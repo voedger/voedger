@@ -5,7 +5,7 @@
 package invite
 
 import (
-	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/untillpro/goutils/iterate"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/state"
 )
@@ -13,20 +13,19 @@ import (
 func provideSyncProjectorInviteIndexFactory() istructs.ProjectorFactory {
 	return func(partition istructs.PartitionID) istructs.Projector {
 		return istructs.Projector{
-			Name:         qNameProjectorInviteIndex,
-			EventsFilter: []appdef.QName{qNameCmdInitiateInvitationByEMail},
-			Func:         inviteIndexProjector,
+			Name: qNameProjectorInviteIndex,
+			Func: inviteIndexProjector,
 		}
 	}
 }
 
 var inviteIndexProjector = func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
-	return event.CUDs(func(rec istructs.ICUDRow) (err error) {
+	return iterate.ForEachError(event.CUDs, func(rec istructs.ICUDRow) error {
 		if rec.QName() != qNameCDocInvite {
-			return
+			return nil
 		}
 
-		skbViewInviteIndex, err := s.KeyBuilder(state.ViewRecordsStorage, qNameViewInviteIndex)
+		skbViewInviteIndex, err := s.KeyBuilder(state.View, qNameViewInviteIndex)
 		if err != nil {
 			return err
 		}
@@ -40,6 +39,6 @@ var inviteIndexProjector = func(event istructs.IPLogEvent, s istructs.IState, in
 
 		svViewInviteIndex.PutRecordID(field_InviteID, rec.ID())
 
-		return
+		return nil
 	})
 }

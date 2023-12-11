@@ -52,15 +52,15 @@ func TestBasicUsage_RowsProcessorFactory(t *testing.T) {
 	skb.On("PutRecordID", mock.Anything, mock.Anything)
 	s := &mockState{}
 	s.
-		On("KeyBuilder", state.RecordsStorage, appdef.NullQName).Return(skb).
+		On("KeyBuilder", state.Record, appdef.NullQName).Return(skb).
 		On("MustExist", mock.Anything).Return(department("Soft drinks")).Once().
 		On("MustExist", mock.Anything).Return(department("Alcohol drinks")).Once().
 		On("MustExist", mock.Anything).Return(department("Alcohol drinks")).Once().
 		On("MustExist", mock.Anything).Return(department("Sweet")).Once()
 
 	appDef := appdef.New()
-	departmentDef := appDef.AddObject(qNamePosDepartment)
-	departmentDef.AddField("name", appdef.DataKind_string, false)
+	departmentObj := appDef.AddObject(qNamePosDepartment)
+	departmentObj.AddField("name", appdef.DataKind_string, false)
 	resultMeta := appDef.AddObject(appdef.NewQName("pos", "DepartmentResult"))
 	resultMeta.
 		AddField("id", appdef.DataKind_int64, true).
@@ -155,6 +155,9 @@ func getTestCfg(require *require.Assertions, prepareAppDef func(appDef appdef.IA
 		AddField("name", appdef.DataKind_string, true).
 		AddField("id_department", appdef.DataKind_int64, true)
 	appDef.AddSingleton(authnz.QNameCDocWorkspaceDescriptor) // need to avoid error cdoc.sys.wsdesc missing
+	appDef.AddQuery(qNameFunction).SetParam(qNameFindArticlesByModificationTimeStampRangeParams).SetResult(appdef.NewQName("bo", "Article"))
+	appDef.AddCommand(istructs.QNameCommandCUD)
+	appDef.AddQuery(qNameQryDenied)
 
 	if prepareAppDef != nil {
 		prepareAppDef(appDef)
@@ -172,9 +175,7 @@ func getTestCfg(require *require.Assertions, prepareAppDef func(appDef appdef.IA
 	}
 	cfg.Resources.Add(istructsmem.NewQueryFunction(
 		qNameFunction,
-		qNameFindArticlesByModificationTimeStampRangeParams,
-		appdef.NewQName("bo", "Article"),
-		func(_ context.Context, qf istructs.IQueryFunction, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
+		func(_ context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 			require.Equal(int64(1257894000), args.ArgumentObject.AsInt64("from"))
 			require.Equal(int64(2257894000), args.ArgumentObject.AsInt64("till"))
 			objects := []istructs.IObject{
@@ -192,8 +193,8 @@ func getTestCfg(require *require.Assertions, prepareAppDef func(appDef appdef.IA
 			return err
 		},
 	))
-	cfg.Resources.Add(istructsmem.NewCommandFunction(istructs.QNameCommandCUD, appdef.NullQName, appdef.NullQName, appdef.NullQName, istructsmem.NullCommandExec))
-	cfg.Resources.Add(istructsmem.NewQueryFunction(qNameQryDenied, appdef.NullQName, appdef.NullQName, istructsmem.NullQueryExec))
+	cfg.Resources.Add(istructsmem.NewCommandFunction(istructs.QNameCommandCUD, istructsmem.NullCommandExec))
+	cfg.Resources.Add(istructsmem.NewQueryFunction(qNameQryDenied, istructsmem.NullQueryExec))
 
 	for _, f := range cfgFunc {
 		f(cfg)
@@ -289,9 +290,9 @@ func TestBasicUsage_ServiceFactory(t *testing.T) {
 		queryProcessor.Run(processorCtx)
 		wg.Done()
 	}()
-	funcResource := as.Resources().QueryResource(qNameFunction)
+	query := as.AppDef().Query(qNameFunction)
 	systemToken := getSystemToken(appTokens)
-	serviceChannel <- NewQueryMessage(context.Background(), istructs.AppQName_test1_app1, 15, nil, body, funcResource, "127.0.0.1", systemToken)
+	serviceChannel <- NewQueryMessage(context.Background(), istructs.AppQName_test1_app1, 15, nil, body, query, "127.0.0.1", systemToken)
 	<-done
 	processorCtxCancel()
 	wg.Wait()
@@ -318,7 +319,7 @@ func TestRawMode(t *testing.T) {
 	require := require.New(t)
 
 	appDef := appdef.New()
-	resultMeta := appDef.AddObject(istructs.QNameJSON)
+	resultMeta := appDef.AddObject(istructs.QNameRaw)
 
 	result := ""
 	rs := testResultSenderClosable{
@@ -334,7 +335,7 @@ func TestRawMode(t *testing.T) {
 
 	require.NoError(processor.SendAsync(workpiece{
 		object: &coreutils.TestObject{
-			Data: map[string]interface{}{processors.Field_JSONDef_Body: `[accepted]`},
+			Data: map[string]interface{}{processors.Field_RawObject_Body: `[accepted]`},
 		},
 		outputRow: &outputRow{
 			keyToIdx: map[string]int{rootDocument: 0},
@@ -996,21 +997,16 @@ func TestRateLimiter(t *testing.T) {
 
 	qNameMyFuncParams := appdef.NewQName(appdef.SysPackage, "myFuncParams")
 	qNameMyFuncResults := appdef.NewQName(appdef.SysPackage, "results")
-	var myFunc istructs.IResource
+	qName := appdef.NewQName(appdef.SysPackage, "myFunc")
 	cfgs, appStructsProvider, appTokens := getTestCfg(require,
 		func(appDef appdef.IAppDefBuilder) {
 			appDef.AddObject(qNameMyFuncParams)
 			appDef.AddObject(qNameMyFuncResults).
 				AddField("fld", appdef.DataKind_string, false)
+			appDef.AddQuery(qName).SetParam(qNameMyFuncParams).SetResult(qNameMyFuncResults)
 		},
 		func(cfg *istructsmem.AppConfigType) {
-			qName := appdef.NewQName(appdef.SysPackage, "myFunc")
-			myFunc = istructsmem.NewQueryFunction(
-				qName,
-				qNameMyFuncParams,
-				qNameMyFuncResults,
-				istructsmem.NullQueryExec,
-			)
+			myFunc := istructsmem.NewQueryFunction(qName, istructsmem.NullQueryExec)
 			// declare a test func
 
 			cfg.Resources.Add(myFunc)
@@ -1038,13 +1034,15 @@ func TestRateLimiter(t *testing.T) {
 
 	// execute query
 	// first 2 - ok
-	serviceChannel <- NewQueryMessage(context.Background(), istructs.AppQName_test1_app1, 15, nil, body, myFunc, "127.0.0.1", systemToken)
+	cfg := cfgs.GetConfig(istructs.AppQName_test1_app1)
+	query := cfg.AppDef.Query(qName)
+	serviceChannel <- NewQueryMessage(context.Background(), istructs.AppQName_test1_app1, 15, nil, body, query, "127.0.0.1", systemToken)
 	require.NoError(<-errs)
-	serviceChannel <- NewQueryMessage(context.Background(), istructs.AppQName_test1_app1, 15, nil, body, myFunc, "127.0.0.1", systemToken)
+	serviceChannel <- NewQueryMessage(context.Background(), istructs.AppQName_test1_app1, 15, nil, body, query, "127.0.0.1", systemToken)
 	require.NoError(<-errs)
 
 	// 3rd exceeds the limit - not often than twice per minute
-	serviceChannel <- NewQueryMessage(context.Background(), istructs.AppQName_test1_app1, 15, nil, body, myFunc, "127.0.0.1", systemToken)
+	serviceChannel <- NewQueryMessage(context.Background(), istructs.AppQName_test1_app1, 15, nil, body, query, "127.0.0.1", systemToken)
 	require.Error(<-errs)
 }
 
@@ -1076,10 +1074,10 @@ func TestAuthnz(t *testing.T) {
 	queryProcessor := ProvideServiceFactory()(serviceChannel, func(ctx context.Context, sender interface{}) IResultSenderClosable { return rs },
 		appStructsProvider, 3, metrics, "vvm", authn, authz, cfgs)
 	go queryProcessor.Run(context.Background())
-	funcResource := as.Resources().QueryResource(qNameFunction)
+	query := as.AppDef().Query(qNameFunction)
 
 	t.Run("no token for a query that requires authorization -> 403 unauthorized", func(t *testing.T) {
-		serviceChannel <- NewQueryMessage(context.Background(), istructs.AppQName_test1_app1, 15, nil, body, funcResource, "127.0.0.1", "")
+		serviceChannel <- NewQueryMessage(context.Background(), istructs.AppQName_test1_app1, 15, nil, body, query, "127.0.0.1", "")
 		var se coreutils.SysError
 		require.ErrorAs(<-errs, &se)
 		require.Equal(http.StatusForbidden, se.HTTPStatus)
@@ -1089,7 +1087,7 @@ func TestAuthnz(t *testing.T) {
 		systemToken := getSystemToken(appTokens)
 		// make the token be expired
 		now = now.Add(2 * time.Minute)
-		serviceChannel <- NewQueryMessage(context.Background(), istructs.AppQName_test1_app1, 15, nil, body, funcResource, "127.0.0.1", systemToken)
+		serviceChannel <- NewQueryMessage(context.Background(), istructs.AppQName_test1_app1, 15, nil, body, query, "127.0.0.1", systemToken)
 		var se coreutils.SysError
 		require.ErrorAs(<-errs, &se)
 		require.Equal(http.StatusUnauthorized, se.HTTPStatus)
@@ -1098,8 +1096,8 @@ func TestAuthnz(t *testing.T) {
 	t.Run("token provided by querying is denied -> 403 forbidden", func(t *testing.T) {
 		wsid := istructs.WSID(1)
 		token := getTestToken(appTokens, wsid)
-		deniedFunc := as.Resources().QueryResource(qNameQryDenied)
-		serviceChannel <- NewQueryMessage(context.Background(), istructs.AppQName_test1_app1, wsid, nil, body, deniedFunc, "127.0.0.1", token)
+		deniedQuery := as.AppDef().Query(qNameQryDenied)
+		serviceChannel <- NewQueryMessage(context.Background(), istructs.AppQName_test1_app1, wsid, nil, body, deniedQuery, "127.0.0.1", token)
 		var se coreutils.SysError
 		require.ErrorAs(<-errs, &se)
 		require.Equal(http.StatusForbidden, se.HTTPStatus)

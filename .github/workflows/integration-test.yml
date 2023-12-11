@@ -23,6 +23,9 @@ jobs:
   deploy:
     if: ${{ contains(github.event.issue.title, 'ctoolintegrationtest') }}
     runs-on: ubuntu-latest
+    env:
+      SSH_PORT: 2214
+      SSH_OPTIONS: "-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=ERROR"
     steps:
     - name: Check Issue
       run: |
@@ -92,13 +95,17 @@ jobs:
         
     - name: Load environment file
       run: |
-           echo PUBLIC_IP=$(terraform -chdir=cmd/ctool/scripts/terraform/ output -raw public_ip_node_03) >> $GITHUB_ENV
-           echo CTOOL_IP=$(terraform -chdir=cmd/ctool/scripts/terraform/ output -raw public_ip_node_00) >> $GITHUB_ENV
-           echo SSH_OPTIONS="-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=ERROR" >> $GITHUB_ENV
+           echo "PUBLIC_IP=$(terraform -chdir=cmd/ctool/scripts/terraform/ output -raw public_ip_node_03)" >> $GITHUB_ENV
+           echo "CTOOL_IP=$(terraform -chdir=cmd/ctool/scripts/terraform/ output -raw public_ip_node_00)" >> $GITHUB_ENV
+           echo "SSH_PORT=2214" >> $GITHUB_ENV
+           if [ -n "${SSH_PORT:-}" ]; then
+               SSH_OPTIONS+=" -p $SSH_PORT"
+           fi
+           echo "SSH_OPTIONS=$SSH_OPTIONS" >> $GITHUB_ENV
 
     - name: Test deploy cluster. Simulate error when init. Continue with repeat after problem elimination.
       run: | 
-        if ! ssh ${{ env.SSH_OPTIONS }} ubuntu@${{ env.CTOOL_IP }} "cd /home/ubuntu/voedger/cmd/ctool && ./ctool init SE 10.0.0.11 10.0.0.12 10.0.0.13 10.0.0.14 10.0.0.15 -v --ssh-key /tmp/amazonKey.pem; exit \$?"; then
+        if ! ssh ${{ env.SSH_OPTIONS }} ubuntu@${{ env.CTOOL_IP }} "cd /home/ubuntu/voedger/cmd/ctool && ./ctool init SE 10.0.0.11 10.0.0.12 10.0.0.13 10.0.0.14 10.0.0.15 -p ${{ env.SSH_PORT }} -v --ssh-key /tmp/amazonKey.pem; exit \$?"; then
           echo "Error: SSH key permission too open."
             if ssh ${{ env.SSH_OPTIONS }} ubuntu@${{ env.CTOOL_IP }} "chmod 400 /tmp/amazonKey.pem; exit \$?"; then
               echo "Changing ssh key permissions to more restrective."
@@ -122,7 +129,7 @@ jobs:
         echo "Work with ${{ env.PUBLIC_IP }}"
         count=0
         while [ $count -lt 60 ]; do
-           if [ $(ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=ERROR ubuntu@${{ env.PUBLIC_IP }} docker exec '$(docker ps -qf name=scylla)' nodetool status | grep -c "^UN\s") -eq 3 ]; then
+           if [ $(ssh ${{ env.SSH_OPTIONS }} ubuntu@${{ env.PUBLIC_IP }} docker exec '$(docker ps -qf name=scylla)' nodetool status | grep -c "^UN\s") -eq 3 ]; then
            echo "Scylla initialization success"
              break
            fi
@@ -140,7 +147,7 @@ jobs:
         NODES=("10.0.0.11" "10.0.0.12")
 
         for node in "${NODES[@]}"; do
-          PROMETHEUS_RESPONSE=$(ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=ERROR ubuntu@${{ env.PUBLIC_IP }} "curl -sL -w '%{http_code}' -o /dev/null http://${node}:9090")
+          PROMETHEUS_RESPONSE=$(ssh ${{ env.SSH_OPTIONS }} ubuntu@${{ env.PUBLIC_IP }} "curl -sL -w '%{http_code}' -o /dev/null http://${node}:9090/-/healthy")
           if [[ "${PROMETHEUS_RESPONSE}" == "200" ]]; then
             echo "Prometheus is up and running on node ${node}."
           else
@@ -148,7 +155,7 @@ jobs:
             exit 1
           fi
 
-          ALERTMANAGER_RESPONSE=$(ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=ERROR ubuntu@${{ env.PUBLIC_IP }} "curl -sL -w '%{http_code}' -o /dev/null http://${node}:9093")
+          ALERTMANAGER_RESPONSE=$(ssh ${{ env.SSH_OPTIONS }} ubuntu@${{ env.PUBLIC_IP }} "curl -sL -w '%{http_code}' -o /dev/null http://${node}:9093/-/healthy")
           if [[ "${ALERTMANAGER_RESPONSE}" == "200" ]]; then
             echo "Alertmanager is up and running on node ${node}."
           else
@@ -167,7 +174,7 @@ jobs:
 
     - name: Smoke test - replace scylla node to new hardware
       run: | 
-        if ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=ERROR ubuntu@${{ env.CTOOL_IP }} "cd /home/ubuntu/voedger/cmd/ctool && ./ctool replace 10.0.0.13 10.0.0.16 -v --ssh-key /tmp/amazonKey.pem; exit \$?"; then
+        if ssh ${{ env.SSH_OPTIONS }} ubuntu@${{ env.CTOOL_IP }} "cd /home/ubuntu/voedger/cmd/ctool && ./ctool replace db-node-1 10.0.0.16 -v --ssh-key /tmp/amazonKey.pem; exit \$?"; then
           echo "Replace node success"
         else 
           echo "Failed to replace scylla node in cluster"
@@ -179,7 +186,7 @@ jobs:
         echo "Work with ${{ env.PUBLIC_IP }}"
         count=0
         while [ $count -lt 60 ]; do
-           if [ $(ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=ERROR ubuntu@${{ env.PUBLIC_IP }} docker exec '$(docker ps -qf name=scylla)' nodetool status | grep -c "^UN\s") -eq 3 ]; then
+           if [ $(ssh ${{ env.SSH_OPTIONS }} ubuntu@${{ env.PUBLIC_IP }} docker exec '$(docker ps -qf name=scylla)' nodetool status | grep -c "^UN\s") -eq 3 ]; then
            echo "Scylla initialization success"
              break
            fi
@@ -200,17 +207,9 @@ jobs:
         TF_VAR_ssh_private_key: ${{ secrets.AWS_SSH_KEY }}
         TF_VAR_gh_token: ${{ secrets.REPOREADING_TOKEN }}
 
-    - name: Smoke test - Create new hadware for AppNode.
-      run: terraform -chdir=cmd/ctool/scripts/terraform/ apply -target=aws_instance.node_02 -auto-approve
-      env:
-        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        TF_VAR_ssh_private_key: ${{ secrets.AWS_SSH_KEY }}
-        TF_VAR_gh_token: ${{ secrets.REPOREADING_TOKEN }}
-
     - name: Smoke test - replace AppNode to new hardware
       run: | 
-        if ssh ${{ env.SSH_OPTIONS }} ubuntu@${{ env.CTOOL_IP }} "cd /home/ubuntu/voedger/cmd/ctool && ./ctool replace 10.0.0.12 10.0.0.13 -v --trace --ssh-key /tmp/amazonKey.pem; exit \$?"; then
+        if ssh ${{ env.SSH_OPTIONS }} ubuntu@${{ env.CTOOL_IP }} "cd /home/ubuntu/voedger/cmd/ctool && ./ctool replace app-node-2 10.0.0.17 -v --trace --ssh-key /tmp/amazonKey.pem; exit \$?"; then
           echo "Replace AppNode success"
         else 
 
@@ -233,13 +232,13 @@ jobs:
 
     - name: Smoke test - check Prometheus and Alertmanager is up after replace node
       run: |
-        IP_ADDRESS="10.0.0.13"
+        IP_ADDRESS="10.0.0.17"
         retries=5
         while [[ $retries -gt 0 ]]; do
           success=true
 
 
-          PROMETHEUS_RESPONSE=$(ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=ERROR ubuntu@${{ env.PUBLIC_IP }} "curl -sL -w '%{http_code}' -o /dev/null http://${IP_ADDRESS}:9090 >/dev/null 2>&1; RETVAL=\$?; if [ \$RETVAL -eq 0 ]; then curl -sL -w '%{http_code}' -o /dev/null http://${IP_ADDRESS}:9090; else echo '000'; fi" 2>/dev/null)
+          PROMETHEUS_RESPONSE=$(ssh ${{ env.SSH_OPTIONS }} ubuntu@${{ env.PUBLIC_IP }} "curl -sL -w '%{http_code}' -o /dev/null http://${IP_ADDRESS}:9090/-/healthy >/dev/null 2>&1; RETVAL=\$?; if [ \$RETVAL -eq 0 ]; then curl -sL -w '%{http_code}' -o /dev/null http://${IP_ADDRESS}:9090/-/healthy; else echo '000'; fi" 2>/dev/null)
            
           if [[ "$PROMETHEUS_RESPONSE" == "200" ]]; then
             echo "Prometheus is up and running on IP address ${IP_ADDRESS}."
@@ -251,7 +250,7 @@ jobs:
              success=false
           fi
         
-          ALERTMANAGER_RESPONSE=$(ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=ERROR ubuntu@${{ env.PUBLIC_IP }} "curl -sL -w '%{http_code}' -o /dev/null http://${IP_ADDRESS}:9093 >/dev/null 2>&1; RETVAL=\$?; if [ \$RETVAL -eq 0 ]; then curl -sL -w '%{http_code}' -o /dev/null http://${IP_ADDRESS}:9093; else echo '000'; fi" 2>/dev/null)
+          ALERTMANAGER_RESPONSE=$(ssh ${{ env.SSH_OPTIONS }} ubuntu@${{ env.PUBLIC_IP }} "curl -sL -w '%{http_code}' -o /dev/null http://${IP_ADDRESS}:9093/-/healthy >/dev/null 2>&1; RETVAL=\$?; if [ \$RETVAL -eq 0 ]; then curl -sL -w '%{http_code}' -o /dev/null http://${IP_ADDRESS}:9093/-/healthy; else echo '000'; fi" 2>/dev/null)
            
           if [[ "$ALERTMANAGER_RESPONSE" == "200" ]]; then
             echo "Alertmanager is up and running on IP address ${IP_ADDRESS}."

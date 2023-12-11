@@ -264,11 +264,11 @@ func TestWrongTypes(t *testing.T) {
 	}
 	as, err := appStructsProvider.AppStructs(istructs.AppQName_test1_app1)
 	require.NoError(err)
-	funcResource := as.Resources().QueryResource(qNameFunction)
+	query := as.AppDef().Query(qNameFunction)
 	sysToken := getSystemToken(appTokens)
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			qm := NewQueryMessage(context.Background(), istructs.AppQName_test1_app1, 1, nil, []byte(test.body), funcResource, "", sysToken)
+			qm := NewQueryMessage(context.Background(), istructs.AppQName_test1_app1, 1, nil, []byte(test.body), query, "", sysToken)
 			serviceChannel <- qm
 			err := <-errs
 			require.Contains(err.Error(), test.err)

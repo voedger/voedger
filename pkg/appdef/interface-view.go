@@ -5,77 +5,85 @@
 
 package appdef
 
-// View definition. DefKind() is DefKind_ViewRecord
+// View is a type with key and value.
 //
 // Ref to view.go for implementation
 type IView interface {
-	IDef
-	IComment
-	IContainers
+	IType
 
-	// Returns full (pk + ccols) view key definition
+	// All view fields, include key and value.
+	IFields
+
+	// Returns full (pk + ccols) view key
 	Key() IViewKey
 
-	// Returns view value definition
+	// Returns view value
 	Value() IViewValue
 }
 
 type IViewBuilder interface {
-	ICommentBuilder
+	IView
+	ITypeBuilder
 
 	// Returns full (pk + ccols) view key builder
-	Key() IViewKeyBuilder
+	KeyBuilder() IViewKeyBuilder
 
 	// Returns view value builder
-	Value() IViewValueBuilder
+	ValueBuilder() IViewValueBuilder
 }
 
-// View full (pk + cc) key definition. DefKind() is DefKind_ViewRecordFullKey
-//
-// Partition key fields is required, clustering columns is not.
+// View full (pk + cc) key.
 //
 // Ref. to view.go for implementation
 type IViewKey interface {
-	IDef
+	// All key fields, include partition key and clustering columns.
+	//
+	// Partition key fields is required, clustering columns is not.
 	IFields
-	IContainers
 
-	// Returns partition key definition
-	Partition() IViewPartKey
+	// Returns partition key
+	PartKey() IViewPartKey
 
-	// Returns clustering columns definition
+	// Returns clustering columns
 	ClustCols() IViewClustCols
 }
 
-// View full (pk + cc) key builder.
-//
-// Ref. to view.go for implementation
 type IViewKeyBuilder interface {
-	// Returns partition key definition
-	Partition() IViewPartKeyBuilder
+	IViewKey
 
-	// Returns clustering columns definition
-	ClustCols() IViewClustColsBuilder
+	// Returns partition key type builder
+	PartKeyBuilder() IViewPartKeyBuilder
+
+	// Returns clustering columns type builder
+	ClustColsBuilder() IViewClustColsBuilder
 }
 
-// View partition key definition. DefKind() is DefKind_ViewRecordPartitionKey
+// View partition key contains fields for partitioning.
+// Fields for partitioning should be selected so that the size of the partition
+// does not exceed 100 MB. Perfectly if it is around 10 MB.
+// The size of the basket (partition) can be evaluated by the formula:
+//	(ViewValue_Size + ClustCols_Size) * KeysPerPartition.
+// https://opensource.com/article/20/5/apache-cassandra#:~:text=As%20a%20rule%20of%20thumb%2C,design%20supports%20desired%20cluster%20performance
 //
 // Ref. to view.go for implementation
 type IViewPartKey interface {
-	IDef
+	// Partition key fields.
 	IFields
+
+	// Unwanted type assertion stub
+	isPartKey()
 }
 
-// View partition key builder.
-//
-// Ref. to view.go for implementation
 type IViewPartKeyBuilder interface {
+	IViewPartKey
+
 	// Adds partition key field.
 	//
 	// # Panics:
 	//	- if field already exists in clustering columns or value fields,
 	//	- if not fixed size data kind.
-	AddField(name string, kind DataKind, comment ...string) IViewPartKeyBuilder
+	AddField(name string, kind DataKind, constraints ...IConstraint) IViewPartKeyBuilder
+	AddDataField(name string, dataType QName, constraints ...IConstraint) IViewPartKeyBuilder
 	AddRefField(name string, ref ...QName) IViewPartKeyBuilder
 
 	// Sets fields comment.
@@ -87,26 +95,30 @@ type IViewPartKeyBuilder interface {
 	SetFieldComment(name string, comment ...string) IViewPartKeyBuilder
 }
 
-// View clustering columns definition. DefKind() is DefKind_ViewRecordClusteringColumns
+// Defines fields for sorting values inside partition.
 //
 // Ref. to view.go for implementation
 type IViewClustCols interface {
-	IDef
+	// Clustering columns fields.
 	IFields
+
+	// Unwanted type assertion stub
+	isClustCols()
 }
 
-// View clustering columns builder.
-//
-// Ref. to view.go for implementation
 type IViewClustColsBuilder interface {
+	IViewClustCols
+
 	// Adds clustering columns field.
 	//
+	// Only last column field can be variable length.
+	//
 	// # Panics:
-	//	- if field already exists in partition key or value fields.
-	AddField(name string, kind DataKind, comment ...string) IViewClustColsBuilder
+	//	- if field already exists in view;
+	//	- if already contains a variable length field.
+	AddField(name string, kind DataKind, constraints ...IConstraint) IViewClustColsBuilder
+	AddDataField(name string, dataType QName, constraints ...IConstraint) IViewClustColsBuilder
 	AddRefField(name string, ref ...QName) IViewClustColsBuilder
-	AddStringField(name string, maxLen uint16) IViewClustColsBuilder
-	AddBytesField(name string, maxLen uint16) IViewClustColsBuilder
 
 	// Sets fields comment.
 	// Useful for reference or verified fields, what Add×××Field has not comments
@@ -117,14 +129,19 @@ type IViewClustColsBuilder interface {
 	SetFieldComment(name string, comment ...string) IViewClustColsBuilder
 }
 
-// View value definition. DefKind() is DefKind_ViewRecord_Value
+// View value. Like a structure, view value has fields, but has not containers and uniques.
 //
 // Ref. to view.go for implementation
 type IViewValue interface {
-	IDef
+	// View value fields.
 	IFields
+
+	// Unwanted type assertion stub
+	isViewValue()
 }
 
 type IViewValueBuilder interface {
+	IViewValue
+
 	IFieldsBuilder
 }

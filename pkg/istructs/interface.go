@@ -18,6 +18,8 @@ type IAppStructsProvider interface {
 	// ErrAppNotFound can be returned
 	// @ConcurrentAccess
 	AppStructs(aqn AppQName) (structs IAppStructs, err error)
+
+	AppStructsByDef(aqn AppQName, appDef appdef.IAppDef) (structs IAppStructs, err error)
 }
 
 type IAppStructs interface {
@@ -157,8 +159,6 @@ type IResources interface {
 	// If resource not found then {ResourceKind_null, QNameForNullResource) is returned
 	// Currently resources are ICommandFunction and IQueryFunction
 	QueryResource(resource appdef.QName) (r IResource)
-
-	QueryFunctionArgsBuilder(query IQueryFunction) IObjectBuilder
 
 	// Enumerates all application resources
 	Resources(func(resName appdef.QName))

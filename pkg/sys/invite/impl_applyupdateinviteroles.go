@@ -20,17 +20,15 @@ import (
 func provideAsyncProjectorApplyUpdateInviteRolesFactory(timeFunc coreutils.TimeFunc, federation coreutils.IFederation, appQName istructs.AppQName, tokens itokens.ITokens, smtpCfg smtp.Cfg) istructs.ProjectorFactory {
 	return func(partition istructs.PartitionID) istructs.Projector {
 		return istructs.Projector{
-			Name:         qNameAPApplyUpdateInviteRoles,
-			EventsFilter: []appdef.QName{qNameCmdInitiateUpdateInviteRoles},
-			Func:         applyUpdateInviteRolesProjector(timeFunc, federation, appQName, tokens, smtpCfg),
-			NonBuffered:  true,
+			Name: qNameAPApplyUpdateInviteRoles,
+			Func: applyUpdateInviteRolesProjector(timeFunc, federation, appQName, tokens, smtpCfg),
 		}
 	}
 }
 
 func applyUpdateInviteRolesProjector(timeFunc coreutils.TimeFunc, federation coreutils.IFederation, appQName istructs.AppQName, tokens itokens.ITokens, smtpCfg smtp.Cfg) func(event istructs.IPLogEvent, state istructs.IState, intents istructs.IIntents) (err error) {
 	return func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
-		skbCDocInvite, err := s.KeyBuilder(state.RecordsStorage, qNameCDocInvite)
+		skbCDocInvite, err := s.KeyBuilder(state.Record, qNameCDocInvite)
 		if err != nil {
 			return
 		}
@@ -40,7 +38,7 @@ func applyUpdateInviteRolesProjector(timeFunc coreutils.TimeFunc, federation cor
 			return
 		}
 
-		skbCDocSubject, err := s.KeyBuilder(state.RecordsStorage, QNameCDocSubject)
+		skbCDocSubject, err := s.KeyBuilder(state.Record, QNameCDocSubject)
 		if err != nil {
 			return
 		}
@@ -80,7 +78,7 @@ func applyUpdateInviteRolesProjector(timeFunc coreutils.TimeFunc, federation cor
 		replacer := strings.NewReplacer(EmailTemplatePlaceholder_Roles, event.ArgumentObject().AsString(Field_Roles))
 
 		//Send roles update email
-		skbSendMail, err := s.KeyBuilder(state.SendMailStorage, appdef.NullQName)
+		skbSendMail, err := s.KeyBuilder(state.SendMail, appdef.NullQName)
 		if err != nil {
 			return
 		}
@@ -94,7 +92,7 @@ func applyUpdateInviteRolesProjector(timeFunc coreutils.TimeFunc, federation cor
 
 		pwd := ""
 		if !coreutils.IsTest() {
-			skbAppSecretsStorage, err := s.KeyBuilder(state.AppSecretsStorage, appdef.NullQName)
+			skbAppSecretsStorage, err := s.KeyBuilder(state.AppSecret, appdef.NullQName)
 			if err != nil {
 				return err
 			}

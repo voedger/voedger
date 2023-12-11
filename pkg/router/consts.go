@@ -39,7 +39,7 @@ const (
 var (
 	bearerPrefixLen = len(coreutils.BearerPrefix)
 	// airsBPPartitionsAmount int                         = 100 // changes in tests
-	onRequestCtxClosed  func()                      = nil // used in tests
-	onAfterSectionWrite func(w http.ResponseWriter) = nil // used in tests
-	elem1                                           = map[string]interface{}{"fld1": "fld1Val"}
+	onRequestCtxClosed    func()                      = nil // used in tests
+	onBeforeWriteResponse func(w http.ResponseWriter) = nil // used in tests
+	elem1                                             = map[string]interface{}{"fld1": "fld1Val"}
 )

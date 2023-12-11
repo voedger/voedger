@@ -14,7 +14,7 @@ import (
 )
 
 func TestRates_BasicUsage(t *testing.T) {
-	vit := it.NewVIT(t, &it.SharedConfig_Simple)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
 	ws := vit.DummyWS(istructs.AppQName_test1_app1, 42+istructs.MaxPseudoBaseWSID)
@@ -23,40 +23,40 @@ func TestRates_BasicUsage(t *testing.T) {
 
 	// first 2 calls are ok
 	for i := 0; i < 2; i++ {
-		vit.PostWS(ws, "q.sys.RatedQry", bodyQry)
-		vit.PostWS(ws, "c.sys.RatedCmd", bodyCmd)
+		vit.PostWS(ws, "q.app1pkg.RatedQry", bodyQry)
+		vit.PostWS(ws, "c.app1pkg.RatedCmd", bodyCmd)
 	}
 
 	// 3rd is failed because per-minute rate is exceeded
-	vit.PostWS(ws, "q.sys.RatedQry", bodyQry, coreutils.Expect429())
-	vit.PostWS(ws, "c.sys.RatedCmd", bodyCmd, coreutils.Expect429())
+	vit.PostWS(ws, "q.app1pkg.RatedQry", bodyQry, coreutils.Expect429())
+	vit.PostWS(ws, "c.app1pkg.RatedCmd", bodyCmd, coreutils.Expect429())
 
 	// proceed to the next minute to restore per-minute rates
 	vit.TimeAdd(time.Minute)
 
 	// next 2 calls are ok again
 	for i := 0; i < 2; i++ {
-		vit.PostWS(ws, "q.sys.RatedQry", bodyQry)
-		vit.PostWS(ws, "c.sys.RatedCmd", bodyCmd)
+		vit.PostWS(ws, "q.app1pkg.RatedQry", bodyQry)
+		vit.PostWS(ws, "c.app1pkg.RatedCmd", bodyCmd)
 	}
 
 	// next are failed again because per-minute rate is exceeded again
-	vit.PostWS(ws, "q.sys.RatedQry", bodyQry, coreutils.Expect429())
-	vit.PostWS(ws, "c.sys.RatedCmd", bodyCmd, coreutils.Expect429())
+	vit.PostWS(ws, "q.app1pkg.RatedQry", bodyQry, coreutils.Expect429())
+	vit.PostWS(ws, "c.app1pkg.RatedCmd", bodyCmd, coreutils.Expect429())
 
 	// proceed to the next minute to restore per-minute rates
 	vit.TimeAdd(time.Minute)
 
 	// next are failed again because per-hour rate is exceeded
-	vit.PostWS(ws, "q.sys.RatedQry", bodyQry, coreutils.Expect429())
-	vit.PostWS(ws, "c.sys.RatedCmd", bodyCmd, coreutils.Expect429())
+	vit.PostWS(ws, "q.app1pkg.RatedQry", bodyQry, coreutils.Expect429())
+	vit.PostWS(ws, "c.app1pkg.RatedCmd", bodyCmd, coreutils.Expect429())
 
 	// proceed to the next hour to restore per-hour rates
 	vit.TimeAdd(time.Hour)
 
 	// next 2 calls are ok again
 	for i := 0; i < 2; i++ {
-		vit.PostWS(ws, "q.sys.RatedQry", bodyQry)
-		vit.PostWS(ws, "c.sys.RatedCmd", bodyCmd)
+		vit.PostWS(ws, "q.app1pkg.RatedQry", bodyQry)
+		vit.PostWS(ws, "c.app1pkg.RatedCmd", bodyCmd)
 	}
 }

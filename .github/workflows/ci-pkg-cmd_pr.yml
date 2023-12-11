@@ -17,20 +17,44 @@ jobs:
       reporeading_token: ${{ secrets.REPOREADING_TOKEN }}
       codecov_token: ${{ secrets.CODECOV_TOKEN }}
       personal_token: ${{ secrets.PERSONAL_TOKEN }}
-  call-workflow-ci-cmd:
+  call-workflow-ci-cmd-ctool:
     needs: call-workflow-ci-pkg
     uses: untillpro/ci-action/.github/workflows/ci_reuse_go_pr.yml@master
     with: 
-      test_folder: 'cmd'
+      test_folder: 'cmd/ctool/'
       ignore_copyright: 'pkg/apps/sys.monitor/site.main'
-      short_test: 'true'
       ignore_bp3: 'true'
+      short_test: 'true'
+    secrets:
+      reporeading_token: ${{ secrets.REPOREADING_TOKEN }}
+      codecov_token: ${{ secrets.CODECOV_TOKEN }}
+      personal_token: ${{ secrets.PERSONAL_TOKEN }}
+  call-workflow-ci-cmd-edger:
+    needs: call-workflow-ci-cmd-ctool
+    uses: untillpro/ci-action/.github/workflows/ci_reuse_go_pr.yml@master
+    with: 
+      test_folder: 'cmd/edger/'
+      ignore_copyright: 'pkg/apps/sys.monitor/site.main'
+      ignore_bp3: 'true'
+      short_test: 'true'
+    secrets:
+      reporeading_token: ${{ secrets.REPOREADING_TOKEN }}
+      codecov_token: ${{ secrets.CODECOV_TOKEN }}
+      personal_token: ${{ secrets.PERSONAL_TOKEN }}
+  call-workflow-ci-cmd-voedger:
+    needs: call-workflow-ci-cmd-edger
+    uses: untillpro/ci-action/.github/workflows/ci_reuse_go_pr.yml@master
+    with: 
+      test_folder: 'cmd/voedger/'
+      ignore_copyright: 'pkg/apps/sys.monitor/site.main'
+      ignore_bp3: 'true'
+      short_test: 'true'
     secrets:
       reporeading_token: ${{ secrets.REPOREADING_TOKEN }}
       codecov_token: ${{ secrets.CODECOV_TOKEN }}
       personal_token: ${{ secrets.PERSONAL_TOKEN }}
   auto-merge-pr:
-    needs: call-workflow-ci-cmd
+    needs: call-workflow-ci-cmd-voedger
     uses: voedger/voedger/.github/workflows/merge.yml@main
     secrets:
       personaltoken: ${{ secrets.REPOREADING_TOKEN }}

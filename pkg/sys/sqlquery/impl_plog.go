@@ -21,7 +21,7 @@ func readPlog(ctx context.Context, WSID istructs.WSID, numCommandProcessors core
 			}
 		}
 	}
-	return appStructs.Events().ReadPLog(ctx, partitionID(WSID, numCommandProcessors), offset, count, func(plogOffset istructs.Offset, event istructs.IPLogEvent) (err error) {
+	return appStructs.Events().ReadPLog(ctx, coreutils.PartitionID(WSID, numCommandProcessors), offset, count, func(plogOffset istructs.Offset, event istructs.IPLogEvent) (err error) {
 		data := make(map[string]interface{})
 		if f.filter("PlogOffset") {
 			data["PlogOffset"] = plogOffset
@@ -34,19 +34,14 @@ func readPlog(ctx context.Context, WSID istructs.WSID, numCommandProcessors core
 		}
 		if f.filter("CUDs") {
 			cuds := make([]map[string]interface{}, 0)
-			err := event.CUDs(func(rec istructs.ICUDRow) error {
+			event.CUDs(func(rec istructs.ICUDRow) {
 				cudData := make(map[string]interface{})
 				cudData["sys.ID"] = rec.ID()
 				cudData["sys.QName"] = rec.QName().String()
 				cudData["IsNew"] = rec.IsNew()
 				cudData["fields"] = coreutils.FieldsToMap(rec, appStructs.AppDef())
 				cuds = append(cuds, cudData)
-				return nil
 			})
-			if err != nil {
-				// notest
-				return err
-			}
 			data["CUDs"] = cuds
 		}
 		if f.filter("RegisteredAt") {
@@ -85,8 +80,4 @@ func readPlog(ctx context.Context, WSID istructs.WSID, numCommandProcessors core
 
 		return callback(&result{value: string(bb)})
 	})
-}
-
-func partitionID(wsid istructs.WSID, numCommandProcessors coreutils.CommandProcessorsCount) istructs.PartitionID {
-	return istructs.PartitionID(int(wsid) % int(numCommandProcessors))
 }

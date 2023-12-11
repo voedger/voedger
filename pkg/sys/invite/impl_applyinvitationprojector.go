@@ -23,17 +23,15 @@ import (
 func provideAsyncProjectorApplyInvitationFactory(timeFunc coreutils.TimeFunc, federation coreutils.IFederation, appQName istructs.AppQName, tokens itokens.ITokens, smtpCfg smtp.Cfg) istructs.ProjectorFactory {
 	return func(partition istructs.PartitionID) istructs.Projector {
 		return istructs.Projector{
-			Name:         qNameAPApplyInvitation,
-			EventsFilter: []appdef.QName{qNameCmdInitiateInvitationByEMail},
-			Func:         applyInvitationProjector(timeFunc, federation, appQName, tokens, smtpCfg),
-			NonBuffered:  true,
+			Name: qNameAPApplyInvitation,
+			Func: applyInvitationProjector(timeFunc, federation, appQName, tokens, smtpCfg),
 		}
 	}
 }
 
 func applyInvitationProjector(timeFunc coreutils.TimeFunc, federation coreutils.IFederation, appQName istructs.AppQName, tokens itokens.ITokens, smtpCfg smtp.Cfg) func(event istructs.IPLogEvent, state istructs.IState, intents istructs.IIntents) (err error) {
 	return func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
-		skbViewInviteIndex, err := s.KeyBuilder(state.ViewRecordsStorage, qNameViewInviteIndex)
+		skbViewInviteIndex, err := s.KeyBuilder(state.View, qNameViewInviteIndex)
 		if err != nil {
 			return
 		}
@@ -47,7 +45,7 @@ func applyInvitationProjector(timeFunc coreutils.TimeFunc, federation coreutils.
 		verificationCode := fmt.Sprintf("%06d", timeFunc().UnixMilli()%time.Second.Microseconds())
 		emailTemplate := coreutils.TruncateEmailTemplate(event.ArgumentObject().AsString(field_EmailTemplate))
 
-		skbCDocWorkspaceDescriptor, err := s.KeyBuilder(state.RecordsStorage, authnz.QNameCDocWorkspaceDescriptor)
+		skbCDocWorkspaceDescriptor, err := s.KeyBuilder(state.Record, authnz.QNameCDocWorkspaceDescriptor)
 		if err != nil {
 			return
 		}
@@ -66,7 +64,7 @@ func applyInvitationProjector(timeFunc coreutils.TimeFunc, federation coreutils.
 		)
 
 		//Send invitation email
-		skbSendMail, err := s.KeyBuilder(state.SendMailStorage, appdef.NullQName)
+		skbSendMail, err := s.KeyBuilder(state.SendMail, appdef.NullQName)
 		if err != nil {
 			return
 		}
@@ -80,7 +78,7 @@ func applyInvitationProjector(timeFunc coreutils.TimeFunc, federation coreutils.
 
 		pwd := ""
 		if !coreutils.IsTest() {
-			skbAppSecretsStorage, err := s.KeyBuilder(state.AppSecretsStorage, appdef.NullQName)
+			skbAppSecretsStorage, err := s.KeyBuilder(state.AppSecret, appdef.NullQName)
 			if err != nil {
 				return err
 			}

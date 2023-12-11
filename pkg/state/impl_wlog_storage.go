@@ -42,7 +42,7 @@ func (s *wLogStorage) Read(kb istructs.IStateKeyBuilder, callback istructs.Value
 		offs := int64(wlogOffset)
 		return callback(
 			&key{data: map[string]interface{}{Field_Offset: offs}},
-			&wLogStorageValue{
+			&wLogValue{
 				event:      event,
 				offset:     offs,
 				toJSONFunc: s.toJSON,
@@ -51,21 +51,15 @@ func (s *wLogStorage) Read(kb istructs.IStateKeyBuilder, callback istructs.Value
 	return s.eventsFunc().ReadWLog(s.ctx, k.wsid, k.offset, k.count, cb)
 }
 func (s *wLogStorage) toJSON(sv istructs.IStateValue, _ ...interface{}) (string, error) {
-	value := sv.(*wLogStorageValue)
+	value := sv.(*wLogValue)
 	obj := make(map[string]interface{})
 	obj["QName"] = value.event.QName().String()
 	obj["ArgumentObject"] = coreutils.ObjectToMap(value.event.ArgumentObject(), s.appDefFunc())
 	cc := make([]map[string]interface{}, 0)
-	err := value.event.CUDs(func(rec istructs.ICUDRow) (err error) {
+	value.event.CUDs(func(rec istructs.ICUDRow) {
 		cudRowMap := cudRowToMap(rec, s.appDefFunc)
 		cc = append(cc, cudRowMap)
-		return
 	})
-	if err != nil {
-		//no error returns
-		// notest
-		return "", err
-	}
 	obj["CUDs"] = cc
 	obj[Field_RegisteredAt] = value.event.RegisteredAt()
 	obj["Synced"] = value.event.Synced()

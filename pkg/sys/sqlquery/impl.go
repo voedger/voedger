@@ -13,22 +13,11 @@ import (
 	"github.com/blastrain/vitess-sqlparser/sqlparser"
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
-	"github.com/voedger/voedger/pkg/istructsmem"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-func provideQrySqlQuery(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, asp istructs.IAppStructsProvider, numCommandProcessors coreutils.CommandProcessorsCount) {
-	cfg.Resources.Add(istructsmem.NewQueryFunction(
-		appdef.NewQName(appdef.SysPackage, "SqlQuery"),
-		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "SqlQueryParams")).
-			AddField(field_Query, appdef.DataKind_string, true).(appdef.IDef).QName(),
-		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "SqlQueryResult")).
-			AddField(field_Result, appdef.DataKind_string, true).(appdef.IDef).QName(),
-		execQrySqlQuery(asp, cfg.Name, numCommandProcessors),
-	))
-}
-func execQrySqlQuery(asp istructs.IAppStructsProvider, appQName istructs.AppQName, numCommandProcessors coreutils.CommandProcessorsCount) func(ctx context.Context, qf istructs.IQueryFunction, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
-	return func(ctx context.Context, _ istructs.IQueryFunction, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
+func execQrySqlQuery(asp istructs.IAppStructsProvider, appQName istructs.AppQName, numCommandProcessors coreutils.CommandProcessorsCount) func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
+	return func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 		wsid := args.Workspace
 		if index := strings.Index(args.ArgumentObject.AsString(field_Query), flag_WSID); index != -1 {
 			v, err := strconv.Atoi(args.ArgumentObject.AsString(field_Query)[index+len(flag_WSID):])
@@ -74,14 +63,14 @@ func execQrySqlQuery(asp istructs.IAppStructsProvider, appQName istructs.AppQNam
 		table := s.From[0].(*sqlparser.AliasedTableExpr).Expr.(sqlparser.TableName)
 		source := appdef.NewQName(table.Qualifier.String(), table.Name.String())
 
-		switch appStructs.AppDef().Def(source).Kind() {
-		case appdef.DefKind_ViewRecord:
+		switch appStructs.AppDef().Type(source).Kind() {
+		case appdef.TypeKind_ViewRecord:
 			return readViewRecords(ctx, wsid, appdef.NewQName(table.Qualifier.String(), table.Name.String()), whereExpr, appStructs, f, callback)
-		case appdef.DefKind_CDoc:
+		case appdef.TypeKind_CDoc:
 			fallthrough
-		case appdef.DefKind_CRecord:
+		case appdef.TypeKind_CRecord:
 			fallthrough
-		case appdef.DefKind_WDoc:
+		case appdef.TypeKind_WDoc:
 			return readRecords(wsid, source, whereExpr, appStructs, f, callback)
 		default:
 			if source != plog && source != wlog {

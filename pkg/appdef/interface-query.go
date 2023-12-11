@@ -5,38 +5,17 @@
 
 package appdef
 
-// Query
+// Query is a function that returns data from system state.
 //
 // Ref. to query.go for implementation
 type IQuery interface {
-	IDef
-	IComment
+	IFunction
 
-	// Argument. Returns nil if not assigned
-	Arg() IObject
-
-	// Result. Returns nil if not assigned.
-	//
-	// If result is may be different, then NullQName is used
-	Result() IObject
-
-	// Extension
-	Extension() IExtension
+	// Unwanted type assertion stub
+	isQuery()
 }
 
 type IQueryBuilder interface {
 	IQuery
-	ICommentBuilder
-
-	// Sets query argument. Must be object or NullQName
-	SetArg(QName) IQueryBuilder
-
-	// Sets query result. Must be object or NullQName
-	SetResult(QName) IQueryBuilder
-
-	// Sets engine.
-	//
-	// # Panics:
-	//	- if name is empty or invalid identifier
-	SetExtension(name string, engine ExtensionEngineKind) IQueryBuilder
+	IFunctionBuilder
 }

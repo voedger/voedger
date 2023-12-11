@@ -38,14 +38,17 @@ func (e *greeterRR) AsString(name string) string {
 func TestBasicUsage(t *testing.T) {
 	require := require.New(t)
 	cfg := it.NewOwnVITConfig(
-		it.WithApp(istructs.AppQName_test1_app1, func(apis apps.APIs, cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) {
+		it.WithApp(istructs.AppQName_test1_app2, func(apis apps.APIs, cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) {
+			qNameCmdGreeter := appdef.NewQName(appdef.SysPackage, "Greeter")
+			appDefBuilder.AddQuery(qNameCmdGreeter).
+				SetParam(appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "GreeterParams")).
+					AddField("Text", appdef.DataKind_string, true).(appdef.IType).QName()).
+				SetResult(appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "GreeterResult")).
+					AddField("Res", appdef.DataKind_string, true).(appdef.IType).QName())
+
 			cfg.Resources.Add(istructsmem.NewQueryFunction(
-				appdef.NewQName(appdef.SysPackage, "Greeter"),
-				appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "GreeterParams")).
-					AddField("Text", appdef.DataKind_string, true).(appdef.IDef).QName(),
-				appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "GreeterResult")).
-					AddField("Res", appdef.DataKind_string, true).(appdef.IDef).QName(),
-				func(_ context.Context, _ istructs.IQueryFunction, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
+				qNameCmdGreeter,
+				func(_ context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 					text := args.ArgumentObject.AsString("Text")
 					var rr = &greeterRR{text: text}
 					return callback(rr)
@@ -55,6 +58,7 @@ func TestBasicUsage(t *testing.T) {
 			// need to read cdoc.sys.Subject on auth
 			sys.Provide(cfg, appDefBuilder, smtp.Cfg{}, ep, nil, apis.TimeFunc, apis.ITokens, apis.IFederation, apis.IAppStructsProvider, apis.IAppTokensFactory,
 				apis.NumCommandProcessors, nil, apis.IAppStorageProvider)
+			apps.RegisterSchemaFS(it.SchemaTestApp2FS, "app2", ep)
 		}),
 	)
 	vit := it.NewVIT(t, &cfg)
@@ -73,7 +77,7 @@ func TestBasicUsage(t *testing.T) {
 		]
 	  }
 	`
-	ws := vit.DummyWS(istructs.AppQName_test1_app1, 1)
+	ws := vit.DummyWS(istructs.AppQName_test1_app2, 1)
 	resp := vit.PostWSSys(ws, "q.sys.Greeter", body)
 	require.Equal(`{"sections":[{"type":"","elements":[[[["hello, world"]]]]}]}`, resp.Body)
 	resp.Println()
@@ -81,7 +85,7 @@ func TestBasicUsage(t *testing.T) {
 
 func TestAppWSAutoInitialization(t *testing.T) {
 	require := require.New(t)
-	vit := it.NewVIT(t, &it.SharedConfig_Simple)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
 	checkCDocsWSDesc(vit.VVM, require)
@@ -92,7 +96,7 @@ func TestAppWSAutoInitialization(t *testing.T) {
 }
 
 func checkCDocsWSDesc(vvm *vvm.VVM, require *require.Assertions) {
-	for _, appQName := range vvm.VVMApps {
+	for appQName := range vvm.AppConfigsType {
 		as, err := vvm.AppStructs(istructs.AppQName_test1_app1)
 		require.NoError(err)
 		for wsNum := 0; istructs.AppWSAmount(wsNum) < as.WSAmount(); wsNum++ {
@@ -107,13 +111,13 @@ func checkCDocsWSDesc(vvm *vvm.VVM, require *require.Assertions) {
 }
 
 func TestAuthorization(t *testing.T) {
-	vit := it.NewVIT(t, &it.SharedConfig_Simple)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
 	prn := ws.Owner
 
-	body := `{"cuds":[{"fields":{"sys.ID": 1,"sys.QName":"simpleApp.air_table_plan"}}]}`
+	body := `{"cuds":[{"fields":{"sys.ID": 1,"sys.QName":"app1pkg.air_table_plan"}}]}`
 
 	t.Run("basic usage", func(t *testing.T) {
 		t.Run("Bearer scheme", func(t *testing.T) {
@@ -170,7 +174,7 @@ func TestAuthorization(t *testing.T) {
 
 func TestUtilFuncs(t *testing.T) {
 	require := require.New(t)
-	vit := it.NewVIT(t, &it.SharedConfig_Simple)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
 	t.Run("func Echo", func(t *testing.T) {
@@ -196,7 +200,7 @@ func TestUtilFuncs(t *testing.T) {
 }
 
 func Test400BadRequests(t *testing.T) {
-	vit := it.NewVIT(t, &it.SharedConfig_Simple)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 	var err error
 
@@ -231,7 +235,7 @@ func Test503OnNoQueryProcessorsAvailable(t *testing.T) {
 		<-okToFinish
 		return nil
 	}
-	vit := it.NewVIT(t, &it.SharedConfig_Simple)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
 	body := `{"args": {"Input": "world"},"elements": [{"fields": ["Res"]}]}`
@@ -241,7 +245,7 @@ func Test503OnNoQueryProcessorsAvailable(t *testing.T) {
 		postDone.Add(1)
 		go func() {
 			defer postDone.Done()
-			vit.PostApp(istructs.AppQName_test1_app1, 1, "q.sys.MockQry", body, coreutils.WithAuthorizeBy(sys.Token))
+			vit.PostApp(istructs.AppQName_test1_app1, 1, "q.app1pkg.MockQry", body, coreutils.WithAuthorizeBy(sys.Token))
 		}()
 
 		<-funcStarted
@@ -257,7 +261,7 @@ func Test503OnNoQueryProcessorsAvailable(t *testing.T) {
 
 func TestCmdResult(t *testing.T) {
 	require := require.New(t)
-	vit := it.NewVIT(t, &it.SharedConfig_Simple)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
@@ -265,7 +269,7 @@ func TestCmdResult(t *testing.T) {
 	t.Run("basic usage", func(t *testing.T) {
 
 		body := `{"args":{"Arg1": 1}}`
-		resp := vit.PostWS(ws, "c.sys.TestCmd", body)
+		resp := vit.PostWS(ws, "c.app1pkg.TestCmd", body)
 		resp.Println()
 		require.Equal("Str", resp.CmdResult["Str"])
 		require.Equal(float64(42), resp.CmdResult["Int"])
@@ -274,18 +278,37 @@ func TestCmdResult(t *testing.T) {
 	// ok - just required field is filled
 	t.Run("just required fields filled", func(t *testing.T) {
 		body := fmt.Sprintf(`{"args":{"Arg1":%d}}`, 2)
-		resp := vit.PostWS(ws, "c.sys.TestCmd", body)
+		resp := vit.PostWS(ws, "c.app1pkg.TestCmd", body)
 		resp.Println()
 		require.Equal(float64(42), resp.CmdResult["Int"])
 	})
 
 	t.Run("missing required fields -> 500", func(t *testing.T) {
 		body := fmt.Sprintf(`{"args":{"Arg1":%d}}`, 3)
-		vit.PostWS(ws, "c.sys.TestCmd", body, coreutils.Expect500()).Println()
+		vit.PostWS(ws, "c.app1pkg.TestCmd", body, coreutils.Expect500()).Println()
 	})
 
 	t.Run("wrong types -> 500", func(t *testing.T) {
 		body := fmt.Sprintf(`{"args":{"Arg1":%d}}`, 4)
-		vit.PostWS(ws, "c.sys.TestCmd", body, coreutils.Expect500()).Println()
+		vit.PostWS(ws, "c.app1pkg.TestCmd", body, coreutils.Expect500()).Println()
+	})
+}
+
+func TestIsActiveValidation(t *testing.T) {
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
+
+	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+
+	t.Run("deny update sys.IsActive and other fields", func(t *testing.T) {
+		body := `{"cuds":[{"fields":{"sys.ID": 1,"sys.QName":"app1pkg.air_table_plan"}}]}`
+		id := vit.PostWS(ws, "c.sys.CUD", body).NewID()
+		body = fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"sys.IsActive":false,"name":"newName"}}]}`, id)
+		vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect403()).Println()
+	})
+
+	t.Run("deny insert a deactivated record", func(t *testing.T) {
+		body := `{"cuds":[{"fields":{"sys.ID": 1,"sys.QName":"app1pkg.air_table_plan","sys.IsActive":false}}]}`
+		vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect403()).Println()
 	})
 }

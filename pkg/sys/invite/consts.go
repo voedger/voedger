@@ -5,8 +5,6 @@
 package invite
 
 import (
-	"embed"
-
 	"github.com/voedger/voedger/pkg/appdef"
 )
 
@@ -37,8 +35,7 @@ var (
 	QNameCDocJoinedWorkspace             = appdef.NewQName(appdef.SysPackage, "JoinedWorkspace")
 	QNameCDocSubject                     = appdef.NewQName(appdef.SysPackage, "Subject")
 	QNameViewSubjectsIdx                 = appdef.NewQName(appdef.SysPackage, "ViewSubjectsIdx")
-	//go:embed schemas.sql
-	schemasFS embed.FS
+	QNameApplyViewSubjectsIdx            = appdef.NewQName(appdef.SysPackage, "ApplyViewSubjectsIdx")
 )
 
 const (
@@ -58,7 +55,6 @@ const (
 	field_SubjectID             = "SubjectID"
 	field_Dummy                 = "Dummy"
 	field_JoinedWorkspaceID     = "JoinedWorkspaceID"
-	ield_WSName                 = "WSName"
 	Field_SubjectKind           = "SubjectKind"
 	Field_ProfileWSID           = "ProfileWSID"
 	Field_SubjectID             = "SubjectID"

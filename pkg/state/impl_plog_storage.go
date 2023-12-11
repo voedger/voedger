@@ -42,7 +42,7 @@ func (s *pLogStorage) Read(kb istructs.IStateKeyBuilder, callback istructs.Value
 		offs := int64(plogOffset)
 		return callback(
 			&key{data: map[string]interface{}{Field_Offset: offs}},
-			&pLogStorageValue{
+			&pLogValue{
 				event:      event,
 				offset:     offs,
 				toJSONFunc: s.toJSON,
@@ -51,15 +51,14 @@ func (s *pLogStorage) Read(kb istructs.IStateKeyBuilder, callback istructs.Value
 	return s.eventsFunc().ReadPLog(s.ctx, k.partitionID, k.offset, k.count, cb)
 }
 func (s *pLogStorage) toJSON(sv istructs.IStateValue, _ ...interface{}) (string, error) {
-	value := sv.(*pLogStorageValue)
+	value := sv.(*pLogValue)
 	obj := make(map[string]interface{})
 	obj["QName"] = value.event.QName().String()
 	obj["ArgumentObject"] = coreutils.ObjectToMap(value.event.ArgumentObject(), s.appDefFunc())
 	cc := make([]map[string]interface{}, 0)
-	_ = value.event.CUDs(func(rec istructs.ICUDRow) (err error) { //no error returns
+	value.event.CUDs(func(rec istructs.ICUDRow) {
 		cudRowMap := cudRowToMap(rec, s.appDefFunc)
 		cc = append(cc, cudRowMap)
-		return
 	})
 	obj["CUDs"] = cc
 	obj[Field_RegisteredAt] = value.event.RegisteredAt()

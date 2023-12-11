@@ -22,22 +22,45 @@ func (a *Application) read(app istructs.IAppStructs, rateLimits map[appdef.QName
 
 	a.Name = app.AppQName()
 
-	app.AppDef().Defs(func(def appdef.IDef) {
-		defName := def.QName()
-		pkg := getPkg(defName, a)
-		d := newDef()
-		d.Name = defName
-		pkg.Defs[defName.String()] = d
-		d.read(app.AppDef().Def(defName))
-	})
+	app.AppDef().Types(func(typ appdef.IType) {
+		name := typ.QName()
 
-	app.Resources().Resources(func(resName appdef.QName) {
-		pkg := getPkg(resName, a)
-		resource := newResource()
-		resource.Name = resName
-		pkg.Resources[resName.String()] = resource
+		if name.Pkg() == appdef.SysPackage {
+			return
+		}
 
-		resource.read(app.Resources().QueryResource(resName))
+		pkg := getPkg(name, a)
+
+		if data, ok := typ.(appdef.IData); ok {
+			if !data.IsSystem() {
+				d := newData()
+				d.read(data)
+				pkg.DataTypes[name.String()] = d
+			}
+			return
+		}
+
+		if str, ok := typ.(appdef.IStructure); ok {
+			s := newStructure()
+			s.read(str)
+			pkg.Structures[name.String()] = s
+			return
+		}
+
+		if view, ok := typ.(appdef.IView); ok {
+			v := newView()
+			v.read(view)
+			pkg.Views[name.String()] = v
+			return
+		}
+
+		if ext, ok := typ.(appdef.IExtension); ok {
+			if pkg.Extensions == nil {
+				pkg.Extensions = newExtensions()
+			}
+			pkg.Extensions.read(ext)
+			return
+		}
 	})
 
 	for qName, qNameRateLimit := range rateLimits {
@@ -65,7 +88,9 @@ func getPkg(name appdef.QName, a *Application) *Package {
 
 func newPackage() *Package {
 	return &Package{
-		Defs:       make(map[string]*Def),
+		DataTypes:  make(map[string]*Data),
+		Structures: make(map[string]*Structure),
+		Views:      make(map[string]*View),
 		Resources:  make(map[string]*Resource),
 		RateLimits: make(map[string][]*RateLimit),
 	}

@@ -66,25 +66,26 @@ func bench_BuildRawEvent(b *testing.B, numOfIntFields int) {
 	stringFieldNames := make([]string, numOfIntFields)
 	stringFieldValues := make(map[string]string)
 
-	// application definition
+	// application
 	appDef := func() appdef.IAppDefBuilder {
-		cache := appdef.New()
+		app := appdef.New()
 
-		s := cache.AddODoc(oDocQName)
+		doc := app.AddODoc(oDocQName)
 		for i := 0; i < numOfIntFields; i++ {
 
 			intFieldName := fmt.Sprintf("i%v", i)
-			s.AddField(intFieldName, appdef.DataKind_int64, true)
+			doc.AddField(intFieldName, appdef.DataKind_int64, true)
 			intFieldNames[i] = intFieldName
 			intFieldNamesFloat64Values[intFieldName] = float64(i)
 
 			stringFieldName := fmt.Sprintf("s%v", i)
-			s.AddStringField(stringFieldName, true)
+			doc.AddField(stringFieldName, appdef.DataKind_string, true)
 			stringFieldNames[i] = stringFieldName
 			stringFieldValues[stringFieldName] = stringFieldName
 
 		}
-		return cache
+		app.AddCommand(cmdQName).SetParam(oDocQName)
+		return app
 	}
 
 	// Con
@@ -94,7 +95,7 @@ func bench_BuildRawEvent(b *testing.B, numOfIntFields int) {
 
 	// Register command
 	{
-		cfg.Resources.Add(NewCommandFunction(cmdQName, oDocQName, appdef.NullQName, appdef.NullQName, NullCommandExec))
+		cfg.Resources.Add(NewCommandFunction(cmdQName, NullCommandExec))
 	}
 
 	provider := Provide(configs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider())

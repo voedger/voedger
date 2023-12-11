@@ -18,16 +18,15 @@ import (
 func provideAsyncProjectorApplyCancelAcceptedInviteFactory(timeFunc coreutils.TimeFunc, federation coreutils.IFederation, appQName istructs.AppQName, tokens itokens.ITokens) istructs.ProjectorFactory {
 	return func(partition istructs.PartitionID) istructs.Projector {
 		return istructs.Projector{
-			Name:         qNameAPApplyCancelAcceptedInvite,
-			EventsFilter: []appdef.QName{qNameCmdInitiateCancelAcceptedInvite},
-			Func:         applyCancelAcceptedInvite(timeFunc, federation, appQName, tokens),
+			Name: qNameAPApplyCancelAcceptedInvite,
+			Func: applyCancelAcceptedInvite(timeFunc, federation, appQName, tokens),
 		}
 	}
 }
 
 func applyCancelAcceptedInvite(timeFunc coreutils.TimeFunc, federation coreutils.IFederation, appQName istructs.AppQName, tokens itokens.ITokens) func(event istructs.IPLogEvent, state istructs.IState, intents istructs.IIntents) (err error) {
 	return func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
-		skbCDocInvite, err := s.KeyBuilder(state.RecordsStorage, qNameCDocInvite)
+		skbCDocInvite, err := s.KeyBuilder(state.Record, qNameCDocInvite)
 		if err != nil {
 			return
 		}
@@ -37,7 +36,7 @@ func applyCancelAcceptedInvite(timeFunc coreutils.TimeFunc, federation coreutils
 			return
 		}
 
-		skbCDocSubject, err := s.KeyBuilder(state.RecordsStorage, QNameCDocSubject)
+		skbCDocSubject, err := s.KeyBuilder(state.Record, QNameCDocSubject)
 		if err != nil {
 			return
 		}

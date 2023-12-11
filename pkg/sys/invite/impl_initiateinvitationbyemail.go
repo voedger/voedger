@@ -14,28 +14,20 @@ import (
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-func provideCmdInitiateInvitationByEMail(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, timeFunc coreutils.TimeFunc) {
+func provideCmdInitiateInvitationByEMail(cfg *istructsmem.AppConfigType, timeFunc coreutils.TimeFunc) {
 	cfg.Resources.Add(istructsmem.NewCommandFunction(
 		qNameCmdInitiateInvitationByEMail,
-		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "InitiateInvitationByEMailParams")).
-			AddField(field_Email, appdef.DataKind_string, true).
-			AddField(Field_Roles, appdef.DataKind_string, true).
-			AddField(field_ExpireDatetime, appdef.DataKind_int64, true).
-			AddField(field_EmailTemplate, appdef.DataKind_string, true).
-			AddField(field_EmailSubject, appdef.DataKind_string, true).(appdef.IDef).QName(),
-		appdef.NullQName,
-		appdef.NullQName,
 		execCmdInitiateInvitationByEMail(timeFunc),
 	))
 }
 
-func execCmdInitiateInvitationByEMail(timeFunc coreutils.TimeFunc) func(_ istructs.ICommandFunction, args istructs.ExecCommandArgs) (err error) {
-	return func(_ istructs.ICommandFunction, args istructs.ExecCommandArgs) (err error) {
+func execCmdInitiateInvitationByEMail(timeFunc coreutils.TimeFunc) func(args istructs.ExecCommandArgs) (err error) {
+	return func(args istructs.ExecCommandArgs) (err error) {
 		if !coreutils.IsValidEmailTemplate(args.ArgumentObject.AsString(field_EmailTemplate)) {
 			return coreutils.NewHTTPError(http.StatusBadRequest, errInviteTemplateInvalid)
 		}
 
-		skbViewInviteIndex, err := args.State.KeyBuilder(state.ViewRecordsStorage, qNameViewInviteIndex)
+		skbViewInviteIndex, err := args.State.KeyBuilder(state.View, qNameViewInviteIndex)
 		if err != nil {
 			return
 		}
@@ -47,7 +39,7 @@ func execCmdInitiateInvitationByEMail(timeFunc coreutils.TimeFunc) func(_ istruc
 		}
 
 		if ok {
-			skbCDocInvite, err := args.State.KeyBuilder(state.RecordsStorage, qNameCDocInvite)
+			skbCDocInvite, err := args.State.KeyBuilder(state.Record, qNameCDocInvite)
 			if err != nil {
 				return err
 			}
@@ -73,7 +65,7 @@ func execCmdInitiateInvitationByEMail(timeFunc coreutils.TimeFunc) func(_ istruc
 			return nil
 		}
 
-		skbCDocInvite, err := args.State.KeyBuilder(state.RecordsStorage, qNameCDocInvite)
+		skbCDocInvite, err := args.State.KeyBuilder(state.Record, qNameCDocInvite)
 		if err != nil {
 			return err
 		}

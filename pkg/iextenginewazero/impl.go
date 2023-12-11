@@ -26,10 +26,10 @@ import (
 )
 
 type wazeroExtEngine struct {
-	data       []byte
-	module     api.Module
-	host       api.Module
-	recoverMem api.Memory
+	data   []byte
+	module api.Module
+	host   api.Module
+	//recoverMem api.Memory
 
 	//mwasi api.Module
 	// ce    api.ICallEngine
@@ -54,7 +54,7 @@ type wazeroExtEngine struct {
 	funcOnReadValue  api.Function
 
 	ctx        context.Context
-	io         iextengine.IExtentionIO
+	io         iextengine.IExtensionIO
 	exts       map[string]api.Function
 	wasiCloser api.Closer
 }
@@ -90,6 +90,10 @@ func ExtEngineWazeroFactory(ctx context.Context, moduleURL *url.URL, extensionNa
 	}
 
 	return impl, nil
+}
+
+func (f *wazeroExtEngine) SetLimits(limits iextengine.ExtensionLimits) {
+	//f.cep.Duration = limits.ExecutionInterval
 }
 
 func (f *wazeroExtEngine) importFuncs(funcs map[string]*api.Function) error {
@@ -276,11 +280,11 @@ func (f *wazeroExtEngine) recover() {
 	//TODO: f.module.Memory().Restore(f.recoverMem)
 }
 
-func (f *wazeroExtEngine) Invoke(ctx context.Context, extentionName string, io iextengine.IExtentionIO) (err error) {
+func (f *wazeroExtEngine) Invoke(ctx context.Context, extentionName iextengine.ExtQName, io iextengine.IExtensionIO) (err error) {
 
-	funct := f.exts[extentionName]
+	funct := f.exts[extentionName.ExtName]
 	if funct == nil {
-		return invalidExtensionName(extentionName)
+		return invalidExtensionName(extentionName.ExtName)
 	}
 
 	f.io = io

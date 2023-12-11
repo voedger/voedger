@@ -37,10 +37,10 @@ func TestContainers(t *testing.T) {
 	containers := New()
 	if err := containers.Prepare(storage, versions,
 		func() appdef.IAppDef {
-			defName := appdef.NewQName("test", "el")
+			objName := appdef.NewQName("test", "object")
 			appDef := appdef.New()
-			appDef.AddElement(defName).
-				AddContainer(containerName, defName, 0, 1)
+			appDef.AddObject(objName).
+				AddContainer(containerName, objName, 0, 1)
 			result, err := appDef.Build()
 			require.NoError(err)
 			return result
@@ -87,10 +87,10 @@ func TestContainers(t *testing.T) {
 			containers2 := New()
 			if err := containers2.Prepare(storage, versions,
 				func() appdef.IAppDef {
-					defName := appdef.NewQName("test", "el")
+					objName := appdef.NewQName("test", "object")
 					appDef := appdef.New()
-					appDef.AddElement(defName).
-						AddContainer(containerName, defName, 0, 1)
+					appDef.AddObject(objName).
+						AddContainer(containerName, objName, 0, 1)
 					result, err := appDef.Build()
 					require.NoError(err)
 					return result
@@ -200,9 +200,9 @@ func TestContainersPrepareErrors(t *testing.T) {
 			func() appdef.IAppDef {
 				appDef := appdef.New()
 				qName := appdef.NewQName("test", "test")
-				def := appDef.AddElement(qName)
+				obj := appDef.AddObject(qName)
 				for i := 0; i <= MaxAvailableContainerID; i++ {
-					def.AddContainer(fmt.Sprintf("cont_%d", i), qName, 0, 1)
+					obj.AddContainer(fmt.Sprintf("cont_%d", i), qName, 0, 1)
 				}
 				result, err := appDef.Build()
 				require.NoError(err)
@@ -228,10 +228,10 @@ func TestContainersPrepareErrors(t *testing.T) {
 			names := New()
 			err := names.Prepare(storage, versions,
 				func() appdef.IAppDef {
-					defName := appdef.NewQName("test", "el")
+					objName := appdef.NewQName("test", "object")
 					appDef := appdef.New()
-					appDef.AddElement(defName).
-						AddContainer(containerName, defName, 0, 1)
+					appDef.AddObject(objName).
+						AddContainer(containerName, objName, 0, 1)
 					result, err := appDef.Build()
 					require.NoError(err)
 					return result
@@ -252,10 +252,10 @@ func TestContainersPrepareErrors(t *testing.T) {
 			names := New()
 			err := names.Prepare(storage, versions,
 				func() appdef.IAppDef {
-					defName := appdef.NewQName("test", "el")
+					objName := appdef.NewQName("test", "object")
 					appDef := appdef.New()
-					appDef.AddElement(defName).
-						AddContainer(containerName, defName, 0, 1)
+					appDef.AddObject(objName).
+						AddContainer(containerName, objName, 0, 1)
 					result, err := appDef.Build()
 					require.NoError(err)
 					return result

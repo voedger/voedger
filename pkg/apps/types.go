@@ -28,4 +28,4 @@ type APIs struct {
 }
 
 type AppBuilder func(apis APIs, cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint)
-
+type SchemasExportedContent map[string]map[string][]byte // packageName->schemaFilePath->content

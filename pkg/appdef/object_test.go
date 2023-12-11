@@ -15,19 +15,19 @@ import (
 func Test_AppDef_AddObject(t *testing.T) {
 	require := require.New(t)
 
-	objName, elementName := NewQName("test", "obj"), NewQName("test", "element")
+	rootName, childName := NewQName("test", "root"), NewQName("test", "child")
 
 	var app IAppDef
 
-	t.Run("must be ok to add object", func(t *testing.T) {
+	t.Run("must be ok to add objects", func(t *testing.T) {
 		appDef := New()
-		doc := appDef.AddObject(objName)
-		doc.
+		root := appDef.AddObject(rootName)
+		root.
 			AddField("f1", DataKind_int64, true).
 			AddField("f2", DataKind_string, false)
-		doc.AddContainer("child", elementName, 0, Occurs_Unbounded)
-		rec := appDef.AddElement(elementName)
-		rec.
+		root.AddContainer("child", childName, 0, Occurs_Unbounded)
+		child := appDef.AddObject(childName)
+		child.
 			AddField("f1", DataKind_int64, true).
 			AddField("f2", DataKind_string, false)
 
@@ -37,31 +37,36 @@ func Test_AppDef_AddObject(t *testing.T) {
 		app = a
 	})
 
-	t.Run("must be ok to find builded object", func(t *testing.T) {
-		def := app.Def(objName)
-		require.Equal(DefKind_Object, def.Kind())
+	t.Run("must be ok to find builded root object", func(t *testing.T) {
+		typ := app.Type(rootName)
+		require.Equal(TypeKind_Object, typ.Kind())
 
-		doc := app.Object(objName)
-		require.Equal(DefKind_Object, doc.Kind())
-		require.Equal(def.(IObject), doc)
+		root := app.Object(rootName)
+		require.Equal(TypeKind_Object, root.Kind())
+		require.Equal(typ.(IObject), root)
 
-		require.Equal(2, doc.UserFieldCount())
-		require.Equal(DataKind_int64, doc.Field("f1").DataKind())
+		require.NotNil(root.Field(SystemField_QName))
 
-		require.Equal(DefKind_Element, doc.Container("child").Def().Kind())
+		require.Equal(2, root.UserFieldCount())
+		require.Equal(DataKind_int64, root.Field("f1").DataKind())
 
-		t.Run("must be ok to find builded element", func(t *testing.T) {
-			def := app.Def(elementName)
-			require.Equal(DefKind_Element, def.Kind())
+		require.Equal(TypeKind_Object, root.Container("child").Type().Kind())
 
-			rec := app.Element(elementName)
-			require.Equal(DefKind_Element, rec.Kind())
-			require.Equal(def.(IElement), rec)
+		t.Run("must be ok to find builded child object", func(t *testing.T) {
+			typ := app.Type(childName)
+			require.Equal(TypeKind_Object, typ.Kind())
 
-			require.Equal(2, rec.UserFieldCount())
-			require.Equal(DataKind_int64, rec.Field("f1").DataKind())
+			child := app.Object(childName)
+			require.Equal(TypeKind_Object, child.Kind())
+			require.Equal(typ.(IObject), child)
 
-			require.Equal(0, rec.ContainerCount())
+			require.NotNil(child.Field(SystemField_QName))
+			require.NotNil(child.Field(SystemField_Container))
+
+			require.Equal(2, child.UserFieldCount())
+			require.Equal(DataKind_int64, child.Field("f1").DataKind())
+
+			require.Zero(child.ContainerCount())
 		})
 	})
 }

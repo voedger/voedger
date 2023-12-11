@@ -15,21 +15,16 @@ import (
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-func provideCmdInitiateJoinWorkspace(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, timeFunc coreutils.TimeFunc) {
+func provideCmdInitiateJoinWorkspace(cfg *istructsmem.AppConfigType, timeFunc coreutils.TimeFunc) {
 	cfg.Resources.Add(istructsmem.NewCommandFunction(
 		qNameCmdInitiateJoinWorkspace,
-		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "InitiateJoinWorkspaceParams")).
-			AddField(field_InviteID, appdef.DataKind_RecordID, true).
-			AddField(field_VerificationCode, appdef.DataKind_string, true).(appdef.IDef).QName(),
-		appdef.NullQName,
-		appdef.NullQName,
 		execCmdInitiateJoinWorkspace(timeFunc),
 	))
 }
 
-func execCmdInitiateJoinWorkspace(timeFunc coreutils.TimeFunc) func(cf istructs.ICommandFunction, args istructs.ExecCommandArgs) (err error) {
-	return func(_ istructs.ICommandFunction, args istructs.ExecCommandArgs) (err error) {
-		skbCDocInvite, err := args.State.KeyBuilder(state.RecordsStorage, qNameCDocInvite)
+func execCmdInitiateJoinWorkspace(timeFunc coreutils.TimeFunc) func(args istructs.ExecCommandArgs) (err error) {
+	return func(args istructs.ExecCommandArgs) (err error) {
+		skbCDocInvite, err := args.State.KeyBuilder(state.Record, qNameCDocInvite)
 		if err != nil {
 			return
 		}
@@ -52,7 +47,7 @@ func execCmdInitiateJoinWorkspace(timeFunc coreutils.TimeFunc) func(cf istructs.
 			return coreutils.NewHTTPError(http.StatusBadRequest, errInviteVerificationCodeInvalid)
 		}
 
-		skbPrincipal, err := args.State.KeyBuilder(state.SubjectStorage, appdef.NullQName)
+		skbPrincipal, err := args.State.KeyBuilder(state.RequestSubject, appdef.NullQName)
 		if err != nil {
 			return
 		}

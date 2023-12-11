@@ -2,31 +2,411 @@
 
 [![codecov](https://codecov.io/gh/voedger/voedger/appdef/branch/main/graph/badge.svg?token=u6VrbqKtnn)](https://codecov.io/gh/voedger/voedger/appdef)
 
-## Definitions inheritance
+## Types
 
-### Overview
+### Types inheritance
 
 ```mermaid
-mindmap
-  root((Def))
-    )Structures(
-      (GDoc)
-        (GRecord)
-      (CDoc)
-        (CRecord)
-      (WDoc)
-        (WRecord)
-      (ODoc)
-        (ORecord)
-      (Object)
-        (Element)
-    (Views)
-      (PartKey)
-      (ClustCols)
-      (Value)
-    )Resources(
-      (Commands)
-      (Queries)
+classDiagram
+    class IAppDef {
+        <<interface>>
+        +Type(QName) IType
+        +Data(QName) IData
+        +GDoc(QName) IGDoc
+        +CDoc(QName) ICDoc
+        +WDoc(QName) IWDoc
+        +ODoc(QName) IODoc
+        +View(QName) IView
+        +Command(QName) ICommand
+        +Query(QName) IQuery
+        +Projector(QName) IProjector
+        +Workspace(QName) IWorkspace
+    }
+    IAppDef "1" *--> "0..*" IType : compose
+
+    class IType {
+        <<interface>>
+        +QName() QName
+        +Kind()* TypeKind
+        +Comment() []string
+    }
+
+    IData --|> IType : inherits
+    class IData {
+        <<interface>>
+        +Kind()* TypeKind_Data
+        +Ancestor() IData
+        +Constraints() []IConstraint
+    }
+
+    IArray --|> IType : inherits
+    class IArray {
+        <<interface>>
+        +Kind()* TypeKind_Array
+        +MaxLen() uint
+        +Elem() IType
+    }
+
+    IType <|-- IStructure : inherits
+    class IStructure {
+        <<interface>>
+        +Abstract() bool
+        +Fields() []IField
+        +Containers() []IContainer
+        +Uniques() []IUnique
+        +SystemField_QName() IField
+    }
+
+    IStructure <|-- IRecord  : inherits
+    class IRecord {
+        <<interface>>
+        +SystemField_ID() IField
+        +SystemField_IsActive() IField
+    }
+
+    IDoc --|> IRecord : inherits
+    class IDoc {
+        <<interface>>
+    }
+
+    IGDoc --|> IDoc : inherits
+    class IGDoc {
+        <<interface>>
+        +Kind()* TypeKind_GDoc
+    }
+
+    ICDoc --|> IDoc : inherits
+    class ICDoc {
+        <<interface>>
+        +Kind()* TypeKind_CDoc
+        +Singleton() bool
+    }
+
+    IWDoc --|> IDoc : inherits
+    class IWDoc {
+        <<interface>>
+        +Kind()* TypeKind_WDoc
+    }
+                    
+    IODoc --|> IDoc: inherits
+    class IODoc {
+        <<interface>>
+        +Kind()* TypeKind_ODoc
+    }
+
+    IRecord <|-- IContainedRecord  : inherits
+    class IContainedRecord {
+        <<interface>>
+        +SystemField_ParentID() IField
+        +SystemField_Container() IField
+    }
+
+    IContainedRecord <|-- IGRecord : inherits
+    class IGRecord {
+        <<interface>>
+        +Kind()* TypeKind_GRecord
+    }
+
+    IContainedRecord <|-- ICRecord : inherits
+    class ICRecord {
+        <<interface>>
+        +Kind()* TypeKind_CRecord
+    }
+
+    IContainedRecord <|-- IWRecord : inherits
+    class IWRecord {
+        <<interface>>
+        +Kind()* TypeKind_WRecord
+    }
+
+    IContainedRecord <|-- IORecord : inherits
+    class IORecord {
+        <<interface>>
+        +Kind()* TypeKind_ORecord
+    }
+
+    IObject --|> IStructure : inherits
+    class IObject {
+        <<interface>>
+        +Kind()* TypeKind_Object
+    }
+
+    IType <|-- IView : inherits
+    class IView {
+        <<interface>>
+        +Kind()* TypeKind_ViewRecord
+        +Key() IViewKey
+        +Value() IViewValue
+    }
+            
+    IType <|-- IExtension : inherits
+    class IExtension {
+        <<interface>>
+        +Name() string
+        +Engine() ExtensionEngineKind
+    }
+
+    IExtension <|-- IFunction : inherits
+    class IFunction {
+        <<interface>>
+        +Param() IType
+        +Result() IType
+    }
+
+    IFunction <|-- ICommand : inherits
+    class ICommand {
+        <<interface>>
+        +Kind()* TypeKind_Command
+        +UnloggedParam() IType
+    }
+
+    IFunction <|-- IQuery : inherits
+    class IQuery {
+        <<interface>>
+        +Kind()* TypeKind_Query
+    }
+
+    IExtension <|-- IProjector : inherits
+    class IProjector {
+        <<interface>>
+        +Kind()* TypeKind_Projector
+        +Extension() IExtension
+        +Events() []IProjectorEvent
+        +WantErrors() bool
+        +States() [QName]QNames
+        +Intents() [QName]QNames
+    }
+
+    IWorkspace --|> IType : inherits
+    class IWorkspace {
+        <<interface>>
+        +Kind()* TypeKind_Workspace
+        +Abstract() bool
+        +Types() []IType
+    }
+```
+
+### Data types
+
+```mermaid
+classDiagram
+    direction BT
+    class IType {
+        <<interface>>
+        +Name() QName
+        +Kind() TypeKind
+    }
+
+    IData --|> IType : inherits
+    class IData {
+        <<interface>>
+        +Name()* QName
+        +Kind()* TypeKind_Data
+        +DataKind() DataKind
+        +Ancestor() IData
+        +Constraints() []IConstraint
+    }
+
+    Name "1" <--* "1" IData : Name
+    class Name {
+        <<QName>>
+    }
+    note for Name "- for built-in types sys.int32, sys.float64, etc.,
+                   - for custom types — user-defined and
+                   - NullQName for anonymous types"
+
+    DataKind "1" <--* "1" IData : Kind
+    class DataKind {
+        <<DataKind>>
+    }
+    note for DataKind " - null
+                        - int32
+                        - int64
+                        - float32
+                        - float64
+                        - bytes
+                        - string
+                        - QName
+                        - bool
+                        - RecordID
+                        - Record
+                        - Event"
+ 
+    Ancestor "1" <--* "1" IData : Ancestor
+    class Ancestor {
+        <<IData>>
+    }
+    note for Ancestor "  - data type from which the user data type is inherits or 
+                         - nil for built-in types"
+
+    IConstraint "0..*" <--*  "1" IData : Constraints
+    class IConstraint {
+        <<interface>>
+        +Kind() ConstraintKind
+        +Value() any
+    }
+    note for IConstraint " - minLen() uint
+                           - maxLen() uint
+                           - Pattern() RegExp
+                           - MinInclusive() float
+                           - MinExclusive() float
+                           - MaxInclusive() float
+                           - MaxExclusive() float
+                           - Enum() []enumerable"
+```
+
+### Structures
+
+Structured (documents, records, objects) are those structural types that have fields and can contain containers with other structural types.
+
+The inheritance and composing diagrams given below are expanded general diagrams of the types above.
+
+### Structures inheritance
+
+```mermaid
+classDiagram
+    direction BT
+%%    namespace _ {
+        class IStructure {
+            <<interface>>
+            +Abstract() bool
+            +Fields() []IField
+            +Containers() []IContainer
+            +Uniques() []IUnique
+            +SystemField_QName() IField
+        }
+
+        class IRecord {
+            <<interface>>
+            +SystemField_ID() IField
+            +SystemField_IsActive() IField
+        }
+%%    }
+
+    IRecord --|> IStructure : inherits
+
+    IDoc --|> IRecord : inherits
+    class IDoc {
+        <<interface>>
+    }
+
+    IGDoc --|> IDoc : inherits
+    class IGDoc {
+        <<interface>>
+        +Kind()* TypeKind_GDoc
+    }
+
+    ICDoc --|> IDoc : inherits
+    class ICDoc {
+        <<interface>>
+        +Kind()* TypeKind_CDoc
+        +Singleton() bool
+    }
+
+    IWDoc --|> IDoc : inherits
+    class IWDoc {
+        <<interface>>
+        +Kind()* TypeKind_WDoc
+    }
+                    
+    IODoc --|> IDoc: inherits
+    class IODoc {
+        <<interface>>
+        +Kind()* TypeKind_ODoc
+    }
+
+    IRecord <|-- IContainedRecord  : inherits
+    class IContainedRecord {
+        <<interface>>
+        +SystemField_ParentID() IField
+        +SystemField_Container() IField
+    }
+
+    IContainedRecord <|-- IGRecord : inherits
+    class IGRecord {
+        <<interface>>
+        +Kind()* TypeKind_GRecord
+    }
+
+    IContainedRecord <|-- ICRecord : inherits
+    class ICRecord {
+        <<interface>>
+        +Kind()* TypeKind_CRecord
+    }
+
+    IContainedRecord <|-- IWRecord : inherits
+    class IWRecord {
+        <<interface>>
+        +Kind()* TypeKind_WRecord
+    }
+
+    IContainedRecord <|-- IORecord : inherits
+    class IORecord {
+        <<interface>>
+        +Kind()* TypeKind_ORecord
+    }
+```
+
+### Structures composing
+
+```mermaid
+classDiagram
+  direction TB
+
+  class IGDoc {
+    <<Interface>>
+    IDoc
+  }
+  IGDoc "1" o--> "0..*" IGRecord : children
+
+  class IGRecord {
+    <<Interface>>
+    IContainedRecord
+  }
+  IGRecord "1" o--> "0..*" IGRecord : children
+
+  class ICDoc {
+    <<Interface>>
+    IDoc
+    +Singleton() bool
+  }
+  ICDoc "1" o--> "0..*" ICRecord : children
+
+  class ICRecord {
+    <<Interface>>
+    IContainedRecord
+  }
+  ICRecord "1" o--> "0..*" ICRecord : children
+
+  class IWDoc {
+    <<Interface>>
+    IDoc
+  }
+  IWDoc "1" o--> "0..*" IWRecord : children
+
+  class IWRecord {
+    <<Interface>>
+    IContainedRecord
+  }
+  IWRecord "1" o--> "0..*" IWRecord : children
+
+  class IODoc {
+    <<Interface>>
+    IDoc
+  }
+  IODoc "1" o--> "0..*" IORecord : children
+
+  class IORecord {
+    <<Interface>>
+    IContainedRecord
+  }
+  IORecord "1" o--> "0..*" IORecord : children
+
+  class IObject {
+    <<Interface>>
+    IStructure
+  }
+  IObject "1" o--> "0..*" IObject : children
 ```
 
 ### Fields, Containers, Uniques
@@ -40,14 +420,15 @@ classDiagram
     +DataKind() DataKind
     +Required() bool
     +Verified() bool
-    +VerificationKind(VerificationKind) bool
+    +VerificationKind() []VerificationKind
+    +Constraints() []IConstraint
   }
 
   class IFields{
     <<Interface>>
     Field(string) IField
     FieldCount() int
-    Fields(func(IField))
+    Fields() []IField
   }
   IFields "1" --* "0..*" IField : compose
 
@@ -58,27 +439,13 @@ classDiagram
     AddVerifiedField(…)
     AddRefField(…)
     AddStringField(…)
+    AddConstraints(IConstraint...)
   }
 
   IRefField --|> IField : inherits
   class IRefField {
     <<Interface>>
     Refs() []QName
-  }
-
-  IStringField --|> IField : inherits
-  class IStringField {
-    <<Interface>>
-    Refs() []QName
-    Restricts() IStringFieldRestricts
-  }
-
-  IStringField "1" --o "1" IStringFieldRestricts : aggregates
-  class IStringFieldRestricts {
-    <<Interface>>
-    MinValue() uint16
-    MaxValue() uint16
-    Pattern() string
   }
 
   class IContainer {
@@ -93,8 +460,8 @@ classDiagram
     <<Interface>>
     Container(string) IContainer
     ContainerCount() int
-    ContainerDef(string) IDef
-    Containers(func(IContainer))
+    ContainerDef() [string]IType
+    Containers() []IContainer
   }
   IContainers "1" --* "0..*" IContainer : compose
 
@@ -116,7 +483,7 @@ classDiagram
     UniqueByID(UniqueID) IUnique
     UniqueByName(string) IUnique
     UniqueCount() int
-    Uniques(func(IUnique))
+    Uniques() []IUnique
   }
   IUniques "1" --* "0..*" IUnique : compose
 
@@ -127,247 +494,138 @@ classDiagram
   }
 ```
 
-### Structures
-
-```mermaid
-classDiagram
-  direction BT
-
-  class IDef{
-    <<Interface>>
-    +Kind() DefKind
-    +QName() QName
-  }
-
-  IGDoc --|> IDef : inherits
-  class IGDoc {
-    <<Interface>>
-    IFields
-    IContainers
-    IUniques
-  }
-  IGDoc "1" --o "0..*" IGRecord : aggregate child
-
-  IGDocBuilder --|> IGDoc : inherits
-  class IGDocBuilder {
-    <<Interface>>
-    IFieldsBuilder
-    IContainersBuilder
-    IUniquesBuilder
-  }
-
-  IGRecord --|> IDef : inherits
-  class IGRecord {
-    <<Interface>>
-    IFields
-    IContainers
-    IUniques
-  }
-  IGRecord "1" --o "0..*" IGRecord : aggregate child
-
-  IGRecordBuilder --|> IGRecord : inherits
-  class IGRecordBuilder {
-    <<Interface>>
-    IFieldsBuilder
-    IContainersBuilder
-    IUniquesBuilder
-  }
-
-  ICDoc --|> IDef : inherits
-  class ICDoc {
-    <<Interface>>
-    IFields
-    IContainers
-    IUniques
-    +Singleton() bool
-  }
-  ICDoc "1" --o "0..*" ICRecord : aggregate child
-
-  ICDocBuilder --|> ICDoc : inherits
-  class ICDocBuilder {
-    <<Interface>>
-    IFieldsBuilder
-    IContainersBuilder
-    IUniquesBuilder
-    +SetSingleton()
-  }
-
-  ICRecord --|> IDef : inherits
-  class ICRecord {
-    <<Interface>>
-    IFields
-    IContainers
-    IUniques
-  }
-  ICRecord "1" --o "0..*" ICRecord : aggregate child
-
-  ICRecordBuilder --|> ICRecord : inherits
-  class ICRecordBuilder {
-    <<Interface>>
-    IFieldsBuilder
-    IContainersBuilder
-    IUniquesBuilder
-  }
-
-  IWDoc --|> IDef : inherits
-  class IWDoc {
-    <<Interface>>
-    IFields
-    IContainers
-    IUniques
-  }
-  IWDoc "1" --o "0..*" IWRecord : aggregate child
-
-  IWDocBuilder --|> IWDoc : inherits
-  class IWDocBuilder {
-    <<Interface>>
-    IFieldsBuilder
-    IContainersBuilder
-    IUniquesBuilder
-  }
-
-  IWRecord --|> IDef : inherits
-  class IWRecord {
-    <<Interface>>
-    IFields
-    IContainers
-    IUniques
-  }
-  IWRecord "1" --o "0..*" IWRecord : aggregate child
-
-  IWRecordBuilder --|> IWRecord : inherits
-  class IWRecordBuilder {
-    <<Interface>>
-    IFieldsBuilder
-    IContainersBuilder
-    IUniquesBuilder
-  }
-
-  IODoc --|> IDef : inherits
-  class IODoc {
-    <<Interface>>
-    IFields
-    IContainers
-  }
-  IODoc "1" --o "0..*" IODoc : aggregate child docs
-  IODoc "1" --o "0..*" IORecord : aggregate child recs
-
-  IODocBuilder --|> IODoc : inherits
-  class IODocBuilder {
-    <<Interface>>
-    IFieldsBuilder
-    IContainersBuilder
-  }
-
-  IORecord --|> IDef : inherits
-  class IORecord {
-    <<Interface>>
-    IFields
-    IContainers
-  }
-  IORecord "1" --o "0..*" IORecord : aggregate child
-
-  IORecordBuilder --|> IORecord : inherits
-  class IORecordBuilder {
-    <<Interface>>
-    IFieldsBuilder
-    IContainersBuilder
-  }
-
-  IObject --|> IDef : inherits
-
-  class IObject {
-    <<Interface>>
-    IFields
-    IContainers
-  }
-  IObject "1" --o "0..*" IElement : aggregate child
-
-  IObjectBuilder --|> IObject : inherits
-  class IObjectBuilder {
-    <<Interface>>
-    IFieldsBuilder
-    IContainersBuilder
-  }
-  
-  IElement --|> IDef : inherits
-  class IElement {
-    <<Interface>>
-    IFields
-    IContainers
-  }
-  IElement "1" --o "0..*" IElement : aggregate child
-
-  IElementBuilder --|> IElement : inherits
-  class IElementBuilder {
-    <<Interface>>
-    IFieldsBuilder
-    IContainersBuilder
-  }
-```
-
 ### Views
 
 ```mermaid
 classDiagram
-  direction BT
-
-  class IDef{
+  class IType{
     <<Interface>>
-    +Kind() DefKind
+    +Kind()* TypeKind
     +QName() QName
   }
 
-  class IField {
-    <<Interface>>
-    +Name() string
-    +DataKind() DataKind
-    +Required() bool
-  }
-  note for IField "Required is always true \n for partition key fields, \n false for clustering columns \n and optional for value fields"
-
-  IView --|> IDef : inherits
+  IType <|-- IView : inherits
   class IView {
     <<Interface>>
-    IContainers
-    +PartKey() IPartKey
-    +ClustCols() IClustCols
+    +Kind()* TypeKind_View
+    IFields
     +Key() IViewKey
     +Value() IViewValue
   }
-  IView --o IPartKey : aggregate
-  IView --o IClustCols : aggregate
-  IView --o IViewKey : aggregate
-  IView --o IViewValue : aggregate
+  IView "1" *--> "1" IViewKey : Key
+  IView "1" *--> "1" IViewValue : Value
 
-  IPartKey --|> IDef : inherits
-  class IPartKey {
-    <<Interface>>
-    IFields
-  }
-  IPartKey "1" -- "1..*" IField : compose
-
-  IClustCols --|> IDef : inherits
-  class IClustCols {
-    <<Interface>>
-    IFields
-  }
-  IClustCols "1" -- "1..*" IField : compose
-
-  IViewKey --|> IDef : inherits
   class IViewKey {
     <<Interface>>
     IFields
+    +PartKey() IViewPartKey
+    +ClustCols() IViewClustCols
   }
-  IViewKey "1" -- "1..*" IField : compose
+  IViewKey "1" *--> "1..*" IField : fields
+  IViewKey "1" *--> "1" IViewPartKey : PartKey
+  IViewKey "1" *--> "1" IViewClustCols : ClustCols
 
-  IViewValue --|> IDef : inherits
+  class IViewPartKey {
+    <<Interface>>
+    IFields
+  }
+  IViewPartKey "1" *--> "1..*" IField : fields
+
+  class IViewClustCols {
+    <<Interface>>
+    IFields
+  }
+  IViewClustCols "1" *--> "1..*" IField : fields
+
   class IViewValue {
     <<Interface>>
     IFields
   }
-  IViewValue "1" -- "1..*" IField : compose
+  IViewValue "1" *--> "1..*" IField : fields
+
+  class IField {
+    <<interface>>
+    …
+  }
 ```
+
+### Functions, commands, queries and projectors
+
+```mermaid
+    classDiagram
+    IType <|-- IExtension : inherits
+    class IExtension {
+        <<interface>>
+        +Name() string
+        +Engine() ExtensionEngineKind
+    }
+
+    IExtension "1" ..> "1" ExtensionEngineKind : Engine
+    class ExtensionEngineKind {
+        <<enumeration>>
+        BuiltIn
+        WASM
+    }
+
+    IExtension <|-- IFunction : inherits
+    class IFunction {
+        <<interface>>
+        +Param() IType
+        +Result() IType
+    }
+
+    IFunction <|-- ICommand : inherits
+    class ICommand {
+        <<interface>>
+        +Kind()* TypeKind_Command
+        +UnloggedParam() IType
+    }
+
+    IFunction <|-- IQuery : inherits
+    class IQuery {
+        <<interface>>
+        +Kind()* TypeKind_Query
+    }
+
+    IExtension <|-- IProjector : inherits
+    class IProjector {
+        <<interface>>
+        +Kind()* TypeKind_Projector
+        +Extension() IExtension
+        +Events() []IProjectorEvent
+        +WantErrors() bool
+        +States() [QName]QNames
+        +Intents() [QName]QNames
+    }
+
+    IProjector "1" *--> "1..*" IProjectorEvent : Events
+    class IProjectorEvent {
+        <<interface>>
+        +Comment() []string
+        +On() IType
+        +Kind() []ProjectorEventKind
+    }
+
+    IProjectorEvent "1" ..> "1..*" ProjectorEventKind : Kind
+    class ProjectorEventKind {
+        <<enumeration>>
+        Insert
+        Update
+        Activate
+        Deactivate
+        Execute
+        ExecuteWithParam
+    }
+
+    IProjector "1" *--> "0..*" storage : States
+    IProjector "1" *--> "0..*" storage : Intents
+    class storage {
+        QName
+        +QNames() []QName
+    }
+```
+
+*Rem*: In the above diagram the Param and Result of the function are `IType`, in future versions it will be changed to an array of `[]IParam` and renamed to plural (`Params`, `Results`).
 
 ## Restrictions
 
@@ -397,14 +655,14 @@ Invalid names examples:
 
 ### Fields
 
-- Maximum fields per definition is 65536.
-- Maximum string field length is 1024.
+- Maximum fields per structure is 65536.
+- Maximum string and bytes field length is 65535.
 
 ### Containers
 
-- Maximum containers per definition is 65536.
+- Maximum containers per structure is 65536.
 
 ### Uniques
 
 - Maximum fields per unique is 256
-- Maximum uniques per definition is 100.
+- Maximum uniques per structure is 100.

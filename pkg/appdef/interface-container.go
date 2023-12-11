@@ -10,13 +10,12 @@ package appdef
 // Ref. occurs.go for constants and methods
 type Occurs uint16
 
-// Definitions with containers:
-//	- DefKind_GDoc and DefKind_GRecord,
-//	- DefKind_CDoc and DefKind_CRecord,
-//	- DefKind_ODoc and DefKind_CRecord,
-//	- DefKind_WDoc and DefKind_WRecord,
-//	- DefKind_Object and DefKind_Element,
-//	- DefKind_ViewRecord and DefKind_ViewKey
+// Final types with containers are:
+//	- TypeKind_GDoc and TypeKind_GRecord,
+//	- TypeKind_CDoc and TypeKind_CRecord,
+//	- TypeKind_ODoc and TypeKind_CRecord,
+//	- TypeKind_WDoc and TypeKind_WRecord,
+//	- TypeKind_Object and TypeKind_Element,
 //
 // Ref. to container.go for implementation
 type IContainers interface {
@@ -33,19 +32,21 @@ type IContainers interface {
 }
 
 type IContainersBuilder interface {
+	IContainers
+
 	// Adds container specified name and occurs.
 	//
 	// # Panics:
 	//   - if name is empty,
 	//   - if name is invalid,
 	//   - if container with name already exists,
-	//   - if definition name is empty,
+	//   - if type name is empty,
 	//   - if invalid occurrences,
-	//   - if container definition kind is not compatible with parent definition kind.
-	AddContainer(name string, def QName, min, max Occurs, comment ...string) IContainersBuilder
+	//   - if container type kind is not compatible with parent type kind.
+	AddContainer(name string, typeName QName, min, max Occurs, comment ...string) IContainersBuilder
 }
 
-// Describes single inclusion of child definition in parent definition.
+// Describes single inclusion of child in parent.
 //
 // Ref to container.go for implementation
 type IContainer interface {
@@ -54,20 +55,17 @@ type IContainer interface {
 	// Returns name of container
 	Name() string
 
-	// Returns definition name of container
+	// Returns type name of included in container child
 	QName() QName
 
-	// Returns container definition.
+	// Returns type of included in container child.
 	//
 	// Returns nil if not found
-	Def() IDef
+	Type() IType
 
-	// Returns minimum occurs
+	// Returns minimum occurs of child
 	MinOccurs() Occurs
 
-	// Returns maximum occurs
+	// Returns maximum occurs of child
 	MaxOccurs() Occurs
-
-	// Returns is container system
-	IsSys() bool
 }

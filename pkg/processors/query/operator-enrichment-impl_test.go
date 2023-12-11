@@ -23,17 +23,17 @@ func TestEnrichmentOperator_DoSync(t *testing.T) {
 
 		appDef := appdef.New()
 
-		commonDef := func(n appdef.QName) {
+		addObject := func(n appdef.QName) {
 			appDef.AddObject(n).
 				AddField("id_lower_case_name", appdef.DataKind_RecordID, false)
 		}
-		commonDef(appdef.NewQName("_", "root"))
-		commonDef(appdef.NewQName("f", "first_children_1"))
-		commonDef(appdef.NewQName("f", "deep_children_1"))
-		commonDef(appdef.NewQName("f", "very_deep_children_1"))
-		commonDef(appdef.NewQName("s", "first_children_2"))
-		commonDef(appdef.NewQName("s", "deep_children_1"))
-		commonDef(appdef.NewQName("s", "very_deep_children_1"))
+		addObject(appdef.NewQName("_", "root"))
+		addObject(appdef.NewQName("f", "first_children_1"))
+		addObject(appdef.NewQName("f", "deep_children_1"))
+		addObject(appdef.NewQName("f", "very_deep_children_1"))
+		addObject(appdef.NewQName("s", "first_children_2"))
+		addObject(appdef.NewQName("s", "deep_children_1"))
+		addObject(appdef.NewQName("s", "very_deep_children_1"))
 
 		commonFields := []IRefField{refField{field: "id_lower_case_name", ref: "name", key: "id_lower_case_name/name"}}
 
@@ -222,7 +222,7 @@ func TestEnrichmentOperator_DoSync(t *testing.T) {
 		skb.On("PutRecordID", mock.Anything, mock.Anything)
 		s := &mockState{}
 		s.
-			On("KeyBuilder", state.RecordsStorage, appdef.NullQName).Return(skb).
+			On("KeyBuilder", state.Record, appdef.NullQName).Return(skb).
 			On("MustExist", mock.Anything).Return(record("root")).Once().
 			On("MustExist", mock.Anything).Return(record("first_children_1_101")).Once().
 			On("MustExist", mock.Anything).Return(record("first_children_1_102")).Once().

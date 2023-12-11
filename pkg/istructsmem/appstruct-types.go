@@ -23,7 +23,7 @@ import (
 // AppConfigsType: map of applications configurators
 type AppConfigsType map[istructs.AppQName]*AppConfigType
 
-// AddConfig: adds new config for specified application
+// AddConfig: adds new config for specified application or replaces if exists
 func (cfgs *AppConfigsType) AddConfig(appName istructs.AppQName, appDef appdef.IAppDefBuilder) *AppConfigType {
 	c := newAppConfig(appName, appDef)
 
@@ -42,8 +42,8 @@ func (cfgs *AppConfigsType) GetConfig(appName istructs.AppQName) *AppConfigType 
 
 // AppConfigType: configuration for application workflow
 type AppConfigType struct {
-	Name    istructs.AppQName
-	QNameID istructs.ClusterAppID
+	Name         istructs.AppQName
+	ClusterAppID istructs.ClusterAppID
 
 	appDefBuilder appdef.IAppDefBuilder
 	AppDef        appdef.IAppDef
@@ -52,8 +52,7 @@ type AppConfigType struct {
 	// Application configuration parameters
 	Params AppConfigParams
 
-	dynoSchemes dynobuf.DynoBufSchemes
-	validators  *validators
+	dynoSchemes *dynobuf.DynoBufSchemes
 
 	storage                 istorage.IAppStorage // will be initialized on prepare()
 	versions                *vers.Versions
@@ -79,18 +78,17 @@ func newAppConfig(appName istructs.AppQName, appDef appdef.IAppDefBuilder) *AppC
 	if !ok {
 		panic(fmt.Errorf("unable construct configuration for unknown application «%v»: %w", appName, istructs.ErrAppNotFound))
 	}
-	cfg.QNameID = qNameID
+	cfg.ClusterAppID = qNameID
 
 	cfg.appDefBuilder = appDef
 	app, err := appDef.Build()
 	if err != nil {
-		panic(fmt.Errorf("%v: unable build application definition: %w", appName, err))
+		panic(fmt.Errorf("%v: unable build application: %w", appName, err))
 	}
 	cfg.AppDef = app
 	cfg.Resources = newResources(&cfg)
 
 	cfg.dynoSchemes = dynobuf.New()
-	cfg.validators = newValidators()
 
 	cfg.versions = vers.New()
 	cfg.qNames = qnames.New()
@@ -111,14 +109,13 @@ func (cfg *AppConfigType) prepare(buckets irates.IBuckets, appStorage istorage.I
 		return nil
 	}
 
-	sch, err := cfg.appDefBuilder.Build()
+	app, err := cfg.appDefBuilder.Build()
 	if err != nil {
-		return fmt.Errorf("%v: unable rebuild changed application definition: %w", cfg.Name, err)
+		return fmt.Errorf("%v: unable rebuild changed application: %w", cfg.Name, err)
 	}
-	cfg.AppDef = sch
+	cfg.AppDef = app
 
 	cfg.dynoSchemes.Prepare(cfg.AppDef)
-	cfg.validators.prepare(cfg.AppDef)
 
 	// prepare IAppStorage
 	cfg.storage = appStorage
@@ -169,6 +166,11 @@ func (cfg *AppConfigType) AddCUDValidators(cudValidators ...istructs.CUDValidato
 
 func (cfg *AppConfigType) AddEventValidators(eventValidators ...istructs.EventValidator) {
 	cfg.eventValidators = append(cfg.eventValidators, eventValidators...)
+}
+
+// Returns is application configuration prepared
+func (cfg *AppConfigType) Prepared() bool {
+	return cfg.prepared
 }
 
 // Application configuration parameters

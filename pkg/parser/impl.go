@@ -13,6 +13,7 @@ import (
 
 	"github.com/alecthomas/participle/v2"
 	"github.com/alecthomas/participle/v2/lexer"
+
 	"github.com/voedger/voedger/pkg/appdef"
 )
 
@@ -30,6 +31,14 @@ func parseImpl(fileName string, content string) (*SchemaAST, error) {
 		{Name: "NOTNULL", Pattern: `NOT[ \r\n\t]+NULL`},
 		{Name: "UNLOGGED", Pattern: `UNLOGGED`},
 		{Name: "EXTENSIONENGINE", Pattern: `EXTENSION[ \r\n\t]+ENGINE`},
+		{Name: "EXECUTEONCOMMAND", Pattern: `EXECUTE[ \r\n\t]+ON[ \r\n\t]+COMMAND`},
+		{Name: "EXECUTEONALLCOMMANDSWITHTAG", Pattern: `EXECUTE[ \r\n\t]+ON[ \r\n\t]+ALL[ \r\n\t]+COMMANDS[ \r\n\t]+WITH[ \r\n\t]+TAG`},
+		{Name: "EXECUTEONALLCOMMANDS", Pattern: `EXECUTE[ \r\n\t]+ON[ \r\n\t]+ALL[ \r\n\t]+COMMANDS[ \r\n\t]+`},
+		{Name: "EXECUTEONQUERY", Pattern: `EXECUTE[ \r\n\t]+ON[ \r\n\t]+QUERY`},
+		{Name: "EXECUTEONALLQUERIESWITHTAG", Pattern: `EXECUTE[ \r\n\t]+ON[ \r\n\t]+ALL[ \r\n\t]+QUERIES[ \r\n\t]+WITH[ \r\n\t]+TAG`},
+		{Name: "EXECUTEONALLQUERIES", Pattern: `EXECUTE[ \r\n\t]+ON[ \r\n\t]+ALL[ \r\n\t]+QUERIES[ \r\n\t]+`},
+		{Name: "INSERTONWORKSPACE", Pattern: `INSERT[ \r\n\t]+ON[ \r\n\t]+WORKSPACE`},
+		{Name: "INSERTONALLWORKSPACESWITHTAG", Pattern: `INSERT[ \r\n\t]+ON[ \r\n\t]+ALL[ \r\n\t]+WORKSPACES[ \r\n\t]+WITH[ \r\n\t]+TAG`},
 		{Name: "PRIMARYKEY", Pattern: `PRIMARY[ \r\n\t]+KEY`},
 		{Name: "String", Pattern: `('(\\'|[^'])*')`},
 		{Name: "Ident", Pattern: `([a-zA-Z_]\w*)|("[a-zA-Z_]\w*")`},
@@ -52,12 +61,11 @@ func mergeSchemas(mergeFrom, mergeTo *SchemaAST) {
 	mergeTo.Statements = append(mergeTo.Statements, mergeFrom.Statements...)
 }
 
-func parseFSImpl(fs IReadFS, dir string) ([]*FileSchemaAST, error) {
+func parseFSImpl(fs IReadFS, dir string) (schemas []*FileSchemaAST, errs []error) {
 	entries, err := fs.ReadDir(dir)
 	if err != nil {
-		return nil, err
+		return nil, []error{err}
 	}
-	schemas := make([]*FileSchemaAST, 0)
 	for _, entry := range entries {
 		if strings.ToLower(filepath.Ext(entry.Name())) == ".sql" {
 			var fpath string
@@ -68,11 +76,12 @@ func parseFSImpl(fs IReadFS, dir string) ([]*FileSchemaAST, error) {
 			}
 			bytes, err := fs.ReadFile(fpath)
 			if err != nil {
-				return nil, err
+				errs = append(errs, err)
+				continue
 			}
 			schema, err := parseImpl(entry.Name(), string(bytes))
 			if err != nil {
-				return nil, err
+				errs = append(errs, err)
 			}
 			schemas = append(schemas, &FileSchemaAST{
 				FileName: entry.Name(),
@@ -81,25 +90,23 @@ func parseFSImpl(fs IReadFS, dir string) ([]*FileSchemaAST, error) {
 		}
 	}
 	if len(schemas) == 0 {
-		return nil, ErrDirContainsNoSchemaFiles
+		return nil, []error{ErrDirContainsNoSchemaFiles}
 	}
-	return schemas, nil
+	return schemas, errs
 }
 
-func mergeFileSchemaASTsImpl(qualifiedPackageName string, asts []*FileSchemaAST) (*PackageSchemaAST, error) {
+func buildPackageSchemaImpl(qualifiedPackageName string, asts []*FileSchemaAST) (*PackageSchemaAST, error) {
+	if qualifiedPackageName == "" {
+		return nil, ErrNoQualifiedName
+	}
 	if len(asts) == 0 {
 		return nil, nil
 	}
 	headAst := asts[0].Ast
-	// TODO: do we need to check that last element in qualifiedPackageName path corresponds to f.Ast.Package?
 	for i := 1; i < len(asts); i++ {
 		f := asts[i]
-		if f.Ast.Package != headAst.Package {
-			return nil, ErrUnexpectedSchema(f.FileName, string(f.Ast.Package), string(headAst.Package))
-		}
 		mergeSchemas(f.Ast, headAst)
 	}
-
 	errs := make([]error, 0)
 	errs = checkDuplicateNames(headAst, errs)
 	cleanupComments(headAst)
@@ -129,7 +136,7 @@ func checkDuplicateNames(schema *SchemaAST, errs []error) []error {
 		if named, ok := stmt.(INamedStatement); ok {
 			name := named.GetName()
 			if _, ok := namedIndex[name]; ok {
-				errs = append(errs, errorAt(ErrRedeclared(name), named.GetPos()))
+				errs = append(errs, errorAt(ErrRedefined(name), named.GetPos()))
 			} else {
 				namedIndex[name] = stmt
 			}
@@ -193,7 +200,72 @@ func cleanupImports(schema *SchemaAST) {
 	}
 }
 
-func mergePackageSchemasImpl(packages []*PackageSchemaAST) (map[string]*PackageSchemaAST, error) {
+func defineApp(c *basicContext) {
+	var app *ApplicationStmt
+	var appAst *PackageSchemaAST
+
+	for _, p := range c.app.Packages {
+		a, err := FindApplication(p)
+		if err != nil {
+			c.errs = append(c.errs, err)
+			return
+		}
+		if a != nil {
+			if app != nil {
+				c.stmtErr(a.GetPos(), ErrApplicationRedefined)
+				return
+			}
+			app = a
+			appAst = p
+		}
+	}
+	if app == nil {
+		c.errs = append(c.errs, ErrApplicationNotDefined)
+		return
+	}
+
+	c.app.Name = string(app.Name)
+	appAst.Name = getPackageName(appAst.QualifiedPackageName)
+	pkgNames := make(map[string]bool)
+	pkgNames[appAst.Name] = true
+
+	for _, use := range app.Uses {
+
+		if _, ok := pkgNames[string(use.Name)]; ok {
+			c.stmtErr(use.GetPos(), ErrPackageWithSameNameAlreadyIncludedInApp)
+			continue
+		}
+		pkgNames[string(use.Name)] = true
+
+		pkgQN := GetQualifiedPackageName(use.Name, appAst.Ast)
+		if pkgQN == "" {
+			c.stmtErr(use.GetPos(), ErrUndefined(string(use.Name)))
+			continue
+		}
+
+		pkg := c.app.Packages[pkgQN]
+		if pkg == nil {
+			c.stmtErr(use.GetPos(), ErrCouldNotImport(pkgQN))
+			continue
+		}
+
+		pkg.Name = string(use.Name)
+	}
+
+	for _, p := range c.app.Packages {
+		if p.QualifiedPackageName == appdef.SysPackage {
+			p.Name = appdef.SysPackage
+			continue
+		}
+
+		if p.Name == "" {
+			c.err(ErrAppDoesNotDefineUseOfPackage(p.QualifiedPackageName))
+		}
+	}
+}
+
+func buildAppSchemaImpl(packages []*PackageSchemaAST) (*AppSchemaAST, error) {
+
 	pkgmap := make(map[string]*PackageSchemaAST)
 	for _, p := range packages {
 		if _, ok := pkgmap[p.QualifiedPackageName]; ok {
@@ -202,29 +274,45 @@ func mergePackageSchemasImpl(packages []*PackageSchemaAST) (map[string]*PackageS
 		pkgmap[p.QualifiedPackageName] = p
 	}
 
+	appSchema := &AppSchemaAST{
+		Packages: pkgmap,
+	}
+
 	c := basicContext{
-		pkg:    nil,
-		pkgmap: pkgmap,
-		errs:   make([]error, 0),
+		app:  appSchema,
+		errs: make([]error, 0),
+	}
+
+	defineApp(&c)
+
+	for _, p := range packages {
+		preAnalyse(&c, p)
 	}
 
 	for _, p := range packages {
 		analyse(&c, p)
 	}
-	return pkgmap, errors.Join(c.errs...)
+	return appSchema, errors.Join(c.errs...)
 }
 
 type basicContext struct {
-	pkg    *PackageSchemaAST
-	pkgmap map[string]*PackageSchemaAST
-	errs   []error
+	app  *AppSchemaAST
+	errs []error
+}
+
+func (c *basicContext) newStmtErr(pos *lexer.Position, err error) error {
+	return fmt.Errorf("%s: %w", pos.String(), err)
 }
 
 func (c *basicContext) stmtErr(pos *lexer.Position, err error) {
-	c.errs = append(c.errs, fmt.Errorf("%s: %w", pos.String(), err))
+	c.err(c.newStmtErr(pos, err))
 }
 
-func buildAppDefs(packages map[string]*PackageSchemaAST, builder appdef.IAppDefBuilder) error {
-	ctx := newBuildContext(packages, builder)
+func (c *basicContext) err(err error) {
+	c.errs = append(c.errs, err)
+}
+
+func buildAppDefs(appSchema *AppSchemaAST, builder appdef.IAppDefBuilder) error {
+	ctx := newBuildContext(appSchema, builder)
 	return ctx.build()
 }

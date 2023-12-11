@@ -9,13 +9,16 @@ package projectors
 import (
 	"context"
 	"fmt"
+	"sync/atomic"
 	"time"
 
+	"github.com/untillpro/goutils/iterate"
 	"github.com/untillpro/goutils/logger"
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
+	imetrics "github.com/voedger/voedger/pkg/metrics"
 	"github.com/voedger/voedger/pkg/pipeline"
 	"github.com/voedger/voedger/pkg/state"
 )
@@ -31,13 +34,14 @@ func (w *workpiece) Release() {
 
 // implements ServiceOperator
 type asyncActualizer struct {
-	conf     AsyncActualizerConf
-	factory  istructs.ProjectorFactory
-	pipeline pipeline.IAsyncPipeline
-	structs  istructs.IAppStructs
-	offset   istructs.Offset
-	name     string
-	readCtx  *asyncActualizerContextState
+	conf         AsyncActualizerConf
+	factory      istructs.ProjectorFactory
+	pipeline     pipeline.IAsyncPipeline
+	structs      istructs.IAppStructs
+	offset       istructs.Offset
+	name         string
+	readCtx      *asyncActualizerContextState
+	projErrState int32 // 0 - no error, 1 - error
 }
 
 func (a *asyncActualizer) Prepare(interface{}) error {
@@ -94,8 +98,31 @@ func (a *asyncActualizer) init(ctx context.Context) (err error) {
 
 	a.readCtx.ctx, a.readCtx.cancel = context.WithCancel(ctx)
 
-	p := &asyncProjector{partition: a.conf.Partition, metrics: a.conf.Metrics, flushPositionInterval: a.conf.FlushPositionInverval, lastSave: time.Now()}
-	p.projector = a.factory(a.conf.Partition)
+	projector := a.factory(a.conf.Partition)
+	iProjector := a.structs.AppDef().Projector(projector.Name)
+
+	// https://github.com/voedger/voedger/issues/1048
+	hasIntentsExceptViewAndRecord, _, _ := iterate.FindFirstMap(iProjector.Intents, func(storage appdef.QName, _ appdef.QNames) bool {
+		return storage != state.View && storage != state.Record
+	})
+	// https://github.com/voedger/voedger/issues/1092
+	hasStatesExceptViewAndRecord, _, _ := iterate.FindFirstMap(iProjector.States, func(storage appdef.QName, _ appdef.QNames) bool {
+		return storage != state.View && storage != state.Record
+	})
+	nonBuffered := hasIntentsExceptViewAndRecord || hasStatesExceptViewAndRecord
+	p := &asyncProjector{
+		partition:             a.conf.Partition,
+		aametrics:             a.conf.AAMetrics,
+		flushPositionInterval: a.conf.FlushPositionInverval,
+		lastSave:              time.Now(),
+		projErrState:          &a.projErrState,
+		metrics:               a.conf.Metrics,
+		vvmName:               a.conf.VvmName,
+		appQName:              a.conf.AppQName,
+		projector:             projector,
+		iProjector:            iProjector,
+		nonBuffered:           nonBuffered,
+	}
 
 	err = a.readOffset(p.projector.Name)
 	if err != nil {
@@ -124,7 +151,14 @@ func (a *asyncActualizer) init(ctx context.Context) (err error) {
 
 	projectorOp := pipeline.WireAsyncOperator("Projector", p, a.conf.FlushInterval)
 
-	errorHandlerOp := pipeline.WireAsyncOperator("ErrorHandler", &asyncErrorHandler{readCtx: a.readCtx})
+	errHandler := &asyncErrorHandler{
+		readCtx:      a.readCtx,
+		projErrState: &a.projErrState,
+		metrics:      a.conf.Metrics,
+		vvmName:      a.conf.VvmName,
+		appQName:     a.conf.AppQName,
+	}
+	errorHandlerOp := pipeline.WireAsyncOperator("ErrorHandler", errHandler)
 
 	a.pipeline = pipeline.NewAsyncPipeline(ctx, a.name, projectorOp, errorHandlerOp)
 
@@ -133,7 +167,7 @@ func (a *asyncActualizer) init(ctx context.Context) (err error) {
 	}
 	return a.conf.Broker.Subscribe(a.conf.channel, in10n.ProjectionKey{
 		App:        a.conf.AppQName,
-		Projection: PlogQName,
+		Projection: PLogUpdatesQName,
 		WS:         istructs.WSID(a.conf.Partition),
 	})
 }
@@ -214,10 +248,16 @@ type asyncProjector struct {
 	wsid                  istructs.WSID
 	projector             istructs.Projector
 	pLogOffset            istructs.Offset
-	metrics               AsyncActualizerMetrics
+	aametrics             AsyncActualizerMetrics
+	metrics               imetrics.IMetrics
 	flushPositionInterval time.Duration
 	acceptedSinceSave     bool
 	lastSave              time.Time
+	projErrState          *int32
+	vvmName               string
+	appQName              istructs.AppQName
+	iProjector            appdef.IProjector
+	nonBuffered           bool
 }
 
 func (p *asyncProjector) DoAsync(_ context.Context, work pipeline.IWorkpiece) (outWork pipeline.IWorkpiece, err error) {
@@ -226,11 +266,12 @@ func (p *asyncProjector) DoAsync(_ context.Context, work pipeline.IWorkpiece) (o
 
 	p.wsid = w.event.Workspace()
 	p.pLogOffset = w.pLogOffset
-	if p.metrics != nil {
-		p.metrics.Set(aaCurrentOffset, p.partition, p.projector.Name, float64(w.pLogOffset))
+	if p.aametrics != nil {
+		p.aametrics.Set(aaCurrentOffset, p.partition, p.projector.Name, float64(w.pLogOffset))
 	}
 
-	if isAcceptable(p.projector, w.event) {
+	triggeringQNames := triggeringQNames(p.iProjector)
+	if isAcceptable(w.event, p.iProjector.WantErrors(), triggeringQNames, p.iProjector.App()) {
 		err = p.projector.Func(w.event, p.state, p.state)
 		if err != nil {
 			return nil, fmt.Errorf("wsid[%d] offset[%d]: %w", w.event.Workspace(), w.event.WLogOffset(), err)
@@ -246,7 +287,7 @@ func (p *asyncProjector) DoAsync(_ context.Context, work pipeline.IWorkpiece) (o
 			return nil, err
 		}
 
-		if readyToFlushBundle || p.projector.NonBuffered {
+		if readyToFlushBundle || p.nonBuffered {
 			return nil, p.flush()
 		}
 	}
@@ -260,7 +301,7 @@ func (p *asyncProjector) savePosition() error {
 		p.acceptedSinceSave = false
 		p.lastSave = time.Now()
 	}()
-	key, e := p.state.KeyBuilder(state.ViewRecordsStorage, qnameProjectionOffsets)
+	key, e := p.state.KeyBuilder(state.View, qnameProjectionOffsets)
 	if e != nil {
 		return e
 	}
@@ -292,19 +333,38 @@ func (p *asyncProjector) flush() (err error) {
 	if err != nil {
 		return err
 	}
-	if p.metrics != nil {
-		p.metrics.Increase(aaFlushesTotal, p.partition, p.projector.Name, 1)
-		p.metrics.Set(aaStoredOffset, p.partition, p.projector.Name, float64(p.pLogOffset))
+	if p.aametrics != nil {
+		p.aametrics.Increase(aaFlushesTotal, p.partition, p.projector.Name, 1)
+		p.aametrics.Set(aaStoredOffset, p.partition, p.projector.Name, float64(p.pLogOffset))
 	}
-	return p.state.FlushBundles()
+	err = p.state.FlushBundles()
+	if err == nil {
+		if atomic.CompareAndSwapInt32(p.projErrState, 1, 0) {
+			if p.metrics != nil {
+				p.metrics.IncreaseApp(ProjectorsInError, p.vvmName, p.appQName, -1)
+			}
+		}
+	}
+	return err
 }
 
 type asyncErrorHandler struct {
 	pipeline.AsyncNOOP
-	readCtx *asyncActualizerContextState
+	readCtx      *asyncActualizerContextState
+	metrics      imetrics.IMetrics
+	vvmName      string
+	appQName     istructs.AppQName
+	projErrState *int32
 }
 
-func (h *asyncErrorHandler) OnError(_ context.Context, err error) { h.readCtx.cancelWithError(err) }
+func (h *asyncErrorHandler) OnError(_ context.Context, err error) {
+	if atomic.CompareAndSwapInt32(h.projErrState, 0, 1) {
+		if h.metrics != nil {
+			h.metrics.IncreaseApp(ProjectorsInError, h.vvmName, h.appQName, 1)
+		}
+	}
+	h.readCtx.cancelWithError(err)
+}
 
 func ActualizerOffset(appStructs istructs.IAppStructs, partition istructs.PartitionID, projectorName appdef.QName) (offset istructs.Offset, err error) {
 	key := appStructs.ViewRecords().KeyBuilder(qnameProjectionOffsets)

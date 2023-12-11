@@ -5,38 +5,32 @@
 
 package appdef
 
-// Operation document. DefKind() is DefKind_ODoc.
+// Operation document.
+//
+// Ref. to odoc.go for implementation
 type IODoc interface {
-	IDef
-	IComment
-	IFields
-	IContainers
-	IWithAbstract
+	IDoc
+
+	// Unwanted type assertion stub
+	isODoc()
 }
 
 type IODocBuilder interface {
 	IODoc
-	ICommentBuilder
-	IFieldsBuilder
-	IContainersBuilder
-	IWithAbstractBuilder
+	IDocBuilder
 }
 
-// Operation document record. DefKind() is DefKind_ORecord.
+// Operation document record.
 //
 // Ref. to odoc.go for implementation
 type IORecord interface {
-	IDef
-	IComment
-	IFields
-	IContainers
-	IWithAbstract
+	IContainedRecord
+
+	// Unwanted type assertion stub
+	isORecord()
 }
 
 type IORecordBuilder interface {
 	IORecord
-	ICommentBuilder
-	IFieldsBuilder
-	IContainersBuilder
-	IWithAbstractBuilder
+	IContainedRecordBuilder
 }

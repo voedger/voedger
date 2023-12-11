@@ -19,8 +19,8 @@ import (
 	"github.com/untillpro/goutils/logger"
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/registry"
 	"github.com/voedger/voedger/pkg/sys/authnz"
-	"github.com/voedger/voedger/pkg/sys/authnz/signupin"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
@@ -42,7 +42,7 @@ func (vit *VIT) signUp(login Login, wsKindInitData string, opts ...coreutils.Req
 	vit.T.Helper()
 	body := fmt.Sprintf(`{"args":{"Login":"%s","AppName":"%s","SubjectKind":%d,"WSKindInitializationData":%q,"ProfileCluster":%d},"unloggedArgs":{"Password":"%s"}}`,
 		login.Name, login.AppQName.String(), login.subjectKind, wsKindInitData, login.clusterID, login.Pwd)
-	vit.PostApp(istructs.AppQName_sys_registry, login.PseudoProfileWSID, "c.sys.CreateLogin", body, opts...)
+	vit.PostApp(istructs.AppQName_sys_registry, login.PseudoProfileWSID, "c.registry.CreateLogin", body, opts...)
 }
 
 func WithClusterID(clusterID istructs.ClusterID) signUpOptFunc {
@@ -88,8 +88,8 @@ func (vit *VIT) GetCDocLoginID(login Login) int64 {
 	as, err := vit.IAppStructsProvider.AppStructs(istructs.AppQName_sys_registry)
 	require.NoError(vit.T, err) // notest
 	appWSID := coreutils.GetAppWSID(login.PseudoProfileWSID, as.WSAmount())
-	body := fmt.Sprintf(`{"args":{"query":"select CDocLoginID from sys.LoginIdx where AppWSID = %d and AppIDLoginHash = '%s/%s'"}, "elements":[{"fields":["Result"]}]}`,
-		appWSID, login.AppQName, signupin.GetLoginHash(login.Name))
+	body := fmt.Sprintf(`{"args":{"query":"select CDocLoginID from registry.LoginIdx where AppWSID = %d and AppIDLoginHash = '%s/%s'"}, "elements":[{"fields":["Result"]}]}`,
+		appWSID, login.AppQName, registry.GetLoginHash(login.Name))
 	sys := vit.GetSystemPrincipal(istructs.AppQName_sys_registry)
 	resp := vit.PostApp(istructs.AppQName_sys_registry, login.PseudoProfileWSID, "q.sys.SqlQuery", body, coreutils.WithAuthorizeBy(sys.Token))
 	m := map[string]interface{}{}
@@ -108,8 +108,8 @@ func (vit *VIT) getCDoc(appQName istructs.AppQName, qName appdef.QName, wsid ist
 	fields := []string{}
 	as, err := vit.IAppStructsProvider.AppStructs(appQName)
 	require.NoError(vit.T, err)
-	if def := as.AppDef().CDoc(qName); def != nil {
-		def.Fields(func(field appdef.IField) {
+	if doc := as.AppDef().CDoc(qName); doc != nil {
+		doc.Fields(func(field appdef.IField) {
 			switch field.Name() {
 			case appdef.SystemField_ID, appdef.SystemField_QName, appdef.SystemField_IsActive:
 				return
@@ -233,7 +233,7 @@ func (vit *VIT) SignIn(login Login, optFuncs ...signInOptFunc) (prn *Principal) 
 					}
 				]
 			}`, login.Name, login.Pwd, login.AppQName.String())
-		resp := vit.PostApp(istructs.AppQName_sys_registry, login.PseudoProfileWSID, "q.sys.IssuePrincipalToken", body)
+		resp := vit.PostApp(istructs.AppQName_sys_registry, login.PseudoProfileWSID, "q.registry.IssuePrincipalToken", body)
 		profileWSID := istructs.WSID(resp.SectionRow()[1].(float64))
 		wsError := resp.SectionRow()[2].(string)
 		token := resp.SectionRow()[0].(string)
@@ -361,7 +361,7 @@ func (vit *VIT) MetricsRequest(opts ...coreutils.ReqOptFunc) (resp string) {
 	return res.Body
 }
 
-func (vit *VIT) GetAny(entity string, ws *AppWorkspace) (istructs.RecordID) {
+func (vit *VIT) GetAny(entity string, ws *AppWorkspace) istructs.RecordID {
 	vit.T.Helper()
 	body := fmt.Sprintf(`{"args":{"Query":"select DocID from sys.CollectionView where PartKey = 1 and DocQName = '%s'"},"elements":[{"fields":["Result"]}]}`, entity)
 	resp := vit.PostWS(ws, "q.sys.SqlQuery", body)

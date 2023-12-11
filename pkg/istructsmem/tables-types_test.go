@@ -89,7 +89,7 @@ func Test_newRecord(t *testing.T) {
 
 		t.Run("system field counters for test CDoc", func(t *testing.T) {
 			sysCnt := 0
-			doc.fieldsDef().Fields(
+			doc.fields.Fields(
 				func(f appdef.IField) {
 					require.True(doc.HasValue(f.Name()))
 					if f.IsSys() {
@@ -110,7 +110,7 @@ func Test_newRecord(t *testing.T) {
 			cnt := 0
 			sysCnt := 0
 
-			doc.fieldsDef().Fields(
+			doc.fields.Fields(
 				func(f appdef.IField) {
 					require.True(doc.HasValue(f.Name()))
 					if f.IsSys() {
@@ -120,8 +120,8 @@ func Test_newRecord(t *testing.T) {
 				})
 
 			require.Equal(3, sysCnt) // sys.QName, sys.ID and sys.IsActive
-			require.Equal(sysCnt+9, cnt)
-			require.Equal(doc.fieldsDef().FieldCount(), cnt)
+			require.Equal(sysCnt+10, cnt)
+			require.Equal(doc.fields.FieldCount(), cnt)
 		})
 
 		t.Run("newTestCRec must return non empty, full filled and valid «test.Record»", func(t *testing.T) {
@@ -147,7 +147,7 @@ func Test_newRecord(t *testing.T) {
 			t.Run("system field counters for test CRecord", func(t *testing.T) {
 				sysCnt := 0
 
-				rec.fieldsDef().Fields(
+				rec.fields.Fields(
 					func(f appdef.IField) {
 						require.True(rec.HasValue(f.Name()))
 						if f.IsSys() {
@@ -169,7 +169,7 @@ func Test_newRecord(t *testing.T) {
 				cnt := 0
 				sysCnt := 0
 
-				rec.fieldsDef().Fields(
+				rec.fields.Fields(
 					func(f appdef.IField) {
 						require.True(rec.HasValue(f.Name()))
 						if f.IsSys() {
@@ -179,8 +179,8 @@ func Test_newRecord(t *testing.T) {
 					})
 
 				require.Equal(5, sysCnt) // sys.QName, sys.ID sys.ParentID, sys.Container and sys.IsActive
-				require.Equal(sysCnt+9, cnt)
-				require.Equal(rec.fieldsDef().FieldCount(), cnt)
+				require.Equal(sysCnt+10, cnt)
+				require.Equal(rec.fields.FieldCount(), cnt)
 			})
 		})
 	})
@@ -228,17 +228,17 @@ func Test_LoadStoreRecord_Bytes(t *testing.T) {
 			if row.QName() == appdef.NullQName {
 				return buf.Bytes()
 			}
-			if row.def.Kind().HasSystemField(appdef.SystemField_ID) {
+			if exists, _ := row.typ.Kind().HasSystemField(appdef.SystemField_ID); exists {
 				require.NoError(binary.Write(buf, binary.BigEndian, uint64(row.ID())))
 			}
-			if row.def.Kind().HasSystemField(appdef.SystemField_ParentID) {
+			if exists, _ := row.typ.Kind().HasSystemField(appdef.SystemField_ParentID); exists {
 				require.NoError(binary.Write(buf, binary.BigEndian, uint64(row.parentID)))
 			}
-			if row.def.Kind().HasSystemField(appdef.SystemField_Container) {
+			if exists, _ := row.typ.Kind().HasSystemField(appdef.SystemField_Container); exists {
 				id, _ := row.containerID()
 				require.NoError(binary.Write(buf, binary.BigEndian, int16(id)))
 			}
-			if row.def.Kind().HasSystemField(appdef.SystemField_IsActive) {
+			if exists, _ := row.typ.Kind().HasSystemField(appdef.SystemField_IsActive); exists {
 				require.NoError(binary.Write(buf, binary.BigEndian, row.isActive))
 			}
 			b, err := row.dyB.ToBytes()
@@ -360,18 +360,19 @@ func Test_LoadStoreRecord_Bytes(t *testing.T) {
 
 		b := rec1.storeToBytes()
 
+		newFieldName := func(old string) string { return old + "_1" }
+		oldFieldName := func(new string) string { return new[:len(new)-2] }
+
 		appDef := appdef.New()
-		t.Run("must be ok to build application definition", func(t *testing.T) {
-			appDef.AddCDoc(test.testCDoc).
-				AddField("int32_1", appdef.DataKind_int32, false).
-				AddField("int64_1", appdef.DataKind_int64, false).
-				AddField("float32_1", appdef.DataKind_float32, false).
-				AddField("float64_1", appdef.DataKind_float64, false).
-				AddBytesField("bytes_1", false).
-				AddStringField("string_1", false).
-				AddField("QName_1", appdef.DataKind_QName, false).
-				AddField("bool_1", appdef.DataKind_bool, false).
-				AddField("RecordID_1", appdef.DataKind_RecordID, false)
+		t.Run("must be ok to build application", func(t *testing.T) {
+			newCDoc := appDef.AddCDoc(test.testCDoc)
+
+			oldCDoc := rec1.appCfg.AppDef.CDoc(test.testCDoc)
+			oldCDoc.Fields(func(f appdef.IField) {
+				if !f.IsSys() {
+					newCDoc.AddField(newFieldName(f.Name()), f.DataKind(), f.Required())
+				}
+			})
 			appDef.AddObject(test.tablePhotos) // for reading QName_1 field value
 		})
 
@@ -386,17 +387,52 @@ func Test_LoadStoreRecord_Bytes(t *testing.T) {
 
 		require.Equal(rec1.QName(), rec2.QName())
 		rec1.dyB.IterateFields(nil, func(name string, val1 interface{}) bool {
-			newName := name + "_1"
+			newName := name
+			if !appdef.IsSysField(name) {
+				newName = newFieldName(name)
+			}
 			require.True(rec2.HasValue(newName), newName)
 			val2 := rec2.dyB.Get(newName)
 			require.Equal(val1, val2)
 			return true
 		})
 		rec2.dyB.IterateFields(nil, func(name string, val2 interface{}) bool {
-			oldName := name[:len(name)-2]
+			oldName := name
+			if !appdef.IsSysField(name) {
+				oldName = oldFieldName(name)
+			}
 			require.True(rec1.HasValue(oldName), oldName)
 			return true
 		})
+	})
+
+}
+
+func TestModifiedFields(t *testing.T) {
+	require := require.New(t)
+	test := test()
+
+	t.Run("no modifications", func(t *testing.T) {
+		rec := newRecord(test.AppCfg)
+		rec.ModifiedFields(func(fieldName string, newValue interface{}) {
+			t.Fail()
+		})
+	})
+	t.Run("has modifications", func(t *testing.T) {
+		rec := newRecord(test.AppCfg)
+		rec.setQName(test.testCDoc)
+		rec.PutInt32("int32", 42)
+		rec.PutBool(appdef.SystemField_IsActive, false) // should be mentioned on ModifiedFields()
+		require.NoError(rec.build())
+		actualModifications := map[string]bool{}
+		rec.ModifiedFields(func(fieldName string, newValue interface{}) {
+			actualModifications[fieldName] = true
+		})
+		expectedModifications := map[string]bool{
+			"int32":                     true,
+			appdef.SystemField_IsActive: true,
+		}
+		require.Equal(expectedModifications, actualModifications)
 	})
 
 }

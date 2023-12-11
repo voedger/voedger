@@ -113,8 +113,8 @@ type idsGeneratorType struct {
 	nextPlogOffset istructs.Offset
 }
 
-func (me *idsGeneratorType) NextID(rawID istructs.RecordID, def appdef.IDef) (storageID istructs.RecordID, err error) {
-	if storageID, err = me.IIDGenerator.NextID(rawID, def); err != nil {
+func (me *idsGeneratorType) NextID(rawID istructs.RecordID, t appdef.IType) (storageID istructs.RecordID, err error) {
+	if storageID, err = me.IIDGenerator.NextID(rawID, t); err != nil {
 		return istructs.NullRecordID, err
 	}
 	me.idmap[rawID] = storageID
@@ -140,7 +140,7 @@ func newIdsGenerator() idsGeneratorType {
 }
 
 func requireArticle(require *require.Assertions, name string, number int32, as istructs.IAppStructs, articleId istructs.RecordID) {
-	kb := as.ViewRecords().KeyBuilder(QNameViewCollection)
+	kb := as.ViewRecords().KeyBuilder(QNameCollectionView)
 	kb.PutInt32(Field_PartKey, PartitionKeyCollection)
 	kb.PutQName(Field_DocQName, test.tableArticles)
 	kb.PutRecordID(field_DocID, articleId)
@@ -153,7 +153,7 @@ func requireArticle(require *require.Assertions, name string, number int32, as i
 }
 
 func requireArPrice(require *require.Assertions, priceId istructs.RecordID, price float32, as istructs.IAppStructs, articleId, articlePriceId istructs.RecordID) {
-	kb := as.ViewRecords().KeyBuilder(QNameViewCollection)
+	kb := as.ViewRecords().KeyBuilder(QNameCollectionView)
 	kb.PutInt32(Field_PartKey, PartitionKeyCollection)
 	kb.PutQName(Field_DocQName, test.tableArticles)
 	kb.PutRecordID(field_DocID, articleId)
@@ -166,7 +166,7 @@ func requireArPrice(require *require.Assertions, priceId istructs.RecordID, pric
 }
 
 func requireArPriceException(require *require.Assertions, periodId istructs.RecordID, price float32, as istructs.IAppStructs, articleId, articlePriceExceptionId istructs.RecordID) {
-	kb := as.ViewRecords().KeyBuilder(QNameViewCollection)
+	kb := as.ViewRecords().KeyBuilder(QNameCollectionView)
 	kb.PutInt32(Field_PartKey, PartitionKeyCollection)
 	kb.PutQName(Field_DocQName, test.tableArticles)
 	kb.PutRecordID(field_DocID, articleId)

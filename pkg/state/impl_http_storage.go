@@ -17,10 +17,10 @@ import (
 type httpStorage struct{}
 
 func (s *httpStorage) NewKeyBuilder(appdef.QName, istructs.IStateKeyBuilder) istructs.IStateKeyBuilder {
-	return newHTTPStorageKeyBuilder()
+	return newHttpKeyBuilder()
 }
 func (s *httpStorage) Read(key istructs.IStateKeyBuilder, callback istructs.ValueCallback) (err error) {
-	kb := key.(*httpStorageKeyBuilder)
+	kb := key.(*httpKeyBuilder)
 
 	ctx, cancel := context.WithTimeout(context.Background(), kb.timeout())
 	defer cancel()
@@ -45,7 +45,7 @@ func (s *httpStorage) Read(key istructs.IStateKeyBuilder, callback istructs.Valu
 		return err
 	}
 
-	return callback(nil, &httpStorageValue{
+	return callback(nil, &httpValue{
 		body:       bb,
 		header:     res.Header,
 		statusCode: res.StatusCode,
@@ -53,7 +53,7 @@ func (s *httpStorage) Read(key istructs.IStateKeyBuilder, callback istructs.Valu
 	})
 }
 func (s *httpStorage) toJSON(sv istructs.IStateValue, _ ...interface{}) (string, error) {
-	value := sv.(*httpStorageValue)
+	value := sv.(*httpValue)
 
 	obj := make(map[string]interface{})
 	obj[Field_Body] = string(value.body)

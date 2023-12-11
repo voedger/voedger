@@ -38,22 +38,6 @@ func (res *Resources) QueryResource(resource appdef.QName) (r istructs.IResource
 	return r
 }
 
-// Returns argument object builder for query function
-func (res *Resources) QueryFunctionArgsBuilder(query istructs.IQueryFunction) istructs.IObjectBuilder {
-	r := makeObject(res.cfg, query.ParamsDef())
-	return &r
-}
-
-// Returns command function from application resource by QName or nil if not founded
-func (res *Resources) CommandFunction(name appdef.QName) (cmd istructs.ICommandFunction) {
-	r := res.QueryResource(name)
-	if r.Kind() == istructs.ResourceKind_CommandFunction {
-		cmd := r.(istructs.ICommandFunction)
-		return cmd
-	}
-	return nil
-}
-
 // Enumerates all application resources
 func (res *Resources) Resources(enum func(appdef.QName)) {
 	for n := range res.resources {
@@ -63,19 +47,19 @@ func (res *Resources) Resources(enum func(appdef.QName)) {
 
 // Ancestor for command & query functions
 type abstractFunction struct {
-	name, parsDef appdef.QName
-	resDef        func(istructs.PrepareArgs) appdef.QName
+	name appdef.QName
+	res  func(istructs.PrepareArgs) appdef.QName
 }
 
 // istructs.IResource
 func (af *abstractFunction) QName() appdef.QName { return af.name }
 
 // istructs.IFunction
-func (af *abstractFunction) ParamsDef() appdef.QName { return af.parsDef }
-
-// istructs.IFunction
-func (af *abstractFunction) ResultDef(args istructs.PrepareArgs) appdef.QName {
-	return af.resDef(args)
+func (af *abstractFunction) ResultType(args istructs.PrepareArgs) appdef.QName {
+	if af.res == nil {
+		panic("ResultType() must not be called if created by not NewQueryFunctionCustomResult()")
+	}
+	return af.res(args)
 }
 
 // For debug and logging purposes
@@ -85,7 +69,7 @@ func (af *abstractFunction) String() string {
 
 type (
 	// Function type to call for query execute action
-	ExecQueryClosure func(ctx context.Context, qf istructs.IQueryFunction, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error)
+	ExecQueryClosure func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error)
 
 	// Implements istructs.IQueryFunction
 	queryFunction struct {
@@ -95,29 +79,28 @@ type (
 )
 
 // Creates and returns new query function
-func NewQueryFunction(name, pars, result appdef.QName, exec ExecQueryClosure) istructs.IQueryFunction {
-	return NewQueryFunctionCustomResult(name, pars, func(istructs.PrepareArgs) appdef.QName { return result }, exec)
+func NewQueryFunction(name appdef.QName, exec ExecQueryClosure) istructs.IQueryFunction {
+	return NewQueryFunctionCustomResult(name, nil, exec)
 }
 
-func NewQueryFunctionCustomResult(name, pars appdef.QName, resultDef func(istructs.PrepareArgs) appdef.QName, exec ExecQueryClosure) istructs.IQueryFunction {
+func NewQueryFunctionCustomResult(name appdef.QName, resultFunc func(istructs.PrepareArgs) appdef.QName, exec ExecQueryClosure) istructs.IQueryFunction {
 	return &queryFunction{
 		abstractFunction: abstractFunction{
-			name:    name,
-			parsDef: pars,
-			resDef:  resultDef,
+			name: name,
+			res:  resultFunc,
 		},
 		exec: exec,
 	}
 }
 
 // Null execute action closure for query functions
-func NullQueryExec(_ context.Context, _ istructs.IQueryFunction, _ istructs.ExecQueryArgs, _ istructs.ExecQueryCallback) error {
+func NullQueryExec(_ context.Context, _ istructs.ExecQueryArgs, _ istructs.ExecQueryCallback) error {
 	return nil
 }
 
 // istructs.IQueryFunction
 func (qf *queryFunction) Exec(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
-	return qf.exec(ctx, qf, args, callback)
+	return qf.exec(ctx, args, callback)
 }
 
 // istructs.IResource
@@ -126,8 +109,8 @@ func (qf *queryFunction) Kind() istructs.ResourceKindType {
 }
 
 // istructs.IQueryFunction
-func (qf *queryFunction) ResultDef(args istructs.PrepareArgs) appdef.QName {
-	return qf.abstractFunction.ResultDef(args)
+func (qf *queryFunction) ResultType(args istructs.PrepareArgs) appdef.QName {
+	return qf.abstractFunction.ResultType(args)
 }
 
 // for debug and logging purposes
@@ -137,37 +120,33 @@ func (qf *queryFunction) String() string {
 
 type (
 	// Function type to call for command execute action
-	ExecCommandClosure func(cf istructs.ICommandFunction, args istructs.ExecCommandArgs) (err error)
+	ExecCommandClosure func(args istructs.ExecCommandArgs) (err error)
 
 	// Implements istructs.ICommandFunction
 	commandFunction struct {
 		abstractFunction
-		unlParsDef appdef.QName
-		exec       ExecCommandClosure
+		exec ExecCommandClosure
 	}
 )
 
 // NewCommandFunction creates and returns new command function
-func NewCommandFunction(name, params, unlogged, result appdef.QName, exec ExecCommandClosure) istructs.ICommandFunction {
+func NewCommandFunction(name appdef.QName, exec ExecCommandClosure) istructs.ICommandFunction {
 	return &commandFunction{
 		abstractFunction: abstractFunction{
-			name:    name,
-			parsDef: params,
-			resDef:  func(pa istructs.PrepareArgs) appdef.QName { return result },
+			name: name,
 		},
-		unlParsDef: unlogged,
-		exec:       exec,
+		exec: exec,
 	}
 }
 
 // NullCommandExec is null execute action closure for command functions
-func NullCommandExec(_ istructs.ICommandFunction, _ istructs.ExecCommandArgs) error {
+func NullCommandExec(_ istructs.ExecCommandArgs) error {
 	return nil
 }
 
 // istructs.ICommandFunction
 func (cf *commandFunction) Exec(args istructs.ExecCommandArgs) error {
-	return cf.exec(cf, args)
+	return cf.exec(args)
 }
 
 // istructs.IResource
@@ -175,18 +154,9 @@ func (cf *commandFunction) Kind() istructs.ResourceKindType {
 	return istructs.ResourceKind_CommandFunction
 }
 
-// istructs.ICommandFunction
-func (cf *commandFunction) ResultDef() appdef.QName {
-	return cf.abstractFunction.ResultDef(nullPrepareArgs)
-}
-
 // for debug and logging purposes
 func (cf *commandFunction) String() string {
 	return fmt.Sprintf("c:%v", cf.abstractFunction.String())
-}
-
-func (cf *commandFunction) UnloggedParamsDef() appdef.QName {
-	return cf.unlParsDef
 }
 
 // nullResourceType type to return then resource is not founded

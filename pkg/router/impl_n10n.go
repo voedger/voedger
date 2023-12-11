@@ -18,6 +18,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/in10nmem"
+	in10nmemv1 "github.com/voedger/voedger/pkg/in10nmem/v1"
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
@@ -58,7 +59,7 @@ func (s *httpService) subscribeAndWatchHandler() http.HandlerFunc {
 		channel, err = s.n10n.NewChannel(urlParams.SubjectLogin, 24*time.Hour)
 		if err != nil {
 			logger.Error(err)
-			http.Error(rw, "Error create new channel", http.StatusTooManyRequests)
+			http.Error(rw, "create new channel failed: "+err.Error(), n10nErrorToStatusCode(err))
 			return
 		}
 		if _, err = fmt.Fprintf(rw, "event: channelId\ndata: %s\n\n", channel); err != nil {
@@ -69,7 +70,7 @@ func (s *httpService) subscribeAndWatchHandler() http.HandlerFunc {
 			err = s.n10n.Subscribe(channel, projection)
 			if err != nil {
 				logger.Error(err)
-				http.Error(rw, err.Error(), http.StatusInternalServerError)
+				http.Error(rw, "subscribe failed: "+err.Error(), n10nErrorToStatusCode(err))
 				return
 			}
 		}
@@ -109,6 +110,18 @@ func (s *httpService) subscribeAndWatchHandler() http.HandlerFunc {
 	}
 }
 
+func n10nErrorToStatusCode(err error) int {
+	switch {
+	case errors.Is(err, in10n.ErrChannelDoesNotExist), errors.Is(err, in10nmemv1.ErrMetricDoesNotExists),
+		errors.Is(err, in10n.ErrChannelDoesNotExist):
+		return http.StatusBadRequest
+	case errors.Is(err, in10n.ErrQuotaExceeded_Subsciptions), errors.Is(err, in10n.ErrQuotaExceeded_SubsciptionsPerSubject),
+		errors.Is(err, in10n.ErrQuotaExceeded_Channels), errors.Is(err, in10n.ErrQuotaExceeded_ChannelsPerSubject):
+		return http.StatusTooManyRequests
+	}
+	return http.StatusInternalServerError
+}
+
 /*
 curl -G --data-urlencode "payload={\"Channel\": \"a23b2050-b90c-4ed1-adb7-1ecc4f346f2b\", \"ProjectionKey\":[{\"App\":\"Application\",\"Projection\":\"paa.wine_price\",\"WS\":1}]}" https://alpha2.dev.untill.ru/n10n/subscribe -H "Content-Type: application/json"
 */
@@ -124,7 +137,7 @@ func (s *httpService) subscribeHandler() http.HandlerFunc {
 			err = s.n10n.Subscribe(parameters.Channel, projection)
 			if err != nil {
 				logger.Error(err)
-				http.Error(rw, err.Error(), http.StatusInternalServerError)
+				http.Error(rw, "subscribe failed: "+err.Error(), n10nErrorToStatusCode(err))
 				return
 			}
 		}
@@ -146,7 +159,7 @@ func (s *httpService) unSubscribeHandler() http.HandlerFunc {
 			err = s.n10n.Unsubscribe(parameters.Channel, projection)
 			if err != nil {
 				logger.Error(err)
-				http.Error(rw, err.Error(), http.StatusInternalServerError)
+				http.Error(rw, err.Error(), n10nErrorToStatusCode(err))
 				return
 			}
 		}

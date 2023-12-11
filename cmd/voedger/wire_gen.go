@@ -8,8 +8,6 @@ package main
 
 import (
 	"github.com/voedger/voedger/pkg/apps"
-	"github.com/voedger/voedger/pkg/ibus"
-	"github.com/voedger/voedger/pkg/ibusmem"
 	"github.com/voedger/voedger/pkg/ihttp"
 	"github.com/voedger/voedger/pkg/ihttpctl"
 	"github.com/voedger/voedger/pkg/ihttpimpl"
@@ -21,34 +19,30 @@ import (
 
 // Injectors from wire.go:
 
-func wireServer(cliParams ibus.CLIParams, ihttpCLIParams ihttp.CLIParams) (WiredServer, func(), error) {
-	iBus, cleanup := ibusmem.New(cliParams)
-	ihttpProcessor, cleanup2, err := ihttpimpl.NewProcessor(ihttpCLIParams, iBus)
+func wireServer(cliParams ihttp.CLIParams, grafanaPort ihttp.GrafanaPort, prometheusPort ihttp.PrometheusPort) (WiredServer, func(), error) {
+	ihttpProcessor, cleanup, err := ihttpimpl.NewProcessor(cliParams)
 	if err != nil {
-		cleanup()
 		return WiredServer{}, nil, err
 	}
-	ihttpProcessorAPI, err := ihttpimpl.NewAPI(iBus, ihttpProcessor)
+	ihttpProcessorAPI, err := ihttpimpl.NewAPI(ihttpProcessor)
 	if err != nil {
-		cleanup2()
 		cleanup()
 		return WiredServer{}, nil, err
 	}
 	v := apps.NewStaticEmbeddedResources()
-	ihttpProcessorController, err := ihttpctl.NewHTTPProcessorController(ihttpProcessorAPI, v)
+	redirectRoutes := apps.NewRedirectionRoutes(grafanaPort, prometheusPort)
+	defaultRedirectRoute := apps.NewDefaultRedirectionRoute()
+	ihttpProcessorController, err := ihttpctl.NewHTTPProcessorController(ihttpProcessorAPI, v, redirectRoutes, defaultRedirectRoute)
 	if err != nil {
-		cleanup2()
 		cleanup()
 		return WiredServer{}, nil, err
 	}
 	wiredServer := WiredServer{
-		IBus:                     iBus,
 		IHTTPProcessor:           ihttpProcessor,
 		IHTTPProcessorAPI:        ihttpProcessorAPI,
 		IHTTPProcessorController: ihttpProcessorController,
 	}
 	return wiredServer, func() {
-		cleanup2()
 		cleanup()
 	}, nil
 }

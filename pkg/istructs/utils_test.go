@@ -339,7 +339,7 @@ func TestNullObject(t *testing.T) {
 	// Should not be called
 	{
 		null.Containers(nil)
-		null.Elements(appdef.NullName, nil)
+		null.Children(appdef.NullName, nil)
 		null.RecordIDs(true, nil)
 		null.FieldNames(nil)
 	}
@@ -442,43 +442,4 @@ func TestRateLimitKind_MarshalText(t *testing.T) {
 			require.Equal(rlk.String(), string(b))
 		}
 	}
-}
-
-func TestValidatorMatchByQName(t *testing.T) {
-	require := require.New(t)
-	qn1 := appdef.NewQName("test", "n1")
-	qn2 := appdef.NewQName("test", "n2")
-	qn3 := appdef.NewQName("test", "n3")
-
-	t.Run("QName only", func(t *testing.T) {
-		v := CUDValidator{
-			MatchQNames: []appdef.QName{qn1, qn2},
-		}
-		require.True(ValidatorMatchByQName(v, qn1))
-		require.True(ValidatorMatchByQName(v, qn2))
-		require.False(ValidatorMatchByQName(v, qn3))
-	})
-
-	t.Run("func(QName) only", func(t *testing.T) {
-		v := CUDValidator{
-			MatchFunc: func(qName appdef.QName) bool {
-				return qName == qn1 || qName == qn2
-			},
-		}
-		require.True(ValidatorMatchByQName(v, qn1))
-		require.True(ValidatorMatchByQName(v, qn2))
-		require.False(ValidatorMatchByQName(v, qn3))
-	})
-
-	t.Run("both func(QName) and QName", func(t *testing.T) {
-		v := CUDValidator{
-			MatchFunc: func(qName appdef.QName) bool {
-				return qName == qn1
-			},
-			MatchQNames: []appdef.QName{qn2},
-		}
-		require.True(ValidatorMatchByQName(v, qn1))
-		require.True(ValidatorMatchByQName(v, qn2))
-		require.False(ValidatorMatchByQName(v, qn3))
-	})
 }

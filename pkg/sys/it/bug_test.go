@@ -51,13 +51,13 @@ func TestBug_QueryProcessorMustStopOnClientDisconnect(t *testing.T) {
 		defer func() { goOn <- nil }() // отсигналим, что поймали ошибку context.Cancelled
 		return err
 	}
-	vit := it.NewVIT(t, &it.SharedConfig_Simple)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
 	// отправим POST-запрос
 	body := `{"args": {"Input": "world"},"elements": [{"fields": ["Res"]}]}`
 	ws := vit.DummyWS(istructs.AppQName_test1_app1)
-	vit.PostWSSys(ws, "q.sys.MockQry", body, coreutils.WithResponseHandler(func(httpResp *http.Response) {
+	vit.PostWSSys(ws, "q.app1pkg.MockQry", body, coreutils.WithResponseHandler(func(httpResp *http.Response) {
 		// прочтем первую часть ответа (сервер не отдаст вторую, пока в goOn не запишем чего-нибудь)
 		entireResp := []byte{}
 		var err error
@@ -83,19 +83,20 @@ func TestBug_QueryProcessorMustStopOnClientDisconnect(t *testing.T) {
 
 func Test409OnRepeatedlyUsedRawIDsInResultCUDs(t *testing.T) {
 	vitCfg := it.NewOwnVITConfig(
-		it.WithApp(istructs.AppQName_test1_app1, func(apis apps.APIs, cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) {
+		it.WithApp(istructs.AppQName_test1_app2, func(apis apps.APIs, cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) {
 
 			sys.Provide(cfg, appDefBuilder, smtp.Cfg{}, ep, nil, apis.TimeFunc, apis.ITokens, apis.IFederation, apis.IAppStructsProvider, apis.IAppTokensFactory,
 				apis.NumCommandProcessors, nil, apis.IAppStorageProvider)
+			apps.RegisterSchemaFS(it.SchemaTestApp2FS, "github.com/voedger/voedger/pkg/vit/app2pkg", ep)
 
-			cdocQName := appdef.NewQName("test", "cdoc")
-			appDefBuilder.AddCDoc(cdocQName)
+			qNameDoc1 := appdef.NewQName("app2pkg", "doc1")
+			// appDefBuilder.AddCDoc(cdocQName)
 
-			cmdQName := appdef.NewQName(appdef.SysPackage, "testCmd")
-			cmd2CUDs := istructsmem.NewCommandFunction(cmdQName, appdef.NullQName, appdef.NullQName, appdef.NullQName,
-				func(cf istructs.ICommandFunction, args istructs.ExecCommandArgs) (err error) {
+			cmdQName := appdef.NewQName("app2pkg", "testCmd")
+			cmd2CUDs := istructsmem.NewCommandFunction(cmdQName,
+				func(args istructs.ExecCommandArgs) (err error) {
 					// 2 раза используем один и тот же rawID -> 500 internal server error
-					kb, err := args.State.KeyBuilder(state.RecordsStorage, cdocQName)
+					kb, err := args.State.KeyBuilder(state.Record, qNameDoc1)
 					if err != nil {
 						return
 					}
@@ -105,7 +106,7 @@ func Test409OnRepeatedlyUsedRawIDsInResultCUDs(t *testing.T) {
 					}
 					sv.PutRecordID(appdef.SystemField_ID, 1)
 
-					kb, err = args.State.KeyBuilder(state.RecordsStorage, cdocQName)
+					kb, err = args.State.KeyBuilder(state.Record, qNameDoc1)
 					if err != nil {
 						return
 					}
@@ -123,7 +124,7 @@ func Test409OnRepeatedlyUsedRawIDsInResultCUDs(t *testing.T) {
 	vit := it.NewVIT(t, &vitCfg)
 	defer vit.TearDown()
 
-	prn := vit.GetPrincipal(istructs.AppQName_test1_app1, "login")
-	resp := vit.PostProfile(prn, "c.sys.testCmd", "{}", coreutils.Expect409())
+	prn := vit.GetPrincipal(istructs.AppQName_test1_app2, "login")
+	resp := vit.PostProfile(prn, "c.app2pkg.testCmd", "{}", coreutils.Expect409())
 	resp.Println()
 }

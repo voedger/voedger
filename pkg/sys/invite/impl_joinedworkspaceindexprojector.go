@@ -5,7 +5,7 @@
 package invite
 
 import (
-	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/untillpro/goutils/iterate"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/state"
 )
@@ -13,20 +13,19 @@ import (
 func provideSyncProjectorJoinedWorkspaceIndexFactory() istructs.ProjectorFactory {
 	return func(partition istructs.PartitionID) istructs.Projector {
 		return istructs.Projector{
-			Name:         QNameProjectorJoinedWorkspaceIndex,
-			EventsFilter: []appdef.QName{qNameCmdCreateJoinedWorkspace},
-			Func:         joinedWorkspaceIndexProjector,
+			Name: QNameProjectorJoinedWorkspaceIndex,
+			Func: joinedWorkspaceIndexProjector,
 		}
 	}
 }
 
 var joinedWorkspaceIndexProjector = func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
-	return event.CUDs(func(rec istructs.ICUDRow) (err error) {
+	return iterate.ForEachError(event.CUDs, func(rec istructs.ICUDRow) error {
 		if rec.QName() != QNameCDocJoinedWorkspace {
-			return
+			return nil
 		}
 
-		skbViewJoinedWorkspaceIndex, err := s.KeyBuilder(state.ViewRecordsStorage, QNameViewJoinedWorkspaceIndex)
+		skbViewJoinedWorkspaceIndex, err := s.KeyBuilder(state.View, QNameViewJoinedWorkspaceIndex)
 		if err != nil {
 			return err
 		}
@@ -40,6 +39,6 @@ var joinedWorkspaceIndexProjector = func(event istructs.IPLogEvent, s istructs.I
 
 		svbViewJoinedWorkspaceIndex.PutRecordID(field_JoinedWorkspaceID, rec.ID())
 
-		return
+		return nil
 	})
 }

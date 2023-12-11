@@ -65,7 +65,7 @@
 ## Functional design
 Declare a schema with a verified field:
 ```go
-AppConfigType.AppDef.Add(QName, e.g. appdef.DefKind_CDoc).
+AppConfigType.AppDef.Add(QName, e.g. appdef.TypeKind_CDoc).
 	AddVerifiedField(name, kind, false, e.g. appdef.VerificationKind_EMail)
 ```
 

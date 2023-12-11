@@ -32,11 +32,15 @@ var (
 
 	QNameCommandCUD = appdef.NewQName(appdef.SysPackage, "CUD")
 
-	// QNameJSON denotes that Function argument comes as a JSON object
-	QNameJSON = appdef.NewQName(appdef.SysPackage, "JSON")
+	// QNameRaw denotes that Function argument comes as a JSON object
+	QNameRaw = appdef.NewQName(appdef.SysPackage, "Raw")
 
-	// QNameJSON denotes that a Function result can be of any value
-	QNameANY = appdef.NewQName(appdef.SysPackage, "ANY")
+	QNameCDoc    = appdef.NewQName(appdef.SysPackage, "CDoc")
+	QNameWDoc    = appdef.NewQName(appdef.SysPackage, "WDoc")
+	QNameODoc    = appdef.NewQName(appdef.SysPackage, "ODoc")
+	QNameCRecord = appdef.NewQName(appdef.SysPackage, "CRecord")
+	QNameWRecord = appdef.NewQName(appdef.SysPackage, "WRecord")
+	QNameORecord = appdef.NewQName(appdef.SysPackage, "ORecord")
 )
 
 // *********************************************************************************************************
@@ -64,6 +68,8 @@ const (
 	ClusterAsRegisterID = 0xFFFF - 1000 + iota
 	ClusterAsCRecordRegisterID
 )
+
+var MinClusterRecordID = NewRecordID(NullRecordID)
 
 // *********************************************************************************************************
 //

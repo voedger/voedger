@@ -22,19 +22,40 @@ import (
 	"github.com/untillpro/goutils/logger"
 )
 
-func newCluster() *clusterType {
+var testMode bool
+
+func newCluster() (*clusterType, error) {
 	var cluster = clusterType{
 		DesiredClusterVersion: version,
 		ActualClusterVersion:  "",
 		exists:                false,
 		Draft:                 true,
 		sshKey:                sshKey,
+		SshPort:               sshPort,
 		Cmd:                   newCmd("", ""),
+		SkipStacks:            make([]string, 0),
+		ReplacedAddresses:     make([]string, 0),
 	}
+	if err := cluster.setEnv(); err != nil {
+		return nil, err
+	}
+
 	dir, _ := os.Getwd()
 	cluster.configFileName = filepath.Join(dir, clusterConfFileName)
 	cluster.exists = cluster.loadFromJSON() == nil
-	return &cluster
+
+	if cluster.ActualClusterVersion == "" {
+		return &cluster, nil
+	}
+
+	vr := compareVersions(version, cluster.ActualClusterVersion)
+	if vr == 1 {
+		return &cluster, fmt.Errorf(errCtoolVersionNewerThanClusterVersion, version, cluster.ActualClusterVersion, ErrBadVersion)
+	} else if vr == -1 {
+		return &cluster, fmt.Errorf(errClusterVersionNewerThanCtoolVersion, cluster.ActualClusterVersion, version, ErrBadVersion)
+	}
+
+	return &cluster, nil
 }
 
 func newCmd(cmdKind, cmdArgs string) *cmdType {
@@ -71,7 +92,45 @@ type nodeType struct {
 	DesiredNodeState *nodeStateType `json:"DesiredNodeState,omitempty"`
 }
 
+func (n *nodeType) address() string {
+	if len(n.ActualNodeState.Address) > 0 {
+		return n.ActualNodeState.Address
+	} else if len(n.DesiredNodeState.Address) > 0 {
+		return n.DesiredNodeState.Address
+	}
+
+	err := fmt.Errorf(errEmptyNodeAddress, n.nodeName(), ErrEmptyNodeAddress)
+	logger.Error(err.Error)
+	panic(err)
+}
+
+// nolint
+func (n *nodeType) nodeName() string {
+	if n.cluster.Edition == clusterEditionSE {
+		switch n.idx {
+		case 1:
+			return "app-node-1"
+		case 2:
+			return "app-node-2"
+		case 3:
+			return "db-node-1"
+		case 4:
+			return "db-node-2"
+		case 5:
+			return "db-node-3"
+		default:
+			return "node"
+		}
+	} else if n.cluster.Edition == clusterEditionCE {
+		return "CENode"
+	} else {
+		return "node"
+	}
+
+}
+
 // the minimum amount of RAM required by the node (as string)
+// nolint
 func (n *nodeType) minAmountOfRAM() string {
 	switch n.NodeRole {
 	case nrAppNode:
@@ -84,6 +143,13 @@ func (n *nodeType) minAmountOfRAM() string {
 }
 
 func (n *nodeType) nodeControllerFunction() error {
+	if testMode {
+		if n.DesiredNodeState != nil {
+			n.success()
+			return nil
+		}
+	}
+
 	switch n.NodeRole {
 	case nrDBNode, nrAppNode:
 		return seNodeControllerFunction(n)
@@ -100,6 +166,7 @@ func (n *nodeType) success() {
 	n.Error = ""
 }
 
+// nolint
 func (n *nodeType) fail(err string) {
 	n.Error = err
 }
@@ -118,6 +185,7 @@ func (n *nodeType) desiredNodeVersion(c *clusterType) string {
 	return c.DesiredClusterVersion
 }
 
+// nolint
 func (n *nodeType) actualNodeVersion() string {
 	return n.ActualNodeState.NodeVersion
 }
@@ -127,30 +195,34 @@ func (n *nodeType) label(key string) string {
 	case nrCENode:
 		return "ce"
 	case nrAppNode:
-		if key == swarmAppLabelKey {
-			return "AppNode"
-		} else if key == swarmMonLabelKey {
+		if key != swarmAppLabelKey {
 			return fmt.Sprintf("AppNode%d", n.idx)
 		}
+		return "AppNode"
 	case nrDBNode:
 		return fmt.Sprintf("DBNode%d", n.idx-seNodeCount)
 	}
 
-	return fmt.Sprintf("node%d", n.idx)
+	err := fmt.Errorf(errInvalidNodeRole, n.address(), ErrInvalidNodeRole)
+	logger.Error(err.Error)
+	panic(err)
 }
 
+// nolint
 func (ns *nodeType) check(c *clusterType) error {
 	if ns.actualNodeVersion() != ns.desiredNodeVersion(c) {
-		return ErrDifferentNodeVersions
+		return fmt.Errorf(errDifferentNodeVersion, ns.actualNodeVersion(), ns.desiredNodeVersion(c), ErrBadVersion)
 	}
 	return nil
 }
 
+// nolint
 type nodesType []*nodeType
 
 // returns a list of node addresses
 // you can specify the role of nodes to get addresses
 // if role = "", the full list of all cluster nodes will be returned
+// nolint
 func (n *nodesType) hosts(nodeRole string) []string {
 	var h []string
 	for _, N := range *n {
@@ -162,14 +234,16 @@ func (n *nodesType) hosts(nodeRole string) []string {
 }
 
 type cmdType struct {
-	Kind string
-	Args string
+	Kind       string
+	Args       string
+	SkipStacks []string
 }
 
 func (c *cmdType) apply(cluster *clusterType) error {
 
 	var err error
 
+	// nolint
 	defer cluster.saveToJSON()
 
 	if err = cluster.validate(); err != nil {
@@ -230,6 +304,7 @@ func (c *cmdType) validate(cluster *clusterType) error {
 // init [CE] [ipAddr1]
 // or
 // init [SE] [ipAddr1] [ipAddr2] [ipAddr3] [ipAddr4] [ipAddr5]
+// nolint
 func validateInitCmd(cmd *cmdType, cluster *clusterType) error {
 	args := cmd.args()
 
@@ -240,9 +315,8 @@ func validateInitCmd(cmd *cmdType, cluster *clusterType) error {
 	if args[0] != clusterEditionCE && args[0] != clusterEditionSE {
 		return ErrInvalidClusterEdition
 	}
-
-	if args[0] == clusterEditionCE && len(args) != 1+initCeArgCount ||
-		args[0] == clusterEditionSE && len(args) != 1+initSeArgCount && len(args) != initSeWithDCArgCount {
+	logger.Info("count args: ", len(args))
+	if args[0] == clusterEditionCE && len(args) != 1+initCeArgCount {
 		return ErrInvalidNumberOfArguments
 	}
 
@@ -299,14 +373,21 @@ type clusterType struct {
 	Edition               string
 	ActualClusterVersion  string
 	DesiredClusterVersion string   `json:"DesiredClusterVersion,omitempty"`
+	SshPort               string   `json:"SSHPort,omitempty"`
 	Cmd                   *cmdType `json:"Cmd,omitempty"`
-	DataCenters           []string `json:"DataCenters,omitempty"`
 	LastAttemptError      string   `json:"LastAttemptError,omitempty"`
+	SkipStacks            []string `json:"SkipStacks,omitempty"`
 	Nodes                 []nodeType
-	Draft                 bool `json:"Draft,omitempty"`
+	ReplacedAddresses     []string `json:"ReplacedAddresses,omitempty"`
+	Draft                 bool     `json:"Draft,omitempty"`
 }
 
 func (c *clusterType) clusterControllerFunction() error {
+	if testMode {
+		c.success()
+		return nil
+	}
+
 	switch c.Edition {
 	case clusterEditionCE:
 		return ceClusterControllerFunction(c)
@@ -335,9 +416,9 @@ func equalIPs(ip1, ip2 string) bool {
 	return netIP1.Equal(netIP2)
 }
 
-func (c *clusterType) nodeByHost(address string) *nodeType {
+func (c *clusterType) nodeByHost(addrOrHostName string) *nodeType {
 	for i, n := range c.Nodes {
-		if equalIPs(n.ActualNodeState.Address, address) {
+		if addrOrHostName == n.nodeName() || equalIPs(n.ActualNodeState.Address, addrOrHostName) {
 			return &c.Nodes[i]
 		}
 	}
@@ -353,14 +434,37 @@ func (c *clusterType) applyCmd(cmd *cmdType) error {
 		return ErrUncompletedCommandFound
 	}
 
-	c.Cmd = cmd
-
+	// nolint
 	defer c.saveToJSON()
+
 	switch cmd.Kind {
 	case ckReplace:
 		oldAddr := cmd.args()[0]
 		newAddr := cmd.args()[1]
+
+		if c.addressInReplacedList(newAddr) {
+			return fmt.Errorf(errAddressInReplacedList, newAddr, ErrAddressCannotBeUsed)
+		}
+
 		node := c.nodeByHost(oldAddr)
+		if node == nil {
+			return fmt.Errorf(errHostNotFoundInCluster, oldAddr, ErrHostNotFoundInCluster)
+		}
+
+		if oldAddr == node.nodeName() {
+			oldAddr = node.ActualNodeState.Address
+			cmd.Args = strings.Replace(cmd.Args, node.nodeName(), oldAddr, 1)
+		}
+
+		if !testMode {
+			if err := nodeIsLive(node); err == nil {
+				return fmt.Errorf(errCannotReplaceALiveNode, oldAddr, ErrCommandCannotBeExecuted)
+			}
+
+			if err := hostIsAvailable(c, newAddr); err != nil {
+				return fmt.Errorf(errHostIsNotAvailable, newAddr, ErrHostIsNotAvailable)
+			}
+		}
 
 		node.DesiredNodeState = newNodeState(newAddr, node.desiredNodeVersion(c))
 
@@ -369,6 +473,8 @@ func (c *clusterType) applyCmd(cmd *cmdType) error {
 		}
 
 	}
+
+	c.Cmd = cmd
 
 	return nil
 }
@@ -379,6 +485,7 @@ func (c *clusterType) updateNodeIndexes() {
 	}
 }
 
+// TODO: Filename should be an argument
 func (c *clusterType) saveToJSON() error {
 
 	if c.Cmd != nil && c.Cmd.isEmpty() {
@@ -402,6 +509,16 @@ func (c *clusterType) saveToJSON() error {
 		err = ioutil.WriteFile(c.configFileName, b, rwxrwxrwx)
 	}
 	return err
+}
+
+// The address was replaced in the cluster
+func (c *clusterType) addressInReplacedList(address string) bool {
+	for _, value := range c.ReplacedAddresses {
+		if value == address {
+			return true
+		}
+	}
+	return false
 }
 
 func (c *clusterType) loadFromJSON() error {
@@ -438,13 +555,31 @@ func (c *clusterType) loadFromJSON() error {
 		c.Nodes[i].cluster = c
 	}
 
+	if err == nil {
+		err = c.setEnv()
+	}
+
 	return err
 }
 
+// Installation of the necessary variables of the environment
+func (c *clusterType) setEnv() error {
+	return os.Setenv("VOEDGER_NODE_SSH_PORT", c.SshPort)
+}
+
+// nolint
 func (c *clusterType) readFromInitArgs(cmd *cobra.Command, args []string) error {
 
 	defer c.updateNodeIndexes()
+	// nolint
 	defer c.saveToJSON()
+
+	skipStacks, err := cmd.Flags().GetStringSlice("skip-stack")
+	if err != nil {
+		fmt.Println("Error getting skip-stack values:", err)
+		return err
+	}
+	c.SkipStacks = skipStacks
 
 	if cmd == initCECmd { // CE args
 		c.Edition = clusterEditionCE
@@ -461,7 +596,6 @@ func (c *clusterType) readFromInitArgs(cmd *cobra.Command, args []string) error 
 	} else { // SE args
 		c.Edition = clusterEditionSE
 		c.Nodes = make([]nodeType, 5)
-		c.DataCenters = make([]string, 0)
 
 		for i := 0; i < initSeArgCount; i++ {
 			if i < seNodeCount {
@@ -474,13 +608,11 @@ func (c *clusterType) readFromInitArgs(cmd *cobra.Command, args []string) error 
 			c.Nodes[i].cluster = c
 		}
 
-		if len(args) == initSeWithDCArgCount {
-			c.DataCenters = append(c.DataCenters, args[seNodeCount:]...)
-		}
 	}
 	return nil
 }
 
+// nolint
 func (c *clusterType) validate() error {
 
 	var err error
@@ -498,10 +630,6 @@ func (c *clusterType) validate() error {
 		err = errors.Join(err, ErrInvalidClusterEdition)
 	}
 
-	if len(c.DataCenters) > 0 && len(c.DataCenters) != 3 {
-		err = errors.Join(err, ErrInvalidNumberOfDataCenters)
-	}
-
 	return err
 }
 
@@ -514,10 +642,12 @@ func (c *clusterType) success() {
 	c.LastAttemptError = ""
 }
 
+// nolint
 func (c *clusterType) fail(error string) {
 	c.LastAttemptError = error
 }
 
+// nolint
 func expandPath(path string) (string, error) {
 	if strings.HasPrefix(path, "~/") {
 		homeDir, err := user.Current()

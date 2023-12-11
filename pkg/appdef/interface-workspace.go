@@ -5,21 +5,13 @@
 
 package appdef
 
-// Workspace
+// Workspace is a set of types.
 //
 // Ref. to workspace.go for implementation
 type IWorkspace interface {
-	IDef
-	IComment
+	IType
 	IWithAbstract
-
-	// Returns definition by name.
-	//
-	// Nil is returned if not found
-	Def(QName) IDef
-
-	// Enumerates all workspace definitions
-	Defs(func(IDef))
+	IWithTypes
 
 	// Workspace descriptor document.
 	// See [#466](https://github.com/voedger/voedger/issues/466)
@@ -31,15 +23,15 @@ type IWorkspace interface {
 
 type IWorkspaceBuilder interface {
 	IWorkspace
-	ICommentBuilder
+	ITypeBuilder
 	IWithAbstractBuilder
 
-	// Adds definition to workspace. Definition must be defined for application before.
+	// Adds (includes) type to workspace. Type must be defined for application before.
 	//
 	// # Panics:
 	//	- if name is empty
 	//	- if name is not defined for application
-	AddDef(QName) IWorkspaceBuilder
+	AddType(QName) IWorkspaceBuilder
 
 	// Sets descriptor.
 	//

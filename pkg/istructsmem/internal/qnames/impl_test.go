@@ -282,10 +282,6 @@ func (r *mockResources) QueryResource(resource appdef.QName) istructs.IResource 
 	return r.Called(resource).Get(0).(istructs.IResource)
 }
 
-func (r *mockResources) QueryFunctionArgsBuilder(query istructs.IQueryFunction) istructs.IObjectBuilder {
-	return r.Called(query).Get(0).(istructs.IObjectBuilder)
-}
-
 func (r *mockResources) Resources(cb func(appdef.QName)) {
 	r.Called(cb)
 }

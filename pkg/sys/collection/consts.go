@@ -23,7 +23,7 @@ const (
 )
 
 var (
-	QNameViewCollection      = appdef.NewQName("sys", "CollectionView")
+	QNameCollectionView      = appdef.NewQName("sys", "CollectionView")
 	QNameProjectorCollection = appdef.NewQName("sys", "ProjectorCollection")
 )
 
@@ -55,7 +55,7 @@ const (
 )
 
 var (
-	qNameCDocFunc = appdef.NewQName(appdef.SysPackage, "CDoc")
+	qNameQueryGetCDoc = appdef.NewQName(appdef.SysPackage, "GetCDoc")
 )
 
 const DEC = 10

@@ -25,13 +25,13 @@ func TestBasicUsage_HTTPConventions(t *testing.T) {
 	vit.MockCmdExec = func(input string) error {
 		return errors.New("test error")
 	}
-	vit := vit.NewVIT(t, &vit.SharedConfig_Simple)
+	vit := vit.NewVIT(t, &vit.SharedConfig_App1)
 	defer vit.TearDown()
 	prn := vit.GetPrincipal(istructs.AppQName_test1_app1, "login")
 
 	t.Run("query", func(t *testing.T) {
 		body := `{"args": {"Input": "world"},"elements": [{"fields": ["Res"]}]}`
-		resp := vit.PostProfile(prn, "q.sys.MockQry", body, coreutils.ExpectSysError500())
+		resp := vit.PostProfile(prn, "q.app1pkg.MockQry", body, coreutils.ExpectSysError500())
 		require.Equal("world", resp.SectionRow()[0])
 		require.Equal(coreutils.ApplicationJSON, resp.HTTPResp.Header["Content-Type"][0])
 		require.Equal(http.StatusOK, resp.HTTPResp.StatusCode)
@@ -43,7 +43,7 @@ func TestBasicUsage_HTTPConventions(t *testing.T) {
 
 	t.Run("command", func(t *testing.T) {
 		body := `{"args": {"Input": "1"}}`
-		resp := vit.PostProfile(prn, "c.sys.MockCmd", body, coreutils.Expect500())
+		resp := vit.PostProfile(prn, "c.app1pkg.MockCmd", body, coreutils.Expect500())
 		require.Equal(coreutils.ApplicationJSON, resp.HTTPResp.Header["Content-Type"][0])
 		require.Equal(http.StatusInternalServerError, resp.HTTPResp.StatusCode)
 		require.Equal(http.StatusInternalServerError, resp.SysError.HTTPStatus)

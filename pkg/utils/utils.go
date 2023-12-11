@@ -6,9 +6,12 @@
 package coreutils
 
 import (
+	"fmt"
 	"os"
 	"strings"
 	"time"
+
+	"github.com/voedger/voedger/pkg/istructs"
 )
 
 func IsBlank(str string) bool {
@@ -36,4 +39,23 @@ func IsDebug() bool {
 func IsCassandraStorage() bool {
 	_, ok := os.LookupEnv("CASSANDRA_TESTS_ENABLED")
 	return ok
+}
+
+func ServerAddress(port int) string {
+	addr := ""
+	if IsTest() {
+		addr = "127.0.0.1"
+	}
+	return fmt.Sprintf("%s:%d", addr, port)
+}
+
+func PartitionID(wsid istructs.WSID, numCommandProcessors CommandProcessorsCount) istructs.PartitionID {
+	return istructs.PartitionID(int(wsid) % int(numCommandProcessors))
+}
+
+func SplitErrors(joinedError error) (errs []error) {
+	if e, ok := joinedError.(interface{ Unwrap() []error }); ok {
+		return e.Unwrap()
+	}
+	return
 }

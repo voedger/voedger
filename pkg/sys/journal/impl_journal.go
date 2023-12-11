@@ -21,21 +21,11 @@ import (
 func provideQryJournal(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) {
 	cfg.Resources.Add(istructsmem.NewQueryFunction(
 		appdef.NewQName(appdef.SysPackage, "Journal"),
-		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "JournalParams")).
-			AddField(field_From, appdef.DataKind_int64, true).
-			AddField(field_Till, appdef.DataKind_int64, true).
-			AddField(Field_EventTypes, appdef.DataKind_string, true).
-			AddField(field_IndexForTimestamps, appdef.DataKind_string, false).
-			AddField(field_RangeUnit, appdef.DataKind_string, false).(appdef.IDef).QName(),
-		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "JournalResult")).
-			AddField(Field_Offset, appdef.DataKind_int64, true).
-			AddField(Field_EventTime, appdef.DataKind_int64, true).
-			AddField(Field_Event, appdef.DataKind_string, true).(appdef.IDef).QName(),
 		qryJournalExec(ep, appDefBuilder),
 	))
 }
 func qryJournalExec( /*jdi vvm.IEPJournalIndices, jp vvm.IEPJournalPredicates, */ ep extensionpoints.IExtensionPoint, appDef appdef.IAppDef) istructsmem.ExecQueryClosure {
-	return func(ctx context.Context, qf istructs.IQueryFunction, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
+	return func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 		var fo, lo int64
 		ji := ep.ExtensionPoint(EPJournalIndices)
 		jp := ep.ExtensionPoint(EPJournalPredicates)
@@ -75,7 +65,7 @@ func qryJournalExec( /*jdi vvm.IEPJournalIndices, jp vvm.IEPJournalPredicates, *
 			return err
 		}
 
-		kb, err := args.State.KeyBuilder(state.WLogStorage, appdef.NullQName)
+		kb, err := args.State.KeyBuilder(state.WLog, appdef.NullQName)
 		if err != nil {
 			return err
 		}

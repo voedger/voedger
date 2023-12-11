@@ -34,7 +34,6 @@ import (
 	"github.com/voedger/voedger/pkg/irates"
 	"github.com/voedger/voedger/pkg/iratesce"
 	"github.com/voedger/voedger/pkg/isecrets"
-	"github.com/voedger/voedger/pkg/isecretsimpl"
 	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istoragecache"
 	"github.com/voedger/voedger/pkg/istorageimpl"
@@ -153,7 +152,6 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 		iauthnzimpl.NewDefaultAuthorizer,
 		provideAppsWSAmounts,
 		provideSecretKeyJWT,
-		provideSecretReader,
 		provideBucketsFactory,
 		provideAppsExtensionPoints,
 		provideSubjectGetterFunc,
@@ -174,6 +172,7 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 			"VVMPort",
 			"MetricsServicePort",
 			"ActualizerStateOpts",
+			"SecretsReader",
 		),
 	))
 }
@@ -226,14 +225,6 @@ func provideBucketsFactory(timeFunc coreutils.TimeFunc) irates.BucketsFactoryTyp
 	return func() irates.IBuckets {
 		return iratesce.Provide(timeFunc)
 	}
-}
-
-func provideSecretReader() isecrets.ISecretReader {
-	sr := isecretsimpl.ProvideSecretReader()
-	if coreutils.IsTest() {
-		return &testISecretReader{realSecretReader: sr}
-	}
-	return sr
 }
 
 func provideSecretKeyJWT(sr isecrets.ISecretReader) (itokensjwt.SecretKeyType, error) {
@@ -318,7 +309,7 @@ func provideAppsExtensionPoints(vvmConfig *VVMConfig) map[istructs.AppQName]exte
 	return vvmConfig.VVMAppsBuilder.PrepareAppsExtensionPoints()
 }
 
-func provideVVMApps(vvmConfig *VVMConfig, cfgs istructsmem.AppConfigsType, apis apps.APIs, appsEPs map[istructs.AppQName]extensionpoints.IExtensionPoint) VVMApps {
+func provideVVMApps(vvmConfig *VVMConfig, cfgs istructsmem.AppConfigsType, apis apps.APIs, appsEPs map[istructs.AppQName]extensionpoints.IExtensionPoint) (VVMApps, error) {
 	return vvmConfig.VVMAppsBuilder.Build(cfgs, apis, appsEPs)
 }
 
@@ -489,7 +480,7 @@ func provideCommandProcessors(cpCount coreutils.CommandProcessorsCount, ccf Comm
 	return pipeline.ForkOperator(pipeline.ForkSame, forks[0], forks[1:]...)
 }
 
-func provideAsyncActualizersFactory(appStructsProvider istructs.IAppStructsProvider, n10nBroker in10n.IN10nBroker, asyncActualizerFactory projectors.AsyncActualizerFactory, secretReader isecrets.ISecretReader) AsyncActualizersFactory {
+func provideAsyncActualizersFactory(appStructsProvider istructs.IAppStructsProvider, n10nBroker in10n.IN10nBroker, asyncActualizerFactory projectors.AsyncActualizerFactory, secretReader isecrets.ISecretReader, metrics imetrics.IMetrics) AsyncActualizersFactory {
 	return func(vvmCtx context.Context, appQName istructs.AppQName, asyncProjectorFactories AsyncProjectorFactories, partitionID istructs.PartitionID, opts []state.ActualizerStateOptFunc) pipeline.ISyncOperator {
 		var asyncProjectors []pipeline.ForkOperatorOptionFunc
 		appStructs, err := appStructsProvider.AppStructs(appQName)
@@ -508,6 +499,7 @@ func provideAsyncActualizersFactory(appStructsProvider istructs.IAppStructsProvi
 			Opts:          opts,
 			IntentsLimit:  builtin.MaxCUDs,
 			FlushInterval: actualizerFlushInterval,
+			Metrics:       metrics,
 		}
 
 		asyncProjectors = make([]pipeline.ForkOperatorOptionFunc, len(asyncProjectorFactories))

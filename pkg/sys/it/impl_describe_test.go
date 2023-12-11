@@ -16,68 +16,82 @@ import (
 
 func TestBasicUsage_DescribeSchema(t *testing.T) {
 	require := require.New(t)
-	vit := it.NewVIT(t, &it.SharedConfig_Simple)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
-	prn := vit.GetPrincipal(istructs.AppQName_test1_app1, "login")
+	prnApp1 := vit.GetPrincipal(istructs.AppQName_test1_app1, "login")
+	prnApp2 := vit.GetPrincipal(istructs.AppQName_test1_app2, "login")
 
 	t.Run("describe package names", func(t *testing.T) {
 		body := `{"args":{},"elements":[{"fields":["Names"]}]}`
-		namesStr := vit.PostProfile(prn, "q.sys.DescribePackageNames", body).SectionRow()[0].(string)
+		namesStr := vit.PostProfile(prnApp1, "q.sys.DescribePackageNames", body).SectionRow()[0].(string)
 		names := strings.Split(namesStr, ",")
-		require.Len(names, 3)
+		require.Len(names, 2)
 		require.Contains(names, "sys")
-		require.Contains(names, "my")
-		require.Contains(names, "simpleApp")
+		require.Contains(names, "app1pkg")
 	})
 
 	t.Run("describe package", func(t *testing.T) {
-		body := `{"args":{"PackageName":"my"},"elements":[{"fields":["PackageDesc"]}]}`
-		desc := vit.PostProfile(prn, "q.sys.DescribePackage", body).SectionRow()[0].(string)
+		body := `{"args":{"PackageName":"app2pkg"},"elements":[{"fields":["PackageDesc"]}]}`
+		desc := vit.PostProfile(prnApp2, "q.sys.DescribePackage", body).SectionRow()[0].(string)
 
 		actual := map[string]interface{}{}
 		require.NoError(json.Unmarshal([]byte(desc), &actual))
 
 		expected := map[string]interface{}{
-			"Name": "my",
-			"Defs": map[string]interface{}{
-				"my.View": map[string]interface{}{
-					"Containers": []interface{}{
-						map[string]interface{}{"MaxOccurs": float64(1), "MinOccurs": float64(1), "Name": "sys.key", "Type": "my.View_FullKey"},
-						map[string]interface{}{"MaxOccurs": float64(1), "MinOccurs": float64(1), "Name": "sys.val", "Type": "my.View_Value"},
-					},
-					"Kind": "DefKind_ViewRecord",
-					"Name": "my.View",
-				},
-				"my.View_FullKey": map[string]interface{}{
+			"Structures": map[string]interface{}{
+				"app2pkg.WSKind": map[string]interface{}{
 					"Fields": []interface{}{
-						map[string]interface{}{"Kind": "DataKind_int32", "Name": "ViewIntFld", "Required": true},
-						map[string]interface{}{"Kind": "DataKind_string", "Name": "ViewStrFld"},
+						map[string]interface{}{
+							"Data":     "sys.QName",
+							"Name":     "sys.QName",
+							"Required": true,
+						}, map[string]interface{}{
+							"Data":     "sys.RecordID",
+							"Name":     "sys.ID",
+							"Required": true,
+						}, map[string]interface{}{
+							"Data": "sys.bool",
+							"Name": "sys.IsActive",
+						}, map[string]interface{}{
+							"Data":     "sys.int32",
+							"Name":     "IntFld",
+							"Required": true,
+						}, map[string]interface{}{
+							"Data": "sys.string",
+							"Name": "StrFld",
+						},
 					},
-					"Containers": []interface{}{
-						map[string]interface{}{"MaxOccurs": float64(1), "MinOccurs": float64(1), "Name": "sys.pkey", "Type": "my.View_PartitionKey"},
-						map[string]interface{}{"MaxOccurs": float64(1), "MinOccurs": float64(1), "Name": "sys.ccols", "Type": "my.View_ClusteringColumns"},
+					"Kind":      "CDoc",
+					"Singleton": true,
+				},
+				"app2pkg.doc1": map[string]interface{}{
+					"Fields": []interface{}{
+						map[string]interface{}{
+							"Data":     "sys.QName",
+							"Name":     "sys.QName",
+							"Required": true,
+						}, map[string]interface{}{
+							"Data":     "sys.RecordID",
+							"Name":     "sys.ID",
+							"Required": true,
+						}, map[string]interface{}{
+							"Data": "sys.bool",
+							"Name": "sys.IsActive",
+						},
 					},
-					"Kind": "DefKind_ViewRecord_Key",
-					"Name": "my.View_FullKey",
+					"Kind": "CDoc",
 				},
-				"my.View_PartitionKey": map[string]interface{}{
-					"Fields": []interface{}{map[string]interface{}{"Kind": "DataKind_int32", "Name": "ViewIntFld", "Required": true}},
-					"Kind":   "DefKind_ViewRecord_PartitionKey",
-					"Name":   "my.View_PartitionKey",
-				},
-				"my.View_ClusteringColumns": map[string]interface{}{
-					"Fields": []interface{}{map[string]interface{}{"Kind": "DataKind_string", "Name": "ViewStrFld"}},
-					"Kind":   "DefKind_ViewRecord_ClusteringColumns",
-					"Name":   "my.View_ClusteringColumns",
-				},
-				"my.View_Value": map[string]interface{}{
-					"Fields": []interface{}{map[string]interface{}{"Kind": "DataKind_QName", "Name": "sys.QName", "Required": true}},
-					"Kind":   "DefKind_ViewRecord_Value",
-					"Name":   "my.View_Value",
+			},
+			"Extensions": map[string]interface{}{
+				"Commands": map[string]interface{}{
+					"app2pkg.testCmd": map[string]interface{}{
+						"Engine": "BuiltIn",
+						"Name":   "testCmd",
+					},
 				},
 			},
 		}
-		require.Equal(expected, actual)
+		require.EqualValues(expected, actual)
 	})
 }

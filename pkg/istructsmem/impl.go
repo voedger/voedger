@@ -51,7 +51,7 @@ func (provider *appStructsProviderType) AppStructs(appName istructs.AppQName) (s
 	defer provider.locker.Unlock()
 
 	app, exists := provider.structures[appName]
-	if !exists {
+	if !exists || !appCfg.Prepared() {
 		buckets := provider.bucketsFactory()
 		appTokens := provider.appTokensFactory.New(appName)
 		appStorage, err := provider.storageProvider.AppStorage(appName)
@@ -65,6 +65,11 @@ func (provider *appStructsProviderType) AppStructs(appName istructs.AppQName) (s
 		provider.structures[appName] = app
 	}
 	return app, nil
+}
+
+// istructs.IAppStructsProvider.AppStructsByDef
+func (provider *appStructsProviderType) AppStructsByDef(aqn istructs.AppQName, appDef appdef.IAppDef) (structs istructs.IAppStructs, err error) {
+	return provider.AppStructs(aqn)
 }
 
 // appStructsType implements IAppStructs interface
@@ -122,7 +127,7 @@ func (app *appStructsType) Resources() istructs.IResources {
 
 // istructs.IAppStructs.ClusterAppID
 func (app *appStructsType) ClusterAppID() istructs.ClusterAppID {
-	return app.config.QNameID
+	return app.config.ClusterAppID
 }
 
 // istructs.IAppStructs.AppQName
@@ -139,6 +144,7 @@ func (app *appStructsType) Buckets() irates.IBuckets {
 func (app *appStructsType) SyncProjectors() []istructs.ProjectorFactory {
 	return app.config.syncProjectorFactories
 }
+
 func (app *appStructsType) AsyncProjectors() []istructs.ProjectorFactory {
 	return app.config.asyncProjectorFactories
 }
@@ -444,7 +450,7 @@ func (recs *appRecordsType) validEvent(ev *eventType) (err error) {
 	}
 
 	for _, rec := range ev.cud.creates {
-		if cDoc, ok := rec.def.(appdef.ICDoc); ok && cDoc.Singleton() {
+		if cDoc, ok := rec.typ.(appdef.ICDoc); ok && cDoc.Singleton() {
 			id, err := recs.app.config.singletons.ID(rec.QName())
 			if err != nil {
 				return err
@@ -471,7 +477,7 @@ func (recs *appRecordsType) validEvent(ev *eventType) (err error) {
 
 		// check exists record has correct QName
 		if rec.originRec.QName() != old.QName() {
-			return fmt.Errorf("updated «%v» record «%d» has unexpected QName value «%v»: %w", rec.originRec.QName(), rec.originRec.ID(), old.QName(), ErrWrongDefinition)
+			return fmt.Errorf("updated «%v» record «%d» has unexpected QName value «%v»: %w", rec.originRec.QName(), rec.originRec.ID(), old.QName(), ErrWrongType)
 		}
 	}
 

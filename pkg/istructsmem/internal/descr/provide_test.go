@@ -6,6 +6,7 @@
 package descr
 
 import (
+	_ "embed"
 	"encoding/json"
 	"testing"
 
@@ -15,16 +16,29 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
+//go:embed provide_test.json
+var expectedJson string
+
 func TestBasicUsage(t *testing.T) {
 	appDef := appdef.New()
 
+	numName := appdef.NewQName("test", "number")
+	strName := appdef.NewQName("test", "string")
+
 	docName, recName := appdef.NewQName("test", "doc"), appdef.NewQName("test", "rec")
+
+	n := appDef.AddData(numName, appdef.DataKind_int64, appdef.NullQName, appdef.MinIncl(1))
+	n.SetComment("natural (positive) integer")
+
+	s := appDef.AddData(strName, appdef.DataKind_string, appdef.NullQName)
+	s.AddConstraints(appdef.MinLen(1), appdef.MaxLen(100), appdef.Pattern(`^\w+$`, "only word characters allowed"))
 
 	doc := appDef.AddSingleton(docName)
 	doc.
 		AddField("f1", appdef.DataKind_int64, true).
 		SetFieldComment("f1", "field comment").
-		AddStringField("f2", false, appdef.MinLen(4), appdef.MaxLen(4), appdef.Pattern(`^\w+$`)).
+		AddField("f2", appdef.DataKind_string, false, appdef.MinLen(4), appdef.MaxLen(4), appdef.Pattern(`^\w+$`)).
+		AddDataField("numField", numName, false).
 		AddRefField("mainChild", false, recName).(appdef.ICDocBuilder).
 		AddContainer("rec", recName, 0, 100, "container comment").(appdef.ICDocBuilder).
 		AddUnique("", []string{"f1", "f2"})
@@ -33,10 +47,43 @@ func TestBasicUsage(t *testing.T) {
 	rec := appDef.AddCRecord(recName)
 	rec.
 		AddField("f1", appdef.DataKind_int64, true).
-		AddStringField("f2", false).
-		AddStringField("phone", true, appdef.MinLen(1), appdef.MaxLen(25)).
+		AddField("f2", appdef.DataKind_string, false).
+		AddField("phone", appdef.DataKind_string, true, appdef.MinLen(1), appdef.MaxLen(25)).
 		SetFieldVerify("phone", appdef.VerificationKind_Any...).(appdef.ICRecordBuilder).
 		SetUniqueField("phone")
+
+	viewName := appdef.NewQName("test", "view")
+	view := appDef.AddView(viewName)
+	view.KeyBuilder().PartKeyBuilder().
+		AddField("pk_1", appdef.DataKind_int64)
+	view.KeyBuilder().ClustColsBuilder().
+		AddField("cc_1", appdef.DataKind_string, appdef.MaxLen(100))
+	view.ValueBuilder().
+		AddDataField("vv_code", strName, true).
+		AddRefField("vv_1", true, docName)
+
+	objName := appdef.NewQName("test", "obj")
+	obj := appDef.AddObject(objName)
+	obj.AddField("f1", appdef.DataKind_string, true)
+
+	cmdName := appdef.NewQName("test", "cmd")
+	appDef.AddCommand(cmdName).
+		SetUnloggedParam(objName).
+		SetParam(objName).
+		SetEngine(appdef.ExtensionEngineKind_WASM)
+
+	appDef.AddQuery(appdef.NewQName("test", "query")).
+		SetParam(objName).
+		SetResult(appdef.QNameANY)
+
+	appDef.AddProjector(appdef.NewQName("test", "projector")).
+		AddEvent(recName, appdef.ProjectorEventKind_AnyChanges...).SetEventComment(recName, "run projector every time when «test.rec» is changed").
+		AddEvent(cmdName).SetEventComment(cmdName, "run projector every time when «test.cmd» command is executed").
+		AddEvent(objName).SetEventComment(objName, "run projector every time when any command with «test.obj» argument is executed").
+		SetWantErrors().
+		AddState(appdef.NewQName("sys", "records"), docName, recName).
+		AddIntent(appdef.NewQName("sys", "views"), viewName).
+		SetEngine(appdef.ExtensionEngineKind_WASM)
 
 	res := &mockResources{}
 	res.
@@ -58,78 +105,9 @@ func TestBasicUsage(t *testing.T) {
 	require.NoError(err)
 	require.Greater(len(json), 1)
 
-	require.Regexp(`^{`, string(json))
-	require.Regexp(`}$`, string(json))
+	//ioutil.WriteFile("C://temp//provide_test.json", json, 0644)
 
-	require.Regexp(`("Name")(\s*:\s*)("test1/app1")`, string(json), "app name expected")
-
-	require.Regexp(
-		`("test\.doc")(\s*:\s*{\s*)`+
-			`("Comment")(\s*:\s*)("comment 1\\ncomment 2")(\s*,\s*)`+
-			`("Name")(\s*:\s*)("test\.doc")(\s*,\s*)`+
-			`("Kind")(\s*:\s*)("DefKind_CDoc")`,
-		string(json), "doc «test.doc» expected")
-
-	require.Regexp(
-		`("Name")(\s*:\s*)("sys\.QName")(\s*,\s*)`+
-			`("Kind")(\s*:\s*)("DataKind_QName")`,
-		string(json),
-		"system field «sys.QName» expected")
-
-	require.Regexp(
-		`("Comment")(\s*:\s*)("field comment")(\s*,\s*)`+
-			`("Name")(\s*:\s*)("f1")(\s*,\s*)`+
-			`("Kind")(\s*:\s*)("DataKind_int64")(\s*,\s*)`+
-			`("Required")(\s*:\s*)(true)`,
-		string(json),
-		"int64 field «f1» expected")
-
-	require.Regexp(
-		`("Name")(\s*:\s*)("f2")(\s*,\s*)`+
-			`("Kind")(\s*:\s*)("DataKind_string")(\s*,\s*)`+
-			`("Restricts")(\s*:\s*{\s*)`+
-			`("MinLen")(\s*:\s*)(4)(\s*,\s*)`+
-			`("MaxLen")(\s*:\s*)(4)(\s*,\s*)`+
-			`("Pattern")(\s*:\s*)("\^\\\\w\+\$)`,
-		string(json),
-		"string field «f2» expected")
-
-	require.Regexp(
-		`("Name")(\s*:\s*)("mainChild")(\s*,\s*)`+
-			`("Kind")(\s*:\s*)("DataKind_RecordID")(\s*,\s*)`+
-			`("Refs")(\s*:\s*)(\[\s*"test\.rec"\s*\])`,
-		string(json),
-		"ref field «mainChild» expected")
-
-	require.Regexp(
-		`("Uniques")(\s*:\s*\[\s*{\s*)`+
-			`("Name")(\s*:\s*)("\w+")(\s*,\s*)`+
-			`("Fields")(\s*:\s*\[\s*)`+
-			`("f1")(\s*,\s*)`+
-			`("f2")(\s*\]\s*)`,
-		string(json),
-		"unique expected")
-
-	require.Regexp(
-		`("Containers")(\s*:\s*\[\s*{\s*)`+
-			`("Comment")(\s*:\s*)("container comment")(\s*,\s*)`+
-			`("Name")(\s*:\s*)("rec")(\s*,\s*)`+
-			`("Type")(\s*:\s*)("test\.rec")(\s*,\s*)`+
-			`("MinOccurs")(\s*:\s*)(0)(\s*,\s*)`+
-			`("MaxOccurs")(\s*:\s*)(100)`,
-		string(json),
-		"container expected")
-
-	require.Regexp(`("Name")(\s*:\s*)("test\.rec")`, string(json), "record «test.rec» expected")
-
-	require.Regexp(
-		`("Name")(\s*:\s*)("phone")(\s*,\s*)`+
-			`("Kind")(\s*:\s*)("DataKind_string")(\s*,\s*)`+
-			`("Required")(\s*:\s*)(true)(\s*,\s*)`+
-			`("Verifiable")(\s*:\s*)(true)`+
-			``,
-		string(json),
-		"verified field «phone» expected")
+	require.JSONEq(expectedJson, string(json))
 }
 
 type mockedAppStructs struct {

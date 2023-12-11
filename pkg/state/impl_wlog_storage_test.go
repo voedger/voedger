@@ -31,7 +31,7 @@ func TestWLogStorage_Read(t *testing.T) {
 		appStructs.On("Records").Return(&nilRecords{})
 		appStructs.On("ViewRecords").Return(&nilViewRecords{})
 		s := ProvideQueryProcessorStateFactory()(context.Background(), appStructs, nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil)
-		kb, err := s.KeyBuilder(WLogStorage, appdef.NullQName)
+		kb, err := s.KeyBuilder(WLog, appdef.NullQName)
 		require.NoError(err)
 		kb.PutInt64(Field_Offset, 1)
 		kb.PutInt64(Field_Count, 1)
@@ -54,7 +54,7 @@ func TestWLogStorage_Read(t *testing.T) {
 		appStructs.On("Records").Return(&nilRecords{})
 		appStructs.On("ViewRecords").Return(&nilViewRecords{})
 		s := ProvideQueryProcessorStateFactory()(context.Background(), appStructs, nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil)
-		k, err := s.KeyBuilder(WLogStorage, appdef.NullQName)
+		k, err := s.KeyBuilder(WLog, appdef.NullQName)
 		require.NoError(err)
 		k.PutInt64(Field_Offset, 1)
 		k.PutInt64(Field_Count, 1)
@@ -69,8 +69,8 @@ func TestWLogStorage_GetBatch(t *testing.T) {
 		require := require.New(t)
 		event := new(mockWLogEvent)
 		event.On("CUDs", mock.Anything).Return(nil).Run(func(args mock.Arguments) {
-			cb := args.Get(0).(func(rec istructs.ICUDRow) error)
-			require.NoError(cb(new(mockCUDRow)))
+			cb := args.Get(0).(func(rec istructs.ICUDRow))
+			cb(new(mockCUDRow))
 		})
 		events := &mockEvents{}
 		events.On("ReadWLog", context.Background(), istructs.WSID(1), istructs.FirstOffset, 1, mock.AnythingOfType("istructs.WLogEventsReaderCallback")).
@@ -85,7 +85,7 @@ func TestWLogStorage_GetBatch(t *testing.T) {
 		appStructs.On("Records").Return(&nilRecords{})
 		appStructs.On("ViewRecords").Return(&nilViewRecords{})
 		s := ProvideCommandProcessorStateFactory()(context.Background(), func() istructs.IAppStructs { return appStructs }, nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil, nil, 0, nil)
-		kb, err := s.KeyBuilder(WLogStorage, appdef.NullQName)
+		kb, err := s.KeyBuilder(WLog, appdef.NullQName)
 		require.NoError(err)
 		kb.PutInt64(Field_Offset, 1)
 		kb.PutInt64(Field_Count, 1)
@@ -123,11 +123,11 @@ func TestWLogStorage_GetBatch(t *testing.T) {
 		appStructs.On("Records").Return(&nilRecords{})
 		appStructs.On("ViewRecords").Return(&nilViewRecords{})
 		s := ProvideCommandProcessorStateFactory()(context.Background(), func() istructs.IAppStructs { return appStructs }, nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil, nil, 0, nil)
-		kb1, err := s.KeyBuilder(WLogStorage, appdef.NullQName)
+		kb1, err := s.KeyBuilder(WLog, appdef.NullQName)
 		require.NoError(err)
 		kb1.PutInt64(Field_Offset, 1)
 		kb1.PutInt64(Field_Count, 1)
-		kb2, err := s.KeyBuilder(WLogStorage, appdef.NullQName)
+		kb2, err := s.KeyBuilder(WLog, appdef.NullQName)
 		require.NoError(err)
 		kb2.PutInt64(Field_Offset, 2)
 		kb2.PutInt64(Field_Count, 1)
@@ -157,7 +157,7 @@ func TestWLogStorage_ToJSON(t *testing.T) {
 		On("SyncedAt").Return(istructs.UnixMilli(1662972220001)).
 		On("Error").Return(eventError)
 
-	sv := &wLogStorageValue{
+	sv := &wLogValue{
 		event:      event,
 		offset:     123,
 		toJSONFunc: s.toJSON,

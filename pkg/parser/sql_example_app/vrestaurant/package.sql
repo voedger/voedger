@@ -1,7 +1,12 @@
 /*
 * Copyright (c) 2023-present unTill Pro, Ltd.
 */
-SCHEMA vrestaurant;
+
+APPLICATION vrestaurant();
+
+-- Declare tag to assign it later to definition(s)
+TAG BackofficeTag;
+TAG PosTag;
 
 -- TABLE BOEntity : is an Abstract base data struct for many CDOC tables
 ABSTRACT TABLE BOEntity INHERITS CDoc( -- TODO: ABSTRACT
@@ -29,10 +34,6 @@ WORKSPACE Restaurant (
 
     ROLE LocationUser;
     ROLE LocationManager;
-
-    -- Declare tag to assign it later to definition(s)
-    TAG BackofficeTag;
-    TAG PosTag;
 
     -- CDOC data schemes
 
@@ -165,13 +166,16 @@ WORKSPACE Restaurant (
 
     EXTENSION ENGINE BUILTIN (
 	
+
 	    SYNC PROJECTOR UpdateTableStatus
-	        AFTER INSERT ON (Order, Bill)
-		INTENTS(View TableStatus);
+            AFTER INSERT ON Transaction OR
+	        AFTER EXECUTE WITH PARAM ON (Order, Bill)
+		INTENTS(View(TableStatus));
 
 	    PROJECTOR UpdateSalesReport
-	        AFTER INSERT ON Bill 
-		INTENTS(View SalesPerDay);
+            AFTER INSERT ON Transaction OR 
+	        AFTER EXECUTE WITH PARAM ON Bill
+		INTENTS(View(SalesPerDay));
 
     );
 
@@ -185,10 +189,11 @@ WORKSPACE Restaurant (
 
     -- VIEW TableStatus     : keeps actual status of table(free/occupied)
     VIEW TableStatus (
+        Dummy int,
         TableNumber int,
         --  status of table(free/occupied)
         Status int,
-        PRIMARY KEY (TableNumber)
+        PRIMARY KEY ((Dummy), TableNumber)
     ) AS RESULT OF UpdateTableStatus;
 
     -- VIEW SalesPerDay     : sales report per day
@@ -204,7 +209,7 @@ WORKSPACE Restaurant (
         Vat int32, --!!! Must be float32
         VatPercent int32, --!!! Must be Currency
         PaymentTypeID ref(PaymentType) NOT NULL,
-        PRIMARY KEY (Year, Month, Day, Number)
+        PRIMARY KEY ((Year, Month, Day), Number)
     ) AS RESULT OF UpdateSalesReport;
 );    
 

@@ -6,8 +6,6 @@ package invite
 
 import (
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/apps"
-	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/itokens"
 	"github.com/voedger/voedger/pkg/sys/smtp"
@@ -15,24 +13,16 @@ import (
 )
 
 func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, timeFunc coreutils.TimeFunc,
-	federation coreutils.IFederation, itokens itokens.ITokens, smtpCfg smtp.Cfg, ep extensionpoints.IExtensionPoint) {
-	provideCmdInitiateInvitationByEMail(cfg, appDefBuilder, timeFunc)
-	provideCmdInitiateJoinWorkspace(cfg, appDefBuilder, timeFunc)
-	provideCmdInitiateUpdateInviteRoles(cfg, appDefBuilder, timeFunc)
-	provideCmdInitiateCancelAcceptedInvite(cfg, appDefBuilder, timeFunc)
+	federation coreutils.IFederation, itokens itokens.ITokens, smtpCfg smtp.Cfg) {
+	provideCmdInitiateInvitationByEMail(cfg, timeFunc)
+	provideCmdInitiateJoinWorkspace(cfg, timeFunc)
+	provideCmdInitiateUpdateInviteRoles(cfg, timeFunc)
+	provideCmdInitiateCancelAcceptedInvite(cfg, timeFunc)
 	provideCmdInitiateLeaveWorkspace(cfg, timeFunc)
-	provideCmdCancelSentInvite(cfg, appDefBuilder, timeFunc)
-	provideCmdCreateJoinedWorkspace(cfg, appDefBuilder)
-	provideCmdUpdateJoinedWorkspaceRoles(cfg, appDefBuilder)
-	provideCmdDeactivateJoinedWorkspace(cfg, appDefBuilder)
-	provideCDocSubject(cfg, appDefBuilder)
-	provideViewInviteIndex(appDefBuilder)
-	provideViewJoinedWorkspaceIndex(appDefBuilder)
-	appDefBuilder.AddObject(qNameAPApplyCancelAcceptedInvite)
-	appDefBuilder.AddObject(qNameAPApplyInvitation)
-	appDefBuilder.AddObject(qNameAPApplyJoinWorkspace)
-	appDefBuilder.AddObject(qNameAPApplyLeaveWorkspace)
-	appDefBuilder.AddObject(qNameAPApplyUpdateInviteRoles)
+	provideCmdCancelSentInvite(cfg, timeFunc)
+	provideCmdCreateJoinedWorkspace(cfg)
+	provideCmdUpdateJoinedWorkspaceRoles(cfg)
+	provideCmdDeactivateJoinedWorkspace(cfg)
 	cfg.AddAsyncProjectors(
 		provideAsyncProjectorApplyInvitationFactory(timeFunc, federation, cfg.Name, itokens, smtpCfg),
 		provideAsyncProjectorApplyJoinWorkspaceFactory(timeFunc, federation, cfg.Name, itokens),
@@ -43,6 +33,6 @@ func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder
 	cfg.AddSyncProjectors(
 		provideSyncProjectorInviteIndexFactory(),
 		provideSyncProjectorJoinedWorkspaceIndexFactory(),
+		applyViewSubjectsIdx,
 	)
-	apps.Parse(schemasFS, appdef.SysPackage, ep)
 }

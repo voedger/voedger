@@ -22,7 +22,7 @@ func (vr *appViewRecords) storeViewRecord(workspace istructs.WSID, key istructs.
 	if err = k.build(); err != nil {
 		return nil, nil, nil, err
 	}
-	if err = vr.app.config.validators.validKey(k, false); err != nil {
+	if err = validateViewKey(k, false); err != nil {
 		return nil, nil, nil, err
 	}
 
@@ -30,12 +30,12 @@ func (vr *appViewRecords) storeViewRecord(workspace istructs.WSID, key istructs.
 	if err = v.build(); err != nil {
 		return nil, nil, nil, err
 	}
-	if err = vr.app.config.validators.validViewValue(v); err != nil {
+	if err = validateViewValue(v); err != nil {
 		return nil, nil, nil, err
 	}
 
 	if k.viewName != v.viewName {
-		return nil, nil, nil, fmt.Errorf("key and value are from different views (key view is «%v», value view is «%v»): %w", k.viewName, v.viewName, ErrWrongDefinition)
+		return nil, nil, nil, fmt.Errorf("key and value are from different views (key view is «%v», value view is «%v»): %w", k.viewName, v.viewName, ErrWrongType)
 	}
 
 	partKey, cCols = k.storeToBytes(workspace)
@@ -58,7 +58,7 @@ func (key *keyType) storeViewPartKey(ws istructs.WSID) []byte {
 	utils.WriteUint16(buf, key.viewID)
 	utils.WriteUint64(buf, uint64(ws))
 
-	key.partRow.fieldsDef().Fields(
+	key.partRow.fields.Fields(
 		func(f appdef.IField) {
 			utils.SafeWriteBuf(buf, key.partRow.dyB.Get(f.Name()))
 		})
@@ -70,7 +70,7 @@ func (key *keyType) storeViewPartKey(ws istructs.WSID) []byte {
 func (key *keyType) storeViewClustKey() []byte {
 	buf := new(bytes.Buffer)
 
-	key.ccolsRow.fieldsDef().Fields(
+	key.ccolsRow.fields.Fields(
 		func(f appdef.IField) {
 			utils.SafeWriteBuf(buf, key.ccolsRow.dyB.Get(f.Name()))
 		})
@@ -80,13 +80,13 @@ func (key *keyType) storeViewClustKey() []byte {
 
 // Loads clustering columns from buffer
 func loadViewClustKey_00(key *keyType, buf *bytes.Buffer) (err error) {
-	key.ccolsRow.fieldsDef().Fields(
+	key.ccolsRow.fields.Fields(
 		func(f appdef.IField) {
 			if err != nil {
 				return // first error is enough
 			}
 			if e := loadClustFieldFromBuffer_00(key, f, buf); e != nil {
-				err = fmt.Errorf("unable to load clustering columns field «%s»: %w", f.Name(), e)
+				err = fmt.Errorf("%v: unable to load clustering columns field «%s»: %w", key.viewName, f.Name(), e)
 			}
 		})
 
@@ -99,10 +99,10 @@ func loadViewClustKey_00(key *keyType, buf *bytes.Buffer) (err error) {
 
 // Loads view value from specified buf using specified codec.
 //
-// This method uses the name of the definition set by the caller (val.QName), ignoring that is read from the buffer.
+// This method uses the name of the type set by the caller (val.QName), ignoring that is read from the buffer.
 func loadViewValue(val *valueType, codecVer byte, buf *bytes.Buffer) (err error) {
 	if _, err = utils.ReadUInt16(buf); err != nil {
-		return fmt.Errorf("error read value QNameID: %w", err)
+		return fmt.Errorf("%v: error read value QNameID: %w", val.viewName, err)
 	}
 	if err = loadRowSysFields(&val.rowType, codecVer, buf); err != nil {
 		return err
@@ -110,10 +110,10 @@ func loadViewValue(val *valueType, codecVer byte, buf *bytes.Buffer) (err error)
 
 	len := uint32(0)
 	if len, err = utils.ReadUInt32(buf); err != nil {
-		return fmt.Errorf("error read value dynobuffer length: %w", err)
+		return fmt.Errorf("%v: error read value dynobuffer length: %w", val.viewName, err)
 	}
 	if buf.Len() < int(len) {
-		return fmt.Errorf("error read value dynobuffer, expected %d bytes, but only %d bytes is available: %w", len, buf.Len(), io.ErrUnexpectedEOF)
+		return fmt.Errorf("%v: error read value dynobuffer, expected %d bytes, but only %d bytes is available: %w", val.viewName, len, buf.Len(), io.ErrUnexpectedEOF)
 	}
 	val.dyB.Reset(buf.Next(int(len)))
 
@@ -167,7 +167,7 @@ func loadClustFieldFromBuffer_00(key *keyType, field appdef.IField, buf *bytes.B
 		key.ccolsRow.PutString(field.Name(), buf.String())
 	default:
 		//no test
-		err = fmt.Errorf("unable load data type «%s»: %w", field.DataKind().TrimString(), ErrWrongFieldType)
+		err = fmt.Errorf("%v: unable load data type «%s»: %w", key.viewName, field.DataKind().TrimString(), ErrWrongFieldType)
 	}
 	return err
 }

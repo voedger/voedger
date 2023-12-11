@@ -8,8 +8,13 @@ package ihttpimpl
 import "time"
 
 const (
-	NumOfAPIProcessors       = 1
-	APIChannelBufferSize     = 10
 	defaultReadHeaderTimeout = time.Second
 	staticPath               = "/static/"
+)
+
+type contextKey int
+
+const (
+	varsKey contextKey = iota
+	routeKey
 )

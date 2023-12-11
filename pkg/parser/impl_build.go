@@ -9,8 +9,8 @@ import (
 	"fmt"
 
 	"github.com/alecthomas/participle/v2/lexer"
+
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/istructs"
 )
 
 type buildContext struct {
@@ -20,15 +20,15 @@ type buildContext struct {
 	wsBuildCtxs map[*WorkspaceStmt]*wsBuildCtx
 }
 
-func newBuildContext(packages map[string]*PackageSchemaAST, builder appdef.IAppDefBuilder) *buildContext {
+func newBuildContext(appSchema *AppSchemaAST, builder appdef.IAppDefBuilder) *buildContext {
 	return &buildContext{
 		basicContext: basicContext{
-			pkg:    nil,
-			pkgmap: packages,
-			errs:   make([]error, 0),
+			app:  appSchema,
+			errs: make([]error, 0),
 		},
 		builder:     builder,
 		wsBuildCtxs: make(map[*WorkspaceStmt]*wsBuildCtx),
+		defs:        make([]defBuildContext, 0),
 	}
 }
 
@@ -40,6 +40,7 @@ func (c *buildContext) build() error {
 		c.tables,
 		c.views,
 		c.commands,
+		c.projectors,
 		c.queries,
 		c.workspaces,
 		c.alterWorkspaces,
@@ -55,8 +56,9 @@ func (c *buildContext) build() error {
 }
 
 type wsBuildCtx struct {
-	schema  *PackageSchemaAST
+	pkg     *PackageSchemaAST
 	builder appdef.IWorkspaceBuilder
+	ictx    *iterateCtx
 	qname   appdef.QName
 }
 
@@ -71,47 +73,56 @@ func supported(stmt interface{}) bool {
 	if _, ok := stmt.(*RateStmt); ok {
 		return false
 	}
-	if _, ok := stmt.(*ProjectorStmt); ok {
+	if _, ok := stmt.(*LimitStmt); ok {
 		return false
 	}
 	return true
 }
 
-func (c *buildContext) useStmtInWs(wsctx *wsBuildCtx, stmtPackage string, stmt interface{}) {
+func (c *buildContext) useStmtInWs(wsctx *wsBuildCtx, stmtPackage string, stmt interface{}, ictx *iterateCtx) {
 	if named, ok := stmt.(INamedStatement); ok {
 		if supported(stmt) {
-			wsctx.builder.AddDef(appdef.NewQName(stmtPackage, named.GetName()))
+			wsctx.builder.AddType(appdef.NewQName(stmtPackage, named.GetName()))
 		}
 	}
 	if useTable, ok := stmt.(*UseTableStmt); ok {
-		wsctx.builder.AddDef(appdef.NewQName(stmtPackage, string(useTable.Table)))
+		if useTable.TableName != nil { // Use single table
+			n := DefQName{Package: useTable.Package, Name: *useTable.TableName}
+			err := resolveInCtx(n, ictx, func(tbl *TableStmt, pkg *PackageSchemaAST) error {
+				wsctx.builder.AddType(pkg.NewQName(tbl.Name))
+				return nil
+			})
+			if err != nil {
+				// notest
+				c.stmtErr(&useTable.Pos, err)
+				return
+			}
+		} else { // Use all tables
+			pkg, e := findPackage(useTable.Package, ictx)
+			if e != nil {
+				// notest
+				c.stmtErr(&useTable.Pos, e)
+				return
+			}
+			for _, stmt := range pkg.Ast.Statements {
+				if stmt.Table != nil {
+					wsctx.builder.AddType(pkg.NewQName(stmt.Table.Name))
+				}
+			}
+		}
 	}
 	if useWorkspace, ok := stmt.(*UseWorkspaceStmt); ok {
-		wsctx.builder.AddDef(appdef.NewQName(stmtPackage, string(useWorkspace.Workspace)))
+		wsctx.builder.AddType(appdef.NewQName(stmtPackage, string(useWorkspace.Workspace)))
 	}
 }
 
 func (c *buildContext) workspaces() error {
-	c.wsBuildCtxs = make(map[*WorkspaceStmt]*wsBuildCtx)
-	for _, schema := range c.pkgmap {
-		c.setSchema(schema)
-		iterateStmt(schema.Ast, func(w *WorkspaceStmt) {
-			qname := schema.Ast.NewQName(w.Name)
-			bld := c.builder.AddWorkspace(qname)
-			c.wsBuildCtxs[w] = &wsBuildCtx{
-				schema:  schema,
-				qname:   qname,
-				builder: bld,
-			}
-			c.addComments(w, bld)
-		})
-	}
 
 	var iter func(ws *WorkspaceStmt, wsctx *wsBuildCtx, coll IStatementCollection)
 
 	iter = func(ws *WorkspaceStmt, wsctx *wsBuildCtx, coll IStatementCollection) {
 		coll.Iterate(func(stmt interface{}) {
-			c.useStmtInWs(wsctx, string(wsctx.schema.Ast.Package), stmt)
+			c.useStmtInWs(wsctx, wsctx.pkg.Name, stmt, wsctx.ictx)
 			if collection, ok := stmt.(IStatementCollection); ok {
 				if _, isWorkspace := stmt.(*WorkspaceStmt); !isWorkspace {
 					iter(ws, wsctx, collection)
@@ -120,28 +131,43 @@ func (c *buildContext) workspaces() error {
 		})
 	}
 
-	for w, ctx := range c.wsBuildCtxs {
-		c.pkg = ctx.schema
-		iter(w, ctx, w)
+	c.wsBuildCtxs = make(map[*WorkspaceStmt]*wsBuildCtx)
+	for _, schema := range c.app.Packages {
+		iteratePackageStmt(schema, &c.basicContext, func(w *WorkspaceStmt, ictx *iterateCtx) {
+			qname := schema.NewQName(w.Name)
+			bld := c.builder.AddWorkspace(qname)
+			wsc := &wsBuildCtx{
+				pkg:     schema,
+				qname:   qname,
+				builder: bld,
+				ictx:    ictx,
+			}
+			c.wsBuildCtxs[w] = wsc
+			c.addComments(w, bld)
+		})
+	}
+
+	for w, wsc := range c.wsBuildCtxs {
+		iter(w, wsc, w)
 		if w.Abstract {
-			ctx.builder.SetAbstract()
+			wsc.builder.SetAbstract()
 		}
 		if w.Descriptor != nil {
-			ctx.builder.SetDescriptor(appdef.NewQName(string(ctx.schema.Ast.Package), w.Descriptor.GetName()))
+			wsc.builder.SetDescriptor(appdef.NewQName(string(wsc.ictx.pkg.Name), w.Descriptor.GetName()))
 		}
+
 	}
+
 	return nil
 }
 
 func (c *buildContext) alterWorkspaces() error {
-	for _, schema := range c.pkgmap {
-		c.setSchema(schema)
-		iterateStmt(schema.Ast, func(a *AlterWorkspaceStmt) {
-
+	for _, pkgAst := range c.app.Packages {
+		iteratePackageStmt(pkgAst, &c.basicContext, func(a *AlterWorkspaceStmt, ictx *iterateCtx) {
 			var iter func(wsctx *wsBuildCtx, coll IStatementCollection)
 			iter = func(wsctx *wsBuildCtx, coll IStatementCollection) {
 				coll.Iterate(func(stmt interface{}) {
-					c.useStmtInWs(wsctx, string(schema.Ast.Package), stmt)
+					c.useStmtInWs(wsctx, string(pkgAst.Name), stmt, ictx)
 					if collection, ok := stmt.(IStatementCollection); ok {
 						if _, isWorkspace := stmt.(*WorkspaceStmt); !isWorkspace {
 							iter(wsctx, collection)
@@ -150,8 +176,8 @@ func (c *buildContext) alterWorkspaces() error {
 				})
 			}
 
-			err := resolveEx(a.Name, &c.basicContext, func(w *WorkspaceStmt, pkg *PackageSchemaAST) error {
-				if !w.Alterable && schema != pkg {
+			err := resolveInCtx(a.Name, ictx, func(w *WorkspaceStmt, pkg *PackageSchemaAST) error {
+				if !w.Alterable && pkg != pkgAst {
 					return ErrWorkspaceIsNotAlterable(w.GetName())
 				}
 				iter(c.wsBuildCtxs[w], a)
@@ -167,16 +193,15 @@ func (c *buildContext) alterWorkspaces() error {
 }
 
 func (c *buildContext) addDefsFromCtx(srcCtx *wsBuildCtx, destBuilder appdef.IWorkspaceBuilder) {
-	srcCtx.builder.Defs(func(i appdef.IDef) {
-		destBuilder.AddDef(i.QName())
+	srcCtx.builder.Types(func(t appdef.IType) {
+		destBuilder.AddType(t.QName())
 	})
 }
 
 func (c *buildContext) inheritedWorkspaces() error {
-
-	sysWorkspace, _, err := lookup[*WorkspaceStmt](DefQName{Package: appdef.SysPackage, Name: rootWorkspaceName}, &c.basicContext)
+	sysWorkspace, err := lookupInSysPackage(&c.basicContext, DefQName{Package: appdef.SysPackage, Name: rootWorkspaceName})
 	if err != nil {
-		return ErrSysWorkspaceNotFound
+		return err
 	}
 
 	var addFromInheritedWs func(ws *WorkspaceStmt, wsctx *wsBuildCtx)
@@ -187,7 +212,7 @@ func (c *buildContext) inheritedWorkspaces() error {
 		for _, inherits := range ws.Inherits {
 
 			inheritsAnything = true
-			baseWs, _, err := lookup[*WorkspaceStmt](inherits, &c.basicContext)
+			baseWs, _, err := lookupInCtx[*WorkspaceStmt](inherits, wsctx.ictx)
 			if err != nil {
 				c.stmtErr(&ws.Pos, err)
 				return
@@ -206,7 +231,6 @@ func (c *buildContext) inheritedWorkspaces() error {
 	}
 
 	for w, ctx := range c.wsBuildCtxs {
-		c.pkg = ctx.schema
 		addFromInheritedWs(w, ctx)
 	}
 	return nil
@@ -220,151 +244,304 @@ func (c *buildContext) addComments(s IStatement, builder appdef.ICommentBuilder)
 }
 
 func (c *buildContext) types() error {
-	for _, schema := range c.pkgmap {
-		c.setSchema(schema)
-		iterateStmt(schema.Ast, func(typ *TypeStmt) {
-			c.pushDef(typ.Name, appdef.DefKind_Object)
+	for _, schema := range c.app.Packages {
+		iteratePackageStmt(schema, &c.basicContext, func(typ *TypeStmt, ictx *iterateCtx) {
+			c.pushDef(schema.NewQName(typ.Name), appdef.TypeKind_Object)
 			c.addComments(typ, c.defCtx().defBuilder.(appdef.ICommentBuilder))
-			c.addTableItems(typ.Items)
+			c.addTableItems(typ.Items, ictx)
 			c.popDef()
+		})
+	}
+	return nil
+}
+
+func (c *buildContext) projectors() error {
+	for _, schema := range c.app.Packages {
+		iteratePackageStmt(schema, &c.basicContext, func(proj *ProjectorStmt, ictx *iterateCtx) {
+			pQname := schema.NewQName(proj.Name)
+			builder := c.builder.AddProjector(pQname)
+			// Triggers
+			for _, trigger := range proj.Triggers {
+				evKinds := make([]appdef.ProjectorEventKind, 0)
+				if trigger.ExecuteAction != nil {
+					if trigger.ExecuteAction.WithParam {
+						evKinds = append(evKinds, appdef.ProjectorEventKind_ExecuteWithParam)
+					} else {
+						evKinds = append(evKinds, appdef.ProjectorEventKind_Execute)
+					}
+				} else {
+					if trigger.insert() {
+						evKinds = append(evKinds, appdef.ProjectorEventKind_Insert)
+					}
+					if trigger.update() {
+						evKinds = append(evKinds, appdef.ProjectorEventKind_Update)
+					}
+					if trigger.activate() {
+						evKinds = append(evKinds, appdef.ProjectorEventKind_Activate)
+					}
+					if trigger.deactivate() {
+						evKinds = append(evKinds, appdef.ProjectorEventKind_Deactivate)
+					}
+				}
+				for _, qn := range trigger.QNames {
+					if len(trigger.TableActions) > 0 {
+						if err := resolveInCtx(qn, ictx, func(tbl *TableStmt, pkg *PackageSchemaAST) error {
+							evQname := pkg.NewQName(tbl.Name)
+							builder.AddEvent(evQname, evKinds...)
+							return nil
+						}); err != nil {
+							// notest
+							c.stmtErr(&proj.Pos, err)
+						}
+					} else { // Command
+						if trigger.ExecuteAction.WithParam {
+							var pkg *PackageSchemaAST
+							var err error
+							var typ *TypeStmt
+							var odoc *TableStmt
+							var name Ident
+							typ, pkg, err = lookupInCtx[*TypeStmt](qn, ictx)
+							if err != nil {
+								// notest
+								c.stmtErr(&proj.Pos, err)
+								return
+							}
+							if typ == nil { // ODoc
+								odoc, pkg, err = lookupInCtx[*TableStmt](qn, ictx)
+								if err != nil {
+									// notest
+									c.stmtErr(&proj.Pos, err)
+									return
+								}
+								if odoc == nil {
+									// notest
+									c.stmtErr(&proj.Pos, ErrUndefinedTypeOrOdoc(qn))
+									return
+								}
+								name = odoc.Name
+							} else {
+								name = typ.Name
+							}
+							evQname := pkg.NewQName(name)
+							builder.AddEvent(evQname, evKinds...)
+						} else {
+							if err := resolveInCtx(qn, ictx, func(cmd *CommandStmt, pkg *PackageSchemaAST) error {
+								evQname := pkg.NewQName(cmd.Name)
+								builder.AddEvent(evQname, evKinds...)
+								return nil
+							}); err != nil {
+								// notest
+								c.stmtErr(&proj.Pos, err)
+							}
+						}
+					}
+				}
+			}
+
+			if proj.IncludingErrors {
+				builder.SetWantErrors()
+			}
+
+			// Common for State and Intents
+			handleStorage := func(p *ProjectorStorage, cb func(storage appdef.QName, entities ...appdef.QName)) {
+				var storage *StorageStmt
+				var storagePkg *PackageSchemaAST
+				if err := resolveInCtx(p.Storage, ictx, func(s *StorageStmt, pkg *PackageSchemaAST) error {
+					storage = s
+					storagePkg = pkg
+					return nil
+				}); err != nil {
+					// notest
+					c.stmtErr(&proj.Pos, err)
+					return // do not continue with this projector
+				}
+
+				entities := make([]appdef.QName, len(p.Entities))
+				for i, qn := range p.Entities {
+					var resolveErr error
+					if storage.EntityRecord { // resolve table
+						resolveErr = resolveInCtx(qn, ictx, func(tbl *TableStmt, pkg *PackageSchemaAST) error {
+							entities[i] = pkg.NewQName(tbl.Name)
+							return nil
+						})
+					} else if storage.EntityView { // resolve view
+						resolveErr = resolveInCtx(qn, ictx, func(tbl *ViewStmt, pkg *PackageSchemaAST) error {
+							entities[i] = pkg.NewQName(tbl.Name)
+							return nil
+						})
+					}
+					if resolveErr != nil {
+						// notest
+						c.stmtErr(&proj.Pos, resolveErr)
+						return // do not continue with this projector
+					}
+				}
+				cb(storagePkg.NewQName(storage.Name), entities...)
+			}
+
+			// Intents
+			for _, intent := range proj.Intents {
+				handleStorage(&intent, func(storage appdef.QName, entities ...appdef.QName) {
+					builder.AddIntent(storage, entities...)
+				})
+			}
+			// State
+			for _, state := range proj.State {
+				handleStorage(&state, func(storage appdef.QName, entities ...appdef.QName) {
+					builder.AddState(storage, entities...)
+				})
+			}
+
+			c.addComments(proj, builder)
+			builder.SetName(proj.GetName())
+			if proj.Engine.WASM {
+				builder.SetEngine(appdef.ExtensionEngineKind_WASM)
+			} else {
+				builder.SetEngine(appdef.ExtensionEngineKind_BuiltIn)
+			}
+			builder.SetSync(proj.Sync)
 		})
 	}
 	return nil
 }
 
 func (c *buildContext) views() error {
-	for _, schema := range c.pkgmap {
-		c.setSchema(schema)
-		iterateStmt(schema.Ast, func(view *ViewStmt) {
-			c.pushDef(view.Name, appdef.DefKind_ViewRecord)
+	for _, schema := range c.app.Packages {
+		iteratePackageStmt(schema, &c.basicContext, func(view *ViewStmt, ictx *iterateCtx) {
+			c.pushDef(schema.NewQName(view.Name), appdef.TypeKind_ViewRecord)
 			vb := func() appdef.IViewBuilder {
 				return c.defCtx().defBuilder.(appdef.IViewBuilder)
 			}
 			c.addComments(view, vb())
-			for i := range view.Items {
-				f := &view.Items[i]
 
-				if f.PrimaryKey != nil {
-					continue
-				}
-
-				ccComments := func(fieldname string, comments []string) {
-					if len(comments) > 0 {
-						vb().Key().ClustCols().SetFieldComment(string(fieldname), comments...)
+			resolveConstraints := func(f *ViewField) []appdef.IConstraint {
+				cc := []appdef.IConstraint{}
+				switch k := dataTypeToDataKind(f.Type); k {
+				case appdef.DataKind_bytes:
+					if (f.Type.Bytes != nil) && (f.Type.Bytes.MaxLen != nil) {
+						cc = append(cc, appdef.MaxLen(uint16(*f.Type.Bytes.MaxLen)))
+					}
+				case appdef.DataKind_string:
+					if (f.Type.Varchar != nil) && (f.Type.Varchar.MaxLen != nil) {
+						cc = append(cc, appdef.MaxLen(uint16(*f.Type.Varchar.MaxLen)))
 					}
 				}
-				pkComments := func(fieldname string, comments []string) {
-					if len(comments) > 0 {
-						vb().Key().Partition().SetFieldComment(string(fieldname), comments...)
-					}
-				}
-				valComments := func(fieldname string, comments []string) {
-					if len(comments) > 0 {
-						vb().Value().SetFieldComment(string(fieldname), comments...)
-					}
-				}
-
-				if f.Field != nil {
-					fieldname := f.Field.Name
-					comments := f.Field.Statement.GetComments()
-					var length uint16 = appdef.DefaultFieldMaxLength
-					if f.Field.Type.Varchar != nil {
-						if f.Field.Type.Varchar.MaxLen != nil {
-							length = *f.Field.Type.Varchar.MaxLen
-						}
-						if contains(view.pkRef.ClusteringColumnsFields, fieldname) {
-							vb().Key().ClustCols().AddStringField(string(fieldname), length)
-							ccComments(string(fieldname), comments)
-						} else {
-							vb().Value().AddStringField(string(fieldname), f.Field.NotNull, length)
-							valComments(string(fieldname), comments)
-						}
-					} else if f.Field.Type.Bytes != nil {
-						if f.Field.Type.Bytes.MaxLen != nil {
-							length = *f.Field.Type.Bytes.MaxLen
-						}
-						if contains(view.pkRef.ClusteringColumnsFields, fieldname) {
-							vb().Key().ClustCols().AddBytesField(string(fieldname), length)
-							ccComments(string(fieldname), comments)
-						} else {
-							vb().Value().AddBytesField(string(fieldname), f.Field.NotNull, length)
-							valComments(string(fieldname), comments)
-						}
-					} else { // Other data types
-						datakind := dataTypeToDataKind(f.Field.Type)
-						if contains(view.pkRef.ClusteringColumnsFields, fieldname) {
-							vb().Key().ClustCols().AddField(string(fieldname), datakind)
-							ccComments(string(fieldname), comments)
-						} else if contains(view.pkRef.PartitionKeyFields, fieldname) {
-							vb().Key().Partition().AddField(string(fieldname), datakind)
-							pkComments(string(fieldname), comments)
-						} else {
-							vb().Value().AddField(string(fieldname), datakind, f.Field.NotNull)
-							valComments(string(fieldname), comments)
-						}
-
-					}
-				} else if f.RefField != nil {
-					fieldname := f.RefField.Name
-					comments := f.RefField.Statement.GetComments()
-					refs := make([]appdef.QName, 0)
-					errors := false
-					for i := range f.RefField.RefDocs {
-						tableStmt, schema, err := resolveTable(f.RefField.RefDocs[i], &c.basicContext)
-						if err != nil {
-							c.stmtErr(&f.RefField.Pos, err)
-							errors = true
-							continue
-						}
-						if err = c.checkReference(f.RefField.RefDocs[i], tableStmt); err != nil {
-							c.stmtErr(&f.RefField.Pos, err)
-							errors = true
-						}
-						refs = append(refs, appdef.NewQName(string(schema.Ast.Package), string(f.RefField.RefDocs[i].Name)))
-					}
-					if !errors {
-						if contains(view.pkRef.ClusteringColumnsFields, fieldname) {
-							vb().Key().ClustCols().AddRefField(string(fieldname), refs...)
-							ccComments(string(fieldname), comments)
-						} else if contains(view.pkRef.PartitionKeyFields, fieldname) {
-							vb().Key().Partition().AddRefField(string(fieldname), refs...)
-							pkComments(string(fieldname), comments)
-						} else {
-							vb().Value().AddRefField(string(fieldname), f.RefField.NotNull, refs...)
-							valComments(string(fieldname), comments)
-						}
-					}
-				}
+				return cc
 			}
+
+			resolveRefs := func(f *ViewRefField) (refs []appdef.QName, ok bool) {
+				refs = make([]appdef.QName, 0, len(f.RefDocs))
+				ok = true
+				for _, ref := range f.RefDocs {
+					if err := resolveInCtx(ref, ictx,
+						func(tbl *TableStmt, pkg *PackageSchemaAST) error {
+							if e := c.checkReference(ref, pkg, tbl); e != nil {
+								return e
+							}
+							refs = append(refs, appdef.NewQName(string(pkg.Name), string(ref.Name)))
+							return nil
+						},
+					); err != nil {
+						c.stmtErr(&f.Pos, err)
+						ok = false
+					}
+				}
+				return refs, ok
+			}
+
+			view.PartitionFields(func(f *ViewItemExpr) {
+				comment := func(n Ident, s Statement) {
+					if txt := s.GetComments(); len(txt) > 0 {
+						vb().KeyBuilder().PartKeyBuilder().SetFieldComment(string(n), txt...)
+					}
+				}
+				if f.Field != nil {
+					vb().KeyBuilder().PartKeyBuilder().AddField(string(f.Field.Name), dataTypeToDataKind(f.Field.Type))
+					comment(f.Field.Name, f.Field.Statement)
+					return
+				}
+				if f.RefField != nil {
+					if refs, ok := resolveRefs(f.RefField); ok {
+						vb().KeyBuilder().PartKeyBuilder().AddRefField(string(f.RefField.Name), refs...)
+						comment(f.RefField.Name, f.RefField.Statement)
+					}
+				}
+			})
+
+			view.ClusteringColumns(func(f *ViewItemExpr) {
+				comment := func(n Ident, s Statement) {
+					if txt := s.GetComments(); len(txt) > 0 {
+						vb().KeyBuilder().ClustColsBuilder().SetFieldComment(string(n), txt...)
+					}
+				}
+				if f.Field != nil {
+					k := dataTypeToDataKind(f.Field.Type)
+					vb().KeyBuilder().ClustColsBuilder().AddDataField(string(f.Field.Name), appdef.SysDataName(k), resolveConstraints(f.Field)...)
+					comment(f.Field.Name, f.Field.Statement)
+					return
+				}
+				if f.RefField != nil {
+					if refs, ok := resolveRefs(f.RefField); ok {
+						vb().KeyBuilder().ClustColsBuilder().AddRefField(string(f.RefField.Name), refs...)
+						comment(f.RefField.Name, f.RefField.Statement)
+					}
+				}
+			})
+
+			view.ValueFields(func(f *ViewItemExpr) {
+				comment := func(n Ident, s Statement) {
+					if txt := s.GetComments(); len(txt) > 0 {
+						vb().ValueBuilder().SetFieldComment(string(n), txt...)
+					}
+				}
+				if f.Field != nil {
+					k := dataTypeToDataKind(f.Field.Type)
+					vb().ValueBuilder().AddDataField(string(f.Field.Name), appdef.SysDataName(k), f.Field.NotNull, resolveConstraints(f.Field)...)
+					comment(f.Field.Name, f.Field.Statement)
+					return
+				}
+				if f.RefField != nil {
+					if refs, ok := resolveRefs(f.RefField); ok {
+						vb().ValueBuilder().AddRefField(string(f.RefField.Name), f.RefField.NotNull, refs...)
+						comment(f.RefField.Name, f.RefField.Statement)
+					}
+				}
+			})
 			c.popDef()
 		})
 	}
 	return nil
 }
 
+func setParam(ictx *iterateCtx, v *AnyOrVoidOrDef, cb func(qn appdef.QName)) {
+	if v.Def != nil {
+		argQname := buildQname(ictx, v.Def.Package, v.Def.Name)
+		cb(argQname)
+	} else if v.Any {
+		cb(appdef.QNameANY)
+	}
+}
+
 func (c *buildContext) commands() error {
-	for _, schema := range c.pkgmap {
-		c.setSchema(schema)
-		iterateStmt(schema.Ast, func(cmd *CommandStmt) {
-			qname := c.pkg.Ast.NewQName(cmd.Name)
+	for _, schema := range c.app.Packages {
+		iteratePackageStmt(schema, &c.basicContext, func(cmd *CommandStmt, ictx *iterateCtx) {
+			qname := schema.NewQName(cmd.Name)
 			b := c.builder.AddCommand(qname)
 			c.addComments(cmd, b)
-			if cmd.Arg != nil && cmd.Arg.Def != nil {
-				argQname := buildQname(c, cmd.Arg.Def.Package, cmd.Arg.Def.Name)
-				b.SetArg(argQname)
+			if cmd.Param != nil {
+				setParam(ictx, cmd.Param, func(qn appdef.QName) { b.SetParam(qn) })
 			}
-			if cmd.UnloggedArg != nil && cmd.UnloggedArg.Def != nil {
-				argQname := buildQname(c, cmd.UnloggedArg.Def.Package, cmd.UnloggedArg.Def.Name)
-				b.SetUnloggedArg(argQname)
+			if cmd.UnloggedParam != nil {
+				setParam(ictx, cmd.UnloggedParam, func(qn appdef.QName) { b.SetUnloggedParam(qn) })
 			}
-			if cmd.Returns != nil && cmd.Returns.Def != nil {
-				retQname := buildQname(c, cmd.Returns.Def.Package, cmd.Returns.Def.Name)
-				b.SetResult(retQname)
+			if cmd.Returns != nil {
+				setParam(ictx, cmd.Returns, func(qn appdef.QName) { b.SetResult(qn) })
 			}
+			b.SetName(cmd.GetName())
 			if cmd.Engine.WASM {
-				b.SetExtension(cmd.GetName(), appdef.ExtensionEngineKind_WASM)
+				b.SetEngine(appdef.ExtensionEngineKind_WASM)
 			} else {
-				b.SetExtension(cmd.GetName(), appdef.ExtensionEngineKind_BuiltIn)
+				b.SetEngine(appdef.ExtensionEngineKind_BuiltIn)
 			}
 		})
 	}
@@ -372,30 +549,22 @@ func (c *buildContext) commands() error {
 }
 
 func (c *buildContext) queries() error {
-	for _, schema := range c.pkgmap {
-		c.setSchema(schema)
-		iterateStmt(schema.Ast, func(q *QueryStmt) {
-			qname := c.pkg.Ast.NewQName(q.Name)
+	for _, schema := range c.app.Packages {
+		iteratePackageStmt(schema, &c.basicContext, func(q *QueryStmt, ictx *iterateCtx) {
+			qname := schema.NewQName(q.Name)
 			b := c.builder.AddQuery(qname)
 			c.addComments(q, b)
-			if q.Arg != nil && q.Arg.Def != nil {
-				argQname := buildQname(c, q.Arg.Def.Package, q.Arg.Def.Name)
-				b.SetArg(argQname)
+			if q.Param != nil {
+				setParam(ictx, q.Param, func(qn appdef.QName) { b.SetParam(qn) })
 			}
 
-			if q.Returns.Any {
-				b.SetResult(istructs.QNameANY)
-			} else {
-				if q.Returns.Def != nil {
-					retQname := buildQname(c, q.Returns.Def.Package, q.Returns.Def.Name)
-					b.SetResult(retQname)
-				}
-			}
+			setParam(ictx, &q.Returns, func(qn appdef.QName) { b.SetResult(qn) })
 
+			b.SetName(q.GetName())
 			if q.Engine.WASM {
-				b.SetExtension(string(q.Name), appdef.ExtensionEngineKind_WASM)
+				b.SetEngine(appdef.ExtensionEngineKind_WASM)
 			} else {
-				b.SetExtension(string(q.Name), appdef.ExtensionEngineKind_BuiltIn)
+				b.SetEngine(appdef.ExtensionEngineKind_BuiltIn)
 			}
 		})
 	}
@@ -403,58 +572,51 @@ func (c *buildContext) queries() error {
 }
 
 func (c *buildContext) tables() error {
-	for _, schema := range c.pkgmap {
-		c.setSchema(schema)
-		iterateStmt(schema.Ast, func(table *TableStmt) {
-			c.table(schema, table)
+	for _, schema := range c.app.Packages {
+		iteratePackageStmt(schema, &c.basicContext, func(table *TableStmt, ictx *iterateCtx) {
+			c.table(schema, table, ictx)
 		})
-		iterateStmt(schema.Ast, func(w *WorkspaceStmt) {
-			c.workspaceDescriptor(schema, w)
+		iteratePackageStmt(schema, &c.basicContext, func(w *WorkspaceStmt, ictx *iterateCtx) {
+			c.workspaceDescriptor(w, ictx)
 		})
 	}
 	return errors.Join(c.errs...)
 }
 
-func (c *buildContext) fillTable(table *TableStmt) {
+func (c *buildContext) fillTable(table *TableStmt, ictx *iterateCtx) {
 	if table.Inherits != nil {
-		if err := resolve(*table.Inherits, &c.basicContext, func(t *TableStmt) error {
-			c.fillTable(t)
+		if err := resolveInCtx(*table.Inherits, ictx, func(t *TableStmt, schema *PackageSchemaAST) error {
+			c.fillTable(t, ictx)
 			return nil
 		}); err != nil {
 			c.stmtErr(&table.Pos, err)
 		}
 	}
-	c.addTableItems(table.Items)
+	c.addTableItems(table.Items, ictx)
 }
 
-func (c *buildContext) workspaceDescriptor(schema *PackageSchemaAST, w *WorkspaceStmt) {
+func (c *buildContext) workspaceDescriptor(w *WorkspaceStmt, ictx *iterateCtx) {
 	if w.Descriptor != nil {
-		c.setSchema(schema)
-		qname := c.pkg.Ast.NewQName(w.Descriptor.Name)
-		if c.isExists(qname, appdef.DefKind_CDoc) {
+		qname := ictx.pkg.NewQName(w.Descriptor.Name)
+		if c.isExists(qname, appdef.TypeKind_CDoc) {
 			return
 		}
-		c.pushDef(w.Descriptor.Name, appdef.DefKind_CDoc)
+		c.pushDef(qname, appdef.TypeKind_CDoc)
 		c.addComments(w.Descriptor, c.defCtx().defBuilder.(appdef.ICommentBuilder))
-		c.addTableItems(w.Descriptor.Items)
+		c.addTableItems(w.Descriptor.Items, ictx)
 		c.defCtx().defBuilder.(appdef.ICDocBuilder).SetSingleton()
 		c.popDef()
 	}
 }
 
-func (c *buildContext) table(schema *PackageSchemaAST, table *TableStmt) {
-	c.setSchema(schema)
-	if isPredefinedSysTable(c.pkg.QualifiedPackageName, table) {
+func (c *buildContext) table(schema *PackageSchemaAST, table *TableStmt, ictx *iterateCtx) {
+	qname := schema.NewQName(table.Name)
+	if c.isExists(qname, table.tableTypeKind) {
 		return
 	}
-
-	qname := c.pkg.Ast.NewQName(table.Name)
-	if c.isExists(qname, table.tableDefKind) {
-		return
-	}
-	c.pushDef(table.Name, table.tableDefKind)
+	c.pushDef(qname, table.tableTypeKind)
 	c.addComments(table, c.defCtx().defBuilder.(appdef.ICommentBuilder))
-	c.fillTable(table)
+	c.fillTable(table, ictx)
 	if table.singletone {
 		c.defCtx().defBuilder.(appdef.ICDocBuilder).SetSingleton()
 	}
@@ -464,7 +626,7 @@ func (c *buildContext) table(schema *PackageSchemaAST, table *TableStmt) {
 	c.popDef()
 }
 
-func (c *buildContext) addFieldRefToDef(refField *RefFieldExpr) {
+func (c *buildContext) addFieldRefToDef(refField *RefFieldExpr, ictx *iterateCtx) {
 	if err := c.defCtx().checkName(string(refField.Name)); err != nil {
 		c.stmtErr(&refField.Pos, err)
 		return
@@ -472,112 +634,154 @@ func (c *buildContext) addFieldRefToDef(refField *RefFieldExpr) {
 	refs := make([]appdef.QName, 0)
 	errors := false
 	for i := range refField.RefDocs {
-		tableStmt, schema, err := resolveTable(refField.RefDocs[i], &c.basicContext)
+		err := resolveInCtx(refField.RefDocs[i], ictx, func(tbl *TableStmt, pkg *PackageSchemaAST) error {
+			if e := c.checkReference(refField.RefDocs[i], pkg, tbl); e != nil {
+				return e
+			}
+			refs = append(refs, appdef.NewQName(string(pkg.Name), string(refField.RefDocs[i].Name)))
+			return nil
+		})
 		if err != nil {
 			c.stmtErr(&refField.Pos, err)
 			errors = true
 			continue
 		}
-		if err = c.checkReference(refField.RefDocs[i], tableStmt); err != nil {
-			c.stmtErr(&refField.Pos, err)
-			errors = true
-		}
-		refs = append(refs, appdef.NewQName(string(schema.Ast.Package), string(refField.RefDocs[i].Name)))
 	}
 	if !errors {
 		c.defCtx().defBuilder.(appdef.IFieldsBuilder).AddRefField(string(refField.Name), refField.NotNull, refs...)
 	}
 }
 
-func (c *buildContext) addFieldToDef(field *FieldExpr) {
+func (c *buildContext) addDataTypeField(field *FieldExpr) {
+	if err := c.defCtx().checkName(string(field.Name)); err != nil {
+		c.stmtErr(&field.Pos, err)
+		return
+	}
 
-	if field.Type.DataType != nil { // embedded type
-		if err := c.defCtx().checkName(string(field.Name)); err != nil {
+	bld := c.defCtx().defBuilder.(appdef.IFieldsBuilder)
+	fieldName := string(field.Name)
+	sysDataKind := dataTypeToDataKind(*field.Type.DataType)
+
+	if field.Type.DataType.Bytes != nil {
+		if field.Type.DataType.Bytes.MaxLen != nil {
+			bld.AddField(fieldName, appdef.DataKind_bytes, field.NotNull, appdef.MaxLen(uint16(*field.Type.DataType.Bytes.MaxLen)))
+		} else {
+			bld.AddField(fieldName, appdef.DataKind_bytes, field.NotNull)
+		}
+	} else if field.Type.DataType.Varchar != nil {
+		constraints := make([]appdef.IConstraint, 0)
+		if field.Type.DataType.Varchar.MaxLen != nil {
+			constraints = append(constraints, appdef.MaxLen(uint16(*field.Type.DataType.Varchar.MaxLen)))
+		}
+		if field.CheckRegexp != nil {
+			constraints = append(constraints, appdef.Pattern(*field.CheckRegexp))
+		}
+		bld.AddField(fieldName, appdef.DataKind_string, field.NotNull, constraints...)
+	} else {
+		bld.AddField(fieldName, sysDataKind, field.NotNull)
+	}
+
+	if field.Verifiable {
+		bld.SetFieldVerify(fieldName, appdef.VerificationKind_EMail)
+		// TODO: Support different verification kindsbuilder, &c
+	}
+
+	comments := field.Statement.GetComments()
+	if len(comments) > 0 {
+		bld.SetFieldComment(fieldName, comments...)
+	}
+}
+
+func (c *buildContext) addObjectFieldToType(field *FieldExpr, ictx *iterateCtx) {
+	pkg := string(field.Type.Def.Package)
+	if pkg == "" {
+		pkg = ictx.pkg.Name
+	}
+	qname := appdef.NewQName(pkg, string(field.Type.Def.Name))
+
+	err := resolveInCtx(*field.Type.Def, ictx, func(tbl *TypeStmt, pkg *PackageSchemaAST) error { return nil })
+	if err != nil {
+		// notest
+		c.stmtErr(&field.Pos, err)
+		return
+	}
+
+	minOccur := 0
+	if field.NotNull {
+		minOccur = 1
+	}
+
+	maxOccur := 1
+	// not supported by kernel yet
+	// if field.Type.Array != nil {
+	// 	if field.Type.Array.Unbounded {
+	// 		maxOccur = maxNestedTableContainerOccurrences
+	// 	} else {
+	// 		maxOccur = field.Type.Array.MaxOccurs
+	// 	}
+	// }
+	c.defCtx().defBuilder.(appdef.IObjectBuilder).AddContainer(string(field.Name), qname, appdef.Occurs(minOccur), appdef.Occurs(maxOccur))
+}
+
+func (c *buildContext) addTableFieldToTable(field *FieldExpr, ictx *iterateCtx) {
+	// Record?
+	pkg := string(field.Type.Def.Package)
+	if pkg == "" {
+		pkg = ictx.pkg.Name
+	}
+	qname := appdef.NewQName(pkg, string(field.Type.Def.Name))
+	wrec := c.builder.WRecord(qname)
+	crec := c.builder.CRecord(qname)
+	orec := c.builder.ORecord(qname)
+
+	if wrec == nil && orec == nil && crec == nil { // not yet built
+		tbl, _, err := lookupInCtx[*TableStmt](DefQName{Package: Ident(qname.Pkg()), Name: Ident(qname.Entity())}, ictx)
+		if err != nil {
 			c.stmtErr(&field.Pos, err)
 			return
 		}
-
-		bld := c.defCtx().defBuilder.(appdef.IFieldsBuilder)
-		fieldName := string(field.Name)
-		sysDataKind := dataTypeToDataKind(*field.Type.DataType)
-
-		if field.Type.DataType.Bytes != nil {
-			if field.Type.DataType.Bytes.MaxLen != nil {
-				bld.AddBytesField(fieldName, field.NotNull, appdef.MaxLen(*field.Type.DataType.Bytes.MaxLen))
-			} else {
-				bld.AddBytesField(fieldName, field.NotNull)
-			}
-		} else if field.Type.DataType.Varchar != nil {
-			restricts := make([]appdef.IFieldRestrict, 0)
-			if field.Type.DataType.Varchar.MaxLen != nil {
-				restricts = append(restricts, appdef.MaxLen(*field.Type.DataType.Varchar.MaxLen))
-			}
-			if field.CheckRegexp != nil {
-				restricts = append(restricts, appdef.Pattern(*field.CheckRegexp))
-			}
-			bld.AddStringField(fieldName, field.NotNull, restricts...)
-		} else {
-			bld.AddField(fieldName, sysDataKind, field.NotNull)
+		if tbl == nil {
+			c.stmtErr(&field.Pos, ErrTypeNotSupported(field.Type.String()))
+			return
 		}
-
-		if field.Verifiable {
-			bld.SetFieldVerify(fieldName, appdef.VerificationKind_EMail)
-			// TODO: Support different verification kindsbuilder, &c
+		if tbl.Abstract {
+			c.stmtErr(&field.Pos, ErrNestedAbstractTable(field.Type.String()))
+			return
 		}
-
-		comments := field.Statement.GetComments()
-		if len(comments) > 0 {
-			bld.SetFieldComment(fieldName, comments...)
-		}
-
-	} else { // field.Type.Def
-		// Record?
-		pkg := field.Type.Def.Package
-		if pkg == "" {
-			pkg = c.pkg.Ast.Package
-		}
-		qname := appdef.NewQName(string(pkg), string(field.Type.Def.Name))
-		wrec := c.builder.WRecord(qname)
-		crec := c.builder.CRecord(qname)
-		orec := c.builder.ORecord(qname)
-
-		if wrec == nil && orec == nil && crec == nil { // not yet built
-			tbl, _, err := lookup[*TableStmt](DefQName{Package: Ident(qname.Pkg()), Name: Ident(qname.Entity())}, &c.basicContext)
-			if err != nil {
-				c.stmtErr(&field.Pos, err)
-				return
-			}
-			if tbl == nil {
-				c.stmtErr(&field.Pos, ErrTypeNotSupported(field.Type.String()))
-				return
-			}
-			if tbl.Abstract {
-				c.stmtErr(&field.Pos, ErrNestedAbstractTable(field.Type.String()))
-				return
-			}
-			if tbl.tableDefKind == appdef.DefKind_CRecord || tbl.tableDefKind == appdef.DefKind_ORecord || tbl.tableDefKind == appdef.DefKind_WRecord {
-				c.table(c.pkg, tbl)
-				wrec = c.builder.WRecord(qname)
-				crec = c.builder.CRecord(qname)
-				orec = c.builder.ORecord(qname)
-			} else {
-				c.stmtErr(&field.Pos, ErrTypeNotSupported(field.Type.String()))
-				return
-			}
-		}
-
-		if wrec != nil || orec != nil || crec != nil {
-			//tk := getNestedTableKind(ctx.defs[0].kind)
-			tk := getNestedTableKind(c.defCtx().kind)
-			if (wrec != nil && tk != appdef.DefKind_WRecord) ||
-				(orec != nil && tk != appdef.DefKind_ORecord) ||
-				(crec != nil && tk != appdef.DefKind_CRecord) {
-				c.errs = append(c.errs, ErrNestedTableIncorrectKind)
-				return
-			}
-			c.defCtx().defBuilder.(appdef.IContainersBuilder).AddContainer(string(field.Name), qname, 0, maxNestedTableContainerOccurrences)
+		if tbl.tableTypeKind == appdef.TypeKind_CRecord || tbl.tableTypeKind == appdef.TypeKind_ORecord || tbl.tableTypeKind == appdef.TypeKind_WRecord {
+			c.table(ictx.pkg, tbl, ictx)
+			wrec = c.builder.WRecord(qname)
+			crec = c.builder.CRecord(qname)
+			orec = c.builder.ORecord(qname)
 		} else {
 			c.stmtErr(&field.Pos, ErrTypeNotSupported(field.Type.String()))
+			return
+		}
+	}
+
+	if wrec != nil || orec != nil || crec != nil {
+		//tk := getNestedTableKind(ctx.defs[0].kind)
+		tk := getNestedTableKind(c.defCtx().kind)
+		if (wrec != nil && tk != appdef.TypeKind_WRecord) ||
+			(orec != nil && tk != appdef.TypeKind_ORecord) ||
+			(crec != nil && tk != appdef.TypeKind_CRecord) {
+			c.errs = append(c.errs, ErrNestedTableIncorrectKind)
+			return
+		}
+		c.defCtx().defBuilder.(appdef.IContainersBuilder).AddContainer(string(field.Name), qname, 0, maxNestedTableContainerOccurrences)
+	} else {
+		c.stmtErr(&field.Pos, ErrTypeNotSupported(field.Type.String()))
+	}
+}
+
+func (c *buildContext) addFieldToDef(field *FieldExpr, ictx *iterateCtx) {
+	if field.Type.DataType != nil {
+		c.addDataTypeField(field)
+	} else {
+		if c.defCtx().kind == appdef.TypeKind_Object {
+			c.addObjectFieldToType(field, ictx)
+		} else {
+			c.addTableFieldToTable(field, ictx)
 		}
 	}
 }
@@ -589,18 +793,13 @@ func (c *buildContext) addConstraintToDef(constraint *TableConstraint) {
 			c.stmtErr(&constraint.Pos, ErrUndefinedField(string(constraint.UniqueField.Field)))
 			return
 		}
-		if !f.Required() {
-			c.stmtErr(&constraint.Pos, ErrMustBeNotNull)
-			return
-		}
-		// item.Constraint.ConstraintName  constraint name not used for old uniques
 		c.defCtx().defBuilder.(appdef.IUniquesBuilder).SetUniqueField(string(constraint.UniqueField.Field))
 	}
 }
 
-func (c *buildContext) addNestedTableToDef(nested *NestedTableStmt) {
+func (c *buildContext) addNestedTableToDef(nested *NestedTableStmt, ictx *iterateCtx) {
 	nestedTable := &nested.Table
-	if nestedTable.tableDefKind == appdef.DefKind_null {
+	if nestedTable.tableTypeKind == appdef.TypeKind_null {
 		c.stmtErr(&nestedTable.Pos, ErrUndefinedTableKind)
 		return
 	}
@@ -611,35 +810,35 @@ func (c *buildContext) addNestedTableToDef(nested *NestedTableStmt) {
 		return
 	}
 
-	contQName := c.pkg.Ast.NewQName(nestedTable.Name)
-	if !c.isExists(contQName, nestedTable.tableDefKind) {
-		c.pushDef(nestedTable.Name, nestedTable.tableDefKind)
-		c.addTableItems(nestedTable.Items)
+	contQName := ictx.pkg.NewQName(nestedTable.Name)
+	if !c.isExists(contQName, nestedTable.tableTypeKind) {
+		c.pushDef(contQName, nestedTable.tableTypeKind)
+		c.addTableItems(nestedTable.Items, ictx)
 		c.popDef()
 	}
 
 	c.defCtx().defBuilder.(appdef.IContainersBuilder).AddContainer(containerName, contQName, 0, maxNestedTableContainerOccurrences)
 
 }
-func (c *buildContext) addTableItems(items []TableItemExpr) {
+func (c *buildContext) addTableItems(items []TableItemExpr, ictx *iterateCtx) {
 	for _, item := range items {
 		if item.RefField != nil {
-			c.addFieldRefToDef(item.RefField)
+			c.addFieldRefToDef(item.RefField, ictx)
 		} else if item.Field != nil {
-			c.addFieldToDef(item.Field)
+			c.addFieldToDef(item.Field, ictx)
 		} else if item.Constraint != nil {
 			c.addConstraintToDef(item.Constraint)
 		} else if item.NestedTable != nil {
-			c.addNestedTableToDef(item.NestedTable)
+			c.addNestedTableToDef(item.NestedTable, ictx)
 		} else if item.FieldSet != nil {
-			c.addFieldsOf(&item.FieldSet.Pos, item.FieldSet.Type)
+			c.addFieldsOf(&item.FieldSet.Pos, item.FieldSet.Type, ictx)
 		}
 	}
 }
 
-func (c *buildContext) addFieldsOf(pos *lexer.Position, of DefQName) {
-	if err := resolve(of, &c.basicContext, func(t *TypeStmt) error {
-		c.addTableItems(t.Items)
+func (c *buildContext) addFieldsOf(pos *lexer.Position, of DefQName, ictx *iterateCtx) {
+	if err := resolveInCtx(of, ictx, func(t *TypeStmt, schema *PackageSchemaAST) error {
+		c.addTableItems(t.Items, ictx)
 		return nil
 	}); err != nil {
 		c.stmtErr(pos, err)
@@ -649,44 +848,36 @@ func (c *buildContext) addFieldsOf(pos *lexer.Position, of DefQName) {
 type defBuildContext struct {
 	defBuilder interface{}
 	qname      appdef.QName
-	kind       appdef.DefKind
+	kind       appdef.TypeKind
 	names      map[string]bool
 }
 
 func (c *defBuildContext) checkName(name string) error {
 	if _, ok := c.names[name]; ok {
-		return ErrRedeclared(name)
+		return ErrRedefined(name)
 	}
 	c.names[name] = true
 	return nil
 }
 
-func (c *buildContext) setSchema(schema *PackageSchemaAST) {
-	c.pkg = schema
-	if c.defs == nil {
-		c.defs = make([]defBuildContext, 0)
-	}
-}
-
-func (c *buildContext) pushDef(name Ident, kind appdef.DefKind) {
-	qname := c.pkg.Ast.NewQName(name)
+func (c *buildContext) pushDef(qname appdef.QName, kind appdef.TypeKind) {
 	var builder interface{}
 	switch kind {
-	case appdef.DefKind_CDoc:
+	case appdef.TypeKind_CDoc:
 		builder = c.builder.AddCDoc(qname)
-	case appdef.DefKind_CRecord:
+	case appdef.TypeKind_CRecord:
 		builder = c.builder.AddCRecord(qname)
-	case appdef.DefKind_ODoc:
+	case appdef.TypeKind_ODoc:
 		builder = c.builder.AddODoc(qname)
-	case appdef.DefKind_ORecord:
+	case appdef.TypeKind_ORecord:
 		builder = c.builder.AddORecord(qname)
-	case appdef.DefKind_WDoc:
+	case appdef.TypeKind_WDoc:
 		builder = c.builder.AddWDoc(qname)
-	case appdef.DefKind_WRecord:
+	case appdef.TypeKind_WRecord:
 		builder = c.builder.AddWRecord(qname)
-	case appdef.DefKind_Object:
+	case appdef.TypeKind_Object:
 		builder = c.builder.AddObject(qname)
-	case appdef.DefKind_ViewRecord:
+	case appdef.TypeKind_ViewRecord:
 		builder = c.builder.AddView(qname)
 	default:
 		panic(fmt.Sprintf("unsupported def kind %d", kind))
@@ -699,30 +890,30 @@ func (c *buildContext) pushDef(name Ident, kind appdef.DefKind) {
 	})
 }
 
-func (c *buildContext) isExists(qname appdef.QName, kind appdef.DefKind) (exists bool) {
+func (c *buildContext) isExists(qname appdef.QName, kind appdef.TypeKind) (exists bool) {
 	switch kind {
-	case appdef.DefKind_CDoc:
+	case appdef.TypeKind_CDoc:
 		return c.builder.CDoc(qname) != nil
-	case appdef.DefKind_CRecord:
+	case appdef.TypeKind_CRecord:
 		return c.builder.CRecord(qname) != nil
-	case appdef.DefKind_ODoc:
+	case appdef.TypeKind_ODoc:
 		return c.builder.ODoc(qname) != nil
-	case appdef.DefKind_ORecord:
+	case appdef.TypeKind_ORecord:
 		return c.builder.ORecord(qname) != nil
-	case appdef.DefKind_WDoc:
+	case appdef.TypeKind_WDoc:
 		return c.builder.WDoc(qname) != nil
-	case appdef.DefKind_WRecord:
+	case appdef.TypeKind_WRecord:
 		return c.builder.WRecord(qname) != nil
-	case appdef.DefKind_Object:
+	case appdef.TypeKind_Object:
 		return c.builder.Object(qname) != nil
 	default:
-		panic(fmt.Sprintf("unsupported def kind %d", kind))
+		panic(fmt.Sprintf("unsupported def kind %d of %s", kind, qname))
 	}
 }
 
-func (c *buildContext) fundSchemaByPkg(pkg Ident) *PackageSchemaAST {
-	for _, ast := range c.pkgmap {
-		if ast.Ast.Package == pkg {
+func (c *buildContext) findSchemaByPkg(pkg string) *PackageSchemaAST {
+	for _, ast := range c.app.Packages {
+		if ast.Name == pkg {
 			return ast
 		}
 	}
@@ -737,24 +928,32 @@ func (c *buildContext) defCtx() *defBuildContext {
 	return &c.defs[len(c.defs)-1]
 }
 
-func (c *buildContext) checkReference(refTable DefQName, table *TableStmt) error {
+func (c *buildContext) checkReference(refTable DefQName, pkg *PackageSchemaAST, table *TableStmt) error {
 	if refTable.Package == "" {
-		refTable.Package = c.basicContext.pkg.Ast.Package
+		refTable.Package = Ident(pkg.Name)
 	}
-	refTableDef := c.builder.DefByName(appdef.NewQName(string(refTable.Package), string(refTable.Name)))
-	if refTableDef == nil {
-		c.table(c.fundSchemaByPkg(refTable.Package), table)
-		refTableDef = c.builder.DefByName(appdef.NewQName(string(refTable.Package), string(refTable.Name)))
+	refTableType := c.builder.TypeByName(appdef.NewQName(string(refTable.Package), string(refTable.Name)))
+	if refTableType == nil {
+		tableSchema := c.findSchemaByPkg(string(refTable.Package))
+		tableCtx := &iterateCtx{
+			basicContext: &c.basicContext,
+			collection:   tableSchema.Ast,
+			pkg:          tableSchema,
+			parent:       nil,
+		}
+
+		c.table(tableSchema, table, tableCtx)
+		refTableType = c.builder.TypeByName(appdef.NewQName(string(refTable.Package), string(refTable.Name)))
 	}
 
-	if refTableDef == nil {
+	if refTableType == nil {
 		//if it happened it means that error occurred
 		return nil
 	}
 
-	for _, defKind := range canNotReferenceTo[c.defCtx().kind] {
-		if defKind == refTableDef.Kind() {
-			return fmt.Errorf("table %s can not reference to table %s", c.defCtx().qname, refTableDef.QName())
+	for _, k := range canNotReferenceTo[c.defCtx().kind] {
+		if k == refTableType.Kind() {
+			return fmt.Errorf("table %s can not reference to table %s", c.defCtx().qname, refTableType.QName())
 		}
 	}
 

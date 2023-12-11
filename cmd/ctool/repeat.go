@@ -11,17 +11,28 @@ import (
 )
 
 func newRepeatCmd() *cobra.Command {
-	cmd := &cobra.Command{
+	repeatCmd := &cobra.Command{
 		Use:   "repeat",
 		Short: "executing the last incomplete command",
 		RunE:  repeat,
 	}
 
-	return cmd
+	repeatCmd.PersistentFlags().StringVar(&sshKey, "ssh-key", "", "Path to SSH key")
+	if err := repeatCmd.MarkPersistentFlagRequired("ssh-key"); err != nil {
+		logger.Error(err.Error())
+		return nil
+	}
+
+	return repeatCmd
 }
 
 func repeat(cmd *cobra.Command, arg []string) error {
-	cluster := newCluster()
+	cluster, err := newCluster()
+	if err != nil {
+		return err
+	}
+
+	// nolint
 	defer cluster.saveToJSON()
 
 	if !cluster.existsNodeError() && (cluster.Cmd == nil || cluster.Cmd.isEmpty()) {
@@ -29,9 +40,8 @@ func repeat(cmd *cobra.Command, arg []string) error {
 		return nil
 	}
 
+	// nolint
 	mkCommandDirAndLogFile(cmd, cluster)
-
-	var err error
 
 	if err = cluster.Cmd.apply(cluster); err != nil {
 		logger.Error(err)

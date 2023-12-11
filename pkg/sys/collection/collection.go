@@ -7,6 +7,7 @@
 package collection
 
 import (
+	"github.com/untillpro/goutils/iterate"
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/state"
@@ -29,7 +30,7 @@ func collectionProjector(appDef appdef.IAppDef) func(event istructs.IPLogEvent, 
 		}
 
 		newKey := func(docQname appdef.QName, docID, elementID istructs.RecordID) (kb istructs.IStateKeyBuilder, err error) {
-			kb, err = s.KeyBuilder(state.ViewRecordsStorage, QNameViewCollection)
+			kb, err = s.KeyBuilder(state.View, QNameCollectionView)
 			if err != nil {
 				return
 			}
@@ -58,18 +59,18 @@ func collectionProjector(appDef appdef.IAppDef) func(event istructs.IPLogEvent, 
 			return
 		}
 
-		return event.CUDs(func(rec istructs.ICUDRow) (err error) {
-			kind := appDef.Def(rec.QName()).Kind()
-			if kind != appdef.DefKind_CDoc && kind != appdef.DefKind_CRecord {
-				return
+		return iterate.ForEachError(event.CUDs, func(rec istructs.ICUDRow) error {
+			kind := appDef.Type(rec.QName()).Kind()
+			if kind != appdef.TypeKind_CDoc && kind != appdef.TypeKind_CRecord {
+				return nil
 			}
 			record, err := is.findRecordByID(rec.ID())
 			if err != nil {
-				return
+				return err
 			}
 			root, err := is.findRootByID(rec.ID())
 			if err != nil {
-				return
+				return err
 			}
 			elementID := record.ID()
 			if record.ID() == root.ID() {
@@ -77,7 +78,7 @@ func collectionProjector(appDef appdef.IAppDef) func(event istructs.IPLogEvent, 
 			}
 			kb, err := newKey(root.QName(), root.ID(), elementID)
 			if err != nil {
-				return
+				return err
 			}
 			return apply(kb, record)
 		})
@@ -95,7 +96,7 @@ func (s *idService) findRecordByID(id istructs.RecordID) (record istructs.IRecor
 		return
 	}
 
-	kb, err := s.state.KeyBuilder(state.RecordsStorage, appdef.NullQName)
+	kb, err := s.state.KeyBuilder(state.Record, appdef.NullQName)
 	if err != nil {
 		return
 	}
@@ -119,15 +120,4 @@ func (s *idService) findRootByID(id istructs.RecordID) (record istructs.IRecord,
 		return
 	}
 	return s.findRootByID(record.Parent())
-}
-
-var CollectionViewBuilderFunc = func(view appdef.IViewBuilder) {
-	view.Key().Partition().AddField(Field_PartKey, appdef.DataKind_int32)
-	view.Key().ClustCols().
-		AddField(Field_DocQName, appdef.DataKind_QName).
-		AddRefField(field_DocID).
-		AddRefField(field_ElementID)
-	view.Value().
-		AddField(Field_Record, appdef.DataKind_Record, true).
-		AddField(state.ColOffset, appdef.DataKind_int64, true)
 }

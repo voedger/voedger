@@ -7,27 +7,22 @@ package invite
 import (
 	"net/http"
 
-	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/state"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-func provideCmdInitiateCancelAcceptedInvite(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, timeFunc coreutils.TimeFunc) {
+func provideCmdInitiateCancelAcceptedInvite(cfg *istructsmem.AppConfigType, timeFunc coreutils.TimeFunc) {
 	cfg.Resources.Add(istructsmem.NewCommandFunction(
 		qNameCmdInitiateCancelAcceptedInvite,
-		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "InitiateCancelAcceptedInviteParams")).
-			AddField(field_InviteID, appdef.DataKind_RecordID, true).(appdef.IDef).QName(),
-		appdef.NullQName,
-		appdef.NullQName,
 		execCmdInitiateCancelAcceptedInvite(timeFunc),
 	))
 }
 
-func execCmdInitiateCancelAcceptedInvite(timeFunc coreutils.TimeFunc) func(cf istructs.ICommandFunction, args istructs.ExecCommandArgs) (err error) {
-	return func(cf istructs.ICommandFunction, args istructs.ExecCommandArgs) (err error) {
-		skbCDocInvite, err := args.State.KeyBuilder(state.RecordsStorage, qNameCDocInvite)
+func execCmdInitiateCancelAcceptedInvite(timeFunc coreutils.TimeFunc) func(args istructs.ExecCommandArgs) (err error) {
+	return func(args istructs.ExecCommandArgs) (err error) {
+		skbCDocInvite, err := args.State.KeyBuilder(state.Record, qNameCDocInvite)
 		if err != nil {
 			return
 		}

@@ -28,82 +28,131 @@ import (
 	imetrics "github.com/voedger/voedger/pkg/metrics"
 	"github.com/voedger/voedger/pkg/pipeline"
 	queryprocessor "github.com/voedger/voedger/pkg/processors/query"
+	"github.com/voedger/voedger/pkg/projectors"
+	"github.com/voedger/voedger/pkg/state"
 )
 
 var provider istructs.IAppStructsProvider
 var cocaColaDocID istructs.RecordID
-var collectionFuncResource istructs.IResource
-var cdocFuncResource istructs.IResource
-var stateFuncResource istructs.IResource
+var collectionQuery appdef.IQuery
+var getCDocQuery appdef.IQuery
+var stateQuery appdef.IQuery
 var testCfgs istructsmem.AppConfigsType
 
 const maxPrepareQueries = 10
 
-func appConfigs() (istructsmem.AppConfigsType, istorage.IAppStorageProvider) {
+func appConfigs(t *testing.T) (istructsmem.AppConfigsType, istorage.IAppStorageProvider) {
+	require := require.New(t)
 	cfgs := make(istructsmem.AppConfigsType, 1)
 	asf := istorage.ProvideMem()
 	appStorageProvider := istorageimpl.Provide(asf)
 	// конфиг приложения airs-bp
-	adf := appdef.New()
-	cfg := cfgs.AddConfig(test.appQName, adf)
+	adb := appdef.New()
+	cfg := cfgs.AddConfig(test.appQName, adb)
 	{
-		Provide(cfg, adf)
+		Provide(cfg, adb)
+
+		// this should be done in tests only. Runtime -> the projector is defined in sys.sql already
+		adb.AddCDoc(istructs.QNameCDoc)
+		adb.AddODoc(istructs.QNameODoc)
+		adb.AddWDoc(istructs.QNameWDoc)
+		adb.AddCRecord(istructs.QNameCRecord)
+		adb.AddORecord(istructs.QNameORecord)
+		adb.AddWRecord(istructs.QNameWRecord)
+		adb.AddProjector(QNameProjectorCollection).
+			AddEvent(istructs.QNameCRecord, appdef.ProjectorEventKind_Insert, appdef.ProjectorEventKind_Update).
+			AddIntent(state.View, QNameCollectionView)
+	}
+	{
+		// fill IAppDef with funcs. That is done here manually because we o not use sys.sql here
+		qNameCollectionParams := appdef.NewQName(appdef.SysPackage, "CollectionParams")
+
+		// will add func definitions to AppDef manually because local test does not use sql. In runtime these definitions will come from sys.sql
+		adb.AddQuery(qNameQueryCollection).
+			SetParam(adb.AddObject(qNameCollectionParams).
+				AddField(field_Schema, appdef.DataKind_string, true).
+				AddField(field_ID, appdef.DataKind_RecordID, false).(appdef.IType).QName()).
+			SetResult(appdef.QNameANY)
+
+		adb.AddQuery(qNameQueryGetCDoc).
+			SetParam(adb.AddObject(appdef.NewQName(appdef.SysPackage, "GetCDocParams")).
+				AddField(field_ID, appdef.DataKind_int64, true).(appdef.IType).QName()).
+			SetResult(adb.AddObject(appdef.NewQName(appdef.SysPackage, "GetCDocResult")).
+				AddField("Result", appdef.DataKind_string, true).(appdef.IType).QName())
+
+		adb.AddQuery(qNameQueryState).
+			SetParam(adb.AddObject(appdef.NewQName(appdef.SysPackage, "StateParams")).
+				AddField(field_After, appdef.DataKind_int64, true).(appdef.IType).QName()).
+			SetResult(adb.AddObject(appdef.NewQName(appdef.SysPackage, "StateResult")).
+				AddField(field_State, appdef.DataKind_string, true).(appdef.IType).QName())
 	}
 	{ // "modify" function
-		cfg.Resources.Add(istructsmem.NewCommandFunction(test.modifyCmdName, appdef.NullQName, appdef.NullQName, appdef.NullQName, istructsmem.NullCommandExec))
+		adb.AddCommand(test.modifyCmdName)
+		cfg.Resources.Add(istructsmem.NewCommandFunction(test.modifyCmdName, istructsmem.NullCommandExec))
 	}
 	{ // CDoc: articles
-		articlesDef := adf.AddCDoc(test.tableArticles)
-		articlesDef.
+		articles := adb.AddCDoc(test.tableArticles)
+		articles.
 			AddField(test.articleNameIdent, appdef.DataKind_string, true).
 			AddField(test.articleNumberIdent, appdef.DataKind_int32, false).
 			AddField(test.articleDeptIdent, appdef.DataKind_RecordID, false)
-		articlesDef.
+		articles.
 			AddContainer(test.tableArticlePrices.Entity(), test.tableArticlePrices, appdef.Occurs(0), appdef.Occurs(100))
 	}
 	{ // CDoc: departments
-		depDef := adf.AddCDoc(test.tableDepartments)
-		depDef.
+		departments := adb.AddCDoc(test.tableDepartments)
+		departments.
 			AddField(test.depNameIdent, appdef.DataKind_string, true).
 			AddField(test.depNumberIdent, appdef.DataKind_int32, false)
 	}
 	{ // CDoc: periods
-		periodsDef := adf.AddCDoc(test.tablePeriods)
-		periodsDef.
+		periods := adb.AddCDoc(test.tablePeriods)
+		periods.
 			AddField(test.periodNameIdent, appdef.DataKind_string, true).
 			AddField(test.periodNumberIdent, appdef.DataKind_int32, false)
 	}
 	{ // CDoc: prices
-		pricesDef := adf.AddCDoc(test.tablePrices)
-		pricesDef.
+		prices := adb.AddCDoc(test.tablePrices)
+		prices.
 			AddField(test.priceNameIdent, appdef.DataKind_string, true).
 			AddField(test.priceNumberIdent, appdef.DataKind_int32, false)
 	}
 
 	{ // CDoc: article prices
-		articlesPricesDef := adf.AddCRecord(test.tableArticlePrices)
-		articlesPricesDef.
+		articlesPrices := adb.AddCRecord(test.tableArticlePrices)
+		articlesPrices.
 			AddField(test.articlePricesPriceIdIdent, appdef.DataKind_RecordID, true).
 			AddField(test.articlePricesPriceIdent, appdef.DataKind_float32, true)
-		articlesPricesDef.
+		articlesPrices.
 			AddContainer(test.tableArticlePriceExceptions.Entity(), test.tableArticlePriceExceptions, appdef.Occurs(0), appdef.Occurs(100))
 	}
 
 	{ // CDoc: article price exceptions
-		articlesPricesExceptionsDef := adf.AddCRecord(test.tableArticlePriceExceptions)
-		articlesPricesExceptionsDef.
+		articlesPricesExceptions := adb.AddCRecord(test.tableArticlePriceExceptions)
+		articlesPricesExceptions.
 			AddField(test.articlePriceExceptionsPeriodIdIdent, appdef.DataKind_RecordID, true).
 			AddField(test.articlePriceExceptionsPriceIdent, appdef.DataKind_float32, true)
 	}
 
 	// TODO: remove it after https://github.com/voedger/voedger/issues/56
-	if _, err := adf.Build(); err != nil {
-		panic(err)
-	}
+	appDef, err := adb.Build()
+	require.NoError(err)
 
-	collectionFuncResource = cfg.Resources.QueryResource(qNameQueryCollection)
-	cdocFuncResource = cfg.Resources.QueryResource(qNameCDocFunc)
-	stateFuncResource = cfg.Resources.QueryResource(qNameQueryState)
+	// kept here to keep local tests working without sql
+	projectors.ProvideViewDef(adb, QNameCollectionView, func(b appdef.IViewBuilder) {
+		b.KeyBuilder().PartKeyBuilder().AddField(Field_PartKey, appdef.DataKind_int32)
+		b.KeyBuilder().ClustColsBuilder().
+			AddField(Field_DocQName, appdef.DataKind_QName).
+			AddRefField(field_DocID).
+			AddRefField(field_ElementID)
+		b.ValueBuilder().
+			AddField(Field_Record, appdef.DataKind_Record, true).
+			AddField(state.ColOffset, appdef.DataKind_int64, true)
+	})
+
+	collectionQuery = appDef.Query(qNameQueryCollection)
+	getCDocQuery = appDef.Query(qNameQueryGetCDoc)
+	stateQuery = appDef.Query(qNameQueryState)
 
 	testCfgs = cfgs
 	return cfgs, appStorageProvider
@@ -115,10 +164,9 @@ func appConfigs() (istructsmem.AppConfigsType, istorage.IAppStorageProvider) {
 // - insert fanta with 2 prices
 // ...then launches Collection actualizer and waits until it reads all the log.
 // Then projection values checked.
-
 func TestBasicUsage_Collection(t *testing.T) {
 	require := require.New(t)
-	appConfigs, asp := appConfigs()
+	appConfigs, asp := appConfigs(t)
 	provider := istructsmem.Provide(appConfigs, iratesce.TestBucketsFactory,
 		payloads.ProvideIAppTokensFactory(itokensjwt.TestTokensJWT()), asp)
 	as, err := provider.AppStructs(test.appQName)
@@ -185,7 +233,7 @@ func TestBasicUsage_Collection(t *testing.T) {
 
 func Test_updateChildRecord(t *testing.T) {
 	require := require.New(t)
-	appConfigs, asp := appConfigs()
+	appConfigs, asp := appConfigs(t)
 	provider := istructsmem.Provide(appConfigs, iratesce.TestBucketsFactory,
 		payloads.ProvideIAppTokensFactory(itokensjwt.TestTokensJWT()), asp)
 	as, err := provider.AppStructs(test.appQName)
@@ -245,7 +293,7 @@ func Test_Collection_3levels(t *testing.T) {
 	var err error
 	require := require.New(t)
 
-	appConfigs, asp := appConfigs()
+	appConfigs, asp := appConfigs(t)
 	provider = istructsmem.Provide(appConfigs, iratesce.TestBucketsFactory,
 		payloads.ProvideIAppTokensFactory(itokensjwt.TestTokensJWT()), asp)
 	as, err := provider.AppStructs(test.appQName)
@@ -380,12 +428,12 @@ func TestBasicUsage_QueryFunc_Collection(t *testing.T) {
 	authz := iauthnzimpl.NewDefaultAuthorizer()
 	tokens := itokensjwt.ProvideITokens(itokensjwt.SecretKeyExample, time.Now)
 	appTokens := payloads.ProvideIAppTokensFactory(tokens).New(test.appQName)
-	queryProcessor := queryprocessor.ProvideServiceFactory()(serviceChannel, func(ctx context.Context, sender interface{}) queryprocessor.IResultSenderClosable { return out }, provider, maxPrepareQueries, imetrics.Provide(), "vvm",
-		authn, authz, testCfgs)
+	queryProcessor := queryprocessor.ProvideServiceFactory()(serviceChannel, func(ctx context.Context, sender interface{}) queryprocessor.IResultSenderClosable { return out },
+		provider, maxPrepareQueries, imetrics.Provide(), "vvm", authn, authz, testCfgs)
 	go queryProcessor.Run(context.Background())
 	sysToken, err := payloads.GetSystemPrincipalTokenApp(appTokens)
 	require.NoError(err)
-	serviceChannel <- queryprocessor.NewQueryMessage(context.Background(), test.appQName, test.workspace, nil, request, collectionFuncResource, "", sysToken)
+	serviceChannel <- queryprocessor.NewQueryMessage(context.Background(), test.appQName, test.workspace, nil, request, collectionQuery, "", sysToken)
 	<-out.done
 
 	out.requireNoError(require)
@@ -497,7 +545,7 @@ func TestBasicUsage_QueryFunc_CDoc(t *testing.T) {
 	go queryProcessor.Run(context.Background())
 	sysToken, err := payloads.GetSystemPrincipalTokenApp(appTokens)
 	require.NoError(err)
-	serviceChannel <- queryprocessor.NewQueryMessage(context.Background(), test.appQName, test.workspace, nil, []byte(request), cdocFuncResource, "", sysToken)
+	serviceChannel <- queryprocessor.NewQueryMessage(context.Background(), test.appQName, test.workspace, nil, []byte(request), getCDocQuery, "", sysToken)
 	<-out.done
 
 	out.requireNoError(require)
@@ -612,7 +660,8 @@ func TestBasicUsage_State(t *testing.T) {
 	go queryProcessor.Run(context.Background())
 	sysToken, err := payloads.GetSystemPrincipalTokenApp(appTokens)
 	require.NoError(err)
-	serviceChannel <- queryprocessor.NewQueryMessage(context.Background(), test.appQName, test.workspace, nil, []byte(`{"args":{"After":0},"elements":[{"fields":["State"]}]}`), stateFuncResource, "", sysToken)
+	serviceChannel <- queryprocessor.NewQueryMessage(context.Background(), test.appQName, test.workspace, nil, []byte(`{"args":{"After":0},"elements":[{"fields":["State"]}]}`),
+		stateQuery, "", sysToken)
 	<-out.done
 
 	out.requireNoError(require)
@@ -776,7 +825,8 @@ func TestState_withAfterArgument(t *testing.T) {
 	go queryProcessor.Run(context.Background())
 	sysToken, err := payloads.GetSystemPrincipalTokenApp(appTokens)
 	require.NoError(err)
-	serviceChannel <- queryprocessor.NewQueryMessage(context.Background(), test.appQName, test.workspace, nil, []byte(`{"args":{"After":5},"elements":[{"fields":["State"]}]}`), stateFuncResource, "", sysToken)
+	serviceChannel <- queryprocessor.NewQueryMessage(context.Background(), test.appQName, test.workspace, nil, []byte(`{"args":{"After":5},"elements":[{"fields":["State"]}]}`),
+		stateQuery, "", sysToken)
 	<-out.done
 
 	out.requireNoError(require)
@@ -963,7 +1013,7 @@ func newModify(app istructs.IAppStructs, gen *idsGeneratorType, cb eventCallback
 
 func Test_Idempotency(t *testing.T) {
 	require := require.New(t)
-	appConfigs, asp := appConfigs()
+	appConfigs, asp := appConfigs(t)
 	provider := istructsmem.Provide(appConfigs, iratesce.TestBucketsFactory,
 		payloads.ProvideIAppTokensFactory(itokensjwt.TestTokensJWT()), asp)
 	as, err := provider.AppStructs(test.appQName)
@@ -1007,4 +1057,16 @@ func Test_Idempotency(t *testing.T) {
 		requireArticle(require, "Coca-cola", test.cocaColaNumber2, as, cocaColaDocID)
 	}
 
+}
+
+// should be used in tests only. Sync Actualizer per app will be wired in production
+func provideSyncActualizer(ctx context.Context, as istructs.IAppStructs, partitionID istructs.PartitionID) pipeline.ISyncOperator {
+	actualizerConfig := projectors.SyncActualizerConf{
+		Ctx:        ctx,
+		AppStructs: func() istructs.IAppStructs { return as },
+		Partition:  partitionID,
+		N10nFunc:   func(view appdef.QName, wsid istructs.WSID, offset istructs.Offset) {},
+	}
+	actualizerFactory := projectors.ProvideSyncActualizerFactory()
+	return actualizerFactory(actualizerConfig, collectionProjectorFactory(as.AppDef()))
 }

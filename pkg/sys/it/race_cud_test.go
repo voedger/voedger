@@ -32,7 +32,7 @@ func Test_Race_CUDSimpleRead(t *testing.T) {
 	if coreutils.IsCassandraStorage() {
 		return
 	}
-	vit := it.NewVIT(t, &it.SharedConfig_Simple)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
 	cnt := readCnt
@@ -54,7 +54,7 @@ func Test_Race_CUDSimpleWrite(t *testing.T) {
 	if coreutils.IsCassandraStorage() {
 		return
 	}
-	vit := it.NewVIT(t, &it.SharedConfig_Simple)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
 	cnt := writeCnt
@@ -73,7 +73,7 @@ func Test_Race_CUDOneWriteManyRead(t *testing.T) {
 	if coreutils.IsCassandraStorage() {
 		return
 	}
-	vit := it.NewVIT(t, &it.SharedConfig_Simple)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
 	wg := sync.WaitGroup{}
@@ -100,7 +100,7 @@ func Test_Race_CUDManyWriteOneRead(t *testing.T) {
 	if coreutils.IsCassandraStorage() {
 		return
 	}
-	vit := it.NewVIT(t, &it.SharedConfig_Simple)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
 	cnt := writeCnt
@@ -130,7 +130,7 @@ func Test_Race_CUDManyWriteManyReadNoResult(t *testing.T) {
 	if coreutils.IsCassandraStorage() {
 		return
 	}
-	vit := it.NewVIT(t, &it.SharedConfig_Simple)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
 	cnt := writeCnt
@@ -156,7 +156,7 @@ func Test_Race_CUDManyWriteManyReadCheckResult(t *testing.T) {
 	if coreutils.IsCassandraStorage() {
 		return
 	}
-	vit := it.NewVIT(t, &it.SharedConfig_Simple)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
 	cnt := writeCnt
@@ -194,7 +194,7 @@ func Test_Race_CUDManyUpdateManyReadCheckResult(t *testing.T) {
 	if coreutils.IsCassandraStorage() {
 		return
 	}
-	vit := it.NewVIT(t, &it.SharedConfig_Simple)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
 	cntw := writeCnt
@@ -242,7 +242,7 @@ func Test_Race_CUDManyReadCheckResult(t *testing.T) {
 	if coreutils.IsCassandraStorage() {
 		return
 	}
-	vit := it.NewVIT(t, &it.SharedConfig_Simple)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
 	var cntWS int = readCnt
@@ -264,7 +264,7 @@ func Test_Race_CUDManyWriteCheckResult(t *testing.T) {
 	if coreutils.IsCassandraStorage() {
 		return
 	}
-	vit := it.NewVIT(t, &it.SharedConfig_Simple)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
 	var cntWS int = writeCnt
@@ -290,7 +290,7 @@ func Test_Race_CUDManyWriteReadCheckResult(t *testing.T) {
 	if coreutils.IsCassandraStorage() {
 		return
 	}
-	vit := it.NewVIT(t, &it.SharedConfig_Simple)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
 	var cntWS int = writeCnt
@@ -328,7 +328,7 @@ func writeArt(ws *it.AppWorkspace, vit *it.VIT) (artNumber int) {
 				{
 					"fields": {
 						"sys.ID": ` + idstr + `,
-						"sys.QName": "simpleApp.articles",
+						"sys.QName": "app1pkg.articles",
 						"name": "` + artname + `",
 						"article_manual": 1,
 						"article_hash": 2,
@@ -347,7 +347,7 @@ func readArt(vit *it.VIT, ws *it.AppWorkspace) *coreutils.FuncResponse {
 	body := `
 	{
 		"args":{
-			"Schema":"simpleApp.articles"
+			"Schema":"app1pkg.articles"
 		},
 		"elements":[
 			{

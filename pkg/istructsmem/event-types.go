@@ -43,8 +43,8 @@ type eventType struct {
 	sync      bool
 	device    istructs.ConnectedDeviceID
 	syncTime  istructs.UnixMilli
-	argObject elementType
-	argUnlObj elementType
+	argObject objectType
+	argUnlObj objectType
 	cud       cudType
 
 	// db event members
@@ -60,8 +60,8 @@ type eventType struct {
 func newEvent(appCfg *AppConfigType) *eventType {
 	event := &eventType{
 		appCfg:    appCfg,
-		argObject: makeObject(appCfg, appdef.NullQName),
-		argUnlObj: makeObject(appCfg, appdef.NullQName),
+		argObject: makeObject(appCfg, appdef.NullQName, nil),
+		argUnlObj: makeObject(appCfg, appdef.NullQName, nil),
 		cud:       makeCUD(appCfg),
 		buildErr:  makeEventError(),
 	}
@@ -106,13 +106,18 @@ func (ev *eventType) argumentNames() (arg, argUnl appdef.QName, err error) {
 		return arg, argUnl, nil // #17664 — «sys.CUD» command has no arguments objects, only CUDs
 	}
 
-	cmd := ev.appCfg.Resources.CommandFunction(ev.name)
+	cmd := ev.appCfg.AppDef.Command(ev.name)
 	if cmd != nil {
-		arg = cmd.ParamsDef()
-		argUnl = cmd.UnloggedParamsDef()
+		if cmd.Param() != nil {
+			arg = cmd.Param().QName()
+		}
+		if cmd.UnloggedParam() != nil {
+			argUnl = cmd.UnloggedParam().QName()
+		}
 	} else {
-		// #!16208: Must be possible to use DefKind_ODoc as Event.QName
-		if d := ev.appCfg.AppDef.DefByName(ev.name); (d == nil) || (d.Kind() != appdef.DefKind_ODoc) {
+		// #!16208: Must be possible to use TypeKind_ODoc as Event.QName
+		if t := ev.appCfg.AppDef.TypeByName(ev.name); (t == nil) || (t.Kind() != appdef.TypeKind_ODoc) {
+			// command function «test.object» not found
 			return arg, argUnl, fmt.Errorf("command function «%v» not found: %w", ev.name, ErrNameNotFound)
 		}
 		arg = ev.name
@@ -124,11 +129,11 @@ func (ev *eventType) argumentNames() (arg, argUnl appdef.QName, err error) {
 // build build all event arguments and CUDs
 func (ev *eventType) build() (err error) {
 	if ev.name == appdef.NullQName {
-		return validateErrorf(ECode_EmptyDefName, "empty event command name: %w", ErrNameMissed)
+		return validateErrorf(ECode_EmptyTypeName, "empty event command name: %w", ErrNameMissed)
 	}
 
 	if _, err = ev.appCfg.qNames.ID(ev.name); err != nil {
-		return validateErrorf(ECode_InvalidDefName, "unknown event command name «%v»: %w", ev.name, err)
+		return validateErrorf(ECode_InvalidTypeName, "unknown event command name «%v»: %w", ev.name, err)
 	}
 
 	err = errors.Join(
@@ -241,7 +246,7 @@ func (ev *eventType) BuildRawEvent() (raw istructs.IRawEvent, err error) {
 		return ev, err
 	}
 
-	if err = ev.appCfg.validators.validEvent(ev); err != nil {
+	if err = validateEvent(ev); err != nil {
 		return ev, err
 	}
 
@@ -258,8 +263,8 @@ func (ev *eventType) ArgumentObject() istructs.IObject {
 }
 
 // istructs.IAbstractEvent.CUDs
-func (ev *eventType) CUDs(cb func(rec istructs.ICUDRow) error) (err error) {
-	return ev.cud.enumRecs(cb)
+func (ev *eventType) CUDs(cb func(rec istructs.ICUDRow)) {
+	ev.cud.enumRecs(cb)
 }
 
 // istructs.IDbEvent.Error
@@ -296,6 +301,11 @@ func (ev *eventType) RegisteredAt() istructs.UnixMilli {
 func (ev *eventType) Release() {
 	// Free() will called through a RefCounter.Release() then reference counter decrease zero
 	ev.RefCounter.Release()
+}
+
+// # Return event name, such as `event «sys.CUD»` or `event «test.ODocument»`
+func (ev *eventType) String() string {
+	return fmt.Sprintf("event «%v»", ev.name)
 }
 
 // istructs.IAbstractEvent.Synced
@@ -409,20 +419,14 @@ func (cud *cudType) empty() bool {
 }
 
 // enumRecs: enumerates changes as IRecords
-func (cud *cudType) enumRecs(cb func(rec istructs.ICUDRow) error) (err error) {
+func (cud *cudType) enumRecs(cb func(rec istructs.ICUDRow)) {
 	for _, rec := range cud.creates {
-		if err = cb(rec); err != nil {
-			return err
-		}
+		cb(rec)
 	}
 
 	for _, rec := range cud.updates {
-		if err = cb(&rec.changes); err != nil { // changed fields only
-			return err
-		}
+		cb(&rec.changes)
 	}
-
-	return nil
 }
 
 // newIDsPlanType is type for ID regeneration plan. Key is raw ID, value is storage ID
@@ -435,18 +439,18 @@ func (cud *cudType) regenerateIDsPlan(generator istructs.IIDGenerator) (newIDs n
 		id := rec.ID()
 		if !id.IsRaw() {
 			// storage IDs are allowed for sync events
-			generator.UpdateOnSync(id, rec.def)
+			generator.UpdateOnSync(id, rec.typ)
 			continue
 		}
 
 		var storeID istructs.RecordID
 
-		if cDoc, ok := rec.def.(appdef.ICDoc); ok && cDoc.Singleton() {
+		if cDoc, ok := rec.typ.(appdef.ICDoc); ok && cDoc.Singleton() {
 			if storeID, err = cud.appCfg.singletons.ID(rec.QName()); err != nil {
 				return nil, err
 			}
 		} else {
-			if storeID, err = generator.NextID(id, rec.def); err != nil {
+			if storeID, err = generator.NextID(id, rec.typ); err != nil {
 				return nil, err
 			}
 		}
@@ -638,56 +642,59 @@ func (upd *updateRecType) release() {
 	upd.result.release()
 }
 
-// elementType implements object and element (as part of object) structure
-//   - interfaces:
-//     — istructs.IObjectBuilder
-//     — istructs.IElementBuilder
-//     — istructs.IObject,
-//     — istructs.IElement
-type elementType struct {
+// # Implements object structure
+//
+// # Implements:
+//
+//   - istructs.IObjectBuilder
+//   - istructs.IObject,
+type objectType struct {
 	recordType
-	parent *elementType
-	child  []*elementType
+	parent *objectType
+	child  []*objectType
 }
 
-func makeObject(appCfg *AppConfigType, qn appdef.QName) elementType {
-	obj := elementType{
+func makeObject(appCfg *AppConfigType, qn appdef.QName, parent *objectType) objectType {
+	o := objectType{
 		recordType: makeRecord(appCfg),
-		child:      make([]*elementType, 0),
-	}
-	obj.setQName(qn)
-	return obj
-}
-
-func makeElement(parent *elementType) elementType {
-	el := elementType{
-		recordType: makeRecord(parent.appCfg),
 		parent:     parent,
-		child:      make([]*elementType, 0),
+		child:      make([]*objectType, 0),
 	}
-	return el
+	if qn != appdef.NullQName {
+		o.setQName(qn)
+	}
+	return o
 }
 
-// Build builds element record and all children recursive
-func (el *elementType) build() (err error) {
-	return el.forEach(func(e *elementType) error {
-		return e.rowType.build()
+func newObject(appCfg *AppConfigType, qn appdef.QName, parent *objectType) *objectType {
+	o := makeObject(appCfg, qn, parent)
+	return &o
+}
+
+// enumerates all children
+func (o *objectType) allChildren(cb func(*objectType)) {
+	for _, c := range o.child {
+		cb(c)
+	}
+}
+
+// Builds object with children recursive
+func (o *objectType) build() (err error) {
+	return o.forEach(func(c *objectType) error {
+		return c.rowType.build()
 	})
 }
 
-// Clears element record and all children recursive
-func (el *elementType) clear() {
-	el.recordType.clear()
-	for _, e := range el.child {
-		e.clear()
-	}
-	el.child = make([]*elementType, 0)
+// Clears object with children recursive
+func (o *objectType) clear() {
+	o.recordType.clear()
+	o.child = make([]*objectType, 0)
 }
 
 // forEach applies cb function to element and all it children recursive
-func (el *elementType) forEach(cb func(e *elementType) error) (err error) {
-	if err = cb(el); err == nil {
-		for _, e := range el.child {
+func (o *objectType) forEach(cb func(c *objectType) error) (err error) {
+	if err = cb(o); err == nil {
+		for _, e := range o.child {
 			if err = e.forEach(cb); err != nil {
 				break
 			}
@@ -696,37 +703,37 @@ func (el *elementType) forEach(cb func(e *elementType) error) (err error) {
 	return err
 }
 
-// Returns is document definition assigned to element record
-func (el *elementType) isDocument() bool {
-	kind := el.def.Kind()
-	return (kind == appdef.DefKind_GDoc) ||
-		(kind == appdef.DefKind_CDoc) ||
-		(kind == appdef.DefKind_ODoc) ||
-		(kind == appdef.DefKind_WDoc)
+// Returns is object has document type kind
+func (o *objectType) isDocument() bool {
+	kind := o.typ.Kind()
+	return (kind == appdef.TypeKind_GDoc) ||
+		(kind == appdef.TypeKind_CDoc) ||
+		(kind == appdef.TypeKind_ODoc) ||
+		(kind == appdef.TypeKind_WDoc)
 }
 
-// maskValues masks element record row values and all elements children recursive
-func (el *elementType) maskValues() {
-	el.rowType.maskValues()
+// maskValues masks object row values with children recursive
+func (o *objectType) maskValues() {
+	o.rowType.maskValues()
 
-	for _, e := range el.child {
-		e.maskValues()
+	for _, c := range o.child {
+		c.maskValues()
 	}
 }
 
-// regenerateIDs regenerates element record IDs and all elements children recursive.
+// regenerateIDs regenerates record IDs in object and children recursive.
 // If some child record ID reference (e.c. «sys.Parent» fields) refers to regenerated parent ID fields, this replaced too.
-func (el *elementType) regenerateIDs(generator istructs.IIDGenerator) (err error) {
+func (o *objectType) regenerateIDs(generator istructs.IIDGenerator) (err error) {
 	newIDs := make(newIDsPlanType)
 
-	err = el.forEach(
-		func(e *elementType) error {
-			if id := e.ID(); id.IsRaw() {
-				storeID, err := generator.NextID(id, e.def)
+	err = o.forEach(
+		func(c *objectType) error {
+			if id := c.ID(); id.IsRaw() {
+				storeID, err := generator.NextID(id, c.typ)
 				if err != nil {
 					return err
 				}
-				e.setID(storeID)
+				c.setID(storeID)
 				newIDs[id] = storeID
 			}
 			return nil
@@ -735,22 +742,22 @@ func (el *elementType) regenerateIDs(generator istructs.IIDGenerator) (err error
 		return err
 	}
 
-	err = el.forEach(
-		func(e *elementType) (err error) {
-			if id := e.Parent(); id.IsRaw() {
-				e.setParent(newIDs[id])
+	err = o.forEach(
+		func(c *objectType) (err error) {
+			if id := c.Parent(); id.IsRaw() {
+				c.setParent(newIDs[id])
 			}
 
 			changes := false
-			e.RecordIDs(false, func(name string, id istructs.RecordID) {
+			c.RecordIDs(false, func(name string, id istructs.RecordID) {
 				if id.IsRaw() {
-					e.PutRecordID(name, newIDs[id])
+					c.PutRecordID(name, newIDs[id])
 					changes = true
 				}
 			})
 			if changes {
-				// rebuild element to apply changes in dyno-buffer
-				err = e.build()
+				// rebuild object to apply changes in dyno-buffer
+				err = c.build()
 			}
 			return err
 		})
@@ -758,52 +765,76 @@ func (el *elementType) regenerateIDs(generator istructs.IIDGenerator) (err error
 	return err
 }
 
-// Return dynobuffer to pool for element and all it children recursive
-func (el *elementType) release() {
-	el.recordType.release()
-	for _, e := range el.child {
-		e.release()
+// Return dynobuffer to pool for object with children recursive
+func (o *objectType) release() {
+	o.recordType.release()
+	for _, c := range o.child {
+		c.release()
 	}
 }
 
-// istructs.IElementBuilder.ElementBuilder
-func (el *elementType) ElementBuilder(containerName string) istructs.IElementBuilder {
-	c := makeElement(el)
-	el.child = append(el.child, &c)
-	if el.QName() != appdef.NullQName {
-		if cont := el.def.(appdef.IContainers).Container(containerName); cont != nil {
+// # Implements istructs.IObjectBuilder.Build()
+//
+// Builds and returns object or document.
+//
+//	If builded object type is not found in appdef then returns error.
+//	If builded object type is not object or document then returns error.
+//	If builded object is not valid then returns validation error.
+func (o *objectType) Build() (istructs.IObject, error) {
+	if err := o.build(); err != nil {
+		return nil, err
+	}
+	if o.QName() == appdef.NullQName {
+		return nil, fmt.Errorf("object builder has empty type name: %w", ErrNameMissed)
+	}
+	if t := o.typ.Kind(); (t != appdef.TypeKind_Object) &&
+		(t != appdef.TypeKind_ODoc) &&
+		(t != appdef.TypeKind_GDoc) &&
+		(t != appdef.TypeKind_CDoc) &&
+		(t != appdef.TypeKind_WDoc) {
+		return nil, fmt.Errorf("object builder has wrong type %v (not an object or document): %w", o, ErrUnexpectedTypeKind)
+	}
+	if _, err := validateObjectIDs(o, false); err != nil {
+		return nil, err
+	}
+	if err := validateObject(o); err != nil {
+		return nil, err
+	}
+
+	return o, nil
+}
+
+// istructs.IObjectBuilder.ChildBuilder
+func (o *objectType) ChildBuilder(containerName string) istructs.IObjectBuilder {
+	c := newObject(o.appCfg, appdef.NullQName, o)
+	o.child = append(o.child, c)
+	if o.QName() != appdef.NullQName {
+		if cont := o.typ.(appdef.IContainers).Container(containerName); cont != nil {
 			c.setQName(cont.QName())
 			if c.QName() != appdef.NullQName {
-				if el.ID() != istructs.NullRecordID {
-					c.setParent(el.ID())
+				if o.ID() != istructs.NullRecordID {
+					c.setParent(o.ID())
 				}
 				c.setContainer(containerName)
 			}
 		}
 	}
-	return &c
+	return c
 }
 
-// istructs.IElement.Elements
-func (el *elementType) Elements(container string, cb func(nestedPart istructs.IElement)) {
-	for _, c := range el.child {
-		if c.Container() == container {
+// istructs.IObject.Children
+func (o *objectType) Children(container string, cb func(c istructs.IObject)) {
+	for _, c := range o.child {
+		if (container == "") || (container == c.Container()) {
 			cb(c)
 		}
 	}
 }
 
-// enumerates all child elements
-func (el *elementType) EnumElements(cb func(*elementType)) {
-	for _, c := range el.child {
-		cb(c)
-	}
-}
-
-// istructs.IElement.Containers
-func (el *elementType) Containers(cb func(container string)) {
-	duplicates := make(map[string]bool, len(el.child))
-	for _, c := range el.child {
+// istructs.IObject.Containers
+func (o *objectType) Containers(cb func(container string)) {
+	duplicates := make(map[string]bool, len(o.child))
+	for _, c := range o.child {
 		name := c.Container()
 		if duplicates[name] {
 			continue
@@ -813,26 +844,14 @@ func (el *elementType) Containers(cb func(container string)) {
 	}
 }
 
-// istructs.IObjectBuilder.Build()
-func (el *elementType) Build() (doc istructs.IObject, err error) {
-	if err = el.build(); err != nil {
-		return nil, err
-	}
-	if err = el.appCfg.validators.validObject(el); err != nil {
-		return nil, err
-	}
-
-	return el, nil
-}
-
-// istructs.IElement.QName()
-func (el *elementType) QName() appdef.QName {
-	return el.recordType.QName()
+// istructs.IObject.QName()
+func (o *objectType) QName() appdef.QName {
+	return o.recordType.QName()
 }
 
 // istructs.IObject.AsRecord()
-func (el *elementType) AsRecord() istructs.IRecord {
-	return el
+func (o *objectType) AsRecord() istructs.IRecord {
+	return o
 }
 
 // Implements interfaces:

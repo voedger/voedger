@@ -106,10 +106,6 @@ func writeSectionedResponse(requestCtx context.Context, w http.ResponseWriter, s
 			if ok = writeSection(w, iSection, requestCtx); !ok {
 				return false
 			}
-			if onAfterSectionWrite != nil {
-				// happens in tests
-				onAfterSectionWrite(w)
-			}
 		}
 		return true
 	}

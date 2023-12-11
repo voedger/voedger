@@ -70,12 +70,21 @@ resource "aws_network_interface" "node_04" {
   }
 }
 
-resource "aws_network_interface" "node_instead" {
+resource "aws_network_interface" "node_instead_00" {
   subnet_id   = aws_subnet.scylla_subnet.id
   private_ips = ["10.0.0.16"]
   security_groups = [aws_security_group.scylla_hosts.id]
   tags = {
-    Name = "node_instead_interface"
+    Name = "node_instead_00_interface"
+  }
+}
+
+resource "aws_network_interface" "node_instead_01" {
+  subnet_id   = aws_subnet.scylla_subnet.id
+  private_ips = ["10.0.0.17"]
+  security_groups = [aws_security_group.scylla_hosts.id]
+  tags = {
+    Name = "node_instead_01_interface"
   }
 }
 
@@ -95,33 +104,45 @@ resource "aws_instance" "node_00" {
 
   key_name = "amazonKey"
 
-  connection {
-    type        = "ssh"
-    user        = "ubuntu"
-    private_key = "${var.ssh_private_key}"
-    host        = "${aws_instance.node_00.public_ip}"
-  }
-
-  provisioner "remote-exec" {
-    inline = [
-    "echo '${var.ssh_private_key}' > /tmp/amazonKey.pem",
-    "chmod 755 /tmp/amazonKey.pem",
-    "curl -L https://git.io/vQhTU | bash -s -- --version 1.20",
-    "git clone https://github.com/voedger/voedger",
-    "export GOROOT=$HOME/.go",
-    "export PATH=$GOROOT/bin:$PATH",
-    "echo $GOROOT",
-    "echo $PATH", 
-    "cd $HOME/voedger/cmd/ctool && go build -o ctool"
-    ]
-  }
-
-
   tags = {
     Name = "node_00"
   }
-
 }
+
+module "instance_sshd_provisioners" {
+  source           = "./modules/provision-sshd"
+
+  ssh_private_key  = var.ssh_private_key
+  ssh_private_ips  = [
+      aws_instance.node_00.public_ip,
+      aws_instance.node_01.public_ip,
+      aws_instance.node_02.public_ip,
+      aws_instance.node_03.public_ip,
+      aws_instance.node_04.public_ip,
+      aws_instance.node_instead_00.public_ip,
+      aws_instance.node_instead_01.public_ip,
+    ]
+
+  depends_on = [
+      aws_instance.node_00,
+      aws_instance.node_01,
+      aws_instance.node_02,
+      aws_instance.node_03,
+      aws_instance.node_04,
+      aws_instance.node_instead_00,
+      aws_instance.node_instead_01,
+    ]
+}
+
+module "instance_ctool_provision" {
+  source           = "./modules/provision-ctool"
+
+  ssh_private_key  = var.ssh_private_key
+  ctool_node = aws_instance.node_00.public_ip
+
+  depends_on = [ module.instance_sshd_provisioners ]
+}
+
 
 output "public_ip_node_00" {
   value = aws_instance.node_00.public_ip
@@ -205,7 +226,7 @@ output "public_ip_node_04" {
   value = aws_instance.node_04.public_ip
 }
 
-resource "aws_instance" "node_instead" {
+resource "aws_instance" "node_instead_00" {
   ami = "ami-0568936c8d2b91c4e"
   instance_type = "i3.large"
   root_block_device {
@@ -214,14 +235,33 @@ resource "aws_instance" "node_instead" {
   }
   placement_group = aws_placement_group.scylla_placement_group.id
   network_interface {
-    network_interface_id = aws_network_interface.node_instead.id
+    network_interface_id = aws_network_interface.node_instead_00.id
     device_index         = 0
   }
   key_name = "amazonKey"
 }
 
-output "public_ip_node_instead" {
-  value = aws_instance.node_instead.public_ip
+output "public_ip_node_instead_00" {
+  value = aws_instance.node_instead_00.public_ip
+}
+
+resource "aws_instance" "node_instead_01" {
+  ami = "ami-0568936c8d2b91c4e"
+  instance_type = "i3.large"
+  root_block_device {
+    volume_size = "30"
+    volume_type = "gp2"
+  }
+  placement_group = aws_placement_group.scylla_placement_group.id
+  network_interface {
+    network_interface_id = aws_network_interface.node_instead_01.id
+    device_index         = 0
+  }
+  key_name = "amazonKey"
+}
+
+output "public_ip_node_instead_01" {
+  value = aws_instance.node_instead_01.public_ip
 }
 
 

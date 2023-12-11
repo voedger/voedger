@@ -18,46 +18,47 @@ func TestDynoBufSchemes(t *testing.T) {
 
 	var appDef appdef.IAppDef
 
-	t.Run("must ok to build application definition", func(t *testing.T) {
+	t.Run("must ok to build application", func(t *testing.T) {
 		appDefBuilder := appdef.New()
-		rootDef := appDefBuilder.AddObject(appdef.NewQName("test", "obj"))
-		rootDef.
+		root := appDefBuilder.AddObject(appdef.NewQName("test", "root"))
+		root.
 			AddField("int32Field", appdef.DataKind_int32, true).
 			AddField("int64Field", appdef.DataKind_int64, false).
 			AddField("float32Field", appdef.DataKind_float32, false).
 			AddField("float64Field", appdef.DataKind_float64, false).
-			AddBytesField("bytesField", false).
-			AddStringField("strField", false).
+			AddField("bytesField", appdef.DataKind_bytes, false).
+			AddField("strField", appdef.DataKind_string, false).
 			AddField("qnameField", appdef.DataKind_QName, false).
 			AddField("recIDField", appdef.DataKind_RecordID, false)
-		rootDef.
-			AddContainer("child", appdef.NewQName("test", "el"), 1, appdef.Occurs_Unbounded)
+		root.
+			AddContainer("child", appdef.NewQName("test", "child"), 1, appdef.Occurs_Unbounded)
 
-		childDef := appDefBuilder.AddElement(appdef.NewQName("test", "el"))
-		childDef.
+		child := appDefBuilder.AddObject(appdef.NewQName("test", "child"))
+		child.
 			AddField("int32Field", appdef.DataKind_int32, true).
 			AddField("int64Field", appdef.DataKind_int64, false).
 			AddField("float32Field", appdef.DataKind_float32, false).
 			AddField("float64Field", appdef.DataKind_float64, false).
-			AddBytesField("bytesField", false).
-			AddStringField("strField", false).
+			AddField("bytesField", appdef.DataKind_bytes, false).
+			AddField("strField", appdef.DataKind_string, false).
 			AddField("qnameField", appdef.DataKind_QName, false).
 			AddField("boolField", appdef.DataKind_bool, false).
 			AddField("recIDField", appdef.DataKind_RecordID, false)
-		childDef.
-			AddContainer("grandChild", appdef.NewQName("test", "el1"), 0, 1)
+		child.
+			AddContainer("grandChild", appdef.NewQName("test", "grandChild"), 0, 1)
 
-		grandDef := appDefBuilder.AddElement(appdef.NewQName("test", "el1"))
-		grandDef.
+		grandChild := appDefBuilder.AddObject(appdef.NewQName("test", "grandChild"))
+		grandChild.
 			AddField("recIDField", appdef.DataKind_RecordID, false)
+
+		view := appDefBuilder.AddView(appdef.NewQName("test", "view"))
+		view.KeyBuilder().PartKeyBuilder().AddField("pk1", appdef.DataKind_int64)
+		view.KeyBuilder().ClustColsBuilder().AddField("cc1", appdef.DataKind_string, appdef.MaxLen(100))
+		view.ValueBuilder().AddRefField("val1", true)
 
 		sch, err := appDefBuilder.Build()
 		require.NoError(err)
 
-		viewDef := appDefBuilder.AddView(appdef.NewQName("test", "view"))
-		viewDef.Key().Partition().AddField("pk1", appdef.DataKind_int64)
-		viewDef.Key().ClustCols().AddStringField("cc1", 100)
-		viewDef.Value().AddRefField("val1", true)
 		appDef = sch
 	})
 
@@ -66,46 +67,37 @@ func TestDynoBufSchemes(t *testing.T) {
 
 	schemes.Prepare(appDef)
 
-	var checkScheme func(dynoScheme *dynobuffers.Scheme)
+	checkScheme := func(name appdef.QName, fields appdef.IFields, dynoScheme *dynobuffers.Scheme) {
+		require.NotNil(dynoScheme, "dynobuffer scheme for «%v» not found", name)
 
-	checkScheme = func(dynoScheme *dynobuffers.Scheme) {
-		require.NotNil(dynoScheme)
-
-		defName, err := appdef.ParseQName(dynoScheme.Name)
-		require.NoError(err)
-
-		def := appDef.DefByName(defName)
-		require.NotNil(def)
+		require.EqualValues(len(dynoScheme.FieldsMap), fields.UserFieldCount())
 
 		for _, fld := range dynoScheme.Fields {
-			if fld.Ft == dynobuffers.FieldTypeObject {
-				cont, ok := def.(appdef.IContainers)
-				require.True(ok)
-
-				c := cont.Container(fld.Name)
-				require.NotNil(c)
-
-				require.Equal(fld.IsMandatory, c.MinOccurs() > 0)
-				require.Equal(fld.IsArray, c.MaxOccurs() > 1)
-
-				require.NotNil(fld.FieldScheme)
-
-				checkScheme(fld.FieldScheme)
-
-				continue
-			}
-
-			field := def.(appdef.IFields).Field(fld.Name)
+			field := fields.Field(fld.Name)
 			require.NotNil(field)
-
 			require.Equal(DataKindToFieldType(field.DataKind()), fld.Ft)
 		}
+
+		fields.Fields(func(field appdef.IField) {
+			if !field.IsSys() {
+				fld, ok := dynoScheme.FieldsMap[field.Name()]
+				require.True(ok)
+				require.Equal(DataKindToFieldType(field.DataKind()), fld.Ft)
+			}
+		})
 	}
 
-	appDef.Defs(
-		func(s appdef.IDef) {
-			if _, ok := s.(appdef.IFields); ok {
-				checkScheme(schemes[s.QName()])
+	appDef.Types(
+		func(typ appdef.IType) {
+			name := typ.QName()
+			if view, ok := typ.(appdef.IView); ok {
+				checkScheme(name, view.Key().PartKey(), schemes.ViewPartKeyScheme(name))
+				checkScheme(name, view.Key().ClustCols(), schemes.ViewClustColsScheme(name))
+				checkScheme(name, view.Value(), schemes.Scheme(name))
+				return
+			}
+			if fld, ok := typ.(appdef.IFields); ok {
+				checkScheme(name, fld, schemes.Scheme(name))
 			}
 		})
 }

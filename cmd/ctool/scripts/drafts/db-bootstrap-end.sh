@@ -15,12 +15,12 @@ if [[ $# -ne 1 ]]; then
   exit 1
 fi
 
+source ./utils.sh
 
 SSH_USER=$LOGNAME
-SSH_OPTIONS='-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=ERROR'
 
 pattern="replace_address_first_boot"
 
-ssh $SSH_OPTIONS $SSH_USER@$1 sed -i "/$pattern/d" ~/scylla/scylla.yaml
+utils_ssh "$SSH_USER@$1" sed -i "/$pattern/d" ~/scylla/scylla.yaml
 
 set +x

@@ -20,16 +20,15 @@ import (
 func provideAsyncProjectorApplyJoinWorkspaceFactory(timeFunc coreutils.TimeFunc, federation coreutils.IFederation, appQName istructs.AppQName, tokens itokens.ITokens) istructs.ProjectorFactory {
 	return func(partition istructs.PartitionID) istructs.Projector {
 		return istructs.Projector{
-			Name:         qNameAPApplyJoinWorkspace,
-			EventsFilter: []appdef.QName{qNameCmdInitiateJoinWorkspace},
-			Func:         applyJoinWorkspace(timeFunc, federation, appQName, tokens),
+			Name: qNameAPApplyJoinWorkspace,
+			Func: applyJoinWorkspace(timeFunc, federation, appQName, tokens),
 		}
 	}
 }
 
 func applyJoinWorkspace(timeFunc coreutils.TimeFunc, federation coreutils.IFederation, appQName istructs.AppQName, tokens itokens.ITokens) func(event istructs.IPLogEvent, state istructs.IState, intents istructs.IIntents) (err error) {
 	return func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
-		skbCDocInvite, err := s.KeyBuilder(state.RecordsStorage, qNameCDocInvite)
+		skbCDocInvite, err := s.KeyBuilder(state.Record, qNameCDocInvite)
 		if err != nil {
 			return
 		}
@@ -39,7 +38,7 @@ func applyJoinWorkspace(timeFunc coreutils.TimeFunc, federation coreutils.IFeder
 			return
 		}
 
-		skbCDocWorkspaceDescriptor, err := s.KeyBuilder(state.RecordsStorage, authnz.QNameCDocWorkspaceDescriptor)
+		skbCDocWorkspaceDescriptor, err := s.KeyBuilder(state.Record, authnz.QNameCDocWorkspaceDescriptor)
 		if err != nil {
 			return err
 		}
@@ -64,7 +63,7 @@ func applyJoinWorkspace(timeFunc coreutils.TimeFunc, federation coreutils.IFeder
 		}
 
 		//Find cdoc.sys.Subject by cdoc.air.Invite
-		skbViewCollection, err := s.KeyBuilder(state.ViewRecordsStorage, collection.QNameViewCollection)
+		skbViewCollection, err := s.KeyBuilder(state.View, collection.QNameCollectionView)
 		if err != nil {
 			return
 		}

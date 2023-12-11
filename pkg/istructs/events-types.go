@@ -33,16 +33,13 @@ type ICUD interface {
 }
 
 type IObjectBuilder interface {
-	IElementBuilder
-	// Function validates object structure
-	Build() (object IObject, err error)
-}
-
-type IElementBuilder interface {
 	IRowWriter
 
-	// Build element for nested container
-	ElementBuilder(containerName string) IElementBuilder
+	// Build child for nested container
+	ChildBuilder(containerName string) IObjectBuilder
+
+	// Function validates object structure
+	Build() (object IObject, err error)
 }
 
 type IAbstractEvent interface {
@@ -53,7 +50,7 @@ type IAbstractEvent interface {
 
 	ArgumentObject() IObject
 
-	CUDs(cb func(rec ICUDRow) error) (err error)
+	CUDs(cb func(rec ICUDRow))
 
 	RegisteredAt() UnixMilli
 	Synced() bool
@@ -73,8 +70,8 @@ type ICUDRow interface {
 }
 
 type IIDGenerator interface {
-	NextID(rawID RecordID, def appdef.IDef) (storageID RecordID, err error)
-	UpdateOnSync(syncID RecordID, def appdef.IDef)
+	NextID(rawID RecordID, t appdef.IType) (storageID RecordID, err error)
+	UpdateOnSync(syncID RecordID, t appdef.IType)
 }
 
 type IRawEvent interface {
@@ -126,17 +123,17 @@ type IWLogEvent interface {
 }
 
 type IObject interface {
-	IElement
-}
-
-type IElement interface {
 	IRowReader
 
 	QName() appdef.QName
-	// Elements in given container
-	Elements(container string, cb func(el IElement))
+
+	// Children in given container
+	//
+	// if container is empty string then enums all children
+	Children(container string, cb func(IObject))
+
 	// First level qname-s
-	Containers(cb func(container string))
+	Containers(func(string))
 
 	// Does NOT panic if it is not actually IRecord
 	// Just a wrapper which uses consts.SystemField*

@@ -82,7 +82,7 @@ type PostDocFieldType struct {
 }
 
 type PostDocDesc struct {
-	Kind        appdef.DefKind
+	Kind        appdef.TypeKind
 	IsSingleton bool
 }
 
@@ -92,7 +92,6 @@ type VVMAppsBuilder map[istructs.AppQName][]apps.AppBuilder
 type VVM struct {
 	ServicePipeline
 	apps.APIs
-	VVMApps
 	AppsExtensionPoints map[istructs.AppQName]extensionpoints.IExtensionPoint
 	MetricsServicePort  func() metrics.MetricsServicePort
 }
@@ -128,6 +127,7 @@ type VVMConfig struct {
 	// test and FederationURL contains port -> the port will be relaced with the actual VVMPort
 	FederationURL       *url.URL
 	ActualizerStateOpts []state.ActualizerStateOptFunc
+	SecretsReader       isecrets.ISecretReader
 }
 
 type resultSenderErrorFirst struct {
@@ -141,8 +141,4 @@ type VoedgerVM struct {
 	*VVM
 	vvmCtxCancel func()
 	vvmCleanup   func()
-}
-
-type testISecretReader struct {
-	realSecretReader isecrets.ISecretReader
 }

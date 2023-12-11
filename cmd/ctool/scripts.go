@@ -8,14 +8,16 @@ import (
 	"embed"
 	"fmt"
 	"io"
+	"io/fs"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
-	"sync"
 	"text/template"
 	"time"
 
 	"github.com/untillpro/goutils/exec"
+	"github.com/untillpro/goutils/logger"
 	"golang.org/x/crypto/ssh/terminal"
 )
 
@@ -48,6 +50,9 @@ func showProgress(done chan bool) {
 }
 
 func verbose() bool {
+	if testMode {
+		return true
+	}
 	b, err := rootCmd.Flags().GetBool("verbose")
 	return err == nil && b
 }
@@ -56,6 +61,9 @@ func (se *scriptExecuterType) run(scriptName string, args ...string) error {
 
 	var pExec *exec.PipedExec
 
+	// nolint
+	os.Chdir(scriptsTempDir)
+
 	if len(se.sshKeyPath) > 0 {
 		args = append([]string{fmt.Sprintf("eval $(ssh-agent -s); ssh-add %s; ./%s", se.sshKeyPath, scriptName)}, args...)
 		pExec = new(exec.PipedExec).Command("bash", "-c", strings.Join(args, " "))
@@ -63,8 +71,6 @@ func (se *scriptExecuterType) run(scriptName string, args ...string) error {
 		args = append([]string{scriptName}, args...)
 		pExec = new(exec.PipedExec).Command("bash", args...)
 	}
-
-	os.Chdir(scriptsTempDir)
 
 	var stdoutWriter io.Writer
 	var stderrWriter io.Writer
@@ -96,6 +102,9 @@ func (se *scriptExecuterType) run(scriptName string, args ...string) error {
 			Run(stdoutWriter, stderrWriter)
 	}
 
+	if err != nil {
+		logger.Error(fmt.Errorf("the error of the script %s: %w", scriptName, err).Error())
+	}
 	return err
 }
 
@@ -103,6 +112,7 @@ func newScriptExecuter(sshKey string, outputPrefix string) *scriptExecuterType {
 	return &scriptExecuterType{sshKeyPath: sshKey, outputPrefix: outputPrefix}
 }
 
+// nolint
 func getEnvValue1(key string) string {
 	value, _ := os.LookupEnv(key)
 	return value
@@ -122,15 +132,22 @@ func scriptExists(scriptFileName string) bool {
 
 func prepareScripts(scriptFileNames ...string) error {
 
-	var m sync.Mutex
-	m.Lock()
-	defer m.Unlock()
-
+	// nolint
 	os.Chdir(scriptsTempDir)
 
 	err := createScriptsTempDir()
 	if err != nil {
 		return err
+	}
+
+	// If scriptfilenames is empty, then we will copy all scripts from scriptsfs
+	if len(scriptFileNames) == 0 {
+		err = extractAllScripts()
+		if err != nil {
+			logger.Error(err.Error())
+			return err
+		}
+		return nil
 	}
 
 	for _, fileName := range scriptFileNames {
@@ -139,7 +156,7 @@ func prepareScripts(scriptFileNames ...string) error {
 			continue
 		}
 
-		file, err := scriptsFS.Open("scripts/drafts/" + fileName)
+		file, err := scriptsFS.Open("./scripts/drafts/" + fileName)
 		if err != nil {
 			return err
 		}
@@ -149,6 +166,7 @@ func prepareScripts(scriptFileNames ...string) error {
 
 		dir := filepath.Dir(destFileName)
 
+		// nolint
 		err = os.MkdirAll(dir, 0700) // os.ModePerm)
 		if err != nil {
 			return err
@@ -173,7 +191,34 @@ func prepareScripts(scriptFileNames ...string) error {
 	return nil
 }
 
+// save all the embedded scripts into the temporary folder
+func extractAllScripts() error {
+	return fs.WalkDir(scriptsFS, "scripts/drafts", func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if !d.IsDir() {
+			content, err := fs.ReadFile(scriptsFS, path)
+			if err != nil {
+				return err
+			}
+			destPath := filepath.Join(scriptsTempDir, strings.TrimPrefix(path, "scripts/drafts"))
+			err = os.MkdirAll(filepath.Dir(destPath), 0700)
+			if err != nil {
+				return err
+			}
+			err = ioutil.WriteFile(destPath, content, rwxrwxrwx)
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+}
+
+// nolint
 func inputPassword(pass *string) error {
+
 	bytePassword, err := terminal.ReadPassword(int(os.Stdin.Fd()))
 	if err == nil {
 		*pass = string(bytePassword)
@@ -182,6 +227,7 @@ func inputPassword(pass *string) error {
 	return err
 }
 
+// nolint
 func prepareScriptFromTemplate(scriptFileName string, data interface{}) error {
 
 	err := createScriptsTempDir()
@@ -214,6 +260,7 @@ func prepareScriptFromTemplate(scriptFileName string, data interface{}) error {
 	return nil
 }
 
+// nolint
 func copyFile(src, dest string) error {
 	sourceFile, err := os.Open(src)
 	if err != nil {
@@ -250,6 +297,7 @@ func copyFile(src, dest string) error {
 	return nil
 }
 
+// nolint
 func fileExists(filename string) bool {
 	_, err := os.Stat(filename)
 	if os.IsNotExist(err) {

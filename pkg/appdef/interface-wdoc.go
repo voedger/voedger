@@ -5,42 +5,32 @@
 
 package appdef
 
-// Workflow document. DefKind() is DefKind_WDoc.
+// Workflow document.
+//
+// Ref. to wdoc.go for implementation
 type IWDoc interface {
-	IDef
-	IComment
-	IFields
-	IContainers
-	IUniques
-	IWithAbstract
+	IDoc
+
+	// Unwanted type assertion stub
+	isWDoc()
 }
 
 type IWDocBuilder interface {
 	IWDoc
-	ICommentBuilder
-	IFieldsBuilder
-	IContainersBuilder
-	IUniquesBuilder
-	IWithAbstractBuilder
+	IDocBuilder
 }
 
-// Workflow document record. DefKind() is DefKind_WRecord.
+// Workflow document record.
 //
 // Ref. to wdoc.go for implementation
 type IWRecord interface {
-	IDef
-	IComment
-	IFields
-	IContainers
-	IUniques
-	IWithAbstract
+	IContainedRecord
+
+	// Unwanted type assertion stub
+	isWRecord()
 }
 
 type IWRecordBuilder interface {
 	IWRecord
-	ICommentBuilder
-	IFieldsBuilder
-	IContainersBuilder
-	IUniquesBuilder
-	IWithAbstractBuilder
+	IContainedRecordBuilder
 }

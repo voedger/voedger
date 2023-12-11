@@ -7,7 +7,10 @@
 package projectors
 
 const (
-	aaFlushesTotal  = "heeus_aa_flushes_total"
-	aaCurrentOffset = "heeus_aa_current_offset"
-	aaStoredOffset  = "heeus_aa_stored_offset"
+	ProjectorsInError = "voedger_projectors_in_error"
+
+	// internal metrics
+	aaFlushesTotal  = "voedger_aa_flushes_total"
+	aaCurrentOffset = "voedger_aa_current_offset"
+	aaStoredOffset  = "voedger_aa_stored_offset"
 )

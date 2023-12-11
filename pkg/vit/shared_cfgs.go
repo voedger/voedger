@@ -16,54 +16,54 @@ import (
 	"github.com/voedger/voedger/pkg/sys/smtp"
 
 	"github.com/voedger/voedger/pkg/appdef"
-	registryapp "github.com/voedger/voedger/pkg/apps/sys/registry"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
-	"github.com/voedger/voedger/pkg/projectors"
 	"github.com/voedger/voedger/pkg/sys"
 	sys_test_template "github.com/voedger/voedger/pkg/vit/testdata"
 	"github.com/voedger/voedger/pkg/vvm"
 )
 
 const (
-	TestEmail        = "123@123.com"
-	TestEmail2       = "124@124.com"
-	TestEmail3       = "125@125.com"
-	TestServicePort  = 10000
-	defaultMaxOccurs = 100
+	TestEmail       = "123@123.com"
+	TestEmail2      = "124@124.com"
+	TestEmail3      = "125@125.com"
+	TestServicePort = 10000
+	app1PkgName     = "app1pkg"
 )
 
 var (
-	QNameTestWSKind               = appdef.NewQName("simpleApp", "WSKind")
-	QNameTestView                 = appdef.NewQName("my", "View")
-	QNameTestEmailVerificationDoc = appdef.NewQName("simpleApp", "Doc")
-	QNameCDocTestConstraints      = appdef.NewQName("simpleApp", "DocConstraints")
-	QNameCmdRated                 = appdef.NewQName(appdef.SysPackage, "RatedCmd")
-	QNameQryRated                 = appdef.NewQName(appdef.SysPackage, "RatedQry")
-	TestSMTPCfg                   = smtp.Cfg{
+	QNameApp1_TestWSKind               = appdef.NewQName(app1PkgName, "WSKind")
+	QNameTestView                      = appdef.NewQName(app1PkgName, "View")
+	QNameApp1_TestEmailVerificationDoc = appdef.NewQName(app1PkgName, "Doc")
+	QNameApp1_CDocTestConstraints      = appdef.NewQName(app1PkgName, "DocConstraints")
+	QNameCmdRated                      = appdef.NewQName(app1PkgName, "RatedCmd")
+	QNameQryRated                      = appdef.NewQName(app1PkgName, "RatedQry")
+	QNameODoc1                         = appdef.NewQName(app1PkgName, "odoc1")
+	QNameODoc2                         = appdef.NewQName(app1PkgName, "odoc2")
+	TestSMTPCfg                        = smtp.Cfg{
 		Username: "username@gmail.com",
 	}
 
 	// BLOBMaxSize 5
-	SharedConfig_Simple = NewSharedVITConfig(
-		WithApp(istructs.AppQName_test1_app1, ProvideSimpleApp,
-			WithWorkspaceTemplate(QNameTestWSKind, "test_template", sys_test_template.TestTemplateFS),
+	SharedConfig_App1 = NewSharedVITConfig(
+		WithApp(istructs.AppQName_test1_app1, ProvideApp1,
+			WithWorkspaceTemplate(QNameApp1_TestWSKind, "test_template", sys_test_template.TestTemplateFS),
 			WithUserLogin("login", "pwd"),
 			WithUserLogin(TestEmail, "1"),
 			WithUserLogin(TestEmail2, "1"),
 			WithUserLogin(TestEmail3, "1"),
-			WithChildWorkspace(QNameTestWSKind, "test_ws", "test_template", "", "login", map[string]interface{}{"IntFld": 42}),
+			WithChildWorkspace(QNameApp1_TestWSKind, "test_ws", "test_template", "", "login", map[string]interface{}{"IntFld": 42}),
 		),
-		WithApp(istructs.AppQName_test1_app2, ProvideSimpleApp, WithUserLogin("login", "1")),
+		WithApp(istructs.AppQName_test1_app2, ProvideApp2, WithUserLogin("login", "1")),
 		WithVVMConfig(func(cfg *vvm.VVMConfig) {
 			// for impl_reverseproxy_test
 			cfg.Routes["/grafana"] = fmt.Sprintf("http://127.0.0.1:%d", TestServicePort)
 			cfg.RoutesRewrite["/grafana-rewrite"] = fmt.Sprintf("http://127.0.0.1:%d/rewritten", TestServicePort)
 			cfg.RouteDefault = fmt.Sprintf("http://127.0.0.1:%d/not-found", TestServicePort)
-			cfg.RouteDomains["localhost"] = "http://127.0.0.1"
+			cfg.RouteDomains["localhost"] = fmt.Sprintf("http://127.0.0.1:%d", TestServicePort)
 
-			const simpleAppBLOBMaxSize = 5
-			cfg.BLOBMaxSize = simpleAppBLOBMaxSize
+			const app1_BLOBMaxSize = 5
+			cfg.BLOBMaxSize = app1_BLOBMaxSize
 		}),
 		WithCleanup(func(_ *VIT) {
 			MockCmdExec = func(input string) error { panic("") }
@@ -74,12 +74,17 @@ var (
 	MockCmdExec func(input string) error
 )
 
-func EmptyApp(apis apps.APIs, cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) {
-	registryapp.Provide(smtp.Cfg{})(apis, cfg, appDefBuilder, ep)
-	apps.Parse(schemasEmptyApp, "emptyApp", ep)
+func ProvideApp2(apis apps.APIs, cfg *istructsmem.AppConfigType, adf appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) {
+	buildInfo, ok := debug.ReadBuildInfo()
+	if !ok {
+		panic("no build info")
+	}
+	sys.Provide(cfg, adf, TestSMTPCfg, ep, nil, apis.TimeFunc, apis.ITokens, apis.IFederation, apis.IAppStructsProvider, apis.IAppTokensFactory,
+		apis.NumCommandProcessors, buildInfo, apis.IAppStorageProvider)
+	apps.RegisterSchemaFS(SchemaTestApp2FS, "github.com/voedger/voedger/pkg/vit/app2pkg", ep)
 }
 
-func ProvideSimpleApp(apis apps.APIs, cfg *istructsmem.AppConfigType, adf appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) {
+func ProvideApp1(apis apps.APIs, cfg *istructsmem.AppConfigType, adf appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) {
 	// sys package
 	buildInfo, ok := debug.ReadBuildInfo()
 	if !ok {
@@ -88,27 +93,16 @@ func ProvideSimpleApp(apis apps.APIs, cfg *istructsmem.AppConfigType, adf appdef
 	sys.Provide(cfg, adf, TestSMTPCfg, ep, nil, apis.TimeFunc, apis.ITokens, apis.IFederation, apis.IAppStructsProvider, apis.IAppTokensFactory,
 		apis.NumCommandProcessors, buildInfo, apis.IAppStorageProvider)
 
-	apps.Parse(schemasSimpleApp, "simpleApp", ep)
-
-	projectors.ProvideViewDef(adf, QNameTestView, func(view appdef.IViewBuilder) {
-		view.Key().Partition().AddField("ViewIntFld", appdef.DataKind_int32)
-		view.Key().ClustCols().AddStringField("ViewStrFld", appdef.DefaultFieldMaxLength)
-	})
+	apps.RegisterSchemaFS(SchemaTestApp1FS, "github.com/voedger/voedger/pkg/vit/app1pkg", ep)
 
 	// for rates test
 	cfg.Resources.Add(istructsmem.NewQueryFunction(
 		QNameQryRated,
-		appdef.NullQName,
-		adf.AddObject(appdef.NewQName(appdef.SysPackage, "RatedQryParams")).
-			AddField("Fld", appdef.DataKind_string, false).(appdef.IDef).QName(),
 		istructsmem.NullQueryExec,
 	))
+
 	cfg.Resources.Add(istructsmem.NewCommandFunction(
 		QNameCmdRated,
-		adf.AddObject(appdef.NewQName(appdef.SysPackage, "RatedCmdParams")).
-			AddField("Fld", appdef.DataKind_string, false).(appdef.IDef).QName(),
-		appdef.NullQName,
-		appdef.NullQName,
 		istructsmem.NullCommandExec,
 	))
 
@@ -132,47 +126,27 @@ func ProvideSimpleApp(apis apps.APIs, cfg *istructsmem.AppConfigType, adf appdef
 		MaxAllowedPerDuration: 4,
 	})
 
-	mockQryQName := appdef.NewQName(appdef.SysPackage, "MockQry")
-	mockQryParamsQName := appdef.NewQName(appdef.SysPackage, "MockQryParams")
-	adf.AddObject(mockQryParamsQName).
-		AddField(field_Input, appdef.DataKind_string, true)
-
-	mockQryResQName := appdef.NewQName(appdef.SysPackage, "MockQryResult")
-	mockQryResScheme := adf.AddObject(mockQryResQName)
-	mockQryResScheme.AddField("Res", appdef.DataKind_string, true)
-
-	mockQry := istructsmem.NewQueryFunction(mockQryQName, mockQryParamsQName, mockQryResQName,
-		func(_ context.Context, _ istructs.IQueryFunction, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
+	cfg.Resources.Add(istructsmem.NewQueryFunction(
+		appdef.NewQName(app1PkgName, "MockQry"),
+		func(_ context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 			input := args.ArgumentObject.AsString(field_Input)
 			return MockQryExec(input, callback)
 		},
-	)
-	cfg.Resources.Add(mockQry)
+	))
 
-	mockCmdQName := appdef.NewQName(appdef.SysPackage, "MockCmd")
-	mockCmdParamsQName := appdef.NewQName(appdef.SysPackage, "MockCmdParams")
-	adf.AddObject(mockCmdParamsQName).
-		AddField(field_Input, appdef.DataKind_string, true)
-
-	execCmdMockCmd := func(cf istructs.ICommandFunction, args istructs.ExecCommandArgs) (err error) {
-		input := args.ArgumentObject.AsString(field_Input)
-		return MockCmdExec(input)
-	}
-	mockCmd := istructsmem.NewCommandFunction(mockCmdQName, mockCmdParamsQName, appdef.NullQName, appdef.NullQName, execCmdMockCmd)
-	cfg.Resources.Add(mockCmd)
-
-	testCmdResult := appdef.NewQName(appdef.SysPackage, "TestCmdResult")
-	testCmdParams := appdef.NewQName(appdef.SysPackage, "TestCmdParams")
 	cfg.Resources.Add(istructsmem.NewCommandFunction(
-		appdef.NewQName(appdef.SysPackage, "TestCmd"),
-		adf.AddObject(testCmdParams).
-			AddField("Arg1", appdef.DataKind_int32, true).(appdef.IDef).QName(),
-		appdef.NullQName,
-		adf.AddObject(testCmdResult).
-			AddField("Int", appdef.DataKind_int32, true).
-			AddField("Str", appdef.DataKind_string, false).(appdef.IDef).QName(),
-		func(cf istructs.ICommandFunction, args istructs.ExecCommandArgs) (err error) {
-			key, err := args.State.KeyBuilder(state.CmdResultStorage, testCmdResult)
+		appdef.NewQName(app1PkgName, "MockCmd"),
+		func(args istructs.ExecCommandArgs) (err error) {
+			input := args.ArgumentObject.AsString(field_Input)
+			return MockCmdExec(input)
+		},
+	))
+
+	testCmdResult := appdef.NewQName(app1PkgName, "TestCmdResult")
+	cfg.Resources.Add(istructsmem.NewCommandFunction(
+		appdef.NewQName(app1PkgName, "TestCmd"),
+		func(args istructs.ExecCommandArgs) (err error) {
+			key, err := args.State.KeyBuilder(state.Result, testCmdResult)
 			if err != nil {
 				return err
 			}
@@ -196,5 +170,15 @@ func ProvideSimpleApp(apis apps.APIs, cfg *istructsmem.AppConfigType, adf appdef
 			}
 			return nil
 		},
+	))
+
+	cfg.Resources.Add(istructsmem.NewCommandFunction(
+		appdef.NewQName(app1PkgName, "CmdODocOne"),
+		istructsmem.NullCommandExec,
+	))
+
+	cfg.Resources.Add(istructsmem.NewCommandFunction(
+		appdef.NewQName(app1PkgName, "CmdODocTwo"),
+		istructsmem.NullCommandExec,
 	))
 }

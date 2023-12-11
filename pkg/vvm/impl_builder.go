@@ -9,7 +9,7 @@ import (
 	"github.com/voedger/voedger/pkg/apps"
 	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/istructs"
-	istructsmem "github.com/voedger/voedger/pkg/istructsmem"
+	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/parser"
 )
 
@@ -27,33 +27,19 @@ func (hap VVMAppsBuilder) PrepareAppsExtensionPoints() map[istructs.AppQName]ext
 	return seps
 }
 
-func buildSchemasASTs(adf appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) {
-	epPackageSchemasASTs := ep.ExtensionPoint(apps.EPPackageSchemasASTs)
-	packageSchemaASTs := []*parser.PackageSchemaAST{}
-	epPackageSchemasASTs.Iterate(func(eKey extensionpoints.EKey, value interface{}) {
-		qualifiedPackageName := eKey.(string)
-		packageFilesSchemasASTsEP := value.(extensionpoints.IExtensionPoint)
-		packageFilesSchemasASTs := []*parser.FileSchemaAST{}
-		packageFilesSchemasASTsEP.Iterate(func(eKey extensionpoints.EKey, value interface{}) {
-			fileSchemaAST := value.(*parser.FileSchemaAST)
-			packageFilesSchemasASTs = append(packageFilesSchemasASTs, fileSchemaAST)
-		})
-		packageSchemaAST, err := parser.MergeFileSchemaASTs(qualifiedPackageName, packageFilesSchemasASTs)
-		if err != nil {
-			panic(err)
-		}
-		packageSchemaASTs = append(packageSchemaASTs, packageSchemaAST)
-	})
-	packageSchemas, err := parser.MergePackageSchemas(packageSchemaASTs)
+func buildSchemasASTs(adf appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) error {
+	packageSchemaASTs, err := ReadPackageSchemaAST(ep)
 	if err != nil {
-		panic(err)
+		return err
 	}
-	if err := parser.BuildAppDefs(packageSchemas, adf); err != nil {
-		panic(err)
+	appSchemaAST, err := parser.BuildAppSchema(packageSchemaASTs)
+	if err != nil {
+		return err
 	}
+	return parser.BuildAppDefs(appSchemaAST, adf)
 }
 
-func (hap VVMAppsBuilder) Build(cfgs istructsmem.AppConfigsType, apis apps.APIs, appsEPs map[istructs.AppQName]extensionpoints.IExtensionPoint) (vvmApps VVMApps) {
+func (hap VVMAppsBuilder) Build(cfgs istructsmem.AppConfigsType, apis apps.APIs, appsEPs map[istructs.AppQName]extensionpoints.IExtensionPoint) (vvmApps VVMApps, err error) {
 	for appQName, appBuilders := range hap {
 		adf := appdef.New()
 		appEPs := appsEPs[appQName]
@@ -61,11 +47,13 @@ func (hap VVMAppsBuilder) Build(cfgs istructsmem.AppConfigsType, apis apps.APIs,
 		for _, builder := range appBuilders {
 			builder(apis, cfg, adf, appEPs)
 		}
-		buildSchemasASTs(adf, appEPs)
+		if err := buildSchemasASTs(adf, appEPs); err != nil {
+			return nil, err
+		}
 		vvmApps = append(vvmApps, appQName)
 		if _, err := adf.Build(); err != nil {
-			panic(err)
+			return nil, err
 		}
 	}
-	return vvmApps
+	return vvmApps, nil
 }

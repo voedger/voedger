@@ -13,7 +13,6 @@ import (
 	"net"
 	"net/http"
 	"net/http/pprof"
-	"strconv"
 	"strings"
 	"time"
 
@@ -55,9 +54,7 @@ func (s *httpService) Prepare(work interface{}) (err error) {
 		return err
 	}
 
-	port := strconv.Itoa(s.RouterParams.Port)
-
-	if s.listener, err = net.Listen("tcp", ":"+port); err != nil {
+	if s.listener, err = net.Listen("tcp", coreutils.ServerAddress(s.RouterParams.Port)); err != nil {
 		return err
 	}
 
@@ -66,7 +63,7 @@ func (s *httpService) Prepare(work interface{}) (err error) {
 	}
 
 	s.server = &http.Server{
-		Addr:         ":" + port,
+		Addr:         coreutils.ServerAddress(s.RouterParams.Port),
 		Handler:      s.router,
 		ReadTimeout:  time.Duration(s.RouterParams.ReadTimeout) * time.Second,
 		WriteTimeout: time.Duration(s.RouterParams.WriteTimeout) * time.Second,
@@ -126,7 +123,7 @@ func (s *httpService) registerHandlers(busTimeout time.Duration, appsWSAmount ma
 			Methods("POST", "GET", "OPTIONS").
 			Name("blob read")
 	}
-	s.router.HandleFunc(fmt.Sprintf("/api/{%s}/{%s}/{%s:[0-9]+}/{%s:[a-zA-Z_/.]+}", appOwner, appName,
+	s.router.HandleFunc(fmt.Sprintf("/api/{%s}/{%s}/{%s:[0-9]+}/{%s:[a-zA-Z0-9_/.]+}", appOwner, appName,
 		wsid, resourceName), corsHandler(requestHandler(s.bus, busTimeout, appsWSAmount))).
 		Methods("POST", "PATCH", "OPTIONS").Name("api")
 

@@ -6,6 +6,7 @@ package state
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/mock"
@@ -69,9 +70,9 @@ func Test_put(t *testing.T) {
 		mrr.AssertExpectations(t)
 	})
 	t.Run("Should panic when data kind not supported", func(t *testing.T) {
-		require.PanicsWithError(t, "illegal state: field - 'notSupported', kind - '12': not supported", func() {
-			put("notSupported", appdef.DataKind_FakeLast, nil, nil)
-		})
+		require.PanicsWithError(t,
+			fmt.Sprintf("illegal state: field - 'notSupported', kind - '%d': not supported", appdef.DataKind_FakeLast),
+			func() { put("notSupported", appdef.DataKind_FakeLast, nil, nil) })
 	})
 }
 
@@ -84,23 +85,23 @@ func Test_getStorageID(t *testing.T) {
 		}{
 			{
 				name:            "General storage key",
-				kb:              newKeyBuilder(RecordsStorage, appdef.NullQName),
-				expectedStorage: RecordsStorage,
+				kb:              newKeyBuilder(Record, appdef.NullQName),
+				expectedStorage: Record,
 			},
 			{
 				name:            "Email storage key",
-				kb:              &sendMailStorageKeyBuilder{keyBuilder: newKeyBuilder(SendMailStorage, appdef.NullQName)},
-				expectedStorage: SendMailStorage,
+				kb:              &sendMailKeyBuilder{keyBuilder: newKeyBuilder(SendMail, appdef.NullQName)},
+				expectedStorage: SendMail,
 			},
 			{
 				name:            "HTTP storage key",
-				kb:              &httpStorageKeyBuilder{keyBuilder: newKeyBuilder(HTTPStorage, appdef.NullQName)},
-				expectedStorage: HTTPStorage,
+				kb:              &httpKeyBuilder{keyBuilder: newKeyBuilder(Http, appdef.NullQName)},
+				expectedStorage: Http,
 			},
 			{
 				name:            "View storage key",
-				kb:              &viewRecordsKeyBuilder{},
-				expectedStorage: ViewRecordsStorage,
+				kb:              &viewKeyBuilder{},
+				expectedStorage: View,
 			},
 		}
 		for _, test := range tests {
@@ -380,8 +381,8 @@ type mockWLogEvent struct {
 func (e *mockWLogEvent) ArgumentObject() istructs.IObject {
 	return e.Called().Get(0).(istructs.IObject)
 }
-func (e *mockWLogEvent) CUDs(cb func(rec istructs.ICUDRow) error) (err error) {
-	return e.Called(cb).Error(0)
+func (e *mockWLogEvent) CUDs(cb func(rec istructs.ICUDRow)) {
+	e.Called(cb)
 }
 func (e *mockWLogEvent) RegisteredAt() istructs.UnixMilli {
 	return e.Called().Get(0).(istructs.UnixMilli)
@@ -411,12 +412,8 @@ type mockPLogEvent struct {
 func (e *mockPLogEvent) ArgumentObject() istructs.IObject {
 	return e.Called().Get(0).(istructs.IObject)
 }
-func (e *mockPLogEvent) CUDs(cb func(rec istructs.ICUDRow) error) (err error) {
-	err, ok := e.Called(cb).Get(0).(error)
-	if ok {
-		return err
-	}
-	return nil
+func (e *mockPLogEvent) CUDs(cb func(rec istructs.ICUDRow)) {
+	e.Called(cb)
 }
 func (e *mockPLogEvent) RegisteredAt() istructs.UnixMilli {
 	return e.Called().Get(0).(istructs.UnixMilli)

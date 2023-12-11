@@ -46,44 +46,43 @@ func TestBasicUsage(t *testing.T) {
 	appConfigs := func() AppConfigsType {
 		bld := appdef.New()
 
-		saleParamsDef := bld.AddODoc(appdef.NewQName("test", "Sale"))
-		saleParamsDef.
-			AddStringField("Buyer", true).
+		saleParamsDoc := bld.AddODoc(appdef.NewQName("test", "SaleParams"))
+		saleParamsDoc.
+			AddField("Buyer", appdef.DataKind_string, true).
 			AddField("Age", appdef.DataKind_int32, false).
 			AddField("Height", appdef.DataKind_float32, false).
 			AddField("isHuman", appdef.DataKind_bool, false).
 			AddField("Photo", appdef.DataKind_bytes, false)
-		saleParamsDef.
+		saleParamsDoc.
 			AddContainer("Basket", appdef.NewQName("test", "Basket"), 1, 1)
 
-		basketDef := bld.AddORecord(appdef.NewQName("test", "Basket"))
-		basketDef.AddContainer("Good", appdef.NewQName("test", "Good"), 0, appdef.Occurs_Unbounded)
+		basketRec := bld.AddORecord(appdef.NewQName("test", "Basket"))
+		basketRec.AddContainer("Good", appdef.NewQName("test", "Good"), 0, appdef.Occurs_Unbounded)
 
-		goodDef := bld.AddORecord(appdef.NewQName("test", "Good"))
-		goodDef.
-			AddStringField("Name", true).
+		goodRec := bld.AddORecord(appdef.NewQName("test", "Good"))
+		goodRec.
+			AddField("Name", appdef.DataKind_string, true).
 			AddField("Code", appdef.DataKind_int64, true).
 			AddField("Weight", appdef.DataKind_float64, false)
 
-		saleSecureParamsDef := bld.AddObject(appdef.NewQName("test", "saleSecureArgs"))
-		saleSecureParamsDef.
-			AddStringField("password", true)
+		saleSecureParamsObj := bld.AddObject(appdef.NewQName("test", "saleSecureArgs"))
+		saleSecureParamsObj.
+			AddField("password", appdef.DataKind_string, true)
 
-		docDef := bld.AddCDoc(appdef.NewQName("test", "photos"))
-		docDef.
-			AddStringField("Buyer", true).
+		photosDoc := bld.AddCDoc(appdef.NewQName("test", "photos"))
+		photosDoc.
+			AddField("Buyer", appdef.DataKind_string, true).
 			AddField("Age", appdef.DataKind_int32, false).
 			AddField("Height", appdef.DataKind_float32, false).
 			AddField("isHuman", appdef.DataKind_bool, false).
 			AddField("Photo", appdef.DataKind_bytes, false)
 
+		qNameCmdTestSale := appdef.NewQName("test", "Sale")
+		bld.AddCommand(qNameCmdTestSale).SetUnloggedParam(saleSecureParamsObj.QName()).SetParam(saleParamsDoc.QName())
+
 		cfgs := make(AppConfigsType, 1)
 		cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, bld)
-
-		cfg.Resources.Add(
-			NewCommandFunction(appdef.NewQName("test", "Sale"),
-				appdef.NewQName("test", "Sale"), appdef.NewQName("test", "saleSecureArgs"), appdef.NullQName,
-				NullCommandExec))
+		cfg.Resources.Add(NewCommandFunction(qNameCmdTestSale, NullCommandExec))
 
 		return cfgs
 	}()
@@ -119,16 +118,16 @@ func TestBasicUsage(t *testing.T) {
 	cmd.PutFloat32("Height", 1.75)
 	cmd.PutBytes("Photo", []byte{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 9, 8, 7, 6, 4, 4, 3, 2, 1, 0})
 
-	basket := cmd.ElementBuilder("Basket")
+	basket := cmd.ChildBuilder("Basket")
 	basket.PutRecordID(appdef.SystemField_ID, 2)
 
-	good := basket.ElementBuilder("Good")
+	good := basket.ChildBuilder("Good")
 	good.PutRecordID(appdef.SystemField_ID, 3)
 	good.PutString("Name", "Biscuits")
 	good.PutInt64("Code", 7070)
 	good.PutFloat64("Weight", 1.1)
 
-	good = basket.ElementBuilder("Good")
+	good = basket.ChildBuilder("Good")
 	good.PutRecordID(appdef.SystemField_ID, 4)
 	good.PutString("Name", "Jam")
 	good.PutInt64("Code", 8080)
@@ -140,7 +139,7 @@ func TestBasicUsage(t *testing.T) {
 	// 3. make result cud
 	cud := bld.CUDBuilder()
 	rec := cud.Create(appdef.NewQName("test", "photos"))
-	rec.PutRecordID(appdef.SystemField_ID, 1)
+	rec.PutRecordID(appdef.SystemField_ID, 11)
 	rec.PutString("Buyer", "Карлсон 哇\"呀呀")
 	rec.PutInt32("Age", 33)
 	rec.PutFloat32("Height", 1.75)
@@ -148,7 +147,7 @@ func TestBasicUsage(t *testing.T) {
 
 	// 4. get raw event
 	rawEvent, buildErr := bld.BuildRawEvent()
-	require.NoError(buildErr, buildErr)
+	require.NoError(buildErr)
 
 	// Save raw event to PLog & WLog and save CUD demo
 	// 5. save to PLog
@@ -193,15 +192,15 @@ func TestBasicUsage_ViewRecords(t *testing.T) {
 
 	appConfigs := func() AppConfigsType {
 		bld := appdef.New()
-		viewDef := bld.AddView(appdef.NewQName("test", "viewDrinks"))
-		viewDef.Key().Partition().AddField("partitionKey1", appdef.DataKind_int64)
-		viewDef.Key().ClustCols().
+		view := bld.AddView(appdef.NewQName("test", "viewDrinks"))
+		view.KeyBuilder().PartKeyBuilder().AddField("partitionKey1", appdef.DataKind_int64)
+		view.KeyBuilder().ClustColsBuilder().
 			AddField("clusteringColumn1", appdef.DataKind_int64).
 			AddField("clusteringColumn2", appdef.DataKind_bool).
-			AddStringField("clusteringColumn3", 100)
-		viewDef.Value().
+			AddField("clusteringColumn3", appdef.DataKind_string, appdef.MaxLen(100))
+		view.ValueBuilder().
 			AddField("id", appdef.DataKind_int64, true).
-			AddStringField("name", true).
+			AddField("name", appdef.DataKind_string, true).
 			AddField("active", appdef.DataKind_bool, true)
 
 		cfgs := make(AppConfigsType, 1)
@@ -286,25 +285,13 @@ func TestBasicUsage_ViewRecords(t *testing.T) {
 // TestBasicUsage_Resources: Demonstrates basic usage resources
 func TestBasicUsage_Resources(t *testing.T) {
 	require := require.New(t)
-	test := test()
-
-	// gets AppStructProvider and AppStructs
-	provider := Provide(test.AppConfigs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider())
-
-	app, err := provider.AppStructs(test.appName)
-	require.NoError(err)
 
 	t.Run("Basic usage NewCommandFunction", func(t *testing.T) {
 		funcQName := appdef.NewQName("test", "cmd")
-		paramsDef := appdef.NewQName("test", "cmdParams")
-		resultDef := appdef.NullQName
 
-		f := NewCommandFunction(funcQName, paramsDef, appdef.NullQName, resultDef, NullCommandExec)
+		f := NewCommandFunction(funcQName, NullCommandExec)
 		require.Equal(funcQName, f.QName())
 		require.Equal(istructs.ResourceKind_CommandFunction, f.Kind())
-		require.Equal(paramsDef, f.ParamsDef())
-		require.Equal(appdef.NullQName, f.UnloggedParamsDef())
-		require.Equal(resultDef, f.ResultDef())
 
 		// Calls have no effect since we use Null* closures
 
@@ -315,23 +302,20 @@ func TestBasicUsage_Resources(t *testing.T) {
 	})
 
 	t.Run("Basic usage NewQueryFunction", func(t *testing.T) {
-		myExecQuery := func(ctx context.Context, qf istructs.IQueryFunction, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) error {
+		myExecQuery := func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) error {
 			// Can use NullExecQuery instead of myExecQuery, it does nothing
-			NullQueryExec(ctx, qf, args, callback)
+			NullQueryExec(ctx, args, callback)
 
 			callback(&istructs.NullObject{})
 			return nil
 		}
 
 		funcQName := appdef.NewQName("test", "query")
-		parDefs := appdef.NewQName("test", "queryParams")
-		resDefs := appdef.NullQName
 
-		f := NewQueryFunction(funcQName, parDefs, resDefs, myExecQuery)
+		f := NewQueryFunction(funcQName, myExecQuery)
 		require.Equal(funcQName, f.QName())
 		require.Equal(istructs.ResourceKind_QueryFunction, f.Kind())
-		require.Equal(parDefs, f.ParamsDef())
-		require.Equal(resDefs, f.ResultDef(istructs.PrepareArgs{})) // ???
+		require.Panics(func() { f.ResultType(istructs.PrepareArgs{}) })
 
 		// Depends on myExecQuery
 		f.Exec(context.Background(), istructs.ExecQueryArgs{}, func(istructs.IObject) error { return nil })
@@ -339,21 +323,9 @@ func TestBasicUsage_Resources(t *testing.T) {
 		// Test String()
 		log.Println(f)
 	})
-
-	t.Run("test app.Resources()", func(t *testing.T) {
-		r := app.Resources().QueryResource(test.queryPhotoFunctionName)
-		require.NotNil(r)
-
-		bld := app.Resources().QueryFunctionArgsBuilder(r.(istructs.IQueryFunction))
-		require.NotNil(bld)
-		bld.PutString(test.buyerIdent, test.buyerValue)
-		doc, err := bld.Build()
-		require.NoError(err)
-		require.NotNil(doc)
-	})
 }
 
-// Demonstrates basic usage application definition
+// Demonstrates basic usage application
 func TestBasicUsage_AppDef(t *testing.T) {
 	require := require.New(t)
 	test := test()
@@ -361,18 +333,18 @@ func TestBasicUsage_AppDef(t *testing.T) {
 	// gets AppStructProvider and AppStructs
 	provider := Provide(test.AppConfigs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider())
 
-	app, err := provider.AppStructs(test.appName)
+	app, err := provider.AppStructsByDef(test.appName, test.AppDef)
 	require.NoError(err)
 
-	t.Run("I. test top level definition (command object)", func(t *testing.T) {
-		cmdDef := app.AppDef().ODoc(test.saleCmdDocName)
+	t.Run("I. test top level type (command object)", func(t *testing.T) {
+		cmdDoc := app.AppDef().ODoc(test.saleCmdDocName)
 
-		require.NotNil(cmdDef)
-		require.Equal(appdef.DefKind_ODoc, cmdDef.Kind())
+		require.NotNil(cmdDoc)
+		require.Equal(appdef.TypeKind_ODoc, cmdDoc.Kind())
 
 		// check fields
 		fields := make(map[string]appdef.DataKind)
-		cmdDef.Fields(func(f appdef.IField) {
+		cmdDoc.Fields(func(f appdef.IField) {
 			fields[f.Name()] = f.DataKind()
 		})
 		require.Equal(7, len(fields)) // 2 system {sys.QName, sys.ID} + 5 user
@@ -382,27 +354,27 @@ func TestBasicUsage_AppDef(t *testing.T) {
 		require.Equal(appdef.DataKind_bool, fields[test.humanIdent])
 		require.Equal(appdef.DataKind_bytes, fields[test.photoIdent])
 
-		cmdDef.Containers(
+		cmdDoc.Containers(
 			func(c appdef.IContainer) {
 				require.Equal(test.basketIdent, c.Name())
 				require.Equal(appdef.NewQName(test.pkgName, test.basketIdent), c.QName())
-				t.Run("II. test first level nested definition (basket)", func(t *testing.T) {
-					def := app.AppDef().ORecord(appdef.NewQName(test.pkgName, test.basketIdent))
-					require.NotNil(def)
-					require.Equal(appdef.DefKind_ORecord, def.Kind())
+				t.Run("II. test first level nested type (basket)", func(t *testing.T) {
+					rec := app.AppDef().ORecord(appdef.NewQName(test.pkgName, test.basketIdent))
+					require.NotNil(rec)
+					require.Equal(appdef.TypeKind_ORecord, rec.Kind())
 
-					def.Containers(
+					rec.Containers(
 						func(c appdef.IContainer) {
 							require.Equal(test.goodIdent, c.Name())
 							require.Equal(appdef.NewQName(test.pkgName, test.goodIdent), c.QName())
 
-							t.Run("III. test second level nested definition (good)", func(t *testing.T) {
-								def := app.AppDef().ORecord(appdef.NewQName(test.pkgName, test.goodIdent))
-								require.NotNil(def)
-								require.Equal(appdef.DefKind_ORecord, def.Kind())
+							t.Run("III. test second level nested type (good)", func(t *testing.T) {
+								rec := app.AppDef().ORecord(appdef.NewQName(test.pkgName, test.goodIdent))
+								require.NotNil(rec)
+								require.Equal(appdef.TypeKind_ORecord, rec.Kind())
 
 								fields := make(map[string]appdef.DataKind)
-								def.Fields(func(f appdef.IField) {
+								rec.Fields(func(f appdef.IField) {
 									fields[f.Name()] = f.DataKind()
 								})
 								require.Equal(8, len(fields)) // 4 system {sys.QName, sys.ID, sys.ParentID, sys.Container} + 4 user
@@ -424,44 +396,36 @@ func Test_BasicUsageDescribePackages(t *testing.T) {
 	app := func() istructs.IAppStructs {
 		appDef := appdef.New()
 
-		recDef := appDef.AddCRecord(appdef.NewQName("types", "CRec"))
-		recDef.AddField("int", appdef.DataKind_int64, false)
+		rec := appDef.AddCRecord(appdef.NewQName("types", "CRec"))
+		rec.AddField("int", appdef.DataKind_int64, false)
 
 		docQName := appdef.NewQName("types", "CDoc")
-		docDef := appDef.AddCDoc(docQName)
-		docDef.AddStringField("str", true)
-		docDef.AddField("fld", appdef.DataKind_int32, true)
-		docDef.SetUniqueField("str")
+		doc := appDef.AddCDoc(docQName)
+		doc.AddField("str", appdef.DataKind_string, true)
+		doc.AddField("fld", appdef.DataKind_int32, true)
+		doc.SetUniqueField("str")
 
-		docDef.AddContainer("rec", recDef.QName(), 0, appdef.Occurs_Unbounded)
+		doc.AddContainer("rec", rec.QName(), 0, appdef.Occurs_Unbounded)
 
 		viewName := appdef.NewQName("types", "View")
-		viewDef := appDef.AddView(viewName)
-		viewDef.Key().Partition().AddField("int", appdef.DataKind_int64)
-		viewDef.Key().ClustCols().AddStringField("str", 100)
-		viewDef.Value().AddField("bool", appdef.DataKind_bool, false)
+		view := appDef.AddView(viewName)
+		view.KeyBuilder().PartKeyBuilder().AddField("int", appdef.DataKind_int64)
+		view.KeyBuilder().ClustColsBuilder().AddField("str", appdef.DataKind_string, appdef.MaxLen(100))
+		view.ValueBuilder().AddField("bool", appdef.DataKind_bool, false)
 
-		argDef := appDef.AddObject(appdef.NewQName("types", "Arg"))
-		argDef.AddField("bool", appdef.DataKind_bool, false)
+		arg := appDef.AddObject(appdef.NewQName("types", "Arg"))
+		arg.AddField("bool", appdef.DataKind_bool, false)
+
+		qNameCmd := appdef.NewQName("commands", "cmd")
+		qNameQry := appdef.NewQName("commands", "query")
+		appDef.AddCommand(qNameCmd).SetParam(arg.QName()).SetResult(doc.QName())
+		appDef.AddQuery(qNameQry).SetParam(arg.QName()).SetResult(appdef.QNameANY)
 
 		cfgs := make(AppConfigsType)
 		cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, appDef)
 
-		cfg.Resources.Add(
-			NewCommandFunction(
-				appdef.NewQName("commands", "cmd"),
-				argDef.QName(),
-				appdef.NullQName,
-				docDef.QName(),
-				NullCommandExec))
-
-		qNameQry := appdef.NewQName("commands", "query")
-		cfg.Resources.Add(
-			NewQueryFunction(
-				qNameQry,
-				argDef.QName(),
-				appdef.ViewValueDefName(viewName),
-				NullQueryExec))
+		cfg.Resources.Add(NewCommandFunction(qNameCmd, NullCommandExec))
+		cfg.Resources.Add(NewQueryFunction(qNameQry, NullQueryExec))
 
 		cfg.FunctionRateLimits.AddAppLimit(qNameQry, istructs.RateLimit{
 			Period:                1,

@@ -5,39 +5,26 @@
 package invite
 
 import (
-	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/untillpro/goutils/iterate"
 	"github.com/voedger/voedger/pkg/istructs"
-	"github.com/voedger/voedger/pkg/istructsmem"
-	"github.com/voedger/voedger/pkg/projectors"
 	"github.com/voedger/voedger/pkg/state"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-// buildSubjectsIdx need to build view.sys.SubjectIdx on an existing storage: true -> async projector will be registered, sync otherwise
-func provideCDocSubject(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder) {
-	projectors.ProvideViewDef(appDefBuilder, QNameViewSubjectsIdx, func(view appdef.IViewBuilder) {
-		view.Key().Partition().AddField(Field_LoginHash, appdef.DataKind_int64)
-		view.Key().ClustCols().AddStringField(Field_Login, appdef.DefaultFieldMaxLength)
-		view.Value().AddRefField(Field_SubjectID, true)
-	})
-
-	cfg.AddSyncProjectors(subjectIdxProjectorFactory)
-}
-
-func subjectIdxProjectorFactory(partition istructs.PartitionID) istructs.Projector {
+func applyViewSubjectsIdx(partition istructs.PartitionID) istructs.Projector {
 	return istructs.Projector{
-		Name: QNameViewSubjectsIdx,
+		Name: QNameApplyViewSubjectsIdx,
 		Func: viewSubjectsIdxProjector,
 	}
 }
 
 func viewSubjectsIdxProjector(event istructs.IPLogEvent, st istructs.IState, intents istructs.IIntents) (err error) {
-	return event.CUDs(func(cdocSubject istructs.ICUDRow) error {
+	return iterate.ForEachError(event.CUDs, func(cdocSubject istructs.ICUDRow) error {
 		if cdocSubject.QName() != QNameCDocSubject || !cdocSubject.IsNew() {
 			return nil
 		}
 
-		skbViewSubjectsIdx, err := st.KeyBuilder(state.ViewRecordsStorage, QNameViewSubjectsIdx)
+		skbViewSubjectsIdx, err := st.KeyBuilder(state.View, QNameViewSubjectsIdx)
 		if err != nil {
 			// notest
 			return err

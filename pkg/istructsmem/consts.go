@@ -5,6 +5,7 @@
 package istructsmem
 
 import (
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
@@ -49,11 +50,13 @@ const (
 	sfm_IsActive  = uint16(1 << 3)
 )
 
-var nullPrepareArgs = istructs.PrepareArgs{}
-
 // rate limits function name formats, see GetFunctionRateLimitName
 var funcRateLimitNameFmt = [istructs.RateLimitKind_FakeLast]string{
 	"func_%s_byApp",
 	"func_%s_byWS",
 	"func_%s_byID",
+}
+
+var MatchAll = func(_ appdef.QName, _ istructs.WSID, _ appdef.QName) bool {
+	return true
 }

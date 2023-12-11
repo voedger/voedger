@@ -104,7 +104,7 @@ func Test_recordKey(t *testing.T) {
 	}
 }
 
-func TestElementFillAndGet(t *testing.T) {
+func TestObjectFillAndGet(t *testing.T) {
 	require := require.New(t)
 	test := test()
 
@@ -134,7 +134,7 @@ func TestElementFillAndGet(t *testing.T) {
 			},
 		}
 		cfg := cfgs[test.appName]
-		require.NoError(FillElementFromJSON(data, cfg.AppDef.Def(test.testCDoc), builder))
+		require.NoError(FillObjectFromJSON(data, cfg.AppDef.Type(test.testCDoc), builder))
 		o, err := builder.Build()
 		require.NoError(err)
 
@@ -148,9 +148,9 @@ func TestElementFillAndGet(t *testing.T) {
 		require.Equal(test.testCDoc, o.AsQName("QName"))
 		require.True(o.AsBool("bool"))
 		count := 0
-		o.Elements("record", func(el istructs.IElement) {
-			require.Equal(istructs.RecordID(8), el.AsRecordID("sys.ID"))
-			require.Equal(int32(6), el.AsInt32("int32"))
+		o.Children("record", func(c istructs.IObject) {
+			require.Equal(istructs.RecordID(8), c.AsRecordID("sys.ID"))
+			require.Equal(int32(6), c.AsInt32("int32"))
 			count++
 		})
 		require.Equal(1, count)
@@ -178,7 +178,7 @@ func TestElementFillAndGet(t *testing.T) {
 				"sys.ID": float64(1),
 				name:     val,
 			}
-			require.NoError(FillElementFromJSON(data, cfg.AppDef.Def(test.testCDoc), builder))
+			require.NoError(FillObjectFromJSON(data, cfg.AppDef.Type(test.testCDoc), builder))
 			o, err := builder.Build()
 			require.ErrorIs(err, ErrWrongFieldType)
 			require.Nil(o)
@@ -200,7 +200,7 @@ func TestElementFillAndGet(t *testing.T) {
 			data := map[string]interface{}{
 				c.f: c.v,
 			}
-			err := FillElementFromJSON(data, cfg.AppDef.Def(test.testCDoc), builder)
+			err := FillObjectFromJSON(data, cfg.AppDef.Type(test.testCDoc), builder)
 			require.Error(err)
 		}
 	})

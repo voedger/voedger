@@ -12,10 +12,24 @@ if [ "$#" -lt 1 ]; then
   exit 1
 fi
 
-VERSION_STRING="5:20.10.23~3-0~ubuntu-focal"
+source ./utils.sh
+
+release=$(lsb_release -rs)
+
+if [[ $release == "20.04" ]]; then
+	echo "This is Ubuntu 20.04"
+	VERSION_STRING="5:20.10.23~3-0~ubuntu-focal"
+
+elif [[ $release == "22.04" ]]; then
+	echo "This is Ubuntu 22.04"
+	VERSION_STRING="5:20.10.23~3-0~ubuntu-jammy"
+else
+	echo "This script only supports Ubuntu 20.04 and 22.04"
+	exit 1
+fi
+
 NODE=$1
 SSH_USER=$LOGNAME
-SSH_OPTIONS='-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=ERROR'
 
 script="\
         sudo add-apt-repository ppa:rmescandon/yq -y;
@@ -25,7 +39,7 @@ script="\
 			curl \
 			gnupg \
 		lsb-release \
-		yq jq -y;
+		yq jq netcat -y;
 
 	curl -fsSL https://download.docker.com/linux/ubuntu/gpg | \
 		sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg;
@@ -43,12 +57,12 @@ script="\
 
 # Check if docker is installed and install if not
 docker_ins=0
-ssh $SSH_OPTIONS $SSH_USER@$NODE 'command docker -v &>/dev/null' || docker_ins=1
+utils_ssh "$SSH_USER@$NODE" 'command docker -v &>/dev/null' || docker_ins=1
 if [[ $docker_ins -eq 0 ]]; then
   echo "Docker is already installed on the remote host."
 else
   echo "Docker is not installed on the host. Installing it now..."
-  ssh $SSH_OPTIONS $SSH_USER@$NODE "bash -s" << EOF
+  utils_ssh "$SSH_USER@$NODE" "bash -s" << EOF
   $script
 EOF
 fi

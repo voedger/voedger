@@ -5,27 +5,29 @@
 
 package appdef
 
-// Application definition.
+// Application definition is a set of types, views, commands, queries and workspaces.
 //
 // Ref to apdef.go for implementation
 type IAppDef interface {
 	IComment
+	IWithTypes
 
-	// Returns definition by name.
-	//
-	// If not found empty definition with DefKind_null is returned
-	Def(name QName) IDef
-
-	// Returns definition by name.
+	// Return data type by name.
 	//
 	// Returns nil if not found.
-	DefByName(name QName) IDef
+	Data(name QName) IData
 
-	// Return count of definitions.
-	DefCount() int
+	// Enumerates all application data types.
+	//
+	// If incSys specified then system data types are included into enumeration.
+	//
+	// Data types are enumerated in alphabetical order by QName.
+	DataTypes(incSys bool, cb func(IData))
 
-	// Enumerates all application definitions.
-	Defs(func(IDef))
+	// Returns system data type (sys.int32, sys.float654, etc.) by data kind.
+	//
+	// Returns nil if not found.
+	SysData(DataKind) IData
 
 	// Return GDoc by name.
 	//
@@ -72,10 +74,20 @@ type IAppDef interface {
 	// Returns nil if not found.
 	Object(name QName) IObject
 
-	// Return Element by name.
+	// Return record by name.
 	//
 	// Returns nil if not found.
-	Element(name QName) IElement
+	Record(QName) IRecord
+
+	// Enumerates all application records, e.g. documents and contained records
+	//
+	// Records are enumerated in alphabetical order by QName
+	Records(func(IRecord))
+
+	// Enumerates all application structures
+	//
+	// Structures are enumerated in alphabetical order by QName
+	Structures(func(IStructure))
 
 	// Return View by name.
 	//
@@ -92,113 +104,132 @@ type IAppDef interface {
 	// Returns nil if not found.
 	Query(QName) IQuery
 
+	// Return projector by name.
+	//
+	// Returns nil if not found.
+	Projector(QName) IProjector
+
+	// Enumerates all application projectors.
+	//
+	// Projectors are enumerated in alphabetical order by QName.
+	Projectors(func(IProjector))
+
+	// Enumerates all application extensions (commands, queries and extensions)
+	//
+	// Extensions are enumerated in alphabetical order by QName
+	Extensions(func(IExtension))
+
 	// Returns workspace by name.
 	//
 	// Returns nil if not found.
 	Workspace(QName) IWorkspace
 }
 
-// Application definition builder
-//
-// Ref to appdef.go for implementation
 type IAppDefBuilder interface {
 	IAppDef
 	ICommentBuilder
 
-	// Adds new GDoc definition with specified name.
+	// Adds new data type with specified name and kind.
+	//
+	// If ancestor is not empty, then new data type inherits from.
+	// If ancestor is empty, then new data type inherits from system data types with same data kind.
 	//
 	// # Panics:
 	//   - if name is empty (appdef.NullQName),
 	//   - if name is invalid,
-	//   - if definition with name already exists.
+	//   - if type with name already exists,
+	//   - if ancestor is not found,
+	//	 - if ancestor is not data,
+	//	 - if ancestor has different kind,
+	//	 - if constraints are not compatible with data kind.
+	AddData(name QName, kind DataKind, ancestor QName, constraints ...IConstraint) IDataBuilder
+
+	// Adds new GDoc type with specified name.
+	//
+	// # Panics:
+	//   - if name is empty (appdef.NullQName),
+	//   - if name is invalid,
+	//   - if type with name already exists.
 	AddGDoc(name QName) IGDocBuilder
 
-	// Adds new GRecord definition with specified name.
+	// Adds new GRecord type with specified name.
 	//
 	// # Panics:
 	//   - if name is empty (appdef.NullQName),
 	//   - if name is invalid,
-	//   - if definition with name already exists.
+	//   - if type with name already exists.
 	AddGRecord(name QName) IGRecordBuilder
 
-	// Adds new CDoc definition with specified name.
+	// Adds new CDoc type with specified name.
 	//
 	// # Panics:
 	//   - if name is empty (appdef.NullQName),
 	//   - if name is invalid,
-	//   - if definition with name already exists.
+	//   - if type with name already exists.
 	AddCDoc(name QName) ICDocBuilder
 
-	// Adds new singleton CDoc definition with specified name.
+	// Adds new singleton CDoc type with specified name.
 	//
 	// # Panics:
 	//   - if name is empty (appdef.NullQName),
 	//   - if name is invalid,
-	//   - if definition with name already exists.
+	//   - if type with name already exists.
 	AddSingleton(name QName) ICDocBuilder
 
-	// Adds new CRecord definition with specified name.
+	// Adds new CRecord type with specified name.
 	//
 	// # Panics:
 	//   - if name is empty (appdef.NullQName),
 	//   - if name is invalid,
-	//   - if definition with name already exists.
+	//   - if type with name already exists.
 	AddCRecord(name QName) ICRecordBuilder
 
-	// Adds new WDoc definition with specified name.
+	// Adds new WDoc type with specified name.
 	//
 	// # Panics:
 	//   - if name is empty (appdef.NullQName),
 	//   - if name is invalid,
-	//   - if definition with name already exists.
+	//   - if type with name already exists.
 	AddWDoc(name QName) IWDocBuilder
 
-	// Adds new WRecord definition with specified name.
+	// Adds new WRecord type with specified name.
 	//
 	// # Panics:
 	//   - if name is empty (appdef.NullQName),
 	//   - if name is invalid,
-	//   - if definition with name already exists.
+	//   - if type with name already exists.
 	AddWRecord(name QName) IWRecordBuilder
 
-	// Adds new ODoc definition with specified name.
+	// Adds new ODoc type with specified name.
 	//
 	// # Panics:
 	//   - if name is empty (appdef.NullQName),
 	//   - if name is invalid,
-	//   - if definition with name already exists.
+	//   - if type with name already exists.
 	AddODoc(name QName) IODocBuilder
 
-	// Adds new ORecord definition with specified name.
+	// Adds new ORecord type with specified name.
 	//
 	// # Panics:
 	//   - if name is empty (appdef.NullQName),
 	//   - if name is invalid,
-	//   - if definition with name already exists.
+	//   - if type with name already exists.
 	AddORecord(name QName) IORecordBuilder
 
-	// Adds new Object definition with specified name.
+	// Adds new Object type with specified name.
 	//
 	// # Panics:
 	//   - if name is empty (appdef.NullQName),
 	//   - if name is invalid,
-	//   - if definition with name already exists.
+	//   - if type with name already exists.
 	AddObject(name QName) IObjectBuilder
 
-	// Adds new Element definition with specified name.
+	// Adds new types for view.
 	//
 	// # Panics:
 	//   - if name is empty (appdef.NullQName),
 	//   - if name is invalid,
-	//   - if definition with name already exists.
-	AddElement(name QName) IElementBuilder
-
-	// Adds new definitions for view.
-	//
-	// # Panics:
-	//   - if name is empty (appdef.NullQName),
-	//   - if name is invalid,
-	//   - if definition with name already exists.
+	//   - if type with name already exists.
 	AddView(QName) IViewBuilder
 
 	// Adds new command.
@@ -206,7 +237,7 @@ type IAppDefBuilder interface {
 	// # Panics:
 	//   - if name is empty (appdef.NullQName),
 	//   - if name is invalid,
-	//   - if definition with name already exists.
+	//   - if type with name already exists.
 	AddCommand(QName) ICommandBuilder
 
 	// Adds new query.
@@ -214,17 +245,28 @@ type IAppDefBuilder interface {
 	// # Panics:
 	//   - if name is empty (appdef.NullQName),
 	//   - if name is invalid,
-	//   - if definition with name already exists.
+	//   - if type with name already exists.
 	AddQuery(QName) IQueryBuilder
+
+	// Adds new projector.
+	//
+	// # Panics:
+	//   - if name is empty (appdef.NullQName),
+	//   - if name is invalid,
+	//   - if type with name already exists.
+	AddProjector(QName) IProjectorBuilder
 
 	// Adds new workspace.
 	//
 	// # Panics:
 	//   - if name is empty (appdef.NullQName),
 	//   - if name is invalid,
-	//   - if definition with name already exists.
+	//   - if type with name already exists.
 	AddWorkspace(QName) IWorkspaceBuilder
 
-	// Must be called after all definitions added. Validates and returns builded application definition or error
+	// Builds application definition.
+	//
+	// Validates and returns builded application type or error.
+	// Must be called after all entities added.
 	Build() (IAppDef, error)
 }

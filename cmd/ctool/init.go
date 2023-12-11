@@ -17,6 +17,7 @@ import (
 var (
 	initCECmd, initSECmd *cobra.Command
 )
+var skipStacks []string
 
 func newInitCmd() *cobra.Command {
 	initCECmd = &cobra.Command{
@@ -27,10 +28,10 @@ func newInitCmd() *cobra.Command {
 	}
 
 	initSECmd = &cobra.Command{
-		Use:   "SE [<ipaddr>...] [<data-centers>...]",
+		Use:   "SE [<ipaddr>...]",
 		Short: "Creates the file cluster.json for the SE edition cluster",
 		Args: func(cmd *cobra.Command, args []string) error {
-			if len(args) != initSeArgCount && len(args) != initSeWithDCArgCount {
+			if len(args) != initSeArgCount {
 				return ErrInvalidNumberOfArguments
 			}
 			return nil
@@ -38,10 +39,19 @@ func newInitCmd() *cobra.Command {
 		RunE: initSE,
 	}
 
+	initSECmd.Flags().StringSliceVar(&skipStacks, "skip-stack", []string{}, "Specify docker compose stacks to skip")
+
 	initCmd := &cobra.Command{
 		Use:   "init",
 		Short: "Creates the file cluster.json for cluster",
 	}
+	initCmd.PersistentFlags().StringVar(&sshKey, "ssh-key", "", "Path to SSH key")
+	if err := initCmd.MarkPersistentFlagRequired("ssh-key"); err != nil {
+		logger.Error(err.Error())
+		return nil
+	}
+
+	initCmd.PersistentFlags().StringVarP(&sshPort, "ssh-port", "p", "22", "SSH port")
 
 	initCmd.AddCommand(initCECmd, initSECmd)
 
@@ -49,6 +59,7 @@ func newInitCmd() *cobra.Command {
 
 }
 
+// nolint
 func parseIpArg(arg string) (resArg string, err error) {
 	if net.ParseIP(arg) == nil {
 		return "", errors.New("invalid IP address " + arg)
@@ -57,6 +68,7 @@ func parseIpArg(arg string) (resArg string, err error) {
 	return arg, nil
 }
 
+// nolint
 func parseDeployArgs(args []string) error {
 	if len(args) == 0 {
 		return errors.New("the list of command arguments is empty")
@@ -65,7 +77,7 @@ func parseDeployArgs(args []string) error {
 	var err error
 
 	if args[0] == "SE" {
-		if len(args) != initSeArgCount && len(args) != initSeWithDCArgCount {
+		if len(args) != initSeArgCount {
 			return errors.New("invalid number of arguments")
 		}
 
@@ -80,22 +92,32 @@ func parseDeployArgs(args []string) error {
 	return nil
 }
 
+// nolint
 func initCE(cmd *cobra.Command, args []string) error {
 
-	cluster := newCluster()
-	defer cluster.saveToJSON()
+	cluster, err := newCluster()
+	if err != nil {
+		return err
+	}
+
+	defer func(cluster *clusterType) {
+		err := cluster.saveToJSON()
+		if err != nil {
+			logger.Error(err.Error())
+		}
+	}(cluster)
 
 	if !cluster.Draft {
 		return ErrClusterConfAlreadyExists
 	}
 
 	c := newCmd(ckInit, "CE "+strings.Join(args, " "))
-	if err := cluster.applyCmd(c); err != nil {
+	if err = cluster.applyCmd(c); err != nil {
 		logger.Error(err.Error())
 		return err
 	}
 
-	err := mkCommandDirAndLogFile(cmd, cluster)
+	err = mkCommandDirAndLogFile(cmd, cluster)
 	if err != nil {
 		return err
 	}
@@ -117,22 +139,32 @@ func initCE(cmd *cobra.Command, args []string) error {
 	return err
 }
 
+// nolint
 func initSE(cmd *cobra.Command, args []string) error {
 
-	cluster := newCluster()
+	cluster, err := newCluster()
+	if err != nil {
+		return err
+	}
 
 	if !cluster.Draft {
 		return ErrClusterConfAlreadyExists
 	}
 
 	c := newCmd(ckInit, "SE "+strings.Join(args, " "))
+	c.SkipStacks = skipStacks
 	if err := cluster.applyCmd(c); err != nil {
 		logger.Error(err.Error())
 		return err
 	}
 
-	defer cluster.saveToJSON()
-	err := mkCommandDirAndLogFile(cmd, cluster)
+	defer func(cluster *clusterType) {
+		err := cluster.saveToJSON()
+		if err != nil {
+			logger.Error(err.Error())
+		}
+	}(cluster)
+	err = mkCommandDirAndLogFile(cmd, cluster)
 	if err != nil {
 		return err
 	}

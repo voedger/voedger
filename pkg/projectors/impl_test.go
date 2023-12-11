@@ -49,6 +49,9 @@ func TestBasicUsage_SynchronousActualizer(t *testing.T) {
 		func(appDef appdef.IAppDefBuilder) {
 			ProvideViewDef(appDef, incProjectionView, buildProjectionView)
 			ProvideViewDef(appDef, decProjectionView, buildProjectionView)
+			appDef.AddCommand(testQName)
+			appDef.AddProjector(incrementorName).AddEvent(testQName, appdef.ProjectorEventKind_Execute)
+			appDef.AddProjector(decrementorName).AddEvent(testQName, appdef.ProjectorEventKind_Execute)
 		},
 		nil)
 	actualizerFactory := ProvideSyncActualizerFactory()
@@ -104,7 +107,7 @@ var (
 		if wsid == 1099 {
 			return errors.New("test err")
 		}
-		key, err := s.KeyBuilder(state.ViewRecordsStorage, incProjectionView)
+		key, err := s.KeyBuilder(state.View, incProjectionView)
 		if err != nil {
 			return
 		}
@@ -126,7 +129,7 @@ var (
 		return
 	}
 	decrementor = func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
-		key, err := s.KeyBuilder(state.ViewRecordsStorage, decProjectionView)
+		key, err := s.KeyBuilder(state.View, decProjectionView)
 		if err != nil {
 			return
 		}
@@ -150,9 +153,9 @@ var (
 )
 
 var buildProjectionView = func(view appdef.IViewBuilder) {
-	view.Key().Partition().AddField("pk", appdef.DataKind_int32)
-	view.Key().ClustCols().AddField("cc", appdef.DataKind_int32)
-	view.Value().AddField(colValue, appdef.DataKind_int32, true)
+	view.KeyBuilder().PartKeyBuilder().AddField("pk", appdef.DataKind_int32)
+	view.KeyBuilder().ClustColsBuilder().AddField("cc", appdef.DataKind_int32)
+	view.ValueBuilder().AddField(colValue, appdef.DataKind_int32, true)
 }
 
 type (
@@ -162,11 +165,10 @@ type (
 
 func appStructs(prepareAppDef appDefCallback, prepareAppCfg appCfgCallback) istructs.IAppStructs {
 	appDef := appdef.New()
-	appDef.AddObject(incrementorName)
-	appDef.AddObject(decrementorName)
 	if prepareAppDef != nil {
 		prepareAppDef(appDef)
 	}
+	provideOffsetsDefImpl(appDef)
 
 	cfgs := make(istructsmem.AppConfigsType, 1)
 	cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, appDef)
@@ -192,8 +194,6 @@ var metrics imetrics.IMetrics
 
 func appStructsCached(prepareAppDef appDefCallback, prepareAppCfg appCfgCallback) istructs.IAppStructs {
 	appDef := appdef.New()
-	appDef.AddObject(incrementorName)
-	appDef.AddObject(decrementorName)
 	if prepareAppDef != nil {
 		prepareAppDef(appDef)
 	}
@@ -227,6 +227,9 @@ func Test_ErrorInSyncActualizer(t *testing.T) {
 		func(appDef appdef.IAppDefBuilder) {
 			ProvideViewDef(appDef, incProjectionView, buildProjectionView)
 			ProvideViewDef(appDef, decProjectionView, buildProjectionView)
+			appDef.AddCommand(testQName)
+			appDef.AddProjector(incrementorName).AddEvent(testQName, appdef.ProjectorEventKind_Execute)
+			appDef.AddProjector(decrementorName).AddEvent(testQName, appdef.ProjectorEventKind_Execute)
 		},
 		nil)
 	actualizerFactory := ProvideSyncActualizerFactory()

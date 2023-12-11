@@ -10,22 +10,22 @@ package main
 
 import (
 	"github.com/google/wire"
+
 	"github.com/voedger/voedger/pkg/apps"
-	"github.com/voedger/voedger/pkg/ibus"
-	"github.com/voedger/voedger/pkg/ibusmem"
 	"github.com/voedger/voedger/pkg/ihttp"
 	"github.com/voedger/voedger/pkg/ihttpctl"
 	"github.com/voedger/voedger/pkg/ihttpimpl"
 )
 
-func wireServer(ibus.CLIParams, ihttp.CLIParams) (WiredServer, func(), error) {
+func wireServer(ihttp.CLIParams, ihttp.GrafanaPort, ihttp.PrometheusPort) (WiredServer, func(), error) {
 	panic(
 		wire.Build(
-			ibusmem.New,
 			ihttpimpl.NewProcessor,
 			ihttpimpl.NewAPI,
 			ihttpctl.NewHTTPProcessorController,
 			apps.NewStaticEmbeddedResources,
+			apps.NewRedirectionRoutes,
+			apps.NewDefaultRedirectionRoute,
 			wire.Struct(new(WiredServer), "*"),
 		),
 	)

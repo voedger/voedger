@@ -18,18 +18,14 @@ import (
 func provideStateFunc(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder) {
 	cfg.Resources.Add(istructsmem.NewQueryFunction(
 		qNameQueryState,
-		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "StateParams")).
-			AddField(field_After, appdef.DataKind_int64, true).(appdef.IDef).QName(),
-		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "StateResult")).
-			AddField(field_State, appdef.DataKind_string, true).(appdef.IDef).QName(),
 		stateFuncExec(appDefBuilder)))
 }
 
 func stateFuncExec(appDef appdef.IAppDef) istructsmem.ExecQueryClosure {
-	return func(ctx context.Context, qf istructs.IQueryFunction, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
+	return func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 		after := args.ArgumentObject.AsInt64(field_After)
 
-		kb, err := args.State.KeyBuilder(state.ViewRecordsStorage, QNameViewCollection)
+		kb, err := args.State.KeyBuilder(state.View, QNameCollectionView)
 		if err != nil {
 			return err
 		}

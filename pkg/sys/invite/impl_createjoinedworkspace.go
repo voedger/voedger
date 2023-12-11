@@ -12,20 +12,14 @@ import (
 	"github.com/voedger/voedger/pkg/sys/authnz"
 )
 
-func provideCmdCreateJoinedWorkspace(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder) {
+func provideCmdCreateJoinedWorkspace(cfg *istructsmem.AppConfigType) {
 	cfg.Resources.Add(istructsmem.NewCommandFunction(
 		qNameCmdCreateJoinedWorkspace,
-		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "CreateJoinedWorkspaceParams")).
-			AddField(Field_Roles, appdef.DataKind_string, true).
-			AddField(Field_InvitingWorkspaceWSID, appdef.DataKind_int64, true).
-			AddField(authnz.Field_WSName, appdef.DataKind_string, true).(appdef.IDef).QName(),
-		appdef.NullQName,
-		appdef.NullQName,
 		execCmdCreateJoinedWorkspace,
 	))
 }
 
-func execCmdCreateJoinedWorkspace(_ istructs.ICommandFunction, args istructs.ExecCommandArgs) (err error) {
+func execCmdCreateJoinedWorkspace(args istructs.ExecCommandArgs) (err error) {
 	svbCDocJoinedWorkspace, ok, err := GetCDocJoinedWorkspaceForUpdate(args.State, args.Intents, args.ArgumentObject.AsInt64(Field_InvitingWorkspaceWSID))
 	if err != nil {
 		// notest
@@ -37,7 +31,7 @@ func execCmdCreateJoinedWorkspace(_ istructs.ICommandFunction, args istructs.Exe
 
 		return nil
 	}
-	skbCDocJoinedWorkspace, err := args.State.KeyBuilder(state.RecordsStorage, QNameCDocJoinedWorkspace)
+	skbCDocJoinedWorkspace, err := args.State.KeyBuilder(state.Record, QNameCDocJoinedWorkspace)
 	if err != nil {
 		return
 	}

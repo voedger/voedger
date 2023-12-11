@@ -27,19 +27,10 @@ import (
 var translationsCatalog = coreutils.GetCatalogFromTranslations(translations)
 
 // called at targetApp/profileWSID
-func provideQryInitiateEmailVerification(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, itokens itokens.ITokens,
+func provideQryInitiateEmailVerification(cfg *istructsmem.AppConfigType, itokens itokens.ITokens,
 	asp istructs.IAppStructsProvider, federation coreutils.IFederation) {
 	cfg.Resources.Add(istructsmem.NewQueryFunction(
 		QNameQueryInitiateEmailVerification,
-		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "InitiateEmailVerificationParams")).
-			AddField(field_Entity, appdef.DataKind_string, true). // must be string, not QName, because target app could not know that QName. E.g. unknown QName «sys.ResetPasswordByEmailUnloggedParams»: name not found
-			AddField(field_Field, appdef.DataKind_string, true).
-			AddField(Field_Email, appdef.DataKind_string, true).
-			AddField(field_TargetWSID, appdef.DataKind_int64, true).
-			AddField(field_ForRegistry, appdef.DataKind_bool, false). // to issue token for sys/registry/pseudoWSID/c.sys.ResetPassword, not for the current app
-			AddField(field_Language, appdef.DataKind_string, false).(appdef.IDef).QName(),
-		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "InitialEmailVerificationResult")).
-			AddField(field_VerificationToken, appdef.DataKind_string, true).(appdef.IDef).QName(),
 		provideIEVExec(cfg.Name, itokens, asp, federation),
 	))
 	cfg.FunctionRateLimits.AddWorkspaceLimit(QNameQueryInitiateEmailVerification, istructs.RateLimit{
@@ -51,7 +42,7 @@ func provideQryInitiateEmailVerification(cfg *istructsmem.AppConfigType, appDefB
 // q.sys.InitiateEmailVerification
 // called at targetApp/profileWSID
 func provideIEVExec(appQName istructs.AppQName, itokens itokens.ITokens, asp istructs.IAppStructsProvider, federation coreutils.IFederation) istructsmem.ExecQueryClosure {
-	return func(ctx context.Context, qf istructs.IQueryFunction, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
+	return func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 		entity := args.ArgumentObject.AsString(field_Entity)
 		targetWSID := istructs.WSID(args.ArgumentObject.AsInt64(field_TargetWSID))
 		field := args.ArgumentObject.AsString(field_Field)
@@ -96,11 +87,17 @@ func provideIEVExec(appQName istructs.AppQName, itokens itokens.ITokens, asp ist
 	}
 }
 
-func sendEmailVerificationCodeProjector(federation coreutils.IFederation, smtpCfg smtp.Cfg) func(event istructs.IPLogEvent, state istructs.IState, intents istructs.IIntents) (err error) {
+func applySendEmailVerificationCode(federation coreutils.IFederation, smtpCfg smtp.Cfg, timeFunc coreutils.TimeFunc) func(event istructs.IPLogEvent, state istructs.IState, intents istructs.IIntents) (err error) {
 	return func(event istructs.IPLogEvent, st istructs.IState, intents istructs.IIntents) (err error) {
+		eventTime := time.UnixMilli(int64(event.RegisteredAt()))
+		if eventTime.Add(threeDays).Before(timeFunc()) {
+			// skip old emails to prevent re-sending after projector rename
+			// see https://github.com/voedger/voedger/issues/275
+			return nil
+		}
 		lng := event.ArgumentObject().AsString(field_Language)
 
-		kb, err := st.KeyBuilder(state.SendMailStorage, appdef.NullQName)
+		kb, err := st.KeyBuilder(state.SendMail, appdef.NullQName)
 		if err != nil {
 			return
 		}
@@ -115,7 +112,7 @@ func sendEmailVerificationCodeProjector(federation coreutils.IFederation, smtpCf
 		kb.PutString(state.Field_Username, smtpCfg.Username)
 		pwd := ""
 		if !coreutils.IsTest() {
-			kbSecret, err := st.KeyBuilder(state.AppSecretsStorage, appdef.NullQName)
+			kbSecret, err := st.KeyBuilder(state.AppSecret, appdef.NullQName)
 			if err != nil {
 				return err
 			}
@@ -143,15 +140,9 @@ func (r ivvtResult) AsString(string) string {
 }
 
 // called at targetApp/targetWSID
-func provideQryIssueVerifiedValueToken(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, itokens itokens.ITokens, asp istructs.IAppStructsProvider) {
+func provideQryIssueVerifiedValueToken(cfg *istructsmem.AppConfigType, itokens itokens.ITokens, asp istructs.IAppStructsProvider) {
 	cfg.Resources.Add(istructsmem.NewQueryFunction(
 		QNameQueryIssueVerifiedValueToken,
-		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "IssueVerifiedValueTokenParams")).
-			AddField(field_VerificationToken, appdef.DataKind_string, true).
-			AddField(field_VerificationCode, appdef.DataKind_string, true).
-			AddField(field_ForRegistry, appdef.DataKind_bool, false).(appdef.IDef).QName(),
-		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "IssueVerifiedValueTokenResult")).
-			AddField(field_VerifiedValueToken, appdef.DataKind_string, true).(appdef.IDef).QName(),
 		provideIVVTExec(itokens, cfg.Name, asp),
 	))
 
@@ -163,7 +154,7 @@ func provideQryIssueVerifiedValueToken(cfg *istructsmem.AppConfigType, appDefBui
 // called at targetApp/profileWSID
 // a helper is used for ResetPassword that calls `q.sys.IssueVerifiedValueToken` at the profile
 func provideIVVTExec(itokens itokens.ITokens, appQName istructs.AppQName, asp istructs.IAppStructsProvider) istructsmem.ExecQueryClosure {
-	return func(ctx context.Context, qf istructs.IQueryFunction, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
+	return func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 		verificationToken := args.ArgumentObject.AsString(field_VerificationToken)
 		verificationCode := args.ArgumentObject.AsString(field_VerificationCode)
 		forRegistry := args.ArgumentObject.AsBool(field_ForRegistry)
@@ -201,16 +192,9 @@ func provideIVVTExec(itokens itokens.ITokens, appQName istructs.AppQName, asp is
 	}
 }
 
-func provideCmdSendEmailVerificationCode(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder) {
+func provideCmdSendEmailVerificationCode(cfg *istructsmem.AppConfigType) {
 	cfg.Resources.Add(istructsmem.NewCommandFunction(
 		QNameCommandSendEmailVerificationCode,
-		appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "SendEmailVerificationParams")).
-			AddField(field_VerificationCode, appdef.DataKind_string, true).
-			AddField(Field_Email, appdef.DataKind_string, true).
-			AddField(field_Reason, appdef.DataKind_string, true).
-			AddField(field_Language, appdef.DataKind_string, false).(appdef.IDef).QName(),
-		appdef.NullQName,
-		appdef.NullQName,
 		istructsmem.NullCommandExec,
 	))
 }

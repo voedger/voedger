@@ -16,13 +16,15 @@ var (
 	TestTimeFunc = TimeFunc(func() time.Time { return TestNow })
 )
 
+// ICUDRow, IObject
 type TestObject struct {
 	istructs.NullObject
-	Name        appdef.QName
-	Id          istructs.RecordID
-	Parent_     istructs.RecordID
-	Data        map[string]interface{}
-	Containers_ map[string][]*TestObject
+	Name            appdef.QName
+	Id              istructs.RecordID
+	Parent_         istructs.RecordID
+	Data            map[string]interface{}
+	Containers_     map[string][]*TestObject
+	IsNew_          bool
 }
 
 type TestValue struct {
@@ -48,9 +50,15 @@ func (o *TestObject) PutRecordID(name string, value istructs.RecordID) { o.Data[
 func (o *TestObject) PutNumber(name string, value float64)             { o.Data[name] = value }
 func (o *TestObject) PutChars(name string, value string)               { o.Data[name] = value }
 
-func (o *TestObject) ID() istructs.RecordID      { return o.Id }
-func (o *TestObject) QName() appdef.QName        { return o.Name }
-func (o *TestObject) Parent() istructs.RecordID  { return o.Parent_ }
+func (o *TestObject) ID() istructs.RecordID     { return o.Id }
+func (o *TestObject) QName() appdef.QName       { return o.Name }
+func (o *TestObject) Parent() istructs.RecordID { return o.Parent_ }
+func (o *TestObject) IsNew() bool               { return o.IsNew_ }
+func (o *TestObject) ModifiedFields(cb func(string, interface{})) {
+	for name, value := range o.Data {
+		cb(name, value)
+	}
+}
 func (o *TestObject) AsRecord() istructs.IRecord { return o }
 func (o *TestObject) AsInt32(name string) int32 {
 	if resIntf, ok := o.Data[name]; ok {
@@ -107,10 +115,20 @@ func (o *TestObject) AsRecordID(name string) istructs.RecordID {
 	}
 	return istructs.NullRecordID
 }
-func (o *TestObject) Elements(container string, cb func(el istructs.IElement)) {
-	if objects, ok := o.Containers_[container]; ok {
-		for _, object := range objects {
-			cb(object)
+func (o *TestObject) Children(container string, cb func(istructs.IObject)) {
+	iterate := func(cc []*TestObject) {
+		for _, c := range cc {
+			cb(c)
+		}
+	}
+
+	if container == "" {
+		for _, cc := range o.Containers_ {
+			iterate(cc)
+		}
+	} else {
+		if cc, ok := o.Containers_[container]; ok {
+			iterate(cc)
 		}
 	}
 }

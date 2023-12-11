@@ -14,6 +14,7 @@ import (
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/isecrets"
 	"github.com/voedger/voedger/pkg/istructs"
+	imetrics "github.com/voedger/voedger/pkg/metrics"
 	"github.com/voedger/voedger/pkg/pipeline"
 	"github.com/voedger/voedger/pkg/state"
 )
@@ -33,7 +34,7 @@ type AsyncActualizerConf struct {
 	// Optional. Default value: `core-logger.Error`
 	LogError LogErrorFunc
 	// Optional.
-	Metrics AsyncActualizerMetrics
+	AAMetrics AsyncActualizerMetrics
 	//IntentsLimit top limit per event, optional, default value is 100
 	IntentsLimit int
 	//BundlesLimit top limit when bundle size is greater than this value, actualizer flushes changes to underlying storage, optional, default value is 100
@@ -42,6 +43,9 @@ type AsyncActualizerConf struct {
 	FlushInterval time.Duration
 	// FlushPositionInverval specifies how often actializer must save it's position, even when no events has been processed by actualizer. Default is 1 minute
 	FlushPositionInverval time.Duration
+
+	VvmName string
+	Metrics imetrics.IMetrics
 
 	Broker  in10n.IN10nBroker
 	channel in10n.ChannelID
@@ -67,7 +71,7 @@ type SyncActualizerConf struct {
 	N10nFunc     state.N10nFunc
 }
 
-type ViewDefBuilder func(builder appdef.IViewBuilder)
+type ViewTypeBuilder func(builder appdef.IViewBuilder)
 
 type WorkToEventFunc func(work interface{}) istructs.IPLogEvent
 

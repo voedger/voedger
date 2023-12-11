@@ -15,28 +15,28 @@ func Test_AppDef_AddCommand(t *testing.T) {
 	require := require.New(t)
 
 	var app IAppDef
-	cmdName, argName, unlName, resName := NewQName("test", "cmd"), NewQName("test", "arg"), NewQName("test", "unl"), NewQName("test", "res")
+	cmdName, parName, unlName, resName := NewQName("test", "cmd"), NewQName("test", "par"), NewQName("test", "unl"), NewQName("test", "res")
 
 	t.Run("must be ok to add command", func(t *testing.T) {
 		appDef := New()
 
-		_ = appDef.AddObject(argName)
+		_ = appDef.AddObject(parName)
 		_ = appDef.AddObject(unlName)
 		_ = appDef.AddObject(resName)
 
 		cmd := appDef.AddCommand(cmdName)
-		require.Equal(DefKind_Command, cmd.Kind())
+		require.Equal(TypeKind_Command, cmd.Kind())
 		require.Equal(cmd, appDef.Command(cmdName))
-		require.Nil(cmd.Arg())
-		require.Nil(cmd.UnloggedArg())
+		require.Nil(cmd.Param())
+		require.Nil(cmd.UnloggedParam())
 		require.Nil(cmd.Result())
 
-		t.Run("must be ok to assign cmd args and result", func(t *testing.T) {
+		t.Run("must be ok to assign cmd parameter and result", func(t *testing.T) {
+			cmd.SetEngine(ExtensionEngineKind_BuiltIn)
 			cmd.
-				SetArg(argName).
-				SetUnloggedArg(unlName).
-				SetResult(resName).
-				SetExtension("CmdExt", ExtensionEngineKind_BuiltIn)
+				SetParam(parName).(ICommandBuilder).
+				SetUnloggedParam(unlName).
+				SetResult(resName)
 		})
 
 		t.Run("must be ok to build", func(t *testing.T) {
@@ -51,28 +51,45 @@ func Test_AppDef_AddCommand(t *testing.T) {
 	require.NotNil(app)
 
 	t.Run("must be ok to find builded command", func(t *testing.T) {
-		def := app.Def(cmdName)
-		require.Equal(DefKind_Command, def.Kind())
+		typ := app.Type(cmdName)
+		require.Equal(TypeKind_Command, typ.Kind())
 
-		d, ok := def.(ICommand)
+		c, ok := typ.(ICommand)
 		require.True(ok)
-		require.Equal(DefKind_Command, d.Kind())
+		require.Equal(TypeKind_Command, c.Kind())
 
 		cmd := app.Command(cmdName)
-		require.Equal(DefKind_Command, cmd.Kind())
-		require.Equal(d, cmd)
+		require.Equal(TypeKind_Command, cmd.Kind())
+		require.Equal(cmdName.Entity(), cmd.Name())
+		require.Equal(c, cmd)
 
-		require.Equal(argName, cmd.Arg().QName())
-		require.Equal(DefKind_Object, cmd.Arg().Kind())
+		require.Equal(ExtensionEngineKind_BuiltIn, cmd.Engine())
 
-		require.Equal(unlName, cmd.UnloggedArg().QName())
-		require.Equal(DefKind_Object, cmd.UnloggedArg().Kind())
+		require.Equal(parName, cmd.Param().QName())
+		require.Equal(TypeKind_Object, cmd.Param().Kind())
+
+		require.Equal(unlName, cmd.UnloggedParam().QName())
+		require.Equal(TypeKind_Object, cmd.UnloggedParam().Kind())
 
 		require.Equal(resName, cmd.Result().QName())
-		require.Equal(DefKind_Object, cmd.Result().Kind())
+		require.Equal(TypeKind_Object, cmd.Result().Kind())
+	})
 
-		require.Equal("CmdExt", cmd.Extension().Name())
-		require.Equal(ExtensionEngineKind_BuiltIn, cmd.Extension().Engine())
+	t.Run("must be ok to enum commands", func(t *testing.T) {
+		cnt := 0
+		app.Extensions(func(ex IExtension) {
+			cnt++
+			switch cnt {
+			case 1:
+				cmd, ok := ex.(ICommand)
+				require.True(ok)
+				require.Equal(TypeKind_Command, cmd.Kind())
+				require.Equal(cmdName, cmd.QName())
+			default:
+				require.Failf("unexpected extension", "extension: %v", ex)
+			}
+		})
+		require.Equal(1, cnt)
 	})
 
 	t.Run("check nil returns", func(t *testing.T) {
@@ -94,7 +111,7 @@ func Test_AppDef_AddCommand(t *testing.T) {
 		})
 	})
 
-	t.Run("panic if definition with name already exists", func(t *testing.T) {
+	t.Run("panic if type with name already exists", func(t *testing.T) {
 		testName := NewQName("test", "dupe")
 		apb := New()
 		apb.AddObject(testName)
@@ -107,7 +124,7 @@ func Test_AppDef_AddCommand(t *testing.T) {
 		apb := New()
 		cmd := apb.AddCommand(NewQName("test", "cmd"))
 		require.Panics(func() {
-			cmd.SetExtension("", ExtensionEngineKind_BuiltIn)
+			cmd.SetName("")
 		})
 	})
 
@@ -115,8 +132,15 @@ func Test_AppDef_AddCommand(t *testing.T) {
 		apb := New()
 		cmd := apb.AddCommand(NewQName("test", "cmd"))
 		require.Panics(func() {
-			cmd.SetExtension("naked 🔫", ExtensionEngineKind_BuiltIn)
+			cmd.SetName("naked 🔫")
 		})
+	})
+
+	t.Run("panic if extension kind is invalid", func(t *testing.T) {
+		apb := New()
+		cmd := apb.AddCommand(NewQName("test", "cmd"))
+		require.Panics(func() { cmd.SetEngine(ExtensionEngineKind_null) })
+		require.Panics(func() { cmd.SetEngine(ExtensionEngineKind_Count) })
 	})
 }
 
@@ -124,48 +148,68 @@ func Test_CommandValidate(t *testing.T) {
 	require := require.New(t)
 
 	appDef := New()
+	obj := NewQName("test", "obj")
+	_ = appDef.AddObject(obj)
+	bad := NewQName("test", "workspace")
+	_ = appDef.AddWorkspace(bad)
+	unknown := NewQName("test", "unknown")
 
 	cmd := appDef.AddCommand(NewQName("test", "cmd"))
 
-	t.Run("must error if argument name is unknown", func(t *testing.T) {
-		arg := NewQName("test", "arg")
-		cmd.SetArg(arg)
-		_, err := appDef.Build()
-		require.ErrorIs(err, ErrNameNotFound)
-		require.ErrorContains(err, arg.String())
+	t.Run("errors in parameter", func(t *testing.T) {
+		t.Run("must error if parameter name is unknown", func(t *testing.T) {
+			cmd.SetParam(unknown)
+			_, err := appDef.Build()
+			require.ErrorIs(err, ErrNameNotFound)
+			require.ErrorContains(err, unknown.String())
+		})
 
-		_ = appDef.AddObject(arg)
+		t.Run("must error if deprecated parameter type", func(t *testing.T) {
+			cmd.SetParam(bad)
+			_, err := appDef.Build()
+			require.ErrorIs(err, ErrInvalidTypeKind)
+			require.ErrorContains(err, bad.String())
+		})
+
+		cmd.SetParam(obj)
 	})
 
-	t.Run("must error if unlogged argument name is unknown", func(t *testing.T) {
-		unl := NewQName("test", "unl")
-		cmd.SetUnloggedArg(unl)
-		_, err := appDef.Build()
-		require.ErrorIs(err, ErrNameNotFound)
-		require.ErrorContains(err, unl.String())
+	t.Run("errors in unlogged parameter", func(t *testing.T) {
+		t.Run("must error if unlogged parameter name is unknown", func(t *testing.T) {
+			cmd.SetUnloggedParam(unknown)
+			_, err := appDef.Build()
+			require.ErrorIs(err, ErrNameNotFound)
+			require.ErrorContains(err, unknown.String())
+		})
 
-		_ = appDef.AddObject(unl)
+		t.Run("must error if deprecated unlogged parameter type", func(t *testing.T) {
+			cmd.SetUnloggedParam(bad)
+			_, err := appDef.Build()
+			require.ErrorIs(err, ErrInvalidTypeKind)
+			require.ErrorContains(err, bad.String())
+		})
+
+		cmd.SetUnloggedParam(obj)
 	})
 
-	t.Run("must error if result object name is unknown", func(t *testing.T) {
-		res := NewQName("test", "res")
-		cmd.SetResult(res)
-		_, err := appDef.Build()
-		require.ErrorIs(err, ErrNameNotFound)
-		require.ErrorContains(err, res.String())
+	t.Run("errors in result", func(t *testing.T) {
+		t.Run("must error if result object name is unknown", func(t *testing.T) {
+			cmd.SetResult(unknown)
+			_, err := appDef.Build()
+			require.ErrorIs(err, ErrNameNotFound)
+			require.ErrorContains(err, unknown.String())
+		})
 
-		_ = appDef.AddObject(res)
+		t.Run("must error if deprecated unlogged parameter type", func(t *testing.T) {
+			cmd.SetResult(bad)
+			_, err := appDef.Build()
+			require.ErrorIs(err, ErrInvalidTypeKind)
+			require.ErrorContains(err, bad.String())
+		})
+
+		cmd.SetResult(obj)
 	})
 
-	t.Run("must error if extension name or engine is missed", func(t *testing.T) {
-		_, err := appDef.Build()
-		require.ErrorIs(err, ErrNameMissed)
-		require.ErrorContains(err, "extension name")
-
-		require.ErrorIs(err, ErrExtensionEngineKindMissed)
-	})
-
-	cmd.SetExtension("CmdExt", ExtensionEngineKind_BuiltIn)
 	_, err := appDef.Build()
 	require.NoError(err)
 }

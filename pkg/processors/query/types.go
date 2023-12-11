@@ -94,7 +94,7 @@ type IQueryMessage interface {
 	Sender() interface{}
 	Body() []byte
 	RequestCtx() context.Context
-	Resource() istructs.IResource
+	Query() appdef.IQuery
 	//TODO Denis provide partition
 	Partition() istructs.PartitionID
 	Host() string

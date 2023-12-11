@@ -24,7 +24,7 @@ func bench_purecall(b *testing.B) {
 
 	b.ResetTimer()
 	for n := 0; n < b.N; n++ {
-		if e := ee.Invoke(context.Background(), simple, extIO); e != nil {
+		if e := ee.Invoke(context.Background(), iextengine.NewExtQName("", simple), extIO); e != nil {
 			panic(e)
 		}
 	}
@@ -48,11 +48,11 @@ func bench_gc(b *testing.B, cycles int) {
 	for n := 0; n < b.N; n++ {
 		b.StopTimer()
 		for i := 0; i < cycles; i++ {
-			if e := ee.Invoke(context.Background(), arrAppend, extIO); e != nil {
+			if e := ee.Invoke(context.Background(), iextengine.NewExtQName("", arrAppend), extIO); e != nil {
 				panic(e)
 			}
 		}
-		if e := ee.Invoke(context.Background(), arrReset, extIO); e != nil {
+		if e := ee.Invoke(context.Background(), iextengine.NewExtQName("", arrReset), extIO); e != nil {
 			panic(e)
 		}
 		b.StartTimer()
@@ -110,7 +110,7 @@ func bench_extensions(b *testing.B, gc bool) {
 		b.Run(extname, func(b *testing.B) {
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
-				err := ee.Invoke(context.Background(), extname, extIO)
+				err := ee.Invoke(context.Background(), iextengine.NewExtQName("", extname), extIO)
 				if err != nil {
 					panic(err)
 				}
@@ -149,7 +149,7 @@ func benchmarkRecover(b *testing.B, limitPages uint, expectedRuns int) {
 	we := ee.(*wazeroExtEngine)
 
 	for runs := 0; runs < expectedRuns; runs++ {
-		if err := ee.Invoke(context.Background(), arrAppend2, extIO); err != nil {
+		if err := ee.Invoke(context.Background(), iextengine.NewExtQName("", arrAppend2), extIO); err != nil {
 			panic(err)
 		}
 	}

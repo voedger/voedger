@@ -128,7 +128,7 @@ type pLogKeyBuilder struct {
 }
 
 func (b *pLogKeyBuilder) Storage() appdef.QName {
-	return PLogStorage
+	return PLog
 }
 
 func (b *pLogKeyBuilder) String() string {
@@ -147,7 +147,7 @@ type wLogKeyBuilder struct {
 }
 
 func (b *wLogKeyBuilder) Storage() appdef.QName {
-	return WLogStorage
+	return WLog
 }
 
 func (b *wLogKeyBuilder) String() string {
@@ -170,7 +170,7 @@ type recordsKeyBuilder struct {
 }
 
 func (b *recordsKeyBuilder) Storage() appdef.QName {
-	return RecordsStorage
+	return Record
 }
 
 func (b *recordsKeyBuilder) String() string {
@@ -232,34 +232,34 @@ func (b *recordsValueBuilder) PutRecordID(name string, value istructs.RecordID) 
 	b.rw.PutRecordID(name, value)
 }
 
-type viewRecordsKeyBuilder struct {
+type viewKeyBuilder struct {
 	istructs.IKeyBuilder
 	wsid istructs.WSID
 	view appdef.QName
 }
 
-func (b *viewRecordsKeyBuilder) PutInt64(name string, value int64) {
+func (b *viewKeyBuilder) PutInt64(name string, value int64) {
 	if name == Field_WSID {
 		b.wsid = istructs.WSID(value)
 		return
 	}
 	b.IKeyBuilder.PutInt64(name, value)
 }
-func (b *viewRecordsKeyBuilder) PutQName(name string, value appdef.QName) {
+func (b *viewKeyBuilder) PutQName(name string, value appdef.QName) {
 	if name == appdef.SystemField_QName {
 		b.wsid = istructs.NullWSID
 		b.view = value
 	}
 	b.IKeyBuilder.PutQName(name, value)
 }
-func (b *viewRecordsKeyBuilder) Entity() appdef.QName {
+func (b *viewKeyBuilder) Entity() appdef.QName {
 	return b.view
 }
-func (b *viewRecordsKeyBuilder) Storage() appdef.QName {
-	return ViewRecordsStorage
+func (b *viewKeyBuilder) Storage() appdef.QName {
+	return View
 }
-func (b *viewRecordsKeyBuilder) Equals(src istructs.IKeyBuilder) bool {
-	kb, ok := src.(*viewRecordsKeyBuilder)
+func (b *viewKeyBuilder) Equals(src istructs.IKeyBuilder) bool {
+	kb, ok := src.(*viewKeyBuilder)
 	if !ok {
 		return false
 	}
@@ -272,63 +272,64 @@ func (b *viewRecordsKeyBuilder) Equals(src istructs.IKeyBuilder) bool {
 	return b.IKeyBuilder.Equals(kb.IKeyBuilder)
 }
 
-type viewRecordsValueBuilder struct {
+type viewValueBuilder struct {
 	istructs.IValueBuilder
 	offset     istructs.Offset
 	toJSONFunc toJSONFunc
 	entity     appdef.QName
 }
 
-func (b *viewRecordsValueBuilder) PutInt64(name string, value int64) {
+func (b *viewValueBuilder) PutInt64(name string, value int64) {
 	if name == ColOffset {
 		b.offset = istructs.Offset(value)
 	}
 	b.IValueBuilder.PutInt64(name, value)
 }
-func (b *viewRecordsValueBuilder) PutQName(name string, value appdef.QName) {
+func (b *viewValueBuilder) PutQName(name string, value appdef.QName) {
 	if name == appdef.SystemField_QName {
 		b.offset = istructs.NullOffset
 	}
 	b.IValueBuilder.PutQName(name, value)
 }
-func (b *viewRecordsValueBuilder) Build() istructs.IValue {
+func (b *viewValueBuilder) Build() istructs.IValue {
 	return b.IValueBuilder.Build()
 }
 
-func (b *viewRecordsValueBuilder) BuildValue() istructs.IStateValue {
-	return &viewRecordsStorageValue{
+func (b *viewValueBuilder) BuildValue() istructs.IStateValue {
+	return &viewValue{
 		value: b.Build(),
 	}
 }
 
-type recordsStorageValue struct {
+type recordsValue struct {
 	baseStateValue
 	record istructs.IRecord
 }
 
-func (v *recordsStorageValue) AsInt32(name string) int32        { return v.record.AsInt32(name) }
-func (v *recordsStorageValue) AsInt64(name string) int64        { return v.record.AsInt64(name) }
-func (v *recordsStorageValue) AsFloat32(name string) float32    { return v.record.AsFloat32(name) }
-func (v *recordsStorageValue) AsFloat64(name string) float64    { return v.record.AsFloat64(name) }
-func (v *recordsStorageValue) AsBytes(name string) []byte       { return v.record.AsBytes(name) }
-func (v *recordsStorageValue) AsString(name string) string      { return v.record.AsString(name) }
-func (v *recordsStorageValue) AsQName(name string) appdef.QName { return v.record.AsQName(name) }
-func (v *recordsStorageValue) AsBool(name string) bool          { return v.record.AsBool(name) }
-func (v *recordsStorageValue) AsRecordID(name string) istructs.RecordID {
+func (v *recordsValue) AsInt32(name string) int32        { return v.record.AsInt32(name) }
+func (v *recordsValue) AsInt64(name string) int64        { return v.record.AsInt64(name) }
+func (v *recordsValue) AsFloat32(name string) float32    { return v.record.AsFloat32(name) }
+func (v *recordsValue) AsFloat64(name string) float64    { return v.record.AsFloat64(name) }
+func (v *recordsValue) AsBytes(name string) []byte       { return v.record.AsBytes(name) }
+func (v *recordsValue) AsString(name string) string      { return v.record.AsString(name) }
+func (v *recordsValue) AsQName(name string) appdef.QName { return v.record.AsQName(name) }
+func (v *recordsValue) AsBool(name string) bool          { return v.record.AsBool(name) }
+func (v *recordsValue) AsRecordID(name string) istructs.RecordID {
 	return v.record.AsRecordID(name)
 }
-func (v *recordsStorageValue) AsRecord(string) (record istructs.IRecord) { return v.record }
+func (v *recordsValue) AsRecord(string) (record istructs.IRecord) { return v.record }
+func (v *recordsValue) FieldNames(cb func(fieldName string)) {
+	v.record.FieldNames(cb)
+}
 
-//func (v *recordsStorageValue) AsRecord(string) (record istructs.IRecord) { return v.record }
-
-type pLogStorageValue struct {
+type pLogValue struct {
 	baseStateValue
 	event      istructs.IPLogEvent
 	offset     int64
 	toJSONFunc toJSONFunc
 }
 
-func (v *pLogStorageValue) AsInt64(name string) int64 {
+func (v *pLogValue) AsInt64(name string) int64 {
 	switch name {
 	case Field_WLogOffset:
 		return int64(v.event.WLogOffset())
@@ -345,34 +346,33 @@ func (v *pLogStorageValue) AsInt64(name string) int64 {
 	}
 	return 0
 }
-func (v *pLogStorageValue) AsBool(string) bool { return v.event.Synced() }
-func (v *pLogStorageValue) AsRecord(string) istructs.IRecord {
+func (v *pLogValue) AsBool(string) bool { return v.event.Synced() }
+func (v *pLogValue) AsRecord(string) istructs.IRecord {
 	return v.event.ArgumentObject().AsRecord()
 }
-func (v *pLogStorageValue) AsEvent(string) istructs.IDbEvent { return v.event }
-func (v *pLogStorageValue) AsValue(name string) istructs.IStateValue {
+func (v *pLogValue) AsEvent(string) istructs.IDbEvent { return v.event }
+func (v *pLogValue) AsValue(name string) istructs.IStateValue {
 	if name != Field_CUDs {
 		panic(ErrNotSupported)
 	}
-	sv := &cudsStorageValue{}
-	_ = v.event.CUDs(func(rec istructs.ICUDRow) error {
+	sv := &cudsValue{}
+	v.event.CUDs(func(rec istructs.ICUDRow) {
 		sv.cuds = append(sv.cuds, rec)
-		return nil
 	})
 	return sv
 }
-func (v *pLogStorageValue) ToJSON(opts ...interface{}) (string, error) {
+func (v *pLogValue) ToJSON(opts ...interface{}) (string, error) {
 	return v.toJSONFunc(v, opts...)
 }
 
-type wLogStorageValue struct {
+type wLogValue struct {
 	baseStateValue
 	event      istructs.IWLogEvent
 	offset     int64
 	toJSONFunc toJSONFunc
 }
 
-func (v *wLogStorageValue) AsInt64(name string) int64 {
+func (v *wLogValue) AsInt64(name string) int64 {
 	switch name {
 	case Field_RegisteredAt:
 		return int64(v.event.RegisteredAt())
@@ -386,37 +386,36 @@ func (v *wLogStorageValue) AsInt64(name string) int64 {
 		return 0
 	}
 }
-func (v *wLogStorageValue) AsBool(_ string) bool          { return v.event.Synced() }
-func (v *wLogStorageValue) AsQName(_ string) appdef.QName { return v.event.QName() }
-func (v *wLogStorageValue) AsEvent(_ string) (event istructs.IDbEvent) {
+func (v *wLogValue) AsBool(_ string) bool          { return v.event.Synced() }
+func (v *wLogValue) AsQName(_ string) appdef.QName { return v.event.QName() }
+func (v *wLogValue) AsEvent(_ string) (event istructs.IDbEvent) {
 	return v.event
 }
-func (v *wLogStorageValue) AsRecord(_ string) (record istructs.IRecord) {
+func (v *wLogValue) AsRecord(_ string) (record istructs.IRecord) {
 	return v.event.ArgumentObject().AsRecord()
 }
-func (v *wLogStorageValue) AsValue(name string) istructs.IStateValue {
+func (v *wLogValue) AsValue(name string) istructs.IStateValue {
 	if name != Field_CUDs {
 		panic(ErrNotSupported)
 	}
-	sv := &cudsStorageValue{}
-	_ = v.event.CUDs(func(rec istructs.ICUDRow) error {
+	sv := &cudsValue{}
+	v.event.CUDs(func(rec istructs.ICUDRow) {
 		sv.cuds = append(sv.cuds, rec)
-		return nil
 	})
 	return sv
 }
-func (v *wLogStorageValue) ToJSON(opts ...interface{}) (string, error) {
+func (v *wLogValue) ToJSON(opts ...interface{}) (string, error) {
 	return v.toJSONFunc(v, opts...)
 }
 
-type sendMailStorageKeyBuilder struct {
+type sendMailKeyBuilder struct {
 	*keyBuilder
 	to  []string
 	cc  []string
 	bcc []string
 }
 
-func (b *sendMailStorageKeyBuilder) PutString(name string, value string) {
+func (b *sendMailKeyBuilder) PutString(name string, value string) {
 	switch name {
 	case Field_To:
 		b.to = append(b.to, value)
@@ -429,19 +428,19 @@ func (b *sendMailStorageKeyBuilder) PutString(name string, value string) {
 	}
 }
 
-type httpStorageKeyBuilder struct {
+type httpKeyBuilder struct {
 	*keyBuilder
 	headers map[string]string
 }
 
-func newHTTPStorageKeyBuilder() *httpStorageKeyBuilder {
-	return &httpStorageKeyBuilder{
-		keyBuilder: newKeyBuilder(HTTPStorage, appdef.NullQName),
+func newHttpKeyBuilder() *httpKeyBuilder {
+	return &httpKeyBuilder{
+		keyBuilder: newKeyBuilder(Http, appdef.NullQName),
 		headers:    make(map[string]string),
 	}
 }
 
-func (b *httpStorageKeyBuilder) PutString(name string, value string) {
+func (b *httpKeyBuilder) PutString(name string, value string) {
 	switch name {
 	case Field_Header:
 		trim := func(v string) string { return strings.Trim(v, " \n\r\t") }
@@ -452,31 +451,31 @@ func (b *httpStorageKeyBuilder) PutString(name string, value string) {
 	}
 }
 
-func (b *httpStorageKeyBuilder) method() string {
+func (b *httpKeyBuilder) method() string {
 	if v, ok := b.keyBuilder.data[Field_Method]; ok {
 		return v.(string)
 	}
 	return http.MethodGet
 }
-func (b *httpStorageKeyBuilder) url() string {
+func (b *httpKeyBuilder) url() string {
 	if v, ok := b.keyBuilder.data[Field_Url]; ok {
 		return v.(string)
 	}
 	panic(fmt.Errorf("'url': %w", ErrNotFound))
 }
-func (b *httpStorageKeyBuilder) body() io.Reader {
+func (b *httpKeyBuilder) body() io.Reader {
 	if v, ok := b.keyBuilder.data[Field_Body]; ok {
 		return bytes.NewReader(v.([]byte))
 	}
 	return nil
 }
-func (b *httpStorageKeyBuilder) timeout() time.Duration {
+func (b *httpKeyBuilder) timeout() time.Duration {
 	if v, ok := b.keyBuilder.data[Field_HTTPClientTimeoutMilliseconds]; ok {
 		return time.Duration(v.(int64)) * time.Millisecond
 	}
 	return defaultHTTPClientTimeout
 }
-func (b *httpStorageKeyBuilder) String() string {
+func (b *httpKeyBuilder) String() string {
 	ss := make([]string, 0, httpStorageKeyBuilderStringerSliceCap)
 	ss = append(ss, b.method())
 	ss = append(ss, b.url())
@@ -486,7 +485,7 @@ func (b *httpStorageKeyBuilder) String() string {
 	return strings.Join(ss, " ")
 }
 
-type httpStorageValue struct {
+type httpValue struct {
 	istructs.IStateValue
 	body       []byte
 	header     map[string][]string
@@ -494,9 +493,9 @@ type httpStorageValue struct {
 	toJSONFunc toJSONFunc
 }
 
-func (v *httpStorageValue) AsBytes(string) []byte { return v.body }
-func (v *httpStorageValue) AsInt32(string) int32  { return int32(v.statusCode) }
-func (v *httpStorageValue) AsString(name string) string {
+func (v *httpValue) AsBytes(string) []byte { return v.body }
+func (v *httpValue) AsInt32(string) int32  { return int32(v.statusCode) }
+func (v *httpValue) AsString(name string) string {
 	if name == Field_Header {
 		var res strings.Builder
 		for k, v := range v.header {
@@ -511,18 +510,18 @@ func (v *httpStorageValue) AsString(name string) string {
 	}
 	return string(v.body)
 }
-func (v *httpStorageValue) ToJSON(opts ...interface{}) (string, error) {
+func (v *httpValue) ToJSON(opts ...interface{}) (string, error) {
 	return v.toJSONFunc(v, opts...)
 }
 
-type appSecretsStorageValue struct {
+type appSecretValue struct {
 	baseStateValue
 	content    string
 	toJSONFunc toJSONFunc
 }
 
-func (v *appSecretsStorageValue) AsString(string) string { return v.content }
-func (v *appSecretsStorageValue) ToJSON(opts ...interface{}) (string, error) {
+func (v *appSecretValue) AsString(string) string { return v.content }
+func (v *appSecretValue) ToJSON(opts ...interface{}) (string, error) {
 	return v.toJSONFunc(v, opts...)
 }
 
@@ -596,7 +595,7 @@ type key struct {
 
 func (k *key) AsInt64(name string) int64 { return k.data[name].(int64) }
 
-type subjectStorageValue struct {
+type requestSubjectValue struct {
 	baseStateValue
 	kind        int32
 	profileWSID int64
@@ -605,7 +604,7 @@ type subjectStorageValue struct {
 	toJSONFunc  toJSONFunc
 }
 
-func (v *subjectStorageValue) AsInt64(name string) int64 {
+func (v *requestSubjectValue) AsInt64(name string) int64 {
 	switch name {
 	case Field_ProfileWSID:
 		return v.profileWSID
@@ -613,7 +612,7 @@ func (v *subjectStorageValue) AsInt64(name string) int64 {
 		return 0
 	}
 }
-func (v *subjectStorageValue) AsInt32(name string) int32 {
+func (v *requestSubjectValue) AsInt32(name string) int32 {
 	switch name {
 	case Field_Kind:
 		return v.kind
@@ -621,7 +620,7 @@ func (v *subjectStorageValue) AsInt32(name string) int32 {
 		return 0
 	}
 }
-func (v *subjectStorageValue) AsString(name string) string {
+func (v *requestSubjectValue) AsString(name string) string {
 	switch name {
 	case Field_Name:
 		return v.name
@@ -631,59 +630,59 @@ func (v *subjectStorageValue) AsString(name string) string {
 		return ""
 	}
 }
-func (v *subjectStorageValue) ToJSON(opts ...interface{}) (string, error) {
+func (v *requestSubjectValue) ToJSON(opts ...interface{}) (string, error) {
 	return v.toJSONFunc(v, opts...)
 }
 
-type viewRecordsStorageValue struct {
+type viewValue struct {
 	baseStateValue
 	value istructs.IValue
 }
 
-func (v *viewRecordsStorageValue) AsInt32(name string) int32        { return v.value.AsInt32(name) }
-func (v *viewRecordsStorageValue) AsInt64(name string) int64        { return v.value.AsInt64(name) }
-func (v *viewRecordsStorageValue) AsFloat32(name string) float32    { return v.value.AsFloat32(name) }
-func (v *viewRecordsStorageValue) AsFloat64(name string) float64    { return v.value.AsFloat64(name) }
-func (v *viewRecordsStorageValue) AsBytes(name string) []byte       { return v.value.AsBytes(name) }
-func (v *viewRecordsStorageValue) AsString(name string) string      { return v.value.AsString(name) }
-func (v *viewRecordsStorageValue) AsQName(name string) appdef.QName { return v.value.AsQName(name) }
-func (v *viewRecordsStorageValue) AsBool(name string) bool          { return v.value.AsBool(name) }
-func (v *viewRecordsStorageValue) AsRecordID(name string) istructs.RecordID {
+func (v *viewValue) AsInt32(name string) int32        { return v.value.AsInt32(name) }
+func (v *viewValue) AsInt64(name string) int64        { return v.value.AsInt64(name) }
+func (v *viewValue) AsFloat32(name string) float32    { return v.value.AsFloat32(name) }
+func (v *viewValue) AsFloat64(name string) float64    { return v.value.AsFloat64(name) }
+func (v *viewValue) AsBytes(name string) []byte       { return v.value.AsBytes(name) }
+func (v *viewValue) AsString(name string) string      { return v.value.AsString(name) }
+func (v *viewValue) AsQName(name string) appdef.QName { return v.value.AsQName(name) }
+func (v *viewValue) AsBool(name string) bool          { return v.value.AsBool(name) }
+func (v *viewValue) AsRecordID(name string) istructs.RecordID {
 	return v.value.AsRecordID(name)
 }
-func (v *viewRecordsStorageValue) AsRecord(name string) istructs.IRecord {
+func (v *viewValue) AsRecord(name string) istructs.IRecord {
 	return v.value.AsRecord(name)
 }
 
-type cudsStorageValue struct {
+type cudsValue struct {
 	istructs.IStateValue
 	cuds []istructs.ICUDRow
 }
 
-func (v *cudsStorageValue) Length() int { return len(v.cuds) }
-func (v *cudsStorageValue) GetAsValue(index int) istructs.IStateValue {
-	return &cudRowStorageValue{value: v.cuds[index]}
+func (v *cudsValue) Length() int { return len(v.cuds) }
+func (v *cudsValue) GetAsValue(index int) istructs.IStateValue {
+	return &cudRowValue{value: v.cuds[index]}
 }
 
-type cudRowStorageValue struct {
+type cudRowValue struct {
 	baseStateValue
 	value istructs.ICUDRow
 }
 
-func (v *cudRowStorageValue) AsInt32(name string) int32        { return v.value.AsInt32(name) }
-func (v *cudRowStorageValue) AsInt64(name string) int64        { return v.value.AsInt64(name) }
-func (v *cudRowStorageValue) AsFloat32(name string) float32    { return v.value.AsFloat32(name) }
-func (v *cudRowStorageValue) AsFloat64(name string) float64    { return v.value.AsFloat64(name) }
-func (v *cudRowStorageValue) AsBytes(name string) []byte       { return v.value.AsBytes(name) }
-func (v *cudRowStorageValue) AsString(name string) string      { return v.value.AsString(name) }
-func (v *cudRowStorageValue) AsQName(name string) appdef.QName { return v.value.AsQName(name) }
-func (v *cudRowStorageValue) AsBool(name string) bool {
+func (v *cudRowValue) AsInt32(name string) int32        { return v.value.AsInt32(name) }
+func (v *cudRowValue) AsInt64(name string) int64        { return v.value.AsInt64(name) }
+func (v *cudRowValue) AsFloat32(name string) float32    { return v.value.AsFloat32(name) }
+func (v *cudRowValue) AsFloat64(name string) float64    { return v.value.AsFloat64(name) }
+func (v *cudRowValue) AsBytes(name string) []byte       { return v.value.AsBytes(name) }
+func (v *cudRowValue) AsString(name string) string      { return v.value.AsString(name) }
+func (v *cudRowValue) AsQName(name string) appdef.QName { return v.value.AsQName(name) }
+func (v *cudRowValue) AsBool(name string) bool {
 	if name == Field_IsNew {
 		return v.value.IsNew()
 	}
 	return v.value.AsBool(name)
 }
-func (v *cudRowStorageValue) AsRecordID(name string) istructs.RecordID {
+func (v *cudRowValue) AsRecordID(name string) istructs.RecordID {
 	return v.value.AsRecordID(name)
 }
 
@@ -718,119 +717,54 @@ func (v *baseStateValue) AsValue(string) istructs.IStateValue {
 	panic(errFieldByNameIsNotAnObjectOrArray)
 }
 
-type cmdResultKeyBuilder struct {
+type resultKeyBuilder struct {
 	*keyBuilder
 }
 
-func newCmdResultKeyBuilder() *cmdResultKeyBuilder {
-	return &cmdResultKeyBuilder{
+func newResultKeyBuilder() *resultKeyBuilder {
+	return &resultKeyBuilder{
 		&keyBuilder{
-			storage: CmdResultStorage,
+			storage: Result,
 		},
 	}
 }
 
-type cmdResultValueBuilder struct {
+type resultValueBuilder struct {
 	istructs.IStateValueBuilder
-	cmdResultBuilder istructs.IObjectBuilder
+	resultBuilder istructs.IObjectBuilder
 }
 
-func (c *cmdResultValueBuilder) PutInt32(name string, value int32) {
-	c.cmdResultBuilder.PutInt32(name, value)
+func (c *resultValueBuilder) PutInt32(name string, value int32) {
+	c.resultBuilder.PutInt32(name, value)
 }
 
-func (c *cmdResultValueBuilder) PutInt64(name string, value int64) {
-	c.cmdResultBuilder.PutInt64(name, value)
+func (c *resultValueBuilder) PutInt64(name string, value int64) {
+	c.resultBuilder.PutInt64(name, value)
 }
-func (c *cmdResultValueBuilder) PutBytes(name string, value []byte) {
-	c.cmdResultBuilder.PutBytes(name, value)
+func (c *resultValueBuilder) PutBytes(name string, value []byte) {
+	c.resultBuilder.PutBytes(name, value)
 }
-func (c *cmdResultValueBuilder) PutString(name, value string) {
-	c.cmdResultBuilder.PutString(name, value)
+func (c *resultValueBuilder) PutString(name, value string) {
+	c.resultBuilder.PutString(name, value)
 }
-func (c *cmdResultValueBuilder) PutBool(name string, value bool) {
-	c.cmdResultBuilder.PutBool(name, value)
+func (c *resultValueBuilder) PutBool(name string, value bool) {
+	c.resultBuilder.PutBool(name, value)
 }
-func (c *cmdResultValueBuilder) PutChars(name string, value string) {
-	c.cmdResultBuilder.PutChars(name, value)
+func (c *resultValueBuilder) PutChars(name string, value string) {
+	c.resultBuilder.PutChars(name, value)
 }
-func (c *cmdResultValueBuilder) PutFloat32(name string, value float32) {
-	c.cmdResultBuilder.PutFloat32(name, value)
+func (c *resultValueBuilder) PutFloat32(name string, value float32) {
+	c.resultBuilder.PutFloat32(name, value)
 }
-func (c *cmdResultValueBuilder) PutFloat64(name string, value float64) {
-	c.cmdResultBuilder.PutFloat64(name, value)
+func (c *resultValueBuilder) PutFloat64(name string, value float64) {
+	c.resultBuilder.PutFloat64(name, value)
 }
-func (c *cmdResultValueBuilder) PutQName(name string, value appdef.QName) {
-	c.cmdResultBuilder.PutQName(name, value)
+func (c *resultValueBuilder) PutQName(name string, value appdef.QName) {
+	c.resultBuilder.PutQName(name, value)
 }
-func (c *cmdResultValueBuilder) PutNumber(name string, value float64) {
-	c.cmdResultBuilder.PutNumber(name, value)
+func (c *resultValueBuilder) PutNumber(name string, value float64) {
+	c.resultBuilder.PutNumber(name, value)
 }
-func (c *cmdResultValueBuilder) PutRecordID(name string, value istructs.RecordID) {
-	c.cmdResultBuilder.PutRecordID(name, value)
-}
-
-type principalTokenKeyBuilder struct {
-	*keyBuilder
-}
-
-func newPrincipalTokenKeyBuilder() *principalTokenKeyBuilder {
-	return &principalTokenKeyBuilder{
-		&keyBuilder{
-			storage: PrincipalTokenStorage,
-		},
-	}
-}
-
-func (c *principalTokenKeyBuilder) PutInt32(name string, value int32)        { panic(ErrNotSupported) }
-func (c *principalTokenKeyBuilder) PutInt64(name string, value int64)        { panic(ErrNotSupported) }
-func (c *principalTokenKeyBuilder) PutBytes(name string, value []byte)       { panic(ErrNotSupported) }
-func (c *principalTokenKeyBuilder) PutString(name, value string)             { panic(ErrNotSupported) }
-func (c *principalTokenKeyBuilder) PutBool(name string, value bool)          { panic(ErrNotSupported) }
-func (c *principalTokenKeyBuilder) PutChars(name string, value string)       { panic(ErrNotSupported) }
-func (c *principalTokenKeyBuilder) PutFloat32(name string, value float32)    { panic(ErrNotSupported) }
-func (c *principalTokenKeyBuilder) PutFloat64(name string, value float64)    { panic(ErrNotSupported) }
-func (c *principalTokenKeyBuilder) PutQName(name string, value appdef.QName) { panic(ErrNotSupported) }
-func (c *principalTokenKeyBuilder) PutNumber(name string, value float64)     { panic(ErrNotSupported) }
-func (c *principalTokenKeyBuilder) PutRecordID(name string, value istructs.RecordID) {
-	panic(ErrNotSupported)
-}
-func (c *principalTokenKeyBuilder) PartitionKey() istructs.IRowWriter      { panic(ErrNotSupported) }
-func (c *principalTokenKeyBuilder) ClusteringColumns() istructs.IRowWriter { panic(ErrNotSupported) }
-func (c *principalTokenKeyBuilder) Equals(src istructs.IKeyBuilder) bool   { panic(ErrNotSupported) }
-
-type principalTokenStorageValue struct {
-	baseStateValue
-	token string
-}
-
-func (v *principalTokenStorageValue) AsString(name string) string {
-	switch name {
-	case Field_Token:
-		return v.token
-	default:
-		return ""
-	}
-}
-
-func (v *principalTokenStorageValue) AsRecord(name string) (record istructs.IRecord) {
-	panic(ErrNotSupported)
-}
-func (v *principalTokenStorageValue) AsEvent(name string) (event istructs.IDbEvent) {
-	panic(ErrNotSupported)
-}
-func (v *principalTokenStorageValue) AsValue(name string) istructs.IStateValue {
-	panic(ErrNotSupported)
-}
-func (v *principalTokenStorageValue) Length() int                       { panic(ErrNotSupported) }
-func (v *principalTokenStorageValue) GetAsString(index int) string      { panic(ErrNotSupported) }
-func (v *principalTokenStorageValue) GetAsBytes(index int) []byte       { panic(ErrNotSupported) }
-func (v *principalTokenStorageValue) GetAsInt32(index int) int32        { panic(ErrNotSupported) }
-func (v *principalTokenStorageValue) GetAsInt64(index int) int64        { panic(ErrNotSupported) }
-func (v *principalTokenStorageValue) GetAsFloat32(index int) float32    { panic(ErrNotSupported) }
-func (v *principalTokenStorageValue) GetAsFloat64(index int) float64    { panic(ErrNotSupported) }
-func (v *principalTokenStorageValue) GetAsQName(index int) appdef.QName { panic(ErrNotSupported) }
-func (v *principalTokenStorageValue) GetAsBool(index int) bool          { panic(ErrNotSupported) }
-func (v *principalTokenStorageValue) GetAsValue(index int) istructs.IStateValue {
-	panic(ErrNotSupported)
+func (c *resultValueBuilder) PutRecordID(name string, value istructs.RecordID) {
+	c.resultBuilder.PutRecordID(name, value)
 }

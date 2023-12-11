@@ -11,7 +11,6 @@ import (
 	ibus "github.com/untillpro/airs-ibus"
 	"github.com/untillpro/goutils/logger"
 
-	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/isecrets"
@@ -19,13 +18,12 @@ import (
 	"github.com/voedger/voedger/pkg/istructsmem"
 	imetrics "github.com/voedger/voedger/pkg/metrics"
 	"github.com/voedger/voedger/pkg/pipeline"
-	"github.com/voedger/voedger/pkg/processors"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 type workspace struct {
 	NextWLogOffset istructs.Offset
-	idGenerator istructs.IIDGenerator
+	idGenerator    istructs.IIDGenerator
 }
 
 type cmdProc struct {
@@ -42,11 +40,6 @@ type cmdProc struct {
 type appPartition struct {
 	workspaces     map[istructs.WSID]*workspace
 	nextPLogOffset istructs.Offset
-}
-
-func ProvideJSONFuncParamsDef(appDef appdef.IAppDefBuilder) {
-	appDef.AddObject(istructs.QNameJSON).
-		AddField(processors.Field_JSONDef_Body, appdef.DataKind_string, true)
 }
 
 // syncActualizerFactory - это фабрика(разделИД), которая возвращает свитч, в бранчах которого по синхронному актуализатору на каждое приложение, внутри каждого - проекторы на каждое приложение
@@ -74,6 +67,7 @@ func ProvideServiceFactory(bus ibus.IBus, asp istructs.IAppStructsProvider, now 
 				pipeline.WireFunc("checkWSInitialized", checkWSInitialized),
 				pipeline.WireFunc("checkWSActive", checkWSActive),
 				pipeline.WireFunc("getAppPartition", cmdProc.getAppPartition),
+				pipeline.WireFunc("getResources", getResources),
 				pipeline.WireFunc("getFunction", getFunction),
 				pipeline.WireFunc("authorizeRequest", cmdProc.authorizeRequest),
 				pipeline.WireFunc("unmarshalRequestBody", unmarshalRequestBody),

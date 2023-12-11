@@ -22,7 +22,7 @@ func TestAppSecretsStorage_BasicUsage(t *testing.T) {
 	sr := &isecrets.SecretReaderMock{}
 	sr.On("ReadSecret", secret).Return([]byte(secretBody), nil)
 	s := ProvideAsyncActualizerStateFactory()(context.Background(), &nilAppStructs{}, nil, nil, nil, sr, 0, 0)
-	kb, err := s.KeyBuilder(AppSecretsStorage, appdef.NullQName)
+	kb, err := s.KeyBuilder(AppSecret, appdef.NullQName)
 	require.NoError(err)
 	kb.PutString(Field_Secret, secret)
 
@@ -34,7 +34,7 @@ func TestAppSecretsStorage_BasicUsage(t *testing.T) {
 func TestAppSecretsStorage(t *testing.T) {
 	t.Run("Should return error when key invalid", func(t *testing.T) {
 		s := ProvideAsyncActualizerStateFactory()(context.Background(), &nilAppStructs{}, nil, nil, nil, nil, 0, 0)
-		kb, err := s.KeyBuilder(AppSecretsStorage, appdef.NullQName)
+		kb, err := s.KeyBuilder(AppSecret, appdef.NullQName)
 		require.NoError(t, err)
 
 		_, err = s.MustExist(kb)
@@ -57,7 +57,7 @@ func TestAppSecretsStorage(t *testing.T) {
 				sr := &isecrets.SecretReaderMock{}
 				sr.On("ReadSecret", mock.Anything).Return(nil, test.err)
 				s := ProvideAsyncActualizerStateFactory()(context.Background(), &nilAppStructs{}, nil, nil, nil, sr, 0, 0)
-				kb, err := s.KeyBuilder(AppSecretsStorage, appdef.NullQName)
+				kb, err := s.KeyBuilder(AppSecret, appdef.NullQName)
 				require.NoError(t, err)
 				kb.PutString(Field_Secret, "")
 

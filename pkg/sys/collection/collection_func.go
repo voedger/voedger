@@ -27,7 +27,7 @@ func collectionResultQName(args istructs.PrepareArgs) appdef.QName {
 	return qname
 }
 
-func collectionFuncExec(ctx context.Context, qf istructs.IQueryFunction, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
+func collectionFuncExec(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 	if args.ArgumentObject == nil {
 		return errors.New("ArgumentObject is not defined in PrepareArgs")
 	}
@@ -37,7 +37,7 @@ func collectionFuncExec(ctx context.Context, qf istructs.IQueryFunction, args is
 		return err
 	}
 
-	kb, err := args.State.KeyBuilder(state.ViewRecordsStorage, QNameViewCollection)
+	kb, err := args.State.KeyBuilder(state.View, QNameCollectionView)
 	if err != nil {
 		return err
 	}
@@ -48,7 +48,7 @@ func collectionFuncExec(ctx context.Context, qf istructs.IQueryFunction, args is
 		kb.PutRecordID(field_DocID, id)
 	}
 
-	var lastDoc *collectionElement
+	var lastDoc *collectionObject
 
 	err = args.State.Read(kb, func(key istructs.IKey, value istructs.IStateValue) (err error) {
 		rec := value.AsRecord(Field_Record)
@@ -61,8 +61,8 @@ func collectionFuncExec(ctx context.Context, qf istructs.IQueryFunction, args is
 				lastDoc.handleRawRecords()
 				err = callback(lastDoc)
 			}
-			cobj := newCollectionElement(rec)
-			lastDoc = &cobj
+			obj := newCollectionObject(rec)
+			lastDoc = obj
 		}
 		return
 	})
