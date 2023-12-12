@@ -187,9 +187,6 @@ func TestCompatBasicUsage(t *testing.T) {
 	err = copyContents(testMyAppFS, tempDir)
 	require.NoError(err)
 
-	err = copyContents(testMyAppIncompatibleFS, tempDir)
-	require.NoError(err)
-
 	err = os.Chdir(tempDir)
 	require.NoError(err)
 
