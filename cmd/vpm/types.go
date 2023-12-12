@@ -10,6 +10,7 @@ import "github.com/voedger/voedger/pkg/parser"
 type vpmParams struct {
 	WorkingDir string
 	TargetDir  string
+	IgnoreFile string
 }
 
 // packageFiles is a map of package name to a list of files that belong to the package
@@ -27,4 +28,8 @@ type baselineInfo struct {
 	BaselinePackageUrl string `json:"BaselinePackageUrl"`
 	Timestamp          string `json:"Timestamp"`
 	GitCommitHash      string `json:"GitCommitHash,omitempty"`
+}
+
+type ignoreInfo struct {
+	Ignore []string `yaml:"Ignore"`
 }

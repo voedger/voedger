@@ -278,6 +278,14 @@ func setUpParams(params vpmParams, args []string) (newParams vpmParams, err erro
 	if len(args) > 0 {
 		for _, arg := range args {
 			arg = strings.TrimSpace(arg)
+			if strings.HasPrefix(arg, "--ignore ") {
+				newParams.IgnoreFile = strings.TrimPrefix(arg, "--ignore ")
+				continue
+			}
+			if strings.HasPrefix(arg, "--ignore=") {
+				newParams.IgnoreFile = strings.TrimPrefix(arg, "--ignore=")
+				continue
+			}
 			if strings.HasPrefix(arg, "-C ") {
 				newParams.WorkingDir = strings.TrimPrefix(arg, "-C ")
 				continue

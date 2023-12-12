@@ -32,11 +32,7 @@ func newBaselineCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			if err := baseline(compileRes, newParams.TargetDir); err != nil {
-				return err
-			}
-
-			return nil
+			return baseline(compileRes, newParams.TargetDir)
 		},
 	}
 	initGlobalFlags(cmd, &params)
