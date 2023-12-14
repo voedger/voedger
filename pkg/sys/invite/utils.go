@@ -8,6 +8,7 @@ package invite
 import (
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/state"
+	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 func GetCDocJoinedWorkspaceForUpdateRequired(st istructs.IState, intents istructs.IIntents, invitingWorkspaceWSID int64) (svbCDocJoinedWorkspace istructs.IStateValueBuilder, err error) {
@@ -70,4 +71,15 @@ func GetCDocJoinedWorkspaceForUpdate(st istructs.IState, intents istructs.IInten
 	}
 	svbCDocJoinedWorkspace, err = intents.UpdateValue(skb, svCDocJoinedWorkspace)
 	return svbCDocJoinedWorkspace, true, err
+}
+
+func GetSubjectIdxViewKeyBuilder(login string, s istructs.IState) (istructs.IStateKeyBuilder, error) {
+	skbViewSubjectsIdx, err := s.KeyBuilder(state.View, QNameViewSubjectsIdx)
+	if err != nil {
+		// notest
+		return nil, err
+	}
+	skbViewSubjectsIdx.PutInt64(Field_LoginHash, coreutils.HashBytes([]byte(login)))
+	skbViewSubjectsIdx.PutString(Field_Login, login)
+	return skbViewSubjectsIdx, nil
 }

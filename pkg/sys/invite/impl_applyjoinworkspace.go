@@ -38,6 +38,41 @@ func applyJoinWorkspace(timeFunc coreutils.TimeFunc, federation coreutils.IFeder
 			return
 		}
 
+		// cdoc.sys.SubjectIdx by cdoc.sys.Invite.ActualLogin or by cdoc.sys.Invite.Login exists -> do nothing, see https://github.com/voedger/voedger/issues/1107
+		login := svCDocInvite.AsString(Field_Login)
+		skbViewSubjectsIdx, err := GetSubjectIdxViewKeyBuilder(login, s)
+		if err != nil {
+			// notest
+			return err
+		}
+		_, ok, err := s.CanExist(skbViewSubjectsIdx)
+		if err != nil {
+			// notest
+			return err
+		}
+		if ok {
+			// for backward compatibility
+			// TODO: what to write into the key of view.sys.SubjectsIdx: Login or ActualLogin?
+			// ActualLogin -> this if block will provide the backward compatibility for existing storages
+			// cdoc.sys.SubjectIdx by cdoc.sys.Invite.Login exists -> do nothing, see https://github.com/voedger/voedger/issues/1107
+			return nil
+		}
+		actualLogin := svCDocInvite.AsString(field_ActualLogin)
+		skbViewSubjectsIdx, err = GetSubjectIdxViewKeyBuilder(actualLogin, s)
+		if err != nil {
+			// notest
+			return err
+		}
+		_, ok, err = s.CanExist(skbViewSubjectsIdx)
+		if err != nil {
+			// notest
+			return err
+		}
+		if ok {
+			// cdoc.sys.SubjectIdx by cdoc.sys.Invite.ActualLogin -> do nothing, see https://github.com/voedger/voedger/issues/1107
+			return nil
+		}
+
 		skbCDocWorkspaceDescriptor, err := s.KeyBuilder(state.Record, authnz.QNameCDocWorkspaceDescriptor)
 		if err != nil {
 			return err
@@ -70,28 +105,32 @@ func applyJoinWorkspace(timeFunc coreutils.TimeFunc, federation coreutils.IFeder
 		skbViewCollection.PutInt32(collection.Field_PartKey, collection.PartitionKeyCollection)
 		skbViewCollection.PutQName(collection.Field_DocQName, QNameCDocSubject)
 
+		// determine if
 		var svCDocSubject istructs.IStateValue
-		err = s.Read(skbViewCollection, func(key istructs.IKey, value istructs.IStateValue) (err error) {
-			if svCDocSubject != nil || svCDocInvite.AsRecordID(field_SubjectID) == istructs.NullRecordID {
+		if svCDocInvite.AsRecordID(field_SubjectID) != istructs.NullRecordID {
+			err = s.Read(skbViewCollection, func(key istructs.IKey, value istructs.IStateValue) (err error) {
+				if svCDocSubject != nil {
+					return nil
+				}
+				if svCDocInvite.AsRecordID(field_SubjectID) == value.AsRecordID(appdef.SystemField_ID) {
+					svCDocSubject = value
+				}
+				return nil
+			})
+			if err != nil {
 				return
 			}
-			if svCDocInvite.AsRecordID(field_SubjectID) == value.AsRecordID(appdef.SystemField_ID) {
-				svCDocSubject = value
-			}
-			return err
-		})
-		if err != nil {
-			return
 		}
 
 		var body string
 		//Store cdoc.sys.Subject
 		if svCDocSubject == nil {
-			body = fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"sys.Subject","Login":"%s","Roles":"%s","SubjectKind":%d,"ProfileWSID":%d}}]}`,
+			body = fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"sys.Subject","Login":"%s","Roles":"%s","SubjectKind":%d,"ProfileWSID":%d,"ActualLogin":"%s"}}]}`,
 				svCDocInvite.AsString(Field_Login), svCDocInvite.AsString(Field_Roles), svCDocInvite.AsInt32(authnz.Field_SubjectKind),
-				svCDocInvite.AsInt64(field_InviteeProfileWSID))
+				svCDocInvite.AsInt64(field_InviteeProfileWSID), svCDocInvite.AsString(field_ActualLogin))
 		} else {
-			body = fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"Roles":"%s"}}]}`, svCDocSubject.AsRecordID(appdef.SystemField_ID), svCDocInvite.AsString(Field_Roles))
+			body = fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"Roles":"%s"}}]}`,
+				svCDocSubject.AsRecordID(appdef.SystemField_ID), svCDocInvite.AsString(Field_Roles))
 		}
 		resp, err := coreutils.FederationFunc(
 			federation.URL(),
@@ -105,9 +144,11 @@ func applyJoinWorkspace(timeFunc coreutils.TimeFunc, federation coreutils.IFeder
 		//Store cdoc.sys.Invite
 		//TODO why Login update???
 		if svCDocSubject == nil {
-			body = fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"State":%d,"SubjectID":%d,"Updated":%d}}]}`, svCDocInvite.AsRecordID(appdef.SystemField_ID), State_Joined, resp.NewID(), timeFunc().UnixMilli())
+			body = fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"State":%d,"SubjectID":%d,"Updated":%d}}]}`,
+				svCDocInvite.AsRecordID(appdef.SystemField_ID), State_Joined, resp.NewID(), timeFunc().UnixMilli())
 		} else {
-			body = fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"State":%d,"Updated":%d}}]}`, svCDocInvite.AsRecordID(appdef.SystemField_ID), State_Joined, timeFunc().UnixMilli())
+			body = fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"State":%d,"Updated":%d}}]}`,
+				svCDocInvite.AsRecordID(appdef.SystemField_ID), State_Joined, timeFunc().UnixMilli())
 		}
 		_, err = coreutils.FederationFunc(
 			federation.URL(),
