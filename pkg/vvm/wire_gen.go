@@ -10,6 +10,8 @@ import (
 	"context"
 	"github.com/untillpro/airs-ibus"
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appparts"
+	"github.com/voedger/voedger/pkg/apppartsctl"
 	"github.com/voedger/voedger/pkg/apps"
 	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/iauthnz"
@@ -84,6 +86,10 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 	queryProcessorsChannelGroupIdxType := provideProcessorChannelGroupIdxQuery(vvmConfig)
 	vvmPortSource := provideVVMPortSource()
 	iFederation := provideIFederation(vvmConfig, vvmPortSource)
+	iAppPartitions, cleanup, err := appparts.New(iAppStructsProvider)
+	if err != nil {
+		return nil, nil, err
+	}
 	apIs := apps.APIs{
 		ITokens:              iTokens,
 		IAppStructsProvider:  iAppStructsProvider,
@@ -93,15 +99,17 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 		IFederation:          iFederation,
 		TimeFunc:             timeFunc,
 		NumCommandProcessors: commandProcessorsCount,
+		IAppPartitions:       iAppPartitions,
 	}
 	v2 := provideAppsExtensionPoints(vvmConfig)
 	vvmApps, err := provideVVMApps(vvmConfig, appConfigsType, apIs, v2)
 	if err != nil {
+		cleanup()
 		return nil, nil, err
 	}
 	iBus := provideIBus(iAppStructsProvider, iProcBus, commandProcessorsChannelGroupIdxType, queryProcessorsChannelGroupIdxType, commandProcessorsCount, vvmApps)
 	quotas := vvmConfig.Quotas
-	in10nBroker, cleanup := in10nmem.ProvideEx2(quotas, timeFunc)
+	in10nBroker, cleanup2 := in10nmem.ProvideEx2(quotas, timeFunc)
 	maxPrepareQueriesType := vvmConfig.MaxPrepareQueries
 	syncActualizerFactory := projectors.ProvideSyncActualizerFactory()
 	commandprocessorSyncActualizerFactory := provideSyncActualizerFactory(vvmApps, iAppStructsProvider, in10nBroker, maxPrepareQueriesType, syncActualizerFactory, iSecretReader)
@@ -127,18 +135,21 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 	blobMaxSizeType := vvmConfig.BLOBMaxSize
 	blobberAppStruct, err := provideBlobberAppStruct(iAppStructsProvider)
 	if err != nil {
+		cleanup2()
 		cleanup()
 		return nil, nil, err
 	}
 	blobberAppClusterID := provideBlobberClusterAppID(blobberAppStruct)
 	blobAppStorage, err := provideBlobAppStorage(iAppStorageProvider)
 	if err != nil {
+		cleanup2()
 		cleanup()
 		return nil, nil, err
 	}
 	blobStorage := provideBlobStorage(blobAppStorage, timeFunc)
 	routerAppStorage, err := provideRouterAppStorage(iAppStorageProvider)
 	if err != nil {
+		cleanup2()
 		cleanup()
 		return nil, nil, err
 	}
@@ -150,15 +161,25 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 	metricsServicePort := provideMetricsServicePort(metricsServicePortInitial, vvmIdx)
 	metricsService := metrics.ProvideMetricsService(vvmCtx, metricsServicePort, iMetrics)
 	metricsServiceOperator := provideMetricsServiceOperator(metricsService)
-	servicePipeline := provideServicePipeline(vvmCtx, operatorCommandProcessors, operatorQueryProcessors, operatorAppServicesFactory, routerServiceOperator, metricsServiceOperator)
-	v6 := provideMetricsServicePortGetter(metricsService)
+	v6 := vvmConfig.BuiltInApps
+	iAppPartitionsController, cleanup3, err := apppartsctl.New(iAppPartitions, v6)
+	if err != nil {
+		cleanup2()
+		cleanup()
+		return nil, nil, err
+	}
+	iAppPartsCtlPipelineService := provideAppPartsCtlPipelineService(iAppPartitionsController)
+	servicePipeline := provideServicePipeline(vvmCtx, operatorCommandProcessors, operatorQueryProcessors, operatorAppServicesFactory, routerServiceOperator, metricsServiceOperator, iAppPartsCtlPipelineService)
+	v7 := provideMetricsServicePortGetter(metricsService)
 	vvm := &VVM{
 		ServicePipeline:     servicePipeline,
 		APIs:                apIs,
 		AppsExtensionPoints: v2,
-		MetricsServicePort:  v6,
+		MetricsServicePort:  v7,
 	}
 	return vvm, func() {
+		cleanup3()
+		cleanup2()
 		cleanup()
 	}, nil
 }
@@ -201,6 +222,10 @@ func (vvm *VoedgerVM) Shutdown() {
 func (vvm *VoedgerVM) Launch() error {
 	ignition := struct{}{}
 	return vvm.ServicePipeline.SendSync(ignition)
+}
+
+func provideAppPartsCtlPipelineService(ctl apppartsctl.IAppPartitionsController) IAppPartsCtlPipelineService {
+	return &AppPartsCtlPipelineService{IAppPartitionsController: ctl}
 }
 
 func provideIAppStorageUncachingProviderFactory(factory istorage.IAppStorageFactory) IAppStorageUncachingProviderFactory {
@@ -581,8 +606,8 @@ func provideOperatorAppServices(apf AppServiceFactory, vvmApps VVMApps, asp istr
 }
 
 func provideServicePipeline(vvmCtx context.Context, opCommandProcessors OperatorCommandProcessors, opQueryProcessors OperatorQueryProcessors, opAppServices OperatorAppServicesFactory,
-	routerServiceOp RouterServiceOperator, metricsServiceOp MetricsServiceOperator) ServicePipeline {
-	return pipeline.NewSyncPipeline(vvmCtx, "ServicePipeline", pipeline.WireSyncOperator("service fork operator", pipeline.ForkOperator(pipeline.ForkSame, pipeline.ForkBranch(pipeline.ForkOperator(pipeline.ForkSame, pipeline.ForkBranch(opQueryProcessors), pipeline.ForkBranch(opCommandProcessors), pipeline.ForkBranch(opAppServices(vvmCtx)))), pipeline.ForkBranch(routerServiceOp), pipeline.ForkBranch(metricsServiceOp),
+	routerServiceOp RouterServiceOperator, metricsServiceOp MetricsServiceOperator, appPartsCtl IAppPartsCtlPipelineService) ServicePipeline {
+	return pipeline.NewSyncPipeline(vvmCtx, "ServicePipeline", pipeline.WireSyncOperator("service fork operator", pipeline.ForkOperator(pipeline.ForkSame, pipeline.ForkBranch(pipeline.ForkOperator(pipeline.ForkSame, pipeline.ForkBranch(opQueryProcessors), pipeline.ForkBranch(opCommandProcessors), pipeline.ForkBranch(opAppServices(vvmCtx)), pipeline.ForkBranch(pipeline.ServiceOperator(appPartsCtl)))), pipeline.ForkBranch(routerServiceOp), pipeline.ForkBranch(metricsServiceOp),
 	)),
 	)
 }

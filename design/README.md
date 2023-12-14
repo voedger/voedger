@@ -204,25 +204,22 @@ IExtensionEngineFactory {
   New(packageNameToLocalPath map[string]string, numEngines int) []IExtensionEngine
 }
 
-type IExtensionEngine interface {
-    Invoke(extName QName, io IExtensionIO) (err error)
-}
+type IExtensionEngineFactories map[appdef.ExtensionEngineKind]IExtensionEngineFactory
 
 type ExtQName struct {
     PackageName string // Fully qualified package name
     ExtName string
 }
 
+type IExtensionEngine interface {
+    Invoke(ctx context.Context, extName ExtQName, io IExtensionIO) (err error)
+}
+
 type BuiltInExtFunc func(io ExtensionIO) error
 type BuiltInExtFuncs map[ExtQName]BuiltInExtFunc // Provided to construct factory of engines
 ```
 
-
-provide:
-```go
-// an instance of IExtensionEngineFactories is provided to apppartsctl.New()
-func ProvideExtensionEngineFactories(funcs BuiltInExtFuncs) IExtensionEngineFactories;
-```
+An instance of IExtensionEngineFactories is provided to apppartsctl.New().
 
 #### Execute Extentions
 ```go

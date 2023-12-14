@@ -407,3 +407,32 @@ func Test_LoadStoreRecord_Bytes(t *testing.T) {
 	})
 
 }
+
+func TestModifiedFields(t *testing.T) {
+	require := require.New(t)
+	test := test()
+
+	t.Run("no modifications", func(t *testing.T) {
+		rec := newRecord(test.AppCfg)
+		rec.ModifiedFields(func(fieldName string, newValue interface{}) {
+			t.Fail()
+		})
+	})
+	t.Run("has modifications", func(t *testing.T) {
+		rec := newRecord(test.AppCfg)
+		rec.setQName(test.testCDoc)
+		rec.PutInt32("int32", 42)
+		rec.PutBool(appdef.SystemField_IsActive, false) // should be mentioned on ModifiedFields()
+		require.NoError(rec.build())
+		actualModifications := map[string]bool{}
+		rec.ModifiedFields(func(fieldName string, newValue interface{}) {
+			actualModifications[fieldName] = true
+		})
+		expectedModifications := map[string]bool{
+			"int32":                     true,
+			appdef.SystemField_IsActive: true,
+		}
+		require.Equal(expectedModifications, actualModifications)
+	})
+
+}
