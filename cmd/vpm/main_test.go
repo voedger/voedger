@@ -194,6 +194,9 @@ func TestCompatBasicUsage(t *testing.T) {
 	baselineDir := filepath.Join(tempDir, "test/baseline_myapp")
 	err = execRootCmd([]string{"vpm", "baseline", fmt.Sprintf(" -C %s", workDir), baselineDir}, "1.0.0")
 	require.NoError(err)
+	// check reordered args
+	err = execRootCmd([]string{"vpm", "baseline", baselineDir, fmt.Sprintf(" --change-dir=%s", workDir)}, "1.0.0")
+	require.NoError(err)
 
 	baselinePkgDir := filepath.Join(tempDir, fmt.Sprintf("test/myapp_baseline/%s/%s", baselineDirName, pkgDirName))
 	err = execRootCmd([]string{"vpm", "compat", fmt.Sprintf(" -C %s", workDir), baselinePkgDir}, "1.0.0")
@@ -226,7 +229,7 @@ func TestCompatErrors(t *testing.T) {
 
 	workDir = filepath.Join(tempDir, "test/myapp_incompatible")
 	baselinePkgDir := filepath.Join(tempDir, fmt.Sprintf("test/baseline_myapp/%s/%s", baselineDirName, pkgDirName))
-	err = execRootCmd([]string{"vpm", "compat", fmt.Sprintf(" -C %s", workDir), fmt.Sprintf(" --ignore %s", filepath.Join(workDir, "ignores.yml")), baselinePkgDir}, "1.0.0")
+	err = execRootCmd([]string{"vpm", "compat", fmt.Sprintf(" --ignore %s", filepath.Join(workDir, "ignores.yml")), fmt.Sprintf(" --change-dir=%s", workDir), baselinePkgDir}, "1.0.0")
 	require.Error(err)
 	errs := coreutils.SplitErrors(err)
 

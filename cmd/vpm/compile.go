@@ -277,28 +277,37 @@ func setUpParams(params vpmParams, args []string) (newParams vpmParams, err erro
 	}
 	if len(args) > 0 {
 		for _, arg := range args {
-			arg = strings.TrimSpace(arg)
-			if strings.HasPrefix(arg, "--ignore ") {
-				newParams.IgnoreFile = strings.TrimPrefix(arg, "--ignore ")
+			arg = filepath.Clean(strings.TrimSpace(arg))
+			if checkFlags(&newParams.IgnoreFile, arg, []string{
+				ignoreFlagWithSpace,
+				ignoreFlagWithEqual,
+			}) {
 				continue
 			}
-			if strings.HasPrefix(arg, "--ignore=") {
-				newParams.IgnoreFile = strings.TrimPrefix(arg, "--ignore=")
+			if checkFlags(&newParams.WorkingDir, arg, []string{
+				changeDirShortFlagWithSpace,
+				changeDirShortFlagWithEqual,
+				changeDirFlagWithSpace,
+				changeDirFlagWithEqual,
+			}) {
 				continue
 			}
-			if strings.HasPrefix(arg, "-C ") {
-				newParams.WorkingDir = strings.TrimPrefix(arg, "-C ")
-				continue
-			}
-			if strings.HasPrefix(arg, "-C=") {
-				newParams.WorkingDir = strings.TrimPrefix(arg, "-C=")
-				continue
-			}
-			newParams.TargetDir = strings.TrimSpace(arg)
+			newParams.TargetDir = arg
 		}
 	}
 	if newParams.TargetDir == "" {
 		newParams.TargetDir = newParams.WorkingDir
+	}
+	return
+}
+
+func checkFlags(param *string, arg string, flags []string) (ok bool) {
+	for _, flag := range flags {
+		if strings.HasPrefix(arg, flag) {
+			*param = strings.TrimPrefix(arg, flag)
+			ok = true
+			return
+		}
 	}
 	return
 }
