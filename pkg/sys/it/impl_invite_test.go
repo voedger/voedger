@@ -6,20 +6,18 @@ package sys_it
 
 import (
 	"fmt"
-	"strconv"
 	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/state/smtptest"
 	"github.com/voedger/voedger/pkg/sys/invite"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 	it "github.com/voedger/voedger/pkg/vit"
 )
 
 func TestInvite_BasicUsage(t *testing.T) {
-	//TODO Daniil fix it
-	t.Skip("Daniil fix it https://dev.untill.com/projects/#!639145")
 	require := require.New(t)
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
@@ -36,8 +34,6 @@ func TestInvite_BasicUsage(t *testing.T) {
 	updateRolesEmailTemplate := "text:" + invite.EmailTemplatePlaceholder_Roles
 	updateRolesEmailSubject := "your roles are updated"
 	expireDatetime := vit.Now().UnixMilli()
-	expireDatetimeStr := strconv.FormatInt(expireDatetime, 10)
-	verificationCode := expireDatetimeStr[len(expireDatetimeStr)-6:]
 	initialRoles := "initial.Roles"
 	updatedRoles := "updated.Roles"
 
@@ -60,6 +56,7 @@ func TestInvite_BasicUsage(t *testing.T) {
 				"Updated",
 				"SubjectID",
 				"InviteeProfileWSID",
+				"ActualLogin",
 				"sys.ID"
 			]}],
 			"filters":[{"expr":"eq","args":{"field":"sys.ID","value":%d}}]}`, inviteID)).SectionRow(0)
@@ -83,9 +80,13 @@ func TestInvite_BasicUsage(t *testing.T) {
 	inviteID2 := InitiateInvitationByEMail(vit, ws, expireDatetime, it.TestEmail2, initialRoles, inviteEmailTemplate, inviteEmailSubject)
 	inviteID3 := InitiateInvitationByEMail(vit, ws, expireDatetime, it.TestEmail3, initialRoles, inviteEmailTemplate, inviteEmailSubject)
 
-	WaitForInviteState(vit, ws, invite.State_ToBeInvited, inviteID)
-	WaitForInviteState(vit, ws, invite.State_ToBeInvited, inviteID2)
-	WaitForInviteState(vit, ws, invite.State_ToBeInvited, inviteID3)
+	// need to gather email first because
+	actualEmails := []smtptest.Message{vit.CaptureEmail(), vit.CaptureEmail(), vit.CaptureEmail()}
+
+	// State ToBeInvite exists for a very small period of time so let's do not catch it
+	WaitForInviteState(vit, ws, invite.State_Invited, inviteID)
+	WaitForInviteState(vit, ws, invite.State_Invited, inviteID2)
+	WaitForInviteState(vit, ws, invite.State_Invited, inviteID3)
 
 	cDocInvite := findCDocInviteByID(inviteID)
 
@@ -96,41 +97,62 @@ func TestInvite_BasicUsage(t *testing.T) {
 	require.Equal(float64(vit.Now().UnixMilli()), cDocInvite[7])
 	require.Equal(float64(vit.Now().UnixMilli()), cDocInvite[8])
 
-	//Check that emails were send
-	require.Equal(verificationCode, strings.Split(vit.CaptureEmail().Body, ";")[0])
-	require.Equal(verificationCode, strings.Split(vit.CaptureEmail().Body, ";")[0])
-
-	message := vit.CaptureEmail()
-	ss := strings.Split(message.Body, ";")
-	require.Equal(inviteEmailSubject, message.Subject)
-	require.Equal(it.TestSMTPCfg.GetFrom(), message.From)
-	require.Equal([]string{it.TestEmail3}, message.To)
-	require.Equal(verificationCode, ss[0])
-	require.Equal(strconv.FormatInt(inviteID3, 10), ss[1])
-	require.Equal(strconv.FormatInt(int64(ws.WSID), 10), ss[2])
-	require.Equal(wsName, ss[3])
-	require.Equal(it.TestEmail3, ss[4])
-
-	WaitForInviteState(vit, ws, invite.State_Invited, inviteID)
-	WaitForInviteState(vit, ws, invite.State_Invited, inviteID2)
-	WaitForInviteState(vit, ws, invite.State_Invited, inviteID3)
+	//Check that emails were sent
+	var verificationCodeEmail, verificationCodeEmail2, verificationCodeEmail3 string
+	for _, actualEmail := range actualEmails {
+		switch actualEmail.To[0] {
+		case it.TestEmail:
+			verificationCodeEmail = actualEmail.Body[:6]
+		case it.TestEmail2:
+			verificationCodeEmail2 = actualEmail.Body[:6]
+		case it.TestEmail3:
+			verificationCodeEmail3 = actualEmail.Body[:6]
+		}
+	}
+	expectedEmails := []smtptest.Message{
+		{
+			Subject: inviteEmailSubject,
+			From:    it.TestSMTPCfg.GetFrom(),
+			To:      []string{it.TestEmail},
+			Body:    fmt.Sprintf("%s;%d;%d;%s;%s", verificationCodeEmail, inviteID, ws.WSID, wsName, it.TestEmail),
+			CC:      []string{},
+			BCC:     []string{},
+		},
+		{
+			Subject: inviteEmailSubject,
+			From:    it.TestSMTPCfg.GetFrom(),
+			To:      []string{it.TestEmail2},
+			Body:    fmt.Sprintf("%s;%d;%d;%s;%s", verificationCodeEmail2, inviteID2, ws.WSID, wsName, it.TestEmail2),
+			CC:      []string{},
+			BCC:     []string{},
+		},
+		{
+			Subject: inviteEmailSubject,
+			From:    it.TestSMTPCfg.GetFrom(),
+			To:      []string{it.TestEmail3},
+			Body:    fmt.Sprintf("%s;%d;%d;%s;%s", verificationCodeEmail3, inviteID3, ws.WSID, wsName, it.TestEmail3),
+			CC:      []string{},
+			BCC:     []string{},
+		},
+	}
+	require.EqualValues(expectedEmails, actualEmails)
 
 	cDocInvite = findCDocInviteByID(inviteID2)
 
-	require.Equal(verificationCode, cDocInvite[5])
+	require.Equal(verificationCodeEmail2, cDocInvite[5])
 	require.Equal(float64(vit.Now().UnixMilli()), cDocInvite[8])
 
 	//Cancel then invite it again (inviteID3)
 	vit.PostWS(ws, "c.sys.CancelSentInvite", fmt.Sprintf(`{"args":{"InviteID":%d}}`, inviteID3))
 	WaitForInviteState(vit, ws, invite.State_Cancelled, inviteID3)
 	InitiateInvitationByEMail(vit, ws, expireDatetime, it.TestEmail3, initialRoles, inviteEmailTemplate, inviteEmailSubject)
-	WaitForInviteState(vit, ws, invite.State_ToBeInvited, inviteID3)
+	// WaitForInviteState(vit, ws, invite.State_ToBeInvited, inviteID3)
 	_ = vit.CaptureEmail()
 	WaitForInviteState(vit, ws, invite.State_Invited, inviteID3)
 
 	//Join workspaces
-	InitiateJoinWorkspace(vit, ws, inviteID, it.TestEmail, verificationCode)
-	InitiateJoinWorkspace(vit, ws, inviteID2, it.TestEmail2, verificationCode)
+	InitiateJoinWorkspace(vit, ws, inviteID, it.TestEmail, verificationCodeEmail)
+	InitiateJoinWorkspace(vit, ws, inviteID2, it.TestEmail2, verificationCodeEmail2)
 
 	WaitForInviteState(vit, ws, invite.State_ToBeJoined, inviteID)
 	WaitForInviteState(vit, ws, invite.State_ToBeJoined, inviteID2)
@@ -167,7 +189,7 @@ func TestInvite_BasicUsage(t *testing.T) {
 
 	//Check that emails were send
 	require.Equal(updatedRoles, vit.CaptureEmail().Body)
-	message = vit.CaptureEmail()
+	message := vit.CaptureEmail()
 	require.Equal(updateRolesEmailSubject, message.Subject)
 	require.Equal(it.TestSMTPCfg.GetFrom(), message.From)
 	require.Equal([]string{it.TestEmail2}, message.To)
@@ -217,6 +239,7 @@ func TestInvite_BasicUsage(t *testing.T) {
 	require.False(cDocSubject[4].(bool))
 
 	//TODO check InviteeProfile joined workspace
+
 }
 
 func TestCancelSentInvite(t *testing.T) {

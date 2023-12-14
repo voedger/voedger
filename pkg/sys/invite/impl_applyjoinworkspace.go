@@ -28,6 +28,7 @@ func provideAsyncProjectorApplyJoinWorkspaceFactory(timeFunc coreutils.TimeFunc,
 
 func applyJoinWorkspace(timeFunc coreutils.TimeFunc, federation coreutils.IFederation, appQName istructs.AppQName, tokens itokens.ITokens) func(event istructs.IPLogEvent, state istructs.IState, intents istructs.IIntents) (err error) {
 	return func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
+		// it is AFTER EXECUTE ON (InitiateJoinWorkspace) so no doc checking here
 		skbCDocInvite, err := s.KeyBuilder(state.Record, qNameCDocInvite)
 		if err != nil {
 			return
@@ -105,7 +106,6 @@ func applyJoinWorkspace(timeFunc coreutils.TimeFunc, federation coreutils.IFeder
 		skbViewCollection.PutInt32(collection.Field_PartKey, collection.PartitionKeyCollection)
 		skbViewCollection.PutQName(collection.Field_DocQName, QNameCDocSubject)
 
-		// determine if
 		var svCDocSubject istructs.IStateValue
 		if svCDocInvite.AsRecordID(field_SubjectID) != istructs.NullRecordID {
 			err = s.Read(skbViewCollection, func(key istructs.IKey, value istructs.IStateValue) (err error) {
@@ -125,9 +125,10 @@ func applyJoinWorkspace(timeFunc coreutils.TimeFunc, federation coreutils.IFeder
 		var body string
 		//Store cdoc.sys.Subject
 		if svCDocSubject == nil {
-			body = fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"sys.Subject","Login":"%s","Roles":"%s","SubjectKind":%d,"ProfileWSID":%d,"ActualLogin":"%s"}}]}`,
-				svCDocInvite.AsString(Field_Login), svCDocInvite.AsString(Field_Roles), svCDocInvite.AsInt32(authnz.Field_SubjectKind),
-				svCDocInvite.AsInt64(field_InviteeProfileWSID), svCDocInvite.AsString(field_ActualLogin))
+			// svCDocInvite.AsString(Field_Login) is actually c.sys.InitiateInvitationByEMail.Email
+			body = fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"sys.Subject","Login":"%s","Roles":"%s","SubjectKind":%d,"ProfileWSID":%d}}]}`,
+				svCDocInvite.AsString(field_ActualLogin), svCDocInvite.AsString(Field_Roles), svCDocInvite.AsInt32(authnz.Field_SubjectKind),
+				svCDocInvite.AsInt64(field_InviteeProfileWSID))
 		} else {
 			body = fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"Roles":"%s"}}]}`,
 				svCDocSubject.AsRecordID(appdef.SystemField_ID), svCDocInvite.AsString(Field_Roles))
