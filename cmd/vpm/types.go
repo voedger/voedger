@@ -25,9 +25,9 @@ type compileResult struct {
 
 // baselineInfo is a struct that is saved to baseline.json file
 type baselineInfo struct {
-	BaselinePackageUrl string `json:"BaselinePackageUrl"`
-	Timestamp          string `json:"Timestamp"`
-	GitCommitHash      string `json:"GitCommitHash,omitempty"`
+	BaselinePackageUrl string
+	Timestamp          string
+	GitCommitHash      string `json:",omitempty"`
 }
 
 type ignoreInfo struct {

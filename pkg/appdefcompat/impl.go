@@ -253,7 +253,7 @@ func checkConstraint(oldTreePath []string, m *matchNodesResult, constraint Const
 	if len(constraint) == 0 {
 		return
 	}
-	if m.InsertedNodeCount > 0 {
+	if len(m.DeletedNodeNames) == 0 && m.InsertedNodeCount > 0 {
 		if constraint == ConstraintNonModifiable || constraint == ConstraintAppendOnly {
 			errorType := ErrorTypeNodeInserted
 			if constraint == ConstraintNonModifiable {
