@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/spf13/cobra"
 	"github.com/untillpro/goutils/logger"
@@ -51,11 +52,12 @@ func compile(workingDir string) (*compileResult, error) {
 	importedStmts := make(map[string]parser.ImportStmt)
 	pkgFiles := make(packageFiles)
 	goModFileDir := filepath.Dir(depMan.DependencyFilePath())
-	relativeWorkingDir, err := filepath.Rel(goModFileDir, workingDir)
+	relativeModulePath, err := filepath.Rel(goModFileDir, workingDir)
 	if err != nil {
 		return nil, err
 	}
-	modulePath, err := url.JoinPath(depMan.ModulePath(), relativeWorkingDir)
+	relativeModulePath = strings.ReplaceAll(relativeModulePath, "\\", "/")
+	modulePath, err := url.JoinPath(depMan.ModulePath(), relativeModulePath)
 	if err != nil {
 		return nil, err
 	}
