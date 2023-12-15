@@ -198,8 +198,8 @@ func TestCompatBasicUsage(t *testing.T) {
 	err = execRootCmd([]string{"vpm", "baseline", baselineDir, "--change-dir", workDir}, "1.0.0")
 	require.NoError(err)
 
-	baselinePkgDir := filepath.Join(tempDir, "test", "myapp_baseline", baselineDirName, pkgDirName)
-	err = execRootCmd([]string{"vpm", "compat", "-C", workDir, baselinePkgDir}, "1.0.0")
+	baselineSchemasDir := filepath.Join(baselineDir, baselineDirName)
+	err = execRootCmd([]string{"vpm", "compat", "-C", workDir, baselineSchemasDir}, "1.0.0")
 	require.NoError(err)
 }
 
@@ -228,8 +228,8 @@ func TestCompatErrors(t *testing.T) {
 	require.NoError(err)
 
 	workDir = filepath.Join(tempDir, "test", "myapp_incompatible")
-	baselinePkgDir := filepath.Join(tempDir, "test", "baseline_myapp", baselineDirName, pkgDirName)
-	err = execRootCmd([]string{"vpm", "compat", "--ignore", filepath.Join(workDir, "ignores.yml"), "--change-dir", workDir, baselinePkgDir}, "1.0.0")
+	baselineSchemasDir := filepath.Join(baselineDir, baselineDirName)
+	err = execRootCmd([]string{"vpm", "compat", "--ignore", filepath.Join(workDir, "ignores.yml"), "--change-dir", workDir, baselineSchemasDir}, "1.0.0")
 	require.Error(err)
 	errs := coreutils.SplitErrors(err)
 
