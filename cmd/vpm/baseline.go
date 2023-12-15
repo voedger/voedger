@@ -23,16 +23,16 @@ func newBaselineCmd() *cobra.Command {
 		Use:   "baseline",
 		Short: "create baseline schemas",
 		Args:  cobra.MinimumNArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
-			newParams, err := setUpParams(params, args)
+		RunE: func(cmd *cobra.Command, args []string) (err error) {
+			params, err = prepareParams(params, args)
 			if err != nil {
 				return err
 			}
-			compileRes, err := compile(newParams.WorkingDir)
+			compileRes, err := compile(params.WorkingDir)
 			if err != nil {
 				return err
 			}
-			return baseline(compileRes, newParams.TargetDir)
+			return baseline(compileRes, params.TargetDir)
 		},
 	}
 	initGlobalFlags(cmd, &params)

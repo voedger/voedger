@@ -26,20 +26,20 @@ func newCompatCmd() *cobra.Command {
 		Use:   "compat",
 		Short: "check backward compatibility",
 		Args:  cobra.MinimumNArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
-			newParams, err := setUpParams(params, args)
+		RunE: func(cmd *cobra.Command, args []string) (err error) {
+			params, err = prepareParams(params, args)
 			if err != nil {
 				return err
 			}
-			ignores, err := readIgnoreFile(newParams.IgnoreFile)
+			ignores, err := readIgnoreFile(params.IgnoreFile)
 			if err != nil {
 				return err
 			}
-			compileRes, err := compile(newParams.WorkingDir)
+			compileRes, err := compile(params.WorkingDir)
 			if err != nil {
 				return err
 			}
-			return compat(compileRes, newParams, ignores)
+			return compat(compileRes, params, ignores)
 		},
 	}
 	initGlobalFlags(cmd, &params)
@@ -129,7 +129,11 @@ func appDefFromBaselineDir(baselineDir string) (appdef.IAppDef, error) {
 	pkgFiles := make(packageFiles)
 	for _, schemaFile := range schemaFiles {
 		dir := filepath.Dir(schemaFile)
-		qpn := strings.TrimPrefix(dir, baselineDir+"/")
+		qpn, err := filepath.Rel(baselineDir, dir)
+		if err != nil {
+			return nil, err
+		}
+		qpn = strings.ReplaceAll(qpn, "\\", "/")
 		pkgFiles[qpn] = append(pkgFiles[qpn], schemaFile)
 	}
 
