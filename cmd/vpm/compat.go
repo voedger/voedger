@@ -7,6 +7,7 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -111,9 +112,18 @@ func appDefFromCompiled(compileRes *compileResult) (appdef.IAppDef, error) {
 func appDefFromBaselineDir(baselineDir string) (appdef.IAppDef, error) {
 	var errs []error
 
+	pkgDirPath := filepath.Join(baselineDir, pkgDirName)
+	if _, err := os.Stat(pkgDirPath); os.IsNotExist(err) {
+		return nil, fmt.Errorf("baseline directory does not contain %s subdirectory", pkgDirName)
+	}
+	baselineJsonFilePath := filepath.Join(baselineDir, baselineInfoFileName)
+	if _, err := os.Stat(baselineJsonFilePath); os.IsNotExist(err) {
+		return nil, fmt.Errorf("baseline directory does not contain %s file", baselineInfoFileName)
+	}
+
 	// gather schema files from baseline dir
 	var schemaFiles []string
-	if err := filepath.Walk(baselineDir, func(path string, info os.FileInfo, err error) error {
+	if err := filepath.Walk(pkgDirPath, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return nil
 		}
@@ -129,7 +139,7 @@ func appDefFromBaselineDir(baselineDir string) (appdef.IAppDef, error) {
 	pkgFiles := make(packageFiles)
 	for _, schemaFile := range schemaFiles {
 		dir := filepath.Dir(schemaFile)
-		qpn, err := filepath.Rel(baselineDir, dir)
+		qpn, err := filepath.Rel(pkgDirPath, dir)
 		if err != nil {
 			return nil, err
 		}
