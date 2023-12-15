@@ -129,7 +129,11 @@ func appDefFromBaselineDir(baselineDir string) (appdef.IAppDef, error) {
 	pkgFiles := make(packageFiles)
 	for _, schemaFile := range schemaFiles {
 		dir := filepath.Dir(schemaFile)
-		qpn := strings.TrimPrefix(dir, baselineDir+"/")
+		qpn, err := filepath.Rel(baselineDir, dir)
+		if err != nil {
+			return nil, err
+		}
+		qpn = strings.ReplaceAll(qpn, "\\", "/")
 		pkgFiles[qpn] = append(pkgFiles[qpn], schemaFile)
 	}
 
