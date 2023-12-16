@@ -393,20 +393,20 @@ ALTERABLE WORKSPACE test_ws (
 		NonVerifiedField varchar
 	);
 
-	TABLE DocConstraints INHERITS CDoc (
-		Int int32,
-		Str varchar NOT NULL,
-		Bool bool NOT NULL,
-		Float32 float32,
-		Bytes bytes NOT NULL,
-		UNIQUEFIELD Int
-	);
+	-- TABLE DocConstraints INHERITS CDoc (
+	-- 	Int int32,
+	-- 	Str varchar NOT NULL,
+	-- 	Bool bool NOT NULL,
+	-- 	Float32 float32,
+	-- 	Bytes bytes NOT NULL
+	-- 	-- UNIQUE (Int, Str)
+	-- );
 
-	TABLE DocConstraintsString INHERITS CDoc (
-		Str varchar,
-		Int int32,
-		UNIQUEFIELD Str
-	);
+	-- TABLE DocConstraintsString INHERITS CDoc (
+	-- 	Str varchar,
+	-- 	Int int32
+	-- 	-- UNIQUE (Str)
+	-- );
 
 	TABLE Config INHERITS Singleton (
 		Fld1 varchar NOT NULL

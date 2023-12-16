@@ -78,8 +78,8 @@ type IUnique interface {
 	Name() string
 
 	// Returns unique fields list. Fields are sorted alphabetically
-	Fields() []IField
 
+	Fields() []IField
 	// Unique identifier.
 	//
 	// Must be assigned during AppStruct construction by calling SetID(UniqueID)

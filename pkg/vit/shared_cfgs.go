@@ -35,7 +35,8 @@ var (
 	QNameApp1_TestWSKind               = appdef.NewQName(app1PkgName, "WSKind")
 	QNameTestView                      = appdef.NewQName(app1PkgName, "View")
 	QNameApp1_TestEmailVerificationDoc = appdef.NewQName(app1PkgName, "Doc")
-	QNameApp1_CDocTestConstraints      = appdef.NewQName(app1PkgName, "DocConstraints")
+	QNameApp1_DocConstraints           = appdef.NewQName(app1PkgName, "DocConstraints")
+	QNameApp1_DocConstraintsString     = appdef.NewQName(app1PkgName, "DocConstraintsString")
 	QNameCmdRated                      = appdef.NewQName(app1PkgName, "RatedCmd")
 	QNameQryRated                      = appdef.NewQName(app1PkgName, "RatedQry")
 	QNameODoc1                         = appdef.NewQName(app1PkgName, "odoc1")
@@ -181,4 +182,18 @@ func ProvideApp1(apis apps.APIs, cfg *istructsmem.AppConfigType, adf appdef.IApp
 		appdef.NewQName(app1PkgName, "CmdODocTwo"),
 		istructsmem.NullCommandExec,
 	))
+
+	bldr := adf.AddCDoc(QNameApp1_DocConstraints)
+	bldr.
+		AddField("Int", appdef.DataKind_int32, false).
+		AddField("Str", appdef.DataKind_string, true).
+		AddField("Bool", appdef.DataKind_bool, true).
+		AddField("Bytes", appdef.DataKind_bytes, true)
+	bldr.AddUnique("uniq1", []string{"Int"})
+
+	bldr = adf.AddCDoc(QNameApp1_DocConstraintsString)
+	bldr.
+		AddField("Str", appdef.DataKind_string, false).
+		AddField("Int", appdef.DataKind_int32, false)
+	bldr.AddUnique("uniq1", []string{"Str"})
 }

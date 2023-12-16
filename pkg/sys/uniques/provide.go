@@ -17,5 +17,5 @@ func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder
 			Func: provideApplyUniques2(appDefBuilder),
 		}
 	})
-	cfg.AddEventValidators(provideEventUniqueValidator())
+	cfg.AddEventValidators(eventUniqueValidator2)
 }

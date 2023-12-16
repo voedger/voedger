@@ -75,7 +75,7 @@ TABLE TablePlan INHERITS CDoc (
     CheckedField varchar(8) CHECK '^[0-9]{8}$', -- Field validated by regexp
     CHECK (ValidateRow(this)), -- Unnamed CHECK table constraint. Expressions evaluating to TRUE or UNKNOWN succeed.
     CONSTRAINT StateChecker CHECK (ValidateFState(FState)), -- Named CHECK table constraint
-    -- UNIQUE (FState, Name), -- unnamed UNIQUE table constraint
+    UNIQUE (FState, Name), -- unnamed UNIQUE table constraint
     UNIQUEFIELD Name, -- deprecated. For Air backward compatibility only
     TableItems TABLE TablePlanItem (
         TableNo int,
@@ -177,7 +177,7 @@ WORKSPACE MyWorkspace (
         -- Projector uses sys.HTTPStorage
         PROJECTOR UpdateSubscriptionProfile
             AFTER EXECUTE WITH PARAM ON SubscriptionEvent
-            STATE(sys.Http, AppSecret);            
+            STATE(sys.Http, AppSecret);
 
         -- Projector triggered by few COMMANDs
         PROJECTOR UpdateDashboard
@@ -190,8 +190,8 @@ WORKSPACE MyWorkspace (
             AFTER ACTIVATE OR DEACTIVATE ON TablePlan
             INTENTS(View(ActiveTablePlansView));
 
-        /* 
-            Some projector which sends E-mails and performs HTTP queries. 
+        /*
+            Some projector which sends E-mails and performs HTTP queries.
             This one also triggered on events with errors
         */
         PROJECTOR NotifyOnChanges
@@ -200,7 +200,7 @@ WORKSPACE MyWorkspace (
             INTENTS(SendMail, View(NotificationsHistory))
             INCLUDING ERRORS;
 
-        /* 
+        /*
         Projector on any CUD operation.
         CDoc, WDoc, ODoc are the only abstract tables which are allowed to use in this case
         */
@@ -237,14 +237,14 @@ WORKSPACE MyWorkspace (
     RATE PosSalesRate 1000 PER HOUR PER USER;
     RATE NewOrderRate 500 PER HOUR PER USER;
     --  Custom scopes
-    RATE RestorePasswordRate1 3 PER 5 MINUTES PER APP PARTITION PER IP;    
-    RATE RestorePasswordRate2 10 PER DAY PER APP PARTITION PER IP;    
+    RATE RestorePasswordRate1 3 PER 5 MINUTES PER APP PARTITION PER IP;
+    RATE RestorePasswordRate2 10 PER DAY PER APP PARTITION PER IP;
 
     LIMIT AllCommandsLimit EXECUTE ON ALL COMMANDS WITH RATE PosSalesRate;
     LIMIT NewOrderLimit EXECUTE ON COMMAND NewOrder WITH RATE NewOrderRate;
     LIMIT AllQueriesLimit EXECUTE ON ALL QUERIES WITH TAG PosTag WITH RATE AppDefaultRate;
     -- Combination of two rates
-    LIMIT RestorePasswordLimit1 EXECUTE ON COMMAND RestorePassword WITH RATE RestorePasswordRate1; 
+    LIMIT RestorePasswordLimit1 EXECUTE ON COMMAND RestorePassword WITH RATE RestorePasswordRate1;
     LIMIT RestorePasswordLimit2 EXECUTE ON COMMAND RestorePassword WITH RATE RestorePasswordRate2;
 
     -- ACLs
@@ -317,7 +317,7 @@ WORKSPACE MyWorkspace (
 
 );
 
-LIMIT MyWorkspaceInsertLimit INSERT ON WORKSPACE MyWorkspace WITH RATE AppDefaultRate;        
+LIMIT MyWorkspaceInsertLimit INSERT ON WORKSPACE MyWorkspace WITH RATE AppDefaultRate;
 
 /*
     Abstract workspaces:

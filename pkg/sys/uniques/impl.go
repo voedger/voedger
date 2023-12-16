@@ -215,7 +215,10 @@ func buildUniqueViewKey(kb istructs.IKeyBuilder, rec istructs.IRowReader, uf app
 }
 
 type uniqueViewRecord struct {
-	exists      bool
+	// refRecordID is not enought because NullRecordID could mean record exists but deactivated
+	// need to avoid unique key fields modification in this case
+	// no needed because uniqueViewRecord type is used on update only. But all unique fields are required -> view record exists on any update
+	// exists      bool
 	refRecordID istructs.RecordID
 }
 
@@ -272,46 +275,46 @@ func provideEventUniqueValidator() func(ctx context.Context, rawEvent istructs.I
 							if currentUniqueRecord.refRecordID == istructs.NullRecordID {
 								// inserting a new active record, unique is inactive -> allowed, update its ID in map
 								currentUniqueRecord.refRecordID = cudRec.ID()
-								currentUniqueRecord.exists = true // avoid: 1st CUD insert a unique record, 2nd modify the unique value
+								// currentUniqueRecord.exists = true // avoid: 1st CUD insert a unique record, 2nd modify the unique value
 							} else {
 								// inserting a new active record, unique is active -> deny
 								return conflict(cudQName, currentUniqueRecord.refRecordID)
 							}
 						} else {
 							if cudUniqueFieldHasValue {
-								currentUniqueRecord.exists = true
+								// currentUniqueRecord.exists = true
 								currentUniqueRecord.refRecordID = istructs.NullRecordID
 							}
 							// insert an inactive record, no unique value -> allow, do nothing
 						}
 					} else {
-						cudRecIsActive := cudRec.AsBool(appdef.SystemField_IsActive)
-						if currentUniqueRecord.exists {
-							if cudUniqueFieldHasValue && (currentUniqueRecord.refRecordID == cudRec.ID() || currentUniqueRecord.refRecordID == istructs.NullRecordID) {
-								return fmt.Errorf("%v: unique field «%s» can not be changed: %w", cudQName, uniqueField.Name(), ErrUniqueFieldUpdateDeny)
-							}
-							if currentUniqueRecord.refRecordID == istructs.NullRecordID {
-								if cudRecIsActive {
-									currentUniqueRecord.refRecordID = cudRec.ID()
-								}
-							} else {
-								if currentUniqueRecord.refRecordID == cudRec.ID() {
-									if !cudRecIsActive {
-										currentUniqueRecord.refRecordID = istructs.NullRecordID
-									}
-								} else {
-									if cudRecIsActive {
-										return conflict(cudQName, currentUniqueRecord.refRecordID)
-									}
-								}
-							}
-						} else {
-							// update, no unique view record
-							if cudRecIsActive && cudUniqueFieldHasValue {
-								currentUniqueRecord.exists = true
-								currentUniqueRecord.refRecordID = cudRec.ID()
-							}
-						}
+						// cudRecIsActive := cudRec.AsBool(appdef.SystemField_IsActive)
+						// if currentUniqueRecord.exists {
+						// 	if cudUniqueFieldHasValue && (currentUniqueRecord.refRecordID == cudRec.ID() || currentUniqueRecord.refRecordID == istructs.NullRecordID) {
+						// 		return fmt.Errorf("%v: unique field «%s» can not be changed: %w", cudQName, uniqueField.Name(), ErrUniqueFieldUpdateDeny)
+						// 	}
+						// 	if currentUniqueRecord.refRecordID == istructs.NullRecordID {
+						// 		if cudRecIsActive {
+						// 			currentUniqueRecord.refRecordID = cudRec.ID()
+						// 		}
+						// 	} else {
+						// 		if currentUniqueRecord.refRecordID == cudRec.ID() {
+						// 			if !cudRecIsActive {
+						// 				currentUniqueRecord.refRecordID = istructs.NullRecordID
+						// 			}
+						// 		} else {
+						// 			if cudRecIsActive {
+						// 				return conflict(cudQName, currentUniqueRecord.refRecordID)
+						// 			}
+						// 		}
+						// 	}
+						// } else {
+						// 	// update, no unique view record
+						// 	if cudRecIsActive && cudUniqueFieldHasValue {
+						// 		currentUniqueRecord.exists = true
+						// 		currentUniqueRecord.refRecordID = cudRec.ID()
+						// 	}
+						// }
 					}
 				}
 			}
@@ -336,12 +339,12 @@ func getCurrentUniqueViewRecord(uniquesState map[appdef.QName]map[string]*unique
 	}
 	currentUniqueRecord, ok := qNameEventUniques[string(uniqueKeyValues)]
 	if !ok {
-		currentUniqueRecordID, uniqueViewRecordExists, err := getUniqueIDByValues(appStructs, wsid, qName, uniqueKeyValues)
+		currentUniqueRecordID /*uniqueViewRecordExists*/, _, err := getUniqueIDByValues(appStructs, wsid, qName, uniqueKeyValues)
 		if err != nil {
 			return nil, err
 		}
 		currentUniqueRecord = &uniqueViewRecord{
-			exists:      uniqueViewRecordExists,
+			// exists:      uniqueViewRecordExists,
 			refRecordID: currentUniqueRecordID,
 		}
 		qNameEventUniques[string(uniqueKeyValues)] = currentUniqueRecord

@@ -168,25 +168,25 @@ func TestUniquesDenyUpdate(t *testing.T) {
 
 // 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
 
-	// t.Run("order of fields should not cause violation", func(t *testing.T) {
-	// 	// row with int32 12345678,[]byte{0} are inserted
-	// 	// have unique combination for key []byte{7, 91, 205, 21, 0}
-	// 	// insert a new row for []byte{7}, int32([]byte{91, 205, 21, 0})
-	// 	// should not cause violation
-	// 	// the test protects the rule that var size field must be used last
-	// 	num := 123456789 // []byte{7, 91, 205, 21}
-	// 	bts := base64.StdEncoding.EncodeToString([]byte{0})
-	// 	body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.DocConstraints","sys.IsActive":false,"Int":%d,"Str":"str","Bool":true,"Bytes":"%s"}}]}`, num, bts)
-	// 	vit.PostWS(ws, "c.sys.CUD", body)
+// t.Run("order of fields should not cause violation", func(t *testing.T) {
+// 	// row with int32 12345678,[]byte{0} are inserted
+// 	// have unique combination for key []byte{7, 91, 205, 21, 0}
+// 	// insert a new row for []byte{7}, int32([]byte{91, 205, 21, 0})
+// 	// should not cause violation
+// 	// the test protects the rule that var size field must be used last
+// 	num := 123456789 // []byte{7, 91, 205, 21}
+// 	bts := base64.StdEncoding.EncodeToString([]byte{0})
+// 	body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.DocConstraints","sys.IsActive":false,"Int":%d,"Str":"str","Bool":true,"Bytes":"%s"}}]}`, num, bts)
+// 	vit.PostWS(ws, "c.sys.CUD", body)
 
-	// 	// have unique for key {7,91,205,21,0}
+// 	// have unique for key {7,91,205,21,0}
 
-	// 	num = int(binary.BigEndian.Uint32([]byte{91, 205, 21, 0}))
-	// 	bts = base64.StdEncoding.EncodeToString([]byte{7})
-	// 	body = fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.DocConstraints","sys.IsActive":false,"Bytes":"%s","Int":%d,"Str":"str","Bool":true}}]}`, bts, num)
-	// 	vit.PostWS(ws, "c.sys.CUD", body)
-	// 	// expect no errors
-	// })
+// 	num = int(binary.BigEndian.Uint32([]byte{91, 205, 21, 0}))
+// 	bts = base64.StdEncoding.EncodeToString([]byte{7})
+// 	body = fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.DocConstraints","sys.IsActive":false,"Bytes":"%s","Int":%d,"Str":"str","Bool":true}}]}`, bts, num)
+// 	vit.PostWS(ws, "c.sys.CUD", body)
+// 	// expect no errors
+// })
 // }
 
 func TestMultipleCUDs(t *testing.T) {
@@ -316,7 +316,7 @@ func TestBasicUsage_GetUniqueID(t *testing.T) {
 	require.NoError(err)
 
 	t.Run("must be ok to find unique field for test CDoc", func(t *testing.T) {
-		unique, ok := as.AppDef().Type(it.QNameApp1_CDocTestConstraints).(appdef.IUniques)
+		unique, ok := as.AppDef().Type(it.QNameApp1_DocConstraints).(appdef.IUniques)
 		require.True(ok)
 		require.NotNil(unique.UniqueField())
 	})
@@ -326,7 +326,7 @@ func TestBasicUsage_GetUniqueID(t *testing.T) {
 		obj := &coreutils.TestObject{
 			Data: map[string]interface{}{
 				// required for unique key builder
-				appdef.SystemField_QName: it.QNameApp1_CDocTestConstraints,
+				appdef.SystemField_QName: it.QNameApp1_DocConstraints,
 				// required for unique key
 				"Int": int32(num),
 				// not in the unique key, could be omitted
@@ -349,7 +349,7 @@ func TestBasicUsage_GetUniqueID(t *testing.T) {
 			// NullRecordID for the inactive record
 			obj := &coreutils.TestObject{
 				Data: map[string]interface{}{
-					appdef.SystemField_QName: it.QNameApp1_CDocTestConstraints,
+					appdef.SystemField_QName: it.QNameApp1_DocConstraints,
 					"Int":                    int32(num),
 					"Str":                    "str",
 					"Bool":                   true,
@@ -364,7 +364,7 @@ func TestBasicUsage_GetUniqueID(t *testing.T) {
 	t.Run("must be not found unknown record", func(t *testing.T) {
 		obj := &coreutils.TestObject{
 			Data: map[string]interface{}{
-				appdef.SystemField_QName: it.QNameApp1_CDocTestConstraints,
+				appdef.SystemField_QName: it.QNameApp1_DocConstraints,
 				"Int":                    int32(num) + 1,
 			},
 		}
@@ -381,7 +381,7 @@ func TestBasicUsage_GetUniqueID(t *testing.T) {
 		t.Run("must be ok reactivated record", func(t *testing.T) {
 			obj := &coreutils.TestObject{
 				Data: map[string]interface{}{
-					appdef.SystemField_QName: it.QNameApp1_CDocTestConstraints,
+					appdef.SystemField_QName: it.QNameApp1_DocConstraints,
 					"Int":                    int32(num),
 					"Str":                    "str",
 					"Bool":                   true,
