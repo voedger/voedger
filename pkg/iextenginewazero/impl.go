@@ -331,17 +331,17 @@ func (f *wazeroExtEngine) recover() {
 	}
 }
 
-func (f *wazeroExtEngine) Invoke(ctx context.Context, extention iextengine.ExtQName, io iextengine.IExtensionIO) (err error) {
+func (f *wazeroExtEngine) Invoke(ctx context.Context, extension iextengine.ExtQName, io iextengine.IExtensionIO) (err error) {
 
 	var ok bool
-	f.pkg, ok = f.modules[extention.PackageName]
+	f.pkg, ok = f.modules[extension.PackageName]
 	if !ok {
-		return undefinedPackage(extention.PackageName)
+		return undefinedPackage(extension.PackageName)
 	}
 
-	funct := f.pkg.exts[extention.ExtName]
+	funct := f.pkg.exts[extension.ExtName]
 	if funct == nil {
-		return invalidExtensionName(extention.ExtName)
+		return invalidExtensionName(extension.ExtName)
 	}
 
 	f.io = io
