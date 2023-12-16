@@ -1,7 +1,7 @@
 /*
-* Copyright (c) 2022-present unTill Pro, Ltd.
-* @author Michael Saigachenko
- */
+  - Copyright (c) 2023-present unTill Software Development Group B. V.
+    @author Michael Saigachenko
+*/
 
 package iextenginewasm
 
@@ -18,6 +18,10 @@ var (
 
 func missingExportedFunction(name string) error {
 	return errors.New("missing exported function: " + name)
+}
+
+func undefinedPackage(name string) error {
+	return errors.New("undefined package: " + name)
 }
 
 func incorrectExtensionName(name string) error {
