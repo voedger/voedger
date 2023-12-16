@@ -164,17 +164,3 @@ func (k RateLimitKind) MarshalText() ([]byte, error) {
 	}
 	return []byte(s), nil
 }
-
-func ValidatorMatchByQName(cudValidator CUDValidator, cudQName appdef.QName, wsid WSID, cmdQName appdef.QName) bool {
-	if cudValidator.MatchFunc != nil {
-		if cudValidator.MatchFunc(cudQName, wsid, cmdQName) {
-			return true
-		}
-	}
-	for _, qn := range cudValidator.MatchQNames {
-		if qn == cudQName {
-			return true
-		}
-	}
-	return false
-}

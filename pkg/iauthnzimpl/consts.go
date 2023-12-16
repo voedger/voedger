@@ -80,7 +80,10 @@ var (
 	qNameQryGetUPTransferInstrument                 = appdef.NewQName(airPackage, "GetUPTransferInstrument")
 	qNameCmdRetryTransferUPPayout                   = appdef.NewQName(airPackage, "RetryTransferUPPayout")
 	qNameQryGetUPLocationSubjects                   = appdef.NewQName(airPackage, "GetUPLocationSubjects")
-	qNameQryIsDirectLocation                        = appdef.NewQName(airPackage, "IsDirectLocation")
+	qNameQryIsDirectReseller                        = appdef.NewQName(airPackage, "IsDirectReseller")
+	qNameQryGetUPLocationInvoiceParties             = appdef.NewQName(airPackage, "GetUPLocationInvoiceParties")
+	qNameQryGetLocationDailyUPReport                = appdef.NewQName(airPackage, "GetLocationDailyUPReport")
+	qNameQryGetResellerDailyUPReport                = appdef.NewQName(airPackage, "GetResellerDailyUPReport ")
 
 	// Air roles
 	qNameRoleResellersAdmin         = appdef.NewQName(airPackage, "ResellersAdmin")

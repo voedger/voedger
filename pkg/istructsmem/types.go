@@ -30,16 +30,17 @@ import (
 //   - istructs.IRecord (partially)
 //   - istructs.IEditableRecord
 type rowType struct {
-	appCfg    *AppConfigType
-	typ       appdef.IType
-	fields    appdef.IFields
-	id        istructs.RecordID
-	parentID  istructs.RecordID
-	container string
-	isActive  bool
-	dyB       *dynobuffers.Buffer
-	nils      []string // nilled string and []bytes, which not stored in dynobuffer
-	err       error
+	appCfg           *AppConfigType
+	typ              appdef.IType
+	fields           appdef.IFields
+	id               istructs.RecordID
+	parentID         istructs.RecordID
+	container        string
+	isActive         bool
+	dyB              *dynobuffers.Buffer
+	nils             []string // nilled string and []bytes, which not stored in dynobuffer
+	err              error
+	isActiveModified bool
 }
 
 // Makes new empty row (QName is appdef.NullQName)
@@ -848,6 +849,7 @@ func (row *rowType) PutChars(name string, value string) {
 func (row *rowType) PutBool(name string, value bool) {
 	if name == appdef.SystemField_IsActive {
 		row.setActive(value)
+		row.isActiveModified = true
 		return
 	}
 

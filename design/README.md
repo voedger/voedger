@@ -130,19 +130,6 @@ flowchart TD
     
     %% Entities
 
-    Projector{
-        Type   appdef_IProjector
-    }
-    Query{
-        Type   appdef_IQuery
-    }
-    Command {
-        Type   appdef_ICommand
-    }   
-    IAppPartition {
-        Release() method
-    }       
-
     %% Relations
 
     VVM ||--|{ Processor : "has"
@@ -151,14 +138,12 @@ flowchart TD
     Processor ||--|| QueryProcessor : "can be"
     Processor ||--|| Actualizer : "can be"   
 
+    CommandProcessor ||..|| "Invoke(extName, extIO)": "executes Extension using"
+    QueryProcessor ||..|| "Invoke(extName, extIO)": "executes Extension using"
+    Actualizer ||..|| "Invoke(extName, extIO)": "executes Extension using"
 
-    Actualizer ||..|| Projector: executes
-    CommandProcessor ||..|| Command: "executes"
-    QueryProcessor ||..|| Query: "executes"
+    "Invoke(extName, extIO)" ||..|| IAppPartition: "method of"
 
-    Command ||..|| IAppPartition: "taken from"
-    Query ||..|| IAppPartition: "taken from"
-    Projector ||..|| IAppPartition: "taken from"
 
     IAppPartition ||..|| IAppPartitions: "borrowed from"
 ```
@@ -181,33 +166,67 @@ type IAppPartitions interface {
 
     appRT ||--|{ appPartitionRT : "has"
 
-    appPartitionRT ||--|| latestVersion : "has"
-    appPartitionRT ||--|| permanent : "has"
+    appRT ||--|| latestVersion : "has"
+    appPartitionRT ||--|| partitionCache : "has"
 
     latestVersion ||--|| AppDef : "has"
-    latestVersion  ||--|{ commandsExEnginePool : "has"
-    latestVersion  ||--|{ queryExEnginePool : "has"
-    latestVersion  ||--|{ projectionExEnginePool : "has"
-    permanent  ||--|| partitionCache: "has"
+    latestVersion  ||--|{ commandsExEnginePool : "has one per EngineKind"
+    latestVersion  ||--|{ queryExEnginePool : "has one per EngineKind"
+    latestVersion  ||--|{ projectionExEnginePool : "has one per EngineKind"
 
 
     AppDef ||--|{ appdef_IPackage : "has"
-    appdef_IPackage ||--|{ appdef_IEngine : "has one per EngineKind"
+    appdef_IPackage ||..|{ appdef_IEngine: "extensions instantiated by"
 
     appdef_IEngine ||..|| "IAppPartitions_Borrow()": "copied by ref by"
     
-    commandsExEnginePool ||..|| "IAppPartitions_Borrow()": "can be used by"
-    queryExEnginePool ||..|| "IAppPartitions_Borrow()": "can be used by"
-    projectionExEnginePool ||..|| "IAppPartitions_Borrow()": "can be used by"
+    commandsExEnginePool ||..|{ "appdef_IEngine": "provides pool of"
+    queryExEnginePool ||..|{ "appdef_IEngine": "provides pool of"
+    projectionExEnginePool ||..|{ "appdef_IEngine": "provides pool of"
     partitionCache ||..|| "IAppPartitions_Borrow()": "copied by ref by"
 
     "IAppPartitions_Borrow()" ||..|| "IAppPartition": "returns"
 
-    IAppPartition ||--|{ package : "has"
-    package ||--|{ ExtensionEngine : "has one per kind"
-    IAppPartition ||--|{ "Invoke()" : "has something like"
+    IAppPartition ||--|{ "Invoke()" : "may invoke extensions with method"
+```
 
-    "Invoke()" ||..|| ExtensionEngine : "uses"
+#### Construct Pools of Extension Engines
+interfaces:
+```go
+// Builtin engines factory
+type IExtensionEngineFactories interface {
+  QueryFactory(appdef.ExtensionEngineKind) IExtensionEngineFactory
+}
+
+IExtensionEngineFactory {
+  // LocalPath is a path package data can be got from
+  // packageNameToLocalPath is not used for ExtensionEngineKind_BuiltIn
+  New(packageNameToLocalPath map[string]string, numEngines int) []IExtensionEngine
+}
+
+type IExtensionEngineFactories map[appdef.ExtensionEngineKind]IExtensionEngineFactory
+
+type ExtQName struct {
+    PackageName string // Fully qualified package name
+    ExtName string
+}
+
+type IExtensionEngine interface {
+    Invoke(ctx context.Context, extName ExtQName, io IExtensionIO) (err error)
+}
+
+type BuiltInExtFunc func(io ExtensionIO) error
+type BuiltInExtFuncs map[ExtQName]BuiltInExtFunc // Provided to construct factory of engines
+```
+
+An instance of IExtensionEngineFactories is provided to apppartsctl.New().
+
+#### Execute Extentions
+```go
+type IAppPartition interface {
+    // Processor constructs and provides ExtensionIO
+    Invoke(extensionName QName, io IExtensionIO) (err error)
+}
 ```
 
 ### Event Sourcing & CQRS

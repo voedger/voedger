@@ -33,8 +33,10 @@ func parseImpl(fileName string, content string) (*SchemaAST, error) {
 		{Name: "EXTENSIONENGINE", Pattern: `EXTENSION[ \r\n\t]+ENGINE`},
 		{Name: "EXECUTEONCOMMAND", Pattern: `EXECUTE[ \r\n\t]+ON[ \r\n\t]+COMMAND`},
 		{Name: "EXECUTEONALLCOMMANDSWITHTAG", Pattern: `EXECUTE[ \r\n\t]+ON[ \r\n\t]+ALL[ \r\n\t]+COMMANDS[ \r\n\t]+WITH[ \r\n\t]+TAG`},
+		{Name: "EXECUTEONALLCOMMANDS", Pattern: `EXECUTE[ \r\n\t]+ON[ \r\n\t]+ALL[ \r\n\t]+COMMANDS[ \r\n\t]+`},
 		{Name: "EXECUTEONQUERY", Pattern: `EXECUTE[ \r\n\t]+ON[ \r\n\t]+QUERY`},
 		{Name: "EXECUTEONALLQUERIESWITHTAG", Pattern: `EXECUTE[ \r\n\t]+ON[ \r\n\t]+ALL[ \r\n\t]+QUERIES[ \r\n\t]+WITH[ \r\n\t]+TAG`},
+		{Name: "EXECUTEONALLQUERIES", Pattern: `EXECUTE[ \r\n\t]+ON[ \r\n\t]+ALL[ \r\n\t]+QUERIES[ \r\n\t]+`},
 		{Name: "INSERTONWORKSPACE", Pattern: `INSERT[ \r\n\t]+ON[ \r\n\t]+WORKSPACE`},
 		{Name: "INSERTONALLWORKSPACESWITHTAG", Pattern: `INSERT[ \r\n\t]+ON[ \r\n\t]+ALL[ \r\n\t]+WORKSPACES[ \r\n\t]+WITH[ \r\n\t]+TAG`},
 		{Name: "PRIMARYKEY", Pattern: `PRIMARY[ \r\n\t]+KEY`},
@@ -59,12 +61,11 @@ func mergeSchemas(mergeFrom, mergeTo *SchemaAST) {
 	mergeTo.Statements = append(mergeTo.Statements, mergeFrom.Statements...)
 }
 
-func parseFSImpl(fs IReadFS, dir string) ([]*FileSchemaAST, error) {
+func parseFSImpl(fs IReadFS, dir string) (schemas []*FileSchemaAST, errs []error) {
 	entries, err := fs.ReadDir(dir)
 	if err != nil {
-		return nil, err
+		return nil, []error{err}
 	}
-	schemas := make([]*FileSchemaAST, 0)
 	for _, entry := range entries {
 		if strings.ToLower(filepath.Ext(entry.Name())) == ".sql" {
 			var fpath string
@@ -75,11 +76,12 @@ func parseFSImpl(fs IReadFS, dir string) ([]*FileSchemaAST, error) {
 			}
 			bytes, err := fs.ReadFile(fpath)
 			if err != nil {
-				return nil, err
+				errs = append(errs, err)
+				continue
 			}
 			schema, err := parseImpl(entry.Name(), string(bytes))
 			if err != nil {
-				return nil, err
+				errs = append(errs, err)
 			}
 			schemas = append(schemas, &FileSchemaAST{
 				FileName: entry.Name(),
@@ -88,9 +90,9 @@ func parseFSImpl(fs IReadFS, dir string) ([]*FileSchemaAST, error) {
 		}
 	}
 	if len(schemas) == 0 {
-		return nil, ErrDirContainsNoSchemaFiles
+		return nil, []error{ErrDirContainsNoSchemaFiles}
 	}
-	return schemas, nil
+	return schemas, errs
 }
 
 func buildPackageSchemaImpl(qualifiedPackageName string, asts []*FileSchemaAST) (*PackageSchemaAST, error) {
@@ -282,15 +284,9 @@ func buildAppSchemaImpl(packages []*PackageSchemaAST) (*AppSchemaAST, error) {
 	}
 
 	defineApp(&c)
-	if len(c.errs) > 0 {
-		return nil, errors.Join(c.errs...)
-	}
 
 	for _, p := range packages {
 		preAnalyse(&c, p)
-	}
-	if len(c.errs) > 0 {
-		return nil, errors.Join(c.errs...)
 	}
 
 	for _, p := range packages {

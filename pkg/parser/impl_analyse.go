@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/alecthomas/participle/v2/lexer"
 	"github.com/voedger/voedger/pkg/appdef"
 )
 
@@ -65,6 +66,8 @@ func analyse(c *basicContext, p *PackageSchemaAST) {
 			analyseAlterWorkspace(v, ictx)
 		case *StorageStmt:
 			analyseStorage(v, ictx)
+		case *LimitStmt:
+			analyseLimit(v, ictx)
 		}
 	})
 }
@@ -123,6 +126,31 @@ func analyseStorage(u *StorageStmt, c *iterateCtx) {
 	if c.pkg.QualifiedPackageName != appdef.SysPackage {
 		c.stmtErr(&u.Pos, ErrStorageDeclaredOnlyInSys)
 	}
+}
+
+func analyseLimit(u *LimitStmt, c *iterateCtx) {
+	err := resolveInCtx(u.RateName, c, func(l *RateStmt, schema *PackageSchemaAST) error { return nil })
+	if err != nil {
+		c.stmtErr(&u.Pos, err)
+	}
+
+	if u.Action.AllCommandsWithTag != nil {
+		err = resolveInCtx(*u.Action.AllCommandsWithTag, c, func(t *TagStmt, schema *PackageSchemaAST) error { return nil })
+	} else if u.Action.AllQueriesWithTag != nil {
+		err = resolveInCtx(*u.Action.AllQueriesWithTag, c, func(t *TagStmt, schema *PackageSchemaAST) error { return nil })
+	} else if u.Action.AllWorkspacesWithTag != nil {
+		err = resolveInCtx(*u.Action.AllWorkspacesWithTag, c, func(t *TagStmt, schema *PackageSchemaAST) error { return nil })
+	} else if u.Action.Command != nil {
+		err = resolveInCtx(*u.Action.Command, c, func(t *CommandStmt, schema *PackageSchemaAST) error { return nil })
+	} else if u.Action.Query != nil {
+		err = resolveInCtx(*u.Action.Query, c, func(t *QueryStmt, schema *PackageSchemaAST) error { return nil })
+	} else if u.Action.Workspace != nil {
+		err = resolveInCtx(*u.Action.Workspace, c, func(t *WorkspaceStmt, schema *PackageSchemaAST) error { return nil })
+	}
+	if err != nil {
+		c.stmtErr(&u.Pos, err)
+	}
+
 }
 
 func analyseView(view *ViewStmt, c *iterateCtx) {
@@ -454,7 +482,7 @@ func analyseTable(v *TableStmt, c *iterateCtx) {
 	analyseWith(&v.With, v, c)
 	analyseNestedTables(v.Items, v.tableTypeKind, c)
 	analyseFieldSets(v.Items, c)
-	analyseFields(v.Items, c)
+	analyseFields(v.Items, c, true)
 	if v.Inherits != nil {
 		resolvedFunc := func(f *TableStmt, _ *PackageSchemaAST) error {
 			if !f.Abstract {
@@ -476,7 +504,7 @@ func analyseType(v *TypeStmt, c *iterateCtx) {
 		}
 	}
 	analyseFieldSets(v.Items, c)
-	analyseFields(v.Items, c)
+	analyseFields(v.Items, c, false)
 }
 
 func analyseWorkspace(v *WorkspaceStmt, c *iterateCtx) {
@@ -524,10 +552,30 @@ func analyseWorkspace(v *WorkspaceStmt, c *iterateCtx) {
 func analyseNestedTables(items []TableItemExpr, rootTableKind appdef.TypeKind, c *iterateCtx) {
 	for i := range items {
 		item := items[i]
+
+		var nestedTable *TableStmt
+		var pos *lexer.Position
+
 		if item.NestedTable != nil {
-			nestedTable := &item.NestedTable.Table
+			nestedTable = &item.NestedTable.Table
+			pos = &item.NestedTable.Pos
+		} else if item.Field != nil && item.Field.Type.Def != nil {
+			tbl, _, err := lookupInCtx[*TableStmt](*item.Field.Type.Def, c)
+			if err != nil {
+				c.stmtErr(&item.Field.Pos, err)
+				continue
+			}
+			if tbl == nil {
+				c.stmtErr(&item.Field.Pos, ErrUndefinedTable(*item.Field.Type.Def))
+				continue
+			}
+			nestedTable = tbl
+			pos = &item.Field.Pos
+		}
+
+		if nestedTable != nil {
 			if nestedTable.Abstract {
-				c.stmtErr(&nestedTable.Pos, ErrNestedAbstractTable(nestedTable.GetName()))
+				c.stmtErr(pos, ErrNestedAbstractTable(nestedTable.GetName()))
 				return
 			}
 			if nestedTable.Inherits == nil {
@@ -536,12 +584,12 @@ func analyseNestedTables(items []TableItemExpr, rootTableKind appdef.TypeKind, c
 				var err error
 				nestedTable.tableTypeKind, nestedTable.singletone, err = getTableTypeKind(nestedTable, c.pkg, c)
 				if err != nil {
-					c.stmtErr(&nestedTable.Pos, err)
+					c.stmtErr(pos, err)
 					return
 				}
 				tk := getNestedTableKind(rootTableKind)
 				if nestedTable.tableTypeKind != tk {
-					c.stmtErr(&nestedTable.Pos, ErrNestedTableIncorrectKind)
+					c.stmtErr(pos, ErrNestedTableIncorrectKind)
 					return
 				}
 			}
@@ -566,7 +614,7 @@ func analyseFieldSets(items []TableItemExpr, c *iterateCtx) {
 	}
 }
 
-func analyseFields(items []TableItemExpr, c *iterateCtx) {
+func analyseFields(items []TableItemExpr, c *iterateCtx, isTable bool) {
 	for i := range items {
 		item := items[i]
 		if item.Field != nil {
@@ -592,6 +640,18 @@ func analyseFields(items []TableItemExpr, c *iterateCtx) {
 						c.stmtErr(&field.Pos, ErrMaxFieldLengthTooLarge)
 					}
 				}
+			} else {
+				if !isTable { // analysing a TYPE
+					typ, _, err := lookupInCtx[*TypeStmt](*field.Type.Def, c)
+					if err != nil { // type?
+						c.stmtErr(&field.Pos, err)
+						continue
+					}
+					if typ == nil {
+						c.stmtErr(&field.Pos, ErrUndefinedType(*field.Type.Def))
+						continue
+					}
+				}
 			}
 		}
 		if item.RefField != nil {
@@ -610,7 +670,7 @@ func analyseFields(items []TableItemExpr, c *iterateCtx) {
 		}
 		if item.NestedTable != nil {
 			nestedTable := &item.NestedTable.Table
-			analyseFields(nestedTable.Items, c)
+			analyseFields(nestedTable.Items, c, true)
 		}
 	}
 }
@@ -634,15 +694,17 @@ func getTableInheritanceChain(table *TableStmt, c *iterateCtx) (chain []tableNod
 	vf = func(t *TableStmt) error {
 		if t.Inherits != nil {
 			inherited := *t.Inherits
-			if err := resolveInCtx(inherited, c, func(t *TableStmt, pkg *PackageSchemaAST) error {
+			t, pkg, err := lookupInCtx[*TableStmt](inherited, c)
+			if err != nil {
+				return err
+			}
+			if t != nil {
 				node := tableNode{pkg: pkg, table: t}
 				if refCycle(node) {
 					return ErrCircularReferenceInInherits
 				}
 				chain = append(chain, node)
 				return vf(t)
-			}); err != nil {
-				return err
 			}
 		}
 		return nil

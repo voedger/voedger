@@ -105,7 +105,11 @@ func (a *asyncActualizer) init(ctx context.Context) (err error) {
 	hasIntentsExceptViewAndRecord, _, _ := iterate.FindFirstMap(iProjector.Intents, func(storage appdef.QName, _ appdef.QNames) bool {
 		return storage != state.View && storage != state.Record
 	})
-	nonBuffered := hasIntentsExceptViewAndRecord
+	// https://github.com/voedger/voedger/issues/1092
+	hasStatesExceptViewAndRecord, _, _ := iterate.FindFirstMap(iProjector.States, func(storage appdef.QName, _ appdef.QNames) bool {
+		return storage != state.View && storage != state.Record
+	})
+	nonBuffered := hasIntentsExceptViewAndRecord || hasStatesExceptViewAndRecord
 	p := &asyncProjector{
 		partition:             a.conf.Partition,
 		aametrics:             a.conf.AAMetrics,

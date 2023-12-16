@@ -23,6 +23,9 @@ var version string
 // path to SSH key (flag --ssh-key)
 var sshKey string
 
+// SSH port
+var sshPort string
+
 // skip checking nodes for the presence of the minimum allowable amount of RAM
 var skipNodeMemoryCheck bool
 
@@ -69,7 +72,7 @@ func execRootCmd(args []string, ver string) error {
 	)
 
 	rootCmd.PersistentFlags().BoolVar(&testMode, "test-mode", false, "Test mode")
-	rootCmd.PersistentFlags().StringVar(&sshKey, "ssh-key", "", "Path to SSH key")
+
 	rootCmd.PersistentFlags().BoolVar(&skipNodeMemoryCheck, "skip-node-memory-check", false, "Skip checking nodes for the presence of the minimum allowable amount of RAM")
 	rootCmd.PersistentFlags().BoolVar(&devMode, "dev-mode", false, "Use development mode for DB stack")
 	logger.SetLogLevel(getLoggerLevel())

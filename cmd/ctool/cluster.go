@@ -31,10 +31,15 @@ func newCluster() (*clusterType, error) {
 		exists:                false,
 		Draft:                 true,
 		sshKey:                sshKey,
+		SshPort:               sshPort,
 		Cmd:                   newCmd("", ""),
 		SkipStacks:            make([]string, 0),
 		ReplacedAddresses:     make([]string, 0),
 	}
+	if err := cluster.setEnv(); err != nil {
+		return nil, err
+	}
+
 	dir, _ := os.Getwd()
 	cluster.configFileName = filepath.Join(dir, clusterConfFileName)
 	cluster.exists = cluster.loadFromJSON() == nil
@@ -368,6 +373,7 @@ type clusterType struct {
 	Edition               string
 	ActualClusterVersion  string
 	DesiredClusterVersion string   `json:"DesiredClusterVersion,omitempty"`
+	SshPort               string   `json:"SSHPort,omitempty"`
 	Cmd                   *cmdType `json:"Cmd,omitempty"`
 	LastAttemptError      string   `json:"LastAttemptError,omitempty"`
 	SkipStacks            []string `json:"SkipStacks,omitempty"`
@@ -549,7 +555,16 @@ func (c *clusterType) loadFromJSON() error {
 		c.Nodes[i].cluster = c
 	}
 
+	if err == nil {
+		err = c.setEnv()
+	}
+
 	return err
+}
+
+// Installation of the necessary variables of the environment
+func (c *clusterType) setEnv() error {
+	return os.Setenv("VOEDGER_NODE_SSH_PORT", c.SshPort)
 }
 
 // nolint

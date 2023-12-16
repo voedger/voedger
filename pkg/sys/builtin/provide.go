@@ -26,4 +26,5 @@ func Provide(cfg *istructsmem.AppConfigType, adf appdef.IAppDefBuilder, buildInf
 	provideQryEcho(cfg, adf)
 	provideQryGRCount(cfg, adf)
 	proivideRenameQName(cfg, adf, asp)
+	provideSysIsActiveValidation(cfg)
 }

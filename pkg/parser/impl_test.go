@@ -108,7 +108,7 @@ func Test_BasicUsage(t *testing.T) {
 	singleton := builder.CDoc(appdef.NewQName("main", "SubscriptionProfile"))
 	require.Equal("Singletones are always CDOC. Error is thrown on attempt to declare it as WDOC or ODOC\nThese comments are included in the statement definition, but may be overridden with `WITH Comment=...`", singleton.Comment())
 
-	cmd := builder.Command(appdef.NewQName("main", "Orders"))
+	cmd := builder.Command(appdef.NewQName("main", "NewOrder"))
 	require.Equal("Commands can only be declared in workspaces\nCommand can have optional argument and/or unlogged argument\nCommand can return TYPE", cmd.Comment())
 
 	// type
@@ -174,11 +174,11 @@ func Test_BasicUsage(t *testing.T) {
 		if eventsCount == 1 {
 			require.Equal(1, len(ie.Kind()))
 			require.Equal(appdef.ProjectorEventKind_Execute, ie.Kind()[0])
-			require.Equal(appdef.NewQName("main", "Orders"), ie.On().QName())
+			require.Equal(appdef.NewQName("main", "NewOrder"), ie.On().QName())
 		} else if eventsCount == 2 {
 			require.Equal(1, len(ie.Kind()))
 			require.Equal(appdef.ProjectorEventKind_Execute, ie.Kind()[0])
-			require.Equal(appdef.NewQName("main", "Orders2"), ie.On().QName())
+			require.Equal(appdef.NewQName("main", "NewOrder2"), ie.On().QName())
 		}
 	})
 
@@ -257,7 +257,7 @@ func Test_CircularReferences(t *testing.T) {
 
 	// Tables
 	fs, err := ParseFile("file1.sql", `APPLICATION test();
-	TABLE table2 INHERITS table2 ();
+	ABSTRACT TABLE table2 INHERITS table2 ();
 	ABSTRACT TABLE table3 INHERITS table3 ();
 	ABSTRACT TABLE table4 INHERITS table5 ();
 	ABSTRACT TABLE table5 INHERITS table6 ();
@@ -578,8 +578,9 @@ func Test_AbstractTables(t *testing.T) {
 		"file1.sql:18:4: projector refers to abstract table AbstractTable",
 		"file1.sql:22:4: projector refers to abstract table AbstractTable",
 		"file1.sql:26:4: projector refers to abstract table AbstractTable",
+		"file1.sql:32:4: nested abstract table AbstractTable",
 		"file1.sql:34:3: use of abstract table AbstractTable",
-		"file1.sql:37:10: nested abstract table Nested",
+		"file1.sql:37:4: nested abstract table Nested",
 	}, "\n"))
 
 }
@@ -601,13 +602,10 @@ func Test_AbstractTables2(t *testing.T) {
 	pkg, err := BuildPackageSchema("test/pkg", []*FileSchemaAST{fs})
 	require.NoError(err)
 
-	packages, err := BuildAppSchema([]*PackageSchemaAST{
+	_, err = BuildAppSchema([]*PackageSchemaAST{
 		getSysPackageAST(),
 		pkg,
 	})
-	require.NoError(err)
-
-	err = BuildAppDefs(packages, appdef.New())
 	require.EqualError(err, strings.Join([]string{
 		"file1.sql:7:4: nested abstract table AbstractTable",
 	}, "\n"))
@@ -653,15 +651,12 @@ func Test_PanicUnknownFieldType(t *testing.T) {
 	pkg, err := BuildPackageSchema("test/pkg", []*FileSchemaAST{fs})
 	require.NoError(err)
 
-	packages, err := BuildAppSchema([]*PackageSchemaAST{
+	_, err = BuildAppSchema([]*PackageSchemaAST{
 		getSysPackageAST(),
 		pkg,
 	})
-	require.NoError(err)
-
-	err = BuildAppDefs(packages, appdef.New())
 	require.EqualError(err, strings.Join([]string{
-		"file1.sql:3:3: asdasd type not supported",
+		"file1.sql:3:3: undefined table: asdasd",
 	}, "\n"))
 
 }
@@ -1751,12 +1746,12 @@ func Test_Storages(t *testing.T) {
 	require.ErrorContains(err, "storages are only declared in sys package")
 }
 
-func buildPackage(qn string, sql string) *PackageSchemaAST {
+func buildPackage(sql string) *PackageSchemaAST {
 	fs, err := ParseFile("source.sql", sql)
 	if err != nil {
 		panic(err)
 	}
-	pkg, err := BuildPackageSchema(qn, []*FileSchemaAST{fs})
+	pkg, err := BuildPackageSchema("github.com/voedger/voedger/app1", []*FileSchemaAST{fs})
 	if err != nil {
 		panic(err)
 	}
@@ -1765,7 +1760,7 @@ func buildPackage(qn string, sql string) *PackageSchemaAST {
 
 func Test_OdocCmdArgs(t *testing.T) {
 	require := require.New(t)
-	pkgApp1 := buildPackage("github.com/voedger/voedger/app1", `
+	pkgApp1 := buildPackage(`
 
 	APPLICATION registry(
 	);
@@ -1814,7 +1809,7 @@ func Test_OdocCmdArgs(t *testing.T) {
 
 func Test_TypeContainers(t *testing.T) {
 	require := require.New(t)
-	pkgApp1 := buildPackage("github.com/voedger/voedger/app1", `
+	pkgApp1 := buildPackage(`
 
 APPLICATION registry(
 );
@@ -1878,7 +1873,7 @@ WORKSPACE Workspace1 (
 
 func Test_EmptyType(t *testing.T) {
 	require := require.New(t)
-	pkgApp1 := buildPackage("github.com/voedger/voedger/app1", `
+	pkgApp1 := buildPackage(`
 
 APPLICATION registry(
 );
@@ -1899,4 +1894,43 @@ TYPE EmptyType (
 
 	_, err = builder.Build()
 	require.NoError(err)
+}
+
+func Test_EmptyType1(t *testing.T) {
+	require := require.New(t)
+	pkgApp1 := buildPackage(`
+
+APPLICATION registry(
+);
+
+TYPE SomeType (
+	t int321
+);
+
+TABLE SomeTable INHERITS CDoc (
+	t int321
+)
+	`)
+
+	_, err := BuildAppSchema([]*PackageSchemaAST{pkgApp1, getSysPackageAST()})
+	require.EqualError(err, strings.Join([]string{
+		"source.sql:7:2: undefined type: int321",
+		"source.sql:11:2: undefined table: int321",
+	}, "\n"))
+
+}
+
+func Test_ODocUnknown(t *testing.T) {
+	require := require.New(t)
+	pkgApp1 := buildPackage(`APPLICATION registry();
+TABLE MyTable1 INHERITS ODocUnknown ( MyField ref(registry.Login) NOT NULL ); 
+`)
+
+	_, err := BuildAppSchema([]*PackageSchemaAST{pkgApp1, getSysPackageAST()})
+	require.EqualError(err, strings.Join([]string{
+		"source.sql:2:1: undefined table kind",
+		"source.sql:2:39: registry undefined",
+		"source.sql:2:1: ODocUnknown undefined",
+	}, "\n"))
+
 }
