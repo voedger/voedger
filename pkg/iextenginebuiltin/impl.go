@@ -29,7 +29,7 @@ func (e extensionEngine) Invoke(ctx context.Context, extName iextengine.ExtQName
 
 func (e extensionEngine) Close(ctx context.Context) {}
 
-func (f extensionEngineFactory) New(packageNameToLocalPath map[string]string, config *iextengine.ExtEngineConfig, numEngines int) (result []iextengine.IExtensionEngine) {
+func (f extensionEngineFactory) New(ctx context.Context, packages []iextengine.ExtensionPackage, config *iextengine.ExtEngineConfig, numEngines int) (result []iextengine.IExtensionEngine, err error) {
 	result = make([]iextengine.IExtensionEngine, numEngines)
 	for i := 0; i < numEngines; i++ {
 		result[i] = &extensionEngine{f.funcs}

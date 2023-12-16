@@ -7,6 +7,7 @@ package iextengine
 
 import (
 	"context"
+	"net/url"
 	"time"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -32,6 +33,8 @@ type ExtEngineConfig struct {
 	//
 	// Default value is 2^8 so the total available memory is 2^24 bytes
 	MemoryLimitPages uint
+
+	//Compile bool
 }
 
 type IExtensionIO interface {
@@ -62,9 +65,15 @@ func (n ExtQName) String() string {
 type BuiltInExtFunc func(ctx context.Context, io IExtensionIO) error
 type BuiltInExtFuncs map[ExtQName]BuiltInExtFunc // Provided to construct factory of engines
 
+type ExtensionPackage struct {
+	QualifiedName  string
+	ModuleUrl      *url.URL
+	ExtensionNames []string
+}
+
 type IExtensionEngineFactory interface {
 	// LocalPath is a path package data can be got from
-	// - packageNameToLocalPath is not used for ExtensionEngineKind_BuiltIn
+	// - packages is not used for ExtensionEngineKind_BuiltIn
 	// - config is not used for ExtensionEngineKind_BuiltIn
-	New(packageNameToLocalPath map[string]string, config *ExtEngineConfig, numEngines int) []IExtensionEngine
+	New(ctx context.Context, packages []ExtensionPackage, config *ExtEngineConfig, numEngines int) ([]IExtensionEngine, error)
 }

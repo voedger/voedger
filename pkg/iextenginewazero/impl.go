@@ -1,7 +1,7 @@
 /*
-* Copyright (c) 2022-present unTill Pro, Ltd.
-* @author Michael Saigachenko
- */
+  - Copyright (c) 2023-present unTill Software Development Group B. V.
+    @author Michael Saigachenko
+*/
 
 package iextenginewasm
 
@@ -11,36 +11,21 @@ import (
 	"fmt"
 	"io"
 	"math"
-	"net/url"
 	"os"
 	"runtime"
 	"strings"
 
 	"github.com/tetratelabs/wazero"
 	"github.com/tetratelabs/wazero/api"
-	"github.com/tetratelabs/wazero/experimental/sys"
 	"github.com/tetratelabs/wazero/imports/wasi_snapshot_preview1"
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/iextengine"
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
-type wazeroExtEngine struct {
-	data   []byte
+type wazeroExtPkg struct {
 	module api.Module
-	host   api.Module
-	//recoverMem api.Memory
-
-	//mwasi api.Module
-	// ce    api.ICallEngine
-	// cep   api.CallEngineParams
-
-	allocatedBufs []*allocatedBuf
-
-	keys          []istructs.IKey
-	keyBuilders   []istructs.IStateKeyBuilder
-	values        []istructs.IStateValue
-	valueBuilders []istructs.IStateValueBuilder
+	exts   map[string]api.Function
 
 	funcMalloc api.Function
 	funcFree   api.Function
@@ -53,10 +38,31 @@ type wazeroExtEngine struct {
 	funcGc           api.Function
 	funcOnReadValue  api.Function
 
-	ctx        context.Context
-	io         iextengine.IExtensionIO
-	exts       map[string]api.Function
-	wasiCloser api.Closer
+	allocatedBufs []*allocatedBuf
+	recoverMem    []byte
+}
+
+type wazeroExtEngine struct {
+	compile bool
+	config  *iextengine.ExtEngineConfig
+	modules map[string]*wazeroExtPkg
+	host    api.Module
+	rtm     wazero.Runtime
+	//recoverMem api.Memory
+
+	//mwasi api.Module
+	// ce    api.ICallEngine
+	// cep   api.CallEngineParams
+	keys          []istructs.IKey
+	keyBuilders   []istructs.IStateKeyBuilder
+	values        []istructs.IStateValue
+	valueBuilders []istructs.IStateValueBuilder
+	wasiCloser    api.Closer
+
+	// Invoke-related!
+	io  iextengine.IExtensionIO
+	ctx context.Context
+	pkg *wazeroExtPkg
 }
 
 type allocatedBuf struct {
@@ -65,38 +71,55 @@ type allocatedBuf struct {
 	cap  uint32
 }
 
-func ExtEngineWazeroFactory(ctx context.Context, moduleURL *url.URL, extensionNames []string, cfg iextengine.ExtEngineConfig) (e iextengine.IExtensionEngine, err error) {
+type extensionEngineFactory struct {
+	compile bool
+}
 
-	var wasmdata []byte
-	if moduleURL.Scheme == "file" && (moduleURL.Host == "" || strings.EqualFold("localhost", moduleURL.Scheme)) {
-		path := moduleURL.Path
-		if runtime.GOOS == "windows" {
-			path = strings.TrimPrefix(path, "/")
+func (f extensionEngineFactory) New(ctx context.Context, packages []iextengine.ExtensionPackage, config *iextengine.ExtEngineConfig, numEngines int) (engines []iextengine.IExtensionEngine, err error) {
+	for i := 0; i < numEngines; i++ {
+		engine := &wazeroExtEngine{
+			modules: make(map[string]*wazeroExtPkg),
+			config:  config,
+			compile: f.compile,
 		}
-
-		wasmdata, err = os.ReadFile(path)
+		err = engine.init(ctx)
 		if err != nil {
-			return nil, err
+			return engines, err
 		}
-	} else {
-		return nil, fmt.Errorf("unsupported URL: " + moduleURL.String())
+		engines = append(engines, engine)
 	}
 
-	impl := &wazeroExtEngine{data: wasmdata}
+	for _, pkg := range packages {
+		if pkg.ModuleUrl.Scheme == "file" && (pkg.ModuleUrl.Host == "" || strings.EqualFold("localhost", pkg.ModuleUrl.Scheme)) {
+			path := pkg.ModuleUrl.Path
+			if runtime.GOOS == "windows" {
+				path = strings.TrimPrefix(path, "/")
+			}
 
-	err = impl.init(ctx, extensionNames, cfg)
-	if err != nil {
-		return nil, err
+			wasmdata, err := os.ReadFile(path)
+
+			if err != nil {
+				return nil, err
+			}
+
+			for _, eng := range engines {
+				err = eng.(*wazeroExtEngine).initModule(ctx, pkg.QualifiedName, wasmdata, pkg.ExtensionNames)
+				if err != nil {
+					return nil, err
+				}
+			}
+		} else {
+			return nil, fmt.Errorf("unsupported URL: " + pkg.ModuleUrl.String())
+		}
 	}
-
-	return impl, nil
+	return engines, nil
 }
 
 func (f *wazeroExtEngine) SetLimits(limits iextengine.ExtensionLimits) {
 	//f.cep.Duration = limits.ExecutionInterval
 }
 
-func (f *wazeroExtEngine) importFuncs(funcs map[string]*api.Function) error {
+func (f *wazeroExtPkg) importFuncs(funcs map[string]*api.Function) error {
 
 	for k, v := range funcs {
 		*v = f.module.ExportedFunction(k)
@@ -107,9 +130,9 @@ func (f *wazeroExtEngine) importFuncs(funcs map[string]*api.Function) error {
 	return nil
 }
 
-func (f *wazeroExtEngine) init(ctx context.Context, extNames []string, config iextengine.ExtEngineConfig) error {
+func (f *wazeroExtEngine) init(ctx context.Context) error {
 	var err error
-	var memPages = config.MemoryLimitPages
+	var memPages = f.config.MemoryLimitPages
 	if memPages == 0 {
 		memPages = iextengine.DefaultMemoryLimitPages
 	}
@@ -124,19 +147,27 @@ func (f *wazeroExtEngine) init(ctx context.Context, extNames []string, config ie
 		return fmt.Errorf("the minimum limit of memory is: %.1f bytes, requested limit is: %.1f", limit, float32(memoryLimit))
 	}
 
-	rtConf := wazero.NewRuntimeConfigInterpreter().
+	var rtConf wazero.RuntimeConfig
+
+	if f.compile {
+		rtConf = wazero.NewRuntimeConfigCompiler()
+	} else {
+		rtConf = wazero.NewRuntimeConfigInterpreter()
+	}
+	rtConf = rtConf.
 		WithCoreFeatures(api.CoreFeatureBulkMemoryOperations).
-		//FIXME: WithCloseOnContextDone(true).
+		WithCloseOnContextDone(true).
+		WithMemoryCapacityFromMax(true).
 		WithMemoryLimitPages(uint32(memPages))
 
-	rtm := wazero.NewRuntimeWithConfig(ctx, rtConf)
-	f.wasiCloser, err = wasi_snapshot_preview1.Instantiate(ctx, rtm)
+	f.rtm = wazero.NewRuntimeWithConfig(ctx, rtConf)
+	f.wasiCloser, err = wasi_snapshot_preview1.Instantiate(ctx, f.rtm)
 
 	if err != nil {
 		return err
 	}
 
-	f.host, err = rtm.NewHostModuleBuilder("env").
+	f.host, err = f.rtm.NewHostModuleBuilder("env").
 		NewFunctionBuilder().WithFunc(f.hostGetKey).Export("hostGetKey").
 		NewFunctionBuilder().WithFunc(f.hostMustExist).Export("hostGetValue").
 		NewFunctionBuilder().WithFunc(f.hostCanExist).Export("hostQueryValue").
@@ -193,65 +224,81 @@ func (f *wazeroExtEngine) init(ctx context.Context, extNames []string, config ie
 		return err
 	}
 
-	compiledWasm, err := rtm.CompileModule(ctx, f.data)
-	if err != nil {
-		return err
+	f.keyBuilders = make([]istructs.IStateKeyBuilder, 0, keysBuildersCapacity)
+	f.values = make([]istructs.IStateValue, 0, valuesCapacity)
+	f.valueBuilders = make([]istructs.IStateValueBuilder, 0, valueBuildersCapacity)
+
+	return nil
+
+}
+
+func (f *wazeroExtEngine) initModule(ctx context.Context, pkgName string, wasmdata []byte, extNames []string) (err error) {
+	ePkg := &wazeroExtPkg{}
+
+	moduleCfg := wazero.NewModuleConfig().WithName("wasm").WithStdout(io.Discard).WithStderr(io.Discard)
+	if f.compile {
+		compiledWasm, err := f.rtm.CompileModule(ctx, wasmdata)
+		if err != nil {
+			return err
+		}
+
+		ePkg.module, err = f.rtm.InstantiateModule(ctx, compiledWasm, moduleCfg)
+		if err != nil {
+			return err
+		}
+	} else {
+		ePkg.module, err = f.rtm.InstantiateWithConfig(ctx, wasmdata, moduleCfg)
+		if err != nil {
+			return err
+		}
 	}
 
-	f.module, err = rtm.InstantiateModule(ctx, compiledWasm, wazero.NewModuleConfig().WithName("wasm").WithStdout(io.Discard).WithStderr(io.Discard))
-	if err != nil {
-		return err
-	}
-
-	if err != nil {
-		return err
-	}
-
-	err = f.importFuncs(map[string]*api.Function{
-		"malloc":               &f.funcMalloc,
-		"free":                 &f.funcFree,
-		"WasmAbiVersion_0_0_1": &f.funcVer,
-		"WasmGetHeapInuse":     &f.funcGetHeapInuse,
-		"WasmGetHeapSys":       &f.funcGetHeapSys,
-		"WasmGetMallocs":       &f.funcGetMallocs,
-		"WasmGetFrees":         &f.funcGetFrees,
-		"WasmGC":               &f.funcGc,
-		"WasmOnReadValue":      &f.funcOnReadValue,
+	err = ePkg.importFuncs(map[string]*api.Function{
+		"malloc":               &ePkg.funcMalloc,
+		"free":                 &ePkg.funcFree,
+		"WasmAbiVersion_0_0_1": &ePkg.funcVer,
+		"WasmGetHeapInuse":     &ePkg.funcGetHeapInuse,
+		"WasmGetHeapSys":       &ePkg.funcGetHeapSys,
+		"WasmGetMallocs":       &ePkg.funcGetMallocs,
+		"WasmGetFrees":         &ePkg.funcGetFrees,
+		"WasmGC":               &ePkg.funcGc,
+		"WasmOnReadValue":      &ePkg.funcOnReadValue,
 	})
 	if err != nil {
 		return err
 	}
 
 	// Check WASM SDK version
-	_, err = f.funcVer.Call(ctx)
+	_, err = ePkg.funcVer.Call(ctx)
 	if err != nil {
 		return errors.New("unsupported WASM version")
 	}
-
-	f.keyBuilders = make([]istructs.IStateKeyBuilder, 0, keysBuildersCapacity)
-	f.values = make([]istructs.IStateValue, 0, valuesCapacity)
-	f.valueBuilders = make([]istructs.IStateValueBuilder, 0, valueBuildersCapacity)
-
-	res, err := f.funcMalloc.Call(ctx, uint64(WasmPreallocatedBufferSize))
+	res, err := ePkg.funcMalloc.Call(ctx, uint64(WasmPreallocatedBufferSize))
 	if err != nil {
 		return err
 	}
-	f.allocatedBufs = append(f.allocatedBufs, &allocatedBuf{
+	ePkg.allocatedBufs = append(ePkg.allocatedBufs, &allocatedBuf{
 		addr: uint32(res[0]),
 		offs: 0,
 		cap:  WasmPreallocatedBufferSize,
 	})
 
-	// TODO: f.recoverMem = f.module.Memory().Backup()
+	backup, read := ePkg.module.Memory().Read(0, ePkg.module.Memory().Size())
+	if !read {
+		return fmt.Errorf("unable to backup memory")
+	}
 
-	f.exts = make(map[string]api.Function)
+	ePkg.recoverMem = make([]byte, ePkg.module.Memory().Size())
+	copy(ePkg.recoverMem[0:], backup[0:])
+
+	ePkg.exts = make(map[string]api.Function)
 
 	for _, name := range extNames {
 		if !strings.HasPrefix(name, "Wasm") && name != "alloc" && name != "free" &&
 			name != "calloc" && name != "realloc" && name != "malloc" && name != "_start" && name != "memory" {
-			expFunc := f.module.ExportedFunction(name)
+			expFunc := ePkg.module.ExportedFunction(name)
 			if expFunc != nil {
-				f.exts[name] = expFunc
+				ePkg.exts[name] = expFunc
 			} else {
 				return missingExportedFunction(name)
 			}
@@ -260,13 +307,15 @@ func (f *wazeroExtEngine) init(ctx context.Context, extNames []string, config ie
 		}
 	}
 
+	f.modules[pkgName] = ePkg
 	return nil
-
 }
 
 func (f *wazeroExtEngine) Close(ctx context.Context) {
-	if f.module != nil {
-		f.module.Close(ctx)
+	for _, m := range f.modules {
+		if m.module != nil {
+			m.module.Close(ctx)
+		}
 	}
 	if f.host != nil {
 		f.host.Close(ctx)
@@ -277,14 +326,22 @@ func (f *wazeroExtEngine) Close(ctx context.Context) {
 }
 
 func (f *wazeroExtEngine) recover() {
-	//TODO: f.module.Memory().Restore(f.recoverMem)
+	if !f.pkg.module.Memory().Write(0, f.pkg.recoverMem) {
+		panic("unable to restore memory")
+	}
 }
 
-func (f *wazeroExtEngine) Invoke(ctx context.Context, extentionName iextengine.ExtQName, io iextengine.IExtensionIO) (err error) {
+func (f *wazeroExtEngine) Invoke(ctx context.Context, extention iextengine.ExtQName, io iextengine.IExtensionIO) (err error) {
 
-	funct := f.exts[extentionName.ExtName]
+	var ok bool
+	f.pkg, ok = f.modules[extention.PackageName]
+	if !ok {
+		return undefinedPackage(extention.PackageName)
+	}
+
+	funct := f.pkg.exts[extention.ExtName]
 	if funct == nil {
-		return invalidExtensionName(extentionName.ExtName)
+		return invalidExtensionName(extention.ExtName)
 	}
 
 	f.io = io
@@ -302,15 +359,11 @@ func (f *wazeroExtEngine) Invoke(ctx context.Context, extentionName iextengine.E
 	if len(f.valueBuilders) > 0 {
 		f.valueBuilders = make([]istructs.IStateValueBuilder, 0, valueBuildersCapacity)
 	}
-	for i := range f.allocatedBufs {
-		f.allocatedBufs[i].offs = 0 // reuse pre-allocated memory
+	for i := range f.pkg.allocatedBufs {
+		f.pkg.allocatedBufs[i].offs = 0 // reuse pre-allocated memory
 	}
 
 	_, err = funct.Call(ctx)
-
-	if err != nil {
-		f.recover()
-	}
 
 	if err != nil {
 		f.recover()
@@ -320,14 +373,10 @@ func (f *wazeroExtEngine) Invoke(ctx context.Context, extentionName iextengine.E
 }
 
 func (f *wazeroExtEngine) decodeStr(ptr, size uint32) string {
-	if bytes, ok := f.module.Memory().Read(uint32(ptr), uint32(size)); ok {
+	if bytes, ok := f.pkg.module.Memory().Read(uint32(ptr), uint32(size)); ok {
 		return string(bytes)
 	}
 	panic(ErrUnableToReadMemory)
-}
-
-func (f *wazeroExtEngine) fdWrite(fd, iovs, iovsCount, resultSize uint32) sys.Errno {
-	return 0
 }
 
 func (f *wazeroExtEngine) hostGetKey(storagePtr, storageSize, entityPtr, entitySize uint32) (res uint64) {
@@ -375,7 +424,7 @@ func (f *wazeroExtEngine) hostReadValues(keyId uint64) {
 			f.keys[keyIndex] = key
 			f.values[valueIndex] = value
 		}
-		_, err = f.funcOnReadValue.Call(f.ctx, uint64(keyIndex), uint64(valueIndex))
+		_, err = f.pkg.funcOnReadValue.Call(f.ctx, uint64(keyIndex), uint64(valueIndex))
 		return err
 	})
 	if err != nil {
@@ -420,7 +469,7 @@ func (f *wazeroExtEngine) allocAndSend(buf []byte) (result uint64) {
 	if e != nil {
 		panic(e)
 	}
-	if !f.module.Memory().Write(addrPkg, buf) {
+	if !f.pkg.module.Memory().Write(addrPkg, buf) {
 		panic(e)
 	}
 	return (uint64(addrPkg) << uint64(bitsInFourBytes)) | uint64(len(buf))
@@ -619,10 +668,10 @@ func (f *wazeroExtEngine) hostValueLength(id uint64) (result uint32) {
 }
 
 func (f *wazeroExtEngine) allocBuf(size uint32) (addr uint32, err error) {
-	for i := range f.allocatedBufs {
-		if f.allocatedBufs[i].cap-f.allocatedBufs[i].offs >= size {
-			addr = f.allocatedBufs[i].addr + f.allocatedBufs[i].offs
-			f.allocatedBufs[i].offs += uint32(size)
+	for i := range f.pkg.allocatedBufs {
+		if f.pkg.allocatedBufs[i].cap-f.pkg.allocatedBufs[i].offs >= size {
+			addr = f.pkg.allocatedBufs[i].addr + f.pkg.allocatedBufs[i].offs
+			f.pkg.allocatedBufs[i].offs += uint32(size)
 			return
 		}
 	}
@@ -634,12 +683,12 @@ func (f *wazeroExtEngine) allocBuf(size uint32) (addr uint32, err error) {
 	}
 
 	var res []uint64
-	res, err = f.funcMalloc.Call(f.ctx, uint64(newBufferSize))
+	res, err = f.pkg.funcMalloc.Call(f.ctx, uint64(newBufferSize))
 	if err != nil {
 		return 0, err
 	}
 	addr = uint32(res[0])
-	f.allocatedBufs = append(f.allocatedBufs, &allocatedBuf{
+	f.pkg.allocatedBufs = append(f.pkg.allocatedBufs, &allocatedBuf{
 		addr: addr,
 		offs: 0,
 		cap:  newBufferSize,
@@ -647,40 +696,60 @@ func (f *wazeroExtEngine) allocBuf(size uint32) (addr uint32, err error) {
 	return addr, nil
 }
 
-func (f *wazeroExtEngine) getFrees(ctx context.Context) (uint64, error) {
-	res, err := f.funcGetFrees.Call(ctx)
+func (f *wazeroExtEngine) getFrees(packageName string, ctx context.Context) (uint64, error) {
+	pkg, ok := f.modules[packageName]
+	if !ok {
+		return 0, undefinedPackage(packageName)
+	}
+	res, err := pkg.funcGetFrees.Call(ctx)
 	if err != nil {
 		return 0, err
 	}
 	return res[0], nil
 }
 
-func (f *wazeroExtEngine) gc(ctx context.Context) error {
-	_, err := f.funcGc.Call(ctx)
+func (f *wazeroExtEngine) gc(packageName string, ctx context.Context) error {
+	pkg, ok := f.modules[packageName]
+	if !ok {
+		return undefinedPackage(packageName)
+	}
+	_, err := pkg.funcGc.Call(ctx)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func (f *wazeroExtEngine) getHeapinuse(ctx context.Context) (uint64, error) {
-	res, err := f.funcGetHeapInuse.Call(ctx)
+func (f *wazeroExtEngine) getHeapinuse(packageName string, ctx context.Context) (uint64, error) {
+	pkg, ok := f.modules[packageName]
+	if !ok {
+		return 0, undefinedPackage(packageName)
+	}
+	res, err := pkg.funcGetHeapInuse.Call(ctx)
 	if err != nil {
 		return 0, err
 	}
 	return res[0], nil
 }
 
-func (f *wazeroExtEngine) getHeapSys(ctx context.Context) (uint64, error) {
-	res, err := f.funcGetHeapSys.Call(ctx)
+func (f *wazeroExtEngine) getHeapSys(packageName string, ctx context.Context) (uint64, error) {
+	pkg, ok := f.modules[packageName]
+	if !ok {
+		return 0, undefinedPackage(packageName)
+	}
+	res, err := pkg.funcGetHeapSys.Call(ctx)
 	if err != nil {
 		return 0, err
 	}
 	return res[0], nil
 }
 
-func (f *wazeroExtEngine) getMallocs(ctx context.Context) (uint64, error) {
-	res, err := f.funcGetMallocs.Call(ctx)
+func (f *wazeroExtEngine) getMallocs(packageName string, ctx context.Context) (uint64, error) {
+	pkg, ok := f.modules[packageName]
+	if !ok {
+		return 0, undefinedPackage(packageName)
+	}
+	res, err := pkg.funcGetMallocs.Call(ctx)
 	if err != nil {
 		return 0, err
 	}
@@ -743,7 +812,7 @@ func (f *wazeroExtEngine) hostRowWriterPutBytes(id uint64, typ uint32, namePtr u
 
 	var bytes []byte
 	var ok bool
-	bytes, ok = f.module.Memory().Read(uint32(valuePtr), uint32(valueSize))
+	bytes, ok = f.pkg.module.Memory().Read(uint32(valuePtr), uint32(valueSize))
 	if !ok {
 		panic(ErrUnableToReadMemory)
 	}

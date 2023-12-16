@@ -1,7 +1,7 @@
 /*
-* Copyright (c) 2022-present unTill Pro, Ltd.
-* @author Michael Saigachenko
- */
+  - Copyright (c) 2023-present unTill Software Development Group B. V.
+    @author Michael Saigachenko
+*/
 
 package iextenginewasm
 
@@ -16,7 +16,7 @@ func bench_purecall(b *testing.B) {
 	ctx := context.Background()
 	const simple = "simple"
 	moduleUrl := testModuleURL("./_testdata/allocs/pkg.wasm")
-	ee, err := ExtEngineWazeroFactory(ctx, moduleUrl, []string{simple}, iextengine.ExtEngineConfig{MemoryLimitPages: 0xffff})
+	ee, err := testFactoryHelper(ctx, moduleUrl, []string{simple}, iextengine.ExtEngineConfig{MemoryLimitPages: 0xffff}, false)
 	if err != nil {
 		panic(err)
 	}
@@ -38,7 +38,7 @@ func bench_gc(b *testing.B, cycles int) {
 	const arrReset = "arrReset"
 	ctx := context.Background()
 	moduleUrl := testModuleURL("./_testdata/allocs/pkggc.wasm")
-	ee, err := ExtEngineWazeroFactory(ctx, moduleUrl, []string{arrAppend, arrReset}, iextengine.ExtEngineConfig{MemoryLimitPages: 0xffff})
+	ee, err := testFactoryHelper(ctx, moduleUrl, []string{arrAppend, arrReset}, iextengine.ExtEngineConfig{MemoryLimitPages: 0xffff}, false)
 	if err != nil {
 		panic(err)
 	}
@@ -56,7 +56,7 @@ func bench_gc(b *testing.B, cycles int) {
 			panic(e)
 		}
 		b.StartTimer()
-		if e := ee.(*wazeroExtEngine).gc(ctx); e != nil {
+		if e := ee.(*wazeroExtEngine).gc(testPkg, ctx); e != nil {
 			panic(e)
 		}
 	}
@@ -90,7 +90,7 @@ func Benchmark_GarbageCollection(b *testing.B) {
 	})
 }
 
-func bench_extensions(b *testing.B, gc bool) {
+func bench_extensions(b *testing.B, gc bool, compile bool) {
 
 	funcs := []string{"oneGetOneIntent5calls", "oneGetNoIntents2calls", "oneGetLongStr3calls", "oneKey1call", "doNothing"}
 
@@ -100,17 +100,17 @@ func bench_extensions(b *testing.B, gc bool) {
 		wsm = "./_testdata/benchmarks/pkggc.wasm"
 	}
 	moduleUrl := testModuleURL(wsm)
-	ee, err := ExtEngineWazeroFactory(ctx, moduleUrl, funcs, iextengine.ExtEngineConfig{MemoryLimitPages: 0xffff})
+	ee, err := testFactoryHelper(ctx, moduleUrl, funcs, iextengine.ExtEngineConfig{MemoryLimitPages: 0xffff}, compile)
 	if err != nil {
 		panic(err)
 	}
 	defer ee.Close(ctx)
-
 	for _, extname := range funcs {
+		ext := iextengine.NewExtQName(testPkg, extname)
 		b.Run(extname, func(b *testing.B) {
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
-				err := ee.Invoke(context.Background(), iextengine.NewExtQName("", extname), extIO)
+				err := ee.Invoke(context.Background(), ext, extIO)
 				if err != nil {
 					panic(err)
 				}
@@ -130,17 +130,22 @@ Benchmark_Extensions_NoGc/oneKey1call-20                 	 4694110	       243.9 
 Benchmark_Extensions_NoGc/doNothing-20                   	19467026	        61.33 ns/op	       0 B/op	       0 allocs/op
 */
 func Benchmark_Extensions_NoGc(b *testing.B) {
-	bench_extensions(b, false)
+	b.Run("Compiler", func(b *testing.B) {
+		bench_extensions(b, false, true)
+	})
+	b.Run("Interpreter", func(b *testing.B) {
+		bench_extensions(b, false, false)
+	})
 }
 func Skip_Benchmark_Extensions_WithGc(b *testing.B) {
-	bench_extensions(b, true)
+	bench_extensions(b, true, true)
 }
 
 func benchmarkRecover(b *testing.B, limitPages uint, expectedRuns int) {
 	const arrAppend2 = "arrAppend2"
 	ctx := context.Background()
 	moduleUrl := testModuleURL("./_testdata/allocs/pkg.wasm")
-	ee, err := ExtEngineWazeroFactory(ctx, moduleUrl, []string{arrAppend2}, iextengine.ExtEngineConfig{MemoryLimitPages: limitPages})
+	ee, err := testFactoryHelper(ctx, moduleUrl, []string{arrAppend2}, iextengine.ExtEngineConfig{MemoryLimitPages: limitPages}, false)
 	if err != nil {
 		panic(err)
 	}
@@ -172,7 +177,7 @@ func benchmarkRecover(b *testing.B, limitPages uint, expectedRuns int) {
 func benchmarkRecoverClean(b *testing.B, limitPages uint) {
 	ctx := context.Background()
 	moduleUrl := testModuleURL("./_testdata/allocs/pkg.wasm")
-	ee, err := ExtEngineWazeroFactory(ctx, moduleUrl, []string{}, iextengine.ExtEngineConfig{MemoryLimitPages: limitPages})
+	ee, err := testFactoryHelper(ctx, moduleUrl, []string{}, iextengine.ExtEngineConfig{MemoryLimitPages: limitPages}, false)
 	if err != nil {
 		panic(err)
 	}
