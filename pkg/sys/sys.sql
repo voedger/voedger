@@ -370,12 +370,22 @@ ABSTRACT WORKSPACE Workspace (
 		PRIMARY KEY ((PartKey), DocQName, DocID, ElementID)
 	) AS RESULT OF ProjectorCollection;
 
+	-- Deprecated, use Uniques2
 	VIEW Uniques (
 		QName qname NOT NULL, -- Doc QName
 		ValuesHash int64 NOT NULL,
 		Values bytes(65535) NOT NULL,
 		ID ref,
 		PRIMARY KEY ((QName, ValuesHash), Values) -- keep this, no better solution
+	) AS RESULT OF ApplyUniques;
+
+	VIEW Uniques2 (
+		QName qname NOT NULL, -- Doc QName
+		ValuesHash int64 NOT NULL,
+		UniqueNumber int32 NOT NULL,
+		Values bytes(65535) NOT NULL,
+		ID ref,
+		PRIMARY KEY ((QName, ValuesHash), Values) -- partitioning is not optimal, no better solution
 	) AS RESULT OF ApplyUniques;
 
 	VIEW ChildWorkspaceIdx (

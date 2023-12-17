@@ -135,6 +135,9 @@ func getUniqueKeyValues2(rec istructs.IRowReader, orderedUniqueFields orderedUni
 			binary.Write(buf, binary.BigEndian, val) // nolint
 		}
 	}
+	if buf.Len() > int(appdef.MaxFieldLength) {
+		return fmt.Errorf("%w: resulting len is %d, max %d is allowed. Decrese  AZZ", errUniqueValueTooLong)
+	}
 	return buf.Bytes()
 }
 
