@@ -13,6 +13,17 @@ utils_SSH_OPTS() {
 echo "$opts"
 }
 
+utils_SCP_OPTS() {
+
+    opts="-q -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=ERROR"
+
+    if [ -n "${VOEDGER_NODE_SSH_PORT:-}" ]; then
+        opts+=" -P ${VOEDGER_NODE_SSH_PORT}"
+    fi
+
+echo "$opts"
+}
+
 utils_ssh() {
   local ssh_options_string=$(utils_SSH_OPTS)
 
@@ -24,7 +35,7 @@ utils_ssh() {
 }
 
 utils_scp() {
-  local ssh_options_string=$(utils_SSH_OPTS)
+  local ssh_options_string=$(utils_SCP_OPTS)
 
   IFS=' ' read -r -a ssh_options <<< "$ssh_options_string"
   scp "${ssh_options[@]}" "$@"

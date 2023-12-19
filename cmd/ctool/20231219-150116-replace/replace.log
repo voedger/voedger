@@ -1,0 +1,7 @@
++ echo 'TEST_VAR = test_value'
+TEST_VAR = test_value
++ '[' test_value '!=' test_value ']'
+TEST_VAR = new_test_value
++ echo 'TEST_VAR = new_test_value'
++ '[' new_test_value '!=' test_value ']'
++ exit 1
