@@ -22,8 +22,8 @@ func applyViewSubjectsIdxProjector(event istructs.IPLogEvent, st istructs.IState
 			return nil
 		}
 
-		login := cdocSubject.AsString(Field_Login)
-		skbViewSubjectsIdx, err := GetSubjectIdxViewKeyBuilder(login, st)
+		actualLogin := cdocSubject.AsString(Field_Login) // cdoc.sys.Subject.Login <- cdoc.sys.Invite.ActualLogin by ap.sys.ApplyJoinWorkspace
+		skbViewSubjectsIdx, err := GetSubjectIdxViewKeyBuilder(actualLogin, st)
 		if err != nil {
 			// notest
 			return err

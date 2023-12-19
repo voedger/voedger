@@ -39,37 +39,24 @@ func applyJoinWorkspace(timeFunc coreutils.TimeFunc, federation coreutils.IFeder
 			return
 		}
 
-		// cdoc.sys.SubjectIdx by cdoc.sys.Invite.ActualLogin or by cdoc.sys.Invite.Login exists -> do nothing, see https://github.com/voedger/voedger/issues/1107
 		login := svCDocInvite.AsString(Field_Login)
-		skbViewSubjectsIdx, err := GetSubjectIdxViewKeyBuilder(login, s)
+		exists, err := SubjectExistByLogin(login, s)
 		if err != nil {
 			// notest
 			return err
 		}
-		_, ok, err := s.CanExist(skbViewSubjectsIdx)
-		if err != nil {
-			// notest
-			return err
-		}
-		if ok {
+		if exists {
 			// for backward compatibility
-			// TODO: what to write into the key of view.sys.SubjectsIdx: Login or ActualLogin?
-			// ActualLogin -> this if block will provide the backward compatibility for existing storages
 			// cdoc.sys.SubjectIdx by cdoc.sys.Invite.Login exists -> do nothing, see https://github.com/voedger/voedger/issues/1107
 			return nil
 		}
 		actualLogin := svCDocInvite.AsString(field_ActualLogin)
-		skbViewSubjectsIdx, err = GetSubjectIdxViewKeyBuilder(actualLogin, s)
+		exists, err = SubjectExistByLogin(actualLogin, s)
 		if err != nil {
 			// notest
 			return err
 		}
-		_, ok, err = s.CanExist(skbViewSubjectsIdx)
-		if err != nil {
-			// notest
-			return err
-		}
-		if ok {
+		if exists {
 			// cdoc.sys.SubjectIdx by cdoc.sys.Invite.ActualLogin -> do nothing, see https://github.com/voedger/voedger/issues/1107
 			return nil
 		}
@@ -93,7 +80,9 @@ func applyJoinWorkspace(timeFunc coreutils.TimeFunc, federation coreutils.IFeder
 			fmt.Sprintf("api/%s/%d/c.sys.CreateJoinedWorkspace", appQName, svCDocInvite.AsInt64(field_InviteeProfileWSID)),
 			fmt.Sprintf(`{"args":{"Roles":"%s","InvitingWorkspaceWSID":%d,"WSName":"%s"}}`,
 				svCDocInvite.AsString(Field_Roles), event.Workspace(), svCDocWorkspaceDescriptor.AsString(authnz.Field_WSName)),
-			coreutils.WithAuthorizeBy(token))
+			coreutils.WithAuthorizeBy(token),
+			coreutils.WithDiscardResponse(),
+		)
 		if err != nil {
 			return
 		}

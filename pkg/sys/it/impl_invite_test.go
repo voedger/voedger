@@ -6,8 +6,10 @@ package sys_it
 
 import (
 	"fmt"
+	"log"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -16,6 +18,12 @@ import (
 	coreutils "github.com/voedger/voedger/pkg/utils"
 	it "github.com/voedger/voedger/pkg/vit"
 )
+
+func TestMain(t *testing.T) {
+	gmtTimeLoc := time.FixedZone("GMT", 0)
+	s := time.Now().In(gmtTimeLoc).Format("Mon, 02 Jan 2006 15:04:05.000 GMT")
+	log.Println(s)
+}
 
 func TestInvite_BasicUsage(t *testing.T) {
 	require := require.New(t)

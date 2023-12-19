@@ -83,3 +83,11 @@ func GetSubjectIdxViewKeyBuilder(login string, s istructs.IState) (istructs.ISta
 	skbViewSubjectsIdx.PutString(Field_Login, login)
 	return skbViewSubjectsIdx, nil
 }
+
+func SubjectExistByLogin(login string, state istructs.IState) (ok bool, _ error) {
+	skbViewSubjectsIdx, err := GetSubjectIdxViewKeyBuilder(login, state)
+	if err == nil {
+		_, ok, err = state.CanExist(skbViewSubjectsIdx)
+	}
+	return ok, err
+}
