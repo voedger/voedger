@@ -8,6 +8,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"os"
 
 	"github.com/untillpro/goutils/logger"
 )
@@ -44,11 +45,16 @@ func seNodeControllerFunction(n *nodeType) error {
 
 	if err = deployDocker(n); err != nil {
 		logger.Error(err.Error())
-	} else {
-		n.success()
+		return err
 	}
 
-	return err
+	if err = copyCtoolAndKeyToNode(n); err != nil {
+		logger.Error(err.Error())
+		return err
+	}
+
+	n.success()
+	return nil
 }
 
 func setHostname(node *nodeType) error {
@@ -132,7 +138,7 @@ func seClusterControllerFunction(c *clusterType) error {
 	var err error
 
 	switch c.Cmd.Kind {
-	case ckInit:
+	case ckInit, ckUpgrade:
 		err = initSeCluster(c)
 	case ckReplace:
 		var n *nodeType
@@ -634,5 +640,22 @@ func nodeIsLive(node *nodeType) error {
 		run("host-check.sh", node.nodeName()); err != nil {
 		return err
 	}
+	return nil
+}
+
+func copyCtoolAndKeyToNode(node *nodeType) error {
+
+	ctoolPath, err := os.Executable()
+
+	if err != nil {
+		return err
+	}
+
+	logger.Info(fmt.Sprintf("copying ctool and key to %s [%s]", node.nodeName(), node.address()))
+	if err := newScriptExecuter(node.cluster.sshKey, node.nodeName()).
+		run("copy-ctool.sh", ctoolPath, node.cluster.sshKey, node.address()); err != nil {
+		return err
+	}
+
 	return nil
 }

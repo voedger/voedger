@@ -27,18 +27,21 @@ func newRepeatCmd() *cobra.Command {
 }
 
 func repeat(cmd *cobra.Command, arg []string) error {
-	cluster, err := newCluster()
+	cluster := newCluster()
+	var err error
+
+	if !cluster.existsNodeError() && (cluster.Cmd == nil || cluster.Cmd.isEmpty()) {
+		logger.Info("no active command found to repeat")
+		return nil
+	}
+
+	err = cluster.checkVersion()
 	if err != nil {
 		return err
 	}
 
 	// nolint
 	defer cluster.saveToJSON()
-
-	if !cluster.existsNodeError() && (cluster.Cmd == nil || cluster.Cmd.isEmpty()) {
-		logger.Info("no active command found to repeat")
-		return nil
-	}
 
 	// nolint
 	mkCommandDirAndLogFile(cmd, cluster)

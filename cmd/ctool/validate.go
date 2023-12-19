@@ -6,6 +6,8 @@
 package main
 
 import (
+	"errors"
+
 	"github.com/spf13/cobra"
 	"github.com/untillpro/goutils/logger"
 )
@@ -20,22 +22,27 @@ func newValidateCmd() *cobra.Command {
 
 func validate(cmd *cobra.Command, arg []string) error {
 
-	cluster, err := newCluster()
-	if err != nil {
-		return err
-	}
+	cluster := newCluster()
 
 	// nolint
 	mkCommandDirAndLogFile(cmd, cluster)
 
 	if !cluster.exists {
-		logger.Error(red(ErrClusterConfNotFound.Error()))
 		return ErrClusterConfNotFound
 	}
 
-	err = cluster.validate()
+	err := cluster.validate()
 	if err == nil {
 		logger.Info(green("cluster configuration is ok"))
 	}
+
+	if !cluster.Draft && !cluster.Cmd.isEmpty() {
+		err = errors.Join(err, ErrUncompletedCommandFound)
+	}
+
+	if e := cluster.checkVersion(); e != nil {
+		err = errors.Join(err, e)
+	}
+
 	return err
 }

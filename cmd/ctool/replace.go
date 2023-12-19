@@ -30,7 +30,10 @@ func newReplaceCmd() *cobra.Command {
 
 func replace(cmd *cobra.Command, arg []string) error {
 
-	cluster, err := newCluster()
+	cluster := newCluster()
+	var err error
+
+	err = cluster.checkVersion()
 	if err != nil {
 		return err
 	}
@@ -39,7 +42,7 @@ func replace(cmd *cobra.Command, arg []string) error {
 	defer cluster.saveToJSON()
 
 	c := newCmd(ckReplace, strings.Join(arg, " "))
-	if err := cluster.applyCmd(c); err != nil {
+	if err = cluster.applyCmd(c); err != nil {
 		return err
 	}
 
