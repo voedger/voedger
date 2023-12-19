@@ -11,10 +11,11 @@ const (
 	field_ValuesHash = "ValuesHash"
 	field_QName      = "QName"
 	field_Values     = "Values"
+	field_UniqueID   = "UniqueID"
 	zeroByte         = byte(0)
 )
 
 var (
 	qNameApplyUniques = appdef.NewQName(appdef.SysPackage, "ApplyUniques")
-	qNameViewUniques  = appdef.NewQName(appdef.SysPackage, "Uniques")
+	qNameViewUniques  = appdef.NewQName(appdef.SysPackage, "Uniques2")
 )

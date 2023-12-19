@@ -87,7 +87,7 @@ func storedUniqueFieldHasValue(st istructs.IState, rec istructs.ICUDRow, uniqueF
 }
 
 func insert(rec istructs.ICUDRow, uf appdef.IField, state istructs.IState, intents istructs.IIntents) error {
-	uniqueViewRecord, uniqueViewKB, ok, err := getUniqueViewRecord(state, rec, uf)
+	uniqueViewRecord, uniqueViewKB, ok, err := getUniqueViewRecord(state, rec, uf, 0)
 	if err != nil {
 		return err
 	}
@@ -134,7 +134,7 @@ func update(rec istructs.ICUDRow, uf appdef.IField, st istructs.IState, intents 
 	}
 
 	// unique view record
-	uniqueViewRecord, uniqueViewKB, _, err := getUniqueViewRecord(st, currentRecord, uf)
+	uniqueViewRecord, uniqueViewKB, _, err := getUniqueViewRecord(st, currentRecord, uf, 0)
 	if err != nil {
 		return err
 	}
@@ -167,12 +167,12 @@ func update(rec istructs.ICUDRow, uf appdef.IField, st istructs.IState, intents 
 	return nil
 }
 
-func getUniqueViewRecord(st istructs.IState, rec istructs.IRowReader, uf appdef.IField) (istructs.IStateValue, istructs.IStateKeyBuilder, bool, error) {
+func getUniqueViewRecord(st istructs.IState, rec istructs.IRowReader, uf appdef.IField, uniqueID appdef.UniqueID) (istructs.IStateValue, istructs.IStateKeyBuilder, bool, error) {
 	kb, err := st.KeyBuilder(state.View, qNameViewUniques)
 	if err != nil {
 		return nil, nil, false, err
 	}
-	if err := buildUniqueViewKey(kb, rec, uf); err != nil {
+	if err := buildUniqueViewKey(kb, rec, uf, uniqueID); err != nil {
 		// notest
 		return nil, nil, false, err
 	}
@@ -197,20 +197,21 @@ func getUniqueKeyValues(rec istructs.IRowReader, uf appdef.IField) (res []byte, 
 }
 
 // notest err
-func buildUniqueViewKeyByValues(kb istructs.IKeyBuilder, docQName appdef.QName, uniqueKeyValues []byte) {
+func buildUniqueViewKeyByValues(kb istructs.IKeyBuilder, docQName appdef.QName, uniqueKeyValues []byte, uniqueID appdef.UniqueID) {
 	kb.PutQName(field_QName, docQName)
 	kb.PutInt64(field_ValuesHash, coreutils.HashBytes(uniqueKeyValues))
 	kb.PutBytes(field_Values, uniqueKeyValues)
+	kb.PutInt32(field_UniqueID, int32(uniqueID))
 }
 
 // notest err
-func buildUniqueViewKey(kb istructs.IKeyBuilder, rec istructs.IRowReader, uf appdef.IField) error {
+func buildUniqueViewKey(kb istructs.IKeyBuilder, rec istructs.IRowReader, uf appdef.IField, uniqueID appdef.UniqueID) error {
 	uniqueKeyValues, err := getUniqueKeyValues(rec, uf)
 	if err != nil {
 		// notest
 		return err
 	}
-	buildUniqueViewKeyByValues(kb, rec.AsQName(appdef.SystemField_QName), uniqueKeyValues)
+	buildUniqueViewKeyByValues(kb, rec.AsQName(appdef.SystemField_QName), uniqueKeyValues, uniqueID)
 	return nil
 }
 
@@ -278,7 +279,7 @@ func provideEventUniqueValidator() func(ctx context.Context, rawEvent istructs.I
 								// currentUniqueRecord.exists = true // avoid: 1st CUD insert a unique record, 2nd modify the unique value
 							} else {
 								// inserting a new active record, unique is active -> deny
-								return conflict(cudQName, currentUniqueRecord.refRecordID)
+								return conflict(cudQName, currentUniqueRecord.refRecordID, "")
 							}
 						} else {
 							if cudUniqueFieldHasValue {
@@ -352,6 +353,6 @@ func getCurrentUniqueViewRecord(uniquesState map[appdef.QName]map[string]*unique
 	return currentUniqueRecord, nil
 }
 
-func conflict(qName appdef.QName, conflictingWithID istructs.RecordID) error {
-	return coreutils.NewHTTPError(http.StatusConflict, fmt.Errorf("%s: %w with ID %d", qName, ErrUniqueConstraintViolation, conflictingWithID))
+func conflict(qName appdef.QName, conflictingWithID istructs.RecordID, uniqueName string) error {
+	return coreutils.NewHTTPError(http.StatusConflict, fmt.Errorf(`%s: "%s" %w with ID %d`, qName, uniqueName, ErrUniqueConstraintViolation, conflictingWithID))
 }

@@ -169,8 +169,8 @@ func WithMethod(m string) ReqOptFunc {
 	}
 }
 
-func Expect409() ReqOptFunc {
-	return WithExpectedCode(http.StatusConflict)
+func Expect409(expected ...string) ReqOptFunc {
+	return WithExpectedCode(http.StatusConflict, expected...)
 }
 
 func Expect404() ReqOptFunc {

@@ -14,6 +14,7 @@ import (
 	"github.com/untillpro/goutils/iterate"
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/state"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
@@ -28,17 +29,17 @@ func provideApplyUniques2(appDef appdef.IAppDef) func(event istructs.IPLogEvent,
 			err := iterate.ForEachError(iUniques.Uniques, func(unique appdef.IUnique) error {
 				orderedUniqueFields := getOrderedUniqueFields(appDef, rec, unique)
 				if rec.IsNew() {
-					return insert2(st, rec, intents, orderedUniqueFields)
+					return insert2(st, rec, intents, orderedUniqueFields, unique)
 				}
-				return update2(st, rec, orderedUniqueFields)
+				return update2(st, rec, intents, orderedUniqueFields, unique)
 			})
 			return err
 		})
 	}
 }
 
-func getOrderedUniqueFields(appDef appdef.IAppDef, rec istructs.ICUDRow, unique appdef.IUnique) (orderedUniqueFields orderedUniqueFields) {
-	recType := appDef.Type(rec.QName())
+func getOrderedUniqueFields(appDef appdef.IAppDef, rec istructs.IRowReader, unique appdef.IUnique) (orderedUniqueFields orderedUniqueFields) {
+	recType := appDef.Type(rec.AsQName(appdef.SystemField_QName))
 	recSchemaFields := recType.(appdef.IFields)
 	recSchemaFields.Fields(func(schemaField appdef.IField) {
 		for _, uniqueFieldDesc := range unique.Fields() {
@@ -50,7 +51,7 @@ func getOrderedUniqueFields(appDef appdef.IAppDef, rec istructs.ICUDRow, unique 
 	return orderedUniqueFields
 }
 
-func update2(st istructs.IState, rec istructs.ICUDRow, orderedUniqueFields orderedUniqueFields) error {
+func update2(st istructs.IState, rec istructs.ICUDRow, intents istructs.IIntents, orderedUniqueFields orderedUniqueFields, unique appdef.IUnique) error {
 	// check modified fields
 	// case when we're updating unique fields is already dropped by the validator
 	// so came here -> we're updating anything but unique fields
@@ -68,22 +69,37 @@ func update2(st istructs.IState, rec istructs.ICUDRow, orderedUniqueFields order
 
 	// unique view record
 	// we're updating -> unique view record exists
-	uniqueViewRecord, uniqueViewKB, _, err := getUniqueViewRecord2(st, currentRecord, orderedUniqueFields)
+	uniqueViewRecord, uniqueViewKB, _, err := getUniqueViewRecord2(st, currentRecord, orderedUniqueFields, unique)
 	if err != nil {
 		return err
 	}
-	if uniqueViewRecord.AsRecordID(field_ID) == istructs.NullRecordID && rec.AsBool(appdef.SystemField_IsActive) {
-		// activate a deactivated combination
-		uniqueViewKB.PutRecordID(field_ID, rec.ID())
-	} else if uniqueViewRecord.AsRecordID(field_ID) != istructs.NullRecordID && !rec.AsBool(appdef.SystemField_IsActive) {
-		// deactivate an active combination
-		uniqueViewKB.PutRecordID(field_ID, istructs.NullRecordID)
+	refIDToSet := istructs.NullRecordID
+	uvrID := uniqueViewRecord.AsRecordID(field_ID)
+	if rec.AsBool(appdef.SystemField_IsActive) {
+		if uvrID == istructs.NullRecordID {
+			// activating the record whereas previous combination was deactivated -> allow, update the view
+			refIDToSet = rec.ID()
+		} else {
+			// activating the already activated record, unique combination exists for that record -> allow, nothing to do
+			return nil
+			// note: case when uvrID == rec.ID() is handled already by validator
+		}
+	} else {
+		if rec.ID() != uvrID {
+			// deactivating a record whereas unique combination exists for another record -> allow, nothing to do
+			return nil
+		}
 	}
+	uniqueViewUpdater, err := intents.UpdateValue(uniqueViewKB, uniqueViewRecord)
+	if err != nil {
+		return err
+	}
+	uniqueViewUpdater.PutRecordID(field_ID, refIDToSet)
 	return nil
 }
 
-func insert2(state istructs.IState, rec istructs.ICUDRow, intents istructs.IIntents, orderedUniqueFields orderedUniqueFields) error {
-	uniqueViewRecord, uniqueViewKB, uniqueViewRecordExists, err := getUniqueViewRecord2(state, rec, orderedUniqueFields)
+func insert2(state istructs.IState, rec istructs.ICUDRow, intents istructs.IIntents, orderedUniqueFields orderedUniqueFields, unique appdef.IUnique) error {
+	uniqueViewRecord, uniqueViewKB, uniqueViewRecordExists, err := getUniqueViewRecord2(state, rec, orderedUniqueFields, unique)
 	if err != nil {
 		return err
 	}
@@ -97,30 +113,35 @@ func insert2(state istructs.IState, rec istructs.ICUDRow, intents istructs.IInte
 	} else {
 		uniqueViewRecordBuilder, err = intents.NewValue(uniqueViewKB)
 	}
+
 	if err == nil {
 		uniqueViewRecordBuilder.PutRecordID(field_ID, rec.ID())
 	}
 	return err
 }
 
-func getUniqueViewRecord2(st istructs.IState, rec istructs.IRowReader, orderedUniqueFields orderedUniqueFields) (istructs.IStateValue, istructs.IStateKeyBuilder, bool, error) {
+func getUniqueViewRecord2(st istructs.IState, rec istructs.IRowReader, orderedUniqueFields orderedUniqueFields, unique appdef.IUnique) (istructs.IStateValue, istructs.IStateKeyBuilder, bool, error) {
 	uniqueViewRecordBuilder, err := st.KeyBuilder(state.View, qNameViewUniques)
 	if err != nil {
 		// notest
 		return nil, nil, false, err
 	}
-	buildUniqueViewKey2(uniqueViewRecordBuilder, rec, orderedUniqueFields)
+	buildUniqueViewKey2(uniqueViewRecordBuilder, rec, orderedUniqueFields, unique)
 	sv, ok, err := st.CanExist(uniqueViewRecordBuilder)
 	return sv, uniqueViewRecordBuilder, ok, err
 }
 
 // notest err
-func buildUniqueViewKey2(kb istructs.IKeyBuilder, rec istructs.IRowReader, orderedUniqueFields orderedUniqueFields) {
-	uniqueKeyValues := getUniqueKeyValues2(rec, orderedUniqueFields)
-	buildUniqueViewKeyByValues(kb, rec.AsQName(appdef.SystemField_QName), uniqueKeyValues)
+func buildUniqueViewKey2(kb istructs.IKeyBuilder, rec istructs.IRowReader, orderedUniqueFields orderedUniqueFields, unique appdef.IUnique) error {
+	uniqueKeyValues, err := getUniqueKeyValues2(rec, orderedUniqueFields, unique.Name())
+	if err != nil {
+		return err
+	}
+	buildUniqueViewKeyByValues(kb, rec.AsQName(appdef.SystemField_QName), uniqueKeyValues, unique.ID())
+	return nil
 }
 
-func getUniqueKeyValues2(rec istructs.IRowReader, orderedUniqueFields orderedUniqueFields) (res []byte) {
+func getUniqueKeyValues2(rec istructs.IRowReader, orderedUniqueFields orderedUniqueFields, uniqueName string) (res []byte, err error) {
 	buf := bytes.NewBuffer(nil)
 	for _, uniqueField := range orderedUniqueFields {
 		val := coreutils.ReadByKind(uniqueField.Name(), uniqueField.DataKind(), rec)
@@ -136,14 +157,61 @@ func getUniqueKeyValues2(rec istructs.IRowReader, orderedUniqueFields orderedUni
 		}
 	}
 	if buf.Len() > int(appdef.MaxFieldLength) {
-		return fmt.Errorf("%w: resulting len is %d, max %d is allowed. Decrese  AZZ", errUniqueValueTooLong)
+		return nil, fmt.Errorf(`%w: resulting len of the unique combination "%s.%s" is %d, max %d is allowed. Decrease len of values of unique fields`,
+			errUniqueValueTooLong, rec.AsQName(appdef.SystemField_QName), uniqueName, buf.Len(), appdef.MaxFieldLength)
 	}
-	return buf.Bytes()
+	return buf.Bytes(), nil
+}
+
+func getCurrentUniqueViewRecord2(uniquesState map[appdef.QName]map[appdef.UniqueID]map[string]*uniqueViewRecord,
+	cudQName appdef.QName, uniqueKeyValues []byte, appStructs istructs.IAppStructs, wsid istructs.WSID, uniqueID appdef.UniqueID) (*uniqueViewRecord, error) {
+	// why to accumulate in a map?
+	//         id:  field: IsActive: Result:
+	// stored: 111: xxx    -
+	// …
+	// cud(I): 222: xxx    +         - should be ok to insert new record
+	// …
+	// cud(J): 111:        +         - should be denied to restore old record
+	cudQNameUniques, ok := uniquesState[cudQName]
+	if !ok {
+		cudQNameUniques = map[appdef.UniqueID]map[string]*uniqueViewRecord{}
+		uniquesState[cudQName] = cudQNameUniques
+	}
+	uniqueViewRecords, ok := cudQNameUniques[uniqueID]
+	if !ok {
+		uniqueViewRecords = map[string]*uniqueViewRecord{}
+		cudQNameUniques[uniqueID] = uniqueViewRecords
+	}
+	currentUniqueViewRecord, ok := uniqueViewRecords[string(uniqueKeyValues)]
+	if !ok {
+		currentUniqueRecordID, _, err := getUniqueIDByValues2(appStructs, wsid, cudQName, uniqueKeyValues, uniqueID)
+		if err != nil {
+			return nil, err
+		}
+		currentUniqueViewRecord = &uniqueViewRecord{
+			refRecordID: currentUniqueRecordID,
+		}
+		uniqueViewRecords[string(uniqueKeyValues)] = currentUniqueViewRecord
+	}
+	return currentUniqueViewRecord, nil
+}
+
+func getUniqueIDByValues2(appStructs istructs.IAppStructs, wsid istructs.WSID, qName appdef.QName, uniqueKeyValues []byte, uniqueID appdef.UniqueID) (istructs.RecordID, bool, error) {
+	kb := appStructs.ViewRecords().KeyBuilder(qNameViewUniques)
+	buildUniqueViewKeyByValues(kb, qName, uniqueKeyValues, uniqueID)
+	val, err := appStructs.ViewRecords().Get(wsid, kb)
+	if err == nil {
+		return val.AsRecordID(field_ID), true, nil
+	}
+	if err == istructsmem.ErrRecordNotFound {
+		err = nil
+	}
+	return istructs.NullRecordID, false, err
 }
 
 func eventUniqueValidator2(ctx context.Context, rawEvent istructs.IRawEvent, appStructs istructs.IAppStructs, wsid istructs.WSID) error {
-	//                      ???      unique key bytes
-	uniquesState := map[appdef.QName]map[string]*uniqueViewRecord{}
+	//                    cudQName                      unique-key-bytes
+	uniquesState := map[appdef.QName]map[appdef.UniqueID]map[string]*uniqueViewRecord{}
 	return iterate.ForEachError(rawEvent.CUDs, func(cudRec istructs.ICUDRow) (err error) {
 		cudQName := cudRec.QName()
 		cudUniques, ok := appStructs.AppDef().Type(cudQName).(appdef.IUniques)
@@ -152,13 +220,25 @@ func eventUniqueValidator2(ctx context.Context, rawEvent istructs.IRawEvent, app
 		}
 		err = iterate.ForEachError(cudUniques.Uniques, func(unique appdef.IUnique) error {
 			var uniqueKeyValues []byte
+			var rowSource istructs.IRowReader
 			if cudRec.IsNew() {
-				// currentRow is cudRec
-				orderedUniqueFields := getOrderedUniqueFields(appStructs.AppDef(), cudRec, unique)
-				uniqueKeyValues = getUniqueKeyValues2(cudRec, orderedUniqueFields)
+				// insert -> will get existing values from the current CUD
+				rowSource = cudRec
+			} else {
+				// update -> will get existing values from the stored record
+				rowSource, err = appStructs.Records().Get(wsid, true, cudRec.ID())
+				if err != nil {
+					// notest
+					return err
+				}
+			}
+			orderedUniqueFields := getOrderedUniqueFields(appStructs.AppDef(), rowSource, unique)
+			uniqueKeyValues, err = getUniqueKeyValues2(rowSource, orderedUniqueFields, unique.Name())
+			if err != nil {
+				return err
 			}
 			// currentUniqueRecord - is for unique combination from current cudRec
-			currentUniqueRecord, err := getCurrentUniqueViewRecord(uniquesState, cudQName, uniqueKeyValues, appStructs, wsid)
+			currentUniqueRecord, err := getCurrentUniqueViewRecord2(uniquesState, cudQName, uniqueKeyValues, appStructs, wsid, unique.ID())
 			if err != nil {
 				return err
 			}
@@ -170,7 +250,7 @@ func eventUniqueValidator2(ctx context.Context, rawEvent istructs.IRawEvent, app
 					// currentUniqueRecord.exists = true // avoid: 1st CUD insert a unique record, 2nd modify the unique value
 				} else {
 					// inserting a new active record, unique is active -> deny
-					return conflict(cudQName, currentUniqueRecord.refRecordID)
+					return conflict(cudQName, currentUniqueRecord.refRecordID, unique.Name())
 				}
 			} else {
 				// update
@@ -195,7 +275,7 @@ func eventUniqueValidator2(ctx context.Context, rawEvent istructs.IRawEvent, app
 							currentUniqueRecord.refRecordID = cudRec.ID()
 						} else if currentUniqueRecord.refRecordID != cudRec.ID() {
 							// we're activating, this combination exists for another record already -> deny
-							return conflict(cudQName, currentUniqueRecord.refRecordID)
+							return conflict(cudQName, currentUniqueRecord.refRecordID, unique.Name())
 						}
 					} else {
 						// deactivating
