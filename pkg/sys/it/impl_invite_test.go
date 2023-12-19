@@ -251,24 +251,21 @@ func TestInvite_BasicUsage(t *testing.T) {
 }
 
 func TestCancelSentInvite(t *testing.T) {
-	//TODO Fix it Daniil
-	t.Skip("Fix it Daniil")
-	//require := require.New(t)
-	//vit := it.NewVIT(t, &it.SharedConfig_Simple)
-	//defer vit.TearDown()
-	//ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
-	//
-	//t.Run("Should be ok", func(t *testing.T) {
-	//	body := `{"args":{"Email":"user@acme.com","Roles":"trolles","ExpireDatetime":1674751138000,"NewLoginEmailTemplate":"text:","ExistingLoginEmailTemplate":"text:"}}`
-	//	inviteID := vit.PostWS(ws, "c.sys.InitiateInvitationByEMail", body).NewID()
-	//	//Read it for successful vit tear down
-	//	_ = vit.ExpectEmail().Capture()
-	//
-	//	vit.PostWS(ws, "c.sys.CancelSentInvite", fmt.Sprintf(`{"args":{"InviteID":%d}}`, inviteID))
-	//})
-	//t.Run("Should be not ok", func(t *testing.T) {
-	//	resp := vit.PostWS(ws, "c.sys.CancelSentInvite", fmt.Sprintf(`{"args":{"InviteID":%d}}`, -100), coreutils.Expect400())
-	//
-	//	require.Equal(coreutils.NewHTTPError(http.StatusBadRequest, invite.errInviteNotExists), resp.SysError)
-	//})
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
+	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+
+	t.Run("basic usage", func(t *testing.T) {
+		body := `{"args":{"Email":"user@acme.com","Roles":"trolles","ExpireDatetime":1674751138000,"NewLoginEmailTemplate":"text:","ExistingLoginEmailTemplate":"text:"}}`
+		inviteID := vit.PostWS(ws, "c.sys.InitiateInvitationByEMail", body).NewID()
+
+		//Read it for successful vit tear down
+		vit.CaptureEmail()
+
+		vit.PostWS(ws, "c.sys.CancelSentInvite", fmt.Sprintf(`{"args":{"InviteID":%d}}`, inviteID))
+		WaitForInviteState(vit, ws, invite.State_Cancelled, inviteID)
+	})
+	t.Run("invite not exists -> 400 bad request", func(t *testing.T) {
+		vit.PostWS(ws, "c.sys.CancelSentInvite", fmt.Sprintf(`{"args":{"InviteID":%d}}`, -100), coreutils.Expect400(invite.ErrInviteNotExists.Error()))
+	})
 }
