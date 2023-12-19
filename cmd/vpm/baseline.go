@@ -7,6 +7,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -41,17 +42,16 @@ func newBaselineCmd() *cobra.Command {
 
 // baseline creates baseline schemas in target dir
 func baseline(compileRes *compileResult, workingDir, targetDir string) error {
-	baselineDir, err := createBaselineDir(targetDir)
-	if err != nil {
+	if err := createBaselineDir(targetDir); err != nil {
 		return err
 	}
 
-	pkgDir := filepath.Join(baselineDir, pkgDirName)
+	pkgDir := filepath.Join(targetDir, pkgDirName)
 	if err := saveBaselineSchemas(compileRes.pkgFiles, pkgDir); err != nil {
 		return err
 	}
 
-	if err := saveBaselineInfo(compileRes, workingDir, baselineDir); err != nil {
+	if err := saveBaselineInfo(compileRes, workingDir, targetDir); err != nil {
 		return err
 	}
 	return nil
@@ -108,9 +108,10 @@ func saveBaselineSchemas(pkgFiles packageFiles, baselineDir string) error {
 	return nil
 }
 
-func createBaselineDir(dir string) (baselineDir string, err error) {
-	baselineDir = filepath.Join(dir, baselineDirName)
-	pkgDir := filepath.Join(baselineDir, pkgDirName)
-	err = os.MkdirAll(pkgDir, defaultPermissions)
-	return
+func createBaselineDir(dir string) error {
+	if _, err := os.Stat(dir); !os.IsNotExist(err) {
+		return fmt.Errorf("baseline directory already exists: %s", dir)
+	}
+	pkgDir := filepath.Join(dir, pkgDirName)
+	return os.MkdirAll(pkgDir, defaultPermissions)
 }
