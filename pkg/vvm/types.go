@@ -12,6 +12,7 @@ import (
 	ibus "github.com/untillpro/airs-ibus"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/apppartsctl"
 	"github.com/voedger/voedger/pkg/apps"
 	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/iblobstorage"
@@ -74,6 +75,10 @@ type VVMPortSource struct {
 	getter func() VVMPortType
 }
 type IAppStorageUncachingProviderFactory func() (provider istorage.IAppStorageProvider)
+type AppPartsCtlPipelineService struct {
+	apppartsctl.IAppPartitionsController
+}
+type IAppPartsCtlPipelineService pipeline.IService
 
 type PostDocFieldType struct {
 	Kind              appdef.DataKind
@@ -128,6 +133,7 @@ type VVMConfig struct {
 	FederationURL       *url.URL
 	ActualizerStateOpts []state.ActualizerStateOptFunc
 	SecretsReader       isecrets.ISecretReader
+	BuiltInApps         []apppartsctl.BuiltInApp // TODO: empty for now
 }
 
 type resultSenderErrorFirst struct {
