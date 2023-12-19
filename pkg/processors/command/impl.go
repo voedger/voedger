@@ -455,7 +455,7 @@ func (cmdProc *cmdProc) validate(ctx context.Context, work interface{}) (err err
 	}
 	for _, appCUDValidator := range cmd.appStructs.CUDValidators() {
 		err = iterate.ForEachError(cmd.rawEvent.CUDs, func(rec istructs.ICUDRow) error {
-			if istructs.ValidatorMatchByQName(appCUDValidator, rec.QName(), cmd.cmdMes.WSID(), cmd.cmdMes.Command().QName()) {
+			if appCUDValidator.Match(rec, cmd.cmdMes.WSID(), cmd.cmdMes.Command().QName()) {
 				if err := appCUDValidator.Validate(ctx, cmd.appStructs, rec, cmd.cmdMes.WSID(), cmd.cmdMes.Command().QName()); err != nil {
 					return err
 				}
@@ -540,6 +540,33 @@ func checkArgsRefIntegrity(_ context.Context, work interface{}) (err error) {
 	}
 	if cmd.unloggedArgsObject != nil {
 		return builtin.CheckRefIntegrity(cmd.unloggedArgsObject, cmd.appStructs, cmd.cmdMes.WSID())
+	}
+	return nil
+}
+
+// not a validator due of https://github.com/voedger/voedger/issues/1125
+func checkIsActiveInCUDs(_ context.Context, work interface{}) (err error) {
+	cmd := work.(*cmdWorkpiece)
+	for _, cud := range cmd.parsedCUDs {
+		if cud.opKind != iauthnz.OperationKind_UPDATE {
+			continue
+		}
+		hasOnlySystemFields := true
+		sysIsActiveUpdating := false
+		isActiveAndOtherFieldsMixedOnUpdate := false
+		for fieldName := range cud.fields {
+			if !appdef.IsSysField(fieldName) {
+				hasOnlySystemFields = false
+			} else if fieldName == appdef.SystemField_IsActive {
+				sysIsActiveUpdating = true
+			}
+			if isActiveAndOtherFieldsMixedOnUpdate = sysIsActiveUpdating && !hasOnlySystemFields; isActiveAndOtherFieldsMixedOnUpdate {
+				break
+			}
+		}
+		if isActiveAndOtherFieldsMixedOnUpdate {
+			return coreutils.NewHTTPError(http.StatusForbidden, errors.New("updating other fields is not allowed if sys.IsActive is updating"))
+		}
 	}
 	return nil
 }

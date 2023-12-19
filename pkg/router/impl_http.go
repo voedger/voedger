@@ -151,9 +151,6 @@ func (s *httpService) registerHandlers(busTimeout time.Duration, appsWSAmount ma
 
 func requestHandler(bus ibus.IBus, busTimeout time.Duration, appsWSAmount map[istructs.AppQName]istructs.AppWSAmount) http.HandlerFunc {
 	return func(resp http.ResponseWriter, req *http.Request) {
-		if logger.IsVerbose() {
-			logger.Verbose("serving ", req.Method, " ", req.URL.Path)
-		}
 		vars := mux.Vars(req)
 		queueRequest, ok := createRequest(req.Method, req, resp, appsWSAmount)
 		if !ok {
@@ -187,6 +184,9 @@ func requestHandler(bus ibus.IBus, busTimeout time.Duration, appsWSAmount map[is
 
 func corsHandler(h http.Handler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		if logger.IsVerbose() {
+			logger.Verbose("serving ", r.Method, " ", r.URL.Path)
+		}
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, Authorization")
 		if r.Method == "OPTIONS" {

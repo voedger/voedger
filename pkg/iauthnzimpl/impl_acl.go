@@ -270,6 +270,8 @@ var defaultACL = ACL{
 				qNameQryGetUPTransactionReceipts,
 				// https://dev.untill.com/projects/#!664899
 				qNameQryGetUPLocationSubjects,
+				// https://dev.untill.com/projects/#!659825
+				qNameQryGetLocationDailyUPReport,
 			},
 			principalsPattern: [][]iauthnz.Principal{
 				{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleUntillPaymentsUser}},
@@ -330,6 +332,8 @@ var defaultACL = ACL{
 				qNameQryGetUPFeesOverview,
 				// https://dev.untill.com/projects/#!664876
 				qNameQryIsDirectReseller,
+				// https://dev.untill.com/projects/#!659825
+				qNameQryGetResellerDailyUPReport,
 			},
 			principalsPattern: [][]iauthnz.Principal{{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleUntillPaymentsReseller}}},
 		},

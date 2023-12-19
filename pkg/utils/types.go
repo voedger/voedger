@@ -9,6 +9,8 @@ import (
 	"io/fs"
 	"net/http"
 	"net/url"
+	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/voedger/voedger/pkg/istructs"
@@ -53,3 +55,25 @@ type IFederation interface {
 type TimeFunc func() time.Time
 
 type CommandProcessorsCount int
+
+type PathReader struct {
+	rootPath string
+}
+
+func NewPathReader(rootPath string) *PathReader {
+	return &PathReader{
+		rootPath: rootPath,
+	}
+}
+
+func (r *PathReader) Open(name string) (fs.File, error) {
+	return os.Open(filepath.Join(r.rootPath, name))
+}
+
+func (r *PathReader) ReadDir(name string) ([]os.DirEntry, error) {
+	return os.ReadDir(filepath.Join(r.rootPath, name))
+}
+
+func (r *PathReader) ReadFile(name string) ([]byte, error) {
+	return os.ReadFile(filepath.Join(r.rootPath, name))
+}

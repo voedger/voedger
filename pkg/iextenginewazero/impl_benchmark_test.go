@@ -1,7 +1,7 @@
 /*
-* Copyright (c) 2022-present unTill Pro, Ltd.
-* @author Michael Saigachenko
- */
+  - Copyright (c) 2023-present unTill Software Development Group B. V.
+    @author Michael Saigachenko
+*/
 
 package iextenginewasm
 
@@ -16,20 +16,20 @@ func bench_purecall(b *testing.B) {
 	ctx := context.Background()
 	const simple = "simple"
 	moduleUrl := testModuleURL("./_testdata/allocs/pkg.wasm")
-	ee, err := ExtEngineWazeroFactory(ctx, moduleUrl, []string{simple}, iextengine.ExtEngineConfig{MemoryLimitPages: 0xffff})
+	ee, err := testFactoryHelper(ctx, moduleUrl, []string{simple}, iextengine.ExtEngineConfig{MemoryLimitPages: 0xffff}, false)
 	if err != nil {
 		panic(err)
 	}
-	ee.SetLimits(limits)
+	//ee.SetLimits(limits)
 
 	b.ResetTimer()
 	for n := 0; n < b.N; n++ {
-		if e := ee.Invoke(context.Background(), simple, extIO); e != nil {
+		if e := ee.Invoke(context.Background(), iextengine.NewExtQName("", simple), extIO); e != nil {
 			panic(e)
 		}
 	}
 	b.StopTimer()
-	ee.Close()
+	ee.Close(ctx)
 }
 
 func bench_gc(b *testing.B, cycles int) {
@@ -38,31 +38,31 @@ func bench_gc(b *testing.B, cycles int) {
 	const arrReset = "arrReset"
 	ctx := context.Background()
 	moduleUrl := testModuleURL("./_testdata/allocs/pkggc.wasm")
-	ee, err := ExtEngineWazeroFactory(ctx, moduleUrl, []string{arrAppend, arrReset}, iextengine.ExtEngineConfig{MemoryLimitPages: 0xffff})
+	ee, err := testFactoryHelper(ctx, moduleUrl, []string{arrAppend, arrReset}, iextengine.ExtEngineConfig{MemoryLimitPages: 0xffff}, false)
 	if err != nil {
 		panic(err)
 	}
-	ee.SetLimits(limits)
+	//ee.SetLimits(limits)
 
 	b.ResetTimer()
 	for n := 0; n < b.N; n++ {
 		b.StopTimer()
 		for i := 0; i < cycles; i++ {
-			if e := ee.Invoke(context.Background(), arrAppend, extIO); e != nil {
+			if e := ee.Invoke(context.Background(), iextengine.NewExtQName("", arrAppend), extIO); e != nil {
 				panic(e)
 			}
 		}
-		if e := ee.Invoke(context.Background(), arrReset, extIO); e != nil {
+		if e := ee.Invoke(context.Background(), iextengine.NewExtQName("", arrReset), extIO); e != nil {
 			panic(e)
 		}
 		b.StartTimer()
-		if e := ee.(*wazeroExtEngine).gc(); e != nil {
+		if e := ee.(*wazeroExtEngine).gc(testPkg, ctx); e != nil {
 			panic(e)
 		}
 	}
 
 	b.StopTimer()
-	ee.Close()
+	ee.Close(ctx)
 
 }
 
@@ -90,7 +90,7 @@ func Benchmark_GarbageCollection(b *testing.B) {
 	})
 }
 
-func bench_extensions(b *testing.B, gc bool) {
+func bench_extensions(b *testing.B, gc bool, compile bool) {
 
 	funcs := []string{"oneGetOneIntent5calls", "oneGetNoIntents2calls", "oneGetLongStr3calls", "oneKey1call", "doNothing"}
 
@@ -100,17 +100,17 @@ func bench_extensions(b *testing.B, gc bool) {
 		wsm = "./_testdata/benchmarks/pkggc.wasm"
 	}
 	moduleUrl := testModuleURL(wsm)
-	ee, err := ExtEngineWazeroFactory(ctx, moduleUrl, funcs, iextengine.ExtEngineConfig{MemoryLimitPages: 0xffff})
+	ee, err := testFactoryHelper(ctx, moduleUrl, funcs, iextengine.ExtEngineConfig{MemoryLimitPages: 0xffff}, compile)
 	if err != nil {
 		panic(err)
 	}
-	defer ee.Close()
-
+	defer ee.Close(ctx)
 	for _, extname := range funcs {
+		ext := iextengine.NewExtQName(testPkg, extname)
 		b.Run(extname, func(b *testing.B) {
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
-				err := ee.Invoke(context.Background(), extname, extIO)
+				err := ee.Invoke(context.Background(), ext, extIO)
 				if err != nil {
 					panic(err)
 				}
@@ -130,31 +130,36 @@ Benchmark_Extensions_NoGc/oneKey1call-20                 	 4694110	       243.9 
 Benchmark_Extensions_NoGc/doNothing-20                   	19467026	        61.33 ns/op	       0 B/op	       0 allocs/op
 */
 func Benchmark_Extensions_NoGc(b *testing.B) {
-	bench_extensions(b, false)
+	b.Run("Compiler", func(b *testing.B) {
+		bench_extensions(b, false, true)
+	})
+	b.Run("Interpreter", func(b *testing.B) {
+		bench_extensions(b, false, false)
+	})
 }
 func Skip_Benchmark_Extensions_WithGc(b *testing.B) {
-	bench_extensions(b, true)
+	bench_extensions(b, true, true)
 }
 
 func benchmarkRecover(b *testing.B, limitPages uint, expectedRuns int) {
 	const arrAppend2 = "arrAppend2"
 	ctx := context.Background()
 	moduleUrl := testModuleURL("./_testdata/allocs/pkg.wasm")
-	ee, err := ExtEngineWazeroFactory(ctx, moduleUrl, []string{arrAppend2}, iextengine.ExtEngineConfig{MemoryLimitPages: limitPages})
+	ee, err := testFactoryHelper(ctx, moduleUrl, []string{arrAppend2}, iextengine.ExtEngineConfig{MemoryLimitPages: limitPages}, false)
 	if err != nil {
 		panic(err)
 	}
-	defer ee.Close()
+	defer ee.Close(ctx)
 
 	we := ee.(*wazeroExtEngine)
 
 	for runs := 0; runs < expectedRuns; runs++ {
-		if err := ee.Invoke(context.Background(), arrAppend2, extIO); err != nil {
+		if err := ee.Invoke(context.Background(), iextengine.NewExtQName("", arrAppend2), extIO); err != nil {
 			panic(err)
 		}
 	}
 
-	memoryFull := we.module.Memory().Backup()
+	//TODO: memoryFull := we.module.Memory().Backup()
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -165,18 +170,18 @@ func benchmarkRecover(b *testing.B, limitPages uint, expectedRuns int) {
 		// }
 		//require.Equal(b, uint64(0x6ebc50), h)
 		b.StopTimer()
-		we.module.Memory().Restore(memoryFull)
+		//we.module.Memory().Restore(memoryFull)
 	}
 }
 
 func benchmarkRecoverClean(b *testing.B, limitPages uint) {
 	ctx := context.Background()
 	moduleUrl := testModuleURL("./_testdata/allocs/pkg.wasm")
-	ee, err := ExtEngineWazeroFactory(ctx, moduleUrl, []string{}, iextengine.ExtEngineConfig{MemoryLimitPages: limitPages})
+	ee, err := testFactoryHelper(ctx, moduleUrl, []string{}, iextengine.ExtEngineConfig{MemoryLimitPages: limitPages}, false)
 	if err != nil {
 		panic(err)
 	}
-	defer ee.Close()
+	defer ee.Close(ctx)
 	we := ee.(*wazeroExtEngine)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
