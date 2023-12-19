@@ -32,7 +32,7 @@ func newBaselineCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			return baseline(compileRes, params.TargetDir)
+			return baseline(compileRes, params.WorkingDir, params.TargetDir)
 		},
 	}
 	initGlobalFlags(cmd, &params)
@@ -40,7 +40,7 @@ func newBaselineCmd() *cobra.Command {
 }
 
 // baseline creates baseline schemas in target dir
-func baseline(compileRes *compileResult, targetDir string) error {
+func baseline(compileRes *compileResult, workingDir, targetDir string) error {
 	baselineDir, err := createBaselineDir(targetDir)
 	if err != nil {
 		return err
@@ -51,16 +51,16 @@ func baseline(compileRes *compileResult, targetDir string) error {
 		return err
 	}
 
-	if err := saveBaselineInfo(compileRes, baselineDir); err != nil {
+	if err := saveBaselineInfo(compileRes, workingDir, baselineDir); err != nil {
 		return err
 	}
 	return nil
 }
 
-func saveBaselineInfo(compileRes *compileResult, baselineDir string) error {
+func saveBaselineInfo(compileRes *compileResult, workingDir, baselineDir string) error {
 	var gitCommitHash string
 	sb := new(strings.Builder)
-	if err := new(exec.PipedExec).Command("git", "rev-parse", "HEAD").Run(sb, nil); err == nil {
+	if err := new(exec.PipedExec).Command("git", "rev-parse", "HEAD").WorkingDir(workingDir).Run(sb, nil); err == nil {
 		gitCommitHash = strings.TrimSpace(sb.String())
 	}
 
