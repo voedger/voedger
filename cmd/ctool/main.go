@@ -7,7 +7,6 @@ package main
 
 import (
 	_ "embed"
-	"fmt"
 	"os"
 
 	"github.com/fatih/color"
@@ -43,11 +42,12 @@ func main() {
 	defer func() {
 		err := deleteScriptsTempDir()
 		if err != nil {
-			logger.Error(err)
+			logger.Error(err.Error())
 		}
 	}()
 	err := execRootCmd(os.Args, version)
 	if err != nil {
+		logger.Error(err.Error())
 		os.Exit(1)
 	}
 }
@@ -56,14 +56,12 @@ var rootCmd *cobra.Command
 
 // nolint
 func execRootCmd(args []string, ver string) error {
-	fmt.Println(args)
 	version = ver
 	rootCmd = cobrau.PrepareRootCmd(
 		"ctool",
 		"Cluster managment utility",
 		args,
 		version,
-		newVersionCmd(),
 		newInitCmd(),
 		newValidateCmd(),
 		newUpgradeCmd(),
@@ -78,15 +76,4 @@ func execRootCmd(args []string, ver string) error {
 	logger.SetLogLevel(getLoggerLevel())
 
 	return cobrau.ExecCommandAndCatchInterrupt(rootCmd)
-}
-
-func newVersionCmd() *cobra.Command {
-	cmd := &cobra.Command{
-		Use:   "version",
-		Short: "Prints the version of the ctool utility",
-		Run: func(cmd *cobra.Command, args []string) {
-			fmt.Println("ctool version ", version)
-		},
-	}
-	return cmd
 }
