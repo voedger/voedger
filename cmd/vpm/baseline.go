@@ -66,7 +66,7 @@ func saveBaselineInfo(compileRes *compileResult, baselineDir string) error {
 
 	baselineInfoObj := baselineInfo{
 		BaselinePackageUrl: compileRes.modulePath,
-		Timestamp:          time.Now().Format(timestampFormat),
+		Timestamp:          time.Now().In(time.FixedZone("GMT", 0)).Format(timestampFormat),
 		GitCommitHash:      gitCommitHash,
 	}
 

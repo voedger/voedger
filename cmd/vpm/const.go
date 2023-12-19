@@ -13,5 +13,5 @@ const (
 	pkgDirName           = "pkg"
 	defaultPermissions   = 0766
 	baselineInfoFileName = "baseline.json"
-	timestampFormat      = "20060102150405"
+	timestampFormat      = "Mon, 02 Jan 2006 15:04:05.000 GMT"
 )
