@@ -14,12 +14,6 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
-type CLIParams struct {
-	// AppStorage istorage.IAppStorage
-	Port int
-	// HttpsPort  int
-}
-
 // Proposed factory signature
 type IHTTPProcessor interface {
 	iservices.IService
@@ -27,6 +21,7 @@ type IHTTPProcessor interface {
 	HandlePath(resource string, prefix bool, handlerFunc func(http.ResponseWriter, *http.Request))
 	AddReverseProxyRoute(srcRegExp, dstRegExp string)
 	AddReverseProxyRouteDefault(srcRegExp, dstRegExp string)
+	AddAcmeDomain(domain string)
 }
 
 type IHTTPProcessorAPI interface {
@@ -84,6 +79,7 @@ type IHTTPProcessorAPI interface {
 	//--	UndeployDynamicSubresource(app istructs.AppQName, path string) (err error)
 	AddReverseProxyRoute(srcRegExp, dstRegExp string)
 	AddReverseProxyRouteDefault(srcRegExp, dstRegExp string)
+	AddAcmeDomain(domain string)
 }
 
 type ISender interface {
