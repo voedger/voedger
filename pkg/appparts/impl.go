@@ -10,6 +10,7 @@ import (
 	"sync"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/cluster"
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
@@ -28,7 +29,7 @@ func newAppPartitions(structs istructs.IAppStructsProvider) (ap IAppPartitions, 
 	return a, func() {}, err
 }
 
-func (aps *apps) DeployApp(appName istructs.AppQName, appDef appdef.IAppDef, engines [ProcKind_Count][]IEngine) {
+func (aps *apps) DeployApp(appName istructs.AppQName, appDef appdef.IAppDef, engines [cluster.ProcKind_Count]int) {
 	aps.mx.Lock()
 	defer aps.mx.Unlock()
 
@@ -61,7 +62,7 @@ func (aps *apps) DeployAppPartitions(appName istructs.AppQName, partIDs []istruc
 	}
 }
 
-func (aps *apps) Borrow(appName istructs.AppQName, partID istructs.PartitionID, proc ProcKind) (IAppPartition, error) {
+func (aps *apps) Borrow(appName istructs.AppQName, partID istructs.PartitionID, proc cluster.ProcKind) (IAppPartition, error) {
 	aps.mx.RLock()
 	defer aps.mx.RUnlock()
 

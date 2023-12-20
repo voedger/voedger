@@ -3,21 +3,11 @@
  * @author: Nikolay Nikitin
  */
 
-package appparts
+package cluster
 
 import (
 	"strconv"
 	"strings"
-)
-
-//go:generate stringer -type=ProcKind -output=proc-kind_string.go
-
-const (
-	ProcKind_Command ProcKind = iota
-	ProcKind_Query
-	ProcKind_Projector
-
-	ProcKind_Count
 )
 
 func (k ProcKind) MarshalText() ([]byte, error) {

@@ -7,15 +7,9 @@ package appparts
 
 import (
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/cluster"
 	"github.com/voedger/voedger/pkg/istructs"
 )
-
-// ProcKind is a enumeration of processors.
-//
-// Ref to proc-king.go for values and methods
-type ProcKind uint8
-
-type IEngine interface{}
 
 // Application partitions manager.
 type IAppPartitions interface {
@@ -24,7 +18,7 @@ type IAppPartitions interface {
 	// If application with the same name exists, then its definition will be updated.
 	//
 	// @ConcurrentAccess
-	DeployApp(appName istructs.AppQName, appDef appdef.IAppDef, engines [ProcKind_Count][]IEngine)
+	DeployApp(appName istructs.AppQName, appDef appdef.IAppDef, engines [cluster.ProcKind_Count]int)
 
 	// Deploys new partitions for specified application or update existing.
 	//
@@ -41,7 +35,7 @@ type IAppPartitions interface {
 	// If partition not exist, returns error.
 	//
 	// @ConcurrentAccess
-	Borrow(istructs.AppQName, istructs.PartitionID, ProcKind) (IAppPartition, error)
+	Borrow(istructs.AppQName, istructs.PartitionID, cluster.ProcKind) (IAppPartition, error)
 }
 
 // Application partition.

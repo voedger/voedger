@@ -8,6 +8,7 @@ package apppartsctl
 import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appparts"
+	"github.com/voedger/voedger/pkg/cluster"
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
@@ -23,9 +24,11 @@ type BuiltInApp struct {
 	// Application definition will use to generate AppStructs
 	Def appdef.IAppDef
 
-	// Number of partitions. Partitions IDs will be generated from 1 to NumParts
+	// Deployment parameters:
+
+	// Number of partitions. Partitions IDs will be generated from 0 to NumParts-1
 	NumParts int
 
-	// Engines for each processor kind
-	Engines [appparts.ProcKind_Count][]appparts.IEngine
+	// EnginePoolSize pools size for each processor kind
+	EnginePoolSize [cluster.ProcKind_Count]int
 }

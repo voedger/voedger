@@ -59,3 +59,22 @@ func BuildAppSchema(packages []*PackageSchemaAST) (*AppSchemaAST, error) {
 func BuildAppDefs(appSchema *AppSchemaAST, builder appdef.IAppDefBuilder) error {
 	return buildAppDefs(appSchema, builder)
 }
+
+func BuildAppDefFromFS(qualifiedPackageName string, fs IReadFS, subDir string) (appdef.IAppDef, error) {
+	packageAst, err := ParsePackageDir(qualifiedPackageName, fs, subDir)
+	if err != nil {
+		return nil, err
+	}
+	appSchema, err := BuildAppSchema([]*PackageSchemaAST{packageAst})
+	if err != nil {
+		return nil, err
+	}
+
+	adb := appdef.New()
+	err = BuildAppDefs(appSchema, adb)
+	if err != nil {
+		return nil, err
+	}
+
+	return adb.Build()
+}
