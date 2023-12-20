@@ -28,10 +28,10 @@ func AppDef() (appdef.IAppDef, error) {
 	return parser.BuildAppDefFromFS(BlobberAppFQN, blobberSchemaFS, "")
 }
 
-// Returns blobber engines pool sizes
-func Engines() [cluster.ProcessorKind_Count][]int {
-	return [cluster.ProcessorKind_Count][]int{}
-}
-
 // Returns blobber partitions count
 func PartsCount() int { return 1 }
+
+// Returns blobber engines pool sizes
+func EnginePoolSize() [cluster.ProcessorKind_Count][]int {
+	return [cluster.ProcessorKind_Count][]int{}
+}
