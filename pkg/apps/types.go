@@ -38,3 +38,6 @@ type PackageDesc struct {
 	FQN string
 	FS  embed.FS
 }
+type CLIParams struct {
+	Storage string
+}

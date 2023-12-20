@@ -42,8 +42,8 @@ func TestBasicUsage_HTTPProcessor(t *testing.T) {
 		for _, res := range resources {
 			dir, fileName := makeTmpContent(require, res)
 			defer os.RemoveAll(dir)
-			fs := os.DirFS(dir)
-			testApp.api.DeployStaticContent(res, fs)
+			dirFS := os.DirFS(dir)
+			testApp.api.DeployStaticContent(res, dirFS)
 
 			body := testApp.get("/static/" + res + "/" + filepath.Base(fileName))
 			require.Equal([]byte(filepath.Base(res)), body)
@@ -161,7 +161,8 @@ func setUp(t *testing.T) *testApp {
 	params := ihttp.CLIParams{
 		Port: 0, // listen using some free port, port value will be taken using API
 	}
-	processor, pCleanup, err := NewProcessor(params)
+	// TODO: add routerStorage
+	processor, pCleanup, err := NewProcessor(params, nil)
 	require.NoError(err)
 	cleanups = append(cleanups, pCleanup)
 
