@@ -63,24 +63,48 @@ func parseVersionComponent(component string) int {
 	if strings.Contains(component, "-") {
 		component = strings.Split(component, "-")[0]
 	}
-	version, _ := fmt.Sscanf(component, "%d", &version)
+	var version int
+	fmt.Sscanf(component, "%d", &version)
 	return version
 }
 
-func upgrade(cmd *cobra.Command, arg []string) error {
+func upgrade(cmd *cobra.Command, args []string) error {
 
-	cluster, err := newCluster()
-	if err != nil {
-		return err
-	}
-
-	if cluster.ActualClusterVersion == cluster.DesiredClusterVersion {
-		fmt.Println("no update required")
-		return nil
-	}
+	cluster := newCluster()
+	var err error
 
 	err = mkCommandDirAndLogFile(cmd, cluster)
 	if err != nil {
+		logger.Error(err.Error())
+		return err
+	}
+
+	ok, e := cluster.needUpgrade()
+	if e != nil {
+		logger.Error(e.Error())
+		return e
+	}
+
+	if !ok {
+		logger.Info(green("upgrade is not required"))
+		return nil
+	}
+
+	c := newCmd(ckUpgrade, strings.Join(args, " "))
+	defer func(cluster *clusterType) {
+		err = cluster.saveToJSON()
+		if err != nil {
+			logger.Error(err.Error())
+		}
+	}(cluster)
+
+	if err = cluster.applyCmd(c); err != nil {
+		logger.Error(err.Error())
+		return err
+	}
+
+	if err = cluster.Cmd.apply(cluster); err != nil {
+		logger.Error(err)
 		return err
 	}
 

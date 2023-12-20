@@ -228,6 +228,11 @@ fi
 	err := createScriptsTempDir()
 	require.NoError(err, err)
 
+	defer func() {
+		err := deleteScriptsTempDir()
+		require.NoError(err, err)
+	}()
+
 	err = ioutil.WriteFile(filepath.Join(scriptsTempDir, "test-script.sh"), []byte(script), 0700)
 	require.NoError(err, err)
 

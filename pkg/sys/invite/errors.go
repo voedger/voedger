@@ -9,7 +9,7 @@ import (
 )
 
 var (
-	errInviteNotExists               = errors.New("invite not exists")
+	ErrInviteNotExists               = errors.New("invite not exists")
 	errInviteExpired                 = errors.New("invite expired")
 	errInviteTemplateInvalid         = errors.New("invite template invalid, it must be prefixed with 'text:' or 'resource:'")
 	errInviteVerificationCodeInvalid = errors.New("invite verification code invalid")

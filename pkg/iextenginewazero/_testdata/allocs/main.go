@@ -33,7 +33,7 @@ func arrReset() {
 //export longFunc
 func longFunc() {
 	m := make(map[int]int)
-	for i := 0; i < 100000; i++ {
+	for i := 0; i < 10000000; i++ {
 		if _, ok := m[i]; !ok {
 			m[i] = i
 		}

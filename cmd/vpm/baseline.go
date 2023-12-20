@@ -7,6 +7,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -32,7 +33,7 @@ func newBaselineCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			return baseline(compileRes, params.TargetDir)
+			return baseline(compileRes, params.WorkingDir, params.TargetDir)
 		},
 	}
 	initGlobalFlags(cmd, &params)
@@ -40,33 +41,32 @@ func newBaselineCmd() *cobra.Command {
 }
 
 // baseline creates baseline schemas in target dir
-func baseline(compileRes *compileResult, targetDir string) error {
-	baselineDir, err := createBaselineDir(targetDir)
-	if err != nil {
+func baseline(compileRes *compileResult, workingDir, targetDir string) error {
+	if err := createBaselineDir(targetDir); err != nil {
 		return err
 	}
 
-	pkgDir := filepath.Join(baselineDir, pkgDirName)
+	pkgDir := filepath.Join(targetDir, pkgDirName)
 	if err := saveBaselineSchemas(compileRes.pkgFiles, pkgDir); err != nil {
 		return err
 	}
 
-	if err := saveBaselineInfo(compileRes, baselineDir); err != nil {
+	if err := saveBaselineInfo(compileRes, workingDir, targetDir); err != nil {
 		return err
 	}
 	return nil
 }
 
-func saveBaselineInfo(compileRes *compileResult, baselineDir string) error {
+func saveBaselineInfo(compileRes *compileResult, workingDir, baselineDir string) error {
 	var gitCommitHash string
 	sb := new(strings.Builder)
-	if err := new(exec.PipedExec).Command("git", "rev-parse", "HEAD").Run(sb, nil); err == nil {
+	if err := new(exec.PipedExec).Command("git", "rev-parse", "HEAD").WorkingDir(workingDir).Run(sb, nil); err == nil {
 		gitCommitHash = strings.TrimSpace(sb.String())
 	}
 
 	baselineInfoObj := baselineInfo{
 		BaselinePackageUrl: compileRes.modulePath,
-		Timestamp:          time.Now().Format(timestampFormat),
+		Timestamp:          time.Now().In(time.FixedZone("GMT", 0)).Format(timestampFormat),
 		GitCommitHash:      gitCommitHash,
 	}
 
@@ -108,9 +108,10 @@ func saveBaselineSchemas(pkgFiles packageFiles, baselineDir string) error {
 	return nil
 }
 
-func createBaselineDir(dir string) (baselineDir string, err error) {
-	baselineDir = filepath.Join(dir, baselineDirName)
-	pkgDir := filepath.Join(baselineDir, pkgDirName)
-	err = os.MkdirAll(pkgDir, defaultPermissions)
-	return
+func createBaselineDir(dir string) error {
+	if _, err := os.Stat(dir); !os.IsNotExist(err) {
+		return fmt.Errorf("baseline directory already exists: %s", dir)
+	}
+	pkgDir := filepath.Join(dir, pkgDirName)
+	return os.MkdirAll(pkgDir, defaultPermissions)
 }

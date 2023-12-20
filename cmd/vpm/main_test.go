@@ -94,6 +94,7 @@ func TestBaselineBasicUsage(t *testing.T) {
 	err = os.Chdir(tempDir)
 	require.NoError(err)
 
+	baselineDirName := "baseline_schemas"
 	testCases := []struct {
 		name                  string
 		workingDir            string
@@ -148,10 +149,11 @@ func TestBaselineBasicUsage(t *testing.T) {
 			err := os.Chdir(tc.workingDir)
 			require.NoError(err)
 
-			err = os.RemoveAll(filepath.Join(tempTargetDir, baselineDirName))
+			err = os.RemoveAll(tempTargetDir)
 			require.NoError(err)
 
-			err = execRootCmd([]string{"vpm", "baseline", "-C", tc.workingDir, tempTargetDir}, "1.0.0")
+			baselineDir := filepath.Join(tempTargetDir, baselineDirName)
+			err = execRootCmd([]string{"vpm", "baseline", "-C", tc.workingDir, baselineDir}, "1.0.0")
 			require.NoError(err)
 
 			var actualFilePaths []string
@@ -192,14 +194,10 @@ func TestCompatBasicUsage(t *testing.T) {
 
 	workDir := filepath.Join(tempDir, "test", "myapp")
 	baselineDir := filepath.Join(tempDir, "test", "baseline_myapp")
-	err = execRootCmd([]string{"vpm", "baseline", "-C", workDir, baselineDir}, "1.0.0")
-	require.NoError(err)
-	// check reordered args
 	err = execRootCmd([]string{"vpm", "baseline", baselineDir, "--change-dir", workDir}, "1.0.0")
 	require.NoError(err)
 
-	baselineSchemasDir := filepath.Join(baselineDir, baselineDirName)
-	err = execRootCmd([]string{"vpm", "compat", "-C", workDir, baselineSchemasDir}, "1.0.0")
+	err = execRootCmd([]string{"vpm", "compat", "-C", workDir, baselineDir}, "1.0.0")
 	require.NoError(err)
 }
 
@@ -228,8 +226,7 @@ func TestCompatErrors(t *testing.T) {
 	require.NoError(err)
 
 	workDir = filepath.Join(tempDir, "test", "myapp_incompatible")
-	baselineSchemasDir := filepath.Join(baselineDir, baselineDirName)
-	err = execRootCmd([]string{"vpm", "compat", "--ignore", filepath.Join(workDir, "ignores.yml"), "--change-dir", workDir, baselineSchemasDir}, "1.0.0")
+	err = execRootCmd([]string{"vpm", "compat", "--ignore", filepath.Join(workDir, "ignores.yml"), "--change-dir", workDir, baselineDir}, "1.0.0")
 	require.Error(err)
 	errs := coreutils.SplitErrors(err)
 

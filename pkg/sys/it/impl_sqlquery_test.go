@@ -32,7 +32,7 @@ func TestBasicUsage_SqlQuery(t *testing.T) {
 			PlogOffset int64
 			WLogOffset int64
 		}
-		body := `{"args":{"Query":"select Workspace, PlogOffset, WLogOffset from sys.plog"},"elements":[{"fields":["Result"]}]}`
+		body := `{"args":{"Query":"select Workspace, PlogOffset, WLogOffset from sys.plog limit -1"},"elements":[{"fields":["Result"]}]}`
 		resp := vit.PostWS(ws, "q.sys.SqlQuery", body)
 		for _, element := range resp.Sections[0].Elements {
 			r := new(row)
@@ -476,18 +476,4 @@ func TestSqlQuery(t *testing.T) {
 
 		require.NotEqual(t, len(wsOne.Sections[0].Elements), len(wsTwo.Sections[0].Elements))
 	})
-}
-
-func TestXxx(t *testing.T) {
-	vit := it.NewVIT(t, &it.SharedConfig_App1)
-	defer vit.TearDown()
-
-	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
-	body := `{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.category","name":"Awesome food"}}]}`
-	vit.PostWS(ws, "c.sys.CUD", body)
-
-	// body = `{"args":{"Query":"select * from app1pkg.category where name = 'Awesome food'"}}`
-	// vit.PostWS(ws, "q.sys.SqlQuery", body).Println()
-	body = `{"args":{"Schema":"app1pkg.category"},"elements":[{"fields":["sys.ID","name"]}],"filters":[{"expr":"eq","args":{"field":"name","value":"Awesome food"}}]}`
-	vit.PostWS(ws, "q.sys.Collection", body).Println()
 }
