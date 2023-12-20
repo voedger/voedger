@@ -39,3 +39,6 @@ func AppDef() (appdef.IAppDef, error) {
 func Engines() [cluster.ProcessorKind_Count][]int {
 	return [cluster.ProcessorKind_Count][]int{}
 }
+
+// Returns registry partitions count
+func PartsCount() int { return 1 }
