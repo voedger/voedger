@@ -24,6 +24,7 @@ func provideAsyncProjectorApplyCancelAcceptedInviteFactory(timeFunc coreutils.Ti
 	}
 }
 
+// AFTER EXEC c.sys.InitiateCancelAcceptedInvite
 func applyCancelAcceptedInvite(timeFunc coreutils.TimeFunc, federation coreutils.IFederation, appQName istructs.AppQName, tokens itokens.ITokens) func(event istructs.IPLogEvent, state istructs.IState, intents istructs.IIntents) (err error) {
 	return func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
 		skbCDocInvite, err := s.KeyBuilder(state.Record, qNameCDocInvite)

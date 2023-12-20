@@ -157,7 +157,6 @@ func TestInvite_BasicUsage(t *testing.T) {
 	vit.PostWS(ws, "c.sys.CancelSentInvite", fmt.Sprintf(`{"args":{"InviteID":%d}}`, inviteID3))
 	WaitForInviteState(vit, ws, invite.State_Cancelled, inviteID3)
 	InitiateInvitationByEMail(vit, ws, expireDatetime, it.TestEmail3, initialRoles, inviteEmailTemplate, inviteEmailSubject)
-	// WaitForInviteState(vit, ws, invite.State_ToBeInvited, inviteID3)
 	_ = vit.CaptureEmail()
 	WaitForInviteState(vit, ws, invite.State_Invited, inviteID3)
 

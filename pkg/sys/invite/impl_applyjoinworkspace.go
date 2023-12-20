@@ -40,24 +40,20 @@ func applyJoinWorkspace(timeFunc coreutils.TimeFunc, federation coreutils.IFeder
 		}
 
 		login := svCDocInvite.AsString(Field_Login)
-		exists, err := SubjectExistByLogin(login, s)
+		subjectExists, err := SubjectExistByLogin(login, s) // for backward compatibility
+		if err == nil && !subjectExists {
+
+			actualLogin := svCDocInvite.AsString(field_ActualLogin)
+			subjectExists, err = SubjectExistByLogin(actualLogin, s)
+		}
 		if err != nil {
 			// notest
 			return err
 		}
-		if exists {
-			// for backward compatibility
-			// cdoc.sys.SubjectIdx by cdoc.sys.Invite.Login exists -> do nothing, see https://github.com/voedger/voedger/issues/1107
-			return nil
-		}
-		actualLogin := svCDocInvite.AsString(field_ActualLogin)
-		exists, err = SubjectExistByLogin(actualLogin, s)
-		if err != nil {
-			// notest
-			return err
-		}
-		if exists {
-			// cdoc.sys.SubjectIdx by cdoc.sys.Invite.ActualLogin -> do nothing, see https://github.com/voedger/voedger/issues/1107
+		if subjectExists && svCDocInvite.AsInt32(field_State) == State_Joined {
+			// cdoc.sys.Subject eists by login and invite state is any of [State_ToBeInvited, State_Invited, State_ToBeJoined, State_Joined, State_ToUpdateRoles] -> do nothing
+			// otherwise - consider the workspace is joining again
+			// see https://github.com/voedger/voedger/issues/1107
 			return nil
 		}
 
