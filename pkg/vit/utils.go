@@ -377,3 +377,11 @@ func NewLogin(name, pwd string, appQName istructs.AppQName, subjectKind istructs
 	pseudoWSID := coreutils.GetPseudoWSID(istructs.NullWSID, name, istructs.MainClusterID)
 	return Login{name, pwd, pseudoWSID, appQName, subjectKind, clusterID, map[appdef.QName]map[string]interface{}{}}
 }
+
+func TestDeadline(nonTestDeadline time.Duration) time.Time {
+	deadline := time.Now().Add(5 * time.Second)
+	if coreutils.IsDebug() {
+		deadline = deadline.Add(time.Hour)
+	}
+	return deadline
+}

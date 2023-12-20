@@ -33,7 +33,7 @@ func execCmdCancelSentInvite(timeFunc coreutils.TimeFunc) func(args istructs.Exe
 		}
 
 		if !ok {
-			return coreutils.NewHTTPError(http.StatusBadRequest, errInviteNotExists)
+			return coreutils.NewHTTPError(http.StatusBadRequest, ErrInviteNotExists)
 		}
 
 		if !isValidInviteState(svCDocInvite.AsInt32(field_State), qNameCmdCancelSentInvite) {
