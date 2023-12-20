@@ -37,7 +37,8 @@ func Test_BasicUsage(t *testing.T) {
 		ext2name: ext2func,
 	})
 
-	engines := factory.New(nil, nil, 5)
+	engines, err := factory.New(context.Background(), nil, nil, 5)
+	require.NoError(err)
 	require.Equal(5, len(engines))
 
 	require.NoError(engines[0].Invoke(context.Background(), ext1name, nil))

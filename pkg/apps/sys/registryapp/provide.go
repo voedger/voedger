@@ -7,8 +7,10 @@ package registryapp
 import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/apps"
+	"github.com/voedger/voedger/pkg/cluster"
 	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/istructsmem"
+	"github.com/voedger/voedger/pkg/parser"
 	"github.com/voedger/voedger/pkg/registry"
 	"github.com/voedger/voedger/pkg/sys"
 	"github.com/voedger/voedger/pkg/sys/smtp"
@@ -26,4 +28,21 @@ func Provide(smtpCfg smtp.Cfg) apps.AppBuilder {
 		cfg.AddSyncProjectors(registry.ProvideSyncProjectorLoginIdxFactory())
 		apps.RegisterSchemaFS(registrySchemaFS, RegistryAppFQN, ep)
 	}
+}
+
+// Returns registry application definition
+func AppDef() appdef.IAppDef {
+	appDef, err := parser.BuildAppDefFromFS(RegistryAppFQN, registrySchemaFS, "")
+	if err != nil {
+		panic(err)
+	}
+	return appDef
+}
+
+// Returns registry partitions count
+func PartsCount() int { return 1 }
+
+// Returns registry engines pool sizes
+func EnginePoolSize() [cluster.ProcessorKind_Count]int {
+	return [cluster.ProcessorKind_Count]int{1, 1, 1}
 }

@@ -14,6 +14,7 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/apppartsctl"
+	"github.com/voedger/voedger/pkg/cluster"
 	"github.com/voedger/voedger/pkg/iratesce"
 	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istorageimpl"
@@ -50,13 +51,13 @@ func Example() {
 
 	appPartsCtl, cleanupCtl, err := apppartsctl.New(appParts, []apppartsctl.BuiltInApp{
 		{Name: istructs.AppQName_test1_app1,
-			Def:      appDef_1_v1,
-			NumParts: 2,
-			Engines:  MockEngines(2, 2, 2)},
+			Def:            appDef_1_v1,
+			PartsCount:     2,
+			EnginePoolSize: [cluster.ProcessorKind_Count]int{2, 2, 2}},
 		{Name: istructs.AppQName_test1_app2,
-			Def:      appDef_2_v1,
-			NumParts: 3,
-			Engines:  MockEngines(2, 2, 2)},
+			Def:            appDef_2_v1,
+			PartsCount:     3,
+			EnginePoolSize: [cluster.ProcessorKind_Count]int{2, 2, 2}},
 	})
 
 	if err != nil {
@@ -72,7 +73,7 @@ func Example() {
 	ctx, cancel := context.WithCancel(context.Background())
 	go appPartsCtl.Run(ctx)
 
-	borrow_work_release := func(appName istructs.AppQName, partID istructs.PartitionID, proc appparts.ProcKind) {
+	borrow_work_release := func(appName istructs.AppQName, partID istructs.PartitionID, proc cluster.ProcessorKind) {
 		part, err := appParts.Borrow(appName, partID, proc)
 		for errors.Is(err, appparts.ErrNotFound) {
 			time.Sleep(time.Nanosecond)
@@ -93,8 +94,8 @@ func Example() {
 			})
 	}
 
-	borrow_work_release(istructs.AppQName_test1_app1, 1, appparts.ProcKind_Command)
-	borrow_work_release(istructs.AppQName_test1_app2, 1, appparts.ProcKind_Query)
+	borrow_work_release(istructs.AppQName_test1_app1, 1, cluster.ProcessorKind_Command)
+	borrow_work_release(istructs.AppQName_test1_app2, 1, cluster.ProcessorKind_Query)
 
 	cancel()
 
