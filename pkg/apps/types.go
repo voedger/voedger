@@ -43,3 +43,6 @@ type AppPackages struct {
 type CLIParams struct {
 	Storage string
 }
+type CLIParams struct {
+	Storage string
+}
