@@ -53,11 +53,11 @@ func Example() {
 		{Name: istructs.AppQName_test1_app1,
 			Def:            appDef_1_v1,
 			NumParts:       2,
-			EnginePoolSize: [cluster.ProcKind_Count]int{2, 2, 2}},
+			EnginePoolSize: [cluster.ProcessorKind_Count]int{2, 2, 2}},
 		{Name: istructs.AppQName_test1_app2,
 			Def:            appDef_2_v1,
 			NumParts:       3,
-			EnginePoolSize: [cluster.ProcKind_Count]int{2, 2, 2}},
+			EnginePoolSize: [cluster.ProcessorKind_Count]int{2, 2, 2}},
 	})
 
 	if err != nil {
@@ -73,7 +73,7 @@ func Example() {
 	ctx, cancel := context.WithCancel(context.Background())
 	go appPartsCtl.Run(ctx)
 
-	borrow_work_release := func(appName istructs.AppQName, partID istructs.PartitionID, proc cluster.ProcKind) {
+	borrow_work_release := func(appName istructs.AppQName, partID istructs.PartitionID, proc cluster.ProcessorKind) {
 		part, err := appParts.Borrow(appName, partID, proc)
 		for errors.Is(err, appparts.ErrNotFound) {
 			time.Sleep(time.Nanosecond)
@@ -94,8 +94,8 @@ func Example() {
 			})
 	}
 
-	borrow_work_release(istructs.AppQName_test1_app1, 1, cluster.ProcKind_Command)
-	borrow_work_release(istructs.AppQName_test1_app2, 1, cluster.ProcKind_Query)
+	borrow_work_release(istructs.AppQName_test1_app1, 1, cluster.ProcessorKind_Command)
+	borrow_work_release(istructs.AppQName_test1_app2, 1, cluster.ProcessorKind_Query)
 
 	cancel()
 

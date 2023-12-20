@@ -5,23 +5,21 @@
 
 package cluster
 
-// ProcKind is a enumeration of processors.
-//
-// Ref to proc-king.go for values and methods
-type ProcKind uint8
+// ProcessorKind is a enumeration of processors.
+type ProcessorKind uint8
 
-//go:generate stringer -type=ProcKind
+//go:generate stringer -type=ProcessorKind
 
 const (
-	ProcKind_Command ProcKind = iota
-	ProcKind_Query
-	ProcKind_Projector
+	ProcessorKind_Command ProcessorKind = iota
+	ProcessorKind_Query
+	ProcessorKind_Projector
 
-	ProcKind_Count
+	ProcessorKind_Count
 )
 
 type AppDeploymentDescriptor struct {
 	NumParts int
 
-	EnginePoolSize [ProcKind_Count]int
+	EnginePoolSize [ProcessorKind_Count]int
 }

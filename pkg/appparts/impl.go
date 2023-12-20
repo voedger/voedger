@@ -29,7 +29,7 @@ func newAppPartitions(structs istructs.IAppStructsProvider) (ap IAppPartitions, 
 	return a, func() {}, err
 }
 
-func (aps *apps) DeployApp(appName istructs.AppQName, appDef appdef.IAppDef, engines [cluster.ProcKind_Count]int) {
+func (aps *apps) DeployApp(appName istructs.AppQName, appDef appdef.IAppDef, engines [cluster.ProcessorKind_Count]int) {
 	aps.mx.Lock()
 	defer aps.mx.Unlock()
 
@@ -62,7 +62,7 @@ func (aps *apps) DeployAppPartitions(appName istructs.AppQName, partIDs []istruc
 	}
 }
 
-func (aps *apps) Borrow(appName istructs.AppQName, partID istructs.PartitionID, proc cluster.ProcKind) (IAppPartition, error) {
+func (aps *apps) Borrow(appName istructs.AppQName, partID istructs.PartitionID, proc cluster.ProcessorKind) (IAppPartition, error) {
 	aps.mx.RLock()
 	defer aps.mx.RUnlock()
 

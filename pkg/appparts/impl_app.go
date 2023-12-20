@@ -21,7 +21,7 @@ type app struct {
 	name    istructs.AppQName
 	def     appdef.IAppDef
 	structs istructs.IAppStructs
-	engines [cluster.ProcKind_Count]*pool.Pool[engine]
+	engines [cluster.ProcessorKind_Count]*pool.Pool[engine]
 	// no locks need. Owned apps structure will locks access to this structure
 	parts map[istructs.PartitionID]*partition
 }
@@ -33,7 +33,7 @@ func newApplication(name istructs.AppQName) *app {
 	}
 }
 
-func (a *app) deploy(def appdef.IAppDef, structs istructs.IAppStructs, engines [cluster.ProcKind_Count]int) {
+func (a *app) deploy(def appdef.IAppDef, structs istructs.IAppStructs, engines [cluster.ProcessorKind_Count]int) {
 	a.def = def
 	a.structs = structs
 	for k, cnt := range engines {
@@ -55,7 +55,7 @@ func newPartition(app *app, id istructs.PartitionID) *partition {
 	return part
 }
 
-func (p *partition) borrow(proc cluster.ProcKind) (*partitionRT, error) {
+func (p *partition) borrow(proc cluster.ProcessorKind) (*partitionRT, error) {
 	b := newPartitionRT(p)
 
 	if err := b.init(proc); err != nil {
@@ -96,7 +96,7 @@ func (rt *partitionRT) Release() {
 }
 
 // Initialize partition RT structures for use
-func (rt *partitionRT) init(proc cluster.ProcKind) error {
+func (rt *partitionRT) init(proc cluster.ProcessorKind) error {
 	engine, err := rt.part.app.engines[proc].Borrow()
 	if err != nil {
 		return fmt.Errorf(errNotEnoughEngines, proc.TrimString(), err)

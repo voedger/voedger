@@ -36,6 +36,6 @@ func AppDef() (appdef.IAppDef, error) {
 }
 
 // Returns registry engines pool sizes
-func Engines() [cluster.ProcKind_Count][]int {
-	return [cluster.ProcKind_Count][]int{}
+func Engines() [cluster.ProcessorKind_Count][]int {
+	return [cluster.ProcessorKind_Count][]int{}
 }

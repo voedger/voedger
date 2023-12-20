@@ -10,9 +10,9 @@ import (
 	"strings"
 )
 
-func (k ProcKind) MarshalText() ([]byte, error) {
+func (k ProcessorKind) MarshalText() ([]byte, error) {
 	var s string
-	if k < ProcKind_Count {
+	if k < ProcessorKind_Count {
 		s = k.String()
 	} else {
 		const base = 10
@@ -21,9 +21,9 @@ func (k ProcKind) MarshalText() ([]byte, error) {
 	return []byte(s), nil
 }
 
-// Renders an ProcKind in human-readable form, without `ProcKind_` prefix,
+// Renders an ProcessorKind in human-readable form, without `ProcessorKind_` prefix,
 // suitable for debugging or error messages
-func (k ProcKind) TrimString() string {
-	const pref = "ProcKind_"
+func (k ProcessorKind) TrimString() string {
+	const pref = "ProcessorKind_"
 	return strings.TrimPrefix(k.String(), pref)
 }
