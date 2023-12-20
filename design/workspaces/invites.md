@@ -150,9 +150,9 @@ stateDiagram-v2
 - State
 - Created (unix-timestamp) ???
 - Updated (unix-timestamp) ???
-- SubjectID (Subject.ID)
-- InviteeProfileWSID
-- ActualLogin // `token.Login`
+- SubjectID (Subject.ID) // by ap.sys.ApplyJoinWorkspace
+- InviteeProfileWSID     // by ap.sys.ApplyJoinWorkspace
+- ActualLogin            // `token.Login`, by ap.sys.ApplyJoinWorkspace
 
 ## c.sys.InitiateJoinWorkspace()
 
