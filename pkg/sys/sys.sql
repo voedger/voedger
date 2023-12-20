@@ -85,7 +85,6 @@ ABSTRACT WORKSPACE Workspace (
 		SubjectKind int32 NOT NULL,
 		Roles varchar(1024) NOT NULL,
 		ProfileWSID int64 NOT NULL,
-		ActualLogin varchar,
 		UNIQUEFIELD Login
 	);
 

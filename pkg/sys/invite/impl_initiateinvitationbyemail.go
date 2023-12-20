@@ -92,7 +92,6 @@ func execCmdInitiateInvitationByEMail(timeFunc coreutils.TimeFunc) func(args ist
 		svbCDocInvite.PutInt64(field_Created, now)
 		svbCDocInvite.PutInt64(field_Updated, now)
 		svbCDocInvite.PutInt32(field_State, State_ToBeInvited)
-		svbCDocInvite.PutString(Field_Roles, args.ArgumentObject.AsString(Field_Roles))
 		svbCDocInvite.PutString(field_ActualLogin, actualLogin)
 
 		return
