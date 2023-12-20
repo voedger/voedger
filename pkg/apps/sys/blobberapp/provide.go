@@ -24,14 +24,18 @@ func Provide(smtpCfg smtp.Cfg) apps.AppBuilder {
 }
 
 // Returns blobber application definition
-func AppDef() (appdef.IAppDef, error) {
-	return parser.BuildAppDefFromFS(BlobberAppFQN, blobberSchemaFS, "")
+func AppDef() appdef.IAppDef {
+	appDef, err := parser.BuildAppDefFromFS(BlobberAppFQN, blobberSchemaFS, "")
+	if err != nil {
+		panic(err)
+	}
+	return appDef
 }
 
 // Returns blobber partitions count
 func PartsCount() int { return 1 }
 
 // Returns blobber engines pool sizes
-func EnginePoolSize() [cluster.ProcessorKind_Count][]int {
-	return [cluster.ProcessorKind_Count][]int{}
+func EnginePoolSize() [cluster.ProcessorKind_Count]int {
+	return [cluster.ProcessorKind_Count]int{1, 1, 1}
 }

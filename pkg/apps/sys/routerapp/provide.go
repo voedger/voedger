@@ -24,14 +24,18 @@ func Provide(smtpCfg smtp.Cfg) apps.AppBuilder {
 }
 
 // Returns router application definition
-func AppDef() (appdef.IAppDef, error) {
-	return parser.BuildAppDefFromFS(RouterAppFQN, routerSchemaFS, "")
+func AppDef() appdef.IAppDef {
+	appDef, err := parser.BuildAppDefFromFS(RouterAppFQN, routerSchemaFS, "")
+	if err != nil {
+		panic(err)
+	}
+	return appDef
 }
 
 // Returns router partitions count
 func PartsCount() int { return 1 }
 
 // Returns router engines pool sizes
-func EnginePoolSize() [cluster.ProcessorKind_Count][]int {
-	return [cluster.ProcessorKind_Count][]int{}
+func EnginePoolSize() [cluster.ProcessorKind_Count]int {
+	return [cluster.ProcessorKind_Count]int{1, 1, 1}
 }

@@ -31,14 +31,18 @@ func Provide(smtpCfg smtp.Cfg) apps.AppBuilder {
 }
 
 // Returns registry application definition
-func AppDef() (appdef.IAppDef, error) {
-	return parser.BuildAppDefFromFS(RegistryAppFQN, registrySchemaFS, "")
+func AppDef() appdef.IAppDef {
+	appDef, err := parser.BuildAppDefFromFS(RegistryAppFQN, registrySchemaFS, "")
+	if err != nil {
+		panic(err)
+	}
+	return appDef
 }
 
 // Returns registry partitions count
 func PartsCount() int { return 1 }
 
 // Returns registry engines pool sizes
-func EnginePoolSize() [cluster.ProcessorKind_Count][]int {
-	return [cluster.ProcessorKind_Count][]int{}
+func EnginePoolSize() [cluster.ProcessorKind_Count]int {
+	return [cluster.ProcessorKind_Count]int{1, 1, 1}
 }

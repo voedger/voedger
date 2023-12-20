@@ -31,8 +31,8 @@ func (ctl *appPartitionsController) Run(ctx context.Context) {
 
 	for _, app := range ctl.apps {
 		ctl.parts.DeployApp(app.Name, app.Def, app.EnginePoolSize)
-		ids := make([]istructs.PartitionID, app.NumParts)
-		for id := 0; id < app.NumParts; id++ {
+		ids := make([]istructs.PartitionID, app.PartsCount)
+		for id := 0; id < app.PartsCount; id++ {
 			ids[id] = istructs.PartitionID(id)
 		}
 		ctl.parts.DeployAppPartitions(app.Name, ids)
