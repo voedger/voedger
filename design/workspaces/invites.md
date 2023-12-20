@@ -263,7 +263,7 @@ sequenceDiagram
     participant workspace as InvitingWorkspace
     participant profilews as InviteeProfile
 
-    inviter ->> workspace: c.sys.CancelAcceptedInvite()
+    inviter ->> workspace: c.sys.InitiateCancelAcceptedInvite()
     activate workspace
         workspace ->> workspace: Update cdoc.sys.Invite State=ToBeCancelled
         workspace -->> inviter: OK

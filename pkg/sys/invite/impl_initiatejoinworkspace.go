@@ -64,6 +64,7 @@ func execCmdInitiateJoinWorkspace(timeFunc coreutils.TimeFunc) func(args istruct
 		svbCDocInvite.PutInt32(authnz.Field_SubjectKind, svPrincipal.AsInt32(state.Field_Kind))
 		svbCDocInvite.PutInt64(field_Updated, timeFunc().UnixMilli())
 		svbCDocInvite.PutInt32(field_State, State_ToBeJoined)
+		svbCDocInvite.PutChars(field_ActualLogin, svPrincipal.AsString(state.Field_Name))
 
 		return
 	}

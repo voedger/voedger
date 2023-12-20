@@ -8,7 +8,6 @@ package sys_it
 import (
 	"encoding/json"
 	"fmt"
-	"strconv"
 	"testing"
 	"time"
 
@@ -93,13 +92,11 @@ func TestDeactivateJoinedWorkspace(t *testing.T) {
 	// join login TestEmail2 to ws1
 	expireDatetime := vit.Now().UnixMilli()
 	roleOwner := iauthnz.QNameRoleWorkspaceOwner.String()
-	updateRolesEmailTemplate := "text:" + invite.EmailTemplatePlaceholder_Roles
 	updateRolesEmailSubject := "your roles are updated"
-	inviteID := InitiateInvitationByEMail(vit, newWS, expireDatetime, it.TestEmail2, roleOwner, updateRolesEmailTemplate, updateRolesEmailSubject)
-	vit.CaptureEmail()
+	inviteID := InitiateInvitationByEMail(vit, newWS, expireDatetime, it.TestEmail2, roleOwner, inviteEmailTemplate, updateRolesEmailSubject)
+	email := vit.CaptureEmail()
+	verificationCode := email.Body[:6]
 	WaitForInviteState(vit, newWS, invite.State_Invited, inviteID)
-	expireDatetimeStr := strconv.FormatInt(expireDatetime, 10)
-	verificationCode := expireDatetimeStr[len(expireDatetimeStr)-6:]
 	InitiateJoinWorkspace(vit, newWS, inviteID, it.TestEmail2, verificationCode)
 	WaitForInviteState(vit, newWS, invite.State_Joined, inviteID)
 

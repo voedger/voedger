@@ -6,10 +6,8 @@ package sys_it
 
 import (
 	"fmt"
-	"log"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -18,12 +16,6 @@ import (
 	coreutils "github.com/voedger/voedger/pkg/utils"
 	it "github.com/voedger/voedger/pkg/vit"
 )
-
-func TestMain(t *testing.T) {
-	gmtTimeLoc := time.FixedZone("GMT", 0)
-	s := time.Now().In(gmtTimeLoc).Format("Mon, 02 Jan 2006 15:04:05.000 GMT")
-	log.Println(s)
-}
 
 var (
 	initialRoles        = "initial.Roles"
@@ -164,17 +156,15 @@ func TestInvite_BasicUsage(t *testing.T) {
 	InitiateJoinWorkspace(vit, ws, inviteID, it.TestEmail, verificationCodeEmail)
 	InitiateJoinWorkspace(vit, ws, inviteID2, it.TestEmail2, verificationCodeEmail2)
 
-	WaitForInviteState(vit, ws, invite.State_ToBeJoined, inviteID)
-	WaitForInviteState(vit, ws, invite.State_ToBeJoined, inviteID2)
+	// State_ToBeJoined will be set for a very short period of time so let's do not catch it
+	WaitForInviteState(vit, ws, invite.State_Joined, inviteID)
+	WaitForInviteState(vit, ws, invite.State_Joined, inviteID2)
 
 	cDocInvite = findCDocInviteByID(inviteID2)
 
 	require.Equal(float64(vit.GetPrincipal(istructs.AppQName_test1_app1, it.TestEmail2).ProfileWSID), cDocInvite[10])
 	require.Equal(float64(istructs.SubjectKind_User), cDocInvite[0])
 	require.Equal(float64(vit.Now().UnixMilli()), cDocInvite[8])
-
-	WaitForInviteState(vit, ws, invite.State_Joined, inviteID)
-	WaitForInviteState(vit, ws, invite.State_Joined, inviteID2)
 
 	cDocJoinedWorkspace := FindCDocJoinedWorkspaceByInvitingWorkspaceWSIDAndLogin(vit, ws.WSID, it.TestEmail2)
 
@@ -217,13 +207,12 @@ func TestInvite_BasicUsage(t *testing.T) {
 	//Cancel accepted invite
 	vit.PostWS(ws, "c.sys.InitiateCancelAcceptedInvite", fmt.Sprintf(`{"args":{"InviteID":%d}}`, inviteID))
 
-	WaitForInviteState(vit, ws, invite.State_ToBeCancelled, inviteID)
+	// State_ToBeCancelled will be set for a veri short period of time so let's do not catch it
+	WaitForInviteState(vit, ws, invite.State_Cancelled, inviteID)
 
 	cDocInvite = findCDocInviteByID(inviteID)
 
 	require.Equal(float64(vit.Now().UnixMilli()), cDocInvite[8])
-
-	WaitForInviteState(vit, ws, invite.State_Cancelled, inviteID)
 
 	cDocSubject = findCDocSubjectByLogin(it.TestEmail)
 
@@ -236,20 +225,18 @@ func TestInvite_BasicUsage(t *testing.T) {
 	//Leave workspace
 	vit.PostWS(ws, "c.sys.InitiateLeaveWorkspace", "{}", coreutils.WithAuthorizeBy(vit.GetPrincipal(ws.Owner.AppQName, it.TestEmail2).Token))
 
-	WaitForInviteState(vit, ws, invite.State_ToBeLeft, inviteID2)
+	// State_ToBeLeft will be set for a veri short period of time so let's do not catch it
+	WaitForInviteState(vit, ws, invite.State_Left, inviteID2)
 
 	cDocInvite = findCDocInviteByID(inviteID2)
 
 	require.Equal(float64(vit.Now().UnixMilli()), cDocInvite[8])
-
-	WaitForInviteState(vit, ws, invite.State_Left, inviteID2)
 
 	cDocSubject = findCDocSubjectByLogin(it.TestEmail2)
 
 	require.False(cDocSubject[4].(bool))
 
 	//TODO check InviteeProfile joined workspace
-
 }
 
 func TestCancelSentInvite(t *testing.T) {
@@ -259,6 +246,7 @@ func TestCancelSentInvite(t *testing.T) {
 
 	t.Run("basic usage", func(t *testing.T) {
 		inviteID := InitiateInvitationByEMail(vit, ws, 1674751138000, "user@acme.com", initialRoles, inviteEmailTemplate, inviteEmailSubject)
+		WaitForInviteState(vit, ws, invite.State_Invited, inviteID)
 
 		//Read it for successful vit tear down
 		vit.CaptureEmail()
