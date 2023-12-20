@@ -33,7 +33,7 @@ func (ctl *appPartitionsController) Run(ctx context.Context) {
 		ctl.parts.DeployApp(app.Name, app.Def, app.EnginePoolSize)
 		ids := make([]istructs.PartitionID, app.NumParts)
 		for id := 0; id < app.NumParts; id++ {
-			ids[id] = istructs.PartitionID(id + 1)
+			ids[id] = istructs.PartitionID(id)
 		}
 		ctl.parts.DeployAppPartitions(app.Name, ids)
 	}
