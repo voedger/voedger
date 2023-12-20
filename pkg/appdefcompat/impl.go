@@ -253,7 +253,7 @@ func checkConstraint(oldTreePath []string, m *matchNodesResult, constraint Const
 	if len(constraint) == 0 {
 		return
 	}
-	if m.InsertedNodeCount > 0 {
+	if len(m.DeletedNodeNames) == 0 && m.InsertedNodeCount > 0 {
 		if constraint == ConstraintNonModifiable || constraint == ConstraintAppendOnly {
 			errorType := ErrorTypeNodeInserted
 			if constraint == ConstraintNonModifiable {
@@ -337,7 +337,7 @@ func matchNodes(oldNodes, newNodes []*CompatibilityTreeNode) *matchNodesResult {
 	for i, newNode := range newNodes {
 		oldNode, _ := findNodeByName(oldNodes, newNode.Name)
 		if oldNode == nil {
-			if i >= len(newNodes)-1 {
+			if i > len(oldNodes)-1 {
 				result.AppendedNodeCount++
 			} else {
 				result.InsertedNodeCount++

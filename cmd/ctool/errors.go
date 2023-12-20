@@ -11,7 +11,7 @@ import "errors"
 var (
 	ErrInvalidClusterEdition                = errors.New("invalid cluster edition (expected SE or CE)")
 	ErrInvalidNumberOfDataCenters           = errors.New("invalid number of data centers")
-	ErrClusterConfNotFound                  = errors.New("cluster configuration not found\nuse the init command")
+	ErrClusterConfNotFound                  = errors.New("cluster configuration not found")
 	ErrClusterConfAlreadyExists             = errors.New("the cluster configuration already exists")
 	ErrInvalidNumberOfArguments             = errors.New("invalid number of arguments")
 	ErrInvalidIpAddress                     = errors.New("invalid IP-address")
@@ -26,11 +26,11 @@ var (
 	ErrManagerTokenNotExists                = errors.New("manager token not exists")
 )
 
-var ErrBadVersion = errors.New("bad version")
+var ErrIncorrectVersion = errors.New("incorrect version")
 
 const (
 	errCtoolVersionNewerThanClusterVersion = "ctool version %s is newer than cluster version %s: %w"
-	errClusterVersionNewerThanCtoolVersion = "cluster version %s is newer than ctool version %s: %w"
+	errClusterVersionNewerThanCtoolVersion = "cluster version %s is newer than ctool version %s\nyou should use the ctool version %s: %w"
 	errDifferentNodeVersion                = "node version %s do not match the cluster version %s: %w"
 )
 

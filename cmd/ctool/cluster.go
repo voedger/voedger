@@ -24,7 +24,7 @@ import (
 
 var testMode bool
 
-func newCluster() (*clusterType, error) {
+func newCluster() *clusterType {
 	var cluster = clusterType{
 		DesiredClusterVersion: version,
 		ActualClusterVersion:  "",
@@ -37,25 +37,22 @@ func newCluster() (*clusterType, error) {
 		ReplacedAddresses:     make([]string, 0),
 	}
 	if err := cluster.setEnv(); err != nil {
-		return nil, err
+		logger.Error(err.Error())
+		return nil
 	}
 
 	dir, _ := os.Getwd()
 	cluster.configFileName = filepath.Join(dir, clusterConfFileName)
-	cluster.exists = cluster.loadFromJSON() == nil
 
-	if cluster.ActualClusterVersion == "" {
-		return &cluster, nil
+	if cluster.clusterConfigFileExists() {
+		cluster.exists = true
+		if err := cluster.loadFromJSON(); err != nil {
+			logger.Error(err.Error())
+			return nil
+		}
 	}
 
-	vr := compareVersions(version, cluster.ActualClusterVersion)
-	if vr == 1 {
-		return &cluster, fmt.Errorf(errCtoolVersionNewerThanClusterVersion, version, cluster.ActualClusterVersion, ErrBadVersion)
-	} else if vr == -1 {
-		return &cluster, fmt.Errorf(errClusterVersionNewerThanCtoolVersion, cluster.ActualClusterVersion, version, ErrBadVersion)
-	}
-
-	return &cluster, nil
+	return &cluster
 }
 
 func newCmd(cmdKind, cmdArgs string) *cmdType {
@@ -93,9 +90,9 @@ type nodeType struct {
 }
 
 func (n *nodeType) address() string {
-	if len(n.ActualNodeState.Address) > 0 {
+	if n.ActualNodeState != nil && len(n.ActualNodeState.Address) > 0 {
 		return n.ActualNodeState.Address
-	} else if len(n.DesiredNodeState.Address) > 0 {
+	} else if n.DesiredNodeState != nil && len(n.DesiredNodeState.Address) > 0 {
 		return n.DesiredNodeState.Address
 	}
 
@@ -211,7 +208,7 @@ func (n *nodeType) label(key string) string {
 // nolint
 func (ns *nodeType) check(c *clusterType) error {
 	if ns.actualNodeVersion() != ns.desiredNodeVersion(c) {
-		return fmt.Errorf(errDifferentNodeVersion, ns.actualNodeVersion(), ns.desiredNodeVersion(c), ErrBadVersion)
+		return fmt.Errorf(errDifferentNodeVersion, ns.actualNodeVersion(), ns.desiredNodeVersion(c), ErrIncorrectVersion)
 	}
 	return nil
 }
@@ -471,7 +468,12 @@ func (c *clusterType) applyCmd(cmd *cmdType) error {
 		if node.ActualNodeState != nil {
 			node.ActualNodeState.clear()
 		}
-
+	case ckUpgrade:
+		c.DesiredClusterVersion = version
+		for i := range c.Nodes {
+			c.Nodes[i].DesiredNodeState.NodeVersion = version
+			c.Nodes[i].DesiredNodeState.Address = c.Nodes[i].ActualNodeState.Address
+		}
 	}
 
 	c.Cmd = cmd
@@ -521,6 +523,17 @@ func (c *clusterType) addressInReplacedList(address string) bool {
 	return false
 }
 
+func (c *clusterType) clusterConfigFileExists() bool {
+	_, err := os.Stat(c.configFileName)
+	if err == nil {
+		return true
+	}
+	if os.IsNotExist(err) {
+		return false
+	}
+	return false
+}
+
 func (c *clusterType) loadFromJSON() error {
 
 	defer c.updateNodeIndexes()
@@ -537,8 +550,9 @@ func (c *clusterType) loadFromJSON() error {
 			}
 		}
 	}()
-	if _, err := os.Stat(c.configFileName); err != nil {
-		return err
+
+	if !c.clusterConfigFileExists() {
+		return ErrClusterConfNotFound
 	}
 
 	b, err := os.ReadFile(c.configFileName)
@@ -673,4 +687,48 @@ func (c *clusterType) existsNodeError() bool {
 		}
 	}
 	return false
+}
+
+func (c *clusterType) checkVersion() error {
+
+	logger.Info("ctool version: ", version)
+
+	var clusterVersion string
+
+	if c.clusterConfigFileExists() && !c.Cmd.isEmpty() {
+		clusterVersion = c.DesiredClusterVersion
+	}
+
+	if len(clusterVersion) == 0 {
+		clusterVersion = c.ActualClusterVersion
+	}
+
+	// The cluster configuration is still missing
+	if clusterVersion == "" {
+		logger.Info("cluster version is missing")
+		return nil
+	}
+
+	logger.Info("cluster version: ", clusterVersion)
+
+	vr := compareVersions(version, clusterVersion)
+	if vr == 1 {
+		return fmt.Errorf(errCtoolVersionNewerThanClusterVersion, version, clusterVersion, ErrIncorrectVersion)
+	} else if vr == -1 {
+		return fmt.Errorf(errClusterVersionNewerThanCtoolVersion, clusterVersion, version, clusterVersion, ErrIncorrectVersion)
+	}
+
+	return nil
+}
+
+func (c *clusterType) needUpgrade() (bool, error) {
+	vr := compareVersions(version, c.ActualClusterVersion)
+	if vr == -1 {
+		return false, fmt.Errorf(errClusterVersionNewerThanCtoolVersion, c.ActualClusterVersion, version, c.ActualClusterVersion, ErrIncorrectVersion)
+	} else if vr == 1 {
+		return true, nil
+	}
+
+	return false, nil
+
 }

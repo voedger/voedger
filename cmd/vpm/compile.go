@@ -28,15 +28,13 @@ func newCompileCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "compile",
 		Short: "compile voedger application",
-		RunE: func(cmd *cobra.Command, args []string) error {
-			newParams, err := setUpParams(params, args)
+		RunE: func(cmd *cobra.Command, args []string) (err error) {
+			params, err = prepareParams(params, args)
 			if err != nil {
 				return err
 			}
-			if _, err := compile(newParams.WorkingDir); err != nil {
-				return err
-			}
-			return nil
+			_, err = compile(params.WorkingDir)
+			return
 		},
 	}
 	initGlobalFlags(cmd, &params)
@@ -54,11 +52,12 @@ func compile(workingDir string) (*compileResult, error) {
 	importedStmts := make(map[string]parser.ImportStmt)
 	pkgFiles := make(packageFiles)
 	goModFileDir := filepath.Dir(depMan.DependencyFilePath())
-	relativeWorkingDir, err := filepath.Rel(goModFileDir, workingDir)
+	relativeModulePath, err := filepath.Rel(goModFileDir, workingDir)
 	if err != nil {
 		return nil, err
 	}
-	modulePath, err := url.JoinPath(depMan.ModulePath(), relativeWorkingDir)
+	relativeModulePath = strings.ReplaceAll(relativeModulePath, "\\", "/")
+	modulePath, err := url.JoinPath(depMan.ModulePath(), relativeModulePath)
 	if err != nil {
 		return nil, err
 	}
@@ -249,18 +248,18 @@ func compileDependency(depMan dm.IDependencyManager, depURL string, importedStmt
 }
 
 // checkWorkingDir checks if working dir is valid and returns it
-func checkWorkingDir(params vpmParams) (string, error) {
-	if params.WorkingDir == "" {
+func checkWorkingDir(workingDir string) (string, error) {
+	if workingDir == "" {
 		wd, err := os.Getwd()
 		if err != nil {
 			return "", fmt.Errorf("failed to get working directory: %v", err)
 		}
 		return wd, nil
 	}
-	if _, err := os.Stat(params.WorkingDir); os.IsNotExist(err) {
-		return "", fmt.Errorf("failed to open %s", params.WorkingDir)
+	if _, err := os.Stat(workingDir); os.IsNotExist(err) {
+		return "", fmt.Errorf("failed to open %s", workingDir)
 	}
-	return params.WorkingDir, nil
+	return workingDir, nil
 }
 
 func initGlobalFlags(cmd *cobra.Command, params *vpmParams) {
@@ -268,26 +267,18 @@ func initGlobalFlags(cmd *cobra.Command, params *vpmParams) {
 	cmd.Flags().StringVarP(&params.WorkingDir, "change-dir", "C", "", "Change to dir before running the command. Any files named on the command line are interpreted after changing directories. If used, this flag must be the first one in the command line.")
 }
 
-// setUpParams sets up command line params
-// returns params and error
-func setUpParams(params vpmParams, args []string) (newParams vpmParams, err error) {
-	newParams.WorkingDir, err = checkWorkingDir(params)
+func prepareParams(params vpmParams, args []string) (newParams vpmParams, err error) {
+	if len(args) > 0 {
+		params.TargetDir = filepath.Clean(args[0])
+	}
+	newParams = params
+	newParams.WorkingDir, err = checkWorkingDir(params.WorkingDir)
 	if err != nil {
 		return
 	}
-	if len(args) > 0 {
-		for _, arg := range args {
-			arg = strings.TrimSpace(arg)
-			if strings.HasPrefix(arg, "-C ") {
-				newParams.WorkingDir = strings.TrimPrefix(arg, "-C ")
-				continue
-			}
-			if strings.HasPrefix(arg, "-C=") {
-				newParams.WorkingDir = strings.TrimPrefix(arg, "-C=")
-				continue
-			}
-			newParams.TargetDir = strings.TrimSpace(arg)
-		}
+	newParams.WorkingDir = filepath.Clean(newParams.WorkingDir)
+	if newParams.IgnoreFile != "" {
+		newParams.IgnoreFile = filepath.Clean(newParams.IgnoreFile)
 	}
 	if newParams.TargetDir == "" {
 		newParams.TargetDir = newParams.WorkingDir

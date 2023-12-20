@@ -15,10 +15,15 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
+	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 //go:embed test/myapp/*
 var testMyAppFS embed.FS
+
+//go:embed test/myapp_incompatible/*
+var testMyAppIncompatibleFS embed.FS
 
 //go:embed test/myapperr/*
 var testMyAppErrFS embed.FS
@@ -45,19 +50,19 @@ func TestCompileBasicUsage(t *testing.T) {
 	}{
 		{
 			name: "simple schema with no imports",
-			dir:  filepath.Join(tempDir, "test/myapp/mypkg1"),
+			dir:  filepath.Join(tempDir, "test", "myapp", "mypkg1"),
 		},
 		{
 			name: "schema importing a local package",
-			dir:  filepath.Join(tempDir, "test/myapp/mypkg2"),
+			dir:  filepath.Join(tempDir, "test", "myapp", "mypkg2"),
 		},
 		{
 			name: "schema importing voedger package",
-			dir:  filepath.Join(tempDir, "test/myapp/mypkg3"),
+			dir:  filepath.Join(tempDir, "test", "myapp", "mypkg3"),
 		},
 		{
 			name: "application schema using both local package and voedger",
-			dir:  filepath.Join(tempDir, "test/myapp"),
+			dir:  filepath.Join(tempDir, "test", "myapp"),
 		},
 	}
 
@@ -66,7 +71,7 @@ func TestCompileBasicUsage(t *testing.T) {
 			err := os.Chdir(tc.dir)
 			require.NoError(err)
 
-			err = execRootCmd([]string{"vpm", "compile", fmt.Sprintf(" -C %s", tc.dir)}, "1.0.0")
+			err = execRootCmd([]string{"vpm", "compile", "-C", tc.dir}, "1.0.0")
 			require.NoError(err)
 		})
 	}
@@ -89,6 +94,7 @@ func TestBaselineBasicUsage(t *testing.T) {
 	err = os.Chdir(tempDir)
 	require.NoError(err)
 
+	baselineDirName := "baseline_schemas"
 	testCases := []struct {
 		name                  string
 		workingDir            string
@@ -96,43 +102,43 @@ func TestBaselineBasicUsage(t *testing.T) {
 	}{
 		{
 			name:       "simple schema with no imports",
-			workingDir: filepath.Join(tempDir, "test/myapp/mypkg1"),
+			workingDir: filepath.Join(tempDir, "test", "myapp", "mypkg1"),
 			expectedBaselineFiles: []string{
-				filepath.Join(tempTargetDir, fmt.Sprintf("%s/%s/sys/sys.sql", baselineDirName, pkgDirName)),
-				filepath.Join(tempTargetDir, fmt.Sprintf("%s/%s/server.com/account/repo/mypkg1/schema1.sql", baselineDirName, pkgDirName)),
+				filepath.Join(tempTargetDir, baselineDirName, pkgDirName, "sys", "sys.sql"),
+				filepath.Join(tempTargetDir, baselineDirName, pkgDirName, "server.com", "account", "repo", "mypkg1", "schema1.sql"),
 				filepath.Join(tempTargetDir, baselineDirName, baselineInfoFileName),
 			},
 		},
 		{
 			name:       "schema importing a local package",
-			workingDir: filepath.Join(tempDir, "test/myapp/mypkg2"),
+			workingDir: filepath.Join(tempDir, "test", "myapp", "mypkg2"),
 			expectedBaselineFiles: []string{
-				filepath.Join(tempTargetDir, fmt.Sprintf("%s/%s/sys/sys.sql", baselineDirName, pkgDirName)),
-				filepath.Join(tempTargetDir, fmt.Sprintf("%s/%s/server.com/account/repo/mypkg1/schema1.sql", baselineDirName, pkgDirName)),
-				filepath.Join(tempTargetDir, fmt.Sprintf("%s/%s/server.com/account/repo/mypkg2/schema2.sql", baselineDirName, pkgDirName)),
+				filepath.Join(tempTargetDir, baselineDirName, pkgDirName, "sys", "sys.sql"),
+				filepath.Join(tempTargetDir, baselineDirName, pkgDirName, "server.com", "account", "repo", "mypkg1", "schema1.sql"),
+				filepath.Join(tempTargetDir, baselineDirName, pkgDirName, "server.com", "account", "repo", "mypkg2", "schema2.sql"),
 				filepath.Join(tempTargetDir, baselineDirName, baselineInfoFileName),
 			},
 		},
 		{
 			name:       "schema importing voedger package",
-			workingDir: filepath.Join(tempDir, "test/myapp/mypkg3"),
+			workingDir: filepath.Join(tempDir, "test", "myapp", "mypkg3"),
 			expectedBaselineFiles: []string{
-				filepath.Join(tempTargetDir, fmt.Sprintf("%s/%s/sys/sys.sql", baselineDirName, pkgDirName)),
-				filepath.Join(tempTargetDir, fmt.Sprintf("%s/%s/server.com/account/repo/mypkg3/schema3.sql", baselineDirName, pkgDirName)),
-				filepath.Join(tempTargetDir, fmt.Sprintf("%s/%s/github.com/voedger/voedger/pkg/registry/schemas.sql", baselineDirName, pkgDirName)),
+				filepath.Join(tempTargetDir, baselineDirName, pkgDirName, "sys", "sys.sql"),
+				filepath.Join(tempTargetDir, baselineDirName, pkgDirName, "server.com", "account", "repo", "mypkg3", "schema3.sql"),
+				filepath.Join(tempTargetDir, baselineDirName, pkgDirName, "github.com", "voedger", "voedger", "pkg", "registry", "schemas.sql"),
 				filepath.Join(tempTargetDir, baselineDirName, baselineInfoFileName),
 			},
 		},
 		{
 			name:       "application schema using both local package and voedger",
-			workingDir: filepath.Join(tempDir, "test/myapp"),
+			workingDir: filepath.Join(tempDir, "test", "myapp"),
 			expectedBaselineFiles: []string{
-				filepath.Join(tempTargetDir, fmt.Sprintf("%s/%s/sys/sys.sql", baselineDirName, pkgDirName)),
-				filepath.Join(tempTargetDir, fmt.Sprintf("%s/%s/github.com/voedger/voedger/pkg/registry/schemas.sql", baselineDirName, pkgDirName)),
-				filepath.Join(tempTargetDir, fmt.Sprintf("%s/%s/server.com/account/repo/mypkg1/schema1.sql", baselineDirName, pkgDirName)),
-				filepath.Join(tempTargetDir, fmt.Sprintf("%s/%s/server.com/account/repo/mypkg2/schema2.sql", baselineDirName, pkgDirName)),
-				filepath.Join(tempTargetDir, fmt.Sprintf("%s/%s/server.com/account/repo/mypkg3/schema3.sql", baselineDirName, pkgDirName)),
-				filepath.Join(tempTargetDir, fmt.Sprintf("%s/%s/server.com/account/repo/myapp.sql", baselineDirName, pkgDirName)),
+				filepath.Join(tempTargetDir, baselineDirName, pkgDirName, "sys", "sys.sql"),
+				filepath.Join(tempTargetDir, baselineDirName, pkgDirName, "github.com", "voedger", "voedger", "pkg", "registry", "schemas.sql"),
+				filepath.Join(tempTargetDir, baselineDirName, pkgDirName, "server.com", "account", "repo", "mypkg1", "schema1.sql"),
+				filepath.Join(tempTargetDir, baselineDirName, pkgDirName, "server.com", "account", "repo", "mypkg2", "schema2.sql"),
+				filepath.Join(tempTargetDir, baselineDirName, pkgDirName, "server.com", "account", "repo", "mypkg3", "schema3.sql"),
+				filepath.Join(tempTargetDir, baselineDirName, pkgDirName, "server.com", "account", "repo", "myapp.sql"),
 				filepath.Join(tempTargetDir, baselineDirName, baselineInfoFileName),
 			},
 		},
@@ -143,10 +149,11 @@ func TestBaselineBasicUsage(t *testing.T) {
 			err := os.Chdir(tc.workingDir)
 			require.NoError(err)
 
-			err = os.RemoveAll(filepath.Join(tempTargetDir, baselineDirName))
+			err = os.RemoveAll(tempTargetDir)
 			require.NoError(err)
 
-			err = execRootCmd([]string{"vpm", "baseline", fmt.Sprintf(" -C %s", tc.workingDir), tempTargetDir}, "1.0.0")
+			baselineDir := filepath.Join(tempTargetDir, baselineDirName)
+			err = execRootCmd([]string{"vpm", "baseline", "-C", tc.workingDir, baselineDir}, "1.0.0")
 			require.NoError(err)
 
 			var actualFilePaths []string
@@ -169,7 +176,73 @@ func TestBaselineBasicUsage(t *testing.T) {
 	}
 }
 
-func TestErrorsInCompile(t *testing.T) {
+func TestCompatBasicUsage(t *testing.T) {
+	require := require.New(t)
+
+	wd, err := os.Getwd()
+	require.NoError(err)
+	defer func() {
+		_ = os.Chdir(wd)
+	}()
+
+	tempDir := t.TempDir()
+	err = copyContents(testMyAppFS, tempDir)
+	require.NoError(err)
+
+	err = os.Chdir(tempDir)
+	require.NoError(err)
+
+	workDir := filepath.Join(tempDir, "test", "myapp")
+	baselineDir := filepath.Join(tempDir, "test", "baseline_myapp")
+	err = execRootCmd([]string{"vpm", "baseline", baselineDir, "--change-dir", workDir}, "1.0.0")
+	require.NoError(err)
+
+	err = execRootCmd([]string{"vpm", "compat", "-C", workDir, baselineDir}, "1.0.0")
+	require.NoError(err)
+}
+
+func TestCompatErrors(t *testing.T) {
+	require := require.New(t)
+
+	wd, err := os.Getwd()
+	require.NoError(err)
+	defer func() {
+		_ = os.Chdir(wd)
+	}()
+
+	tempDir := t.TempDir()
+	err = copyContents(testMyAppFS, tempDir)
+	require.NoError(err)
+
+	err = copyContents(testMyAppIncompatibleFS, tempDir)
+	require.NoError(err)
+
+	err = os.Chdir(tempDir)
+	require.NoError(err)
+
+	workDir := filepath.Join(tempDir, "test", "myapp")
+	baselineDir := filepath.Join(tempDir, "test", "baseline_myapp")
+	err = execRootCmd([]string{"vpm", "baseline", "-C", workDir, baselineDir}, "1.0.0")
+	require.NoError(err)
+
+	workDir = filepath.Join(tempDir, "test", "myapp_incompatible")
+	err = execRootCmd([]string{"vpm", "compat", "--ignore", filepath.Join(workDir, "ignores.yml"), "--change-dir", workDir, baselineDir}, "1.0.0")
+	require.Error(err)
+	errs := coreutils.SplitErrors(err)
+
+	expectedErrs := []string{
+		"OrderChanged: AppDef/Types/mypkg2.MyTable/Fields/myfield3",
+		"OrderChanged: AppDef/Types/mypkg2.MyTable/Fields/myfield2",
+		"NodeRemoved: AppDef/Types/mypkg3.MyTable3/Fields/MyField",
+	}
+	require.Equal(len(expectedErrs), len(errs))
+
+	for _, err := range errs {
+		require.Contains(expectedErrs, err.Error())
+	}
+}
+
+func TestCompileErrors(t *testing.T) {
 	require := require.New(t)
 
 	wd, err := os.Getwd()
@@ -192,14 +265,14 @@ func TestErrorsInCompile(t *testing.T) {
 	}{
 		{
 			name: "package schema - syntax errors",
-			dir:  filepath.Join(tempDir, "test/myapperr/mypkg1"),
+			dir:  filepath.Join(tempDir, "test", "myapperr", "mypkg1"),
 			expectedErrPositions: []string{
 				"schema1.sql:7:33",
 			},
 		},
 		{
 			name: "application schema - syntax errors",
-			dir:  filepath.Join(tempDir, "test/myapperr/mypkg2"),
+			dir:  filepath.Join(tempDir, "test", "myapperr", "mypkg2"),
 			expectedErrPositions: []string{
 				"schema2.sql:7:5",
 			},
@@ -211,7 +284,7 @@ func TestErrorsInCompile(t *testing.T) {
 			err := os.Chdir(tc.dir)
 			require.NoError(err)
 
-			err = execRootCmd([]string{"vpm", "compile", fmt.Sprintf(" -C %s", tc.dir)}, "1.0.0")
+			err = execRootCmd([]string{"vpm", "compile", "-C", tc.dir}, "1.0.0")
 			require.Error(err)
 			errMsg := err.Error()
 			for _, expectedErrPosition := range tc.expectedErrPositions {

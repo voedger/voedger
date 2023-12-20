@@ -23,7 +23,6 @@ require (
 	github.com/untillpro/goutils v0.0.0-20231117130619-11fe1908c171
 	github.com/untillpro/ibusmem v0.0.0-20230904100952-cc8a0d2caa40
 	github.com/valyala/bytebufferpool v1.0.0
-	github.com/voedger/wazero v0.0.0-20230501104804-47700bcd4177
 	github.com/wneessen/go-mail v0.3.9
 	go.etcd.io/bbolt v1.3.7
 	golang.org/x/crypto v0.8.0
@@ -31,6 +30,7 @@ require (
 	golang.org/x/mod v0.8.0
 	golang.org/x/net v0.9.0
 	golang.org/x/text v0.13.0
+	gopkg.in/yaml.v2 v2.4.0
 )
 
 require (
@@ -45,9 +45,9 @@ require (
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/stretchr/objx v0.5.0 // indirect
+	github.com/tetratelabs/wazero v1.5.0 // indirect
 	github.com/untillpro/gojay v1.2.17-0.20201109133446-b1069e05b56c // indirect
 	golang.org/x/sys v0.13.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
-	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
