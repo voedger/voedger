@@ -25,24 +25,27 @@ func TestMain(t *testing.T) {
 	log.Println(s)
 }
 
-func TestInvite_BasicUsage(t *testing.T) {
-	require := require.New(t)
-	vit := it.NewVIT(t, &it.SharedConfig_App1)
-	defer vit.TearDown()
-	wsName := "test_ws"
-	ws := vit.WS(istructs.AppQName_test1_app1, wsName)
-	inviteEmailTemplate := "text:" + strings.Join([]string{
+var (
+	initialRoles        = "initial.Roles"
+	inviteEmailTemplate = "text:" + strings.Join([]string{
 		invite.EmailTemplatePlaceholder_VerificationCode,
 		invite.EmailTemplatePlaceholder_InviteID,
 		invite.EmailTemplatePlaceholder_WSID,
 		invite.EmailTemplatePlaceholder_WSName,
 		invite.EmailTemplatePlaceholder_Email,
 	}, ";")
-	inviteEmailSubject := "you are invited"
+	inviteEmailSubject = "you are invited"
+)
+
+func TestInvite_BasicUsage(t *testing.T) {
+	require := require.New(t)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
+	wsName := "test_ws"
+	ws := vit.WS(istructs.AppQName_test1_app1, wsName)
 	updateRolesEmailTemplate := "text:" + invite.EmailTemplatePlaceholder_Roles
 	updateRolesEmailSubject := "your roles are updated"
 	expireDatetime := vit.Now().UnixMilli()
-	initialRoles := "initial.Roles"
 	updatedRoles := "updated.Roles"
 
 	initiateUpdateInviteRoles := func(inviteID int64) {
@@ -256,8 +259,7 @@ func TestCancelSentInvite(t *testing.T) {
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
 
 	t.Run("basic usage", func(t *testing.T) {
-		body := `{"args":{"Email":"user@acme.com","Roles":"trolles","ExpireDatetime":1674751138000,"NewLoginEmailTemplate":"text:","ExistingLoginEmailTemplate":"text:"}}`
-		inviteID := vit.PostWS(ws, "c.sys.InitiateInvitationByEMail", body).NewID()
+		inviteID := InitiateInvitationByEMail(vit, ws, 1674751138000, "user@acme.com", initialRoles, inviteEmailTemplate, inviteEmailSubject)
 
 		//Read it for successful vit tear down
 		vit.CaptureEmail()
@@ -266,6 +268,6 @@ func TestCancelSentInvite(t *testing.T) {
 		WaitForInviteState(vit, ws, invite.State_Cancelled, inviteID)
 	})
 	t.Run("invite not exists -> 400 bad request", func(t *testing.T) {
-		vit.PostWS(ws, "c.sys.CancelSentInvite", fmt.Sprintf(`{"args":{"InviteID":%d}}`, -100), coreutils.Expect400(invite.ErrInviteNotExists.Error()))
+		vit.PostWS(ws, "c.sys.CancelSentInvite", fmt.Sprintf(`{"args":{"InviteID":%d}}`, -100), coreutils.Expect400RefIntegrity_Existence())
 	})
 }
