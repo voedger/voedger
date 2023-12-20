@@ -10,6 +10,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appparts"
+	"github.com/voedger/voedger/pkg/cluster"
 	"github.com/voedger/voedger/pkg/iratesce"
 	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istorageimpl"
@@ -55,13 +56,13 @@ func Example() {
 
 	fmt.Println("*** Add ver 1 ***")
 
-	appParts.DeployApp(istructs.AppQName_test1_app1, appDef_1_v1, MockEngines(2, 2, 2))
-	appParts.DeployApp(istructs.AppQName_test1_app2, appDef_2_v1, MockEngines(2, 2, 2))
+	appParts.DeployApp(istructs.AppQName_test1_app1, appDef_1_v1, [cluster.ProcessorKind_Count]int{2, 2, 2})
+	appParts.DeployApp(istructs.AppQName_test1_app2, appDef_2_v1, [cluster.ProcessorKind_Count]int{2, 2, 2})
 
 	appParts.DeployAppPartitions(istructs.AppQName_test1_app1, []istructs.PartitionID{1})
 	appParts.DeployAppPartitions(istructs.AppQName_test1_app2, []istructs.PartitionID{1})
 
-	a1_v1_p1, err := appParts.Borrow(istructs.AppQName_test1_app1, 1, appparts.ProcKind_Command)
+	a1_v1_p1, err := appParts.Borrow(istructs.AppQName_test1_app1, 1, cluster.ProcessorKind_Command)
 	if err != nil {
 		panic(err)
 	}
@@ -69,7 +70,7 @@ func Example() {
 
 	report(a1_v1_p1)
 
-	a2_v1_p1, err := appParts.Borrow(istructs.AppQName_test1_app2, 1, appparts.ProcKind_Query)
+	a2_v1_p1, err := appParts.Borrow(istructs.AppQName_test1_app2, 1, cluster.ProcessorKind_Query)
 	if err != nil {
 		panic(err)
 	}
@@ -84,10 +85,10 @@ func Example() {
 	appConfigs.AddConfig(istructs.AppQName_test1_app1, appDef_1_v2)
 	appConfigs.AddConfig(istructs.AppQName_test1_app2, appDef_2_v2)
 
-	appParts.DeployApp(istructs.AppQName_test1_app2, appDef_2_v2, MockEngines(2, 2, 2))
-	appParts.DeployApp(istructs.AppQName_test1_app1, appDef_1_v2, MockEngines(2, 2, 2))
+	appParts.DeployApp(istructs.AppQName_test1_app2, appDef_2_v2, [cluster.ProcessorKind_Count]int{2, 2, 2})
+	appParts.DeployApp(istructs.AppQName_test1_app1, appDef_1_v2, [cluster.ProcessorKind_Count]int{2, 2, 2})
 
-	a2_v2_p1, err := appParts.Borrow(istructs.AppQName_test1_app2, 1, appparts.ProcKind_Projector)
+	a2_v2_p1, err := appParts.Borrow(istructs.AppQName_test1_app2, 1, cluster.ProcessorKind_Projector)
 	if err != nil {
 		panic(err)
 	}
@@ -95,7 +96,7 @@ func Example() {
 
 	report(a2_v2_p1)
 
-	a1_v2_p1, err := appParts.Borrow(istructs.AppQName_test1_app1, 1, appparts.ProcKind_Command)
+	a1_v2_p1, err := appParts.Borrow(istructs.AppQName_test1_app1, 1, cluster.ProcessorKind_Command)
 	if err != nil {
 		panic(err)
 	}
