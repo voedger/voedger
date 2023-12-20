@@ -5,7 +5,6 @@
 package verifier
 
 import (
-	"crypto/rand"
 	"net/http"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -16,17 +15,12 @@ import (
 )
 
 func NewVerificationToken(entity string, field, value string, kind appdef.VerificationKind, targetWSID istructs.WSID, itokens itokens.ITokens, appTokens istructs.IAppTokens) (token, code string, err error) {
-	verificationCode := make([]byte, VerificationCodeLength)
-	if _, err = rand.Read(verificationCode); err != nil {
-		return
+	verificationCode, err := coreutils.EmailVerificationCode()
+	if err != nil {
+		// notest
+		return "", "", err
 	}
-
-	// compress range 0..255 -> 0..9
-	for i := 0; i < len(verificationCode); i++ {
-		verificationCode[i] = verificationCodeSymbols[int(float32(verificationCode[i])/byteRangeToVerifcationSymbolsRangeCoeff)]
-	}
-
-	verificationCodeHash := itokens.CryptoHash256(verificationCode)
+	verificationCodeHash := itokens.CryptoHash256([]byte(verificationCode))
 
 	entityQName, err := appdef.ParseQName(entity)
 	if err != nil {

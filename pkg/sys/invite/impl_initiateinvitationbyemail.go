@@ -37,6 +37,15 @@ func execCmdInitiateInvitationByEMail(timeFunc coreutils.TimeFunc) func(args ist
 		if err != nil {
 			return
 		}
+		skbPrincipal, err := args.State.KeyBuilder(state.RequestSubject, appdef.NullQName)
+		if err != nil {
+			return
+		}
+		svPrincipal, err := args.State.MustExist(skbPrincipal)
+		if err != nil {
+			return
+		}
+		actualLogin := svPrincipal.AsString(state.Field_Name)
 
 		if ok {
 			skbCDocInvite, err := args.State.KeyBuilder(state.Record, qNameCDocInvite)
@@ -61,6 +70,7 @@ func execCmdInitiateInvitationByEMail(timeFunc coreutils.TimeFunc) func(args ist
 			svbCDocInvite.PutInt64(field_ExpireDatetime, args.ArgumentObject.AsInt64(field_ExpireDatetime))
 			svbCDocInvite.PutInt32(field_State, State_ToBeInvited)
 			svbCDocInvite.PutInt64(field_Updated, timeFunc().UnixMilli())
+			svbCDocInvite.PutString(field_ActualLogin, actualLogin)
 
 			return nil
 		}
@@ -82,6 +92,7 @@ func execCmdInitiateInvitationByEMail(timeFunc coreutils.TimeFunc) func(args ist
 		svbCDocInvite.PutInt64(field_Created, now)
 		svbCDocInvite.PutInt64(field_Updated, now)
 		svbCDocInvite.PutInt32(field_State, State_ToBeInvited)
+		svbCDocInvite.PutString(field_ActualLogin, actualLogin)
 
 		return
 	}
