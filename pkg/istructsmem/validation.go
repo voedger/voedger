@@ -78,7 +78,7 @@ func validateObjectIDs(obj *objectType, rawID bool) (ids map[istructs.RecordID]a
 	})
 
 	_ = obj.forEach(func(e *objectType) error {
-		e.fields.RefFields(func(fld appdef.IRefField) {
+		for _, fld := range e.fields.RefFields() {
 			if id := e.AsRecordID(fld.Name()); id != istructs.NullRecordID {
 				target, exists := ids[id]
 				if !exists {
@@ -87,7 +87,7 @@ func validateObjectIDs(obj *objectType, rawID bool) (ids map[istructs.RecordID]a
 							// ODoc «test.document» field «RefField» refers to unknown record ID «7»
 							validateErrorf(ECode_InvalidRefRecordID, errUnknownIDRef, e, fld.Name(), id, ErrRecordIDNotFound))
 					}
-					return
+					continue
 				}
 				if !fld.Ref(target) {
 					err = errors.Join(err,
@@ -95,7 +95,7 @@ func validateObjectIDs(obj *objectType, rawID bool) (ids map[istructs.RecordID]a
 						validateErrorf(ECode_InvalidRefRecordID, errUnavailableTargetRef, e, fld.Name(), id, target, ErrWrongRecordID))
 				}
 			}
-		})
+		}
 		return nil
 	})
 
