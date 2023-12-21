@@ -42,6 +42,20 @@ func getSysPackageAST() *PackageSchemaAST {
 	return pkgSys
 }
 
+//go:embed package.sql
+var pkgSqlFS embed.FS
+
+func TestDot(t *testing.T) {
+	t.Run("dot", func(t *testing.T) {
+		_, err := ParsePackageDir("github.com/untillpro/main", pkgSqlFS, ".")
+		require.NoError(t, err)
+	})
+	t.Run("empty", func(t *testing.T) {
+		_, err := ParsePackageDir("github.com/untillpro/main", pkgSqlFS, "")
+		require.NoError(t, err)
+	})
+}
+
 func Test_BasicUsage(t *testing.T) {
 
 	require := require.New(t)
@@ -1923,7 +1937,7 @@ TABLE SomeTable INHERITS CDoc (
 func Test_ODocUnknown(t *testing.T) {
 	require := require.New(t)
 	pkgApp1 := buildPackage(`APPLICATION registry();
-TABLE MyTable1 INHERITS ODocUnknown ( MyField ref(registry.Login) NOT NULL ); 
+TABLE MyTable1 INHERITS ODocUnknown ( MyField ref(registry.Login) NOT NULL );
 `)
 
 	_, err := BuildAppSchema([]*PackageSchemaAST{pkgApp1, getSysPackageAST()})

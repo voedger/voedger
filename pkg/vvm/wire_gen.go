@@ -13,6 +13,7 @@ import (
 	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/apppartsctl"
 	"github.com/voedger/voedger/pkg/apps"
+	"github.com/voedger/voedger/pkg/cluster/builtin"
 	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/iauthnzimpl"
@@ -38,7 +39,7 @@ import (
 	"github.com/voedger/voedger/pkg/projectors"
 	"github.com/voedger/voedger/pkg/router"
 	"github.com/voedger/voedger/pkg/state"
-	"github.com/voedger/voedger/pkg/sys/builtin"
+	builtin2 "github.com/voedger/voedger/pkg/sys/builtin"
 	"github.com/voedger/voedger/pkg/sys/invite"
 	"github.com/voedger/voedger/pkg/utils"
 	"github.com/voedger/voedger/pkg/vvm/db_cert_cache"
@@ -161,7 +162,7 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 	metricsServicePort := provideMetricsServicePort(metricsServicePortInitial, vvmIdx)
 	metricsService := metrics.ProvideMetricsService(vvmCtx, metricsServicePort, iMetrics)
 	metricsServiceOperator := provideMetricsServiceOperator(metricsService)
-	v6 := vvmConfig.BuiltInApps
+	v6 := builtin.Apps()
 	iAppPartitionsController, cleanup3, err := apppartsctl.New(iAppPartitions, v6)
 	if err != nil {
 		cleanup2()
@@ -435,7 +436,7 @@ func provideSyncActualizerFactory(vvmApps VVMApps, structsProvider istructs.IApp
 						WS:         wsid,
 					}, offset)
 				},
-				IntentsLimit: builtin.MaxCUDs,
+				IntentsLimit: builtin2.MaxCUDs,
 			}
 			actualizer := actualizerFactory(conf, appStructs.SyncProjectors()[0], appStructs.SyncProjectors()[1:]...)
 			actualizers = append(actualizers, pipeline.SwitchBranch(appQName.String(), actualizer))
@@ -546,7 +547,7 @@ func provideAsyncActualizersFactory(appStructsProvider istructs.IAppStructsProvi
 			Partition:     partitionID,
 			Broker:        n10nBroker,
 			Opts:          opts,
-			IntentsLimit:  builtin.MaxCUDs,
+			IntentsLimit:  builtin2.MaxCUDs,
 			FlushInterval: actualizerFlushInterval,
 			Metrics:       metrics2,
 		}

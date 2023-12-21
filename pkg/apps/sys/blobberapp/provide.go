@@ -25,7 +25,7 @@ func Provide(smtpCfg smtp.Cfg) apps.AppBuilder {
 
 // Returns blobber application definition
 func AppDef() appdef.IAppDef {
-	appDef, err := parser.BuildAppDefFromFS(BlobberAppFQN, blobberSchemaFS, "")
+	appDef, err := parser.BuildAppDefFromFS(BlobberAppFQN, blobberSchemaFS, ".")
 	if err != nil {
 		panic(err)
 	}
