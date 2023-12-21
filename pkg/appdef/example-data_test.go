@@ -6,6 +6,7 @@ package appdef_test
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -56,10 +57,11 @@ func ExampleIAppDefBuilder_AddData() {
 				fmt.Println(" ", d.Comment())
 			}
 			str := []string{}
-			d.Constraints(func(c appdef.IConstraint) {
+			for _, c := range d.Constraints(false) {
 				str = append(str, fmt.Sprint(c))
-			})
+			}
 			if len(str) > 0 {
+				sort.Strings(str)
 				fmt.Printf("  constraints: (%v)\n", strings.Join(str, `, `))
 			}
 		})
@@ -75,7 +77,7 @@ func ExampleIAppDefBuilder_AddData() {
 	//   Natural number
 	//   constraints: (MinExcl: 0)
 	// - string-data «test.string» inherits from string-data «sys.string»
-	//   constraints: (MinLen: 1, MaxLen: 4)
+	//   constraints: (MaxLen: 4, MinLen: 1)
 	// - string-data «test.token» inherits from string-data «test.string»
 	//   constraints: (Pattern: `^[a-z]+$`)
 	// - string-data «test.weekDay» inherits from string-data «test.string»

@@ -39,7 +39,7 @@ func makeField(name string, data IData, required bool, comments ...string) field
 		data:        data,
 		required:    required,
 		verifiable:  false,
-		constraints: ConstraintsWithInherited(data),
+		constraints: data.Constraints(true),
 	}
 	return f
 }
