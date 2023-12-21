@@ -17,12 +17,13 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"testing"
 
 	"github.com/spf13/cobra"
 	"github.com/untillpro/goutils/logger"
 )
 
-var testMode bool
+var dryRun bool
 
 func newCluster() *clusterType {
 	var cluster = clusterType{
@@ -31,6 +32,7 @@ func newCluster() *clusterType {
 		exists:                false,
 		Draft:                 true,
 		sshKey:                sshKey,
+		dryRun:                dryRun,
 		SshPort:               sshPort,
 		Cmd:                   newCmd("", ""),
 		SkipStacks:            make([]string, 0),
@@ -42,7 +44,39 @@ func newCluster() *clusterType {
 	}
 
 	dir, _ := os.Getwd()
+
 	cluster.configFileName = filepath.Join(dir, clusterConfFileName)
+
+	// Preparation of a configuration file for Dry Run mode
+	if cluster.dryRun {
+
+		dryRunDir := filepath.Join(dir, "dry-run")
+		if _, err := os.Stat(dryRunDir); os.IsNotExist(err) {
+			err := os.Mkdir(dryRunDir, rwxrwxrwx)
+			if err != nil {
+				logger.Error(err.Error())
+				return nil
+			}
+		}
+		dryRunClusterConfigFileName := filepath.Join(dryRunDir, clusterConfFileName)
+
+		// Remove the old dry run configuration file
+		// Under tests, you do not need to delete for the possibility of testing command sequences
+		if !testing.Testing() {
+			if fileExists(dryRunClusterConfigFileName) {
+				os.Remove(dryRunClusterConfigFileName)
+			}
+		}
+
+		if fileExists(cluster.configFileName) {
+			if err := copyFile(cluster.configFileName, dryRunClusterConfigFileName); err != nil {
+				logger.Error(err.Error())
+				return nil
+			}
+		}
+
+		cluster.configFileName = dryRunClusterConfigFileName
+	}
 
 	if cluster.clusterConfigFileExists() {
 		cluster.exists = true
@@ -140,7 +174,7 @@ func (n *nodeType) minAmountOfRAM() string {
 }
 
 func (n *nodeType) nodeControllerFunction() error {
-	if testMode {
+	if dryRun {
 		if n.DesiredNodeState != nil {
 			n.success()
 			return nil
@@ -367,6 +401,7 @@ type clusterType struct {
 	configFileName        string
 	sshKey                string
 	exists                bool //the cluster is loaded from "cluster.json" at the start of ctool
+	dryRun                bool
 	Edition               string
 	ActualClusterVersion  string
 	DesiredClusterVersion string   `json:"DesiredClusterVersion,omitempty"`
@@ -380,7 +415,7 @@ type clusterType struct {
 }
 
 func (c *clusterType) clusterControllerFunction() error {
-	if testMode {
+	if dryRun {
 		c.success()
 		return nil
 	}
@@ -453,7 +488,7 @@ func (c *clusterType) applyCmd(cmd *cmdType) error {
 			cmd.Args = strings.Replace(cmd.Args, node.nodeName(), oldAddr, 1)
 		}
 
-		if !testMode {
+		if !dryRun {
 			if err := nodeIsLive(node); err == nil {
 				return fmt.Errorf(errCannotReplaceALiveNode, oldAddr, ErrCommandCannotBeExecuted)
 			}
