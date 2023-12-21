@@ -50,7 +50,7 @@ func Test_def_AddUnique(t *testing.T) {
 
 		require.Equal(doc.UniqueCount(), func() int {
 			cnt := 0
-			doc.Uniques(func(u IUnique) {
+			for _, u := range doc.Uniques() {
 				cnt++
 				switch u.Name() {
 				case "userUniqueEMail":
@@ -63,14 +63,17 @@ func Test_def_AddUnique(t *testing.T) {
 					require.Equal("name", u.Fields()[1].Name())
 					require.Equal("surname", u.Fields()[2].Name())
 				}
-			})
+			}
 			return cnt
 		}())
 	})
 
 	t.Run("test unique IDs", func(t *testing.T) {
 		id := FirstUniqueID
-		doc.Uniques(func(u IUnique) { id++; u.(interface{ SetID(UniqueID) }).SetID(id) })
+		for _, u := range doc.Uniques() {
+			id++
+			u.(interface{ SetID(UniqueID) }).SetID(id)
+		}
 
 		require.Nil(doc.UniqueByID(FirstUniqueID))
 		require.NotNil(doc.UniqueByID(FirstUniqueID + 1))
