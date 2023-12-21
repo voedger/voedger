@@ -10,12 +10,12 @@ package appdef
 // Ref. occurs.go for constants and methods
 type Occurs uint16
 
-// Final types with containers are:
+// Final structures with containers are:
 //	- TypeKind_GDoc and TypeKind_GRecord,
 //	- TypeKind_CDoc and TypeKind_CRecord,
 //	- TypeKind_ODoc and TypeKind_CRecord,
 //	- TypeKind_WDoc and TypeKind_WRecord,
-//	- TypeKind_Object and TypeKind_Element,
+//	- TypeKind_Object,
 //
 // Ref. to container.go for implementation
 type IContainers interface {
@@ -27,8 +27,8 @@ type IContainers interface {
 	// Returns containers count
 	ContainerCount() int
 
-	// Enumerates all containers in add order.
-	Containers(func(IContainer))
+	// All containers in add order.
+	Containers() []IContainer
 }
 
 type IContainersBuilder interface {

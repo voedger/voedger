@@ -99,14 +99,12 @@ func TestAddView(t *testing.T) {
 			require.Equal("valF2", f.Name())
 			require.False(f.Required())
 			cnt := 0
-			for _, c := range f.Constraints() {
+			for k, c := range f.Constraints() {
 				cnt++
-				switch cnt {
-				case 1:
-					require.Equal(ConstraintKind_MaxLen, c.Kind())
+				switch k {
+				case ConstraintKind_MaxLen:
 					require.EqualValues(100, c.Value())
-				case 2:
-					require.Equal(ConstraintKind_Pattern, c.Kind())
+				case ConstraintKind_Pattern:
 					require.EqualValues(`^\d+$`, c.Value().(*regexp.Regexp).String())
 					require.Equal("only digits allowed", c.Comment())
 				default:

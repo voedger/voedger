@@ -58,6 +58,7 @@ func ExampleIFieldsBuilder_AddField() {
 				str = append(str, fmt.Sprint(c))
 			}
 			if len(str) > 0 {
+				sort.Strings(str)
 				fmt.Println()
 				fmt.Printf("  - constraints: [%v]", strings.Join(str, `, `))
 			}
@@ -68,7 +69,7 @@ func ExampleIFieldsBuilder_AddField() {
 	// Output:
 	// ODoc «test.doc», user field count: 2
 	// 1. string-field «code», required. Code is string containing from one to four digits
-	//   - constraints: [MinLen: 1, MaxLen: 4, Pattern: `^\d+$`]
+	//   - constraints: [MaxLen: 4, MinLen: 1, Pattern: `^\d+$`]
 	// 2. bytes-field «barCode». Bar code scan data, up to 4 KB
 	//   - constraints: [MaxLen: 4096]
 }

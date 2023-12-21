@@ -79,10 +79,10 @@ func Example() {
 		fmt.Println("founded", doc.Container("rec"))
 
 		contCnt := 0
-		doc.Containers(func(c appdef.IContainer) {
+		for _, c := range doc.Containers() {
 			contCnt++
 			fmt.Printf("%d. %v, occurs: %v…%v\n", contCnt, c, c.MinOccurs(), c.MaxOccurs())
-		})
+		}
 
 		// what if unknown type
 		fmt.Println("unknown type:", app.Type(appdef.NewQName("test", "unknown")))
