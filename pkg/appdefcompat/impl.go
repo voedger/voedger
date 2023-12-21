@@ -176,9 +176,9 @@ func buildUniqueFieldNode(parentNode *CompatibilityTreeNode, item appdef.IUnique
 
 func buildUniqueFieldsNode(parentNode *CompatibilityTreeNode, item appdef.IUniques) (node *CompatibilityTreeNode) {
 	node = newNode(parentNode, NodeNameUniqueFields, nil)
-	item.Uniques(func(field appdef.IUnique) {
-		node.Props = append(node.Props, buildUniqueFieldNode(node, field))
-	})
+	for _, unique := range item.Uniques() {
+		node.Props = append(node.Props, buildUniqueFieldNode(node, unique))
+	}
 	return
 }
 
