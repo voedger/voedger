@@ -545,9 +545,9 @@ func (qw *queryWork) AppQName() istructs.AppQName {
 func newFieldsKinds(t appdef.IType) FieldsKinds {
 	res := FieldsKinds{}
 	if fields, ok := t.(appdef.IFields); ok {
-		fields.Fields(func(f appdef.IField) {
+		for _, f := range fields.Fields() {
 			res[f.Name()] = f.DataKind()
-		})
+		}
 	}
 	return res
 }
