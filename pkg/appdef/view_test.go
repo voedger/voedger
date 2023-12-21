@@ -118,7 +118,7 @@ func TestAddView(t *testing.T) {
 
 		require.Equal(7, view.FieldCount())
 		cnt := 0
-		view.Fields(func(f IField) {
+		for _, f := range view.Fields() {
 			cnt++
 			switch cnt {
 			case 1:
@@ -145,14 +145,14 @@ func TestAddView(t *testing.T) {
 			default:
 				require.Fail("unexpected field «%s»", f.Name())
 			}
-		})
+		}
 		require.Equal(view.FieldCount(), cnt)
 
 		t.Run("must be ok to read view full key", func(t *testing.T) {
 			key := view.Key()
 			require.Equal(4, key.FieldCount())
 			cnt := 0
-			key.Fields(func(f IField) {
+			for _, f := range key.Fields() {
 				cnt++
 				switch cnt {
 				case 1:
@@ -171,7 +171,7 @@ func TestAddView(t *testing.T) {
 				default:
 					require.Fail("unexpected field «%s»", f.Name())
 				}
-			})
+			}
 			require.Equal(key.FieldCount(), cnt)
 		})
 
@@ -179,7 +179,7 @@ func TestAddView(t *testing.T) {
 			pk := view.Key().PartKey()
 			require.Equal(2, pk.FieldCount())
 			cnt := 0
-			pk.Fields(func(f IField) {
+			for _, f := range pk.Fields() {
 				cnt++
 				switch cnt {
 				case 1:
@@ -192,7 +192,7 @@ func TestAddView(t *testing.T) {
 				default:
 					require.Fail("unexpected field «%s»", f.Name())
 				}
-			})
+			}
 			require.Equal(pk.FieldCount(), cnt)
 		})
 
@@ -200,7 +200,7 @@ func TestAddView(t *testing.T) {
 			cc := view.Key().ClustCols()
 			require.Equal(2, cc.FieldCount())
 			cnt := 0
-			cc.Fields(func(f IField) {
+			for _, f := range cc.Fields() {
 				cnt++
 				switch cnt {
 				case 1:
@@ -212,7 +212,7 @@ func TestAddView(t *testing.T) {
 				default:
 					require.Fail("unexpected field «%s»", f.Name())
 				}
-			})
+			}
 			require.Equal(cc.FieldCount(), cnt)
 		})
 
@@ -220,7 +220,7 @@ func TestAddView(t *testing.T) {
 			val := view.Value()
 			require.Equal(3, val.FieldCount())
 			cnt := 0
-			val.Fields(func(f IField) {
+			for _, f := range val.Fields() {
 				cnt++
 				switch cnt {
 				case 1:
@@ -234,7 +234,7 @@ func TestAddView(t *testing.T) {
 				default:
 					require.Fail("unexpected field «%s»", f.Name())
 				}
-			})
+			}
 			require.Equal(val.FieldCount(), cnt)
 		})
 
@@ -297,7 +297,9 @@ func TestAddView(t *testing.T) {
 
 		require.Equal(5, view.Value().UserFieldCount())
 
-		view.Value().Fields(func(f IField) {
+		cnt := 0
+		for _, f := range view.Value().Fields() {
+			cnt++
 			switch f.Name() {
 			case SystemField_QName:
 				require.Equal(DataKind_QName, f.DataKind())
@@ -338,7 +340,8 @@ func TestAddView(t *testing.T) {
 			default:
 				require.Fail("unexpected value field", "field name: %s", f.Name())
 			}
-		})
+		}
+		require.Equal(view.Value().UserFieldCount()+1, cnt)
 	})
 }
 

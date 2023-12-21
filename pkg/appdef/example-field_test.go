@@ -40,7 +40,10 @@ func ExampleIFieldsBuilder_AddField() {
 		fmt.Printf("%v, user field count: %v\n", doc, doc.UserFieldCount())
 
 		cnt := 0
-		doc.UserFields(func(f appdef.IField) {
+		for _, f := range doc.Fields() {
+			if f.IsSys() {
+				continue
+			}
 			cnt++
 			fmt.Printf("%d. %v", cnt, f)
 			if f.Required() {
@@ -58,7 +61,7 @@ func ExampleIFieldsBuilder_AddField() {
 				fmt.Printf("  - constraints: [%v]", strings.Join(str, `, `))
 			}
 			fmt.Println()
-		})
+		}
 	}
 
 	// Output:
@@ -105,7 +108,10 @@ func ExampleIFieldsBuilder_AddDataField() {
 		fmt.Printf("%v, user field count: %v\n", doc, doc.UserFieldCount())
 
 		cnt := 0
-		doc.UserFields(func(f appdef.IField) {
+		for _, f := range doc.Fields() {
+			if f.IsSys() {
+				continue
+			}
 			cnt++
 			fmt.Printf("%d. %v", cnt, f)
 			if f.Required() {
@@ -123,8 +129,7 @@ func ExampleIFieldsBuilder_AddDataField() {
 				fmt.Printf("  - constraints: [%v]", strings.Join(str, `, `))
 			}
 			fmt.Println()
-		})
-
+		}
 	}
 
 	// Output:

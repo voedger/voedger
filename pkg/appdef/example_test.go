@@ -59,7 +59,7 @@ func Example() {
 		fmt.Println("founded", doc.Field("f1"))
 
 		fldCnt := 0
-		doc.Fields(func(f appdef.IField) {
+		for _, f := range doc.Fields() {
 			fldCnt++
 			if f.IsSys() {
 				fmt.Print("*")
@@ -71,7 +71,7 @@ func Example() {
 				info += ". " + f.Comment()
 			}
 			fmt.Println(info)
-		})
+		}
 
 		// how to inspect doc containers
 		fmt.Printf("doc container count: %v\n", doc.ContainerCount())

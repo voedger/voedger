@@ -29,7 +29,7 @@ type IFields interface {
 	FieldCount() int
 
 	// Enumerates all fields in add order.
-	Fields(func(IField))
+	Fields() []IField
 
 	// Finds reference field by name.
 	//
@@ -38,9 +38,6 @@ type IFields interface {
 
 	// Enumerates all reference fields. System field (sys.ParentID) is also enumerated
 	RefFields(func(IRefField))
-
-	// Enumerates all fields except system
-	UserFields(func(IField))
 
 	// Returns user fields count. System fields (sys.QName, sys.ID, …) do not count
 	UserFieldCount() int

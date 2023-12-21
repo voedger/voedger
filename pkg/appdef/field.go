@@ -109,7 +109,7 @@ type fields struct {
 	app           *appDef
 	emb           interface{}
 	fields        map[string]interface{}
-	fieldsOrdered []string
+	fieldsOrdered []IField
 }
 
 // Makes new fields instance
@@ -118,7 +118,7 @@ func makeFields(app *appDef, embeds interface{}) fields {
 		app:           app,
 		emb:           embeds,
 		fields:        make(map[string]interface{}),
-		fieldsOrdered: make([]string, 0)}
+		fieldsOrdered: make([]IField, 0)}
 	return ff
 }
 
@@ -166,10 +166,8 @@ func (ff *fields) FieldCount() int {
 	return len(ff.fieldsOrdered)
 }
 
-func (ff *fields) Fields(cb func(IField)) {
-	for _, n := range ff.fieldsOrdered {
-		cb(ff.Field(n))
-	}
+func (ff *fields) Fields() []IField {
+	return ff.fieldsOrdered
 }
 
 func (ff *fields) RefField(name string) (rf IRefField) {
@@ -184,13 +182,13 @@ func (ff *fields) RefField(name string) (rf IRefField) {
 }
 
 func (ff *fields) RefFields(cb func(IRefField)) {
-	ff.Fields(func(fld IField) {
-		if fld.DataKind() == DataKind_RecordID {
+	for _, fld := range ff.fieldsOrdered {
+		if fld.(IField).DataKind() == DataKind_RecordID {
 			if rf, ok := fld.(IRefField); ok {
 				cb(rf)
 			}
 		}
-	})
+	}
 }
 
 func (ff *fields) SetFieldComment(name string, comment ...string) IFieldsBuilder {
@@ -212,17 +210,13 @@ func (ff *fields) SetFieldVerify(name string, vk ...VerificationKind) IFieldsBui
 	return ff.emb.(IFieldsBuilder)
 }
 
-func (ff *fields) UserFields(cb func(IField)) {
-	ff.Fields(func(fld IField) {
-		if !fld.IsSys() {
-			cb(fld)
-		}
-	})
-}
-
 func (ff *fields) UserFieldCount() int {
 	cnt := 0
-	ff.UserFields(func(IField) { cnt++ })
+	for _, fld := range ff.fieldsOrdered {
+		if !fld.(IField).IsSys() {
+			cnt++
+		}
+	}
 	return cnt
 }
 
@@ -256,7 +250,7 @@ func (ff *fields) appendField(name string, fld interface{}) {
 	}
 
 	ff.fields[name] = fld
-	ff.fieldsOrdered = append(ff.fieldsOrdered, name)
+	ff.fieldsOrdered = append(ff.fieldsOrdered, fld.(IField))
 }
 
 // Returns type that embeds fields
@@ -345,9 +339,7 @@ type nullFields struct{}
 
 func (f *nullFields) Field(name string) IField       { return nil }
 func (f *nullFields) FieldCount() int                { return 0 }
-func (f *nullFields) Fields(func(IField))            {}
+func (f *nullFields) Fields() []IField               { return []IField{} }
 func (f *nullFields) RefField(name string) IRefField { return nil }
 func (f *nullFields) RefFields(func(IRefField))      {}
-func (f *nullFields) RefFieldCount() int             { return 0 }
-func (f *nullFields) UserFields(func(IField))        {}
 func (f *nullFields) UserFieldCount() int            { return 0 }
