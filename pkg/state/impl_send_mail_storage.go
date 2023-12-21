@@ -119,7 +119,7 @@ func (s *sendMailStorage) ApplyBatch(items []ApplyBatchItem) (err error) {
 				BCC:     k.bcc,
 				Body:    stringOrEmpty(k, Field_Body),
 			}
-			go func(m smtptest.Message) { s.messages <- m }(m)
+			s.messages <- m
 		} else {
 			c, e := mail.NewClient(k.data[Field_Host].(string), opts...)
 			if e != nil {
