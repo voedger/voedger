@@ -49,12 +49,8 @@ func newField(name string, data IData, required bool, comments ...string) *field
 	return &f
 }
 
-func (fld *field) Constraints(f func(IConstraint)) {
-	for i := ConstraintKind(1); i < ConstraintKind_Count; i++ {
-		if c, ok := fld.constraints[i]; ok {
-			f(c)
-		}
-	}
+func (fld *field) Constraints() map[ConstraintKind]IConstraint {
+	return fld.constraints
 }
 
 func (fld *field) Data() IData { return fld.data }

@@ -6,6 +6,7 @@ package appdef_test
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -65,10 +66,11 @@ func ExampleIView() {
 					}
 				}
 				str := []string{}
-				f.Constraints(func(c appdef.IConstraint) {
+				for _, c := range f.Constraints() {
 					str = append(str, fmt.Sprint(c))
-				})
+				}
 				if len(str) > 0 {
+					sort.Strings(str)
 					fmt.Printf(", constraints: [%v]", strings.Join(str, `, `))
 				}
 				fmt.Println()

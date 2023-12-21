@@ -99,7 +99,7 @@ func TestAddView(t *testing.T) {
 			require.Equal("valF2", f.Name())
 			require.False(f.Required())
 			cnt := 0
-			f.Constraints(func(c IConstraint) {
+			for _, c := range f.Constraints() {
 				cnt++
 				switch cnt {
 				case 1:
@@ -112,7 +112,7 @@ func TestAddView(t *testing.T) {
 				default:
 					require.Fail("unexpected constraint", "constraint: %v", c)
 				}
-			})
+			}
 			require.Equal("up to 100 digits", f.Comment())
 		}
 
@@ -320,7 +320,7 @@ func TestAddView(t *testing.T) {
 				require.False(f.Required())
 				require.Equal("test comment", f.Comment())
 				cnt := 0
-				f.Constraints(func(c IConstraint) {
+				for _, c := range f.Constraints() {
 					cnt++
 					switch cnt {
 					case 1:
@@ -329,7 +329,7 @@ func TestAddView(t *testing.T) {
 					default:
 						require.Fail("unexpected constraint", "constraint: %v", c)
 					}
-				})
+				}
 				require.EqualValues(1, cnt)
 			case "valF5":
 				require.Equal(DataKind_bool, f.DataKind())

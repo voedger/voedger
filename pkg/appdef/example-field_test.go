@@ -6,6 +6,7 @@ package appdef_test
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -53,9 +54,9 @@ func ExampleIFieldsBuilder_AddField() {
 				fmt.Print(". ", c)
 			}
 			str := []string{}
-			f.Constraints(func(c appdef.IConstraint) {
+			for _, c := range f.Constraints() {
 				str = append(str, fmt.Sprint(c))
-			})
+			}
 			if len(str) > 0 {
 				fmt.Println()
 				fmt.Printf("  - constraints: [%v]", strings.Join(str, `, `))
@@ -121,11 +122,12 @@ func ExampleIFieldsBuilder_AddDataField() {
 				fmt.Print(". ", c)
 			}
 			str := []string{}
-			f.Constraints(func(c appdef.IConstraint) {
+			for _, c := range f.Constraints() {
 				str = append(str, fmt.Sprint(c))
-			})
+			}
 			if len(str) > 0 {
 				fmt.Println()
+				sort.Strings(str)
 				fmt.Printf("  - constraints: [%v]", strings.Join(str, `, `))
 			}
 			fmt.Println()
@@ -135,9 +137,9 @@ func ExampleIFieldsBuilder_AddDataField() {
 	// Output:
 	// CDoc «test.doc», user field count: 2
 	// 1. string-field «code», required. Code is string containing 10 digits
-	//   - constraints: [MinLen: 10, MaxLen: 10, Pattern: `^\d+$`]
+	//   - constraints: [MaxLen: 10, MinLen: 10, Pattern: `^\d+$`]
 	// 2. int32-field «month», required. Month number natural up to 12
-	//   - constraints: [MinExcl: 0, MaxIncl: 12]
+	//   - constraints: [MaxIncl: 12, MinExcl: 0]
 }
 
 func ExampleIFieldsBuilder_SetFieldVerify() {
