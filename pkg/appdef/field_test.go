@@ -260,7 +260,7 @@ func Test_AddRefField(t *testing.T) {
 		t.Run("must be ok to enumerate reference fields", func(t *testing.T) {
 			require.Equal(2, func() int {
 				cnt := 0
-				doc.RefFields(func(rf IRefField) {
+				for _, rf := range doc.RefFields() {
 					cnt++
 					switch cnt {
 					case 1:
@@ -274,7 +274,7 @@ func Test_AddRefField(t *testing.T) {
 					default:
 						require.Failf("unexpected reference field", "field name: %s", rf.Name())
 					}
-				})
+				}
 				return cnt
 			}())
 		})
@@ -373,7 +373,7 @@ func TestNullFields(t *testing.T) {
 	require.Empty(NullFields.Fields())
 
 	require.Nil(NullFields.RefField("field"))
-	NullFields.RefFields(func(IRefField) { require.Fail("RefFields() must be empty") })
+	require.Empty(NullFields.RefFields())
 
 	require.Zero(NullFields.UserFieldCount())
 }

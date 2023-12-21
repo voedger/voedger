@@ -37,7 +37,7 @@ type IFields interface {
 	RefField(name string) IRefField
 
 	// Enumerates all reference fields. System field (sys.ParentID) is also enumerated
-	RefFields(func(IRefField))
+	RefFields() []IRefField
 
 	// Returns user fields count. System fields (sys.QName, sys.ID, …) do not count
 	UserFieldCount() int
