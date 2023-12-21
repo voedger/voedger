@@ -28,11 +28,11 @@ func (s *Structure) read(str appdef.IStructure) {
 		s.Fields = append(s.Fields, f)
 	}
 
-	str.Containers(func(cont appdef.IContainer) {
+	for _, cont := range str.Containers() {
 		c := newContainer()
 		c.read(cont)
 		s.Containers = append(s.Containers, c)
-	})
+	}
 
 	str.Uniques(func(unique appdef.IUnique) {
 		u := newUnique()

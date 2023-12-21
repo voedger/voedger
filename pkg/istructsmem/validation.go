@@ -269,21 +269,20 @@ func validateObject(o *objectType) (err error) {
 	t := o.typ.(appdef.IContainers)
 
 	// validate occurrences
-	t.Containers(
-		func(cont appdef.IContainer) {
-			occurs := appdef.Occurs(0)
-			o.Children(cont.Name(), func(istructs.IObject) { occurs++ })
-			if occurs < cont.MinOccurs() {
-				err = errors.Join(err,
-					// ODoc «test.document» container «child» has not enough occurrences (0, minimum 1)
-					validateErrorf(ECode_InvalidOccursMin, errContainerMinOccursViolated, o, cont.Name(), occurs, cont.MinOccurs(), ErrMinOccursViolation))
-			}
-			if occurs > cont.MaxOccurs() {
-				err = errors.Join(err,
-					// ODoc «test.document» container «child» has too many occurrences (2, maximum 1)
-					validateErrorf(ECode_InvalidOccursMax, errContainerMaxOccursViolated, o, cont.Name(), occurs, cont.MaxOccurs(), ErrMaxOccursViolation))
-			}
-		})
+	for _, cont := range t.Containers() {
+		occurs := appdef.Occurs(0)
+		o.Children(cont.Name(), func(istructs.IObject) { occurs++ })
+		if occurs < cont.MinOccurs() {
+			err = errors.Join(err,
+				// ODoc «test.document» container «child» has not enough occurrences (0, minimum 1)
+				validateErrorf(ECode_InvalidOccursMin, errContainerMinOccursViolated, o, cont.Name(), occurs, cont.MinOccurs(), ErrMinOccursViolation))
+		}
+		if occurs > cont.MaxOccurs() {
+			err = errors.Join(err,
+				// ODoc «test.document» container «child» has too many occurrences (2, maximum 1)
+				validateErrorf(ECode_InvalidOccursMax, errContainerMaxOccursViolated, o, cont.Name(), occurs, cont.MaxOccurs(), ErrMaxOccursViolation))
+		}
+	}
 
 	// validate children
 	objID := o.ID()

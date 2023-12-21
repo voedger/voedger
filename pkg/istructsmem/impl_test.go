@@ -354,38 +354,36 @@ func TestBasicUsage_AppDef(t *testing.T) {
 		require.Equal(appdef.DataKind_bool, fields[test.humanIdent])
 		require.Equal(appdef.DataKind_bytes, fields[test.photoIdent])
 
-		cmdDoc.Containers(
-			func(c appdef.IContainer) {
-				require.Equal(test.basketIdent, c.Name())
-				require.Equal(appdef.NewQName(test.pkgName, test.basketIdent), c.QName())
-				t.Run("II. test first level nested type (basket)", func(t *testing.T) {
-					rec := app.AppDef().ORecord(appdef.NewQName(test.pkgName, test.basketIdent))
-					require.NotNil(rec)
-					require.Equal(appdef.TypeKind_ORecord, rec.Kind())
+		for _, c := range cmdDoc.Containers() {
+			require.Equal(test.basketIdent, c.Name())
+			require.Equal(appdef.NewQName(test.pkgName, test.basketIdent), c.QName())
+			t.Run("II. test first level nested type (basket)", func(t *testing.T) {
+				rec := app.AppDef().ORecord(appdef.NewQName(test.pkgName, test.basketIdent))
+				require.NotNil(rec)
+				require.Equal(appdef.TypeKind_ORecord, rec.Kind())
 
-					rec.Containers(
-						func(c appdef.IContainer) {
-							require.Equal(test.goodIdent, c.Name())
-							require.Equal(appdef.NewQName(test.pkgName, test.goodIdent), c.QName())
+				for _, c := range rec.Containers() {
+					require.Equal(test.goodIdent, c.Name())
+					require.Equal(appdef.NewQName(test.pkgName, test.goodIdent), c.QName())
 
-							t.Run("III. test second level nested type (good)", func(t *testing.T) {
-								rec := app.AppDef().ORecord(appdef.NewQName(test.pkgName, test.goodIdent))
-								require.NotNil(rec)
-								require.Equal(appdef.TypeKind_ORecord, rec.Kind())
+					t.Run("III. test second level nested type (good)", func(t *testing.T) {
+						rec := app.AppDef().ORecord(appdef.NewQName(test.pkgName, test.goodIdent))
+						require.NotNil(rec)
+						require.Equal(appdef.TypeKind_ORecord, rec.Kind())
 
-								fields := make(map[string]appdef.DataKind)
-								for _, f := range rec.Fields() {
-									fields[f.Name()] = f.DataKind()
-								}
-								require.Equal(8, len(fields)) // 4 system {sys.QName, sys.ID, sys.ParentID, sys.Container} + 4 user
-								require.Equal(appdef.DataKind_RecordID, fields[test.saleIdent])
-								require.Equal(appdef.DataKind_string, fields[test.nameIdent])
-								require.Equal(appdef.DataKind_int64, fields[test.codeIdent])
-								require.Equal(appdef.DataKind_float64, fields[test.weightIdent])
-							})
-						})
-				})
+						fields := make(map[string]appdef.DataKind)
+						for _, f := range rec.Fields() {
+							fields[f.Name()] = f.DataKind()
+						}
+						require.Equal(8, len(fields)) // 4 system {sys.QName, sys.ID, sys.ParentID, sys.Container} + 4 user
+						require.Equal(appdef.DataKind_RecordID, fields[test.saleIdent])
+						require.Equal(appdef.DataKind_string, fields[test.nameIdent])
+						require.Equal(appdef.DataKind_int64, fields[test.codeIdent])
+						require.Equal(appdef.DataKind_float64, fields[test.weightIdent])
+					})
+				}
 			})
+		}
 	})
 }
 
