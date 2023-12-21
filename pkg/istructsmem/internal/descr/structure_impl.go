@@ -22,11 +22,11 @@ func (s *Structure) read(str appdef.IStructure) {
 
 	s.Kind = str.Kind().TrimString()
 
-	str.Fields(func(field appdef.IField) {
+	for _, fld := range str.Fields() {
 		f := newField()
-		f.read(field)
+		f.read(fld)
 		s.Fields = append(s.Fields, f)
-	})
+	}
 
 	str.Containers(func(cont appdef.IContainer) {
 		c := newContainer()

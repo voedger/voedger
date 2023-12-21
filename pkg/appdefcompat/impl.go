@@ -154,9 +154,9 @@ func buildFieldsNode(parentNode *CompatibilityTreeNode, item interface{}, nodeNa
 		return
 	}
 	if fieldsObj, ok := item.(appdef.IFields); ok {
-		fieldsObj.Fields(func(field appdef.IField) {
+		for _, field := range fieldsObj.Fields() {
 			node.Props = append(node.Props, buildFieldNode(node, field))
-		})
+		}
 	}
 	return
 }

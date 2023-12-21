@@ -344,9 +344,9 @@ func TestBasicUsage_AppDef(t *testing.T) {
 
 		// check fields
 		fields := make(map[string]appdef.DataKind)
-		cmdDoc.Fields(func(f appdef.IField) {
+		for _, f := range cmdDoc.Fields() {
 			fields[f.Name()] = f.DataKind()
-		})
+		}
 		require.Equal(7, len(fields)) // 2 system {sys.QName, sys.ID} + 5 user
 		require.Equal(appdef.DataKind_string, fields[test.buyerIdent])
 		require.Equal(appdef.DataKind_int32, fields[test.ageIdent])
@@ -374,9 +374,9 @@ func TestBasicUsage_AppDef(t *testing.T) {
 								require.Equal(appdef.TypeKind_ORecord, rec.Kind())
 
 								fields := make(map[string]appdef.DataKind)
-								rec.Fields(func(f appdef.IField) {
+								for _, f := range rec.Fields() {
 									fields[f.Name()] = f.DataKind()
-								})
+								}
 								require.Equal(8, len(fields)) // 4 system {sys.QName, sys.ID, sys.ParentID, sys.Container} + 4 user
 								require.Equal(appdef.DataKind_RecordID, fields[test.saleIdent])
 								require.Equal(appdef.DataKind_string, fields[test.nameIdent])
