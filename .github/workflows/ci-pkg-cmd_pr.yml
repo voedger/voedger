@@ -1,4 +1,4 @@
-name: CI pkg-cmd
+name: CI pkg-cmd PR
 
 on:
   pull_request_target:
