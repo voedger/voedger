@@ -184,9 +184,9 @@ func buildUniqueFieldsNode(parentNode *CompatibilityTreeNode, item appdef.IUniqu
 
 func buildContainersNode(parentNode *CompatibilityTreeNode, item appdef.IContainers) (node *CompatibilityTreeNode) {
 	node = newNode(parentNode, NodeNameContainers, nil)
-	item.Containers(func(container appdef.IContainer) {
+	for _, container := range item.Containers() {
 		node.Props = append(node.Props, buildContainerNode(node, container))
-	})
+	}
 	return
 }
 
