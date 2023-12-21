@@ -1282,11 +1282,11 @@ func Test_1KStringField(t *testing.T) {
 	require.NotNil(fld)
 
 	cnt := 0
-	fld.Constraints(func(c appdef.IConstraint) {
+	for _, c := range fld.Constraints() {
 		cnt++
 		require.Equal(appdef.ConstraintKind_MaxLen, c.Kind())
 		require.EqualValues(1024, c.Value())
-	})
+	}
 	require.Equal(1, cnt)
 
 	_, err = appBld.Build()
