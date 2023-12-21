@@ -384,9 +384,9 @@ ABSTRACT WORKSPACE Workspace (
 		QName qname NOT NULL, -- Doc QName
 		ValuesHash int64 NOT NULL,
 		Values bytes(65535) NOT NULL,
-		ID ref,
-		UniqueID int32 NOT NULL,
-		PRIMARY KEY ((QName, ValuesHash), UniqueID, Values) -- partitioning is not optimal, no better solution
+		ID ref, -- ref to the doc
+		--UniqueID int32 NOT NULL,
+		PRIMARY KEY ((QName, ValuesHash), /*UniqueID, */Values) -- partitioning is not optimal, no better solution
 	) AS RESULT OF ApplyUniques;
 
 	VIEW ChildWorkspaceIdx (
