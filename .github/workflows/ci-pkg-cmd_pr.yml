@@ -4,6 +4,7 @@ on:
   pull_request_target:
     paths:
       - 'pkg/**'
+      - 'cmd/**'
 
 jobs:
   call-workflow-ci-pkg:
