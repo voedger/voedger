@@ -16,7 +16,7 @@ Invite Users/Devices to Workspaces
   - [Main sequence](#main-sequence)
   - [Extra](#extra)
 
-Commands  
+Commands
 - [c.sys.InitiateInvitationByEMail()](#csysinitiateinvitationbyemail)
 - [c.sys.InitiateJoinWorkspace()](#csysinitiatejoinworkspace)
 - [c.sys.InitiateUpdateInviteRoles()](#csysinitiateupdateinviteroles)
@@ -39,7 +39,7 @@ Docs
     Inviter["Inviter"]:::B
     Invitee["Invitee"]:::B
 
-    
+
     registry[(registry)]:::H
         Login["cdoc.Login"]:::H
 
@@ -53,9 +53,9 @@ Docs
         Invite --- InviteRoles(["Roles"]):::H
         InvitingWorkspace --x Subject["cdoc.sys.Subject"]:::H
 
-    InvitesService([InvitesService]):::S 
+    InvitesService([InvitesService]):::S
 
-    Subject -.- Invite 
+    Subject -.- Invite
     Subject -.- |gives| SubjectRole
 
     InviteeProfile --- JoinedWorkspace
@@ -63,7 +63,7 @@ Docs
     InvitesService -.- |creates| Subject
     InvitesService -.- |reads| Invite
     InvitesService -.- |can create| Login
-    InvitesService -.- |creates| JoinedWorkspace    
+    InvitesService -.- |creates| JoinedWorkspace
 
     Inviter -.- |creates, updates| Invite
     Inviter -.- |must be| WorkspaceAdmin
@@ -89,7 +89,7 @@ Docs
 ### Main sequence
 ```mermaid
 stateDiagram-v2
-    
+
     [*] --> ToBeInvited : c.sys.InitiateInvitationByEMail() by Inviter
     ToBeInvited --> Invited: ap.sys.ApplyInvitation() // send EMail
 
@@ -138,44 +138,21 @@ stateDiagram-v2
     - invalid argument EmailTemplate
 - //TODO: EMail => Login must be implemented, currently it is supposed that EMail == Login
 
-```mermaid
-    sequenceDiagram
-    
-    actor Inviter
-    participant workspace as InvitingWorkspace
-    actor user as Invitee
-
-    Inviter ->> workspace: c.sys.InitiateInvitationByEMail()
-    activate workspace
-        workspace ->> workspace: Create/Update cdoc.Invite, State=ToBeInvited, Login=args.Email, Email, Roles, ExpireDatetime
-        note over workspace: Update if exists cdoc.Invite where Login == args.EMail
-        workspace -->> Inviter: OK
-    deactivate workspace
-
-    Inviter ->> Inviter: Wait for State = Invited   
-
-    note over workspace: ap.sys.ApplyInvitation()
-    activate workspace
-        workspace ->> workspace: Prepare Email
-        workspace -->> user: Send invitation Email
-        workspace ->> workspace: Update cdoc.Invite State=Invited
-    deactivate workspace
-```
-
 ## cdoc.sys.Invite
 
 - ID
 - SubjectKind ([User/Device](https://github.com/heeus/core-istructs/blob/b95ff00ea97f3731f58b8d95f71914f29786e6bf/types.go#L81))
-- Login
-- Email
+- Login // actually `c.sys.InitiateInvitationByEmail.EMail`
+- Email // actually `c.sys.InitiateInvitationByEmail.EMail`
 - Roles (comma-separated)
 - ExpireDatetime (unix-timestamp)
 - VerificationCode
 - State
 - Created (unix-timestamp) ???
 - Updated (unix-timestamp) ???
-- SubjectID (Subject.ID)
-- InviteeProfileWSID
+- SubjectID (Subject.ID) // by ap.sys.ApplyJoinWorkspace
+- InviteeProfileWSID     // by ap.sys.ApplyJoinWorkspace
+- ActualLogin            // `token.Login`, by ap.sys.ApplyJoinWorkspace
 
 ## c.sys.InitiateJoinWorkspace()
 
@@ -185,13 +162,13 @@ stateDiagram-v2
   - VerificationCode
 - Errors
   - Invite state is not in (Invited)
-  - Invite does not exist 
+  - Invite does not exist
   - Invite expired
   - wrong Verification Code
 
 ```mermaid
     sequenceDiagram
-    
+
     actor Invitee
     participant front as Frontend
     participant workspace as InvitingWorkspace
@@ -210,7 +187,7 @@ stateDiagram-v2
 
     note over workspace: ap.sys.ApplyJoinWorkspace()
     activate workspace
-
+        note over workspace: cdoc.sys.SubjectIdx exists by Invite.Login or by Invite.ActualLogin -> do nothing
         workspace ->> profilews: sys.CreateJoinedWorkspace()
         profilews ->> profilews: create cdoc.sys.JoinedWorkspace if not exists
 
@@ -218,7 +195,7 @@ stateDiagram-v2
         workspace ->> workspace: Update cdoc.Invite
         workspace ->> workspace: ...State=Joined, SubjectID, Login
 
-    deactivate workspace        
+    deactivate workspace
 
     front -->> workspace: Wait for  cdoc.sys.Invite.State == Joined
 
@@ -226,7 +203,7 @@ stateDiagram-v2
 
 ## cdoc.sys.Subject
 
-- Login
+- Login // old stored records -> `Invite.Login` that is actually `c.sys.InitiateInvitationByEMail.Email`, new records (starting from https://github.com/voedger/voedger/issues/1107) - `Invite.ActualLogin` that is login from token
 - SubjectKind ([User/Device](https://github.com/heeus/core-istructs/blob/b95ff00ea97f3731f58b8d95f71914f29786e6bf/types.go#L81))
 - Roles (comma-separated list)
 
@@ -255,7 +232,7 @@ stateDiagram-v2
     activate workspace
         workspace ->> workspace: Update cdoc.sys.Invite State=ToUpdateRoles
         workspace -->> inviter: OK
-    deactivate workspace      
+    deactivate workspace
 
     note over workspace: ap.sys.ApplyUpdateInviteRoles()
     activate workspace
@@ -267,7 +244,7 @@ stateDiagram-v2
         workspace ->> workspace: Update cdoc.sys.Invite.State=Joined, Roles
     deactivate workspace
 
-    inviter -->> workspace: Wait for  cdoc.sys.Invite.State == Joined    
+    inviter -->> workspace: Wait for  cdoc.sys.Invite.State == Joined
 
 ```
 
@@ -286,12 +263,12 @@ sequenceDiagram
     participant workspace as InvitingWorkspace
     participant profilews as InviteeProfile
 
-    inviter ->> workspace: c.sys.CancelAcceptedInvite()
+    inviter ->> workspace: c.sys.InitiateCancelAcceptedInvite()
     activate workspace
         workspace ->> workspace: Update cdoc.sys.Invite State=ToBeCancelled
         workspace -->> inviter: OK
     deactivate workspace
-    
+
     note over workspace: ap.sys.ApplyCancelAcceptedInvite()
     activate workspace
         workspace ->> workspace: Update cdoc.sys.Subject IsActive=0
@@ -301,7 +278,7 @@ sequenceDiagram
         workspace ->> workspace:: Update cdoc.sys.Invite State=Cancelled
     deactivate workspace
 
-    inviter -->> workspace: Wait for  cdoc.sys.Subject.State == Cancelled        
+    inviter -->> workspace: Wait for  cdoc.sys.Subject.State == Cancelled
 
 ```
 
@@ -320,7 +297,7 @@ sequenceDiagram
     actor Invitee
     participant workspace as TargetWorkspace
     participant profilews as InviteeProfile
-    
+
     Invitee ->> workspace: c.sys.InitiateLeaveWorkspace()
     activate workspace
         workspace ->> workspace: Update cdoc.sys.Invite State=ToBeLeft

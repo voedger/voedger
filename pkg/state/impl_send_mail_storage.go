@@ -110,6 +110,7 @@ func (s *sendMailStorage) ApplyBatch(items []ApplyBatchItem) (err error) {
 		logger.Info(fmt.Sprintf("send mail '%s' from '%s' to %s, cc %s, bcc %s", stringOrEmpty(k, Field_Subject), k.data[Field_From], k.to, k.cc, k.bcc))
 
 		if s.messages != nil {
+			// happens in tests only
 			m := smtptest.Message{
 				Subject: stringOrEmpty(k, Field_Subject),
 				From:    k.data[Field_From].(string),
@@ -118,11 +119,7 @@ func (s *sendMailStorage) ApplyBatch(items []ApplyBatchItem) (err error) {
 				BCC:     k.bcc,
 				Body:    stringOrEmpty(k, Field_Body),
 			}
-			select {
-			case s.messages <- m:
-			default:
-				// asumming VIT will be failed on TearDown
-			}
+			s.messages <- m
 		} else {
 			c, e := mail.NewClient(k.data[Field_Host].(string), opts...)
 			if e != nil {
