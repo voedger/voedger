@@ -190,23 +190,26 @@ func TestClusterJSON(t *testing.T) {
 func TestCtoolCommands(t *testing.T) {
 	require := require.New(t)
 
+	deleteDryRunDir()
 	err := deleteClusterJson()
 	require.NoError(err, err)
 
+	defer deleteDryRunDir()
+
 	// execute the init command
-	err = execRootCmd([]string{"./ctool", "init", "SE", "10.0.0.21", "10.0.0.22", "10.0.0.23", "10.0.0.24", "10.0.0.25", "--test-mode", "--ssh-key", "key"}, version)
+	err = execRootCmd([]string{"./ctool", "init", "SE", "10.0.0.21", "10.0.0.22", "10.0.0.23", "10.0.0.24", "10.0.0.25", "--dry-run", "--ssh-key", "key"}, version)
 	require.NoError(err, err)
 
 	// repeat command init should give an error
-	err = execRootCmd([]string{"./ctool", "init", "SE", "10.0.0.21", "10.0.0.22", "10.0.0.23", "10.0.0.24", "10.0.0.25", "--test-mode", "--ssh-key", "key"}, version)
+	err = execRootCmd([]string{"./ctool", "init", "SE", "10.0.0.21", "10.0.0.22", "10.0.0.23", "10.0.0.24", "10.0.0.25", "--dry-run", "--ssh-key", "key"}, version)
 	require.Error(err, err)
 
 	// execute the replace command
-	err = execRootCmd([]string{"./ctool", "replace", "db-node-1", "10.0.0.28", "--test-mode", "--ssh-key", "key"}, version)
+	err = execRootCmd([]string{"./ctool", "replace", "db-node-1", "10.0.0.28", "--dry-run", "--ssh-key", "key"}, version)
 	require.NoError(err, err)
 
 	// replace node to the address from the list of Replacedaddresses should give an error
-	err = execRootCmd([]string{"./ctool", "replace", "10.0.0.28", "10.0.0.23", "--test-mode", "--ssh-key", "key"}, version)
+	err = execRootCmd([]string{"./ctool", "replace", "10.0.0.28", "10.0.0.23", "--dry-run", "--ssh-key", "key"}, version)
 	require.Error(err, err)
 }
 
@@ -214,7 +217,7 @@ func TestCtoolCommands(t *testing.T) {
 func TestVariableEnvironment(t *testing.T) {
 	require := require.New(t)
 
-	testMode = true
+	dryRun = true
 
 	script := `#!/usr/bin/env bash
 set -euo pipefail
@@ -256,6 +259,20 @@ func deleteClusterJson() error {
 	}
 
 	err := os.Remove(fname)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func deleteDryRunDir() error {
+	dryRunDir := "dry-run"
+	if _, err := os.Stat(dryRunDir); os.IsNotExist(err) {
+		return nil
+	}
+
+	err := os.RemoveAll(dryRunDir)
 	if err != nil {
 		return err
 	}
