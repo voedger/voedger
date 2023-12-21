@@ -28,7 +28,7 @@ type IFields interface {
 	// Returns fields count
 	FieldCount() int
 
-	// Enumerates all fields in add order.
+	// All fields in add order.
 	Fields() []IField
 
 	// Finds reference field by name.
@@ -36,7 +36,7 @@ type IFields interface {
 	// Returns nil if field is not found, or field found but it is not a reference field
 	RefField(name string) IRefField
 
-	// Enumerates all reference fields. System field (sys.ParentID) is also enumerated
+	// All reference fields. System field (sys.ParentID) is also included
 	RefFields() []IRefField
 
 	// Returns user fields count. System fields (sys.QName, sys.ID, …) do not count
