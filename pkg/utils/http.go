@@ -112,7 +112,7 @@ func WithLongPolling() ReqOptFunc {
 }
 
 // WithDiscardResponse, WithResponseHandler and WithLongPolling are mutual exclusive
-// causes *HTTPResponse to be nil
+// causes FederationReq() to return nil for *HTTPResponse
 func WithDiscardResponse() ReqOptFunc {
 	return func(opts *reqOpts) {
 		opts.discardResp = true
@@ -353,10 +353,8 @@ func Req(urlStr string, body string, optFuncs ...ReqOptFunc) (*HTTPResponse, err
 			return httpResponse, nil
 		}
 		if opts.discardResp {
-			if err := discardRespBody(resp); err != nil {
-				return nil, err
-			}
-			return nil, nil
+			err := discardRespBody(resp)
+			return nil, err
 		}
 	}
 	respBody, err := readBody(resp)

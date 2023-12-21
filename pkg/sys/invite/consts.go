@@ -59,6 +59,7 @@ const (
 	Field_ProfileWSID           = "ProfileWSID"
 	Field_SubjectID             = "SubjectID"
 	Field_LoginHash             = "LoginHash"
+	field_ActualLogin           = "ActualLogin"
 )
 
 type State int32

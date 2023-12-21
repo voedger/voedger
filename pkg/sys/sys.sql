@@ -100,6 +100,7 @@ ABSTRACT WORKSPACE Workspace (
 		Updated int64 NOT NULL,
 		SubjectID ref,
 		InviteeProfileWSID int64,
+		ActualLogin varchar,
 		UNIQUEFIELD Email
 	);
 
