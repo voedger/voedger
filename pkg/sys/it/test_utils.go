@@ -15,17 +15,17 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 	coreutils "github.com/voedger/voedger/pkg/utils"
-	"github.com/voedger/voedger/pkg/vit"
+	it "github.com/voedger/voedger/pkg/vit"
 )
 
-func InitiateEmailVerification(vit *vit.VIT, prn *vit.Principal, entity appdef.QName, field, email string, targetWSID istructs.WSID, opts ...coreutils.ReqOptFunc) (token, code string) {
+func InitiateEmailVerification(vit *it.VIT, prn *it.Principal, entity appdef.QName, field, email string, targetWSID istructs.WSID, opts ...coreutils.ReqOptFunc) (token, code string) {
 	return InitiateEmailVerificationFunc(vit, func() *coreutils.FuncResponse {
 		body := fmt.Sprintf(`{"args":{"Entity":"%s","Field":"%s","Email":"%s","TargetWSID":%d},"elements":[{"fields":["VerificationToken"]}]}`, entity, field, email, targetWSID)
 		return vit.PostApp(prn.AppQName, prn.ProfileWSID, "q.sys.InitiateEmailVerification", body, opts...)
 	})
 }
 
-func InitiateEmailVerificationFunc(vit *vit.VIT, f func() *coreutils.FuncResponse) (token, code string) {
+func InitiateEmailVerificationFunc(vit *it.VIT, f func() *coreutils.FuncResponse) (token, code string) {
 	resp := f()
 	emailMessage := vit.CaptureEmail()
 	r := regexp.MustCompile(`(?P<code>\d{6})`)
@@ -35,7 +35,7 @@ func InitiateEmailVerificationFunc(vit *vit.VIT, f func() *coreutils.FuncRespons
 	return
 }
 
-func WaitForIndexOffset(vit *vit.VIT, ws *vit.AppWorkspace, index appdef.QName, offset int64) {
+func WaitForIndexOffset(vit *it.VIT, ws *it.AppWorkspace, index appdef.QName, offset int64) {
 	type entity struct {
 		Last int64 `json:"Last"`
 	}
@@ -67,19 +67,19 @@ func WaitForIndexOffset(vit *vit.VIT, ws *vit.AppWorkspace, index appdef.QName, 
 	}
 }
 
-func InitiateInvitationByEMail(vit *vit.VIT, ws *vit.AppWorkspace, expireDatetime int64, email, initialRoles, inviteEmailTemplate, inviteEmailSubject string) (inviteID int64) {
+func InitiateInvitationByEMail(vit *it.VIT, ws *it.AppWorkspace, expireDatetime int64, email, initialRoles, inviteEmailTemplate, inviteEmailSubject string) (inviteID int64) {
 	body := fmt.Sprintf(`{"args":{"Email":"%s","Roles":"%s","ExpireDatetime":%d,"EmailTemplate":"%s","EmailSubject":"%s"}}`,
 		email, initialRoles, expireDatetime, inviteEmailTemplate, inviteEmailSubject)
 	return vit.PostWS(ws, "c.sys.InitiateInvitationByEMail", body).NewID()
 }
 
-func InitiateJoinWorkspace(vit *vit.VIT, ws *vit.AppWorkspace, inviteID int64, login string, verificationCode string) {
+func InitiateJoinWorkspace(vit *it.VIT, ws *it.AppWorkspace, inviteID int64, login string, verificationCode string) {
 	profile := vit.GetPrincipal(istructs.AppQName_test1_app1, login)
 	vit.PostWS(ws, "c.sys.InitiateJoinWorkspace", fmt.Sprintf(`{"args":{"InviteID":%d,"VerificationCode":"%s"}}`, inviteID, verificationCode), coreutils.WithAuthorizeBy(profile.Token))
 }
 
-func WaitForInviteState(vit *vit.VIT, ws *vit.AppWorkspace, inviteState int32, inviteID int64) {
-	deadline := time.Now().Add(time.Second * 5)
+func WaitForInviteState(vit *it.VIT, ws *it.AppWorkspace, inviteState int32, inviteID int64) {
+	deadline := it.TestDeadline(5 * time.Second)
 	var entity []interface{}
 	for time.Now().Before(deadline) {
 		entity = vit.PostWS(ws, "q.sys.Collection", fmt.Sprintf(`
@@ -101,7 +101,7 @@ type joinedWorkspaceDesc struct {
 	wsName                string
 }
 
-func FindCDocJoinedWorkspaceByInvitingWorkspaceWSIDAndLogin(vit *vit.VIT, invitingWorkspaceWSID istructs.WSID, login string) joinedWorkspaceDesc {
+func FindCDocJoinedWorkspaceByInvitingWorkspaceWSIDAndLogin(vit *it.VIT, invitingWorkspaceWSID istructs.WSID, login string) joinedWorkspaceDesc {
 	resp := vit.PostProfile(vit.GetPrincipal(istructs.AppQName_test1_app1, login), "q.sys.Collection", fmt.Sprintf(`
 		{"args":{"Schema":"sys.JoinedWorkspace"},
 		"elements":[{"fields":[
@@ -123,7 +123,7 @@ func FindCDocJoinedWorkspaceByInvitingWorkspaceWSIDAndLogin(vit *vit.VIT, inviti
 }
 
 func DenyCreateCDocWSKind_Test(t *testing.T, cdocWSKinds []appdef.QName) {
-	vit := vit.NewVIT(t, &vit.SharedConfig_App1)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
