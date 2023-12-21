@@ -18,6 +18,7 @@ require (
 	github.com/hashicorp/golang-lru/v2 v2.0.4
 	github.com/spf13/cobra v1.7.0
 	github.com/stretchr/testify v1.8.4
+	github.com/tetratelabs/wazero v1.5.0
 	github.com/untillpro/airs-ibus v0.0.0-20230904100809-21eaae083040
 	github.com/untillpro/dynobuffers v0.0.0-20221105082727-4ed4b8227195
 	github.com/untillpro/goutils v0.0.0-20231117130619-11fe1908c171
@@ -45,7 +46,6 @@ require (
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/stretchr/objx v0.5.0 // indirect
-	github.com/tetratelabs/wazero v1.5.0 // indirect
 	github.com/untillpro/gojay v1.2.17-0.20201109133446-b1069e05b56c // indirect
 	golang.org/x/sys v0.13.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
