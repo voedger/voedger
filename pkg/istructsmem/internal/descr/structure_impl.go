@@ -34,11 +34,11 @@ func (s *Structure) read(str appdef.IStructure) {
 		s.Containers = append(s.Containers, c)
 	}
 
-	str.Uniques(func(unique appdef.IUnique) {
+	for _, unique := range str.Uniques() {
 		u := newUnique()
 		u.read(unique)
 		s.Uniques = append(s.Uniques, u)
-	})
+	}
 	if uf := str.UniqueField(); uf != nil {
 		s.UniqueField = uf.Name()
 	}
