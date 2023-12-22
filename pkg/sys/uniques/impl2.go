@@ -26,14 +26,18 @@ func provideApplyUniques2(appDef appdef.IAppDef) func(event istructs.IPLogEvent,
 			if !ok {
 				return nil
 			}
-			err := iterate.ForEachError(iUniques.Uniques, func(unique appdef.IUnique) error {
+			for _, unique := range iUniques.Uniques() {
 				orderedUniqueFields := getOrderedUniqueFields(appDef, rec, unique)
 				if rec.IsNew() {
-					return insert2(st, rec, intents, orderedUniqueFields, unique)
+					err = insert2(st, rec, intents, orderedUniqueFields, unique)
+				} else {
+					err = update2(st, rec, intents, orderedUniqueFields, unique)
 				}
-				return update2(st, rec, intents, orderedUniqueFields, unique)
-			})
-			return err
+				if err != nil {
+					return err
+				}
+			}
+			return nil
 		})
 	}
 }
@@ -41,13 +45,13 @@ func provideApplyUniques2(appDef appdef.IAppDef) func(event istructs.IPLogEvent,
 func getOrderedUniqueFields(appDef appdef.IAppDef, rec istructs.IRowReader, unique appdef.IUnique) (orderedUniqueFields orderedUniqueFields) {
 	recType := appDef.Type(rec.AsQName(appdef.SystemField_QName))
 	recSchemaFields := recType.(appdef.IFields)
-	recSchemaFields.Fields(func(schemaField appdef.IField) {
+	for _, schemaField := range recSchemaFields.Fields() {
 		for _, uniqueFieldDesc := range unique.Fields() {
 			if uniqueFieldDesc.Name() == schemaField.Name() {
 				orderedUniqueFields = append(orderedUniqueFields, schemaField)
 			}
 		}
-	})
+	}
 	return orderedUniqueFields
 }
 
@@ -218,7 +222,7 @@ func eventUniqueValidator2(ctx context.Context, rawEvent istructs.IRawEvent, app
 		if !ok {
 			return nil
 		}
-		err = iterate.ForEachError(cudUniques.Uniques, func(unique appdef.IUnique) error {
+		for _, unique := range cudUniques.Uniques() {
 			var uniqueKeyValues []byte
 			var rowSource istructs.IRowReader
 			if cudRec.IsNew() {
@@ -291,8 +295,7 @@ func eventUniqueValidator2(ctx context.Context, rawEvent istructs.IRawEvent, app
 				// }
 
 			}
-			return nil
-		})
-		return err
+		}
+		return nil
 	})
 }

@@ -384,22 +384,12 @@ ABSTRACT WORKSPACE Workspace (
 		PRIMARY KEY ((PartKey), DocQName, DocID, ElementID)
 	) AS RESULT OF ProjectorCollection;
 
-	-- Deprecated, use Uniques2
-	-- VIEW Uniques (
-	-- 	QName qname NOT NULL, -- Doc QName
-	-- 	ValuesHash int64 NOT NULL,
-	-- 	Values bytes(65535) NOT NULL,
-	-- 	ID ref,
-	-- 	PRIMARY KEY ((QName, ValuesHash), Values) -- keep this, no better solution
-	-- ) AS RESULT OF ApplyUniques;
-
-	VIEW Uniques2 (
+	VIEW Uniques (
 		QName qname NOT NULL, -- Doc QName
 		ValuesHash int64 NOT NULL,
 		Values bytes(65535) NOT NULL,
-		ID ref, -- ref to the doc
-		--UniqueID int32 NOT NULL,
-		PRIMARY KEY ((QName, ValuesHash), /*UniqueID, */Values) -- partitioning is not optimal, no better solution
+		ID ref,
+		PRIMARY KEY ((QName, ValuesHash), Values) -- partitioning is not optimal, no better solution
 	) AS RESULT OF ApplyUniques;
 
 	VIEW WorkspaceIDIdx (
@@ -493,7 +483,7 @@ ABSTRACT WORKSPACE Workspace (
 		SYNC PROJECTOR ApplyUniques
 			AFTER INSERT OR UPDATE ON (CRecord, WRecord) OR
 			AFTER EXECUTE WITH PARAM ON ODoc
-			INTENTS(View(Uniques2));
+			INTENTS(View(Uniques));
 
 		-- verifier
 
