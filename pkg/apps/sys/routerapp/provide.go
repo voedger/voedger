@@ -16,16 +16,20 @@ import (
 )
 
 func Provide(smtpCfg smtp.Cfg) apps.AppBuilder {
-	return func(apis apps.APIs, cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) {
-		sys.Provide(cfg, appDefBuilder, smtpCfg, ep, nil, apis.TimeFunc, apis.ITokens, apis.IFederation, apis.IAppStructsProvider, apis.IAppTokensFactory,
+	return func(apis apps.APIs, cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) []parser.PackageFS {
+		sysPackageFS := sys.Provide(cfg, appDefBuilder, smtpCfg, ep, nil, apis.TimeFunc, apis.ITokens, apis.IFederation, apis.IAppStructsProvider, apis.IAppTokensFactory,
 			apis.NumCommandProcessors, nil, apis.IAppStorageProvider)
-		apps.RegisterSchemaFS(routerSchemaFS, RouterAppFQN, ep)
+		routerAppPackageFS := parser.PackageFS{
+			QualifiedPackageName: RouterAppFQN,
+			FS:                   routerAppSchemaFS,
+		}
+		return []parser.PackageFS{sysPackageFS, routerAppPackageFS}
 	}
 }
 
 // Returns router application definition
 func AppDef() appdef.IAppDef {
-	appDef, err := parser.BuildAppDefFromFS(RouterAppFQN, routerSchemaFS, "")
+	appDef, err := apps.BuildAppDefFromFS(RouterAppFQN, routerAppSchemaFS, ".")
 	if err != nil {
 		panic(err)
 	}

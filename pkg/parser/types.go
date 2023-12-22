@@ -39,6 +39,11 @@ type IReadFS interface {
 	fs.ReadFileFS
 }
 
+type PackageFS struct {
+	QualifiedPackageName string
+	FS                   IReadFS
+}
+
 type Ident string
 
 func (b *Ident) Capture(values []string) error {

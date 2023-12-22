@@ -133,7 +133,6 @@ type VVMConfig struct {
 	FederationURL       *url.URL
 	ActualizerStateOpts []state.ActualizerStateOptFunc
 	SecretsReader       isecrets.ISecretReader
-	BuiltInApps         []apppartsctl.BuiltInApp // TODO: empty for now
 }
 
 type resultSenderErrorFirst struct {
