@@ -205,7 +205,7 @@ func (ff *fields) SetFieldVerify(name string, vk ...VerificationKind) IFieldsBui
 func (ff *fields) UserFieldCount() int {
 	cnt := 0
 	for _, fld := range ff.fieldsOrdered {
-		if !fld.(IField).IsSys() {
+		if !fld.IsSys() {
 			cnt++
 		}
 	}
