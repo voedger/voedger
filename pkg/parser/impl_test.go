@@ -1282,11 +1282,11 @@ func Test_1KStringField(t *testing.T) {
 	require.NotNil(fld)
 
 	cnt := 0
-	fld.Constraints(func(c appdef.IConstraint) {
+	for _, c := range fld.Constraints() {
 		cnt++
 		require.Equal(appdef.ConstraintKind_MaxLen, c.Kind())
 		require.EqualValues(1024, c.Value())
-	})
+	}
 	require.Equal(1, cnt)
 
 	_, err = appBld.Build()
@@ -1923,7 +1923,7 @@ TABLE SomeTable INHERITS CDoc (
 func Test_ODocUnknown(t *testing.T) {
 	require := require.New(t)
 	pkgApp1 := buildPackage(`APPLICATION registry();
-TABLE MyTable1 INHERITS ODocUnknown ( MyField ref(registry.Login) NOT NULL ); 
+TABLE MyTable1 INHERITS ODocUnknown ( MyField ref(registry.Login) NOT NULL );
 `)
 
 	_, err := BuildAppSchema([]*PackageSchemaAST{pkgApp1, getSysPackageAST()})
@@ -1933,4 +1933,14 @@ TABLE MyTable1 INHERITS ODocUnknown ( MyField ref(registry.Login) NOT NULL );
 		"source.sql:2:1: ODocUnknown undefined",
 	}, "\n"))
 
+}
+
+//go:embed package.sql
+var pkgSqlFS embed.FS
+
+func TestParseFilesFromFSRoot(t *testing.T) {
+	t.Run("dot", func(t *testing.T) {
+		_, err := ParsePackageDir("github.com/untillpro/main", pkgSqlFS, ".")
+		require.NoError(t, err)
+	})
 }

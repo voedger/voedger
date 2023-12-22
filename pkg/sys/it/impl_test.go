@@ -18,6 +18,7 @@ import (
 	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
+	"github.com/voedger/voedger/pkg/parser"
 	"github.com/voedger/voedger/pkg/sys"
 	"github.com/voedger/voedger/pkg/sys/authnz"
 	"github.com/voedger/voedger/pkg/sys/smtp"
@@ -38,7 +39,7 @@ func (e *greeterRR) AsString(name string) string {
 func TestBasicUsage(t *testing.T) {
 	require := require.New(t)
 	cfg := it.NewOwnVITConfig(
-		it.WithApp(istructs.AppQName_test1_app2, func(apis apps.APIs, cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) {
+		it.WithApp(istructs.AppQName_test1_app2, func(apis apps.APIs, cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) []parser.PackageFS {
 			qNameCmdGreeter := appdef.NewQName(appdef.SysPackage, "Greeter")
 			appDefBuilder.AddQuery(qNameCmdGreeter).
 				SetParam(appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "GreeterParams")).
@@ -56,9 +57,13 @@ func TestBasicUsage(t *testing.T) {
 			))
 
 			// need to read cdoc.sys.Subject on auth
-			sys.Provide(cfg, appDefBuilder, smtp.Cfg{}, ep, nil, apis.TimeFunc, apis.ITokens, apis.IFederation, apis.IAppStructsProvider, apis.IAppTokensFactory,
+			sysPackageFS := sys.Provide(cfg, appDefBuilder, smtp.Cfg{}, ep, nil, apis.TimeFunc, apis.ITokens, apis.IFederation, apis.IAppStructsProvider, apis.IAppTokensFactory,
 				apis.NumCommandProcessors, nil, apis.IAppStorageProvider)
-			apps.RegisterSchemaFS(it.SchemaTestApp2FS, "app2", ep)
+			appPackageFS := parser.PackageFS{
+				QualifiedPackageName: "github.com/voedger/voedger/pkg/vit/app2pkg",
+				FS:                   it.SchemaTestApp2FS,
+			}
+			return []parser.PackageFS{sysPackageFS, appPackageFS}
 		}),
 	)
 	vit := it.NewVIT(t, &cfg)

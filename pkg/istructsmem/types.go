@@ -893,15 +893,14 @@ func (row *rowType) QName() appdef.QName {
 
 // istructs.IRowReader.RecordIDs
 func (row *rowType) RecordIDs(includeNulls bool, cb func(string, istructs.RecordID)) {
-	row.fields.Fields(
-		func(fld appdef.IField) {
-			if fld.DataKind() == appdef.DataKind_RecordID {
-				id := row.AsRecordID(fld.Name())
-				if (id != istructs.NullRecordID) || includeNulls {
-					cb(fld.Name(), id)
-				}
+	for _, fld := range row.fields.Fields() {
+		if fld.DataKind() == appdef.DataKind_RecordID {
+			id := row.AsRecordID(fld.Name())
+			if (id != istructs.NullRecordID) || includeNulls {
+				cb(fld.Name(), id)
 			}
-		})
+		}
+	}
 }
 
 // Return readable name of row.

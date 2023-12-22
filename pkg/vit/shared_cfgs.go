@@ -12,6 +12,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/apps"
 	"github.com/voedger/voedger/pkg/extensionpoints"
+	"github.com/voedger/voedger/pkg/parser"
 	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys/smtp"
 
@@ -76,26 +77,28 @@ var (
 	MockCmdExec func(input string) error
 )
 
-func ProvideApp2(apis apps.APIs, cfg *istructsmem.AppConfigType, adf appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) {
+func ProvideApp2(apis apps.APIs, cfg *istructsmem.AppConfigType, adf appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) []parser.PackageFS {
 	buildInfo, ok := debug.ReadBuildInfo()
 	if !ok {
 		panic("no build info")
 	}
-	sys.Provide(cfg, adf, TestSMTPCfg, ep, nil, apis.TimeFunc, apis.ITokens, apis.IFederation, apis.IAppStructsProvider, apis.IAppTokensFactory,
+	sysPackageFS := sys.Provide(cfg, adf, TestSMTPCfg, ep, nil, apis.TimeFunc, apis.ITokens, apis.IFederation, apis.IAppStructsProvider, apis.IAppTokensFactory,
 		apis.NumCommandProcessors, buildInfo, apis.IAppStorageProvider)
-	apps.RegisterSchemaFS(SchemaTestApp2FS, "github.com/voedger/voedger/pkg/vit/app2pkg", ep)
+	app2PackageFS := parser.PackageFS{
+		QualifiedPackageName: "github.com/voedger/voedger/pkg/vit/app2pkg",
+		FS:                   SchemaTestApp2FS,
+	}
+	return []parser.PackageFS{sysPackageFS, app2PackageFS}
 }
 
-func ProvideApp1(apis apps.APIs, cfg *istructsmem.AppConfigType, adf appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) {
+func ProvideApp1(apis apps.APIs, cfg *istructsmem.AppConfigType, adf appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) []parser.PackageFS {
 	// sys package
 	buildInfo, ok := debug.ReadBuildInfo()
 	if !ok {
 		panic("no build info")
 	}
-	sys.Provide(cfg, adf, TestSMTPCfg, ep, nil, apis.TimeFunc, apis.ITokens, apis.IFederation, apis.IAppStructsProvider, apis.IAppTokensFactory,
+	sysPackageFS := sys.Provide(cfg, adf, TestSMTPCfg, ep, nil, apis.TimeFunc, apis.ITokens, apis.IFederation, apis.IAppStructsProvider, apis.IAppTokensFactory,
 		apis.NumCommandProcessors, buildInfo, apis.IAppStorageProvider)
-
-	apps.RegisterSchemaFS(SchemaTestApp1FS, "github.com/voedger/voedger/pkg/vit/app1pkg", ep)
 
 	// for rates test
 	cfg.Resources.Add(istructsmem.NewQueryFunction(
@@ -209,4 +212,9 @@ func ProvideApp1(apis apps.APIs, cfg *istructsmem.AppConfigType, adf appdef.IApp
 		AddField("Bool2", appdef.DataKind_bool, false)
 	bldr.AddUnique("uniq1", []string{"Int1", "Str1", "Bool1", "Bytes1"})
 	bldr.AddUnique("uniq2", []string{"Int2", "Str2", "Bool2", "Bytes1"})
+	app1PackageFS := parser.PackageFS{
+		QualifiedPackageName: "github.com/voedger/voedger/pkg/vit/app1pkg",
+		FS:                   SchemaTestApp1FS,
+	}
+	return []parser.PackageFS{sysPackageFS, app1PackageFS}
 }

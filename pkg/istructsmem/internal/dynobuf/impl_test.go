@@ -72,19 +72,19 @@ func TestDynoBufSchemes(t *testing.T) {
 
 		require.EqualValues(len(dynoScheme.FieldsMap), fields.UserFieldCount())
 
-		for _, fld := range dynoScheme.Fields {
-			field := fields.Field(fld.Name)
-			require.NotNil(field)
-			require.Equal(DataKindToFieldType(field.DataKind()), fld.Ft)
+		for _, f := range dynoScheme.Fields {
+			fld := fields.Field(f.Name)
+			require.NotNil(fld)
+			require.Equal(DataKindToFieldType(fld.DataKind()), f.Ft)
 		}
 
-		fields.Fields(func(field appdef.IField) {
-			if !field.IsSys() {
-				fld, ok := dynoScheme.FieldsMap[field.Name()]
+		for _, fld := range fields.Fields() {
+			if !fld.IsSys() {
+				f, ok := dynoScheme.FieldsMap[fld.Name()]
 				require.True(ok)
-				require.Equal(DataKindToFieldType(field.DataKind()), fld.Ft)
+				require.Equal(DataKindToFieldType(fld.DataKind()), f.Ft)
 			}
-		})
+		}
 	}
 
 	appDef.Types(
