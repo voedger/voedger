@@ -39,7 +39,7 @@ func makeField(name string, data IData, required bool, comments ...string) field
 		data:        data,
 		required:    required,
 		verifiable:  false,
-		constraints: ConstraintsWithInherited(data),
+		constraints: data.Constraints(true),
 	}
 	return f
 }
@@ -49,12 +49,8 @@ func newField(name string, data IData, required bool, comments ...string) *field
 	return &f
 }
 
-func (fld *field) Constraints(f func(IConstraint)) {
-	for i := ConstraintKind(1); i < ConstraintKind_Count; i++ {
-		if c, ok := fld.constraints[i]; ok {
-			f(c)
-		}
-	}
+func (fld *field) Constraints() map[ConstraintKind]IConstraint {
+	return fld.constraints
 }
 
 func (fld *field) Data() IData { return fld.data }
@@ -109,7 +105,8 @@ type fields struct {
 	app           *appDef
 	emb           interface{}
 	fields        map[string]interface{}
-	fieldsOrdered []string
+	fieldsOrdered []IField
+	refFields     []IRefField
 }
 
 // Makes new fields instance
@@ -118,7 +115,8 @@ func makeFields(app *appDef, embeds interface{}) fields {
 		app:           app,
 		emb:           embeds,
 		fields:        make(map[string]interface{}),
-		fieldsOrdered: make([]string, 0)}
+		fieldsOrdered: make([]IField, 0),
+		refFields:     make([]IRefField, 0)}
 	return ff
 }
 
@@ -166,10 +164,8 @@ func (ff *fields) FieldCount() int {
 	return len(ff.fieldsOrdered)
 }
 
-func (ff *fields) Fields(cb func(IField)) {
-	for _, n := range ff.fieldsOrdered {
-		cb(ff.Field(n))
-	}
+func (ff *fields) Fields() []IField {
+	return ff.fieldsOrdered
 }
 
 func (ff *fields) RefField(name string) (rf IRefField) {
@@ -183,14 +179,8 @@ func (ff *fields) RefField(name string) (rf IRefField) {
 	return rf
 }
 
-func (ff *fields) RefFields(cb func(IRefField)) {
-	ff.Fields(func(fld IField) {
-		if fld.DataKind() == DataKind_RecordID {
-			if rf, ok := fld.(IRefField); ok {
-				cb(rf)
-			}
-		}
-	})
+func (ff *fields) RefFields() []IRefField {
+	return ff.refFields
 }
 
 func (ff *fields) SetFieldComment(name string, comment ...string) IFieldsBuilder {
@@ -212,17 +202,13 @@ func (ff *fields) SetFieldVerify(name string, vk ...VerificationKind) IFieldsBui
 	return ff.emb.(IFieldsBuilder)
 }
 
-func (ff *fields) UserFields(cb func(IField)) {
-	ff.Fields(func(fld IField) {
-		if !fld.IsSys() {
-			cb(fld)
-		}
-	})
-}
-
 func (ff *fields) UserFieldCount() int {
 	cnt := 0
-	ff.UserFields(func(IField) { cnt++ })
+	for _, fld := range ff.fieldsOrdered {
+		if !fld.IsSys() {
+			cnt++
+		}
+	}
 	return cnt
 }
 
@@ -256,7 +242,11 @@ func (ff *fields) appendField(name string, fld interface{}) {
 	}
 
 	ff.fields[name] = fld
-	ff.fieldsOrdered = append(ff.fieldsOrdered, name)
+	ff.fieldsOrdered = append(ff.fieldsOrdered, fld.(IField))
+
+	if rf, ok := fld.(IRefField); ok {
+		ff.refFields = append(ff.refFields, rf)
+	}
 }
 
 // Returns type that embeds fields
@@ -319,9 +309,9 @@ func (f refField) Refs() QNames { return f.refs }
 //   - every RefField must refer to known types,
 //   - every referenced by RefField type must be record type
 func validateTypeFields(t IType) (err error) {
-	if fld, ok := t.(IFields); ok {
+	if ff, ok := t.(IFields); ok {
 		// resolve reference types
-		fld.RefFields(func(rf IRefField) {
+		for _, rf := range ff.RefFields() {
 			for _, n := range rf.Refs() {
 				refType := t.App().TypeByName(n)
 				if refType == nil {
@@ -333,7 +323,7 @@ func validateTypeFields(t IType) (err error) {
 					continue
 				}
 			}
-		})
+		}
 	}
 	return err
 }
@@ -345,9 +335,7 @@ type nullFields struct{}
 
 func (f *nullFields) Field(name string) IField       { return nil }
 func (f *nullFields) FieldCount() int                { return 0 }
-func (f *nullFields) Fields(func(IField))            {}
+func (f *nullFields) Fields() []IField               { return []IField{} }
 func (f *nullFields) RefField(name string) IRefField { return nil }
-func (f *nullFields) RefFields(func(IRefField))      {}
-func (f *nullFields) RefFieldCount() int             { return 0 }
-func (f *nullFields) UserFields(func(IField))        {}
+func (f *nullFields) RefFields() []IRefField         { return []IRefField{} }
 func (f *nullFields) UserFieldCount() int            { return 0 }

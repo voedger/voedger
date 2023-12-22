@@ -26,13 +26,10 @@ type IData interface {
 	// All user types should have ancestor. System types may has no ancestor.
 	Ancestor() IData
 
-	// Enumerate data type constraints.
+	// All data type constraints.
 	//
-	// Constraints are enumerated in kind order.
-	//
-	// Only this data type constraints are enumerated. To obtain all constraints,
-	// include inherited ones, use DataConstraintsInherited().
-	Constraints(func(IConstraint))
+	// To obtain all constraints include ancestor data types, pass true to withInherited parameter.
+	Constraints(withInherited bool) map[ConstraintKind]IConstraint
 }
 
 type IDataBuilder interface {

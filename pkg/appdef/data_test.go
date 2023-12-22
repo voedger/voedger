@@ -60,23 +60,23 @@ func Test_AppDef_AddData(t *testing.T) {
 		require.Equal(DataKind_string, tk.DataKind())
 		require.Equal(s, tk.Ancestor())
 		cnt := 0
-		tk.Constraints(func(c IConstraint) {
+		for k, c := range tk.Constraints(false) {
 			cnt++
-			switch cnt {
-			case 1:
+			switch k {
+			case ConstraintKind_MinLen:
 				require.Equal(ConstraintKind_MinLen, c.Kind())
 				require.EqualValues(1, c.Value())
-			case 2:
+			case ConstraintKind_MaxLen:
 				require.Equal(ConstraintKind_MaxLen, c.Kind())
 				require.EqualValues(100, c.Value())
-			case 3:
+			case ConstraintKind_Pattern:
 				require.Equal(ConstraintKind_Pattern, c.Kind())
 				require.EqualValues(`^\w+$`, c.Value().(*regexp.Regexp).String())
 				require.Equal("only word characters allowed", c.Comment())
 			default:
 				require.Failf("unexpected constraint", "constraint: %v", c)
 			}
-		})
+		}
 		require.Equal(3, cnt)
 	})
 

@@ -24,17 +24,16 @@ func NewFieldsScheme(name string, fields appdef.IFields) *dynobuffers.Scheme {
 	db := dynobuffers.NewScheme()
 
 	db.Name = name
-	fields.Fields(
-		func(f appdef.IField) {
-			if !f.IsSys() { // #18142: extract system fields from dynobuffer
-				fieldType := DataKindToFieldType(f.DataKind())
-				if fieldType == dynobuffers.FieldTypeByte {
-					db.AddArray(f.Name(), fieldType, false)
-				} else {
-					db.AddField(f.Name(), fieldType, false)
-				}
+	for _, f := range fields.Fields() {
+		if !f.IsSys() { // #18142: extract system fields from dynobuffer
+			ft := DataKindToFieldType(f.DataKind())
+			if ft == dynobuffers.FieldTypeByte {
+				db.AddArray(f.Name(), ft, false)
+			} else {
+				db.AddField(f.Name(), ft, false)
 			}
-		})
+		}
+	}
 
 	return db
 }

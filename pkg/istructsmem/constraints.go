@@ -40,8 +40,8 @@ type chars interface{ string | []byte }
 func checkCharsConstraints[T chars](fld appdef.IField, value T) (err error) {
 	maxLenChecked := false
 
-	fld.Constraints(func(c appdef.IConstraint) {
-		switch c.Kind() {
+	for k, c := range fld.Constraints() {
+		switch k {
 		case appdef.ConstraintKind_MinLen:
 			if len(value) < int(c.Value().(uint16)) {
 				err = errors.Join(err, fmt.Errorf(errFieldDataConstraintViolatedFmt, fld, c, ErrDataConstraintViolation))
@@ -73,7 +73,7 @@ func checkCharsConstraints[T chars](fld appdef.IField, value T) (err error) {
 				}
 			}
 		}
-	})
+	}
 
 	if !maxLenChecked {
 		if len(value) > int(appdef.DefaultFieldMaxLength) {
@@ -90,8 +90,8 @@ type number = interface {
 }
 
 func checkNumberConstraints[T number](fld appdef.IField, value T) (err error) {
-	fld.Constraints(func(c appdef.IConstraint) {
-		switch c.Kind() {
+	for k, c := range fld.Constraints() {
+		switch k {
 		case appdef.ConstraintKind_MinIncl:
 			if float64(value) < c.Value().(float64) {
 				err = errors.Join(err, fmt.Errorf(errFieldDataConstraintViolatedFmt, fld, c, ErrDataConstraintViolation))
@@ -125,7 +125,7 @@ func checkNumberConstraints[T number](fld appdef.IField, value T) (err error) {
 				}
 			}
 		}
-	})
+	}
 
 	return err
 }

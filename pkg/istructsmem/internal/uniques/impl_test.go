@@ -79,10 +79,10 @@ func TestUniques(t *testing.T) {
 		require.Equal(2, doc.UniqueCount())
 		require.Equal(doc.UniqueCount(), func() int {
 			cnt := 0
-			doc.Uniques(func(u appdef.IUnique) {
+			for _, u := range doc.Uniques() {
 				cnt++
 				require.Greater(u.ID(), appdef.FirstUniqueID)
-			})
+			}
 			return cnt
 		}())
 	})
@@ -110,13 +110,13 @@ func TestUniques(t *testing.T) {
 		doc2 := appDef2.CDoc(testName)
 		require.Equal(3, doc2.UniqueCount())
 
-		doc1.Uniques(func(u1 appdef.IUnique) {
+		for _, u1 := range doc1.Uniques() {
 			u2 := doc2.UniqueByName(u1.Name())
 			require.Equal(u1.ID(), u2.ID())
 
 			u2 = doc2.UniqueByID(u1.ID())
 			require.Equal(u1.Name(), u2.Name())
-		})
+		}
 	})
 }
 
