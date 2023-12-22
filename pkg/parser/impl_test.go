@@ -42,20 +42,6 @@ func getSysPackageAST() *PackageSchemaAST {
 	return pkgSys
 }
 
-//go:embed package.sql
-var pkgSqlFS embed.FS
-
-func TestDot(t *testing.T) {
-	t.Run("dot", func(t *testing.T) {
-		_, err := ParsePackageDir("github.com/untillpro/main", pkgSqlFS, ".")
-		require.NoError(t, err)
-	})
-	t.Run("empty", func(t *testing.T) {
-		_, err := ParsePackageDir("github.com/untillpro/main", pkgSqlFS, "")
-		require.NoError(t, err)
-	})
-}
-
 func Test_BasicUsage(t *testing.T) {
 
 	require := require.New(t)
@@ -1952,7 +1938,7 @@ TABLE MyTable1 INHERITS ODocUnknown ( MyField ref(registry.Login) NOT NULL );
 //go:embed package.sql
 var pkgSqlFS embed.FS
 
-func TestDot(t *testing.T) {
+func TestParseFilesFromFSRoot(t *testing.T) {
 	t.Run("dot", func(t *testing.T) {
 		_, err := ParsePackageDir("github.com/untillpro/main", pkgSqlFS, ".")
 		require.NoError(t, err)

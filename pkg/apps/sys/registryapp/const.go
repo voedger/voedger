@@ -8,6 +8,6 @@ package registryapp
 import "embed"
 
 //go:embed schema.sql
-var registrySchemaFS embed.FS
+var registryAppSchemaFS embed.FS
 
 const RegistryAppFQN = "github.com/voedger/voedger/pkg/apps/sys/registryapp"

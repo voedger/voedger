@@ -5,8 +5,6 @@
 
 package apps
 
-import "github.com/voedger/voedger/pkg/extensionpoints"
-
 const (
-	EPSchemasFS extensionpoints.EPKey = "SchemasFS"
+// EPSchemasFS extensionpoints.EPKey = "SchemasFS"
 )

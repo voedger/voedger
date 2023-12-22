@@ -16,16 +16,20 @@ import (
 )
 
 func Provide(smtpCfg smtp.Cfg) apps.AppBuilder {
-	return func(apis apps.APIs, cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) {
-		sys.Provide(cfg, appDefBuilder, smtpCfg, ep, nil, apis.TimeFunc, apis.ITokens, apis.IFederation, apis.IAppStructsProvider, apis.IAppTokensFactory,
+	return func(apis apps.APIs, cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) []parser.PackageFS {
+		sysPackageFS := sys.Provide(cfg, appDefBuilder, smtpCfg, ep, nil, apis.TimeFunc, apis.ITokens, apis.IFederation, apis.IAppStructsProvider, apis.IAppTokensFactory,
 			apis.NumCommandProcessors, nil, apis.IAppStorageProvider) // need to generate AppWorkspaces only
-		apps.RegisterSchemaFS(blobberSchemaFS, BlobberAppFQN, ep)
+		blobberAppPackageFS := parser.PackageFS{
+			QualifiedPackageName: BlobberAppFQN,
+			FS:                   blobberSchemaFS,
+		}
+		return []parser.PackageFS{sysPackageFS, blobberAppPackageFS}
 	}
 }
 
 // Returns blobber application definition
 func AppDef() appdef.IAppDef {
-	appDef, err := parser.BuildAppDefFromFS(BlobberAppFQN, blobberSchemaFS, ".")
+	appDef, err := apps.BuildAppDefFromFS(BlobberAppFQN, blobberSchemaFS, ".")
 	if err != nil {
 		panic(err)
 	}

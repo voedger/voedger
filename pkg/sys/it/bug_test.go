@@ -17,6 +17,7 @@ import (
 	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
+	"github.com/voedger/voedger/pkg/parser"
 	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys"
 	"github.com/voedger/voedger/pkg/sys/smtp"
@@ -83,11 +84,10 @@ func TestBug_QueryProcessorMustStopOnClientDisconnect(t *testing.T) {
 
 func Test409OnRepeatedlyUsedRawIDsInResultCUDs(t *testing.T) {
 	vitCfg := it.NewOwnVITConfig(
-		it.WithApp(istructs.AppQName_test1_app2, func(apis apps.APIs, cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) {
+		it.WithApp(istructs.AppQName_test1_app2, func(apis apps.APIs, cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) []parser.PackageFS {
 
-			sys.Provide(cfg, appDefBuilder, smtp.Cfg{}, ep, nil, apis.TimeFunc, apis.ITokens, apis.IFederation, apis.IAppStructsProvider, apis.IAppTokensFactory,
+			sysPackageFS := sys.Provide(cfg, appDefBuilder, smtp.Cfg{}, ep, nil, apis.TimeFunc, apis.ITokens, apis.IFederation, apis.IAppStructsProvider, apis.IAppTokensFactory,
 				apis.NumCommandProcessors, nil, apis.IAppStorageProvider)
-			apps.RegisterSchemaFS(it.SchemaTestApp2FS, "github.com/voedger/voedger/pkg/vit/app2pkg", ep)
 
 			qNameDoc1 := appdef.NewQName("app2pkg", "doc1")
 			// appDefBuilder.AddCDoc(cdocQName)
@@ -119,6 +119,11 @@ func Test409OnRepeatedlyUsedRawIDsInResultCUDs(t *testing.T) {
 				},
 			)
 			cfg.Resources.Add(cmd2CUDs)
+			appPackageFS := parser.PackageFS{
+				QualifiedPackageName: "github.com/voedger/voedger/pkg/vit/app2pkg",
+				FS:                   it.SchemaTestApp2FS,
+			}
+			return []parser.PackageFS{sysPackageFS, appPackageFS}
 		}, it.WithUserLogin("login", "1")),
 	)
 	vit := it.NewVIT(t, &vitCfg)
