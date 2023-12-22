@@ -1934,3 +1934,13 @@ TABLE MyTable1 INHERITS ODocUnknown ( MyField ref(registry.Login) NOT NULL );
 	}, "\n"))
 
 }
+
+//go:embed package.sql
+var pkgSqlFS embed.FS
+
+func TestDot(t *testing.T) {
+	t.Run("dot", func(t *testing.T) {
+		_, err := ParsePackageDir("github.com/untillpro/main", pkgSqlFS, ".")
+		require.NoError(t, err)
+	})
+}
