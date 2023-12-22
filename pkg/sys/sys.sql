@@ -15,15 +15,7 @@ ABSTRACT TABLE WDoc INHERITS WRecord();
 
 ABSTRACT TABLE Singleton INHERITS CDoc();
 
-ALTERABLE WORKSPACE AppWorkspaceWS();
-
-TYPE Raw (
-	-- must not be bytes because the engine will expect urlBase64-encoded string as the value to put into this field
-	Body varchar(65535) NOT NULL
-);
-
-ABSTRACT WORKSPACE Workspace (
-
+WORKSPACE ProfileWS (
 	TABLE ChildWorkspace INHERITS CDoc (
 		WSName varchar NOT NULL,
 		WSKind qname NOT NULL,
@@ -34,6 +26,36 @@ ABSTRACT WORKSPACE Workspace (
 		WSID int64,           -- to be updated afterwards
 		WSError varchar(1024) -- to be updated afterwards
 	);
+
+	TYPE InitChildWorkspaceParams (
+		WSName text NOT NULL,
+		WSKind qname NOT NULL,
+		WSKindInitializationData text,
+		WSClusterID int32 NOT NULL,
+		TemplateName text,
+		TemplateParams text
+	);
+
+	VIEW ChildWorkspaceIdx (
+		dummy int32 NOT NULL,
+		WSName text NOT NULL,
+		ChildWorkspaceID int64 NOT NULL,
+		PRIMARY KEY ((dummy), WSName)
+	) AS RESULT OF ProjectorChildWorkspaceIdx;
+
+	EXTENSION ENGINE BUILTIN (
+		COMMAND InitChildWorkspace(InitChildWorkspaceParams);
+		PROJECTOR InvokeCreateWorkspaceID AFTER INSERT ON(ChildWorkspace);
+		SYNC PROJECTOR ProjectorChildWorkspaceIdx AFTER INSERT ON (ChildWorkspace) INTENTS(View(ChildWorkspaceIdx));
+	);
+);
+
+TYPE Raw (
+	-- must not be bytes because the engine will expect urlBase64-encoded string as the value to put into this field
+	Body varchar(65535) NOT NULL
+);
+
+ABSTRACT WORKSPACE Workspace (
 
 	-- target app, (target cluster, base profile WSID)
 	TABLE WorkspaceID INHERITS CDoc (
@@ -269,15 +291,6 @@ ABSTRACT WORKSPACE Workspace (
 		Language text
 	);
 
-	TYPE InitChildWorkspaceParams (
-		WSName text NOT NULL,
-		WSKind qname NOT NULL,
-		WSKindInitializationData text,
-		WSClusterID int32 NOT NULL,
-		TemplateName text,
-		TemplateParams text
-	);
-
 	TYPE CreateWorkspaceIDParams (
 		OwnerWSID int64 NOT NULL,
 		OwnerQName qname, -- Deprecated: use OwnerQName2
@@ -378,13 +391,6 @@ ABSTRACT WORKSPACE Workspace (
 		ID ref,
 		PRIMARY KEY ((QName, ValuesHash) Values)
 	) AS RESULT OF ApplyUniques;
-
-	VIEW ChildWorkspaceIdx (
-		dummy int32 NOT NULL,
-		WSName text NOT NULL,
-		ChildWorkspaceID int64 NOT NULL,
-		PRIMARY KEY ((dummy), WSName)
-	) AS RESULT OF ProjectorChildWorkspaceIdx;
 
 	VIEW WorkspaceIDIdx (
 		OwnerWSID int64 NOT NULL,
@@ -488,7 +494,6 @@ ABSTRACT WORKSPACE Workspace (
 
 		-- workspace
 
-		COMMAND InitChildWorkspace(InitChildWorkspaceParams);
 		COMMAND CreateWorkspaceID(CreateWorkspaceIDParams);
 		COMMAND CreateWorkspace(CreateWorkspaceParams);
 		COMMAND OnWorkspaceDeactivated(OnWorkspaceDeactivatedParams);
@@ -497,9 +502,7 @@ ABSTRACT WORKSPACE Workspace (
 		COMMAND InitiateDeactivateWorkspace();
 		PROJECTOR ApplyDeactivateWorkspace AFTER EXECUTE ON (InitiateDeactivateWorkspace);
 		PROJECTOR InvokeCreateWorkspace AFTER INSERT ON (WorkspaceID);
-		PROJECTOR InvokeCreateWorkspaceID AFTER INSERT ON(ChildWorkspace);
 		PROJECTOR InitializeWorkspace AFTER INSERT ON(WorkspaceDescriptor);
-		SYNC PROJECTOR ProjectorChildWorkspaceIdx AFTER INSERT ON (ChildWorkspace) INTENTS(View(ChildWorkspaceIdx));
 		SYNC PROJECTOR ProjectorWorkspaceIDIdx AFTER INSERT ON (WorkspaceID) INTENTS(View(WorkspaceIDIdx));
 	);
 );
