@@ -27,18 +27,6 @@ func (hap VVMAppsBuilder) PrepareAppsExtensionPoints() map[istructs.AppQName]ext
 	return seps
 }
 
-// func buildSchemasASTs(adf appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) error {
-// 	packageSchemaASTs, err := ReadPackageSchemaAST(ep)
-// 	if err != nil {
-// 		return err
-// 	}
-// 	appSchemaAST, err := parser.BuildAppSchema(packageSchemaASTs)
-// 	if err != nil {
-// 		return err
-// 	}
-// 	return parser.BuildAppDefs(appSchemaAST, adf)
-// }
-
 func buillAppFromPackagesFS(fses []parser.PackageFS, adf appdef.IAppDefBuilder) error {
 	packageSchemaASTs := []*parser.PackageSchemaAST{}
 	for _, fs := range fses {
@@ -67,9 +55,6 @@ func (hap VVMAppsBuilder) Build(cfgs istructsmem.AppConfigsType, apis apps.APIs,
 		if err := buillAppFromPackagesFS(appPackagesFSes, adf); err != nil {
 			return nil, err
 		}
-		// if err := buildSchemasASTs(adf, appEPs); err != nil {
-		// 	return nil, err
-		// }
 		vvmApps = append(vvmApps, appQName)
 		if _, err := adf.Build(); err != nil {
 			return nil, err
