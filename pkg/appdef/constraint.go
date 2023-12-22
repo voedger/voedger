@@ -182,27 +182,6 @@ func NewConstraint(kind ConstraintKind, value any, c ...string) IConstraint {
 	panic(fmt.Errorf("unknown constraint kind: %v", kind))
 }
 
-// Returns the constraints for a data type, combined
-// with those inherited from all ancestors of the type.
-//
-// Constraints are collected throughout the data types
-// hierarchy, include all ancestors recursively.
-// If any constraint is specified by the ancestor,
-// but redefined in the descendant, then the constraint
-// from the descendant only will included into result.
-func ConstraintsWithInherited(data IData) map[ConstraintKind]IConstraint {
-	cc := make(map[ConstraintKind]IConstraint)
-	for d := data; d != nil; d = d.Ancestor() {
-		d.Constraints(func(c IConstraint) {
-			k := c.Kind()
-			if _, ok := cc[k]; !ok {
-				cc[k] = c
-			}
-		})
-	}
-	return cc
-}
-
 // # Implements:
 //   - IDataConstraint
 type dataConstraint struct {

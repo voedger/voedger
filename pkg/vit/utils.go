@@ -109,14 +109,13 @@ func (vit *VIT) getCDoc(appQName istructs.AppQName, qName appdef.QName, wsid ist
 	as, err := vit.IAppStructsProvider.AppStructs(appQName)
 	require.NoError(vit.T, err)
 	if doc := as.AppDef().CDoc(qName); doc != nil {
-		doc.Fields(func(field appdef.IField) {
-			switch field.Name() {
-			case appdef.SystemField_ID, appdef.SystemField_QName, appdef.SystemField_IsActive:
-				return
+		for _, field := range doc.Fields() {
+			if field.IsSys() {
+				continue
 			}
 			body.WriteString(fmt.Sprintf(`,"%s"`, field.Name()))
 			fields = append(fields, field.Name())
-		})
+		}
 	}
 	body.WriteString("]}]}")
 	sys := vit.GetSystemPrincipal(appQName)

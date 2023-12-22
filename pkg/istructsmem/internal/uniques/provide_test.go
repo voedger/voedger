@@ -69,10 +69,10 @@ func Test_BasicUsage(t *testing.T) {
 		require.Equal(2, doc.UniqueCount())
 		require.Equal(doc.UniqueCount(), func() int {
 			cnt := 0
-			doc.Uniques(func(u appdef.IUnique) {
+			for _, u := range doc.Uniques() {
 				cnt++
 				require.Greater(u.ID(), appdef.FirstUniqueID)
-			})
+			}
 			return cnt
 		}())
 	})

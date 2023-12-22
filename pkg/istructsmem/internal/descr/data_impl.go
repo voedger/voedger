@@ -23,7 +23,7 @@ func (d *Data) read(data appdef.IData) {
 		k := data.DataKind()
 		d.DataKind = &k
 	}
-	data.Constraints(func(c appdef.IConstraint) {
-		d.Constraints[c.Kind().TrimString()] = c.Value()
-	})
+	for k, c := range data.Constraints(false) {
+		d.Constraints[k.TrimString()] = c.Value()
+	}
 }

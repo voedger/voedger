@@ -89,14 +89,24 @@ func (d *data) Ancestor() IData {
 	return d.ancestor
 }
 
-func (d *data) Constraints(f func(IConstraint)) {
-	if len(d.constraints) > 0 {
-		for i := ConstraintKind(1); i < ConstraintKind_Count; i++ {
-			if c, ok := d.constraints[i]; ok {
-				f(c)
+func (d *data) Constraints(withInherited bool) map[ConstraintKind]IConstraint {
+	if !withInherited {
+		return d.constraints
+	}
+
+	cc := make(map[ConstraintKind]IConstraint)
+	for a := d; a != nil; {
+		for k, c := range a.constraints {
+			if _, ok := cc[k]; !ok {
+				cc[k] = c
 			}
 		}
+		if a.ancestor == nil {
+			break
+		}
+		a = a.ancestor.(*data)
 	}
+	return cc
 }
 
 func (d *data) DataKind() DataKind {
