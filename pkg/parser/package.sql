@@ -8,5 +8,3 @@ TYPE TypeWithName (
 TYPE Order (
     Name text
 );
-
-
