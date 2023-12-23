@@ -50,7 +50,7 @@ func TestBasicUsage(t *testing.T) {
 		AddField("f2", appdef.DataKind_string, false).
 		AddField("phone", appdef.DataKind_string, true, appdef.MinLen(1), appdef.MaxLen(25)).
 		SetFieldVerify("phone", appdef.VerificationKind_Any...).(appdef.ICRecordBuilder).
-		SetUniqueField("phone")
+		AddUnique("uniq1", []string{"phone"})
 
 	viewName := appdef.NewQName("test", "view")
 	view := appDef.AddView(viewName)

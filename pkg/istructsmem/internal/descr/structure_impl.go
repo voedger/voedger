@@ -39,9 +39,6 @@ func (s *Structure) read(str appdef.IStructure) {
 		u.read(unique)
 		s.Uniques = append(s.Uniques, u)
 	}
-	if uf := str.UniqueField(); uf != nil {
-		s.UniqueField = uf.Name()
-	}
 
 	if cDoc, ok := str.(appdef.ICDoc); ok {
 		if cDoc.Singleton() {

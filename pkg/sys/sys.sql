@@ -106,8 +106,8 @@ ABSTRACT WORKSPACE Workspace (
 		Login varchar NOT NULL,
 		SubjectKind int32 NOT NULL,
 		Roles varchar(1024) NOT NULL,
-		ProfileWSID int64 NOT NULL,
-		UNIQUEFIELD Login
+		ProfileWSID int64 NOT NULL
+		-- UNIQUE (Login)
 	);
 
 	TABLE Invite INHERITS CDoc (
@@ -122,8 +122,8 @@ ABSTRACT WORKSPACE Workspace (
 		Updated int64 NOT NULL,
 		SubjectID ref,
 		InviteeProfileWSID int64,
-		ActualLogin varchar,
-		UNIQUEFIELD Email
+		ActualLogin varchar
+		-- UNIQUE (Email)
 	);
 
 	TABLE JoinedWorkspace INHERITS CDoc (

@@ -1151,47 +1151,6 @@ func Test_AbstractWorkspace(t *testing.T) {
 
 }
 
-func Test_UniqueFields(t *testing.T) {
-	require := require.New(t)
-
-	fs, err := ParseFile("example.sql", `APPLICATION test();
-	TABLE MyTable INHERITS CDoc (
-		Int1 int32,
-		Int2 int32 NOT NULL,
-		UNIQUEFIELD UnknownField,
-		UNIQUEFIELD Int1,
-		UNIQUEFIELD Int2
-	)
-	`)
-	require.Nil(err)
-
-	pkg, err := BuildPackageSchema("test", []*FileSchemaAST{fs})
-	require.Nil(err)
-
-	packages, err := BuildAppSchema([]*PackageSchemaAST{
-		getSysPackageAST(),
-		pkg,
-	})
-	require.NoError(err)
-
-	appBld := appdef.New()
-	err = BuildAppDefs(packages, appBld)
-	require.EqualError(err, strings.Join([]string{
-		"example.sql:5:3: undefined field UnknownField",
-	}, "\n"))
-
-	cdoc := appBld.CDoc(appdef.NewQName("test", "MyTable"))
-	require.NotNil(cdoc)
-
-	fld := cdoc.UniqueField()
-	require.NotNil(fld)
-	require.Equal("Int2", fld.Name())
-
-	_, err = appBld.Build()
-	require.NoError(err)
-
-}
-
 func Test_NestedTables(t *testing.T) {
 	require := require.New(t)
 

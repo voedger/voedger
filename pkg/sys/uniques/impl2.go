@@ -10,6 +10,7 @@ import (
 	"context"
 	"encoding/binary"
 	"fmt"
+	"net/http"
 
 	"github.com/untillpro/goutils/iterate"
 	"github.com/voedger/voedger/pkg/appdef"
@@ -53,6 +54,14 @@ func getOrderedUniqueFields(appDef appdef.IAppDef, rec istructs.IRowReader, uniq
 		}
 	}
 	return orderedUniqueFields
+}
+
+type uniqueViewRecord struct {
+	// refRecordID is not enought because NullRecordID could mean record exists but deactivated
+	// need to avoid unique key fields modification in this case
+	// no needed because uniqueViewRecord type is used on update only. But all unique fields are required -> view record exists on any update
+	// exists      bool
+	refRecordID istructs.RecordID
 }
 
 func update2(st istructs.IState, rec istructs.ICUDRow, intents istructs.IIntents, orderedUniqueFields orderedUniqueFields, unique appdef.IUnique) error {
@@ -135,9 +144,15 @@ func getUniqueViewRecord2(st istructs.IState, rec istructs.IRowReader, orderedUn
 	return sv, uniqueViewRecordBuilder, ok, err
 }
 
+func buildUniqueViewKeyByValues(kb istructs.IKeyBuilder, docQName appdef.QName, uniqueKeyValues []byte, uniqueID appdef.UniqueID) {
+	kb.PutQName(field_QName, docQName)
+	kb.PutInt64(field_ValuesHash, coreutils.HashBytes(uniqueKeyValues))
+	kb.PutBytes(field_Values, uniqueKeyValues)
+}
+
 // notest err
 func buildUniqueViewKey2(kb istructs.IKeyBuilder, rec istructs.IRowReader, orderedUniqueFields orderedUniqueFields, unique appdef.IUnique) error {
-	uniqueKeyValues, err := getUniqueKeyValues2(rec, orderedUniqueFields, unique.Name())
+	uniqueKeyValues, err := getUniqueKeyValues2(rec, orderedUniqueFields, unique.Name(), unique.ID())
 	if err != nil {
 		return err
 	}
@@ -145,8 +160,9 @@ func buildUniqueViewKey2(kb istructs.IKeyBuilder, rec istructs.IRowReader, order
 	return nil
 }
 
-func getUniqueKeyValues2(rec istructs.IRowReader, orderedUniqueFields orderedUniqueFields, uniqueName string) (res []byte, err error) {
+func getUniqueKeyValues2(rec istructs.IRowReader, orderedUniqueFields orderedUniqueFields, uniqueName string, uniqueID appdef.UniqueID) (res []byte, err error) {
 	buf := bytes.NewBuffer(nil)
+	binary.Write(buf, binary.BigEndian, uniqueID)
 	for _, uniqueField := range orderedUniqueFields {
 		val := coreutils.ReadByKind(uniqueField.Name(), uniqueField.DataKind(), rec)
 		switch uniqueField.DataKind() {
@@ -200,9 +216,9 @@ func getCurrentUniqueViewRecord2(uniquesState map[appdef.QName]map[appdef.Unique
 	return currentUniqueViewRecord, nil
 }
 
-func getUniqueIDByValues2(appStructs istructs.IAppStructs, wsid istructs.WSID, qName appdef.QName, uniqueKeyValues []byte, uniqueID appdef.UniqueID) (istructs.RecordID, bool, error) {
+func getUniqueIDByValues2(appStructs istructs.IAppStructs, wsid istructs.WSID, docQName appdef.QName, uniqueKeyValues []byte, uniqueID appdef.UniqueID) (istructs.RecordID, bool, error) {
 	kb := appStructs.ViewRecords().KeyBuilder(qNameViewUniques)
-	buildUniqueViewKeyByValues(kb, qName, uniqueKeyValues, uniqueID)
+	buildUniqueViewKeyByValues(kb, docQName, uniqueKeyValues, uniqueID)
 	val, err := appStructs.ViewRecords().Get(wsid, kb)
 	if err == nil {
 		return val.AsRecordID(field_ID), true, nil
@@ -237,7 +253,7 @@ func eventUniqueValidator2(ctx context.Context, rawEvent istructs.IRawEvent, app
 				}
 			}
 			orderedUniqueFields := getOrderedUniqueFields(appStructs.AppDef(), rowSource, unique)
-			uniqueKeyValues, err = getUniqueKeyValues2(rowSource, orderedUniqueFields, unique.Name())
+			uniqueKeyValues, err = getUniqueKeyValues2(rowSource, orderedUniqueFields, unique.Name(), unique.ID())
 			if err != nil {
 				return err
 			}
@@ -298,4 +314,8 @@ func eventUniqueValidator2(ctx context.Context, rawEvent istructs.IRawEvent, app
 		}
 		return nil
 	})
+}
+
+func conflict(qName appdef.QName, conflictingWithID istructs.RecordID, uniqueName string) error {
+	return coreutils.NewHTTPError(http.StatusConflict, fmt.Errorf(`%s: "%s" %w with ID %d`, qName, uniqueName, ErrUniqueConstraintViolation, conflictingWithID))
 }

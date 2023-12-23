@@ -399,7 +399,7 @@ ALTERABLE WORKSPACE test_ws (
 	-- 	Bool bool NOT NULL,
 	-- 	Float32 float32,
 	-- 	Bytes bytes NOT NULL
-	-- 	-- UNIQUE (Int, Str)
+	-- 	-- UNIQUE (Int, Str, Bool, Bytes)
 	-- );
 
 	-- TABLE DocConstraintsString INHERITS CDoc (
@@ -407,6 +407,18 @@ ALTERABLE WORKSPACE test_ws (
 	-- 	Int int32
 	-- 	-- UNIQUE (Str)
 	-- );
+
+	-- TABLE DocConstraintsFewUniques INHERITS CDoc (
+	-- 	Int1 int32,
+	-- 	Str1 varchar,
+	-- 	Bool1 bool,
+	-- 	Bytes1 bytes,
+	-- 	Int2 int32,
+	-- 	Str2 varchar,
+	-- 	Bool2 bool,
+	-- 	UNIQUE ("uniq1", "Int1", "Str1", "Bool1", "Bytes1")
+	-- 	UNIQUE ("uniq2", "Int2", "Str2", "Bool2", "Bytes1")
+	-- )
 
 	TABLE Config INHERITS Singleton (
 		Fld1 varchar NOT NULL

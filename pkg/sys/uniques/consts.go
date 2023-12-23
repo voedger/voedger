@@ -11,7 +11,6 @@ const (
 	field_ValuesHash = "ValuesHash"
 	field_QName      = "QName"
 	field_Values     = "Values"
-	field_UniqueID   = "UniqueID"
 	zeroByte         = byte(0)
 )
 

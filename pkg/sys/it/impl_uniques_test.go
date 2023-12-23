@@ -189,17 +189,18 @@ func TestUniquesDenyUpdate(t *testing.T) {
 // 	})
 // }
 
-func TestFewUniques(t *testing.T) {
+func TestFewUniquesOneDoc(t *testing.T) {
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
 
-	t.Run("no conflict between different uniques in one doc", func(t *testing.T) {
+	t.Run("same sets of values for 2 different uniques in one doc -> no coflict", func(t *testing.T) {
 		newNum, newBts := getUniqueNumber(vit)
+		// the doc has 2 uniques, Bytes1 fields belongs to both
 		body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.DocConstraintsFewUniques",
 			"Int1":%[1]d,"Str1":"str","Bool1":true,"Bytes1":"%[2]s",
-			"Int2":%[1]d,"Str2":"str","Bool2":true}}]}`, newNum, newBts)
+			"Int2":%[1]d,"Str2":"str","Bool2":true,"Bytes1":"%[2]s"}}]}`, newNum, newBts)
 		vit.PostWS(ws, "c.sys.CUD", body)
 	})
 
@@ -207,12 +208,14 @@ func TestFewUniques(t *testing.T) {
 		t.Run("uniq1", func(t *testing.T) {
 
 			// insert a record with no values for unique fields -> default values are used as unique values
+			// have values for uniq2, no values for uniq1
 			newNum, _ := getUniqueNumber(vit)
 			body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.DocConstraintsFewUniques",
 				"Int2":%d,"Str2":"str","Bool2":true}}]}`, newNum)
 			vit.PostWS(ws, "c.sys.CUD", body)
 
 			// no values again -> conflict because unique combination for default values exists already
+			// have values for uniq2, no values for uniq1
 			newNum, _ = getUniqueNumber(vit)
 			body = fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.DocConstraintsFewUniques",
 				"Int2":%d,"Str2":"str","Bool2":true}}]}`, newNum)
@@ -221,12 +224,14 @@ func TestFewUniques(t *testing.T) {
 		t.Run("uniq2", func(t *testing.T) {
 
 			// insert a record with no values for unique fields -> default values are used as unique values
+			// have values for uniq1, no values for uniq2
 			newNum, _ := getUniqueNumber(vit)
 			body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.DocConstraintsFewUniques",
 				"Int1":%d,"Str1":"str","Bool1":true}}]}`, newNum)
 			vit.PostWS(ws, "c.sys.CUD", body)
 
 			// no values again -> conflict because unique combination for default values exists already
+			// have values for uniq1, no values for uniq2
 			newNum, _ = getUniqueNumber(vit)
 			body = fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.DocConstraintsFewUniques",
 				"Int1":%d,"Str1":"str","Bool1":true}}]}`, newNum)
@@ -339,7 +344,7 @@ func TestMultipleCUDs(t *testing.T) {
 	})
 }
 
-func TestBasicUsage_GetUniqueID(t *testing.T) {
+func TestBasicUsage_GetUniqueRecordID(t *testing.T) {
 	require := require.New(t)
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
@@ -354,12 +359,6 @@ func TestBasicUsage_GetUniqueID(t *testing.T) {
 	as, err := vit.IAppStructsProvider.AppStructs(istructs.AppQName_test1_app1)
 	require.NoError(err)
 
-	t.Run("must be ok to find unique field for test CDoc", func(t *testing.T) {
-		unique, ok := as.AppDef().Type(it.QNameApp1_DocConstraints).(appdef.IUniques)
-		require.True(ok)
-		require.NotNil(unique.UniqueField())
-	})
-
 	// simulate data source and try to get an ID for that combination of key fields
 	t.Run("basic", func(t *testing.T) {
 		obj := &coreutils.TestObject{
@@ -367,14 +366,15 @@ func TestBasicUsage_GetUniqueID(t *testing.T) {
 				// required for unique key builder
 				appdef.SystemField_QName: it.QNameApp1_DocConstraints,
 				// required for unique key
-				"Int": int32(num),
+				"Int":   int32(num),
+				"Str":   "str",
+				"Bool":  true,
+				"Bytes": bts,
 				// not in the unique key, could be omitted
-				"Str":     "str",
-				"Bool":    true,
 				"Float32": float32(42),
 			},
 		}
-		uniqueRecID, err := uniques.GetUniqueID(as, obj, ws.WSID)
+		uniqueRecID, err := uniques.GetUniqueRecordID(as, obj, ws.WSID)
 		require.NoError(err)
 		require.Equal(istructs.RecordID(newID), uniqueRecID)
 	})
@@ -394,7 +394,7 @@ func TestBasicUsage_GetUniqueID(t *testing.T) {
 					"Bool":                   true,
 				},
 			}
-			uniqueRecID, err := uniques.GetUniqueID(as, obj, ws.WSID)
+			uniqueRecID, err := uniques.GetUniqueRecordID(as, obj, ws.WSID)
 			require.NoError(err)
 			require.Zero(uniqueRecID)
 		})
@@ -407,7 +407,7 @@ func TestBasicUsage_GetUniqueID(t *testing.T) {
 				"Int":                    int32(num) + 1,
 			},
 		}
-		uniqueRecID, err := uniques.GetUniqueID(as, obj, ws.WSID)
+		uniqueRecID, err := uniques.GetUniqueRecordID(as, obj, ws.WSID)
 		require.NoError(err)
 		require.Zero(uniqueRecID)
 	})
@@ -426,7 +426,7 @@ func TestBasicUsage_GetUniqueID(t *testing.T) {
 					"Bool":                   true,
 				},
 			}
-			uniqueRecID, err := uniques.GetUniqueID(as, obj, ws.WSID)
+			uniqueRecID, err := uniques.GetUniqueRecordID(as, obj, ws.WSID)
 			require.NoError(err)
 			require.Equal(istructs.RecordID(newID), uniqueRecID)
 		})
