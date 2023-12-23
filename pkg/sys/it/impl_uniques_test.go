@@ -350,17 +350,20 @@ func TestBasicUsage_GetUniqueRecordID(t *testing.T) {
 	defer vit.TearDown()
 
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
-	num, bts := getUniqueNumber(vit)
 
-	// insert a doc record that has an unique
-	body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.DocConstraints","Int":%d,"Str":"str","Bool":true,"Bytes":"%s"}}]}`, num, bts)
-	newID := vit.PostWS(ws, "c.sys.CUD", body).NewID()
 
 	as, err := vit.IAppStructsProvider.AppStructs(istructs.AppQName_test1_app1)
 	require.NoError(err)
 
 	// simulate data source and try to get an ID for that combination of key fields
 	t.Run("basic", func(t *testing.T) {
+		// insert a doc record that has an unique
+		num, bts := getUniqueNumber(vit)
+		body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.DocConstraints","Int":%d,"Str":"str","Bool":true,"Bytes":"%s"}}]}`, num, bts)
+		newID := vit.PostWS(ws, "c.sys.CUD", body).NewID()
+
+		bytes, err := base64.StdEncoding.DecodeString(bts)
+		require.NoError(err)
 		obj := &coreutils.TestObject{
 			Data: map[string]interface{}{
 				// required for unique key builder
@@ -369,7 +372,7 @@ func TestBasicUsage_GetUniqueRecordID(t *testing.T) {
 				"Int":   int32(num),
 				"Str":   "str",
 				"Bool":  true,
-				"Bytes": bts,
+				"Bytes": bytes,
 				// not in the unique key, could be omitted
 				"Float32": float32(42),
 			},
@@ -380,6 +383,11 @@ func TestBasicUsage_GetUniqueRecordID(t *testing.T) {
 	})
 
 	t.Run("must be ok to deactivate active record", func(t *testing.T) {
+		// insert a doc record that has an unique
+		num, bts := getUniqueNumber(vit)
+		body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.DocConstraints","Int":%d,"Str":"str","Bool":true,"Bytes":"%s"}}]}`, num, bts)
+		newID := vit.PostWS(ws, "c.sys.CUD", body).NewID()
+
 		// let's deactivate the record
 		body = fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"sys.QName":"app1pkg.DocConstraints","sys.IsActive":false}}]}`, newID)
 		vit.PostWS(ws, "c.sys.CUD", body)
@@ -398,22 +406,7 @@ func TestBasicUsage_GetUniqueRecordID(t *testing.T) {
 			require.NoError(err)
 			require.Zero(uniqueRecID)
 		})
-	})
 
-	t.Run("must be not found unknown record", func(t *testing.T) {
-		obj := &coreutils.TestObject{
-			Data: map[string]interface{}{
-				appdef.SystemField_QName: it.QNameApp1_DocConstraints,
-				"Int":                    int32(num) + 1,
-			},
-		}
-		uniqueRecID, err := uniques.GetUniqueRecordID(as, obj, ws.WSID)
-		require.NoError(err)
-		require.Zero(uniqueRecID)
-	})
-
-	t.Run("must be ok to reactivate inactive record", func(t *testing.T) {
-		// let's reactivate the record
 		body = fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"sys.QName":"app1pkg.DocConstraints","sys.IsActive":true}}]}`, newID)
 		vit.PostWS(ws, "c.sys.CUD", body)
 
@@ -430,6 +423,19 @@ func TestBasicUsage_GetUniqueRecordID(t *testing.T) {
 			require.NoError(err)
 			require.Equal(istructs.RecordID(newID), uniqueRecID)
 		})
+	})
+
+	t.Run("must be not found unknown record", func(t *testing.T) {
+		num, _ := getUniqueNumber(vit)
+		obj := &coreutils.TestObject{
+			Data: map[string]interface{}{
+				appdef.SystemField_QName: it.QNameApp1_DocConstraints,
+				"Int":                    int32(num) + 1,
+			},
+		}
+		uniqueRecID, err := uniques.GetUniqueRecordID(as, obj, ws.WSID)
+		require.NoError(err)
+		require.Zero(uniqueRecID)
 	})
 }
 
