@@ -206,11 +206,13 @@ func TestFewUniques(t *testing.T) {
 	t.Run("no values for unique fields -> default values are used", func(t *testing.T) {
 		t.Run("uniq1", func(t *testing.T) {
 
+			// insert a record with no values for unique fields -> default values are used as unique values
 			newNum, _ := getUniqueNumber(vit)
 			body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.DocConstraintsFewUniques",
 				"Int2":%d,"Str2":"str","Bool2":true}}]}`, newNum)
 			vit.PostWS(ws, "c.sys.CUD", body)
 
+			// no values again -> conflict because unique combination for default values exists already
 			newNum, _ = getUniqueNumber(vit)
 			body = fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.DocConstraintsFewUniques",
 				"Int2":%d,"Str2":"str","Bool2":true}}]}`, newNum)
@@ -218,11 +220,13 @@ func TestFewUniques(t *testing.T) {
 		})
 		t.Run("uniq2", func(t *testing.T) {
 
+			// insert a record with no values for unique fields -> default values are used as unique values
 			newNum, _ := getUniqueNumber(vit)
 			body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.DocConstraintsFewUniques",
 				"Int1":%d,"Str1":"str","Bool1":true}}]}`, newNum)
 			vit.PostWS(ws, "c.sys.CUD", body)
 
+			// no values again -> conflict because unique combination for default values exists already
 			newNum, _ = getUniqueNumber(vit)
 			body = fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.DocConstraintsFewUniques",
 				"Int1":%d,"Str1":"str","Bool1":true}}]}`, newNum)
@@ -246,9 +250,10 @@ func TestMultipleCUDs(t *testing.T) {
 		vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect409())
 	})
 
-	t.Run("multiple update", func(t *testing.T) {
+	t.Run("update few records in one request", func(t *testing.T) {
 		t.Run("update the inactive record", func(t *testing.T) {
 			num, bts := getUniqueNumber(vit)
+			// insert the first record
 			body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.DocConstraints","Int":%d,"Str":"str","Bool":true,"Bytes":"%s"}}]}`, num, bts)
 			id := vit.PostWS(ws, "c.sys.CUD", body).NewID()
 
@@ -276,7 +281,7 @@ func TestMultipleCUDs(t *testing.T) {
 					body = fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"sys.QName":"app1pkg.DocConstraints","sys.IsActive":false}}]}`, id)
 					vit.PostWS(ws, "c.sys.CUD", body)
 
-					// insert new same (ok) and update the incative one (should be denied)
+					// insert new same (ok) and activate the incative one -> deny
 					body = fmt.Sprintf(`{"cuds":[
 						{"fields":{"sys.ID":2,"sys.QName":"app1pkg.DocConstraints","Int":%d,"Str":"str","Bool":true,"Bytes":"%s"}},
 						{"sys.ID":%d,"fields":{"sys.QName":"app1pkg.DocConstraints","sys.IsActive":true}}
@@ -310,8 +315,9 @@ func TestMultipleCUDs(t *testing.T) {
 			vit.PostWS(ws, "c.sys.CUD", body)
 
 			t.Run("ok to make first conflict by update then fix it immediately because engine stores updates in a map by ID, result is false in our case", func(t *testing.T) {
-				// cmd.reb.cud.updates is map, so first we set one ID isActive=true that shout make it conflict
-				// but on creating the update for the secod CUD we overwrite the map by the same ID and write SetActive=false
+				// cmd.reb.cud.updates is map, so first we set one ID isActive=true that shout make a conflict
+				// but on creating the update for the second CUD we overwrite the map by the same ID and write SetActive=false
+				// i.e. update the same record twice -> one update operation with merged fields, result is deactivation
 				// see commandprocessor.writeCUDs()
 				body = fmt.Sprintf(`{"cuds":[
 					{"sys.ID":%d,"fields":{"sys.QName":"app1pkg.DocConstraints","sys.IsActive":true}},
@@ -321,6 +327,7 @@ func TestMultipleCUDs(t *testing.T) {
 			})
 
 			t.Run("conflict if effectively activating the conflicting record", func(t *testing.T) {
+				// update the same record twice -> one update operation with merged fields, result is activation
 				body = fmt.Sprintf(`{"cuds":[
 					{"sys.ID":%d,"fields":{"sys.QName":"app1pkg.DocConstraints","sys.IsActive":false}},
 					{"sys.ID":%d,"fields":{"sys.QName":"app1pkg.DocConstraints","sys.IsActive":true}}
@@ -425,8 +432,6 @@ func TestBasicUsage_GetUniqueID(t *testing.T) {
 		})
 	})
 }
-
-
 
 func TestNoValueForUniqueField(t *testing.T) {
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
