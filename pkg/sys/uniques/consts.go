@@ -17,5 +17,5 @@ const (
 
 var (
 	qNameApplyUniques = appdef.NewQName(appdef.SysPackage, "ApplyUniques")
-	qNameViewUniques  = appdef.NewQName(appdef.SysPackage, "Uniques2")
+	qNameViewUniques  = appdef.NewQName(appdef.SysPackage, "Uniques")
 )

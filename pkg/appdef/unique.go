@@ -71,12 +71,12 @@ func (u *unique) SetID(value UniqueID) {
 type uniques struct {
 	emb            interface{}
 	uniques        map[string]*unique
-	uniquesOrdered []string
+	uniquesOrdered []IUnique
 	field          IField
 }
 
 func makeUniques(embeds interface{}) uniques {
-	u := uniques{embeds, make(map[string]*unique), make([]string, 0), nil}
+	u := uniques{embeds, make(map[string]*unique), make([]IUnique, 0), nil}
 	return u
 }
 
@@ -113,13 +113,13 @@ func (u *uniques) UniqueByName(name string) IUnique {
 	return nil
 }
 
-func (u *uniques) UniqueByID(id UniqueID) (unique IUnique) {
-	u.Uniques(func(u IUnique) {
+func (u *uniques) UniqueByID(id UniqueID) IUnique {
+	for _, u := range u.uniquesOrdered {
 		if u.ID() == id {
-			unique = u
+			return u
 		}
-	})
-	return unique
+	}
+	return nil
 }
 
 func (u *uniques) UniqueCount() int {
@@ -130,10 +130,8 @@ func (u *uniques) UniqueField() IField {
 	return u.field
 }
 
-func (u *uniques) Uniques(enum func(IUnique)) {
-	for _, n := range u.uniquesOrdered {
-		enum(u.UniqueByName(n))
-	}
+func (u *uniques) Uniques() []IUnique {
+	return u.uniquesOrdered
 }
 
 func (u *uniques) addUnique(name string, fields []string, comment ...string) IUniquesBuilder {
@@ -155,7 +153,7 @@ func (u *uniques) addUnique(name string, fields []string, comment ...string) IUn
 		panic(fmt.Errorf("%v: unique «%s» exceeds maximum fields (%d): %w", u.embeds(), name, MaxTypeUniqueFieldsCount, ErrTooManyFields))
 	}
 
-	u.Uniques(func(un IUnique) {
+	for _, un := range u.uniquesOrdered {
 		ff := make([]string, 0)
 		for _, f := range un.Fields() {
 			ff = append(ff, f.Name())
@@ -163,7 +161,7 @@ func (u *uniques) addUnique(name string, fields []string, comment ...string) IUn
 		if overlaps(fields, ff) {
 			panic(fmt.Errorf("%v: type already has unique «%s» which overlaps with new unique: %w", u.embeds(), name, ErrUniqueOverlaps))
 		}
-	})
+	}
 
 	if len(u.uniques) >= MaxTypeUniqueCount {
 		panic(fmt.Errorf("%v: maximum uniques (%d) is exceeded: %w", u.embeds(), MaxTypeUniqueCount, ErrTooManyUniques))
@@ -172,7 +170,7 @@ func (u *uniques) addUnique(name string, fields []string, comment ...string) IUn
 	un := newUnique(u.emb, name, fields)
 	un.SetComment(comment...)
 	u.uniques[name] = un
-	u.uniquesOrdered = append(u.uniquesOrdered, name)
+	u.uniquesOrdered = append(u.uniquesOrdered, un)
 
 	return u.emb.(IUniquesBuilder)
 }

@@ -154,9 +154,9 @@ func buildFieldsNode(parentNode *CompatibilityTreeNode, item interface{}, nodeNa
 		return
 	}
 	if fieldsObj, ok := item.(appdef.IFields); ok {
-		fieldsObj.Fields(func(field appdef.IField) {
+		for _, field := range fieldsObj.Fields() {
 			node.Props = append(node.Props, buildFieldNode(node, field))
-		})
+		}
 	}
 	return
 }
@@ -176,17 +176,17 @@ func buildUniqueFieldNode(parentNode *CompatibilityTreeNode, item appdef.IUnique
 
 func buildUniqueFieldsNode(parentNode *CompatibilityTreeNode, item appdef.IUniques) (node *CompatibilityTreeNode) {
 	node = newNode(parentNode, NodeNameUniqueFields, nil)
-	item.Uniques(func(field appdef.IUnique) {
-		node.Props = append(node.Props, buildUniqueFieldNode(node, field))
-	})
+	for _, unique := range item.Uniques() {
+		node.Props = append(node.Props, buildUniqueFieldNode(node, unique))
+	}
 	return
 }
 
 func buildContainersNode(parentNode *CompatibilityTreeNode, item appdef.IContainers) (node *CompatibilityTreeNode) {
 	node = newNode(parentNode, NodeNameContainers, nil)
-	item.Containers(func(container appdef.IContainer) {
+	for _, container := range item.Containers() {
 		node.Props = append(node.Props, buildContainerNode(node, container))
-	})
+	}
 	return
 }
 

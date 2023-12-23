@@ -21,12 +21,12 @@ func readViewRecords(ctx context.Context, WSID istructs.WSID, viewRecordQName ap
 
 	if !f.acceptAll {
 		allowedFields := make(map[string]bool, view.Key().FieldCount()+view.Value().FieldCount())
-		view.Key().Fields(func(f appdef.IField) {
+		for _, f := range view.Key().Fields() {
 			allowedFields[f.Name()] = true
-		})
-		view.Value().Fields(func(f appdef.IField) {
+		}
+		for _, f := range view.Value().Fields() {
 			allowedFields[f.Name()] = true
-		})
+		}
 		for field := range f.fields {
 			if !allowedFields[field] {
 				return fmt.Errorf("field '%s' does not exist in '%s' value def", field, viewRecordQName)

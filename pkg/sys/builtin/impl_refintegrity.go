@@ -35,10 +35,11 @@ func CheckRefIntegrity(obj istructs.IRowReader, appStructs istructs.IAppStructs,
 	appDef := appStructs.AppDef()
 	objQName := obj.AsQName(appdef.SystemField_QName)
 	fields := appDef.Type(objQName).(appdef.IFields)
-	return iterate.ForEachError(fields.RefFields, func(refField appdef.IRefField) error {
+
+	for _, refField := range fields.RefFields() {
 		targetID := obj.AsRecordID(refField.Name())
 		if targetID == istructs.NullRecordID || targetID.IsRaw() {
-			return nil
+			continue
 		}
 		allowedTargetQNames := refField.Refs()
 		kb := appStructs.ViewRecords().KeyBuilder(QNameViewRecordsRegistry)
@@ -50,14 +51,16 @@ func CheckRefIntegrity(obj istructs.IRowReader, appStructs istructs.IAppStructs,
 			if len(allowedTargetQNames) > 0 && !allowedTargetQNames.Contains(registryRecord.AsQName(field_QName)) {
 				return wrongQName(targetID, objQName, refField.Name(), registryRecord.AsQName(field_QName), allowedTargetQNames)
 			}
-			return nil
+			continue
 		}
 		if !errors.Is(err, istructsmem.ErrRecordNotFound) {
 			// notest
 			return err
 		}
 		return fmt.Errorf("%w: record ID %d referenced by %s.%s does not exist", ErrReferentialIntegrityViolation, targetID, objQName, refField.Name())
-	})
+	}
+
+	return nil
 }
 
 func wrongQName(targetID istructs.RecordID, srcQName appdef.QName, srcField string, actualQName appdef.QName, allowedQNames appdef.QNames) error {

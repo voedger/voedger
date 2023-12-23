@@ -59,11 +59,14 @@ func (cont *container) embeds() IStructure { return cont.emb.(IStructure) }
 type containers struct {
 	emb               interface{}
 	containers        map[string]*container
-	containersOrdered []string
+	containersOrdered []IContainer
 }
 
 func makeContainers(embeds interface{}) containers {
-	c := containers{embeds, make(map[string]*container), make([]string, 0)}
+	c := containers{
+		emb:               embeds,
+		containers:        make(map[string]*container),
+		containersOrdered: make([]IContainer, 0)}
 	return c
 }
 
@@ -102,7 +105,7 @@ func (c *containers) AddContainer(name string, contType QName, minOccurs, maxOcc
 	cont := newContainer(c.emb, name, contType, minOccurs, maxOccurs)
 	cont.SetComment(comment...)
 	c.containers[name] = cont
-	c.containersOrdered = append(c.containersOrdered, name)
+	c.containersOrdered = append(c.containersOrdered, cont)
 
 	return c.emb.(IContainersBuilder)
 }
@@ -118,10 +121,8 @@ func (c *containers) ContainerCount() int {
 	return len(c.containersOrdered)
 }
 
-func (c *containers) Containers(cb func(IContainer)) {
-	for _, n := range c.containersOrdered {
-		cb(c.Container(n))
-	}
+func (c *containers) Containers() []IContainer {
+	return c.containersOrdered
 }
 
 func (c *containers) embeds() IStructure {
@@ -136,16 +137,16 @@ func (c *containers) embeds() IStructure {
 func validateTypeContainers(t IType) (err error) {
 	if cnt, ok := t.(IContainers); ok {
 		// resolve containers types
-		cnt.Containers(func(cont IContainer) {
+		for _, cont := range cnt.Containers() {
 			contType := cont.Type()
 			if contType == nil {
 				err = errors.Join(err, fmt.Errorf("%v: container «%s» uses unknown type «%v»: %w", t, cont.Name(), cont.QName(), ErrNameNotFound))
-				return
+				continue
 			}
 			if !t.Kind().ContainerKindAvailable(contType.Kind()) {
 				err = errors.Join(err, fmt.Errorf("%v: container «%s» type %v is incompatible: «%s» can`t contain «%s»: %w", t, cont.Name(), contType, t.Kind().TrimString(), contType.Kind().TrimString(), ErrInvalidTypeKind))
 			}
-		})
+		}
 	}
 	return err
 }

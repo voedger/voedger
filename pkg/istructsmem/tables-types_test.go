@@ -89,13 +89,12 @@ func Test_newRecord(t *testing.T) {
 
 		t.Run("system field counters for test CDoc", func(t *testing.T) {
 			sysCnt := 0
-			doc.fields.Fields(
-				func(f appdef.IField) {
-					require.True(doc.HasValue(f.Name()))
-					if f.IsSys() {
-						sysCnt++
-					}
-				})
+			for _, f := range doc.fields.Fields() {
+				require.True(doc.HasValue(f.Name()))
+				if f.IsSys() {
+					sysCnt++
+				}
+			}
 			require.Equal(3, sysCnt) // sys.QName, sys.ID and sys.IsActive
 		})
 
@@ -110,14 +109,13 @@ func Test_newRecord(t *testing.T) {
 			cnt := 0
 			sysCnt := 0
 
-			doc.fields.Fields(
-				func(f appdef.IField) {
-					require.True(doc.HasValue(f.Name()))
-					if f.IsSys() {
-						sysCnt++
-					}
-					cnt++
-				})
+			for _, f := range doc.fields.Fields() {
+				require.True(doc.HasValue(f.Name()))
+				if f.IsSys() {
+					sysCnt++
+				}
+				cnt++
+			}
 
 			require.Equal(3, sysCnt) // sys.QName, sys.ID and sys.IsActive
 			require.Equal(sysCnt+10, cnt)
@@ -147,13 +145,12 @@ func Test_newRecord(t *testing.T) {
 			t.Run("system field counters for test CRecord", func(t *testing.T) {
 				sysCnt := 0
 
-				rec.fields.Fields(
-					func(f appdef.IField) {
-						require.True(rec.HasValue(f.Name()))
-						if f.IsSys() {
-							sysCnt++
-						}
-					})
+				for _, f := range rec.fields.Fields() {
+					require.True(rec.HasValue(f.Name()))
+					if f.IsSys() {
+						sysCnt++
+					}
+				}
 
 				require.Equal(5, sysCnt) // sys.QName, sys.ID sys.ParentID, sys.Container and sys.IsActive
 			})
@@ -169,14 +166,13 @@ func Test_newRecord(t *testing.T) {
 				cnt := 0
 				sysCnt := 0
 
-				rec.fields.Fields(
-					func(f appdef.IField) {
-						require.True(rec.HasValue(f.Name()))
-						if f.IsSys() {
-							sysCnt++
-						}
-						cnt++
-					})
+				for _, f := range rec.fields.Fields() {
+					require.True(rec.HasValue(f.Name()))
+					if f.IsSys() {
+						sysCnt++
+					}
+					cnt++
+				}
 
 				require.Equal(5, sysCnt) // sys.QName, sys.ID sys.ParentID, sys.Container and sys.IsActive
 				require.Equal(sysCnt+10, cnt)
@@ -368,11 +364,11 @@ func Test_LoadStoreRecord_Bytes(t *testing.T) {
 			newCDoc := appDef.AddCDoc(test.testCDoc)
 
 			oldCDoc := rec1.appCfg.AppDef.CDoc(test.testCDoc)
-			oldCDoc.Fields(func(f appdef.IField) {
+			for _, f := range oldCDoc.Fields() {
 				if !f.IsSys() {
 					newCDoc.AddField(newFieldName(f.Name()), f.DataKind(), f.Required())
 				}
-			})
+			}
 			appDef.AddObject(test.tablePhotos) // for reading QName_1 field value
 		})
 

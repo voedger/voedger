@@ -50,9 +50,7 @@ func Test_appDef_makeSysDataTypes(t *testing.T) {
 			require.True(d.IsSystem())
 			require.Equal(k, d.DataKind())
 			require.Nil(d.Ancestor())
-			cnt := 0
-			d.Constraints(func(c IConstraint) { cnt++ })
-			require.Equal(0, cnt, "system data type %v should have no constraints", d)
+			require.Empty(d.Constraints(false))
 		}
 	})
 }

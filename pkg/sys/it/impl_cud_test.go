@@ -343,12 +343,12 @@ func testArgsRefIntegrity(t *testing.T, vit *it.VIT, ws *it.AppWorkspace, appDef
 	idCDoc := vit.PostWS(ws, "c.sys.CUD", body).NewID()
 	t.Run("ref to unexisting -> 400 bad request", func(t *testing.T) {
 		oDoc := appDef.ODoc(it.QNameODoc2)
-		oDoc.RefFields(func(oDoc1RefField appdef.IRefField) {
+		for _, oDoc1RefField := range oDoc.RefFields() {
 			t.Run(oDoc1RefField.Name(), func(t *testing.T) {
 				body := fmt.Sprintf(urlTemplate, fmt.Sprintf(`"%s":1000000000000`, oDoc1RefField.Name()))
 				vit.PostWS(ws, "c.app1pkg.CmdODocTwo", body, coreutils.Expect400RefIntegrity_Existence()).Println()
 			})
-		})
+		}
 	})
 
 	t.Run("ref to existing", func(t *testing.T) {
