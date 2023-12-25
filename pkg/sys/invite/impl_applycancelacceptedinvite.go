@@ -57,7 +57,8 @@ func applyCancelAcceptedInvite(timeFunc coreutils.TimeFunc, federation coreutils
 			federation.URL(),
 			fmt.Sprintf("api/%s/%d/c.sys.CUD", appQName, event.Workspace()),
 			fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"sys.IsActive":false}}]}`, svCDocSubject.AsRecordID(appdef.SystemField_ID)),
-			coreutils.WithAuthorizeBy(token))
+			coreutils.WithAuthorizeBy(token),
+			coreutils.WithDiscardResponse())
 		if err != nil {
 			return
 		}
@@ -67,7 +68,8 @@ func applyCancelAcceptedInvite(timeFunc coreutils.TimeFunc, federation coreutils
 			federation.URL(),
 			fmt.Sprintf("api/%s/%d/c.sys.DeactivateJoinedWorkspace", appQName, svCDocInvite.AsInt64(field_InviteeProfileWSID)),
 			fmt.Sprintf(`{"args":{"InvitingWorkspaceWSID":%d}}`, event.Workspace()),
-			coreutils.WithAuthorizeBy(token))
+			coreutils.WithAuthorizeBy(token),
+			coreutils.WithDiscardResponse())
 		if err != nil {
 			return
 		}
@@ -77,7 +79,8 @@ func applyCancelAcceptedInvite(timeFunc coreutils.TimeFunc, federation coreutils
 			federation.URL(),
 			fmt.Sprintf("api/%s/%d/c.sys.CUD", appQName, event.Workspace()),
 			fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"State":%d,"Updated":%d}}]}`, event.ArgumentObject().AsRecordID(field_InviteID), State_Cancelled, timeFunc().UnixMilli()),
-			coreutils.WithAuthorizeBy(token))
+			coreutils.WithAuthorizeBy(token),
+			coreutils.WithDiscardResponse())
 
 		return err
 	}
