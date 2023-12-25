@@ -62,10 +62,13 @@ type IUnique interface {
 	Name() string
 
 	// Returns unique fields list. Fields are sorted alphabetically
-
 	Fields() []IField
+
 	// Unique identifier.
 	//
 	// Must be assigned during AppStruct construction by calling SetID(UniqueID)
 	ID() UniqueID
+
+	// Unique fields list in the order of the according fields in the schema
+	FieldsSchemaOrdered() []IField
 }

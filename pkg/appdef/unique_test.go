@@ -30,7 +30,7 @@ func Test_def_AddUnique(t *testing.T) {
 		AddField("eMail", DataKind_string, false)
 	doc.
 		AddUnique("", []string{"eMail"}).
-		AddUnique("userUniqueFullName", []string{"name", "surname", "lastName"})
+		AddUnique("userUniqueFullName", []string{"lastName", "name", "surname"})
 
 	t.Run("test is ok", func(t *testing.T) {
 		app, err := appDef.Build()
@@ -47,6 +47,10 @@ func Test_def_AddUnique(t *testing.T) {
 		require.Equal("lastName", u.Fields()[0].Name())
 		require.Equal("name", u.Fields()[1].Name())
 		require.Equal("surname", u.Fields()[2].Name())
+		require.Len(u.FieldsSchemaOrdered(), 3)
+		require.Equal("name", u.FieldsSchemaOrdered()[0].Name())
+		require.Equal("surname", u.FieldsSchemaOrdered()[1].Name())
+		require.Equal("lastName", u.FieldsSchemaOrdered()[2].Name())
 
 		require.Equal(doc.UniqueCount(), func() int {
 			cnt := 0

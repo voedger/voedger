@@ -19,10 +19,11 @@ const (
 //   - IUnique
 type unique struct {
 	comment
-	emb    interface{}
-	name   string
-	fields []IField
-	id     UniqueID
+	emb                  interface{}
+	name                 string
+	fields               []IField
+	id                   UniqueID
+	uniquesSchemaOrdered []IField
 }
 
 func newUnique(embeds interface{}, name string, fields []string) *unique {
@@ -63,6 +64,20 @@ func (u unique) ID() UniqueID {
 // Assigns ID. Must be called during application structures preparation
 func (u *unique) SetID(value UniqueID) {
 	u.id = value
+}
+
+func (u *unique) FieldsSchemaOrdered() []IField {
+	return u.uniquesSchemaOrdered
+}
+
+func (u *unique) createFieldsSchemaOrdered(schemaFields IFields) {
+	for _, schemaField := range schemaFields.Fields() {
+		for _, uniqueField := range u.fields {
+			if schemaField.Name() == uniqueField.Name() {
+				u.uniquesSchemaOrdered = append(u.uniquesSchemaOrdered, schemaField)
+			}
+		}
+	}
 }
 
 // # Implements:
@@ -153,4 +168,12 @@ func (u *uniques) addUnique(name string, fields []string, comment ...string) IUn
 
 func (u *uniques) embeds() IStructure {
 	return u.emb.(IStructure)
+}
+
+// need to create schema-ordered set of fields after the entire schema is defined
+func (u *uniques) Validate() error {
+	for _, unique := range u.uniques {
+		unique.createFieldsSchemaOrdered(u.emb.(IFields))
+	}
+	return nil
 }

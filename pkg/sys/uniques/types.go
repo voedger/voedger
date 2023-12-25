@@ -7,4 +7,4 @@ package uniques
 
 import "github.com/voedger/voedger/pkg/appdef"
 
-type orderedUniqueFields []appdef.IField
+type schemaOrderedUniqueFields []appdef.IField

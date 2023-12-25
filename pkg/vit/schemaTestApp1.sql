@@ -395,10 +395,10 @@ ALTERABLE WORKSPACE test_ws (
 
 	-- TABLE DocConstraints INHERITS CDoc (
 	-- 	Int int32,
-	-- 	Str varchar NOT NULL,
+	-- 	Str varchar(65535) NOT NULL,
 	-- 	Bool bool NOT NULL,
 	-- 	Float32 float32,
-	-- 	Bytes bytes NOT NULL
+	-- 	Bytes bytes(65535) NOT NULL
 	-- 	-- UNIQUE (Int, Str, Bool, Bytes)
 	-- );
 

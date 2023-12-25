@@ -190,10 +190,10 @@ func ProvideApp1(apis apps.APIs, cfg *istructsmem.AppConfigType, adf appdef.IApp
 	bldr := adf.AddCDoc(QNameApp1_DocConstraints)
 	bldr.
 		AddField("Int", appdef.DataKind_int32, false).
-		AddField("Str", appdef.DataKind_string, true).
+		AddField("Str", appdef.DataKind_string, true, appdef.MaxLen(65535)).
 		AddField("Bool", appdef.DataKind_bool, true).
 		AddField("FLoat32", appdef.DataKind_float32, false).
-		AddField("Bytes", appdef.DataKind_bytes, true)
+		AddField("Bytes", appdef.DataKind_bytes, true, appdef.MaxLen(65535))
 	bldr.AddUnique("uniq1", []string{"Int", "Str", "Bool", "Bytes"})
 
 	bldr = adf.AddCDoc(QNameApp1_DocConstraintsString)

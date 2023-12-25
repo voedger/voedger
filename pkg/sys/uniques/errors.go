@@ -10,6 +10,6 @@ var ErrUniqueConstraintViolation = errors.New("unique constraint violation")
 
 var ErrUniqueFieldUpdateDeny = errors.New("unique field update denied")
 
-var errUniqueValueTooLong = errors.New("unique value is too long")
+var ErrUniqueValueTooLong = errors.New("unique value is too long")
 
 var ErrProvidedDocCanNotHaveUniques = errors.New("type of the provided doc can not have uniques")

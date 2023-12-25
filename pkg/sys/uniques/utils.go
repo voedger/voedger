@@ -19,12 +19,12 @@ func GetUniqueRecordID(appStructs istructs.IAppStructs, doc istructs.IRowReader,
 		return istructs.NullRecordID, ErrProvidedDocCanNotHaveUniques
 	}
 	for _, unique := range uniques.Uniques() {
-		orderedUniqueFields := getOrderedUniqueFields(appStructs.AppDef(), doc, unique)
-		uniqueKeyValues, err := getUniqueKeyValues2(doc, orderedUniqueFields, unique.Name(), unique.ID())
+		schemaOrderedUniqueFields := unique.FieldsSchemaOrdered()
+		uniqueKeyValues, err := getUniqueKeyValues(doc, schemaOrderedUniqueFields, unique.Name(), unique.ID())
 		if err != nil {
 			return istructs.NullRecordID, err
 		}
-		recID, exists, err := getUniqueIDByValues2(appStructs, wsid, docQName, uniqueKeyValues, unique.ID())
+		recID, exists, err := getUniqueIDByValues(appStructs, wsid, docQName, uniqueKeyValues, unique.ID())
 		if err != nil {
 			return istructs.NullRecordID, err
 		}
