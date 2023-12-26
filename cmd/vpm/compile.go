@@ -49,8 +49,10 @@ func compile(workingDir string) (*compileResult, error) {
 	}
 	var errs []error
 
+	var packages []*parser.PackageSchemaAST
 	importedStmts := make(map[string]parser.ImportStmt)
 	pkgFiles := make(packageFiles)
+	// extract module path from dependency file
 	goModFileDir := filepath.Dir(depMan.DependencyFilePath())
 	relativeModulePath, err := filepath.Rel(goModFileDir, workingDir)
 	if err != nil {
@@ -61,11 +63,18 @@ func compile(workingDir string) (*compileResult, error) {
 	if err != nil {
 		return nil, err
 	}
-	// modulePath := filepath.Join(depMan.ModuleName(), strings.TrimPrefix(workingDir, goModFileDir))
 
-	packages, compileDirErrs := compileDir(depMan, workingDir, modulePath, importedStmts, pkgFiles)
+	// compile sys package first
+	sysPackageAst, compileSysErrs := compileSys(depMan, importedStmts, pkgFiles)
+	packages = append(packages, sysPackageAst...)
+	errs = append(errs, compileSysErrs...)
+
+	// compile working dir after sys package
+	compileDirPackageAst, compileDirErrs := compileDir(depMan, workingDir, modulePath, importedStmts, pkgFiles)
+	packages = append(packages, compileDirPackageAst...)
 	errs = append(errs, compileDirErrs...)
 
+	// add dummy app schema if no app schema found
 	if !hasAppSchema(packages) {
 		appPackageAst, err := getDummyAppPackageAst(maps.Values(importedStmts))
 		if err != nil {
@@ -75,27 +84,24 @@ func compile(workingDir string) (*compileResult, error) {
 		addMissingUses(appPackageAst, getUseStmts(maps.Values(importedStmts)))
 	}
 
-	sysPackageAst, compileSysErrs := compileSys(depMan, importedStmts, pkgFiles)
-	packages = append(packages, sysPackageAst...)
-	errs = append(errs, compileSysErrs...)
-
+	// remove nil packages
 	nonNilPackages := make([]*parser.PackageSchemaAST, 0, len(packages))
 	for _, p := range packages {
 		if p != nil {
 			nonNilPackages = append(nonNilPackages, p)
 		}
 	}
-
+	// build app schema
 	appAst, err := parser.BuildAppSchema(nonNilPackages)
 	if err != nil {
 		errs = append(errs, coreutils.SplitErrors(err)...)
 	}
+	// build app defs from app schema
 	if appAst != nil {
 		if err := parser.BuildAppDefs(appAst, appdef.New()); err != nil {
 			errs = append(errs, coreutils.SplitErrors(err)...)
 		}
 	}
-
 	if len(errs) == 0 {
 		if logger.IsVerbose() {
 			logger.Verbose("compiling succeeded")
@@ -176,20 +182,22 @@ func compileSys(depMan dm.IDependencyManager, importedStmts map[string]parser.Im
 }
 
 // checkImportedStmts checks if qpn is already imported. If not, it adds it to importedStmts
-func checkImportedStmts(qpn string, importedStmts map[string]parser.ImportStmt) (ok bool) {
-	if _, exists := importedStmts[qpn]; exists {
-		return
-	}
-	ok = true
-	importStmt := parser.ImportStmt{
-		Name: qpn,
-	}
-	if qpn == appdef.SysPackage {
+func checkImportedStmts(qpn string, importedStmts map[string]parser.ImportStmt) bool {
+	var aliasPtr *parser.Ident
+	// workaround for sys package
+	if qpn == appdef.SysPackage || qpn == sysQPN {
+		qpn = appdef.SysPackage
 		alias := parser.Ident(qpn)
-		importStmt.Alias = &alias
+		aliasPtr = &alias
 	}
-	importedStmts[qpn] = importStmt
-	return
+	if _, exists := importedStmts[qpn]; exists {
+		return false
+	}
+	importedStmts[qpn] = parser.ImportStmt{
+		Name:  qpn,
+		Alias: aliasPtr,
+	}
+	return true
 }
 
 func compileDir(depMan dm.IDependencyManager, dir, qpn string, importedStmts map[string]parser.ImportStmt, pkgFiles packageFiles) (packages []*parser.PackageSchemaAST, errs []error) {

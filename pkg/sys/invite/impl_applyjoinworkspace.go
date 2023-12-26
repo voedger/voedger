@@ -140,7 +140,8 @@ func applyJoinWorkspace(timeFunc coreutils.TimeFunc, federation coreutils.IFeder
 			federation.URL(),
 			fmt.Sprintf("api/%s/%d/c.sys.CUD", appQName, event.Workspace()),
 			body,
-			coreutils.WithAuthorizeBy(token))
+			coreutils.WithAuthorizeBy(token),
+			coreutils.WithDiscardResponse())
 
 		return err
 	}
