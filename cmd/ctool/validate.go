@@ -9,7 +9,6 @@ import (
 	"errors"
 
 	"github.com/spf13/cobra"
-	"github.com/untillpro/goutils/logger"
 )
 
 func newValidateCmd() *cobra.Command {
@@ -33,7 +32,7 @@ func validate(cmd *cobra.Command, arg []string) error {
 
 	err := cluster.validate()
 	if err == nil {
-		logger.Info(green("cluster configuration is ok"))
+		loggerInfoGreen("cluster configuration is ok")
 	}
 
 	if !cluster.Draft && !cluster.Cmd.isEmpty() {

@@ -70,7 +70,7 @@ func compile(workingDir string) (*compileResult, error) {
 	errs = append(errs, compileSysErrs...)
 
 	// compile working dir after sys package
-	compileDirPackageAst, compileDirErrs := compileDir(depMan, workingDir, modulePath, importedStmts, pkgFiles)
+	compileDirPackageAst, compileDirErrs := compileDir(depMan, workingDir, modulePath, nil, importedStmts, pkgFiles)
 	packages = append(packages, compileDirPackageAst...)
 	errs = append(errs, compileDirErrs...)
 
@@ -178,12 +178,12 @@ func addMissingUses(appPackage *parser.PackageSchemaAST, uses []parser.UseStmt) 
 }
 
 func compileSys(depMan dm.IDependencyManager, importedStmts map[string]parser.ImportStmt, pkgFiles packageFiles) ([]*parser.PackageSchemaAST, []error) {
-	return compileDependency(depMan, appdef.SysPackage, importedStmts, pkgFiles)
+	return compileDependency(depMan, appdef.SysPackage, nil, importedStmts, pkgFiles)
 }
 
 // checkImportedStmts checks if qpn is already imported. If not, it adds it to importedStmts
-func checkImportedStmts(qpn string, importedStmts map[string]parser.ImportStmt) bool {
-	var aliasPtr *parser.Ident
+func checkImportedStmts(qpn string, alias *parser.Ident, importedStmts map[string]parser.ImportStmt) bool {
+	aliasPtr := alias
 	// workaround for sys package
 	if qpn == appdef.SysPackage || qpn == sysQPN {
 		qpn = appdef.SysPackage
@@ -200,8 +200,8 @@ func checkImportedStmts(qpn string, importedStmts map[string]parser.ImportStmt) 
 	return true
 }
 
-func compileDir(depMan dm.IDependencyManager, dir, qpn string, importedStmts map[string]parser.ImportStmt, pkgFiles packageFiles) (packages []*parser.PackageSchemaAST, errs []error) {
-	if ok := checkImportedStmts(qpn, importedStmts); !ok {
+func compileDir(depMan dm.IDependencyManager, dir, qpn string, alias *parser.Ident, importedStmts map[string]parser.ImportStmt, pkgFiles packageFiles) (packages []*parser.PackageSchemaAST, errs []error) {
+	if ok := checkImportedStmts(qpn, alias, importedStmts); !ok {
 		return
 	}
 	if logger.IsVerbose() {
@@ -229,14 +229,14 @@ func compileDir(depMan dm.IDependencyManager, dir, qpn string, importedStmts map
 
 func compileDependencies(depMan dm.IDependencyManager, imports []parser.ImportStmt, importedStmts map[string]parser.ImportStmt, pkgFiles packageFiles) (packages []*parser.PackageSchemaAST, errs []error) {
 	for _, imp := range imports {
-		dependentPackages, compileDepErrs := compileDependency(depMan, imp.Name, importedStmts, pkgFiles)
+		dependentPackages, compileDepErrs := compileDependency(depMan, imp.Name, imp.Alias, importedStmts, pkgFiles)
 		errs = append(errs, compileDepErrs...)
 		packages = append(packages, dependentPackages...)
 	}
 	return
 }
 
-func compileDependency(depMan dm.IDependencyManager, depURL string, importedStmts map[string]parser.ImportStmt, pkgFiles packageFiles) (packages []*parser.PackageSchemaAST, errs []error) {
+func compileDependency(depMan dm.IDependencyManager, depURL string, alias *parser.Ident, importedStmts map[string]parser.ImportStmt, pkgFiles packageFiles) (packages []*parser.PackageSchemaAST, errs []error) {
 	// workaround for sys package
 	depURLToFind := depURL
 	if depURL == appdef.SysPackage {
@@ -250,7 +250,7 @@ func compileDependency(depMan dm.IDependencyManager, depURL string, importedStmt
 		logger.Verbose(fmt.Sprintf("dependency: %s\nlocation: %s\n", depURL, localPath))
 	}
 	var compileDirErrs []error
-	packages, compileDirErrs = compileDir(depMan, localPath, depURL, importedStmts, pkgFiles)
+	packages, compileDirErrs = compileDir(depMan, localPath, depURL, alias, importedStmts, pkgFiles)
 	errs = append(errs, compileDirErrs...)
 	return
 }
