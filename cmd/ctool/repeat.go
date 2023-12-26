@@ -7,7 +7,6 @@ package main
 
 import (
 	"github.com/spf13/cobra"
-	"github.com/untillpro/goutils/logger"
 )
 
 func newRepeatCmd() *cobra.Command {
@@ -19,7 +18,7 @@ func newRepeatCmd() *cobra.Command {
 
 	repeatCmd.PersistentFlags().StringVar(&sshKey, "ssh-key", "", "Path to SSH key")
 	if err := repeatCmd.MarkPersistentFlagRequired("ssh-key"); err != nil {
-		logger.Error(err.Error())
+		loggerError(err.Error())
 		return nil
 	}
 
@@ -31,7 +30,7 @@ func repeat(cmd *cobra.Command, arg []string) error {
 	var err error
 
 	if !cluster.existsNodeError() && (cluster.Cmd == nil || cluster.Cmd.isEmpty()) {
-		logger.Info("no active command found to repeat")
+		loggerInfo("no active command found to repeat")
 		return nil
 	}
 
@@ -47,7 +46,7 @@ func repeat(cmd *cobra.Command, arg []string) error {
 	mkCommandDirAndLogFile(cmd, cluster)
 
 	if err = cluster.Cmd.apply(cluster); err != nil {
-		logger.Error(err)
+		loggerError(err)
 	}
 
 	return err

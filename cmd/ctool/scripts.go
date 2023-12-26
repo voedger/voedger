@@ -17,7 +17,6 @@ import (
 	"time"
 
 	"github.com/untillpro/goutils/exec"
-	"github.com/untillpro/goutils/logger"
 	"golang.org/x/crypto/ssh/terminal"
 )
 
@@ -103,7 +102,7 @@ func (se *scriptExecuterType) run(scriptName string, args ...string) error {
 	}
 
 	if err != nil {
-		logger.Error(fmt.Errorf("the error of the script %s: %w", scriptName, err).Error())
+		loggerError(fmt.Errorf("the error of the script %s: %w", scriptName, err).Error())
 	}
 	return err
 }
@@ -144,7 +143,7 @@ func prepareScripts(scriptFileNames ...string) error {
 	if len(scriptFileNames) == 0 {
 		err = extractAllScripts()
 		if err != nil {
-			logger.Error(err.Error())
+			loggerError(err.Error())
 			return err
 		}
 		return nil

@@ -42,12 +42,12 @@ func main() {
 	defer func() {
 		err := deleteScriptsTempDir()
 		if err != nil {
-			logger.Error(err.Error())
+			loggerError(err.Error())
 		}
 	}()
 	err := execRootCmd(os.Args, version)
 	if err != nil {
-		logger.Error(err.Error())
+		loggerError(err.Error())
 		os.Exit(1)
 	}
 }
