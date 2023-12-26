@@ -18,6 +18,8 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appparts"
+	"github.com/voedger/voedger/pkg/cluster"
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/in10nmem"
 	"github.com/voedger/voedger/pkg/pipeline"
@@ -381,7 +383,7 @@ func Test400BadRequests(t *testing.T) {
 		ibus.Request
 		expectedMessageLike string
 	}{
-		{"unknown app", ibus.Request{AppQName: "untill/unknown"}, "application not found"}, // TODO: simplify
+		{"unknown app", ibus.Request{AppQName: "untill/unknown"}, "application untill/unknown not found"}, // TODO: simplify
 		{"bad request body", ibus.Request{Body: []byte("{wrong")}, "failed to unmarshal request body: invalid character 'w' looking for beginning of object key string"},
 		{"unknown func", ibus.Request{Resource: "c.sys.Unknown"}, "unknown function"},
 		{"args: field of wrong type provided", ibus.Request{Body: []byte(`{"args":{"Text":42}}`)}, "wrong field type"},
@@ -644,6 +646,14 @@ func setUp(t *testing.T, prepareAppDef func(appDef appdef.IAppDefBuilder), cfgFu
 	appStructsProvider := istructsmem.Provide(cfgs, iratesce.TestBucketsFactory,
 		payloads.ProvideIAppTokensFactory(itokensjwt.TestTokensJWT()), appStorageProvider)
 
+	// тут надо подготовить appparts, у которого команда будет заимствовать (borrow) AppStructs
+	appParts, appPartsClean, err := appparts.New(appStructsProvider)
+	require.NoError(t, err)
+	defer appPartsClean()
+
+	appParts.DeployApp(istructs.AppQName_untill_airs_bp, appDef, [cluster.ProcessorKind_Count]int{100, 100, 100}) // ?? где взять размеры пулов?
+	appParts.DeployAppPartitions(istructs.AppQName_untill_airs_bp, []istructs.PartitionID{1})                     // ?? где взять номера разделов?
+
 	// command processor работает через ibus.SendResponse -> нам нужна реализация ibus
 	var bus ibus.IBus
 	bus = ibusmem.Provide(func(ctx context.Context, sender interface{}, request ibus.Request) {
@@ -676,7 +686,7 @@ func setUp(t *testing.T, prepareAppDef func(appDef appdef.IAppDefBuilder), cfgFu
 	appTokens := payloads.ProvideIAppTokensFactory(tokens).New(istructs.AppQName_untill_airs_bp)
 	systemToken, err := payloads.GetSystemPrincipalTokenApp(appTokens)
 	require.NoError(t, err)
-	cmdProcessorFactory := ProvideServiceFactory(bus, appStructsProvider, time.Now, func(ctx context.Context, partitionID istructs.PartitionID) pipeline.ISyncOperator {
+	cmdProcessorFactory := ProvideServiceFactory(bus, appParts, time.Now, func(ctx context.Context, partitionID istructs.PartitionID) pipeline.ISyncOperator {
 		return &pipeline.NOOP{}
 	}, n10nBroker, imetrics.Provide(), "vvm", iauthnzimpl.NewDefaultAuthenticator(iauthnzimpl.TestSubjectRolesGetter), iauthnzimpl.NewDefaultAuthorizer(), isecretsimpl.ProvideSecretReader(), cfgs)
 	cmdProcService := cmdProcessorFactory(serviceChannel, 1)

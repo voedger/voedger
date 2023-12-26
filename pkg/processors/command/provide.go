@@ -11,6 +11,7 @@ import (
 	ibus "github.com/untillpro/airs-ibus"
 	"github.com/untillpro/goutils/logger"
 
+	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/isecrets"
@@ -43,7 +44,7 @@ type appPartition struct {
 }
 
 // syncActualizerFactory - это фабрика(разделИД), которая возвращает свитч, в бранчах которого по синхронному актуализатору на каждое приложение, внутри каждого - проекторы на каждое приложение
-func ProvideServiceFactory(bus ibus.IBus, asp istructs.IAppStructsProvider, now coreutils.TimeFunc, syncActualizerFactory SyncActualizerFactory,
+func ProvideServiceFactory(bus ibus.IBus, appParts appparts.IAppPartitions, now coreutils.TimeFunc, syncActualizerFactory SyncActualizerFactory,
 	n10nBroker in10n.IN10nBroker, metrics imetrics.IMetrics, vvm VVMName, authenticator iauthnz.IAuthenticator, authorizer iauthnz.IAuthorizer,
 	secretReader isecrets.ISecretReader, appConfigsType istructsmem.AppConfigsType) ServiceFactory {
 	return func(commandsChannel CommandChannel, partitionID istructs.PartitionID) pipeline.IService {
@@ -106,7 +107,7 @@ func ProvideServiceFactory(bus ibus.IBus, asp istructs.IAppStructsProvider, now 
 					cmd := &cmdWorkpiece{
 						cmdMes:            intf.(ICommandMessage),
 						requestData:       coreutils.MapObject{},
-						asp:               asp,
+						appParts:          appParts,
 						hostStateProvider: hsp,
 					}
 					cmd.metrics = commandProcessorMetrics{

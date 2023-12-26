@@ -20,6 +20,7 @@ import (
 	"golang.org/x/exp/maps"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/cluster"
 	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -260,9 +261,16 @@ func checkWSActive(_ context.Context, work interface{}) (err error) {
 }
 
 func getAppStructs(_ context.Context, work interface{}) (err error) {
+	// ?? Как проконтролировать, что getAppStructs вызывается именно в момент обработки команды, а не заранее ??
 	cmd := work.(*cmdWorkpiece)
-	cmd.appStructs, err = cmd.asp.AppStructs(cmd.cmdMes.AppQName())
-	return
+
+	ap, err := cmd.appParts.Borrow(cmd.cmdMes.AppQName(), cmd.cmdMes.PartitionID(), cluster.ProcessorKind_Command)
+	if err != nil {
+		return err
+	}
+	cmd.appStructs = ap.AppStructs() // ?? Куда вписать Release() ??
+
+	return nil
 }
 
 func limitCallRate(_ context.Context, work interface{}) (err error) {
