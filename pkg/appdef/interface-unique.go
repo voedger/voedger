@@ -28,8 +28,8 @@ type IUniques interface {
 	// Return uniques count
 	UniqueCount() int
 
-	// Enumerates all uniques.
-	Uniques(func(IUnique))
+	// All uniques.
+	Uniques() []IUnique
 
 	// Returns single field unique.
 	//

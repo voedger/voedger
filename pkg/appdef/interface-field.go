@@ -28,19 +28,16 @@ type IFields interface {
 	// Returns fields count
 	FieldCount() int
 
-	// Enumerates all fields in add order.
-	Fields(func(IField))
+	// All fields in add order.
+	Fields() []IField
 
 	// Finds reference field by name.
 	//
 	// Returns nil if field is not found, or field found but it is not a reference field
 	RefField(name string) IRefField
 
-	// Enumerates all reference fields. System field (sys.ParentID) is also enumerated
-	RefFields(func(IRefField))
-
-	// Enumerates all fields except system
-	UserFields(func(IField))
+	// All reference fields. System field (sys.ParentID) is also included
+	RefFields() []IRefField
 
 	// Returns user fields count. System fields (sys.QName, sys.ID, …) do not count
 	UserFieldCount() int
@@ -128,12 +125,12 @@ type IField interface {
 	// Returns is field system
 	IsSys() bool
 
-	// Enumerates field constraints.
+	// All field constraints.
 	//
-	// Enumeration throughout the data types hierarchy, include all ancestors recursively.
+	// Result contains throughout the data types hierarchy, include all ancestors recursively.
 	// If any constraint (for example `MinLen`) is specified by the ancestor, but redefined in the descendant,
-	// then the constraint from the descendant only will enumerated.
-	Constraints(func(IConstraint))
+	// then the constraint from the descendant will include in result.
+	Constraints() map[ConstraintKind]IConstraint
 }
 
 // Reference field. Describe field with DataKind_RecordID.

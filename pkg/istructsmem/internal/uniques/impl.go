@@ -141,9 +141,9 @@ func (un *uniques) collectAll(appDef appdef.IAppDef) (err error) {
 	appDef.Types(
 		func(t appdef.IType) {
 			if uni, ok := t.(appdef.IUniques); ok {
-				uni.Uniques(func(u appdef.IUnique) {
+				for _, u := range uni.Uniques() {
 					err = errors.Join(err, un.collect(u))
-				})
+				}
 			}
 		})
 

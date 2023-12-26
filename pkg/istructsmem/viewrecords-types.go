@@ -345,12 +345,12 @@ func (key *keyType) Equals(src istructs.IKeyBuilder) bool {
 						}
 					}
 
-					result := true
-					r1.fields.Fields(
-						func(f appdef.IField) {
-							result = result && equalVal(r1.dyB.Get(f.Name()), r2.dyB.Get(f.Name()))
-						})
-					return result
+					for _, f := range r1.fields.Fields() {
+						if !equalVal(r1.dyB.Get(f.Name()), r2.dyB.Get(f.Name())) {
+							return false
+						}
+					}
+					return true
 				}
 
 				return equalRow(key.partRow, k.partRow) && equalRow(key.ccolsRow, k.ccolsRow)

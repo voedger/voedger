@@ -74,10 +74,9 @@ func (cnt *Containers) collectAll(appDef appdef.IAppDef) (err error) {
 		appDef.Types(
 			func(t appdef.IType) {
 				if cont, ok := t.(appdef.IContainers); ok {
-					cont.Containers(
-						func(c appdef.IContainer) {
-							err = errors.Join(err, cnt.collect(c.Name()))
-						})
+					for _, c := range cont.Containers() {
+						err = errors.Join(err, cnt.collect(c.Name()))
+					}
 				}
 			})
 	}

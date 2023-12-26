@@ -108,7 +108,8 @@ func applyInvitationProjector(timeFunc coreutils.TimeFunc, federation coreutils.
 			federation.URL(),
 			fmt.Sprintf("api/%s/%d/c.sys.CUD", appQName, event.Workspace()),
 			fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"State":%d,"VerificationCode":"%s","Updated":%d}}]}`, svViewInviteIndex.AsRecordID(field_InviteID), State_Invited, verificationCode, timeFunc().UnixMilli()),
-			coreutils.WithAuthorizeBy(authToken))
+			coreutils.WithAuthorizeBy(authToken),
+			coreutils.WithDiscardResponse())
 
 		return err
 	}

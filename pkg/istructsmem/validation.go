@@ -78,7 +78,7 @@ func validateObjectIDs(obj *objectType, rawID bool) (ids map[istructs.RecordID]a
 	})
 
 	_ = obj.forEach(func(e *objectType) error {
-		e.fields.RefFields(func(fld appdef.IRefField) {
+		for _, fld := range e.fields.RefFields() {
 			if id := e.AsRecordID(fld.Name()); id != istructs.NullRecordID {
 				target, exists := ids[id]
 				if !exists {
@@ -87,7 +87,7 @@ func validateObjectIDs(obj *objectType, rawID bool) (ids map[istructs.RecordID]a
 							// ODoc «test.document» field «RefField» refers to unknown record ID «7»
 							validateErrorf(ECode_InvalidRefRecordID, errUnknownIDRef, e, fld.Name(), id, ErrRecordIDNotFound))
 					}
-					return
+					continue
 				}
 				if !fld.Ref(target) {
 					err = errors.Join(err,
@@ -95,7 +95,7 @@ func validateObjectIDs(obj *objectType, rawID bool) (ids map[istructs.RecordID]a
 						validateErrorf(ECode_InvalidRefRecordID, errUnavailableTargetRef, e, fld.Name(), id, target, ErrWrongRecordID))
 				}
 			}
-		})
+		}
 		return nil
 	})
 
@@ -269,21 +269,20 @@ func validateObject(o *objectType) (err error) {
 	t := o.typ.(appdef.IContainers)
 
 	// validate occurrences
-	t.Containers(
-		func(cont appdef.IContainer) {
-			occurs := appdef.Occurs(0)
-			o.Children(cont.Name(), func(istructs.IObject) { occurs++ })
-			if occurs < cont.MinOccurs() {
-				err = errors.Join(err,
-					// ODoc «test.document» container «child» has not enough occurrences (0, minimum 1)
-					validateErrorf(ECode_InvalidOccursMin, errContainerMinOccursViolated, o, cont.Name(), occurs, cont.MinOccurs(), ErrMinOccursViolation))
-			}
-			if occurs > cont.MaxOccurs() {
-				err = errors.Join(err,
-					// ODoc «test.document» container «child» has too many occurrences (2, maximum 1)
-					validateErrorf(ECode_InvalidOccursMax, errContainerMaxOccursViolated, o, cont.Name(), occurs, cont.MaxOccurs(), ErrMaxOccursViolation))
-			}
-		})
+	for _, cont := range t.Containers() {
+		occurs := appdef.Occurs(0)
+		o.Children(cont.Name(), func(istructs.IObject) { occurs++ })
+		if occurs < cont.MinOccurs() {
+			err = errors.Join(err,
+				// ODoc «test.document» container «child» has not enough occurrences (0, minimum 1)
+				validateErrorf(ECode_InvalidOccursMin, errContainerMinOccursViolated, o, cont.Name(), occurs, cont.MinOccurs(), ErrMinOccursViolation))
+		}
+		if occurs > cont.MaxOccurs() {
+			err = errors.Join(err,
+				// ODoc «test.document» container «child» has too many occurrences (2, maximum 1)
+				validateErrorf(ECode_InvalidOccursMax, errContainerMaxOccursViolated, o, cont.Name(), occurs, cont.MaxOccurs(), ErrMaxOccursViolation))
+		}
+	}
 
 	// validate children
 	objID := o.ID()
@@ -337,27 +336,26 @@ func validateObject(o *objectType) (err error) {
 // Checks that all required fields are filled.
 // For required ref fields checks that they are filled with non null IDs.
 func validateRow(row *rowType) (err error) {
-	row.fields.Fields(
-		func(f appdef.IField) {
-			if f.Required() {
-				if !row.HasValue(f.Name()) {
-					err = errors.Join(err,
-						// ODoc «test.document» misses required field «RequiredField»
-						validateErrorf(ECode_EmptyData, errEmptyRequiredField, row, f.Name(), ErrNameNotFound))
-					return
-				}
-				if !f.IsSys() {
-					switch f.DataKind() {
-					case appdef.DataKind_RecordID:
-						if row.AsRecordID(f.Name()) == istructs.NullRecordID {
-							err = errors.Join(err,
-								// ORecord «child2: test.record2» required ref field «RequiredRefField» has NullRecordID value
-								validateErrorf(ECode_InvalidRefRecordID, errNullInRequiredRefField, row, f.Name(), ErrWrongRecordID))
-						}
+	for _, f := range row.fields.Fields() {
+		if f.Required() {
+			if !row.HasValue(f.Name()) {
+				err = errors.Join(err,
+					// ODoc «test.document» misses required field «RequiredField»
+					validateErrorf(ECode_EmptyData, errEmptyRequiredField, row, f.Name(), ErrNameNotFound))
+				continue
+			}
+			if !f.IsSys() {
+				switch f.DataKind() {
+				case appdef.DataKind_RecordID:
+					if row.AsRecordID(f.Name()) == istructs.NullRecordID {
+						err = errors.Join(err,
+							// ORecord «child2: test.record2» required ref field «RequiredRefField» has NullRecordID value
+							validateErrorf(ECode_InvalidRefRecordID, errNullInRequiredRefField, row, f.Name(), ErrWrongRecordID))
 					}
 				}
 			}
-		})
+		}
+	}
 	return err
 }
 
@@ -404,22 +402,20 @@ func validateEventCUD(ev *eventType, rec *recordType, part string) error {
 //
 // If partialClust specified then clustering columns row may be partially filled
 func validateViewKey(key *keyType, partialClust bool) (err error) {
-	key.partRow.fields.Fields(
-		func(f appdef.IField) {
-			if !key.partRow.HasValue(f.Name()) {
-				err = errors.Join(err,
-					validateErrorf(ECode_EmptyData, "view «%v» partition key field «%s» is empty: %w", key.viewName, f.Name(), ErrFieldIsEmpty))
-			}
-		})
+	for _, f := range key.partRow.fields.Fields() {
+		if !key.partRow.HasValue(f.Name()) {
+			err = errors.Join(err,
+				validateErrorf(ECode_EmptyData, "view «%v» partition key field «%s» is empty: %w", key.viewName, f.Name(), ErrFieldIsEmpty))
+		}
+	}
 
 	if !partialClust {
-		key.ccolsRow.fields.Fields(
-			func(f appdef.IField) {
-				if !key.ccolsRow.HasValue(f.Name()) {
-					err = errors.Join(err,
-						validateErrorf(ECode_EmptyData, "view «%v» clustering columns field «%s» is empty: %w", key.viewName, f.Name(), ErrFieldIsEmpty))
-				}
-			})
+		for _, f := range key.ccolsRow.fields.Fields() {
+			if !key.ccolsRow.HasValue(f.Name()) {
+				err = errors.Join(err,
+					validateErrorf(ECode_EmptyData, "view «%v» clustering columns field «%s» is empty: %w", key.viewName, f.Name(), ErrFieldIsEmpty))
+			}
+		}
 	}
 
 	return err

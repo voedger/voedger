@@ -6,6 +6,7 @@ package appdef_test
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -50,48 +51,51 @@ func ExampleIView() {
 		view := app.View(viewName)
 		fmt.Printf("view %q: %v, %s\n", view.QName(), view.Kind(), view.Comment())
 
-		field := func(f appdef.IField) {
-			fmt.Printf("- %s: %s", f.Name(), f.DataKind().TrimString())
-			if f.IsSys() {
-				fmt.Print(", sys")
-			}
-			if f.Required() {
-				fmt.Print(", required")
-			}
-			if r, ok := f.(appdef.IRefField); ok {
-				if len(r.Refs()) != 0 {
-					fmt.Printf(", refs: %v", r.Refs())
+		fields := func(ff []appdef.IField) {
+			for _, f := range ff {
+				fmt.Printf("- %s: %s", f.Name(), f.DataKind().TrimString())
+				if f.IsSys() {
+					fmt.Print(", sys")
 				}
+				if f.Required() {
+					fmt.Print(", required")
+				}
+				if r, ok := f.(appdef.IRefField); ok {
+					if len(r.Refs()) != 0 {
+						fmt.Printf(", refs: %v", r.Refs())
+					}
+				}
+				str := []string{}
+				for _, c := range f.Constraints() {
+					str = append(str, fmt.Sprint(c))
+				}
+				if len(str) > 0 {
+					sort.Strings(str)
+					fmt.Printf(", constraints: [%v]", strings.Join(str, `, `))
+				}
+				fmt.Println()
 			}
-			str := []string{}
-			f.Constraints(func(c appdef.IConstraint) {
-				str = append(str, fmt.Sprint(c))
-			})
-			if len(str) > 0 {
-				fmt.Printf(", constraints: [%v]", strings.Join(str, `, `))
-			}
-			fmt.Println()
 		}
 
 		// how to inspect all view fields
 		fmt.Printf("view has %d fields:\n", view.FieldCount())
-		view.Fields(field)
+		fields(view.Fields())
 
 		// how to inspect view key fields
 		fmt.Printf("view key has %d fields:\n", view.Key().FieldCount())
-		view.Key().Fields(field)
+		fields(view.Key().Fields())
 
 		// how to inspect view partition key
 		fmt.Printf("view partition key has %d fields:\n", view.Key().PartKey().FieldCount())
-		view.Key().PartKey().Fields(field)
+		fields(view.Key().PartKey().Fields())
 
 		// how to inspect view clustering columns
 		fmt.Printf("view clustering columns key has %d fields:\n", view.Key().ClustCols().FieldCount())
-		view.Key().ClustCols().Fields(field)
+		fields(view.Key().ClustCols().Fields())
 
 		// how to inspect view value
 		fmt.Printf("view value has %d fields:\n", view.Value().FieldCount())
-		view.Value().Fields(field)
+		fields(view.Value().Fields())
 	}
 
 	// Output:
