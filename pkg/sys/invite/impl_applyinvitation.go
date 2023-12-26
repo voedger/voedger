@@ -95,12 +95,13 @@ func applyInvitationProjector(timeFunc coreutils.TimeFunc, federation coreutils.
 		}
 		skbSendMail.PutString(state.Field_Password, pwd)
 
+		// Send invitation Email
 		_, err = intents.NewValue(skbSendMail)
 		if err != nil {
 			return
 		}
 
-		//Update invite status
+		// Update cdoc.Invite State=Invited
 		authToken, err := payloads.GetSystemPrincipalToken(tokens, appQName)
 		if err != nil {
 			return
