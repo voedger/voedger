@@ -43,22 +43,26 @@ func buillAppFromPackagesFS(fses []parser.PackageFS, adf appdef.IAppDefBuilder) 
 	return parser.BuildAppDefs(appSchemaAST, adf)
 }
 
-func (hap VVMAppsBuilder) Build(cfgs istructsmem.AppConfigsType, apis apps.APIs, appsEPs map[istructs.AppQName]extensionpoints.IExtensionPoint) (vvmApps VVMApps, err error) {
+func (hap VVMAppsBuilder) Build(cfgs istructsmem.AppConfigsType, apis apps.APIs, appsEPs map[istructs.AppQName]extensionpoints.IExtensionPoint) (appsPackages []apps.AppPackages, err error) {
 	for appQName, appBuilders := range hap {
 		adf := appdef.New()
 		appEPs := appsEPs[appQName]
 		cfg := cfgs.AddConfig(appQName, adf)
-		appPackagesFSes := []parser.PackageFS{}
+		appPackagesFS := []parser.PackageFS{}
 		for _, appBuilder := range appBuilders {
-			appPackagesFSes = append(appPackagesFSes, appBuilder(apis, cfg, adf, appEPs)...)
+			appPackages := appBuilder(apis, cfg, adf, appEPs)
+			appPackagesFS = append(appPackagesFS, appPackages.Packages...)
 		}
-		if err := buillAppFromPackagesFS(appPackagesFSes, adf); err != nil {
+		if err := buillAppFromPackagesFS(appPackagesFS, adf); err != nil {
 			return nil, err
 		}
-		vvmApps = append(vvmApps, appQName)
 		if _, err := adf.Build(); err != nil {
 			return nil, err
 		}
+		appsPackages = append(appsPackages, apps.AppPackages{
+			AppQName: appQName,
+			Packages: appPackagesFS,
+		})
 	}
-	return vvmApps, nil
+	return appsPackages, nil
 }

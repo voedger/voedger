@@ -75,7 +75,7 @@ var (
 	MockCmdExec func(input string) error
 )
 
-func ProvideApp2(apis apps.APIs, cfg *istructsmem.AppConfigType, adf appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) []parser.PackageFS {
+func ProvideApp2(apis apps.APIs, cfg *istructsmem.AppConfigType, adf appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) apps.AppPackages {
 	buildInfo, ok := debug.ReadBuildInfo()
 	if !ok {
 		panic("no build info")
@@ -86,10 +86,13 @@ func ProvideApp2(apis apps.APIs, cfg *istructsmem.AppConfigType, adf appdef.IApp
 		QualifiedPackageName: "github.com/voedger/voedger/pkg/vit/app2pkg",
 		FS:                   SchemaTestApp2FS,
 	}
-	return []parser.PackageFS{sysPackageFS, app2PackageFS}
+	return apps.AppPackages{
+		AppQName: istructs.AppQName_test1_app2,
+		Packages: []parser.PackageFS{sysPackageFS, app2PackageFS},
+	}
 }
 
-func ProvideApp1(apis apps.APIs, cfg *istructsmem.AppConfigType, adf appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) []parser.PackageFS {
+func ProvideApp1(apis apps.APIs, cfg *istructsmem.AppConfigType, adf appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) apps.AppPackages {
 	// sys package
 	buildInfo, ok := debug.ReadBuildInfo()
 	if !ok {
@@ -188,5 +191,8 @@ func ProvideApp1(apis apps.APIs, cfg *istructsmem.AppConfigType, adf appdef.IApp
 		QualifiedPackageName: "github.com/voedger/voedger/pkg/vit/app1pkg",
 		FS:                   SchemaTestApp1FS,
 	}
-	return []parser.PackageFS{sysPackageFS, app1PackageFS}
+	return apps.AppPackages{
+		AppQName: istructs.AppQName_test1_app1,
+		Packages: []parser.PackageFS{sysPackageFS, app1PackageFS},
+	}
 }
