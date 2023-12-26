@@ -44,14 +44,17 @@ func buillAppFromPackagesFS(fses []parser.PackageFS, adf appdef.IAppDefBuilder) 
 }
 
 func (hap VVMAppsBuilder) Build(cfgs istructsmem.AppConfigsType, apis apps.APIs, appsEPs map[istructs.AppQName]extensionpoints.IExtensionPoint) (appsPackages AppsPackages, err error) {
-	appsPackages = map[istructs.AppQName][]parser.PackageFS{}
+	appsPackages = AppsPackages{}
 	for appQName, appBuilders := range hap {
 		adf := appdef.New()
 		appEPs := appsEPs[appQName]
 		cfg := cfgs.AddConfig(appQName, adf)
 		appPackagesFSes := []parser.PackageFS{}
+		var appDesc apps.AppDesc
 		for _, appBuilder := range appBuilders {
-			appPackagesFSes = append(appPackagesFSes, appBuilder(apis, cfg, adf, appEPs)...)
+			appPackages := appBuilder(apis, cfg, adf, appEPs)
+			appDesc = appPackages.AppDesc
+			appPackagesFSes = append(appPackagesFSes, appPackages.Packages...)
 		}
 		if err := buillAppFromPackagesFS(appPackagesFSes, adf); err != nil {
 			return nil, err
@@ -59,7 +62,7 @@ func (hap VVMAppsBuilder) Build(cfgs istructsmem.AppConfigsType, apis apps.APIs,
 		if _, err := adf.Build(); err != nil {
 			return nil, err
 		}
-		appsPackages[appQName] = append(appsPackages[appQName], appPackagesFSes...)
+		appsPackages[appDesc] = append(appsPackages[appDesc], appPackagesFSes...)
 	}
 	return appsPackages, nil
 }

@@ -18,7 +18,6 @@ import (
 	"github.com/google/wire"
 	ibus "github.com/untillpro/airs-ibus"
 	"golang.org/x/crypto/acme/autocert"
-	"golang.org/x/exp/maps"
 
 	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/apppartsctl"
@@ -322,8 +321,11 @@ func provideAppsExtensionPoints(vvmConfig *VVMConfig) map[istructs.AppQName]exte
 	return vvmConfig.VVMAppsBuilder.PrepareAppsExtensionPoints()
 }
 
-func provideVVMApps(appsPackages AppsPackages) VVMApps {
-	return maps.Keys(appsPackages)
+func provideVVMApps(appsPackages AppsPackages) (vvmApps VVMApps) {
+	for appDesc := range appsPackages {
+		vvmApps = append(vvmApps, appDesc.AppQName)
+	}
+	return vvmApps
 }
 
 func provideAppsPackages(vvmConfig *VVMConfig, cfgs istructsmem.AppConfigsType, apis apps.APIs, appsEPs map[istructs.AppQName]extensionpoints.IExtensionPoint) (AppsPackages, error) {
