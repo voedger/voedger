@@ -45,6 +45,7 @@ import (
 	"github.com/voedger/voedger/pkg/vvm/db_cert_cache"
 	"github.com/voedger/voedger/pkg/vvm/metrics"
 	"golang.org/x/crypto/acme/autocert"
+	"golang.org/x/exp/maps"
 	"net/url"
 	"strconv"
 	"strings"
@@ -103,11 +104,12 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 		IAppPartitions:       iAppPartitions,
 	}
 	v2 := provideAppsExtensionPoints(vvmConfig)
-	vvmApps, err := provideVVMApps(vvmConfig, appConfigsType, apIs, v2)
+	appsPackages, err := provideAppsPackages(vvmConfig, appConfigsType, apIs, v2)
 	if err != nil {
 		cleanup()
 		return nil, nil, err
 	}
+	vvmApps := provideVVMApps(appsPackages)
 	iBus := provideIBus(iAppStructsProvider, iProcBus, commandProcessorsChannelGroupIdxType, queryProcessorsChannelGroupIdxType, commandProcessorsCount, vvmApps)
 	quotas := vvmConfig.Quotas
 	in10nBroker, cleanup2 := in10nmem.ProvideEx2(quotas, timeFunc)
@@ -177,6 +179,7 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 		APIs:                apIs,
 		AppsExtensionPoints: v2,
 		MetricsServicePort:  v7,
+		AppsPackages:        appsPackages,
 	}
 	return vvm, func() {
 		cleanup3()
@@ -360,7 +363,11 @@ func provideAppsExtensionPoints(vvmConfig *VVMConfig) map[istructs.AppQName]exte
 	return vvmConfig.VVMAppsBuilder.PrepareAppsExtensionPoints()
 }
 
-func provideVVMApps(vvmConfig *VVMConfig, cfgs istructsmem.AppConfigsType, apis apps.APIs, appsEPs map[istructs.AppQName]extensionpoints.IExtensionPoint) (VVMApps, error) {
+func provideVVMApps(appsPackages AppsPackages) VVMApps {
+	return maps.Keys(appsPackages)
+}
+
+func provideAppsPackages(vvmConfig *VVMConfig, cfgs istructsmem.AppConfigsType, apis apps.APIs, appsEPs map[istructs.AppQName]extensionpoints.IExtensionPoint) (AppsPackages, error) {
 	return vvmConfig.VVMAppsBuilder.Build(cfgs, apis, appsEPs)
 }
 

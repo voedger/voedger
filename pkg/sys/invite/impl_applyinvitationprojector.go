@@ -28,6 +28,7 @@ func provideAsyncProjectorApplyInvitationFactory(timeFunc coreutils.TimeFunc, fe
 	}
 }
 
+// AFTER EXECUTE ON (InitiateInvitationByEMail)
 func applyInvitationProjector(timeFunc coreutils.TimeFunc, federation coreutils.IFederation, appQName istructs.AppQName, tokens itokens.ITokens, smtpCfg smtp.Cfg) func(event istructs.IPLogEvent, state istructs.IState, intents istructs.IIntents) (err error) {
 	return func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
 		skbViewInviteIndex, err := s.KeyBuilder(state.View, qNameViewInviteIndex)

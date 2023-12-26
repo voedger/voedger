@@ -22,6 +22,7 @@ import (
 	"github.com/voedger/voedger/pkg/isecrets"
 	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/parser"
 	"github.com/voedger/voedger/pkg/pipeline"
 	commandprocessor "github.com/voedger/voedger/pkg/processors/command"
 	"github.com/voedger/voedger/pkg/router"
@@ -55,6 +56,7 @@ type ServiceChannelFactory func(pcgt ProcessorChannelType, channelIdx int) iproc
 type AppStorageFactory func(appQName istructs.AppQName, appStorage istorage.IAppStorage) istorage.IAppStorage
 type StorageCacheSizeType int
 type VVMApps []istructs.AppQName
+type AppsPackages map[AppDesc][]parser.PackageFS
 type QueryProcessorsCount int
 type BusTimeout time.Duration
 type FederationURL func() *url.URL
@@ -64,6 +66,10 @@ type ProcessorChannelType int
 type ProcesorChannel struct {
 	iprocbusmem.ChannelGroup
 	ChannelType ProcessorChannelType
+}
+type AppDesc struct {
+	AppQName                istructs.AppQName
+	AppQualifiedPackageName string
 }
 type RouterServices struct {
 	router.IHTTPService
@@ -99,6 +105,7 @@ type VVM struct {
 	apps.APIs
 	AppsExtensionPoints map[istructs.AppQName]extensionpoints.IExtensionPoint
 	MetricsServicePort  func() metrics.MetricsServicePort
+	AppsPackages        AppsPackages
 }
 
 type AppsExtensionPoints map[istructs.AppQName]extensionpoints.IExtensionPoint

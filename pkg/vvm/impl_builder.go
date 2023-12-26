@@ -43,7 +43,8 @@ func buillAppFromPackagesFS(fses []parser.PackageFS, adf appdef.IAppDefBuilder) 
 	return parser.BuildAppDefs(appSchemaAST, adf)
 }
 
-func (hap VVMAppsBuilder) Build(cfgs istructsmem.AppConfigsType, apis apps.APIs, appsEPs map[istructs.AppQName]extensionpoints.IExtensionPoint) (vvmApps VVMApps, err error) {
+func (hap VVMAppsBuilder) Build(cfgs istructsmem.AppConfigsType, apis apps.APIs, appsEPs map[istructs.AppQName]extensionpoints.IExtensionPoint) (appsPackages AppsPackages, err error) {
+	appsPackages = map[istructs.AppQName][]parser.PackageFS{}
 	for appQName, appBuilders := range hap {
 		adf := appdef.New()
 		appEPs := appsEPs[appQName]
@@ -55,10 +56,10 @@ func (hap VVMAppsBuilder) Build(cfgs istructsmem.AppConfigsType, apis apps.APIs,
 		if err := buillAppFromPackagesFS(appPackagesFSes, adf); err != nil {
 			return nil, err
 		}
-		vvmApps = append(vvmApps, appQName)
 		if _, err := adf.Build(); err != nil {
 			return nil, err
 		}
+		appsPackages[appQName] = append(appsPackages[appQName], appPackagesFSes...)
 	}
-	return vvmApps, nil
+	return appsPackages, nil
 }

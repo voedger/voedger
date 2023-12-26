@@ -18,6 +18,7 @@ import (
 	"github.com/google/wire"
 	ibus "github.com/untillpro/airs-ibus"
 	"golang.org/x/crypto/acme/autocert"
+	"golang.org/x/exp/maps"
 
 	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/apppartsctl"
@@ -120,6 +121,7 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 		provideBlobAppStorage,
 		provideBlobberAppStruct,
 		provideVVMApps,
+		provideAppsPackages,
 		provideBlobberClusterAppID,
 		provideServiceChannelFactory,
 		provideBlobStorage,
@@ -320,7 +322,11 @@ func provideAppsExtensionPoints(vvmConfig *VVMConfig) map[istructs.AppQName]exte
 	return vvmConfig.VVMAppsBuilder.PrepareAppsExtensionPoints()
 }
 
-func provideVVMApps(vvmConfig *VVMConfig, cfgs istructsmem.AppConfigsType, apis apps.APIs, appsEPs map[istructs.AppQName]extensionpoints.IExtensionPoint) (VVMApps, error) {
+func provideVVMApps(appsPackages AppsPackages) VVMApps {
+	return maps.Keys(appsPackages)
+}
+
+func provideAppsPackages(vvmConfig *VVMConfig, cfgs istructsmem.AppConfigsType, apis apps.APIs, appsEPs map[istructs.AppQName]extensionpoints.IExtensionPoint) (AppsPackages, error) {
 	return vvmConfig.VVMAppsBuilder.Build(cfgs, apis, appsEPs)
 }
 
