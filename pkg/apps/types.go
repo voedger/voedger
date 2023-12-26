@@ -34,15 +34,11 @@ type APIs struct {
 
 type AppBuilder func(apis APIs, cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) AppPackages
 type SchemasExportedContent map[string]map[string][]byte // packageName->schemaFilePath->content
-type PackageDesc struct {
-	FQN string
-	FS  embed.FS
-}
-type AppDesc struct {
-	AppQName                istructs.AppQName
-	AppQualifiedPackageName string
-}
+// type PackageDesc struct {
+// 	FQN string
+// 	FS  embed.FS
+// }
 type AppPackages struct {
-	AppDesc
+	AppQName istructs.AppQName
 	Packages []parser.PackageFS
 }
