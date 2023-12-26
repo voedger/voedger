@@ -9,6 +9,7 @@ import (
 	"github.com/voedger/voedger/pkg/apps"
 	"github.com/voedger/voedger/pkg/cluster"
 	"github.com/voedger/voedger/pkg/extensionpoints"
+	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/parser"
 	"github.com/voedger/voedger/pkg/registry"
@@ -17,7 +18,7 @@ import (
 )
 
 func Provide(smtpCfg smtp.Cfg) apps.AppBuilder {
-	return func(apis apps.APIs, cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) []parser.PackageFS {
+	return func(apis apps.APIs, cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) apps.AppPackages {
 
 		// sys package
 		sysPackageFS := sys.Provide(cfg, appDefBuilder, smtpCfg, ep, nil, apis.TimeFunc, apis.ITokens, apis.IFederation, apis.IAppStructsProvider, apis.IAppTokensFactory,
@@ -30,7 +31,10 @@ func Provide(smtpCfg smtp.Cfg) apps.AppBuilder {
 			QualifiedPackageName: RegistryAppFQN,
 			FS:                   registryAppSchemaFS,
 		}
-		return []parser.PackageFS{sysPackageFS, registryPackageFS, registryAppPackageFS}
+		return apps.AppPackages{
+			AppQName: istructs.AppQName_sys_registry,
+			Packages: []parser.PackageFS{sysPackageFS, registryPackageFS, registryAppPackageFS},
+		}
 	}
 }
 

@@ -53,13 +53,16 @@ func (hap VVMAppsBuilder) Build(cfgs istructsmem.AppConfigsType, apis apps.APIs,
 			appPackages := appBuilder(apis, cfg, adf, appEPs)
 			appPackagesFS = append(appPackagesFS, appPackages.Packages...)
 		}
-		if err := buillAppFromPackagesFS(appPackagesFSes, adf); err != nil {
+		if err := buillAppFromPackagesFS(appPackagesFS, adf); err != nil {
 			return nil, err
 		}
 		if _, err := adf.Build(); err != nil {
 			return nil, err
 		}
-		appsPackages[appDesc] = append(appsPackages[appDesc], appPackagesFSes...)
+		appsPackages = append(appsPackages, apps.AppPackages{
+			AppQName: appQName,
+			Packages: appPackagesFS,
+		})
 	}
 	return appsPackages, nil
 }

@@ -39,7 +39,7 @@ func (e *greeterRR) AsString(name string) string {
 func TestBasicUsage(t *testing.T) {
 	require := require.New(t)
 	cfg := it.NewOwnVITConfig(
-		it.WithApp(istructs.AppQName_test1_app2, func(apis apps.APIs, cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) []parser.PackageFS {
+		it.WithApp(istructs.AppQName_test1_app2, func(apis apps.APIs, cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) apps.AppPackages {
 			qNameCmdGreeter := appdef.NewQName(appdef.SysPackage, "Greeter")
 			appDefBuilder.AddQuery(qNameCmdGreeter).
 				SetParam(appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "GreeterParams")).
@@ -63,7 +63,10 @@ func TestBasicUsage(t *testing.T) {
 				QualifiedPackageName: "github.com/voedger/voedger/pkg/vit/app2pkg",
 				FS:                   it.SchemaTestApp2FS,
 			}
-			return []parser.PackageFS{sysPackageFS, appPackageFS}
+			return apps.AppPackages{
+				AppQName: istructs.AppQName_test1_app2,
+				Packages: []parser.PackageFS{sysPackageFS, appPackageFS},
+			}
 		}),
 	)
 	vit := it.NewVIT(t, &cfg)
