@@ -43,8 +43,7 @@ const (
 
 	embedScriptsDir = "scripts"
 
-	sshSockFile     = "/home/ubuntu/ssh-agent-sock"
-	sshAgentPidFile = "/home/ubuntu/ssh-agent-pid"
+	dryRunDir = ".dry-run"
 )
 
 const (

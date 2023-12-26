@@ -11,7 +11,9 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/fatih/color"
 	"github.com/stretchr/testify/require"
+	"github.com/untillpro/goutils/logger"
 )
 
 var testVersion string = "0.0.1-dummy"
@@ -190,11 +192,31 @@ func TestClusterJSON(t *testing.T) {
 func TestCtoolCommands(t *testing.T) {
 	require := require.New(t)
 
+	red = color.New(color.FgRed).SprintFunc()
+	green = color.New(color.FgGreen).SprintFunc()
+	logger.PrintLine = printLogLine
+	prepareScripts()
+	defer func() {
+		err := deleteScriptsTempDir()
+		if err != nil {
+			loggerError(err.Error())
+		}
+	}()
+
+	version = "0.0.1"
 	deleteDryRunDir()
 	err := deleteClusterJson()
 	require.NoError(err, err)
 
 	defer deleteDryRunDir()
+
+	// команда version выполняется без ошибки
+	err = execRootCmd([]string{"./ctool", "version", "--dry-run"}, version)
+	require.NoError(err, err)
+
+	// the command validate return the error because the configuration of the cluster has not yet been created
+	err = execRootCmd([]string{"./ctool", "validate", "--dry-run"}, version)
+	require.Error(err, err)
 
 	// execute the init command
 	err = execRootCmd([]string{"./ctool", "init", "SE", "10.0.0.21", "10.0.0.22", "10.0.0.23", "10.0.0.24", "10.0.0.25", "--dry-run", "--ssh-key", "key"}, version)
@@ -210,6 +232,24 @@ func TestCtoolCommands(t *testing.T) {
 
 	// replace node to the address from the list of Replacedaddresses should give an error
 	err = execRootCmd([]string{"./ctool", "replace", "10.0.0.28", "10.0.0.23", "--dry-run", "--ssh-key", "key"}, version)
+	require.Error(err, err)
+
+	// upgrade without changing the ctool version should give an error
+	err = execRootCmd([]string{"./ctool", "upgrade", "--dry-run", "--ssh-key", "key"}, version)
+	require.Error(err, err)
+
+	// increase the ctool version.Upgrade is performed without error
+	version = "0.0.2"
+	err = execRootCmd([]string{"./ctool", "upgrade", "--dry-run", "--ssh-key", "key"}, version)
+	require.NoError(err, err)
+
+	// after a successful upgrade, command validate should work without errors
+	err = execRootCmd([]string{"./ctool", "validate", "--dry-run"}, version)
+	require.NoError(err, err)
+
+	// понижаем версию ctool. Команда upgrade должна выдать ошибку
+	version = "0.0.1"
+	err = execRootCmd([]string{"./ctool", "upgrade", "--dry-run", "--ssh-key", "key"}, version)
 	require.Error(err, err)
 }
 
@@ -267,7 +307,6 @@ func deleteClusterJson() error {
 }
 
 func deleteDryRunDir() error {
-	dryRunDir := "dry-run"
 	if _, err := os.Stat(dryRunDir); os.IsNotExist(err) {
 		return nil
 	}

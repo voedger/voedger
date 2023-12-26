@@ -11,7 +11,6 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
-	"github.com/untillpro/goutils/logger"
 )
 
 var (
@@ -47,7 +46,7 @@ func newInitCmd() *cobra.Command {
 	}
 	initCmd.PersistentFlags().StringVar(&sshKey, "ssh-key", "", "Path to SSH key")
 	if err := initCmd.MarkPersistentFlagRequired("ssh-key"); err != nil {
-		logger.Error(err.Error())
+		loggerError(err.Error())
 		return nil
 	}
 
@@ -101,7 +100,7 @@ func initCE(cmd *cobra.Command, args []string) error {
 	defer func(cluster *clusterType) {
 		err = cluster.saveToJSON()
 		if err != nil {
-			logger.Error(err.Error())
+			loggerError(err.Error())
 		}
 	}(cluster)
 
@@ -111,7 +110,7 @@ func initCE(cmd *cobra.Command, args []string) error {
 
 	c := newCmd(ckInit, "CE "+strings.Join(args, " "))
 	if err = cluster.applyCmd(c); err != nil {
-		logger.Error(err.Error())
+		loggerError(err.Error())
 		return err
 	}
 
@@ -122,17 +121,17 @@ func initCE(cmd *cobra.Command, args []string) error {
 
 	err = cluster.readFromInitArgs(cmd, args)
 	if err != nil {
-		logger.Error(err.Error())
+		loggerError(err.Error())
 		return err
 	}
 
 	err = cluster.validate()
 	if err != nil {
-		logger.Error(err.Error())
+		loggerError(err.Error())
 		return err
 	}
 
-	logger.Info("Cluster configuration is ok")
+	loggerInfo("Cluster configuration is ok")
 
 	return err
 }
@@ -149,14 +148,14 @@ func initSE(cmd *cobra.Command, args []string) error {
 	c := newCmd(ckInit, "SE "+strings.Join(args, " "))
 	c.SkipStacks = skipStacks
 	if err = cluster.applyCmd(c); err != nil {
-		logger.Error(err.Error())
+		loggerError(err.Error())
 		return err
 	}
 
 	defer func(cluster *clusterType) {
 		err = cluster.saveToJSON()
 		if err != nil {
-			logger.Error(err.Error())
+			loggerError(err.Error())
 		}
 	}(cluster)
 	err = mkCommandDirAndLogFile(cmd, cluster)
@@ -173,7 +172,7 @@ func initSE(cmd *cobra.Command, args []string) error {
 	if err == nil {
 		println("cluster configuration is ok")
 		if err = cluster.Cmd.apply(cluster); err != nil {
-			logger.Error(err)
+			loggerError(err)
 			return err
 		}
 	}
