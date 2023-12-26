@@ -137,6 +137,29 @@ stateDiagram-v2
     - State not in (None, Cancelled, Left, Invited)
     - invalid argument EmailTemplate
 - //TODO: EMail => Login must be implemented, currently it is supposed that EMail == Login
+```mermaid
+    sequenceDiagram
+
+    actor Inviter
+    participant workspace as InvitingWorkspace
+    actor user as Invitee
+
+    Inviter ->> workspace: c.sys.InitiateInvitationByEMail()
+    activate workspace
+        workspace ->> workspace: Create/Update cdoc.Invite, State=ToBeInvited, Login=args.Email, Email, Roles, ExpireDatetime
+        note over workspace: Update if exists cdoc.Invite where Login == args.EMail
+        workspace -->> Inviter: OK
+    deactivate workspace
+
+    Inviter ->> Inviter: Wait for State = Invited
+
+    note over workspace: ap.sys.ApplyInvitation()
+    activate workspace
+        workspace ->> workspace: Prepare Email
+        workspace -->> user: Send invitation Email
+        workspace ->> workspace: Update cdoc.Invite State=Invited
+    deactivate workspace
+```
 
 ## cdoc.sys.Invite
 
