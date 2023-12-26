@@ -56,6 +56,7 @@ func (m *commandProcessorMetrics) increase(metricName string, valueDelta float64
 
 type cmdWorkpiece struct {
 	appParts            appparts.IAppPartitions
+	appPart             appparts.IAppPartition
 	appStructs          istructs.IAppStructs
 	requestData         coreutils.MapObject
 	cmdMes              ICommandMessage

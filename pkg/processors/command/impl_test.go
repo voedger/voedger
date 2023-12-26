@@ -651,7 +651,7 @@ func setUp(t *testing.T, prepareAppDef func(appDef appdef.IAppDefBuilder), cfgFu
 	require.NoError(t, err)
 	defer appPartsClean()
 
-	appParts.DeployApp(istructs.AppQName_untill_airs_bp, appDef, [cluster.ProcessorKind_Count]int{100, 100, 100}) // ?? где взять размеры пулов?
+	appParts.DeployApp(istructs.AppQName_untill_airs_bp, appDef, [cluster.ProcessorKind_Count]int{100, 100, 100}) // команды в тестах идут последовательно, можно указать {1, 0, 0}
 	appParts.DeployAppPartitions(istructs.AppQName_untill_airs_bp, []istructs.PartitionID{1})                     // ?? где взять номера разделов?
 
 	// command processor работает через ibus.SendResponse -> нам нужна реализация ibus

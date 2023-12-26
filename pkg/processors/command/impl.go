@@ -261,14 +261,13 @@ func checkWSActive(_ context.Context, work interface{}) (err error) {
 }
 
 func getAppStructs(_ context.Context, work interface{}) (err error) {
-	// ?? Как проконтролировать, что getAppStructs вызывается именно в момент обработки команды, а не заранее ??
 	cmd := work.(*cmdWorkpiece)
 
-	ap, err := cmd.appParts.Borrow(cmd.cmdMes.AppQName(), cmd.cmdMes.PartitionID(), cluster.ProcessorKind_Command)
+	cmd.appPart, err = cmd.appParts.Borrow(cmd.cmdMes.AppQName(), cmd.cmdMes.PartitionID(), cluster.ProcessorKind_Command)
 	if err != nil {
 		return err
 	}
-	cmd.appStructs = ap.AppStructs() // ?? Куда вписать Release() ??
+	cmd.appStructs = cmd.appPart.AppStructs() // cmd.appPart.Release() will be called from opSendResponse.DoSync
 
 	return nil
 }
@@ -670,6 +669,15 @@ type opSendResponse struct {
 
 func (sr *opSendResponse) DoSync(_ context.Context, work interface{}) (err error) {
 	cmd := work.(*cmdWorkpiece)
+
+	defer func() {
+		// release application partition after sending response
+		if ap := cmd.appPart; ap != nil {
+			cmd.appPart = nil
+			ap.Release()
+		}
+	}()
+
 	if cmd.err != nil {
 		cmd.metrics.increase(ErrorsTotal, 1.0)
 		//if error occurred somewhere in syncProjectors we have to measure elapsed time
