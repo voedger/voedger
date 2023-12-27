@@ -23,3 +23,5 @@ type AppDeploymentDescriptor struct {
 
 	EnginePoolSize [ProcessorKind_Count]int
 }
+
+func PoolSize(c, q, p int) [ProcessorKind_Count]int { return [ProcessorKind_Count]int{c, q, p} }

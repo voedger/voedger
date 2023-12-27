@@ -9,6 +9,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/voedger/voedger/pkg/appparts"
+	"github.com/voedger/voedger/pkg/cluster"
 	"github.com/voedger/voedger/pkg/iauthnzimpl"
 	"github.com/voedger/voedger/pkg/iprocbus"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -32,9 +34,20 @@ func TestWrongTypes(t *testing.T) {
 	authn := iauthnzimpl.NewDefaultAuthenticator(iauthnzimpl.TestSubjectRolesGetter)
 	authz := iauthnzimpl.NewDefaultAuthorizer()
 
-	cfgs, appStructsProvider, appTokens := getTestCfg(require, nil)
-	queryProcessor := ProvideServiceFactory()(serviceChannel, resultSenderClosableFactory, appStructsProvider, 3, imetrics.Provide(),
-		"vvm", authn, authz, cfgs)
+	cfgs, appDef, appStructsProvider, appTokens := getTestCfg(require, nil)
+
+	appParts, cleanAppParts, err := appparts.New(appStructsProvider)
+	require.NoError(err)
+	defer cleanAppParts()
+	appParts.DeployApp(appName, appDef, cluster.PoolSize(100, 100, 100)) // queries limits is «3» (in this test), so you can use {0, 3, 0}
+	appParts.DeployAppPartitions(appName, []istructs.PartitionID{partID})
+
+	queryProcessor := ProvideServiceFactory()(
+		serviceChannel,
+		resultSenderClosableFactory,
+		appParts,
+		3, // maxPrepareQueries
+		imetrics.Provide(), "vvm", authn, authz, cfgs)
 	ctx, cancel := context.WithCancel(context.Background())
 	go func() {
 		queryProcessor.Run(ctx)
@@ -262,13 +275,12 @@ func TestWrongTypes(t *testing.T) {
 			err:  "elements: path 'article' must be unique",
 		},
 	}
-	as, err := appStructsProvider.AppStructs(istructs.AppQName_test1_app1)
-	require.NoError(err)
-	query := as.AppDef().Query(qNameFunction)
+
+	query := appDef.Query(qNameFunction) // nnv: Suspicious code!! Should be borrowed AppPartition.AppDef() instead of appDef?
 	sysToken := getSystemToken(appTokens)
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			qm := NewQueryMessage(context.Background(), istructs.AppQName_test1_app1, 1, nil, []byte(test.body), query, "", sysToken)
+			qm := NewQueryMessage(context.Background(), appName, partID, 1, nil, []byte(test.body), query, "", sysToken)
 			serviceChannel <- qm
 			err := <-errs
 			require.Contains(err.Error(), test.err)

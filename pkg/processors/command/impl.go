@@ -267,7 +267,8 @@ func getAppStructs(_ context.Context, work interface{}) (err error) {
 	if err != nil {
 		return err
 	}
-	cmd.appStructs = cmd.appPart.AppStructs() // cmd.appPart.Release() will be called from opSendResponse.DoSync
+	// cmd.appPart.Release() will be called from opSendResponse.DoSync
+	cmd.appStructs = cmd.appPart.AppStructs()
 
 	return nil
 }

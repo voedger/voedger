@@ -18,6 +18,8 @@ import (
 	"time"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appparts"
+	"github.com/voedger/voedger/pkg/cluster"
 	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/iprocbus"
 	"github.com/voedger/voedger/pkg/isecrets"
@@ -87,7 +89,7 @@ func implRowsProcessorFactory(ctx context.Context, appDef appdef.IAppDef, state 
 }
 
 func implServiceFactory(serviceChannel iprocbus.ServiceChannel, resultSenderClosableFactory ResultSenderClosableFactory,
-	appStructsProvider istructs.IAppStructsProvider, maxPrepareQueries int, metrics imetrics.IMetrics, vvm string,
+	appParts appparts.IAppPartitions, maxPrepareQueries int, metrics imetrics.IMetrics, vvm string,
 	authn iauthnz.IAuthenticator, authz iauthnz.IAuthorizer, appCfgs istructsmem.AppConfigsType) pipeline.IService {
 	secretReader := isecretsimpl.ProvideSecretReader()
 	return pipeline.NewService(func(ctx context.Context) {
@@ -105,7 +107,7 @@ func implServiceFactory(serviceChannel iprocbus.ServiceChannel, resultSenderClos
 				qpm.Increase(queriesTotal, 1.0)
 				rs := resultSenderClosableFactory(msg.RequestCtx(), msg.Sender())
 				rs = &resultSenderClosableOnlyOnce{IResultSenderClosable: rs}
-				qwork := newQueryWork(msg, rs, appStructsProvider, maxPrepareQueries, qpm, secretReader)
+				qwork := newQueryWork(msg, rs, appParts, maxPrepareQueries, qpm, secretReader)
 				if p == nil {
 					p = newQueryProcessorPipeline(ctx, authn, authz, appCfgs)
 				}
@@ -130,7 +132,11 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 	appCfgs istructsmem.AppConfigsType) pipeline.ISyncPipeline {
 	ops := []*pipeline.WiredOperator{
 		operator("get app structs", func(ctx context.Context, qw *queryWork) (err error) {
-			qw.appStructs, err = qw.appStructsProvider.AppStructs(qw.msg.AppQName())
+			qw.appPart, err = qw.appParts.Borrow(qw.msg.AppQName(), qw.msg.Partition(), cluster.ProcessorKind_Query)
+			if err == nil {
+				qw.appStructs = qw.appPart.AppStructs()
+				// qw.appPart.Release() will be called from defer in "exec function" operator
+			}
 			return coreutils.WrapSysError(err, http.StatusBadRequest)
 		}),
 		operator("check function call rate", func(ctx context.Context, qw *queryWork) (err error) {
@@ -275,6 +281,14 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 			return nil
 		}),
 		operator("exec function", func(ctx context.Context, qw *queryWork) (err error) {
+			defer func() {
+				// release application partition after sending response
+				if ap := qw.appPart; ap != nil {
+					qw.appPart = nil
+					ap.Release()
+				}
+			}()
+
 			now := time.Now()
 			defer func() {
 				if r := recover(); r != nil {
@@ -311,13 +325,14 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 
 type queryWork struct {
 	// input
-	msg                IQueryMessage
-	rs                 IResultSenderClosable
-	appStructsProvider istructs.IAppStructsProvider
+	msg      IQueryMessage
+	rs       IResultSenderClosable
+	appParts appparts.IAppPartitions
 	// work
 	requestData       map[string]interface{}
 	state             istructs.IState
 	queryParams       IQueryParams
+	appPart           appparts.IAppPartition
 	appStructs        istructs.IAppStructs
 	resultType        appdef.IType
 	execQueryArgs     istructs.ExecQueryArgs
@@ -331,16 +346,16 @@ type queryWork struct {
 	queryFunc         istructs.IQueryFunction
 }
 
-func newQueryWork(msg IQueryMessage, rs IResultSenderClosable, appStructsProvider istructs.IAppStructsProvider,
+func newQueryWork(msg IQueryMessage, rs IResultSenderClosable, appParts appparts.IAppPartitions,
 	maxPrepareQueries int, metrics *queryProcessorMetrics, secretReader isecrets.ISecretReader) queryWork {
 	return queryWork{
-		msg:                msg,
-		rs:                 rs,
-		appStructsProvider: appStructsProvider,
-		requestData:        make(map[string]interface{}),
-		maxPrepareQueries:  maxPrepareQueries,
-		metrics:            metrics,
-		secretReader:       secretReader,
+		msg:               msg,
+		rs:                rs,
+		appParts:          appParts,
+		requestData:       make(map[string]interface{}),
+		maxPrepareQueries: maxPrepareQueries,
+		metrics:           metrics,
+		secretReader:      secretReader,
 	}
 }
 
@@ -389,11 +404,12 @@ func (m queryMessage) Body() []byte {
 	return []byte("{}")
 }
 
-func NewQueryMessage(requestCtx context.Context, appQName istructs.AppQName, wsid istructs.WSID, sender interface{}, body []byte,
+func NewQueryMessage(requestCtx context.Context, appQName istructs.AppQName, partID istructs.PartitionID, wsid istructs.WSID, sender interface{}, body []byte,
 	query appdef.IQuery, host string, token string) IQueryMessage {
 	return queryMessage{
 		appQName:   appQName,
 		wsid:       wsid,
+		partition:  partID,
 		sender:     sender,
 		body:       body,
 		requestCtx: requestCtx,

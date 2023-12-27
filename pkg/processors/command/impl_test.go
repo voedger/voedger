@@ -657,7 +657,7 @@ func setUp(t *testing.T, prepareAppDef func(appDef appdef.IAppDefBuilder), cfgFu
 	require.NoError(t, err)
 	defer appPartsClean()
 
-	appParts.DeployApp(appName, appDef, [cluster.ProcessorKind_Count]int{100, 100, 100}) // The commands in the tests go sequentially, you can specify {1, 0, 0}
+	appParts.DeployApp(appName, appDef, cluster.PoolSize(100, 100, 100)) // The commands in the tests go sequentially, you can specify {1, 0, 0}
 	appParts.DeployAppPartitions(appName, []istructs.PartitionID{partID})
 
 	// command processor работает через ibus.SendResponse -> нам нужна реализация ibus
