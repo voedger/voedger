@@ -83,7 +83,7 @@ func deliverToProcessors(request ibus.Request, requestCtx context.Context, appQN
 	cpAmount coreutils.CommandProcessorsCount) {
 	switch request.Resource[:1] {
 	case "q":
-		iqm := queryprocessor.NewQueryMessage(requestCtx, appQName, istructs.WSID(request.WSID), sender, request.Body, funcType.(appdef.IQuery), request.Host, token)
+		iqm := queryprocessor.NewQueryMessage(requestCtx, appQName, istructs.PartitionID(request.PartitionNumber), istructs.WSID(request.WSID), sender, request.Body, funcType.(appdef.IQuery), request.Host, token)
 		if !procbus.Submit(int(qpcgIdx), 0, iqm) {
 			coreutils.ReplyErrf(bus, sender, http.StatusServiceUnavailable, "no query processors available")
 		}

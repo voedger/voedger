@@ -103,6 +103,9 @@ func IBucketsFromIAppStructs(as istructs.IAppStructs) irates.IBuckets {
 	return as.(interface{ Buckets() irates.IBuckets }).Buckets()
 }
 
+// TODO: @nnv: eliminate the parameter «t appdef.IType».
+//   - To obtain object name builder should use b.String() interface
+//   - If some complex field (with value type is []interface{}) has ChildBuilder with NullQName, then return error
 func FillObjectFromJSON(data map[string]interface{}, t appdef.IType, b istructs.IObjectBuilder) error {
 	for fieldName, fieldValue := range data {
 		switch fv := fieldValue.(type) {
@@ -137,6 +140,10 @@ func FillObjectFromJSON(data map[string]interface{}, t appdef.IType, b istructs.
 	return nil
 }
 
+// TODO: @nnv: deprecate this function!
+//
+//	Add new IAppStructs.ObjectBuilder(appdef.QName).
+//	AppConfigType should be used internally
 func NewIObjectBuilder(cfg *AppConfigType, qName appdef.QName) istructs.IObjectBuilder {
 	return newObject(cfg, qName, nil)
 }
