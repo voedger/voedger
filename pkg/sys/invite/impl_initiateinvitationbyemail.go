@@ -27,6 +27,12 @@ func execCmdInitiateInvitationByEMail(timeFunc coreutils.TimeFunc) func(args ist
 			return coreutils.NewHTTPError(http.StatusBadRequest, errInviteTemplateInvalid)
 		}
 
+		login := args.ArgumentObject.AsString(field_Email)
+		subjectExists, actualLogin, err := SubjectExistByBothLogins(login, args.State) // for backward compatibility
+		if err != nil {
+			return
+		}
+
 		skbViewInviteIndex, err := args.State.KeyBuilder(state.View, qNameViewInviteIndex)
 		if err != nil {
 			return
@@ -37,15 +43,6 @@ func execCmdInitiateInvitationByEMail(timeFunc coreutils.TimeFunc) func(args ist
 		if err != nil {
 			return
 		}
-		skbPrincipal, err := args.State.KeyBuilder(state.RequestSubject, appdef.NullQName)
-		if err != nil {
-			return
-		}
-		svPrincipal, err := args.State.MustExist(skbPrincipal)
-		if err != nil {
-			return
-		}
-		actualLogin := svPrincipal.AsString(state.Field_Name)
 
 		if ok {
 			skbCDocInvite, err := args.State.KeyBuilder(state.Record, qNameCDocInvite)
@@ -57,9 +54,13 @@ func execCmdInitiateInvitationByEMail(timeFunc coreutils.TimeFunc) func(args ist
 			if err != nil {
 				return err
 			}
+			if subjectExists && svCDocInvite.AsInt32(field_State) > State_Invited {
+				// If Subject exists by token.Login and state is not ToBeInvited and not Invited -> subject already exists error
+				return coreutils.NewHTTPError(http.StatusBadRequest, ErrSubjectAlreadyExists)
+			}
 
 			if !isValidInviteState(svCDocInvite.AsInt32(field_State), qNameCmdInitiateInvitationByEMail) {
-				return coreutils.NewHTTPError(http.StatusBadRequest, errInviteStateInvalid)
+				return coreutils.NewHTTPError(http.StatusBadRequest, ErrInviteStateInvalid)
 			}
 
 			svbCDocInvite, err := args.Intents.UpdateValue(skbCDocInvite, svCDocInvite)

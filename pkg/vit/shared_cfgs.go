@@ -27,7 +27,6 @@ import (
 const (
 	TestEmail       = "123@123.com"
 	TestEmail2      = "124@124.com"
-	TestEmail3      = "125@125.com"
 	TestServicePort = 10000
 	app1PkgName     = "app1pkg"
 )
@@ -54,7 +53,6 @@ var (
 			WithUserLogin("login", "pwd"),
 			WithUserLogin(TestEmail, "1"),
 			WithUserLogin(TestEmail2, "1"),
-			WithUserLogin(TestEmail3, "1"),
 			WithChildWorkspace(QNameApp1_TestWSKind, "test_ws", "test_template", "", "login", map[string]interface{}{"IntFld": 42}),
 		),
 		WithApp(istructs.AppQName_test1_app2, ProvideApp2, WithUserLogin("login", "1")),
@@ -77,7 +75,7 @@ var (
 	MockCmdExec func(input string) error
 )
 
-func ProvideApp2(apis apps.APIs, cfg *istructsmem.AppConfigType, adf appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) []parser.PackageFS {
+func ProvideApp2(apis apps.APIs, cfg *istructsmem.AppConfigType, adf appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) apps.AppPackages {
 	buildInfo, ok := debug.ReadBuildInfo()
 	if !ok {
 		panic("no build info")
@@ -88,10 +86,13 @@ func ProvideApp2(apis apps.APIs, cfg *istructsmem.AppConfigType, adf appdef.IApp
 		QualifiedPackageName: "github.com/voedger/voedger/pkg/vit/app2pkg",
 		FS:                   SchemaTestApp2FS,
 	}
-	return []parser.PackageFS{sysPackageFS, app2PackageFS}
+	return apps.AppPackages{
+		AppQName: istructs.AppQName_test1_app2,
+		Packages: []parser.PackageFS{sysPackageFS, app2PackageFS},
+	}
 }
 
-func ProvideApp1(apis apps.APIs, cfg *istructsmem.AppConfigType, adf appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) []parser.PackageFS {
+func ProvideApp1(apis apps.APIs, cfg *istructsmem.AppConfigType, adf appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) apps.AppPackages {
 	// sys package
 	buildInfo, ok := debug.ReadBuildInfo()
 	if !ok {
@@ -217,5 +218,8 @@ func ProvideApp1(apis apps.APIs, cfg *istructsmem.AppConfigType, adf appdef.IApp
 		QualifiedPackageName: "github.com/voedger/voedger/pkg/vit/app1pkg",
 		FS:                   SchemaTestApp1FS,
 	}
-	return []parser.PackageFS{sysPackageFS, app1PackageFS}
+	return apps.AppPackages{
+		AppQName: istructs.AppQName_test1_app1,
+		Packages: []parser.PackageFS{sysPackageFS, app1PackageFS},
+	}
 }

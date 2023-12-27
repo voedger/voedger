@@ -120,6 +120,7 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 		provideBlobAppStorage,
 		provideBlobberAppStruct,
 		provideVVMApps,
+		provideAppsPackages,
 		provideBlobberClusterAppID,
 		provideServiceChannelFactory,
 		provideBlobStorage,
@@ -320,7 +321,14 @@ func provideAppsExtensionPoints(vvmConfig *VVMConfig) map[istructs.AppQName]exte
 	return vvmConfig.VVMAppsBuilder.PrepareAppsExtensionPoints()
 }
 
-func provideVVMApps(vvmConfig *VVMConfig, cfgs istructsmem.AppConfigsType, apis apps.APIs, appsEPs map[istructs.AppQName]extensionpoints.IExtensionPoint) (VVMApps, error) {
+func provideVVMApps(appsPackages []apps.AppPackages) (vvmApps VVMApps) {
+	for _, appPackage := range appsPackages {
+		vvmApps = append(vvmApps, appPackage.AppQName)
+	}
+	return vvmApps
+}
+
+func provideAppsPackages(vvmConfig *VVMConfig, cfgs istructsmem.AppConfigsType, apis apps.APIs, appsEPs map[istructs.AppQName]extensionpoints.IExtensionPoint) ([]apps.AppPackages, error) {
 	return vvmConfig.VVMAppsBuilder.Build(cfgs, apis, appsEPs)
 }
 

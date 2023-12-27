@@ -6,8 +6,6 @@
 package apps
 
 import (
-	"embed"
-
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/extensionpoints"
@@ -32,9 +30,13 @@ type APIs struct {
 	appparts.IAppPartitions
 }
 
-type AppBuilder func(apis APIs, cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) []parser.PackageFS
+type AppBuilder func(apis APIs, cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) AppPackages
 type SchemasExportedContent map[string]map[string][]byte // packageName->schemaFilePath->content
-type PackageDesc struct {
-	FQN string
-	FS  embed.FS
+//	type PackageDesc struct {
+//		FQN string
+//		FS  embed.FS
+//	}
+type AppPackages struct {
+	AppQName istructs.AppQName
+	Packages []parser.PackageFS
 }

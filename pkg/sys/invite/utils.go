@@ -6,6 +6,7 @@
 package invite
 
 import (
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/state"
 	coreutils "github.com/voedger/voedger/pkg/utils"
@@ -84,7 +85,32 @@ func GetSubjectIdxViewKeyBuilder(login string, s istructs.IState) (istructs.ISta
 	return skbViewSubjectsIdx, nil
 }
 
-func SubjectExistByLogin(login string, state istructs.IState) (ok bool, _ error) {
+// checks cdoc.sys.SubjectIdx existence by login as cdoc.sys.Invite.EMail and as token.Login
+func SubjectExistByBothLogins(login string, st istructs.IState) (ok bool, actualLogin string, _ error) {
+	subjectExists, err := SubjectExistsByLogin(login, st) // for backward compatibility
+	if err != nil {
+		return false, "", err
+	}
+	skbPrincipal, err := st.KeyBuilder(state.RequestSubject, appdef.NullQName)
+	if err != nil {
+		return false, "", err
+	}
+	svPrincipal, err := st.MustExist(skbPrincipal)
+	if err != nil {
+		return
+	}
+	actualLogin = svPrincipal.AsString(state.Field_Name)
+	if !subjectExists {
+		subjectExists, err = SubjectExistsByLogin(actualLogin, st)
+		if err != nil {
+			return false, "", err
+		}
+	}
+	return subjectExists, actualLogin, nil
+
+}
+
+func SubjectExistsByLogin(login string, state istructs.IState) (ok bool, _ error) {
 	skbViewSubjectsIdx, err := GetSubjectIdxViewKeyBuilder(login, state)
 	if err == nil {
 		_, ok, err = state.CanExist(skbViewSubjectsIdx)

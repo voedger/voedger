@@ -28,12 +28,7 @@ func TestBasicUsage_InitiateDeactivateWorkspace(t *testing.T) {
 	wsName := vit.NextName()
 
 	prn1 := vit.GetPrincipal(istructs.AppQName_test1_app1, it.TestEmail)
-	wsp := it.WSParams{
-		Name:         wsName,
-		Kind:         it.QNameApp1_TestWSKind,
-		InitDataJSON: `{"IntFld":42}`,
-		ClusterID:    istructs.MainClusterID,
-	}
+	wsp := it.DummyWSParams(wsName)
 
 	ws := vit.CreateWorkspace(wsp, prn1)
 
@@ -76,12 +71,7 @@ func TestDeactivateJoinedWorkspace(t *testing.T) {
 	wsName1 := vit.NextName()
 	prn1 := vit.GetPrincipal(istructs.AppQName_test1_app1, it.TestEmail)
 	prn2 := vit.GetPrincipal(istructs.AppQName_test1_app1, it.TestEmail2)
-	wsp := it.WSParams{
-		Name:         wsName1,
-		Kind:         it.QNameApp1_TestWSKind,
-		InitDataJSON: `{"IntFld":42}`,
-		ClusterID:    istructs.MainClusterID,
-	}
+	wsp := it.DummyWSParams(wsName1)
 
 	newWS := vit.CreateWorkspace(wsp, prn1)
 
@@ -97,7 +87,8 @@ func TestDeactivateJoinedWorkspace(t *testing.T) {
 	email := vit.CaptureEmail()
 	verificationCode := email.Body[:6]
 	WaitForInviteState(vit, newWS, invite.State_Invited, inviteID)
-	InitiateJoinWorkspace(vit, newWS, inviteID, it.TestEmail2, verificationCode)
+	testEmail2Prn := vit.GetPrincipal(istructs.AppQName_test1_app1, it.TestEmail2)
+	InitiateJoinWorkspace(vit, newWS, inviteID, testEmail2Prn, verificationCode)
 	WaitForInviteState(vit, newWS, invite.State_Joined, inviteID)
 
 	// check prn2 could work in ws1
@@ -109,7 +100,7 @@ func TestDeactivateJoinedWorkspace(t *testing.T) {
 	waitForDeactivate(vit, newWS)
 
 	// check cdoc.sys.JoinedWorkspace.IsActive == false
-	joinedWorkspace := FindCDocJoinedWorkspaceByInvitingWorkspaceWSIDAndLogin(vit, newWS.WSID, it.TestEmail2)
+	joinedWorkspace := FindCDocJoinedWorkspaceByInvitingWorkspaceWSIDAndLogin(vit, newWS.WSID, testEmail2Prn)
 	require.False(joinedWorkspace.isActive)
 
 	// check appWS/cdoc.sys.WorkspaceID.IsActive == false

@@ -40,7 +40,7 @@ func execCmdInitiateUpdateInviteRoles(timeFunc coreutils.TimeFunc) func(args ist
 		}
 
 		if !isValidInviteState(svCDocInvite.AsInt32(field_State), qNameCmdInitiateUpdateInviteRoles) {
-			return coreutils.NewHTTPError(http.StatusBadRequest, errInviteStateInvalid)
+			return coreutils.NewHTTPError(http.StatusBadRequest, ErrInviteStateInvalid)
 		}
 
 		svbCDocInvite, err := args.Intents.UpdateValue(skbCDocInvite, svCDocInvite)
