@@ -22,7 +22,7 @@
 
 - AuthZ: role.sys.WorkspaceOwner
 - Params: none
-- `cdoc.sys.WorkspaceID` existance in appWS is checked by `view.sys.WorkspaceIDIdx` but there was no this view before. So need to check the existance of the link to `cdoc.sys.WorkspaceID` before checking `cdoc.sys.WorkspaceID.IsActive`
+- `cdoc.sys.WorkspaceID` existence in appWS is checked by `view.sys.WorkspaceIDIdx` but there was no this view before. So need to check the existence of the link to `cdoc.sys.WorkspaceID` before checking `cdoc.sys.WorkspaceID.IsActive`
 
 ```mermaid
     sequenceDiagram

@@ -85,7 +85,7 @@ func GetSubjectIdxViewKeyBuilder(login string, s istructs.IState) (istructs.ISta
 	return skbViewSubjectsIdx, nil
 }
 
-// checks cdoc.sys.SubjectIdx existance by login as cdoc.sys.Invite.EMail and as token.Login
+// checks cdoc.sys.SubjectIdx existence by login as cdoc.sys.Invite.EMail and as token.Login
 func SubjectExistByBothLogins(login string, st istructs.IState) (ok bool, actualLogin string, _ error) {
 	subjectExists, err := SubjectExistsByLogin(login, st) // for backward compatibility
 	if err != nil {

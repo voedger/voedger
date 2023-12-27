@@ -158,7 +158,7 @@ func TestInvite_BasicUsage(t *testing.T) {
 	require.Equal(float64(vit.Now().UnixMilli()), cDocInvite[8])
 
 	// overwrite roles is possible when the invite is not accepted yet
-	verificationCodeEmail = testOverwriteRoles(t, vit, ws, email1, inviteID, login1Prn)
+	verificationCodeEmail = testOverwriteRoles(t, vit, ws, email1, inviteID)
 
 	//Cancel then invite it again (inviteID3)
 	vit.PostWS(ws, "c.sys.CancelSentInvite", fmt.Sprintf(`{"args":{"InviteID":%d}}`, inviteID3))
@@ -285,10 +285,10 @@ func TestCancelSentInvite(t *testing.T) {
 	})
 }
 
-func testOverwriteRoles(t *testing.T, vit *it.VIT, ws *it.AppWorkspace, email string, inviteID int64, actualLogin *it.Principal) (verificationCode string) {
+func testOverwriteRoles(t *testing.T, vit *it.VIT, ws *it.AppWorkspace, email string, inviteID int64) (verificationCode string) {
 	require := require.New(t)
 
-	// reinvite when invitation is not accpeted yet -> roles must be overwritten
+	// reinvite when invitation is not accepted yet -> roles must be overwritten
 	newInviteID := InitiateInvitationByEMail(vit, ws, 1674751138000, email, newRoles, inviteEmailTemplate, inviteEmailSubject)
 	require.Zero(newInviteID)
 	WaitForInviteState(vit, ws, invite.State_Invited, inviteID)
