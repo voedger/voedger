@@ -30,7 +30,7 @@ func GetUniqueRecordID(appStructs istructs.IAppStructs, doc istructs.IRowReader,
 		}
 	}
 	if uniques.UniqueField() != nil {
-		uniqueQName := coreutils.UniqueQName(docQName, coreutils.OldUniqueName(uniques.UniqueField().Name()))
+		uniqueQName := coreutils.UniqueQName(docQName, uniques.UniqueField().Name())
 		recID, _, err := exists(doc, uniqueQName, []appdef.IField{uniques.UniqueField()}, appStructs, wsid)
 		if err != nil {
 			return istructs.NullRecordID, err

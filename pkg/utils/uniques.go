@@ -14,7 +14,3 @@ import (
 func UniqueQName(docQName appdef.QName, name string) appdef.QName {
 	return appdef.NewQName(docQName.Pkg(), fmt.Sprintf("%sUniques%s", docQName.Entity(), name)) // TODO: add $ ?
 }
-
-func OldUniqueName(uniqueFieldName string) string {
-	return "UNIQUEFIELD " + uniqueFieldName
-}
