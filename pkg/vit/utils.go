@@ -270,6 +270,15 @@ func (vit *VIT) InitChildWorkspace(wsd WSParams, owner *Principal) {
 	vit.PostProfile(owner, "c.sys.InitChildWorkspace", body)
 }
 
+func DummyWSParams(wsName string) WSParams {
+	return WSParams{
+		Name:         wsName,
+		Kind:         QNameApp1_TestWSKind,
+		ClusterID:    istructs.MainClusterID,
+		InitDataJSON: `{"IntFld": 42}`, //
+	}
+}
+
 func (vit *VIT) CreateWorkspace(wsp WSParams, owner *Principal) *AppWorkspace {
 	vit.InitChildWorkspace(wsp, owner)
 	ws := vit.WaitForWorkspace(wsp.Name, owner)
