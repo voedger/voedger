@@ -47,10 +47,6 @@ func Test_def_AddUnique(t *testing.T) {
 		require.Equal("lastName", u.Fields()[0].Name())
 		require.Equal("name", u.Fields()[1].Name())
 		require.Equal("surname", u.Fields()[2].Name())
-		require.Len(u.FieldsSchemaOrdered(), 3)
-		require.Equal("name", u.FieldsSchemaOrdered()[0].Name())
-		require.Equal("surname", u.FieldsSchemaOrdered()[1].Name())
-		require.Equal("lastName", u.FieldsSchemaOrdered()[2].Name())
 
 		require.Equal(doc.UniqueCount(), func() int {
 			cnt := 0
@@ -140,5 +136,59 @@ func Test_def_AddUnique(t *testing.T) {
 			rec.AddField("lastStraw", DataKind_int32, false)
 			require.Panics(func() { rec.AddUnique("", []string{"lastStraw"}) })
 		})
+	})
+}
+
+func Test_type_UniqueField(t *testing.T) {
+	// This tests old-style uniques. See [issue #173](https://github.com/voedger/voedger/issues/173)
+	require := require.New(t)
+
+	qName := NewQName("test", "user")
+	appDef := New()
+
+	doc := appDef.AddCDoc(qName)
+	require.NotNil(doc)
+
+	doc.
+		AddField("name", DataKind_string, true).
+		AddField("surname", DataKind_string, false).
+		AddField("lastName", DataKind_string, false).
+		AddField("birthday", DataKind_int64, false).
+		AddField("sex", DataKind_bool, false).
+		AddField("eMail", DataKind_string, true)
+	doc.SetUniqueField("eMail")
+
+	t.Run("test is ok", func(t *testing.T) {
+		app, err := appDef.Build()
+		require.NoError(err)
+
+		d := app.CDoc(qName)
+		require.NotEqual(TypeKind_null, d.Kind())
+
+		fld := d.UniqueField()
+		require.Equal("eMail", fld.Name())
+		require.True(fld.Required())
+	})
+
+	t.Run("must be ok to clear unique field", func(t *testing.T) {
+		doc.SetUniqueField("")
+
+		app, err := appDef.Build()
+		require.NoError(err)
+
+		d := app.CDoc(qName)
+		require.NotEqual(TypeKind_null, d.Kind())
+
+		require.Nil(d.UniqueField())
+	})
+
+	t.Run("test panics", func(t *testing.T) {
+		require.Panics(func() {
+			doc.SetUniqueField("naked-🔫")
+		}, "panics if invalid unique field name")
+
+		require.Panics(func() {
+			doc.SetUniqueField("unknownField")
+		}, "panics if unknown unique field name")
 	})
 }

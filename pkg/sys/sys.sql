@@ -385,7 +385,7 @@ ABSTRACT WORKSPACE Workspace (
 	) AS RESULT OF ProjectorCollection;
 
 	VIEW Uniques (
-		QName qname NOT NULL, -- Doc QName
+		QName qname NOT NULL, -- deprecated UNIQUEFIELD -> QName of the doc, new UNIQUE -> QName of the unique
 		ValuesHash int64 NOT NULL,
 		Values bytes(65535) NOT NULL,
 		ID ref,

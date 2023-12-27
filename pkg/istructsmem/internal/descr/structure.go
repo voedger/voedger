@@ -15,6 +15,7 @@ type Structure struct {
 	Fields      []*Field     `json:",omitempty"`
 	Containers  []*Container `json:",omitempty"`
 	Uniques     []*Unique    `json:",omitempty"`
+	UniqueField string       `json:",omitempty"`
 	Singleton   bool         `json:",omitempty"`
 }
 

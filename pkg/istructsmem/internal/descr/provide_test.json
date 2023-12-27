@@ -155,7 +155,15 @@
               "Verifiable": true
             }
           ],
-          "UniqueField": "phone"
+          "UniqueField": "phone",
+          "Uniques": [
+            {
+              "Name": "uniq1",
+              "Fields": [
+                "f1"
+              ]
+            }
+          ]
         }
       },
       "Views": {

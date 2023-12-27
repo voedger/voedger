@@ -736,12 +736,12 @@ type TableConstraint struct {
 	Check *TableCheckExpr `parser:"| @@)"`
 }
 
-type UniqueFieldExpr struct {
-	Field Ident `parser:"'UNIQUEFIELD' @Ident"`
-}
-
 type TableCheckExpr struct {
 	Expression Expression `parser:"'CHECK' '(' @@ ')'"`
+}
+
+type UniqueFieldExpr struct {
+	Field Ident `parser:"'UNIQUEFIELD' @Ident"`
 }
 
 type UniqueExpr struct {

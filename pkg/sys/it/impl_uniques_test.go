@@ -387,7 +387,7 @@ func TestBasicUsage_GetUniqueRecordID(t *testing.T) {
 	})
 }
 
-func TestMaxUniuqeLen(t *testing.T) {
+func TestMaxUniqueLen(t *testing.T) {
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
@@ -400,4 +400,21 @@ func TestMaxUniuqeLen(t *testing.T) {
 	longBytesBase64 := base64.StdEncoding.EncodeToString(longBytes)
 	body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.DocConstraints","Int":%d,"Str":"%s","Bool":true,"Bytes":"%s"}}]}`, num, longString, longBytesBase64)
 	vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect403(uniques.ErrUniqueValueTooLong.Error())).Println()
+}
+
+func TestBasicUsage_UNIQUEFIELD(t *testing.T) {
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
+
+	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+	num, bts := getUniqueNumber(vit)
+
+	// insert an initial record
+	body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.DocConstraintsOldAndNewUniques","Int":%d,"Str":"%s"}}]}`, num, string(bts))
+	vit.PostWS(ws, "c.sys.CUD", body)
+
+	// fire the UNIQUEFIELD violation, avoid UNIQUE (Str) vioaltion
+	_, newBts := getUniqueNumber(vit)
+	body = fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.DocConstraintsOldAndNewUniques","Int":%d,"Str":"%s"}}]}`, num, string(newBts))
+	vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect409("UNIQUEFIELD Int"))
 }

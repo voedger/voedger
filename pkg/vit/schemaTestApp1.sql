@@ -400,12 +400,14 @@ ALTERABLE WORKSPACE test_ws (
 	-- 	Float32 float32,
 	-- 	Bytes bytes(65535) NOT NULL
 	-- 	-- UNIQUE (Int, Str, Bool, Bytes)
+	--  UNIQUEFIELD
 	-- );
 
-	-- TABLE DocConstraintsString INHERITS CDoc (
+	-- TABLE DocConstraintsOldAndNewUniques INHERITS CDoc (
 	-- 	Str varchar,
 	-- 	Int int32
-	-- 	-- UNIQUE (Str)
+	-- 	-- UNIQUE (Str),
+	--  UNIQUEFIELD Int
 	-- );
 
 	-- TABLE DocConstraintsFewUniques INHERITS CDoc (

@@ -87,7 +87,7 @@ func Test_BasicUsage(t *testing.T) {
 	require.Equal(appdef.Occurs(0), container.MinOccurs())
 	require.Equal(appdef.Occurs(maxNestedTableContainerOccurrences), container.MaxOccurs())
 	require.Equal(appdef.TypeKind_CRecord, container.Type().Kind())
-	require.Equal(2+5 /*system fields*/, container.Type().(appdef.IFields).FieldCount())
+	require.Equal(2+5 /* +5 system fields*/, container.Type().(appdef.IFields).FieldCount())
 	require.Equal(appdef.DataKind_int32, container.Type().(appdef.IFields).Field("TableNo").DataKind())
 	require.Equal(appdef.DataKind_int32, container.Type().(appdef.IFields).Field("Chairs").DataKind())
 
@@ -1148,6 +1148,47 @@ func Test_AbstractWorkspace(t *testing.T) {
 		"example.sql:3:2: abstract workspace cannot have a descriptor",
 		"example.sql:9:2: base workspace must be abstract",
 	}, "\n"))
+
+}
+
+func Test_UniqueFields(t *testing.T) {
+	require := require.New(t)
+
+	fs, err := ParseFile("example.sql", `APPLICATION test();
+	TABLE MyTable INHERITS CDoc (
+		Int1 int32,
+		Int2 int32 NOT NULL,
+		UNIQUEFIELD UnknownField,
+		UNIQUEFIELD Int1,
+		UNIQUEFIELD Int2
+	)
+	`)
+	require.Nil(err)
+
+	pkg, err := BuildPackageSchema("test", []*FileSchemaAST{fs})
+	require.Nil(err)
+
+	packages, err := BuildAppSchema([]*PackageSchemaAST{
+		getSysPackageAST(),
+		pkg,
+	})
+	require.NoError(err)
+
+	appBld := appdef.New()
+	err = BuildAppDefs(packages, appBld)
+	require.EqualError(err, strings.Join([]string{
+		"example.sql:5:3: undefined field UnknownField",
+	}, "\n"))
+
+	cdoc := appBld.CDoc(appdef.NewQName("test", "MyTable"))
+	require.NotNil(cdoc)
+
+	fld := cdoc.UniqueField()
+	require.NotNil(fld)
+	require.Equal("Int2", fld.Name())
+
+	_, err = appBld.Build()
+	require.NoError(err)
 
 }
 

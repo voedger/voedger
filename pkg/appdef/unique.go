@@ -19,11 +19,10 @@ const (
 //   - IUnique
 type unique struct {
 	comment
-	emb                  interface{}
-	name                 string
-	fields               []IField
-	id                   UniqueID
-	uniquesSchemaOrdered []IField
+	emb    interface{}
+	name   string
+	fields []IField
+	id     UniqueID
 }
 
 func newUnique(embeds interface{}, name string, fields []string) *unique {
@@ -66,20 +65,6 @@ func (u *unique) SetID(value UniqueID) {
 	u.id = value
 }
 
-func (u *unique) FieldsSchemaOrdered() []IField {
-	return u.uniquesSchemaOrdered
-}
-
-func (u *unique) createFieldsSchemaOrdered(schemaFields IFields) {
-	for _, schemaField := range schemaFields.Fields() {
-		for _, uniqueField := range u.fields {
-			if schemaField.Name() == uniqueField.Name() {
-				u.uniquesSchemaOrdered = append(u.uniquesSchemaOrdered, schemaField)
-			}
-		}
-	}
-}
-
 // # Implements:
 //   - IUniques
 //   - IUniquesBuilder
@@ -87,10 +72,11 @@ type uniques struct {
 	emb            interface{}
 	uniques        map[string]*unique
 	uniquesOrdered []IUnique
+	field          IField
 }
 
 func makeUniques(embeds interface{}) uniques {
-	u := uniques{embeds, make(map[string]*unique), make([]IUnique, 0)}
+	u := uniques{embeds, make(map[string]*unique), make([]IUnique, 0), nil}
 	return u
 }
 
@@ -99,6 +85,25 @@ func (u *uniques) AddUnique(name string, fields []string, comment ...string) IUn
 		name = generateUniqueName(u, fields)
 	}
 	return u.addUnique(name, fields, comment...)
+}
+
+func (u *uniques) SetUniqueField(name string) IUniquesBuilder {
+	if name == NullName {
+		u.field = nil
+		return u
+	}
+	if ok, err := ValidIdent(name); !ok {
+		panic((fmt.Errorf("%v: unique field name «%v» is invalid: %w", u.embeds(), name, err)))
+	}
+
+	fld := u.embeds().Field(name)
+	if fld == nil {
+		panic((fmt.Errorf("%v: unique field name «%v» not found: %w", u.embeds(), name, ErrNameNotFound)))
+	}
+
+	u.field = fld
+
+	return u
 }
 
 func (u *uniques) UniqueByName(name string) IUnique {
@@ -119,6 +124,10 @@ func (u *uniques) UniqueByID(id UniqueID) IUnique {
 
 func (u *uniques) UniqueCount() int {
 	return len(u.uniques)
+}
+
+func (u *uniques) UniqueField() IField {
+	return u.field
 }
 
 func (u *uniques) Uniques() []IUnique {
@@ -168,12 +177,4 @@ func (u *uniques) addUnique(name string, fields []string, comment ...string) IUn
 
 func (u *uniques) embeds() IStructure {
 	return u.emb.(IStructure)
-}
-
-// need to create schema-ordered set of fields after the entire schema is defined
-func (u *uniques) Validate() error {
-	for _, unique := range u.uniques {
-		unique.createFieldsSchemaOrdered(u.emb.(IFields))
-	}
-	return nil
 }

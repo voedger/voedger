@@ -14,7 +14,7 @@ func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder
 	cfg.AddSyncProjectors(func(partition istructs.PartitionID) istructs.Projector {
 		return istructs.Projector{
 			Name: qNameApplyUniques,
-			Func: provideApplyUniques2(appDefBuilder),
+			Func: provideApplyUniques(appDefBuilder),
 		}
 	})
 	cfg.AddEventValidators(eventUniqueValidator)

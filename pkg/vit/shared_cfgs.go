@@ -15,6 +15,7 @@ import (
 	"github.com/voedger/voedger/pkg/parser"
 	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys/smtp"
+	coreutils "github.com/voedger/voedger/pkg/utils"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -32,17 +33,18 @@ const (
 )
 
 var (
-	QNameApp1_TestWSKind               = appdef.NewQName(app1PkgName, "WSKind")
-	QNameTestView                      = appdef.NewQName(app1PkgName, "View")
-	QNameApp1_TestEmailVerificationDoc = appdef.NewQName(app1PkgName, "Doc")
-	QNameApp1_DocConstraints           = appdef.NewQName(app1PkgName, "DocConstraints")
-	QNameApp1_DocConstraintsString     = appdef.NewQName(app1PkgName, "DocConstraintsString")
-	QNameApp1_DocConstraintsFewUniques = appdef.NewQName(app1PkgName, "DocConstraintsFewUniques")
-	QNameCmdRated                      = appdef.NewQName(app1PkgName, "RatedCmd")
-	QNameQryRated                      = appdef.NewQName(app1PkgName, "RatedQry")
-	QNameODoc1                         = appdef.NewQName(app1PkgName, "odoc1")
-	QNameODoc2                         = appdef.NewQName(app1PkgName, "odoc2")
-	TestSMTPCfg                        = smtp.Cfg{
+	QNameApp1_TestWSKind                     = appdef.NewQName(app1PkgName, "WSKind")
+	QNameTestView                            = appdef.NewQName(app1PkgName, "View")
+	QNameApp1_TestEmailVerificationDoc       = appdef.NewQName(app1PkgName, "Doc")
+	QNameApp1_DocConstraints                 = appdef.NewQName(app1PkgName, "DocConstraints")
+	QNameApp1_DocConstraintsString           = appdef.NewQName(app1PkgName, "DocConstraintsString")
+	QNameApp1_DocConstraintsFewUniques       = appdef.NewQName(app1PkgName, "DocConstraintsFewUniques")
+	QNameApp1_DocConstraintsOldAndNewUniques = appdef.NewQName(app1PkgName, "DocConstraintsOldAndNewUniques")
+	QNameCmdRated                            = appdef.NewQName(app1PkgName, "RatedCmd")
+	QNameQryRated                            = appdef.NewQName(app1PkgName, "RatedQry")
+	QNameODoc1                               = appdef.NewQName(app1PkgName, "odoc1")
+	QNameODoc2                               = appdef.NewQName(app1PkgName, "odoc2")
+	TestSMTPCfg                              = smtp.Cfg{
 		Username: "username@gmail.com",
 	}
 
@@ -196,12 +198,14 @@ func ProvideApp1(apis apps.APIs, cfg *istructsmem.AppConfigType, adf appdef.IApp
 		AddField("FLoat32", appdef.DataKind_float32, false).
 		AddField("Bytes", appdef.DataKind_bytes, true, appdef.MaxLen(65535))
 	bldr.AddUnique("uniq1", []string{"Int", "Str", "Bool", "Bytes"})
+	adf.AddObject(coreutils.UniqueQName(QNameApp1_DocConstraints, "uniq1"))
 
 	bldr = adf.AddCDoc(QNameApp1_DocConstraintsString)
 	bldr.
 		AddField("Str", appdef.DataKind_string, false).
 		AddField("Int", appdef.DataKind_int32, false)
 	bldr.AddUnique("uniq1", []string{"Str"})
+	adf.AddObject(coreutils.UniqueQName(QNameApp1_DocConstraintsString, "uniq1"))
 
 	bldr = adf.AddCDoc(QNameApp1_DocConstraintsFewUniques)
 	bldr.
@@ -214,6 +218,17 @@ func ProvideApp1(apis apps.APIs, cfg *istructsmem.AppConfigType, adf appdef.IApp
 		AddField("Bool2", appdef.DataKind_bool, false)
 	bldr.AddUnique("uniq1", []string{"Int1", "Str1", "Bool1", "Bytes1"})
 	bldr.AddUnique("uniq2", []string{"Int2", "Str2", "Bool2", "Bytes1"})
+	adf.AddObject(coreutils.UniqueQName(QNameApp1_DocConstraintsFewUniques, "uniq1"))
+	adf.AddObject(coreutils.UniqueQName(QNameApp1_DocConstraintsFewUniques, "uniq2"))
+
+	bldr = adf.AddCDoc(QNameApp1_DocConstraintsOldAndNewUniques)
+	bldr.
+		AddField("Str", appdef.DataKind_string, false).
+		AddField("Int", appdef.DataKind_int32, false)
+	bldr.SetUniqueField("Int")
+	bldr.AddUnique("uniq3", []string{"Str"})
+	adf.AddObject(coreutils.UniqueQName(QNameApp1_DocConstraintsOldAndNewUniques, "uniq3"))
+
 	app1PackageFS := parser.PackageFS{
 		QualifiedPackageName: "github.com/voedger/voedger/pkg/vit/app1pkg",
 		FS:                   SchemaTestApp1FS,

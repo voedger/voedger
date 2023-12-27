@@ -787,6 +787,14 @@ func (c *buildContext) addFieldToDef(field *FieldExpr, ictx *iterateCtx) {
 }
 
 func (c *buildContext) addConstraintToDef(constraint *TableConstraint) {
+	if constraint.UniqueField != nil {
+		f := c.defCtx().defBuilder.(appdef.IFields).Field(string(constraint.UniqueField.Field))
+		if f == nil {
+			c.stmtErr(&constraint.Pos, ErrUndefinedField(string(constraint.UniqueField.Field)))
+			return
+		}
+		c.defCtx().defBuilder.(appdef.IUniquesBuilder).SetUniqueField(string(constraint.UniqueField.Field))
+	}
 }
 
 func (c *buildContext) addNestedTableToDef(nested *NestedTableStmt, ictx *iterateCtx) {
