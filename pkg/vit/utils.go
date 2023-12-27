@@ -286,11 +286,11 @@ func (vit *VIT) CreateWorkspace(wsp WSParams, owner *Principal) *AppWorkspace {
 	return ws
 }
 
-func (vit *VIT) SubscribeForN10nCleanup(ws *AppWorkspace, viewQName appdef.QName) (n10n chan int64, unsubscribe func()) {
+func (vit *VIT) SubscribeForN10nCleanup(p SubscriptionParameters, viewQName appdef.QName) (n10n chan int64, unsubscribe func()) {
 	n10n = make(chan int64)
 	params := url.Values{}
 	query := fmt.Sprintf(`{"SubjectLogin":"test_%d","ProjectionKey":[{"App":"%s","Projection":"%s","WS":%d}]}`,
-		ws.WSID, ws.Owner.AppQName, viewQName, ws.WSID)
+		p.GetWSID(), p.GetAppQName(), viewQName, p.GetWSID())
 	params.Add("payload", query)
 	httpResp, err := coreutils.FederationReq(vit.IFederation.URL(), fmt.Sprintf("n10n/channel?%s", params.Encode()), "",
 		coreutils.WithLongPolling())
@@ -339,9 +339,9 @@ func (vit *VIT) SubscribeForN10nCleanup(ws *AppWorkspace, viewQName appdef.QName
 					}
 				]
 			}
-		`, channelIDStr, ws.Owner.AppQName, viewQName, ws.WSID)
+		`, channelIDStr, p.GetAppQName(), viewQName, p.GetWSID())
 		params := url.Values{}
-		params.Add("payload", string(body))
+		params.Add("payload", body)
 		vit.Get(fmt.Sprintf("n10n/unsubscribe?%s", params.Encode()))
 		httpResp.HTTPResp.Body.Close()
 		for range n10n {
@@ -351,8 +351,8 @@ func (vit *VIT) SubscribeForN10nCleanup(ws *AppWorkspace, viewQName appdef.QName
 }
 
 // will be finalized automatically on vit.TearDown()
-func (vit *VIT) SubscribeForN10n(ws *AppWorkspace, viewQName appdef.QName) chan int64 {
-	n10nChan, unsubscribe := vit.SubscribeForN10nCleanup(ws, viewQName)
+func (vit *VIT) SubscribeForN10n(p SubscriptionParameters, viewQName appdef.QName) chan int64 {
+	n10nChan, unsubscribe := vit.SubscribeForN10nCleanup(p, viewQName)
 	vit.lock.Lock() // need to lock because the vit instance is used in different goroutines in e.g. Test_Race_RestaurantIntenseUsage()
 	vit.cleanups = append(vit.cleanups, func(vit *VIT) {
 		unsubscribe()
