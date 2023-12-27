@@ -38,7 +38,7 @@ func execCmdInitiateJoinWorkspace(timeFunc coreutils.TimeFunc) func(args istruct
 		}
 
 		if !isValidInviteState(svCDocInvite.AsInt32(field_State), qNameCmdInitiateJoinWorkspace) {
-			return coreutils.NewHTTPError(http.StatusBadRequest, errInviteStateInvalid)
+			return coreutils.NewHTTPError(http.StatusBadRequest, ErrInviteStateInvalid)
 		}
 		if svCDocInvite.AsInt64(field_ExpireDatetime) < timeFunc().UnixMilli() {
 			return coreutils.NewHTTPError(http.StatusBadRequest, errInviteExpired)
