@@ -138,6 +138,9 @@ module "instance_ctool_provision" {
   source           = "./modules/provision-ctool"
 
   ssh_private_key  = var.ssh_private_key
+  git_commit_id = var.git_commit_id
+  git_repo_url = var.git_repo_url
+  ssh_port = var.ssh_port
   ctool_node = aws_instance.node_00.public_ip
 
   depends_on = [ module.instance_sshd_provisioners ]
