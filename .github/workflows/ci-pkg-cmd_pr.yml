@@ -5,6 +5,7 @@ on:
     paths:
       - 'pkg/**'
       - 'cmd/**'
+      - 'design/**'
 
 jobs:
   call-workflow-ci-pkg:
