@@ -1,3 +1,7 @@
+# Copyright (c) 2023 Sigma-Soft, Ltd.
+# @author Aleksei Ponomarev
+# @date 2023-12-25
+
 name: 'Test Voedger Cluster Action'
 description: 'Test Voedger Cluster Action'
 
