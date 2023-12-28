@@ -227,6 +227,7 @@ func ProvideApp1(apis apps.APIs, cfg *istructsmem.AppConfigType, adf appdef.IApp
 		AddField("Int", appdef.DataKind_int32, false)
 	bldr.SetUniqueField("Int")
 	bldr.AddUnique("uniq3", []string{"Str"})
+	adf.AddObject(coreutils.UniqueQName(QNameApp1_DocConstraintsOldAndNewUniques, "uniq3"))
 	adf.AddObject(coreutils.UniqueQName(QNameApp1_DocConstraintsOldAndNewUniques, "Int"))
 
 	app1PackageFS := parser.PackageFS{
