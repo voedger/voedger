@@ -1,0 +1,29 @@
+name: 'Voedger Cluster Init Action'
+description: 'Voedger Cluster Init Action'
+
+runs:
+  using: 'composite'
+
+  steps:
+    - name: Test deploy cluster. Simulate error when init. Continue with repeat after problem elimination.
+      run: |
+        if ! ssh ${{ env.SSH_OPTIONS }} ubuntu@${{ env.CTOOL_IP }} "cd /home/ubuntu/voedger/cmd/ctool && ./ctool init SE 10.0.0.11 10.0.0.12 10.0.0.13 10.0.0.14 10.0.0.15 -p ${{ env.SSH_PORT }} -v --ssh-key /tmp/amazonKey.pem; exit \$?"; then
+          echo "Error: SSH key permission too open."
+            if ssh ${{ env.SSH_OPTIONS }} ubuntu@${{ env.CTOOL_IP }} "chmod 400 /tmp/amazonKey.pem; exit \$?"; then
+              echo "Changing ssh key permissions to more restrective."
+                if ssh ${{ env.SSH_OPTIONS }} ubuntu@${{ env.CTOOL_IP }} "cd /home/ubuntu/voedger/cmd/ctool && ./ctool repeat -v --ssh-key /tmp/amazonKey.pem; exit \$?"; then
+                  echo "Cluster init reepeat succesfull." 
+                else 
+                  echo "Error: cluster init repeat. Exit."
+                  exit 1
+                fi 
+            else 
+              echo "Error: changing ssh key permissions to more restrective. Exit."
+              exit 1
+            fi 
+        else 
+          echo "Error: connect to resources with too open ssh key not possible. Exit."
+          exit 1
+        fi
+      shell: bash
+
