@@ -21,8 +21,8 @@ import (
 
 // Injectors from wire.go:
 
-func wireServer(cliParams ihttp.CLIParams, appsCLIParams apps.CLIParams, grafanaPort ihttp.GrafanaPort, prometheusPort ihttp.PrometheusPort) (WiredServer, func(), error) {
-	iAppStorageFactory, err := apps.NewAppStorageFactory(appsCLIParams)
+func wireServer(httpCliParams ihttp.CLIParams, appsCliParams apps.CLIParams, grafanaPort ihttp.GrafanaPort, prometheusPort ihttp.PrometheusPort) (WiredServer, func(), error) {
+	iAppStorageFactory, err := apps.NewAppStorageFactory(appsCliParams)
 	if err != nil {
 		return WiredServer{}, nil, err
 	}
@@ -31,7 +31,7 @@ func wireServer(cliParams ihttp.CLIParams, appsCLIParams apps.CLIParams, grafana
 	if err != nil {
 		return WiredServer{}, nil, err
 	}
-	ihttpProcessor, cleanup, err := ihttpimpl.NewProcessor(cliParams, iRouterStorage)
+	ihttpProcessor, cleanup, err := ihttpimpl.NewProcessor(httpCliParams, iRouterStorage)
 	if err != nil {
 		return WiredServer{}, nil, err
 	}
@@ -43,7 +43,7 @@ func wireServer(cliParams ihttp.CLIParams, appsCLIParams apps.CLIParams, grafana
 	v := apps.NewStaticEmbeddedResources()
 	redirectRoutes := apps.NewRedirectionRoutes(grafanaPort, prometheusPort)
 	defaultRedirectRoute := apps.NewDefaultRedirectionRoute()
-	acmeDomains := emptyAcmeDomainList()
+	acmeDomains := httpCliParams.AcmeDomains
 	ihttpProcessorController, err := ihttpctl.NewHTTPProcessorController(ihttpProcessorAPI, v, redirectRoutes, defaultRedirectRoute, acmeDomains)
 	if err != nil {
 		cleanup()
@@ -61,10 +61,7 @@ func wireServer(cliParams ihttp.CLIParams, appsCLIParams apps.CLIParams, grafana
 
 // wire.go:
 
+// provideAppStorageProvider is intended to be used by wire instead of istorageimpl.Provide, because wire can not handle variadic arguments
 func provideAppStorageProvider(appStorageFactory istorage.IAppStorageFactory) istorage.IAppStorageProvider {
 	return istorageimpl.Provide(appStorageFactory)
-}
-
-func emptyAcmeDomainList() ihttpctl.AcmeDomains {
-	return ihttpctl.AcmeDomains{}
 }

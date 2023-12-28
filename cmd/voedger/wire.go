@@ -19,7 +19,7 @@ import (
 	"github.com/voedger/voedger/pkg/istorageimpl"
 )
 
-func wireServer(ihttp.CLIParams, apps.CLIParams, ihttp.GrafanaPort, ihttp.PrometheusPort) (WiredServer, func(), error) {
+func wireServer(httpCliParams ihttp.CLIParams, appsCliParams apps.CLIParams, grafanaPort ihttp.GrafanaPort, prometheusPort ihttp.PrometheusPort) (WiredServer, func(), error) {
 	panic(
 		wire.Build(
 			ihttpimpl.NewProcessor,
@@ -31,16 +31,13 @@ func wireServer(ihttp.CLIParams, apps.CLIParams, ihttp.GrafanaPort, ihttp.Promet
 			apps.NewDefaultRedirectionRoute,
 			apps.NewAppStorageFactory,
 			provideAppStorageProvider,
-			emptyAcmeDomainList,
+			wire.FieldsOf(&httpCliParams, "AcmeDomains"),
 			wire.Struct(new(WiredServer), "*"),
 		),
 	)
 }
 
+// provideAppStorageProvider is intended to be used by wire instead of istorageimpl.Provide, because wire can not handle variadic arguments
 func provideAppStorageProvider(appStorageFactory istorage.IAppStorageFactory) istorage.IAppStorageProvider {
 	return istorageimpl.Provide(appStorageFactory)
-}
-
-func emptyAcmeDomainList() ihttpctl.AcmeDomains {
-	return ihttpctl.AcmeDomains{}
 }

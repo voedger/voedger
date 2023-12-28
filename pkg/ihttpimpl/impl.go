@@ -43,7 +43,6 @@ type httpProcessor struct {
 	acmeDomains  *sync.Map
 	certCache    autocert.Cache
 	certManager  *autocert.Manager
-	isHTTPS      bool
 }
 
 type redirectionRoute struct {
@@ -52,12 +51,16 @@ type redirectionRoute struct {
 }
 
 func (p *httpProcessor) Prepare() (err error) {
-	if p.isHTTPS {
+	if p.isHTTPS() {
 		acmeAddr := coreutils.ServerAddress(defaultHTTPPort)
 		p.certManager = &autocert.Manager{
 			Prompt:     autocert.AcceptTOS,
 			HostPolicy: p.hostPolicy,
 			Cache:      p.certCache,
+		}
+		p.server.TLSConfig = &tls.Config{
+			GetCertificate: p.certManager.GetCertificate,
+			MinVersion:     tls.VersionTLS12, // VersionTLS13 is unsupported by Chargebee
 		}
 		p.acmeServer = &http.Server{
 			Addr:         acmeAddr,
@@ -66,11 +69,11 @@ func (p *httpProcessor) Prepare() (err error) {
 			Handler:      p.certManager.HTTPHandler(nil),
 		}
 		if p.acmeListener, err = net.Listen("tcp", acmeAddr); err == nil {
-			logger.Info("listening port:", p.acmeListener.Addr().(*net.TCPAddr).Port)
+			logger.Info("listening port ", p.acmeListener.Addr().(*net.TCPAddr).Port, " for acme server")
 		}
 	}
 	if p.listener, err = net.Listen("tcp", coreutils.ServerAddress(p.params.Port)); err == nil {
-		logger.Info("listening port:", p.listener.Addr().(*net.TCPAddr).Port)
+		logger.Info("listening port ", p.listener.Addr().(*net.TCPAddr).Port, " for server")
 	}
 	return
 }
@@ -78,12 +81,15 @@ func (p *httpProcessor) Prepare() (err error) {
 func (p *httpProcessor) Run(ctx context.Context) {
 	wg := &sync.WaitGroup{}
 	wg.Add(1)
+	isHTTPS := p.isHTTPS()
 	go func() {
 		defer wg.Done()
-		logger.Info("httpProcessor started:", fmt.Sprintf("%#v", p.params))
+		logger.Info("httpProcessor starting:", fmt.Sprintf("%#v", p.params))
+		p.server.BaseContext = func(_ net.Listener) context.Context {
+			return ctx // need to track both client disconnect and app finalize
+		}
 		var err error
-		if p.isHTTPS {
-			p.server.TLSConfig = &tls.Config{GetCertificate: p.certManager.GetCertificate, MinVersion: tls.VersionTLS12} // VersionTLS13 is unsupported by Chargebee
+		if isHTTPS {
 			err = p.server.ServeTLS(p.listener, "", "")
 		} else {
 			err = p.server.Serve(p.listener)
@@ -91,11 +97,11 @@ func (p *httpProcessor) Run(ctx context.Context) {
 		logger.Info("httpProcessor stopped, result:", err)
 	}()
 
-	if p.isHTTPS {
+	if isHTTPS {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			logger.Info("httpProcessor's acme server started:", fmt.Sprintf("%#v", p.params))
+			logger.Info("httpProcessor's acme server starting:", fmt.Sprintf("%#v", p.params))
 			err := p.acmeServer.Serve(p.acmeListener)
 			logger.Info("httpProcessor's acme server  stopped, result:", err)
 		}()
@@ -154,6 +160,15 @@ func (p *httpProcessor) HandlePath(resource string, prefix bool, handlerFunc fun
 
 func (p *httpProcessor) ListeningPort() int {
 	return p.listener.Addr().(*net.TCPAddr).Port
+}
+
+func (p *httpProcessor) isHTTPS() bool {
+	var count int
+	p.acmeDomains.Range(func(_, _ interface{}) bool {
+		count++
+		return true
+	})
+	return count > 0
 }
 
 func (p *httpProcessor) hostPolicy(_ context.Context, host string) error {

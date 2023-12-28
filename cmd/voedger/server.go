@@ -41,6 +41,6 @@ func newServerCmd() *cobra.Command {
 	}
 	serverCmd.PersistentFlags().IntVar(&httpCLIParams.Port, "ihttp.Port", Default_ihttp_Port, "")
 	serverCmd.Flags().StringVar(&appsCLIParams.Storage, "storage", "", "")
-	serverCmd.Flags().StringArrayVar(&httpCLIParams.AcmeDomains, "acme-domain", []string{}, "")
+	serverCmd.Flags().StringArrayVar((*[]string)(&httpCLIParams.AcmeDomains), "acme-domain", []string{}, "")
 	return serverCmd
 }

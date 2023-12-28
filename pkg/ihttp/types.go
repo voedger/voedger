@@ -5,7 +5,9 @@
 
 package ihttp
 
-import "github.com/voedger/voedger/pkg/istorage"
+import (
+	"github.com/voedger/voedger/pkg/istorage"
+)
 
 type Alias struct {
 	Domain string
@@ -24,7 +26,8 @@ type Status struct {
 type GrafanaPort int
 type PrometheusPort int
 type IRouterStorage istorage.IAppStorage
+type AcmeDomains []string
 type CLIParams struct {
 	Port        int
-	AcmeDomains []string
+	AcmeDomains AcmeDomains
 }

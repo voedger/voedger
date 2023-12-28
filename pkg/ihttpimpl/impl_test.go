@@ -26,6 +26,8 @@ import (
 
 	"github.com/voedger/voedger/pkg/apps"
 	"github.com/voedger/voedger/pkg/ihttp"
+	"github.com/voedger/voedger/pkg/istorage"
+	"github.com/voedger/voedger/pkg/istorageimpl"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
@@ -162,7 +164,10 @@ func setUp(t *testing.T) *testApp {
 		Port: 0, // listen using some free port, port value will be taken using API
 	}
 	// TODO: add routerStorage
-	processor, pCleanup, err := NewProcessor(params, nil)
+	appStorageProvider := istorageimpl.Provide(istorage.ProvideMem())
+	routerStorage, err := ihttp.NewIRouterStorage(appStorageProvider)
+	require.NoError(err)
+	processor, pCleanup, err := NewProcessor(params, routerStorage)
 	require.NoError(err)
 	cleanups = append(cleanups, pCleanup)
 
