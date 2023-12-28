@@ -28,7 +28,6 @@ func NewProcessor(params ihttp.CLIParams, routerStorage ihttp.IRouterStorage) (s
 		},
 	}
 	if len(params.AcmeDomains) > 0 {
-		httpProcessor.isHTTPS = true
 		for _, domain := range params.AcmeDomains {
 			httpProcessor.AddAcmeDomain(domain)
 		}

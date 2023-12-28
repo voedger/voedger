@@ -11,7 +11,7 @@ import (
 	"github.com/voedger/voedger/pkg/ihttp"
 )
 
-func NewHTTPProcessorController(api ihttp.IHTTPProcessorAPI, staticResources []StaticResourcesType, redirections RedirectRoutes, defaultRedirection DefaultRedirectRoute, acmeDomains AcmeDomains) (IHTTPProcessorController, error) {
+func NewHTTPProcessorController(api ihttp.IHTTPProcessorAPI, staticResources []StaticResourcesType, redirections RedirectRoutes, defaultRedirection DefaultRedirectRoute, acmeDomains ihttp.AcmeDomains) (IHTTPProcessorController, error) {
 	srs := StaticResourcesType{}
 	for _, sr := range staticResources {
 		for url, fs := range sr {
