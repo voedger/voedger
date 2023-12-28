@@ -1158,7 +1158,6 @@ func Test_UniqueFields(t *testing.T) {
 	TABLE MyTable INHERITS CDoc (
 		Int1 int32,
 		Int2 int32 NOT NULL,
-		UNIQUEFIELD UnknownField,
 		UNIQUEFIELD Int1,
 		UNIQUEFIELD Int2
 	)
@@ -1176,9 +1175,7 @@ func Test_UniqueFields(t *testing.T) {
 
 	appBld := appdef.New()
 	err = BuildAppDefs(packages, appBld)
-	require.EqualError(err, strings.Join([]string{
-		"example.sql:5:3: undefined field UnknownField",
-	}, "\n"))
+	require.NoError(err)
 
 	cdoc := appBld.CDoc(appdef.NewQName("test", "MyTable"))
 	require.NotNil(cdoc)
@@ -1943,4 +1940,52 @@ func TestParseFilesFromFSRoot(t *testing.T) {
 		_, err := ParsePackageDir("github.com/untillpro/main", pkgSqlFS, ".")
 		require.NoError(t, err)
 	})
+}
+
+func Test_Constraints(t *testing.T) {
+	require := require.New(t)
+
+	f := func(sql string, expectErrors ...string) {
+		ast, err := ParseFile("file.sql", sql)
+		require.NoError(err)
+		_, err = BuildPackageSchema("github.com/untillpro/airsbp3/pkg1", []*FileSchemaAST{ast})
+		require.EqualError(err, strings.Join(expectErrors, "\n"))
+	}
+
+	f2 := func(sql string, expectErrors ...string) {
+		ast, err := ParseFile("file.sql", sql)
+		require.NoError(err)
+		pkg, err := BuildPackageSchema("github.com/untillpro/airsbp3/pkg1", []*FileSchemaAST{ast})
+		require.NoError(err)
+
+		_, err = BuildAppSchema([]*PackageSchemaAST{
+			getSysPackageAST(),
+			pkg,
+		})
+		require.EqualError(err, strings.Join(expectErrors, "\n"))
+	}
+	f(`
+	APPLICATION app1();
+	TABLE SomeTable INHERITS CDoc (
+		t1 int32,
+		t2 int32,
+		CONSTRAINT c1 UNIQUE(t1),
+		CONSTRAINT c1 UNIQUE(t2)
+	)`, "file.sql:7:3: redefinition of c1")
+
+	f2(`
+	APPLICATION app1();
+	TABLE SomeTable INHERITS CDoc (
+		UNIQUEFIELD UnknownField
+	)`, "file.sql:4:3: undefined field UnknownField")
+
+	f2(`
+	APPLICATION app1();
+	TABLE SomeTable INHERITS CDoc (
+		t1 int32,
+		t2 int32,
+		CONSTRAINT c1 UNIQUE(t1),
+		CONSTRAINT c2 UNIQUE(t2, t1)
+	)`, "file.sql:7:3: field t1 already in unique constraint")
+
 }

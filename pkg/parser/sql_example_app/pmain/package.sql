@@ -62,6 +62,7 @@ TAG BackofficeTag;
 */
 TABLE TablePlan INHERITS CDoc (
     FState int,
+    TableNumber int,
     Name varchar NOT NULL,
     Rate currency NOT NULL,
     Expiration timestamp,
@@ -75,7 +76,8 @@ TABLE TablePlan INHERITS CDoc (
     CheckedField varchar(8) CHECK '^[0-9]{8}$', -- Field validated by regexp
     CHECK (ValidateRow(this)), -- Unnamed CHECK table constraint. Expressions evaluating to TRUE or UNKNOWN succeed.
     CONSTRAINT StateChecker CHECK (ValidateFState(FState)), -- Named CHECK table constraint
-    -- UNIQUE (FState, Name), -- unnamed UNIQUE table constraint
+    UNIQUE (FState, Name), -- unnamed UNIQUE table constraint
+    CONSTRAINT UniqueTable UNIQUE (TableNumber), -- named UNIQUE table constraint
     UNIQUEFIELD Name, -- deprecated. For Air backward compatibility only
     TableItems TABLE TablePlanItem (
         TableNo int,

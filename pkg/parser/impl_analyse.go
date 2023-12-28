@@ -614,7 +614,20 @@ func analyseFieldSets(items []TableItemExpr, c *iterateCtx) {
 	}
 }
 
+func lookupField(items []TableItemExpr, name Ident) bool {
+	for i := range items {
+		item := items[i]
+		if item.Field != nil {
+			if item.Field.Name == name {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 func analyseFields(items []TableItemExpr, c *iterateCtx, isTable bool) {
+	fieldsInUniques := make([]Ident, 0)
 	for i := range items {
 		item := items[i]
 		if item.Field != nil {
@@ -671,6 +684,28 @@ func analyseFields(items []TableItemExpr, c *iterateCtx, isTable bool) {
 		if item.NestedTable != nil {
 			nestedTable := &item.NestedTable.Table
 			analyseFields(nestedTable.Items, c, true)
+		}
+		if item.Constraint != nil {
+			if item.Constraint.UniqueField != nil {
+				if ok := lookupField(items, item.Constraint.UniqueField.Field); !ok {
+					c.stmtErr(&item.Constraint.Pos, ErrUndefinedField(string(item.Constraint.UniqueField.Field)))
+					continue
+				}
+			} else if item.Constraint.Unique != nil {
+				for _, field := range item.Constraint.Unique.Fields {
+					for _, f := range fieldsInUniques {
+						if f == field {
+							c.stmtErr(&item.Constraint.Pos, ErrFieldAlreadyInUnique(string(field)))
+							continue
+						}
+					}
+					if ok := lookupField(items, field); !ok {
+						c.stmtErr(&item.Constraint.Pos, ErrUndefinedField(string(field)))
+						continue
+					}
+					fieldsInUniques = append(fieldsInUniques, field)
+				}
+			}
 		}
 	}
 }
