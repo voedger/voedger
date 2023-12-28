@@ -12,10 +12,10 @@ import (
 
 const (
 	EPSchemasFS             extensionpoints.EPKey = "SchemasFS"
-	casStorageTypeCas1                            = "cas1"
-	casStorageTypeCas3                            = "cas3"
-	cas1ReplicationStrategy                       = "{'class': 'SimpleStrategy', 'replication_factor': '1'}"
-	cas3ReplicationStrategy                       = "{ 'class': 'NetworkTopologyStrategy', 'dc1': 2, 'dc2': 1}"
+	casStorageTypeCas1      string                = "cas1"
+	casStorageTypeCas3      string                = "cas3"
+	cas1ReplicationStrategy string                = "{'class': 'SimpleStrategy', 'replication_factor': '1'}"
+	cas3ReplicationStrategy string                = "{ 'class': 'NetworkTopologyStrategy', 'dc1': 2, 'dc2': 1}"
 )
 
 var defaultCasParams = istoragecas.CassandraParamsType{
