@@ -163,7 +163,6 @@ func setUp(t *testing.T) *testApp {
 	params := ihttp.CLIParams{
 		Port: 0, // listen using some free port, port value will be taken using API
 	}
-	// TODO: add routerStorage
 	appStorageProvider := istorageimpl.Provide(istorage.ProvideMem())
 	routerStorage, err := ihttp.NewIRouterStorage(appStorageProvider)
 	require.NoError(err)
