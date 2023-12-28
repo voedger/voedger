@@ -13,7 +13,7 @@ import (
 // returns ID of the record by the unique combination defined by the doc
 // NullRecordID means no records for such unique combination or the record is inactive
 // type by doc.QName can not have uniques (e.g. not a table) -> error
-func GetUniqueRecordID(appStructs istructs.IAppStructs, doc istructs.IRowReader, wsid istructs.WSID) (recID istructs.RecordID, err error) {
+func GetUniqueRecordID(appStructs istructs.IAppStructs, doc istructs.IObject, wsid istructs.WSID) (recID istructs.RecordID, err error) {
 	docQName := doc.AsQName(appdef.SystemField_QName)
 	uniques, ok := appStructs.AppDef().Type(docQName).(appdef.IUniques)
 	if !ok {
@@ -40,10 +40,10 @@ func GetUniqueRecordID(appStructs istructs.IAppStructs, doc istructs.IRowReader,
 	return istructs.NullRecordID, err
 }
 
-func exists(doc istructs.IRowReader, uniqueQName appdef.QName, uniqueFields []appdef.IField, appStructs istructs.IAppStructs, wsid istructs.WSID) (recID istructs.RecordID, exists bool, err error) {
+func exists(doc istructs.IObject, uniqueQName appdef.QName, uniqueFields []appdef.IField, appStructs istructs.IAppStructs, wsid istructs.WSID) (recID istructs.RecordID, exists bool, err error) {
 	uniqueKeyValues, err := getUniqueKeyValues(doc, uniqueFields, uniqueQName)
 	if err != nil {
 		return istructs.NullRecordID, false, err
 	}
-	return getUniqueIDByValues(appStructs, wsid, doc.AsQName(appdef.SystemField_QName), uniqueKeyValues)
+	return getUniqueIDByValues(appStructs, wsid, uniqueQName, uniqueKeyValues)
 }
