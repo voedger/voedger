@@ -326,6 +326,8 @@ func (c *cmdType) validate(cluster *clusterType) error {
 		return validateUpgradeCmd(c, cluster)
 	case ckReplace:
 		return validateReplaceCmd(c, cluster)
+	case ckBackup:
+		return validateBackupCmd(c, cluster)
 	default:
 		return ErrUnknownCommand
 	}
@@ -386,7 +388,7 @@ func validateReplaceCmd(cmd *cmdType, cluster *clusterType) error {
 	var err error
 
 	if n := cluster.nodeByHost(args[0]); n == nil {
-		err = errors.Join(err, fmt.Errorf(ErrHostNotFoundInCluster.Error(), args[0]))
+		err = errors.Join(err, fmt.Errorf(errHostNotFoundInCluster, args[0], ErrHostNotFoundInCluster.Error()))
 	}
 
 	if n := cluster.nodeByHost(args[1]); n != nil {
@@ -394,6 +396,30 @@ func validateReplaceCmd(cmd *cmdType, cluster *clusterType) error {
 	}
 
 	return err
+}
+
+func validateBackupCmd(cmd *cmdType, cluster *clusterType) error {
+	args := cmd.args()
+	if len(args) == 0 {
+		return ErrMissingCommandArguments
+	}
+
+	if cluster.Draft {
+		return ErrClusterConfNotFound
+	}
+
+	if len(args) <= 1 {
+		return ErrMissingCommandArguments
+	}
+
+	switch args[0] {
+	case "node":
+		return validateBackupNodeCmd(cmd, cluster)
+	case "crone":
+		return validateBackupCroneCmd(cmd, cluster)
+	default:
+		return ErrUnknownCommand
+	}
 }
 
 type clusterType struct {

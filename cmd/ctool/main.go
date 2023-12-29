@@ -67,7 +67,9 @@ func execRootCmd(args []string, ver string) error {
 		newUpgradeCmd(),
 		newReplaceCmd(),
 		newRepeatCmd(),
+		newBackupCmd(),
 	)
+	rootCmd.SilenceErrors = true
 	rootCmd.PersistentFlags().BoolVar(&dryRun, "dry-run", false, "Perform a dry run of the command without making any actual changes")
 
 	rootCmd.PersistentFlags().BoolVar(&skipNodeMemoryCheck, "skip-node-memory-check", false, "Skip checking nodes for the presence of the minimum allowable amount of RAM")

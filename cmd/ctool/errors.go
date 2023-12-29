@@ -56,6 +56,10 @@ var ErrAddressCannotBeUsed = errors.New("address cannot be used")
 
 const errAddressInReplacedList = "address %s is in replaced list: %w"
 
-var ErrHostNotFoundInCluster = errors.New("host %s not found in cluster")
+var ErrHostNotFoundInCluster = errors.New("host not found")
 
 const errHostNotFoundInCluster = "host %s not found in cluster: %w"
+
+var ErrFileNotFound = errors.New("file not found")
+
+const errSshKeyNotFound = "ssh key %s not found: %w"

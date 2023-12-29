@@ -38,6 +38,7 @@ utils_ssh() {
   
   # Return the SSH command result
   echo "$ssh_result"
+
   return "$ssh_exit_status"
 }
 
