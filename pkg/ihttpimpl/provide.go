@@ -34,7 +34,3 @@ func NewProcessor(params ihttp.CLIParams, routerStorage ihttp.IRouterStorage) (s
 	}
 	return &httpProcessor, httpProcessor.cleanup, err
 }
-
-func NewAPI(httpProcessor ihttp.IHTTPProcessor) (api ihttp.IHTTPProcessorAPI, err error) {
-	return &processorAPI{processor: httpProcessor}, err
-}

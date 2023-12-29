@@ -147,15 +147,19 @@ func (p *httpProcessor) AddAcmeDomain(domain string) {
 	p.acmeDomains.Store(domain, struct{}{})
 }
 
-func (p *httpProcessor) HandlePath(resource string, prefix bool, handlerFunc func(http.ResponseWriter, *http.Request)) {
-	// TODO: concurrency safety can be added via sync.RWMutex
-	var r *mux.Route
-	if prefix {
-		r = p.router.contentRouter.PathPrefix(resource)
-	} else {
-		r = p.router.contentRouter.Path(resource)
+func (p *httpProcessor) DeployStaticContent(resource string, fs fs.FS) {
+	resource = staticPath + resource
+	f := func(wr http.ResponseWriter, req *http.Request) {
+		fsHandler := http.FileServer(http.FS(fs))
+		http.StripPrefix(resource, fsHandler).ServeHTTP(wr, req)
 	}
-	r.HandlerFunc(handlerFunc)
+	p.handlePath(resource, true, f)
+}
+
+func (p *httpProcessor) DeployAppPartition(app istructs.AppQName, partNo istructs.PartitionID, commandHandler, queryHandler ihttp.ISender) {
+	// <cluster-domain>/api/<AppQName.owner>/<AppQName.name>/<wsid>/<{q,c}.funcQName>
+	resourcePath := fmt.Sprintf("/api/%s/%s/%d/q|c\\.[a-zA-Z_.]+", app.Owner(), app.Name(), partNo)
+	p.handlePath(resourcePath, false, handleAppPart())
 }
 
 func (p *httpProcessor) ListeningPort() int {
@@ -189,35 +193,15 @@ func (p *httpProcessor) cleanup() {
 	}
 }
 
-type processorAPI struct {
-	processor ihttp.IHTTPProcessor
-}
-
-func (api *processorAPI) DeployStaticContent(resource string, fs fs.FS) {
-	resource = staticPath + resource
-	f := func(wr http.ResponseWriter, req *http.Request) {
-		fsHandler := http.FileServer(http.FS(fs))
-		http.StripPrefix(resource, fsHandler).ServeHTTP(wr, req)
+func (p *httpProcessor) handlePath(resource string, prefix bool, handlerFunc func(http.ResponseWriter, *http.Request)) {
+	// TODO: concurrency safety can be added via sync.RWMutex
+	var r *mux.Route
+	if prefix {
+		r = p.router.contentRouter.PathPrefix(resource)
+	} else {
+		r = p.router.contentRouter.Path(resource)
 	}
-	api.processor.HandlePath(resource, true, f)
-}
-
-func (api *processorAPI) DeployAppPartition(app istructs.AppQName, partNo istructs.PartitionID, commandHandler, queryHandler ihttp.ISender) {
-	// <cluster-domain>/api/<AppQName.owner>/<AppQName.name>/<wsid>/<{q,c}.funcQName>
-	resourcePath := fmt.Sprintf("/api/%s/%s/%d/q|c\\.[a-zA-Z_.]+", app.Owner(), app.Name(), partNo)
-	api.processor.HandlePath(resourcePath, false, handleAppPart())
-}
-
-func (api *processorAPI) AddReverseProxyRoute(srcRegExp, dstRegExp string) {
-	api.processor.AddReverseProxyRoute(srcRegExp, dstRegExp)
-}
-
-func (api *processorAPI) SetReverseProxyRouteDefault(srcRegExp, dstRegExp string) {
-	api.processor.SetReverseProxyRouteDefault(srcRegExp, dstRegExp)
-}
-
-func (api *processorAPI) AddAcmeDomain(domain string) {
-	api.processor.AddAcmeDomain(domain)
+	r.HandlerFunc(handlerFunc)
 }
 
 type router struct {

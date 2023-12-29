@@ -45,7 +45,7 @@ func TestBasicUsage_HTTPProcessor(t *testing.T) {
 			dir, fileName := makeTmpContent(require, res)
 			defer os.RemoveAll(dir)
 			dirFS := os.DirFS(dir)
-			testApp.api.DeployStaticContent(res, dirFS)
+			testApp.processor.DeployStaticContent(res, dirFS)
 
 			body := testApp.get("/static/" + res + "/" + filepath.Base(fileName))
 			require.Equal([]byte(filepath.Base(res)), body)
@@ -55,7 +55,7 @@ func TestBasicUsage_HTTPProcessor(t *testing.T) {
 	t.Run("deploy embedded", func(t *testing.T) {
 		testContentFS, err := fs.Sub(testContentFS, "testcontent")
 		require.NoError(err)
-		testApp.api.DeployStaticContent("embedded", testContentFS)
+		testApp.processor.DeployStaticContent("embedded", testContentFS)
 		body := testApp.get("/static/embedded/test.txt")
 		require.Equal([]byte("test file content"), body)
 	})
@@ -134,10 +134,10 @@ func TestReverseProxy(t *testing.T) {
 	}
 
 	for srcRegExp, dstRegExp := range testRedirectionRoutes() {
-		testApp.api.AddReverseProxyRoute(srcRegExp, dstRegExp)
+		testApp.processor.AddReverseProxyRoute(srcRegExp, dstRegExp)
 	}
-	testApp.api.SetReverseProxyRouteDefault("^(https?)://([^/]+)/([^?]+)?(\\?(.+))?$", fmt.Sprintf("http://127.0.0.1:%d/unknown/$3", targetListenerPort))
-	testApp.api.DeployStaticContent("embedded", testContentSubFs)
+	testApp.processor.SetReverseProxyRouteDefault("^(https?)://([^/]+)/([^?]+)?(\\?(.+))?$", fmt.Sprintf("http://127.0.0.1:%d/unknown/$3", targetListenerPort))
+	testApp.processor.DeployStaticContent("embedded", testContentSubFs)
 	for requestedPath, expectedPath := range paths {
 		targetHandler.expectedURLPath = expectedPath
 		testApp.get(requestedPath)
@@ -152,7 +152,6 @@ type testApp struct {
 	cancel    context.CancelFunc
 	wg        *sync.WaitGroup
 	processor ihttp.IHTTPProcessor
-	api       ihttp.IHTTPProcessorAPI
 	cleanups  []func()
 	t         *testing.T
 }
@@ -189,9 +188,6 @@ func setUp(t *testing.T) *testApp {
 
 	// create API
 
-	api, err := NewAPI(processor)
-	require.NoError(err)
-
 	// reverse cleanups
 	for i, j := 0, len(cleanups)-1; i < j; i, j = i+1, j-1 {
 		cleanups[i], cleanups[j] = cleanups[j], cleanups[i]
@@ -202,7 +198,6 @@ func setUp(t *testing.T) *testApp {
 		cancel:    cancel,
 		wg:        &wg,
 		processor: processor,
-		api:       api,
 		cleanups:  cleanups,
 		t:         t,
 	}
