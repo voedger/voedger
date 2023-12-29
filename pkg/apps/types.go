@@ -40,3 +40,6 @@ type AppPackages struct {
 	AppQName istructs.AppQName
 	Packages []parser.PackageFS
 }
+type CLIParams struct {
+	Storage string
+}

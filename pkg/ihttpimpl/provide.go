@@ -7,22 +7,30 @@ package ihttpimpl
 
 import (
 	"net/http"
-	"strconv"
+	"sync"
 
 	"github.com/voedger/voedger/pkg/ihttp"
+	coreutils "github.com/voedger/voedger/pkg/utils"
+	dbcertcache "github.com/voedger/voedger/pkg/vvm/db_cert_cache"
 )
 
-func NewProcessor(params ihttp.CLIParams) (server ihttp.IHTTPProcessor, cleanup func(), err error) {
-	port := strconv.Itoa(params.Port)
+func NewProcessor(params ihttp.CLIParams, routerStorage ihttp.IRouterStorage) (server ihttp.IHTTPProcessor, cleanup func(), err error) {
 	r := newRouter()
 	httpProcessor := httpProcessor{
-		params: params,
-		router: r,
+		params:      params,
+		router:      r,
+		certCache:   dbcertcache.ProvideDbCache(routerStorage),
+		acmeDomains: &sync.Map{},
 		server: &http.Server{
-			Addr:              ":" + port,
+			Addr:              coreutils.ServerAddress(params.Port),
 			Handler:           r,
 			ReadHeaderTimeout: defaultReadHeaderTimeout,
 		},
+	}
+	if len(params.AcmeDomains) > 0 {
+		for _, domain := range params.AcmeDomains {
+			httpProcessor.AddAcmeDomain(domain)
+		}
 	}
 	return &httpProcessor, httpProcessor.cleanup, err
 }

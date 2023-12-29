@@ -26,29 +26,14 @@ if [[ $# -ne 3 ]]; then
 fi
 
 source ./utils.sh
+source ./utils-cql.sh
 
 readonly node=$1
 readonly targetFolder=$2
 readonly containerName="scylla"
 readonly nodeDataDir="/var/lib/scylla"
 readonly sshKey=$3
-readonly signalFilePath="$HOME/ctool/.voedgerbackup"
 
-getContainer() {
-    if ! containerID=$(utils_ssh -i "$sshKey" "$LOGNAME@$node" docker ps -q -f "name=$containerName"); then
-        echo "Error getting container ID for $containerName"
-        return 1
-    fi
-
-    trimmedID=$(echo "$containerID" | tr -d '[:space:]')
-
-    if [ -z "$trimmedID" ]; then
-        echo "Container ID not found for $containerName"
-        return 1
-    fi
-
-    echo "$trimmedID"
-}
 
 signalFile() {
     case "$1" in
@@ -62,7 +47,7 @@ signalFile() {
             ;;
         remove)
             # Remove the signal file if it exists
-            if [ -e "$signalFilePath" ]; then
+            if utils_ssh -i "$sshKey" "$LOGNAME@$node" "[ -e $signalFilePath ]"; then
                 utils_ssh -i "$sshKey" "$LOGNAME@$node" rm "$signalFilePath"
                 echo "Signal file removed from: $signalFilePath"
             else
@@ -102,34 +87,6 @@ snapshotCtl() {
     echo "$snapshotTag"
 }
 
-descKeyspaces() {
-    containerID="$1"
-    mapfile -t CQLout < <(
-        utils_ssh -i "$sshKey" "$LOGNAME@$node" \
-        "docker exec $containerID cqlsh -e 'DESC KEYSPACES' | grep -v '^$' | sed '/^Warning:/d'"
-    )
-
-    if [ $? -ne 0 ]; then
-        echo "Error executing 'DESC KEYSPACES' in container $containerID"
-        return 1
-    fi
-
-    # Create a new array to store trimmed and split keyspaces
-    declare -a keyspaces
-
-    # Process each line to split by space and trim elements
-    for ((i = 0; i < ${#CQLout[@]}; i++)); do
-        read -ra keyspaces_line <<< "${CQLout[i]}"
-        trimmed_ks=""
-        for ks in "${keyspaces_line[@]}"; do
-            trimmed_ks+=$(echo "$ks" | tr -d '[:space:]')' '
-        done
-        # Remove trailing space
-        keyspaces+=("${trimmed_ks%" "}")
-    done
-
- echo "${keyspaces[@]}"
-}
 
 upload() {
     while [ $# -gt 0 ]; do

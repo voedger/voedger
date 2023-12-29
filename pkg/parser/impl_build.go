@@ -794,6 +794,12 @@ func (c *buildContext) addConstraintToDef(constraint *TableConstraint) {
 			return
 		}
 		c.defCtx().defBuilder.(appdef.IUniquesBuilder).SetUniqueField(string(constraint.UniqueField.Field))
+	} else if constraint.Unique != nil {
+		fields := make([]string, len(constraint.Unique.Fields))
+		for i, f := range constraint.Unique.Fields {
+			fields[i] = string(f)
+		}
+		c.defCtx().defBuilder.(appdef.IUniquesBuilder).AddUnique(string(constraint.ConstraintName), fields)
 	}
 }
 
