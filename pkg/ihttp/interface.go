@@ -20,7 +20,7 @@ type IHTTPProcessor interface {
 	ListeningPort() int
 	HandlePath(resource string, prefix bool, handlerFunc func(http.ResponseWriter, *http.Request))
 	AddReverseProxyRoute(srcRegExp, dstRegExp string)
-	AddReverseProxyRouteDefault(srcRegExp, dstRegExp string)
+	SetReverseProxyRouteDefault(srcRegExp, dstRegExp string)
 	AddAcmeDomain(domain string)
 }
 
@@ -78,7 +78,7 @@ type IHTTPProcessorAPI interface {
 	// ErrUnknownDynamicSubresource
 	//--	UndeployDynamicSubresource(app istructs.AppQName, path string) (err error)
 	AddReverseProxyRoute(srcRegExp, dstRegExp string)
-	AddReverseProxyRouteDefault(srcRegExp, dstRegExp string)
+	SetReverseProxyRouteDefault(srcRegExp, dstRegExp string)
 	AddAcmeDomain(domain string)
 }
 

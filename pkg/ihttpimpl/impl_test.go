@@ -129,7 +129,7 @@ func TestReverseProxy(t *testing.T) {
 	for srcRegExp, dstRegExp := range apps.NewRedirectionRoutes(ihttp.GrafanaPort(targetListenerPort), ihttp.PrometheusPort(targetListenerPort)) {
 		testApp.api.AddReverseProxyRoute(srcRegExp, dstRegExp)
 	}
-	testApp.api.AddReverseProxyRouteDefault("^(https?)://([^/]+)/([^?]+)?(\\?(.+))?$", fmt.Sprintf("http://127.0.0.1:%d/unknown/$3", targetListenerPort))
+	testApp.api.SetReverseProxyRouteDefault("^(https?)://([^/]+)/([^?]+)?(\\?(.+))?$", fmt.Sprintf("http://127.0.0.1:%d/unknown/$3", targetListenerPort))
 	testApp.api.DeployStaticContent("embedded", testContentSubFs)
 	for requestedPath, expectedPath := range paths {
 		targetHandler.expectedURLPath = expectedPath
