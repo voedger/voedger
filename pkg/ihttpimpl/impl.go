@@ -135,7 +135,7 @@ func (p *httpProcessor) AddReverseProxyRoute(srcRegExp, dstRegExp string) {
 	})
 }
 
-func (p *httpProcessor) AddReverseProxyRouteDefault(srcRegExp, dstRegExp string) {
+func (p *httpProcessor) SetReverseProxyRouteDefault(srcRegExp, dstRegExp string) {
 	// TODO: concurrency safety can be added via sync.RWMutex
 	p.router.redirections[len(p.router.redirections)-1] = &redirectionRoute{
 		srcRegExp:        regexp.MustCompile(srcRegExp),
@@ -212,8 +212,8 @@ func (api *processorAPI) AddReverseProxyRoute(srcRegExp, dstRegExp string) {
 	api.processor.AddReverseProxyRoute(srcRegExp, dstRegExp)
 }
 
-func (api *processorAPI) AddReverseProxyRouteDefault(srcRegExp, dstRegExp string) {
-	api.processor.AddReverseProxyRouteDefault(srcRegExp, dstRegExp)
+func (api *processorAPI) SetReverseProxyRouteDefault(srcRegExp, dstRegExp string) {
+	api.processor.SetReverseProxyRouteDefault(srcRegExp, dstRegExp)
 }
 
 func (api *processorAPI) AddAcmeDomain(domain string) {
