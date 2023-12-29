@@ -13,6 +13,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// noliint
 func newBackupCmd() *cobra.Command {
 	backupNodeCmd := &cobra.Command{
 		Use:   "node <node> <target folder> <path to ssh key>",
@@ -53,6 +54,7 @@ func validateBackupCroneCmd(cmd *cmdType, cluster *clusterType) error {
 	return nil
 }
 
+// nolint
 func validateBackupNodeCmd(cmd *cmdType, cluster *clusterType) error {
 	args := cmd.args()
 
