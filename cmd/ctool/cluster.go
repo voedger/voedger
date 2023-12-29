@@ -388,7 +388,7 @@ func validateReplaceCmd(cmd *cmdType, cluster *clusterType) error {
 	var err error
 
 	if n := cluster.nodeByHost(args[0]); n == nil {
-		err = errors.Join(err, fmt.Errorf(errHostNotFoundInCluster, args[0], ErrHostNotFoundInCluster.Error()))
+		err = errors.Join(err, fmt.Errorf(errHostNotFoundInCluster, args[0], ErrHostNotFoundInCluster))
 	}
 
 	if n := cluster.nodeByHost(args[1]); n != nil {
