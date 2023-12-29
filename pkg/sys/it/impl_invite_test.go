@@ -98,10 +98,9 @@ func TestInvite_BasicUsage(t *testing.T) {
 	// need to gather email first because
 	actualEmails := []smtptest.Message{vit.CaptureEmail(), vit.CaptureEmail(), vit.CaptureEmail()}
 
-	// State ToBeInvited exists for a very small period of time so let's do not catch it
-	WaitForInviteState(vit, ws, invite.State_Invited, inviteID)
-	WaitForInviteState(vit, ws, invite.State_Invited, inviteID2)
-	WaitForInviteState(vit, ws, invite.State_Invited, inviteID3)
+	WaitForInviteState(vit, ws, inviteID, invite.State_ToBeInvited, invite.State_Invited)
+	WaitForInviteState(vit, ws, inviteID2, invite.State_ToBeInvited, invite.State_Invited)
+	WaitForInviteState(vit, ws, inviteID3, invite.State_ToBeInvited, invite.State_Invited)
 
 	cDocInvite := findCDocInviteByID(inviteID)
 
@@ -162,18 +161,18 @@ func TestInvite_BasicUsage(t *testing.T) {
 
 	//Cancel then invite it again (inviteID3)
 	vit.PostWS(ws, "c.sys.CancelSentInvite", fmt.Sprintf(`{"args":{"InviteID":%d}}`, inviteID3))
-	WaitForInviteState(vit, ws, invite.State_Cancelled, inviteID3)
+	WaitForInviteState(vit, ws, inviteID3, invite.State_ToBeCancelled, invite.State_Cancelled)
 	InitiateInvitationByEMail(vit, ws, expireDatetime, email3, initialRoles, inviteEmailTemplate, inviteEmailSubject)
 	_ = vit.CaptureEmail()
-	WaitForInviteState(vit, ws, invite.State_Invited, inviteID3)
+	WaitForInviteState(vit, ws, inviteID3, invite.State_ToBeInvited, invite.State_Invited)
 
 	//Join workspaces
 	InitiateJoinWorkspace(vit, ws, inviteID, login1Prn, verificationCodeEmail)
 	InitiateJoinWorkspace(vit, ws, inviteID2, login2Prn, verificationCodeEmail2)
 
 	// State_ToBeJoined will be set for a very short period of time so let's do not catch it
-	WaitForInviteState(vit, ws, invite.State_Joined, inviteID)
-	WaitForInviteState(vit, ws, invite.State_Joined, inviteID2)
+	WaitForInviteState(vit, ws, inviteID, invite.State_ToBeJoined, invite.State_Joined)
+	WaitForInviteState(vit, ws, inviteID2, invite.State_ToBeJoined, invite.State_Joined)
 
 	cDocInvite = findCDocInviteByID(inviteID2)
 
@@ -202,8 +201,8 @@ func TestInvite_BasicUsage(t *testing.T) {
 	initiateUpdateInviteRoles(inviteID)
 	initiateUpdateInviteRoles(inviteID2)
 
-	WaitForInviteState(vit, ws, invite.State_ToUpdateRoles, inviteID)
-	WaitForInviteState(vit, ws, invite.State_ToUpdateRoles, inviteID2)
+	WaitForInviteState(vit, ws, inviteID, invite.State_ToUpdateRoles)
+	WaitForInviteState(vit, ws, inviteID2, invite.State_ToUpdateRoles)
 	cDocInvite = findCDocInviteByID(inviteID)
 
 	require.Equal(float64(vit.Now().UnixMilli()), cDocInvite[8])
@@ -222,14 +221,14 @@ func TestInvite_BasicUsage(t *testing.T) {
 
 	//TODO Denis how to get WS by login? I want to check sys.JoinedWorkspace
 
-	WaitForInviteState(vit, ws, invite.State_Joined, inviteID)
-	WaitForInviteState(vit, ws, invite.State_Joined, inviteID2)
+	WaitForInviteState(vit, ws, inviteID, invite.State_ToBeJoined, invite.State_Joined)
+	WaitForInviteState(vit, ws, inviteID2, invite.State_ToBeJoined, invite.State_Joined)
 
 	//Cancel accepted invite
 	vit.PostWS(ws, "c.sys.InitiateCancelAcceptedInvite", fmt.Sprintf(`{"args":{"InviteID":%d}}`, inviteID))
 
 	// State_ToBeCancelled will be set for a veri short period of time so let's do not catch it
-	WaitForInviteState(vit, ws, invite.State_Cancelled, inviteID)
+	WaitForInviteState(vit, ws, inviteID, invite.State_ToBeCancelled, invite.State_Cancelled)
 
 	cDocInvite = findCDocInviteByID(inviteID)
 
@@ -246,8 +245,7 @@ func TestInvite_BasicUsage(t *testing.T) {
 	//Leave workspace
 	vit.PostWS(ws, "c.sys.InitiateLeaveWorkspace", "{}", coreutils.WithAuthorizeBy(login2Prn.Token))
 
-	// State_ToBeLeft will be set for a veri short period of time so let's do not catch it
-	WaitForInviteState(vit, ws, invite.State_Left, inviteID2)
+	WaitForInviteState(vit, ws, inviteID2, invite.State_ToBeLeft, invite.State_Left)
 
 	cDocInvite = findCDocInviteByID(inviteID2)
 
@@ -272,13 +270,13 @@ func TestCancelSentInvite(t *testing.T) {
 
 	t.Run("basic usage", func(t *testing.T) {
 		inviteID := InitiateInvitationByEMail(vit, ws, 1674751138000, email, initialRoles, inviteEmailTemplate, inviteEmailSubject)
-		WaitForInviteState(vit, ws, invite.State_Invited, inviteID)
+		WaitForInviteState(vit, ws, inviteID, invite.State_ToBeInvited, invite.State_Invited)
 
 		//Read it for successful vit tear down
 		vit.CaptureEmail()
 
 		vit.PostWS(ws, "c.sys.CancelSentInvite", fmt.Sprintf(`{"args":{"InviteID":%d}}`, inviteID))
-		WaitForInviteState(vit, ws, invite.State_Cancelled, inviteID)
+		WaitForInviteState(vit, ws, inviteID, invite.State_ToBeCancelled, invite.State_Cancelled)
 	})
 	t.Run("invite not exists -> 400 bad request", func(t *testing.T) {
 		vit.PostWS(ws, "c.sys.CancelSentInvite", fmt.Sprintf(`{"args":{"InviteID":%d}}`, -100), coreutils.Expect400RefIntegrity_Existence())
@@ -291,7 +289,7 @@ func testOverwriteRoles(t *testing.T, vit *it.VIT, ws *it.AppWorkspace, email st
 	// reinvite when invitation is not accepted yet -> roles must be overwritten
 	newInviteID := InitiateInvitationByEMail(vit, ws, 1674751138000, email, newRoles, inviteEmailTemplate, inviteEmailSubject)
 	require.Zero(newInviteID)
-	WaitForInviteState(vit, ws, invite.State_Invited, inviteID)
+	WaitForInviteState(vit, ws, inviteID, invite.State_ToBeInvited, invite.State_Invited)
 	actualEmail := vit.CaptureEmail()
 	verificationCode = actualEmail.Body[:6]
 
