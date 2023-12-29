@@ -24,9 +24,9 @@ import (
 func newCompatCmd() *cobra.Command {
 	params := vpmParams{}
 	cmd := &cobra.Command{
-		Use:   "compat",
+		Use:   "compat [baseline-folder]",
 		Short: "check backward compatibility",
-		Args:  cobra.MinimumNArgs(1),
+		Args:  showHelpIfLackOfArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
 			params, err = prepareParams(params, args)
 			if err != nil {
@@ -199,4 +199,13 @@ func splitIgnorePaths(ignores []string) (res [][]string) {
 		res[i] = strings.Split(ignore, "/")
 	}
 	return
+}
+
+func showHelpIfLackOfArgs(n int) cobra.PositionalArgs {
+	return func(cmd *cobra.Command, args []string) error {
+		if len(args) < n {
+			return cmd.Help()
+		}
+		return nil
+	}
 }
