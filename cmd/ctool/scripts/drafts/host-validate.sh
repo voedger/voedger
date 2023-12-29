@@ -7,6 +7,8 @@
 #
 set -euo pipefail
 
+set -x
+
 if [ $# -lt 2 ]; then
   echo "Usage: $0 <remote host IP> <minimum RAM MB>"
   exit 1

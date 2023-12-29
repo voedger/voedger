@@ -141,7 +141,7 @@ func seClusterControllerFunction(c *clusterType) error {
 	case ckReplace:
 		var n *nodeType
 		if n = c.nodeByHost(c.Cmd.args()[1]); n == nil {
-			return fmt.Errorf(ErrHostNotFoundInCluster.Error(), c.Cmd.args()[1])
+			return fmt.Errorf(errHostNotFoundInCluster, c.Cmd.args()[1], ErrHostNotFoundInCluster)
 		}
 		switch n.NodeRole {
 		case nrDBNode:
@@ -496,7 +496,7 @@ func resolveDC(cluster *clusterType, ip string) (dc string, err error) {
 	const nodeOffset int32 = 1
 	n := cluster.nodeByHost(ip)
 	if n == nil {
-		return "", fmt.Errorf(ErrHostNotFoundInCluster.Error(), cluster.Cmd.args()[0])
+		return "", fmt.Errorf(errHostNotFoundInCluster, cluster.Cmd.args()[0], ErrHostNotFoundInCluster)
 	}
 	if (n.idx == int(idxDBNode1+nodeOffset)) || (n.idx == int(idxDBNode2+nodeOffset)) {
 		return "dc1", nil
