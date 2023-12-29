@@ -68,14 +68,15 @@ func WaitForIndexOffset(vit *it.VIT, ws *it.AppWorkspace, index appdef.QName, of
 }
 
 func InitiateInvitationByEMail(vit *it.VIT, ws *it.AppWorkspace, expireDatetime int64, email, initialRoles, inviteEmailTemplate, inviteEmailSubject string) (inviteID int64) {
+	vit.T.Helper()
 	body := fmt.Sprintf(`{"args":{"Email":"%s","Roles":"%s","ExpireDatetime":%d,"EmailTemplate":"%s","EmailSubject":"%s"}}`,
 		email, initialRoles, expireDatetime, inviteEmailTemplate, inviteEmailSubject)
 	return vit.PostWS(ws, "c.sys.InitiateInvitationByEMail", body).NewID()
 }
 
-func InitiateJoinWorkspace(vit *it.VIT, ws *it.AppWorkspace, inviteID int64, login string, verificationCode string) {
-	profile := vit.GetPrincipal(istructs.AppQName_test1_app1, login)
-	vit.PostWS(ws, "c.sys.InitiateJoinWorkspace", fmt.Sprintf(`{"args":{"InviteID":%d,"VerificationCode":"%s"}}`, inviteID, verificationCode), coreutils.WithAuthorizeBy(profile.Token))
+func InitiateJoinWorkspace(vit *it.VIT, ws *it.AppWorkspace, inviteID int64, login *it.Principal, verificationCode string) {
+	vit.T.Helper()
+	vit.PostWS(ws, "c.sys.InitiateJoinWorkspace", fmt.Sprintf(`{"args":{"InviteID":%d,"VerificationCode":"%s"}}`, inviteID, verificationCode), coreutils.WithAuthorizeBy(login.Token))
 }
 
 func WaitForInviteState(vit *it.VIT, ws *it.AppWorkspace, inviteState int32, inviteID int64) {
@@ -101,8 +102,9 @@ type joinedWorkspaceDesc struct {
 	wsName                string
 }
 
-func FindCDocJoinedWorkspaceByInvitingWorkspaceWSIDAndLogin(vit *it.VIT, invitingWorkspaceWSID istructs.WSID, login string) joinedWorkspaceDesc {
-	resp := vit.PostProfile(vit.GetPrincipal(istructs.AppQName_test1_app1, login), "q.sys.Collection", fmt.Sprintf(`
+func FindCDocJoinedWorkspaceByInvitingWorkspaceWSIDAndLogin(vit *it.VIT, invitingWorkspaceWSID istructs.WSID, login *it.Principal) joinedWorkspaceDesc {
+	vit.T.Helper()
+	resp := vit.PostProfile(login, "q.sys.Collection", fmt.Sprintf(`
 		{"args":{"Schema":"sys.JoinedWorkspace"},
 		"elements":[{"fields":[
 			"sys.ID",

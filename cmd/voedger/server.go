@@ -10,6 +10,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/voedger/voedger/pkg/apps"
 	"github.com/voedger/voedger/pkg/ihttp"
 	"github.com/voedger/voedger/pkg/iservices"
 	"github.com/voedger/voedger/pkg/iservicesctl"
@@ -17,11 +18,12 @@ import (
 
 func newServerCmd() *cobra.Command {
 	var httpCLIParams ihttp.CLIParams
+	var appsCLIParams apps.CLIParams
 	serverCmd := &cobra.Command{
 		Use:   "server",
 		Short: "Start server",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			wired, cleanup, err := wireServer(httpCLIParams, defaultGrafanaPort, defaultPrometheusPort)
+			wired, cleanup, err := wireServer(httpCLIParams, appsCLIParams, defaultGrafanaPort, defaultPrometheusPort)
 			if err != nil {
 				return fmt.Errorf("services not wired: %w", err)
 			}
@@ -38,5 +40,7 @@ func newServerCmd() *cobra.Command {
 		},
 	}
 	serverCmd.PersistentFlags().IntVar(&httpCLIParams.Port, "ihttp.Port", Default_ihttp_Port, "")
+	serverCmd.Flags().StringVar(&appsCLIParams.Storage, "storage", "", "")
+	serverCmd.Flags().StringArrayVar((*[]string)(&httpCLIParams.AcmeDomains), "acme-domain", []string{}, "")
 	return serverCmd
 }

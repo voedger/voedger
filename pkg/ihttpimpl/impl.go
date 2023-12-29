@@ -9,6 +9,8 @@ package ihttpimpl
 
 import (
 	"context"
+	"crypto/tls"
+	"errors"
 	"fmt"
 	"io/fs"
 	"net"
@@ -20,6 +22,7 @@ import (
 	"sync"
 
 	"github.com/gorilla/mux"
+	"golang.org/x/crypto/acme/autocert"
 	"golang.org/x/exp/slices"
 
 	"github.com/voedger/voedger/pkg/istructs"
@@ -31,10 +34,15 @@ import (
 )
 
 type httpProcessor struct {
-	params   ihttp.CLIParams
-	router   *router
-	server   *http.Server
-	listener net.Listener
+	params       ihttp.CLIParams
+	router       *router
+	server       *http.Server
+	listener     net.Listener
+	acmeServer   *http.Server
+	acmeListener net.Listener
+	acmeDomains  *sync.Map
+	certCache    autocert.Cache
+	certManager  *autocert.Manager
 }
 
 type redirectionRoute struct {
@@ -43,28 +51,75 @@ type redirectionRoute struct {
 }
 
 func (p *httpProcessor) Prepare() (err error) {
+	if p.isHTTPS() {
+		acmeAddr := coreutils.ServerAddress(defaultHTTPPort)
+		p.certManager = &autocert.Manager{
+			Prompt:     autocert.AcceptTOS,
+			HostPolicy: p.hostPolicy,
+			Cache:      p.certCache,
+		}
+		p.server.TLSConfig = &tls.Config{
+			GetCertificate: p.certManager.GetCertificate,
+			MinVersion:     tls.VersionTLS12, // VersionTLS13 is unsupported by Chargebee
+		}
+		p.acmeServer = &http.Server{
+			Addr:         acmeAddr,
+			ReadTimeout:  defaultACMEServerReadTimeout,
+			WriteTimeout: defaultACMEServerWriteTimeout,
+			Handler:      p.certManager.HTTPHandler(nil),
+		}
+		if p.acmeListener, err = net.Listen("tcp", acmeAddr); err == nil {
+			logger.Info("listening port ", p.acmeListener.Addr().(*net.TCPAddr).Port, " for acme server")
+		}
+	}
 	if p.listener, err = net.Listen("tcp", coreutils.ServerAddress(p.params.Port)); err == nil {
-		logger.Info("listening port:", p.listener.Addr().(*net.TCPAddr).Port)
+		logger.Info("listening port ", p.listener.Addr().(*net.TCPAddr).Port, " for server")
 	}
 	return
 }
 
 func (p *httpProcessor) Run(ctx context.Context) {
-
 	wg := &sync.WaitGroup{}
 	wg.Add(1)
+	isHTTPS := p.isHTTPS()
 	go func() {
 		defer wg.Done()
-		logger.Info("httpProcessor started:", fmt.Sprintf("%#v", p.params))
-		err := p.server.Serve(p.listener)
+		logger.Info("httpProcessor starting:", fmt.Sprintf("%#v", p.params))
+		p.server.BaseContext = func(_ net.Listener) context.Context {
+			return ctx // need to track both client disconnect and app finalize
+		}
+		var err error
+		if isHTTPS {
+			err = p.server.ServeTLS(p.listener, "", "")
+		} else {
+			err = p.server.Serve(p.listener)
+		}
 		logger.Info("httpProcessor stopped, result:", err)
 	}()
+
+	if isHTTPS {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			logger.Info("httpProcessor's acme server starting:", fmt.Sprintf("%#v", p.params))
+			err := p.acmeServer.Serve(p.acmeListener)
+			logger.Info("httpProcessor's acme server  stopped, result:", err)
+		}()
+	}
 
 	<-ctx.Done()
 	if err := p.server.Shutdown(context.Background()); err != nil {
 		logger.Error("server shutdown failed", err)
-		p.listener.Close()
-		p.server.Close()
+		_ = p.listener.Close()
+		_ = p.server.Close()
+	}
+
+	if p.acmeServer != nil {
+		if err := p.acmeServer.Shutdown(context.Background()); err != nil {
+			logger.Error("acme server shutdown failed", err)
+			_ = p.acmeListener.Close()
+			_ = p.acmeServer.Close()
+		}
 	}
 
 	logger.Info("waiting for the httpProcessor...")
@@ -88,6 +143,10 @@ func (p *httpProcessor) AddReverseProxyRouteDefault(srcRegExp, dstRegExp string)
 	}
 }
 
+func (p *httpProcessor) AddAcmeDomain(domain string) {
+	p.acmeDomains.Store(domain, struct{}{})
+}
+
 func (p *httpProcessor) HandlePath(resource string, prefix bool, handlerFunc func(http.ResponseWriter, *http.Request)) {
 	// TODO: concurrency safety can be added via sync.RWMutex
 	var r *mux.Route
@@ -103,10 +162,30 @@ func (p *httpProcessor) ListeningPort() int {
 	return p.listener.Addr().(*net.TCPAddr).Port
 }
 
+func (p *httpProcessor) isHTTPS() bool {
+	var count int
+	p.acmeDomains.Range(func(_, _ interface{}) bool {
+		count++
+		return true
+	})
+	return count > 0
+}
+
+func (p *httpProcessor) hostPolicy(_ context.Context, host string) error {
+	if _, ok := p.acmeDomains.Load(host); !ok {
+		return fmt.Errorf("acme/autocert: host %s not configured", host)
+	}
+	return nil
+}
+
 func (p *httpProcessor) cleanup() {
 	if nil != p.listener {
-		p.listener.Close()
+		_ = p.listener.Close()
 		p.listener = nil
+	}
+	if nil != p.acmeListener {
+		_ = p.acmeListener.Close()
+		p.acmeListener = nil
 	}
 }
 
@@ -125,8 +204,8 @@ func (api *processorAPI) DeployStaticContent(resource string, fs fs.FS) {
 
 func (api *processorAPI) DeployAppPartition(app istructs.AppQName, partNo istructs.PartitionID, commandHandler, queryHandler ihttp.ISender) {
 	// <cluster-domain>/api/<AppQName.owner>/<AppQName.name>/<wsid>/<{q,c}.funcQName>
-	path := fmt.Sprintf("/api/%s/%s/%d/q|c\\.[a-zA-Z_.]+", app.Owner(), app.Name(), partNo)
-	api.processor.HandlePath(path, false, handleAppPart())
+	resourcePath := fmt.Sprintf("/api/%s/%s/%d/q|c\\.[a-zA-Z_.]+", app.Owner(), app.Name(), partNo)
+	api.processor.HandlePath(resourcePath, false, handleAppPart())
 }
 
 func (api *processorAPI) AddReverseProxyRoute(srcRegExp, dstRegExp string) {
@@ -135,6 +214,10 @@ func (api *processorAPI) AddReverseProxyRoute(srcRegExp, dstRegExp string) {
 
 func (api *processorAPI) AddReverseProxyRouteDefault(srcRegExp, dstRegExp string) {
 	api.processor.AddReverseProxyRouteDefault(srcRegExp, dstRegExp)
+}
+
+func (api *processorAPI) AddAcmeDomain(domain string) {
+	api.processor.AddAcmeDomain(domain)
 }
 
 type router struct {
@@ -171,7 +254,7 @@ func (r *router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		req = requestWithRoute(req, match.Route)
 	}
 
-	if handler == nil && match.MatchErr == mux.ErrMethodMismatch {
+	if handler == nil && errors.Is(match.MatchErr, mux.ErrMethodMismatch) {
 		handler = methodNotAllowedHandler()
 	}
 
@@ -275,7 +358,7 @@ func requestWithRoute(r *http.Request, route *mux.Route) *http.Request {
 
 // methodNotAllowed replies to the request with an HTTP status code 405.
 // Borrowed from the mux package.
-func methodNotAllowed(w http.ResponseWriter, r *http.Request) {
+func methodNotAllowed(w http.ResponseWriter, _ *http.Request) {
 	w.WriteHeader(http.StatusMethodNotAllowed)
 }
 

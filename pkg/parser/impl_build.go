@@ -761,7 +761,11 @@ func (c *buildContext) addTableFieldToTable(field *FieldExpr, ictx *iterateCtx) 
 
 	if wrec != nil || orec != nil || crec != nil {
 		//tk := getNestedTableKind(ctx.defs[0].kind)
-		tk := getNestedTableKind(c.defCtx().kind)
+		tk, err := getNestedTableKind(c.defCtx().kind)
+		if err != nil {
+			c.stmtErr(&field.Pos, err)
+			return
+		}
 		if (wrec != nil && tk != appdef.TypeKind_WRecord) ||
 			(orec != nil && tk != appdef.TypeKind_ORecord) ||
 			(crec != nil && tk != appdef.TypeKind_CRecord) {
@@ -794,6 +798,12 @@ func (c *buildContext) addConstraintToDef(constraint *TableConstraint) {
 			return
 		}
 		c.defCtx().defBuilder.(appdef.IUniquesBuilder).SetUniqueField(string(constraint.UniqueField.Field))
+	} else if constraint.Unique != nil {
+		fields := make([]string, len(constraint.Unique.Fields))
+		for i, f := range constraint.Unique.Fields {
+			fields[i] = string(f)
+		}
+		c.defCtx().defBuilder.(appdef.IUniquesBuilder).AddUnique(string(constraint.ConstraintName), fields)
 	}
 }
 

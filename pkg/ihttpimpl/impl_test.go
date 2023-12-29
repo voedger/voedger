@@ -26,6 +26,8 @@ import (
 
 	"github.com/voedger/voedger/pkg/apps"
 	"github.com/voedger/voedger/pkg/ihttp"
+	"github.com/voedger/voedger/pkg/istorage"
+	"github.com/voedger/voedger/pkg/istorageimpl"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
@@ -42,8 +44,8 @@ func TestBasicUsage_HTTPProcessor(t *testing.T) {
 		for _, res := range resources {
 			dir, fileName := makeTmpContent(require, res)
 			defer os.RemoveAll(dir)
-			fs := os.DirFS(dir)
-			testApp.api.DeployStaticContent(res, fs)
+			dirFS := os.DirFS(dir)
+			testApp.api.DeployStaticContent(res, dirFS)
 
 			body := testApp.get("/static/" + res + "/" + filepath.Base(fileName))
 			require.Equal([]byte(filepath.Base(res)), body)
@@ -161,7 +163,10 @@ func setUp(t *testing.T) *testApp {
 	params := ihttp.CLIParams{
 		Port: 0, // listen using some free port, port value will be taken using API
 	}
-	processor, pCleanup, err := NewProcessor(params)
+	appStorageProvider := istorageimpl.Provide(istorage.ProvideMem())
+	routerStorage, err := ihttp.NewIRouterStorage(appStorageProvider)
+	require.NoError(err)
+	processor, pCleanup, err := NewProcessor(params, routerStorage)
 	require.NoError(err)
 	cleanups = append(cleanups, pCleanup)
 

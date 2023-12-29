@@ -11,6 +11,8 @@ import (
 	"github.com/voedger/voedger/pkg/ihttp"
 	"github.com/voedger/voedger/pkg/ihttpctl"
 	"github.com/voedger/voedger/pkg/ihttpimpl"
+	"github.com/voedger/voedger/pkg/istorage"
+	"github.com/voedger/voedger/pkg/istorageimpl"
 )
 
 import (
@@ -19,8 +21,17 @@ import (
 
 // Injectors from wire.go:
 
-func wireServer(cliParams ihttp.CLIParams, grafanaPort ihttp.GrafanaPort, prometheusPort ihttp.PrometheusPort) (WiredServer, func(), error) {
-	ihttpProcessor, cleanup, err := ihttpimpl.NewProcessor(cliParams)
+func wireServer(httpCliParams ihttp.CLIParams, appsCliParams apps.CLIParams, grafanaPort ihttp.GrafanaPort, prometheusPort ihttp.PrometheusPort) (WiredServer, func(), error) {
+	iAppStorageFactory, err := apps.NewAppStorageFactory(appsCliParams)
+	if err != nil {
+		return WiredServer{}, nil, err
+	}
+	iAppStorageProvider := provideAppStorageProvider(iAppStorageFactory)
+	iRouterStorage, err := ihttp.NewIRouterStorage(iAppStorageProvider)
+	if err != nil {
+		return WiredServer{}, nil, err
+	}
+	ihttpProcessor, cleanup, err := ihttpimpl.NewProcessor(httpCliParams, iRouterStorage)
 	if err != nil {
 		return WiredServer{}, nil, err
 	}
@@ -32,7 +43,8 @@ func wireServer(cliParams ihttp.CLIParams, grafanaPort ihttp.GrafanaPort, promet
 	v := apps.NewStaticEmbeddedResources()
 	redirectRoutes := apps.NewRedirectionRoutes(grafanaPort, prometheusPort)
 	defaultRedirectRoute := apps.NewDefaultRedirectionRoute()
-	ihttpProcessorController, err := ihttpctl.NewHTTPProcessorController(ihttpProcessorAPI, v, redirectRoutes, defaultRedirectRoute)
+	acmeDomains := httpCliParams.AcmeDomains
+	ihttpProcessorController, err := ihttpctl.NewHTTPProcessorController(ihttpProcessorAPI, v, redirectRoutes, defaultRedirectRoute, acmeDomains)
 	if err != nil {
 		cleanup()
 		return WiredServer{}, nil, err
@@ -45,4 +57,11 @@ func wireServer(cliParams ihttp.CLIParams, grafanaPort ihttp.GrafanaPort, promet
 	return wiredServer, func() {
 		cleanup()
 	}, nil
+}
+
+// wire.go:
+
+// provideAppStorageProvider is intended to be used by wire instead of istorageimpl.Provide, because wire can not handle variadic arguments
+func provideAppStorageProvider(appStorageFactory istorage.IAppStorageFactory) istorage.IAppStorageProvider {
+	return istorageimpl.Provide(appStorageFactory)
 }

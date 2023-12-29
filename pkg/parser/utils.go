@@ -258,16 +258,16 @@ func maybeSysPkg(pkg Ident) bool {
 	return (pkg == "" || pkg == appdef.SysPackage)
 }
 
-func getNestedTableKind(rootTableKind appdef.TypeKind) appdef.TypeKind {
+func getNestedTableKind(rootTableKind appdef.TypeKind) (appdef.TypeKind, error) {
 	switch rootTableKind {
 	case appdef.TypeKind_CDoc, appdef.TypeKind_CRecord:
-		return appdef.TypeKind_CRecord
+		return appdef.TypeKind_CRecord, nil
 	case appdef.TypeKind_ODoc, appdef.TypeKind_ORecord:
-		return appdef.TypeKind_ORecord
+		return appdef.TypeKind_ORecord, nil
 	case appdef.TypeKind_WDoc, appdef.TypeKind_WRecord:
-		return appdef.TypeKind_WRecord
+		return appdef.TypeKind_WRecord, nil
 	default:
-		panic(fmt.Sprintf("unexpected root table kind %d", rootTableKind))
+		return appdef.TypeKind_null, ErrUnexpectedRootTableKind(int(rootTableKind))
 	}
 }
 

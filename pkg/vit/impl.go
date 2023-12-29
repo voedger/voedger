@@ -263,6 +263,7 @@ func (vit *VIT) GetSystemPrincipal(appQName istructs.AppQName) *Principal {
 }
 
 func (vit *VIT) GetPrincipal(appQName istructs.AppQName, login string) *Principal {
+	vit.T.Helper()
 	appPrincipals, ok := vit.principals[appQName]
 	if !ok {
 		vit.T.Fatalf("unknown app %s", appQName)

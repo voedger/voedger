@@ -90,11 +90,17 @@ type AppWorkspace struct {
 	Owner *Principal // потому что токены принципала обновляются, когда меняется время
 }
 
+func (a *AppWorkspace) GetWSID() istructs.WSID         { return a.WSID }
+func (a *AppWorkspace) GetAppQName() istructs.AppQName { return a.Owner.AppQName }
+
 type Principal struct {
 	Login
 	Token       string
 	ProfileWSID istructs.WSID
 }
+
+func (p *Principal) GetWSID() istructs.WSID         { return p.ProfileWSID }
+func (p *Principal) GetAppQName() istructs.AppQName { return p.AppQName }
 
 type app struct {
 	name            istructs.AppQName
@@ -119,3 +125,8 @@ type signUpOpts struct {
 }
 
 type emailCaptor chan smtptest.Message
+
+type SubscriptionParameters interface {
+	GetWSID() istructs.WSID
+	GetAppQName() istructs.AppQName
+}

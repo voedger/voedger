@@ -91,6 +91,12 @@ func Test_BasicUsage(t *testing.T) {
 	require.Equal(appdef.DataKind_int32, container.Type().(appdef.IFields).Field("TableNo").DataKind())
 	require.Equal(appdef.DataKind_int32, container.Type().(appdef.IFields).Field("Chairs").DataKind())
 
+	// constraint
+	uniques := cdoc.Uniques()
+	require.Equal(2, len(uniques))
+	require.Equal("Unique01", uniques[0].Name())
+	require.Equal("UniqueTable", uniques[1].Name())
+
 	// child table
 	crec := builder.CRecord(appdef.NewQName("main", "TablePlanItem"))
 	require.NotNil(crec)
@@ -212,6 +218,28 @@ func Test_BasicUsage(t *testing.T) {
 	_, err = builder.Build()
 	require.NoError(err)
 
+}
+
+type ParserAssertions struct {
+	*require.Assertions
+}
+
+func (require *ParserAssertions) AppSchemaError(sql string, expectErrors ...string) {
+	ast, err := ParseFile("file.sql", sql)
+	require.NoError(err)
+
+	pkg, err := BuildPackageSchema("github.com/company/pkg", []*FileSchemaAST{ast})
+	require.NoError(err)
+
+	_, err = BuildAppSchema([]*PackageSchemaAST{
+		getSysPackageAST(),
+		pkg,
+	})
+	require.EqualError(err, strings.Join(expectErrors, "\n"))
+}
+
+func assertions(t *testing.T) *ParserAssertions {
+	return &ParserAssertions{require.New(t)}
 }
 
 func Test_Refs_NestedTables(t *testing.T) {
@@ -757,22 +785,9 @@ func Test_DuplicatesInViews(t *testing.T) {
 
 }
 func Test_Views(t *testing.T) {
-	require := require.New(t)
+	require := assertions(t)
 
-	f := func(sql string, expectErrors ...string) {
-		ast, err := ParseFile("file2.sql", sql)
-		require.NoError(err)
-		pkg, err := BuildPackageSchema("test/pkg", []*FileSchemaAST{ast})
-		require.NoError(err)
-
-		_, err = BuildAppSchema([]*PackageSchemaAST{
-			getSysPackageAST(),
-			pkg,
-		})
-		require.EqualError(err, strings.Join(expectErrors, "\n"))
-	}
-
-	f(`APPLICATION test(); WORKSPACE Workspace (
+	require.AppSchemaError(`APPLICATION test(); WORKSPACE Workspace (
 			VIEW test(
 				field1 int,
 				PRIMARY KEY(field2)
@@ -782,9 +797,9 @@ func Test_Views(t *testing.T) {
 				COMMAND Orders()
 			);
 			)
-	`, "file2.sql:4:17: undefined field field2")
+	`, "file.sql:4:17: undefined field field2")
 
-	f(`APPLICATION test(); WORKSPACE Workspace (
+	require.AppSchemaError(`APPLICATION test(); WORKSPACE Workspace (
 			VIEW test(
 				field1 varchar,
 				PRIMARY KEY((field1))
@@ -794,9 +809,9 @@ func Test_Views(t *testing.T) {
 				COMMAND Orders()
 			);
 			)
-	`, "file2.sql:4:17: varchar field field1 not supported in partition key")
+	`, "file.sql:4:17: varchar field field1 not supported in partition key")
 
-	f(`APPLICATION test(); WORKSPACE Workspace (
+	require.AppSchemaError(`APPLICATION test(); WORKSPACE Workspace (
 		VIEW test(
 			field1 bytes,
 			PRIMARY KEY((field1))
@@ -806,9 +821,9 @@ func Test_Views(t *testing.T) {
 			COMMAND Orders()
 		);
 	)
-	`, "file2.sql:4:16: bytes field field1 not supported in partition key")
+	`, "file.sql:4:16: bytes field field1 not supported in partition key")
 
-	f(`APPLICATION test(); WORKSPACE Workspace (
+	require.AppSchemaError(`APPLICATION test(); WORKSPACE Workspace (
 		VIEW test(
 			field1 varchar,
 			field2 int,
@@ -819,9 +834,9 @@ func Test_Views(t *testing.T) {
 			COMMAND Orders()
 		);
 	)
-	`, "file2.sql:5:16: varchar field field1 can only be the last one in clustering key")
+	`, "file.sql:5:16: varchar field field1 can only be the last one in clustering key")
 
-	f(`APPLICATION test(); WORKSPACE Workspace (
+	require.AppSchemaError(`APPLICATION test(); WORKSPACE Workspace (
 		VIEW test(
 			field1 bytes,
 			field2 int,
@@ -832,9 +847,9 @@ func Test_Views(t *testing.T) {
 			COMMAND Orders()
 		);
 	)
-	`, "file2.sql:5:16: bytes field field1 can only be the last one in clustering key")
+	`, "file.sql:5:16: bytes field field1 can only be the last one in clustering key")
 
-	f(`APPLICATION test(); WORKSPACE Workspace (
+	require.AppSchemaError(`APPLICATION test(); WORKSPACE Workspace (
 		ABSTRACT TABLE abc INHERITS CDoc();
 		VIEW test(
 			field1 ref(abc),
@@ -846,9 +861,9 @@ func Test_Views(t *testing.T) {
 			COMMAND Orders()
 		);
 	)
-	`, "file2.sql:4:4: reference to abstract table abc", "file2.sql:5:4: unexisting undefined")
+	`, "file.sql:4:4: reference to abstract table abc", "file.sql:5:4: unexisting undefined")
 
-	f(`APPLICATION test(); WORKSPACE Workspace (
+	require.AppSchemaError(`APPLICATION test(); WORKSPACE Workspace (
 		VIEW test(
 			fld1 int32
 		) AS RESULT OF Proj1;
@@ -857,7 +872,7 @@ func Test_Views(t *testing.T) {
 			COMMAND Orders()
 		);
 	)
-	`, "file2.sql:2:3: primary key not defined")
+	`, "file.sql:2:3: primary key not defined")
 }
 
 func Test_Views2(t *testing.T) {
@@ -1158,7 +1173,6 @@ func Test_UniqueFields(t *testing.T) {
 	TABLE MyTable INHERITS CDoc (
 		Int1 int32,
 		Int2 int32 NOT NULL,
-		UNIQUEFIELD UnknownField,
 		UNIQUEFIELD Int1,
 		UNIQUEFIELD Int2
 	)
@@ -1176,9 +1190,7 @@ func Test_UniqueFields(t *testing.T) {
 
 	appBld := appdef.New()
 	err = BuildAppDefs(packages, appBld)
-	require.EqualError(err, strings.Join([]string{
-		"example.sql:5:3: undefined field UnknownField",
-	}, "\n"))
+	require.NoError(err)
 
 	cdoc := appBld.CDoc(appdef.NewQName("test", "MyTable"))
 	require.NotNil(cdoc)
@@ -1943,4 +1955,33 @@ func TestParseFilesFromFSRoot(t *testing.T) {
 		_, err := ParsePackageDir("github.com/untillpro/main", pkgSqlFS, ".")
 		require.NoError(t, err)
 	})
+}
+
+func Test_Constraints(t *testing.T) {
+	require := assertions(t)
+
+	require.AppSchemaError(`
+	APPLICATION app1();
+	TABLE SomeTable INHERITS CDoc (
+		t1 int32,
+		t2 int32,
+		CONSTRAINT c1 UNIQUE(t1),
+		CONSTRAINT c1 UNIQUE(t2)
+	)`, "file.sql:7:3: redefinition of c1")
+
+	require.AppSchemaError(`
+	APPLICATION app1();
+	TABLE SomeTable INHERITS CDoc (
+		UNIQUEFIELD UnknownField
+	)`, "file.sql:4:3: undefined field UnknownField")
+
+	require.AppSchemaError(`
+	APPLICATION app1();
+	TABLE SomeTable INHERITS CDoc (
+		t1 int32,
+		t2 int32,
+		CONSTRAINT c1 UNIQUE(t1),
+		CONSTRAINT c2 UNIQUE(t2, t1)
+	)`, "file.sql:7:3: field t1 already in unique constraint")
+
 }
