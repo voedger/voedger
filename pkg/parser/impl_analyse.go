@@ -579,7 +579,12 @@ func analyseNestedTables(items []TableItemExpr, rootTableKind appdef.TypeKind, c
 				return
 			}
 			if nestedTable.Inherits == nil {
-				nestedTable.tableTypeKind = getNestedTableKind(rootTableKind)
+				var err error
+				nestedTable.tableTypeKind, err = getNestedTableKind(rootTableKind)
+				if err != nil {
+					c.stmtErr(pos, err)
+					return
+				}
 			} else {
 				var err error
 				nestedTable.tableTypeKind, nestedTable.singletone, err = getTableTypeKind(nestedTable, c.pkg, c)
@@ -587,7 +592,11 @@ func analyseNestedTables(items []TableItemExpr, rootTableKind appdef.TypeKind, c
 					c.stmtErr(pos, err)
 					return
 				}
-				tk := getNestedTableKind(rootTableKind)
+				tk, err := getNestedTableKind(rootTableKind)
+				if err != nil {
+					c.stmtErr(pos, err)
+					return
+				}
 				if nestedTable.tableTypeKind != tk {
 					c.stmtErr(pos, ErrNestedTableIncorrectKind)
 					return
