@@ -68,6 +68,10 @@ func ErrCouldNotImport(pkgName string) error {
 	return fmt.Errorf("could not import %s", pkgName)
 }
 
+func ErrUnexpectedRootTableKind(kind int) error {
+	return fmt.Errorf("unexpected root table kind %d", kind)
+}
+
 func ErrReferenceToAbstractTable(tblName string) error {
 	return fmt.Errorf("reference to abstract table %s", tblName)
 }
