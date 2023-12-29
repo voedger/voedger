@@ -23,7 +23,6 @@ func wireServer(httpCliParams ihttp.CLIParams, appsCliParams apps.CLIParams) (Wi
 	panic(
 		wire.Build(
 			ihttpimpl.NewProcessor,
-			ihttpimpl.NewAPI,
 			ihttpctl.NewHTTPProcessorController,
 			ihttp.NewIRouterStorage,
 			apps.NewStaticEmbeddedResources,
