@@ -435,7 +435,7 @@ func (c *buildContext) views() error {
 				for _, ref := range f.RefDocs {
 					if err := resolveInCtx(ref, ictx,
 						func(tbl *TableStmt, pkg *PackageSchemaAST) error {
-							if e := c.checkReference(ref, pkg, tbl); e != nil {
+							if e := c.checkReference(pkg, tbl); e != nil {
 								return e
 							}
 							refs = append(refs, appdef.NewQName(string(pkg.Name), string(ref.Name)))
@@ -635,7 +635,7 @@ func (c *buildContext) addFieldRefToDef(refField *RefFieldExpr, ictx *iterateCtx
 	errors := false
 	for i := range refField.RefDocs {
 		err := resolveInCtx(refField.RefDocs[i], ictx, func(tbl *TableStmt, pkg *PackageSchemaAST) error {
-			if e := c.checkReference(refField.RefDocs[i], pkg, tbl); e != nil {
+			if e := c.checkReference(pkg, tbl); e != nil {
 				return e
 			}
 			refs = append(refs, appdef.NewQName(string(pkg.Name), string(refField.RefDocs[i].Name)))
@@ -921,15 +921,6 @@ func (c *buildContext) isExists(qname appdef.QName, kind appdef.TypeKind) (exist
 	}
 }
 
-func (c *buildContext) findSchemaByPkg(pkg string) *PackageSchemaAST {
-	for _, ast := range c.app.Packages {
-		if ast.Name == pkg {
-			return ast
-		}
-	}
-	return nil
-}
-
 func (c *buildContext) popDef() {
 	c.defs = c.defs[:len(c.defs)-1]
 }
@@ -938,22 +929,18 @@ func (c *buildContext) defCtx() *defBuildContext {
 	return &c.defs[len(c.defs)-1]
 }
 
-func (c *buildContext) checkReference(refTable DefQName, pkg *PackageSchemaAST, table *TableStmt) error {
-	if refTable.Package == "" {
-		refTable.Package = Ident(pkg.Name)
-	}
-	refTableType := c.builder.TypeByName(appdef.NewQName(string(refTable.Package), string(refTable.Name)))
+func (c *buildContext) checkReference(pkg *PackageSchemaAST, table *TableStmt) error {
+	refTableType := c.builder.TypeByName(appdef.NewQName(string(pkg.Name), string(table.Name)))
 	if refTableType == nil {
-		tableSchema := c.findSchemaByPkg(string(refTable.Package))
 		tableCtx := &iterateCtx{
 			basicContext: &c.basicContext,
-			collection:   tableSchema.Ast,
-			pkg:          tableSchema,
+			collection:   pkg.Ast,
+			pkg:          pkg,
 			parent:       nil,
 		}
 
-		c.table(tableSchema, table, tableCtx)
-		refTableType = c.builder.TypeByName(appdef.NewQName(string(refTable.Package), string(refTable.Name)))
+		c.table(pkg, table, tableCtx)
+		refTableType = c.builder.TypeByName(appdef.NewQName(string(pkg.Name), string(table.Name)))
 	}
 
 	if refTableType == nil {
