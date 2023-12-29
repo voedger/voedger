@@ -21,7 +21,7 @@ import (
 
 // Injectors from wire.go:
 
-func wireServer(httpCliParams ihttp.CLIParams, appsCliParams apps.CLIParams, grafanaPort ihttp.GrafanaPort, prometheusPort ihttp.PrometheusPort) (WiredServer, func(), error) {
+func wireServer(httpCliParams ihttp.CLIParams, appsCliParams apps.CLIParams) (WiredServer, func(), error) {
 	iAppStorageFactory, err := apps.NewAppStorageFactory(appsCliParams)
 	if err != nil {
 		return WiredServer{}, nil, err
@@ -41,7 +41,7 @@ func wireServer(httpCliParams ihttp.CLIParams, appsCliParams apps.CLIParams, gra
 		return WiredServer{}, nil, err
 	}
 	v := apps.NewStaticEmbeddedResources()
-	redirectRoutes := apps.NewRedirectionRoutes(grafanaPort, prometheusPort)
+	redirectRoutes := apps.NewRedirectionRoutes()
 	defaultRedirectRoute := apps.NewDefaultRedirectionRoute()
 	acmeDomains := httpCliParams.AcmeDomains
 	ihttpProcessorController, err := ihttpctl.NewHTTPProcessorController(ihttpProcessorAPI, v, redirectRoutes, defaultRedirectRoute, acmeDomains)

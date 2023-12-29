@@ -8,7 +8,6 @@ import (
 	"fmt"
 
 	sysmonitor "github.com/voedger/voedger/pkg/apps/sys.monitor"
-	"github.com/voedger/voedger/pkg/ihttp"
 	"github.com/voedger/voedger/pkg/ihttpctl"
 	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istorageimpl/istoragecas"
@@ -20,10 +19,10 @@ func NewStaticEmbeddedResources() []ihttpctl.StaticResourcesType {
 	}
 }
 
-func NewRedirectionRoutes(grafanaPort ihttp.GrafanaPort, prometheusPort ihttp.PrometheusPort) ihttpctl.RedirectRoutes {
+func NewRedirectionRoutes() ihttpctl.RedirectRoutes {
 	return ihttpctl.RedirectRoutes{
-		"(https?://[^/]*)/grafana($|/.*)":    fmt.Sprintf("http://127.0.0.1:%d$2", grafanaPort),
-		"(https?://[^/]*)/prometheus($|/.*)": fmt.Sprintf("http://127.0.0.1:%d$2", prometheusPort),
+		"(https?://[^/]*)/grafana($|/.*)":    fmt.Sprintf("http://127.0.0.1:%d$2", defaultGrafanaPort),
+		"(https?://[^/]*)/prometheus($|/.*)": fmt.Sprintf("http://127.0.0.1:%d$2", defaultPrometheusPort),
 	}
 }
 
