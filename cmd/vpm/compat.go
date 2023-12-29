@@ -62,17 +62,16 @@ func compat(compileRes *compileResult, params vpmParams, ignores [][]string) err
 		errs = append(errs, coreutils.SplitErrors(err)...)
 	}
 
-	compatErrs := appdefcompat.CheckBackwardCompatibility(baselineAppDef, compiledAppDef)
-	compatErrs = appdefcompat.IgnoreCompatibilityErrors(compatErrs, ignores)
-	if len(compatErrs.Errors) > 0 {
+	if baselineAppDef != nil && compiledAppDef != nil {
+		compatErrs := appdefcompat.CheckBackwardCompatibility(baselineAppDef, compiledAppDef)
+		compatErrs = appdefcompat.IgnoreCompatibilityErrors(compatErrs, ignores)
 		errObjs := make([]error, len(compatErrs.Errors))
 		for i, err := range compatErrs.Errors {
 			errObjs[i] = err
 		}
 		errs = append(errs, errObjs...)
-		return errors.Join(errs...)
 	}
-	return nil
+	return errors.Join(errs...)
 }
 
 // readIgnoreFile reads yaml file and returns list of errors to be ignored
