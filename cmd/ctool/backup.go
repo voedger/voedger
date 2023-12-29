@@ -13,7 +13,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// noliint
+// nolint
 func newBackupCmd() *cobra.Command {
 	backupNodeCmd := &cobra.Command{
 		Use:   "node <node> <target folder> <path to ssh key>",
