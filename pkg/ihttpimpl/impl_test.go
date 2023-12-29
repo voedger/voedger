@@ -24,8 +24,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/voedger/voedger/pkg/apps"
 	"github.com/voedger/voedger/pkg/ihttp"
+	"github.com/voedger/voedger/pkg/ihttpctl"
 	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istorageimpl"
 	coreutils "github.com/voedger/voedger/pkg/utils"
@@ -126,7 +126,14 @@ func TestReverseProxy(t *testing.T) {
 	testContentSubFs, err := fs.Sub(testContentFS, "testcontent")
 	require.NoError(err)
 
-	for srcRegExp, dstRegExp := range apps.NewRedirectionRoutes(ihttp.GrafanaPort(targetListenerPort), ihttp.PrometheusPort(targetListenerPort)) {
+	testRedirectionRoutes := func() ihttpctl.RedirectRoutes {
+		return ihttpctl.RedirectRoutes{
+			"(https?://[^/]*)/grafana($|/.*)":    fmt.Sprintf("http://127.0.0.1:%d$2", targetListenerPort),
+			"(https?://[^/]*)/prometheus($|/.*)": fmt.Sprintf("http://127.0.0.1:%d$2", targetListenerPort),
+		}
+	}
+
+	for srcRegExp, dstRegExp := range testRedirectionRoutes() {
 		testApp.api.AddReverseProxyRoute(srcRegExp, dstRegExp)
 	}
 	testApp.api.SetReverseProxyRouteDefault("^(https?)://([^/]+)/([^?]+)?(\\?(.+))?$", fmt.Sprintf("http://127.0.0.1:%d/unknown/$3", targetListenerPort))
