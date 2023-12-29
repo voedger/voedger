@@ -104,6 +104,10 @@ func ErrUndefinedField(name string) error {
 	return fmt.Errorf("undefined field %s", name)
 }
 
+func ErrFieldAlreadyInUnique(name string) error {
+	return fmt.Errorf("field %s already in unique constraint", name)
+}
+
 func ErrTypeNotSupported(name string) error {
 	return fmt.Errorf("%s type not supported", name)
 }
