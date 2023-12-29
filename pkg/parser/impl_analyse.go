@@ -628,6 +628,7 @@ func lookupField(items []TableItemExpr, name Ident) bool {
 
 func analyseFields(items []TableItemExpr, c *iterateCtx, isTable bool) {
 	fieldsInUniques := make([]Ident, 0)
+	constraintNames := make(map[string]bool)
 	for i := range items {
 		item := items[i]
 		if item.Field != nil {
@@ -686,6 +687,14 @@ func analyseFields(items []TableItemExpr, c *iterateCtx, isTable bool) {
 			analyseFields(nestedTable.Items, c, true)
 		}
 		if item.Constraint != nil {
+			if item.Constraint.ConstraintName != "" {
+				cname := string(item.Constraint.ConstraintName)
+				if _, ok := constraintNames[cname]; ok {
+					c.stmtErr(&item.Constraint.Pos, ErrRedefined(cname))
+					continue
+				}
+				constraintNames[cname] = true
+			}
 			if item.Constraint.UniqueField != nil {
 				if ok := lookupField(items, item.Constraint.UniqueField.Field); !ok {
 					c.stmtErr(&item.Constraint.Pos, ErrUndefinedField(string(item.Constraint.UniqueField.Field)))

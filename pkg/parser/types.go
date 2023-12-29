@@ -736,8 +736,6 @@ type TableConstraint struct {
 	Check          *TableCheckExpr  `parser:"| @@)"`
 }
 
-func (s TableConstraint) GetName() string { return string(s.ConstraintName) }
-
 type TableCheckExpr struct {
 	Expression Expression `parser:"'CHECK' '(' @@ ')'"`
 }
