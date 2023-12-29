@@ -124,6 +124,7 @@ func seNodeValidate(n *nodeType) error {
 
 	if err := newScriptExecuter(n.cluster.sshKey, n.DesiredNodeState.Address).
 		run("host-validate.sh", n.DesiredNodeState.Address, minRAM); err != nil {
+		n.Error = err.Error()
 		return err
 	}
 
@@ -646,12 +647,14 @@ func copyCtoolAndKeyToNode(node *nodeType) error {
 	ctoolPath, err := os.Executable()
 
 	if err != nil {
+		node.Error = err.Error()
 		return err
 	}
 
 	loggerInfo(fmt.Sprintf("copying ctool and key to %s [%s]", node.nodeName(), node.address()))
 	if err := newScriptExecuter(node.cluster.sshKey, node.nodeName()).
 		run("copy-ctool.sh", ctoolPath, node.cluster.sshKey, node.address()); err != nil {
+		node.Error = err.Error()
 		return err
 	}
 
