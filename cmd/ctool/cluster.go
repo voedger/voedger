@@ -638,6 +638,7 @@ func (c *clusterType) loadFromJSON() error {
 
 // Installation of the necessary variables of the environment
 func (c *clusterType) setEnv() error {
+	loggerInfo("Set env", "VOEDGER_NODE_SSH_PORT", c.SshPort)
 	return os.Setenv("VOEDGER_NODE_SSH_PORT", c.SshPort)
 }
 
