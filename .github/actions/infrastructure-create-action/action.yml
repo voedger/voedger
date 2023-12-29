@@ -1,0 +1,28 @@
+# Copyright (c) 2023 Sigma-Soft, Ltd.
+# @author Aleksei Ponomarev
+# @date 2023-12-25
+
+name: 'Voedger Cluster Create Infrastructure Action'
+description: 'Voedger Cluster Create Infrastructure Action'
+
+runs:
+  using: 'composite'
+
+  steps:
+    - name: Set up Terraform
+      uses: hashicorp/setup-terraform@v2
+      with:
+        terraform_wrapper: false
+
+    - name: Terraform Init
+      run: terraform -chdir=cmd/ctool/scripts/terraform/ init
+      shell: bash
+
+    - name: Terraform plan
+      run: terraform -chdir=cmd/ctool/scripts/terraform/ plan -out=terraform.tfplan
+      shell: bash
+
+    - name: Terraform apply
+      run: terraform -chdir=cmd/ctool/scripts/terraform/ apply -auto-approve
+      shell: bash
+
