@@ -53,6 +53,7 @@ func validateBackupCroneCmd(cmd *cmdType, cluster *clusterType) error {
 	return nil
 }
 
+// nolint
 func validateBackupNodeCmd(cmd *cmdType, cluster *clusterType) error {
 	args := cmd.args()
 
