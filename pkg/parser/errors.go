@@ -68,6 +68,10 @@ func ErrCouldNotImport(pkgName string) error {
 	return fmt.Errorf("could not import %s", pkgName)
 }
 
+func ErrUnexpectedRootTableKind(kind int) error {
+	return fmt.Errorf("unexpected root table kind %d", kind)
+}
+
 func ErrReferenceToAbstractTable(tblName string) error {
 	return fmt.Errorf("reference to abstract table %s", tblName)
 }
@@ -102,6 +106,10 @@ func ErrUndefined(name string) error {
 
 func ErrUndefinedField(name string) error {
 	return fmt.Errorf("undefined field %s", name)
+}
+
+func ErrFieldAlreadyInUnique(name string) error {
+	return fmt.Errorf("field %s already in unique constraint", name)
 }
 
 func ErrTypeNotSupported(name string) error {

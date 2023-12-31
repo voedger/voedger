@@ -150,6 +150,9 @@ func checkDuplicateNames(schema *SchemaAST, errs []error) []error {
 				if t.Items[i].NestedTable != nil {
 					checkStatement(&t.Items[i].NestedTable.Table)
 				}
+				if t.Items[i].Constraint != nil && t.Items[i].Constraint.ConstraintName != "" {
+					checkStatement(t.Items[i].Constraint)
+				}
 			}
 		}
 	}

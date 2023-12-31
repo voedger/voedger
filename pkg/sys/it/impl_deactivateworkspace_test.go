@@ -86,10 +86,10 @@ func TestDeactivateJoinedWorkspace(t *testing.T) {
 	inviteID := InitiateInvitationByEMail(vit, newWS, expireDatetime, it.TestEmail2, roleOwner, inviteEmailTemplate, updateRolesEmailSubject)
 	email := vit.CaptureEmail()
 	verificationCode := email.Body[:6]
-	WaitForInviteState(vit, newWS, invite.State_Invited, inviteID)
+	WaitForInviteState(vit, newWS, inviteID, invite.State_ToBeJoined, invite.State_Invited)
 	testEmail2Prn := vit.GetPrincipal(istructs.AppQName_test1_app1, it.TestEmail2)
 	InitiateJoinWorkspace(vit, newWS, inviteID, testEmail2Prn, verificationCode)
-	WaitForInviteState(vit, newWS, invite.State_Joined, inviteID)
+	WaitForInviteState(vit, newWS, inviteID, invite.State_ToBeJoined, invite.State_Joined)
 
 	// check prn2 could work in ws1
 	body = `{"cuds":[{"fields":{"sys.QName":"app1pkg.computers","sys.ID":1}}]}`
