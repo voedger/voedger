@@ -410,3 +410,16 @@ func (m *MockValue) AsRecord(name string) istructs.IRecord {
 func (m *MockValue) AsEvent(name string) istructs.IDbEvent {
 	return m.Called(name).Get(0).(istructs.IDbEvent)
 }
+
+type MockIntents struct {
+	mock.Mock
+}
+
+func (m *MockIntents) NewValue(key istructs.IStateKeyBuilder) (istructs.IStateValueBuilder, error) {
+	args := m.Called(key)
+	return args.Get(0).(istructs.IStateValueBuilder), args.Error(1)
+}
+func (m *MockIntents) UpdateValue(key istructs.IStateKeyBuilder, existingValue istructs.IStateValue) (istructs.IStateValueBuilder, error) {
+	args := m.Called(key, existingValue)
+	return args.Get(0).(istructs.IStateValueBuilder), args.Error(1)
+}
