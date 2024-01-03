@@ -144,6 +144,36 @@ func TestReverseProxy(t *testing.T) {
 	}
 }
 
+func TestRace_HTTPProcessor(t *testing.T) {
+	require := require.New(t)
+	testApp := setUp(t)
+	defer tearDown(testApp)
+
+	testContentSubFs, err := fs.Sub(testContentFS, "testcontent")
+	require.NoError(err)
+
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+
+		for i := 0; i < 1000; i++ {
+			testApp.processor.DeployStaticContent(fmt.Sprintf("test_path_%d", i), testContentSubFs)
+		}
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+
+		for i := 0; i < 1000; i++ {
+			testApp.get(fmt.Sprintf("/test_path_%d", i), []int{http.StatusOK, http.StatusNotFound}...)
+		}
+	}()
+
+	wg.Wait()
+}
+
 //go:embed testcontent/*
 var testContentFS embed.FS
 
@@ -219,11 +249,9 @@ func (ta *testApp) get(resource string, expectedCodes ...int) []byte {
 
 	res, err := http.Get(url)
 	require.NoError(err)
-	expectedCode := http.StatusOK
 	if len(expectedCodes) > 0 {
-		expectedCode = expectedCodes[0]
+		require.Contains(expectedCodes, res.StatusCode)
 	}
-	require.Equal(expectedCode, res.StatusCode)
 
 	body, err := io.ReadAll(res.Body)
 	require.NoError(err)
