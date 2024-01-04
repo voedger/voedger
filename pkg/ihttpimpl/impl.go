@@ -128,7 +128,9 @@ func (p *httpProcessor) Run(ctx context.Context) {
 }
 
 func (p *httpProcessor) AddReverseProxyRoute(srcRegExp, dstRegExp string) {
-	// TODO: concurrency safety can be added via sync.RWMutex
+	p.router.Lock()
+	defer p.router.Unlock()
+
 	p.router.redirections = slices.Insert(p.router.redirections, len(p.router.redirections)-1, &redirectionRoute{
 		srcRegExp:        regexp.MustCompile(srcRegExp),
 		dstRegExpPattern: dstRegExp,
@@ -136,7 +138,9 @@ func (p *httpProcessor) AddReverseProxyRoute(srcRegExp, dstRegExp string) {
 }
 
 func (p *httpProcessor) SetReverseProxyRouteDefault(srcRegExp, dstRegExp string) {
-	// TODO: concurrency safety can be added via sync.RWMutex
+	p.router.Lock()
+	defer p.router.Unlock()
+
 	p.router.redirections[len(p.router.redirections)-1] = &redirectionRoute{
 		srcRegExp:        regexp.MustCompile(srcRegExp),
 		dstRegExpPattern: dstRegExp,
@@ -194,7 +198,9 @@ func (p *httpProcessor) cleanup() {
 }
 
 func (p *httpProcessor) handlePath(resource string, prefix bool, handlerFunc func(http.ResponseWriter, *http.Request)) {
-	// TODO: concurrency safety can be added via sync.RWMutex
+	p.router.Lock()
+	defer p.router.Unlock()
+
 	var r *mux.Route
 	if prefix {
 		r = p.router.contentRouter.PathPrefix(resource)
@@ -208,6 +214,7 @@ type router struct {
 	contentRouter *mux.Router
 	reverseProxy  *httputil.ReverseProxy
 	redirections  []*redirectionRoute // last item is always exist and if it is non-null, then it is a default route
+	sync.RWMutex
 }
 
 func newRouter() *router {
@@ -219,6 +226,9 @@ func newRouter() *router {
 }
 
 func (r *router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	r.RLock()
+	defer r.RUnlock()
+
 	reqPath := req.URL.EscapedPath()
 	// Clean path to canonical form and redirect.
 	if p := cleanPath(reqPath); p != reqPath {
@@ -250,7 +260,6 @@ func (r *router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 }
 
 func (r *router) Match(req *http.Request, rm *mux.RouteMatch) bool {
-	// TODO: concurrency safety can be added via sync.RWMutex
 	return r.contentRouter.Match(req, rm) || r.matchRedirections(req, rm)
 }
 
