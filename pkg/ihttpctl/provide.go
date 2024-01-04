@@ -11,7 +11,7 @@ import (
 	"github.com/voedger/voedger/pkg/ihttp"
 )
 
-func NewHTTPProcessorController(api ihttp.IHTTPProcessorAPI, staticResources []StaticResourcesType, redirections RedirectRoutes, defaultRedirection DefaultRedirectRoute) (IHTTPProcessorController, error) {
+func NewHTTPProcessorController(processor ihttp.IHTTPProcessor, staticResources []StaticResourcesType, redirections RedirectRoutes, defaultRedirection DefaultRedirectRoute, acmeDomains ihttp.AcmeDomains) (IHTTPProcessorController, error) {
 	srs := StaticResourcesType{}
 	for _, sr := range staticResources {
 		for url, fs := range sr {
@@ -24,10 +24,14 @@ func NewHTTPProcessorController(api ihttp.IHTTPProcessorAPI, staticResources []S
 	if len(defaultRedirection) > 1 {
 		panic("default redirection should be single record")
 	}
-	return &httpProcessorController{
-		api:                api,
+	httpController := &httpProcessorController{
+		processor:          processor,
 		staticResources:    srs,
 		redirections:       redirections,
 		defaultRedirection: defaultRedirection,
-	}, nil
+	}
+	for _, acmeDomain := range acmeDomains {
+		httpController.processor.AddAcmeDomain(acmeDomain)
+	}
+	return httpController, nil
 }

@@ -93,9 +93,9 @@ func FieldsToMap(obj istructs.IRowReader, appDef appdef.IAppDef, optFuncs ...Map
 				proceedField(fieldName, fields.Field(fieldName).DataKind())
 			})
 		} else {
-			fields.Fields(func(f appdef.IField) {
+			for _, f := range fields.Fields() {
 				proceedField(f.Name(), f.DataKind())
-			})
+			}
 		}
 	}
 

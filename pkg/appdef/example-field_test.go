@@ -6,6 +6,7 @@ package appdef_test
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -40,7 +41,10 @@ func ExampleIFieldsBuilder_AddField() {
 		fmt.Printf("%v, user field count: %v\n", doc, doc.UserFieldCount())
 
 		cnt := 0
-		doc.UserFields(func(f appdef.IField) {
+		for _, f := range doc.Fields() {
+			if f.IsSys() {
+				continue
+			}
 			cnt++
 			fmt.Printf("%d. %v", cnt, f)
 			if f.Required() {
@@ -50,21 +54,22 @@ func ExampleIFieldsBuilder_AddField() {
 				fmt.Print(". ", c)
 			}
 			str := []string{}
-			f.Constraints(func(c appdef.IConstraint) {
+			for _, c := range f.Constraints() {
 				str = append(str, fmt.Sprint(c))
-			})
+			}
 			if len(str) > 0 {
+				sort.Strings(str)
 				fmt.Println()
 				fmt.Printf("  - constraints: [%v]", strings.Join(str, `, `))
 			}
 			fmt.Println()
-		})
+		}
 	}
 
 	// Output:
 	// ODoc «test.doc», user field count: 2
 	// 1. string-field «code», required. Code is string containing from one to four digits
-	//   - constraints: [MinLen: 1, MaxLen: 4, Pattern: `^\d+$`]
+	//   - constraints: [MaxLen: 4, MinLen: 1, Pattern: `^\d+$`]
 	// 2. bytes-field «barCode». Bar code scan data, up to 4 KB
 	//   - constraints: [MaxLen: 4096]
 }
@@ -105,7 +110,10 @@ func ExampleIFieldsBuilder_AddDataField() {
 		fmt.Printf("%v, user field count: %v\n", doc, doc.UserFieldCount())
 
 		cnt := 0
-		doc.UserFields(func(f appdef.IField) {
+		for _, f := range doc.Fields() {
+			if f.IsSys() {
+				continue
+			}
 			cnt++
 			fmt.Printf("%d. %v", cnt, f)
 			if f.Required() {
@@ -115,24 +123,24 @@ func ExampleIFieldsBuilder_AddDataField() {
 				fmt.Print(". ", c)
 			}
 			str := []string{}
-			f.Constraints(func(c appdef.IConstraint) {
+			for _, c := range f.Constraints() {
 				str = append(str, fmt.Sprint(c))
-			})
+			}
 			if len(str) > 0 {
 				fmt.Println()
+				sort.Strings(str)
 				fmt.Printf("  - constraints: [%v]", strings.Join(str, `, `))
 			}
 			fmt.Println()
-		})
-
+		}
 	}
 
 	// Output:
 	// CDoc «test.doc», user field count: 2
 	// 1. string-field «code», required. Code is string containing 10 digits
-	//   - constraints: [MinLen: 10, MaxLen: 10, Pattern: `^\d+$`]
+	//   - constraints: [MaxLen: 10, MinLen: 10, Pattern: `^\d+$`]
 	// 2. int32-field «month», required. Month number natural up to 12
-	//   - constraints: [MinExcl: 0, MaxIncl: 12]
+	//   - constraints: [MaxIncl: 12, MinExcl: 0]
 }
 
 func ExampleIFieldsBuilder_SetFieldVerify() {

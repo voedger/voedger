@@ -112,12 +112,7 @@ func TestBasicUsage_Verifier(t *testing.T) {
 
 	t.Run("bug: one token could be used in any wsid", func(t *testing.T) {
 		body := fmt.Sprintf(`{"cuds": [{"fields": {"sys.ID": 1,"sys.QName": "%s","EmailField": "%s"}}]}`, it.QNameApp1_TestEmailVerificationDoc, verifiedValueToken)
-		ws2 := vit.CreateWorkspace(it.WSParams{
-			Name:         "testws" + vit.NextName(),
-			Kind:         it.QNameApp1_TestWSKind,
-			ClusterID:    istructs.MainClusterID,
-			InitDataJSON: `{"IntFld":42}`, // from config template
-		}, userPrincipal)
+		ws2 := vit.CreateWorkspace(it.DummyWSParams("testws"+vit.NextName()), userPrincipal)
 		vit.PostWS(ws2, "c.sys.CUD", body)
 	})
 

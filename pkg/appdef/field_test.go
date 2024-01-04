@@ -260,7 +260,7 @@ func Test_AddRefField(t *testing.T) {
 		t.Run("must be ok to enumerate reference fields", func(t *testing.T) {
 			require.Equal(2, func() int {
 				cnt := 0
-				doc.RefFields(func(rf IRefField) {
+				for _, rf := range doc.RefFields() {
 					cnt++
 					switch cnt {
 					case 1:
@@ -274,7 +274,7 @@ func Test_AddRefField(t *testing.T) {
 					default:
 						require.Failf("unexpected reference field", "field name: %s", rf.Name())
 					}
-				})
+				}
 				return cnt
 			}())
 		})
@@ -315,19 +315,21 @@ func Test_UserFields(t *testing.T) {
 
 		require.Equal(doc.UserFieldCount(), func() int {
 			cnt := 0
-			doc.UserFields(func(f IField) {
-				switch cnt {
-				case 0:
-					require.Equal(doc.Field("f"), f)
-				case 1:
-					require.True(f.VerificationKind(VerificationKind_EMail))
-				case 2:
-					require.EqualValues(QNames{docName}, f.(IRefField).Refs())
-				default:
-					require.Failf("unexpected reference field", "field name: %s", f.Name())
+			for _, f := range doc.Fields() {
+				if !f.IsSys() {
+					cnt++
+					switch cnt {
+					case 1:
+						require.Equal(doc.Field("f"), f)
+					case 2:
+						require.True(f.VerificationKind(VerificationKind_EMail))
+					case 3:
+						require.EqualValues(QNames{docName}, f.(IRefField).Refs())
+					default:
+						require.Failf("unexpected reference field", "field name: %s", f.Name())
+					}
 				}
-				cnt++
-			})
+			}
 			return cnt
 		}())
 	})
@@ -368,12 +370,10 @@ func TestNullFields(t *testing.T) {
 
 	require.Nil(NullFields.Field("field"))
 	require.Zero(NullFields.FieldCount())
-	NullFields.Fields(func(IField) { require.Fail("Fields() must be empty") })
+	require.Empty(NullFields.Fields())
 
 	require.Nil(NullFields.RefField("field"))
-	require.Zero(NullFields.RefFieldCount())
-	NullFields.RefFields(func(IRefField) { require.Fail("RefFields() must be empty") })
+	require.Empty(NullFields.RefFields())
 
 	require.Zero(NullFields.UserFieldCount())
-	NullFields.UserFields(func(IField) { require.Fail("UserFields() must be empty") })
 }

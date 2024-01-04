@@ -12,6 +12,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/apps"
 	"github.com/voedger/voedger/pkg/extensionpoints"
+	"github.com/voedger/voedger/pkg/parser"
 	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys/smtp"
 
@@ -26,7 +27,6 @@ import (
 const (
 	TestEmail       = "123@123.com"
 	TestEmail2      = "124@124.com"
-	TestEmail3      = "125@125.com"
 	TestServicePort = 10000
 	app1PkgName     = "app1pkg"
 )
@@ -51,7 +51,6 @@ var (
 			WithUserLogin("login", "pwd"),
 			WithUserLogin(TestEmail, "1"),
 			WithUserLogin(TestEmail2, "1"),
-			WithUserLogin(TestEmail3, "1"),
 			WithChildWorkspace(QNameApp1_TestWSKind, "test_ws", "test_template", "", "login", map[string]interface{}{"IntFld": 42}),
 		),
 		WithApp(istructs.AppQName_test1_app2, ProvideApp2, WithUserLogin("login", "1")),
@@ -74,26 +73,31 @@ var (
 	MockCmdExec func(input string) error
 )
 
-func ProvideApp2(apis apps.APIs, cfg *istructsmem.AppConfigType, adf appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) {
+func ProvideApp2(apis apps.APIs, cfg *istructsmem.AppConfigType, adf appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) apps.AppPackages {
 	buildInfo, ok := debug.ReadBuildInfo()
 	if !ok {
 		panic("no build info")
 	}
-	sys.Provide(cfg, adf, TestSMTPCfg, ep, nil, apis.TimeFunc, apis.ITokens, apis.IFederation, apis.IAppStructsProvider, apis.IAppTokensFactory,
+	sysPackageFS := sys.Provide(cfg, adf, TestSMTPCfg, ep, nil, apis.TimeFunc, apis.ITokens, apis.IFederation, apis.IAppStructsProvider, apis.IAppTokensFactory,
 		apis.NumCommandProcessors, buildInfo, apis.IAppStorageProvider)
-	apps.RegisterSchemaFS(SchemaTestApp2FS, "github.com/voedger/voedger/pkg/vit/app2pkg", ep)
+	app2PackageFS := parser.PackageFS{
+		QualifiedPackageName: "github.com/voedger/voedger/pkg/vit/app2pkg",
+		FS:                   SchemaTestApp2FS,
+	}
+	return apps.AppPackages{
+		AppQName: istructs.AppQName_test1_app2,
+		Packages: []parser.PackageFS{sysPackageFS, app2PackageFS},
+	}
 }
 
-func ProvideApp1(apis apps.APIs, cfg *istructsmem.AppConfigType, adf appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) {
+func ProvideApp1(apis apps.APIs, cfg *istructsmem.AppConfigType, adf appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) apps.AppPackages {
 	// sys package
 	buildInfo, ok := debug.ReadBuildInfo()
 	if !ok {
 		panic("no build info")
 	}
-	sys.Provide(cfg, adf, TestSMTPCfg, ep, nil, apis.TimeFunc, apis.ITokens, apis.IFederation, apis.IAppStructsProvider, apis.IAppTokensFactory,
+	sysPackageFS := sys.Provide(cfg, adf, TestSMTPCfg, ep, nil, apis.TimeFunc, apis.ITokens, apis.IFederation, apis.IAppStructsProvider, apis.IAppTokensFactory,
 		apis.NumCommandProcessors, buildInfo, apis.IAppStorageProvider)
-
-	apps.RegisterSchemaFS(SchemaTestApp1FS, "github.com/voedger/voedger/pkg/vit/app1pkg", ep)
 
 	// for rates test
 	cfg.Resources.Add(istructsmem.NewQueryFunction(
@@ -181,4 +185,12 @@ func ProvideApp1(apis apps.APIs, cfg *istructsmem.AppConfigType, adf appdef.IApp
 		appdef.NewQName(app1PkgName, "CmdODocTwo"),
 		istructsmem.NullCommandExec,
 	))
+	app1PackageFS := parser.PackageFS{
+		QualifiedPackageName: "github.com/voedger/voedger/pkg/vit/app1pkg",
+		FS:                   SchemaTestApp1FS,
+	}
+	return apps.AppPackages{
+		AppQName: istructs.AppQName_test1_app1,
+		Packages: []parser.PackageFS{sysPackageFS, app1PackageFS},
+	}
 }

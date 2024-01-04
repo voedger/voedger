@@ -109,14 +109,13 @@ func (vit *VIT) getCDoc(appQName istructs.AppQName, qName appdef.QName, wsid ist
 	as, err := vit.IAppStructsProvider.AppStructs(appQName)
 	require.NoError(vit.T, err)
 	if doc := as.AppDef().CDoc(qName); doc != nil {
-		doc.Fields(func(field appdef.IField) {
-			switch field.Name() {
-			case appdef.SystemField_ID, appdef.SystemField_QName, appdef.SystemField_IsActive:
-				return
+		for _, field := range doc.Fields() {
+			if field.IsSys() {
+				continue
 			}
 			body.WriteString(fmt.Sprintf(`,"%s"`, field.Name()))
 			fields = append(fields, field.Name())
-		})
+		}
 	}
 	body.WriteString("]}]}")
 	sys := vit.GetSystemPrincipal(appQName)
@@ -271,6 +270,15 @@ func (vit *VIT) InitChildWorkspace(wsd WSParams, owner *Principal) {
 	vit.PostProfile(owner, "c.sys.InitChildWorkspace", body)
 }
 
+func DummyWSParams(wsName string) WSParams {
+	return WSParams{
+		Name:         wsName,
+		Kind:         QNameApp1_TestWSKind,
+		ClusterID:    istructs.MainClusterID,
+		InitDataJSON: `{"IntFld": 42}`, //
+	}
+}
+
 func (vit *VIT) CreateWorkspace(wsp WSParams, owner *Principal) *AppWorkspace {
 	vit.InitChildWorkspace(wsp, owner)
 	ws := vit.WaitForWorkspace(wsp.Name, owner)
@@ -278,11 +286,11 @@ func (vit *VIT) CreateWorkspace(wsp WSParams, owner *Principal) *AppWorkspace {
 	return ws
 }
 
-func (vit *VIT) SubscribeForN10nCleanup(ws *AppWorkspace, viewQName appdef.QName) (n10n chan int64, unsubscribe func()) {
+func (vit *VIT) SubscribeForN10nCleanup(p SubscriptionParameters, viewQName appdef.QName) (n10n chan int64, unsubscribe func()) {
 	n10n = make(chan int64)
 	params := url.Values{}
 	query := fmt.Sprintf(`{"SubjectLogin":"test_%d","ProjectionKey":[{"App":"%s","Projection":"%s","WS":%d}]}`,
-		ws.WSID, ws.Owner.AppQName, viewQName, ws.WSID)
+		p.GetWSID(), p.GetAppQName(), viewQName, p.GetWSID())
 	params.Add("payload", query)
 	httpResp, err := coreutils.FederationReq(vit.IFederation.URL(), fmt.Sprintf("n10n/channel?%s", params.Encode()), "",
 		coreutils.WithLongPolling())
@@ -331,9 +339,9 @@ func (vit *VIT) SubscribeForN10nCleanup(ws *AppWorkspace, viewQName appdef.QName
 					}
 				]
 			}
-		`, channelIDStr, ws.Owner.AppQName, viewQName, ws.WSID)
+		`, channelIDStr, p.GetAppQName(), viewQName, p.GetWSID())
 		params := url.Values{}
-		params.Add("payload", string(body))
+		params.Add("payload", body)
 		vit.Get(fmt.Sprintf("n10n/unsubscribe?%s", params.Encode()))
 		httpResp.HTTPResp.Body.Close()
 		for range n10n {
@@ -343,8 +351,8 @@ func (vit *VIT) SubscribeForN10nCleanup(ws *AppWorkspace, viewQName appdef.QName
 }
 
 // will be finalized automatically on vit.TearDown()
-func (vit *VIT) SubscribeForN10n(ws *AppWorkspace, viewQName appdef.QName) chan int64 {
-	n10nChan, unsubscribe := vit.SubscribeForN10nCleanup(ws, viewQName)
+func (vit *VIT) SubscribeForN10n(p SubscriptionParameters, viewQName appdef.QName) chan int64 {
+	n10nChan, unsubscribe := vit.SubscribeForN10nCleanup(p, viewQName)
 	vit.lock.Lock() // need to lock because the vit instance is used in different goroutines in e.g. Test_Race_RestaurantIntenseUsage()
 	vit.cleanups = append(vit.cleanups, func(vit *VIT) {
 		unsubscribe()

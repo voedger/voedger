@@ -17,12 +17,12 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"testing"
 
 	"github.com/spf13/cobra"
-	"github.com/untillpro/goutils/logger"
 )
 
-var testMode bool
+var dryRun bool
 
 func newCluster() *clusterType {
 	var cluster = clusterType{
@@ -31,23 +31,56 @@ func newCluster() *clusterType {
 		exists:                false,
 		Draft:                 true,
 		sshKey:                sshKey,
+		dryRun:                dryRun,
 		SshPort:               sshPort,
 		Cmd:                   newCmd("", ""),
 		SkipStacks:            make([]string, 0),
 		ReplacedAddresses:     make([]string, 0),
 	}
 	if err := cluster.setEnv(); err != nil {
-		logger.Error(err.Error())
+		loggerError(err.Error())
 		return nil
 	}
 
 	dir, _ := os.Getwd()
+
 	cluster.configFileName = filepath.Join(dir, clusterConfFileName)
+
+	// Preparation of a configuration file for Dry Run mode
+	if cluster.dryRun {
+
+		dryRunDir := filepath.Join(dir, dryRunDir)
+		if _, err := os.Stat(dryRunDir); os.IsNotExist(err) {
+			err := os.Mkdir(dryRunDir, rwxrwxrwx)
+			if err != nil {
+				loggerError(err.Error())
+				return nil
+			}
+		}
+		dryRunClusterConfigFileName := filepath.Join(dryRunDir, clusterConfFileName)
+
+		// Remove the old dry run configuration file
+		// Under tests, you do not need to delete for the possibility of testing command sequences
+		if !testing.Testing() {
+			if fileExists(dryRunClusterConfigFileName) {
+				os.Remove(dryRunClusterConfigFileName)
+			}
+		}
+
+		if fileExists(cluster.configFileName) {
+			if err := copyFile(cluster.configFileName, dryRunClusterConfigFileName); err != nil {
+				loggerError(err.Error())
+				return nil
+			}
+		}
+
+		cluster.configFileName = dryRunClusterConfigFileName
+	}
 
 	if cluster.clusterConfigFileExists() {
 		cluster.exists = true
 		if err := cluster.loadFromJSON(); err != nil {
-			logger.Error(err.Error())
+			loggerError(err.Error())
 			return nil
 		}
 	}
@@ -97,7 +130,7 @@ func (n *nodeType) address() string {
 	}
 
 	err := fmt.Errorf(errEmptyNodeAddress, n.nodeName(), ErrEmptyNodeAddress)
-	logger.Error(err.Error)
+	loggerError(err.Error)
 	panic(err)
 }
 
@@ -140,7 +173,7 @@ func (n *nodeType) minAmountOfRAM() string {
 }
 
 func (n *nodeType) nodeControllerFunction() error {
-	if testMode {
+	if dryRun {
 		if n.DesiredNodeState != nil {
 			n.success()
 			return nil
@@ -201,7 +234,7 @@ func (n *nodeType) label(key string) string {
 	}
 
 	err := fmt.Errorf(errInvalidNodeRole, n.address(), ErrInvalidNodeRole)
-	logger.Error(err.Error)
+	loggerError(err.Error)
 	panic(err)
 }
 
@@ -244,7 +277,7 @@ func (c *cmdType) apply(cluster *clusterType) error {
 	defer cluster.saveToJSON()
 
 	if err = cluster.validate(); err != nil {
-		logger.Error(err.Error)
+		loggerError(err.Error)
 		return err
 	}
 
@@ -257,7 +290,7 @@ func (c *cmdType) apply(cluster *clusterType) error {
 		go func(node *nodeType) {
 			defer wg.Done()
 			if err := node.nodeControllerFunction(); err != nil {
-				logger.Error(err.Error)
+				loggerError(err.Error)
 			}
 		}(&cluster.Nodes[i])
 	}
@@ -293,6 +326,8 @@ func (c *cmdType) validate(cluster *clusterType) error {
 		return validateUpgradeCmd(c, cluster)
 	case ckReplace:
 		return validateReplaceCmd(c, cluster)
+	case ckBackup:
+		return validateBackupCmd(c, cluster)
 	default:
 		return ErrUnknownCommand
 	}
@@ -312,7 +347,7 @@ func validateInitCmd(cmd *cmdType, cluster *clusterType) error {
 	if args[0] != clusterEditionCE && args[0] != clusterEditionSE {
 		return ErrInvalidClusterEdition
 	}
-	logger.Info("count args: ", len(args))
+	loggerInfo("count args: ", len(args))
 	if args[0] == clusterEditionCE && len(args) != 1+initCeArgCount {
 		return ErrInvalidNumberOfArguments
 	}
@@ -353,7 +388,7 @@ func validateReplaceCmd(cmd *cmdType, cluster *clusterType) error {
 	var err error
 
 	if n := cluster.nodeByHost(args[0]); n == nil {
-		err = errors.Join(err, fmt.Errorf(ErrHostNotFoundInCluster.Error(), args[0]))
+		err = errors.Join(err, fmt.Errorf(errHostNotFoundInCluster, args[0], ErrHostNotFoundInCluster))
 	}
 
 	if n := cluster.nodeByHost(args[1]); n != nil {
@@ -363,10 +398,35 @@ func validateReplaceCmd(cmd *cmdType, cluster *clusterType) error {
 	return err
 }
 
+func validateBackupCmd(cmd *cmdType, cluster *clusterType) error {
+	args := cmd.args()
+	if len(args) == 0 {
+		return ErrMissingCommandArguments
+	}
+
+	if cluster.Draft {
+		return ErrClusterConfNotFound
+	}
+
+	if len(args) <= 1 {
+		return ErrMissingCommandArguments
+	}
+
+	switch args[0] {
+	case "node":
+		return validateBackupNodeCmd(cmd, cluster)
+	case "crone":
+		return validateBackupCroneCmd(cmd, cluster)
+	default:
+		return ErrUnknownCommand
+	}
+}
+
 type clusterType struct {
 	configFileName        string
 	sshKey                string
 	exists                bool //the cluster is loaded from "cluster.json" at the start of ctool
+	dryRun                bool
 	Edition               string
 	ActualClusterVersion  string
 	DesiredClusterVersion string   `json:"DesiredClusterVersion,omitempty"`
@@ -380,7 +440,7 @@ type clusterType struct {
 }
 
 func (c *clusterType) clusterControllerFunction() error {
-	if testMode {
+	if dryRun {
 		c.success()
 		return nil
 	}
@@ -453,7 +513,7 @@ func (c *clusterType) applyCmd(cmd *cmdType) error {
 			cmd.Args = strings.Replace(cmd.Args, node.nodeName(), oldAddr, 1)
 		}
 
-		if !testMode {
+		if !dryRun {
 			if err := nodeIsLive(node); err == nil {
 				return fmt.Errorf(errCannotReplaceALiveNode, oldAddr, ErrCommandCannotBeExecuted)
 			}
@@ -578,6 +638,7 @@ func (c *clusterType) loadFromJSON() error {
 
 // Installation of the necessary variables of the environment
 func (c *clusterType) setEnv() error {
+	loggerInfo("Set env", "VOEDGER_NODE_SSH_PORT", c.SshPort)
 	return os.Setenv("VOEDGER_NODE_SSH_PORT", c.SshPort)
 }
 
@@ -691,7 +752,7 @@ func (c *clusterType) existsNodeError() bool {
 
 func (c *clusterType) checkVersion() error {
 
-	logger.Info("ctool version: ", version)
+	loggerInfo("ctool version: ", version)
 
 	var clusterVersion string
 
@@ -705,11 +766,11 @@ func (c *clusterType) checkVersion() error {
 
 	// The cluster configuration is still missing
 	if clusterVersion == "" {
-		logger.Info("cluster version is missing")
+		loggerInfo("cluster version is missing")
 		return nil
 	}
 
-	logger.Info("cluster version: ", clusterVersion)
+	loggerInfo("cluster version: ", clusterVersion)
 
 	vr := compareVersions(version, clusterVersion)
 	if vr == 1 {

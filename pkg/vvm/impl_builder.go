@@ -27,10 +27,14 @@ func (hap VVMAppsBuilder) PrepareAppsExtensionPoints() map[istructs.AppQName]ext
 	return seps
 }
 
-func buildSchemasASTs(adf appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) error {
-	packageSchemaASTs, err := ReadPackageSchemaAST(ep)
-	if err != nil {
-		return err
+func buillAppFromPackagesFS(fses []parser.PackageFS, adf appdef.IAppDefBuilder) error {
+	packageSchemaASTs := []*parser.PackageSchemaAST{}
+	for _, fs := range fses {
+		packageSchemaAST, err := parser.ParsePackageDir(fs.QualifiedPackageName, fs.FS, ".")
+		if err != nil {
+			return err
+		}
+		packageSchemaASTs = append(packageSchemaASTs, packageSchemaAST)
 	}
 	appSchemaAST, err := parser.BuildAppSchema(packageSchemaASTs)
 	if err != nil {
@@ -39,21 +43,26 @@ func buildSchemasASTs(adf appdef.IAppDefBuilder, ep extensionpoints.IExtensionPo
 	return parser.BuildAppDefs(appSchemaAST, adf)
 }
 
-func (hap VVMAppsBuilder) Build(cfgs istructsmem.AppConfigsType, apis apps.APIs, appsEPs map[istructs.AppQName]extensionpoints.IExtensionPoint) (vvmApps VVMApps, err error) {
+func (hap VVMAppsBuilder) Build(cfgs istructsmem.AppConfigsType, apis apps.APIs, appsEPs map[istructs.AppQName]extensionpoints.IExtensionPoint) (appsPackages []apps.AppPackages, err error) {
 	for appQName, appBuilders := range hap {
 		adf := appdef.New()
 		appEPs := appsEPs[appQName]
 		cfg := cfgs.AddConfig(appQName, adf)
-		for _, builder := range appBuilders {
-			builder(apis, cfg, adf, appEPs)
+		appPackagesFS := []parser.PackageFS{}
+		for _, appBuilder := range appBuilders {
+			appPackages := appBuilder(apis, cfg, adf, appEPs)
+			appPackagesFS = append(appPackagesFS, appPackages.Packages...)
 		}
-		if err := buildSchemasASTs(adf, appEPs); err != nil {
+		if err := buillAppFromPackagesFS(appPackagesFS, adf); err != nil {
 			return nil, err
 		}
-		vvmApps = append(vvmApps, appQName)
 		if _, err := adf.Build(); err != nil {
 			return nil, err
 		}
+		appsPackages = append(appsPackages, apps.AppPackages{
+			AppQName: appQName,
+			Packages: appPackagesFS,
+		})
 	}
-	return vvmApps, nil
+	return appsPackages, nil
 }

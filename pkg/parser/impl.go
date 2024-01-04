@@ -70,7 +70,11 @@ func parseFSImpl(fs IReadFS, dir string) (schemas []*FileSchemaAST, errs []error
 		if strings.ToLower(filepath.Ext(entry.Name())) == ".sql" {
 			var fpath string
 			if _, ok := fs.(embed.FS); ok {
-				fpath = fmt.Sprintf("%s/%s", dir, entry.Name()) // The path separator is a forward slash, even on Windows systems
+				if dir == "." || dir == "" {
+					fpath = entry.Name()
+				} else {
+					fpath = fmt.Sprintf("%s/%s", dir, entry.Name()) // The path separator is a forward slash, even on Windows systems
+				}
 			} else {
 				fpath = filepath.Join(dir, entry.Name())
 			}
@@ -145,6 +149,9 @@ func checkDuplicateNames(schema *SchemaAST, errs []error) []error {
 			for i := range t.Items {
 				if t.Items[i].NestedTable != nil {
 					checkStatement(&t.Items[i].NestedTable.Table)
+				}
+				if t.Items[i].Constraint != nil && t.Items[i].Constraint.ConstraintName != "" {
+					checkStatement(t.Items[i].Constraint)
 				}
 			}
 		}

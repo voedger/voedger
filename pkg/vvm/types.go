@@ -55,6 +55,9 @@ type ServiceChannelFactory func(pcgt ProcessorChannelType, channelIdx int) iproc
 type AppStorageFactory func(appQName istructs.AppQName, appStorage istorage.IAppStorage) istorage.IAppStorage
 type StorageCacheSizeType int
 type VVMApps []istructs.AppQName
+
+// type AppsPackages map[istructs.AppQName]apps.AppPackages
+
 type QueryProcessorsCount int
 type BusTimeout time.Duration
 type FederationURL func() *url.URL
@@ -65,6 +68,7 @@ type ProcesorChannel struct {
 	iprocbusmem.ChannelGroup
 	ChannelType ProcessorChannelType
 }
+
 type RouterServices struct {
 	router.IHTTPService
 	router.IACMEService
@@ -99,6 +103,7 @@ type VVM struct {
 	apps.APIs
 	AppsExtensionPoints map[istructs.AppQName]extensionpoints.IExtensionPoint
 	MetricsServicePort  func() metrics.MetricsServicePort
+	AppsPackages        []apps.AppPackages
 }
 
 type AppsExtensionPoints map[istructs.AppQName]extensionpoints.IExtensionPoint
@@ -133,7 +138,6 @@ type VVMConfig struct {
 	FederationURL       *url.URL
 	ActualizerStateOpts []state.ActualizerStateOptFunc
 	SecretsReader       isecrets.ISecretReader
-	BuiltInApps         []apppartsctl.BuiltInApp // TODO: empty for now
 }
 
 type resultSenderErrorFirst struct {

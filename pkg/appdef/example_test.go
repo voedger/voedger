@@ -59,7 +59,7 @@ func Example() {
 		fmt.Println("founded", doc.Field("f1"))
 
 		fldCnt := 0
-		doc.Fields(func(f appdef.IField) {
+		for _, f := range doc.Fields() {
 			fldCnt++
 			if f.IsSys() {
 				fmt.Print("*")
@@ -71,7 +71,7 @@ func Example() {
 				info += ". " + f.Comment()
 			}
 			fmt.Println(info)
-		})
+		}
 
 		// how to inspect doc containers
 		fmt.Printf("doc container count: %v\n", doc.ContainerCount())
@@ -79,10 +79,10 @@ func Example() {
 		fmt.Println("founded", doc.Container("rec"))
 
 		contCnt := 0
-		doc.Containers(func(c appdef.IContainer) {
+		for _, c := range doc.Containers() {
 			contCnt++
 			fmt.Printf("%d. %v, occurs: %v…%v\n", contCnt, c, c.MinOccurs(), c.MaxOccurs())
-		})
+		}
 
 		// what if unknown type
 		fmt.Println("unknown type:", app.Type(appdef.NewQName("test", "unknown")))
