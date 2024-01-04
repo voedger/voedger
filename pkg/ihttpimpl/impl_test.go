@@ -145,6 +145,9 @@ func TestReverseProxy(t *testing.T) {
 }
 
 func TestRace_HTTPProcessor(t *testing.T) {
+	if testing.Short() {
+		t.Skip()
+	}
 	require := require.New(t)
 	testApp := setUp(t)
 	defer tearDown(testApp)
