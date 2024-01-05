@@ -10,7 +10,7 @@ import (
 	"strings"
 )
 
-type Constraint string
+type Constraint uint8
 type ErrorType string
 
 type CompatibilityTreeNode struct {

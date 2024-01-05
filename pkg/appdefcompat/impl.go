@@ -2,6 +2,7 @@
 * Copyright (c) 2023-present unTill Pro, Ltd.
 * @author Alisher Nurmanov
  */
+
 package appdefcompat
 
 import (
@@ -14,7 +15,7 @@ import (
 var constrains = []NodeConstraint{
 	{NodeNameTypes, ConstraintInsertOnly},
 	{NodeNameFields, ConstraintAppendOnly},
-	{NodeNameUniqueFields, ConstraintNonModifiable},
+	{NodeNameUniqueFields, ConstraintOrderChangeOnly},
 	{NodeNamePartKeyFields, ConstraintNonModifiable},
 	{NodeNameClustColsFields, ConstraintNonModifiable},
 	{NodeNameCommandArgs, ConstraintNonModifiable},
@@ -161,23 +162,12 @@ func buildFieldsNode(parentNode *CompatibilityTreeNode, item interface{}, nodeNa
 	return
 }
 
-func buildUniqueFieldNode(parentNode *CompatibilityTreeNode, item appdef.IUnique) (node *CompatibilityTreeNode) {
-	node = newNode(parentNode, item.Name().String(), nil)
-	fieldsNode := newNode(node, NodeNameFields, nil)
-	for _, f := range item.Fields() {
-		fieldsNode.Props = append(fieldsNode.Props, buildFieldNode(node, f))
-	}
-	node.Props = append(node.Props,
-		fieldsNode, // Fields node
-		buildQNameNode(node, item.ParentStructure(), NodeNameParent, false), // Parent node
-	)
-	return
-}
-
 func buildUniqueFieldsNode(parentNode *CompatibilityTreeNode, item appdef.IUniques) (node *CompatibilityTreeNode) {
 	node = newNode(parentNode, NodeNameUniqueFields, nil)
 	for _, unique := range item.Uniques() {
-		node.Props = append(node.Props, buildUniqueFieldNode(node, unique))
+		for _, f := range unique.Fields() {
+			node.Props = append(node.Props, buildFieldNode(node, f))
+		}
 	}
 	return
 }
