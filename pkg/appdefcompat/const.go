@@ -2,6 +2,7 @@
 * Copyright (c) 2023-present unTill Pro, Ltd.
 * @author Alisher Nurmanov
  */
+
 package appdefcompat
 
 const (
@@ -10,10 +11,13 @@ const (
 )
 
 const (
-	ConstraintValueMatch    Constraint = "ConstraintValueMatch"
-	ConstraintAppendOnly    Constraint = "ConstraintAppendOnly"
-	ConstraintInsertOnly    Constraint = "ConstraintInsertOnly"
-	ConstraintNonModifiable Constraint = "ConstraintNonModifiable"
+	ConstraintValueMatch Constraint = 1 << iota
+	ConstraintAppendOnly
+	ConstraintInsertOnly
+	ConstraintDeleteOnly
+	ConstraintOrderChangeOnly
+	ConstraintAllAllowed    = 255
+	ConstraintNonModifiable = 0
 )
 
 const (
