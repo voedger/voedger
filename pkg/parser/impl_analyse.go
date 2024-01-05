@@ -68,8 +68,98 @@ func analyse(c *basicContext, p *PackageSchemaAST) {
 			analyseStorage(v, ictx)
 		case *LimitStmt:
 			analyseLimit(v, ictx)
+		case *GrantStmt:
+			analyseGrant(v, ictx)
 		}
 	})
+}
+
+func analyseGrant(grant *GrantStmt, c *iterateCtx) {
+
+	// To
+	role, _, err := lookupInCtx[*RoleStmt](grant.To, c)
+	if err != nil {
+		c.stmtErr(&grant.To.Pos, err)
+	}
+	if role == nil {
+		c.stmtErr(&grant.To.Pos, ErrUndefinedRole(grant.To))
+	}
+
+	// On
+	/*
+		if grant.What.Command {
+			err := resolveInCtx(grant.On, c, func(f *CommandStmt, _ *PackageSchemaAST) error { return nil })
+			if err != nil {
+				c.stmtErr(&grant.On.Pos, err)
+			}
+		}
+
+		if grant.What.Query {
+			err := resolveInCtx(grant.On, c, func(f *QueryStmt, _ *PackageSchemaAST) error { return nil })
+			if err != nil {
+				c.stmtErr(&grant.On.Pos, err)
+			}
+		}
+
+		if grant.What.Workspace {
+			err := resolveInCtx(grant.On, c, func(f *WorkspaceStmt, _ *PackageSchemaAST) error { return nil })
+			if err != nil {
+				c.stmtErr(&grant.On.Pos, err)
+			}
+		}
+
+		if grant.What.AllCommandsWithTag || grant.What.AllQueriesWithTag || grant.What.AllWorkspacesWithTag || (grant.What.AllTablesWithTag != nil) {
+			err := resolveInCtx(grant.On, c, func(f *TagStmt, _ *PackageSchemaAST) error { return nil })
+			if err != nil {
+				c.stmtErr(&grant.On.Pos, err)
+			}
+		}
+
+		var table *TableStmt
+
+		if grant.What.Table != nil {
+			err := resolveInCtx(grant.On, c, func(f *TableStmt, _ *PackageSchemaAST) error { table = f; return nil })
+			if err != nil {
+				c.stmtErr(&grant.On.Pos, err)
+			}
+		}
+
+		// Grant table actions
+		if table != nil {
+
+			checkColumn := func(column Ident) error {
+				for _, f := range table.Items {
+					if f.Field != nil && f.Field.Name == Ident(column) {
+						return nil
+					}
+					if f.RefField != nil && f.RefField.Name == Ident(column) {
+						return nil
+					}
+					if f.NestedTable != nil && f.NestedTable.Table.Name == Ident(column) {
+						return nil
+					}
+				}
+				return ErrUndefinedField(string(column))
+			}
+
+			if grant.What.Table.GrantAll != nil {
+				for _, column := range grant.What.Table.GrantAll.Columns {
+					if err := checkColumn(column.Value); err != nil {
+						c.stmtErr(&column.Pos, err)
+					}
+				}
+			}
+
+			for _, i := range grant.What.Table.Items {
+				for _, column := range i.Columns {
+					if err := checkColumn(column.Value); err != nil {
+						c.stmtErr(&column.Pos, err)
+					}
+				}
+			}
+		}
+	*/
+
 }
 
 func analyseUseTable(u *UseTableStmt, c *iterateCtx) {
@@ -264,11 +354,15 @@ func analyseView(view *ViewStmt, c *iterateCtx) {
 func analyzeCommand(cmd *CommandStmt, c *iterateCtx) {
 
 	resolve := func(qn DefQName) {
-		err := resolveInCtx(qn, c, func(*TypeStmt, *PackageSchemaAST) error { return nil })
-		if err != nil {
-			if err = resolveInCtx(qn, c, func(*TableStmt, *PackageSchemaAST) error { return nil }); err != nil {
-				c.stmtErr(&cmd.Pos, err)
+		typ, _, err := lookupInCtx[*TypeStmt](qn, c)
+		if typ == nil && err == nil {
+			tbl, _, err := lookupInCtx[*TableStmt](qn, c)
+			if tbl == nil && err == nil {
+				c.stmtErr(&cmd.Pos, ErrUndefinedTypeOrTable(qn))
 			}
+		}
+		if err != nil {
+			c.stmtErr(&cmd.Pos, err)
 		}
 	}
 
@@ -276,11 +370,15 @@ func analyzeCommand(cmd *CommandStmt, c *iterateCtx) {
 		resolve(*cmd.Param.Def)
 	}
 	if cmd.UnloggedParam != nil && cmd.UnloggedParam.Def != nil {
-		err := resolveInCtx(*cmd.UnloggedParam.Def, c, func(*TypeStmt, *PackageSchemaAST) error { return nil })
-		if err != nil {
-			if err = resolveInCtx(*cmd.UnloggedParam.Def, c, func(*TableStmt, *PackageSchemaAST) error { return nil }); err != nil {
-				c.stmtErr(&cmd.Pos, err)
+		typ, _, err := lookupInCtx[*TypeStmt](*cmd.UnloggedParam.Def, c)
+		if typ == nil && err == nil {
+			tbl, _, err := lookupInCtx[*TableStmt](*cmd.UnloggedParam.Def, c)
+			if tbl == nil && err == nil {
+				c.stmtErr(&cmd.Pos, ErrUndefinedTypeOrTable(*cmd.UnloggedParam.Def))
 			}
+		}
+		if err != nil {
+			c.stmtErr(&cmd.Pos, err)
 		}
 	}
 	if cmd.Returns != nil && cmd.Returns.Def != nil {

@@ -39,6 +39,8 @@ func parseImpl(fileName string, content string) (*SchemaAST, error) {
 		{Name: "EXECUTEONALLQUERIES", Pattern: `EXECUTE[ \r\n\t]+ON[ \r\n\t]+ALL[ \r\n\t]+QUERIES[ \r\n\t]+`},
 		{Name: "INSERTONWORKSPACE", Pattern: `INSERT[ \r\n\t]+ON[ \r\n\t]+WORKSPACE`},
 		{Name: "INSERTONALLWORKSPACESWITHTAG", Pattern: `INSERT[ \r\n\t]+ON[ \r\n\t]+ALL[ \r\n\t]+WORKSPACES[ \r\n\t]+WITH[ \r\n\t]+TAG`},
+		{Name: "ONALLTABLESWITHTAG", Pattern: `ON[ \r\n\t]+ALL[ \r\n\t]+TABLES[ \r\n\t]+WITH[ \r\n\t]+TAG`},
+		{Name: "ONTABLE", Pattern: `ON[ \r\n\t]+TABLE`},
 		{Name: "PRIMARYKEY", Pattern: `PRIMARY[ \r\n\t]+KEY`},
 		{Name: "String", Pattern: `('(\\'|[^'])*')`},
 		{Name: "Ident", Pattern: `([a-zA-Z_]\w*)|("[a-zA-Z_]\w*")`},
@@ -49,6 +51,7 @@ func parseImpl(fileName string, content string) (*SchemaAST, error) {
 		participle.Lexer(basicLexer),
 		participle.Elide("Whitespace", "Comment", "MultilineComment", "PreStmtComment"),
 		participle.Unquote("String"),
+		participle.UseLookahead(5),
 	)
 	return parser.ParseString(fileName, content)
 }
