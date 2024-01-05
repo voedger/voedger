@@ -32,11 +32,18 @@ WORKSPACE SomeWorkspace(
         ProfileToken                int64, -- ValueChanged: int32 in old version, int64 in new version
         NewField                    varchar -- appending field is allowed
     );
+    TABLE OneMoreTable INHERITS CDoc(
+        A varchar,
+        B varchar,
+        C int32,
+        UNIQUE (A, B) -- allowed to reorder fields in unique constraint
+    );
     TABLE AnotherOneTable INHERITS CDoc(
         A varchar,
         B varchar,
         D varchar, -- NodeInserted
-        C int32 -- OrderChanged, ValueChanged: varchar in old version, int32 in new version, field's index is changed
+        C int32, -- OrderChanged, ValueChanged: varchar in old version, int32 in new version, field's index is changed
+        UNIQUE (A, B, D) -- NodeModified: added field D to UniqueFields
     );
     TYPE SomeType(
         A varchar,
