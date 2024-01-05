@@ -231,6 +231,7 @@ func compareNodes(old, new *CompatibilityTreeNode, constrains []NodeConstraint) 
 }
 
 func findConstraint(nodeName string, constrains []NodeConstraint) (constraint Constraint) {
+	constraint = ConstraintAllAllowed
 	for _, c := range constrains {
 		if c.NodeName == nodeName {
 			return c.Constraint
@@ -240,11 +241,11 @@ func findConstraint(nodeName string, constrains []NodeConstraint) (constraint Co
 }
 
 func checkConstraint(oldTreePath []string, m *matchNodesResult, constraint Constraint) (cerrs []CompatibilityError) {
-	if len(constraint) == 0 {
+	if constraint == ConstraintAllAllowed {
 		return
 	}
 	if len(m.DeletedNodeNames) == 0 && m.InsertedNodeCount > 0 {
-		if constraint == ConstraintNonModifiable || constraint == ConstraintAppendOnly {
+		if constraint == ConstraintNonModifiable || constraint&ConstraintAppendOnly > 0 {
 			errorType := ErrorTypeNodeInserted
 			if constraint == ConstraintNonModifiable {
 				errorType = ErrorTypeNodeModified
@@ -260,7 +261,7 @@ func checkConstraint(oldTreePath []string, m *matchNodesResult, constraint Const
 	}
 
 	if len(m.DeletedNodeNames) > 0 {
-		if constraint == ConstraintNonModifiable || constraint == ConstraintAppendOnly || constraint == ConstraintInsertOnly {
+		if constraint == ConstraintNonModifiable || constraint&ConstraintAppendOnly > 0 || constraint&ConstraintInsertOnly > 0 {
 			errorType := ErrorTypeNodeRemoved
 			if constraint == ConstraintNonModifiable {
 				errorType = ErrorTypeNodeModified
@@ -273,7 +274,7 @@ func checkConstraint(oldTreePath []string, m *matchNodesResult, constraint Const
 	}
 
 	if len(m.ReorderedNodeNames) > 0 && len(m.DeletedNodeNames) == 0 {
-		if constraint == ConstraintNonModifiable || constraint == ConstraintAppendOnly {
+		if constraint == ConstraintNonModifiable || constraint&ConstraintAppendOnly > 0 {
 			errorType := ErrorTypeOrderChanged
 			if constraint == ConstraintNonModifiable {
 				errorType = ErrorTypeNodeModified
@@ -285,6 +286,13 @@ func checkConstraint(oldTreePath []string, m *matchNodesResult, constraint Const
 			}
 		}
 	}
+
+	if constraint&ConstraintOrderChangeOnly > 0 {
+		if m.AppendedNodeCount > 0 || len(m.DeletedNodeNames) > 0 || m.InsertedNodeCount > 0 {
+			cerrs = append(cerrs, newCompatibilityError(constraint, oldTreePath, ErrorTypeNodeModified))
+		}
+	}
+
 	return
 }
 
