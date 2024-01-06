@@ -311,7 +311,7 @@ func Test_CircularReferences(t *testing.T) {
 	// Workspaces
 	fs, err = ParseFile("file1.sql", `APPLICATION test();
 	ABSTRACT WORKSPACE w1();
-	ABSTRACT WORKSPACE w2 INHERITS w1,w2(
+		ABSTRACT WORKSPACE w2 INHERITS w1,w2(
 		TABLE table4 INHERITS CDoc();
 	);
 	ABSTRACT WORKSPACE w3 INHERITS w4();
@@ -328,10 +328,10 @@ func Test_CircularReferences(t *testing.T) {
 	})
 
 	require.EqualError(err, strings.Join([]string{
-		"file1.sql:3:2: circular reference in INHERITS",
-		"file1.sql:6:2: circular reference in INHERITS",
-		"file1.sql:7:2: circular reference in INHERITS",
-		"file1.sql:8:2: circular reference in INHERITS",
+		"file1.sql:3:37: circular reference in INHERITS",
+		"file1.sql:6:33: circular reference in INHERITS",
+		"file1.sql:7:33: circular reference in INHERITS",
+		"file1.sql:8:33: circular reference in INHERITS",
 	}, "\n"))
 }
 
@@ -423,7 +423,7 @@ func Test_Alter_Workspace(t *testing.T) {
 		pkg2,
 	})
 	require.EqualError(err, strings.Join([]string{
-		"file2.sql:3:3: workspace pkg1.AWorkspace is not alterable",
+		"file2.sql:3:19: workspace pkg1.AWorkspace is not alterable",
 	}, "\n"))
 }
 
@@ -491,8 +491,8 @@ func Test_Varchar(t *testing.T) {
 		pkg,
 	})
 	require.EqualError(err, strings.Join([]string{
-		fmt.Sprintf("file1.sql:3:3: maximum field length is %d", appdef.MaxFieldLength),
-		fmt.Sprintf("file1.sql:6:3: maximum field length is %d", appdef.MaxFieldLength),
+		fmt.Sprintf("file1.sql:3:12: maximum field length is %d", appdef.MaxFieldLength),
+		fmt.Sprintf("file1.sql:6:12: maximum field length is %d", appdef.MaxFieldLength),
 	}, "\n"))
 
 }
@@ -601,13 +601,13 @@ func Test_AbstractTables(t *testing.T) {
 		pkg,
 	})
 	require.EqualError(err, strings.Join([]string{
-		"file1.sql:5:2: base table must be abstract",
-		"file1.sql:9:3: reference to abstract table AbstractTable",
-		"file1.sql:18:4: projector refers to abstract table AbstractTable",
-		"file1.sql:22:4: projector refers to abstract table AbstractTable",
-		"file1.sql:26:4: projector refers to abstract table AbstractTable",
+		"file1.sql:5:25: base table must be abstract",
+		"file1.sql:9:10: reference to abstract table AbstractTable",
+		"file1.sql:19:29: projector refers to abstract table AbstractTable",
+		"file1.sql:24:21: projector refers to abstract table AbstractTable",
+		"file1.sql:28:10: projector refers to abstract table AbstractTable",
 		"file1.sql:32:4: nested abstract table AbstractTable",
-		"file1.sql:34:3: use of abstract table AbstractTable",
+		"file1.sql:34:13: use of abstract table AbstractTable",
 		"file1.sql:37:4: nested abstract table Nested",
 	}, "\n"))
 
@@ -684,7 +684,7 @@ func Test_PanicUnknownFieldType(t *testing.T) {
 		pkg,
 	})
 	require.EqualError(err, strings.Join([]string{
-		"file1.sql:3:3: undefined table: asdasd",
+		"file1.sql:3:8: undefined table: asdasd",
 	}, "\n"))
 
 }
@@ -809,7 +809,7 @@ func Test_Views(t *testing.T) {
 				COMMAND Orders()
 			);
 			)
-	`, "file.sql:4:17: varchar field field1 not supported in partition key")
+	`, "file.sql:4:18: varchar field field1 not supported in partition key")
 
 	require.AppSchemaError(`APPLICATION test(); WORKSPACE Workspace (
 		VIEW test(
@@ -821,7 +821,7 @@ func Test_Views(t *testing.T) {
 			COMMAND Orders()
 		);
 	)
-	`, "file.sql:4:16: bytes field field1 not supported in partition key")
+	`, "file.sql:4:17: bytes field field1 not supported in partition key")
 
 	require.AppSchemaError(`APPLICATION test(); WORKSPACE Workspace (
 		VIEW test(
@@ -861,7 +861,7 @@ func Test_Views(t *testing.T) {
 			COMMAND Orders()
 		);
 	)
-	`, "file.sql:4:4: reference to abstract table abc", "file.sql:5:4: undefined table: unexisting")
+	`, "file.sql:4:15: reference to abstract table abc", "file.sql:5:15: undefined table: unexisting")
 
 	require.AppSchemaError(`APPLICATION test(); WORKSPACE Workspace (
 		VIEW test(
@@ -1044,12 +1044,12 @@ func Test_Undefined(t *testing.T) {
 	_, err = BuildAppSchema([]*PackageSchemaAST{pkg, getSysPackageAST()})
 
 	require.EqualError(err, strings.Join([]string{
-		"example.sql:4:4: undefined tag: UndefinedTag",
-		"example.sql:5:4: undefined rate: UndefinedRate",
-		"example.sql:6:4: xyz undefined",
-		"example.sql:7:4: undefined type or table: text",
-		"example.sql:9:4: undefined type or table: text",
-		"example.sql:11:4: undefined type or table: text",
+		"example.sql:4:32: undefined tag: UndefinedTag",
+		"example.sql:5:40: undefined rate: UndefinedRate",
+		"example.sql:6:43: xyz undefined",
+		"example.sql:7:36: undefined type or table: text",
+		"example.sql:9:23: undefined type or table: text",
+		"example.sql:11:40: undefined type or table: text",
 	}, "\n"))
 }
 
@@ -1081,13 +1081,13 @@ func Test_Projectors(t *testing.T) {
 	_, err = BuildAppSchema([]*PackageSchemaAST{pkg, getSysPackageAST()})
 
 	require.EqualError(err, strings.Join([]string{
-		"example.sql:6:4: undefined command: test.CreateUPProfile",
-		"example.sql:7:4: undefined command: Order",
-		"example.sql:8:4: only INSERT allowed for ODoc or ORecord",
-		"example.sql:9:4: only INSERT allowed for ODoc or ORecord",
-		"example.sql:10:4: only INSERT allowed for ODoc or ORecord",
-		"example.sql:12:4: undefined type or ODoc: Bill",
-		"example.sql:14:4: undefined type or ODoc: ORecord",
+		"example.sql:6:44: undefined command: test.CreateUPProfile",
+		"example.sql:7:44: undefined command: Order",
+		"example.sql:8:43: only INSERT allowed for ODoc or ORecord",
+		"example.sql:9:45: only INSERT allowed for ODoc or ORecord",
+		"example.sql:10:47: only INSERT allowed for ODoc or ORecord",
+		"example.sql:12:55: undefined type or ODoc: Bill",
+		"example.sql:14:55: undefined type or ODoc: ORecord",
 	}, "\n"))
 }
 
@@ -1126,8 +1126,8 @@ func Test_Imports(t *testing.T) {
 
 	_, err = BuildAppSchema([]*PackageSchemaAST{getSysPackageAST(), pkg1, pkg2, pkg3})
 	require.EqualError(err, strings.Join([]string{
-		"example.sql:12:7: undefined tag: air.UnknownTag",
-		"example.sql:13:7: Air undefined",
+		"example.sql:12:44: undefined tag: air.UnknownTag",
+		"example.sql:13:46: Air undefined",
 	}, "\n"))
 
 }
@@ -1160,8 +1160,8 @@ func Test_AbstractWorkspace(t *testing.T) {
 		ps,
 	})
 	require.EqualError(err, strings.Join([]string{
-		"example.sql:3:2: abstract workspace cannot have a descriptor",
-		"example.sql:9:2: base workspace must be abstract",
+		"example.sql:4:13: abstract workspace cannot have a descriptor",
+		"example.sql:9:25: base workspace must be abstract",
 	}, "\n"))
 
 }
@@ -1552,7 +1552,7 @@ func Test_Scope(t *testing.T) {
 	require.NoError(err)
 
 	_, err = BuildAppSchema([]*PackageSchemaAST{getSysPackageAST(), main, pkg1, pkg2})
-	require.EqualError(err, "example3.sql:4:3: undefined table: p1.MyTable")
+	require.EqualError(err, "example3.sql:4:16: undefined table: p1.MyTable")
 
 }
 
@@ -1598,9 +1598,9 @@ func Test_Scope_TableRefs(t *testing.T) {
 	require.NoError(err)
 	_, err = BuildAppSchema([]*PackageSchemaAST{getSysPackageAST(), main, pkg1})
 	require.EqualError(err, strings.Join([]string{
-		"example2.sql:16:4: undefined table: MyTable",
-		"example2.sql:17:4: undefined table: MyTable2",
-		"example2.sql:19:4: undefined table: MyInnerTable",
+		"example2.sql:16:11: undefined table: MyTable",
+		"example2.sql:17:11: undefined table: MyTable2",
+		"example2.sql:19:11: undefined table: MyInnerTable",
 	}, "\n"))
 
 }
@@ -1653,6 +1653,47 @@ func Test_Alter_Workspace_In_Package(t *testing.T) {
 		pkg1,
 	})
 	require.NoError(err)
+}
+
+func Test_UseTableErrors(t *testing.T) {
+	require := require.New(t)
+
+	fs, err := ParseFile("main.sql", `
+	IMPORT SCHEMA 'org/pkg1';
+	APPLICATION test(
+		USE pkg1;
+	);
+	WORKSPACE Ws(
+		USE TABLE pkg1.Pkg1Table3;  -- bad, declared in workspace
+		USE TABLE pkg2.*;  			-- bad, package not found
+		USE WORKSPACE ws1;			-- bad, workspace not found
+	)
+	`)
+	require.NoError(err)
+	pkg, err := BuildPackageSchema("test/main", []*FileSchemaAST{fs})
+	require.NoError(err)
+
+	// pkg1
+	fs1, err := ParseFile("file1.sql", `
+	WORKSPACE Ws(
+		TABLE Pkg1Table3 INHERITS CDoc();
+	)
+	`)
+	require.NoError(err)
+	pkg1, err := BuildPackageSchema("org/pkg1", []*FileSchemaAST{fs1})
+	require.NoError(err)
+
+	_, err = BuildAppSchema([]*PackageSchemaAST{
+		getSysPackageAST(),
+		pkg,
+		pkg1,
+	})
+
+	require.EqualError(err, strings.Join([]string{
+		"main.sql:7:18: undefined table: pkg1.Pkg1Table3",
+		"main.sql:8:13: pkg2 undefined",
+		"main.sql:9:17: undefined workspace: main.ws1",
+	}, "\n"))
 }
 
 func Test_UseTables(t *testing.T) {
@@ -1713,14 +1754,12 @@ func Test_UseTables(t *testing.T) {
 	})
 
 	require.EqualError(err, strings.Join([]string{
-		"main.sql:15:3: undefined table: pkg2.Pkg2Table3",
+		"main.sql:15:18: undefined table: pkg2.Pkg2Table3",
 	}, "\n"))
 
 	builder := appdef.New()
 	err = BuildAppDefs(schema, builder)
-	require.EqualError(err, strings.Join([]string{
-		"main.sql:15:3: undefined table: pkg2.Pkg2Table3",
-	}, "\n"))
+	require.NoError(err)
 
 	ws := builder.Workspace(appdef.NewQName("main", "Ws"))
 	require.NotNil(ws)
@@ -1926,8 +1965,8 @@ TABLE SomeTable INHERITS CDoc (
 
 	_, err := BuildAppSchema([]*PackageSchemaAST{pkgApp1, getSysPackageAST()})
 	require.EqualError(err, strings.Join([]string{
-		"source.sql:7:2: undefined type: int321",
-		"source.sql:11:2: undefined table: int321",
+		"source.sql:7:4: undefined type: int321",
+		"source.sql:11:4: undefined table: int321",
 	}, "\n"))
 
 }
@@ -1941,8 +1980,8 @@ TABLE MyTable1 INHERITS ODocUnknown ( MyField ref(registry.Login) NOT NULL );
 	_, err := BuildAppSchema([]*PackageSchemaAST{pkgApp1, getSysPackageAST()})
 	require.EqualError(err, strings.Join([]string{
 		"source.sql:2:1: undefined table kind",
-		"source.sql:2:39: registry undefined",
-		"source.sql:2:1: undefined table: ODocUnknown",
+		"source.sql:2:51: registry undefined",
+		"source.sql:2:25: undefined table: ODocUnknown",
 	}, "\n"))
 
 }
