@@ -8,6 +8,8 @@ curl -X GET \
 --data-urlencode 'skip=30'
 --data-urlencode 'include=article_prices'
 --data-urlencode 'refs={"dname":"id_department.name","pname":"article_prices.id_price.name"}' 
+--data-urlencode 'where={"id_department":123456,"number":{"$gte": 100, "$lte": 200}}'
+
   https://air.untill.com/api/rest/untill/airs-bp/140737488486431/untill.articles
 ```
 
@@ -16,6 +18,7 @@ curl -X GET \
 [
     {
         "id": 1234,
+        "number": 100,
         "name": "article1",
         "id_department": 123456,
         "__refs": {
