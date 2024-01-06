@@ -339,9 +339,9 @@ func buildQname(ctx *iterateCtx, pkg Ident, name Ident) appdef.QName {
 	return appdef.NewQName(string(pkg), string(name))
 }
 
-func contains(s []Ident, e Ident) bool {
+func contains(s []Identifier, e Ident) bool {
 	for _, a := range s {
-		if a == e {
+		if a.Value == e {
 			return true
 		}
 	}
