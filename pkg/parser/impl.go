@@ -302,7 +302,11 @@ func buildAppSchemaImpl(packages []*PackageSchemaAST) (*AppSchemaAST, error) {
 	for _, p := range packages {
 		analyse(&c, p)
 	}
-	return appSchema, errors.Join(c.errs...)
+
+	if len(c.errs) > 0 {
+		return nil, errors.Join(c.errs...)
+	}
+	return appSchema, nil
 }
 
 type basicContext struct {

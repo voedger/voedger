@@ -1713,7 +1713,6 @@ func Test_UseTables(t *testing.T) {
 		USE TABLE *;				-- good, import all tables declared on current package level
 		USE TABLE pkg1.*;			-- good, import all tables from specified package
 		USE TABLE pkg2.Pkg2Table1;	-- good, import specified table
-		USE TABLE pkg2.Pkg2Table3;  -- bad, declared in workspace
 	)
 	`)
 	require.NoError(err)
@@ -1753,9 +1752,7 @@ func Test_UseTables(t *testing.T) {
 		pkg2,
 	})
 
-	require.EqualError(err, strings.Join([]string{
-		"main.sql:15:18: undefined table: pkg2.Pkg2Table3",
-	}, "\n"))
+	require.NoError(err)
 
 	builder := appdef.New()
 	err = BuildAppDefs(schema, builder)
@@ -1791,10 +1788,11 @@ func Test_Storages(t *testing.T) {
 	pkg2, err := BuildPackageSchema("github.com/untillpro/airsbp3/pkg2", []*FileSchemaAST{fs})
 	require.NoError(err)
 
-	_, err = BuildAppSchema([]*PackageSchemaAST{
+	schema, err := BuildAppSchema([]*PackageSchemaAST{
 		pkg2,
 	})
 	require.ErrorContains(err, "storages are only declared in sys package")
+	require.Nil(schema)
 }
 
 func buildPackage(sql string) *PackageSchemaAST {
