@@ -2000,6 +2000,16 @@ func Test_Grants(t *testing.T) {
 		TABLE Tbl INHERITS CDoc();
 		GRANT ALL(FakeCol) ON TABLE Tbl TO role1;
 		GRANT INSERT,UPDATE(FakeCol) ON TABLE Tbl TO role1;
+		GRANT EXECUTE ON ALL COMMANDS WITH TAG x TO role1; 
+		TABLE Nested1 INHERITS CRecord();
+		TABLE Tbl2 INHERITS CDoc(
+			ref1 ref(Tbl),
+			items TABLE Nested(),
+			items2 Nested1
+		);
+		GRANT ALL(ref1) ON TABLE Tbl2 TO role1;
+		GRANT ALL(items) ON TABLE Tbl2 TO role1;
+		GRANT ALL(items2) ON TABLE Tbl2 TO role1;
 	);
 	`, "file.sql:5:30: undefined role: app1",
 		"file.sql:5:22: undefined table: Fake",
@@ -2008,27 +2018,7 @@ func Test_Grants(t *testing.T) {
 		"file.sql:8:29: undefined workspace: Fake",
 		"file.sql:10:13: undefined field FakeCol",
 		"file.sql:11:23: undefined field FakeCol",
-	)
-
-}
-
-func Test_Grants2(t *testing.T) {
-	require := assertions(t)
-
-	require.AppSchemaError(`
-	APPLICATION app1();
-	ROLE role1;
-	WORKSPACE ws1 (
-		GRANT EXECUTE ON COMMAND Fake TO role1;
-		GRANT EXECUTE ON QUERY Fake TO role1;
-		GRANT INSERT ON WORKSPACE Fake TO role1;
-	);
-	`, "file.sql:5:30: undefined role: app1",
-		"file.sql:5:22: undefined table: Fake",
-		"file.sql:6:28: undefined command: Fake",
-		"file.sql:7:26: undefined query: Fake",
-		"file.sql:8:29: undefined workspace: Fake",
-		"file.sql:10:13: undefined field FakeCol",
+		"file.sql:12:42: undefined tag: x",
 	)
 
 }

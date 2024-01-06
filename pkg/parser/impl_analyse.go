@@ -77,38 +77,34 @@ func analyse(c *basicContext, p *PackageSchemaAST) {
 func analyseGrant(grant *GrantStmt, c *iterateCtx) {
 
 	// To
-	role, _, err := lookupInCtx[*RoleStmt](grant.To, c)
+	err := resolveInCtx(grant.To, c, func(f *RoleStmt, _ *PackageSchemaAST) error { return nil })
 	if err != nil {
 		c.stmtErr(&grant.To.Pos, err)
 	}
-	if role == nil {
-		c.stmtErr(&grant.To.Pos, ErrUndefinedRole(grant.To))
-	}
 
 	// On
-
-	if grant.What.Command {
+	if grant.Command {
 		err := resolveInCtx(grant.On, c, func(f *CommandStmt, _ *PackageSchemaAST) error { return nil })
 		if err != nil {
 			c.stmtErr(&grant.On.Pos, err)
 		}
 	}
 
-	if grant.What.Query {
+	if grant.Query {
 		err := resolveInCtx(grant.On, c, func(f *QueryStmt, _ *PackageSchemaAST) error { return nil })
 		if err != nil {
 			c.stmtErr(&grant.On.Pos, err)
 		}
 	}
 
-	if grant.What.Workspace {
+	if grant.Workspace {
 		err := resolveInCtx(grant.On, c, func(f *WorkspaceStmt, _ *PackageSchemaAST) error { return nil })
 		if err != nil {
 			c.stmtErr(&grant.On.Pos, err)
 		}
 	}
 
-	if grant.What.AllCommandsWithTag || grant.What.AllQueriesWithTag || grant.What.AllWorkspacesWithTag || (grant.What.AllTablesWithTag != nil) {
+	if grant.AllCommandsWithTag || grant.AllQueriesWithTag || grant.AllWorkspacesWithTag || (grant.AllTablesWithTag != nil) {
 		err := resolveInCtx(grant.On, c, func(f *TagStmt, _ *PackageSchemaAST) error { return nil })
 		if err != nil {
 			c.stmtErr(&grant.On.Pos, err)
@@ -117,7 +113,7 @@ func analyseGrant(grant *GrantStmt, c *iterateCtx) {
 
 	var table *TableStmt
 
-	if grant.What.Table != nil {
+	if grant.Table != nil {
 		err := resolveInCtx(grant.On, c, func(f *TableStmt, _ *PackageSchemaAST) error { table = f; return nil })
 		if err != nil {
 			c.stmtErr(&grant.On.Pos, err)
@@ -135,22 +131,22 @@ func analyseGrant(grant *GrantStmt, c *iterateCtx) {
 				if f.RefField != nil && f.RefField.Name == Ident(column) {
 					return nil
 				}
-				if f.NestedTable != nil && f.NestedTable.Table.Name == Ident(column) {
+				if f.NestedTable != nil && f.NestedTable.Name == Ident(column) {
 					return nil
 				}
 			}
 			return ErrUndefinedField(string(column))
 		}
 
-		if grant.What.Table.GrantAll != nil {
-			for _, column := range grant.What.Table.GrantAll.Columns {
+		if grant.Table.GrantAll != nil {
+			for _, column := range grant.Table.GrantAll.Columns {
 				if err := checkColumn(column.Value); err != nil {
 					c.stmtErr(&column.Pos, err)
 				}
 			}
 		}
 
-		for _, i := range grant.What.Table.Items {
+		for _, i := range grant.Table.Items {
 			for _, column := range i.Columns {
 				if err := checkColumn(column.Value); err != nil {
 					c.stmtErr(&column.Pos, err)
@@ -158,7 +154,6 @@ func analyseGrant(grant *GrantStmt, c *iterateCtx) {
 			}
 		}
 	}
-
 }
 
 func analyseUseTable(u *UseTableStmt, c *iterateCtx) {
