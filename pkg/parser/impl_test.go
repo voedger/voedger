@@ -1999,7 +1999,7 @@ func Test_Grants(t *testing.T) {
 		GRANT INSERT ON WORKSPACE Fake TO role1;
 		TABLE Tbl INHERITS CDoc();
 		GRANT ALL(FakeCol) ON TABLE Tbl TO role1;
-GRANT INSERT,UPDATE(FakeCol) ON TABLE Tbl TO role1;
+		GRANT INSERT,UPDATE(FakeCol) ON TABLE Tbl TO role1;
 	);
 	`, "file.sql:5:30: undefined role: app1",
 		"file.sql:5:22: undefined table: Fake",
@@ -2007,6 +2007,7 @@ GRANT INSERT,UPDATE(FakeCol) ON TABLE Tbl TO role1;
 		"file.sql:7:26: undefined query: Fake",
 		"file.sql:8:29: undefined workspace: Fake",
 		"file.sql:10:13: undefined field FakeCol",
+		"file.sql:11:23: undefined field FakeCol",
 	)
 
 }

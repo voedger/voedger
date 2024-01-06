@@ -86,79 +86,78 @@ func analyseGrant(grant *GrantStmt, c *iterateCtx) {
 	}
 
 	// On
-	/*
-		if grant.What.Command {
-			err := resolveInCtx(grant.On, c, func(f *CommandStmt, _ *PackageSchemaAST) error { return nil })
-			if err != nil {
-				c.stmtErr(&grant.On.Pos, err)
-			}
+
+	if grant.What.Command {
+		err := resolveInCtx(grant.On, c, func(f *CommandStmt, _ *PackageSchemaAST) error { return nil })
+		if err != nil {
+			c.stmtErr(&grant.On.Pos, err)
 		}
+	}
 
-		if grant.What.Query {
-			err := resolveInCtx(grant.On, c, func(f *QueryStmt, _ *PackageSchemaAST) error { return nil })
-			if err != nil {
-				c.stmtErr(&grant.On.Pos, err)
-			}
+	if grant.What.Query {
+		err := resolveInCtx(grant.On, c, func(f *QueryStmt, _ *PackageSchemaAST) error { return nil })
+		if err != nil {
+			c.stmtErr(&grant.On.Pos, err)
 		}
+	}
 
-		if grant.What.Workspace {
-			err := resolveInCtx(grant.On, c, func(f *WorkspaceStmt, _ *PackageSchemaAST) error { return nil })
-			if err != nil {
-				c.stmtErr(&grant.On.Pos, err)
-			}
+	if grant.What.Workspace {
+		err := resolveInCtx(grant.On, c, func(f *WorkspaceStmt, _ *PackageSchemaAST) error { return nil })
+		if err != nil {
+			c.stmtErr(&grant.On.Pos, err)
 		}
+	}
 
-		if grant.What.AllCommandsWithTag || grant.What.AllQueriesWithTag || grant.What.AllWorkspacesWithTag || (grant.What.AllTablesWithTag != nil) {
-			err := resolveInCtx(grant.On, c, func(f *TagStmt, _ *PackageSchemaAST) error { return nil })
-			if err != nil {
-				c.stmtErr(&grant.On.Pos, err)
-			}
+	if grant.What.AllCommandsWithTag || grant.What.AllQueriesWithTag || grant.What.AllWorkspacesWithTag || (grant.What.AllTablesWithTag != nil) {
+		err := resolveInCtx(grant.On, c, func(f *TagStmt, _ *PackageSchemaAST) error { return nil })
+		if err != nil {
+			c.stmtErr(&grant.On.Pos, err)
 		}
+	}
 
-		var table *TableStmt
+	var table *TableStmt
 
-		if grant.What.Table != nil {
-			err := resolveInCtx(grant.On, c, func(f *TableStmt, _ *PackageSchemaAST) error { table = f; return nil })
-			if err != nil {
-				c.stmtErr(&grant.On.Pos, err)
-			}
+	if grant.What.Table != nil {
+		err := resolveInCtx(grant.On, c, func(f *TableStmt, _ *PackageSchemaAST) error { table = f; return nil })
+		if err != nil {
+			c.stmtErr(&grant.On.Pos, err)
 		}
+	}
 
-		// Grant table actions
-		if table != nil {
+	// Grant table actions
+	if table != nil {
 
-			checkColumn := func(column Ident) error {
-				for _, f := range table.Items {
-					if f.Field != nil && f.Field.Name == Ident(column) {
-						return nil
-					}
-					if f.RefField != nil && f.RefField.Name == Ident(column) {
-						return nil
-					}
-					if f.NestedTable != nil && f.NestedTable.Table.Name == Ident(column) {
-						return nil
-					}
+		checkColumn := func(column Ident) error {
+			for _, f := range table.Items {
+				if f.Field != nil && f.Field.Name == Ident(column) {
+					return nil
 				}
-				return ErrUndefinedField(string(column))
-			}
-
-			if grant.What.Table.GrantAll != nil {
-				for _, column := range grant.What.Table.GrantAll.Columns {
-					if err := checkColumn(column.Value); err != nil {
-						c.stmtErr(&column.Pos, err)
-					}
+				if f.RefField != nil && f.RefField.Name == Ident(column) {
+					return nil
+				}
+				if f.NestedTable != nil && f.NestedTable.Table.Name == Ident(column) {
+					return nil
 				}
 			}
+			return ErrUndefinedField(string(column))
+		}
 
-			for _, i := range grant.What.Table.Items {
-				for _, column := range i.Columns {
-					if err := checkColumn(column.Value); err != nil {
-						c.stmtErr(&column.Pos, err)
-					}
+		if grant.What.Table.GrantAll != nil {
+			for _, column := range grant.What.Table.GrantAll.Columns {
+				if err := checkColumn(column.Value); err != nil {
+					c.stmtErr(&column.Pos, err)
 				}
 			}
 		}
-	*/
+
+		for _, i := range grant.What.Table.Items {
+			for _, column := range i.Columns {
+				if err := checkColumn(column.Value); err != nil {
+					c.stmtErr(&column.Pos, err)
+				}
+			}
+		}
+	}
 
 }
 

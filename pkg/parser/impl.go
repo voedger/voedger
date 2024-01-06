@@ -51,7 +51,7 @@ func parseImpl(fileName string, content string) (*SchemaAST, error) {
 		participle.Lexer(basicLexer),
 		participle.Elide("Whitespace", "Comment", "MultilineComment", "PreStmtComment"),
 		participle.Unquote("String"),
-		participle.UseLookahead(5),
+		participle.UseLookahead(10),
 	)
 	return parser.ParseString(fileName, content)
 }

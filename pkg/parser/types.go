@@ -603,6 +603,7 @@ type GrantAllTablesWithTagActions struct {
 }
 
 type GrantExecuteWhat struct {
+	Pos                lexer.Position
 	Command            bool `parser:"@'COMMAND'"`
 	AllCommandsWithTag bool `parser:"| @'ALLCOMMANDSWITHTAG'"`
 	Query              bool `parser:"| @'QUERY'"`
@@ -630,25 +631,14 @@ type GrantWhat struct {
 	Workspace            bool                          `parser:"| @INSERTONWORKSPACE"`
 	AllWorkspacesWithTag bool                          `parser:"| @INSERTONALLWORKSPACESWITHTAG"`
 	AllTablesWithTag     *GrantAllTablesWithTagActions `parser:"| (@@ ONALLTABLESWITHTAG)"`
-	Table                *GrantTableActions            `parser:"| (@@ ONTABLE) )!"`
+	Table                *GrantTableActions            `parser:"| (@@ ONTABLE) )"`
 }
 
 type GrantStmt struct {
 	Statement
-	Grant bool `parser:"@'GRANT'"`
-
-	What    string   `parser:"@('EXECUTE' | 'INSERT')"`
-	Subject string   `parser:"'ON' @('QUERY' | 'COMMAND'| 'WORKSPACE')"`
-	Def     DefQName `parser:"@@"`
-
-	// ExecuteCommand                 *ExecuteOnCommand `parser:"(@@"`
-	// ExecuteCommandsWithTag         *DefQName         `parser:"| (EXECUTEONALLCOMMANDSWITHTAG @@)"`
-	// ExecuteQuery                   *DefQName         `parser:"| (EXECUTEONQUERY @@)"`
-	// ExecuteQueriesWithTag          *DefQName         `parser:"| (EXECUTEONALLQUERIESWITHTAG @@)"`
-	// InsertIntoWorkspace            *DefQName         `parser:"| (INSERTONWORKSPACE @@)"`
-	// InsertIntoAllWorkspacesWithTag *DefQName         `parser:"| (INSERTONALLWORKSPACESWITHTAG @@))!"`
-
-	To DefQName `parser:"'TO' @@"`
+	What GrantWhat `parser:"'GRANT' @@"`
+	On   DefQName  `parser:"@@"`
+	To   DefQName  `parser:"'TO' @@"`
 }
 
 type StorageStmt struct {
