@@ -126,6 +126,7 @@ WORKSPACE MyWorkspace (
     -- Definitions declared in the workspace are only available in this workspace
     TAG PosTag;
     ROLE LocationManager;
+    ROLE LocationUser;
     TYPE TypeWithKind (
         Kind int
     );
@@ -251,11 +252,11 @@ WORKSPACE MyWorkspace (
 
     -- ACLs
     GRANT ALL ON ALL TABLES WITH TAG BackofficeTag TO LocationManager;
-    GRANT INSERT,UPDATE(name, number) ON ALL TABLES WITH TAG sys.ODoc TO LocationUser;
-    GRANT SELECT ON TABLE Orders TO LocationUser;
-    GRANT SELECT(name) ON TABLE Orders TO LocationUser;
+    GRANT INSERT,UPDATE ON ALL TABLES WITH TAG PosTag TO LocationUser;
+    GRANT SELECT ON TABLE untill.Prices TO LocationUser;
+    GRANT SELECT(Price) ON TABLE untill.Prices TO LocationUser;
     GRANT EXECUTE ON COMMAND NewOrder TO LocationUser;
-    GRANT EXECUTE ON QUERY TransactionHistory TO LocationUser;
+    GRANT EXECUTE ON QUERY Query1 TO LocationUser;
     GRANT EXECUTE ON ALL QUERIES WITH TAG PosTag TO main.LocationUser;
     GRANT INSERT ON WORKSPACE MyWorkspace TO LocationUser;
 

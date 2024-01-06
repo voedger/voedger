@@ -51,6 +51,11 @@ func (b *Ident) Capture(values []string) error {
 	return nil
 }
 
+type Identifier struct {
+	Pos   lexer.Position
+	Value Ident `parser:"@Ident"`
+}
+
 type IStatement interface {
 	GetPos() *lexer.Position
 	GetRawCommentBlocks() []string
@@ -202,8 +207,7 @@ type WorkspaceStmt struct {
 	Alterable  bool                 `parser:"| @'ALTERABLE')?"`
 	Pool       bool                 `parser:"@('POOL' 'OF')?"`
 	Name       Ident                `parser:"'WORKSPACE' @Ident "`
-	Inherits   []DefQName           `parser:"('INHERITS' @@ (',' @@)* )?"`
-	A          int                  `parser:"'('"`
+	Inherits   []DefQName           `parser:"('INHERITS' @@ (',' @@)* )? '('"`
 	Descriptor *WsDescriptorStmt    `parser:"('DESCRIPTOR' @@)?"`
 	Statements []WorkspaceStatement `parser:"@@? (';' @@)* ';'? ')'"`
 }
@@ -257,6 +261,7 @@ type WsDescriptorStmt struct {
 func (s WsDescriptorStmt) GetName() string { return string(s.Name) }
 
 type DefQName struct {
+	Pos     lexer.Position
 	Package Ident `parser:"(@Ident '.')?"`
 	Name    Ident `parser:"@Ident"`
 }
@@ -564,37 +569,48 @@ type LimitStmt struct {
 func (s LimitStmt) GetName() string { return string(s.Name) }
 
 type GrantTableAction struct {
-	Select  bool     `parser:"(@'SELECT'"`
-	Insert  bool     `parser:"| @'INSERT'"`
-	Update  bool     `parser:"| @'UPDATE')"`
-	Columns []string `parser:"( '(' @Ident (',' @Ident)* ')' )?"`
+	Pos     lexer.Position
+	Select  bool         `parser:"(@'SELECT'"`
+	Insert  bool         `parser:"| @'INSERT'"`
+	Update  bool         `parser:"| @'UPDATE')"`
+	Columns []Identifier `parser:"( '(' @@ (',' @@)* ')' )?"`
+}
+
+type GrantAllTablesWithTagAction struct {
+	Pos    lexer.Position
+	Select bool `parser:"@'SELECT'"`
+	Insert bool `parser:"| @'INSERT'"`
+	Update bool `parser:"| @'UPDATE'"`
 }
 
 type GrantTableAll struct {
-	AllTables bool     `parser:"@'ALL'"`
-	Columns   []string `parser:"( '(' @Ident (',' @Ident)* ')' )?"`
+	Pos      lexer.Position
+	GrantAll bool         `parser:"@'ALL'"`
+	Columns  []Identifier `parser:"( '(' @@ (',' @@)* ')' )?"`
 }
 
 type GrantTableActions struct {
-	All   *GrantTableAll     `parser:"@@ | "`
-	Items []GrantTableAction `parser:"(@@ (',' @@)*)"`
+	Pos      lexer.Position
+	GrantAll *GrantTableAll     `parser:"(@@ | "`
+	Items    []GrantTableAction `parser:"(@@ (',' @@)*))"`
 }
 
-type GrantTable struct {
-	Actions          GrantTableActions `parser:"@@"`
-	OneTable         bool              `parser:"'ON' (@'TABLE'"`
-	AllTablesWithTag bool              `parser:"| @('ALL' 'TABLES' 'WITH' 'TAG'))"`
+type GrantAllTablesWithTagActions struct {
+	Pos      lexer.Position
+	GrantAll bool                          `parser:"@'ALL' | "`
+	Items    []GrantAllTablesWithTagAction `parser:"(@@ (',' @@)*)"`
 }
 
 type GrantStmt struct {
 	Statement
-	Command              bool        `parser:"'GRANT' ( @EXECUTEONCOMMAND"`
-	AllCommandsWithTag   bool        `parser:"| @EXECUTEONALLCOMMANDSWITHTAG"`
-	Query                bool        `parser:"| @EXECUTEONQUERY"`
-	AllQueriesWithTag    bool        `parser:"| @EXECUTEONALLQUERIESWITHTAG"`
-	Workspace            bool        `parser:"| @INSERTONWORKSPACE"`
-	AllWorkspacesWithTag bool        `parser:"| @INSERTONALLWORKSPACESWITHTAG"`
-	Table                *GrantTable `parser:"| @@)"`
+	Command              bool                          `parser:"'GRANT' ( @EXECUTEONCOMMAND"`
+	AllCommandsWithTag   bool                          `parser:"| @EXECUTEONALLCOMMANDSWITHTAG"`
+	Query                bool                          `parser:"| @EXECUTEONQUERY"`
+	AllQueriesWithTag    bool                          `parser:"| @EXECUTEONALLQUERIESWITHTAG"`
+	Workspace            bool                          `parser:"| @INSERTONWORKSPACE"`
+	AllWorkspacesWithTag bool                          `parser:"| @INSERTONALLWORKSPACESWITHTAG"`
+	AllTablesWithTag     *GrantAllTablesWithTagActions `parser:"| (@@ ONALLTABLESWITHTAG)"`
+	Table                *GrantTableActions            `parser:"| (@@ ONTABLE) )"`
 
 	On DefQName `parser:"@@"`
 	To DefQName `parser:"'TO' @@"`
@@ -690,7 +706,7 @@ type NamedParam struct {
 
 type TableStmt struct {
 	Statement
-	Abstract      bool            `parser:"@'ABSTRACT'? 'TABLE'"`
+	Abstract      bool            `parser:"@'ABSTRACT'?'TABLE'"`
 	Name          Ident           `parser:"@Ident"`
 	Inherits      *DefQName       `parser:"('INHERITS' @@)?"`
 	Items         []TableItemExpr `parser:"'(' @@? (',' @@)* ')'"`

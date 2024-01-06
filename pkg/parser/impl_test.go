@@ -861,7 +861,7 @@ func Test_Views(t *testing.T) {
 			COMMAND Orders()
 		);
 	)
-	`, "file.sql:4:4: reference to abstract table abc", "file.sql:5:4: unexisting undefined")
+	`, "file.sql:4:4: reference to abstract table abc", "file.sql:5:4: undefined table: unexisting")
 
 	require.AppSchemaError(`APPLICATION test(); WORKSPACE Workspace (
 		VIEW test(
@@ -1044,12 +1044,12 @@ func Test_Undefined(t *testing.T) {
 	_, err = BuildAppSchema([]*PackageSchemaAST{pkg, getSysPackageAST()})
 
 	require.EqualError(err, strings.Join([]string{
-		"example.sql:4:4: UndefinedTag undefined",
-		"example.sql:5:4: UndefinedRate undefined",
+		"example.sql:4:4: undefined tag: UndefinedTag",
+		"example.sql:5:4: undefined rate: UndefinedRate",
 		"example.sql:6:4: xyz undefined",
-		"example.sql:7:4: text undefined",
-		"example.sql:9:4: text undefined",
-		"example.sql:11:4: text undefined",
+		"example.sql:7:4: undefined type or table: text",
+		"example.sql:9:4: undefined type or table: text",
+		"example.sql:11:4: undefined type or table: text",
 	}, "\n"))
 }
 
@@ -1126,7 +1126,7 @@ func Test_Imports(t *testing.T) {
 
 	_, err = BuildAppSchema([]*PackageSchemaAST{getSysPackageAST(), pkg1, pkg2, pkg3})
 	require.EqualError(err, strings.Join([]string{
-		"example.sql:12:7: air.UnknownTag undefined",
+		"example.sql:12:7: undefined tag: air.UnknownTag",
 		"example.sql:13:7: Air undefined",
 	}, "\n"))
 
@@ -1177,7 +1177,7 @@ func Test_UniqueFields(t *testing.T) {
 		UNIQUEFIELD Int2
 	)
 	`)
-	require.Nil(err)
+	require.NoError(err)
 
 	pkg, err := BuildPackageSchema("test", []*FileSchemaAST{fs})
 	require.Nil(err)
@@ -1324,7 +1324,7 @@ func Test_ReferenceToNoTable(t *testing.T) {
 		getSysPackageAST(),
 		pkg,
 	})
-	require.Contains(err.Error(), "Admin undefined")
+	require.Contains(err.Error(), "undefined table: Admin")
 
 }
 
@@ -1552,7 +1552,7 @@ func Test_Scope(t *testing.T) {
 	require.NoError(err)
 
 	_, err = BuildAppSchema([]*PackageSchemaAST{getSysPackageAST(), main, pkg1, pkg2})
-	require.EqualError(err, "example3.sql:4:3: p1.MyTable undefined")
+	require.EqualError(err, "example3.sql:4:3: undefined table: p1.MyTable")
 
 }
 
@@ -1598,9 +1598,9 @@ func Test_Scope_TableRefs(t *testing.T) {
 	require.NoError(err)
 	_, err = BuildAppSchema([]*PackageSchemaAST{getSysPackageAST(), main, pkg1})
 	require.EqualError(err, strings.Join([]string{
-		"example2.sql:16:4: MyTable undefined",
-		"example2.sql:17:4: MyTable2 undefined",
-		"example2.sql:19:4: MyInnerTable undefined",
+		"example2.sql:16:4: undefined table: MyTable",
+		"example2.sql:17:4: undefined table: MyTable2",
+		"example2.sql:19:4: undefined table: MyInnerTable",
 	}, "\n"))
 
 }
@@ -1713,13 +1713,13 @@ func Test_UseTables(t *testing.T) {
 	})
 
 	require.EqualError(err, strings.Join([]string{
-		"main.sql:15:3: pkg2.Pkg2Table3 undefined",
+		"main.sql:15:3: undefined table: pkg2.Pkg2Table3",
 	}, "\n"))
 
 	builder := appdef.New()
 	err = BuildAppDefs(schema, builder)
 	require.EqualError(err, strings.Join([]string{
-		"main.sql:15:3: pkg2.Pkg2Table3 undefined",
+		"main.sql:15:3: undefined table: pkg2.Pkg2Table3",
 	}, "\n"))
 
 	ws := builder.Workspace(appdef.NewQName("main", "Ws"))
@@ -1942,7 +1942,7 @@ TABLE MyTable1 INHERITS ODocUnknown ( MyField ref(registry.Login) NOT NULL );
 	require.EqualError(err, strings.Join([]string{
 		"source.sql:2:1: undefined table kind",
 		"source.sql:2:39: registry undefined",
-		"source.sql:2:1: ODocUnknown undefined",
+		"source.sql:2:1: undefined table: ODocUnknown",
 	}, "\n"))
 
 }
@@ -1983,5 +1983,42 @@ func Test_Constraints(t *testing.T) {
 		CONSTRAINT c1 UNIQUE(t1),
 		CONSTRAINT c2 UNIQUE(t2, t1)
 	)`, "file.sql:7:3: field t1 already in unique constraint")
+
+}
+
+func Test_Grants(t *testing.T) {
+	require := assertions(t)
+
+	require.AppSchemaError(`
+	APPLICATION app1();
+	ROLE role1;
+	WORKSPACE ws1 (
+		GRANT ALL ON TABLE Fake TO app1;
+		GRANT EXECUTE ON COMMAND Fake TO role1;
+		GRANT EXECUTE ON QUERY Fake TO role1;
+		GRANT INSERT ON WORKSPACE Fake TO role1;
+		TABLE Tbl INHERITS CDoc();
+		GRANT ALL(FakeCol) ON TABLE Tbl TO role1;
+		GRANT INSERT,UPDATE(FakeCol) ON TABLE Tbl TO role1;
+		GRANT EXECUTE ON ALL COMMANDS WITH TAG x TO role1; 
+		TABLE Nested1 INHERITS CRecord();
+		TABLE Tbl2 INHERITS CDoc(
+			ref1 ref(Tbl),
+			items TABLE Nested(),
+			items2 Nested1
+		);
+		GRANT ALL(ref1) ON TABLE Tbl2 TO role1;
+		GRANT ALL(items) ON TABLE Tbl2 TO role1;
+		GRANT ALL(items2) ON TABLE Tbl2 TO role1;
+	);
+	`, "file.sql:5:30: undefined role: app1",
+		"file.sql:5:22: undefined table: Fake",
+		"file.sql:6:28: undefined command: Fake",
+		"file.sql:7:26: undefined query: Fake",
+		"file.sql:8:29: undefined workspace: Fake",
+		"file.sql:10:13: undefined field FakeCol",
+		"file.sql:11:23: undefined field FakeCol",
+		"file.sql:12:42: undefined tag: x",
+	)
 
 }
