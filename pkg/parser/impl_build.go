@@ -540,7 +540,7 @@ func (c *buildContext) addDataTypeField(field *FieldExpr) {
 	}
 }
 
-func (c *buildContext) addObjectFieldToType(field *FieldExpr, ictx *iterateCtx) {
+func (c *buildContext) addObjectFieldToType(field *FieldExpr) {
 
 	minOccur := 0
 	if field.NotNull {
@@ -596,7 +596,7 @@ func (c *buildContext) addFieldToDef(field *FieldExpr, ictx *iterateCtx) {
 		c.addDataTypeField(field)
 	} else {
 		if c.defCtx().kind == appdef.TypeKind_Object {
-			c.addObjectFieldToType(field, ictx)
+			c.addObjectFieldToType(field)
 		} else {
 			c.addTableFieldToTable(field, ictx)
 		}
