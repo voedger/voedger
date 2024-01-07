@@ -231,6 +231,8 @@ type AlterWorkspaceStmt struct {
 	Name       DefQName             `parser:"'ALTER' 'WORKSPACE' @@ "`
 	A          int                  `parser:"'('"`
 	Statements []WorkspaceStatement `parser:"@@? (';' @@)* ';'? ')'"`
+
+	alteredWorkspace *WorkspaceStmt // filled on the analysis stage
 }
 
 func (s *AlterWorkspaceStmt) Iterate(callback func(stmt interface{})) {
@@ -353,6 +355,11 @@ type DataTypeOrDef struct {
 	DataType *DataType `parser:"( @@"`
 	Def      *DefQName `parser:"| @@ )"`
 	// Array    *DataTypeOrDefArray `parser:"@@?"` not suppored by kernel yet
+
+	// filled on the analysis stage
+	qName     appdef.QName
+	tableStmt *TableStmt        // when qName is table
+	tablePkg  *PackageSchemaAST // when qName is table
 }
 
 func (q DataTypeOrDef) String() (s string) {
@@ -387,6 +394,10 @@ func (s *Statement) SetComments(comments []string) {
 type ProjectorStorage struct {
 	Storage  DefQName   `parser:"@@"`
 	Entities []DefQName `parser:"( '(' @@ (',' @@)* ')')?"`
+
+	// filled on the analysis stage
+	storageQName appdef.QName
+	entityQNames []appdef.QName
 }
 
 type ProjectionTableAction struct {
@@ -405,6 +416,8 @@ type ProjectorTrigger struct {
 	ExecuteAction *ProjectorCommandAction `parser:"'AFTER' (@@"`
 	TableActions  []ProjectionTableAction `parser:"| (@@ ('OR' @@)* ))"`
 	QNames        []DefQName              `parser:"'ON' (('(' @@ (',' @@)* ')') | @@)!"`
+
+	qNames []appdef.QName // filled on the analysis stage
 }
 
 type ProjectorStmt struct {
@@ -414,21 +427,12 @@ type ProjectorStmt struct {
 	Triggers        []ProjectorTrigger `parser:"@@ ('OR' @@)*"`
 	State           []ProjectorStorage `parser:"('STATE'   '(' @@ (',' @@)* ')' )?"`
 	Intents         []ProjectorStorage `parser:"('INTENTS' '(' @@ (',' @@)* ')' )?"`
-	IncludingErrors bool               `parser:"('INCLUDING' 'ERRORS')?"`
+	IncludingErrors bool               `parser:"@('INCLUDING' 'ERRORS')?"`
 	Engine          EngineType         // Initialized with 1st pass
 }
 
 func (s *ProjectorStmt) GetName() string            { return string(s.Name) }
 func (s *ProjectorStmt) SetEngineType(e EngineType) { s.Engine = e }
-
-// func (t *ProjectorCUDEvents) insert() bool {
-// 	for i := 0; i < len(t.Actions); i++ {
-// 		if t.Actions[i] == "INSERT" {
-// 			return true
-// 		}
-// 	}
-// 	return false
-// }
 
 func (t *ProjectorTrigger) update() bool {
 	for i := 0; i < len(t.TableActions); i++ {
@@ -882,6 +886,9 @@ type ViewRefField struct {
 	Name    Identifier `parser:"@@"`
 	RefDocs []DefQName `parser:"'ref' ('(' @@ (',' @@)* ')')?"`
 	NotNull bool       `parser:"@(NOTNULL)?"`
+
+	// filled on the analysis stage
+	refQNames []appdef.QName
 }
 
 type ViewField struct {
