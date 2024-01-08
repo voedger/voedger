@@ -684,7 +684,7 @@ func Test_PanicUnknownFieldType(t *testing.T) {
 		pkg,
 	})
 	require.EqualError(err, strings.Join([]string{
-		"file1.sql:3:8: undefined table: asdasd",
+		"file1.sql:3:8: undefined data type or table: asdasd",
 	}, "\n"))
 
 }
@@ -1964,7 +1964,7 @@ TABLE SomeTable INHERITS CDoc (
 	_, err := BuildAppSchema([]*PackageSchemaAST{pkgApp1, getSysPackageAST()})
 	require.EqualError(err, strings.Join([]string{
 		"source.sql:7:4: undefined type: int321",
-		"source.sql:11:4: undefined table: int321",
+		"source.sql:11:4: undefined data type or table: int321",
 	}, "\n"))
 
 }
@@ -2057,5 +2057,15 @@ func Test_Grants(t *testing.T) {
 		"file.sql:11:23: undefined field FakeCol",
 		"file.sql:12:42: undefined tag: x",
 	)
+}
 
+func Test_UndefinedType(t *testing.T) {
+	require := assertions(t)
+
+	require.AppSchemaError(`APPLICATION app1();
+TABLE MyTable2 INHERITS ODoc (
+MyField int23 NOT NULL
+);
+	`, "file.sql:3:9: undefined data type or table: int23",
+	)
 }

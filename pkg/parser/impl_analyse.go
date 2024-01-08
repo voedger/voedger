@@ -815,7 +815,11 @@ func analyseFields(items []TableItemExpr, c *iterateCtx, isTable bool) {
 						return nil
 					})
 					if err != nil {
-						c.stmtErr(&field.Type.Def.Pos, err)
+						if err.Error() == ErrUndefinedTable(*field.Type.Def).Error() {
+							c.stmtErr(&field.Type.Def.Pos, ErrUndefinedDataTypeOrTable(*field.Type.Def))
+						} else {
+							c.stmtErr(&field.Type.Def.Pos, err)
+						}
 						continue
 					}
 				}
