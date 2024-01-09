@@ -617,8 +617,7 @@ func (c *buildContext) addConstraintToDef(constraint *TableConstraint) {
 			fields[i] = string(f)
 		}
 		tabName := c.defCtx().defBuilder.(appdef.IType).QName()
-		unName := appdef.NewQName(tabName.Pkg(), fmt.Sprintf(uniqueNameFmt, tabName.Entity(), constraint.ConstraintName))
-		c.defCtx().defBuilder.(appdef.IUniquesBuilder).AddUnique(unName, fields)
+		c.defCtx().defBuilder.(appdef.IUniquesBuilder).AddUnique(appdef.UniqueQName(tabName, string(constraint.ConstraintName)), fields)
 	}
 }
 

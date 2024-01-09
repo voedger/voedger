@@ -16,8 +16,8 @@ func Test_def_AddUnique(t *testing.T) {
 	require := require.New(t)
 
 	qName := NewQName("test", "user")
-	un1 := NewQName("test", "user$uniqueEMail")
-	un2 := NewQName("test", "user$uniqueFullName")
+	un1 := UniqueQName(qName, "EMail")
+	un2 := UniqueQName(qName, "Full")
 
 	appDef := New()
 

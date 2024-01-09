@@ -7,7 +7,6 @@ package uniques
 import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
-	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 // returns ID of the record by the unique combination defined by the doc
@@ -20,8 +19,7 @@ func GetUniqueRecordID(appStructs istructs.IAppStructs, doc istructs.IObject, ws
 		return istructs.NullRecordID, ErrProvidedDocCanNotHaveUniques
 	}
 	for _, unique := range uniques.Uniques() {
-		uniqueQName := coreutils.UniqueQName(docQName, unique.Name())
-		recID, exists, err := exists(doc, uniqueQName, unique.Fields(), appStructs, wsid)
+		recID, exists, err := exists(doc, unique.Name(), unique.Fields(), appStructs, wsid)
 		if err != nil {
 			return istructs.NullRecordID, err
 		}
@@ -30,7 +28,7 @@ func GetUniqueRecordID(appStructs istructs.IAppStructs, doc istructs.IObject, ws
 		}
 	}
 	if uniques.UniqueField() != nil {
-		uniqueQName := coreutils.UniqueQName(docQName, uniques.UniqueField().Name())
+		uniqueQName := docQName
 		recID, _, err := exists(doc, uniqueQName, []appdef.IField{uniques.UniqueField()}, appStructs, wsid)
 		if err != nil {
 			return istructs.NullRecordID, err

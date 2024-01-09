@@ -143,10 +143,9 @@ func TestFewUniquesOneDoc(t *testing.T) {
 
 	t.Run("same sets of values for 2 different uniques in one doc -> no coflict", func(t *testing.T) {
 		newNum, newBts := getUniqueNumber(vit)
-		// the doc has 2 uniques, Bytes1 fields belongs to both
 		body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.DocConstraintsFewUniques",
 			"Int1":%[1]d,"Str1":"str","Bool1":true,"Bytes1":"%[2]s",
-			"Int2":%[1]d,"Str2":"str","Bool2":true,"Bytes1":"%[2]s"}}]}`, newNum, newBts)
+			"Int2":%[1]d,"Str2":"str","Bool2":true,"Bytes2":"%[2]s"}}]}`, newNum, newBts)
 		vit.PostWS(ws, "c.sys.CUD", body)
 	})
 
@@ -165,7 +164,7 @@ func TestFewUniquesOneDoc(t *testing.T) {
 			newNum, _ = getUniqueNumber(vit)
 			body = fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.DocConstraintsFewUniques",
 				"Int2":%d,"Str2":"str","Bool2":true}}]}`, newNum)
-			vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect409("uniq1")).Println()
+			vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect409(fmt.Sprintf(`"%s" unique constraint violation`, appdef.UniqueQName(it.QNameApp1_DocConstraintsFewUniques, "01")))).Println()
 		})
 		t.Run("uniq2", func(t *testing.T) {
 
@@ -181,7 +180,7 @@ func TestFewUniquesOneDoc(t *testing.T) {
 			newNum, _ = getUniqueNumber(vit)
 			body = fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.DocConstraintsFewUniques",
 				"Int1":%d,"Str1":"str","Bool1":true}}]}`, newNum)
-			vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect409("uniq2")).Println()
+			vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect409(fmt.Sprintf(`"%s" unique constraint violation`, appdef.UniqueQName(it.QNameApp1_DocConstraintsFewUniques, "02")))).Println()
 		})
 	})
 }
@@ -232,7 +231,7 @@ func TestMultipleCUDs(t *testing.T) {
 					body = fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"sys.QName":"app1pkg.DocConstraints","sys.IsActive":false}}]}`, id)
 					vit.PostWS(ws, "c.sys.CUD", body)
 
-					// insert new same (ok) and activate the incative one -> deny
+					// insert new same (ok) and activate the inactive one -> deny
 					body = fmt.Sprintf(`{"cuds":[
 						{"fields":{"sys.ID":2,"sys.QName":"app1pkg.DocConstraints","Int":%d,"Str":"str","Bool":true,"Bytes":"%s"}},
 						{"sys.ID":%d,"fields":{"sys.QName":"app1pkg.DocConstraints","sys.IsActive":true}}
@@ -492,5 +491,5 @@ func TestBasicUsage_UNIQUEFIELD(t *testing.T) {
 	// fire the UNIQUEFIELD violation, avoid UNIQUE (Str) violation
 	_, newBts := getUniqueNumber(vit)
 	body = fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.DocConstraintsOldAndNewUniques","Int":%d,"Str":"%s"}}]}`, num, string(newBts))
-	vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect409(coreutils.UniqueQName(it.QNameApp1_DocConstraintsOldAndNewUniques, "Int").String()))
+	vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect409(it.QNameApp1_DocConstraintsOldAndNewUniques.String()))
 }

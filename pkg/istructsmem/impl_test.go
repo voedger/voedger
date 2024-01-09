@@ -402,7 +402,8 @@ func Test_BasicUsageDescribePackages(t *testing.T) {
 		doc.AddField("str", appdef.DataKind_string, true)
 		doc.AddField("fld", appdef.DataKind_int32, true)
 		doc.SetUniqueField("fld")
-		doc.AddUnique("uniq1", []string{"str"})
+		un1 := appdef.NewQName(appdef.SysPackage, "uniq1")
+		doc.AddUnique(un1, []string{"str"})
 
 		doc.AddContainer("rec", rec.QName(), 0, appdef.Occurs_Unbounded)
 
