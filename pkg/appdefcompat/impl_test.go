@@ -70,7 +70,7 @@ func Test_Basic(t *testing.T) {
 			{OldTreePath: []string{"AppDef", "Types", "sys.SomeView", "PartKeyFields"}, ErrorType: ErrorTypeNodeModified},
 			{OldTreePath: []string{"AppDef", "Types", "sys.SomeView", "Fields", "E"}, ErrorType: ErrorTypeValueChanged},
 			{OldTreePath: []string{"AppDef", "Types", "sys.SomeView", "ClustColsFields", "B"}, ErrorType: ErrorTypeValueChanged},
-			{OldTreePath: []string{"AppDef", "Types", "sys.AnotherOneTable", "UniqueFields"}, ErrorType: ErrorTypeNodeModified},
+			{OldTreePath: []string{"AppDef", "Types", "sys.AnotherOneTable", "Uniques", "sys.AnotherOneTable$unique$01", "UniqueFields"}, ErrorType: ErrorTypeNodeModified},
 		}
 		allowedErrors := []CompatibilityError{
 			{OldTreePath: []string{"AppDef", "Types", "sys.SomeCommand", "UnloggedArgs"}},
