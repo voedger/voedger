@@ -24,8 +24,10 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/voedger/voedger/pkg/apps"
 	"github.com/voedger/voedger/pkg/ihttp"
+	"github.com/voedger/voedger/pkg/ihttpctl"
+	"github.com/voedger/voedger/pkg/istorage"
+	"github.com/voedger/voedger/pkg/istorageimpl"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
@@ -42,8 +44,8 @@ func TestBasicUsage_HTTPProcessor(t *testing.T) {
 		for _, res := range resources {
 			dir, fileName := makeTmpContent(require, res)
 			defer os.RemoveAll(dir)
-			fs := os.DirFS(dir)
-			testApp.api.DeployStaticContent(res, fs)
+			dirFS := os.DirFS(dir)
+			testApp.processor.DeployStaticContent(res, dirFS)
 
 			body := testApp.get("/static/" + res + "/" + filepath.Base(fileName))
 			require.Equal([]byte(filepath.Base(res)), body)
@@ -53,7 +55,7 @@ func TestBasicUsage_HTTPProcessor(t *testing.T) {
 	t.Run("deploy embedded", func(t *testing.T) {
 		testContentFS, err := fs.Sub(testContentFS, "testcontent")
 		require.NoError(err)
-		testApp.api.DeployStaticContent("embedded", testContentFS)
+		testApp.processor.DeployStaticContent("embedded", testContentFS)
 		body := testApp.get("/static/embedded/test.txt")
 		require.Equal([]byte("test file content"), body)
 	})
@@ -124,15 +126,55 @@ func TestReverseProxy(t *testing.T) {
 	testContentSubFs, err := fs.Sub(testContentFS, "testcontent")
 	require.NoError(err)
 
-	for srcRegExp, dstRegExp := range apps.NewRedirectionRoutes(ihttp.GrafanaPort(targetListenerPort), ihttp.PrometheusPort(targetListenerPort)) {
-		testApp.api.AddReverseProxyRoute(srcRegExp, dstRegExp)
+	testRedirectionRoutes := func() ihttpctl.RedirectRoutes {
+		return ihttpctl.RedirectRoutes{
+			"(https?://[^/]*)/grafana($|/.*)":    fmt.Sprintf("http://127.0.0.1:%d$2", targetListenerPort),
+			"(https?://[^/]*)/prometheus($|/.*)": fmt.Sprintf("http://127.0.0.1:%d$2", targetListenerPort),
+		}
 	}
-	testApp.api.AddReverseProxyRouteDefault("^(https?)://([^/]+)/([^?]+)?(\\?(.+))?$", fmt.Sprintf("http://127.0.0.1:%d/unknown/$3", targetListenerPort))
-	testApp.api.DeployStaticContent("embedded", testContentSubFs)
+
+	for srcRegExp, dstRegExp := range testRedirectionRoutes() {
+		testApp.processor.AddReverseProxyRoute(srcRegExp, dstRegExp)
+	}
+	testApp.processor.SetReverseProxyRouteDefault("^(https?)://([^/]+)/([^?]+)?(\\?(.+))?$", fmt.Sprintf("http://127.0.0.1:%d/unknown/$3", targetListenerPort))
+	testApp.processor.DeployStaticContent("embedded", testContentSubFs)
 	for requestedPath, expectedPath := range paths {
 		targetHandler.expectedURLPath = expectedPath
 		testApp.get(requestedPath)
 	}
+}
+
+func TestRace_HTTPProcessor(t *testing.T) {
+	if testing.Short() {
+		t.Skip()
+	}
+	require := require.New(t)
+	testApp := setUp(t)
+	defer tearDown(testApp)
+
+	testContentSubFs, err := fs.Sub(testContentFS, "testcontent")
+	require.NoError(err)
+
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+
+		for i := 0; i < 1000; i++ {
+			testApp.processor.DeployStaticContent(fmt.Sprintf("test_path_%d", i), testContentSubFs)
+		}
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+
+		for i := 0; i < 1000; i++ {
+			testApp.get(fmt.Sprintf("/test_path_%d", i), []int{http.StatusOK, http.StatusNotFound}...)
+		}
+	}()
+
+	wg.Wait()
 }
 
 //go:embed testcontent/*
@@ -143,7 +185,6 @@ type testApp struct {
 	cancel    context.CancelFunc
 	wg        *sync.WaitGroup
 	processor ihttp.IHTTPProcessor
-	api       ihttp.IHTTPProcessorAPI
 	cleanups  []func()
 	t         *testing.T
 }
@@ -161,7 +202,10 @@ func setUp(t *testing.T) *testApp {
 	params := ihttp.CLIParams{
 		Port: 0, // listen using some free port, port value will be taken using API
 	}
-	processor, pCleanup, err := NewProcessor(params)
+	appStorageProvider := istorageimpl.Provide(istorage.ProvideMem())
+	routerStorage, err := ihttp.NewIRouterStorage(appStorageProvider)
+	require.NoError(err)
+	processor, pCleanup, err := NewProcessor(params, routerStorage)
 	require.NoError(err)
 	cleanups = append(cleanups, pCleanup)
 
@@ -177,9 +221,6 @@ func setUp(t *testing.T) *testApp {
 
 	// create API
 
-	api, err := NewAPI(processor)
-	require.NoError(err)
-
 	// reverse cleanups
 	for i, j := 0, len(cleanups)-1; i < j; i, j = i+1, j-1 {
 		cleanups[i], cleanups[j] = cleanups[j], cleanups[i]
@@ -190,7 +231,6 @@ func setUp(t *testing.T) *testApp {
 		cancel:    cancel,
 		wg:        &wg,
 		processor: processor,
-		api:       api,
 		cleanups:  cleanups,
 		t:         t,
 	}
@@ -212,11 +252,9 @@ func (ta *testApp) get(resource string, expectedCodes ...int) []byte {
 
 	res, err := http.Get(url)
 	require.NoError(err)
-	expectedCode := http.StatusOK
 	if len(expectedCodes) > 0 {
-		expectedCode = expectedCodes[0]
+		require.Contains(expectedCodes, res.StatusCode)
 	}
-	require.Equal(expectedCode, res.StatusCode)
 
 	body, err := io.ReadAll(res.Body)
 	require.NoError(err)

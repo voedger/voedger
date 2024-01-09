@@ -27,7 +27,6 @@ import (
 const (
 	TestEmail       = "123@123.com"
 	TestEmail2      = "124@124.com"
-	TestEmail3      = "125@125.com"
 	TestServicePort = 10000
 	app1PkgName     = "app1pkg"
 )
@@ -52,7 +51,6 @@ var (
 			WithUserLogin("login", "pwd"),
 			WithUserLogin(TestEmail, "1"),
 			WithUserLogin(TestEmail2, "1"),
-			WithUserLogin(TestEmail3, "1"),
 			WithChildWorkspace(QNameApp1_TestWSKind, "test_ws", "test_template", "", "login", map[string]interface{}{"IntFld": 42}),
 		),
 		WithApp(istructs.AppQName_test1_app2, ProvideApp2, WithUserLogin("login", "1")),

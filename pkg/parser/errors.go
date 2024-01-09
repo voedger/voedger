@@ -47,8 +47,36 @@ func ErrUndefinedCommand(name DefQName) error {
 	return fmt.Errorf("undefined command: %s", name.String())
 }
 
+func ErrUndefinedQuery(name DefQName) error {
+	return fmt.Errorf("undefined query: %s", name.String())
+}
+
+func ErrUndefinedRate(name DefQName) error {
+	return fmt.Errorf("undefined rate: %s", name)
+}
+
+func ErrUndefinedWorkspace(name DefQName) error {
+	return fmt.Errorf("undefined workspace: %s", name.String())
+}
+
+func ErrUndefinedTag(name DefQName) error {
+	return fmt.Errorf("undefined tag: %s", name.String())
+}
+
+func ErrUndefinedRole(name DefQName) error {
+	return fmt.Errorf("undefined role: %s", name.String())
+}
+
 func ErrUndefinedTypeOrOdoc(name DefQName) error {
 	return fmt.Errorf("undefined type or ODoc: %s", name.String())
+}
+
+func ErrUndefinedTypeOrTable(name DefQName) error {
+	return fmt.Errorf("undefined type or table: %s", name.String())
+}
+
+func ErrUndefinedDataTypeOrTable(name DefQName) error {
+	return fmt.Errorf("undefined data type or table: %s", name.String())
 }
 
 func ErrUndefinedType(name DefQName) error {
@@ -66,6 +94,10 @@ func ErrCheckRegexpErr(e error) error {
 // Golang: could not import github.com/alecthomas/participle/v2/asd (no required module provides package "github.com/alecthomas/participle/v2/asd")
 func ErrCouldNotImport(pkgName string) error {
 	return fmt.Errorf("could not import %s", pkgName)
+}
+
+func ErrUnexpectedRootTableKind(kind int) error {
+	return fmt.Errorf("unexpected root table kind %d", kind)
 }
 
 func ErrReferenceToAbstractTable(tblName string) error {
@@ -102,6 +134,10 @@ func ErrUndefined(name string) error {
 
 func ErrUndefinedField(name string) error {
 	return fmt.Errorf("undefined field %s", name)
+}
+
+func ErrFieldAlreadyInUnique(name string) error {
+	return fmt.Errorf("field %s already in unique constraint", name)
 }
 
 func ErrTypeNotSupported(name string) error {

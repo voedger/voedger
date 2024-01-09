@@ -3,7 +3,7 @@
 */
 
 TABLE Prices INHERITS CDoc(
-    field int
+    Price float
 );
 
 ABSTRACT WORKSPACE UntillAWorkspace ();
