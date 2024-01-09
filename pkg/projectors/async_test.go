@@ -1065,3 +1065,4 @@ func Test_AsynchronousActualizer_Stress_Buffered(t *testing.T) {
 	})
 	t.Logf("FlushesTotal: %d", flushesTotal)
 }
+
