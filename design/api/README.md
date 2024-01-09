@@ -50,13 +50,12 @@ POST https://adventure-works.com/orders // Good
 POST https://adventure-works.com/create-order // Avoid
 ```
 
-Summary, airs-bp3 example:
-Current:
+Summary, the following Query in airs-bp3:
 ```
 POST .../IssueLinkDeviceToken
 ```
-Violates Restful API design:
-- uses POST for query, does not change the server state
+violates Restful API design:
+- uses POST for query, without changing the server state
 - uses verb in the URL
 
 Should be:
