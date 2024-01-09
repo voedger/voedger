@@ -17,22 +17,52 @@ API URL must support versioning ([example IBM MQ](https://www.ibm.com/docs/en/ib
 |--------------------------------------|------------------------------------------------|
 | Create CDoc/WDoc/CRecord/WRecord     | `POST /api/v2/owner/app/wsid/pkg.table`        |
 | Read CDoc/WDoc/CRecord/WRecord       | `GET /api/v2/owner/app/wsid/pkg.table/id`      |
-| Update CDoc/WDoc/CRecord/WRecord     | `PUT /api/v2/owner/app/wsid/pkg.table/id`      |
+| Update CDoc/WDoc/CRecord/WRecord     | `PATCH /api/v2/owner/app/wsid/pkg.table/id`      |
 | Deactivate CDoc/WDoc/CRecord/WRecord | `DELETE /api/v2/owner/app/wsid/pkg.table/id`   |
 | Execute Command                      | `POST /api/v2/owner/app/wsid/pkg.command`      |
 | Execute Query (old way*)             | `POST /api/v2/owner/app/wsid/pkg.name`         |
-|   - Read Collection                  |   - `POST /api/v2/owner/app/wsid/pkg.table`    |
-|   - Execute Query Function           |   - `POST /api/v2/owner/app/wsid/pkg.query`    |
+| --> Read Collection                  |  --> `POST /api/v2/owner/app/wsid/pkg.table`    |
+| --> Execute Query Function           |  --> `POST /api/v2/owner/app/wsid/pkg.query`    |
 | Execute Query (new way*)             | `GET /api/v2/owner/app/wsid/pkg.name`          |
-|   - Read Query Function              |   - `GET /api/v2/owner/app/wsid/pkg.query`     |
-|   - Read Collection                  |   - `GET /api/v2/owner/app/wsid/pkg.table`     |
+| --> Read Query Function              |  --> `GET /api/v2/owner/app/wsid/pkg.query`     |
+| --> Read Collection                  |  --> `GET /api/v2/owner/app/wsid/pkg.table`     |
 
-* Current design of the QueryProcessor based on POST queries. If change it to GET (new way), then we do not need prefixes like 'q.' and 'c.' for commands and queries in URLs:
+\* Current design of the QueryProcessor based on POST queries. 
+However, according to many resources, using POST for queries in RESTful API is not a good practice:
+- [Swagger.io: best practices in API design](https://swagger.io/resources/articles/best-practices-in-api-design/)
+- [MS Azure Architectural Center: Define API operations in terms of HTTP methods](https://learn.microsoft.com/en-us/azure/architecture/best-practices/api-design#define-api-operations-in-terms-of-http-methods)
+- [StackOverflow: REST API using POST instead of GET](https://stackoverflow.com/questions/19637459/rest-api-using-post-instead-of-get)
 
-| HTTP Method       | Processor         |
-|-------------------|-------------------|
-| GET               | Query Processor   |
-| POST, PUT, DELETE | Command Processor |
+Also, using GET and POST allows to distinguish between Query and Command processors clearly:
+
+| HTTP Method         | Processor         |
+|---------------------|-------------------|
+| GET                 | Query Processor   |
+| POST, PATCH, DELETE | Command Processor |
+
+>> Note: according to RESTful API design, queries should not change the state of the system. Current QueryFunction design allows it to execute commands through HTTP bus.
+
+Another thing is that according to REST best practices, it is not recommended to use verbs in the URL, the resource names should be based on nouns:
+
+[Example Microsoft](https://learn.microsoft.com/en-us/azure/architecture/best-practices/api-design#organize-the-api-design-around-resources):
+```
+POST https://adventure-works.com/orders // Good
+POST https://adventure-works.com/create-order // Avoid
+```
+
+Summary, airs-bp3 example:
+Current:
+```
+POST .../IssueLinkDeviceToken
+```
+Violates Restful API design:
+- uses POST for query, does not change the server state
+- uses verb in the URL
+
+Should be:
+```
+GET .../TokenToLinkDevice?args=...
+```
 
 ## Paths Detailed
 
@@ -69,7 +99,7 @@ API URL must support versioning ([example IBM MQ](https://www.ibm.com/docs/en/ib
 
 ### Update CDoc/WDoc/CRecord/WRecord
 - URL:
-    - `PUT /api/v2/owner/app/wsid/pkg.table/id`
+    - `PATCH /api/v2/owner/app/wsid/pkg.table/id`
 - Parameters: 
     - application/json
     - CDoc/WDoc/CRecord/WRecord (fields to be updated)
@@ -148,12 +178,34 @@ Examples:
 - sys.CUD function cannot be called directly
 
 # Technical Design
-- Router:
-    - redirects to api v1/v2
-    - for v2, based on HTTP Method:
-        - GET -> QP            
-        - POST, PUT, DELETE -> CP
-            - name is CDoc/WDoc/CRecord/WRecord: exec CUD command
-            - POST && name_is_command: exec this command
-- Updates to Query Processor to support v2
-- `sys.OpenApi` query function
+## Router:
+- redirects to api v1/v2
+- for v2, based on HTTP Method:
+    - GET -> QP            
+    - POST, PUT, DELETE -> CP
+        - name is CDoc/WDoc/CRecord/WRecord: exec CUD command
+        - POST && name_is_command: exec this command
+
+## Updates to vSQL and appdef
+- Query Result can be either array of objects or an object
+
+## Updates to Query Processor
+[GET params](../queryprocessor/request.md) conversion:
+- `order`, `limit`, `skip`, `include`, `refs`, `where` -> `sys.QueryParams`
+- `arg` -> `sys.QueryArgs`
+
+Example:
+```bash
+curl -X GET \
+-H "AccessToken: ${ACCESS_TOKEN}"
+--data-urlencode 'arg={"SalesMode":1,"TableNumber":100,"BillPrinter":12312312312,"SalesArea":12312312333}'
+
+  https://air.untill.com/api/rest/untill/airs-bp/140737488486431/air.IssueLinkDeviceToken
+
+```
+
+## Migration to GET in Queries
+Some existing components must be updated:
+- Air Payouts we use Query Functions for webhooks. In this case, they should be changed to commands + projectors.
+
+## `sys.OpenApi` query function
