@@ -588,11 +588,11 @@ func Test_AbstractTables(t *testing.T) {
 	TABLE ByBaseTable INHERITS CDoc (
 		Name varchar
 	);
-	TABLE MyTable INHERITS ByBaseTable(		-- NOT ALLOWED
+	TABLE MyTable INHERITS ByBaseTable(		-- NOT ALLOWED (base table must be abstract)
 	);
 
 	TABLE My1 INHERITS CRecord(
-		f1 ref(AbstractTable)				-- NOT ALLOWED
+		f1 ref(AbstractTable)				-- NOT ALLOWED (reference to abstract table)
 	);
 
 	ABSTRACT TABLE AbstractTable INHERITS CDoc(
@@ -602,16 +602,16 @@ func Test_AbstractTables(t *testing.T) {
 		EXTENSION ENGINE BUILTIN (
 
 			PROJECTOR proj1
-            AFTER INSERT ON AbstractTable 	-- NOT ALLOWED
+            AFTER INSERT ON AbstractTable 	-- NOT ALLOWED (projector refers to abstract table)
             INTENTS(SendMail);
 
 			SYNC PROJECTOR proj2
             AFTER INSERT ON My1
-            INTENTS(Record(AbstractTable));	-- NOT ALLOWED
+            INTENTS(Record(AbstractTable));	-- NOT ALLOWED (projector refers to abstract table)
 
 			PROJECTOR proj3
             AFTER INSERT ON My1
-			STATE(Record(AbstractTable))		-- NOT ALLOWED
+			STATE(Record(AbstractTable))		-- NOT ALLOWED (projector refers to abstract table)
             INTENTS(SendMail);
 		);
 		TABLE My2 INHERITS CRecord(
@@ -638,7 +638,7 @@ func Test_AbstractTables(t *testing.T) {
 		"file1.sql:19:29: projector refers to abstract table AbstractTable",
 		"file1.sql:24:21: projector refers to abstract table AbstractTable",
 		"file1.sql:28:10: projector refers to abstract table AbstractTable",
-		"file1.sql:32:4: nested abstract table AbstractTable",
+		"file1.sql:32:11: nested abstract table AbstractTable",
 		"file1.sql:34:13: use of abstract table AbstractTable",
 		"file1.sql:37:4: nested abstract table Nested",
 	}, "\n"))
@@ -667,7 +667,7 @@ func Test_AbstractTables2(t *testing.T) {
 		pkg,
 	})
 	require.EqualError(err, strings.Join([]string{
-		"file1.sql:7:4: nested abstract table AbstractTable",
+		"file1.sql:7:11: nested abstract table AbstractTable",
 	}, "\n"))
 
 }
@@ -716,7 +716,7 @@ func Test_PanicUnknownFieldType(t *testing.T) {
 		pkg,
 	})
 	require.EqualError(err, strings.Join([]string{
-		"file1.sql:3:8: undefined table: asdasd",
+		"file1.sql:3:8: undefined data type or table: asdasd",
 	}, "\n"))
 
 }
@@ -1996,7 +1996,7 @@ TABLE SomeTable INHERITS CDoc (
 	_, err := BuildAppSchema([]*PackageSchemaAST{pkgApp1, getSysPackageAST()})
 	require.EqualError(err, strings.Join([]string{
 		"source.sql:7:4: undefined type: int321",
-		"source.sql:11:4: undefined table: int321",
+		"source.sql:11:4: undefined data type or table: int321",
 	}, "\n"))
 
 }
@@ -2089,5 +2089,15 @@ func Test_Grants(t *testing.T) {
 		"file.sql:11:23: undefined field FakeCol",
 		"file.sql:12:42: undefined tag: x",
 	)
+}
 
+func Test_UndefinedType(t *testing.T) {
+	require := assertions(t)
+
+	require.AppSchemaError(`APPLICATION app1();
+TABLE MyTable2 INHERITS ODoc (
+MyField int23 NOT NULL
+);
+	`, "file.sql:3:9: undefined data type or table: int23",
+	)
 }

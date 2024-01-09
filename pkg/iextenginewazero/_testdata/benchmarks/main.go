@@ -6,7 +6,7 @@
 package main
 
 import (
-	ext "github.com/voedger/extensions-tinygo"
+	ext "github.com/voedger/exttinygo"
 )
 
 const StorageTest = "sys.Test"
