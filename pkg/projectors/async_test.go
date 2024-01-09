@@ -273,6 +273,19 @@ func Test_AsynchronousActualizer_FlushByInterval(t *testing.T) {
 	require.Equal(int32(1), getProjectionValue(require, app, incProjectionView, istructs.WSID(1002)))
 }
 
+func getProjectorsInError(metrics imetrics.IMetrics, appName istructs.AppQName, vvmName string) *float64 {
+	var foundMetricValue float64
+	var projInErrors *float64 = nil
+	metrics.List(func(metric imetrics.IMetric, metricValue float64) (err error) {
+		if metric.App() == appName && metric.Vvm() == vvmName && metric.Name() == ProjectorsInError {
+			foundMetricValue = metricValue
+			projInErrors = &foundMetricValue
+		}
+		return nil
+	})
+	return projInErrors
+}
+
 // Tests that error is handled correctly.
 // Async actualizer should write the error to log, then rebuild and restart itself after a 30-second pause
 func Test_AsynchronousActualizer_ErrorAndRestore(t *testing.T) {
@@ -315,16 +328,6 @@ func Test_AsynchronousActualizer_ErrorAndRestore(t *testing.T) {
 	defer cleanup()
 
 	metrics := imetrics.Provide()
-	getProjectorsInError := func() float64 {
-		var projInErrors float64
-		metrics.List(func(metric imetrics.IMetric, metricValue float64) (err error) {
-			if metric.App() == istructs.AppQName_test1_app1 && metric.Vvm() == "test" && metric.Name() == ProjectorsInError {
-				projInErrors = metricValue
-			}
-			return nil
-		})
-		return projInErrors
-	}
 
 	// init and launch actualizer
 	conf := AsyncActualizerConf{
@@ -376,7 +379,9 @@ func Test_AsynchronousActualizer_ErrorAndRestore(t *testing.T) {
 		time.Sleep(time.Microsecond)
 	}
 	require.Equal(1, attempts)
-	require.Equal(1.0, getProjectorsInError())
+	projInErr := getProjectorsInError(metrics, istructs.AppQName_test1_app1, "test")
+	require.NotNil(projInErr)
+	require.Equal(1.0, *projInErr)
 
 	// tick after-error interval ("30 second delay")
 	chanAfterError <- time.Now()
@@ -385,7 +390,9 @@ func Test_AsynchronousActualizer_ErrorAndRestore(t *testing.T) {
 	for getActualizerOffset(require, app, partitionNr, name) < topOffset {
 		time.Sleep(time.Microsecond)
 	}
-	require.Equal(0.0, getProjectorsInError())
+	projInErr = getProjectorsInError(metrics, istructs.AppQName_test1_app1, "test")
+	require.NotNil(projInErr)
+	require.Equal(0.0, *projInErr)
 
 	// stop services
 	cancelCtx()
@@ -420,6 +427,7 @@ func Test_AsynchronousActualizer_ResumeReadAfterNotifications(t *testing.T) {
 	topOffset := f.fill(1002)
 
 	withCancel, cancelCtx := context.WithCancel(context.Background())
+	metrics := imetrics.Provide()
 
 	broker, cleanup := in10nmem.ProvideEx2(in10n.Quotas{
 		Channels:               2,
@@ -439,6 +447,8 @@ func Test_AsynchronousActualizer_ResumeReadAfterNotifications(t *testing.T) {
 		BundlesLimit:  2,
 		FlushInterval: 1 * time.Second,
 		Broker:        broker,
+		Metrics:       metrics,
+		VvmName:       "test",
 	}
 	actualizerFactory := ProvideAsyncActualizerFactory()
 	actualizer, err := actualizerFactory(conf, incrementorFactory)
@@ -474,6 +484,9 @@ func Test_AsynchronousActualizer_ResumeReadAfterNotifications(t *testing.T) {
 	// expected projection values
 	require.Equal(int32(3), getProjectionValue(require, app, incProjectionView, istructs.WSID(1001)))
 	require.Equal(int32(1), getProjectionValue(require, app, incProjectionView, istructs.WSID(1002)))
+	projInErrs := getProjectorsInError(metrics, istructs.AppQName_test1_app1, "test")
+	require.NotNil(projInErrs)
+	require.Equal(0.0, *projInErrs)
 }
 
 type pLogFiller struct {
