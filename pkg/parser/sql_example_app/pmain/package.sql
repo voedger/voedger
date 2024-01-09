@@ -62,6 +62,7 @@ TAG BackofficeTag;
 */
 TABLE TablePlan INHERITS CDoc (
     FState int,
+    TableNumber int,
     Name varchar NOT NULL,
     Rate currency NOT NULL,
     Expiration timestamp,
@@ -75,7 +76,8 @@ TABLE TablePlan INHERITS CDoc (
     CheckedField varchar(8) CHECK '^[0-9]{8}$', -- Field validated by regexp
     CHECK (ValidateRow(this)), -- Unnamed CHECK table constraint. Expressions evaluating to TRUE or UNKNOWN succeed.
     CONSTRAINT StateChecker CHECK (ValidateFState(FState)), -- Named CHECK table constraint
-    -- UNIQUE (FState, Name), -- unnamed UNIQUE table constraint
+    UNIQUE (FState, Name), -- unnamed UNIQUE table constraint, core generates `Unique01` automatically
+    CONSTRAINT UniqueTable UNIQUE (TableNumber), -- named UNIQUE table constraint
     UNIQUEFIELD Name, -- deprecated. For Air backward compatibility only
     TableItems TABLE TablePlanItem (
         TableNo int,
@@ -124,6 +126,7 @@ WORKSPACE MyWorkspace (
     -- Definitions declared in the workspace are only available in this workspace
     TAG PosTag;
     ROLE LocationManager;
+    ROLE LocationUser;
     TYPE TypeWithKind (
         Kind int
     );
@@ -249,11 +252,11 @@ WORKSPACE MyWorkspace (
 
     -- ACLs
     GRANT ALL ON ALL TABLES WITH TAG BackofficeTag TO LocationManager;
-    GRANT INSERT,UPDATE(name, number) ON ALL TABLES WITH TAG sys.ODoc TO LocationUser;
-    GRANT SELECT ON TABLE Orders TO LocationUser;
-    GRANT SELECT(name) ON TABLE Orders TO LocationUser;
+    GRANT INSERT,UPDATE ON ALL TABLES WITH TAG PosTag TO LocationUser;
+    GRANT SELECT ON TABLE untill.Prices TO LocationUser;
+    GRANT SELECT(Price) ON TABLE untill.Prices TO LocationUser;
     GRANT EXECUTE ON COMMAND NewOrder TO LocationUser;
-    GRANT EXECUTE ON QUERY TransactionHistory TO LocationUser;
+    GRANT EXECUTE ON QUERY Query1 TO LocationUser;
     GRANT EXECUTE ON ALL QUERIES WITH TAG PosTag TO main.LocationUser;
     GRANT INSERT ON WORKSPACE MyWorkspace TO LocationUser;
 

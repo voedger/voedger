@@ -15,7 +15,7 @@ import (
 )
 
 type httpProcessorController struct {
-	api                ihttp.IHTTPProcessorAPI
+	processor          ihttp.IHTTPProcessor
 	staticResources    map[string]fs.FS
 	redirections       RedirectRoutes
 	defaultRedirection DefaultRedirectRoute
@@ -27,15 +27,15 @@ func (hc *httpProcessorController) Prepare() (err error) {
 
 func (hc *httpProcessorController) Run(ctx context.Context) {
 	for path, fs := range hc.staticResources {
-		hc.api.DeployStaticContent(path, fs)
+		hc.processor.DeployStaticContent(path, fs)
 		logger.Info(path, "deployed")
 	}
 	for src, dst := range hc.redirections {
-		hc.api.AddReverseProxyRoute(src, dst)
+		hc.processor.AddReverseProxyRoute(src, dst)
 		logger.Info("redirection", src, arrow, dst, "added")
 	}
 	for src, dst := range hc.defaultRedirection {
-		hc.api.AddReverseProxyRouteDefault(src, dst)
+		hc.processor.SetReverseProxyRouteDefault(src, dst)
 		logger.Info("default redirection", src, arrow, dst, "added")
 	}
 	<-ctx.Done()

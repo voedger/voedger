@@ -98,7 +98,10 @@ func (m *MockState) KeyBuilder(storage, entity appdef.QName) (builder istructs.I
 }
 func (m *MockState) CanExist(key istructs.IStateKeyBuilder) (value istructs.IStateValue, ok bool, err error) {
 	args := m.Called(key)
-	return args.Get(0).(istructs.IStateValue), args.Bool(1), args.Error(2)
+	if intf := args.Get(0); intf != nil {
+		value = intf.(istructs.IStateValue)
+	}
+	return value, args.Bool(1), args.Error(2)
 }
 func (m *MockState) CanExistAll(keys []istructs.IStateKeyBuilder, callback istructs.StateValueCallback) (err error) {
 	args := m.Called(keys, callback)
@@ -406,4 +409,17 @@ func (m *MockValue) AsRecord(name string) istructs.IRecord {
 }
 func (m *MockValue) AsEvent(name string) istructs.IDbEvent {
 	return m.Called(name).Get(0).(istructs.IDbEvent)
+}
+
+type MockIntents struct {
+	mock.Mock
+}
+
+func (m *MockIntents) NewValue(key istructs.IStateKeyBuilder) (istructs.IStateValueBuilder, error) {
+	args := m.Called(key)
+	return args.Get(0).(istructs.IStateValueBuilder), args.Error(1)
+}
+func (m *MockIntents) UpdateValue(key istructs.IStateKeyBuilder, existingValue istructs.IStateValue) (istructs.IStateValueBuilder, error) {
+	args := m.Called(key, existingValue)
+	return args.Get(0).(istructs.IStateValueBuilder), args.Error(1)
 }
