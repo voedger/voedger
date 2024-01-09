@@ -162,7 +162,7 @@ func buildFieldsNode(parentNode *CompatibilityTreeNode, item interface{}, nodeNa
 }
 
 func buildUniqueFieldNode(parentNode *CompatibilityTreeNode, item appdef.IUnique) (node *CompatibilityTreeNode) {
-	node = newNode(parentNode, item.Name(), item.ID())
+	node = newNode(parentNode, item.Name().String(), nil)
 	fieldsNode := newNode(node, NodeNameFields, nil)
 	for _, f := range item.Fields() {
 		fieldsNode.Props = append(fieldsNode.Props, buildFieldNode(node, f))
