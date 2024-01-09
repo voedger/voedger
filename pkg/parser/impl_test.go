@@ -94,8 +94,40 @@ func Test_BasicUsage(t *testing.T) {
 	// constraint
 	uniques := cdoc.Uniques()
 	require.Equal(2, len(uniques))
-	require.Equal("Unique01", uniques[0].Name())
-	require.Equal("UniqueTable", uniques[1].Name())
+
+	t.Run("first unique, automatically named", func(t *testing.T) {
+		u := uniques[appdef.MustParseQName("main.TablePlan$unique$01")]
+		require.NotNil(u)
+		cnt := 0
+		for _, f := range u.Fields() {
+			cnt++
+			switch n := f.Name(); n {
+			case "FState":
+				require.Equal(appdef.DataKind_int32, f.DataKind())
+			case "Name":
+				require.Equal(appdef.DataKind_string, f.DataKind())
+			default:
+				require.Fail("unexpected field name", n)
+			}
+		}
+		require.Equal(2, cnt)
+	})
+
+	t.Run("second unique, named by user", func(t *testing.T) {
+		u := uniques[appdef.MustParseQName("main.TablePlan$unique$UniqueTable")]
+		require.NotNil(u)
+		cnt := 0
+		for _, f := range u.Fields() {
+			cnt++
+			switch n := f.Name(); n {
+			case "TableNumber":
+				require.Equal(appdef.DataKind_int32, f.DataKind())
+			default:
+				require.Fail("unexpected field name", n)
+			}
+		}
+		require.Equal(1, cnt)
+	})
 
 	// child table
 	crec := builder.CRecord(appdef.NewQName("main", "TablePlanItem"))

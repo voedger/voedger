@@ -782,7 +782,9 @@ func (c *buildContext) addConstraintToDef(constraint *TableConstraint) {
 		for i, f := range constraint.Unique.Fields {
 			fields[i] = string(f)
 		}
-		c.defCtx().defBuilder.(appdef.IUniquesBuilder).AddUnique(string(constraint.ConstraintName), fields)
+		tabName := c.defCtx().defBuilder.(appdef.IType).QName()
+		unName := appdef.NewQName(tabName.Pkg(), fmt.Sprintf(uniqueNameFmt, tabName.Entity(), constraint.ConstraintName))
+		c.defCtx().defBuilder.(appdef.IUniquesBuilder).AddUnique(unName, fields)
 	}
 }
 
@@ -810,6 +812,21 @@ func (c *buildContext) addNestedTableToDef(nested *NestedTableStmt, ictx *iterat
 
 }
 func (c *buildContext) addTableItems(items []TableItemExpr, ictx *iterateCtx) {
+
+	func() {
+		// generate unique names if empty
+		const nameFmt = "%02d"
+		cnt := 0
+		for _, item := range items {
+			if (item.Constraint != nil) && (item.Constraint.Unique != nil) {
+				if item.Constraint.ConstraintName == "" {
+					cnt++
+					item.Constraint.ConstraintName = Ident(fmt.Sprintf(nameFmt, cnt))
+				}
+			}
+		}
+	}()
+
 	for _, item := range items {
 		if item.RefField != nil {
 			c.addFieldRefToDef(item.RefField, ictx)
