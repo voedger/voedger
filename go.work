@@ -4,6 +4,5 @@ use (
 	.
 	./cmd/edger
 	./cmd/ctool
-	./staging/src/github.com/voedger/exttinygo
 	./pkg/iextenginewazero/_testdata
 )
