@@ -45,7 +45,7 @@ jobs:
       personal_token: ${{ secrets.PERSONAL_TOKEN }}
   call-workflow-ci-cmd-vpm:
     needs: call-workflow-ci-cmd-edger
-    uses: untillpro/ci-action/.github/workflows/ci_reuse_go.yml@master
+    uses: untillpro/ci-action/.github/workflows/ci_reuse_go_pr.yml@master
     with: 
       test_folder: 'cmd/vpm/'
       ignore_copyright: 'pkg/apps/sys.monitor/site.main'
