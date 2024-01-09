@@ -29,6 +29,8 @@ const ExportedPkgFolder = "pkg"
 const maxNestedTableContainerOccurrences = 100 // FIXME: 100 container occurrences
 const parserLookahead = 10
 
+const uniqueNameFmt = "%s$unique$%s" // test.doc$unique$name
+
 var canNotReferenceTo = map[appdef.TypeKind][]appdef.TypeKind{
 	appdef.TypeKind_ODoc:       {},
 	appdef.TypeKind_ORecord:    {},

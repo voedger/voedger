@@ -27,7 +27,9 @@ func TestQNamesBasicUsage(t *testing.T) {
 
 	testName := appdef.NewQName("test", "doc")
 	app := appdef.New()
-	app.AddCDoc(testName)
+	d := app.AddCDoc(testName)
+	d.AddField("f1", appdef.DataKind_int64, false)
+	d.AddUnique(appdef.NewQName("test", "doc$unique$f1"), []string{"f1"})
 	appDef, err := app.Build()
 	if err != nil {
 		panic(err)

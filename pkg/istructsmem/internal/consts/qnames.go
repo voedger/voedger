@@ -14,5 +14,5 @@ const (
 	SysView_PLog                            // application PLog view
 	SysView_WLog                            // application WLog view
 	SysView_SingletonIDs                    // application singletons IDs view
-	SysView_UniquesIDs                      // application uniques IDs view
+	SysView_RESERVED                        // SysView_UniquesIDs (application uniques IDs view) deprecated
 )
