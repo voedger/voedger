@@ -286,7 +286,6 @@ func TestMultipleCUDs(t *testing.T) {
 				vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect409())
 			})
 		})
-
 	})
 }
 
@@ -490,7 +489,7 @@ func TestBasicUsage_UNIQUEFIELD(t *testing.T) {
 	body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.DocConstraintsOldAndNewUniques","Int":%d,"Str":"%s"}}]}`, num, string(bts))
 	vit.PostWS(ws, "c.sys.CUD", body)
 
-	// fire the UNIQUEFIELD violation, avoid UNIQUE (Str) vioaltion
+	// fire the UNIQUEFIELD violation, avoid UNIQUE (Str) violation
 	_, newBts := getUniqueNumber(vit)
 	body = fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.DocConstraintsOldAndNewUniques","Int":%d,"Str":"%s"}}]}`, num, string(newBts))
 	vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect409(coreutils.UniqueQName(it.QNameApp1_DocConstraintsOldAndNewUniques, "Int").String()))
