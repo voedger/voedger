@@ -2,6 +2,10 @@
 # Copyright (c) 2023 Sigma-Soft, Ltd.
 # @author Aleksei Ponomarev
 
+set -euo pipefail
+
+set -x
+
 utils_SSH_PORT() {
     port="${VOEDGER_NODE_SSH_PORT:-22}"
     echo "$port"
@@ -29,8 +33,17 @@ utils_ssh() {
   # Split the string into an array
   IFS=' ' read -r -a ssh_options <<< "$ssh_options_string"
 
+  local ssh_result
+  
   # Pass options as separate arguments
-  ssh "${ssh_options[@]}" "$@"
+  ssh_result=$(ssh "${ssh_options[@]}" "$@")
+  # Capture the exit status of the ssh command
+  local ssh_exit_status=$?
+  
+  # Return the SSH command result
+  echo "$ssh_result"
+
+  return "$ssh_exit_status"
 }
 
 utils_scp() {

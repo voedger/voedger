@@ -27,6 +27,7 @@ const ExportedAppsFile = "apps.yaml"
 const ExportedPkgFolder = "pkg"
 
 const maxNestedTableContainerOccurrences = 100 // FIXME: 100 container occurrences
+const parserLookahead = 10
 
 var canNotReferenceTo = map[appdef.TypeKind][]appdef.TypeKind{
 	appdef.TypeKind_ODoc:       {},

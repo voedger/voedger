@@ -7,16 +7,16 @@ package registry
 
 import (
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/apps"
 	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/itokens"
+	"github.com/voedger/voedger/pkg/parser"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, asp istructs.IAppStructsProvider, itokens itokens.ITokens,
-	federation coreutils.IFederation, ep extensionpoints.IExtensionPoint) {
+	federation coreutils.IFederation, ep extensionpoints.IExtensionPoint) parser.PackageFS {
 	cfg.Resources.Add(istructsmem.NewCommandFunction(
 		QNameCommandCreateLogin,
 		execCmdCreateLogin(asp),
@@ -28,7 +28,14 @@ func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder
 	provideChangePassword(cfg)
 	provideResetPassword(cfg, asp, itokens, federation)
 	cfg.AddAsyncProjectors(provideAsyncProjectorFactoryInvokeCreateWorkspaceID(federation, cfg.Name, itokens))
-	apps.RegisterSchemaFS(schemasFS, RegistryPackageFQN, ep)
+	return ProvidePackageFS()
+}
+
+func ProvidePackageFS() parser.PackageFS {
+	return parser.PackageFS{
+		QualifiedPackageName: RegistryPackageFQN,
+		FS:                   schemasFS,
+	}
 }
 
 func provideAsyncProjectorFactoryInvokeCreateWorkspaceID(federation coreutils.IFederation, appQName istructs.AppQName, tokensAPI itokens.ITokens) istructs.ProjectorFactory {

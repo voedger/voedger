@@ -43,8 +43,7 @@ const (
 
 	embedScriptsDir = "scripts"
 
-	sshSockFile     = "/home/ubuntu/ssh-agent-sock"
-	sshAgentPidFile = "/home/ubuntu/ssh-agent-pid"
+	dryRunDir = ".dry-run"
 )
 
 const (
@@ -61,6 +60,7 @@ const (
 	ckInit    = "init"
 	ckUpgrade = "upgrade"
 	ckReplace = "replace"
+	ckBackup  = "backup"
 
 	// minimum amount of RAM per node in MB
 	minRamOnAppNode = "8192"

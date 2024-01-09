@@ -9,6 +9,7 @@ import (
 	"github.com/voedger/voedger/pkg/apps"
 	"github.com/voedger/voedger/pkg/cluster"
 	"github.com/voedger/voedger/pkg/extensionpoints"
+	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/parser"
 	"github.com/voedger/voedger/pkg/registry"
@@ -17,22 +18,30 @@ import (
 )
 
 func Provide(smtpCfg smtp.Cfg) apps.AppBuilder {
-	return func(apis apps.APIs, cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) {
+	return func(apis apps.APIs, cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) apps.AppPackages {
 
 		// sys package
-		sys.Provide(cfg, appDefBuilder, smtpCfg, ep, nil, apis.TimeFunc, apis.ITokens, apis.IFederation, apis.IAppStructsProvider, apis.IAppTokensFactory,
+		sysPackageFS := sys.Provide(cfg, appDefBuilder, smtpCfg, ep, nil, apis.TimeFunc, apis.ITokens, apis.IFederation, apis.IAppStructsProvider, apis.IAppTokensFactory,
 			apis.NumCommandProcessors, nil, apis.IAppStorageProvider)
 
 		// sys/registry resources
-		registry.Provide(cfg, appDefBuilder, apis.IAppStructsProvider, apis.ITokens, apis.IFederation, ep)
+		registryPackageFS := registry.Provide(cfg, appDefBuilder, apis.IAppStructsProvider, apis.ITokens, apis.IFederation, ep)
 		cfg.AddSyncProjectors(registry.ProvideSyncProjectorLoginIdxFactory())
-		apps.RegisterSchemaFS(registrySchemaFS, RegistryAppFQN, ep)
+		registryAppPackageFS := parser.PackageFS{
+			QualifiedPackageName: RegistryAppFQN,
+			FS:                   registryAppSchemaFS,
+		}
+		return apps.AppPackages{
+			AppQName: istructs.AppQName_sys_registry,
+			Packages: []parser.PackageFS{sysPackageFS, registryPackageFS, registryAppPackageFS},
+		}
 	}
 }
 
 // Returns registry application definition
 func AppDef() appdef.IAppDef {
-	appDef, err := parser.BuildAppDefFromFS(RegistryAppFQN, registrySchemaFS, "")
+	registryFS := registry.ProvidePackageFS()
+	appDef, err := apps.BuildAppDefFromFS(RegistryAppFQN, registryAppSchemaFS, ".", registryFS)
 	if err != nil {
 		panic(err)
 	}

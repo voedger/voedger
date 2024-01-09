@@ -40,11 +40,10 @@ func applyJoinWorkspace(timeFunc coreutils.TimeFunc, federation coreutils.IFeder
 		}
 
 		login := svCDocInvite.AsString(Field_Login)
-		subjectExists, err := SubjectExistByLogin(login, s) // for backward compatibility
+		subjectExists, err := SubjectExistsByLogin(login, s) // for backward compatibility
 		if err == nil && !subjectExists {
-
 			actualLogin := svCDocInvite.AsString(field_ActualLogin)
-			subjectExists, err = SubjectExistByLogin(actualLogin, s)
+			subjectExists, err = SubjectExistsByLogin(actualLogin, s)
 		}
 		if err != nil {
 			// notest
@@ -140,7 +139,8 @@ func applyJoinWorkspace(timeFunc coreutils.TimeFunc, federation coreutils.IFeder
 			federation.URL(),
 			fmt.Sprintf("api/%s/%d/c.sys.CUD", appQName, event.Workspace()),
 			body,
-			coreutils.WithAuthorizeBy(token))
+			coreutils.WithAuthorizeBy(token),
+			coreutils.WithDiscardResponse())
 
 		return err
 	}

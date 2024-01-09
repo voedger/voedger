@@ -24,6 +24,27 @@ var commandDirName string
 
 var mutex = &sync.Mutex{}
 
+func loggerInfo(args ...interface{}) {
+	if !verbose() {
+		fmt.Println(args...)
+	}
+	logger.Info(args...)
+}
+
+func loggerInfoGreen(args ...interface{}) {
+	if !verbose() {
+		fmt.Println(green(args...))
+	}
+	logger.Info(args...)
+}
+
+func loggerError(args ...interface{}) {
+	if !verbose() {
+		fmt.Println("Error:", red(args...))
+	}
+	logger.Error(args...)
+}
+
 func printLogLine(logLevel logger.TLogLevel, line string) {
 	line = fmt.Sprintf("\r%s", line)
 	if logFile != nil {
@@ -34,7 +55,9 @@ func printLogLine(logLevel logger.TLogLevel, line string) {
 	if logLevel == 1 {
 		line = red(line)
 	}
-	logger.DefaultPrintLine(logLevel, line)
+	if verbose() {
+		logger.DefaultPrintLine(logLevel, line)
+	}
 }
 
 func getLoggerLevel() logger.TLogLevel {
@@ -72,7 +95,7 @@ func mkCommandDirAndLogFile(cmd *cobra.Command, cluster *clusterType) error {
 	commandDirName = fmt.Sprintf("%s-%s", time.Now().Format("20060102-150405"), s)
 
 	if cluster.dryRun {
-		commandDirName = filepath.Join("dry-run", commandDirName)
+		commandDirName = filepath.Join(dryRunDir, commandDirName)
 	}
 
 	err := os.Mkdir(commandDirName, rwxrwxrwx)

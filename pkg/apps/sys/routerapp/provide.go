@@ -9,6 +9,7 @@ import (
 	"github.com/voedger/voedger/pkg/apps"
 	"github.com/voedger/voedger/pkg/cluster"
 	"github.com/voedger/voedger/pkg/extensionpoints"
+	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/parser"
 	"github.com/voedger/voedger/pkg/sys"
@@ -16,16 +17,23 @@ import (
 )
 
 func Provide(smtpCfg smtp.Cfg) apps.AppBuilder {
-	return func(apis apps.APIs, cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) {
-		sys.Provide(cfg, appDefBuilder, smtpCfg, ep, nil, apis.TimeFunc, apis.ITokens, apis.IFederation, apis.IAppStructsProvider, apis.IAppTokensFactory,
+	return func(apis apps.APIs, cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) apps.AppPackages {
+		sysPackageFS := sys.Provide(cfg, appDefBuilder, smtpCfg, ep, nil, apis.TimeFunc, apis.ITokens, apis.IFederation, apis.IAppStructsProvider, apis.IAppTokensFactory,
 			apis.NumCommandProcessors, nil, apis.IAppStorageProvider)
-		apps.RegisterSchemaFS(routerSchemaFS, RouterAppFQN, ep)
+		routerAppPackageFS := parser.PackageFS{
+			QualifiedPackageName: RouterAppFQN,
+			FS:                   routerAppSchemaFS,
+		}
+		return apps.AppPackages{
+			AppQName: istructs.AppQName_sys_router,
+			Packages: []parser.PackageFS{sysPackageFS, routerAppPackageFS},
+		}
 	}
 }
 
 // Returns router application definition
 func AppDef() appdef.IAppDef {
-	appDef, err := parser.BuildAppDefFromFS(RouterAppFQN, routerSchemaFS, "")
+	appDef, err := apps.BuildAppDefFromFS(RouterAppFQN, routerAppSchemaFS, ".")
 	if err != nil {
 		panic(err)
 	}

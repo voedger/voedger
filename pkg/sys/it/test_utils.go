@@ -16,6 +16,7 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 	it "github.com/voedger/voedger/pkg/vit"
+	"golang.org/x/exp/slices"
 )
 
 func InitiateEmailVerification(vit *it.VIT, prn *it.Principal, entity appdef.QName, field, email string, targetWSID istructs.WSID, opts ...coreutils.ReqOptFunc) (token, code string) {
@@ -68,29 +69,34 @@ func WaitForIndexOffset(vit *it.VIT, ws *it.AppWorkspace, index appdef.QName, of
 }
 
 func InitiateInvitationByEMail(vit *it.VIT, ws *it.AppWorkspace, expireDatetime int64, email, initialRoles, inviteEmailTemplate, inviteEmailSubject string) (inviteID int64) {
+	vit.T.Helper()
 	body := fmt.Sprintf(`{"args":{"Email":"%s","Roles":"%s","ExpireDatetime":%d,"EmailTemplate":"%s","EmailSubject":"%s"}}`,
 		email, initialRoles, expireDatetime, inviteEmailTemplate, inviteEmailSubject)
 	return vit.PostWS(ws, "c.sys.InitiateInvitationByEMail", body).NewID()
 }
 
-func InitiateJoinWorkspace(vit *it.VIT, ws *it.AppWorkspace, inviteID int64, login string, verificationCode string) {
-	profile := vit.GetPrincipal(istructs.AppQName_test1_app1, login)
-	vit.PostWS(ws, "c.sys.InitiateJoinWorkspace", fmt.Sprintf(`{"args":{"InviteID":%d,"VerificationCode":"%s"}}`, inviteID, verificationCode), coreutils.WithAuthorizeBy(profile.Token))
+func InitiateJoinWorkspace(vit *it.VIT, ws *it.AppWorkspace, inviteID int64, login *it.Principal, verificationCode string) {
+	vit.T.Helper()
+	vit.PostWS(ws, "c.sys.InitiateJoinWorkspace", fmt.Sprintf(`{"args":{"InviteID":%d,"VerificationCode":"%s"}}`, inviteID, verificationCode), coreutils.WithAuthorizeBy(login.Token))
 }
 
-func WaitForInviteState(vit *it.VIT, ws *it.AppWorkspace, inviteState int32, inviteID int64) {
+func WaitForInviteState(vit *it.VIT, ws *it.AppWorkspace, inviteID int64, inviteStatesSeq ...int32) {
 	deadline := it.TestDeadline(5 * time.Second)
-	var entity []interface{}
+	var actualInviteState int32
 	for time.Now().Before(deadline) {
-		entity = vit.PostWS(ws, "q.sys.Collection", fmt.Sprintf(`
+		entity := vit.PostWS(ws, "q.sys.Collection", fmt.Sprintf(`
 		{"args":{"Schema":"sys.Invite"},
 		"elements":[{"fields":["State","sys.ID"]}],
 		"filters":[{"expr":"eq","args":{"field":"sys.ID","value":%d}}]}`, inviteID)).SectionRow(0)
-		if inviteState == int32(entity[0].(float64)) {
+		actualInviteState = int32(entity[0].(float64))
+		if inviteStatesSeq[len(inviteStatesSeq)-1] == actualInviteState {
 			return
 		}
+		if !slices.Contains(inviteStatesSeq, actualInviteState) {
+			break
+		}
 	}
-	panic(fmt.Sprintf("invite [%d] is not in required state [%d] it has state [%d]", inviteID, inviteState, int32(entity[0].(float64))))
+	vit.T.Fatalf("invite %d is failed achieve the state %d. The last state was %d", inviteID, inviteStatesSeq[len(inviteStatesSeq)-1], actualInviteState)
 }
 
 type joinedWorkspaceDesc struct {
@@ -101,8 +107,9 @@ type joinedWorkspaceDesc struct {
 	wsName                string
 }
 
-func FindCDocJoinedWorkspaceByInvitingWorkspaceWSIDAndLogin(vit *it.VIT, invitingWorkspaceWSID istructs.WSID, login string) joinedWorkspaceDesc {
-	resp := vit.PostProfile(vit.GetPrincipal(istructs.AppQName_test1_app1, login), "q.sys.Collection", fmt.Sprintf(`
+func FindCDocJoinedWorkspaceByInvitingWorkspaceWSIDAndLogin(vit *it.VIT, invitingWorkspaceWSID istructs.WSID, login *it.Principal) joinedWorkspaceDesc {
+	vit.T.Helper()
+	resp := vit.PostProfile(login, "q.sys.Collection", fmt.Sprintf(`
 		{"args":{"Schema":"sys.JoinedWorkspace"},
 		"elements":[{"fields":[
 			"sys.ID",

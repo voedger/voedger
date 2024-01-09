@@ -10,7 +10,6 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
-	"github.com/untillpro/goutils/logger"
 )
 
 func newUpgradeCmd() *cobra.Command {
@@ -22,7 +21,7 @@ func newUpgradeCmd() *cobra.Command {
 
 	upgradeCmd.PersistentFlags().StringVar(&sshKey, "ssh-key", "", "Path to SSH key")
 	if err := upgradeCmd.MarkPersistentFlagRequired("ssh-key"); err != nil {
-		logger.Error(err.Error())
+		loggerError(err.Error())
 		return nil
 	}
 
@@ -73,38 +72,38 @@ func upgrade(cmd *cobra.Command, args []string) error {
 	cluster := newCluster()
 	var err error
 
-	err = mkCommandDirAndLogFile(cmd, cluster)
-	if err != nil {
-		logger.Error(err.Error())
-		return err
-	}
-
 	ok, e := cluster.needUpgrade()
 	if e != nil {
-		logger.Error(e.Error())
+		loggerError(e.Error())
 		return e
 	}
 
 	if !ok {
-		logger.Info(green("upgrade is not required"))
-		return nil
+		loggerInfo(green("upgrade is not required"))
+		return ErrNoUpdgradeRequired
+	}
+
+	err = mkCommandDirAndLogFile(cmd, cluster)
+	if err != nil {
+		loggerError(err.Error())
+		return err
 	}
 
 	c := newCmd(ckUpgrade, strings.Join(args, " "))
 	defer func(cluster *clusterType) {
 		err = cluster.saveToJSON()
 		if err != nil {
-			logger.Error(err.Error())
+			loggerError(err.Error())
 		}
 	}(cluster)
 
 	if err = cluster.applyCmd(c); err != nil {
-		logger.Error(err.Error())
+		loggerError(err.Error())
 		return err
 	}
 
 	if err = cluster.Cmd.apply(cluster); err != nil {
-		logger.Error(err)
+		loggerError(err)
 		return err
 	}
 

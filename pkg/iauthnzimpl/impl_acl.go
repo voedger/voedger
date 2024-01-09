@@ -358,4 +358,13 @@ var defaultACL = ACL{
 		},
 		policy: ACPolicy_Allow,
 	},
+	{
+		desc: "allow update cdoc.air.Reseller to sys.RoleWorkspaceAdmin",
+		pattern: PatternType{
+			opKindsPattern:    []iauthnz.OperationKindType{iauthnz.OperationKind_UPDATE},
+			qNamesPattern:     []appdef.QName{qNameCDocReseller},
+			principalsPattern: [][]iauthnz.Principal{{{Kind: iauthnz.PrincipalKind_Role, QName: iauthnz.QNameRoleWorkspaceAdmin}}},
+		},
+		policy: ACPolicy_Allow,
+	},
 }
