@@ -281,7 +281,7 @@ func validateCUD(cudRec istructs.ICUDRow, appStructs istructs.IAppStructs, wsid 
 }
 
 func eventUniqueValidator(ctx context.Context, rawEvent istructs.IRawEvent, appStructs istructs.IAppStructs, wsid istructs.WSID) error {
-	//                    cudQName     uniqueQName  unique-key-bytes
+	//                    cudQName       uniqueQName  unique-key-bytes
 	uniquesState := map[appdef.QName]map[appdef.QName]map[string]*uniqueViewRecord{}
 	return iterate.ForEachError(rawEvent.CUDs, func(cudRec istructs.ICUDRow) (err error) {
 
