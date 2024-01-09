@@ -15,7 +15,6 @@ import (
 	"github.com/voedger/voedger/pkg/parser"
 	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys/smtp"
-	coreutils "github.com/voedger/voedger/pkg/utils"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -189,46 +188,6 @@ func ProvideApp1(apis apps.APIs, cfg *istructsmem.AppConfigType, adf appdef.IApp
 		appdef.NewQName(app1PkgName, "CmdODocTwo"),
 		istructsmem.NullCommandExec,
 	))
-
-	bldr := adf.AddCDoc(QNameApp1_DocConstraints)
-	bldr.
-		AddField("Int", appdef.DataKind_int32, false).
-		AddField("Str", appdef.DataKind_string, true, appdef.MaxLen(65535)).
-		AddField("Bool", appdef.DataKind_bool, true).
-		AddField("FLoat32", appdef.DataKind_float32, false).
-		AddField("Bytes", appdef.DataKind_bytes, true, appdef.MaxLen(65535))
-	bldr.AddUnique("uniq1", []string{"Int", "Str", "Bool", "Bytes"})
-	adf.AddObject(coreutils.UniqueQName(QNameApp1_DocConstraints, "uniq1"))
-
-	bldr = adf.AddCDoc(QNameApp1_DocConstraintsString)
-	bldr.
-		AddField("Str", appdef.DataKind_string, false).
-		AddField("Int", appdef.DataKind_int32, false)
-	bldr.AddUnique("uniq1", []string{"Str"})
-	adf.AddObject(coreutils.UniqueQName(QNameApp1_DocConstraintsString, "uniq1"))
-
-	bldr = adf.AddCDoc(QNameApp1_DocConstraintsFewUniques)
-	bldr.
-		AddField("Int1", appdef.DataKind_int32, false).
-		AddField("Str1", appdef.DataKind_string, false).
-		AddField("Bool1", appdef.DataKind_bool, false).
-		AddField("Bytes1", appdef.DataKind_bytes, false).
-		AddField("Int2", appdef.DataKind_int32, false).
-		AddField("Str2", appdef.DataKind_string, false).
-		AddField("Bool2", appdef.DataKind_bool, false)
-	bldr.AddUnique("uniq1", []string{"Int1", "Str1", "Bool1", "Bytes1"})
-	bldr.AddUnique("uniq2", []string{"Int2", "Str2", "Bool2", "Bytes1"})
-	adf.AddObject(coreutils.UniqueQName(QNameApp1_DocConstraintsFewUniques, "uniq1"))
-	adf.AddObject(coreutils.UniqueQName(QNameApp1_DocConstraintsFewUniques, "uniq2"))
-
-	bldr = adf.AddCDoc(QNameApp1_DocConstraintsOldAndNewUniques)
-	bldr.
-		AddField("Str", appdef.DataKind_string, false).
-		AddField("Int", appdef.DataKind_int32, false)
-	bldr.SetUniqueField("Int")
-	bldr.AddUnique("uniq3", []string{"Str"})
-	adf.AddObject(coreutils.UniqueQName(QNameApp1_DocConstraintsOldAndNewUniques, "uniq3"))
-	adf.AddObject(coreutils.UniqueQName(QNameApp1_DocConstraintsOldAndNewUniques, "Int"))
 
 	app1PackageFS := parser.PackageFS{
 		QualifiedPackageName: "github.com/voedger/voedger/pkg/vit/app1pkg",

@@ -47,8 +47,36 @@ func ErrUndefinedCommand(name DefQName) error {
 	return fmt.Errorf("undefined command: %s", name.String())
 }
 
+func ErrUndefinedQuery(name DefQName) error {
+	return fmt.Errorf("undefined query: %s", name.String())
+}
+
+func ErrUndefinedRate(name DefQName) error {
+	return fmt.Errorf("undefined rate: %s", name)
+}
+
+func ErrUndefinedWorkspace(name DefQName) error {
+	return fmt.Errorf("undefined workspace: %s", name.String())
+}
+
+func ErrUndefinedTag(name DefQName) error {
+	return fmt.Errorf("undefined tag: %s", name.String())
+}
+
+func ErrUndefinedRole(name DefQName) error {
+	return fmt.Errorf("undefined role: %s", name.String())
+}
+
 func ErrUndefinedTypeOrOdoc(name DefQName) error {
 	return fmt.Errorf("undefined type or ODoc: %s", name.String())
+}
+
+func ErrUndefinedTypeOrTable(name DefQName) error {
+	return fmt.Errorf("undefined type or table: %s", name.String())
+}
+
+func ErrUndefinedDataTypeOrTable(name DefQName) error {
+	return fmt.Errorf("undefined data type or table: %s", name.String())
 }
 
 func ErrUndefinedType(name DefQName) error {

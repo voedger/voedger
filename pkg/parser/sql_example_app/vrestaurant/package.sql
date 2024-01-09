@@ -181,10 +181,10 @@ WORKSPACE Restaurant (
 
 -- ACLs
     GRANT ALL ON ALL TABLES WITH TAG BackofficeTag TO LocationManager;
-    GRANT INSERT,UPDATE ON ALL TABLES WITH TAG sys.ODoc TO LocationUser;
+    -- GRANT INSERT,UPDATE ON ALL TABLES WITH TAG sys.ODoc TO LocationUser;
     GRANT SELECT ON TABLE Order TO LocationUser;
-    GRANT EXECUTE ON COMMAND MakeOrder TO LocationUser;
-    GRANT EXECUTE ON COMMAND MakePayment TO LocationUser;
+    -- GRANT EXECUTE ON COMMAND MakeOrder TO LocationUser;
+    -- GRANT EXECUTE ON COMMAND MakePayment TO LocationUser;
     GRANT EXECUTE ON ALL QUERIES WITH TAG PosTag TO LocationUser;
 
     -- VIEW TableStatus     : keeps actual status of table(free/occupied)

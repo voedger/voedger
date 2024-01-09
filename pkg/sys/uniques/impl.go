@@ -28,13 +28,12 @@ func provideApplyUniques(appDef appdef.IAppDef) func(event istructs.IPLogEvent, 
 				return nil
 			}
 			for _, unique := range iUniques.Uniques() {
-				uniqueQName := coreutils.UniqueQName(rec.QName(), unique.Name())
-				if err := handleCUD(rec, st, intents, unique.Fields(), uniqueQName); err != nil { // TODO make QName
+				if err := handleCUD(rec, st, intents, unique.Fields(), unique.Name()); err != nil {
 					return err
 				}
 			}
 			if iUniques.UniqueField() != nil {
-				uniqueQName := coreutils.UniqueQName(rec.QName(), iUniques.UniqueField().Name())
+				uniqueQName := rec.QName()
 				return handleCUD(rec, st, intents, []appdef.IField{iUniques.UniqueField()}, uniqueQName)
 			}
 			return nil
@@ -291,13 +290,12 @@ func eventUniqueValidator(ctx context.Context, rawEvent istructs.IRawEvent, appS
 			return nil
 		}
 		for _, unique := range cudUniques.Uniques() {
-			uniqueQName := coreutils.UniqueQName(cudRec.QName(), unique.Name())
-			if err := validateCUD(cudRec, appStructs, wsid, unique.Fields(), uniqueQName, uniquesState); err != nil {
+			if err := validateCUD(cudRec, appStructs, wsid, unique.Fields(), unique.Name(), uniquesState); err != nil {
 				return err
 			}
 		}
 		if cudUniques.UniqueField() != nil {
-			uniqueQName := coreutils.UniqueQName(cudRec.QName(), cudUniques.UniqueField().Name())
+			uniqueQName := cudRec.QName()
 			if err := validateCUD(cudRec, appStructs, wsid, []appdef.IField{cudUniques.UniqueField()}, uniqueQName, uniquesState); err != nil {
 				return err
 			}

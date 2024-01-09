@@ -393,34 +393,40 @@ ALTERABLE WORKSPACE test_ws (
 		NonVerifiedField varchar
 	);
 
-	-- TABLE DocConstraints INHERITS CDoc (
-	-- 	Int int32,
-	-- 	Str varchar(65535) NOT NULL,
-	-- 	Bool bool NOT NULL,
-	-- 	Float32 float32,
-	-- 	Bytes bytes(65535) NOT NULL
-	-- 	-- UNIQUE (Int, Str, Bool, Bytes)
-	--  UNIQUEFIELD
-	-- );
+	TABLE DocConstraints INHERITS CDoc (
+		Int int32,
+		Str varchar(65535) NOT NULL,
+		Bool bool NOT NULL,
+		Float32 float32,
+		Bytes bytes(65535) NOT NULL,
+		UNIQUE (Int, Str, Bool, Bytes)
+	);
 
-	-- TABLE DocConstraintsOldAndNewUniques INHERITS CDoc (
-	-- 	Str varchar,
-	-- 	Int int32
-	-- 	-- UNIQUE (Str),
-	--  UNIQUEFIELD Int
-	-- );
+	TABLE DocConstraintsString INHERITS CDoc (
+		Str varchar,
+		Int int32,
+		UNIQUE ("Str")
+	);
 
-	-- TABLE DocConstraintsFewUniques INHERITS CDoc (
-	-- 	Int1 int32,
-	-- 	Str1 varchar,
-	-- 	Bool1 bool,
-	-- 	Bytes1 bytes,
-	-- 	Int2 int32,
-	-- 	Str2 varchar,
-	-- 	Bool2 bool,
-	-- 	UNIQUE ("uniq1", "Int1", "Str1", "Bool1", "Bytes1")
-	-- 	UNIQUE ("uniq2", "Int2", "Str2", "Bool2", "Bytes1")
-	-- )
+	TABLE DocConstraintsFewUniques INHERITS CDoc (
+		Int1 int32,
+		Str1 varchar,
+		Bool1 bool,
+		Bytes1 bytes,
+		Int2 int32,
+		Str2 varchar,
+		Bool2 bool,
+		Bytes2 bytes,
+		UNIQUE ("Int1", "Str1", "Bool1", "Bytes1"),
+		UNIQUE ("Int2", "Str2", "Bool2", "Bytes2")
+	);
+
+	TABLE DocConstraintsOldAndNewUniques INHERITS CDoc (
+		Str varchar,
+		Int int32,
+		UNIQUE (Str),
+		UNIQUEFIELD Int
+	);
 
 	TABLE Config INHERITS Singleton (
 		Fld1 varchar NOT NULL
