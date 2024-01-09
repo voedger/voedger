@@ -78,7 +78,7 @@
           ],
           "Uniques": [
             {
-              "Name": "Unique01",
+              "Name": "test.doc$unique1",
               "Fields": [
                 "f1",
                 "f2"
