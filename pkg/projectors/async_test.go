@@ -447,8 +447,8 @@ func Test_AsynchronousActualizer_ResumeReadAfterNotifications(t *testing.T) {
 		BundlesLimit:  2,
 		FlushInterval: 1 * time.Second,
 		Broker:        broker,
-		Metrics:       metrics,
 		VvmName:       "test",
+		Metrics:       metrics,
 	}
 	actualizerFactory := ProvideAsyncActualizerFactory()
 	actualizer, err := actualizerFactory(conf, incrementorFactory)
@@ -1065,4 +1065,3 @@ func Test_AsynchronousActualizer_Stress_Buffered(t *testing.T) {
 	})
 	t.Logf("FlushesTotal: %d", flushesTotal)
 }
-
