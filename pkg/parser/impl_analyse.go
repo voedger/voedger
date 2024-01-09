@@ -214,6 +214,7 @@ func analyseAlterWorkspace(u *AlterWorkspaceStmt, c *iterateCtx) {
 		if !w.Alterable && schema != c.pkg {
 			return ErrWorkspaceIsNotAlterable(u.Name.String())
 		}
+		u.alteredWorkspace = w
 		return nil
 	}
 	err := resolveInCtx(u.Name, c, resolveFunc)
@@ -289,14 +290,16 @@ func analyseView(view *ViewStmt, c *iterateCtx) {
 				fields[string(rf.Name.Value)] = i
 			}
 			for i := range rf.RefDocs {
-				err := resolveInCtx(rf.RefDocs[i], c, func(f *TableStmt, _ *PackageSchemaAST) error {
+				refDoc := &rf.RefDocs[i]
+				err := resolveInCtx(*refDoc, c, func(f *TableStmt, pkg *PackageSchemaAST) error {
 					if f.Abstract {
-						return ErrReferenceToAbstractTable(rf.RefDocs[i].String())
+						return ErrReferenceToAbstractTable(refDoc.String())
 					}
+					rf.refQNames = append(rf.refQNames, pkg.NewQName(f.Name))
 					return nil
 				})
 				if err != nil {
-					c.stmtErr(&rf.RefDocs[i].Pos, err)
+					c.stmtErr(&refDoc.Pos, err)
 					continue
 				}
 			}
@@ -431,7 +434,8 @@ func analyzeQuery(query *QueryStmt, c *iterateCtx) {
 }
 
 func analyseProjector(v *ProjectorStmt, c *iterateCtx) {
-	for _, trigger := range v.Triggers {
+	for i := range v.Triggers {
+		trigger := &v.Triggers[i]
 		for _, qname := range trigger.QNames {
 			if len(trigger.TableActions) > 0 {
 				resolveFunc := func(table *TableStmt, pkg *PackageSchemaAST) error {
@@ -448,6 +452,7 @@ func analyseProjector(v *ProjectorStmt, c *iterateCtx) {
 							return ErrOnlyInsertForOdocOrORecord
 						}
 					}
+					trigger.qNames = append(trigger.qNames, pkg.NewQName(table.Name))
 					return nil
 				}
 				if err := resolveInCtx(qname, c, resolveFunc); err != nil {
@@ -455,13 +460,15 @@ func analyseProjector(v *ProjectorStmt, c *iterateCtx) {
 				}
 			} else { // Command
 				if trigger.ExecuteAction.WithParam {
-					cmd, _, err := lookupInCtx[*TypeStmt](qname, c)
+					var pkg *PackageSchemaAST
+					var odoc *TableStmt
+					typ, pkg, err := lookupInCtx[*TypeStmt](qname, c)
 					if err != nil { // type?
 						c.stmtErr(&qname.Pos, err)
 						continue
 					}
-					if cmd == nil { // ODoc?
-						odoc, _, err := lookupInCtx[*TableStmt](qname, c)
+					if typ == nil { // ODoc?
+						odoc, pkg, err = lookupInCtx[*TableStmt](qname, c)
 						if err != nil {
 							c.stmtErr(&qname.Pos, err)
 							continue
@@ -471,14 +478,14 @@ func analyseProjector(v *ProjectorStmt, c *iterateCtx) {
 							continue
 						}
 					}
+					trigger.qNames = append(trigger.qNames, pkg.NewQName(qname.Name))
 				} else {
-					cmd, _, err := lookupInCtx[*CommandStmt](qname, c)
+					err := resolveInCtx(qname, c, func(f *CommandStmt, pkg *PackageSchemaAST) error {
+						trigger.qNames = append(trigger.qNames, pkg.NewQName(qname.Name))
+						return nil
+					})
 					if err != nil {
 						c.stmtErr(&qname.Pos, err)
-						continue
-					}
-					if cmd == nil {
-						c.stmtErr(&qname.Pos, ErrUndefinedCommand(qname))
 						continue
 					}
 				}
@@ -486,16 +493,17 @@ func analyseProjector(v *ProjectorStmt, c *iterateCtx) {
 		}
 	}
 
-	checkEntity := func(key ProjectorStorage, f *StorageStmt) error {
+	checkEntity := func(key *ProjectorStorage, f *StorageStmt) error {
 		if f.EntityRecord {
 			if len(key.Entities) == 0 {
 				return ErrStorageRequiresEntity(key.Storage.String())
 			}
 			for _, entity := range key.Entities {
-				resolveFunc := func(f *TableStmt, _ *PackageSchemaAST) error {
+				resolveFunc := func(f *TableStmt, pkg *PackageSchemaAST) error {
 					if f.Abstract {
 						return ErrAbstractTableNotAlowedInProjectors(entity.String())
 					}
+					key.entityQNames = append(key.entityQNames, pkg.NewQName(entity.Name))
 					return nil
 				}
 				if err2 := resolveInCtx(entity, c, resolveFunc); err2 != nil {
@@ -508,7 +516,10 @@ func analyseProjector(v *ProjectorStmt, c *iterateCtx) {
 				return ErrStorageRequiresEntity(key.Storage.String())
 			}
 			for _, entity := range key.Entities {
-				if err2 := resolveInCtx(entity, c, func(*ViewStmt, *PackageSchemaAST) error { return nil }); err2 != nil {
+				if err2 := resolveInCtx(entity, c, func(view *ViewStmt, pkg *PackageSchemaAST) error {
+					key.entityQNames = append(key.entityQNames, pkg.NewQName(entity.Name))
+					return nil
+				}); err2 != nil {
 					return err2
 				}
 			}
@@ -516,8 +527,9 @@ func analyseProjector(v *ProjectorStmt, c *iterateCtx) {
 		return nil
 	}
 
-	for _, key := range v.State {
-		if err := resolveInCtx(key.Storage, c, func(f *StorageStmt, _ *PackageSchemaAST) error {
+	for i := range v.State {
+		key := &v.State[i]
+		if err := resolveInCtx(key.Storage, c, func(f *StorageStmt, pkg *PackageSchemaAST) error {
 			if e := checkEntity(key, f); e != nil {
 				return e
 			}
@@ -535,14 +547,16 @@ func analyseProjector(v *ProjectorStmt, c *iterateCtx) {
 			if !read {
 				return ErrStorageNotInProjectorState(key.Storage.String())
 			}
+			key.storageQName = pkg.NewQName(key.Storage.Name)
 			return nil
 		}); err != nil {
 			c.stmtErr(&key.Storage.Pos, err)
 		}
 	}
 
-	for _, key := range v.Intents {
-		if err := resolveInCtx(key.Storage, c, func(f *StorageStmt, _ *PackageSchemaAST) error {
+	for i := range v.Intents {
+		key := &v.Intents[i]
+		if err := resolveInCtx(key.Storage, c, func(f *StorageStmt, pkg *PackageSchemaAST) error {
 			if e := checkEntity(key, f); e != nil {
 				return e
 			}
@@ -560,6 +574,7 @@ func analyseProjector(v *ProjectorStmt, c *iterateCtx) {
 			if !read {
 				return ErrStorageNotInProjectorIntents(key.Storage.String())
 			}
+			key.storageQName = pkg.NewQName(key.Storage.Name)
 			return nil
 		}); err != nil {
 			c.stmtErr(&key.Storage.Pos, err)
@@ -684,21 +699,7 @@ func analyseNestedTables(items []TableItemExpr, rootTableKind appdef.TypeKind, c
 		if item.NestedTable != nil {
 			nestedTable = &item.NestedTable.Table
 			pos = &item.NestedTable.Pos
-		} else if item.Field != nil && item.Field.Type.Def != nil {
-			tbl, _, err := lookupInCtx[*TableStmt](*item.Field.Type.Def, c)
-			if err != nil {
-				c.stmtErr(&item.Field.Type.Def.Pos, err)
-				continue
-			}
-			if tbl == nil {
-				c.stmtErr(&item.Field.Type.Def.Pos, ErrUndefinedTable(*item.Field.Type.Def))
-				continue
-			}
-			nestedTable = tbl
-			pos = &item.Field.Pos
-		}
 
-		if nestedTable != nil {
 			if nestedTable.Abstract {
 				c.stmtErr(pos, ErrNestedAbstractTable(nestedTable.GetName()))
 				return
@@ -792,9 +793,33 @@ func analyseFields(items []TableItemExpr, c *iterateCtx, isTable bool) {
 				}
 			} else {
 				if !isTable { // analysing a TYPE
-					err := resolveInCtx(*field.Type.Def, c, func(f *TypeStmt, _ *PackageSchemaAST) error { return nil })
+					err := resolveInCtx(*field.Type.Def, c, func(f *TypeStmt, pkg *PackageSchemaAST) error {
+						field.Type.qName = pkg.NewQName(f.Name)
+						return nil
+					})
 					if err != nil {
 						c.stmtErr(&field.Type.Def.Pos, err)
+						continue
+					}
+				} else { // analysing a TABLE
+					err := resolveInCtx(*field.Type.Def, c, func(f *TableStmt, pkg *PackageSchemaAST) error {
+						if f.Abstract {
+							return ErrNestedAbstractTable(field.Type.Def.String())
+						}
+						if f.tableTypeKind != appdef.TypeKind_CRecord && f.tableTypeKind != appdef.TypeKind_ORecord && f.tableTypeKind != appdef.TypeKind_WRecord {
+							return ErrTypeNotSupported(field.Type.Def.String())
+						}
+						field.Type.qName = pkg.NewQName(f.Name)
+						field.Type.tableStmt = f
+						field.Type.tablePkg = pkg
+						return nil
+					})
+					if err != nil {
+						if err.Error() == ErrUndefinedTable(*field.Type.Def).Error() {
+							c.stmtErr(&field.Type.Def.Pos, ErrUndefinedDataTypeOrTable(*field.Type.Def))
+						} else {
+							c.stmtErr(&field.Type.Def.Pos, err)
+						}
 						continue
 					}
 				}
