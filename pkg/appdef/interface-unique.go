@@ -21,7 +21,7 @@ type IUniques interface {
 	UniqueCount() int
 
 	// All uniques.
-	Uniques() []IUnique
+	Uniques() map[QName]IUnique
 
 	// Returns single field unique.
 	//

@@ -53,9 +53,10 @@ func Test_def_AddUnique(t *testing.T) {
 
 		require.Equal(doc.UniqueCount(), func() int {
 			cnt := 0
-			for _, u := range doc.Uniques() {
+			for n, u := range doc.Uniques() {
 				cnt++
-				switch u.Name() {
+				require.Equal(n, u.Name())
+				switch n {
 				case un1:
 					require.Len(u.Fields(), 1)
 					require.Equal("eMail", u.Fields()[0].Name())

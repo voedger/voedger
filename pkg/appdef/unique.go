@@ -53,17 +53,15 @@ func (u unique) Fields() []IField {
 //   - IUniques
 //   - IUniquesBuilder
 type uniques struct {
-	emb            interface{}
-	uniques        map[QName]*unique
-	uniquesOrdered []IUnique
-	field          IField
+	emb     interface{}
+	uniques map[QName]IUnique
+	field   IField
 }
 
 func makeUniques(embeds interface{}) uniques {
 	u := uniques{
-		emb:            embeds,
-		uniques:        make(map[QName]*unique),
-		uniquesOrdered: make([]IUnique, 0),
+		emb:     embeds,
+		uniques: make(map[QName]IUnique),
 	}
 	return u
 }
@@ -106,8 +104,8 @@ func (u *uniques) UniqueField() IField {
 	return u.field
 }
 
-func (u *uniques) Uniques() []IUnique {
-	return u.uniquesOrdered
+func (u *uniques) Uniques() map[QName]IUnique {
+	return u.uniques
 }
 
 func (u *uniques) addUnique(name QName, fields []string, comment ...string) IUniquesBuilder {
@@ -156,7 +154,6 @@ func (u *uniques) addUnique(name QName, fields []string, comment ...string) IUni
 	un.SetComment(comment...)
 
 	u.uniques[name] = un
-	u.uniquesOrdered = append(u.uniquesOrdered, un)
 
 	return u.emb.(IUniquesBuilder)
 }

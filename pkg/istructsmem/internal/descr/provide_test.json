@@ -76,15 +76,14 @@
               "MaxOccurs": 100
             }
           ],
-          "Uniques": [
-            {
-              "Name": "test.doc$unique1",
+          "Uniques": {
+            "test.doc$unique1": {
               "Fields": [
                 "f1",
                 "f2"
               ]
             }
-          ],
+          },
           "Singleton": true
         },
         "test.obj": {
