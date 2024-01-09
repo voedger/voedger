@@ -201,6 +201,8 @@ var defaultACL = ACL{
 
 				// https://dev.untill.com/projects/#!638320
 				qNameQryGetUPStatus,
+				// https://dev.untill.com/projects/#!673032
+				qNameQryGetSubscriptionInvoices,
 			},
 			principalsPattern: [][]iauthnz.Principal{{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleAirReseller}}},
 		},
