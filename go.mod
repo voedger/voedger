@@ -4,7 +4,7 @@ go 1.21.4
 
 require (
 	github.com/VictoriaMetrics/fastcache v1.12.1
-	github.com/alecthomas/participle/v2 v2.0.0
+	github.com/alecthomas/participle/v2 v2.1.1
 	github.com/aptible/supercronic v0.2.2
 	github.com/blastrain/vitess-sqlparser v0.0.0-20201030050434-a139afbb1aba
 	github.com/emersion/go-smtp v0.15.0

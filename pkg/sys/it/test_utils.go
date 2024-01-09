@@ -16,6 +16,7 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 	it "github.com/voedger/voedger/pkg/vit"
+	"golang.org/x/exp/slices"
 )
 
 func InitiateEmailVerification(vit *it.VIT, prn *it.Principal, entity appdef.QName, field, email string, targetWSID istructs.WSID, opts ...coreutils.ReqOptFunc) (token, code string) {
@@ -79,19 +80,23 @@ func InitiateJoinWorkspace(vit *it.VIT, ws *it.AppWorkspace, inviteID int64, log
 	vit.PostWS(ws, "c.sys.InitiateJoinWorkspace", fmt.Sprintf(`{"args":{"InviteID":%d,"VerificationCode":"%s"}}`, inviteID, verificationCode), coreutils.WithAuthorizeBy(login.Token))
 }
 
-func WaitForInviteState(vit *it.VIT, ws *it.AppWorkspace, inviteState int32, inviteID int64) {
+func WaitForInviteState(vit *it.VIT, ws *it.AppWorkspace, inviteID int64, inviteStatesSeq ...int32) {
 	deadline := it.TestDeadline(5 * time.Second)
-	var entity []interface{}
+	var actualInviteState int32
 	for time.Now().Before(deadline) {
-		entity = vit.PostWS(ws, "q.sys.Collection", fmt.Sprintf(`
+		entity := vit.PostWS(ws, "q.sys.Collection", fmt.Sprintf(`
 		{"args":{"Schema":"sys.Invite"},
 		"elements":[{"fields":["State","sys.ID"]}],
 		"filters":[{"expr":"eq","args":{"field":"sys.ID","value":%d}}]}`, inviteID)).SectionRow(0)
-		if inviteState == int32(entity[0].(float64)) {
+		actualInviteState = int32(entity[0].(float64))
+		if inviteStatesSeq[len(inviteStatesSeq)-1] == actualInviteState {
 			return
 		}
+		if !slices.Contains(inviteStatesSeq, actualInviteState) {
+			break
+		}
 	}
-	panic(fmt.Sprintf("invite [%d] is not in required state [%d] it has state [%d]", inviteID, inviteState, int32(entity[0].(float64))))
+	vit.T.Fatalf("invite %d is failed achieve the state %d. The last state was %d", inviteID, inviteStatesSeq[len(inviteStatesSeq)-1], actualInviteState)
 }
 
 type joinedWorkspaceDesc struct {

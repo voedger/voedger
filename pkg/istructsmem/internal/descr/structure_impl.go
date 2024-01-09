@@ -13,7 +13,7 @@ func newStructure() *Structure {
 	return &Structure{
 		Fields:     make([]*Field, 0),
 		Containers: make([]*Container, 0),
-		Uniques:    make([]*Unique, 0),
+		Uniques:    make(map[string]*Unique),
 	}
 }
 
@@ -34,10 +34,10 @@ func (s *Structure) read(str appdef.IStructure) {
 		s.Containers = append(s.Containers, c)
 	}
 
-	for _, unique := range str.Uniques() {
+	for n, unique := range str.Uniques() {
 		u := newUnique()
 		u.read(unique)
-		s.Uniques = append(s.Uniques, u)
+		s.Uniques[n.String()] = u
 	}
 	if uf := str.UniqueField(); uf != nil {
 		s.UniqueField = uf.Name()

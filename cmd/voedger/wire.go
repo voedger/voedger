@@ -19,11 +19,10 @@ import (
 	"github.com/voedger/voedger/pkg/istorageimpl"
 )
 
-func wireServer(httpCliParams ihttp.CLIParams, appsCliParams apps.CLIParams, grafanaPort ihttp.GrafanaPort, prometheusPort ihttp.PrometheusPort) (WiredServer, func(), error) {
+func wireServer(httpCliParams ihttp.CLIParams, appsCliParams apps.CLIParams) (WiredServer, func(), error) {
 	panic(
 		wire.Build(
 			ihttpimpl.NewProcessor,
-			ihttpimpl.NewAPI,
 			ihttpctl.NewHTTPProcessorController,
 			ihttp.NewIRouterStorage,
 			apps.NewStaticEmbeddedResources,

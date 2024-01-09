@@ -40,7 +40,7 @@ func loggerInfoGreen(args ...interface{}) {
 
 func loggerError(args ...interface{}) {
 	if !verbose() {
-		fmt.Println(red(args...))
+		fmt.Println("Error:", red(args...))
 	}
 	logger.Error(args...)
 }

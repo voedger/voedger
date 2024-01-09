@@ -275,7 +275,7 @@ func test() *testDataType {
 				AddField(testData.humanIdent, appdef.DataKind_bool, false).
 				AddDataField(testData.photoIdent, testData.dataPhoto, false)
 			rec.
-				AddUnique("", []string{testData.buyerIdent})
+				AddUnique(appdef.NewQName("test", "photos$unique$buyerIdent"), []string{testData.buyerIdent})
 			rec.
 				AddContainer(testData.remarkIdent, testData.tablePhotoRems, 0, appdef.Occurs_Unbounded)
 

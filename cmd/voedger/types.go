@@ -12,6 +12,5 @@ import (
 
 type WiredServer struct {
 	ihttp.IHTTPProcessor
-	ihttp.IHTTPProcessorAPI
 	ihttpctl.IHTTPProcessorController
 }

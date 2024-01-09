@@ -60,6 +60,7 @@ const (
 	ckInit    = "init"
 	ckUpgrade = "upgrade"
 	ckReplace = "replace"
+	ckBackup  = "backup"
 
 	// minimum amount of RAM per node in MB
 	minRamOnAppNode = "8192"

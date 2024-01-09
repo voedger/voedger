@@ -128,15 +128,19 @@ func (p *httpProcessor) Run(ctx context.Context) {
 }
 
 func (p *httpProcessor) AddReverseProxyRoute(srcRegExp, dstRegExp string) {
-	// TODO: concurrency safety can be added via sync.RWMutex
+	p.router.Lock()
+	defer p.router.Unlock()
+
 	p.router.redirections = slices.Insert(p.router.redirections, len(p.router.redirections)-1, &redirectionRoute{
 		srcRegExp:        regexp.MustCompile(srcRegExp),
 		dstRegExpPattern: dstRegExp,
 	})
 }
 
-func (p *httpProcessor) AddReverseProxyRouteDefault(srcRegExp, dstRegExp string) {
-	// TODO: concurrency safety can be added via sync.RWMutex
+func (p *httpProcessor) SetReverseProxyRouteDefault(srcRegExp, dstRegExp string) {
+	p.router.Lock()
+	defer p.router.Unlock()
+
 	p.router.redirections[len(p.router.redirections)-1] = &redirectionRoute{
 		srcRegExp:        regexp.MustCompile(srcRegExp),
 		dstRegExpPattern: dstRegExp,
@@ -147,15 +151,19 @@ func (p *httpProcessor) AddAcmeDomain(domain string) {
 	p.acmeDomains.Store(domain, struct{}{})
 }
 
-func (p *httpProcessor) HandlePath(resource string, prefix bool, handlerFunc func(http.ResponseWriter, *http.Request)) {
-	// TODO: concurrency safety can be added via sync.RWMutex
-	var r *mux.Route
-	if prefix {
-		r = p.router.contentRouter.PathPrefix(resource)
-	} else {
-		r = p.router.contentRouter.Path(resource)
+func (p *httpProcessor) DeployStaticContent(resource string, fs fs.FS) {
+	resource = staticPath + resource
+	f := func(wr http.ResponseWriter, req *http.Request) {
+		fsHandler := http.FileServer(http.FS(fs))
+		http.StripPrefix(resource, fsHandler).ServeHTTP(wr, req)
 	}
-	r.HandlerFunc(handlerFunc)
+	p.handlePath(resource, true, f)
+}
+
+func (p *httpProcessor) DeployAppPartition(app istructs.AppQName, partNo istructs.PartitionID, commandHandler, queryHandler ihttp.ISender) {
+	// <cluster-domain>/api/<AppQName.owner>/<AppQName.name>/<wsid>/<{q,c}.funcQName>
+	resourcePath := fmt.Sprintf("/api/%s/%s/%d/q|c\\.[a-zA-Z_.]+", app.Owner(), app.Name(), partNo)
+	p.handlePath(resourcePath, false, handleAppPart())
 }
 
 func (p *httpProcessor) ListeningPort() int {
@@ -189,41 +197,24 @@ func (p *httpProcessor) cleanup() {
 	}
 }
 
-type processorAPI struct {
-	processor ihttp.IHTTPProcessor
-}
+func (p *httpProcessor) handlePath(resource string, prefix bool, handlerFunc func(http.ResponseWriter, *http.Request)) {
+	p.router.Lock()
+	defer p.router.Unlock()
 
-func (api *processorAPI) DeployStaticContent(resource string, fs fs.FS) {
-	resource = staticPath + resource
-	f := func(wr http.ResponseWriter, req *http.Request) {
-		fsHandler := http.FileServer(http.FS(fs))
-		http.StripPrefix(resource, fsHandler).ServeHTTP(wr, req)
+	var r *mux.Route
+	if prefix {
+		r = p.router.contentRouter.PathPrefix(resource)
+	} else {
+		r = p.router.contentRouter.Path(resource)
 	}
-	api.processor.HandlePath(resource, true, f)
-}
-
-func (api *processorAPI) DeployAppPartition(app istructs.AppQName, partNo istructs.PartitionID, commandHandler, queryHandler ihttp.ISender) {
-	// <cluster-domain>/api/<AppQName.owner>/<AppQName.name>/<wsid>/<{q,c}.funcQName>
-	resourcePath := fmt.Sprintf("/api/%s/%s/%d/q|c\\.[a-zA-Z_.]+", app.Owner(), app.Name(), partNo)
-	api.processor.HandlePath(resourcePath, false, handleAppPart())
-}
-
-func (api *processorAPI) AddReverseProxyRoute(srcRegExp, dstRegExp string) {
-	api.processor.AddReverseProxyRoute(srcRegExp, dstRegExp)
-}
-
-func (api *processorAPI) AddReverseProxyRouteDefault(srcRegExp, dstRegExp string) {
-	api.processor.AddReverseProxyRouteDefault(srcRegExp, dstRegExp)
-}
-
-func (api *processorAPI) AddAcmeDomain(domain string) {
-	api.processor.AddAcmeDomain(domain)
+	r.HandlerFunc(handlerFunc)
 }
 
 type router struct {
 	contentRouter *mux.Router
 	reverseProxy  *httputil.ReverseProxy
 	redirections  []*redirectionRoute // last item is always exist and if it is non-null, then it is a default route
+	sync.RWMutex
 }
 
 func newRouter() *router {
@@ -235,6 +226,9 @@ func newRouter() *router {
 }
 
 func (r *router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	r.RLock()
+	defer r.RUnlock()
+
 	reqPath := req.URL.EscapedPath()
 	// Clean path to canonical form and redirect.
 	if p := cleanPath(reqPath); p != reqPath {
@@ -266,7 +260,6 @@ func (r *router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 }
 
 func (r *router) Match(req *http.Request, rm *mux.RouteMatch) bool {
-	// TODO: concurrency safety can be added via sync.RWMutex
 	return r.contentRouter.Match(req, rm) || r.matchRedirections(req, rm)
 }
 

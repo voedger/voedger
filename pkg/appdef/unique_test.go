@@ -16,6 +16,9 @@ func Test_def_AddUnique(t *testing.T) {
 	require := require.New(t)
 
 	qName := NewQName("test", "user")
+	un1 := NewQName("test", "user$uniqueEMail")
+	un2 := NewQName("test", "user$uniqueFullName")
+
 	appDef := New()
 
 	doc := appDef.AddCDoc(qName)
@@ -29,8 +32,8 @@ func Test_def_AddUnique(t *testing.T) {
 		AddField("sex", DataKind_bool, false).
 		AddField("eMail", DataKind_string, false)
 	doc.
-		AddUnique("", []string{"eMail"}).
-		AddUnique("userUniqueFullName", []string{"lastName", "name", "surname"})
+		AddUnique(un1, []string{"eMail"}).
+		AddUnique(un2, []string{"name", "surname", "lastName"})
 
 	t.Run("test is ok", func(t *testing.T) {
 		app, err := appDef.Build()
@@ -41,7 +44,7 @@ func Test_def_AddUnique(t *testing.T) {
 
 		require.Equal(2, doc.UniqueCount())
 
-		u := doc.UniqueByName("userUniqueFullName")
+		u := doc.UniqueByName(un2)
 		require.Equal(doc.QName(), u.ParentStructure().QName())
 		require.Len(u.Fields(), 3)
 		require.Equal("lastName", u.Fields()[0].Name())
@@ -50,14 +53,15 @@ func Test_def_AddUnique(t *testing.T) {
 
 		require.Equal(doc.UniqueCount(), func() int {
 			cnt := 0
-			for _, u := range doc.Uniques() {
+			for n, u := range doc.Uniques() {
 				cnt++
-				switch u.Name() {
-				case "userUniqueEMail":
+				require.Equal(n, u.Name())
+				switch n {
+				case un1:
 					require.Len(u.Fields(), 1)
 					require.Equal("eMail", u.Fields()[0].Name())
 					require.Equal(DataKind_string, u.Fields()[0].DataKind())
-				case "userUniqueFullName":
+				case un2:
 					require.Len(u.Fields(), 3)
 					require.Equal("lastName", u.Fields()[0].Name())
 					require.Equal("name", u.Fields()[1].Name())
@@ -68,35 +72,30 @@ func Test_def_AddUnique(t *testing.T) {
 		}())
 	})
 
-	t.Run("test unique IDs", func(t *testing.T) {
-		id := FirstUniqueID
-		for _, u := range doc.Uniques() {
-			id++
-			u.(interface{ SetID(UniqueID) }).SetID(id)
-		}
-
-		require.Nil(doc.UniqueByID(FirstUniqueID))
-		require.NotNil(doc.UniqueByID(FirstUniqueID + 1))
-		require.NotNil(doc.UniqueByID(FirstUniqueID + 2))
-		require.Nil(doc.UniqueByID(FirstUniqueID + 3))
-	})
-
 	t.Run("test panics", func(t *testing.T) {
 
 		require.Panics(func() {
-			doc.AddUnique("naked-🔫", []string{"sex"})
+			doc.AddUnique(NullQName, []string{"sex"})
+		}, "panics if empty unique name")
+
+		require.Panics(func() {
+			doc.AddUnique(NewQName("naked", "🔫"), []string{"sex"})
 		}, "panics if invalid unique name")
 
 		require.Panics(func() {
-			doc.AddUnique("userUniqueFullName", []string{"name", "surname", "lastName"})
+			doc.AddUnique(NewQName("test", "user$uniqueFullName"), []string{"name", "surname", "lastName"})
 		}, "panics unique with name is already exists")
 
 		require.Panics(func() {
-			doc.AddUnique("emptyUnique", []string{})
+			doc.AddUnique(doc.QName(), []string{"name", "surname", "lastName"})
+		}, "panics if type with unique name is exists")
+
+		require.Panics(func() {
+			doc.AddUnique(NewQName("test", "user$uniqueEmpty"), []string{})
 		}, "panics if fields set is empty")
 
 		require.Panics(func() {
-			doc.AddUnique("", []string{"birthday", "birthday"})
+			doc.AddUnique(NewQName("test", "user$uniqueFiledDup"), []string{"birthday", "birthday"})
 		}, "if fields has duplicates")
 
 		t.Run("panics if too many fields", func(t *testing.T) {
@@ -107,23 +106,23 @@ func Test_def_AddUnique(t *testing.T) {
 				rec.AddField(n, DataKind_bool, false)
 				fldNames = append(fldNames, n)
 			}
-			require.Panics(func() { rec.AddUnique("", fldNames) })
+			require.Panics(func() { rec.AddUnique(NewQName("test", "user$uniqueTooLong"), fldNames) })
 		})
 
 		require.Panics(func() {
-			doc.AddUnique("", []string{"name", "surname", "lastName"})
+			doc.AddUnique(NewQName("test", "user$uniqueFieldsSetDup"), []string{"name", "surname", "lastName"})
 		}, "if fields set is already exists")
 
 		require.Panics(func() {
-			doc.AddUnique("", []string{"surname"})
+			doc.AddUnique(NewQName("test", "user$uniqueFieldsSetOverlaps"), []string{"surname"})
 		}, "if fields set overlaps exists")
 
 		require.Panics(func() {
-			doc.AddUnique("", []string{"eMail", "birthday"})
+			doc.AddUnique(NewQName("test", "user$uniqueFieldsSetOverlapped"), []string{"eMail", "birthday"})
 		}, "if fields set overlapped by exists")
 
 		require.Panics(func() {
-			doc.AddUnique("", []string{"unknown"})
+			doc.AddUnique(NewQName("test", "user$uniqueFieldsUnknown"), []string{"unknown"})
 		}, "if fields not exists")
 
 		t.Run("panics if too many uniques", func(t *testing.T) {
@@ -131,10 +130,10 @@ func Test_def_AddUnique(t *testing.T) {
 			for i := 0; i < MaxTypeUniqueCount; i++ {
 				n := fmt.Sprintf("f_%#x", i)
 				rec.AddField(n, DataKind_int32, false)
-				rec.AddUnique("", []string{n})
+				rec.AddUnique(NewQName("test", fmt.Sprintf("rec$unique$%s", n)), []string{n})
 			}
 			rec.AddField("lastStraw", DataKind_int32, false)
-			require.Panics(func() { rec.AddUnique("", []string{"lastStraw"}) })
+			require.Panics(func() { rec.AddUnique(NewQName("test", "rec$unique$lastStraw"), []string{"lastStraw"}) })
 		})
 	})
 }

@@ -23,8 +23,6 @@ type Status struct {
 	ErrorMessage string
 	ErrorData    string
 }
-type GrafanaPort int
-type PrometheusPort int
 type IRouterStorage istorage.IAppStorage
 type AcmeDomains []string
 type CLIParams struct {

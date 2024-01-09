@@ -16,7 +16,6 @@ import (
 	"github.com/voedger/voedger/pkg/istructsmem/internal/dynobuf"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/qnames"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/singletons"
-	"github.com/voedger/voedger/pkg/istructsmem/internal/uniques"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/vers"
 )
 
@@ -137,11 +136,6 @@ func (cfg *AppConfigType) prepare(buckets irates.IBuckets, appStorage istorage.I
 
 	// prepare singleton CDocs
 	if err := cfg.singletons.Prepare(cfg.storage, cfg.versions, cfg.AppDef); err != nil {
-		return err
-	}
-
-	// prepare unique IDs
-	if err := uniques.PrepareAppDefUniqueIDs(cfg.storage, cfg.versions, cfg.qNames, cfg.AppDef); err != nil {
 		return err
 	}
 

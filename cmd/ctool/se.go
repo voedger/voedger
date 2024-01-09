@@ -124,6 +124,7 @@ func seNodeValidate(n *nodeType) error {
 
 	if err := newScriptExecuter(n.cluster.sshKey, n.DesiredNodeState.Address).
 		run("host-validate.sh", n.DesiredNodeState.Address, minRAM); err != nil {
+		n.Error = err.Error()
 		return err
 	}
 
@@ -141,7 +142,7 @@ func seClusterControllerFunction(c *clusterType) error {
 	case ckReplace:
 		var n *nodeType
 		if n = c.nodeByHost(c.Cmd.args()[1]); n == nil {
-			return fmt.Errorf(ErrHostNotFoundInCluster.Error(), c.Cmd.args()[1])
+			return fmt.Errorf(errHostNotFoundInCluster, c.Cmd.args()[1], ErrHostNotFoundInCluster)
 		}
 		switch n.NodeRole {
 		case nrDBNode:
@@ -496,7 +497,7 @@ func resolveDC(cluster *clusterType, ip string) (dc string, err error) {
 	const nodeOffset int32 = 1
 	n := cluster.nodeByHost(ip)
 	if n == nil {
-		return "", fmt.Errorf(ErrHostNotFoundInCluster.Error(), cluster.Cmd.args()[0])
+		return "", fmt.Errorf(errHostNotFoundInCluster, cluster.Cmd.args()[0], ErrHostNotFoundInCluster)
 	}
 	if (n.idx == int(idxDBNode1+nodeOffset)) || (n.idx == int(idxDBNode2+nodeOffset)) {
 		return "dc1", nil
@@ -646,12 +647,14 @@ func copyCtoolAndKeyToNode(node *nodeType) error {
 	ctoolPath, err := os.Executable()
 
 	if err != nil {
+		node.Error = err.Error()
 		return err
 	}
 
 	loggerInfo(fmt.Sprintf("copying ctool and key to %s [%s]", node.nodeName(), node.address()))
 	if err := newScriptExecuter(node.cluster.sshKey, node.nodeName()).
 		run("copy-ctool.sh", ctoolPath, node.cluster.sshKey, node.address()); err != nil {
+		node.Error = err.Error()
 		return err
 	}
 

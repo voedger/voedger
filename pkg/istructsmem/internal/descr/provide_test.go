@@ -41,7 +41,7 @@ func TestBasicUsage(t *testing.T) {
 		AddDataField("numField", numName, false).
 		AddRefField("mainChild", false, recName).(appdef.ICDocBuilder).
 		AddContainer("rec", recName, 0, 100, "container comment").(appdef.ICDocBuilder).
-		AddUnique("", []string{"f1", "f2"})
+		AddUnique(appdef.NewQName("test", "doc$unique1"), []string{"f1", "f2"})
 	doc.SetComment(`comment 1`, `comment 2`)
 
 	rec := appDef.AddCRecord(recName)
