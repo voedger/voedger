@@ -58,6 +58,12 @@ func Test_ValidIdent(t *testing.T) {
 			wantErr: ErrInvalidName,
 		},
 		{
+			name:    "error if starts from buck",
+			args:    args{ident: "$zip"},
+			wantOk:  false,
+			wantErr: ErrInvalidName,
+		},
+		{
 			name:    "error if spaces at begin",
 			args:    args{ident: " zip"},
 			wantOk:  false,
@@ -104,6 +110,11 @@ func Test_ValidIdent(t *testing.T) {
 			wantOk: true,
 		},
 		{
+			name:   "buck at any except first pos must pass",
+			args:   args{ident: "test$test"},
+			wantOk: true,
+		},
+		{
 			name:   "basic camel notation must pass",
 			args:   args{ident: "thisIsIdent1"},
 			wantOk: true,
@@ -115,7 +126,7 @@ func Test_ValidIdent(t *testing.T) {
 		},
 		{
 			name:   "mixed notation must pass",
-			args:   args{ident: "useMix_4_fun"},
+			args:   args{ident: "useMix_4_fun$sense"},
 			wantOk: true,
 		},
 	}
