@@ -31,6 +31,7 @@ const (
 const (
 	NodeNameTypes           = "Types"
 	NodeNameFields          = "Fields"
+	NodeNameUniques         = "Uniques"
 	NodeNameUniqueFields    = "UniqueFields"
 	NodeNameAbstract        = "Abstract"
 	NodeNameParent          = "Parent"

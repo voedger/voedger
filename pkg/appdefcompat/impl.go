@@ -93,7 +93,7 @@ func buildQueryNode(parentNode *CompatibilityTreeNode, item appdef.IQuery) (node
 func buildTableNode(parentNode *CompatibilityTreeNode, item appdef.IDoc) (node *CompatibilityTreeNode) {
 	node = newNode(parentNode, item.QName().String(), nil)
 	node.Props = append(node.Props,
-		buildUniqueFieldsNode(node, item),
+		buildUniquesNode(node, item),
 		buildFieldsNode(node, item, NodeNameFields),
 		buildContainersNode(node, item),
 		buildAbstractNode(node, item),
@@ -162,12 +162,27 @@ func buildFieldsNode(parentNode *CompatibilityTreeNode, item interface{}, nodeNa
 	return
 }
 
-func buildUniqueFieldsNode(parentNode *CompatibilityTreeNode, item appdef.IUniques) (node *CompatibilityTreeNode) {
+func buildUniqueFieldsNode(parentNode *CompatibilityTreeNode, item appdef.IUnique) (node *CompatibilityTreeNode) {
 	node = newNode(parentNode, NodeNameUniqueFields, nil)
+	for _, f := range item.Fields() {
+		node.Props = append(node.Props, buildFieldNode(node, f))
+	}
+	return
+}
+
+func buildUniqueNode(parentNode *CompatibilityTreeNode, item appdef.IUnique) (node *CompatibilityTreeNode) {
+	node = newNode(parentNode, item.Name().String(), nil)
+	node.Props = append(node.Props,
+		buildUniqueFieldsNode(node, item),
+		buildQNameNode(node, item.ParentStructure(), NodeNameParent, false), // Parent node
+	)
+	return
+}
+
+func buildUniquesNode(parentNode *CompatibilityTreeNode, item appdef.IUniques) (node *CompatibilityTreeNode) {
+	node = newNode(parentNode, NodeNameUniques, nil)
 	for _, unique := range item.Uniques() {
-		for _, f := range unique.Fields() {
-			node.Props = append(node.Props, buildFieldNode(node, f))
-		}
+		node.Props = append(node.Props, buildUniqueNode(node, unique))
 	}
 	return
 }
