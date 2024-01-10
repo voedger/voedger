@@ -50,17 +50,20 @@ POST https://adventure-works.com/orders // Good
 POST https://adventure-works.com/create-order // Avoid
 ```
 
-Summary, the following Query in airs-bp3:
+Summary, the following Queries in airs-bp3:
 ```
 POST .../IssueLinkDeviceToken
+POST .../GetSalesMetrics
 ```
-violates Restful API design:
+violate Restful API design:
 - uses POST for query, without changing the server state
 - uses verb in the URL
 
 Should be:
 ```
 GET .../TokenToLinkDevice?args=...
+GET .../SalesMetrics?args=...
+```
 ```
 
 ## Paths Detailed
