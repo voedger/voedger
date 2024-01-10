@@ -39,7 +39,8 @@ func wireServer(httpCliParams ihttp.CLIParams, appsCliParams apps.CLIParams) (Wi
 	redirectRoutes := apps.NewRedirectionRoutes()
 	defaultRedirectRoute := apps.NewDefaultRedirectionRoute()
 	acmeDomains := httpCliParams.AcmeDomains
-	ihttpProcessorController, err := ihttpctl.NewHTTPProcessorController(ihttpProcessor, v, redirectRoutes, defaultRedirectRoute, acmeDomains)
+	appPartitionRequestHandlers := apps.NewAppRequestHandlers()
+	ihttpProcessorController, err := ihttpctl.NewHTTPProcessorController(ihttpProcessor, v, redirectRoutes, defaultRedirectRoute, acmeDomains, appPartitionRequestHandlers)
 	if err != nil {
 		cleanup()
 		return WiredServer{}, nil, err
