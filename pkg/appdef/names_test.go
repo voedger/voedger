@@ -7,6 +7,7 @@ package appdef
 
 import (
 	"errors"
+	"strings"
 	"testing"
 )
 
@@ -58,12 +59,6 @@ func Test_ValidIdent(t *testing.T) {
 			wantErr: ErrInvalidName,
 		},
 		{
-			name:    "error if starts from buck",
-			args:    args{ident: "$zip"},
-			wantOk:  false,
-			wantErr: ErrInvalidName,
-		},
-		{
 			name:    "error if spaces at begin",
 			args:    args{ident: " zip"},
 			wantOk:  false,
@@ -82,14 +77,8 @@ func Test_ValidIdent(t *testing.T) {
 			wantErr: ErrInvalidName,
 		},
 		{
-			name: "error if too long",
-			args: args{ident: func() string {
-				worm := "_"
-				for i := 0; i < MaxIdentLen; i++ {
-					worm += "_"
-				}
-				return worm
-			}()},
+			name:    "error if too long",
+			args:    args{ident: strings.Repeat("_", MaxIdentLen) + `_`},
 			wantOk:  false,
 			wantErr: ErrInvalidName,
 		},
@@ -110,8 +99,13 @@ func Test_ValidIdent(t *testing.T) {
 			wantOk: true,
 		},
 		{
-			name:   "buck at any except first pos must pass",
+			name:   "buck at any pos must pass",
 			args:   args{ident: "test$test"},
+			wantOk: true,
+		},
+		{
+			name:   "buck at first pos must pass",
+			args:   args{ident: "$test"},
 			wantOk: true,
 		},
 		{
