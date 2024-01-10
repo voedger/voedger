@@ -96,7 +96,7 @@ func Test_BasicUsage(t *testing.T) {
 	require.Equal(2, len(uniques))
 
 	t.Run("first unique, automatically named", func(t *testing.T) {
-		u := uniques[appdef.MustParseQName("main.TablePlan$unique$01")]
+		u := uniques[appdef.MustParseQName("main.TablePlan$uniques$01")]
 		require.NotNil(u)
 		cnt := 0
 		for _, f := range u.Fields() {
@@ -114,7 +114,7 @@ func Test_BasicUsage(t *testing.T) {
 	})
 
 	t.Run("second unique, named by user", func(t *testing.T) {
-		u := uniques[appdef.MustParseQName("main.TablePlan$unique$UniqueTable")]
+		u := uniques[appdef.MustParseQName("main.TablePlan$uniques$UniqueTable")]
 		require.NotNil(u)
 		cnt := 0
 		for _, f := range u.Fields() {
@@ -2069,7 +2069,7 @@ func Test_Grants(t *testing.T) {
 		TABLE Tbl INHERITS CDoc();
 		GRANT ALL(FakeCol) ON TABLE Tbl TO role1;
 		GRANT INSERT,UPDATE(FakeCol) ON TABLE Tbl TO role1;
-		GRANT EXECUTE ON ALL COMMANDS WITH TAG x TO role1; 
+		GRANT EXECUTE ON ALL COMMANDS WITH TAG x TO role1;
 		TABLE Nested1 INHERITS CRecord();
 		TABLE Tbl2 INHERITS CDoc(
 			ref1 ref(Tbl),
