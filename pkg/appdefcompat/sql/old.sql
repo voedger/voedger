@@ -31,6 +31,12 @@ WORKSPACE SomeWorkspace(
         Email varchar,
         Password varchar
     );
+    TABLE OneMoreTable INHERITS CDoc(
+        A varchar,
+        B varchar,
+        C int32,
+        UNIQUE (B, A)
+    );
     TABLE SomeTable INHERITS CDoc( -- NodeRemoved: removed in new.sql
         A varchar,
         B varchar
@@ -38,7 +44,8 @@ WORKSPACE SomeWorkspace(
     TABLE AnotherOneTable INHERITS CDoc(
         A varchar,
         B varchar,
-        C varchar
+        C varchar,
+        UNIQUE (A, B)
     );
     TYPE SomeType(
         A varchar,
