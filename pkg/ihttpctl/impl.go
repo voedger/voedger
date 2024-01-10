@@ -19,6 +19,7 @@ type httpProcessorController struct {
 	staticResources    map[string]fs.FS
 	redirections       RedirectRoutes
 	defaultRedirection DefaultRedirectRoute
+	apps               AppRequestHandlers
 }
 
 func (hc *httpProcessorController) Prepare() (err error) {
@@ -38,5 +39,28 @@ func (hc *httpProcessorController) Run(ctx context.Context) {
 		hc.processor.SetReverseProxyRouteDefault(src, dst)
 		logger.Info("default redirection", src, arrow, dst, "added")
 	}
+
+	for _, appRequestHandler := range hc.apps {
+		if err := hc.processor.DeployApp(appRequestHandler.AppQName, appRequestHandler.NumPartitions, appRequestHandler.NumAppWS); err != nil {
+			panic(err)
+		}
+		for partNo, handler := range appRequestHandler.Handlers {
+			if err := hc.processor.DeployAppPartition(appRequestHandler.AppQName, partNo, handler); err != nil {
+				panic(err)
+			}
+		}
+	}
+
 	<-ctx.Done()
+
+	for _, appRequestHandler := range hc.apps {
+		for partNo := range appRequestHandler.Handlers {
+			if err := hc.processor.UndeployAppPartition(appRequestHandler.AppQName, partNo); err != nil {
+				panic(err)
+			}
+		}
+		if err := hc.processor.UndeployApp(appRequestHandler.AppQName); err != nil {
+			panic(err)
+		}
+	}
 }

@@ -33,9 +33,6 @@ var SendRequest func(ctx context.Context,
 var SendRequest2 func(ctx context.Context,
 	request Request, timeout time.Duration) (res Response, sections <-chan ISection, secError *error, err error)
 
-// RequestHandler used by app
-var RequestHandler func(ctx context.Context, sender interface{}, request Request)
-
 // SendResponse used by app
 var SendResponse func(ctx context.Context, sender interface{}, response Response)
 
