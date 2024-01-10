@@ -143,6 +143,7 @@ func Test_AppDef_SetDescriptor(t *testing.T) {
 			ws := app.WorkspaceByDescriptor(desc1Name)
 			require.NotNil(ws)
 			require.Equal(TypeKind_Workspace, ws.Kind())
+			require.Equal(wsName, ws.QName())
 
 			require.Nil(app.WorkspaceByDescriptor(descName))
 		})
