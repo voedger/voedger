@@ -5,12 +5,18 @@
 package apps
 
 import (
+	"context"
 	"fmt"
+
+	"github.com/untillpro/goutils/logger"
 
 	sysmonitor "github.com/voedger/voedger/pkg/apps/sys.monitor"
 	"github.com/voedger/voedger/pkg/ihttpctl"
 	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istorageimpl/istoragecas"
+	"github.com/voedger/voedger/pkg/istructs"
+	coreutils "github.com/voedger/voedger/pkg/utils"
+	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
 )
 
 func NewStaticEmbeddedResources() []ihttpctl.StaticResourcesType {
@@ -48,4 +54,41 @@ func NewAppStorageFactory(params CLIParams) (istorage.IAppStorageFactory, error)
 		return nil, fmt.Errorf("unable to define replication strategy")
 	}
 	return istoragecas.Provide(casParams)
+}
+
+func NewSysRouterRequestHandler(_ context.Context, sender ibus.ISender, request ibus.Request) {
+	switch request.Resource {
+	case "c.EchoCommand":
+		go func() {
+			sender.SendResponse(ibus.Response{
+				ContentType: "text/plain",
+				StatusCode:  200,
+				Data:        []byte(fmt.Sprintf("Hello, %s", string(request.Body))),
+			})
+		}()
+	case "q.EchoQuery":
+		rs := sender.SendParallelResponse()
+		go func() {
+			rs.StartArraySection("", []string{})
+			err := rs.SendElement("Result", []byte(fmt.Sprintf("Hello, %s", string(request.Body))))
+			if err != nil {
+				logger.Error(err)
+			}
+			rs.Close(nil)
+		}()
+	default:
+		coreutils.ReplyBadRequest(sender, fmt.Sprintf("unknown func: %s", request.Resource))
+	}
+}
+
+func NewAppRequestHandlers() ihttpctl.AppRequestHandlers {
+	return ihttpctl.AppRequestHandlers{
+		{
+			AppQName:      istructs.AppQName_sys_router,
+			NumPartitions: 1,
+			Handlers: map[istructs.PartitionID]ibus.RequestHandler{
+				istructs.PartitionID(0): NewSysRouterRequestHandler,
+			},
+		},
+	}
 }
