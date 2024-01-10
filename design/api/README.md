@@ -64,7 +64,22 @@ Should be:
 GET .../TokenToLinkDevice?args=...
 GET .../SalesMetrics?args=...
 ```
+
+### ACL
+EXECUTE -> SELECT for Queries?
+
+Currently:
+```sql
+LIMIT AllQueriesLimit EXECUTE ON ALL QUERIES WITH TAG PosTag WITH RATE AppDefaultRate;
+GRANT EXECUTE ON QUERY Query1 TO LocationUser;
 ```
+
+Should be:
+```sql
+LIMIT AllQueriesLimit SELECT ON ALL QUERIES WITH TAG PosTag WITH RATE AppDefaultRate;
+GRANT SELECT ON QUERY Query1 TO LocationUser;
+```
+
 
 ## Paths Detailed
 
