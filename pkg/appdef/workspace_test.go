@@ -94,6 +94,75 @@ func Test_AppDef_AddWorkspace(t *testing.T) {
 	})
 }
 
+func Test_AppDef_SetDescriptor(t *testing.T) {
+	require := require.New(t)
+
+	t.Run("must be ok to add workspace with descriptor", func(t *testing.T) {
+		wsName, descName := NewQName("test", "ws"), NewQName("test", "desc")
+
+		appDef := New()
+		ws := appDef.AddWorkspace(wsName)
+		require.Equal(NullQName, ws.Descriptor())
+		_ = appDef.AddCDoc(descName)
+		ws.SetDescriptor(descName)
+
+		app, err := appDef.Build()
+		require.NoError(err)
+
+		t.Run("must be ok to find workspace by descriptor", func(t *testing.T) {
+			ws := app.WorkspaceByDescriptor(descName)
+			require.NotNil(ws)
+			require.Equal(TypeKind_Workspace, ws.Kind())
+
+			t.Run("must be nil if can't find workspace by descriptor", func(t *testing.T) {
+				ws := app.WorkspaceByDescriptor(NewQName("test", "unknown"))
+				require.Nil(ws)
+			})
+		})
+	})
+
+	t.Run("must be ok to change ws descriptor", func(t *testing.T) {
+		wsName, descName, desc1Name := NewQName("test", "ws"), NewQName("test", "desc"), NewQName("test", "desc1")
+
+		appDef := New()
+		ws := appDef.AddWorkspace(wsName)
+		_ = appDef.AddCDoc(descName)
+		ws.SetDescriptor(descName)
+
+		t.Run("must be ok to assign descriptor twice", func(t *testing.T) {
+			ws.SetDescriptor(descName)
+		})
+
+		_ = appDef.AddCDoc(desc1Name)
+		ws.SetDescriptor(desc1Name)
+
+		app, err := appDef.Build()
+		require.NoError(err)
+
+		t.Run("must be ok to find workspace by changed descriptor", func(t *testing.T) {
+			ws := app.WorkspaceByDescriptor(desc1Name)
+			require.NotNil(ws)
+			require.Equal(TypeKind_Workspace, ws.Kind())
+
+			require.Nil(app.WorkspaceByDescriptor(descName))
+		})
+
+		t.Run("must be ok to clear descriptor", func(t *testing.T) {
+			ws.SetDescriptor(NullQName)
+
+			app, err = appDef.Build()
+			require.NoError(err)
+
+			require.Nil(app.WorkspaceByDescriptor(descName))
+			require.Nil(app.WorkspaceByDescriptor(desc1Name))
+
+			ws := app.Workspace(wsName)
+			require.NotNil(ws)
+			require.Equal(NullQName, ws.Descriptor())
+		})
+	})
+}
+
 func Test_AppDef_AddWorkspaceAbstract(t *testing.T) {
 	require := require.New(t)
 

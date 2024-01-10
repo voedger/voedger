@@ -59,10 +59,19 @@ func ExampleIWorkspace() {
 		fmt.Println("types count:", cnt)
 	}
 
+	// how to find workspace by descriptor
+	{
+		ws := app.WorkspaceByDescriptor(descName)
+		fmt.Println()
+		fmt.Printf("founded by descriptor %q: %v\n", descName, ws)
+	}
+
 	// Output:
 	// workspace "test.ws": TypeKind_Workspace
 	// workspace "test.ws" descriptor is "test.desc"
 	// - Type: "test.doc", kind: TypeKind_CDoc
 	// - Type: "test.rec", kind: TypeKind_CRecord
 	// types count: 2
+	//
+	// founded by descriptor "test.desc": Workspace «test.ws»
 }
