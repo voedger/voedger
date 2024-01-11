@@ -180,7 +180,7 @@ func TestFewUniquesOneDoc(t *testing.T) {
 			newNum, _ = getUniqueNumber(vit)
 			body = fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.DocConstraintsFewUniques",
 				"Int1":%d,"Str1":"str","Bool1":true}}]}`, newNum)
-			vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect409(fmt.Sprintf(`"%s" unique constraint violation`, appdef.UniqueQName(it.QNameApp1_DocConstraintsFewUniques, "02")))).Println()
+			vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect409(fmt.Sprintf(`"%s" unique constraint violation`, appdef.UniqueQName(it.QNameApp1_DocConstraintsFewUniques, "uniq1")))).Println()
 		})
 	})
 }

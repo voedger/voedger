@@ -418,7 +418,7 @@ ALTERABLE WORKSPACE test_ws (
 		Bool2 bool,
 		Bytes2 bytes,
 		UNIQUE ("Int1", "Str1", "Bool1", "Bytes1"),
-		UNIQUE ("Int2", "Str2", "Bool2", "Bytes2")
+		CONSTRAINT uniq1 UNIQUE ("Int2", "Str2", "Bool2", "Bytes2")
 	);
 
 	TABLE DocConstraintsOldAndNewUniques INHERITS CDoc (

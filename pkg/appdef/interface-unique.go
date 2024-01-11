@@ -6,9 +6,9 @@
 package appdef
 
 // Final structures with uniques are:
-//   - TypeKind_GDoc and TypeKind_GRecord,
-//   - TypeKind_CDoc and TypeKind_CRecord,
-//   - TypeKind_WDoc and TypeKind_WRecord
+// - TypeKind_GDoc and TypeKind_GRecord,
+// - TypeKind_CDoc and TypeKind_CRecord,
+// - TypeKind_WDoc and TypeKind_WRecord
 //
 // Ref. to unique.go for implementation
 type IUniques interface {
