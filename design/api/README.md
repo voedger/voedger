@@ -145,8 +145,8 @@ GRANT SELECT ON QUERY Query1 TO LocationUser;
 - URL:
     - `GET /api/v2/owner/app/wsid/pkg.query`
 - Parameters: 
-    - Query [parameters](../queryprocessor/request.md)
-    - Query function argument
+    - Query [constraints](../queryprocessor/request.md)
+    - Query function argument `&arg=...`
 - Result: one of:
     - `application/json` array of objects, [example](../queryprocessor/request.md)
     - `application/json` an object
@@ -165,8 +165,7 @@ GRANT SELECT ON QUERY Query1 TO LocationUser;
 - URL:
     - `GET /api/v2/owner/app/wsid/pkg.table`
 - Parameters: 
-    - Query [parameters](../queryprocessor/request.md)
-    - Query function argument
+    - Query [constraints](../queryprocessor/request.md)
 - Result:
     - `application/json` array of objects
 - Errors:
@@ -181,9 +180,9 @@ GRANT SELECT ON QUERY Query1 TO LocationUser;
 - URL:
     - `GET /api/v2/owner/app/wsid/pkg.view`
 - Parameters: 
-    - Query [parameters](../queryprocessor/request.md)
-    - Argument:
-        - key values
+    - Query [constraints](../queryprocessor/request.md)
+    - Key values in `&arg=...`:
+        - example `&arg={"yyyymm":202401}`
 - Result:
     - `application/json` array of view records
 - Errors:
@@ -216,12 +215,17 @@ GRANT SELECT ON QUERY Query1 TO LocationUser;
 - redirects to api v1/v2
 - for v2, based on HTTP Method:
     - GET -> QP            
+        - Query Function
+        - System functions for:
+            - Collection of CDocs
+            - View
     - POST, PUT, DELETE -> CP
         - name is CDoc/WDoc/CRecord/WRecord: exec CUD command
         - POST && name_is_command: exec this command
 
 ## Updates to vSQL and appdef
 - Query Result can be either array of objects or an object
+- Query Result can be either JSON or custom mime type
 
 ## Updates to Query Processor
 [GET params](../queryprocessor/request.md) conversion:
