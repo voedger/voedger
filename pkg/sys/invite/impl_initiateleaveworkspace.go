@@ -54,7 +54,7 @@ func execCmdInitiateLeaveWorkspace(timeFunc coreutils.TimeFunc) func(args istruc
 		}
 
 		if !isValidInviteState(svCDocInvite.AsInt32(field_State), qNameCmdInitiateLeaveWorkspace) {
-			return coreutils.NewHTTPError(http.StatusBadRequest, errInviteStateInvalid)
+			return coreutils.NewHTTPError(http.StatusBadRequest, ErrInviteStateInvalid)
 		}
 
 		svbCDocInvite, err := args.Intents.UpdateValue(skbCDocInvite, svCDocInvite)

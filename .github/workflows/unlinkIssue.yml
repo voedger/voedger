@@ -1,0 +1,18 @@
+name: Unlink issue from Milestone
+
+on:
+  issues:
+    types: [reopened]
+
+jobs: 
+  unlink:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Unlink issue from milestone
+      env: 
+        GH_TOKEN: ${{ secrets.PERSONAL_TOKEN }}
+        repo: ${{ GITHUB.REPOSITORY }}
+        issue: ${{ github.event.issue.number }}
+      run: curl -s https://raw.githubusercontent.com/untillpro/ci-action/master/scripts/unlinkmilestone.sh | bash 
+

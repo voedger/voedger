@@ -14,6 +14,7 @@ import (
 	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/itokens"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
+	"github.com/voedger/voedger/pkg/parser"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
@@ -29,5 +30,16 @@ type APIs struct {
 	appparts.IAppPartitions
 }
 
-type AppBuilder func(apis APIs, cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint)
+type AppBuilder func(apis APIs, cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) AppPackages
 type SchemasExportedContent map[string]map[string][]byte // packageName->schemaFilePath->content
+//	type PackageDesc struct {
+//		FQN string
+//		FS  embed.FS
+//	}
+type AppPackages struct {
+	AppQName istructs.AppQName
+	Packages []parser.PackageFS
+}
+type CLIParams struct {
+	Storage string
+}

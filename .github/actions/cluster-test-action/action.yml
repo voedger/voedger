@@ -1,0 +1,161 @@
+# Copyright (c) 2023 Sigma-Soft, Ltd.
+# @author Aleksei Ponomarev
+# @date 2023-12-25
+
+name: 'Test Voedger Cluster Action'
+description: 'Test Voedger Cluster Action'
+
+runs:
+  using: 'composite'
+
+  steps:
+    - name: Smoke test - wait for db cluster building
+      run: |
+        echo "Work with ${{ env.PUBLIC_IP }}"
+        count=0
+        while [ $count -lt 60 ]; do
+           if [ $(ssh ${{ env.SSH_OPTIONS }} ubuntu@${{ env.PUBLIC_IP }} docker exec '$(docker ps -qf name=scylla)' nodetool status | grep -c "^UN\s") -eq 3 ]; then
+           echo "Scylla initialization success"
+             break
+           fi
+           echo "Still wait for scylla initialization.."
+           sleep 5
+           count=$((count+1))
+        done
+        if [ $count -eq 60 ]; then
+           echo "Scylla initialization timed out."
+           exit 1
+        fi
+      shell: bash
+      
+    - name: Check Prometheus and Alertmanager
+      run: |
+        NODES=("10.0.0.11" "10.0.0.12")
+
+        for node in "${NODES[@]}"; do
+          PROMETHEUS_RESPONSE=$(ssh ${{ env.SSH_OPTIONS }} ubuntu@${{ env.PUBLIC_IP }} "curl -sL -w '%{http_code}' -o /dev/null http://${node}:9090/-/healthy")
+          if [[ "${PROMETHEUS_RESPONSE}" == "200" ]]; then
+            echo "Prometheus is up and running on node ${node}."
+          else
+            echo "Failed to reach Prometheus on node ${node}. HTTP response code: ${PROMETHEUS_RESPONSE}"
+            exit 1
+          fi
+
+          ALERTMANAGER_RESPONSE=$(ssh ${{ env.SSH_OPTIONS }} ubuntu@${{ env.PUBLIC_IP }} "curl -sL -w '%{http_code}' -o /dev/null http://${node}:9093/-/healthy")
+          if [[ "${ALERTMANAGER_RESPONSE}" == "200" ]]; then
+            echo "Alertmanager is up and running on node ${node}."
+          else
+            echo "Failed to reach Alertmanager on node ${node}. HTTP response code: ${ALERTMANAGER_RESPONSE}"
+            exit 1
+          fi
+        done
+      shell: bash
+
+    - name: Smoke test - node fail simulation. Drop node.
+      run: terraform -chdir=cmd/ctool/scripts/terraform/ destroy -target=aws_instance.node_02 -auto-approve
+      shell: bash
+
+    - name: Smoke test - replace scylla node to new hardware
+      run: |
+        if ssh ${{ env.SSH_OPTIONS }} ubuntu@${{ env.CTOOL_IP }} "cd /home/ubuntu/voedger/cmd/ctool && ./ctool replace db-node-1 10.0.0.16 -v --ssh-key /tmp/amazonKey.pem; exit \$?"; then
+          echo "Replace node success"
+        else 
+          echo "Failed to replace scylla node in cluster"
+          exit 1
+        fi
+      shell: bash
+
+    - name: Smoke test - wait until db replaced node is up
+      run: |
+        echo "Work with ${{ env.PUBLIC_IP }}"
+        count=0
+        while [ $count -lt 60 ]; do
+           if [ $(ssh ${{ env.SSH_OPTIONS }} ubuntu@${{ env.PUBLIC_IP }} docker exec '$(docker ps -qf name=scylla)' nodetool status | grep -c "^UN\s") -eq 3 ]; then
+           echo "Scylla initialization success"
+             break
+           fi
+           echo "Still wait for scylla initialization.."
+           sleep 5
+           count=$((count+1))
+        done
+        if [ $count -eq 60 ]; then
+           echo "Scylla initialization timed out."
+           exit 1
+        fi
+      shell: bash
+
+    - name: Smoke test - AppNode fail simulation. Drop node.
+      run: terraform -chdir=cmd/ctool/scripts/terraform/ destroy -target=aws_instance.node_01 -auto-approve
+      shell: bash
+
+    - name: Smoke test - replace AppNode to new hardware
+      run: |
+        if ssh ${{ env.SSH_OPTIONS }} ubuntu@${{ env.CTOOL_IP }} "cd /home/ubuntu/voedger/cmd/ctool && ./ctool replace app-node-2 10.0.0.17 -v --trace --ssh-key /tmp/amazonKey.pem; exit \$?"; then
+          echo "Replace AppNode success"
+        else 
+
+            count=0
+            while [ $count -lt 5 ]; do
+               if ssh ${{ env.SSH_OPTIONS }} ubuntu@${{ env.CTOOL_IP }} "cd /home/ubuntu/voedger/cmd/ctool && ./ctool repeat -v --ssh-key /tmp/amazonKey.pem; exit \$?"; then
+               echo "Replace AppNode success"
+                 break
+               fi
+               echo "Still wait for new hardware.."
+               sleep 10
+               count=$((count+1))
+            done
+            if [ $count -eq 5 ]; then
+               echo "Failed to replace AppNode in Voedger cluster"
+               exit 1
+            fi
+
+        fi
+      shell: bash
+
+    - name: Smoke test - check Prometheus and Alertmanager is up after replace node
+      run: |
+        IP_ADDRESS="10.0.0.17"
+        retries=5
+        while [[ $retries -gt 0 ]]; do
+          success=true
+
+
+          PROMETHEUS_RESPONSE=$(ssh ${{ env.SSH_OPTIONS }} ubuntu@${{ env.PUBLIC_IP }} "curl -sL -w '%{http_code}' -o /dev/null http://${IP_ADDRESS}:9090/-/healthy >/dev/null 2>&1; RETVAL=\$?; if [ \$RETVAL -eq 0 ]; then curl -sL -w '%{http_code}' -o /dev/null http://${IP_ADDRESS}:9090/-/healthy; else echo '000'; fi" 2>/dev/null)
+        
+          if [[ "$PROMETHEUS_RESPONSE" == "200" ]]; then
+            echo "Prometheus is up and running on IP address ${IP_ADDRESS}."
+          elif [[ "$PROMETHEUS_RESPONSE" == "000" ]]; then
+             echo "Failed to connect to Prometheus on IP address ${IP_ADDRESS}."
+             success=false
+          else
+             echo "Failed to reach Prometheus on IP address ${IP_ADDRESS}. HTTP response code: $PROMETHEUS_RESPONSE"
+             success=false
+          fi
+        
+          ALERTMANAGER_RESPONSE=$(ssh ${{ env.SSH_OPTIONS }} ubuntu@${{ env.PUBLIC_IP }} "curl -sL -w '%{http_code}' -o /dev/null http://${IP_ADDRESS}:9093/-/healthy >/dev/null 2>&1; RETVAL=\$?; if [ \$RETVAL -eq 0 ]; then curl -sL -w '%{http_code}' -o /dev/null http://${IP_ADDRESS}:9093/-/healthy; else echo '000'; fi" 2>/dev/null)
+        
+          if [[ "$ALERTMANAGER_RESPONSE" == "200" ]]; then
+            echo "Alertmanager is up and running on IP address ${IP_ADDRESS}."
+          elif [[ "$ALERTMANAGER_RESPONSE" == "000" ]]; then
+             echo "Failed to connect to Alertmanager on IP address ${IP_ADDRESS}."
+             success=false
+          else
+             echo "Failed to reach Alertmanager on IP address ${IP_ADDRESS}. HTTP response code: $ALERTMANAGER_RESPONSE"
+             success=false
+          fi
+        
+          if $success; then
+            break
+          fi
+        
+          retries=$((retries - 1))
+          if [[ $retries -eq 0 ]]; then
+            echo "Maximum retries exceeded. Exiting."
+            exit 1
+          fi
+        
+          echo "Retrying in 10 seconds..."
+          sleep 10
+        done
+      shell: bash
+

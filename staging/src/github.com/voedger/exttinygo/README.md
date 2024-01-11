@@ -1,4 +1,4 @@
-# extensions-tinygo
+# exttinygo
 
 ## Usage
 
@@ -6,7 +6,7 @@
 package main
 
 import (
-	ext "github.com/heeus/extensions-tinygo"
+	ext "github.com/heeus/exttinygo"
 )
 
 //export exampleExtension

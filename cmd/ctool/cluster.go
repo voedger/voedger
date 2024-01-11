@@ -20,7 +20,6 @@ import (
 	"testing"
 
 	"github.com/spf13/cobra"
-	"github.com/untillpro/goutils/logger"
 )
 
 var dryRun bool
@@ -39,7 +38,7 @@ func newCluster() *clusterType {
 		ReplacedAddresses:     make([]string, 0),
 	}
 	if err := cluster.setEnv(); err != nil {
-		logger.Error(err.Error())
+		loggerError(err.Error())
 		return nil
 	}
 
@@ -50,11 +49,11 @@ func newCluster() *clusterType {
 	// Preparation of a configuration file for Dry Run mode
 	if cluster.dryRun {
 
-		dryRunDir := filepath.Join(dir, "dry-run")
+		dryRunDir := filepath.Join(dir, dryRunDir)
 		if _, err := os.Stat(dryRunDir); os.IsNotExist(err) {
 			err := os.Mkdir(dryRunDir, rwxrwxrwx)
 			if err != nil {
-				logger.Error(err.Error())
+				loggerError(err.Error())
 				return nil
 			}
 		}
@@ -70,7 +69,7 @@ func newCluster() *clusterType {
 
 		if fileExists(cluster.configFileName) {
 			if err := copyFile(cluster.configFileName, dryRunClusterConfigFileName); err != nil {
-				logger.Error(err.Error())
+				loggerError(err.Error())
 				return nil
 			}
 		}
@@ -81,7 +80,7 @@ func newCluster() *clusterType {
 	if cluster.clusterConfigFileExists() {
 		cluster.exists = true
 		if err := cluster.loadFromJSON(); err != nil {
-			logger.Error(err.Error())
+			loggerError(err.Error())
 			return nil
 		}
 	}
@@ -131,7 +130,7 @@ func (n *nodeType) address() string {
 	}
 
 	err := fmt.Errorf(errEmptyNodeAddress, n.nodeName(), ErrEmptyNodeAddress)
-	logger.Error(err.Error)
+	loggerError(err.Error)
 	panic(err)
 }
 
@@ -235,7 +234,7 @@ func (n *nodeType) label(key string) string {
 	}
 
 	err := fmt.Errorf(errInvalidNodeRole, n.address(), ErrInvalidNodeRole)
-	logger.Error(err.Error)
+	loggerError(err.Error)
 	panic(err)
 }
 
@@ -278,7 +277,7 @@ func (c *cmdType) apply(cluster *clusterType) error {
 	defer cluster.saveToJSON()
 
 	if err = cluster.validate(); err != nil {
-		logger.Error(err.Error)
+		loggerError(err.Error)
 		return err
 	}
 
@@ -291,7 +290,7 @@ func (c *cmdType) apply(cluster *clusterType) error {
 		go func(node *nodeType) {
 			defer wg.Done()
 			if err := node.nodeControllerFunction(); err != nil {
-				logger.Error(err.Error)
+				loggerError(err.Error)
 			}
 		}(&cluster.Nodes[i])
 	}
@@ -327,6 +326,8 @@ func (c *cmdType) validate(cluster *clusterType) error {
 		return validateUpgradeCmd(c, cluster)
 	case ckReplace:
 		return validateReplaceCmd(c, cluster)
+	case ckBackup:
+		return validateBackupCmd(c, cluster)
 	default:
 		return ErrUnknownCommand
 	}
@@ -346,7 +347,7 @@ func validateInitCmd(cmd *cmdType, cluster *clusterType) error {
 	if args[0] != clusterEditionCE && args[0] != clusterEditionSE {
 		return ErrInvalidClusterEdition
 	}
-	logger.Info("count args: ", len(args))
+	loggerInfo("count args: ", len(args))
 	if args[0] == clusterEditionCE && len(args) != 1+initCeArgCount {
 		return ErrInvalidNumberOfArguments
 	}
@@ -387,7 +388,7 @@ func validateReplaceCmd(cmd *cmdType, cluster *clusterType) error {
 	var err error
 
 	if n := cluster.nodeByHost(args[0]); n == nil {
-		err = errors.Join(err, fmt.Errorf(ErrHostNotFoundInCluster.Error(), args[0]))
+		err = errors.Join(err, fmt.Errorf(errHostNotFoundInCluster, args[0], ErrHostNotFoundInCluster))
 	}
 
 	if n := cluster.nodeByHost(args[1]); n != nil {
@@ -395,6 +396,30 @@ func validateReplaceCmd(cmd *cmdType, cluster *clusterType) error {
 	}
 
 	return err
+}
+
+func validateBackupCmd(cmd *cmdType, cluster *clusterType) error {
+	args := cmd.args()
+	if len(args) == 0 {
+		return ErrMissingCommandArguments
+	}
+
+	if cluster.Draft {
+		return ErrClusterConfNotFound
+	}
+
+	if len(args) <= 1 {
+		return ErrMissingCommandArguments
+	}
+
+	switch args[0] {
+	case "node":
+		return validateBackupNodeCmd(cmd, cluster)
+	case "crone":
+		return validateBackupCroneCmd(cmd, cluster)
+	default:
+		return ErrUnknownCommand
+	}
 }
 
 type clusterType struct {
@@ -613,6 +638,7 @@ func (c *clusterType) loadFromJSON() error {
 
 // Installation of the necessary variables of the environment
 func (c *clusterType) setEnv() error {
+	loggerInfo("Set env", "VOEDGER_NODE_SSH_PORT", c.SshPort)
 	return os.Setenv("VOEDGER_NODE_SSH_PORT", c.SshPort)
 }
 
@@ -726,7 +752,7 @@ func (c *clusterType) existsNodeError() bool {
 
 func (c *clusterType) checkVersion() error {
 
-	logger.Info("ctool version: ", version)
+	loggerInfo("ctool version: ", version)
 
 	var clusterVersion string
 
@@ -740,11 +766,11 @@ func (c *clusterType) checkVersion() error {
 
 	// The cluster configuration is still missing
 	if clusterVersion == "" {
-		logger.Info("cluster version is missing")
+		loggerInfo("cluster version is missing")
 		return nil
 	}
 
-	logger.Info("cluster version: ", clusterVersion)
+	loggerInfo("cluster version: ", clusterVersion)
 
 	vr := compareVersions(version, clusterVersion)
 	if vr == 1 {

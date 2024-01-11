@@ -21,6 +21,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/apppartsctl"
+	builtinapps "github.com/voedger/voedger/pkg/cluster/builtin"
 	"github.com/voedger/voedger/pkg/router"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -119,6 +120,7 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 		provideBlobAppStorage,
 		provideBlobberAppStruct,
 		provideVVMApps,
+		provideAppsPackages,
 		provideBlobberClusterAppID,
 		provideServiceChannelFactory,
 		provideBlobStorage,
@@ -162,6 +164,7 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 		provideAppPartsCtlPipelineService,
 		apppartsctl.New,
 		appparts.New,
+		builtinapps.Apps,
 		// wire.Value(vvmConfig.NumCommandProcessors) -> (wire bug?) value github.com/untillpro/airs-bp3/vvm.CommandProcessorsCount can't be used: vvmConfig is not declared in package scope
 		wire.FieldsOf(&vvmConfig,
 			"NumCommandProcessors",
@@ -178,7 +181,6 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 			"MetricsServicePort",
 			"ActualizerStateOpts",
 			"SecretsReader",
-			"BuiltInApps",
 		),
 	))
 }
@@ -319,7 +321,14 @@ func provideAppsExtensionPoints(vvmConfig *VVMConfig) map[istructs.AppQName]exte
 	return vvmConfig.VVMAppsBuilder.PrepareAppsExtensionPoints()
 }
 
-func provideVVMApps(vvmConfig *VVMConfig, cfgs istructsmem.AppConfigsType, apis apps.APIs, appsEPs map[istructs.AppQName]extensionpoints.IExtensionPoint) (VVMApps, error) {
+func provideVVMApps(appsPackages []apps.AppPackages) (vvmApps VVMApps) {
+	for _, appPackage := range appsPackages {
+		vvmApps = append(vvmApps, appPackage.AppQName)
+	}
+	return vvmApps
+}
+
+func provideAppsPackages(vvmConfig *VVMConfig, cfgs istructsmem.AppConfigsType, apis apps.APIs, appsEPs map[istructs.AppQName]extensionpoints.IExtensionPoint) ([]apps.AppPackages, error) {
 	return vvmConfig.VVMAppsBuilder.Build(cfgs, apis, appsEPs)
 }
 

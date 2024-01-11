@@ -13,6 +13,7 @@ import (
 	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/apppartsctl"
 	"github.com/voedger/voedger/pkg/apps"
+	"github.com/voedger/voedger/pkg/cluster/builtin"
 	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/iauthnzimpl"
@@ -38,7 +39,7 @@ import (
 	"github.com/voedger/voedger/pkg/projectors"
 	"github.com/voedger/voedger/pkg/router"
 	"github.com/voedger/voedger/pkg/state"
-	"github.com/voedger/voedger/pkg/sys/builtin"
+	builtin2 "github.com/voedger/voedger/pkg/sys/builtin"
 	"github.com/voedger/voedger/pkg/sys/invite"
 	"github.com/voedger/voedger/pkg/utils"
 	"github.com/voedger/voedger/pkg/vvm/db_cert_cache"
@@ -102,19 +103,20 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 		IAppPartitions:       iAppPartitions,
 	}
 	v2 := provideAppsExtensionPoints(vvmConfig)
-	vvmApps, err := provideVVMApps(vvmConfig, appConfigsType, apIs, v2)
+	v3, err := provideAppsPackages(vvmConfig, appConfigsType, apIs, v2)
 	if err != nil {
 		cleanup()
 		return nil, nil, err
 	}
+	vvmApps := provideVVMApps(v3)
 	iBus := provideIBus(iAppStructsProvider, iProcBus, commandProcessorsChannelGroupIdxType, queryProcessorsChannelGroupIdxType, commandProcessorsCount, vvmApps)
 	quotas := vvmConfig.Quotas
 	in10nBroker, cleanup2 := in10nmem.ProvideEx2(quotas, timeFunc)
 	maxPrepareQueriesType := vvmConfig.MaxPrepareQueries
 	syncActualizerFactory := projectors.ProvideSyncActualizerFactory()
 	commandprocessorSyncActualizerFactory := provideSyncActualizerFactory(vvmApps, iAppStructsProvider, in10nBroker, maxPrepareQueriesType, syncActualizerFactory, iSecretReader)
-	v3 := provideSubjectGetterFunc()
-	iAuthenticator := iauthnzimpl.NewDefaultAuthenticator(v3)
+	v4 := provideSubjectGetterFunc()
+	iAuthenticator := iauthnzimpl.NewDefaultAuthenticator(v4)
 	iAuthorizer := iauthnzimpl.NewDefaultAuthorizer()
 	serviceFactory := commandprocessor.ProvideServiceFactory(iBus, iAppPartitions, timeFunc, commandprocessorSyncActualizerFactory, in10nBroker, iMetrics, vvmName, iAuthenticator, iAuthorizer, iSecretReader, appConfigsType)
 	operatorCommandProcessors := provideCommandProcessors(commandProcessorsCount, commandChannelFactory, serviceFactory)
@@ -124,8 +126,8 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 	operatorQueryProcessors := provideQueryProcessors(queryProcessorsCount, queryChannel, iBus, iAppStructsProvider, queryprocessorServiceFactory, iMetrics, vvmName, maxPrepareQueriesType, iAuthenticator, iAuthorizer, appConfigsType)
 	asyncActualizerFactory := projectors.ProvideAsyncActualizerFactory()
 	asyncActualizersFactory := provideAsyncActualizersFactory(iAppStructsProvider, in10nBroker, asyncActualizerFactory, iSecretReader, iMetrics)
-	v4 := vvmConfig.ActualizerStateOpts
-	appPartitionFactory := provideAppPartitionFactory(asyncActualizersFactory, v4)
+	v5 := vvmConfig.ActualizerStateOpts
+	appPartitionFactory := provideAppPartitionFactory(asyncActualizersFactory, v5)
 	appServiceFactory := provideAppServiceFactory(appPartitionFactory, commandProcessorsCount)
 	operatorAppServicesFactory := provideOperatorAppServices(appServiceFactory, vvmApps, iAppStructsProvider)
 	vvmPortType := vvmConfig.VVMPort
@@ -154,15 +156,15 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 		return nil, nil, err
 	}
 	cache := dbcertcache.ProvideDbCache(routerAppStorage)
-	v5 := provideAppsWSAmounts(vvmApps, iAppStructsProvider)
-	routerServices := provideRouterServices(vvmCtx, routerParams, busTimeout, in10nBroker, quotas, timeFunc, blobberServiceChannels, blobMaxSizeType, blobberAppClusterID, blobStorage, routerAppStorage, cache, iBus, vvmPortSource, v5)
+	v6 := provideAppsWSAmounts(vvmApps, iAppStructsProvider)
+	routerServices := provideRouterServices(vvmCtx, routerParams, busTimeout, in10nBroker, quotas, timeFunc, blobberServiceChannels, blobMaxSizeType, blobberAppClusterID, blobStorage, routerAppStorage, cache, iBus, vvmPortSource, v6)
 	routerServiceOperator := provideRouterServiceFactory(routerServices)
 	metricsServicePortInitial := vvmConfig.MetricsServicePort
 	metricsServicePort := provideMetricsServicePort(metricsServicePortInitial, vvmIdx)
 	metricsService := metrics.ProvideMetricsService(vvmCtx, metricsServicePort, iMetrics)
 	metricsServiceOperator := provideMetricsServiceOperator(metricsService)
-	v6 := vvmConfig.BuiltInApps
-	iAppPartitionsController, cleanup3, err := apppartsctl.New(iAppPartitions, v6)
+	v7 := builtin.Apps()
+	iAppPartitionsController, cleanup3, err := apppartsctl.New(iAppPartitions, v7)
 	if err != nil {
 		cleanup2()
 		cleanup()
@@ -170,12 +172,13 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 	}
 	iAppPartsCtlPipelineService := provideAppPartsCtlPipelineService(iAppPartitionsController)
 	servicePipeline := provideServicePipeline(vvmCtx, operatorCommandProcessors, operatorQueryProcessors, operatorAppServicesFactory, routerServiceOperator, metricsServiceOperator, iAppPartsCtlPipelineService)
-	v7 := provideMetricsServicePortGetter(metricsService)
+	v8 := provideMetricsServicePortGetter(metricsService)
 	vvm := &VVM{
 		ServicePipeline:     servicePipeline,
 		APIs:                apIs,
 		AppsExtensionPoints: v2,
-		MetricsServicePort:  v7,
+		MetricsServicePort:  v8,
+		AppsPackages:        v3,
 	}
 	return vvm, func() {
 		cleanup3()
@@ -359,7 +362,14 @@ func provideAppsExtensionPoints(vvmConfig *VVMConfig) map[istructs.AppQName]exte
 	return vvmConfig.VVMAppsBuilder.PrepareAppsExtensionPoints()
 }
 
-func provideVVMApps(vvmConfig *VVMConfig, cfgs istructsmem.AppConfigsType, apis apps.APIs, appsEPs map[istructs.AppQName]extensionpoints.IExtensionPoint) (VVMApps, error) {
+func provideVVMApps(appsPackages []apps.AppPackages) (vvmApps VVMApps) {
+	for _, appPackage := range appsPackages {
+		vvmApps = append(vvmApps, appPackage.AppQName)
+	}
+	return vvmApps
+}
+
+func provideAppsPackages(vvmConfig *VVMConfig, cfgs istructsmem.AppConfigsType, apis apps.APIs, appsEPs map[istructs.AppQName]extensionpoints.IExtensionPoint) ([]apps.AppPackages, error) {
 	return vvmConfig.VVMAppsBuilder.Build(cfgs, apis, appsEPs)
 }
 
@@ -435,7 +445,7 @@ func provideSyncActualizerFactory(vvmApps VVMApps, structsProvider istructs.IApp
 						WS:         wsid,
 					}, offset)
 				},
-				IntentsLimit: builtin.MaxCUDs,
+				IntentsLimit: builtin2.MaxCUDs,
 			}
 			actualizer := actualizerFactory(conf, appStructs.SyncProjectors()[0], appStructs.SyncProjectors()[1:]...)
 			actualizers = append(actualizers, pipeline.SwitchBranch(appQName.String(), actualizer))
@@ -546,7 +556,7 @@ func provideAsyncActualizersFactory(appStructsProvider istructs.IAppStructsProvi
 			Partition:     partitionID,
 			Broker:        n10nBroker,
 			Opts:          opts,
-			IntentsLimit:  builtin.MaxCUDs,
+			IntentsLimit:  builtin2.MaxCUDs,
 			FlushInterval: actualizerFlushInterval,
 			Metrics:       metrics2,
 		}

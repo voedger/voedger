@@ -9,13 +9,13 @@ import (
 	"runtime/debug"
 
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/apps"
 	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/itokens"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
+	"github.com/voedger/voedger/pkg/parser"
 	"github.com/voedger/voedger/pkg/projectors"
 	"github.com/voedger/voedger/pkg/sys/authnz"
 	"github.com/voedger/voedger/pkg/sys/blobber"
@@ -38,7 +38,7 @@ var SysFS embed.FS
 func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, smtpCfg smtp.Cfg,
 	ep extensionpoints.IExtensionPoint, wsPostInitFunc workspace.WSPostInitFunc, timeFunc coreutils.TimeFunc, itokens itokens.ITokens, federation coreutils.IFederation,
 	asp istructs.IAppStructsProvider, atf payloads.IAppTokensFactory, numCommandProcessors coreutils.CommandProcessorsCount, buildInfo *debug.BuildInfo,
-	storageProvider istorage.IAppStorageProvider) {
+	storageProvider istorage.IAppStorageProvider) parser.PackageFS {
 	blobber.ProvideBlobberCmds(cfg)
 	collection.Provide(cfg, appDefBuilder)
 	journal.Provide(cfg, appDefBuilder, ep)
@@ -51,7 +51,12 @@ func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder
 	invite.Provide(cfg, appDefBuilder, timeFunc, federation, itokens, smtpCfg)
 	uniques.Provide(cfg, appDefBuilder)
 	describe.Provide(cfg, asp, appDefBuilder)
+	return ProvidePackageFS()
+}
 
-	// add sys sql schema
-	apps.RegisterSchemaFS(SysFS, appdef.SysPackage, ep)
+func ProvidePackageFS() parser.PackageFS {
+	return parser.PackageFS{
+		QualifiedPackageName: appdef.SysPackage,
+		FS:                   SysFS,
+	}
 }

@@ -37,7 +37,7 @@ func execCmdCancelSentInvite(timeFunc coreutils.TimeFunc) func(args istructs.Exe
 		}
 
 		if !isValidInviteState(svCDocInvite.AsInt32(field_State), qNameCmdCancelSentInvite) {
-			return coreutils.NewHTTPError(http.StatusBadRequest, errInviteStateInvalid)
+			return coreutils.NewHTTPError(http.StatusBadRequest, ErrInviteStateInvalid)
 		}
 
 		svbCDocInvite, err := args.Intents.UpdateValue(skbCDocInvite, svCDocInvite)

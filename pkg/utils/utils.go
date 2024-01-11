@@ -54,8 +54,11 @@ func PartitionID(wsid istructs.WSID, numCommandProcessors CommandProcessorsCount
 }
 
 func SplitErrors(joinedError error) (errs []error) {
-	if e, ok := joinedError.(interface{ Unwrap() []error }); ok {
-		return e.Unwrap()
+	if joinedError != nil {
+		if e, ok := joinedError.(interface{ Unwrap() []error }); ok {
+			return e.Unwrap()
+		}
+		return []error{joinedError}
 	}
 	return
 }

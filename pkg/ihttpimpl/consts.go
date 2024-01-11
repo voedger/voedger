@@ -8,8 +8,11 @@ package ihttpimpl
 import "time"
 
 const (
-	defaultReadHeaderTimeout = time.Second
-	staticPath               = "/static/"
+	defaultACMEServerReadTimeout  = 5 * time.Second
+	defaultACMEServerWriteTimeout = 5 * time.Second
+	defaultHTTPPort               = 80
+	defaultReadHeaderTimeout      = time.Second
+	staticPath                    = "/static/"
 )
 
 type contextKey int

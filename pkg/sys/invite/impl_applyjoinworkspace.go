@@ -40,20 +40,20 @@ func applyJoinWorkspace(timeFunc coreutils.TimeFunc, federation coreutils.IFeder
 		}
 
 		login := svCDocInvite.AsString(Field_Login)
-		subjectExists, err := SubjectExistByLogin(login, s) // for backward compatibility
+		subjectExists, err := SubjectExistsByLogin(login, s) // for backward compatibility
 		if err == nil && !subjectExists {
-
 			actualLogin := svCDocInvite.AsString(field_ActualLogin)
-			subjectExists, err = SubjectExistByLogin(actualLogin, s)
+			subjectExists, err = SubjectExistsByLogin(actualLogin, s)
 		}
 		if err != nil {
 			// notest
 			return err
 		}
-		if subjectExists && svCDocInvite.AsInt32(field_State) == State_Joined {
-			// cdoc.sys.Subject eists by login and invite state is any of [State_ToBeInvited, State_Invited, State_ToBeJoined, State_Joined, State_ToUpdateRoles] -> do nothing
-			// otherwise - consider the workspace is joining again
+
+		if subjectExists {
+			// cdoc.sys.Subject exists by login -> skip
 			// see https://github.com/voedger/voedger/issues/1107
+			// && svCDocInvite.AsInt32(field_State) == State_Joined -> insert cdoc.sys.Subject with an existing login -> unique violation -> the projector stuck
 			return nil
 		}
 
@@ -140,7 +140,8 @@ func applyJoinWorkspace(timeFunc coreutils.TimeFunc, federation coreutils.IFeder
 			federation.URL(),
 			fmt.Sprintf("api/%s/%d/c.sys.CUD", appQName, event.Workspace()),
 			body,
-			coreutils.WithAuthorizeBy(token))
+			coreutils.WithAuthorizeBy(token),
+			coreutils.WithDiscardResponse())
 
 		return err
 	}
