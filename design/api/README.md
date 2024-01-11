@@ -11,23 +11,24 @@ API URL must support versioning ([example IBM MQ](https://www.ibm.com/docs/en/ib
 - new API is available at `/api/v2/...`
     - "v1" is not allowed as an owner name, at least until API "v1" is ready
 
+TODO: add endpoint for the list of supported versions
+
 ## REST API Paths
 
 | Action                               | REST API Path                                  |
 |--------------------------------------|------------------------------------------------|
 | Create CDoc/WDoc/CRecord/WRecord     | `POST /api/v2/owner/app/wsid/pkg.table`        |
-| Read CDoc/WDoc/CRecord/WRecord       | `GET /api/v2/owner/app/wsid/pkg.table/id`      |
-| Update CDoc/WDoc/CRecord/WRecord     | `PATCH /api/v2/owner/app/wsid/pkg.table/id`      |
+| Update CDoc/WDoc/CRecord/WRecord     | `PATCH /api/v2/owner/app/wsid/pkg.table/id`    |
 | Deactivate CDoc/WDoc/CRecord/WRecord | `DELETE /api/v2/owner/app/wsid/pkg.table/id`   |
 | Execute Command                      | `POST /api/v2/owner/app/wsid/pkg.command`      |
-| Execute Query (old way*)             | `POST /api/v2/owner/app/wsid/pkg.name`         |
-| --> Read Collection                  |  --> `POST /api/v2/owner/app/wsid/pkg.table`    |
-| --> Execute Query Function           |  --> `POST /api/v2/owner/app/wsid/pkg.query`    |
-| Execute Query (new way*)             | `GET /api/v2/owner/app/wsid/pkg.name`          |
-| --> Read Query Function              |  --> `GET /api/v2/owner/app/wsid/pkg.query`     |
-| --> Read Collection                  |  --> `GET /api/v2/owner/app/wsid/pkg.table`     |
+| Read CDoc/WDoc/CRecord/WRecord       | `GET /api/v2/owner/app/wsid/pkg.table/id`      |
+| Read from Query Function             | `GET /api/v2/owner/app/wsid/pkg.query`         |
+| Read from CDoc Collection            | `GET /api/v2/owner/app/wsid/pkg.table`         |
+| Read from View                       | `GET /api/v2/owner/app/wsid/pkg.view`          |
 
-\* Current design of the QueryProcessor based on POST queries. 
+
+## Query Processor based on GET
+Current design of the QueryProcessor based on POST queries. 
 However, according to many resources, using POST for queries in RESTful API is not a good practice:
 - [Swagger.io: best practices in API design](https://swagger.io/resources/articles/best-practices-in-api-design/)
 - [MS Azure Architectural Center: Define API operations in terms of HTTP methods](https://learn.microsoft.com/en-us/azure/architecture/best-practices/api-design#define-api-operations-in-terms-of-http-methods)
@@ -140,25 +141,12 @@ GRANT SELECT ON QUERY Query1 TO LocationUser;
     - 404: Table Not Found
     - 405: Method Not Allowed, table is an ODoc/ORecord
 
-### Execute Query (old way)
+### Read from Query
 - URL:
-    - `POST /api/v2/owner/app/wsid/pkg.name`:
-        - `POST /api/v2/owner/app/wsid/pkg.query` - Query Function
-        - `POST /api/v2/owner/app/wsid/pkg.table` - Collection
-- Parameters: according to [current QP syntax](https://dev.heeus.io/launchpad/#!18998)
-- Result:
-    - multi-dimentional array
-- Errors:
-    - 401: Unauthorized
-    - 403: Forbidden
-    - 404: Query Function or Table Not Found
-
-### Execute Query (new way)
-- URL:
-    - `GET /api/v2/owner/app/wsid/pkg.name`
-        - `GET /api/v2/owner/app/wsid/pkg.query`
-        - `GET /api/v2/owner/app/wsid/pkg.table`
-- Parameters: [example](../queryprocessor/request.md), request syntax taken from [Parse API](https://docs.parseplatform.org/rest/guide/#queries), 
+    - `GET /api/v2/owner/app/wsid/pkg.query`
+- Parameters: 
+    - Query [parameters](../queryprocessor/request.md)
+    - Query function argument
 - Result: one of:
     - `application/json` array of objects, [example](../queryprocessor/request.md)
     - `application/json` an object
@@ -166,16 +154,45 @@ GRANT SELECT ON QUERY Query1 TO LocationUser;
 - Errors:
     - 401: Unauthorized
     - 403: Forbidden
-    - 404: Query Function or Table Not Found
+    - 404: Query Function Not Found
+- Examples:
+    - Read from WLog
+        - `GET /api/v2/owner/app/wsid/sys.wlog?limit=100&skip=13994`
+    - Read OpenAPI app schema
+        - `GET /api/v2/owner/app/wsid/sys.OpenApi`
 
-Examples:
-- Read from WLog
-    - `GET /api/v2/owner/app/wsid/sys.wlog?limit=100&skip=13994`
-- Read articles
-    - `GET /api/v2/untill/airs-bp3/12313123123/untill.articles?limit=20&skip=20`
-- Read OpenAPI app schema
-    - `GET /api/v2/owner/app/wsid/sys.OpenApi`
+### Read from CDoc collection
+- URL:
+    - `GET /api/v2/owner/app/wsid/pkg.table`
+- Parameters: 
+    - Query [parameters](../queryprocessor/request.md)
+    - Query function argument
+- Result:
+    - `application/json` array of objects
+- Errors:
+    - 401: Unauthorized
+    - 403: Forbidden
+    - 404: Table Not Found
+- Examples:
+    - Read articles
+        - `GET /api/v2/untill/airs-bp3/12313123123/untill.articles?limit=20&skip=20`
 
+### Read from View
+- URL:
+    - `GET /api/v2/owner/app/wsid/pkg.view`
+- Parameters: 
+    - Query [parameters](../queryprocessor/request.md)
+    - Argument:
+        - key values
+- Result:
+    - `application/json` array of view records
+- Errors:
+    - 401: Unauthorized
+    - 403: Forbidden
+    - 404: View Not Found
+- Examples:
+    - Read articles
+        - `GET /api/v2/untill/airs-bp3/12313123123/untill.articles?limit=20&skip=20`
 
 ### Execute Command
 - URL
@@ -226,3 +243,4 @@ Some existing components must be updated:
 - Air Payouts we use Query Functions for webhooks. In this case, they should be changed to commands + projectors.
 
 ## `sys.OpenApi` query function
+

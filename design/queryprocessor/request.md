@@ -1,3 +1,6 @@
+# Motivation
+[Parse API](https://docs.parseplatform.org/rest/guide/#queries) request syntax
+
 # Request example
 Wit references, embedded collection
 ```bash
