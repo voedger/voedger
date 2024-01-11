@@ -45,8 +45,8 @@ func ValidIdent(ident string) (bool, error) {
 	buck := func(r rune) bool { return r == char_Buck }
 
 	for p, c := range ident {
-		if !letter(c) && !underScore(c) {
-			if (p == 0) || (!digit(c) && !buck(c)) {
+		if !letter(c) && !underScore(c) && !buck(c) {
+			if (p == 0) || !digit(c) {
 				return false, fmt.Errorf("name char «%c» at pos %d is not valid: %w", c, p, ErrInvalidName)
 			}
 		}

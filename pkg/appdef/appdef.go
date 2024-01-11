@@ -18,11 +18,13 @@ type appDef struct {
 	comment
 	types        map[QName]interface{}
 	typesOrdered []interface{}
+	wsDesc       map[QName]IWorkspace
 }
 
 func newAppDef() *appDef {
 	app := appDef{
-		types: make(map[QName]interface{}),
+		types:  make(map[QName]interface{}),
+		wsDesc: make(map[QName]IWorkspace),
 	}
 	app.makeSysPackage()
 	return &app
@@ -305,6 +307,10 @@ func (app *appDef) Workspace(name QName) IWorkspace {
 		return t.(IWorkspace)
 	}
 	return nil
+}
+
+func (app *appDef) WorkspaceByDescriptor(name QName) IWorkspace {
+	return app.wsDesc[name]
 }
 
 func (app *appDef) appendType(t interface{}) {
