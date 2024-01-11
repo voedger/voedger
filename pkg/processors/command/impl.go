@@ -14,10 +14,11 @@ import (
 	"strconv"
 	"time"
 
-	ibus "github.com/untillpro/airs-ibus"
 	"github.com/untillpro/goutils/iterate"
 	"github.com/untillpro/goutils/logger"
 	"golang.org/x/exp/maps"
+
+	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/iauthnz"

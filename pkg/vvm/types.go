@@ -9,7 +9,7 @@ import (
 	"net/url"
 	"time"
 
-	ibus "github.com/untillpro/airs-ibus"
+	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/apppartsctl"
