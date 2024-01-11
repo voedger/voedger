@@ -260,7 +260,7 @@ func checkWSActive(_ context.Context, work interface{}) (err error) {
 	return processors.ErrWSInactive
 }
 
-func getAppStructs(_ context.Context, work interface{}) (err error) {
+func borrowAppPart(_ context.Context, work interface{}) (err error) {
 	cmd := work.(*cmdWorkpiece)
 
 	cmd.appPart, err = cmd.appParts.Borrow(cmd.cmdMes.AppQName(), cmd.cmdMes.PartitionID(), cluster.ProcessorKind_Command)
@@ -269,6 +269,17 @@ func getAppStructs(_ context.Context, work interface{}) (err error) {
 	}
 	// cmd.appPart.Release() will be called from opSendResponse.DoSync
 	cmd.appStructs = cmd.appPart.AppStructs()
+
+	return nil
+}
+
+func releaseAppPart(_ context.Context, work interface{}) error {
+	cmd := work.(*cmdWorkpiece)
+
+	if ap := cmd.appPart; ap != nil {
+		cmd.appPart = nil
+		ap.Release()
+	}
 
 	return nil
 }
@@ -670,14 +681,6 @@ type opSendResponse struct {
 
 func (sr *opSendResponse) DoSync(_ context.Context, work interface{}) (err error) {
 	cmd := work.(*cmdWorkpiece)
-
-	defer func() {
-		// release application partition after sending response
-		if ap := cmd.appPart; ap != nil {
-			cmd.appPart = nil
-			ap.Release()
-		}
-	}()
 
 	if cmd.err != nil {
 		cmd.metrics.increase(ErrorsTotal, 1.0)

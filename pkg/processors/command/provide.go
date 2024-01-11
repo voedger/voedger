@@ -61,7 +61,7 @@ func ProvideServiceFactory(bus ibus.IBus, appParts appparts.IAppPartitions, now 
 		return pipeline.NewService(func(vvmCtx context.Context) {
 			hsp := newHostStateProvider(vvmCtx, partitionID, secretReader)
 			cmdPipeline := pipeline.NewSyncPipeline(vvmCtx, "Command Processor",
-				pipeline.WireFunc("getAppStructs", getAppStructs),
+				pipeline.WireFunc("borrowAppPart", borrowAppPart),
 				pipeline.WireFunc("limitCallRate", limitCallRate),
 				pipeline.WireFunc("getWSDesc", getWSDesc),
 				pipeline.WireFunc("authenticate", cmdProc.authenticate),
@@ -97,6 +97,7 @@ func ProvideServiceFactory(bus ibus.IBus, appParts appparts.IAppPartitions, now 
 				pipeline.WireFunc("n10n", cmdProc.n10n),
 				pipeline.WireFunc("putWLog", putWLog),
 				pipeline.WireSyncOperator("sendResponse", &opSendResponse{bus: bus}), // ICatch
+				pipeline.WireFunc("releaseAppPart", releaseAppPart),
 			)
 			// TODO: сделать потом plogOffset свой по каждому разделу, wlogoffset - свой для каждого wsid
 			defer cmdPipeline.Close()
