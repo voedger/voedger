@@ -29,6 +29,7 @@ import (
 	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/state/smtptest"
 	"github.com/voedger/voedger/pkg/sys/authnz"
+	"github.com/voedger/voedger/pkg/sys/verifier"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 	"github.com/voedger/voedger/pkg/vvm"
 )
@@ -119,6 +120,20 @@ func newVit(t *testing.T, vitCfg *VITConfig, useCas bool) *VIT {
 	require.NoError(t, vit.Launch())
 
 	for _, app := range vitPreConfig.vitApps {
+		// generate verified value tokens if queried
+		for desiredValue, vvi := range app.verifiedValuesIntents {
+			appTokens := vvm.IAppTokensFactory.New(app.name)
+			verifiedValuePayload := payloads.VerifiedValuePayload{
+				VerificationKind: appdef.VerificationKind_EMail,
+				Entity:           vvi.docQName,
+				Field:            vvi.fieldName,
+				Value:            vvi.desiredValue,
+			}
+			verifiedValueToken, err := appTokens.IssueToken(verifier.VerifiedValueTokenDuration, &verifiedValuePayload)
+			require.NoError(vit.T, err)
+			
+
+		}
 		// создадим логины и рабочие области
 		for _, login := range app.logins {
 			vit.SignUp(login.Name, login.Pwd, login.AppQName)
