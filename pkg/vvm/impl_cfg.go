@@ -7,8 +7,9 @@ package vvm
 import (
 	"os"
 
-	ibus "github.com/untillpro/airs-ibus"
 	"github.com/untillpro/goutils/logger"
+
+	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
 
 	"github.com/voedger/voedger/pkg/iprocbus"
 	"github.com/voedger/voedger/pkg/iprocbusmem"

@@ -18,8 +18,10 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
-	ibus "github.com/untillpro/airs-ibus"
-	"github.com/untillpro/ibusmem"
+
+	"github.com/voedger/voedger/staging/src/github.com/untillpro/ibusmem"
+
+	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
 
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/istructs"
