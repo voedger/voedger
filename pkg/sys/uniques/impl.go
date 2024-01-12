@@ -148,10 +148,16 @@ func getUniqueKeyValues(rec istructs.IRowReader, uniqueFields []appdef.IField, u
 		val := coreutils.ReadByKind(uniqueField.Name(), uniqueField.DataKind(), rec)
 		switch uniqueField.DataKind() {
 		case appdef.DataKind_string:
-			buf.WriteByte(zeroByte)
+			if len(uniqueFields) > 1 {
+				// backward compatibility
+				buf.WriteByte(zeroByte)
+			}
 			buf.WriteString(val.(string))
 		case appdef.DataKind_bytes:
-			buf.WriteByte(zeroByte)
+			if len(uniqueFields) > 1 {
+				// backward compatibility
+				buf.WriteByte(zeroByte)
+			}
 			buf.Write(val.([]byte))
 		default:
 			binary.Write(buf, binary.BigEndian, val) // nolint
