@@ -80,7 +80,7 @@ func WithChildWorkspace(wsKind appdef.QName, name, templateName string, template
 			ownerLoginName: ownerLoginName,
 			InitDataJSON:   string(initData),
 			ClusterID:      istructs.MainClusterID,
-			singletons:     map[appdef.QName]map[string]interface{}{},
+			singletons:     map[appdef.QName]func(verifiedValues map[string]string) map[string]interface{}{},
 		}
 		for _, opt := range opts {
 			opt(&wsParams)
@@ -89,17 +89,23 @@ func WithChildWorkspace(wsKind appdef.QName, name, templateName string, template
 	}
 }
 
-func WithSingleton(name appdef.QName, data map[string]interface{}) PostConstructFunc {
+func WithSingletonWithVerifiedFields(name appdef.QName, dataFactory func(verifiedValues map[string]string) map[string]interface{}) PostConstructFunc {
 	return func(intf interface{}) {
 		switch t := intf.(type) {
 		case *Login:
-			t.singletons[name] = data
+			t.singletons[name] = dataFactory
 		case *WSParams:
-			t.singletons[name] = data
+			t.singletons[name] = dataFactory
 		default:
-			panic(fmt.Sprintln(t, name, data))
+			panic(fmt.Sprintln(t, name))
 		}
 	}
+}
+
+func WithSingleton(name appdef.QName, data map[string]interface{}) PostConstructFunc {
+	return WithSingletonWithVerifiedFields(name, func(verifiedValues map[string]string) map[string]interface{} {
+		return data
+	})
 }
 
 func WithVVMConfig(configurer func(cfg *vvm.VVMConfig)) vitConfigOptFunc {
@@ -121,8 +127,9 @@ func WithApp(appQName istructs.AppQName, updater apps.AppBuilder, appOpts ...App
 			panic("app already added")
 		}
 		app := &app{
-			name: appQName,
-			ws:   map[string]WSParams{},
+			name:                  appQName,
+			ws:                    map[string]WSParams{},
+			verifiedValuesIntents: map[string]verifiedValueIntent{},
 		}
 		vpc.vitApps[appQName] = app
 		vpc.vvmCfg.VVMAppsBuilder.Add(appQName, updater)
@@ -135,6 +142,16 @@ func WithApp(appQName istructs.AppQName, updater apps.AppBuilder, appOpts ...App
 				wsTempalateFunc(ep)
 				return
 			})
+		}
+	}
+}
+
+func WithVerifiedValue(docQName appdef.QName, fieldName string, desiredValue string) AppOptFunc {
+	return func(app *app, cfg *vvm.VVMConfig) {
+		app.verifiedValuesIntents[desiredValue] = verifiedValueIntent{
+			docQName:     docQName,
+			fieldName:    fieldName,
+			desiredValue: desiredValue,
 		}
 	}
 }
