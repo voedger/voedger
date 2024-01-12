@@ -16,8 +16,8 @@ func Test_def_AddUnique(t *testing.T) {
 	require := require.New(t)
 
 	qName := NewQName("test", "user")
-	un1 := NewQName("test", "user$uniqueEMail")
-	un2 := NewQName("test", "user$uniqueFullName")
+	un1 := UniqueQName(qName, "EMail")
+	un2 := UniqueQName(qName, "Full")
 
 	appDef := New()
 
@@ -130,10 +130,10 @@ func Test_def_AddUnique(t *testing.T) {
 			for i := 0; i < MaxTypeUniqueCount; i++ {
 				n := fmt.Sprintf("f_%#x", i)
 				rec.AddField(n, DataKind_int32, false)
-				rec.AddUnique(NewQName("test", fmt.Sprintf("rec$unique$%s", n)), []string{n})
+				rec.AddUnique(NewQName("test", fmt.Sprintf("rec$uniques$%s", n)), []string{n})
 			}
 			rec.AddField("lastStraw", DataKind_int32, false)
-			require.Panics(func() { rec.AddUnique(NewQName("test", "rec$unique$lastStraw"), []string{"lastStraw"}) })
+			require.Panics(func() { rec.AddUnique(NewQName("test", "rec$uniques$lastStraw"), []string{"lastStraw"}) })
 		})
 	})
 }

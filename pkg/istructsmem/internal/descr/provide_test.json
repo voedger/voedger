@@ -77,7 +77,8 @@
             }
           ],
           "Uniques": {
-            "test.doc$unique1": {
+            "test.doc$uniques$unique1": {
+              "Name": "test.doc$uniques$unique1",
               "Fields": [
                 "f1",
                 "f2"
@@ -154,7 +155,15 @@
               "Verifiable": true
             }
           ],
-          "UniqueField": "phone"
+          "UniqueField": "phone",
+          "Uniques": {
+            "test.rec$uniques$uniq1": {
+              "Name": "test.rec$uniques$uniq1",
+              "Fields": [
+                "f1"
+              ]
+            }
+          }
         }
       },
       "Views": {

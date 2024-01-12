@@ -170,8 +170,8 @@ func WithMethod(m string) ReqOptFunc {
 	}
 }
 
-func Expect409() ReqOptFunc {
-	return WithExpectedCode(http.StatusConflict)
+func Expect409(expected ...string) ReqOptFunc {
+	return WithExpectedCode(http.StatusConflict, expected...)
 }
 
 func Expect404() ReqOptFunc {
@@ -182,8 +182,8 @@ func Expect401() ReqOptFunc {
 	return WithExpectedCode(http.StatusUnauthorized)
 }
 
-func Expect403() ReqOptFunc {
-	return WithExpectedCode(http.StatusForbidden)
+func Expect403(expectedMessages ...string) ReqOptFunc {
+	return WithExpectedCode(http.StatusForbidden, expectedMessages...)
 }
 
 func Expect400(expectErrorContains ...string) ReqOptFunc {
