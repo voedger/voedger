@@ -121,6 +121,8 @@ func newVit(t *testing.T, vitCfg *VITConfig, useCas bool) *VIT {
 
 	for _, app := range vitPreConfig.vitApps {
 		// generate verified value tokens if queried
+		//                desiredValue token
+		verifiedValues := map[string]string{}
 		for desiredValue, vvi := range app.verifiedValuesIntents {
 			appTokens := vvm.IAppTokensFactory.New(app.name)
 			verifiedValuePayload := payloads.VerifiedValuePayload{
@@ -131,9 +133,9 @@ func newVit(t *testing.T, vitCfg *VITConfig, useCas bool) *VIT {
 			}
 			verifiedValueToken, err := appTokens.IssueToken(verifier.VerifiedValueTokenDuration, &verifiedValuePayload)
 			require.NoError(vit.T, err)
-			
-
+			verifiedValues[desiredValue] = verifiedValueToken
 		}
+
 		// создадим логины и рабочие области
 		for _, login := range app.logins {
 			vit.SignUp(login.Name, login.Pwd, login.AppQName)
@@ -145,10 +147,11 @@ func newVit(t *testing.T, vitCfg *VITConfig, useCas bool) *VIT {
 			}
 			appPrincipals[login.Name] = prn
 
-			for singleton, data := range login.singletons {
+			for singleton, dataFactory := range login.singletons {
 				if !vit.PostProfile(prn, "q.sys.Collection", fmt.Sprintf(`{"args":{"Schema":"%s"}}`, singleton)).IsEmpty() {
 					continue
 				}
+				data := dataFactory(verifiedValues)
 				data[appdef.SystemField_ID] = 1
 				data[appdef.SystemField_QName] = singleton.String()
 
@@ -167,10 +170,11 @@ func newVit(t *testing.T, vitCfg *VITConfig, useCas bool) *VIT {
 			}
 			appWorkspaces[wsd.Name] = vit.CreateWorkspace(wsd, owner)
 
-			for singleton, data := range wsd.singletons {
+			for singleton, dataFactory := range wsd.singletons {
 				if !vit.PostWS(appWorkspaces[wsd.Name], "q.sys.Collection", fmt.Sprintf(`{"args":{"Schema":"%s"}}`, singleton)).IsEmpty() {
 					continue
 				}
+				data := dataFactory(verifiedValues)
 				data[appdef.SystemField_ID] = 1
 				data[appdef.SystemField_QName] = singleton.String()
 

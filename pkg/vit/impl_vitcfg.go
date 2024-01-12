@@ -127,8 +127,9 @@ func WithApp(appQName istructs.AppQName, updater apps.AppBuilder, appOpts ...App
 			panic("app already added")
 		}
 		app := &app{
-			name: appQName,
-			ws:   map[string]WSParams{},
+			name:                  appQName,
+			ws:                    map[string]WSParams{},
+			verifiedValuesIntents: map[string]verifiedValueIntent{},
 		}
 		vpc.vitApps[appQName] = app
 		vpc.vvmCfg.VVMAppsBuilder.Add(appQName, updater)
