@@ -16,8 +16,9 @@ import (
 	"time"
 
 	"github.com/google/wire"
-	ibus "github.com/untillpro/airs-ibus"
 	"golang.org/x/crypto/acme/autocert"
+
+	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
 
 	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/apppartsctl"

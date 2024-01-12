@@ -23,8 +23,9 @@ import (
 	"github.com/voedger/voedger/pkg/pipeline"
 	"github.com/voedger/voedger/pkg/projectors"
 
-	ibus "github.com/untillpro/airs-ibus"
-	"github.com/untillpro/ibusmem"
+	"github.com/voedger/voedger/staging/src/github.com/untillpro/ibusmem"
+
+	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
 
 	"github.com/voedger/voedger/pkg/iauthnzimpl"
 	"github.com/voedger/voedger/pkg/iratesce"

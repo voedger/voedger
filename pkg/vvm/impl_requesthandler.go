@@ -12,15 +12,17 @@ import (
 	"net/http"
 	"strings"
 
-	ibus "github.com/untillpro/airs-ibus"
 	"github.com/untillpro/goutils/logger"
-	"github.com/untillpro/ibusmem"
+
+	"github.com/voedger/voedger/staging/src/github.com/untillpro/ibusmem"
+
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/iprocbus"
 	"github.com/voedger/voedger/pkg/istructs"
 	commandprocessor "github.com/voedger/voedger/pkg/processors/command"
 	queryprocessor "github.com/voedger/voedger/pkg/processors/query"
 	coreutils "github.com/voedger/voedger/pkg/utils"
+	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
 )
 
 func provideIBus(asp istructs.IAppStructsProvider, procbus iprocbus.IProcBus,
