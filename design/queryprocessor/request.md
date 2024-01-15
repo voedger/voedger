@@ -10,7 +10,7 @@ curl -X GET \
 --data-urlencode 'limit=10'
 --data-urlencode 'skip=30'
 --data-urlencode 'include=article_prices.article_price_exceptions'  #include article_prices and article_price_exceptions
---data-urlencode 'select=name,article_prices.price,article_prices.article_price_exceptions.name'
+--data-urlencode 'keys=name,article_prices.price,article_prices.article_price_exceptions.name'
 --data-urlencode 'where={"id_department":123456,"number":{"$gte": 100, "$lte": 200}}'
 
   https://air.untill.com/api/rest/untill/airs-bp/140737488486431/untill.articles

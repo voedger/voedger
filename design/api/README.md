@@ -229,8 +229,8 @@ GRANT SELECT ON QUERY Query1 TO LocationUser;
 
 ## Updates to Query Processor
 [GET params](../queryprocessor/request.md) conversion:
-- `order`, `limit`, `skip`, `include`, `refs`, `where` -> `sys.QueryParams`
-- `arg` -> `sys.QueryArgs`
+- Query constraints (`order`, `limit`, `skip`, `include`, `keys` -> `sys.QueryParams`
+- Query `arg` -> `sys.QueryArgs`
 
 Example:
 ```bash
