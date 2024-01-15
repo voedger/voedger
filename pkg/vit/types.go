@@ -69,14 +69,16 @@ type Login struct {
 }
 
 type WSParams struct {
-	Name           string
-	TemplateName   string
-	TemplateParams string
-	Kind           appdef.QName
-	InitDataJSON   string
-	ownerLoginName string
-	ClusterID      istructs.ClusterID
-	singletons     map[appdef.QName]func(verifiedValues map[string]string) map[string]interface{}
+	Name            string
+	TemplateName    string
+	TemplateParams  string
+	Kind            appdef.QName
+	InitDataJSON    string
+	ownerLoginName  string
+	ClusterID       istructs.ClusterID
+	singletons      map[appdef.QName]func(verifiedValues map[string]string) map[string]interface{}
+	joinToWorkspace string
+	joinToWSRoles   []appdef.QName
 }
 
 type WorkspaceDescriptor struct {

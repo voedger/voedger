@@ -30,6 +30,16 @@ var (
 	inviteEmailSubject = "you are invited"
 )
 
+func TestWithJoin(t *testing.T) {
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
+
+	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws2")
+
+	body := `{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.options"}}]}`
+	vit.PostWS(ws, "c.sys.CUD", body)
+}
+
 // impossible to use the test workspace again with the same login due of invite error `subject already exists`
 func TestInvite_BasicUsage(t *testing.T) {
 	require := require.New(t)

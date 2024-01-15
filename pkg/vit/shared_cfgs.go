@@ -55,6 +55,9 @@ var (
 			WithUserLogin(TestEmail, "1"),
 			WithUserLogin(TestEmail2, "1"),
 			WithChildWorkspace(QNameApp1_TestWSKind, "test_ws", "test_template", "", "login", map[string]interface{}{"IntFld": 42}),
+			WithChildWorkspace(QNameApp1_TestWSKind, "test_ws2", "test_template", "", TestEmail, map[string]interface{}{"IntFld": 42}),
+			// WithChildWorkspace(QNameApp1_TestWSKind, "test_ws2", "test_template", "", "login", map[string]interface{}{"IntFld": 42},
+			// 	WithJoinToWorkspace("test_ws", appdef.NewQName(appdef.SysPackage, "WorkspaceAdmin"))),
 		),
 		WithApp(istructs.AppQName_test1_app2, ProvideApp2, WithUserLogin("login", "1")),
 		WithVVMConfig(func(cfg *vvm.VVMConfig) {

@@ -184,6 +184,25 @@ func newVit(t *testing.T, vitCfg *VITConfig, useCas bool) *VIT {
 				vit.PostWS(appWorkspaces[wsd.Name], "c.sys.CUD", fmt.Sprintf(`{"cuds":[{"fields":%s}]}`, bb), coreutils.WithAuthorizeBy(vit.GetSystemPrincipal(app.name).Token))
 			}
 		}
+
+		// join workspaces if any
+		for _, wsd := range app.ws {
+			if len(wsd.joinToWorkspace) == 0 {
+				continue
+			}
+			joinToWS := vit.appWorkspaces[app.name][wsd.joinToWorkspace]
+			roles := ""
+			for i, roleQName := range wsd.joinToWSRoles {
+				if i > 0 {
+					roles += ","
+				}
+				roles += roleQName.String()
+			}
+
+			body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"sys.Subject","Login":"%s","Roles":"%s","SubjectKind":%d,"ProfileWSID":%d}}]}`,
+				wsd.ownerLoginName, roles, istructs.SubjectKind_User, vit.principals[app.name][wsd.ownerLoginName].ProfileWSID)
+			vit.PostWS(joinToWS, "c.sys.CUD", body)
+		}
 	}
 	return vit
 }

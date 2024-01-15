@@ -66,6 +66,18 @@ func WithWorkspaceTemplate(wsKind appdef.QName, templateName string, templateFS 
 	}
 }
 
+// joining will be done via creating cdoc.sys.Subject in the toWorkspaceName workspace from the name of owner of the workspace we're calling WithJoinToWorkspace() for.
+func WithJoinToWorkspace(toWorkspaceName string, roles ...appdef.QName) PostConstructFunc {
+	return func(intf interface{}) {
+		wsParams, ok := intf.(*WSParams)
+		if !ok {
+			panic("WithJoinedWorkspace could be used only within WithChildWorkspace()")
+		}
+		wsParams.joinToWorkspace = toWorkspaceName
+		wsParams.joinToWSRoles = roles
+	}
+}
+
 func WithChildWorkspace(wsKind appdef.QName, name, templateName string, templateParams string, ownerLoginName string, wsInitData map[string]interface{}, opts ...PostConstructFunc) AppOptFunc {
 	return func(app *app, cfg *vvm.VVMConfig) {
 		initData, err := json.Marshal(&wsInitData)
