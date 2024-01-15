@@ -31,7 +31,7 @@ const (
 var (
 	QNameCDoc_WorkspaceKind_UserProfile   = appdef.NewQName(appdef.SysPackage, "UserProfile")
 	QNameCDoc_WorkspaceKind_DeviceProfile = appdef.NewQName(appdef.SysPackage, "DeviceProfile")
-	QNameCDoc_WorkspaceKind_AppWorkspace  = appdef.NewQName(appdef.SysPackage, "AppWorkspace")
+	// QNameCDoc_WorkspaceKind_AppWorkspace  = appdef.NewQName(appdef.SysPackage, "AppWorkspace") // import cycle: registry: workspace.InvokeInitChildWorkspace() but workspace uses registry.AppWorkspace
 	QNameCDocChildWorkspace               = appdef.NewQName(appdef.SysPackage, "ChildWorkspace")
 	QNameCommandInitChildWorkspace        = appdef.NewQName(appdef.SysPackage, "InitChildWorkspace")
 

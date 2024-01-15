@@ -2,6 +2,9 @@
 -- @author Denis Gribanov
 
 WORKSPACE AppWorkspaceWS (
+
+	DESCRIPTOR AppWorkspace ();
+
 	TABLE Login INHERITS CDoc (
 		ProfileCluster int32 NOT NULL,
 		PwdHash bytes NOT NULL,

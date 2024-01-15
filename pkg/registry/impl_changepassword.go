@@ -10,7 +10,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
-	"github.com/voedger/voedger/pkg/sys/authnz"
+	// "github.com/voedger/voedger/pkg/sys/authnz"
 )
 
 func provideChangePassword(cfgRegistry *istructsmem.AppConfigType) {
@@ -28,8 +28,8 @@ func provideChangePassword(cfgRegistry *istructsmem.AppConfigType) {
 // sys/registry/pseudoWSID
 // null auth
 func cmdChangePasswordExec(args istructs.ExecCommandArgs) (err error) {
-	appName := args.ArgumentObject.AsString(authnz.Field_AppName)
-	login := args.ArgumentObject.AsString(authnz.Field_Login)
+	appName := args.ArgumentObject.AsString(field_AppName)
+	login := args.ArgumentObject.AsString(field_Login)
 	oldPwd := args.ArgumentUnloggedObject.AsString(field_OldPassword)
 	newPwd := args.ArgumentUnloggedObject.AsString(field_NewPassword)
 

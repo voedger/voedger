@@ -15,21 +15,23 @@ import (
 )
 
 const (
-	RegistryPackage          = "registry"
-	RegistryPackageFQN       = "github.com/voedger/voedger/pkg/" + RegistryPackage
-	field_AppWSID            = "AppWSID"
-	field_AppIDLoginHash     = "AppIDLoginHash"
-	field_CDocLoginID        = "CDocLoginID"
-	field_PwdHash            = "PwdHash"
-	field_Passwrd            = "Password"
-	field_NewPassword        = "NewPassword"
-	field_OldPassword        = "OldPassword"
-	field_Email              = "Email"
-	field_Language           = "Language"
-	field_VerificationToken  = "VerificationToken"
-	field_VerificationCode   = "VerificationCode"
-	field_ProfileWSID        = "ProfileWSID"
-	field_NewPwd             = "NewPwd"
+	RegistryPackage         = "registry"
+	RegistryPackageFQN      = "github.com/voedger/voedger/pkg/" + RegistryPackage
+	field_AppWSID           = "AppWSID"
+	field_AppIDLoginHash    = "AppIDLoginHash"
+	field_CDocLoginID       = "CDocLoginID"
+	field_PwdHash           = "PwdHash"
+	field_Passwrd           = "Password"
+	field_NewPassword       = "NewPassword"
+	field_OldPassword       = "OldPassword"
+	field_Email             = "Email"
+	field_Language          = "Language"
+	field_VerificationToken = "VerificationToken"
+	field_VerificationCode  = "VerificationCode"
+	field_ProfileWSID       = "ProfileWSID"
+	field_NewPwd            = "NewPwd"
+	field_AppName           = "AppName"
+	field_Login             = "Login"
 )
 
 var (
@@ -46,6 +48,7 @@ var (
 	qNameProjectorInvokeCreateWorkspaceID_registry    = appdef.NewQName(RegistryPackage, "InvokeCreateWorkspaceID_registry")
 	errPasswordIsIncorrect                            = coreutils.NewHTTPErrorf(http.StatusUnauthorized, "password is incorrect")
 	errLoginOrPasswordIsIncorrect                     = coreutils.NewHTTPErrorf(http.StatusUnauthorized, "login or password is incorrect")
+	QNameCDoc_WorkspaceKind_AppWorkspace              = appdef.NewQName(RegistryPackage, "AppWorkspace")
 
 	//go:embed appws.sql
 	schemasFS embed.FS

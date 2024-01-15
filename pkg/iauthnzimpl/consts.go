@@ -11,7 +11,7 @@ import (
 var (
 	qNameViewDeviceProfileWSIDIdx                   = appdef.NewQName(airPackage, "DeviceProfileWSIDIdx")
 	qNameCDocWorkspaceKindRestaurant                = appdef.NewQName(airPackage, "Restaurant")
-	qNameCDocWorkspaceKindAppWorkspace              = appdef.NewQName(appdef.SysPackage, "AppWorkspace")
+	qNameCDocWorkspaceKindAppWorkspace              = appdef.NewQName(registryPackage, "AppWorkspace")
 	qNameCDocSubscriptionProfile                    = appdef.NewQName(airPackage, "SubscriptionProfile")
 	qNameCDocUnTillOrders                           = appdef.NewQName(untillPackage, "orders")
 	qNameCDocUnTillPBill                            = appdef.NewQName(untillPackage, "pbill")
@@ -106,7 +106,7 @@ const (
 	untillPackage               = "untill"
 	untillChargebeeAgentLogin   = "untillchargebeeagent"
 
-	// registryPackage -> import cycle: collection->iauthnzimpl->registry->workspace->collection
+	// avoiding import cycle: collection->iauthnzimpl->registry->workspace->collection
 	registryPackage = "registry"
 )
 
