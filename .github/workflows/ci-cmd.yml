@@ -29,8 +29,20 @@ jobs:
       reporeading_token: ${{ secrets.REPOREADING_TOKEN }}
       codecov_token: ${{ secrets.CODECOV_TOKEN }}
       personal_token: ${{ secrets.PERSONAL_TOKEN }}
-  call-workflow-ci-cmd-voedger:
+  call-workflow-ci-cmd-vpm:
     needs: call-workflow-ci-cmd-edger
+    uses: untillpro/ci-action/.github/workflows/ci_reuse_go.yml@master
+    with: 
+      test_folder: 'cmd/vpm/'
+      ignore_copyright: 'pkg/apps/sys.monitor/site.main'
+      ignore_bp3: 'true'
+      short_test: 'true'
+    secrets:
+      reporeading_token: ${{ secrets.REPOREADING_TOKEN }}
+      codecov_token: ${{ secrets.CODECOV_TOKEN }}
+      personal_token: ${{ secrets.PERSONAL_TOKEN }}
+  call-workflow-ci-cmd-voedger:
+    needs: call-workflow-ci-cmd-vpm
     uses: untillpro/ci-action/.github/workflows/ci_reuse_go.yml@master
     with: 
       test_folder: 'cmd/voedger/'

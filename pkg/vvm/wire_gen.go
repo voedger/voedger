@@ -8,7 +8,11 @@ package vvm
 
 import (
 	"context"
-	"github.com/untillpro/airs-ibus"
+	"net/url"
+	"strconv"
+	"strings"
+	"time"
+
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/apppartsctl"
@@ -44,11 +48,8 @@ import (
 	"github.com/voedger/voedger/pkg/utils"
 	"github.com/voedger/voedger/pkg/vvm/db_cert_cache"
 	"github.com/voedger/voedger/pkg/vvm/metrics"
+	"github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
 	"golang.org/x/crypto/acme/autocert"
-	"net/url"
-	"strconv"
-	"strings"
-	"time"
 )
 
 // Injectors from provide.go:
@@ -617,7 +618,6 @@ func provideOperatorAppServices(apf AppServiceFactory, vvmApps VVMApps, asp istr
 
 func provideServicePipeline(vvmCtx context.Context, opCommandProcessors OperatorCommandProcessors, opQueryProcessors OperatorQueryProcessors, opAppServices OperatorAppServicesFactory,
 	routerServiceOp RouterServiceOperator, metricsServiceOp MetricsServiceOperator, appPartsCtl IAppPartsCtlPipelineService) ServicePipeline {
-	return pipeline.NewSyncPipeline(vvmCtx, "ServicePipeline", pipeline.WireSyncOperator("service fork operator", pipeline.ForkOperator(pipeline.ForkSame, pipeline.ForkBranch(pipeline.ForkOperator(pipeline.ForkSame, pipeline.ForkBranch(opQueryProcessors), pipeline.ForkBranch(opCommandProcessors), pipeline.ForkBranch(opAppServices(vvmCtx)), pipeline.ForkBranch(pipeline.ServiceOperator(appPartsCtl)))), pipeline.ForkBranch(routerServiceOp), pipeline.ForkBranch(metricsServiceOp),
-	)),
+	return pipeline.NewSyncPipeline(vvmCtx, "ServicePipeline", pipeline.WireSyncOperator("service fork operator", pipeline.ForkOperator(pipeline.ForkSame, pipeline.ForkBranch(pipeline.ForkOperator(pipeline.ForkSame, pipeline.ForkBranch(opQueryProcessors), pipeline.ForkBranch(opCommandProcessors), pipeline.ForkBranch(opAppServices(vvmCtx)), pipeline.ForkBranch(pipeline.ServiceOperator(appPartsCtl)))), pipeline.ForkBranch(routerServiceOp), pipeline.ForkBranch(metricsServiceOp))),
 	)
 }

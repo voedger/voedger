@@ -147,9 +147,6 @@ func TestSqlQuery_plog(t *testing.T) {
 	t.Run("Should read one event by Offset", func(t *testing.T) {
 		require := require.New(t)
 		body := fmt.Sprintf(`{"args":{"Query":"select * from sys.plog where Offset > %d"},"elements":[{"fields":["Result"]}]}`, lastPLogOffset-1)
-		if lastPLogOffset-1 <= 0 {
-			fmt.Println("!!!!!!!!!!!!!!!!!!!!!!!!!")
-		}
 		resp := vit.PostWS(ws, "q.sys.SqlQuery", body)
 
 		m := map[string]interface{}{}

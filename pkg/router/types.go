@@ -13,8 +13,9 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
-	ibus "github.com/untillpro/airs-ibus"
 	"golang.org/x/crypto/acme/autocert"
+
+	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
 
 	"github.com/voedger/voedger/pkg/iblobstorage"
 	"github.com/voedger/voedger/pkg/in10n"

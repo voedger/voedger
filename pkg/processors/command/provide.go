@@ -8,8 +8,9 @@ import (
 	"context"
 	"time"
 
-	ibus "github.com/untillpro/airs-ibus"
 	"github.com/untillpro/goutils/logger"
+
+	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
 
 	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/in10n"
@@ -95,7 +96,7 @@ func ProvideServiceFactory(bus ibus.IBus, asp istructs.IAppStructsProvider, now 
 				pipeline.WireFunc("syncProjectorsEnd", syncProjectorsEnd),
 				pipeline.WireFunc("n10n", cmdProc.n10n),
 				pipeline.WireFunc("putWLog", putWLog),
-				pipeline.WireSyncOperator("sendResponse", &opSendResponse{bus: bus}), // ICatch
+				pipeline.WireSyncOperator("sendResponse", &opSendResponse{bus: bus, cmdProc: cmdProc}), // ICatch
 			)
 			// TODO: сделать потом plogOffset свой по каждому разделу, wlogoffset - свой для каждого wsid
 			defer cmdPipeline.Close()

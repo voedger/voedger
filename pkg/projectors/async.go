@@ -124,6 +124,10 @@ func (a *asyncActualizer) init(ctx context.Context) (err error) {
 		nonBuffered:           nonBuffered,
 	}
 
+	if p.metrics != nil {
+		p.projInErrAddr = p.metrics.AppMetricAddr(ProjectorsInError, a.conf.VvmName, a.conf.AppQName)
+	}
+
 	err = a.readOffset(p.projector.Name)
 	if err != nil {
 		a.conf.LogError(a.name, err)
@@ -250,6 +254,7 @@ type asyncProjector struct {
 	pLogOffset            istructs.Offset
 	aametrics             AsyncActualizerMetrics
 	metrics               imetrics.IMetrics
+	projInErrAddr         *imetrics.MetricValue
 	flushPositionInterval time.Duration
 	acceptedSinceSave     bool
 	lastSave              time.Time
@@ -338,11 +343,11 @@ func (p *asyncProjector) flush() (err error) {
 		p.aametrics.Set(aaStoredOffset, p.partition, p.projector.Name, float64(p.pLogOffset))
 	}
 	err = p.state.FlushBundles()
-	if err == nil {
+	if err == nil && p.projInErrAddr != nil {
 		if atomic.CompareAndSwapInt32(p.projErrState, 1, 0) {
-			if p.metrics != nil {
-				p.metrics.IncreaseApp(ProjectorsInError, p.vvmName, p.appQName, -1)
-			}
+			p.projInErrAddr.Increase(-1)
+		} else { // state not changed
+			p.projInErrAddr.Increase(0)
 		}
 	}
 	return err

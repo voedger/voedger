@@ -123,6 +123,11 @@ type IAppDef interface {
 	//
 	// Returns nil if not found.
 	Workspace(QName) IWorkspace
+
+	// Returns workspace by descriptor.
+	//
+	// Returns nil if not found.
+	WorkspaceByDescriptor(QName) IWorkspace
 }
 
 type IAppDefBuilder interface {

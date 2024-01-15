@@ -78,6 +78,12 @@ func (names *QNames) collectAll(appDef appdef.IAppDef, r istructs.IResources) (e
 			func(t appdef.IType) {
 				err = errors.Join(err,
 					names.collect(t.QName()))
+				if uu, ok := t.(appdef.IUniques); ok {
+					for _, u := range uu.Uniques() {
+						err = errors.Join(err,
+							names.collect(u.Name()))
+					}
+				}
 			})
 	}
 

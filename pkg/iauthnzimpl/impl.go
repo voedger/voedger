@@ -61,11 +61,11 @@ func (i *implIAuthenticator) Authenticate(requestContext context.Context, as ist
 
 	profileWSID := principalPayload.ProfileWSID // for user and device subject kinds
 	pkt := iauthnz.PrincipalKind_NULL
-	name := ""
+	loginName := ""
 	switch principalPayload.SubjectKind {
 	case istructs.SubjectKind_User:
 		pkt = iauthnz.PrincipalKind_User
-		name = principalPayload.Login
+		loginName = principalPayload.Login
 	case istructs.SubjectKind_Device:
 		pkt = iauthnz.PrincipalKind_Device
 	default:
@@ -89,7 +89,7 @@ func (i *implIAuthenticator) Authenticate(requestContext context.Context, as ist
 	prn := iauthnz.Principal{
 		Kind: pkt,
 		WSID: profileWSID,
-		Name: name,
+		Name: loginName,
 	}
 	if !slices.Contains(principals, prn) {
 		principals = append(principals, prn)

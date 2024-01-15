@@ -7,6 +7,7 @@ package appdef
 
 import (
 	"errors"
+	"strings"
 	"testing"
 )
 
@@ -76,14 +77,8 @@ func Test_ValidIdent(t *testing.T) {
 			wantErr: ErrInvalidName,
 		},
 		{
-			name: "error if too long",
-			args: args{ident: func() string {
-				worm := "_"
-				for i := 0; i < MaxIdentLen; i++ {
-					worm += "_"
-				}
-				return worm
-			}()},
+			name:    "error if too long",
+			args:    args{ident: strings.Repeat("_", MaxIdentLen) + `_`},
 			wantOk:  false,
 			wantErr: ErrInvalidName,
 		},
@@ -104,6 +99,16 @@ func Test_ValidIdent(t *testing.T) {
 			wantOk: true,
 		},
 		{
+			name:   "buck at any pos must pass",
+			args:   args{ident: "test$test"},
+			wantOk: true,
+		},
+		{
+			name:   "buck at first pos must pass",
+			args:   args{ident: "$test"},
+			wantOk: true,
+		},
+		{
 			name:   "basic camel notation must pass",
 			args:   args{ident: "thisIsIdent1"},
 			wantOk: true,
@@ -115,7 +120,7 @@ func Test_ValidIdent(t *testing.T) {
 		},
 		{
 			name:   "mixed notation must pass",
-			args:   args{ident: "useMix_4_fun"},
+			args:   args{ident: "useMix_4_fun$sense"},
 			wantOk: true,
 		},
 	}

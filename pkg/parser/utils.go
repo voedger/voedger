@@ -61,7 +61,7 @@ func iterate(c IStatementCollection, callback func(stmt interface{})) {
 }
 
 func resolveInCtx[stmtType *TableStmt | *TypeStmt | *FunctionStmt | *CommandStmt | *ProjectorStmt |
-	*RateStmt | *TagStmt | *WorkspaceStmt | *StorageStmt | *ViewStmt | *LimitStmt | *QueryStmt](fn DefQName, ictx *iterateCtx, cb func(f stmtType, schema *PackageSchemaAST) error) error {
+	*RateStmt | *TagStmt | *WorkspaceStmt | *StorageStmt | *ViewStmt | *LimitStmt | *QueryStmt | *RoleStmt](fn DefQName, ictx *iterateCtx, cb func(f stmtType, schema *PackageSchemaAST) error) error {
 	var err error
 	var item stmtType
 	var p *PackageSchemaAST
@@ -69,8 +69,29 @@ func resolveInCtx[stmtType *TableStmt | *TypeStmt | *FunctionStmt | *CommandStmt
 	if err != nil {
 		return err
 	}
+
 	if item == nil {
-		return ErrUndefined(fn.String())
+		var value interface{} = item
+		switch value.(type) {
+		case *TableStmt:
+			return ErrUndefinedTable(fn)
+		case *CommandStmt:
+			return ErrUndefinedCommand(fn)
+		case *QueryStmt:
+			return ErrUndefinedQuery(fn)
+		case *TagStmt:
+			return ErrUndefinedTag(fn)
+		case *RoleStmt:
+			return ErrUndefinedRole(fn)
+		case *TypeStmt:
+			return ErrUndefinedType(fn)
+		case *WorkspaceStmt:
+			return ErrUndefinedWorkspace(fn)
+		case *RateStmt:
+			return ErrUndefinedRate(fn)
+		default:
+			return ErrUndefined(fn.String())
+		}
 	}
 	return cb(item, p)
 }
@@ -91,7 +112,7 @@ func lookupInSysPackage[stmtType *WorkspaceStmt](ctx *basicContext, fn DefQName)
 }
 
 func lookupInCtx[stmtType *TableStmt | *TypeStmt | *FunctionStmt | *CommandStmt | *RateStmt | *TagStmt | *ProjectorStmt |
-	*WorkspaceStmt | *ViewStmt | *StorageStmt | *LimitStmt | *QueryStmt](fn DefQName, ictx *iterateCtx) (stmtType, *PackageSchemaAST, error) {
+	*WorkspaceStmt | *ViewStmt | *StorageStmt | *LimitStmt | *QueryStmt | *RoleStmt](fn DefQName, ictx *iterateCtx) (stmtType, *PackageSchemaAST, error) {
 	schema, err := getTargetSchema(fn, ictx)
 	if err != nil {
 		return nil, nil, err
@@ -318,9 +339,9 @@ func buildQname(ctx *iterateCtx, pkg Ident, name Ident) appdef.QName {
 	return appdef.NewQName(string(pkg), string(name))
 }
 
-func contains(s []Ident, e Ident) bool {
+func contains(s []Identifier, e Ident) bool {
 	for _, a := range s {
-		if a == e {
+		if a.Value == e {
 			return true
 		}
 	}
