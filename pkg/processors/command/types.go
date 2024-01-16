@@ -55,32 +55,31 @@ func (m *commandProcessorMetrics) increase(metricName string, valueDelta float64
 }
 
 type cmdWorkpiece struct {
-	asp                          istructs.IAppStructsProvider
-	appStructs                   istructs.IAppStructs
-	requestData                  coreutils.MapObject
-	cmdMes                       ICommandMessage
-	argsObject                   istructs.IObject
-	unloggedArgsObject           istructs.IObject
-	reb                          istructs.IRawEventBuilder
-	rawEvent                     istructs.IRawEvent
-	pLogEvent                    istructs.IPLogEvent
-	err                          error
-	workspace                    *workspace
-	idGenerator                  *implIDGenerator
-	eca                          istructs.ExecCommandArgs
-	metrics                      commandProcessorMetrics
-	syncProjectorsStart          time.Time
-	principals                   []iauthnz.Principal
-	principalPayload             payloads.PrincipalPayload
-	parsedCUDs                   []parsedCUD
-	wsDesc                       istructs.IRecord
-	hostStateProvider            *hostStateProvider
-	wsInitialized                bool
-	cmdResultBuilder             istructs.IObjectBuilder
-	cmdResult                    istructs.IObject
-	resources                    istructs.IResources
-	cmdFunc                      istructs.ICommandFunction
-	appPartitionRestartScheduled bool
+	asp                 istructs.IAppStructsProvider
+	appStructs          istructs.IAppStructs
+	requestData         coreutils.MapObject
+	cmdMes              ICommandMessage
+	argsObject          istructs.IObject
+	unloggedArgsObject  istructs.IObject
+	reb                 istructs.IRawEventBuilder
+	rawEvent            istructs.IRawEvent
+	pLogEvent           istructs.IPLogEvent
+	err                 error
+	workspace           *workspace
+	idGenerator         *implIDGenerator
+	eca                 istructs.ExecCommandArgs
+	metrics             commandProcessorMetrics
+	syncProjectorsStart time.Time
+	principals          []iauthnz.Principal
+	principalPayload    payloads.PrincipalPayload
+	parsedCUDs          []parsedCUD
+	wsDesc              istructs.IRecord
+	hostStateProvider   *hostStateProvider
+	wsInitialized       bool
+	cmdResultBuilder    istructs.IObjectBuilder
+	cmdResult           istructs.IObject
+	resources           istructs.IResources
+	cmdFunc         istructs.ICommandFunction
 }
 
 type implIDGenerator struct {

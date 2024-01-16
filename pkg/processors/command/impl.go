@@ -112,10 +112,10 @@ func (cmdProc *cmdProc) getAppPartition(ctx context.Context, work interface{}) (
 
 func (cmdProc *cmdProc) getCmdResultBuilder(_ context.Context, work interface{}) (err error) {
 	cmd := work.(*cmdWorkpiece)
-	cmdResultType := cmd.cmdMes.Command().Result()
-	if cmdResultType != nil {
+	res := cmd.cmdMes.Command().Result()
+	if res != nil {
 		cfg := cmdProc.cfgs[cmd.cmdMes.AppQName()]
-		cmd.cmdResultBuilder = istructsmem.NewIObjectBuilder(cfg, cmdResultType.QName())
+		cmd.cmdResultBuilder = istructsmem.NewIObjectBuilder(cfg, res.QName())
 	}
 	return nil
 }
@@ -198,11 +198,8 @@ func getIDGenerator(_ context.Context, work interface{}) (err error) {
 
 func (cmdProc *cmdProc) putPLog(_ context.Context, work interface{}) (err error) {
 	cmd := work.(*cmdWorkpiece)
-	if cmd.pLogEvent, err = cmd.appStructs.Events().PutPlog(cmd.rawEvent, nil, cmd.idGenerator); err != nil {
-		cmd.appPartitionRestartScheduled = true
-	} else {
-		cmdProc.appPartition.nextPLogOffset++
-	}
+	cmd.pLogEvent, err = cmd.appStructs.Events().PutPlog(cmd.rawEvent, nil, cmd.idGenerator)
+	cmdProc.appPartition.nextPLogOffset++
 	return
 }
 
@@ -616,8 +613,11 @@ func (osp *wrongArgsCatcher) OnErr(err error, _ interface{}, _ pipeline.IWorkpie
 
 func applyPLogEvent(_ context.Context, work interface{}) (err error) {
 	cmd := work.(*cmdWorkpiece)
-	if err = cmd.appStructs.Records().Apply(cmd.pLogEvent); err != nil {
-		cmd.appPartitionRestartScheduled = true
+	if err = cmd.appStructs.Records().Apply(cmd.pLogEvent); err == nil {
+		// actually WLogOffset must be increased after successfult write to WLog.
+		// but new WLogOffset is needed for next step - Sync Projectors
+		// so increase WLogOffsets here - right before Sync Projectors
+		cmd.workspace.NextWLogOffset++
 	}
 	return
 }
@@ -635,9 +635,8 @@ func (cmdProc *cmdProc) n10n(_ context.Context, work interface{}) (err error) {
 
 func putWLog(_ context.Context, work interface{}) (err error) {
 	cmd := work.(*cmdWorkpiece)
-	if err = cmd.appStructs.Events().PutWlog(cmd.pLogEvent); err != nil {
-		cmd.appPartitionRestartScheduled = true
-	} else {
+	err = cmd.appStructs.Events().PutWlog(cmd.pLogEvent)
+	if err != nil {
 		cmd.workspace.NextWLogOffset++
 	}
 	return
@@ -658,8 +657,7 @@ func syncProjectorsEnd(_ context.Context, work interface{}) (err error) {
 
 type opSendResponse struct {
 	pipeline.NOOP
-	bus     ibus.IBus
-	cmdProc *cmdProc
+	bus ibus.IBus
 }
 
 func (sr *opSendResponse) DoSync(_ context.Context, work interface{}) (err error) {
@@ -672,10 +670,6 @@ func (sr *opSendResponse) DoSync(_ context.Context, work interface{}) (err error
 		}
 		logger.Error(cmd.err)
 		coreutils.ReplyErr(cmd.cmdMes.Sender(), cmd.err)
-		if cmd.appPartitionRestartScheduled {
-			logger.Info("partition %d will be restarted due of an error on writting to Log: %w", cmd.cmdMes.PartitionID(), cmd.err)
-			delete(sr.cmdProc.appPartitions, cmd.cmdMes.AppQName())
-		}
 		return
 	}
 	body := bytes.NewBufferString(fmt.Sprintf(`{"CurrentWLogOffset":%d`, cmd.Event().WLogOffset()))
