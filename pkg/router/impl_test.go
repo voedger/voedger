@@ -385,8 +385,7 @@ func setUp(t *testing.T, handlerFunc func(requestCtx context.Context, sender int
 		ReadTimeout:      DefaultReadTimeout,
 		ConnectionsLimit: DefaultConnectionsLimit,
 	}
-	var bus ibus.IBus
-	bus = ibusmem.Provide(func(requestCtx context.Context, bus ibus.IBus, sender interface{}, request ibus.Request) {
+	bus := ibusmem.Provide(func(requestCtx context.Context, bus ibus.IBus, sender interface{}, request ibus.Request) {
 		router.handler(requestCtx, sender, request, bus)
 	})
 	router = &testRouter{
