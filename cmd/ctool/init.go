@@ -8,7 +8,6 @@ package main
 import (
 	"errors"
 	"net"
-	"strings"
 
 	"github.com/spf13/cobra"
 )
@@ -108,7 +107,7 @@ func initCE(cmd *cobra.Command, args []string) error {
 		return ErrClusterConfAlreadyExists
 	}
 
-	c := newCmd(ckInit, "CE "+strings.Join(args, " "))
+	c := newCmd(ckInit, append([]string{"CE"}, args...))
 	if err = cluster.applyCmd(c); err != nil {
 		loggerError(err.Error())
 		return err
@@ -145,7 +144,7 @@ func initSE(cmd *cobra.Command, args []string) error {
 		return ErrClusterConfAlreadyExists
 	}
 
-	c := newCmd(ckInit, "SE "+strings.Join(args, " "))
+	c := newCmd(ckInit, append([]string{"SE"}, args...))
 	c.SkipStacks = skipStacks
 	if err = cluster.applyCmd(c); err != nil {
 		loggerError(err.Error())

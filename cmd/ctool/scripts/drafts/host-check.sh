@@ -47,3 +47,5 @@ else
   echo "Node $1 is not in working condition."
   exit 1
 fi
+
+set +x

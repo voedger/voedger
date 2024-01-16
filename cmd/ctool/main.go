@@ -8,6 +8,7 @@ package main
 import (
 	_ "embed"
 	"os"
+	"path/filepath"
 
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
@@ -35,6 +36,14 @@ var green func(a ...interface{}) string
 
 // nolint
 func main() {
+
+	ex, err := os.Executable()
+	if err != nil {
+		panic(err)
+	}
+	dir := filepath.Dir(ex)
+	os.Chdir(dir)
+
 	red = color.New(color.FgRed).SprintFunc()
 	green = color.New(color.FgGreen).SprintFunc()
 	logger.PrintLine = printLogLine
@@ -45,7 +54,7 @@ func main() {
 			loggerError(err.Error())
 		}
 	}()
-	err := execRootCmd(os.Args, version)
+	err = execRootCmd(os.Args, version)
 	if err != nil {
 		loggerError(err.Error())
 		os.Exit(1)
