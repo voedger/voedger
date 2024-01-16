@@ -12,11 +12,11 @@ import (
 )
 
 // requestCtx is already contained by sender but exposed also as a separate param because it is more useful in request handlers
-func Provide(requestHandler func(requestCtx context.Context, sender interface{}, request ibus.Request)) ibus.IBus {
+func Provide(requestHandler func(requestCtx context.Context, bus ibus.IBus, sender interface{}, request ibus.Request)) ibus.IBus {
 	return provide(requestHandler, time.After, time.After, time.After)
 }
 
-func provide(requestHandler func(requestCtx context.Context, sender interface{}, request ibus.Request),
+func provide(requestHandler func(requestCtx context.Context, bus ibus.IBus, sender interface{}, request ibus.Request),
 	timerResponse func(time.Duration) <-chan time.Time,
 	timerSection func(time.Duration) <-chan time.Time,
 	timerElement func(time.Duration) <-chan time.Time,

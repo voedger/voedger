@@ -646,8 +646,7 @@ func setUp(t *testing.T, prepareAppDef func(appDef appdef.IAppDefBuilder), cfgFu
 		payloads.ProvideIAppTokensFactory(itokensjwt.TestTokensJWT()), appStorageProvider)
 
 	// command processor работает через ibus.SendResponse -> нам нужна реализация ibus
-	var bus ibus.IBus
-	bus = ibusmem.Provide(func(ctx context.Context, sender interface{}, request ibus.Request) {
+	bus := ibusmem.Provide(func(ctx context.Context, bus ibus.IBus, sender interface{}, request ibus.Request) {
 		// сымитируем работу реального приложения при приеме запроса-команды
 		cmdQName, err := appdef.ParseQName(request.Resource[2:])
 		require.NoError(t, err)

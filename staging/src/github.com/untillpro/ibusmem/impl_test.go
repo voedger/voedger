@@ -19,8 +19,7 @@ import (
 func TestBasicUsage(t *testing.T) {
 	require := require.New(t)
 	t.Run("Single response basic usage", func(t *testing.T) {
-		var bus ibus.IBus
-		bus = Provide(func(requestCtx context.Context, sender interface{}, request ibus.Request) {
+		bus := Provide(func(requestCtx context.Context, bus ibus.IBus, sender interface{}, request ibus.Request) {
 
 			// wrong sender -> panic
 			require.Panics(func() { bus.SendResponse("wrong sender", ibus.Response{}) })
@@ -42,8 +41,7 @@ func TestBasicUsage(t *testing.T) {
 	t.Run("Sectioned response basic usage", func(t *testing.T) {
 		testErr := errors.New("error from result sender")
 		ch := make(chan interface{})
-		var bus ibus.IBus
-		bus = Provide(func(requestCtx context.Context, sender interface{}, request ibus.Request) {
+		bus := Provide(func(requestCtx context.Context, bus ibus.IBus, sender interface{}, request ibus.Request) {
 
 			// wrong sender -> panic
 			require.Panics(func() { bus.SendParallelResponse2("wrong sender") })
@@ -147,7 +145,7 @@ func TestBasicUsage(t *testing.T) {
 		require.Panics(func() { Provide(nil) })
 	})
 	t.Run("Should return timeout error if no response at all", func(t *testing.T) {
-		bus := provide(func(srequestCtx context.Context, ender interface{}, request ibus.Request) {
+		bus := provide(func(srequestCtx context.Context, bus ibus.IBus, sender interface{}, request ibus.Request) {
 			// do not send response to trigger the timeout case
 		}, timeoutTrigger, time.After, time.After)
 
@@ -163,7 +161,7 @@ func TestBasicUsage(t *testing.T) {
 func TestBus_SendRequest2(t *testing.T) {
 	require := require.New(t)
 	t.Run("Should return error on ctx done", func(t *testing.T) {
-		bus := Provide(func(requestCtx context.Context, sender interface{}, request ibus.Request) {
+		bus := Provide(func(requestCtx context.Context, bus ibus.IBus, sender interface{}, request ibus.Request) {
 			// do not send response to trigger ctx.Done() case
 		})
 		ctx, cancel := context.WithCancel(context.Background())
@@ -177,7 +175,7 @@ func TestBus_SendRequest2(t *testing.T) {
 		require.Nil(secErr)
 	})
 	t.Run("Should handle panic in request handler with message", func(t *testing.T) {
-		bus := Provide(func(requestCtx context.Context, sender interface{}, request ibus.Request) {
+		bus := Provide(func(requestCtx context.Context, bus ibus.IBus, sender interface{}, request ibus.Request) {
 			panic("boom")
 		})
 
@@ -190,7 +188,7 @@ func TestBus_SendRequest2(t *testing.T) {
 	})
 	t.Run("Should handle panic in request handler with error", func(t *testing.T) {
 		testErr := errors.New("boom")
-		bus := Provide(func(requestCtx context.Context, sender interface{}, request ibus.Request) {
+		bus := Provide(func(requestCtx context.Context, bus ibus.IBus, sender interface{}, request ibus.Request) {
 			panic(testErr)
 		})
 
@@ -206,9 +204,8 @@ func TestBus_SendRequest2(t *testing.T) {
 func TestResultSenderClosable_StartArraySection(t *testing.T) {
 	require := require.New(t)
 	t.Run("Should return timeout error on long section read", func(t *testing.T) {
-		var bus ibus.IBus
 		ch := make(chan interface{})
-		bus = provide(func(requestCtx context.Context, sender interface{}, request ibus.Request) {
+		bus := provide(func(requestCtx context.Context, bus ibus.IBus, sender interface{}, request ibus.Request) {
 			rs := bus.SendParallelResponse2(sender)
 			go func() {
 				err := rs.ObjectSection("", nil, 42)
@@ -228,9 +225,8 @@ func TestResultSenderClosable_StartArraySection(t *testing.T) {
 
 	})
 	t.Run("Should return error when ctx done on send section", func(t *testing.T) {
-		var bus ibus.IBus
 		ch := make(chan interface{})
-		bus = Provide(func(requestCtx context.Context, sender interface{}, request ibus.Request) {
+		bus := Provide(func(requestCtx context.Context, bus ibus.IBus, sender interface{}, request ibus.Request) {
 			rs := bus.SendParallelResponse2(sender)
 			go func() {
 				<-ch // wait for cancel
@@ -262,8 +258,7 @@ func TestResultSenderClosable_SendElement(t *testing.T) {
 			ID   int64
 			Name string
 		}
-		var bus ibus.IBus
-		bus = Provide(func(requestCtx context.Context, sender interface{}, request ibus.Request) {
+		bus := Provide(func(requestCtx context.Context, bus ibus.IBus, sender interface{}, request ibus.Request) {
 			rs := bus.SendParallelResponse2(sender)
 			go func() {
 				require.Nil(rs.ObjectSection("", nil, article{ID: 100, Name: "Cola"}))
@@ -289,8 +284,7 @@ func TestResultSenderClosable_SendElement(t *testing.T) {
 			X int64
 			Y int64
 		}
-		var bus ibus.IBus
-		bus = Provide(func(requestCtx context.Context, sender interface{}, request ibus.Request) {
+		bus := Provide(func(requestCtx context.Context, bus ibus.IBus, sender interface{}, request ibus.Request) {
 			rs := bus.SendParallelResponse2(sender)
 			go func() {
 				require.Nil(rs.ObjectSection("", nil, []byte(`{"X":52,"Y":89}`)))
@@ -311,8 +305,7 @@ func TestResultSenderClosable_SendElement(t *testing.T) {
 		require.Nil(*secErr)
 	})
 	t.Run("Should return error when client reads element too long", func(t *testing.T) {
-		var bus ibus.IBus
-		bus = provide(func(requestCtx context.Context, sender interface{}, request ibus.Request) {
+		bus := provide(func(requestCtx context.Context, bus ibus.IBus, sender interface{}, request ibus.Request) {
 			rs := bus.SendParallelResponse2(sender)
 			go func() {
 				rs.StartArraySection("", nil)
@@ -332,9 +325,8 @@ func TestResultSenderClosable_SendElement(t *testing.T) {
 		require.Nil(*secErr)
 	})
 	t.Run("Should return error when ctx done on send element", func(t *testing.T) {
-		var bus ibus.IBus
 		ch := make(chan interface{})
-		bus = Provide(func(requestCtx context.Context, sender interface{}, request ibus.Request) {
+		bus := Provide(func(requestCtx context.Context, bus ibus.IBus, sender interface{}, request ibus.Request) {
 			rs := bus.SendParallelResponse2(sender)
 			go func() {
 				rs.StartArraySection("", nil)
@@ -370,9 +362,8 @@ func TestResultSenderClosable_SendElement(t *testing.T) {
 }
 
 func TestObjectSection_Value(t *testing.T) {
-	var bus ibus.IBus
 	require := require.New(t)
-	bus = Provide(func(requestCtx context.Context, sender interface{}, request ibus.Request) {
+	bus := Provide(func(requestCtx context.Context, bus ibus.IBus, sender interface{}, request ibus.Request) {
 		rs := bus.SendParallelResponse2(sender)
 		go func() {
 			require.Nil(rs.ObjectSection("", nil, []byte("bb")))
@@ -397,8 +388,7 @@ func TestObjectSection_Value(t *testing.T) {
 func TestClientDisconnectOnSectionsSending(t *testing.T) {
 	require := require.New(t)
 	ch := make(chan interface{})
-	var bus ibus.IBus
-	bus = Provide(func(requestCtx context.Context, sender interface{}, request ibus.Request) {
+	bus := Provide(func(requestCtx context.Context, bus ibus.IBus, sender interface{}, request ibus.Request) {
 		rs := bus.SendParallelResponse2(sender)
 		go func() {
 			rs.StartArraySection("array", []string{"array-path"})
