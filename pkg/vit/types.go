@@ -65,7 +65,7 @@ type Login struct {
 	AppQName          istructs.AppQName
 	subjectKind       istructs.SubjectKindType
 	clusterID         istructs.ClusterID
-	singletons        map[appdef.QName]map[string]interface{}
+	singletons        map[appdef.QName]func(verifiedValues map[string]string) map[string]interface{}
 }
 
 type WSParams struct {
@@ -76,7 +76,7 @@ type WSParams struct {
 	InitDataJSON   string
 	ownerLoginName string
 	ClusterID      istructs.ClusterID
-	singletons     map[appdef.QName]map[string]interface{}
+	singletons     map[appdef.QName]func(verifiedValues map[string]string) map[string]interface{}
 }
 
 type WorkspaceDescriptor struct {
@@ -99,14 +99,21 @@ type Principal struct {
 	ProfileWSID istructs.WSID
 }
 
+type verifiedValueIntent struct {
+	docQName     appdef.QName
+	fieldName    string
+	desiredValue string
+}
+
 func (p *Principal) GetWSID() istructs.WSID         { return p.ProfileWSID }
 func (p *Principal) GetAppQName() istructs.AppQName { return p.AppQName }
 
 type app struct {
-	name            istructs.AppQName
-	logins          []Login
-	ws              map[string]WSParams
-	wsTemplateFuncs []func(extensionpoints.IExtensionPoint)
+	name                  istructs.AppQName
+	logins                []Login
+	ws                    map[string]WSParams
+	wsTemplateFuncs       []func(extensionpoints.IExtensionPoint)
+	verifiedValuesIntents map[string]verifiedValueIntent
 }
 
 type BLOB struct {

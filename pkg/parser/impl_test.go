@@ -87,15 +87,47 @@ func Test_BasicUsage(t *testing.T) {
 	require.Equal(appdef.Occurs(0), container.MinOccurs())
 	require.Equal(appdef.Occurs(maxNestedTableContainerOccurrences), container.MaxOccurs())
 	require.Equal(appdef.TypeKind_CRecord, container.Type().Kind())
-	require.Equal(2+5 /*system fields*/, container.Type().(appdef.IFields).FieldCount())
+	require.Equal(2+5 /* +5 system fields*/, container.Type().(appdef.IFields).FieldCount())
 	require.Equal(appdef.DataKind_int32, container.Type().(appdef.IFields).Field("TableNo").DataKind())
 	require.Equal(appdef.DataKind_int32, container.Type().(appdef.IFields).Field("Chairs").DataKind())
 
 	// constraint
 	uniques := cdoc.Uniques()
 	require.Equal(2, len(uniques))
-	require.Equal("Unique01", uniques[0].Name())
-	require.Equal("UniqueTable", uniques[1].Name())
+
+	t.Run("first unique, automatically named", func(t *testing.T) {
+		u := uniques[appdef.MustParseQName("main.TablePlan$uniques$01")]
+		require.NotNil(u)
+		cnt := 0
+		for _, f := range u.Fields() {
+			cnt++
+			switch n := f.Name(); n {
+			case "FState":
+				require.Equal(appdef.DataKind_int32, f.DataKind())
+			case "Name":
+				require.Equal(appdef.DataKind_string, f.DataKind())
+			default:
+				require.Fail("unexpected field name", n)
+			}
+		}
+		require.Equal(2, cnt)
+	})
+
+	t.Run("second unique, named by user", func(t *testing.T) {
+		u := uniques[appdef.MustParseQName("main.TablePlan$uniques$UniqueTable")]
+		require.NotNil(u)
+		cnt := 0
+		for _, f := range u.Fields() {
+			cnt++
+			switch n := f.Name(); n {
+			case "TableNumber":
+				require.Equal(appdef.DataKind_int32, f.DataKind())
+			default:
+				require.Fail("unexpected field name", n)
+			}
+		}
+		require.Equal(1, cnt)
+	})
 
 	// child table
 	crec := builder.CRecord(appdef.NewQName("main", "TablePlanItem"))
@@ -2037,7 +2069,7 @@ func Test_Grants(t *testing.T) {
 		TABLE Tbl INHERITS CDoc();
 		GRANT ALL(FakeCol) ON TABLE Tbl TO role1;
 		GRANT INSERT,UPDATE(FakeCol) ON TABLE Tbl TO role1;
-		GRANT EXECUTE ON ALL COMMANDS WITH TAG x TO role1; 
+		GRANT EXECUTE ON ALL COMMANDS WITH TAG x TO role1;
 		TABLE Nested1 INHERITS CRecord();
 		TABLE Tbl2 INHERITS CDoc(
 			ref1 ref(Tbl),

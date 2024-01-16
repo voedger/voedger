@@ -16,8 +16,9 @@ import (
 	"time"
 
 	"github.com/google/wire"
-	ibus "github.com/untillpro/airs-ibus"
 	"golang.org/x/crypto/acme/autocert"
+
+	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
 
 	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/apppartsctl"
@@ -473,15 +474,14 @@ func provideCommandChannelFactory(sch ServiceChannelFactory) CommandChannelFacto
 	}
 }
 
-func provideQueryProcessors(qpCount QueryProcessorsCount, qc QueryChannel, bus ibus.IBus, asp istructs.IAppStructsProvider, qpFactory queryprocessor.ServiceFactory,
+func provideQueryProcessors(qpCount QueryProcessorsCount, qc QueryChannel, asp istructs.IAppStructsProvider, qpFactory queryprocessor.ServiceFactory,
 	imetrics imetrics.IMetrics, vvm commandprocessor.VVMName, mpq MaxPrepareQueriesType, authn iauthnz.IAuthenticator, authz iauthnz.IAuthorizer,
 	appCfgs istructsmem.AppConfigsType) OperatorQueryProcessors {
 	forks := make([]pipeline.ForkOperatorOptionFunc, qpCount)
-	resultSenderFactory := func(ctx context.Context, sender interface{}) queryprocessor.IResultSenderClosable {
+	resultSenderFactory := func(ctx context.Context, sender ibus.ISender) queryprocessor.IResultSenderClosable {
 		return &resultSenderErrorFirst{
 			ctx:    ctx,
 			sender: sender,
-			bus:    bus,
 		}
 	}
 	for i := 0; i < int(qpCount); i++ {

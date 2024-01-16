@@ -181,16 +181,12 @@ github.com/stretchr/testify v1.8.4/go.mod h1:sz/lmYIOXD/1dqDmKjjqLyZ2RngseejIcXl
 github.com/tarm/serial v0.0.0-20180830185346-98f6abe2eb07/go.mod h1:kDXzergiv9cbyO7IOYJZWg1U88JhDg3PB6klq9Hg2pA=
 github.com/tetratelabs/wazero v1.5.0 h1:Yz3fZHivfDiZFUXnWMPUoiW7s8tC1sjdBtlJn08qYa0=
 github.com/tetratelabs/wazero v1.5.0/go.mod h1:0U0G41+ochRKoPKCJlh0jMg1CHkyfK8kDqiirMmKY8A=
-github.com/untillpro/airs-ibus v0.0.0-20230904100809-21eaae083040 h1:6IkhNm6unxJpCqkdKk1QvOmuTV7VL+JMAFDQDGqoeJw=
-github.com/untillpro/airs-ibus v0.0.0-20230904100809-21eaae083040/go.mod h1:q6sL+/tsxO3upNtujUUG/5B316qvPjy5aHc1uR/W+C0=
 github.com/untillpro/dynobuffers v0.0.0-20221105082727-4ed4b8227195 h1:nq0/Di+aBZ1yMtNHd+yjKPOvfWeGGsJ486HHh+RNywI=
 github.com/untillpro/dynobuffers v0.0.0-20221105082727-4ed4b8227195/go.mod h1:+q8szMmVnNfUqqieAtVi96uYPBrdy+BhZoHBzxgdCUM=
 github.com/untillpro/gojay v1.2.17-0.20201109133446-b1069e05b56c h1:1oN5J8ueU7ai8rVENgfjVK9vmjEBTRqsvHe6o2p3xU8=
 github.com/untillpro/gojay v1.2.17-0.20201109133446-b1069e05b56c/go.mod h1:wHiWFBGIA2fG/tCRDfHII3S8LW1+DB1SEx4UinSXwdM=
 github.com/untillpro/goutils v0.0.0-20231117130619-11fe1908c171 h1:XjKi6kNRWFy2AQ/NOcXPkAMgpNPnXNVrj0k7BHPIppA=
 github.com/untillpro/goutils v0.0.0-20231117130619-11fe1908c171/go.mod h1:D7adcEUMVzLXEjHhqZX5ss22BXJyXP3RLhJO99r8dII=
-github.com/untillpro/ibusmem v0.0.0-20230904100952-cc8a0d2caa40 h1:rrJmRAVXaxwQExZCxBHhyJoYAJ3Q1bTquHVrRpvwgB0=
-github.com/untillpro/ibusmem v0.0.0-20230904100952-cc8a0d2caa40/go.mod h1:hOihIs7DYQIrop/ds9Beqh/hDHbrDrjWY9SVA//RCY4=
 github.com/valyala/bytebufferpool v1.0.0 h1:GqA5TC/0021Y/b9FG4Oi9Mr3q7XYx6KllzawFIhcdPw=
 github.com/valyala/bytebufferpool v1.0.0/go.mod h1:6bBcMArwyJ5K/AmCkWv1jt77kVWyCJ6HpOuEn7z0Csc=
 github.com/viant/assertly v0.4.8/go.mod h1:aGifi++jvCrUaklKEKT0BU95igDNaqkvz+49uaYMPRU=

@@ -182,6 +182,7 @@ classDiagram
         <<interface>>
         +Kind()* TypeKind_Workspace
         +Abstract() bool
+        +Descriptor() QName
         +Types() []IType
     }
 ```
@@ -473,15 +474,13 @@ classDiagram
 
   class IUnique {
     <<Interface>>
-    +Name() string
-    +ID() UniqueID
+    +Name() QName
     +Fields() []IFeld
   }
 
   class IUniques{
     <<Interface>>
-    UniqueByID(UniqueID) IUnique
-    UniqueByName(string) IUnique
+    UniqueByName(QName) IUnique
     UniqueCount() int
     Uniques() []IUnique
   }
@@ -634,6 +633,8 @@ classDiagram
 - Only letters (from `A` to `Z` and from `a` to `z`), digits (from `0` to `9`) and underscore symbol (`_`) are used.
 - First symbol must be letter or underscore.
 - Maximum length of name is 255.
+- Names are case sensitive.
+- System level names can contains buck char (`$`).
 
 Valid names examples:
 

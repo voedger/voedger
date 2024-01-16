@@ -12,11 +12,11 @@ import (
 type Structure struct {
 	Type
 	Kind        string
-	Fields      []*Field     `json:",omitempty"`
-	Containers  []*Container `json:",omitempty"`
-	Uniques     []*Unique    `json:",omitempty"`
-	UniqueField string       `json:",omitempty"`
-	Singleton   bool         `json:",omitempty"`
+	Fields      []*Field           `json:",omitempty"`
+	Containers  []*Container       `json:",omitempty"`
+	Uniques     map[string]*Unique `json:",omitempty"`
+	UniqueField string             `json:",omitempty"`
+	Singleton   bool               `json:",omitempty"`
 }
 
 type Field struct {
@@ -39,6 +39,6 @@ type Container struct {
 
 type Unique struct {
 	Comment string `json:",omitempty"`
-	Name    string
+	Name    appdef.QName
 	Fields  []string
 }

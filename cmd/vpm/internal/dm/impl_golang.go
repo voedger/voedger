@@ -10,7 +10,6 @@ import (
 	"go/build"
 	"os"
 	osexec "os/exec"
-	"path"
 	"path/filepath"
 	"strings"
 
@@ -34,10 +33,10 @@ func (g *goImpl) LocalPath(depURL string) (localDepPath string, err error) {
 		return "", fmt.Errorf("cannot find module for path %s", depURL)
 	}
 	if version == "" {
-		localDepPath = path.Join(filepath.Dir(g.goModFilePath), subDir)
+		localDepPath = filepath.Join(filepath.Dir(g.goModFilePath), subDir)
 		return
 	}
-	localDepPath = path.Join(g.cachePath, fmt.Sprintf("%s@%s", pkgURL, version), subDir)
+	localDepPath = filepath.Join(g.cachePath, fmt.Sprintf("%s@%s", pkgURL, version), subDir)
 	if _, err := os.Stat(localDepPath); os.IsNotExist(err) {
 		if err := downloadDependencies(g.goModFilePath); err != nil {
 			return "", err
@@ -143,7 +142,7 @@ func getCachePath() string {
 	if logger.IsVerbose() {
 		logger.Verbose("searching for cache of the packages")
 	}
-	return path.Join(build.Default.GOPATH, "pkg", "mod")
+	return filepath.Join(build.Default.GOPATH, "pkg", "mod")
 }
 
 func getGoModFile(workingDir string) (*modfile.File, string, error) {

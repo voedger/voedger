@@ -23,23 +23,21 @@ var oldFS embed.FS
 //go:embed sql/new.sql
 var newFS embed.FS
 
-func getSysPackageAST(file parser.IReadFS) *parser.PackageSchemaAST {
-	pkgSys, err := parser.ParsePackageDir(appdef.SysPackage, file, "sql")
-	if err != nil {
-		panic(err)
-	}
-	return pkgSys
+func getSysPackageAST(file parser.IReadFS) (*parser.PackageSchemaAST, error) {
+	return parser.ParsePackageDir(appdef.SysPackage, file, "sql")
 }
 
 func Test_Basic(t *testing.T) {
-	oldPackages, err := parser.BuildAppSchema([]*parser.PackageSchemaAST{
-		getSysPackageAST(oldFS),
-	})
+	oldPkgAST, err := getSysPackageAST(oldFS)
 	require.NoError(t, err)
 
-	newPackages, err := parser.BuildAppSchema([]*parser.PackageSchemaAST{
-		getSysPackageAST(newFS),
-	})
+	oldPackages, err := parser.BuildAppSchema([]*parser.PackageSchemaAST{oldPkgAST})
+	require.NoError(t, err)
+
+	newPkgAST, err := getSysPackageAST(newFS)
+	require.NoError(t, err)
+
+	newPackages, err := parser.BuildAppSchema([]*parser.PackageSchemaAST{newPkgAST})
 	require.NoError(t, err)
 
 	oldBuilder := appdef.New()
@@ -72,6 +70,7 @@ func Test_Basic(t *testing.T) {
 			{OldTreePath: []string{"AppDef", "Types", "sys.SomeView", "PartKeyFields"}, ErrorType: ErrorTypeNodeModified},
 			{OldTreePath: []string{"AppDef", "Types", "sys.SomeView", "Fields", "E"}, ErrorType: ErrorTypeValueChanged},
 			{OldTreePath: []string{"AppDef", "Types", "sys.SomeView", "ClustColsFields", "B"}, ErrorType: ErrorTypeValueChanged},
+			{OldTreePath: []string{"AppDef", "Types", "sys.AnotherOneTable", "Uniques", "sys.AnotherOneTable$uniques$01", "UniqueFields"}, ErrorType: ErrorTypeNodeModified},
 		}
 		allowedErrors := []CompatibilityError{
 			{OldTreePath: []string{"AppDef", "Types", "sys.SomeCommand", "UnloggedArgs"}},

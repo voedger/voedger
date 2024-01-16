@@ -17,9 +17,10 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
-	ibus "github.com/untillpro/airs-ibus"
 	"github.com/untillpro/goutils/logger"
 	"golang.org/x/net/netutil"
+
+	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
 
 	"github.com/voedger/voedger/pkg/istructs"
 	coreutils "github.com/voedger/voedger/pkg/utils"

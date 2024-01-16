@@ -16,10 +16,11 @@ import (
 	"strings"
 
 	"github.com/gorilla/mux"
-	ibus "github.com/untillpro/airs-ibus"
 	"github.com/valyala/bytebufferpool"
-	istructs "github.com/voedger/voedger/pkg/istructs"
+
+	"github.com/voedger/voedger/pkg/istructs"
 	coreutils "github.com/voedger/voedger/pkg/utils"
+	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
 )
 
 func createRequest(reqMethod string, req *http.Request, rw http.ResponseWriter, appsWSAmount map[istructs.AppQName]istructs.AppWSAmount) (res ibus.Request, ok bool) {

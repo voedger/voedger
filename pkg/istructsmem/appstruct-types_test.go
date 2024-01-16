@@ -145,7 +145,7 @@ func TestErrorsAppConfigsType(t *testing.T) {
 		doc := app.AddSingleton(appdef.NewQName("test", "doc"))
 		doc.AddField("f1", appdef.DataKind_string, true)
 		doc.AddContainer("rec", appdef.NewQName("test", "rec"), 0, 1)
-		doc.AddUnique("", []string{"f1"})
+		doc.AddUnique(appdef.UniqueQName(doc.QName(), "f1"), []string{"f1"})
 		app.AddCRecord(appdef.NewQName("test", "rec"))
 		return app
 	}()
@@ -206,20 +206,6 @@ func TestErrorsAppConfigsType(t *testing.T) {
 			func(b *[]byte) { (*b)[0] = 255 }, // <- invalid Containers system view version
 			utils.ToBytes(consts.SysView_Versions),
 			utils.ToBytes(vers.SysSingletonsVersion))
-		defer storage.Reset()
-
-		cfgs := make(AppConfigsType, 1)
-		_ = cfgs.AddConfig(istructs.AppQName_test1_app1, appDef)
-		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
-		_, err := provider.AppStructs(istructs.AppQName_test1_app1)
-		require.ErrorIs(err, vers.ErrorInvalidVersion)
-	})
-
-	t.Run("must be error to provide app structure if error while read Uniques system view", func(t *testing.T) {
-		storage.ScheduleGetDamage(
-			func(b *[]byte) { (*b)[0] = 255 }, // <- invalid Uniques system view version
-			utils.ToBytes(consts.SysView_Versions),
-			utils.ToBytes(vers.SysUniquesVersion))
 		defer storage.Reset()
 
 		cfgs := make(AppConfigsType, 1)

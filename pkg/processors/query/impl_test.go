@@ -31,6 +31,7 @@ import (
 	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys/authnz"
 	coreutils "github.com/voedger/voedger/pkg/utils"
+	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
 )
 
 var now = time.Now()
@@ -281,7 +282,7 @@ func TestBasicUsage_ServiceFactory(t *testing.T) {
 
 	authn := iauthnzimpl.NewDefaultAuthenticator(iauthnzimpl.TestSubjectRolesGetter)
 	authz := iauthnzimpl.NewDefaultAuthorizer()
-	queryProcessor := ProvideServiceFactory()(serviceChannel, func(ctx context.Context, sender interface{}) IResultSenderClosable { return rs },
+	queryProcessor := ProvideServiceFactory()(serviceChannel, func(ctx context.Context, sender ibus.ISender) IResultSenderClosable { return rs },
 		appStructsProvider, 3, metrics, "vvm", authn, authz, cfgs)
 	processorCtx, processorCtxCancel := context.WithCancel(context.Background())
 	wg := sync.WaitGroup{}
@@ -1022,7 +1023,7 @@ func TestRateLimiter(t *testing.T) {
 	metrics := imetrics.Provide()
 	authn := iauthnzimpl.NewDefaultAuthenticator(iauthnzimpl.TestSubjectRolesGetter)
 	authz := iauthnzimpl.NewDefaultAuthorizer()
-	queryProcessor := ProvideServiceFactory()(serviceChannel, func(ctx context.Context, sender interface{}) IResultSenderClosable { return rs },
+	queryProcessor := ProvideServiceFactory()(serviceChannel, func(ctx context.Context, sender ibus.ISender) IResultSenderClosable { return rs },
 		appStructsProvider, 3, metrics, "vvm", authn, authz, cfgs)
 	go queryProcessor.Run(context.Background())
 
@@ -1071,7 +1072,7 @@ func TestAuthnz(t *testing.T) {
 
 	authn := iauthnzimpl.NewDefaultAuthenticator(iauthnzimpl.TestSubjectRolesGetter)
 	authz := iauthnzimpl.NewDefaultAuthorizer()
-	queryProcessor := ProvideServiceFactory()(serviceChannel, func(ctx context.Context, sender interface{}) IResultSenderClosable { return rs },
+	queryProcessor := ProvideServiceFactory()(serviceChannel, func(ctx context.Context, sender ibus.ISender) IResultSenderClosable { return rs },
 		appStructsProvider, 3, metrics, "vvm", authn, authz, cfgs)
 	go queryProcessor.Run(context.Background())
 	query := as.AppDef().Query(qNameFunction)

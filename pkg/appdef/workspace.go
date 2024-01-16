@@ -78,12 +78,28 @@ func (ws *workspace) Types(cb func(IType)) {
 }
 
 func (ws *workspace) SetDescriptor(q QName) IWorkspaceBuilder {
+	old := ws.Descriptor()
+	if old == q {
+		return ws
+	}
+
+	if (old != NullQName) && (ws.app.wsDesc[old] == ws) {
+		delete(ws.app.wsDesc, old)
+	}
+
+	if q == NullQName {
+		ws.desc = nil
+		return ws
+	}
+
 	if ws.desc = ws.app.CDoc(q); ws.desc == nil {
 		panic(fmt.Errorf("type «%v» is unknown CDoc name to assign as descriptor for workspace «%v»: %w", q, ws.QName(), ErrNameNotFound))
 	}
 	if ws.desc.Abstract() {
 		ws.SetAbstract()
 	}
+
+	ws.app.wsDesc[q] = ws
 	return ws
 }
 
