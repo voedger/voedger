@@ -19,6 +19,7 @@ import (
 	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys/builtin"
 	coreutils "github.com/voedger/voedger/pkg/utils"
+	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
 )
 
 type ServiceFactory func(commandsChannel CommandChannel, partitionID istructs.PartitionID) pipeline.IService
@@ -33,7 +34,7 @@ type ICommandMessage interface {
 	Body() []byte
 	AppQName() istructs.AppQName
 	WSID() istructs.WSID // url WSID
-	Sender() interface{}
+	Sender() ibus.ISender
 	PartitionID() istructs.PartitionID
 	RequestCtx() context.Context
 	Command() appdef.ICommand
@@ -78,7 +79,8 @@ type cmdWorkpiece struct {
 	cmdResultBuilder    istructs.IObjectBuilder
 	cmdResult           istructs.IObject
 	resources           istructs.IResources
-	cmdFunc         istructs.ICommandFunction
+	cmdFunc             istructs.ICommandFunction
+	sender              ibus.ISender
 }
 
 type implIDGenerator struct {
@@ -99,7 +101,7 @@ type implICommandMessage struct {
 	body        []byte
 	appQName    istructs.AppQName // need to determine where to send c.sys.Init request on create a new workspace
 	wsid        istructs.WSID
-	sender      interface{}
+	sender      ibus.ISender
 	partitionID istructs.PartitionID
 	requestCtx  context.Context
 	command     appdef.ICommand

@@ -105,3 +105,8 @@ type IBus interface {
 	// IResultSenderClosable.Close() must be called at the end
 	SendParallelResponse2(sender interface{}) (rsender IResultSenderClosable)
 }
+
+type ISender interface {
+	SendResponse(resp Response)
+	SendParallelResponse() IResultSenderClosable
+}

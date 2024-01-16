@@ -69,7 +69,8 @@ func (b *bus) SendRequest2(clientCtx context.Context, request ibus.Request, time
 			return
 		}
 	}()
-	b.requestHandler(clientCtx, b, s, request)
+	sender := NewISender(b, s)
+	b.requestHandler(clientCtx, sender, request)
 	wg.Wait()
 	return res, sections, secError, err
 }
@@ -249,4 +250,12 @@ func (s *objectSection) Value(ctx context.Context) []byte {
 		}
 	}
 	return nil
+}
+
+func (s *implISender) SendResponse(resp ibus.Response) {
+	s.bus.SendResponse(s.sender, resp)
+}
+
+func (s *implISender) SendParallelResponse() ibus.IResultSenderClosable {
+	return s.bus.SendParallelResponse2(s.sender)
 }
