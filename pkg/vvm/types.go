@@ -142,9 +142,8 @@ type VVMConfig struct {
 
 type resultSenderErrorFirst struct {
 	ctx    context.Context
-	sender interface{}
+	sender ibus.ISender
 	rs     ibus.IResultSenderClosable
-	bus    ibus.IBus
 }
 
 type VoedgerVM struct {

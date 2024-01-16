@@ -17,8 +17,8 @@ import (
 
 // BenchmarkSectionedRequestResponse/#00-4    51944	     23527 ns/op	     42505 rps	    4229 B/op	      69 allocs/op
 func BenchmarkSectionedRequestResponse(b *testing.B) {
-	bus := Provide(func(requestCtx context.Context, bus ibus.IBus, sender interface{}, request ibus.Request) {
-		rs := bus.SendParallelResponse2(sender)
+	bus := Provide(func(requestCtx context.Context, sender ibus.ISender, request ibus.Request) {
+		rs := sender.SendParallelResponse()
 		go func() {
 			require.Nil(b, rs.ObjectSection("secObj", []string{"meta"}, "elem"))
 			rs.StartMapSection("secMap", []string{"classifier", "2"})
@@ -69,8 +69,8 @@ func BenchmarkSectionedRequestResponse(b *testing.B) {
 }
 
 func BenchmarkOneSectionElement(b *testing.B) {
-	bus := Provide(func(requestCtx context.Context, bus ibus.IBus, sender interface{}, request ibus.Request) {
-		rs := bus.SendParallelResponse2(sender)
+	bus := Provide(func(requestCtx context.Context, sender ibus.ISender, request ibus.Request) {
+		rs := sender.SendParallelResponse()
 		go func() {
 			require.Nil(b, rs.ObjectSection("secObj", nil, "hello"))
 			rs.Close(nil)
@@ -95,8 +95,8 @@ func BenchmarkOneSectionElement(b *testing.B) {
 }
 
 func BenchmarkNonsectionedResponse(b *testing.B) {
-	bus := Provide(func(requestCtx context.Context, bus ibus.IBus, sender interface{}, request ibus.Request) {
-		bus.SendResponse(sender, ibus.Response{
+	bus := Provide(func(requestCtx context.Context, sender ibus.ISender, request ibus.Request) {
+		sender.SendResponse(ibus.Response{
 			Data: []byte("hello"),
 		})
 	})

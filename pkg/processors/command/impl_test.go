@@ -16,18 +16,10 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
-
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/iauthnzimpl"
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/in10nmem"
-	"github.com/voedger/voedger/pkg/pipeline"
-	"github.com/voedger/voedger/pkg/projectors"
-
-	"github.com/voedger/voedger/staging/src/github.com/untillpro/ibusmem"
-
-	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
-
-	"github.com/voedger/voedger/pkg/iauthnzimpl"
 	"github.com/voedger/voedger/pkg/iratesce"
 	"github.com/voedger/voedger/pkg/isecretsimpl"
 	"github.com/voedger/voedger/pkg/istorage"
@@ -37,8 +29,12 @@ import (
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	"github.com/voedger/voedger/pkg/itokensjwt"
 	imetrics "github.com/voedger/voedger/pkg/metrics"
+	"github.com/voedger/voedger/pkg/pipeline"
 	"github.com/voedger/voedger/pkg/processors"
+	"github.com/voedger/voedger/pkg/projectors"
 	coreutils "github.com/voedger/voedger/pkg/utils"
+	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
+	"github.com/voedger/voedger/staging/src/github.com/untillpro/ibusmem"
 )
 
 var (
@@ -606,9 +602,9 @@ func tearDown(app testApp) {
 }
 
 // simulate real app behavior
-func replyBadRequest(bus ibus.IBus, sender interface{}, message string) {
+func replyBadRequest(sender ibus.ISender, message string) {
 	res := coreutils.NewHTTPErrorf(http.StatusBadRequest, message)
-	bus.SendResponse(sender, ibus.Response{
+	sender.SendResponse(ibus.Response{
 		ContentType: coreutils.ApplicationJSON,
 		StatusCode:  http.StatusBadRequest,
 		Data:        []byte(res.ToJSON()),
@@ -646,7 +642,7 @@ func setUp(t *testing.T, prepareAppDef func(appDef appdef.IAppDefBuilder), cfgFu
 		payloads.ProvideIAppTokensFactory(itokensjwt.TestTokensJWT()), appStorageProvider)
 
 	// command processor работает через ibus.SendResponse -> нам нужна реализация ibus
-	bus := ibusmem.Provide(func(ctx context.Context, bus ibus.IBus, sender interface{}, request ibus.Request) {
+	bus := ibusmem.Provide(func(ctx context.Context, sender ibus.ISender, request ibus.Request) {
 		// сымитируем работу реального приложения при приеме запроса-команды
 		cmdQName, err := appdef.ParseQName(request.Resource[2:])
 		require.NoError(t, err)
@@ -654,7 +650,7 @@ func setUp(t *testing.T, prepareAppDef func(appDef appdef.IAppDefBuilder), cfgFu
 		require.NoError(t, err)
 		tp := appDef.Type(cmdQName)
 		if tp.Kind() == appdef.TypeKind_null {
-			replyBadRequest(bus, sender, "unknown function")
+			replyBadRequest(sender, "unknown function")
 			return
 		}
 		token := ""
@@ -676,7 +672,7 @@ func setUp(t *testing.T, prepareAppDef func(appDef appdef.IAppDefBuilder), cfgFu
 	appTokens := payloads.ProvideIAppTokensFactory(tokens).New(istructs.AppQName_untill_airs_bp)
 	systemToken, err := payloads.GetSystemPrincipalTokenApp(appTokens)
 	require.NoError(t, err)
-	cmdProcessorFactory := ProvideServiceFactory(bus, appStructsProvider, time.Now, func(ctx context.Context, partitionID istructs.PartitionID) pipeline.ISyncOperator {
+	cmdProcessorFactory := ProvideServiceFactory(appStructsProvider, time.Now, func(ctx context.Context, partitionID istructs.PartitionID) pipeline.ISyncOperator {
 		return &pipeline.NOOP{}
 	}, n10nBroker, imetrics.Provide(), "vvm", iauthnzimpl.NewDefaultAuthenticator(iauthnzimpl.TestSubjectRolesGetter), iauthnzimpl.NewDefaultAuthorizer(), isecretsimpl.ProvideSecretReader(), cfgs)
 	cmdProcService := cmdProcessorFactory(serviceChannel, 1)

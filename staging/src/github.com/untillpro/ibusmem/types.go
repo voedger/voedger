@@ -12,7 +12,7 @@ import (
 )
 
 type bus struct {
-	requestHandler func(requestCtx context.Context, bus ibus.IBus, sender interface{}, request ibus.Request)
+	requestHandler func(requestCtx context.Context, sender ibus.ISender, request ibus.Request)
 	timerResponse  func(d time.Duration) <-chan time.Time
 	timerSection   func(d time.Duration) <-chan time.Time
 	timerElement   func(d time.Duration) <-chan time.Time
@@ -57,4 +57,9 @@ type objectSection struct {
 type element struct {
 	name  string
 	value []byte
+}
+
+type implISender struct {
+	bus    ibus.IBus
+	sender interface{}
 }
