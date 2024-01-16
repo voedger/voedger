@@ -28,8 +28,7 @@ import (
 func provideIBus(asp istructs.IAppStructsProvider, procbus iprocbus.IProcBus,
 	cpchIdx CommandProcessorsChannelGroupIdxType, qpcgIdx QueryProcessorsChannelGroupIdxType,
 	cpAmount coreutils.CommandProcessorsCount, vvmApps VVMApps) ibus.IBus {
-	var bus ibus.IBus
-	bus = ibusmem.Provide(func(requestCtx context.Context, sender interface{}, request ibus.Request) {
+	return ibusmem.Provide(func(requestCtx context.Context, bus ibus.IBus, sender interface{}, request ibus.Request) {
 		// Handling Command/Query messages
 		// router -> SendRequest2(ctx, ...) -> requestHandler(ctx, ... ) - вот этот контекст. Если connection gracefully closed, то этот ctx.Done()
 		// т.е. надо этот контекст пробрасывать далее
@@ -77,7 +76,6 @@ func provideIBus(asp istructs.IAppStructsProvider, procbus iprocbus.IProcBus,
 
 		deliverToProcessors(request, requestCtx, appQName, sender, funcType, procbus, bus, token, cpchIdx, qpcgIdx, cpAmount)
 	})
-	return bus
 }
 
 func deliverToProcessors(request ibus.Request, requestCtx context.Context, appQName istructs.AppQName, sender interface{}, funcType appdef.IType,

@@ -69,7 +69,7 @@ func (b *bus) SendRequest2(clientCtx context.Context, request ibus.Request, time
 			return
 		}
 	}()
-	b.requestHandler(clientCtx, s, request)
+	b.requestHandler(clientCtx, b, s, request)
 	wg.Wait()
 	return res, sections, secError, err
 }

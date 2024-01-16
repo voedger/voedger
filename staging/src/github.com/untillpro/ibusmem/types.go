@@ -12,7 +12,7 @@ import (
 )
 
 type bus struct {
-	requestHandler func(requestCtx context.Context, sender interface{}, request ibus.Request)
+	requestHandler func(requestCtx context.Context, bus ibus.IBus, sender interface{}, request ibus.Request)
 	timerResponse  func(d time.Duration) <-chan time.Time
 	timerSection   func(d time.Duration) <-chan time.Time
 	timerElement   func(d time.Duration) <-chan time.Time
