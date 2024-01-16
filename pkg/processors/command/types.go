@@ -79,7 +79,7 @@ type cmdWorkpiece struct {
 	cmdResultBuilder    istructs.IObjectBuilder
 	cmdResult           istructs.IObject
 	resources           istructs.IResources
-	cmdFunc         istructs.ICommandFunction
+	cmdFunc             istructs.ICommandFunction
 }
 
 type implIDGenerator struct {

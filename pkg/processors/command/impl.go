@@ -657,7 +657,6 @@ func syncProjectorsEnd(_ context.Context, work interface{}) (err error) {
 
 type opSendResponse struct {
 	pipeline.NOOP
-	bus ibus.IBus
 }
 
 func (sr *opSendResponse) DoSync(_ context.Context, work interface{}) (err error) {

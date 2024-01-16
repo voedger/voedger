@@ -94,7 +94,7 @@ func ProvideServiceFactory(asp istructs.IAppStructsProvider, now coreutils.TimeF
 				pipeline.WireFunc("syncProjectorsEnd", syncProjectorsEnd),
 				pipeline.WireFunc("n10n", cmdProc.n10n),
 				pipeline.WireFunc("putWLog", putWLog),
-				pipeline.WireSyncOperator("sendResponse", &opSendResponse{cmdProc: cmdProc}), // ICatch
+				pipeline.WireSyncOperator("sendResponse", &opSendResponse{}), // ICatch
 			)
 			// TODO: сделать потом plogOffset свой по каждому разделу, wlogoffset - свой для каждого wsid
 			defer cmdPipeline.Close()
