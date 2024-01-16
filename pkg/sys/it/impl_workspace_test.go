@@ -15,7 +15,6 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/istructs"
-	"github.com/voedger/voedger/pkg/registry"
 	"github.com/voedger/voedger/pkg/sys/authnz"
 	"github.com/voedger/voedger/pkg/sys/workspace"
 	coreutils "github.com/voedger/voedger/pkg/utils"
@@ -165,7 +164,7 @@ func TestDenyCreateCDocWSKind(t *testing.T) {
 	DenyCreateCDocWSKind_Test(t, []appdef.QName{
 		authnz.QNameCDoc_WorkspaceKind_UserProfile,
 		authnz.QNameCDoc_WorkspaceKind_DeviceProfile,
-		registry.QNameCDoc_WorkspaceKind_AppWorkspace,
+		authnz.QNameCDoc_WorkspaceKind_AppWorkspace,
 	})
 }
 

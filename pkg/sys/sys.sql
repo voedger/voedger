@@ -15,12 +15,12 @@ ABSTRACT TABLE WDoc INHERITS WRecord();
 
 ABSTRACT TABLE Singleton INHERITS CDoc();
 
-WORKSPACE DeviceProfileWS (
-	DESCRIPTOR DeviceProfile ();
-);
-
 ALTERABLE WORKSPACE AppWorkspaceWS (
 	DESCRIPTOR AppWorkspace ();
+);
+
+WORKSPACE DeviceProfileWS (
+	DESCRIPTOR DeviceProfile ();
 );
 
 WORKSPACE UserProfileWS (

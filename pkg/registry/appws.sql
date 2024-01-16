@@ -1,6 +1,8 @@
 -- Copyright (c) 2021-present unTill Pro, Ltd.
 -- @author Denis Gribanov
 
+
+
 ALTER WORKSPACE AppWorkspaceWS (
 
 	TABLE Login INHERITS CDoc (

@@ -32,7 +32,7 @@ const (
 )
 
 var (
-	QNameApp1_TestWSKind                     = appdef.NewQName(app1PkgName, "WSKind")
+	QNameApp1_TestWSKind                     = appdef.NewQName(app1PkgName, "test_ws")
 	QNameTestView                            = appdef.NewQName(app1PkgName, "View")
 	QNameApp1_TestEmailVerificationDoc       = appdef.NewQName(app1PkgName, "Doc")
 	QNameApp1_DocConstraints                 = appdef.NewQName(app1PkgName, "DocConstraints")

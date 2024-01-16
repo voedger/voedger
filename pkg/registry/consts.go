@@ -48,7 +48,6 @@ var (
 	qNameProjectorInvokeCreateWorkspaceID_registry    = appdef.NewQName(RegistryPackage, "InvokeCreateWorkspaceID_registry")
 	errPasswordIsIncorrect                            = coreutils.NewHTTPErrorf(http.StatusUnauthorized, "password is incorrect")
 	errLoginOrPasswordIsIncorrect                     = coreutils.NewHTTPErrorf(http.StatusUnauthorized, "login or password is incorrect")
-	QNameCDoc_WorkspaceKind_AppWorkspace              = appdef.NewQName(RegistryPackage, "AppWorkspace")
 
 	//go:embed appws.sql
 	schemasFS embed.FS

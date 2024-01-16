@@ -51,6 +51,5 @@ var (
 	qNameProjectorApplyDeactivateWorkspace = appdef.NewQName(appdef.SysPackage, "ApplyDeactivateWorkspace")
 	QNameCommandCreateWorkspaceID          = appdef.NewQName(appdef.SysPackage, "CreateWorkspaceID")
 	QNameCommandCreateWorkspace            = appdef.NewQName(appdef.SysPackage, "CreateWorkspace")
-	qNameCDoc_WorkspaceKind_AppWorkspace   = appdef.NewQName("registry", "AppWorkspace") // avoiding import cycle: registry: workspace.InitChildWorkspaceProjector(), but here registry.QNameCDoc_WorkspaceKind_AppWorkspace
 	nextWSIDGlobalLock                     = sync.Mutex{}
 )
