@@ -1,9 +1,7 @@
 -- Copyright (c) 2021-present unTill Pro, Ltd.
 -- @author Denis Gribanov
 
-WORKSPACE AppWorkspaceWS (
-
-	DESCRIPTOR AppWorkspace ();
+ALTER WORKSPACE AppWorkspaceWS (
 
 	TABLE Login INHERITS CDoc (
 		ProfileCluster int32 NOT NULL,

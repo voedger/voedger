@@ -19,6 +19,10 @@ WORKSPACE DeviceProfileWS (
 	DESCRIPTOR DeviceProfile ();
 );
 
+ALTERABLE WORKSPACE AppWorkspaceWS (
+	DESCRIPTOR AppWorkspace ();
+);
+
 WORKSPACE UserProfileWS (
 
 	DESCRIPTOR UserProfile (
