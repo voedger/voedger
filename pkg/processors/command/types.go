@@ -80,7 +80,6 @@ type cmdWorkpiece struct {
 	cmdResult           istructs.IObject
 	resources           istructs.IResources
 	cmdFunc             istructs.ICommandFunction
-	sender              ibus.ISender
 }
 
 type implIDGenerator struct {
