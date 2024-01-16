@@ -40,8 +40,8 @@ var (
 
 func TestBasicUsage_SingleResponse(t *testing.T) {
 	require := require.New(t)
-	setUp(t, func(requestCtx context.Context, sender interface{}, request ibus.Request, bus ibus.IBus) {
-		bus.SendResponse(sender, ibus.Response{
+	setUp(t, func(requestCtx context.Context, sender ibus.ISender, request ibus.Request) {
+		sender.SendResponse(ibus.Response{
 			ContentType: "text/plain",
 			StatusCode:  http.StatusOK,
 			Data:        []byte("test resp"),
@@ -59,7 +59,7 @@ func TestBasicUsage_SingleResponse(t *testing.T) {
 }
 
 func TestSectionedSendResponseError(t *testing.T) {
-	setUp(t, func(requestCtx context.Context, sender interface{}, request ibus.Request, bus ibus.IBus) {
+	setUp(t, func(requestCtx context.Context, sender ibus.ISender, request ibus.Request) {
 	}, time.Millisecond)
 	defer tearDown()
 
@@ -82,7 +82,7 @@ func TestBasicUsage_SectionedResponse(t *testing.T) {
 		elem3  = map[string]interface{}{"total": 1}
 	)
 	require := require.New(t)
-	setUp(t, func(requestCtx context.Context, sender interface{}, request ibus.Request, bus ibus.IBus) {
+	setUp(t, func(requestCtx context.Context, sender ibus.ISender, request ibus.Request) {
 		require.Equal("test body", string(request.Body))
 		require.Equal(ibus.HTTPMethodPOST, request.Method)
 		require.Equal(0, request.PartitionNumber)
@@ -100,7 +100,7 @@ func TestBasicUsage_SectionedResponse(t *testing.T) {
 
 		// request is normally handled by processors in a separate goroutine so let's send response in a separate goroutine
 		go func() {
-			rs := bus.SendParallelResponse2(sender)
+			rs := sender.SendParallelResponse()
 			require.NoError(rs.ObjectSection("obj", []string{"meta"}, elem3))
 			rs.StartMapSection(`哇"呀呀Map`, []string{`哇"呀呀`, "21"})
 			require.NoError(rs.SendElement("id1", elem1))
@@ -166,8 +166,8 @@ func TestBasicUsage_SectionedResponse(t *testing.T) {
 }
 
 func TestEmptySectionedResponse(t *testing.T) {
-	setUp(t, func(requestCtx context.Context, sender interface{}, request ibus.Request, bus ibus.IBus) {
-		rs := bus.SendParallelResponse2(sender)
+	setUp(t, func(requestCtx context.Context, sender ibus.ISender, request ibus.Request) {
+		rs := sender.SendParallelResponse()
 		rs.Close(nil)
 	}, ibus.DefaultTimeout)
 	defer tearDown()
@@ -182,8 +182,8 @@ func TestEmptySectionedResponse(t *testing.T) {
 }
 
 func TestSimpleErrorSectionedResponse(t *testing.T) {
-	setUp(t, func(requestCtx context.Context, sender interface{}, request ibus.Request, bus ibus.IBus) {
-		rs := bus.SendParallelResponse2(sender)
+	setUp(t, func(requestCtx context.Context, sender ibus.ISender, request ibus.Request) {
+		rs := sender.SendParallelResponse()
 		rs.Close(errors.New("test error"))
 	}, ibus.DefaultTimeout)
 	defer tearDown()
@@ -200,7 +200,7 @@ func TestSimpleErrorSectionedResponse(t *testing.T) {
 }
 
 func TestHandlerPanic(t *testing.T) {
-	setUp(t, func(requestCtx context.Context, sender interface{}, request ibus.Request, bus ibus.IBus) {
+	setUp(t, func(requestCtx context.Context, sender ibus.ISender, request ibus.Request) {
 		panic("test panic")
 	}, ibus.DefaultTimeout)
 	defer tearDown()
@@ -219,9 +219,9 @@ func TestHandlerPanic(t *testing.T) {
 
 func TestClientDisconnectDuringSections(t *testing.T) {
 	ch := make(chan struct{})
-	setUp(t, func(requestCtx context.Context, sender interface{}, request ibus.Request, bus ibus.IBus) {
+	setUp(t, func(requestCtx context.Context, sender ibus.ISender, request ibus.Request) {
 		go func() {
-			rs := bus.SendParallelResponse2(sender)
+			rs := sender.SendParallelResponse()
 			rs.StartMapSection("secMap", []string{"2"})
 			require.Nil(t, rs.SendElement("id1", elem1))
 			// sometimes Request.Body.Close() happens before checking if requestCtx.Err() nil or not after sending a section
@@ -258,7 +258,7 @@ func TestClientDisconnectDuringSections(t *testing.T) {
 }
 
 func TestCheck(t *testing.T) {
-	setUp(t, func(requestCtx context.Context, sender interface{}, request ibus.Request, bus ibus.IBus) {
+	setUp(t, func(requestCtx context.Context, sender ibus.ISender, request ibus.Request) {
 	}, 1*time.Second)
 	defer tearDown()
 
@@ -273,7 +273,7 @@ func TestCheck(t *testing.T) {
 }
 
 func Test404(t *testing.T) {
-	setUp(t, func(requestCtx context.Context, sender interface{}, request ibus.Request, bus ibus.IBus) {
+	setUp(t, func(requestCtx context.Context, sender ibus.ISender, request ibus.Request) {
 	}, 1*time.Second)
 	defer tearDown()
 
@@ -286,9 +286,9 @@ func Test404(t *testing.T) {
 
 func TestFailedToWriteResponse(t *testing.T) {
 	ch := make(chan struct{})
-	setUp(t, func(requestCtx context.Context, sender interface{}, request ibus.Request, bus ibus.IBus) {
+	setUp(t, func(requestCtx context.Context, sender ibus.ISender, request ibus.Request) {
 		go func() {
-			rs := bus.SendParallelResponse2(sender)
+			rs := sender.SendParallelResponse()
 			rs.StartMapSection("secMap", []string{"2"})
 			require.Nil(t, rs.SendElement("id1", elem1))
 
@@ -348,7 +348,7 @@ type testRouter struct {
 	cancel     context.CancelFunc
 	wg         *sync.WaitGroup
 	httpServer pipeline.IService
-	handler    func(requestCtx context.Context, sender interface{}, request ibus.Request, bus ibus.IBus)
+	handler    func(requestCtx context.Context, sender ibus.ISender, request ibus.Request)
 	params     RouterParams
 	bus        ibus.IBus
 }
@@ -369,7 +369,7 @@ func startRouter(t *testing.T, rp RouterParams, bus ibus.IBus, busTimeout time.D
 	}
 }
 
-func setUp(t *testing.T, handlerFunc func(requestCtx context.Context, sender interface{}, request ibus.Request, bus ibus.IBus), busTimeout time.Duration) {
+func setUp(t *testing.T, handlerFunc func(requestCtx context.Context, sender ibus.ISender, request ibus.Request), busTimeout time.Duration) {
 	if router != nil {
 		router.handler = handlerFunc
 		if !isRouterRestartTested {
@@ -385,9 +385,8 @@ func setUp(t *testing.T, handlerFunc func(requestCtx context.Context, sender int
 		ReadTimeout:      DefaultReadTimeout,
 		ConnectionsLimit: DefaultConnectionsLimit,
 	}
-	var bus ibus.IBus
-	bus = ibusmem.Provide(func(requestCtx context.Context, sender interface{}, request ibus.Request) {
-		router.handler(requestCtx, sender, request, bus)
+	bus := ibusmem.Provide(func(requestCtx context.Context, sender ibus.ISender, request ibus.Request) {
+		router.handler(requestCtx, sender, request)
 	})
 	router = &testRouter{
 		bus:     bus,
@@ -399,7 +398,7 @@ func setUp(t *testing.T, handlerFunc func(requestCtx context.Context, sender int
 }
 
 func tearDown() {
-	router.handler = func(requestCtx context.Context, sender interface{}, request ibus.Request, bus ibus.IBus) {
+	router.handler = func(requestCtx context.Context, sender ibus.ISender, request ibus.Request) {
 		panic("unexpected handler call")
 	}
 	select {

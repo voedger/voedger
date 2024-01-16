@@ -15,6 +15,7 @@ import (
 	"github.com/voedger/voedger/pkg/iprocbus"
 	"github.com/voedger/voedger/pkg/istructs"
 	imetrics "github.com/voedger/voedger/pkg/metrics"
+	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
 )
 
 func Benchmark_pipelineIService_Sequential(b *testing.B) {
@@ -51,7 +52,7 @@ func Benchmark_pipelineIService_Sequential(b *testing.B) {
 	authn := iauthnzimpl.NewDefaultAuthenticator(iauthnzimpl.TestSubjectRolesGetter)
 	authz := iauthnzimpl.NewDefaultAuthorizer()
 	cfgs, appStructsProvider, appTokens := getTestCfg(require, nil)
-	queryProcessor := ProvideServiceFactory()(serviceChannel, func(ctx context.Context, sender interface{}) IResultSenderClosable { return rs }, appStructsProvider, 3,
+	queryProcessor := ProvideServiceFactory()(serviceChannel, func(ctx context.Context, sender ibus.ISender) IResultSenderClosable { return rs }, appStructsProvider, 3,
 		imetrics.Provide(), "vvm", authn, authz, cfgs)
 	go queryProcessor.Run(context.Background())
 	as, err := appStructsProvider.AppStructs(istructs.AppQName_test1_app1)
@@ -113,7 +114,7 @@ func Benchmark_pipelineIService_Parallel(b *testing.B) {
 		authn := iauthnzimpl.NewDefaultAuthenticator(iauthnzimpl.TestSubjectRolesGetter)
 		authz := iauthnzimpl.NewDefaultAuthorizer()
 		cfgs, appStructsProvider, appTokens := getTestCfg(require, nil)
-		queryProcessor := ProvideServiceFactory()(serviceChannel, func(ctx context.Context, sender interface{}) IResultSenderClosable { return rs },
+		queryProcessor := ProvideServiceFactory()(serviceChannel, func(ctx context.Context, sender ibus.ISender) IResultSenderClosable { return rs },
 			appStructsProvider, 3, imetrics.Provide(), "vvm", authn, authz, cfgs)
 		go queryProcessor.Run(context.Background())
 		as, err := appStructsProvider.AppStructs(istructs.AppQName_test1_app1)

@@ -18,8 +18,6 @@ import (
 	"github.com/untillpro/goutils/logger"
 	"golang.org/x/exp/maps"
 
-	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
-
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/in10n"
@@ -33,19 +31,20 @@ import (
 	"github.com/voedger/voedger/pkg/sys/builtin"
 	workspacemgmt "github.com/voedger/voedger/pkg/sys/workspace"
 	coreutils "github.com/voedger/voedger/pkg/utils"
+	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
 )
 
 func (cm *implICommandMessage) Body() []byte                      { return cm.body }
 func (cm *implICommandMessage) AppQName() istructs.AppQName       { return cm.appQName }
 func (cm *implICommandMessage) WSID() istructs.WSID               { return cm.wsid }
-func (cm *implICommandMessage) Sender() interface{}               { return cm.sender }
+func (cm *implICommandMessage) Sender() ibus.ISender              { return cm.sender }
 func (cm *implICommandMessage) PartitionID() istructs.PartitionID { return cm.partitionID }
 func (cm *implICommandMessage) RequestCtx() context.Context       { return cm.requestCtx }
 func (cm *implICommandMessage) Command() appdef.ICommand          { return cm.command }
 func (cm *implICommandMessage) Token() string                     { return cm.token }
 func (cm *implICommandMessage) Host() string                      { return cm.host }
 
-func NewCommandMessage(requestCtx context.Context, body []byte, appQName istructs.AppQName, wsid istructs.WSID, sender interface{},
+func NewCommandMessage(requestCtx context.Context, body []byte, appQName istructs.AppQName, wsid istructs.WSID, sender ibus.ISender,
 	partitionID istructs.PartitionID, command appdef.ICommand, token string, host string) ICommandMessage {
 	return &implICommandMessage{
 		body:        body,
@@ -672,7 +671,7 @@ func (sr *opSendResponse) DoSync(_ context.Context, work interface{}) (err error
 			cmd.metrics.increase(ProjectorsSeconds, time.Since(cmd.syncProjectorsStart).Seconds())
 		}
 		logger.Error(cmd.err)
-		coreutils.ReplyErr(sr.bus, cmd.cmdMes.Sender(), cmd.err)
+		coreutils.ReplyErr(cmd.cmdMes.Sender(), cmd.err)
 		if cmd.appPartitionRestartScheduled {
 			logger.Info("partition %d will be restarted due of an error on writting to Log: %w", cmd.cmdMes.PartitionID(), cmd.err)
 			delete(sr.cmdProc.appPartitions, cmd.cmdMes.AppQName())
@@ -702,7 +701,7 @@ func (sr *opSendResponse) DoSync(_ context.Context, work interface{}) (err error
 		body.WriteString(string(cmdResultBytes))
 	}
 	body.WriteString("}")
-	coreutils.ReplyJSON(sr.bus, cmd.cmdMes.Sender(), http.StatusOK, body.String())
+	coreutils.ReplyJSON(cmd.cmdMes.Sender(), http.StatusOK, body.String())
 	return nil
 }
 
