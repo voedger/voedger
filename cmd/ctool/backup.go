@@ -11,12 +11,14 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
+
+	"github.com/robfig/cron/v3"
 )
 
 // nolint
 func newBackupCmd() *cobra.Command {
 	backupNodeCmd := &cobra.Command{
-		Use:   "node <node> <target folder> <path to ssh key>",
+		Use:   "node [<node> <target folder> <path to ssh key>]",
 		Short: "Backup db node",
 		Args: func(cmd *cobra.Command, args []string) error {
 			if len(args) != 3 {
@@ -27,8 +29,8 @@ func newBackupCmd() *cobra.Command {
 		RunE: backupNode,
 	}
 
-	backupCroneCmd := &cobra.Command{
-		Use:   "crone <crone event>",
+	backupCronCmd := &cobra.Command{
+		Use:   "cron [<cron event>]",
 		Short: "Installation of a backup of schedule",
 		Args: func(cmd *cobra.Command, args []string) error {
 			if len(args) != 1 {
@@ -36,40 +38,50 @@ func newBackupCmd() *cobra.Command {
 			}
 			return nil
 		},
-		RunE: backupCrone,
+		RunE: backupCron,
 	}
+	backupCronCmd.PersistentFlags().StringVar(&sshKey, "ssh-key", "", "Path to SSH key")
 
 	backupCmd := &cobra.Command{
 		Use:   "backup",
 		Short: "Backup database",
 	}
 
-	backupCmd.AddCommand(backupNodeCmd, backupCroneCmd)
+	backupCmd.AddCommand(backupNodeCmd, backupCronCmd)
 
 	return backupCmd
 
 }
 
-func validateBackupCroneCmd(cmd *cmdType, cluster *clusterType) error {
+// nolint
+func validateBackupCronCmd(cmd *cmdType, cluster *clusterType) error {
+
+	if len(cmd.Args) != 2 {
+		return ErrInvalidNumberOfArguments
+	}
+
+	if _, err := cron.ParseStandard(cmd.Args[1]); err != nil {
+		return err
+	}
+
 	return nil
 }
 
 // nolint
 func validateBackupNodeCmd(cmd *cmdType, cluster *clusterType) error {
-	args := cmd.args()
 
-	if len(args) != 4 {
+	if len(cmd.Args) != 4 {
 		return ErrInvalidNumberOfArguments
 	}
 
 	var err error
 
-	if n := cluster.nodeByHost(args[1]); n == nil {
-		err = errors.Join(err, fmt.Errorf(errHostNotFoundInCluster, args[1], ErrHostNotFoundInCluster))
+	if n := cluster.nodeByHost(cmd.Args[1]); n == nil {
+		err = errors.Join(err, fmt.Errorf(errHostNotFoundInCluster, cmd.Args[1], ErrHostNotFoundInCluster))
 	}
 
-	if !fileExists(args[3]) {
-		err = errors.Join(err, fmt.Errorf(errSshKeyNotFound, args[3], ErrFileNotFound))
+	if !fileExists(cmd.Args[3]) {
+		err = errors.Join(err, fmt.Errorf(errSshKeyNotFound, cmd.Args[3], ErrFileNotFound))
 	}
 
 	return err
@@ -79,14 +91,17 @@ func backupNode(cmd *cobra.Command, args []string) error {
 	loggerInfo("backup node", args[0])
 	cluster := newCluster()
 
-	Cmd := newCmd(ckBackup, "node "+strings.Join(args, " "))
+	//Cmd := newCmd(ckBackup, append([]string{"node"}, args...))
 
-	if err := Cmd.validate(cluster); err != nil {
-		return err
-	}
+	var err error
 
-	err := mkCommandDirAndLogFile(cmd, cluster)
-	if err != nil {
+	/*
+		if err = Cmd.validate(cluster); err != nil {
+			return err
+		}
+	*/
+
+	if err = mkCommandDirAndLogFile(cmd, cluster); err != nil {
 		return err
 	}
 
@@ -99,7 +114,34 @@ func backupNode(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func backupCrone(cmd *cobra.Command, args []string) error {
-	fmt.Println("backup crone")
+func backupCron(cmd *cobra.Command, args []string) error {
+	cluster := newCluster()
+	if cluster.Draft {
+		return ErrClusterConfNotFound
+	}
+
+	Cmd := newCmd(ckBackup, append([]string{"cron"}, args...))
+
+	var err error
+
+	if err = Cmd.validate(cluster); err != nil {
+		return err
+	}
+
+	if err = mkCommandDirAndLogFile(cmd, cluster); err != nil {
+		return err
+	}
+
+	if err = setCronBackup(cluster, args[0]); err != nil {
+		return err
+	}
+
+	loggerInfoGreen("Cron schedule set successfully")
+
+	cluster.Cron.Backup = args[0]
+	if err = cluster.saveToJSON(); err != nil {
+		return err
+	}
+
 	return nil
 }
