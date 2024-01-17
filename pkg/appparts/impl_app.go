@@ -34,10 +34,11 @@ func (e *engine) release() {
 }
 
 type app struct {
-	name    istructs.AppQName
-	def     appdef.IAppDef
-	structs istructs.IAppStructs
-	engines [cluster.ProcessorKind_Count]*pool.Pool[*engine]
+	name       istructs.AppQName
+	def        appdef.IAppDef
+	partsCount int
+	structs    istructs.IAppStructs
+	engines    [cluster.ProcessorKind_Count]*pool.Pool[*engine]
 	// no locks need. Owned apps structure will locks access to this structure
 	parts map[istructs.PartitionID]*partition
 }
@@ -49,9 +50,10 @@ func newApplication(name istructs.AppQName) *app {
 	}
 }
 
-func (a *app) deploy(def appdef.IAppDef, structs istructs.IAppStructs, engines [cluster.ProcessorKind_Count]int) {
+func (a *app) deploy(def appdef.IAppDef, structs istructs.IAppStructs, partsCount int, engines [cluster.ProcessorKind_Count]int) {
 	a.def = def
 	a.structs = structs
+	a.partsCount = partsCount
 	for k, cnt := range engines {
 		ee := make([]*engine, cnt)
 		for i := 0; i < cnt; i++ {

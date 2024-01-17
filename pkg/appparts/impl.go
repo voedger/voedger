@@ -29,22 +29,22 @@ func newAppPartitions(structs istructs.IAppStructsProvider) (ap IAppPartitions, 
 	return a, func() {}, err
 }
 
-func (aps *apps) DeployApp(appName istructs.AppQName, appDef appdef.IAppDef, engines [cluster.ProcessorKind_Count]int) {
+func (aps *apps) DeployApp(name istructs.AppQName, def appdef.IAppDef, partsCount int, engines [cluster.ProcessorKind_Count]int) {
 	aps.mx.Lock()
 	defer aps.mx.Unlock()
 
-	a, ok := aps.apps[appName]
+	a, ok := aps.apps[name]
 	if !ok {
-		a = newApplication(appName)
-		aps.apps[appName] = a
+		a = newApplication(name)
+		aps.apps[name] = a
 	}
 
-	appStructs, err := aps.structs.AppStructsByDef(appName, appDef)
+	appStructs, err := aps.structs.AppStructsByDef(name, def)
 	if err != nil {
 		panic(err)
 	}
 
-	a.deploy(appDef, appStructs, engines)
+	a.deploy(def, appStructs, partsCount, engines)
 }
 
 func (aps *apps) DeployAppPartitions(appName istructs.AppQName, partIDs []istructs.PartitionID) {
@@ -60,6 +60,22 @@ func (aps *apps) DeployAppPartitions(appName istructs.AppQName, partIDs []istruc
 		p := newPartition(a, id)
 		a.parts[id] = p
 	}
+}
+
+func (aps *apps) AppDef(appName istructs.AppQName) (appdef.IAppDef, error) {
+	app, ok := aps.apps[appName]
+	if !ok {
+		return nil, fmt.Errorf(errAppNotFound, appName, ErrNotFound)
+	}
+	return app.def, nil
+}
+
+func (aps *apps) AppPartsCount(appName istructs.AppQName) (int, error) {
+	app, ok := aps.apps[appName]
+	if !ok {
+		return 0, fmt.Errorf(errAppNotFound, appName, ErrNotFound)
+	}
+	return len(app.parts), nil
 }
 
 func (aps *apps) Borrow(appName istructs.AppQName, partID istructs.PartitionID, proc cluster.ProcessorKind) (IAppPartition, error) {
