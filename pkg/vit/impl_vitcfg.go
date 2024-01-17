@@ -84,7 +84,7 @@ func WithChild(wsKind appdef.QName, name, templateName string, templateParams st
 			docs:           map[appdef.QName]func(verifiedValues map[string]string) map[string]interface{}{},
 		}
 		for _, opt := range opts {
-			opt(wsParams)
+			opt(&newWSParams)
 		}
 		wsParams.childs = append(wsParams.childs, newWSParams)
 	}
