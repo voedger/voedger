@@ -393,10 +393,10 @@ func TestSqlQuery_records(t *testing.T) {
 	})
 	t.Run("Should read singleton", func(t *testing.T) {
 		require := require.New(t)
-		body = `{"args":{"Query":"select sys.QName from app1pkg.WSKind"},"elements":[{"fields":["Result"]}]}`
+		body = `{"args":{"Query":"select sys.QName from app1pkg.test_ws"},"elements":[{"fields":["Result"]}]}`
 		restaurant := vit.PostWS(ws, "q.sys.SqlQuery", body).SectionRow(0)
 
-		require.Equal(`{"sys.QName":"app1pkg.WSKind"}`, restaurant[0])
+		require.Equal(`{"sys.QName":"app1pkg.test_ws"}`, restaurant[0])
 	})
 }
 
