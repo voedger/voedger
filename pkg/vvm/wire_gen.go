@@ -8,7 +8,6 @@ package vvm
 
 import (
 	"context"
-	"github.com/untillpro/airs-ibus"
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/apppartsctl"
@@ -44,6 +43,7 @@ import (
 	"github.com/voedger/voedger/pkg/utils"
 	"github.com/voedger/voedger/pkg/vvm/db_cert_cache"
 	"github.com/voedger/voedger/pkg/vvm/metrics"
+	"github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
 	"golang.org/x/crypto/acme/autocert"
 	"net/url"
 	"strconv"
@@ -87,8 +87,6 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 	if err != nil {
 		return nil, nil, err
 	}
-	commandProcessorsChannelGroupIdxType := provideProcessorChannelGroupIdxCommand(vvmConfig)
-	queryProcessorsChannelGroupIdxType := provideProcessorChannelGroupIdxQuery(vvmConfig)
 	vvmPortSource := provideVVMPortSource()
 	iFederation := provideIFederation(vvmConfig, vvmPortSource)
 	apIs := apps.APIs{
@@ -109,7 +107,6 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 		return nil, nil, err
 	}
 	vvmApps := provideVVMApps(v3)
-	iBus := provideIBus(iAppPartitions, iProcBus, commandProcessorsChannelGroupIdxType, queryProcessorsChannelGroupIdxType, commandProcessorsCount, vvmApps)
 	quotas := vvmConfig.Quotas
 	in10nBroker, cleanup2 := in10nmem.ProvideEx2(quotas, timeFunc)
 	maxPrepareQueriesType := vvmConfig.MaxPrepareQueries
@@ -118,12 +115,12 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 	v4 := provideSubjectGetterFunc()
 	iAuthenticator := iauthnzimpl.NewDefaultAuthenticator(v4)
 	iAuthorizer := iauthnzimpl.NewDefaultAuthorizer()
-	serviceFactory := commandprocessor.ProvideServiceFactory(iBus, iAppPartitions, timeFunc, commandprocessorSyncActualizerFactory, in10nBroker, iMetrics, vvmName, iAuthenticator, iAuthorizer, iSecretReader, appConfigsType)
+	serviceFactory := commandprocessor.ProvideServiceFactory(iAppPartitions, timeFunc, commandprocessorSyncActualizerFactory, in10nBroker, iMetrics, vvmName, iAuthenticator, iAuthorizer, iSecretReader, appConfigsType)
 	operatorCommandProcessors := provideCommandProcessors(commandProcessorsCount, commandChannelFactory, serviceFactory)
 	queryProcessorsCount := vvmConfig.NumQueryProcessors
 	queryChannel := provideQueryChannel(serviceChannelFactory)
 	queryprocessorServiceFactory := queryprocessor.ProvideServiceFactory()
-	operatorQueryProcessors := provideQueryProcessors(queryProcessorsCount, queryChannel, iBus, iAppPartitions, queryprocessorServiceFactory, iMetrics, vvmName, maxPrepareQueriesType, iAuthenticator, iAuthorizer, appConfigsType)
+	operatorQueryProcessors := provideQueryProcessors(queryProcessorsCount, queryChannel, iAppPartitions, queryprocessorServiceFactory, iMetrics, vvmName, maxPrepareQueriesType, iAuthenticator, iAuthorizer, appConfigsType)
 	asyncActualizerFactory := projectors.ProvideAsyncActualizerFactory()
 	asyncActualizersFactory := provideAsyncActualizersFactory(iAppStructsProvider, in10nBroker, asyncActualizerFactory, iSecretReader, iMetrics)
 	v5 := vvmConfig.ActualizerStateOpts
@@ -156,6 +153,9 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 		return nil, nil, err
 	}
 	cache := dbcertcache.ProvideDbCache(routerAppStorage)
+	commandProcessorsChannelGroupIdxType := provideProcessorChannelGroupIdxCommand(vvmConfig)
+	queryProcessorsChannelGroupIdxType := provideProcessorChannelGroupIdxQuery(vvmConfig)
+	iBus := provideIBus(iAppPartitions, iProcBus, commandProcessorsChannelGroupIdxType, queryProcessorsChannelGroupIdxType, commandProcessorsCount, vvmApps)
 	v6 := provideAppsWSAmounts(vvmApps, iAppStructsProvider)
 	routerServices := provideRouterServices(vvmCtx, routerParams, busTimeout, in10nBroker, quotas, timeFunc, blobberServiceChannels, blobMaxSizeType, blobberAppClusterID, blobStorage, routerAppStorage, cache, iBus, vvmPortSource, v6)
 	routerServiceOperator := provideRouterServiceFactory(routerServices)
@@ -514,15 +514,14 @@ func provideCommandChannelFactory(sch ServiceChannelFactory) CommandChannelFacto
 	}
 }
 
-func provideQueryProcessors(qpCount QueryProcessorsCount, qc QueryChannel, bus ibus.IBus, appParts appparts.IAppPartitions, qpFactory queryprocessor.ServiceFactory, imetrics2 imetrics.IMetrics,
+func provideQueryProcessors(qpCount QueryProcessorsCount, qc QueryChannel, appParts appparts.IAppPartitions, qpFactory queryprocessor.ServiceFactory, imetrics2 imetrics.IMetrics,
 	vvm commandprocessor.VVMName, mpq MaxPrepareQueriesType, authn iauthnz.IAuthenticator, authz iauthnz.IAuthorizer,
 	appCfgs istructsmem.AppConfigsType) OperatorQueryProcessors {
 	forks := make([]pipeline.ForkOperatorOptionFunc, qpCount)
-	resultSenderFactory := func(ctx context.Context, sender interface{}) queryprocessor.IResultSenderClosable {
+	resultSenderFactory := func(ctx context.Context, sender ibus.ISender) queryprocessor.IResultSenderClosable {
 		return &resultSenderErrorFirst{
 			ctx:    ctx,
 			sender: sender,
-			bus:    bus,
 		}
 	}
 	for i := 0; i < int(qpCount); i++ {

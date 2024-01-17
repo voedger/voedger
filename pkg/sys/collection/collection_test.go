@@ -32,6 +32,7 @@ import (
 	queryprocessor "github.com/voedger/voedger/pkg/processors/query"
 	"github.com/voedger/voedger/pkg/projectors"
 	"github.com/voedger/voedger/pkg/state"
+	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
 )
 
 var cocaColaDocID istructs.RecordID
@@ -457,7 +458,7 @@ func TestBasicUsage_QueryFunc_Collection(t *testing.T) {
 	appTokens := payloads.ProvideIAppTokensFactory(tokens).New(test.appQName)
 	queryProcessor := queryprocessor.ProvideServiceFactory()(
 		serviceChannel,
-		func(ctx context.Context, sender interface{}) queryprocessor.IResultSenderClosable { return out },
+		func(ctx context.Context, sender ibus.ISender) queryprocessor.IResultSenderClosable { return out },
 		appParts,
 		maxPrepareQueries,
 		imetrics.Provide(), "vvm", authn, authz, cfgs)
@@ -573,7 +574,7 @@ func TestBasicUsage_QueryFunc_CDoc(t *testing.T) {
 	authz := iauthnzimpl.NewDefaultAuthorizer()
 	tokens := itokensjwt.ProvideITokens(itokensjwt.SecretKeyExample, time.Now)
 	appTokens := payloads.ProvideIAppTokensFactory(tokens).New(test.appQName)
-	queryProcessor := queryprocessor.ProvideServiceFactory()(serviceChannel, func(ctx context.Context, sender interface{}) queryprocessor.IResultSenderClosable {
+	queryProcessor := queryprocessor.ProvideServiceFactory()(serviceChannel, func(ctx context.Context, sender ibus.ISender) queryprocessor.IResultSenderClosable {
 		return out
 	}, appParts, maxPrepareQueries, imetrics.Provide(), "vvm", authn, authz, cfgs)
 
@@ -692,7 +693,7 @@ func TestBasicUsage_State(t *testing.T) {
 	authz := iauthnzimpl.NewDefaultAuthorizer()
 	tokens := itokensjwt.ProvideITokens(itokensjwt.SecretKeyExample, time.Now)
 	appTokens := payloads.ProvideIAppTokensFactory(tokens).New(test.appQName)
-	queryProcessor := queryprocessor.ProvideServiceFactory()(serviceChannel, func(ctx context.Context, sender interface{}) queryprocessor.IResultSenderClosable {
+	queryProcessor := queryprocessor.ProvideServiceFactory()(serviceChannel, func(ctx context.Context, sender ibus.ISender) queryprocessor.IResultSenderClosable {
 		return out
 	}, appParts, maxPrepareQueries, imetrics.Provide(), "vvm", authn, authz, cfgs)
 
@@ -861,7 +862,7 @@ func TestState_withAfterArgument(t *testing.T) {
 	authz := iauthnzimpl.NewDefaultAuthorizer()
 	tokens := itokensjwt.ProvideITokens(itokensjwt.SecretKeyExample, time.Now)
 	appTokens := payloads.ProvideIAppTokensFactory(tokens).New(test.appQName)
-	queryProcessor := queryprocessor.ProvideServiceFactory()(serviceChannel, func(ctx context.Context, sender interface{}) queryprocessor.IResultSenderClosable {
+	queryProcessor := queryprocessor.ProvideServiceFactory()(serviceChannel, func(ctx context.Context, sender ibus.ISender) queryprocessor.IResultSenderClosable {
 		return out
 	}, appParts, maxPrepareQueries, imetrics.Provide(), "vvm", authn, authz, cfgs)
 

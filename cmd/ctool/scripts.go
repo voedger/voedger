@@ -64,7 +64,16 @@ func (se *scriptExecuterType) run(scriptName string, args ...string) error {
 	os.Chdir(scriptsTempDir)
 
 	if len(se.sshKeyPath) > 0 {
-		args = append([]string{fmt.Sprintf("eval $(ssh-agent -s); ssh-add %s; ./%s", se.sshKeyPath, scriptName)}, args...)
+		buf := []string{}
+		for _, s := range args {
+			if strings.Contains(s, " ") {
+				buf = append(buf, fmt.Sprintf(`"%s"`, s))
+			} else {
+				buf = append(buf, s)
+			}
+		}
+		args = append([]string{fmt.Sprintf("eval $(ssh-agent -s); ssh-add %s; ./%s", se.sshKeyPath, scriptName)}, buf...)
+
 		pExec = new(exec.PipedExec).Command("bash", "-c", strings.Join(args, " "))
 	} else {
 		args = append([]string{scriptName}, args...)

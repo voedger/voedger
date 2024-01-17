@@ -32,6 +32,7 @@ import (
 	"github.com/voedger/voedger/pkg/processors"
 	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys/authnz"
+	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
 
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
@@ -382,7 +383,7 @@ type queryMessage struct {
 	appQName   istructs.AppQName
 	wsid       istructs.WSID
 	partition  istructs.PartitionID
-	sender     interface{}
+	sender     ibus.ISender
 	body       []byte
 	query      appdef.IQuery
 	host       string
@@ -391,7 +392,7 @@ type queryMessage struct {
 
 func (m queryMessage) AppQName() istructs.AppQName     { return m.appQName }
 func (m queryMessage) WSID() istructs.WSID             { return m.wsid }
-func (m queryMessage) Sender() interface{}             { return m.sender }
+func (m queryMessage) Sender() ibus.ISender            { return m.sender }
 func (m queryMessage) RequestCtx() context.Context     { return m.requestCtx }
 func (m queryMessage) Query() appdef.IQuery            { return m.query }
 func (m queryMessage) Host() string                    { return m.host }
@@ -404,7 +405,7 @@ func (m queryMessage) Body() []byte {
 	return []byte("{}")
 }
 
-func NewQueryMessage(requestCtx context.Context, appQName istructs.AppQName, partID istructs.PartitionID, wsid istructs.WSID, sender interface{}, body []byte,
+func NewQueryMessage(requestCtx context.Context, appQName istructs.AppQName, partID istructs.PartitionID, wsid istructs.WSID, sender ibus.ISender, body []byte,
 	query appdef.IQuery, host string, token string) IQueryMessage {
 	return queryMessage{
 		appQName:   appQName,

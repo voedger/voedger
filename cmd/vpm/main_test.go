@@ -16,6 +16,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/voedger/voedger/cmd/vpm/internal/dm"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
@@ -293,6 +294,29 @@ func TestCompileErrors(t *testing.T) {
 			fmt.Println(err.Error())
 		})
 	}
+}
+
+func TestPkgRegistryCompile(t *testing.T) {
+	require := require.New(t)
+
+	wd, err := os.Getwd()
+	require.NoError(err)
+	defer func() {
+		_ = os.Chdir(wd)
+	}()
+
+	depManager, err := dm.NewGoBasedDependencyManager(wd)
+	require.NoError(err)
+
+	localPkgRegistry, err := depManager.LocalPath("github.com/voedger/voedger/pkg/registry")
+	require.NoError(err)
+
+	pkgDir := filepath.Dir(localPkgRegistry)
+	err = os.Chdir(pkgDir)
+	require.NoError(err)
+
+	err = execRootCmd([]string{"vpm", "compile", "-C", "registry"}, "1.0.0")
+	require.NoError(err)
 }
 
 func copyContents(src embed.FS, dest string) error {

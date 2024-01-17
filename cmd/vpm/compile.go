@@ -255,19 +255,18 @@ func compileDependency(depMan dm.IDependencyManager, depURL string, alias *parse
 	return
 }
 
-// checkWorkingDir checks if working dir is valid and returns it
-func checkWorkingDir(workingDir string) (string, error) {
-	if workingDir == "" {
+func makeAbsPath(dir string) (string, error) {
+	if !filepath.IsAbs(dir) {
 		wd, err := os.Getwd()
 		if err != nil {
 			return "", fmt.Errorf("failed to get working directory: %v", err)
 		}
-		return wd, nil
+		dir = filepath.Clean(filepath.Join(wd, dir))
 	}
-	if _, err := os.Stat(workingDir); os.IsNotExist(err) {
-		return "", fmt.Errorf("failed to open %s", workingDir)
+	if _, err := os.Stat(dir); os.IsNotExist(err) {
+		return "", fmt.Errorf("failed to open %s", dir)
 	}
-	return workingDir, nil
+	return dir, nil
 }
 
 func initGlobalFlags(cmd *cobra.Command, params *vpmParams) {
@@ -280,11 +279,10 @@ func prepareParams(params vpmParams, args []string) (newParams vpmParams, err er
 		params.TargetDir = filepath.Clean(args[0])
 	}
 	newParams = params
-	newParams.WorkingDir, err = checkWorkingDir(params.WorkingDir)
+	newParams.WorkingDir, err = makeAbsPath(params.WorkingDir)
 	if err != nil {
 		return
 	}
-	newParams.WorkingDir = filepath.Clean(newParams.WorkingDir)
 	if newParams.IgnoreFile != "" {
 		newParams.IgnoreFile = filepath.Clean(newParams.IgnoreFile)
 	}

@@ -8,7 +8,6 @@ import (
 	"context"
 	"time"
 
-	ibus "github.com/untillpro/airs-ibus"
 	"github.com/untillpro/goutils/logger"
 
 	"github.com/voedger/voedger/pkg/appparts"
@@ -44,7 +43,7 @@ type appPartition struct {
 }
 
 // syncActualizerFactory - это фабрика(разделИД), которая возвращает свитч, в бранчах которого по синхронному актуализатору на каждое приложение, внутри каждого - проекторы на каждое приложение
-func ProvideServiceFactory(bus ibus.IBus, appParts appparts.IAppPartitions, now coreutils.TimeFunc, syncActualizerFactory SyncActualizerFactory,
+func ProvideServiceFactory(appParts appparts.IAppPartitions, now coreutils.TimeFunc, syncActualizerFactory SyncActualizerFactory,
 	n10nBroker in10n.IN10nBroker, metrics imetrics.IMetrics, vvm VVMName, authenticator iauthnz.IAuthenticator, authorizer iauthnz.IAuthorizer,
 	secretReader isecrets.ISecretReader, appConfigsType istructsmem.AppConfigsType) ServiceFactory {
 	return func(commandsChannel CommandChannel, partitionID istructs.PartitionID) pipeline.IService {
@@ -96,7 +95,7 @@ func ProvideServiceFactory(bus ibus.IBus, appParts appparts.IAppPartitions, now 
 				pipeline.WireFunc("syncProjectorsEnd", syncProjectorsEnd),
 				pipeline.WireFunc("n10n", cmdProc.n10n),
 				pipeline.WireFunc("putWLog", putWLog),
-				pipeline.WireSyncOperator("sendResponse", &opSendResponse{bus: bus}), // ICatch
+				pipeline.WireSyncOperator("sendResponse", &opSendResponse{}), // ICatch
 				pipeline.WireFunc("releaseAppPart", releaseAppPart),
 			)
 			// TODO: сделать потом plogOffset свой по каждому разделу, wlogoffset - свой для каждого wsid

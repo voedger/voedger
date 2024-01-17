@@ -29,6 +29,7 @@ import (
 	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/state/smtptest"
 	"github.com/voedger/voedger/pkg/sys/authnz"
+	"github.com/voedger/voedger/pkg/sys/verifier"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 	"github.com/voedger/voedger/pkg/vvm"
 )
@@ -132,6 +133,22 @@ func newVit(t *testing.T, vitCfg *VITConfig, useCas bool) *VIT {
 			vit.VVM.APIs.IAppPartitions.DeployAppPartitions(app.name, appParts)
 		}
 
+		// generate verified value tokens if queried
+		//                desiredValue token
+		verifiedValues := map[string]string{}
+		for desiredValue, vvi := range app.verifiedValuesIntents {
+			appTokens := vvm.IAppTokensFactory.New(app.name)
+			verifiedValuePayload := payloads.VerifiedValuePayload{
+				VerificationKind: appdef.VerificationKind_EMail,
+				Entity:           vvi.docQName,
+				Field:            vvi.fieldName,
+				Value:            vvi.desiredValue,
+			}
+			verifiedValueToken, err := appTokens.IssueToken(verifier.VerifiedValueTokenDuration, &verifiedValuePayload)
+			require.NoError(vit.T, err)
+			verifiedValues[desiredValue] = verifiedValueToken
+		}
+
 		// создадим логины и рабочие области
 		for _, login := range app.logins {
 			vit.SignUp(login.Name, login.Pwd, login.AppQName)
@@ -143,10 +160,11 @@ func newVit(t *testing.T, vitCfg *VITConfig, useCas bool) *VIT {
 			}
 			appPrincipals[login.Name] = prn
 
-			for singleton, data := range login.singletons {
+			for singleton, dataFactory := range login.singletons {
 				if !vit.PostProfile(prn, "q.sys.Collection", fmt.Sprintf(`{"args":{"Schema":"%s"}}`, singleton)).IsEmpty() {
 					continue
 				}
+				data := dataFactory(verifiedValues)
 				data[appdef.SystemField_ID] = 1
 				data[appdef.SystemField_QName] = singleton.String()
 
@@ -165,10 +183,11 @@ func newVit(t *testing.T, vitCfg *VITConfig, useCas bool) *VIT {
 			}
 			appWorkspaces[wsd.Name] = vit.CreateWorkspace(wsd, owner)
 
-			for singleton, data := range wsd.singletons {
+			for singleton, dataFactory := range wsd.singletons {
 				if !vit.PostWS(appWorkspaces[wsd.Name], "q.sys.Collection", fmt.Sprintf(`{"args":{"Schema":"%s"}}`, singleton)).IsEmpty() {
 					continue
 				}
+				data := dataFactory(verifiedValues)
 				data[appdef.SystemField_ID] = 1
 				data[appdef.SystemField_QName] = singleton.String()
 

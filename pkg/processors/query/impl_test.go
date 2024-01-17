@@ -33,6 +33,7 @@ import (
 	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys/authnz"
 	coreutils "github.com/voedger/voedger/pkg/utils"
+	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
 )
 
 var now = time.Now()
@@ -297,7 +298,7 @@ func TestBasicUsage_ServiceFactory(t *testing.T) {
 	authz := iauthnzimpl.NewDefaultAuthorizer()
 	queryProcessor := ProvideServiceFactory()(
 		serviceChannel,
-		func(ctx context.Context, sender interface{}) IResultSenderClosable { return rs },
+		func(ctx context.Context, sender ibus.ISender) IResultSenderClosable { return rs },
 		appParts,
 		3, // max concurrent queries
 		metrics, "vvm", authn, authz, cfgs)
@@ -1048,7 +1049,7 @@ func TestRateLimiter(t *testing.T) {
 	authz := iauthnzimpl.NewDefaultAuthorizer()
 	queryProcessor := ProvideServiceFactory()(
 		serviceChannel,
-		func(ctx context.Context, sender interface{}) IResultSenderClosable { return rs },
+		func(ctx context.Context, sender ibus.ISender) IResultSenderClosable { return rs },
 		appParts,
 		3, // max concurrent queries
 		metrics, "vvm", authn, authz, cfgs)
@@ -1062,7 +1063,7 @@ func TestRateLimiter(t *testing.T) {
 
 	// execute query
 	// first 2 - ok
-	query := appDef.Query(qName) // nnv: Suspicious code!!
+	query := appDef.Query(qName)
 	serviceChannel <- NewQueryMessage(context.Background(), appName, partID, wsID, nil, body, query, "127.0.0.1", systemToken)
 	require.NoError(<-errs)
 	serviceChannel <- NewQueryMessage(context.Background(), appName, partID, wsID, nil, body, query, "127.0.0.1", systemToken)
@@ -1104,12 +1105,12 @@ func TestAuthnz(t *testing.T) {
 	authz := iauthnzimpl.NewDefaultAuthorizer()
 	queryProcessor := ProvideServiceFactory()(
 		serviceChannel,
-		func(ctx context.Context, sender interface{}) IResultSenderClosable { return rs },
+		func(ctx context.Context, sender ibus.ISender) IResultSenderClosable { return rs },
 		appParts,
 		3, // max concurrent queries
 		metrics, "vvm", authn, authz, cfgs)
 	go queryProcessor.Run(context.Background())
-	query := appDef.Query(qNameFunction) // nnv: Suspicious code!!
+	query := appDef.Query(qNameFunction)
 
 	t.Run("no token for a query that requires authorization -> 403 unauthorized", func(t *testing.T) {
 		serviceChannel <- NewQueryMessage(context.Background(), appName, partID, wsID, nil, body, query, "127.0.0.1", "")

@@ -32,15 +32,18 @@ const (
 )
 
 var (
-	QNameApp1_TestWSKind               = appdef.NewQName(app1PkgName, "WSKind")
-	QNameTestView                      = appdef.NewQName(app1PkgName, "View")
-	QNameApp1_TestEmailVerificationDoc = appdef.NewQName(app1PkgName, "Doc")
-	QNameApp1_CDocTestConstraints      = appdef.NewQName(app1PkgName, "DocConstraints")
-	QNameCmdRated                      = appdef.NewQName(app1PkgName, "RatedCmd")
-	QNameQryRated                      = appdef.NewQName(app1PkgName, "RatedQry")
-	QNameODoc1                         = appdef.NewQName(app1PkgName, "odoc1")
-	QNameODoc2                         = appdef.NewQName(app1PkgName, "odoc2")
-	TestSMTPCfg                        = smtp.Cfg{
+	QNameApp1_TestWSKind                     = appdef.NewQName(app1PkgName, "WSKind")
+	QNameTestView                            = appdef.NewQName(app1PkgName, "View")
+	QNameApp1_TestEmailVerificationDoc       = appdef.NewQName(app1PkgName, "Doc")
+	QNameApp1_DocConstraints                 = appdef.NewQName(app1PkgName, "DocConstraints")
+	QNameApp1_DocConstraintsString           = appdef.NewQName(app1PkgName, "DocConstraintsString")
+	QNameApp1_DocConstraintsFewUniques       = appdef.NewQName(app1PkgName, "DocConstraintsFewUniques")
+	QNameApp1_DocConstraintsOldAndNewUniques = appdef.NewQName(app1PkgName, "DocConstraintsOldAndNewUniques")
+	QNameCmdRated                            = appdef.NewQName(app1PkgName, "RatedCmd")
+	QNameQryRated                            = appdef.NewQName(app1PkgName, "RatedQry")
+	QNameODoc1                               = appdef.NewQName(app1PkgName, "odoc1")
+	QNameODoc2                               = appdef.NewQName(app1PkgName, "odoc2")
+	TestSMTPCfg                              = smtp.Cfg{
 		Username: "username@gmail.com",
 	}
 
@@ -185,6 +188,7 @@ func ProvideApp1(apis apps.APIs, cfg *istructsmem.AppConfigType, adf appdef.IApp
 		appdef.NewQName(app1PkgName, "CmdODocTwo"),
 		istructsmem.NullCommandExec,
 	))
+
 	app1PackageFS := parser.PackageFS{
 		QualifiedPackageName: "github.com/voedger/voedger/pkg/vit/app1pkg",
 		FS:                   SchemaTestApp1FS,

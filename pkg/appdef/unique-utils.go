@@ -5,6 +5,8 @@
 
 package appdef
 
+import "fmt"
+
 // If the slices have duplicates, then the indices of the first pair are returned, otherwise (-1, -1)
 func duplicates[T comparable](s []T) (int, int) {
 	for i := range s {
@@ -37,4 +39,8 @@ func subSet[T comparable](sub, set []T) bool {
 // Returns is set1 and set2 overlaps, i.e. set1 is subset of set2 or set2 is subset of set1
 func overlaps[T comparable](set1, set2 []T) bool {
 	return subSet(set1, set2) || subSet(set2, set1)
+}
+
+func UniqueQName(docQName QName, uniqueName string) QName {
+	return NewQName(docQName.Pkg(), fmt.Sprintf("%s$uniques$%s", docQName.Entity(), uniqueName))
 }

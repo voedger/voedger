@@ -14,13 +14,14 @@ import (
 	"github.com/voedger/voedger/pkg/iprocbus"
 	"github.com/voedger/voedger/pkg/istructs"
 	imetrics "github.com/voedger/voedger/pkg/metrics"
+	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
 )
 
 func TestWrongTypes(t *testing.T) {
 	require := require.New(t)
 	serviceChannel := make(iprocbus.ServiceChannel)
 	errs := make(chan error)
-	resultSenderClosableFactory := func(ctx context.Context, sender interface{}) IResultSenderClosable {
+	resultSenderClosableFactory := func(ctx context.Context, sender ibus.ISender) IResultSenderClosable {
 		return &testResultSenderClosable{
 			startArraySection: func(sectionType string, path []string) { t.Fatal() },
 			sendElement:       func(name string, element interface{}) (err error) { t.Fatal(); return nil },
