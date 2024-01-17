@@ -10,7 +10,6 @@ import (
 
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
-	// "github.com/voedger/voedger/pkg/sys/authnz"
 )
 
 func provideChangePassword(cfgRegistry *istructsmem.AppConfigType) {
