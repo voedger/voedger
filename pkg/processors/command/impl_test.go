@@ -616,12 +616,15 @@ func replyBadRequest(bus ibus.IBus, sender interface{}, message string) {
 	})
 }
 
-func setUp(t *testing.T, prepareAppDef func(appDef appdef.IAppDefBuilder), cfgFuncs ...func(*istructsmem.AppConfigType)) testApp {
+// test app deployment constants
+var (
+	testAppName                            = istructs.AppQName_untill_airs_bp
+	testAppPartsCount                      = 2
+	testAppEngines                         = [cluster.ProcessorKind_Count]int{10, 10, 10}
+	testAppPartID     istructs.PartitionID = 1
+)
 
-	var (
-		appName istructs.AppQName    = istructs.AppQName_untill_airs_bp
-		partID  istructs.PartitionID = 1
-	)
+func setUp(t *testing.T, prepareAppDef func(appDef appdef.IAppDefBuilder), cfgFuncs ...func(*istructsmem.AppConfigType)) testApp {
 
 	if coreutils.IsDebug() {
 		testTimeout = time.Hour
@@ -644,7 +647,7 @@ func setUp(t *testing.T, prepareAppDef func(appDef appdef.IAppDefBuilder), cfgFu
 	}
 
 	// конфиг приложения airs-bp
-	cfg := cfgs.AddConfig(appName, appDef)
+	cfg := cfgs.AddConfig(testAppName, appDef)
 	for _, cfgFunc := range cfgFuncs {
 		cfgFunc(cfg)
 	}
@@ -657,8 +660,8 @@ func setUp(t *testing.T, prepareAppDef func(appDef appdef.IAppDefBuilder), cfgFu
 	require.NoError(t, err)
 	defer appPartsClean()
 
-	appParts.DeployApp(appName, appDef, cluster.PoolSize(100, 100, 100)) // The commands in the tests go sequentially, you can specify {1, 0, 0}
-	appParts.DeployAppPartitions(appName, []istructs.PartitionID{partID})
+	appParts.DeployApp(testAppName, appDef, testAppPartsCount, testAppEngines)
+	appParts.DeployAppPartitions(testAppName, []istructs.PartitionID{testAppPartID})
 
 	// command processor работает через ibus.SendResponse -> нам нужна реализация ibus
 	var bus ibus.IBus
@@ -678,7 +681,7 @@ func setUp(t *testing.T, prepareAppDef func(appDef appdef.IAppDefBuilder), cfgFu
 			token = strings.TrimPrefix(authHeaders[0], "Bearer ")
 		}
 		command := appDef.Command(cmdQName)
-		icm := NewCommandMessage(ctx, request.Body, appQName, istructs.WSID(request.WSID), sender, partID, command, token, "")
+		icm := NewCommandMessage(ctx, request.Body, appQName, istructs.WSID(request.WSID), sender, testAppPartID, command, token, "")
 		serviceChannel <- icm
 	})
 	n10nBroker, n10nBrokerCleanup := in10nmem.ProvideEx2(in10n.Quotas{
@@ -689,13 +692,13 @@ func setUp(t *testing.T, prepareAppDef func(appDef appdef.IAppDefBuilder), cfgFu
 	}, time.Now)
 
 	tokens := itokensjwt.ProvideITokens(itokensjwt.SecretKeyExample, time.Now)
-	appTokens := payloads.ProvideIAppTokensFactory(tokens).New(appName)
+	appTokens := payloads.ProvideIAppTokensFactory(tokens).New(testAppName)
 	systemToken, err := payloads.GetSystemPrincipalTokenApp(appTokens)
 	require.NoError(t, err)
 	cmdProcessorFactory := ProvideServiceFactory(bus, appParts, time.Now, func(ctx context.Context, partitionID istructs.PartitionID) pipeline.ISyncOperator {
 		return &pipeline.NOOP{}
 	}, n10nBroker, imetrics.Provide(), "vvm", iauthnzimpl.NewDefaultAuthenticator(iauthnzimpl.TestSubjectRolesGetter), iauthnzimpl.NewDefaultAuthorizer(), isecretsimpl.ProvideSecretReader(), cfgs)
-	cmdProcService := cmdProcessorFactory(serviceChannel, partID)
+	cmdProcService := cmdProcessorFactory(serviceChannel, testAppPartID)
 
 	go func() {
 		cmdProcService.Run(ctx)
