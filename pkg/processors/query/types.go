@@ -12,6 +12,7 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 	coreutils "github.com/voedger/voedger/pkg/utils"
+	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
 )
 
 // FilterFactory creates IFilter from data
@@ -91,7 +92,7 @@ type IOutputRow interface {
 type IQueryMessage interface {
 	AppQName() istructs.AppQName
 	WSID() istructs.WSID
-	Sender() interface{}
+	Sender() ibus.ISender
 	Body() []byte
 	RequestCtx() context.Context
 	Query() appdef.IQuery
@@ -101,7 +102,7 @@ type IQueryMessage interface {
 	Token() string
 }
 
-type ResultSenderClosableFactory func(ctx context.Context, sender interface{}) IResultSenderClosable
+type ResultSenderClosableFactory func(ctx context.Context, sender ibus.ISender) IResultSenderClosable
 
 type IResultSenderClosable interface {
 	StartArraySection(sectionType string, path []string)

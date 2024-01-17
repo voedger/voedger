@@ -23,6 +23,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
+	"github.com/voedger/voedger/staging/src/github.com/untillpro/ibusmem"
 )
 
 func TestNewHTTPError(t *testing.T) {
@@ -72,12 +73,13 @@ func (bus *testIBus) SendParallelResponse2(sender interface{}) (rsender ibus.IRe
 
 func TestReply(t *testing.T) {
 	require := require.New(t)
-	sender := "whatever"
+	busSender := "whatever"
 
 	t.Run("ReplyErr", func(t *testing.T) {
 		bus := &testIBus{}
 		err := errors.New("test error")
-		ReplyErr(bus, sender, err)
+		sender := ibusmem.NewISender(bus, busSender)
+		ReplyErr(sender, err)
 		expectedResp := ibus.Response{
 			ContentType: ApplicationJSON,
 			StatusCode:  http.StatusInternalServerError,
@@ -88,7 +90,8 @@ func TestReply(t *testing.T) {
 
 	t.Run("ReplyErrf", func(t *testing.T) {
 		bus := &testIBus{}
-		ReplyErrf(bus, sender, http.StatusAccepted, "test ", "message")
+		sender := ibusmem.NewISender(bus, busSender)
+		ReplyErrf(sender, http.StatusAccepted, "test ", "message")
 		expectedResp := ibus.Response{
 			ContentType: ApplicationJSON,
 			StatusCode:  http.StatusAccepted,
@@ -101,7 +104,8 @@ func TestReply(t *testing.T) {
 		t.Run("common error", func(t *testing.T) {
 			bus := &testIBus{}
 			err := errors.New("test error")
-			ReplyErrDef(bus, sender, err, http.StatusAccepted)
+			sender := ibusmem.NewISender(bus, busSender)
+			ReplyErrDef(sender, err, http.StatusAccepted)
 			expectedResp := ibus.Response{
 				ContentType: ApplicationJSON,
 				StatusCode:  http.StatusAccepted,
@@ -117,7 +121,8 @@ func TestReply(t *testing.T) {
 				Data:       "dddfd",
 				QName:      appdef.NewQName("my", "qname"),
 			}
-			ReplyErrDef(bus, sender, err, http.StatusAccepted)
+			sender := ibusmem.NewISender(bus, busSender)
+			ReplyErrDef(sender, err, http.StatusAccepted)
 			expectedResp := ibus.Response{
 				ContentType: ApplicationJSON,
 				StatusCode:  http.StatusAlreadyReported,
@@ -130,7 +135,7 @@ func TestReply(t *testing.T) {
 	t.Run("http status helpers", func(t *testing.T) {
 		cases := []struct {
 			statusCode      int
-			f               func(bus ibus.IBus, sender interface{}, message string)
+			f               func(sender ibus.ISender, message string)
 			expectedMessage string
 		}{
 			{f: ReplyUnauthorized, statusCode: http.StatusUnauthorized},
@@ -144,8 +149,9 @@ func TestReply(t *testing.T) {
 			name = name[strings.LastIndex(name, ".")+1:]
 			t.Run(name, func(t *testing.T) {
 				bus := &testIBus{}
-				sender := "whatever"
-				c.f(bus, sender, "test message")
+				busSender := "whatever"
+				sender := ibusmem.NewISender(bus, busSender)
+				c.f(sender, "test message")
 				expectedMessage := "test message"
 				if len(c.expectedMessage) > 0 {
 					expectedMessage = c.expectedMessage
@@ -161,9 +167,10 @@ func TestReply(t *testing.T) {
 
 		t.Run("ReplyInternalServerError", func(t *testing.T) {
 			bus := &testIBus{}
-			sender := "whatever"
+			busSender := "whatever"
 			err := errors.New("test error")
-			ReplyInternalServerError(bus, sender, "test", err)
+			sender := ibusmem.NewISender(bus, busSender)
+			ReplyInternalServerError(sender, "test", err)
 			expectedResp := ibus.Response{
 				ContentType: ApplicationJSON,
 				StatusCode:  http.StatusInternalServerError,
