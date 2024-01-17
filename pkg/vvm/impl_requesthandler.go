@@ -76,8 +76,13 @@ func provideIBus(appParts appparts.IAppPartitions, procbus iprocbus.IProcBus,
 			return
 		}
 
-		appPartsCount := appParts.AppPartsCount(appQName)
-		deliverToProcessors(request, requestCtx, appQName, sender, funcType, procbus, bus, token, cpchIdx, qpcgIdx, cpAmount)
+		appPartsCount, err := appParts.AppPartsCount(appQName)
+		if err != nil {
+			coreutils.ReplyInternalServerError(bus, sender, "failed to get app partitions count", err)
+			return
+		}
+
+		deliverToProcessors(request, requestCtx, appQName, sender, funcType, procbus, bus, token, cpchIdx, qpcgIdx, cpAmount, appPartsCount)
 	})
 	return bus
 }

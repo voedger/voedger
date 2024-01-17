@@ -123,11 +123,10 @@ func newVit(t *testing.T, vitCfg *VITConfig, useCas bool) *VIT {
 		as, err := vit.AppStructs(app.name)
 		require.NoError(t, err)
 
-		// FIXME: replace with istructs.SysOwner
-		if app.name.Owner() != appdef.SysPackage {
-			vit.VVM.APIs.IAppPartitions.DeployApp(app.name, as.AppDef(), app.deployment.EnginePoolSize)
+		if !app.name.IsSys() {
+			vit.VVM.APIs.IAppPartitions.DeployApp(app.name, as.AppDef(), app.deployment.PartsCount, app.deployment.EnginePoolSize)
 			appParts := []istructs.PartitionID{}
-			for pid := 0; pid < app.deployment.NumParts; pid++ {
+			for pid := 0; pid < app.deployment.PartsCount; pid++ {
 				appParts = append(appParts, istructs.PartitionID(pid))
 			}
 			vit.VVM.APIs.IAppPartitions.DeployAppPartitions(app.name, appParts)

@@ -83,14 +83,14 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 		return nil, nil, err
 	}
 	iAppStructsProvider := istructsmem.Provide(appConfigsType, bucketsFactoryType, iAppTokensFactory, iAppStorageProvider)
-	commandProcessorsChannelGroupIdxType := provideProcessorChannelGroupIdxCommand(vvmConfig)
-	queryProcessorsChannelGroupIdxType := provideProcessorChannelGroupIdxQuery(vvmConfig)
-	vvmPortSource := provideVVMPortSource()
-	iFederation := provideIFederation(vvmConfig, vvmPortSource)
 	iAppPartitions, cleanup, err := appparts.New(iAppStructsProvider)
 	if err != nil {
 		return nil, nil, err
 	}
+	commandProcessorsChannelGroupIdxType := provideProcessorChannelGroupIdxCommand(vvmConfig)
+	queryProcessorsChannelGroupIdxType := provideProcessorChannelGroupIdxQuery(vvmConfig)
+	vvmPortSource := provideVVMPortSource()
+	iFederation := provideIFederation(vvmConfig, vvmPortSource)
 	apIs := apps.APIs{
 		ITokens:              iTokens,
 		IAppStructsProvider:  iAppStructsProvider,
@@ -109,7 +109,7 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 		return nil, nil, err
 	}
 	vvmApps := provideVVMApps(v3)
-	iBus := provideIBus(iAppStructsProvider, iProcBus, commandProcessorsChannelGroupIdxType, queryProcessorsChannelGroupIdxType, commandProcessorsCount, vvmApps)
+	iBus := provideIBus(iAppPartitions, iProcBus, commandProcessorsChannelGroupIdxType, queryProcessorsChannelGroupIdxType, commandProcessorsCount, vvmApps)
 	quotas := vvmConfig.Quotas
 	in10nBroker, cleanup2 := in10nmem.ProvideEx2(quotas, timeFunc)
 	maxPrepareQueriesType := vvmConfig.MaxPrepareQueries

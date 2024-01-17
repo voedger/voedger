@@ -19,8 +19,7 @@ const (
 )
 
 type AppDeploymentDescriptor struct {
-	NumParts int
-
+	PartsCount     int
 	EnginePoolSize [ProcessorKind_Count]int
 }
 

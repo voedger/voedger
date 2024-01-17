@@ -122,7 +122,7 @@ func WithApp(appQName istructs.AppQName, updater apps.AppBuilder, appOpts ...App
 		app := &app{
 			name: appQName,
 			deployment: cluster.AppDeploymentDescriptor{
-				NumParts:       DefaultTestAppPartsCount,
+				PartsCount:     DefaultTestAppPartsCount,
 				EnginePoolSize: DefaultTestAppEnginesPool,
 			},
 			ws: map[string]WSParams{},
