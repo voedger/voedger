@@ -49,6 +49,8 @@ func newInitCmd() *cobra.Command {
 		return nil
 	}
 
+	initCmd.PersistentFlags().StringVar(&acmeDomains, "acme-domain", "", "ACME domains <comma separated list>")
+
 	initCmd.PersistentFlags().StringVarP(&sshPort, "ssh-port", "p", "22", "SSH port")
 
 	initCmd.AddCommand(initCECmd, initSECmd)

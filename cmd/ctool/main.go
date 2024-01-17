@@ -29,6 +29,8 @@ var sshPort string
 // skip checking nodes for the presence of the minimum allowable amount of RAM
 var skipNodeMemoryCheck bool
 
+var acmeDomains string
+
 var devMode bool
 
 var red func(a ...interface{}) string

@@ -20,6 +20,7 @@ import (
 	"testing"
 
 	"github.com/spf13/cobra"
+	"github.com/untillpro/goutils/logger"
 )
 
 var dryRun bool
@@ -37,7 +38,11 @@ func newCluster() *clusterType {
 		SkipStacks:            make([]string, 0),
 		ReplacedAddresses:     make([]string, 0),
 		Cron:                  &cronType{},
+		Acme:                  &acmeType{},
 	}
+
+	cluster.Acme.Domains = strings.Split(acmeDomains, ",")
+
 	if err := cluster.setEnv(); err != nil {
 		loggerError(err.Error())
 		return nil
@@ -315,41 +320,6 @@ func (c *cmdType) apply(cluster *clusterType) error {
 	return cluster.clusterControllerFunction()
 }
 
-/*
-func (c *cmdType) args() []string {
-	return strings.Split(c.Args, " ")
-}
-*/
-
-/*
-func (c *cmdType) args() []string {
-	var args []string
-	quoteOpen := false
-	currentArg := ""
-
-	for _, char := range c.Args {
-		if char == '"' {
-			quoteOpen = !quoteOpen
-		} else if char == ' ' && !quoteOpen {
-			if currentArg != "" {
-				args = append(args, currentArg)
-				currentArg = ""
-			}
-			continue
-		}
-
-		currentArg += string(char)
-	}
-
-	if currentArg != "" {
-		args = append(args, currentArg)
-	}
-
-	fmt.Println(args, " [", len(args), "]")
-	return args
-}
-*/
-
 func (c *cmdType) clear() {
 	c.Kind = ""
 	c.Args = []string{}
@@ -450,6 +420,14 @@ type cronType struct {
 	Backup string `json:"Backup,omitempty"`
 }
 
+type acmeType struct {
+	Domains []string `json:"Domains,omitempty"`
+}
+
+func (a *acmeType) domains() string {
+	return strings.Join(a.Domains, ",")
+}
+
 type clusterType struct {
 	configFileName        string
 	sshKey                string
@@ -459,6 +437,7 @@ type clusterType struct {
 	ActualClusterVersion  string
 	DesiredClusterVersion string    `json:"DesiredClusterVersion,omitempty"`
 	SshPort               string    `json:"SSHPort,omitempty"`
+	Acme                  *acmeType `json:"Acme,omitempty"`
 	Cmd                   *cmdType  `json:"Cmd,omitempty"`
 	LastAttemptError      string    `json:"LastAttemptError,omitempty"`
 	SkipStacks            []string  `json:"SkipStacks,omitempty"`
@@ -667,7 +646,18 @@ func (c *clusterType) loadFromJSON() error {
 
 // Installation of the necessary variables of the environment
 func (c *clusterType) setEnv() error {
-	return os.Setenv("VOEDGER_NODE_SSH_PORT", c.SshPort)
+
+	logger.Verbose(fmt.Sprintf("Set env VOEDGER_NODE_SSH_PORT = %s", c.SshPort))
+	if err := os.Setenv("VOEDGER_NODE_SSH_PORT", c.SshPort); err != nil {
+		return err
+	}
+
+	logger.Verbose(fmt.Sprintf("Set env VOEDGER_ACME_DOMAINS = %s", c.Acme.domains()))
+	if err := os.Setenv("VOEDGER_ACME_DOMAINS", c.Acme.domains()); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // nolint
