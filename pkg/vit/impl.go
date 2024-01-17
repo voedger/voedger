@@ -147,13 +147,13 @@ func newVit(t *testing.T, vitCfg *VITConfig, useCas bool) *VIT {
 			}
 			appPrincipals[login.Name] = prn
 
-			for singleton, dataFactory := range login.singletons {
-				if !vit.PostProfile(prn, "q.sys.Collection", fmt.Sprintf(`{"args":{"Schema":"%s"}}`, singleton)).IsEmpty() {
+			for doc, dataFactory := range login.docs {
+				if !vit.PostProfile(prn, "q.sys.Collection", fmt.Sprintf(`{"args":{"Schema":"%s"}}`, doc)).IsEmpty() {
 					continue
 				}
 				data := dataFactory(verifiedValues)
 				data[appdef.SystemField_ID] = 1
-				data[appdef.SystemField_QName] = singleton.String()
+				data[appdef.SystemField_QName] = doc.String()
 
 				bb, err := json.Marshal(data)
 				require.NoError(t, err)
@@ -161,6 +161,7 @@ func newVit(t *testing.T, vitCfg *VITConfig, useCas bool) *VIT {
 				vit.PostProfile(prn, "c.sys.CUD", fmt.Sprintf(`{"cuds":[{"fields":%s}]}`, bb))
 			}
 		}
+
 		for _, wsd := range app.ws {
 			owner := vit.principals[app.name][wsd.ownerLoginName]
 			appWorkspaces, ok := vit.appWorkspaces[app.name]
@@ -170,41 +171,100 @@ func newVit(t *testing.T, vitCfg *VITConfig, useCas bool) *VIT {
 			}
 			appWorkspaces[wsd.Name] = vit.CreateWorkspace(wsd, owner)
 
-			for singleton, dataFactory := range wsd.singletons {
-				if !vit.PostWS(appWorkspaces[wsd.Name], "q.sys.Collection", fmt.Sprintf(`{"args":{"Schema":"%s"}}`, singleton)).IsEmpty() {
-					continue
+			handleWSParam(vit, wsd, appWorkspaces[wsd.Name], verifiedValues)
+
+			// for doc, dataFactory := range wsd.docs {
+			// 	if !vit.PostWS(appWorkspaces[wsd.Name], "q.sys.Collection", fmt.Sprintf(`{"args":{"Schema":"%s"}}`, doc)).IsEmpty() {
+			// 		continue
+			// 	}
+			// 	data := dataFactory(verifiedValues)
+			// 	data[appdef.SystemField_ID] = 1
+			// 	data[appdef.SystemField_QName] = doc.String()
+
+			// 	bb, err := json.Marshal(data)
+			// 	require.NoError(t, err)
+
+			// 	vit.PostWS(appWorkspaces[wsd.Name], "c.sys.CUD", fmt.Sprintf(`{"cuds":[{"fields":%s}]}`, bb), coreutils.WithAuthorizeBy(vit.GetSystemPrincipal(app.name).Token))
+			// }
+
+			for _, childWSParams := range wsd.childs {
+				appWorkspaces, ok := vit.appWorkspaces[app.name]
+				if !ok {
+					appWorkspaces = map[string]*AppWorkspace{}
+					vit.appWorkspaces[app.name] = appWorkspaces
 				}
-				data := dataFactory(verifiedValues)
-				data[appdef.SystemField_ID] = 1
-				data[appdef.SystemField_QName] = singleton.String()
+				parentWS := appWorkspaces[wsd.Name]
+				vit.InitChildWorkspace(childWSParams, parentWS)
+				childWS := vit.WaitForChildWorkspace(parentWS, childWSParams.Name, parentWS.Owner)
+				appWorkspaces[childWSParams.Name] = childWS
+			}
 
-				bb, err := json.Marshal(data)
-				require.NoError(t, err)
-
-				vit.PostWS(appWorkspaces[wsd.Name], "c.sys.CUD", fmt.Sprintf(`{"cuds":[{"fields":%s}]}`, bb), coreutils.WithAuthorizeBy(vit.GetSystemPrincipal(app.name).Token))
+			for _, subject := range wsd.subjects {
+				roles := ""
+				for i, role := range subject.roles {
+					if i > 0 {
+						roles += ","
+					}
+					roles += role.String()
+				}
+				body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"sys.Subject","Login":"%s","Roles":"%s","SubjectKind":%d,"ProfileWSID":%d}}]}`,
+					subject.login, roles, subject.subjectKind, vit.principals[app.name][subject.login].ProfileWSID)
+				vit.PostWS(appWorkspaces[wsd.Name], "c.sys.CUD", body)
 			}
 		}
 
-		// join workspaces if any
-		for _, wsd := range app.ws {
-			if len(wsd.joinToWorkspace) == 0 {
-				continue
-			}
-			joinToWS := vit.appWorkspaces[app.name][wsd.joinToWorkspace]
-			roles := ""
-			for i, roleQName := range wsd.joinToWSRoles {
-				if i > 0 {
-					roles += ","
-				}
-				roles += roleQName.String()
-			}
+		// // join workspaces if any
+		// for _, wsd := range app.ws {
+		// 	if len(wsd.joinToWorkspace) == 0 {
+		// 		continue
+		// 	}
+		// 	joinToWS := vit.appWorkspaces[app.name][wsd.joinToWorkspace]
+		// 	roles := ""
+		// 	for i, roleQName := range wsd.joinToWSRoles {
+		// 		if i > 0 {
+		// 			roles += ","
+		// 		}
+		// 		roles += roleQName.String()
+		// 	}
 
-			body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"sys.Subject","Login":"%s","Roles":"%s","SubjectKind":%d,"ProfileWSID":%d}}]}`,
-				wsd.ownerLoginName, roles, istructs.SubjectKind_User, vit.principals[app.name][wsd.ownerLoginName].ProfileWSID)
-			vit.PostWS(joinToWS, "c.sys.CUD", body)
-		}
+		// 	body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"sys.Subject","Login":"%s","Roles":"%s","SubjectKind":%d,"ProfileWSID":%d}}]}`,
+		// 		wsd.ownerLoginName, roles, istructs.SubjectKind_User, vit.principals[app.name][wsd.ownerLoginName].ProfileWSID)
+		// 	vit.PostWS(joinToWS, "c.sys.CUD", body)
+		// }
 	}
 	return vit
+}
+
+func handleWSParam(vit *VIT, ws WSParams, appWS *AppWorkspace, appWorkspaces verifiedValues map[string]string) {
+	for doc, dataFactory := range ws.docs {
+		if !vit.PostWS(appWS, "q.sys.Collection", fmt.Sprintf(`{"args":{"Schema":"%s"}}`, doc)).IsEmpty() {
+			continue
+		}
+		data := dataFactory(verifiedValues)
+		data[appdef.SystemField_ID] = 1
+		data[appdef.SystemField_QName] = doc.String()
+
+		bb, err := json.Marshal(data)
+		require.NoError(vit.T, err)
+
+		vit.PostWS(appWS, "c.sys.CUD", fmt.Sprintf(`{"cuds":[{"fields":%s}]}`, bb), coreutils.WithAuthorizeBy(vit.GetSystemPrincipal(appWS.GetAppQName()).Token))
+	}
+	for _, subject := range ws.subjects {
+		roles := ""
+		for i, role := range subject.roles {
+			if i > 0 {
+				roles += ","
+			}
+			roles += role.String()
+		}
+		body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"sys.Subject","Login":"%s","Roles":"%s","SubjectKind":%d,"ProfileWSID":%d}}]}`,
+			subject.login, roles, subject.subjectKind, vit.principals[appWS.GetAppQName()][subject.login].ProfileWSID)
+		vit.PostWS(appWS, "c.sys.CUD", body)
+	}
+
+	for _, childWS := range ws.childs {
+		handleWSParam(vit, childWS, )
+	}
 }
 
 func NewVITLocalCassandra(t *testing.T, vitCfg *VITConfig, opts ...vitOptFunc) (vit *VIT) {

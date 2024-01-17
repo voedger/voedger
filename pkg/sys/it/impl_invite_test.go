@@ -34,10 +34,12 @@ func TestWithJoin(t *testing.T) {
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
-	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws2")
+	ws2 := vit.WS(istructs.AppQName_test1_app1, "test_ws2")
+
+	// prn := vit.GetPrincipal(istructs.AppQName_test1_app1, "login") // from cfg
 
 	body := `{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.options"}}]}`
-	vit.PostWS(ws, "c.sys.CUD", body)
+	vit.PostWS(ws2, "c.sys.CUD", body)
 }
 
 // impossible to use the test workspace again with the same login due of invite error `subject already exists`

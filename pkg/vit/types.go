@@ -65,20 +65,26 @@ type Login struct {
 	AppQName          istructs.AppQName
 	subjectKind       istructs.SubjectKindType
 	clusterID         istructs.ClusterID
-	singletons        map[appdef.QName]func(verifiedValues map[string]string) map[string]interface{}
+	docs              map[appdef.QName]func(verifiedValues map[string]string) map[string]interface{}
 }
 
 type WSParams struct {
-	Name            string
-	TemplateName    string
-	TemplateParams  string
-	Kind            appdef.QName
-	InitDataJSON    string
-	ownerLoginName  string
-	ClusterID       istructs.ClusterID
-	singletons      map[appdef.QName]func(verifiedValues map[string]string) map[string]interface{}
-	joinToWorkspace string
-	joinToWSRoles   []appdef.QName
+	Name           string
+	TemplateName   string
+	TemplateParams string
+	Kind           appdef.QName
+	InitDataJSON   string
+	ownerLoginName string
+	ClusterID      istructs.ClusterID
+	docs           map[appdef.QName]func(verifiedValues map[string]string) map[string]interface{}
+	childs         []WSParams
+	subjects       []subject
+}
+
+type subject struct {
+	login       string
+	subjectKind istructs.SubjectKindType
+	roles       []appdef.QName
 }
 
 type WorkspaceDescriptor struct {

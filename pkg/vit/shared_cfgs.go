@@ -12,6 +12,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/apps"
 	"github.com/voedger/voedger/pkg/extensionpoints"
+	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/parser"
 	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys/smtp"
@@ -54,10 +55,9 @@ var (
 			WithUserLogin("login", "pwd"),
 			WithUserLogin(TestEmail, "1"),
 			WithUserLogin(TestEmail2, "1"),
-			WithChildWorkspace(QNameApp1_TestWSKind, "test_ws", "test_template", "", "login", map[string]interface{}{"IntFld": 42}),
-			WithChildWorkspace(QNameApp1_TestWSKind, "test_ws2", "test_template", "", TestEmail, map[string]interface{}{"IntFld": 42}),
-			// WithChildWorkspace(QNameApp1_TestWSKind, "test_ws2", "test_template", "", "login", map[string]interface{}{"IntFld": 42},
-			// 	WithJoinToWorkspace("test_ws", appdef.NewQName(appdef.SysPackage, "WorkspaceAdmin"))),
+			WithChildWorkspace(QNameApp1_TestWSKind, "test_ws", "test_template", "", "login", map[string]interface{}{"IntFld": 42},
+				WithChild(QNameApp1_TestWSKind, "test_ws2", "test_template", "", TestEmail, map[string]interface{}{"IntFld": 42},
+					WithSubject("login", istructs.SubjectKind_User, []appdef.QName{iauthnz.QNameRoleWorkspaceAdmin}))),
 		),
 		WithApp(istructs.AppQName_test1_app2, ProvideApp2, WithUserLogin("login", "1")),
 		WithVVMConfig(func(cfg *vvm.VVMConfig) {
