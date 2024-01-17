@@ -210,7 +210,7 @@ func TestCtoolCommands(t *testing.T) {
 
 	defer deleteDryRunDir()
 
-	// команда version выполняется без ошибки
+	// Version command is performed without error
 	err = execRootCmd([]string{"./ctool", "version", "--dry-run"}, version)
 	require.NoError(err, err)
 
@@ -219,8 +219,12 @@ func TestCtoolCommands(t *testing.T) {
 	require.Error(err, err)
 
 	// execute the init command
-	err = execRootCmd([]string{"./ctool", "init", "SE", "10.0.0.21", "10.0.0.22", "10.0.0.23", "10.0.0.24", "10.0.0.25", "--dry-run", "--ssh-key", "key"}, version)
+	err = execRootCmd([]string{"./ctool", "init", "SE", "10.0.0.21", "10.0.0.22", "10.0.0.23", "10.0.0.24", "10.0.0.25", "--dry-run", "--ssh-key", "key", "--acme-domain", "domain"}, version)
 	require.NoError(err, err)
+
+	dryRun = true
+	cluster := newCluster()
+	require.Equal(cluster.Acme.domains(), "domain")
 
 	// repeat command init should give an error
 	err = execRootCmd([]string{"./ctool", "init", "SE", "10.0.0.21", "10.0.0.22", "10.0.0.23", "10.0.0.24", "10.0.0.25", "--dry-run", "--ssh-key", "key"}, version)
