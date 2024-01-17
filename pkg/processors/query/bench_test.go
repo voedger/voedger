@@ -12,7 +12,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/appparts"
-	"github.com/voedger/voedger/pkg/cluster"
 	"github.com/voedger/voedger/pkg/iauthnzimpl"
 	"github.com/voedger/voedger/pkg/iprocbus"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -57,7 +56,7 @@ func Benchmark_pipelineIService_Sequential(b *testing.B) {
 	appParts, cleanAppParts, err := appparts.New(appStructsProvider)
 	require.NoError(err)
 	defer cleanAppParts()
-	appParts.DeployApp(appName, appDef, cluster.PoolSize(100, 100, 100)) // queries limits is «3» (in this test), so you can use {0, 3, 0}
+	appParts.DeployApp(appName, appDef, appPartsCount, appEngines)
 	appParts.DeployAppPartitions(appName, []istructs.PartitionID{partID})
 
 	queryProcessor := ProvideServiceFactory()(
@@ -127,7 +126,7 @@ func Benchmark_pipelineIService_Parallel(b *testing.B) {
 		appParts, cleanAppParts, err := appparts.New(appStructsProvider)
 		require.NoError(err)
 		defer cleanAppParts()
-		appParts.DeployApp(appName, appDef, cluster.PoolSize(100, 100, 100)) // queries limits is «3» (in this test), so you can use {0, 3, 0}
+		appParts.DeployApp(appName, appDef, appPartsCount, appEngines)
 		appParts.DeployAppPartitions(appName, []istructs.PartitionID{partID})
 
 		queryProcessor := ProvideServiceFactory()(

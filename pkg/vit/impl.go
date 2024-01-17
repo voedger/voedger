@@ -119,6 +119,20 @@ func newVit(t *testing.T, vitCfg *VITConfig, useCas bool) *VIT {
 	require.NoError(t, vit.Launch())
 
 	for _, app := range vitPreConfig.vitApps {
+		// deploy app and partitions
+		as, err := vit.AppStructs(app.name)
+		require.NoError(t, err)
+
+		// FIXME: replace with istructs.SysOwner
+		if app.name.Owner() != appdef.SysPackage {
+			vit.VVM.APIs.IAppPartitions.DeployApp(app.name, as.AppDef(), app.deployment.EnginePoolSize)
+			appParts := []istructs.PartitionID{}
+			for pid := 0; pid < app.deployment.NumParts; pid++ {
+				appParts = append(appParts, istructs.PartitionID(pid))
+			}
+			vit.VVM.APIs.IAppPartitions.DeployAppPartitions(app.name, appParts)
+		}
+
 		// создадим логины и рабочие области
 		for _, login := range app.logins {
 			vit.SignUp(login.Name, login.Pwd, login.AppQName)

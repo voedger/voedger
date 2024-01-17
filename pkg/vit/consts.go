@@ -9,6 +9,7 @@ import (
 	"math"
 	"time"
 
+	"github.com/voedger/voedger/pkg/cluster"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
@@ -32,6 +33,9 @@ var (
 	SchemaTestApp1FS embed.FS
 	//go:embed schemaTestApp2.sql
 	SchemaTestApp2FS embed.FS
+
+	DefaultTestAppPartsCount  = 10
+	DefaultTestAppEnginesPool = cluster.PoolSize(10, 10, 10)
 )
 
 func init() {
