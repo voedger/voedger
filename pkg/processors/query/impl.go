@@ -119,6 +119,7 @@ func implServiceFactory(serviceChannel iprocbus.ServiceChannel, resultSenderClos
 					p.Close()
 					p = nil
 				}
+				qwork.release()
 				rs.Close(err)
 				qpm.Increase(queriesSeconds, time.Since(now).Seconds())
 			case <-ctx.Done():
@@ -288,15 +289,6 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 			return nil
 		}),
 		operator("exec function", func(ctx context.Context, qw *queryWork) (err error) {
-			defer func() {
-				// TODO: move release to separate operator. It should be supports ICatch interface
-				// release application partition after sending response
-				if ap := qw.appPart; ap != nil {
-					qw.appPart = nil
-					ap.Release()
-				}
-			}()
-
 			now := time.Now()
 			defer func() {
 				if r := recover(); r != nil {
@@ -370,6 +362,18 @@ func newQueryWork(msg IQueryMessage, rs IResultSenderClosable, appParts appparts
 // need for q.sys.EnrichPrincipalToken
 func (qw *queryWork) GetPrincipals() []iauthnz.Principal {
 	return qw.principals
+}
+
+func (qw *queryWork) release() {
+	if ap := qw.appPart; ap != nil {
+		qw.appPart = nil
+		ap.Release()
+	}
+}
+
+// need or q.sys.EnrichPrincipalToken
+func (qw *queryWork) AppQName() istructs.AppQName {
+	return qw.msg.AppQName()
 }
 
 func operator(name string, doSync func(ctx context.Context, qw *queryWork) (err error)) *pipeline.WiredOperator {
@@ -559,11 +563,6 @@ type queryProcessorMetrics struct {
 
 func (m *queryProcessorMetrics) Increase(metricName string, valueDelta float64) {
 	m.metrics.IncreaseApp(metricName, m.vvm, m.app, valueDelta)
-}
-
-// need or q.sys.EnrichPrincipalToken
-func (qw *queryWork) AppQName() istructs.AppQName {
-	return qw.msg.AppQName()
 }
 
 func newFieldsKinds(t appdef.IType) FieldsKinds {
