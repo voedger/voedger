@@ -109,7 +109,7 @@ func implServiceFactory(serviceChannel iprocbus.ServiceChannel, resultSenderClos
 				rs := resultSenderClosableFactory(msg.RequestCtx(), msg.Sender())
 				rs = &resultSenderClosableOnlyOnce{IResultSenderClosable: rs}
 				qwork := newQueryWork(msg, rs, appParts, maxPrepareQueries, qpm, secretReader)
-				// TODO: create qwork.release() to release borrowed resources				\
+				defer qwork.release()
 				if p == nil {
 					p = newQueryProcessorPipeline(ctx, authn, authz, appCfgs)
 				}
@@ -134,19 +134,7 @@ func implServiceFactory(serviceChannel iprocbus.ServiceChannel, resultSenderClos
 func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthenticator, authz iauthnz.IAuthorizer,
 	appCfgs istructsmem.AppConfigsType) pipeline.ISyncPipeline {
 	ops := []*pipeline.WiredOperator{
-		operator("get app structs", func(ctx context.Context, qw *queryWork) (err error) {
-			qw.appPart, err = qw.appParts.Borrow(qw.msg.AppQName(), qw.msg.Partition(), cluster.ProcessorKind_Query)
-			switch {
-			case err == nil:
-				qw.appStructs = qw.appPart.AppStructs()
-				// qw.appPart.Release() will be called from defer in "exec function" operator
-			case errors.Is(err, appparts.NotAvailableEngines):
-				return coreutils.WrapSysError(err, http.StatusServiceUnavailable)
-			default:
-				return coreutils.WrapSysError(err, http.StatusBadRequest)
-			}
-			return nil
-		}),
+		operator("borrowAppPart", borrowAppPart),
 		operator("check function call rate", func(ctx context.Context, qw *queryWork) (err error) {
 			if qw.appStructs.IsFunctionRateLimitsExceeded(qw.msg.Query().QName(), qw.msg.WSID()) {
 				return coreutils.NewSysError(http.StatusTooManyRequests)
@@ -364,6 +352,16 @@ func (qw *queryWork) GetPrincipals() []iauthnz.Principal {
 	return qw.principals
 }
 
+// borrows app partition for query
+func (qw *queryWork) borrow() (err error) {
+	if qw.appPart, err = qw.appParts.Borrow(qw.msg.AppQName(), qw.msg.Partition(), cluster.ProcessorKind_Query); err != nil {
+		return err
+	}
+	qw.appStructs = qw.appPart.AppStructs()
+	return nil
+}
+
+// releases borrowed app partition
 func (qw *queryWork) release() {
 	if ap := qw.appPart; ap != nil {
 		qw.appPart = nil
@@ -374,6 +372,17 @@ func (qw *queryWork) release() {
 // need or q.sys.EnrichPrincipalToken
 func (qw *queryWork) AppQName() istructs.AppQName {
 	return qw.msg.AppQName()
+}
+
+func borrowAppPart(_ context.Context, qw *queryWork) error {
+	switch err := qw.borrow(); {
+	case err == nil:
+		return nil
+	case errors.Is(err, appparts.NotAvailableEngines):
+		return coreutils.WrapSysError(err, http.StatusServiceUnavailable)
+	default:
+		return coreutils.WrapSysError(err, http.StatusBadRequest)
+	}
 }
 
 func operator(name string, doSync func(ctx context.Context, qw *queryWork) (err error)) *pipeline.WiredOperator {
