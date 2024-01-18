@@ -273,6 +273,7 @@ func borrowAppPart(_ context.Context, work interface{}) (err error) {
 	return nil
 }
 
+// TODO: It should be supports ICatch interface
 func releaseAppPart(_ context.Context, work interface{}) error {
 	cmd := work.(*cmdWorkpiece)
 

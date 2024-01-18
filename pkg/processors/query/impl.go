@@ -109,6 +109,7 @@ func implServiceFactory(serviceChannel iprocbus.ServiceChannel, resultSenderClos
 				rs := resultSenderClosableFactory(msg.RequestCtx(), msg.Sender())
 				rs = &resultSenderClosableOnlyOnce{IResultSenderClosable: rs}
 				qwork := newQueryWork(msg, rs, appParts, maxPrepareQueries, qpm, secretReader)
+				// TODO: create qwork.release() to release borrowed resources				\
 				if p == nil {
 					p = newQueryProcessorPipeline(ctx, authn, authz, appCfgs)
 				}
@@ -134,11 +135,16 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 	ops := []*pipeline.WiredOperator{
 		operator("get app structs", func(ctx context.Context, qw *queryWork) (err error) {
 			qw.appPart, err = qw.appParts.Borrow(qw.msg.AppQName(), qw.msg.Partition(), cluster.ProcessorKind_Query)
-			if err == nil {
+			switch {
+			case err == nil:
 				qw.appStructs = qw.appPart.AppStructs()
 				// qw.appPart.Release() will be called from defer in "exec function" operator
+			case errors.Is(err, appparts.NotAvailableEngines):
+				return coreutils.WrapSysError(err, http.StatusServiceUnavailable)
+			default:
+				return coreutils.WrapSysError(err, http.StatusBadRequest)
 			}
-			return coreutils.WrapSysError(err, http.StatusBadRequest)
+			return nil
 		}),
 		operator("check function call rate", func(ctx context.Context, qw *queryWork) (err error) {
 			if qw.appStructs.IsFunctionRateLimitsExceeded(qw.msg.Query().QName(), qw.msg.WSID()) {
@@ -283,6 +289,7 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 		}),
 		operator("exec function", func(ctx context.Context, qw *queryWork) (err error) {
 			defer func() {
+				// TODO: move release to separate operator. It should be supports ICatch interface
 				// release application partition after sending response
 				if ap := qw.appPart; ap != nil {
 					qw.appPart = nil

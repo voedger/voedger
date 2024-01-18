@@ -110,6 +110,7 @@ func ProvideServiceFactory(appParts appparts.IAppPartitions, now coreutils.TimeF
 						appParts:          appParts,
 						hostStateProvider: hsp,
 					}
+					// TODO: create cmd.release() to release borrowed resources
 					cmd.metrics = commandProcessorMetrics{
 						vvm:     string(vvm),
 						app:     cmd.cmdMes.AppQName(),
