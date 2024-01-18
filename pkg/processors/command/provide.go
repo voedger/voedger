@@ -96,7 +96,6 @@ func ProvideServiceFactory(appParts appparts.IAppPartitions, now coreutils.TimeF
 				pipeline.WireFunc("n10n", cmdProc.n10n),
 				pipeline.WireFunc("putWLog", putWLog),
 				pipeline.WireSyncOperator("sendResponse", &opSendResponse{}), // ICatch
-				pipeline.WireFunc("releaseAppPart", releaseAppPart),
 			)
 			// TODO: сделать потом plogOffset свой по каждому разделу, wlogoffset - свой для каждого wsid
 			defer cmdPipeline.Close()
@@ -110,7 +109,7 @@ func ProvideServiceFactory(appParts appparts.IAppPartitions, now coreutils.TimeF
 						appParts:          appParts,
 						hostStateProvider: hsp,
 					}
-					// TODO: create cmd.release() to release borrowed resources
+					defer cmd.release()
 					cmd.metrics = commandProcessorMetrics{
 						vvm:     string(vvm),
 						app:     cmd.cmdMes.AppQName(),

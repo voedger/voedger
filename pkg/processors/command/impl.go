@@ -85,6 +85,27 @@ func (c *cmdWorkpiece) WSID() istructs.WSID {
 	return c.cmdMes.WSID()
 }
 
+// borrows app partition for command
+func (c *cmdWorkpiece) borrow() (err error) {
+	if c.appPart, err = c.appParts.Borrow(c.cmdMes.AppQName(), c.cmdMes.PartitionID(), cluster.ProcessorKind_Command); err != nil {
+		return err
+	}
+	c.appStructs = c.appPart.AppStructs()
+	return nil
+}
+
+// releases borrowed app partition
+func (c *cmdWorkpiece) release() {
+	if ap := c.appPart; ap != nil {
+		c.appPart = nil
+		ap.Release()
+	}
+}
+
+func borrowAppPart(_ context.Context, work interface{}) error {
+	return work.(*cmdWorkpiece).borrow()
+}
+
 func (ap *appPartition) getWorkspace(wsid istructs.WSID) *workspace {
 	ws, ok := ap.workspaces[wsid]
 	if !ok {
@@ -258,31 +279,6 @@ func checkWSActive(_ context.Context, work interface{}) (err error) {
 		return nil
 	}
 	return processors.ErrWSInactive
-}
-
-func borrowAppPart(_ context.Context, work interface{}) (err error) {
-	cmd := work.(*cmdWorkpiece)
-
-	cmd.appPart, err = cmd.appParts.Borrow(cmd.cmdMes.AppQName(), cmd.cmdMes.PartitionID(), cluster.ProcessorKind_Command)
-	if err != nil {
-		return err
-	}
-	// cmd.appPart.Release() will be called from opSendResponse.DoSync
-	cmd.appStructs = cmd.appPart.AppStructs()
-
-	return nil
-}
-
-// TODO: It should be supports ICatch interface
-func releaseAppPart(_ context.Context, work interface{}) error {
-	cmd := work.(*cmdWorkpiece)
-
-	if ap := cmd.appPart; ap != nil {
-		cmd.appPart = nil
-		ap.Release()
-	}
-
-	return nil
 }
 
 func limitCallRate(_ context.Context, work interface{}) (err error) {
