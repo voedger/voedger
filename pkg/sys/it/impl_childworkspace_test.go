@@ -52,7 +52,7 @@ func TestBasicUsage_ChildWorkspaces(t *testing.T) {
 			{
 				"args": {
 					"WSName": "%s",
-					"WSKind": "app1pkg.WSKind",
+					"WSKind": "app1pkg.test_ws",
 					"WSKindInitializationData": "{\"IntFld\": 10}",
 					"TemplateName": "test_template",
 					"WSClusterID": 1
@@ -70,7 +70,7 @@ func TestBasicUsage_ChildWorkspaces(t *testing.T) {
 		require.Equal(istructs.ClusterID(1), childWS.WSID.ClusterID())
 
 		t.Run("create a new workspace with an existing name -> 409 conflict", func(t *testing.T) {
-			body := fmt.Sprintf(`{"args": {"WSName": "%s","WSKind": "app1pkg.WSKind","WSKindInitializationData": "{\"WorkStartTime\": \"10\"}","TemplateName": "test","WSClusterID": 1}}`, wsName)
+			body := fmt.Sprintf(`{"args": {"WSName": "%s","WSKind": "app1pkg.test_ws","WSKindInitializationData": "{\"WorkStartTime\": \"10\"}","TemplateName": "test","WSClusterID": 1}}`, wsName)
 			resp := vit.PostWS(parentWS, "c.sys.InitChildWorkspace", body, coreutils.Expect409())
 			resp.Println()
 		})
@@ -99,7 +99,7 @@ func TestForeignAuthorization(t *testing.T) {
 	wsName := vit.NextName()
 
 	// init child workspace
-	body := fmt.Sprintf(`{"args": {"WSName": "%s","WSKind": "app1pkg.WSKind","WSKindInitializationData": "{\"IntFld\": 10}","TemplateName": "test_template","WSClusterID": 42}}`, wsName)
+	body := fmt.Sprintf(`{"args": {"WSName": "%s","WSKind": "app1pkg.test_ws","WSKindInitializationData": "{\"IntFld\": 10}","TemplateName": "test_template","WSClusterID": 42}}`, wsName)
 	vit.PostWS(parentWS, "c.sys.InitChildWorkspace", body)
 
 	// wait for finish
