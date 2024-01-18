@@ -1,7 +1,7 @@
 FROM ubuntu:20.04
 
-RUN apt update -y.
-RUN apt install ca-certificates -y
+RUN apt update && \
+    apt install -y ca-certificates
 
 RUN mkdir /app
 COPY voedger /app
