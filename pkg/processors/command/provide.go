@@ -109,7 +109,6 @@ func ProvideServiceFactory(appParts appparts.IAppPartitions, now coreutils.TimeF
 						appParts:          appParts,
 						hostStateProvider: hsp,
 					}
-					defer cmd.release()
 					cmd.metrics = commandProcessorMetrics{
 						vvm:     string(vvm),
 						app:     cmd.cmdMes.AppQName(),
@@ -119,9 +118,7 @@ func ProvideServiceFactory(appParts appparts.IAppPartitions, now coreutils.TimeF
 					if err := cmdPipeline.SendSync(cmd); err != nil {
 						logger.Error("unhandled error: " + err.Error())
 					}
-					if cmd.pLogEvent != nil {
-						cmd.pLogEvent.Release()
-					}
+					cmd.release()
 					cmd.metrics.increase(CommandsSeconds, time.Since(start).Seconds())
 				case <-vvmCtx.Done():
 					cmdProc.appPartitions = map[istructs.AppQName]*appPartition{} // clear appPartitions to test recovery
