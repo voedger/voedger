@@ -96,18 +96,20 @@ func (ap *appPartition) getWorkspace(wsid istructs.WSID) *workspace {
 	return ws
 }
 
-func (cmdProc *cmdProc) getAppPartition(ctx context.Context, work interface{}) (err error) {
-	cmd := work.(*cmdWorkpiece)
-	cmd.cmdMes.AppQName()
-	ap, ok := cmdProc.appPartitions[cmd.cmdMes.AppQName()]
-	if !ok {
-		if ap, err = cmdProc.recovery(ctx, cmd); err != nil {
-			return err
+func (cmdProc *cmdProc) provideGetAppPartition(syncActualizerFactory pipeline.ISyncOperator) func(ctx context.Context, work interface{}) (err error) {
+	return func(ctx context.Context, work interface{}) (err error) {
+		cmd := work.(*cmdWorkpiece)
+		cmd.cmdMes.AppQName()
+		ap, ok := cmdProc.appPartitions[cmd.cmdMes.AppQName()]
+		if !ok {
+			if ap, err = cmdProc.recovery(ctx, cmd, syncActualizerFactory); err != nil {
+				return err
+			}
+			cmdProc.appPartitions[cmd.cmdMes.AppQName()] = ap
 		}
-		cmdProc.appPartitions[cmd.cmdMes.AppQName()] = ap
+		cmdProc.appPartition = ap
+		return nil
 	}
-	cmdProc.appPartition = ap
-	return nil
 }
 
 func (cmdProc *cmdProc) getCmdResultBuilder(_ context.Context, work interface{}) (err error) {
@@ -152,11 +154,12 @@ func updateIDGeneratorFromO(root istructs.IObject, appDef appdef.IAppDef, idGen 
 	})
 }
 
-func (cmdProc *cmdProc) recovery(ctx context.Context, cmd *cmdWorkpiece) (*appPartition, error) {
+func (cmdProc *cmdProc) recovery(ctx context.Context, cmd *cmdWorkpiece, syncActualizerFactory pipeline.ISyncOperator) (*appPartition, error) {
 	ap := &appPartition{
 		workspaces:     map[istructs.WSID]*workspace{},
 		nextPLogOffset: istructs.FirstOffset,
 	}
+	var lastEvent istructs.IPLogEvent
 	cb := func(plogOffset istructs.Offset, event istructs.IPLogEvent) (err error) {
 		ws := ap.getWorkspace(event.Workspace())
 		event.CUDs(func(rec istructs.ICUDRow) {
@@ -171,12 +174,32 @@ func (cmdProc *cmdProc) recovery(ctx context.Context, cmd *cmdWorkpiece) (*appPa
 		}
 		ws.NextWLogOffset = event.WLogOffset() + 1
 		ap.nextPLogOffset = plogOffset + 1
+		lastEvent = event
 		return nil
 	}
 
 	if err := cmd.appStructs.Events().ReadPLog(ctx, cmdProc.pNumber, istructs.FirstOffset, istructs.ReadToTheEnd, cb); err != nil {
 		return nil, err
 	}
+
+	if lastEvent != nil {
+		// re-apply the last event
+		// apply records
+		if err := cmd.appStructs.Records().Apply(lastEvent); err == nil {
+			return nil, err
+		}
+
+		// apply sync projectors
+		if err := syncActualizerFactory.DoSync(ctx, lastEvent); err != nil {
+			return nil, err
+		}
+
+		// put WLog
+		if err := cmd.appStructs.Events().PutWlog(lastEvent); err != nil {
+			return nil, err
+		}
+	}
+
 	worskapcesJSON, err := json.Marshal(ap.workspaces)
 	if err != nil {
 		// error impossible

@@ -58,6 +58,7 @@ func ProvideServiceFactory(asp istructs.IAppStructsProvider, now coreutils.TimeF
 
 		return pipeline.NewService(func(vvmCtx context.Context) {
 			hsp := newHostStateProvider(vvmCtx, partitionID, secretReader)
+			syncActualizerFactory := syncActualizerFactory(vvmCtx, partitionID)
 			cmdPipeline := pipeline.NewSyncPipeline(vvmCtx, "Command Processor",
 				pipeline.WireFunc("getAppStructs", getAppStructs),
 				pipeline.WireFunc("limitCallRate", limitCallRate),
@@ -65,7 +66,7 @@ func ProvideServiceFactory(asp istructs.IAppStructsProvider, now coreutils.TimeF
 				pipeline.WireFunc("authenticate", cmdProc.authenticate),
 				pipeline.WireFunc("checkWSInitialized", checkWSInitialized),
 				pipeline.WireFunc("checkWSActive", checkWSActive),
-				pipeline.WireFunc("getAppPartition", cmdProc.getAppPartition),
+				pipeline.WireFunc("getAppPartition", cmdProc.provideGetAppPartition(syncActualizerFactory)),
 				pipeline.WireFunc("getResources", getResources),
 				pipeline.WireFunc("getFunction", getFunction),
 				pipeline.WireFunc("authorizeRequest", cmdProc.authorizeRequest),
@@ -90,7 +91,7 @@ func ProvideServiceFactory(asp istructs.IAppStructsProvider, now coreutils.TimeF
 				pipeline.WireFunc("putPLog", cmdProc.putPLog),
 				pipeline.WireFunc("applyPLogEvent", applyPLogEvent),
 				pipeline.WireFunc("syncProjectorsStart", syncProjectorsBegin),
-				pipeline.WireSyncOperator("syncProjectors", syncActualizerFactory(vvmCtx, partitionID)),
+				pipeline.WireSyncOperator("syncProjectors", syncActualizerFactory),
 				pipeline.WireFunc("syncProjectorsEnd", syncProjectorsEnd),
 				pipeline.WireFunc("n10n", cmdProc.n10n),
 				pipeline.WireFunc("putWLog", putWLog),
