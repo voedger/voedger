@@ -18,8 +18,6 @@ import (
 	"github.com/untillpro/goutils/logger"
 	"golang.org/x/exp/maps"
 
-	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
-
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/in10n"
@@ -33,19 +31,20 @@ import (
 	"github.com/voedger/voedger/pkg/sys/builtin"
 	workspacemgmt "github.com/voedger/voedger/pkg/sys/workspace"
 	coreutils "github.com/voedger/voedger/pkg/utils"
+	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
 )
 
 func (cm *implICommandMessage) Body() []byte                      { return cm.body }
 func (cm *implICommandMessage) AppQName() istructs.AppQName       { return cm.appQName }
 func (cm *implICommandMessage) WSID() istructs.WSID               { return cm.wsid }
-func (cm *implICommandMessage) Sender() interface{}               { return cm.sender }
+func (cm *implICommandMessage) Sender() ibus.ISender              { return cm.sender }
 func (cm *implICommandMessage) PartitionID() istructs.PartitionID { return cm.partitionID }
 func (cm *implICommandMessage) RequestCtx() context.Context       { return cm.requestCtx }
 func (cm *implICommandMessage) Command() appdef.ICommand          { return cm.command }
 func (cm *implICommandMessage) Token() string                     { return cm.token }
 func (cm *implICommandMessage) Host() string                      { return cm.host }
 
-func NewCommandMessage(requestCtx context.Context, body []byte, appQName istructs.AppQName, wsid istructs.WSID, sender interface{},
+func NewCommandMessage(requestCtx context.Context, body []byte, appQName istructs.AppQName, wsid istructs.WSID, sender ibus.ISender,
 	partitionID istructs.PartitionID, command appdef.ICommand, token string, host string) ICommandMessage {
 	return &implICommandMessage{
 		body:        body,
@@ -97,18 +96,19 @@ func (ap *appPartition) getWorkspace(wsid istructs.WSID) *workspace {
 	return ws
 }
 
-func (cmdProc *cmdProc) getAppPartition(ctx context.Context, work interface{}) (err error) {
-	cmd := work.(*cmdWorkpiece)
-	cmd.cmdMes.AppQName()
-	ap, ok := cmdProc.appPartitions[cmd.cmdMes.AppQName()]
-	if !ok {
-		if ap, err = cmdProc.recovery(ctx, cmd); err != nil {
-			return err
+func (cmdProc *cmdProc) provideGetAppPartition(syncActualizerFactory pipeline.ISyncOperator) func(ctx context.Context, work interface{}) (err error) {
+	return func(ctx context.Context, work interface{}) (err error) {
+		cmd := work.(*cmdWorkpiece)
+		ap, ok := cmdProc.appPartitions[cmd.cmdMes.AppQName()]
+		if !ok {
+			if ap, err = cmdProc.recovery(ctx, cmd, syncActualizerFactory); err != nil {
+				return err
+			}
+			cmdProc.appPartitions[cmd.cmdMes.AppQName()] = ap
 		}
-		cmdProc.appPartitions[cmd.cmdMes.AppQName()] = ap
+		cmdProc.appPartition = ap
+		return nil
 	}
-	cmdProc.appPartition = ap
-	return nil
 }
 
 func (cmdProc *cmdProc) getCmdResultBuilder(_ context.Context, work interface{}) (err error) {
@@ -153,11 +153,12 @@ func updateIDGeneratorFromO(root istructs.IObject, appDef appdef.IAppDef, idGen 
 	})
 }
 
-func (cmdProc *cmdProc) recovery(ctx context.Context, cmd *cmdWorkpiece) (*appPartition, error) {
+func (cmdProc *cmdProc) recovery(ctx context.Context, cmd *cmdWorkpiece, syncActualizerFactory pipeline.ISyncOperator) (*appPartition, error) {
 	ap := &appPartition{
 		workspaces:     map[istructs.WSID]*workspace{},
 		nextPLogOffset: istructs.FirstOffset,
 	}
+	var lastEvent istructs.IPLogEvent
 	cb := func(plogOffset istructs.Offset, event istructs.IPLogEvent) (err error) {
 		ws := ap.getWorkspace(event.Workspace())
 		event.CUDs(func(rec istructs.ICUDRow) {
@@ -172,12 +173,36 @@ func (cmdProc *cmdProc) recovery(ctx context.Context, cmd *cmdWorkpiece) (*appPa
 		}
 		ws.NextWLogOffset = event.WLogOffset() + 1
 		ap.nextPLogOffset = plogOffset + 1
+		lastEvent = event
 		return nil
 	}
 
 	if err := cmd.appStructs.Events().ReadPLog(ctx, cmdProc.pNumber, istructs.FirstOffset, istructs.ReadToTheEnd, cb); err != nil {
 		return nil, err
 	}
+
+	if lastEvent != nil {
+		// re-apply the last event
+		// apply records
+		if err := cmd.appStructs.Records().Apply(lastEvent); err != nil {
+			return nil, err
+		}
+
+		// apply sync projectors
+		work := &cmdWorkpiece{
+			pLogEvent: lastEvent,
+			cmdMes:    NewCommandMessage(ctx, nil, cmd.AppQName(), lastEvent.Workspace(), cmd.cmdMes.Sender(), cmdProc.pNumber, nil, "", ""), // actually AppQName() only will be required
+		}
+		if err := syncActualizerFactory.DoSync(ctx, work); err != nil {
+			return nil, err
+		}
+
+		// put WLog
+		if err := cmd.appStructs.Events().PutWlog(lastEvent); err != nil {
+			return nil, err
+		}
+	}
+
 	worskapcesJSON, err := json.Marshal(ap.workspaces)
 	if err != nil {
 		// error impossible
@@ -659,7 +684,7 @@ func syncProjectorsEnd(_ context.Context, work interface{}) (err error) {
 
 type opSendResponse struct {
 	pipeline.NOOP
-	bus     ibus.IBus
+	bus ibus.IBus
 	cmdProc *cmdProc
 }
 
@@ -672,7 +697,7 @@ func (sr *opSendResponse) DoSync(_ context.Context, work interface{}) (err error
 			cmd.metrics.increase(ProjectorsSeconds, time.Since(cmd.syncProjectorsStart).Seconds())
 		}
 		logger.Error(cmd.err)
-		coreutils.ReplyErr(sr.bus, cmd.cmdMes.Sender(), cmd.err)
+		coreutils.ReplyErr(cmd.cmdMes.Sender(), cmd.err)
 		if cmd.appPartitionRestartScheduled {
 			logger.Info("partition %d will be restarted due of an error on writting to Log: %w", cmd.cmdMes.PartitionID(), cmd.err)
 			delete(sr.cmdProc.appPartitions, cmd.cmdMes.AppQName())
@@ -702,7 +727,7 @@ func (sr *opSendResponse) DoSync(_ context.Context, work interface{}) (err error
 		body.WriteString(string(cmdResultBytes))
 	}
 	body.WriteString("}")
-	coreutils.ReplyJSON(sr.bus, cmd.cmdMes.Sender(), http.StatusOK, body.String())
+	coreutils.ReplyJSON(cmd.cmdMes.Sender(), http.StatusOK, body.String())
 	return nil
 }
 

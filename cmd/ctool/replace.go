@@ -6,7 +6,6 @@ package main
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/spf13/cobra"
 )
@@ -27,7 +26,7 @@ func newReplaceCmd() *cobra.Command {
 
 }
 
-func replace(cmd *cobra.Command, arg []string) error {
+func replace(cmd *cobra.Command, args []string) error {
 
 	cluster := newCluster()
 	var err error
@@ -40,7 +39,7 @@ func replace(cmd *cobra.Command, arg []string) error {
 	// nolint
 	defer cluster.saveToJSON()
 
-	c := newCmd(ckReplace, strings.Join(arg, " "))
+	c := newCmd(ckReplace, args)
 	if err = cluster.applyCmd(c); err != nil {
 		return err
 	}
@@ -50,7 +49,7 @@ func replace(cmd *cobra.Command, arg []string) error {
 		return err
 	}
 
-	replacedAddress := cluster.Cmd.args()[0]
+	replacedAddress := cluster.Cmd.Args[0]
 
 	err = cluster.validate()
 	if err == nil {

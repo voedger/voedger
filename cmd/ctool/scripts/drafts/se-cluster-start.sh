@@ -30,7 +30,7 @@ MANAGER=$1
 # done
 
 # Start db cluster
-cat ./docker-compose-se.yml | utils_ssh "$SSH_USER@$MANAGER" 'cat > ~/docker-compose-se.yml'
+envsubst < ./docker-compose-se.yml | utils_ssh "$SSH_USER@$MANAGER" 'cat > ~/docker-compose-se.yml'
 
 utils_ssh "$SSH_USER@$MANAGER" "docker stack deploy --compose-file ~/docker-compose-se.yml SEDockerStack"
 

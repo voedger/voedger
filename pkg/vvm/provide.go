@@ -241,7 +241,7 @@ func provideBucketsFactory(timeFunc coreutils.TimeFunc) irates.BucketsFactoryTyp
 }
 
 func provideSecretKeyJWT(sr isecrets.ISecretReader) (itokensjwt.SecretKeyType, error) {
-	return sr.ReadSecret(SecretKeyJWTName)
+	return sr.ReadSecret(itokensjwt.SecretKeyJWTName)
 }
 
 func provideAppsWSAmounts(vvmApps VVMApps, asp istructs.IAppStructsProvider) map[istructs.AppQName]istructs.AppWSAmount {
@@ -474,15 +474,14 @@ func provideCommandChannelFactory(sch ServiceChannelFactory) CommandChannelFacto
 	}
 }
 
-func provideQueryProcessors(qpCount QueryProcessorsCount, qc QueryChannel, bus ibus.IBus, asp istructs.IAppStructsProvider, qpFactory queryprocessor.ServiceFactory,
+func provideQueryProcessors(qpCount QueryProcessorsCount, qc QueryChannel, asp istructs.IAppStructsProvider, qpFactory queryprocessor.ServiceFactory,
 	imetrics imetrics.IMetrics, vvm commandprocessor.VVMName, mpq MaxPrepareQueriesType, authn iauthnz.IAuthenticator, authz iauthnz.IAuthorizer,
 	appCfgs istructsmem.AppConfigsType) OperatorQueryProcessors {
 	forks := make([]pipeline.ForkOperatorOptionFunc, qpCount)
-	resultSenderFactory := func(ctx context.Context, sender interface{}) queryprocessor.IResultSenderClosable {
+	resultSenderFactory := func(ctx context.Context, sender ibus.ISender) queryprocessor.IResultSenderClosable {
 		return &resultSenderErrorFirst{
 			ctx:    ctx,
 			sender: sender,
-			bus:    bus,
 		}
 	}
 	for i := 0; i < int(qpCount); i++ {

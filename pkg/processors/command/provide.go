@@ -10,8 +10,6 @@ import (
 
 	"github.com/untillpro/goutils/logger"
 
-	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
-
 	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/isecrets"
@@ -44,7 +42,7 @@ type appPartition struct {
 }
 
 // syncActualizerFactory - это фабрика(разделИД), которая возвращает свитч, в бранчах которого по синхронному актуализатору на каждое приложение, внутри каждого - проекторы на каждое приложение
-func ProvideServiceFactory(bus ibus.IBus, asp istructs.IAppStructsProvider, now coreutils.TimeFunc, syncActualizerFactory SyncActualizerFactory,
+func ProvideServiceFactory(asp istructs.IAppStructsProvider, now coreutils.TimeFunc, syncActualizerFactory SyncActualizerFactory,
 	n10nBroker in10n.IN10nBroker, metrics imetrics.IMetrics, vvm VVMName, authenticator iauthnz.IAuthenticator, authorizer iauthnz.IAuthorizer,
 	secretReader isecrets.ISecretReader, appConfigsType istructsmem.AppConfigsType) ServiceFactory {
 	return func(commandsChannel CommandChannel, partitionID istructs.PartitionID) pipeline.IService {
@@ -60,6 +58,7 @@ func ProvideServiceFactory(bus ibus.IBus, asp istructs.IAppStructsProvider, now 
 
 		return pipeline.NewService(func(vvmCtx context.Context) {
 			hsp := newHostStateProvider(vvmCtx, partitionID, secretReader)
+			syncActualizerFactory := syncActualizerFactory(vvmCtx, partitionID)
 			cmdPipeline := pipeline.NewSyncPipeline(vvmCtx, "Command Processor",
 				pipeline.WireFunc("getAppStructs", getAppStructs),
 				pipeline.WireFunc("limitCallRate", limitCallRate),
@@ -67,7 +66,7 @@ func ProvideServiceFactory(bus ibus.IBus, asp istructs.IAppStructsProvider, now 
 				pipeline.WireFunc("authenticate", cmdProc.authenticate),
 				pipeline.WireFunc("checkWSInitialized", checkWSInitialized),
 				pipeline.WireFunc("checkWSActive", checkWSActive),
-				pipeline.WireFunc("getAppPartition", cmdProc.getAppPartition),
+				pipeline.WireFunc("getAppPartition", cmdProc.provideGetAppPartition(syncActualizerFactory)),
 				pipeline.WireFunc("getResources", getResources),
 				pipeline.WireFunc("getFunction", getFunction),
 				pipeline.WireFunc("authorizeRequest", cmdProc.authorizeRequest),
@@ -92,11 +91,11 @@ func ProvideServiceFactory(bus ibus.IBus, asp istructs.IAppStructsProvider, now 
 				pipeline.WireFunc("putPLog", cmdProc.putPLog),
 				pipeline.WireFunc("applyPLogEvent", applyPLogEvent),
 				pipeline.WireFunc("syncProjectorsStart", syncProjectorsBegin),
-				pipeline.WireSyncOperator("syncProjectors", syncActualizerFactory(vvmCtx, partitionID)),
+				pipeline.WireSyncOperator("syncProjectors", syncActualizerFactory),
 				pipeline.WireFunc("syncProjectorsEnd", syncProjectorsEnd),
 				pipeline.WireFunc("n10n", cmdProc.n10n),
 				pipeline.WireFunc("putWLog", putWLog),
-				pipeline.WireSyncOperator("sendResponse", &opSendResponse{bus: bus, cmdProc: cmdProc}), // ICatch
+				pipeline.WireSyncOperator("sendResponse", &opSendResponse{cmdProc: cmdProc}), // ICatch
 			)
 			// TODO: сделать потом plogOffset свой по каждому разделу, wlogoffset - свой для каждого wsid
 			defer cmdPipeline.Close()

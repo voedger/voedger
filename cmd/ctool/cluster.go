@@ -20,6 +20,7 @@ import (
 	"testing"
 
 	"github.com/spf13/cobra"
+	"github.com/untillpro/goutils/logger"
 )
 
 var dryRun bool
@@ -33,10 +34,15 @@ func newCluster() *clusterType {
 		sshKey:                sshKey,
 		dryRun:                dryRun,
 		SshPort:               sshPort,
-		Cmd:                   newCmd("", ""),
+		Cmd:                   newCmd("", make([]string, 0)),
 		SkipStacks:            make([]string, 0),
 		ReplacedAddresses:     make([]string, 0),
+		Cron:                  &cronType{},
+		Acme:                  &acmeType{},
 	}
+
+	cluster.Acme.Domains = strings.Split(acmeDomains, ",")
+
 	if err := cluster.setEnv(); err != nil {
 		loggerError(err.Error())
 		return nil
@@ -88,7 +94,7 @@ func newCluster() *clusterType {
 	return &cluster
 }
 
-func newCmd(cmdKind, cmdArgs string) *cmdType {
+func newCmd(cmdKind string, cmdArgs []string) *cmdType {
 	return &cmdType{
 		Kind: cmdKind,
 		Args: cmdArgs,
@@ -263,10 +269,20 @@ func (n *nodesType) hosts(nodeRole string) []string {
 	return h
 }
 
+type cmdArgsType []string
+
 type cmdType struct {
 	Kind       string
-	Args       string
+	Args       cmdArgsType
 	SkipStacks []string
+}
+
+func (a *cmdArgsType) replace(sourceValue, destValue string) {
+	for i, v := range *a {
+		if v == sourceValue {
+			(*a)[i] = destValue
+		}
+	}
 }
 
 func (c *cmdType) apply(cluster *clusterType) error {
@@ -304,18 +320,14 @@ func (c *cmdType) apply(cluster *clusterType) error {
 	return cluster.clusterControllerFunction()
 }
 
-func (c *cmdType) args() []string {
-	return strings.Split(c.Args, " ")
-}
-
 func (c *cmdType) clear() {
 	c.Kind = ""
-	c.Args = ""
+	c.Args = []string{}
 }
 
 func (c *cmdType) isEmpty() bool {
 
-	return c.Kind == "" && c.Args == ""
+	return c.Kind == "" && len(c.Args) == 0
 }
 
 func (c *cmdType) validate(cluster *clusterType) error {
@@ -338,17 +350,15 @@ func (c *cmdType) validate(cluster *clusterType) error {
 // init [SE] [ipAddr1] [ipAddr2] [ipAddr3] [ipAddr4] [ipAddr5]
 // nolint
 func validateInitCmd(cmd *cmdType, cluster *clusterType) error {
-	args := cmd.args()
 
-	if len(args) == 0 {
+	if len(cmd.Args) == 0 {
 		return ErrMissingCommandArguments
 	}
 
-	if args[0] != clusterEditionCE && args[0] != clusterEditionSE {
+	if cmd.Args[0] != clusterEditionCE && cmd.Args[0] != clusterEditionSE {
 		return ErrInvalidClusterEdition
 	}
-	loggerInfo("count args: ", len(args))
-	if args[0] == clusterEditionCE && len(args) != 1+initCeArgCount {
+	if cmd.Args[0] == clusterEditionCE && len(cmd.Args) != 1+initCeArgCount {
 		return ErrInvalidNumberOfArguments
 	}
 
@@ -357,50 +367,34 @@ func validateInitCmd(cmd *cmdType, cluster *clusterType) error {
 
 // update [desiredVersion]
 func validateUpgradeCmd(cmd *cmdType, cluster *clusterType) error {
-	args := cmd.args()
-
-	if len(args) == 0 {
-		return ErrMissingCommandArguments
-	}
-
-	if len(args) != 1 {
-		return ErrInvalidNumberOfArguments
-	}
-
-	if args[0] == cluster.ActualClusterVersion {
-		return ErrNoUpdgradeRequired
-	}
-
 	return nil
 }
 
 func validateReplaceCmd(cmd *cmdType, cluster *clusterType) error {
-	args := cmd.args()
 
-	if len(args) == 0 {
+	if len(cmd.Args) == 0 {
 		return ErrMissingCommandArguments
 	}
 
-	if len(args) != 2 {
+	if len(cmd.Args) != 2 {
 		return ErrInvalidNumberOfArguments
 	}
 
 	var err error
 
-	if n := cluster.nodeByHost(args[0]); n == nil {
-		err = errors.Join(err, fmt.Errorf(errHostNotFoundInCluster, args[0], ErrHostNotFoundInCluster))
+	if n := cluster.nodeByHost(cmd.Args[0]); n == nil {
+		err = errors.Join(err, fmt.Errorf(errHostNotFoundInCluster, cmd.Args[0], ErrHostNotFoundInCluster))
 	}
 
-	if n := cluster.nodeByHost(args[1]); n != nil {
-		err = errors.Join(err, fmt.Errorf(ErrHostAlreadyExistsInCluster.Error(), args[1]))
+	if n := cluster.nodeByHost(cmd.Args[1]); n != nil {
+		err = errors.Join(err, fmt.Errorf(ErrHostAlreadyExistsInCluster.Error(), cmd.Args[1]))
 	}
 
 	return err
 }
 
 func validateBackupCmd(cmd *cmdType, cluster *clusterType) error {
-	args := cmd.args()
-	if len(args) == 0 {
+	if len(cmd.Args) == 0 {
 		return ErrMissingCommandArguments
 	}
 
@@ -408,18 +402,30 @@ func validateBackupCmd(cmd *cmdType, cluster *clusterType) error {
 		return ErrClusterConfNotFound
 	}
 
-	if len(args) <= 1 {
+	if len(cmd.Args) <= 1 {
 		return ErrMissingCommandArguments
 	}
 
-	switch args[0] {
+	switch cmd.Args[0] {
 	case "node":
 		return validateBackupNodeCmd(cmd, cluster)
-	case "crone":
-		return validateBackupCroneCmd(cmd, cluster)
+	case "cron":
+		return validateBackupCronCmd(cmd, cluster)
 	default:
 		return ErrUnknownCommand
 	}
+}
+
+type cronType struct {
+	Backup string `json:"Backup,omitempty"`
+}
+
+type acmeType struct {
+	Domains []string `json:"Domains,omitempty"`
+}
+
+func (a *acmeType) domains() string {
+	return strings.Join(a.Domains, ",")
 }
 
 type clusterType struct {
@@ -429,11 +435,13 @@ type clusterType struct {
 	dryRun                bool
 	Edition               string
 	ActualClusterVersion  string
-	DesiredClusterVersion string   `json:"DesiredClusterVersion,omitempty"`
-	SshPort               string   `json:"SSHPort,omitempty"`
-	Cmd                   *cmdType `json:"Cmd,omitempty"`
-	LastAttemptError      string   `json:"LastAttemptError,omitempty"`
-	SkipStacks            []string `json:"SkipStacks,omitempty"`
+	DesiredClusterVersion string    `json:"DesiredClusterVersion,omitempty"`
+	SshPort               string    `json:"SSHPort,omitempty"`
+	Acme                  *acmeType `json:"Acme,omitempty"`
+	Cmd                   *cmdType  `json:"Cmd,omitempty"`
+	LastAttemptError      string    `json:"LastAttemptError,omitempty"`
+	SkipStacks            []string  `json:"SkipStacks,omitempty"`
+	Cron                  *cronType `json:"Cron,omitempty"`
 	Nodes                 []nodeType
 	ReplacedAddresses     []string `json:"ReplacedAddresses,omitempty"`
 	Draft                 bool     `json:"Draft,omitempty"`
@@ -496,8 +504,8 @@ func (c *clusterType) applyCmd(cmd *cmdType) error {
 
 	switch cmd.Kind {
 	case ckReplace:
-		oldAddr := cmd.args()[0]
-		newAddr := cmd.args()[1]
+		oldAddr := cmd.Args[0]
+		newAddr := cmd.Args[1]
 
 		if c.addressInReplacedList(newAddr) {
 			return fmt.Errorf(errAddressInReplacedList, newAddr, ErrAddressCannotBeUsed)
@@ -510,7 +518,7 @@ func (c *clusterType) applyCmd(cmd *cmdType) error {
 
 		if oldAddr == node.nodeName() {
 			oldAddr = node.ActualNodeState.Address
-			cmd.Args = strings.Replace(cmd.Args, node.nodeName(), oldAddr, 1)
+			cmd.Args.replace(node.nodeName(), oldAddr)
 		}
 
 		if !dryRun {
@@ -599,7 +607,7 @@ func (c *clusterType) loadFromJSON() error {
 	defer c.updateNodeIndexes()
 	defer func() {
 		if c.Cmd == nil {
-			c.Cmd = newCmd("", "")
+			c.Cmd = newCmd("", []string{})
 		}
 		for i := 0; i < len(c.Nodes); i++ {
 			if c.Nodes[i].ActualNodeState == nil {
@@ -638,8 +646,18 @@ func (c *clusterType) loadFromJSON() error {
 
 // Installation of the necessary variables of the environment
 func (c *clusterType) setEnv() error {
-	loggerInfo("Set env", "VOEDGER_NODE_SSH_PORT", c.SshPort)
-	return os.Setenv("VOEDGER_NODE_SSH_PORT", c.SshPort)
+
+	logger.Verbose(fmt.Sprintf("Set env VOEDGER_NODE_SSH_PORT = %s", c.SshPort))
+	if err := os.Setenv("VOEDGER_NODE_SSH_PORT", c.SshPort); err != nil {
+		return err
+	}
+
+	logger.Verbose(fmt.Sprintf("Set env VOEDGER_ACME_DOMAINS = %s", c.Acme.domains()))
+	if err := os.Setenv("VOEDGER_ACME_DOMAINS", c.Acme.domains()); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // nolint

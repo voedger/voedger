@@ -438,6 +438,17 @@ func analyseProjector(v *ProjectorStmt, c *iterateCtx) {
 		trigger := &v.Triggers[i]
 		for _, qname := range trigger.QNames {
 			if len(trigger.TableActions) > 0 {
+
+				wd, pkg, err := lookupInCtx[*WsDescriptorStmt](qname, c)
+				if err != nil {
+					c.stmtErr(&qname.Pos, err)
+					continue
+				}
+				if wd != nil {
+					trigger.qNames = append(trigger.qNames, pkg.NewQName(wd.Name))
+					continue
+				}
+
 				resolveFunc := func(table *TableStmt, pkg *PackageSchemaAST) error {
 					sysDoc := (pkg.QualifiedPackageName == appdef.SysPackage) && (table.Name == nameCRecord || table.Name == nameWRecord)
 					if table.Abstract && !sysDoc {

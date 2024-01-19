@@ -372,7 +372,6 @@ func initializeWorkspaceProjector(nowFunc coreutils.TimeFunc, targetAppQName ist
 					return nil
 				}
 
-				// err = bp3.BuildWorkspace() // to init data
 				wsKind := wsDescr.AsQName(authnz.Field_WSKind)
 				if wsError = buildWorkspace(wsDescr.AsString(field_TemplateName), ep, wsKind, federation, newWSID,
 					targetAppQName, newWSName, systemPrincipalToken_TargetApp); wsError != nil {
