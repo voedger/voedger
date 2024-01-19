@@ -10,6 +10,7 @@ import (
 
 	"github.com/untillpro/goutils/logger"
 
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/isecrets"
@@ -23,6 +24,7 @@ import (
 type workspace struct {
 	NextWLogOffset istructs.Offset
 	idGenerator    istructs.IIDGenerator
+	iws            appdef.IWorkspace
 }
 
 type cmdProc struct {
@@ -67,8 +69,10 @@ func ProvideServiceFactory(asp istructs.IAppStructsProvider, now coreutils.TimeF
 				pipeline.WireFunc("checkWSInitialized", checkWSInitialized),
 				pipeline.WireFunc("checkWSActive", checkWSActive),
 				pipeline.WireFunc("getAppPartition", cmdProc.provideGetAppPartition(syncActualizerFactory)),
+				pipeline.WireFunc("getIWorkspace", getIWorkspace),
+				pipeline.WireFunc("getICommand", getICommand),
 				pipeline.WireFunc("getResources", getResources),
-				pipeline.WireFunc("getFunction", getFunction),
+				pipeline.WireFunc("getExec", getExec),
 				pipeline.WireFunc("authorizeRequest", cmdProc.authorizeRequest),
 				pipeline.WireFunc("unmarshalRequestBody", unmarshalRequestBody),
 				pipeline.WireFunc("getWorkspace", cmdProc.getWorkspace),

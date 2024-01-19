@@ -79,7 +79,9 @@ type cmdWorkpiece struct {
 	cmdResultBuilder             istructs.IObjectBuilder
 	cmdResult                    istructs.IObject
 	resources                    istructs.IResources
-	cmdFunc                      istructs.ICommandFunction
+	cmdExec                      func(args istructs.ExecCommandArgs) error
+	iCommand                     appdef.ICommand
+	iWorkspace                   appdef.IWorkspace
 	appPartitionRestartScheduled bool
 }
 

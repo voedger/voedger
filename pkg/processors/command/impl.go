@@ -111,6 +111,18 @@ func (cmdProc *cmdProc) provideGetAppPartition(syncActualizerFactory pipeline.IS
 	}
 }
 
+func getIWorkspace(_ context.Context, work interface{}) (err error) {
+	cmd := work.(*cmdWorkpiece)
+	cmd.iWorkspace = cmd.appStructs.AppDef().WorkspaceByDescriptor(cmd.wsDesc.QName())
+	return nil
+}
+
+func getICommand(_ context.Context, work interface{}) (err error) {
+	cmd := work.(*cmdWorkpiece)
+	cmd.iCommand = cmd.iWorkspace.Type(cmd.cmdMes.)
+	return nil
+}
+
 func (cmdProc *cmdProc) getCmdResultBuilder(_ context.Context, work interface{}) (err error) {
 	cmd := work.(*cmdWorkpiece)
 	cmdResultType := cmd.cmdMes.Command().Result()
@@ -338,9 +350,9 @@ func getResources(_ context.Context, work interface{}) (err error) {
 	return nil
 }
 
-func getFunction(_ context.Context, work interface{}) (err error) {
+func getExec(_ context.Context, work interface{}) (err error) {
 	cmd := work.(*cmdWorkpiece)
-	cmd.cmdFunc = cmd.resources.QueryResource(cmd.cmdMes.Command().QName()).(istructs.ICommandFunction) // existence is checked already
+	cmd.cmdExec = cmd.resources.QueryResource(cmd.cmdMes.Command().QName()).(istructs.ICommandFunction).Exec
 	return nil
 }
 
@@ -444,7 +456,7 @@ func (xp xPath) Error(err error) error {
 func execCommand(_ context.Context, work interface{}) (err error) {
 	cmd := work.(*cmdWorkpiece)
 	begin := time.Now()
-	err = cmd.cmdFunc.Exec(cmd.eca)
+	err = cmd.cmdExec(cmd.eca)
 	work.(*cmdWorkpiece).metrics.increase(ExecSeconds, time.Since(begin).Seconds())
 	return err
 }
