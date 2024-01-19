@@ -224,7 +224,7 @@ func getIDGenerator(_ context.Context, work interface{}) (err error) {
 
 func (cmdProc *cmdProc) putPLog(_ context.Context, work interface{}) (err error) {
 	cmd := work.(*cmdWorkpiece)
-	if cmd.pLogEvent, err = cmd.appStructs.Events().PutPlog(cmd.rawEvent, nil, cmd.idGenerator); err == nil {
+	if cmd.pLogEvent, err = cmd.appStructs.Events().PutPlog(cmd.rawEvent, nil, cmd.idGenerator); err != nil {
 		cmd.appPartitionRestartScheduled = true
 	} else {
 		cmdProc.appPartition.nextPLogOffset++
