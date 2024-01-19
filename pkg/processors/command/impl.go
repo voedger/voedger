@@ -185,12 +185,16 @@ func (cmdProc *cmdProc) recovery(ctx context.Context, cmd *cmdWorkpiece, syncAct
 	if lastEvent != nil {
 		// re-apply the last event
 		// apply records
-		if err := cmd.appStructs.Records().Apply(lastEvent); err == nil {
+		if err := cmd.appStructs.Records().Apply(lastEvent); err != nil {
 			return nil, err
 		}
 
 		// apply sync projectors
-		if err := syncActualizerFactory.DoSync(ctx, lastEvent); err != nil {
+		work := &cmdWorkpiece{
+			pLogEvent: lastEvent,
+			cmdMes:    NewCommandMessage(ctx, nil, cmd.AppQName(), lastEvent.Workspace(), cmd.cmdMes.Sender(), cmdProc.pNumber, nil, "", ""), // actually AppQName() only will be required
+		}
+		if err := syncActualizerFactory.DoSync(ctx, work); err != nil {
 			return nil, err
 		}
 

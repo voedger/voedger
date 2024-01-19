@@ -241,7 +241,7 @@ func provideBucketsFactory(timeFunc coreutils.TimeFunc) irates.BucketsFactoryTyp
 }
 
 func provideSecretKeyJWT(sr isecrets.ISecretReader) (itokensjwt.SecretKeyType, error) {
-	return sr.ReadSecret(SecretKeyJWTName)
+	return sr.ReadSecret(itokensjwt.SecretKeyJWTName)
 }
 
 func provideAppsWSAmounts(vvmApps VVMApps, asp istructs.IAppStructsProvider) map[istructs.AppQName]istructs.AppWSAmount {
