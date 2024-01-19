@@ -254,7 +254,8 @@ func (vit *VIT) SignIn(login Login, optFuncs ...signInOptFunc) (prn *Principal) 
 	return nil
 }
 
-func (vit *VIT) InitChildWorkspace(wsd WSParams, owner *Principal) {
+// owner could be *vit.Principal or *vit.AppWorkspace
+func (vit *VIT) InitChildWorkspace(wsd WSParams, ownerIntf interface{}) {
 	vit.T.Helper()
 	body := fmt.Sprintf(`{
 		"args": {
@@ -267,7 +268,14 @@ func (vit *VIT) InitChildWorkspace(wsd WSParams, owner *Principal) {
 		}
 	}`, wsd.Name, wsd.Kind.String(), wsd.InitDataJSON, wsd.TemplateName, wsd.TemplateParams, wsd.ClusterID)
 
-	vit.PostProfile(owner, "c.sys.InitChildWorkspace", body)
+	switch owner := ownerIntf.(type) {
+	case *Principal:
+		vit.PostProfile(owner, "c.sys.InitChildWorkspace", body)
+	case *AppWorkspace:
+		vit.PostWS(owner, "c.sys.InitChildWorkspace", body)
+	default:
+		panic("ownerIntf could be vit.*Principal or vit.*AppWorkspace only")
+	}
 }
 
 func DummyWSParams(wsName string) WSParams {

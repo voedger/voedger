@@ -40,7 +40,7 @@ func TestBasicUsage_DescribeSchema(t *testing.T) {
 
 		expected := map[string]interface{}{
 			"Structures": map[string]interface{}{
-				"app2pkg.WSKind": map[string]interface{}{
+				"app2pkg.test_ws": map[string]interface{}{
 					"Fields": []interface{}{
 						map[string]interface{}{
 							"Data":     "sys.QName",

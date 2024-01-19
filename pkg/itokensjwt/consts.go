@@ -11,6 +11,7 @@ const (
 	SecretKeyLength     = 64
 	hashLength          = 32
 	errorVerifyAudience = "error verify token, this token have %s audience and was intended for principal type %s %w"
+	SecretKeyJWTName    = "secretKeyJWT"
 )
 
 var SecretKeyExample = SecretKeyType{
