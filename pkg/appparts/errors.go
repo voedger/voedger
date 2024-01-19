@@ -14,4 +14,4 @@ const (
 	errPartitionNotFound = "application %v partition %v not found: %w"
 )
 
-var NotAvailableEngines = errors.New("no available engines")
+var ErrNotAvailableEngines = errors.New("no available engines")
