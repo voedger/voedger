@@ -229,7 +229,6 @@ func TestRecoveryOnProjectorError(t *testing.T) {
 	// partition is scheduled to be recovered
 
 	// 3rd c.sys.CUD - > recovery procedure must re-apply 2nd event (PLog, records and WLog), then 3rd event is processed ok (sync projectors are ok)
-	restartCmdProc(&app)
 	respData = sendCUD(t, 1, app)
 	require.Equal(3, int(respData["CurrentWLogOffset"].(float64)))
 	require.Equal(istructs.NewCDocCRecordID(istructs.FirstBaseRecordID)+4, istructs.RecordID(respData["NewIDs"].(map[string]interface{})["1"].(float64)))
