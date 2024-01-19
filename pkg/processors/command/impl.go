@@ -224,7 +224,7 @@ func getIDGenerator(_ context.Context, work interface{}) (err error) {
 
 func (cmdProc *cmdProc) putPLog(_ context.Context, work interface{}) (err error) {
 	cmd := work.(*cmdWorkpiece)
-	if cmd.pLogEvent, err = cmd.appStructs.Events().PutPlog(cmd.rawEvent, nil, cmd.idGenerator); err != nil {
+	if cmd.pLogEvent, err = cmd.appStructs.Events().PutPlog(cmd.rawEvent, nil, cmd.idGenerator); err == nil {
 		cmd.appPartitionRestartScheduled = true
 	} else {
 		cmdProc.appPartition.nextPLogOffset++
@@ -707,7 +707,7 @@ func (sr *opSendResponse) DoSync(_ context.Context, work interface{}) (err error
 		logger.Error(cmd.err)
 		coreutils.ReplyErr(cmd.cmdMes.Sender(), cmd.err)
 		if cmd.appPartitionRestartScheduled {
-			logger.Info("partition %d will be restarted due of an error on writting to Log: %w", cmd.cmdMes.PartitionID(), cmd.err)
+			logger.Info("partition %d will be restarted due of an error on writing to Log: %w", cmd.cmdMes.PartitionID(), cmd.err)
 			delete(sr.cmdProc.appPartitions, cmd.cmdMes.AppQName())
 		}
 		return
