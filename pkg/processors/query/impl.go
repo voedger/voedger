@@ -118,6 +118,7 @@ func implServiceFactory(serviceChannel iprocbus.ServiceChannel, resultSenderClos
 					p.Close()
 					p = nil
 				}
+				qwork.release()
 				rs.Close(err)
 				qpm.Increase(queriesSeconds, time.Since(now).Seconds())
 			case <-ctx.Done():
@@ -375,6 +376,11 @@ func (qw *queryWork) release() {
 	}
 }
 
+// need or q.sys.EnrichPrincipalToken
+func (qw *queryWork) AppQName() istructs.AppQName {
+	return qw.msg.AppQName()
+}
+
 func borrowAppPart(_ context.Context, qw *queryWork) error {
 	switch err := qw.borrow(); {
 	case err == nil:
@@ -598,11 +604,6 @@ type queryProcessorMetrics struct {
 
 func (m *queryProcessorMetrics) Increase(metricName string, valueDelta float64) {
 	m.metrics.IncreaseApp(metricName, m.vvm, m.app, valueDelta)
-}
-
-// need or q.sys.EnrichPrincipalToken
-func (qw *queryWork) AppQName() istructs.AppQName {
-	return qw.msg.AppQName()
 }
 
 func newFieldsKinds(t appdef.IType) FieldsKinds {
