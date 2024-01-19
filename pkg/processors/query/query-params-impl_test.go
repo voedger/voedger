@@ -276,7 +276,7 @@ func TestWrongTypes(t *testing.T) {
 		},
 	}
 
-	query := appDef.Query(qNameFunction) // nnv: Suspicious code!! Should be borrowed AppPartition.AppDef() instead of appDef?
+	query := appDef.Query(qNameFunction)
 	sysToken := getSystemToken(appTokens)
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

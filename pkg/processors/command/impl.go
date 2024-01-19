@@ -94,9 +94,16 @@ func (c *cmdWorkpiece) borrow() (err error) {
 	return nil
 }
 
-// releases borrowed app partition
+// releases resources:
+//   - borrowed app partition
+//   - plog event
 func (c *cmdWorkpiece) release() {
+	if ev := c.pLogEvent; ev != nil {
+		c.pLogEvent = nil
+		ev.Release()
+	}
 	if ap := c.appPart; ap != nil {
+		c.appStructs = nil
 		c.appPart = nil
 		ap.Release()
 	}
@@ -104,6 +111,19 @@ func (c *cmdWorkpiece) release() {
 
 func borrowAppPart(_ context.Context, work interface{}) error {
 	return work.(*cmdWorkpiece).borrow()
+}
+
+type releaseWorkpiece struct{ pipeline.NOOP }
+
+// nolint (result is always nil)
+func (r *releaseWorkpiece) DoSync(_ context.Context, work interface{}) (err error) {
+	work.(*cmdWorkpiece).release()
+	return nil
+}
+
+// nolint (result is always nil)
+func (r *releaseWorkpiece) OnErr(err error, w interface{}, ctx pipeline.IWorkpieceContext) error {
+	return err
 }
 
 func (ap *appPartition) getWorkspace(wsid istructs.WSID) *workspace {

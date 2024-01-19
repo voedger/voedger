@@ -95,7 +95,8 @@ func ProvideServiceFactory(appParts appparts.IAppPartitions, now coreutils.TimeF
 				pipeline.WireFunc("syncProjectorsEnd", syncProjectorsEnd),
 				pipeline.WireFunc("n10n", cmdProc.n10n),
 				pipeline.WireFunc("putWLog", putWLog),
-				pipeline.WireSyncOperator("sendResponse", &opSendResponse{}), // ICatch
+				pipeline.WireSyncOperator("sendResponse", &opSendResponse{}),       // ICatch
+				pipeline.WireSyncOperator("releaseWorkpiece", &releaseWorkpiece{}), // ICatch
 			)
 			// TODO: сделать потом plogOffset свой по каждому разделу, wlogoffset - свой для каждого wsid
 			defer cmdPipeline.Close()
@@ -109,7 +110,6 @@ func ProvideServiceFactory(appParts appparts.IAppPartitions, now coreutils.TimeF
 						appParts:          appParts,
 						hostStateProvider: hsp,
 					}
-					defer cmd.release()
 					cmd.metrics = commandProcessorMetrics{
 						vvm:     string(vvm),
 						app:     cmd.cmdMes.AppQName(),
@@ -118,9 +118,6 @@ func ProvideServiceFactory(appParts appparts.IAppPartitions, now coreutils.TimeF
 					cmd.metrics.increase(CommandsTotal, 1.0)
 					if err := cmdPipeline.SendSync(cmd); err != nil {
 						logger.Error("unhandled error: " + err.Error())
-					}
-					if cmd.pLogEvent != nil {
-						cmd.pLogEvent.Release()
 					}
 					cmd.metrics.increase(CommandsSeconds, time.Since(start).Seconds())
 				case <-vvmCtx.Done():

@@ -109,11 +109,10 @@ func implServiceFactory(serviceChannel iprocbus.ServiceChannel, resultSenderClos
 				rs := resultSenderClosableFactory(msg.RequestCtx(), msg.Sender())
 				rs = &resultSenderClosableOnlyOnce{IResultSenderClosable: rs}
 				qwork := newQueryWork(msg, rs, appParts, maxPrepareQueries, qpm, secretReader)
-				defer qwork.release()
 				if p == nil {
 					p = newQueryProcessorPipeline(ctx, authn, authz, appCfgs)
 				}
-				err := p.SendSync(&qwork)
+				err := p.SendSync(qwork)
 				if err != nil {
 					qpm.Increase(errorsTotal, 1.0)
 					p.Close()
@@ -306,6 +305,13 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 			})
 			return coreutils.WrapSysError(err, http.StatusInternalServerError)
 		}),
+		catchOperator("release workpiece",
+			func(ctx context.Context, qw *queryWork) error {
+				qw.release()
+				return nil
+			},
+			nil,
+		),
 	}
 	return pipeline.NewSyncPipeline(requestCtx, "Query Processor", ops[0], ops[1:]...)
 }
@@ -334,8 +340,8 @@ type queryWork struct {
 }
 
 func newQueryWork(msg IQueryMessage, rs IResultSenderClosable, appParts appparts.IAppPartitions,
-	maxPrepareQueries int, metrics *queryProcessorMetrics, secretReader isecrets.ISecretReader) queryWork {
-	return queryWork{
+	maxPrepareQueries int, metrics *queryProcessorMetrics, secretReader isecrets.ISecretReader) *queryWork {
+	return &queryWork{
 		msg:               msg,
 		rs:                rs,
 		appParts:          appParts,
@@ -363,6 +369,7 @@ func (qw *queryWork) borrow() (err error) {
 // releases borrowed app partition
 func (qw *queryWork) release() {
 	if ap := qw.appPart; ap != nil {
+		qw.appStructs = nil
 		qw.appPart = nil
 		ap.Release()
 	}
@@ -379,10 +386,35 @@ func borrowAppPart(_ context.Context, qw *queryWork) error {
 	}
 }
 
+// pipeline operator for query workpiece with ICatch support
+type catchErrorOperator struct {
+	pipeline.NOOP
+	doSync func(context.Context, *queryWork) error
+	onErr  func(error, *queryWork, pipeline.IWorkpieceContext) error
+}
+
+func (o *catchErrorOperator) DoSync(ctx context.Context, work interface{}) (err error) {
+	if o.doSync == nil {
+		return nil
+	}
+	return o.doSync(ctx, work.(*queryWork))
+}
+
+func (o *catchErrorOperator) OnErr(err error, work interface{}, ctx pipeline.IWorkpieceContext) error {
+	if o.onErr == nil {
+		return err
+	}
+	return o.onErr(err, work.(*queryWork), ctx)
+}
+
 func operator(name string, doSync func(ctx context.Context, qw *queryWork) (err error)) *pipeline.WiredOperator {
 	return pipeline.WireFunc(name, func(ctx context.Context, work interface{}) (err error) {
 		return doSync(ctx, work.(*queryWork))
 	})
+}
+
+func catchOperator(name string, doSync func(context.Context, *queryWork) error, onErr func(error, *queryWork, pipeline.IWorkpieceContext) error) *pipeline.WiredOperator {
+	return pipeline.WireSyncOperator(name, &catchErrorOperator{doSync: doSync, onErr: onErr})
 }
 
 func errIfFalse(cond bool, errIfFalse func() error) error {
