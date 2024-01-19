@@ -306,12 +306,11 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 			})
 			return coreutils.WrapSysError(err, http.StatusInternalServerError)
 		}),
-		catchOperator("release workpiece",
-			func(ctx context.Context, qw *queryWork) error {
+		deferOperator("release workpiece",
+			func(qw *queryWork) error {
 				qw.release()
 				return nil
 			},
-			nil,
 		),
 	}
 	return pipeline.NewSyncPipeline(requestCtx, "Query Processor", ops[0], ops[1:]...)
@@ -338,6 +337,7 @@ type queryWork struct {
 	secretReader      isecrets.ISecretReader
 	appCfg            *istructsmem.AppConfigType
 	queryFunc         istructs.IQueryFunction
+	deferError        error
 }
 
 func newQueryWork(msg IQueryMessage, rs IResultSenderClosable, appParts appparts.IAppPartitions,
@@ -392,26 +392,23 @@ func borrowAppPart(_ context.Context, qw *queryWork) error {
 	}
 }
 
-// pipeline operator for query workpiece with ICatch support
-type catchErrorOperator struct {
+type deferOp struct {
 	pipeline.NOOP
-	doSync func(context.Context, *queryWork) error
-	onErr  func(error, *queryWork, pipeline.IWorkpieceContext) error
+	f func(*queryWork) error
 }
 
-func (o *catchErrorOperator) DoSync(ctx context.Context, work interface{}) (err error) {
-	if o.doSync == nil {
-		return nil
+func (o *deferOp) DoSync(ctx context.Context, work interface{}) (err error) {
+	qw := work.(*queryWork)
+	err = o.f(qw)
+	if qw.deferError != nil {
+		return qw.deferError
 	}
-	return o.doSync(ctx, work.(*queryWork))
+	return err
 }
 
-func (o *catchErrorOperator) OnErr(err error, work interface{}, ctx pipeline.IWorkpieceContext) error {
-	if o.onErr == nil {
-		o.DoSync(context.Background(), work)
-		return err
-	}
-	return o.onErr(err, work.(*queryWork), ctx)
+func (o *deferOp) OnErr(err error, work interface{}, ctx pipeline.IWorkpieceContext) error {
+	work.(*queryWork).deferError = err
+	return nil
 }
 
 func operator(name string, doSync func(ctx context.Context, qw *queryWork) (err error)) *pipeline.WiredOperator {
@@ -420,8 +417,8 @@ func operator(name string, doSync func(ctx context.Context, qw *queryWork) (err 
 	})
 }
 
-func catchOperator(name string, doSync func(context.Context, *queryWork) error, onErr func(error, *queryWork, pipeline.IWorkpieceContext) error) *pipeline.WiredOperator {
-	return pipeline.WireSyncOperator(name, &catchErrorOperator{doSync: doSync, onErr: onErr})
+func deferOperator(name string, f func(*queryWork) error) *pipeline.WiredOperator {
+	return pipeline.WireSyncOperator(name, &deferOp{f: f})
 }
 
 func errIfFalse(cond bool, errIfFalse func() error) error {
