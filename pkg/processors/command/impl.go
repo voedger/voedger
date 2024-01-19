@@ -99,7 +99,6 @@ func (ap *appPartition) getWorkspace(wsid istructs.WSID) *workspace {
 func (cmdProc *cmdProc) provideGetAppPartition(syncActualizerFactory pipeline.ISyncOperator) func(ctx context.Context, work interface{}) (err error) {
 	return func(ctx context.Context, work interface{}) (err error) {
 		cmd := work.(*cmdWorkpiece)
-		cmd.cmdMes.AppQName()
 		ap, ok := cmdProc.appPartitions[cmd.cmdMes.AppQName()]
 		if !ok {
 			if ap, err = cmdProc.recovery(ctx, cmd, syncActualizerFactory); err != nil {
