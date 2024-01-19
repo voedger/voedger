@@ -37,7 +37,7 @@ type ICommandMessage interface {
 	Sender() ibus.ISender
 	PartitionID() istructs.PartitionID
 	RequestCtx() context.Context
-	Command() appdef.ICommand
+	QName() appdef.QName
 	Token() string
 	Host() string
 }
@@ -106,7 +106,7 @@ type implICommandMessage struct {
 	sender      ibus.ISender
 	partitionID istructs.PartitionID
 	requestCtx  context.Context
-	command     appdef.ICommand
+	qName       appdef.QName
 	token       string
 	host        string
 }

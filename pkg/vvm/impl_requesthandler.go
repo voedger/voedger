@@ -35,7 +35,7 @@ func provideIBus(asp istructs.IAppStructsProvider, procbus iprocbus.IProcBus,
 			coreutils.ReplyBadRequest(sender, "wrong function name: "+request.Resource)
 			return
 		}
-		qName, err := appdef.ParseQName(request.Resource[2:])
+		funcQName, err := appdef.ParseQName(request.Resource[2:])
 		if err != nil {
 			coreutils.ReplyBadRequest(sender, "wrong function name: "+request.Resource)
 			return
@@ -55,16 +55,6 @@ func provideIBus(asp istructs.IAppStructsProvider, procbus iprocbus.IProcBus,
 			coreutils.ReplyBadRequest(sender, fmt.Sprintf("unknown app %s", request.AppQName))
 			return
 		}
-		as, err := asp.AppStructs(appQName)
-		if err != nil {
-			coreutils.ReplyInternalServerError(sender, "failed to get appStructs", err)
-			return
-		}
-		funcKindMark := request.Resource[:1]
-		funcType, isHandled := getFuncType(as, qName, sender, funcKindMark)
-		if isHandled {
-			return
-		}
 
 		token, err := getPrincipalToken(request)
 		if err != nil {
@@ -72,11 +62,13 @@ func provideIBus(asp istructs.IAppStructsProvider, procbus iprocbus.IProcBus,
 			return
 		}
 
-		deliverToProcessors(request, requestCtx, appQName, sender, funcType, procbus, token, cpchIdx, qpcgIdx, cpAmount)
+		deliverToProcessors(request, requestCtx, appQName, sender, funcQName, procbus, token, cpchIdx, qpcgIdx, cpAmount)
 	})
 }
 
-func deliverToProcessors(request ibus.Request, requestCtx context.Context, appQName istructs.AppQName, sender ibus.ISender, funcType appdef.IType,
+func parseFuncName(resource string) appdef.QName
+
+func deliverToProcessors(request ibus.Request, requestCtx context.Context, appQName istructs.AppQName, sender ibus.ISender, funcQName appdef.QName,
 	procbus iprocbus.IProcBus, token string, cpchIdx CommandProcessorsChannelGroupIdxType, qpcgIdx QueryProcessorsChannelGroupIdxType,
 	cpAmount coreutils.CommandProcessorsCount) {
 	switch request.Resource[:1] {
@@ -88,31 +80,31 @@ func deliverToProcessors(request ibus.Request, requestCtx context.Context, appQN
 	case "c":
 		channelIdx := request.WSID % int64(cpAmount)
 		partitionID := istructs.PartitionID(channelIdx)
-		icm := commandprocessor.NewCommandMessage(requestCtx, request.Body, appQName, istructs.WSID(request.WSID), sender, partitionID, funcType.(appdef.ICommand), token, request.Host)
+		icm := commandprocessor.NewCommandMessage(requestCtx, request.Body, appQName, istructs.WSID(request.WSID), sender, partitionID, funcQName, token, request.Host)
 		if !procbus.Submit(int(cpchIdx), int(channelIdx), icm) {
 			coreutils.ReplyErrf(sender, http.StatusServiceUnavailable, fmt.Sprintf("command processor of partition %d is busy", partitionID))
 		}
 	}
 }
 
-func getFuncType(as istructs.IAppStructs, qName appdef.QName, sender ibus.ISender, funcKindMark string) (appdef.IType, bool) {
-	tp := as.AppDef().Type(qName)
-	switch tp.Kind() {
-	case appdef.TypeKind_null:
-		coreutils.ReplyBadRequest(sender, "unknown function "+qName.String())
-		return nil, true
-	case appdef.TypeKind_Query:
-		if funcKindMark == "q" {
-			return tp, false
-		}
-	case appdef.TypeKind_Command:
-		if funcKindMark == "c" {
-			return tp, false
-		}
-	}
-	coreutils.ReplyBadRequest(sender, fmt.Sprintf(`wrong function kind "%s" for function %s`, funcKindMark, qName))
-	return nil, true
-}
+// func getFuncType(as istructs.IAppStructs, qName appdef.QName, sender ibus.ISender, funcKindMark string) (appdef.IType, bool) {
+// 	tp := as.AppDef().Type(qName)
+// 	switch tp.Kind() {
+// 	case appdef.TypeKind_null:
+// 		coreutils.ReplyBadRequest(sender, "unknown function "+qName.String())
+// 		return nil, true
+// 	case appdef.TypeKind_Query:
+// 		if funcKindMark == "q" {
+// 			return tp, false
+// 		}
+// 	case appdef.TypeKind_Command:
+// 		if funcKindMark == "c" {
+// 			return tp, false
+// 		}
+// 	}
+// 	coreutils.ReplyBadRequest(sender, fmt.Sprintf(`wrong function kind "%s" for function %s`, funcKindMark, qName))
+// 	return nil, true
+// }
 
 func getPrincipalToken(request ibus.Request) (token string, err error) {
 	authHeaders := request.Header[coreutils.Authorization]
