@@ -118,7 +118,7 @@ func implServiceFactory(serviceChannel iprocbus.ServiceChannel, resultSenderClos
 					p.Close()
 					p = nil
 				}
-				qwork.release()
+				// qwork.release()
 				rs.Close(err)
 				qpm.Increase(queriesSeconds, time.Since(now).Seconds())
 			case <-ctx.Done():
@@ -408,6 +408,7 @@ func (o *catchErrorOperator) DoSync(ctx context.Context, work interface{}) (err 
 
 func (o *catchErrorOperator) OnErr(err error, work interface{}, ctx pipeline.IWorkpieceContext) error {
 	if o.onErr == nil {
+		o.DoSync(context.Background(), work)
 		return err
 	}
 	return o.onErr(err, work.(*queryWork), ctx)
