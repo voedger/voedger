@@ -91,7 +91,7 @@ func ProvideServiceFactory(asp istructs.IAppStructsProvider, now coreutils.TimeF
 				pipeline.WireFunc("putPLog", cmdProc.putPLog),
 				pipeline.WireFunc("applyPLogEvent", applyPLogEvent),
 				pipeline.WireFunc("syncProjectorsStart", syncProjectorsBegin),
-				pipeline.WireSyncOperator("syncProjectors", syncActualizerFactory),
+				pipeline.WireFunc("syncProjectors", provideSyncActualizerFactory(syncActualizerFactory)),
 				pipeline.WireFunc("syncProjectorsEnd", syncProjectorsEnd),
 				pipeline.WireFunc("n10n", cmdProc.n10n),
 				pipeline.WireFunc("putWLog", putWLog),

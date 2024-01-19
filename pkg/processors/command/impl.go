@@ -102,7 +102,7 @@ func (cmdProc *cmdProc) provideGetAppPartition(syncActualizerFactory pipeline.IS
 		ap, ok := cmdProc.appPartitions[cmd.cmdMes.AppQName()]
 		if !ok {
 			if ap, err = cmdProc.recovery(ctx, cmd, syncActualizerFactory); err != nil {
-				return err
+				return fmt.Errorf("partition %d recovery failed: %w", cmdProc.pNumber, err)
 			}
 			cmdProc.appPartitions[cmd.cmdMes.AppQName()] = ap
 		}
@@ -669,6 +669,15 @@ func putWLog(_ context.Context, work interface{}) (err error) {
 	return
 }
 
+func provideSyncActualizerFactory(syncActualizer pipeline.ISyncOperator) func(ctx context.Context, work interface{}) (err error) {
+	return func(ctx context.Context, work interface{}) (err error) {
+		if err = syncActualizer.DoSync(ctx, work); err != nil {
+			work.(*cmdWorkpiece).appPartitionRestartScheduled = true
+		}
+		return err
+	}
+}
+
 func syncProjectorsBegin(_ context.Context, work interface{}) (err error) {
 	cmd := work.(*cmdWorkpiece)
 	cmd.syncProjectorsStart = time.Now()
@@ -684,7 +693,6 @@ func syncProjectorsEnd(_ context.Context, work interface{}) (err error) {
 
 type opSendResponse struct {
 	pipeline.NOOP
-	bus ibus.IBus
 	cmdProc *cmdProc
 }
 
