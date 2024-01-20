@@ -66,6 +66,19 @@ GET .../TokenToLinkDevice?args=...
 GET .../SalesMetrics?args=...
 ```
 
+### Query Constraints and Query Arguments 
+Every query may have constraints (ex. [IQueryArguments]( https://dev.heeus.io/launchpad/#!12396)) and arguments.
+
+Constraints are:
+- order (string) - order by field
+- limit (int) - limit number of records
+- skip (int) skip number of records
+- include (string) - include referenced objects
+- keys (string) - select only some field(s)
+- where (object) - filter records
+
+Arguments are optional and are passed in `&arg=...` GET parameter.
+
 ### ACL
 EXECUTE -> SELECT for Queries?
 
