@@ -104,10 +104,6 @@ GRANT SELECT ON QUERY Query1 TO LocationUser;
 - Parameters:
     - application/json
     - CDoc/WDoc/CRecord/WRecord
-- Result:
-    - application/json
-    - ID of the new object
-        - ??? entire CDoc/WDoc/CRecord/WRecord object
 - Errors:
     - 400: Bad Request, e.g. Record requires sys.ParentID
     - 401: Unauthorized
@@ -115,12 +111,21 @@ GRANT SELECT ON QUERY Query1 TO LocationUser;
     - 404: Table Not Found
     - 405: Method Not Allowed, table is an ODoc/ORecord
 
+200 Result:
+```json
+{
+    "CurrentWLogOffset":114,
+    "NewIDs": {
+        "1":322685000131212
+    }
+}
+```
+
 ### Read CDoc/WDoc/CRecord/WRecord
 - URL:
     - `GET /api/v2/owner/app/wsid/pkg.table/id`
 - Parameters: none
 - Result:
-    - application/json
     - CDoc/WDoc/CRecord/WRecord object
 - Errors:
     - 401: Unauthorized
@@ -134,8 +139,6 @@ GRANT SELECT ON QUERY Query1 TO LocationUser;
 - Parameters: 
     - application/json
     - CDoc/WDoc/CRecord/WRecord (fields to be updated)
-- Result: none
-    - ??? entire CDoc/WDoc/CRecord/WRecord object
 - Errors:
     - 400: Bad Request, e.g. Record requires sys.ParentID
     - 401: Unauthorized
@@ -143,16 +146,33 @@ GRANT SELECT ON QUERY Query1 TO LocationUser;
     - 404: Table Not Found
     - 405: Method Not Allowed, table is an ODoc/ORecord
 
+200 Result:
+```json
+{
+    "CurrentWLogOffset":114,
+    "NewIDs": {
+        "1":322685000131212
+    }
+}
+```
+
 ### Deactivate CDoc/WDoc/CRecord/WRecord
 - URL:
     - `DELETE /api/v2/owner/app/wsid/pkg.table/id`
 - Parameters: none
-- Result: none
 - Errors:
     - 401: Unauthorized
     - 403: Forbidden
     - 404: Table Not Found
     - 405: Method Not Allowed, table is an ODoc/ORecord
+
+200 Result:
+```json
+{
+    "CurrentWLogOffset":114,
+}
+```
+
 
 ### Read from Query
 - URL:
@@ -161,11 +181,12 @@ GRANT SELECT ON QUERY Query1 TO LocationUser;
     - Query [constraints](../queryprocessor/request.md)
     - Query function argument `&arg=...`
 - Result: 
-    -  The return value is a JSON object that contains a results field with a JSON array that lists the objects [example](../queryprocessor/request.md)
+    -  The return value is a JSON object that contains a results field with a JSON array that lists the objects [example](../queryprocessor/request.md), ref. [Parse API](https://docs.parseplatform.org/rest/guide/#basic-queries)
 - Errors:
     - 401: Unauthorized
     - 403: Forbidden
     - 404: Query Function Not Found
+
 - Examples:
     - Read from WLog
         - `GET /api/v2/owner/app/wsid/sys.wlog?limit=100&skip=13994`
@@ -217,6 +238,16 @@ GRANT SELECT ON QUERY Query1 TO LocationUser;
     - 404: Command Not Found
     - 403: Forbidden
     - 401: Unauthorized
+
+## Errors
+When HTTP Result code is not OK, then [response](https://docs.parseplatform.org/rest/guide/#response-format) is an object:
+```json
+{
+  "code": 105,
+  "error": "invalid field name: bl!ng"
+}
+```
+
 
 # Limitations
 - sys.CUD function cannot be called directly
