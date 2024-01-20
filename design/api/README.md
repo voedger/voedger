@@ -234,10 +234,6 @@ GRANT SELECT ON QUERY Query1 TO LocationUser;
         - name is CDoc/WDoc/CRecord/WRecord: exec CUD command
         - POST && name_is_command: exec this command
 
-## Updates to vSQL and appdef
-- Query Result can be either array of objects or an object
-- Query Result can be either JSON or custom mime type
-
 ## Updates to Query Processor
 [GET params](../queryprocessor/request.md) conversion:
 - Query constraints (`order`, `limit`, `skip`, `include`, `keys` -> `sys.QueryParams`
