@@ -107,9 +107,6 @@ func (c *cmdWorkpiece) release() {
 		c.appPart = nil
 		ap.Release()
 	}
-	if c.pLogEvent != nil {
-		c.pLogEvent.Release()
-	}
 }
 
 func borrowAppPart(_ context.Context, work interface{}) error {
