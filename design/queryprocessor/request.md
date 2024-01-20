@@ -2,7 +2,6 @@
 Support [Parse API](https://docs.parseplatform.org/rest/guide/#queries) request syntax
 
 # Request example
-Wit references, embedded collection
 ```bash
 curl -X GET \
 -H "AccessToken: ${ACCESS_TOKEN}"
