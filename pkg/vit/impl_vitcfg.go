@@ -13,6 +13,7 @@ import (
 	"github.com/voedger/voedger/pkg/apps/sys/blobberapp"
 	"github.com/voedger/voedger/pkg/apps/sys/registryapp"
 	"github.com/voedger/voedger/pkg/apps/sys/routerapp"
+	"github.com/voedger/voedger/pkg/cluster"
 	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
@@ -29,9 +30,7 @@ func NewOwnVITConfig(opts ...vitConfigOptFunc) VITConfig {
 		WithApp(istructs.AppQName_sys_blobber, blobberapp.Provide(smtp.Cfg{})),
 		WithApp(istructs.AppQName_sys_router, routerapp.Provide(smtp.Cfg{})),
 	)
-	return VITConfig{
-		opts: opts,
-	}
+	return VITConfig{opts: opts}
 }
 
 func NewSharedVITConfig(opts ...vitConfigOptFunc) VITConfig {
@@ -162,7 +161,11 @@ func WithApp(appQName istructs.AppQName, updater apps.AppBuilder, appOpts ...App
 			panic("app already added")
 		}
 		app := &app{
-			name:                  appQName,
+			name: appQName,
+			deployment: cluster.AppDeploymentDescriptor{
+				PartsCount:     DefaultTestAppPartsCount,
+				EnginePoolSize: DefaultTestAppEnginesPool,
+			},
 			ws:                    map[string]WSParams{},
 			verifiedValuesIntents: map[string]verifiedValueIntent{},
 		}

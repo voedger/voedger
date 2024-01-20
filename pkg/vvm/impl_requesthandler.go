@@ -14,6 +14,7 @@ import (
 
 	"github.com/untillpro/goutils/logger"
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/iprocbus"
 	"github.com/voedger/voedger/pkg/istructs"
 	commandprocessor "github.com/voedger/voedger/pkg/processors/command"
@@ -23,7 +24,7 @@ import (
 	"github.com/voedger/voedger/staging/src/github.com/untillpro/ibusmem"
 )
 
-func provideIBus(asp istructs.IAppStructsProvider, procbus iprocbus.IProcBus,
+func provideIBus(appParts appparts.IAppPartitions, procbus iprocbus.IProcBus,
 	cpchIdx CommandProcessorsChannelGroupIdxType, qpcgIdx QueryProcessorsChannelGroupIdxType,
 	cpAmount coreutils.CommandProcessorsCount, vvmApps VVMApps) ibus.IBus {
 	return ibusmem.Provide(func(requestCtx context.Context, sender ibus.ISender, request ibus.Request) {
@@ -55,13 +56,15 @@ func provideIBus(asp istructs.IAppStructsProvider, procbus iprocbus.IProcBus,
 			coreutils.ReplyBadRequest(sender, fmt.Sprintf("unknown app %s", request.AppQName))
 			return
 		}
-		as, err := asp.AppStructs(appQName)
+
+		appDef, err := appParts.AppDef(appQName)
 		if err != nil {
-			coreutils.ReplyInternalServerError(sender, "failed to get appStructs", err)
+			coreutils.ReplyInternalServerError(sender, "failed to get AppDef", err)
 			return
 		}
+
 		funcKindMark := request.Resource[:1]
-		funcType, isHandled := getFuncType(as, qName, sender, funcKindMark)
+		funcType, isHandled := getFuncType(appDef, qName, sender, funcKindMark)
 		if isHandled {
 			return
 		}
@@ -72,31 +75,38 @@ func provideIBus(asp istructs.IAppStructsProvider, procbus iprocbus.IProcBus,
 			return
 		}
 
-		deliverToProcessors(request, requestCtx, appQName, sender, funcType, procbus, token, cpchIdx, qpcgIdx, cpAmount)
+		appPartsCount, err := appParts.AppPartsCount(appQName)
+		if err != nil {
+			coreutils.ReplyInternalServerError(sender, "failed to get app partitions count", err)
+			return
+		}
+
+		deliverToProcessors(request, requestCtx, appQName, sender, funcType, procbus, token, cpchIdx, qpcgIdx, cpAmount, appPartsCount)
 	})
 }
 
 func deliverToProcessors(request ibus.Request, requestCtx context.Context, appQName istructs.AppQName, sender ibus.ISender, funcType appdef.IType,
 	procbus iprocbus.IProcBus, token string, cpchIdx CommandProcessorsChannelGroupIdxType, qpcgIdx QueryProcessorsChannelGroupIdxType,
-	cpAmount coreutils.CommandProcessorsCount) {
+	cpCount coreutils.CommandProcessorsCount, appPartsCount int) {
 	switch request.Resource[:1] {
 	case "q":
-		iqm := queryprocessor.NewQueryMessage(requestCtx, appQName, istructs.WSID(request.WSID), sender, request.Body, funcType.(appdef.IQuery), request.Host, token)
+		iqm := queryprocessor.NewQueryMessage(requestCtx, appQName, istructs.PartitionID(request.PartitionNumber), istructs.WSID(request.WSID), sender, request.Body, funcType.(appdef.IQuery), request.Host, token)
 		if !procbus.Submit(int(qpcgIdx), 0, iqm) {
 			coreutils.ReplyErrf(sender, http.StatusServiceUnavailable, "no query processors available")
 		}
 	case "c":
-		channelIdx := request.WSID % int64(cpAmount)
-		partitionID := istructs.PartitionID(channelIdx)
+		partitionID := istructs.PartitionID(request.WSID % int64(appPartsCount))
+		// TODO: use appQName to calculate processorIdx in solid range [0..cpCount)
+		processorIdx := int64(partitionID) % int64(cpCount)
 		icm := commandprocessor.NewCommandMessage(requestCtx, request.Body, appQName, istructs.WSID(request.WSID), sender, partitionID, funcType.(appdef.ICommand), token, request.Host)
-		if !procbus.Submit(int(cpchIdx), int(channelIdx), icm) {
+		if !procbus.Submit(int(cpchIdx), int(processorIdx), icm) {
 			coreutils.ReplyErrf(sender, http.StatusServiceUnavailable, fmt.Sprintf("command processor of partition %d is busy", partitionID))
 		}
 	}
 }
 
-func getFuncType(as istructs.IAppStructs, qName appdef.QName, sender ibus.ISender, funcKindMark string) (appdef.IType, bool) {
-	tp := as.AppDef().Type(qName)
+func getFuncType(appDef appdef.IAppDef, qName appdef.QName, sender ibus.ISender, funcKindMark string) (appdef.IType, bool) {
+	tp := appDef.Type(qName)
 	switch tp.Kind() {
 	case appdef.TypeKind_null:
 		coreutils.ReplyBadRequest(sender, "unknown function "+qName.String())

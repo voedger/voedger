@@ -142,15 +142,17 @@ const FirstGeneratedAppID = ClusterAppID(0x100)
 
 // Cluster application qnames
 
+const SysOwner = "sys"
+
 var AppQName_null = NullAppQName
-var AppQName_sys_registry = NewAppQName("sys", "registry")
+var AppQName_sys_registry = NewAppQName(SysOwner, "registry")
 var AppQName_untill_airs_bp = NewAppQName("untill", "airs-bp")
 var AppQName_test1_app1 = NewAppQName("test1", "app1")
 var AppQName_test1_app2 = NewAppQName("test1", "app2")
 var AppQName_test2_app1 = NewAppQName("test2", "app1")
 var AppQName_test2_app2 = NewAppQName("test2", "app2")
-var AppQName_sys_blobber = NewAppQName("sys", "blobber")
-var AppQName_sys_router = NewAppQName("sys", "router") // For ACME certificates
+var AppQName_sys_blobber = NewAppQName(SysOwner, "blobber")
+var AppQName_sys_router = NewAppQName(SysOwner, "router") // For ACME certificates
 var AppQName_untill_resellerportal = NewAppQName("untill", "resellerportal")
 
 // Cluster applications

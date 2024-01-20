@@ -44,7 +44,7 @@ func (provider *appStructsProviderType) AppStructs(appName istructs.AppQName) (s
 
 	appCfg, ok := provider.configs[appName]
 	if !ok {
-		return nil, istructs.ErrAppNotFound
+		return nil, fmt.Errorf("%w: %v", istructs.ErrAppNotFound, appName)
 	}
 
 	provider.locker.Lock()

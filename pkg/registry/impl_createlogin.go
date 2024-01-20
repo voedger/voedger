@@ -38,7 +38,7 @@ func execCmdCreateLogin(asp istructs.IAppStructsProvider) istructsmem.ExecComman
 
 		as, err := asp.AppStructs(appQName)
 		if err != nil {
-			if err == istructs.ErrAppNotFound {
+			if errors.Is(err, istructs.ErrAppNotFound) {
 				return coreutils.NewHTTPErrorf(http.StatusBadRequest, "unknown application ", appName)
 			}
 			return err

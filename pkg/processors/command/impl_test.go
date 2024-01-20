@@ -17,6 +17,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appparts"
+	"github.com/voedger/voedger/pkg/cluster"
 	"github.com/voedger/voedger/pkg/iauthnzimpl"
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/in10nmem"
@@ -437,7 +439,7 @@ func Test400BadRequests(t *testing.T) {
 		ibus.Request
 		expectedMessageLike string
 	}{
-		{"unknown app", ibus.Request{AppQName: "untill/unknown"}, "application not found"}, // TODO: simplify
+		{"unknown app", ibus.Request{AppQName: "untill/unknown"}, "application untill/unknown not found"}, // TODO: simplify
 		{"bad request body", ibus.Request{Body: []byte("{wrong")}, "failed to unmarshal request body: invalid character 'w' looking for beginning of object key string"},
 		{"unknown func", ibus.Request{Resource: "c.sys.Unknown"}, "unknown function"},
 		{"args: field of wrong type provided", ibus.Request{Body: []byte(`{"args":{"Text":42}}`)}, "wrong field type"},
@@ -668,6 +670,14 @@ func replyBadRequest(sender ibus.ISender, message string) {
 	})
 }
 
+// test app deployment constants
+var (
+	testAppName                            = istructs.AppQName_untill_airs_bp
+	testAppPartsCount                      = 2
+	testAppEngines                         = [cluster.ProcessorKind_Count]int{10, 10, 10}
+	testAppPartID     istructs.PartitionID = 1
+)
+
 func setUp(t *testing.T, prepare func(appDef appdef.IAppDefBuilder, cfg *istructsmem.AppConfigType)) testApp {
 	require := require.New(t)
 	if coreutils.IsDebug() {
@@ -691,8 +701,19 @@ func setUp(t *testing.T, prepare func(appDef appdef.IAppDefBuilder, cfg *istruct
 		prepare(adb, cfg)
 	}
 
+	appDef, err := adb.Build()
+	require.NoError(err)
+
 	appStructsProvider := istructsmem.Provide(cfgs, iratesce.TestBucketsFactory,
 		payloads.ProvideIAppTokensFactory(itokensjwt.TestTokensJWT()), appStorageProvider)
+
+	// prepare the AppParts to borrow AppStructs
+	appParts, appPartsClean, err := appparts.New(appStructsProvider)
+	require.NoError(err)
+	defer appPartsClean()
+
+	appParts.DeployApp(testAppName, appDef, testAppPartsCount, testAppEngines)
+	appParts.DeployAppPartitions(testAppName, []istructs.PartitionID{testAppPartID})
 
 	// command processor работает через ibus.SendResponse -> нам нужна реализация ibus
 	bus := ibusmem.Provide(func(ctx context.Context, sender ibus.ISender, request ibus.Request) {
@@ -701,7 +722,7 @@ func setUp(t *testing.T, prepare func(appDef appdef.IAppDefBuilder, cfg *istruct
 		require.NoError(err)
 		appQName, err := istructs.ParseAppQName(request.AppQName)
 		require.NoError(err)
-		tp := adb.Type(cmdQName)
+		tp := appDef.Type(cmdQName)
 		if tp.Kind() == appdef.TypeKind_null {
 			replyBadRequest(sender, "unknown function")
 			return
@@ -710,8 +731,8 @@ func setUp(t *testing.T, prepare func(appDef appdef.IAppDefBuilder, cfg *istruct
 		if authHeaders, ok := request.Header[coreutils.Authorization]; ok {
 			token = strings.TrimPrefix(authHeaders[0], "Bearer ")
 		}
-		command := adb.Command(cmdQName)
-		icm := NewCommandMessage(ctx, request.Body, appQName, istructs.WSID(request.WSID), sender, 1, command, token, "")
+		command := appDef.Command(cmdQName)
+		icm := NewCommandMessage(ctx, request.Body, appQName, istructs.WSID(request.WSID), sender, testAppPartID, command, token, "")
 		serviceChannel <- icm
 	})
 	n10nBroker, n10nBrokerCleanup := in10nmem.ProvideEx2(in10n.Quotas{
@@ -722,7 +743,7 @@ func setUp(t *testing.T, prepare func(appDef appdef.IAppDefBuilder, cfg *istruct
 	}, time.Now)
 
 	tokens := itokensjwt.ProvideITokens(itokensjwt.SecretKeyExample, time.Now)
-	appTokens := payloads.ProvideIAppTokensFactory(tokens).New(istructs.AppQName_untill_airs_bp)
+	appTokens := payloads.ProvideIAppTokensFactory(tokens).New(testAppName)
 	systemToken, err := payloads.GetSystemPrincipalTokenApp(appTokens)
 	require.NoError(err)
 	as, err := appStructsProvider.AppStructs(istructs.AppQName_untill_airs_bp)
@@ -754,8 +775,8 @@ func setUp(t *testing.T, prepare func(appDef appdef.IAppDefBuilder, cfg *istruct
 		}
 		return syncActualizerFactory(conf, as.SyncProjectors()[0], as.SyncProjectors()[1:]...)
 	}
-	cmdProcessorFactory := ProvideServiceFactory(appStructsProvider, time.Now, op, n10nBroker, imetrics.Provide(), "vvm", iauthnzimpl.NewDefaultAuthenticator(iauthnzimpl.TestSubjectRolesGetter), iauthnzimpl.NewDefaultAuthorizer(), isecretsimpl.ProvideSecretReader(), cfgs)
-	cmdProcService := cmdProcessorFactory(serviceChannel, 1)
+	cmdProcessorFactory := ProvideServiceFactory(appParts, time.Now, op, n10nBroker, imetrics.Provide(), "vvm", iauthnzimpl.NewDefaultAuthenticator(iauthnzimpl.TestSubjectRolesGetter), iauthnzimpl.NewDefaultAuthorizer(), isecretsimpl.ProvideSecretReader(), cfgs)
+	cmdProcService := cmdProcessorFactory(serviceChannel, testAppPartID)
 
 	go func() {
 		cmdProcService.Run(ctx)

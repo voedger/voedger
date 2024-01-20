@@ -19,6 +19,7 @@ import (
 	"golang.org/x/exp/maps"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/cluster"
 	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -82,6 +83,50 @@ func (c *cmdWorkpiece) Event() istructs.IPLogEvent {
 // used by ProvideSyncActualizerFactory
 func (c *cmdWorkpiece) WSID() istructs.WSID {
 	return c.cmdMes.WSID()
+}
+
+// borrows app partition for command
+func (c *cmdWorkpiece) borrow() (err error) {
+	if c.appPart, err = c.appParts.Borrow(c.cmdMes.AppQName(), c.cmdMes.PartitionID(), cluster.ProcessorKind_Command); err != nil {
+		return err
+	}
+	c.appStructs = c.appPart.AppStructs()
+	return nil
+}
+
+// releases resources:
+//   - borrowed app partition
+//   - plog event
+func (c *cmdWorkpiece) release() {
+	if ev := c.pLogEvent; ev != nil {
+		c.pLogEvent = nil
+		ev.Release()
+	}
+	if ap := c.appPart; ap != nil {
+		c.appStructs = nil
+		c.appPart = nil
+		ap.Release()
+	}
+	if c.pLogEvent != nil {
+		c.pLogEvent.Release()
+	}
+}
+
+func borrowAppPart(_ context.Context, work interface{}) error {
+	return work.(*cmdWorkpiece).borrow()
+}
+
+type releaseWorkpiece struct{ pipeline.NOOP }
+
+// nolint (result is always nil)
+func (r *releaseWorkpiece) DoSync(_ context.Context, work interface{}) (err error) {
+	work.(*cmdWorkpiece).release()
+	return nil
+}
+
+// nolint (result is always nil)
+func (r *releaseWorkpiece) OnErr(err error, w interface{}, ctx pipeline.IWorkpieceContext) error {
+	return err
 }
 
 func (ap *appPartition) getWorkspace(wsid istructs.WSID) *workspace {
@@ -286,12 +331,6 @@ func checkWSActive(_ context.Context, work interface{}) (err error) {
 		return nil
 	}
 	return processors.ErrWSInactive
-}
-
-func getAppStructs(_ context.Context, work interface{}) (err error) {
-	cmd := work.(*cmdWorkpiece)
-	cmd.appStructs, err = cmd.asp.AppStructs(cmd.cmdMes.AppQName())
-	return
 }
 
 func limitCallRate(_ context.Context, work interface{}) (err error) {
@@ -698,6 +737,7 @@ type opSendResponse struct {
 
 func (sr *opSendResponse) DoSync(_ context.Context, work interface{}) (err error) {
 	cmd := work.(*cmdWorkpiece)
+
 	if cmd.err != nil {
 		cmd.metrics.increase(ErrorsTotal, 1.0)
 		//if error occurred somewhere in syncProjectors we have to measure elapsed time

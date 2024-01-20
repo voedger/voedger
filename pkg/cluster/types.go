@@ -19,7 +19,8 @@ const (
 )
 
 type AppDeploymentDescriptor struct {
-	NumParts int
-
+	PartsCount     int
 	EnginePoolSize [ProcessorKind_Count]int
 }
+
+func PoolSize(c, q, p int) [ProcessorKind_Count]int { return [ProcessorKind_Count]int{c, q, p} }
