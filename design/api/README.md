@@ -147,10 +147,8 @@ GRANT SELECT ON QUERY Query1 TO LocationUser;
 - Parameters: 
     - Query [constraints](../queryprocessor/request.md)
     - Query function argument `&arg=...`
-- Result: one of:
-    - `application/json` array of objects, [example](../queryprocessor/request.md)
-    - `application/json` an object
-    - `mime/type` custom type of response
+- Result: 
+    -  The return value is a JSON object that contains a results field with a JSON array that lists the objects [example](../queryprocessor/request.md)
 - Errors:
     - 401: Unauthorized
     - 403: Forbidden
@@ -166,8 +164,8 @@ GRANT SELECT ON QUERY Query1 TO LocationUser;
     - `GET /api/v2/owner/app/wsid/pkg.table`
 - Parameters: 
     - Query [constraints](../queryprocessor/request.md)
-- Result:
-    - `application/json` array of objects
+- Result: 
+    -  The return value is a JSON object that contains a results field with a JSON array that lists the objects [example](../queryprocessor/request.md)
 - Errors:
     - 401: Unauthorized
     - 403: Forbidden
@@ -183,8 +181,8 @@ GRANT SELECT ON QUERY Query1 TO LocationUser;
     - Query [constraints](../queryprocessor/request.md)
     - Key values in `&arg=...`:
         - example `&arg={"yyyymm":202401}`
-- Result:
-    - `application/json` array of view records
+- Result: 
+    -  The return value is a JSON object that contains a results field with a JSON array that lists the objects [example](../queryprocessor/request.md)
 - Errors:
     - 401: Unauthorized
     - 403: Forbidden

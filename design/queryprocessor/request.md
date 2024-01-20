@@ -9,8 +9,8 @@ curl -X GET \
 --data-urlencode 'order=name'
 --data-urlencode 'limit=10'
 --data-urlencode 'skip=30'
---data-urlencode 'include=article_prices.article_price_exceptions'  #include article_prices and article_price_exceptions
---data-urlencode 'keys=name,article_prices.price,article_prices.article_price_exceptions.name'
+--data-urlencode 'include=department.group'  #include both department and group
+--data-urlencode 'keys=id,name,department.name,department.group.name' #select only some fields
 --data-urlencode 'where={"id_department":123456,"number":{"$gte": 100, "$lte": 200}}'
 
   https://air.untill.com/api/rest/untill/airs-bp/140737488486431/untill.articles
@@ -27,27 +27,31 @@ Parameters:
 
 # Response
 ```json
-[
-    {
-        "id": 1234,
-        "number": 100,
-        "name": "article1",
-        "id_department": 123456,
-        "__refs": {
-            "dname": "Cold Drinks"
-        }, 
-        "article_prices": [
-            {
-                "id": 321,
-                "id_price": 3214,
-                "price": 12.23,
-                "__refs": {
-                    "pname": "Normal Price"
+{
+    "results": [
+        {
+            "id": 123,
+            "name": "Coca-Cola 0.5l",
+            "department": {
+                "name": "Fresh Drinks",
+                "group": {
+                    "name": "Drinks"
                 }
             }
-        ]
-    }
-]
+        },
+        {
+            "id": 124,
+            "name": "Fant 0.5l",
+            "department": {
+                "name": "Fresh Drinks",
+                "group": {
+                    "name": "Drinks"
+                }
+            }
+        }
+    ]
+
+}
 ```
 
 # Links
