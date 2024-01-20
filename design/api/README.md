@@ -213,8 +213,8 @@ GRANT SELECT ON QUERY Query1 TO LocationUser;
     - `GET /api/v2/owner/app/wsid/pkg.view`
 - Parameters: 
     - Query [constraints](../queryprocessor/request.md)
-    - Key values in `&arg=...`:
-        - example `&arg={"yyyymm":202401}`
+- Constraints
+    -  "where" must contain "eq" or "in" condition for PK fields
 - Result: 
     -  The return value is a JSON object that contains a results field with a JSON array that lists the objects [example](../queryprocessor/request.md)
 - Errors:
@@ -222,9 +222,7 @@ GRANT SELECT ON QUERY Query1 TO LocationUser;
     - 403: Forbidden
     - 404: View Not Found
 - Examples:
-    - Read articles
-        - `GET /api/v2/untill/airs-bp3/12313123123/untill.articles?limit=20&skip=20`
-
+    - `GET /api/v2/untill/airs-bp3/12313123123/air.SalesMetrics?where={"Year":2024, "Month":{"$in":[1,2,3]}}`
 ### Execute Command
 - URL
     - `POST /api/v2/owner/app/wsid/pkg.command`
