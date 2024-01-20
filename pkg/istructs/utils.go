@@ -26,6 +26,7 @@ func NewAppQName(owner, name string) AppQName {
 func (aqn *AppQName) Owner() string { return aqn.owner }
 func (aqn *AppQName) Name() string  { return aqn.name }
 func (aqn AppQName) String() string { return aqn.owner + AppQNameQualifierChar + aqn.name }
+func (aqn AppQName) IsSys() bool    { return aqn.owner == SysOwner }
 
 func ParseAppQName(val string) (res AppQName, err error) {
 	s1, s2, err := appdef.ParseQualifiedName(val, AppQNameQualifierChar)

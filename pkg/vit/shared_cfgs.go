@@ -12,6 +12,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/apps"
 	"github.com/voedger/voedger/pkg/extensionpoints"
+	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/parser"
 	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys/smtp"
@@ -32,15 +33,18 @@ const (
 )
 
 var (
-	QNameApp1_TestWSKind               = appdef.NewQName(app1PkgName, "WSKind")
-	QNameTestView                      = appdef.NewQName(app1PkgName, "View")
-	QNameApp1_TestEmailVerificationDoc = appdef.NewQName(app1PkgName, "Doc")
-	QNameApp1_CDocTestConstraints      = appdef.NewQName(app1PkgName, "DocConstraints")
-	QNameCmdRated                      = appdef.NewQName(app1PkgName, "RatedCmd")
-	QNameQryRated                      = appdef.NewQName(app1PkgName, "RatedQry")
-	QNameODoc1                         = appdef.NewQName(app1PkgName, "odoc1")
-	QNameODoc2                         = appdef.NewQName(app1PkgName, "odoc2")
-	TestSMTPCfg                        = smtp.Cfg{
+	QNameApp1_TestWSKind                     = appdef.NewQName(app1PkgName, "test_ws")
+	QNameTestView                            = appdef.NewQName(app1PkgName, "View")
+	QNameApp1_TestEmailVerificationDoc       = appdef.NewQName(app1PkgName, "Doc")
+	QNameApp1_DocConstraints                 = appdef.NewQName(app1PkgName, "DocConstraints")
+	QNameApp1_DocConstraintsString           = appdef.NewQName(app1PkgName, "DocConstraintsString")
+	QNameApp1_DocConstraintsFewUniques       = appdef.NewQName(app1PkgName, "DocConstraintsFewUniques")
+	QNameApp1_DocConstraintsOldAndNewUniques = appdef.NewQName(app1PkgName, "DocConstraintsOldAndNewUniques")
+	QNameCmdRated                            = appdef.NewQName(app1PkgName, "RatedCmd")
+	QNameQryRated                            = appdef.NewQName(app1PkgName, "RatedQry")
+	QNameODoc1                               = appdef.NewQName(app1PkgName, "odoc1")
+	QNameODoc2                               = appdef.NewQName(app1PkgName, "odoc2")
+	TestSMTPCfg                              = smtp.Cfg{
 		Username: "username@gmail.com",
 	}
 
@@ -51,7 +55,9 @@ var (
 			WithUserLogin("login", "pwd"),
 			WithUserLogin(TestEmail, "1"),
 			WithUserLogin(TestEmail2, "1"),
-			WithChildWorkspace(QNameApp1_TestWSKind, "test_ws", "test_template", "", "login", map[string]interface{}{"IntFld": 42}),
+			WithChildWorkspace(QNameApp1_TestWSKind, "test_ws", "test_template", "", "login", map[string]interface{}{"IntFld": 42},
+				WithChild(QNameApp1_TestWSKind, "test_ws2", "test_template", "", TestEmail, map[string]interface{}{"IntFld": 42},
+					WithSubject("login", istructs.SubjectKind_User, []appdef.QName{iauthnz.QNameRoleWorkspaceOwner}))),
 		),
 		WithApp(istructs.AppQName_test1_app2, ProvideApp2, WithUserLogin("login", "1")),
 		WithVVMConfig(func(cfg *vvm.VVMConfig) {
@@ -185,6 +191,7 @@ func ProvideApp1(apis apps.APIs, cfg *istructsmem.AppConfigType, adf appdef.IApp
 		appdef.NewQName(app1PkgName, "CmdODocTwo"),
 		istructsmem.NullCommandExec,
 	))
+
 	app1PackageFS := parser.PackageFS{
 		QualifiedPackageName: "github.com/voedger/voedger/pkg/vit/app1pkg",
 		FS:                   SchemaTestApp1FS,

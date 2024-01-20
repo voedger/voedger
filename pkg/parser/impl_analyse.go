@@ -157,25 +157,40 @@ func analyseGrant(grant *GrantStmt, c *iterateCtx) {
 }
 
 func analyseUseTable(u *UseTableStmt, c *iterateCtx) {
-	if u.TableName != nil {
-		n := DefQName{Package: u.Package, Name: *u.TableName}
-		err := resolveInCtx(n, c, func(f *TableStmt, _ *PackageSchemaAST) error {
-			if f.Abstract {
-				return ErrUseOfAbstractTable(n.String())
+
+	var pkg *PackageSchemaAST
+	var pkgName Ident = ""
+	var err error
+
+	if u.Package != nil {
+		pkg, err = findPackage(u.Package.Value, c)
+		if err != nil {
+			c.stmtErr(&u.Package.Pos, err)
+			return
+		}
+		pkgName = u.Package.Value
+	}
+
+	if u.AllTables {
+		if pkg == nil {
+			pkg = c.pkg
+		}
+		for _, stmt := range pkg.Ast.Statements {
+			if stmt.Table != nil && !stmt.Table.Abstract {
+				u.qNames = append(u.qNames, pkg.NewQName(stmt.Table.Name))
 			}
+		}
+	} else {
+		defQName := DefQName{Package: pkgName, Name: u.TableName.Value}
+		err = resolveInCtx(defQName, c, func(tbl *TableStmt, pkg *PackageSchemaAST) error {
+			if tbl.Abstract {
+				return ErrUseOfAbstractTable(defQName.String())
+			}
+			u.qNames = append(u.qNames, pkg.NewQName(tbl.Name))
 			return nil
 		})
 		if err != nil {
-			c.stmtErr(&u.Pos, err)
-		}
-	} else {
-		if u.Package != "" {
-			_, e := findPackage(u.Package, c)
-			if e != nil {
-				c.stmtErr(&u.Pos, e)
-				return
-			}
-
+			c.stmtErr(&u.TableName.Pos, err)
 		}
 	}
 }
@@ -183,13 +198,14 @@ func analyseUseTable(u *UseTableStmt, c *iterateCtx) {
 func analyseUseWorkspace(u *UseWorkspaceStmt, c *iterateCtx) {
 	resolveFunc := func(f *WorkspaceStmt, _ *PackageSchemaAST) error {
 		if f.Abstract {
-			return ErrUseOfAbstractWorkspace(string(u.Workspace))
+			return ErrUseOfAbstractWorkspace(string(u.Workspace.Value))
 		}
+		u.qName = appdef.NewQName(c.pkg.Name, string(u.Workspace.Value))
 		return nil
 	}
-	err := resolveInCtx(DefQName{Package: Ident(c.pkg.Name), Name: u.Workspace}, c, resolveFunc)
+	err := resolveInCtx(DefQName{Package: Ident(c.pkg.Name), Name: u.Workspace.Value}, c, resolveFunc)
 	if err != nil {
-		c.stmtErr(&u.Pos, err)
+		c.stmtErr(&u.Workspace.Pos, err)
 	}
 }
 
@@ -198,11 +214,12 @@ func analyseAlterWorkspace(u *AlterWorkspaceStmt, c *iterateCtx) {
 		if !w.Alterable && schema != c.pkg {
 			return ErrWorkspaceIsNotAlterable(u.Name.String())
 		}
+		u.alteredWorkspace = w
 		return nil
 	}
 	err := resolveInCtx(u.Name, c, resolveFunc)
 	if err != nil {
-		c.stmtErr(&u.Pos, err)
+		c.stmtErr(&u.Name.Pos, err)
 	}
 }
 
@@ -215,26 +232,35 @@ func analyseStorage(u *StorageStmt, c *iterateCtx) {
 func analyseLimit(u *LimitStmt, c *iterateCtx) {
 	err := resolveInCtx(u.RateName, c, func(l *RateStmt, schema *PackageSchemaAST) error { return nil })
 	if err != nil {
-		c.stmtErr(&u.Pos, err)
+		c.stmtErr(&u.RateName.Pos, err)
 	}
 
 	if u.Action.AllCommandsWithTag != nil {
-		err = resolveInCtx(*u.Action.AllCommandsWithTag, c, func(t *TagStmt, schema *PackageSchemaAST) error { return nil })
+		if err = resolveInCtx(*u.Action.AllCommandsWithTag, c, func(t *TagStmt, schema *PackageSchemaAST) error { return nil }); err != nil {
+			c.stmtErr(&u.Action.AllCommandsWithTag.Pos, err)
+		}
 	} else if u.Action.AllQueriesWithTag != nil {
-		err = resolveInCtx(*u.Action.AllQueriesWithTag, c, func(t *TagStmt, schema *PackageSchemaAST) error { return nil })
+		if err = resolveInCtx(*u.Action.AllQueriesWithTag, c, func(t *TagStmt, schema *PackageSchemaAST) error { return nil }); err != nil {
+			c.stmtErr(&u.Action.AllQueriesWithTag.Pos, err)
+		}
 	} else if u.Action.AllWorkspacesWithTag != nil {
-		err = resolveInCtx(*u.Action.AllWorkspacesWithTag, c, func(t *TagStmt, schema *PackageSchemaAST) error { return nil })
+		if err = resolveInCtx(*u.Action.AllWorkspacesWithTag, c, func(t *TagStmt, schema *PackageSchemaAST) error { return nil }); err != nil {
+			c.stmtErr(&u.Action.AllWorkspacesWithTag.Pos, err)
+		}
 	} else if u.Action.Command != nil {
-		err = resolveInCtx(*u.Action.Command, c, func(t *CommandStmt, schema *PackageSchemaAST) error { return nil })
-	} else if u.Action.Query != nil {
-		err = resolveInCtx(*u.Action.Query, c, func(t *QueryStmt, schema *PackageSchemaAST) error { return nil })
-	} else if u.Action.Workspace != nil {
-		err = resolveInCtx(*u.Action.Workspace, c, func(t *WorkspaceStmt, schema *PackageSchemaAST) error { return nil })
-	}
-	if err != nil {
-		c.stmtErr(&u.Pos, err)
-	}
+		if err = resolveInCtx(*u.Action.Command, c, func(t *CommandStmt, schema *PackageSchemaAST) error { return nil }); err != nil {
+			c.stmtErr(&u.Action.Command.Pos, err)
+		}
 
+	} else if u.Action.Query != nil {
+		if err = resolveInCtx(*u.Action.Query, c, func(t *QueryStmt, schema *PackageSchemaAST) error { return nil }); err != nil {
+			c.stmtErr(&u.Action.Query.Pos, err)
+		}
+	} else if u.Action.Workspace != nil {
+		if err = resolveInCtx(*u.Action.Workspace, c, func(t *WorkspaceStmt, schema *PackageSchemaAST) error { return nil }); err != nil {
+			c.stmtErr(&u.Action.Workspace.Pos, err)
+		}
+	}
 }
 
 func analyseView(view *ViewStmt, c *iterateCtx) {
@@ -251,27 +277,29 @@ func analyseView(view *ViewStmt, c *iterateCtx) {
 		}
 		if fe.Field != nil {
 			f := fe.Field
-			if _, ok := fields[string(f.Name)]; ok {
-				c.stmtErr(&f.Pos, ErrRedefined(string(f.Name)))
+			if _, ok := fields[string(f.Name.Value)]; ok {
+				c.stmtErr(&f.Name.Pos, ErrRedefined(string(f.Name.Value)))
 			} else {
-				fields[string(f.Name)] = i
+				fields[string(f.Name.Value)] = i
 			}
 		} else if fe.RefField != nil {
 			rf := fe.RefField
-			if _, ok := fields[string(rf.Name)]; ok {
-				c.stmtErr(&rf.Pos, ErrRedefined(string(rf.Name)))
+			if _, ok := fields[string(rf.Name.Value)]; ok {
+				c.stmtErr(&rf.Name.Pos, ErrRedefined(string(rf.Name.Value)))
 			} else {
-				fields[string(rf.Name)] = i
+				fields[string(rf.Name.Value)] = i
 			}
 			for i := range rf.RefDocs {
-				err := resolveInCtx(rf.RefDocs[i], c, func(f *TableStmt, _ *PackageSchemaAST) error {
+				refDoc := &rf.RefDocs[i]
+				err := resolveInCtx(*refDoc, c, func(f *TableStmt, pkg *PackageSchemaAST) error {
 					if f.Abstract {
-						return ErrReferenceToAbstractTable(rf.RefDocs[i].String())
+						return ErrReferenceToAbstractTable(refDoc.String())
 					}
+					rf.refQNames = append(rf.refQNames, pkg.NewQName(f.Name))
 					return nil
 				})
 				if err != nil {
-					c.stmtErr(&rf.Pos, err)
+					c.stmtErr(&refDoc.Pos, err)
 					continue
 				}
 			}
@@ -283,66 +311,74 @@ func analyseView(view *ViewStmt, c *iterateCtx) {
 	}
 
 	for _, pkf := range view.pkRef.PartitionKeyFields {
-		index, ok := fields[string(pkf)]
+		index, ok := fields[string(pkf.Value)]
 		if !ok {
-			c.stmtErr(&view.pkRef.Pos, ErrUndefinedField(string(pkf)))
+			c.stmtErr(&pkf.Pos, ErrUndefinedField(string(pkf.Value)))
 		}
-		if view.Items[index].Field != nil {
-			if view.Items[index].Field.Type.Varchar != nil {
-				c.stmtErr(&view.pkRef.Pos, ErrViewFieldVarchar(string(pkf)))
+		fld := view.Items[index].Field
+		if fld != nil {
+			if fld.Type.Varchar != nil {
+				c.stmtErr(&pkf.Pos, ErrViewFieldVarchar(string(pkf.Value)))
 			}
-			if view.Items[index].Field.Type.Bytes != nil {
-				c.stmtErr(&view.pkRef.Pos, ErrViewFieldBytes(string(pkf)))
+			if fld.Type.Bytes != nil {
+				c.stmtErr(&pkf.Pos, ErrViewFieldBytes(string(pkf.Value)))
 			}
 		}
 	}
 
 	for ccIndex, ccf := range view.pkRef.ClusteringColumnsFields {
-		fieldIndex, ok := fields[string(ccf)]
+		fieldIndex, ok := fields[string(ccf.Value)]
 		last := ccIndex == len(view.pkRef.ClusteringColumnsFields)-1
 		if !ok {
-			c.stmtErr(&view.pkRef.Pos, ErrUndefinedField(string(ccf)))
+			c.stmtErr(&ccf.Pos, ErrUndefinedField(string(ccf.Value)))
 		}
-		if view.Items[fieldIndex].Field != nil {
-			if view.Items[fieldIndex].Field.Type.Varchar != nil && !last {
-				c.stmtErr(&view.pkRef.Pos, ErrVarcharFieldInCC(string(ccf)))
+		fld := view.Items[fieldIndex].Field
+		if fld != nil {
+			if fld.Type.Varchar != nil && !last {
+				c.stmtErr(&ccf.Pos, ErrVarcharFieldInCC(string(ccf.Value)))
 			}
-			if view.Items[fieldIndex].Field.Type.Bytes != nil && !last {
-				c.stmtErr(&view.pkRef.Pos, ErrBytesFieldInCC(string(ccf)))
+			if fld.Type.Bytes != nil && !last {
+				c.stmtErr(&ccf.Pos, ErrBytesFieldInCC(string(ccf.Value)))
 			}
 		}
 	}
 
 	// ResultOf
+	var projector *ProjectorStmt
 	err := resolveInCtx(view.ResultOf, c, func(f *ProjectorStmt, _ *PackageSchemaAST) error {
-		var intentForView *ProjectorStorage
-		for i := 0; i < len(f.Intents) && intentForView == nil; i++ {
-			var isView bool
-			intent := f.Intents[i]
-			if err := resolveInCtx(intent.Storage, c, func(storage *StorageStmt, _ *PackageSchemaAST) error {
-				isView = isView || storage.EntityView
-				return nil
-			}); err != nil {
-				c.stmtErr(&view.Pos, err)
-			}
-
-			if isView {
-				for _, entity := range intent.Entities {
-					if entity.Name == view.Name && (entity.Package == Ident(c.pkg.Name) || entity.Package == Ident("")) {
-						intentForView = &f.Intents[i]
-						break
-					}
-				}
-			}
-		}
-		if intentForView == nil {
-			return ErrProjectorDoesNotDeclareViewIntent(f.GetName(), view.GetName())
-		}
+		projector = f
 		return nil
 	})
 	if err != nil {
-		c.stmtErr(&view.Pos, err)
+		c.stmtErr(&view.ResultOf.Pos, err)
+		return
 	}
+
+	var intentForView *ProjectorStorage
+	for i := 0; i < len(projector.Intents) && intentForView == nil; i++ {
+		var isView bool
+		intent := projector.Intents[i]
+		if err := resolveInCtx(intent.Storage, c, func(storage *StorageStmt, _ *PackageSchemaAST) error {
+			isView = isView || storage.EntityView
+			return nil
+		}); err != nil {
+			c.stmtErr(&intent.Storage.Pos, err)
+		}
+
+		if isView {
+			for _, entity := range intent.Entities {
+				if entity.Name == view.Name && (entity.Package == Ident(c.pkg.Name) || entity.Package == Ident("")) {
+					intentForView = &projector.Intents[i]
+					break
+				}
+			}
+		}
+	}
+	if intentForView == nil {
+		c.stmtErr(&view.ResultOf.Pos, ErrProjectorDoesNotDeclareViewIntent(projector.GetName(), view.GetName()))
+		return
+	}
+
 }
 
 func analyzeCommand(cmd *CommandStmt, c *iterateCtx) {
@@ -352,11 +388,11 @@ func analyzeCommand(cmd *CommandStmt, c *iterateCtx) {
 		if typ == nil && err == nil {
 			tbl, _, err := lookupInCtx[*TableStmt](qn, c)
 			if tbl == nil && err == nil {
-				c.stmtErr(&cmd.Pos, ErrUndefinedTypeOrTable(qn))
+				c.stmtErr(&qn.Pos, ErrUndefinedTypeOrTable(qn))
 			}
 		}
 		if err != nil {
-			c.stmtErr(&cmd.Pos, err)
+			c.stmtErr(&qn.Pos, err)
 		}
 	}
 
@@ -368,11 +404,11 @@ func analyzeCommand(cmd *CommandStmt, c *iterateCtx) {
 		if typ == nil && err == nil {
 			tbl, _, err := lookupInCtx[*TableStmt](*cmd.UnloggedParam.Def, c)
 			if tbl == nil && err == nil {
-				c.stmtErr(&cmd.Pos, ErrUndefinedTypeOrTable(*cmd.UnloggedParam.Def))
+				c.stmtErr(&cmd.UnloggedParam.Def.Pos, ErrUndefinedTypeOrTable(*cmd.UnloggedParam.Def))
 			}
 		}
 		if err != nil {
-			c.stmtErr(&cmd.Pos, err)
+			c.stmtErr(&cmd.UnloggedParam.Def.Pos, err)
 		}
 	}
 	if cmd.Returns != nil && cmd.Returns.Def != nil {
@@ -384,13 +420,13 @@ func analyzeCommand(cmd *CommandStmt, c *iterateCtx) {
 func analyzeQuery(query *QueryStmt, c *iterateCtx) {
 	if query.Param != nil && query.Param.Def != nil {
 		if err := resolveInCtx(*query.Param.Def, c, func(*TypeStmt, *PackageSchemaAST) error { return nil }); err != nil {
-			c.stmtErr(&query.Pos, err)
+			c.stmtErr(&query.Param.Def.Pos, err)
 		}
 
 	}
 	if query.Returns.Def != nil {
 		if err := resolveInCtx(*query.Returns.Def, c, func(*TypeStmt, *PackageSchemaAST) error { return nil }); err != nil {
-			c.stmtErr(&query.Pos, err)
+			c.stmtErr(&query.Returns.Def.Pos, err)
 		}
 	}
 	analyseWith(&query.With, query, c)
@@ -398,9 +434,21 @@ func analyzeQuery(query *QueryStmt, c *iterateCtx) {
 }
 
 func analyseProjector(v *ProjectorStmt, c *iterateCtx) {
-	for _, trigger := range v.Triggers {
+	for i := range v.Triggers {
+		trigger := &v.Triggers[i]
 		for _, qname := range trigger.QNames {
 			if len(trigger.TableActions) > 0 {
+
+				wd, pkg, err := lookupInCtx[*WsDescriptorStmt](qname, c)
+				if err != nil {
+					c.stmtErr(&qname.Pos, err)
+					continue
+				}
+				if wd != nil {
+					trigger.qNames = append(trigger.qNames, pkg.NewQName(wd.Name))
+					continue
+				}
+
 				resolveFunc := func(table *TableStmt, pkg *PackageSchemaAST) error {
 					sysDoc := (pkg.QualifiedPackageName == appdef.SysPackage) && (table.Name == nameCRecord || table.Name == nameWRecord)
 					if table.Abstract && !sysDoc {
@@ -415,37 +463,40 @@ func analyseProjector(v *ProjectorStmt, c *iterateCtx) {
 							return ErrOnlyInsertForOdocOrORecord
 						}
 					}
+					trigger.qNames = append(trigger.qNames, pkg.NewQName(table.Name))
 					return nil
 				}
 				if err := resolveInCtx(qname, c, resolveFunc); err != nil {
-					c.stmtErr(&v.Pos, err)
+					c.stmtErr(&qname.Pos, err)
 				}
 			} else { // Command
 				if trigger.ExecuteAction.WithParam {
-					cmd, _, err := lookupInCtx[*TypeStmt](qname, c)
+					var pkg *PackageSchemaAST
+					var odoc *TableStmt
+					typ, pkg, err := lookupInCtx[*TypeStmt](qname, c)
 					if err != nil { // type?
-						c.stmtErr(&v.Pos, err)
+						c.stmtErr(&qname.Pos, err)
 						continue
 					}
-					if cmd == nil { // ODoc?
-						odoc, _, err := lookupInCtx[*TableStmt](qname, c)
+					if typ == nil { // ODoc?
+						odoc, pkg, err = lookupInCtx[*TableStmt](qname, c)
 						if err != nil {
-							c.stmtErr(&v.Pos, err)
+							c.stmtErr(&qname.Pos, err)
 							continue
 						}
 						if odoc == nil || odoc.tableTypeKind != appdef.TypeKind_ODoc {
-							c.stmtErr(&v.Pos, ErrUndefinedTypeOrOdoc(qname))
+							c.stmtErr(&qname.Pos, ErrUndefinedTypeOrOdoc(qname))
 							continue
 						}
 					}
+					trigger.qNames = append(trigger.qNames, pkg.NewQName(qname.Name))
 				} else {
-					cmd, _, err := lookupInCtx[*CommandStmt](qname, c)
+					err := resolveInCtx(qname, c, func(f *CommandStmt, pkg *PackageSchemaAST) error {
+						trigger.qNames = append(trigger.qNames, pkg.NewQName(qname.Name))
+						return nil
+					})
 					if err != nil {
-						c.stmtErr(&v.Pos, err)
-						continue
-					}
-					if cmd == nil {
-						c.stmtErr(&v.Pos, ErrUndefinedCommand(qname))
+						c.stmtErr(&qname.Pos, err)
 						continue
 					}
 				}
@@ -453,16 +504,17 @@ func analyseProjector(v *ProjectorStmt, c *iterateCtx) {
 		}
 	}
 
-	checkEntity := func(key ProjectorStorage, f *StorageStmt) error {
+	checkEntity := func(key *ProjectorStorage, f *StorageStmt) error {
 		if f.EntityRecord {
 			if len(key.Entities) == 0 {
 				return ErrStorageRequiresEntity(key.Storage.String())
 			}
 			for _, entity := range key.Entities {
-				resolveFunc := func(f *TableStmt, _ *PackageSchemaAST) error {
+				resolveFunc := func(f *TableStmt, pkg *PackageSchemaAST) error {
 					if f.Abstract {
 						return ErrAbstractTableNotAlowedInProjectors(entity.String())
 					}
+					key.entityQNames = append(key.entityQNames, pkg.NewQName(entity.Name))
 					return nil
 				}
 				if err2 := resolveInCtx(entity, c, resolveFunc); err2 != nil {
@@ -475,7 +527,10 @@ func analyseProjector(v *ProjectorStmt, c *iterateCtx) {
 				return ErrStorageRequiresEntity(key.Storage.String())
 			}
 			for _, entity := range key.Entities {
-				if err2 := resolveInCtx(entity, c, func(*ViewStmt, *PackageSchemaAST) error { return nil }); err2 != nil {
+				if err2 := resolveInCtx(entity, c, func(view *ViewStmt, pkg *PackageSchemaAST) error {
+					key.entityQNames = append(key.entityQNames, pkg.NewQName(entity.Name))
+					return nil
+				}); err2 != nil {
 					return err2
 				}
 			}
@@ -483,8 +538,9 @@ func analyseProjector(v *ProjectorStmt, c *iterateCtx) {
 		return nil
 	}
 
-	for _, key := range v.State {
-		if err := resolveInCtx(key.Storage, c, func(f *StorageStmt, _ *PackageSchemaAST) error {
+	for i := range v.State {
+		key := &v.State[i]
+		if err := resolveInCtx(key.Storage, c, func(f *StorageStmt, pkg *PackageSchemaAST) error {
 			if e := checkEntity(key, f); e != nil {
 				return e
 			}
@@ -502,14 +558,16 @@ func analyseProjector(v *ProjectorStmt, c *iterateCtx) {
 			if !read {
 				return ErrStorageNotInProjectorState(key.Storage.String())
 			}
+			key.storageQName = pkg.NewQName(key.Storage.Name)
 			return nil
 		}); err != nil {
-			c.stmtErr(&v.Pos, err)
+			c.stmtErr(&key.Storage.Pos, err)
 		}
 	}
 
-	for _, key := range v.Intents {
-		if err := resolveInCtx(key.Storage, c, func(f *StorageStmt, _ *PackageSchemaAST) error {
+	for i := range v.Intents {
+		key := &v.Intents[i]
+		if err := resolveInCtx(key.Storage, c, func(f *StorageStmt, pkg *PackageSchemaAST) error {
 			if e := checkEntity(key, f); e != nil {
 				return e
 			}
@@ -527,9 +585,10 @@ func analyseProjector(v *ProjectorStmt, c *iterateCtx) {
 			if !read {
 				return ErrStorageNotInProjectorIntents(key.Storage.String())
 			}
+			key.storageQName = pkg.NewQName(key.Storage.Name)
 			return nil
 		}); err != nil {
-			c.stmtErr(&v.Pos, err)
+			c.stmtErr(&key.Storage.Pos, err)
 		}
 	}
 
@@ -545,13 +604,13 @@ func analyseWith(with *[]WithItem, statement IStatement, c *iterateCtx) {
 			comment = item
 		} else if item.Rate != nil {
 			if err := resolveInCtx(*item.Rate, c, func(*RateStmt, *PackageSchemaAST) error { return nil }); err != nil {
-				c.stmtErr(statement.GetPos(), err)
+				c.stmtErr(&item.Rate.Pos, err)
 			}
 		}
 		for j := range item.Tags {
 			tag := item.Tags[j]
 			if err := resolveInCtx(tag, c, func(*TagStmt, *PackageSchemaAST) error { return nil }); err != nil {
-				c.stmtErr(statement.GetPos(), err)
+				c.stmtErr(&tag.Pos, err)
 			}
 		}
 	}
@@ -583,7 +642,7 @@ func analyseTable(v *TableStmt, c *iterateCtx) {
 			return nil
 		}
 		if err := resolveInCtx(*v.Inherits, c, resolvedFunc); err != nil {
-			c.stmtErr(&v.Pos, err)
+			c.stmtErr(&v.Inherits.Pos, err)
 		}
 
 	}
@@ -592,7 +651,7 @@ func analyseTable(v *TableStmt, c *iterateCtx) {
 func analyseType(v *TypeStmt, c *iterateCtx) {
 	for _, i := range v.Items {
 		if i.NestedTable != nil {
-			c.stmtErr(&v.Pos, ErrNestedTablesNotSupportedInTypes)
+			c.stmtErr(&i.NestedTable.Pos, ErrNestedTablesNotSupportedInTypes)
 		}
 	}
 	analyseFieldSets(v.Items, c)
@@ -629,12 +688,12 @@ func analyseWorkspace(v *WorkspaceStmt, c *iterateCtx) {
 	for _, inherits := range v.Inherits {
 		chain = make([]DefQName, 0)
 		if err := checkChain(inherits); err != nil {
-			c.stmtErr(&v.Pos, err)
+			c.stmtErr(&inherits.Pos, err)
 		}
 	}
 	if v.Descriptor != nil {
 		if v.Abstract {
-			c.stmtErr(&v.Pos, ErrAbstractWorkspaceDescriptor)
+			c.stmtErr(&v.Descriptor.Pos, ErrAbstractWorkspaceDescriptor)
 		}
 		analyseNestedTables(v.Descriptor.Items, appdef.TypeKind_CDoc, c)
 		analyseFieldSets(v.Descriptor.Items, c)
@@ -651,21 +710,7 @@ func analyseNestedTables(items []TableItemExpr, rootTableKind appdef.TypeKind, c
 		if item.NestedTable != nil {
 			nestedTable = &item.NestedTable.Table
 			pos = &item.NestedTable.Pos
-		} else if item.Field != nil && item.Field.Type.Def != nil {
-			tbl, _, err := lookupInCtx[*TableStmt](*item.Field.Type.Def, c)
-			if err != nil {
-				c.stmtErr(&item.Field.Pos, err)
-				continue
-			}
-			if tbl == nil {
-				c.stmtErr(&item.Field.Pos, ErrUndefinedTable(*item.Field.Type.Def))
-				continue
-			}
-			nestedTable = tbl
-			pos = &item.Field.Pos
-		}
 
-		if nestedTable != nil {
 			if nestedTable.Abstract {
 				c.stmtErr(pos, ErrNestedAbstractTable(nestedTable.GetName()))
 				return
@@ -704,7 +749,7 @@ func analyseFieldSets(items []TableItemExpr, c *iterateCtx) {
 		item := items[i]
 		if item.FieldSet != nil {
 			if err := resolveInCtx(item.FieldSet.Type, c, func(*TypeStmt, *PackageSchemaAST) error { return nil }); err != nil {
-				c.stmtErr(&item.FieldSet.Pos, err)
+				c.stmtErr(&item.FieldSet.Type.Pos, err)
 				continue
 			}
 		}
@@ -736,34 +781,56 @@ func analyseFields(items []TableItemExpr, c *iterateCtx, isTable bool) {
 			field := item.Field
 			if field.CheckRegexp != nil {
 				if field.Type.DataType != nil && field.Type.DataType.Varchar != nil {
-					_, err := regexp.Compile(*field.CheckRegexp)
+					_, err := regexp.Compile(field.CheckRegexp.Regexp)
 					if err != nil {
-						c.stmtErr(&field.Pos, ErrCheckRegexpErr(err))
+						c.stmtErr(&field.CheckRegexp.Pos, ErrCheckRegexpErr(err))
 					}
 				} else {
-					c.stmtErr(&field.Pos, ErrRegexpCheckOnlyForVarcharField)
+					c.stmtErr(&field.CheckRegexp.Pos, ErrRegexpCheckOnlyForVarcharField)
 				}
 			}
 			if field.Type.DataType != nil {
-				if field.Type.DataType.Varchar != nil && field.Type.DataType.Varchar.MaxLen != nil {
-					if *field.Type.DataType.Varchar.MaxLen > uint64(appdef.MaxFieldLength) {
-						c.stmtErr(&field.Pos, ErrMaxFieldLengthTooLarge)
+				vc := field.Type.DataType.Varchar
+				if vc != nil && vc.MaxLen != nil {
+					if *vc.MaxLen > uint64(appdef.MaxFieldLength) {
+						c.stmtErr(&vc.Pos, ErrMaxFieldLengthTooLarge)
 					}
 				}
-				if field.Type.DataType.Bytes != nil && field.Type.DataType.Bytes.MaxLen != nil {
-					if *field.Type.DataType.Bytes.MaxLen > uint64(appdef.MaxFieldLength) {
-						c.stmtErr(&field.Pos, ErrMaxFieldLengthTooLarge)
+				bb := field.Type.DataType.Bytes
+				if bb != nil && bb.MaxLen != nil {
+					if *bb.MaxLen > uint64(appdef.MaxFieldLength) {
+						c.stmtErr(&bb.Pos, ErrMaxFieldLengthTooLarge)
 					}
 				}
 			} else {
 				if !isTable { // analysing a TYPE
-					typ, _, err := lookupInCtx[*TypeStmt](*field.Type.Def, c)
-					if err != nil { // type?
-						c.stmtErr(&field.Pos, err)
+					err := resolveInCtx(*field.Type.Def, c, func(f *TypeStmt, pkg *PackageSchemaAST) error {
+						field.Type.qName = pkg.NewQName(f.Name)
+						return nil
+					})
+					if err != nil {
+						c.stmtErr(&field.Type.Def.Pos, err)
 						continue
 					}
-					if typ == nil {
-						c.stmtErr(&field.Pos, ErrUndefinedType(*field.Type.Def))
+				} else { // analysing a TABLE
+					err := resolveInCtx(*field.Type.Def, c, func(f *TableStmt, pkg *PackageSchemaAST) error {
+						if f.Abstract {
+							return ErrNestedAbstractTable(field.Type.Def.String())
+						}
+						if f.tableTypeKind != appdef.TypeKind_CRecord && f.tableTypeKind != appdef.TypeKind_ORecord && f.tableTypeKind != appdef.TypeKind_WRecord {
+							return ErrTypeNotSupported(field.Type.Def.String())
+						}
+						field.Type.qName = pkg.NewQName(f.Name)
+						field.Type.tableStmt = f
+						field.Type.tablePkg = pkg
+						return nil
+					})
+					if err != nil {
+						if err.Error() == ErrUndefinedTable(*field.Type.Def).Error() {
+							c.stmtErr(&field.Type.Def.Pos, ErrUndefinedDataTypeOrTable(*field.Type.Def))
+						} else {
+							c.stmtErr(&field.Type.Def.Pos, err)
+						}
 						continue
 					}
 				}
@@ -778,7 +845,7 @@ func analyseFields(items []TableItemExpr, c *iterateCtx, isTable bool) {
 					}
 					return nil
 				}); err != nil {
-					c.stmtErr(&rf.Pos, err)
+					c.stmtErr(&rf.RefDocs[i].Pos, err)
 					continue
 				}
 			}

@@ -41,7 +41,7 @@ func TestBasicUsage(t *testing.T) {
 		AddDataField("numField", numName, false).
 		AddRefField("mainChild", false, recName).(appdef.ICDocBuilder).
 		AddContainer("rec", recName, 0, 100, "container comment").(appdef.ICDocBuilder).
-		AddUnique("", []string{"f1", "f2"})
+		AddUnique(appdef.UniqueQName(doc.QName(), "unique1"), []string{"f1", "f2"})
 	doc.SetComment(`comment 1`, `comment 2`)
 
 	rec := appDef.AddCRecord(recName)
@@ -50,7 +50,8 @@ func TestBasicUsage(t *testing.T) {
 		AddField("f2", appdef.DataKind_string, false).
 		AddField("phone", appdef.DataKind_string, true, appdef.MinLen(1), appdef.MaxLen(25)).
 		SetFieldVerify("phone", appdef.VerificationKind_Any...).(appdef.ICRecordBuilder).
-		SetUniqueField("phone")
+		SetUniqueField("phone").
+		AddUnique(appdef.UniqueQName(rec.QName(), "uniq1"), []string{"f1"})
 
 	viewName := appdef.NewQName("test", "view")
 	view := appDef.AddView(viewName)

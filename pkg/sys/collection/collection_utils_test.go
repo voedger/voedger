@@ -9,14 +9,18 @@ package collection
 import (
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/cluster"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
 	queryprocessor "github.com/voedger/voedger/pkg/processors/query"
 )
 
 type testDataType struct {
-	appQName istructs.AppQName
-	pkgName  string
+	appQName      istructs.AppQName
+	appPartsCount int
+	appEngines    [cluster.ProcessorKind_Count]int
+
+	pkgName string
 
 	// common event entites
 	partitionIdent string
@@ -64,8 +68,11 @@ type testDataType struct {
 const OccursUnbounded = appdef.Occurs(0xffff)
 
 var test = testDataType{
-	appQName: istructs.AppQName_test1_app1,
-	pkgName:  "test",
+	appQName:      istructs.AppQName_test1_app1,
+	appPartsCount: 64,
+	appEngines:    cluster.PoolSize(100, 100, 100),
+
+	pkgName: "test",
 
 	partitionIdent:      "Partition",
 	partition:           55,

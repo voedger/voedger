@@ -107,11 +107,11 @@ type NodeConstraint struct {
       - Containers // IContainers
         - Name1 QName1
         - Name2 QName2
-      - UniqueFields // IUniques
-        - Name1 ID1 // IUnique
-          -  Fields
-            - Name1 int
+      - Uniques // IUniques
+        - Name1 QName1 // IUnique
+          - UniqueFields
             - Name2 varchar
+            - Name1 int
           - Parent
             - Abstract true // IWithAbstract
             - Fields // IFields
@@ -120,8 +120,8 @@ type NodeConstraint struct {
             - Containers // IContainers
               - Name1 QName1
               - Name2 QName2
-        - Name2 ID2 // IUnique
-          -  Fields
+        - Name2 QName2 // IUnique
+          -  UniqueFields
             - Name1 int
             - Name2 varchar
           - Parent

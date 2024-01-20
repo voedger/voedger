@@ -14,12 +14,12 @@ import (
 	"strconv"
 	"time"
 
-	ibus "github.com/untillpro/airs-ibus"
 	"github.com/untillpro/goutils/iterate"
 	"github.com/untillpro/goutils/logger"
 	"golang.org/x/exp/maps"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/cluster"
 	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -32,19 +32,20 @@ import (
 	"github.com/voedger/voedger/pkg/sys/builtin"
 	workspacemgmt "github.com/voedger/voedger/pkg/sys/workspace"
 	coreutils "github.com/voedger/voedger/pkg/utils"
+	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
 )
 
 func (cm *implICommandMessage) Body() []byte                      { return cm.body }
 func (cm *implICommandMessage) AppQName() istructs.AppQName       { return cm.appQName }
 func (cm *implICommandMessage) WSID() istructs.WSID               { return cm.wsid }
-func (cm *implICommandMessage) Sender() interface{}               { return cm.sender }
+func (cm *implICommandMessage) Sender() ibus.ISender              { return cm.sender }
 func (cm *implICommandMessage) PartitionID() istructs.PartitionID { return cm.partitionID }
 func (cm *implICommandMessage) RequestCtx() context.Context       { return cm.requestCtx }
 func (cm *implICommandMessage) Command() appdef.ICommand          { return cm.command }
 func (cm *implICommandMessage) Token() string                     { return cm.token }
 func (cm *implICommandMessage) Host() string                      { return cm.host }
 
-func NewCommandMessage(requestCtx context.Context, body []byte, appQName istructs.AppQName, wsid istructs.WSID, sender interface{},
+func NewCommandMessage(requestCtx context.Context, body []byte, appQName istructs.AppQName, wsid istructs.WSID, sender ibus.ISender,
 	partitionID istructs.PartitionID, command appdef.ICommand, token string, host string) ICommandMessage {
 	return &implICommandMessage{
 		body:        body,
@@ -84,6 +85,50 @@ func (c *cmdWorkpiece) WSID() istructs.WSID {
 	return c.cmdMes.WSID()
 }
 
+// borrows app partition for command
+func (c *cmdWorkpiece) borrow() (err error) {
+	if c.appPart, err = c.appParts.Borrow(c.cmdMes.AppQName(), c.cmdMes.PartitionID(), cluster.ProcessorKind_Command); err != nil {
+		return err
+	}
+	c.appStructs = c.appPart.AppStructs()
+	return nil
+}
+
+// releases resources:
+//   - borrowed app partition
+//   - plog event
+func (c *cmdWorkpiece) release() {
+	if ev := c.pLogEvent; ev != nil {
+		c.pLogEvent = nil
+		ev.Release()
+	}
+	if ap := c.appPart; ap != nil {
+		c.appStructs = nil
+		c.appPart = nil
+		ap.Release()
+	}
+	if c.pLogEvent != nil {
+		c.pLogEvent.Release()
+	}
+}
+
+func borrowAppPart(_ context.Context, work interface{}) error {
+	return work.(*cmdWorkpiece).borrow()
+}
+
+type releaseWorkpiece struct{ pipeline.NOOP }
+
+// nolint (result is always nil)
+func (r *releaseWorkpiece) DoSync(_ context.Context, work interface{}) (err error) {
+	work.(*cmdWorkpiece).release()
+	return nil
+}
+
+// nolint (result is always nil)
+func (r *releaseWorkpiece) OnErr(err error, w interface{}, ctx pipeline.IWorkpieceContext) error {
+	return err
+}
+
 func (ap *appPartition) getWorkspace(wsid istructs.WSID) *workspace {
 	ws, ok := ap.workspaces[wsid]
 	if !ok {
@@ -96,26 +141,27 @@ func (ap *appPartition) getWorkspace(wsid istructs.WSID) *workspace {
 	return ws
 }
 
-func (cmdProc *cmdProc) getAppPartition(ctx context.Context, work interface{}) (err error) {
-	cmd := work.(*cmdWorkpiece)
-	cmd.cmdMes.AppQName()
-	ap, ok := cmdProc.appPartitions[cmd.cmdMes.AppQName()]
-	if !ok {
-		if ap, err = cmdProc.recovery(ctx, cmd); err != nil {
-			return err
+func (cmdProc *cmdProc) provideGetAppPartition(syncActualizerFactory pipeline.ISyncOperator) func(ctx context.Context, work interface{}) (err error) {
+	return func(ctx context.Context, work interface{}) (err error) {
+		cmd := work.(*cmdWorkpiece)
+		ap, ok := cmdProc.appPartitions[cmd.cmdMes.AppQName()]
+		if !ok {
+			if ap, err = cmdProc.recovery(ctx, cmd, syncActualizerFactory); err != nil {
+				return fmt.Errorf("partition %d recovery failed: %w", cmdProc.pNumber, err)
+			}
+			cmdProc.appPartitions[cmd.cmdMes.AppQName()] = ap
 		}
-		cmdProc.appPartitions[cmd.cmdMes.AppQName()] = ap
+		cmdProc.appPartition = ap
+		return nil
 	}
-	cmdProc.appPartition = ap
-	return nil
 }
 
 func (cmdProc *cmdProc) getCmdResultBuilder(_ context.Context, work interface{}) (err error) {
 	cmd := work.(*cmdWorkpiece)
-	res := cmd.cmdMes.Command().Result()
-	if res != nil {
+	cmdResultType := cmd.cmdMes.Command().Result()
+	if cmdResultType != nil {
 		cfg := cmdProc.cfgs[cmd.cmdMes.AppQName()]
-		cmd.cmdResultBuilder = istructsmem.NewIObjectBuilder(cfg, res.QName())
+		cmd.cmdResultBuilder = istructsmem.NewIObjectBuilder(cfg, cmdResultType.QName())
 	}
 	return nil
 }
@@ -152,11 +198,12 @@ func updateIDGeneratorFromO(root istructs.IObject, appDef appdef.IAppDef, idGen 
 	})
 }
 
-func (cmdProc *cmdProc) recovery(ctx context.Context, cmd *cmdWorkpiece) (*appPartition, error) {
+func (cmdProc *cmdProc) recovery(ctx context.Context, cmd *cmdWorkpiece, syncActualizerFactory pipeline.ISyncOperator) (*appPartition, error) {
 	ap := &appPartition{
 		workspaces:     map[istructs.WSID]*workspace{},
 		nextPLogOffset: istructs.FirstOffset,
 	}
+	var lastEvent istructs.IPLogEvent
 	cb := func(plogOffset istructs.Offset, event istructs.IPLogEvent) (err error) {
 		ws := ap.getWorkspace(event.Workspace())
 		event.CUDs(func(rec istructs.ICUDRow) {
@@ -171,12 +218,36 @@ func (cmdProc *cmdProc) recovery(ctx context.Context, cmd *cmdWorkpiece) (*appPa
 		}
 		ws.NextWLogOffset = event.WLogOffset() + 1
 		ap.nextPLogOffset = plogOffset + 1
+		lastEvent = event
 		return nil
 	}
 
 	if err := cmd.appStructs.Events().ReadPLog(ctx, cmdProc.pNumber, istructs.FirstOffset, istructs.ReadToTheEnd, cb); err != nil {
 		return nil, err
 	}
+
+	if lastEvent != nil {
+		// re-apply the last event
+		// apply records
+		if err := cmd.appStructs.Records().Apply(lastEvent); err != nil {
+			return nil, err
+		}
+
+		// apply sync projectors
+		work := &cmdWorkpiece{
+			pLogEvent: lastEvent,
+			cmdMes:    NewCommandMessage(ctx, nil, cmd.AppQName(), lastEvent.Workspace(), cmd.cmdMes.Sender(), cmdProc.pNumber, nil, "", ""), // actually AppQName() only will be required
+		}
+		if err := syncActualizerFactory.DoSync(ctx, work); err != nil {
+			return nil, err
+		}
+
+		// put WLog
+		if err := cmd.appStructs.Events().PutWlog(lastEvent); err != nil {
+			return nil, err
+		}
+	}
+
 	worskapcesJSON, err := json.Marshal(ap.workspaces)
 	if err != nil {
 		// error impossible
@@ -198,8 +269,11 @@ func getIDGenerator(_ context.Context, work interface{}) (err error) {
 
 func (cmdProc *cmdProc) putPLog(_ context.Context, work interface{}) (err error) {
 	cmd := work.(*cmdWorkpiece)
-	cmd.pLogEvent, err = cmd.appStructs.Events().PutPlog(cmd.rawEvent, nil, cmd.idGenerator)
-	cmdProc.appPartition.nextPLogOffset++
+	if cmd.pLogEvent, err = cmd.appStructs.Events().PutPlog(cmd.rawEvent, nil, cmd.idGenerator); err != nil {
+		cmd.appPartitionRestartScheduled = true
+	} else {
+		cmdProc.appPartition.nextPLogOffset++
+	}
 	return
 }
 
@@ -257,12 +331,6 @@ func checkWSActive(_ context.Context, work interface{}) (err error) {
 		return nil
 	}
 	return processors.ErrWSInactive
-}
-
-func getAppStructs(_ context.Context, work interface{}) (err error) {
-	cmd := work.(*cmdWorkpiece)
-	cmd.appStructs, err = cmd.asp.AppStructs(cmd.cmdMes.AppQName())
-	return
 }
 
 func limitCallRate(_ context.Context, work interface{}) (err error) {
@@ -613,11 +681,8 @@ func (osp *wrongArgsCatcher) OnErr(err error, _ interface{}, _ pipeline.IWorkpie
 
 func applyPLogEvent(_ context.Context, work interface{}) (err error) {
 	cmd := work.(*cmdWorkpiece)
-	if err = cmd.appStructs.Records().Apply(cmd.pLogEvent); err == nil {
-		// actually WLogOffset must be increased after successfult write to WLog.
-		// but new WLogOffset is needed for next step - Sync Projectors
-		// so increase WLogOffsets here - right before Sync Projectors
-		cmd.workspace.NextWLogOffset++
+	if err = cmd.appStructs.Records().Apply(cmd.pLogEvent); err != nil {
+		cmd.appPartitionRestartScheduled = true
 	}
 	return
 }
@@ -635,11 +700,21 @@ func (cmdProc *cmdProc) n10n(_ context.Context, work interface{}) (err error) {
 
 func putWLog(_ context.Context, work interface{}) (err error) {
 	cmd := work.(*cmdWorkpiece)
-	err = cmd.appStructs.Events().PutWlog(cmd.pLogEvent)
-	if err != nil {
+	if err = cmd.appStructs.Events().PutWlog(cmd.pLogEvent); err != nil {
+		cmd.appPartitionRestartScheduled = true
+	} else {
 		cmd.workspace.NextWLogOffset++
 	}
 	return
+}
+
+func provideSyncActualizerFactory(syncActualizer pipeline.ISyncOperator) func(ctx context.Context, work interface{}) (err error) {
+	return func(ctx context.Context, work interface{}) (err error) {
+		if err = syncActualizer.DoSync(ctx, work); err != nil {
+			work.(*cmdWorkpiece).appPartitionRestartScheduled = true
+		}
+		return err
+	}
 }
 
 func syncProjectorsBegin(_ context.Context, work interface{}) (err error) {
@@ -657,11 +732,12 @@ func syncProjectorsEnd(_ context.Context, work interface{}) (err error) {
 
 type opSendResponse struct {
 	pipeline.NOOP
-	bus ibus.IBus
+	cmdProc *cmdProc
 }
 
 func (sr *opSendResponse) DoSync(_ context.Context, work interface{}) (err error) {
 	cmd := work.(*cmdWorkpiece)
+
 	if cmd.err != nil {
 		cmd.metrics.increase(ErrorsTotal, 1.0)
 		//if error occurred somewhere in syncProjectors we have to measure elapsed time
@@ -669,7 +745,11 @@ func (sr *opSendResponse) DoSync(_ context.Context, work interface{}) (err error
 			cmd.metrics.increase(ProjectorsSeconds, time.Since(cmd.syncProjectorsStart).Seconds())
 		}
 		logger.Error(cmd.err)
-		coreutils.ReplyErr(sr.bus, cmd.cmdMes.Sender(), cmd.err)
+		coreutils.ReplyErr(cmd.cmdMes.Sender(), cmd.err)
+		if cmd.appPartitionRestartScheduled {
+			logger.Info("partition %d will be restarted due of an error on writing to Log: %w", cmd.cmdMes.PartitionID(), cmd.err)
+			delete(sr.cmdProc.appPartitions, cmd.cmdMes.AppQName())
+		}
 		return
 	}
 	body := bytes.NewBufferString(fmt.Sprintf(`{"CurrentWLogOffset":%d`, cmd.Event().WLogOffset()))
@@ -695,7 +775,7 @@ func (sr *opSendResponse) DoSync(_ context.Context, work interface{}) (err error
 		body.WriteString(string(cmdResultBytes))
 	}
 	body.WriteString("}")
-	coreutils.ReplyJSON(sr.bus, cmd.cmdMes.Sender(), http.StatusOK, body.String())
+	coreutils.ReplyJSON(cmd.cmdMes.Sender(), http.StatusOK, body.String())
 	return nil
 }
 

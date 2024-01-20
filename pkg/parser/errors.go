@@ -75,6 +75,10 @@ func ErrUndefinedTypeOrTable(name DefQName) error {
 	return fmt.Errorf("undefined type or table: %s", name.String())
 }
 
+func ErrUndefinedDataTypeOrTable(name DefQName) error {
+	return fmt.Errorf("undefined data type or table: %s", name.String())
+}
+
 func ErrUndefinedType(name DefQName) error {
 	return fmt.Errorf("undefined type: %s", name.String())
 }

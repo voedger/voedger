@@ -15,7 +15,20 @@ ABSTRACT TABLE WDoc INHERITS WRecord();
 
 ABSTRACT TABLE Singleton INHERITS CDoc();
 
-WORKSPACE ProfileWS (
+ALTERABLE WORKSPACE AppWorkspaceWS (
+	DESCRIPTOR AppWorkspace ();
+);
+
+WORKSPACE DeviceProfileWS (
+	DESCRIPTOR DeviceProfile ();
+);
+
+WORKSPACE UserProfileWS (
+
+	DESCRIPTOR UserProfile (
+		DisplayName varchar
+	);
+
 	TABLE ChildWorkspace INHERITS CDoc (
 		WSName varchar NOT NULL,
 		WSKind qname NOT NULL,
@@ -94,11 +107,11 @@ ABSTRACT WORKSPACE Workspace (
 		OwnerQName2 text
 	);
 
-	TABLE UserProfile INHERITS Singleton (DisplayName varchar);
+	-- TABLE UserProfile INHERITS Singleton (DisplayName varchar);
 
-	TABLE DeviceProfile INHERITS Singleton ();
+	-- TABLE DeviceProfile INHERITS Singleton ();
 
-	TABLE AppWorkspace INHERITS Singleton ();
+	-- TABLE AppWorkspace INHERITS Singleton ();
 
 	TABLE BLOB INHERITS WDoc (status int32 NOT NULL);
 
@@ -132,7 +145,6 @@ ABSTRACT WORKSPACE Workspace (
 		WSName varchar NOT NULL
 	);
 
-
 	TYPE EchoParams (Text text NOT NULL);
 
 	TYPE EchoResult (Res text NOT NULL);
@@ -154,7 +166,7 @@ ABSTRACT WORKSPACE Workspace (
 	);
 
 	TYPE ModulesResult (
-			Modules varchar(32768) NOT NULL
+		Modules varchar(32768) NOT NULL
 	);
 
 	TYPE RenameQNameParams (
@@ -172,7 +184,7 @@ ABSTRACT WORKSPACE Workspace (
 	);
 
 	TYPE GetCDocResult (
-			Result varchar(32768) NOT NULL
+		Result varchar(32768) NOT NULL
 	);
 
 	TYPE StateParams (
@@ -180,7 +192,7 @@ ABSTRACT WORKSPACE Workspace (
 	);
 
 	TYPE StateResult (
-			State varchar(32768) NOT NULL
+		State varchar(32768) NOT NULL
 	);
 
 	TYPE DescribePackageNamesResult (
@@ -196,11 +208,11 @@ ABSTRACT WORKSPACE Workspace (
 	);
 
 	TYPE InitiateInvitationByEMailParams (
-			Email text NOT NULL,
-			Roles text NOT NULL,
-			ExpireDatetime int64 NOT NULL,
-			EmailTemplate varchar(32768) NOT NULL,
-			EmailSubject text NOT NULL
+		Email text NOT NULL,
+		Roles text NOT NULL,
+		ExpireDatetime int64 NOT NULL,
+		EmailTemplate varchar(32768) NOT NULL,
+		EmailSubject text NOT NULL
 	);
 
 	TYPE InitiateJoinWorkspaceParams (
@@ -209,10 +221,10 @@ ABSTRACT WORKSPACE Workspace (
 	);
 
 	TYPE InitiateUpdateInviteRolesParams (
-			InviteID ref NOT NULL,
-			Roles text NOT NULL,
-			EmailTemplate varchar(32768) NOT NULL,
-			EmailSubject text NOT NULL
+		InviteID ref NOT NULL,
+		Roles text NOT NULL,
+		EmailTemplate varchar(32768) NOT NULL,
+		EmailSubject text NOT NULL
 	);
 
 	TYPE InitiateCancelAcceptedInviteParams (
@@ -270,13 +282,13 @@ ABSTRACT WORKSPACE Workspace (
 	);
 
 	TYPE InitialEmailVerificationResult (
-			VerificationToken varchar(32768) NOT NULL
+		VerificationToken varchar(32768) NOT NULL
 	);
 
 	TYPE IssueVerifiedValueTokenParams (
-			VerificationToken varchar(32768) NOT NULL,
-			VerificationCode text NOT NULL,
-			ForRegistry bool
+		VerificationToken varchar(32768) NOT NULL,
+		VerificationCode text NOT NULL,
+		ForRegistry bool
 	);
 
 	TYPE IssueVerifiedValueTokenResult (
@@ -385,11 +397,11 @@ ABSTRACT WORKSPACE Workspace (
 	) AS RESULT OF ProjectorCollection;
 
 	VIEW Uniques (
-		QName qname NOT NULL,
+		QName qname NOT NULL, -- deprecated UNIQUEFIELD -> QName of the doc, new UNIQUE -> QName of the unique
 		ValuesHash int64 NOT NULL,
-		Values bytes(32768) NOT NULL,
+		Values bytes(65535) NOT NULL,
 		ID ref,
-		PRIMARY KEY ((QName, ValuesHash) Values)
+		PRIMARY KEY ((QName, ValuesHash), Values) -- partitioning is not optimal, no better solution
 	) AS RESULT OF ApplyUniques;
 
 	VIEW WorkspaceIDIdx (

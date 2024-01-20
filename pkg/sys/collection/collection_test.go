@@ -16,6 +16,8 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appparts"
+	"github.com/voedger/voedger/pkg/cluster"
 	"github.com/voedger/voedger/pkg/iauthnzimpl"
 	"github.com/voedger/voedger/pkg/iprocbus"
 	"github.com/voedger/voedger/pkg/iratesce"
@@ -30,22 +32,22 @@ import (
 	queryprocessor "github.com/voedger/voedger/pkg/processors/query"
 	"github.com/voedger/voedger/pkg/projectors"
 	"github.com/voedger/voedger/pkg/state"
+	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
 )
 
-var provider istructs.IAppStructsProvider
 var cocaColaDocID istructs.RecordID
 var collectionQuery appdef.IQuery
 var getCDocQuery appdef.IQuery
 var stateQuery appdef.IQuery
-var testCfgs istructsmem.AppConfigsType
 
 const maxPrepareQueries = 10
 
-func appConfigs(t *testing.T) (istructsmem.AppConfigsType, istorage.IAppStorageProvider) {
+func buildAppParts(t *testing.T) (appParts appparts.IAppPartitions, cfgs istructsmem.AppConfigsType, cleanup func()) {
 	require := require.New(t)
-	cfgs := make(istructsmem.AppConfigsType, 1)
-	asf := istorage.ProvideMem()
-	appStorageProvider := istorageimpl.Provide(asf)
+
+	cfgs = make(istructsmem.AppConfigsType, 1)
+	asp := istorageimpl.Provide(istorage.ProvideMem())
+
 	// конфиг приложения airs-bp
 	adb := appdef.New()
 	cfg := cfgs.AddConfig(test.appQName, adb)
@@ -154,8 +156,15 @@ func appConfigs(t *testing.T) (istructsmem.AppConfigsType, istorage.IAppStorageP
 	getCDocQuery = appDef.Query(qNameQueryGetCDoc)
 	stateQuery = appDef.Query(qNameQueryState)
 
-	testCfgs = cfgs
-	return cfgs, appStorageProvider
+	provider := istructsmem.Provide(cfgs, iratesce.TestBucketsFactory,
+		payloads.ProvideIAppTokensFactory(itokensjwt.TestTokensJWT()), asp)
+
+	appParts, cleanup, err = appparts.New(provider)
+	require.NoError(err)
+	appParts.DeployApp(test.appQName, appDef, test.appPartsCount, test.appEngines)
+	appParts.DeployAppPartitions(test.appQName, []istructs.PartitionID{test.partition})
+
+	return appParts, cfgs, cleanup
 }
 
 // Test executes 3 operations with CUDs:
@@ -166,14 +175,17 @@ func appConfigs(t *testing.T) (istructsmem.AppConfigsType, istorage.IAppStorageP
 // Then projection values checked.
 func TestBasicUsage_Collection(t *testing.T) {
 	require := require.New(t)
-	appConfigs, asp := appConfigs(t)
-	provider := istructsmem.Provide(appConfigs, iratesce.TestBucketsFactory,
-		payloads.ProvideIAppTokensFactory(itokensjwt.TestTokensJWT()), asp)
-	as, err := provider.AppStructs(test.appQName)
-	require.NoError(err)
+
+	appParts, _, cleanup := buildAppParts(t)
+	defer cleanup()
 
 	// Command processor
-	actualizer := provideSyncActualizer(context.Background(), as, istructs.PartitionID(1))
+	appPart, err := appParts.Borrow(test.appQName, test.partition, cluster.ProcessorKind_Command)
+	require.NoError(err)
+	defer appPart.Release()
+	as := appPart.AppStructs()
+
+	actualizer := provideSyncActualizer(context.Background(), as, test.partition)
 	processor := pipeline.NewSyncPipeline(context.Background(), "partition processor", pipeline.WireSyncOperator("actualizer", actualizer))
 	defer actualizer.Close()
 
@@ -233,11 +245,15 @@ func TestBasicUsage_Collection(t *testing.T) {
 
 func Test_updateChildRecord(t *testing.T) {
 	require := require.New(t)
-	appConfigs, asp := appConfigs(t)
-	provider := istructsmem.Provide(appConfigs, iratesce.TestBucketsFactory,
-		payloads.ProvideIAppTokensFactory(itokensjwt.TestTokensJWT()), asp)
-	as, err := provider.AppStructs(test.appQName)
+
+	appParts, _, cleanup := buildAppParts(t)
+	defer cleanup()
+
+	// Command processor
+	appPart, err := appParts.Borrow(test.appQName, test.partition, cluster.ProcessorKind_Command)
 	require.NoError(err)
+	defer appPart.Release()
+	as := appPart.AppStructs()
 
 	// ID and Offset generators
 	idGen := newIdsGenerator()
@@ -289,21 +305,22 @@ update coca-cola:
 	update exception for happy_hour:
 		- holiday: 0.9
 */
-func Test_Collection_3levels(t *testing.T) {
+
+func cp_Collection_3levels(t *testing.T, appParts appparts.IAppPartitions) {
 	var err error
 	require := require.New(t)
 
-	appConfigs, asp := appConfigs(t)
-	provider = istructsmem.Provide(appConfigs, iratesce.TestBucketsFactory,
-		payloads.ProvideIAppTokensFactory(itokensjwt.TestTokensJWT()), asp)
-	as, err := provider.AppStructs(test.appQName)
+	// Command processor
+	appPart, err := appParts.Borrow(test.appQName, test.partition, cluster.ProcessorKind_Command)
 	require.NoError(err)
+	defer appPart.Release()
+	as := appPart.AppStructs()
 
 	// ID and Offset generators
 	idGen := newIdsGenerator()
 
 	// Command processor
-	actualizer := provideSyncActualizer(context.Background(), as, istructs.PartitionID(1))
+	actualizer := provideSyncActualizer(context.Background(), as, test.partition)
 	processor := pipeline.NewSyncPipeline(context.Background(), "partition processor", pipeline.WireSyncOperator("actualizer", actualizer))
 	defer actualizer.Close()
 
@@ -399,10 +416,21 @@ func Test_Collection_3levels(t *testing.T) {
 	}
 }
 
+func Test_Collection_3levels(t *testing.T) {
+	appParts, _, cleanup := buildAppParts(t)
+	defer cleanup()
+
+	cp_Collection_3levels(t, appParts)
+}
+
 func TestBasicUsage_QueryFunc_Collection(t *testing.T) {
 	require := require.New(t)
+
+	appParts, cfgs, cleanup := buildAppParts(t)
+	defer cleanup()
+
 	// Fill the collection projection
-	Test_Collection_3levels(t)
+	cp_Collection_3levels(t, appParts)
 
 	request := []byte(`{
 						"args":{
@@ -428,12 +456,16 @@ func TestBasicUsage_QueryFunc_Collection(t *testing.T) {
 	authz := iauthnzimpl.NewDefaultAuthorizer()
 	tokens := itokensjwt.ProvideITokens(itokensjwt.SecretKeyExample, time.Now)
 	appTokens := payloads.ProvideIAppTokensFactory(tokens).New(test.appQName)
-	queryProcessor := queryprocessor.ProvideServiceFactory()(serviceChannel, func(ctx context.Context, sender interface{}) queryprocessor.IResultSenderClosable { return out },
-		provider, maxPrepareQueries, imetrics.Provide(), "vvm", authn, authz, testCfgs)
+	queryProcessor := queryprocessor.ProvideServiceFactory()(
+		serviceChannel,
+		func(ctx context.Context, sender ibus.ISender) queryprocessor.IResultSenderClosable { return out },
+		appParts,
+		maxPrepareQueries,
+		imetrics.Provide(), "vvm", authn, authz, cfgs)
 	go queryProcessor.Run(context.Background())
 	sysToken, err := payloads.GetSystemPrincipalTokenApp(appTokens)
 	require.NoError(err)
-	serviceChannel <- queryprocessor.NewQueryMessage(context.Background(), test.appQName, test.workspace, nil, request, collectionQuery, "", sysToken)
+	serviceChannel <- queryprocessor.NewQueryMessage(context.Background(), test.appQName, test.partition, test.workspace, nil, request, collectionQuery, "", sysToken)
 	<-out.done
 
 	out.requireNoError(require)
@@ -517,8 +549,12 @@ func TestBasicUsage_QueryFunc_Collection(t *testing.T) {
 
 func TestBasicUsage_QueryFunc_CDoc(t *testing.T) {
 	require := require.New(t)
+
+	appParts, cfgs, cleanup := buildAppParts(t)
+	defer cleanup()
+
 	// Fill the collection projection
-	Test_Collection_3levels(t)
+	cp_Collection_3levels(t, appParts)
 
 	request := fmt.Sprintf(`{
 		"args":{
@@ -538,14 +574,14 @@ func TestBasicUsage_QueryFunc_CDoc(t *testing.T) {
 	authz := iauthnzimpl.NewDefaultAuthorizer()
 	tokens := itokensjwt.ProvideITokens(itokensjwt.SecretKeyExample, time.Now)
 	appTokens := payloads.ProvideIAppTokensFactory(tokens).New(test.appQName)
-	queryProcessor := queryprocessor.ProvideServiceFactory()(serviceChannel, func(ctx context.Context, sender interface{}) queryprocessor.IResultSenderClosable {
+	queryProcessor := queryprocessor.ProvideServiceFactory()(serviceChannel, func(ctx context.Context, sender ibus.ISender) queryprocessor.IResultSenderClosable {
 		return out
-	}, provider, maxPrepareQueries, imetrics.Provide(), "vvm", authn, authz, testCfgs)
+	}, appParts, maxPrepareQueries, imetrics.Provide(), "vvm", authn, authz, cfgs)
 
 	go queryProcessor.Run(context.Background())
 	sysToken, err := payloads.GetSystemPrincipalTokenApp(appTokens)
 	require.NoError(err)
-	serviceChannel <- queryprocessor.NewQueryMessage(context.Background(), test.appQName, test.workspace, nil, []byte(request), getCDocQuery, "", sysToken)
+	serviceChannel <- queryprocessor.NewQueryMessage(context.Background(), test.appQName, test.partition, test.workspace, nil, []byte(request), getCDocQuery, "", sysToken)
 	<-out.done
 
 	out.requireNoError(require)
@@ -643,8 +679,12 @@ func TestBasicUsage_QueryFunc_CDoc(t *testing.T) {
 
 func TestBasicUsage_State(t *testing.T) {
 	require := require.New(t)
+
+	appParts, cfgs, cleanup := buildAppParts(t)
+	defer cleanup()
+
 	// Fill the collection projection
-	Test_Collection_3levels(t)
+	cp_Collection_3levels(t, appParts)
 
 	serviceChannel := make(iprocbus.ServiceChannel)
 	out := newTestSender()
@@ -653,14 +693,14 @@ func TestBasicUsage_State(t *testing.T) {
 	authz := iauthnzimpl.NewDefaultAuthorizer()
 	tokens := itokensjwt.ProvideITokens(itokensjwt.SecretKeyExample, time.Now)
 	appTokens := payloads.ProvideIAppTokensFactory(tokens).New(test.appQName)
-	queryProcessor := queryprocessor.ProvideServiceFactory()(serviceChannel, func(ctx context.Context, sender interface{}) queryprocessor.IResultSenderClosable {
+	queryProcessor := queryprocessor.ProvideServiceFactory()(serviceChannel, func(ctx context.Context, sender ibus.ISender) queryprocessor.IResultSenderClosable {
 		return out
-	}, provider, maxPrepareQueries, imetrics.Provide(), "vvm", authn, authz, testCfgs)
+	}, appParts, maxPrepareQueries, imetrics.Provide(), "vvm", authn, authz, cfgs)
 
 	go queryProcessor.Run(context.Background())
 	sysToken, err := payloads.GetSystemPrincipalTokenApp(appTokens)
 	require.NoError(err)
-	serviceChannel <- queryprocessor.NewQueryMessage(context.Background(), test.appQName, test.workspace, nil, []byte(`{"args":{"After":0},"elements":[{"fields":["State"]}]}`),
+	serviceChannel <- queryprocessor.NewQueryMessage(context.Background(), test.appQName, test.partition, test.workspace, nil, []byte(`{"args":{"After":0},"elements":[{"fields":["State"]}]}`),
 		stateQuery, "", sysToken)
 	<-out.done
 
@@ -808,8 +848,12 @@ func TestBasicUsage_State(t *testing.T) {
 
 func TestState_withAfterArgument(t *testing.T) {
 	require := require.New(t)
+
+	appParts, cfgs, cleanup := buildAppParts(t)
+	defer cleanup()
+
 	// Fill the collection projection
-	Test_Collection_3levels(t)
+	cp_Collection_3levels(t, appParts)
 
 	serviceChannel := make(iprocbus.ServiceChannel)
 	out := newTestSender()
@@ -818,14 +862,14 @@ func TestState_withAfterArgument(t *testing.T) {
 	authz := iauthnzimpl.NewDefaultAuthorizer()
 	tokens := itokensjwt.ProvideITokens(itokensjwt.SecretKeyExample, time.Now)
 	appTokens := payloads.ProvideIAppTokensFactory(tokens).New(test.appQName)
-	queryProcessor := queryprocessor.ProvideServiceFactory()(serviceChannel, func(ctx context.Context, sender interface{}) queryprocessor.IResultSenderClosable {
+	queryProcessor := queryprocessor.ProvideServiceFactory()(serviceChannel, func(ctx context.Context, sender ibus.ISender) queryprocessor.IResultSenderClosable {
 		return out
-	}, provider, maxPrepareQueries, imetrics.Provide(), "vvm", authn, authz, testCfgs)
+	}, appParts, maxPrepareQueries, imetrics.Provide(), "vvm", authn, authz, cfgs)
 
 	go queryProcessor.Run(context.Background())
 	sysToken, err := payloads.GetSystemPrincipalTokenApp(appTokens)
 	require.NoError(err)
-	serviceChannel <- queryprocessor.NewQueryMessage(context.Background(), test.appQName, test.workspace, nil, []byte(`{"args":{"After":5},"elements":[{"fields":["State"]}]}`),
+	serviceChannel <- queryprocessor.NewQueryMessage(context.Background(), test.appQName, test.partition, test.workspace, nil, []byte(`{"args":{"After":5},"elements":[{"fields":["State"]}]}`),
 		stateQuery, "", sysToken)
 	<-out.done
 
@@ -1013,14 +1057,17 @@ func newModify(app istructs.IAppStructs, gen *idsGeneratorType, cb eventCallback
 
 func Test_Idempotency(t *testing.T) {
 	require := require.New(t)
-	appConfigs, asp := appConfigs(t)
-	provider := istructsmem.Provide(appConfigs, iratesce.TestBucketsFactory,
-		payloads.ProvideIAppTokensFactory(itokensjwt.TestTokensJWT()), asp)
-	as, err := provider.AppStructs(test.appQName)
-	require.NoError(err)
+
+	appParts, _, cleanup := buildAppParts(t)
+	defer cleanup()
 
 	// create command processor
-	actualizer := provideSyncActualizer(context.Background(), as, istructs.PartitionID(1))
+	appPart, err := appParts.Borrow(test.appQName, test.partition, cluster.ProcessorKind_Command)
+	require.NoError(err)
+	defer appPart.Release()
+
+	as := appPart.AppStructs()
+	actualizer := provideSyncActualizer(context.Background(), as, test.partition)
 	processor := pipeline.NewSyncPipeline(context.Background(), "partition processor", pipeline.WireSyncOperator("actualizer", actualizer))
 	defer actualizer.Close()
 

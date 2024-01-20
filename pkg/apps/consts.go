@@ -12,8 +12,9 @@ import (
 
 const (
 	EPSchemasFS             extensionpoints.EPKey = "SchemasFS"
-	casStorageTypeCas1      string                = "cas1"
-	casStorageTypeCas3      string                = "cas3"
+	storageTypeCas1         string                = "cas1"
+	storageTypeCas3         string                = "cas3"
+	storageTypeMem          string                = "mem"
 	cas1ReplicationStrategy string                = "{'class': 'SimpleStrategy', 'replication_factor': '1'}"
 	cas3ReplicationStrategy string                = "{ 'class': 'NetworkTopologyStrategy', 'dc1': 2, 'dc2': 1}"
 )

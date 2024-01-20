@@ -13,6 +13,7 @@ import (
 	"github.com/voedger/voedger/pkg/apps/sys/blobberapp"
 	"github.com/voedger/voedger/pkg/apps/sys/registryapp"
 	"github.com/voedger/voedger/pkg/apps/sys/routerapp"
+	"github.com/voedger/voedger/pkg/cluster"
 	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
@@ -29,9 +30,7 @@ func NewOwnVITConfig(opts ...vitConfigOptFunc) VITConfig {
 		WithApp(istructs.AppQName_sys_blobber, blobberapp.Provide(smtp.Cfg{})),
 		WithApp(istructs.AppQName_sys_router, routerapp.Provide(smtp.Cfg{})),
 	)
-	return VITConfig{
-		opts: opts,
-	}
+	return VITConfig{opts: opts}
 }
 
 func NewSharedVITConfig(opts ...vitConfigOptFunc) VITConfig {
@@ -66,6 +65,30 @@ func WithWorkspaceTemplate(wsKind appdef.QName, templateName string, templateFS 
 	}
 }
 
+func WithChild(wsKind appdef.QName, name, templateName string, templateParams string, ownerLoginName string, wsInitData map[string]interface{}, opts ...PostConstructFunc) PostConstructFunc {
+	return func(intf interface{}) {
+		wsParams := intf.(*WSParams)
+		initData, err := json.Marshal(&wsInitData)
+		if err != nil {
+			panic(err)
+		}
+		newWSParams := WSParams{
+			Name:           name,
+			TemplateName:   templateName,
+			TemplateParams: templateParams,
+			Kind:           wsKind,
+			ownerLoginName: ownerLoginName,
+			InitDataJSON:   string(initData),
+			ClusterID:      istructs.MainClusterID,
+			docs:           map[appdef.QName]func(verifiedValues map[string]string) map[string]interface{}{},
+		}
+		for _, opt := range opts {
+			opt(&newWSParams)
+		}
+		wsParams.childs = append(wsParams.childs, newWSParams)
+	}
+}
+
 func WithChildWorkspace(wsKind appdef.QName, name, templateName string, templateParams string, ownerLoginName string, wsInitData map[string]interface{}, opts ...PostConstructFunc) AppOptFunc {
 	return func(app *app, cfg *vvm.VVMConfig) {
 		initData, err := json.Marshal(&wsInitData)
@@ -80,7 +103,7 @@ func WithChildWorkspace(wsKind appdef.QName, name, templateName string, template
 			ownerLoginName: ownerLoginName,
 			InitDataJSON:   string(initData),
 			ClusterID:      istructs.MainClusterID,
-			singletons:     map[appdef.QName]map[string]interface{}{},
+			docs:           map[appdef.QName]func(verifiedValues map[string]string) map[string]interface{}{},
 		}
 		for _, opt := range opts {
 			opt(&wsParams)
@@ -89,16 +112,33 @@ func WithChildWorkspace(wsKind appdef.QName, name, templateName string, template
 	}
 }
 
-func WithSingleton(name appdef.QName, data map[string]interface{}) PostConstructFunc {
+func WithDocWithVerifiedFields(name appdef.QName, dataFactory func(verifiedValues map[string]string) map[string]interface{}) PostConstructFunc {
 	return func(intf interface{}) {
 		switch t := intf.(type) {
 		case *Login:
-			t.singletons[name] = data
+			t.docs[name] = dataFactory
 		case *WSParams:
-			t.singletons[name] = data
+			t.docs[name] = dataFactory
 		default:
-			panic(fmt.Sprintln(t, name, data))
+			panic(fmt.Sprintln(t, name))
 		}
+	}
+}
+
+func WithDoc(name appdef.QName, data map[string]interface{}) PostConstructFunc {
+	return WithDocWithVerifiedFields(name, func(verifiedValues map[string]string) map[string]interface{} {
+		return data
+	})
+}
+
+func WithSubject(login string, subjectKind istructs.SubjectKindType, roles []appdef.QName) PostConstructFunc {
+	return func(intf interface{}) {
+		wsParams := intf.(*WSParams)
+		wsParams.subjects = append(wsParams.subjects, subject{
+			login:       login,
+			subjectKind: subjectKind,
+			roles:       roles,
+		})
 	}
 }
 
@@ -122,7 +162,12 @@ func WithApp(appQName istructs.AppQName, updater apps.AppBuilder, appOpts ...App
 		}
 		app := &app{
 			name: appQName,
-			ws:   map[string]WSParams{},
+			deployment: cluster.AppDeploymentDescriptor{
+				PartsCount:     DefaultTestAppPartsCount,
+				EnginePoolSize: DefaultTestAppEnginesPool,
+			},
+			ws:                    map[string]WSParams{},
+			verifiedValuesIntents: map[string]verifiedValueIntent{},
 		}
 		vpc.vitApps[appQName] = app
 		vpc.vvmCfg.VVMAppsBuilder.Add(appQName, updater)
@@ -135,6 +180,16 @@ func WithApp(appQName istructs.AppQName, updater apps.AppBuilder, appOpts ...App
 				wsTempalateFunc(ep)
 				return
 			})
+		}
+	}
+}
+
+func WithVerifiedValue(docQName appdef.QName, fieldName string, desiredValue string) AppOptFunc {
+	return func(app *app, cfg *vvm.VVMConfig) {
+		app.verifiedValuesIntents[desiredValue] = verifiedValueIntent{
+			docQName:     docQName,
+			fieldName:    fieldName,
+			desiredValue: desiredValue,
 		}
 	}
 }

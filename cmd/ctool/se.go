@@ -141,8 +141,8 @@ func seClusterControllerFunction(c *clusterType) error {
 		err = initSeCluster(c)
 	case ckReplace:
 		var n *nodeType
-		if n = c.nodeByHost(c.Cmd.args()[1]); n == nil {
-			return fmt.Errorf(errHostNotFoundInCluster, c.Cmd.args()[1], ErrHostNotFoundInCluster)
+		if n = c.nodeByHost(c.Cmd.Args[1]); n == nil {
+			return fmt.Errorf(errHostNotFoundInCluster, c.Cmd.Args[1], ErrHostNotFoundInCluster)
 		}
 		switch n.NodeRole {
 		case nrDBNode:
@@ -497,7 +497,7 @@ func resolveDC(cluster *clusterType, ip string) (dc string, err error) {
 	const nodeOffset int32 = 1
 	n := cluster.nodeByHost(ip)
 	if n == nil {
-		return "", fmt.Errorf(errHostNotFoundInCluster, cluster.Cmd.args()[0], ErrHostNotFoundInCluster)
+		return "", fmt.Errorf(errHostNotFoundInCluster, cluster.Cmd.Args[0], ErrHostNotFoundInCluster)
 	}
 	if (n.idx == int(idxDBNode1+nodeOffset)) || (n.idx == int(idxDBNode2+nodeOffset)) {
 		return "dc1", nil
@@ -509,7 +509,7 @@ func replaceSeScyllaNode(cluster *clusterType) error {
 	var err error
 	var dc string
 
-	if dc, err = resolveDC(cluster, cluster.Cmd.args()[1]); err != nil {
+	if dc, err = resolveDC(cluster, cluster.Cmd.Args[1]); err != nil {
 		loggerError(err.Error())
 		return err
 	}
@@ -522,8 +522,8 @@ func replaceSeScyllaNode(cluster *clusterType) error {
 		return err
 	}
 
-	oldAddr := cluster.Cmd.args()[0]
-	newAddr := cluster.Cmd.args()[1]
+	oldAddr := cluster.Cmd.Args[0]
+	newAddr := cluster.Cmd.Args[1]
 	if conf.DBNode1 == newAddr {
 		conf.DBNode1 = oldAddr
 	} else if conf.DBNode2 == newAddr {
@@ -563,8 +563,8 @@ func replaceSeAppNode(cluster *clusterType) error {
 
 	conf := newSeConfigType(cluster)
 
-	oldAddr := cluster.Cmd.args()[0]
-	newAddr := cluster.Cmd.args()[1]
+	oldAddr := cluster.Cmd.Args[0]
+	newAddr := cluster.Cmd.Args[1]
 
 	var liveOldAddr string
 
@@ -655,6 +655,18 @@ func copyCtoolAndKeyToNode(node *nodeType) error {
 	if err := newScriptExecuter(node.cluster.sshKey, node.nodeName()).
 		run("copy-ctool.sh", ctoolPath, node.cluster.sshKey, node.address()); err != nil {
 		node.Error = err.Error()
+		return err
+	}
+
+	return nil
+}
+
+func setCronBackup(cluster *clusterType, backupTime string) error {
+
+	loggerInfo("Setting a cron schedule for database backup ", backupTime)
+
+	if err := newScriptExecuter(cluster.sshKey, "").
+		run("set-cron-backup-ssh.sh", backupTime); err != nil {
 		return err
 	}
 

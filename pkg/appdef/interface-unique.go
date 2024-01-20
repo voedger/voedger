@@ -5,31 +5,23 @@
 
 package appdef
 
-// Unique identifier type
-type UniqueID uint32
-
 // Final structures with uniques are:
-//	- TypeKind_GDoc and TypeKind_GRecord,
-//	- TypeKind_CDoc and TypeKind_CRecord,
-//	- TypeKind_WDoc and TypeKind_WRecord
+// - TypeKind_GDoc and TypeKind_GRecord,
+// - TypeKind_CDoc and TypeKind_CRecord,
+// - TypeKind_WDoc and TypeKind_WRecord
 //
 // Ref. to unique.go for implementation
 type IUniques interface {
-	// Return unique by ID.
+	// Return unique by qualified name.
 	//
 	// Returns nil if not unique found
-	UniqueByID(id UniqueID) IUnique
-
-	// Return unique by name.
-	//
-	// Returns nil if not unique found
-	UniqueByName(name string) IUnique
+	UniqueByName(QName) IUnique
 
 	// Return uniques count
 	UniqueCount() int
 
 	// All uniques.
-	Uniques() []IUnique
+	Uniques() map[QName]IUnique
 
 	// Returns single field unique.
 	//
@@ -39,17 +31,17 @@ type IUniques interface {
 
 type IUniquesBuilder interface {
 	// Adds new unique with specified name and fields.
-	// If name is omitted, then default name is used, e.g. `unique01`.
 	//
 	// # Panics:
+	//   - if unique name is empty,
 	//   - if unique name is invalid,
-	//   - if unique with name is already exists,
+	//   - if name is already exists,
 	//   - if structured type kind is not supports uniques,
 	//   - if fields list is empty,
 	//   - if fields has duplicates,
 	//   - if fields is already exists or overlaps with an existing unique,
 	//   - if some field not found.
-	AddUnique(name string, fields []string, comment ...string) IUniquesBuilder
+	AddUnique(name QName, fields []string, comment ...string) IUniquesBuilder
 
 	// Sets single field unique.
 	// Calling SetUniqueField again changes unique field. If specified name is empty, then clears unique field.
@@ -72,16 +64,9 @@ type IUnique interface {
 	// Returns parent structure
 	ParentStructure() IStructure
 
-	// Returns name of unique.
-	//
-	// Name suitable for debugging or error messages. Unique identification provided by ID
-	Name() string
+	// Returns qualified name of unique.
+	Name() QName
 
 	// Returns unique fields list. Fields are sorted alphabetically
 	Fields() []IField
-
-	// Unique identifier.
-	//
-	// Must be assigned during AppStruct construction by calling SetID(UniqueID)
-	ID() UniqueID
 }

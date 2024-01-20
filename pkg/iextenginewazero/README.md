@@ -28,7 +28,7 @@ We are allowed to do this since extensions are pure functions by design.
 
 Technical solution:
 - `ExtBuildFile` compiles TinyGo sources to WASM with garbage collection [disabled (gc=leaking)](https://tinygo.org/docs/reference/usage/important-options/)
-- the `extensions-tinygo` library is developed to minimize heap allocations
+- the `exttinygo` library is developed to minimize heap allocations
 - after WazeroExtensionEngine is initialized, the memory backup is saved internally;
 - after ANY error engine automatically restores it's memory from backup
 

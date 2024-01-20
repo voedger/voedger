@@ -3,7 +3,13 @@
 
 APPLICATION app1();
 
-ALTERABLE WORKSPACE test_ws (
+ALTERABLE WORKSPACE test_wsWS (
+
+	DESCRIPTOR test_ws (
+		IntFld int32 NOT NULL,
+		StrFld varchar
+	);
+
 	TABLE articles INHERITS CDoc (
 		name varchar,
 		article_manual int32 NOT NULL,
@@ -375,11 +381,6 @@ ALTERABLE WORKSPACE test_ws (
 		description varchar
 	);
 
-	TABLE WSKind INHERITS Singleton (
-		IntFld int32 NOT NULL,
-		StrFld varchar
-	);
-
 	TABLE category INHERITS CDoc (
 		name varchar,
 		hq_id varchar,
@@ -395,17 +396,37 @@ ALTERABLE WORKSPACE test_ws (
 
 	TABLE DocConstraints INHERITS CDoc (
 		Int int32,
-		Str varchar NOT NULL,
+		Str varchar(65535) NOT NULL,
 		Bool bool NOT NULL,
 		Float32 float32,
-		Bytes bytes NOT NULL,
-		UNIQUEFIELD Int
+		Bytes bytes(65535) NOT NULL,
+		UNIQUE (Int, Str, Bool, Bytes)
 	);
 
 	TABLE DocConstraintsString INHERITS CDoc (
 		Str varchar,
 		Int int32,
-		UNIQUEFIELD Str
+		UNIQUE ("Str")
+	);
+
+	TABLE DocConstraintsFewUniques INHERITS CDoc (
+		Int1 int32,
+		Str1 varchar,
+		Bool1 bool,
+		Bytes1 bytes,
+		Int2 int32,
+		Str2 varchar,
+		Bool2 bool,
+		Bytes2 bytes,
+		UNIQUE ("Int1", "Str1", "Bool1", "Bytes1"),
+		CONSTRAINT uniq1 UNIQUE ("Int2", "Str2", "Bool2", "Bytes2")
+	);
+
+	TABLE DocConstraintsOldAndNewUniques INHERITS CDoc (
+		Str varchar,
+		Int int32,
+		UNIQUE (Str),
+		UNIQUEFIELD Int
 	);
 
 	TABLE Config INHERITS Singleton (

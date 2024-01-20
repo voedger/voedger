@@ -6,7 +6,6 @@
 package appdef
 
 import (
-	"strconv"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -81,44 +80,5 @@ func Test_overlaps(t *testing.T) {
 		require.False(overlaps([]int{1}, []int{2}))
 		require.False(overlaps([]string{"a"}, []string{"b", "c"}))
 		require.False(overlaps([]int{1, 2, 3}, []int{7, 0, 3, 2, 0, -1}))
-	})
-}
-
-func Test_generateUniqueName(t *testing.T) {
-	app := newAppDef()
-	doc := app.AddCDoc(NewQName("test", "user"))
-
-	tests := []struct {
-		name   string
-		fields []string
-		want   string
-	}{
-		{"single field test", []string{"eMail"}, "UniqueEMail"},
-		{"multiply fields test", []string{"field1", "field2"}, "Unique01"},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := generateUniqueName(doc, tt.fields); got != tt.want {
-				t.Errorf("generateUniqueName(%v, %#v) = %v, want %v", doc.QName(), tt.fields, got, tt.want)
-			}
-		})
-	}
-
-	t.Run("too many uniques (> 100) test", func(t *testing.T) {
-		require := require.New(t)
-
-		appDef := New()
-		rec := appDef.AddCRecord(NewQName("test", "rec"))
-		for i := 1; i < MaxTypeUniqueCount; i++ {
-			rec.AddField("i"+strconv.Itoa(i), DataKind_int32, false)
-			rec.AddField("b"+strconv.Itoa(i), DataKind_bool, false)
-		}
-		for i := 1; i < MaxTypeUniqueCount; i++ {
-			rec.AddUnique("", []string{"i" + strconv.Itoa(i), "b" + strconv.Itoa(i)})
-		}
-
-		require.Panics(func() {
-			rec.AddUnique("", []string{"i01", "b99"})
-		})
 	})
 }

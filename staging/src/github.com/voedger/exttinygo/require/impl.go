@@ -9,7 +9,7 @@ import (
 	"math"
 	"strconv"
 
-	ext "github.com/voedger/extensions-tinygo"
+	ext "github.com/voedger/exttinygo"
 )
 
 func floarToStr(f float64) string {

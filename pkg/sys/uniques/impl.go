@@ -1,5 +1,6 @@
 /*
- * Copyright (c) 2020-present unTill Pro, Ltd.
+ * Copyright (c) 2020-present unTill Software Development Group B.V.
+ * @author Denis Gribanov
  */
 
 package uniques
@@ -14,6 +15,7 @@ import (
 	"github.com/untillpro/goutils/iterate"
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/state"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
@@ -21,108 +23,41 @@ import (
 func provideApplyUniques(appDef appdef.IAppDef) func(event istructs.IPLogEvent, state istructs.IState, intents istructs.IIntents) (err error) {
 	return func(event istructs.IPLogEvent, st istructs.IState, intents istructs.IIntents) (err error) {
 		return iterate.ForEachError(event.CUDs, func(rec istructs.ICUDRow) error {
-			if unique, ok := appDef.Type(rec.QName()).(appdef.IUniques); ok {
-				if uniqueField := unique.UniqueField(); uniqueField != nil {
-					uniqueFieldIsNotNull, _, _ := iterate.FindFirstMap(rec.ModifiedFields, func(s string, _ interface{}) bool {
-						return s == uniqueField.Name()
-					})
-					// update and uniqueFieldIsNotNull -> we're setting the value if the unique field for the first time. In this case let's insert.
-					// update and uniqueFieldIsNotNull and had a value already -> impossible here, denied by the validator already
-					if rec.IsNew() {
-						// insert regardless uniqueFieldIsNotNull -> insert with an empty value is the same as if value is 0
-						// so will not insert if the value is not provided
-						if uniqueFieldIsNotNull {
-							return insert(rec, uniqueField, st, intents)
-						}
-					} else {
-						// came here in 2 cases:
-						// - we're updating fields that are not part of an unique key (e.g. sys.IsActive)
-						// - we're setting the value for the unqiue field for the first time
-
-						if uniqueFieldIsNotNull {
-							// update and the value is provided -> we're setting the value for the first time. Let's insert
-							// update the value that is already set -> denied by the validator already
-							return insert(rec, uniqueField, st, intents)
-						}
-
-						// came here -> unique field has no value in the request
-						// let's check if the value is inited already
-						// inited already -> update, need to check if we're activating\deactivating
-						// not inited yet -> has no record in the view, we're updating other fields -> do nothing
-						storedUniqueFieldHasValue, err := storedUniqueFieldHasValue(st, rec, uniqueField)
-						if err != nil {
-							// notest
-							return nil
-						}
-						if storedUniqueFieldHasValue {
-							// has record in the view and the value is not provided in the request -> probably we're updating sys.IsActive
-							return update(rec, uniqueField, st, intents)
-						}
-						// no unique field value in the request and was not inited -> do nothing
-						return nil
-					}
+			iUniques, ok := appDef.Type(rec.QName()).(appdef.IUniques)
+			if !ok {
+				return nil
+			}
+			for _, unique := range iUniques.Uniques() {
+				if err := handleCUD(rec, st, intents, unique.Fields(), unique.Name()); err != nil {
+					return err
 				}
+			}
+			if iUniques.UniqueField() != nil {
+				uniqueQName := rec.QName()
+				return handleCUD(rec, st, intents, []appdef.IField{iUniques.UniqueField()}, uniqueQName)
 			}
 			return nil
 		})
 	}
 }
 
-func storedUniqueFieldHasValue(st istructs.IState, rec istructs.ICUDRow, uniqueField appdef.IField) (bool, error) {
-	kb, err := st.KeyBuilder(state.Record, rec.QName())
-	if err != nil {
-		// notest
-		return false, err
+func handleCUD(cud istructs.ICUDRow, st istructs.IState, intents istructs.IIntents, uniqueFields []appdef.IField, uniqueQName appdef.QName) error {
+	if cud.IsNew() {
+		return insert(st, cud, intents, uniqueFields, uniqueQName)
 	}
-	kb.PutRecordID(state.Field_ID, rec.ID())
-	storageRec, err := st.MustExist(kb)
-	if err != nil {
-		// notest
-		return false, err
-	}
-	storedUniqueFieldHasValue, _ := iterate.FindFirst(storageRec.FieldNames, func(storedUniqueFieldNameThatHasValue string) bool {
-		return storedUniqueFieldNameThatHasValue == uniqueField.Name()
-	})
-	return storedUniqueFieldHasValue, nil
+	return update(st, cud, intents, uniqueFields, uniqueQName)
 }
 
-func insert(rec istructs.ICUDRow, uf appdef.IField, state istructs.IState, intents istructs.IIntents) error {
-	uniqueViewRecord, uniqueViewKB, ok, err := getUniqueViewRecord(state, rec, uf)
-	if err != nil {
-		return err
-	}
-
-	var uniqueViewRecordBuilder istructs.IStateValueBuilder
-	recIsActive := rec.AsBool(appdef.SystemField_IsActive)
-	if !ok {
-		if uniqueViewRecordBuilder, err = intents.NewValue(uniqueViewKB); err != nil {
-			return err
-		}
-		cudID := rec.ID()
-		if !recIsActive {
-			cudID = istructs.NullRecordID
-		}
-		uniqueViewRecordBuilder.PutRecordID(field_ID, cudID)
-	} else {
-		if !recIsActive {
-			// inserting an inactive record whereas unique exists -> allow, nothing to do
-			return nil
-		}
-		if uniqueViewRecord.AsRecordID(field_ID) == istructs.NullRecordID {
-			// insering an active record whereas unique exists for a deactivated record -> allow + update view
-			if uniqueViewRecordBuilder, err = intents.UpdateValue(uniqueViewKB, uniqueViewRecord); err != nil {
-				return err
-			}
-			uniqueViewRecordBuilder.PutRecordID(field_ID, rec.ID())
-		}
-		// note: inserting a new active record whereas uniques exists already - this case is denied already by the validator
-		// note: uvrID == recID - impossible, recID can not deuplicate
-	}
-	return err
+type uniqueViewRecord struct {
+	refRecordID istructs.RecordID
 }
 
-func update(rec istructs.ICUDRow, uf appdef.IField, st istructs.IState, intents istructs.IIntents) error {
-	// read current record
+func update(st istructs.IState, rec istructs.ICUDRow, intents istructs.IIntents, uniqueFields []appdef.IField, uniqueQName appdef.QName) error {
+	// check modified fields
+	// case when we're updating unique fields is already dropped by the validator
+	// so came here -> we're updating anything but unique fields
+	// let's check activation\deactivation
+
 	kb, err := st.KeyBuilder(state.Record, rec.QName())
 	if err != nil {
 		return err
@@ -133,195 +68,110 @@ func update(rec istructs.ICUDRow, uf appdef.IField, st istructs.IState, intents 
 		return err
 	}
 
-	// unique view record
-	uniqueViewRecord, uniqueViewKB, _, err := getUniqueViewRecord(st, currentRecord, uf)
+	// we're updating -> unique view record exists
+	uniqueViewRecord, uniqueViewKB, _, err := getUniqueViewRecord(st, currentRecord, uniqueFields, uniqueQName)
 	if err != nil {
 		return err
 	}
-
-	// !uniqueViewRecord.Exists() - impossible: record was inserted -> an unique exists
-	// now possible: inserted a record that has no value for a unique field -> no unique at all
-
-	viewValueID := istructs.NullRecordID
-	uvrID := uniqueViewRecord.AsRecordID(field_ID)
+	refIDToSet := istructs.NullRecordID
+	uniqueViewRecordID := uniqueViewRecord.AsRecordID(field_ID)
 	if rec.AsBool(appdef.SystemField_IsActive) {
-		if uvrID == istructs.NullRecordID {
-			// activating the record whereas previous combination was deactivated -> allow, update view
-			viewValueID = rec.ID()
+		if uniqueViewRecordID == istructs.NullRecordID {
+			// activating the record whereas previous combination was deactivated -> allow, update the view
+			refIDToSet = rec.ID()
 		} else {
 			// activating the already activated record, unique combination exists for that record -> allow, nothing to do
+			// note: case when uniqueViewRecordID != rec.ID() is handled already by the validator, so nothing to do here
 			return nil
-			// note: case when uvrID == rec.ID() is handled already by validator
 		}
 	} else {
-		if rec.ID() != uvrID {
+		if rec.ID() != uniqueViewRecordID {
 			// deactivating a record whereas unique combination exists for another record -> allow, nothing to do
 			return nil
 		}
 	}
-	uniqueViewRecordBuilder, err := intents.UpdateValue(uniqueViewKB, uniqueViewRecord)
+	uniqueViewUpdater, err := intents.UpdateValue(uniqueViewKB, uniqueViewRecord)
 	if err != nil {
 		return err
 	}
-	uniqueViewRecordBuilder.PutRecordID(field_ID, viewValueID)
+	uniqueViewUpdater.PutRecordID(field_ID, refIDToSet)
 	return nil
 }
 
-func getUniqueViewRecord(st istructs.IState, rec istructs.IRowReader, uf appdef.IField) (istructs.IStateValue, istructs.IStateKeyBuilder, bool, error) {
-	kb, err := st.KeyBuilder(state.View, qNameViewUniques)
+func insert(state istructs.IState, rec istructs.ICUDRow, intents istructs.IIntents, uniqueFields []appdef.IField, uniqueQName appdef.QName) error {
+	uniqueViewRecord, uniqueViewKB, uniqueViewRecordExists, err := getUniqueViewRecord(state, rec, uniqueFields, uniqueQName)
 	if err != nil {
-		return nil, nil, false, err
+		return err
 	}
-	if err := buildUniqueViewKey(kb, rec, uf); err != nil {
+	// no scenario whe we're inserting a deactivated record
+	var uniqueViewRecordBuilder istructs.IStateValueBuilder
+	if uniqueViewRecordExists {
+		// the olny possible case here - we're inserting a new record, the view record exists for this combination and it is relates to an inactive record
+		// case when it relates to an active record is already dropped by the validator
+		// so just update the existing view record
+		uniqueViewRecordBuilder, err = intents.UpdateValue(uniqueViewKB, uniqueViewRecord)
+	} else {
+		uniqueViewRecordBuilder, err = intents.NewValue(uniqueViewKB)
+	}
+
+	if err == nil {
+		uniqueViewRecordBuilder.PutRecordID(field_ID, rec.ID())
+	}
+	return err
+}
+
+func getUniqueViewRecord(st istructs.IState, rec istructs.IRowReader, uniqueFields []appdef.IField, uniqueQName appdef.QName) (istructs.IStateValue, istructs.IStateKeyBuilder, bool, error) {
+	uniqueViewRecordBuilder, err := st.KeyBuilder(state.View, qNameViewUniques)
+	if err != nil {
 		// notest
 		return nil, nil, false, err
 	}
-	sv, ok, err := st.CanExist(kb)
-	return sv, kb, ok, err
-}
-
-func getUniqueKeyValues(rec istructs.IRowReader, uf appdef.IField) (res []byte, err error) {
-	buf := bytes.NewBuffer(nil)
-
-	val := coreutils.ReadByKind(uf.Name(), uf.DataKind(), rec)
-	switch uf.DataKind() {
-	case appdef.DataKind_string:
-		_, err = buf.WriteString(val.(string))
-	case appdef.DataKind_bytes:
-		_, err = buf.Write(val.([]byte))
-	default:
-		err = binary.Write(buf, binary.BigEndian, val)
+	uniqueKeyValues, err := getUniqueKeyValues(rec, uniqueFields, uniqueQName)
+	if err != nil {
+		return nil, nil, false, err
 	}
-
-	return buf.Bytes(), err
+	buildUniqueViewKeyByValues(uniqueViewRecordBuilder, uniqueQName, uniqueKeyValues)
+	sv, ok, err := st.CanExist(uniqueViewRecordBuilder)
+	return sv, uniqueViewRecordBuilder, ok, err
 }
 
-// notest err
-func buildUniqueViewKeyByValues(kb istructs.IKeyBuilder, qName appdef.QName, uniqueKeyValues []byte) error {
+// new uniques -> QName of the unique, old uniques -> QName of the doc
+func buildUniqueViewKeyByValues(kb istructs.IKeyBuilder, qName appdef.QName, uniqueKeyValues []byte) {
 	kb.PutQName(field_QName, qName)
 	kb.PutInt64(field_ValuesHash, coreutils.HashBytes(uniqueKeyValues))
 	kb.PutBytes(field_Values, uniqueKeyValues)
-	return nil
 }
 
-// notest err
-func buildUniqueViewKey(kb istructs.IKeyBuilder, rec istructs.IRowReader, uf appdef.IField) error {
-	uniqueKeyValues, err := getUniqueKeyValues(rec, uf)
-	if err != nil {
-		// notest
-		return err
-	}
-	return buildUniqueViewKeyByValues(kb, rec.AsQName(appdef.SystemField_QName), uniqueKeyValues)
-}
-
-type uniqueViewRecord struct {
-	exists      bool
-	refRecordID istructs.RecordID
-}
-
-func provideEventUniqueValidator() func(ctx context.Context, rawEvent istructs.IRawEvent, appStructs istructs.IAppStructs, wsid istructs.WSID) error {
-	return func(ctx context.Context, rawEvent istructs.IRawEvent, appStructs istructs.IAppStructs, wsid istructs.WSID) error {
-		//                                      key         uvrID
-		uniquesState := map[appdef.QName]map[string]*uniqueViewRecord{}
-		err := iterate.ForEachError(rawEvent.CUDs, func(cudRec istructs.ICUDRow) (err error) {
-			qName := cudRec.QName()
-			if uniques, ok := appStructs.AppDef().Type(qName).(appdef.IUniques); ok {
-				if uniqueField := uniques.UniqueField(); uniqueField != nil {
-					cudUniqueFieldHasValue, _ := iterate.FindFirst(cudRec.FieldNames, func(fieldNameThatHasValue string) bool {
-						return fieldNameThatHasValue == uniqueField.Name()
-					})
-					var uniqueKeyValues []byte
-					sourceRow := cudRec.(istructs.IRecord)
-					if cudRec.IsNew() {
-						if !cudUniqueFieldHasValue {
-							// insert a new record, no unique field value -> do nothing
-							return nil
-						}
-					} else {
-						// need to check if unique combination exists already
-						storedRow, err := appStructs.Records().Get(wsid, true, cudRec.ID())
-						if err != nil {
-							// notest
-							return err
-						}
-						storedUniqueFieldHasValue, _ := iterate.FindFirst(storedRow.FieldNames, func(uniqueFieldNameThatHasStoredValue string) bool {
-							return uniqueFieldNameThatHasStoredValue == uniqueField.Name()
-						})
-						if !storedUniqueFieldHasValue && !cudUniqueFieldHasValue {
-							// had no unique field value before and update something else _. nothing to do
-							return nil
-						}
-						if storedUniqueFieldHasValue {
-							sourceRow = storedRow
-						}
-					}
-					uniqueKeyValues, err = getUniqueKeyValues(sourceRow, uniqueField)
-					if err != nil {
-						// notest
-						return err
-					}
-
-					currentUniqueRecord, err := getCurrentUniqueViewRecord(uniquesState, qName, uniqueKeyValues, appStructs, wsid)
-					if err != nil {
-						// notest
-						return err
-					}
-
-					if cudRec.IsNew() {
-						if cudRec.AsBool(appdef.SystemField_IsActive) {
-							if currentUniqueRecord.refRecordID == istructs.NullRecordID {
-								// inserting a new active record, unique is inactive -> allowed, update its ID in map
-								currentUniqueRecord.refRecordID = cudRec.ID()
-								currentUniqueRecord.exists = true // avoid: 1st CUD insert a unique record, 2nd modify the unique value
-							} else {
-								// inserting a new active record, unique is active -> deny
-								return conflict(qName, currentUniqueRecord.refRecordID)
-							}
-						} else {
-							if cudUniqueFieldHasValue {
-								currentUniqueRecord.exists = true
-								currentUniqueRecord.refRecordID = istructs.NullRecordID
-							}
-							// insert an inactive record, no unique value -> allow, do nothing
-						}
-					} else {
-						cudRecIsActive := cudRec.AsBool(appdef.SystemField_IsActive)
-						if currentUniqueRecord.exists {
-							if cudUniqueFieldHasValue && (currentUniqueRecord.refRecordID == cudRec.ID() || currentUniqueRecord.refRecordID == istructs.NullRecordID) {
-								return fmt.Errorf("%v: unique field «%s» can not be changed: %w", qName, uniqueField.Name(), ErrUniqueFieldUpdateDeny)
-							}
-							if currentUniqueRecord.refRecordID == istructs.NullRecordID {
-								if cudRecIsActive {
-									currentUniqueRecord.refRecordID = cudRec.ID()
-								}
-							} else {
-								if currentUniqueRecord.refRecordID == cudRec.ID() {
-									if !cudRecIsActive {
-										currentUniqueRecord.refRecordID = istructs.NullRecordID
-									}
-								} else {
-									if cudRecIsActive {
-										return conflict(qName, currentUniqueRecord.refRecordID)
-									}
-								}
-							}
-						} else {
-							// update, no unique view record
-							if cudRecIsActive && cudUniqueFieldHasValue {
-								currentUniqueRecord.exists = true
-								currentUniqueRecord.refRecordID = cudRec.ID()
-							}
-						}
-					}
-				}
+func getUniqueKeyValues(rec istructs.IRowReader, uniqueFields []appdef.IField, uniqueQName appdef.QName) (res []byte, err error) {
+	buf := bytes.NewBuffer(nil)
+	for _, uniqueField := range uniqueFields {
+		val := coreutils.ReadByKind(uniqueField.Name(), uniqueField.DataKind(), rec)
+		switch uniqueField.DataKind() {
+		case appdef.DataKind_string:
+			if len(uniqueFields) > 1 {
+				// backward compatibility
+				buf.WriteByte(zeroByte)
 			}
-			return nil
-		})
-		return err
+			buf.WriteString(val.(string))
+		case appdef.DataKind_bytes:
+			if len(uniqueFields) > 1 {
+				// backward compatibility
+				buf.WriteByte(zeroByte)
+			}
+			buf.Write(val.([]byte))
+		default:
+			binary.Write(buf, binary.BigEndian, val) // nolint
+		}
 	}
+	if buf.Len() > int(appdef.MaxFieldLength) {
+		return nil, fmt.Errorf(`%w: resulting len of the unique combination "%s" is %d, max %d is allowed. Decrease len of values of unique fields`,
+			ErrUniqueValueTooLong, uniqueQName, buf.Len(), appdef.MaxFieldLength)
+	}
+	return buf.Bytes(), nil
 }
 
-func getCurrentUniqueViewRecord(uniquesState map[appdef.QName]map[string]*uniqueViewRecord, qName appdef.QName, uniqueKeyValues []byte, appStructs istructs.IAppStructs, wsid istructs.WSID) (*uniqueViewRecord, error) {
+func getCurrentUniqueViewRecord(uniquesState map[appdef.QName]map[appdef.QName]map[string]*uniqueViewRecord,
+	cudQName appdef.QName, uniqueKeyValues []byte, appStructs istructs.IAppStructs, wsid istructs.WSID, uniqueQName appdef.QName) (*uniqueViewRecord, error) {
 	// why to accumulate in a map?
 	//         id:  field: IsActive: Result:
 	// stored: 111: xxx    -
@@ -329,26 +179,137 @@ func getCurrentUniqueViewRecord(uniquesState map[appdef.QName]map[string]*unique
 	// cud(I): 222: xxx    +         - should be ok to insert new record
 	// …
 	// cud(J): 111:        +         - should be denied to restore old record
-	qNameEventUniques, ok := uniquesState[qName]
+	cudQNameUniques, ok := uniquesState[cudQName]
 	if !ok {
-		qNameEventUniques = map[string]*uniqueViewRecord{}
-		uniquesState[qName] = qNameEventUniques
+		cudQNameUniques = map[appdef.QName]map[string]*uniqueViewRecord{}
+		uniquesState[cudQName] = cudQNameUniques
 	}
-	currentUniqueRecord, ok := qNameEventUniques[string(uniqueKeyValues)]
+	uniqueViewRecords, ok := cudQNameUniques[uniqueQName]
 	if !ok {
-		currentUniqueRecordID, uniqueViewRecordExists, err := getUniqueIDByValues(appStructs, wsid, qName, uniqueKeyValues)
+		uniqueViewRecords = map[string]*uniqueViewRecord{}
+		cudQNameUniques[uniqueQName] = uniqueViewRecords
+	}
+	currentUniqueViewRecord, ok := uniqueViewRecords[string(uniqueKeyValues)]
+	if !ok {
+		currentUniqueRecordID, _, err := getUniqueIDByValues(appStructs, wsid, uniqueQName, uniqueKeyValues)
 		if err != nil {
 			return nil, err
 		}
-		currentUniqueRecord = &uniqueViewRecord{
-			exists:      uniqueViewRecordExists,
+		currentUniqueViewRecord = &uniqueViewRecord{
 			refRecordID: currentUniqueRecordID,
 		}
-		qNameEventUniques[string(uniqueKeyValues)] = currentUniqueRecord
+		uniqueViewRecords[string(uniqueKeyValues)] = currentUniqueViewRecord
 	}
-	return currentUniqueRecord, nil
+	return currentUniqueViewRecord, nil
 }
 
-func conflict(qName appdef.QName, conflictingWithID istructs.RecordID) error {
-	return coreutils.NewHTTPError(http.StatusConflict, fmt.Errorf("%s: %w with ID %d", qName, ErrUniqueConstraintViolation, conflictingWithID))
+func getUniqueIDByValues(appStructs istructs.IAppStructs, wsid istructs.WSID, uniqueQName appdef.QName, uniqueKeyValues []byte) (istructs.RecordID, bool, error) {
+	kb := appStructs.ViewRecords().KeyBuilder(qNameViewUniques)
+	buildUniqueViewKeyByValues(kb, uniqueQName, uniqueKeyValues)
+	val, err := appStructs.ViewRecords().Get(wsid, kb)
+	if err == nil {
+		return val.AsRecordID(field_ID), true, nil
+	}
+	if err == istructsmem.ErrRecordNotFound {
+		err = nil
+	}
+	return istructs.NullRecordID, false, err
+}
+
+func validateCUD(cudRec istructs.ICUDRow, appStructs istructs.IAppStructs, wsid istructs.WSID, uniqueFields []appdef.IField, uniqueQName appdef.QName, uniquesState map[appdef.QName]map[appdef.QName]map[string]*uniqueViewRecord) (err error) {
+	var uniqueKeyValues []byte
+	var rowSource istructs.IRowReader
+	cudQName := cudRec.QName()
+	if cudRec.IsNew() {
+		// insert -> will get existing values from the current CUD
+		rowSource = cudRec
+	} else {
+		// update -> will get existing values from the stored record
+		rowSource, err = appStructs.Records().Get(wsid, true, cudRec.ID())
+		if err != nil {
+			// notest
+			return err
+		}
+	}
+	uniqueKeyValues, err = getUniqueKeyValues(rowSource, uniqueFields, uniqueQName)
+	if err != nil {
+		return err
+	}
+	// uniqueViewRecord - is for unique combination from current cudRec
+	uniqueViewRecord, err := getCurrentUniqueViewRecord(uniquesState, cudQName, uniqueKeyValues, appStructs, wsid, uniqueQName)
+	if err != nil {
+		return err
+	}
+	if cudRec.IsNew() {
+		// !IsActive is impossible for new records anymore
+		if uniqueViewRecord.refRecordID == istructs.NullRecordID {
+			// inserting a new active record, the doc record according to this combination is inactive or does not exist -> allow, update its ID in map
+			uniqueViewRecord.refRecordID = cudRec.ID()
+		} else {
+			// inserting a new active record, the doc record according to this combination is active -> deny
+			return conflict(cudQName, uniqueViewRecord.refRecordID, uniqueQName)
+		}
+	} else {
+		// update
+		// unique view record exists because all unique fields are required.
+		// let's deny to update unique fields and handle IsActive state
+		err := iterate.ForEachError2Values(cudRec.ModifiedFields, func(cudModifiedFieldName string, newValue interface{}) error {
+			for _, uniqueField := range uniqueFields {
+				if uniqueField.Name() == cudModifiedFieldName {
+					return fmt.Errorf("%v: unique field «%s» can not be changed: %w", cudQName, uniqueField.Name(), ErrUniqueFieldUpdateDeny)
+				}
+			}
+			if cudModifiedFieldName != appdef.SystemField_IsActive {
+				return nil
+			}
+			// we're updating IsActive field here.
+			isActivating := newValue.(bool)
+			if isActivating {
+				if uniqueViewRecord.refRecordID == istructs.NullRecordID {
+					// doc rec for this combination does not exist or is inactive (no matter for this cudRec or any other rec),
+					// we're activating now -> set current unique combination ref to the cudRec
+					uniqueViewRecord.refRecordID = cudRec.ID()
+				} else if uniqueViewRecord.refRecordID != cudRec.ID() {
+					// we're activating, doc rec for this combination exists, it is active and it is the another rec (not the one we're updating by the current CUD) -> deny
+					return conflict(cudQName, uniqueViewRecord.refRecordID, uniqueQName)
+				}
+			} else {
+				// deactivating
+				uniqueViewRecord.refRecordID = istructs.NullRecordID
+			}
+			return nil
+		})
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func eventUniqueValidator(ctx context.Context, rawEvent istructs.IRawEvent, appStructs istructs.IAppStructs, wsid istructs.WSID) error {
+	//                    cudQName       uniqueQName  unique-key-bytes
+	uniquesState := map[appdef.QName]map[appdef.QName]map[string]*uniqueViewRecord{}
+	return iterate.ForEachError(rawEvent.CUDs, func(cudRec istructs.ICUDRow) (err error) {
+
+		cudUniques, ok := appStructs.AppDef().Type(cudRec.QName()).(appdef.IUniques)
+		if !ok {
+			return nil
+		}
+		for _, unique := range cudUniques.Uniques() {
+			if err := validateCUD(cudRec, appStructs, wsid, unique.Fields(), unique.Name(), uniquesState); err != nil {
+				return err
+			}
+		}
+		if cudUniques.UniqueField() != nil {
+			uniqueQName := cudRec.QName()
+			if err := validateCUD(cudRec, appStructs, wsid, []appdef.IField{cudUniques.UniqueField()}, uniqueQName, uniquesState); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+}
+
+func conflict(docQName appdef.QName, conflictingWithID istructs.RecordID, uniqueQName appdef.QName) error {
+	return coreutils.NewHTTPError(http.StatusConflict, fmt.Errorf(`%s: "%s" %w with ID %d`, docQName, uniqueQName, ErrUniqueConstraintViolation, conflictingWithID))
 }

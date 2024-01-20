@@ -16,6 +16,8 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appparts"
+	"github.com/voedger/voedger/pkg/cluster"
 	"github.com/voedger/voedger/pkg/iauthnzimpl"
 	"github.com/voedger/voedger/pkg/iprocbus"
 	"github.com/voedger/voedger/pkg/iratesce"
@@ -31,11 +33,23 @@ import (
 	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys/authnz"
 	coreutils "github.com/voedger/voedger/pkg/utils"
+	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
 )
 
 var now = time.Now()
 
 var timeFunc = coreutils.TimeFunc(func() time.Time { return now })
+
+var (
+	appName       istructs.AppQName    = istructs.AppQName_test1_app1
+	appPartsCount                      = 1
+	appEngines                         = cluster.PoolSize(10, 100, 10)
+	partID        istructs.PartitionID = 5
+	wsID          istructs.WSID        = 15
+
+	qNameFunction  = appdef.NewQName("bo", "FindArticlesByModificationTimeStampRange")
+	qNameQryDenied = appdef.NewQName(appdef.SysPackage, "TestDeniedQry") // same as in ACL
+)
 
 func TestBasicUsage_RowsProcessorFactory(t *testing.T) {
 	require := require.New(t)
@@ -129,12 +143,7 @@ func TestBasicUsage_RowsProcessorFactory(t *testing.T) {
 	require.Equal(`[[[3,"White wine","Alcohol drinks"]]]`, result)
 }
 
-var (
-	qNameFunction  = appdef.NewQName("bo", "FindArticlesByModificationTimeStampRange")
-	qNameQryDenied = appdef.NewQName(appdef.SysPackage, "TestDeniedQry") // same as in ACL
-)
-
-func getTestCfg(require *require.Assertions, prepareAppDef func(appDef appdef.IAppDefBuilder), cfgFunc ...func(cfg *istructsmem.AppConfigType)) (cfgs istructsmem.AppConfigsType, asp istructs.IAppStructsProvider, appTokens istructs.IAppTokens) {
+func getTestCfg(require *require.Assertions, prepareAppDef func(appdef.IAppDefBuilder), cfgFunc ...func(cfg *istructsmem.AppConfigType)) (cfgs istructsmem.AppConfigsType, appDef appdef.IAppDef, asp istructs.IAppStructsProvider, appTokens istructs.IAppTokens) {
 	cfgs = make(istructsmem.AppConfigsType)
 	asf := istorage.ProvideMem()
 	storageProvider := istorageimpl.Provide(asf)
@@ -144,26 +153,26 @@ func getTestCfg(require *require.Assertions, prepareAppDef func(appDef appdef.IA
 	qNameDepartment := appdef.NewQName("bo", "Department")
 	qNameArticle := appdef.NewQName("bo", "Article")
 
-	appDef := appdef.New()
-	appDef.AddObject(qNameFindArticlesByModificationTimeStampRangeParams).
+	adb := appdef.New()
+	adb.AddObject(qNameFindArticlesByModificationTimeStampRangeParams).
 		AddField("from", appdef.DataKind_int64, false).
 		AddField("till", appdef.DataKind_int64, false)
-	appDef.AddCDoc(qNameDepartment).
+	adb.AddCDoc(qNameDepartment).
 		AddField("name", appdef.DataKind_string, true)
-	appDef.AddObject(qNameArticle).
+	adb.AddObject(qNameArticle).
 		AddField("sys.ID", appdef.DataKind_RecordID, true).
 		AddField("name", appdef.DataKind_string, true).
 		AddField("id_department", appdef.DataKind_int64, true)
-	appDef.AddSingleton(authnz.QNameCDocWorkspaceDescriptor) // need to avoid error cdoc.sys.wsdesc missing
-	appDef.AddQuery(qNameFunction).SetParam(qNameFindArticlesByModificationTimeStampRangeParams).SetResult(appdef.NewQName("bo", "Article"))
-	appDef.AddCommand(istructs.QNameCommandCUD)
-	appDef.AddQuery(qNameQryDenied)
+	adb.AddSingleton(authnz.QNameCDocWorkspaceDescriptor) // need to avoid error cdoc.sys.wsdesc missing
+	adb.AddQuery(qNameFunction).SetParam(qNameFindArticlesByModificationTimeStampRangeParams).SetResult(appdef.NewQName("bo", "Article"))
+	adb.AddCommand(istructs.QNameCommandCUD)
+	adb.AddQuery(qNameQryDenied)
 
 	if prepareAppDef != nil {
-		prepareAppDef(appDef)
+		prepareAppDef(adb)
 	}
 
-	cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, appDef)
+	cfg := cfgs.AddConfig(appName, adb)
 
 	asp = istructsmem.Provide(cfgs, iratesce.TestBucketsFactory, payloads.TestAppTokensFactory(tokens), storageProvider)
 
@@ -200,13 +209,16 @@ func getTestCfg(require *require.Assertions, prepareAppDef func(appDef appdef.IA
 		f(cfg)
 	}
 
-	as, err := asp.AppStructs(istructs.AppQName_test1_app1)
+	as, err := asp.AppStructs(appName)
 	require.NoError(err)
+
+	appDef = as.AppDef()
+
 	plogOffset := istructs.FirstOffset
 	wlogOffset := istructs.FirstOffset
 	grebp := istructs.GenericRawEventBuilderParams{
-		HandlingPartition: 5,
-		Workspace:         15,
+		HandlingPartition: partID,
+		Workspace:         wsID,
 		QName:             istructs.QNameCommandCUD,
 		RegisteredAt:      istructs.UnixMilli(time.Now().UnixMilli()),
 		PLogOffset:        plogOffset,
@@ -235,8 +247,8 @@ func getTestCfg(require *require.Assertions, prepareAppDef func(appDef appdef.IA
 	require.NoError(as.Records().Apply(pLogEvent))
 	err = as.Events().PutWlog(pLogEvent)
 	require.NoError(err)
-	appTokens = payloads.TestAppTokensFactory(tokens).New(istructs.AppQName_test1_app1)
-	return cfgs, asp, appTokens
+	appTokens = payloads.TestAppTokensFactory(tokens).New(appName)
+	return cfgs, appDef, asp, appTokens
 }
 
 func TestBasicUsage_ServiceFactory(t *testing.T) {
@@ -274,15 +286,22 @@ func TestBasicUsage_ServiceFactory(t *testing.T) {
 	metrics := imetrics.Provide()
 	metricNames := make([]string, 0)
 
-	cfgs, appStructsProvider, appTokens := getTestCfg(require, nil)
+	cfgs, appDef, appStructsProvider, appTokens := getTestCfg(require, nil)
 
-	as, err := appStructsProvider.AppStructs(istructs.AppQName_test1_app1)
+	appParts, cleanAppParts, err := appparts.New(appStructsProvider)
 	require.NoError(err)
+	defer cleanAppParts()
+	appParts.DeployApp(appName, appDef, appPartsCount, appEngines)
+	appParts.DeployAppPartitions(appName, []istructs.PartitionID{partID})
 
 	authn := iauthnzimpl.NewDefaultAuthenticator(iauthnzimpl.TestSubjectRolesGetter)
 	authz := iauthnzimpl.NewDefaultAuthorizer()
-	queryProcessor := ProvideServiceFactory()(serviceChannel, func(ctx context.Context, sender interface{}) IResultSenderClosable { return rs },
-		appStructsProvider, 3, metrics, "vvm", authn, authz, cfgs)
+	queryProcessor := ProvideServiceFactory()(
+		serviceChannel,
+		func(ctx context.Context, sender ibus.ISender) IResultSenderClosable { return rs },
+		appParts,
+		3, // max concurrent queries
+		metrics, "vvm", authn, authz, cfgs)
 	processorCtx, processorCtxCancel := context.WithCancel(context.Background())
 	wg := sync.WaitGroup{}
 	wg.Add(1)
@@ -290,9 +309,9 @@ func TestBasicUsage_ServiceFactory(t *testing.T) {
 		queryProcessor.Run(processorCtx)
 		wg.Done()
 	}()
-	query := as.AppDef().Query(qNameFunction)
+	query := appDef.Query(qNameFunction) // nnv: Suspicious code!! Should be borrowed AppPartition.AppDef() instead of appDef?
 	systemToken := getSystemToken(appTokens)
-	serviceChannel <- NewQueryMessage(context.Background(), istructs.AppQName_test1_app1, 15, nil, body, query, "127.0.0.1", systemToken)
+	serviceChannel <- NewQueryMessage(context.Background(), appName, partID, wsID, nil, body, query, "127.0.0.1", systemToken)
 	<-done
 	processorCtxCancel()
 	wg.Wait()
@@ -998,7 +1017,7 @@ func TestRateLimiter(t *testing.T) {
 	qNameMyFuncParams := appdef.NewQName(appdef.SysPackage, "myFuncParams")
 	qNameMyFuncResults := appdef.NewQName(appdef.SysPackage, "results")
 	qName := appdef.NewQName(appdef.SysPackage, "myFunc")
-	cfgs, appStructsProvider, appTokens := getTestCfg(require,
+	cfgs, appDef, appStructsProvider, appTokens := getTestCfg(require,
 		func(appDef appdef.IAppDefBuilder) {
 			appDef.AddObject(qNameMyFuncParams)
 			appDef.AddObject(qNameMyFuncResults).
@@ -1018,12 +1037,22 @@ func TestRateLimiter(t *testing.T) {
 			})
 		})
 
+	appParts, cleanAppParts, err := appparts.New(appStructsProvider)
+	require.NoError(err)
+	defer cleanAppParts()
+	appParts.DeployApp(appName, appDef, appPartsCount, appEngines)
+	appParts.DeployAppPartitions(appName, []istructs.PartitionID{partID})
+
 	// create aquery processor
 	metrics := imetrics.Provide()
 	authn := iauthnzimpl.NewDefaultAuthenticator(iauthnzimpl.TestSubjectRolesGetter)
 	authz := iauthnzimpl.NewDefaultAuthorizer()
-	queryProcessor := ProvideServiceFactory()(serviceChannel, func(ctx context.Context, sender interface{}) IResultSenderClosable { return rs },
-		appStructsProvider, 3, metrics, "vvm", authn, authz, cfgs)
+	queryProcessor := ProvideServiceFactory()(
+		serviceChannel,
+		func(ctx context.Context, sender ibus.ISender) IResultSenderClosable { return rs },
+		appParts,
+		3, // max concurrent queries
+		metrics, "vvm", authn, authz, cfgs)
 	go queryProcessor.Run(context.Background())
 
 	systemToken := getSystemToken(appTokens)
@@ -1034,15 +1063,14 @@ func TestRateLimiter(t *testing.T) {
 
 	// execute query
 	// first 2 - ok
-	cfg := cfgs.GetConfig(istructs.AppQName_test1_app1)
-	query := cfg.AppDef.Query(qName)
-	serviceChannel <- NewQueryMessage(context.Background(), istructs.AppQName_test1_app1, 15, nil, body, query, "127.0.0.1", systemToken)
+	query := appDef.Query(qName)
+	serviceChannel <- NewQueryMessage(context.Background(), appName, partID, wsID, nil, body, query, "127.0.0.1", systemToken)
 	require.NoError(<-errs)
-	serviceChannel <- NewQueryMessage(context.Background(), istructs.AppQName_test1_app1, 15, nil, body, query, "127.0.0.1", systemToken)
+	serviceChannel <- NewQueryMessage(context.Background(), appName, partID, wsID, nil, body, query, "127.0.0.1", systemToken)
 	require.NoError(<-errs)
 
 	// 3rd exceeds the limit - not often than twice per minute
-	serviceChannel <- NewQueryMessage(context.Background(), istructs.AppQName_test1_app1, 15, nil, body, query, "127.0.0.1", systemToken)
+	serviceChannel <- NewQueryMessage(context.Background(), appName, partID, wsID, nil, body, query, "127.0.0.1", systemToken)
 	require.Error(<-errs)
 }
 
@@ -1064,20 +1092,28 @@ func TestAuthnz(t *testing.T) {
 
 	metrics := imetrics.Provide()
 
-	cfgs, appStructsProvider, appTokens := getTestCfg(require, nil)
+	cfgs, appDef, appStructsProvider, appTokens := getTestCfg(require, nil)
 
-	as, err := appStructsProvider.AppStructs(istructs.AppQName_test1_app1)
+	appParts, cleanAppParts, err := appparts.New(appStructsProvider)
 	require.NoError(err)
+	defer cleanAppParts()
+
+	appParts.DeployApp(appName, appDef, appPartsCount, appEngines)
+	appParts.DeployAppPartitions(appName, []istructs.PartitionID{partID})
 
 	authn := iauthnzimpl.NewDefaultAuthenticator(iauthnzimpl.TestSubjectRolesGetter)
 	authz := iauthnzimpl.NewDefaultAuthorizer()
-	queryProcessor := ProvideServiceFactory()(serviceChannel, func(ctx context.Context, sender interface{}) IResultSenderClosable { return rs },
-		appStructsProvider, 3, metrics, "vvm", authn, authz, cfgs)
+	queryProcessor := ProvideServiceFactory()(
+		serviceChannel,
+		func(ctx context.Context, sender ibus.ISender) IResultSenderClosable { return rs },
+		appParts,
+		3, // max concurrent queries
+		metrics, "vvm", authn, authz, cfgs)
 	go queryProcessor.Run(context.Background())
-	query := as.AppDef().Query(qNameFunction)
+	query := appDef.Query(qNameFunction)
 
 	t.Run("no token for a query that requires authorization -> 403 unauthorized", func(t *testing.T) {
-		serviceChannel <- NewQueryMessage(context.Background(), istructs.AppQName_test1_app1, 15, nil, body, query, "127.0.0.1", "")
+		serviceChannel <- NewQueryMessage(context.Background(), appName, partID, wsID, nil, body, query, "127.0.0.1", "")
 		var se coreutils.SysError
 		require.ErrorAs(<-errs, &se)
 		require.Equal(http.StatusForbidden, se.HTTPStatus)
@@ -1087,7 +1123,7 @@ func TestAuthnz(t *testing.T) {
 		systemToken := getSystemToken(appTokens)
 		// make the token be expired
 		now = now.Add(2 * time.Minute)
-		serviceChannel <- NewQueryMessage(context.Background(), istructs.AppQName_test1_app1, 15, nil, body, query, "127.0.0.1", systemToken)
+		serviceChannel <- NewQueryMessage(context.Background(), appName, partID, wsID, nil, body, query, "127.0.0.1", systemToken)
 		var se coreutils.SysError
 		require.ErrorAs(<-errs, &se)
 		require.Equal(http.StatusUnauthorized, se.HTTPStatus)
@@ -1096,8 +1132,8 @@ func TestAuthnz(t *testing.T) {
 	t.Run("token provided by querying is denied -> 403 forbidden", func(t *testing.T) {
 		wsid := istructs.WSID(1)
 		token := getTestToken(appTokens, wsid)
-		deniedQuery := as.AppDef().Query(qNameQryDenied)
-		serviceChannel <- NewQueryMessage(context.Background(), istructs.AppQName_test1_app1, wsid, nil, body, deniedQuery, "127.0.0.1", token)
+		deniedQuery := appDef.Query(qNameQryDenied) // nnv: Suspicious code!!
+		serviceChannel <- NewQueryMessage(context.Background(), appName, partID, wsid, nil, body, deniedQuery, "127.0.0.1", token)
 		var se coreutils.SysError
 		require.ErrorAs(<-errs, &se)
 		require.Equal(http.StatusForbidden, se.HTTPStatus)

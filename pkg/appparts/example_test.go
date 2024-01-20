@@ -56,8 +56,8 @@ func Example() {
 
 	fmt.Println("*** Add ver 1 ***")
 
-	appParts.DeployApp(istructs.AppQName_test1_app1, appDef_1_v1, [cluster.ProcessorKind_Count]int{2, 2, 2})
-	appParts.DeployApp(istructs.AppQName_test1_app2, appDef_2_v1, [cluster.ProcessorKind_Count]int{2, 2, 2})
+	appParts.DeployApp(istructs.AppQName_test1_app1, appDef_1_v1, 1, [cluster.ProcessorKind_Count]int{2, 2, 2})
+	appParts.DeployApp(istructs.AppQName_test1_app2, appDef_2_v1, 1, [cluster.ProcessorKind_Count]int{2, 2, 2})
 
 	appParts.DeployAppPartitions(istructs.AppQName_test1_app1, []istructs.PartitionID{1})
 	appParts.DeployAppPartitions(istructs.AppQName_test1_app2, []istructs.PartitionID{1})
@@ -85,8 +85,8 @@ func Example() {
 	appConfigs.AddConfig(istructs.AppQName_test1_app1, appDef_1_v2)
 	appConfigs.AddConfig(istructs.AppQName_test1_app2, appDef_2_v2)
 
-	appParts.DeployApp(istructs.AppQName_test1_app2, appDef_2_v2, [cluster.ProcessorKind_Count]int{2, 2, 2})
-	appParts.DeployApp(istructs.AppQName_test1_app1, appDef_1_v2, [cluster.ProcessorKind_Count]int{2, 2, 2})
+	appParts.DeployApp(istructs.AppQName_test1_app2, appDef_2_v2, 1, [cluster.ProcessorKind_Count]int{2, 2, 2})
+	appParts.DeployApp(istructs.AppQName_test1_app1, appDef_1_v2, 1, [cluster.ProcessorKind_Count]int{2, 2, 2})
 
 	a2_v2_p1, err := appParts.Borrow(istructs.AppQName_test1_app2, 1, cluster.ProcessorKind_Projector)
 	if err != nil {

@@ -10,27 +10,20 @@ import (
 	"sort"
 )
 
-const (
-	NullUniqueID  UniqueID = 0
-	FirstUniqueID          = NullUniqueID + 65536
-)
-
 // # Implements:
 //   - IUnique
 type unique struct {
 	comment
 	emb    interface{}
-	name   string
+	name   QName
 	fields []IField
-	id     UniqueID
 }
 
-func newUnique(embeds interface{}, name string, fields []string) *unique {
+func newUnique(embeds interface{}, name QName, fields []string) *unique {
 	u := &unique{
 		emb:    embeds,
 		name:   name,
 		fields: make([]IField, 0),
-		id:     NullUniqueID,
 	}
 	sort.Strings(fields)
 	str := embeds.(IStructure)
@@ -48,7 +41,7 @@ func (u unique) ParentStructure() IStructure {
 	return u.emb.(IStructure)
 }
 
-func (u unique) Name() string {
+func (u unique) Name() QName {
 	return u.name
 }
 
@@ -56,34 +49,24 @@ func (u unique) Fields() []IField {
 	return u.fields
 }
 
-func (u unique) ID() UniqueID {
-	return u.id
-}
-
-// Assigns ID. Must be called during application structures preparation
-func (u *unique) SetID(value UniqueID) {
-	u.id = value
-}
-
 // # Implements:
 //   - IUniques
 //   - IUniquesBuilder
 type uniques struct {
-	emb            interface{}
-	uniques        map[string]*unique
-	uniquesOrdered []IUnique
-	field          IField
+	emb     interface{}
+	uniques map[QName]IUnique
+	field   IField
 }
 
 func makeUniques(embeds interface{}) uniques {
-	u := uniques{embeds, make(map[string]*unique), make([]IUnique, 0), nil}
+	u := uniques{
+		emb:     embeds,
+		uniques: make(map[QName]IUnique),
+	}
 	return u
 }
 
-func (u *uniques) AddUnique(name string, fields []string, comment ...string) IUniquesBuilder {
-	if name == NullName {
-		name = generateUniqueName(u, fields)
-	}
+func (u *uniques) AddUnique(name QName, fields []string, comment ...string) IUniquesBuilder {
 	return u.addUnique(name, fields, comment...)
 }
 
@@ -106,18 +89,9 @@ func (u *uniques) SetUniqueField(name string) IUniquesBuilder {
 	return u
 }
 
-func (u *uniques) UniqueByName(name string) IUnique {
+func (u *uniques) UniqueByName(name QName) IUnique {
 	if u, ok := u.uniques[name]; ok {
 		return u
-	}
-	return nil
-}
-
-func (u *uniques) UniqueByID(id UniqueID) IUnique {
-	for _, u := range u.uniquesOrdered {
-		if u.ID() == id {
-			return u
-		}
 	}
 	return nil
 }
@@ -130,36 +104,45 @@ func (u *uniques) UniqueField() IField {
 	return u.field
 }
 
-func (u *uniques) Uniques() []IUnique {
-	return u.uniquesOrdered
+func (u *uniques) Uniques() map[QName]IUnique {
+	return u.uniques
 }
 
-func (u *uniques) addUnique(name string, fields []string, comment ...string) IUniquesBuilder {
-	if ok, err := ValidIdent(name); !ok {
+func (u *uniques) addUnique(name QName, fields []string, comment ...string) IUniquesBuilder {
+	if name == NullQName {
+		panic(fmt.Errorf("%v: unique name cannot be empty: %w", u.embeds(), ErrNameMissed))
+	}
+	if ok, err := ValidQName(name); !ok {
 		panic(fmt.Errorf("%v: unique name «%v» is invalid: %w", u.embeds(), name, err))
 	}
 	if u.UniqueByName(name) != nil {
 		panic(fmt.Errorf("%v: unique «%v» is already exists: %w", u.embeds(), name, ErrNameUniqueViolation))
 	}
 
+	if app := u.embeds().App(); app != nil {
+		if t := app.TypeByName(name); t != nil {
+			panic(fmt.Errorf("%v: unique name «%v» is already used by type %v: %w", u.embeds(), name, t, ErrNameUniqueViolation))
+		}
+	}
+
 	if len(fields) == 0 {
-		panic(fmt.Errorf("%v: no fields specified for unique «%s»: %w", u.embeds(), name, ErrNameMissed))
+		panic(fmt.Errorf("%v: no fields specified for unique «%v»: %w", u.embeds(), name, ErrNameMissed))
 	}
 	if i, j := duplicates(fields); i >= 0 {
-		panic(fmt.Errorf("%v: unique «%s» has duplicates (fields[%d] == fields[%d] == %q): %w", u.embeds(), name, i, j, fields[i], ErrNameUniqueViolation))
+		panic(fmt.Errorf("%v: unique «%v» has duplicates (fields[%d] == fields[%d] == %q): %w", u.embeds(), name, i, j, fields[i], ErrNameUniqueViolation))
 	}
 
 	if len(fields) > MaxTypeUniqueFieldsCount {
-		panic(fmt.Errorf("%v: unique «%s» exceeds maximum fields (%d): %w", u.embeds(), name, MaxTypeUniqueFieldsCount, ErrTooManyFields))
+		panic(fmt.Errorf("%v: unique «%v» exceeds maximum fields (%d): %w", u.embeds(), name, MaxTypeUniqueFieldsCount, ErrTooManyFields))
 	}
 
-	for _, un := range u.uniquesOrdered {
+	for n, un := range u.uniques {
 		ff := make([]string, 0)
 		for _, f := range un.Fields() {
 			ff = append(ff, f.Name())
 		}
 		if overlaps(fields, ff) {
-			panic(fmt.Errorf("%v: type already has unique «%s» which overlaps with new unique: %w", u.embeds(), name, ErrUniqueOverlaps))
+			panic(fmt.Errorf("%v: type already has unique «%v» which overlaps with new unique «%v»: %w", u.embeds(), n, name, ErrUniqueOverlaps))
 		}
 	}
 
@@ -169,8 +152,8 @@ func (u *uniques) addUnique(name string, fields []string, comment ...string) IUn
 
 	un := newUnique(u.emb, name, fields)
 	un.SetComment(comment...)
+
 	u.uniques[name] = un
-	u.uniquesOrdered = append(u.uniquesOrdered, un)
 
 	return u.emb.(IUniquesBuilder)
 }

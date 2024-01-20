@@ -89,7 +89,7 @@ func upgrade(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	c := newCmd(ckUpgrade, strings.Join(args, " "))
+	c := newCmd(ckUpgrade, args)
 	defer func(cluster *clusterType) {
 		err = cluster.saveToJSON()
 		if err != nil {

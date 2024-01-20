@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/iprocbus"
 	"github.com/voedger/voedger/pkg/isecrets"
@@ -19,6 +20,7 @@ import (
 	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys/builtin"
 	coreutils "github.com/voedger/voedger/pkg/utils"
+	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
 )
 
 type ServiceFactory func(commandsChannel CommandChannel, partitionID istructs.PartitionID) pipeline.IService
@@ -33,7 +35,7 @@ type ICommandMessage interface {
 	Body() []byte
 	AppQName() istructs.AppQName
 	WSID() istructs.WSID // url WSID
-	Sender() interface{}
+	Sender() ibus.ISender
 	PartitionID() istructs.PartitionID
 	RequestCtx() context.Context
 	Command() appdef.ICommand
@@ -54,31 +56,33 @@ func (m *commandProcessorMetrics) increase(metricName string, valueDelta float64
 }
 
 type cmdWorkpiece struct {
-	asp                 istructs.IAppStructsProvider
-	appStructs          istructs.IAppStructs
-	requestData         coreutils.MapObject
-	cmdMes              ICommandMessage
-	argsObject          istructs.IObject
-	unloggedArgsObject  istructs.IObject
-	reb                 istructs.IRawEventBuilder
-	rawEvent            istructs.IRawEvent
-	pLogEvent           istructs.IPLogEvent
-	err                 error
-	workspace           *workspace
-	idGenerator         *implIDGenerator
-	eca                 istructs.ExecCommandArgs
-	metrics             commandProcessorMetrics
-	syncProjectorsStart time.Time
-	principals          []iauthnz.Principal
-	principalPayload    payloads.PrincipalPayload
-	parsedCUDs          []parsedCUD
-	wsDesc              istructs.IRecord
-	hostStateProvider   *hostStateProvider
-	wsInitialized       bool
-	cmdResultBuilder    istructs.IObjectBuilder
-	cmdResult           istructs.IObject
-	resources           istructs.IResources
-	cmdFunc         istructs.ICommandFunction
+	appParts                     appparts.IAppPartitions
+	appPart                      appparts.IAppPartition
+	appStructs                   istructs.IAppStructs
+	requestData                  coreutils.MapObject
+	cmdMes                       ICommandMessage
+	argsObject                   istructs.IObject
+	unloggedArgsObject           istructs.IObject
+	reb                          istructs.IRawEventBuilder
+	rawEvent                     istructs.IRawEvent
+	pLogEvent                    istructs.IPLogEvent
+	err                          error
+	workspace                    *workspace
+	idGenerator                  *implIDGenerator
+	eca                          istructs.ExecCommandArgs
+	metrics                      commandProcessorMetrics
+	syncProjectorsStart          time.Time
+	principals                   []iauthnz.Principal
+	principalPayload             payloads.PrincipalPayload
+	parsedCUDs                   []parsedCUD
+	wsDesc                       istructs.IRecord
+	hostStateProvider            *hostStateProvider
+	wsInitialized                bool
+	cmdResultBuilder             istructs.IObjectBuilder
+	cmdResult                    istructs.IObject
+	resources                    istructs.IResources
+	cmdFunc                      istructs.ICommandFunction
+	appPartitionRestartScheduled bool
 }
 
 type implIDGenerator struct {
@@ -99,7 +103,7 @@ type implICommandMessage struct {
 	body        []byte
 	appQName    istructs.AppQName // need to determine where to send c.sys.Init request on create a new workspace
 	wsid        istructs.WSID
-	sender      interface{}
+	sender      ibus.ISender
 	partitionID istructs.PartitionID
 	requestCtx  context.Context
 	command     appdef.ICommand

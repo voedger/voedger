@@ -8,9 +8,9 @@ import (
 	"context"
 	"time"
 
-	ibus "github.com/untillpro/airs-ibus"
 	"github.com/untillpro/goutils/logger"
 
+	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/isecrets"
@@ -43,7 +43,7 @@ type appPartition struct {
 }
 
 // syncActualizerFactory - это фабрика(разделИД), которая возвращает свитч, в бранчах которого по синхронному актуализатору на каждое приложение, внутри каждого - проекторы на каждое приложение
-func ProvideServiceFactory(bus ibus.IBus, asp istructs.IAppStructsProvider, now coreutils.TimeFunc, syncActualizerFactory SyncActualizerFactory,
+func ProvideServiceFactory(appParts appparts.IAppPartitions, now coreutils.TimeFunc, syncActualizerFactory SyncActualizerFactory,
 	n10nBroker in10n.IN10nBroker, metrics imetrics.IMetrics, vvm VVMName, authenticator iauthnz.IAuthenticator, authorizer iauthnz.IAuthorizer,
 	secretReader isecrets.ISecretReader, appConfigsType istructsmem.AppConfigsType) ServiceFactory {
 	return func(commandsChannel CommandChannel, partitionID istructs.PartitionID) pipeline.IService {
@@ -59,14 +59,15 @@ func ProvideServiceFactory(bus ibus.IBus, asp istructs.IAppStructsProvider, now 
 
 		return pipeline.NewService(func(vvmCtx context.Context) {
 			hsp := newHostStateProvider(vvmCtx, partitionID, secretReader)
+			syncActualizerFactory := syncActualizerFactory(vvmCtx, partitionID)
 			cmdPipeline := pipeline.NewSyncPipeline(vvmCtx, "Command Processor",
-				pipeline.WireFunc("getAppStructs", getAppStructs),
+				pipeline.WireFunc("borrowAppPart", borrowAppPart),
 				pipeline.WireFunc("limitCallRate", limitCallRate),
 				pipeline.WireFunc("getWSDesc", getWSDesc),
 				pipeline.WireFunc("authenticate", cmdProc.authenticate),
 				pipeline.WireFunc("checkWSInitialized", checkWSInitialized),
 				pipeline.WireFunc("checkWSActive", checkWSActive),
-				pipeline.WireFunc("getAppPartition", cmdProc.getAppPartition),
+				pipeline.WireFunc("getAppPartition", cmdProc.provideGetAppPartition(syncActualizerFactory)),
 				pipeline.WireFunc("getResources", getResources),
 				pipeline.WireFunc("getFunction", getFunction),
 				pipeline.WireFunc("authorizeRequest", cmdProc.authorizeRequest),
@@ -91,11 +92,12 @@ func ProvideServiceFactory(bus ibus.IBus, asp istructs.IAppStructsProvider, now 
 				pipeline.WireFunc("putPLog", cmdProc.putPLog),
 				pipeline.WireFunc("applyPLogEvent", applyPLogEvent),
 				pipeline.WireFunc("syncProjectorsStart", syncProjectorsBegin),
-				pipeline.WireSyncOperator("syncProjectors", syncActualizerFactory(vvmCtx, partitionID)),
+				pipeline.WireFunc("syncProjectors", provideSyncActualizerFactory(syncActualizerFactory)),
 				pipeline.WireFunc("syncProjectorsEnd", syncProjectorsEnd),
 				pipeline.WireFunc("n10n", cmdProc.n10n),
 				pipeline.WireFunc("putWLog", putWLog),
-				pipeline.WireSyncOperator("sendResponse", &opSendResponse{bus: bus}), // ICatch
+				pipeline.WireSyncOperator("sendResponse", &opSendResponse{cmdProc: cmdProc}), // ICatch
+				pipeline.WireSyncOperator("releaseWorkpiece", &releaseWorkpiece{}),           // ICatch
 			)
 			// TODO: сделать потом plogOffset свой по каждому разделу, wlogoffset - свой для каждого wsid
 			defer cmdPipeline.Close()
@@ -106,7 +108,7 @@ func ProvideServiceFactory(bus ibus.IBus, asp istructs.IAppStructsProvider, now 
 					cmd := &cmdWorkpiece{
 						cmdMes:            intf.(ICommandMessage),
 						requestData:       coreutils.MapObject{},
-						asp:               asp,
+						appParts:          appParts,
 						hostStateProvider: hsp,
 					}
 					cmd.metrics = commandProcessorMetrics{
@@ -117,9 +119,6 @@ func ProvideServiceFactory(bus ibus.IBus, asp istructs.IAppStructsProvider, now 
 					cmd.metrics.increase(CommandsTotal, 1.0)
 					if err := cmdPipeline.SendSync(cmd); err != nil {
 						logger.Error("unhandled error: " + err.Error())
-					}
-					if cmd.pLogEvent != nil {
-						cmd.pLogEvent.Release()
 					}
 					cmd.metrics.increase(CommandsSeconds, time.Since(start).Seconds())
 				case <-vvmCtx.Done():
