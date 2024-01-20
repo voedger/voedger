@@ -118,7 +118,6 @@ func implServiceFactory(serviceChannel iprocbus.ServiceChannel, resultSenderClos
 					p.Close()
 					p = nil
 				}
-				// qwork.release()
 				rs.Close(err)
 				qpm.Increase(queriesSeconds, time.Since(now).Seconds())
 			case <-ctx.Done():
