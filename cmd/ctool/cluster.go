@@ -41,7 +41,7 @@ func newCluster() *clusterType {
 		Acme:                  &acmeType{},
 	}
 
-	cluster.Acme.Domains = strings.Split(acmeDomains, ",")
+	cluster.Acme.Domains = strings.Split(acmeDomains, comma)
 
 	if err := cluster.setEnv(); err != nil {
 		loggerError(err.Error())
@@ -435,7 +435,6 @@ func validateAcmeCmd(cmd *cmdType, cluster *clusterType) error {
 		return ErrUnknownCommand
 	}
 
-	return nil
 }
 
 func validateAcmeAddCmd(cmd *cmdType, cluster *clusterType) error {
@@ -455,14 +454,14 @@ type acmeType struct {
 }
 
 func (a *acmeType) domains() string {
-	return strings.Join(a.Domains, ",")
+	return strings.Join(a.Domains, comma)
 }
 
 // adds new domains to the ACME Domains list from a string "Domain1,Domain2,Domain3"
 func (a *acmeType) addDomains(domainsStr string) {
-	domains := strings.Split(domainsStr, ",")
+	domains := strings.Split(domainsStr, comma)
 	for _, d := range domains {
-		if !strings.Contains(strings.Join(a.Domains, ","), d) {
+		if !strings.Contains(strings.Join(a.Domains, comma), d) {
 			a.Domains = append(a.Domains, d)
 		}
 	}

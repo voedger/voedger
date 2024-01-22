@@ -72,3 +72,5 @@ const (
 	swarmAppLabelKey  = "app"
 	swarmMonLabelKey  = "mon"
 )
+
+const comma = ","
