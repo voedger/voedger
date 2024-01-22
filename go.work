@@ -2,7 +2,8 @@ go 1.21.4
 
 use (
 	.
-	./cmd/edger
 	./cmd/ctool
+	./cmd/edger
 	./pkg/iextenginewazero/_testdata
+	./staging/src/github.com/voedger/exttinygo
 )
