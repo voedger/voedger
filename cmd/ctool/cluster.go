@@ -38,10 +38,12 @@ func newCluster() *clusterType {
 		SkipStacks:            make([]string, 0),
 		ReplacedAddresses:     make([]string, 0),
 		Cron:                  &cronType{},
-		Acme:                  &acmeType{},
+		Acme:                  &acmeType{Domains: make([]string, 0)},
 	}
 
-	cluster.Acme.Domains = strings.Split(acmeDomains, comma)
+	if len(acmeDomains) != 0 {
+		cluster.Acme.Domains = strings.Split(acmeDomains, comma)
+	}
 
 	if err := cluster.setEnv(); err != nil {
 		loggerError(err.Error())
