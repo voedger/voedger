@@ -334,7 +334,6 @@ type queryWork struct {
 	secretReader      isecrets.ISecretReader
 	appCfg            *istructsmem.AppConfigType
 	queryFunc         istructs.IQueryFunction
-	deferError        error
 }
 
 func newQueryWork(msg IQueryMessage, rs IResultSenderClosable, appParts appparts.IAppPartitions,
