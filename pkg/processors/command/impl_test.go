@@ -17,6 +17,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appparts"
+	"github.com/voedger/voedger/pkg/cluster"
 	"github.com/voedger/voedger/pkg/iauthnzimpl"
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/in10nmem"
@@ -54,7 +56,7 @@ func TestBasicUsage(t *testing.T) {
 	testCmdQNameParams := appdef.NewQName(appdef.SysPackage, "TestParams")
 	// схема unlogged-параметров тестовой команды
 	testCmdQNameParamsUnlogged := appdef.NewQName(appdef.SysPackage, "TestParamsUnlogged")
-	prepareAppDef := func(appDef appdef.IAppDefBuilder) {
+	prepareAppDef := func(appDef appdef.IAppDefBuilder, _ *istructsmem.AppConfigType) {
 		pars := appDef.AddObject(testCmdQNameParams)
 		pars.AddField("Text", appdef.DataKind_string, true)
 
@@ -155,7 +157,7 @@ func TestBasicUsage(t *testing.T) {
 	})
 }
 
-func sendCUD(t *testing.T, wsid istructs.WSID, app testApp) map[string]interface{} {
+func sendCUD(t *testing.T, wsid istructs.WSID, app testApp, expectedCode ...int) map[string]interface{} {
 	require := require.New(t)
 	req := ibus.Request{
 		WSID:     int64(wsid),
@@ -172,21 +174,80 @@ func sendCUD(t *testing.T, wsid istructs.WSID, app testApp) map[string]interface
 	require.Nil(err, err)
 	require.Nil(secErr, secErr)
 	require.Nil(sections)
-	require.Equal(http.StatusOK, resp.StatusCode)
+	if len(expectedCode) == 0 {
+		require.Equal(http.StatusOK, resp.StatusCode)
+	} else {
+		require.Equal(expectedCode[0], resp.StatusCode)
+	}
 	respData := map[string]interface{}{}
 	require.Nil(json.Unmarshal(resp.Data, &respData))
 	return respData
+}
+
+func TestRecoveryOnProjectorError(t *testing.T) {
+	require := require.New(t)
+
+	cudQName := appdef.NewQName(appdef.SysPackage, "CUD")
+	testErr := errors.New("test error")
+	counter := 0
+	app := setUp(t, func(appDef appdef.IAppDefBuilder, cfg *istructsmem.AppConfigType) {
+		appDef.AddCRecord(testCRecord)
+		appDef.AddCDoc(testCDoc).AddContainer("TestCRecord", testCRecord, 0, 1)
+		appDef.AddWDoc(testWDoc)
+		appDef.AddCommand(cudQName)
+
+		failingProjQName := appdef.NewQName(appdef.SysPackage, "Failer")
+		cfg.AddSyncProjectors(func(partition istructs.PartitionID) istructs.Projector {
+			return istructs.Projector{
+				Name: failingProjQName,
+				Func: func(event istructs.IPLogEvent, state istructs.IState, intents istructs.IIntents) (err error) {
+					counter++
+					if counter == 2 {
+						return testErr
+					}
+					return nil
+				},
+			}
+		})
+		appDef.AddProjector(failingProjQName).AddEvent(cudQName, appdef.ProjectorEventKind_Execute)
+	})
+	defer tearDown(app)
+
+	cmdCUD := istructsmem.NewCommandFunction(cudQName, istructsmem.NullCommandExec)
+	app.cfg.Resources.Add(cmdCUD)
+
+	// ok to c.sys.CUD
+	respData := sendCUD(t, 1, app)
+	require.Equal(1, int(respData["CurrentWLogOffset"].(float64)))
+	require.Equal(istructs.NewCDocCRecordID(istructs.FirstBaseRecordID), istructs.RecordID(respData["NewIDs"].(map[string]interface{})["1"].(float64)))
+	require.Equal(istructs.NewRecordID(istructs.FirstBaseRecordID), istructs.RecordID(respData["NewIDs"].(map[string]interface{})["2"].(float64)))
+	require.Equal(istructs.NewCDocCRecordID(istructs.FirstBaseRecordID)+1, istructs.RecordID(respData["NewIDs"].(map[string]interface{})["3"].(float64)))
+
+	// 2nd c.sys.CUD -> sync projector failure, expect 500 internal server error
+	respData = sendCUD(t, 1, app, http.StatusInternalServerError)
+	require.Equal(testErr.Error(), respData["sys.Error"].(map[string]interface{})["Message"].(string))
+
+	// PLog and record is applied but WLog is not written here because sync projector is failed
+	// partition is scheduled to be recovered
+
+	// 3rd c.sys.CUD - > recovery procedure must re-apply 2nd event (PLog, records and WLog), then 3rd event is processed ok (sync projectors are ok)
+	respData = sendCUD(t, 1, app)
+	require.Equal(3, int(respData["CurrentWLogOffset"].(float64)))
+	require.Equal(istructs.NewCDocCRecordID(istructs.FirstBaseRecordID)+4, istructs.RecordID(respData["NewIDs"].(map[string]interface{})["1"].(float64)))
+	require.Equal(istructs.NewRecordID(istructs.FirstBaseRecordID)+2, istructs.RecordID(respData["NewIDs"].(map[string]interface{})["2"].(float64)))
+	require.Equal(istructs.NewCDocCRecordID(istructs.FirstBaseRecordID)+5, istructs.RecordID(respData["NewIDs"].(map[string]interface{})["3"].(float64)))
+
 }
 
 func TestRecovery(t *testing.T) {
 	require := require.New(t)
 
 	cudQName := appdef.NewQName(appdef.SysPackage, "CUD")
-	app := setUp(t, func(appDef appdef.IAppDefBuilder) {
-		_ = appDef.AddCRecord(testCRecord)
-		_ = appDef.AddCDoc(testCDoc).AddContainer("TestCRecord", testCRecord, 0, 1)
-		_ = appDef.AddWDoc(testWDoc)
-		_ = appDef.AddCommand(cudQName)
+	app := setUp(t, func(appDef appdef.IAppDefBuilder, cfg *istructsmem.AppConfigType) {
+		appDef.AddCRecord(testCRecord)
+		appDef.AddCDoc(testCDoc).AddContainer("TestCRecord", testCRecord, 0, 1)
+		appDef.AddWDoc(testWDoc)
+		appDef.AddCommand(cudQName)
 	})
 	defer tearDown(app)
 
@@ -241,7 +302,7 @@ func TestCUDUpdate(t *testing.T) {
 	testQName := appdef.NewQName("test", "test")
 
 	cudQName := appdef.NewQName(appdef.SysPackage, "CUD")
-	app := setUp(t, func(appDef appdef.IAppDefBuilder) {
+	app := setUp(t, func(appDef appdef.IAppDefBuilder, _ *istructsmem.AppConfigType) {
 		_ = appDef.AddCDoc(testQName).AddField("IntFld", appdef.DataKind_int32, false)
 		_ = appDef.AddCommand(cudQName)
 	})
@@ -295,7 +356,7 @@ func Test400BadRequestOnCUDErrors(t *testing.T) {
 	testQName := appdef.NewQName("test", "test")
 
 	cudQName := appdef.NewQName(appdef.SysPackage, "CUD")
-	app := setUp(t, func(appDef appdef.IAppDefBuilder) {
+	app := setUp(t, func(appDef appdef.IAppDefBuilder, _ *istructsmem.AppConfigType) {
 		_ = appDef.AddCDoc(testQName)
 		_ = appDef.AddCommand(cudQName)
 	})
@@ -347,7 +408,7 @@ func Test400BadRequests(t *testing.T) {
 	testCmdQNameParamsUnlogged := appdef.NewQName(appdef.SysPackage, "TestParamsUnlogged")
 
 	testCmdQName := appdef.NewQName(appdef.SysPackage, "Test")
-	app := setUp(t, func(appDef appdef.IAppDefBuilder) {
+	app := setUp(t, func(appDef appdef.IAppDefBuilder, _ *istructsmem.AppConfigType) {
 		appDef.AddObject(testCmdQNameParams).
 			AddField("Text", appdef.DataKind_string, true)
 
@@ -378,7 +439,7 @@ func Test400BadRequests(t *testing.T) {
 		ibus.Request
 		expectedMessageLike string
 	}{
-		{"unknown app", ibus.Request{AppQName: "untill/unknown"}, "application not found"}, // TODO: simplify
+		{"unknown app", ibus.Request{AppQName: "untill/unknown"}, "application untill/unknown not found"}, // TODO: simplify
 		{"bad request body", ibus.Request{Body: []byte("{wrong")}, "failed to unmarshal request body: invalid character 'w' looking for beginning of object key string"},
 		{"unknown func", ibus.Request{Resource: "c.sys.Unknown"}, "unknown function"},
 		{"args: field of wrong type provided", ibus.Request{Body: []byte(`{"args":{"Text":42}}`)}, "wrong field type"},
@@ -424,7 +485,7 @@ func TestAuthnz(t *testing.T) {
 
 	qNameAllowedCmd := appdef.NewQName(appdef.SysPackage, "TestAllowedCmd")
 	qNameDeniedCmd := appdef.NewQName(appdef.SysPackage, "TestDeniedCmd") // the same in core/iauthnzimpl
-	app := setUp(t, func(appDef appdef.IAppDefBuilder) {
+	app := setUp(t, func(appDef appdef.IAppDefBuilder, _ *istructsmem.AppConfigType) {
 		appDef.AddCDoc(qNameTestDeniedCDoc)
 		appDef.AddCommand(qNameAllowedCmd)
 		appDef.AddCommand(qNameDeniedCmd)
@@ -502,7 +563,7 @@ func getAuthHeader(token string) map[string][]string {
 func TestBasicUsage_FuncWithRawArg(t *testing.T) {
 	require := require.New(t)
 	testCmdQName := appdef.NewQName(appdef.SysPackage, "Test")
-	app := setUp(t, func(appDef appdef.IAppDefBuilder) {
+	app := setUp(t, func(appDef appdef.IAppDefBuilder, _ *istructsmem.AppConfigType) {
 		appDef.AddCommand(testCmdQName).SetParam(istructs.QNameRaw)
 	})
 	defer tearDown(app)
@@ -540,11 +601,9 @@ func TestRateLimit(t *testing.T) {
 	parsQName := appdef.NewQName(appdef.SysPackage, "Params")
 
 	app := setUp(t,
-		func(appDef appdef.IAppDefBuilder) {
+		func(appDef appdef.IAppDefBuilder, cfg *istructsmem.AppConfigType) {
 			appDef.AddObject(parsQName)
 			appDef.AddCommand(qName).SetParam(parsQName)
-		},
-		func(cfg *istructsmem.AppConfigType) {
 			cfg.Resources.Add(istructsmem.NewCommandFunction(qName, istructsmem.NullCommandExec))
 
 			cfg.FunctionRateLimits.AddWorkspaceLimit(qName, istructs.RateLimit{
@@ -611,7 +670,16 @@ func replyBadRequest(sender ibus.ISender, message string) {
 	})
 }
 
-func setUp(t *testing.T, prepareAppDef func(appDef appdef.IAppDefBuilder), cfgFuncs ...func(*istructsmem.AppConfigType)) testApp {
+// test app deployment constants
+var (
+	testAppName                            = istructs.AppQName_untill_airs_bp
+	testAppPartsCount                      = 2
+	testAppEngines                         = [cluster.ProcessorKind_Count]int{10, 10, 10}
+	testAppPartID     istructs.PartitionID = 1
+)
+
+func setUp(t *testing.T, prepare func(appDef appdef.IAppDefBuilder, cfg *istructsmem.AppConfigType)) testApp {
+	require := require.New(t)
 	if coreutils.IsDebug() {
 		testTimeout = time.Hour
 	}
@@ -626,28 +694,34 @@ func setUp(t *testing.T, prepareAppDef func(appDef appdef.IAppDefBuilder), cfgFu
 	appStorageProvider := istorageimpl.Provide(asf)
 
 	// build application
-	appDef := appdef.New()
-	appDef.AddObject(istructs.QNameRaw).AddField(processors.Field_RawObject_Body, appdef.DataKind_string, true, appdef.MaxLen(appdef.MaxFieldLength))
-	if prepareAppDef != nil {
-		prepareAppDef(appDef)
+	adb := appdef.New()
+	adb.AddObject(istructs.QNameRaw).AddField(processors.Field_RawObject_Body, appdef.DataKind_string, true, appdef.MaxLen(appdef.MaxFieldLength))
+	cfg := cfgs.AddConfig(istructs.AppQName_untill_airs_bp, adb)
+	if prepare != nil {
+		prepare(adb, cfg)
 	}
 
-	// конфиг приложения airs-bp
-	cfg := cfgs.AddConfig(istructs.AppQName_untill_airs_bp, appDef)
-	for _, cfgFunc := range cfgFuncs {
-		cfgFunc(cfg)
-	}
+	appDef, err := adb.Build()
+	require.NoError(err)
 
 	appStructsProvider := istructsmem.Provide(cfgs, iratesce.TestBucketsFactory,
 		payloads.ProvideIAppTokensFactory(itokensjwt.TestTokensJWT()), appStorageProvider)
+
+	// prepare the AppParts to borrow AppStructs
+	appParts, appPartsClean, err := appparts.New(appStructsProvider)
+	require.NoError(err)
+	defer appPartsClean()
+
+	appParts.DeployApp(testAppName, appDef, testAppPartsCount, testAppEngines)
+	appParts.DeployAppPartitions(testAppName, []istructs.PartitionID{testAppPartID})
 
 	// command processor работает через ibus.SendResponse -> нам нужна реализация ibus
 	bus := ibusmem.Provide(func(ctx context.Context, sender ibus.ISender, request ibus.Request) {
 		// сымитируем работу реального приложения при приеме запроса-команды
 		cmdQName, err := appdef.ParseQName(request.Resource[2:])
-		require.NoError(t, err)
+		require.NoError(err)
 		appQName, err := istructs.ParseAppQName(request.AppQName)
-		require.NoError(t, err)
+		require.NoError(err)
 		tp := appDef.Type(cmdQName)
 		if tp.Kind() == appdef.TypeKind_null {
 			replyBadRequest(sender, "unknown function")
@@ -658,7 +732,7 @@ func setUp(t *testing.T, prepareAppDef func(appDef appdef.IAppDefBuilder), cfgFu
 			token = strings.TrimPrefix(authHeaders[0], "Bearer ")
 		}
 		command := appDef.Command(cmdQName)
-		icm := NewCommandMessage(ctx, request.Body, appQName, istructs.WSID(request.WSID), sender, 1, command, token, "")
+		icm := NewCommandMessage(ctx, request.Body, appQName, istructs.WSID(request.WSID), sender, testAppPartID, command, token, "")
 		serviceChannel <- icm
 	})
 	n10nBroker, n10nBrokerCleanup := in10nmem.ProvideEx2(in10n.Quotas{
@@ -669,13 +743,40 @@ func setUp(t *testing.T, prepareAppDef func(appDef appdef.IAppDefBuilder), cfgFu
 	}, time.Now)
 
 	tokens := itokensjwt.ProvideITokens(itokensjwt.SecretKeyExample, time.Now)
-	appTokens := payloads.ProvideIAppTokensFactory(tokens).New(istructs.AppQName_untill_airs_bp)
+	appTokens := payloads.ProvideIAppTokensFactory(tokens).New(testAppName)
 	systemToken, err := payloads.GetSystemPrincipalTokenApp(appTokens)
-	require.NoError(t, err)
-	cmdProcessorFactory := ProvideServiceFactory(appStructsProvider, time.Now, func(ctx context.Context, partitionID istructs.PartitionID) pipeline.ISyncOperator {
-		return &pipeline.NOOP{}
-	}, n10nBroker, imetrics.Provide(), "vvm", iauthnzimpl.NewDefaultAuthenticator(iauthnzimpl.TestSubjectRolesGetter), iauthnzimpl.NewDefaultAuthorizer(), isecretsimpl.ProvideSecretReader(), cfgs)
-	cmdProcService := cmdProcessorFactory(serviceChannel, 1)
+	require.NoError(err)
+	as, err := appStructsProvider.AppStructs(istructs.AppQName_untill_airs_bp)
+	require.NoError(err)
+	syncActualizerFactory := projectors.ProvideSyncActualizerFactory()
+	op := func(vvmCtx context.Context, partitionID istructs.PartitionID) pipeline.ISyncOperator {
+		if len(as.SyncProjectors()) == 0 {
+			return &pipeline.NOOP{}
+		}
+		conf := projectors.SyncActualizerConf{
+			Ctx: vvmCtx,
+			AppStructs: func() istructs.IAppStructs {
+				return as
+			},
+			SecretReader: itokensjwt.ProvideTestSecretsReader(nil),
+			Partition:    partitionID,
+			WorkToEvent: func(work interface{}) istructs.IPLogEvent {
+				return work.(interface{ Event() istructs.IPLogEvent }).Event()
+				// 	switch typed := work.(type) {
+				// 	case interface{ Event() istructs.IPLogEvent }:
+				// 		return typed.Event()
+				// 	case istructs.IPLogEvent:
+				// 		return typed
+				// 	}
+				// 	panic("")
+			},
+			IntentsLimit: 1,
+			N10nFunc:     nil,
+		}
+		return syncActualizerFactory(conf, as.SyncProjectors()[0], as.SyncProjectors()[1:]...)
+	}
+	cmdProcessorFactory := ProvideServiceFactory(appParts, time.Now, op, n10nBroker, imetrics.Provide(), "vvm", iauthnzimpl.NewDefaultAuthenticator(iauthnzimpl.TestSubjectRolesGetter), iauthnzimpl.NewDefaultAuthorizer(), isecretsimpl.ProvideSecretReader(), cfgs)
+	cmdProcService := cmdProcessorFactory(serviceChannel, testAppPartID)
 
 	go func() {
 		cmdProcService.Run(ctx)

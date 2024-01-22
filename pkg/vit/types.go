@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/cluster"
 	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/state/smtptest"
@@ -65,7 +66,7 @@ type Login struct {
 	AppQName          istructs.AppQName
 	subjectKind       istructs.SubjectKindType
 	clusterID         istructs.ClusterID
-	singletons        map[appdef.QName]func(verifiedValues map[string]string) map[string]interface{}
+	docs              map[appdef.QName]func(verifiedValues map[string]string) map[string]interface{}
 }
 
 type WSParams struct {
@@ -76,7 +77,15 @@ type WSParams struct {
 	InitDataJSON   string
 	ownerLoginName string
 	ClusterID      istructs.ClusterID
-	singletons     map[appdef.QName]func(verifiedValues map[string]string) map[string]interface{}
+	docs           map[appdef.QName]func(verifiedValues map[string]string) map[string]interface{}
+	childs         []WSParams
+	subjects       []subject
+}
+
+type subject struct {
+	login       string
+	subjectKind istructs.SubjectKindType
+	roles       []appdef.QName
 }
 
 type WorkspaceDescriptor struct {
@@ -110,6 +119,7 @@ func (p *Principal) GetAppQName() istructs.AppQName { return p.AppQName }
 
 type app struct {
 	name                  istructs.AppQName
+	deployment            cluster.AppDeploymentDescriptor
 	logins                []Login
 	ws                    map[string]WSParams
 	wsTemplateFuncs       []func(extensionpoints.IExtensionPoint)

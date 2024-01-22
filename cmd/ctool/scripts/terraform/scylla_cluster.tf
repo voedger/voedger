@@ -109,6 +109,15 @@ resource "aws_instance" "node_00" {
   }
 }
 
+resource "aws_route53_record" "app-node-01_instance_record" {
+  zone_id = "Z09953832CB14VQPR2ZJG"
+  name    = "${var.issue_number}-01.cdci.voedger.io"
+  type    = "A"
+  ttl     = 60
+
+  records = [aws_instance.node_00.public_ip]
+}
+
 module "instance_sshd_provisioners" {
   source           = "./modules/provision-sshd"
 
@@ -164,6 +173,15 @@ resource "aws_instance" "node_01" {
     device_index         = 0
   }
   key_name = "amazonKey"
+}
+
+resource "aws_route53_record" "app-node-02_instance_record" {
+  zone_id = "Z09953832CB14VQPR2ZJG"
+  name    = "${var.issue_number}-02.cdci.voedger.io"
+  type    = "A"
+  ttl     = 60
+
+  records = [aws_instance.node_01.public_ip]
 }
 
 output "public_ip_node_01" {

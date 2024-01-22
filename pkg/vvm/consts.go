@@ -26,7 +26,6 @@ const (
 	DefaultMaxPrepareQueries             = 10
 	DefaultBLOBMaxSize                   = router.BLOBMaxSizeType(20971520) // 20Mb
 	DefaultVVMPort                       = router.DefaultRouterPort
-	SecretKeyJWTName                     = "secretKeyJWT"
 	actualizerFlushInterval              = time.Millisecond * 500
 )
 

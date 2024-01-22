@@ -120,6 +120,19 @@ func newVit(t *testing.T, vitCfg *VITConfig, useCas bool) *VIT {
 	require.NoError(t, vit.Launch())
 
 	for _, app := range vitPreConfig.vitApps {
+		// deploy app and partitions
+		as, err := vit.AppStructs(app.name)
+		require.NoError(t, err)
+
+		if !app.name.IsSys() {
+			vit.VVM.APIs.IAppPartitions.DeployApp(app.name, as.AppDef(), app.deployment.PartsCount, app.deployment.EnginePoolSize)
+			appParts := []istructs.PartitionID{}
+			for pid := 0; pid < app.deployment.PartsCount; pid++ {
+				appParts = append(appParts, istructs.PartitionID(pid))
+			}
+			vit.VVM.APIs.IAppPartitions.DeployAppPartitions(app.name, appParts)
+		}
+
 		// generate verified value tokens if queried
 		//                desiredValue token
 		verifiedValues := map[string]string{}
@@ -147,13 +160,13 @@ func newVit(t *testing.T, vitCfg *VITConfig, useCas bool) *VIT {
 			}
 			appPrincipals[login.Name] = prn
 
-			for singleton, dataFactory := range login.singletons {
-				if !vit.PostProfile(prn, "q.sys.Collection", fmt.Sprintf(`{"args":{"Schema":"%s"}}`, singleton)).IsEmpty() {
+			for doc, dataFactory := range login.docs {
+				if !vit.PostProfile(prn, "q.sys.Collection", fmt.Sprintf(`{"args":{"Schema":"%s"}}`, doc)).IsEmpty() {
 					continue
 				}
 				data := dataFactory(verifiedValues)
 				data[appdef.SystemField_ID] = 1
-				data[appdef.SystemField_QName] = singleton.String()
+				data[appdef.SystemField_QName] = doc.String()
 
 				bb, err := json.Marshal(data)
 				require.NoError(t, err)
@@ -161,6 +174,7 @@ func newVit(t *testing.T, vitCfg *VITConfig, useCas bool) *VIT {
 				vit.PostProfile(prn, "c.sys.CUD", fmt.Sprintf(`{"cuds":[{"fields":%s}]}`, bb))
 			}
 		}
+
 		for _, wsd := range app.ws {
 			owner := vit.principals[app.name][wsd.ownerLoginName]
 			appWorkspaces, ok := vit.appWorkspaces[app.name]
@@ -170,22 +184,46 @@ func newVit(t *testing.T, vitCfg *VITConfig, useCas bool) *VIT {
 			}
 			appWorkspaces[wsd.Name] = vit.CreateWorkspace(wsd, owner)
 
-			for singleton, dataFactory := range wsd.singletons {
-				if !vit.PostWS(appWorkspaces[wsd.Name], "q.sys.Collection", fmt.Sprintf(`{"args":{"Schema":"%s"}}`, singleton)).IsEmpty() {
-					continue
-				}
-				data := dataFactory(verifiedValues)
-				data[appdef.SystemField_ID] = 1
-				data[appdef.SystemField_QName] = singleton.String()
-
-				bb, err := json.Marshal(data)
-				require.NoError(t, err)
-
-				vit.PostWS(appWorkspaces[wsd.Name], "c.sys.CUD", fmt.Sprintf(`{"cuds":[{"fields":%s}]}`, bb), coreutils.WithAuthorizeBy(vit.GetSystemPrincipal(app.name).Token))
-			}
+			handleWSParam(vit, wsd, appWorkspaces[wsd.Name], appWorkspaces, verifiedValues)
 		}
 	}
 	return vit
+}
+
+func handleWSParam(vit *VIT, ws WSParams, appWS *AppWorkspace, appWorkspaces map[string]*AppWorkspace, verifiedValues map[string]string) {
+	for doc, dataFactory := range ws.docs {
+		if !vit.PostWS(appWS, "q.sys.Collection", fmt.Sprintf(`{"args":{"Schema":"%s"}}`, doc)).IsEmpty() {
+			continue
+		}
+		data := dataFactory(verifiedValues)
+		data[appdef.SystemField_ID] = 1
+		data[appdef.SystemField_QName] = doc.String()
+
+		bb, err := json.Marshal(data)
+		require.NoError(vit.T, err)
+
+		vit.PostWS(appWS, "c.sys.CUD", fmt.Sprintf(`{"cuds":[{"fields":%s}]}`, bb), coreutils.WithAuthorizeBy(vit.GetSystemPrincipal(appWS.GetAppQName()).Token))
+	}
+	sysPrn := vit.GetSystemPrincipal(appWS.GetAppQName())
+	for _, subject := range ws.subjects {
+		roles := ""
+		for i, role := range subject.roles {
+			if i > 0 {
+				roles += ","
+			}
+			roles += role.String()
+		}
+		body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"sys.Subject","Login":"%s","Roles":"%s","SubjectKind":%d,"ProfileWSID":%d}}]}`,
+			subject.login, roles, subject.subjectKind, vit.principals[appWS.GetAppQName()][subject.login].ProfileWSID)
+		vit.PostWS(appWS, "c.sys.CUD", body, coreutils.WithAuthorizeBy(sysPrn.Token))
+	}
+
+	for _, childWS := range ws.childs {
+		vit.InitChildWorkspace(childWS, appWS)
+		childAppWS := vit.WaitForChildWorkspace(appWS, childWS.Name, appWS.Owner)
+		appWorkspaces[childWS.Name] = childAppWS
+		handleWSParam(vit, childWS, childAppWS, appWorkspaces, verifiedValues)
+	}
 }
 
 func NewVITLocalCassandra(t *testing.T, vitCfg *VITConfig, opts ...vitOptFunc) (vit *VIT) {

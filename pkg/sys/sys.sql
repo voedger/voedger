@@ -15,7 +15,20 @@ ABSTRACT TABLE WDoc INHERITS WRecord();
 
 ABSTRACT TABLE Singleton INHERITS CDoc();
 
-WORKSPACE ProfileWS (
+ALTERABLE WORKSPACE AppWorkspaceWS (
+	DESCRIPTOR AppWorkspace ();
+);
+
+WORKSPACE DeviceProfileWS (
+	DESCRIPTOR DeviceProfile ();
+);
+
+WORKSPACE UserProfileWS (
+
+	DESCRIPTOR UserProfile (
+		DisplayName varchar
+	);
+
 	TABLE ChildWorkspace INHERITS CDoc (
 		WSName varchar NOT NULL,
 		WSKind qname NOT NULL,
@@ -94,11 +107,11 @@ ABSTRACT WORKSPACE Workspace (
 		OwnerQName2 text
 	);
 
-	TABLE UserProfile INHERITS Singleton (DisplayName varchar);
+	-- TABLE UserProfile INHERITS Singleton (DisplayName varchar);
 
-	TABLE DeviceProfile INHERITS Singleton ();
+	-- TABLE DeviceProfile INHERITS Singleton ();
 
-	TABLE AppWorkspace INHERITS Singleton ();
+	-- TABLE AppWorkspace INHERITS Singleton ();
 
 	TABLE BLOB INHERITS WDoc (status int32 NOT NULL);
 

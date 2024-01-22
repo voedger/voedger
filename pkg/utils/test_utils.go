@@ -19,12 +19,12 @@ var (
 // ICUDRow, IObject
 type TestObject struct {
 	istructs.NullObject
-	Name            appdef.QName
-	Id              istructs.RecordID
-	Parent_         istructs.RecordID
-	Data            map[string]interface{}
-	Containers_     map[string][]*TestObject
-	IsNew_          bool
+	Name        appdef.QName
+	Id          istructs.RecordID
+	Parent_     istructs.RecordID
+	Data        map[string]interface{}
+	Containers_ map[string][]*TestObject
+	IsNew_      bool
 }
 
 type TestValue struct {

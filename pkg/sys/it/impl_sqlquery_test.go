@@ -147,9 +147,6 @@ func TestSqlQuery_plog(t *testing.T) {
 	t.Run("Should read one event by Offset", func(t *testing.T) {
 		require := require.New(t)
 		body := fmt.Sprintf(`{"args":{"Query":"select * from sys.plog where Offset > %d"},"elements":[{"fields":["Result"]}]}`, lastPLogOffset-1)
-		if lastPLogOffset-1 <= 0 {
-			fmt.Println("!!!!!!!!!!!!!!!!!!!!!!!!!")
-		}
 		resp := vit.PostWS(ws, "q.sys.SqlQuery", body)
 
 		m := map[string]interface{}{}
@@ -393,10 +390,10 @@ func TestSqlQuery_records(t *testing.T) {
 	})
 	t.Run("Should read singleton", func(t *testing.T) {
 		require := require.New(t)
-		body = `{"args":{"Query":"select sys.QName from app1pkg.WSKind"},"elements":[{"fields":["Result"]}]}`
+		body = `{"args":{"Query":"select sys.QName from app1pkg.test_ws"},"elements":[{"fields":["Result"]}]}`
 		restaurant := vit.PostWS(ws, "q.sys.SqlQuery", body).SectionRow(0)
 
-		require.Equal(`{"sys.QName":"app1pkg.WSKind"}`, restaurant[0])
+		require.Equal(`{"sys.QName":"app1pkg.test_ws"}`, restaurant[0])
 	})
 }
 

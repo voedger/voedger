@@ -52,7 +52,7 @@ func TestBasicUsage_Workspace(t *testing.T) {
 		{
 			"args": {
 				"WSName": "%s",
-				"WSKind": "app1pkg.WSKind",
+				"WSKind": "app1pkg.test_ws",
 				"WSKindInitializationData": "{\"IntFld\": 10}",
 				"TemplateName": "test_template",
 				"WSClusterID": 1
@@ -94,7 +94,7 @@ func TestBasicUsage_Workspace(t *testing.T) {
 						{
 							"sys.ID": %d,
 							"fields": {
-								"sys.QName": "app1pkg.WSKind",
+								"sys.QName": "app1pkg.test_ws",
 								"IntFld": 42,
 								"StrFld": "str"
 							}
@@ -112,7 +112,7 @@ func TestBasicUsage_Workspace(t *testing.T) {
 	})
 
 	t.Run("create a new workspace with an existing name -> 409 conflict", func(t *testing.T) {
-		body := fmt.Sprintf(`{"args": {"WSName": "%s","WSKind": "app1pkg.WSKind","WSKindInitializationData": "{\"WorkStartTime\": \"10\"}","TemplateName": "test","WSClusterID": 1}}`, wsName)
+		body := fmt.Sprintf(`{"args": {"WSName": "%s","WSKind": "app1pkg.test_ws","WSKindInitializationData": "{\"WorkStartTime\": \"10\"}","TemplateName": "test","WSClusterID": 1}}`, wsName)
 		resp := vit.PostProfile(prn, "c.sys.InitChildWorkspace", body, coreutils.Expect409())
 		resp.Println()
 	})
@@ -133,7 +133,7 @@ func TestWorkspaceAuthorization(t *testing.T) {
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
 	prn := ws.Owner
 
-	body := `{"cuds": [{"sys.ID": 1,"fields": {"sys.QName": "app1pkg.WSKind"}}]}`
+	body := `{"cuds": [{"sys.ID": 1,"fields": {"sys.QName": "app1pkg.test_ws"}}]}`
 
 	t.Run("403 forbidden", func(t *testing.T) {
 		t.Run("workspace is not initialized", func(t *testing.T) {

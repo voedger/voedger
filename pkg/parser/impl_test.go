@@ -257,6 +257,14 @@ type ParserAssertions struct {
 }
 
 func (require *ParserAssertions) AppSchemaError(sql string, expectErrors ...string) {
+	require.EqualError(require.AppSchema(sql), strings.Join(expectErrors, "\n"))
+}
+
+func (require *ParserAssertions) NoAppSchemaError(sql string) {
+	require.NoError(require.AppSchema(sql))
+}
+
+func (require *ParserAssertions) AppSchema(sql string, expectErrors ...string) error {
 	ast, err := ParseFile("file.sql", sql)
 	require.NoError(err)
 
@@ -267,7 +275,8 @@ func (require *ParserAssertions) AppSchemaError(sql string, expectErrors ...stri
 		getSysPackageAST(),
 		pkg,
 	})
-	require.EqualError(err, strings.Join(expectErrors, "\n"))
+
+	return err
 }
 
 func assertions(t *testing.T) *ParserAssertions {
@@ -2100,4 +2109,26 @@ MyField int23 NOT NULL
 );
 	`, "file.sql:3:9: undefined data type or table: int23",
 	)
+}
+
+func Test_DescriptorInProjector(t *testing.T) {
+	require := assertions(t)
+
+	require.AppSchemaError(`APPLICATION app1();
+	WORKSPACE w (
+		EXTENSION ENGINE BUILTIN (
+		  PROJECTOR x AFTER INSERT ON (unknown.z) STATE(Http);
+		);
+	  );
+	`,
+		"file.sql:4:34: unknown undefined")
+
+	require.NoAppSchemaError(`APPLICATION app1();
+	WORKSPACE RestaurantWS (
+		DESCRIPTOR Restaurant ();
+		EXTENSION ENGINE BUILTIN (
+		  PROJECTOR NewRestaurantVat AFTER INSERT OR UPDATE ON (Restaurant) STATE(AppSecret, Http) INTENTS(SendMail);
+		);
+	  );
+	`)
 }

@@ -3,7 +3,13 @@
 
 APPLICATION app1();
 
-ALTERABLE WORKSPACE test_ws (
+ALTERABLE WORKSPACE test_wsWS (
+
+	DESCRIPTOR test_ws (
+		IntFld int32 NOT NULL,
+		StrFld varchar
+	);
+
 	TABLE articles INHERITS CDoc (
 		name varchar,
 		article_manual int32 NOT NULL,
@@ -373,11 +379,6 @@ ALTERABLE WORKSPACE test_ws (
 		kind int32,
 		email varchar,
 		description varchar
-	);
-
-	TABLE WSKind INHERITS Singleton (
-		IntFld int32 NOT NULL,
-		StrFld varchar
 	);
 
 	TABLE category INHERITS CDoc (

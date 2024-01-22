@@ -106,7 +106,7 @@ const (
 	untillPackage               = "untill"
 	untillChargebeeAgentLogin   = "untillchargebeeagent"
 
-	// registryPackage -> import cycle: collection->iauthnzimpl->registry->workspace->collection
+	// avoiding import cycle: collection->iauthnzimpl->registry->workspace->collection
 	registryPackage = "registry"
 )
 
