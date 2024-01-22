@@ -57,17 +57,17 @@ func provideIBus(appParts appparts.IAppPartitions, procbus iprocbus.IProcBus,
 			return
 		}
 
-		appDef, err := appParts.AppDef(appQName)
-		if err != nil {
-			coreutils.ReplyInternalServerError(sender, "failed to get AppDef", err)
-			return
-		}
+		// appDef, err := appParts.AppDef(appQName)
+		// if err != nil {
+		// 	coreutils.ReplyInternalServerError(sender, "failed to get AppDef", err)
+		// 	return
+		// }
 
-		funcKindMark := request.Resource[:1]
-		funcType, isHandled := getFuncType(appDef, qName, sender, funcKindMark)
-		if isHandled {
-			return
-		}
+		// funcKindMark := request.Resource[:1]
+		// funcType, isHandled := getFuncType(appDef, qName, sender, funcKindMark)
+		// if isHandled {
+		// 	return
+		// }
 
 		token, err := getPrincipalToken(request)
 		if err != nil {
@@ -75,14 +75,13 @@ func provideIBus(appParts appparts.IAppPartitions, procbus iprocbus.IProcBus,
 			return
 		}
 
-		deliverToProcessors(request, requestCtx, appQName, sender, funcQName, procbus, token, cpchIdx, qpcgIdx, cpAmount)
 		appPartsCount, err := appParts.AppPartsCount(appQName)
 		if err != nil {
 			coreutils.ReplyInternalServerError(sender, "failed to get app partitions count", err)
 			return
 		}
 
-		deliverToProcessors(request, requestCtx, appQName, sender, funcType, procbus, token, cpchIdx, qpcgIdx, cpAmount, appPartsCount)
+		deliverToProcessors(request, requestCtx, appQName, sender, funcQName, procbus, token, cpchIdx, qpcgIdx, cpAmount, appPartsCount)
 	})
 }
 
@@ -93,7 +92,7 @@ func deliverToProcessors(request ibus.Request, requestCtx context.Context, appQN
 	cpCount coreutils.CommandProcessorsCount, appPartsCount int) {
 	switch request.Resource[:1] {
 	case "q":
-		iqm := queryprocessor.NewQueryMessage(requestCtx, appQName, istructs.PartitionID(request.PartitionNumber), istructs.WSID(request.WSID), sender, request.Body, funcType.(appdef.IQuery), request.Host, token)
+		iqm := queryprocessor.NewQueryMessage(requestCtx, appQName, istructs.PartitionID(request.PartitionNumber), istructs.WSID(request.WSID), sender, request.Body, funcQName, request.Host, token)
 		if !procbus.Submit(int(qpcgIdx), 0, iqm) {
 			coreutils.ReplyErrf(sender, http.StatusServiceUnavailable, "no query processors available")
 		}

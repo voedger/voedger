@@ -731,8 +731,7 @@ func setUp(t *testing.T, prepare func(appDef appdef.IAppDefBuilder, cfg *istruct
 		if authHeaders, ok := request.Header[coreutils.Authorization]; ok {
 			token = strings.TrimPrefix(authHeaders[0], "Bearer ")
 		}
-		command := appDef.Command(cmdQName)
-		icm := NewCommandMessage(ctx, request.Body, appQName, istructs.WSID(request.WSID), sender, testAppPartID, command, token, "")
+		icm := NewCommandMessage(ctx, request.Body, appQName, istructs.WSID(request.WSID), sender, testAppPartID, cmdQName, token, "")
 		serviceChannel <- icm
 	})
 	n10nBroker, n10nBrokerCleanup := in10nmem.ProvideEx2(in10n.Quotas{
