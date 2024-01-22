@@ -305,7 +305,7 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 			})
 			return coreutils.WrapSysError(err, http.StatusInternalServerError)
 		}),
-		coreutils.DeferOperator[*queryWork]("release operator", func(qw *queryWork) error {
+		pipeline.FinallyOperator[*queryWork]("release operator", func(qw *queryWork) error {
 			qw.release()
 			return nil
 		}),
