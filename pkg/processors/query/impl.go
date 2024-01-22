@@ -305,12 +305,10 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 			})
 			return coreutils.WrapSysError(err, http.StatusInternalServerError)
 		}),
-		deferOperator("release workpiece",
-			func(qw *queryWork) error {
-				qw.release()
-				return nil
-			},
-		),
+		pipeline.FinallyOperator[*queryWork]("release operator", func(qw *queryWork) error {
+			qw.release()
+			return nil
+		}),
 	}
 	return pipeline.NewSyncPipeline(requestCtx, "Query Processor", ops[0], ops[1:]...)
 }
@@ -336,7 +334,6 @@ type queryWork struct {
 	secretReader      isecrets.ISecretReader
 	appCfg            *istructsmem.AppConfigType
 	queryFunc         istructs.IQueryFunction
-	deferError        error
 }
 
 func newQueryWork(msg IQueryMessage, rs IResultSenderClosable, appParts appparts.IAppPartitions,
@@ -391,33 +388,10 @@ func borrowAppPart(_ context.Context, qw *queryWork) error {
 	}
 }
 
-type deferOp struct {
-	pipeline.NOOP
-	f func(*queryWork) error
-}
-
-func (o *deferOp) DoSync(ctx context.Context, work interface{}) (err error) {
-	qw := work.(*queryWork)
-	err = o.f(qw)
-	if qw.deferError != nil {
-		return qw.deferError
-	}
-	return err
-}
-
-func (o *deferOp) OnErr(err error, work interface{}, ctx pipeline.IWorkpieceContext) error {
-	work.(*queryWork).deferError = err
-	return nil
-}
-
 func operator(name string, doSync func(ctx context.Context, qw *queryWork) (err error)) *pipeline.WiredOperator {
 	return pipeline.WireFunc(name, func(ctx context.Context, work interface{}) (err error) {
 		return doSync(ctx, work.(*queryWork))
 	})
-}
-
-func deferOperator(name string, f func(*queryWork) error) *pipeline.WiredOperator {
-	return pipeline.WireSyncOperator(name, &deferOp{f: f})
 }
 
 func errIfFalse(cond bool, errIfFalse func() error) error {
