@@ -443,3 +443,21 @@ func TestRateLimitKind_MarshalText(t *testing.T) {
 		}
 	}
 }
+
+func TestAppQName_IsSys(t *testing.T) {
+	tests := []struct {
+		aqn  AppQName
+		want bool
+	}{
+		{NullAppQName, false},
+		{AppQName_sys_registry, true},
+		{AppQName_untill_airs_bp, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.aqn.String(), func(t *testing.T) {
+			if got := tt.aqn.IsSys(); got != tt.want {
+				t.Errorf("AppQName.IsSys() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}

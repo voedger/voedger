@@ -41,9 +41,9 @@ func AppDef() appdef.IAppDef {
 }
 
 // Returns router partitions count
-func PartsCount() int { return 1 }
+func PartsCount() int { return DefDeploymentPartsCount }
 
 // Returns router engines pool sizes
 func EnginePoolSize() [cluster.ProcessorKind_Count]int {
-	return [cluster.ProcessorKind_Count]int{1, 1, 1}
+	return DefDeploymentEnginePoolSize
 }

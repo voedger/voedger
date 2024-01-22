@@ -15,13 +15,30 @@ import (
 )
 
 // engine placeholder
-type engine interface{}
+type engine struct {
+	cluster.ProcessorKind
+	pool *pool.Pool[*engine]
+}
+
+func newEngine(kind cluster.ProcessorKind) *engine {
+	return &engine{
+		ProcessorKind: kind,
+	}
+}
+
+func (e *engine) release() {
+	if p := e.pool; p != nil {
+		e.pool = nil
+		p.Release(e)
+	}
+}
 
 type app struct {
-	name    istructs.AppQName
-	def     appdef.IAppDef
-	structs istructs.IAppStructs
-	engines [cluster.ProcessorKind_Count]*pool.Pool[engine]
+	name       istructs.AppQName
+	def        appdef.IAppDef
+	partsCount int
+	structs    istructs.IAppStructs
+	engines    [cluster.ProcessorKind_Count]*pool.Pool[*engine]
 	// no locks need. Owned apps structure will locks access to this structure
 	parts map[istructs.PartitionID]*partition
 }
@@ -33,12 +50,16 @@ func newApplication(name istructs.AppQName) *app {
 	}
 }
 
-func (a *app) deploy(def appdef.IAppDef, structs istructs.IAppStructs, engines [cluster.ProcessorKind_Count]int) {
+func (a *app) deploy(def appdef.IAppDef, structs istructs.IAppStructs, partsCount int, engines [cluster.ProcessorKind_Count]int) {
 	a.def = def
 	a.structs = structs
+	a.partsCount = partsCount
 	for k, cnt := range engines {
-		ee := make([]engine, cnt)
-		a.engines[k] = pool.New[engine](ee)
+		ee := make([]*engine, cnt)
+		for i := 0; i < cnt; i++ {
+			ee[i] = newEngine(cluster.ProcessorKind(k))
+		}
+		a.engines[k] = pool.New[*engine](ee)
 	}
 }
 
@@ -69,10 +90,7 @@ type partitionRT struct {
 	part       *partition
 	appDef     appdef.IAppDef
 	appStructs istructs.IAppStructs
-	borrowed   struct {
-		engine engine
-		pool   *pool.Pool[engine]
-	}
+	borrowed   *engine
 }
 
 func newPartitionRT(part *partition) *partitionRT {
@@ -89,19 +107,20 @@ func (rt *partitionRT) AppStructs() istructs.IAppStructs { return rt.appStructs 
 func (rt *partitionRT) ID() istructs.PartitionID         { return rt.part.id }
 
 func (rt *partitionRT) Release() {
-	if e := rt.borrowed.engine; e != nil {
-		rt.borrowed.engine = nil
-		rt.borrowed.pool.Release(e)
+	if e := rt.borrowed; e != nil {
+		rt.borrowed = nil
+		e.release()
 	}
 }
 
 // Initialize partition RT structures for use
 func (rt *partitionRT) init(proc cluster.ProcessorKind) error {
-	engine, err := rt.part.app.engines[proc].Borrow()
+	pool := rt.part.app.engines[proc]
+	engine, err := pool.Borrow() // will be released in (*engine).release()
 	if err != nil {
-		return fmt.Errorf(errNotEnoughEngines, proc.TrimString(), err)
+		return fmt.Errorf("%w (%w): %s", ErrNotAvailableEngines, err, proc.TrimString())
 	}
-	rt.borrowed.engine = engine
-	rt.borrowed.pool = rt.part.app.engines[proc]
+	engine.pool = pool
+	rt.borrowed = engine
 	return nil
 }

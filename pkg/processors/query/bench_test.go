@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/iauthnzimpl"
 	"github.com/voedger/voedger/pkg/iprocbus"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -51,21 +52,29 @@ func Benchmark_pipelineIService_Sequential(b *testing.B) {
 	}
 	authn := iauthnzimpl.NewDefaultAuthenticator(iauthnzimpl.TestSubjectRolesGetter)
 	authz := iauthnzimpl.NewDefaultAuthorizer()
-	cfgs, appStructsProvider, appTokens := getTestCfg(require, nil)
-	queryProcessor := ProvideServiceFactory()(serviceChannel, func(ctx context.Context, sender ibus.ISender) IResultSenderClosable { return rs }, appStructsProvider, 3,
+	cfgs, appDef, appStructsProvider, appTokens := getTestCfg(require, nil)
+
+	appParts, cleanAppParts, err := appparts.New(appStructsProvider)
+	require.NoError(err)
+	defer cleanAppParts()
+	appParts.DeployApp(appName, appDef, appPartsCount, appEngines)
+	appParts.DeployAppPartitions(appName, []istructs.PartitionID{partID})
+
+	queryProcessor := ProvideServiceFactory()(
+		serviceChannel,
+		func(ctx context.Context, sender ibus.ISender) IResultSenderClosable { return rs },
+		appParts,
+		3, // MaxPrepareQueries
 		imetrics.Provide(), "vvm", authn, authz, cfgs)
 	go queryProcessor.Run(context.Background())
-	as, err := appStructsProvider.AppStructs(istructs.AppQName_test1_app1)
-	require.NoError(err)
-	query := as.AppDef().Query(qNameFunction)
+	query := appDef.Query(qNameFunction) // nnv: Suspicious code!! Should be borrowed AppPartition.AppDef() instead of appDef?
 	start := time.Now()
 	sysToken := getSystemToken(appTokens)
 
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-
-		serviceChannel <- NewQueryMessage(context.Background(), istructs.AppQName_test1_app1, 15, nil, body, query, "", sysToken)
+		serviceChannel <- NewQueryMessage(context.Background(), appName, partID, wsID, nil, body, query, "", sysToken)
 		<-res
 	}
 
@@ -113,19 +122,28 @@ func Benchmark_pipelineIService_Parallel(b *testing.B) {
 		}
 		authn := iauthnzimpl.NewDefaultAuthenticator(iauthnzimpl.TestSubjectRolesGetter)
 		authz := iauthnzimpl.NewDefaultAuthorizer()
-		cfgs, appStructsProvider, appTokens := getTestCfg(require, nil)
-		queryProcessor := ProvideServiceFactory()(serviceChannel, func(ctx context.Context, sender ibus.ISender) IResultSenderClosable { return rs },
-			appStructsProvider, 3, imetrics.Provide(), "vvm", authn, authz, cfgs)
-		go queryProcessor.Run(context.Background())
-		as, err := appStructsProvider.AppStructs(istructs.AppQName_test1_app1)
+		cfgs, appDef, appStructsProvider, appTokens := getTestCfg(require, nil)
+
+		appParts, cleanAppParts, err := appparts.New(appStructsProvider)
 		require.NoError(err)
-		query := as.AppDef().Query(qNameFunction)
+		defer cleanAppParts()
+		appParts.DeployApp(appName, appDef, appPartsCount, appEngines)
+		appParts.DeployAppPartitions(appName, []istructs.PartitionID{partID})
+
+		queryProcessor := ProvideServiceFactory()(
+			serviceChannel,
+			func(ctx context.Context, sender ibus.ISender) IResultSenderClosable { return rs },
+			appParts,
+			3, // MaxPrepareQueries
+			imetrics.Provide(), "vvm", authn, authz, cfgs)
+		go queryProcessor.Run(context.Background())
+		query := appDef.Query(qNameFunction) // nnv: Suspicious code!! Should be borrowed AppPartition.AppDef() instead of appDef?
 		sysToken := getSystemToken(appTokens)
 
 		b.ResetTimer()
 
 		for pb.Next() {
-			serviceChannel <- NewQueryMessage(context.Background(), istructs.AppQName_test1_app1, 15, nil, body, query, "", sysToken)
+			serviceChannel <- NewQueryMessage(context.Background(), appName, partID, wsID, nil, body, query, "", sysToken)
 			<-res
 		}
 	})

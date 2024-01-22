@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/iprocbus"
 	"github.com/voedger/voedger/pkg/isecrets"
@@ -55,7 +56,8 @@ func (m *commandProcessorMetrics) increase(metricName string, valueDelta float64
 }
 
 type cmdWorkpiece struct {
-	asp                          istructs.IAppStructsProvider
+	appParts                     appparts.IAppPartitions
+	appPart                      appparts.IAppPartition
 	appStructs                   istructs.IAppStructs
 	requestData                  coreutils.MapObject
 	cmdMes                       ICommandMessage

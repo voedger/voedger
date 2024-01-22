@@ -18,7 +18,7 @@ type IAppPartitions interface {
 	// If application with the same name exists, then its definition will be updated.
 	//
 	// @ConcurrentAccess
-	DeployApp(appName istructs.AppQName, appDef appdef.IAppDef, engines [cluster.ProcessorKind_Count]int)
+	DeployApp(name istructs.AppQName, def appdef.IAppDef, partsCount int, engines [cluster.ProcessorKind_Count]int)
 
 	// Deploys new partitions for specified application or update existing.
 	//
@@ -29,6 +29,16 @@ type IAppPartitions interface {
 	//
 	// @ConcurrentAccess
 	DeployAppPartitions(appName istructs.AppQName, partIDs []istructs.PartitionID)
+
+	// Returns application definition.
+	//
+	// Returns nil and error if app not exists.
+	AppDef(istructs.AppQName) (appdef.IAppDef, error)
+
+	// Returns application partitions count.
+	//
+	// Returns 0 and error if app not exists.
+	AppPartsCount(istructs.AppQName) (int, error)
 
 	// Borrows and returns a partition.
 	//

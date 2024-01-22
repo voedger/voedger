@@ -10,6 +10,7 @@ import (
 
 	"github.com/untillpro/goutils/logger"
 
+	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/in10n"
@@ -44,7 +45,7 @@ type appPartition struct {
 }
 
 // syncActualizerFactory - это фабрика(разделИД), которая возвращает свитч, в бранчах которого по синхронному актуализатору на каждое приложение, внутри каждого - проекторы на каждое приложение
-func ProvideServiceFactory(asp istructs.IAppStructsProvider, now coreutils.TimeFunc, syncActualizerFactory SyncActualizerFactory,
+func ProvideServiceFactory(appParts appparts.IAppPartitions, now coreutils.TimeFunc, syncActualizerFactory SyncActualizerFactory,
 	n10nBroker in10n.IN10nBroker, metrics imetrics.IMetrics, vvm VVMName, authenticator iauthnz.IAuthenticator, authorizer iauthnz.IAuthorizer,
 	secretReader isecrets.ISecretReader, appConfigsType istructsmem.AppConfigsType) ServiceFactory {
 	return func(commandsChannel CommandChannel, partitionID istructs.PartitionID) pipeline.IService {
@@ -62,7 +63,7 @@ func ProvideServiceFactory(asp istructs.IAppStructsProvider, now coreutils.TimeF
 			hsp := newHostStateProvider(vvmCtx, partitionID, secretReader)
 			syncActualizerFactory := syncActualizerFactory(vvmCtx, partitionID)
 			cmdPipeline := pipeline.NewSyncPipeline(vvmCtx, "Command Processor",
-				pipeline.WireFunc("getAppStructs", getAppStructs),
+				pipeline.WireFunc("borrowAppPart", borrowAppPart),
 				pipeline.WireFunc("limitCallRate", limitCallRate),
 				pipeline.WireFunc("getWSDesc", getWSDesc),
 				pipeline.WireFunc("authenticate", cmdProc.authenticate),
@@ -100,6 +101,7 @@ func ProvideServiceFactory(asp istructs.IAppStructsProvider, now coreutils.TimeF
 				pipeline.WireFunc("n10n", cmdProc.n10n),
 				pipeline.WireFunc("putWLog", putWLog),
 				pipeline.WireSyncOperator("sendResponse", &opSendResponse{cmdProc: cmdProc}), // ICatch
+				pipeline.WireSyncOperator("releaseWorkpiece", &releaseWorkpiece{}),           // ICatch
 			)
 			// TODO: сделать потом plogOffset свой по каждому разделу, wlogoffset - свой для каждого wsid
 			defer cmdPipeline.Close()
@@ -110,7 +112,7 @@ func ProvideServiceFactory(asp istructs.IAppStructsProvider, now coreutils.TimeF
 					cmd := &cmdWorkpiece{
 						cmdMes:            intf.(ICommandMessage),
 						requestData:       coreutils.MapObject{},
-						asp:               asp,
+						appParts:          appParts,
 						hostStateProvider: hsp,
 					}
 					cmd.metrics = commandProcessorMetrics{
@@ -121,9 +123,6 @@ func ProvideServiceFactory(asp istructs.IAppStructsProvider, now coreutils.TimeF
 					cmd.metrics.increase(CommandsTotal, 1.0)
 					if err := cmdPipeline.SendSync(cmd); err != nil {
 						logger.Error("unhandled error: " + err.Error())
-					}
-					if cmd.pLogEvent != nil {
-						cmd.pLogEvent.Release()
 					}
 					cmd.metrics.increase(CommandsSeconds, time.Since(start).Seconds())
 				case <-vvmCtx.Done():

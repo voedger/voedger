@@ -12,11 +12,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/iratesce"
+	"github.com/voedger/voedger/pkg/cluster"
 	"github.com/voedger/voedger/pkg/istructs"
-	istructsmem "github.com/voedger/voedger/pkg/istructsmem"
-	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
-	"github.com/voedger/voedger/pkg/itokensjwt"
 )
 
 const (
@@ -61,11 +58,15 @@ func newTSIdsGenerator() *TSidsGeneratorType {
 
 func Test_Race_SimpleInsertOne(t *testing.T) {
 	req := require.New(t)
-	appConfigs, asp := appConfigs(t)
-	provider := istructsmem.Provide(appConfigs, iratesce.TestBucketsFactory,
-		payloads.ProvideIAppTokensFactory(itokensjwt.TestTokensJWT()), asp)
-	app, err := provider.AppStructs(test.appQName)
+
+	appParts, _, cleanup := buildAppParts(t)
+	defer cleanup()
+
+	appPart, err := appParts.Borrow(test.appQName, test.partition, cluster.ProcessorKind_Command)
 	req.NoError(err)
+	defer appPart.Release()
+
+	as := appPart.AppStructs()
 
 	idGen := newTSIdsGenerator()
 	wg := sync.WaitGroup{}
@@ -73,21 +74,25 @@ func Test_Race_SimpleInsertOne(t *testing.T) {
 		wg.Add(1)
 		go func(areq *require.Assertions, _ istructs.IAppStructs, aidGen *TSidsGeneratorType) {
 			defer wg.Done()
-			saveEvent(areq, app, idGen, newTSModify(app, aidGen, func(event istructs.IRawEventBuilder) {
+			saveEvent(areq, as, idGen, newTSModify(as, aidGen, func(event istructs.IRawEventBuilder) {
 				newDepartmentCUD(event, 1, 1, "Cold Drinks")
 			}))
-		}(req, app, idGen)
+		}(req, as, idGen)
 	}
 	wg.Wait()
 }
 
 func Test_Race_SimpleInsertMany(t *testing.T) {
 	req := require.New(t)
-	appConfigs, asp := appConfigs(t)
-	provider := istructsmem.Provide(appConfigs, iratesce.TestBucketsFactory,
-		payloads.ProvideIAppTokensFactory(itokensjwt.TestTokensJWT()), asp)
-	app, err := provider.AppStructs(test.appQName)
+
+	appParts, _, cleanup := buildAppParts(t)
+	defer cleanup()
+
+	appPart, err := appParts.Borrow(test.appQName, test.partition, cluster.ProcessorKind_Command)
 	req.NoError(err)
+	defer appPart.Release()
+
+	as := appPart.AppStructs()
 
 	idGen := newTSIdsGenerator()
 	wg := sync.WaitGroup{}
@@ -95,10 +100,10 @@ func Test_Race_SimpleInsertMany(t *testing.T) {
 		wg.Add(1)
 		go func(areq *require.Assertions, _ istructs.IAppStructs, aidGen *TSidsGeneratorType, ai int) {
 			defer wg.Done()
-			saveEvent(areq, app, idGen, newTSModify(app, aidGen, func(event istructs.IRawEventBuilder) {
+			saveEvent(areq, as, idGen, newTSModify(as, aidGen, func(event istructs.IRawEventBuilder) {
 				newDepartmentCUD(event, istructs.RecordID(ai), int32(ai), "Hot Drinks"+strconv.Itoa(ai))
 			}))
-		}(req, app, idGen, i+1)
+		}(req, as, idGen, i+1)
 	}
 	wg.Wait()
 }
