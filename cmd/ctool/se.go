@@ -150,7 +150,10 @@ func seClusterControllerFunction(c *clusterType) error {
 		case nrAppNode:
 			err = replaceSeAppNode(c)
 		}
-
+	case ckAcme:
+		if err = deploySeDockerStack(c); err != nil {
+			return err
+		}
 	default:
 		err = ErrUnknownCommand
 	}
