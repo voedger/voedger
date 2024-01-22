@@ -465,18 +465,12 @@ func (a *acmeType) domains() string {
 
 // adds new domains to the ACME Domains list from a string "Domain1,Domain2,Domain3"
 func (a *acmeType) addDomains(domainsStr string) {
-	domainsStr = strings.ReplaceAll(domainsStr, " ", "")
 	domains := strings.Split(domainsStr, comma)
-	if len(domains) == 0 {
-		return
-	}
-
 	for _, d := range domains {
 		if !strings.Contains(strings.Join(a.Domains, comma), d) {
 			a.Domains = append(a.Domains, d)
 		}
 	}
-
 }
 
 type clusterType struct {
@@ -557,9 +551,6 @@ func (c *clusterType) applyCmd(cmd *cmdType) error {
 	case ckAcme:
 		if cmd.Args[0] == "add" && len(cmd.Args) == 2 {
 			c.Acme.addDomains(cmd.Args[1])
-			if err := c.setEnv(); err != nil {
-				return err
-			}
 		}
 	case ckReplace:
 		oldAddr := cmd.Args[0]
