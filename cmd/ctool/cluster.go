@@ -439,6 +439,10 @@ func validateAcmeCmd(cmd *cmdType, cluster *clusterType) error {
 
 func validateAcmeAddCmd(cmd *cmdType, cluster *clusterType) error {
 
+	if cluster.Draft {
+		return ErrClusterConfNotFound
+	}
+
 	if len(cmd.Args) != 2 {
 		return ErrInvalidNumberOfArguments
 	}
