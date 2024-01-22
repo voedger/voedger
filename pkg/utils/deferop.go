@@ -8,6 +8,7 @@ package coreutils
 import (
 	"context"
 
+	"github.com/untillpro/goutils/logger"
 	"github.com/voedger/voedger/pkg/pipeline"
 )
 
@@ -28,6 +29,7 @@ func (o *deferOp[T]) DoSync(ctx context.Context, work interface{}) (err error) {
 }
 
 func (o *deferOp[T]) OnErr(err error, _ T, _ pipeline.IWorkpieceContext) error {
+	logger.Info("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
 	o.deferError = err
 	return nil
 }

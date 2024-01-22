@@ -109,22 +109,27 @@ func (c *cmdWorkpiece) release() {
 	}
 }
 
+func releaseWorkpiece(work *cmdWorkpiece) error {
+	work.release()
+	return nil
+}
+
 func borrowAppPart(_ context.Context, work interface{}) error {
 	return work.(*cmdWorkpiece).borrow()
 }
 
-type releaseWorkpiece struct{ pipeline.NOOP }
+// type releaseWorkpiece struct{ pipeline.NOOP }
 
-// nolint (result is always nil)
-func (r *releaseWorkpiece) DoSync(_ context.Context, work interface{}) (err error) {
-	work.(*cmdWorkpiece).release()
-	return nil
-}
+// // nolint (result is always nil)
+// func (r *releaseWorkpiece) DoSync(_ context.Context, work interface{}) (err error) {
+// 	work.(*cmdWorkpiece).release()
+// 	return nil
+// }
 
-// nolint (result is always nil)
-func (r *releaseWorkpiece) OnErr(err error, w interface{}, ctx pipeline.IWorkpieceContext) error {
-	return err
-}
+// // nolint (result is always nil)
+// func (r *releaseWorkpiece) OnErr(err error, w interface{}, ctx pipeline.IWorkpieceContext) error {
+// 	return err
+// }
 
 func (ap *appPartition) getWorkspace(wsid istructs.WSID) *workspace {
 	ws, ok := ap.workspaces[wsid]

@@ -97,7 +97,7 @@ func ProvideServiceFactory(appParts appparts.IAppPartitions, now coreutils.TimeF
 				pipeline.WireFunc("n10n", cmdProc.n10n),
 				pipeline.WireFunc("putWLog", putWLog),
 				pipeline.WireSyncOperator("sendResponse", &opSendResponse{cmdProc: cmdProc}), // ICatch
-				pipeline.WireSyncOperator("releaseWorkpiece", &releaseWorkpiece{}),           // ICatch
+				coreutils.DeferOperator[*cmdWorkpiece]("releaseWorkpiece", releaseWorkpiece), // ICatch
 			)
 			// TODO: сделать потом plogOffset свой по каждому разделу, wlogoffset - свой для каждого wsid
 			defer cmdPipeline.Close()
