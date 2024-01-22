@@ -147,15 +147,21 @@ func (cmdProc *cmdProc) provideGetAppPartition(syncActualizerFactory pipeline.IS
 
 func getIWorkspace(_ context.Context, work interface{}) (err error) {
 	cmd := work.(*cmdWorkpiece)
-	cmd.iWorkspace = cmd.appStructs.AppDef().WorkspaceByDescriptor(cmd.wsDesc.QName())
+	if !coreutils.IsDummyWS(cmd.cmdMes.WSID()) {
+		cmd.iWorkspace = cmd.appStructs.AppDef().WorkspaceByDescriptor(cmd.wsDesc.AsQName(authnz.Field_WSKind))
+	}
 	return nil
 }
 
 func getICommand(_ context.Context, work interface{}) (err error) {
 	cmd := work.(*cmdWorkpiece)
-	cmdType := cmd.iWorkspace.Type(cmd.cmdMes.QName())
-	if cmdType == nil {
-		return fmt.Errorf("command %s does not exists in workspace %s", cmd.cmdMes.QName(), cmd.iWorkspace.QName())
+	var cmdType appdef.IType
+	if coreutils.IsDummyWS(cmd.cmdMes.WSID()) {
+		cmdType = cmd.AppDef().Type(cmd.cmdMes.QName())
+	} else {
+		if cmdType = cmd.iWorkspace.Type(cmd.cmdMes.QName()); cmdType == nil {
+			return fmt.Errorf("command %s does not exists in workspace %s", cmd.cmdMes.QName(), cmd.iWorkspace.QName())
+		}
 	}
 	ok := false
 	cmd.iCommand, ok = cmdType.(appdef.ICommand)
@@ -297,7 +303,7 @@ func getWSDesc(_ context.Context, work interface{}) (err error) {
 func checkWSInitialized(_ context.Context, work interface{}) (err error) {
 	cmd := work.(*cmdWorkpiece)
 	wsDesc := work.(*cmdWorkpiece).wsDesc
-	cmdQName := cmd.iCommand.QName()
+	cmdQName := cmd.cmdMes.QName()
 	if coreutils.IsDummyWS(cmd.cmdMes.WSID()) {
 		return nil
 	}
@@ -344,7 +350,7 @@ func checkWSActive(_ context.Context, work interface{}) (err error) {
 
 func limitCallRate(_ context.Context, work interface{}) (err error) {
 	cmd := work.(*cmdWorkpiece)
-	if cmd.appStructs.IsFunctionRateLimitsExceeded(cmd.iCommand.QName(), cmd.cmdMes.WSID()) {
+	if cmd.appStructs.IsFunctionRateLimitsExceeded(cmd.cmdMes.QName(), cmd.cmdMes.WSID()) {
 		return coreutils.NewHTTPErrorf(http.StatusTooManyRequests)
 	}
 	return nil
@@ -368,7 +374,7 @@ func (cmdProc *cmdProc) authorizeRequest(_ context.Context, work interface{}) (e
 	cmd := work.(*cmdWorkpiece)
 	req := iauthnz.AuthzRequest{
 		OperationKind: iauthnz.OperationKind_EXECUTE,
-		Resource:      cmd.iCommand.QName(),
+		Resource:      cmd.cmdMes.QName(),
 	}
 	ok, err := cmdProc.authorizer.Authorize(cmd.appStructs, cmd.principals, req)
 	if err != nil {
@@ -388,7 +394,7 @@ func getResources(_ context.Context, work interface{}) (err error) {
 
 func getExec(_ context.Context, work interface{}) (err error) {
 	cmd := work.(*cmdWorkpiece)
-	cmd.cmdExec = cmd.resources.QueryResource(cmd.iCommand.QName()).(istructs.ICommandFunction).Exec
+	cmd.cmdExec = cmd.resources.QueryResource(cmd.cmdMes.QName()).(istructs.ICommandFunction).Exec
 	return nil
 }
 
@@ -415,13 +421,13 @@ func (cmdProc *cmdProc) getRawEventBuilder(_ context.Context, work interface{}) 
 	grebp := istructs.GenericRawEventBuilderParams{
 		HandlingPartition: cmd.cmdMes.PartitionID(),
 		Workspace:         cmd.cmdMes.WSID(),
-		QName:             cmd.iCommand.QName(),
+		QName:             cmd.cmdMes.QName(),
 		RegisteredAt:      istructs.UnixMilli(cmdProc.now().UnixMilli()),
 		PLogOffset:        cmdProc.appPartition.nextPLogOffset,
 		WLogOffset:        cmd.workspace.NextWLogOffset,
 	}
 
-	switch cmd.iCommand.QName() {
+	switch cmd.cmdMes.QName() {
 	case builtin.QNameCommandInit: // nolint, kept to not to break existing events only
 		cmd.reb = cmd.appStructs.Events().GetSyncRawEventBuilder(
 			istructs.SyncRawEventBuilderParams{
@@ -532,8 +538,8 @@ func (cmdProc *cmdProc) validate(ctx context.Context, work interface{}) (err err
 	}
 	for _, appCUDValidator := range cmd.appStructs.CUDValidators() {
 		err = iterate.ForEachError(cmd.rawEvent.CUDs, func(rec istructs.ICUDRow) error {
-			if appCUDValidator.Match(rec, cmd.cmdMes.WSID(), cmd.iCommand.QName()) {
-				if err := appCUDValidator.Validate(ctx, cmd.appStructs, rec, cmd.cmdMes.WSID(), cmd.iCommand.QName()); err != nil {
+			if appCUDValidator.Match(rec, cmd.cmdMes.WSID(), cmd.cmdMes.QName()) {
+				if err := appCUDValidator.Validate(ctx, cmd.appStructs, rec, cmd.cmdMes.WSID(), cmd.cmdMes.QName()); err != nil {
 					return err
 				}
 			}

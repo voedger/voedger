@@ -5,7 +5,10 @@
 
 package pipeline
 
-import "context"
+import (
+	"context"
+	"errors"
+)
 
 type finallyOp[T any] struct {
 	NOOP
@@ -16,9 +19,8 @@ type finallyOp[T any] struct {
 func (o *finallyOp[T]) DoSync(ctx context.Context, work interface{}) (err error) {
 	err = o.f(work.(T))
 	if o.finalError != nil {
-		err := o.finalError
+		err = errors.Join(o.finalError, err)
 		o.finalError = nil
-		return err
 	}
 	return err
 }

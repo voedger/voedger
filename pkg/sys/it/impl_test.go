@@ -320,3 +320,12 @@ func TestIsActiveValidation(t *testing.T) {
 		vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect403()).Println()
 	})
 }
+
+func TestCommandProcessorMustTakeQNamesFromWorkspace(t *testing.T) {
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
+
+	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+
+	vit.PostProfile(ws.Owner, "c.app1pkg.TestCmd", "{}")
+}

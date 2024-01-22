@@ -36,9 +36,7 @@ import (
 )
 
 var cocaColaDocID istructs.RecordID
-var collectionQuery appdef.IQuery
-var getCDocQuery appdef.IQuery
-var stateQuery appdef.IQuery
+var qNameWorkspaceDescriptor = appdef.NewQName(appdef.SysPackage, "WorkspaceDescriptor")
 
 const maxPrepareQueries = 10
 
@@ -87,6 +85,12 @@ func buildAppParts(t *testing.T) (appParts appparts.IAppPartitions, cfgs istruct
 				AddField(field_After, appdef.DataKind_int64, true).(appdef.IType).QName()).
 			SetResult(adb.AddObject(appdef.NewQName(appdef.SysPackage, "StateResult")).
 				AddField(field_State, appdef.DataKind_string, true).(appdef.IType).QName())
+		adb.AddSingleton(qNameWorkspaceDescriptor) // stub to make tests work
+		wsBuilder := adb.AddWorkspace(appdef.NewQName(appdef.SysPackage, "test_ws"))
+		wsBuilder.SetDescriptor(qNameWorkspaceDescriptor)
+		wsBuilder.AddType(qNameQueryCollection)
+		wsBuilder.AddType(qNameQueryGetCDoc)
+		wsBuilder.AddType(qNameQueryState)
 	}
 	{ // "modify" function
 		adb.AddCommand(test.modifyCmdName)
@@ -152,10 +156,6 @@ func buildAppParts(t *testing.T) (appParts appparts.IAppPartitions, cfgs istruct
 			AddField(state.ColOffset, appdef.DataKind_int64, true)
 	})
 
-	collectionQuery = appDef.Query(qNameQueryCollection)
-	getCDocQuery = appDef.Query(qNameQueryGetCDoc)
-	stateQuery = appDef.Query(qNameQueryState)
-
 	provider := istructsmem.Provide(cfgs, iratesce.TestBucketsFactory,
 		payloads.ProvideIAppTokensFactory(itokensjwt.TestTokensJWT()), asp)
 
@@ -163,6 +163,34 @@ func buildAppParts(t *testing.T) (appParts appparts.IAppPartitions, cfgs istruct
 	require.NoError(err)
 	appParts.DeployApp(test.appQName, appDef, test.appPartsCount, test.appEngines)
 	appParts.DeployAppPartitions(test.appQName, []istructs.PartitionID{test.partition})
+
+	// create stub for cdoc.sys.WorkspaceDescriptor to make query processor work
+	as, err := provider.AppStructs(istructs.AppQName_test1_app1)
+	require.NoError(err)
+	now := time.Now()
+	grebp := istructs.GenericRawEventBuilderParams{
+		HandlingPartition: test.partition,
+		Workspace:         test.workspace,
+		QName:             istructs.QNameCommandCUD,
+		RegisteredAt:      istructs.UnixMilli(now.UnixMilli()),
+		PLogOffset:        1,
+		WLogOffset:        1,
+	}
+	reb := as.Events().GetSyncRawEventBuilder(
+		istructs.SyncRawEventBuilderParams{
+			GenericRawEventBuilderParams: grebp,
+			SyncedAt:                     istructs.UnixMilli(now.UnixMilli()),
+		},
+	)
+	cdocWSDesc := reb.CUDBuilder().Create(qNameWorkspaceDescriptor)
+	cdocWSDesc.PutRecordID(appdef.SystemField_ID, 1)
+	rawEvent, err := reb.BuildRawEvent()
+	require.NoError(err)
+	pLogEvent, err := as.Events().PutPlog(rawEvent, nil, istructsmem.NewIDGenerator())
+	require.NoError(err)
+	defer pLogEvent.Release()
+	require.NoError(as.Records().Apply(pLogEvent))
+	require.NoError(as.Events().PutWlog(pLogEvent))
 
 	return appParts, cfgs, cleanup
 }
@@ -465,7 +493,7 @@ func TestBasicUsage_QueryFunc_Collection(t *testing.T) {
 	go queryProcessor.Run(context.Background())
 	sysToken, err := payloads.GetSystemPrincipalTokenApp(appTokens)
 	require.NoError(err)
-	serviceChannel <- queryprocessor.NewQueryMessage(context.Background(), test.appQName, test.partition, test.workspace, nil, request, collectionQuery, "", sysToken)
+	serviceChannel <- queryprocessor.NewQueryMessage(context.Background(), test.appQName, test.partition, test.workspace, nil, request, qNameQueryCollection, "", sysToken)
 	<-out.done
 
 	out.requireNoError(require)
@@ -581,7 +609,7 @@ func TestBasicUsage_QueryFunc_CDoc(t *testing.T) {
 	go queryProcessor.Run(context.Background())
 	sysToken, err := payloads.GetSystemPrincipalTokenApp(appTokens)
 	require.NoError(err)
-	serviceChannel <- queryprocessor.NewQueryMessage(context.Background(), test.appQName, test.partition, test.workspace, nil, []byte(request), getCDocQuery, "", sysToken)
+	serviceChannel <- queryprocessor.NewQueryMessage(context.Background(), test.appQName, test.partition, test.workspace, nil, []byte(request), qNameQueryGetCDoc, "", sysToken)
 	<-out.done
 
 	out.requireNoError(require)
@@ -701,7 +729,7 @@ func TestBasicUsage_State(t *testing.T) {
 	sysToken, err := payloads.GetSystemPrincipalTokenApp(appTokens)
 	require.NoError(err)
 	serviceChannel <- queryprocessor.NewQueryMessage(context.Background(), test.appQName, test.partition, test.workspace, nil, []byte(`{"args":{"After":0},"elements":[{"fields":["State"]}]}`),
-		stateQuery, "", sysToken)
+		qNameQueryState, "", sysToken)
 	<-out.done
 
 	out.requireNoError(require)
@@ -870,7 +898,7 @@ func TestState_withAfterArgument(t *testing.T) {
 	sysToken, err := payloads.GetSystemPrincipalTokenApp(appTokens)
 	require.NoError(err)
 	serviceChannel <- queryprocessor.NewQueryMessage(context.Background(), test.appQName, test.partition, test.workspace, nil, []byte(`{"args":{"After":5},"elements":[{"fields":["State"]}]}`),
-		stateQuery, "", sysToken)
+		qNameQueryState, "", sysToken)
 	<-out.done
 
 	out.requireNoError(require)

@@ -30,7 +30,7 @@ func TestFinallyOperatorBasicUsage(t *testing.T) {
 		require.Equal(1, count)
 	})
 
-	t.Run("error", func(t *testing.T) {
+	t.Run("error before finally", func(t *testing.T) {
 		count := 0
 		ctx := context.Background()
 		testErr := errors.New("test error")
@@ -46,7 +46,7 @@ func TestFinallyOperatorBasicUsage(t *testing.T) {
 		require.Equal(1, count)
 	})
 
-	t.Run("error in finally", func(t *testing.T) {
+	t.Run("error before and error in finally -> errors are combined", func(t *testing.T) {
 		count := 0
 		ctx := context.Background()
 		testErr := errors.New("test error")
@@ -60,10 +60,11 @@ func TestFinallyOperatorBasicUsage(t *testing.T) {
 
 		err := p.SendSync(42)
 		require.ErrorIs(err, testErr)
+		require.ErrorIs(err, testErr2)
 		require.Equal(1, count)
 	})
 
-	t.Run("error in finally no final error", func(t *testing.T) {
+	t.Run("error in finally, no error before", func(t *testing.T) {
 		count := 0
 		ctx := context.Background()
 		testErr2 := errors.New("test error 2")
