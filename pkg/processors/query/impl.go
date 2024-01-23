@@ -124,6 +124,7 @@ func implServiceFactory(serviceChannel iprocbus.ServiceChannel, resultSenderClos
 					// wait until all rows are sent
 					qwork.rowsProcessor.Close()
 				}
+				err = coreutils.WrapSysError(err, http.StatusInternalServerError)
 				rs.Close(err)
 				qwork.release()
 				metrics.IncreaseApp(queriesSeconds, vvm, msg.AppQName(), time.Since(now).Seconds())
