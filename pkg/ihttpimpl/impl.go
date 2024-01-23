@@ -148,9 +148,7 @@ func (p *httpProcessor) AddReverseProxyRoute(srcRegExp, dstRegExp string) {
 		srcRegExp:        regexp.MustCompile(srcRegExp),
 		dstRegExpPattern: dstRegExp,
 	})
-	if p.router.reverseProxyRoute == nil {
-		p.router.reverseProxyRoute = p.router.contentRouter.Name("reverse-proxy")
-	}
+	p.router.setReverseProxyRoute()
 }
 
 func (p *httpProcessor) SetReverseProxyRouteDefault(srcRegExp, dstRegExp string) {
@@ -161,9 +159,7 @@ func (p *httpProcessor) SetReverseProxyRouteDefault(srcRegExp, dstRegExp string)
 		srcRegExp:        regexp.MustCompile(srcRegExp),
 		dstRegExpPattern: dstRegExp,
 	}
-	if p.router.reverseProxyRoute == nil {
-		p.router.reverseProxyRoute = p.router.contentRouter.Name("reverse-proxy").MatcherFunc(p.router.matchRedirections)
-	}
+	p.router.setReverseProxyRoute()
 }
 
 func (p *httpProcessor) AddAcmeDomain(domain string) {
@@ -344,7 +340,7 @@ func newRouter() *router {
 	}
 }
 
-func (r *router) setRedirectionRoute() {
+func (r *router) setReverseProxyRoute() {
 	if r.reverseProxyRoute == nil {
 		r.reverseProxyRoute = r.contentRouter.Name("reverse-proxy").MatcherFunc(r.matchRedirections)
 	}
