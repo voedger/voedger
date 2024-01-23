@@ -33,28 +33,29 @@ jobs:
       TF_VAR_git_commit_id: ""
       TF_VAR_git_repo_url: "https://github.com/voedger/voedger"
       TF_VAR_ssh_port: 2214
+      TF_VAR_issue_number: ${{ github.event.issue.number }}
 
     steps:
       - name: Check Issue
         run: |
-
+      
           ORG_NAME="voedger"
           TEAM_NAME="DevOps_ctool"
           USER_NAME="${{ github.event.issue.user.login }}"
-
+      
           # Check organization membership
           ORG_MEMBERSHIP=$(curl -s -o /dev/null -w "%{http_code}" -H "Authorization: Bearer ${{ secrets.REPOREADING_TOKEN }}" "https://api.github.com/orgs/$ORG_NAME/members/$USER_NAME")
-
+      
           if [[ $ORG_MEMBERSHIP -eq 204 ]]; then
             echo "The user $USER_NAME is a member of the organization $ORG_NAME."
           else
             echo "The user $USER_NAME is not a member of the organization $ORG_NAME."
             exit 1
           fi
-
+      
           # Check team membership
           TEAM_MEMBERSHIP=$(curl -s -o /dev/null -w "%{http_code}" -H "Authorization: Bearer ${{ secrets.REPOREADING_TOKEN }}" "https://api.github.com/orgs/$ORG_NAME/teams/$TEAM_NAME/memberships/$USER_NAME")
-
+      
           if [[ $TEAM_MEMBERSHIP -eq 200 ]]; then
             echo "The user $USER_NAME is a member of the team $TEAM_NAME within the organization $ORG_NAME."
           else
@@ -95,6 +96,8 @@ jobs:
 
       - name: Init Cluster
         uses: ./.github/actions/cluster-init-action
+        with:
+          command: "./ctool init SE --acme-domain ${{ github.event.issue.number }}-01.cdci.voedger.io 10.0.0.11 10.0.0.12 10.0.0.13 10.0.0.14 10.0.0.15 -p ${{ env.SSH_PORT }} -v --ssh-key /tmp/amazonKey.pem"
 
       - name: Run Voedger Cluster Tests
         uses: ./.github/actions/cluster-test-action
@@ -133,35 +136,9 @@ jobs:
       TF_VAR_git_commit_id: "4b0e2993e942a57234d949b2b7d86f9965ed928c"
       TF_VAR_git_repo_url: "https://github.com/voedger/voedger"
       TF_VAR_ssh_port: 2214
+      TF_VAR_issue_number: ${{ github.event.issue.number }}
 
     steps:
-      - name: Check Issue
-        run: |
-
-          ORG_NAME="voedger"
-          TEAM_NAME="DevOps_ctool"
-          USER_NAME="${{ github.event.issue.user.login }}"
-
-          # Check organization membership
-          ORG_MEMBERSHIP=$(curl -s -o /dev/null -w "%{http_code}" -H "Authorization: Bearer ${{ secrets.REPOREADING_TOKEN }}" "https://api.github.com/orgs/$ORG_NAME/members/$USER_NAME")
-
-          if [[ $ORG_MEMBERSHIP -eq 204 ]]; then
-            echo "The user $USER_NAME is a member of the organization $ORG_NAME."
-          else
-            echo "The user $USER_NAME is not a member of the organization $ORG_NAME."
-            exit 1
-          fi
-
-          # Check team membership
-          TEAM_MEMBERSHIP=$(curl -s -o /dev/null -w "%{http_code}" -H "Authorization: Bearer ${{ secrets.REPOREADING_TOKEN }}" "https://api.github.com/orgs/$ORG_NAME/teams/$TEAM_NAME/memberships/$USER_NAME")
-
-          if [[ $TEAM_MEMBERSHIP -eq 200 ]]; then
-            echo "The user $USER_NAME is a member of the team $TEAM_NAME within the organization $ORG_NAME."
-          else
-            echo "The user $USER_NAME is not a member of the team $TEAM_NAME within the organization $ORG_NAME."
-            exit 1
-          fi
-
       - name: Checkout
         uses: actions/checkout@v3
 
@@ -195,6 +172,8 @@ jobs:
 
       - name: Init Cluster
         uses: ./.github/actions/cluster-init-action
+        with:
+          command: "./ctool init SE 10.0.0.11 10.0.0.12 10.0.0.13 10.0.0.14 10.0.0.15 -p ${{ env.SSH_PORT }} -v --ssh-key /tmp/amazonKey.pem"
 
       - name: Wait for db cluster building
         run: |
@@ -226,6 +205,13 @@ jobs:
              go build -o ctool
              ./ctool version
              ./ctool upgrade -v --ssh-key /tmp/amazonKey.pem
+          EOF
+
+      - name: Add ACME domain
+        run: |
+          ssh ${{ env.SSH_OPTIONS }} ubuntu@${{ env.CTOOL_IP }} <<EOF 
+             cd /home/ubuntu/voedger/cmd/ctool
+             ./ctool acme add ${{ github.event.issue.number }}-01.cdci.voedger.io -v --ssh-key /tmp/amazonKey.pem
           EOF
 
       - name: Run Voedger Cluster Tests
