@@ -551,6 +551,9 @@ func (c *clusterType) applyCmd(cmd *cmdType) error {
 	case ckAcme:
 		if cmd.Args[0] == "add" && len(cmd.Args) == 2 {
 			c.Acme.addDomains(cmd.Args[1])
+			if err := c.setEnv(); err != nil {
+				return err
+			}
 		}
 	case ckReplace:
 		oldAddr := cmd.Args[0]
