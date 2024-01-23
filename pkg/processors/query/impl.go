@@ -119,7 +119,8 @@ func implServiceFactory(serviceChannel iprocbus.ServiceChannel, resultSenderClos
 					p = nil
 				}
 				rs.Close(err)
-				qpm.Increase(queriesSeconds, time.Since(now).Seconds())
+				qwork.release()
+				metrics.IncreaseApp(queriesSeconds, vvm, msg.AppQName(), time.Since(now).Seconds())
 			case <-ctx.Done():
 			}
 		}
@@ -304,10 +305,6 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 				})
 			})
 			return coreutils.WrapSysError(err, http.StatusInternalServerError)
-		}),
-		pipeline.FinallyOperator[*queryWork]("release operator", func(qw *queryWork) error {
-			qw.release()
-			return nil
 		}),
 	}
 	return pipeline.NewSyncPipeline(requestCtx, "Query Processor", ops[0], ops[1:]...)
