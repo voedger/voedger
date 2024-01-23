@@ -162,7 +162,7 @@ func TestResultFieldsOperator_DoSync(t *testing.T) {
 					},
 				},
 			}
-			return workpiece{
+			return rowsWorkpiece{
 				object: o,
 				outputRow: &outputRow{
 					keyToIdx: map[string]int{
@@ -214,7 +214,7 @@ func TestResultFieldsOperator_DoSync(t *testing.T) {
 			elements: []IElement{element{path: path{""}, fields: []IResultField{resultField{""}}}},
 			metrics:  &testMetrics{},
 		}
-		work := workpiece{
+		work := rowsWorkpiece{
 			outputRow: &outputRow{
 				keyToIdx: map[string]int{"": 0},
 				values:   []interface{}{nil},
@@ -228,7 +228,7 @@ func TestResultFieldsOperator_DoSync(t *testing.T) {
 	})
 	t.Run("Should handle read field value error during row fill with result fields", func(t *testing.T) {
 		require := require.New(t)
-		work := workpiece{
+		work := rowsWorkpiece{
 			outputRow: &outputRow{
 				keyToIdx: map[string]int{"": 0},
 				values:   []interface{}{nil},
@@ -246,7 +246,7 @@ func TestResultFieldsOperator_DoSync(t *testing.T) {
 		require := require.New(t)
 		ctx, cancel := context.WithCancel(context.Background())
 		cancel()
-		work := workpiece{
+		work := rowsWorkpiece{
 			outputRow: &outputRow{
 				keyToIdx: map[string]int{"": 0},
 				values:   []interface{}{nil},
@@ -266,7 +266,7 @@ func TestResultFieldsOperator_DoSync(t *testing.T) {
 		require := require.New(t)
 		ctx, cancel := context.WithCancel(context.Background())
 		cancel()
-		work := workpiece{
+		work := rowsWorkpiece{
 			object: &coreutils.TestObject{Containers_: map[string][]*coreutils.TestObject{
 				"container": {&coreutils.TestObject{Data: map[string]interface{}{"": ""}}},
 			}},

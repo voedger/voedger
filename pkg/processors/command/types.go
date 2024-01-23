@@ -66,7 +66,6 @@ type cmdWorkpiece struct {
 	reb                          istructs.IRawEventBuilder
 	rawEvent                     istructs.IRawEvent
 	pLogEvent                    istructs.IPLogEvent
-	err                          error
 	workspace                    *workspace
 	idGenerator                  *implIDGenerator
 	eca                          istructs.ExecCommandArgs

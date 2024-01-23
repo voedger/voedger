@@ -14,7 +14,7 @@ import (
 
 func TestFilterOperator_DoAsync(t *testing.T) {
 	emptyWorkpiece := func() pipeline.IWorkpiece {
-		return workpiece{
+		return rowsWorkpiece{
 			outputRow: &outputRow{
 				keyToIdx: map[string]int{rootDocument: 0},
 				values:   []interface{}{[]IOutputRow{&outputRow{}}},
