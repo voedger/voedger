@@ -91,7 +91,7 @@ func implRowsProcessorFactory(ctx context.Context, appDef appdef.IAppDef, state 
 
 func implServiceFactory(serviceChannel iprocbus.ServiceChannel, resultSenderClosableFactory ResultSenderClosableFactory,
 	appParts appparts.IAppPartitions, maxPrepareQueries int, metrics imetrics.IMetrics, vvm string,
-	authn iauthnz.IAuthenticator, authz iauthnz.IAuthorizer, appCfgs istructsmem.AppConfigsType) pipeline.IService {
+	authn iauthnz.IAuthenticator, authz iauthnz.IAuthorizer) pipeline.IService {
 	secretReader := isecretsimpl.ProvideSecretReader()
 	return pipeline.NewService(func(ctx context.Context) {
 		var p pipeline.ISyncPipeline
@@ -110,7 +110,7 @@ func implServiceFactory(serviceChannel iprocbus.ServiceChannel, resultSenderClos
 				rs = &resultSenderClosableOnlyOnce{IResultSenderClosable: rs}
 				qwork := newQueryWork(msg, rs, appParts, maxPrepareQueries, qpm, secretReader)
 				if p == nil {
-					p = newQueryProcessorPipeline(ctx, authn, authz, appCfgs)
+					p = newQueryProcessorPipeline(ctx, authn, authz)
 				}
 				err := p.SendSync(qwork)
 				if err != nil {
@@ -129,8 +129,7 @@ func implServiceFactory(serviceChannel iprocbus.ServiceChannel, resultSenderClos
 	})
 }
 
-func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthenticator, authz iauthnz.IAuthorizer,
-	appCfgs istructsmem.AppConfigsType) pipeline.ISyncPipeline {
+func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthenticator, authz iauthnz.IAuthorizer) pipeline.ISyncPipeline {
 	ops := []*pipeline.WiredOperator{
 		operator("borrowAppPart", borrowAppPart),
 		operator("check function call rate", func(ctx context.Context, qw *queryWork) (err error) {
