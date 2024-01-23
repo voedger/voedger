@@ -149,8 +149,7 @@ func (cmdProc *cmdProc) getCmdResultBuilder(_ context.Context, work interface{})
 	cmd := work.(*cmdWorkpiece)
 	cmdResultType := cmd.cmdMes.Command().Result()
 	if cmdResultType != nil {
-		cfg := cmdProc.cfgs[cmd.cmdMes.AppQName()]
-		cmd.cmdResultBuilder = istructsmem.NewIObjectBuilder(cfg, cmdResultType.QName())
+		cmd.cmdResultBuilder = cmd.appStructs.ObjectBuilder(cmdResultType.QName())
 	}
 	return nil
 }
