@@ -319,7 +319,6 @@ func (p *httpProcessor) requestHandler(ctx context.Context, sender ibus.ISender,
 		coreutils.ReplyBadRequest(sender, err.Error())
 		return
 	}
-	// TODO: is that the correct way of calculating partNo?
 	partNo := istructs.PartitionID(request.WSID % partitionsAmount)
 	handler, err := p.getAppPartHandler(appQName, partNo)
 	if err != nil {
