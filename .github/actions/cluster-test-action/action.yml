@@ -27,6 +27,30 @@ runs:
            exit 1
         fi
       shell: bash
+
+    - name: Check voedger SE stack status
+      run: |
+        attempts=3
+        ssh ${{ env.SSH_OPTIONS }} ubuntu@${{ env.PUBLIC_IP }} docker node update --label-rm  AppNode app-node-2
+        sleep 20
+        url="https://${{ github.event.issue.number }}-01.cdci.voedger.io/static/sys/monitor/site/hello"
+        for ((i=1; i<=attempts; i++)); do
+          echo "Attempt $i to connect to $url"
+          if curl --output /dev/null --fail -Iv "$url"; then
+            echo "Website is available over HTTPS."
+            break
+          fi
+  
+          if [ "$i" -lt "$attempts" ]; then
+            echo "Retrying in 2 seconds..."
+            sleep 20
+          else
+            echo "Maximum attempts reached. Website is not available."
+            exit 1
+          fi
+        done
+        ssh ${{ env.SSH_OPTIONS }} ubuntu@${{ env.PUBLIC_IP }} docker node update --label-add  AppNode=true app-node-2
+      shell: bash
       
     - name: Check Prometheus and Alertmanager
       run: |
