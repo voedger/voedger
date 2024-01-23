@@ -10,8 +10,8 @@ import (
 
 	"github.com/untillpro/goutils/logger"
 
-	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/isecrets"
@@ -94,7 +94,7 @@ func ProvideServiceFactory(appParts appparts.IAppPartitions, now coreutils.TimeF
 				pipeline.WireFunc("validateCmdResult", validateCmdResult),
 				pipeline.WireFunc("getIDGenerator", getIDGenerator),
 				pipeline.WireFunc("putPLog", cmdProc.putPLog),
-				pipeline.WireFunc("applyPLogEvent", applyPLogEvent),
+				pipeline.WireFunc("applyRecords", applyRecords),
 				pipeline.WireFunc("syncProjectorsStart", syncProjectorsBegin),
 				pipeline.WireFunc("syncProjectors", provideSyncActualizerFactory(syncActualizerFactory)),
 				pipeline.WireFunc("syncProjectorsEnd", syncProjectorsEnd),

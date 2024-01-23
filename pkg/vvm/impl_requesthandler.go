@@ -85,8 +85,6 @@ func provideIBus(appParts appparts.IAppPartitions, procbus iprocbus.IProcBus,
 	})
 }
 
-func parseFuncName(resource string) appdef.QName
-
 func deliverToProcessors(request ibus.Request, requestCtx context.Context, appQName istructs.AppQName, sender ibus.ISender, funcQName appdef.QName,
 	procbus iprocbus.IProcBus, token string, cpchIdx CommandProcessorsChannelGroupIdxType, qpcgIdx QueryProcessorsChannelGroupIdxType,
 	cpCount coreutils.CommandProcessorsCount, appPartsCount int) {

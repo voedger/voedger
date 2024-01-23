@@ -694,7 +694,7 @@ func (osp *wrongArgsCatcher) OnErr(err error, _ interface{}, _ pipeline.IWorkpie
 	return coreutils.WrapSysError(err, http.StatusBadRequest)
 }
 
-func applyPLogEvent(_ context.Context, work interface{}) (err error) {
+func applyRecords(_ context.Context, work interface{}) (err error) {
 	cmd := work.(*cmdWorkpiece)
 	if err = cmd.appStructs.Records().Apply(cmd.pLogEvent); err != nil {
 		cmd.appPartitionRestartScheduled = true

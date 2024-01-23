@@ -1179,10 +1179,9 @@ func TestAuthnz(t *testing.T) {
 		require.Equal(http.StatusUnauthorized, se.HTTPStatus)
 	})
 
-	t.Run("token provided by querying is denied -> 403 forbidden", func(t *testing.T) {
-		wsid := istructs.WSID(1)
-		token := getTestToken(appTokens, wsid)
-		serviceChannel <- NewQueryMessage(context.Background(), appName, partID, wsid, nil, body, qNameQryDenied, "127.0.0.1", token)
+	t.Run("token provided, query a denied func -> 403 forbidden", func(t *testing.T) {
+		token := getTestToken(appTokens, wsID)
+		serviceChannel <- NewQueryMessage(context.Background(), appName, partID, wsID, nil, body, qNameQryDenied, "127.0.0.1", token)
 		var se coreutils.SysError
 		require.ErrorAs(<-errs, &se)
 		require.Equal(http.StatusForbidden, se.HTTPStatus)
