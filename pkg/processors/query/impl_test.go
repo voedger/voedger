@@ -145,7 +145,7 @@ func TestBasicUsage_RowsProcessorFactory(t *testing.T) {
 	require.Equal(`[[[3,"White wine","Alcohol drinks"]]]`, result)
 }
 
-func getTestCfg(require *require.Assertions, prepareAppDef func(appdef.IAppDefBuilder), cfgFunc ...func(cfg *istructsmem.AppConfigType)) (cfgs istructsmem.AppConfigsType, appDef appdef.IAppDef, asp istructs.IAppStructsProvider, appTokens istructs.IAppTokens) {
+func getTestCfg(require *require.Assertions, prepareAppDef func(adb appdef.IAppDefBuilder, wsb appdef.IWorkspaceBuilder), cfgFunc ...func(cfg *istructsmem.AppConfigType)) (cfgs istructsmem.AppConfigsType, appDef appdef.IAppDef, asp istructs.IAppStructsProvider, appTokens istructs.IAppTokens) {
 	cfgs = make(istructsmem.AppConfigsType)
 	asf := istorage.ProvideMem()
 	storageProvider := istorageimpl.Provide(asf)
@@ -156,9 +156,9 @@ func getTestCfg(require *require.Assertions, prepareAppDef func(appdef.IAppDefBu
 	qNameArticle := appdef.NewQName("bo", "Article")
 
 	adb := appdef.New()
-	ws := adb.AddWorkspace(qNameTestWS)
+	wsb := adb.AddWorkspace(qNameTestWS)
 	adb.AddCDoc(qNameTestWSDescriptor)
-	ws.SetDescriptor(qNameTestWSDescriptor)
+	wsb.SetDescriptor(qNameTestWSDescriptor)
 
 	adb.AddObject(qNameFindArticlesByModificationTimeStampRangeParams).
 		AddField("from", appdef.DataKind_int64, false).
@@ -169,20 +169,25 @@ func getTestCfg(require *require.Assertions, prepareAppDef func(appdef.IAppDefBu
 		AddField("sys.ID", appdef.DataKind_RecordID, true).
 		AddField("name", appdef.DataKind_string, true).
 		AddField("id_department", appdef.DataKind_int64, true)
-	adb.AddSingleton(authnz.QNameCDocWorkspaceDescriptor).AddField(authnz.Field_WSKind, appdef.DataKind_QName, true) // need to avoid error cdoc.sys.wsdesc missing
+
+	// simplified cdoc.sys.WorkspaceDescriptor
+	adb.AddSingleton(authnz.QNameCDocWorkspaceDescriptor).
+		AddField(authnz.Field_WSKind, appdef.DataKind_QName, false).
+		AddField(authnz.Field_Status, appdef.DataKind_int32, false)
+
 	adb.AddQuery(qNameFunction).SetParam(qNameFindArticlesByModificationTimeStampRangeParams).SetResult(appdef.NewQName("bo", "Article"))
 	adb.AddCommand(istructs.QNameCommandCUD)
 	adb.AddQuery(qNameQryDenied)
-	ws.AddType(qNameDepartment)
-	ws.AddType(qNameArticle)
-	ws.AddType(qNameArticle)
-	ws.AddType(authnz.QNameCDocWorkspaceDescriptor)
-	ws.AddType(qNameFunction)
-	ws.AddType(istructs.QNameCommandCUD)
-	ws.AddType(qNameQryDenied)
+	wsb.AddType(qNameDepartment)
+	wsb.AddType(qNameArticle)
+	wsb.AddType(qNameArticle)
+	wsb.AddType(authnz.QNameCDocWorkspaceDescriptor)
+	wsb.AddType(qNameFunction)
+	wsb.AddType(istructs.QNameCommandCUD)
+	wsb.AddType(qNameQryDenied)
 
 	if prepareAppDef != nil {
-		prepareAppDef(adb)
+		prepareAppDef(adb, wsb)
 	}
 
 	cfg := cfgs.AddConfig(appName, adb)
@@ -284,6 +289,7 @@ func getTestCfg(require *require.Assertions, prepareAppDef func(appdef.IAppDefBu
 	)
 	cdocWSDesc := reb.CUDBuilder().Create(authnz.QNameCDocWorkspaceDescriptor)
 	cdocWSDesc.PutRecordID(appdef.SystemField_ID, 1)
+	cdocWSDesc.PutInt32(authnz.Field_Status, int32(authnz.WorkspaceStatus_Active))
 	cdocWSDesc.PutQName(authnz.Field_WSKind, qNameTestWSDescriptor)
 	rawEvent, err = reb.BuildRawEvent()
 	require.NoError(err)
@@ -1062,11 +1068,13 @@ func TestRateLimiter(t *testing.T) {
 	qNameMyFuncResults := appdef.NewQName(appdef.SysPackage, "results")
 	qName := appdef.NewQName(appdef.SysPackage, "myFunc")
 	cfgs, appDef, appStructsProvider, appTokens := getTestCfg(require,
-		func(appDef appdef.IAppDefBuilder) {
+		func(appDef appdef.IAppDefBuilder, wsb appdef.IWorkspaceBuilder) {
 			appDef.AddObject(qNameMyFuncParams)
 			appDef.AddObject(qNameMyFuncResults).
 				AddField("fld", appdef.DataKind_string, false)
-			appDef.AddQuery(qName).SetParam(qNameMyFuncParams).SetResult(qNameMyFuncResults)
+			qry := appDef.AddQuery(qName)
+			qry.SetParam(qNameMyFuncParams).SetResult(qNameMyFuncResults)
+			wsb.AddType(qry.QName())
 		},
 		func(cfg *istructsmem.AppConfigType) {
 			myFunc := istructsmem.NewQueryFunction(qName, istructsmem.NullQueryExec)
