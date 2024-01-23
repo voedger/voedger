@@ -134,6 +134,29 @@ func (no *NullObject) Container() string                        { return "" }
 func (no *NullObject) ID() RecordID                             { return NullRecordID }
 func (no *NullObject) Parent() RecordID                         { return NullRecordID }
 
+// Implements IRowWriter
+type NullRowWriter struct{}
+
+func (*NullRowWriter) PutInt32(string, int32)        {}
+func (*NullRowWriter) PutInt64(string, int64)        {}
+func (*NullRowWriter) PutFloat32(string, float32)    {}
+func (*NullRowWriter) PutFloat64(string, float64)    {}
+func (*NullRowWriter) PutBytes(string, []byte)       {}
+func (*NullRowWriter) PutString(string, string)      {}
+func (*NullRowWriter) PutQName(string, appdef.QName) {}
+func (*NullRowWriter) PutBool(string, bool)          {}
+func (*NullRowWriter) PutRecordID(string, RecordID)  {}
+func (*NullRowWriter) PutNumber(string, float64)     {}
+func (*NullRowWriter) PutChars(string, string)       {}
+
+// Implements IObjectBuilder
+type NullObjectBuilder struct{ NullRowWriter }
+
+func NewNullObjectBuilder() IObjectBuilder { return &NullObjectBuilder{} }
+
+func (*NullObjectBuilder) ChildBuilder(string) IObjectBuilder { return NewNullObjectBuilder() }
+func (*NullObjectBuilder) Build() (IObject, error)            { return NewNullObject(), nil }
+
 // *********************************************************************************************************
 //
 //	ResourceKindType

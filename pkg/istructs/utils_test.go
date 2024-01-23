@@ -321,7 +321,29 @@ func TestRecordID_IsTemp(t *testing.T) {
 
 func TestNullObject(t *testing.T) {
 	require := require.New(t)
-	null := NewNullObject()
+	builder := NewNullObjectBuilder()
+
+	require.NotNil(builder)
+
+	require.NotPanics(func() {
+		builder.PutInt32("int32", 1)
+		builder.PutInt64("int64", 1)
+		builder.PutFloat32("float32", 1)
+		builder.PutFloat64("float64", 1)
+		builder.PutBytes("bytes", []byte{0})
+		builder.PutString("string", "")
+		builder.PutQName("QName", appdef.NullQName)
+		builder.PutBool("bool", true)
+		builder.PutRecordID("RecordID", NullRecordID)
+		builder.PutNumber("float64", 1)
+		builder.PutChars("string", "ABC")
+		builder.PutNumber("int64", 1)
+	})
+
+	require.NotNil(builder.ChildBuilder("child"))
+
+	null, err := builder.Build()
+	require.NoError(err)
 
 	require.Nil(null.AsBytes(appdef.NullName))
 	require.Equal(float32(0), null.AsFloat32(appdef.NullName))
@@ -353,7 +375,6 @@ func TestNullObject(t *testing.T) {
 		require.Equal(NullRecordID, r.Parent())
 
 	})
-
 }
 
 func TestRateLimitKind_String(t *testing.T) {
