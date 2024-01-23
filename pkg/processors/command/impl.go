@@ -109,11 +109,6 @@ func (c *cmdWorkpiece) release() {
 	}
 }
 
-func releaseWorkpiece(work *cmdWorkpiece) error {
-	work.release()
-	return nil
-}
-
 func borrowAppPart(_ context.Context, work interface{}) error {
 	return work.(*cmdWorkpiece).borrow()
 }

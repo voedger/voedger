@@ -104,16 +104,17 @@ func ProvideServiceFactory(appParts appparts.IAppPartitions, now coreutils.TimeF
 				select {
 				case intf := <-commandsChannel:
 					start := time.Now()
+					cmdMes := intf.(ICommandMessage)
 					cmd := &cmdWorkpiece{
-						cmdMes:            intf.(ICommandMessage),
+						cmdMes:            cmdMes,
 						requestData:       coreutils.MapObject{},
 						appParts:          appParts,
 						hostStateProvider: hsp,
-					}
-					cmd.metrics = commandProcessorMetrics{
-						vvm:     string(vvm),
-						app:     cmd.cmdMes.AppQName(),
-						metrics: metrics,
+						metrics: commandProcessorMetrics{
+							vvmName: string(vvm),
+							app:     cmdMes.AppQName(),
+							metrics: metrics,
+						},
 					}
 					cmd.metrics.increase(CommandsTotal, 1.0)
 					cmdHandlingErr := cmdPipeline.SendSync(cmd)
@@ -125,7 +126,8 @@ func ProvideServiceFactory(appParts appparts.IAppPartitions, now coreutils.TimeF
 						logger.Info("partition %d will be restarted due of an error on writing to Log: %w", cmd.cmdMes.PartitionID(), cmdHandlingErr)
 						delete(cmdProc.appPartitions, cmd.cmdMes.AppQName())
 					}
-					cmd.metrics.increase(CommandsSeconds, time.Since(start).Seconds())
+					cmd.release()
+					metrics.IncreaseApp(CommandsSeconds, string(vvm), cmdMes.AppQName(), time.Since(start).Seconds())
 				case <-vvmCtx.Done():
 					cmdProc.appPartitions = map[istructs.AppQName]*appPartition{} // clear appPartitions to test recovery
 					return
