@@ -26,7 +26,7 @@ func TestSendToBusOperator_DoAsync(t *testing.T) {
 		},
 		metrics: &testMetrics{},
 	}
-	work := workpiece{outputRow: &testOutputRow{values: []interface{}{"hello world"}}}
+	work := rowsWorkpiece{outputRow: &testOutputRow{values: []interface{}{"hello world"}}}
 
 	outWork, err := operator.DoAsync(context.Background(), work)
 	_, _ = operator.DoAsync(context.Background(), work)

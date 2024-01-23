@@ -714,14 +714,14 @@ func syncProjectorsEnd(_ context.Context, work interface{}) (err error) {
 	return
 }
 
-func sendResponse(cmdHandlingError error, cmd *cmdWorkpiece) {
-	if cmdHandlingError != nil {
+func sendResponse(cmd *cmdWorkpiece, handlingError error) {
+	if handlingError != nil {
 		cmd.metrics.increase(ErrorsTotal, 1.0)
 		//if error occurred somewhere in syncProjectors we have to measure elapsed time
 		if !cmd.syncProjectorsStart.IsZero() {
 			cmd.metrics.increase(ProjectorsSeconds, time.Since(cmd.syncProjectorsStart).Seconds())
 		}
-		coreutils.ReplyErr(cmd.cmdMes.Sender(), cmdHandlingError)
+		coreutils.ReplyErr(cmd.cmdMes.Sender(), handlingError)
 		return
 	}
 	body := bytes.NewBufferString(fmt.Sprintf(`{"CurrentWLogOffset":%d`, cmd.Event().WLogOffset()))

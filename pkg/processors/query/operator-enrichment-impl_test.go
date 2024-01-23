@@ -193,7 +193,7 @@ func TestEnrichmentOperator_DoSync(t *testing.T) {
 					},
 				},
 			}
-			return workpiece{
+			return rowsWorkpiece{
 				object: o,
 				outputRow: &outputRow{
 					keyToIdx: map[string]int{
@@ -263,7 +263,7 @@ func TestEnrichmentOperator_DoSync(t *testing.T) {
 		require := require.New(t)
 		ctx, cancel := context.WithCancel(context.Background())
 		cancel()
-		work := workpiece{
+		work := rowsWorkpiece{
 			outputRow: &outputRow{
 				keyToIdx: map[string]int{rootDocument: 0},
 				values: []interface{}{

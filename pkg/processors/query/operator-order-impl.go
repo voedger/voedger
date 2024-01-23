@@ -69,7 +69,7 @@ func (o OrderOperator) Flush(callback pipeline.OpFuncFlush) (err error) {
 	})
 	if err == nil {
 		for _, row := range o.rows {
-			callback(workpiece{outputRow: row})
+			callback(rowsWorkpiece{outputRow: row})
 		}
 	}
 	return err

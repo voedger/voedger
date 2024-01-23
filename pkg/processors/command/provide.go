@@ -96,7 +96,6 @@ func ProvideServiceFactory(appParts appparts.IAppPartitions, now coreutils.TimeF
 				pipeline.WireFunc("syncProjectorsEnd", syncProjectorsEnd),
 				pipeline.WireFunc("n10n", cmdProc.n10n),
 				pipeline.WireFunc("putWLog", putWLog),
-				pipeline.FinallyOperator[*cmdWorkpiece]("releaseWorkpiece", releaseWorkpiece), // ICatch
 			)
 			// TODO: сделать потом plogOffset свой по каждому разделу, wlogoffset - свой для каждого wsid
 			defer cmdPipeline.Close()
@@ -121,7 +120,7 @@ func ProvideServiceFactory(appParts appparts.IAppPartitions, now coreutils.TimeF
 					if cmdHandlingErr != nil {
 						logger.Error(cmdHandlingErr)
 					}
-					sendResponse(cmdHandlingErr, cmd)
+					sendResponse(cmd, cmdHandlingErr)
 					if cmd.appPartitionRestartScheduled {
 						logger.Info("partition %d will be restarted due of an error on writing to Log: %w", cmd.cmdMes.PartitionID(), cmdHandlingErr)
 						delete(cmdProc.appPartitions, cmd.cmdMes.AppQName())
