@@ -35,22 +35,3 @@ func TestSendToBusOperator_DoAsync(t *testing.T) {
 	require.NoError(err)
 	require.Equal(1, counter)
 }
-
-func TestSendToBusOperator_OnError(t *testing.T) {
-	require := require.New(t)
-	times := 0
-	operator := SendToBusOperator{rs: &resultSenderClosableOnlyOnce{
-		IResultSenderClosable: testResultSenderClosable{
-			close: func(err error) {
-				require.Error(err)
-				times++
-			},
-		},
-	}}
-
-	operator.OnError(context.Background(), ErrWrongType)
-	operator.OnError(context.Background(), ErrWrongType)
-	operator.OnError(context.Background(), ErrWrongType)
-
-	require.Equal(1, times)
-}

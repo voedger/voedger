@@ -107,7 +107,6 @@ func implServiceFactory(serviceChannel iprocbus.ServiceChannel, resultSenderClos
 				}
 				qpm.Increase(queriesTotal, 1.0)
 				rs := resultSenderClosableFactory(msg.RequestCtx(), msg.Sender())
-				rs = &resultSenderClosableOnlyOnce{IResultSenderClosable: rs}
 				qwork := newQueryWork(msg, rs, appParts, maxPrepareQueries, qpm, secretReader)
 				if p == nil {
 					p = newQueryProcessorPipeline(ctx, authn, authz, appCfgs)
@@ -561,17 +560,6 @@ func (c *fieldsDefs) get(name appdef.QName) FieldsKinds {
 		c.fields[name] = fd
 	}
 	return fd
-}
-
-type resultSenderClosableOnlyOnce struct {
-	IResultSenderClosable
-	sync.Once
-}
-
-func (s *resultSenderClosableOnlyOnce) Close(err error) {
-	s.Once.Do(func() {
-		s.IResultSenderClosable.Close(err)
-	})
 }
 
 type queryProcessorMetrics struct {
