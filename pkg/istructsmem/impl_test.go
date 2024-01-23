@@ -8,14 +8,13 @@ import (
 	"context"
 	"encoding/json"
 	"log"
+	"testing"
 
 	"github.com/stretchr/testify/require"
 	"github.com/untillpro/goutils/logger"
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/iratesce"
 	"github.com/voedger/voedger/pkg/istructs"
-
-	"testing"
 )
 
 /* Пояснения к тесту. */
@@ -279,6 +278,51 @@ func TestBasicUsage_ViewRecords(t *testing.T) {
 		})
 
 		require.Equal(1, counter)
+	})
+}
+
+func Test_appStructsType_ObjectBuilder(t *testing.T) {
+	require := require.New(t)
+
+	objName := appdef.NewQName("test", "object")
+
+	appStructs := func() istructs.IAppStructs {
+		adb := appdef.New()
+		obj := adb.AddObject(objName)
+		obj.AddField("int", appdef.DataKind_int64, true)
+
+		cfgs := make(AppConfigsType)
+		_ = cfgs.AddConfig(istructs.AppQName_test1_app1, adb)
+
+		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider())
+		app, err := provider.AppStructs(istructs.AppQName_test1_app1)
+		require.NoError(err)
+
+		return app
+	}()
+
+	t.Run("Should be ok to build known object", func(t *testing.T) {
+		b := appStructs.ObjectBuilder(objName)
+		require.NotNil(b)
+
+		b.PutInt64("int", 1)
+
+		o, err := b.Build()
+		require.NoError(err)
+
+		require.Equal(objName, o.QName())
+		require.EqualValues(1, o.AsInt64("int"))
+	})
+
+	t.Run("Should be error to build unknown object", func(t *testing.T) {
+		b := appStructs.ObjectBuilder(appdef.NewQName("test", "unknown"))
+		require.NotNil(b)
+
+		b.PutInt64("int", 1)
+
+		o, err := b.Build()
+		require.Nil(o)
+		require.ErrorIs(err, ErrNameNotFound)
 	})
 }
 
