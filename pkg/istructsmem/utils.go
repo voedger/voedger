@@ -139,11 +139,3 @@ func FillObjectFromJSON(data map[string]interface{}, t appdef.IType, b istructs.
 	}
 	return nil
 }
-
-// TODO: @nnv: deprecate this function!
-//
-//	Add new IAppStructs.ObjectBuilder(appdef.QName).
-//	AppConfigType should be used internally
-func NewIObjectBuilder(cfg *AppConfigType, qName appdef.QName) istructs.IObjectBuilder {
-	return newObject(cfg, qName, nil)
-}
