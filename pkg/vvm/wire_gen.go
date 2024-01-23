@@ -115,7 +115,7 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 	v4 := provideSubjectGetterFunc()
 	iAuthenticator := iauthnzimpl.NewDefaultAuthenticator(v4)
 	iAuthorizer := iauthnzimpl.NewDefaultAuthorizer()
-	serviceFactory := commandprocessor.ProvideServiceFactory(iAppPartitions, timeFunc, commandprocessorSyncActualizerFactory, in10nBroker, iMetrics, vvmName, iAuthenticator, iAuthorizer, iSecretReader, appConfigsType)
+	serviceFactory := commandprocessor.ProvideServiceFactory(iAppPartitions, timeFunc, commandprocessorSyncActualizerFactory, in10nBroker, iMetrics, vvmName, iAuthenticator, iAuthorizer, iSecretReader)
 	operatorCommandProcessors := provideCommandProcessors(commandProcessorsCount, commandChannelFactory, serviceFactory)
 	queryProcessorsCount := vvmConfig.NumQueryProcessors
 	queryChannel := provideQueryChannel(serviceChannelFactory)
