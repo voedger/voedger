@@ -46,13 +46,13 @@ type ICommandMessage interface {
 type xPath string
 
 type commandProcessorMetrics struct {
-	vvm     string
+	vvmName string
 	app     istructs.AppQName
 	metrics imetrics.IMetrics
 }
 
 func (m *commandProcessorMetrics) increase(metricName string, valueDelta float64) {
-	m.metrics.IncreaseApp(metricName, m.vvm, m.app, valueDelta)
+	m.metrics.IncreaseApp(metricName, m.vvmName, m.app, valueDelta)
 }
 
 type cmdWorkpiece struct {

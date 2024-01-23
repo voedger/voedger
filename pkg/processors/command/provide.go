@@ -96,8 +96,7 @@ func ProvideServiceFactory(appParts appparts.IAppPartitions, now coreutils.TimeF
 				pipeline.WireFunc("syncProjectorsEnd", syncProjectorsEnd),
 				pipeline.WireFunc("n10n", cmdProc.n10n),
 				pipeline.WireFunc("putWLog", putWLog),
-				pipeline.WireSyncOperator("sendResponse", &opSendResponse{cmdProc: cmdProc}),  // ICatch
-				pipeline.FinallyOperator[*cmdWorkpiece]("releaseWorkpiece", releaseWorkpiece), // ICatch
+				pipeline.WireSyncOperator("sendResponse", &opSendResponse{cmdProc: cmdProc}), // ICatch
 			)
 			// TODO: сделать потом plogOffset свой по каждому разделу, wlogoffset - свой для каждого wsid
 			defer cmdPipeline.Close()
@@ -105,22 +104,24 @@ func ProvideServiceFactory(appParts appparts.IAppPartitions, now coreutils.TimeF
 				select {
 				case intf := <-commandsChannel:
 					start := time.Now()
+					cmdMes := intf.(ICommandMessage)
 					cmd := &cmdWorkpiece{
-						cmdMes:            intf.(ICommandMessage),
+						cmdMes:            cmdMes,
 						requestData:       coreutils.MapObject{},
 						appParts:          appParts,
 						hostStateProvider: hsp,
-					}
-					cmd.metrics = commandProcessorMetrics{
-						vvm:     string(vvm),
-						app:     cmd.cmdMes.AppQName(),
-						metrics: metrics,
+						metrics: commandProcessorMetrics{
+							vvmName: string(vvm),
+							app:     cmdMes.AppQName(),
+							metrics: metrics,
+						},
 					}
 					cmd.metrics.increase(CommandsTotal, 1.0)
 					if err := cmdPipeline.SendSync(cmd); err != nil {
 						logger.Error("unhandled error: " + err.Error())
 					}
-					cmd.metrics.increase(CommandsSeconds, time.Since(start).Seconds())
+					cmd.release()
+					metrics.IncreaseApp(CommandsSeconds, string(vvm), cmdMes.AppQName(), time.Since(start).Seconds())
 				case <-vvmCtx.Done():
 					cmdProc.appPartitions = map[istructs.AppQName]*appPartition{} // clear appPartitions to test recovery
 					return
