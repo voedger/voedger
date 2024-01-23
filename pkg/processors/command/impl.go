@@ -726,12 +726,7 @@ func sendResponse(cmdHandlingError error, cmd *cmdWorkpiece) {
 		if !cmd.syncProjectorsStart.IsZero() {
 			cmd.metrics.increase(ProjectorsSeconds, time.Since(cmd.syncProjectorsStart).Seconds())
 		}
-		logger.Error(cmdHandlingError)
 		coreutils.ReplyErr(cmd.cmdMes.Sender(), cmdHandlingError)
-		// if cmd.appPartitionRestartScheduled {
-		// 	logger.Info("partition %d will be restarted due of an error on writing to Log: %w", cmd.cmdMes.PartitionID(), cmd.err)
-		// 	delete(sr.cmdProc.appPartitions, cmd.cmdMes.AppQName())
-		// }
 		return
 	}
 	body := bytes.NewBufferString(fmt.Sprintf(`{"CurrentWLogOffset":%d`, cmd.Event().WLogOffset()))
@@ -759,7 +754,6 @@ func sendResponse(cmdHandlingError error, cmd *cmdWorkpiece) {
 	}
 	body.WriteString("}")
 	coreutils.ReplyJSON(cmd.cmdMes.Sender(), http.StatusOK, body.String())
-	return
 }
 
 // type opSendResponse struct {
