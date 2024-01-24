@@ -6,7 +6,5 @@
 package main
 
 const (
-	Default_ihttp_Port                      = 80
-	Default_ibus_MaxNumOfConcurrentRequests = 1000
-	Default_ibus_ReadWriteTimeoutNS         = 5_000_000_000
+	Default_ihttp_Port = 80
 )

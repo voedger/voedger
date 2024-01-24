@@ -86,8 +86,7 @@ func (p *httpProcessor) Prepare() (err error) {
 		logger.Info("listening port ", p.listener.Addr().(*net.TCPAddr).Port, " for server")
 	}
 
-	p.registerHttpHandler()
-	p.registerReverseProxyRoute()
+	p.registerRoutes()
 
 	return
 }
@@ -142,25 +141,11 @@ func (p *httpProcessor) Run(ctx context.Context) {
 }
 
 func (p *httpProcessor) AddReverseProxyRoute(srcRegExp, dstRegExp string) {
-	p.router.Lock()
-	defer p.router.Unlock()
-
-	p.router.redirections = slices.Insert(p.router.redirections, len(p.router.redirections)-1, &redirectionRoute{
-		srcRegExp:        regexp.MustCompile(srcRegExp),
-		dstRegExpPattern: dstRegExp,
-	})
-	p.router.setReverseProxyRoute()
+	p.router.addReverseProxyRoute(srcRegExp, dstRegExp)
 }
 
 func (p *httpProcessor) SetReverseProxyRouteDefault(srcRegExp, dstRegExp string) {
-	p.router.Lock()
-	defer p.router.Unlock()
-
-	p.router.redirections[len(p.router.redirections)-1] = &redirectionRoute{
-		srcRegExp:        regexp.MustCompile(srcRegExp),
-		dstRegExpPattern: dstRegExp,
-	}
-	p.router.setReverseProxyRoute()
+	p.router.setReverseProxyRouteDefault(srcRegExp, dstRegExp)
 }
 
 func (p *httpProcessor) AddAcmeDomain(domain string) {
@@ -168,12 +153,7 @@ func (p *httpProcessor) AddAcmeDomain(domain string) {
 }
 
 func (p *httpProcessor) DeployStaticContent(resource string, fs fs.FS) {
-	resource = staticPath + resource
-	f := func(wr http.ResponseWriter, req *http.Request) {
-		fsHandler := http.FileServer(http.FS(fs))
-		http.StripPrefix(resource, fsHandler).ServeHTTP(wr, req)
-	}
-	p.handlePath(resource, true, f)
+	p.router.addStaticContent(resource, fs)
 }
 
 func (p *httpProcessor) DeployAppPartition(app istructs.AppQName, partNo istructs.PartitionID, appPartitionRequestHandler ibus.RequestHandler) error {
@@ -276,41 +256,13 @@ func (p *httpProcessor) cleanup() {
 	}
 }
 
-func (p *httpProcessor) handlePath(resource string, prefix bool, handlerFunc func(http.ResponseWriter, *http.Request)) {
-	p.router.Lock()
-	defer p.router.Unlock()
-
-	var r *mux.Route
-	if prefix {
-		r = p.router.staticContentRouter.PathPrefix(resource)
-	} else {
-		r = p.router.staticContentRouter.Path(resource)
-	}
-	r.HandlerFunc(handlerFunc)
-}
-
-func (p *httpProcessor) registerHttpHandler() {
-	p.router.contentRouter.HandleFunc(
-		fmt.Sprintf("/api/{%s}/{%s}/{%s:[0-9]+}/{%s:[a-zA-Z0-9_/.]+}",
-			routerpkg.AppOwner,
-			routerpkg.AppName,
-			routerpkg.WSID,
-			routerpkg.ResourceName,
-		),
-		corsHandler(p.httpHandler()),
-	).Methods("POST", "PATCH", "OPTIONS").Name("api")
-}
-
-func (p *httpProcessor) registerReverseProxyRoute() {
-	p.router.setReverseProxyRoute()
+func (p *httpProcessor) registerRoutes() {
+	p.router.setUpRoutes(corsHandler(p.httpHandler()))
 }
 
 func (p *httpProcessor) httpHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		p.RLock()
-		defer p.RUnlock()
-
-		routerpkg.RequestHandler(p.bus, busTimeout, p.appsWSAmount)(w, r)
+		routerpkg.RequestHandler(p.bus, ibus.DefaultTimeout, p.appsWSAmount)(w, r)
 	}
 }
 
@@ -330,26 +282,59 @@ func (p *httpProcessor) requestHandler(ctx context.Context, sender ibus.ISender,
 }
 
 type router struct {
-	contentRouter       *mux.Router
-	staticContentRouter *mux.Router
-	reverseProxy        *httputil.ReverseProxy
-	redirections        []*redirectionRoute // last item is always exist and if it is non-null, then it is a default route
-	reverseProxyRoute   *mux.Route
+	router        *mux.Router
+	reverseProxy  *httputil.ReverseProxy
+	staticContent map[string]fs.FS
+	redirections  []*redirectionRoute // last item is always exist and if it is non-null, then it is a default route
 	sync.RWMutex
 }
 
 func newRouter() *router {
 	return &router{
-		contentRouter:       mux.NewRouter(),
-		staticContentRouter: mux.NewRouter(),
-		reverseProxy:        &httputil.ReverseProxy{Director: func(r *http.Request) {}},
-		redirections:        make([]*redirectionRoute, 1),
+		router:        mux.NewRouter(),
+		staticContent: make(map[string]fs.FS),
+		reverseProxy:  &httputil.ReverseProxy{Director: func(r *http.Request) {}},
+		redirections:  make([]*redirectionRoute, 1),
 	}
 }
 
-func (r *router) setReverseProxyRoute() {
-	if r.reverseProxyRoute == nil {
-		r.reverseProxyRoute = r.contentRouter.Name("reverse-proxy").MatcherFunc(r.matchRedirections)
+func (r *router) setUpRoutes(appRequestHandler http.HandlerFunc) {
+	appRequestPath := fmt.Sprintf("/api/{%s}/{%s}/{%s:[0-9]+}/{%s:[a-zA-Z0-9_/.]+}",
+		routerpkg.AppOwner,
+		routerpkg.AppName,
+		routerpkg.WSID,
+		routerpkg.ResourceName,
+	)
+	r.router.HandleFunc(appRequestPath, appRequestHandler).Name("api").Methods("POST", "PATCH", "OPTIONS")
+	r.router.Name("static").PathPrefix(staticPath).MatcherFunc(r.matchStaticContent)
+	// set reverse proxy route last
+	r.router.Name("reverse-proxy").MatcherFunc(r.matchRedirections)
+}
+
+func (r *router) addStaticContent(resource string, fs fs.FS) {
+	r.Lock()
+	defer r.Unlock()
+
+	r.staticContent[resource] = fs
+}
+
+func (r *router) addReverseProxyRoute(srcRegExp, dstRegExp string) {
+	r.Lock()
+	defer r.Unlock()
+
+	r.redirections = slices.Insert(r.redirections, len(r.redirections)-1, &redirectionRoute{
+		srcRegExp:        regexp.MustCompile(srcRegExp),
+		dstRegExpPattern: dstRegExp,
+	})
+}
+
+func (r *router) setReverseProxyRouteDefault(srcRegExp, dstRegExp string) {
+	r.Lock()
+	defer r.Unlock()
+
+	r.redirections[len(r.redirections)-1] = &redirectionRoute{
+		srcRegExp:        regexp.MustCompile(srcRegExp),
+		dstRegExpPattern: dstRegExp,
 	}
 }
 
@@ -357,12 +342,26 @@ func (r *router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	r.RLock()
 	defer r.RUnlock()
 
-	var routeMatch mux.RouteMatch
-	if r.staticContentRouter.Match(req, &routeMatch) {
-		r.staticContentRouter.ServeHTTP(w, req)
-		return
+	r.router.ServeHTTP(w, req)
+}
+
+func staticContentHandler(resource string, fs fs.FS) http.HandlerFunc {
+	return func(wr http.ResponseWriter, req *http.Request) {
+		fsHandler := http.FileServer(http.FS(fs))
+		http.StripPrefix(resource, fsHandler).ServeHTTP(wr, req)
 	}
-	r.contentRouter.ServeHTTP(w, req)
+}
+
+func (r *router) matchStaticContent(req *http.Request, rm *mux.RouteMatch) (matched bool) {
+	requestedURL := getFullRequestedURL(req)
+	for path, fs := range r.staticContent {
+		if regexp.MustCompile(path).MatchString(requestedURL) {
+			rm.Route = r.router.Get("static")
+			rm.Handler = staticContentHandler(staticPath+path, fs)
+			return true
+		}
+	}
+	return
 }
 
 func (r *router) matchRedirections(req *http.Request, rm *mux.RouteMatch) (matched bool) {
