@@ -754,6 +754,20 @@ func (row *rowType) PutFloat64(name string, value float64) {
 	row.putValue(name, dynobuffers.FieldTypeFloat64, value)
 }
 
+// istructs.IRowWriter.PutFromJSON
+func (row *rowType) PutFromJSON(j map[string]any) {
+	for n, v := range j {
+		switch fv := v.(type) {
+		case float64:
+			row.PutNumber(n, fv)
+		case string:
+			row.PutChars(n, fv)
+		case bool:
+			row.PutBool(n, fv)
+		}
+	}
+}
+
 // istructs.IRowWriter.PutNumber
 func (row *rowType) PutNumber(name string, value float64) {
 	fld := row.fieldDef(name)

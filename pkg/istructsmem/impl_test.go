@@ -374,11 +374,7 @@ func TestBasicUsage_AppDef(t *testing.T) {
 	require := require.New(t)
 	test := test()
 
-	// gets AppStructProvider and AppStructs
-	provider := Provide(test.AppConfigs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider())
-
-	app, err := provider.AppStructsByDef(test.appName, test.AppDef)
-	require.NoError(err)
+	app := test.AppStructs
 
 	t.Run("I. test top level type (command object)", func(t *testing.T) {
 		cmdDoc := app.AppDef().ODoc(test.saleCmdDocName)

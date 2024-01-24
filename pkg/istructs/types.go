@@ -98,10 +98,15 @@ type IRowWriter interface {
 	// Tries to make conversion from value to a name type
 	PutNumber(name string, value float64)
 
-	// Puts value into string, bytes, raw or QName data type field.
+	// Puts value into string, bytes or QName data type field.
 	//
 	// Tries to make conversion from value to a name type
 	PutChars(name string, value string)
+
+	// Puts value into fields. Field names are taken from map keys, values are taken from map values.
+	//
+	// Calls PutNumber for numbers and RecordIDs, PutChars for strings, bytes and QNames.
+	PutFromJSON(map[string]any)
 }
 
 // App Workspace amount type. Need to wire

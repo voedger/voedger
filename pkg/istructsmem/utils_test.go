@@ -108,10 +108,8 @@ func TestObjectFillAndGet(t *testing.T) {
 	require := require.New(t)
 	test := test()
 
-	cfgs := test.AppConfigs
-	asp := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider())
-	as, err := asp.AppStructs(test.appName)
-	require.NoError(err)
+	as := test.AppStructs
+
 	builder := as.ObjectBuilder(test.testCDoc)
 
 	t.Run("basic", func(t *testing.T) {
@@ -133,7 +131,7 @@ func TestObjectFillAndGet(t *testing.T) {
 				},
 			},
 		}
-		cfg := cfgs[test.appName]
+		cfg := test.AppCfg
 		require.NoError(FillObjectFromJSON(data, cfg.AppDef.Type(test.testCDoc), builder))
 		o, err := builder.Build()
 		require.NoError(err)
@@ -171,7 +169,7 @@ func TestObjectFillAndGet(t *testing.T) {
 			},
 		}
 
-		cfg := cfgs[test.appName]
+		cfg := test.AppCfg
 		for name, val := range cases {
 			builder := as.ObjectBuilder(test.testCDoc)
 			data := map[string]interface{}{
@@ -195,7 +193,7 @@ func TestObjectFillAndGet(t *testing.T) {
 			{"record", []interface{}{"str"}},
 			{"record", []interface{}{map[string]interface{}{"unknownContainer": []interface{}{}}}},
 		}
-		cfg := cfgs[test.appName]
+		cfg := test.AppCfg
 		for _, c := range cases {
 			data := map[string]interface{}{
 				c.f: c.v,

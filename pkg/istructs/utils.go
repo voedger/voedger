@@ -148,6 +148,7 @@ func (*NullRowWriter) PutBool(string, bool)          {}
 func (*NullRowWriter) PutRecordID(string, RecordID)  {}
 func (*NullRowWriter) PutNumber(string, float64)     {}
 func (*NullRowWriter) PutChars(string, string)       {}
+func (*NullRowWriter) PutFromJSON(map[string]any)    {}
 
 // Implements IObjectBuilder
 type NullObjectBuilder struct{ NullRowWriter }

@@ -28,6 +28,12 @@ type (
 		AppCfg     *AppConfigType
 		AppDef     appdef.IAppDef
 
+		StorageProvider istorage.IAppStorageProvider
+		Storage         istorage.IAppStorage
+
+		AppStructsProvider istructs.IAppStructsProvider
+		AppStructs         istructs.IAppStructs
+
 		// common event entities
 		eventRawBytes      []byte
 		partition          istructs.PartitionID
@@ -367,28 +373,33 @@ func test() *testDataType {
 		return appDef
 	}
 
-	prepareConfig := func(cfg *AppConfigType) {
+	if testData.AppConfigs == nil {
+		testData.AppConfigs = make(AppConfigsType, 1)
+		testData.AppCfg = testData.AppConfigs.AddConfig(testData.appName, prepareAppDef())
+		testData.AppDef = testData.AppCfg.AppDef
 
-		sp := istorageimpl.Provide(istorage.ProvideMem())
-		storage, err := sp.AppStorage(testData.appName)
+		testData.AppCfg.Resources.Add(NewCommandFunction(testData.saleCmdName, NullCommandExec))
+		testData.AppCfg.Resources.Add(NewCommandFunction(testData.changeCmdName, NullCommandExec))
+		testData.AppCfg.Resources.Add(NewQueryFunction(testData.queryPhotoFunctionName, NullQueryExec))
+
+		var err error
+
+		testData.StorageProvider = istorageimpl.Provide(istorage.ProvideMem())
+		testData.Storage, err = testData.StorageProvider.AppStorage(testData.appName)
 		if err != nil {
 			panic(err)
 		}
 
-		cfg.Resources.Add(NewCommandFunction(testData.saleCmdName, NullCommandExec))
-		cfg.Resources.Add(NewCommandFunction(testData.changeCmdName, NullCommandExec))
-		cfg.Resources.Add(NewQueryFunction(testData.queryPhotoFunctionName, NullQueryExec))
-
-		if err := cfg.prepare(iratesce.TestBucketsFactory(), storage); err != nil {
+		err = testData.AppCfg.prepare(iratesce.TestBucketsFactory(), testData.Storage)
+		if err != nil {
 			panic(err)
 		}
-	}
 
-	if testData.AppConfigs == nil {
-		testData.AppConfigs = make(AppConfigsType, 1)
-		testData.AppCfg = testData.AppConfigs.AddConfig(testData.appName, prepareAppDef())
-		prepareConfig(testData.AppCfg)
-		testData.AppDef = testData.AppCfg.AppDef
+		testData.AppStructsProvider = Provide(testData.AppConfigs, iratesce.TestBucketsFactory, testTokensFactory(), testData.StorageProvider)
+		testData.AppStructs, err = testData.AppStructsProvider.AppStructsByDef(testData.appName, testData.AppDef)
+		if err != nil {
+			panic(err)
+		}
 	}
 
 	return &testData

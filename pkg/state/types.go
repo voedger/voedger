@@ -83,6 +83,7 @@ func (b *keyBuilder) PutBool(name string, value bool)                  { b.data[
 func (b *keyBuilder) PutRecordID(name string, value istructs.RecordID) { b.data[name] = value }
 func (b *keyBuilder) PutNumber(string, float64)                        { panic(ErrNotSupported) }
 func (b *keyBuilder) PutChars(string, string)                          { panic(ErrNotSupported) }
+func (b *keyBuilder) PutFromJSON(map[string]any)                       { panic(ErrNotSupported) }
 func (b *keyBuilder) PartitionKey() istructs.IRowWriter                { panic(ErrNotSupported) }
 func (b *keyBuilder) ClusteringColumns() istructs.IRowWriter           { panic(ErrNotSupported) }
 func (b *keyBuilder) Equals(src istructs.IKeyBuilder) bool {
