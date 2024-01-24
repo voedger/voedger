@@ -5,7 +5,9 @@
 
 package ihttpimpl
 
-import "time"
+import (
+	"time"
+)
 
 const (
 	defaultACMEServerReadTimeout  = 5 * time.Second
@@ -14,5 +16,4 @@ const (
 	defaultReadHeaderTimeout      = time.Second
 	staticPath                    = "/static/"
 	partitionsAmount              = 10
-	busTimeout                    = 5 * time.Minute
 )
