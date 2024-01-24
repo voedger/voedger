@@ -87,6 +87,7 @@ func (p *httpProcessor) Prepare() (err error) {
 	}
 
 	p.registerHttpHandler()
+	p.registerReverseProxyRoute()
 
 	return
 }
@@ -281,9 +282,9 @@ func (p *httpProcessor) handlePath(resource string, prefix bool, handlerFunc fun
 
 	var r *mux.Route
 	if prefix {
-		r = p.router.contentRouter.PathPrefix(resource)
+		r = p.router.staticContentRouter.PathPrefix(resource)
 	} else {
-		r = p.router.contentRouter.Path(resource)
+		r = p.router.staticContentRouter.Path(resource)
 	}
 	r.HandlerFunc(handlerFunc)
 }
@@ -298,6 +299,10 @@ func (p *httpProcessor) registerHttpHandler() {
 		),
 		corsHandler(p.httpHandler()),
 	).Methods("POST", "PATCH", "OPTIONS").Name("api")
+}
+
+func (p *httpProcessor) registerReverseProxyRoute() {
+	p.router.setReverseProxyRoute()
 }
 
 func (p *httpProcessor) httpHandler() http.HandlerFunc {
@@ -325,18 +330,20 @@ func (p *httpProcessor) requestHandler(ctx context.Context, sender ibus.ISender,
 }
 
 type router struct {
-	contentRouter     *mux.Router
-	reverseProxy      *httputil.ReverseProxy
-	redirections      []*redirectionRoute // last item is always exist and if it is non-null, then it is a default route
-	reverseProxyRoute *mux.Route
+	contentRouter       *mux.Router
+	staticContentRouter *mux.Router
+	reverseProxy        *httputil.ReverseProxy
+	redirections        []*redirectionRoute // last item is always exist and if it is non-null, then it is a default route
+	reverseProxyRoute   *mux.Route
 	sync.RWMutex
 }
 
 func newRouter() *router {
 	return &router{
-		contentRouter: mux.NewRouter(),
-		reverseProxy:  &httputil.ReverseProxy{Director: func(r *http.Request) {}},
-		redirections:  make([]*redirectionRoute, 1),
+		contentRouter:       mux.NewRouter(),
+		staticContentRouter: mux.NewRouter(),
+		reverseProxy:        &httputil.ReverseProxy{Director: func(r *http.Request) {}},
+		redirections:        make([]*redirectionRoute, 1),
 	}
 }
 
@@ -350,6 +357,11 @@ func (r *router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	r.RLock()
 	defer r.RUnlock()
 
+	var routeMatch mux.RouteMatch
+	if r.staticContentRouter.Match(req, &routeMatch) {
+		r.staticContentRouter.ServeHTTP(w, req)
+		return
+	}
 	r.contentRouter.ServeHTTP(w, req)
 }
 
