@@ -14,7 +14,7 @@ import (
 
 func TestOrderOperator_Flush(t *testing.T) {
 	work := func(id int64, name string, departmentNumber int64, weight float64) pipeline.IWorkpiece {
-		return workpiece{
+		return rowsWorkpiece{
 			outputRow: &outputRow{
 				keyToIdx: map[string]int{rootDocument: 0},
 				values: []interface{}{
@@ -34,16 +34,16 @@ func TestOrderOperator_Flush(t *testing.T) {
 		}
 	}
 	id := func(work pipeline.IWorkpiece) int64 {
-		return work.(workpiece).OutputRow().Value(rootDocument).([]IOutputRow)[0].Values()[0].(int64)
+		return work.(rowsWorkpiece).OutputRow().Value(rootDocument).([]IOutputRow)[0].Values()[0].(int64)
 	}
 	name := func(work pipeline.IWorkpiece) string {
-		return work.(workpiece).OutputRow().Value(rootDocument).([]IOutputRow)[0].Values()[1].(string)
+		return work.(rowsWorkpiece).OutputRow().Value(rootDocument).([]IOutputRow)[0].Values()[1].(string)
 	}
 	departmentNumber := func(work pipeline.IWorkpiece) int64 {
-		return work.(workpiece).OutputRow().Value(rootDocument).([]IOutputRow)[0].Values()[2].(int64)
+		return work.(rowsWorkpiece).OutputRow().Value(rootDocument).([]IOutputRow)[0].Values()[2].(int64)
 	}
 	weight := func(work pipeline.IWorkpiece) float64 {
-		return work.(workpiece).OutputRow().Value(rootDocument).([]IOutputRow)[0].Values()[3].(float64)
+		return work.(rowsWorkpiece).OutputRow().Value(rootDocument).([]IOutputRow)[0].Values()[3].(float64)
 	}
 	t.Run("Should order by one int64 field asc", func(t *testing.T) {
 		require := require.New(t)
@@ -326,7 +326,7 @@ func TestOrderOperator_Flush(t *testing.T) {
 	t.Run("Should return data type unspecified error", func(t *testing.T) {
 		require := require.New(t)
 		work := func(flag bool) pipeline.IWorkpiece {
-			return workpiece{
+			return rowsWorkpiece{
 				outputRow: &outputRow{
 					keyToIdx: map[string]int{rootDocument: 0},
 					values: []interface{}{
@@ -359,7 +359,7 @@ func TestOrderOperator_Flush(t *testing.T) {
 	})
 	t.Run("Should order by int32 field", func(t *testing.T) {
 		work := func(x, y int32) pipeline.IWorkpiece {
-			return workpiece{outputRow: &outputRow{
+			return rowsWorkpiece{outputRow: &outputRow{
 				keyToIdx: map[string]int{rootDocument: 0},
 				values: []interface{}{
 					[]IOutputRow{&outputRow{
@@ -373,10 +373,10 @@ func TestOrderOperator_Flush(t *testing.T) {
 			}}
 		}
 		x := func(work pipeline.IWorkpiece) int32 {
-			return work.(workpiece).OutputRow().Value(rootDocument).([]IOutputRow)[0].Values()[0].(int32)
+			return work.(rowsWorkpiece).OutputRow().Value(rootDocument).([]IOutputRow)[0].Values()[0].(int32)
 		}
 		y := func(work pipeline.IWorkpiece) int32 {
-			return work.(workpiece).OutputRow().Value(rootDocument).([]IOutputRow)[0].Values()[1].(int32)
+			return work.(rowsWorkpiece).OutputRow().Value(rootDocument).([]IOutputRow)[0].Values()[1].(int32)
 		}
 		t.Run("Asc order", func(t *testing.T) {
 			require := require.New(t)
@@ -425,7 +425,7 @@ func TestOrderOperator_Flush(t *testing.T) {
 	})
 	t.Run("Should order by float32 field", func(t *testing.T) {
 		work := func(temperature float32) pipeline.IWorkpiece {
-			return workpiece{outputRow: &outputRow{
+			return rowsWorkpiece{outputRow: &outputRow{
 				keyToIdx: map[string]int{rootDocument: 0},
 				values: []interface{}{
 					[]IOutputRow{&outputRow{
@@ -436,7 +436,7 @@ func TestOrderOperator_Flush(t *testing.T) {
 			}}
 		}
 		temperature := func(work pipeline.IWorkpiece) float32 {
-			return work.(workpiece).OutputRow().Value(rootDocument).([]IOutputRow)[0].Values()[0].(float32)
+			return work.(rowsWorkpiece).OutputRow().Value(rootDocument).([]IOutputRow)[0].Values()[0].(float32)
 		}
 		t.Run("Asc order", func(t *testing.T) {
 			require := require.New(t)

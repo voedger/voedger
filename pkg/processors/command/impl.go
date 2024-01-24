@@ -109,11 +109,6 @@ func (c *cmdWorkpiece) release() {
 	}
 }
 
-func releaseWorkpiece(work *cmdWorkpiece) error {
-	work.release()
-	return nil
-}
-
 func borrowAppPart(_ context.Context, work interface{}) error {
 	return work.(*cmdWorkpiece).borrow()
 }
@@ -718,26 +713,14 @@ func syncProjectorsEnd(_ context.Context, work interface{}) (err error) {
 	return
 }
 
-type opSendResponse struct {
-	pipeline.NOOP
-	cmdProc *cmdProc
-}
-
-func (sr *opSendResponse) DoSync(_ context.Context, work interface{}) (err error) {
-	cmd := work.(*cmdWorkpiece)
-
-	if cmd.err != nil {
+func sendResponse(cmd *cmdWorkpiece, handlingError error) {
+	if handlingError != nil {
 		cmd.metrics.increase(ErrorsTotal, 1.0)
 		//if error occurred somewhere in syncProjectors we have to measure elapsed time
 		if !cmd.syncProjectorsStart.IsZero() {
 			cmd.metrics.increase(ProjectorsSeconds, time.Since(cmd.syncProjectorsStart).Seconds())
 		}
-		logger.Error(cmd.err)
-		coreutils.ReplyErr(cmd.cmdMes.Sender(), cmd.err)
-		if cmd.appPartitionRestartScheduled {
-			logger.Info("partition %d will be restarted due of an error on writing to Log: %w", cmd.cmdMes.PartitionID(), cmd.err)
-			delete(sr.cmdProc.appPartitions, cmd.cmdMes.AppQName())
-		}
+		coreutils.ReplyErr(cmd.cmdMes.Sender(), handlingError)
 		return
 	}
 	body := bytes.NewBufferString(fmt.Sprintf(`{"CurrentWLogOffset":%d`, cmd.Event().WLogOffset()))
@@ -757,20 +740,14 @@ func (sr *opSendResponse) DoSync(_ context.Context, work interface{}) (err error
 		cmdResultBytes, err := json.Marshal(cmdResult)
 		if err != nil {
 			// notest
-			return err
+			logger.Error("failed to marshal response: " + err.Error())
+			return
 		}
 		body.WriteString(`,"Result":`)
 		body.WriteString(string(cmdResultBytes))
 	}
 	body.WriteString("}")
 	coreutils.ReplyJSON(cmd.cmdMes.Sender(), http.StatusOK, body.String())
-	return nil
-}
-
-// nolint (result is always nil)
-func (sr *opSendResponse) OnErr(err error, work interface{}, _ pipeline.IWorkpieceContext) error {
-	work.(*cmdWorkpiece).err = err
-	return nil
 }
 
 func (idGen *implIDGenerator) NextID(rawID istructs.RecordID, t appdef.IType) (storageID istructs.RecordID, err error) {

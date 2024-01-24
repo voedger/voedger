@@ -107,7 +107,6 @@ func implServiceFactory(serviceChannel iprocbus.ServiceChannel, resultSenderClos
 				}
 				qpm.Increase(queriesTotal, 1.0)
 				rs := resultSenderClosableFactory(msg.RequestCtx(), msg.Sender())
-				rs = &resultSenderClosableOnlyOnce{IResultSenderClosable: rs}
 				qwork := newQueryWork(msg, rs, appParts, maxPrepareQueries, qpm, secretReader)
 				if p == nil {
 					p = newQueryProcessorPipeline(ctx, authn, authz)
@@ -117,15 +116,52 @@ func implServiceFactory(serviceChannel iprocbus.ServiceChannel, resultSenderClos
 					qpm.Increase(errorsTotal, 1.0)
 					p.Close()
 					p = nil
+				} else {
+					err = execAndSendResponse(ctx, qwork)
 				}
+				if qwork.rowsProcessor != nil {
+					// wait until all rows are sent
+					qwork.rowsProcessor.Close()
+				}
+				err = coreutils.WrapSysError(err, http.StatusInternalServerError)
 				rs.Close(err)
-				qpm.Increase(queriesSeconds, time.Since(now).Seconds())
+				qwork.release()
+				metrics.IncreaseApp(queriesSeconds, vvm, msg.AppQName(), time.Since(now).Seconds())
 			case <-ctx.Done():
 			}
 		}
 		if p != nil {
 			p.Close()
 		}
+	})
+}
+
+func execAndSendResponse(ctx context.Context, qw *queryWork) (err error) {
+	now := time.Now()
+	defer func() {
+		if r := recover(); r != nil {
+			stack := string(debug.Stack())
+			err = fmt.Errorf("%v\n%s", r, stack)
+		}
+		qw.metrics.Increase(execSeconds, time.Since(now).Seconds())
+	}()
+	return qw.queryExec(ctx, qw.execQueryArgs, func(object istructs.IObject) error {
+		pathToIdx := make(map[string]int)
+		if qw.resultType.QName() == istructs.QNameRaw {
+			pathToIdx[processors.Field_RawObject_Body] = 0
+		} else {
+			for i, element := range qw.queryParams.Elements() {
+				pathToIdx[element.Path().Name()] = i
+			}
+		}
+		return qw.rowsProcessor.SendAsync(rowsWorkpiece{
+			object: object,
+			outputRow: &outputRow{
+				keyToIdx: pathToIdx,
+				values:   make([]interface{}, len(pathToIdx)),
+			},
+			enrichedRootFieldsKinds: make(map[string]appdef.DataKind),
+		})
 	})
 }
 
@@ -265,39 +301,8 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 				qw.state, qw.queryParams, qw.resultType, qw.rs, qw.metrics)
 			return nil
 		}),
-		operator("exec function", func(ctx context.Context, qw *queryWork) (err error) {
-			now := time.Now()
-			defer func() {
-				if r := recover(); r != nil {
-					stack := string(debug.Stack())
-					err = fmt.Errorf("%v\n%s", r, stack)
-				}
-				qw.rowsProcessor.Close()
-				qw.metrics.Increase(execSeconds, time.Since(now).Seconds())
-			}()
-			exec := qw.appStructs.Resources().QueryResource(qw.msg.Query().QName()).(istructs.IQueryFunction).Exec
-			err = exec(ctx, qw.execQueryArgs, func(object istructs.IObject) error {
-				pathToIdx := make(map[string]int)
-				if qw.resultType.QName() == istructs.QNameRaw {
-					pathToIdx[processors.Field_RawObject_Body] = 0
-				} else {
-					for i, element := range qw.queryParams.Elements() {
-						pathToIdx[element.Path().Name()] = i
-					}
-				}
-				return qw.rowsProcessor.SendAsync(workpiece{
-					object: object,
-					outputRow: &outputRow{
-						keyToIdx: pathToIdx,
-						values:   make([]interface{}, len(pathToIdx)),
-					},
-					enrichedRootFieldsKinds: make(map[string]appdef.DataKind),
-				})
-			})
-			return coreutils.WrapSysError(err, http.StatusInternalServerError)
-		}),
-		pipeline.FinallyOperator[*queryWork]("release operator", func(qw *queryWork) error {
-			qw.release()
+		operator("get func exec", func(ctx context.Context, qw *queryWork) (err error) {
+			qw.queryExec = qw.appStructs.Resources().QueryResource(qw.msg.Query().QName()).(istructs.IQueryFunction).Exec
 			return nil
 		}),
 	}
@@ -324,6 +329,7 @@ type queryWork struct {
 	principalPayload  payloads.PrincipalPayload
 	secretReader      isecrets.ISecretReader
 	queryFunc         istructs.IQueryFunction
+	queryExec         func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) error
 }
 
 func newQueryWork(msg IQueryMessage, rs IResultSenderClosable, appParts appparts.IAppPartitions,
@@ -433,20 +439,20 @@ func NewQueryMessage(requestCtx context.Context, appQName istructs.AppQName, par
 	}
 }
 
-type workpiece struct {
+type rowsWorkpiece struct {
 	pipeline.IWorkpiece
 	object                  istructs.IObject
 	outputRow               IOutputRow
 	enrichedRootFieldsKinds FieldsKinds
 }
 
-func (w workpiece) Object() istructs.IObject             { return w.object }
-func (w workpiece) OutputRow() IOutputRow                { return w.outputRow }
-func (w workpiece) EnrichedRootFieldsKinds() FieldsKinds { return w.enrichedRootFieldsKinds }
-func (w workpiece) PutEnrichedRootFieldKind(name string, kind appdef.DataKind) {
+func (w rowsWorkpiece) Object() istructs.IObject             { return w.object }
+func (w rowsWorkpiece) OutputRow() IOutputRow                { return w.outputRow }
+func (w rowsWorkpiece) EnrichedRootFieldsKinds() FieldsKinds { return w.enrichedRootFieldsKinds }
+func (w rowsWorkpiece) PutEnrichedRootFieldKind(name string, kind appdef.DataKind) {
 	w.enrichedRootFieldsKinds[name] = kind
 }
-func (w workpiece) Release() {
+func (w rowsWorkpiece) Release() {
 	//TODO implement it someday
 	//Release goes here
 }
@@ -543,17 +549,6 @@ func (c *fieldsDefs) get(name appdef.QName) FieldsKinds {
 		c.fields[name] = fd
 	}
 	return fd
-}
-
-type resultSenderClosableOnlyOnce struct {
-	IResultSenderClosable
-	sync.Once
-}
-
-func (s *resultSenderClosableOnlyOnce) Close(err error) {
-	s.Once.Do(func() {
-		s.IResultSenderClosable.Close(err)
-	})
 }
 
 type queryProcessorMetrics struct {

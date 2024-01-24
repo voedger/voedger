@@ -28,7 +28,7 @@ func (o *SendToBusOperator) DoAsync(_ context.Context, work pipeline.IWorkpiece)
 		o.rs.StartArraySection("", nil)
 		o.initialized = true
 	}
-	return work, o.rs.SendElement("", work.(workpiece).OutputRow().Values())
+	return work, o.rs.SendElement("", work.(rowsWorkpiece).OutputRow().Values())
 }
 
 func (o *SendToBusOperator) OnError(_ context.Context, err error) {
