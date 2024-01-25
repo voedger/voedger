@@ -34,7 +34,7 @@ func TestWrongTypes(t *testing.T) {
 	authn := iauthnzimpl.NewDefaultAuthenticator(iauthnzimpl.TestSubjectRolesGetter)
 	authz := iauthnzimpl.NewDefaultAuthorizer()
 
-	cfgs, appDef, appStructsProvider, appTokens := getTestCfg(require, nil)
+	appDef, appStructsProvider, appTokens := getTestCfg(require, nil)
 
 	appParts, cleanAppParts, err := appparts.New(appStructsProvider)
 	require.NoError(err)
@@ -47,7 +47,7 @@ func TestWrongTypes(t *testing.T) {
 		resultSenderClosableFactory,
 		appParts,
 		3, // maxPrepareQueries
-		imetrics.Provide(), "vvm", authn, authz, cfgs)
+		imetrics.Provide(), "vvm", authn, authz)
 	ctx, cancel := context.WithCancel(context.Background())
 	go func() {
 		queryProcessor.Run(ctx)

@@ -5,6 +5,7 @@
 package coreutils
 
 import (
+	"maps"
 	"time"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -49,6 +50,7 @@ func (o *TestObject) PutBool(name string, value bool)                  { o.Data[
 func (o *TestObject) PutRecordID(name string, value istructs.RecordID) { o.Data[name] = value }
 func (o *TestObject) PutNumber(name string, value float64)             { o.Data[name] = value }
 func (o *TestObject) PutChars(name string, value string)               { o.Data[name] = value }
+func (o *TestObject) PutFromJSON(value map[string]any)                 { maps.Copy(o.Data, value) }
 
 func (o *TestObject) ID() istructs.RecordID     { return o.Id }
 func (o *TestObject) QName() appdef.QName       { return o.Name }

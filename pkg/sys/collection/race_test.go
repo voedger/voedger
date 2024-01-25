@@ -59,7 +59,7 @@ func newTSIdsGenerator() *TSidsGeneratorType {
 func Test_Race_SimpleInsertOne(t *testing.T) {
 	req := require.New(t)
 
-	appParts, _, cleanup := buildAppParts(t)
+	appParts, cleanup := buildAppParts(t)
 	defer cleanup()
 
 	appPart, err := appParts.Borrow(test.appQName, test.partition, cluster.ProcessorKind_Command)
@@ -85,7 +85,7 @@ func Test_Race_SimpleInsertOne(t *testing.T) {
 func Test_Race_SimpleInsertMany(t *testing.T) {
 	req := require.New(t)
 
-	appParts, _, cleanup := buildAppParts(t)
+	appParts, cleanup := buildAppParts(t)
 	defer cleanup()
 
 	appPart, err := appParts.Borrow(test.appQName, test.partition, cluster.ProcessorKind_Command)
