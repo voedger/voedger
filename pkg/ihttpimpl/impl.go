@@ -284,7 +284,7 @@ func (p *httpProcessor) requestHandler(ctx context.Context, sender ibus.ISender,
 type router struct {
 	router        *mux.Router
 	reverseProxy  *httputil.ReverseProxy
-	staticContent map[string]fs.FS
+	staticContent map[string]http.HandlerFunc
 	redirections  []*redirectionRoute // last item is always exist and if it is non-null, then it is a default route
 	sync.RWMutex
 }
@@ -292,7 +292,7 @@ type router struct {
 func newRouter() *router {
 	return &router{
 		router:        mux.NewRouter(),
-		staticContent: make(map[string]fs.FS),
+		staticContent: make(map[string]http.HandlerFunc),
 		reverseProxy:  &httputil.ReverseProxy{Director: func(r *http.Request) {}},
 		redirections:  make([]*redirectionRoute, 1),
 	}
@@ -315,7 +315,7 @@ func (r *router) addStaticContent(resource string, fs fs.FS) {
 	r.Lock()
 	defer r.Unlock()
 
-	r.staticContent[resource] = fs
+	r.staticContent[resource] = staticContentHandler(staticPath+resource, fs)
 }
 
 func (r *router) addReverseProxyRoute(srcRegExp, dstRegExp string) {
@@ -354,10 +354,10 @@ func staticContentHandler(resource string, fs fs.FS) http.HandlerFunc {
 
 func (r *router) matchStaticContent(req *http.Request, rm *mux.RouteMatch) (matched bool) {
 	requestedURL := getFullRequestedURL(req)
-	for path, fs := range r.staticContent {
+	for path, handler := range r.staticContent {
 		if regexp.MustCompile(path).MatchString(requestedURL) {
 			rm.Route = r.router.Get("static")
-			rm.Handler = staticContentHandler(staticPath+path, fs)
+			rm.Handler = handler
 			return true
 		}
 	}
