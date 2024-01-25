@@ -111,7 +111,7 @@ func TestBasicUsage_RowsProcessorFactory(t *testing.T) {
 		},
 	}
 	work := func(id int64, name string, idDepartment int64) pipeline.IWorkpiece {
-		return workpiece{
+		return rowsWorkpiece{
 			object: &coreutils.TestObject{
 				Name: appdef.NewQName("pos", "Article"),
 				Data: map[string]interface{}{"id": id, "name": name, "id_department": istructs.RecordID(idDepartment)},
@@ -402,7 +402,7 @@ func TestRawMode(t *testing.T) {
 	}
 	processor := ProvideRowsProcessorFactory()(context.Background(), appDef, &mockState{}, queryParams{}, resultMeta, rs, &testMetrics{})
 
-	require.NoError(processor.SendAsync(workpiece{
+	require.NoError(processor.SendAsync(rowsWorkpiece{
 		object: &coreutils.TestObject{
 			Data: map[string]interface{}{processors.Field_RawObject_Body: `[accepted]`},
 		},

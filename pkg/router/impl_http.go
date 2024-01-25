@@ -117,15 +117,15 @@ func (s *httpService) registerHandlers(busTimeout time.Duration, appsWSAmount ma
 		-> need to allow OPTIONS
 	*/
 	if s.BlobberParams != nil {
-		s.router.Handle(fmt.Sprintf("/blob/{%s}/{%s}/{%s:[0-9]+}", appOwner, appName, wsid), corsHandler(s.blobWriteRequestHandler())).
+		s.router.Handle(fmt.Sprintf("/blob/{%s}/{%s}/{%s:[0-9]+}", AppOwner, AppName, WSID), corsHandler(s.blobWriteRequestHandler())).
 			Methods("POST", "OPTIONS").
 			Name("blob write")
-		s.router.Handle(fmt.Sprintf("/blob/{%s}/{%s}/{%s:[0-9]+}/{%s:[0-9]+}", appOwner, appName, wsid, blobID), corsHandler(s.blobReadRequestHandler())).
+		s.router.Handle(fmt.Sprintf("/blob/{%s}/{%s}/{%s:[0-9]+}/{%s:[0-9]+}", AppOwner, AppName, WSID, blobID), corsHandler(s.blobReadRequestHandler())).
 			Methods("POST", "GET", "OPTIONS").
 			Name("blob read")
 	}
-	s.router.HandleFunc(fmt.Sprintf("/api/{%s}/{%s}/{%s:[0-9]+}/{%s:[a-zA-Z0-9_/.]+}", appOwner, appName,
-		wsid, resourceName), corsHandler(requestHandler(s.bus, busTimeout, appsWSAmount))).
+	s.router.HandleFunc(fmt.Sprintf("/api/{%s}/{%s}/{%s:[0-9]+}/{%s:[a-zA-Z0-9_/.]+}", AppOwner, AppName,
+		WSID, ResourceName), corsHandler(RequestHandler(s.bus, busTimeout, appsWSAmount))).
 		Methods("POST", "PATCH", "OPTIONS").Name("api")
 
 	s.router.Handle("/n10n/channel", corsHandler(s.subscribeAndWatchHandler())).Methods("GET")
@@ -150,7 +150,7 @@ func (s *httpService) registerHandlers(busTimeout time.Duration, appsWSAmount ma
 	return nil
 }
 
-func requestHandler(bus ibus.IBus, busTimeout time.Duration, appsWSAmount map[istructs.AppQName]istructs.AppWSAmount) http.HandlerFunc {
+func RequestHandler(bus ibus.IBus, busTimeout time.Duration, appsWSAmount map[istructs.AppQName]istructs.AppWSAmount) http.HandlerFunc {
 	return func(resp http.ResponseWriter, req *http.Request) {
 		vars := mux.Vars(req)
 		queueRequest, ok := createRequest(req.Method, req, resp, appsWSAmount)
@@ -158,7 +158,7 @@ func requestHandler(bus ibus.IBus, busTimeout time.Duration, appsWSAmount map[is
 			return
 		}
 
-		queueRequest.Resource = vars[resourceName]
+		queueRequest.Resource = vars[ResourceName]
 
 		// req's BaseContext is router service's context. See service.Start()
 		// router app closing or client disconnected -> req.Context() is done
@@ -169,7 +169,7 @@ func requestHandler(bus ibus.IBus, busTimeout time.Duration, appsWSAmount map[is
 		res, sections, secErr, err := bus.SendRequest2(requestCtx, queueRequest, busTimeout)
 		if err != nil {
 			logger.Error("IBus.SendRequest2 failed on ", queueRequest.Resource, ":", err, ". Body:\n", string(queueRequest.Body))
-			writeTextResponse(resp, err.Error(), http.StatusInternalServerError)
+			WriteTextResponse(resp, err.Error(), http.StatusInternalServerError)
 			return
 		}
 

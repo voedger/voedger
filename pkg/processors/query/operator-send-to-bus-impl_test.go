@@ -26,7 +26,7 @@ func TestSendToBusOperator_DoAsync(t *testing.T) {
 		},
 		metrics: &testMetrics{},
 	}
-	work := workpiece{outputRow: &testOutputRow{values: []interface{}{"hello world"}}}
+	work := rowsWorkpiece{outputRow: &testOutputRow{values: []interface{}{"hello world"}}}
 
 	outWork, err := operator.DoAsync(context.Background(), work)
 	_, _ = operator.DoAsync(context.Background(), work)
@@ -34,23 +34,4 @@ func TestSendToBusOperator_DoAsync(t *testing.T) {
 	require.Equal(work, outWork)
 	require.NoError(err)
 	require.Equal(1, counter)
-}
-
-func TestSendToBusOperator_OnError(t *testing.T) {
-	require := require.New(t)
-	times := 0
-	operator := SendToBusOperator{rs: &resultSenderClosableOnlyOnce{
-		IResultSenderClosable: testResultSenderClosable{
-			close: func(err error) {
-				require.Error(err)
-				times++
-			},
-		},
-	}}
-
-	operator.OnError(context.Background(), ErrWrongType)
-	operator.OnError(context.Background(), ErrWrongType)
-	operator.OnError(context.Background(), ErrWrongType)
-
-	require.Equal(1, times)
 }

@@ -257,6 +257,19 @@ func TestCtoolCommands(t *testing.T) {
 	require.Error(err, err)
 }
 
+func TestAcmeDomains(t *testing.T) {
+	require := require.New(t)
+
+	cluster := newCluster()
+	require.Equal(cluster.Acme.domains(), "")
+
+	cluster.Acme.Domains = []string{"domain1.io", "domain2.io"}
+	require.Equal(cluster.Acme.domains(), "domain1.io,domain2.io")
+
+	cluster.Acme.addDomains("domain2.io,domain3,domain4")
+	require.Equal(cluster.Acme.domains(), "domain1.io,domain2.io,domain3,domain4")
+}
+
 // Testing the availability of the variable environment from scripts caused by PipedExec
 func TestVariableEnvironment(t *testing.T) {
 	require := require.New(t)

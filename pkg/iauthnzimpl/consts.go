@@ -85,7 +85,10 @@ var (
 	qNameQryGetLocationDailyUPReport                = appdef.NewQName(airPackage, "GetLocationDailyUPReport")
 	qNameQryGetResellerDailyUPReport                = appdef.NewQName(airPackage, "GetResellerDailyUPReport")
 	qNameCDocReseller                               = appdef.NewQName(airPackage, "Reseller")
-	qNameQryGetSubscriptionInvoices                 = appdef.NewQName(airPackage, "GetSubscriptionInvoices")
+	qNameQryListIssuedSubscriptionInvoices          = appdef.NewQName(airPackage, "ListIssuedSubscriptionInvoices")
+	qNameQryListIssuedSubscriptionResellers         = appdef.NewQName(airPackage, "ListIssuedSubscriptionResellers")
+	qNameQryListPaidSubscriptionInvoices            = appdef.NewQName(airPackage, "ListPaidSubscriptionInvoices")
+	qNameQryListPaidSubscriptionResellers           = appdef.NewQName(airPackage, "ListPaidSubscriptionResellers")
 
 	// Air roles
 	qNameRoleResellersAdmin         = appdef.NewQName(airPackage, "ResellersAdmin")

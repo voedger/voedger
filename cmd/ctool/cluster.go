@@ -38,10 +38,12 @@ func newCluster() *clusterType {
 		SkipStacks:            make([]string, 0),
 		ReplacedAddresses:     make([]string, 0),
 		Cron:                  &cronType{},
-		Acme:                  &acmeType{},
+		Acme:                  &acmeType{Domains: make([]string, 0)},
 	}
 
-	cluster.Acme.Domains = strings.Split(acmeDomains, ",")
+	if len(acmeDomains) != 0 {
+		cluster.Acme.Domains = strings.Split(acmeDomains, comma)
+	}
 
 	if err := cluster.setEnv(); err != nil {
 		loggerError(err.Error())
@@ -340,6 +342,8 @@ func (c *cmdType) validate(cluster *clusterType) error {
 		return validateReplaceCmd(c, cluster)
 	case ckBackup:
 		return validateBackupCmd(c, cluster)
+	case ckAcme:
+		return validateAcmeCmd(c, cluster)
 	default:
 		return ErrUnknownCommand
 	}
@@ -416,6 +420,37 @@ func validateBackupCmd(cmd *cmdType, cluster *clusterType) error {
 	}
 }
 
+func validateAcmeCmd(cmd *cmdType, cluster *clusterType) error {
+
+	if len(cmd.Args) == 0 {
+		return ErrMissingCommandArguments
+	}
+
+	if cluster.Draft {
+		return ErrClusterConfNotFound
+	}
+
+	switch cmd.Args[0] {
+	case "add":
+		return validateAcmeAddCmd(cmd, cluster)
+	default:
+		return ErrUnknownCommand
+	}
+
+}
+
+func validateAcmeAddCmd(cmd *cmdType, cluster *clusterType) error {
+
+	if cluster.Draft {
+		return ErrClusterConfNotFound
+	}
+
+	if len(cmd.Args) != 2 {
+		return ErrInvalidNumberOfArguments
+	}
+	return nil
+}
+
 type cronType struct {
 	Backup string `json:"Backup,omitempty"`
 }
@@ -425,7 +460,17 @@ type acmeType struct {
 }
 
 func (a *acmeType) domains() string {
-	return strings.Join(a.Domains, ",")
+	return strings.Join(a.Domains, comma)
+}
+
+// adds new domains to the ACME Domains list from a string "Domain1,Domain2,Domain3"
+func (a *acmeType) addDomains(domainsStr string) {
+	domains := strings.Split(domainsStr, comma)
+	for _, d := range domains {
+		if !strings.Contains(strings.Join(a.Domains, comma), d) {
+			a.Domains = append(a.Domains, d)
+		}
+	}
 }
 
 type clusterType struct {
@@ -503,6 +548,13 @@ func (c *clusterType) applyCmd(cmd *cmdType) error {
 	defer c.saveToJSON()
 
 	switch cmd.Kind {
+	case ckAcme:
+		if cmd.Args[0] == "add" && len(cmd.Args) == 2 {
+			c.Acme.addDomains(cmd.Args[1])
+			if err := c.setEnv(); err != nil {
+				return err
+			}
+		}
 	case ckReplace:
 		oldAddr := cmd.Args[0]
 		newAddr := cmd.Args[1]

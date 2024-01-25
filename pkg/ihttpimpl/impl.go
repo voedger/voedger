@@ -3,6 +3,7 @@
  * @author Aleksei Ponomarev
  * Copyright (c) 2022-present unTill Pro, Ltd.
  * @author Maxim Geraskin (refactoring)
+ * @author Alisher Nurmanov
  */
 
 package ihttpimpl
@@ -17,21 +18,25 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"net/url"
-	"path"
 	"regexp"
 	"sync"
 
 	"github.com/gorilla/mux"
+	"github.com/untillpro/goutils/logger"
 	"golang.org/x/crypto/acme/autocert"
 	"golang.org/x/exp/slices"
 
-	"github.com/voedger/voedger/pkg/istructs"
-	coreutils "github.com/voedger/voedger/pkg/utils"
-
-	"github.com/untillpro/goutils/logger"
-
 	"github.com/voedger/voedger/pkg/ihttp"
+	"github.com/voedger/voedger/pkg/istructs"
+	routerpkg "github.com/voedger/voedger/pkg/router"
+	coreutils "github.com/voedger/voedger/pkg/utils"
+	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
 )
+
+type appInfo struct {
+	numPartitions uint
+	handlers      map[istructs.PartitionID]ibus.RequestHandler
+}
 
 type httpProcessor struct {
 	params       ihttp.CLIParams
@@ -43,6 +48,10 @@ type httpProcessor struct {
 	acmeDomains  *sync.Map
 	certCache    autocert.Cache
 	certManager  *autocert.Manager
+	bus          ibus.IBus
+	apps         map[istructs.AppQName]*appInfo
+	appsWSAmount map[istructs.AppQName]istructs.AppWSAmount
+	sync.RWMutex
 }
 
 type redirectionRoute struct {
@@ -72,9 +81,13 @@ func (p *httpProcessor) Prepare() (err error) {
 			logger.Info("listening port ", p.acmeListener.Addr().(*net.TCPAddr).Port, " for acme server")
 		}
 	}
+
 	if p.listener, err = net.Listen("tcp", coreutils.ServerAddress(p.params.Port)); err == nil {
 		logger.Info("listening port ", p.listener.Addr().(*net.TCPAddr).Port, " for server")
 	}
+
+	p.registerRoutes()
+
 	return
 }
 
@@ -128,23 +141,11 @@ func (p *httpProcessor) Run(ctx context.Context) {
 }
 
 func (p *httpProcessor) AddReverseProxyRoute(srcRegExp, dstRegExp string) {
-	p.router.Lock()
-	defer p.router.Unlock()
-
-	p.router.redirections = slices.Insert(p.router.redirections, len(p.router.redirections)-1, &redirectionRoute{
-		srcRegExp:        regexp.MustCompile(srcRegExp),
-		dstRegExpPattern: dstRegExp,
-	})
+	p.router.addReverseProxyRoute(srcRegExp, dstRegExp)
 }
 
 func (p *httpProcessor) SetReverseProxyRouteDefault(srcRegExp, dstRegExp string) {
-	p.router.Lock()
-	defer p.router.Unlock()
-
-	p.router.redirections[len(p.router.redirections)-1] = &redirectionRoute{
-		srcRegExp:        regexp.MustCompile(srcRegExp),
-		dstRegExpPattern: dstRegExp,
-	}
+	p.router.setReverseProxyRouteDefault(srcRegExp, dstRegExp)
 }
 
 func (p *httpProcessor) AddAcmeDomain(domain string) {
@@ -152,18 +153,76 @@ func (p *httpProcessor) AddAcmeDomain(domain string) {
 }
 
 func (p *httpProcessor) DeployStaticContent(resource string, fs fs.FS) {
-	resource = staticPath + resource
-	f := func(wr http.ResponseWriter, req *http.Request) {
-		fsHandler := http.FileServer(http.FS(fs))
-		http.StripPrefix(resource, fsHandler).ServeHTTP(wr, req)
-	}
-	p.handlePath(resource, true, f)
+	p.router.addStaticContent(resource, fs)
 }
 
-func (p *httpProcessor) DeployAppPartition(app istructs.AppQName, partNo istructs.PartitionID, commandHandler, queryHandler ihttp.ISender) {
-	// <cluster-domain>/api/<AppQName.owner>/<AppQName.name>/<wsid>/<{q,c}.funcQName>
-	resourcePath := fmt.Sprintf("/api/%s/%s/%d/q|c\\.[a-zA-Z_.]+", app.Owner(), app.Name(), partNo)
-	p.handlePath(resourcePath, false, handleAppPart())
+func (p *httpProcessor) DeployAppPartition(app istructs.AppQName, partNo istructs.PartitionID, appPartitionRequestHandler ibus.RequestHandler) error {
+	p.Lock()
+	defer p.Unlock()
+
+	if _, err := p.getAppPartHandler(app, partNo); !errors.Is(err, ErrAppPartitionIsNotDeployed) {
+		return err
+	}
+	p.apps[app].handlers[partNo] = appPartitionRequestHandler
+	return nil
+}
+
+func (p *httpProcessor) UndeployAppPartition(app istructs.AppQName, partNo istructs.PartitionID) error {
+	p.Lock()
+	defer p.Unlock()
+
+	if _, err := p.getAppPartHandler(app, partNo); err != nil {
+		return err
+	}
+	delete(p.apps[app].handlers, partNo)
+	return nil
+}
+
+func (p *httpProcessor) getAppPartHandler(appQName istructs.AppQName, partNo istructs.PartitionID) (ibus.RequestHandler, error) {
+	app, ok := p.apps[appQName]
+	if !ok {
+		return nil, ErrAppIsNotDeployed
+	}
+	if uint(partNo) >= app.numPartitions {
+		return nil, ErrAppPartNoOutOfRange
+	}
+	handler, ok := app.handlers[partNo]
+	if !ok {
+		return nil, ErrAppPartitionIsNotDeployed
+	}
+	return handler, nil
+}
+
+func (p *httpProcessor) DeployApp(app istructs.AppQName, numPartitions uint, numAppWS uint) error {
+	p.Lock()
+	defer p.Unlock()
+
+	if _, ok := p.apps[app]; ok {
+		return ErrAppAlreadyDeployed
+	}
+	p.apps[app] = &appInfo{
+		numPartitions: numPartitions,
+		handlers:      make(map[istructs.PartitionID]ibus.RequestHandler),
+	}
+	p.appsWSAmount[app] = istructs.AppWSAmount(numAppWS)
+	return nil
+}
+
+func (p *httpProcessor) UndeployApp(app istructs.AppQName) error {
+	p.Lock()
+	defer p.Unlock()
+
+	if p.apps[app] == nil {
+		return ErrAppIsNotDeployed
+	}
+	for _, handler := range p.apps[app].handlers {
+		if handler != nil {
+			return ErrActiveAppPartitionsExist
+		}
+	}
+	delete(p.apps, app)
+	delete(p.appsWSAmount, app)
+	return nil
 }
 
 func (p *httpProcessor) ListeningPort() int {
@@ -197,31 +256,90 @@ func (p *httpProcessor) cleanup() {
 	}
 }
 
-func (p *httpProcessor) handlePath(resource string, prefix bool, handlerFunc func(http.ResponseWriter, *http.Request)) {
-	p.router.Lock()
-	defer p.router.Unlock()
+func (p *httpProcessor) registerRoutes() {
+	p.router.setUpRoutes(corsHandler(p.httpHandler()))
+}
 
-	var r *mux.Route
-	if prefix {
-		r = p.router.contentRouter.PathPrefix(resource)
-	} else {
-		r = p.router.contentRouter.Path(resource)
+func (p *httpProcessor) httpHandler() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		routerpkg.RequestHandler(p.bus, ibus.DefaultTimeout, p.appsWSAmount)(w, r)
 	}
-	r.HandlerFunc(handlerFunc)
+}
+
+func (p *httpProcessor) requestHandler(ctx context.Context, sender ibus.ISender, request ibus.Request) {
+	appQName, err := istructs.ParseAppQName(request.AppQName)
+	if err != nil {
+		coreutils.ReplyBadRequest(sender, err.Error())
+		return
+	}
+	app, ok := p.apps[appQName]
+	if !ok {
+		coreutils.ReplyBadRequest(sender, ErrAppIsNotDeployed.Error())
+		return
+	}
+	partNo := istructs.PartitionID(request.WSID % int64(app.numPartitions))
+	handler, err := p.getAppPartHandler(appQName, partNo)
+	if err != nil {
+		coreutils.ReplyBadRequest(sender, err.Error())
+		return
+	}
+	handler(ctx, sender, request)
 }
 
 type router struct {
-	contentRouter *mux.Router
+	router        *mux.Router
 	reverseProxy  *httputil.ReverseProxy
+	staticContent map[string]http.HandlerFunc
 	redirections  []*redirectionRoute // last item is always exist and if it is non-null, then it is a default route
 	sync.RWMutex
 }
 
 func newRouter() *router {
 	return &router{
-		contentRouter: mux.NewRouter(),
+		router:        mux.NewRouter(),
+		staticContent: make(map[string]http.HandlerFunc),
 		reverseProxy:  &httputil.ReverseProxy{Director: func(r *http.Request) {}},
 		redirections:  make([]*redirectionRoute, 1),
+	}
+}
+
+func (r *router) setUpRoutes(appRequestHandler http.HandlerFunc) {
+	appRequestPath := fmt.Sprintf("/api/{%s}/{%s}/{%s:[0-9]+}/{%s:[a-zA-Z0-9_/.]+}",
+		routerpkg.AppOwner,
+		routerpkg.AppName,
+		routerpkg.WSID,
+		routerpkg.ResourceName,
+	)
+	r.router.HandleFunc(appRequestPath, appRequestHandler).Name("api").Methods("POST", "PATCH", "OPTIONS")
+	r.router.Name("static").PathPrefix(staticPath).MatcherFunc(r.matchStaticContent)
+	// set reverse proxy route last
+	r.router.Name("reverse-proxy").MatcherFunc(r.matchRedirections)
+}
+
+func (r *router) addStaticContent(resource string, fs fs.FS) {
+	r.Lock()
+	defer r.Unlock()
+
+	r.staticContent[resource] = staticContentHandler(staticPath+resource, fs)
+}
+
+func (r *router) addReverseProxyRoute(srcRegExp, dstRegExp string) {
+	r.Lock()
+	defer r.Unlock()
+
+	r.redirections = slices.Insert(r.redirections, len(r.redirections)-1, &redirectionRoute{
+		srcRegExp:        regexp.MustCompile(srcRegExp),
+		dstRegExpPattern: dstRegExp,
+	})
+}
+
+func (r *router) setReverseProxyRouteDefault(srcRegExp, dstRegExp string) {
+	r.Lock()
+	defer r.Unlock()
+
+	r.redirections[len(r.redirections)-1] = &redirectionRoute{
+		srcRegExp:        regexp.MustCompile(srcRegExp),
+		dstRegExpPattern: dstRegExp,
 	}
 }
 
@@ -229,38 +347,26 @@ func (r *router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	r.RLock()
 	defer r.RUnlock()
 
-	reqPath := req.URL.EscapedPath()
-	// Clean path to canonical form and redirect.
-	if p := cleanPath(reqPath); p != reqPath {
-		reqURL := *req.URL
-		reqURL.Path = p
-		p = reqURL.String()
-
-		w.Header().Set("Location", p)
-		w.WriteHeader(http.StatusMovedPermanently)
-		return
-	}
-	var match mux.RouteMatch
-	var handler http.Handler
-	if r.Match(req, &match) {
-		handler = match.Handler
-		req = requestWithVars(req, match.Vars)
-		req = requestWithRoute(req, match.Route)
-	}
-
-	if handler == nil && errors.Is(match.MatchErr, mux.ErrMethodMismatch) {
-		handler = methodNotAllowedHandler()
-	}
-
-	if handler == nil {
-		handler = http.NotFoundHandler()
-	}
-
-	handler.ServeHTTP(w, req)
+	r.router.ServeHTTP(w, req)
 }
 
-func (r *router) Match(req *http.Request, rm *mux.RouteMatch) bool {
-	return r.contentRouter.Match(req, rm) || r.matchRedirections(req, rm)
+func staticContentHandler(resource string, fs fs.FS) http.HandlerFunc {
+	return func(wr http.ResponseWriter, req *http.Request) {
+		fsHandler := http.FileServer(http.FS(fs))
+		http.StripPrefix(resource, fsHandler).ServeHTTP(wr, req)
+	}
+}
+
+func (r *router) matchStaticContent(req *http.Request, rm *mux.RouteMatch) (matched bool) {
+	requestedURL := getFullRequestedURL(req)
+	for path, handler := range r.staticContent {
+		if regexp.MustCompile(path).MatchString(requestedURL) {
+			rm.Route = r.router.Get("static")
+			rm.Handler = handler
+			return true
+		}
+	}
+	return
 }
 
 func (r *router) matchRedirections(req *http.Request, rm *mux.RouteMatch) (matched bool) {
@@ -318,52 +424,16 @@ func getFullRequestedURL(r *http.Request) string {
 	return fullURL
 }
 
-// cleanPath returns the canonical path for p, eliminating . and .. elements.
-// Borrowed from the net/http package.
-// nolint
-func cleanPath(p string) string {
-	if p == "" {
-		return "/"
-	}
-	if p[0] != '/' {
-		p = "/" + p
-	}
-	np := path.Clean(p)
-	// path.Clean removes trailing slash except for root;
-	// put the trailing slash back if necessary.
-	if p[len(p)-1] == '/' && np != "/" {
-		np += "/"
-	}
-	return np
-}
-
-// Borrowed from the mux package.
-func requestWithVars(r *http.Request, vars map[string]string) *http.Request {
-	ctx := context.WithValue(r.Context(), varsKey, vars)
-	return r.WithContext(ctx)
-}
-
-// Borrowed from the mux package.
-func requestWithRoute(r *http.Request, route *mux.Route) *http.Request {
-	ctx := context.WithValue(r.Context(), routeKey, route)
-	return r.WithContext(ctx)
-}
-
-// methodNotAllowed replies to the request with an HTTP status code 405.
-// Borrowed from the mux package.
-func methodNotAllowed(w http.ResponseWriter, _ *http.Request) {
-	w.WriteHeader(http.StatusMethodNotAllowed)
-}
-
-// methodNotAllowedHandler returns a simple request handler
-// that replies to each request with a status code 405.
-// Borrowed from the mux package.
-func methodNotAllowedHandler() http.Handler { return http.HandlerFunc(methodNotAllowed) }
-
-func handleAppPart() http.HandlerFunc {
-	return func(wr http.ResponseWriter, req *http.Request) {
-		// <cluster-domain>/api/<AppQName.owner>/<AppQName.name>/<wsid>/<{q,c}.funcQName>
-		// got sender
-		_, _ = wr.Write([]byte("under construction"))
+func corsHandler(h http.Handler) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if logger.IsVerbose() {
+			logger.Verbose("serving ", r.Method, " ", r.URL.Path)
+		}
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, Authorization")
+		if r.Method == "OPTIONS" {
+			return
+		}
+		h.ServeHTTP(w, r)
 	}
 }

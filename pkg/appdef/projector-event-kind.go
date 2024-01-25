@@ -24,7 +24,7 @@ const (
 	ProjectorEventKind_Count
 )
 
-// Events for record any change.
+// ProjectorEventKind_AnyChanges describes events for record any change.
 var ProjectorEventKind_AnyChanges = []ProjectorEventKind{
 	ProjectorEventKind_Insert,
 	ProjectorEventKind_Update,
