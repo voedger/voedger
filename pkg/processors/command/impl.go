@@ -424,9 +424,7 @@ func getArgsObject(_ context.Context, work interface{}) (err error) {
 		if !ok {
 			return errors.New(`"args" field must be an object`)
 		}
-		if err = istructsmem.FillObjectFromJSON(args, cmd.cmdMes.Command().Param(), aob); err != nil {
-			return err
-		}
+		aob.FillFromJSON(args)
 	}
 	if cmd.argsObject, err = aob.Build(); err != nil {
 		err = fmt.Errorf("argument object build failed: %w", err)
@@ -445,9 +443,7 @@ func getUnloggedArgsObject(_ context.Context, work interface{}) (err error) {
 		if !ok {
 			return errors.New(`"unloggedArgs" field must be an object`)
 		}
-		if err = istructsmem.FillObjectFromJSON(unloggedArgs, cmd.cmdMes.Command().UnloggedParam(), auob); err != nil {
-			return err
-		}
+		auob.FillFromJSON(unloggedArgs)
 	}
 	if cmd.unloggedArgsObject, err = auob.Build(); err != nil {
 		err = fmt.Errorf("unlogged argument object build failed: %w", err)

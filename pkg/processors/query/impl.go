@@ -25,7 +25,6 @@ import (
 	"github.com/voedger/voedger/pkg/isecrets"
 	"github.com/voedger/voedger/pkg/isecretsimpl"
 	"github.com/voedger/voedger/pkg/istructs"
-	"github.com/voedger/voedger/pkg/istructsmem"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	imetrics "github.com/voedger/voedger/pkg/metrics"
 	"github.com/voedger/voedger/pkg/pipeline"
@@ -476,9 +475,7 @@ func newExecQueryArgs(data coreutils.MapObject, wsid istructs.WSID, qw *queryWor
 	requestArgs := istructs.NewNullObject()
 	if argsType != nil {
 		requestArgsBuilder := qw.appStructs.ObjectBuilder(argsType.QName())
-		if err := istructsmem.FillObjectFromJSON(args, argsType, requestArgsBuilder); err != nil {
-			return execQueryArgs, err
-		}
+		requestArgsBuilder.FillFromJSON(args)
 		requestArgs, err = requestArgsBuilder.Build()
 		if err != nil {
 			return execQueryArgs, err
