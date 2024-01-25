@@ -131,8 +131,7 @@ func TestObjectFillAndGet(t *testing.T) {
 				},
 			},
 		}
-		cfg := test.AppCfg
-		require.NoError(FillObjectFromJSON(data, cfg.AppDef.Type(test.testCDoc), builder))
+		builder.FillFromJSON(data)
 		o, err := builder.Build()
 		require.NoError(err)
 
@@ -169,14 +168,13 @@ func TestObjectFillAndGet(t *testing.T) {
 			},
 		}
 
-		cfg := test.AppCfg
 		for name, val := range cases {
 			builder := as.ObjectBuilder(test.testCDoc)
 			data := map[string]interface{}{
 				"sys.ID": float64(1),
 				name:     val,
 			}
-			require.NoError(FillObjectFromJSON(data, cfg.AppDef.Type(test.testCDoc), builder))
+			builder.FillFromJSON(data)
 			o, err := builder.Build()
 			require.ErrorIs(err, ErrWrongFieldType)
 			require.Nil(o)
@@ -193,12 +191,12 @@ func TestObjectFillAndGet(t *testing.T) {
 			{"record", []interface{}{"str"}},
 			{"record", []interface{}{map[string]interface{}{"unknownContainer": []interface{}{}}}},
 		}
-		cfg := test.AppCfg
 		for _, c := range cases {
 			data := map[string]interface{}{
 				c.f: c.v,
 			}
-			err := FillObjectFromJSON(data, cfg.AppDef.Type(test.testCDoc), builder)
+			builder.FillFromJSON(data)
+			_, err := builder.Build()
 			require.Error(err)
 		}
 	})

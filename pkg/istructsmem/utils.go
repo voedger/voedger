@@ -7,7 +7,6 @@ package istructsmem
 
 import (
 	"encoding/binary"
-	"fmt"
 
 	"github.com/untillpro/dynobuffers"
 
@@ -101,41 +100,4 @@ func wlogKey(ws istructs.WSID, offset istructs.Offset) (pkey, ccols []byte) {
 func IBucketsFromIAppStructs(as istructs.IAppStructs) irates.IBuckets {
 	// appStructs implementation has method Buckets()
 	return as.(interface{ Buckets() irates.IBuckets }).Buckets()
-}
-
-// TODO: @nnv: eliminate the parameter «t appdef.IType».
-//   - To obtain object name builder should use b.String() interface
-//   - If some complex field (with value type is []interface{}) has ChildBuilder with NullQName, then return error
-func FillObjectFromJSON(data map[string]interface{}, t appdef.IType, b istructs.IObjectBuilder) error {
-	for fieldName, fieldValue := range data {
-		switch fv := fieldValue.(type) {
-		case float64:
-			b.PutNumber(fieldName, fv)
-		case string:
-			b.PutChars(fieldName, fv)
-		case bool:
-			b.PutBool(fieldName, fv)
-		case []interface{}:
-			// e.g. "order_item": [<2 children>]
-			containers, ok := t.(appdef.IContainers)
-			if !ok {
-				return fmt.Errorf("type %v has no containers", t.QName())
-			}
-			container := containers.Container(fieldName)
-			if container == nil {
-				return fmt.Errorf("container with name %s is not found", fieldName)
-			}
-			for i, val := range fv {
-				childData, ok := val.(map[string]interface{})
-				if !ok {
-					return fmt.Errorf("child #%d of %s is not an object", i, fieldName)
-				}
-				childBuilder := b.ChildBuilder(fieldName)
-				if err := FillObjectFromJSON(childData, container.Type(), childBuilder); err != nil {
-					return err
-				}
-			}
-		}
-	}
-	return nil
 }
