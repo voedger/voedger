@@ -15,5 +15,4 @@ const (
 	defaultHTTPPort               = 80
 	defaultReadHeaderTimeout      = time.Second
 	staticPath                    = "/static/"
-	partitionsAmount              = 10
 )

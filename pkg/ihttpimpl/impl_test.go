@@ -110,17 +110,17 @@ func TestBasicUsage_HTTPProcessor(t *testing.T) {
 		wsid := 10
 		testText := "Test"
 		resource := "c.EchoCommand"
-		path := fmt.Sprintf("%s/%s/%d/%s", appOwner, appName, wsid, resource)
+		path := fmt.Sprintf("%s/%s/%d/%s?par1=val1&par2=val2", appOwner, appName, wsid, resource)
 
 		body := testApp.post("/api/"+path, "text/plain", testText, nil)
-		require.Equal([]byte("Hello, Test"), body)
+		require.Equal([]byte("Hello, Test, {\"par1\":[\"val1\"],\"par2\":[\"val2\"]}"), body)
 
 		body = testApp.post("/api/"+path, "application/json", "", map[string]string{"text": testText})
-		require.Equal([]byte(fmt.Sprintf("Hello, {\"text\":\"%s\"}", testText)), body)
+		require.Equal([]byte(fmt.Sprintf("Hello, {\"text\":\"%s\"}, {\"par1\":[\"val1\"],\"par2\":[\"val2\"]}", testText)), body)
 
 		testText = ""
 		body = testApp.post("/api/"+path, "text/plain", testText, nil)
-		require.Equal([]byte(fmt.Sprintf("Hello, %s", testText)), body)
+		require.Equal([]byte(fmt.Sprintf("Hello, %s, {\"par1\":[\"val1\"],\"par2\":[\"val2\"]}", testText)), body)
 	})
 
 	t.Run("q.EchoQuery", func(t *testing.T) {
@@ -147,7 +147,7 @@ func TestBasicUsage_HTTPProcessor(t *testing.T) {
 		path := fmt.Sprintf("%s/%s/%d/%s", appOwner, appName, wsid, resource)
 
 		body := testApp.post("/api/"+path, "text/plain", testText, nil)
-		require.Equal([]byte(fmt.Sprintf("{\"sections\":[{\"type\":\"\",\"elements\":[Hello, %s]}]}", testText)), body)
+		require.Equal([]byte(fmt.Sprintf("{\"sections\":[{\"type\":\"\",\"elements\":[Hello, %s, {}]}]}", testText)), body)
 	})
 
 	t.Run("call unknown app", func(t *testing.T) {
@@ -435,6 +435,8 @@ func (ta *testApp) get(resource string, expectedCodes ...int) []byte {
 
 	body, err := io.ReadAll(res.Body)
 	require.NoError(err)
+	err = res.Body.Close()
+	require.NoError(err)
 
 	return body
 }
@@ -461,6 +463,8 @@ func (ta *testApp) post(resource string, contentType string, requestText string,
 	resp, err := client.Do(req)
 	require.NoError(err)
 	body, err := io.ReadAll(resp.Body)
+	require.NoError(err)
+	err = resp.Body.Close()
 	require.NoError(err)
 
 	return body

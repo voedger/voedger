@@ -6,6 +6,7 @@ package apps
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	"github.com/untillpro/goutils/logger"
@@ -57,28 +58,32 @@ func NewAppStorageFactory(params CLIParams) (istorage.IAppStorageFactory, error)
 }
 
 func NewSysRouterRequestHandler(_ context.Context, sender ibus.ISender, request ibus.Request) {
-	switch request.Resource {
-	case "c.EchoCommand":
-		go func() {
+	go func() {
+		queryParamsBytes, err := json.Marshal(request.Query)
+		if err != nil {
+			coreutils.ReplyBadRequest(sender, err.Error())
+			return
+		}
+
+		switch request.Resource {
+		case "c.EchoCommand":
 			sender.SendResponse(ibus.Response{
 				ContentType: "text/plain",
 				StatusCode:  200,
-				Data:        []byte(fmt.Sprintf("Hello, %s", string(request.Body))),
+				Data:        []byte(fmt.Sprintf("Hello, %s, %s", string(request.Body), string(queryParamsBytes))),
 			})
-		}()
-	case "q.EchoQuery":
-		rs := sender.SendParallelResponse()
-		go func() {
+		case "q.EchoQuery":
+			rs := sender.SendParallelResponse()
 			rs.StartArraySection("", []string{})
-			err := rs.SendElement("Result", []byte(fmt.Sprintf("Hello, %s", string(request.Body))))
+			err := rs.SendElement("Result", []byte(fmt.Sprintf("Hello, %s, %s", string(request.Body), string(queryParamsBytes))))
 			if err != nil {
 				logger.Error(err)
 			}
 			rs.Close(nil)
-		}()
-	default:
-		coreutils.ReplyBadRequest(sender, fmt.Sprintf("unknown func: %s", request.Resource))
-	}
+		default:
+			coreutils.ReplyBadRequest(sender, fmt.Sprintf("unknown func: %s", request.Resource))
+		}
+	}()
 }
 
 func NewAppRequestHandlers() ihttpctl.AppRequestHandlers {

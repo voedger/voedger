@@ -272,7 +272,12 @@ func (p *httpProcessor) requestHandler(ctx context.Context, sender ibus.ISender,
 		coreutils.ReplyBadRequest(sender, err.Error())
 		return
 	}
-	partNo := istructs.PartitionID(request.WSID % partitionsAmount)
+	app, ok := p.apps[appQName]
+	if !ok {
+		coreutils.ReplyBadRequest(sender, ErrAppIsNotDeployed.Error())
+		return
+	}
+	partNo := istructs.PartitionID(request.WSID % int64(app.numPartitions))
 	handler, err := p.getAppPartHandler(appQName, partNo)
 	if err != nil {
 		coreutils.ReplyBadRequest(sender, err.Error())
