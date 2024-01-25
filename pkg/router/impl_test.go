@@ -116,7 +116,7 @@ func TestBasicUsage_SectionedResponse(t *testing.T) {
 	body := []byte("test body")
 	bodyReader := bytes.NewReader(body)
 
-	resp, err := http.Post(fmt.Sprintf("http://127.0.0.1:%d/api/%s/%s/%d/somefunc", router.port(), appOwner, appName, testWSID), "application/json", bodyReader)
+	resp, err := http.Post(fmt.Sprintf("http://127.0.0.1:%d/api/%s/%s/%d/somefunc", router.port(), AppOwner, AppName, testWSID), "application/json", bodyReader)
 	require.NoError(err)
 	defer resp.Body.Close()
 
@@ -239,7 +239,7 @@ func TestClientDisconnectDuringSections(t *testing.T) {
 	}, 5*time.Second)
 	defer tearDown()
 
-	resp, err := http.Post(fmt.Sprintf("http://127.0.0.1:%d/api/%s/%s/%d/somefunc", router.port(), appOwner, appName, testWSID), "application/json", http.NoBody)
+	resp, err := http.Post(fmt.Sprintf("http://127.0.0.1:%d/api/%s/%s/%d/somefunc", router.port(), AppOwner, AppName, testWSID), "application/json", http.NoBody)
 	require.NoError(t, err)
 	entireResp := []byte{}
 	for string(entireResp) != `{"sections":[{"type":"secMap","path":["2"],"elements":{"id1":{"fld1":"fld1Val"}` {
@@ -306,7 +306,7 @@ func TestFailedToWriteResponse(t *testing.T) {
 
 	body := []byte("")
 	bodyReader := bytes.NewReader(body)
-	resp, err := http.Post(fmt.Sprintf("http://127.0.0.1:%d/api/%s/%s/%d/somefunc", router.port(), appOwner, appName, testWSID), "application/json", bodyReader)
+	resp, err := http.Post(fmt.Sprintf("http://127.0.0.1:%d/api/%s/%s/%d/somefunc", router.port(), AppOwner, AppName, testWSID), "application/json", bodyReader)
 	require.Nil(t, err, err)
 
 	// read out the first section
