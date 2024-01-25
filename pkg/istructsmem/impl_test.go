@@ -290,6 +290,7 @@ func Test_appStructsType_ObjectBuilder(t *testing.T) {
 		adb := appdef.New()
 		obj := adb.AddObject(objName)
 		obj.AddField("int", appdef.DataKind_int64, true)
+		obj.AddContainer("child", objName, 0, appdef.Occurs_Unbounded)
 
 		cfgs := make(AppConfigsType)
 		_ = cfgs.AddConfig(istructs.AppQName_test1_app1, adb)
@@ -312,6 +313,35 @@ func Test_appStructsType_ObjectBuilder(t *testing.T) {
 
 		require.Equal(objName, o.QName())
 		require.EqualValues(1, o.AsInt64("int"))
+	})
+
+	t.Run("Should be ok to fill object with children from JSON", func(t *testing.T) {
+		b := appStructs.ObjectBuilder(objName)
+		require.NotNil(b)
+
+		b.FillFromJSON(map[string]interface{}{
+			"int": float64(1),
+			"child": []interface{}{
+				map[string]interface{}{
+					"int": float64(2),
+				},
+			},
+		})
+
+		o, err := b.Build()
+		require.NoError(err)
+
+		require.Equal(objName, o.QName())
+		require.EqualValues(1, o.AsInt64("int"))
+
+		require.Equal(1, func() int {
+			cnt := 0
+			o.Children("child", func(c istructs.IObject) {
+				cnt++
+				require.EqualValues(2, c.AsInt64("int"))
+			})
+			return cnt
+		}())
 	})
 
 	t.Run("Should be error to build unknown object", func(t *testing.T) {

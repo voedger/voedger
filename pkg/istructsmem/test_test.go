@@ -101,6 +101,7 @@ type (
 		// tested rows
 		abstractCDoc appdef.QName
 		testRow      appdef.QName
+		testObj      appdef.QName
 
 		// tested records
 		testCDoc appdef.QName
@@ -204,6 +205,7 @@ var testData = testDataType{
 
 	abstractCDoc: appdef.NewQName("test", "abstract"),
 	testRow:      appdef.NewQName("test", "Row"),
+	testObj:      appdef.NewQName("test", "Obj"),
 	testCDoc:     appdef.NewQName("test", "CDoc"),
 	testCRec:     appdef.NewQName("test", "Record"),
 
@@ -314,6 +316,22 @@ func test() *testDataType {
 				AddField("bool", appdef.DataKind_bool, false).
 				AddField("RecordID", appdef.DataKind_RecordID, false).
 				AddField("RecordID_2", appdef.DataKind_RecordID, false)
+		}
+
+		{
+			obj := appDef.AddObject(testData.testObj)
+			obj.
+				AddField("int32", appdef.DataKind_int32, false).
+				AddField("int64", appdef.DataKind_int64, false).
+				AddField("float32", appdef.DataKind_float32, false).
+				AddField("float64", appdef.DataKind_float64, false).
+				AddField("bytes", appdef.DataKind_bytes, false).
+				AddField("string", appdef.DataKind_string, false).
+				AddField("raw", appdef.DataKind_bytes, false, appdef.MaxLen(appdef.MaxFieldLength)).
+				AddField("QName", appdef.DataKind_QName, false).
+				AddField("bool", appdef.DataKind_bool, false).
+				AddField("RecordID", appdef.DataKind_RecordID, false)
+			obj.AddContainer("child", testData.testObj, 0, appdef.Occurs_Unbounded)
 		}
 
 		{

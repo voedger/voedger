@@ -155,6 +155,7 @@ type NullObjectBuilder struct{ NullRowWriter }
 
 func NewNullObjectBuilder() IObjectBuilder { return &NullObjectBuilder{} }
 
+func (*NullObjectBuilder) FillFromJSON(map[string]any)        {}
 func (*NullObjectBuilder) ChildBuilder(string) IObjectBuilder { return NewNullObjectBuilder() }
 func (*NullObjectBuilder) Build() (IObject, error)            { return NewNullObject(), nil }
 

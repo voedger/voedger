@@ -7,6 +7,7 @@ package istructsmem
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -1661,4 +1662,88 @@ func Test_ObjectMask(t *testing.T) {
 	})
 
 	require.Equal(test.goodCount, cnt)
+}
+
+func Test_objectType_FillFromJSON(t *testing.T) {
+	require := require.New(t)
+	test := test()
+
+	tests := []struct {
+		name  string
+		data  string
+		check func(istructs.IObject, error)
+	}{
+		{"must be ok to fill from empty JSON",
+			`{}`,
+			func(o istructs.IObject, err error) {
+				require.NoError(err)
+				require.Equal(test.testObj, o.QName())
+				require.EqualValues(0, o.AsInt32("int32"))
+			}},
+		{"must be ok to fill fields from JSON",
+			`{"int32": 1, "int64": 2, "float32": 3.3, "float64": 4.4, "bool": true, "string": "test", "bytes": "AQID"}`,
+			func(o istructs.IObject, err error) {
+				require.NoError(err)
+				require.Equal(test.testObj, o.QName())
+				require.EqualValues(1, o.AsInt32("int32"))
+				require.EqualValues(2, o.AsInt64("int64"))
+				require.EqualValues(3.3, o.AsFloat32("float32"))
+				require.EqualValues(4.4, o.AsFloat64("float64"))
+				require.EqualValues(true, o.AsBool("bool"))
+				require.EqualValues("test", o.AsString("string"))
+				require.EqualValues([]byte{1, 2, 3}, o.AsBytes("bytes"))
+			}},
+		{"must be ok to fill children from JSON",
+			`{"int32": 1, "child": [{"int64": 1}, {"int64": 2}, {"int64": 3}]}`,
+			func(o istructs.IObject, err error) {
+				require.NoError(err)
+				require.Equal(test.testObj, o.QName())
+				require.EqualValues(1, o.AsInt32("int32"))
+				require.Equal(3, func() int {
+					cnt := 0
+					o.Children("child", func(c istructs.IObject) {
+						cnt++
+						require.EqualValues(cnt, c.AsInt64("int64"))
+					})
+					return cnt
+				}())
+			}},
+		{"must be error if unknown field in JSON",
+			`{"unknown": 1}`,
+			func(o istructs.IObject, err error) {
+				require.ErrorIs(err, ErrNameNotFound)
+				require.ErrorContains(err, "field «unknown» is not found")
+			}},
+		{"must be error if invalid data type in JSON field",
+			`{"int32": "error"}`,
+			func(o istructs.IObject, err error) {
+				require.ErrorIs(err, ErrWrongFieldType)
+				require.ErrorContains(err, "int32")
+			}},
+		{"must be error if unknown container in JSON",
+			`{"unknown": [{"int32": 1}]}`,
+			func(o istructs.IObject, err error) {
+				require.ErrorIs(err, ErrNameNotFound)
+				require.ErrorContains(err, "container «unknown» is not found")
+			}},
+		{"must be error if invalid data type in JSON container",
+			`{"child": ["a","b"]}`,
+			func(o istructs.IObject, err error) {
+				require.ErrorIs(err, ErrWrongType)
+				require.ErrorContains(err, "invalid type «string»")
+				require.ErrorContains(err, "child «child[0]»")
+			}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			b := test.AppStructs.ObjectBuilder(test.testObj)
+			require.NotNil(b)
+
+			var j map[string]any
+			_ = json.Unmarshal([]byte(tt.data), &j)
+			b.FillFromJSON(j)
+
+			tt.check(b.Build())
+		})
+	}
 }

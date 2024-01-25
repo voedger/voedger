@@ -338,6 +338,9 @@ func TestNullObject(t *testing.T) {
 		builder.PutNumber("float64", 1)
 		builder.PutChars("string", "ABC")
 		builder.PutNumber("int64", 1)
+
+		builder.PutFromJSON(map[string]interface{}{"int32": 1})
+		builder.FillFromJSON(map[string]interface{}{"int32": 1, "child": []any{map[string]interface{}{"int32": 1}}})
 	})
 
 	require.NotNil(builder.ChildBuilder("child"))
@@ -373,7 +376,6 @@ func TestNullObject(t *testing.T) {
 		require.Equal("", r.Container())
 		require.Equal(NullRecordID, r.ID())
 		require.Equal(NullRecordID, r.Parent())
-
 	})
 }
 
