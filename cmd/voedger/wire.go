@@ -29,6 +29,7 @@ func wireServer(httpCliParams ihttp.CLIParams, appsCliParams apps.CLIParams) (Wi
 			apps.NewRedirectionRoutes,
 			apps.NewDefaultRedirectionRoute,
 			apps.NewAppStorageFactory,
+			apps.NewAppRequestHandlers,
 			provideAppStorageProvider,
 			wire.FieldsOf(&httpCliParams, "AcmeDomains"),
 			wire.Struct(new(WiredServer), "*"),
