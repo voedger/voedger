@@ -66,7 +66,10 @@ func ProvideServiceFactory(appParts appparts.IAppPartitions, now coreutils.TimeF
 				pipeline.WireFunc("applyRecords", func(ctx context.Context, work interface{}) (err error) {
 					// sync apply records
 					cmd := work.(*cmdWorkpiece)
-					return cmd.appStructs.Records().Apply(cmd.pLogEvent)
+					if err = cmd.appStructs.Records().Apply(cmd.pLogEvent); err != nil {
+						cmd.appPartitionRestartScheduled = true
+					}
+					return err
 				}), pipeline.WireSyncOperator("syncProjectorsAndPutWLog", pipeline.ForkOperator(pipeline.ForkSame,
 					// forK: sync projector and PutWLog
 					pipeline.ForkBranch(pipeline.NewSyncOp(wireSyncActualizer(syncActualizerOperator))),
@@ -88,7 +91,7 @@ func ProvideServiceFactory(appParts appparts.IAppPartitions, now coreutils.TimeF
 				pipeline.WireFunc("authenticate", cmdProc.authenticate),
 				pipeline.WireFunc("checkWSInitialized", checkWSInitialized),
 				pipeline.WireFunc("checkWSActive", checkWSActive),
-				pipeline.WireFunc("getAppPartition", cmdProc.provideGetAppPartition(syncActualizerOperator)),
+				pipeline.WireFunc("getAppPartition", cmdProc.getAppPartition),
 				pipeline.WireFunc("getResources", getResources),
 				pipeline.WireFunc("getFunction", getFunction),
 				pipeline.WireFunc("authorizeRequest", cmdProc.authorizeRequest),

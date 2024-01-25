@@ -125,19 +125,17 @@ func (ap *appPartition) getWorkspace(wsid istructs.WSID) *workspace {
 	return ws
 }
 
-func (cmdProc *cmdProc) provideGetAppPartition(syncActualizerFactory pipeline.ISyncOperator) func(ctx context.Context, work interface{}) (err error) {
-	return func(ctx context.Context, work interface{}) (err error) {
-		cmd := work.(*cmdWorkpiece)
-		ap, ok := cmdProc.appPartitions[cmd.cmdMes.AppQName()]
-		if !ok {
-			if ap, err = cmdProc.recovery(ctx, cmd, syncActualizerFactory); err != nil {
-				return fmt.Errorf("partition %d recovery failed: %w", cmdProc.pNumber, err)
-			}
-			cmdProc.appPartitions[cmd.cmdMes.AppQName()] = ap
+func (cmdProc *cmdProc) getAppPartition(ctx context.Context, work interface{}) (err error) {
+	cmd := work.(*cmdWorkpiece)
+	ap, ok := cmdProc.appPartitions[cmd.cmdMes.AppQName()]
+	if !ok {
+		if ap, err = cmdProc.recovery(ctx, cmd); err != nil {
+			return fmt.Errorf("partition %d recovery failed: %w", cmdProc.pNumber, err)
 		}
-		cmdProc.appPartition = ap
-		return nil
+		cmdProc.appPartitions[cmd.cmdMes.AppQName()] = ap
 	}
+	cmdProc.appPartition = ap
+	return nil
 }
 
 func (cmdProc *cmdProc) getCmdResultBuilder(_ context.Context, work interface{}) (err error) {
@@ -182,7 +180,7 @@ func updateIDGeneratorFromO(root istructs.IObject, appDef appdef.IAppDef, idGen 
 	})
 }
 
-func (cmdProc *cmdProc) recovery(ctx context.Context, cmd *cmdWorkpiece, syncActualizerFactory pipeline.ISyncOperator) (*appPartition, error) {
+func (cmdProc *cmdProc) recovery(ctx context.Context, cmd *cmdWorkpiece) (*appPartition, error) {
 	ap := &appPartition{
 		workspaces:     map[istructs.WSID]*workspace{},
 		nextPLogOffset: istructs.FirstOffset,
@@ -653,14 +651,6 @@ func (osp *wrongArgsCatcher) OnErr(err error, _ interface{}, _ pipeline.IWorkpie
 	return coreutils.WrapSysError(err, http.StatusBadRequest)
 }
 
-func applyPLogEvent(_ context.Context, work interface{}) (err error) {
-	cmd := work.(*cmdWorkpiece)
-	if err = cmd.appStructs.Records().Apply(cmd.pLogEvent); err != nil {
-		cmd.appPartitionRestartScheduled = true
-	}
-	return
-}
-
 func (cmdProc *cmdProc) n10n(_ context.Context, work interface{}) (err error) {
 	cmd := work.(*cmdWorkpiece)
 	cmdProc.n10nBroker.Update(in10n.ProjectionKey{
@@ -670,16 +660,6 @@ func (cmdProc *cmdProc) n10n(_ context.Context, work interface{}) (err error) {
 	}, cmd.rawEvent.PLogOffset())
 	logger.Verbose("updated plog event on offset ", cmd.rawEvent.PLogOffset(), ", pnumber ", cmdProc.pNumber)
 	return nil
-}
-
-func putWLog(_ context.Context, work interface{}) (err error) {
-	cmd := work.(*cmdWorkpiece)
-	if err = cmd.appStructs.Events().PutWlog(cmd.pLogEvent); err != nil {
-		cmd.appPartitionRestartScheduled = true
-	} else {
-		cmd.workspace.NextWLogOffset++
-	}
-	return
 }
 
 func wireSyncActualizer(syncActualizer pipeline.ISyncOperator) func(ctx context.Context, work interface{}) (err error) {
