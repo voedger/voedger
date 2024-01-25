@@ -11,6 +11,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/iservices"
 	"github.com/voedger/voedger/pkg/istructs"
+	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
 )
 
 // Proposed factory signature
@@ -44,12 +45,15 @@ type IHTTPProcessor interface {
 	//--	SetAppPartitionsNumber(app istructs.AppQName, partNo istructs.PartitionID, numPartitions istructs.PartitionID) (err error)
 
 	// ErrUnknownApplication
-	DeployAppPartition(app istructs.AppQName, partNo istructs.PartitionID, commandHandler, queryHandler ISender)
+	DeployAppPartition(app istructs.AppQName, partNo istructs.PartitionID, appPartitionRequestHandler ibus.RequestHandler) (err error)
 	// ErrUnknownAppPartition
 	//--	UndeployAppPartition(app istructs.AppQName, partNo istructs.PartitionID) (err error)
 
 	// ErrUnknownApplication
 	//--	UndeployAllAppPartitions(app istructs.AppQName)
+	DeployApp(app istructs.AppQName, numPartitions uint, numAppWS uint) (err error)
+	UndeployAppPartition(app istructs.AppQName, partNo istructs.PartitionID) (err error)
+	UndeployApp(app istructs.AppQName) (err error)
 }
 
 type ISender interface {

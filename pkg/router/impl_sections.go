@@ -25,14 +25,14 @@ import (
 
 func createRequest(reqMethod string, req *http.Request, rw http.ResponseWriter, appsWSAmount map[istructs.AppQName]istructs.AppWSAmount) (res ibus.Request, ok bool) {
 	vars := mux.Vars(req)
-	wsidStr := vars[wsid]
+	wsidStr := vars[WSID]
 	wsidInt, err := strconv.ParseInt(wsidStr, parseInt64Base, parseInt64Bits)
 	if err != nil {
 		//  impossible because of regexp in a handler
 		// notest
 		panic(err)
 	}
-	appQNameStr := vars[appOwner] + "/" + vars[appName]
+	appQNameStr := vars[AppOwner] + istructs.AppQNameQualifierChar + vars[AppName]
 	wsid := istructs.WSID(wsidInt)
 	if appQName, err := istructs.ParseAppQName(appQNameStr); err == nil {
 		if appWSAmount, ok := appsWSAmount[appQName]; ok {

@@ -20,11 +20,11 @@ const (
 	localhost                       = "127.0.0.1"
 	parseInt64Base                  = 10
 	parseInt64Bits                  = 64
-	wsid                            = "wsid"
-	appOwner                        = "appOwner"
-	appName                         = "appName"
+	WSID                            = "wsid"
+	AppOwner                        = "appOwner"
+	AppName                         = "appName"
 	blobID                          = "blobID"
-	resourceName                    = "resourceName"
+	ResourceName                    = "resourceName"
 	//Timeouts should be greater than NATS timeouts to proper use in browser(multiply responses)
 	DefaultReadTimeout            = 15
 	DefaultWriteTimeout           = 15
