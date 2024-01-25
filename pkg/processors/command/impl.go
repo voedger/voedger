@@ -187,7 +187,7 @@ func (cmdProc *cmdProc) recovery(ctx context.Context, cmd *cmdWorkpiece, syncAct
 		workspaces:     map[istructs.WSID]*workspace{},
 		nextPLogOffset: istructs.FirstOffset,
 	}
-	var lastEvent istructs.IPLogEvent
+	var lastPLogEvent istructs.IPLogEvent // TODO: how to release?
 	cb := func(plogOffset istructs.Offset, event istructs.IPLogEvent) (err error) {
 		ws := ap.getWorkspace(event.Workspace())
 		event.CUDs(func(rec istructs.ICUDRow) {
@@ -202,7 +202,7 @@ func (cmdProc *cmdProc) recovery(ctx context.Context, cmd *cmdWorkpiece, syncAct
 		}
 		ws.NextWLogOffset = event.WLogOffset() + 1
 		ap.nextPLogOffset = plogOffset + 1
-		lastEvent = event
+		lastPLogEvent = event
 		return nil
 	}
 
@@ -210,26 +210,16 @@ func (cmdProc *cmdProc) recovery(ctx context.Context, cmd *cmdWorkpiece, syncAct
 		return nil, err
 	}
 
-	if lastEvent != nil {
+	if lastPLogEvent != nil {
 		// re-apply the last event
-		// apply records
-		if err := cmd.appStructs.Records().Apply(lastEvent); err != nil {
+		cmd.pLogEvent = lastPLogEvent
+		cmd.workspace = ap.getWorkspace(lastPLogEvent.Workspace())
+		cmd.workspace.NextWLogOffset-- // cmdProc.storeOp will bump it
+		if err := cmdProc.storeOp.DoSync(ctx, cmd); err != nil {
 			return nil, err
 		}
-
-		// apply sync projectors
-		work := &cmdWorkpiece{
-			pLogEvent: lastEvent,
-			cmdMes:    NewCommandMessage(ctx, nil, cmd.AppQName(), lastEvent.Workspace(), cmd.cmdMes.Sender(), cmdProc.pNumber, nil, "", ""), // actually AppQName() only will be required
-		}
-		if err := syncActualizerFactory.DoSync(ctx, work); err != nil {
-			return nil, err
-		}
-
-		// put WLog
-		if err := cmd.appStructs.Events().PutWlog(lastEvent); err != nil {
-			return nil, err
-		}
+		cmd.pLogEvent = nil
+		cmd.workspace = nil
 	}
 
 	worskapcesJSON, err := json.Marshal(ap.workspaces)
@@ -692,26 +682,17 @@ func putWLog(_ context.Context, work interface{}) (err error) {
 	return
 }
 
-func provideSyncActualizerFactory(syncActualizer pipeline.ISyncOperator) func(ctx context.Context, work interface{}) (err error) {
+func wireSyncActualizer(syncActualizer pipeline.ISyncOperator) func(ctx context.Context, work interface{}) (err error) {
 	return func(ctx context.Context, work interface{}) (err error) {
+		cmd := work.(*cmdWorkpiece)
+		cmd.syncProjectorsStart = time.Now()
 		if err = syncActualizer.DoSync(ctx, work); err != nil {
-			work.(*cmdWorkpiece).appPartitionRestartScheduled = true
+			cmd.appPartitionRestartScheduled = true
 		}
+		cmd.metrics.increase(ProjectorsSeconds, time.Since(cmd.syncProjectorsStart).Seconds())
+		cmd.syncProjectorsStart = time.Time{}
 		return err
 	}
-}
-
-func syncProjectorsBegin(_ context.Context, work interface{}) (err error) {
-	cmd := work.(*cmdWorkpiece)
-	cmd.syncProjectorsStart = time.Now()
-	return
-}
-
-func syncProjectorsEnd(_ context.Context, work interface{}) (err error) {
-	cmd := work.(*cmdWorkpiece)
-	cmd.metrics.increase(ProjectorsSeconds, time.Since(cmd.syncProjectorsStart).Seconds())
-	cmd.syncProjectorsStart = time.Time{}
-	return
 }
 
 func sendResponse(cmd *cmdWorkpiece, handlingError error) {

@@ -30,3 +30,5 @@ type BuiltInApp struct {
 	// EnginePoolSize pools size for each processor kind
 	EnginePoolSize [cluster.ProcessorKind_Count]int
 }
+
+type UserBuiltInApp BuiltInApp
