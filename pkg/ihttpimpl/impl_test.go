@@ -382,8 +382,7 @@ func setUp(t *testing.T) *testApp {
 	appStorageProvider := istorageimpl.Provide(istorage.ProvideMem())
 	routerStorage, err := ihttp.NewIRouterStorage(appStorageProvider)
 	require.NoError(err)
-	processor, pCleanup, err := NewProcessor(params, routerStorage)
-	require.NoError(err)
+	processor, pCleanup := NewProcessor(params, routerStorage)
 	cleanups = append(cleanups, pCleanup)
 
 	err = processor.Prepare()

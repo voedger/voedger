@@ -81,7 +81,7 @@ func InitiateJoinWorkspace(vit *it.VIT, ws *it.AppWorkspace, inviteID int64, log
 }
 
 func WaitForInviteState(vit *it.VIT, ws *it.AppWorkspace, inviteID int64, inviteStatesSeq ...int32) {
-	deadline := it.TestDeadline(5 * time.Second)
+	deadline := it.TestDeadline()
 	var actualInviteState int32
 	for time.Now().Before(deadline) {
 		entity := vit.PostWS(ws, "q.sys.Collection", fmt.Sprintf(`

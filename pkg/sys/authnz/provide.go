@@ -6,15 +6,12 @@ package authnz
 
 import (
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/istructs"
 	istructsmem "github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/itokens"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
-	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-func Provide(cfgRegistry *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, itokens itokens.ITokens, federation coreutils.IFederation,
-	asp istructs.IAppStructsProvider, atf payloads.IAppTokensFactory) {
+func Provide(cfgRegistry *istructsmem.AppConfigType, itokens itokens.ITokens, atf payloads.IAppTokensFactory) {
 	cfgRegistry.Resources.Add(istructsmem.NewQueryFunction(
 		appdef.NewQName(appdef.SysPackage, "RefreshPrincipalToken"),
 		provideRefreshPrincipalTokenExec(itokens),

@@ -24,9 +24,8 @@ func newResources(cfg *AppConfigType) Resources {
 }
 
 // Adds new resource to application resources
-func (res *Resources) Add(r istructs.IResource) *Resources {
+func (res *Resources) Add(r istructs.IResource) {
 	res.resources[r.QName()] = r
-	return res
 }
 
 // Finds application resource by QName

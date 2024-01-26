@@ -394,7 +394,7 @@ func NewLogin(name, pwd string, appQName istructs.AppQName, subjectKind istructs
 	return Login{name, pwd, pseudoWSID, appQName, subjectKind, clusterID, map[appdef.QName]func(verifiedValues map[string]string) map[string]interface{}{}}
 }
 
-func TestDeadline(nonTestDeadline time.Duration) time.Time {
+func TestDeadline() time.Time {
 	deadline := time.Now().Add(5 * time.Second)
 	if coreutils.IsDebug() {
 		deadline = deadline.Add(time.Hour)
