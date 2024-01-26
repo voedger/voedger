@@ -10,7 +10,7 @@ linters:
     - misspell
     - errcheck
     - unparam
-    - structchecks
+    - structcheck
   fast: true
 linters-settings:
   gosec:
