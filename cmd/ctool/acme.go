@@ -29,11 +29,16 @@ func newAcmeCmd() *cobra.Command {
 		RunE:  acmeList,
 	}
 
-	acmeRomoveCmd := &cobra.Command{
+	acmeRemoveCmd := &cobra.Command{
 		Use:   "remove [<domain1,domain2...>]",
 		Short: "Removes one or more domains from the acme domain list",
 		Args:  cobra.ExactArgs(1),
 		RunE:  acmeRemove,
+	}
+	acmeRemoveCmd.PersistentFlags().StringVar(&sshKey, "ssh-key", "", "Path to SSH key")
+	if err := acmeRemoveCmd.MarkPersistentFlagRequired("ssh-key"); err != nil {
+		loggerError(err.Error())
+		return nil
 	}
 
 	acmeCmd := &cobra.Command{
@@ -41,7 +46,7 @@ func newAcmeCmd() *cobra.Command {
 		Short: "ACME settings",
 	}
 
-	acmeCmd.AddCommand(acmeAddCmd, acmeListCmd, acmeRomoveCmd)
+	acmeCmd.AddCommand(acmeAddCmd, acmeListCmd, acmeRemoveCmd)
 
 	return acmeCmd
 
