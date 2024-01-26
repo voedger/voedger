@@ -321,11 +321,44 @@ func TestIsActiveValidation(t *testing.T) {
 	})
 }
 
-func TestCommandProcessorMustTakeQNamesFromWorkspace(t *testing.T) {
+
+func TestTakeFuncsFromWorkspace(t *testing.T) {
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
-	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+	t.Run("command", func(t *testing.T) {
+		t.Run("existence", func(t *testing.T) {
 
-	vit.PostProfile(ws.Owner, "c.app1pkg.TestCmd", "{}")
+			anotherWS := vit.WS(istructs.AppQName_test1_app1, "test_ws_another")
+			body := fmt.Sprintf(`{"args":{"Arg1":%d}}`, 1)
+			// c.app1pkg.TestCmd is not defined in test_ws_anotherWS workspace -> 400 bad request
+			vit.PostWS(anotherWS, "c.app1pkg.TestCmd", body, coreutils.Expect400("command app1pkg.TestCmd does not exist in workspace app1pkg.test_wsWS_another"))
+
+			ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+			body = "{}"
+			// c.app1pkg.testCmd is defined in test_wsWS workspace -> 400 bad request
+			vit.PostWS(ws, "c.app1pkg.testCmd", body, coreutils.Expect400("command app1pkg.testCmd does not exist in workspace app1pkg.test_wsWS"))
+		})
+
+		t.Run("type", func(t *testing.T) {
+			ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+			body := "{}"
+			// c.app1pkg.testCmd is defined in test_wsWS workspace -> 400 bad request
+			vit.PostWS(ws, "c.app1pkg.MockQry", body, coreutils.Expect400("app1pkg.MockQry is not a command"))
+		})
+	})
+
+	t.Run("query", func(t *testing.T) {
+		t.Run("existensce", func(t *testing.T) {
+			anotherWS := vit.WS(istructs.AppQName_test1_app1, "test_ws_another")
+			body := `{"args":{"Input":"str"}}`
+			// q.app1pkg.MockQry is not defined in test_ws_anotherWS workspace -> 400 bad request
+			vit.PostWS(anotherWS, "q.app1pkg.MockQry", body, coreutils.Expect400("query app1pkg.MockQry does not exist in workspace app1pkg.test_wsWS_another"))
+		})
+		t.Run("type", func(t *testing.T) {
+			anotherWS := vit.WS(istructs.AppQName_test1_app1, "test_ws_another")
+			body := fmt.Sprintf(`{"args":{"Arg1":%d}}`, 1)
+			vit.PostWS(anotherWS, "q.app1pkg.testCmd", body, coreutils.Expect400("app1pkg.testCmd is not a query"))
+		})
+	})
 }

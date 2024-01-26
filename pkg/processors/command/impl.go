@@ -140,7 +140,7 @@ func (cmdProc *cmdProc) getAppPartition(ctx context.Context, work interface{}) (
 
 func getIWorkspace(_ context.Context, work interface{}) (err error) {
 	cmd := work.(*cmdWorkpiece)
-	if !coreutils.IsDummyWS(cmd.cmdMes.WSID()) {
+	if !coreutils.IsDummyWS(cmd.cmdMes.WSID()) && cmd.cmdMes.QName() != workspacemgmt.QNameCommandCreateWorkspace {
 		cmd.iWorkspace = cmd.appStructs.AppDef().WorkspaceByDescriptor(cmd.wsDesc.AsQName(authnz.Field_WSKind))
 	}
 	return nil
@@ -149,10 +149,11 @@ func getIWorkspace(_ context.Context, work interface{}) (err error) {
 func getICommand(_ context.Context, work interface{}) (err error) {
 	cmd := work.(*cmdWorkpiece)
 	var cmdType appdef.IType
-	if coreutils.IsDummyWS(cmd.cmdMes.WSID()) {
+	if cmd.iWorkspace == nil {
+		// DummyWS or c.sys.CreateWorkspace
 		cmdType = cmd.AppDef().Type(cmd.cmdMes.QName())
 	} else {
-		if cmdType = cmd.iWorkspace.Type(cmd.cmdMes.QName()); cmdType == nil {
+		if cmdType = cmd.iWorkspace.Type(cmd.cmdMes.QName()); cmdType.Kind() == appdef.TypeKind_null {
 			return fmt.Errorf("command %s does not exist in workspace %s", cmd.cmdMes.QName(), cmd.iWorkspace.QName())
 		}
 	}

@@ -3,6 +3,14 @@
 
 APPLICATION app1();
 
+ALTERABLE WORKSPACE test_wsWS_another (
+	DESCRIPTOR test_ws_another ();
+
+	EXTENSION ENGINE BUILTIN (
+		COMMAND testCmd();
+	);
+);
+
 ALTERABLE WORKSPACE test_wsWS (
 
 	DESCRIPTOR test_ws (

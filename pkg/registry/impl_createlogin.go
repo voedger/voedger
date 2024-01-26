@@ -36,16 +36,11 @@ func execCmdCreateLogin(asp istructs.IAppStructsProvider) istructsmem.ExecComman
 			return coreutils.NewHTTPErrorf(http.StatusBadRequest, "failed to parse app qualified name", appQName.String(), ":", err)
 		}
 
-		as, err := asp.AppStructs(appQName)
-		if err != nil {
+		if _, err = asp.AppStructs(appQName); err != nil {
 			if errors.Is(err, istructs.ErrAppNotFound) {
 				return coreutils.NewHTTPErrorf(http.StatusBadRequest, "unknown application ", appName)
 			}
 			return err
-		}
-
-		if err = CheckAppWSID(loginStr, args.Workspace, as.WSAmount()); err != nil {
-			return
 		}
 
 		// see https://dev.untill.com/projects/#!537026

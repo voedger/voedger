@@ -210,12 +210,12 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 		}),
 		operator("get IQuery", func(ctx context.Context, qw *queryWork) (err error) {
 			queryType := qw.iWorkspace.Type(qw.msg.QName())
-			if queryType == nil {
-				return fmt.Errorf("query %s does not exist in workspace %s", qw.msg.QName(), qw.iWorkspace.QName())
+			if queryType.Kind() == appdef.TypeKind_null {
+				return coreutils.NewHTTPErrorf(http.StatusBadRequest, fmt.Sprintf("query %s does not exist in workspace %s", qw.msg.QName(), qw.iWorkspace.QName()))
 			}
 			ok := false
 			if qw.iQuery, ok = queryType.(appdef.IQuery); !ok {
-				return fmt.Errorf("%s is not a query", qw.msg.QName())
+				return coreutils.NewHTTPErrorf(http.StatusBadRequest, fmt.Sprintf("%s is not a query", qw.msg.QName()))
 			}
 			return nil
 		}),

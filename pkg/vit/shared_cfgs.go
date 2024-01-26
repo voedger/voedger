@@ -34,12 +34,14 @@ const (
 
 var (
 	QNameApp1_TestWSKind                     = appdef.NewQName(app1PkgName, "test_ws")
+	QNameApp1_TestWSKind_another             = appdef.NewQName(app1PkgName, "test_ws_another")
 	QNameTestView                            = appdef.NewQName(app1PkgName, "View")
 	QNameApp1_TestEmailVerificationDoc       = appdef.NewQName(app1PkgName, "Doc")
 	QNameApp1_DocConstraints                 = appdef.NewQName(app1PkgName, "DocConstraints")
 	QNameApp1_DocConstraintsString           = appdef.NewQName(app1PkgName, "DocConstraintsString")
 	QNameApp1_DocConstraintsFewUniques       = appdef.NewQName(app1PkgName, "DocConstraintsFewUniques")
 	QNameApp1_DocConstraintsOldAndNewUniques = appdef.NewQName(app1PkgName, "DocConstraintsOldAndNewUniques")
+	QNameApp1_CDocCategory                   = appdef.NewQName(app1PkgName, "category")
 	QNameCmdRated                            = appdef.NewQName(app1PkgName, "RatedCmd")
 	QNameQryRated                            = appdef.NewQName(app1PkgName, "RatedQry")
 	QNameODoc1                               = appdef.NewQName(app1PkgName, "odoc1")
@@ -58,6 +60,7 @@ var (
 			WithChildWorkspace(QNameApp1_TestWSKind, "test_ws", "test_template", "", "login", map[string]interface{}{"IntFld": 42},
 				WithChild(QNameApp1_TestWSKind, "test_ws2", "test_template", "", TestEmail, map[string]interface{}{"IntFld": 42},
 					WithSubject("login", istructs.SubjectKind_User, []appdef.QName{iauthnz.QNameRoleWorkspaceOwner}))),
+			WithChildWorkspace(QNameApp1_TestWSKind_another, "test_ws_another", "", "", "login", map[string]interface{}{}),
 		),
 		WithApp(istructs.AppQName_test1_app2, ProvideApp2, WithUserLogin("login", "1")),
 		WithVVMConfig(func(cfg *vvm.VVMConfig) {
@@ -71,12 +74,12 @@ var (
 			cfg.BLOBMaxSize = app1_BLOBMaxSize
 		}),
 		WithCleanup(func(_ *VIT) {
-			MockCmdExec = func(input string) error { panic("") }
+			MockCmdExec = func(input string, args istructs.ExecCommandArgs) error { panic("") }
 			MockQryExec = func(input string, callback istructs.ExecQueryCallback) error { panic("") }
 		}),
 	)
 	MockQryExec func(input string, callback istructs.ExecQueryCallback) error
-	MockCmdExec func(input string) error
+	MockCmdExec func(input string, args istructs.ExecCommandArgs) error
 )
 
 func ProvideApp2(apis apps.APIs, cfg *istructsmem.AppConfigType, adf appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) apps.AppPackages {
@@ -148,7 +151,7 @@ func ProvideApp1(apis apps.APIs, cfg *istructsmem.AppConfigType, adf appdef.IApp
 		appdef.NewQName(app1PkgName, "MockCmd"),
 		func(args istructs.ExecCommandArgs) (err error) {
 			input := args.ArgumentObject.AsString(field_Input)
-			return MockCmdExec(input)
+			return MockCmdExec(input, args)
 		},
 	))
 
