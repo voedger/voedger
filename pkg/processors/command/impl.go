@@ -153,7 +153,7 @@ func getICommand(_ context.Context, work interface{}) (err error) {
 		cmdType = cmd.AppDef().Type(cmd.cmdMes.QName())
 	} else {
 		if cmdType = cmd.iWorkspace.Type(cmd.cmdMes.QName()); cmdType == nil {
-			return fmt.Errorf("command %s does not exists in workspace %s", cmd.cmdMes.QName(), cmd.iWorkspace.QName())
+			return fmt.Errorf("command %s does not exist in workspace %s", cmd.cmdMes.QName(), cmd.iWorkspace.QName())
 		}
 	}
 	ok := false

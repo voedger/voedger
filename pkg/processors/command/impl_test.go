@@ -760,13 +760,6 @@ func setUp(t *testing.T, prepare func(appDef appdef.IAppDefBuilder, cfg *istruct
 			Partition:    partitionID,
 			WorkToEvent: func(work interface{}) istructs.IPLogEvent {
 				return work.(interface{ Event() istructs.IPLogEvent }).Event()
-				// 	switch typed := work.(type) {
-				// 	case interface{ Event() istructs.IPLogEvent }:
-				// 		return typed.Event()
-				// 	case istructs.IPLogEvent:
-				// 		return typed
-				// 	}
-				// 	panic("")
 			},
 			IntentsLimit: 1,
 			N10nFunc:     nil,

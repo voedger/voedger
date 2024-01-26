@@ -11,7 +11,6 @@ import (
 
 	"github.com/untillpro/goutils/logger"
 
-	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/in10n"
@@ -25,7 +24,6 @@ import (
 type workspace struct {
 	NextWLogOffset istructs.Offset
 	idGenerator    istructs.IIDGenerator
-	iws            appdef.IWorkspace
 }
 
 type cmdProc struct {
