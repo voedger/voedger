@@ -17,6 +17,7 @@ import (
 )
 
 func TestBasicUsage_SignUpIn(t *testing.T) {
+	разобраться с QName-type field «WSKind» is not found in type «.»: name not found
 	require := require.New(t)
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
