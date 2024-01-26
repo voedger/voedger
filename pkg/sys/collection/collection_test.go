@@ -192,7 +192,7 @@ func buildAppParts(t *testing.T) (appParts appparts.IAppPartitions, cleanup func
 	require.NoError(as.Records().Apply(pLogEvent))
 	require.NoError(as.Events().PutWlog(pLogEvent))
 
-	return appParts, cfgs, cleanup
+	return appParts, cleanup
 }
 
 // Test executes 3 operations with CUDs:

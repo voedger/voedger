@@ -145,7 +145,7 @@ func TestBasicUsage_RowsProcessorFactory(t *testing.T) {
 	require.Equal(`[[[3,"White wine","Alcohol drinks"]]]`, result)
 }
 
-func getTestCfg(require *require.Assertions, prepareAppDef func(adb appdef.IAppDefBuilder, wsb appdef.IWorkspaceBuilde), cfgFunc ...func(cfg *istructsmem.AppConfigType)) (appDef appdef.IAppDef, asp istructs.IAppStructsProvider, appTokens istructs.IAppTokens) {
+func getTestCfg(require *require.Assertions, prepareAppDef func(adb appdef.IAppDefBuilder, wsb appdef.IWorkspaceBuilder), cfgFunc ...func(cfg *istructsmem.AppConfigType)) (appDef appdef.IAppDef, asp istructs.IAppStructsProvider, appTokens istructs.IAppTokens) {
 	cfgs := make(istructsmem.AppConfigsType)
 	asf := istorage.ProvideMem()
 	storageProvider := istorageimpl.Provide(asf)
@@ -299,7 +299,7 @@ func getTestCfg(require *require.Assertions, prepareAppDef func(adb appdef.IAppD
 	require.NoError(as.Records().Apply(pLogEvent))
 	require.NoError(as.Events().PutWlog(pLogEvent))
 
-	return cfgs, appDef, asp, appTokens
+	return appDef, asp, appTokens
 }
 
 func TestBasicUsage_ServiceFactory(t *testing.T) {
