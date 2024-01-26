@@ -9,6 +9,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// nolint
 func newAcmeCmd() *cobra.Command {
 	acmeAddCmd := &cobra.Command{
 		Use:   "add [<domain1,domain2...>]",
