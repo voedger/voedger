@@ -325,7 +325,7 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 			return nil
 		}),
 		operator("get func exec", func(ctx context.Context, qw *queryWork) (err error) {
-			qw.queryExec = qw.appStructs.Resources().QueryResource(qw.msg.Query().QName()).(istructs.IQueryFunction).Exec
+			qw.queryExec = qw.appStructs.Resources().QueryResource(qw.iQuery.QName()).(istructs.IQueryFunction).Exec
 			return nil
 		}),
 	}
