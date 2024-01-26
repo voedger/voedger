@@ -9,9 +9,7 @@ linters:
     - stylecheck
     - misspell
     - errcheck
-    - unparam
-    - deadcode
-    - unparam
+#    - unparam
   fast: true
 linters-settings:
   gosec:
@@ -23,13 +21,14 @@ linters-settings:
     checks: [ "all", "-SA1019"]    
   stylecheck:
     checks: [ "all", "-ST1003", "-ST1023" ]    
+  unparam:
+    check-exported: true
   misspell:
     ignore-words:
       - untill
   revive:
   # see https://github.com/mgechev/revive#available-rules for details.
     ignore-generated-header: true
-    exclude: "*_test.go"
     severity: warning
     rules:
       - name: indent-error-flow

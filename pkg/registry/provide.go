@@ -7,7 +7,6 @@ package registry
 
 import (
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/itokens"
@@ -15,8 +14,8 @@ import (
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, asp istructs.IAppStructsProvider, itokens itokens.ITokens,
-	federation coreutils.IFederation, ep extensionpoints.IExtensionPoint) parser.PackageFS {
+func Provide(cfg *istructsmem.AppConfigType, asp istructs.IAppStructsProvider, itokens itokens.ITokens,
+	federation coreutils.IFederation) parser.PackageFS {
 	cfg.Resources.Add(istructsmem.NewCommandFunction(
 		QNameCommandCreateLogin,
 		execCmdCreateLogin(asp),

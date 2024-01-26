@@ -16,7 +16,7 @@ import (
 	"github.com/voedger/voedger/staging/src/github.com/untillpro/ibusmem"
 )
 
-func NewProcessor(params ihttp.CLIParams, routerStorage ihttp.IRouterStorage) (server ihttp.IHTTPProcessor, cleanup func(), err error) {
+func NewProcessor(params ihttp.CLIParams, routerStorage ihttp.IRouterStorage) (server ihttp.IHTTPProcessor, cleanup func()) {
 	r := newRouter()
 	httpProcessor := &httpProcessor{
 		params:      params,
@@ -37,5 +37,5 @@ func NewProcessor(params ihttp.CLIParams, routerStorage ihttp.IRouterStorage) (s
 			httpProcessor.AddAcmeDomain(domain)
 		}
 	}
-	return httpProcessor, httpProcessor.cleanup, err
+	return httpProcessor, httpProcessor.cleanup
 }

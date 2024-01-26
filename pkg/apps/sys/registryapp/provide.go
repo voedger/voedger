@@ -25,7 +25,7 @@ func Provide(smtpCfg smtp.Cfg) apps.AppBuilder {
 			apis.NumCommandProcessors, nil, apis.IAppStorageProvider)
 
 		// sys/registry resources
-		registryPackageFS := registry.Provide(cfg, appDefBuilder, apis.IAppStructsProvider, apis.ITokens, apis.IFederation, ep)
+		registryPackageFS := registry.Provide(cfg, apis.IAppStructsProvider, apis.ITokens, apis.IFederation)
 		cfg.AddSyncProjectors(registry.ProvideSyncProjectorLoginIdxFactory())
 		registryAppPackageFS := parser.PackageFS{
 			QualifiedPackageName: RegistryAppFQN,

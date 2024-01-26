@@ -46,11 +46,11 @@ func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder
 	workspace.Provide(cfg, appDefBuilder, asp, timeFunc, itokens, federation, itokens, ep, wsPostInitFunc)
 	sqlquery.Provide(cfg, asp, numCommandProcessors)
 	projectors.ProvideOffsetsDef(appDefBuilder)
-	verifier.Provide(cfg, appDefBuilder, itokens, federation, asp, smtpCfg, timeFunc)
-	authnz.Provide(cfg, appDefBuilder, itokens, federation, asp, atf)
-	invite.Provide(cfg, appDefBuilder, timeFunc, federation, itokens, smtpCfg)
+	verifier.Provide(cfg, itokens, federation, asp, smtpCfg, timeFunc)
+	authnz.Provide(cfg, itokens, atf)
+	invite.Provide(cfg, timeFunc, federation, itokens, smtpCfg)
 	uniques.Provide(cfg, appDefBuilder)
-	describe.Provide(cfg, asp, appDefBuilder)
+	describe.Provide(cfg, asp)
 	return ProvidePackageFS()
 }
 
