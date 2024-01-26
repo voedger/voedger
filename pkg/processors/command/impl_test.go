@@ -773,7 +773,7 @@ func setUp(t *testing.T, prepare func(appDef appdef.IAppDefBuilder, cfg *istruct
 		}
 		return syncActualizerFactory(conf, as.SyncProjectors()[0], as.SyncProjectors()[1:]...)
 	}
-	cmdProcessorFactory := ProvideServiceFactory(appParts, time.Now, op, n10nBroker, imetrics.Provide(), "vvm", iauthnzimpl.NewDefaultAuthenticator(iauthnzimpl.TestSubjectRolesGetter), iauthnzimpl.NewDefaultAuthorizer(), isecretsimpl.ProvideSecretReader(), cfgs)
+	cmdProcessorFactory := ProvideServiceFactory(appParts, time.Now, op, n10nBroker, imetrics.Provide(), "vvm", iauthnzimpl.NewDefaultAuthenticator(iauthnzimpl.TestSubjectRolesGetter), iauthnzimpl.NewDefaultAuthorizer(), isecretsimpl.ProvideSecretReader())
 	cmdProcService := cmdProcessorFactory(serviceChannel, testAppPartID)
 
 	go func() {

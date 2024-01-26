@@ -17,7 +17,6 @@ import (
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/isecrets"
 	"github.com/voedger/voedger/pkg/istructs"
-	"github.com/voedger/voedger/pkg/istructsmem"
 	imetrics "github.com/voedger/voedger/pkg/metrics"
 	"github.com/voedger/voedger/pkg/pipeline"
 	coreutils "github.com/voedger/voedger/pkg/utils"
@@ -37,7 +36,6 @@ type cmdProc struct {
 	now           coreutils.TimeFunc
 	authenticator iauthnz.IAuthenticator
 	authorizer    iauthnz.IAuthorizer
-	cfgs          istructsmem.AppConfigsType
 	storeOp       pipeline.ISyncOperator
 }
 
@@ -49,7 +47,7 @@ type appPartition struct {
 // syncActualizerFactory - это фабрика(разделИД), которая возвращает свитч, в бранчах которого по синхронному актуализатору на каждое приложение, внутри каждого - проекторы на каждое приложение
 func ProvideServiceFactory(appParts appparts.IAppPartitions, now coreutils.TimeFunc, syncActualizerFactory SyncActualizerFactory,
 	n10nBroker in10n.IN10nBroker, metrics imetrics.IMetrics, vvm VVMName, authenticator iauthnz.IAuthenticator, authorizer iauthnz.IAuthorizer,
-	secretReader isecrets.ISecretReader, appConfigsType istructsmem.AppConfigsType) ServiceFactory {
+	secretReader isecrets.ISecretReader) ServiceFactory {
 	return func(commandsChannel CommandChannel, partitionID istructs.PartitionID) pipeline.IService {
 		cmdProc := &cmdProc{
 			pNumber:       partitionID,
@@ -58,7 +56,6 @@ func ProvideServiceFactory(appParts appparts.IAppPartitions, now coreutils.TimeF
 			now:           now,
 			authenticator: authenticator,
 			authorizer:    authorizer,
-			cfgs:          appConfigsType,
 		}
 
 		return pipeline.NewService(func(vvmCtx context.Context) {

@@ -108,11 +108,9 @@ func TestObjectFillAndGet(t *testing.T) {
 	require := require.New(t)
 	test := test()
 
-	cfgs := test.AppConfigs
-	asp := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider())
-	_, err := asp.AppStructs(test.appName)
-	require.NoError(err)
-	builder := NewIObjectBuilder(cfgs[istructs.AppQName_test1_app1], test.testCDoc)
+	as := test.AppStructs
+
+	builder := as.ObjectBuilder(test.testCDoc)
 
 	t.Run("basic", func(t *testing.T) {
 
@@ -133,8 +131,7 @@ func TestObjectFillAndGet(t *testing.T) {
 				},
 			},
 		}
-		cfg := cfgs[test.appName]
-		require.NoError(FillObjectFromJSON(data, cfg.AppDef.Type(test.testCDoc), builder))
+		builder.FillFromJSON(data)
 		o, err := builder.Build()
 		require.NoError(err)
 
@@ -171,14 +168,13 @@ func TestObjectFillAndGet(t *testing.T) {
 			},
 		}
 
-		cfg := cfgs[test.appName]
 		for name, val := range cases {
-			builder := NewIObjectBuilder(cfgs[istructs.AppQName_test1_app1], test.testCDoc)
+			builder := as.ObjectBuilder(test.testCDoc)
 			data := map[string]interface{}{
 				"sys.ID": float64(1),
 				name:     val,
 			}
-			require.NoError(FillObjectFromJSON(data, cfg.AppDef.Type(test.testCDoc), builder))
+			builder.FillFromJSON(data)
 			o, err := builder.Build()
 			require.ErrorIs(err, ErrWrongFieldType)
 			require.Nil(o)
@@ -186,7 +182,7 @@ func TestObjectFillAndGet(t *testing.T) {
 	})
 
 	t.Run("container errors", func(t *testing.T) {
-		builder := NewIObjectBuilder(cfgs[istructs.AppQName_test1_app1], test.testCDoc)
+		builder := as.ObjectBuilder(test.testCDoc)
 		cases := []struct {
 			f string
 			v interface{}
@@ -195,12 +191,12 @@ func TestObjectFillAndGet(t *testing.T) {
 			{"record", []interface{}{"str"}},
 			{"record", []interface{}{map[string]interface{}{"unknownContainer": []interface{}{}}}},
 		}
-		cfg := cfgs[test.appName]
 		for _, c := range cases {
 			data := map[string]interface{}{
 				c.f: c.v,
 			}
-			err := FillObjectFromJSON(data, cfg.AppDef.Type(test.testCDoc), builder)
+			builder.FillFromJSON(data)
+			_, err := builder.Build()
 			require.Error(err)
 		}
 	})

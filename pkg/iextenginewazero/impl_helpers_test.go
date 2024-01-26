@@ -250,6 +250,8 @@ func (kb *mockKeyBuilder) PutNumber(name string, value float64) {}
 // Tries to make conversion from value to a name type
 func (kb *mockKeyBuilder) PutChars(name string, value string) {}
 
+func (kb *mockKeyBuilder) PutFromJSON(map[string]any) {}
+
 func newJsonValue(jsonString string) istructs.IStateValue {
 	v := mockValue{TestObject: coreutils.TestObject{Data: map[string]interface{}{}}}
 	err := json.Unmarshal([]byte(jsonString), &v.Data)
@@ -366,6 +368,7 @@ func (kb *mockValueBuilder) PutString(name, value string)                     { 
 func (kb *mockValueBuilder) PutQName(name string, value appdef.QName)         {}
 func (kb *mockValueBuilder) PutBool(name string, value bool)                  {}
 func (kb *mockValueBuilder) PutRecordID(name string, value istructs.RecordID) {}
+func (kb *mockValueBuilder) PutFromJSON(map[string]any)                       {}
 
 // Tries to make conversion from value to a name type
 func (kb *mockValueBuilder) PutNumber(name string, value float64) {}

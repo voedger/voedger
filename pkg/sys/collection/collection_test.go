@@ -40,10 +40,10 @@ var qNameWorkspaceDescriptor = appdef.NewQName(appdef.SysPackage, "WorkspaceDesc
 
 const maxPrepareQueries = 10
 
-func buildAppParts(t *testing.T) (appParts appparts.IAppPartitions, cfgs istructsmem.AppConfigsType, cleanup func()) {
+func buildAppParts(t *testing.T) (appParts appparts.IAppPartitions, cleanup func()) {
 	require := require.New(t)
 
-	cfgs = make(istructsmem.AppConfigsType, 1)
+	cfgs := make(istructsmem.AppConfigsType, 1)
 	asp := istorageimpl.Provide(istorage.ProvideMem())
 
 	// конфиг приложения airs-bp
@@ -204,7 +204,7 @@ func buildAppParts(t *testing.T) (appParts appparts.IAppPartitions, cfgs istruct
 func TestBasicUsage_Collection(t *testing.T) {
 	require := require.New(t)
 
-	appParts, _, cleanup := buildAppParts(t)
+	appParts, cleanup := buildAppParts(t)
 	defer cleanup()
 
 	// Command processor
@@ -274,7 +274,7 @@ func TestBasicUsage_Collection(t *testing.T) {
 func Test_updateChildRecord(t *testing.T) {
 	require := require.New(t)
 
-	appParts, _, cleanup := buildAppParts(t)
+	appParts, cleanup := buildAppParts(t)
 	defer cleanup()
 
 	// Command processor
@@ -445,7 +445,7 @@ func cp_Collection_3levels(t *testing.T, appParts appparts.IAppPartitions) {
 }
 
 func Test_Collection_3levels(t *testing.T) {
-	appParts, _, cleanup := buildAppParts(t)
+	appParts, cleanup := buildAppParts(t)
 	defer cleanup()
 
 	cp_Collection_3levels(t, appParts)
@@ -454,7 +454,7 @@ func Test_Collection_3levels(t *testing.T) {
 func TestBasicUsage_QueryFunc_Collection(t *testing.T) {
 	require := require.New(t)
 
-	appParts, cfgs, cleanup := buildAppParts(t)
+	appParts, cleanup := buildAppParts(t)
 	defer cleanup()
 
 	// Fill the collection projection
@@ -489,7 +489,7 @@ func TestBasicUsage_QueryFunc_Collection(t *testing.T) {
 		func(ctx context.Context, sender ibus.ISender) queryprocessor.IResultSenderClosable { return out },
 		appParts,
 		maxPrepareQueries,
-		imetrics.Provide(), "vvm", authn, authz, cfgs)
+		imetrics.Provide(), "vvm", authn, authz)
 	go queryProcessor.Run(context.Background())
 	sysToken, err := payloads.GetSystemPrincipalTokenApp(appTokens)
 	require.NoError(err)
@@ -578,7 +578,7 @@ func TestBasicUsage_QueryFunc_Collection(t *testing.T) {
 func TestBasicUsage_QueryFunc_CDoc(t *testing.T) {
 	require := require.New(t)
 
-	appParts, cfgs, cleanup := buildAppParts(t)
+	appParts, cleanup := buildAppParts(t)
 	defer cleanup()
 
 	// Fill the collection projection
@@ -604,7 +604,7 @@ func TestBasicUsage_QueryFunc_CDoc(t *testing.T) {
 	appTokens := payloads.ProvideIAppTokensFactory(tokens).New(test.appQName)
 	queryProcessor := queryprocessor.ProvideServiceFactory()(serviceChannel, func(ctx context.Context, sender ibus.ISender) queryprocessor.IResultSenderClosable {
 		return out
-	}, appParts, maxPrepareQueries, imetrics.Provide(), "vvm", authn, authz, cfgs)
+	}, appParts, maxPrepareQueries, imetrics.Provide(), "vvm", authn, authz)
 
 	go queryProcessor.Run(context.Background())
 	sysToken, err := payloads.GetSystemPrincipalTokenApp(appTokens)
@@ -708,7 +708,7 @@ func TestBasicUsage_QueryFunc_CDoc(t *testing.T) {
 func TestBasicUsage_State(t *testing.T) {
 	require := require.New(t)
 
-	appParts, cfgs, cleanup := buildAppParts(t)
+	appParts, cleanup := buildAppParts(t)
 	defer cleanup()
 
 	// Fill the collection projection
@@ -723,7 +723,7 @@ func TestBasicUsage_State(t *testing.T) {
 	appTokens := payloads.ProvideIAppTokensFactory(tokens).New(test.appQName)
 	queryProcessor := queryprocessor.ProvideServiceFactory()(serviceChannel, func(ctx context.Context, sender ibus.ISender) queryprocessor.IResultSenderClosable {
 		return out
-	}, appParts, maxPrepareQueries, imetrics.Provide(), "vvm", authn, authz, cfgs)
+	}, appParts, maxPrepareQueries, imetrics.Provide(), "vvm", authn, authz)
 
 	go queryProcessor.Run(context.Background())
 	sysToken, err := payloads.GetSystemPrincipalTokenApp(appTokens)
@@ -877,7 +877,7 @@ func TestBasicUsage_State(t *testing.T) {
 func TestState_withAfterArgument(t *testing.T) {
 	require := require.New(t)
 
-	appParts, cfgs, cleanup := buildAppParts(t)
+	appParts, cleanup := buildAppParts(t)
 	defer cleanup()
 
 	// Fill the collection projection
@@ -892,7 +892,7 @@ func TestState_withAfterArgument(t *testing.T) {
 	appTokens := payloads.ProvideIAppTokensFactory(tokens).New(test.appQName)
 	queryProcessor := queryprocessor.ProvideServiceFactory()(serviceChannel, func(ctx context.Context, sender ibus.ISender) queryprocessor.IResultSenderClosable {
 		return out
-	}, appParts, maxPrepareQueries, imetrics.Provide(), "vvm", authn, authz, cfgs)
+	}, appParts, maxPrepareQueries, imetrics.Provide(), "vvm", authn, authz)
 
 	go queryProcessor.Run(context.Background())
 	sysToken, err := payloads.GetSystemPrincipalTokenApp(appTokens)
@@ -1086,7 +1086,7 @@ func newModify(app istructs.IAppStructs, gen *idsGeneratorType, cb eventCallback
 func Test_Idempotency(t *testing.T) {
 	require := require.New(t)
 
-	appParts, _, cleanup := buildAppParts(t)
+	appParts, cleanup := buildAppParts(t)
 	defer cleanup()
 
 	// create command processor

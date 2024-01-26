@@ -25,7 +25,6 @@ import (
 	"github.com/voedger/voedger/pkg/isecrets"
 	"github.com/voedger/voedger/pkg/isecretsimpl"
 	"github.com/voedger/voedger/pkg/istructs"
-	"github.com/voedger/voedger/pkg/istructsmem"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	imetrics "github.com/voedger/voedger/pkg/metrics"
 	"github.com/voedger/voedger/pkg/pipeline"
@@ -91,7 +90,7 @@ func implRowsProcessorFactory(ctx context.Context, appDef appdef.IAppDef, state 
 
 func implServiceFactory(serviceChannel iprocbus.ServiceChannel, resultSenderClosableFactory ResultSenderClosableFactory,
 	appParts appparts.IAppPartitions, maxPrepareQueries int, metrics imetrics.IMetrics, vvm string,
-	authn iauthnz.IAuthenticator, authz iauthnz.IAuthorizer, appCfgs istructsmem.AppConfigsType) pipeline.IService {
+	authn iauthnz.IAuthenticator, authz iauthnz.IAuthorizer) pipeline.IService {
 	secretReader := isecretsimpl.ProvideSecretReader()
 	return pipeline.NewService(func(ctx context.Context) {
 		var p pipeline.ISyncPipeline
@@ -109,7 +108,7 @@ func implServiceFactory(serviceChannel iprocbus.ServiceChannel, resultSenderClos
 				rs := resultSenderClosableFactory(msg.RequestCtx(), msg.Sender())
 				qwork := newQueryWork(msg, rs, appParts, maxPrepareQueries, qpm, secretReader)
 				if p == nil {
-					p = newQueryProcessorPipeline(ctx, authn, authz, appCfgs)
+					p = newQueryProcessorPipeline(ctx, authn, authz)
 				}
 				err := p.SendSync(qwork)
 				if err != nil {
@@ -165,8 +164,7 @@ func execAndSendResponse(ctx context.Context, qw *queryWork) (err error) {
 	})
 }
 
-func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthenticator, authz iauthnz.IAuthorizer,
-	appCfgs istructsmem.AppConfigsType) pipeline.ISyncPipeline {
+func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthenticator, authz iauthnz.IAuthorizer) pipeline.ISyncPipeline {
 	ops := []*pipeline.WiredOperator{
 		operator("borrowAppPart", borrowAppPart),
 		operator("check function call rate", func(ctx context.Context, qw *queryWork) (err error) {
@@ -247,16 +245,8 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 			err = json.Unmarshal(qw.msg.Body(), &qw.requestData)
 			return coreutils.WrapSysError(err, http.StatusBadRequest)
 		}),
-		operator("get AppConfig", func(ctx context.Context, qw *queryWork) (err error) {
-			cfg, ok := appCfgs[qw.msg.AppQName()]
-			if !ok {
-				return errors.New("failed to get AppConfig")
-			}
-			qw.appCfg = cfg
-			return nil
-		}),
 		operator("validate: get exec query args", func(ctx context.Context, qw *queryWork) (err error) {
-			qw.execQueryArgs, err = newExecQueryArgs(qw.requestData, qw.msg.WSID(), qw.appCfg, qw)
+			qw.execQueryArgs, err = newExecQueryArgs(qw.requestData, qw.msg.WSID(), qw)
 			return coreutils.WrapSysError(err, http.StatusBadRequest)
 		}),
 		operator("create state", func(ctx context.Context, qw *queryWork) (err error) {
@@ -351,7 +341,6 @@ type queryWork struct {
 	principals        []iauthnz.Principal
 	principalPayload  payloads.PrincipalPayload
 	secretReader      isecrets.ISecretReader
-	appCfg            *istructsmem.AppConfigType
 	queryFunc         istructs.IQueryFunction
 	iWorkspace        appdef.IWorkspace
 	iQuery            appdef.IQuery
@@ -494,8 +483,7 @@ func (r *outputRow) Values() []interface{}               { return r.values }
 func (r *outputRow) Value(alias string) interface{}      { return r.values[r.keyToIdx[alias]] }
 func (r *outputRow) MarshalJSON() ([]byte, error)        { return json.Marshal(r.values) }
 
-func newExecQueryArgs(data coreutils.MapObject, wsid istructs.WSID, appCfg *istructsmem.AppConfigType,
-	qw *queryWork) (execQueryArgs istructs.ExecQueryArgs, err error) {
+func newExecQueryArgs(data coreutils.MapObject, wsid istructs.WSID, qw *queryWork) (execQueryArgs istructs.ExecQueryArgs, err error) {
 	args, _, err := data.AsObject("args")
 	if err != nil {
 		return execQueryArgs, err
@@ -503,10 +491,8 @@ func newExecQueryArgs(data coreutils.MapObject, wsid istructs.WSID, appCfg *istr
 	argsType := qw.iQuery.Param()
 	requestArgs := istructs.NewNullObject()
 	if argsType != nil {
-		requestArgsBuilder := istructsmem.NewIObjectBuilder(appCfg, argsType.QName())
-		if err := istructsmem.FillObjectFromJSON(args, argsType, requestArgsBuilder); err != nil {
-			return execQueryArgs, err
-		}
+		requestArgsBuilder := qw.appStructs.ObjectBuilder(argsType.QName())
+		requestArgsBuilder.FillFromJSON(args)
 		requestArgs, err = requestArgsBuilder.Build()
 		if err != nil {
 			return execQueryArgs, err

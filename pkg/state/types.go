@@ -10,6 +10,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"maps"
 	"net/http"
 	"strings"
 	"time"
@@ -83,6 +84,7 @@ func (b *keyBuilder) PutBool(name string, value bool)                  { b.data[
 func (b *keyBuilder) PutRecordID(name string, value istructs.RecordID) { b.data[name] = value }
 func (b *keyBuilder) PutNumber(string, float64)                        { panic(ErrNotSupported) }
 func (b *keyBuilder) PutChars(string, string)                          { panic(ErrNotSupported) }
+func (b *keyBuilder) PutFromJSON(j map[string]any)                     { maps.Copy(b.data, j) }
 func (b *keyBuilder) PartitionKey() istructs.IRowWriter                { panic(ErrNotSupported) }
 func (b *keyBuilder) ClusteringColumns() istructs.IRowWriter           { panic(ErrNotSupported) }
 func (b *keyBuilder) Equals(src istructs.IKeyBuilder) bool {
@@ -96,13 +98,8 @@ func (b *keyBuilder) Equals(src istructs.IKeyBuilder) bool {
 	if b.entity != kb.entity {
 		return false
 	}
-	if len(b.data) != len(kb.data) {
+	if !maps.Equal(b.data, kb.data) {
 		return false
-	}
-	for k, v := range b.data {
-		if v != kb.data[k] {
-			return false
-		}
 	}
 	return true
 }

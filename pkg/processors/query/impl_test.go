@@ -145,8 +145,8 @@ func TestBasicUsage_RowsProcessorFactory(t *testing.T) {
 	require.Equal(`[[[3,"White wine","Alcohol drinks"]]]`, result)
 }
 
-func getTestCfg(require *require.Assertions, prepareAppDef func(adb appdef.IAppDefBuilder, wsb appdef.IWorkspaceBuilder), cfgFunc ...func(cfg *istructsmem.AppConfigType)) (cfgs istructsmem.AppConfigsType, appDef appdef.IAppDef, asp istructs.IAppStructsProvider, appTokens istructs.IAppTokens) {
-	cfgs = make(istructsmem.AppConfigsType)
+func getTestCfg(require *require.Assertions, prepareAppDef func(adb appdef.IAppDefBuilder, wsb appdef.IWorkspaceBuilde), cfgFunc ...func(cfg *istructsmem.AppConfigType)) (appDef appdef.IAppDef, asp istructs.IAppStructsProvider, appTokens istructs.IAppTokens) {
+	cfgs := make(istructsmem.AppConfigsType)
 	asf := istorage.ProvideMem()
 	storageProvider := istorageimpl.Provide(asf)
 	tokens := itokensjwt.ProvideITokens(itokensjwt.SecretKeyExample, timeFunc)
@@ -337,7 +337,7 @@ func TestBasicUsage_ServiceFactory(t *testing.T) {
 	metrics := imetrics.Provide()
 	metricNames := make([]string, 0)
 
-	cfgs, appDef, appStructsProvider, appTokens := getTestCfg(require, nil)
+	appDef, appStructsProvider, appTokens := getTestCfg(require, nil)
 
 	appParts, cleanAppParts, err := appparts.New(appStructsProvider)
 	require.NoError(err)
@@ -352,7 +352,7 @@ func TestBasicUsage_ServiceFactory(t *testing.T) {
 		func(ctx context.Context, sender ibus.ISender) IResultSenderClosable { return rs },
 		appParts,
 		3, // max concurrent queries
-		metrics, "vvm", authn, authz, cfgs)
+		metrics, "vvm", authn, authz)
 	processorCtx, processorCtxCancel := context.WithCancel(context.Background())
 	wg := sync.WaitGroup{}
 	wg.Add(1)
@@ -1067,7 +1067,7 @@ func TestRateLimiter(t *testing.T) {
 	qNameMyFuncParams := appdef.NewQName(appdef.SysPackage, "myFuncParams")
 	qNameMyFuncResults := appdef.NewQName(appdef.SysPackage, "results")
 	qName := appdef.NewQName(appdef.SysPackage, "myFunc")
-	cfgs, appDef, appStructsProvider, appTokens := getTestCfg(require,
+	appDef, appStructsProvider, appTokens := getTestCfg(require,
 		func(appDef appdef.IAppDefBuilder, wsb appdef.IWorkspaceBuilder) {
 			appDef.AddObject(qNameMyFuncParams)
 			appDef.AddObject(qNameMyFuncResults).
@@ -1104,7 +1104,7 @@ func TestRateLimiter(t *testing.T) {
 		func(ctx context.Context, sender ibus.ISender) IResultSenderClosable { return rs },
 		appParts,
 		3, // max concurrent queries
-		metrics, "vvm", authn, authz, cfgs)
+		metrics, "vvm", authn, authz)
 	go queryProcessor.Run(context.Background())
 
 	systemToken := getSystemToken(appTokens)
@@ -1143,7 +1143,7 @@ func TestAuthnz(t *testing.T) {
 
 	metrics := imetrics.Provide()
 
-	cfgs, appDef, appStructsProvider, appTokens := getTestCfg(require, nil)
+	appDef, appStructsProvider, appTokens := getTestCfg(require, nil)
 
 	appParts, cleanAppParts, err := appparts.New(appStructsProvider)
 	require.NoError(err)
@@ -1159,7 +1159,7 @@ func TestAuthnz(t *testing.T) {
 		func(ctx context.Context, sender ibus.ISender) IResultSenderClosable { return rs },
 		appParts,
 		3, // max concurrent queries
-		metrics, "vvm", authn, authz, cfgs)
+		metrics, "vvm", authn, authz)
 	go queryProcessor.Run(context.Background())
 
 	t.Run("no token for a query that requires authorization -> 403 unauthorized", func(t *testing.T) {

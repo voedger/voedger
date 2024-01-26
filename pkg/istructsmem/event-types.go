@@ -844,6 +844,36 @@ func (o *objectType) Containers(cb func(container string)) {
 	}
 }
 
+// istructs.IObjectBuilder.FillFromJSON
+func (o *objectType) FillFromJSON(data map[string]any) {
+	for n, v := range data {
+		switch fv := v.(type) {
+		case float64:
+			o.PutNumber(n, fv)
+		case string:
+			o.PutChars(n, fv)
+		case bool:
+			o.PutBool(n, fv)
+		case []interface{}:
+			// e.g. "order_item": [<2 children>]
+			cont := o.typ.(appdef.IContainers).Container(n)
+			if cont == nil {
+				o.collectErrorf(errContainerNotFoundWrap, n, o.typ, ErrNameNotFound)
+				continue
+			}
+			for i, val := range fv {
+				childData, ok := val.(map[string]any)
+				if !ok {
+					o.collectErrorf("%v: invalid type «%T» in JSON for child «%s[%d]», expected «map[string]any»: %w", o, val, n, i, ErrWrongType)
+					break
+				}
+				c := o.ChildBuilder(n)
+				c.FillFromJSON(childData)
+			}
+		}
+	}
+}
+
 // istructs.IObject.QName()
 func (o *objectType) QName() appdef.QName {
 	return o.recordType.QName()
