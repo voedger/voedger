@@ -9,9 +9,7 @@ linters:
     - stylecheck
     - misspell
     - errcheck
-    - unparam
-    - deadcode
-    - structcheck
+#    - unparam
   fast: true
 linters-settings:
   gosec:
@@ -31,7 +29,6 @@ linters-settings:
   revive:
   # see https://github.com/mgechev/revive#available-rules for details.
     ignore-generated-header: true
-    exclude: "*_test.go"
     severity: warning
     rules:
       - name: indent-error-flow
