@@ -29,12 +29,19 @@ func newAcmeCmd() *cobra.Command {
 		RunE:  acmeList,
 	}
 
+	acmeRomoveCmd := &cobra.Command{
+		Use:   "remove [<domain1,domain2...>]",
+		Short: "Removes one or more domains from the acme domain list",
+		Args:  cobra.ExactArgs(1),
+		RunE:  acmeRemove,
+	}
+
 	acmeCmd := &cobra.Command{
 		Use:   "acme",
 		Short: "ACME settings",
 	}
 
-	acmeCmd.AddCommand(acmeAddCmd, acmeListCmd)
+	acmeCmd.AddCommand(acmeAddCmd, acmeListCmd, acmeRomoveCmd)
 
 	return acmeCmd
 
@@ -48,6 +55,38 @@ func acmeAdd(cmd *cobra.Command, args []string) error {
 	}
 
 	c := newCmd(ckAcme, append([]string{"add"}, args...))
+	if err := cluster.applyCmd(c); err != nil {
+		loggerError(err.Error())
+		return err
+	}
+
+	defer func(cluster *clusterType) {
+		err := cluster.saveToJSON()
+		if err != nil {
+			loggerError(err.Error())
+		}
+	}(cluster)
+
+	if err := mkCommandDirAndLogFile(cmd, cluster); err != nil {
+		return err
+	}
+
+	if err := cluster.Cmd.apply(cluster); err != nil {
+		loggerError(err)
+		return err
+	}
+
+	return nil
+}
+
+func acmeRemove(cmd *cobra.Command, args []string) error {
+	cluster := newCluster()
+
+	if !cluster.clusterConfigFileExists() {
+		return ErrClusterConfNotFound
+	}
+
+	c := newCmd(ckAcme, append([]string{"remove"}, args...))
 	if err := cluster.applyCmd(c); err != nil {
 		loggerError(err.Error())
 		return err
