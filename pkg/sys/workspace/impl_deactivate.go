@@ -91,7 +91,7 @@ func cmdInitiateDeactivateWorkspaceExec(args istructs.ExecCommandArgs) (err erro
 
 func cmdOnJoinedWorkspaceDeactivateExec(args istructs.ExecCommandArgs) (err error) {
 	invitedToWSID := args.ArgumentObject.AsInt64(field_InvitedToWSID)
-	svCDocJoinedWorkspace, skb, ok, err := invite.GetCDocJoinedWorkspace(args.State, args.Intents, invitedToWSID)
+	svCDocJoinedWorkspace, skb, ok, err := invite.GetCDocJoinedWorkspace(args.State, invitedToWSID)
 	if err != nil || !ok {
 		return err
 	}

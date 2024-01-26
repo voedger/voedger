@@ -43,7 +43,7 @@ func invokeCreateWorkspaceIDProjector(federation coreutils.IFederation, appQName
 			wsidToCallCreateWSIDAt := istructs.NewWSID(targetClusterID, ownerWSID.BaseWSID())
 			templateName := ""
 			templateParams := ""
-			return workspace.ApplyInvokeCreateWorkspaceID(federation, appQName, tokensAPI, wsName, wsKind, targetClusterID, wsidToCallCreateWSIDAt,
+			return workspace.ApplyInvokeCreateWorkspaceID(federation, appQName, tokensAPI, wsName, wsKind, wsidToCallCreateWSIDAt,
 				targetApp, templateName, templateParams, rec, ownerWSID)
 		})
 	}

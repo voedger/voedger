@@ -5,7 +5,6 @@
 package verifier
 
 import (
-	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/itokens"
@@ -13,7 +12,7 @@ import (
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, itokens itokens.ITokens, federation coreutils.IFederation, asp istructs.IAppStructsProvider,
+func Provide(cfg *istructsmem.AppConfigType, itokens itokens.ITokens, federation coreutils.IFederation, asp istructs.IAppStructsProvider,
 	smtpCfg smtp.Cfg, timeFunc coreutils.TimeFunc) {
 	provideQryInitiateEmailVerification(cfg, itokens, asp, federation)
 	provideQryIssueVerifiedValueToken(cfg, itokens, asp)

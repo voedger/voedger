@@ -21,7 +21,7 @@ import (
 )
 
 // port == 443 -> httpsService + ACMEService, otherwise -> HTTPService only, ACMEService is nil
-func Provide(hvmCtx context.Context, rp RouterParams, aBusTimeout time.Duration, broker in10n.IN10nBroker, quotas in10n.Quotas, bp *BlobberParams, autocertCache autocert.Cache,
+func Provide(hvmCtx context.Context, rp RouterParams, aBusTimeout time.Duration, broker in10n.IN10nBroker, bp *BlobberParams, autocertCache autocert.Cache,
 	bus ibus.IBus, appsWSAmount map[istructs.AppQName]istructs.AppWSAmount) (httpSrv IHTTPService, acmeSrv IACMEService) {
 	httpService := &httpService{
 		RouterParams:  rp,

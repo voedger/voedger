@@ -30,11 +30,13 @@ func (san SafeAppName) String() string {
 	return san.name
 }
 
+// nolint
 func (san SafeAppName) MarshalJSON() ([]byte, error) {
 	return []byte(strconv.Quote(san.name)), nil
 }
 
 // need to marshal map[SafeAppName]any
+// nolint
 func (san SafeAppName) MarshalText() (text []byte, err error) {
 	return []byte(san.name), nil
 }

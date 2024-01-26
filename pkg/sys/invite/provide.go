@@ -5,14 +5,13 @@
 package invite
 
 import (
-	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/itokens"
 	"github.com/voedger/voedger/pkg/sys/smtp"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, timeFunc coreutils.TimeFunc,
+func Provide(cfg *istructsmem.AppConfigType, timeFunc coreutils.TimeFunc,
 	federation coreutils.IFederation, itokens itokens.ITokens, smtpCfg smtp.Cfg) {
 	provideCmdInitiateInvitationByEMail(cfg, timeFunc)
 	provideCmdInitiateJoinWorkspace(cfg, timeFunc)

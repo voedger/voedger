@@ -20,7 +20,7 @@ type subjectStorage struct {
 func (s *subjectStorage) NewKeyBuilder(_ appdef.QName, _ istructs.IStateKeyBuilder) istructs.IStateKeyBuilder {
 	return newKeyBuilder(RequestSubject, appdef.NullQName)
 }
-func (s *subjectStorage) Get(key istructs.IStateKeyBuilder) (value istructs.IStateValue, err error) {
+func (s *subjectStorage) Get(_ istructs.IStateKeyBuilder) (istructs.IStateValue, error) {
 	ssv := &requestSubjectValue{
 		token:      s.tokenFunc(),
 		toJSONFunc: s.toJSON,

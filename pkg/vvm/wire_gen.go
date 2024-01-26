@@ -486,7 +486,7 @@ func provideRouterServices(vvmCtx context.Context, rp router.RouterParams, busTi
 		RetryAfterSecondsOn503: DefaultRetryAfterSecondsOn503,
 		BLOBMaxSize:            bms,
 	}
-	httpSrv, acmeSrv := router.Provide(vvmCtx, rp, time.Duration(busTimeout), broker, quotas, bp, autocertCache, bus, appsWSAmounts)
+	httpSrv, acmeSrv := router.Provide(vvmCtx, rp, time.Duration(busTimeout), broker, bp, autocertCache, bus, appsWSAmounts)
 	vvmPortSource.getter = func() VVMPortType {
 		return VVMPortType(httpSrv.GetPort())
 	}

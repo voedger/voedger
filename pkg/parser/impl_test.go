@@ -264,7 +264,7 @@ func (require *ParserAssertions) NoAppSchemaError(sql string) {
 	require.NoError(require.AppSchema(sql))
 }
 
-func (require *ParserAssertions) AppSchema(sql string, expectErrors ...string) error {
+func (require *ParserAssertions) AppSchema(sql string) error {
 	ast, err := ParseFile("file.sql", sql)
 	require.NoError(err)
 
