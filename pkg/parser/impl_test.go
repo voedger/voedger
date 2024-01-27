@@ -2132,3 +2132,65 @@ func Test_DescriptorInProjector(t *testing.T) {
 	  );
 	`)
 }
+
+func Test_Limits(t *testing.T) {
+	require := assertions(t)
+	require.AppSchemaError(`APPLICATION app1();
+WORKSPACE w(
+/*
+	LIMIT creates a bucket 
+	Syntax: LIMIT <Name> ON <Target> WITH RATE <RateName>
+*/
+	 -- All commands and queries
+	LIMIT AntiDDOS ON ALL REQUESTS WITH RATE AntiDDosRate; 
+
+	-- Commands
+	LIMIT NewOrderLimit ON COMMAND NewOrder WITH RATE NewOrderRate;   -- Single command applied with rate
+	LIMIT AllCommandsLimit ON EVERY COMMAND WITH RATE PosSalesRate;  -- Every command applied with the same rate
+	LIMIT AllCommandsLimit ON EVERY COMMAND WITH TAG PosTag WITH RATE PosSalesRate; -- Every command with tag applied with the same rate
+
+	-- Queries
+	LIMIT Query1Limit ON QUERY NewQuery WITH RATE QueryRate;
+	LIMIT AllQueriesLimit ON EVERY QUERY WITH RATE AppDefaultRate;
+	LIMIT AllQueriesLimit ON EVERY QUERY WITH TAG PosTag WITH RATE AppDefaultRate;
+
+	-- Tables, any modifications
+	LIMIT TableLimit1 ON TABLE Restaurant WITH RATE TableRate;
+
+	-- Workspaces
+	LIMIT WorkspaceLimit1 ON CREATE WORKSPACE Restaurant WITH RATE WsRate;
+);
+	`)
+
+	require.AppSchemaError(`APPLICATION app1();
+WORKSPACE w(
+/*
+	LIMIT creates a bucket 
+	Syntax: 
+		LIMIT ALL REQUESTS WITH RATE <RateName> [AS <LimitName>]
+		LIMIT (COMMAND | QUERY) [WHEN <Name>=<Value> [AND <Name>=<Value>]] WITH RATE <RateName> [AS <LimitName>]
+		LIMIT TABLE WITH RATE <RateName> [AS <LimitName>]
+*/
+	-- All commands and queries
+	LIMIT ALL REQUESTS WITH RATE AntiDDosRate; 
+	LIMIT ALL REQUESTS WITH RATE AntiDDosRate AS AntiDDOS;  -- named Limit
+
+	-- Commands
+	LIMIT COMMAND NewOrder WITH RATE NewOrderRate;
+	LIMIT EVERY COMMAND WITH RATE PosSalesRate;
+	LIMIT EVERY COMMAND WITH TAG PosTag WITH RATE PosSalesRate;
+
+	-- Limit creating workspace
+	LIMIT COMMAND InitChildWorkspace WITH RATE NewOrderRate;
+	LIMIT COMMAND InitChildWorkspace WHEN WSKind IS air.Restaurant WITH RATE NewOrderRate;
+
+	-- Queries
+	LIMIT QUERY NewQuery WITH RATE QueryRate;
+	LIMIT EVERY QUERY WITH RATE AppDefaultRate;
+	LIMIT EVERY QUERY WITH TAG PosTag WITH RATE AppDefaultRate;
+
+	-- Tables, any modifications
+	LIMIT TABLE Restaurant WITH RATE TableRate;
+);
+	`)
+}
