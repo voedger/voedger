@@ -568,12 +568,12 @@ func (s RateStmt) GetName() string { return string(s.Name) }
 
 type LimitAction struct {
 	Pos                  lexer.Position
-	Command              *DefQName `parser:"(EXECUTEONCOMMAND @@)"`
-	AllCommandsWithTag   *DefQName `parser:"| (EXECUTEONALLCOMMANDSWITHTAG @@)"`
-	AllCommands          bool      `parser:"| @EXECUTEONALLCOMMANDS"`
-	Query                *DefQName `parser:"| (EXECUTEONQUERY @@)"`
-	AllQueriesWithTag    *DefQName `parser:"| (EXECUTEONALLQUERIESWITHTAG @@)"`
-	AllQueries           bool      `parser:"| @EXECUTEONALLQUERIES"`
+	Command              *DefQName `parser:"(INSERTONCOMMAND @@)"`
+	AllCommandsWithTag   *DefQName `parser:"| (INSERTONALLCOMMANDSWITHTAG @@)"`
+	AllCommands          bool      `parser:"| @INSERTONALLCOMMANDS"`
+	Query                *DefQName `parser:"| (SELECTONQUERY @@)"`
+	AllQueriesWithTag    *DefQName `parser:"| (SELECTONALLQUERIESWITHTAG @@)"`
+	AllQueries           bool      `parser:"| @SELECTONALLQUERIES"`
 	Workspace            *DefQName `parser:"| (INSERTONWORKSPACE @@)"`
 	AllWorkspacesWithTag *DefQName `parser:"| (INSERTONALLWORKSPACESWITHTAG @@)"`
 }
@@ -622,10 +622,10 @@ type GrantAllTablesWithTagActions struct {
 
 type GrantStmt struct {
 	Statement
-	Command              bool                          `parser:"'GRANT' ( @EXECUTEONCOMMAND"`
-	AllCommandsWithTag   bool                          `parser:"| @EXECUTEONALLCOMMANDSWITHTAG"`
-	Query                bool                          `parser:"| @EXECUTEONQUERY"`
-	AllQueriesWithTag    bool                          `parser:"| @EXECUTEONALLQUERIESWITHTAG"`
+	Command              bool                          `parser:"'GRANT' ( @INSERTONCOMMAND"`
+	AllCommandsWithTag   bool                          `parser:"| @INSERTONALLCOMMANDSWITHTAG"`
+	Query                bool                          `parser:"| @SELECTONQUERY"`
+	AllQueriesWithTag    bool                          `parser:"| @SELECTONALLQUERIESWITHTAG"`
 	Workspace            bool                          `parser:"| @INSERTONWORKSPACE"`
 	AllWorkspacesWithTag bool                          `parser:"| @INSERTONALLWORKSPACESWITHTAG"`
 	AllTablesWithTag     *GrantAllTablesWithTagActions `parser:"| (@@ ONALLTABLESWITHTAG)"`
