@@ -326,7 +326,10 @@ func (c *basicContext) err(err error) {
 	c.errs = append(c.errs, err)
 }
 
-func buildAppDefs(appSchema *AppSchemaAST, builder appdef.IAppDefBuilder) error {
+func buildAppDefs(appSchema *AppSchemaAST, builder appdef.IAppDefBuilder, opts ...BuildAppDefsOption) error {
 	ctx := newBuildContext(appSchema, builder)
+	for _, opt := range opts {
+		opt(ctx)
+	}
 	return ctx.build()
 }
