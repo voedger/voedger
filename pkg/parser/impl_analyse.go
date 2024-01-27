@@ -617,10 +617,6 @@ func analyseWith(with *[]WithItem, statement IStatement, c *iterateCtx) {
 		item := &(*with)[i]
 		if item.Comment != nil {
 			comment = item
-		} else if item.Rate != nil {
-			if err := resolveInCtx(*item.Rate, c, func(*RateStmt, *PackageSchemaAST) error { return nil }); err != nil {
-				c.stmtErr(&item.Rate.Pos, err)
-			}
 		}
 		for j := range item.Tags {
 			tag := item.Tags[j]
