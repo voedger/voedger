@@ -15,9 +15,10 @@ import (
 
 type buildContext struct {
 	basicContext
-	builder     appdef.IAppDefBuilder
-	defs        []defBuildContext
-	wsBuildCtxs map[*WorkspaceStmt]*wsBuildCtx
+	builder          appdef.IAppDefBuilder
+	defs             []defBuildContext
+	variableResolver IVariableResolver
+	wsBuildCtxs      map[*WorkspaceStmt]*wsBuildCtx
 }
 
 func newBuildContext(appSchema *AppSchemaAST, builder appdef.IAppDefBuilder) *buildContext {
@@ -37,6 +38,7 @@ type buildFunc func() error
 func (c *buildContext) build() error {
 	var steps = []buildFunc{
 		c.types,
+		c.rates,
 		c.tables,
 		c.views,
 		c.commands,
@@ -93,6 +95,20 @@ func (c *buildContext) useStmtInWs(wsctx *wsBuildCtx, stmtPackage string, stmt i
 	if useWorkspace, ok := stmt.(*UseWorkspaceStmt); ok {
 		wsctx.builder.AddType(useWorkspace.qName)
 	}
+}
+
+func (c *buildContext) rates() error {
+	for _, schema := range c.app.Packages {
+		iteratePackageStmt(schema, &c.basicContext, func(rate *RateStmt, ictx *iterateCtx) {
+			if rate.Value.Variable != nil {
+				if c.variableResolver != nil {
+					c.variableResolver.AsInt32(rate.Value.variable)
+					// TODO: use in appdef builder
+				}
+			}
+		})
+	}
+	return nil
 }
 
 func (c *buildContext) workspaces() error {

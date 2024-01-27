@@ -257,26 +257,28 @@ type ParserAssertions struct {
 }
 
 func (require *ParserAssertions) AppSchemaError(sql string, expectErrors ...string) {
-	require.EqualError(require.AppSchema(sql), strings.Join(expectErrors, "\n"))
+	_, err := require.AppSchema(sql)
+	require.EqualError(err, strings.Join(expectErrors, "\n"))
 }
 
 func (require *ParserAssertions) NoAppSchemaError(sql string) {
-	require.NoError(require.AppSchema(sql))
+	_, err := require.AppSchema(sql)
+	require.NoError(err)
 }
 
-func (require *ParserAssertions) AppSchema(sql string) error {
+func (require *ParserAssertions) AppSchema(sql string) (*AppSchemaAST, error) {
 	ast, err := ParseFile("file.sql", sql)
 	require.NoError(err)
 
 	pkg, err := BuildPackageSchema("github.com/company/pkg", []*FileSchemaAST{ast})
 	require.NoError(err)
 
-	_, err = BuildAppSchema([]*PackageSchemaAST{
+	schema, err := BuildAppSchema([]*PackageSchemaAST{
 		getSysPackageAST(),
 		pkg,
 	})
 
-	return err
+	return schema, err
 }
 
 func assertions(t *testing.T) *ParserAssertions {
@@ -2131,4 +2133,30 @@ func Test_DescriptorInProjector(t *testing.T) {
 		);
 	  );
 	`)
+}
+
+type testVarResolver struct {
+	resolved map[appdef.QName]bool
+}
+
+func (t testVarResolver) AsInt32(name appdef.QName) (int32, bool) {
+	t.resolved[name] = true
+	return 1, true
+}
+
+func Test_Variables(t *testing.T) {
+	require := assertions(t)
+
+	require.AppSchemaError(`APPLICATION app1(); RATE AppDefaultRate variable PER HOUR;`, "file.sql:1:41: variable undefined")
+
+	schema, err := require.AppSchema(`APPLICATION app1();
+	DECLARE variable int32 DEFAULT 100;
+	RATE AppDefaultRate variable PER HOUR;
+	`)
+	require.NoError(err)
+
+	resolver := testVarResolver{resolved: make(map[appdef.QName]bool)}
+
+	BuildAppDefs(schema, appdef.New(), WithVariableResolver(&resolver))
+	require.True(resolver.resolved[appdef.NewQName("pkg", "variable")])
 }

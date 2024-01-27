@@ -114,6 +114,7 @@ type RootStatement struct {
 	Table          *TableStmt          `parser:"| @@"`
 	Type           *TypeStmt           `parser:"| @@"`
 	Application    *ApplicationStmt    `parser:"| @@"`
+	Declare        *DeclareStmt        `parser:"| @@"`
 	// Sequence  *sequenceStmt  `parser:"| @@"`
 
 	stmt interface{}
@@ -189,6 +190,15 @@ func (s *RootExtEngineStmt) Iterate(callback func(stmt interface{})) {
 		callback(raw.stmt)
 	}
 }
+
+type DeclareStmt struct {
+	Statement
+	Name         Ident  `parser:"'DECLARE' @Ident"`
+	DataType     string `parser:"@('int' | 'int32')"`
+	DefaultValue *int   `parser:"'DEFAULT' @Int"`
+}
+
+func (s DeclareStmt) GetName() string { return string(s.Name) }
 
 type UseStmt struct {
 	Statement
@@ -528,9 +538,12 @@ type RateValueTimeUnit struct {
 }
 
 type RateValue struct {
-	Count           int               `parser:"@Int 'PER'"`
+	Count           *int              `parser:"(@Int"`
+	Variable        *DefQName         `parser:"| @@) 'PER'"`
 	TimeUnitAmounts *int              `parser:"@Int?"`
 	TimeUnit        RateValueTimeUnit `parser:"@@"`
+	variable        appdef.QName      // filled on the analysis stage
+	declare         *DeclareStmt      // filled on the analysis stage
 }
 
 type RateObjectScope struct {
@@ -896,4 +909,17 @@ type ViewField struct {
 	Name    Identifier `parser:"@@"`
 	Type    DataType   `parser:"@@"`
 	NotNull bool       `parser:"@(NOTNULL)?"`
+}
+
+type IVariableResolver interface {
+	AsInt32(name appdef.QName) (int32, bool)
+}
+
+// BuildAppDefsOption is a function that can be passed to BuildAppDefs to configure it.
+type BuildAppDefsOption = func(*buildContext)
+
+func WithVariableResolver(resolver IVariableResolver) BuildAppDefsOption {
+	return func(c *buildContext) {
+		c.variableResolver = resolver
+	}
 }
