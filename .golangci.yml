@@ -1,4 +1,6 @@
 # options for analysis running
+# https://golangci-lint.run/usage/linters/
+
 linters:
   disable-all: true
   enable:
@@ -9,6 +11,37 @@ linters:
     - stylecheck
     - misspell
     - errcheck
+    - bidichk 
+
+#    - asciicheck      # Checks that all code identifiers does not have non-ASCII symbols in the name
+#    - durationcheck   # Check for two durations multiplied together 
+#    - gochecknoinits  # Checks that no init functions are present in Go code.
+#    - gomnd           # An analyzer to detect magic numbers
+#    - forcetypeassert # Finds forced type assertions.
+
+#    - unconvert
+#    - testpackage
+#    - testifylint 
+#    - predeclared
+#    - prealloc
+#    - perfsprint
+#    - nonamedreturns
+#    - noctx 
+#    - nilnil 
+#    - nilerr 
+#?    - nestif 
+#    - musttag
+#    - mirror 
+#    - makezero
+#    - inamedparam
+#   - goerr113      
+#    - godox       #- searches FixMe,TODO in code
+#    - gocritic
+#    - forbidigo
+#    - exportloopref
+#    - exhaustruct
+#    - errorlint
+#    - goconst 
 #    - unparam
   fast: true
 linters-settings:
@@ -50,3 +83,4 @@ issues:
        - revive
        - gosec
        - errcheck
+       - forcetypeassert
