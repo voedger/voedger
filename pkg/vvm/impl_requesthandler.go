@@ -57,18 +57,6 @@ func provideIBus(appParts appparts.IAppPartitions, procbus iprocbus.IProcBus,
 			return
 		}
 
-		// appDef, err := appParts.AppDef(appQName)
-		// if err != nil {
-		// 	coreutils.ReplyInternalServerError(sender, "failed to get AppDef", err)
-		// 	return
-		// }
-
-		// funcKindMark := request.Resource[:1]
-		// funcType, isHandled := getFuncType(appDef, qName, sender, funcKindMark)
-		// if isHandled {
-		// 	return
-		// }
-
 		token, err := getPrincipalToken(request)
 		if err != nil {
 			coreutils.ReplyAccessDeniedUnauthorized(sender, err.Error())
@@ -102,27 +90,10 @@ func deliverToProcessors(request ibus.Request, requestCtx context.Context, appQN
 		if !procbus.Submit(int(cpchIdx), int(processorIdx), icm) {
 			coreutils.ReplyErrf(sender, http.StatusServiceUnavailable, fmt.Sprintf("command processor of partition %d is busy", partitionID))
 		}
+	default:
+		coreutils.ReplyBadRequest(sender, fmt.Sprintf(`wrong function mark "%s" for function %s`, request.Resource[:1], funcQName))
 	}
 }
-
-//func getFuncType(appDef appdef.IAppDef, qName appdef.QName, sender ibus.ISender, funcKindMark string) (appdef.IType, bool) {
-//	tp := appDef.Type(qName)
-//	switch tp.Kind() {
-//	case appdef.TypeKind_null:
-//		coreutils.ReplyBadRequest(sender, "unknown function "+qName.String())
-//		return nil, true
-//	case appdef.TypeKind_Query:
-//		if funcKindMark == "q" {
-//			return tp, false
-//		}
-//	case appdef.TypeKind_Command:
-//		if funcKindMark == "c" {
-//			return tp, false
-//		}
-//	}
-//	coreutils.ReplyBadRequest(sender, fmt.Sprintf(`wrong function kind "%s" for function %s`, funcKindMark, qName))
-//	return nil, true
-//}
 
 func getPrincipalToken(request ibus.Request) (token string, err error) {
 	authHeaders := request.Header[coreutils.Authorization]

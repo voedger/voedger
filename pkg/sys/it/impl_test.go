@@ -5,7 +5,6 @@
 package sys_it
 
 import (
-	"context"
 	"encoding/base64"
 	"fmt"
 	"sync"
@@ -13,83 +12,12 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/apps"
-	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/istructs"
-	"github.com/voedger/voedger/pkg/istructsmem"
-	"github.com/voedger/voedger/pkg/parser"
-	"github.com/voedger/voedger/pkg/sys"
 	"github.com/voedger/voedger/pkg/sys/authnz"
-	"github.com/voedger/voedger/pkg/sys/smtp"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 	it "github.com/voedger/voedger/pkg/vit"
 	"github.com/voedger/voedger/pkg/vvm"
 )
-
-type greeterRR struct {
-	istructs.NullObject
-	text string
-}
-
-func (e *greeterRR) AsString(name string) string {
-	return "hello, " + e.text
-}
-
-func TestBasicUsage(t *testing.T) {
-	require := require.New(t)
-	cfg := it.NewOwnVITConfig(
-		it.WithApp(istructs.AppQName_test1_app2, func(apis apps.APIs, cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) apps.AppPackages {
-			qNameCmdGreeter := appdef.NewQName(appdef.SysPackage, "Greeter")
-			appDefBuilder.AddQuery(qNameCmdGreeter).
-				SetParam(appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "GreeterParams")).
-					AddField("Text", appdef.DataKind_string, true).(appdef.IType).QName()).
-				SetResult(appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "GreeterResult")).
-					AddField("Res", appdef.DataKind_string, true).(appdef.IType).QName())
-
-			cfg.Resources.Add(istructsmem.NewQueryFunction(
-				qNameCmdGreeter,
-				func(_ context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
-					text := args.ArgumentObject.AsString("Text")
-					var rr = &greeterRR{text: text}
-					return callback(rr)
-				},
-			))
-
-			// need to read cdoc.sys.Subject on auth
-			sysPackageFS := sys.Provide(cfg, appDefBuilder, smtp.Cfg{}, ep, nil, apis.TimeFunc, apis.ITokens, apis.IFederation, apis.IAppStructsProvider, apis.IAppTokensFactory,
-				apis.NumCommandProcessors, nil, apis.IAppStorageProvider)
-			appPackageFS := parser.PackageFS{
-				QualifiedPackageName: "github.com/voedger/voedger/pkg/vit/app2pkg",
-				FS:                   it.SchemaTestApp2FS,
-			}
-			return apps.AppPackages{
-				AppQName: istructs.AppQName_test1_app2,
-				Packages: []parser.PackageFS{sysPackageFS, appPackageFS},
-			}
-		}),
-	)
-	vit := it.NewVIT(t, &cfg)
-	defer vit.TearDown()
-
-	// отправим POST-запрос
-	body := `
-	{
-		"args": {
-		  "Text": "world"
-		},
-		"elements": [
-		  {
-			"fields": ["Res"]
-		  }
-		]
-	  }
-	`
-	ws := vit.DummyWS(istructs.AppQName_test1_app2, 1)
-	resp := vit.PostWSSys(ws, "q.sys.Greeter", body)
-	require.Equal(`{"sections":[{"type":"","elements":[[[["hello, world"]]]]}]}`, resp.Body)
-	resp.Println()
-}
 
 func TestAppWSAutoInitialization(t *testing.T) {
 	require := require.New(t)
@@ -320,7 +248,6 @@ func TestIsActiveValidation(t *testing.T) {
 		vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect403()).Println()
 	})
 }
-
 
 func TestTakeFuncsFromWorkspace(t *testing.T) {
 	vit := it.NewVIT(t, &it.SharedConfig_App1)

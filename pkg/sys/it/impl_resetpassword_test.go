@@ -9,7 +9,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/untillpro/goutils/logger"
 	"github.com/voedger/voedger/pkg/irates"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
@@ -70,7 +69,6 @@ func TestIntiateResetPasswordErrors(t *testing.T) {
 }
 
 func TestIssueResetPasswordTokenErrors(t *testing.T) {
-	logger.SetLogLevel(logger.LogLevelVerbose)
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 	prn := vit.GetPrincipal(istructs.AppQName_test1_app1, it.TestEmail)

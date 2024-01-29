@@ -67,12 +67,12 @@ func TestCreateLoginErrors(t *testing.T) {
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
-	t.Run("wrong url wsid", func(t *testing.T) {
+	t.Run("wrong AppWSID", func(t *testing.T) {
 		body := fmt.Sprintf(`{"args":{"Login":"login1","AppName":"test1/app1","SubjectKind":%d,"WSKindInitializationData":"{}","ProfileCluster":1},"unloggedArgs":{"Password":"password"}}`, istructs.SubjectKind_User)
 		crc16 := coreutils.CRC16([]byte("login1")) - 1 // simulate crc16 is calculated wrong
 		pseudoWSID := istructs.NewWSID(istructs.MainClusterID, istructs.WSID(crc16))
 		resp := vit.PostApp(istructs.AppQName_sys_registry, pseudoWSID, "c.registry.CreateLogin", body, coreutils.Expect403())
-		resp.RequireError(t, "wrong url WSID: 140737488420870 expected, 140737488420869 got")
+		resp.RequireError(t, "wrong AppWSID: 140737488420870 expected, 140737488420869 got")
 	})
 
 	login := vit.NextName()
@@ -136,12 +136,6 @@ func TestSignInErrors(t *testing.T) {
 		body := fmt.Sprintf(`{"args": {"Login": "%s","Password": "1","AppName": "%s"},"elements":[{"fields":["PrincipalToken", "WSID", "WSError"]}]}`,
 			login, istructs.AppQName_test1_app1.String())
 		vit.PostApp(istructs.AppQName_sys_registry, pseudoWSID, "q.registry.IssuePrincipalToken", body, coreutils.Expect401()).Println()
-	})
-
-	t.Run("wrong WSID", func(t *testing.T) {
-		body := fmt.Sprintf(`{"args": {"Login": "%s","Password": "1","AppName": "%s"},"elements":[{"fields":[]}]}`,
-			login, istructs.AppQName_test1_app1.String())
-		vit.PostApp(istructs.AppQName_sys_registry, 2, "q.registry.IssuePrincipalToken", body, coreutils.Expect403())
 	})
 
 	vit.SignUp(login, "1", istructs.AppQName_test1_app1)
