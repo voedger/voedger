@@ -13,12 +13,15 @@ linters:
     - errcheck
     - bidichk 
 
+# First stage linters
 #    - asciicheck      # Checks that all code identifiers does not have non-ASCII symbols in the name
 #    - durationcheck   # Check for two durations multiplied together 
 #    - gochecknoinits  # Checks that no init functions are present in Go code.
-#    - gomnd           # An analyzer to detect magic numbers
 #    - forcetypeassert # Finds forced type assertions.
+#    - gomnd           # An analyzer to detect magic numbers
 
+# For the future:
+#------------------------------------
 #    - unconvert
 #    - testpackage
 #    - testifylint 
@@ -34,7 +37,7 @@ linters:
 #    - mirror 
 #    - makezero
 #    - inamedparam
-#   - goerr113      
+#    - goerr113      
 #    - godox       #- searches FixMe,TODO in code
 #    - gocritic
 #    - forbidigo
@@ -43,6 +46,7 @@ linters:
 #    - errorlint
 #    - goconst 
 #    - unparam
+#------------------------------------
   fast: true
 linters-settings:
   gosec:
