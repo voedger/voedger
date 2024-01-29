@@ -433,6 +433,8 @@ func validateAcmeCmd(cmd *cmdType, cluster *clusterType) error {
 	switch cmd.Args[0] {
 	case "add":
 		return validateAcmeAddCmd(cmd, cluster)
+	case "remove":
+		return validateAcmeRemoveCmd(cmd, cluster)
 	default:
 		return ErrUnknownCommand
 	}
@@ -448,6 +450,36 @@ func validateAcmeAddCmd(cmd *cmdType, cluster *clusterType) error {
 	if len(cmd.Args) != 2 {
 		return ErrInvalidNumberOfArguments
 	}
+
+	return nil
+}
+
+func validateAcmeRemoveCmd(cmd *cmdType, cluster *clusterType) error {
+
+	if cluster.Draft {
+		return ErrClusterConfNotFound
+	}
+
+	if len(cmd.Args) != 2 {
+		return ErrInvalidNumberOfArguments
+	}
+
+	domains := strings.Split(cmd.Args[1], comma)
+	domainsMap := make(map[string]bool)
+	for _, s := range cluster.Acme.Domains {
+		domainsMap[s] = true
+	}
+
+	var notFound []string
+	for _, s := range domains {
+		if !domainsMap[s] {
+			notFound = append(notFound, s)
+		}
+	}
+	if len(notFound) > 0 {
+		return fmt.Errorf(errDomainsNotFound, strings.Join(notFound, comma), ErrDomainsNotFound)
+	}
+
 	return nil
 }
 
@@ -469,6 +501,18 @@ func (a *acmeType) addDomains(domainsStr string) {
 	for _, d := range domains {
 		if !strings.Contains(strings.Join(a.Domains, comma), d) {
 			a.Domains = append(a.Domains, d)
+		}
+	}
+}
+
+// removes domains from the ACME Domains list from a string "Domain1,Domain2,Domain3"
+func (a *acmeType) removeDomains(domainsStr string) {
+	domains := strings.Split(domainsStr, comma)
+	for _, d := range domains {
+		for i, v := range a.Domains {
+			if v == d {
+				a.Domains = append(a.Domains[:i], a.Domains[i+1:]...)
+			}
 		}
 	}
 }
@@ -553,6 +597,13 @@ func (c *clusterType) applyCmd(cmd *cmdType) error {
 			c.Acme.addDomains(cmd.Args[1])
 			if err := c.setEnv(); err != nil {
 				return err
+			}
+		} else {
+			if cmd.Args[0] == "remove" && len(cmd.Args) == 2 {
+				c.Acme.removeDomains(cmd.Args[1])
+				if err := c.setEnv(); err != nil {
+					return err
+				}
 			}
 		}
 	case ckReplace:
