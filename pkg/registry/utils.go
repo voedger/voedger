@@ -17,15 +17,15 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-// func CheckAppWSID(login string, urlWSID istructs.WSID, appWSAmount istructs.AppWSAmount) error {
-// 	crc16 := coreutils.CRC16([]byte(login))
-// 	appWSID := istructs.WSID(crc16%uint16(appWSAmount)) + istructs.FirstBaseAppWSID
-// 	expectedAppWSID := istructs.NewWSID(urlWSID.ClusterID(), appWSID)
-// 	if expectedAppWSID != urlWSID {
-// 		return coreutils.NewHTTPErrorf(http.StatusForbidden, "wrong url WSID: ", expectedAppWSID, " expected, ", urlWSID, " got")
-// 	}
-// 	return nil
-// }
+func CheckAppWSID(login string, urlWSID istructs.WSID, appWSAmount istructs.AppWSAmount) error {
+	crc16 := coreutils.CRC16([]byte(login))
+	appWSID := istructs.WSID(crc16%uint16(appWSAmount)) + istructs.FirstBaseAppWSID
+	expectedAppWSID := istructs.NewWSID(urlWSID.ClusterID(), appWSID)
+	if expectedAppWSID != urlWSID {
+		return coreutils.NewHTTPErrorf(http.StatusForbidden, "wrong url WSID: ", expectedAppWSID, " expected, ", urlWSID, " got")
+	}
+	return nil
+}
 
 // istructs.NullRecordID means not found
 func GetCDocLoginID(st istructs.IState, appWSID istructs.WSID, appName string, login string) (cdocLoginID istructs.RecordID, err error) {
