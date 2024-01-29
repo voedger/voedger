@@ -188,6 +188,13 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 			qw.wsDesc, err = qw.appStructs.Records().GetSingleton(qw.msg.WSID(), authnz.QNameCDocWorkspaceDescriptor)
 			return err
 		}),
+		operator("check cdoc.sys.WorkspaceDescriptor existense", func(ctx context.Context, qw *queryWork) (err error) {
+			if qw.wsDesc.QName() == appdef.NullQName {
+				// TODO: ws init check is simpl here comparing to command processor because we need just IWorkspace to get the query from it. No WSDesc -> no IWorkspace -> need to check WSDesc existense
+				return processors.ErrWSNotInited
+			}
+			return nil
+		}),
 		operator("check workspace active", func(ctx context.Context, qw *queryWork) (err error) {
 			for _, prn := range qw.principals {
 				if prn.Kind == iauthnz.PrincipalKind_Role && prn.QName == iauthnz.QNameRoleSystem && prn.WSID == qw.msg.WSID() {

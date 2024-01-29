@@ -17,7 +17,6 @@ import (
 )
 
 func TestBasicUsage_SignUpIn(t *testing.T) {
-	разобраться с QName-type field «WSKind» is not found in type «.»: name not found
 	require := require.New(t)
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
@@ -25,14 +24,14 @@ func TestBasicUsage_SignUpIn(t *testing.T) {
 	loginName2 := vit.NextName()
 
 	login1 := vit.SignUp(loginName1, "pwd1", istructs.AppQName_test1_app1)
-	login2 := vit.SignUp(loginName2, "pwd2", istructs.AppQName_test1_app1, it.WithClusterID(42))
+	login2 := vit.SignUp(loginName2, "pwd2", istructs.AppQName_test1_app1) // now wrong to create a login in a different CLusterID because it is unknown how to init AppWorkspace there
 
 	prn1 := vit.SignIn(login1)
 	prn2 := vit.SignIn(login2)
 
 	require.NotEqual(prn1.Token, prn2.Token)
 	require.Equal(istructs.ClusterID(1), istructs.WSID(prn1.ProfileWSID).ClusterID())
-	require.Equal(istructs.ClusterID(42), istructs.WSID(prn2.ProfileWSID).ClusterID())
+	require.Equal(istructs.ClusterID(1), istructs.WSID(prn2.ProfileWSID).ClusterID())
 	require.True(prn1.ProfileWSID.BaseWSID() >= istructs.FirstBaseUserWSID &&
 		prn2.ProfileWSID.BaseWSID() >= istructs.FirstBaseUserWSID &&
 		prn1.ProfileWSID.BaseWSID() != prn2.ProfileWSID.BaseWSID())

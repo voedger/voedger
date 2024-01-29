@@ -280,6 +280,7 @@ func getWSDesc(_ context.Context, work interface{}) (err error) {
 	if !coreutils.IsDummyWS(cmd.cmdMes.WSID()) {
 		cmd.wsDesc, err = cmd.appStructs.Records().GetSingleton(cmd.cmdMes.WSID(), authnz.QNameCDocWorkspaceDescriptor)
 	}
+
 	return
 }
 
@@ -291,7 +292,7 @@ func checkWSInitialized(_ context.Context, work interface{}) (err error) {
 		return nil
 	}
 	if cmdQName == workspacemgmt.QNameCommandCreateWorkspace ||
-		cmdQName == workspacemgmt.QNameCommandCreateWorkspaceID || // happens on creating a child of an another workspace
+		// cmdQName == workspacemgmt.QNameCommandCreateWorkspaceID ||
 		cmdQName == builtin.QNameCommandInit { //nolint
 		return nil
 	}
@@ -310,7 +311,7 @@ func checkWSInitialized(_ context.Context, work interface{}) (err error) {
 			}
 		}
 	}
-	return errWSNotInited
+	return processors.ErrWSNotInited
 }
 
 func checkWSActive(_ context.Context, work interface{}) (err error) {

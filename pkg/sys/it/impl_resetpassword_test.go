@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/untillpro/goutils/logger"
 	"github.com/voedger/voedger/pkg/irates"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
@@ -69,6 +70,7 @@ func TestIntiateResetPasswordErrors(t *testing.T) {
 }
 
 func TestIssueResetPasswordTokenErrors(t *testing.T) {
+	logger.SetLogLevel(logger.LogLevelVerbose)
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 	prn := vit.GetPrincipal(istructs.AppQName_test1_app1, it.TestEmail)
@@ -91,7 +93,9 @@ func TestIssueResetPasswordTokenErrors(t *testing.T) {
 	t.Run("400 bad request on bad appQName", func(t *testing.T) {
 		body := fmt.Sprintf(`{"args":{"VerificationToken":"%s","VerificationCode":"%s","ProfileWSID":%d,"AppName":"wrong app"},"elements":[{"fields":["VerifiedValueToken"]}]}`,
 			token, code, profileWSID)
-		vit.PostApp(istructs.AppQName_sys_registry, profileWSID, "q.registry.IssueVerifiedValueTokenForResetPassword", body, coreutils.Expect400()).Println()
+		// note: was at profileWSID. It does not works since https://github.com/voedger/voedger/issues/1311
+		// because sys/registry:profileWSID workspace is not initialized -> call at pseudoProfileWSID
+		vit.PostApp(istructs.AppQName_sys_registry, prn.PseudoProfileWSID, "q.registry.IssueVerifiedValueTokenForResetPassword", body, coreutils.Expect400()).Println()
 	})
 }
 
