@@ -66,6 +66,8 @@ func analyse(c *basicContext, p *PackageSchemaAST) {
 			analyseAlterWorkspace(v, ictx)
 		case *StorageStmt:
 			analyseStorage(v, ictx)
+		case *RateStmt:
+			analyseRate(v, ictx)
 		case *LimitStmt:
 			analyseLimit(v, ictx)
 		case *GrantStmt:
@@ -226,6 +228,19 @@ func analyseAlterWorkspace(u *AlterWorkspaceStmt, c *iterateCtx) {
 func analyseStorage(u *StorageStmt, c *iterateCtx) {
 	if c.pkg.QualifiedPackageName != appdef.SysPackage {
 		c.stmtErr(&u.Pos, ErrStorageDeclaredOnlyInSys)
+	}
+}
+
+func analyseRate(r *RateStmt, c *iterateCtx) {
+	if r.Value.Variable != nil {
+		resolved := func(d *DeclareStmt, p *PackageSchemaAST) error {
+			r.Value.variable = p.NewQName(d.Name)
+			r.Value.declare = d
+			return nil
+		}
+		if err := resolveInCtx(*r.Value.Variable, c, resolved); err != nil {
+			c.stmtErr(&r.Value.Variable.Pos, err)
+		}
 	}
 }
 
@@ -589,10 +604,6 @@ func analyseWith(with *[]WithItem, statement IStatement, c *iterateCtx) {
 		item := &(*with)[i]
 		if item.Comment != nil {
 			comment = item
-		} else if item.Rate != nil {
-			if err := resolveInCtx(*item.Rate, c, func(*RateStmt, *PackageSchemaAST) error { return nil }); err != nil {
-				c.stmtErr(&item.Rate.Pos, err)
-			}
 		}
 		for j := range item.Tags {
 			tag := item.Tags[j]
