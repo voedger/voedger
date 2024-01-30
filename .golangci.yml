@@ -14,11 +14,11 @@ linters:
     - bidichk 
 
 # First stage linters
-#    - asciicheck      # Checks that all code identifiers does not have non-ASCII symbols in the name
-#    - durationcheck   # Check for two durations multiplied together 
-#    - gochecknoinits  # Checks that no init functions are present in Go code.
+    - asciicheck      # Checks that all code identifiers does not have non-ASCII symbols in the name
+    - durationcheck   # Check for two durations multiplied together
+    - gochecknoinits  # Checks that no init functions are present in Go code.
 #    - forcetypeassert # Finds forced type assertions.
-#    - gomnd           # An analyzer to detect magic numbers
+    - gomnd
 
 # For the future:
 #------------------------------------
@@ -77,6 +77,19 @@ linters-settings:
             allowStrs: '""'
             allowInts: "0,1,2"
             allowFloats: "0.0,0.,1.0,1.,2.0,2."
+  gomnd:
+    ignored-files:
+      - "pkg/vit/consts.go"
+    ignored-numbers:
+      - "0"
+      - "1"
+      - "2"
+      - "3"
+      - "4"
+      - "5"
+      - "10"
+      - "42"
+      - "100"
 issues:
   exclude:
    - underscore

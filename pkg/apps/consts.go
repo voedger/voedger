@@ -22,11 +22,12 @@ const (
 const (
 	defaultGrafanaPort    = 3000
 	defaultPrometheusPort = 9090
+	defaultCassandraPort  = 9042
 )
 
 var defaultCasParams = istoragecas.CassandraParamsType{
 	Hosts:    "db-node-1,db-node-2,db-node-3",
-	Port:     9042,
+	Port:     defaultCassandraPort,
 	Username: "cassandra",
 	Pwd:      "cassandra",
 }

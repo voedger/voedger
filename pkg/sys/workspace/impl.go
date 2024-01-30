@@ -17,6 +17,7 @@ import (
 
 	"github.com/untillpro/goutils/iterate"
 	"github.com/untillpro/goutils/logger"
+
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -267,7 +268,7 @@ func execCmdCreateWorkspace(now coreutils.TimeFunc, asp istructs.IAppStructsProv
 		cdocWSDesc.PutString(field_TemplateName, args.ArgumentObject.AsString(field_TemplateName))
 		cdocWSDesc.PutString(Field_TemplateParams, args.ArgumentObject.AsString(Field_TemplateParams))
 		cdocWSDesc.PutInt64(authnz.Field_WSID, int64(newWSID))
-		cdocWSDesc.PutInt64(authnz.Field_СreatedAtMs, now().UnixMilli())
+		cdocWSDesc.PutInt64(authnz.Field_CreatedAtMs, now().UnixMilli())
 		cdocWSDesc.PutInt32(authnz.Field_Status, int32(authnz.WorkspaceStatus_Active))
 		if e != nil {
 			cdocWSDesc.PutString(Field_CreateError, e.Error())

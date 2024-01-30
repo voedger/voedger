@@ -6,11 +6,10 @@ package vit
 
 import (
 	"embed"
-	"math"
 	"time"
 
 	"github.com/voedger/voedger/pkg/cluster"
-	coreutils "github.com/voedger/voedger/pkg/utils"
+	"github.com/voedger/voedger/pkg/istructs"
 )
 
 const (
@@ -25,10 +24,9 @@ const (
 )
 
 var (
-	ts                        = &timeService{currentInstant: DefaultTestTime}
-	vits                      = map[*VITConfig]*VIT{}
-	DefaultTestTime           = time.UnixMilli(1649667286774) // 2022-04-11 11:54:46 +0300 MSK
-	workspaceInitAwaitTimeout = defaultWorkspaceAwaitTimeout
+	ts              = &timeService{currentInstant: DefaultTestTime}
+	vits            = map[*VITConfig]*VIT{}
+	DefaultTestTime = time.UnixMilli(1649667286774) // 2022-04-11 11:54:46 +0300 MSK
 	//go:embed schemaTestApp1.sql
 	SchemaTestApp1FS embed.FS
 	//go:embed schemaTestApp2.sql
@@ -36,10 +34,12 @@ var (
 
 	DefaultTestAppPartsCount  = 10
 	DefaultTestAppEnginesPool = cluster.PoolSize(10, 10, 10)
-)
-
-func init() {
-	if coreutils.IsDebug() {
-		workspaceInitAwaitTimeout = math.MaxInt
+	maxRateLimit2PerMinute    = istructs.RateLimit{
+		Period:                time.Minute,
+		MaxAllowedPerDuration: 2,
 	}
-}
+	maxRateLimit4PerHour = istructs.RateLimit{
+		Period:                time.Hour,
+		MaxAllowedPerDuration: 4,
+	}
+)
