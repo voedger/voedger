@@ -20,6 +20,11 @@ APPLICATION example_app (
     USE untill;
 );
 
+
+-- Declare variable to use it later in the schema. Can be overriden on app deployment stage
+DECLARE nAntiDdosPerSecRate int32 DEFAULT 1000;
+
+
 /*
     Abstract tables can only be used for INHERITance by other tables.
     INHERITS includes all the fields, nested tables and constraints from an ancestor table.
@@ -236,12 +241,14 @@ WORKSPACE MyWorkspace (
         QUERY Query2(air.Order) RETURNS any;
     );
 
-    --  Object scope is PER APP PARTITION PER IP
-    RATE AntiDDosRate 1000 PER SECOND;
+    -- Object scope is PER APP PARTITION PER IP
+    -- Use variable declared in the package
+    RATE AntiDDosRate nAntiDdosPerSecRate PER SECOND;
+
+    --  Custom scopes
     RATE BackofficeRate 1000 PER HOUR PER APP PARTITION;
     RATE QueryRate 1000 PER HOUR PER APP PARTITION PER IP;
     RATE CudRate 100 PER HOUR PER USER;
-    --  Custom scopes
     RATE RestorePasswordRate1 3 PER 5 MINUTES PER APP PARTITION PER IP;
     RATE RestorePasswordRate2 10 PER DAY PER APP PARTITION PER IP;
 
