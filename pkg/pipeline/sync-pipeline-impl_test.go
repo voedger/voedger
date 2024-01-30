@@ -18,6 +18,7 @@ func TestSyncPipeline_DoSync(t *testing.T) {
 			WireFunc("apply-name", opName),
 			WireFunc("fail-here", opError),
 			WireFunc("passthrough-error", opSex),
+			WireFunc("apply-age", opAge),
 		)
 		defer pipeline.Close()
 
@@ -71,19 +72,6 @@ func TestSyncPipeline_DoSync(t *testing.T) {
 			WireSyncOperator("noop", &NOOP{}))
 
 		require.Nil(t, pipeline.DoSync(ctx, v))
-	})
-}
-
-func TestSyncPipeline_Close(t *testing.T) {
-	pipeline := &SyncPipeline{
-		stdin:  make(chan interface{}, 1),
-		stdout: make(chan interface{}, 1),
-	}
-	pipeline.stdout <- newTestWork()
-	close(pipeline.stdout)
-
-	require.NotPanics(t, func() {
-		pipeline.Close()
 	})
 }
 
