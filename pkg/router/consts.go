@@ -34,6 +34,7 @@ const (
 	//Timeouts should be greater than NATS timeouts to proper use in browser(multiply responses)
 	DefaultRouterReadTimeout  = 15
 	DefaultRouterWriteTimeout = 15
+	hours24                   = 24 * time.Hour
 )
 
 var (

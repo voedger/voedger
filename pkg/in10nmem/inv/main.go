@@ -73,7 +73,7 @@ func runChannels(broker in10n.IN10nBroker) {
 
 		for projector := 0; projector < numProjectorsPerPartition; projector++ {
 
-			channelID, err := broker.NewChannel(subject, 24*time.Hour)
+			channelID, err := broker.NewChannel(subject, hours24)
 			checkErr(err)
 
 			projectionKeyExample := in10n.ProjectionKey{
