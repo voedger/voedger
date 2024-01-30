@@ -468,10 +468,8 @@ func (b *httpKeyBuilder) body() io.Reader {
 }
 func (b *httpKeyBuilder) timeout() time.Duration {
 	if v, ok := b.keyBuilder.data[Field_HTTPClientTimeoutMilliseconds]; ok {
-		t, ok := v.(int64)
-		if ok {
-			return time.Duration(t) * time.Millisecond
-		}
+		t := v.(int64)
+		return time.Duration(t) * time.Millisecond
 	}
 	return defaultHTTPClientTimeout
 }
