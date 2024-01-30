@@ -237,18 +237,20 @@ WORKSPACE MyWorkspace (
     );
 
     --  Object scope is PER APP PARTITION PER IP
-    RATE PosSalesRate 1000 PER HOUR PER USER;
-    RATE NewOrderRate 500 PER HOUR PER USER;
+    RATE AntiDDosRate 1000 PER SECOND;
+    RATE BackofficeRate 1000 PER HOUR PER APP PARTITION;
+    RATE QueryRate 1000 PER HOUR PER APP PARTITION PER IP;
+    RATE CudRate 100 PER HOUR PER USER;
     --  Custom scopes
     RATE RestorePasswordRate1 3 PER 5 MINUTES PER APP PARTITION PER IP;
     RATE RestorePasswordRate2 10 PER DAY PER APP PARTITION PER IP;
 
-    LIMIT AllCommandsLimit EXECUTE ON ALL COMMANDS WITH RATE PosSalesRate;
-    LIMIT NewOrderLimit EXECUTE ON COMMAND NewOrder WITH RATE NewOrderRate;
-    LIMIT AllQueriesLimit EXECUTE ON ALL QUERIES WITH TAG PosTag WITH RATE AppDefaultRate;
-    -- Combination of two rates
-    LIMIT RestorePasswordLimit1 EXECUTE ON COMMAND RestorePassword WITH RATE RestorePasswordRate1;
-    LIMIT RestorePasswordLimit2 EXECUTE ON COMMAND RestorePassword WITH RATE RestorePasswordRate2;
+	LIMIT AntiDDOS ON EVERYTHING WITH RATE AntiDDosRate; -- all commands, queries and CUD
+	LIMIT RestorePasswordLimit1 ON COMMAND RestorePassword WITH RATE RestorePasswordRate1;   -- Single command applied with rate
+	LIMIT RestorePasswordLimit2 ON COMMAND RestorePassword WITH RATE RestorePasswordRate2;   -- Combination of two rates
+	LIMIT Query1Limit ON QUERY Query1 WITH RATE QueryRate; -- Single query applied with rate
+	LIMIT tl1 ON TABLE Res WITH RATE CudRate; -- CUD operations on a single table
+	LIMIT BackofficeLimit ON TAG BackofficeTag WITH RATE BackofficeRate; -- Limit on anything with tag
 
     -- ACLs
     GRANT ALL ON ALL TABLES WITH TAG BackofficeTag TO LocationManager;
@@ -319,8 +321,6 @@ WORKSPACE MyWorkspace (
     ) AS RESULT OF UpdateDashboard;
 
 );
-
-LIMIT MyWorkspaceInsertLimit INSERT ON WORKSPACE MyWorkspace WITH RATE AppDefaultRate;
 
 /*
     Abstract workspaces:
