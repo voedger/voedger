@@ -256,7 +256,7 @@ WORKSPACE MyWorkspace (
 	LIMIT RestorePasswordLimit1 ON COMMAND RestorePassword WITH RATE RestorePasswordRate1;   -- Single command applied with rate
 	LIMIT RestorePasswordLimit2 ON COMMAND RestorePassword WITH RATE RestorePasswordRate2;   -- Combination of two rates
 	LIMIT Query1Limit ON QUERY Query1 WITH RATE QueryRate; -- Single query applied with rate
-	LIMIT tl1 ON TABLE Res WITH RATE CudRate; -- CUD operations on a single table
+	LIMIT tl1 ON TABLE WsTable WITH RATE CudRate; -- CUD operations on a single table
 	LIMIT BackofficeLimit ON TAG BackofficeTag WITH RATE BackofficeRate; -- Limit on anything with tag
 
     -- ACLs
