@@ -11,14 +11,11 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
-	"github.com/voedger/voedger/pkg/istructsmem"
 )
 
 func TestCmdResultStorage_InsertInValue(t *testing.T) {
-	cfg := istructsmem.AppConfigType{Name: istructs.NullAppQName}
-	cmdResBuilder := istructsmem.NewIObjectBuilder(&cfg, appdef.NullQName)
+	cmdResBuilder := istructs.NewNullObjectBuilder()
 	s := ProvideCommandProcessorStateFactory()(context.Background(), nil, nil, SimpleWSIDFunc(istructs.NullWSID), nil, nil, nil, nil, 1, func() istructs.IObjectBuilder { return cmdResBuilder })
 
 	kb, err := s.KeyBuilder(Result, testRecordQName1)
@@ -39,8 +36,7 @@ func TestCmdResultStorage_InsertInKey(t *testing.T) {
 		require.Equal(t, "assignment to entry in nil map", r)
 	}()
 
-	cfg := istructsmem.AppConfigType{Name: istructs.NullAppQName}
-	cmdResBuilder := istructsmem.NewIObjectBuilder(&cfg, appdef.NullQName)
+	cmdResBuilder := istructs.NewNullObjectBuilder()
 	s := ProvideCommandProcessorStateFactory()(context.Background(), nil, nil, SimpleWSIDFunc(istructs.NullWSID), nil, nil, nil, nil, 1, func() istructs.IObjectBuilder { return cmdResBuilder })
 
 	kb, err := s.KeyBuilder(Result, testRecordQName1)

@@ -257,26 +257,28 @@ type ParserAssertions struct {
 }
 
 func (require *ParserAssertions) AppSchemaError(sql string, expectErrors ...string) {
-	require.EqualError(require.AppSchema(sql), strings.Join(expectErrors, "\n"))
+	_, err := require.AppSchema(sql)
+	require.EqualError(err, strings.Join(expectErrors, "\n"))
 }
 
 func (require *ParserAssertions) NoAppSchemaError(sql string) {
-	require.NoError(require.AppSchema(sql))
+	_, err := require.AppSchema(sql)
+	require.NoError(err)
 }
 
-func (require *ParserAssertions) AppSchema(sql string, expectErrors ...string) error {
+func (require *ParserAssertions) AppSchema(sql string) (*AppSchemaAST, error) {
 	ast, err := ParseFile("file.sql", sql)
 	require.NoError(err)
 
 	pkg, err := BuildPackageSchema("github.com/company/pkg", []*FileSchemaAST{ast})
 	require.NoError(err)
 
-	_, err = BuildAppSchema([]*PackageSchemaAST{
+	schema, err := BuildAppSchema([]*PackageSchemaAST{
 		getSysPackageAST(),
 		pkg,
 	})
 
-	return err
+	return schema, err
 }
 
 func assertions(t *testing.T) *ParserAssertions {
@@ -1067,7 +1069,6 @@ func Test_Undefined(t *testing.T) {
 	WORKSPACE test (
 		EXTENSION ENGINE WASM (
 			COMMAND Orders() WITH Tags=(UndefinedTag);
-			QUERY Query1 RETURNS void WITH Rate=UndefinedRate;
 			PROJECTOR ImProjector AFTER EXECUTE ON xyz.CreateUPProfile;
 			COMMAND CmdFakeReturn() RETURNS text;
 			COMMAND CmdNoReturn() RETURNS void;
@@ -1086,11 +1087,10 @@ func Test_Undefined(t *testing.T) {
 
 	require.EqualError(err, strings.Join([]string{
 		"example.sql:4:32: undefined tag: UndefinedTag",
-		"example.sql:5:40: undefined rate: UndefinedRate",
-		"example.sql:6:43: xyz undefined",
-		"example.sql:7:36: undefined type or table: text",
-		"example.sql:9:23: undefined type or table: text",
-		"example.sql:11:40: undefined type or table: text",
+		"example.sql:5:43: xyz undefined",
+		"example.sql:6:36: undefined type or table: text",
+		"example.sql:8:23: undefined type or table: text",
+		"example.sql:10:40: undefined type or table: text",
 	}, "\n"))
 }
 
@@ -2072,13 +2072,13 @@ func Test_Grants(t *testing.T) {
 	ROLE role1;
 	WORKSPACE ws1 (
 		GRANT ALL ON TABLE Fake TO app1;
-		GRANT EXECUTE ON COMMAND Fake TO role1;
-		GRANT EXECUTE ON QUERY Fake TO role1;
+		GRANT INSERT ON COMMAND Fake TO role1;
+		GRANT SELECT ON QUERY Fake TO role1;
 		GRANT INSERT ON WORKSPACE Fake TO role1;
 		TABLE Tbl INHERITS CDoc();
 		GRANT ALL(FakeCol) ON TABLE Tbl TO role1;
 		GRANT INSERT,UPDATE(FakeCol) ON TABLE Tbl TO role1;
-		GRANT EXECUTE ON ALL COMMANDS WITH TAG x TO role1;
+		GRANT INSERT ON ALL COMMANDS WITH TAG x TO role1;
 		TABLE Nested1 INHERITS CRecord();
 		TABLE Tbl2 INHERITS CDoc(
 			ref1 ref(Tbl),
@@ -2091,12 +2091,12 @@ func Test_Grants(t *testing.T) {
 	);
 	`, "file.sql:5:30: undefined role: app1",
 		"file.sql:5:22: undefined table: Fake",
-		"file.sql:6:28: undefined command: Fake",
-		"file.sql:7:26: undefined query: Fake",
+		"file.sql:6:27: undefined command: Fake",
+		"file.sql:7:25: undefined query: Fake",
 		"file.sql:8:29: undefined workspace: Fake",
 		"file.sql:10:13: undefined field FakeCol",
 		"file.sql:11:23: undefined field FakeCol",
-		"file.sql:12:42: undefined tag: x",
+		"file.sql:12:41: undefined tag: x",
 	)
 }
 
@@ -2131,4 +2131,49 @@ func Test_DescriptorInProjector(t *testing.T) {
 		);
 	  );
 	`)
+}
+
+type testVarResolver struct {
+	resolved map[appdef.QName]bool
+}
+
+func (t testVarResolver) AsInt32(name appdef.QName) (int32, bool) {
+	t.resolved[name] = true
+	return 1, true
+}
+
+func Test_Variables(t *testing.T) {
+	require := assertions(t)
+
+	require.AppSchemaError(`APPLICATION app1(); RATE AppDefaultRate variable PER HOUR;`, "file.sql:1:41: variable undefined")
+
+	schema, err := require.AppSchema(`APPLICATION app1();
+	DECLARE variable int32 DEFAULT 100;
+	RATE AppDefaultRate variable PER HOUR;
+	`)
+	require.NoError(err)
+
+	resolver := testVarResolver{resolved: make(map[appdef.QName]bool)}
+
+	BuildAppDefs(schema, appdef.New(), WithVariableResolver(&resolver))
+	require.True(resolver.resolved[appdef.NewQName("pkg", "variable")])
+}
+
+func Test_RatesAndLimits(t *testing.T) {
+	require := assertions(t)
+
+	require.AppSchemaError(`APPLICATION app1();
+	WORKSPACE w (
+		RATE r 1 PER HOUR;
+		LIMIT l1 ON EVERYTHING WITH RATE x;
+		LIMIT l2 ON COMMAND x WITH RATE r;
+		LIMIT l3 ON QUERY y WITH RATE r;
+		LIMIT l4 ON TAG z WITH RATE r;
+		LIMIT l5 ON TABLE t WITH RATE r;
+	);`,
+		"file.sql:4:36: undefined rate: x",
+		"file.sql:5:23: undefined command: x",
+		"file.sql:6:21: undefined query: y",
+		"file.sql:7:19: undefined tag: z",
+		"file.sql:8:21: undefined table: t")
 }

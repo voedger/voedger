@@ -56,6 +56,6 @@ func BuildAppSchema(packages []*PackageSchemaAST) (*AppSchemaAST, error) {
 	return buildAppSchemaImpl(packages)
 }
 
-func BuildAppDefs(appSchema *AppSchemaAST, builder appdef.IAppDefBuilder) error {
-	return buildAppDefs(appSchema, builder)
+func BuildAppDefs(appSchema *AppSchemaAST, builder appdef.IAppDefBuilder, opts ...BuildAppDefsOption) error {
+	return buildAppDefs(appSchema, builder, opts...)
 }

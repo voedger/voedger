@@ -8,14 +8,13 @@ import (
 	"context"
 	"encoding/json"
 	"log"
+	"testing"
 
 	"github.com/stretchr/testify/require"
 	"github.com/untillpro/goutils/logger"
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/iratesce"
 	"github.com/voedger/voedger/pkg/istructs"
-
-	"testing"
 )
 
 /* Пояснения к тесту. */
@@ -282,6 +281,81 @@ func TestBasicUsage_ViewRecords(t *testing.T) {
 	})
 }
 
+func Test_appStructsType_ObjectBuilder(t *testing.T) {
+	require := require.New(t)
+
+	objName := appdef.NewQName("test", "object")
+
+	appStructs := func() istructs.IAppStructs {
+		adb := appdef.New()
+		obj := adb.AddObject(objName)
+		obj.AddField("int", appdef.DataKind_int64, true)
+		obj.AddContainer("child", objName, 0, appdef.Occurs_Unbounded)
+
+		cfgs := make(AppConfigsType)
+		_ = cfgs.AddConfig(istructs.AppQName_test1_app1, adb)
+
+		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider())
+		app, err := provider.AppStructs(istructs.AppQName_test1_app1)
+		require.NoError(err)
+
+		return app
+	}()
+
+	t.Run("Should be ok to build known object", func(t *testing.T) {
+		b := appStructs.ObjectBuilder(objName)
+		require.NotNil(b)
+
+		b.PutInt64("int", 1)
+
+		o, err := b.Build()
+		require.NoError(err)
+
+		require.Equal(objName, o.QName())
+		require.EqualValues(1, o.AsInt64("int"))
+	})
+
+	t.Run("Should be ok to fill object with children from JSON", func(t *testing.T) {
+		b := appStructs.ObjectBuilder(objName)
+		require.NotNil(b)
+
+		b.FillFromJSON(map[string]interface{}{
+			"int": float64(1),
+			"child": []interface{}{
+				map[string]interface{}{
+					"int": float64(2),
+				},
+			},
+		})
+
+		o, err := b.Build()
+		require.NoError(err)
+
+		require.Equal(objName, o.QName())
+		require.EqualValues(1, o.AsInt64("int"))
+
+		require.Equal(1, func() int {
+			cnt := 0
+			o.Children("child", func(c istructs.IObject) {
+				cnt++
+				require.EqualValues(2, c.AsInt64("int"))
+			})
+			return cnt
+		}())
+	})
+
+	t.Run("Should be error to build unknown object", func(t *testing.T) {
+		b := appStructs.ObjectBuilder(appdef.NewQName("test", "unknown"))
+		require.NotNil(b)
+
+		b.PutInt64("int", 1)
+
+		o, err := b.Build()
+		require.Nil(o)
+		require.ErrorIs(err, ErrNameNotFound)
+	})
+}
+
 // TestBasicUsage_Resources: Demonstrates basic usage resources
 func TestBasicUsage_Resources(t *testing.T) {
 	require := require.New(t)
@@ -330,11 +404,7 @@ func TestBasicUsage_AppDef(t *testing.T) {
 	require := require.New(t)
 	test := test()
 
-	// gets AppStructProvider and AppStructs
-	provider := Provide(test.AppConfigs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider())
-
-	app, err := provider.AppStructsByDef(test.appName, test.AppDef)
-	require.NoError(err)
+	app := test.AppStructs
 
 	t.Run("I. test top level type (command object)", func(t *testing.T) {
 		cmdDoc := app.AppDef().ODoc(test.saleCmdDocName)

@@ -34,6 +34,11 @@ type IAppStructs interface {
 	ViewRecords() IViewRecords
 
 	// ************************************************************
+	// Runtime helpers
+
+	ObjectBuilder(appdef.QName) IObjectBuilder
+
+	// ************************************************************
 	// Static data, kind of constants
 
 	// Working with resources like functions, images (in the future)

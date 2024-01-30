@@ -408,6 +408,12 @@ func (key *keyType) PutFloat64(name string, value float64) {
 	}
 }
 
+// istructs.IRowWriter.PutFromJSON
+func (key *keyType) PutFromJSON(j map[string]any) {
+	key.partRow.PutFromJSON(j)
+	key.ccolsRow.PutFromJSON(j)
+}
+
 // istructs.IRowWriter.PutInt32
 func (key *keyType) PutInt32(name string, value int32) {
 	if key.partRow.fieldDef(name) != nil {

@@ -120,6 +120,11 @@ func (app *appStructsType) ViewRecords() istructs.IViewRecords {
 	return &app.viewRecords
 }
 
+// istructs.IAppStructs.ObjectBuilder
+func (app *appStructsType) ObjectBuilder(name appdef.QName) istructs.IObjectBuilder {
+	return newObject(app.config, name, nil)
+}
+
 // istructs.IAppStructs.Resources
 func (app *appStructsType) Resources() istructs.IResources {
 	return &app.config.Resources

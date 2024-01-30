@@ -185,6 +185,9 @@ func (m *MockStateKeyBuilder) Entity() appdef.QName {
 	args := m.Called()
 	return args.Get(0).(appdef.QName)
 }
+func (m *MockStateKeyBuilder) PutFromJSON(map[string]any) {
+	m.Called(0)
+}
 
 type MockStateValue struct {
 	mock.Mock
@@ -335,6 +338,9 @@ func (m *MockStateValueBuilder) Build() istructs.IValue {
 func (m *MockStateValueBuilder) BuildValue() istructs.IStateValue {
 	args := m.Called()
 	return args.Get(0).(istructs.IStateValue)
+}
+func (m *MockStateValueBuilder) PutFromJSON(map[string]any) {
+	m.Called(0)
 }
 
 type MockRawEvent struct {

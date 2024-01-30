@@ -10,13 +10,15 @@ import (
 	"sync"
 
 	"github.com/voedger/voedger/pkg/ihttp"
+	"github.com/voedger/voedger/pkg/istructs"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 	dbcertcache "github.com/voedger/voedger/pkg/vvm/db_cert_cache"
+	"github.com/voedger/voedger/staging/src/github.com/untillpro/ibusmem"
 )
 
-func NewProcessor(params ihttp.CLIParams, routerStorage ihttp.IRouterStorage) (server ihttp.IHTTPProcessor, cleanup func(), err error) {
+func NewProcessor(params ihttp.CLIParams, routerStorage ihttp.IRouterStorage) (server ihttp.IHTTPProcessor, cleanup func()) {
 	r := newRouter()
-	httpProcessor := httpProcessor{
+	httpProcessor := &httpProcessor{
 		params:      params,
 		router:      r,
 		certCache:   dbcertcache.ProvideDbCache(routerStorage),
@@ -26,11 +28,14 @@ func NewProcessor(params ihttp.CLIParams, routerStorage ihttp.IRouterStorage) (s
 			Handler:           r,
 			ReadHeaderTimeout: defaultReadHeaderTimeout,
 		},
+		apps:         make(map[istructs.AppQName]*appInfo),
+		appsWSAmount: make(map[istructs.AppQName]istructs.AppWSAmount),
 	}
+	httpProcessor.bus = ibusmem.Provide(httpProcessor.requestHandler)
 	if len(params.AcmeDomains) > 0 {
 		for _, domain := range params.AcmeDomains {
 			httpProcessor.AddAcmeDomain(domain)
 		}
 	}
-	return &httpProcessor, httpProcessor.cleanup, err
+	return httpProcessor, httpProcessor.cleanup
 }

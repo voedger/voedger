@@ -13,7 +13,7 @@ import (
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-func writeTextResponse(w http.ResponseWriter, msg string, code int) {
+func WriteTextResponse(w http.ResponseWriter, msg string, code int) {
 	w.Header().Set(coreutils.ContentType, "text/plain")
 	w.WriteHeader(code)
 	writeResponse(w, msg)
@@ -34,5 +34,5 @@ func writeResponse(w http.ResponseWriter, data string) bool {
 }
 
 func writeUnauthorized(rw http.ResponseWriter) {
-	writeTextResponse(rw, "not authorized", http.StatusUnauthorized)
+	WriteTextResponse(rw, "not authorized", http.StatusUnauthorized)
 }

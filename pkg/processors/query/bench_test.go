@@ -52,7 +52,7 @@ func Benchmark_pipelineIService_Sequential(b *testing.B) {
 	}
 	authn := iauthnzimpl.NewDefaultAuthenticator(iauthnzimpl.TestSubjectRolesGetter)
 	authz := iauthnzimpl.NewDefaultAuthorizer()
-	cfgs, appDef, appStructsProvider, appTokens := getTestCfg(require, nil)
+	appDef, appStructsProvider, appTokens := getTestCfg(require, nil)
 
 	appParts, cleanAppParts, err := appparts.New(appStructsProvider)
 	require.NoError(err)
@@ -65,7 +65,7 @@ func Benchmark_pipelineIService_Sequential(b *testing.B) {
 		func(ctx context.Context, sender ibus.ISender) IResultSenderClosable { return rs },
 		appParts,
 		3, // MaxPrepareQueries
-		imetrics.Provide(), "vvm", authn, authz, cfgs)
+		imetrics.Provide(), "vvm", authn, authz)
 	go queryProcessor.Run(context.Background())
 	query := appDef.Query(qNameFunction) // nnv: Suspicious code!! Should be borrowed AppPartition.AppDef() instead of appDef?
 	start := time.Now()
@@ -122,7 +122,7 @@ func Benchmark_pipelineIService_Parallel(b *testing.B) {
 		}
 		authn := iauthnzimpl.NewDefaultAuthenticator(iauthnzimpl.TestSubjectRolesGetter)
 		authz := iauthnzimpl.NewDefaultAuthorizer()
-		cfgs, appDef, appStructsProvider, appTokens := getTestCfg(require, nil)
+		appDef, appStructsProvider, appTokens := getTestCfg(require, nil)
 
 		appParts, cleanAppParts, err := appparts.New(appStructsProvider)
 		require.NoError(err)
@@ -135,7 +135,7 @@ func Benchmark_pipelineIService_Parallel(b *testing.B) {
 			func(ctx context.Context, sender ibus.ISender) IResultSenderClosable { return rs },
 			appParts,
 			3, // MaxPrepareQueries
-			imetrics.Provide(), "vvm", authn, authz, cfgs)
+			imetrics.Provide(), "vvm", authn, authz)
 		go queryProcessor.Run(context.Background())
 		query := appDef.Query(qNameFunction) // nnv: Suspicious code!! Should be borrowed AppPartition.AppDef() instead of appDef?
 		sysToken := getSystemToken(appTokens)

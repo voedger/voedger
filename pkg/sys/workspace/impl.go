@@ -17,6 +17,7 @@ import (
 
 	"github.com/untillpro/goutils/iterate"
 	"github.com/untillpro/goutils/logger"
+
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -43,9 +44,9 @@ func invokeCreateWorkspaceIDProjector(federation coreutils.IFederation, appQName
 			templateName := rec.AsString(field_TemplateName)
 			templateParams := rec.AsString(Field_TemplateParams)
 			targetApp := appQName.String()
-			var targetClusterID istructs.ClusterID
+			targetClusterID := istructs.MainClusterID // TODO: on https://github.com/voedger/voedger/commit/1e7ce3f2c546e9bf1332edb31a5beed5954bc476 was NullClusetrID!
 			wsidToCallCreateWSIDAt := coreutils.GetPseudoWSID(ownerWSID, wsName, targetClusterID)
-			return ApplyInvokeCreateWorkspaceID(federation, appQName, tokensAPI, wsName, wsKind, targetClusterID, wsidToCallCreateWSIDAt, targetApp,
+			return ApplyInvokeCreateWorkspaceID(federation, appQName, tokensAPI, wsName, wsKind, wsidToCallCreateWSIDAt, targetApp,
 				templateName, templateParams, rec, ownerWSID)
 		})
 	}
@@ -55,8 +56,8 @@ func invokeCreateWorkspaceIDProjector(federation coreutils.IFederation, appQName
 // wsid - pseudoProfile: crc32(wsName) or crc32(login)
 // sys/registry app
 func ApplyInvokeCreateWorkspaceID(federation coreutils.IFederation, appQName istructs.AppQName, tokensAPI itokens.ITokens,
-	wsName string, wsKind appdef.QName, targetClusterID istructs.ClusterID,
-	wsidToCallCreateWSIDAt istructs.WSID, targetApp string, templateName string, templateParams string, ownerDoc istructs.ICUDRow, ownerWSID istructs.WSID) error {
+	wsName string, wsKind appdef.QName, wsidToCallCreateWSIDAt istructs.WSID, targetApp string, templateName string, templateParams string,
+	ownerDoc istructs.ICUDRow, ownerWSID istructs.WSID) error {
 	// Call WS[$PseudoWSID].c.CreateWorkspaceID()
 	ownerApp := appQName.String()
 	ownerQName := ownerDoc.QName()
@@ -267,7 +268,7 @@ func execCmdCreateWorkspace(now coreutils.TimeFunc, asp istructs.IAppStructsProv
 		cdocWSDesc.PutString(field_TemplateName, args.ArgumentObject.AsString(field_TemplateName))
 		cdocWSDesc.PutString(Field_TemplateParams, args.ArgumentObject.AsString(Field_TemplateParams))
 		cdocWSDesc.PutInt64(authnz.Field_WSID, int64(newWSID))
-		cdocWSDesc.PutInt64(authnz.Field_СreatedAtMs, now().UnixMilli())
+		cdocWSDesc.PutInt64(authnz.Field_CreatedAtMs, now().UnixMilli())
 		cdocWSDesc.PutInt32(authnz.Field_Status, int32(authnz.WorkspaceStatus_Active))
 		if e != nil {
 			cdocWSDesc.PutString(Field_CreateError, e.Error())

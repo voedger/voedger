@@ -35,6 +35,9 @@ type ICUD interface {
 type IObjectBuilder interface {
 	IRowWriter
 
+	// Fill object from JSON
+	FillFromJSON(map[string]any)
+
 	// Build child for nested container
 	ChildBuilder(containerName string) IObjectBuilder
 

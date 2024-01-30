@@ -52,7 +52,7 @@ func TestBasicUsage_InitiateDeactivateWorkspace(t *testing.T) {
 }
 
 func waitForDeactivate(vit *it.VIT, ws *it.AppWorkspace) {
-	deadline := it.TestDeadline(5 * time.Second)
+	deadline := it.TestDeadline()
 	for time.Now().Before(deadline) {
 		resp := vit.PostWSSys(ws, "q.sys.Collection", `{"args":{"Schema":"sys.WorkspaceDescriptor"},"elements":[{"fields":["Status"]}]}`)
 		if int32(resp.SectionRow()[0].(float64)) == int32(authnz.WorkspaceStatus_Inactive) {

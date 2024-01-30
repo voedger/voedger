@@ -6,6 +6,7 @@ package commandprocessor
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/untillpro/goutils/logger"
@@ -15,7 +16,6 @@ import (
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/isecrets"
 	"github.com/voedger/voedger/pkg/istructs"
-	"github.com/voedger/voedger/pkg/istructsmem"
 	imetrics "github.com/voedger/voedger/pkg/metrics"
 	"github.com/voedger/voedger/pkg/pipeline"
 	coreutils "github.com/voedger/voedger/pkg/utils"
@@ -34,7 +34,7 @@ type cmdProc struct {
 	now           coreutils.TimeFunc
 	authenticator iauthnz.IAuthenticator
 	authorizer    iauthnz.IAuthorizer
-	cfgs          istructsmem.AppConfigsType
+	storeOp       pipeline.ISyncOperator
 }
 
 type appPartition struct {
@@ -45,7 +45,7 @@ type appPartition struct {
 // syncActualizerFactory - это фабрика(разделИД), которая возвращает свитч, в бранчах которого по синхронному актуализатору на каждое приложение, внутри каждого - проекторы на каждое приложение
 func ProvideServiceFactory(appParts appparts.IAppPartitions, now coreutils.TimeFunc, syncActualizerFactory SyncActualizerFactory,
 	n10nBroker in10n.IN10nBroker, metrics imetrics.IMetrics, vvm VVMName, authenticator iauthnz.IAuthenticator, authorizer iauthnz.IAuthorizer,
-	secretReader isecrets.ISecretReader, appConfigsType istructsmem.AppConfigsType) ServiceFactory {
+	secretReader isecrets.ISecretReader) ServiceFactory {
 	return func(commandsChannel CommandChannel, partitionID istructs.PartitionID) pipeline.IService {
 		cmdProc := &cmdProc{
 			pNumber:       partitionID,
@@ -54,12 +54,33 @@ func ProvideServiceFactory(appParts appparts.IAppPartitions, now coreutils.TimeF
 			now:           now,
 			authenticator: authenticator,
 			authorizer:    authorizer,
-			cfgs:          appConfigsType,
 		}
 
 		return pipeline.NewService(func(vvmCtx context.Context) {
 			hsp := newHostStateProvider(vvmCtx, partitionID, secretReader)
-			syncActualizerFactory := syncActualizerFactory(vvmCtx, partitionID)
+			syncActualizerOperator := syncActualizerFactory(vvmCtx, partitionID)
+			cmdProc.storeOp = pipeline.NewSyncPipeline(vvmCtx, "store",
+				pipeline.WireFunc("applyRecords", func(ctx context.Context, work interface{}) (err error) {
+					// sync apply records
+					cmd := work.(*cmdWorkpiece)
+					if err = cmd.appStructs.Records().Apply(cmd.pLogEvent); err != nil {
+						cmd.appPartitionRestartScheduled = true
+					}
+					return err
+				}), pipeline.WireSyncOperator("syncProjectorsAndPutWLog", pipeline.ForkOperator(pipeline.ForkSame,
+					// forK: sync projector and PutWLog
+					pipeline.ForkBranch(pipeline.NewSyncOp(wireSyncActualizer(syncActualizerOperator))),
+					pipeline.ForkBranch(pipeline.NewSyncOp(func(ctx context.Context, work interface{}) (err error) {
+						// put WLog
+						cmd := work.(*cmdWorkpiece)
+						if err = cmd.appStructs.Events().PutWlog(cmd.pLogEvent); err != nil {
+							cmd.appPartitionRestartScheduled = true
+						} else {
+							cmd.workspace.NextWLogOffset++
+						}
+						return
+					})),
+				)))
 			cmdPipeline := pipeline.NewSyncPipeline(vvmCtx, "Command Processor",
 				pipeline.WireFunc("borrowAppPart", borrowAppPart),
 				pipeline.WireFunc("limitCallRate", limitCallRate),
@@ -67,7 +88,7 @@ func ProvideServiceFactory(appParts appparts.IAppPartitions, now coreutils.TimeF
 				pipeline.WireFunc("authenticate", cmdProc.authenticate),
 				pipeline.WireFunc("checkWSInitialized", checkWSInitialized),
 				pipeline.WireFunc("checkWSActive", checkWSActive),
-				pipeline.WireFunc("getAppPartition", cmdProc.provideGetAppPartition(syncActualizerFactory)),
+				pipeline.WireFunc("getAppPartition", cmdProc.getAppPartition),
 				pipeline.WireFunc("getResources", getResources),
 				pipeline.WireFunc("getFunction", getFunction),
 				pipeline.WireFunc("authorizeRequest", cmdProc.authorizeRequest),
@@ -90,12 +111,8 @@ func ProvideServiceFactory(appParts appparts.IAppPartitions, now coreutils.TimeF
 				pipeline.WireFunc("validateCmdResult", validateCmdResult),
 				pipeline.WireFunc("getIDGenerator", getIDGenerator),
 				pipeline.WireFunc("putPLog", cmdProc.putPLog),
-				pipeline.WireFunc("applyPLogEvent", applyPLogEvent),
-				pipeline.WireFunc("syncProjectorsStart", syncProjectorsBegin),
-				pipeline.WireFunc("syncProjectors", provideSyncActualizerFactory(syncActualizerFactory)),
-				pipeline.WireFunc("syncProjectorsEnd", syncProjectorsEnd),
+				pipeline.WireFunc("store", cmdProc.storeOp.DoSync),
 				pipeline.WireFunc("n10n", cmdProc.n10n),
-				pipeline.WireFunc("putWLog", putWLog),
 			)
 			// TODO: сделать потом plogOffset свой по каждому разделу, wlogoffset - свой для каждого wsid
 			defer cmdPipeline.Close()
@@ -122,7 +139,7 @@ func ProvideServiceFactory(appParts appparts.IAppPartitions, now coreutils.TimeF
 					}
 					sendResponse(cmd, cmdHandlingErr)
 					if cmd.appPartitionRestartScheduled {
-						logger.Info("partition %d will be restarted due of an error on writing to Log: %w", cmd.cmdMes.PartitionID(), cmdHandlingErr)
+						logger.Info(fmt.Sprintf("partition %d will be restarted due of an error on writing to Log: %s", cmd.cmdMes.PartitionID(), cmdHandlingErr))
 						delete(cmdProc.appPartitions, cmd.cmdMes.AppQName())
 					}
 					cmd.release()

@@ -9,8 +9,10 @@
 package ihttpimpl
 
 import (
+	"bytes"
 	"context"
 	"embed"
+	"encoding/json"
 	"fmt"
 	"io"
 	"io/fs"
@@ -22,12 +24,15 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 
+	"github.com/voedger/voedger/pkg/apps"
 	"github.com/voedger/voedger/pkg/ihttp"
 	"github.com/voedger/voedger/pkg/ihttpctl"
 	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istorageimpl"
+	"github.com/voedger/voedger/pkg/istructs"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
@@ -83,6 +88,177 @@ func TestBasicUsage_HTTPProcessor(t *testing.T) {
 			})
 		}
 	})
+
+	t.Run("c.EchoCommand", func(t *testing.T) {
+		appOwner := "test"
+		appName := uuid.New().String()
+		testAppQName := istructs.NewAppQName(appOwner, appName)
+		err := testApp.processor.DeployApp(testAppQName, 10, 1)
+		require.NoError(err)
+
+		defer func() {
+			_ = testApp.processor.UndeployApp(testAppQName)
+		}()
+
+		err = testApp.processor.DeployAppPartition(testAppQName, 4, apps.NewSysRouterRequestHandler)
+		require.NoError(err)
+
+		defer func() {
+			_ = testApp.processor.UndeployAppPartition(testAppQName, 0)
+		}()
+
+		wsid := 10
+		testText := "Test"
+		resource := "c.EchoCommand"
+		path := fmt.Sprintf("%s/%s/%d/%s?par1=val1&par2=val2", appOwner, appName, wsid, resource)
+
+		body := testApp.post("/api/"+path, "text/plain", testText, nil)
+		require.Equal([]byte("Hello, Test, {\"par1\":[\"val1\"],\"par2\":[\"val2\"]}"), body)
+
+		body = testApp.post("/api/"+path, "application/json", "", map[string]string{"text": testText})
+		require.Equal([]byte(fmt.Sprintf("Hello, {\"text\":\"%s\"}, {\"par1\":[\"val1\"],\"par2\":[\"val2\"]}", testText)), body)
+
+		testText = ""
+		body = testApp.post("/api/"+path, "text/plain", testText, nil)
+		require.Equal([]byte(fmt.Sprintf("Hello, %s, {\"par1\":[\"val1\"],\"par2\":[\"val2\"]}", testText)), body)
+	})
+
+	t.Run("q.EchoQuery", func(t *testing.T) {
+		appOwner := "test"
+		appName := uuid.New().String()
+		testAppQName := istructs.NewAppQName(appOwner, appName)
+		err := testApp.processor.DeployApp(testAppQName, 10, 1)
+		require.NoError(err)
+
+		defer func() {
+			_ = testApp.processor.UndeployApp(testAppQName)
+		}()
+
+		err = testApp.processor.DeployAppPartition(testAppQName, 4, apps.NewSysRouterRequestHandler)
+		require.NoError(err)
+
+		defer func() {
+			_ = testApp.processor.UndeployAppPartition(testAppQName, 0)
+		}()
+
+		wsid := 10
+		testText := "Test"
+		resource := "q.EchoQuery"
+		path := fmt.Sprintf("%s/%s/%d/%s", appOwner, appName, wsid, resource)
+
+		body := testApp.post("/api/"+path, "text/plain", testText, nil)
+		require.Equal([]byte(fmt.Sprintf("{\"sections\":[{\"type\":\"\",\"elements\":[Hello, %s, {}]}]}", testText)), body)
+	})
+
+	t.Run("call unknown app", func(t *testing.T) {
+		appOwner := "test"
+		appName := uuid.New().String()
+		resource := "c.SomeCommand"
+
+		wsid := 10
+		testText := "Test"
+		path := fmt.Sprintf("%s/%s/%d/%s", appOwner, appName, wsid, resource)
+
+		body := testApp.post("/api/"+path, "text/plain", testText, nil)
+		require.Equal([]byte("{\"sys.Error\":{\"HTTPStatus\":400,\"Message\":\"app is not deployed\"}}"), body)
+	})
+
+	t.Run("deploy the same app twice", func(t *testing.T) {
+		appOwner := "test"
+		appName := uuid.New().String()
+		testAppQName := istructs.NewAppQName(appOwner, appName)
+		err := testApp.processor.DeployApp(testAppQName, 10, 1)
+		require.NoError(err)
+
+		defer func() {
+			_ = testApp.processor.UndeployApp(testAppQName)
+		}()
+
+		err = testApp.processor.DeployApp(testAppQName, 10, 1)
+		require.ErrorIs(err, ErrAppAlreadyDeployed)
+
+	})
+
+	t.Run("undeploy not deployed yet app", func(t *testing.T) {
+		appOwner := "test"
+		appName := uuid.New().String()
+		testAppQName := istructs.NewAppQName(appOwner, appName)
+		err := testApp.processor.DeployApp(testAppQName, 10, 1)
+		require.NoError(err)
+
+		defer func() {
+			_ = testApp.processor.UndeployApp(testAppQName)
+		}()
+
+		unknownAppName := uuid.New().String()
+		err = testApp.processor.UndeployApp(istructs.NewAppQName(appOwner, unknownAppName))
+		require.ErrorIs(err, ErrAppIsNotDeployed)
+
+	})
+
+	t.Run("undeploy app part which is not deployed yet", func(t *testing.T) {
+		appOwner := "test"
+		appName := uuid.New().String()
+		testAppQName := istructs.NewAppQName(appOwner, appName)
+		err := testApp.processor.DeployApp(testAppQName, 10, 1)
+		require.NoError(err)
+
+		defer func() {
+			_ = testApp.processor.UndeployApp(testAppQName)
+		}()
+
+		err = testApp.processor.UndeployAppPartition(testAppQName, 0)
+		require.ErrorIs(err, ErrAppPartitionIsNotDeployed)
+
+	})
+
+	t.Run("undeploy wrong app part no", func(t *testing.T) {
+		appOwner := "test"
+		appName := uuid.New().String()
+		testAppQName := istructs.NewAppQName(appOwner, appName)
+		err := testApp.processor.DeployApp(testAppQName, 10, 1)
+		require.NoError(err)
+
+		defer func() {
+			_ = testApp.processor.UndeployApp(testAppQName)
+		}()
+
+		err = testApp.processor.DeployAppPartition(testAppQName, 0, apps.NewSysRouterRequestHandler)
+		require.NoError(err)
+
+		err = testApp.processor.UndeployAppPartition(testAppQName, 1)
+		require.ErrorIs(err, ErrAppPartitionIsNotDeployed)
+
+	})
+
+	t.Run("app part no is out of range", func(t *testing.T) {
+		appOwner := "test"
+		appName := uuid.New().String()
+		testAppQName := istructs.NewAppQName(appOwner, appName)
+		err := testApp.processor.DeployApp(testAppQName, 2, 1)
+		require.NoError(err)
+
+		defer func() {
+			_ = testApp.processor.UndeployApp(testAppQName)
+		}()
+
+		err = testApp.processor.DeployAppPartition(testAppQName, 3, apps.NewSysRouterRequestHandler)
+		require.ErrorIs(err, ErrAppPartNoOutOfRange)
+	})
+
+	t.Run("undeploy active app part", func(t *testing.T) {
+		appOwner := "test"
+		appName := uuid.New().String()
+		testAppQName := istructs.NewAppQName(appOwner, appName)
+		err := testApp.processor.DeployApp(testAppQName, 2, 1)
+		require.NoError(err)
+
+		err = testApp.processor.DeployAppPartition(testAppQName, 0, apps.NewSysRouterRequestHandler)
+		require.NoError(err)
+
+		err = testApp.processor.UndeployApp(testAppQName)
+		require.ErrorIs(err, ErrActiveAppPartitionsExist)
+	})
 }
 
 func TestReverseProxy(t *testing.T) {
@@ -99,19 +275,20 @@ func TestReverseProxy(t *testing.T) {
 	defer close(errs)
 
 	paths := map[string]string{
-		"/static/embedded/test.txt": fmt.Sprintf("http://127.0.0.1:%d/static/embedded/test.txt", testAppPort),
-		"/grafana":                  fmt.Sprintf("http://127.0.0.1:%d/", targetListenerPort),
-		"/grafana/":                 fmt.Sprintf("http://127.0.0.1:%d/", targetListenerPort),
-		"/grafana/report":           fmt.Sprintf("http://127.0.0.1:%d/report", targetListenerPort),
-		"/prometheus":               fmt.Sprintf("http://127.0.0.1:%d/", targetListenerPort),
-		"/prometheus/":              fmt.Sprintf("http://127.0.0.1:%d/", targetListenerPort),
-		"/prometheus/report":        fmt.Sprintf("http://127.0.0.1:%d/report", targetListenerPort),
-		"/grafanawhatever":          fmt.Sprintf("http://127.0.0.1:%d/unknown/grafanawhatever", targetListenerPort),
-		"/a/grafana":                fmt.Sprintf("http://127.0.0.1:%d/unknown/a/grafana", targetListenerPort),
-		"/a/b/grafana/whatever":     fmt.Sprintf("http://127.0.0.1:%d/unknown/a/b/grafana/whatever", targetListenerPort),
-		"/z/prometheus":             fmt.Sprintf("http://127.0.0.1:%d/unknown/z/prometheus", targetListenerPort),
-		"/z/v/prometheus/whatever":  fmt.Sprintf("http://127.0.0.1:%d/unknown/z/v/prometheus/whatever", targetListenerPort),
-		"/some_unregistered_path":   fmt.Sprintf("http://127.0.0.1:%d/unknown/some_unregistered_path", targetListenerPort),
+		"/static/embedded/test.txt":  fmt.Sprintf("http://127.0.0.1:%d/static/embedded/test.txt", testAppPort),
+		"/grafana":                   fmt.Sprintf("http://127.0.0.1:%d/", targetListenerPort),
+		"/grafana/":                  fmt.Sprintf("http://127.0.0.1:%d/", targetListenerPort),
+		"/grafana/report":            fmt.Sprintf("http://127.0.0.1:%d/report", targetListenerPort),
+		"/prometheus":                fmt.Sprintf("http://127.0.0.1:%d/", targetListenerPort),
+		"/prometheus/":               fmt.Sprintf("http://127.0.0.1:%d/", targetListenerPort),
+		"/prometheus/report":         fmt.Sprintf("http://127.0.0.1:%d/report", targetListenerPort),
+		"/grafanawhatever":           fmt.Sprintf("http://127.0.0.1:%d/unknown/grafanawhatever", targetListenerPort),
+		"/a/grafana":                 fmt.Sprintf("http://127.0.0.1:%d/unknown/a/grafana", targetListenerPort),
+		"/a/b/grafana/whatever":      fmt.Sprintf("http://127.0.0.1:%d/unknown/a/b/grafana/whatever", targetListenerPort),
+		"/z/prometheus":              fmt.Sprintf("http://127.0.0.1:%d/unknown/z/prometheus", targetListenerPort),
+		"/z/v/prometheus/whatever":   fmt.Sprintf("http://127.0.0.1:%d/unknown/z/v/prometheus/whatever", targetListenerPort),
+		"/some_unregistered_path":    fmt.Sprintf("http://127.0.0.1:%d/unknown/some_unregistered_path", targetListenerPort),
+		"/static/embedded/test2.txt": fmt.Sprintf("http://127.0.0.1:%d/static/embedded/test2.txt", testAppPort),
 	}
 
 	targetHandler := targetHandler{t: t}
@@ -205,8 +382,7 @@ func setUp(t *testing.T) *testApp {
 	appStorageProvider := istorageimpl.Provide(istorage.ProvideMem())
 	routerStorage, err := ihttp.NewIRouterStorage(appStorageProvider)
 	require.NoError(err)
-	processor, pCleanup, err := NewProcessor(params, routerStorage)
-	require.NoError(err)
+	processor, pCleanup := NewProcessor(params, routerStorage)
 	cleanups = append(cleanups, pCleanup)
 
 	err = processor.Prepare()
@@ -257,6 +433,37 @@ func (ta *testApp) get(resource string, expectedCodes ...int) []byte {
 	}
 
 	body, err := io.ReadAll(res.Body)
+	require.NoError(err)
+	err = res.Body.Close()
+	require.NoError(err)
+
+	return body
+}
+
+func (ta *testApp) post(resource string, contentType string, requestText string, requestMap map[string]string) []byte {
+	require := require.New(ta.t)
+	ta.t.Helper()
+
+	url := fmt.Sprintf("http://localhost:%d%s", ta.processor.ListeningPort(), resource)
+
+	var requestData []byte
+	if requestText != "" {
+		requestData = []byte(requestText)
+	}
+	if requestMap != nil {
+		requestData, _ = json.Marshal(requestMap)
+	}
+
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(requestData))
+	require.NoError(err)
+	req.Header.Set("Content-Type", contentType)
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	require.NoError(err)
+	body, err := io.ReadAll(resp.Body)
+	require.NoError(err)
+	err = resp.Body.Close()
 	require.NoError(err)
 
 	return body

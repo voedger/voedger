@@ -31,19 +31,13 @@ func wireServer(httpCliParams ihttp.CLIParams, appsCliParams apps.CLIParams) (Wi
 	if err != nil {
 		return WiredServer{}, nil, err
 	}
-	ihttpProcessor, cleanup, err := ihttpimpl.NewProcessor(httpCliParams, iRouterStorage)
-	if err != nil {
-		return WiredServer{}, nil, err
-	}
+	ihttpProcessor, cleanup := ihttpimpl.NewProcessor(httpCliParams, iRouterStorage)
 	v := apps.NewStaticEmbeddedResources()
 	redirectRoutes := apps.NewRedirectionRoutes()
 	defaultRedirectRoute := apps.NewDefaultRedirectionRoute()
 	acmeDomains := httpCliParams.AcmeDomains
-	ihttpProcessorController, err := ihttpctl.NewHTTPProcessorController(ihttpProcessor, v, redirectRoutes, defaultRedirectRoute, acmeDomains)
-	if err != nil {
-		cleanup()
-		return WiredServer{}, nil, err
-	}
+	appRequestHandlers := apps.NewAppRequestHandlers()
+	ihttpProcessorController := ihttpctl.NewHTTPProcessorController(ihttpProcessor, v, redirectRoutes, defaultRedirectRoute, acmeDomains, appRequestHandlers)
 	wiredServer := WiredServer{
 		IHTTPProcessor:           ihttpProcessor,
 		IHTTPProcessorController: ihttpProcessorController,
