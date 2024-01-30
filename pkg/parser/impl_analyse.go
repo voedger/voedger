@@ -262,6 +262,10 @@ func analyseLimit(u *LimitStmt, c *iterateCtx) {
 		if err = resolveInCtx(*u.Action.Query, c, func(t *QueryStmt, schema *PackageSchemaAST) error { return nil }); err != nil {
 			c.stmtErr(&u.Action.Query.Pos, err)
 		}
+	} else if u.Action.Table != nil {
+		if err = resolveInCtx(*u.Action.Table, c, func(t *TableStmt, schema *PackageSchemaAST) error { return nil }); err != nil {
+			c.stmtErr(&u.Action.Table.Pos, err)
+		}
 	}
 }
 
