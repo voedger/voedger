@@ -2,30 +2,32 @@
  * Copyright (c) 2021-present unTill Pro, Ltd.
  */
 
-package istorage
+package mem
 
 import (
 	"bytes"
 	"context"
 	"sort"
 	"sync"
+
+	"github.com/voedger/voedger/pkg/istorage"
 )
 
 type appStorageFactory struct {
 	storages map[string]map[string]map[string][]byte
 }
 
-func (s *appStorageFactory) AppStorage(appName SafeAppName) (IAppStorage, error) {
+func (s *appStorageFactory) AppStorage(appName istorage.SafeAppName) (istorage.IAppStorage, error) {
 	storage, ok := s.storages[appName.String()]
 	if !ok {
-		return nil, ErrStorageDoesNotExist
+		return nil, istorage.ErrStorageDoesNotExist
 	}
 	return &appStorage{storage: storage}, nil
 }
 
-func (s *appStorageFactory) Init(appName SafeAppName) error {
+func (s *appStorageFactory) Init(appName istorage.SafeAppName) error {
 	if _, ok := s.storages[appName.String()]; ok {
-		return ErrStorageAlreadyExists
+		return istorage.ErrStorageAlreadyExists
 	}
 	s.storages[appName.String()] = map[string]map[string][]byte{}
 	return nil
@@ -48,7 +50,7 @@ func (s *appStorage) Put(pKey []byte, cCols []byte, value []byte) (err error) {
 	return
 }
 
-func (s *appStorage) PutBatch(items []BatchItem) (err error) {
+func (s *appStorage) PutBatch(items []istorage.BatchItem) (err error) {
 	for _, item := range items {
 		err = s.Put(item.PKey, item.CCols, item.Value)
 		if err != nil {
@@ -109,7 +111,7 @@ func (s *appStorage) readPart(ctx context.Context, pKey []byte, startCCols, fini
 	return cCols, values
 }
 
-func (s *appStorage) Read(ctx context.Context, pKey []byte, startCCols, finishCCols []byte, cb ReadCallback) (err error) {
+func (s *appStorage) Read(ctx context.Context, pKey []byte, startCCols, finishCCols []byte, cb istorage.ReadCallback) (err error) {
 
 	if (len(startCCols) > 0) && (len(finishCCols) > 0) && (bytes.Compare(startCCols, finishCCols) >= 0) {
 		return nil // absurd range
@@ -144,7 +146,7 @@ func (s *appStorage) Get(pKey []byte, cCols []byte, data *[]byte) (ok bool, err 
 	return
 }
 
-func (s *appStorage) GetBatch(pKey []byte, items []GetBatchItem) (err error) {
+func (s *appStorage) GetBatch(pKey []byte, items []istorage.GetBatchItem) (err error) {
 	for i := range items {
 		items[i].Ok, err = s.Get(pKey, items[i].CCols, items[i].Data)
 		if err != nil {

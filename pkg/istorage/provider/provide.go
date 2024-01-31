@@ -2,10 +2,11 @@
  * Copyright (c) 2020-present unTill Pro, Ltd.
  */
 
-package istorageimpl
+package provider
 
 import (
 	"github.com/google/uuid"
+
 	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istructs"
 )

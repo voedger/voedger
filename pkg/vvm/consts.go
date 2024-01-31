@@ -7,7 +7,7 @@ package vvm
 import (
 	"time"
 
-	"github.com/voedger/voedger/pkg/istorageimpl/istoragecas"
+	istoragecas2 "github.com/voedger/voedger/pkg/istorage/cas"
 	"github.com/voedger/voedger/pkg/router"
 )
 
@@ -38,9 +38,9 @@ const (
 var (
 	LocalHost        = "http://127.0.0.1"
 	DefaultTimeFunc  = time.Now
-	DefaultCasParams = istoragecas.CassandraParamsType{
+	DefaultCasParams = istoragecas2.CassandraParamsType{
 		Hosts:                   "127.0.0.1",
 		Port:                    defaultCassandraPort,
-		KeyspaceWithReplication: istoragecas.SimpleWithReplication,
+		KeyspaceWithReplication: istoragecas2.SimpleWithReplication,
 	}
 )

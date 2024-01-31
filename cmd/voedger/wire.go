@@ -16,7 +16,7 @@ import (
 	"github.com/voedger/voedger/pkg/ihttpctl"
 	"github.com/voedger/voedger/pkg/ihttpimpl"
 	"github.com/voedger/voedger/pkg/istorage"
-	"github.com/voedger/voedger/pkg/istorageimpl"
+	"github.com/voedger/voedger/pkg/istorage/provider"
 )
 
 func wireServer(httpCliParams ihttp.CLIParams, appsCliParams apps.CLIParams) (WiredServer, func(), error) {
@@ -37,7 +37,7 @@ func wireServer(httpCliParams ihttp.CLIParams, appsCliParams apps.CLIParams) (Wi
 	)
 }
 
-// provideAppStorageProvider is intended to be used by wire instead of istorageimpl.Provide, because wire can not handle variadic arguments
+// provideAppStorageProvider is intended to be used by wire instead of istorage/provider.Provide, because wire can not handle variadic arguments
 func provideAppStorageProvider(appStorageFactory istorage.IAppStorageFactory) istorage.IAppStorageProvider {
-	return istorageimpl.Provide(appStorageFactory)
+	return provider.Provide(appStorageFactory)
 }

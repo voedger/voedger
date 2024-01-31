@@ -10,10 +10,11 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/iratesce"
-	"github.com/voedger/voedger/pkg/istorage"
-	"github.com/voedger/voedger/pkg/istorageimpl"
+	"github.com/voedger/voedger/pkg/istorage/mem"
+	istorageimpl "github.com/voedger/voedger/pkg/istorage/provider"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/consts"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/teststore"
@@ -86,7 +87,7 @@ func TestAppConfigsType_AddConfig(t *testing.T) {
 func TestAppConfigsType_GetConfig(t *testing.T) {
 	require := require.New(t)
 
-	asf := istorage.ProvideMem()
+	asf := mem.Provide()
 	storages := istorageimpl.Provide(asf)
 
 	cfgs := make(AppConfigsType)
