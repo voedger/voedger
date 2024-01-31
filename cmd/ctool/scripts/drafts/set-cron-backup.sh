@@ -7,12 +7,13 @@
 set -euo pipefail
 set -x
 
-if [ $# -ne 1 ]; then
-  echo "Usage: $0 <cron schedule time>" 
+if [ $# -ne 2 ]; then
+  echo "Usage: $0 <cron schedule time> <ssh port>"  
   exit 1
 fi
 
 SCHEDULE=$1
+SSH_PORT=$2
 SSH_USER=$LOGNAME
 CTOOL_PATH="/home/${SSH_USER}/ctool/ctool"
 KEY_PATH="/home/${SSH_USER}/ctool/pkey"
@@ -35,7 +36,7 @@ set_cron_schedule(){
       crontab -l | grep -v "${CTOOL_PATH}" > "${CRON_FILE}"
     fi
 
-    echo "${SCHEDULE} ${CTOOL_PATH} backup node ${DB_NODE_1_HOST} ${BACKUP_FOLDER} ${KEY_PATH};${CTOOL_PATH} backup node ${DB_NODE_2_HOST} ${BACKUP_FOLDER} ${KEY_PATH};${CTOOL_PATH} backup node ${DB_NODE_3_HOST} ${BACKUP_FOLDER} ${KEY_PATH}" >> "${CRON_FILE}"
+    echo "${SCHEDULE} ${CTOOL_PATH} backup node ${DB_NODE_1_HOST} ${BACKUP_FOLDER} ${KEY_PATH} --ssh-port ${SSH_PORT};${CTOOL_PATH} backup node ${DB_NODE_2_HOST} ${BACKUP_FOLDER} ${KEY_PATH} --ssh-port ${SSH_PORT};${CTOOL_PATH} backup node ${DB_NODE_3_HOST} ${BACKUP_FOLDER} ${KEY_PATH} --ssh-port ${SSH_PORT}" >> "${CRON_FILE}"
     echo "Modified cron file:"
     cat "${CRON_FILE}"
     crontab "${CRON_FILE}"
@@ -43,7 +44,7 @@ set_cron_schedule(){
     rm "${CRON_FILE}"
   else
     echo "Appending to existing cron file"
-    (crontab -l 2>/dev/null; echo "${SCHEDULE} ${CTOOL_PATH} backup node ${DB_NODE_1_HOST} ${BACKUP_FOLDER} ${KEY_PATH};${CTOOL_PATH} backup node ${DB_NODE_2_HOST} ${BACKUP_FOLDER} ${KEY_PATH};${CTOOL_PATH} backup node ${DB_NODE_3_HOST} ${BACKUP_FOLDER} ${KEY_PATH}") | crontab -
+    (crontab -l 2>/dev/null; echo "${SCHEDULE} ${CTOOL_PATH} backup node ${DB_NODE_1_HOST} ${BACKUP_FOLDER} ${KEY_PATH} --ssh-port ${SSH_PORT};${CTOOL_PATH} backup node ${DB_NODE_2_HOST} ${BACKUP_FOLDER} ${KEY_PATH} --ssh-port ${SSH_PORT};${CTOOL_PATH} backup node ${DB_NODE_3_HOST} ${BACKUP_FOLDER} ${KEY_PATH} --ssh-port ${SSH_PORT}") | crontab -
     echo "Cron schedule set successfully"
   fi
 }

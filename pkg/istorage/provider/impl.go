@@ -3,7 +3,7 @@
  */
 
 // nolint
-package istorageimpl
+package provider
 
 import (
 	"encoding/json"

@@ -3,7 +3,7 @@
 * @author Maxim Geraskin
  */
 
-package istoragebbolt
+package bbolt
 
 import (
 	"encoding/binary"
@@ -11,8 +11,9 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	istorage "github.com/voedger/voedger/pkg/istorage"
-	"github.com/voedger/voedger/pkg/istorageimpl"
+
+	"github.com/voedger/voedger/pkg/istorage"
+	istorageimpl "github.com/voedger/voedger/pkg/istorage/provider"
 	"github.com/voedger/voedger/pkg/istructs"
 )
 

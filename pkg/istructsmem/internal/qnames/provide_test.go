@@ -9,15 +9,16 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/istorage"
-	"github.com/voedger/voedger/pkg/istorageimpl"
+	"github.com/voedger/voedger/pkg/istorage/mem"
+	istorageimpl "github.com/voedger/voedger/pkg/istorage/provider"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/vers"
 )
 
 func TestQNamesBasicUsage(t *testing.T) {
-	sp := istorageimpl.Provide(istorage.ProvideMem())
+	sp := istorageimpl.Provide(mem.Provide())
 	storage, _ := sp.AppStorage(istructs.AppQName_test1_app1)
 
 	versions := vers.New()

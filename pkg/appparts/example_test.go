@@ -12,8 +12,8 @@ import (
 	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/cluster"
 	"github.com/voedger/voedger/pkg/iratesce"
-	"github.com/voedger/voedger/pkg/istorage"
-	"github.com/voedger/voedger/pkg/istorageimpl"
+	"github.com/voedger/voedger/pkg/istorage/mem"
+	"github.com/voedger/voedger/pkg/istorage/provider"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
@@ -37,7 +37,7 @@ func Example() {
 		appConfigs,
 		iratesce.TestBucketsFactory,
 		payloads.TestAppTokensFactory(itokensjwt.TestTokensJWT()),
-		istorageimpl.Provide(istorage.ProvideMem(), ""))
+		provider.Provide(mem.Provide(), ""))
 
 	appParts, cleanupParts, err := appparts.New(appStructs)
 	if err != nil {

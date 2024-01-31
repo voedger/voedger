@@ -4,7 +4,7 @@
  * @author: Maxim Geraskin (refactoring)
  */
 
-package istoragebbolt
+package bbolt
 
 import (
 	"bytes"
@@ -12,8 +12,9 @@ import (
 	"os"
 	"path/filepath"
 
-	istorage "github.com/voedger/voedger/pkg/istorage"
 	bolt "go.etcd.io/bbolt"
+
+	"github.com/voedger/voedger/pkg/istorage"
 )
 
 type appStorageFactory struct {
