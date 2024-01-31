@@ -22,3 +22,6 @@ go.work.sum
 
 # But not .github
 !/.github
+
+# Other
+.DS_Store

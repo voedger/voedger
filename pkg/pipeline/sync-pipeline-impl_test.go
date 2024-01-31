@@ -18,7 +18,6 @@ func TestSyncPipeline_DoSync(t *testing.T) {
 			WireFunc("apply-name", opName),
 			WireFunc("fail-here", opError),
 			WireFunc("passthrough-error", opSex),
-			WireFunc("apply-age", opAge),
 		)
 		defer pipeline.Close()
 
@@ -72,6 +71,22 @@ func TestSyncPipeline_DoSync(t *testing.T) {
 			WireSyncOperator("noop", &NOOP{}))
 
 		require.Nil(t, pipeline.DoSync(ctx, v))
+	})
+	t.Run("Should panic on nil work", func(t *testing.T) {
+		pipeline := NewSyncPipeline(context.Background(), "my-pipeline",
+			WireFunc("panic-onNil", nil))
+
+		require.PanicsWithValue(t, "critical error in operator 'panic-onNil': nil work in processSyncOp. Pipeline 'my-pipeline' [operator: panic-onNil]", func() {
+			_ = pipeline.SendSync(nil)
+		})
+	})
+}
+
+func TestSyncPipeline_Close(t *testing.T) {
+	pipeline := &SyncPipeline{}
+
+	require.NotPanics(t, func() {
+		pipeline.Close()
 	})
 }
 

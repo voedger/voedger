@@ -43,7 +43,7 @@ func NewSyncPipeline(ctx context.Context, name string, first *WiredOperator, oth
 	return pipeline
 }
 
-func (p SyncPipeline) DoSync(_ context.Context, work interface{}) (err error) {
+func (p *SyncPipeline) DoSync(_ context.Context, work interface{}) (err error) {
 	return p.SendSync(work)
 }
 
@@ -51,9 +51,8 @@ func (p *SyncPipeline) SendSync(work interface{}) (err error) {
 	if p.ctx.Err() != nil {
 		return p.ctx.Err()
 	}
-	//p.stdin <- work
 	for _, op := range p.operators {
-		work = processOp(op, work)
+		work = processSyncOp(op, work)
 	}
 	if err, ok := work.(error); ok {
 		return err
@@ -61,20 +60,16 @@ func (p *SyncPipeline) SendSync(work interface{}) (err error) {
 	return nil
 }
 
-func processOp(wo *WiredOperator, work interface{}) interface{} {
-	//work := <-wo.Stdin
-
+func processSyncOp(wo *WiredOperator, work interface{}) interface{} {
 	if work == nil {
-		pipelinePanic("nil in puller_sync stdin", wo.name, wo.wctx)
+		pipelinePanic("nil work in processSyncOp", wo.name, wo.wctx)
 	}
 	if err, ok := work.(IErrorPipeline); ok {
 		if catch, ok := wo.Operator.(ICatch); ok {
 			if newerr := catch.OnErr(err, err.GetWork(), wo.wctx); newerr != nil {
-				//wo.Stdout <- wo.NewError(fmt.Errorf("nested error '%w' while handling '%w'", newerr, err), err.GetWork(), placeCatchOnErr)
 				return wo.NewError(fmt.Errorf("nested error '%w' while handling '%w'", newerr, err), err.GetWork(), placeCatchOnErr)
 			}
 		} else {
-			//wo.Stdout <- err
 			return err
 		}
 		work = err.GetWork() // restore from error
@@ -83,16 +78,13 @@ func processOp(wo *WiredOperator, work interface{}) interface{} {
 	err := wo.doSync(wo.ctx, work)
 
 	if err != nil {
-		//wo.Stdout <- err
 		return err
 	} else {
-		//wo.Stdout <- work
 		return work
 	}
 }
 
-func (p SyncPipeline) Close() {
-	//close(p.stdin)
+func (p *SyncPipeline) Close() {
 	for _, operator := range p.operators {
 		operator.Operator.Close()
 	}
