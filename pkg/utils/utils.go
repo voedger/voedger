@@ -41,6 +41,11 @@ func IsCassandraStorage() bool {
 	return ok
 }
 
+func IsDynamoDBStorage() bool {
+	_, ok := os.LookupEnv("DYNAMODB_TESTS_ENABLED")
+	return ok
+}
+
 func ServerAddress(port int) string {
 	addr := ""
 	if IsTest() {
