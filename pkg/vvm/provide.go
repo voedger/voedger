@@ -39,6 +39,7 @@ import (
 	"github.com/voedger/voedger/pkg/iratesce"
 	"github.com/voedger/voedger/pkg/isecrets"
 	"github.com/voedger/voedger/pkg/istorage"
+	"github.com/voedger/voedger/pkg/istorage/provider"
 	"github.com/voedger/voedger/pkg/istoragecache"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
@@ -190,8 +191,8 @@ func provideAppPartsCtlPipelineService(ctl apppartsctl.IAppPartitionsController)
 }
 
 func provideIAppStorageUncachingProviderFactory(factory istorage.IAppStorageFactory) IAppStorageUncachingProviderFactory {
-	return func() (provider istorage.IAppStorageProvider) {
-		return istorageimpl.Provide(factory)
+	return func() istorage.IAppStorageProvider {
+		return provider.Provide(factory)
 	}
 }
 
