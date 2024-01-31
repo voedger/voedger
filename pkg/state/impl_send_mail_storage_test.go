@@ -19,7 +19,7 @@ func TestSendMailStorage_BasicUsage(t *testing.T) {
 	require := require.New(t)
 	ts := smtptest.NewServer(smtptest.WithCredentials("user", "pwd"))
 	defer ts.Close()
-	s := ProvideAsyncActualizerStateFactory()(context.Background(), &nilAppStructs{}, nil, nil, nil, nil, 1, 0)
+	s := ProvideAsyncActualizerStateFactory()(context.Background(), &nilAppStructs{}, SimpleIWorkspaceFunc(&nilIWorkspace{}), nil, nil, nil, nil, 1, 0)
 	k, err := s.KeyBuilder(SendMail, appdef.NullQName)
 	require.NoError(err)
 
@@ -107,7 +107,7 @@ func TestSendMailStorage_Validate(t *testing.T) {
 	for _, test := range tests {
 		t.Run(fmt.Sprintf("Should return error when mandatory field '%s' not found", test.mandatoryField), func(t *testing.T) {
 			require := require.New(t)
-			s := ProvideAsyncActualizerStateFactory()(context.Background(), &nilAppStructs{}, nil, nil, nil, nil, 1, 0)
+			s := ProvideAsyncActualizerStateFactory()(context.Background(), &nilAppStructs{}, SimpleIWorkspaceFunc(&nilIWorkspace{}), nil, nil, nil, nil, 1, 0)
 			k, err := s.KeyBuilder(SendMail, appdef.NullQName)
 			require.NoError(err)
 			test.kbFiller(k)

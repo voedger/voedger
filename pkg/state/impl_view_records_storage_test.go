@@ -23,6 +23,8 @@ func TestViewRecordsStorage_GetBatch(t *testing.T) {
 		view.KeyBuilder().PartKeyBuilder().AddField("pkk", appdef.DataKind_int64)
 		view.KeyBuilder().ClustColsBuilder().AddField("cck", appdef.DataKind_string)
 		view.ValueBuilder().AddField("vk", appdef.DataKind_string, false)
+		ws := appDef.AddWorkspace(testWSQName)
+		ws.AddType(testViewRecordQName1)
 
 		value := &mockValue{}
 		value.On("AsString", "vk").Return("value")
@@ -37,7 +39,7 @@ func TestViewRecordsStorage_GetBatch(t *testing.T) {
 			On("Records").Return(&nilRecords{}).
 			On("Events").Return(&nilEvents{}).
 			On("ViewRecords").Return(viewRecords)
-		s := ProvideQueryProcessorStateFactory()(context.Background(), appStructs, nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil)
+		s := ProvideQueryProcessorStateFactory()(context.Background(), appStructs, SimpleIWorkspaceFunc(ws), nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil)
 		k, e := s.KeyBuilder(View, testViewRecordQName1)
 		require.Nil(e)
 		k.PutInt64("pkk", 64)
@@ -58,6 +60,8 @@ func TestViewRecordsStorage_GetBatch(t *testing.T) {
 		view.KeyBuilder().PartKeyBuilder().AddField("pkk", appdef.DataKind_int64)
 		view.KeyBuilder().ClustColsBuilder().AddField("cck", appdef.DataKind_string)
 		view.ValueBuilder().AddField("vk", appdef.DataKind_string, false)
+		ws := appDef.AddWorkspace(testWSQName)
+		ws.AddType(testViewRecordQName1)
 
 		viewRecords := &mockViewRecords{}
 		viewRecords.
@@ -69,7 +73,7 @@ func TestViewRecordsStorage_GetBatch(t *testing.T) {
 			On("Records").Return(&nilRecords{}).
 			On("Events").Return(&nilEvents{}).
 			On("ViewRecords").Return(viewRecords)
-		s := ProvideQueryProcessorStateFactory()(context.Background(), appStructs, nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil)
+		s := ProvideQueryProcessorStateFactory()(context.Background(), appStructs, SimpleIWorkspaceFunc(ws), nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil)
 		k, err := s.KeyBuilder(View, testViewRecordQName1)
 		require.NoError(err)
 		k.PutInt64("pkk", 64)
@@ -99,7 +103,7 @@ func TestViewRecordsStorage_Read(t *testing.T) {
 			On("Records").Return(&nilRecords{}).
 			On("Events").Return(&nilEvents{}).
 			On("ViewRecords").Return(viewRecords)
-		s := ProvideQueryProcessorStateFactory()(context.Background(), appStructs, nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil)
+		s := ProvideQueryProcessorStateFactory()(context.Background(), appStructs, SimpleIWorkspaceFunc(&nilIWorkspace{}), nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil)
 		k, err := s.KeyBuilder(View, testViewRecordQName1)
 		require.NoError(err)
 
@@ -124,7 +128,7 @@ func TestViewRecordsStorage_Read(t *testing.T) {
 			On("Records").Return(&nilRecords{}).
 			On("Events").Return(&nilEvents{}).
 			On("ViewRecords").Return(viewRecords)
-		s := ProvideQueryProcessorStateFactory()(context.Background(), appStructs, nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil)
+		s := ProvideQueryProcessorStateFactory()(context.Background(), appStructs, SimpleIWorkspaceFunc(&nilIWorkspace{}), nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil)
 		k, err := s.KeyBuilder(View, testViewRecordQName1)
 		require.NoError(err)
 
@@ -142,6 +146,8 @@ func TestViewRecordsStorage_ApplyBatch_should_return_error_on_put_batch(t *testi
 	view.KeyBuilder().PartKeyBuilder().AddField("pkk", appdef.DataKind_int64)
 	view.KeyBuilder().ClustColsBuilder().AddField("cck", appdef.DataKind_string)
 	view.ValueBuilder().AddField("vk", appdef.DataKind_string, false)
+	ws := appDef.AddWorkspace(testWSQName)
+	ws.AddType(testViewRecordQName1)
 
 	viewRecords := &mockViewRecords{}
 	viewRecords.
@@ -154,7 +160,7 @@ func TestViewRecordsStorage_ApplyBatch_should_return_error_on_put_batch(t *testi
 		On("ViewRecords").Return(viewRecords).
 		On("Records").Return(&nilRecords{}).
 		On("Events").Return(&nilEvents{})
-	s := ProvideAsyncActualizerStateFactory()(context.Background(), appStructs, nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, 10, 10)
+	s := ProvideAsyncActualizerStateFactory()(context.Background(), appStructs, SimpleIWorkspaceFunc(ws), nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, 10, 10)
 	kb, err := s.KeyBuilder(View, testViewRecordQName1)
 	require.NoError(err)
 	_, err = s.NewValue(kb)

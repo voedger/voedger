@@ -19,7 +19,8 @@ func TestHostState_BasicUsage(t *testing.T) {
 	require := require.New(t)
 
 	factory := ProvideQueryProcessorStateFactory()
-	hostState := factory(context.Background(), mockedHostStateStructs(), nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil)
+	appStructs, ws := mockedHostStateStructs()
+	hostState := factory(context.Background(), appStructs, SimpleIWorkspaceFunc(ws), nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil)
 
 	// Declare simple extension
 	extension := func(state istructs.IState) {
@@ -39,7 +40,7 @@ func TestHostState_BasicUsage(t *testing.T) {
 	require.NoError(hostState.ApplyIntents())
 }
 
-func mockedHostStateStructs() istructs.IAppStructs {
+func mockedHostStateStructs() (istructs.IAppStructs, appdef.IWorkspace) {
 	mv := &mockValue{}
 	mv.
 		On("AsInt64", "vFld").Return(int64(10)).
@@ -81,6 +82,8 @@ func mockedHostStateStructs() istructs.IAppStructs {
 	view.ValueBuilder().
 		AddField("vFld", appdef.DataKind_int64, false).
 		AddField(ColOffset, appdef.DataKind_int64, false)
+	ws := appDef.AddWorkspace(testWSQName)
+	ws.AddType(testViewRecordQName1)
 
 	appStructs := &mockAppStructs{}
 	appStructs.
@@ -88,7 +91,7 @@ func mockedHostStateStructs() istructs.IAppStructs {
 		On("ViewRecords").Return(viewRecords).
 		On("Events").Return(&nilEvents{}).
 		On("Records").Return(&nilRecords{})
-	return appStructs
+	return appStructs, ws
 }
 func TestHostState_KeyBuilder_Should_return_unknown_storage_ID_error(t *testing.T) {
 	require := require.New(t)
@@ -610,7 +613,7 @@ func hostStateForTest(s IStateStorage) IHostState {
 	return hs
 }
 func emptyHostStateForTest(s IStateStorage) (istructs.IState, istructs.IIntents) {
-	bs := ProvideQueryProcessorStateFactory()(context.Background(), &nilAppStructs{}, nil, nil, nil, nil, nil).(*hostState)
+	bs := ProvideQueryProcessorStateFactory()(context.Background(), &nilAppStructs{}, SimpleIWorkspaceFunc(&nilIWorkspace{}), nil, nil, nil, nil, nil).(*hostState)
 	bs.addStorage(testStorage, s, math.MinInt)
 	return bs, bs
 }
