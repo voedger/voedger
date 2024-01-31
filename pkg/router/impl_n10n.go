@@ -11,7 +11,6 @@ import (
 	"io"
 	"net/http"
 	"strconv"
-	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/untillpro/goutils/logger"
@@ -56,7 +55,7 @@ func (s *httpService) subscribeAndWatchHandler() http.HandlerFunc {
 			http.Error(rw, "Streaming unsupported!", http.StatusInternalServerError)
 			return
 		}
-		channel, err = s.n10n.NewChannel(urlParams.SubjectLogin, 24*time.Hour)
+		channel, err = s.n10n.NewChannel(urlParams.SubjectLogin, hours24)
 		if err != nil {
 			logger.Error(err)
 			http.Error(rw, "create new channel failed: "+err.Error(), n10nErrorToStatusCode(err))

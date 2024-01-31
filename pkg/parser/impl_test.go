@@ -2158,3 +2158,22 @@ func Test_Variables(t *testing.T) {
 	BuildAppDefs(schema, appdef.New(), WithVariableResolver(&resolver))
 	require.True(resolver.resolved[appdef.NewQName("pkg", "variable")])
 }
+
+func Test_RatesAndLimits(t *testing.T) {
+	require := assertions(t)
+
+	require.AppSchemaError(`APPLICATION app1();
+	WORKSPACE w (
+		RATE r 1 PER HOUR;
+		LIMIT l1 ON EVERYTHING WITH RATE x;
+		LIMIT l2 ON COMMAND x WITH RATE r;
+		LIMIT l3 ON QUERY y WITH RATE r;
+		LIMIT l4 ON TAG z WITH RATE r;
+		LIMIT l5 ON TABLE t WITH RATE r;
+	);`,
+		"file.sql:4:36: undefined rate: x",
+		"file.sql:5:23: undefined command: x",
+		"file.sql:6:21: undefined query: y",
+		"file.sql:7:19: undefined tag: z",
+		"file.sql:8:21: undefined table: t")
+}

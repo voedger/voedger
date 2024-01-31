@@ -27,6 +27,7 @@ const (
 	DefaultBLOBMaxSize                   = router.BLOBMaxSizeType(20971520) // 20Mb
 	DefaultVVMPort                       = router.DefaultRouterPort
 	actualizerFlushInterval              = time.Millisecond * 500
+	defaultCassandraPort                 = 9042
 )
 
 const (
@@ -39,7 +40,7 @@ var (
 	DefaultTimeFunc  = time.Now
 	DefaultCasParams = istoragecas.CassandraParamsType{
 		Hosts:                   "127.0.0.1",
-		Port:                    9042,
+		Port:                    defaultCassandraPort,
 		KeyspaceWithReplication: istoragecas.SimpleWithReplication,
 	}
 )

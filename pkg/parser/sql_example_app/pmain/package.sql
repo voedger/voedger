@@ -20,6 +20,11 @@ APPLICATION example_app (
     USE untill;
 );
 
+
+-- Declare variable to use it later in the schema. Can be overriden on app deployment stage
+DECLARE nAntiDdosPerSecRate int32 DEFAULT 1000;
+
+
 /*
     Abstract tables can only be used for INHERITance by other tables.
     INHERITS includes all the fields, nested tables and constraints from an ancestor table.
@@ -236,19 +241,23 @@ WORKSPACE MyWorkspace (
         QUERY Query2(air.Order) RETURNS any;
     );
 
-    --  Object scope is PER APP PARTITION PER IP
-    RATE PosSalesRate 1000 PER HOUR PER USER;
-    RATE NewOrderRate 500 PER HOUR PER USER;
+    -- Object scope is PER APP PARTITION PER IP
+    -- Use variable declared in the package
+    RATE AntiDDosRate nAntiDdosPerSecRate PER SECOND;
+
     --  Custom scopes
+    RATE BackofficeRate 1000 PER HOUR PER APP PARTITION;
+    RATE QueryRate 1000 PER HOUR PER APP PARTITION PER IP;
+    RATE CudRate 100 PER HOUR PER USER;
     RATE RestorePasswordRate1 3 PER 5 MINUTES PER APP PARTITION PER IP;
     RATE RestorePasswordRate2 10 PER DAY PER APP PARTITION PER IP;
 
-    LIMIT AllCommandsLimit INSERT ON ALL COMMANDS WITH RATE PosSalesRate;
-    LIMIT NewOrderLimit INSERT ON COMMAND NewOrder WITH RATE NewOrderRate;
-    LIMIT AllQueriesLimit SELECT ON ALL QUERIES WITH TAG PosTag WITH RATE AppDefaultRate;
-    -- Combination of two rates
-    LIMIT RestorePasswordLimit1 INSERT ON COMMAND RestorePassword WITH RATE RestorePasswordRate1;
-    LIMIT RestorePasswordLimit2 INSERT ON COMMAND RestorePassword WITH RATE RestorePasswordRate2;
+	LIMIT AntiDDOS ON EVERYTHING WITH RATE AntiDDosRate; -- all commands, queries and CUD
+	LIMIT RestorePasswordLimit1 ON COMMAND RestorePassword WITH RATE RestorePasswordRate1;   -- Single command applied with rate
+	LIMIT RestorePasswordLimit2 ON COMMAND RestorePassword WITH RATE RestorePasswordRate2;   -- Combination of two rates
+	LIMIT Query1Limit ON QUERY Query1 WITH RATE QueryRate; -- Single query applied with rate
+	LIMIT tl1 ON TABLE WsTable WITH RATE CudRate; -- CUD operations on a single table
+	LIMIT BackofficeLimit ON TAG BackofficeTag WITH RATE BackofficeRate; -- Limit on anything with tag
 
     -- ACLs
     GRANT ALL ON ALL TABLES WITH TAG BackofficeTag TO LocationManager;
@@ -319,8 +328,6 @@ WORKSPACE MyWorkspace (
     ) AS RESULT OF UpdateDashboard;
 
 );
-
-LIMIT MyWorkspaceInsertLimit INSERT ON WORKSPACE MyWorkspace WITH RATE AppDefaultRate;
 
 /*
     Abstract workspaces:
