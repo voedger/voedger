@@ -6,6 +6,7 @@ package vit
 
 import (
 	"bytes"
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -15,16 +16,15 @@ import (
 	"testing"
 	"time"
 
-	_ "embed"
-
 	"github.com/stretchr/testify/require"
 	"github.com/untillpro/goutils/logger"
+
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/irates"
-	istorage "github.com/voedger/voedger/pkg/istorage"
-	"github.com/voedger/voedger/pkg/istorageimpl/istoragecas"
+	"github.com/voedger/voedger/pkg/istorage"
+	"github.com/voedger/voedger/pkg/istorage/cas"
 	"github.com/voedger/voedger/pkg/istructs"
-	istructsmem "github.com/voedger/voedger/pkg/istructsmem"
+	"github.com/voedger/voedger/pkg/istructsmem"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/state/smtptest"
@@ -99,7 +99,7 @@ func newVit(t *testing.T, vitCfg *VITConfig, useCas bool) *VIT {
 	if useCas {
 		cfg.StorageFactory = func() (provider istorage.IAppStorageFactory, err error) {
 			logger.Info("using istoragecas ", fmt.Sprint(vvm.DefaultCasParams))
-			return istoragecas.Provide(vvm.DefaultCasParams)
+			return cas.Provide(vvm.DefaultCasParams)
 		}
 	}
 

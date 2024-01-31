@@ -12,9 +12,10 @@ import (
 
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/istorage"
-	"github.com/voedger/voedger/pkg/istorageimpl"
+	"github.com/voedger/voedger/pkg/istorage/mem"
+	istorageimpl "github.com/voedger/voedger/pkg/istorage/provider"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/consts"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/teststore"
@@ -25,7 +26,7 @@ import (
 func TestQNames(t *testing.T) {
 	require := require.New(t)
 
-	sp := istorageimpl.Provide(istorage.ProvideMem())
+	sp := istorageimpl.Provide(mem.Provide())
 	storage, _ := sp.AppStorage(istructs.AppQName_test1_app1)
 
 	versions := vers.New()
@@ -129,7 +130,7 @@ func TestQNamesPrepareErrors(t *testing.T) {
 	require := require.New(t)
 
 	t.Run("must be error if unknown system view version", func(t *testing.T) {
-		sp := istorageimpl.Provide(istorage.ProvideMem())
+		sp := istorageimpl.Provide(mem.Provide())
 		storage, _ := sp.AppStorage(istructs.AppQName_test1_app1)
 
 		versions := vers.New()
@@ -145,7 +146,7 @@ func TestQNamesPrepareErrors(t *testing.T) {
 	})
 
 	t.Run("must be error if invalid QName loaded from system view ", func(t *testing.T) {
-		sp := istorageimpl.Provide(istorage.ProvideMem())
+		sp := istorageimpl.Provide(mem.Provide())
 		storage, _ := sp.AppStorage(istructs.AppQName_test1_app1)
 
 		versions := vers.New()
@@ -164,7 +165,7 @@ func TestQNamesPrepareErrors(t *testing.T) {
 	})
 
 	t.Run("must be ok if deleted QName loaded from system view ", func(t *testing.T) {
-		sp := istorageimpl.Provide(istorage.ProvideMem())
+		sp := istorageimpl.Provide(mem.Provide())
 		storage, _ := sp.AppStorage(istructs.AppQName_test1_app1)
 
 		versions := vers.New()
@@ -181,7 +182,7 @@ func TestQNamesPrepareErrors(t *testing.T) {
 	})
 
 	t.Run("must be error if invalid (small) QNameID loaded from system view ", func(t *testing.T) {
-		sp := istorageimpl.Provide(istorage.ProvideMem())
+		sp := istorageimpl.Provide(mem.Provide())
 		storage, _ := sp.AppStorage(istructs.AppQName_test1_app1)
 
 		versions := vers.New()
@@ -199,7 +200,7 @@ func TestQNamesPrepareErrors(t *testing.T) {
 	})
 
 	t.Run("must be error if too many QNames", func(t *testing.T) {
-		sp := istorageimpl.Provide(istorage.ProvideMem())
+		sp := istorageimpl.Provide(mem.Provide())
 		storage, _ := sp.AppStorage(istructs.AppQName_test1_app1)
 
 		versions := vers.New()

@@ -2,12 +2,14 @@
  * Copyright (c) 2021-present unTill Pro, Ltd.
  */
 
-package istorage
+package mem
 
 import (
 	"testing"
+
+	"github.com/voedger/voedger/pkg/istorage"
 )
 
 func TestMemTCK(t *testing.T) {
-	TechnologyCompatibilityKit(t, ProvideMem())
+	istorage.TechnologyCompatibilityKit(t, Provide())
 }

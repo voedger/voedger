@@ -15,7 +15,8 @@ import (
 	sysmonitor "github.com/voedger/voedger/pkg/apps/sys.monitor"
 	"github.com/voedger/voedger/pkg/ihttpctl"
 	"github.com/voedger/voedger/pkg/istorage"
-	"github.com/voedger/voedger/pkg/istorageimpl/istoragecas"
+	"github.com/voedger/voedger/pkg/istorage/cas"
+	"github.com/voedger/voedger/pkg/istorage/mem"
 	"github.com/voedger/voedger/pkg/istructs"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
@@ -51,11 +52,11 @@ func NewAppStorageFactory(params CLIParams) (istorage.IAppStorageFactory, error)
 		casParams.Hosts = "db-node-1,db-node-2,db-node-3"
 		casParams.KeyspaceWithReplication = cas3ReplicationStrategy
 	case storageTypeMem:
-		return istorage.ProvideMem(), nil
+		return mem.Provide(), nil
 	default:
 		return nil, fmt.Errorf("unable to define replication strategy")
 	}
-	return istoragecas.Provide(casParams)
+	return cas.Provide(casParams)
 }
 
 func NewSysRouterRequestHandler(_ context.Context, sender ibus.ISender, request ibus.Request) {

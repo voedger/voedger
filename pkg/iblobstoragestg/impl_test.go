@@ -15,10 +15,11 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+
 	"github.com/voedger/voedger/pkg/iblobstorage"
-	"github.com/voedger/voedger/pkg/istorage"
-	"github.com/voedger/voedger/pkg/istorageimpl"
-	istructs "github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/istorage/mem"
+	istorageimpl "github.com/voedger/voedger/pkg/istorage/provider"
+	"github.com/voedger/voedger/pkg/istructs"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
@@ -42,7 +43,7 @@ func TestBasicUsage(t *testing.T) {
 	)
 	require := require.New(t)
 
-	asf := istorage.ProvideMem()
+	asf := mem.Provide()
 	asp := istorageimpl.Provide(asf)
 	storage, err := asp.AppStorage(istructs.AppQName_test1_app1)
 	require.NoError(err)
@@ -116,7 +117,7 @@ func TestQuotaExceed(t *testing.T) {
 		}
 	)
 	require := require.New(t)
-	asf := istorage.ProvideMem()
+	asf := mem.Provide()
 	asp := istorageimpl.Provide(asf)
 	storage, err := asp.AppStorage(istructs.AppQName_test1_app1)
 	require.NoError(err)
