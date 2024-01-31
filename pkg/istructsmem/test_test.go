@@ -12,10 +12,12 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/iratesce"
 	"github.com/voedger/voedger/pkg/istorage"
-	"github.com/voedger/voedger/pkg/istorageimpl"
+	"github.com/voedger/voedger/pkg/istorage/mem"
+	istorageimpl "github.com/voedger/voedger/pkg/istorage/provider"
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
@@ -402,7 +404,7 @@ func test() *testDataType {
 
 		var err error
 
-		testData.StorageProvider = istorageimpl.Provide(istorage.ProvideMem())
+		testData.StorageProvider = istorageimpl.Provide(mem.Provide())
 		testData.Storage, err = testData.StorageProvider.AppStorage(testData.appName)
 		if err != nil {
 			panic(err)

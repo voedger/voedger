@@ -2,7 +2,7 @@
  * Copyright (c) 2021-present unTill Pro, Ltd.
  */
 
-package istoragecas
+package cas
 
 type CassandraParamsType struct {
 	// Comma separated list of hosts

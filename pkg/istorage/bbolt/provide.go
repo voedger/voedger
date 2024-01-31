@@ -3,10 +3,10 @@
  * @author: Dmitry Molchanovsky
  */
 
-package istoragebbolt
+package bbolt
 
 import (
-	istorage "github.com/voedger/voedger/pkg/istorage"
+	"github.com/voedger/voedger/pkg/istorage"
 )
 
 func Provide(params ParamsType) istorage.IAppStorageFactory {

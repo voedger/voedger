@@ -21,8 +21,8 @@ import (
 	"github.com/voedger/voedger/pkg/iauthnzimpl"
 	"github.com/voedger/voedger/pkg/iprocbus"
 	"github.com/voedger/voedger/pkg/iratesce"
-	"github.com/voedger/voedger/pkg/istorage"
-	"github.com/voedger/voedger/pkg/istorageimpl"
+	"github.com/voedger/voedger/pkg/istorage/mem"
+	istorageimpl "github.com/voedger/voedger/pkg/istorage/provider"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
@@ -44,7 +44,7 @@ func buildAppParts(t *testing.T) (appParts appparts.IAppPartitions, cleanup func
 	require := require.New(t)
 
 	cfgs := make(istructsmem.AppConfigsType, 1)
-	asp := istorageimpl.Provide(istorage.ProvideMem())
+	asp := istorageimpl.Provide(mem.Provide())
 
 	// конфиг приложения airs-bp
 	adb := appdef.New()

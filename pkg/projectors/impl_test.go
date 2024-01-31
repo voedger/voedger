@@ -12,11 +12,12 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/iratesce"
-	"github.com/voedger/voedger/pkg/istorage"
+	"github.com/voedger/voedger/pkg/istorage/mem"
+	istorageimpl "github.com/voedger/voedger/pkg/istorage/provider"
 	"github.com/voedger/voedger/pkg/istoragecache"
-	"github.com/voedger/voedger/pkg/istorageimpl"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
@@ -176,7 +177,7 @@ func appStructs(prepareAppDef appDefCallback, prepareAppCfg appCfgCallback) istr
 		prepareAppCfg(cfg)
 	}
 
-	asf := istorage.ProvideMem()
+	asf := mem.Provide()
 	storageProvider := istorageimpl.Provide(asf)
 	prov := istructsmem.Provide(
 		cfgs,
@@ -204,7 +205,7 @@ func appStructsCached(prepareAppDef appDefCallback, prepareAppCfg appCfgCallback
 		prepareAppCfg(cfg)
 	}
 
-	asf := istorage.ProvideMem()
+	asf := mem.Provide()
 	metrics = imetrics.Provide()
 	storageProvider := istorageimpl.Provide(asf)
 	cached := istoragecache.Provide(1000000, storageProvider, metrics, "testVM")

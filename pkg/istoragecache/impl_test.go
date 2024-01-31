@@ -10,9 +10,11 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	istorage "github.com/voedger/voedger/pkg/istorage"
-	"github.com/voedger/voedger/pkg/istorageimpl"
-	istructs "github.com/voedger/voedger/pkg/istructs"
+
+	"github.com/voedger/voedger/pkg/istorage"
+	"github.com/voedger/voedger/pkg/istorage/mem"
+	istorageimpl "github.com/voedger/voedger/pkg/istorage/provider"
+	"github.com/voedger/voedger/pkg/istructs"
 	imetrics "github.com/voedger/voedger/pkg/metrics"
 )
 
@@ -311,7 +313,7 @@ func TestAppStorage_GetBatch(t *testing.T) {
 }
 
 func TestTechnologyCompatibilityKit(t *testing.T) {
-	asf := istorage.ProvideMem()
+	asf := mem.Provide()
 	asp := istorageimpl.Provide(asf)
 	cachingStorageProvider := Provide(testCacheSize, asp, imetrics.Provide(), "vvm")
 	storage, err := cachingStorageProvider.AppStorage(istructs.AppQName_test1_app1)

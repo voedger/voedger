@@ -2,7 +2,7 @@
  * Copyright (c) 2022-present Sigma-Soft, Ltd.
  */
 
-package istoragebbolt
+package bbolt
 
 const (
 	rwxrwxrwx = 0777
