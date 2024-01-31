@@ -176,7 +176,7 @@ func (cmdProc *cmdProc) getCmdResultBuilder(_ context.Context, work interface{})
 
 func (cmdProc *cmdProc) buildCommandArgs(_ context.Context, work interface{}) (err error) {
 	cmd := work.(*cmdWorkpiece)
-	hs := cmd.hostStateProvider.get(cmd.appStructs, cmd.cmdMes.WSID(), cmd.reb.CUDBuilder(), cmd.principals, cmd.cmdMes.Token(), cmd.cmdResultBuilder)
+	hs := cmd.hostStateProvider.get(cmd.appStructs, cmd.cmdMes.WSID(), cmd.reb.CUDBuilder(), cmd.principals, cmd.cmdMes.Token(), cmd.cmdResultBuilder, cmd.iWorkspace)
 	hs.ClearIntents()
 	cmd.eca = istructs.ExecCommandArgs{
 		CommandPrepareArgs: istructs.CommandPrepareArgs{

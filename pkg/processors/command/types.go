@@ -124,11 +124,12 @@ type hostStateProvider struct {
 	state            state.IHostState
 	token            string
 	cmdResultBuilder istructs.IObjectBuilder
+	iWorkspace       appdef.IWorkspace
 }
 
 func newHostStateProvider(ctx context.Context, pid istructs.PartitionID, secretReader isecrets.ISecretReader) *hostStateProvider {
 	p := &hostStateProvider{}
-	p.state = state.ProvideCommandProcessorStateFactory()(ctx, p.getAppStructs, state.SimplePartitionIDFunc(pid), p.getWSID, secretReader, p.getCUD, p.getPrincipals, p.getToken, builtin.MaxCUDs, p.getCmdResultBuilder)
+	p.state = state.ProvideCommandProcessorStateFactory()(ctx, p.getAppStructs, p.getIWorkspace, state.SimplePartitionIDFunc(pid), p.getWSID, secretReader, p.getCUD, p.getPrincipals, p.getToken, builtin.MaxCUDs, p.getCmdResultBuilder)
 	return p
 }
 
@@ -140,12 +141,17 @@ func (p *hostStateProvider) getPrincipals() []iauthnz.Principal {
 }
 func (p *hostStateProvider) getToken() string                             { return p.token }
 func (p *hostStateProvider) getCmdResultBuilder() istructs.IObjectBuilder { return p.cmdResultBuilder }
-func (p *hostStateProvider) get(appStructs istructs.IAppStructs, wsid istructs.WSID, cud istructs.ICUD, principals []iauthnz.Principal, token string, cmdResultBuilder istructs.IObjectBuilder) state.IHostState {
+func (p *hostStateProvider) get(appStructs istructs.IAppStructs, wsid istructs.WSID, cud istructs.ICUD, principals []iauthnz.Principal, token string,
+	cmdResultBuilder istructs.IObjectBuilder, iWorkspace appdef.IWorkspace) state.IHostState {
 	p.as = appStructs
 	p.wsid = wsid
 	p.cud = cud
 	p.principals = principals
 	p.token = token
 	p.cmdResultBuilder = cmdResultBuilder
+	p.iWorkspace = iWorkspace
 	return p.state
+}
+func (p *hostStateProvider) getIWorkspace() appdef.IWorkspace {
+	return p.iWorkspace
 }
