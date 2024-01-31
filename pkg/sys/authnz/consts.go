@@ -21,7 +21,7 @@ const (
 	Field_ProfileCluster            = "ProfileCluster"
 	Field_LoginHash                 = "LoginHash"
 	Field_Login                     = "Login"
-	Field_СreatedAtMs               = "CreatedAtMs"
+	Field_CreatedAtMs               = "CreatedAtMs"
 	Field_WSName                    = "WSName"
 	Field_WSKind                    = "WSKind"
 	Field_AppName                   = "AppName"

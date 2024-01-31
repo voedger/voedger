@@ -249,18 +249,9 @@ func analyseLimit(u *LimitStmt, c *iterateCtx) {
 	if err != nil {
 		c.stmtErr(&u.RateName.Pos, err)
 	}
-
-	if u.Action.AllCommandsWithTag != nil {
-		if err = resolveInCtx(*u.Action.AllCommandsWithTag, c, func(t *TagStmt, schema *PackageSchemaAST) error { return nil }); err != nil {
-			c.stmtErr(&u.Action.AllCommandsWithTag.Pos, err)
-		}
-	} else if u.Action.AllQueriesWithTag != nil {
-		if err = resolveInCtx(*u.Action.AllQueriesWithTag, c, func(t *TagStmt, schema *PackageSchemaAST) error { return nil }); err != nil {
-			c.stmtErr(&u.Action.AllQueriesWithTag.Pos, err)
-		}
-	} else if u.Action.AllWorkspacesWithTag != nil {
-		if err = resolveInCtx(*u.Action.AllWorkspacesWithTag, c, func(t *TagStmt, schema *PackageSchemaAST) error { return nil }); err != nil {
-			c.stmtErr(&u.Action.AllWorkspacesWithTag.Pos, err)
+	if u.Action.Tag != nil {
+		if err = resolveInCtx(*u.Action.Tag, c, func(t *TagStmt, schema *PackageSchemaAST) error { return nil }); err != nil {
+			c.stmtErr(&u.Action.Tag.Pos, err)
 		}
 	} else if u.Action.Command != nil {
 		if err = resolveInCtx(*u.Action.Command, c, func(t *CommandStmt, schema *PackageSchemaAST) error { return nil }); err != nil {
@@ -271,9 +262,9 @@ func analyseLimit(u *LimitStmt, c *iterateCtx) {
 		if err = resolveInCtx(*u.Action.Query, c, func(t *QueryStmt, schema *PackageSchemaAST) error { return nil }); err != nil {
 			c.stmtErr(&u.Action.Query.Pos, err)
 		}
-	} else if u.Action.Workspace != nil {
-		if err = resolveInCtx(*u.Action.Workspace, c, func(t *WorkspaceStmt, schema *PackageSchemaAST) error { return nil }); err != nil {
-			c.stmtErr(&u.Action.Workspace.Pos, err)
+	} else if u.Action.Table != nil {
+		if err = resolveInCtx(*u.Action.Table, c, func(t *TableStmt, schema *PackageSchemaAST) error { return nil }); err != nil {
+			c.stmtErr(&u.Action.Table.Pos, err)
 		}
 	}
 }

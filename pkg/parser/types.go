@@ -567,15 +567,12 @@ type RateStmt struct {
 func (s RateStmt) GetName() string { return string(s.Name) }
 
 type LimitAction struct {
-	Pos                  lexer.Position
-	Command              *DefQName `parser:"(INSERTONCOMMAND @@)"`
-	AllCommandsWithTag   *DefQName `parser:"| (INSERTONALLCOMMANDSWITHTAG @@)"`
-	AllCommands          bool      `parser:"| @INSERTONALLCOMMANDS"`
-	Query                *DefQName `parser:"| (SELECTONQUERY @@)"`
-	AllQueriesWithTag    *DefQName `parser:"| (SELECTONALLQUERIESWITHTAG @@)"`
-	AllQueries           bool      `parser:"| @SELECTONALLQUERIES"`
-	Workspace            *DefQName `parser:"| (INSERTONWORKSPACE @@)"`
-	AllWorkspacesWithTag *DefQName `parser:"| (INSERTONALLWORKSPACESWITHTAG @@)"`
+	Pos        lexer.Position
+	Table      *DefQName `parser:"(ONTABLE @@)"`
+	Command    *DefQName `parser:"| ('ON' 'COMMAND' @@)"`
+	Query      *DefQName `parser:"| ('ON' 'QUERY' @@)"`
+	Tag        *DefQName `parser:"| ('ON' 'TAG' @@)"`
+	Everything bool      `parser:"| @('ON' 'EVERYTHING')"`
 }
 
 type LimitStmt struct {

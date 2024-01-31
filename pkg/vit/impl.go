@@ -87,6 +87,10 @@ func newVit(t *testing.T, vitCfg *VITConfig, useCas bool) *VIT {
 		opt(vitPreConfig)
 	}
 
+	for _, initFunc := range vitPreConfig.initFuncs {
+		initFunc()
+	}
+
 	// eliminate timeouts impact for debugging
 	cfg.RouterReadTimeout = int(debugTimeout)
 	cfg.RouterWriteTimeout = int(debugTimeout)

@@ -8,7 +8,6 @@ import (
 	"context"
 	"fmt"
 	"runtime/debug"
-	"time"
 
 	"github.com/voedger/voedger/pkg/apps"
 	"github.com/voedger/voedger/pkg/extensionpoints"
@@ -120,24 +119,12 @@ func ProvideApp1(apis apps.APIs, cfg *istructsmem.AppConfigType, adf appdef.IApp
 	))
 
 	// per-app limits
-	cfg.FunctionRateLimits.AddAppLimit(QNameCmdRated, istructs.RateLimit{
-		Period:                time.Minute,
-		MaxAllowedPerDuration: 2,
-	})
-	cfg.FunctionRateLimits.AddAppLimit(QNameQryRated, istructs.RateLimit{
-		Period:                time.Minute,
-		MaxAllowedPerDuration: 2,
-	})
+	cfg.FunctionRateLimits.AddAppLimit(QNameCmdRated, maxRateLimit2PerMinute)
+	cfg.FunctionRateLimits.AddAppLimit(QNameQryRated, maxRateLimit2PerMinute)
 
 	// per-workspace limits
-	cfg.FunctionRateLimits.AddWorkspaceLimit(QNameCmdRated, istructs.RateLimit{
-		Period:                time.Hour,
-		MaxAllowedPerDuration: 4,
-	})
-	cfg.FunctionRateLimits.AddWorkspaceLimit(QNameQryRated, istructs.RateLimit{
-		Period:                time.Hour,
-		MaxAllowedPerDuration: 4,
-	})
+	cfg.FunctionRateLimits.AddWorkspaceLimit(QNameCmdRated, maxRateLimit4PerHour)
+	cfg.FunctionRateLimits.AddWorkspaceLimit(QNameQryRated, maxRateLimit4PerHour)
 
 	cfg.Resources.Add(istructsmem.NewQueryFunction(
 		appdef.NewQName(app1PkgName, "MockQry"),

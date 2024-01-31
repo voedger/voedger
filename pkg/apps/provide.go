@@ -8,6 +8,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
 
 	"github.com/untillpro/goutils/logger"
 
@@ -69,7 +70,7 @@ func NewSysRouterRequestHandler(_ context.Context, sender ibus.ISender, request 
 		case "c.EchoCommand":
 			sender.SendResponse(ibus.Response{
 				ContentType: "text/plain",
-				StatusCode:  200,
+				StatusCode:  http.StatusOK,
 				Data:        []byte(fmt.Sprintf("Hello, %s, %s", string(request.Body), string(queryParamsBytes))),
 			})
 		case "q.EchoQuery":
