@@ -193,15 +193,15 @@ func (cmdProc *cmdProc) buildCommandArgs(_ context.Context, work interface{}) (e
 	return
 }
 
-func updateIDGeneratorFromO(root istructs.IObject, appDef appdef.IAppDef, idGen istructs.IIDGenerator) {
+func updateIDGeneratorFromO(root istructs.IObject, ws appdef.IWorkspace, idGen istructs.IIDGenerator) {
 	// new IDs only here because update is not allowed for ODocs in Args
-	idGen.UpdateOnSync(root.AsRecordID(appdef.SystemField_ID), appDef.Type(root.QName()))
+	idGen.UpdateOnSync(root.AsRecordID(appdef.SystemField_ID), ws.Type(root.QName()))
 	root.Containers(func(container string) {
 		// order of containers here is the order in the schema
 		// but order in the request could be different
 		// that is not a problem because for ODocs/ORecords ID generator will bump next ID only if syncID is actually next
 		root.Children(container, func(c istructs.IObject) {
-			updateIDGeneratorFromO(c, appDef, idGen)
+			updateIDGeneratorFromO(c, ws, idGen)
 		})
 	})
 }
@@ -216,13 +216,13 @@ func (cmdProc *cmdProc) recovery(ctx context.Context, cmd *cmdWorkpiece) (*appPa
 		ws := ap.getWorkspace(event.Workspace())
 		event.CUDs(func(rec istructs.ICUDRow) {
 			if rec.IsNew() {
-				t := cmd.AppDef().Type(rec.QName())
+				t := cmd.iWorkspace.Type(rec.QName())
 				ws.idGenerator.UpdateOnSync(rec.ID(), t)
 			}
 		})
 		ao := event.ArgumentObject()
-		if cmd.AppDef().Type(ao.QName()).Kind() == appdef.TypeKind_ODoc {
-			updateIDGeneratorFromO(ao, cmd.AppDef(), ws.idGenerator)
+		if cmd.iWorkspace.Type(ao.QName()).Kind() == appdef.TypeKind_ODoc {
+			updateIDGeneratorFromO(ao, cmd.iWorkspace, ws.idGenerator)
 		}
 		ws.NextWLogOffset = event.WLogOffset() + 1
 		ap.nextPLogOffset = plogOffset + 1
@@ -292,7 +292,6 @@ func checkWSInitialized(_ context.Context, work interface{}) (err error) {
 		return nil
 	}
 	if cmdQName == workspacemgmt.QNameCommandCreateWorkspace ||
-		// cmdQName == workspacemgmt.QNameCommandCreateWorkspaceID ||
 		cmdQName == builtin.QNameCommandInit { //nolint
 		return nil
 	}
@@ -506,30 +505,52 @@ func validateCmdResult(ctx context.Context, work interface{}) (err error) {
 	return nil
 }
 
-func (cmdProc *cmdProc) validate(ctx context.Context, work interface{}) (err error) {
-	defer func() {
-		err = coreutils.WrapSysError(err, http.StatusForbidden)
-	}()
+func (cmdProc *cmdProc) eventValidators(ctx context.Context, work interface{}) (err error) {
 	cmd := work.(*cmdWorkpiece)
 	for _, appEventValidator := range cmd.appStructs.EventValidators() {
 		if err = appEventValidator(ctx, cmd.rawEvent, cmd.appStructs, cmd.cmdMes.WSID()); err != nil {
-			return
+			return coreutils.WrapSysError(err, http.StatusForbidden)
 		}
 	}
+	return nil
+}
+
+func (cmdProc *cmdProc) cudsValidators(ctx context.Context, work interface{}) (err error) {
+	cmd := work.(*cmdWorkpiece)
 	for _, appCUDValidator := range cmd.appStructs.CUDValidators() {
 		err = iterate.ForEachError(cmd.rawEvent.CUDs, func(rec istructs.ICUDRow) error {
 			if appCUDValidator.Match(rec, cmd.cmdMes.WSID(), cmd.cmdMes.QName()) {
 				if err := appCUDValidator.Validate(ctx, cmd.appStructs, rec, cmd.cmdMes.WSID(), cmd.cmdMes.QName()); err != nil {
-					return err
+					return coreutils.WrapSysError(err, http.StatusForbidden)
 				}
 			}
 			return nil
 		})
 		if err != nil {
-			return
+			return err
 		}
 	}
 	return nil
+}
+
+func (cmdProc *cmdProc) validateCUDsQNames(ctx context.Context, work interface{}) (err error) {
+	cmd := work.(*cmdWorkpiece)
+	if cmd.iWorkspace == nil {
+		// dummy or c.sys.CreateWorkspace
+		return nil
+	}
+	return iterate.ForEachError(cmd.rawEvent.CUDs, func(cud istructs.ICUDRow) error {
+		cudTypeKind := cmd.iWorkspace.Type(cud.QName()).Kind()
+		if cudTypeKind == appdef.TypeKind_CRecord || cudTypeKind == appdef.TypeKind_WRecord || cudTypeKind == appdef.TypeKind_GRecord {
+			// skip containers
+			return nil
+		}
+		if cmd.iWorkspace.Type(cud.QName()) == appdef.NullType {
+			return coreutils.NewHTTPErrorf(http.StatusBadRequest, fmt.Errorf("doc %s mentioned in resulting CUDs does not exist in the workspace %s",
+				cud.QName(), cmd.wsDesc.AsQName(authnz.Field_WSKind)))
+		}
+		return nil
+	})
 }
 
 func parseCUDs(_ context.Context, work interface{}) (err error) {
@@ -721,7 +742,7 @@ func sendResponse(cmd *cmdWorkpiece, handlingError error) {
 		}
 	}
 	if cmd.cmdResult != nil {
-		cmdResult := coreutils.ObjectToMap(cmd.cmdResult, cmd.AppDef())
+		cmdResult := coreutils.ObjectToMap(cmd.cmdResult, cmd.iWorkspace)
 		cmdResultBytes, err := json.Marshal(cmdResult)
 		if err != nil {
 			// notest

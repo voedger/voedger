@@ -29,16 +29,16 @@ type CUDFunc func() istructs.ICUD
 type CmdResultBuilderFunc func() istructs.IObjectBuilder
 type PrincipalsFunc func() []iauthnz.Principal
 type TokenFunc func() string
-type CommandProcessorStateFactory func(ctx context.Context, appStructsFunc AppStructsFunc, partitionIDFunc PartitionIDFunc, wsidFunc WSIDFunc, secretReader isecrets.ISecretReader, cudFunc CUDFunc, principalPayloadFunc PrincipalsFunc, tokenFunc TokenFunc, intentsLimit int, cmdResultBuilderFunc CmdResultBuilderFunc) IHostState
-type SyncActualizerStateFactory func(ctx context.Context, appStructs istructs.IAppStructs, partitionIDFunc PartitionIDFunc, wsidFunc WSIDFunc, n10nFunc N10nFunc, secretReader isecrets.ISecretReader, intentsLimit int) IHostState
-type QueryProcessorStateFactory func(ctx context.Context, appStructs istructs.IAppStructs, partitionIDFunc PartitionIDFunc, wsidFunc WSIDFunc, secretReader isecrets.ISecretReader, principalPayloadFunc PrincipalsFunc, tokenFunc TokenFunc) IHostState
-type AsyncActualizerStateFactory func(ctx context.Context, appStructs istructs.IAppStructs, partitionIDFunc PartitionIDFunc, wsidFunc WSIDFunc, n10nFunc N10nFunc, secretReader isecrets.ISecretReader, intentsLimit, bundlesLimit int,
+type CommandProcessorStateFactory func(ctx context.Context, appStructsFunc AppStructsFunc, iWorkspaceFunc iWorkspaceFunc, partitionIDFunc PartitionIDFunc, wsidFunc WSIDFunc, secretReader isecrets.ISecretReader, cudFunc CUDFunc, principalPayloadFunc PrincipalsFunc, tokenFunc TokenFunc, intentsLimit int, cmdResultBuilderFunc CmdResultBuilderFunc) IHostState
+type SyncActualizerStateFactory func(ctx context.Context, appStructs istructs.IAppStructs, iWorkspaceFunc iWorkspaceFunc, partitionIDFunc PartitionIDFunc, wsidFunc WSIDFunc, n10nFunc N10nFunc, secretReader isecrets.ISecretReader, intentsLimit int) IHostState
+type QueryProcessorStateFactory func(ctx context.Context, appStructs istructs.IAppStructs, iWorkspaceFunc iWorkspaceFunc, partitionIDFunc PartitionIDFunc, wsidFunc WSIDFunc, secretReader isecrets.ISecretReader, principalPayloadFunc PrincipalsFunc, tokenFunc TokenFunc) IHostState
+type AsyncActualizerStateFactory func(ctx context.Context, appStructs istructs.IAppStructs, iWorkspaceFunc iWorkspaceFunc, partitionIDFunc PartitionIDFunc, wsidFunc WSIDFunc, n10nFunc N10nFunc, secretReader isecrets.ISecretReader, intentsLimit, bundlesLimit int,
 	opts ...ActualizerStateOptFunc) IBundledHostState
 
 type eventsFunc func() istructs.IEvents
 type viewRecordsFunc func() istructs.IViewRecords
 type recordsFunc func() istructs.IRecords
-type appDefFunc func() appdef.IAppDef
+type iWorkspaceFunc func() appdef.IWorkspace
 
 type ToJSONOptions struct{ excludedFields map[string]bool }
 type ToJSONOption func(opts *ToJSONOptions)

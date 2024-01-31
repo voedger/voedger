@@ -56,14 +56,14 @@ func WithNonNilsOnly() MapperOpt {
 	}
 }
 
-func FieldsToMap(obj istructs.IRowReader, appDef appdef.IAppDef, optFuncs ...MapperOpt) (res map[string]interface{}) {
+func FieldsToMap(obj istructs.IRowReader, ws appdef.IWorkspace, optFuncs ...MapperOpt) (res map[string]interface{}) {
 	res = map[string]interface{}{}
 
 	qn := obj.AsQName(appdef.SystemField_QName)
 	if qn == appdef.NullQName {
 		return
 	}
-	t := appDef.Type(qn)
+	t := ws.Type(qn)
 
 	opts := &mapperOpts{}
 	for _, optFunc := range optFuncs {
@@ -78,7 +78,7 @@ func FieldsToMap(obj istructs.IRowReader, appDef appdef.IAppDef, optFuncs ...Map
 		}
 		if kind == appdef.DataKind_Record {
 			if v, ok := obj.(istructs.IValue); ok {
-				res[fieldName] = FieldsToMap(v.AsRecord(fieldName), appDef, optFuncs...)
+				res[fieldName] = FieldsToMap(v.AsRecord(fieldName), ws, optFuncs...)
 			} else {
 				panic("DataKind_Record field met -> IValue must be provided")
 			}
@@ -102,16 +102,16 @@ func FieldsToMap(obj istructs.IRowReader, appDef appdef.IAppDef, optFuncs ...Map
 	return res
 }
 
-func ObjectToMap(obj istructs.IObject, appDef appdef.IAppDef, opts ...MapperOpt) (res map[string]interface{}) {
+func ObjectToMap(obj istructs.IObject, ws appdef.IWorkspace, opts ...MapperOpt) (res map[string]interface{}) {
 	if obj.QName() == appdef.NullQName {
 		return map[string]interface{}{}
 	}
-	res = FieldsToMap(obj, appDef, opts...)
+	res = FieldsToMap(obj, ws, opts...)
 	obj.Containers(func(container string) {
 		var childMap map[string]interface{}
 		cont := []map[string]interface{}{}
 		obj.Children(container, func(c istructs.IObject) {
-			childMap = ObjectToMap(c, appDef, opts...)
+			childMap = ObjectToMap(c, ws, opts...)
 			cont = append(cont, childMap)
 		})
 		res[container] = cont

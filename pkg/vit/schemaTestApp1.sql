@@ -6,6 +6,8 @@ APPLICATION app1();
 ALTERABLE WORKSPACE test_wsWS_another (
 	DESCRIPTOR test_ws_another ();
 
+	TABLE docInAnotherWS INHERITS CDoc();
+
 	EXTENSION ENGINE BUILTIN (
 		COMMAND testCmd();
 	);

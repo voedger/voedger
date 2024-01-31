@@ -14,10 +14,10 @@ import (
 )
 
 type recordsStorage struct {
-	recordsFunc recordsFunc
-	cudFunc     CUDFunc
-	appDefFunc  appDefFunc
-	wsidFunc    WSIDFunc
+	recordsFunc    recordsFunc
+	cudFunc        CUDFunc
+	iWorkspaceFunc iWorkspaceFunc
+	wsidFunc       WSIDFunc
 }
 
 func (s *recordsStorage) NewKeyBuilder(entity appdef.QName, _ istructs.IStateKeyBuilder) istructs.IStateKeyBuilder {
@@ -115,7 +115,7 @@ func (s *recordsStorage) ProvideValueBuilderForUpdate(_ istructs.IStateKeyBuilde
 	return &recordsValueBuilder{rw: s.cudFunc().Update(existingValue.AsRecord(""))}
 }
 func (s *recordsStorage) ToJSON(sv istructs.IStateValue, _ ...interface{}) (string, error) {
-	obj := coreutils.FieldsToMap(sv, s.appDefFunc())
+	obj := coreutils.FieldsToMap(sv, s.iWorkspaceFunc())
 	bb, err := json.Marshal(&obj)
 	return string(bb), err
 }

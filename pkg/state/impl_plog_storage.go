@@ -16,7 +16,7 @@ import (
 type pLogStorage struct {
 	ctx             context.Context
 	eventsFunc      eventsFunc
-	appDefFunc      appDefFunc
+	iWorkspaceFunc  iWorkspaceFunc
 	partitionIDFunc PartitionIDFunc
 }
 
@@ -54,10 +54,10 @@ func (s *pLogStorage) toJSON(sv istructs.IStateValue, _ ...interface{}) (string,
 	value := sv.(*pLogValue)
 	obj := make(map[string]interface{})
 	obj["QName"] = value.event.QName().String()
-	obj["ArgumentObject"] = coreutils.ObjectToMap(value.event.ArgumentObject(), s.appDefFunc())
+	obj["ArgumentObject"] = coreutils.ObjectToMap(value.event.ArgumentObject(), s.iWorkspaceFunc())
 	cc := make([]map[string]interface{}, 0)
 	value.event.CUDs(func(rec istructs.ICUDRow) {
-		cudRowMap := cudRowToMap(rec, s.appDefFunc)
+		cudRowMap := cudRowToMap(rec, s.iWorkspaceFunc)
 		cc = append(cc, cudRowMap)
 	})
 	obj["CUDs"] = cc

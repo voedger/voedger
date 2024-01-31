@@ -18,6 +18,9 @@ func SimpleWSIDFunc(wsid istructs.WSID) WSIDFunc {
 func SimplePartitionIDFunc(partitionID istructs.PartitionID) PartitionIDFunc {
 	return func() istructs.PartitionID { return partitionID }
 }
+func SimpleIWorkspaceFunc(iws appdef.IWorkspace) iWorkspaceFunc {
+	return func() appdef.IWorkspace { return iws }
+}
 func WithExcludeFields(fieldNames ...string) ToJSONOption {
 	return func(opts *ToJSONOptions) {
 		for _, name := range fieldNames {
@@ -50,8 +53,8 @@ func put(fieldName string, kind appdef.DataKind, rr istructs.IRowReader, rw istr
 	}
 }
 
-func cudRowToMap(rec istructs.ICUDRow, cache appDefFunc) (res map[string]interface{}) {
-	res = coreutils.FieldsToMap(rec, cache())
+func cudRowToMap(rec istructs.ICUDRow, wsFunc iWorkspaceFunc) (res map[string]interface{}) {
+	res = coreutils.FieldsToMap(rec, wsFunc())
 	res["IsNew"] = rec.IsNew()
 	return res
 }

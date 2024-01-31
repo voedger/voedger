@@ -12,7 +12,9 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys/authnz"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 	it "github.com/voedger/voedger/pkg/vit"
@@ -173,7 +175,7 @@ func Test503OnNoQueryProcessorsAvailable(t *testing.T) {
 	}
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
-
+	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
 	body := `{"args": {"Input": "world"},"elements": [{"fields": ["Res"]}]}`
 	postDone := sync.WaitGroup{}
 	sys := vit.GetSystemPrincipal(istructs.AppQName_test1_app1)
@@ -181,12 +183,13 @@ func Test503OnNoQueryProcessorsAvailable(t *testing.T) {
 		postDone.Add(1)
 		go func() {
 			defer postDone.Done()
-			vit.PostApp(istructs.AppQName_test1_app1, 1, "q.app1pkg.MockQry", body, coreutils.WithAuthorizeBy(sys.Token))
+			vit.PostWS(ws, "q.app1pkg.MockQry", body, coreutils.WithAuthorizeBy(sys.Token))
 		}()
 
 		<-funcStarted
 	}
 
+	// one more request to any WSID -> 503 service unavailable
 	vit.PostApp(istructs.AppQName_test1_app1, 1, "q.sys.Echo", body, coreutils.Expect503(), coreutils.WithAuthorizeBy(sys.Token))
 
 	for i := 0; i < int(vit.VVMConfig.NumQueryProcessors); i++ {
@@ -249,7 +252,7 @@ func TestIsActiveValidation(t *testing.T) {
 	})
 }
 
-func TestTakeFuncsFromWorkspace(t *testing.T) {
+func TestTakeQNamesFromWorkspace(t *testing.T) {
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
@@ -286,6 +289,32 @@ func TestTakeFuncsFromWorkspace(t *testing.T) {
 			anotherWS := vit.WS(istructs.AppQName_test1_app1, "test_ws_another")
 			body := fmt.Sprintf(`{"args":{"Arg1":%d}}`, 1)
 			vit.PostWS(anotherWS, "q.app1pkg.testCmd", body, coreutils.Expect400("app1pkg.testCmd is not a query"))
+		})
+	})
+
+	t.Run("CUDs QNames", func(t *testing.T) {
+		t.Run("CUD in the request", func(t *testing.T) {
+			anotherWS := vit.WS(istructs.AppQName_test1_app1, "test_ws_another")
+			body := `{"cuds":[{"fields":{"sys.ID": 1,"sys.QName":"app1pkg.options"}}]}`
+			// try to insert a QName that does not exist in the workspace -> 403 foribidden ??? or 400 bad request ???
+			vit.PostWS(anotherWS, "c.sys.CUD", body, coreutils.Expect400("app1pkg.options", "does not exist in the workspace app1pkg.test_ws_another"))
+		})
+		t.Run("CUD produced by a command", func(t *testing.T) {
+			it.MockCmdExec = func(input string, args istructs.ExecCommandArgs) error {
+				kb, err := args.State.KeyBuilder(state.Record, appdef.NewQName("app1pkg", "docInAnotherWS"))
+				if err != nil {
+					return err
+				}
+				vb, err := args.Intents.NewValue(kb)
+				if err != nil {
+					return err
+				}
+				vb.PutRecordID(appdef.SystemField_ID, 1)
+				return nil
+			}
+			body := `{"args":{"Input":"Str"}}`
+			ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+			vit.PostWS(ws, "c.app1pkg.MockCmd", body, coreutils.Expect400("app1pkg.docInAnotherWS", "does not exist in the workspace app1pkg.test_ws"))
 		})
 	})
 }

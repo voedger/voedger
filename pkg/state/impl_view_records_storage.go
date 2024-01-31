@@ -17,7 +17,7 @@ import (
 type viewRecordsStorage struct {
 	ctx             context.Context
 	viewRecordsFunc viewRecordsFunc
-	appDefFunc      appDefFunc
+	iWorkspaceFunc  iWorkspaceFunc
 	wsidFunc        WSIDFunc
 	n10nFunc        N10nFunc
 }
@@ -139,7 +139,7 @@ func (s *viewRecordsStorage) toJSON(sv istructs.IStateValue, opts ...interface{}
 	// 		}
 	// 	})
 
-	obj := coreutils.FieldsToMap(sv, s.appDefFunc(), coreutils.Filter(func(n string, _ appdef.DataKind) bool {
+	obj := coreutils.FieldsToMap(sv, s.iWorkspaceFunc(), coreutils.Filter(func(n string, _ appdef.DataKind) bool {
 		return !options.excludedFields[n]
 	}))
 

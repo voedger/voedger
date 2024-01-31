@@ -138,7 +138,7 @@ func TestWLogStorage_GetBatch(t *testing.T) {
 	})
 }
 func TestWLogStorage_ToJSON(t *testing.T) {
-	s := &wLogStorage{appDefFunc: func() appdef.IAppDef { return nil }}
+	s := &wLogStorage{iWorkspaceFunc: func() appdef.IWorkspace { return nil }}
 	require := require.New(t)
 	eventError := &mockEventError{}
 	eventError.

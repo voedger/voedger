@@ -18,10 +18,10 @@ func TestBundledHostState_BasicUsage(t *testing.T) {
 	require := require.New(t)
 	factory := ProvideAsyncActualizerStateFactory()
 	n10nFn := func(view appdef.QName, wsid istructs.WSID, offset istructs.Offset) {}
-	appStructs := mockedAppStructs()
+	appStructs, iws := mockedAppStructs()
 
 	// Create instance of async actualizer state
-	aaState := factory(context.Background(), appStructs, nil, SimpleWSIDFunc(istructs.WSID(1)), n10nFn, nil, 2, 1)
+	aaState := factory(context.Background(), appStructs, SimpleIWorkspaceFunc(iws), nil, SimpleWSIDFunc(istructs.WSID(1)), n10nFn, nil, 2, 1)
 
 	// Declare simple extension
 	extension := func(state istructs.IState, intents istructs.IIntents) {
@@ -48,7 +48,7 @@ func TestBundledHostState_BasicUsage(t *testing.T) {
 	_ = aaState.FlushBundles()
 }
 
-func mockedAppStructs() istructs.IAppStructs {
+func mockedAppStructs() (istructs.IAppStructs, appdef.IWorkspace) {
 	mv := &mockValue{}
 	mv.
 		On("AsInt64", "vFld").Return(int64(10)).
@@ -75,13 +75,19 @@ func mockedAppStructs() istructs.IAppStructs {
 		On("NewValueBuilder", testViewRecordQName1).Return(mvb2).Once().
 		On("PutBatch", istructs.WSID(1), mock.AnythingOfType("[]istructs.ViewKV")).Return(nil)
 
-	appDef := appdef.New()
-	view := appDef.AddView(testViewRecordQName1)
+	appDefBuilder := appdef.New()
+	view := appDefBuilder.AddView(testViewRecordQName1)
 	view.KeyBuilder().PartKeyBuilder().AddField("pkFld", appdef.DataKind_int64)
 	view.KeyBuilder().ClustColsBuilder().AddField("ccFld", appdef.DataKind_string)
 	view.ValueBuilder().
 		AddField("vFld", appdef.DataKind_int64, true).
 		AddField(ColOffset, appdef.DataKind_int64, true)
+	ws := appDefBuilder.AddWorkspace(testWSQName)
+	ws.AddType(testViewRecordQName1)
+	appDef, err := appDefBuilder.Build()
+	if err != nil {
+		panic(err)
+	}
 
 	appStructs := &mockAppStructs{}
 	appStructs.
@@ -89,7 +95,7 @@ func mockedAppStructs() istructs.IAppStructs {
 		On("ViewRecords").Return(viewRecords).
 		On("Events").Return(&nilEvents{}).
 		On("Records").Return(&nilRecords{})
-	return appStructs
+	return appStructs, ws
 }
 
 func TestAsyncActualizerState_BasicUsage_Old(t *testing.T) {
@@ -130,7 +136,8 @@ func TestAsyncActualizerState_BasicUsage_Old(t *testing.T) {
 		On("ViewRecords").Return(viewRecords).
 		On("Events").Return(&nilEvents{}).
 		On("Records").Return(&nilRecords{})
-	s := ProvideAsyncActualizerStateFactory()(context.Background(), appStructs, nil, SimpleWSIDFunc(istructs.WSID(1)), n10nFn, nil, 2, 1)
+
+	s := ProvideAsyncActualizerStateFactory()(context.Background(), appStructs, SimpleIWorkspaceFunc(&nilIWorkspace{}), nil, SimpleWSIDFunc(istructs.WSID(1)), n10nFn, nil, 2, 1)
 
 	//Create key
 	kb, err := s.KeyBuilder(View, testViewRecordQName1)
@@ -437,6 +444,7 @@ func TestAsyncActualizerState_Read(t *testing.T) {
 		touched := false
 
 		appDef := appdef.New() // Def() must return NullDef
+		ws := appDef.AddWorkspace(testWSQName)
 
 		viewRecords := &mockViewRecords{}
 		viewRecords.
@@ -460,7 +468,7 @@ func TestAsyncActualizerState_Read(t *testing.T) {
 			On("ViewRecords").Return(viewRecords).
 			On("Records").Return(&nilRecords{}).
 			On("Events").Return(&nilEvents{})
-		s := ProvideAsyncActualizerStateFactory()(context.Background(), appStructs, nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, 10, 10)
+		s := ProvideAsyncActualizerStateFactory()(context.Background(), appStructs, SimpleIWorkspaceFunc(ws), nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, 10, 10)
 		kb1, err := s.KeyBuilder(View, testViewRecordQName1)
 		require.NoError(err)
 		kb2, err := s.KeyBuilder(View, testViewRecordQName2)
@@ -484,6 +492,7 @@ func TestAsyncActualizerState_Read(t *testing.T) {
 		require := require.New(t)
 		touched := false
 		appDef := appdef.New() // Def() must return NullDef
+		ws := appDef.AddWorkspace(testWSQName)
 		viewRecords := &mockViewRecords{}
 		viewRecords.
 			On("KeyBuilder", testViewRecordQName1).Return(&nilKeyBuilder{}).
@@ -497,7 +506,7 @@ func TestAsyncActualizerState_Read(t *testing.T) {
 			On("ViewRecords").Return(viewRecords).
 			On("Records").Return(&nilRecords{}).
 			On("Events").Return(&nilEvents{})
-		s := ProvideAsyncActualizerStateFactory()(context.Background(), appStructs, nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, 10, 10)
+		s := ProvideAsyncActualizerStateFactory()(context.Background(), appStructs, SimpleIWorkspaceFunc(ws), nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, 10, 10)
 		kb1, err := s.KeyBuilder(View, testViewRecordQName1)
 		require.NoError(err)
 		kb2, err := s.KeyBuilder(View, testViewRecordQName2)

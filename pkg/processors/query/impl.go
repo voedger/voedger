@@ -188,9 +188,9 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 			qw.wsDesc, err = qw.appStructs.Records().GetSingleton(qw.msg.WSID(), authnz.QNameCDocWorkspaceDescriptor)
 			return err
 		}),
-		operator("check cdoc.sys.WorkspaceDescriptor existense", func(ctx context.Context, qw *queryWork) (err error) {
-			if qw.wsDesc.QName() == appdef.NullQName {
-				// TODO: ws init check is simpl here comparing to command processor because we need just IWorkspace to get the query from it. No WSDesc -> no IWorkspace -> need to check WSDesc existense
+		operator("check cdoc.sys.WorkspaceDescriptor existence", func(ctx context.Context, qw *queryWork) (err error) {
+			if !coreutils.IsDummyWS(qw.msg.WSID()) && qw.wsDesc.QName() == appdef.NullQName {
+				// TODO: ws init check is simpl here comparing to command processor because we need just IWorkspace to get the query from it. No WSDesc -> no IWorkspace -> need to check WSDesc existence
 				return processors.ErrWSNotInited
 			}
 			return nil
@@ -203,7 +203,7 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 				}
 			}
 			if qw.wsDesc.QName() == appdef.NullQName {
-				// TODO: query prcessor currently does not check workspace initialization
+				// TODO: query prcessor currently does not check the workspace active state
 				return nil
 			}
 			if qw.wsDesc.AsInt32(authnz.Field_Status) != int32(authnz.WorkspaceStatus_Active) {
@@ -212,11 +212,18 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 			return nil
 		}),
 		operator("get IWorkspace", func(ctx context.Context, qw *queryWork) (err error) {
-			qw.iWorkspace = qw.appStructs.AppDef().WorkspaceByDescriptor(qw.wsDesc.AsQName(authnz.Field_WSKind))
+			if qw.wsDesc.QName() != appdef.NullQName { // otherwise the workspace is dummy
+				qw.iWorkspace = qw.appStructs.AppDef().WorkspaceByDescriptor(qw.wsDesc.AsQName(authnz.Field_WSKind))
+			}
 			return nil
 		}),
 		operator("get IQuery", func(ctx context.Context, qw *queryWork) (err error) {
-			queryType := qw.iWorkspace.Type(qw.msg.QName())
+			var queryType appdef.IType
+			if coreutils.IsDummyWS(qw.msg.WSID()) {
+				queryType = qw.appStructs.AppDef().Type(qw.msg.QName())
+			} else {
+				queryType = qw.iWorkspace.Type(qw.msg.QName())
+			}
 			if queryType.Kind() == appdef.TypeKind_null {
 				return coreutils.NewHTTPErrorf(http.StatusBadRequest, fmt.Sprintf("query %s does not exist in workspace %s", qw.msg.QName(), qw.iWorkspace.QName()))
 			}

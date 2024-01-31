@@ -124,7 +124,7 @@ func TestPLogStorage_Get(t *testing.T) {
 	})
 }
 func TestPLogStorage_ToJSON(t *testing.T) {
-	s := &pLogStorage{appDefFunc: func() appdef.IAppDef { return nil }}
+	s := &pLogStorage{iWorkspaceFunc: func() appdef.IAppDef { return nil }}
 	require := require.New(t)
 	eventError := &mockEventError{}
 	eventError.
