@@ -79,9 +79,8 @@ func processSyncOp(wo *WiredOperator, work interface{}) interface{} {
 
 	if err != nil {
 		return err
-	} else {
-		return work
 	}
+	return work
 }
 
 func (p *SyncPipeline) Close() {
