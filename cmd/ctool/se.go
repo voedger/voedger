@@ -338,8 +338,10 @@ func deployDbmsDockerStack(cluster *clusterType) error {
 		return err
 	}
 
+	s := "Use datacenter:"
+
 	// prepare DBNode1
-	loggerInfo("Use datacenter: ", conf.DBNode1DC)
+	loggerInfo(s, conf.DBNode1DC)
 	loggerInfo("Db node prepare ", conf.DBNode1)
 	if err := newScriptExecuter(cluster.sshKey, conf.DBNode1).
 		run("db-node-prepare.sh", conf.DBNode1Name, conf.DBNode1DC); err != nil {
@@ -348,7 +350,7 @@ func deployDbmsDockerStack(cluster *clusterType) error {
 	}
 
 	// prepare DBNode2
-	loggerInfo("Use datacenter: ", conf.DBNode2DC)
+	loggerInfo(s, conf.DBNode2DC)
 	loggerInfo("Prepare node", conf.DBNode2)
 	if err := newScriptExecuter(cluster.sshKey, conf.DBNode2).
 		run("db-node-prepare.sh", conf.DBNode2Name, conf.DBNode2DC); err != nil {
@@ -357,7 +359,7 @@ func deployDbmsDockerStack(cluster *clusterType) error {
 	}
 
 	// prepare DBNode3
-	loggerInfo("Use datacenter: ", conf.DBNode3DC)
+	loggerInfo(s, conf.DBNode3DC)
 	loggerInfo("Prepare node", conf.DBNode3)
 	if err := newScriptExecuter(cluster.sshKey, conf.DBNode3).
 		run("db-node-prepare.sh", conf.DBNode3Name, conf.DBNode3DC); err != nil {
@@ -633,17 +635,6 @@ func replaceSeAppNode(cluster *clusterType) error {
 func hostIsAvailable(cluster *clusterType, host string) error {
 	if err := newScriptExecuter(cluster.sshKey, host).
 		run("host-check.sh", host, "only-ping"); err != nil {
-		return err
-	}
-	return nil
-}
-
-// node is live
-// pinging the address of the node
-// checks that the node is alive in the Swarm cluster
-func nodeIsLive(node *nodeType) error {
-	if err := newScriptExecuter(node.cluster.sshKey, node.nodeName()).
-		run("host-check.sh", node.nodeName()); err != nil {
 		return err
 	}
 	return nil

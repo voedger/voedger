@@ -48,7 +48,8 @@ func formatArgs(args []interface{}) string {
 
 func loggerError(args ...interface{}) {
 	if !verbose() {
-		fmt.Println(fmt.Sprintf("%s %s", red("Error:"), formatArgs(args)))
+		s := fmt.Sprintf("%s %s", red("Error:"), formatArgs(args))
+		fmt.Println(s)
 	}
 	logger.Error(args...)
 }
