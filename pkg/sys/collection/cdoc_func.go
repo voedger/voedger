@@ -25,7 +25,7 @@ func provideQryCDoc(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDef
 		execQryCDoc(appDefBuilder)))
 }
 
-func execQryCDoc(appDef appdef.IAppDef) istructsmem.ExecQueryClosure {
+func execQryCDoc(iWorkspace appdef.IWorkspace) istructsmem.ExecQueryClosure {
 	return func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 		rkb, err := args.State.KeyBuilder(state.Record, appdef.NullQName)
 		if err != nil {
@@ -71,11 +71,11 @@ func execQryCDoc(appDef appdef.IAppDef) istructsmem.ExecQueryClosure {
 		var bytes []byte
 		var obj map[string]interface{}
 		refs := make(map[istructs.RecordID]bool)
-		obj, err = convert(doc, appDef, refs, istructs.NullRecordID)
+		obj, err = convert(doc, iWorkspace, refs, istructs.NullRecordID)
 		if err != nil {
 			return
 		}
-		err = addRefs(obj, refs, args.State, appDef)
+		err = addRefs(obj, refs, args.State, iWorkspace)
 		if err != nil {
 			return
 		}
@@ -86,11 +86,11 @@ func execQryCDoc(appDef appdef.IAppDef) istructsmem.ExecQueryClosure {
 		return callback(&cdocObject{data: string(bytes)})
 	}
 }
-func convert(doc istructs.IObject, appDef appdef.IAppDef, refs map[istructs.RecordID]bool, parent istructs.RecordID) (obj map[string]interface{}, err error) {
+func convert(doc istructs.IObject, iWorkspace appdef.IWorkspace, refs map[istructs.RecordID]bool, parent istructs.RecordID) (obj map[string]interface{}, err error) {
 	if doc == nil {
 		return nil, nil
 	}
-	obj = coreutils.FieldsToMap(doc, appDef, coreutils.Filter(func(fieldName string, kind appdef.DataKind) bool {
+	obj = coreutils.FieldsToMap(doc, iWorkspace, coreutils.Filter(func(fieldName string, kind appdef.DataKind) bool {
 		if skipField(fieldName) {
 			return false
 		}
@@ -109,7 +109,7 @@ func convert(doc istructs.IObject, appDef appdef.IAppDef, refs map[istructs.Reco
 		doc.Children(container, func(c istructs.IObject) {
 			var childObj map[string]interface{}
 			if err == nil {
-				childObj, err = convert(c.(*collectionObject), appDef, refs, doc.AsRecord().ID())
+				childObj, err = convert(c.(*collectionObject), iWorkspace, refs, doc.AsRecord().ID())
 				if err == nil {
 					list = append(list, childObj)
 				}
@@ -122,7 +122,7 @@ func convert(doc istructs.IObject, appDef appdef.IAppDef, refs map[istructs.Reco
 
 	return obj, nil
 }
-func addRefs(obj map[string]interface{}, refs map[istructs.RecordID]bool, s istructs.IState, appDef appdef.IAppDef) error {
+func addRefs(obj map[string]interface{}, refs map[istructs.RecordID]bool, s istructs.IState, iWorkspace appdef.IWorkspace) error {
 	if len(refs) == 0 {
 		return nil
 	}
@@ -151,7 +151,7 @@ func addRefs(obj map[string]interface{}, refs map[istructs.RecordID]bool, s istr
 		recKey := strconv.FormatInt(int64(recordId), DEC)
 		if _, ok := recmap[recKey]; !ok {
 			child := newCollectionObject(rkv.AsRecord(""))
-			obj, err := convert(child, appDef, nil, istructs.NullRecordID)
+			obj, err := convert(child, iWorkspace, nil, istructs.NullRecordID)
 			if err != nil {
 				return err
 			}
