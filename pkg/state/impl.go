@@ -18,13 +18,6 @@ func SimpleWSIDFunc(wsid istructs.WSID) WSIDFunc {
 func SimplePartitionIDFunc(partitionID istructs.PartitionID) PartitionIDFunc {
 	return func() istructs.PartitionID { return partitionID }
 }
-func WithExcludeFields(fieldNames ...string) ToJSONOption {
-	return func(opts *ToJSONOptions) {
-		for _, name := range fieldNames {
-			opts.excludedFields[name] = true
-		}
-	}
-}
 func put(fieldName string, kind appdef.DataKind, rr istructs.IRowReader, rw istructs.IRowWriter) {
 	switch kind {
 	case appdef.DataKind_int32:

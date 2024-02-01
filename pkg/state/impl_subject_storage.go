@@ -5,8 +5,6 @@
 package state
 
 import (
-	"encoding/json"
-
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -22,8 +20,7 @@ func (s *subjectStorage) NewKeyBuilder(_ appdef.QName, _ istructs.IStateKeyBuild
 }
 func (s *subjectStorage) Get(_ istructs.IStateKeyBuilder) (istructs.IStateValue, error) {
 	ssv := &requestSubjectValue{
-		token:      s.tokenFunc(),
-		toJSONFunc: s.toJSON,
+		token: s.tokenFunc(),
 	}
 	for _, principal := range s.principalsFunc() {
 		if principal.Kind == iauthnz.PrincipalKind_Device || principal.Kind == iauthnz.PrincipalKind_User {
@@ -38,18 +35,4 @@ func (s *subjectStorage) Get(_ istructs.IStateKeyBuilder) (istructs.IStateValue,
 		}
 	}
 	return ssv, nil
-}
-
-func (s *subjectStorage) toJSON(sv istructs.IStateValue, _ ...interface{}) (string, error) {
-	value := sv.(*requestSubjectValue)
-	obj := make(map[string]interface{})
-	obj[Field_ProfileWSID] = value.profileWSID
-	obj[Field_Kind] = value.kind
-	obj[Field_Name] = value.name
-	obj[Field_Token] = value.token
-	bb, err := json.Marshal(obj)
-	if err != nil {
-		return "", err
-	}
-	return string(bb), nil
 }
