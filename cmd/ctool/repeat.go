@@ -30,8 +30,7 @@ func repeat(cmd *cobra.Command, arg []string) error {
 	var err error
 
 	if !cluster.existsNodeError() && (cluster.Cmd == nil || cluster.Cmd.isEmpty()) {
-		loggerInfo("no active command found to repeat")
-		return nil
+		return ErrNoIncompleteCommandWasFoundToRepeat
 	}
 
 	err = cluster.checkVersion()

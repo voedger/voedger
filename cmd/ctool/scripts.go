@@ -110,7 +110,7 @@ func (se *scriptExecuterType) run(scriptName string, args ...string) error {
 			Run(stdoutWriter, stderrWriter)
 	}
 
-	if err != nil {
+	if err != nil && verbose() {
 		loggerError(fmt.Errorf("the error of the script %s: %w", scriptName, err).Error())
 	}
 	return err

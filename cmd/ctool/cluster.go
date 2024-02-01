@@ -625,7 +625,7 @@ func (c *clusterType) applyCmd(cmd *cmdType) error {
 		}
 
 		if !dryRun {
-			if err := nodeIsLive(node); err == nil {
+			if err := nodeIsDown(node); err != nil {
 				return fmt.Errorf(errCannotReplaceALiveNode, oldAddr, ErrCommandCannotBeExecuted)
 			}
 
@@ -873,7 +873,7 @@ func (c *clusterType) existsNodeError() bool {
 
 func (c *clusterType) checkVersion() error {
 
-	loggerInfo("ctool version: ", version)
+	loggerInfo("Ctool version: ", version)
 
 	var clusterVersion string
 
@@ -887,11 +887,11 @@ func (c *clusterType) checkVersion() error {
 
 	// The cluster configuration is still missing
 	if clusterVersion == "" {
-		loggerInfo("cluster version is missing")
+		loggerInfo("Cluster version is missing")
 		return nil
 	}
 
-	loggerInfo("cluster version: ", clusterVersion)
+	loggerInfo("Cluster version: ", clusterVersion)
 
 	vr := compareVersions(version, clusterVersion)
 	if vr == 1 {
