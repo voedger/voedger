@@ -515,8 +515,9 @@ func newExecQueryArgs(data coreutils.MapObject, wsid istructs.WSID, qw *queryWor
 	return istructs.ExecQueryArgs{
 		PrepareArgs: istructs.PrepareArgs{
 			ArgumentObject: requestArgs,
-			Workspace:      wsid,
+			WSID:           wsid,
 			Workpiece:      qw,
+			Workspace:     qw.iWorkspace,
 		},
 	}, nil
 }

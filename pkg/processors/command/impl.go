@@ -182,8 +182,9 @@ func (cmdProc *cmdProc) buildCommandArgs(_ context.Context, work interface{}) (e
 		CommandPrepareArgs: istructs.CommandPrepareArgs{
 			PrepareArgs: istructs.PrepareArgs{
 				ArgumentObject: cmd.argsObject,
-				Workspace:      cmd.cmdMes.WSID(),
+				WSID:           cmd.cmdMes.WSID(),
 				Workpiece:      work,
+				Workspace:     cmd.iWorkspace,
 			},
 			ArgumentUnloggedObject: cmd.unloggedArgsObject,
 		},

@@ -54,7 +54,7 @@ func provideQryInitiateResetPasswordByEmailExec(itokens itokens.ITokens, federat
 			return coreutils.NewHTTPError(http.StatusBadRequest, err)
 		}
 
-		cdocLoginID, err := GetCDocLoginID(args.State, args.Workspace, loginAppStr, login)
+		cdocLoginID, err := GetCDocLoginID(args.State, args.WSID, loginAppStr, login)
 		if err != nil {
 			return err
 		}
@@ -130,7 +130,7 @@ func cmdResetPasswordByEmailExec(args istructs.ExecCommandArgs) (err error) {
 	appName := args.ArgumentObject.AsString(authnz.Field_AppName)
 	login := email
 
-	return ChangePassword(login, args.State, args.Intents, args.Workspace, appName, newPwd)
+	return ChangePassword(login, args.State, args.Intents, args.WSID, appName, newPwd)
 }
 
 func (r *result) AsString(string) string {

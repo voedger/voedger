@@ -56,7 +56,7 @@ func provideIssuePrincipalTokenExec(itokens itokens.ITokens) istructsmem.ExecQue
 		// 	return err
 		// }
 
-		cdocLogin, doesLoginExist, err := GetCDocLogin(login, args.State, args.Workspace, appName)
+		cdocLogin, doesLoginExist, err := GetCDocLogin(login, args.State, args.WSID, appName)
 		if err != nil {
 			return err
 		}
