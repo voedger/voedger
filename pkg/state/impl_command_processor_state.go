@@ -11,7 +11,7 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
-func implProvideCommandProcessorState(ctx context.Context, appStructsFunc AppStructsFunc, iWorkspaceFunc iWorkspaceFunc, partitionIDFunc PartitionIDFunc,
+func implProvideCommandProcessorState(ctx context.Context, appStructsFunc AppStructsFunc, partitionIDFunc PartitionIDFunc,
 	wsidFunc WSIDFunc, secretReader isecrets.ISecretReader, cudFunc CUDFunc, principalsFunc PrincipalsFunc,
 	tokenFunc TokenFunc, intentsLimit int, cmdResultBuilderFunc CmdResultBuilderFunc) IHostState {
 	bs := newHostState("CommandProcessor", intentsLimit)
@@ -19,28 +19,24 @@ func implProvideCommandProcessorState(ctx context.Context, appStructsFunc AppStr
 	bs.addStorage(View, &viewRecordsStorage{
 		ctx:             ctx,
 		viewRecordsFunc: func() istructs.IViewRecords { return appStructsFunc().ViewRecords() },
-		iWorkspaceFunc:  iWorkspaceFunc,
 		wsidFunc:        wsidFunc,
 	}, S_GET|S_GET_BATCH)
 
 	bs.addStorage(Record, &recordsStorage{
-		recordsFunc:    func() istructs.IRecords { return appStructsFunc().Records() },
-		cudFunc:        cudFunc,
-		iWorkspaceFunc: iWorkspaceFunc,
-		wsidFunc:       wsidFunc,
+		recordsFunc: func() istructs.IRecords { return appStructsFunc().Records() },
+		cudFunc:     cudFunc,
+		wsidFunc:    wsidFunc,
 	}, S_GET|S_GET_BATCH|S_INSERT|S_UPDATE)
 
 	bs.addStorage(WLog, &wLogStorage{
-		ctx:            ctx,
-		eventsFunc:     func() istructs.IEvents { return appStructsFunc().Events() },
-		iWorkspaceFunc: iWorkspaceFunc,
-		wsidFunc:       wsidFunc,
+		ctx:        ctx,
+		eventsFunc: func() istructs.IEvents { return appStructsFunc().Events() },
+		wsidFunc:   wsidFunc,
 	}, S_GET)
 
 	bs.addStorage(PLog, &pLogStorage{
 		ctx:             ctx,
 		eventsFunc:      func() istructs.IEvents { return appStructsFunc().Events() },
-		iWorkspaceFunc:  iWorkspaceFunc,
 		partitionIDFunc: partitionIDFunc,
 	}, S_GET)
 

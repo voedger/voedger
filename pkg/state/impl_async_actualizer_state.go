@@ -25,7 +25,7 @@ type actualizerStateOpts struct {
 	messages chan smtptest.Message
 }
 
-func implProvideAsyncActualizerState(ctx context.Context, appStructs istructs.IAppStructs, iWorkspaceFunc iWorkspaceFunc, partitionIDFunc PartitionIDFunc, wsidFunc WSIDFunc, n10nFunc N10nFunc, secretReader isecrets.ISecretReader, intentsLimit, bundlesLimit int,
+func implProvideAsyncActualizerState(ctx context.Context, appStructs istructs.IAppStructs, partitionIDFunc PartitionIDFunc, wsidFunc WSIDFunc, n10nFunc N10nFunc, secretReader isecrets.ISecretReader, intentsLimit, bundlesLimit int,
 	optFuncs ...ActualizerStateOptFunc) IBundledHostState {
 
 	opts := &actualizerStateOpts{}
@@ -41,28 +41,24 @@ func implProvideAsyncActualizerState(ctx context.Context, appStructs istructs.IA
 	state.addStorage(View, &viewRecordsStorage{
 		ctx:             ctx,
 		viewRecordsFunc: func() istructs.IViewRecords { return appStructs.ViewRecords() },
-		iWorkspaceFunc:  iWorkspaceFunc,
 		wsidFunc:        wsidFunc,
 		n10nFunc:        n10nFunc,
 	}, S_GET|S_GET_BATCH|S_READ|S_INSERT|S_UPDATE)
 
 	state.addStorage(Record, &recordsStorage{
-		recordsFunc:    func() istructs.IRecords { return appStructs.Records() },
-		iWorkspaceFunc: iWorkspaceFunc,
-		wsidFunc:       wsidFunc,
+		recordsFunc: func() istructs.IRecords { return appStructs.Records() },
+		wsidFunc:    wsidFunc,
 	}, S_GET|S_GET_BATCH)
 
 	state.addStorage(WLog, &wLogStorage{
-		ctx:            ctx,
-		eventsFunc:     func() istructs.IEvents { return appStructs.Events() },
-		iWorkspaceFunc: iWorkspaceFunc,
-		wsidFunc:       wsidFunc,
+		ctx:        ctx,
+		eventsFunc: func() istructs.IEvents { return appStructs.Events() },
+		wsidFunc:   wsidFunc,
 	}, S_GET|S_READ)
 
 	state.addStorage(PLog, &pLogStorage{
 		ctx:             ctx,
 		eventsFunc:      func() istructs.IEvents { return appStructs.Events() },
-		iWorkspaceFunc:  iWorkspaceFunc,
 		partitionIDFunc: partitionIDFunc,
 	}, S_GET|S_READ)
 

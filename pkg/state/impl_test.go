@@ -114,10 +114,6 @@ type nilAppStructs struct {
 	istructs.IAppStructs
 }
 
-type nilIWorkspace struct {
-	appdef.IWorkspace
-}
-
 func (s *nilAppStructs) AppDef() appdef.IAppDef             { return nil }
 func (s *nilAppStructs) Events() istructs.IEvents           { return nil }
 func (s *nilAppStructs) Records() istructs.IRecords         { return nil }

@@ -20,7 +20,7 @@ import (
 
 func TestHttpStorage_BasicUsage(t *testing.T) {
 	require := require.New(t)
-	s := ProvideAsyncActualizerStateFactory()(context.Background(), &nilAppStructs{}, SimpleIWorkspaceFunc(&nilIWorkspace{}), nil, nil, nil, nil, 0, 0)
+	s := ProvideAsyncActualizerStateFactory()(context.Background(), &nilAppStructs{}, nil, nil, nil, nil, 0, 0)
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		require.Equal(http.MethodPost, r.Method)
 		require.Equal("my-value", r.Header.Get("my-header"))
@@ -56,7 +56,7 @@ func TestHttpStorage_BasicUsage(t *testing.T) {
 func TestHttpStorage_Timeout(t *testing.T) {
 	t.Run("Should panic when url not found", func(t *testing.T) {
 		require := require.New(t)
-		s := ProvideAsyncActualizerStateFactory()(context.Background(), &nilAppStructs{}, SimpleIWorkspaceFunc(&nilIWorkspace{}), nil, nil, nil, nil, 0, 0)
+		s := ProvideAsyncActualizerStateFactory()(context.Background(), &nilAppStructs{}, nil, nil, nil, nil, 0, 0)
 		k, err := s.KeyBuilder(Http, appdef.NullQName)
 		require.NoError(err)
 
@@ -64,7 +64,7 @@ func TestHttpStorage_Timeout(t *testing.T) {
 	})
 	t.Run("Should return error on timeout", func(t *testing.T) {
 		require := require.New(t)
-		s := ProvideAsyncActualizerStateFactory()(context.Background(), &nilAppStructs{}, SimpleIWorkspaceFunc(&nilIWorkspace{}), nil, nil, nil, nil, 0, 0)
+		s := ProvideAsyncActualizerStateFactory()(context.Background(), &nilAppStructs{}, nil, nil, nil, nil, 0, 0)
 		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			time.Sleep(time.Millisecond * 200)
 		}))

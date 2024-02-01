@@ -12,10 +12,9 @@ import (
 )
 
 type wLogStorage struct {
-	ctx            context.Context
-	eventsFunc     eventsFunc
-	iWorkspaceFunc iWorkspaceFunc
-	wsidFunc       WSIDFunc
+	ctx        context.Context
+	eventsFunc eventsFunc
+	wsidFunc   WSIDFunc
 }
 
 func (s *wLogStorage) NewKeyBuilder(appdef.QName, istructs.IStateKeyBuilder) istructs.IStateKeyBuilder {

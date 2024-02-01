@@ -14,7 +14,6 @@ import (
 type pLogStorage struct {
 	ctx             context.Context
 	eventsFunc      eventsFunc
-	iWorkspaceFunc  iWorkspaceFunc
 	partitionIDFunc PartitionIDFunc
 }
 
