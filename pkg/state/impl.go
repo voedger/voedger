@@ -9,7 +9,6 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
-	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 func SimpleWSIDFunc(wsid istructs.WSID) WSIDFunc {
@@ -41,10 +40,4 @@ func put(fieldName string, kind appdef.DataKind, rr istructs.IRowReader, rw istr
 	default:
 		panic(fmt.Errorf("illegal state: field - '%s', kind - '%d': %w", fieldName, kind, ErrNotSupported))
 	}
-}
-
-func cudRowToMap(rec istructs.ICUDRow, cache appDefFunc) (res map[string]interface{}) {
-	res = coreutils.FieldsToMap(rec, cache())
-	res["IsNew"] = rec.IsNew()
-	return res
 }
