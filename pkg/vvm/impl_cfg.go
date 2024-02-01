@@ -15,6 +15,7 @@ import (
 	"github.com/voedger/voedger/pkg/iprocbusmem"
 	"github.com/voedger/voedger/pkg/isecretsimpl"
 	"github.com/voedger/voedger/pkg/istorage"
+	"github.com/voedger/voedger/pkg/istorage/mem"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/itokensjwt"
 	commandprocessor "github.com/voedger/voedger/pkg/processors/command"
@@ -54,7 +55,7 @@ func NewVVMDefaultConfig() VVMConfig {
 		MetricsServicePort:   DefaultMetricsServicePort,
 		StorageFactory: func() (provider istorage.IAppStorageFactory, err error) {
 			logger.Info("using istoragemem")
-			return istorage.ProvideMem(), nil
+			return mem.Provide(), nil
 		},
 		SecretsReader: isecretsimpl.ProvideSecretReader(),
 	}

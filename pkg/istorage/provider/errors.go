@@ -3,7 +3,7 @@
  * @author Denis Gribanov
  */
 
-package istorageimpl
+package provider
 
 import "errors"
 

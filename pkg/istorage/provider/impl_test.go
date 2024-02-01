@@ -2,19 +2,21 @@
  * Copyright (c) 2020-present unTill Pro, Ltd.
  */
 
-package istorageimpl
+package provider
 
 import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
 	"github.com/voedger/voedger/pkg/istorage"
+	"github.com/voedger/voedger/pkg/istorage/mem"
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
 func TestBasicUsage(t *testing.T) {
 	require := require.New(t)
-	asf := istorage.ProvideMem()
+	asf := mem.Provide()
 	asp := Provide(asf)
 
 	app1 := istructs.NewAppQName("sys", "_") // SafeAppName is "sys"
@@ -59,7 +61,7 @@ func TestBasicUsage(t *testing.T) {
 
 func TestInitErrorPersistence(t *testing.T) {
 	require := require.New(t)
-	asf := istorage.ProvideMem()
+	asf := mem.Provide()
 	asp := Provide(asf)
 
 	app1 := istructs.NewAppQName("sys", "_")

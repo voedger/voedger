@@ -48,9 +48,10 @@ type VITConfig struct {
 type vitApps map[istructs.AppQName]*app // указатель потому, что к app потом будут опции применяться ([]logins, например)
 
 type vitPreConfig struct {
-	vvmCfg   *vvm.VVMConfig
-	vitApps  vitApps
-	cleanups []func(vit *VIT)
+	vvmCfg    *vvm.VVMConfig
+	vitApps   vitApps
+	cleanups  []func(vit *VIT)
+	initFuncs []func()
 }
 
 type vitConfigOptFunc func(*vitPreConfig)

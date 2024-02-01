@@ -3,7 +3,7 @@
  * @author: Dmitry Molchanovsky
  */
 
-package istoragebbolt
+package bbolt
 
 type ParamsType struct {
 	DBDir string

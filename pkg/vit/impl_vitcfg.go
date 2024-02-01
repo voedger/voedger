@@ -154,6 +154,12 @@ func WithCleanup(cleanup func(*VIT)) vitConfigOptFunc {
 	}
 }
 
+func WithInit(initFunc func()) vitConfigOptFunc {
+	return func(vpc *vitPreConfig) {
+		vpc.initFuncs = append(vpc.initFuncs, initFunc)
+	}
+}
+
 func WithApp(appQName istructs.AppQName, updater apps.AppBuilder, appOpts ...AppOptFunc) vitConfigOptFunc {
 	return func(vpc *vitPreConfig) {
 		_, ok := vpc.vitApps[appQName]

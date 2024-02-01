@@ -10,7 +10,8 @@ import (
 	"context"
 
 	"github.com/voedger/voedger/pkg/istorage"
-	"github.com/voedger/voedger/pkg/istorageimpl"
+	"github.com/voedger/voedger/pkg/istorage/mem"
+	"github.com/voedger/voedger/pkg/istorage/provider"
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
@@ -50,8 +51,8 @@ func NewStorageProvider(ts *TestMemStorage) istorage.IAppStorageProvider {
 // Returns new test storage
 func NewStorage() *TestMemStorage {
 	s := TestMemStorage{get: scheduleStorageError{}, put: scheduleStorageError{}}
-	asf := istorage.ProvideMem()
-	sp := istorageimpl.Provide(asf)
+	asf := mem.Provide()
+	sp := provider.Provide(asf)
 	var err error
 	if s.storage, err = sp.AppStorage(istructs.AppQName_test1_app1); err != nil {
 		panic(err)

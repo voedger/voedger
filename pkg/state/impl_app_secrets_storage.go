@@ -34,10 +34,6 @@ func (s *appSecretsStorage) Get(key istructs.IStateKeyBuilder) (value istructs.I
 		return nil, e
 	}
 	return &appSecretValue{
-		content:    string(bb),
-		toJSONFunc: s.toJSON,
+		content: string(bb),
 	}, nil
-}
-func (s *appSecretsStorage) toJSON(sv istructs.IStateValue, _ ...interface{}) (string, error) {
-	return fmt.Sprintf(`{"Body":"%s"}`, sv.(*appSecretValue).content), nil
 }

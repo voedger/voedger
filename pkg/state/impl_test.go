@@ -19,7 +19,6 @@ var (
 	testRecordQName1     = appdef.NewQName("test", "record1")
 	testRecordQName2     = appdef.NewQName("test", "record2")
 	testRecordQName3     = appdef.NewQName("test", "record3")
-	testEvent            = appdef.NewQName("test", "event")
 	testViewRecordQName1 = appdef.NewQName("test", "viewRecord1")
 	testViewRecordQName2 = appdef.NewQName("test", "viewRecord2")
 	testStorage          = appdef.NewQName("test", "testStorage")
@@ -395,39 +394,6 @@ func (e *mockWLogEvent) QName() appdef.QName          { return e.Called().Get(0)
 func (e *mockWLogEvent) SyncedAt() istructs.UnixMilli { return e.Called().Get(0).(istructs.UnixMilli) }
 func (e *mockWLogEvent) Error() istructs.IEventError  { return e.Called().Get(0).(istructs.IEventError) }
 func (e *mockWLogEvent) Release()                     {}
-
-type mockEventError struct {
-	mock.Mock
-}
-
-func (e *mockEventError) ErrStr() string                { return e.Called().String(0) }
-func (e *mockEventError) QNameFromParams() appdef.QName { return e.Called().Get(0).(appdef.QName) }
-func (e *mockEventError) ValidEvent() bool              { return e.Called().Bool(0) }
-func (e *mockEventError) OriginalEventBytes() []byte    { return e.Called().Get(0).([]byte) }
-
-type mockPLogEvent struct {
-	mock.Mock
-}
-
-func (e *mockPLogEvent) ArgumentObject() istructs.IObject {
-	return e.Called().Get(0).(istructs.IObject)
-}
-func (e *mockPLogEvent) CUDs(cb func(rec istructs.ICUDRow)) {
-	e.Called(cb)
-}
-func (e *mockPLogEvent) RegisteredAt() istructs.UnixMilli {
-	return e.Called().Get(0).(istructs.UnixMilli)
-}
-func (e *mockPLogEvent) DeviceID() istructs.ConnectedDeviceID {
-	return e.Called().Get(0).(istructs.ConnectedDeviceID)
-}
-func (e *mockPLogEvent) Synced() bool                 { return e.Called().Bool(0) }
-func (e *mockPLogEvent) QName() appdef.QName          { return e.Called().Get(0).(appdef.QName) }
-func (e *mockPLogEvent) SyncedAt() istructs.UnixMilli { return e.Called().Get(0).(istructs.UnixMilli) }
-func (e *mockPLogEvent) Error() istructs.IEventError  { return e.Called().Get(0).(istructs.IEventError) }
-func (e *mockPLogEvent) Workspace() istructs.WSID     { return e.Called().Get(0).(istructs.WSID) }
-func (e *mockPLogEvent) WLogOffset() istructs.Offset  { return e.Called().Get(0).(istructs.Offset) }
-func (e *mockPLogEvent) Release()                     {}
 
 type mockCUD struct {
 	mock.Mock
