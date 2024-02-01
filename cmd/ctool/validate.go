@@ -32,7 +32,7 @@ func validate(cmd *cobra.Command, arg []string) error {
 
 	err := cluster.validate()
 	if err == nil {
-		loggerInfoGreen("cluster configuration is ok")
+		loggerInfoGreen("Cluster configuration is ok")
 	}
 
 	if !cluster.Draft && !cluster.Cmd.isEmpty() {

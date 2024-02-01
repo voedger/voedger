@@ -43,6 +43,10 @@ func newBackupCmd() *cobra.Command {
 		RunE: backupCron,
 	}
 	backupCronCmd.PersistentFlags().StringVar(&sshKey, "ssh-key", "", "Path to SSH key")
+	if err := backupCronCmd.MarkPersistentFlagRequired("ssh-key"); err != nil {
+		loggerError(err.Error())
+		return nil
+	}
 
 	backupCmd := &cobra.Command{
 		Use:   "backup",
