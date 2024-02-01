@@ -215,14 +215,15 @@ func (cmdProc *cmdProc) recovery(ctx context.Context, cmd *cmdWorkpiece) (*appPa
 	var lastPLogEvent istructs.IPLogEvent // TODO: how to release?
 	cb := func(plogOffset istructs.Offset, event istructs.IPLogEvent) (err error) {
 		ws := ap.getWorkspace(event.Workspace())
+		// cmd.iWorkspace could be nil so let's take QNames from cmd.AppDef()
 		event.CUDs(func(rec istructs.ICUDRow) {
 			if rec.IsNew() {
-				t := cmd.iWorkspace.Type(rec.QName())
+				t := cmd.AppDef().Type(rec.QName())
 				ws.idGenerator.UpdateOnSync(rec.ID(), t)
 			}
 		})
 		ao := event.ArgumentObject()
-		if cmd.iWorkspace.Type(ao.QName()).Kind() == appdef.TypeKind_ODoc {
+		if cmd.AppDef().Type(ao.QName()).Kind() == appdef.TypeKind_ODoc {
 			updateIDGeneratorFromO(ao, cmd.iWorkspace, ws.idGenerator)
 		}
 		ws.NextWLogOffset = event.WLogOffset() + 1
