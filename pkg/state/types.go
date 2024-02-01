@@ -40,13 +40,6 @@ type viewRecordsFunc func() istructs.IViewRecords
 type recordsFunc func() istructs.IRecords
 type iWorkspaceFunc func() appdef.IWorkspace
 
-type ToJSONOptions struct{ excludedFields map[string]bool }
-type ToJSONOption func(opts *ToJSONOptions)
-type toJSONFunc func(e istructs.IStateValue, opts ...interface{}) (string, error)
-type IToJson interface {
-	ToJSON(sv istructs.IStateValue, _ ...interface{}) (string, error)
-}
-
 type ApplyBatchItem struct {
 	key   istructs.IStateKeyBuilder
 	value istructs.IStateValueBuilder
@@ -271,9 +264,8 @@ func (b *viewKeyBuilder) Equals(src istructs.IKeyBuilder) bool {
 
 type viewValueBuilder struct {
 	istructs.IValueBuilder
-	offset     istructs.Offset
-	toJSONFunc toJSONFunc
-	entity     appdef.QName
+	offset istructs.Offset
+	entity appdef.QName
 }
 
 func (b *viewValueBuilder) PutInt64(name string, value int64) {
@@ -321,9 +313,8 @@ func (v *recordsValue) FieldNames(cb func(fieldName string)) {
 
 type pLogValue struct {
 	baseStateValue
-	event      istructs.IPLogEvent
-	offset     int64
-	toJSONFunc toJSONFunc
+	event  istructs.IPLogEvent
+	offset int64
 }
 
 func (v *pLogValue) AsInt64(name string) int64 {
@@ -358,15 +349,11 @@ func (v *pLogValue) AsValue(name string) istructs.IStateValue {
 	})
 	return sv
 }
-func (v *pLogValue) ToJSON(opts ...interface{}) (string, error) {
-	return v.toJSONFunc(v, opts...)
-}
 
 type wLogValue struct {
 	baseStateValue
-	event      istructs.IWLogEvent
-	offset     int64
-	toJSONFunc toJSONFunc
+	event  istructs.IWLogEvent
+	offset int64
 }
 
 func (v *wLogValue) AsInt64(name string) int64 {
@@ -400,9 +387,6 @@ func (v *wLogValue) AsValue(name string) istructs.IStateValue {
 		sv.cuds = append(sv.cuds, rec)
 	})
 	return sv
-}
-func (v *wLogValue) ToJSON(opts ...interface{}) (string, error) {
-	return v.toJSONFunc(v, opts...)
 }
 
 type sendMailKeyBuilder struct {
@@ -488,7 +472,6 @@ type httpValue struct {
 	body       []byte
 	header     map[string][]string
 	statusCode int
-	toJSONFunc toJSONFunc
 }
 
 func (v *httpValue) AsBytes(string) []byte { return v.body }
@@ -508,20 +491,13 @@ func (v *httpValue) AsString(name string) string {
 	}
 	return string(v.body)
 }
-func (v *httpValue) ToJSON(opts ...interface{}) (string, error) {
-	return v.toJSONFunc(v, opts...)
-}
 
 type appSecretValue struct {
 	baseStateValue
-	content    string
-	toJSONFunc toJSONFunc
+	content string
 }
 
 func (v *appSecretValue) AsString(string) string { return v.content }
-func (v *appSecretValue) ToJSON(opts ...interface{}) (string, error) {
-	return v.toJSONFunc(v, opts...)
-}
 
 type n10n struct {
 	wsid istructs.WSID
@@ -599,7 +575,6 @@ type requestSubjectValue struct {
 	profileWSID int64
 	name        string
 	token       string
-	toJSONFunc  toJSONFunc
 }
 
 func (v *requestSubjectValue) AsInt64(name string) int64 {
@@ -627,9 +602,6 @@ func (v *requestSubjectValue) AsString(name string) string {
 	default:
 		return ""
 	}
-}
-func (v *requestSubjectValue) ToJSON(opts ...interface{}) (string, error) {
-	return v.toJSONFunc(v, opts...)
 }
 
 type viewValue struct {

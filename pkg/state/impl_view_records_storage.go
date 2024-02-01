@@ -6,12 +6,10 @@ package state
 
 import (
 	"context"
-	"encoding/json"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
-	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 type viewRecordsStorage struct {
@@ -107,7 +105,6 @@ func (s *viewRecordsStorage) ProvideValueBuilder(kb istructs.IStateKeyBuilder, _
 	return &viewValueBuilder{
 		IValueBuilder: s.viewRecordsFunc().NewValueBuilder(kb.(*viewKeyBuilder).view),
 		offset:        istructs.NullOffset,
-		toJSONFunc:    s.toJSON,
 		entity:        kb.Entity(),
 	}
 }
@@ -115,34 +112,6 @@ func (s *viewRecordsStorage) ProvideValueBuilderForUpdate(kb istructs.IStateKeyB
 	return &viewValueBuilder{
 		IValueBuilder: s.viewRecordsFunc().UpdateValueBuilder(kb.(*viewKeyBuilder).view, existingValue.(*viewValue).value),
 		offset:        istructs.NullOffset,
-		toJSONFunc:    s.toJSON,
 		entity:        kb.Entity(),
 	}
-}
-func (s *viewRecordsStorage) toJSON(sv istructs.IStateValue, opts ...interface{}) (string, error) {
-	options := &ToJSONOptions{make(map[string]bool)}
-	for _, opt := range opts {
-		opt.(ToJSONOption)(options)
-	}
-
-	// obj := make(map[string]interface{})
-	// —— nnv, commented. Я не понимаю, зачем здесь поиск контейнера со значением, если его результат никак не используется.
-	//		Если бы QName (или определение) найденного контейнера передавалась бы дальше в FieldsToMap или бы изменила бы QName	sv, то это бы объяснило зачем.
-
-	// s.appDefFunc().Def(sv.AsQName(appdef.SystemField_QName)).
-	// 	Containers(func(cont appdef.Container) {
-	// 		containerName := cont.Name()
-	// 		if containerName == appdef.SystemContainer_ViewValue {
-	// 			obj = coreutils.FieldsToMap(sv, s.appDefFunc(), coreutils.Filter(func(name string, kind appdef.DataKind) bool {
-	// 				return !options.excludedFields[name]
-	// 			}))
-	// 		}
-	// 	})
-
-	obj := coreutils.FieldsToMap(sv, s.iWorkspaceFunc(), coreutils.Filter(func(n string, _ appdef.DataKind) bool {
-		return !options.excludedFields[n]
-	}))
-
-	bb, err := json.Marshal(obj)
-	return string(bb), err
 }

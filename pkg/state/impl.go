@@ -9,7 +9,6 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
-	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 func SimpleWSIDFunc(wsid istructs.WSID) WSIDFunc {
@@ -17,16 +16,6 @@ func SimpleWSIDFunc(wsid istructs.WSID) WSIDFunc {
 }
 func SimplePartitionIDFunc(partitionID istructs.PartitionID) PartitionIDFunc {
 	return func() istructs.PartitionID { return partitionID }
-}
-func SimpleIWorkspaceFunc(iws appdef.IWorkspace) iWorkspaceFunc {
-	return func() appdef.IWorkspace { return iws }
-}
-func WithExcludeFields(fieldNames ...string) ToJSONOption {
-	return func(opts *ToJSONOptions) {
-		for _, name := range fieldNames {
-			opts.excludedFields[name] = true
-		}
-	}
 }
 func put(fieldName string, kind appdef.DataKind, rr istructs.IRowReader, rw istructs.IRowWriter) {
 	switch kind {
@@ -51,10 +40,4 @@ func put(fieldName string, kind appdef.DataKind, rr istructs.IRowReader, rw istr
 	default:
 		panic(fmt.Errorf("illegal state: field - '%s', kind - '%d': %w", fieldName, kind, ErrNotSupported))
 	}
-}
-
-func cudRowToMap(rec istructs.ICUDRow, wsFunc iWorkspaceFunc) (res map[string]interface{}) {
-	res = coreutils.FieldsToMap(rec, wsFunc())
-	res["IsNew"] = rec.IsNew()
-	return res
 }

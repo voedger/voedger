@@ -1,6 +1,5 @@
 # Binaries for programs and plugins
 *.exe
-*.exe
 *.exe~
 *.dll
 *.so
@@ -22,3 +21,6 @@ go.work.sum
 
 # But not .github
 !/.github
+
+# Other
+.DS_Store
