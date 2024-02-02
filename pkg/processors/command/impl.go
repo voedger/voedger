@@ -542,9 +542,9 @@ func (cmdProc *cmdProc) validateCUDsQNames(ctx context.Context, work interface{}
 		return nil
 	}
 	return iterate.ForEachError(cmd.rawEvent.CUDs, func(cud istructs.ICUDRow) error {
-		cudTypeKind := cmd.iWorkspace.Type(cud.QName()).Kind()
-		if cudTypeKind == appdef.TypeKind_CRecord || cudTypeKind == appdef.TypeKind_WRecord || cudTypeKind == appdef.TypeKind_GRecord {
-			// skip containers
+		appDefCUDTypeKind := cmd.AppDef().Type(cud.QName()).Kind()
+		if appDefCUDTypeKind == appdef.TypeKind_CRecord || appDefCUDTypeKind == appdef.TypeKind_WRecord || appDefCUDTypeKind == appdef.TypeKind_GRecord {
+			// skip containers because parser does not add it to workspace
 			return nil
 		}
 		if cmd.iWorkspace.Type(cud.QName()) == appdef.NullType {
