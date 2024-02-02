@@ -291,7 +291,7 @@ func TestCancelSentInvite(t *testing.T) {
 		WaitForInviteState(vit, ws, inviteID, invite.State_ToBeCancelled, invite.State_Cancelled)
 	})
 	t.Run("invite not exists -> 400 bad request", func(t *testing.T) {
-		vit.PostWS(ws, "c.sys.CancelSentInvite", fmt.Sprintf(`{"args":{"InviteID":%d}}`, istructs.TestUnexistingRecordID), coreutils.Expect400RefIntegrity_Existence())
+		vit.PostWS(ws, "c.sys.CancelSentInvite", fmt.Sprintf(`{"args":{"InviteID":%d}}`, istructs.NonExistingRecordID), coreutils.Expect400RefIntegrity_Existence())
 	})
 }
 

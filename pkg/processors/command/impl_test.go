@@ -340,7 +340,7 @@ func TestCUDUpdate(t *testing.T) {
 	})
 
 	t.Run("404 not found on update not existing", func(t *testing.T) {
-		req.Body = []byte(fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"sys.QName":"test.test", "IntFld": 42}}]}`, istructs.TestUnexistingRecordID))
+		req.Body = []byte(fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"sys.QName":"test.test", "IntFld": 42}}]}`, istructs.NonExistingRecordID))
 		resp, sections, secErr, err = app.bus.SendRequest2(app.ctx, req, coreutils.GetTestBustTimeout())
 		require.Nil(err, err)
 		require.Nil(secErr, secErr)

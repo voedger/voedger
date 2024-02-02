@@ -134,7 +134,7 @@ func TestBasicUsage_CUD(t *testing.T) {
 						"fields": {}
 					}
 				]
-			}`, istructs.TestUnexistingRecordID)
+			}`, istructs.NonExistingRecordID)
 		vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect404())
 	})
 }
@@ -295,10 +295,10 @@ func TestRefIntegrity(t *testing.T) {
 		idDep := resp.NewIDs["3"]
 
 		t.Run("ref to unexisting -> 400 bad request", func(t *testing.T) {
-			body = fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID": 2,"sys.QName":"app1pkg.cdoc2","field1": %d}}]}`, istructs.TestUnexistingRecordID)
+			body = fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID": 2,"sys.QName":"app1pkg.cdoc2","field1": %d}}]}`, istructs.NonExistingRecordID)
 			vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect400RefIntegrity_Existence())
 
-			body = fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID": 2,"sys.QName":"app1pkg.cdoc2","field2": %d}}]}`, istructs.TestUnexistingRecordID)
+			body = fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID": 2,"sys.QName":"app1pkg.cdoc2","field2": %d}}]}`, istructs.NonExistingRecordID)
 			vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect400RefIntegrity_Existence())
 		})
 
@@ -342,7 +342,7 @@ func testArgsRefIntegrity(t *testing.T, vit *it.VIT, ws *it.AppWorkspace, appDef
 		oDoc := appDef.ODoc(it.QNameODoc2)
 		for _, oDoc1RefField := range oDoc.RefFields() {
 			t.Run(oDoc1RefField.Name(), func(t *testing.T) {
-				body := fmt.Sprintf(urlTemplate, fmt.Sprintf(`"%s":%d`, oDoc1RefField.Name(), istructs.TestUnexistingRecordID))
+				body := fmt.Sprintf(urlTemplate, fmt.Sprintf(`"%s":%d`, oDoc1RefField.Name(), istructs.NonExistingRecordID))
 				vit.PostWS(ws, "c.app1pkg.CmdODocTwo", body, coreutils.Expect400RefIntegrity_Existence()).Println()
 			})
 		}
