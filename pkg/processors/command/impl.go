@@ -744,7 +744,7 @@ func sendResponse(cmd *cmdWorkpiece, handlingError error) {
 		}
 	}
 	if cmd.cmdResult != nil {
-		cmdResult := coreutils.ObjectToMap(cmd.cmdResult, cmd.iWorkspace)
+		cmdResult := coreutils.ObjectToMap(cmd.cmdResult)
 		cmdResultBytes, err := json.Marshal(cmdResult)
 		if err != nil {
 			// notest

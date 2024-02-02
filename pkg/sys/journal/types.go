@@ -55,7 +55,7 @@ type EventObject struct {
 func (o *EventObject) AsInt64(name string) int64 { return o.Data[name] }
 func (o *EventObject) AsString(string) string    { return o.JSON }
 
-func NewEventObject(event istructs.IWLogEvent, iWorkspace appdef.IWorkspace, f Filter, opts ...coreutils.MapperOpt) (o *EventObject, err error) {
+func NewEventObject(event istructs.IWLogEvent, f Filter, opts ...coreutils.MapperOpt) (o *EventObject, err error) {
 	var bb []byte
 	data := make(map[string]interface{})
 	data["sys.QName"] = event.QName().String()
@@ -65,7 +65,7 @@ func NewEventObject(event istructs.IWLogEvent, iWorkspace appdef.IWorkspace, f F
 	data["SyncedAt"] = event.SyncedAt()
 	noArgs := true
 	if f.isMatch(event.ArgumentObject().QName()) {
-		data["args"] = coreutils.ObjectToMap(event.ArgumentObject(), iWorkspace, opts...)
+		data["args"] = coreutils.ObjectToMap(event.ArgumentObject(), opts...)
 		noArgs = false
 	}
 	cuds := make([]map[string]interface{}, 0)
@@ -77,7 +77,7 @@ func NewEventObject(event istructs.IWLogEvent, iWorkspace appdef.IWorkspace, f F
 		cud["sys.ID"] = rec.ID()
 		cud["sys.QName"] = rec.QName().String()
 		cud["IsNew"] = rec.IsNew()
-		cud["fields"] = coreutils.FieldsToMap(rec, iWorkspace, opts...)
+		cud["fields"] = coreutils.FieldsToMap(rec, opts...)
 		cuds = append(cuds, cud)
 	})
 	data["cuds"] = cuds
