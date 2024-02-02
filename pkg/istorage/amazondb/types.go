@@ -6,7 +6,6 @@
 package amazondb
 
 import (
-	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 )
 
@@ -20,7 +19,6 @@ type DynamoDBParams struct {
 
 type implIAppStorageFactory struct {
 	params DynamoDBParams
-	cfg    *aws.Config
 }
 
 type implIAppStorage struct {
