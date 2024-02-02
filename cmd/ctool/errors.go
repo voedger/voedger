@@ -24,6 +24,7 @@ var (
 	ErrClusterControllerFunctionNotAssigned = errors.New("cluster controller function not assigned")
 	ErrPreparingClusterNodes                = errors.New("error preparing cluster nodes, command is aborted")
 	ErrManagerTokenNotExists                = errors.New("manager token not exists")
+	ErrNoIncompleteCommandWasFoundToRepeat  = errors.New("no incomplete command was found to repeat")
 )
 
 var ErrIncorrectVersion = errors.New("incorrect version")

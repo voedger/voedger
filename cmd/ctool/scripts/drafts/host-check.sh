@@ -8,7 +8,6 @@
 
 set -euo pipefail
 
-set -x
 
 if [ $# -lt 1 ] || [ $# -gt 2 ]; then
   echo "Usage: $0 <IP-Address> [only-ping]" 

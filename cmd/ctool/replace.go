@@ -51,9 +51,7 @@ func replace(cmd *cobra.Command, args []string) error {
 
 	replacedAddress := cluster.Cmd.Args[0]
 
-	err = cluster.validate()
-	if err == nil {
-		println("cluster configuration is ok")
+	if err = cluster.validate(); err == nil {
 		if err = cluster.Cmd.apply(cluster); err != nil {
 			return err
 		}
