@@ -97,6 +97,9 @@ const MaxReservedBaseRecordID = MinReservedBaseRecordID + 0xffff
 const FirstSingletonID = MinReservedBaseRecordID
 const MaxSingletonID = FirstSingletonID + 0x1ff
 
+// Used to test behaviour on providing the unexisting record ID
+const TestUnexistingRecordID = MaxSingletonID + 1
+
 // This is the first value which must be returned by the IDGenerator (in the Command Processor) for the given workspace
 const FirstBaseRecordID = MaxReservedBaseRecordID + 1
 
