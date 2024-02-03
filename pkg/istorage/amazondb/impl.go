@@ -352,6 +352,7 @@ func dynamoDBTableName(name string) string {
 }
 
 // patchPutBytes is a workaround for DynamoDB's limitation on empty byte slices in SortKey
+// https://aws.amazon.com/ru/about-aws/whats-new/2020/05/amazon-dynamodb-now-supports-empty-values-for-non-key-string-and-binary-attributes-in-dynamodb-tables/
 func patchPutBytes(value []byte) (out []byte) {
 	newArr := make([]byte, 1, len(value)+1)
 	newArr[0] = 0
@@ -359,6 +360,7 @@ func patchPutBytes(value []byte) (out []byte) {
 }
 
 // patchGetBytes is a workaround for DynamoDB's limitation on empty byte slices in SortKey
+// https://aws.amazon.com/ru/about-aws/whats-new/2020/05/amazon-dynamodb-now-supports-empty-values-for-non-key-string-and-binary-attributes-in-dynamodb-tables/
 func patchGetBytes(value []byte) (out []byte) {
 	return value[1:]
 }
