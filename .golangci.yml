@@ -19,11 +19,12 @@ linters:
     - gochecknoinits  # Checks that no init functions are present in Go code.
     - gomnd
 
+# Second stage linters
 #    - unconvert    # Remove unnecessary type conversions.
-#    - testifylint  # Checks usage of github.com/stretchr/testify.
 #    - predeclared  # Find code that shadows one of Go's predeclared identifiers.
-#    - nilerr       # Finds the code that returns nil even if it checks that the error is not nil.
 #    - mirror       # Reports wrong mirror patterns of bytes/strings usage.
+#    - nilerr       # Finds the code that returns nil even if it checks that the error is not nil.
+#    - testifylint  # Checks usage of github.com/stretchr/testify.
 
 
 # For the future:
