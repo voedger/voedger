@@ -1,4 +1,6 @@
 # options for analysis running
+# https://golangci-lint.run/usage/linters/
+
 linters:
   disable-all: true
   enable:
@@ -9,9 +11,43 @@ linters:
     - stylecheck
     - misspell
     - errcheck
-    - unparam
-    - deadcode
-    - unparam
+    - bidichk 
+
+# First stage linters
+    - asciicheck      # Checks that all code identifiers does not have non-ASCII symbols in the name
+    - durationcheck   # Check for two durations multiplied together
+    - gochecknoinits  # Checks that no init functions are present in Go code.
+    - gomnd
+
+#    - unconvert    # Remove unnecessary type conversions.
+#    - testifylint  # Checks usage of github.com/stretchr/testify.
+#    - predeclared  # Find code that shadows one of Go's predeclared identifiers.
+#    - nilerr       # Finds the code that returns nil even if it checks that the error is not nil.
+#    - mirror       # Reports wrong mirror patterns of bytes/strings usage.
+
+
+# For the future:
+#------------------------------------
+#    - testpackage
+#    - prealloc
+#    - perfsprint
+#    - nonamedreturns
+#    - noctx 
+#    - nilnil 
+#?    - nestif 
+#    - musttag
+#    - makezero
+#    - inamedparam
+#    - goerr113      
+#    - godox       #- searches FixMe,TODO in code
+#    - gocritic
+#    - forbidigo
+#    - exportloopref
+#    - exhaustruct
+#    - errorlint
+#    - goconst 
+#    - unparam
+#------------------------------------
   fast: true
 linters-settings:
   gosec:
@@ -23,13 +59,14 @@ linters-settings:
     checks: [ "all", "-SA1019"]    
   stylecheck:
     checks: [ "all", "-ST1003", "-ST1023" ]    
+  unparam:
+    check-exported: true
   misspell:
     ignore-words:
       - untill
   revive:
   # see https://github.com/mgechev/revive#available-rules for details.
     ignore-generated-header: true
-    exclude: "*_test.go"
     severity: warning
     rules:
       - name: indent-error-flow
@@ -41,6 +78,19 @@ linters-settings:
             allowStrs: '""'
             allowInts: "0,1,2"
             allowFloats: "0.0,0.,1.0,1.,2.0,2."
+  gomnd:
+    ignored-files:
+      - "pkg/vit/consts.go"
+    ignored-numbers:
+      - "0"
+      - "1"
+      - "2"
+      - "3"
+      - "4"
+      - "5"
+      - "10"
+      - "42"
+      - "100"
 issues:
   exclude:
    - underscore
@@ -51,3 +101,4 @@ issues:
        - revive
        - gosec
        - errcheck
+       - forcetypeassert

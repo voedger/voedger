@@ -8,6 +8,11 @@ package vvm
 
 import (
 	"context"
+	"net/url"
+	"strconv"
+	"strings"
+	"time"
+
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/apppartsctl"
@@ -25,8 +30,8 @@ import (
 	"github.com/voedger/voedger/pkg/iratesce"
 	"github.com/voedger/voedger/pkg/isecrets"
 	"github.com/voedger/voedger/pkg/istorage"
+	istorageimpl "github.com/voedger/voedger/pkg/istorage/provider"
 	"github.com/voedger/voedger/pkg/istoragecache"
-	"github.com/voedger/voedger/pkg/istorageimpl"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/itokens-payloads"
@@ -45,10 +50,6 @@ import (
 	"github.com/voedger/voedger/pkg/vvm/metrics"
 	"github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
 	"golang.org/x/crypto/acme/autocert"
-	"net/url"
-	"strconv"
-	"strings"
-	"time"
 )
 
 // Injectors from provide.go:
@@ -486,7 +487,7 @@ func provideRouterServices(vvmCtx context.Context, rp router.RouterParams, busTi
 		RetryAfterSecondsOn503: DefaultRetryAfterSecondsOn503,
 		BLOBMaxSize:            bms,
 	}
-	httpSrv, acmeSrv := router.Provide(vvmCtx, rp, time.Duration(busTimeout), broker, quotas, bp, autocertCache, bus, appsWSAmounts)
+	httpSrv, acmeSrv := router.Provide(vvmCtx, rp, time.Duration(busTimeout), broker, bp, autocertCache, bus, appsWSAmounts)
 	vvmPortSource.getter = func() VVMPortType {
 		return VVMPortType(httpSrv.GetPort())
 	}
@@ -615,7 +616,6 @@ func provideOperatorAppServices(apf AppServiceFactory, vvmApps VVMApps, asp istr
 
 func provideServicePipeline(vvmCtx context.Context, opCommandProcessors OperatorCommandProcessors, opQueryProcessors OperatorQueryProcessors, opAppServices OperatorAppServicesFactory,
 	routerServiceOp RouterServiceOperator, metricsServiceOp MetricsServiceOperator, appPartsCtl IAppPartsCtlPipelineService) ServicePipeline {
-	return pipeline.NewSyncPipeline(vvmCtx, "ServicePipeline", pipeline.WireSyncOperator("service fork operator", pipeline.ForkOperator(pipeline.ForkSame, pipeline.ForkBranch(pipeline.ForkOperator(pipeline.ForkSame, pipeline.ForkBranch(opQueryProcessors), pipeline.ForkBranch(opCommandProcessors), pipeline.ForkBranch(opAppServices(vvmCtx)), pipeline.ForkBranch(pipeline.ServiceOperator(appPartsCtl)))), pipeline.ForkBranch(routerServiceOp), pipeline.ForkBranch(metricsServiceOp),
-	)),
+	return pipeline.NewSyncPipeline(vvmCtx, "ServicePipeline", pipeline.WireSyncOperator("service fork operator", pipeline.ForkOperator(pipeline.ForkSame, pipeline.ForkBranch(pipeline.ForkOperator(pipeline.ForkSame, pipeline.ForkBranch(opQueryProcessors), pipeline.ForkBranch(opCommandProcessors), pipeline.ForkBranch(opAppServices(vvmCtx)), pipeline.ForkBranch(pipeline.ServiceOperator(appPartsCtl)))), pipeline.ForkBranch(routerServiceOp), pipeline.ForkBranch(metricsServiceOp))),
 	)
 }

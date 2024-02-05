@@ -1,7 +1,6 @@
-/*
- * Copyright (c) 2021-present unTill Pro, Ltd.
- */
-
+// Copyright (c) 2021-present Voedger Authors.
+// This source code is licensed under the MIT license found in the
+// LICENSE file in the root directory of this source tree.
 package pipeline
 
 import (
@@ -72,15 +71,18 @@ func TestSyncPipeline_DoSync(t *testing.T) {
 
 		require.Nil(t, pipeline.DoSync(ctx, v))
 	})
+	t.Run("Should panic on nil work", func(t *testing.T) {
+		pipeline := NewSyncPipeline(context.Background(), "my-pipeline",
+			WireFunc("panic-onNil", nil))
+
+		require.PanicsWithValue(t, "critical error in operator 'panic-onNil': nil work in processSyncOp. Pipeline 'my-pipeline' [operator: panic-onNil]", func() {
+			_ = pipeline.SendSync(nil)
+		})
+	})
 }
 
 func TestSyncPipeline_Close(t *testing.T) {
-	pipeline := &SyncPipeline{
-		stdin:  make(chan interface{}, 1),
-		stdout: make(chan interface{}, 1),
-	}
-	pipeline.stdout <- newTestWork()
-	close(pipeline.stdout)
+	pipeline := &SyncPipeline{}
 
 	require.NotPanics(t, func() {
 		pipeline.Close()

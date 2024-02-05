@@ -29,6 +29,8 @@ func newBackupCmd() *cobra.Command {
 		RunE: backupNode,
 	}
 
+	backupNodeCmd.PersistentFlags().StringVarP(&sshPort, "ssh-port", "p", "22", "SSH port")
+
 	backupCronCmd := &cobra.Command{
 		Use:   "cron [<cron event>]",
 		Short: "Installation of a backup of schedule",
@@ -41,6 +43,10 @@ func newBackupCmd() *cobra.Command {
 		RunE: backupCron,
 	}
 	backupCronCmd.PersistentFlags().StringVar(&sshKey, "ssh-key", "", "Path to SSH key")
+	if err := backupCronCmd.MarkPersistentFlagRequired("ssh-key"); err != nil {
+		loggerError(err.Error())
+		return nil
+	}
 
 	backupCmd := &cobra.Command{
 		Use:   "backup",
@@ -88,24 +94,15 @@ func validateBackupNodeCmd(cmd *cmdType, cluster *clusterType) error {
 }
 
 func backupNode(cmd *cobra.Command, args []string) error {
-	loggerInfo("backup node", args[0])
 	cluster := newCluster()
 
-	//Cmd := newCmd(ckBackup, append([]string{"node"}, args...))
-
 	var err error
-
-	/*
-		if err = Cmd.validate(cluster); err != nil {
-			return err
-		}
-	*/
 
 	if err = mkCommandDirAndLogFile(cmd, cluster); err != nil {
 		return err
 	}
 
-	loggerInfoGreen("backupnode.sh", strings.Join(args, " "))
+	loggerInfo("Backup node", strings.Join(args, " "))
 	if err = newScriptExecuter("", "").
 		run("backupnode.sh", args...); err != nil {
 		return err

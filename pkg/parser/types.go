@@ -114,6 +114,7 @@ type RootStatement struct {
 	Table          *TableStmt          `parser:"| @@"`
 	Type           *TypeStmt           `parser:"| @@"`
 	Application    *ApplicationStmt    `parser:"| @@"`
+	Declare        *DeclareStmt        `parser:"| @@"`
 	// Sequence  *sequenceStmt  `parser:"| @@"`
 
 	stmt interface{}
@@ -189,6 +190,15 @@ func (s *RootExtEngineStmt) Iterate(callback func(stmt interface{})) {
 		callback(raw.stmt)
 	}
 }
+
+type DeclareStmt struct {
+	Statement
+	Name         Ident  `parser:"'DECLARE' @Ident"`
+	DataType     string `parser:"@('int' | 'int32')"`
+	DefaultValue *int   `parser:"'DEFAULT' @Int"`
+}
+
+func (s DeclareStmt) GetName() string { return string(s.Name) }
 
 type UseStmt struct {
 	Statement
@@ -528,9 +538,12 @@ type RateValueTimeUnit struct {
 }
 
 type RateValue struct {
-	Count           int               `parser:"@Int 'PER'"`
+	Count           *int              `parser:"(@Int"`
+	Variable        *DefQName         `parser:"| @@) 'PER'"`
 	TimeUnitAmounts *int              `parser:"@Int?"`
 	TimeUnit        RateValueTimeUnit `parser:"@@"`
+	variable        appdef.QName      // filled on the analysis stage
+	declare         *DeclareStmt      // filled on the analysis stage
 }
 
 type RateObjectScope struct {
@@ -554,15 +567,12 @@ type RateStmt struct {
 func (s RateStmt) GetName() string { return string(s.Name) }
 
 type LimitAction struct {
-	Pos                  lexer.Position
-	Command              *DefQName `parser:"(EXECUTEONCOMMAND @@)"`
-	AllCommandsWithTag   *DefQName `parser:"| (EXECUTEONALLCOMMANDSWITHTAG @@)"`
-	AllCommands          bool      `parser:"| @EXECUTEONALLCOMMANDS"`
-	Query                *DefQName `parser:"| (EXECUTEONQUERY @@)"`
-	AllQueriesWithTag    *DefQName `parser:"| (EXECUTEONALLQUERIESWITHTAG @@)"`
-	AllQueries           bool      `parser:"| @EXECUTEONALLQUERIES"`
-	Workspace            *DefQName `parser:"| (INSERTONWORKSPACE @@)"`
-	AllWorkspacesWithTag *DefQName `parser:"| (INSERTONALLWORKSPACESWITHTAG @@)"`
+	Pos        lexer.Position
+	Table      *DefQName `parser:"(ONTABLE @@)"`
+	Command    *DefQName `parser:"| ('ON' 'COMMAND' @@)"`
+	Query      *DefQName `parser:"| ('ON' 'QUERY' @@)"`
+	Tag        *DefQName `parser:"| ('ON' 'TAG' @@)"`
+	Everything bool      `parser:"| @('ON' 'EVERYTHING')"`
 }
 
 type LimitStmt struct {
@@ -609,10 +619,10 @@ type GrantAllTablesWithTagActions struct {
 
 type GrantStmt struct {
 	Statement
-	Command              bool                          `parser:"'GRANT' ( @EXECUTEONCOMMAND"`
-	AllCommandsWithTag   bool                          `parser:"| @EXECUTEONALLCOMMANDSWITHTAG"`
-	Query                bool                          `parser:"| @EXECUTEONQUERY"`
-	AllQueriesWithTag    bool                          `parser:"| @EXECUTEONALLQUERIESWITHTAG"`
+	Command              bool                          `parser:"'GRANT' ( @INSERTONCOMMAND"`
+	AllCommandsWithTag   bool                          `parser:"| @INSERTONALLCOMMANDSWITHTAG"`
+	Query                bool                          `parser:"| @SELECTONQUERY"`
+	AllQueriesWithTag    bool                          `parser:"| @SELECTONALLQUERIESWITHTAG"`
 	Workspace            bool                          `parser:"| @INSERTONWORKSPACE"`
 	AllWorkspacesWithTag bool                          `parser:"| @INSERTONALLWORKSPACESWITHTAG"`
 	AllTablesWithTag     *GrantAllTablesWithTagActions `parser:"| (@@ ONALLTABLESWITHTAG)"`
@@ -674,7 +684,6 @@ func (s *CommandStmt) SetEngineType(e EngineType) { s.Engine = e }
 type WithItem struct {
 	Comment *string    `parser:"('Comment' '=' @String)"`
 	Tags    []DefQName `parser:"| ('Tags' '=' '(' @@ (',' @@)* ')')"`
-	Rate    *DefQName  `parser:"| ('Rate' '=' @@)"`
 }
 
 type AnyOrVoidOrDef struct {
@@ -896,4 +905,17 @@ type ViewField struct {
 	Name    Identifier `parser:"@@"`
 	Type    DataType   `parser:"@@"`
 	NotNull bool       `parser:"@(NOTNULL)?"`
+}
+
+type IVariableResolver interface {
+	AsInt32(name appdef.QName) (int32, bool)
+}
+
+// BuildAppDefsOption is a function that can be passed to BuildAppDefs to configure it.
+type BuildAppDefsOption = func(*buildContext)
+
+func WithVariableResolver(resolver IVariableResolver) BuildAppDefsOption {
+	return func(c *buildContext) {
+		c.variableResolver = resolver
+	}
 }

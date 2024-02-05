@@ -126,15 +126,15 @@ func TestBasicUsage_CUD(t *testing.T) {
 	})
 
 	t.Run("404 on update unexisting", func(t *testing.T) {
-		body := `
+		body := fmt.Sprintf(`
 			{
 				"cuds": [
 					{
-						"sys.ID": 100000000001,
+						"sys.ID": %d,
 						"fields": {}
 					}
 				]
-			}`
+			}`, istructs.NonExistingRecordID)
 		vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect404())
 	})
 }
@@ -284,10 +284,7 @@ func TestRefIntegrity(t *testing.T) {
 	appDef := appStructs.AppDef()
 
 	t.Run("CUDs", func(t *testing.T) {
-		body := `{"cuds":[{"fields":{"sys.ID":2,"sys.QName":"app1pkg.department","pc_fix_button": 1,"rm_fix_button": 1, "id_food_group": 123456}}]}`
-		vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect400RefIntegrity_Existence())
-
-		body = `{"cuds":[
+		body := `{"cuds":[
 			{"fields":{"sys.ID":1,"sys.QName":"app1pkg.cdoc1"}},
 			{"fields":{"sys.ID":2,"sys.QName":"app1pkg.options"}},
 			{"fields":{"sys.ID":3,"sys.QName":"app1pkg.department","pc_fix_button": 1,"rm_fix_button": 1}}
@@ -298,10 +295,10 @@ func TestRefIntegrity(t *testing.T) {
 		idDep := resp.NewIDs["3"]
 
 		t.Run("ref to unexisting -> 400 bad request", func(t *testing.T) {
-			body = `{"cuds":[{"fields":{"sys.ID": 2,"sys.QName":"app1pkg.cdoc2","field1": 123456}}]}`
+			body = fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID": 2,"sys.QName":"app1pkg.cdoc2","field1": %d}}]}`, istructs.NonExistingRecordID)
 			vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect400RefIntegrity_Existence())
 
-			body = `{"cuds":[{"fields":{"sys.ID": 2,"sys.QName":"app1pkg.cdoc2","field2": 123456}}]}`
+			body = fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID": 2,"sys.QName":"app1pkg.cdoc2","field2": %d}}]}`, istructs.NonExistingRecordID)
 			vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect400RefIntegrity_Existence())
 		})
 
@@ -345,7 +342,7 @@ func testArgsRefIntegrity(t *testing.T, vit *it.VIT, ws *it.AppWorkspace, appDef
 		oDoc := appDef.ODoc(it.QNameODoc2)
 		for _, oDoc1RefField := range oDoc.RefFields() {
 			t.Run(oDoc1RefField.Name(), func(t *testing.T) {
-				body := fmt.Sprintf(urlTemplate, fmt.Sprintf(`"%s":1000000000000`, oDoc1RefField.Name()))
+				body := fmt.Sprintf(urlTemplate, fmt.Sprintf(`"%s":%d`, oDoc1RefField.Name(), istructs.NonExistingRecordID))
 				vit.PostWS(ws, "c.app1pkg.CmdODocTwo", body, coreutils.Expect400RefIntegrity_Existence()).Println()
 			})
 		}
@@ -468,6 +465,6 @@ func TestDenyCreateNonRawIDs(t *testing.T) {
 	defer vit.TearDown()
 
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
-	body := `{"cuds": [{"fields": {"sys.ID": 1000000000,"sys.QName": "app1pkg.options"}}]}`
+	body := fmt.Sprintf(`{"cuds": [{"fields": {"sys.ID": %d,"sys.QName": "app1pkg.options"}}]}`, istructs.FirstBaseUserWSID)
 	vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect400())
 }

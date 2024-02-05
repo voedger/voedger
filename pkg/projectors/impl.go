@@ -111,7 +111,7 @@ func (h *syncErrorHandler) DoSync(_ context.Context, _ interface{}) (err error) 
 	return
 }
 
-func (h *syncErrorHandler) OnErr(err error, _ interface{}, _ pipeline.IWorkpieceContext) (newErr error) {
+func (h *syncErrorHandler) OnErr(err error, _ interface{}, _ pipeline.IWorkpieceContext) error {
 	h.err = err
 	return nil
 }

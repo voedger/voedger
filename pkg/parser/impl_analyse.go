@@ -66,6 +66,8 @@ func analyse(c *basicContext, p *PackageSchemaAST) {
 			analyseAlterWorkspace(v, ictx)
 		case *StorageStmt:
 			analyseStorage(v, ictx)
+		case *RateStmt:
+			analyseRate(v, ictx)
 		case *LimitStmt:
 			analyseLimit(v, ictx)
 		case *GrantStmt:
@@ -229,23 +231,27 @@ func analyseStorage(u *StorageStmt, c *iterateCtx) {
 	}
 }
 
+func analyseRate(r *RateStmt, c *iterateCtx) {
+	if r.Value.Variable != nil {
+		resolved := func(d *DeclareStmt, p *PackageSchemaAST) error {
+			r.Value.variable = p.NewQName(d.Name)
+			r.Value.declare = d
+			return nil
+		}
+		if err := resolveInCtx(*r.Value.Variable, c, resolved); err != nil {
+			c.stmtErr(&r.Value.Variable.Pos, err)
+		}
+	}
+}
+
 func analyseLimit(u *LimitStmt, c *iterateCtx) {
 	err := resolveInCtx(u.RateName, c, func(l *RateStmt, schema *PackageSchemaAST) error { return nil })
 	if err != nil {
 		c.stmtErr(&u.RateName.Pos, err)
 	}
-
-	if u.Action.AllCommandsWithTag != nil {
-		if err = resolveInCtx(*u.Action.AllCommandsWithTag, c, func(t *TagStmt, schema *PackageSchemaAST) error { return nil }); err != nil {
-			c.stmtErr(&u.Action.AllCommandsWithTag.Pos, err)
-		}
-	} else if u.Action.AllQueriesWithTag != nil {
-		if err = resolveInCtx(*u.Action.AllQueriesWithTag, c, func(t *TagStmt, schema *PackageSchemaAST) error { return nil }); err != nil {
-			c.stmtErr(&u.Action.AllQueriesWithTag.Pos, err)
-		}
-	} else if u.Action.AllWorkspacesWithTag != nil {
-		if err = resolveInCtx(*u.Action.AllWorkspacesWithTag, c, func(t *TagStmt, schema *PackageSchemaAST) error { return nil }); err != nil {
-			c.stmtErr(&u.Action.AllWorkspacesWithTag.Pos, err)
+	if u.Action.Tag != nil {
+		if err = resolveInCtx(*u.Action.Tag, c, func(t *TagStmt, schema *PackageSchemaAST) error { return nil }); err != nil {
+			c.stmtErr(&u.Action.Tag.Pos, err)
 		}
 	} else if u.Action.Command != nil {
 		if err = resolveInCtx(*u.Action.Command, c, func(t *CommandStmt, schema *PackageSchemaAST) error { return nil }); err != nil {
@@ -256,9 +262,9 @@ func analyseLimit(u *LimitStmt, c *iterateCtx) {
 		if err = resolveInCtx(*u.Action.Query, c, func(t *QueryStmt, schema *PackageSchemaAST) error { return nil }); err != nil {
 			c.stmtErr(&u.Action.Query.Pos, err)
 		}
-	} else if u.Action.Workspace != nil {
-		if err = resolveInCtx(*u.Action.Workspace, c, func(t *WorkspaceStmt, schema *PackageSchemaAST) error { return nil }); err != nil {
-			c.stmtErr(&u.Action.Workspace.Pos, err)
+	} else if u.Action.Table != nil {
+		if err = resolveInCtx(*u.Action.Table, c, func(t *TableStmt, schema *PackageSchemaAST) error { return nil }); err != nil {
+			c.stmtErr(&u.Action.Table.Pos, err)
 		}
 	}
 }
@@ -602,10 +608,6 @@ func analyseWith(with *[]WithItem, statement IStatement, c *iterateCtx) {
 		item := &(*with)[i]
 		if item.Comment != nil {
 			comment = item
-		} else if item.Rate != nil {
-			if err := resolveInCtx(*item.Rate, c, func(*RateStmt, *PackageSchemaAST) error { return nil }); err != nil {
-				c.stmtErr(&item.Rate.Pos, err)
-			}
 		}
 		for j := range item.Tags {
 			tag := item.Tags[j]

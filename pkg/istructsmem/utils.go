@@ -13,7 +13,8 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/irates"
 	"github.com/voedger/voedger/pkg/istorage"
-	"github.com/voedger/voedger/pkg/istorageimpl"
+	"github.com/voedger/voedger/pkg/istorage/mem"
+	"github.com/voedger/voedger/pkg/istorage/provider"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/consts"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
@@ -27,8 +28,8 @@ var (
 	// not a func -> golang itokensjwt.TimeFunc will be initialized on process init forever
 	testTokensFactory     = func() payloads.IAppTokensFactory { return payloads.TestAppTokensFactory(itokensjwt.TestTokensJWT()) }
 	simpleStorageProvider = func() istorage.IAppStorageProvider {
-		asf := istorage.ProvideMem()
-		return istorageimpl.Provide(asf)
+		asf := mem.Provide()
+		return provider.Provide(asf)
 	}
 )
 

@@ -31,16 +31,15 @@ func parseImpl(fileName string, content string) (*SchemaAST, error) {
 		{Name: "NOTNULL", Pattern: `NOT[ \r\n\t]+NULL`},
 		{Name: "UNLOGGED", Pattern: `UNLOGGED`},
 		{Name: "EXTENSIONENGINE", Pattern: `EXTENSION[ \r\n\t]+ENGINE`},
-		{Name: "EXECUTEONCOMMAND", Pattern: `EXECUTE[ \r\n\t]+ON[ \r\n\t]+COMMAND`},
-		{Name: "EXECUTEONALLCOMMANDSWITHTAG", Pattern: `EXECUTE[ \r\n\t]+ON[ \r\n\t]+ALL[ \r\n\t]+COMMANDS[ \r\n\t]+WITH[ \r\n\t]+TAG`},
-		{Name: "EXECUTEONALLCOMMANDS", Pattern: `EXECUTE[ \r\n\t]+ON[ \r\n\t]+ALL[ \r\n\t]+COMMANDS[ \r\n\t]+`},
-		{Name: "EXECUTEONQUERY", Pattern: `EXECUTE[ \r\n\t]+ON[ \r\n\t]+QUERY`},
-		{Name: "EXECUTEONALLQUERIESWITHTAG", Pattern: `EXECUTE[ \r\n\t]+ON[ \r\n\t]+ALL[ \r\n\t]+QUERIES[ \r\n\t]+WITH[ \r\n\t]+TAG`},
-		{Name: "EXECUTEONALLQUERIES", Pattern: `EXECUTE[ \r\n\t]+ON[ \r\n\t]+ALL[ \r\n\t]+QUERIES[ \r\n\t]+`},
+		{Name: "INSERTONCOMMAND", Pattern: `INSERT[ \r\n\t]+ON[ \r\n\t]+COMMAND`},
+		{Name: "INSERTONALLCOMMANDSWITHTAG", Pattern: `INSERT[ \r\n\t]+ON[ \r\n\t]+ALL[ \r\n\t]+COMMANDS[ \r\n\t]+WITH[ \r\n\t]+TAG`},
+		{Name: "SELECTONQUERY", Pattern: `SELECT[ \r\n\t]+ON[ \r\n\t]+QUERY`},
+		{Name: "SELECTONALLQUERIESWITHTAG", Pattern: `SELECT[ \r\n\t]+ON[ \r\n\t]+ALL[ \r\n\t]+QUERIES[ \r\n\t]+WITH[ \r\n\t]+TAG`},
 		{Name: "INSERTONWORKSPACE", Pattern: `INSERT[ \r\n\t]+ON[ \r\n\t]+WORKSPACE`},
 		{Name: "INSERTONALLWORKSPACESWITHTAG", Pattern: `INSERT[ \r\n\t]+ON[ \r\n\t]+ALL[ \r\n\t]+WORKSPACES[ \r\n\t]+WITH[ \r\n\t]+TAG`},
 		{Name: "ONALLTABLESWITHTAG", Pattern: `ON[ \r\n\t]+ALL[ \r\n\t]+TABLES[ \r\n\t]+WITH[ \r\n\t]+TAG`},
 		{Name: "ONTABLE", Pattern: `ON[ \r\n\t]+TABLE`},
+		{Name: "TABLE", Pattern: `TABLE`},
 		{Name: "PRIMARYKEY", Pattern: `PRIMARY[ \r\n\t]+KEY`},
 		{Name: "String", Pattern: `('(\\'|[^'])*')`},
 		{Name: "Ident", Pattern: `([a-zA-Z_]\w*)|("[a-zA-Z_]\w*")`},
@@ -326,7 +325,10 @@ func (c *basicContext) err(err error) {
 	c.errs = append(c.errs, err)
 }
 
-func buildAppDefs(appSchema *AppSchemaAST, builder appdef.IAppDefBuilder) error {
+func buildAppDefs(appSchema *AppSchemaAST, builder appdef.IAppDefBuilder, opts ...BuildAppDefsOption) error {
 	ctx := newBuildContext(appSchema, builder)
+	for _, opt := range opts {
+		opt(ctx)
+	}
 	return ctx.build()
 }

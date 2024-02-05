@@ -61,7 +61,7 @@ func iterate(c IStatementCollection, callback func(stmt interface{})) {
 }
 
 func resolveInCtx[stmtType *TableStmt | *TypeStmt | *FunctionStmt | *CommandStmt | *ProjectorStmt |
-	*RateStmt | *TagStmt | *WorkspaceStmt | *StorageStmt | *ViewStmt | *LimitStmt | *QueryStmt | *RoleStmt](fn DefQName, ictx *iterateCtx, cb func(f stmtType, schema *PackageSchemaAST) error) error {
+	*RateStmt | *TagStmt | *WorkspaceStmt | *StorageStmt | *ViewStmt | *LimitStmt | *QueryStmt | *RoleStmt | *DeclareStmt](fn DefQName, ictx *iterateCtx, cb func(f stmtType, schema *PackageSchemaAST) error) error {
 	var err error
 	var item stmtType
 	var p *PackageSchemaAST
@@ -112,7 +112,7 @@ func lookupInSysPackage[stmtType *WorkspaceStmt](ctx *basicContext, fn DefQName)
 }
 
 func lookupInCtx[stmtType *TableStmt | *TypeStmt | *FunctionStmt | *CommandStmt | *RateStmt | *TagStmt | *ProjectorStmt |
-	*WorkspaceStmt | *ViewStmt | *StorageStmt | *LimitStmt | *QueryStmt | *RoleStmt | *WsDescriptorStmt](fn DefQName, ictx *iterateCtx) (stmtType, *PackageSchemaAST, error) {
+	*WorkspaceStmt | *ViewStmt | *StorageStmt | *LimitStmt | *QueryStmt | *RoleStmt | *WsDescriptorStmt | *DeclareStmt](fn DefQName, ictx *iterateCtx) (stmtType, *PackageSchemaAST, error) {
 	schema, err := getTargetSchema(fn, ictx)
 	if err != nil {
 		return nil, nil, err
@@ -192,7 +192,7 @@ func iteratePackage(pkg *PackageSchemaAST, ctx *basicContext, callback func(stmt
 }
 
 func iteratePackageStmt[stmtType *TableStmt | *TypeStmt | *ViewStmt | *CommandStmt | *QueryStmt |
-	*WorkspaceStmt | *AlterWorkspaceStmt | *ProjectorStmt](pkg *PackageSchemaAST, ctx *basicContext, callback func(stmt stmtType, ctx *iterateCtx)) {
+	*WorkspaceStmt | *AlterWorkspaceStmt | *ProjectorStmt | *RateStmt](pkg *PackageSchemaAST, ctx *basicContext, callback func(stmt stmtType, ctx *iterateCtx)) {
 	iteratePackage(pkg, ctx, func(stmt interface{}, ctx *iterateCtx) {
 		if s, ok := stmt.(stmtType); ok {
 			callback(s, ctx)

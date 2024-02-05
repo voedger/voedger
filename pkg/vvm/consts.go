@@ -7,7 +7,7 @@ package vvm
 import (
 	"time"
 
-	"github.com/voedger/voedger/pkg/istorageimpl/istoragecas"
+	istoragecas2 "github.com/voedger/voedger/pkg/istorage/cas"
 	"github.com/voedger/voedger/pkg/router"
 )
 
@@ -27,6 +27,7 @@ const (
 	DefaultBLOBMaxSize                   = router.BLOBMaxSizeType(20971520) // 20Mb
 	DefaultVVMPort                       = router.DefaultRouterPort
 	actualizerFlushInterval              = time.Millisecond * 500
+	defaultCassandraPort                 = 9042
 )
 
 const (
@@ -37,9 +38,9 @@ const (
 var (
 	LocalHost        = "http://127.0.0.1"
 	DefaultTimeFunc  = time.Now
-	DefaultCasParams = istoragecas.CassandraParamsType{
+	DefaultCasParams = istoragecas2.CassandraParamsType{
 		Hosts:                   "127.0.0.1",
-		Port:                    9042,
-		KeyspaceWithReplication: istoragecas.SimpleWithReplication,
+		Port:                    defaultCassandraPort,
+		KeyspaceWithReplication: istoragecas2.SimpleWithReplication,
 	}
 )

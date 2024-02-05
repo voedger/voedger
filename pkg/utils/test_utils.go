@@ -10,6 +10,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
+	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
 )
 
 var (
@@ -143,4 +144,11 @@ func (o *TestObject) Containers(cb func(container string)) {
 	for containerName := range o.Containers_ {
 		cb(containerName)
 	}
+}
+
+func GetTestBustTimeout() time.Duration {
+	if IsDebug() {
+		return time.Hour
+	}
+	return ibus.DefaultTimeout
 }

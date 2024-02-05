@@ -24,6 +24,7 @@ var (
 	ErrClusterControllerFunctionNotAssigned = errors.New("cluster controller function not assigned")
 	ErrPreparingClusterNodes                = errors.New("error preparing cluster nodes, command is aborted")
 	ErrManagerTokenNotExists                = errors.New("manager token not exists")
+	ErrNoIncompleteCommandWasFoundToRepeat  = errors.New("no incomplete command was found to repeat")
 )
 
 var ErrIncorrectVersion = errors.New("incorrect version")
@@ -63,3 +64,7 @@ const errHostNotFoundInCluster = "host %s not found in cluster: %w"
 var ErrFileNotFound = errors.New("file not found")
 
 const errSshKeyNotFound = "ssh key %s not found: %w"
+
+var ErrDomainsNotFound = errors.New("domains not found")
+
+const errDomainsNotFound = "domains %s not found in cluster: %w"

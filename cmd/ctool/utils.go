@@ -38,9 +38,18 @@ func loggerInfoGreen(args ...interface{}) {
 	logger.Info(args...)
 }
 
+func formatArgs(args []interface{}) string {
+	formattedArgs := make([]string, len(args))
+	for i, arg := range args {
+		formattedArgs[i] = fmt.Sprint(arg)
+	}
+	return strings.Join(formattedArgs, " ")
+}
+
 func loggerError(args ...interface{}) {
 	if !verbose() {
-		fmt.Println("Error:", red(args...))
+		s := fmt.Sprintf("%s %s", red("Error:"), formatArgs(args))
+		fmt.Println(s)
 	}
 	logger.Error(args...)
 }

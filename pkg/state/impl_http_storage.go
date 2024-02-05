@@ -6,7 +6,6 @@ package state
 
 import (
 	"context"
-	"encoding/json"
 	"io"
 	"net/http"
 
@@ -49,17 +48,5 @@ func (s *httpStorage) Read(key istructs.IStateKeyBuilder, callback istructs.Valu
 		body:       bb,
 		header:     res.Header,
 		statusCode: res.StatusCode,
-		toJSONFunc: s.toJSON,
 	})
-}
-func (s *httpStorage) toJSON(sv istructs.IStateValue, _ ...interface{}) (string, error) {
-	value := sv.(*httpValue)
-
-	obj := make(map[string]interface{})
-	obj[Field_Body] = string(value.body)
-	obj[Field_Header] = value.header
-	obj[Field_StatusCode] = value.statusCode
-
-	bb, err := json.Marshal(obj)
-	return string(bb), err
 }

@@ -39,8 +39,8 @@ import (
 	"github.com/voedger/voedger/pkg/iratesce"
 	"github.com/voedger/voedger/pkg/isecrets"
 	"github.com/voedger/voedger/pkg/istorage"
+	"github.com/voedger/voedger/pkg/istorage/provider"
 	"github.com/voedger/voedger/pkg/istoragecache"
-	"github.com/voedger/voedger/pkg/istorageimpl"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
@@ -191,8 +191,8 @@ func provideAppPartsCtlPipelineService(ctl apppartsctl.IAppPartitionsController)
 }
 
 func provideIAppStorageUncachingProviderFactory(factory istorage.IAppStorageFactory) IAppStorageUncachingProviderFactory {
-	return func() (provider istorage.IAppStorageProvider) {
-		return istorageimpl.Provide(factory)
+	return func() istorage.IAppStorageProvider {
+		return provider.Provide(factory)
 	}
 }
 
@@ -446,7 +446,7 @@ func provideRouterServices(vvmCtx context.Context, rp router.RouterParams, busTi
 		RetryAfterSecondsOn503: DefaultRetryAfterSecondsOn503,
 		BLOBMaxSize:            bms,
 	}
-	httpSrv, acmeSrv := router.Provide(vvmCtx, rp, time.Duration(busTimeout), broker, quotas, bp, autocertCache, bus, appsWSAmounts)
+	httpSrv, acmeSrv := router.Provide(vvmCtx, rp, time.Duration(busTimeout), broker, bp, autocertCache, bus, appsWSAmounts)
 	vvmPortSource.getter = func() VVMPortType {
 		return VVMPortType(httpSrv.GetPort())
 	}

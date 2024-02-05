@@ -9,6 +9,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"math"
 	"mime"
 	"net/url"
 	"strconv"
@@ -17,6 +18,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/untillpro/goutils/logger"
+
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/registry"
@@ -144,7 +146,7 @@ func (vit *VIT) waitForWorkspace(wsName string, owner *Principal, respGetter fun
 		wsidIdx       = 5
 		wsErrIdx      = 6
 	)
-	deadline := time.Now().Add(workspaceInitAwaitTimeout)
+	deadline := time.Now().Add(getWorkspaceInitAwaitTimeout())
 	logger.Verbose("workspace", wsName, "awaiting started")
 	for time.Now().Before(deadline) {
 		body := fmt.Sprintf(`
@@ -217,7 +219,7 @@ func (vit *VIT) SignIn(login Login, optFuncs ...signInOptFunc) (prn *Principal) 
 	for _, opt := range optFuncs {
 		opt(opts)
 	}
-	deadline := time.Now().Add(workspaceInitAwaitTimeout)
+	deadline := time.Now().Add(getWorkspaceInitAwaitTimeout())
 	for time.Now().Before(deadline) {
 		body := fmt.Sprintf(`
 			{
@@ -394,10 +396,18 @@ func NewLogin(name, pwd string, appQName istructs.AppQName, subjectKind istructs
 	return Login{name, pwd, pseudoWSID, appQName, subjectKind, clusterID, map[appdef.QName]func(verifiedValues map[string]string) map[string]interface{}{}}
 }
 
-func TestDeadline(nonTestDeadline time.Duration) time.Time {
+func TestDeadline() time.Time {
 	deadline := time.Now().Add(5 * time.Second)
 	if coreutils.IsDebug() {
 		deadline = deadline.Add(time.Hour)
 	}
 	return deadline
+}
+
+func getWorkspaceInitAwaitTimeout() time.Duration {
+	if coreutils.IsDebug() {
+		// so long for Test_Race_RestaurantIntenseUsage with -race
+		return math.MaxInt
+	}
+	return defaultWorkspaceAwaitTimeout
 }

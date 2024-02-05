@@ -219,12 +219,12 @@ func TestCtoolCommands(t *testing.T) {
 	require.Error(err, err)
 
 	// execute the init command
-	err = execRootCmd([]string{"./ctool", "init", "SE", "10.0.0.21", "10.0.0.22", "10.0.0.23", "10.0.0.24", "10.0.0.25", "--dry-run", "--ssh-key", "key", "--acme-domain", "domain"}, version)
+	err = execRootCmd([]string{"./ctool", "init", "SE", "10.0.0.21", "10.0.0.22", "10.0.0.23", "10.0.0.24", "10.0.0.25", "--dry-run", "--ssh-key", "key", "--acme-domain", "domain1,domain2,domain3"}, version)
 	require.NoError(err, err)
 
 	dryRun = true
 	cluster := newCluster()
-	require.Equal(cluster.Acme.domains(), "domain")
+	require.Equal(cluster.Acme.domains(), "domain1,domain2,domain3")
 
 	// repeat command init should give an error
 	err = execRootCmd([]string{"./ctool", "init", "SE", "10.0.0.21", "10.0.0.22", "10.0.0.23", "10.0.0.24", "10.0.0.25", "--dry-run", "--ssh-key", "key"}, version)
@@ -268,6 +268,9 @@ func TestAcmeDomains(t *testing.T) {
 
 	cluster.Acme.addDomains("domain2.io,domain3,domain4")
 	require.Equal(cluster.Acme.domains(), "domain1.io,domain2.io,domain3,domain4")
+
+	cluster.Acme.removeDomains("domain2.io,domain4")
+	require.Equal(cluster.Acme.domains(), "domain1.io,domain3")
 }
 
 // Testing the availability of the variable environment from scripts caused by PipedExec
