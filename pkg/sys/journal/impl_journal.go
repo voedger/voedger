@@ -52,7 +52,7 @@ func qryJournalExec(ep extensionpoints.IExtensionPoint) istructsmem.ExecQueryClo
 			if fo == int64(0) {
 				return
 			}
-			eo, err := NewEventObject(value.AsEvent("").(istructs.IWLogEvent), f, coreutils.WithNonNilsOnly())
+			eo, err := NewEventObject(value.AsEvent("").(istructs.IWLogEvent), args.Workspace, f, coreutils.WithNonNilsOnly())
 			if err != nil {
 				return err
 			}

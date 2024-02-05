@@ -9,11 +9,13 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-func readWlog(ctx context.Context, WSID istructs.WSID, offset istructs.Offset, count int, appStructs istructs.IAppStructs, f *filter, callback istructs.ExecQueryCallback) error {
+func readWlog(ctx context.Context, WSID istructs.WSID, offset istructs.Offset, count int, appStructs istructs.IAppStructs, f *filter, callback istructs.ExecQueryCallback,
+	iws appdef.IWorkspace) error {
 	if !f.acceptAll {
 		for field := range f.fields {
 			if !wlogDef[field] {
@@ -31,7 +33,7 @@ func readWlog(ctx context.Context, WSID istructs.WSID, offset istructs.Offset, c
 			data["QName"] = event.QName().String()
 		}
 		if f.filter("ArgumentObject") {
-			data["ArgumentObject"] = coreutils.ObjectToMap(event.ArgumentObject())
+			data["ArgumentObject"] = coreutils.ObjectToMap(event.ArgumentObject(), iws)
 		}
 		if f.filter("CUDs") {
 			cuds := make([]map[string]interface{}, 0)
@@ -40,7 +42,7 @@ func readWlog(ctx context.Context, WSID istructs.WSID, offset istructs.Offset, c
 				cudData["sys.ID"] = rec.ID()
 				cudData["sys.QName"] = rec.QName().String()
 				cudData["IsNew"] = rec.IsNew()
-				cudData["fields"] = coreutils.FieldsToMap(rec)
+				cudData["fields"] = coreutils.FieldsToMap(rec, iws)
 				cuds = append(cuds, cudData)
 			})
 			data["CUDs"] = cuds

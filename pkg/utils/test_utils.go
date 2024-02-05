@@ -5,7 +5,6 @@
 package coreutils
 
 import (
-	"fmt"
 	"maps"
 	"time"
 
@@ -19,7 +18,7 @@ var (
 	TestTimeFunc = TimeFunc(func() time.Time { return TestNow })
 )
 
-// ICUDRow, IObject, IFields
+// ICUDRow, IObject
 type TestObject struct {
 	istructs.NullObject
 	Name        appdef.QName
@@ -145,83 +144,6 @@ func (o *TestObject) Containers(cb func(container string)) {
 	for containerName := range o.Containers_ {
 		cb(containerName)
 	}
-}
-func (o *TestObject) Fields() []appdef.IField {
-	res := []appdef.IField{}
-	for name, val := range o.Data {
-		res = append(res, &TestIField{
-			name: name,
-			val:  val,
-		})
-	}
-	return res
-}
-func (o *TestObject) Field(name string) appdef.IField {
-	val, ok := o.Data[name]
-	if !ok {
-		return nil
-	}
-	return &TestIField{
-		name: name,
-		val:  val,
-	}
-}
-
-func (o *TestObject) FieldCount() int {
-	return len(o.Data)
-}
-func (o *TestObject) RefField(name string) appdef.IRefField {
-	panic("not implemented")
-}
-
-func (o *TestObject) RefFields() []appdef.IRefField {
-	panic("not implemented")
-}
-
-func (o *TestObject) UserFieldCount() int {
-	panic("not implemented")
-}
-
-type TestIField struct {
-	name string
-	val  interface{}
-}
-
-func (f *TestIField) Comment() string        { return "" }
-func (f *TestIField) CommentLines() []string { return nil }
-func (f *TestIField) Name() string           { return f.name }
-func (f *TestIField) Data() appdef.IData     { return nil }
-func (f *TestIField) DataKind() appdef.DataKind {
-	switch f.val.(type) {
-	case int32:
-		return appdef.DataKind_int32
-	case int64:
-		return appdef.DataKind_int64
-	case string:
-		return appdef.DataKind_string
-	case []byte:
-		return appdef.DataKind_bytes
-	case bool:
-		return appdef.DataKind_bool
-	case float32:
-		return appdef.DataKind_float32
-	case float64:
-		return appdef.DataKind_float64
-	case appdef.QName:
-		return appdef.DataKind_QName
-	case istructs.RecordID:
-		return appdef.DataKind_RecordID
-	default:
-		panic(fmt.Sprint("unsupported data type:", f.val))
-	}
-}
-func (f *TestIField) Required() bool                                { return false }
-func (f *TestIField) Verifiable() bool                              { return false }
-func (f *TestIField) VerificationKind(appdef.VerificationKind) bool { return false }
-func (f *TestIField) IsFixedWidth() bool                            { return true }
-func (f *TestIField) IsSys() bool                                   { return false }
-func (f *TestIField) Constraints() map[appdef.ConstraintKind]appdef.IConstraint {
-	return map[appdef.ConstraintKind]appdef.IConstraint{}
 }
 
 func GetTestBustTimeout() time.Duration {

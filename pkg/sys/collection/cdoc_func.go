@@ -70,7 +70,7 @@ func execQryCDoc(ctx context.Context, args istructs.ExecQueryArgs, callback istr
 	var bytes []byte
 	var obj map[string]interface{}
 	refs := make(map[istructs.RecordID]bool)
-	obj, err = convert(doc, refs, istructs.NullRecordID)
+	obj, err = convert(doc, args.Workspace, refs, istructs.NullRecordID)
 	if err != nil {
 		return
 	}
@@ -85,11 +85,11 @@ func execQryCDoc(ctx context.Context, args istructs.ExecQueryArgs, callback istr
 	return callback(&cdocObject{data: string(bytes)})
 }
 
-func convert(doc istructs.IObject, refs map[istructs.RecordID]bool, parent istructs.RecordID) (obj map[string]interface{}, err error) {
+func convert(doc istructs.IObject, iWorkspace appdef.IWorkspace, refs map[istructs.RecordID]bool, parent istructs.RecordID) (obj map[string]interface{}, err error) {
 	if doc == nil {
 		return nil, nil
 	}
-	obj = coreutils.FieldsToMap(doc, coreutils.Filter(func(fieldName string, kind appdef.DataKind) bool {
+	obj = coreutils.FieldsToMap(doc, iWorkspace, coreutils.Filter(func(fieldName string, kind appdef.DataKind) bool {
 		if skipField(fieldName) {
 			return false
 		}
@@ -108,7 +108,7 @@ func convert(doc istructs.IObject, refs map[istructs.RecordID]bool, parent istru
 		doc.Children(container, func(c istructs.IObject) {
 			var childObj map[string]interface{}
 			if err == nil {
-				childObj, err = convert(c.(*collectionObject), refs, doc.AsRecord().ID())
+				childObj, err = convert(c.(*collectionObject), iWorkspace, refs, doc.AsRecord().ID())
 				if err == nil {
 					list = append(list, childObj)
 				}
@@ -150,7 +150,7 @@ func addRefs(obj map[string]interface{}, refs map[istructs.RecordID]bool, s istr
 		recKey := strconv.FormatInt(int64(recordId), DEC)
 		if _, ok := recmap[recKey]; !ok {
 			child := newCollectionObject(rkv.AsRecord(""))
-			obj, err := convert(child, nil, istructs.NullRecordID)
+			obj, err := convert(child, iWorkspace, nil, istructs.NullRecordID)
 			if err != nil {
 				return err
 			}

@@ -24,7 +24,7 @@ func TestBasicUsage_SignUpIn(t *testing.T) {
 	loginName2 := vit.NextName()
 
 	login1 := vit.SignUp(loginName1, "pwd1", istructs.AppQName_test1_app1)
-	login2 := vit.SignUp(loginName2, "pwd2", istructs.AppQName_test1_app1) // now wrong to create a login in a different ClusterID because it is unknown how to init AppWorkspace there
+	login2 := vit.SignUp(loginName2, "pwd2", istructs.AppQName_test1_app1) // now wrong to create a login in a different CLusterID because it is unknown how to init AppWorkspace there
 
 	prn1 := vit.SignIn(login1)
 	prn2 := vit.SignIn(login2)
