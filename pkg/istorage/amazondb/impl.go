@@ -100,6 +100,7 @@ func (s *implIAppStorage) PutBatch(items []istorage.BatchItem) (err error) {
 }
 
 func (s *implIAppStorage) Get(pKey []byte, cCols []byte, data *[]byte) (ok bool, err error) {
+	// arranging request payload
 	params := dynamodb.GetItemInput{
 		TableName: aws.String(s.keySpace),
 		Key: map[string]types.AttributeValue{
@@ -110,21 +111,24 @@ func (s *implIAppStorage) Get(pKey []byte, cCols []byte, data *[]byte) (ok bool,
 				Value: patchPutBytes(cCols),
 			},
 		},
-		AttributesToGet: []string{valueAttributeName},
+		ProjectionExpression:     aws.String(fmt.Sprintf("%s, #v", sortKeyAttributeName)),
+		ExpressionAttributeNames: map[string]string{"#v": valueAttributeName},
 	}
 
-	result, err := s.session.GetItem(context.Background(), &params)
+	// making request to DynamoDB
+	// GetItem method returns response (pointer to GetItemOutput struct) and error
+	response, err := s.session.GetItem(context.Background(), &params)
 	if err != nil {
 		return false, err
 	}
 
 	// Check if any items were found
-	if result.Item == nil {
+	if response.Item == nil {
 		return false, nil
 	}
 
-	// Extract the value attribute from the first item
-	valueAttribute := result.Item[valueAttributeName]
+	// Extract the value attribute from the response
+	valueAttribute := response.Item[valueAttributeName]
 	if valueAttribute != nil {
 		*data = (*data)[:0] // Reset the data slice
 		*data = valueAttribute.(*types.AttributeValueMemberB).Value
@@ -240,9 +244,10 @@ func (s *implIAppStorage) Read(ctx context.Context, pKey []byte, startCCols, fin
 		}
 	}
 	params := dynamodb.QueryInput{
-		TableName:       aws.String(s.keySpace),
-		AttributesToGet: []string{sortKeyAttributeName, valueAttributeName},
-		KeyConditions:   keyConditions,
+		TableName:                aws.String(s.keySpace),
+		ProjectionExpression:     aws.String(fmt.Sprintf("%s, #v", sortKeyAttributeName)),
+		ExpressionAttributeNames: map[string]string{"#v": valueAttributeName},
+		KeyConditions:            keyConditions,
 	}
 
 	result, err := s.session.Query(context.Background(), &params)
@@ -332,9 +337,7 @@ func doesTableExist(name string, client *dynamodb.Client) (bool, error) {
 		TableName: aws.String(dynamoDBTableName(name)),
 	}
 
-	_, err := client.DescribeTable(context.TODO(), describeTableInput)
-
-	if err != nil {
+	if _, err := client.DescribeTable(context.TODO(), describeTableInput); err != nil {
 		// Check if the error indicates that the table doesn't exist
 		var resourceNotFoundException *types.ResourceNotFoundException
 		if errors.As(err, &resourceNotFoundException) {
