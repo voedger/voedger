@@ -377,10 +377,10 @@ func TestSqlQuery_records(t *testing.T) {
 		resp.RequireError(t, fmt.Sprintf("record with ID '%d' has mismatching QName 'app1pkg.pos_emails'", emailId))
 	})
 	t.Run("Should return error when record not found", func(t *testing.T) {
-		body = `{"args":{"Query":"select * from app1pkg.payments where id = 123456789"}}`
+		body = fmt.Sprintf(`{"args":{"Query":"select * from app1pkg.payments where id = %d"}}`, istructs.NonExistingRecordID)
 		resp := vit.PostWS(ws, "q.sys.SqlQuery", body, coreutils.Expect500())
 
-		resp.RequireError(t, "record with ID '123456789' not found")
+		resp.RequireError(t, fmt.Sprintf("record with ID '%d' not found", istructs.NonExistingRecordID))
 	})
 	t.Run("Should return error when field not found in def", func(t *testing.T) {
 		body = fmt.Sprintf(`{"args":{"Query":"select abracadabra from app1pkg.pos_emails where id = %d"}}`, emailId)
