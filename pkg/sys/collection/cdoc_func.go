@@ -85,11 +85,11 @@ func execQryCDoc(ctx context.Context, args istructs.ExecQueryArgs, callback istr
 	return callback(&cdocObject{data: string(bytes)})
 }
 
-func convert(doc istructs.IObject, iWorkspace appdef.IWithTypes, refs map[istructs.RecordID]bool, parent istructs.RecordID) (obj map[string]interface{}, err error) {
+func convert(doc istructs.IObject, iWorkspace appdef.IWorkspace, refs map[istructs.RecordID]bool, parent istructs.RecordID) (obj map[string]interface{}, err error) {
 	if doc == nil {
 		return nil, nil
 	}
-	obj = coreutils.FieldsToMap(doc, iWorkspace, coreutils.Filter(func(fieldName string, kind appdef.DataKind) bool {
+	obj = coreutils.ObjectToMap(doc, iWorkspace, coreutils.Filter(func(fieldName string, kind appdef.DataKind) bool {
 		if skipField(fieldName) {
 			return false
 		}
@@ -103,21 +103,35 @@ func convert(doc istructs.IObject, iWorkspace appdef.IWithTypes, refs map[istruc
 		}
 		return true
 	}))
-	doc.Containers(func(container string) {
-		list := make([]interface{}, 0)
-		doc.Children(container, func(c istructs.IObject) {
-			var childObj map[string]interface{}
-			if err == nil {
-				childObj, err = convert(c.(*collectionObject) /*iWorkspace*/, c.(*collectionObject), refs, doc.AsRecord().ID())
-				if err == nil {
-					list = append(list, childObj)
-				}
-			}
-		})
-		if container != "" {
-			obj[container] = list
-		}
-	})
+	// obj = coreutils.FieldsToMap(doc, iWorkspace, coreutils.Filter(func(fieldName string, kind appdef.DataKind) bool {
+	// 	if skipField(fieldName) {
+	// 		return false
+	// 	}
+	// 	if refs != nil {
+	// 		if kind == appdef.DataKind_RecordID && fieldName != appdef.SystemField_ID {
+	// 			// the field is a reference
+	// 			if parent != doc.AsRecordID(fieldName) {
+	// 				refs[doc.AsRecordID(fieldName)] = true
+	// 			}
+	// 		}
+	// 	}
+	// 	return true
+	// }))
+	// doc.Containers(func(container string) {
+	// 	list := make([]interface{}, 0)
+	// 	doc.Children(container, func(c istructs.IObject) {
+	// 		var childObj map[string]interface{}
+	// 		if err == nil {
+	// 			childObj, err = convert(c.(*collectionObject) /*iWorkspace*/, c.(*collectionObject), refs, doc.AsRecord().ID())
+	// 			if err == nil {
+	// 				list = append(list, childObj)
+	// 			}
+	// 		}
+	// 	})
+	// 	if container != "" {
+	// 		obj[container] = list
+	// 	}
+	// })
 
 	return obj, nil
 }

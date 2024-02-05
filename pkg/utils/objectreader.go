@@ -58,7 +58,7 @@ func WithNonNilsOnly() MapperOpt {
 
 // IWorkspace is required as the source to get list of fields from
 // failed to add this information to IRowReader so it is simpler to keep IWorkspace here
-func FieldsToMap(obj istructs.IRowReader, ws appdef.IWithTypes, optFuncs ...MapperOpt) (res map[string]interface{}) {
+func FieldsToMap(obj istructs.IRowReader, ws appdef.IWorkspace, optFuncs ...MapperOpt) (res map[string]interface{}) {
 	res = map[string]interface{}{}
 
 	qn := obj.AsQName(appdef.SystemField_QName)
@@ -113,6 +113,7 @@ func ObjectToMap(obj istructs.IObject, ws appdef.IWorkspace, opts ...MapperOpt) 
 		var childMap map[string]interface{}
 		cont := []map[string]interface{}{}
 		obj.Children(container, func(c istructs.IObject) {
+			
 			childMap = ObjectToMap(c, ws, opts...)
 			cont = append(cont, childMap)
 		})
