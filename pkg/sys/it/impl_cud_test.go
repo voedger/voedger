@@ -192,6 +192,8 @@ func TestBasicUsage_Singletons(t *testing.T) {
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
+	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+
 	body := `
 		{
 			"cuds": [
@@ -204,19 +206,18 @@ func TestBasicUsage_Singletons(t *testing.T) {
 				}
 			]
 		}`
-	prn := vit.GetPrincipal(istructs.AppQName_test1_app1, "login")
-	resp := vit.PostProfile(prn, "c.sys.CUD", body)
+	resp := vit.PostWS(ws, "c.sys.CUD", body)
 	require.Empty(resp.NewIDs) // ничего не прошло через ID generator
 
 	// повторное создание -> ошибка
-	vit.PostProfile(prn, "c.sys.CUD", body, coreutils.Expect409()).Println()
+	vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect409()).Println()
 
 	// запросим ID через collection
 	body = `{
 		"args":{ "Schema":"app1pkg.Config" },
 		"elements":[{ "fields": ["sys.ID"] }]
 	}`
-	resp = vit.PostProfile(prn, "q.sys.Collection", body)
+	resp = vit.PostWS(ws, "q.sys.Collection", body)
 	singletonID := int64(resp.SectionRow()[0].(float64))
 	log.Println(singletonID)
 	require.True(istructs.RecordID(singletonID) >= istructs.FirstSingletonID && istructs.RecordID(singletonID) <= istructs.MaxSingletonID)
@@ -229,6 +230,7 @@ func TestUnlinkReference(t *testing.T) {
 
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
 
+	// new `options` and `department` are linked to `department_options`
 	body := `
 		{
 			"cuds": [
