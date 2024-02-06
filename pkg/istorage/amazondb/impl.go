@@ -351,7 +351,7 @@ func doesTableExist(name string, client *dynamodb.Client) (bool, error) {
 }
 
 func dynamoDBTableName(name string) string {
-	return fmt.Sprintf("%s.value", name)
+	return fmt.Sprintf("%s.values", name)
 }
 
 // prefixZero is a workaround for DynamoDB's limitation on empty byte slices in SortKey
