@@ -211,7 +211,7 @@ func extractAllScripts() error {
 				return err
 			}
 			destPath := filepath.Join(scriptsTempDir, strings.TrimPrefix(path, "scripts/drafts"))
-			err = os.MkdirAll(filepath.Dir(destPath), 0700)
+			err = os.MkdirAll(filepath.Dir(destPath), rwxrwxrwx)
 			if err != nil {
 				return err
 			}
