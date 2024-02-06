@@ -175,7 +175,7 @@ func prepareScripts(scriptFileNames ...string) error {
 		dir := filepath.Dir(destFileName)
 
 		// nolint
-		err = os.MkdirAll(dir, 0700) // os.ModePerm)
+		err = os.MkdirAll(dir, rwxrwxrwx) // os.ModePerm)
 		if err != nil {
 			return err
 		}
