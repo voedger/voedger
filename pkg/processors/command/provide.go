@@ -58,7 +58,7 @@ func ProvideServiceFactory(appParts appparts.IAppPartitions, now coreutils.TimeF
 
 		return pipeline.NewService(func(vvmCtx context.Context) {
 			hsp := newHostStateProvider(vvmCtx, partitionID, secretReader)
-			syncActualizerOperator := syncActualizerFactory(vvmCtx, partitionID)
+			//syncActualizerOperator := syncActualizerFactory(vvmCtx, partitionID)
 			cmdProc.storeOp = pipeline.NewSyncPipeline(vvmCtx, "store",
 				pipeline.WireFunc("applyRecords", func(ctx context.Context, work interface{}) (err error) {
 					// sync apply records
@@ -69,7 +69,15 @@ func ProvideServiceFactory(appParts appparts.IAppPartitions, now coreutils.TimeF
 					return err
 				}), pipeline.WireSyncOperator("syncProjectorsAndPutWLog", pipeline.ForkOperator(pipeline.ForkSame,
 					// forK: sync projector and PutWLog
-					pipeline.ForkBranch(pipeline.NewSyncOp(wireSyncActualizer(syncActualizerOperator))),
+					// pipeline.ForkBranch(pipeline.NewSyncOp(wireSyncActualizer(syncActualizerOperator))),
+
+					pipeline.ForkBranch(
+						pipeline.NewSyncOp(func(ctx context.Context, work interface{}) (err error) {
+							p := work.(*cmdWorkpiece)
+							return p.appPart.DoSyncActualizer(ctx, work)
+						}),
+					),
+
 					pipeline.ForkBranch(pipeline.NewSyncOp(func(ctx context.Context, work interface{}) (err error) {
 						// put WLog
 						cmd := work.(*cmdWorkpiece)

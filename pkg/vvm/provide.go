@@ -377,6 +377,32 @@ func (s *switchByAppName) Switch(work interface{}) (branchName string, err error
 	return work.(interface{ AppQName() istructs.AppQName }).AppQName().String(), nil
 }
 
+func NewSyncActualizerFactoryFactory(actualizerFactory projectors.SyncActualizerFactory, secretReader isecrets.ISecretReader, n10nBroker in10n.IN10nBroker) func(appStructs istructs.IAppStructs, partitionID istructs.PartitionID) pipeline.ISyncOperator {
+	return func(appStructs istructs.IAppStructs, partitionID istructs.PartitionID) pipeline.ISyncOperator {
+		if len(appStructs.SyncProjectors()) == 0 {
+			return &pipeline.NOOP{}
+		}
+		conf := projectors.SyncActualizerConf{
+			Ctx:          context.Background(), // it is needed for sync pipeline and GMP believes it is enough
+			AppStructs:   func() istructs.IAppStructs { return appStructs },
+			SecretReader: secretReader,
+			Partition:    partitionID,
+			WorkToEvent: func(work interface{}) istructs.IPLogEvent {
+				return work.(interface{ Event() istructs.IPLogEvent }).Event()
+			},
+			N10nFunc: func(view appdef.QName, wsid istructs.WSID, offset istructs.Offset) {
+				n10nBroker.Update(in10n.ProjectionKey{
+					App:        appStructs.AppQName(),
+					Projection: view,
+					WS:         wsid,
+				}, offset)
+			},
+			IntentsLimit: builtin.MaxCUDs,
+		}
+		return actualizerFactory(conf, appStructs.SyncProjectors()[0], appStructs.SyncProjectors()[1:]...)
+	}
+}
+
 func provideSyncActualizerFactory(vvmApps VVMApps, structsProvider istructs.IAppStructsProvider, n10nBroker in10n.IN10nBroker, mpq MaxPrepareQueriesType, actualizerFactory projectors.SyncActualizerFactory, secretReader isecrets.ISecretReader) commandprocessor.SyncActualizerFactory {
 	return func(vvmCtx context.Context, partitionID istructs.PartitionID) pipeline.ISyncOperator {
 		actualizers := []pipeline.SwitchOperatorOptionFunc{}

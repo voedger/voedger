@@ -6,6 +6,8 @@
 package appparts
 
 import (
+	"context"
+
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/cluster"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -59,4 +61,6 @@ type IAppPartition interface {
 	//
 	// @ConcurrentAccess
 	Release()
+
+	DoSyncActualizer(ctx context.Context, work interface{}) (err error)
 }

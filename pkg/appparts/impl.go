@@ -15,16 +15,18 @@ import (
 )
 
 type apps struct {
-	structs istructs.IAppStructsProvider
-	apps    map[istructs.AppQName]*app
-	mx      sync.RWMutex
+	structs    istructs.IAppStructsProvider
+	actualizer SyncActualizerFactory
+	apps       map[istructs.AppQName]*app
+	mx         sync.RWMutex
 }
 
-func newAppPartitions(structs istructs.IAppStructsProvider) (ap IAppPartitions, cleanup func(), err error) {
+func newAppPartitions(structs istructs.IAppStructsProvider, actualizer SyncActualizerFactory) (ap IAppPartitions, cleanup func(), err error) {
 	a := &apps{
-		structs: structs,
-		apps:    map[istructs.AppQName]*app{},
-		mx:      sync.RWMutex{},
+		structs:    structs,
+		actualizer: actualizer,
+		apps:       map[istructs.AppQName]*app{},
+		mx:         sync.RWMutex{},
 	}
 	return a, func() {}, err
 }
@@ -35,7 +37,7 @@ func (aps *apps) DeployApp(name istructs.AppQName, def appdef.IAppDef, partsCoun
 
 	a, ok := aps.apps[name]
 	if !ok {
-		a = newApplication(name)
+		a = newApplication(aps, name)
 		aps.apps[name] = a
 	}
 
