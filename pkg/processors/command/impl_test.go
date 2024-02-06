@@ -743,36 +743,7 @@ func setUp(t *testing.T, prepare func(appDef appdef.IAppDefBuilder, cfg *istruct
 	appTokens := payloads.ProvideIAppTokensFactory(tokens).New(testAppName)
 	systemToken, err := payloads.GetSystemPrincipalTokenApp(appTokens)
 	require.NoError(err)
-	as, err := appStructsProvider.AppStructs(istructs.AppQName_untill_airs_bp)
-	require.NoError(err)
-	syncActualizerFactory := projectors.ProvideSyncActualizerFactory()
-	op := func(vvmCtx context.Context, partitionID istructs.PartitionID) pipeline.ISyncOperator {
-		if len(as.SyncProjectors()) == 0 {
-			return &pipeline.NOOP{}
-		}
-		conf := projectors.SyncActualizerConf{
-			Ctx: vvmCtx,
-			AppStructs: func() istructs.IAppStructs {
-				return as
-			},
-			SecretReader: itokensjwt.ProvideTestSecretsReader(nil),
-			Partition:    partitionID,
-			WorkToEvent: func(work interface{}) istructs.IPLogEvent {
-				return work.(interface{ Event() istructs.IPLogEvent }).Event()
-				// 	switch typed := work.(type) {
-				// 	case interface{ Event() istructs.IPLogEvent }:
-				// 		return typed.Event()
-				// 	case istructs.IPLogEvent:
-				// 		return typed
-				// 	}
-				// 	panic("")
-			},
-			IntentsLimit: 1,
-			N10nFunc:     nil,
-		}
-		return syncActualizerFactory(conf, as.SyncProjectors()[0], as.SyncProjectors()[1:]...)
-	}
-	cmdProcessorFactory := ProvideServiceFactory(appParts, time.Now, op, n10nBroker, imetrics.Provide(), "vvm", iauthnzimpl.NewDefaultAuthenticator(iauthnzimpl.TestSubjectRolesGetter), iauthnzimpl.NewDefaultAuthorizer(), isecretsimpl.ProvideSecretReader())
+	cmdProcessorFactory := ProvideServiceFactory(appParts, time.Now, n10nBroker, imetrics.Provide(), "vvm", iauthnzimpl.NewDefaultAuthenticator(iauthnzimpl.TestSubjectRolesGetter), iauthnzimpl.NewDefaultAuthorizer(), isecretsimpl.ProvideSecretReader())
 	cmdProcService := cmdProcessorFactory(serviceChannel, testAppPartID)
 
 	go func() {

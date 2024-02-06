@@ -43,7 +43,7 @@ type appPartition struct {
 }
 
 // syncActualizerFactory - это фабрика(разделИД), которая возвращает свитч, в бранчах которого по синхронному актуализатору на каждое приложение, внутри каждого - проекторы на каждое приложение
-func ProvideServiceFactory(appParts appparts.IAppPartitions, now coreutils.TimeFunc, syncActualizerFactory SyncActualizerFactory,
+func ProvideServiceFactory(appParts appparts.IAppPartitions, now coreutils.TimeFunc,
 	n10nBroker in10n.IN10nBroker, metrics imetrics.IMetrics, vvm VVMName, authenticator iauthnz.IAuthenticator, authorizer iauthnz.IAuthorizer,
 	secretReader isecrets.ISecretReader) ServiceFactory {
 	return func(commandsChannel CommandChannel, partitionID istructs.PartitionID) pipeline.IService {

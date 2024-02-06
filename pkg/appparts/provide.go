@@ -12,10 +12,7 @@ import (
 
 type SyncActualizerFactory = func(istructs.IAppStructs, istructs.PartitionID) pipeline.ISyncOperator
 
-// func New(structs istructs.IAppStructsProvider) (ap IAppPartitions, cleanup func(), err error) {
-// 	return newAppPartitions(structs, nil)
-// }
-
+// New only for tests where sync actualizer is not used
 func New(structs istructs.IAppStructsProvider) (ap IAppPartitions, cleanup func(), err error) {
 	return NewWithActualizer(structs, func(is istructs.IAppStructs, pi istructs.PartitionID) pipeline.ISyncOperator {
 		return &pipeline.NOOP{}
