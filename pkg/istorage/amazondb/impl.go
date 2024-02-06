@@ -130,7 +130,7 @@ func (s *implIAppStorage) Get(pKey []byte, cCols []byte, data *[]byte) (ok bool,
 	// Extract the value attribute from the response
 	valueAttribute := response.Item[valueAttributeName]
 	*data = (*data)[:0] // Reset the data slice
-	*data = valueAttribute.(*types.AttributeValueMemberB).Value
+	*data = unprefixZero(valueAttribute.(*types.AttributeValueMemberB).Value)
 	return true, nil
 }
 
@@ -184,7 +184,7 @@ func (s *implIAppStorage) GetBatch(pKey []byte, items []istorage.GetBatchItem) e
 			indexList := cColToIndex[string(item[sortKeyAttributeName].(*types.AttributeValueMemberB).Value)]
 			for _, index := range indexList {
 				items[index].Ok = true
-				items[index].Data = &item[valueAttributeName].(*types.AttributeValueMemberB).Value
+				*items[index].Data = unprefixZero(item[valueAttributeName].(*types.AttributeValueMemberB).Value)
 			}
 		}
 	}
@@ -248,7 +248,7 @@ func (s *implIAppStorage) Read(ctx context.Context, pKey []byte, startCCols, fin
 		KeyConditions:            keyConditions,
 	}
 
-	result, err := s.client.Query(context.Background(), &params)
+	result, err := s.client.Query(ctx, &params)
 	if err != nil {
 		return err
 	}
