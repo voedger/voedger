@@ -23,17 +23,13 @@ DB_NODE_1_HOST=$(nslookup "db-node-1" | awk '/^Address: / { print $2 }')
 DB_NODE_2_HOST=$(nslookup "db-node-2" | awk '/^Address: / { print $2 }')
 DB_NODE_3_HOST=$(nslookup "db-node-3" | awk '/^Address: / { print $2 }')
 CURRENT_TIME=$(date "+%Y%m%d_%H%M%S")
-BACKUP_FOLDER="/home/${SSH_USER}/backups/backup_\$(date +\%Y-\%m-\%d-\%H-\%M-\%S)"
+BACKUP_FOLDER="/mnt/backup/voedger/\$(date +\%Y\%m\%d\%H\%M\%S)-backup"
 
 set_cron_schedule(){
     CRON_FILE=$(mktemp)
     
-    if crontab -l; then
-      if crontab -l | grep -v "${CTOOL_PATH}"; then
-        crontab -l | grep -v "${CTOOL_PATH}" > "${CRON_FILE}"
-      else
-        crontab -l > "${CRON_FILE}"  
-      fi
+    if crontab -l | grep -v "backup node"; then
+      crontab -l | grep -v "backup node" > "${CRON_FILE}"
     fi
 
     echo "${SCHEDULE} ${CTOOL_PATH} backup node ${DB_NODE_1_HOST} ${BACKUP_FOLDER} ${KEY_PATH} --ssh-port ${SSH_PORT};${CTOOL_PATH} backup node ${DB_NODE_2_HOST} ${BACKUP_FOLDER} ${KEY_PATH} --ssh-port ${SSH_PORT};${CTOOL_PATH} backup node ${DB_NODE_3_HOST} ${BACKUP_FOLDER} ${KEY_PATH} --ssh-port ${SSH_PORT}" >> "${CRON_FILE}"

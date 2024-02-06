@@ -129,6 +129,10 @@ func backupCron(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	if err = checkBackupFolders(cluster); err != nil {
+		return err
+	}
+
 	if err = setCronBackup(cluster, args[0]); err != nil {
 		return err
 	}
@@ -141,4 +145,18 @@ func backupCron(cmd *cobra.Command, args []string) error {
 	}
 
 	return nil
+}
+
+// Checking the presence of a Backup folder on DBNodes
+func checkBackupFolders(cluster *clusterType) error {
+	var err error
+	for _, n := range cluster.Nodes {
+		if n.NodeRole == nrDBNode {
+			if e := newScriptExecuter(cluster.sshKey, "").
+				run("check-remote-folder.sh", n.address(), backupFolder); e != nil {
+				err = errors.Join(err, fmt.Errorf(errBackupFolderIsNotPrepared, n.nodeName()+" "+n.address(), ErrBackupFolderIsNotPrepared))
+			}
+		}
+	}
+	return err
 }
