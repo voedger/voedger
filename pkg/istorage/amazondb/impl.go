@@ -130,7 +130,7 @@ func (s *implIAppStorage) Get(pKey []byte, cCols []byte, data *[]byte) (ok bool,
 	// Extract the value attribute from the response
 	valueAttribute := response.Item[valueAttributeName]
 	*data = (*data)[:0] // Reset the data slice
-	*data = unprefixZero(valueAttribute.(*types.AttributeValueMemberB).Value)
+	*data = valueAttribute.(*types.AttributeValueMemberB).Value
 	return true, nil
 }
 
@@ -184,7 +184,7 @@ func (s *implIAppStorage) GetBatch(pKey []byte, items []istorage.GetBatchItem) e
 			indexList := cColToIndex[string(item[sortKeyAttributeName].(*types.AttributeValueMemberB).Value)]
 			for _, index := range indexList {
 				items[index].Ok = true
-				*items[index].Data = unprefixZero(item[valueAttributeName].(*types.AttributeValueMemberB).Value)
+				*items[index].Data = item[valueAttributeName].(*types.AttributeValueMemberB).Value
 			}
 		}
 	}
@@ -272,9 +272,9 @@ func getClient(cfg aws.Config) *dynamodb.Client {
 }
 
 func newStorage(cfg aws.Config, keySpace string) (storage istorage.IAppStorage) {
-	session := getClient(cfg)
+	client := getClient(cfg)
 	return &implIAppStorage{
-		client:   session,
+		client:   client,
 		keySpace: dynamoDBTableName(keySpace),
 	}
 }
