@@ -68,3 +68,8 @@ const errSshKeyNotFound = "ssh key %s not found: %w"
 var ErrDomainsNotFound = errors.New("domains not found")
 
 const errDomainsNotFound = "domains %s not found in cluster: %w"
+
+// Backup Folder is not prepared
+var ErrBackupFolderIsNotPrepared = errors.New("backup folder error")
+
+const errBackupFolderIsNotPrepared = "backup folder " + backupFolder + " is not prepared on host %s: %w"
