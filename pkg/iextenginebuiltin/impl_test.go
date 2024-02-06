@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
 	"github.com/voedger/voedger/pkg/iextengine"
 )
 
@@ -39,7 +40,7 @@ func Test_BasicUsage(t *testing.T) {
 
 	engines, err := factory.New(context.Background(), nil, nil, 5)
 	require.NoError(err)
-	require.Equal(5, len(engines))
+	require.Len(engines, 5)
 
 	require.NoError(engines[0].Invoke(context.Background(), ext1name, nil))
 	require.NoError(engines[1].Invoke(context.Background(), ext1name, nil))

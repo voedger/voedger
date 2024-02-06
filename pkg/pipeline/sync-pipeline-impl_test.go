@@ -22,7 +22,7 @@ func TestSyncPipeline_DoSync(t *testing.T) {
 
 		err := pipeline.SendSync(newTestWork())
 
-		require.NotNil(t, err)
+		require.Error(t, err)
 		require.Equal(t, "test failure", err.Error())
 		perr, cast := err.(IErrorPipeline)
 		require.Equal(t, "fail-here", perr.GetOpName())
@@ -45,7 +45,7 @@ func TestSyncPipeline_DoSync(t *testing.T) {
 		defer pipeline.Close()
 
 		err := pipeline.SendSync(newTestWork())
-		require.NotNil(t, err)
+		require.Error(t, err)
 		perr := err.(IErrorPipeline)
 		require.Equal(t, "nested error 'rethrown' while handling 'test failure'", perr.Error())
 		require.Equal(t, "catch-and-rethrow", perr.GetOpName())
@@ -69,7 +69,7 @@ func TestSyncPipeline_DoSync(t *testing.T) {
 		pipeline := NewSyncPipeline(ctx, "my-pipeline",
 			WireSyncOperator("noop", &NOOP{}))
 
-		require.Nil(t, pipeline.DoSync(ctx, v))
+		require.NoError(t, pipeline.DoSync(ctx, v))
 	})
 	t.Run("Should panic on nil work", func(t *testing.T) {
 		pipeline := NewSyncPipeline(context.Background(), "my-pipeline",

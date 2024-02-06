@@ -20,16 +20,16 @@ func BenchmarkSectionedRequestResponse(b *testing.B) {
 	bus := Provide(func(requestCtx context.Context, sender ibus.ISender, request ibus.Request) {
 		rs := sender.SendParallelResponse()
 		go func() {
-			require.Nil(b, rs.ObjectSection("secObj", []string{"meta"}, "elem"))
+			require.NoError(b, rs.ObjectSection("secObj", []string{"meta"}, "elem"))
 			rs.StartMapSection("secMap", []string{"classifier", "2"})
-			require.Nil(b, rs.SendElement("id1", "elem"))
-			require.Nil(b, rs.SendElement("id2", "elem"))
+			require.NoError(b, rs.SendElement("id1", "elem"))
+			require.NoError(b, rs.SendElement("id2", "elem"))
 			rs.StartArraySection("secArr", []string{"classifier", "4"})
-			require.Nil(b, rs.SendElement("", "arrEl1"))
-			require.Nil(b, rs.SendElement("", "arrEl2"))
+			require.NoError(b, rs.SendElement("", "arrEl1"))
+			require.NoError(b, rs.SendElement("", "arrEl2"))
 			rs.StartMapSection("deps", []string{"classifier", "3"})
-			require.Nil(b, rs.SendElement("id3", "elem"))
-			require.Nil(b, rs.SendElement("id4", "elem"))
+			require.NoError(b, rs.SendElement("id3", "elem"))
+			require.NoError(b, rs.SendElement("id4", "elem"))
 			rs.Close(errors.New("test error"))
 		}()
 	})
@@ -72,7 +72,7 @@ func BenchmarkOneSectionElement(b *testing.B) {
 	bus := Provide(func(requestCtx context.Context, sender ibus.ISender, request ibus.Request) {
 		rs := sender.SendParallelResponse()
 		go func() {
-			require.Nil(b, rs.ObjectSection("secObj", nil, "hello"))
+			require.NoError(b, rs.ObjectSection("secObj", nil, "hello"))
 			rs.Close(nil)
 		}()
 	})

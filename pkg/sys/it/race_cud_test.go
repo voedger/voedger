@@ -13,6 +13,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
 	"github.com/voedger/voedger/pkg/istructs"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 	it "github.com/voedger/voedger/pkg/vit"
@@ -408,9 +409,9 @@ func readAndCheckArt(t *testing.T, idx int, vit *it.VIT, ws *it.AppWorkspace) {
 		actualName = resp.SectionRow(i)[0].(string)
 		actualControlActive = resp.SectionRow(i)[1].(float64)
 		id = resp.SectionRow(i)[2].(float64)
-		require.NotEqual(id, 0)
+		require.NotEqual(0, id)
 		i++
 	}
 	require.Equal(artname, actualName)
-	require.Equal(float64(5), actualControlActive)
+	require.InDelta(float64(5), actualControlActive, 0.0001)
 }

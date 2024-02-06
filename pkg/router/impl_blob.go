@@ -117,7 +117,7 @@ func writeBLOB(ctx context.Context, wsid int64, appQName string, header map[stri
 	// request HVM for check the principalToken and get a blobID
 	req := ibus.Request{
 		Method:   ibus.HTTPMethodPOST,
-		WSID:     int64(wsid),
+		WSID:     wsid,
 		AppQName: appQName,
 		Resource: "c.sys.UploadBLOBHelper",
 		Body:     []byte(`{}`),

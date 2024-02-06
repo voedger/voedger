@@ -388,7 +388,7 @@ func Test_SchedulerOnTimer(t *testing.T) {
 		// closing channels
 		close(dedupInCh)
 
-		require.Equal(t, 0, len(messagesToDedupIn))
+		require.Empty(t, messagesToDedupIn)
 	})
 
 	t.Run(`2 scheduled items`, func(t *testing.T) {
@@ -525,8 +525,8 @@ func Test_Dedupin(t *testing.T) {
 				return true
 			})
 
-			require.Equal(t, len(messagesToCall), inProcessKeyCounter)
-			require.Equal(t, len(messagesToRepeat), 1)
+			require.Len(t, messagesToCall, inProcessKeyCounter)
+			require.Len(t, messagesToRepeat, 1)
 		})
 	}
 }
@@ -601,8 +601,8 @@ func Test_Repeater(t *testing.T) {
 			messagesToReport = testMessagesReader(reporterCh)
 			messagesToRepeat = testMessagesReader(repeatCh)
 
-			require.Equal(t, len(messagesToReport), 2)
-			require.Equal(t, len(messagesToRepeat), 2)
+			require.Len(t, messagesToReport, 2)
+			require.Len(t, messagesToRepeat, 2)
 		})
 	}
 }

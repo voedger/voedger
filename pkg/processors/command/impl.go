@@ -701,7 +701,7 @@ func sendResponse(cmd *cmdWorkpiece, handlingError error) {
 			return
 		}
 		body.WriteString(`,"Result":`)
-		body.WriteString(string(cmdResultBytes))
+		body.Write(cmdResultBytes)
 	}
 	body.WriteString("}")
 	coreutils.ReplyJSON(cmd.cmdMes.Sender(), http.StatusOK, body.String())

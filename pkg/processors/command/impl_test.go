@@ -89,7 +89,7 @@ func TestBasicUsage(t *testing.T) {
 	testExec := func(args istructs.ExecCommandArgs) (err error) {
 		cuds := args.Workpiece.(*cmdWorkpiece).parsedCUDs
 		if len(cuds) > 0 {
-			require.True(len(cuds) == 1)
+			require.Len(cuds, 1)
 			require.Equal(float64(1), cuds[0].fields[appdef.SystemField_ID])
 			require.Equal(testCDoc.String(), cuds[0].fields[appdef.SystemField_QName])
 			close(cudsCheck)
@@ -123,7 +123,7 @@ func TestBasicUsage(t *testing.T) {
 			Header: app.sysAuthHeader,
 		}
 		resp, sections, secErr, err := app.bus.SendRequest2(app.ctx, request, coreutils.GetTestBustTimeout())
-		require.Nil(err, err)
+		require.NoError(err)
 		require.Nil(secErr, secErr)
 		require.Nil(sections)
 		log.Println(string(resp.Data))
@@ -146,8 +146,8 @@ func TestBasicUsage(t *testing.T) {
 			Header:   app.sysAuthHeader,
 		}
 		resp, sections, secErr, err := app.bus.SendRequest2(app.ctx, request, coreutils.GetTestBustTimeout())
-		require.Nil(err, err)
-		require.Nil(secErr, secErr)
+		require.NoError(err)
+		require.Nil(secErr)
 		require.Nil(sections)
 		require.Equal(http.StatusInternalServerError, resp.StatusCode)
 		require.Equal(coreutils.ApplicationJSON, resp.ContentType)
@@ -171,8 +171,8 @@ func sendCUD(t *testing.T, wsid istructs.WSID, app testApp, expectedCode ...int)
 		Header: app.sysAuthHeader,
 	}
 	resp, sections, secErr, err := app.bus.SendRequest2(app.ctx, req, coreutils.GetTestBustTimeout())
-	require.Nil(err, err)
-	require.Nil(secErr, secErr)
+	require.NoError(err)
+	require.Nil(secErr)
 	require.Nil(sections)
 	if len(expectedCode) == 0 {
 		require.Equal(http.StatusOK, resp.StatusCode)
@@ -180,7 +180,7 @@ func sendCUD(t *testing.T, wsid istructs.WSID, app testApp, expectedCode ...int)
 		require.Equal(expectedCode[0], resp.StatusCode)
 	}
 	respData := map[string]interface{}{}
-	require.Nil(json.Unmarshal(resp.Data, &respData))
+	require.NoError(json.Unmarshal(resp.Data, &respData))
 	return respData
 }
 
@@ -320,7 +320,7 @@ func TestCUDUpdate(t *testing.T) {
 		Header:   app.sysAuthHeader,
 	}
 	resp, sections, secErr, err := app.bus.SendRequest2(app.ctx, req, coreutils.GetTestBustTimeout())
-	require.Nil(err, err)
+	require.NoError(err)
 	require.Nil(secErr, secErr)
 	require.Nil(sections)
 	require.Equal(http.StatusOK, resp.StatusCode)
@@ -332,8 +332,8 @@ func TestCUDUpdate(t *testing.T) {
 		id := int64(m["NewIDs"].(map[string]interface{})["1"].(float64))
 		req.Body = []byte(fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"sys.QName":"test.test", "IntFld": 42}}]}`, id))
 		resp, sections, secErr, err = app.bus.SendRequest2(app.ctx, req, coreutils.GetTestBustTimeout())
-		require.Nil(err, err)
-		require.Nil(secErr, secErr)
+		require.NoError(err)
+		require.Nil(secErr)
 		require.Nil(sections)
 		require.Equal(http.StatusOK, resp.StatusCode)
 		require.Equal(coreutils.ApplicationJSON, resp.ContentType)
@@ -342,8 +342,8 @@ func TestCUDUpdate(t *testing.T) {
 	t.Run("404 not found on update not existing", func(t *testing.T) {
 		req.Body = []byte(fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"sys.QName":"test.test", "IntFld": 42}}]}`, istructs.NonExistingRecordID))
 		resp, sections, secErr, err = app.bus.SendRequest2(app.ctx, req, coreutils.GetTestBustTimeout())
-		require.Nil(err, err)
-		require.Nil(secErr, secErr)
+		require.NoError(err)
+		require.Nil(secErr)
 		require.Nil(sections)
 		require.Equal(http.StatusNotFound, resp.StatusCode)
 		require.Equal(coreutils.ApplicationJSON, resp.ContentType)
@@ -390,8 +390,8 @@ func Test400BadRequestOnCUDErrors(t *testing.T) {
 				Header:   app.sysAuthHeader,
 			}
 			resp, sections, secErr, err := app.bus.SendRequest2(app.ctx, req, coreutils.GetTestBustTimeout())
-			require.Nil(err, err)
-			require.Nil(secErr, secErr)
+			require.NoError(err)
+			require.Nil(secErr)
 			require.Nil(sections)
 			require.Equal(http.StatusBadRequest, resp.StatusCode, c.desc)
 			require.Equal(coreutils.ApplicationJSON, resp.ContentType, c.desc)
@@ -467,8 +467,8 @@ func Test400BadRequests(t *testing.T) {
 				req.Resource = c.Resource
 			}
 			resp, sections, secErr, err := app.bus.SendRequest2(app.ctx, req, coreutils.GetTestBustTimeout())
-			require.Nil(err, err)
-			require.Nil(secErr, secErr)
+			require.NoError(err)
+			require.Nil(secErr)
 			require.Nil(sections)
 			require.Equal(http.StatusBadRequest, resp.StatusCode)
 			require.Equal(coreutils.ApplicationJSON, resp.ContentType)
@@ -543,7 +543,7 @@ func TestAuthnz(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.desc, func(t *testing.T) {
 			resp, sections, secErr, err := app.bus.SendRequest2(app.ctx, c.req, coreutils.GetTestBustTimeout())
-			require.Nil(err, err)
+			require.NoError(err)
 			require.Nil(secErr, secErr)
 			require.Nil(sections)
 			log.Println(string(resp.Data))
@@ -586,7 +586,7 @@ func TestBasicUsage_FuncWithRawArg(t *testing.T) {
 		Header:   app.sysAuthHeader,
 	}
 	resp, sections, secErr, err := app.bus.SendRequest2(app.ctx, request, coreutils.GetTestBustTimeout())
-	require.Nil(err, err)
+	require.NoError(err)
 	require.Nil(secErr)
 	require.Nil(sections)
 	require.Equal(http.StatusOK, resp.StatusCode)
@@ -624,16 +624,16 @@ func TestRateLimit(t *testing.T) {
 	// first 2 calls are ok
 	for i := 0; i < 2; i++ {
 		resp, sections, secErr, err := app.bus.SendRequest2(app.ctx, request, coreutils.GetTestBustTimeout())
-		require.Nil(err, err)
-		require.Nil(secErr, secErr)
+		require.NoError(err)
+		require.Nil(secErr)
 		require.Nil(sections)
 		require.Equal(http.StatusOK, resp.StatusCode)
 	}
 
 	// 3rd exceeds rate limits
 	resp, sections, secErr, err := app.bus.SendRequest2(app.ctx, request, coreutils.GetTestBustTimeout())
-	require.Nil(err, err)
-	require.Nil(secErr, secErr)
+	require.NoError(err)
+	require.Nil(secErr)
 	require.Nil(sections)
 	require.Equal(http.StatusTooManyRequests, resp.StatusCode)
 }

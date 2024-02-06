@@ -8,8 +8,8 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 )
 
-func CheckBackwardCompatibility(old, new appdef.IAppDef) (cerrs *CompatibilityErrors) {
-	return checkBackwardCompatibility(old, new)
+func CheckBackwardCompatibility(oldAppDef, newAppDef appdef.IAppDef) (cerrs *CompatibilityErrors) {
+	return checkBackwardCompatibility(oldAppDef, newAppDef)
 }
 
 func IgnoreCompatibilityErrors(cerrs *CompatibilityErrors, pathsToIgnore [][]string) (cerrsOut *CompatibilityErrors) {

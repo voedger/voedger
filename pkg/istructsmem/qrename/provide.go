@@ -12,6 +12,6 @@ import (
 )
 
 // Renames QName from old to new. QNameID previously used by old will be used by new.
-func Rename(storage istorage.IAppStorage, old, new appdef.QName) error {
-	return qnames.Rename(storage, old, new)
+func Rename(storage istorage.IAppStorage, oldQName, newQName appdef.QName) error {
+	return qnames.Rename(storage, oldQName, newQName)
 }

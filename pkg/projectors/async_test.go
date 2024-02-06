@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/in10nmem"
@@ -381,7 +382,7 @@ func Test_AsynchronousActualizer_ErrorAndRestore(t *testing.T) {
 	require.Equal(1, attempts)
 	projInErr := getProjectorsInError(metrics, istructs.AppQName_test1_app1, "test")
 	require.NotNil(projInErr)
-	require.Equal(1.0, *projInErr)
+	require.InDelta(1.0, *projInErr, 0.0001)
 
 	// tick after-error interval ("30 second delay")
 	chanAfterError <- time.Now()
@@ -392,7 +393,7 @@ func Test_AsynchronousActualizer_ErrorAndRestore(t *testing.T) {
 	}
 	projInErr = getProjectorsInError(metrics, istructs.AppQName_test1_app1, "test")
 	require.NotNil(projInErr)
-	require.Equal(0.0, *projInErr)
+	require.InDelta(0.0, *projInErr, 0.0001)
 
 	// stop services
 	cancelCtx()
@@ -486,7 +487,7 @@ func Test_AsynchronousActualizer_ResumeReadAfterNotifications(t *testing.T) {
 	require.Equal(int32(1), getProjectionValue(require, app, incProjectionView, istructs.WSID(1002)))
 	projInErrs := getProjectorsInError(metrics, istructs.AppQName_test1_app1, "test")
 	require.NotNil(projInErrs)
-	require.Equal(0.0, *projInErrs)
+	require.InDelta(0.0, *projInErrs, 0.0001)
 }
 
 type pLogFiller struct {
@@ -889,11 +890,11 @@ func Test_AsynchronousActualizer_Stress_NonBuffered(t *testing.T) {
 	}
 
 	t.Logf("Stopped in %s ", time.Since(t0))
-	t.Logf("RPS: %.2f", float64(totalEvents)/float64(duration.Seconds()))
+	t.Logf("RPS: %.2f", float64(totalEvents)/duration.Seconds())
 	metrics.List(func(metric imetrics.IMetric, metricValue float64) (err error) {
 		if metric.Name() == "voedger_istoragecache_putbatch_total" {
 			t.Logf("PutBatch: %.0f", metricValue)
-			t.Logf("Batch Per Second: %.2f", float64(metricValue)/float64(duration.Seconds()))
+			t.Logf("Batch Per Second: %.2f", metricValue/duration.Seconds())
 		}
 		return nil
 	})
@@ -1055,11 +1056,11 @@ func Test_AsynchronousActualizer_Stress_Buffered(t *testing.T) {
 	}
 
 	t.Logf("Stopped in %s ", time.Since(t0))
-	t.Logf("RPS: %.2f", float64(totalEvents)/float64(duration.Seconds()))
+	t.Logf("RPS: %.2f", float64(totalEvents)/duration.Seconds())
 	metrics.List(func(metric imetrics.IMetric, metricValue float64) (err error) {
 		if metric.Name() == "voedger_istoragecache_putbatch_total" {
 			t.Logf("PutBatch: %.0f", metricValue)
-			t.Logf("Batch Per Second: %.2f", float64(metricValue)/float64(duration.Seconds()))
+			t.Logf("Batch Per Second: %.2f", metricValue/duration.Seconds())
 		}
 		return nil
 	})

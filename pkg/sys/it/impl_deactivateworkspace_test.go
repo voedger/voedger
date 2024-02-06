@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -112,10 +113,10 @@ func TestDeactivateJoinedWorkspace(t *testing.T) {
 	viewWorkspaceIDIdx := map[string]interface{}{}
 	require.NoError(json.Unmarshal([]byte(resp.SectionRow()[0].(string)), &viewWorkspaceIDIdx))
 	idOfCDocWorkspaceID := int64(viewWorkspaceIDIdx["IDOfCDocWorkspaceID"].(float64))
-	body = fmt.Sprintf(`{"args":{"ID": %d},"elements":[{"fields": ["Result"]}]}`, int64(idOfCDocWorkspaceID))
+	body = fmt.Sprintf(`{"args":{"ID": %d},"elements":[{"fields": ["Result"]}]}`, idOfCDocWorkspaceID)
 	resp = vit.PostApp(istructs.AppQName_test1_app1, wsidOfCDocWorkspaceID, "q.sys.GetCDoc", body, coreutils.WithAuthorizeBy(sysToken.Token))
 	jsonBytes := []byte(resp.SectionRow()[0].(string))
 	cdocWorkspaceID := map[string]interface{}{}
-	require.Nil(json.Unmarshal(jsonBytes, &cdocWorkspaceID))
+	require.NoError(json.Unmarshal(jsonBytes, &cdocWorkspaceID))
 	require.False(cdocWorkspaceID[appdef.SystemField_IsActive].(bool))
 }

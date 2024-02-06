@@ -20,19 +20,19 @@ func Benchmark_BufWriteCustomTypes(b *testing.B) {
 		usrType uint64
 	)
 
-	const cap = 1000 // test slices capacity
+	const capacity = 1000 // test slices capacity
 
-	int64slice := make([]uint64, cap)
+	int64slice := make([]uint64, capacity)
 	for i := range int64slice {
 		int64slice[i] = uint64(2 * i)
 	}
 
-	usrSlice := make([]usrType, cap)
+	usrSlice := make([]usrType, capacity)
 	for i := range usrSlice {
 		usrSlice[i] = usrType(2 * i)
 	}
 
-	synSlice := make([]synType, cap)
+	synSlice := make([]synType, capacity)
 	for i := range synSlice {
 		synSlice[i] = synType(2 * i)
 	}

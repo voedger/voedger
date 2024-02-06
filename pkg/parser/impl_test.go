@@ -93,7 +93,7 @@ func Test_BasicUsage(t *testing.T) {
 
 	// constraint
 	uniques := cdoc.Uniques()
-	require.Equal(2, len(uniques))
+	require.Len(uniques, 2)
 
 	t.Run("first unique, automatically named", func(t *testing.T) {
 		u := uniques[appdef.MustParseQName("main.TablePlan$uniques$01")]
@@ -210,11 +210,11 @@ func Test_BasicUsage(t *testing.T) {
 	proj.Events(func(ie appdef.IProjectorEvent) {
 		eventsCount++
 		if eventsCount == 1 {
-			require.Equal(1, len(ie.Kind()))
+			require.Len(ie.Kind(), 1)
 			require.Equal(appdef.ProjectorEventKind_Execute, ie.Kind()[0])
 			require.Equal(appdef.NewQName("main", "NewOrder"), ie.On().QName())
 		} else if eventsCount == 2 {
-			require.Equal(1, len(ie.Kind()))
+			require.Len(ie.Kind(), 1)
 			require.Equal(appdef.ProjectorEventKind_Execute, ie.Kind()[0])
 			require.Equal(appdef.NewQName("main", "NewOrder2"), ie.On().QName())
 		}
@@ -225,10 +225,10 @@ func Test_BasicUsage(t *testing.T) {
 		stateCount++
 		if stateCount == 1 {
 			require.Equal(appdef.NewQName("sys", "AppSecret"), storage)
-			require.Equal(0, len(names))
+			require.Empty(names)
 		} else if stateCount == 2 {
 			require.Equal(appdef.NewQName("sys", "Http"), storage)
-			require.Equal(0, len(names))
+			require.Empty(names)
 		}
 	})
 	require.Equal(2, stateCount)
@@ -238,7 +238,7 @@ func Test_BasicUsage(t *testing.T) {
 		intentsCount++
 		if intentsCount == 1 {
 			require.Equal(appdef.NewQName("sys", "View"), storage)
-			require.Equal(4, len(names))
+			require.Len(names, 4)
 			require.Equal(appdef.NewQName("main", "ActiveTablePlansView"), names[0])
 			require.Equal(appdef.NewQName("main", "DashboardView"), names[1])
 			require.Equal(appdef.NewQName("main", "NotificationsHistory"), names[2])
@@ -1046,18 +1046,18 @@ func Test_Comments(t *testing.T) {
 	require.NoError(err)
 
 	ps, err := BuildPackageSchema("test", []*FileSchemaAST{fs})
-	require.Nil(err)
+	require.NoError(err)
 
 	require.NotNil(ps.Ast.Statements[0].ExtEngine.Statements[0].Function.Comments)
 
 	comments := ps.Ast.Statements[0].ExtEngine.Statements[0].Function.GetComments()
-	require.Equal(2, len(comments))
+	require.Len(comments, 2)
 	require.Equal("My function", comments[0])
 	require.Equal("line 2", comments[1])
 
 	fn := ps.Ast.Statements[0].ExtEngine.Statements[1].Function
 	comments = fn.GetComments()
-	require.Equal(2, len(comments))
+	require.Len(comments, 2)
 	require.Equal("Multiline", comments[0])
 	require.Equal("comment", comments[1])
 }
@@ -1078,7 +1078,7 @@ func Test_Undefined(t *testing.T) {
 		)
 	)
 	`)
-	require.Nil(err)
+	require.NoError(err)
 
 	pkg, err := BuildPackageSchema("test", []*FileSchemaAST{fs})
 	require.NoError(err)
@@ -1114,7 +1114,7 @@ func Test_Projectors(t *testing.T) {
 		);
 	)
 	`)
-	require.Nil(err)
+	require.NoError(err)
 
 	pkg, err := BuildPackageSchema("test", []*FileSchemaAST{fs})
 	require.NoError(err)
@@ -1186,10 +1186,10 @@ func Test_AbstractWorkspace(t *testing.T) {
 	WORKSPACE ws4 INHERITS ws2 ();
 	WORKSPACE ws5 INHERITS ws1 ();  -- Incorrect
 	`)
-	require.Nil(err)
+	require.NoError(err)
 
 	ps, err := BuildPackageSchema("test", []*FileSchemaAST{fs})
-	require.Nil(err)
+	require.NoError(err)
 
 	require.False(ps.Ast.Statements[1].Workspace.Abstract)
 	require.True(ps.Ast.Statements[2].Workspace.Abstract)
@@ -1221,7 +1221,7 @@ func Test_UniqueFields(t *testing.T) {
 	require.NoError(err)
 
 	pkg, err := BuildPackageSchema("test", []*FileSchemaAST{fs})
-	require.Nil(err)
+	require.NoError(err)
 
 	packages, err := BuildAppSchema([]*PackageSchemaAST{
 		getSysPackageAST(),
@@ -1256,10 +1256,10 @@ func Test_NestedTables(t *testing.T) {
 		)
 	);
 	`)
-	require.Nil(err)
+	require.NoError(err)
 
 	pkg, err := BuildPackageSchema("test", []*FileSchemaAST{fs})
-	require.Nil(err)
+	require.NoError(err)
 
 	packages, err := BuildAppSchema([]*PackageSchemaAST{
 		getSysPackageAST(),
@@ -1287,10 +1287,10 @@ func Test_SemanticAnalysisForReferences(t *testing.T) {
 			OTableRef ref(OTable)
 		);
 		`)
-		require.Nil(err)
+		require.NoError(err)
 
 		pkg, err := BuildPackageSchema("test", []*FileSchemaAST{fs})
-		require.Nil(err)
+		require.NoError(err)
 
 		packages, err := BuildAppSchema([]*PackageSchemaAST{
 			getSysPackageAST(),
@@ -1313,10 +1313,10 @@ func Test_1KStringField(t *testing.T) {
 		KB varchar(1024)
 	)
 	`)
-	require.Nil(err)
+	require.NoError(err)
 
 	pkg, err := BuildPackageSchema("test", []*FileSchemaAST{fs})
-	require.Nil(err)
+	require.NoError(err)
 
 	packages, err := BuildAppSchema([]*PackageSchemaAST{
 		getSysPackageAST(),
@@ -1356,10 +1356,10 @@ func Test_ReferenceToNoTable(t *testing.T) {
 		RefField ref(Admin)
 	);
 	`)
-	require.Nil(err)
+	require.NoError(err)
 
 	pkg, err := BuildPackageSchema("test", []*FileSchemaAST{fs})
-	require.Nil(err)
+	require.NoError(err)
 
 	_, err = BuildAppSchema([]*PackageSchemaAST{
 		getSysPackageAST(),

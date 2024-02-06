@@ -20,11 +20,11 @@ linters:
     - gomnd
 
 # Second stage linters
-#    - unconvert    # Remove unnecessary type conversions.
-#    - predeclared  # Find code that shadows one of Go's predeclared identifiers.
-#    - mirror       # Reports wrong mirror patterns of bytes/strings usage.
+    - unconvert    # Remove unnecessary type conversions.
+    - predeclared  # Find code that shadows one of Go's predeclared identifiers.
+    - mirror       # Reports wrong mirror patterns of bytes/strings usage.
 #    - nilerr       # Finds the code that returns nil even if it checks that the error is not nil.
-#    - testifylint  # Checks usage of github.com/stretchr/testify.
+    - testifylint  # Checks usage of github.com/stretchr/testify.
 
 
 # For the future:
@@ -92,6 +92,8 @@ linters-settings:
       - "10"
       - "42"
       - "100"
+  testifylint:
+    enable-all: true
 issues:
   exclude:
    - underscore

@@ -17,6 +17,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
 	"github.com/voedger/voedger/pkg/appdef"
 )
 
@@ -219,7 +220,6 @@ func TestAppQName_Compare(t *testing.T) {
 	q1_1 := NewAppQName("sys", "registry")
 	q1_2 := NewAppQName("sys", "registry")
 	require.Equal(q1_1, q1_2)
-	require.True(q1_1 == q1_2)
 
 	q2 := appdef.NewQName("sys", "registry2")
 	require.NotEqual(q1_1, q2)
@@ -256,7 +256,7 @@ func TestAppQName_UnmarshalInvalidString(t *testing.T) {
 		q := NewAppQName("a", "b")
 
 		err = q.UnmarshalJSON(nil)
-		require.NotNil(err)
+		require.Error(err)
 		log.Println(err)
 		require.Equal(NullAppQName, q)
 	})
@@ -265,7 +265,7 @@ func TestAppQName_UnmarshalInvalidString(t *testing.T) {
 		q := NewAppQName("a", "b")
 
 		err = q.UnmarshalJSON([]byte("\"\""))
-		require.NotNil(err)
+		require.Error(err)
 		require.Equal(NullAppQName, q)
 
 		log.Println(err)
@@ -275,7 +275,7 @@ func TestAppQName_UnmarshalInvalidString(t *testing.T) {
 		q := NewAppQName("a", "b")
 
 		err = q.UnmarshalJSON([]byte("\"bcd\""))
-		require.NotNil(err)
+		require.Error(err)
 		require.Equal(NullAppQName, q)
 
 		log.Println(err)
@@ -285,14 +285,14 @@ func TestAppQName_UnmarshalInvalidString(t *testing.T) {
 		q := NewAppQName("a", "b")
 
 		err = q.UnmarshalJSON([]byte("\"c..d\""))
-		require.NotNil(err)
+		require.Error(err)
 		log.Println(err)
 	})
 
 	t.Run("json unquoted", func(t *testing.T) {
 		q := NewAppQName("a", "b")
 		err = q.UnmarshalJSON([]byte("c.d"))
-		require.NotNil(err)
+		require.Error(err)
 		log.Println(err)
 	})
 
@@ -349,14 +349,14 @@ func TestNullObject(t *testing.T) {
 	require.NoError(err)
 
 	require.Nil(null.AsBytes(appdef.NullName))
-	require.Equal(float32(0), null.AsFloat32(appdef.NullName))
-	require.Equal(float64(0), null.AsFloat64(appdef.NullName))
-	require.Equal(int32(0), null.AsInt32(appdef.NullName))
-	require.Equal(int64(0), null.AsInt64(appdef.NullName))
+	require.InDelta(float32(0), null.AsFloat32(appdef.NullName), 0.0001)
+	require.InDelta(float64(0), null.AsFloat64(appdef.NullName), 0.0001)
+	require.InDelta(int32(0), null.AsInt32(appdef.NullName), 0.0001)
+	require.InDelta(int64(0), null.AsInt64(appdef.NullName), 0.0001)
 	require.Equal("", null.AsString(appdef.NullName))
 
 	require.Equal(appdef.NullQName, null.AsQName(appdef.NullName))
-	require.Equal(false, null.AsBool(appdef.NullName))
+	require.False(null.AsBool(appdef.NullName))
 	require.Equal(NullRecordID, null.AsRecordID(appdef.NullName))
 
 	require.Equal(appdef.NullQName, null.QName())

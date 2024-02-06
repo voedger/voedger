@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/irates"
 	"github.com/voedger/voedger/pkg/iratesce"
@@ -138,8 +139,8 @@ func TestObjectFillAndGet(t *testing.T) {
 		require.Equal(istructs.RecordID(7), o.AsRecordID("sys.ID"))
 		require.Equal(int32(1), o.AsInt32("int32"))
 		require.Equal(int64(2), o.AsInt64("int64"))
-		require.Equal(float32(3), o.AsFloat32("float32"))
-		require.Equal(float64(4), o.AsFloat64("float64"))
+		require.InDelta(float32(3), o.AsFloat32("float32"), 0.0001)
+		require.InDelta(float64(4), o.AsFloat64("float64"), 0.0001)
 		require.Equal([]byte{5, 6}, o.AsBytes("bytes"))
 		require.Equal("str", o.AsString("string"))
 		require.Equal(test.testCDoc, o.AsQName("QName"))

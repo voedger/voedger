@@ -80,7 +80,7 @@ type SchemaAST struct {
 }
 
 func (p *PackageSchemaAST) NewQName(name Ident) appdef.QName {
-	return appdef.NewQName(string(p.Name), string(name))
+	return appdef.NewQName(p.Name, string(name))
 }
 
 func (s *SchemaAST) Iterate(callback func(stmt interface{})) {

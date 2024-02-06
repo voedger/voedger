@@ -15,6 +15,7 @@ import (
 	"unsafe"
 
 	"github.com/stretchr/testify/require"
+
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/state"
@@ -195,7 +196,7 @@ func TestBasicUsage_POST(t *testing.T) {
 	t.Run("custom response handler", func(t *testing.T) {
 		resp := vit.PostWS(ws, "q.sys.Echo", bodyEcho, coreutils.WithResponseHandler(func(httpResp *http.Response) {
 			bytes, err := io.ReadAll(httpResp.Body)
-			require.Nil(err, err)
+			require.NoError(err)
 			log.Println(string(bytes))
 
 			// response body must be explicitly closed

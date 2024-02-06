@@ -9,7 +9,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
-	itokens "github.com/voedger/voedger/pkg/itokens"
+	"github.com/voedger/voedger/pkg/itokens"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
@@ -38,7 +38,7 @@ func NewVerificationToken(entity string, field, value string, kind appdef.Verifi
 	}
 
 	token, err = appTokens.IssueToken(VerificationTokenDuration, &vp)
-	return token, string(verificationCode), err
+	return token, verificationCode, err
 }
 
 func IssueVerfiedValueToken(token, code string, appTokens istructs.IAppTokens, itokens itokens.ITokens) (verifiedValueToken string, err error) {

@@ -217,7 +217,7 @@ func iterateContext(ictx *iterateCtx, callback func(stmt interface{}, ctx *itera
 
 func isInternalName(pkgName Ident, pkgAst *PackageSchemaAST) bool {
 	pkg := strings.TrimSpace(string(pkgName))
-	return pkg == "" || pkg == string(pkgAst.Name)
+	return pkg == "" || pkg == pkgAst.Name
 }
 
 func getPackageName(pkgQN string) string {

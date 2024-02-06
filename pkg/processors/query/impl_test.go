@@ -385,7 +385,7 @@ func Test_epsilon(t *testing.T) {
 	t.Run("Should return epsilon", func(t *testing.T) {
 		epsilon, err := epsilon(args(options(math.E)))
 
-		require.Equal(t, math.E, epsilon)
+		require.InDelta(t, math.E, epsilon, 0.0001)
 		require.NoError(t, err)
 	})
 	t.Run("Should return error when options is nil", func(t *testing.T) {
@@ -393,7 +393,7 @@ func Test_epsilon(t *testing.T) {
 		t.Skip("//TODO (FILTER0001)")
 		epsilon, err := epsilon(args(nil))
 
-		require.Equal(t, 0.0, epsilon)
+		require.InDelta(t, 0.0, epsilon, 0.0001)
 		require.ErrorIs(t, err, ErrNotFound)
 	})
 	t.Run("Should return error when epsilon is nil", func(t *testing.T) {
@@ -401,13 +401,13 @@ func Test_epsilon(t *testing.T) {
 		t.Skip("//TODO (FILTER0001)")
 		epsilon, err := epsilon(args(options(nil)))
 
-		require.Equal(t, 0.0, epsilon)
+		require.InDelta(t, 0.0, epsilon, 0.0001)
 		require.ErrorIs(t, err, ErrNotFound)
 	})
 	t.Run("Should return error when epsilon has wrong type", func(t *testing.T) {
 		epsilon, err := epsilon(args(options("0.00000001")))
 
-		require.Equal(t, 0.0, epsilon)
+		require.InDelta(t, 0.0, epsilon, 0.0001)
 		require.ErrorIs(t, err, coreutils.ErrFieldTypeMismatch)
 	})
 }

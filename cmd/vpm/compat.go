@@ -124,7 +124,7 @@ func appDefFromBaselineDir(baselineDir string) (appdef.IAppDef, error) {
 	var schemaFiles []string
 	if err := filepath.Walk(pkgDirPath, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
-			return nil
+			return err
 		}
 		if !info.IsDir() && filepath.Ext(path) == ".sql" {
 			schemaFiles = append(schemaFiles, path)

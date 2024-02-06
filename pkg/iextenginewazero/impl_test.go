@@ -13,6 +13,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/tetratelabs/wazero/sys"
+
 	"github.com/voedger/voedger/pkg/iextengine"
 	"github.com/voedger/voedger/pkg/state"
 )
@@ -48,7 +49,7 @@ func Test_BasicUsage(t *testing.T) {
 	// Invoke command
 	//
 	require.NoError(extEngine.Invoke(context.Background(), iextengine.NewExtQName(testPkg, exampleCommand), extIO))
-	require.Equal(1, len(extIO.intents))
+	require.Len(extIO.intents, 1)
 	v := extIO.intents[0].value.(*mockValueBuilder)
 
 	require.Equal("test@gmail.com", v.items["from"])
@@ -62,7 +63,7 @@ func Test_BasicUsage(t *testing.T) {
 	projectorMode = true // state will return different Event
 	require.NoError(extEngine.Invoke(context.Background(), iextengine.NewExtQName(testPkg, updateSubscriptionProjector), extIO))
 
-	require.Equal(1, len(extIO.intents))
+	require.Len(extIO.intents, 1)
 	v = extIO.intents[0].value.(*mockValueBuilder)
 
 	require.Equal("test@gmail.com", v.items["from"])
@@ -158,7 +159,7 @@ func Test_Allocs_AutoGC(t *testing.T) {
 
 	requireMemStatEx(t, wasmEngine, expectedAllocs, expectedFrees, expectedHeapSize, WasmPreallocatedBufferSize)
 
-	calculatedHeapInUse := uint32(WasmPreallocatedBufferSize)
+	calculatedHeapInUse := WasmPreallocatedBufferSize
 	for calculatedHeapInUse < expectedHeapSize-16 {
 		require.NoError(extEngine.Invoke(context.Background(), iextengine.NewExtQName(testPkg, arrAppend), extIO))
 		require.NoError(extEngine.Invoke(context.Background(), iextengine.NewExtQName(testPkg, arrReset), extIO))
@@ -203,7 +204,7 @@ func Test_NoGc_MemoryOverflow(t *testing.T) {
 	var expectedAllocs = uint32(1)
 	var expectedFrees = uint32(0)
 
-	requireMemStatEx(t, wasmEngine, expectedAllocs, expectedFrees, uint32(WasmPreallocatedBufferSize), uint32(WasmPreallocatedBufferSize))
+	requireMemStatEx(t, wasmEngine, expectedAllocs, expectedFrees, WasmPreallocatedBufferSize, WasmPreallocatedBufferSize)
 
 	calculatedHeapInUse := WasmPreallocatedBufferSize
 	err = nil
@@ -315,15 +316,15 @@ func Test_RecoverEngine(t *testing.T) {
 	require.NoError(err)
 	defer extEngine.Close(ctx)
 
-	require.Nil(extEngine.Invoke(context.Background(), iextengine.NewExtQName(testPkg, arrAppend2), extIO))
-	require.Nil(extEngine.Invoke(context.Background(), iextengine.NewExtQName(testPkg, arrAppend2), extIO))
-	require.Nil(extEngine.Invoke(context.Background(), iextengine.NewExtQName(testPkg, arrAppend2), extIO))
-	require.NotNil(extEngine.Invoke(context.Background(), iextengine.NewExtQName(testPkg, arrAppend2), extIO))
+	require.NoError(extEngine.Invoke(context.Background(), iextengine.NewExtQName(testPkg, arrAppend2), extIO))
+	require.NoError(extEngine.Invoke(context.Background(), iextengine.NewExtQName(testPkg, arrAppend2), extIO))
+	require.NoError(extEngine.Invoke(context.Background(), iextengine.NewExtQName(testPkg, arrAppend2), extIO))
+	require.Error(extEngine.Invoke(context.Background(), iextengine.NewExtQName(testPkg, arrAppend2), extIO))
 
-	require.Nil(extEngine.Invoke(context.Background(), iextengine.NewExtQName(testPkg, arrAppend2), extIO))
-	require.Nil(extEngine.Invoke(context.Background(), iextengine.NewExtQName(testPkg, arrAppend2), extIO))
-	require.Nil(extEngine.Invoke(context.Background(), iextengine.NewExtQName(testPkg, arrAppend2), extIO))
-	require.NotNil(extEngine.Invoke(context.Background(), iextengine.NewExtQName(testPkg, arrAppend2), extIO))
+	require.NoError(extEngine.Invoke(context.Background(), iextengine.NewExtQName(testPkg, arrAppend2), extIO))
+	require.NoError(extEngine.Invoke(context.Background(), iextengine.NewExtQName(testPkg, arrAppend2), extIO))
+	require.NoError(extEngine.Invoke(context.Background(), iextengine.NewExtQName(testPkg, arrAppend2), extIO))
+	require.Error(extEngine.Invoke(context.Background(), iextengine.NewExtQName(testPkg, arrAppend2), extIO))
 }
 
 func Test_Read(t *testing.T) {
@@ -385,13 +386,13 @@ func Test_NoAllocs(t *testing.T) {
 	require.NoError(err)
 
 	requireMemStatEx(t, wasmEngine, 1, 0, WasmPreallocatedBufferSize, WasmPreallocatedBufferSize)
-	require.Equal(2, len(extIO.intents))
+	require.Len(extIO.intents, 2)
 	v0 := extIO.intents[0].value.(*mockValueBuilder)
 
 	require.Equal("test@gmail.com", v0.items["from"])
 	require.Equal(int32(668), v0.items["port"])
 	bytes := (v0.items["key"]).([]byte)
-	require.Equal(5, len(bytes))
+	require.Len(bytes, 5)
 
 	v1 := extIO.intents[1].value.(*mockValueBuilder)
 	require.Equal(int32(12346), v1.items["offs"])
