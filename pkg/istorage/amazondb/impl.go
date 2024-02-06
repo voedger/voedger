@@ -129,10 +129,8 @@ func (s *implIAppStorage) Get(pKey []byte, cCols []byte, data *[]byte) (ok bool,
 
 	// Extract the value attribute from the response
 	valueAttribute := response.Item[valueAttributeName]
-	if valueAttribute != nil {
-		*data = (*data)[:0] // Reset the data slice
-		*data = valueAttribute.(*types.AttributeValueMemberB).Value
-	}
+	*data = (*data)[:0] // Reset the data slice
+	*data = valueAttribute.(*types.AttributeValueMemberB).Value
 	return true, nil
 }
 
