@@ -44,7 +44,7 @@ func (d implIAppStorageFactory) Init(appName istorage.SafeAppName) error {
 	}
 	keySpace := appName.String()
 	session := getClient(cfg)
-	if err := createKeyspace(keySpace, session); err != nil {
+	if err := newTableExistsWaiter(keySpace, session); err != nil {
 		var awsErr *types.ResourceInUseException
 		if errors.As(err, &awsErr) {
 			return istorage.ErrStorageAlreadyExists
@@ -62,7 +62,7 @@ func (s *implIAppStorage) Put(pKey []byte, cCols []byte, value []byte) (err erro
 				Value: pKey,
 			},
 			sortKeyAttributeName: &types.AttributeValueMemberB{
-				Value: patchPutBytes(cCols),
+				Value: prefixZero(cCols),
 			},
 			valueAttributeName: &types.AttributeValueMemberB{
 				Value: value,
@@ -82,7 +82,7 @@ func (s *implIAppStorage) PutBatch(items []istorage.BatchItem) (err error) {
 					Value: item.PKey,
 				},
 				sortKeyAttributeName: &types.AttributeValueMemberB{
-					Value: patchPutBytes(item.CCols),
+					Value: prefixZero(item.CCols),
 				},
 				valueAttributeName: &types.AttributeValueMemberB{
 					Value: item.Value,
@@ -108,7 +108,7 @@ func (s *implIAppStorage) Get(pKey []byte, cCols []byte, data *[]byte) (ok bool,
 				Value: pKey,
 			},
 			sortKeyAttributeName: &types.AttributeValueMemberB{
-				Value: patchPutBytes(cCols),
+				Value: prefixZero(cCols),
 			},
 		},
 		ProjectionExpression:     aws.String(fmt.Sprintf("%s, #v", sortKeyAttributeName)),
@@ -148,7 +148,7 @@ func (s *implIAppStorage) GetBatch(pKey []byte, items []istorage.GetBatchItem) e
 	keyList := make([]map[string]types.AttributeValue, 0)
 	uniqueCCols := make(map[string]struct{})
 	for i, item := range items {
-		patchedCCols := patchPutBytes(item.CCols)
+		patchedCCols := prefixZero(item.CCols)
 		strPatchedCCols := string(patchedCCols)
 		cColToIndex[strPatchedCCols] = append(cColToIndex[strPatchedCCols], i)
 		if _, ok := uniqueCCols[strPatchedCCols]; ok {
@@ -214,7 +214,7 @@ func (s *implIAppStorage) Read(ctx context.Context, pKey []byte, startCCols, fin
 				ComparisonOperator: types.ComparisonOperatorLe,
 				AttributeValueList: []types.AttributeValue{
 					&types.AttributeValueMemberB{
-						Value: patchPutBytes(finishCCols),
+						Value: prefixZero(finishCCols),
 					},
 				},
 			}
@@ -225,7 +225,7 @@ func (s *implIAppStorage) Read(ctx context.Context, pKey []byte, startCCols, fin
 			ComparisonOperator: types.ComparisonOperatorGe,
 			AttributeValueList: []types.AttributeValue{
 				&types.AttributeValueMemberB{
-					Value: patchPutBytes(startCCols),
+					Value: prefixZero(startCCols),
 				},
 			},
 		}
@@ -235,10 +235,10 @@ func (s *implIAppStorage) Read(ctx context.Context, pKey []byte, startCCols, fin
 			ComparisonOperator: types.ComparisonOperatorBetween,
 			AttributeValueList: []types.AttributeValue{
 				&types.AttributeValueMemberB{
-					Value: patchPutBytes(startCCols),
+					Value: prefixZero(startCCols),
 				},
 				&types.AttributeValueMemberB{
-					Value: patchPutBytes(finishCCols),
+					Value: prefixZero(finishCCols),
 				},
 			},
 		}
@@ -260,7 +260,7 @@ func (s *implIAppStorage) Read(ctx context.Context, pKey []byte, startCCols, fin
 			if ctx.Err() != nil {
 				return nil // TCK contract
 			}
-			if err := cb(patchGetBytes(item[sortKeyAttributeName].(*types.AttributeValueMemberB).Value), item[valueAttributeName].(*types.AttributeValueMemberB).Value); err != nil {
+			if err := cb(unprefixZero(item[sortKeyAttributeName].(*types.AttributeValueMemberB).Value), item[valueAttributeName].(*types.AttributeValueMemberB).Value); err != nil {
 				return err
 			}
 		}
@@ -297,7 +297,7 @@ func newAwsCfg(params DynamoDBParams) (aws.Config, error) {
 	)
 }
 
-func createKeyspace(name string, client *dynamodb.Client) error {
+func newTableExistsWaiter(name string, client *dynamodb.Client) error {
 	createTableInput := &dynamodb.CreateTableInput{
 		AttributeDefinitions: []types.AttributeDefinition{
 			{
@@ -354,16 +354,16 @@ func dynamoDBTableName(name string) string {
 	return fmt.Sprintf("%s.value", name)
 }
 
-// patchPutBytes is a workaround for DynamoDB's limitation on empty byte slices in SortKey
+// prefixZero is a workaround for DynamoDB's limitation on empty byte slices in SortKey
 // https://aws.amazon.com/ru/about-aws/whats-new/2020/05/amazon-dynamodb-now-supports-empty-values-for-non-key-string-and-binary-attributes-in-dynamodb-tables/
-func patchPutBytes(value []byte) (out []byte) {
+func prefixZero(value []byte) (out []byte) {
 	newArr := make([]byte, 1, len(value)+1)
 	newArr[0] = 0
 	return append(newArr, value...)
 }
 
-// patchGetBytes is a workaround for DynamoDB's limitation on empty byte slices in SortKey
+// unprefixZero is a workaround for DynamoDB's limitation on empty byte slices in SortKey
 // https://aws.amazon.com/ru/about-aws/whats-new/2020/05/amazon-dynamodb-now-supports-empty-values-for-non-key-string-and-binary-attributes-in-dynamodb-tables/
-func patchGetBytes(value []byte) (out []byte) {
+func unprefixZero(value []byte) (out []byte) {
 	return value[1:]
 }
