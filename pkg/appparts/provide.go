@@ -12,10 +12,16 @@ import (
 
 type SyncActualizerFactory = func(istructs.IAppStructs, istructs.PartitionID) pipeline.ISyncOperator
 
+// func New(structs istructs.IAppStructsProvider) (ap IAppPartitions, cleanup func(), err error) {
+// 	return newAppPartitions(structs, nil)
+// }
+
 func New(structs istructs.IAppStructsProvider) (ap IAppPartitions, cleanup func(), err error) {
-	return newAppPartitions(structs, nil)
+	return NewWithActualizer(structs, func(is istructs.IAppStructs, pi istructs.PartitionID) pipeline.ISyncOperator {
+		return &pipeline.NOOP{}
+	})
 }
 
-func New2(structs istructs.IAppStructsProvider, actualizer SyncActualizerFactory) (ap IAppPartitions, cleanup func(), err error) {
+func NewWithActualizer(structs istructs.IAppStructsProvider, actualizer SyncActualizerFactory) (ap IAppPartitions, cleanup func(), err error) {
 	return newAppPartitions(structs, actualizer)
 }
