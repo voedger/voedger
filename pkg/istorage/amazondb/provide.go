@@ -7,8 +7,8 @@ package amazondb
 
 import "github.com/voedger/voedger/pkg/istorage"
 
-func Provide(params DynamoDBParams) (asf istorage.IAppStorageFactory, err error) {
+func Provide(params DynamoDBParams) istorage.IAppStorageFactory {
 	return &implIAppStorageFactory{
 		params: params,
-	}, nil
+	}
 }

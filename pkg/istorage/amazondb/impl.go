@@ -26,7 +26,7 @@ func (d implIAppStorageFactory) AppStorage(appName istorage.SafeAppName) (storag
 		return nil, err
 	}
 	keySpace := appName.String()
-	session := getSession(cfg)
+	session := getClient(cfg)
 	exist, err := doesTableExist(keySpace, session)
 	if err != nil {
 		return nil, err
@@ -43,7 +43,7 @@ func (d implIAppStorageFactory) Init(appName istorage.SafeAppName) error {
 		return err
 	}
 	keySpace := appName.String()
-	session := getSession(cfg)
+	session := getClient(cfg)
 	if err := createKeyspace(keySpace, session); err != nil {
 		var awsErr *types.ResourceInUseException
 		if errors.As(err, &awsErr) {
@@ -69,7 +69,7 @@ func (s *implIAppStorage) Put(pKey []byte, cCols []byte, value []byte) (err erro
 			},
 		},
 	}
-	_, err = s.session.PutItem(context.Background(), &params)
+	_, err = s.client.PutItem(context.Background(), &params)
 	return err
 }
 
@@ -95,7 +95,7 @@ func (s *implIAppStorage) PutBatch(items []istorage.BatchItem) (err error) {
 			s.keySpace: writeRequests,
 		},
 	}
-	_, err = s.session.BatchWriteItem(context.Background(), &params)
+	_, err = s.client.BatchWriteItem(context.Background(), &params)
 	return err
 }
 
@@ -117,7 +117,7 @@ func (s *implIAppStorage) Get(pKey []byte, cCols []byte, data *[]byte) (ok bool,
 
 	// making request to DynamoDB
 	// GetItem method returns response (pointer to GetItemOutput struct) and error
-	response, err := s.session.GetItem(context.Background(), &params)
+	response, err := s.client.GetItem(context.Background(), &params)
 	if err != nil {
 		return false, err
 	}
@@ -176,7 +176,7 @@ func (s *implIAppStorage) GetBatch(pKey []byte, items []istorage.GetBatchItem) e
 		},
 	}
 
-	result, err := s.session.BatchGetItem(context.Background(), &params)
+	result, err := s.client.BatchGetItem(context.Background(), &params)
 	if err != nil {
 		return err
 	}
@@ -250,7 +250,7 @@ func (s *implIAppStorage) Read(ctx context.Context, pKey []byte, startCCols, fin
 		KeyConditions:            keyConditions,
 	}
 
-	result, err := s.session.Query(context.Background(), &params)
+	result, err := s.client.Query(context.Background(), &params)
 	if err != nil {
 		return err
 	}
@@ -268,15 +268,15 @@ func (s *implIAppStorage) Read(ctx context.Context, pKey []byte, startCCols, fin
 	return nil
 }
 
-func getSession(cfg aws.Config) *dynamodb.Client {
+func getClient(cfg aws.Config) *dynamodb.Client {
 	client := dynamodb.NewFromConfig(cfg)
 	return client
 }
 
 func newStorage(cfg aws.Config, keySpace string) (storage istorage.IAppStorage) {
-	session := getSession(cfg)
+	session := getClient(cfg)
 	return &implIAppStorage{
-		session:  session,
+		client:   session,
 		keySpace: dynamoDBTableName(keySpace),
 	}
 }

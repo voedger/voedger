@@ -22,6 +22,6 @@ type implIAppStorageFactory struct {
 }
 
 type implIAppStorage struct {
-	session  *dynamodb.Client
+	client   *dynamodb.Client
 	keySpace string
 }

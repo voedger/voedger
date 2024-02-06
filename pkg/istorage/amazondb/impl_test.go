@@ -8,8 +8,6 @@ package amazondb
 import (
 	"testing"
 
-	"github.com/stretchr/testify/require"
-
 	"github.com/voedger/voedger/pkg/istorage"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
@@ -25,7 +23,6 @@ func TestBasicUsage(t *testing.T) {
 		SecretAccessKey: "local",
 		SessionToken:    "",
 	}
-	asf, err := Provide(casPar)
-	require.NoError(t, err)
+	asf := Provide(casPar)
 	istorage.TechnologyCompatibilityKit(t, asf)
 }
