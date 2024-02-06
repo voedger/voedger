@@ -74,9 +74,10 @@ func update(st istructs.IState, rec istructs.ICUDRow, intents istructs.IIntents,
 		return err
 	}
 	if !ok {
-		// was no unique, insert a record, define a unique, update the record -> no record in the view -> handle as insert
+		// was no unique, insert a record, define a unique, update the record -> no record in the view -> fo nothing to keep backward compatibility
+		// new unique will work starting from the next new record
 		// https://github.com/voedger/voedger/issues/1408
-		return insert(st, currentRecord, intents, uniqueFields, uniqueQName)
+		return nil
 	}
 	refIDToSet := istructs.NullRecordID
 	uniqueViewRecordID := uniqueViewRecord.AsRecordID(field_ID)
