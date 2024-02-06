@@ -160,3 +160,12 @@ func checkBackupFolders(cluster *clusterType) error {
 	}
 	return err
 }
+
+// Checking the presence of a Backup folder on node
+func checkBackupFolderOnHost(cluster *clusterType, addr string) error {
+	if e := newScriptExecuter(cluster.sshKey, "").
+		run("check-remote-folder.sh", addr, backupFolder); e != nil {
+		return fmt.Errorf(errBackupFolderIsNotPrepared, addr, ErrBackupFolderIsNotPrepared)
+	}
+	return nil
+}
