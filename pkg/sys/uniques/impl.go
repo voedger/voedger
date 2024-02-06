@@ -69,9 +69,14 @@ func update(st istructs.IState, rec istructs.ICUDRow, intents istructs.IIntents,
 	}
 
 	// we're updating -> unique view record exists
-	uniqueViewRecord, uniqueViewKB, _, err := getUniqueViewRecord(st, currentRecord, uniqueFields, uniqueQName)
+	uniqueViewRecord, uniqueViewKB, ok, err := getUniqueViewRecord(st, currentRecord, uniqueFields, uniqueQName)
 	if err != nil {
 		return err
+	}
+	if !ok {
+		// was no unique, insert a record, define a unique, update the record -> no record in the view -> handle as insert
+		// https://github.com/voedger/voedger/issues/1408
+		return insert(st, currentRecord, intents, uniqueFields, uniqueQName)
 	}
 	refIDToSet := istructs.NullRecordID
 	uniqueViewRecordID := uniqueViewRecord.AsRecordID(field_ID)
@@ -98,7 +103,7 @@ func update(st istructs.IState, rec istructs.ICUDRow, intents istructs.IIntents,
 	return nil
 }
 
-func insert(state istructs.IState, rec istructs.ICUDRow, intents istructs.IIntents, uniqueFields []appdef.IField, uniqueQName appdef.QName) error {
+func insert(state istructs.IState, rec istructs.IRowReader, intents istructs.IIntents, uniqueFields []appdef.IField, uniqueQName appdef.QName) error {
 	uniqueViewRecord, uniqueViewKB, uniqueViewRecordExists, err := getUniqueViewRecord(state, rec, uniqueFields, uniqueQName)
 	if err != nil {
 		return err
@@ -115,7 +120,7 @@ func insert(state istructs.IState, rec istructs.ICUDRow, intents istructs.IInten
 	}
 
 	if err == nil {
-		uniqueViewRecordBuilder.PutRecordID(field_ID, rec.ID())
+		uniqueViewRecordBuilder.PutRecordID(field_ID, rec.AsRecordID(appdef.SystemField_ID))
 	}
 	return err
 }
