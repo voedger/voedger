@@ -250,7 +250,6 @@ func (cmdProc *cmdProc) recovery(ctx context.Context, cmd *cmdWorkpiece) (*appPa
 
 	worskapcesJSON, err := json.Marshal(ap.workspaces)
 	if err != nil {
-		// error impossible
 		// notest
 		return nil, err
 	}
