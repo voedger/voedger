@@ -12,6 +12,7 @@ import (
 	"testing/fstest"
 
 	"github.com/stretchr/testify/require"
+
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -105,7 +106,7 @@ func TestBasicUsage_Workspace(t *testing.T) {
 
 			// check updated workspace config
 			cdoc, _ := vit.GetCDocWSKind(ws)
-			require.Equal(2, len(cdoc))
+			require.Len(cdoc, 2)
 			require.Equal(float64(42), cdoc["IntFld"])
 			require.Equal("str", cdoc["StrFld"])
 		})
@@ -240,14 +241,14 @@ func TestWorkspaceTemplatesValidationErrors(t *testing.T) {
 			}
 			str := strconv.Itoa(i)
 			_, _, err := workspace.ValidateTemplate("test"+str, epTestWSKindTemplates, it.QNameApp1_TestWSKind)
-			require.NotNil(t, err)
+			require.Error(t, err)
 			log.Println(err)
 		})
 	}
 
 	t.Run("no template for workspace kind", func(t *testing.T) {
 		_, _, err := workspace.ValidateTemplate("test", epTestWSKindTemplates, appdef.NewQName("sys", "unknownKind"))
-		require.NotNil(t, err)
+		require.Error(t, err)
 		log.Println(err)
 	})
 }

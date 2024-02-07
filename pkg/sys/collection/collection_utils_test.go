@@ -8,6 +8,7 @@ package collection
 
 import (
 	"github.com/stretchr/testify/require"
+
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/cluster"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -169,7 +170,7 @@ func requireArPrice(require *require.Assertions, priceId istructs.RecordID, pric
 	require.NoError(err)
 	recArticlePrice := value.AsRecord(Field_Record)
 	require.Equal(priceId, recArticlePrice.AsRecordID(test.articlePricesPriceIdIdent))
-	require.Equal(price, recArticlePrice.AsFloat32(test.articlePricesPriceIdent))
+	require.InDelta(price, recArticlePrice.AsFloat32(test.articlePricesPriceIdent), 0.0001)
 }
 
 func requireArPriceException(require *require.Assertions, periodId istructs.RecordID, price float32, as istructs.IAppStructs, articleId, articlePriceExceptionId istructs.RecordID) {
@@ -182,7 +183,7 @@ func requireArPriceException(require *require.Assertions, periodId istructs.Reco
 	require.NoError(err)
 	recArticlePriceException := value.AsRecord(Field_Record)
 	require.Equal(periodId, recArticlePriceException.AsRecordID(test.articlePriceExceptionsPeriodIdIdent))
-	require.Equal(price, recArticlePriceException.AsFloat32(test.articlePriceExceptionsPriceIdent))
+	require.InDelta(price, recArticlePriceException.AsFloat32(test.articlePriceExceptionsPriceIdent), 0.0001)
 }
 
 type resultElementRow []interface{}

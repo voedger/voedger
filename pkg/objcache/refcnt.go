@@ -52,8 +52,8 @@ func (rc *RefCounter) RefCount() int {
 // item value Free() method
 func (rc *RefCounter) Release() {
 	for cnt := rc.count.Load(); cnt >= 0; cnt = rc.count.Load() {
-		if new := cnt - 1; rc.count.CompareAndSwap(cnt, new) {
-			if new == -1 {
+		if newCnt := cnt - 1; rc.count.CompareAndSwap(cnt, newCnt) {
+			if newCnt == -1 {
 				if rc.Value != nil {
 					rc.Value.Free()
 				}
@@ -67,7 +67,7 @@ func (rc *RefCounter) Release() {
 // and item value is about released
 func (rc *RefCounter) tryAddRef() bool {
 	for cnt := rc.count.Load(); cnt >= 0; cnt = rc.count.Load() {
-		if new := cnt + 1; rc.count.CompareAndSwap(cnt, new) {
+		if newCnt := cnt + 1; rc.count.CompareAndSwap(cnt, newCnt) {
 			return true
 		}
 	}

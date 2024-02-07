@@ -73,7 +73,7 @@ func TestBasicUsage(t *testing.T) {
 	t.Run("Read blob status, return must be without errors", func(t *testing.T) {
 		bs, err := blobber.QueryBLOBState(ctx, key)
 		require.NoError(err)
-		require.Equal(bs.Status, iblobstorage.BLOBStatus_Completed)
+		require.Equal(iblobstorage.BLOBStatus_Completed, bs.Status)
 	})
 
 	t.Run("Read blob that present in storage and compare with reference", func(t *testing.T) {

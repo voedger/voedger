@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/qnames"
@@ -123,7 +124,7 @@ func Test_dynoBufValue(t *testing.T) {
 	t.Run("test QName", func(t *testing.T) {
 		id, _ := test.AppCfg.qNames.ID(test.saleCmdName)
 		b := make([]byte, 2)
-		binary.BigEndian.PutUint16(b, uint16(id))
+		binary.BigEndian.PutUint16(b, id)
 
 		v, err := row.dynoBufValue(test.saleCmdName, appdef.DataKind_QName)
 		require.NoError(err)
@@ -153,11 +154,15 @@ func Test_dynoBufValue(t *testing.T) {
 	t.Run("test bool", func(t *testing.T) {
 		v, err := row.dynoBufValue(false, appdef.DataKind_bool)
 		require.NoError(err)
-		require.Equal(false, v)
+		vBool, ok := v.(bool)
+		require.True(ok)
+		require.False(vBool)
 
 		v, err = row.dynoBufValue(true, appdef.DataKind_bool)
 		require.NoError(err)
-		require.Equal(true, v)
+		vBool, ok = v.(bool)
+		require.True(ok)
+		require.True(vBool)
 
 		v, err = row.dynoBufValue(7, appdef.DataKind_bool)
 		require.ErrorIs(err, ErrWrongFieldType)
@@ -249,15 +254,15 @@ func Test_rowType_PutAs_SimpleTypes(t *testing.T) {
 
 		require.Equal(int32(0), row.AsInt32("int32"))
 		require.Equal(int64(0), row.AsInt64("int64"))
-		require.Equal(float32(0), row.AsFloat32("float32"))
-		require.Equal(float64(0), row.AsFloat64("float64"))
+		require.InDelta(float32(0), row.AsFloat32("float32"), 0.0001)
+		require.InDelta(float64(0), row.AsFloat64("float64"), 0.0001)
 		require.Equal([]byte(nil), row.AsBytes("bytes"))
 		require.Equal("", row.AsString("string"))
 
 		require.EqualValues([]byte(nil), row.AsBytes("raw"))
 
 		require.Equal(appdef.NullQName, row.AsQName("QName"))
-		require.Equal(false, row.AsBool("bool"))
+		require.False(row.AsBool("bool"))
 		require.Equal(istructs.NullRecordID, row.AsRecordID("RecordID"))
 
 		val := newEmptyTestViewValue()
@@ -280,8 +285,8 @@ func Test_rowType_PutAs_SimpleTypes(t *testing.T) {
 
 		require.Equal(int32(1), row.AsInt32("int32"))
 		require.Equal(int64(2), row.AsInt64("int64"))
-		require.Equal(float32(3), row.AsFloat32("float32"))
-		require.Equal(float64(4), row.AsFloat64("float64"))
+		require.InDelta(float32(3), row.AsFloat32("float32"), 0.0001)
+		require.InDelta(float64(4), row.AsFloat64("float64"), 0.0001)
 		require.Equal(istructs.RecordID(5), row.AsRecordID("RecordID"))
 
 		t.Run("Should be OK to As××× with type casts", func(t *testing.T) {
@@ -604,13 +609,13 @@ func Test_rowType_maskValues(t *testing.T) {
 
 		require.Equal(int32(0), row.AsInt32("int32"))
 		require.Equal(int64(0), row.AsInt64("int64"))
-		require.Equal(float32(0), row.AsFloat32("float32"))
-		require.Equal(float64(0), row.AsFloat64("float64"))
+		require.InDelta(float32(0), row.AsFloat32("float32"), 0.0001)
+		require.InDelta(float64(0), row.AsFloat64("float64"), 0.0001)
 		require.Nil(row.AsBytes("bytes"))
 		require.Equal("*", row.AsString("string"))
 		require.Nil(row.AsBytes("raw"))
 		require.Equal(appdef.NullQName, row.AsQName("QName"))
-		require.Equal(false, row.AsBool("bool"))
+		require.False(row.AsBool("bool"))
 		require.Equal(istructs.NullRecordID, row.AsRecordID("RecordID"))
 	})
 }
@@ -831,7 +836,7 @@ func Test_rowType_Nils(t *testing.T) {
 			case "int32", "int64", "float32", "float64":
 				require.Zero(newData)
 			case "QName":
-				var nullQNameBytes = []uint8([]byte{0x0, 0x0})
+				var nullQNameBytes = []byte{0x0, 0x0}
 				require.Equal(nullQNameBytes, newData)
 			case "bool":
 				require.False(newData.(bool))

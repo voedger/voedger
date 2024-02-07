@@ -35,7 +35,7 @@ var (
 
 // сrackID splits ID to two-parts key — partition key (hi) and clustering columns (lo)
 func crackID(id uint64) (hi uint64, low uint16) {
-	return uint64(id >> partitionBits), uint16(id) & lowMask
+	return id >> partitionBits, uint16(id) & lowMask
 }
 
 // СrackRecordID splits record ID to two-parts key — partition key (hi) and clustering columns (lo)

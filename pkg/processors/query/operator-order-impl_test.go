@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
 	"github.com/voedger/voedger/pkg/pipeline"
 )
 
@@ -163,11 +164,11 @@ func TestOrderOperator_Flush(t *testing.T) {
 			works = append(works, work)
 		})
 
-		require.Equal(1.15, weight(works[0]))
+		require.InDelta(1.15, weight(works[0]), 0.0001)
 		require.Equal("Cola", name(works[0]))
-		require.Equal(1.75, weight(works[1]))
+		require.InDelta(1.75, weight(works[1]), 0.0001)
 		require.Equal("Pepsi", name(works[1]))
-		require.Equal(2.0, weight(works[2]))
+		require.InDelta(2.0, weight(works[2]), 0.0001)
 		require.Equal("Sprite", name(works[2]))
 	})
 	t.Run("Should order by one float64 field desc", func(t *testing.T) {
@@ -188,11 +189,11 @@ func TestOrderOperator_Flush(t *testing.T) {
 			works = append(works, work)
 		})
 
-		require.Equal(2.0, weight(works[0]))
+		require.InDelta(2.0, weight(works[0]), 0.0001)
 		require.Equal("Sprite", name(works[0]))
-		require.Equal(1.75, weight(works[1]))
+		require.InDelta(1.75, weight(works[1]), 0.0001)
 		require.Equal("Pepsi", name(works[1]))
-		require.Equal(1.15, weight(works[2]))
+		require.InDelta(1.15, weight(works[2]), 0.0001)
 		require.Equal("Cola", name(works[2]))
 	})
 	t.Run("Should order by two fields asc", func(t *testing.T) {
@@ -456,9 +457,9 @@ func TestOrderOperator_Flush(t *testing.T) {
 				works = append(works, work)
 			})
 
-			require.Equal(float32(-7.2), temperature(works[0]))
-			require.Equal(float32(15.3), temperature(works[1]))
-			require.Equal(float32(22.5), temperature(works[2]))
+			require.InDelta(float32(-7.2), temperature(works[0]), 0.0001)
+			require.InDelta(float32(15.3), temperature(works[1]), 0.0001)
+			require.InDelta(float32(22.5), temperature(works[2]), 0.0001)
 		})
 		t.Run("Desc order", func(t *testing.T) {
 			require := require.New(t)
@@ -478,9 +479,9 @@ func TestOrderOperator_Flush(t *testing.T) {
 				works = append(works, work)
 			})
 
-			require.Equal(float32(22.5), temperature(works[0]))
-			require.Equal(float32(15.3), temperature(works[1]))
-			require.Equal(float32(-7.2), temperature(works[2]))
+			require.InDelta(float32(22.5), temperature(works[0]), 0.0001)
+			require.InDelta(float32(15.3), temperature(works[1]), 0.0001)
+			require.InDelta(float32(-7.2), temperature(works[2]), 0.0001)
 		})
 	})
 }

@@ -159,13 +159,13 @@ func TestBasicUsage_AsyncSwitchOperator(t *testing.T) {
 	// Send to branch1
 
 	targetBranchName = "branch1"
-	require.Nil(pipeline.SendAsync(noRelease{}))
+	require.NoError(pipeline.SendAsync(noRelease{}))
 	require.Equal(1, <-answers)
 
 	// Send to branch2
 
 	targetBranchName = "branch2"
-	require.Nil(pipeline.SendAsync(noRelease{}))
+	require.NoError(pipeline.SendAsync(noRelease{}))
 	require.Equal(2, <-answers)
 
 	// Send in cycle
@@ -181,7 +181,7 @@ func TestBasicUsage_AsyncSwitchOperator(t *testing.T) {
 			branchNo = 2
 			targetBranchName = "branch2"
 		}
-		require.Nil(pipeline.SendAsync(noRelease{}))
+		require.NoError(pipeline.SendAsync(noRelease{}))
 		require.Equal(branchNo, <-answers)
 	}
 
@@ -384,21 +384,21 @@ func TestBasicUsage_AsyncPipeline(t *testing.T) {
 		WireAsyncOperator("writer", NewAsyncOp(funcOpResultWriter)),
 	)
 
-	require.Nil(t, pipeline.SendAsync(&userEntry{name: "Zeus", role: "client"}))
-	require.Nil(t, pipeline.SendAsync(&userEntry{name: "Jack", role: "waiter"}))
-	require.Nil(t, pipeline.SendAsync(&userEntry{name: "Bob", role: "client"}))
-	require.Nil(t, pipeline.SendAsync(&userEntry{name: "Sam", role: "admin"}))
-	require.Nil(t, pipeline.SendAsync(&userEntry{name: "Annie", role: "waiter"}))
-	require.Nil(t, pipeline.SendAsync(&userEntry{role: "client"})) // no name
-	require.Nil(t, pipeline.SendAsync(&userEntry{name: "John", role: "admin"}))
-	require.Nil(t, pipeline.SendAsync(&userEntry{name: "Ron", role: "waiter"}))
-	require.Nil(t, pipeline.SendAsync(&userEntry{name: "Peter", role: "admin"}))
+	require.NoError(t, pipeline.SendAsync(&userEntry{name: "Zeus", role: "client"}))
+	require.NoError(t, pipeline.SendAsync(&userEntry{name: "Jack", role: "waiter"}))
+	require.NoError(t, pipeline.SendAsync(&userEntry{name: "Bob", role: "client"}))
+	require.NoError(t, pipeline.SendAsync(&userEntry{name: "Sam", role: "admin"}))
+	require.NoError(t, pipeline.SendAsync(&userEntry{name: "Annie", role: "waiter"}))
+	require.NoError(t, pipeline.SendAsync(&userEntry{role: "client"})) // no name
+	require.NoError(t, pipeline.SendAsync(&userEntry{name: "John", role: "admin"}))
+	require.NoError(t, pipeline.SendAsync(&userEntry{name: "Ron", role: "waiter"}))
+	require.NoError(t, pipeline.SendAsync(&userEntry{name: "Peter", role: "admin"}))
 
 	// Close blocks until all operator finish
 	pipeline.Close()
 
 	// Test that operators have worked
-	require.Equal(t, 3, len(result))
+	require.Len(t, result, 3)
 	require.Equal(t, "[admin] 1206: John, 1208: Peter, 1204: Sam", result[0])
 	require.Equal(t, "[client] 1203: Bob, 1201: Zeus", result[1])
 	require.Equal(t, "[waiter] 1205: Annie, 1202: Jack, 1207: Ron", result[2])
@@ -444,12 +444,12 @@ func TestBasicUsage_AsyncPipeline_FlushByTimer(t *testing.T) {
 					return nil
 				}).create(), time.Duration(20)*time.Millisecond))
 
-		require.Nil(t, pipeline.SendAsync(userEntry{role: "admin", name: "John"}))
+		require.NoError(t, pipeline.SendAsync(userEntry{role: "admin", name: "John"}))
 		time.Sleep(time.Duration(50) * time.Millisecond)
 		require.True(t, mustHave(result, "JOHN"))
-		require.Nil(t, pipeline.SendAsync(userEntry{role: "admin", name: "Chip"}))
-		require.Nil(t, pipeline.SendAsync(userEntry{role: "waiter", name: "Wrong man"}))
-		require.Nil(t, pipeline.SendAsync(userEntry{role: "admin", name: "Dale"}))
+		require.NoError(t, pipeline.SendAsync(userEntry{role: "admin", name: "Chip"}))
+		require.NoError(t, pipeline.SendAsync(userEntry{role: "waiter", name: "Wrong man"}))
+		require.NoError(t, pipeline.SendAsync(userEntry{role: "admin", name: "Dale"}))
 		time.Sleep(time.Duration(50) * time.Millisecond)
 		require.True(t, mustHave(result, "CHIP"))
 		require.True(t, mustHave(result, "DALE"))
@@ -476,11 +476,11 @@ func TestBasicUsage_AsyncPipeline_FlushByTimer(t *testing.T) {
 					return nil
 				}).create(), time.Duration(20)*time.Millisecond))
 
-		require.Nil(t, pipeline.SendAsync(userEntry{role: "waiter"}))
+		require.NoError(t, pipeline.SendAsync(userEntry{role: "waiter"}))
 		time.Sleep(time.Duration(50) * time.Millisecond)
-		require.Nil(t, pipeline.SendAsync(userEntry{role: "waiter"}))
+		require.NoError(t, pipeline.SendAsync(userEntry{role: "waiter"}))
 		time.Sleep(time.Duration(50) * time.Millisecond)
-		require.Nil(t, pipeline.SendAsync(userEntry{role: "waiter"}))
+		require.NoError(t, pipeline.SendAsync(userEntry{role: "waiter"}))
 		time.Sleep(time.Duration(50) * time.Millisecond)
 
 		require.Equal(t, 0, times)
@@ -543,7 +543,7 @@ func TestBasicUsage_ServiceOperator(t *testing.T) {
 
 	// Start services
 	// NB: Only one SendSync is allowed
-	require.Nil(p.SendSync(workpiece))
+	require.NoError(p.SendSync(workpiece))
 
 	select {
 	case prep := <-prepareLog:

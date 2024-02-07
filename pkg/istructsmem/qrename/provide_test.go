@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/qnames"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/teststore"
@@ -19,8 +20,8 @@ func TestRenameQName(t *testing.T) {
 
 	require := require.New(t)
 
-	old := appdef.NewQName("test", "old")
-	new := appdef.NewQName("test", "new")
+	oldQName := appdef.NewQName("test", "old")
+	newQName := appdef.NewQName("test", "new")
 
 	storage := teststore.NewStorage()
 
@@ -30,7 +31,7 @@ func TestRenameQName(t *testing.T) {
 		require.NoError(err)
 
 		appDefBuilder := appdef.New()
-		_ = appDefBuilder.AddObject(old)
+		_ = appDefBuilder.AddObject(oldQName)
 		appDef, err := appDefBuilder.Build()
 		require.NoError(err)
 
@@ -40,7 +41,7 @@ func TestRenameQName(t *testing.T) {
 	})
 
 	t.Run("basic usage", func(t *testing.T) {
-		err := Rename(storage, old, new)
+		err := Rename(storage, oldQName, newQName)
 		require.NoError(err)
 	})
 
@@ -54,13 +55,13 @@ func TestRenameQName(t *testing.T) {
 		require.NoError(err)
 
 		t.Run("check old is deleted", func(t *testing.T) {
-			id, err := names.ID(old)
+			id, err := names.ID(oldQName)
 			require.ErrorIs(err, qnames.ErrNameNotFound)
-			require.Equal(id, qnames.NullQNameID)
+			require.Equal(qnames.NullQNameID, id)
 		})
 
 		t.Run("check new is not null", func(t *testing.T) {
-			id, err := names.ID(new)
+			id, err := names.ID(newQName)
 			require.NoError(err)
 			require.Greater(id, qnames.QNameIDSysLast)
 		})

@@ -37,5 +37,5 @@ func TestSyncPipeline_NotAWorkpiece(t *testing.T) {
 	ctx := &testContext{}
 	v := &notAWorkpiece{}
 	pipeline := NewSyncPipeline(ctx, "my-pipeline", WireSyncOperator("noop", &NOOP{}))
-	require.Nil(t, pipeline.DoSync(ctx, v))
+	require.NoError(t, pipeline.DoSync(ctx, v))
 }

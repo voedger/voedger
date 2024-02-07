@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/irates"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -243,6 +244,6 @@ func TestBucketsNew(t *testing.T) {
 
 	totalRegKey.RateLimitName = "new limit name"
 	bs, err = buckets.GetBucketState(totalRegKey)
-	require.NotNil(err)
+	require.Error(err)
 	require.True(BucketStateIsZero(&bs))
 }

@@ -13,6 +13,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
 	coreutils "github.com/voedger/voedger/pkg/utils"
 	it "github.com/voedger/voedger/pkg/vit"
 )
@@ -74,7 +75,7 @@ func TestBasicUsage_n10n(t *testing.T) {
 				channelID = data
 				close(subscribed)
 			case `{"App":"untill/Application","Projection":"paa.price","WS":1}`:
-				require.Equal(data, "13")
+				require.Equal("13", data)
 				done <- nil
 			}
 		}
@@ -108,7 +109,7 @@ func TestBasicUsage_n10n(t *testing.T) {
 		}
 	`, channelID)
 	params = url.Values{}
-	params.Add("payload", string(query))
+	params.Add("payload", query)
 	vit.Get(fmt.Sprintf("n10n/unsubscribe?%s", params.Encode()))
 
 	// закроем запрос, т.к. при unsubscribe завершения связи со стороны сервера не происходит

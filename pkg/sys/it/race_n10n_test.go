@@ -131,7 +131,7 @@ func createChannel(vit *it.VIT, ai int) *coreutils.HTTPResponse {
 			]
 		}`, ai)
 	params := url.Values{}
-	params.Add("payload", string(query))
+	params.Add("payload", query)
 	resp := vit.Get(fmt.Sprintf("n10n/channel?%s", params.Encode()), coreutils.WithLongPolling())
 	return resp
 }

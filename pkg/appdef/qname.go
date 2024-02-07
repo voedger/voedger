@@ -110,7 +110,7 @@ func (qn *QName) UnmarshalJSON(text []byte) (err error) {
 	if err != nil {
 		return err
 	}
-	qn.pkg, qn.entity, err = ParseQualifiedName(string(str), QNameQualifierChar)
+	qn.pkg, qn.entity, err = ParseQualifiedName(str, QNameQualifierChar)
 	return err
 }
 

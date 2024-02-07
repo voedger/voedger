@@ -63,12 +63,12 @@ func TestSectionedSendResponseError(t *testing.T) {
 	defer tearDown()
 
 	resp, err := http.Post(fmt.Sprintf("http://127.0.0.1:%d/api/test1/app1/%d/somefunc", router.port(), testWSID), "application/json", http.NoBody)
-	require.Nil(t, err, err)
+	require.NoError(t, err)
 	defer resp.Body.Close()
 	defer resp.Request.Body.Close()
 
 	respBodyBytes, err := io.ReadAll(resp.Body)
-	require.Nil(t, err)
+	require.NoError(t, err)
 	require.Equal(t, ibus.ErrTimeoutExpired.Error(), string(respBodyBytes))
 	expect500RespPlainText(t, resp)
 }
@@ -88,14 +88,14 @@ func TestBasicUsage_SectionedResponse(t *testing.T) {
 
 		require.Equal(testWSID, istructs.WSID(request.WSID))
 		require.Equal("somefunc", request.Resource)
-		require.Equal(0, len(request.Attachments))
+		require.Empty(request.Attachments)
 		require.Equal(map[string][]string{
 			"Accept-Encoding": {"gzip"},
 			"Content-Length":  {"9"}, // len("test body")
 			"Content-Type":    {"application/json"},
 			"User-Agent":      {"Go-http-client/1.1"},
 		}, request.Header)
-		require.Equal(0, len(request.Query))
+		require.Empty(request.Query)
 
 		// request is normally handled by processors in a separate goroutine so let's send response in a separate goroutine
 		go func() {
@@ -207,11 +207,11 @@ func TestHandlerPanic(t *testing.T) {
 	body := []byte("")
 	bodyReader := bytes.NewReader(body)
 	resp, err := http.Post(fmt.Sprintf("http://127.0.0.1:%d/api/untill/airs-bp/%d/somefunc", router.port(), testWSID), "application/json", bodyReader)
-	require.Nil(t, err)
+	require.NoError(t, err)
 	defer resp.Body.Close()
 
 	respBodyBytes, err := io.ReadAll(resp.Body)
-	require.Nil(t, err)
+	require.NoError(t, err)
 	require.Contains(t, string(respBodyBytes), "test panic")
 	expect500RespPlainText(t, resp)
 }
@@ -222,7 +222,7 @@ func TestClientDisconnectDuringSections(t *testing.T) {
 		go func() {
 			rs := sender.SendParallelResponse()
 			rs.StartMapSection("secMap", []string{"2"})
-			require.Nil(t, rs.SendElement("id1", elem1))
+			require.NoError(t, rs.SendElement("id1", elem1))
 			// sometimes Request.Body.Close() happens before checking if requestCtx.Err() nil or not after sending a section
 			// So let's wait for successful SendElelemnt(), then close the request
 			ch <- struct{}{}
@@ -244,7 +244,7 @@ func TestClientDisconnectDuringSections(t *testing.T) {
 	for string(entireResp) != `{"sections":[{"type":"secMap","path":["2"],"elements":{"id1":{"fld1":"fld1Val"}` {
 		buf := make([]byte, 512)
 		n, _ := resp.Body.Read(buf)
-		require.Nil(t, err)
+		require.NoError(t, err)
 		entireResp = append(entireResp, buf[:n]...)
 		log.Println(string(entireResp))
 	}
@@ -263,10 +263,10 @@ func TestCheck(t *testing.T) {
 
 	bodyReader := bytes.NewReader(nil)
 	resp, err := http.Post(fmt.Sprintf("http://127.0.0.1:%d/api/check", router.port()), "application/json", bodyReader)
-	require.Nil(t, err, err)
+	require.NoError(t, err)
 	defer resp.Body.Close()
 	respBodyBytes, err := io.ReadAll(resp.Body)
-	require.Nil(t, err)
+	require.NoError(t, err)
 	require.Equal(t, "ok", string(respBodyBytes))
 	expectOKRespPlainText(t, resp)
 }
@@ -278,7 +278,7 @@ func Test404(t *testing.T) {
 
 	bodyReader := bytes.NewReader(nil)
 	resp, err := http.Post(fmt.Sprintf("http://127.0.0.1:%d/api/wrong", router.port()), "", bodyReader)
-	require.Nil(t, err, err)
+	require.NoError(t, err)
 	defer resp.Body.Close()
 	require.Equal(t, http.StatusNotFound, resp.StatusCode)
 }
@@ -289,7 +289,7 @@ func TestFailedToWriteResponse(t *testing.T) {
 		go func() {
 			rs := sender.SendParallelResponse()
 			rs.StartMapSection("secMap", []string{"2"})
-			require.Nil(t, rs.SendElement("id1", elem1))
+			require.NoError(t, rs.SendElement("id1", elem1))
 
 			// now let's wait for client disconnect
 			<-ch
@@ -306,14 +306,14 @@ func TestFailedToWriteResponse(t *testing.T) {
 	body := []byte("")
 	bodyReader := bytes.NewReader(body)
 	resp, err := http.Post(fmt.Sprintf("http://127.0.0.1:%d/api/%s/%s/%d/somefunc", router.port(), AppOwner, AppName, testWSID), "application/json", bodyReader)
-	require.Nil(t, err, err)
+	require.NoError(t, err)
 
 	// read out the first section
 	entireResp := []byte{}
 	for string(entireResp) != `{"sections":[{"type":"secMap","path":["2"],"elements":{"id1":{"fld1":"fld1Val"}` {
 		buf := make([]byte, 512)
 		n, _ := resp.Body.Read(buf)
-		require.Nil(t, err)
+		require.NoError(t, err)
 		entireResp = append(entireResp, buf[:n]...)
 		log.Println(string(entireResp))
 	}

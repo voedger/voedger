@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 )
@@ -59,7 +60,9 @@ var (
 		require.Equal(float32(3), m["float32"])
 		require.Equal(float64(4), m["float64"])
 		require.Equal("str", m["string"])
-		require.Equal(true, m["bool"])
+		v, ok := m["bool"].(bool)
+		require.True(ok)
+		require.True(v)
 		require.Equal([]byte{5, 6}, m["bytes"])
 		require.Equal(istructs.RecordID(7), m["recordID"])
 		actualQName, err := appdef.ParseQName(m[appdef.SystemField_QName].(string))
@@ -151,7 +154,9 @@ func TestToMap_Filter(t *testing.T) {
 		m := ObjectToMap(obj, appDef, filter)
 		require.Equal(2, count)
 		require.Len(m, 2)
-		require.Equal(true, m["bool"])
+		v, ok := m["bool"].(bool)
+		require.True(ok)
+		require.True(v)
 		require.Equal("str", m["string"])
 	})
 
@@ -159,7 +164,9 @@ func TestToMap_Filter(t *testing.T) {
 		m := FieldsToMap(obj, appDef, filter)
 		require.Equal(4, count)
 		require.Len(m, 2)
-		require.Equal(true, m["bool"])
+		v, ok := m["bool"].(bool)
+		require.True(ok)
+		require.True(v)
 		require.Equal("str", m["string"])
 	})
 }

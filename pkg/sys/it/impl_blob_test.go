@@ -15,6 +15,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
 	"github.com/voedger/voedger/pkg/istructs"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	coreutils "github.com/voedger/voedger/pkg/utils"
@@ -175,7 +176,7 @@ func TestBlobMultipartUpload(t *testing.T) {
 		_, err = part.Write(blob)
 		require.NoError(err)
 	}
-	require.Nil(w.Close())
+	require.NoError(w.Close())
 	log.Println(body.String())
 
 	// write blobs
@@ -185,7 +186,7 @@ func TestBlobMultipartUpload(t *testing.T) {
 	).Body
 	log.Println(blobIDsStr)
 
-	blobIDsStrs := strings.Split(string(blobIDsStr), ",")
+	blobIDsStrs := strings.Split(blobIDsStr, ",")
 	blob1ID, err := strconv.Atoi(blobIDsStrs[0])
 	require.NoError(err)
 	blob2ID, err := strconv.Atoi(blobIDsStrs[1])

@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
 	"github.com/voedger/voedger/pkg/istructs"
 	commandprocessor "github.com/voedger/voedger/pkg/processors/command"
 	coreutils "github.com/voedger/voedger/pkg/utils"
@@ -25,7 +26,7 @@ func TestBasicUsage_Metrics(t *testing.T) {
 
 	url := fmt.Sprintf("http://127.0.0.1:%d/metrics", vit.MetricsServicePort())
 	resp, err := http.Get(url)
-	require.Nil(err, err)
+	require.NoError(err)
 
 	bb, err := io.ReadAll(resp.Body)
 	require.NoError(err)
