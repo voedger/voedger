@@ -632,6 +632,12 @@ func (c *clusterType) applyCmd(cmd *cmdType) error {
 			if err := hostIsAvailable(c, newAddr); err != nil {
 				return fmt.Errorf(errHostIsNotAvailable, newAddr, ErrHostIsNotAvailable)
 			}
+
+			if len(c.Cron.Backup) > 0 && node.NodeRole == nrDBNode {
+				if err := checkBackupFolderOnHost(c, newAddr); err != nil {
+					return err
+				}
+			}
 		}
 
 		node.DesiredNodeState = newNodeState(newAddr, node.desiredNodeVersion(c))

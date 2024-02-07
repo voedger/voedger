@@ -43,12 +43,10 @@ var ErrEmptyNodeAddress = errors.New("empty IP-address")
 
 const errEmptyNodeAddress = "node %s: %w"
 
-// The commander cannot be executed
 var ErrCommandCannotBeExecuted = errors.New("command cannot be executed")
 
 const errCannotReplaceALiveNode = "cannot replace a live node %s: %w"
 
-// host is not available
 var ErrHostIsNotAvailable = errors.New("host is not available")
 
 const errHostIsNotAvailable = "host %s is not available: %w"
@@ -68,3 +66,7 @@ const errSshKeyNotFound = "ssh key %s not found: %w"
 var ErrDomainsNotFound = errors.New("domains not found")
 
 const errDomainsNotFound = "domains %s not found in cluster: %w"
+
+var ErrBackupFolderIsNotPrepared = errors.New("backup folder error")
+
+const errBackupFolderIsNotPrepared = "backup folder " + backupFolder + " is not prepared on host %s: %w"

@@ -7,6 +7,6 @@ package builtin
 
 import "github.com/voedger/voedger/pkg/istructs"
 
-func crackID(id istructs.RecordID) uint64 {
+func CrackID(id istructs.RecordID) uint64 {
 	return uint64(id >> registryViewBits)
 }
