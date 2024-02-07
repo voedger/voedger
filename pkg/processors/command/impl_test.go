@@ -704,8 +704,17 @@ func setUp(t *testing.T, prepare func(appDef appdef.IAppDefBuilder, cfg *istruct
 	appStructsProvider := istructsmem.Provide(cfgs, iratesce.TestBucketsFactory,
 		payloads.ProvideIAppTokensFactory(itokensjwt.TestTokensJWT()), appStorageProvider)
 
+	secretReader := isecretsimpl.ProvideSecretReader()
+	n10nBroker, n10nBrokerCleanup := in10nmem.ProvideEx2(in10n.Quotas{
+		Channels:               1000,
+		ChannelsPerSubject:     10,
+		Subsciptions:           1000,
+		SubsciptionsPerSubject: 10,
+	}, time.Now)
+
 	// prepare the AppParts to borrow AppStructs
-	appParts, appPartsClean, err := appparts.New(appStructsProvider)
+	appParts, appPartsClean, err := appparts.NewWithActualizer(appStructsProvider,
+		projectors.NewSyncActualizerFactoryFactory(projectors.ProvideSyncActualizerFactory(), secretReader, n10nBroker))
 	require.NoError(err)
 	defer appPartsClean()
 
@@ -732,18 +741,12 @@ func setUp(t *testing.T, prepare func(appDef appdef.IAppDefBuilder, cfg *istruct
 		icm := NewCommandMessage(ctx, request.Body, appQName, istructs.WSID(request.WSID), sender, testAppPartID, command, token, "")
 		serviceChannel <- icm
 	})
-	n10nBroker, n10nBrokerCleanup := in10nmem.ProvideEx2(in10n.Quotas{
-		Channels:               1000,
-		ChannelsPerSubject:     10,
-		Subsciptions:           1000,
-		SubsciptionsPerSubject: 10,
-	}, time.Now)
 
 	tokens := itokensjwt.ProvideITokens(itokensjwt.SecretKeyExample, time.Now)
 	appTokens := payloads.ProvideIAppTokensFactory(tokens).New(testAppName)
 	systemToken, err := payloads.GetSystemPrincipalTokenApp(appTokens)
 	require.NoError(err)
-	cmdProcessorFactory := ProvideServiceFactory(appParts, time.Now, n10nBroker, imetrics.Provide(), "vvm", iauthnzimpl.NewDefaultAuthenticator(iauthnzimpl.TestSubjectRolesGetter), iauthnzimpl.NewDefaultAuthorizer(), isecretsimpl.ProvideSecretReader())
+	cmdProcessorFactory := ProvideServiceFactory(appParts, time.Now, n10nBroker, imetrics.Provide(), "vvm", iauthnzimpl.NewDefaultAuthenticator(iauthnzimpl.TestSubjectRolesGetter), iauthnzimpl.NewDefaultAuthorizer(), secretReader)
 	cmdProcService := cmdProcessorFactory(serviceChannel, testAppPartID)
 
 	go func() {
