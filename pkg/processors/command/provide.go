@@ -69,12 +69,21 @@ func ProvideServiceFactory(appParts appparts.IAppPartitions, now coreutils.TimeF
 					return err
 				}), pipeline.WireSyncOperator("syncProjectorsAndPutWLog", pipeline.ForkOperator(pipeline.ForkSame,
 					// forK: sync projector and PutWLog
-					// pipeline.ForkBranch(pipeline.NewSyncOp(wireSyncActualizer(syncActualizerOperator))),
 
 					pipeline.ForkBranch(
 						pipeline.NewSyncOp(func(ctx context.Context, work interface{}) (err error) {
-							p := work.(*cmdWorkpiece)
-							return p.appPart.DoSyncActualizer(ctx, work)
+							cmd := work.(*cmdWorkpiece)
+
+							cmd.syncProjectorsStart = time.Now()
+							err = cmd.appPart.DoSyncActualizer(ctx, work)
+							cmd.metrics.increase(ProjectorsSeconds, time.Since(cmd.syncProjectorsStart).Seconds())
+							cmd.syncProjectorsStart = time.Time{}
+
+							if err != nil {
+								cmd.appPartitionRestartScheduled = true
+							}
+
+							return err
 						}),
 					),
 
