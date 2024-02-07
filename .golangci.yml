@@ -92,8 +92,6 @@ linters-settings:
       - "10"
       - "42"
       - "100"
-  testifylint:
-    enable-all: true
 issues:
   exclude:
    - underscore
