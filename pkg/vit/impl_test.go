@@ -72,8 +72,8 @@ func TestBasicUsage_WorkWithFunctions(t *testing.T) {
 		body := `{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.air_table_plan","name":"test"}}]}`
 		resp := vit.PostWS(ws, "c.sys.CUD", body)
 		require.Len(resp.NewIDs, 1)
-		require.True(resp.NewID() > 1)
-		require.True(resp.CurrentWLogOffset > 0)
+		require.Greater(resp.NewID(), 1)
+		require.Greater(resp.CurrentWLogOffset, 0)
 		require.Equal(http.StatusOK, resp.HTTPResp.StatusCode)
 		require.Empty(resp.Sections)                 // not used for commands
 		require.Panics(func() { resp.SectionRow() }) // panics if not a query
@@ -187,8 +187,8 @@ func TestBasicUsage_POST(t *testing.T) {
 	t.Run("app-level POST with authorization", func(t *testing.T) {
 		vit.PostApp(istructs.AppQName_test1_app1, ws.WSID, "c.sys.CUD", bodyCUD, coreutils.Expect403())
 		resp := vit.PostApp(istructs.AppQName_test1_app1, ws.WSID, "c.sys.CUD", bodyCUD, coreutils.WithAuthorizeBy(ws.Owner.Token)) // FuncResponse is returned
-		require.True(resp.NewID() > 0)
-		require.True(resp.CurrentWLogOffset > 0)
+		require.Greater(resp.NewID(), 0)
+		require.Greater(resp.CurrentWLogOffset, 0)
 		require.Empty(resp.Sections)                 // not used for commands
 		require.Panics(func() { resp.SectionRow() }) // not used for commands
 	})
