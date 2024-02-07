@@ -12,7 +12,6 @@ import (
 	"net/http"
 
 	"github.com/untillpro/goutils/iterate"
-
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
@@ -43,9 +42,9 @@ func CheckRefIntegrity(obj istructs.IRowReader, appStructs istructs.IAppStructs,
 		}
 		allowedTargetQNames := refField.Refs()
 		kb := appStructs.ViewRecords().KeyBuilder(QNameViewRecordsRegistry)
-		idHi := crackID(targetID)
-		kb.PutInt64(field_IDHi, int64(idHi))
-		kb.PutRecordID(field_ID, targetID)
+		idHi := CrackID(targetID)
+		kb.PutInt64(Field_IDHi, int64(idHi))
+		kb.PutRecordID(Field_ID, targetID)
 		registryRecord, err := appStructs.ViewRecords().Get(wsid, kb)
 		if err == nil {
 			if len(allowedTargetQNames) > 0 && !allowedTargetQNames.Contains(registryRecord.AsQName(field_QName)) {
@@ -112,15 +111,15 @@ func writeRegistry(st istructs.IState, intents istructs.IIntents, idToStore istr
 		// notest
 		return err
 	}
-	idHi := crackID(idToStore)
-	kb.PutInt64(field_IDHi, int64(idHi))
-	kb.PutRecordID(field_ID, idToStore)
+	idHi := CrackID(idToStore)
+	kb.PutInt64(Field_IDHi, int64(idHi))
+	kb.PutRecordID(Field_ID, idToStore)
 	recordsRegistryRecBuilder, err := intents.NewValue(kb)
 	if err != nil {
 		// notest
 		return err
 	}
-	recordsRegistryRecBuilder.PutInt64(field_WLogOffset, int64(wLogOffsetToStore))
+	recordsRegistryRecBuilder.PutInt64(Field_WLogOffset, int64(wLogOffsetToStore))
 	recordsRegistryRecBuilder.PutQName(field_QName, qNameToStore)
 	return nil
 }

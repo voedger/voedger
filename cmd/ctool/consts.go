@@ -74,3 +74,6 @@ const (
 )
 
 const comma = ","
+
+// folder for DB backups
+const backupFolder = "/mnt/backup/voedger/"
