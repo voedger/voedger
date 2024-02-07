@@ -355,7 +355,9 @@ func TestRawMode(t *testing.T) {
 
 	require.NoError(processor.SendAsync(rowsWorkpiece{
 		object: &coreutils.TestObject{
-			Data: map[string]interface{}{processors.Field_RawObject_Body: `[accepted]`},
+			Data: map[string]interface{}{
+				processors.Field_RawObject_Body: `[accepted]`,
+			},
 		},
 		outputRow: &outputRow{
 			keyToIdx: map[string]int{rootDocument: 0},

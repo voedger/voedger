@@ -704,8 +704,17 @@ func setUp(t *testing.T, prepare func(appDef appdef.IAppDefBuilder, cfg *istruct
 	appStructsProvider := istructsmem.Provide(cfgs, iratesce.TestBucketsFactory,
 		payloads.ProvideIAppTokensFactory(itokensjwt.TestTokensJWT()), appStorageProvider)
 
+	secretReader := isecretsimpl.ProvideSecretReader()
+	n10nBroker, n10nBrokerCleanup := in10nmem.ProvideEx2(in10n.Quotas{
+		Channels:               1000,
+		ChannelsPerSubject:     10,
+		Subsciptions:           1000,
+		SubsciptionsPerSubject: 10,
+	}, time.Now)
+
 	// prepare the AppParts to borrow AppStructs
-	appParts, appPartsClean, err := appparts.New(appStructsProvider)
+	appParts, appPartsClean, err := appparts.NewWithActualizer(appStructsProvider,
+		projectors.NewSyncActualizerFactoryFactory(projectors.ProvideSyncActualizerFactory(), secretReader, n10nBroker))
 	require.NoError(err)
 	defer appPartsClean()
 
@@ -732,47 +741,12 @@ func setUp(t *testing.T, prepare func(appDef appdef.IAppDefBuilder, cfg *istruct
 		icm := NewCommandMessage(ctx, request.Body, appQName, istructs.WSID(request.WSID), sender, testAppPartID, command, token, "")
 		serviceChannel <- icm
 	})
-	n10nBroker, n10nBrokerCleanup := in10nmem.ProvideEx2(in10n.Quotas{
-		Channels:               1000,
-		ChannelsPerSubject:     10,
-		Subsciptions:           1000,
-		SubsciptionsPerSubject: 10,
-	}, time.Now)
 
 	tokens := itokensjwt.ProvideITokens(itokensjwt.SecretKeyExample, time.Now)
 	appTokens := payloads.ProvideIAppTokensFactory(tokens).New(testAppName)
 	systemToken, err := payloads.GetSystemPrincipalTokenApp(appTokens)
 	require.NoError(err)
-	as, err := appStructsProvider.AppStructs(istructs.AppQName_untill_airs_bp)
-	require.NoError(err)
-	syncActualizerFactory := projectors.ProvideSyncActualizerFactory()
-	op := func(vvmCtx context.Context, partitionID istructs.PartitionID) pipeline.ISyncOperator {
-		if len(as.SyncProjectors()) == 0 {
-			return &pipeline.NOOP{}
-		}
-		conf := projectors.SyncActualizerConf{
-			Ctx: vvmCtx,
-			AppStructs: func() istructs.IAppStructs {
-				return as
-			},
-			SecretReader: itokensjwt.ProvideTestSecretsReader(nil),
-			Partition:    partitionID,
-			WorkToEvent: func(work interface{}) istructs.IPLogEvent {
-				return work.(interface{ Event() istructs.IPLogEvent }).Event()
-				// 	switch typed := work.(type) {
-				// 	case interface{ Event() istructs.IPLogEvent }:
-				// 		return typed.Event()
-				// 	case istructs.IPLogEvent:
-				// 		return typed
-				// 	}
-				// 	panic("")
-			},
-			IntentsLimit: 1,
-			N10nFunc:     nil,
-		}
-		return syncActualizerFactory(conf, as.SyncProjectors()[0], as.SyncProjectors()[1:]...)
-	}
-	cmdProcessorFactory := ProvideServiceFactory(appParts, time.Now, op, n10nBroker, imetrics.Provide(), "vvm", iauthnzimpl.NewDefaultAuthenticator(iauthnzimpl.TestSubjectRolesGetter), iauthnzimpl.NewDefaultAuthorizer(), isecretsimpl.ProvideSecretReader())
+	cmdProcessorFactory := ProvideServiceFactory(appParts, time.Now, n10nBroker, imetrics.Provide(), "vvm", iauthnzimpl.NewDefaultAuthenticator(iauthnzimpl.TestSubjectRolesGetter), iauthnzimpl.NewDefaultAuthorizer(), secretReader)
 	cmdProcService := cmdProcessorFactory(serviceChannel, testAppPartID)
 
 	go func() {
