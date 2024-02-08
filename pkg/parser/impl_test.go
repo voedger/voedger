@@ -384,13 +384,23 @@ func Test_Workspace_Defs(t *testing.T) {
 
 	fs1, err := ParseFile("file1.sql", `APPLICATION test();
 		ABSTRACT WORKSPACE AWorkspace(
-			TABLE table1 INHERITS CDoc (a ref);
+			TABLE table1 INHERITS CDoc (
+				a ref,
+				items TABLE inner1 (
+					b ref
+				)
+			);
 		);
 	`)
 	require.NoError(err)
 	fs2, err := ParseFile("file2.sql", `
 		ALTER WORKSPACE AWorkspace(
-			TABLE table2 INHERITS CDoc (a ref);
+			TABLE table2 INHERITS CDoc (
+				a ref,
+				items TABLE inner2 (
+					b ref
+				)
+			);
 		);
 		WORKSPACE MyWorkspace INHERITS AWorkspace();
 		WORKSPACE MyWorkspace2 INHERITS AWorkspace();
@@ -413,6 +423,8 @@ func Test_Workspace_Defs(t *testing.T) {
 
 	require.Equal(appdef.TypeKind_CDoc, ws.Type(appdef.NewQName("pkg1", "table1")).Kind())
 	require.Equal(appdef.TypeKind_CDoc, ws.Type(appdef.NewQName("pkg1", "table2")).Kind())
+	require.Equal(appdef.TypeKind_CRecord, ws.Type(appdef.NewQName("pkg1", "inner1")).Kind())
+	require.Equal(appdef.TypeKind_CRecord, ws.Type(appdef.NewQName("pkg1", "inner2")).Kind())
 	require.Equal(appdef.TypeKind_Command, ws.Type(appdef.NewQName("sys", "CreateLogin")).Kind())
 
 	wsProfile := builder.Workspace(appdef.NewQName("sys", "Profile"))
