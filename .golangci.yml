@@ -92,6 +92,20 @@ linters-settings:
       - "10"
       - "42"
       - "100"
+  testifylint:
+    disable-all: true
+    enable:
+      - bool-compare
+      - compares
+      - empty
+      - error-is-as
+      - error-nil
+      - expected-actual
+      - len
+      - require-error
+      - suite-dont-use-pkg
+      - suite-extra-assert-call
+      - suite-thelper
 issues:
   exclude:
    - underscore
