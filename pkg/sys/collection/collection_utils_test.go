@@ -170,7 +170,7 @@ func requireArPrice(require *require.Assertions, priceId istructs.RecordID, pric
 	require.NoError(err)
 	recArticlePrice := value.AsRecord(Field_Record)
 	require.Equal(priceId, recArticlePrice.AsRecordID(test.articlePricesPriceIdIdent))
-	require.InDelta(price, recArticlePrice.AsFloat32(test.articlePricesPriceIdent), 0.0001)
+	require.Equal(price, recArticlePrice.AsFloat32(test.articlePricesPriceIdent))
 }
 
 func requireArPriceException(require *require.Assertions, periodId istructs.RecordID, price float32, as istructs.IAppStructs, articleId, articlePriceExceptionId istructs.RecordID) {
@@ -183,7 +183,7 @@ func requireArPriceException(require *require.Assertions, periodId istructs.Reco
 	require.NoError(err)
 	recArticlePriceException := value.AsRecord(Field_Record)
 	require.Equal(periodId, recArticlePriceException.AsRecordID(test.articlePriceExceptionsPeriodIdIdent))
-	require.InDelta(price, recArticlePriceException.AsFloat32(test.articlePriceExceptionsPriceIdent), 0.0001)
+	require.Equal(price, recArticlePriceException.AsFloat32(test.articlePriceExceptionsPriceIdent))
 }
 
 type resultElementRow []interface{}

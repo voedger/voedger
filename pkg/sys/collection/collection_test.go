@@ -279,7 +279,7 @@ func Test_updateChildRecord(t *testing.T) {
 	rec, err := as.Records().Get(test.workspace, true, cocaColaNormalPriceElementId)
 	require.NoError(err)
 	require.NotNil(rec)
-	require.InDelta(float32(2.2), rec.AsFloat32(test.articlePricesPriceIdent), 0.0001)
+	require.Equal(float32(2.2), rec.AsFloat32(test.articlePricesPriceIdent))
 }
 
 /*
