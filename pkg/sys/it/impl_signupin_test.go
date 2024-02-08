@@ -30,8 +30,8 @@ func TestBasicUsage_SignUpIn(t *testing.T) {
 	prn2 := vit.SignIn(login2)
 
 	require.NotEqual(prn1.Token, prn2.Token)
-	require.Equal(istructs.ClusterID(1), istructs.WSID(prn1.ProfileWSID).ClusterID())
-	require.Equal(istructs.ClusterID(42), istructs.WSID(prn2.ProfileWSID).ClusterID())
+	require.Equal(istructs.ClusterID(1), prn1.ProfileWSID.ClusterID())
+	require.Equal(istructs.ClusterID(42), prn2.ProfileWSID.ClusterID())
 	require.True(prn1.ProfileWSID.BaseWSID() >= istructs.FirstBaseUserWSID &&
 		prn2.ProfileWSID.BaseWSID() >= istructs.FirstBaseUserWSID &&
 		prn1.ProfileWSID.BaseWSID() != prn2.ProfileWSID.BaseWSID())

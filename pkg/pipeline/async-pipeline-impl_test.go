@@ -55,7 +55,7 @@ func TestAsyncPipeline_SendAsync(t *testing.T) {
 				})),
 		)
 
-		require.Nil(t, pipeline.SendAsync(testWorkpiece{
+		require.NoError(t, pipeline.SendAsync(testWorkpiece{
 			func() {
 				wg.Done()
 			},
@@ -103,7 +103,7 @@ func TestAsyncPipeline_OnError(t *testing.T) {
 	)
 	defer pipeline.Close()
 
-	require.Nil(t, pipeline.SendAsync(newTestWork()))
+	require.NoError(t, pipeline.SendAsync(newTestWork()))
 	err := (<-handledErrs).(IErrorPipeline)
 	require.Equal(t, "test error", err.Error())
 	require.Equal(t, "doAsync, outWork==nil", err.GetPlace())

@@ -12,6 +12,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/untillpro/goutils/logger"
+
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/iratesce"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -151,7 +152,7 @@ func TestBasicUsage(t *testing.T) {
 	// Save raw event to PLog & WLog and save CUD demo
 	// 5. save to PLog
 	pLogEvent, saveErr := app.Events().PutPlog(rawEvent, buildErr, NewIDGenerator())
-	require.NoError(saveErr, saveErr)
+	require.NoError(saveErr)
 	defer pLogEvent.Release()
 
 	// 6. save to WLog
@@ -417,7 +418,7 @@ func TestBasicUsage_AppDef(t *testing.T) {
 		for _, f := range cmdDoc.Fields() {
 			fields[f.Name()] = f.DataKind()
 		}
-		require.Equal(7, len(fields)) // 2 system {sys.QName, sys.ID} + 5 user
+		require.Len(fields, 7) // 2 system {sys.QName, sys.ID} + 5 user
 		require.Equal(appdef.DataKind_string, fields[test.buyerIdent])
 		require.Equal(appdef.DataKind_int32, fields[test.ageIdent])
 		require.Equal(appdef.DataKind_float32, fields[test.heightIdent])
@@ -445,7 +446,7 @@ func TestBasicUsage_AppDef(t *testing.T) {
 						for _, f := range rec.Fields() {
 							fields[f.Name()] = f.DataKind()
 						}
-						require.Equal(8, len(fields)) // 4 system {sys.QName, sys.ID, sys.ParentID, sys.Container} + 4 user
+						require.Len(fields, 8) // 4 system {sys.QName, sys.ID, sys.ParentID, sys.Container} + 4 user
 						require.Equal(appdef.DataKind_RecordID, fields[test.saleIdent])
 						require.Equal(appdef.DataKind_string, fields[test.nameIdent])
 						require.Equal(appdef.DataKind_int64, fields[test.codeIdent])

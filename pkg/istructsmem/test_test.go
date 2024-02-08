@@ -536,7 +536,7 @@ func testTestRow(t *testing.T, row istructs.IRowReader) {
 	require.EqualValues(test.photoRawValue, row.AsBytes("raw"))
 
 	require.Equal(test.tablePhotos, row.AsQName("QName"))
-	require.Equal(true, row.AsBool("bool"))
+	require.True(row.AsBool("bool"))
 	require.Equal(istructs.RecordID(7777777), row.AsRecordID("RecordID"))
 }
 
@@ -687,7 +687,7 @@ func testTestSecureObject(t *testing.T, obj *objectType) {
 	require := require.New(t)
 	test := test()
 
-	require.Equal(obj.AsString(test.passwordIdent), maskString)
+	require.Equal(maskString, obj.AsString(test.passwordIdent))
 }
 
 func fillTestCUD(cud *cudType) {

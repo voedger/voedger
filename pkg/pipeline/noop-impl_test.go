@@ -50,7 +50,7 @@ func TestBasicUsage_NOOP(t *testing.T) {
 		so := WireSyncOperator("test op", &syncOpNoBoilerplate{})
 		p := NewSyncPipeline(ctx, "test", so)
 		work := newTestWork()
-		require.Nil(p.SendSync(work))
+		require.NoError(p.SendSync(work))
 		require.False(called)
 		p.Close()
 		require.True(called)
@@ -62,7 +62,7 @@ func TestBasicUsage_NOOP(t *testing.T) {
 		so := WireAsyncOperator("test op", &asyncOpNoBoilerplate{}, time.Second)
 		p := NewAsyncPipeline(ctx, "test", so)
 		work := newTestWork()
-		require.Nil(p.SendAsync(work))
+		require.NoError(p.SendAsync(work))
 		require.False(called)
 		p.Close()
 		require.True(called)
@@ -73,7 +73,7 @@ func TestBasicUsage_NOOP(t *testing.T) {
 		srv := &serviceNoBoilerplate{}
 		so := ServiceOperator(srv)
 		require.False(called)
-		require.Nil(so.DoSync(context.TODO(), nil))
+		require.NoError(so.DoSync(context.TODO(), nil))
 		so.Close()
 		require.True(called)
 	})
@@ -91,7 +91,7 @@ func TestBasicUsage_Make(t *testing.T) {
 		p := NewSyncPipeline(ctx, "test", so)
 		work := newTestWork()
 		require.False(called)
-		require.Nil(p.SendSync(work))
+		require.NoError(p.SendSync(work))
 		require.True(called)
 		p.Close()
 	})
@@ -106,7 +106,7 @@ func TestBasicUsage_Make(t *testing.T) {
 		p := NewAsyncPipeline(ctx, "test", ao)
 		work := newTestWork()
 		require.False(called)
-		require.Nil(p.SendAsync(work))
+		require.NoError(p.SendAsync(work))
 		p.Close()
 		require.True(called)
 	})
@@ -119,7 +119,7 @@ func TestBasicUsage_Make(t *testing.T) {
 		so := ServiceOperator(srv)
 		require.False(called)
 		require.False(called)
-		require.Nil(so.DoSync(context.TODO(), nil))
+		require.NoError(so.DoSync(context.TODO(), nil))
 		so.Close()
 		require.True(called)
 	})
@@ -130,7 +130,7 @@ func TestNOOP_Cover(t *testing.T) {
 
 	t.Run("NOOPSync", func(t *testing.T) {
 		s := &NOOP{}
-		require.Nil(s.DoSync(context.TODO(), nil))
+		require.NoError(s.DoSync(context.TODO(), nil))
 		s.Close()
 	})
 
@@ -140,20 +140,20 @@ func TestNOOP_Cover(t *testing.T) {
 		w, err := as.DoAsync(context.TODO(), nil)
 		require.Nil(w)
 		require.NoError(err)
-		require.Nil(as.Flush(nil))
+		require.NoError(as.Flush(nil))
 		as.Close()
 	})
 
 	t.Run("NOService", func(t *testing.T) {
 		is := &NOPService{}
-		require.Nil(is.Prepare(nil))
+		require.NoError(is.Prepare(nil))
 		is.Run(context.TODO())
 		is.Stop()
 	})
 
 	t.Run("make sync operator", func(t *testing.T) {
 		s := NewSyncOp(nil)
-		require.Nil(s.DoSync(context.TODO(), nil))
+		require.NoError(s.DoSync(context.TODO(), nil))
 		s.Close()
 	})
 	t.Run("make async operator", func(t *testing.T) {
@@ -161,12 +161,12 @@ func TestNOOP_Cover(t *testing.T) {
 		w, err := as.DoAsync(context.TODO(), nil)
 		require.Nil(w)
 		require.NoError(err)
-		require.Nil(as.Flush(nil))
+		require.NoError(as.Flush(nil))
 		as.Close()
 	})
 	t.Run("make IService", func(t *testing.T) {
 		is := NewService(nil)
-		require.Nil(is.Prepare(nil))
+		require.NoError(is.Prepare(nil))
 		is.Run(context.TODO())
 		is.Stop()
 	})

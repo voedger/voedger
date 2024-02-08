@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/iratesce"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -744,7 +745,7 @@ func TestCore_ViewRecords(t *testing.T) {
 
 		require.Equal(int64(42), v.AsInt64("id"))
 		require.Equal("Coca Cola", v.AsString("name"))
-		require.Equal(true, v.AsBool("active"))
+		require.True(v.AsBool("active"))
 	})
 	t.Run("Value builder must panic on build value", func(t *testing.T) {
 		vb := viewRecords.NewValueBuilder(appdef.NewQName("test", "viewDrinks"))

@@ -13,33 +13,33 @@ import (
 	"github.com/voedger/voedger/pkg/istructsmem/internal/vers"
 )
 
-func renameQName(storage istorage.IAppStorage, old, new appdef.QName) error {
+func renameQName(storage istorage.IAppStorage, oldQName, newQName appdef.QName) error {
 	const (
 		errFmt     = "can not rename QName from «%v» to «%v»: %s"
 		errWrapFmt = errFmt + ": %w"
 	)
 
-	if old == new {
-		return fmt.Errorf(errFmt, old, new, "names are equals")
+	if oldQName == newQName {
+		return fmt.Errorf(errFmt, oldQName, newQName, "names are equals")
 	}
 
 	vers := vers.New()
 	if err := vers.Prepare(storage); err != nil {
-		return fmt.Errorf(errWrapFmt, old, new, "unable to read versions", err)
+		return fmt.Errorf(errWrapFmt, oldQName, newQName, "unable to read versions", err)
 	}
 
 	qnames := New()
 	if err := qnames.Prepare(storage, vers, nil, nil); err != nil {
-		return fmt.Errorf(errWrapFmt, old, new, "unable to read qnames", err)
+		return fmt.Errorf(errWrapFmt, oldQName, newQName, "unable to read qnames", err)
 	}
 
-	id, err := qnames.ID(old)
+	id, err := qnames.ID(oldQName)
 	if err != nil {
-		return fmt.Errorf(errWrapFmt, old, new, "old not found", err)
+		return fmt.Errorf(errWrapFmt, oldQName, newQName, "old not found", err)
 	}
 
-	if exists, err := qnames.ID(new); err == nil {
-		return fmt.Errorf(errWrapFmt, old, new, fmt.Sprintf("new already exists (id=%v)", exists), err)
+	if exists, err := qnames.ID(newQName); err == nil {
+		return fmt.Errorf(errWrapFmt, oldQName, newQName, fmt.Sprintf("new already exists (id=%v)", exists), err)
 	}
 
 	set := func(n appdef.QName, id QNameID) {
@@ -48,11 +48,11 @@ func renameQName(storage istorage.IAppStorage, old, new appdef.QName) error {
 		qnames.changes++
 	}
 
-	set(old, NullQNameID)
-	set(new, id)
+	set(oldQName, NullQNameID)
+	set(newQName, id)
 
 	if err := qnames.store(storage, vers); err != nil {
-		return fmt.Errorf(errWrapFmt, old, new, "unable to write storage", err)
+		return fmt.Errorf(errWrapFmt, oldQName, newQName, "unable to write storage", err)
 	}
 
 	return nil

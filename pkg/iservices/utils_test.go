@@ -23,7 +23,7 @@ func Test_BasicUsage_WiredServicesToMap(t *testing.T) {
 
 	servicesMap := WiredStructPtrToMap(ws)
 
-	require.Equal(2, len(servicesMap))
+	require.Len(servicesMap, 2)
 	require.Equal(1, servicesMap["MyService1"].(*myService).dummy)
 	require.Equal(2, servicesMap["MyService2"].(*myService).dummy)
 

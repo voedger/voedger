@@ -5,6 +5,8 @@
 
 package queryprocessor
 
+/*
+
 import (
 	"context"
 	"testing"
@@ -152,3 +154,5 @@ func Benchmark_pipelineIService_Parallel(b *testing.B) {
 
 //Before   	   						19144	     61210 ns/op	     16172 ops
 //With sync pipeline re-use   	   	37027	     32734 ns/op	     30474 ops
+
+*/

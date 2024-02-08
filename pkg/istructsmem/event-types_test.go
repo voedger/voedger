@@ -15,6 +15,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	log "github.com/untillpro/goutils/logger"
+
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/iratesce"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -118,7 +119,7 @@ func testEventBuilderCore(t *testing.T, cachedPLog bool) {
 
 		t.Run("test build raw event", func(t *testing.T) {
 			rawEvent, buildErr = bld.BuildRawEvent()
-			require.NoError(buildErr, buildErr)
+			require.NoError(buildErr)
 			require.NotNil(rawEvent)
 		})
 	})
@@ -150,7 +151,7 @@ func testEventBuilderCore(t *testing.T, cachedPLog bool) {
 			return nil
 		},
 		))
-		require.NoError(saveErr, saveErr)
+		require.NoError(saveErr)
 		require.False(photoID.IsRaw())
 		require.False(remarkID.IsRaw())
 		require.False(saleID.IsRaw())
@@ -185,8 +186,8 @@ func testEventBuilderCore(t *testing.T, cachedPLog bool) {
 			}
 		})
 		require.NoError(err)
-		require.NotEqual(idP, istructs.NullRecordID)
-		require.NotEqual(idR, istructs.NullRecordID)
+		require.NotEqual(istructs.NullRecordID, idP)
+		require.NotEqual(istructs.NullRecordID, idR)
 	})
 
 	t.Run("III. Read event from PLog & PLog and reads CUD demo", func(t *testing.T) {
@@ -392,7 +393,7 @@ func testEventBuilderCore(t *testing.T, cachedPLog bool) {
 
 		t.Run("test build raw event", func(t *testing.T) {
 			rawEvent, buildErr = bld.BuildRawEvent()
-			require.NoError(buildErr, buildErr)
+			require.NoError(buildErr)
 			require.NotNil(rawEvent)
 		})
 	})
@@ -403,7 +404,7 @@ func testEventBuilderCore(t *testing.T, cachedPLog bool) {
 
 		t.Run("test save to PLog", func(t *testing.T) {
 			ev, saveErr := app.Events().PutPlog(rawEvent, buildErr, NewIDGenerator())
-			require.NoError(saveErr, saveErr)
+			require.NoError(saveErr)
 			require.NotNil(ev)
 			pLogEvent = ev
 		})
@@ -539,7 +540,7 @@ func testEventBuilderCore(t *testing.T, cachedPLog bool) {
 
 			// hack: use low level appRecordsType putRecord()
 			bytes := r.storeToBytes()
-			require.True(len(bytes) > 0)
+			require.NotEmpty(bytes)
 			err = app.Records().(*appRecordsType).putRecord(test.workspace, photoID, bytes)
 			require.NoError(err)
 
@@ -631,7 +632,7 @@ func testCommandsTree(t *testing.T, cmd istructs.IObject) {
 		var names []string
 		cmd.Containers(
 			func(name string) { names = append(names, name) })
-		require.Equal(1, len(names))
+		require.Len(names, 1)
 		require.Equal(test.basketIdent, names[0])
 
 		cmd.Children(test.basketIdent, func(c istructs.IObject) { basket = c })
@@ -644,13 +645,13 @@ func testCommandsTree(t *testing.T, cmd istructs.IObject) {
 		var names []string
 		basket.Containers(
 			func(name string) { names = append(names, name) })
-		require.Equal(len(names), 1)
+		require.Len(names, 1)
 		require.Equal(test.goodIdent, names[0])
 
 		var goods []istructs.IObject
 		basket.Children(test.goodIdent, func(g istructs.IObject) { goods = append(goods, g) })
 		require.NotNil(goods)
-		require.Equal(test.goodCount, len(goods))
+		require.Len(goods, test.goodCount)
 
 		for i := 0; i < test.goodCount; i++ {
 			good := goods[i]
@@ -714,7 +715,7 @@ func testDbEvent(t *testing.T, event istructs.IDbEvent) {
 			cnt++
 		})
 		require.Equal(2, cnt)
-		require.Equal(2, len(cuds))
+		require.Len(cuds, 2)
 		testPhotoRow(t, cuds[0])
 		require.Equal(cuds[0].AsRecordID(appdef.SystemField_ID), cuds[1].AsRecordID(test.photoIdent))
 		require.Equal(test.remarkValue, cuds[1].AsString(test.remarkIdent))
@@ -797,7 +798,7 @@ func Test_EventUpdateRawCud(t *testing.T) {
 			expectedQName = docName
 			pLogEvent, saveErr := app.Events().PutPlog(rawEvent, err, idGenerator)
 			require.NotNil(pLogEvent)
-			require.NoError(saveErr, saveErr)
+			require.NoError(saveErr)
 			require.True(pLogEvent.Error().ValidEvent())
 
 			t.Run("must ok to apply CDoc records", func(t *testing.T) {
@@ -850,7 +851,7 @@ func Test_EventUpdateRawCud(t *testing.T) {
 			expectedQName = recName
 			pLogEvent, saveErr := app.Events().PutPlog(rawEvent, err, idGenerator)
 			require.NotNil(pLogEvent)
-			require.NoError(saveErr, saveErr)
+			require.NoError(saveErr)
 			require.True(pLogEvent.Error().ValidEvent())
 
 			switch test {
@@ -965,7 +966,7 @@ func Test_SingletonCDocEvent(t *testing.T) {
 			return errors.New("unexpected call ID generator from singleton CDoc creation")
 		}))
 		require.NotNil(pLogEvent)
-		require.NoError(saveErr, saveErr)
+		require.NoError(saveErr)
 		require.True(pLogEvent.Error().ValidEvent())
 
 		t.Run("newly created singleton CDoc must be ok", func(t *testing.T) {
@@ -1032,7 +1033,7 @@ func Test_SingletonCDocEvent(t *testing.T) {
 			return errors.New("unexpected call ID generator from singleton CDoc creation")
 		}))
 		require.NotNil(pLogEvent)
-		require.NoError(saveErr, saveErr)
+		require.NoError(saveErr)
 		require.False(pLogEvent.Error().ValidEvent())
 
 		require.Panics(
@@ -1096,7 +1097,7 @@ func Test_SingletonCDocEvent(t *testing.T) {
 			return errors.New("unexpected call ID generator while singleton CDoc update")
 		}))
 		require.NotNil(pLogEvent)
-		require.NoError(saveErr, saveErr)
+		require.NoError(saveErr)
 		require.True(pLogEvent.Error().ValidEvent())
 
 		t.Run("updated singleton CDoc must be ok", func(t *testing.T) {
@@ -1345,7 +1346,7 @@ func TestEventBuild_Error(t *testing.T) {
 				cud := bld.CUDBuilder().Update(getPhotoRem())
 				cud.PutBool(appdef.SystemField_IsActive, false)
 				rawEvent, buildErr = bld.BuildRawEvent()
-				require.NoError(buildErr, buildErr)
+				require.NoError(buildErr)
 				require.NotNil(rawEvent)
 			})
 		})
@@ -1380,7 +1381,7 @@ func TestEventBuild_Error(t *testing.T) {
 			cmdSec.PutString(test.passwordIdent, "12345")
 
 			rawEvent, buildErr = bld.BuildRawEvent()
-			require.NoError(buildErr, buildErr)
+			require.NoError(buildErr)
 			require.NotNil(rawEvent)
 
 			pLogEvent, saveErr := app.Events().PutPlog(rawEvent, buildErr, NewIDGeneratorWithHook(func(rawID, storageID istructs.RecordID, t appdef.IType) error {
@@ -1392,7 +1393,7 @@ func TestEventBuild_Error(t *testing.T) {
 			}))
 			require.False(pLogEvent.Error().ValidEvent())
 			require.Contains(pLogEvent.Error().ErrStr(), ErrWrongRecordID.Error())
-			require.NoError(saveErr, saveErr)
+			require.NoError(saveErr)
 			require.NotNil(pLogEvent)
 		})
 
@@ -1411,7 +1412,7 @@ func TestEventBuild_Error(t *testing.T) {
 			cud.PutString(test.remarkIdent, test.remarkValue)
 
 			rawEvent, buildErr = bld.BuildRawEvent()
-			require.NoError(buildErr, buildErr)
+			require.NoError(buildErr)
 			require.NotNil(rawEvent)
 
 			pLogEvent, saveErr := app.Events().PutPlog(rawEvent, buildErr, NewIDGeneratorWithHook(func(rawID, storageID istructs.RecordID, t appdef.IType) error {
@@ -1423,7 +1424,7 @@ func TestEventBuild_Error(t *testing.T) {
 			}))
 			require.False(pLogEvent.Error().ValidEvent())
 			require.Contains(pLogEvent.Error().ErrStr(), ErrWrongRecordID.Error())
-			require.NoError(saveErr, saveErr)
+			require.NoError(saveErr)
 			require.NotNil(pLogEvent)
 
 			require.Panics(
@@ -1463,10 +1464,10 @@ func Test_LoadEvent_CorruptedBytes(t *testing.T) {
 	testDbEvent(t, ev1)
 
 	b := ev1.storeToBytes()
-	len := len(b)
+	length := len(b)
 
 	t.Run("load/store from truncated bytes", func(t *testing.T) {
-		for i := 0; i < len; i++ {
+		for i := 0; i < length; i++ {
 			corrupted := b[0:i]
 
 			ev2 := newEmptyTestEvent()
@@ -1480,7 +1481,7 @@ func Test_LoadEvent_CorruptedBytes(t *testing.T) {
 		"— success read wrong data",
 		func(t *testing.T) {
 			stat := make(map[string]int)
-			for i := 0; i < len; i++ {
+			for i := 0; i < length; i++ {
 				b[i] ^= 255
 				ev2 := newEmptyTestEvent()
 
@@ -1502,7 +1503,7 @@ func Test_LoadEvent_CorruptedBytes(t *testing.T) {
 
 				b[i] ^= 255
 			}
-			log.Verbose("len: %d, stat: %v\n", len, stat)
+			log.Verbose("len: %d, stat: %v\n", length, stat)
 		})
 }
 
@@ -1611,8 +1612,8 @@ func Test_LoadErrorEvent_CorruptedBytes(t *testing.T) {
 
 	b := ev1.storeToBytes()
 
-	len := len(b)
-	for i := 0; i < len; i++ {
+	length := len(b)
+	for i := 0; i < length; i++ {
 		corrupted := b[0:i]
 
 		ev2 := newEmptyTestEvent()

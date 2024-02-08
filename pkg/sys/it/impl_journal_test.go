@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/sys/journal"
 	it "github.com/voedger/voedger/pkg/vit"
@@ -105,7 +106,7 @@ func TestBasicUsage_Journal(t *testing.T) {
 			"sys.QName": "sys.CUD"
 		}`, ID, tableNum, vit.Now().UnixMilli(), idUntillUsers)
 
-	require.Equal(int64(resp.SectionRow()[0].(float64)), expectedOffset)
+	require.Equal(expectedOffset, int64(resp.SectionRow()[0].(float64)))
 	require.Equal(int64(resp.SectionRow()[1].(float64)), vit.Now().UnixMilli())
 	require.JSONEq(expectedEvent, resp.SectionRow()[2].(string))
 
@@ -171,7 +172,7 @@ func TestBasicUsage_Journal(t *testing.T) {
 			"sys.QName": "sys.CUD"
 		}`, ID, tableNum, vit.Now().UnixMilli(), idUntillUsers)
 
-	require.Equal(int64(resp.SectionRow()[0].(float64)), expectedOffset)
+	require.Equal(expectedOffset, int64(resp.SectionRow()[0].(float64)))
 	require.Equal(int64(resp.SectionRow()[1].(float64)), vit.Now().UnixMilli())
 	require.JSONEq(expectedEvent, resp.SectionRow()[2].(string))
 }

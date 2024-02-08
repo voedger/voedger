@@ -16,7 +16,7 @@ func TestClusterApps(t *testing.T) {
 	require := require.New(t)
 
 	t.Run("All apps has IDs", func(t *testing.T) {
-		require.Equal(int(ClusterAppID_FakeLast), len(ClusterApps))
+		require.Len(ClusterApps, int(ClusterAppID_FakeLast))
 	})
 
 	t.Run("All IDs are unique", func(t *testing.T) {
@@ -24,18 +24,18 @@ func TestClusterApps(t *testing.T) {
 		for k, v := range ClusterApps {
 			vals[v] = k
 		}
-		require.Equal(int(ClusterAppID_FakeLast), len(vals))
+		require.Len(vals, int(ClusterAppID_FakeLast))
 	})
 }
 
 func TestMainCluster(t *testing.T) {
 	require := require.New(t)
-	require.Equal(ClusterID(1), MainClusterID)
+	require.Equal(MainClusterID, ClusterID(1))
 }
 
 func TestWSID(t *testing.T) {
 	require := require.New(t)
-	require.Equal(WSID(0xffff), MaxPseudoBaseWSID)
-	require.Equal(WSID(0xffff+1), FirstBaseAppWSID)
-	require.Equal(WSID(0xffff+0xffff+1), FirstBaseUserWSID)
+	require.Equal(MaxPseudoBaseWSID, WSID(0xffff))
+	require.Equal(FirstBaseAppWSID, WSID(0xffff+1))
+	require.Equal(FirstBaseUserWSID, WSID(0xffff+0xffff+1))
 }

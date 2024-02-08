@@ -11,7 +11,6 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
-	"github.com/voedger/voedger/pkg/istructsmem/internal/qnames"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/utils"
 )
 
@@ -97,14 +96,14 @@ func loadViewValue(val *valueType, codecVer byte, buf *bytes.Buffer) (err error)
 		return err
 	}
 
-	len := uint32(0)
-	if len, err = utils.ReadUInt32(buf); err != nil {
+	length := uint32(0)
+	if length, err = utils.ReadUInt32(buf); err != nil {
 		return fmt.Errorf("%v: error read value dynobuffer length: %w", val.viewName, err)
 	}
-	if buf.Len() < int(len) {
-		return fmt.Errorf("%v: error read value dynobuffer, expected %d bytes, but only %d bytes is available: %w", val.viewName, len, buf.Len(), io.ErrUnexpectedEOF)
+	if buf.Len() < int(length) {
+		return fmt.Errorf("%v: error read value dynobuffer, expected %d bytes, but only %d bytes is available: %w", val.viewName, length, buf.Len(), io.ErrUnexpectedEOF)
 	}
-	val.dyB.Reset(buf.Next(int(len)))
+	val.dyB.Reset(buf.Next(int(length)))
 
 	return nil
 }
@@ -136,7 +135,7 @@ func loadClustFieldFromBuffer_00(key *keyType, field appdef.IField, buf *bytes.B
 		v := uint16(0)
 		if v, err = utils.ReadUInt16(buf); err == nil {
 			var name appdef.QName
-			if name, err = key.appCfg.qNames.QName(qnames.QNameID(v)); err == nil {
+			if name, err = key.appCfg.qNames.QName(v); err == nil {
 				key.ccolsRow.PutQName(field.Name(), name)
 			}
 		}

@@ -251,7 +251,7 @@ func Test_ErrorInSyncActualizer(t *testing.T) {
 	require.NoError(processor.SendSync(&plogEvent{wsid: 1001}))
 	require.NoError(processor.SendSync(&plogEvent{wsid: 1002}))
 	err := processor.SendSync(&plogEvent{wsid: 1099})
-	require.NotNil(err)
+	require.Error(err)
 	require.Equal("test err", err.Error())
 
 	// now read the projection values in workspaces

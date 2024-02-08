@@ -146,7 +146,7 @@ func (names *QNames) load01(storage istorage.IAppStorage) error {
 		if err != nil {
 			return err
 		}
-		id := QNameID(binary.BigEndian.Uint16(value))
+		id := binary.BigEndian.Uint16(value)
 		if id == NullQNameID {
 			return nil // deleted QName
 		}

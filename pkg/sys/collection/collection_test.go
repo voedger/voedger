@@ -214,7 +214,7 @@ func TestBasicUsage_Collection(t *testing.T) {
 			updateArticleCUD(event, as, cocaColaDocID, test.cocaColaNumber2, "Coca-cola")
 			updateArPriceCUD(event, as, cocaColaNormalPriceElementId, normalPriceID, 2.2)
 		}))
-		require.Nil(processor.SendSync(event))
+		require.NoError(processor.SendSync(event))
 	}
 
 	{ // CUDs: insert fanta
@@ -223,7 +223,7 @@ func TestBasicUsage_Collection(t *testing.T) {
 			newArPriceCUD(event, 7, 8, normalPriceID, 2.1)
 			newArPriceCUD(event, 7, 9, happyHourPriceID, 1.7)
 		}))
-		require.Nil(processor.SendSync(event))
+		require.NoError(processor.SendSync(event))
 	}
 	fantaDocID := idGen.idmap[7]
 	fantaNormalPriceElementId := idGen.idmap[8]
@@ -329,7 +329,7 @@ func cp_Collection_3levels(t *testing.T, appParts appparts.IAppPartitions) {
 	holiday, newyear, eventPeriods := insertPeriods(require, as, &idGen)
 
 	for _, event := range []istructs.IPLogEvent{eventPrices, eventDepartments, eventPeriods} {
-		require.Nil(processor.SendSync(event))
+		require.NoError(processor.SendSync(event))
 	}
 
 	// insert coca-cola
@@ -343,7 +343,7 @@ func cp_Collection_3levels(t *testing.T, appParts appparts.IAppPartitions) {
 				newArPriceExceptionCUD(event, 3, 5, newyear, 0.8)
 			}
 		}))
-		require.Nil(processor.SendSync(event))
+		require.NoError(processor.SendSync(event))
 	}
 
 	cocaColaDocID = idGen.idmap[1]
@@ -366,7 +366,7 @@ func cp_Collection_3levels(t *testing.T, appParts appparts.IAppPartitions) {
 				newArPriceExceptionCUD(event, 8, 11, holiday, 1.1)
 			}
 		}))
-		require.Nil(processor.SendSync(event))
+		require.NoError(processor.SendSync(event))
 	}
 
 	fantaDocID := idGen.idmap[6]
@@ -382,7 +382,7 @@ func cp_Collection_3levels(t *testing.T, appParts appparts.IAppPartitions) {
 			newArPriceExceptionCUD(event, cocaColaNormalPriceElementId, 15, holiday, 1.8)
 			updateArPriceExceptionCUD(event, as, cocaColaHappyHourExceptionHolidayElementId, holiday, 0.9)
 		}))
-		require.Nil(processor.SendSync(event))
+		require.NoError(processor.SendSync(event))
 	}
 	cocaColaNormalExceptionHolidayElementId := idGen.idmap[15]
 	require.NotEqual(istructs.NullRecordID, cocaColaNormalExceptionHolidayElementId)
@@ -469,7 +469,7 @@ func TestBasicUsage_QueryFunc_Collection(t *testing.T) {
 	<-out.done
 
 	out.requireNoError(require)
-	require.Equal(2, len(out.resultRows)) // 2 rows
+	require.Len(out.resultRows, 2) // 2 rows
 
 	json, err := json.Marshal(out.resultRows)
 	require.NoError(err)
@@ -477,11 +477,11 @@ func TestBasicUsage_QueryFunc_Collection(t *testing.T) {
 
 	{
 		row := 0
-		require.Equal(2, len(out.resultRows[row])) // 2 elements in a row
+		require.Len(out.resultRows[row], 2) // 2 elements in a row
 		{
 			elem := 0
-			require.Equal(1, len(out.resultRows[row][elem]))    // 1 element row in 1st element
-			require.Equal(3, len(out.resultRows[row][elem][0])) // 3 cell in a row element
+			require.Len(out.resultRows[row][elem], 1)    // 1 element row in 1st element
+			require.Len(out.resultRows[row][elem][0], 3) // 3 cell in a row element
 			name := out.resultRows[row][elem][0][0]
 			number := out.resultRows[row][elem][0][1]
 			department := out.resultRows[row][elem][0][2]
@@ -491,10 +491,10 @@ func TestBasicUsage_QueryFunc_Collection(t *testing.T) {
 		}
 		{
 			elem := 1
-			require.Equal(2, len(out.resultRows[row][elem])) // 2 element rows in 2nd element
+			require.Len(out.resultRows[row][elem], 2) // 2 element rows in 2nd element
 			{
 				elemRow := 0
-				require.Equal(2, len(out.resultRows[row][elem][elemRow])) // 2 cells in a row element
+				require.Len(out.resultRows[row][elem][elemRow], 2) // 2 cells in a row element
 				price := out.resultRows[row][elem][elemRow][0]
 				pricename := out.resultRows[row][elem][elemRow][1]
 				require.Equal(float32(2.0), price)
@@ -502,7 +502,7 @@ func TestBasicUsage_QueryFunc_Collection(t *testing.T) {
 			}
 			{
 				elemRow := 1
-				require.Equal(2, len(out.resultRows[row][elem][elemRow])) // 2 cells in a row element
+				require.Len(out.resultRows[row][elem][elemRow], 2) // 2 cells in a row element
 				price := out.resultRows[row][elem][elemRow][0]
 				pricename := out.resultRows[row][elem][elemRow][1]
 				require.Equal(float32(1.5), price)
@@ -512,11 +512,11 @@ func TestBasicUsage_QueryFunc_Collection(t *testing.T) {
 	}
 	{
 		row := 1
-		require.Equal(2, len(out.resultRows[row])) // 2 elements in a row
+		require.Len(out.resultRows[row], 2) // 2 elements in a row
 		{
 			elem := 0
-			require.Equal(1, len(out.resultRows[row][elem]))    // 1 element row in 1st element
-			require.Equal(3, len(out.resultRows[row][elem][0])) // 3 cell in a row element
+			require.Len(out.resultRows[row][elem], 1)    // 1 element row in 1st element
+			require.Len(out.resultRows[row][elem][0], 3) // 3 cell in a row element
 			name := out.resultRows[row][elem][0][0]
 			number := out.resultRows[row][elem][0][1]
 			department := out.resultRows[row][elem][0][2]
@@ -526,10 +526,10 @@ func TestBasicUsage_QueryFunc_Collection(t *testing.T) {
 		}
 		{
 			elem := 1
-			require.Equal(2, len(out.resultRows[row][elem])) // 2 element rows in 2nd element
+			require.Len(out.resultRows[row][elem], 2) // 2 element rows in 2nd element
 			{
 				elemRow := 0
-				require.Equal(2, len(out.resultRows[row][elem][elemRow])) // 2 cells in a row element
+				require.Len(out.resultRows[row][elem][elemRow], 2) // 2 cells in a row element
 				price := out.resultRows[row][elem][elemRow][0]
 				pricename := out.resultRows[row][elem][elemRow][1]
 				require.Equal(float32(2.1), price)
@@ -537,7 +537,7 @@ func TestBasicUsage_QueryFunc_Collection(t *testing.T) {
 			}
 			{
 				elemRow := 1
-				require.Equal(2, len(out.resultRows[row][elem][elemRow])) // 2 cells in a row element
+				require.Len(out.resultRows[row][elem][elemRow], 2) // 2 cells in a row element
 				price := out.resultRows[row][elem][elemRow][0]
 				pricename := out.resultRows[row][elem][elemRow][1]
 				require.Equal(float32(1.6), price)
@@ -585,10 +585,10 @@ func TestBasicUsage_QueryFunc_CDoc(t *testing.T) {
 	<-out.done
 
 	out.requireNoError(require)
-	require.Equal(1, len(out.resultRows))          // 1 row
-	require.Equal(1, len(out.resultRows[0]))       // 1 element in a row
-	require.Equal(1, len(out.resultRows[0][0]))    // 1 row element in an element
-	require.Equal(1, len(out.resultRows[0][0][0])) // 1 cell in a row element
+	require.Len(out.resultRows, 1)          // 1 row
+	require.Len(out.resultRows[0], 1)       // 1 element in a row
+	require.Len(out.resultRows[0][0], 1)    // 1 row element in an element
+	require.Len(out.resultRows[0][0][0], 1) // 1 cell in a row element
 
 	value := out.resultRows[0][0][0][0]
 	expected := `{
@@ -705,10 +705,10 @@ func TestBasicUsage_State(t *testing.T) {
 	<-out.done
 
 	out.requireNoError(require)
-	require.Equal(1, len(out.resultRows))          // 1 row
-	require.Equal(1, len(out.resultRows[0]))       // 1 element in a row
-	require.Equal(1, len(out.resultRows[0][0]))    // 1 row element in an element
-	require.Equal(1, len(out.resultRows[0][0][0])) // 1 cell in a row element
+	require.Len(out.resultRows, 1)          // 1 row
+	require.Len(out.resultRows[0], 1)       // 1 element in a row
+	require.Len(out.resultRows[0][0], 1)    // 1 row element in an element
+	require.Len(out.resultRows[0][0][0], 1) // 1 cell in a row element
 	expected := `{
 		"test.article_price_exceptions":{
 			"322685000131081":{
@@ -874,10 +874,10 @@ func TestState_withAfterArgument(t *testing.T) {
 	<-out.done
 
 	out.requireNoError(require)
-	require.Equal(1, len(out.resultRows))          // 1 row
-	require.Equal(1, len(out.resultRows[0]))       // 1 element in a row
-	require.Equal(1, len(out.resultRows[0][0]))    // 1 row element in an element
-	require.Equal(1, len(out.resultRows[0][0][0])) // 1 cell in a row element
+	require.Len(out.resultRows, 1)          // 1 row
+	require.Len(out.resultRows[0], 1)       // 1 element in a row
+	require.Len(out.resultRows[0][0], 1)    // 1 row element in an element
+	require.Len(out.resultRows[0][0][0], 1) // 1 cell in a row element
 	expected := `
 	{
 		"test.article_price_exceptions":{
@@ -1080,24 +1080,24 @@ func Test_Idempotency(t *testing.T) {
 	event1 := createEvent(require, as, &idGen, newModify(as, &idGen, func(event istructs.IRawEventBuilder) {
 		newArticleCUD(event, 1, coldDrinks, test.cocaColaNumber, "Coca-cola")
 	}))
-	require.Nil(as.Records().Apply(event1))
+	require.NoError(as.Records().Apply(event1))
 	cocaColaDocID = idGen.idmap[1]
-	require.Nil(processor.SendSync(event1))
+	require.NoError(processor.SendSync(event1))
 
 	// CUDs: modify coca-cola number and normal price
 	event2 := createEvent(require, as, &idGen, newModify(as, &idGen, func(event istructs.IRawEventBuilder) {
 		updateArticleCUD(event, as, cocaColaDocID, test.cocaColaNumber2, "Coca-cola")
 	}))
-	require.Nil(as.Records().Apply(event2))
-	require.Nil(processor.SendSync(event2))
+	require.NoError(as.Records().Apply(event2))
+	require.NoError(processor.SendSync(event2))
 
 	// simulate sending event with the same offset
 	idGen.decOffset()
 	event2copy := createEvent(require, as, &idGen, newModify(as, &idGen, func(event istructs.IRawEventBuilder) {
 		updateArticleCUD(event, as, cocaColaDocID, test.cocaColaNumber, "Coca-cola")
 	}))
-	require.Nil(as.Records().Apply(event2copy))
-	require.Nil(processor.SendSync(event2copy))
+	require.NoError(as.Records().Apply(event2copy))
+	require.NoError(processor.SendSync(event2copy))
 
 	// Check expected projection values
 	{ // coca-cola

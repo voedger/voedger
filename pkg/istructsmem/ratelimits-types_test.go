@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/iratesce"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -71,7 +72,7 @@ func TestRateLimits_BasicUsage(t *testing.T) {
 }
 
 func TestRateLimitsErrors(t *testing.T) {
-	unsupportedRateLimitKind := istructs.RateLimitKind(istructs.RateLimitKind_FakeLast)
+	unsupportedRateLimitKind := istructs.RateLimitKind_FakeLast
 	rls := functionRateLimits{
 		limits: map[appdef.QName]map[istructs.RateLimitKind]istructs.RateLimit{
 			appdef.NewQName(appdef.SysPackage, "test"): {

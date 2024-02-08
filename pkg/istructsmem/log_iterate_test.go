@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
@@ -201,7 +202,7 @@ func Test_readLogParts(t *testing.T) {
 
 		err := readLogParts(0, 100500, readPart)
 		require.NoError(err)
-		require.Equal(bytesRead, 4096*2)
+		require.Equal(4096*2, bytesRead)
 	})
 
 	t.Run("check readLogParts is breakable by cb() error", func(t *testing.T) {

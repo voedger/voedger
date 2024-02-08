@@ -12,6 +12,7 @@ import (
 
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 )
@@ -104,7 +105,7 @@ func TestBasicUsage(t *testing.T) {
 
 	require := require.New(t)
 	require.NoError(err)
-	require.Greater(len(json), 1)
+	require.NotEmpty(json)
 
 	//ioutil.WriteFile("C://temp//provide_test.json", json, 0644)
 

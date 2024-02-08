@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/in10nmem"
@@ -889,11 +890,11 @@ func Test_AsynchronousActualizer_Stress_NonBuffered(t *testing.T) {
 	}
 
 	t.Logf("Stopped in %s ", time.Since(t0))
-	t.Logf("RPS: %.2f", float64(totalEvents)/float64(duration.Seconds()))
+	t.Logf("RPS: %.2f", float64(totalEvents)/duration.Seconds())
 	metrics.List(func(metric imetrics.IMetric, metricValue float64) (err error) {
 		if metric.Name() == "voedger_istoragecache_putbatch_total" {
 			t.Logf("PutBatch: %.0f", metricValue)
-			t.Logf("Batch Per Second: %.2f", float64(metricValue)/float64(duration.Seconds()))
+			t.Logf("Batch Per Second: %.2f", metricValue/duration.Seconds())
 		}
 		return nil
 	})
@@ -1055,11 +1056,11 @@ func Test_AsynchronousActualizer_Stress_Buffered(t *testing.T) {
 	}
 
 	t.Logf("Stopped in %s ", time.Since(t0))
-	t.Logf("RPS: %.2f", float64(totalEvents)/float64(duration.Seconds()))
+	t.Logf("RPS: %.2f", float64(totalEvents)/duration.Seconds())
 	metrics.List(func(metric imetrics.IMetric, metricValue float64) (err error) {
 		if metric.Name() == "voedger_istoragecache_putbatch_total" {
 			t.Logf("PutBatch: %.0f", metricValue)
-			t.Logf("Batch Per Second: %.2f", float64(metricValue)/float64(duration.Seconds()))
+			t.Logf("Batch Per Second: %.2f", metricValue/duration.Seconds())
 		}
 		return nil
 	})

@@ -42,7 +42,7 @@ func TestBug_QueryProcessorMustStopOnClientDisconnect(t *testing.T) {
 	goOn := make(chan interface{})
 	it.MockQryExec = func(input string, callback istructs.ExecQueryCallback) (err error) {
 		rr := &rr{res: input}
-		require.Nil(callback(rr))
+		require.NoError(callback(rr))
 		<-goOn // ждем, пока http клиент примет первый элемент и отключится
 		// теперь ждем ошибку context.Cancelled. Она выйдет не сразу, т.к. в queryprocessor работает асинхронный конвейер
 		for err == nil {

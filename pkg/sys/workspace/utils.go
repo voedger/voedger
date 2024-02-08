@@ -64,5 +64,5 @@ func GetNextWSID(ctx context.Context, appStructs istructs.IAppStructs, clusterID
 	if err := vr.Put(istructs.NullWSID, kb, vb); err != nil {
 		return 0, err
 	}
-	return istructs.NewWSID(clusterID, istructs.WSID(nextBaseWSID)), nil
+	return istructs.NewWSID(clusterID, nextBaseWSID), nil
 }

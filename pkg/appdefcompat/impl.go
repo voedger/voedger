@@ -24,9 +24,9 @@ var constrains = []NodeConstraint{
 	{NodeNameCommandResult, ConstraintNonModifiable},
 }
 
-func checkBackwardCompatibility(old, new appdef.IAppDef) (cerrs *CompatibilityErrors) {
+func checkBackwardCompatibility(oldAppDef, newAppDef appdef.IAppDef) (cerrs *CompatibilityErrors) {
 	return &CompatibilityErrors{
-		Errors: compareNodes(buildTree(old), buildTree(new), constrains),
+		Errors: compareNodes(buildTree(oldAppDef), buildTree(newAppDef), constrains),
 	}
 }
 
@@ -244,15 +244,15 @@ func buildViewNode(parentNode *CompatibilityTreeNode, item appdef.IView) (node *
 	return
 }
 
-func compareNodes(old, new *CompatibilityTreeNode, constrains []NodeConstraint) (cerrs []CompatibilityError) {
-	if old.Value == appdef.NewQName(appdef.SysPackage, "SomeCommand") {
+func compareNodes(oldNode, newNode *CompatibilityTreeNode, constrains []NodeConstraint) (cerrs []CompatibilityError) {
+	if oldNode.Value == appdef.NewQName(appdef.SysPackage, "SomeCommand") {
 		log.Println()
 	}
-	if !cmp.Equal(old.Value, new.Value) {
-		cerrs = append(cerrs, newCompatibilityError(ConstraintValueMatch, old.Path(), ErrorTypeValueChanged))
+	if !cmp.Equal(oldNode.Value, newNode.Value) {
+		cerrs = append(cerrs, newCompatibilityError(ConstraintValueMatch, oldNode.Path(), ErrorTypeValueChanged))
 	}
-	m := matchNodes(old.Props, new.Props)
-	cerrs = append(cerrs, checkConstraint(old.Path(), m, findConstraint(old.Name, constrains))...)
+	m := matchNodes(oldNode.Props, newNode.Props)
+	cerrs = append(cerrs, checkConstraint(oldNode.Path(), m, findConstraint(oldNode.Name, constrains))...)
 	for _, pair := range m.MatchedNodePairs {
 		cerrs = append(cerrs, compareNodes(pair[0], pair[1], constrains)...)
 	}

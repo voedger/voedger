@@ -13,6 +13,7 @@ import (
 	"fmt"
 
 	"github.com/untillpro/dynobuffers"
+
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/containers"
@@ -89,14 +90,14 @@ func (row *rowType) build() (err error) {
 					row.nils = append(row.nils, nils...)
 				} else {
 					for _, n := range nils {
-						if new := func() bool {
+						if isNew := func() bool {
 							for i := range row.nils {
 								if row.nils[i] == n {
 									return false
 								}
 							}
 							return true
-						}(); new {
+						}(); isNew {
 							row.nils = append(row.nils, n)
 						}
 					}
@@ -588,7 +589,7 @@ func (row *rowType) AsQName(name string) appdef.QName {
 	_ = row.fieldMustExists(name, appdef.DataKind_QName)
 
 	if id, ok := dynoBufGetWord(row.dyB, name); ok {
-		qName, err := row.appCfg.qNames.QName(qnames.QNameID(id))
+		qName, err := row.appCfg.qNames.QName(id)
 		if err != nil {
 			panic(err)
 		}
@@ -824,7 +825,7 @@ func (row *rowType) PutQName(name string, value appdef.QName) {
 		return
 	}
 	b := make([]byte, 2)
-	binary.BigEndian.PutUint16(b, uint16(id))
+	binary.BigEndian.PutUint16(b, id)
 
 	row.putValue(name, dynobuffers.FieldTypeByte, b)
 }

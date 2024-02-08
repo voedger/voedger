@@ -114,7 +114,7 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 		provideQueryProcessors,
 		provideAppServiceFactory,
 		provideAppPartitionFactory,
-		provideSyncActualizerFactory,
+		//provideSyncActualizerFactory,
 		provideAsyncActualizersFactory,
 		provideRouterServiceFactory,
 		provideOperatorAppServices,
@@ -146,6 +146,7 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 		dbcertcache.ProvideDbCache,
 		imetrics.Provide,
 		projectors.ProvideSyncActualizerFactory,
+		projectors.NewSyncActualizerFactoryFactory,
 		projectors.ProvideAsyncActualizerFactory,
 		iprocbusmem.Provide,
 		provideRouterServices,
@@ -164,7 +165,7 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 		provideIAppStorageUncachingProviderFactory,
 		provideAppPartsCtlPipelineService,
 		apppartsctl.New,
-		appparts.New,
+		appparts.NewWithActualizer,
 		builtinapps.Apps,
 		// wire.Value(vvmConfig.NumCommandProcessors) -> (wire bug?) value github.com/untillpro/airs-bp3/vvm.CommandProcessorsCount can't be used: vvmConfig is not declared in package scope
 		wire.FieldsOf(&vvmConfig,
@@ -377,42 +378,42 @@ func (s *switchByAppName) Switch(work interface{}) (branchName string, err error
 	return work.(interface{ AppQName() istructs.AppQName }).AppQName().String(), nil
 }
 
-func provideSyncActualizerFactory(vvmApps VVMApps, structsProvider istructs.IAppStructsProvider, n10nBroker in10n.IN10nBroker, mpq MaxPrepareQueriesType, actualizerFactory projectors.SyncActualizerFactory, secretReader isecrets.ISecretReader) commandprocessor.SyncActualizerFactory {
-	return func(vvmCtx context.Context, partitionID istructs.PartitionID) pipeline.ISyncOperator {
-		actualizers := []pipeline.SwitchOperatorOptionFunc{}
-		for _, appQName := range vvmApps {
-			appStructs, err := structsProvider.AppStructs(appQName)
-			if err != nil {
-				panic(err)
-			}
-			if len(appStructs.SyncProjectors()) == 0 {
-				actualizers = append(actualizers, pipeline.SwitchBranch(appQName.String(), &pipeline.NOOP{}))
-				continue
-			}
-			conf := projectors.SyncActualizerConf{
-				Ctx: vvmCtx,
-				//TODO это правильно, что постоянную appStrcuts возвращаем? Каждый раз не надо запрашивать у appStructsProvider?
-				AppStructs:   func() istructs.IAppStructs { return appStructs },
-				SecretReader: secretReader,
-				Partition:    partitionID,
-				WorkToEvent: func(work interface{}) istructs.IPLogEvent {
-					return work.(interface{ Event() istructs.IPLogEvent }).Event()
-				},
-				N10nFunc: func(view appdef.QName, wsid istructs.WSID, offset istructs.Offset) {
-					n10nBroker.Update(in10n.ProjectionKey{
-						App:        appStructs.AppQName(),
-						Projection: view,
-						WS:         wsid,
-					}, offset)
-				},
-				IntentsLimit: builtin.MaxCUDs,
-			}
-			actualizer := actualizerFactory(conf, appStructs.SyncProjectors()[0], appStructs.SyncProjectors()[1:]...)
-			actualizers = append(actualizers, pipeline.SwitchBranch(appQName.String(), actualizer))
-		}
-		return pipeline.SwitchOperator(&switchByAppName{}, actualizers[0], actualizers[1:]...)
-	}
-}
+// func provideSyncActualizerFactory(vvmApps VVMApps, structsProvider istructs.IAppStructsProvider, n10nBroker in10n.IN10nBroker, mpq MaxPrepareQueriesType, actualizerFactory projectors.SyncActualizerFactory, secretReader isecrets.ISecretReader) commandprocessor.SyncActualizerFactory {
+// 	return func(vvmCtx context.Context, partitionID istructs.PartitionID) pipeline.ISyncOperator {
+// 		actualizers := []pipeline.SwitchOperatorOptionFunc{}
+// 		for _, appQName := range vvmApps {
+// 			appStructs, err := structsProvider.AppStructs(appQName)
+// 			if err != nil {
+// 				panic(err)
+// 			}
+// 			if len(appStructs.SyncProjectors()) == 0 {
+// 				actualizers = append(actualizers, pipeline.SwitchBranch(appQName.String(), &pipeline.NOOP{}))
+// 				continue
+// 			}
+// 			conf := projectors.SyncActualizerConf{
+// 				Ctx: vvmCtx,
+// 				//TODO это правильно, что постоянную appStrcuts возвращаем? Каждый раз не надо запрашивать у appStructsProvider?
+// 				AppStructs:   func() istructs.IAppStructs { return appStructs },
+// 				SecretReader: secretReader,
+// 				Partition:    partitionID,
+// 				WorkToEvent: func(work interface{}) istructs.IPLogEvent {
+// 					return work.(interface{ Event() istructs.IPLogEvent }).Event()
+// 				},
+// 				N10nFunc: func(view appdef.QName, wsid istructs.WSID, offset istructs.Offset) {
+// 					n10nBroker.Update(in10n.ProjectionKey{
+// 						App:        appStructs.AppQName(),
+// 						Projection: view,
+// 						WS:         wsid,
+// 					}, offset)
+// 				},
+// 				IntentsLimit: builtin.MaxCUDs,
+// 			}
+// 			actualizer := actualizerFactory(conf, appStructs.SyncProjectors()[0], appStructs.SyncProjectors()[1:]...)
+// 			actualizers = append(actualizers, pipeline.SwitchBranch(appQName.String(), actualizer))
+// 		}
+// 		return pipeline.SwitchOperator(&switchByAppName{}, actualizers[0], actualizers[1:]...)
+// 	}
+// }
 
 func provideBlobberAppStruct(asp istructs.IAppStructsProvider) (BlobberAppStruct, error) {
 	return asp.AppStructs(istructs.AppQName_sys_blobber)

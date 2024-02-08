@@ -657,19 +657,6 @@ func (cmdProc *cmdProc) n10n(_ context.Context, work interface{}) (err error) {
 	return nil
 }
 
-func wireSyncActualizer(syncActualizer pipeline.ISyncOperator) func(ctx context.Context, work interface{}) (err error) {
-	return func(ctx context.Context, work interface{}) (err error) {
-		cmd := work.(*cmdWorkpiece)
-		cmd.syncProjectorsStart = time.Now()
-		if err = syncActualizer.DoSync(ctx, work); err != nil {
-			cmd.appPartitionRestartScheduled = true
-		}
-		cmd.metrics.increase(ProjectorsSeconds, time.Since(cmd.syncProjectorsStart).Seconds())
-		cmd.syncProjectorsStart = time.Time{}
-		return err
-	}
-}
-
 func sendResponse(cmd *cmdWorkpiece, handlingError error) {
 	if handlingError != nil {
 		cmd.metrics.increase(ErrorsTotal, 1.0)
@@ -701,7 +688,7 @@ func sendResponse(cmd *cmdWorkpiece, handlingError error) {
 			return
 		}
 		body.WriteString(`,"Result":`)
-		body.WriteString(string(cmdResultBytes))
+		body.Write(cmdResultBytes)
 	}
 	body.WriteString("}")
 	coreutils.ReplyJSON(cmd.cmdMes.Sender(), http.StatusOK, body.String())

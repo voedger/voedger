@@ -159,9 +159,9 @@ func SafeWriteBuf(b *bytes.Buffer, data any) {
 }
 
 // Returns error if buf shorter than len bytes
-func checkBufLen(buf *bytes.Buffer, len int) error {
-	if l := buf.Len(); l < len {
-		return fmt.Errorf("error read data from byte buffer, expected %d bytes, but only %d bytes is available: %w", len, l, io.ErrUnexpectedEOF)
+func checkBufLen(buf *bytes.Buffer, length int) error {
+	if l := buf.Len(); l < length {
+		return fmt.Errorf("error read data from byte buffer, expected %d bytes, but only %d bytes is available: %w", length, l, io.ErrUnexpectedEOF)
 	}
 	return nil
 }
