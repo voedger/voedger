@@ -172,15 +172,15 @@ func TestClusterJSON(t *testing.T) {
 
 	c := successSECluster()
 	err := c.saveToJSON()
-	require.NoError(err, err)
+	require.NoError(err)
 
 	c = failSECluster()
 	err = c.saveToJSON()
-	require.NoError(err, err)
+	require.NoError(err)
 
 	c = successCECluster()
 	err = c.saveToJSON()
-	require.NoError(err, err)
+	require.NoError(err)
 
 	c = failCECluster()
 	err = c.saveToJSON()
@@ -216,7 +216,7 @@ func TestCtoolCommands(t *testing.T) {
 
 	// the command validate return the error because the configuration of the cluster has not yet been created
 	err = execRootCmd([]string{"./ctool", "validate", "--dry-run"}, version)
-	require.Error(err, err)
+	require.Error(err)
 
 	// execute the init command
 	err = execRootCmd([]string{"./ctool", "init", "SE", "10.0.0.21", "10.0.0.22", "10.0.0.23", "10.0.0.24", "10.0.0.25", "--dry-run", "--ssh-key", "key", "--acme-domain", "domain1,domain2,domain3"}, version)
@@ -224,11 +224,11 @@ func TestCtoolCommands(t *testing.T) {
 
 	dryRun = true
 	cluster := newCluster()
-	require.Equal(cluster.Acme.domains(), "domain1,domain2,domain3")
+	require.Equal("domain1,domain2,domain3", cluster.Acme.domains())
 
 	// repeat command init should give an error
 	err = execRootCmd([]string{"./ctool", "init", "SE", "10.0.0.21", "10.0.0.22", "10.0.0.23", "10.0.0.24", "10.0.0.25", "--dry-run", "--ssh-key", "key"}, version)
-	require.Error(err, err)
+	require.Error(err)
 
 	// execute the replace command
 	err = execRootCmd([]string{"./ctool", "replace", "db-node-1", "10.0.0.28", "--dry-run", "--ssh-key", "key"}, version)
@@ -236,7 +236,7 @@ func TestCtoolCommands(t *testing.T) {
 
 	// replace node to the address from the list of Replacedaddresses should give an error
 	err = execRootCmd([]string{"./ctool", "replace", "10.0.0.28", "10.0.0.23", "--dry-run", "--ssh-key", "key"}, version)
-	require.Error(err, err)
+	require.Error(err)
 
 	// upgrade without changing the ctool version should give an error
 	err = execRootCmd([]string{"./ctool", "upgrade", "--dry-run", "--ssh-key", "key"}, version)
@@ -261,10 +261,10 @@ func TestAcmeDomains(t *testing.T) {
 	require := require.New(t)
 
 	cluster := newCluster()
-	require.Equal(cluster.Acme.domains(), "")
+	require.Equal("", cluster.Acme.domains())
 
 	cluster.Acme.Domains = []string{"domain1.io", "domain2.io"}
-	require.Equal(cluster.Acme.domains(), "domain1.io,domain2.io")
+	require.Equal("domain1.io,domain2.io", cluster.Acme.domains())
 
 	cluster.Acme.addDomains("domain2.io,domain3,domain4")
 	require.Equal(cluster.Acme.domains(), "domain1.io,domain2.io,domain3,domain4")
