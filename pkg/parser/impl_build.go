@@ -123,6 +123,14 @@ func (c *buildContext) workspaces() error {
 					iter(ws, wsctx, collection)
 				}
 			}
+			if t, ok := stmt.(*TableStmt); ok {
+				for i := range t.Items {
+					if t.Items[i].NestedTable != nil {
+						c.useStmtInWs(wsctx, wsctx.pkg.Name, &t.Items[i].NestedTable.Table)
+						iter(ws, wsctx, &t.Items[i].NestedTable.Table)
+					}
+				}
+			}
 		})
 	}
 
@@ -166,6 +174,14 @@ func (c *buildContext) alterWorkspaces() error {
 					if collection, ok := stmt.(IStatementCollection); ok {
 						if _, isWorkspace := stmt.(*WorkspaceStmt); !isWorkspace {
 							iter(wsctx, collection)
+						}
+					}
+					if t, ok := stmt.(*TableStmt); ok {
+						for i := range t.Items {
+							if t.Items[i].NestedTable != nil {
+								c.useStmtInWs(wsctx, wsctx.pkg.Name, &t.Items[i].NestedTable.Table)
+								iter(wsctx, &t.Items[i].NestedTable.Table)
+							}
 						}
 					}
 				})
