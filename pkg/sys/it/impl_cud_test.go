@@ -64,7 +64,7 @@ func TestBasicUsage_CUD(t *testing.T) {
 		actualControlActive := resp.SectionRow()[1].(float64)
 		id = resp.SectionRow()[2].(float64)
 		require.Equal("cola", actualName)
-		require.InDelta(float64(5), actualControlActive, 0.0001)
+		require.Equal(float64(5), actualControlActive)
 	})
 
 	t.Run("update", func(t *testing.T) {
@@ -102,8 +102,8 @@ func TestBasicUsage_CUD(t *testing.T) {
 		actualControlActive := resp.SectionRow()[1].(float64)
 		newID := resp.SectionRow()[2].(float64)
 		require.Equal("cola1", actualName)
-		require.InDelta(float64(51), actualControlActive, 0.0001)
-		require.InDelta(id, newID, 0.0001)
+		require.Equal(float64(51), actualControlActive)
+		require.Equal(id, newID)
 
 		// CDoc
 		body = fmt.Sprintf(`
@@ -183,7 +183,7 @@ func TestBasicUsage_Init(t *testing.T) {
 	actualControlActive := resp.SectionRow()[1].(float64)
 	id := resp.SectionRow()[2].(float64)
 	require.Equal("cola", actualName)
-	require.InDelta(float64(51), actualControlActive, 0.0001)
+	require.Equal(float64(51), actualControlActive)
 	require.Greater(istructs.RecordID(id), istructs.MaxRawRecordID)
 }
 

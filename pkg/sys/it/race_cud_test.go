@@ -413,5 +413,5 @@ func readAndCheckArt(t *testing.T, idx int, vit *it.VIT, ws *it.AppWorkspace) {
 		i++
 	}
 	require.Equal(artname, actualName)
-	require.InDelta(float64(5), actualControlActive, 0.0001)
+	require.Equal(float64(5), actualControlActive)
 }

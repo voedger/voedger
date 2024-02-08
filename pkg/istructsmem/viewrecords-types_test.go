@@ -672,8 +672,8 @@ func TestCore_ViewRecords(t *testing.T) {
 				counter := 0
 				err = viewRecords.Read(context.Background(), 1, kb, func(key istructs.IKey, value istructs.IValue) (err error) {
 					require.Equal(istructs.QNameForError, key.AsQName("partitionKey1"))
-					require.InDelta(float32(44.4), key.AsFloat32("clusteringColumn1"), 0.0001)
-					require.InDelta(float64(64.4), key.AsFloat64("clusteringColumn2"), 0.0001)
+					require.Equal(float32(44.4), key.AsFloat32("clusteringColumn1"))
+					require.Equal(float64(64.4), key.AsFloat64("clusteringColumn2"))
 					require.Equal([]byte("TEST"), key.AsBytes("clusteringColumn3"))
 					require.Equal(int64(1), value.AsInt64("valueField1"))
 					counter++
@@ -705,8 +705,8 @@ func TestCore_ViewRecords(t *testing.T) {
 				counter := 0
 				err = viewRecords.Read(context.Background(), 1, readKey, func(key istructs.IKey, value istructs.IValue) (err error) {
 					require.Equal(istructs.QNameForError, key.AsQName("partitionKey1"))
-					require.InDelta(float32(44.4), key.AsFloat32("clusteringColumn1"), 0.0001)
-					require.InDelta(float64(64.4), key.AsFloat64("clusteringColumn2"), 0.0001)
+					require.Equal(float32(44.4), key.AsFloat32("clusteringColumn1"))
+					require.Equal(float64(64.4), key.AsFloat64("clusteringColumn2"))
 					require.Equal([]byte{0xFF, 0x1, 0x2}, key.AsBytes("clusteringColumn3"))
 					require.Equal(int64(7), value.AsInt64("valueField1"))
 					counter++
