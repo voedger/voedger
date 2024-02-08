@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
 	"github.com/voedger/voedger/pkg/istructs"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 	"github.com/voedger/voedger/pkg/vit"
@@ -19,7 +20,7 @@ func TestBasicUsage_HTTPConventions(t *testing.T) {
 	require := require.New(t)
 	vit.MockQryExec = func(input string, callback istructs.ExecQueryCallback) error {
 		rr := &rr{res: input}
-		require.Nil(callback(rr))
+		require.NoError(callback(rr))
 		return errors.New("test error")
 	}
 	vit.MockCmdExec = func(input string) error {

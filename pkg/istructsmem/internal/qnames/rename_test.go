@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/consts"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/teststore"
@@ -21,8 +22,8 @@ func TestRenameQName(t *testing.T) {
 
 	require := require.New(t)
 
-	old := appdef.NewQName("test", "old")
-	new := appdef.NewQName("test", "new")
+	oldQName := appdef.NewQName("test", "old")
+	newQName := appdef.NewQName("test", "new")
 
 	storage := teststore.NewStorage()
 
@@ -32,7 +33,7 @@ func TestRenameQName(t *testing.T) {
 		require.NoError(err)
 
 		appDefBuilder := appdef.New()
-		_ = appDefBuilder.AddObject(old)
+		_ = appDefBuilder.AddObject(oldQName)
 		appDef, err := appDefBuilder.Build()
 		require.NoError(err)
 
@@ -42,7 +43,7 @@ func TestRenameQName(t *testing.T) {
 	})
 
 	t.Run("basic usage", func(t *testing.T) {
-		err := Rename(storage, old, new)
+		err := Rename(storage, oldQName, newQName)
 		require.NoError(err)
 	})
 
@@ -56,13 +57,13 @@ func TestRenameQName(t *testing.T) {
 		require.NoError(err)
 
 		t.Run("check old is deleted", func(t *testing.T) {
-			id, err := names.ID(old)
+			id, err := names.ID(oldQName)
 			require.ErrorIs(err, ErrNameNotFound)
-			require.Equal(id, NullQNameID)
+			require.Equal(NullQNameID, id)
 		})
 
 		t.Run("check new is not null", func(t *testing.T) {
-			id, err := names.ID(new)
+			id, err := names.ID(newQName)
 			require.NoError(err)
 			require.Greater(id, QNameIDSysLast)
 		})
@@ -73,8 +74,8 @@ func TestRenameQName_Errors(t *testing.T) {
 
 	require := require.New(t)
 
-	old := appdef.NewQName("test", "old")
-	new := appdef.NewQName("test", "new")
+	oldQName := appdef.NewQName("test", "old")
+	newQName := appdef.NewQName("test", "new")
 	other := appdef.NewQName("test", "other")
 
 	storage := teststore.NewStorage()
@@ -85,7 +86,7 @@ func TestRenameQName_Errors(t *testing.T) {
 		require.NoError(err)
 
 		appDefBuilder := appdef.New()
-		_ = appDefBuilder.AddObject(old)
+		_ = appDefBuilder.AddObject(oldQName)
 		_ = appDefBuilder.AddObject(other)
 		appDef, err := appDefBuilder.Build()
 		require.NoError(err)
@@ -96,30 +97,30 @@ func TestRenameQName_Errors(t *testing.T) {
 	})
 
 	t.Run("must error if old and new are equals", func(t *testing.T) {
-		err := Rename(storage, old, old)
+		err := Rename(storage, oldQName, oldQName)
 		require.ErrorContains(err, "equals")
 	})
 
 	t.Run("must error if twice rename", func(t *testing.T) {
-		err := Rename(storage, old, new)
+		err := Rename(storage, oldQName, newQName)
 		require.NoError(err)
 
-		err = Rename(storage, old, new)
+		err = Rename(storage, oldQName, newQName)
 		require.ErrorIs(err, ErrNameNotFound)
 
 		t.Run("but must ok reverse rename", func(t *testing.T) {
-			err = Rename(storage, new, old)
+			err = Rename(storage, newQName, oldQName)
 			require.NoError(err)
 		})
 	})
 
 	t.Run("must error if old name not found", func(t *testing.T) {
-		err := Rename(storage, appdef.NewQName("test", "unknown"), new)
+		err := Rename(storage, appdef.NewQName("test", "unknown"), newQName)
 		require.ErrorIs(err, ErrNameNotFound)
 	})
 
 	t.Run("must error if new name is already exists", func(t *testing.T) {
-		err := Rename(storage, old, other)
+		err := Rename(storage, oldQName, other)
 		require.ErrorContains(err, "exists")
 	})
 }
@@ -128,8 +129,8 @@ func TestRenameQName_Fails(t *testing.T) {
 
 	require := require.New(t)
 
-	old := appdef.NewQName("test", "old")
-	new := appdef.NewQName("test", "new")
+	oldQName := appdef.NewQName("test", "old")
+	newQName := appdef.NewQName("test", "new")
 
 	t.Run("must error if unsupported version of Versions system view", func(t *testing.T) {
 		testError := errors.New("error read versions")
@@ -142,7 +143,7 @@ func TestRenameQName_Fails(t *testing.T) {
 
 		storage.ScheduleGetError(testError, utils.ToBytes(consts.SysView_Versions), nil)
 
-		err = Rename(storage, old, new)
+		err = Rename(storage, oldQName, newQName)
 		require.ErrorIs(err, testError)
 	})
 
@@ -154,7 +155,7 @@ func TestRenameQName_Fails(t *testing.T) {
 		require.NoError(err)
 		versions.Put(vers.SysQNamesVersion, latestVersion+1) // future version
 
-		err = Rename(storage, old, new)
+		err = Rename(storage, oldQName, newQName)
 		require.ErrorIs(err, vers.ErrorInvalidVersion)
 	})
 
@@ -166,7 +167,7 @@ func TestRenameQName_Fails(t *testing.T) {
 		require.NoError(err)
 
 		appDefBuilder := appdef.New()
-		_ = appDefBuilder.AddObject(old)
+		_ = appDefBuilder.AddObject(oldQName)
 		appDef, err := appDefBuilder.Build()
 		require.NoError(err)
 
@@ -178,18 +179,18 @@ func TestRenameQName_Fails(t *testing.T) {
 	t.Run("must error if storage read failed", func(t *testing.T) {
 		testError := errors.New("can not read old qname")
 
-		storage.ScheduleGetError(testError, nil, []byte(old.String()))
+		storage.ScheduleGetError(testError, nil, []byte(oldQName.String()))
 
-		err := Rename(storage, old, new)
+		err := Rename(storage, oldQName, newQName)
 		require.ErrorIs(err, testError)
 	})
 
 	t.Run("must error if storage put failed", func(t *testing.T) {
 		testError := errors.New("can not delete old qname")
 
-		storage.SchedulePutError(testError, nil, []byte(new.String()))
+		storage.SchedulePutError(testError, nil, []byte(newQName.String()))
 
-		err := Rename(storage, old, new)
+		err := Rename(storage, oldQName, newQName)
 		require.ErrorIs(err, testError)
 	})
 }

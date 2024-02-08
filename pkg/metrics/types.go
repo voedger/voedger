@@ -20,12 +20,12 @@ func (m *MetricValue) Increase(delta float64) {
 	var swapped bool
 	ptr := (*uint64)(unsafe.Pointer(m))
 	for !swapped {
-		old := math.Float64frombits(atomic.LoadUint64(ptr))
-		new := old + delta
+		oldValue := math.Float64frombits(atomic.LoadUint64(ptr))
+		newValue := oldValue + delta
 		swapped = atomic.CompareAndSwapUint64(
 			ptr,
-			math.Float64bits(old),
-			math.Float64bits(new),
+			math.Float64bits(oldValue),
+			math.Float64bits(newValue),
 		)
 	}
 }

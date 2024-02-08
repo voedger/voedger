@@ -33,7 +33,7 @@ func TestBasicUsage_QName(t *testing.T) {
 	// Parse string
 
 	qname2, err := ParseQName("sale.orders")
-	require.Nil(err)
+	require.NoError(err)
 	require.Equal(qname, qname2)
 
 	// Errors. Only one dot allowed
@@ -89,13 +89,13 @@ func TestBasicUsage_QName_JSon(t *testing.T) {
 		// Marshal
 
 		j, err := json.Marshal(&ms)
-		require.Nil(err)
+		require.NoError(err)
 
 		// Unmarshal
 
 		var ms2 = myStruct{}
 		err = json.Unmarshal(j, &ms2)
-		require.Nil(err)
+		require.NoError(err)
 
 		// Compare
 		require.Equal(ms, ms2)
@@ -126,13 +126,13 @@ func TestQName_Json_NullQName(t *testing.T) {
 		// Marshal
 
 		j, err := json.Marshal(&qname)
-		require.Nil(err)
+		require.NoError(err)
 
 		// Unmarshal
 
 		var qname2 = QName{}
 		err = json.Unmarshal(j, &qname2)
-		require.Nil(err)
+		require.NoError(err)
 
 		// Compare
 		require.Equal(qname, qname2)
@@ -145,15 +145,12 @@ func TestQName_Compare(t *testing.T) {
 	q1 := NewQName("pkg", "entity")
 	q2 := NewQName("pkg", "entity")
 	require.Equal(q1, q2)
-	require.True(q1 == q2)
 
 	q3 := NewQName("pkg", "entity_1")
 	require.NotEqual(q1, q3)
-	require.False(q1 == q3)
 
 	q4 := NewQName("pkg_1", "entity")
 	require.NotEqual(q2, q4)
-	require.False(q2 == q4)
 
 	t.Run("test CompareQName()", func(t *testing.T) {
 		require.Equal(0, CompareQName(q1, q2))
@@ -166,7 +163,7 @@ func TestQName_Compare(t *testing.T) {
 
 func Test_NullQName(t *testing.T) {
 	require := require.New(t)
-	require.Equal(NullQName, QName{})
+	require.Equal(QName{}, NullQName)
 }
 
 func TestQName_UnmarshalInvalidString(t *testing.T) {
@@ -177,7 +174,7 @@ func TestQName_UnmarshalInvalidString(t *testing.T) {
 		q := NewQName("a", "b")
 
 		err = q.UnmarshalJSON(nil)
-		require.NotNil(err)
+		require.Error(err)
 		log.Println(err)
 		require.Equal(NullQName, q)
 	})
@@ -186,7 +183,7 @@ func TestQName_UnmarshalInvalidString(t *testing.T) {
 		q := NewQName("a", "b")
 
 		err = q.UnmarshalJSON([]byte("\"\""))
-		require.NotNil(err)
+		require.Error(err)
 		require.Equal(NullQName, q)
 
 		log.Println(err)
@@ -196,7 +193,7 @@ func TestQName_UnmarshalInvalidString(t *testing.T) {
 		q := NewQName("a", "b")
 
 		err = q.UnmarshalJSON([]byte("\"bcd\""))
-		require.NotNil(err)
+		require.Error(err)
 		require.Equal(NullQName, q)
 
 		log.Println(err)
@@ -206,7 +203,7 @@ func TestQName_UnmarshalInvalidString(t *testing.T) {
 		q := NewQName("a", "b")
 
 		err = q.UnmarshalJSON([]byte("\"c..d\""))
-		require.NotNil(err)
+		require.Error(err)
 
 		log.Println(err)
 	})
@@ -214,7 +211,7 @@ func TestQName_UnmarshalInvalidString(t *testing.T) {
 	t.Run("json unquoted", func(t *testing.T) {
 		q := NewQName("a", "b")
 		err = q.UnmarshalJSON([]byte("c.d"))
-		require.NotNil(err)
+		require.Error(err)
 		log.Println(err)
 	})
 }

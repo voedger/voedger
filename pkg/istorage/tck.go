@@ -11,6 +11,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
+
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
@@ -602,8 +603,8 @@ func testAppStorage_GetBatch(t *testing.T, storage IAppStorage) {
 		nePKey := []byte("This partition does not exist")
 
 		require.NoError(storage.GetBatch(nePKey, items))
-		require.Equal(false, items[0].Ok)
-		require.Equal(false, items[1].Ok)
+		require.False(items[0].Ok)
+		require.False(items[1].Ok)
 
 	})
 

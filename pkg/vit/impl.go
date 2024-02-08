@@ -409,7 +409,7 @@ func (vit *VIT) refreshTokens() {
 			principalPayload := payloads.PrincipalPayload{
 				Login:       prn.Login.Name,
 				SubjectKind: istructs.SubjectKind_User,
-				ProfileWSID: istructs.WSID(prn.ProfileWSID),
+				ProfileWSID: prn.ProfileWSID,
 			}
 			as, err := vit.IAppStructsProvider.AppStructs(prn.AppQName)
 			require.NoError(vit.T, err) // notest

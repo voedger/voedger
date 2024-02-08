@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/alecthomas/participle/v2/lexer"
+
 	"github.com/voedger/voedger/pkg/appdef"
 )
 
@@ -127,13 +128,13 @@ func analyseGrant(grant *GrantStmt, c *iterateCtx) {
 
 		checkColumn := func(column Ident) error {
 			for _, f := range table.Items {
-				if f.Field != nil && f.Field.Name == Ident(column) {
+				if f.Field != nil && f.Field.Name == column {
 					return nil
 				}
-				if f.RefField != nil && f.RefField.Name == Ident(column) {
+				if f.RefField != nil && f.RefField.Name == column {
 					return nil
 				}
-				if f.NestedTable != nil && f.NestedTable.Name == Ident(column) {
+				if f.NestedTable != nil && f.NestedTable.Name == column {
 					return nil
 				}
 			}

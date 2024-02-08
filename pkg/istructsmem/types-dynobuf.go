@@ -12,11 +12,11 @@ import (
 	"fmt"
 	"io"
 
-	dynobuffers "github.com/untillpro/dynobuffers"
+	"github.com/untillpro/dynobuffers"
+
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/containers"
-	"github.com/voedger/voedger/pkg/istructsmem/internal/qnames"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/utils"
 )
 
@@ -83,7 +83,7 @@ func (row *rowType) dynoBufValue(value interface{}, kind appdef.DataKind) (inter
 				return nil, err
 			}
 			b := make([]byte, 2)
-			binary.BigEndian.PutUint16(b, uint16(id))
+			binary.BigEndian.PutUint16(b, id)
 			return b, nil
 		case appdef.QName:
 			id, err := row.appCfg.qNames.ID(v)
@@ -91,7 +91,7 @@ func (row *rowType) dynoBufValue(value interface{}, kind appdef.DataKind) (inter
 				return nil, err
 			}
 			b := make([]byte, 2)
-			binary.BigEndian.PutUint16(b, uint16(id))
+			binary.BigEndian.PutUint16(b, id)
 			return b, nil
 		}
 	case appdef.DataKind_bool:
@@ -136,7 +136,7 @@ func storeRow(row *rowType, buf *bytes.Buffer) {
 		//no test
 		panic(fmt.Errorf(errMustValidatedBeforeStore, "row", err))
 	}
-	utils.WriteUint16(buf, uint16(id))
+	utils.WriteUint16(buf, id)
 	if row.QName() == appdef.NullQName {
 		return
 	}
@@ -148,8 +148,8 @@ func storeRow(row *rowType, buf *bytes.Buffer) {
 		//no test
 		panic(fmt.Errorf(errMustValidatedBeforeStore, row.QName(), err))
 	}
-	len := uint32(len(b))
-	utils.WriteUint32(buf, len)
+	length := uint32(len(b))
+	utils.WriteUint32(buf, length)
 	utils.SafeWriteBuf(buf, b)
 }
 
@@ -196,7 +196,7 @@ func loadRow(row *rowType, codecVer byte, buf *bytes.Buffer) (err error) {
 	if qnameId, err = utils.ReadUInt16(buf); err != nil {
 		return fmt.Errorf("error read row QNameID: %w", err)
 	}
-	if err = row.setQNameID(qnames.QNameID(qnameId)); err != nil {
+	if err = row.setQNameID(qnameId); err != nil {
 		return err
 	}
 	if row.QName() == appdef.NullQName {
@@ -207,14 +207,14 @@ func loadRow(row *rowType, codecVer byte, buf *bytes.Buffer) (err error) {
 		return err
 	}
 
-	len := uint32(0)
-	if len, err = utils.ReadUInt32(buf); err != nil {
+	length := uint32(0)
+	if length, err = utils.ReadUInt32(buf); err != nil {
 		return fmt.Errorf("error read dynobuffer length: %w", err)
 	}
-	if buf.Len() < int(len) {
-		return fmt.Errorf("error read dynobuffer, expected %d bytes, but only %d bytes is available: %w", len, buf.Len(), io.ErrUnexpectedEOF)
+	if buf.Len() < int(length) {
+		return fmt.Errorf("error read dynobuffer, expected %d bytes, but only %d bytes is available: %w", length, buf.Len(), io.ErrUnexpectedEOF)
 	}
-	row.dyB.Reset(buf.Next(int(len)))
+	row.dyB.Reset(buf.Next(int(length)))
 
 	return nil
 }

@@ -10,6 +10,7 @@ import (
 
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 )
@@ -39,7 +40,7 @@ func TestViewRecordsStorage_GetBatch(t *testing.T) {
 			On("ViewRecords").Return(viewRecords)
 		s := ProvideQueryProcessorStateFactory()(context.Background(), appStructs, nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil)
 		k, e := s.KeyBuilder(View, testViewRecordQName1)
-		require.Nil(e)
+		require.NoError(e)
 		k.PutInt64("pkk", 64)
 		k.PutString("cck", "ccv")
 

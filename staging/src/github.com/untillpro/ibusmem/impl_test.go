@@ -33,7 +33,7 @@ func TestBasicUsage(t *testing.T) {
 		require.Equal("hello world", string(response.Data))
 		require.Nil(sections)
 		require.Nil(secErr)
-		require.Nil(err)
+		require.NoError(err)
 	})
 	t.Run("Sectioned response basic usage", func(t *testing.T) {
 		testErr := errors.New("error from result sender")
@@ -44,26 +44,26 @@ func TestBasicUsage(t *testing.T) {
 			go func() {
 
 				// try to send an element without section -> panic
-				require.Panics(func() { require.Nil(rs.SendElement("", "element1")) })
+				require.Panics(func() { require.NoError(rs.SendElement("", "element1")) })
 
 				rs.StartArraySection("array", []string{"array-path"})
-				require.Nil(rs.SendElement("", "element1"))
-				require.Nil(rs.SendElement("", "element2"))
-				require.Nil(rs.SendElement("", nil)) // nothingness will not be sent
+				require.NoError(rs.SendElement("", "element1"))
+				require.NoError(rs.SendElement("", "element2"))
+				require.NoError(rs.SendElement("", nil)) // nothingness will not be sent
 
 				// send an unmarshalable element -> error
-				require.NotNil(rs.SendElement("", func() {}))
+				require.Error(rs.SendElement("", func() {}))
 
-				require.Nil(rs.ObjectSection("object", []string{"object-path"}, "value"))
-				require.Nil(rs.ObjectSection("", nil, nil)) // nothingness will not be sent
+				require.NoError(rs.ObjectSection("object", []string{"object-path"}, "value"))
+				require.NoError(rs.ObjectSection("", nil, nil)) // nothingness will not be sent
 
 				// try to send element on object section -> panic
 				require.Panics(func() { rs.SendElement("", 42) })
 
 				rs.StartMapSection("map", []string{"map-path"})
-				require.Nil(rs.SendElement("key1", "value1"))
-				require.Nil(rs.SendElement("key2", "value2"))
-				require.Nil(rs.SendElement("", nil)) // nothingness will not be sent
+				require.NoError(rs.SendElement("key1", "value1"))
+				require.NoError(rs.SendElement("key2", "value2"))
+				require.NoError(rs.SendElement("", nil)) // nothingness will not be sent
 
 				rs.Close(testErr)
 
@@ -82,7 +82,7 @@ func TestBasicUsage(t *testing.T) {
 
 		requestCtx := context.Background()
 		response, sections, secErr, err := bus.SendRequest2(requestCtx, ibus.Request{}, ibus.DefaultTimeout)
-		require.Nil(err)
+		require.NoError(err)
 		require.Empty(response)
 
 		// expect array section
@@ -209,13 +209,13 @@ func TestResultSenderClosable_StartArraySection(t *testing.T) {
 			}()
 		}, time.After, timeoutTrigger, time.After)
 		resp, sections, secErr, err := bus.SendRequest2(context.Background(), ibus.Request{}, ibus.DefaultTimeout)
-		require.Nil(err)
+		require.NoError(err)
 		require.NotNil(sections)
 		require.Empty(resp)
 		<-ch // do not read section to trigger the timeout case
 		_, ok := <-sections
 		require.False(ok)
-		require.Nil(*secErr)
+		require.NoError(*secErr)
 
 	})
 	t.Run("Should return error when ctx done on send section", func(t *testing.T) {
@@ -232,7 +232,7 @@ func TestResultSenderClosable_StartArraySection(t *testing.T) {
 		})
 		ctx, cancel := context.WithCancel(context.Background())
 		response, sections, secErr, err := bus.SendRequest2(ctx, ibus.Request{}, ibus.DefaultTimeout)
-		require.Nil(err)
+		require.NoError(err)
 		require.Empty(response)
 		require.NotNil(sections)
 		cancel()
@@ -241,7 +241,7 @@ func TestResultSenderClosable_StartArraySection(t *testing.T) {
 		// note: section could be sent on ctx.Done() because cases order is undefined at tryToSendSection. But ObjectSection() will return error in any case
 		for range sections {
 		}
-		require.Nil(*secErr)
+		require.NoError(*secErr)
 	})
 }
 
@@ -255,7 +255,7 @@ func TestResultSenderClosable_SendElement(t *testing.T) {
 		bus := Provide(func(requestCtx context.Context, sender ibus.ISender, request ibus.Request) {
 			rs := sender.SendParallelResponse()
 			go func() {
-				require.Nil(rs.ObjectSection("", nil, article{ID: 100, Name: "Cola"}))
+				require.NoError(rs.ObjectSection("", nil, article{ID: 100, Name: "Cola"}))
 				rs.Close(nil)
 			}()
 		})
@@ -264,14 +264,14 @@ func TestResultSenderClosable_SendElement(t *testing.T) {
 		requestCtx := context.Background()
 		response, sections, secErr, err := bus.SendRequest2(requestCtx, ibus.Request{}, ibus.DefaultTimeout)
 
-		require.Nil(err)
+		require.NoError(err)
 		require.Empty(response)
-		require.Nil(json.Unmarshal((<-sections).(ibus.IObjectSection).Value(requestCtx), &a))
+		require.NoError(json.Unmarshal((<-sections).(ibus.IObjectSection).Value(requestCtx), &a))
 		require.Equal(int64(100), a.ID)
 		require.Equal("Cola", a.Name)
 		_, ok := <-sections
 		require.False(ok)
-		require.Nil(*secErr)
+		require.NoError(*secErr)
 	})
 	t.Run("Should accept JSON", func(t *testing.T) {
 		type point struct {
@@ -281,7 +281,7 @@ func TestResultSenderClosable_SendElement(t *testing.T) {
 		bus := Provide(func(requestCtx context.Context, sender ibus.ISender, request ibus.Request) {
 			rs := sender.SendParallelResponse()
 			go func() {
-				require.Nil(rs.ObjectSection("", nil, []byte(`{"X":52,"Y":89}`)))
+				require.NoError(rs.ObjectSection("", nil, []byte(`{"X":52,"Y":89}`)))
 				rs.Close(nil)
 			}()
 		})
@@ -289,14 +289,14 @@ func TestResultSenderClosable_SendElement(t *testing.T) {
 
 		requestCtx := context.Background()
 		response, sections, secErr, err := bus.SendRequest2(requestCtx, ibus.Request{}, ibus.DefaultTimeout)
-		require.Nil(err)
+		require.NoError(err)
 		require.Empty(response)
-		require.Nil(json.Unmarshal((<-sections).(ibus.IObjectSection).Value(requestCtx), &p))
+		require.NoError(json.Unmarshal((<-sections).(ibus.IObjectSection).Value(requestCtx), &p))
 		require.Equal(int64(52), p.X)
 		require.Equal(int64(89), p.Y)
 		_, ok := <-sections
 		require.False(ok)
-		require.Nil(*secErr)
+		require.NoError(*secErr)
 	})
 	t.Run("Should return error when client reads element too long", func(t *testing.T) {
 		bus := provide(func(requestCtx context.Context, sender ibus.ISender, request ibus.Request) {
@@ -310,13 +310,13 @@ func TestResultSenderClosable_SendElement(t *testing.T) {
 
 		response, sections, secErr, err := bus.SendRequest2(context.Background(), ibus.Request{}, ibus.DefaultTimeout)
 
-		require.Nil(err)
+		require.NoError(err)
 		require.Empty(response)
 		_ = (<-sections).(ibus.IArraySection)
 		// do not read an element to trigger timeout
 		_, ok := <-sections
 		require.False(ok)
-		require.Nil(*secErr)
+		require.NoError(*secErr)
 	})
 	t.Run("Should return error when ctx done on send element", func(t *testing.T) {
 		ch := make(chan interface{})
@@ -324,7 +324,7 @@ func TestResultSenderClosable_SendElement(t *testing.T) {
 			rs := sender.SendParallelResponse()
 			go func() {
 				rs.StartArraySection("", nil)
-				require.Nil(rs.SendElement("", 0))
+				require.NoError(rs.SendElement("", 0))
 				<-ch // wait for element read
 				<-ch // wait for cancel
 				err := rs.SendElement("", 1)
@@ -336,7 +336,7 @@ func TestResultSenderClosable_SendElement(t *testing.T) {
 		})
 		ctx, cancel := context.WithCancel(context.Background())
 		response, sections, secErr, err := bus.SendRequest2(ctx, ibus.Request{}, ibus.DefaultTimeout)
-		require.Nil(err)
+		require.NoError(err)
 		require.Empty(response)
 		array := (<-sections).(ibus.IArraySection)
 		val, ok := array.Next(ctx)
@@ -351,7 +351,7 @@ func TestResultSenderClosable_SendElement(t *testing.T) {
 		_, _ = array.Next(ctx) // note: element could be sent on ctx.Done() because cases order is undefined at tryToSendElement. But SendElement() will return error in any case
 		_, ok = <-sections
 		require.False(ok)
-		require.Nil(*secErr)
+		require.NoError(*secErr)
 	})
 }
 
@@ -360,7 +360,7 @@ func TestObjectSection_Value(t *testing.T) {
 	bus := Provide(func(requestCtx context.Context, sender ibus.ISender, request ibus.Request) {
 		rs := sender.SendParallelResponse()
 		go func() {
-			require.Nil(rs.ObjectSection("", nil, []byte("bb")))
+			require.NoError(rs.ObjectSection("", nil, []byte("bb")))
 			rs.Close(nil)
 		}()
 	})
@@ -369,14 +369,14 @@ func TestObjectSection_Value(t *testing.T) {
 	response, sections, secErr, err := bus.SendRequest2(requestCtx, ibus.Request{}, ibus.DefaultTimeout)
 
 	object := (<-sections).(ibus.IObjectSection)
-	require.Nil(err)
+	require.NoError(err)
 	require.Empty(response)
 	require.Equal([]byte("bb"), object.Value(requestCtx))
 	require.Nil(object.Value(requestCtx))
 
 	_, ok := <-sections
 	require.False(ok)
-	require.Nil(*secErr)
+	require.NoError(*secErr)
 }
 
 func TestClientDisconnectOnSectionsSending(t *testing.T) {
@@ -386,11 +386,11 @@ func TestClientDisconnectOnSectionsSending(t *testing.T) {
 		rs := sender.SendParallelResponse()
 		go func() {
 			rs.StartArraySection("array", []string{"array-path"})
-			require.Nil(rs.SendElement("1", "element1"))
+			require.NoError(rs.SendElement("1", "element1"))
 			ch <- nil
 			// client is disconnected here
 			<-ch
-			require.Error(context.Canceled, rs.SendElement("2", "element2"))
+			require.ErrorIs(context.Canceled, rs.SendElement("2", "element2"))
 			rs.Close(nil)
 			close(ch)
 		}()
@@ -398,7 +398,7 @@ func TestClientDisconnectOnSectionsSending(t *testing.T) {
 
 	clientCtx, clientCtxCancel := context.WithCancel(context.Background())
 	response, sections, secErr, err := bus.SendRequest2(clientCtx, ibus.Request{}, ibus.DefaultTimeout)
-	require.Nil(err)
+	require.NoError(err)
 	require.Empty(response)
 
 	// expect array section
@@ -429,7 +429,7 @@ func TestClientDisconnectOnSectionsSending(t *testing.T) {
 	// no more sections
 	_, ok = <-sections
 	require.False(ok)
-	require.Nil(*secErr)
+	require.NoError(*secErr)
 	<-ch
 }
 

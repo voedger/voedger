@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/sys/sqlquery"
 	coreutils "github.com/voedger/voedger/pkg/utils"
@@ -331,8 +332,8 @@ func TestSqlQuery_records(t *testing.T) {
 		body = fmt.Sprintf(`{"args":{"Query":"select name, sys.IsActive from app1pkg.payments where id in (%d,%d)"}, "elements":[{"fields":["Result"]}]}`, eftId, cashId)
 		resp := vit.PostWS(ws, "q.sys.SqlQuery", body)
 
-		require.Equal(resp.SectionRow()[0], `{"name":"EFT","sys.IsActive":true}`)
-		require.Equal(resp.SectionRow(1)[0], `{"name":"Cash","sys.IsActive":true}`)
+		require.Equal(`{"name":"EFT","sys.IsActive":true}`, resp.SectionRow()[0])
+		require.Equal(`{"name":"Cash","sys.IsActive":true}`, resp.SectionRow(1)[0])
 	})
 	t.Run("Should return error when column name not supported", func(t *testing.T) {
 		body = `{"args":{"Query":"select * from app1pkg.payments where something = 1"}}`

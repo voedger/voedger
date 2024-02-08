@@ -160,7 +160,7 @@ func TestBaselineBasicUsage(t *testing.T) {
 			var actualFilePaths []string
 			err = filepath.Walk(tempTargetDir, func(path string, info os.FileInfo, err error) error {
 				if err != nil {
-					return nil
+					return err
 				}
 				if !info.IsDir() {
 					actualFilePaths = append(actualFilePaths, path)

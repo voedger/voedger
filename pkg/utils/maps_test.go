@@ -63,7 +63,9 @@ func TestMarshal(t *testing.T) {
 	require.Len(o.Data, 3)
 	require.Equal(float64(42), o.Data["float64"])
 	require.Equal("str1", o.Data["str"])
-	require.Equal(true, o.Data["bool"])
+	v, ok := o.Data["bool"].(bool)
+	require.True(ok)
+	require.True(v)
 
 	require.Error(Marshal(o, map[string]interface{}{"fld": 42}))
 }

@@ -28,7 +28,7 @@ func (vers *Versions) Put(key VersionKey, value VersionValue) (err error) {
 	vers.vers[key] = value
 
 	return vers.storage.Put(
-		utils.ToBytes(uint16(consts.SysView_Versions)),
+		utils.ToBytes(consts.SysView_Versions),
 		utils.ToBytes(uint16(key)),
 		utils.ToBytes(uint16(value)),
 	)

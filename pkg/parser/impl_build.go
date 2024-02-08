@@ -148,7 +148,7 @@ func (c *buildContext) workspaces() error {
 			wsc.builder.SetAbstract()
 		}
 		if w.Descriptor != nil {
-			wsc.builder.SetDescriptor(appdef.NewQName(string(wsc.ictx.pkg.Name), w.Descriptor.GetName()))
+			wsc.builder.SetDescriptor(appdef.NewQName(wsc.ictx.pkg.Name, w.Descriptor.GetName()))
 		}
 
 	}
@@ -162,7 +162,7 @@ func (c *buildContext) alterWorkspaces() error {
 			var iter func(wsctx *wsBuildCtx, coll IStatementCollection)
 			iter = func(wsctx *wsBuildCtx, coll IStatementCollection) {
 				coll.Iterate(func(stmt interface{}) {
-					c.useStmtInWs(wsctx, string(pkgAst.Name), stmt)
+					c.useStmtInWs(wsctx, pkgAst.Name, stmt)
 					if collection, ok := stmt.(IStatementCollection); ok {
 						if _, isWorkspace := stmt.(*WorkspaceStmt); !isWorkspace {
 							iter(wsctx, collection)
@@ -502,7 +502,7 @@ func (c *buildContext) addFieldRefToDef(refField *RefFieldExpr, ictx *iterateCtx
 			if e := c.checkReference(pkg, tbl); e != nil {
 				return e
 			}
-			refs = append(refs, appdef.NewQName(string(pkg.Name), string(refField.RefDocs[i].Name)))
+			refs = append(refs, appdef.NewQName(pkg.Name, string(refField.RefDocs[i].Name)))
 			return nil
 		})
 		if err != nil {
@@ -775,7 +775,7 @@ func (c *buildContext) defCtx() *defBuildContext {
 }
 
 func (c *buildContext) checkReference(pkg *PackageSchemaAST, table *TableStmt) error {
-	refTableType := c.builder.TypeByName(appdef.NewQName(string(pkg.Name), string(table.Name)))
+	refTableType := c.builder.TypeByName(appdef.NewQName(pkg.Name, string(table.Name)))
 	if refTableType == nil {
 		tableCtx := &iterateCtx{
 			basicContext: &c.basicContext,
@@ -785,7 +785,7 @@ func (c *buildContext) checkReference(pkg *PackageSchemaAST, table *TableStmt) e
 		}
 
 		c.table(pkg, table, tableCtx)
-		refTableType = c.builder.TypeByName(appdef.NewQName(string(pkg.Name), string(table.Name)))
+		refTableType = c.builder.TypeByName(appdef.NewQName(pkg.Name, string(table.Name)))
 	}
 
 	if refTableType == nil {

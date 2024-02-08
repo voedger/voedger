@@ -18,6 +18,7 @@ import (
 	"github.com/tetratelabs/wazero"
 	"github.com/tetratelabs/wazero/api"
 	"github.com/tetratelabs/wazero/imports/wasi_snapshot_preview1"
+
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/iextengine"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -373,7 +374,7 @@ func (f *wazeroExtEngine) Invoke(ctx context.Context, extension iextengine.ExtQN
 }
 
 func (f *wazeroExtEngine) decodeStr(ptr, size uint32) string {
-	if bytes, ok := f.pkg.module.Memory().Read(uint32(ptr), uint32(size)); ok {
+	if bytes, ok := f.pkg.module.Memory().Read(ptr, size); ok {
 		return string(bytes)
 	}
 	panic(ErrUnableToReadMemory)
@@ -671,7 +672,7 @@ func (f *wazeroExtEngine) allocBuf(size uint32) (addr uint32, err error) {
 	for i := range f.pkg.allocatedBufs {
 		if f.pkg.allocatedBufs[i].cap-f.pkg.allocatedBufs[i].offs >= size {
 			addr = f.pkg.allocatedBufs[i].addr + f.pkg.allocatedBufs[i].offs
-			f.pkg.allocatedBufs[i].offs += uint32(size)
+			f.pkg.allocatedBufs[i].offs += size
 			return
 		}
 	}
@@ -812,7 +813,7 @@ func (f *wazeroExtEngine) hostRowWriterPutBytes(id uint64, typ uint32, namePtr u
 
 	var bytes []byte
 	var ok bool
-	bytes, ok = f.pkg.module.Memory().Read(uint32(valuePtr), uint32(valueSize))
+	bytes, ok = f.pkg.module.Memory().Read(valuePtr, valueSize)
 	if !ok {
 		panic(ErrUnableToReadMemory)
 	}
