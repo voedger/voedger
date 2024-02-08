@@ -6,8 +6,6 @@
 package appdefcompat
 
 import (
-	"log"
-
 	"github.com/google/go-cmp/cmp"
 	"golang.org/x/exp/slices"
 
@@ -115,7 +113,7 @@ func buildCommandNode(parentNode *CompatibilityTreeNode, item appdef.ICommand) (
 }
 
 func buildQNameNode(parentNode *CompatibilityTreeNode, item appdef.IType, name string, qNameOnly bool) (node *CompatibilityTreeNode) {
-	var value interface {}
+	var value interface{}
 	if item != nil {
 		value = item.QName().String()
 	}
@@ -239,9 +237,6 @@ func buildViewNode(parentNode *CompatibilityTreeNode, item appdef.IView) (node *
 }
 
 func compareNodes(oldNode, newNode *CompatibilityTreeNode, constrains []NodeConstraint) (cerrs []CompatibilityError) {
-	if oldNode.Value == appdef.NewQName(appdef.SysPackage, "SomeCommand") {
-		log.Println()
-	}
 	if !cmp.Equal(oldNode.Value, newNode.Value) {
 		cerrs = append(cerrs, newCompatibilityError(ConstraintValueMatch, oldNode.Path(), ErrorTypeValueChanged))
 	}
