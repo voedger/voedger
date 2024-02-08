@@ -349,10 +349,10 @@ func TestNullObject(t *testing.T) {
 	require.NoError(err)
 
 	require.Nil(null.AsBytes(appdef.NullName))
-	require.InDelta(float32(0), null.AsFloat32(appdef.NullName), 0.0001)
-	require.InDelta(float64(0), null.AsFloat64(appdef.NullName), 0.0001)
-	require.InDelta(int32(0), null.AsInt32(appdef.NullName), 0.0001)
-	require.InDelta(int64(0), null.AsInt64(appdef.NullName), 0.0001)
+	require.Equal(float32(0), null.AsFloat32(appdef.NullName))
+	require.Equal(float64(0), null.AsFloat64(appdef.NullName))
+	require.Equal(int32(0), null.AsInt32(appdef.NullName))
+	require.Equal(int64(0), null.AsInt64(appdef.NullName))
 	require.Equal("", null.AsString(appdef.NullName))
 
 	require.Equal(appdef.NullQName, null.AsQName(appdef.NullName))

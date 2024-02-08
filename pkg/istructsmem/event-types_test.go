@@ -432,7 +432,7 @@ func testEventBuilderCore(t *testing.T, cachedPLog bool) {
 				event.CUDs(func(rec istructs.ICUDRow) {
 					if rec.QName() == test.tablePhotos {
 						require.False(rec.IsNew())
-						require.InDelta(changedHeights, rec.AsFloat32(test.heightIdent), 0.0001)
+						require.Equal(changedHeights, rec.AsFloat32(test.heightIdent))
 						require.Equal(changedPhoto, rec.AsBytes(test.photoIdent))
 					}
 					if rec.QName() == test.tablePhotoRems {
@@ -509,7 +509,7 @@ func testEventBuilderCore(t *testing.T, cachedPLog bool) {
 			require.Equal(test.buyerValue, rec.AsString(test.buyerIdent))
 			require.Equal(test.ageValue, rec.AsInt32(test.ageIdent))
 
-			require.InDelta(changedHeights, rec.AsFloat32(test.heightIdent), 0.0001)
+			require.Equal(changedHeights, rec.AsFloat32(test.heightIdent))
 			require.Equal(changedPhoto, rec.AsBytes(test.photoIdent))
 
 			require.Equal(test.humanValue, rec.AsBool(test.humanIdent))
@@ -532,7 +532,7 @@ func testEventBuilderCore(t *testing.T, cachedPLog bool) {
 			require.NotNil(rec)
 
 			r := rec.(*recordType)
-			require.InDelta(changedHeights, rec.AsFloat32(test.heightIdent), 0.0001)
+			require.Equal(changedHeights, rec.AsFloat32(test.heightIdent))
 			r.PutFloat32(test.heightIdent, test.heightValue) // revert -10 cm
 			require.Equal(changedPhoto, rec.AsBytes(test.photoIdent))
 			r.PutBytes(test.photoIdent, test.photoValue) // revert to old photo
@@ -548,7 +548,7 @@ func testEventBuilderCore(t *testing.T, cachedPLog bool) {
 			rec, err = app.Records().Get(test.workspace, true, photoID)
 			require.NoError(err)
 			require.NotNil(rec)
-			require.InDelta(test.heightValue, rec.AsFloat32(test.heightIdent), 0.0001)
+			require.Equal(test.heightValue, rec.AsFloat32(test.heightIdent))
 		})
 
 		t.Run("test reread PLog", func(t *testing.T) {
@@ -567,7 +567,7 @@ func testEventBuilderCore(t *testing.T, cachedPLog bool) {
 			pLogEvent.CUDs(func(rec istructs.ICUDRow) {
 				if rec.QName() == test.tablePhotos {
 					require.False(rec.IsNew())
-					require.InDelta(changedHeights, rec.AsFloat32(test.heightIdent), 0.0001)
+					require.Equal(changedHeights, rec.AsFloat32(test.heightIdent))
 					require.Equal(changedPhoto, rec.AsBytes(test.photoIdent))
 					checked = true
 				}
@@ -580,7 +580,7 @@ func testEventBuilderCore(t *testing.T, cachedPLog bool) {
 				err = app.Records().Apply2(pLogEvent, func(r istructs.IRecord) {
 					switch r.QName() {
 					case test.tablePhotos:
-						require.InDelta(changedHeights, r.AsFloat32(test.heightIdent), 0.0001)
+						require.Equal(changedHeights, r.AsFloat32(test.heightIdent))
 						require.Equal(changedPhoto, r.AsBytes(test.photoIdent))
 					case test.tablePhotoRems:
 						require.Equal(changedRems, r.AsString(test.remarkIdent))
@@ -603,7 +603,7 @@ func testEventBuilderCore(t *testing.T, cachedPLog bool) {
 
 			require.Equal(test.buyerValue, rec.AsString(test.buyerIdent))
 			require.Equal(test.ageValue, rec.AsInt32(test.ageIdent))
-			require.InDelta(changedHeights, rec.AsFloat32(test.heightIdent), 0.0001)
+			require.Equal(changedHeights, rec.AsFloat32(test.heightIdent))
 			require.Equal(changedPhoto, rec.AsBytes(test.photoIdent))
 
 			require.Equal(test.humanValue, rec.AsBool(test.humanIdent))
@@ -620,7 +620,7 @@ func testCommandsTree(t *testing.T, cmd istructs.IObject) {
 
 		require.Equal(test.buyerValue, cmd.AsString(test.buyerIdent))
 		require.Equal(test.ageValue, cmd.AsInt32(test.ageIdent))
-		require.InDelta(test.heightValue, cmd.AsFloat32(test.heightIdent), 0.0001)
+		require.Equal(test.heightValue, cmd.AsFloat32(test.heightIdent))
 		require.Equal(test.photoValue, cmd.AsBytes(test.photoIdent))
 
 		require.Equal(test.humanValue, cmd.AsBool(test.humanIdent))
@@ -659,7 +659,7 @@ func testCommandsTree(t *testing.T, cmd istructs.IObject) {
 			require.Equal(cmd.AsRecord().ID(), good.AsRecordID(test.saleIdent))
 			require.Equal(test.goodNames[i], good.AsString(test.nameIdent))
 			require.Equal(test.goodCodes[i], good.AsInt64(test.codeIdent))
-			require.InDelta(test.goodWeights[i], good.AsFloat64(test.weightIdent), 0.0001)
+			require.Equal(test.goodWeights[i], good.AsFloat64(test.weightIdent))
 		}
 	})
 }
@@ -685,7 +685,7 @@ func testPhotoRow(t *testing.T, photo istructs.IRowReader) {
 	test := test()
 	require.Equal(test.buyerValue, photo.AsString(test.buyerIdent))
 	require.Equal(test.ageValue, photo.AsInt32(test.ageIdent))
-	require.InDelta(test.heightValue, photo.AsFloat32(test.heightIdent), 0.0001)
+	require.Equal(test.heightValue, photo.AsFloat32(test.heightIdent))
 	require.Equal(test.photoValue, photo.AsBytes(test.photoIdent))
 }
 
@@ -1646,7 +1646,7 @@ func Test_ObjectMask(t *testing.T) {
 
 	require.Equal(maskString, value.AsString(test.buyerIdent))
 	require.Equal(int32(0), value.AsInt32(test.ageIdent))
-	require.InDelta(float32(0), value.AsFloat32(test.heightIdent), 0.0001)
+	require.Equal(float32(0), value.AsFloat32(test.heightIdent))
 	require.False(value.AsBool(test.humanIdent))
 	require.Equal([]byte(nil), value.AsBytes(test.photoIdent))
 
@@ -1658,7 +1658,7 @@ func Test_ObjectMask(t *testing.T) {
 	basket.Children(test.goodIdent, func(c istructs.IObject) {
 		require.Equal(maskString, c.AsString(test.nameIdent))
 		require.Equal(int64(0), c.AsInt64(test.codeIdent))
-		require.InDelta(float64(0), c.AsFloat64(test.weightIdent), 0.0001)
+		require.Equal(float64(0), c.AsFloat64(test.weightIdent))
 		cnt++
 	})
 

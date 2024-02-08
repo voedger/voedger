@@ -254,8 +254,8 @@ func Test_rowType_PutAs_SimpleTypes(t *testing.T) {
 
 		require.Equal(int32(0), row.AsInt32("int32"))
 		require.Equal(int64(0), row.AsInt64("int64"))
-		require.InDelta(float32(0), row.AsFloat32("float32"), 0.0001)
-		require.InDelta(float64(0), row.AsFloat64("float64"), 0.0001)
+		require.Equal(float32(0), row.AsFloat32("float32"))
+		require.Equal(float64(0), row.AsFloat64("float64"))
 		require.Equal([]byte(nil), row.AsBytes("bytes"))
 		require.Equal("", row.AsString("string"))
 
@@ -285,8 +285,8 @@ func Test_rowType_PutAs_SimpleTypes(t *testing.T) {
 
 		require.Equal(int32(1), row.AsInt32("int32"))
 		require.Equal(int64(2), row.AsInt64("int64"))
-		require.InDelta(float32(3), row.AsFloat32("float32"), 0.0001)
-		require.InDelta(float64(4), row.AsFloat64("float64"), 0.0001)
+		require.Equal(float32(3), row.AsFloat32("float32"))
+		require.Equal(float64(4), row.AsFloat64("float64"))
 		require.Equal(istructs.RecordID(5), row.AsRecordID("RecordID"))
 
 		t.Run("Should be OK to As××× with type casts", func(t *testing.T) {
@@ -609,8 +609,8 @@ func Test_rowType_maskValues(t *testing.T) {
 
 		require.Equal(int32(0), row.AsInt32("int32"))
 		require.Equal(int64(0), row.AsInt64("int64"))
-		require.InDelta(float32(0), row.AsFloat32("float32"), 0.0001)
-		require.InDelta(float64(0), row.AsFloat64("float64"), 0.0001)
+		require.Equal(float32(0), row.AsFloat32("float32"))
+		require.Equal(float64(0), row.AsFloat64("float64"))
 		require.Nil(row.AsBytes("bytes"))
 		require.Equal("*", row.AsString("string"))
 		require.Nil(row.AsBytes("raw"))

@@ -382,7 +382,7 @@ func Test_AsynchronousActualizer_ErrorAndRestore(t *testing.T) {
 	require.Equal(1, attempts)
 	projInErr := getProjectorsInError(metrics, istructs.AppQName_test1_app1, "test")
 	require.NotNil(projInErr)
-	require.InDelta(1.0, *projInErr, 0.0001)
+	require.Equal(1.0, *projInErr)
 
 	// tick after-error interval ("30 second delay")
 	chanAfterError <- time.Now()
@@ -393,7 +393,7 @@ func Test_AsynchronousActualizer_ErrorAndRestore(t *testing.T) {
 	}
 	projInErr = getProjectorsInError(metrics, istructs.AppQName_test1_app1, "test")
 	require.NotNil(projInErr)
-	require.InDelta(0.0, *projInErr, 0.0001)
+	require.Equal(0.0, *projInErr)
 
 	// stop services
 	cancelCtx()
@@ -487,7 +487,7 @@ func Test_AsynchronousActualizer_ResumeReadAfterNotifications(t *testing.T) {
 	require.Equal(int32(1), getProjectionValue(require, app, incProjectionView, istructs.WSID(1002)))
 	projInErrs := getProjectorsInError(metrics, istructs.AppQName_test1_app1, "test")
 	require.NotNil(projInErrs)
-	require.InDelta(0.0, *projInErrs, 0.0001)
+	require.Equal(0.0, *projInErrs)
 }
 
 type pLogFiller struct {

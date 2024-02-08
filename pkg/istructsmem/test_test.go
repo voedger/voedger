@@ -529,8 +529,8 @@ func testTestRow(t *testing.T, row istructs.IRowReader) {
 
 	require.Equal(int32(1), row.AsInt32("int32"))
 	require.Equal(int64(2), row.AsInt64("int64"))
-	require.InDelta(float32(3), row.AsFloat32("float32"), 0.0001)
-	require.InDelta(float64(4), row.AsFloat64("float64"), 0.0001)
+	require.Equal(float32(3), row.AsFloat32("float32"))
+	require.Equal(float64(4), row.AsFloat64("float64"))
 	require.Equal([]byte{1, 2, 3, 4, 5}, row.AsBytes("bytes"))
 	require.Equal("Строка", row.AsString("string"))
 	require.EqualValues(test.photoRawValue, row.AsBytes("raw"))
@@ -653,7 +653,7 @@ func testTestObject(t *testing.T, value istructs.IObject) {
 
 	require.Equal(test.buyerValue, value.AsString(test.buyerIdent))
 	require.Equal(test.ageValue, value.AsInt32(test.ageIdent))
-	require.InDelta(test.heightValue, value.AsFloat32(test.heightIdent), 0.0001)
+	require.Equal(test.heightValue, value.AsFloat32(test.heightIdent))
 	require.Equal(test.humanValue, value.AsBool(test.humanIdent))
 	require.Equal(test.photoValue, value.AsBytes(test.photoIdent))
 
@@ -666,7 +666,7 @@ func testTestObject(t *testing.T, value istructs.IObject) {
 		require.NotEqual(istructs.NullRecordID, c.AsRecordID(test.saleIdent))
 		require.Equal(test.goodNames[cnt], c.AsString(test.nameIdent))
 		require.Equal(test.goodCodes[cnt], c.AsInt64(test.codeIdent))
-		require.InDelta(test.goodWeights[cnt], c.AsFloat64(test.weightIdent), 0.0001)
+		require.Equal(test.goodWeights[cnt], c.AsFloat64(test.weightIdent))
 		cnt++
 	})
 
@@ -819,7 +819,7 @@ func testTestViewValue(t *testing.T, value istructs.IValue) {
 
 	require.Equal(test.buyerValue, value.AsString(test.testViewRecord.valueFields.buyer))
 	require.Equal(test.ageValue, value.AsInt32(test.testViewRecord.valueFields.age))
-	require.InDelta(test.heightValue, value.AsFloat32(test.testViewRecord.valueFields.heights), 0.0001)
+	require.Equal(test.heightValue, value.AsFloat32(test.testViewRecord.valueFields.heights))
 	require.True(value.AsBool(test.testViewRecord.valueFields.human))
 	require.Equal(test.photoValue, value.AsBytes(test.testViewRecord.valueFields.photo))
 
