@@ -8,6 +8,9 @@ package main
 import (
 	"errors"
 	"fmt"
+	"io/ioutil"
+	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -48,12 +51,29 @@ func newBackupCmd() *cobra.Command {
 		return nil
 	}
 
+	backupListCmd := &cobra.Command{
+		Use:   "list",
+		Short: "Display a list of existing backups on all DB nodes",
+		Args: func(cmd *cobra.Command, args []string) error {
+			if len(args) != 0 {
+				return ErrInvalidNumberOfArguments
+			}
+			return nil
+		},
+		RunE: backupList,
+	}
+	backupListCmd.PersistentFlags().StringVar(&sshKey, "ssh-key", "", "Path to SSH key")
+	if err := backupListCmd.MarkPersistentFlagRequired("ssh-key"); err != nil {
+		loggerError(err.Error())
+		return nil
+	}
+
 	backupCmd := &cobra.Command{
 		Use:   "backup",
 		Short: "Backup database",
 	}
 
-	backupCmd.AddCommand(backupNodeCmd, backupCronCmd)
+	backupCmd.AddCommand(backupNodeCmd, backupCronCmd, backupListCmd)
 
 	return backupCmd
 
@@ -168,4 +188,46 @@ func checkBackupFolderOnHost(cluster *clusterType, addr string) error {
 		return fmt.Errorf(errBackupFolderIsNotPrepared, addr, ErrBackupFolderIsNotPrepared)
 	}
 	return nil
+}
+
+func backupList(cmd *cobra.Command, args []string) error {
+	cluster := newCluster()
+	if cluster.Draft {
+		return ErrClusterConfNotFound
+	}
+
+	var err error
+
+	if err = mkCommandDirAndLogFile(cmd, cluster); err != nil {
+		return err
+	}
+
+	if err = checkBackupFolders(cluster); err != nil {
+		return err
+	}
+
+	backups, err := getBackupList(cluster)
+
+	loggerInfo(backups)
+
+	return err
+}
+
+func getBackupList(cluster *clusterType) (string, error) {
+
+	backupFName := filepath.Join(scriptsTempDir, "backups.lst")
+
+	err := os.Remove(backupFName)
+	if err != nil && !os.IsNotExist(err) {
+		return "", err
+	}
+
+	err = newScriptExecuter(cluster.sshKey, "").run("backup-list.sh")
+
+	fContent, e := ioutil.ReadFile(backupFName)
+	if e != nil {
+		return "", e
+	}
+
+	return string(fContent), err
 }

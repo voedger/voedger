@@ -6,12 +6,14 @@
 package appparts
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appparts/internal/pool"
 	"github.com/voedger/voedger/pkg/cluster"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/pipeline"
 )
 
 // engine placeholder
@@ -34,6 +36,7 @@ func (e *engine) release() {
 }
 
 type app struct {
+	apps       *apps
 	name       istructs.AppQName
 	def        appdef.IAppDef
 	partsCount int
@@ -43,8 +46,9 @@ type app struct {
 	parts map[istructs.PartitionID]*partition
 }
 
-func newApplication(name istructs.AppQName) *app {
+func newApplication(apps *apps, name istructs.AppQName) *app {
 	return &app{
+		apps:  apps,
 		name:  name,
 		parts: map[istructs.PartitionID]*partition{},
 	}
@@ -64,14 +68,16 @@ func (a *app) deploy(def appdef.IAppDef, structs istructs.IAppStructs, partsCoun
 }
 
 type partition struct {
-	app *app
-	id  istructs.PartitionID
+	app            *app
+	id             istructs.PartitionID
+	syncActualizer pipeline.ISyncOperator
 }
 
 func newPartition(app *app, id istructs.PartitionID) *partition {
 	part := &partition{
-		app: app,
-		id:  id,
+		app:            app,
+		id:             id,
+		syncActualizer: app.apps.actualizer(app.structs, id),
 	}
 	return part
 }
@@ -111,6 +117,10 @@ func (rt *partitionRT) Release() {
 		rt.borrowed = nil
 		e.release()
 	}
+}
+
+func (rt *partitionRT) DoSyncActualizer(ctx context.Context, work interface{}) error {
+	return rt.part.syncActualizer.DoSync(ctx, work)
 }
 
 // Initialize partition RT structures for use

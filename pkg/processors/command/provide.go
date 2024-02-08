@@ -43,7 +43,7 @@ type appPartition struct {
 }
 
 // syncActualizerFactory - это фабрика(разделИД), которая возвращает свитч, в бранчах которого по синхронному актуализатору на каждое приложение, внутри каждого - проекторы на каждое приложение
-func ProvideServiceFactory(appParts appparts.IAppPartitions, now coreutils.TimeFunc, syncActualizerFactory SyncActualizerFactory,
+func ProvideServiceFactory(appParts appparts.IAppPartitions, now coreutils.TimeFunc,
 	n10nBroker in10n.IN10nBroker, metrics imetrics.IMetrics, vvm VVMName, authenticator iauthnz.IAuthenticator, authorizer iauthnz.IAuthorizer,
 	secretReader isecrets.ISecretReader) ServiceFactory {
 	return func(commandsChannel CommandChannel, partitionID istructs.PartitionID) pipeline.IService {
@@ -58,7 +58,7 @@ func ProvideServiceFactory(appParts appparts.IAppPartitions, now coreutils.TimeF
 
 		return pipeline.NewService(func(vvmCtx context.Context) {
 			hsp := newHostStateProvider(vvmCtx, partitionID, secretReader)
-			syncActualizerOperator := syncActualizerFactory(vvmCtx, partitionID)
+			//syncActualizerOperator := syncActualizerFactory(vvmCtx, partitionID)
 			cmdProc.storeOp = pipeline.NewSyncPipeline(vvmCtx, "store",
 				pipeline.WireFunc("applyRecords", func(ctx context.Context, work interface{}) (err error) {
 					// sync apply records
@@ -69,7 +69,24 @@ func ProvideServiceFactory(appParts appparts.IAppPartitions, now coreutils.TimeF
 					return err
 				}), pipeline.WireSyncOperator("syncProjectorsAndPutWLog", pipeline.ForkOperator(pipeline.ForkSame,
 					// forK: sync projector and PutWLog
-					pipeline.ForkBranch(pipeline.NewSyncOp(wireSyncActualizer(syncActualizerOperator))),
+
+					pipeline.ForkBranch(
+						pipeline.NewSyncOp(func(ctx context.Context, work interface{}) (err error) {
+							cmd := work.(*cmdWorkpiece)
+
+							cmd.syncProjectorsStart = time.Now()
+							err = cmd.appPart.DoSyncActualizer(ctx, work)
+							cmd.metrics.increase(ProjectorsSeconds, time.Since(cmd.syncProjectorsStart).Seconds())
+							cmd.syncProjectorsStart = time.Time{}
+
+							if err != nil {
+								cmd.appPartitionRestartScheduled = true
+							}
+
+							return err
+						}),
+					),
+
 					pipeline.ForkBranch(pipeline.NewSyncOp(func(ctx context.Context, work interface{}) (err error) {
 						// put WLog
 						cmd := work.(*cmdWorkpiece)

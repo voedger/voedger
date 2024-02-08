@@ -120,7 +120,7 @@ func TestBasicUsage_CUD(t *testing.T) {
 		resp = vit.PostWS(ws, "q.sys.GetCDoc", body)
 		jsonBytes := []byte(resp.SectionRow()[0].(string))
 		cdoc := map[string]interface{}{}
-		require.Nil(json.Unmarshal(jsonBytes, &cdoc))
+		require.NoError(json.Unmarshal(jsonBytes, &cdoc))
 		log.Println(string(jsonBytes))
 		log.Println(cdoc)
 	})

@@ -64,12 +64,16 @@ WORKSPACE SomeWorkspace(
         E int,
         PRIMARY KEY ((A), B)
     ) AS RESULT OF Proj1;
+    TABLE O_Doc INHERITS ODoc (
+        Fld1 int32
+    );
     EXTENSION ENGINE BUILTIN (
         PROJECTOR Proj1 AFTER EXECUTE ON (Orders) INTENTS (View(SomeView));
         COMMAND Orders();
         COMMAND CreateLogin(CreateLoginParams, UNLOGGED CreateLoginUnloggedParams) RETURNS void;
         COMMAND SomeCommand(SomeType, UNLOGGED SomeType) RETURNS SomeType;
         QUERY SomeQuery(SomeType) RETURNS SomeType;
+        COMMAND CmdODoc(O_Doc);
     )
 );
 

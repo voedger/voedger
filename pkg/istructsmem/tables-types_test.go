@@ -13,6 +13,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	log "github.com/untillpro/goutils/logger"
+
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 )
@@ -24,10 +25,10 @@ func Test_newRecord(t *testing.T) {
 
 	t.Run("newNullRecord must return empty, nullQName record with specified sys.ID", func(t *testing.T) {
 		rec := NewNullRecord(100500)
-		require.Equal(rec.QName(), appdef.NullQName)
-		require.Equal(rec.ID(), istructs.RecordID(100500))
-		require.Equal(rec.Parent(), istructs.NullRecordID)
-		require.Equal(rec.Container(), "")
+		require.Equal(appdef.NullQName, rec.QName())
+		require.Equal(istructs.RecordID(100500), rec.ID())
+		require.Equal(istructs.NullRecordID, rec.Parent())
+		require.Equal("", rec.Container())
 	})
 
 	t.Run("newRecord must return empty, nullQName record", func(t *testing.T) {
@@ -60,17 +61,17 @@ func Test_newRecord(t *testing.T) {
 	t.Run("newEmptyTestCDoc must return empty, «test.CDoc»", func(t *testing.T) {
 		doc := newEmptyTestCDoc()
 		require.True(doc.empty())
-		require.Equal(doc.QName(), test.testCDoc)
-		require.Equal(doc.ID(), istructs.NullRecordID)
+		require.Equal(test.testCDoc, doc.QName())
+		require.Equal(istructs.NullRecordID, doc.ID())
 		require.True(doc.IsActive())
 
 		t.Run("newEmptyTestCRec must return empty, «test.Record»", func(t *testing.T) {
 			rec := newEmptyTestCRecord()
 			require.True(rec.empty())
-			require.Equal(rec.QName(), test.testCRec)
-			require.Equal(rec.ID(), istructs.NullRecordID)
-			require.Equal(rec.Parent(), istructs.NullRecordID)
-			require.Equal(rec.Container(), "")
+			require.Equal(test.testCRec, rec.QName())
+			require.Equal(istructs.NullRecordID, rec.ID())
+			require.Equal(istructs.NullRecordID, rec.Parent())
+			require.Equal("", rec.Container())
 			require.True(rec.IsActive())
 		})
 	})
@@ -239,8 +240,8 @@ func Test_LoadStoreRecord_Bytes(t *testing.T) {
 			}
 			b, err := row.dyB.ToBytes()
 			require.NoError(err)
-			len := uint32(len(b))
-			require.NoError(binary.Write(buf, binary.BigEndian, &len))
+			length := uint32(len(b))
+			require.NoError(binary.Write(buf, binary.BigEndian, &length))
 			_, err = buf.Write(b)
 			require.NoError(err)
 			return buf.Bytes()
@@ -303,8 +304,8 @@ func Test_LoadStoreRecord_Bytes(t *testing.T) {
 
 		b := rec1.storeToBytes()
 
-		len := len(b)
-		for i := 0; i < len; i++ {
+		length := len(b)
+		for i := 0; i < length; i++ {
 			corrupted := b[0:i]
 			rec2 := newRecord(test.AppCfg)
 			err := rec2.loadFromBytes(corrupted)
@@ -321,9 +322,9 @@ func Test_LoadStoreRecord_Bytes(t *testing.T) {
 
 			b := rec1.storeToBytes()
 
-			len := len(b)
+			length := len(b)
 			stat := make(map[string]int)
-			for i := 0; i < len; i++ {
+			for i := 0; i < length; i++ {
 				b[i] ^= 255
 				rec2 := newRecord(test.AppCfg)
 				func() {
@@ -348,7 +349,7 @@ func Test_LoadStoreRecord_Bytes(t *testing.T) {
 				}()
 				b[i] ^= 255
 			}
-			log.Verbose("len: %d, stat: %v\n", len, stat)
+			log.Verbose("len: %d, stat: %v\n", length, stat)
 		})
 
 	t.Run("test field renaming availability", func(t *testing.T) {
@@ -356,8 +357,8 @@ func Test_LoadStoreRecord_Bytes(t *testing.T) {
 
 		b := rec1.storeToBytes()
 
-		newFieldName := func(old string) string { return old + "_1" }
-		oldFieldName := func(new string) string { return new[:len(new)-2] }
+		newFieldName := func(oldValue string) string { return oldValue + "_1" }
+		oldFieldName := func(newValue string) string { return newValue[:len(newValue)-2] }
 
 		appDef := appdef.New()
 		t.Run("must be ok to build application", func(t *testing.T) {

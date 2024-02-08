@@ -22,9 +22,9 @@ var constrains = []NodeConstraint{
 	{NodeNameCommandResult, ConstraintNonModifiable},
 }
 
-func checkBackwardCompatibility(old, new appdef.IAppDef) (cerrs *CompatibilityErrors) {
+func checkBackwardCompatibility(oldAppDef, newAppDef appdef.IAppDef) (cerrs *CompatibilityErrors) {
 	return &CompatibilityErrors{
-		Errors: compareNodes(buildTree(old), buildTree(new), constrains),
+		Errors: compareNodes(buildTree(oldAppDef), buildTree(newAppDef), constrains),
 	}
 }
 
@@ -105,15 +105,19 @@ func buildTableNode(parentNode *CompatibilityTreeNode, item appdef.IDoc) (node *
 func buildCommandNode(parentNode *CompatibilityTreeNode, item appdef.ICommand) (node *CompatibilityTreeNode) {
 	node = newNode(parentNode, item.QName().String(), nil)
 	node.Props = append(node.Props,
-		buildFieldsNode(node, item.Param(), NodeNameCommandArgs),
-		buildFieldsNode(node, item.UnloggedParam(), NodeNameUnloggedArgs),
-		buildFieldsNode(node, item.Result(), NodeNameCommandResult),
+		buildQNameNode(node, item.Param(), NodeNameCommandArgs, true),
+		buildQNameNode(node, item.UnloggedParam(), NodeNameUnloggedArgs, true),
+		buildQNameNode(node, item.Result(), NodeNameCommandResult, true),
 	)
 	return
 }
 
 func buildQNameNode(parentNode *CompatibilityTreeNode, item appdef.IType, name string, qNameOnly bool) (node *CompatibilityTreeNode) {
-	node = newNode(parentNode, name, nil)
+	var value interface{}
+	if item != nil {
+		value = item.QName().String()
+	}
+	node = newNode(parentNode, name, value)
 	if !qNameOnly {
 		if t, ok := item.(appdef.IWithAbstract); ok {
 			node.Props = append(node.Props, buildAbstractNode(node, t))
@@ -174,7 +178,6 @@ func buildUniqueNode(parentNode *CompatibilityTreeNode, item appdef.IUnique) (no
 	node = newNode(parentNode, item.Name().String(), nil)
 	node.Props = append(node.Props,
 		buildUniqueFieldsNode(node, item),
-		buildQNameNode(node, item.ParentStructure(), NodeNameParent, false), // Parent node
 	)
 	return
 }
@@ -233,12 +236,12 @@ func buildViewNode(parentNode *CompatibilityTreeNode, item appdef.IView) (node *
 	return
 }
 
-func compareNodes(old, new *CompatibilityTreeNode, constrains []NodeConstraint) (cerrs []CompatibilityError) {
-	if !cmp.Equal(old.Value, new.Value) {
-		cerrs = append(cerrs, newCompatibilityError(ConstraintValueMatch, old.Path(), ErrorTypeValueChanged))
+func compareNodes(oldNode, newNode *CompatibilityTreeNode, constrains []NodeConstraint) (cerrs []CompatibilityError) {
+	if !cmp.Equal(oldNode.Value, newNode.Value) {
+		cerrs = append(cerrs, newCompatibilityError(ConstraintValueMatch, oldNode.Path(), ErrorTypeValueChanged))
 	}
-	m := matchNodes(old.Props, new.Props)
-	cerrs = append(cerrs, checkConstraint(old.Path(), m, findConstraint(old.Name, constrains))...)
+	m := matchNodes(oldNode.Props, newNode.Props)
+	cerrs = append(cerrs, checkConstraint(oldNode.Path(), m, findConstraint(oldNode.Name, constrains))...)
 	for _, pair := range m.MatchedNodePairs {
 		cerrs = append(cerrs, compareNodes(pair[0], pair[1], constrains)...)
 	}
