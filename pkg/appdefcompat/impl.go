@@ -106,13 +106,7 @@ func buildTableNode(parentNode *CompatibilityTreeNode, item appdef.IDoc) (node *
 
 func buildCommandNode(parentNode *CompatibilityTreeNode, item appdef.ICommand) (node *CompatibilityTreeNode) {
 	node = newNode(parentNode, item.QName().String(), nil)
-	if item.QName().String() == "sys.SomeCommand" {
-		log.Println()
-	}
 	node.Props = append(node.Props,
-		// buildFieldsNode(node, item.Param(), NodeNameCommandArgs),
-		// buildFieldsNode(node, item.UnloggedParam(), NodeNameUnloggedArgs),
-		// buildFieldsNode(node, item.Result(), NodeNameCommandResult),
 		buildQNameNode(node, item.Param(), NodeNameCommandArgs, true),
 		buildQNameNode(node, item.UnloggedParam(), NodeNameUnloggedArgs, true),
 		buildQNameNode(node, item.Result(), NodeNameCommandResult, true),

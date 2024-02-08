@@ -67,29 +67,17 @@ func Test_Basic(t *testing.T) {
 			{OldTreePath: []string{"AppDef", "Types", "sys.AnotherOneTable", "Fields", "C"}, ErrorType: ErrorTypeOrderChanged},
 			{OldTreePath: []string{"AppDef", "Types", "sys.SomeWorkspace", "Types", "sys.SomeTable"}, ErrorType: ErrorTypeNodeRemoved},
 			{OldTreePath: []string{"AppDef", "Types", "sys.SomeCommand", "CommandArgs"}, ErrorType: ErrorTypeValueChanged},
+			{OldTreePath: []string{"AppDef", "Types", "sys.SomeCommand", "UnloggedArgs"}, ErrorType: ErrorTypeValueChanged},
 			{OldTreePath: []string{"AppDef", "Types", "sys.SomeCommand", "CommandResult"}, ErrorType: ErrorTypeValueChanged},
 			{OldTreePath: []string{"AppDef", "Types", "sys.Workspace", "Abstract"}, ErrorType: ErrorTypeValueChanged},
 			{OldTreePath: []string{"AppDef", "Types", "sys.SomeView", "PartKeyFields"}, ErrorType: ErrorTypeNodeModified},
 			{OldTreePath: []string{"AppDef", "Types", "sys.SomeView", "Fields", "E"}, ErrorType: ErrorTypeValueChanged},
 			{OldTreePath: []string{"AppDef", "Types", "sys.SomeView", "ClustColsFields", "B"}, ErrorType: ErrorTypeValueChanged},
 			{OldTreePath: []string{"AppDef", "Types", "sys.AnotherOneTable", "Uniques", "sys.AnotherOneTable$uniques$01", "UniqueFields"}, ErrorType: ErrorTypeNodeModified},
-			{OldTreePath: []string{"AppDef", "Types", "sys.AnotherOneTable", "Uniques", "sys.AnotherOneTable$uniques$01", "Parent", "Fields"}, ErrorType: ErrorTypeNodeInserted},
-			{OldTreePath: []string{"AppDef", "Types", "sys.AnotherOneTable", "Uniques", "sys.AnotherOneTable$uniques$01", "Parent", "Fields", "C"}, ErrorType: ErrorTypeOrderChanged},
 		}
-		// allowedErrors := []CompatibilityError{
-		// 	{OldTreePath: []string{"AppDef", "Types", "sys.SomeCommand", "UnloggedArgs"}},
-		// }
-		// allowedTypes := []string{
-		// 	"sys.NewTable",
-		// 	"sys.NewType",
-		// 	"sys.NewView",
-		// 	"sys.NewCommand",
-		// 	"sys.NewQuery",
-		// 	"sys.SomeQuery",
-		// }
 		compatErrors := CheckBackwardCompatibility(oldAppDef, newAppDef)
 		fmt.Println(compatErrors.Error())
-		validateCompatibilityErrors2(t, expectedErrors, nil, nil, compatErrors)
+		validateCompatibilityErrors2(t, expectedErrors, compatErrors)
 	})
 
 	t.Run("IgnoreCompatibilityErrors", func(t *testing.T) {
@@ -104,7 +92,7 @@ func Test_Basic(t *testing.T) {
 	})
 }
 
-func validateCompatibilityErrors2(t *testing.T, expectedErrors []CompatibilityError, allowedErrors []CompatibilityError, allowedTypes []string, actualErrors *CompatibilityErrors) {
+func validateCompatibilityErrors2(t *testing.T, expectedErrors []CompatibilityError, actualErrors *CompatibilityErrors) {
 	for _, actualErr := range actualErrors.Errors {
 		require.True(t, slices.ContainsFunc(expectedErrors, func(expectedErr CompatibilityError) bool {
 			if expectedErr.Path() == actualErr.Path() && expectedErr.ErrorType == actualErr.ErrorType {
@@ -119,43 +107,7 @@ func validateCompatibilityErrors2(t *testing.T, expectedErrors []CompatibilityEr
 				return true
 			}
 			return false
-		}), "error is expected but not occurred: " + expectedErr.Error())
-	}
-}
-
-func validateCompatibilityErrors(t *testing.T, expectedErrors []CompatibilityError, allowedErrors []CompatibilityError, allowedTypes []string, compatErrors *CompatibilityErrors) {
-	for _, expectedErr := range expectedErrors {
-		found := false
-		for _, cerr := range compatErrors.Errors {
-			if cerr.Path() == expectedErr.Path() && cerr.ErrorType == expectedErr.ErrorType {
-				found = true
-				break
-			}
-		}
-		require.True(t, found, expectedErr.Error())
-	}
-	// allowed types
-	for _, allowedType := range allowedTypes {
-		found := false
-		for _, compatErr := range compatErrors.Errors {
-			if slices.Contains(compatErr.OldTreePath, allowedType) {
-				found = true
-				break
-			}
-		}
-		require.False(t, found, fmt.Sprintf("type %s should be allowed", allowedType))
-	}
-	// allowed errors
-	for _, allowedError := range allowedErrors {
-		found := false
-		allowedPath := allowedError.Path()
-		for _, compatErr := range compatErrors.Errors {
-			if strings.Contains(compatErr.Path(), allowedPath) {
-				found = true
-				break
-			}
-		}
-		require.False(t, found, fmt.Sprintf("path %s should be allowed", allowedPath))
+		}), "error is expected but not occurred: "+expectedErr.Error())
 	}
 }
 

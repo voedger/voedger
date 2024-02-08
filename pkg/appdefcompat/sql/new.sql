@@ -81,7 +81,7 @@ WORKSPACE SomeWorkspace(
     ) AS RESULT OF Proj1;
     TABLE O_Doc INHERITS ODoc (
         Fld1 int32,
-        Fld2 int64
+        Fld2 int64 -- field added, the doc is an arg of c.sys.CmdODoc -> no problem becuase the field is not required
     );
     EXTENSION ENGINE BUILTIN (
         PROJECTOR Proj1 AFTER EXECUTE ON (Orders) INTENTS (View(SomeView), View(NewView));
