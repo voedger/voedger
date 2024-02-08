@@ -55,6 +55,8 @@ func Test_Basic(t *testing.T) {
 	t.Run("CheckBackwardCompatibility", func(t *testing.T) {
 		expectedErrors := []CompatibilityError{
 			{OldTreePath: []string{"AppDef", "Types", "sys.Profile", "Types", "sys.ProfileTable"}, ErrorType: ErrorTypeNodeRemoved},
+			{OldTreePath: []string{"AppDef", "Types", "sys.ProfileTable"}, ErrorType: ErrorTypeNodeRemoved},
+			{OldTreePath: []string{"AppDef", "Types", "sys.SomeTable"}, ErrorType: ErrorTypeNodeRemoved},
 			{OldTreePath: []string{"AppDef", "Types", "sys.CreateLoginUnloggedParams", "Fields", "Password"}, ErrorType: ErrorTypeOrderChanged},
 			{OldTreePath: []string{"AppDef", "Types", "sys.CreateLoginUnloggedParams", "Fields", "Email"}, ErrorType: ErrorTypeOrderChanged},
 			{OldTreePath: []string{"AppDef", "Types", "sys.CreateLoginParams", "Fields", "Login"}, ErrorType: ErrorTypeNodeRemoved},
@@ -71,21 +73,23 @@ func Test_Basic(t *testing.T) {
 			{OldTreePath: []string{"AppDef", "Types", "sys.SomeView", "Fields", "E"}, ErrorType: ErrorTypeValueChanged},
 			{OldTreePath: []string{"AppDef", "Types", "sys.SomeView", "ClustColsFields", "B"}, ErrorType: ErrorTypeValueChanged},
 			{OldTreePath: []string{"AppDef", "Types", "sys.AnotherOneTable", "Uniques", "sys.AnotherOneTable$uniques$01", "UniqueFields"}, ErrorType: ErrorTypeNodeModified},
+			{OldTreePath: []string{"AppDef", "Types", "sys.AnotherOneTable", "Uniques", "sys.AnotherOneTable$uniques$01", "Parent", "Fields"}, ErrorType: ErrorTypeNodeInserted},
+			{OldTreePath: []string{"AppDef", "Types", "sys.AnotherOneTable", "Uniques", "sys.AnotherOneTable$uniques$01", "Parent", "Fields", "C"}, ErrorType: ErrorTypeOrderChanged},
 		}
-		allowedErrors := []CompatibilityError{
-			{OldTreePath: []string{"AppDef", "Types", "sys.SomeCommand", "UnloggedArgs"}},
-		}
-		allowedTypes := []string{
-			"sys.NewTable",
-			"sys.NewType",
-			"sys.NewView",
-			"sys.NewCommand",
-			"sys.NewQuery",
-			"sys.SomeQuery",
-		}
+		// allowedErrors := []CompatibilityError{
+		// 	{OldTreePath: []string{"AppDef", "Types", "sys.SomeCommand", "UnloggedArgs"}},
+		// }
+		// allowedTypes := []string{
+		// 	"sys.NewTable",
+		// 	"sys.NewType",
+		// 	"sys.NewView",
+		// 	"sys.NewCommand",
+		// 	"sys.NewQuery",
+		// 	"sys.SomeQuery",
+		// }
 		compatErrors := CheckBackwardCompatibility(oldAppDef, newAppDef)
 		fmt.Println(compatErrors.Error())
-		validateCompatibilityErrors(t, expectedErrors, allowedErrors, allowedTypes, compatErrors)
+		validateCompatibilityErrors2(t, expectedErrors, nil, nil, compatErrors)
 	})
 
 	t.Run("IgnoreCompatibilityErrors", func(t *testing.T) {
@@ -98,6 +102,25 @@ func Test_Basic(t *testing.T) {
 		filteredCompatErrors := IgnoreCompatibilityErrors(compatErrors, pathsToIgnore)
 		checkPathsToIgnore(t, pathsToIgnore, compatErrors, filteredCompatErrors)
 	})
+}
+
+func validateCompatibilityErrors2(t *testing.T, expectedErrors []CompatibilityError, allowedErrors []CompatibilityError, allowedTypes []string, actualErrors *CompatibilityErrors) {
+	for _, actualErr := range actualErrors.Errors {
+		require.True(t, slices.ContainsFunc(expectedErrors, func(expectedErr CompatibilityError) bool {
+			if expectedErr.Path() == actualErr.Path() && expectedErr.ErrorType == actualErr.ErrorType {
+				return true
+			}
+			return false
+		}), actualErr.Error())
+	}
+	for _, expectedErr := range expectedErrors {
+		require.True(t, slices.ContainsFunc(actualErrors.Errors, func(actualErr CompatibilityError) bool {
+			if expectedErr.Path() == actualErr.Path() && expectedErr.ErrorType == actualErr.ErrorType {
+				return true
+			}
+			return false
+		}), "error is expected but not occurred: " + expectedErr.Error())
+	}
 }
 
 func validateCompatibilityErrors(t *testing.T, expectedErrors []CompatibilityError, allowedErrors []CompatibilityError, allowedTypes []string, compatErrors *CompatibilityErrors) {

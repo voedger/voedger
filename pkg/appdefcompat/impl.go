@@ -6,6 +6,8 @@
 package appdefcompat
 
 import (
+	"log"
+
 	"github.com/google/go-cmp/cmp"
 	"golang.org/x/exp/slices"
 
@@ -104,16 +106,26 @@ func buildTableNode(parentNode *CompatibilityTreeNode, item appdef.IDoc) (node *
 
 func buildCommandNode(parentNode *CompatibilityTreeNode, item appdef.ICommand) (node *CompatibilityTreeNode) {
 	node = newNode(parentNode, item.QName().String(), nil)
+	if item.QName().String() == "sys.SomeCommand" {
+		log.Println()
+	}
 	node.Props = append(node.Props,
-		buildFieldsNode(node, item.Param(), NodeNameCommandArgs),
-		buildFieldsNode(node, item.UnloggedParam(), NodeNameUnloggedArgs),
-		buildFieldsNode(node, item.Result(), NodeNameCommandResult),
+		// buildFieldsNode(node, item.Param(), NodeNameCommandArgs),
+		// buildFieldsNode(node, item.UnloggedParam(), NodeNameUnloggedArgs),
+		// buildFieldsNode(node, item.Result(), NodeNameCommandResult),
+		buildQNameNode(node, item.Param(), NodeNameCommandArgs, true),
+		buildQNameNode(node, item.UnloggedParam(), NodeNameUnloggedArgs, true),
+		buildQNameNode(node, item.Result(), NodeNameCommandResult, true),
 	)
 	return
 }
 
 func buildQNameNode(parentNode *CompatibilityTreeNode, item appdef.IType, name string, qNameOnly bool) (node *CompatibilityTreeNode) {
-	node = newNode(parentNode, name, nil)
+	var value interface {}
+	if item != nil {
+		value = item.QName().String()
+	}
+	node = newNode(parentNode, name, value)
 	if !qNameOnly {
 		if t, ok := item.(appdef.IWithAbstract); ok {
 			node.Props = append(node.Props, buildAbstractNode(node, t))
@@ -174,7 +186,6 @@ func buildUniqueNode(parentNode *CompatibilityTreeNode, item appdef.IUnique) (no
 	node = newNode(parentNode, item.Name().String(), nil)
 	node.Props = append(node.Props,
 		buildUniqueFieldsNode(node, item),
-		buildQNameNode(node, item.ParentStructure(), NodeNameParent, false), // Parent node
 	)
 	return
 }
@@ -234,6 +245,9 @@ func buildViewNode(parentNode *CompatibilityTreeNode, item appdef.IView) (node *
 }
 
 func compareNodes(old, new *CompatibilityTreeNode, constrains []NodeConstraint) (cerrs []CompatibilityError) {
+	if old.Value == appdef.NewQName(appdef.SysPackage, "SomeCommand") {
+		log.Println()
+	}
 	if !cmp.Equal(old.Value, new.Value) {
 		cerrs = append(cerrs, newCompatibilityError(ConstraintValueMatch, old.Path(), ErrorTypeValueChanged))
 	}

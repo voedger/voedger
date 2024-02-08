@@ -79,14 +79,19 @@ WORKSPACE SomeWorkspace(
         B int,
         PRIMARY KEY ((A), B)
     ) AS RESULT OF Proj1;
+    TABLE O_Doc INHERITS ODoc (
+        Fld1 int32,
+        Fld2 int64
+    );
     EXTENSION ENGINE BUILTIN (
         PROJECTOR Proj1 AFTER EXECUTE ON (Orders) INTENTS (View(SomeView), View(NewView));
         COMMAND Orders();
         COMMAND CreateLogin(CreateLoginParams, UNLOGGED CreateLoginUnloggedParams) RETURNS void;
-        COMMAND SomeCommand(SomeType2, UNLOGGED SomeType2) RETURNS SomeType2; -- args and return type changed; unlogged flag changed, but it is ok
+        COMMAND SomeCommand(SomeType2, UNLOGGED SomeType2) RETURNS SomeType2; -- args, unloggedArgs and result are changed -> deny, clietn will fail to call the cmd he just called
         COMMAND NewCommand(NewType, UNLOGGED NewType2) RETURNS NewType;
         QUERY NewQuery(NewType) RETURNS NewType; -- new query is allowed
         QUERY SomeQuery(SomeType2) RETURNS SomeType2; -- changing args and return type is allowed
+        COMMAND CmdODoc(O_Doc);
     )
 );
 
