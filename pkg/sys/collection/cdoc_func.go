@@ -89,7 +89,9 @@ func convert(doc istructs.IObject, iWorkspace appdef.IWorkspace, refs map[istruc
 	if doc == nil {
 		return nil, nil
 	}
-	obj = coreutils.ObjectToMap(doc, iWorkspace, coreutils.Filter(func(fieldName string, kind appdef.DataKind) bool {
+	// unable to use ObjectToMap because of filter:
+	// field of the root is filtering -> no problem, field of a container is filtering -> `doc` var here ir root, it does not contain fields of container -> panic
+	obj = coreutils.FieldsToMap(doc, iWorkspace, coreutils.Filter(func(fieldName string, kind appdef.DataKind) bool {
 		if skipField(fieldName) {
 			return false
 		}
@@ -103,35 +105,21 @@ func convert(doc istructs.IObject, iWorkspace appdef.IWorkspace, refs map[istruc
 		}
 		return true
 	}))
-	// obj = coreutils.FieldsToMap(doc, iWorkspace, coreutils.Filter(func(fieldName string, kind appdef.DataKind) bool {
-	// 	if skipField(fieldName) {
-	// 		return false
-	// 	}
-	// 	if refs != nil {
-	// 		if kind == appdef.DataKind_RecordID && fieldName != appdef.SystemField_ID {
-	// 			// the field is a reference
-	// 			if parent != doc.AsRecordID(fieldName) {
-	// 				refs[doc.AsRecordID(fieldName)] = true
-	// 			}
-	// 		}
-	// 	}
-	// 	return true
-	// }))
-	// doc.Containers(func(container string) {
-	// 	list := make([]interface{}, 0)
-	// 	doc.Children(container, func(c istructs.IObject) {
-	// 		var childObj map[string]interface{}
-	// 		if err == nil {
-	// 			childObj, err = convert(c.(*collectionObject) /*iWorkspace*/, c.(*collectionObject), refs, doc.AsRecord().ID())
-	// 			if err == nil {
-	// 				list = append(list, childObj)
-	// 			}
-	// 		}
-	// 	})
-	// 	if container != "" {
-	// 		obj[container] = list
-	// 	}
-	// })
+	doc.Containers(func(container string) {
+		list := make([]interface{}, 0)
+		doc.Children(container, func(c istructs.IObject) {
+			var childObj map[string]interface{}
+			if err == nil {
+				childObj, err = convert(c.(*collectionObject), iWorkspace, refs, doc.AsRecord().ID())
+				if err == nil {
+					list = append(list, childObj)
+				}
+			}
+		})
+		if container != "" {
+			obj[container] = list
+		}
+	})
 
 	return obj, nil
 }
