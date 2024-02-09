@@ -297,6 +297,7 @@ func Test_Race_CUDManyWriteReadCheckResult(t *testing.T) {
 	var cntWS int = writeCnt
 	var prtIdx istructs.WSID
 
+
 	for k := 1; k < 10; k++ {
 		wg := sync.WaitGroup{}
 		for prtIdx = 1; int(prtIdx) < cntWS; prtIdx++ {

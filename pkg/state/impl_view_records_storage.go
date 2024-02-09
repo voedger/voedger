@@ -15,7 +15,6 @@ import (
 type viewRecordsStorage struct {
 	ctx             context.Context
 	viewRecordsFunc viewRecordsFunc
-	appDefFunc      appDefFunc
 	wsidFunc        WSIDFunc
 	n10nFunc        N10nFunc
 }

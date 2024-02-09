@@ -95,7 +95,7 @@ type IQueryMessage interface {
 	Sender() ibus.ISender
 	Body() []byte
 	RequestCtx() context.Context
-	Query() appdef.IQuery
+	QName() appdef.QName
 	//TODO Denis provide partition
 	Partition() istructs.PartitionID
 	Host() string
