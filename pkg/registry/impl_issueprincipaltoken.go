@@ -48,14 +48,6 @@ func provideIssuePrincipalTokenExec(itokens itokens.ITokens) istructsmem.ExecQue
 			return coreutils.NewHTTPErrorf(http.StatusBadRequest, "failed to parse app qualified name", appQName.String(), ":", err)
 		}
 
-		// as, err := asp.AppStructs(appQName)
-		// if err != nil {
-		// 	if errors.Is(err, istructs.ErrAppNotFound) {
-		// 		return coreutils.NewHTTPErrorf(http.StatusBadRequest, "unknown application ", appName)
-		// 	}
-		// 	return err
-		// }
-
 		cdocLogin, doesLoginExist, err := GetCDocLogin(login, args.State, args.WSID, appName)
 		if err != nil {
 			return err

@@ -320,8 +320,3 @@ func TestBasicUsage_UNIQUEFIELD(t *testing.T) {
 	body = fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.DocConstraintsOldAndNewUniques","Int":%d,"Str":"%s"}}]}`, num, newBts)
 	vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect409(it.QNameApp1_DocConstraintsOldAndNewUniques.String()))
 }
-
-func TestUpdateWithoutInsert(t *testing.T) {
-	vit := it.NewVIT(t, &it.SharedConfig_App1)
-	defer vit.TearDown()
-}
