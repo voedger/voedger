@@ -32,11 +32,13 @@ import (
 	queryprocessor "github.com/voedger/voedger/pkg/processors/query"
 	"github.com/voedger/voedger/pkg/projectors"
 	"github.com/voedger/voedger/pkg/state"
+	"github.com/voedger/voedger/pkg/sys/authnz"
 	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
 )
 
 var cocaColaDocID istructs.RecordID
 var qNameWorkspaceDescriptor = appdef.NewQName(appdef.SysPackage, "WorkspaceDescriptor")
+var qNameTestWSKind = appdef.NewQName(appdef.SysPackage, "test_ws")
 
 const maxPrepareQueries = 10
 
@@ -85,12 +87,12 @@ func buildAppParts(t *testing.T) (appParts appparts.IAppPartitions, cleanup func
 				AddField(field_After, appdef.DataKind_int64, true).(appdef.IType).QName()).
 			SetResult(adb.AddObject(appdef.NewQName(appdef.SysPackage, "StateResult")).
 				AddField(field_State, appdef.DataKind_string, true).(appdef.IType).QName())
-		adb.AddSingleton(qNameWorkspaceDescriptor) // stub to make tests work
-		wsBuilder := adb.AddWorkspace(appdef.NewQName(appdef.SysPackage, "test_ws"))
-		wsBuilder.SetDescriptor(qNameWorkspaceDescriptor)
-		wsBuilder.AddType(qNameQueryCollection)
-		wsBuilder.AddType(qNameQueryGetCDoc)
-		wsBuilder.AddType(qNameQueryState)
+		wsDesc := adb.AddSingleton(qNameWorkspaceDescriptor) // stub to make tests work
+		wsDesc.
+			AddField("WSKind", appdef.DataKind_QName, true).
+			AddField("Status", appdef.DataKind_int32, true)
+		adb.AddSingleton(qNameTestWSKind)
+
 	}
 	{ // "modify" function
 		adb.AddCommand(test.modifyCmdName)
@@ -140,6 +142,22 @@ func buildAppParts(t *testing.T) (appParts appparts.IAppPartitions, cleanup func
 			AddField(test.articlePriceExceptionsPriceIdent, appdef.DataKind_float32, true)
 	}
 
+	{
+		// Workspace
+		wsBuilder := adb.AddWorkspace(appdef.NewQName(appdef.SysPackage, "test_wsWS"))
+		wsBuilder.SetDescriptor(qNameTestWSKind)
+		wsBuilder.AddType(qNameQueryCollection)
+		wsBuilder.AddType(qNameQueryGetCDoc)
+		wsBuilder.AddType(qNameQueryState)
+		wsBuilder.AddType(test.modifyCmdName)
+		wsBuilder.AddType(test.tableArticles)
+		wsBuilder.AddType(test.tableDepartments)
+		wsBuilder.AddType(test.tablePeriods)
+		wsBuilder.AddType(test.tablePrices)
+		wsBuilder.AddType(test.tableArticlePrices)
+		wsBuilder.AddType(test.tableArticlePriceExceptions)
+	}
+
 	// TODO: remove it after https://github.com/voedger/voedger/issues/56
 	appDef, err := adb.Build()
 	require.NoError(err)
@@ -184,6 +202,8 @@ func buildAppParts(t *testing.T) (appParts appparts.IAppPartitions, cleanup func
 	)
 	cdocWSDesc := reb.CUDBuilder().Create(qNameWorkspaceDescriptor)
 	cdocWSDesc.PutRecordID(appdef.SystemField_ID, 1)
+	cdocWSDesc.PutQName("WSKind", qNameTestWSKind)
+	cdocWSDesc.PutInt32("Status", int32(authnz.WorkspaceStatus_Active))
 	rawEvent, err := reb.BuildRawEvent()
 	require.NoError(err)
 	pLogEvent, err := as.Events().PutPlog(rawEvent, nil, istructsmem.NewIDGenerator())
