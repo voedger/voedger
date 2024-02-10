@@ -44,10 +44,31 @@ func Test_BasicUsage(t *testing.T) {
 
 	require.NoError(engines[0].Invoke(context.Background(), ext1name, nil))
 	require.NoError(engines[1].Invoke(context.Background(), ext1name, nil))
-	require.Error(engines[2].Invoke(context.Background(), ext1name, nil), "test")
+	require.ErrorContains(engines[2].Invoke(context.Background(), ext1name, nil), "test")
 	require.NoError(engines[3].Invoke(context.Background(), ext2name, nil))
 	require.NoError(engines[4].Invoke(context.Background(), ext2name, nil))
-	require.Error(engines[2].Invoke(context.Background(), iextengine.NewExtQName("test", "ext3"), nil), "undefined extension: test.ext3")
+	require.ErrorContains(engines[2].Invoke(context.Background(), iextengine.NewExtQName("test", "ext3"), nil), "undefined extension: test.ext3")
 	require.Equal(1, counter)
+
+}
+
+func Test_Panics(t *testing.T) {
+
+	require := require.New(t)
+
+	ext1name := iextengine.NewExtQName("test", "ext1")
+	ext1func := func(ctx context.Context, io iextengine.IExtensionIO) error {
+		panic("boom")
+	}
+
+	factory := ProvideExtensionEngineFactory(iextengine.BuiltInExtFuncs{
+		ext1name: ext1func,
+	})
+
+	engines, err := factory.New(context.Background(), nil, nil, 5)
+	require.NoError(err)
+	require.Len(engines, 5)
+
+	require.ErrorContains(engines[0].Invoke(context.Background(), ext1name, nil), "extension panic: boom")
 
 }
