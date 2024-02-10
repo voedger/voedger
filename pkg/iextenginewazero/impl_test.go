@@ -409,7 +409,78 @@ func Test_NoAllocs(t *testing.T) {
 	require.Equal("sys.InvitationAccepted", v1.items["qname"])
 }
 
-func Test_Storage(t *testing.T) {
+func Test_WithState(t *testing.T) {
+
+	require := require.New(t)
+	ctx := context.Background()
+
+	testView := appdef.NewQName("pkg", "TestView")
+	const extension = "incrementProjector"
+	const cc = "cc"
+	const pk = "pk"
+	const vv = "vv"
+	const intentsLimit = 5
+	const bundlesLimit = 5
+	const ws = istructs.WSID(1)
+
+	// build app
+	app := appStructs(
+		func(appDef appdef.IAppDefBuilder) {
+			projectors.ProvideViewDef(appDef, testView, func(view appdef.IViewBuilder) {
+				view.KeyBuilder().PartKeyBuilder().AddField(pk, appdef.DataKind_int32)
+				view.KeyBuilder().ClustColsBuilder().AddField(cc, appdef.DataKind_int32)
+				view.ValueBuilder().AddField(vv, appdef.DataKind_int32, true)
+			})
+		},
+		func(cfg *istructsmem.AppConfigType) {})
+	state := state.ProvideAsyncActualizerStateFactory()(context.Background(), app, nil, state.SimpleWSIDFunc(ws), nil, nil, intentsLimit, bundlesLimit)
+
+	// build packages
+	moduleUrl := testModuleURL("./_testdata/basicusage/pkg.wasm")
+	packages := []iextengine.ExtensionPackage{
+		{
+			QualifiedName:  testPkg,
+			ModuleUrl:      moduleUrl,
+			ExtensionNames: []string{extension},
+		},
+	}
+
+	// build extension engine
+	factory := ProvideExtensionEngineFactory(true)
+	engines, err := factory.New(ctx, packages, &iextengine.ExtEngineConfig{}, 1)
+	if err != nil {
+		panic(err)
+	}
+	extEngine := engines[0]
+	defer extEngine.Close(ctx)
+
+	// Invoke extension
+	require.NoError(extEngine.Invoke(context.Background(), iextengine.NewExtQName(testPkg, extension), state))
+	ready, err := state.ApplyIntents()
+	require.NoError(err)
+	require.False(ready)
+
+	// Invoke extension again
+	require.NoError(extEngine.Invoke(context.Background(), iextengine.NewExtQName(testPkg, extension), state))
+	ready, err = state.ApplyIntents()
+	require.NoError(err)
+	require.False(ready)
+
+	// Flush bundles with intents
+	require.NoError(state.FlushBundles())
+
+	// Test view
+	kb := app.ViewRecords().KeyBuilder(testView)
+	kb.PartitionKey().PutInt32(pk, 1)
+	kb.ClusteringColumns().PutInt32(cc, 1)
+	value, err := app.ViewRecords().Get(ws, kb)
+
+	require.NoError(err)
+	require.NotNil(value)
+	require.Equal(int32(2), value.AsInt32(vv))
+}
+
+func Test_StatePanic(t *testing.T) {
 
 	testView := appdef.NewQName("pkg", "TestView")
 	const cc = "cc"
@@ -417,6 +488,7 @@ func Test_Storage(t *testing.T) {
 	const vv = "vv"
 	const intentsLimit = 5
 	const bundlesLimit = 5
+	const ws = istructs.WSID(1)
 
 	app := appStructs(
 		func(appDef appdef.IAppDefBuilder) {
@@ -426,22 +498,20 @@ func Test_Storage(t *testing.T) {
 				view.ValueBuilder().AddField(vv, appdef.DataKind_int32, true)
 			})
 		},
-		func(cfg *istructsmem.AppConfigType) {
-			//cfg.Resources.Add(istructsmem.NewCommandFunction(testQName, istructsmem.NullCommandExec))
-		})
-	state := state.ProvideAsyncActualizerStateFactory()(context.Background(), app, nil, state.SimpleWSIDFunc(istructs.WSID(1)), nil, nil, intentsLimit, bundlesLimit)
+		func(cfg *istructsmem.AppConfigType) {})
+	state := state.ProvideAsyncActualizerStateFactory()(context.Background(), app, nil, state.SimpleWSIDFunc(ws), nil, nil, intentsLimit, bundlesLimit)
 
-	const incrementProjector = "incrementProjector"
+	const extname = "wrongFieldName"
 
 	require := require.New(t)
 	ctx := context.Background()
 
-	moduleUrl := testModuleURL("./_testdata/basicusage/pkg.wasm")
+	moduleUrl := testModuleURL("./_testdata/panics/pkg.wasm")
 	packages := []iextengine.ExtensionPackage{
 		{
 			QualifiedName:  testPkg,
 			ModuleUrl:      moduleUrl,
-			ExtensionNames: []string{incrementProjector},
+			ExtensionNames: []string{extname},
 		},
 	}
 	factory := ProvideExtensionEngineFactory(true)
@@ -452,30 +522,10 @@ func Test_Storage(t *testing.T) {
 	extEngine := engines[0]
 	defer extEngine.Close(ctx)
 	//
-	// Invoke command
+	// Invoke extension
 	//
-	require.NoError(extEngine.Invoke(context.Background(), iextengine.NewExtQName(testPkg, incrementProjector), state))
-	require.Len(extIO.intents, 1)
-	// v := extIO.intents[0].value.(*mockValueBuilder)
-
-	// require.Equal("test@gmail.com", v.items["from"])
-	// require.Equal("email@user.com", v.items["to"])
-	// require.Equal("You are invited", v.items["body"])
-
-	// //
-	// // Invoke projector which parses JSON
-	// //
-	// extIO = &mockIo{}    // reset intents
-	// projectorMode = true // state will return different Event
-	// require.NoError(extEngine.Invoke(context.Background(), iextengine.NewExtQName(testPkg, updateSubscriptionProjector), extIO))
-
-	// require.Len(extIO.intents, 1)
-	// v = extIO.intents[0].value.(*mockValueBuilder)
-
-	// require.Equal("test@gmail.com", v.items["from"])
-	// require.Equal("customer@test.com", v.items["to"])
-	// require.Equal("Your subscription has been updated. New status: active", v.items["body"])
-
+	err = extEngine.Invoke(context.Background(), iextengine.NewExtQName(testPkg, extname), state)
+	require.ErrorContains(err, "int32-type field «wrong» is not found")
 }
 
 type (
