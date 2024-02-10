@@ -41,5 +41,18 @@ func updateSubscriptionProjector() {
 	}
 }
 
+//export incrementProjector
+func incrementProjector() {
+	key := ext.KeyBuilder("sys.View", "pkg.TestView")
+	key.PutInt32("pk", 1)
+	key.PutInt32("cc", "1")
+	exists, value := ext.QueryValue(ext.KeyBuilder("sys.View", "pkg.TestView"))
+	if !exists {
+		ext.NewValue(value).PutInt64("vv", 1)
+	} else {
+		ext.UpdateValue(value).PutInt32("vv", value.AsInt32("vv")+1)
+	}
+}
+
 func main() {
 }
