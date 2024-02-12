@@ -23,7 +23,7 @@ WORKSPACE DeviceProfileWS (
 	DESCRIPTOR DeviceProfile ();
 );
 
-WORKSPACE UserProfileWS (
+ALTERABLE WORKSPACE UserProfileWS (
 	DESCRIPTOR UserProfile (
 		DisplayName varchar
 	);
