@@ -424,13 +424,6 @@ func operator(name string, doSync func(ctx context.Context, qw *queryWork) (err 
 	})
 }
 
-func errIfFalse(cond bool, errIfFalse func() error) error {
-	if !cond {
-		return errIfFalse()
-	}
-	return nil
-}
-
 type queryMessage struct {
 	requestCtx context.Context
 	appQName   istructs.AppQName
@@ -521,7 +514,7 @@ func newExecQueryArgs(data coreutils.MapObject, wsid istructs.WSID, qw *queryWor
 			ArgumentObject: requestArgs,
 			WSID:           wsid,
 			Workpiece:      qw,
-			Workspace:     qw.iWorkspace,
+			Workspace:      qw.iWorkspace,
 		},
 	}, nil
 }
