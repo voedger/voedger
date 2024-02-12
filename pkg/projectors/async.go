@@ -100,6 +100,9 @@ func (a *asyncActualizer) init(ctx context.Context) (err error) {
 
 	projector := a.factory(a.conf.Partition)
 	iProjector := a.structs.AppDef().Projector(projector.Name)
+	if iProjector == nil {
+		return fmt.Errorf("async projector %s is not defined in AppDef", projector.Name)
+	}
 
 	// https://github.com/voedger/voedger/issues/1048
 	hasIntentsExceptViewAndRecord, _, _ := iterate.FindFirstMap(iProjector.Intents, func(storage appdef.QName, _ appdef.QNames) bool {
