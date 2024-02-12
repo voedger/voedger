@@ -253,7 +253,7 @@ func Test_Race_CUDManyReadCheckResult(t *testing.T) {
 		wg.Add(1)
 		go func(wsid istructs.WSID) {
 			defer wg.Done()
-			ws := vit.DummyWS(istructs.AppQName_test1_app1, wsid)
+			ws := vit.DummyWS(istructs.AppQName_test1_app1, wsid+istructs.MaxPseudoBaseWSID)
 			readArt(vit, ws)
 		}(prtIdx)
 	}
@@ -296,7 +296,6 @@ func Test_Race_CUDManyWriteReadCheckResult(t *testing.T) {
 
 	var cntWS int = writeCnt
 	var prtIdx istructs.WSID
-
 
 	for k := 1; k < 10; k++ {
 		wg := sync.WaitGroup{}
