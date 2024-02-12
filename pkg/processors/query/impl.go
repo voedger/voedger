@@ -286,12 +286,16 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 			}
 			if qw.resultType.QName() == appdef.QNameANY {
 				qNameResultType := qw.queryFunc.ResultType(qw.execQueryArgs.PrepareArgs)
-				qw.resultType = qw.appStructs.AppDef().Type(qNameResultType)
+				if coreutils.IsDummyWS(qw.msg.WSID()) {
+					qw.resultType = qw.appStructs.AppDef().Type(qNameResultType)
+				} else {
+					qw.resultType = qw.iWorkspace.Type(qNameResultType)
+				}
+				if qw.resultType.Kind() == appdef.TypeKind_null {
+					return coreutils.NewHTTPError(http.StatusBadRequest, fmt.Errorf("%s query result type %s does not exist in workspace %s", qw.iQuery.QName(), qNameResultType, qw.iWorkspace.QName()))
+				}
 			}
-			err = errIfFalse(qw.resultType.Kind() != appdef.TypeKind_null, func() error {
-				return fmt.Errorf("result type %s: %w", qw.resultType, ErrNotFound)
-			})
-			return coreutils.WrapSysError(err, http.StatusBadRequest)
+			return nil
 		}),
 		operator("validate: get query params", func(ctx context.Context, qw *queryWork) (err error) {
 			qw.queryParams, err = newQueryParams(qw.requestData, NewElement, NewFilter, NewOrderBy, newFieldsKinds(qw.resultType))
@@ -420,13 +424,6 @@ func operator(name string, doSync func(ctx context.Context, qw *queryWork) (err 
 	})
 }
 
-func errIfFalse(cond bool, errIfFalse func() error) error {
-	if !cond {
-		return errIfFalse()
-	}
-	return nil
-}
-
 type queryMessage struct {
 	requestCtx context.Context
 	appQName   istructs.AppQName
@@ -517,7 +514,7 @@ func newExecQueryArgs(data coreutils.MapObject, wsid istructs.WSID, qw *queryWor
 			ArgumentObject: requestArgs,
 			WSID:           wsid,
 			Workpiece:      qw,
-			Workspace:     qw.iWorkspace,
+			Workspace:      qw.iWorkspace,
 		},
 	}, nil
 }
