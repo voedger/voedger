@@ -240,7 +240,7 @@ func TestCtoolCommands(t *testing.T) {
 
 	// upgrade without changing the ctool version should give an error
 	err = execRootCmd([]string{"./ctool", "upgrade", "--dry-run", "--ssh-key", "key"}, version)
-	require.Error(err
+	require.Error(err)
 
 	// increase the ctool version.Upgrade is performed without error
 	version = "0.0.2"
