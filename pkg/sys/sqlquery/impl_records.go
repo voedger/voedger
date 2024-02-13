@@ -10,13 +10,14 @@ import (
 	"fmt"
 
 	"github.com/blastrain/vitess-sqlparser/sqlparser"
+
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-func readRecords(WSID istructs.WSID, qName appdef.QName, expr sqlparser.Expr, appStructs istructs.IAppStructs, f *filter, callback istructs.ExecQueryCallback,
+func readRecords(wsid istructs.WSID, qName appdef.QName, expr sqlparser.Expr, appStructs istructs.IAppStructs, f *filter, callback istructs.ExecQueryCallback,
 	iws appdef.IWorkspace) error {
 	rr := make([]istructs.RecordGetBatchItem, 0)
 
@@ -56,7 +57,7 @@ func readRecords(WSID istructs.WSID, qName appdef.QName, expr sqlparser.Expr, ap
 	}
 
 	if expr == nil {
-		r, e := appStructs.Records().GetSingleton(WSID, qName)
+		r, e := appStructs.Records().GetSingleton(wsid, qName)
 		if e != nil {
 			if errors.Is(e, istructsmem.ErrNameNotFound) {
 				return fmt.Errorf("'%s' is not a singleton. Please specify at least one record ID", qName)
@@ -70,7 +71,7 @@ func readRecords(WSID istructs.WSID, qName appdef.QName, expr sqlparser.Expr, ap
 		return errors.New("you have to provide at least one record ID")
 	}
 
-	err = appStructs.Records().GetBatch(WSID, true, rr)
+	err = appStructs.Records().GetBatch(wsid, true, rr)
 	if err != nil {
 		return err
 	}

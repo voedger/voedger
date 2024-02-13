@@ -11,12 +11,13 @@ import (
 	"strconv"
 
 	"github.com/blastrain/vitess-sqlparser/sqlparser"
+
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-func readViewRecords(ctx context.Context, WSID istructs.WSID, viewRecordQName appdef.QName, expr sqlparser.Expr, appStructs istructs.IAppStructs, f *filter, callback istructs.ExecQueryCallback,
+func readViewRecords(ctx context.Context, wsid istructs.WSID, viewRecordQName appdef.QName, expr sqlparser.Expr, appStructs istructs.IAppStructs, f *filter, callback istructs.ExecQueryCallback,
 	iws appdef.IWorkspace) error {
 	view := appStructs.AppDef().View(viewRecordQName)
 
@@ -108,7 +109,7 @@ func readViewRecords(ctx context.Context, WSID istructs.WSID, viewRecordQName ap
 		}
 	}
 
-	return appStructs.ViewRecords().Read(ctx, WSID, kb, func(key istructs.IKey, value istructs.IValue) (err error) {
+	return appStructs.ViewRecords().Read(ctx, wsid, kb, func(key istructs.IKey, value istructs.IValue) (err error) {
 		data := coreutils.FieldsToMap(key, iws, getFilter(f.filter), coreutils.WithNonNilsOnly())
 		for k, v := range coreutils.FieldsToMap(value, iws, getFilter(f.filter), coreutils.WithNonNilsOnly()) {
 			data[k] = v

@@ -14,7 +14,7 @@ import (
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-func readWlog(ctx context.Context, WSID istructs.WSID, offset istructs.Offset, count int, appStructs istructs.IAppStructs, f *filter, callback istructs.ExecQueryCallback,
+func readWlog(ctx context.Context, wsid istructs.WSID, offset istructs.Offset, count int, appStructs istructs.IAppStructs, f *filter, callback istructs.ExecQueryCallback,
 	iws appdef.IWorkspace) error {
 	if !f.acceptAll {
 		for field := range f.fields {
@@ -23,7 +23,7 @@ func readWlog(ctx context.Context, WSID istructs.WSID, offset istructs.Offset, c
 			}
 		}
 	}
-	return appStructs.Events().ReadWLog(ctx, WSID, offset, count, func(wlogOffset istructs.Offset, event istructs.IWLogEvent) (err error) {
+	return appStructs.Events().ReadWLog(ctx, wsid, offset, count, func(wlogOffset istructs.Offset, event istructs.IWLogEvent) (err error) {
 		data := make(map[string]interface{})
 
 		if f.filter("WlogOffset") {

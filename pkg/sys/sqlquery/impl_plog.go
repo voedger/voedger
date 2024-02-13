@@ -14,7 +14,7 @@ import (
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-func readPlog(ctx context.Context, WSID istructs.WSID, numCommandProcessors coreutils.CommandProcessorsCount, offset istructs.Offset, count int, appStructs istructs.IAppStructs, f *filter, callback istructs.ExecQueryCallback,
+func readPlog(ctx context.Context, wsid istructs.WSID, numCommandProcessors coreutils.CommandProcessorsCount, offset istructs.Offset, count int, appStructs istructs.IAppStructs, f *filter, callback istructs.ExecQueryCallback,
 	iws appdef.IWorkspace) error {
 	if !f.acceptAll {
 		for field := range f.fields {
@@ -23,7 +23,7 @@ func readPlog(ctx context.Context, WSID istructs.WSID, numCommandProcessors core
 			}
 		}
 	}
-	return appStructs.Events().ReadPLog(ctx, coreutils.PartitionID(WSID, numCommandProcessors), offset, count, func(plogOffset istructs.Offset, event istructs.IPLogEvent) (err error) {
+	return appStructs.Events().ReadPLog(ctx, coreutils.PartitionID(wsid, numCommandProcessors), offset, count, func(plogOffset istructs.Offset, event istructs.IPLogEvent) (err error) {
 		data := make(map[string]interface{})
 		if f.filter("PlogOffset") {
 			data["PlogOffset"] = plogOffset
