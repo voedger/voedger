@@ -8,6 +8,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -52,11 +53,11 @@ func runEdger(ctx context.Context, r io.Reader, commandInCh chan ctrlloop.Contro
 	decoder := json.NewDecoder(r)
 
 	var decodingErr error
-	for decodingErr != io.EOF && ctx.Err() == nil {
+	for !errors.Is(decodingErr, io.EOF) && ctx.Err() == nil {
 		var input InputControlMessage
 		decodingErr = decoder.Decode(&input)
 		if decodingErr != nil {
-			if decodingErr != io.EOF {
+			if !errors.Is(decodingErr, io.EOF) {
 				logger.Verbose("error decoding JSON:", decodingErr)
 			}
 			continue
