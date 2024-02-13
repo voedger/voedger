@@ -23,43 +23,9 @@ WORKSPACE DeviceProfileWS (
 	DESCRIPTOR DeviceProfile ();
 );
 
-WORKSPACE UserProfileWS (
-
+ALTERABLE WORKSPACE UserProfileWS (
 	DESCRIPTOR UserProfile (
 		DisplayName varchar
-	);
-
-	TABLE ChildWorkspace INHERITS CDoc (
-		WSName varchar NOT NULL,
-		WSKind qname NOT NULL,
-		WSKindInitializationData varchar(1024),
-		TemplateName varchar,
-		TemplateParams varchar(1024),
-		WSClusterID int32 NOT NULL,
-		WSID int64,           -- to be updated afterwards
-		WSError varchar(1024) -- to be updated afterwards
-	);
-
-	TYPE InitChildWorkspaceParams (
-		WSName text NOT NULL,
-		WSKind qname NOT NULL,
-		WSKindInitializationData text,
-		WSClusterID int32 NOT NULL,
-		TemplateName text,
-		TemplateParams text
-	);
-
-	VIEW ChildWorkspaceIdx (
-		dummy int32 NOT NULL,
-		WSName text NOT NULL,
-		ChildWorkspaceID int64 NOT NULL,
-		PRIMARY KEY ((dummy), WSName)
-	) AS RESULT OF ProjectorChildWorkspaceIdx;
-
-	EXTENSION ENGINE BUILTIN (
-		COMMAND InitChildWorkspace(InitChildWorkspaceParams);
-		PROJECTOR InvokeCreateWorkspaceID AFTER INSERT ON(ChildWorkspace);
-		SYNC PROJECTOR ProjectorChildWorkspaceIdx AFTER INSERT ON (ChildWorkspace) INTENTS(View(ChildWorkspaceIdx));
 	);
 );
 
@@ -419,6 +385,33 @@ ABSTRACT WORKSPACE Workspace (
 		PRIMARY KEY ((LoginHash), Login)
 	) AS RESULT OF ApplyViewSubjectsIdx;
 
+	TABLE ChildWorkspace INHERITS CDoc (
+		WSName varchar NOT NULL,
+		WSKind qname NOT NULL,
+		WSKindInitializationData varchar(1024),
+		TemplateName varchar,
+		TemplateParams varchar(1024),
+		WSClusterID int32 NOT NULL,
+		WSID int64,           -- to be updated afterwards
+		WSError varchar(1024) -- to be updated afterwards
+	);
+
+	TYPE InitChildWorkspaceParams (
+		WSName text NOT NULL,
+		WSKind qname NOT NULL,
+		WSKindInitializationData text,
+		WSClusterID int32 NOT NULL,
+		TemplateName text,
+		TemplateParams text
+	);
+
+	VIEW ChildWorkspaceIdx (
+		dummy int32 NOT NULL,
+		WSName text NOT NULL,
+		ChildWorkspaceID int64 NOT NULL,
+		PRIMARY KEY ((dummy), WSName)
+	) AS RESULT OF ProjectorChildWorkspaceIdx;
+
 	EXTENSION ENGINE BUILTIN (
 
 		-- blobber
@@ -512,10 +505,13 @@ ABSTRACT WORKSPACE Workspace (
 		COMMAND OnJoinedWorkspaceDeactivated(OnJoinedWorkspaceDeactivatedParams);
 		COMMAND OnChildWorkspaceDeactivated(OnChildWorkspaceDeactivatedParams);
 		COMMAND InitiateDeactivateWorkspace();
+		COMMAND InitChildWorkspace(InitChildWorkspaceParams);
 		PROJECTOR ApplyDeactivateWorkspace AFTER EXECUTE ON (InitiateDeactivateWorkspace);
 		PROJECTOR InvokeCreateWorkspace AFTER INSERT ON (WorkspaceID);
 		PROJECTOR InitializeWorkspace AFTER INSERT ON(WorkspaceDescriptor);
+		PROJECTOR InvokeCreateWorkspaceID AFTER INSERT ON(ChildWorkspace);
 		SYNC PROJECTOR ProjectorWorkspaceIDIdx AFTER INSERT ON (WorkspaceID) INTENTS(View(WorkspaceIDIdx));
+		SYNC PROJECTOR ProjectorChildWorkspaceIdx AFTER INSERT ON (ChildWorkspace) INTENTS(View(ChildWorkspaceIdx));
 	);
 );
 

@@ -251,7 +251,7 @@ func TestCtoolCommands(t *testing.T) {
 	err = execRootCmd([]string{"./ctool", "validate", "--dry-run"}, version)
 	require.NoError(err)
 
-	// понижаем версию ctool. Команда upgrade должна выдать ошибку
+	// downgrade ctool version, upgrade command must return an error
 	version = "0.0.1"
 	err = execRootCmd([]string{"./ctool", "upgrade", "--dry-run", "--ssh-key", "key"}, version)
 	require.Error(err)

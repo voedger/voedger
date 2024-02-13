@@ -14,7 +14,6 @@ import (
 type wLogStorage struct {
 	ctx        context.Context
 	eventsFunc eventsFunc
-	appDefFunc appDefFunc
 	wsidFunc   WSIDFunc
 }
 

@@ -57,13 +57,10 @@ func TestIntiateResetPasswordErrors(t *testing.T) {
 
 	t.Run("400 bad request on bad appQName", func(t *testing.T) {
 		body := fmt.Sprintf(`{"args":{"AppName":"wrong app","Email":"%s"},"elements":[{"fields":["VerificationToken","ProfileWSID"]}]}`, prn.Name)
-		vit.PostApp(istructs.AppQName_sys_registry, istructs.FirstBaseUserWSID, "q.registry.InitiateResetPasswordByEmail", body, coreutils.Expect400()).Println()
+		vit.PostApp(istructs.AppQName_sys_registry, prn.PseudoProfileWSID, "q.registry.InitiateResetPasswordByEmail", body, coreutils.Expect400()).Println()
 	})
 
-	t.Run("403 forbidden (wrong workspace) if called not at AppWS", func(t *testing.T) {
-		body := fmt.Sprintf(`{"args":{"AppName":"%s","Email":"%s"},"elements":[{"fields":["VerificationToken","ProfileWSID"]}]}`, istructs.AppQName_test1_app1, prn.Name)
-		vit.PostApp(istructs.AppQName_sys_registry, istructs.FirstBaseUserWSID, "q.registry.InitiateResetPasswordByEmail", body, coreutils.Expect403()).Println()
-	})
+	// note: test "called in non-AppWS" is senceless because now func is taken from the workspace -> 400 bad request + "func does not exist in the workspace" anyway
 
 	t.Run("400 bad request on an unknown login", func(t *testing.T) {
 		body := fmt.Sprintf(`{"args":{"AppName":"%s","Email":"unknown"},"elements":[{"fields":["VerificationToken","ProfileWSID"]}]}`, istructs.AppQName_test1_app1)
@@ -94,7 +91,9 @@ func TestIssueResetPasswordTokenErrors(t *testing.T) {
 	t.Run("400 bad request on bad appQName", func(t *testing.T) {
 		body := fmt.Sprintf(`{"args":{"VerificationToken":"%s","VerificationCode":"%s","ProfileWSID":%d,"AppName":"wrong app"},"elements":[{"fields":["VerifiedValueToken"]}]}`,
 			token, code, profileWSID)
-		vit.PostApp(istructs.AppQName_sys_registry, profileWSID, "q.registry.IssueVerifiedValueTokenForResetPassword", body, coreutils.Expect400()).Println()
+		// note: was at profileWSID. It does not works since https://github.com/voedger/voedger/issues/1311
+		// because sys/registry:profileWSID workspace is not initialized -> call at pseudoProfileWSID
+		vit.PostApp(istructs.AppQName_sys_registry, prn.PseudoProfileWSID, "q.registry.IssueVerifiedValueTokenForResetPassword", body, coreutils.Expect400()).Println()
 	})
 }
 

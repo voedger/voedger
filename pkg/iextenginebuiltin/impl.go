@@ -6,6 +6,7 @@ package iextenginebuiltin
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/voedger/voedger/pkg/iextengine"
 )
@@ -21,6 +22,11 @@ type extensionEngine struct {
 func (e extensionEngine) SetLimits(limits iextengine.ExtensionLimits) {}
 
 func (e extensionEngine) Invoke(ctx context.Context, extName iextengine.ExtQName, io iextengine.IExtensionIO) (err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("extension panic: %v", r)
+		}
+	}()
 	if f, ok := e.funcs[extName]; ok {
 		return f(ctx, io)
 	}

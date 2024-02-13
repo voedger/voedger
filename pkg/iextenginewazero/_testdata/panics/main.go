@@ -130,5 +130,13 @@ func asStringMemoryOverflow() {
 	value.AsBytes("bytes")
 }
 
+//export wrongFieldName
+func wrongFieldName() {
+	key := ext.KeyBuilder("sys.View", "pkg.TestView")
+	key.PutInt32("wrong", 1)
+	key.PutInt32("cc", 1)
+	ext.MustGetValue(key)
+}
+
 func main() {
 }

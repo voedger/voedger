@@ -23,9 +23,9 @@ func Provide(cfg *istructsmem.AppConfigType, asp istructs.IAppStructsProvider, i
 
 	cfg.Resources.Add(istructsmem.NewQueryFunction(
 		appdef.NewQName(RegistryPackage, "IssuePrincipalToken"),
-		provideIssuePrincipalTokenExec(asp, itokens)))
+		provideIssuePrincipalTokenExec(itokens)))
 	provideChangePassword(cfg)
-	provideResetPassword(cfg, asp, itokens, federation)
+	provideResetPassword(cfg, itokens, federation)
 	cfg.AddAsyncProjectors(provideAsyncProjectorFactoryInvokeCreateWorkspaceID(federation, cfg.Name, itokens))
 	return ProvidePackageFS()
 }
