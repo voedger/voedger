@@ -70,3 +70,5 @@ const errDomainsNotFound = "domains %s not found in cluster: %w"
 var ErrBackupFolderIsNotPrepared = errors.New("backup folder error")
 
 const errBackupFolderIsNotPrepared = "backup folder " + backupFolder + " is not prepared on host %s: %w"
+
+var ErrInvalidExpireTime = errors.New("invalid expire time")
