@@ -287,7 +287,7 @@ func testAppStorage_GetPutRead(t *testing.T, storage IAppStorage) {
 		require := require.New(t)
 
 		viewRecords := make(map[string][]byte)
-		reader := func(clustCols, viewRecord []byte) (err error) { //nolint:unparam // This err is used on IAppStorage.Read invocation
+		reader := func(clustCols, viewRecord []byte) (err error) { // This err is used on IAppStorage.Read invocation
 			viewRecords[string(viewRecord)] = append(clustCols[:0:0], clustCols...)
 			return err
 		}
@@ -394,7 +394,7 @@ func testAppStorage_PutBatch(t *testing.T, storage IAppStorage) {
 	require.Equal(items[2].Value, rr[2].value)
 }
 
-//nolint:revive,add-constant // This is part of exported test suit
+// nolint:revive,add-constant // This is part of exported test suit
 func testAppStorage_GetBatch(t *testing.T, storage IAppStorage) {
 	t.Run("Should get batch of existing records", func(t *testing.T) {
 		require := require.New(t)
@@ -504,7 +504,7 @@ func testAppStorage_GetBatch(t *testing.T, storage IAppStorage) {
 
 		items := make([]GetBatchItem, 2)
 
-		//Read NL batch
+		// Read NL batch
 		for i := range items {
 			items[i].CCols = batch[i].CCols
 			data := make([]byte, 0, 100)
@@ -520,7 +520,7 @@ func testAppStorage_GetBatch(t *testing.T, storage IAppStorage) {
 		require.True(items[1].Ok)
 		require.Equal(batch[1].Value, *items[1].Data)
 
-		//Read UK batch
+		// Read UK batch
 		for i := range items {
 			items[i].CCols = batch[i+2].CCols
 		}

@@ -9,13 +9,14 @@ import (
 	"context"
 	"encoding/binary"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"reflect"
 
 	"github.com/voedger/voedger/pkg/iblobstorage"
 	"github.com/voedger/voedger/pkg/istorage"
-	istructs "github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/istructs"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
@@ -70,7 +71,7 @@ func (b *bStorageType) WriteBLOB(ctx context.Context, key iblobstorage.KeyType, 
 			cCol++
 		}
 	}
-	if err == io.EOF {
+	if errors.Is(err, io.EOF) {
 		err = nil
 	}
 	state.FinishedAt = istructs.UnixMilli(b.now().UnixMilli())

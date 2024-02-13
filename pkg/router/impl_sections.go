@@ -140,10 +140,8 @@ func writeSectionedResponse(requestCtx context.Context, w http.ResponseWriter, s
 		} else {
 			writeResponse(w, fmt.Sprintf(`%s"status":%d,"errorDescription":"%s"}`, closer, http.StatusInternalServerError, *secErr))
 		}
-	} else {
-		if sectionedResponseStarted {
-			writeResponse(w, fmt.Sprintf(`%s}`, closer))
-		}
+	} else if sectionedResponseStarted {
+		writeResponse(w, fmt.Sprintf(`%s}`, closer))
 	}
 }
 
@@ -184,10 +182,8 @@ func writeSection(w http.ResponseWriter, isec ibus.ISection, requestCtx context.
 				}
 				isFirst = false
 				closer = "]}"
-			} else {
-				if !writeResponse(w, fmt.Sprintf(`,%s`, string(val))) {
-					return false
-				}
+			} else if !writeResponse(w, fmt.Sprintf(`,%s`, string(val))) {
+				return false
 			}
 		}
 		if !writeResponse(w, closer) {
@@ -215,10 +211,8 @@ func writeSection(w http.ResponseWriter, isec ibus.ISection, requestCtx context.
 				}
 				isFirst = false
 				closer = "}}"
-			} else {
-				if !writeResponse(w, fmt.Sprintf(`,%q:%s`, name, string(val))) {
-					return false
-				}
+			} else if !writeResponse(w, fmt.Sprintf(`,%q:%s`, name, string(val))) {
+				return false
 			}
 		}
 		if !writeResponse(w, closer) {

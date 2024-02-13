@@ -72,7 +72,7 @@ func isKeyspaceExists(name string, session *gocql.Session) (bool, error) {
 	q := "select keyspace_name from system_schema.keyspaces where keyspace_name = ?;"
 	logScript(q)
 	if err := session.Query(q, name).Scan(&dummy); err != nil {
-		if err == gocql.ErrNotFound {
+		if errors.Is(err, gocql.ErrNotFound) {
 			return false, nil
 		}
 		// notest

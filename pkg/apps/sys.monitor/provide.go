@@ -22,12 +22,12 @@ func New() ihttpctl.StaticResourcesType {
 	var err error
 	fsHello, err = fs.Sub(sysMonitorSiteHelloFS, "site.hello")
 	if err != nil {
-		//notest
+		// notest
 		panic(err)
 	}
 	fsMain, err = fs.Sub(sysMonitorSiteMainFS, "site.main")
 	if err != nil {
-		//notest
+		// notest
 		panic(err)
 	}
 	return ihttpctl.StaticResourcesType{

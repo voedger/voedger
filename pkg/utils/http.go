@@ -46,8 +46,9 @@ func ReplyErrf(sender ibus.ISender, status int, args ...interface{}) {
 }
 
 func ReplyErrDef(sender ibus.ISender, err error, defaultStatusCode int) {
-	res := WrapSysError(err, defaultStatusCode).(SysError)
-	ReplyJSON(sender, res.HTTPStatus, res.ToJSON())
+	var sysErr SysError
+	_ = errors.As(WrapSysError(err, defaultStatusCode), &sysErr)
+	ReplyJSON(sender, sysErr.HTTPStatus, sysErr.ToJSON())
 }
 
 func ReplyErr(sender ibus.ISender, err error) {

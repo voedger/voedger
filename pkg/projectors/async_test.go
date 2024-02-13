@@ -497,10 +497,10 @@ type pLogFiller struct {
 	cmdQName  appdef.QName
 }
 
-func (f *pLogFiller) fill(WSID istructs.WSID) (offset istructs.Offset) {
+func (f *pLogFiller) fill(wsid istructs.WSID) (offset istructs.Offset) {
 	reb := f.app.Events().GetNewRawEventBuilder(istructs.NewRawEventBuilderParams{
 		GenericRawEventBuilderParams: istructs.GenericRawEventBuilderParams{
-			Workspace:         WSID,
+			Workspace:         wsid,
 			HandlingPartition: f.partition,
 			PLogOffset:        f.offset,
 			QName:             f.cmdQName,

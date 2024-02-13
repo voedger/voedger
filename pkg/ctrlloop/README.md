@@ -45,7 +45,7 @@ Multiple set-points control loop
         DedupOut:::S        
         Controller[ControllerFunction]:::S
         ToBeReported[(ToBeReported)]:::S
-        InProcess[(InProcess)]:::S
+        inProcess[(inProcess)]:::S
     end
 
     %% Relations ====================
@@ -55,7 +55,7 @@ Multiple set-points control loop
     Scheduler --> |Key, SP, State| DedupIn
     repeat -.-> Scheduler
 
-    DedupIn -.-> InProcess
+    DedupIn -.-> inProcess
 
     Scheduler -.-> ScheduledItems
     ScheduledItems -.-> Scheduler
@@ -67,7 +67,7 @@ Multiple set-points control loop
     Caller -.-> |SP, State| Controller
     Controller -.-> |NewState, *PV, StartTime| Caller    
 
-    DedupOut -.-> InProcess
+    DedupOut -.-> inProcess
     DedupOut --> |Key, SP, State, *PV, StartTime| Repeater
     Repeater -->  |Key, PV| Reporter
     Repeater --> repeat

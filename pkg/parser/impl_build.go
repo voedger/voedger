@@ -805,7 +805,7 @@ func (c *buildContext) checkReference(pkg *PackageSchemaAST, table *TableStmt) e
 	}
 
 	if refTableType == nil {
-		//if it happened it means that error occurred
+		// if it happened it means that error occurred
 		return nil
 	}
 

@@ -52,7 +52,7 @@ func applyCancelAcceptedInvite(timeFunc coreutils.TimeFunc, federation coreutils
 			return
 		}
 
-		//Update subject
+		// Update subject
 		_, err = coreutils.FederationFunc(
 			federation.URL(),
 			fmt.Sprintf("api/%s/%d/c.sys.CUD", appQName, event.Workspace()),
@@ -63,7 +63,7 @@ func applyCancelAcceptedInvite(timeFunc coreutils.TimeFunc, federation coreutils
 			return
 		}
 
-		//Deactivate joined workspace
+		// Deactivate joined workspace
 		_, err = coreutils.FederationFunc(
 			federation.URL(),
 			fmt.Sprintf("api/%s/%d/c.sys.DeactivateJoinedWorkspace", appQName, svCDocInvite.AsInt64(field_InviteeProfileWSID)),
@@ -74,7 +74,7 @@ func applyCancelAcceptedInvite(timeFunc coreutils.TimeFunc, federation coreutils
 			return
 		}
 
-		//Update invite
+		// Update invite
 		_, err = coreutils.FederationFunc(
 			federation.URL(),
 			fmt.Sprintf("api/%s/%d/c.sys.CUD", appQName, event.Workspace()),

@@ -480,8 +480,8 @@ func (w rowsWorkpiece) PutEnrichedRootFieldKind(name string, kind appdef.DataKin
 	w.enrichedRootFieldsKinds[name] = kind
 }
 func (w rowsWorkpiece) Release() {
-	//TODO implement it someday
-	//Release goes here
+	// TODO implement it someday
+	// Release goes here
 }
 
 type outputRow struct {

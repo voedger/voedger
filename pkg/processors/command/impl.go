@@ -293,7 +293,8 @@ func checkWSInitialized(_ context.Context, work interface{}) (err error) {
 		return nil
 	}
 	if cmdQName == workspacemgmt.QNameCommandCreateWorkspace ||
-		cmdQName == builtin.QNameCommandInit { //nolint
+		cmdQName == workspacemgmt.QNameCommandCreateWorkspaceID || // happens on creating a child of an another workspace
+		cmdQName == builtin.QNameCommandInit {
 		return nil
 	}
 	if wsDesc.QName() != appdef.NullQName {

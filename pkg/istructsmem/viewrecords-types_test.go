@@ -1192,7 +1192,7 @@ func Test_ViewRecord_GetBatch(t *testing.T) {
 		batch := make([]istructs.ViewRecordGetBatchItem, 3)
 		batch[0].Key = app.ViewRecords().KeyBuilder(championsView)
 		batch[0].Key.PutInt32("Year", 1962)
-		//batch[0].Key.PutString("Sport", "Волейбол") // error here
+		// batch[0].Key.PutString("Sport", "Волейбол") // error here
 
 		err := app.ViewRecords().(*appViewRecords).GetBatch(1, batch)
 		require.ErrorIs(err, ErrFieldIsEmpty)

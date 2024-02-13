@@ -7,6 +7,7 @@ package router
 
 import (
 	"context"
+	"errors"
 	"log"
 	"net"
 	"net/http"
@@ -23,7 +24,7 @@ func (s *acmeService) Run(ctx context.Context) {
 		return ctx // need to track both client disconnect and app finalize
 	}
 	log.Println("Starting ACME HTTP server on :80")
-	if err := s.ListenAndServe(); err != http.ErrServerClosed {
+	if err := s.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
 		log.Println("ACME HTTP server failure: ", err.Error())
 	}
 }

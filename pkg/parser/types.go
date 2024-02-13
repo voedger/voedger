@@ -135,7 +135,7 @@ type WorkspaceStatement struct {
 	Table     *TableStmt              `parser:"| @@"`
 	Type      *TypeStmt               `parser:"| @@"`
 	Limit     *LimitStmt              `parser:"| @@"`
-	//Sequence  *sequenceStmt  `parser:"| @@"`
+	// Sequence  *sequenceStmt  `parser:"| @@"`
 	Grant *GrantStmt `parser:"| @@"`
 
 	stmt interface{}

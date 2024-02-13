@@ -29,7 +29,7 @@ var wLogDatesProjector = func(event istructs.IPLogEvent, s istructs.IState, inte
 	fo := lo
 	if ok {
 		if sv.AsInt64(field_LastOffset) >= lo {
-			//skip for idempotency
+			// skip for idempotency
 			return nil
 		}
 		fo = sv.AsInt64(field_FirstOffset)

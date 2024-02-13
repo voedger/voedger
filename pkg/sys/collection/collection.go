@@ -8,6 +8,7 @@ package collection
 
 import (
 	"github.com/untillpro/goutils/iterate"
+
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/state"
@@ -47,7 +48,7 @@ func collectionProjector(appDef appdef.IAppDef) func(event istructs.IPLogEvent, 
 				return
 			}
 			if ok && sv.AsInt64(state.ColOffset) >= int64(event.WLogOffset()) {
-				//skip for idempotency
+				// skip for idempotency
 				return
 			}
 			vb, err := intents.NewValue(kb)

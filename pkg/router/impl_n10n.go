@@ -111,8 +111,7 @@ func (s *httpService) subscribeAndWatchHandler() http.HandlerFunc {
 
 func n10nErrorToStatusCode(err error) int {
 	switch {
-	case errors.Is(err, in10n.ErrChannelDoesNotExist), errors.Is(err, in10nmemv1.ErrMetricDoesNotExists),
-		errors.Is(err, in10n.ErrChannelDoesNotExist):
+	case errors.Is(err, in10n.ErrChannelDoesNotExist), errors.Is(err, in10nmemv1.ErrMetricDoesNotExists):
 		return http.StatusBadRequest
 	case errors.Is(err, in10n.ErrQuotaExceeded_Subsciptions), errors.Is(err, in10n.ErrQuotaExceeded_SubsciptionsPerSubject),
 		errors.Is(err, in10n.ErrQuotaExceeded_Channels), errors.Is(err, in10n.ErrQuotaExceeded_ChannelsPerSubject):

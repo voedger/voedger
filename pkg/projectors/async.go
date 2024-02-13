@@ -8,12 +8,14 @@ package projectors
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync/atomic"
 	"time"
 
 	"github.com/untillpro/goutils/iterate"
 	"github.com/untillpro/goutils/logger"
+
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -379,7 +381,7 @@ func ActualizerOffset(appStructs istructs.IAppStructs, partition istructs.Partit
 	key.PutInt32(partitionFld, int32(partition))
 	key.PutQName(projectorNameFld, projectorName)
 	value, err := appStructs.ViewRecords().Get(istructs.NullWSID, key)
-	if err == istructsmem.ErrRecordNotFound {
+	if errors.Is(err, istructsmem.ErrRecordNotFound) {
 		return istructs.NullOffset, nil
 	}
 	if err != nil {

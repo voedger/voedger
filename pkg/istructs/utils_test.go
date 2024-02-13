@@ -460,7 +460,7 @@ func TestRateLimitKind_MarshalText(t *testing.T) {
 		b, err := rlk.MarshalText()
 		require.NoError(err)
 		if rlk == RateLimitKind_FakeLast {
-			require.Equal(fmt.Sprint(i), string(b))
+			require.Equal(strconv.Itoa(i), string(b))
 		} else {
 			require.Equal(rlk.String(), string(b))
 		}

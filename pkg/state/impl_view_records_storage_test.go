@@ -169,7 +169,7 @@ func TestViewRecordsStorage_ApplyBatch_should_return_error_on_put_batch(t *testi
 	require.ErrorIs(err, errTest)
 }
 
-func TestViewRecordsStorage_toJSON(t *testing.T) {
+func TestViewRecordsStorage_toJSON(_ *testing.T) {
 
 	appDef := appdef.New()
 

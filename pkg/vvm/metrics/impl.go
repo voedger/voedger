@@ -6,17 +6,19 @@ package metrics
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net"
 	"net/http"
 
 	"github.com/untillpro/goutils/logger"
+
 	imetrics "github.com/voedger/voedger/pkg/metrics"
 )
 
 func (ms *metricsService) Run(_ context.Context) {
 	logger.Info("Starting Metrics Service on", ms.listener.Addr().(*net.TCPAddr).String())
-	if err := ms.Serve(ms.listener); err != http.ErrServerClosed {
+	if err := ms.Serve(ms.listener); !errors.Is(err, http.ErrServerClosed) {
 		panic("metrics service failure: " + err.Error())
 	}
 }

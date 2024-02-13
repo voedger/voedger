@@ -12,7 +12,7 @@ import (
 	"github.com/blastrain/vitess-sqlparser/sqlparser"
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
-	istructsmem "github.com/voedger/voedger/pkg/istructsmem"
+	"github.com/voedger/voedger/pkg/istructsmem"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 

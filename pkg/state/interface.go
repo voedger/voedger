@@ -17,22 +17,22 @@ type IStateStorage interface {
 	NewKeyBuilder(entity appdef.QName, existingKeyBuilder istructs.IStateKeyBuilder) (newKeyBuilder istructs.IStateKeyBuilder)
 }
 type IWithGet interface {
-	//Get reads item from storage
-	//Nil value returned when item not found
+	// Get reads item from storage
+	// Nil value returned when item not found
 	Get(key istructs.IStateKeyBuilder) (value istructs.IStateValue, err error)
 }
 type IWithGetBatch interface {
-	//GetBatch reads items from storage
+	// GetBatch reads items from storage
 	GetBatch(items []GetBatchItem) (err error)
 }
 type IWithRead interface {
-	//Read reads items with callback. Can return many more than 1 item for the same get
+	// Read reads items with callback. Can return many more than 1 item for the same get
 	Read(key istructs.IStateKeyBuilder, callback istructs.ValueCallback) (err error)
 }
 type IWithApplyBatch interface {
-	//Validate validates batch before store
+	// Validate validates batch before store
 	Validate(items []ApplyBatchItem) (err error)
-	//ApplyBatch applies batch to storage
+	// ApplyBatch applies batch to storage
 	ApplyBatch(items []ApplyBatchItem) (err error)
 }
 type IWithInsert interface {
@@ -53,11 +53,11 @@ type IHostState interface {
 	istructs.IState
 	istructs.IIntents
 
-	//ValidateIntents validates intents
+	// ValidateIntents validates intents
 	ValidateIntents() (err error)
-	//ApplyIntents applies intents to underlying storage
+	// ApplyIntents applies intents to underlying storage
 	ApplyIntents() (err error)
-	//ClearIntents clears intents
+	// ClearIntents clears intents
 	ClearIntents()
 }
 
@@ -67,9 +67,9 @@ type IBundledHostState interface {
 	istructs.IState
 	istructs.IIntents
 
-	//ApplyIntents validates and stores intents to bundles
+	// ApplyIntents validates and stores intents to bundles
 	ApplyIntents() (readyToFlushBundle bool, err error)
 
-	//FlushBundles flushes bundles to underlying storage and resets the bundles
+	// FlushBundles flushes bundles to underlying storage and resets the bundles
 	FlushBundles() (err error)
 }

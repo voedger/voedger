@@ -308,7 +308,7 @@ func IncBytes(cur []byte) (next []byte) {
 	var incByte func(i int)
 	incByte = func(i int) {
 		if next[i] != math.MaxUint8 {
-			next[i] = next[i] + 1
+			next[i]++
 			return
 		}
 		next[i] = 0

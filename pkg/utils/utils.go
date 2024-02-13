@@ -6,6 +6,7 @@
 package coreutils
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -13,6 +14,10 @@ import (
 
 	"github.com/voedger/voedger/pkg/istructs"
 )
+
+type IErrUnwrapper interface {
+	Unwrap() []error
+}
 
 func IsBlank(str string) bool {
 	return len(strings.TrimSpace(str)) == 0
@@ -60,8 +65,9 @@ func PartitionID(wsid istructs.WSID, numCommandProcessors CommandProcessorsCount
 
 func SplitErrors(joinedError error) (errs []error) {
 	if joinedError != nil {
-		if e, ok := joinedError.(interface{ Unwrap() []error }); ok {
-			return e.Unwrap()
+		var pErr IErrUnwrapper
+		if errors.As(joinedError, &pErr) {
+			return pErr.Unwrap()
 		}
 		return []error{joinedError}
 	}

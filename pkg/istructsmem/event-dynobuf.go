@@ -222,7 +222,7 @@ func loadEventBuildError(ev *eventType, buf *bytes.Buffer) (err error) {
 
 	ev.buildErr.bytes = make([]byte, bytesLen)
 	if _, err = buf.Read(ev.buildErr.bytes); err != nil {
-		//no test: possible error (only EOF) is handled above
+		// no test: possible error (only EOF) is handled above
 		return fmt.Errorf("error read event source raw bytes: %w", err)
 	}
 
