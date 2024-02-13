@@ -228,7 +228,7 @@ func TestCtoolCommands(t *testing.T) {
 
 	// repeat command init should give an error
 	err = execRootCmd([]string{"./ctool", "init", "SE", "10.0.0.21", "10.0.0.22", "10.0.0.23", "10.0.0.24", "10.0.0.25", "--dry-run", "--ssh-key", "key"}, version)
-	require.Error(err, err)
+	require.Error(err)
 
 	// execute the replace command
 	err = execRootCmd([]string{"./ctool", "replace", "db-node-1", "10.0.0.28", "--dry-run", "--ssh-key", "key"}, version)
@@ -236,11 +236,11 @@ func TestCtoolCommands(t *testing.T) {
 
 	// replace node to the address from the list of Replacedaddresses should give an error
 	err = execRootCmd([]string{"./ctool", "replace", "10.0.0.28", "10.0.0.23", "--dry-run", "--ssh-key", "key"}, version)
-	require.Error(err, err)
+	require.Error(err)
 
 	// upgrade without changing the ctool version should give an error
 	err = execRootCmd([]string{"./ctool", "upgrade", "--dry-run", "--ssh-key", "key"}, version)
-	require.Error(err, err)
+	require.Error(err
 
 	// increase the ctool version.Upgrade is performed without error
 	version = "0.0.2"
@@ -254,7 +254,7 @@ func TestCtoolCommands(t *testing.T) {
 	// понижаем версию ctool. Команда upgrade должна выдать ошибку
 	version = "0.0.1"
 	err = execRootCmd([]string{"./ctool", "upgrade", "--dry-run", "--ssh-key", "key"}, version)
-	require.Error(err, err)
+	require.Error(err)
 }
 
 func TestAcmeDomains(t *testing.T) {
@@ -267,10 +267,10 @@ func TestAcmeDomains(t *testing.T) {
 	require.Equal("domain1.io,domain2.io", cluster.Acme.domains())
 
 	cluster.Acme.addDomains("domain2.io,domain3,domain4")
-	require.Equal(cluster.Acme.domains(), "domain1.io,domain2.io,domain3,domain4")
+	require.Equal("domain1.io,domain2.io,domain3,domain4", cluster.Acme.domains())
 
 	cluster.Acme.removeDomains("domain2.io,domain4")
-	require.Equal(cluster.Acme.domains(), "domain1.io,domain3")
+	require.Equal("domain1.io,domain3", cluster.Acme.domains())
 }
 
 // Testing the availability of the variable environment from scripts caused by PipedExec
