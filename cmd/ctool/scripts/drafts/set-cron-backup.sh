@@ -7,11 +7,16 @@
 set -euo pipefail
 set -x
 
-if [ $# -ne 2 ]; then
-  echo "Usage: $0 <cron schedule time> <ssh port>"  
+if [ $# -ne 2 ] && [ $# -ne 3 ]; then
+  echo "Usage: $0 <cron schedule time> <ssh port> [<expire time>]"  
   exit 1
 fi
 
+if [ $# -eq 3 ]; then
+    EXPIRE="--expire $3"
+else
+    EXPIRE=""
+fi
 SCHEDULE=$1
 SSH_PORT=$2
 SSH_USER=$LOGNAME
@@ -32,7 +37,7 @@ set_cron_schedule(){
       crontab -l | grep -v "backup node" > "${CRON_FILE}"
     fi
 
-    echo "${SCHEDULE} BACKUP_FOLDER=${BACKUP_FOLDER};${CTOOL_PATH} backup node ${DB_NODE_1_HOST} \${BACKUP_FOLDER} ${KEY_PATH} --ssh-port ${SSH_PORT};${CTOOL_PATH} backup node ${DB_NODE_2_HOST} \${BACKUP_FOLDER} ${KEY_PATH} --ssh-port ${SSH_PORT};${CTOOL_PATH} backup node ${DB_NODE_3_HOST} \${BACKUP_FOLDER} ${KEY_PATH} --ssh-port ${SSH_PORT}" >> "${CRON_FILE}"
+    echo "${SCHEDULE} BACKUP_FOLDER=${BACKUP_FOLDER};${CTOOL_PATH} backup node ${DB_NODE_1_HOST} \${BACKUP_FOLDER} ${KEY_PATH} --ssh-port ${SSH_PORT} ${EXPIRE};${CTOOL_PATH} backup node ${DB_NODE_2_HOST} \${BACKUP_FOLDER} ${KEY_PATH} --ssh-port ${SSH_PORT} ${EXPIRE};${CTOOL_PATH} backup node ${DB_NODE_3_HOST} \${BACKUP_FOLDER} ${KEY_PATH} --ssh-port ${SSH_PORT} ${EXPIRE}" >> "${CRON_FILE}"
     echo "Modified cron file:"
     cat "${CRON_FILE}"
     crontab "${CRON_FILE}"

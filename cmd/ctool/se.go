@@ -674,7 +674,7 @@ func setCronBackup(cluster *clusterType, backupTime string) error {
 	loggerInfo("Setting a cron schedule for database backup ", backupTime)
 
 	if err := newScriptExecuter(cluster.sshKey, "").
-		run("set-cron-backup-ssh.sh", backupTime, cluster.SshPort); err != nil {
+		run("set-cron-backup-ssh.sh", backupTime, cluster.SshPort, cluster.Cron.ExpireTime); err != nil {
 		return err
 	}
 
