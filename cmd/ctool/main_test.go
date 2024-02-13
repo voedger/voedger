@@ -172,19 +172,19 @@ func TestClusterJSON(t *testing.T) {
 
 	c := successSECluster()
 	err := c.saveToJSON()
-	require.NoError(err, err)
+	require.NoError(err)
 
 	c = failSECluster()
 	err = c.saveToJSON()
-	require.NoError(err, err)
+	require.NoError(err)
 
 	c = successCECluster()
 	err = c.saveToJSON()
-	require.NoError(err, err)
+	require.NoError(err)
 
 	c = failCECluster()
 	err = c.saveToJSON()
-	require.NoError(err, err)
+	require.NoError(err)
 
 }
 
@@ -206,25 +206,25 @@ func TestCtoolCommands(t *testing.T) {
 	version = "0.0.1"
 	deleteDryRunDir()
 	err := deleteClusterJson()
-	require.NoError(err, err)
+	require.NoError(err)
 
 	defer deleteDryRunDir()
 
 	// Version command is performed without error
 	err = execRootCmd([]string{"./ctool", "version", "--dry-run"}, version)
-	require.NoError(err, err)
+	require.NoError(err)
 
 	// the command validate return the error because the configuration of the cluster has not yet been created
 	err = execRootCmd([]string{"./ctool", "validate", "--dry-run"}, version)
-	require.Error(err, err)
+	require.Error(err)
 
 	// execute the init command
 	err = execRootCmd([]string{"./ctool", "init", "SE", "10.0.0.21", "10.0.0.22", "10.0.0.23", "10.0.0.24", "10.0.0.25", "--dry-run", "--ssh-key", "key", "--acme-domain", "domain1,domain2,domain3"}, version)
-	require.NoError(err, err)
+	require.NoError(err)
 
 	dryRun = true
 	cluster := newCluster()
-	require.Equal(cluster.Acme.domains(), "domain1,domain2,domain3")
+	require.Equal("domain1,domain2,domain3", cluster.Acme.domains())
 
 	// repeat command init should give an error
 	err = execRootCmd([]string{"./ctool", "init", "SE", "10.0.0.21", "10.0.0.22", "10.0.0.23", "10.0.0.24", "10.0.0.25", "--dry-run", "--ssh-key", "key"}, version)
@@ -232,7 +232,7 @@ func TestCtoolCommands(t *testing.T) {
 
 	// execute the replace command
 	err = execRootCmd([]string{"./ctool", "replace", "db-node-1", "10.0.0.28", "--dry-run", "--ssh-key", "key"}, version)
-	require.NoError(err, err)
+	require.NoError(err)
 
 	// replace node to the address from the list of Replacedaddresses should give an error
 	err = execRootCmd([]string{"./ctool", "replace", "10.0.0.28", "10.0.0.23", "--dry-run", "--ssh-key", "key"}, version)
@@ -245,11 +245,11 @@ func TestCtoolCommands(t *testing.T) {
 	// increase the ctool version.Upgrade is performed without error
 	version = "0.0.2"
 	err = execRootCmd([]string{"./ctool", "upgrade", "--dry-run", "--ssh-key", "key"}, version)
-	require.NoError(err, err)
+	require.NoError(err)
 
 	// after a successful upgrade, command validate should work without errors
 	err = execRootCmd([]string{"./ctool", "validate", "--dry-run"}, version)
-	require.NoError(err, err)
+	require.NoError(err)
 
 	// понижаем версию ctool. Команда upgrade должна выдать ошибку
 	version = "0.0.1"
@@ -261,10 +261,10 @@ func TestAcmeDomains(t *testing.T) {
 	require := require.New(t)
 
 	cluster := newCluster()
-	require.Equal(cluster.Acme.domains(), "")
+	require.Equal("", cluster.Acme.domains())
 
 	cluster.Acme.Domains = []string{"domain1.io", "domain2.io"}
-	require.Equal(cluster.Acme.domains(), "domain1.io,domain2.io")
+	require.Equal("domain1.io,domain2.io", cluster.Acme.domains())
 
 	cluster.Acme.addDomains("domain2.io,domain3,domain4")
 	require.Equal(cluster.Acme.domains(), "domain1.io,domain2.io,domain3,domain4")
@@ -289,27 +289,27 @@ if [ "$TEST_VAR" != "test_value" ]; then
 fi
 `
 	err := createScriptsTempDir()
-	require.NoError(err, err)
+	require.NoError(err)
 
 	defer func() {
 		err := deleteScriptsTempDir()
-		require.NoError(err, err)
+		require.NoError(err)
 	}()
 
 	err = ioutil.WriteFile(filepath.Join(scriptsTempDir, "test-script.sh"), []byte(script), 0700)
-	require.NoError(err, err)
+	require.NoError(err)
 
 	err = os.Setenv("TEST_VAR", "test_value")
-	require.NoError(err, err)
+	require.NoError(err)
 
 	err = newScriptExecuter("", "").run("test-script.sh")
-	require.NoError(err, err)
+	require.NoError(err)
 
 	err = os.Setenv("TEST_VAR", "new_test_value")
-	require.NoError(err, err)
+	require.NoError(err)
 
 	err = newScriptExecuter("", "").run("test-script.sh")
-	require.Error(err, err)
+	require.Error(err)
 }
 
 func deleteClusterJson() error {
