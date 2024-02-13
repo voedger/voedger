@@ -484,7 +484,8 @@ func validateAcmeRemoveCmd(cmd *cmdType, cluster *clusterType) error {
 }
 
 type cronType struct {
-	Backup string `json:"Backup,omitempty"`
+	Backup     string `json:"Backup,omitempty"`
+	ExpireTime string `json:"ExpireTime,omitempty"`
 }
 
 type acmeType struct {

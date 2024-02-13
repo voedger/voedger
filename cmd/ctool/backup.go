@@ -11,12 +11,15 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/spf13/cobra"
 
 	"github.com/robfig/cron/v3"
 )
+
+var expireTime string
 
 // nolint
 func newBackupCmd() *cobra.Command {
@@ -33,6 +36,7 @@ func newBackupCmd() *cobra.Command {
 	}
 
 	backupNodeCmd.PersistentFlags().StringVarP(&sshPort, "ssh-port", "p", "22", "SSH port")
+	backupNodeCmd.PersistentFlags().StringVar(&expireTime, "expire", "e", "Expire time for backup (e.g. 7d, 1m)")
 
 	backupCronCmd := &cobra.Command{
 		Use:   "cron [<cron event>]",
@@ -50,6 +54,7 @@ func newBackupCmd() *cobra.Command {
 		loggerError(err.Error())
 		return nil
 	}
+	backupCronCmd.PersistentFlags().StringVar(&expireTime, "expire", "e", "Expire time for backup (e.g. 7d, 1m)")
 
 	backupListCmd := &cobra.Command{
 		Use:   "list",
@@ -77,6 +82,47 @@ func newBackupCmd() *cobra.Command {
 
 	return backupCmd
 
+}
+
+type expireType struct {
+	value int
+	unit  string
+}
+
+func (e *expireType) validate() error {
+	if e.unit != "d" && e.unit != "m" {
+		return ErrInvalidExpireTime
+	}
+
+	if e.value <= 0 {
+		return ErrInvalidExpireTime
+	}
+
+	return nil
+}
+
+func (e *expireType) string() string {
+	return fmt.Sprintf("%d%s", e.value, e.unit)
+}
+
+func newExpireType(str string) (*expireType, error) {
+	unit := string(str[len(str)-1])
+	valueStr := str[:len(str)-1]
+	value, err := strconv.Atoi(valueStr)
+	if err != nil {
+		return nil, ErrInvalidExpireTime
+	}
+
+	expire := &expireType{
+		value: value,
+		unit:  unit,
+	}
+
+	if err := expire.validate(); err != nil {
+		return nil, err
+	}
+
+	return expire, nil
 }
 
 // nolint
@@ -122,9 +168,22 @@ func backupNode(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	if expireTime != "" {
+		expire, e := newExpireType(expireTime)
+		if e != nil {
+			return e
+		}
+		cluster.Cron.ExpireTime = expire.string()
+	}
+
 	loggerInfo("Backup node", strings.Join(args, " "))
 	if err = newScriptExecuter("", "").
 		run("backupnode.sh", args...); err != nil {
+		return err
+	}
+
+	cluster.sshKey = args[2]
+	if err = deleteExpireBacups(cluster, args[0]); err != nil {
 		return err
 	}
 
@@ -135,6 +194,14 @@ func backupCron(cmd *cobra.Command, args []string) error {
 	cluster := newCluster()
 	if cluster.Draft {
 		return ErrClusterConfNotFound
+	}
+
+	if len(expireTime) > 0 {
+		expire, err := newExpireType(expireTime)
+		if err != nil {
+			return err
+		}
+		cluster.Cron.ExpireTime = expire.string()
 	}
 
 	Cmd := newCmd(ckBackup, append([]string{"cron"}, args...))
@@ -230,4 +297,19 @@ func getBackupList(cluster *clusterType) (string, error) {
 	}
 
 	return string(fContent), err
+}
+
+func deleteExpireBacups(cluster *clusterType, hostAddr string) error {
+
+	if cluster.Cron.ExpireTime == "" {
+		return nil
+	}
+
+	loggerInfo("Search and delete expire backups on", hostAddr)
+	if err := newScriptExecuter(cluster.sshKey, "").
+		run("delete-expire-backups-ssh.sh", hostAddr, backupFolder, cluster.Cron.ExpireTime); err != nil {
+		return err
+	}
+
+	return nil
 }
