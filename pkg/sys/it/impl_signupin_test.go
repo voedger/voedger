@@ -92,7 +92,9 @@ func TestCreateLoginErrors(t *testing.T) {
 		resp.RequireContainsError(t, "failed to parse app qualified name")
 	})
 
-	vit.SignUp(login, "1", istructs.AppQName_test1_app1)
+	newLogin := vit.SignUp(login, "1", istructs.AppQName_test1_app1)
+	// wait for acomplishing the profile init
+	vit.SignIn(newLogin)
 
 	t.Run("create an existing login again", func(t *testing.T) {
 		vit.SignUp(login, "1", istructs.AppQName_test1_app1, it.WithReqOpt(coreutils.Expect409()))
@@ -138,7 +140,9 @@ func TestSignInErrors(t *testing.T) {
 		vit.PostApp(istructs.AppQName_sys_registry, pseudoWSID, "q.registry.IssuePrincipalToken", body, coreutils.Expect401()).Println()
 	})
 
-	vit.SignUp(login, "1", istructs.AppQName_test1_app1)
+	newLogin := vit.SignUp(login, "1", istructs.AppQName_test1_app1)
+	// wait for acomplishing the profile init
+	vit.SignIn(newLogin)
 
 	t.Run("wrong password", func(t *testing.T) {
 		body := fmt.Sprintf(`{"args": {"Login": "%s","Password": "wrongPass","AppName": "%s"},"elements":[{"fields":[]}]}`,
