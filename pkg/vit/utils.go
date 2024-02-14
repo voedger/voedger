@@ -182,6 +182,7 @@ func (vit *VIT) waitForWorkspace(wsName string, owner *Principal, respGetter fun
 					TemplateName:   resp.SectionRow()[tmplNameIdx].(string),
 					TemplateParams: resp.SectionRow()[tmplParamsIdx].(string),
 					ClusterID:      istructs.MainClusterID,
+					ownerLoginName: owner.Name,
 				},
 				WSID:    wsid,
 				WSError: wsError,
