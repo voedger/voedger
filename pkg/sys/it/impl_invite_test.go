@@ -36,7 +36,7 @@ func TestInvite_BasicUsage(t *testing.T) {
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 	wsName := "TestInvite_BasicUsage_ws"
-	wsParams := it.DummyWSParams(wsName)
+	wsParams := it.SimpleWSParams(wsName)
 	updateRolesEmailTemplate := "text:" + invite.EmailTemplatePlaceholder_Roles
 	updateRolesEmailSubject := "your roles are updated"
 	expireDatetime := vit.Now().UnixMilli()
@@ -265,7 +265,7 @@ func TestCancelSentInvite(t *testing.T) {
 	email := fmt.Sprintf("testcancelsentinvite_%d@123.com", vit.NextNumber())
 	login := vit.SignUp(email, "1", istructs.AppQName_test1_app1)
 	loginPrn := vit.SignIn(login)
-	wsParams := it.DummyWSParams("TestCancelSentInvite_ws")
+	wsParams := it.SimpleWSParams("TestCancelSentInvite_ws")
 	ws := vit.CreateWorkspace(wsParams, loginPrn)
 
 	t.Run("basic usage", func(t *testing.T) {
