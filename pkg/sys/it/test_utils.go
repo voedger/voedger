@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"regexp"
+	"runtime"
 	"testing"
 	"time"
 
@@ -96,7 +97,8 @@ func WaitForInviteState(vit *it.VIT, ws *it.AppWorkspace, inviteID int64, invite
 			break
 		}
 	}
-	vit.T.Fatalf("invite %d is failed achieve the state %d. The last state was %d", inviteID, inviteStatesSeq[len(inviteStatesSeq)-1], actualInviteState)
+	_, file, line, _ := runtime.Caller(1)
+	vit.T.Fatalf("%s:%d: invite %d is failed achieve the state %d. The last state was %d", file, line, inviteID, inviteStatesSeq[len(inviteStatesSeq)-1], actualInviteState)
 }
 
 type joinedWorkspaceDesc struct {
