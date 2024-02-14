@@ -75,19 +75,13 @@ func mockedAppStructs() istructs.IAppStructs {
 		On("NewValueBuilder", testViewRecordQName1).Return(mvb2).Once().
 		On("PutBatch", istructs.WSID(1), mock.AnythingOfType("[]istructs.ViewKV")).Return(nil)
 
-	appDefBuilder := appdef.New()
-	view := appDefBuilder.AddView(testViewRecordQName1)
+	appDef := appdef.New()
+	view := appDef.AddView(testViewRecordQName1)
 	view.KeyBuilder().PartKeyBuilder().AddField("pkFld", appdef.DataKind_int64)
 	view.KeyBuilder().ClustColsBuilder().AddField("ccFld", appdef.DataKind_string)
 	view.ValueBuilder().
 		AddField("vFld", appdef.DataKind_int64, true).
 		AddField(ColOffset, appdef.DataKind_int64, true)
-	ws := appDefBuilder.AddWorkspace(testWSQName)
-	ws.AddType(testViewRecordQName1)
-	appDef, err := appDefBuilder.Build()
-	if err != nil {
-		panic(err)
-	}
 
 	appStructs := &mockAppStructs{}
 	appStructs.
@@ -136,7 +130,6 @@ func TestAsyncActualizerState_BasicUsage_Old(t *testing.T) {
 		On("ViewRecords").Return(viewRecords).
 		On("Events").Return(&nilEvents{}).
 		On("Records").Return(&nilRecords{})
-
 	s := ProvideAsyncActualizerStateFactory()(context.Background(), appStructs, nil, SimpleWSIDFunc(istructs.WSID(1)), n10nFn, nil, 2, 1)
 
 	//Create key

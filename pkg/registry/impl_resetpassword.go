@@ -18,13 +18,13 @@ import (
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-func provideResetPassword(cfgRegistry *istructsmem.AppConfigType, itokens itokens.ITokens, federation coreutils.IFederation) {
+func provideResetPassword(cfgRegistry *istructsmem.AppConfigType, asp istructs.IAppStructsProvider, itokens itokens.ITokens, federation coreutils.IFederation) {
 
 	// sys/registry/pseudoProfileWSID/q.sys.InitiateResetPasswordByEmail
 	// null auth
 	cfgRegistry.Resources.Add(istructsmem.NewQueryFunction(
 		QNameQueryInitiateResetPasswordByEmail,
-		provideQryInitiateResetPasswordByEmailExec(itokens, federation),
+		provideQryInitiateResetPasswordByEmailExec(asp, itokens, federation),
 	))
 
 	// sys/registry/pseudoProfileWSID/q.registry.IssueVerifiedValueTokenForResetPassword
@@ -42,7 +42,7 @@ func provideResetPassword(cfgRegistry *istructsmem.AppConfigType, itokens itoken
 
 // sys/registry/pseudoWSID
 // null auth
-func provideQryInitiateResetPasswordByEmailExec(itokens itokens.ITokens, federation coreutils.IFederation) istructsmem.ExecQueryClosure {
+func provideQryInitiateResetPasswordByEmailExec(asp istructs.IAppStructsProvider, itokens itokens.ITokens, federation coreutils.IFederation) istructsmem.ExecQueryClosure {
 	return func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 		loginAppStr := args.ArgumentObject.AsString(authnz.Field_AppName)
 		email := args.ArgumentObject.AsString(field_Email)
@@ -54,7 +54,17 @@ func provideQryInitiateResetPasswordByEmailExec(itokens itokens.ITokens, federat
 			return coreutils.NewHTTPError(http.StatusBadRequest, err)
 		}
 
-		cdocLoginID, err := GetCDocLoginID(args.State, args.WSID, loginAppStr, login)
+		as, err := asp.AppStructs(loginAppQName)
+		if err != nil {
+			return err
+		}
+
+		// request is sent to pseudoProfileWSID, translated to AppWS
+		if err = CheckAppWSID(login, args.Workspace, as.WSAmount()); err != nil {
+			return err
+		}
+
+		cdocLoginID, err := GetCDocLoginID(args.State, args.Workspace, loginAppStr, login)
 		if err != nil {
 			return err
 		}
@@ -130,7 +140,7 @@ func cmdResetPasswordByEmailExec(args istructs.ExecCommandArgs) (err error) {
 	appName := args.ArgumentObject.AsString(authnz.Field_AppName)
 	login := email
 
-	return ChangePassword(login, args.State, args.Intents, args.WSID, appName, newPwd)
+	return ChangePassword(login, args.State, args.Intents, args.Workspace, appName, newPwd)
 }
 
 func (r *result) AsString(string) string {

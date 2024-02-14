@@ -22,7 +22,6 @@ var (
 	testViewRecordQName1 = appdef.NewQName("test", "viewRecord1")
 	testViewRecordQName2 = appdef.NewQName("test", "viewRecord2")
 	testStorage          = appdef.NewQName("test", "testStorage")
-	testWSQName          = appdef.NewQName("test", "testWS")
 )
 
 func TestSimpleWSIDFunc(t *testing.T) {

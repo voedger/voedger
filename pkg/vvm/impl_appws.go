@@ -17,7 +17,6 @@ import (
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-// TODO: currently AppWorkspace are created automatically at MainClusterID only. Any request to any other ClusterID -> `workspace is not initialized` error
 func BuildAppWorkspaces(vvm *VVM, vvmConfig *VVMConfig) error {
 	for appQName := range vvm.AppConfigsType {
 		pLogOffsets := map[istructs.PartitionID]istructs.Offset{}

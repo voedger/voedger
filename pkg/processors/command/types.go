@@ -38,7 +38,7 @@ type ICommandMessage interface {
 	Sender() ibus.ISender
 	PartitionID() istructs.PartitionID
 	RequestCtx() context.Context
-	QName() appdef.QName
+	Command() appdef.ICommand
 	Token() string
 	Host() string
 }
@@ -80,9 +80,7 @@ type cmdWorkpiece struct {
 	cmdResultBuilder             istructs.IObjectBuilder
 	cmdResult                    istructs.IObject
 	resources                    istructs.IResources
-	cmdExec                      func(args istructs.ExecCommandArgs) error
-	iCommand                     appdef.ICommand
-	iWorkspace                   appdef.IWorkspace
+	cmdFunc                      istructs.ICommandFunction
 	appPartitionRestartScheduled bool
 }
 
@@ -107,7 +105,7 @@ type implICommandMessage struct {
 	sender      ibus.ISender
 	partitionID istructs.PartitionID
 	requestCtx  context.Context
-	qName       appdef.QName
+	command     appdef.ICommand
 	token       string
 	host        string
 }
@@ -140,8 +138,7 @@ func (p *hostStateProvider) getPrincipals() []iauthnz.Principal {
 }
 func (p *hostStateProvider) getToken() string                             { return p.token }
 func (p *hostStateProvider) getCmdResultBuilder() istructs.IObjectBuilder { return p.cmdResultBuilder }
-func (p *hostStateProvider) get(appStructs istructs.IAppStructs, wsid istructs.WSID, cud istructs.ICUD, principals []iauthnz.Principal, token string,
-	cmdResultBuilder istructs.IObjectBuilder) state.IHostState {
+func (p *hostStateProvider) get(appStructs istructs.IAppStructs, wsid istructs.WSID, cud istructs.ICUD, principals []iauthnz.Principal, token string, cmdResultBuilder istructs.IObjectBuilder) state.IHostState {
 	p.as = appStructs
 	p.wsid = wsid
 	p.cud = cud

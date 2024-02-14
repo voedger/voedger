@@ -17,7 +17,7 @@ func TestRates_BasicUsage(t *testing.T) {
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
-	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+	ws := vit.DummyWS(istructs.AppQName_test1_app1, 42+istructs.MaxPseudoBaseWSID)
 	bodyQry := `{"args":{}, "elements":[{"path":"","fields":["Fld"]}]}`
 	bodyCmd := `{"args":{}}`
 
