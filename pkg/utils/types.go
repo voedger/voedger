@@ -77,3 +77,7 @@ func (r *PathReader) ReadDir(name string) ([]os.DirEntry, error) {
 func (r *PathReader) ReadFile(name string) ([]byte, error) {
 	return os.ReadFile(filepath.Join(r.rootPath, name))
 }
+
+type IErrUnwrapper interface {
+	Unwrap() []error
+}

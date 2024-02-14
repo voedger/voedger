@@ -86,12 +86,12 @@ func parseGoModFile(goModPath string) (*modfile.File, error) {
 	// TODO: checkout behaviour of modfile if we got replace in go.mod
 	content, err := os.ReadFile(goModPath)
 	if err != nil {
-		return nil, fmt.Errorf("reading %s: %v", goModPath, err)
+		return nil, fmt.Errorf("reading %s: %w", goModPath, err)
 	}
 
 	modFile, err := modfile.ParseLax(goModPath, content, nil)
 	if err != nil {
-		return nil, fmt.Errorf("errors parsing %s: %v", goModFile, err)
+		return nil, fmt.Errorf("errors parsing %s: %w", goModFile, err)
 	}
 	return modFile, nil
 }

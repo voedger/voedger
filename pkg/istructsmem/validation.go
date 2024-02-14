@@ -233,22 +233,18 @@ func validateEventArgs(ev *eventType) (err error) {
 		err = errors.Join(err,
 			// event «test.document» argument uses wrong type «test.record1», expected «test.document»
 			validateErrorf(ECode_InvalidTypeName, errEventArgUseWrongType, ev, ev.argObject.QName(), arg, ErrWrongType))
-	} else {
-		if ev.argObject.QName() != appdef.NullQName {
-			err = errors.Join(err,
-				validateObject(&ev.argObject))
-		}
+	} else if ev.argObject.QName() != appdef.NullQName {
+		err = errors.Join(err,
+			validateObject(&ev.argObject))
 	}
 
 	if ev.argUnlObj.QName() != argUnl {
 		err = errors.Join(err,
 			// event «test.document» unlogged argument uses wrong type «test.object», expected «.»
 			validateErrorf(ECode_InvalidTypeName, errEventUnloggedArgUseWrongType, ev, ev.argUnlObj.QName(), argUnl, ErrWrongType))
-	} else {
-		if ev.argUnlObj.QName() != appdef.NullQName {
-			err = errors.Join(err,
-				validateObject(&ev.argUnlObj))
-		}
+	} else if ev.argUnlObj.QName() != appdef.NullQName {
+		err = errors.Join(err,
+			validateObject(&ev.argUnlObj))
 	}
 
 	return err

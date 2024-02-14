@@ -333,7 +333,9 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 			return nil
 		}),
 		operator("get func exec", func(ctx context.Context, qw *queryWork) (err error) {
-			qw.queryExec = qw.appStructs.Resources().QueryResource(qw.iQuery.QName()).(istructs.IQueryFunction).Exec
+			iResource := qw.appStructs.Resources().QueryResource(qw.iQuery.QName())
+			iQueryFunc := iResource.(istructs.IQueryFunction)
+			qw.queryExec = iQueryFunc.Exec
 			return nil
 		}),
 	}
@@ -480,8 +482,8 @@ func (w rowsWorkpiece) PutEnrichedRootFieldKind(name string, kind appdef.DataKin
 	w.enrichedRootFieldsKinds[name] = kind
 }
 func (w rowsWorkpiece) Release() {
-	//TODO implement it someday
-	//Release goes here
+	// TODO implement it someday
+	// Release goes here
 }
 
 type outputRow struct {

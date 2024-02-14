@@ -8,8 +8,10 @@ package registry
 import (
 	"fmt"
 	"hash/crc32"
+	"strconv"
 
 	"github.com/untillpro/goutils/iterate"
+
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/itokens"
@@ -27,7 +29,7 @@ func invokeCreateWorkspaceIDProjector(federation coreutils.IFederation, appQName
 				return nil
 			}
 			loginHash := rec.AsString(authnz.Field_LoginHash)
-			wsName := fmt.Sprint(crc32.ChecksumIEEE([]byte(loginHash)))
+			wsName := strconv.FormatUint(uint64(crc32.ChecksumIEEE([]byte(loginHash))), decimalBase)
 			var wsKind appdef.QName
 			switch istructs.SubjectKindType(rec.AsInt32(authnz.Field_SubjectKind)) {
 			case istructs.SubjectKind_Device:

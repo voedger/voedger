@@ -5,10 +5,7 @@
 package provider
 
 var (
-	//nolint
 	cCols_AppStorageDesc = []byte{1}
-	//nolint
-	cCols_SafeAppName = []byte{2}
-	//nolint
-	value_SafeAppName = []byte{}
+	cCols_SafeAppName    = []byte{2}
+	value_SafeAppName    = []byte{}
 )

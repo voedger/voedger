@@ -49,9 +49,9 @@ type wazeroExtEngine struct {
 	modules map[string]*wazeroExtPkg
 	host    api.Module
 	rtm     wazero.Runtime
-	//recoverMem api.Memory
+	// recoverMem api.Memory
 
-	//mwasi api.Module
+	// mwasi api.Module
 	// ce    api.ICallEngine
 	// cep   api.CallEngineParams
 	keys          []istructs.IKey
@@ -117,7 +117,7 @@ func (f extensionEngineFactory) New(ctx context.Context, packages []iextengine.E
 }
 
 func (f *wazeroExtEngine) SetLimits(limits iextengine.ExtensionLimits) {
-	//f.cep.Duration = limits.ExecutionInterval
+	// f.cep.Duration = limits.ExecutionInterval
 }
 
 func (f *wazeroExtPkg) importFuncs(funcs map[string]*api.Function) error {

@@ -184,7 +184,7 @@ func (cmdProc *cmdProc) buildCommandArgs(_ context.Context, work interface{}) (e
 				ArgumentObject: cmd.argsObject,
 				WSID:           cmd.cmdMes.WSID(),
 				Workpiece:      work,
-				Workspace:     cmd.iWorkspace,
+				Workspace:      cmd.iWorkspace,
 			},
 			ArgumentUnloggedObject: cmd.unloggedArgsObject,
 		},
@@ -293,7 +293,8 @@ func checkWSInitialized(_ context.Context, work interface{}) (err error) {
 		return nil
 	}
 	if cmdQName == workspacemgmt.QNameCommandCreateWorkspace ||
-		cmdQName == builtin.QNameCommandInit { //nolint
+		cmdQName == workspacemgmt.QNameCommandCreateWorkspaceID || // happens on creating a child of an another workspace
+		cmdQName == builtin.QNameCommandInit {
 		return nil
 	}
 	if wsDesc.QName() != appdef.NullQName {
@@ -378,7 +379,9 @@ func getResources(_ context.Context, work interface{}) (err error) {
 
 func getExec(_ context.Context, work interface{}) (err error) {
 	cmd := work.(*cmdWorkpiece)
-	cmd.cmdExec = cmd.resources.QueryResource(cmd.cmdMes.QName()).(istructs.ICommandFunction).Exec
+	iResource := cmd.resources.QueryResource(cmd.cmdMes.QName())
+	iCommandFunc := iResource.(istructs.ICommandFunction)
+	cmd.cmdExec = iCommandFunc.Exec
 	return nil
 }
 

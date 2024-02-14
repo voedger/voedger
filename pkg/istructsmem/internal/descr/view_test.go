@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
 	"github.com/voedger/voedger/pkg/appdef"
 )
 
@@ -55,7 +56,7 @@ func Test_View(t *testing.T) {
 		require := require.New(t)
 		require.NoError(err)
 
-		//ioutil.WriteFile("C://temp//view_test.json", json, 0644)
+		// ioutil.WriteFile("C://temp//view_test.json", json, 0644)
 
 		const expected = `{
 			"Comment": "view comment",

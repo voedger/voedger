@@ -9,12 +9,13 @@ import (
 	"fmt"
 
 	"github.com/alecthomas/participle/v2/lexer"
+
 	"github.com/voedger/voedger/pkg/appdef"
 )
 
 var ErrDirContainsNoSchemaFiles = errors.New("no schema files in directory")
 var ErrNoQualifiedName = errors.New("empty qualified name")
-
+var ErrEmptyFileAstList = errors.New("empty file ast list")
 var ErrFunctionParamsIncorrect = errors.New("function parameters do not match")
 var ErrFunctionResultIncorrect = errors.New("function result do not match")
 var ErrPrimaryKeyRedefined = errors.New("redefinition of primary key")

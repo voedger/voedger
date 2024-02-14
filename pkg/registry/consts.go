@@ -32,6 +32,7 @@ const (
 	field_NewPwd            = "NewPwd"
 	field_AppName           = "AppName"
 	field_Login             = "Login"
+	decimalBase             = 10
 )
 
 var (

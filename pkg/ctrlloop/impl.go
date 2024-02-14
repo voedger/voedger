@@ -46,13 +46,13 @@ func scheduler[Key comparable, SP any, State any](in chan ControlMessage[Key, SP
 	}
 }
 
-func dedupIn[Key comparable, SP any, State any](in chan statefulMessage[Key, SP, State], callerCh chan statefulMessage[Key, SP, State], repeatCh chan scheduledMessage[Key, SP, State], InProcess *sync.Map, nowTimeFunc nowTimeFunction) {
+func dedupIn[Key comparable, SP any, State any](in chan statefulMessage[Key, SP, State], callerCh chan statefulMessage[Key, SP, State], repeatCh chan scheduledMessage[Key, SP, State], inProcess *sync.Map, nowTimeFunc nowTimeFunction) {
 	defer close(callerCh)
 
 	for m := range in {
 		logger.Verbose(m.String())
 
-		if _, ok := InProcess.Load(m.Key); ok {
+		if _, ok := inProcess.Load(m.Key); ok {
 			repeatCh <- scheduledMessage[Key, SP, State]{
 				Key:          m.Key,
 				SP:           m.SP,
@@ -61,18 +61,18 @@ func dedupIn[Key comparable, SP any, State any](in chan statefulMessage[Key, SP,
 			}
 			continue
 		}
-		InProcess.Store(m.Key, struct{}{})
+		inProcess.Store(m.Key, struct{}{})
 		callerCh <- m
 	}
 }
 
-func dedupOut[Key comparable, SP any, PV any, State any](in chan answer[Key, SP, PV, State], repeaterCh chan answer[Key, SP, PV, State], InProcess *sync.Map) {
+func dedupOut[Key comparable, SP any, PV any, State any](in chan answer[Key, SP, PV, State], repeaterCh chan answer[Key, SP, PV, State], inProcess *sync.Map) {
 	defer close(repeaterCh)
 
 	for m := range in {
 		logger.Verbose(m.String())
 
-		InProcess.Delete(m.Key)
+		inProcess.Delete(m.Key)
 		repeaterCh <- m
 	}
 }

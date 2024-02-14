@@ -180,7 +180,7 @@ func (b *recordsKeyBuilder) PutInt64(name string, value int64) {
 		b.wsid = istructs.WSID(value)
 		return
 	}
-	//TODO ???
+	// TODO ???
 	panic(name)
 }
 
@@ -189,7 +189,7 @@ func (b *recordsKeyBuilder) PutRecordID(name string, value istructs.RecordID) {
 		b.id = value
 		return
 	}
-	//TODO ???
+	// TODO ???
 	panic(name)
 }
 
@@ -198,7 +198,7 @@ func (b *recordsKeyBuilder) PutQName(name string, value appdef.QName) {
 		b.singleton = value
 		return
 	}
-	//TODO ???
+	// TODO ???
 	panic(name)
 }
 

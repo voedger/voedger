@@ -6,6 +6,7 @@
 package istructsmem
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"testing"
@@ -179,7 +180,7 @@ func Test_readLogParts(t *testing.T) {
 
 			require.Equal(tt.result.totalReads, totalReads, "logIterateType.iterate() reads = %v, want %v", totalReads, tt.result.totalReads)
 			require.Equal(tt.result.ranges, ranges, "logIterateType.iterate() read ranges = %v, want %v", ranges, tt.result.ranges)
-			if err != tt.result.err {
+			if !errors.Is(err, tt.result.err) {
 				t.Errorf("logIterateType.iterate() error = %v, want %v", err, tt.result.err)
 			}
 

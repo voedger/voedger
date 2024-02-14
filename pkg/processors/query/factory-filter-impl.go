@@ -164,7 +164,7 @@ func epsilon(args interface{}) (float64, error) {
 	if err != nil {
 		return 0.0, err
 	}
-	//TODO (FILTER0001) move it to filter prepare or validate
+	// TODO (FILTER0001) move it to filter prepare or validate
 	//if epsilon == 0 {
 	//	return 0, ErrJsonFieldNotFound
 	//}

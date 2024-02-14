@@ -12,10 +12,9 @@ import (
 )
 
 type implIAppStorageProvider struct {
-	cache map[istructs.AppQName]istorage.IAppStorage
-	asf   istorage.IAppStorageFactory
-	lock  sync.Mutex
-	//nolint
+	cache       map[istructs.AppQName]istorage.IAppStorage
+	asf         istorage.IAppStorageFactory
+	lock        sync.Mutex
 	metaStorage istorage.IAppStorage
 	suffix      string // used in tests only
 }

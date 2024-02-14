@@ -26,27 +26,31 @@ linters:
 #    - nilerr       # Finds the code that returns nil even if it checks that the error is not nil.
     - testifylint  # Checks usage of github.com/stretchr/testify.
 
-# Third stage linters
-#    - inamedparam  # Reports interfaces with unnamed method parameters.
-#    - perfsprint   # Checks that fmt.Sprintf can be replaced with a faster alternative.
-#    - errorlint    # Errorlint is a linter for that can be used to find code that will cause problems with the error wrapping scheme introduced in Go 1.13.
-#    - gocritic     # Provides diagnostics that check for bugs, performance and style issues. Extensible without recompilation through dynamic rules. Dynamic rules are written declaratively with AST patterns, filters, report message and optional suggestion.
-#    - makezero     # Finds slice declarations with non-zero initial length.
 
+# Third stage linters
+#------------------------------------
+    - prealloc
+    - perfsprint
+    - nilnil
+    - gocritic
+    - exportloopref
+    - errorlint
+    - goconst
+#------------------------------------
 
 # For the future:
 #------------------------------------
-#    - prealloc     # Finds slice declarations that could potentially be pre-allocated.
+#    - testpackage
+#    - nonamedreturns
 #    - noctx 
-#    - nilnil 
-#?    - nestif 
+#?    - nestif
 #    - musttag
+#    - makezero
+#    - inamedparam
 #    - goerr113      
 #    - godox       #- searches FixMe,TODO in code
 #    - forbidigo
-#    - exportloopref
 #    - exhaustruct
-#    - goconst 
 #    - unparam
 #------------------------------------
   fast: true
@@ -106,6 +110,19 @@ linters-settings:
       - suite-dont-use-pkg
       - suite-extra-assert-call
       - suite-thelper
+  gocritic:
+    disabled-checks:
+      - appendAssign
+      - dupArg
+      - ifElseChain
+      - singleCaseSwitch
+      - exitAfterDefer
+      - commentFormatting
+  nilnil:
+    checked-types:
+      - func
+  goconst:
+    ignore-tests: true
 issues:
   exclude:
    - underscore

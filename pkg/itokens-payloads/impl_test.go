@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/itokens"
@@ -156,7 +157,7 @@ func TestBasicUsage_IAppTokens(t *testing.T) {
 		defer func() { testTime = testTime.Add(-testDuration * 2) }()
 		payload := PrincipalPayload{}
 		_, err := at.ValidateToken(token, &payload)
-		require.Equal(itokens.ErrTokenExpired, err)
+		require.ErrorIs(err, itokens.ErrTokenExpired)
 	})
 
 	t.Run("Error on validate a token issued for an another app", func(t *testing.T) {

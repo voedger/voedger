@@ -103,7 +103,7 @@ func blobReadMessageHandler(bbm blobBaseMessage, blobReadDetails blobReadDetails
 		return nil
 	}
 	if err := blobStorage.ReadBLOB(bbm.req.Context(), key, stateWriterDiscard, bbm.resp); err != nil {
-		if err == iblobstorage.ErrBLOBNotFound {
+		if errors.Is(err, iblobstorage.ErrBLOBNotFound) {
 			WriteTextResponse(bbm.resp, err.Error(), http.StatusNotFound)
 			return
 		}
@@ -153,7 +153,7 @@ func writeBLOB(ctx context.Context, wsid int64, appQName string, header map[stri
 	}
 
 	if err := blobStorage.WriteBLOB(ctx, key, descr, body, blobMaxSize); err != nil {
-		if err == iblobstorage.ErrBLOBSizeQuotaExceeded {
+		if errors.Is(err, iblobstorage.ErrBLOBSizeQuotaExceeded) {
 			WriteTextResponse(resp, fmt.Sprintf("blob size quouta exceeded (max %d allowed)", blobMaxSize), http.StatusForbidden)
 			return 0
 		}
@@ -189,7 +189,7 @@ func blobWriteMessageHandlerMultipart(bbm blobBaseMessage, blobStorage iblobstor
 	for err == nil {
 		part, err = r.NextPart()
 		if err != nil {
-			if err != io.EOF {
+			if !errors.Is(err, io.EOF) {
 				WriteTextResponse(bbm.resp, "failed to parse multipart: "+err.Error(), http.StatusBadRequest)
 				return
 			} else if partNum == 0 {
@@ -216,7 +216,7 @@ func blobWriteMessageHandlerMultipart(bbm blobBaseMessage, blobStorage iblobstor
 		if blobID == 0 {
 			return // request handled
 		}
-		blobIDs = append(blobIDs, fmt.Sprint(blobID))
+		blobIDs = append(blobIDs, strconv.FormatInt(blobID, decimalBase))
 		partNum++
 	}
 	WriteTextResponse(bbm.resp, strings.Join(blobIDs, ","), http.StatusOK)
@@ -229,7 +229,7 @@ func blobWriteMessageHandlerSingle(bbm blobBaseMessage, blobWriteDetails blobWri
 	blobID := writeBLOB(bbm.req.Context(), int64(bbm.wsid), bbm.appQName.String(), header, bbm.resp, bbm.clusterAppBlobberID, blobWriteDetails.name,
 		blobWriteDetails.mimeType, blobStorage, bbm.req.Body, int64(bbm.blobMaxSize), bus, busTimeout)
 	if blobID > 0 {
-		WriteTextResponse(bbm.resp, fmt.Sprint(blobID), http.StatusOK)
+		WriteTextResponse(bbm.resp, strconv.FormatInt(blobID, decimalBase), http.StatusOK)
 	}
 }
 
@@ -284,7 +284,7 @@ func (s *httpService) blobRequestHandler(resp http.ResponseWriter, req *http.Req
 	}
 	if !s.BlobberParams.procBus.Submit(0, 0, mes) {
 		resp.WriteHeader(http.StatusServiceUnavailable)
-		resp.Header().Add("Retry-After", fmt.Sprint(s.BlobberParams.RetryAfterSecondsOn503))
+		resp.Header().Add("Retry-After", strconv.Itoa(s.BlobberParams.RetryAfterSecondsOn503))
 		return
 	}
 	select {

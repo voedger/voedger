@@ -6,6 +6,7 @@ package sys_it
 
 import (
 	"context"
+	"errors"
 	"io"
 	"net/http"
 	"testing"
@@ -58,7 +59,7 @@ func TestBug_QueryProcessorMustStopOnClientDisconnect(t *testing.T) {
 		var err error
 		n := 0
 		for string(entireResp) != `{"sections":[{"type":"","elements":[[[["world"]]]` {
-			if n == 0 && err == io.EOF {
+			if n == 0 && errors.Is(err, io.EOF) {
 				t.Fatal()
 			}
 			buf := make([]byte, 512)

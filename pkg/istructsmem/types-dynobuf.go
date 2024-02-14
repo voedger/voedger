@@ -133,7 +133,7 @@ func dynoBufGetWord(dyB *dynobuffers.Buffer, fieldName string) (value uint16, ok
 func storeRow(row *rowType, buf *bytes.Buffer) {
 	id, err := row.qNameID()
 	if err != nil {
-		//no test
+		// no test
 		panic(fmt.Errorf(errMustValidatedBeforeStore, "row", err))
 	}
 	utils.WriteUint16(buf, id)
@@ -145,7 +145,7 @@ func storeRow(row *rowType, buf *bytes.Buffer) {
 
 	b, err := row.dyB.ToBytes()
 	if err != nil {
-		//no test
+		// no test
 		panic(fmt.Errorf(errMustValidatedBeforeStore, row.QName(), err))
 	}
 	length := uint32(len(b))
@@ -179,7 +179,7 @@ func storeRowSysFields(row *rowType, buf *bytes.Buffer) {
 	if row.container != "" {
 		id, err := row.containerID()
 		if err != nil {
-			//no test
+			// no test
 			panic(fmt.Errorf(errMustValidatedBeforeStore, row.QName(), err))
 		}
 		utils.WriteUint16(buf, uint16(id))

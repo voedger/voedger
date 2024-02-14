@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
 	"github.com/voedger/voedger/pkg/appdef"
 )
 
@@ -55,7 +56,8 @@ func TestBasicUsage_SysError(t *testing.T) {
 	})
 
 	t.Run("NewSysError", func(t *testing.T) {
-		sysErr := NewSysError(http.StatusContinue).(SysError)
+		var sysErr SysError
+		require.ErrorAs(NewSysError(http.StatusContinue), &sysErr)
 		require.Empty(sysErr.Data)
 		require.Equal(http.StatusContinue, sysErr.HTTPStatus)
 		require.Empty(sysErr.Message)
@@ -63,7 +65,8 @@ func TestBasicUsage_SysError(t *testing.T) {
 	})
 
 	t.Run("emit status code with desc if message is empty but code > 0", func(t *testing.T) {
-		sysErr := NewSysError(http.StatusContinue).(SysError)
+		var sysErr SysError
+		require.ErrorAs(NewSysError(http.StatusContinue), &sysErr)
 		require.Equal("100 Continue", sysErr.Error())
 	})
 
