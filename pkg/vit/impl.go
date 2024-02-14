@@ -227,6 +227,8 @@ func handleWSParam(vit *VIT, appWS *AppWorkspace, childWSes []WSParams, appWorks
 		vit.InitChildWorkspace(childWSParams, appWS)
 		childAppWS := vit.WaitForChildWorkspace(appWS, childWSParams.Name)
 		require.Empty(vit.T, childAppWS.WSError)
+		childAppWS.childs = childWSParams.childs
+		childAppWS.subjects = childWSParams.subjects
 		appWorkspaces[childWSParams.Name] = childAppWS
 		handleWSParam(vit, childAppWS, childWSParams.childs, appWorkspaces, verifiedValues, token)
 	}
