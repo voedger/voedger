@@ -199,8 +199,8 @@ func (vit *VIT) WaitForWorkspace(wsName string, owner *Principal) (ws *AppWorksp
 	})
 }
 
-func (vit *VIT) WaitForChildWorkspace(parentWS *AppWorkspace, wsName string, owner *Principal) (ws *AppWorkspace) {
-	return vit.waitForWorkspace(wsName, owner, func(owner *Principal, body string) *coreutils.FuncResponse {
+func (vit *VIT) WaitForChildWorkspace(parentWS *AppWorkspace, wsName string) (ws *AppWorkspace) {
+	return vit.waitForWorkspace(wsName, parentWS.Owner, func(owner *Principal, body string) *coreutils.FuncResponse {
 		return vit.PostWS(parentWS, "q.sys.QueryChildWorkspaceByName", body)
 	})
 }

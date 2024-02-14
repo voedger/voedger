@@ -179,6 +179,8 @@ func newVit(t *testing.T, vitCfg *VITConfig, useCas bool) *VIT {
 			}
 		}
 
+		sysToken, err := payloads.GetSystemPrincipalToken(vit, app.name)
+		require.NoError(vit.T, err)
 		for _, wsd := range app.ws {
 			owner := vit.principals[app.name][wsd.ownerLoginName]
 			appWorkspaces, ok := vit.appWorkspaces[app.name]
@@ -188,15 +190,15 @@ func newVit(t *testing.T, vitCfg *VITConfig, useCas bool) *VIT {
 			}
 			appWorkspaces[wsd.Name] = vit.CreateWorkspace(wsd, owner)
 
-			handleWSParam(vit, wsd, appWorkspaces[wsd.Name], appWorkspaces, verifiedValues)
+			handleWSParam(vit, appWorkspaces[wsd.Name], wsd.childs, appWorkspaces, verifiedValues, sysToken)
 		}
 	}
 	return vit
 }
 
-func handleWSParam(vit *VIT, ws WSParams, appWS *AppWorkspace, appWorkspaces map[string]*AppWorkspace, verifiedValues map[string]string) {
-	for doc, dataFactory := range ws.docs {
-		if !vit.PostWS(appWS, "q.sys.Collection", fmt.Sprintf(`{"args":{"Schema":"%s"}}`, doc)).IsEmpty() {
+func handleWSParam(vit *VIT, appWS *AppWorkspace, childWSes []WSParams, appWorkspaces map[string]*AppWorkspace, verifiedValues map[string]string, token string) {
+	for doc, dataFactory := range appWS.docs {
+		if !vit.PostWS(appWS, "q.sys.Collection", fmt.Sprintf(`{"args":{"Schema":"%s"}}`, doc), coreutils.WithAuthorizeBy(token)).IsEmpty() {
 			continue
 		}
 		data := dataFactory(verifiedValues)
@@ -206,10 +208,9 @@ func handleWSParam(vit *VIT, ws WSParams, appWS *AppWorkspace, appWorkspaces map
 		bb, err := json.Marshal(data)
 		require.NoError(vit.T, err)
 
-		vit.PostWS(appWS, "c.sys.CUD", fmt.Sprintf(`{"cuds":[{"fields":%s}]}`, bb), coreutils.WithAuthorizeBy(vit.GetSystemPrincipal(appWS.GetAppQName()).Token))
+		vit.PostWS(appWS, "c.sys.CUD", fmt.Sprintf(`{"cuds":[{"fields":%s}]}`, bb), coreutils.WithAuthorizeBy(token))
 	}
-	sysPrn := vit.GetSystemPrincipal(appWS.GetAppQName())
-	for _, subject := range ws.subjects {
+	for _, subject := range appWS.subjects {
 		roles := ""
 		for i, role := range subject.roles {
 			if i > 0 {
@@ -219,14 +220,17 @@ func handleWSParam(vit *VIT, ws WSParams, appWS *AppWorkspace, appWorkspaces map
 		}
 		body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"sys.Subject","Login":"%s","Roles":"%s","SubjectKind":%d,"ProfileWSID":%d}}]}`,
 			subject.login, roles, subject.subjectKind, vit.principals[appWS.GetAppQName()][subject.login].ProfileWSID)
-		vit.PostWS(appWS, "c.sys.CUD", body, coreutils.WithAuthorizeBy(sysPrn.Token))
+		vit.PostWS(appWS, "c.sys.CUD", body, coreutils.WithAuthorizeBy(token))
 	}
 
-	for _, childWS := range ws.childs {
-		vit.InitChildWorkspace(childWS, appWS)
-		childAppWS := vit.WaitForChildWorkspace(appWS, childWS.Name, appWS.Owner)
-		appWorkspaces[childWS.Name] = childAppWS
-		handleWSParam(vit, childWS, childAppWS, appWorkspaces, verifiedValues)
+	for _, childWSParams := range childWSes {
+		vit.InitChildWorkspace(childWSParams, appWS)
+		childAppWS := vit.WaitForChildWorkspace(appWS, childWSParams.Name)
+		require.Empty(vit.T, childAppWS.WSError)
+		childAppWS.childs = childWSParams.childs
+		childAppWS.subjects = childWSParams.subjects
+		appWorkspaces[childWSParams.Name] = childAppWS
+		handleWSParam(vit, childAppWS, childWSParams.childs, appWorkspaces, verifiedValues, token)
 	}
 }
 
