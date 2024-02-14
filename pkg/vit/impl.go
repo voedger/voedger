@@ -188,15 +188,19 @@ func newVit(t *testing.T, vitCfg *VITConfig, useCas bool) *VIT {
 				appWorkspaces = map[string]*AppWorkspace{}
 				vit.appWorkspaces[app.name] = appWorkspaces
 			}
-			appWorkspaces[wsd.Name] = vit.CreateWorkspace(wsd, owner)
+			newAppWS := vit.CreateWorkspace(wsd, owner)
+			newAppWS.childs = wsd.childs
+			newAppWS.docs = wsd.docs
+			newAppWS.subjects = wsd.subjects
+			appWorkspaces[wsd.Name] = newAppWS
 
-			handleWSParam(vit, appWorkspaces[wsd.Name], wsd.childs, appWorkspaces, verifiedValues, sysToken)
+			handleWSParam(vit, appWorkspaces[wsd.Name], appWorkspaces, verifiedValues, sysToken)
 		}
 	}
 	return vit
 }
 
-func handleWSParam(vit *VIT, appWS *AppWorkspace, childWSes []WSParams, appWorkspaces map[string]*AppWorkspace, verifiedValues map[string]string, token string) {
+func handleWSParam(vit *VIT, appWS *AppWorkspace, appWorkspaces map[string]*AppWorkspace, verifiedValues map[string]string, token string) {
 	for doc, dataFactory := range appWS.docs {
 		if !vit.PostWS(appWS, "q.sys.Collection", fmt.Sprintf(`{"args":{"Schema":"%s"}}`, doc), coreutils.WithAuthorizeBy(token)).IsEmpty() {
 			continue
@@ -223,14 +227,17 @@ func handleWSParam(vit *VIT, appWS *AppWorkspace, childWSes []WSParams, appWorks
 		vit.PostWS(appWS, "c.sys.CUD", body, coreutils.WithAuthorizeBy(token))
 	}
 
-	for _, childWSParams := range childWSes {
+	for _, childWSParams := range appWS.childs {
 		vit.InitChildWorkspace(childWSParams, appWS)
 		childAppWS := vit.WaitForChildWorkspace(appWS, childWSParams.Name)
 		require.Empty(vit.T, childAppWS.WSError)
 		childAppWS.childs = childWSParams.childs
 		childAppWS.subjects = childWSParams.subjects
+		childAppWS.docs = childWSParams.docs
+		childAppWS.ownerLoginName = childWSParams.ownerLoginName
+		childAppWS.Owner = vit.GetPrincipal(appWS.GetAppQName(), childWSParams.ownerLoginName)
 		appWorkspaces[childWSParams.Name] = childAppWS
-		handleWSParam(vit, childAppWS, childWSParams.childs, appWorkspaces, verifiedValues, token)
+		handleWSParam(vit, childAppWS, appWorkspaces, verifiedValues, token)
 	}
 }
 
