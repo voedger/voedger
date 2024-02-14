@@ -15,10 +15,6 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
-type IErrUnwrapper interface {
-	Unwrap() []error
-}
-
 func IsBlank(str string) bool {
 	return len(strings.TrimSpace(str)) == 0
 }
