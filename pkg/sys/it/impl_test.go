@@ -47,12 +47,6 @@ func TestBasicUsage(t *testing.T) {
 	cfg := it.NewOwnVITConfig(
 		it.WithApp(istructs.AppQName_test1_app2, func(apis apps.APIs, cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) apps.AppPackages {
 			qNameCmdGreeter := appdef.NewQName(app2pkg, "Greeter")
-			// appDefBuilder.AddQuery(qNameCmdGreeter).
-			// 	SetParam(appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "GreeterParams")).
-			// 		AddField("Text", appdef.DataKind_string, true).(appdef.IType).QName()).
-			// 	SetResult(appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "GreeterResult")).
-			// 		AddField("Res", appdef.DataKind_string, true).(appdef.IType).QName())
-
 			cfg.Resources.Add(istructsmem.NewQueryFunction(
 				qNameCmdGreeter,
 				func(_ context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
