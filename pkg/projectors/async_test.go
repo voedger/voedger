@@ -58,6 +58,13 @@ func TestBasicUsage_AsynchronousActualizer(t *testing.T) {
 		},
 		func(cfg *istructsmem.AppConfigType) {
 			cfg.Resources.Add(istructsmem.NewCommandFunction(testQName, istructsmem.NullCommandExec))
+			cfg.AddAsyncProjectors(
+				func(partition istructs.PartitionID) istructs.Projector {
+					return istructs.Projector{Name: incrementorName}
+				}, func(partition istructs.PartitionID) istructs.Projector {
+					return istructs.Projector{Name: decrementorName}
+				},
+			)
 		})
 	partitionNr := istructs.PartitionID(1) // test within partition 1
 
@@ -146,6 +153,11 @@ func Test_AsynchronousActualizer_FlushByRange(t *testing.T) {
 		},
 		func(cfg *istructsmem.AppConfigType) {
 			cfg.Resources.Add(istructsmem.NewCommandFunction(testQName, istructsmem.NullCommandExec))
+			cfg.AddAsyncProjectors(
+				func(partition istructs.PartitionID) istructs.Projector {
+					return istructs.Projector{Name: incrementorName}
+				},
+			)
 		})
 	partitionNr := istructs.PartitionID(2) // test within partition 2
 
@@ -221,6 +233,9 @@ func Test_AsynchronousActualizer_FlushByInterval(t *testing.T) {
 		},
 		func(cfg *istructsmem.AppConfigType) {
 			cfg.Resources.Add(istructsmem.NewCommandFunction(testQName, istructsmem.NullCommandExec))
+			cfg.AddAsyncProjectors(func(partition istructs.PartitionID) istructs.Projector {
+				return istructs.Projector{Name: incrementorName}
+			})
 		})
 	partitionNr := istructs.PartitionID(1) // test within partition 1
 
@@ -303,6 +318,9 @@ func Test_AsynchronousActualizer_ErrorAndRestore(t *testing.T) {
 		},
 		func(cfg *istructsmem.AppConfigType) {
 			cfg.Resources.Add(istructsmem.NewCommandFunction(testQName, istructsmem.NullCommandExec))
+			cfg.AddAsyncProjectors(func(partition istructs.PartitionID) istructs.Projector {
+				return istructs.Projector{Name: name}
+			})
 		})
 	partitionNr := istructs.PartitionID(1) // test within partition 1
 
@@ -414,6 +432,9 @@ func Test_AsynchronousActualizer_ResumeReadAfterNotifications(t *testing.T) {
 		},
 		func(cfg *istructsmem.AppConfigType) {
 			cfg.Resources.Add(istructsmem.NewCommandFunction(testQName, istructsmem.NullCommandExec))
+			cfg.AddAsyncProjectors(func(partition istructs.PartitionID) istructs.Projector {
+				return istructs.Projector{Name: incrementorName}
+			})
 		})
 	partitionNr := istructs.PartitionID(1) // test within partition 1
 
@@ -543,6 +564,9 @@ func Test_AsynchronousActualizer_Stress(t *testing.T) {
 		},
 		func(cfg *istructsmem.AppConfigType) {
 			cfg.Resources.Add(istructsmem.NewCommandFunction(testQName, istructsmem.NullCommandExec))
+			cfg.AddAsyncProjectors(func(partition istructs.PartitionID) istructs.Projector {
+				return istructs.Projector{Name: incrementorName}
+			})
 		})
 	partitionNr := istructs.PartitionID(1) // test within partition 1
 
@@ -647,6 +671,9 @@ func Test_AsynchronousActualizer_NonBuffered(t *testing.T) {
 		},
 		func(cfg *istructsmem.AppConfigType) {
 			cfg.Resources.Add(istructsmem.NewCommandFunction(testQName, istructsmem.NullCommandExec))
+			cfg.AddAsyncProjectors(func(partition istructs.PartitionID) istructs.Projector {
+				return istructs.Projector{Name: incrementorName}
+			})
 		})
 	partitionNr := istructs.PartitionID(2) // test within partition 2
 
@@ -764,6 +791,9 @@ func Test_AsynchronousActualizer_Stress_NonBuffered(t *testing.T) {
 		},
 		func(cfg *istructsmem.AppConfigType) {
 			cfg.Resources.Add(istructsmem.NewCommandFunction(testQName, istructsmem.NullCommandExec))
+			cfg.AddAsyncProjectors(func(partition istructs.PartitionID) istructs.Projector {
+				return istructs.Projector{Name: incrementorName}
+			})
 		})
 	partitions := make([]*testPartition, totalPartitions)
 
@@ -928,6 +958,9 @@ func Test_AsynchronousActualizer_Stress_Buffered(t *testing.T) {
 		},
 		func(cfg *istructsmem.AppConfigType) {
 			cfg.Resources.Add(istructsmem.NewCommandFunction(testQName, istructsmem.NullCommandExec))
+			cfg.AddAsyncProjectors(func(partition istructs.PartitionID) istructs.Projector {
+				return istructs.Projector{Name: incrementorName}
+			})
 		})
 	partitions := make([]*testPartition, totalPartitions)
 

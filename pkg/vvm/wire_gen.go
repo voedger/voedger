@@ -158,7 +158,12 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 	commandProcessorsChannelGroupIdxType := provideProcessorChannelGroupIdxCommand(vvmConfig)
 	queryProcessorsChannelGroupIdxType := provideProcessorChannelGroupIdxQuery(vvmConfig)
 	iBus := provideIBus(iAppPartitions, iProcBus, commandProcessorsChannelGroupIdxType, queryProcessorsChannelGroupIdxType, commandProcessorsCount, vvmApps)
-	v7 := provideAppsWSAmounts(vvmApps, iAppStructsProvider)
+	v7, err := provideAppsWSAmounts(vvmApps, iAppStructsProvider)
+	if err != nil {
+		cleanup2()
+		cleanup()
+		return nil, nil, err
+	}
 	routerServices := provideRouterServices(vvmCtx, routerParams, busTimeout, in10nBroker, quotas, timeFunc, blobberServiceChannels, blobMaxSizeType, blobberAppClusterID, blobStorage, routerAppStorage, cache, iBus, vvmPortSource, v7)
 	routerServiceOperator := provideRouterServiceFactory(routerServices)
 	metricsServicePortInitial := vvmConfig.MetricsServicePort
@@ -286,17 +291,17 @@ func provideSecretKeyJWT(sr isecrets.ISecretReader) (itokensjwt.SecretKeyType, e
 	return sr.ReadSecret(itokensjwt.SecretKeyJWTName)
 }
 
-func provideAppsWSAmounts(vvmApps VVMApps, asp istructs.IAppStructsProvider) map[istructs.AppQName]istructs.AppWSAmount {
+func provideAppsWSAmounts(vvmApps VVMApps, asp istructs.IAppStructsProvider) (map[istructs.AppQName]istructs.AppWSAmount, error) {
 	res := map[istructs.AppQName]istructs.AppWSAmount{}
 	for _, appQName := range vvmApps {
 		as, err := asp.AppStructs(appQName)
 		if err != nil {
 
-			panic(err)
+			return nil, err
 		}
 		res[appQName] = as.WSAmount()
 	}
-	return res
+	return res, nil
 }
 
 func provideMetricsServicePort(msp MetricsServicePortInitial, vvmIdx VVMIdxType) metrics.MetricsServicePort {

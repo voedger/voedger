@@ -51,10 +51,20 @@ func TestBasicUsage_SynchronousActualizer(t *testing.T) {
 			ProvideViewDef(appDef, incProjectionView, buildProjectionView)
 			ProvideViewDef(appDef, decProjectionView, buildProjectionView)
 			appDef.AddCommand(testQName)
-			appDef.AddProjector(incrementorName).AddEvent(testQName, appdef.ProjectorEventKind_Execute)
-			appDef.AddProjector(decrementorName).AddEvent(testQName, appdef.ProjectorEventKind_Execute)
+			appDef.AddProjector(incrementorName).AddEvent(testQName, appdef.ProjectorEventKind_Execute).SetSync(true)
+			appDef.AddProjector(decrementorName).AddEvent(testQName, appdef.ProjectorEventKind_Execute).SetSync(true)
 		},
-		nil)
+		func(cfg *istructsmem.AppConfigType) {
+			cfg.AddSyncProjectors(
+				func(istructs.PartitionID) istructs.Projector {
+					return istructs.Projector{Name: incrementorName}
+				},
+				func(istructs.PartitionID) istructs.Projector {
+					return istructs.Projector{Name: decrementorName}
+				},
+			)
+			cfg.Resources.Add(istructsmem.NewCommandFunction(testQName, istructsmem.NullCommandExec))
+		})
 	actualizerFactory := ProvideSyncActualizerFactory()
 
 	// create actualizer with two factories
@@ -229,10 +239,20 @@ func Test_ErrorInSyncActualizer(t *testing.T) {
 			ProvideViewDef(appDef, incProjectionView, buildProjectionView)
 			ProvideViewDef(appDef, decProjectionView, buildProjectionView)
 			appDef.AddCommand(testQName)
-			appDef.AddProjector(incrementorName).AddEvent(testQName, appdef.ProjectorEventKind_Execute)
-			appDef.AddProjector(decrementorName).AddEvent(testQName, appdef.ProjectorEventKind_Execute)
+			appDef.AddProjector(incrementorName).AddEvent(testQName, appdef.ProjectorEventKind_Execute).SetSync(true)
+			appDef.AddProjector(decrementorName).AddEvent(testQName, appdef.ProjectorEventKind_Execute).SetSync(true)
 		},
-		nil)
+		func(cfg *istructsmem.AppConfigType) {
+			cfg.AddSyncProjectors(
+				func(istructs.PartitionID) istructs.Projector {
+					return istructs.Projector{Name: incrementorName}
+				},
+				func(istructs.PartitionID) istructs.Projector {
+					return istructs.Projector{Name: decrementorName}
+				},
+			)
+			cfg.Resources.Add(istructsmem.NewCommandFunction(testQName, istructsmem.NullCommandExec))
+		})
 	actualizerFactory := ProvideSyncActualizerFactory()
 
 	// create actualizer with two factories
