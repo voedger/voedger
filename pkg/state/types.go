@@ -38,7 +38,6 @@ type AsyncActualizerStateFactory func(ctx context.Context, appStructs istructs.I
 type eventsFunc func() istructs.IEvents
 type viewRecordsFunc func() istructs.IViewRecords
 type recordsFunc func() istructs.IRecords
-type appDefFunc func() appdef.IAppDef
 
 type ApplyBatchItem struct {
 	key   istructs.IStateKeyBuilder

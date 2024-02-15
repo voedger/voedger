@@ -41,7 +41,7 @@ func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder
 	storageProvider istorage.IAppStorageProvider) parser.PackageFS {
 	blobber.ProvideBlobberCmds(cfg)
 	collection.Provide(cfg, appDefBuilder)
-	journal.Provide(cfg, appDefBuilder, ep)
+	journal.Provide(cfg, ep)
 	builtin.Provide(cfg, appDefBuilder, buildInfo, storageProvider)
 	workspace.Provide(cfg, appDefBuilder, asp, timeFunc, itokens, federation, itokens, ep, wsPostInitFunc)
 	sqlquery.Provide(cfg, asp, numCommandProcessors)
