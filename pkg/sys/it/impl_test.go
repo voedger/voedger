@@ -6,6 +6,7 @@ package sys_it
 
 import (
 	"context"
+	"embed"
 	"encoding/base64"
 	"fmt"
 	"sync"
@@ -36,16 +37,21 @@ func (e *greeterRR) AsString(name string) string {
 	return "hello, " + e.text
 }
 
+//go:embed testapp.sql
+var testAppSQL embed.FS
+
+const app2pkg = "app2pkg"
+
 func TestBasicUsage(t *testing.T) {
 	require := require.New(t)
 	cfg := it.NewOwnVITConfig(
 		it.WithApp(istructs.AppQName_test1_app2, func(apis apps.APIs, cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) apps.AppPackages {
-			qNameCmdGreeter := appdef.NewQName(appdef.SysPackage, "Greeter")
-			appDefBuilder.AddQuery(qNameCmdGreeter).
-				SetParam(appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "GreeterParams")).
-					AddField("Text", appdef.DataKind_string, true).(appdef.IType).QName()).
-				SetResult(appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "GreeterResult")).
-					AddField("Res", appdef.DataKind_string, true).(appdef.IType).QName())
+			qNameCmdGreeter := appdef.NewQName(app2pkg, "Greeter")
+			// appDefBuilder.AddQuery(qNameCmdGreeter).
+			// 	SetParam(appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "GreeterParams")).
+			// 		AddField("Text", appdef.DataKind_string, true).(appdef.IType).QName()).
+			// 	SetResult(appDefBuilder.AddObject(appdef.NewQName(appdef.SysPackage, "GreeterResult")).
+			// 		AddField("Res", appdef.DataKind_string, true).(appdef.IType).QName())
 
 			cfg.Resources.Add(istructsmem.NewQueryFunction(
 				qNameCmdGreeter,
@@ -61,7 +67,7 @@ func TestBasicUsage(t *testing.T) {
 				apis.NumCommandProcessors, nil, apis.IAppStorageProvider)
 			appPackageFS := parser.PackageFS{
 				QualifiedPackageName: "github.com/voedger/voedger/pkg/vit/app2pkg",
-				FS:                   it.SchemaTestApp2FS,
+				FS:                   testAppSQL,
 			}
 			return apps.AppPackages{
 				AppQName: istructs.AppQName_test1_app2,
@@ -86,7 +92,7 @@ func TestBasicUsage(t *testing.T) {
 	  }
 	`
 	ws := vit.DummyWS(istructs.AppQName_test1_app2, 1)
-	resp := vit.PostWSSys(ws, "q.sys.Greeter", body)
+	resp := vit.PostWSSys(ws, "q.app2pkg.Greeter", body)
 	require.Equal(`{"sections":[{"type":"","elements":[[[["hello, world"]]]]}]}`, resp.Body)
 	resp.Println()
 }
