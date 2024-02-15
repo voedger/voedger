@@ -29,6 +29,7 @@ const (
 	TestEmail2      = "124@124.com"
 	TestServicePort = 10000
 	app1PkgName     = "app1pkg"
+	app2PkgName     = "app2pkg"
 )
 
 var (
@@ -92,6 +93,7 @@ func ProvideApp2(apis apps.APIs, cfg *istructsmem.AppConfigType, adf appdef.IApp
 		QualifiedPackageName: "github.com/voedger/voedger/pkg/vit/app2pkg",
 		FS:                   SchemaTestApp2FS,
 	}
+	cfg.Resources.Add(istructsmem.NewCommandFunction(appdef.NewQName(app2PkgName, "testCmd"), istructsmem.NullCommandExec))
 	return apps.AppPackages{
 		AppQName: istructs.AppQName_test1_app2,
 		Packages: []parser.PackageFS{sysPackageFS, app2PackageFS},
@@ -181,6 +183,17 @@ func ProvideApp1(apis apps.APIs, cfg *istructsmem.AppConfigType, adf appdef.IApp
 		appdef.NewQName(app1PkgName, "CmdODocTwo"),
 		istructsmem.NullCommandExec,
 	))
+
+	cfg.AddAsyncProjectors(func(istructs.PartitionID) istructs.Projector {
+		return istructs.Projector{
+			Name: appdef.NewQName(app1PkgName, "ProjDummy"),
+			Func: func(event istructs.IPLogEvent, state istructs.IState, intents istructs.IIntents) (err error) {
+				return nil
+			},
+		}
+	})
+
+	cfg.Resources.Add(istructsmem.NewCommandFunction(appdef.NewQName(app1PkgName, "testCmd"), istructsmem.NullCommandExec))
 
 	app1PackageFS := parser.PackageFS{
 		QualifiedPackageName: "github.com/voedger/voedger/pkg/vit/app1pkg",

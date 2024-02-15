@@ -56,7 +56,7 @@ func TestBasicUsage(t *testing.T) {
 	testCmdQNameParams := appdef.NewQName(appdef.SysPackage, "TestParams")
 	// схема unlogged-параметров тестовой команды
 	testCmdQNameParamsUnlogged := appdef.NewQName(appdef.SysPackage, "TestParamsUnlogged")
-	prepareAppDef := func(appDef appdef.IAppDefBuilder, _ *istructsmem.AppConfigType) {
+	prepareAppDef := func(appDef appdef.IAppDefBuilder, cfg *istructsmem.AppConfigType) {
 		pars := appDef.AddObject(testCmdQNameParams)
 		pars.AddField("Text", appdef.DataKind_string, true)
 
@@ -66,6 +66,33 @@ func TestBasicUsage(t *testing.T) {
 		appDef.AddCDoc(testCDoc).AddContainer("TestCRecord", testCRecord, 0, 1)
 		appDef.AddCRecord(testCRecord)
 		appDef.AddCommand(testCmdQName).SetUnloggedParam(testCmdQNameParamsUnlogged).SetParam(testCmdQNameParams)
+
+		// сама тестовая команда
+		testExec := func(args istructs.ExecCommandArgs) (err error) {
+			cuds := args.Workpiece.(*cmdWorkpiece).parsedCUDs
+			if len(cuds) > 0 {
+				require.Len(cuds, 1)
+				require.Equal(float64(1), cuds[0].fields[appdef.SystemField_ID])
+				require.Equal(testCDoc.String(), cuds[0].fields[appdef.SystemField_QName])
+				close(cudsCheck)
+			}
+			require.Equal(istructs.WSID(1), args.PrepareArgs.Workspace)
+			require.NotNil(args.State)
+
+			// просто проверим, что мы получили то, что передал клиент
+			text := args.ArgumentObject.AsString("Text")
+			if text == "fire error" {
+				return errors.New(text)
+			} else {
+				require.Equal("hello", text)
+			}
+			require.Equal("pass", args.ArgumentUnloggedObject.AsString("Password"))
+
+			check <- 1 // сигнал: проверки случились
+			return
+		}
+		testCmd := istructsmem.NewCommandFunction(testCmdQName, testExec)
+		cfg.Resources.Add(testCmd)
 	}
 
 	app := setUp(t, prepareAppDef)
@@ -84,33 +111,6 @@ func TestBasicUsage(t *testing.T) {
 	})
 	app.n10nBroker.Subscribe(channelID, projectionKey)
 	defer app.n10nBroker.Unsubscribe(channelID, projectionKey)
-
-	// сама тестовая команда
-	testExec := func(args istructs.ExecCommandArgs) (err error) {
-		cuds := args.Workpiece.(*cmdWorkpiece).parsedCUDs
-		if len(cuds) > 0 {
-			require.Len(cuds, 1)
-			require.Equal(float64(1), cuds[0].fields[appdef.SystemField_ID])
-			require.Equal(testCDoc.String(), cuds[0].fields[appdef.SystemField_QName])
-			close(cudsCheck)
-		}
-		require.Equal(istructs.WSID(1), args.PrepareArgs.WSID)
-		require.NotNil(args.State)
-
-		// просто проверим, что мы получили то, что передал клиент
-		text := args.ArgumentObject.AsString("Text")
-		if text == "fire error" {
-			return errors.New(text)
-		} else {
-			require.Equal("hello", text)
-		}
-		require.Equal("pass", args.ArgumentUnloggedObject.AsString("Password"))
-
-		check <- 1 // сигнал: проверки случились
-		return
-	}
-	testCmd := istructsmem.NewCommandFunction(testCmdQName, testExec)
-	app.cfg.Resources.Add(testCmd)
 
 	t.Run("basic usage", func(t *testing.T) {
 		// command processor работает через ibus.SendResponse -> нам нужен sender -> тестируем через ibus.SendRequest2()
@@ -184,7 +184,7 @@ func sendCUD(t *testing.T, wsid istructs.WSID, app testApp, expectedCode ...int)
 	return respData
 }
 
-func TestRecoveryOnProjectorError(t *testing.T) {
+func TestRecoveryOnSyncProjectorError(t *testing.T) {
 	require := require.New(t)
 
 	cudQName := appdef.NewQName(appdef.SysPackage, "CUD")
@@ -209,7 +209,8 @@ func TestRecoveryOnProjectorError(t *testing.T) {
 				},
 			}
 		})
-		appDef.AddProjector(failingProjQName).AddEvent(cudQName, appdef.ProjectorEventKind_Execute)
+		appDef.AddProjector(failingProjQName).AddEvent(cudQName, appdef.ProjectorEventKind_Execute).SetSync(true)
+		cfg.Resources.Add(istructsmem.NewCommandFunction(cudQName, istructsmem.NullCommandExec))
 	})
 	defer tearDown(app)
 
@@ -247,6 +248,7 @@ func TestRecovery(t *testing.T) {
 		appDef.AddCDoc(testCDoc).AddContainer("TestCRecord", testCRecord, 0, 1)
 		appDef.AddWDoc(testWDoc)
 		appDef.AddCommand(cudQName)
+		cfg.Resources.Add(istructsmem.NewCommandFunction(cudQName, istructsmem.NullCommandExec))
 	})
 	defer tearDown(app)
 
@@ -301,9 +303,10 @@ func TestCUDUpdate(t *testing.T) {
 	testQName := appdef.NewQName("test", "test")
 
 	cudQName := appdef.NewQName(appdef.SysPackage, "CUD")
-	app := setUp(t, func(appDef appdef.IAppDefBuilder, _ *istructsmem.AppConfigType) {
-		_ = appDef.AddCDoc(testQName).AddField("IntFld", appdef.DataKind_int32, false)
-		_ = appDef.AddCommand(cudQName)
+	app := setUp(t, func(appDef appdef.IAppDefBuilder, cfg *istructsmem.AppConfigType) {
+		appDef.AddCDoc(testQName).AddField("IntFld", appdef.DataKind_int32, false)
+		appDef.AddCommand(cudQName)
+		cfg.Resources.Add(istructsmem.NewCommandFunction(cudQName, istructsmem.NullCommandExec))
 	})
 	defer tearDown(app)
 
@@ -355,9 +358,10 @@ func Test400BadRequestOnCUDErrors(t *testing.T) {
 	testQName := appdef.NewQName("test", "test")
 
 	cudQName := appdef.NewQName(appdef.SysPackage, "CUD")
-	app := setUp(t, func(appDef appdef.IAppDefBuilder, _ *istructsmem.AppConfigType) {
-		_ = appDef.AddCDoc(testQName)
-		_ = appDef.AddCommand(cudQName)
+	app := setUp(t, func(appDef appdef.IAppDefBuilder, cfg *istructsmem.AppConfigType) {
+		appDef.AddCDoc(testQName)
+		appDef.AddCommand(cudQName)
+		cfg.Resources.Add(istructsmem.NewCommandFunction(cudQName, istructsmem.NullCommandExec))
 	})
 	defer tearDown(app)
 
@@ -407,7 +411,7 @@ func Test400BadRequests(t *testing.T) {
 	testCmdQNameParamsUnlogged := appdef.NewQName(appdef.SysPackage, "TestParamsUnlogged")
 
 	testCmdQName := appdef.NewQName(appdef.SysPackage, "Test")
-	app := setUp(t, func(appDef appdef.IAppDefBuilder, _ *istructsmem.AppConfigType) {
+	app := setUp(t, func(appDef appdef.IAppDefBuilder, cfg *istructsmem.AppConfigType) {
 		appDef.AddObject(testCmdQNameParams).
 			AddField("Text", appdef.DataKind_string, true)
 
@@ -415,15 +419,9 @@ func Test400BadRequests(t *testing.T) {
 			AddField("Password", appdef.DataKind_string, true)
 
 		appDef.AddCommand(testCmdQName).SetUnloggedParam(testCmdQNameParamsUnlogged).SetParam(testCmdQNameParams)
+		cfg.Resources.Add(istructsmem.NewCommandFunction(testCmdQName, istructsmem.NullCommandExec))
 	})
 	defer tearDown(app)
-
-	testCmd := istructsmem.NewCommandFunction(testCmdQName, func(args istructs.ExecCommandArgs) (err error) {
-		_ = args.ArgumentObject.AsString("Text")
-		_ = args.ArgumentUnloggedObject.AsString("Password")
-		return nil
-	})
-	app.cfg.Resources.Add(testCmd)
 
 	baseReq := ibus.Request{
 		WSID:     1,
@@ -484,15 +482,14 @@ func TestAuthnz(t *testing.T) {
 
 	qNameAllowedCmd := appdef.NewQName(appdef.SysPackage, "TestAllowedCmd")
 	qNameDeniedCmd := appdef.NewQName(appdef.SysPackage, "TestDeniedCmd") // the same in core/iauthnzimpl
-	app := setUp(t, func(appDef appdef.IAppDefBuilder, _ *istructsmem.AppConfigType) {
+	app := setUp(t, func(appDef appdef.IAppDefBuilder, cfg *istructsmem.AppConfigType) {
 		appDef.AddCDoc(qNameTestDeniedCDoc)
 		appDef.AddCommand(qNameAllowedCmd)
 		appDef.AddCommand(qNameDeniedCmd)
+		cfg.Resources.Add(istructsmem.NewCommandFunction(qNameAllowedCmd, istructsmem.NullCommandExec))
+		cfg.Resources.Add(istructsmem.NewCommandFunction(qNameDeniedCmd, istructsmem.NullCommandExec))
 	})
 	defer tearDown(app)
-
-	app.cfg.Resources.Add(istructsmem.NewCommandFunction(qNameDeniedCmd, istructsmem.NullCommandExec))
-	app.cfg.Resources.Add(istructsmem.NewCommandFunction(qNameAllowedCmd, istructsmem.NullCommandExec))
 
 	pp := payloads.PrincipalPayload{
 		Login:       "testlogin",
@@ -562,20 +559,16 @@ func getAuthHeader(token string) map[string][]string {
 func TestBasicUsage_FuncWithRawArg(t *testing.T) {
 	require := require.New(t)
 	testCmdQName := appdef.NewQName(appdef.SysPackage, "Test")
-	app := setUp(t, func(appDef appdef.IAppDefBuilder, _ *istructsmem.AppConfigType) {
+	ch := make(chan interface{})
+	app := setUp(t, func(appDef appdef.IAppDefBuilder, cfg *istructsmem.AppConfigType) {
 		appDef.AddCommand(testCmdQName).SetParam(istructs.QNameRaw)
+		cfg.Resources.Add(istructsmem.NewCommandFunction(testCmdQName, func(args istructs.ExecCommandArgs) (err error) {
+			require.EqualValues("custom content", args.ArgumentObject.AsString(processors.Field_RawObject_Body))
+			close(ch)
+			return
+		}))
 	})
 	defer tearDown(app)
-
-	ch := make(chan interface{})
-	testExec := func(args istructs.ExecCommandArgs) (err error) {
-		require.EqualValues("custom content", args.ArgumentObject.AsString(processors.Field_RawObject_Body))
-		close(ch)
-		return
-	}
-	testCmd := istructsmem.NewCommandFunction(testCmdQName, testExec)
-
-	app.cfg.Resources.Add(testCmd)
 
 	request := ibus.Request{
 		Body:     []byte(`custom content`),

@@ -8,6 +8,7 @@ package istructsmem
 import (
 	"fmt"
 
+	"github.com/untillpro/goutils/iterate"
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/irates"
 	istorage "github.com/voedger/voedger/pkg/istorage"
@@ -142,7 +143,78 @@ func (cfg *AppConfigType) prepare(buckets irates.IBuckets, appStorage istorage.I
 	// prepare functions rate limiter
 	cfg.FunctionRateLimits.prepare(buckets)
 
+	if err := cfg.validateResources(); err != nil {
+		return err
+	}
+
 	cfg.prepared = true
+	return nil
+}
+
+func (cfg *AppConfigType) validateResources() error {
+	err :=  iterate.ForEachError(cfg.AppDef.Types, func(tp appdef.IType) error {
+		switch tp.Kind() {
+		case appdef.TypeKind_Query, appdef.TypeKind_Command:
+			r := cfg.Resources.QueryResource(tp.QName())
+			if r.QName() == appdef.NullQName {
+				return fmt.Errorf("exec of func %s is not defined", tp.QName())
+			}
+		case appdef.TypeKind_Projector:
+			syncFound := false
+			asyncFound := false
+			for _, pFunc := range cfg.syncProjectorFactories {
+				p := pFunc(0)
+				if p.Name == tp.QName() {
+					syncFound = true
+					break
+				}
+			}
+			for _, pFunc := range cfg.asyncProjectorFactories {
+				p := pFunc(0)
+				if p.Name == tp.QName() {
+					asyncFound = true
+					break
+				}
+			}
+			if !syncFound && !asyncFound {
+				return fmt.Errorf("exec of projector %s is not defined", tp.QName())
+			}
+			if syncFound && asyncFound {
+				return fmt.Errorf("exec of projector %s is defined twice: sync and async", tp.QName())
+			}
+			if tp.(appdef.IProjector).Sync() && asyncFound {
+				return fmt.Errorf("exec of sync projector %s is defined as async", tp.QName())
+			}
+			if !tp.(appdef.IProjector).Sync() && syncFound {
+				return fmt.Errorf("exec of async projector %s is defined as sync", tp.QName())
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+	err =  iterate.ForEachError(cfg.Resources.Resources, func(qName appdef.QName) error {
+		if cfg.AppDef.Type(qName).Kind() == appdef.TypeKind_null {
+			return fmt.Errorf("exec of func %s is defined but the func is not defined in SQL", qName)
+		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+	for _, pFunc := range cfg.asyncProjectorFactories {
+		p := pFunc(0)
+		if cfg.AppDef.Type(p.Name).Kind() == appdef.TypeKind_null {
+			return fmt.Errorf("exec of projector %s is defined but the projector is not defined in SQL", p.Name)
+		}
+	}
+	for _, pFunc := range cfg.syncProjectorFactories {
+		p := pFunc(0)
+		if cfg.AppDef.Type(p.Name).Kind() == appdef.TypeKind_null {
+			return fmt.Errorf("exec of projector %s is defined but the projector is not defined in SQL", p.Name)
+		}
+	}
 	return nil
 }
 

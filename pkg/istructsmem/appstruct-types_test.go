@@ -7,6 +7,7 @@ package istructsmem
 
 import (
 	"errors"
+	"log"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -214,5 +215,176 @@ func TestErrorsAppConfigsType(t *testing.T) {
 		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
 		_, err := provider.AppStructs(istructs.AppQName_test1_app1)
 		require.ErrorIs(err, vers.ErrorInvalidVersion)
+	})
+	t.Run("resources validation", func(t *testing.T) {
+		qName := appdef.NewQName("test", "qname")
+		t.Run("query", func(t *testing.T) {
+			t.Run("missing in cfg", func(t *testing.T) {
+				adb := appdef.New()
+				adb.AddQuery(qName)
+				cfgs := make(AppConfigsType, 1)
+				_ = cfgs.AddConfig(istructs.AppQName_test1_app1, adb)
+				provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
+				_, err := provider.AppStructs(istructs.AppQName_test1_app1)
+				require.Error(err)
+				log.Println(err)
+			})
+			t.Run("missing in AppDef", func(t *testing.T) {
+				adb := appdef.New()
+				cfgs := make(AppConfigsType, 1)
+				cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, adb)
+				cfg.Resources.Add(NewQueryFunction(qName, nil))
+				provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
+				_, err := provider.AppStructs(istructs.AppQName_test1_app1)
+				require.Error(err)
+				log.Println(err)
+			})
+		})
+		t.Run("command", func(t *testing.T) {
+			t.Run("missing in cfg", func(t *testing.T) {
+				adb := appdef.New()
+				adb.AddCommand(qName)
+				cfgs := make(AppConfigsType, 1)
+				_ = cfgs.AddConfig(istructs.AppQName_test1_app1, adb)
+				provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
+				_, err := provider.AppStructs(istructs.AppQName_test1_app1)
+				require.Error(err)
+				log.Println(err)
+			})
+			t.Run("missing in AppDef", func(t *testing.T) {
+				adb := appdef.New()
+				cfgs := make(AppConfigsType, 1)
+				cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, adb)
+				cfg.Resources.Add(NewCommandFunction(qName, nil))
+				provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
+				_, err := provider.AppStructs(istructs.AppQName_test1_app1)
+				require.Error(err)
+				log.Println(err)
+			})
+		})
+		t.Run("projectors", func(t *testing.T) {
+			t.Run("sync", func(t *testing.T) {
+				t.Run("missing in cfg", func(t *testing.T) {
+					adb := appdef.New()
+					qName2 := appdef.NewQName("test", "qName2")
+					adb.AddCDoc(qName2)
+					adb.AddProjector(qName).
+						SetSync(true).
+						AddEvent(qName2, appdef.ProjectorEventKind_Insert)
+					cfgs := make(AppConfigsType, 1)
+					_ = cfgs.AddConfig(istructs.AppQName_test1_app1, adb)
+					provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
+					_, err := provider.AppStructs(istructs.AppQName_test1_app1)
+					require.Error(err)
+					log.Println(err)
+				})
+				t.Run("missing in AppDef", func(t *testing.T) {
+					adb := appdef.New()
+					cfgs := make(AppConfigsType, 1)
+					cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, adb)
+					cfg.AddSyncProjectors(func(partition istructs.PartitionID) istructs.Projector {
+						return istructs.Projector{
+							Name: qName,
+						}
+					})
+					provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
+					_, err := provider.AppStructs(istructs.AppQName_test1_app1)
+					require.Error(err)
+					log.Println(err)
+				})
+				t.Run("defined as async in cfg", func(t *testing.T) {
+					adb := appdef.New()
+					qName2 := appdef.NewQName("test", "qName2")
+					adb.AddCDoc(qName2)
+					adb.AddProjector(qName).
+						SetSync(true).
+						AddEvent(qName2, appdef.ProjectorEventKind_Insert)
+					cfgs := make(AppConfigsType, 1)
+					cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, adb)
+					cfg.AddAsyncProjectors(func(partition istructs.PartitionID) istructs.Projector {
+						return istructs.Projector{
+							Name: qName,
+						}
+					})
+					provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
+					_, err := provider.AppStructs(istructs.AppQName_test1_app1)
+					require.Error(err)
+					log.Println(err)
+				})
+			})
+			t.Run("async", func(t *testing.T) {
+				t.Run("missing in cfg", func(t *testing.T) {
+					adb := appdef.New()
+					qName2 := appdef.NewQName("test", "qName2")
+					adb.AddCDoc(qName2)
+					adb.AddProjector(qName).
+						SetSync(false).
+						AddEvent(qName2, appdef.ProjectorEventKind_Insert)
+					cfgs := make(AppConfigsType, 1)
+					_ = cfgs.AddConfig(istructs.AppQName_test1_app1, adb)
+					provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
+					_, err := provider.AppStructs(istructs.AppQName_test1_app1)
+					require.Error(err)
+					log.Println(err)
+				})
+				t.Run("missing in AppDef", func(t *testing.T) {
+					adb := appdef.New()
+					cfgs := make(AppConfigsType, 1)
+					cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, adb)
+					cfg.AddAsyncProjectors(func(partition istructs.PartitionID) istructs.Projector {
+						return istructs.Projector{
+							Name: qName,
+						}
+					})
+					provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
+					_, err := provider.AppStructs(istructs.AppQName_test1_app1)
+					require.Error(err)
+					log.Println(err)
+				})
+				t.Run("defined as sync in cfg", func(t *testing.T) {
+					adb := appdef.New()
+					qName2 := appdef.NewQName("test", "qName2")
+					adb.AddCDoc(qName2)
+					adb.AddProjector(qName).
+						SetSync(false).
+						AddEvent(qName2, appdef.ProjectorEventKind_Insert)
+					cfgs := make(AppConfigsType, 1)
+					cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, adb)
+					cfg.AddSyncProjectors(func(partition istructs.PartitionID) istructs.Projector {
+						return istructs.Projector{
+							Name: qName,
+						}
+					})
+					provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
+					_, err := provider.AppStructs(istructs.AppQName_test1_app1)
+					require.Error(err)
+					log.Println(err)
+				})
+				t.Run("defined twice in cfg", func(t *testing.T) {
+					adb := appdef.New()
+					qName2 := appdef.NewQName("test", "qName2")
+					adb.AddCDoc(qName2)
+					adb.AddProjector(qName).
+						SetSync(true).
+						AddEvent(qName2, appdef.ProjectorEventKind_Insert)
+					cfgs := make(AppConfigsType, 1)
+					cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, adb)
+					cfg.AddAsyncProjectors(func(partition istructs.PartitionID) istructs.Projector {
+						return istructs.Projector{
+							Name: qName,
+						}
+					})
+					cfg.AddSyncProjectors(func(partition istructs.PartitionID) istructs.Projector {
+						return istructs.Projector{
+							Name: qName,
+						}
+					})
+					provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
+					_, err := provider.AppStructs(istructs.AppQName_test1_app1)
+					require.Error(err)
+					log.Println(err)
+				})
+			})
+		})
 	})
 }
