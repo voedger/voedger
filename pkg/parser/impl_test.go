@@ -436,6 +436,49 @@ func Test_Workspace_Defs(t *testing.T) {
 	require.NoError(err)
 }
 
+func Test_Workspace_Defs2(t *testing.T) {
+	require := require.New(t)
+	fs, err := ParseFile("file1.sql", `IMPORT SCHEMA 'test/pkg2'; 
+		APPLICATION test(
+			USE pkg2;
+		);
+		WORKSPACE w(
+			USE TABLE pkg2.*;
+		);
+	`)
+	require.NoError(err)
+	pkg, err := BuildPackageSchema("test/pkg1", []*FileSchemaAST{fs})
+	require.NoError(err)
+
+	fs2, err := ParseFile("file2.sql", `
+		TABLE order INHERITS ODoc (
+			order_item TABLE order_item (
+				b ref
+			)
+		);
+	`)
+	require.NoError(err)
+	pkg2, err := BuildPackageSchema("test/pkg2", []*FileSchemaAST{fs2})
+	require.NoError(err)
+
+	packages, err := BuildAppSchema([]*PackageSchemaAST{
+		getSysPackageAST(),
+		pkg,
+		pkg2,
+	})
+	require.NoError(err)
+	builder := appdef.New()
+	require.NoError(BuildAppDefs(packages, builder))
+	ws := builder.Workspace(appdef.NewQName("pkg1", "w"))
+
+	require.Equal(appdef.TypeKind_ODoc, ws.Type(appdef.NewQName("pkg2", "order")).Kind())
+	require.Equal(appdef.TypeKind_ORecord, ws.Type(appdef.NewQName("pkg2", "order_item")).Kind())
+
+	_, err = builder.Build()
+	require.NoError(err)
+
+}
+
 func Test_Alter_Workspace(t *testing.T) {
 
 	require := require.New(t)
