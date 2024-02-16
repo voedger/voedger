@@ -18,7 +18,8 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 
 	"github.com/golang-jwt/jwt"
-	itokens "github.com/voedger/voedger/pkg/itokens"
+
+	"github.com/voedger/voedger/pkg/itokens"
 )
 
 var (
@@ -176,6 +177,7 @@ func (j *JWTSigner) CryptoHash256(data []byte) (hash [hashLength]byte) {
 	return
 }
 
+//nolint:errorlint
 func setErrorDescription(err error) error {
 	if ve, ok := err.(*jwt.ValidationError); ok {
 		if ve.Errors&(jwt.ValidationErrorExpired) != 0 {

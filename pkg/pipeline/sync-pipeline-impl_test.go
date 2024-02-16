@@ -24,11 +24,11 @@ func TestSyncPipeline_DoSync(t *testing.T) {
 
 		require.Error(t, err)
 		require.Equal(t, "test failure", err.Error())
-		perr, cast := err.(IErrorPipeline)
-		require.Equal(t, "fail-here", perr.GetOpName())
-		require.Equal(t, "doSync", perr.GetPlace())
-		require.True(t, cast)
-		require.NotNil(t, perr.GetWork())
+		var pErr IErrorPipeline
+		require.ErrorAs(t, err, &pErr)
+		require.Equal(t, "fail-here", pErr.GetOpName())
+		require.Equal(t, "doSync", pErr.GetPlace())
+		require.NotNil(t, pErr.GetWork())
 	})
 	t.Run("Should catch and rethrow error", func(t *testing.T) {
 		pipeline := NewSyncPipeline(context.Background(), "my-pipeline",
@@ -46,7 +46,8 @@ func TestSyncPipeline_DoSync(t *testing.T) {
 
 		err := pipeline.SendSync(newTestWork())
 		require.Error(t, err)
-		perr := err.(IErrorPipeline)
+		var perr IErrorPipeline
+		require.ErrorAs(t, err, &perr)
 		require.Equal(t, "nested error 'rethrown' while handling 'test failure'", perr.Error())
 		require.Equal(t, "catch-and-rethrow", perr.GetOpName())
 		require.Equal(t, "catch-onErr", perr.GetPlace())

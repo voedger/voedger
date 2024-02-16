@@ -245,17 +245,17 @@ func provideSecretKeyJWT(sr isecrets.ISecretReader) (itokensjwt.SecretKeyType, e
 	return sr.ReadSecret(itokensjwt.SecretKeyJWTName)
 }
 
-func provideAppsWSAmounts(vvmApps VVMApps, asp istructs.IAppStructsProvider) map[istructs.AppQName]istructs.AppWSAmount {
+func provideAppsWSAmounts(vvmApps VVMApps, asp istructs.IAppStructsProvider) (map[istructs.AppQName]istructs.AppWSAmount, error) {
 	res := map[istructs.AppQName]istructs.AppWSAmount{}
 	for _, appQName := range vvmApps {
 		as, err := asp.AppStructs(appQName)
 		if err != nil {
 			// notest
-			panic(err)
+			return nil, err
 		}
 		res[appQName] = as.WSAmount()
 	}
-	return res
+	return res, nil
 }
 
 func provideMetricsServicePort(msp MetricsServicePortInitial, vvmIdx VVMIdxType) metrics.MetricsServicePort {

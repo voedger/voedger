@@ -426,7 +426,7 @@ func (row *rowType) setType(t appdef.IType) {
 				row.fields = f
 				row.dyB = dynobuffers.NewBuffer(row.appCfg.dynoSchemes.Scheme(t.QName()))
 			} else {
-				//notest
+				// notest
 				row.collectError(fmt.Errorf("type «%v» has no fields: %w", t.QName(), ErrWrongType))
 			}
 		}

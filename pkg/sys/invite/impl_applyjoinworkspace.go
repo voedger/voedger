@@ -83,7 +83,7 @@ func applyJoinWorkspace(timeFunc coreutils.TimeFunc, federation coreutils.IFeder
 			return
 		}
 
-		//Find cdoc.sys.Subject by cdoc.air.Invite
+		// Find cdoc.sys.Subject by cdoc.air.Invite
 		skbViewCollection, err := s.KeyBuilder(state.View, collection.QNameCollectionView)
 		if err != nil {
 			return
@@ -108,7 +108,7 @@ func applyJoinWorkspace(timeFunc coreutils.TimeFunc, federation coreutils.IFeder
 		}
 
 		var body string
-		//Store cdoc.sys.Subject
+		// Store cdoc.sys.Subject
 		if svCDocSubject == nil {
 			// svCDocInvite.AsString(Field_Login) is actually c.sys.InitiateInvitationByEMail.Email
 			body = fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"sys.Subject","Login":"%s","Roles":"%s","SubjectKind":%d,"ProfileWSID":%d}}]}`,

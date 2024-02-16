@@ -147,7 +147,7 @@ func appDefFromBaselineDir(baselineDir string) (appdef.IAppDef, error) {
 	}
 
 	// build package ASTs from schema files
-	var packageASTs []*parser.PackageSchemaAST
+	packageASTs := make([]*parser.PackageSchemaAST, 0)
 	for qpn, files := range pkgFiles {
 		// build file ASTs
 		var fileASTs []*parser.FileSchemaAST

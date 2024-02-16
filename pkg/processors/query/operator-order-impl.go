@@ -50,17 +50,17 @@ func (o OrderOperator) Flush(callback pipeline.OpFuncFlush) (err error) {
 			if o1 == o2 {
 				continue
 			}
-			switch o1.(type) {
+			switch v := o1.(type) {
 			case int32:
-				return compareInt32(o1.(int32), o2.(int32), orderBy.IsDesc())
+				return compareInt32(v, o2.(int32), orderBy.IsDesc())
 			case int64:
-				return compareInt64(o1.(int64), o2.(int64), orderBy.IsDesc())
+				return compareInt64(v, o2.(int64), orderBy.IsDesc())
 			case float32:
-				return compareFloat32(o1.(float32), o2.(float32), orderBy.IsDesc())
+				return compareFloat32(v, o2.(float32), orderBy.IsDesc())
 			case float64:
-				return compareFloat64(o1.(float64), o2.(float64), orderBy.IsDesc())
+				return compareFloat64(v, o2.(float64), orderBy.IsDesc())
 			case string:
-				return compareString(o1.(string), o2.(string), orderBy.IsDesc())
+				return compareString(v, o2.(string), orderBy.IsDesc())
 			default:
 				err = fmt.Errorf("order by '%s' is impossible: %w", orderBy.Field(), ErrWrongType)
 			}

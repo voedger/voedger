@@ -8,7 +8,7 @@ package iratesce
 import (
 	"time"
 
-	irates "github.com/voedger/voedger/pkg/irates"
+	"github.com/voedger/voedger/pkg/irates"
 )
 
 // является ли состояние bucket'а неопределенным (нулевым)
@@ -125,17 +125,17 @@ func (b *bucketsType) bucketByKey(key *irates.BucketKey) (bucket *bucketType) {
 // at the same time, the working Bucket's parameters of restrictions do not change
 // to change the parameters of working buckets, use the ReserRateBuckets function
 // setting the "default" constraint parameters for an action named RateLimitName
-func (b *bucketsType) SetDefaultBucketState(RateLimitName string, bucketState irates.BucketState) {
+func (b *bucketsType) SetDefaultBucketState(rateLimitName string, bucketState irates.BucketState) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
-	b.defaultStates[RateLimitName] = bucketState
+	b.defaultStates[rateLimitName] = bucketState
 }
 
 // returns irates.ErrorRateLimitNotFound
-func (b *bucketsType) GetDefaultBucketsState(RateLimitName string) (state irates.BucketState, err error) {
+func (b *bucketsType) GetDefaultBucketsState(rateLimitName string) (state irates.BucketState, err error) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
-	if state, ok := b.defaultStates[RateLimitName]; ok {
+	if state, ok := b.defaultStates[rateLimitName]; ok {
 		return state, nil
 	}
 	return state, irates.ErrorRateLimitNotFound
@@ -145,10 +145,10 @@ func (b *bucketsType) GetDefaultBucketsState(RateLimitName string) (state irates
 // соответствующие bucket'ы будут "сброшены" до максимально допустимого количества доступных токенов
 // change the restriction parameters with the name RateLimitName for running buckets on bucketState
 // the corresponding buckets will be "reset" to the maximum allowed number of available tokens
-func (b *bucketsType) ResetRateBuckets(RateLimitName string, bucketState irates.BucketState) {
+func (b *bucketsType) ResetRateBuckets(rateLimitName string, bucketState irates.BucketState) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
-	_, ok := b.defaultStates[RateLimitName]
+	_, ok := b.defaultStates[rateLimitName]
 
 	// если параметры "по умолчанию" для данного ограничения не были заданы ранее, то
 	// bucket'ов для этого ограничения точно нет. Просто уходим
@@ -159,7 +159,7 @@ func (b *bucketsType) ResetRateBuckets(RateLimitName string, bucketState irates.
 	}
 
 	for bucketKey, bucket := range b.buckets {
-		if bucketKey.RateLimitName == RateLimitName {
+		if bucketKey.RateLimitName == rateLimitName {
 			bucket.resetToState(bucketState, b.timeFunc())
 		}
 	}

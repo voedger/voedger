@@ -32,7 +32,7 @@ var sfs embed.FS
 var fsvRestaurant embed.FS
 
 //_go:embed example_app/expectedParsed.schema
-//var expectedParsedExampledSchemaStr string
+// var expectedParsedExampledSchemaStr string
 
 func getSysPackageAST() *PackageSchemaAST {
 	pkgSys, err := ParsePackageDir(appdef.SysPackage, sfs, "sql_example_syspkg")
@@ -55,7 +55,7 @@ func Test_BasicUsage(t *testing.T) {
 	require.NoError(err)
 
 	// := repr.String(pkgExample, repr.Indent(" "), repr.IgnorePrivate())
-	//fmt.Println(parsedSchemaStr)
+	// fmt.Println(parsedSchemaStr)
 
 	appSchema, err := BuildAppSchema([]*PackageSchemaAST{
 		getSysPackageAST(),

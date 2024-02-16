@@ -8,14 +8,15 @@
 package itokensjwt
 
 import (
-	base64 "encoding/base64"
+	"encoding/base64"
 	"fmt"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/require"
+
 	"github.com/voedger/voedger/pkg/istructs"
-	itokens "github.com/voedger/voedger/pkg/itokens"
+	"github.com/voedger/voedger/pkg/itokens"
 )
 
 var SecretKeyTooShortExample = SecretKeyType{
@@ -206,12 +207,12 @@ func TestErrorProcessing(t *testing.T) {
 		)
 		gp, err := signer.ValidateToken(brokenHeader+"."+brokenPayload+"."+brokenSignature, &payload)
 		require.Error(err)
-		fmt.Printf("%s", *new(time.Time))
-		require.Equal(*new(time.Time), gp.IssuedAt)
+		fmt.Printf("%s", time.Time{})
+		require.Equal(time.Time{}, gp.IssuedAt)
 
 		gp, err = signer.ValidateToken(brokenHeader+"."+brokenPayload, &payload)
 		require.Error(err)
-		require.Equal(*new(time.Time), gp.IssuedAt)
+		require.Equal(time.Time{}, gp.IssuedAt)
 	})
 
 	t.Run("Verify incorrect token: incorrect algorithm. Must receive error itokens.ErrInvalidToken", func(t *testing.T) {
@@ -239,7 +240,7 @@ func TestErrorProcessing(t *testing.T) {
 		token := base64.RawURLEncoding.EncodeToString(header) + "." + base64.RawURLEncoding.EncodeToString(claims) + "." + "x86NBi8jOX47MvQj0o9IVzdetGF6VUi_f0o0o-DeBcY"
 		gp, err := signer.ValidateToken(token, &payload)
 		require.ErrorIs(err, itokens.ErrInvalidToken)
-		require.Equal(*new(time.Time), gp.IssuedAt)
+		require.Equal(time.Time{}, gp.IssuedAt)
 	})
 
 	t.Run("Verify tokens. Check error when unmarshall token claims.", func(t *testing.T) {

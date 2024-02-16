@@ -6,6 +6,7 @@ package sys_it
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -14,6 +15,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
 	coreutils "github.com/voedger/voedger/pkg/utils"
 	it "github.com/voedger/voedger/pkg/vit"
 )
@@ -63,7 +65,7 @@ func TestBasicUsage_ReverseProxy(t *testing.T) {
 	// stop everything
 	require.NoError(targetServer.Shutdown(context.Background()))
 	err = <-errs
-	if err != http.ErrServerClosed {
+	if !errors.Is(err, http.ErrServerClosed) {
 		t.Fatal(err)
 	}
 	targetListener.Close()

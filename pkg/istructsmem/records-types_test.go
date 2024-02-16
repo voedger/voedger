@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/iratesce"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -97,7 +98,7 @@ func Test_RecordsRead(t *testing.T) {
 			}
 		})
 
-		//nolint: staticcheck
+		// nolint: staticcheck
 		t.Run("test batch read records from random intervals", func(t *testing.T) {
 			const maxIntervalLength = 16
 			rand.Seed(time.Now().UnixNano())

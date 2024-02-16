@@ -24,7 +24,7 @@ var ErrStatuses = map[error]int{
 	ErrReceiverNotFound:    http.StatusBadRequest,
 
 	// Better choice would be StatusResponseTimeout but it does not exist
-	ErrSlowClient: http.StatusGatewayTimeout, //TODO better choice???
+	ErrSlowClient: http.StatusGatewayTimeout, // TODO better choice???
 
 	ErrServiceUnavailable: http.StatusServiceUnavailable,
 	ErrBusUnavailable:     http.StatusServiceUnavailable,

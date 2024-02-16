@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/voedger/voedger/pkg/appdef"
-	istructs "github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/istructs"
 )
 
 type IExtensionsModule interface {
@@ -34,7 +34,7 @@ type ExtEngineConfig struct {
 	// Default value is 2^8 so the total available memory is 2^24 bytes
 	MemoryLimitPages uint
 
-	//Compile bool
+	// Compile bool
 }
 
 type IExtensionIO interface {

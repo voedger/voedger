@@ -61,7 +61,7 @@ func TestBasicUsage_ChildWorkspaces(t *testing.T) {
 		vit.PostWS(parentWS, "c.sys.InitChildWorkspace", body)
 
 		// wait for finish
-		childWS := vit.WaitForChildWorkspace(parentWS, wsName, parentWS.Owner)
+		childWS := vit.WaitForChildWorkspace(parentWS, wsName)
 		require.Empty(childWS.WSError)
 		require.Equal(wsName, childWS.Name)
 		require.Equal(it.QNameApp1_TestWSKind, childWS.Kind)
@@ -103,7 +103,7 @@ func TestForeignAuthorization(t *testing.T) {
 	vit.PostWS(parentWS, "c.sys.InitChildWorkspace", body)
 
 	// wait for finish
-	childWS := vit.WaitForChildWorkspace(parentWS, wsName, parentWS.Owner)
+	childWS := vit.WaitForChildWorkspace(parentWS, wsName)
 
 	t.Run("subjects", func(t *testing.T) {
 		// try to execute an operation by the foreign login, expect 403

@@ -67,7 +67,7 @@ func applyInvitationProjector(timeFunc coreutils.TimeFunc, federation coreutils.
 			EmailTemplatePlaceholder_Email, event.ArgumentObject().AsString(field_Email),
 		)
 
-		//Send invitation email
+		// Send invitation email
 		skbSendMail, err := s.KeyBuilder(state.SendMail, appdef.NullQName)
 		if err != nil {
 			return

@@ -25,7 +25,7 @@ func parseImpl(fileName string, content string) (*SchemaAST, error) {
 		{Name: "Array", Pattern: `\[\]`},
 		{Name: "Float", Pattern: `[-+]?\d+\.\d+`},
 		{Name: "Int", Pattern: `[-+]?\d+`},
-		{Name: "Operators", Pattern: `<>|!=|<=|>=|[-+*/%,()=<>]`}, //( '<>' | '<=' | '>=' | '=' | '<' | '>' | '!=' )"
+		{Name: "Operators", Pattern: `<>|!=|<=|>=|[-+*/%,()=<>]`}, // ( '<>' | '<=' | '>=' | '=' | '<' | '>' | '!=' )"
 		{Name: "Punct", Pattern: `[;\[\].]`},
 		{Name: "DEFAULTNEXTVAL", Pattern: `DEFAULT[ \r\n\t]+NEXTVAL`},
 		{Name: "NOTNULL", Pattern: `NOT[ \r\n\t]+NULL`},
@@ -106,7 +106,7 @@ func buildPackageSchemaImpl(qualifiedPackageName string, asts []*FileSchemaAST) 
 		return nil, ErrNoQualifiedName
 	}
 	if len(asts) == 0 {
-		return nil, nil
+		return nil, ErrEmptyFileAstList
 	}
 	headAst := asts[0].Ast
 	for i := 1; i < len(asts); i++ {

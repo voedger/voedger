@@ -599,12 +599,10 @@ func (c *clusterType) applyCmd(cmd *cmdType) error {
 			if err := c.setEnv(); err != nil {
 				return err
 			}
-		} else {
-			if cmd.Args[0] == "remove" && len(cmd.Args) == 2 {
-				c.Acme.removeDomains(cmd.Args[1])
-				if err := c.setEnv(); err != nil {
-					return err
-				}
+		} else if cmd.Args[0] == "remove" && len(cmd.Args) == 2 {
+			c.Acme.removeDomains(cmd.Args[1])
+			if err := c.setEnv(); err != nil {
+				return err
 			}
 		}
 	case ckReplace:

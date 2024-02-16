@@ -6,6 +6,7 @@ package state
 
 import (
 	"context"
+	"errors"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -15,6 +16,7 @@ import (
 type viewRecordsStorage struct {
 	ctx             context.Context
 	viewRecordsFunc viewRecordsFunc
+	appDefFunc      appDefFunc
 	wsidFunc        WSIDFunc
 	n10nFunc        N10nFunc
 }
@@ -30,7 +32,7 @@ func (s *viewRecordsStorage) Get(key istructs.IStateKeyBuilder) (value istructs.
 	k := key.(*viewKeyBuilder)
 	v, err := s.viewRecordsFunc().Get(k.wsid, k.IKeyBuilder)
 	if err != nil {
-		if err == istructsmem.ErrRecordNotFound {
+		if errors.Is(err, istructsmem.ErrRecordNotFound) {
 			return nil, nil
 		}
 		return nil, err

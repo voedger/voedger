@@ -45,6 +45,7 @@ func ReplyErrf(sender ibus.ISender, status int, args ...interface{}) {
 	ReplyErrDef(sender, NewHTTPErrorf(status, args...), http.StatusInternalServerError)
 }
 
+//nolint:errorlint
 func ReplyErrDef(sender ibus.ISender, err error, defaultStatusCode int) {
 	res := WrapSysError(err, defaultStatusCode).(SysError)
 	ReplyJSON(sender, res.HTTPStatus, res.ToJSON())

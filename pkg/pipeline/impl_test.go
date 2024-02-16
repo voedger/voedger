@@ -226,7 +226,9 @@ func TestBasicUsage_ForkOperator(t *testing.T) {
 
 		err := operator.DoSync(context.Background(), work)
 
-		require.Len(t, err.(ErrInBranches).Errors, 2)
+		var errErrInBranches ErrInBranches
+		require.ErrorAs(t, err, &errErrInBranches)
+		require.Len(t, errErrInBranches.Errors, 2)
 	})
 }
 

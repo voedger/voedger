@@ -276,10 +276,11 @@ func TestWrongTypes(t *testing.T) {
 		},
 	}
 
+	query := appDef.Query(qNameFunction)
 	sysToken := getSystemToken(appTokens)
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			qm := NewQueryMessage(context.Background(), appName, partID, wsID, nil, []byte(test.body), qNameFunction, "", sysToken)
+			qm := NewQueryMessage(context.Background(), appName, partID, 1, nil, []byte(test.body), query, "", sysToken)
 			serviceChannel <- qm
 			err := <-errs
 			require.Contains(err.Error(), test.err)

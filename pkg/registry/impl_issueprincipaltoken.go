@@ -6,6 +6,7 @@ package registry
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 
@@ -33,7 +34,7 @@ func (q *iptRR) AsString(name string) string {
 	return q.principalToken
 }
 
-func provideIssuePrincipalTokenExec(itokens itokens.ITokens) istructsmem.ExecQueryClosure {
+func provideIssuePrincipalTokenExec(asp istructs.IAppStructsProvider, itokens itokens.ITokens) istructsmem.ExecQueryClosure {
 	return func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 		login := args.ArgumentObject.AsString(authnz.Field_Login)
 		appName := args.ArgumentObject.AsString(authnz.Field_AppName)
@@ -48,7 +49,19 @@ func provideIssuePrincipalTokenExec(itokens itokens.ITokens) istructsmem.ExecQue
 			return coreutils.NewHTTPErrorf(http.StatusBadRequest, "failed to parse app qualified name", appQName.String(), ":", err)
 		}
 
-		cdocLogin, doesLoginExist, err := GetCDocLogin(login, args.State, args.WSID, appName)
+		as, err := asp.AppStructs(appQName)
+		if err != nil {
+			if errors.Is(err, istructs.ErrAppNotFound) {
+				return coreutils.NewHTTPErrorf(http.StatusBadRequest, "unknown application ", appName)
+			}
+			return err
+		}
+
+		if err = CheckAppWSID(login, args.Workspace, as.WSAmount()); err != nil {
+			return err
+		}
+
+		cdocLogin, doesLoginExist, err := GetCDocLogin(login, args.State, args.Workspace, appName)
 		if err != nil {
 			return err
 		}

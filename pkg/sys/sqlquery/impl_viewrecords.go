@@ -11,13 +11,13 @@ import (
 	"strconv"
 
 	"github.com/blastrain/vitess-sqlparser/sqlparser"
+
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-func readViewRecords(ctx context.Context, WSID istructs.WSID, viewRecordQName appdef.QName, expr sqlparser.Expr, appStructs istructs.IAppStructs, f *filter, callback istructs.ExecQueryCallback,
-	iws appdef.IWorkspace) error {
+func readViewRecords(ctx context.Context, wsid istructs.WSID, viewRecordQName appdef.QName, expr sqlparser.Expr, appStructs istructs.IAppStructs, f *filter, callback istructs.ExecQueryCallback) error {
 	view := appStructs.AppDef().View(viewRecordQName)
 
 	if !f.acceptAll {
@@ -108,9 +108,9 @@ func readViewRecords(ctx context.Context, WSID istructs.WSID, viewRecordQName ap
 		}
 	}
 
-	return appStructs.ViewRecords().Read(ctx, WSID, kb, func(key istructs.IKey, value istructs.IValue) (err error) {
-		data := coreutils.FieldsToMap(key, iws, getFilter(f.filter), coreutils.WithNonNilsOnly())
-		for k, v := range coreutils.FieldsToMap(value, iws, getFilter(f.filter), coreutils.WithNonNilsOnly()) {
+	return appStructs.ViewRecords().Read(ctx, wsid, kb, func(key istructs.IKey, value istructs.IValue) (err error) {
+		data := coreutils.FieldsToMap(key, appStructs.AppDef(), getFilter(f.filter), coreutils.WithNonNilsOnly())
+		for k, v := range coreutils.FieldsToMap(value, appStructs.AppDef(), getFilter(f.filter), coreutils.WithNonNilsOnly()) {
 			data[k] = v
 		}
 		bb, err := json.Marshal(data)

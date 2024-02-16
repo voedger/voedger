@@ -182,6 +182,7 @@ func (vit *VIT) waitForWorkspace(wsName string, owner *Principal, respGetter fun
 					TemplateName:   resp.SectionRow()[tmplNameIdx].(string),
 					TemplateParams: resp.SectionRow()[tmplParamsIdx].(string),
 					ClusterID:      istructs.MainClusterID,
+					ownerLoginName: owner.Name,
 				},
 				WSID:    wsid,
 				WSError: wsError,
@@ -199,8 +200,8 @@ func (vit *VIT) WaitForWorkspace(wsName string, owner *Principal) (ws *AppWorksp
 	})
 }
 
-func (vit *VIT) WaitForChildWorkspace(parentWS *AppWorkspace, wsName string, owner *Principal) (ws *AppWorkspace) {
-	return vit.waitForWorkspace(wsName, owner, func(owner *Principal, body string) *coreutils.FuncResponse {
+func (vit *VIT) WaitForChildWorkspace(parentWS *AppWorkspace, wsName string) (ws *AppWorkspace) {
+	return vit.waitForWorkspace(wsName, parentWS.Owner, func(owner *Principal, body string) *coreutils.FuncResponse {
 		return vit.PostWS(parentWS, "q.sys.QueryChildWorkspaceByName", body)
 	})
 }
@@ -280,7 +281,7 @@ func (vit *VIT) InitChildWorkspace(wsd WSParams, ownerIntf interface{}) {
 	}
 }
 
-func DummyWSParams(wsName string) WSParams {
+func SimpleWSParams(wsName string) WSParams {
 	return WSParams{
 		Name:         wsName,
 		Kind:         QNameApp1_TestWSKind,

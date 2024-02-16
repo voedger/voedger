@@ -7,14 +7,16 @@ package registry
 
 import (
 	"crypto/sha256"
+	"errors"
 	"fmt"
 	"net/http"
+
+	"golang.org/x/crypto/bcrypt"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/state"
 	coreutils "github.com/voedger/voedger/pkg/utils"
-	"golang.org/x/crypto/bcrypt"
 )
 
 func CheckAppWSID(login string, urlWSID istructs.WSID, appWSAmount istructs.AppWSAmount) error {
@@ -22,7 +24,7 @@ func CheckAppWSID(login string, urlWSID istructs.WSID, appWSAmount istructs.AppW
 	appWSID := istructs.WSID(crc16%uint16(appWSAmount)) + istructs.FirstBaseAppWSID
 	expectedAppWSID := istructs.NewWSID(urlWSID.ClusterID(), appWSID)
 	if expectedAppWSID != urlWSID {
-		return coreutils.NewHTTPErrorf(http.StatusForbidden, "wrong AppWSID: ", expectedAppWSID, " expected, ", urlWSID, " got")
+		return coreutils.NewHTTPErrorf(http.StatusForbidden, "wrong url WSID: ", expectedAppWSID, " expected, ", urlWSID, " got")
 	}
 	return nil
 }
@@ -115,7 +117,7 @@ func GetPasswordSaltedHash(pwd string) (pwdSaltedHash []byte, err error) {
 func CheckPassword(cdocLogin istructs.IStateValue, pwd string) (isPasswordOK bool, err error) {
 	isPasswordOK = true
 	if err := bcrypt.CompareHashAndPassword(cdocLogin.AsBytes(field_PwdHash), []byte(pwd)); err != nil {
-		if err == bcrypt.ErrMismatchedHashAndPassword {
+		if errors.Is(err, bcrypt.ErrMismatchedHashAndPassword) {
 			isPasswordOK = false
 			return isPasswordOK, nil
 		}

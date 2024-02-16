@@ -154,7 +154,7 @@ func loadClustFieldFromBuffer_00(key *keyType, field appdef.IField, buf *bytes.B
 	case appdef.DataKind_string:
 		key.ccolsRow.PutString(field.Name(), buf.String())
 	default:
-		//no test
+		// no test
 		err = fmt.Errorf("%v: unable load data type «%s»: %w", key.viewName, field.DataKind().TrimString(), ErrWrongFieldType)
 	}
 	return err

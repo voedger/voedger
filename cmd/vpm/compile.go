@@ -259,7 +259,7 @@ func makeAbsPath(dir string) (string, error) {
 	if !filepath.IsAbs(dir) {
 		wd, err := os.Getwd()
 		if err != nil {
-			return "", fmt.Errorf("failed to get working directory: %v", err)
+			return "", fmt.Errorf("failed to get working directory: %w", err)
 		}
 		dir = filepath.Clean(filepath.Join(wd, dir))
 	}

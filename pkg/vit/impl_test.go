@@ -287,8 +287,9 @@ func TestWithChildWorkspaceOfWorkspace(t *testing.T) {
 	defer vit.TearDown()
 	ws2 := vit.WS(istructs.AppQName_test1_app1, "test_ws2")
 	body := `{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.options"}}]}`
-	// allowed for login "login" depite he is not an owner of test_ws2
-	vit.PostWS(ws2, "c.sys.CUD", body)
+	prnTestEmail := vit.GetPrincipal(istructs.AppQName_test1_app1, TestEmail)
+	// allowed for login "123@123.com" despite he is not an owner of test_ws2
+	vit.PostWS(ws2, "c.sys.CUD", body, coreutils.WithAuthorizeBy(prnTestEmail.Token))
 }
 
 type nilAppStructs struct {

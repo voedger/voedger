@@ -24,8 +24,7 @@ func (o Occurs) String() string {
 
 func (o Occurs) MarshalJSON() ([]byte, error) {
 	s := o.String()
-	switch o {
-	case Occurs_Unbounded:
+	if o == Occurs_Unbounded {
 		s = strconv.Quote(s)
 	}
 	return []byte(s), nil
