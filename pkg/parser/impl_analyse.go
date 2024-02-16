@@ -175,12 +175,24 @@ func analyseUseTable(u *UseTableStmt, c *iterateCtx) {
 	}
 
 	if u.AllTables {
+		var iter func(tbl *TableStmt)
+		iter = func(tbl *TableStmt) {
+			if !tbl.Abstract {
+				u.qNames = append(u.qNames, pkg.NewQName(tbl.Name))
+			}
+			for _, item := range tbl.Items {
+				if item.NestedTable != nil {
+					iter(&item.NestedTable.Table)
+				}
+			}
+
+		}
 		if pkg == nil {
 			pkg = c.pkg
 		}
 		for _, stmt := range pkg.Ast.Statements {
-			if stmt.Table != nil && !stmt.Table.Abstract {
-				u.qNames = append(u.qNames, pkg.NewQName(stmt.Table.Name))
+			if stmt.Table != nil {
+				iter(stmt.Table)
 			}
 		}
 	} else {
