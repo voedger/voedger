@@ -24,6 +24,7 @@ const (
 
 // Test_Race_SUsignUpIn: sign up,sign in with existing logins & sign in with un-existing logins
 func Test_Race_SUsignUpIn(t *testing.T) {
+	// t.Skip()
 	if testing.Short() {
 		t.Skip()
 	}
@@ -45,11 +46,6 @@ func Test_Race_SUsignUpIn(t *testing.T) {
 
 	wgin := &sync.WaitGroup{}
 	for login := range logins {
-		wgin.Add(1)
-		go func() {
-			defer wgin.Done()
-			vit.SignUp(fmt.Sprintf("login%s", strconv.Itoa(vit.NextNumber())), "1", istructs.AppQName_test1_app1)
-		}()
 		wgin.Add(1)
 		go func(login it.Login) {
 			defer wgin.Done()

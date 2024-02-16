@@ -50,8 +50,7 @@ type IQueryFunction interface {
 type PrepareArgs struct {
 	Workpiece      interface{}
 	ArgumentObject IObject
-	WSID           WSID
-	Workspace      appdef.IWorkspace
+	Workspace      WSID
 }
 
 type CommandPrepareArgs struct {

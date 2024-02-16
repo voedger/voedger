@@ -24,14 +24,14 @@ func TestBasicUsage_SignUpIn(t *testing.T) {
 	loginName2 := vit.NextName()
 
 	login1 := vit.SignUp(loginName1, "pwd1", istructs.AppQName_test1_app1)
-	login2 := vit.SignUp(loginName2, "pwd2", istructs.AppQName_test1_app1) // now wrong to create a login in a different CLusterID because it is unknown how to init AppWorkspace there
+	login2 := vit.SignUp(loginName2, "pwd2", istructs.AppQName_test1_app1, it.WithClusterID(42))
 
 	prn1 := vit.SignIn(login1)
 	prn2 := vit.SignIn(login2)
 
 	require.NotEqual(prn1.Token, prn2.Token)
 	require.Equal(istructs.ClusterID(1), prn1.ProfileWSID.ClusterID())
-	require.Equal(istructs.ClusterID(1), prn2.ProfileWSID.ClusterID())
+	require.Equal(istructs.ClusterID(42), prn2.ProfileWSID.ClusterID())
 	require.True(prn1.ProfileWSID.BaseWSID() >= istructs.FirstBaseUserWSID &&
 		prn2.ProfileWSID.BaseWSID() >= istructs.FirstBaseUserWSID &&
 		prn1.ProfileWSID.BaseWSID() != prn2.ProfileWSID.BaseWSID())
@@ -67,12 +67,12 @@ func TestCreateLoginErrors(t *testing.T) {
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
-	t.Run("wrong AppWSID", func(t *testing.T) {
+	t.Run("wrong url wsid", func(t *testing.T) {
 		body := fmt.Sprintf(`{"args":{"Login":"login1","AppName":"test1/app1","SubjectKind":%d,"WSKindInitializationData":"{}","ProfileCluster":1},"unloggedArgs":{"Password":"password"}}`, istructs.SubjectKind_User)
 		crc16 := coreutils.CRC16([]byte("login1")) - 1 // simulate crc16 is calculated wrong
 		pseudoWSID := istructs.NewWSID(istructs.MainClusterID, istructs.WSID(crc16))
 		resp := vit.PostApp(istructs.AppQName_sys_registry, pseudoWSID, "c.registry.CreateLogin", body, coreutils.Expect403())
-		resp.RequireError(t, "wrong AppWSID: 140737488420870 expected, 140737488420869 got")
+		resp.RequireError(t, "wrong url WSID: 140737488420870 expected, 140737488420869 got")
 	})
 
 	login := vit.NextName()
@@ -92,7 +92,9 @@ func TestCreateLoginErrors(t *testing.T) {
 		resp.RequireContainsError(t, "failed to parse app qualified name")
 	})
 
-	vit.SignUp(login, "1", istructs.AppQName_test1_app1)
+	newLogin := vit.SignUp(login, "1", istructs.AppQName_test1_app1)
+	// wait for acomplishing the profile init
+	vit.SignIn(newLogin)
 
 	t.Run("create an existing login again", func(t *testing.T) {
 		vit.SignUp(login, "1", istructs.AppQName_test1_app1, it.WithReqOpt(coreutils.Expect409()))
@@ -138,7 +140,9 @@ func TestSignInErrors(t *testing.T) {
 		vit.PostApp(istructs.AppQName_sys_registry, pseudoWSID, "q.registry.IssuePrincipalToken", body, coreutils.Expect401()).Println()
 	})
 
-	vit.SignUp(login, "1", istructs.AppQName_test1_app1)
+	newLogin := vit.SignUp(login, "1", istructs.AppQName_test1_app1)
+	// wait for acomplishing the profile init
+	vit.SignIn(newLogin)
 
 	t.Run("wrong password", func(t *testing.T) {
 		body := fmt.Sprintf(`{"args": {"Login": "%s","Password": "wrongPass","AppName": "%s"},"elements":[{"fields":[]}]}`,

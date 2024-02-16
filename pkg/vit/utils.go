@@ -281,7 +281,7 @@ func (vit *VIT) InitChildWorkspace(wsd WSParams, ownerIntf interface{}) {
 	}
 }
 
-func DummyWSParams(wsName string) WSParams {
+func SimpleWSParams(wsName string) WSParams {
 	return WSParams{
 		Name:         wsName,
 		Kind:         QNameApp1_TestWSKind,

@@ -41,24 +41,28 @@ func implProvideAsyncActualizerState(ctx context.Context, appStructs istructs.IA
 	state.addStorage(View, &viewRecordsStorage{
 		ctx:             ctx,
 		viewRecordsFunc: func() istructs.IViewRecords { return appStructs.ViewRecords() },
+		appDefFunc:      func() appdef.IAppDef { return appStructs.AppDef() },
 		wsidFunc:        wsidFunc,
 		n10nFunc:        n10nFunc,
 	}, S_GET|S_GET_BATCH|S_READ|S_INSERT|S_UPDATE)
 
 	state.addStorage(Record, &recordsStorage{
 		recordsFunc: func() istructs.IRecords { return appStructs.Records() },
+		appDefFunc:  func() appdef.IAppDef { return appStructs.AppDef() },
 		wsidFunc:    wsidFunc,
 	}, S_GET|S_GET_BATCH)
 
 	state.addStorage(WLog, &wLogStorage{
 		ctx:        ctx,
 		eventsFunc: func() istructs.IEvents { return appStructs.Events() },
+		appDefFunc: func() appdef.IAppDef { return appStructs.AppDef() },
 		wsidFunc:   wsidFunc,
 	}, S_GET|S_READ)
 
 	state.addStorage(PLog, &pLogStorage{
 		ctx:             ctx,
 		eventsFunc:      func() istructs.IEvents { return appStructs.Events() },
+		appDefFunc:      func() appdef.IAppDef { return appStructs.AppDef() },
 		partitionIDFunc: partitionIDFunc,
 	}, S_GET|S_READ)
 

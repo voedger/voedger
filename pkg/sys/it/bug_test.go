@@ -14,8 +14,14 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/apps"
+	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/istructsmem"
+	"github.com/voedger/voedger/pkg/parser"
 	"github.com/voedger/voedger/pkg/state"
+	"github.com/voedger/voedger/pkg/sys"
+	"github.com/voedger/voedger/pkg/sys/smtp"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 	it "github.com/voedger/voedger/pkg/vit"
 )
@@ -52,8 +58,8 @@ func TestBug_QueryProcessorMustStopOnClientDisconnect(t *testing.T) {
 
 	// отправим POST-запрос
 	body := `{"args": {"Input": "world"},"elements": [{"fields": ["Res"]}]}`
-	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
-	vit.PostWS(ws, "q.app1pkg.MockQry", body, coreutils.WithResponseHandler(func(httpResp *http.Response) {
+	ws := vit.DummyWS(istructs.AppQName_test1_app1)
+	vit.PostWSSys(ws, "q.app1pkg.MockQry", body, coreutils.WithResponseHandler(func(httpResp *http.Response) {
 		// прочтем первую часть ответа (сервер не отдаст вторую, пока в goOn не запишем чего-нибудь)
 		entireResp := []byte{}
 		var err error
@@ -77,32 +83,57 @@ func TestBug_QueryProcessorMustStopOnClientDisconnect(t *testing.T) {
 	// ожидаем, что никаких посторонних ошибок нет: ничего не повисло, queryprocessor отдал управление, роутер не пытается писать в закрытую коннекцию и т.п.
 }
 
-func Test409OnRepeatedlyUsedRawIDsInResultCUDs_(t *testing.T) {
-	vit := it.NewVIT(t, &it.SharedConfig_App1)
-	defer vit.TearDown()
-	it.MockCmdExec = func(_ string, args istructs.ExecCommandArgs) error {
-		// 2 раза используем один и тот же rawID -> 500 internal server error
-		kb, err := args.State.KeyBuilder(state.Record, it.QNameApp1_CDocCategory)
-		if err != nil {
-			return err
-		}
-		sv, err := args.Intents.NewValue(kb)
-		if err != nil {
-			return err
-		}
-		sv.PutRecordID(appdef.SystemField_ID, 1)
+func Test409OnRepeatedlyUsedRawIDsInResultCUDs(t *testing.T) {
+	vitCfg := it.NewOwnVITConfig(
+		it.WithApp(istructs.AppQName_test1_app2, func(apis apps.APIs, cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) apps.AppPackages {
 
-		kb, err = args.State.KeyBuilder(state.Record, it.QNameApp1_CDocCategory)
-		if err != nil {
-			return err
-		}
-		sv, err = args.Intents.NewValue(kb)
-		if err != nil {
-			return err
-		}
-		sv.PutRecordID(appdef.SystemField_ID, 1)
-		return nil
-	}
-	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
-	vit.PostWS(ws, "c.app1pkg.MockCmd", `{"args":{"Input":"Str"}}`, coreutils.Expect409()).Println()
+			sysPackageFS := sys.Provide(cfg, appDefBuilder, smtp.Cfg{}, ep, nil, apis.TimeFunc, apis.ITokens, apis.IFederation, apis.IAppStructsProvider, apis.IAppTokensFactory,
+				apis.NumCommandProcessors, nil, apis.IAppStorageProvider)
+
+			qNameDoc1 := appdef.NewQName("app2pkg", "doc1")
+			// appDefBuilder.AddCDoc(cdocQName)
+
+			cmdQName := appdef.NewQName("app2pkg", "testCmd")
+			cmd2CUDs := istructsmem.NewCommandFunction(cmdQName,
+				func(args istructs.ExecCommandArgs) (err error) {
+					// 2 раза используем один и тот же rawID -> 500 internal server error
+					kb, err := args.State.KeyBuilder(state.Record, qNameDoc1)
+					if err != nil {
+						return
+					}
+					sv, err := args.Intents.NewValue(kb)
+					if err != nil {
+						return
+					}
+					sv.PutRecordID(appdef.SystemField_ID, 1)
+
+					kb, err = args.State.KeyBuilder(state.Record, qNameDoc1)
+					if err != nil {
+						return
+					}
+					sv, err = args.Intents.NewValue(kb)
+					if err != nil {
+						return
+					}
+					sv.PutRecordID(appdef.SystemField_ID, 1)
+					return nil
+				},
+			)
+			cfg.Resources.Add(cmd2CUDs)
+			appPackageFS := parser.PackageFS{
+				QualifiedPackageName: "github.com/voedger/voedger/pkg/vit/app2pkg",
+				FS:                   it.SchemaTestApp2FS,
+			}
+			return apps.AppPackages{
+				AppQName: istructs.AppQName_test1_app2,
+				Packages: []parser.PackageFS{sysPackageFS, appPackageFS},
+			}
+		}, it.WithUserLogin("login", "1")),
+	)
+	vit := it.NewVIT(t, &vitCfg)
+	defer vit.TearDown()
+
+	prn := vit.GetPrincipal(istructs.AppQName_test1_app2, "login")
+	resp := vit.PostProfile(prn, "c.app2pkg.testCmd", "{}", coreutils.Expect409())
+	resp.Println()
 }

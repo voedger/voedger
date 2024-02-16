@@ -29,7 +29,7 @@ func TestBasicUsage_InitiateDeactivateWorkspace(t *testing.T) {
 	wsName := vit.NextName()
 
 	prn1 := vit.GetPrincipal(istructs.AppQName_test1_app1, it.TestEmail)
-	wsp := it.DummyWSParams(wsName)
+	wsp := it.SimpleWSParams(wsName)
 
 	ws := vit.CreateWorkspace(wsp, prn1)
 
@@ -72,7 +72,7 @@ func TestDeactivateJoinedWorkspace(t *testing.T) {
 	wsName1 := vit.NextName()
 	prn1 := vit.GetPrincipal(istructs.AppQName_test1_app1, it.TestEmail)
 	prn2 := vit.GetPrincipal(istructs.AppQName_test1_app1, it.TestEmail2)
-	wsp := it.DummyWSParams(wsName1)
+	wsp := it.SimpleWSParams(wsName1)
 
 	newWS := vit.CreateWorkspace(wsp, prn1)
 
