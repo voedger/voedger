@@ -9,4 +9,5 @@ type Cfg struct {
 	Port      int32
 	Username  string
 	PwdSecret string
+	From      string
 }
