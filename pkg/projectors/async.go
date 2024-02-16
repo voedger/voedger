@@ -75,9 +75,10 @@ func (a *asyncActualizer) Run(ctx context.Context) {
 	for ctx.Err() == nil {
 		if err = a.init(ctx); err == nil {
 			logger.Trace(a.name, "started")
-			if err = a.keepReading(); err != nil {
-				a.conf.LogError(a.name, err)
-			}
+			err = a.keepReading()
+			// if err = a.keepReading(); err != nil {
+			a.conf.LogError(a.name, err)
+			// }
 		}
 		a.finit() // even execute if a.init has failed
 		if ctx.Err() == nil && err != nil {
