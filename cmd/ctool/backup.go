@@ -36,7 +36,7 @@ func newBackupCmd() *cobra.Command {
 	}
 
 	backupNodeCmd.PersistentFlags().StringVarP(&sshPort, "ssh-port", "p", "22", "SSH port")
-	backupNodeCmd.PersistentFlags().StringVar(&expireTime, "expire", "e", "Expire time for backup (e.g. 7d, 1m)")
+	backupNodeCmd.PersistentFlags().StringVarP(&expireTime, "expire", "e", "", "Expire time for backup (e.g. 7d, 1m)")
 
 	backupCronCmd := &cobra.Command{
 		Use:   "cron [<cron event>]",
@@ -54,7 +54,7 @@ func newBackupCmd() *cobra.Command {
 		loggerError(err.Error())
 		return nil
 	}
-	backupCronCmd.PersistentFlags().StringVar(&expireTime, "expire", "e", "Expire time for backup (e.g. 7d, 1m)")
+	backupCronCmd.PersistentFlags().StringVarP(&expireTime, "expire", "e", "", "Expire time for backup (e.g. 7d, 1m)")
 
 	backupListCmd := &cobra.Command{
 		Use:   "list",
@@ -178,7 +178,7 @@ func backupNode(cmd *cobra.Command, args []string) error {
 
 	loggerInfo("Backup node", strings.Join(args, " "))
 	if err = newScriptExecuter("", "").
-		run("backupnode.sh", args...); err != nil {
+		run("backup-node.sh", args...); err != nil {
 		return err
 	}
 
@@ -196,7 +196,7 @@ func backupCron(cmd *cobra.Command, args []string) error {
 		return ErrClusterConfNotFound
 	}
 
-	if len(expireTime) > 0 {
+	if expireTime != "" {
 		expire, err := newExpireType(expireTime)
 		if err != nil {
 			return err

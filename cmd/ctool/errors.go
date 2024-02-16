@@ -72,3 +72,7 @@ var ErrBackupFolderIsNotPrepared = errors.New("backup folder error")
 const errBackupFolderIsNotPrepared = "backup folder " + backupFolder + " is not prepared on host %s: %w"
 
 var ErrInvalidExpireTime = errors.New("invalid expire time")
+
+var ErrBackupNotExist = errors.New("backup not exist")
+
+const errBackupNotExistOnHost = "backup %s not exist on host %s: %w"
