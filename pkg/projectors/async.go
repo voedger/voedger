@@ -234,7 +234,49 @@ func (a *asyncActualizer) handleEvent(pLogOffset istructs.Offset, event istructs
 }
 
 func (a *asyncActualizer) readPlogToTheEnd() (err error) {
-	return a.conf.AppStructs().Events().ReadPLog(a.readCtx.ctx, a.conf.Partition, a.offset+1, istructs.ReadToTheEnd, a.handleEvent)
+
+	type e struct {
+		o istructs.Offset
+		e istructs.IPLogEvent
+	}
+	const maxEvents = 50
+	events := make([]e, 0, maxEvents)
+	errEnough := fmt.Errorf("enough reads (%d)", maxEvents)
+
+	readEvents := func() error {
+		clear(events)
+		aps := a.conf.AppStructs() // must be borrowed and finally released
+		return aps.Events().ReadPLog(a.readCtx.ctx, a.conf.Partition, a.offset+1, istructs.ReadToTheEnd,
+			func(ofs istructs.Offset, event istructs.IPLogEvent) (err error) {
+				events = append(events, e{ofs, event})
+				if len(events) == maxEvents {
+					return errEnough
+				}
+				return nil
+			})
+	}
+
+	for {
+		readErr := readEvents()
+		for _, e := range events {
+			err = a.handleEvent(e.o, e.e)
+			e.e.Release()
+			if err != nil {
+				return err // error while handling event
+			}
+			if a.readCtx.ctx.Err() != nil {
+				return nil // canceled
+			}
+		}
+		switch readErr {
+		case nil:
+			return nil // end of PLog
+		case errEnough:
+			continue // continue reading next portion
+		default:
+			return readErr // error while reading PLog
+		}
+	}
 }
 
 func (a *asyncActualizer) readPlogToTheEnd2(tillOffset istructs.Offset) (err error) {
