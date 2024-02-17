@@ -6,4 +6,5 @@ use (
 	./cmd/edger
 	./pkg/iextenginewazero/_testdata
 	./staging/src/github.com/voedger/exttinygo
+	./staging/src/github.com/voedger/exttinygo/examples/hello/extwasm
 )
