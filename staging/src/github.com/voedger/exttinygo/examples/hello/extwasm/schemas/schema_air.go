@@ -1,12 +1,8 @@
 package schemas
 
-type Field struct {
-	Name string
-	Type string
-}
-
 var Air = struct {
 	ProformaPrinted Air_ProformaPrinted
+	PbillDates      Air_PbillDates
 }{
 	ProformaPrinted: Air_ProformaPrinted{
 		Entity: Entity{QName: "air.ProformaPrinted"},
@@ -22,12 +18,7 @@ var Air = struct {
 			BillID:    "BillID",
 		},
 	},
-}
-
-var Untill = struct {
-	PbillDates Untill_PbillDates
-}{
-	PbillDates: Untill_PbillDates{
+	PbillDates: Air_PbillDates{
 		Entity: Entity{QName: "untill.PbillDates"},
 		Key: struct {
 			Year      string

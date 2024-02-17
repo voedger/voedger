@@ -8,6 +8,8 @@
 - Names conflict: Air, Air_ProformaPrinted
 - Query by partial key
 - missing function body
+- `articles`, `articles.article_number`
+  - Solution: semantic analysis shall verify qnames/names uniqueness using case-insensitive mode
 ```go
 //export hostPanic
 func hostPanic(msgPtr, msgSize uint32)

@@ -55,7 +55,7 @@ VIEW PbillDates (
 
 ) AS RESULT OF FillPbillDates;
 */
-type Untill_PbillDates struct {
+type Air_PbillDates struct {
 	Entity
 	Key struct {
 		Year      string
@@ -76,8 +76,8 @@ func (v *Untill_PbillDates_Value) LastOffset() int32 {
 	return v.tv.AsInt32("LastOffset")
 }
 
-func (pp *Untill_PbillDates) MustGetValue(year int32, dayOfYear int32) Untill_PbillDates_Value {
-	kb := exttinygo.KeyBuilder(exttinygo.StorageViewRecords, Untill.PbillDates.QName)
+func (pp *Air_PbillDates) MustGetValue(year int32, dayOfYear int32) Untill_PbillDates_Value {
+	kb := exttinygo.KeyBuilder(exttinygo.StorageViewRecords, Air.PbillDates.QName)
 	kb.PutInt32("Year", year)
 	kb.PutInt32("DayOfYear", dayOfYear)
 	return Untill_PbillDates_Value{tv: exttinygo.MustGetValue(kb)}
