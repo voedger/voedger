@@ -2,9 +2,20 @@
 
 - [vpm schema](https://github.com/voedger/voedger/issues/1476)
 
-## Unclear
+## Problems
 
+- QNames: `IMPORT SCHEMA 'github.com/untillpro/airs-scheme/bp3' AS untill`
+- Names conflict: Air, Air_ProformaPrinted
 - Query by partial key
+- missing function body
+```go
+//export hostPanic
+func hostPanic(msgPtr, msgSize uint32)
+
+//export hostRowWriterPutBytes
+func hostRowWriterPutBytes(id uint64, typ uint32, namePtr, nameSize, valuePtr, valueSize uint32)
+```
+
 
 ## Schemas
 

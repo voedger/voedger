@@ -1,6 +1,6 @@
 package schemas
 
-type QName string
+type QName = string
 
 type ID int64
 

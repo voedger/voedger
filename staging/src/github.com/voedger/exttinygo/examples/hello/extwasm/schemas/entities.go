@@ -1,5 +1,6 @@
 package schemas
 
+// nolint
 import exttinygo "github.com/voedger/exttinygo"
 
 /*
@@ -14,6 +15,7 @@ TABLE ProformaPrinted INHERITS ODoc (
 */
 type Air_ProformaPrinted struct {
 	Entity
+	// Do we need this for air development?
 	Fields struct {
 		Number    string
 		UserID    string
@@ -22,15 +24,24 @@ type Air_ProformaPrinted struct {
 	}
 }
 
-type Air_ProformaPrinted_Value struct {
-	Number    int32
-	UserID    ID
-	Timestamp int64
-	BillID    ID
+type Air_ProformaPrinted_Value struct{ tv exttinygo.TValue }
+
+func (v *Air_ProformaPrinted_Value) Number() int32 {
+	return v.tv.AsInt32("Number")
+}
+func (v *Air_ProformaPrinted_Value) UserID() int64 {
+	return v.tv.AsInt64("UserID")
+}
+func (v *Air_ProformaPrinted_Value) Timestamp() int64 {
+	return v.tv.AsInt64("Timestamp")
+}
+func (v *Air_ProformaPrinted_Value) BillID() int64 {
+	return v.tv.AsInt64("BillID")
 }
 
 func (pp *Air_ProformaPrinted) MustGetValue(id ID) Air_ProformaPrinted_Value {
-	return Air_ProformaPrinted_Value{}
+	kb := exttinygo.KeyBuilder(exttinygo.StorageRecords, Air.ProformaPrinted.QName)
+	return Air_ProformaPrinted_Value{tv: exttinygo.MustGetValue(kb)}
 }
 
 /*
@@ -56,14 +67,18 @@ type Untill_PbillDates struct {
 	}
 }
 
-type Untill_PbillDates_Value struct {
-	FirstOffset int32
-	LastOffset  int32
+type Untill_PbillDates_Value struct{ tv exttinygo.TValue }
+
+func (v *Untill_PbillDates_Value) FirstOffset() int32 {
+	return v.tv.AsInt32("FirstOffset")
+}
+func (v *Untill_PbillDates_Value) LastOffset() int32 {
+	return v.tv.AsInt32("LastOffset")
 }
 
 func (pp *Untill_PbillDates) MustGetValue(year int32, dayOfYear int32) Untill_PbillDates_Value {
-	kb := exttinygo.KeyBuilder("table", "qq")
-	_ = kb
-	// exttinygo.MustGetValue()
-	return Untill_PbillDates_Value{}
+	kb := exttinygo.KeyBuilder(exttinygo.StorageViewRecords, Untill.PbillDates.QName)
+	kb.PutInt32("Year", year)
+	kb.PutInt32("DayOfYear", dayOfYear)
+	return Untill_PbillDates_Value{tv: exttinygo.MustGetValue(kb)}
 }
