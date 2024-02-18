@@ -1,3 +1,7 @@
+# airs-bp example
+
+Prototype of extensions to build airs-bp application
+
 ## Context
 
 - [vpm schema](https://github.com/voedger/voedger/issues/1476)
@@ -8,7 +12,9 @@
 - Names conflict: Air, Air_ProformaPrinted
 - Query by partial key
 - missing function body
-- `articles`, `articles.article_number`
+- Naming: `articles`, `articles.article_number`
+  - `schemas.Untill.Articles.MustGetValue(schemas.ID(12))`
+  - `println(v.Article_number())`
   - Solution: semantic analysis shall verify qnames/names uniqueness using case-insensitive mode
 ```go
 //export hostPanic
