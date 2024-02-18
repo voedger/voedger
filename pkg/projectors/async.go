@@ -153,6 +153,7 @@ func (a *asyncActualizer) init(ctx context.Context) (err error) {
 			}, offset)
 		},
 		a.conf.SecretReader,
+		p.EventProvider,
 		a.conf.IntentsLimit,
 		a.conf.BundlesLimit,
 		a.conf.Opts...)
@@ -255,7 +256,7 @@ type asyncProjector struct {
 	pipeline.AsyncNOOP
 	state                 state.IBundledHostState
 	partition             istructs.PartitionID
-	wsid                  istructs.WSID
+	event                 istructs.IPLogEvent
 	projector             istructs.Projector
 	pLogOffset            istructs.Offset
 	aametrics             AsyncActualizerMetrics
@@ -275,7 +276,7 @@ func (p *asyncProjector) DoAsync(_ context.Context, work pipeline.IWorkpiece) (o
 	defer work.Release()
 	w := work.(*workpiece)
 
-	p.wsid = w.event.Workspace()
+	p.event = w.event
 	p.pLogOffset = w.pLogOffset
 	if p.aametrics != nil {
 		p.aametrics.Set(aaCurrentOffset, p.partition, p.projector.Name, float64(w.pLogOffset))
@@ -306,7 +307,8 @@ func (p *asyncProjector) DoAsync(_ context.Context, work pipeline.IWorkpiece) (o
 	return nil, err
 }
 func (p *asyncProjector) Flush(_ pipeline.OpFuncFlush) (err error) { return p.flush() }
-func (p *asyncProjector) WSIDProvider() istructs.WSID              { return p.wsid }
+func (p *asyncProjector) WSIDProvider() istructs.WSID              { return p.event.Workspace() }
+func (p *asyncProjector) EventProvider() istructs.IPLogEvent       { return p.event }
 func (p *asyncProjector) savePosition() error {
 	defer func() {
 		p.acceptedSinceSave = false

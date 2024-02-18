@@ -433,7 +433,7 @@ func Test_WithState(t *testing.T) {
 			})
 		},
 		func(cfg *istructsmem.AppConfigType) {})
-	state := state.ProvideAsyncActualizerStateFactory()(context.Background(), app, nil, state.SimpleWSIDFunc(ws), nil, nil, intentsLimit, bundlesLimit)
+	state := state.ProvideAsyncActualizerStateFactory()(context.Background(), app, nil, state.SimpleWSIDFunc(ws), nil, nil, nil, intentsLimit, bundlesLimit)
 
 	// build packages
 	moduleUrl := testModuleURL("./_testdata/basicusage/pkg.wasm")
@@ -499,7 +499,7 @@ func Test_StatePanic(t *testing.T) {
 			})
 		},
 		func(cfg *istructsmem.AppConfigType) {})
-	state := state.ProvideAsyncActualizerStateFactory()(context.Background(), app, nil, state.SimpleWSIDFunc(ws), nil, nil, intentsLimit, bundlesLimit)
+	state := state.ProvideAsyncActualizerStateFactory()(context.Background(), app, nil, state.SimpleWSIDFunc(ws), nil, nil, nil, intentsLimit, bundlesLimit)
 
 	const extname = "wrongFieldName"
 
