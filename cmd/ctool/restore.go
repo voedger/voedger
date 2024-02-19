@@ -8,6 +8,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
 
 	"github.com/spf13/cobra"
@@ -29,9 +30,12 @@ func newRestoreCmd() *cobra.Command {
 
 	restoreCmd.PersistentFlags().StringVarP(&sshPort, "ssh-port", "p", "22", "SSH port")
 	restoreCmd.PersistentFlags().StringVar(&sshKey, "ssh-key", "", "Path to SSH key")
-	if err := restoreCmd.MarkPersistentFlagRequired("ssh-key"); err != nil {
-		loggerError(err.Error())
-		return nil
+	value, exists := os.LookupEnv(envVoedgerSshKey)
+	if !exists || value == "" {
+		if err := restoreCmd.MarkPersistentFlagRequired("ssh-key"); err != nil {
+			loggerError(err.Error())
+			return nil
+		}
 	}
 	return restoreCmd
 }

@@ -71,6 +71,11 @@ const (
 	swarmDbmsLabelKey = "dbm"
 	swarmAppLabelKey  = "app"
 	swarmMonLabelKey  = "mon"
+
+	// Variable environment
+	envVoedgerNodeSshPort = "VOEDGER_NODE_SSH_PORT"
+	envVoedgerAcmeDomains = "VOEDGER_ACME_DOMAINS"
+	envVoedgerSshKey      = "VOEDGER_SSH_KEY"
 )
 
 const comma = ","
