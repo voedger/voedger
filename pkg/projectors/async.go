@@ -202,7 +202,7 @@ func (a *asyncActualizer) keepReading() (err error) {
 			logger.Trace(fmt.Sprintf("%s received n10n: offset %d, last handled: %d", a.name, offset, a.offset))
 		}
 		if a.offset < offset {
-			err = a.readPlogToTheEnd2(offset)
+			err = a.readPlogToOffset(offset)
 			if err != nil {
 				a.conf.LogError(a.name, err)
 				a.readCtx.cancelWithError(err)
@@ -233,34 +233,20 @@ func (a *asyncActualizer) handleEvent(pLogOffset istructs.Offset, event istructs
 	return
 }
 
-func (a *asyncActualizer) readPlogToTheEnd() (err error) {
-
-	type e struct {
-		o istructs.Offset
-		e istructs.IPLogEvent
+type (
+	plogRec struct {
+		istructs.Offset
+		istructs.IPLogEvent
 	}
-	const maxEvents = 50
-	events := make([]e, 0, maxEvents)
-	errEnough := fmt.Errorf("enough reads (%d)", maxEvents)
+	readPLogChunk func() (events []plogRec, eof bool, err error)
+)
 
-	readEvents := func() error {
-		clear(events)
-		aps := a.conf.AppStructs() // must be borrowed and finally released
-		return aps.Events().ReadPLog(a.readCtx.ctx, a.conf.Partition, a.offset+1, istructs.ReadToTheEnd,
-			func(ofs istructs.Offset, event istructs.IPLogEvent) (err error) {
-				events = append(events, e{ofs, event})
-				if len(events) == maxEvents {
-					return errEnough
-				}
-				return nil
-			})
-	}
-
+func (a *asyncActualizer) readPlogByChunks(readChunk readPLogChunk) error {
 	for {
-		readErr := readEvents()
+		events, eof, readErr := readChunk()
 		for _, e := range events {
-			err = a.handleEvent(e.o, e.e)
-			e.e.Release()
+			err := a.handleEvent(e.Offset, e.IPLogEvent)
+			e.IPLogEvent.Release()
 			if err != nil {
 				return err // error while handling event
 			}
@@ -268,24 +254,68 @@ func (a *asyncActualizer) readPlogToTheEnd() (err error) {
 				return nil // canceled
 			}
 		}
-		switch readErr {
-		case nil:
-			return nil // end of PLog
-		case errEnough:
-			continue // continue reading next portion
-		default:
+		if readErr != nil {
 			return readErr // error while reading PLog
+		}
+		if eof {
+			return nil // end of PLog
 		}
 	}
 }
 
-func (a *asyncActualizer) readPlogToTheEnd2(tillOffset istructs.Offset) (err error) {
-	for readOffset := a.offset + 1; readOffset <= tillOffset; readOffset++ {
-		if err = a.conf.AppStructs().Events().ReadPLog(a.readCtx.ctx, a.conf.Partition, readOffset, 1, a.handleEvent); err != nil {
-			return
+func (a *asyncActualizer) readPlogToTheEnd() error {
+
+	var errEnough = errors.New("enough reads")
+
+	return a.readPlogByChunks(func() (events []plogRec, eof bool, err error) {
+		events = make([]plogRec, 0, plogChunkSize)
+		aps := a.conf.AppStructs() // must be borrowed and finally released
+		switch aps.Events().ReadPLog(a.readCtx.ctx, a.conf.Partition, a.offset+1, istructs.ReadToTheEnd,
+			func(ofs istructs.Offset, event istructs.IPLogEvent) error {
+				events = append(events, plogRec{ofs, event})
+				if len(events) == plogChunkSize {
+					return errEnough
+				}
+				return nil
+			}) {
+		case nil:
+			return events, true, nil
+		case errEnough:
+			return events, false, nil
+		default:
+			return events, false, err
 		}
-	}
-	return nil
+	})
+}
+
+func (a *asyncActualizer) readPlogToOffset(tillOffset istructs.Offset) error {
+
+	var errEnough = errors.New("enough reads")
+
+	return a.readPlogByChunks(func() (events []plogRec, eof bool, err error) {
+		events = make([]plogRec, 0, plogChunkSize)
+		aps := a.conf.AppStructs() // must be borrowed and finally released
+		for readOffset := a.offset + 1; readOffset <= tillOffset; readOffset++ {
+			if err = aps.Events().ReadPLog(a.readCtx.ctx, a.conf.Partition, readOffset, 1,
+				func(ofs istructs.Offset, event istructs.IPLogEvent) error {
+					events = append(events, plogRec{ofs, event})
+					if (len(events) == plogChunkSize) && (readOffset < tillOffset) {
+						return errEnough
+					}
+					return nil
+				}); err != nil {
+				break
+			}
+		}
+		switch err {
+		case nil:
+			return events, true, nil
+		case errEnough:
+			return events, false, nil
+		default:
+			return events, false, err
+		}
+	})
 }
 
 func (a *asyncActualizer) readOffset(projectorName appdef.QName) (err error) {

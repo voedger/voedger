@@ -39,3 +39,6 @@ const (
 )
 
 var PLogUpdatesQName = appdef.NewQName(appdef.SysPackage, "PLogUpdates")
+
+// size of a log piece (number of events) read by the actualizer at one time
+const plogChunkSize = 50
