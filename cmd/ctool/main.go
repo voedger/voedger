@@ -80,6 +80,7 @@ func execRootCmd(args []string, ver string) error {
 		newRepeatCmd(),
 		newBackupCmd(),
 		newAcmeCmd(),
+		newRestoreCmd(),
 	)
 	rootCmd.SilenceErrors = true
 	rootCmd.PersistentFlags().BoolVar(&dryRun, "dry-run", false, "Perform a dry run of the command without making any actual changes")

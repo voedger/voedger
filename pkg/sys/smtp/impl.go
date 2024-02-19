@@ -8,5 +8,8 @@ package smtp
 import "strings"
 
 func (c Cfg) GetFrom() string {
-	return strings.ReplaceAll(c.Username, "mailto:", "")
+	if len(c.From) == 0 {
+		return strings.ReplaceAll(c.Username, "mailto:", "")
+	}
+	return c.From
 }
