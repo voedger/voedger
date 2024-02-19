@@ -238,15 +238,16 @@ type (
 		istructs.Offset
 		istructs.IPLogEvent
 	}
-	readPLogChunk func() (events []plogRec, eof bool, err error)
+	readPLogChunk func() (events []plogRec, complete bool, err error)
 )
 
 func (a *asyncActualizer) readPlogByChunks(readChunk readPLogChunk) error {
 	for {
-		events, eof, readErr := readChunk()
+		events, complete, readErr := readChunk()
 		for _, e := range events {
 			err := a.handleEvent(e.Offset, e.IPLogEvent)
-			e.IPLogEvent.Release()
+			//TODO: who must to release this event?
+			//e.IPLogEvent.Release() - IT test failed, because event is async used after release
 			if err != nil {
 				return err // error while handling event
 			}
@@ -257,30 +258,27 @@ func (a *asyncActualizer) readPlogByChunks(readChunk readPLogChunk) error {
 		if readErr != nil {
 			return readErr // error while reading PLog
 		}
-		if eof {
+		if complete {
 			return nil // end of PLog
 		}
 	}
 }
 
 func (a *asyncActualizer) readPlogToTheEnd() error {
-
-	var errEnough = errors.New("enough reads")
-
-	return a.readPlogByChunks(func() (events []plogRec, eof bool, err error) {
+	return a.readPlogByChunks(func() (events []plogRec, complete bool, err error) {
 		events = make([]plogRec, 0, plogChunkSize)
 		aps := a.conf.AppStructs() // must be borrowed and finally released
 		switch aps.Events().ReadPLog(a.readCtx.ctx, a.conf.Partition, a.offset+1, istructs.ReadToTheEnd,
 			func(ofs istructs.Offset, event istructs.IPLogEvent) error {
 				events = append(events, plogRec{ofs, event})
 				if len(events) == plogChunkSize {
-					return errEnough
+					return errChunkFull
 				}
 				return nil
 			}) {
 		case nil:
 			return events, true, nil
-		case errEnough:
+		case errChunkFull:
 			return events, false, nil
 		default:
 			return events, false, err
@@ -289,10 +287,7 @@ func (a *asyncActualizer) readPlogToTheEnd() error {
 }
 
 func (a *asyncActualizer) readPlogToOffset(tillOffset istructs.Offset) error {
-
-	var errEnough = errors.New("enough reads")
-
-	return a.readPlogByChunks(func() (events []plogRec, eof bool, err error) {
+	return a.readPlogByChunks(func() (events []plogRec, complete bool, err error) {
 		events = make([]plogRec, 0, plogChunkSize)
 		aps := a.conf.AppStructs() // must be borrowed and finally released
 		for readOffset := a.offset + 1; readOffset <= tillOffset; readOffset++ {
@@ -300,7 +295,7 @@ func (a *asyncActualizer) readPlogToOffset(tillOffset istructs.Offset) error {
 				func(ofs istructs.Offset, event istructs.IPLogEvent) error {
 					events = append(events, plogRec{ofs, event})
 					if (len(events) == plogChunkSize) && (readOffset < tillOffset) {
-						return errEnough
+						return errChunkFull
 					}
 					return nil
 				}); err != nil {
@@ -310,7 +305,7 @@ func (a *asyncActualizer) readPlogToOffset(tillOffset istructs.Offset) error {
 		switch err {
 		case nil:
 			return events, true, nil
-		case errEnough:
+		case errChunkFull:
 			return events, false, nil
 		default:
 			return events, false, err
