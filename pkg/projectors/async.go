@@ -268,21 +268,18 @@ func (a *asyncActualizer) readPlogToTheEnd() error {
 	return a.readPlogByChunks(func() (events []plogRec, complete bool, err error) {
 		events = make([]plogRec, 0, plogChunkSize)
 		aps := a.conf.AppStructs() // must be borrowed and finally released
-		switch aps.Events().ReadPLog(a.readCtx.ctx, a.conf.Partition, a.offset+1, istructs.ReadToTheEnd,
+		err = aps.Events().ReadPLog(a.readCtx.ctx, a.conf.Partition, a.offset+1, istructs.ReadToTheEnd,
 			func(ofs istructs.Offset, event istructs.IPLogEvent) error {
 				events = append(events, plogRec{ofs, event})
 				if len(events) == plogChunkSize {
 					return errChunkFull
 				}
 				return nil
-			}) {
-		case nil:
-			return events, true, nil
-		case errChunkFull:
+			})
+		if errors.Is(err, errChunkFull) {
 			return events, false, nil
-		default:
-			return events, false, err
 		}
+		return events, err == nil, err
 	})
 }
 
@@ -302,14 +299,10 @@ func (a *asyncActualizer) readPlogToOffset(tillOffset istructs.Offset) error {
 				break
 			}
 		}
-		switch err {
-		case nil:
-			return events, true, nil
-		case errChunkFull:
+		if errors.Is(err, errChunkFull) {
 			return events, false, nil
-		default:
-			return events, false, err
 		}
+		return events, err == nil, err
 	})
 }
 
