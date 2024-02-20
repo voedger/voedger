@@ -392,7 +392,11 @@ func (v *pLogValue) AsValue(name string) istructs.IStateValue {
 		return &eventErrorValue{error: v.event.Error()}
 	}
 	if name == Field_ArgumentObject {
-		return &objectValue{object: v.event.ArgumentObject()}
+		arg := v.event.ArgumentObject()
+		if arg == nil {
+			return nil
+		}
+		return &objectValue{object: arg}
 	}
 	panic(errUndefined(name))
 }

@@ -29,17 +29,24 @@ func TestEventStorage_Get(t *testing.T) {
 	app := appStructs(
 		`APPLICATION test(); 
 		WORKSPACE ws1 (
+			TABLE t1 INHERITS CDoc (
+				x int32
+			);
+			TYPE CommandParam(
+				i int32
+			);
 			EXTENSION ENGINE BUILTIN(
-				COMMAND Command();
+				COMMAND Command(CommandParam);
 			);
 		)
 		`,
 		func(cfg *istructsmem.AppConfigType) {
 			cfg.Resources.Add(istructsmem.NewCommandFunction(testQName, istructsmem.NullCommandExec))
 		})
-	partitionNr := istructs.PartitionID(1) // test within partition 1
-	wsid := istructs.WSID(1)               // test within workspace 1
-	offset := istructs.Offset(123)         // test within offset 1
+	partitionNr := istructs.PartitionID(1)
+	wsid := istructs.WSID(1)
+	offset := istructs.Offset(123)
+	tQname := appdef.NewQName("main", "t1")
 
 	eventFunc := func() istructs.IPLogEvent {
 		reb := app.Events().GetNewRawEventBuilder(istructs.NewRawEventBuilderParams{
@@ -50,10 +57,21 @@ func TestEventStorage_Get(t *testing.T) {
 				QName:             testQName,
 			},
 		})
+		argb := reb.ArgumentObjectBuilder()
+		argb.PutInt32("i", 1)
+		_, err := argb.Build()
+		require.NoError(err)
+
+		cud := reb.CUDBuilder()
+		rw := cud.Create(tQname)
+		rw.PutRecordID(appdef.SystemField_ID, 1)
+		rw.PutInt32("x", 1)
+
 		rawEvent, err := reb.BuildRawEvent()
 		if err != nil {
 			panic(err)
 		}
+
 		event, err := app.Events().PutPlog(rawEvent, nil, istructsmem.NewIDGenerator())
 		if err != nil {
 			panic(err)
@@ -69,8 +87,25 @@ func TestEventStorage_Get(t *testing.T) {
 	require.NoError(err)
 
 	require.Equal(int64(wsid), value.AsInt64(Field_Workspace))
+	require.Equal(int64(0), value.AsInt64(Field_RegisteredAt))
+	require.Equal(int64(0), value.AsInt64(Field_SyncedAt))
+	require.Equal(int64(0), value.AsInt64(Field_Offset))
+	require.Equal(int64(0), value.AsInt64(Field_WLogOffset))
+	require.Equal(int64(0), value.AsInt64(Field_DeviceID))
 	require.Equal(testQName, value.AsQName(Field_QName))
-	// TODO: test other fields
+	require.False(value.AsBool(Field_Synced))
+
+	v := value.AsValue(Field_ArgumentObject)
+	require.NotNil(v)
+	require.Equal(int32(1), v.AsInt32("i"))
+
+	c := value.AsValue(Field_CUDs)
+	require.NotNil(c)
+	require.Equal(1, c.Length())
+	cud1 := c.GetAsValue(0)
+	require.NotNil(cud1)
+	require.Equal(int32(1), cud1.AsInt32("x"))
+	require.Equal(tQname, cud1.AsQName("sys.QName"))
 }
 
 type (
