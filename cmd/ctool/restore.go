@@ -70,8 +70,8 @@ func restoreDbNodes(cluster *clusterType, backupName string) error {
 
 	seConf := newSeConfigType(cluster)
 
-	if err := newScriptExecuter("", "").
-		run("restore-node.sh", backupName, cluster.sshKey, seConf.DBNode1, seConf.DBNode2, seConf.DBNode3); err != nil {
+	if err := newScriptExecuter(cluster.sshKey, "").
+		run("restore-node.sh", backupName, seConf.DBNode1, seConf.DBNode2, seConf.DBNode3); err != nil {
 		return err
 	}
 
