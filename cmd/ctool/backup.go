@@ -194,7 +194,6 @@ func backupNode(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	cluster.sshKey = args[2]
 	if err = deleteExpireBacups(cluster, args[0]); err != nil {
 		return err
 	}

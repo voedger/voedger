@@ -37,7 +37,7 @@ set_cron_schedule(){
       crontab -l | grep -v "backup node" > "${CRON_FILE}"
     fi
 
-    echo "${SCHEDULE} BACKUP_FOLDER=${BACKUP_FOLDER};${CTOOL_PATH} backup node ${DB_NODE_1_HOST} \${BACKUP_FOLDER} ${KEY_PATH} --ssh-port ${SSH_PORT} ${EXPIRE};${CTOOL_PATH} backup node ${DB_NODE_2_HOST} \${BACKUP_FOLDER} ${KEY_PATH} --ssh-port ${SSH_PORT} ${EXPIRE};${CTOOL_PATH} backup node ${DB_NODE_3_HOST} \${BACKUP_FOLDER} ${KEY_PATH} --ssh-port ${SSH_PORT} ${EXPIRE}" >> "${CRON_FILE}"
+    echo "${SCHEDULE} BACKUP_FOLDER=${BACKUP_FOLDER};${CTOOL_PATH} backup node ${DB_NODE_1_HOST} \${BACKUP_FOLDER} --ssh-key ${KEY_PATH} --ssh-port ${SSH_PORT} ${EXPIRE};${CTOOL_PATH} backup node ${DB_NODE_2_HOST} \${BACKUP_FOLDER} --ssh-key ${KEY_PATH} --ssh-port ${SSH_PORT} ${EXPIRE};${CTOOL_PATH} backup node ${DB_NODE_3_HOST} \${BACKUP_FOLDER} --ssh-key ${KEY_PATH} --ssh-port ${SSH_PORT} ${EXPIRE}" >> "${CRON_FILE}"
     echo "Modified cron file:"
     cat "${CRON_FILE}"
     crontab "${CRON_FILE}"
