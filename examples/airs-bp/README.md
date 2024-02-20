@@ -5,6 +5,8 @@ Prototype of extensions to build airs-bp application
 ## Context
 
 - [vpm schema](https://github.com/voedger/voedger/issues/1476)
+- https://github.com/voedger/voedger/tree/main/staging/src/github.com/voedger/exttinygo
+- https://github.com/voedger/voedger/blob/main/pkg/iextenginewazero/_testdata/basicusage/main.go
 
 ## Problems
 
