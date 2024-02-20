@@ -23,11 +23,11 @@ TOC
   flowchart TD
 
   SECluster{{SE Cluster}}:::H
-  AppNode1("AppNode1"):::H
-  AppNode2("AppNode2"):::H
-  DBNode1("DBNode1"):::H
-  DBNode2("DBNode2"):::H
-  DBNode3("DBNode3"):::H
+  AppNode1("app-node-1"):::H
+  AppNode2("app-node-2"):::H
+  DBNode1("db-node-1"):::H
+  DBNode2("db-node-2"):::H
+  DBNode3("db-node-3"):::H
 
   DockerSwarm:::G
   subgraph DockerSwarm["Docker Swarm"]
