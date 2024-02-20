@@ -8,6 +8,7 @@ package main
 import (
 	"errors"
 	"net"
+	"os"
 
 	"github.com/spf13/cobra"
 )
@@ -44,9 +45,13 @@ func newInitCmd() *cobra.Command {
 		Short: "Creates the file cluster.json for cluster",
 	}
 	initCmd.PersistentFlags().StringVar(&sshKey, "ssh-key", "", "Path to SSH key")
-	if err := initCmd.MarkPersistentFlagRequired("ssh-key"); err != nil {
-		loggerError(err.Error())
-		return nil
+
+	value, exists := os.LookupEnv(envVoedgerSshKey)
+	if !exists || value == "" {
+		if err := initCmd.MarkPersistentFlagRequired("ssh-key"); err != nil {
+			loggerError(err.Error())
+			return nil
+		}
 	}
 
 	initCmd.PersistentFlags().StringVar(&acmeDomains, "acme-domain", "", "ACME domains <comma separated list>")
