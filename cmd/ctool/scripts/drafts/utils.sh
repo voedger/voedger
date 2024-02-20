@@ -11,6 +11,11 @@ utils_SSH_PORT() {
     echo "$port"
 }
 
+utils_SSH_KEY() {
+    key="${VOEDGER_SSH_KEY}"
+    echo "$key"
+}
+
 utils_SSH_OPTS() {
     opts="-q -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=ERROR"
     echo "$opts"
@@ -28,7 +33,7 @@ echo "$opts"
 }
 
 utils_ssh() {
-  local ssh_options_string="$(utils_SSH_OPTS) -p $(utils_SSH_PORT)"
+  local ssh_options_string="$(utils_SSH_OPTS) -p $(utils_SSH_PORT) -i $(utils_SSH_KEY)"
 
   # Split the string into an array
   IFS=' ' read -r -a ssh_options <<< "$ssh_options_string"
@@ -47,7 +52,7 @@ utils_ssh() {
 }
 
 utils_scp() {
-  local ssh_options_string="$(utils_SSH_OPTS) -P $(utils_SSH_PORT)"
+  local ssh_options_string="$(utils_SSH_OPTS) -P $(utils_SSH_PORT) -i $(utils_SSH_KEY)"
 
   IFS=' ' read -r -a ssh_options <<< "$ssh_options_string"
   scp "${ssh_options[@]}" "$@"

@@ -41,6 +41,11 @@ func newCluster() *clusterType {
 		Acme:                  &acmeType{Domains: make([]string, 0)},
 	}
 
+	sshKey, exists := os.LookupEnv(envVoedgerSshKey)
+	if exists && cluster.sshKey == "" {
+		cluster.sshKey = sshKey
+	}
+
 	if len(acmeDomains) != 0 {
 		cluster.Acme.Domains = strings.Split(acmeDomains, comma)
 	}
@@ -755,14 +760,21 @@ func (c *clusterType) loadFromJSON() error {
 // Installation of the necessary variables of the environment
 func (c *clusterType) setEnv() error {
 
-	logger.Verbose(fmt.Sprintf("Set env VOEDGER_NODE_SSH_PORT = %s", c.SshPort))
-	if err := os.Setenv("VOEDGER_NODE_SSH_PORT", c.SshPort); err != nil {
+	logger.Verbose(fmt.Sprintf("Set env %s = %s", envVoedgerNodeSshPort, c.SshPort))
+	if err := os.Setenv(envVoedgerNodeSshPort, c.SshPort); err != nil {
 		return err
 	}
 
-	logger.Verbose(fmt.Sprintf("Set env VOEDGER_ACME_DOMAINS = %s", c.Acme.domains()))
-	if err := os.Setenv("VOEDGER_ACME_DOMAINS", c.Acme.domains()); err != nil {
+	logger.Verbose(fmt.Sprintf("Set env %s = %s", envVoedgerAcmeDomains, c.Acme.domains()))
+	if err := os.Setenv(envVoedgerAcmeDomains, c.Acme.domains()); err != nil {
 		return err
+	}
+
+	if c.sshKey != "" {
+		logger.Verbose(fmt.Sprintf("Set env %s = %s", envVoedgerSshKey, c.sshKey))
+		if err := os.Setenv(envVoedgerSshKey, c.sshKey); err != nil {
+			return err
+		}
 	}
 
 	return nil

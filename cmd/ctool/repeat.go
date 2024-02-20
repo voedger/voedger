@@ -6,6 +6,8 @@
 package main
 
 import (
+	"os"
+
 	"github.com/spf13/cobra"
 )
 
@@ -17,11 +19,13 @@ func newRepeatCmd() *cobra.Command {
 	}
 
 	repeatCmd.PersistentFlags().StringVar(&sshKey, "ssh-key", "", "Path to SSH key")
-	if err := repeatCmd.MarkPersistentFlagRequired("ssh-key"); err != nil {
-		loggerError(err.Error())
-		return nil
+	value, exists := os.LookupEnv(envVoedgerSshKey)
+	if !exists || value == "" {
+		if err := repeatCmd.MarkPersistentFlagRequired("ssh-key"); err != nil {
+			loggerError(err.Error())
+			return nil
+		}
 	}
-
 	return repeatCmd
 }
 
