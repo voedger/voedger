@@ -53,7 +53,7 @@ runs:
       run: |
         set -x
         for ((i=1; i<=3; i++)); do
-            if ssh ${{ env.SSH_OPTIONS }} ubuntu@${{ env.CTOOL_IP }} "cd /home/ubuntu/voedger/cmd/ctool && ./ctool backup node db-node-$i /home/ubuntu/backup /tmp/amazonKey.pem -v -p ${{ env.SSH_PORT }}"; then
+            if ssh ${{ env.SSH_OPTIONS }} ubuntu@${{ env.CTOOL_IP }} "cd /home/ubuntu/voedger/cmd/ctool && ./ctool backup node db-node-$i /home/ubuntu/backup --ssh-key /tmp/amazonKey.pem -v -p ${{ env.SSH_PORT }}"; then
                 echo "Backup success"
             else 
                 echo "Failed to backup scylla db-node-$i in cluster"

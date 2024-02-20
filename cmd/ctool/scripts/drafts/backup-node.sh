@@ -20,8 +20,8 @@
 
 set -euo pipefail
 
-if [[ $# -ne 3 ]]; then
-  echo "Usage: $0 <Node> <Target folder> <Path to ssh key>"
+if [[ $# -ne 2 ]]; then
+  echo "Usage: $0 <Node> <Target folder>"
   exit 1
 fi
 
@@ -32,23 +32,22 @@ readonly node=$1
 readonly targetFolder=$2
 readonly containerName="scylla"
 readonly nodeDataDir="/var/lib/scylla"
-readonly sshKey=$3
 
 
 signalFile() {
     case "$1" in
         create)
             # Create the directory if it doesn't exist
-            utils_ssh -i "$sshKey" "$LOGNAME@$node" mkdir -p "$(dirname "$signalFilePath")"
+            utils_ssh "$LOGNAME@$node" mkdir -p "$(dirname "$signalFilePath")"
 
             # Create the signal file
-            utils_ssh -i "$sshKey" "$LOGNAME@$node" touch "$signalFilePath"
+            utils_ssh "$LOGNAME@$node" touch "$signalFilePath"
             echo "Signal file created at: $signalFilePath"
             ;;
         remove)
             # Remove the signal file if it exists
-            if utils_ssh -i "$sshKey" "$LOGNAME@$node" "[ -e $signalFilePath ]"; then
-                utils_ssh -i "$sshKey" "$LOGNAME@$node" rm "$signalFilePath"
+            if utils_ssh "$LOGNAME@$node" "[ -e $signalFilePath ]"; then
+                utils_ssh "$LOGNAME@$node" rm "$signalFilePath"
                 echo "Signal file removed from: $signalFilePath"
             else
                 echo "Signal file not found at: $signalFilePath"
@@ -75,7 +74,7 @@ snapshotCtl() {
       echo "Invalid operation. Use 'snapshot' or 'clearsnapshot'."
       return 1
     fi
-    utils_ssh -i "$sshKey" "$LOGNAME@$node" "docker exec $container nodetool $operation -t $snapshotTag"
+    utils_ssh "$LOGNAME@$node" "docker exec $container nodetool $operation -t $snapshotTag"
     echo "Snapshot $operation for node $node"
     err=$?
 
@@ -92,10 +91,10 @@ upload() {
     while [ $# -gt 0 ]; do
         local keyspace="$1"
             shift
-        utils_ssh -i "$sshKey" "$LOGNAME@$node" "mkdir -p $targetFolder/$keyspace"
+        utils_ssh "$LOGNAME@$node" "mkdir -p $targetFolder/$keyspace"
         cmd="cd $nodeDataDir/data && find . -type d -print0 | grep -z -iE '/$keyspace/[^/]+/snapshots/$snapshotTag' | tar -cvzf $targetFolder/$keyspace/data.tar.gz --null -T -"
             echo "Executing: $cmd"
-        if ! utils_ssh -i "$sshKey" "$LOGNAME@$node" "$cmd"; then
+        if ! utils_ssh "$LOGNAME@$node" "$cmd"; then
             echo "Failed to upload data for keyspace $keyspace"
             return 1
         fi
@@ -108,7 +107,7 @@ dump_schema() {
             shift
         cmd="docker exec $container cqlsh -e 'DESC KEYSPACE $keyspace' | grep -v '^$' | sed '/^Warning:/d' > $targetFolder/$keyspace/schema.cql"
         echo "Dump schema. Executing: $cmd"
-        if ! utils_ssh -i "$sshKey" "$LOGNAME@$node" "$cmd"; then
+        if ! utils_ssh "$LOGNAME@$node" "$cmd"; then
             echo "Failed to dump schema for keyspace $keyspace"
             return 1
         fi
