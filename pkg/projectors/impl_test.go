@@ -79,14 +79,14 @@ func TestBasicUsage_SynchronousActualizer(t *testing.T) {
 	processor := pipeline.NewSyncPipeline(context.Background(), "partition processor", pipeline.WireSyncOperator("actualizer", actualizer))
 
 	// feed partition processor
-	require.NoError(processor.SendSync(&plogEvent{wsid: 1001}))
-	require.NoError(processor.SendSync(&plogEvent{wsid: 1001}))
-	require.NoError(processor.SendSync(&plogEvent{wsid: 1002}))
-	require.NoError(processor.SendSync(&plogEvent{wsid: 1001}))
-	require.NoError(processor.SendSync(&plogEvent{wsid: 1001}))
-	require.NoError(processor.SendSync(&plogEvent{wsid: 1001}))
-	require.NoError(processor.SendSync(&plogEvent{wsid: 1002}))
-	require.NoError(processor.SendSync(&plogEvent{wsid: 1002}))
+	require.NoError(processor.SendSync(&plogEventMock{wsid: 1001}))
+	require.NoError(processor.SendSync(&plogEventMock{wsid: 1001}))
+	require.NoError(processor.SendSync(&plogEventMock{wsid: 1002}))
+	require.NoError(processor.SendSync(&plogEventMock{wsid: 1001}))
+	require.NoError(processor.SendSync(&plogEventMock{wsid: 1001}))
+	require.NoError(processor.SendSync(&plogEventMock{wsid: 1001}))
+	require.NoError(processor.SendSync(&plogEventMock{wsid: 1002}))
+	require.NoError(processor.SendSync(&plogEventMock{wsid: 1002}))
 
 	// now read the projection values in workspaces
 	require.Equal(int32(5), getProjectionValue(require, app, incProjectionView, istructs.WSID(1001)))
@@ -267,10 +267,10 @@ func Test_ErrorInSyncActualizer(t *testing.T) {
 	processor := pipeline.NewSyncPipeline(context.Background(), "partition processor", pipeline.WireSyncOperator("actualizer", actualizer))
 
 	// feed partition processor
-	require.NoError(processor.SendSync(&plogEvent{wsid: 1001}))
-	require.NoError(processor.SendSync(&plogEvent{wsid: 1001}))
-	require.NoError(processor.SendSync(&plogEvent{wsid: 1002}))
-	err := processor.SendSync(&plogEvent{wsid: 1099})
+	require.NoError(processor.SendSync(&plogEventMock{wsid: 1001}))
+	require.NoError(processor.SendSync(&plogEventMock{wsid: 1001}))
+	require.NoError(processor.SendSync(&plogEventMock{wsid: 1002}))
+	err := processor.SendSync(&plogEventMock{wsid: 1099})
 	require.Error(err)
 	require.Equal("test err", err.Error())
 
