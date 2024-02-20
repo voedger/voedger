@@ -139,7 +139,15 @@ tableLoad() {
     local value="$3"
     utils_ssh -i "$sshKey" "$LOGNAME@$node" sudo rm -rf "$nodeDataDir/commitlog/*"
     utils_ssh -i "$sshKey" "$LOGNAME@$node" sudo find "$nodeDataDir/data/$keyspace/$key-${value//-/}" -type f -exec rm {} +
-    utils_ssh -i "$sshKey" "$LOGNAME@$node" sudo tar -xzvf "$targetFolder/$keyspace/data.tar.gz" --strip-components=4 --directory="$nodeDataDir/data/$keyspace/$key-${value//-/}" --wildcards "*$key"-*/snapshots/*/*
+
+    max_depth=$(utils_ssh -i "$sshKey" "$LOGNAME@$node" tar -tf "$targetFolder/$keyspace/data.tar.gz" | grep '/schema.cql$' | awk -F/ '{print NF-1}' | sort -rn | head -n1)
+    echo "Archive max depth: $max_depth"
+    if [[ -n $max_depth ]]; then
+        utils_ssh -i "$sshKey" "$LOGNAME@$node" sudo tar -xzvf "$targetFolder/$keyspace/data.tar.gz" --strip-components="$max_depth" --directory="$nodeDataDir/data/$keyspace/$key-${value//-/}" --wildcards "*$key"-*/snapshots/*/*
+    else
+        echo "Cannot calculate backup archive depth. No trusting to archieve. Exit..."
+        exit 1
+    fi
 
     echo "Table: $key, Id: $value loaded"
 }
