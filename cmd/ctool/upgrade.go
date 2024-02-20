@@ -7,6 +7,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -20,11 +21,13 @@ func newUpgradeCmd() *cobra.Command {
 	}
 
 	upgradeCmd.PersistentFlags().StringVar(&sshKey, "ssh-key", "", "Path to SSH key")
-	if err := upgradeCmd.MarkPersistentFlagRequired("ssh-key"); err != nil {
-		loggerError(err.Error())
-		return nil
+	value, exists := os.LookupEnv(envVoedgerSshKey)
+	if !exists || value == "" {
+		if err := upgradeCmd.MarkPersistentFlagRequired("ssh-key"); err != nil {
+			loggerError(err.Error())
+			return nil
+		}
 	}
-
 	return upgradeCmd
 
 }

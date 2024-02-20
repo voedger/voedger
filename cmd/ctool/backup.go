@@ -50,9 +50,12 @@ func newBackupCmd() *cobra.Command {
 		RunE: backupCron,
 	}
 	backupCronCmd.PersistentFlags().StringVar(&sshKey, "ssh-key", "", "Path to SSH key")
-	if err := backupCronCmd.MarkPersistentFlagRequired("ssh-key"); err != nil {
-		loggerError(err.Error())
-		return nil
+	value, exists := os.LookupEnv(envVoedgerSshKey)
+	if !exists || value == "" {
+		if err := backupCronCmd.MarkPersistentFlagRequired("ssh-key"); err != nil {
+			loggerError(err.Error())
+			return nil
+		}
 	}
 	backupCronCmd.PersistentFlags().StringVarP(&expireTime, "expire", "e", "", "Expire time for backup (e.g. 7d, 1m)")
 
@@ -68,11 +71,12 @@ func newBackupCmd() *cobra.Command {
 		RunE: backupList,
 	}
 	backupListCmd.PersistentFlags().StringVar(&sshKey, "ssh-key", "", "Path to SSH key")
-	if err := backupListCmd.MarkPersistentFlagRequired("ssh-key"); err != nil {
-		loggerError(err.Error())
-		return nil
+	if !exists || value == "" {
+		if err := backupListCmd.MarkPersistentFlagRequired("ssh-key"); err != nil {
+			loggerError(err.Error())
+			return nil
+		}
 	}
-
 	backupCmd := &cobra.Command{
 		Use:   "backup",
 		Short: "Backup database",
