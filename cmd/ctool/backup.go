@@ -24,10 +24,10 @@ var expireTime string
 // nolint
 func newBackupCmd() *cobra.Command {
 	backupNodeCmd := &cobra.Command{
-		Use:   "node [<node> <target folder> <path to ssh key>]",
+		Use:   "node [<node> <target folder>]",
 		Short: "Backup db node",
 		Args: func(cmd *cobra.Command, args []string) error {
-			if len(args) != 3 {
+			if len(args) != 2 {
 				return ErrInvalidNumberOfArguments
 			}
 			return nil
@@ -37,6 +37,14 @@ func newBackupCmd() *cobra.Command {
 
 	backupNodeCmd.PersistentFlags().StringVarP(&sshPort, "ssh-port", "p", "22", "SSH port")
 	backupNodeCmd.PersistentFlags().StringVarP(&expireTime, "expire", "e", "", "Expire time for backup (e.g. 7d, 1m)")
+	backupNodeCmd.PersistentFlags().StringVar(&sshKey, "ssh-key", "", "Path to SSH key")
+	value, exists := os.LookupEnv(envVoedgerSshKey)
+	if !exists || value == "" {
+		if err := backupNodeCmd.MarkPersistentFlagRequired("ssh-key"); err != nil {
+			loggerError(err.Error())
+			return nil
+		}
+	}
 
 	backupCronCmd := &cobra.Command{
 		Use:   "cron [<cron event>]",
@@ -50,7 +58,7 @@ func newBackupCmd() *cobra.Command {
 		RunE: backupCron,
 	}
 	backupCronCmd.PersistentFlags().StringVar(&sshKey, "ssh-key", "", "Path to SSH key")
-	value, exists := os.LookupEnv(envVoedgerSshKey)
+	value, exists = os.LookupEnv(envVoedgerSshKey)
 	if !exists || value == "" {
 		if err := backupCronCmd.MarkPersistentFlagRequired("ssh-key"); err != nil {
 			loggerError(err.Error())
@@ -181,7 +189,7 @@ func backupNode(cmd *cobra.Command, args []string) error {
 	}
 
 	loggerInfo("Backup node", strings.Join(args, " "))
-	if err = newScriptExecuter("", "").
+	if err = newScriptExecuter(cluster.sshKey, "").
 		run("backup-node.sh", args...); err != nil {
 		return err
 	}
