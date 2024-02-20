@@ -7,51 +7,15 @@ package orm
 
 import exttinygo "github.com/voedger/exttinygo"
 
-const (
-	FName_air_ProformaPrinted_Number    = "Number"
-	FName_air_ProformaPrinted_UserID    = "UserID"
-	FName_air_ProformaPrinted_Timestamp = "Timestamp"
-	FName_air_ProformaPrinted_BillID    = "BillID"
-	FName_air_PbillDates_Year           = "Year"
-	FName_air_PbillDates_DayOfYear      = "DayOfYear"
-	FName_air_PbillDates_FirstOffset    = "FirstOffset"
-	FName_air_PbillDates_LastOffset     = "LastOffset"
-)
-
 var Package_air = struct {
 	ODoc_ProformaPrinted ODoc_air_ProformaPrinted
 	View_PbillDates      View_air_PbillDates
 }{
 	ODoc_ProformaPrinted: ODoc_air_ProformaPrinted{
 		Type: Type{qname: "air.ProformaPrinted"},
-		ValueNames: struct {
-			Number    string
-			UserID    string
-			Timestamp string
-			BillID    string
-		}{
-			Number:    "Number",
-			UserID:    "UserID",
-			Timestamp: "Timestamp",
-			BillID:    "BillID",
-		},
 	},
 	View_PbillDates: View_air_PbillDates{
 		Type: Type{qname: "untill.PbillDates"},
-		KeyNames: struct {
-			Year      string
-			DayOfYear string
-		}{
-			Year:      "Year",
-			DayOfYear: "DayOfYear",
-		},
-		ValueNames: struct {
-			FirstOffset string
-			LastOffset  string
-		}{
-			FirstOffset: "FirstOffset",
-			LastOffset:  "LastOffset",
-		},
 	},
 }
 
@@ -68,10 +32,10 @@ TABLE ProformaPrinted INHERITS ODoc (
 type ODoc_air_ProformaPrinted struct {
 	Type
 	ValueNames struct {
-		Number    string
-		UserID    string
-		Timestamp string
-		BillID    string
+		FName_Number    string
+		FName_UserID    string
+		FName_Timestamp string
+		FName_BillID    string
 	}
 }
 
@@ -88,34 +52,26 @@ VIEW PbillDates (
 */
 type View_air_PbillDates struct {
 	Type
-	KeyNames struct {
-		Year      string
-		DayOfYear string
-	}
-	ValueNames struct {
-		FirstOffset string
-		LastOffset  string
-	}
 }
 
 func (v *View_air_PbillDates) MustGetValue(year int32, dayOfYear int32) Value_View_untill_PbillDates {
 	kb := exttinygo.KeyBuilder(exttinygo.StorageViewRecords, Package_air.View_PbillDates.qname)
-	kb.PutInt32(v.KeyNames.Year, year)
-	kb.PutInt32(v.KeyNames.DayOfYear, dayOfYear)
+	kb.PutInt32("Year", year)
+	kb.PutInt32("DayOfYear", dayOfYear)
 	return Value_View_untill_PbillDates{tv: exttinygo.MustGetValue(kb), kb: kb}
 }
 
 func (v *View_air_PbillDates) NewIntent(year int32, dayOfYear int32) View_untill_PbillDates_Intent {
 	kb := exttinygo.KeyBuilder(exttinygo.StorageViewRecords, Package_air.View_PbillDates.qname)
-	kb.PutInt32(v.KeyNames.Year, year)
-	kb.PutInt32(v.KeyNames.DayOfYear, dayOfYear)
+	kb.PutInt32("Year", year)
+	kb.PutInt32("DayOfYear", dayOfYear)
 	return View_untill_PbillDates_Intent{intent: exttinygo.NewValue(kb)}
 }
 
 func (v *View_air_PbillDates) QueryValue(year int32, dayOfYear int32) (value Value_View_untill_PbillDates, ok bool) {
 	kb := exttinygo.KeyBuilder(exttinygo.StorageViewRecords, Package_air.View_PbillDates.qname)
-	kb.PutInt32(v.KeyNames.Year, year)
-	kb.PutInt32(v.KeyNames.DayOfYear, dayOfYear)
+	kb.PutInt32("Year", year)
+	kb.PutInt32("DayOfYear", dayOfYear)
 	ok, tv := exttinygo.QueryValue(kb)
 	if !ok {
 		return Value_View_untill_PbillDates{}, false

@@ -24,7 +24,6 @@ func MyProjector() {
 		v := orm.Package_air.View_PbillDates.MustGetValue(2019, 12)
 		println(v.Get_FirstOffset())
 		println(v.Get_LastOffset())
-		println(orm.Package_air.View_PbillDates.ValueNames.FirstOffset)
 	}
 
 	// Query untill.Articles

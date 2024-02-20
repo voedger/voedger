@@ -88,4 +88,20 @@ TABLE untill_users INHERITS CDoc (
 	language varchar(100),
     ...
 )
+
+
+TABLE pbill INHERITS ODoc (
+	id_bill int64 NOT NULL,
+	id_untill_users ref(untill_users) NOT NULL,
+	number int32,
+	pbill_item pbill_item
+}
+
+
+TABLE pbill_item INHERITS ORecord (
+	id_untill_users ref(untill_users) NOT NULL,
+	tableno int32 NOT NULL,
+	rowbeg int32 NOT NULL
+)
+
 ```
