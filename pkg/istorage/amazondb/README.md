@@ -2,7 +2,7 @@
 
 ## Overview
 
-This package provides a driver for AWS DynamoDB storage as implementation of interfaces `istorage.IAppStorage` and `istorage.IAppStorageFactory`. 
+This package provides a driver for AWS DynamoDB storage as implementation of interfaces `istorage.IAppStorage` and `istorage.IAppStorageFactory`.
 
 
 ## Configuration
@@ -27,8 +27,8 @@ params := DynamoDBParams{
 
 ## KeySpace
 
-AWS DynamoDB does not have a concept of KeySpace. Instead, it has tables. The table name is used as a KeySpace.
+AWS DynamoDB does not have a concept of KeySpace. Keyspaces are emulated using table with names `<keyspaceName>.values`
 
 ## Notes
 
-Partition key and sort key attributes of base tables continue to require non-empty values for all data types, including String and Binary. That is why there is a workaround for null values for clustering columns (see prefixZero and unprefixZero functions).
+Partition key and sort key attributes of base tables continue to require non-empty values for all data types, including String and Binary. To make a workaround `byte(0)` is prefixed to each sort key value. See `prefixZero()` and `unprefixZero() functions.
