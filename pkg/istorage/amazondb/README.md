@@ -27,7 +27,7 @@ params := DynamoDBParams{
 
 ## KeySpace
 
-AWS DynamoDB does not have a concept of KeySpace. Keyspaces are emulated using table with names `<keyspaceName>.values`
+AWS DynamoDB does not have a concept of KeySpace. Keyspaces are emulated using tables with names `<keyspaceName>.values`
 
 ## Notes
 
