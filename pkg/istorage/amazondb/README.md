@@ -1,8 +1,10 @@
 # Driver for AWS DynamoDB storage.
 
+## Overview
 This package provides a driver for AWS DynamoDB storage as implementation of interfaces `istorage.IAppStorage` and `istorage.IAppStorageFactory`. 
 
 
+## Configuration
 To run DynamoDB locally, use the following command:
 
 ```bash
@@ -21,4 +23,10 @@ params := DynamoDBParams{
 }
 ```
 
+## KeySpace
 
+AWS DynamoDB does not have a concept of KeySpace. Instead, it has tables. The table name is used as a KeySpace.
+
+## Notes
+
+Partition key and sort key attributes of base tables continue to require non-empty values for all data types, including String and Binary. That is why there is a workaround for null values for clustering columns (see prefixZero and unprefixZero functions).
