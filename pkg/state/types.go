@@ -29,10 +29,11 @@ type CUDFunc func() istructs.ICUD
 type CmdResultBuilderFunc func() istructs.IObjectBuilder
 type PrincipalsFunc func() []iauthnz.Principal
 type TokenFunc func() string
+type PLogEventFunc func() istructs.IPLogEvent
 type CommandProcessorStateFactory func(ctx context.Context, appStructsFunc AppStructsFunc, partitionIDFunc PartitionIDFunc, wsidFunc WSIDFunc, secretReader isecrets.ISecretReader, cudFunc CUDFunc, principalPayloadFunc PrincipalsFunc, tokenFunc TokenFunc, intentsLimit int, cmdResultBuilderFunc CmdResultBuilderFunc) IHostState
 type SyncActualizerStateFactory func(ctx context.Context, appStructs istructs.IAppStructs, partitionIDFunc PartitionIDFunc, wsidFunc WSIDFunc, n10nFunc N10nFunc, secretReader isecrets.ISecretReader, intentsLimit int) IHostState
 type QueryProcessorStateFactory func(ctx context.Context, appStructs istructs.IAppStructs, partitionIDFunc PartitionIDFunc, wsidFunc WSIDFunc, secretReader isecrets.ISecretReader, principalPayloadFunc PrincipalsFunc, tokenFunc TokenFunc) IHostState
-type AsyncActualizerStateFactory func(ctx context.Context, appStructs istructs.IAppStructs, partitionIDFunc PartitionIDFunc, wsidFunc WSIDFunc, n10nFunc N10nFunc, secretReader isecrets.ISecretReader, intentsLimit, bundlesLimit int,
+type AsyncActualizerStateFactory func(ctx context.Context, appStructs istructs.IAppStructs, partitionIDFunc PartitionIDFunc, wsidFunc WSIDFunc, n10nFunc N10nFunc, secretReader isecrets.ISecretReader, eventFunc PLogEventFunc, intentsLimit, bundlesLimit int,
 	opts ...ActualizerStateOptFunc) IBundledHostState
 
 type eventsFunc func() istructs.IEvents
@@ -311,6 +312,35 @@ func (v *recordsValue) FieldNames(cb func(fieldName string)) {
 	v.record.FieldNames(cb)
 }
 
+type objectValue struct {
+	baseStateValue
+	object istructs.IObject
+}
+
+func (v *objectValue) AsInt32(name string) int32                { return v.object.AsInt32(name) }
+func (v *objectValue) AsInt64(name string) int64                { return v.object.AsInt64(name) }
+func (v *objectValue) AsFloat32(name string) float32            { return v.object.AsFloat32(name) }
+func (v *objectValue) AsFloat64(name string) float64            { return v.object.AsFloat64(name) }
+func (v *objectValue) AsBytes(name string) []byte               { return v.object.AsBytes(name) }
+func (v *objectValue) AsString(name string) string              { return v.object.AsString(name) }
+func (v *objectValue) AsQName(name string) appdef.QName         { return v.object.AsQName(name) }
+func (v *objectValue) AsBool(name string) bool                  { return v.object.AsBool(name) }
+func (v *objectValue) AsRecordID(name string) istructs.RecordID { return v.object.AsRecordID(name) }
+func (v *objectValue) RecordIDs(includeNulls bool, cb func(string, istructs.RecordID)) {
+	v.object.RecordIDs(includeNulls, cb)
+}
+func (v *objectValue) FieldNames(cb func(string)) { v.object.FieldNames(cb) }
+func (v *objectValue) AsValue(name string) istructs.IStateValue {
+	var o istructs.IObject
+	v.object.Children(name, func(i istructs.IObject) {
+		o = i
+	})
+	if o != nil {
+		return &objectValue{object: o}
+	}
+	panic(errUndefined(name))
+}
+
 type pLogValue struct {
 	baseStateValue
 	event  istructs.IPLogEvent
@@ -332,22 +362,43 @@ func (v *pLogValue) AsInt64(name string) int64 {
 	case Field_Offset:
 		return v.offset
 	}
-	return 0
+	panic(errUndefined(name))
 }
-func (v *pLogValue) AsBool(string) bool { return v.event.Synced() }
+func (v *pLogValue) AsBool(name string) bool {
+	if name == Field_Synced {
+		return v.event.Synced()
+	}
+	panic(errUndefined(name))
+}
 func (v *pLogValue) AsRecord(string) istructs.IRecord {
 	return v.event.ArgumentObject().AsRecord()
 }
+func (v *pLogValue) AsQName(name string) appdef.QName {
+	if name == Field_QName {
+		return v.event.QName()
+	}
+	panic(errUndefined(name))
+}
 func (v *pLogValue) AsEvent(string) istructs.IDbEvent { return v.event }
 func (v *pLogValue) AsValue(name string) istructs.IStateValue {
-	if name != Field_CUDs {
-		panic(ErrNotSupported)
+	if name == Field_CUDs {
+		sv := &cudsValue{}
+		v.event.CUDs(func(rec istructs.ICUDRow) {
+			sv.cuds = append(sv.cuds, rec)
+		})
+		return sv
 	}
-	sv := &cudsValue{}
-	v.event.CUDs(func(rec istructs.ICUDRow) {
-		sv.cuds = append(sv.cuds, rec)
-	})
-	return sv
+	if name == Field_Error {
+		return &eventErrorValue{error: v.event.Error()}
+	}
+	if name == Field_ArgumentObject {
+		arg := v.event.ArgumentObject()
+		if arg == nil {
+			return nil
+		}
+		return &objectValue{object: arg}
+	}
+	panic(errUndefined(name))
 }
 
 type wLogValue struct {
@@ -622,6 +673,32 @@ func (v *viewValue) AsRecordID(name string) istructs.RecordID {
 }
 func (v *viewValue) AsRecord(name string) istructs.IRecord {
 	return v.value.AsRecord(name)
+}
+
+type eventErrorValue struct {
+	istructs.IStateValue
+	error istructs.IEventError
+}
+
+func (v *eventErrorValue) AsString(name string) string {
+	if name == Field_ErrStr {
+		return v.error.ErrStr()
+	}
+	panic(ErrNotSupported)
+}
+
+func (v *eventErrorValue) AsBool(name string) bool {
+	if name == Field_ValidEvent {
+		return v.error.ValidEvent()
+	}
+	panic(ErrNotSupported)
+}
+
+func (v *eventErrorValue) AsQName(name string) appdef.QName {
+	if name == Field_QNameFromParams {
+		return v.error.QNameFromParams()
+	}
+	panic(ErrNotSupported)
 }
 
 type cudsValue struct {

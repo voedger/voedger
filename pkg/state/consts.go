@@ -20,6 +20,7 @@ var (
 	AppSecret      = appdef.NewQName(appdef.SysPackage, "AppSecret")
 	RequestSubject = appdef.NewQName(appdef.SysPackage, "RequestSubject")
 	Result         = appdef.NewQName(appdef.SysPackage, "Result")
+	Event          = appdef.NewQName(appdef.SysPackage, "Event")
 )
 
 const (
@@ -35,6 +36,13 @@ const (
 	Field_Method                        = "Method"
 	Field_Header                        = "Header"
 	Field_Offset                        = "Offset"
+	Field_Error                         = "Error"
+	Field_ErrStr                        = "ErrStr"
+	Field_QNameFromParams               = "QNameFromParams"
+	Field_ValidEvent                    = "ValidEvent"
+	Field_QName                         = "QName"
+	Field_ArgumentObject                = "ArgumentObject"
+	Field_Synced                        = "Synced"
 	Field_Count                         = "Count"
 	Field_ID                            = "ID"
 	Field_From                          = "From"
