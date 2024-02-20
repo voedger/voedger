@@ -202,7 +202,7 @@ func (a *asyncActualizer) keepReading() (err error) {
 			logger.Trace(fmt.Sprintf("%s received n10n: offset %d, last handled: %d", a.name, offset, a.offset))
 		}
 		if a.offset < offset {
-			err = a.readPlogToTheEnd2(offset)
+			err = a.readPlogToOffset(offset)
 			if err != nil {
 				a.conf.LogError(a.name, err)
 				a.readCtx.cancelWithError(err)
@@ -233,17 +233,77 @@ func (a *asyncActualizer) handleEvent(pLogOffset istructs.Offset, event istructs
 	return
 }
 
-func (a *asyncActualizer) readPlogToTheEnd() (err error) {
-	return a.conf.AppStructs().Events().ReadPLog(a.readCtx.ctx, a.conf.Partition, a.offset+1, istructs.ReadToTheEnd, a.handleEvent)
-}
+type (
+	plogRec struct {
+		istructs.Offset
+		istructs.IPLogEvent
+	}
+	readPLogBatch func() (events []plogRec, complete bool, err error)
+)
 
-func (a *asyncActualizer) readPlogToTheEnd2(tillOffset istructs.Offset) (err error) {
-	for readOffset := a.offset + 1; readOffset <= tillOffset; readOffset++ {
-		if err = a.conf.AppStructs().Events().ReadPLog(a.readCtx.ctx, a.conf.Partition, readOffset, 1, a.handleEvent); err != nil {
-			return
+func (a *asyncActualizer) readPlogByBatches(readBatch readPLogBatch) error {
+	for {
+		events, complete, readErr := readBatch()
+		for _, e := range events {
+			err := a.handleEvent(e.Offset, e.IPLogEvent)
+			//TODO: who must to release this event?
+			//e.IPLogEvent.Release() - IT test failed, because event is async used after release
+			if err != nil {
+				return err // error while handling event
+			}
+			if a.readCtx.ctx.Err() != nil {
+				return nil // canceled
+			}
+		}
+		if readErr != nil {
+			return readErr // error while reading PLog
+		}
+		if complete {
+			return nil // end of PLog
 		}
 	}
-	return nil
+}
+
+func (a *asyncActualizer) readPlogToTheEnd() error {
+	return a.readPlogByBatches(func() (events []plogRec, complete bool, err error) {
+		events = make([]plogRec, 0, plogReadBatchSize)
+		aps := a.conf.AppStructs() // must be borrowed and finally released
+		err = aps.Events().ReadPLog(a.readCtx.ctx, a.conf.Partition, a.offset+1, istructs.ReadToTheEnd,
+			func(ofs istructs.Offset, event istructs.IPLogEvent) error {
+				events = append(events, plogRec{ofs, event})
+				if len(events) == plogReadBatchSize {
+					return errBatchFull
+				}
+				return nil
+			})
+		if errors.Is(err, errBatchFull) {
+			return events, false, nil
+		}
+		return events, err == nil, err
+	})
+}
+
+func (a *asyncActualizer) readPlogToOffset(tillOffset istructs.Offset) error {
+	return a.readPlogByBatches(func() (events []plogRec, complete bool, err error) {
+		events = make([]plogRec, 0, plogReadBatchSize)
+		aps := a.conf.AppStructs() // must be borrowed and finally released
+		for readOffset := a.offset + 1; readOffset <= tillOffset; readOffset++ {
+			if err = aps.Events().ReadPLog(a.readCtx.ctx, a.conf.Partition, readOffset, 1,
+				func(ofs istructs.Offset, event istructs.IPLogEvent) error {
+					events = append(events, plogRec{ofs, event})
+					if (len(events) == plogReadBatchSize) && (readOffset < tillOffset) {
+						return errBatchFull
+					}
+					return nil
+				}); err != nil {
+				break
+			}
+		}
+		if errors.Is(err, errBatchFull) {
+			return events, false, nil
+		}
+		return events, err == nil, err
+	})
 }
 
 func (a *asyncActualizer) readOffset(projectorName appdef.QName) (err error) {
