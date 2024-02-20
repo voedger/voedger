@@ -1,10 +1,12 @@
 # Driver for AWS DynamoDB storage.
 
 ## Overview
+
 This package provides a driver for AWS DynamoDB storage as implementation of interfaces `istorage.IAppStorage` and `istorage.IAppStorageFactory`. 
 
 
 ## Configuration
+
 To run DynamoDB locally, use the following command:
 
 ```bash
