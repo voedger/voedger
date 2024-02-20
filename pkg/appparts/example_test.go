@@ -88,7 +88,7 @@ func Example() {
 	appParts.DeployApp(istructs.AppQName_test1_app2, appDef_2_v2, 1, [cluster.ProcessorKind_Count]int{2, 2, 2})
 	appParts.DeployApp(istructs.AppQName_test1_app1, appDef_1_v2, 1, [cluster.ProcessorKind_Count]int{2, 2, 2})
 
-	a2_v2_p1, err := appParts.Borrow(istructs.AppQName_test1_app2, 1, cluster.ProcessorKind_Projector)
+	a2_v2_p1, err := appParts.Borrow(istructs.AppQName_test1_app2, 1, cluster.ProcessorKind_Actualizer)
 	if err != nil {
 		panic(err)
 	}

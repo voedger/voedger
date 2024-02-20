@@ -96,7 +96,7 @@ func (a *asyncActualizer) cancelChannel(e error) {
 }
 
 func (a *asyncActualizer) init(ctx context.Context) (err error) {
-	a.structs = a.conf.AppStructs()
+	a.structs = a.conf.AppStructs() // TODO: must be borrowed and finally released
 	a.readCtx = &asyncActualizerContextState{}
 
 	a.readCtx.ctx, a.readCtx.cancel = context.WithCancel(ctx)
