@@ -20,7 +20,7 @@ type IAppPartitions interface {
 	// Adds new application or update existing.
 	//
 	// If application with the same name exists, then its definition will be updated.
-	DeployApp(name istructs.AppQName, def appdef.IAppDef, partsCount int, engines [cluster.ProcessorKind_Count]int)
+	DeployApp(name istructs.AppQName, def appdef.IAppDef, engines [cluster.ProcessorKind_Count]int)
 
 	// Deploys new partitions for specified application or update existing.
 	//

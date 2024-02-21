@@ -665,10 +665,9 @@ func replyBadRequest(sender ibus.ISender, message string) {
 
 // test app deployment constants
 var (
-	testAppName                            = istructs.AppQName_untill_airs_bp
-	testAppPartsCount                      = 2
-	testAppEngines                         = [cluster.ProcessorKind_Count]int{10, 10, 10}
-	testAppPartID     istructs.PartitionID = 1
+	testAppName                         = istructs.AppQName_untill_airs_bp
+	testAppEngines                      = [cluster.ProcessorKind_Count]int{10, 10, 10}
+	testAppPartID  istructs.PartitionID = 1
 )
 
 func setUp(t *testing.T, prepare func(appDef appdef.IAppDefBuilder, cfg *istructsmem.AppConfigType)) testApp {
@@ -711,7 +710,7 @@ func setUp(t *testing.T, prepare func(appDef appdef.IAppDefBuilder, cfg *istruct
 	require.NoError(err)
 	defer appPartsClean()
 
-	appParts.DeployApp(testAppName, appDef, testAppPartsCount, testAppEngines)
+	appParts.DeployApp(testAppName, appDef, testAppEngines)
 	appParts.DeployAppPartitions(testAppName, []istructs.PartitionID{testAppPartID})
 
 	// command processor работает через ibus.SendResponse -> нам нужна реализация ibus

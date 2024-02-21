@@ -162,7 +162,7 @@ func buildAppParts(t *testing.T) (appParts appparts.IAppPartitions, cleanup func
 
 	appParts, cleanup, err = appparts.New(provider)
 	require.NoError(err)
-	appParts.DeployApp(test.appQName, appDef, test.appPartsCount, test.appEngines)
+	appParts.DeployApp(test.appQName, appDef, test.appEngines)
 	appParts.DeployAppPartitions(test.appQName, []istructs.PartitionID{test.partition})
 
 	return appParts, cleanup

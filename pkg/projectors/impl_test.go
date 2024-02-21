@@ -14,7 +14,10 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appparts"
+	"github.com/voedger/voedger/pkg/cluster"
 	"github.com/voedger/voedger/pkg/iratesce"
+	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istorage/mem"
 	istorageimpl "github.com/voedger/voedger/pkg/istorage/provider"
 	"github.com/voedger/voedger/pkg/istoragecache"
@@ -46,7 +49,8 @@ import (
 func TestBasicUsage_SynchronousActualizer(t *testing.T) {
 	require := require.New(t)
 
-	app := appStructs(
+	_, cleanup, _, appStructs := deployTestApp(
+		istructs.AppQName_test1_app1, []istructs.PartitionID{1}, false,
 		func(appDef appdef.IAppDefBuilder) {
 			ProvideViewDef(appDef, incProjectionView, buildProjectionView)
 			ProvideViewDef(appDef, decProjectionView, buildProjectionView)
@@ -65,13 +69,14 @@ func TestBasicUsage_SynchronousActualizer(t *testing.T) {
 			)
 			cfg.Resources.Add(istructsmem.NewCommandFunction(testQName, istructsmem.NullCommandExec))
 		})
+	defer cleanup()
 	actualizerFactory := ProvideSyncActualizerFactory()
 
 	// create actualizer with two factories
 	conf := SyncActualizerConf{
 		Ctx:        context.Background(),
 		Partition:  istructs.PartitionID(1),
-		AppStructs: func() istructs.IAppStructs { return app },
+		AppStructs: func() istructs.IAppStructs { return appStructs },
 	}
 	actualizer := actualizerFactory(conf, incrementorFactory, decrementorFactory)
 
@@ -79,20 +84,20 @@ func TestBasicUsage_SynchronousActualizer(t *testing.T) {
 	processor := pipeline.NewSyncPipeline(context.Background(), "partition processor", pipeline.WireSyncOperator("actualizer", actualizer))
 
 	// feed partition processor
-	require.NoError(processor.SendSync(&plogEvent{wsid: 1001}))
-	require.NoError(processor.SendSync(&plogEvent{wsid: 1001}))
-	require.NoError(processor.SendSync(&plogEvent{wsid: 1002}))
-	require.NoError(processor.SendSync(&plogEvent{wsid: 1001}))
-	require.NoError(processor.SendSync(&plogEvent{wsid: 1001}))
-	require.NoError(processor.SendSync(&plogEvent{wsid: 1001}))
-	require.NoError(processor.SendSync(&plogEvent{wsid: 1002}))
-	require.NoError(processor.SendSync(&plogEvent{wsid: 1002}))
+	require.NoError(processor.SendSync(&plogEventMock{wsid: 1001}))
+	require.NoError(processor.SendSync(&plogEventMock{wsid: 1001}))
+	require.NoError(processor.SendSync(&plogEventMock{wsid: 1002}))
+	require.NoError(processor.SendSync(&plogEventMock{wsid: 1001}))
+	require.NoError(processor.SendSync(&plogEventMock{wsid: 1001}))
+	require.NoError(processor.SendSync(&plogEventMock{wsid: 1001}))
+	require.NoError(processor.SendSync(&plogEventMock{wsid: 1002}))
+	require.NoError(processor.SendSync(&plogEventMock{wsid: 1002}))
 
 	// now read the projection values in workspaces
-	require.Equal(int32(5), getProjectionValue(require, app, incProjectionView, istructs.WSID(1001)))
-	require.Equal(int32(3), getProjectionValue(require, app, incProjectionView, istructs.WSID(1002)))
-	require.Equal(int32(-5), getProjectionValue(require, app, decProjectionView, istructs.WSID(1001)))
-	require.Equal(int32(-3), getProjectionValue(require, app, decProjectionView, istructs.WSID(1002)))
+	require.Equal(int32(5), getProjectionValue(require, appStructs, incProjectionView, istructs.WSID(1001)))
+	require.Equal(int32(3), getProjectionValue(require, appStructs, incProjectionView, istructs.WSID(1002)))
+	require.Equal(int32(-5), getProjectionValue(require, appStructs, decProjectionView, istructs.WSID(1001)))
+	require.Equal(int32(-3), getProjectionValue(require, appStructs, decProjectionView, istructs.WSID(1002)))
 }
 
 var (
@@ -174,7 +179,18 @@ type (
 	appCfgCallback func(cfg *istructsmem.AppConfigType)
 )
 
-func appStructs(prepareAppDef appDefCallback, prepareAppCfg appCfgCallback) istructs.IAppStructs {
+func deployTestApp(
+	appName istructs.AppQName,
+	partID []istructs.PartitionID,
+	cachedStorage bool,
+	prepareAppDef appDefCallback,
+	prepareAppCfg appCfgCallback,
+) (
+	appParts appparts.IAppPartitions,
+	cleanup func(),
+	metrics imetrics.IMetrics,
+	appStructs istructs.IAppStructs,
+) {
 	appDef := appdef.New()
 	if prepareAppDef != nil {
 		prepareAppDef(appDef)
@@ -182,59 +198,49 @@ func appStructs(prepareAppDef appDefCallback, prepareAppCfg appCfgCallback) istr
 	provideOffsetsDefImpl(appDef)
 
 	cfgs := make(istructsmem.AppConfigsType, 1)
-	cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, appDef)
+	cfg := cfgs.AddConfig(appName, appDef)
 	if prepareAppCfg != nil {
 		prepareAppCfg(cfg)
 	}
 
-	asf := mem.Provide()
-	storageProvider := istorageimpl.Provide(asf)
-	prov := istructsmem.Provide(
+	var storageProvider istorage.IAppStorageProvider
+
+	if cachedStorage {
+		metrics = imetrics.Provide()
+		storageProvider = istoragecache.Provide(1000000, istorageimpl.Provide(mem.Provide()), metrics, "testVM")
+	} else {
+		storageProvider = istorageimpl.Provide(mem.Provide())
+	}
+
+	appStructsProvider := istructsmem.Provide(
 		cfgs,
 		iratesce.TestBucketsFactory,
 		payloads.ProvideIAppTokensFactory(itokensjwt.TestTokensJWT()),
 		storageProvider)
-	structs, err := prov.AppStructs(istructs.AppQName_test1_app1)
+
+	var err error
+
+	appStructs, err = appStructsProvider.AppStructs(appName)
 	if err != nil {
 		panic(err)
 	}
-	return structs
-}
 
-var metrics imetrics.IMetrics
-
-func appStructsCached(prepareAppDef appDefCallback, prepareAppCfg appCfgCallback) istructs.IAppStructs {
-	appDef := appdef.New()
-	if prepareAppDef != nil {
-		prepareAppDef(appDef)
-	}
-
-	cfgs := make(istructsmem.AppConfigsType, 1)
-	cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, appDef)
-	if prepareAppCfg != nil {
-		prepareAppCfg(cfg)
-	}
-
-	asf := mem.Provide()
-	metrics = imetrics.Provide()
-	storageProvider := istorageimpl.Provide(asf)
-	cached := istoragecache.Provide(1000000, storageProvider, metrics, "testVM")
-	prov := istructsmem.Provide(
-		cfgs,
-		iratesce.TestBucketsFactory,
-		payloads.ProvideIAppTokensFactory(itokensjwt.TestTokensJWT()),
-		cached)
-	structs, err := prov.AppStructs(istructs.AppQName_test1_app1)
+	appParts, cleanup, err = appparts.New(appStructsProvider)
 	if err != nil {
 		panic(err)
 	}
-	return structs
+
+	appParts.DeployApp(appName, appDef, cluster.PoolSize(10, 10, 10))
+	appParts.DeployAppPartitions(appName, partID)
+
+	return appParts, cleanup, metrics, appStructs
 }
 
 func Test_ErrorInSyncActualizer(t *testing.T) {
 	require := require.New(t)
 
-	app := appStructs(
+	_, cleanup, _, appStructs := deployTestApp(
+		istructs.AppQName_test1_app1, []istructs.PartitionID{1}, false,
 		func(appDef appdef.IAppDefBuilder) {
 			ProvideViewDef(appDef, incProjectionView, buildProjectionView)
 			ProvideViewDef(appDef, decProjectionView, buildProjectionView)
@@ -253,13 +259,14 @@ func Test_ErrorInSyncActualizer(t *testing.T) {
 			)
 			cfg.Resources.Add(istructsmem.NewCommandFunction(testQName, istructsmem.NullCommandExec))
 		})
+	defer cleanup()
 	actualizerFactory := ProvideSyncActualizerFactory()
 
 	// create actualizer with two factories
 	conf := SyncActualizerConf{
 		Ctx:        context.Background(),
 		Partition:  istructs.PartitionID(1),
-		AppStructs: func() istructs.IAppStructs { return app },
+		AppStructs: func() istructs.IAppStructs { return appStructs },
 	}
 	actualizer := actualizerFactory(conf, incrementorFactory, decrementorFactory)
 
@@ -267,18 +274,18 @@ func Test_ErrorInSyncActualizer(t *testing.T) {
 	processor := pipeline.NewSyncPipeline(context.Background(), "partition processor", pipeline.WireSyncOperator("actualizer", actualizer))
 
 	// feed partition processor
-	require.NoError(processor.SendSync(&plogEvent{wsid: 1001}))
-	require.NoError(processor.SendSync(&plogEvent{wsid: 1001}))
-	require.NoError(processor.SendSync(&plogEvent{wsid: 1002}))
-	err := processor.SendSync(&plogEvent{wsid: 1099})
+	require.NoError(processor.SendSync(&plogEventMock{wsid: 1001}))
+	require.NoError(processor.SendSync(&plogEventMock{wsid: 1001}))
+	require.NoError(processor.SendSync(&plogEventMock{wsid: 1002}))
+	err := processor.SendSync(&plogEventMock{wsid: 1099})
 	require.Error(err)
 	require.Equal("test err", err.Error())
 
 	// now read the projection values in workspaces
-	require.Equal(int32(2), getProjectionValue(require, app, incProjectionView, istructs.WSID(1001)))
-	require.Equal(int32(1), getProjectionValue(require, app, incProjectionView, istructs.WSID(1002)))
-	require.Equal(int32(-2), getProjectionValue(require, app, decProjectionView, istructs.WSID(1001)))
-	require.Equal(int32(-1), getProjectionValue(require, app, decProjectionView, istructs.WSID(1002)))
-	require.Equal(int32(0), getProjectionValue(require, app, incProjectionView, istructs.WSID(1099)))
-	require.Equal(int32(0), getProjectionValue(require, app, decProjectionView, istructs.WSID(1099)))
+	require.Equal(int32(2), getProjectionValue(require, appStructs, incProjectionView, istructs.WSID(1001)))
+	require.Equal(int32(1), getProjectionValue(require, appStructs, incProjectionView, istructs.WSID(1002)))
+	require.Equal(int32(-2), getProjectionValue(require, appStructs, decProjectionView, istructs.WSID(1001)))
+	require.Equal(int32(-1), getProjectionValue(require, appStructs, decProjectionView, istructs.WSID(1002)))
+	require.Equal(int32(0), getProjectionValue(require, appStructs, incProjectionView, istructs.WSID(1099)))
+	require.Equal(int32(0), getProjectionValue(require, appStructs, decProjectionView, istructs.WSID(1099)))
 }

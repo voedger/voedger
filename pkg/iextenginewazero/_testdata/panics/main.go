@@ -66,7 +66,7 @@ func incorrectValue2() {
 
 //export incorrectValue3
 func incorrectValue3() {
-	ext.TValue(123).Length()
+	ext.TValue(123).Len()
 }
 
 //export incorrectKeyBuilderOnNewValue
@@ -93,7 +93,7 @@ func incorrectIntentId() {
 func readPanic() {
 	key := ext.KeyBuilder("sys.Test", ext.NullEntity)
 	ext.ReadValues(key, func(ext.TKey, ext.TValue) {
-		ext.TValue(123).Length()
+		ext.TValue(123).Len()
 	})
 }
 

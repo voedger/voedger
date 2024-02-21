@@ -17,6 +17,7 @@ import (
 	"github.com/untillpro/goutils/logger"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/cluster"
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
@@ -96,7 +97,7 @@ func (a *asyncActualizer) cancelChannel(e error) {
 }
 
 func (a *asyncActualizer) init(ctx context.Context) (err error) {
-	a.structs = a.conf.AppStructs()
+	a.structs = a.conf.AppStructs() // TODO: must be borrowed and finally released
 	a.readCtx = &asyncActualizerContextState{}
 
 	a.readCtx.ctx, a.readCtx.cancel = context.WithCancel(ctx)
@@ -235,64 +236,82 @@ func (a *asyncActualizer) handleEvent(pLogOffset istructs.Offset, event istructs
 }
 
 type (
-	plogRec struct {
+	plogEvent struct {
 		istructs.Offset
 		istructs.IPLogEvent
 	}
-	readPLogBatch func() (events []plogRec, complete bool, err error)
+
+	// Should return:
+	//	- events in batch and no error, if events succussfully read
+	//	- no events (empty batch) and no error, if all events are read
+	//	- no events (empty  batch) and error, if error occurs while reading PLog.
+	// Should not return simultaneously any events (non empty batch) and error
+	readPLogBatch func(batch *[]plogEvent) error
 )
 
 func (a *asyncActualizer) readPlogByBatches(readBatch readPLogBatch) error {
-	for {
-		events, complete, readErr := readBatch()
-		for _, e := range events {
-			err := a.handleEvent(e.Offset, e.IPLogEvent)
-			//TODO: who must to release this event?
-			//e.IPLogEvent.Release() - IT test failed, because event is async used after release
-			if err != nil {
-				return err // error while handling event
+	batch := make([]plogEvent, 0, plogReadBatchSize)
+	for a.readCtx.ctx.Err() == nil {
+		if err := readBatch(&batch); err != nil {
+			return err
+		}
+		if len(batch) == 0 {
+			break
+		}
+		for i := 0; i < len(batch); i++ {
+			if err := a.handleEvent(batch[i].Offset, batch[i].IPLogEvent); err != nil {
+				return err
 			}
 			if a.readCtx.ctx.Err() != nil {
 				return nil // canceled
 			}
 		}
-		if readErr != nil {
-			return readErr // error while reading PLog
-		}
-		if complete {
-			return nil // end of PLog
-		}
 	}
+	return nil
 }
 
 func (a *asyncActualizer) readPlogToTheEnd() error {
-	return a.readPlogByBatches(func() (events []plogRec, complete bool, err error) {
-		events = make([]plogRec, 0, plogReadBatchSize)
-		aps := a.conf.AppStructs() // must be borrowed and finally released
-		err = aps.Events().ReadPLog(a.readCtx.ctx, a.conf.Partition, a.offset+1, istructs.ReadToTheEnd,
+	return a.readPlogByBatches(func(batch *[]plogEvent) (err error) {
+		*batch = (*batch)[:0]
+
+		ap, err := a.conf.AppPartitions.Borrow(a.conf.AppQName, a.conf.Partition, cluster.ProcessorKind_Actualizer)
+		if err != nil {
+			return err
+		}
+
+		defer ap.Release()
+
+		err = ap.AppStructs().Events().ReadPLog(a.readCtx.ctx, a.conf.Partition, a.offset+1, istructs.ReadToTheEnd,
 			func(ofs istructs.Offset, event istructs.IPLogEvent) error {
-				events = append(events, plogRec{ofs, event})
-				if len(events) == plogReadBatchSize {
+				if *batch = append(*batch, plogEvent{ofs, event}); len(*batch) == cap(*batch) {
 					return errBatchFull
 				}
 				return nil
 			})
-		if errors.Is(err, errBatchFull) {
-			return events, false, nil
+		if len(*batch) > 0 {
+			//nolint: suppress error if at least one event was read
+			return nil
 		}
-		return events, err == nil, err
+		return err
 	})
 }
 
 func (a *asyncActualizer) readPlogToOffset(tillOffset istructs.Offset) error {
-	return a.readPlogByBatches(func() (events []plogRec, complete bool, err error) {
-		events = make([]plogRec, 0, plogReadBatchSize)
-		aps := a.conf.AppStructs() // must be borrowed and finally released
+	return a.readPlogByBatches(func(batch *[]plogEvent) (err error) {
+		*batch = (*batch)[:0]
+
+		ap, err := a.conf.AppPartitions.Borrow(a.conf.AppQName, a.conf.Partition, cluster.ProcessorKind_Actualizer)
+		if err != nil {
+			return err
+		}
+
+		defer ap.Release()
+
+		plog := ap.AppStructs().Events()
 		for readOffset := a.offset + 1; readOffset <= tillOffset; readOffset++ {
-			if err = aps.Events().ReadPLog(a.readCtx.ctx, a.conf.Partition, readOffset, 1,
+			if err = plog.ReadPLog(a.readCtx.ctx, a.conf.Partition, readOffset, 1,
 				func(ofs istructs.Offset, event istructs.IPLogEvent) error {
-					events = append(events, plogRec{ofs, event})
-					if (len(events) == plogReadBatchSize) && (readOffset < tillOffset) {
+					if *batch = append(*batch, plogEvent{ofs, event}); len(*batch) == cap(*batch) {
 						return errBatchFull
 					}
 					return nil
@@ -300,10 +319,11 @@ func (a *asyncActualizer) readPlogToOffset(tillOffset istructs.Offset) error {
 				break
 			}
 		}
-		if errors.Is(err, errBatchFull) {
-			return events, false, nil
+		if len(*batch) > 0 {
+			//nolint: suppress error if at least one event was read
+			return nil
 		}
-		return events, err == nil, err
+		return err
 	})
 }
 
