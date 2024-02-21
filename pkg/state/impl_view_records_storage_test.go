@@ -155,7 +155,7 @@ func TestViewRecordsStorage_ApplyBatch_should_return_error_on_put_batch(t *testi
 		On("ViewRecords").Return(viewRecords).
 		On("Records").Return(&nilRecords{}).
 		On("Events").Return(&nilEvents{})
-	s := ProvideAsyncActualizerStateFactory()(context.Background(), appStructs, nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, 10, 10)
+	s := ProvideAsyncActualizerStateFactory()(context.Background(), appStructs, nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil, 10, 10)
 	kb, err := s.KeyBuilder(View, testViewRecordQName1)
 	require.NoError(err)
 	_, err = s.NewValue(kb)

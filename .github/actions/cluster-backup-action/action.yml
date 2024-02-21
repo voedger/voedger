@@ -1,0 +1,90 @@
+# Copyright (c) 2023 Sigma-Soft, Ltd.
+# @author Aleksei Ponomarev
+# @date 2024-02-15
+
+name: 'Voedger Scylla DB cluster backup action'
+description: 'Voedger Scylla DB cluster backup action'
+
+runs:
+  using: 'composite'
+
+  steps:
+    - name: Smoke test - create keyspace, table and fill with test data
+      run: |
+        set -x 
+        ssh ${{ env.SSH_OPTIONS }} ubuntu@${{ env.PUBLIC_IP }} 'docker exec $(docker ps -qf name=scylla) bash -c "
+        function create_keyspace() {
+            cqlsh db-node-1 9042 -e \"CREATE KEYSPACE IF NOT EXISTS v_keyspace WITH replication = {'\''class'\'': '\''NetworkTopologyStrategy'\'', '\''dc1'\'': 2, '\''dc2'\'': 1}  AND durable_writes = true;\"
+        }
+        
+        function create_table() {
+            cqlsh db-node-1 9042 -k v_keyspace -e \"CREATE TABLE IF NOT EXISTS values (id INT PRIMARY KEY, value TEXT);\"
+        }
+        
+        function add_records() {
+            for ((i=1; i<=10; i++)); do
+                cqlsh db-node-1 9042 -k v_keyspace -e \"INSERT INTO values (id, value) VALUES (\$i, '\''Inserted_value'\'');\"
+            done
+        }
+        
+        function flush_records() {
+            nodetool flush v_keyspace values
+        }
+        
+        create_keyspace
+        create_table
+        add_records
+        flush_records
+        "'
+      shell: bash
+
+    - name: Check inserted data
+      run: |
+        set -x
+        if [ $(ssh ${{ env.SSH_OPTIONS }} ubuntu@${{ env.PUBLIC_IP }} 'docker exec $(docker ps -qf name=scylla) cqlsh db-node-1 9042 -k v_keyspace -e "select count(*) from values" | grep -v rows | grep -Eo "[0-9]+"') -eq 10 ]; then
+          echo "Data inserted successfully."
+        else
+          echo "Failed to insert data."
+          exit 1
+        fi
+      shell: bash
+
+    - name: Backup scylla node
+      run: |
+        set -x
+        for ((i=1; i<=3; i++)); do
+            if ssh ${{ env.SSH_OPTIONS }} ubuntu@${{ env.CTOOL_IP }} "cd /home/ubuntu/voedger/cmd/ctool && ./ctool backup node db-node-$i /home/ubuntu/backup --ssh-key /tmp/amazonKey.pem -v -p ${{ env.SSH_PORT }}"; then
+                echo "Backup success"
+            else 
+                echo "Failed to backup scylla db-node-$i in cluster"
+            exit 1
+            fi
+        done
+      shell: bash
+
+    - name: Drop keyspace
+      run: |
+        set -euo pipefail
+        set -x
+        ssh ${{ env.SSH_OPTIONS }} ubuntu@${{ env.PUBLIC_IP }} 'docker exec $(docker ps -qf name=scylla) cqlsh db-node-1 9042 -e "DROP KEYSPACE v_keyspace;"'
+        ssh ${{ env.SSH_OPTIONS }} ubuntu@${{ env.PUBLIC_IP }} 'docker exec $(docker ps -qf name=scylla) cqlsh db-node-1 9042 -e "DESC KEYSPACES;"'
+        ssh ${{ env.SSH_OPTIONS }} ubuntu@${{ env.PUBLIC_IP }} "sudo rm -rf /var/lib/scylla/data/v_keyspace"
+      shell: bash
+
+    - name: Restore keyspace
+      run: |
+        set -euo pipefail
+        set -x
+        ssh ${{ env.SSH_OPTIONS }} ubuntu@${{ env.CTOOL_IP }} "cd /home/ubuntu/voedger/cmd/ctool && ./ctool restore /home/ubuntu/backup --ssh-key /tmp/amazonKey.pem -v -p ${{ env.SSH_PORT }}"
+      shell: bash
+
+    - name: Check inserted data after restore
+      run: |
+        set -x
+        if [ $(ssh ${{ env.SSH_OPTIONS }} ubuntu@${{ env.PUBLIC_IP }} 'docker exec $(docker ps -qf name=scylla) cqlsh db-node-1 9042 -k v_keyspace -e "select count(*) from values" | grep -v rows | grep -Eo "[0-9]+"') -eq 10 ]; then
+          echo "Data inserted successfully."
+        else
+          echo "Failed to insert data."
+          exit 1
+        fi
+      shell: bash

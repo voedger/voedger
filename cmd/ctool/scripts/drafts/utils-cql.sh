@@ -9,7 +9,7 @@ set +x
 readonly signalFilePath="$HOME/ctool/.voedgerbackup"
 
 getContainer() {
-    if ! containerID=$(utils_ssh -i "$sshKey" "$LOGNAME@$node" docker ps -l -q -f "name=$containerName"); then
+    if ! containerID=$(utils_ssh "$LOGNAME@$node" docker ps -l -q -f "name=$containerName"); then
         echo "Error getting container ID for $containerName"
         return 1
     fi
@@ -28,7 +28,7 @@ tables() {
     local container="$1"
     local keyspace="$2"
 
-    utils_ssh -i "$sshKey" "$LOGNAME@$node" docker exec "$container" cqlsh -e "\"select table_name, id from system_schema.tables where keyspace_name='"$keyspace"'\"" | \
+    utils_ssh "$LOGNAME@$node" docker exec "$container" cqlsh -e "\"select table_name, id from system_schema.tables where keyspace_name='"$keyspace"'\"" | \
     grep -v '^$' | sed '/^Warning:/d' | tail -n +3 | head -n -1 | \
     jq -R -n '[inputs | split("|") | {(.[0] | gsub("^ +| +$";"")): (. [1] | gsub("^ +| +$";""))}] | add'
 }
@@ -36,7 +36,7 @@ tables() {
 descKeyspaces() {
     containerID="$1"
     mapfile -t CQLout < <(
-        utils_ssh -i "$sshKey" "$LOGNAME@$node" \
+        utils_ssh "$LOGNAME@$node" \
         "docker exec $containerID cqlsh -e 'DESC KEYSPACES' | grep -v '^$' | sed '/^Warning:/d'"
     )
 

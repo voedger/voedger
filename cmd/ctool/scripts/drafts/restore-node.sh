@@ -25,8 +25,8 @@ set -euo pipefail
 
 set +x
 
-if [[ $# -lt 3 ]]; then
-  echo "Usage: $0 <Folder with backup> <Path to ssh key> <Node1> <Node2> <Node3> <Node...>"
+if [[ $# -lt 2 ]]; then
+  echo "Usage: $0 <Folder with backup> <Node1> <Node2> <Node3> <Node...>"
   exit 1
 fi
 
@@ -36,7 +36,6 @@ source ./utils-cql.sh
 readonly targetFolder=$1
 readonly containerName="scylla"
 readonly nodeDataDir="/var/lib/scylla"
-readonly sshKey=$2
 
 
 descUserKeyspaces() {
@@ -70,7 +69,7 @@ function hasKeyspace() {
 
 function isSwarmEnabled() {
     local swarm_status
-    swarm_status=$(utils_ssh -i "$sshKey" "$LOGNAME@$node" docker info --format '{{.Swarm.LocalNodeState}}')
+    swarm_status=$(utils_ssh "$LOGNAME@$node" docker info --format '{{.Swarm.LocalNodeState}}')
 
     if [ "$swarm_status" == "active" ]; then
         echo 0  # Docker Swarm is enabled
@@ -86,32 +85,32 @@ function serviceCtl() {
         stop)
             if [ "$(isSwarmEnabled)" -eq 1 ]; then
                 echo "Docker Swarm is not enabled."
-                utils_ssh -i "$sshKey" "$LOGNAME@$node" docker exec -i "$container" nodetool drain
-                utils_ssh -i "$sshKey" "$LOGNAME@$node" docker stop "$container"
+                utils_ssh "$LOGNAME@$node" docker exec -i "$container" nodetool drain
+                utils_ssh "$LOGNAME@$node" docker stop "$container"
             else
                 echo "Docker Swarm enabled. Scale to zero..."
-                utils_ssh -i "$sshKey" "$LOGNAME@$node" docker service scale DBDockerStack_scylla1=0
-                utils_ssh -i "$sshKey" "$LOGNAME@$node" docker service scale DBDockerStack_scylla2=0
-                utils_ssh -i "$sshKey" "$LOGNAME@$node" docker service scale DBDockerStack_scylla3=0
+                utils_ssh "$LOGNAME@$node" docker service scale DBDockerStack_scylla1=0
+                utils_ssh "$LOGNAME@$node" docker service scale DBDockerStack_scylla2=0
+                utils_ssh "$LOGNAME@$node" docker service scale DBDockerStack_scylla3=0
             fi
 
             echo "Service stopped."
             ;;
         start)
            # Remove the signal file if it exists
-            if utils_ssh -i "$sshKey" "$LOGNAME@$node" "[ -e $signalFilePath ]"; then
+            if utils_ssh "$LOGNAME@$node" "[ -e $signalFilePath ]"; then
                 echo $?  # 0 - signal file exists
-                utils_ssh -i "$sshKey" "$LOGNAME@$node" rm "$signalFilePath"
+                utils_ssh "$LOGNAME@$node" rm "$signalFilePath"
                 echo "Signal file removed from: $signalFilePath"
             else
                 echo "Signal file not found at: $signalFilePath"
             fi
             if [ "$(isSwarmEnabled)" -eq 1 ]; then
-                utils_ssh -i "$sshKey" "$LOGNAME@$node" docker start "$container"
+                utils_ssh "$LOGNAME@$node" docker start "$container"
             else
-                utils_ssh -i "$sshKey" "$LOGNAME@$node" docker service scale DBDockerStack_scylla1=1
-                utils_ssh -i "$sshKey" "$LOGNAME@$node" docker service scale DBDockerStack_scylla2=1
-                utils_ssh -i "$sshKey" "$LOGNAME@$node" docker service scale DBDockerStack_scylla3=1
+                utils_ssh "$LOGNAME@$node" docker service scale DBDockerStack_scylla1=1
+                utils_ssh "$LOGNAME@$node" docker service scale DBDockerStack_scylla2=1
+                utils_ssh "$LOGNAME@$node" docker service scale DBDockerStack_scylla3=1
             fi
             ;;
         *)
@@ -125,7 +124,7 @@ function truncateKeyspace() {
     local keyspace=$2
     local container=$3
         echo "DROP KEYSPACE $keyspace on node $node with container $container"
-        utils_ssh -i "$sshKey" "$LOGNAME@$node" docker exec -i "$container" "cqlsh -u cassandra -p cassandra -e \"DROP KEYSPACE $keyspace\""
+        utils_ssh "$LOGNAME@$node" docker exec -i "$container" "cqlsh -u cassandra -p cassandra -e \"DROP KEYSPACE $keyspace\""
     return $?
 }
 
@@ -137,9 +136,17 @@ tableLoad() {
     local keyspace=$1
     local key="$2"
     local value="$3"
-    utils_ssh -i "$sshKey" "$LOGNAME@$node" sudo rm -rf "$nodeDataDir/commitlog/*"
-    utils_ssh -i "$sshKey" "$LOGNAME@$node" sudo find "$nodeDataDir/data/$keyspace/$key-${value//-/}" -type f -exec rm {} +
-    utils_ssh -i "$sshKey" "$LOGNAME@$node" sudo tar -xzvf "$targetFolder/$keyspace/data.tar.gz" --strip-components=4 --directory="$nodeDataDir/data/$keyspace/$key-${value//-/}" --wildcards "*$key"-*/snapshots/*/*
+    utils_ssh "$LOGNAME@$node" sudo rm -rf "$nodeDataDir/commitlog/*"
+    utils_ssh "$LOGNAME@$node" sudo find "$nodeDataDir/data/$keyspace/$key-${value//-/}" -type f -exec rm {} +
+
+    max_depth=$(utils_ssh "$LOGNAME@$node" tar -tf "$targetFolder/$keyspace/data.tar.gz" | grep '/schema.cql$' | awk -F/ '{print NF-1}' | sort -rn | head -n1)
+    echo "Archive max depth: $max_depth"
+    if [[ -n $max_depth ]]; then
+        utils_ssh "$LOGNAME@$node" sudo tar -xzvf "$targetFolder/$keyspace/data.tar.gz" --strip-components="$max_depth" --directory="$nodeDataDir/data/$keyspace/$key-${value//-/}" --wildcards "*$key"-*/snapshots/*/*
+    else
+        echo "Cannot calculate backup archive depth. No trusting to archieve. Exit..."
+        exit 1
+    fi
 
     echo "Table: $key, Id: $value loaded"
 }
@@ -158,11 +165,11 @@ function prepare() {
 
     if ! hasKeyspace "$keyspace" "$container"; then
         echo "Keyspace $keyspace no exists. Create..."
-        utils_ssh -i "$sshKey" "$LOGNAME@$node" docker exec -i "$container" "cqlsh -u cassandra -p cassandra < \"$targetFolder/$keyspace/schema.cql\""
+        utils_ssh "$LOGNAME@$node" docker exec -i "$container" "cqlsh -u cassandra -p cassandra < \"$targetFolder/$keyspace/schema.cql\""
     else
         if truncateKeyspace "$node" "$keyspace" "$container"; then
             echo "Keyspace $2 truncated"
-            utils_ssh -i "$sshKey" "$LOGNAME@$node" docker exec -i "$container" "cqlsh -u cassandra -p cassandra < \"$targetFolder/$keyspace/schema.cql\""
+            utils_ssh "$LOGNAME@$node" docker exec -i "$container" "cqlsh -u cassandra -p cassandra < \"$targetFolder/$keyspace/schema.cql\""
         else
             echo "Error truncating keyspace $keyspace"
             return 1
@@ -210,7 +217,7 @@ local max_attempts=90
 local timeout=5
 
 while [ $count -lt 90 ]; do
-    if [ "$(utils_ssh -i "$sshKey" "$LOGNAME"@"$ip_address" docker exec '$(docker ps -qf name=scylla)' nodetool status | grep -c '^UN\s')" -eq 3 ]; then
+    if [ "$(utils_ssh "$LOGNAME"@"$ip_address" docker exec '$(docker ps -qf name=scylla)' nodetool status | grep -c '^UN\s')" -eq 3 ]; then
         echo "Scylla cluster initialization success. Check scylla is listening on interface."
 
         while [ $listen_attempts -lt $max_attempts ]; do
@@ -242,15 +249,15 @@ fi
 
 }
 
-shift 2
+shift 1
 
 node="$1"
 container=$(getContainer "$containerName")
 
-if utils_ssh -i "$sshKey" "$LOGNAME@$node" "[ -d \"$targetFolder\" ]"; then
+if utils_ssh "$LOGNAME@$node" "[ -d \"$targetFolder\" ]"; then
     json_tables=$(jq -n -c -M '{keyspaces: []}')
 
-    mapfile -t dirs < <(utils_ssh -i "$sshKey" "$LOGNAME@$node" "find $targetFolder -mindepth 1 -maxdepth 1 -type d -exec basename {} \;")
+    mapfile -t dirs < <(utils_ssh "$LOGNAME@$node" "find $targetFolder -mindepth 1 -maxdepth 1 -type d -exec basename {} \;")
 
     descUserKeyspaces "dirs"
 
@@ -284,7 +291,7 @@ done
 serviceCtl "$container" start
 
 scylla_wait "$node"
-utils_ssh -i "$sshKey" "$LOGNAME"@"$node" docker exec '$(docker ps -qf name=scylla)' nodetool repair --full
+utils_ssh "$LOGNAME"@"$node" docker exec '$(docker ps -qf name=scylla)' nodetool repair --full
 
 exit 0
 

@@ -153,6 +153,7 @@ func (a *asyncActualizer) init(ctx context.Context) (err error) {
 			}, offset)
 		},
 		a.conf.SecretReader,
+		p.EventProvider,
 		a.conf.IntentsLimit,
 		a.conf.BundlesLimit,
 		a.conf.Opts...)
@@ -202,7 +203,7 @@ func (a *asyncActualizer) keepReading() (err error) {
 			logger.Trace(fmt.Sprintf("%s received n10n: offset %d, last handled: %d", a.name, offset, a.offset))
 		}
 		if a.offset < offset {
-			err = a.readPlogToTheEnd2(offset)
+			err = a.readPlogToOffset(offset)
 			if err != nil {
 				a.conf.LogError(a.name, err)
 				a.readCtx.cancelWithError(err)
@@ -233,17 +234,77 @@ func (a *asyncActualizer) handleEvent(pLogOffset istructs.Offset, event istructs
 	return
 }
 
-func (a *asyncActualizer) readPlogToTheEnd() (err error) {
-	return a.conf.AppStructs().Events().ReadPLog(a.readCtx.ctx, a.conf.Partition, a.offset+1, istructs.ReadToTheEnd, a.handleEvent)
-}
+type (
+	plogRec struct {
+		istructs.Offset
+		istructs.IPLogEvent
+	}
+	readPLogBatch func() (events []plogRec, complete bool, err error)
+)
 
-func (a *asyncActualizer) readPlogToTheEnd2(tillOffset istructs.Offset) (err error) {
-	for readOffset := a.offset + 1; readOffset <= tillOffset; readOffset++ {
-		if err = a.conf.AppStructs().Events().ReadPLog(a.readCtx.ctx, a.conf.Partition, readOffset, 1, a.handleEvent); err != nil {
-			return
+func (a *asyncActualizer) readPlogByBatches(readBatch readPLogBatch) error {
+	for {
+		events, complete, readErr := readBatch()
+		for _, e := range events {
+			err := a.handleEvent(e.Offset, e.IPLogEvent)
+			//TODO: who must to release this event?
+			//e.IPLogEvent.Release() - IT test failed, because event is async used after release
+			if err != nil {
+				return err // error while handling event
+			}
+			if a.readCtx.ctx.Err() != nil {
+				return nil // canceled
+			}
+		}
+		if readErr != nil {
+			return readErr // error while reading PLog
+		}
+		if complete {
+			return nil // end of PLog
 		}
 	}
-	return nil
+}
+
+func (a *asyncActualizer) readPlogToTheEnd() error {
+	return a.readPlogByBatches(func() (events []plogRec, complete bool, err error) {
+		events = make([]plogRec, 0, plogReadBatchSize)
+		aps := a.conf.AppStructs() // must be borrowed and finally released
+		err = aps.Events().ReadPLog(a.readCtx.ctx, a.conf.Partition, a.offset+1, istructs.ReadToTheEnd,
+			func(ofs istructs.Offset, event istructs.IPLogEvent) error {
+				events = append(events, plogRec{ofs, event})
+				if len(events) == plogReadBatchSize {
+					return errBatchFull
+				}
+				return nil
+			})
+		if errors.Is(err, errBatchFull) {
+			return events, false, nil
+		}
+		return events, err == nil, err
+	})
+}
+
+func (a *asyncActualizer) readPlogToOffset(tillOffset istructs.Offset) error {
+	return a.readPlogByBatches(func() (events []plogRec, complete bool, err error) {
+		events = make([]plogRec, 0, plogReadBatchSize)
+		aps := a.conf.AppStructs() // must be borrowed and finally released
+		for readOffset := a.offset + 1; readOffset <= tillOffset; readOffset++ {
+			if err = aps.Events().ReadPLog(a.readCtx.ctx, a.conf.Partition, readOffset, 1,
+				func(ofs istructs.Offset, event istructs.IPLogEvent) error {
+					events = append(events, plogRec{ofs, event})
+					if (len(events) == plogReadBatchSize) && (readOffset < tillOffset) {
+						return errBatchFull
+					}
+					return nil
+				}); err != nil {
+				break
+			}
+		}
+		if errors.Is(err, errBatchFull) {
+			return events, false, nil
+		}
+		return events, err == nil, err
+	})
 }
 
 func (a *asyncActualizer) readOffset(projectorName appdef.QName) (err error) {
@@ -255,7 +316,7 @@ type asyncProjector struct {
 	pipeline.AsyncNOOP
 	state                 state.IBundledHostState
 	partition             istructs.PartitionID
-	wsid                  istructs.WSID
+	event                 istructs.IPLogEvent
 	projector             istructs.Projector
 	pLogOffset            istructs.Offset
 	aametrics             AsyncActualizerMetrics
@@ -275,7 +336,7 @@ func (p *asyncProjector) DoAsync(_ context.Context, work pipeline.IWorkpiece) (o
 	defer work.Release()
 	w := work.(*workpiece)
 
-	p.wsid = w.event.Workspace()
+	p.event = w.event
 	p.pLogOffset = w.pLogOffset
 	if p.aametrics != nil {
 		p.aametrics.Set(aaCurrentOffset, p.partition, p.projector.Name, float64(w.pLogOffset))
@@ -306,7 +367,8 @@ func (p *asyncProjector) DoAsync(_ context.Context, work pipeline.IWorkpiece) (o
 	return nil, err
 }
 func (p *asyncProjector) Flush(_ pipeline.OpFuncFlush) (err error) { return p.flush() }
-func (p *asyncProjector) WSIDProvider() istructs.WSID              { return p.wsid }
+func (p *asyncProjector) WSIDProvider() istructs.WSID              { return p.event.Workspace() }
+func (p *asyncProjector) EventProvider() istructs.IPLogEvent       { return p.event }
 func (p *asyncProjector) savePosition() error {
 	defer func() {
 		p.acceptedSinceSave = false

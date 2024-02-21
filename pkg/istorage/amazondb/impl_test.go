@@ -16,13 +16,13 @@ func TestBasicUsage(t *testing.T) {
 	if !coreutils.IsDynamoDBStorage() {
 		t.Skip()
 	}
-	casPar := DynamoDBParams{
+	params := DynamoDBParams{
 		EndpointURL:     "http://127.0.0.1:8000",
 		Region:          "eu-west-1",
 		AccessKeyID:     "local",
 		SecretAccessKey: "local",
 		SessionToken:    "",
 	}
-	asf := Provide(casPar)
+	asf := Provide(params)
 	istorage.TechnologyCompatibilityKit(t, asf)
 }

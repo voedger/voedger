@@ -188,6 +188,35 @@ func TestClusterJSON(t *testing.T) {
 
 }
 
+// tests using env variable VOEDGER_SSH_KEY instead of the option --ssh-key
+func TestEnvSshKey(t *testing.T) {
+	require := require.New(t)
+
+	red = color.New(color.FgRed).SprintFunc()
+	green = color.New(color.FgGreen).SprintFunc()
+	logger.PrintLine = printLogLine
+	prepareScripts()
+	deleteDryRunDir()
+	defer func() {
+		err := deleteScriptsTempDir()
+		if err != nil {
+			loggerError(err.Error())
+		}
+	}()
+
+	// missing the obligatory option --ssh-key
+	err := execRootCmd([]string{"./ctool", "init", "SE", "10.0.0.21", "10.0.0.22", "10.0.0.23", "10.0.0.24", "10.0.0.25", "--dry-run", "--acme-domain", "domain1,domain2,domain3"}, version)
+	require.Error(err)
+
+	err = os.Setenv(envVoedgerSshKey, "key")
+	require.NoError(err)
+
+	// now the option --ssh-key can be omitted
+	err = execRootCmd([]string{"./ctool", "init", "SE", "10.0.0.21", "10.0.0.22", "10.0.0.23", "10.0.0.24", "10.0.0.25", "--dry-run", "--acme-domain", "domain1,domain2,domain3"}, version)
+	require.NoError(err)
+
+}
+
 // tests ctool commands
 func TestCtoolCommands(t *testing.T) {
 	require := require.New(t)
