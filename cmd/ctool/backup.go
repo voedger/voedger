@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/spf13/cobra"
 
@@ -48,7 +49,7 @@ func newBackupCmd() *cobra.Command {
 
 	backupCronCmd := &cobra.Command{
 		Use:   "cron [<cron event>]",
-		Short: "Installation of a backup of schedule",
+		Short: "Installation of a backup database of schedule",
 		Args: func(cmd *cobra.Command, args []string) error {
 			if len(args) != 1 {
 				return ErrInvalidNumberOfArguments
@@ -85,12 +86,33 @@ func newBackupCmd() *cobra.Command {
 			return nil
 		}
 	}
+
+	backupNowCmd := &cobra.Command{
+		Use:   "now",
+		Short: "Backap database",
+		Args: func(cmd *cobra.Command, args []string) error {
+			if len(args) != 0 {
+				return ErrInvalidNumberOfArguments
+			}
+			return nil
+		},
+		RunE: backupNow,
+	}
+
+	backupNowCmd.PersistentFlags().StringVar(&sshKey, "ssh-key", "", "Path to SSH key")
+	if !exists || value == "" {
+		if err := backupNowCmd.MarkPersistentFlagRequired("ssh-key"); err != nil {
+			loggerError(err.Error())
+			return nil
+		}
+	}
+
 	backupCmd := &cobra.Command{
 		Use:   "backup",
 		Short: "Backup database",
 	}
 
-	backupCmd.AddCommand(backupNodeCmd, backupCronCmd, backupListCmd)
+	backupCmd.AddCommand(backupNodeCmd, backupCronCmd, backupListCmd, backupNowCmd)
 
 	return backupCmd
 
@@ -198,6 +220,45 @@ func backupNode(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	return nil
+}
+
+func newBackupFolderName() string {
+	t := time.Now()
+	formattedDate := t.Format("20060102150405")
+	return filepath.Join(backupFolder, fmt.Sprintf("%s-backup", formattedDate))
+}
+
+func backupNow(cmd *cobra.Command, args []string) error {
+	cluster := newCluster()
+
+	if cluster.Draft {
+		return ErrClusterConfNotFound
+	}
+
+	var err error
+
+	if err = mkCommandDirAndLogFile(cmd, cluster); err != nil {
+		return err
+	}
+
+	if err = checkBackupFolders(cluster); err != nil {
+		return err
+	}
+
+	folder := newBackupFolderName()
+
+	for _, n := range cluster.Nodes {
+		if n.NodeRole != nrDBNode {
+			continue
+		}
+
+		loggerInfo("Backup node", n.nodeName(), n.address())
+		if err = newScriptExecuter(cluster.sshKey, "").
+			run("backup-node.sh", n.address(), folder); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
