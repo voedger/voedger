@@ -2232,3 +2232,19 @@ func Test_RatesAndLimits(t *testing.T) {
 		"file.sql:7:19: undefined tag: z",
 		"file.sql:8:21: undefined table: t")
 }
+
+func Test_RefsFromInheritedWs(t *testing.T) {
+	require := assertions(t)
+
+	require.NoAppSchemaError(`APPLICATION test();
+	ABSTRACT WORKSPACE base (
+		TABLE tab1 INHERITS WDoc (
+			Fld1 int32
+		);
+	);
+	WORKSPACE work INHERITS base (
+		TABLE tab2 INHERITS WDoc (
+			Fld2 ref(tab1)
+		);
+	);`)
+}

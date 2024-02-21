@@ -21,7 +21,7 @@ func TestBundledHostState_BasicUsage(t *testing.T) {
 	appStructs := mockedAppStructs()
 
 	// Create instance of async actualizer state
-	aaState := factory(context.Background(), appStructs, nil, SimpleWSIDFunc(istructs.WSID(1)), n10nFn, nil, 2, 1)
+	aaState := factory(context.Background(), appStructs, nil, SimpleWSIDFunc(istructs.WSID(1)), n10nFn, nil, nil, 2, 1)
 
 	// Declare simple extension
 	extension := func(state istructs.IState, intents istructs.IIntents) {
@@ -130,7 +130,7 @@ func TestAsyncActualizerState_BasicUsage_Old(t *testing.T) {
 		On("ViewRecords").Return(viewRecords).
 		On("Events").Return(&nilEvents{}).
 		On("Records").Return(&nilRecords{})
-	s := ProvideAsyncActualizerStateFactory()(context.Background(), appStructs, nil, SimpleWSIDFunc(istructs.WSID(1)), n10nFn, nil, 2, 1)
+	s := ProvideAsyncActualizerStateFactory()(context.Background(), appStructs, nil, SimpleWSIDFunc(istructs.WSID(1)), n10nFn, nil, nil, 2, 1)
 
 	//Create key
 	kb, err := s.KeyBuilder(View, testViewRecordQName1)
@@ -460,7 +460,7 @@ func TestAsyncActualizerState_Read(t *testing.T) {
 			On("ViewRecords").Return(viewRecords).
 			On("Records").Return(&nilRecords{}).
 			On("Events").Return(&nilEvents{})
-		s := ProvideAsyncActualizerStateFactory()(context.Background(), appStructs, nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, 10, 10)
+		s := ProvideAsyncActualizerStateFactory()(context.Background(), appStructs, nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil, 10, 10)
 		kb1, err := s.KeyBuilder(View, testViewRecordQName1)
 		require.NoError(err)
 		kb2, err := s.KeyBuilder(View, testViewRecordQName2)
@@ -497,7 +497,7 @@ func TestAsyncActualizerState_Read(t *testing.T) {
 			On("ViewRecords").Return(viewRecords).
 			On("Records").Return(&nilRecords{}).
 			On("Events").Return(&nilEvents{})
-		s := ProvideAsyncActualizerStateFactory()(context.Background(), appStructs, nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, 10, 10)
+		s := ProvideAsyncActualizerStateFactory()(context.Background(), appStructs, nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil, 10, 10)
 		kb1, err := s.KeyBuilder(View, testViewRecordQName1)
 		require.NoError(err)
 		kb2, err := s.KeyBuilder(View, testViewRecordQName2)
@@ -520,7 +520,7 @@ func TestAsyncActualizerState_Read(t *testing.T) {
 	})
 }
 func asyncActualizerStateWithTestStateStorage(s *mockStorage) istructs.IState {
-	as := ProvideAsyncActualizerStateFactory()(context.Background(), &nilAppStructs{}, nil, nil, nil, nil, 10, 10)
+	as := ProvideAsyncActualizerStateFactory()(context.Background(), &nilAppStructs{}, nil, nil, nil, nil, nil, 10, 10)
 	as.(*bundledHostState).addStorage(testStorage, s, S_GET_BATCH|S_READ)
 	return as
 }
