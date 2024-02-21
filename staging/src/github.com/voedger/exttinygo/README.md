@@ -6,7 +6,7 @@
 package main
 
 import (
-	ext "github.com/heeus/exttinygo"
+	ext "github.com/voedger/exttinygo"
 )
 
 //export exampleExtension
