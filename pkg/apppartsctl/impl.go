@@ -30,7 +30,7 @@ func (ctl *appPartitionsController) Prepare() (err error) {
 func (ctl *appPartitionsController) Run(ctx context.Context) {
 
 	for _, app := range ctl.apps {
-		ctl.parts.DeployApp(app.Name, app.Def, app.PartsCount, app.EnginePoolSize)
+		ctl.parts.DeployApp(app.Name, app.Def, app.EnginePoolSize)
 		ids := make([]istructs.PartitionID, app.PartsCount)
 		for id := 0; id < app.PartsCount; id++ {
 			ids[id] = istructs.PartitionID(id)

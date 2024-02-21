@@ -17,9 +17,8 @@ import (
 )
 
 type testDataType struct {
-	appQName      istructs.AppQName
-	appPartsCount int
-	appEngines    [cluster.ProcessorKind_Count]int
+	appQName   istructs.AppQName
+	appEngines [cluster.ProcessorKind_Count]int
 
 	pkgName string
 
@@ -69,9 +68,8 @@ type testDataType struct {
 const OccursUnbounded = appdef.Occurs(0xffff)
 
 var test = testDataType{
-	appQName:      istructs.AppQName_test1_app1,
-	appPartsCount: 64,
-	appEngines:    cluster.PoolSize(100, 100, 100),
+	appQName:   istructs.AppQName_test1_app1,
+	appEngines: cluster.PoolSize(100, 100, 100),
 
 	pkgName: "test",
 

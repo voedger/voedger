@@ -711,7 +711,7 @@ func setUp(t *testing.T, prepare func(appDef appdef.IAppDefBuilder, cfg *istruct
 	require.NoError(err)
 	defer appPartsClean()
 
-	appParts.DeployApp(testAppName, appDef, testAppPartsCount, testAppEngines)
+	appParts.DeployApp(testAppName, appDef, testAppEngines)
 	appParts.DeployAppPartitions(testAppName, []istructs.PartitionID{testAppPartID})
 
 	// command processor работает через ibus.SendResponse -> нам нужна реализация ibus
