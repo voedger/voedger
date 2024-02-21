@@ -13,7 +13,7 @@ type ProcessorKind uint8
 const (
 	ProcessorKind_Command ProcessorKind = iota
 	ProcessorKind_Query
-	ProcessorKind_Projector
+	ProcessorKind_Actualizer
 
 	ProcessorKind_Count
 )

@@ -48,7 +48,10 @@ import (
 func TestBasicUsage_AsynchronousActualizer(t *testing.T) {
 	require := require.New(t)
 
-	app := appStructs(
+	appName, partitionNr := istructs.AppQName_test1_app1, istructs.PartitionID(1) // test within partition 1
+
+	appParts, cleanup, _, appStructs := deployTestApp(
+		appName, []istructs.PartitionID{partitionNr}, false,
 		func(appDef appdef.IAppDefBuilder) {
 			ProvideViewDef(appDef, incProjectionView, buildProjectionView)
 			ProvideViewDef(appDef, decProjectionView, buildProjectionView)
@@ -66,10 +69,10 @@ func TestBasicUsage_AsynchronousActualizer(t *testing.T) {
 				},
 			)
 		})
-	partitionNr := istructs.PartitionID(1) // test within partition 1
+	defer cleanup()
 
 	f := pLogFiller{
-		app:       app,
+		app:       appStructs,
 		partition: partitionNr,
 		offset:    istructs.Offset(1),
 		cmdQName:  testQName,
@@ -94,7 +97,7 @@ func TestBasicUsage_AsynchronousActualizer(t *testing.T) {
 	//
 	// 2. Decrementor will have the offset=4 stored (will start from
 	// 5th (index 4 in pLog array)):
-	_ = storeProjectorOffset(app, partitionNr, decrementorName, istructs.Offset(4))
+	_ = storeProjectorOffset(appStructs, partitionNr, decrementorName, istructs.Offset(4))
 
 	broker, cleanup := in10nmem.ProvideEx2(in10n.Quotas{
 		Channels:               2,
@@ -109,10 +112,12 @@ func TestBasicUsage_AsynchronousActualizer(t *testing.T) {
 	actualizerFactory := ProvideAsyncActualizerFactory()
 	for i, factory := range []istructs.ProjectorFactory{incrementorFactory, decrementorFactory} {
 		conf := AsyncActualizerConf{
-			Ctx:        withCancel,
-			Partition:  partitionNr,
-			AppStructs: func() istructs.IAppStructs { return app },
-			Broker:     broker,
+			Ctx:           withCancel,
+			AppQName:      appName,
+			Partition:     partitionNr,
+			AppPartitions: appParts,
+			AppStructs:    func() istructs.IAppStructs { return appStructs },
+			Broker:        broker,
 		}
 		actualizer, err := actualizerFactory(conf, factory)
 		require.NoError(err)
@@ -121,10 +126,10 @@ func TestBasicUsage_AsynchronousActualizer(t *testing.T) {
 	}
 
 	// Wait for the projectors
-	for getActualizerOffset(require, app, partitionNr, incrementorName) < topOffset {
+	for getActualizerOffset(require, appStructs, partitionNr, incrementorName) < topOffset {
 		time.Sleep(time.Nanosecond)
 	}
-	for getActualizerOffset(require, app, partitionNr, decrementorName) < topOffset {
+	for getActualizerOffset(require, appStructs, partitionNr, decrementorName) < topOffset {
 		time.Sleep(time.Nanosecond)
 	}
 	// stop services
@@ -134,17 +139,20 @@ func TestBasicUsage_AsynchronousActualizer(t *testing.T) {
 	}
 
 	// expected projection values
-	require.Equal(int32(8), getProjectionValue(require, app, incProjectionView, istructs.WSID(1001)))
-	require.Equal(int32(2), getProjectionValue(require, app, incProjectionView, istructs.WSID(1002)))
-	require.Equal(int32(-5), getProjectionValue(require, app, decProjectionView, istructs.WSID(1001)))
-	require.Equal(int32(-1), getProjectionValue(require, app, decProjectionView, istructs.WSID(1002)))
+	require.Equal(int32(8), getProjectionValue(require, appStructs, incProjectionView, istructs.WSID(1001)))
+	require.Equal(int32(2), getProjectionValue(require, appStructs, incProjectionView, istructs.WSID(1002)))
+	require.Equal(int32(-5), getProjectionValue(require, appStructs, decProjectionView, istructs.WSID(1001)))
+	require.Equal(int32(-1), getProjectionValue(require, appStructs, decProjectionView, istructs.WSID(1002)))
 }
 
 // Tests that istructs.Projector offset is updated (flushed) each time after `OffsetFlushRange` items processed
 func Test_AsynchronousActualizer_FlushByRange(t *testing.T) {
 	require := require.New(t)
 
-	app := appStructs(
+	appName, partitionNr := istructs.AppQName_test1_app1, istructs.PartitionID(2) // test within partition 2
+
+	appParts, cleanup, _, appStructs := deployTestApp(
+		appName, []istructs.PartitionID{partitionNr}, false,
 		func(appDef appdef.IAppDefBuilder) {
 			ProvideViewDef(appDef, incProjectionView, buildProjectionView)
 			ProvideViewDef(appDef, decProjectionView, buildProjectionView)
@@ -159,10 +167,10 @@ func Test_AsynchronousActualizer_FlushByRange(t *testing.T) {
 				},
 			)
 		})
-	partitionNr := istructs.PartitionID(2) // test within partition 2
+	defer cleanup()
 
 	f := pLogFiller{
-		app:       app,
+		app:       appStructs,
 		partition: partitionNr,
 		offset:    istructs.Offset(1),
 		cmdQName:  testQName,
@@ -191,8 +199,10 @@ func Test_AsynchronousActualizer_FlushByRange(t *testing.T) {
 	// init and launch actualizer
 	conf := AsyncActualizerConf{
 		Ctx:           withCancel,
+		AppQName:      appName,
 		Partition:     partitionNr,
-		AppStructs:    func() istructs.IAppStructs { return app },
+		AppPartitions: appParts,
+		AppStructs:    func() istructs.IAppStructs { return appStructs },
 		IntentsLimit:  1,
 		BundlesLimit:  1,
 		FlushInterval: 2 * time.Second,
@@ -207,7 +217,7 @@ func Test_AsynchronousActualizer_FlushByRange(t *testing.T) {
 	require.NoError(err)
 
 	// Wait for the projectors
-	for getActualizerOffset(require, app, partitionNr, incrementorName) < topOffset {
+	for getActualizerOffset(require, appStructs, partitionNr, incrementorName) < topOffset {
 		time.Sleep(time.Nanosecond)
 	}
 	require.True(time.Now().Before(t0.Add(conf.FlushInterval)))
@@ -216,15 +226,18 @@ func Test_AsynchronousActualizer_FlushByRange(t *testing.T) {
 	actualizer.Close()
 
 	// expected projection values
-	require.Equal(int32(8), getProjectionValue(require, app, incProjectionView, istructs.WSID(1001)))
-	require.Equal(int32(2), getProjectionValue(require, app, incProjectionView, istructs.WSID(1002)))
+	require.Equal(int32(8), getProjectionValue(require, appStructs, incProjectionView, istructs.WSID(1001)))
+	require.Equal(int32(2), getProjectionValue(require, appStructs, incProjectionView, istructs.WSID(1002)))
 }
 
 // Tests that istructs.Projector offset is updated (flushed) each time after `OffsetFlushInterval`
 func Test_AsynchronousActualizer_FlushByInterval(t *testing.T) {
 	require := require.New(t)
 
-	app := appStructs(
+	appName, partitionNr := istructs.AppQName_test1_app1, istructs.PartitionID(1) // test within partition 1
+
+	appParts, cleanup, _, appStructs := deployTestApp(
+		appName, []istructs.PartitionID{partitionNr}, false,
 		func(appDef appdef.IAppDefBuilder) {
 			ProvideViewDef(appDef, incProjectionView, buildProjectionView)
 			ProvideViewDef(appDef, decProjectionView, buildProjectionView)
@@ -237,10 +250,10 @@ func Test_AsynchronousActualizer_FlushByInterval(t *testing.T) {
 				return istructs.Projector{Name: incrementorName}
 			})
 		})
-	partitionNr := istructs.PartitionID(1) // test within partition 1
+	defer cleanup()
 
 	f := pLogFiller{
-		app:       app,
+		app:       appStructs,
 		partition: partitionNr,
 		offset:    istructs.Offset(1),
 		cmdQName:  testQName,
@@ -262,8 +275,10 @@ func Test_AsynchronousActualizer_FlushByInterval(t *testing.T) {
 	// init and launch actualizer
 	conf := AsyncActualizerConf{
 		Ctx:           withCancel,
+		AppQName:      appName,
 		Partition:     partitionNr,
-		AppStructs:    func() istructs.IAppStructs { return app },
+		AppPartitions: appParts,
+		AppStructs:    func() istructs.IAppStructs { return appStructs },
 		FlushInterval: 10 * time.Millisecond,
 		Broker:        broker,
 	}
@@ -276,7 +291,7 @@ func Test_AsynchronousActualizer_FlushByInterval(t *testing.T) {
 	require.NoError(err)
 
 	// Wait for the projectors
-	for getActualizerOffset(require, app, partitionNr, incrementorName) < topOffset {
+	for getActualizerOffset(require, appStructs, partitionNr, incrementorName) < topOffset {
 		time.Sleep(time.Nanosecond)
 	}
 	require.True(time.Now().After(t0.Add(conf.FlushInterval)))
@@ -285,8 +300,8 @@ func Test_AsynchronousActualizer_FlushByInterval(t *testing.T) {
 	actualizer.Close()
 
 	// expected projection values
-	require.Equal(int32(2), getProjectionValue(require, app, incProjectionView, istructs.WSID(1001)))
-	require.Equal(int32(1), getProjectionValue(require, app, incProjectionView, istructs.WSID(1002)))
+	require.Equal(int32(2), getProjectionValue(require, appStructs, incProjectionView, istructs.WSID(1001)))
+	require.Equal(int32(1), getProjectionValue(require, appStructs, incProjectionView, istructs.WSID(1002)))
 }
 
 func getProjectorsInError(metrics imetrics.IMetrics, appName istructs.AppQName, vvmName string) *float64 {
@@ -307,8 +322,11 @@ func getProjectorsInError(metrics imetrics.IMetrics, appName istructs.AppQName, 
 func Test_AsynchronousActualizer_ErrorAndRestore(t *testing.T) {
 	require := require.New(t)
 
+	appName, partitionNr := istructs.AppQName_test1_app1, istructs.PartitionID(1) // test within partition 1
 	name := appdef.NewQName("test", "failing_projector")
-	app := appStructs(
+
+	appParts, cleanup, _, appStructs := deployTestApp(
+		appName, []istructs.PartitionID{partitionNr}, false,
 		func(appDef appdef.IAppDefBuilder) {
 			ProvideViewDef(appDef, incProjectionView, buildProjectionView)
 			ProvideViewDef(appDef, decProjectionView, buildProjectionView)
@@ -322,10 +340,10 @@ func Test_AsynchronousActualizer_ErrorAndRestore(t *testing.T) {
 				return istructs.Projector{Name: name}
 			})
 		})
-	partitionNr := istructs.PartitionID(1) // test within partition 1
+	defer cleanup()
 
 	f := pLogFiller{
-		app:       app,
+		app:       appStructs,
 		partition: partitionNr,
 		offset:    istructs.Offset(1),
 		cmdQName:  testQName,
@@ -350,9 +368,11 @@ func Test_AsynchronousActualizer_ErrorAndRestore(t *testing.T) {
 
 	// init and launch actualizer
 	conf := AsyncActualizerConf{
-		Ctx:        withCancel,
-		Partition:  partitionNr,
-		AppStructs: func() istructs.IAppStructs { return app },
+		Ctx:           withCancel,
+		AppQName:      appName,
+		Partition:     partitionNr,
+		AppPartitions: appParts,
+		AppStructs:    func() istructs.IAppStructs { return appStructs },
 		AfterError: func(d time.Duration) <-chan time.Time {
 			if d.Seconds() != 30.0 {
 				panic("unexpected pause")
@@ -364,10 +384,9 @@ func Test_AsynchronousActualizer_ErrorAndRestore(t *testing.T) {
 		LogError: func(args ...interface{}) {
 			errors <- fmt.Sprint("error: ", args)
 		},
-		Broker:   broker,
-		Metrics:  metrics,
-		VvmName:  "test",
-		AppQName: istructs.AppQName_test1_app1,
+		Broker:  broker,
+		Metrics: metrics,
+		VvmName: "test",
 	}
 	attempts := 0
 
@@ -394,7 +413,7 @@ func Test_AsynchronousActualizer_ErrorAndRestore(t *testing.T) {
 	require.Equal("error: [test.failing_projector [1] wsid[1002] offset[0]: test error]", errStr)
 
 	// wait until the istructs.Projector version is updated with the 1st record
-	for getActualizerOffset(require, app, partitionNr, name) < istructs.Offset(1) {
+	for getActualizerOffset(require, appStructs, partitionNr, name) < istructs.Offset(1) {
 		time.Sleep(time.Microsecond)
 	}
 	require.Equal(1, attempts)
@@ -406,7 +425,7 @@ func Test_AsynchronousActualizer_ErrorAndRestore(t *testing.T) {
 	chanAfterError <- time.Now()
 
 	// Now the istructs.Projector must handle the log till the end
-	for getActualizerOffset(require, app, partitionNr, name) < topOffset {
+	for getActualizerOffset(require, appStructs, partitionNr, name) < topOffset {
 		time.Sleep(time.Microsecond)
 	}
 	projInErr = getProjectorsInError(metrics, istructs.AppQName_test1_app1, "test")
@@ -423,7 +442,10 @@ func Test_AsynchronousActualizer_ErrorAndRestore(t *testing.T) {
 func Test_AsynchronousActualizer_ResumeReadAfterNotifications(t *testing.T) {
 	require := require.New(t)
 
-	app := appStructs(
+	appName, partitionNr := istructs.AppQName_test1_app1, istructs.PartitionID(1) // test within partition 1
+
+	appParts, cleanup, _, appStructs := deployTestApp(
+		appName, []istructs.PartitionID{partitionNr}, false,
 		func(appDef appdef.IAppDefBuilder) {
 			ProvideViewDef(appDef, incProjectionView, buildProjectionView)
 			ProvideViewDef(appDef, decProjectionView, buildProjectionView)
@@ -436,10 +458,10 @@ func Test_AsynchronousActualizer_ResumeReadAfterNotifications(t *testing.T) {
 				return istructs.Projector{Name: incrementorName}
 			})
 		})
-	partitionNr := istructs.PartitionID(1) // test within partition 1
+	defer cleanup()
 
 	f := pLogFiller{
-		app:       app,
+		app:       appStructs,
 		partition: partitionNr,
 		offset:    istructs.Offset(1),
 		cmdQName:  testQName,
@@ -462,9 +484,10 @@ func Test_AsynchronousActualizer_ResumeReadAfterNotifications(t *testing.T) {
 	// init and launch actualizer
 	conf := AsyncActualizerConf{
 		Ctx:           withCancel,
-		AppQName:      istructs.AppQName_test1_app1,
+		AppQName:      appName,
 		Partition:     partitionNr,
-		AppStructs:    func() istructs.IAppStructs { return app },
+		AppPartitions: appParts,
+		AppStructs:    func() istructs.IAppStructs { return appStructs },
 		IntentsLimit:  2,
 		BundlesLimit:  2,
 		FlushInterval: 1 * time.Second,
@@ -479,7 +502,7 @@ func Test_AsynchronousActualizer_ResumeReadAfterNotifications(t *testing.T) {
 	_ = actualizer.DoSync(conf.Ctx, struct{}{}) // Start service
 
 	// Wait for the projectors
-	for getActualizerOffset(require, app, partitionNr, incrementorName) < topOffset {
+	for getActualizerOffset(require, appStructs, partitionNr, incrementorName) < topOffset {
 		time.Sleep(time.Nanosecond)
 	}
 
@@ -495,7 +518,7 @@ func Test_AsynchronousActualizer_ResumeReadAfterNotifications(t *testing.T) {
 	}, topOffset)
 
 	// Wait for the projectors
-	for getActualizerOffset(require, app, partitionNr, incrementorName) < topOffset {
+	for getActualizerOffset(require, appStructs, partitionNr, incrementorName) < topOffset {
 		time.Sleep(time.Nanosecond)
 	}
 
@@ -504,8 +527,8 @@ func Test_AsynchronousActualizer_ResumeReadAfterNotifications(t *testing.T) {
 	actualizer.Close()
 
 	// expected projection values
-	require.Equal(int32(3), getProjectionValue(require, app, incProjectionView, istructs.WSID(1001)))
-	require.Equal(int32(1), getProjectionValue(require, app, incProjectionView, istructs.WSID(1002)))
+	require.Equal(int32(3), getProjectionValue(require, appStructs, incProjectionView, istructs.WSID(1001)))
+	require.Equal(int32(1), getProjectionValue(require, appStructs, incProjectionView, istructs.WSID(1002)))
 	projInErrs := getProjectorsInError(metrics, istructs.AppQName_test1_app1, "test")
 	require.NotNil(projInErrs)
 	require.Equal(0.0, *projInErrs)
@@ -555,7 +578,10 @@ func Test_AsynchronousActualizer_Stress(t *testing.T) {
 
 	require := require.New(t)
 
-	app := appStructs(
+	appName, partitionNr := istructs.AppQName_test1_app1, istructs.PartitionID(1) // test within partition 1
+
+	appParts, cleanup, _, appStructs := deployTestApp(
+		appName, []istructs.PartitionID{partitionNr}, false,
 		func(appDef appdef.IAppDefBuilder) {
 			ProvideViewDef(appDef, incProjectionView, buildProjectionView)
 			ProvideViewDef(appDef, decProjectionView, buildProjectionView)
@@ -568,10 +594,10 @@ func Test_AsynchronousActualizer_Stress(t *testing.T) {
 				return istructs.Projector{Name: incrementorName}
 			})
 		})
-	partitionNr := istructs.PartitionID(1) // test within partition 1
+	defer cleanup()
 
 	f := pLogFiller{
-		app:       app,
+		app:       appStructs,
 		partition: partitionNr,
 		offset:    istructs.Offset(1),
 		cmdQName:  testQName,
@@ -599,11 +625,13 @@ func Test_AsynchronousActualizer_Stress(t *testing.T) {
 	// init and launch two actualizers
 	actualizerFactory := ProvideAsyncActualizerFactory()
 	conf := AsyncActualizerConf{
-		Ctx:        withCancel,
-		Partition:  partitionNr,
-		AppStructs: func() istructs.IAppStructs { return app },
-		Broker:     broker,
-		AAMetrics:  &metrics,
+		Ctx:           withCancel,
+		AppQName:      appName,
+		Partition:     partitionNr,
+		AppPartitions: appParts,
+		AppStructs:    func() istructs.IAppStructs { return appStructs },
+		Broker:        broker,
+		AAMetrics:     &metrics,
 	}
 	actualizer, err := actualizerFactory(conf, incrementorFactory)
 	require.NoError(err)
@@ -627,8 +655,8 @@ func Test_AsynchronousActualizer_Stress(t *testing.T) {
 	actualizer.Close()
 
 	// expected projection values
-	require.Equal(int32(totalEvents/2), getProjectionValue(require, app, incProjectionView, istructs.WSID(1001)))
-	require.Equal(int32(totalEvents/2), getProjectionValue(require, app, incProjectionView, istructs.WSID(1002)))
+	require.Equal(int32(totalEvents/2), getProjectionValue(require, appStructs, incProjectionView, istructs.WSID(1001)))
+	require.Equal(int32(totalEvents/2), getProjectionValue(require, appStructs, incProjectionView, istructs.WSID(1002)))
 
 }
 
@@ -661,7 +689,10 @@ func (m *simpleMetrics) Set(metricName string, partition istructs.PartitionID, p
 func Test_AsynchronousActualizer_NonBuffered(t *testing.T) {
 	require := require.New(t)
 
-	app := appStructs(
+	appName, partitionNr := istructs.AppQName_test1_app1, istructs.PartitionID(2) // test within partition 2
+
+	appParts, cleanup, _, appStructs := deployTestApp(
+		appName, []istructs.PartitionID{partitionNr}, false,
 		func(appDef appdef.IAppDefBuilder) {
 			ProvideViewDef(appDef, incProjectionView, buildProjectionView)
 			ProvideViewDef(appDef, decProjectionView, buildProjectionView)
@@ -675,10 +706,10 @@ func Test_AsynchronousActualizer_NonBuffered(t *testing.T) {
 				return istructs.Projector{Name: incrementorName}
 			})
 		})
-	partitionNr := istructs.PartitionID(2) // test within partition 2
+	defer cleanup()
 
 	f := pLogFiller{
-		app:       app,
+		app:       appStructs,
 		partition: partitionNr,
 		offset:    istructs.Offset(1),
 		cmdQName:  testQName,
@@ -701,8 +732,10 @@ func Test_AsynchronousActualizer_NonBuffered(t *testing.T) {
 	// init and launch actualizer
 	conf := AsyncActualizerConf{
 		Ctx:           withCancel,
+		AppQName:      appName,
+		AppPartitions: appParts,
+		AppStructs:    func() istructs.IAppStructs { return appStructs },
 		Partition:     partitionNr,
-		AppStructs:    func() istructs.IAppStructs { return app },
 		IntentsLimit:  10,
 		BundlesLimit:  10,
 		FlushInterval: 2 * time.Second,
@@ -729,10 +762,10 @@ func Test_AsynchronousActualizer_NonBuffered(t *testing.T) {
 	cancelCtx()
 	actualizer.Close()
 
-	require.Equal(int32(2), getProjectionValue(require, app, incProjectionView, istructs.WSID(1001)))
+	require.Equal(int32(2), getProjectionValue(require, appStructs, incProjectionView, istructs.WSID(1001)))
 	require.Equal(int64(2), metrics.flushesTotal)
 	require.Equal(int64(topOffset), metrics.currentOffset)
-	require.Equal(topOffset, getActualizerOffset(require, app, partitionNr, incrementorName))
+	require.Equal(topOffset, getActualizerOffset(require, appStructs, partitionNr, incrementorName))
 }
 
 type testActualizerCtx struct {
@@ -783,18 +816,28 @@ func Test_AsynchronousActualizer_Stress_NonBuffered(t *testing.T) {
 	const projectorsPerPartition = 5
 	const eventsPerPartition = 10000
 
-	app := appStructsCached(
+	appName := istructs.AppQName_test1_app1
+	partID := make([]istructs.PartitionID, totalPartitions)
+	for i := range partID {
+		partID[i] = istructs.PartitionID(i)
+	}
+
+	appParts, cleanup, metrics, appStructs := deployTestApp(
+		appName, partID, true,
 		func(appDef appdef.IAppDefBuilder) {
 			appDef.AddCommand(projectorFilter)
 			appDef.AddCommand(testQName)
 			appDef.AddProjector(incrementorName).AddEvent(projectorFilter, appdef.ProjectorEventKind_Execute)
 		},
 		func(cfg *istructsmem.AppConfigType) {
+			cfg.Resources.Add(istructsmem.NewCommandFunction(projectorFilter, istructsmem.NullCommandExec))
 			cfg.Resources.Add(istructsmem.NewCommandFunction(testQName, istructsmem.NullCommandExec))
 			cfg.AddAsyncProjectors(func(partition istructs.PartitionID) istructs.Projector {
 				return istructs.Projector{Name: incrementorName}
 			})
 		})
+	defer cleanup()
+
 	partitions := make([]*testPartition, totalPartitions)
 
 	withCancel, cancelCtx := context.WithCancel(context.Background())
@@ -818,7 +861,7 @@ func Test_AsynchronousActualizer_Stress_NonBuffered(t *testing.T) {
 			number:      pn,
 			actualizers: make([]testActualizerCtx, projectorsPerPartition),
 			filler: pLogFiller{
-				app:       app,
+				app:       appStructs,
 				partition: pn,
 				offset:    istructs.Offset(1),
 				cmdQName:  testQName,
@@ -837,8 +880,10 @@ func Test_AsynchronousActualizer_Stress_NonBuffered(t *testing.T) {
 
 				conf := AsyncActualizerConf{
 					Ctx:           withCancel,
+					AppQName:      appName,
 					Partition:     pn,
-					AppStructs:    func() istructs.IAppStructs { return app },
+					AppPartitions: appParts,
+					AppStructs:    func() istructs.IAppStructs { return appStructs },
 					IntentsLimit:  10,
 					BundlesLimit:  10,
 					FlushInterval: 2 * time.Second,
@@ -950,18 +995,28 @@ func Test_AsynchronousActualizer_Stress_Buffered(t *testing.T) {
 	const projectorsPerPartition = 5
 	const eventsPerPartition = 20000
 
-	app := appStructsCached(
+	appName := istructs.AppQName_test1_app1
+	partID := make([]istructs.PartitionID, totalPartitions)
+	for i := range partID {
+		partID[i] = istructs.PartitionID(i)
+	}
+
+	appParts, cleanup, metrics, appStructs := deployTestApp(
+		appName, partID, true,
 		func(appDef appdef.IAppDefBuilder) {
 			appDef.AddCommand(projectorFilter)
 			appDef.AddCommand(testQName)
 			appDef.AddProjector(incrementorName).AddEvent(projectorFilter, appdef.ProjectorEventKind_Execute)
 		},
 		func(cfg *istructsmem.AppConfigType) {
+			cfg.Resources.Add(istructsmem.NewCommandFunction(projectorFilter, istructsmem.NullCommandExec))
 			cfg.Resources.Add(istructsmem.NewCommandFunction(testQName, istructsmem.NullCommandExec))
 			cfg.AddAsyncProjectors(func(partition istructs.PartitionID) istructs.Projector {
 				return istructs.Projector{Name: incrementorName}
 			})
 		})
+	defer cleanup()
+
 	partitions := make([]*testPartition, totalPartitions)
 
 	withCancel, cancelCtx := context.WithCancel(context.Background())
@@ -985,7 +1040,7 @@ func Test_AsynchronousActualizer_Stress_Buffered(t *testing.T) {
 			number:      pn,
 			actualizers: make([]testActualizerCtx, projectorsPerPartition),
 			filler: pLogFiller{
-				app:       app,
+				app:       appStructs,
 				partition: pn,
 				offset:    istructs.Offset(1),
 				cmdQName:  testQName,
@@ -1004,8 +1059,10 @@ func Test_AsynchronousActualizer_Stress_Buffered(t *testing.T) {
 
 				conf := AsyncActualizerConf{
 					Ctx:                   withCancel,
+					AppQName:              appName,
 					Partition:             pn,
-					AppStructs:            func() istructs.IAppStructs { return app },
+					AppPartitions:         appParts,
+					AppStructs:            func() istructs.IAppStructs { return appStructs },
 					IntentsLimit:          10,
 					BundlesLimit:          10,
 					FlushInterval:         1000 * time.Millisecond,

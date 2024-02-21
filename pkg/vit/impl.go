@@ -129,7 +129,7 @@ func newVit(t *testing.T, vitCfg *VITConfig, useCas bool) *VIT {
 		require.NoError(t, err)
 
 		if !app.name.IsSys() {
-			vit.VVM.APIs.IAppPartitions.DeployApp(app.name, as.AppDef(), app.deployment.PartsCount, app.deployment.EnginePoolSize)
+			vit.VVM.APIs.IAppPartitions.DeployApp(app.name, as.AppDef(), app.deployment.EnginePoolSize)
 			appParts := []istructs.PartitionID{}
 			for pid := 0; pid < app.deployment.PartsCount; pid++ {
 				appParts = append(appParts, istructs.PartitionID(pid))

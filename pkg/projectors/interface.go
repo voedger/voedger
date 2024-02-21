@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/isecrets"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -24,11 +25,12 @@ type TimeAfterFunc func(d time.Duration) <-chan time.Time
 type LogErrorFunc func(args ...interface{})
 
 type AsyncActualizerConf struct {
-	Ctx          context.Context
-	AppQName     istructs.AppQName
-	AppStructs   AppStructsFunc
-	SecretReader isecrets.ISecretReader
-	Partition    istructs.PartitionID
+	Ctx           context.Context
+	AppQName      istructs.AppQName
+	AppPartitions appparts.IAppPartitions
+	AppStructs    AppStructsFunc
+	SecretReader  isecrets.ISecretReader
+	Partition     istructs.PartitionID
 	// Optional. Default value: `time.After`
 	AfterError TimeAfterFunc
 	// Optional. Default value: `core-logger.Error`
