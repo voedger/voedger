@@ -499,7 +499,7 @@ func provideCommandProcessors(cpCount coreutils.CommandProcessorsCount, ccf Comm
 	return pipeline.ForkOperator(pipeline.ForkSame, forks[0], forks[1:]...)
 }
 
-func provideAsyncActualizersFactory(appStructsProvider istructs.IAppStructsProvider, n10nBroker in10n.IN10nBroker, asyncActualizerFactory projectors.AsyncActualizerFactory, secretReader isecrets.ISecretReader, metrics imetrics.IMetrics) AsyncActualizersFactory {
+func provideAsyncActualizersFactory(appParts appparts.IAppPartitions, appStructsProvider istructs.IAppStructsProvider, n10nBroker in10n.IN10nBroker, asyncActualizerFactory projectors.AsyncActualizerFactory, secretReader isecrets.ISecretReader, metrics imetrics.IMetrics) AsyncActualizersFactory {
 	return func(vvmCtx context.Context, appQName istructs.AppQName, asyncProjectorFactories AsyncProjectorFactories, partitionID istructs.PartitionID, opts []state.ActualizerStateOptFunc) pipeline.ISyncOperator {
 		var asyncProjectors []pipeline.ForkOperatorOptionFunc
 		appStructs, err := appStructsProvider.AppStructs(appQName)
@@ -508,8 +508,9 @@ func provideAsyncActualizersFactory(appStructsProvider istructs.IAppStructsProvi
 		}
 
 		conf := projectors.AsyncActualizerConf{
-			Ctx:      vvmCtx,
-			AppQName: appQName,
+			Ctx:           vvmCtx,
+			AppQName:      appQName,
+			AppPartitions: appParts,
 			// FIXME: это правильно, что постоянную appStrcuts возвращаем? Каждый раз не надо запрашивать у appStructsProvider?
 			AppStructs:    func() istructs.IAppStructs { return appStructs },
 			SecretReader:  secretReader,

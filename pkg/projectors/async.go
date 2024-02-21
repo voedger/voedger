@@ -17,6 +17,7 @@ import (
 	"github.com/untillpro/goutils/logger"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/cluster"
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
@@ -269,12 +270,17 @@ func (a *asyncActualizer) readPlogByBatches(readBatch readPLogBatch) error {
 }
 
 func (a *asyncActualizer) readPlogToTheEnd() error {
-	return a.readPlogByBatches(func(batch *[]plogEvent) error {
+	return a.readPlogByBatches(func(batch *[]plogEvent) (err error) {
 		*batch = (*batch)[:0]
 
-		aps := a.conf.AppStructs() // must be borrowed and finally released
+		ap, err := a.conf.AppPartitions.Borrow(a.conf.AppQName, a.conf.Partition, cluster.ProcessorKind_Actualizer)
+		if err != nil {
+			return err
+		}
 
-		err := aps.Events().ReadPLog(a.readCtx.ctx, a.conf.Partition, a.offset+1, istructs.ReadToTheEnd,
+		defer ap.Release()
+
+		err = ap.AppStructs().Events().ReadPLog(a.readCtx.ctx, a.conf.Partition, a.offset+1, istructs.ReadToTheEnd,
 			func(ofs istructs.Offset, event istructs.IPLogEvent) error {
 				if *batch = append(*batch, plogEvent{ofs, event}); len(*batch) == cap(*batch) {
 					return errBatchFull
@@ -293,10 +299,16 @@ func (a *asyncActualizer) readPlogToOffset(tillOffset istructs.Offset) error {
 	return a.readPlogByBatches(func(batch *[]plogEvent) (err error) {
 		*batch = (*batch)[:0]
 
-		aps := a.conf.AppStructs() // must be borrowed and finally released
+		ap, err := a.conf.AppPartitions.Borrow(a.conf.AppQName, a.conf.Partition, cluster.ProcessorKind_Actualizer)
+		if err != nil {
+			return err
+		}
 
+		defer ap.Release()
+
+		plog := ap.AppStructs().Events()
 		for readOffset := a.offset + 1; readOffset <= tillOffset; readOffset++ {
-			if err = aps.Events().ReadPLog(a.readCtx.ctx, a.conf.Partition, readOffset, 1,
+			if err = plog.ReadPLog(a.readCtx.ctx, a.conf.Partition, readOffset, 1,
 				func(ofs istructs.Offset, event istructs.IPLogEvent) error {
 					if *batch = append(*batch, plogEvent{ofs, event}); len(*batch) == cap(*batch) {
 						return errBatchFull
@@ -306,7 +318,6 @@ func (a *asyncActualizer) readPlogToOffset(tillOffset istructs.Offset) error {
 				break
 			}
 		}
-
 		if len(*batch) > 0 {
 			//nolint: suppress error if at least one event was read
 			return nil
