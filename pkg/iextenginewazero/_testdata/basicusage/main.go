@@ -46,7 +46,7 @@ func incrementProjector() {
 	key := ext.KeyBuilder("sys.View", "pkg.TestView")
 	key.PutInt32("pk", 1)
 	key.PutInt32("cc", 1)
-	exists, value := ext.QueryValue(key)
+	value, exists := ext.QueryValue(key)
 	if !exists {
 		ext.NewValue(key).PutInt32("vv", 1)
 	} else {
