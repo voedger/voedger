@@ -3,7 +3,7 @@
     @author Michael Saigachenko
 */
 
-package iextenginewasm
+package iextenginewazero
 
 const bitsInFourBytes = 32
 const keysCapacity = 10

@@ -3,7 +3,7 @@
 *  @author Michael Saigachenko
  */
 
-package extensions
+package exttinygo
 
 var KeyBuilder func(storage, entity string) (b TKeyBuilder) = keyBuilderImpl
 
