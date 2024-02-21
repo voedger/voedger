@@ -40,5 +40,5 @@ const (
 
 var PLogUpdatesQName = appdef.NewQName(appdef.SysPackage, "PLogUpdates")
 
-// size of a log piece (number of events) read by the actualizer at one time
+// size of a batch (maximum number of events) to read by the actualizer from PLog at one time
 const plogReadBatchSize = 50

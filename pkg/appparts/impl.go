@@ -31,7 +31,7 @@ func newAppPartitions(structs istructs.IAppStructsProvider, actualizer SyncActua
 	return a, func() {}, err
 }
 
-func (aps *apps) DeployApp(name istructs.AppQName, def appdef.IAppDef, partsCount int, engines [cluster.ProcessorKind_Count]int) {
+func (aps *apps) DeployApp(name istructs.AppQName, def appdef.IAppDef, engines [cluster.ProcessorKind_Count]int) {
 	aps.mx.Lock()
 	defer aps.mx.Unlock()
 
@@ -46,7 +46,7 @@ func (aps *apps) DeployApp(name istructs.AppQName, def appdef.IAppDef, partsCoun
 		panic(err)
 	}
 
-	a.deploy(def, appStructs, partsCount, engines)
+	a.deploy(def, appStructs, engines)
 }
 
 func (aps *apps) DeployAppPartitions(appName istructs.AppQName, partIDs []istructs.PartitionID) {
