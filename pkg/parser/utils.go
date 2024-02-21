@@ -156,6 +156,20 @@ func lookupInCtx[stmtType *TableStmt | *TypeStmt | *FunctionStmt | *CommandStmt 
 		// First look in the current workspace
 		if ws != nil {
 			ws.Iterate(lookupCallback)
+			if item == nil {
+				var value interface{} = item
+				if _, ok := value.(*WorkspaceStmt); !ok { //  when looking for something else than a workspace, look in the inherited workspaces
+					for _, dq := range ws.Inherits {
+						err := resolveInCtx[*WorkspaceStmt](dq, ictx, func(f *WorkspaceStmt, schema *PackageSchemaAST) error {
+							f.Iterate(lookupCallback)
+							return nil
+						})
+						if err != nil {
+							return nil, nil, err
+						}
+					}
+				}
+			}
 		}
 
 		// Look in the package
