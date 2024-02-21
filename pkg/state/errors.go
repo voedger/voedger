@@ -23,3 +23,7 @@ var errCurrentValueIsNotAnArray = errors.New("current value is not an array")
 var errFieldByNameIsNotAnObjectOrArray = errors.New("field by name is not an object or array")
 var errFieldByIndexIsNotAnObjectOrArray = errors.New("field by index is not an object or array")
 var errNotImplemented = errors.New("not implemented")
+
+func errUndefined(name string) error {
+	return errors.New(name + " undefined")
+}

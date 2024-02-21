@@ -25,7 +25,7 @@ type actualizerStateOpts struct {
 	messages chan smtptest.Message
 }
 
-func implProvideAsyncActualizerState(ctx context.Context, appStructs istructs.IAppStructs, partitionIDFunc PartitionIDFunc, wsidFunc WSIDFunc, n10nFunc N10nFunc, secretReader isecrets.ISecretReader, intentsLimit, bundlesLimit int,
+func implProvideAsyncActualizerState(ctx context.Context, appStructs istructs.IAppStructs, partitionIDFunc PartitionIDFunc, wsidFunc WSIDFunc, n10nFunc N10nFunc, secretReader isecrets.ISecretReader, eventFunc PLogEventFunc, intentsLimit, bundlesLimit int,
 	optFuncs ...ActualizerStateOptFunc) IBundledHostState {
 
 	opts := &actualizerStateOpts{}
@@ -69,6 +69,8 @@ func implProvideAsyncActualizerState(ctx context.Context, appStructs istructs.IA
 	state.addStorage(Http, &httpStorage{}, S_READ)
 
 	state.addStorage(AppSecret, &appSecretsStorage{secretReader: secretReader}, S_GET)
+
+	state.addStorage(Event, &eventStorage{eventFunc: eventFunc}, S_GET)
 
 	return state
 }
