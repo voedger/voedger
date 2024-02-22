@@ -9,6 +9,7 @@ type vpmParams struct {
 	Dir        string
 	TargetDir  string
 	IgnoreFile string
+	HeaderFile string
 }
 
 // packageFiles is a map of package name to a list of files that belong to the package
@@ -23,4 +24,26 @@ type baselineInfo struct {
 
 type ignoreInfo struct {
 	Ignore []string `yaml:"Ignore"`
+}
+
+// types for ORM generating
+type ormPackageData struct {
+	Name              string
+	HeaderFileContent string
+	Imports           []string
+	Items             []ormTableData
+}
+
+type ormTableData struct {
+	Package    ormPackageData
+	Name       string
+	Type       string
+	SqlContent string
+	Fields     []ormFieldData
+}
+
+type ormFieldData struct {
+	Type          string
+	Name          string
+	GetMethodName string
 }
