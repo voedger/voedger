@@ -7,11 +7,16 @@
 # displays a list of available backups on three DBNodes
 set -euo pipefail
 
-if [ $# -ne 0 ]; then
-  echo "Usage: $0"
+if [ $# -gt 1 ]; then
+  echo "Usage: $0 [<json>]"
   exit 1
 fi
 
+if [ $# -eq 1 ]; then
+    OUTPUT_FORMAT=$1
+else
+    OUTPUT_FORMAT=""
+fi
 source ./utils.sh
 
 BACKUP_FOLDER="/mnt/backup/voedger/"
@@ -34,22 +39,44 @@ if [ "${BACKUP_NAMES}" == "" ]; then
     exit 1
 fi
 
-{
-echo "Backup                 |  DBNodes"
-echo "-------------------------------------------------------"
-for BACKUP_NAME in ${BACKUP_NAMES}; do
-    HOSTS=""
-    if echo "${HOST1_BACKUP_NAMES}" | grep -q "${BACKUP_NAME}"; then
-        HOSTS+="${HOST1} "
-    fi
-    if echo "${HOST2_BACKUP_NAMES}" | grep -q "${BACKUP_NAME}"; then
-        HOSTS+="${HOST2} "
-    fi
-    if echo "${HOST3_BACKUP_NAMES}" | grep -q "${BACKUP_NAME}"; then
-        HOSTS+="${HOST3}"
-    fi
-    
-    echo "${BACKUP_NAME}  |  ${HOSTS}"
-    
-done
-} > backups.lst
+if [ "${OUTPUT_FORMAT}" == "json" ]; then
+    {
+        echo "["
+        for BACKUP_NAME in ${BACKUP_NAMES}; do
+            HOSTS=""
+            if echo "${HOST1_BACKUP_NAMES}" | grep -q "${BACKUP_NAME}"; then
+                HOSTS+="\"${HOST1}\", "
+            fi
+            if echo "${HOST2_BACKUP_NAMES}" | grep -q "${BACKUP_NAME}"; then
+                HOSTS+="\"${HOST2}\", "
+            fi
+            if echo "${HOST3_BACKUP_NAMES}" | grep -q "${BACKUP_NAME}"; then
+                HOSTS+="\"${HOST3}\""
+            fi
+            echo "  {"
+            echo "    \"Backup\": \"${BACKUP_NAME}\","
+            echo "    \"DBNodes\": [${HOSTS}]"
+            echo "  },"
+        done
+        echo "]"
+    } > backups.lst
+else
+    {
+    echo "Backup                 |  DBNodes"
+    echo "-------------------------------------------------------"
+    for BACKUP_NAME in ${BACKUP_NAMES}; do
+        HOSTS=""
+        if echo "${HOST1_BACKUP_NAMES}" | grep -q "${BACKUP_NAME}"; then
+            HOSTS+="${HOST1} "
+        fi
+        if echo "${HOST2_BACKUP_NAMES}" | grep -q "${BACKUP_NAME}"; then
+            HOSTS+="${HOST2} "
+        fi
+        if echo "${HOST3_BACKUP_NAMES}" | grep -q "${BACKUP_NAME}"; then
+            HOSTS+="${HOST3}"
+        fi
+     
+        echo "${BACKUP_NAME}  |  ${HOSTS}"   
+    done
+    } > backups.lst
+fi
