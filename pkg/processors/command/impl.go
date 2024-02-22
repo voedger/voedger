@@ -567,53 +567,57 @@ func parseCUDs(_ context.Context, work interface{}) (err error) {
 		if cudNumber > builtin.MaxCUDs {
 			return coreutils.NewHTTPErrorf(http.StatusBadRequest, "too many cuds, max is", builtin.MaxCUDs)
 		}
-		xPath := xPath("cuds[" + strconv.Itoa(cudNumber) + "]")
+		cudXPath := xPath("cuds[" + strconv.Itoa(cudNumber) + "]")
 		cudDataMap, ok := cudIntf.(map[string]interface{})
 		if !ok {
-			return xPath.Errorf("not an object")
+			return cudXPath.Errorf("not an object")
 		}
 		cudData := coreutils.MapObject(cudDataMap)
 
-		parsedCUD := parsedCUD{
-			xPath: xPath,
-		}
+		parsedCUD := parsedCUD{}
 
 		parsedCUD.fields, ok, err = cudData.AsObject("fields")
 		if err != nil {
-			return xPath.Error(err)
+			return cudXPath.Error(err)
 		}
 		if !ok {
-			return xPath.Errorf(`"fields" missing`)
+			return cudXPath.Errorf(`"fields" missing`)
 		}
 		// sys.ID внутри -> create, снаружи -> update
 		isCreate := false
 		if parsedCUD.id, isCreate, err = parsedCUD.fields.AsInt64(appdef.SystemField_ID); err != nil {
-			return xPath.Error(err)
+			return cudXPath.Error(err)
 		}
 		if isCreate {
 			parsedCUD.opKind = iauthnz.OperationKind_INSERT
 			qNameStr, _, err := parsedCUD.fields.AsString(appdef.SystemField_QName)
 			if err != nil {
-				return xPath.Error(err)
+				return cudXPath.Error(err)
 			}
 			if parsedCUD.qName, err = appdef.ParseQName(qNameStr); err != nil {
-				return xPath.Error(err)
+				return cudXPath.Error(err)
 			}
 		} else {
 			parsedCUD.opKind = iauthnz.OperationKind_UPDATE
 			if parsedCUD.id, ok, err = cudData.AsInt64(appdef.SystemField_ID); err != nil {
-				return xPath.Error(err)
+				return cudXPath.Error(err)
 			}
 			if !ok {
-				return xPath.Errorf(`"sys.ID" missing`)
+				return cudXPath.Errorf(`"sys.ID" missing`)
 			}
 			if parsedCUD.existingRecord, err = cmd.appStructs.Records().Get(cmd.cmdMes.WSID(), true, istructs.RecordID(parsedCUD.id)); err != nil {
 				return
 			}
 			if parsedCUD.qName = parsedCUD.existingRecord.QName(); parsedCUD.qName == appdef.NullQName {
-				return coreutils.NewHTTPError(http.StatusNotFound, xPath.Errorf("record with queried id %d does not exist", parsedCUD.id))
+				return coreutils.NewHTTPError(http.StatusNotFound, cudXPath.Errorf("record with queried id %d does not exist", parsedCUD.id))
 			}
 		}
+		opStr := "UPDATE"
+		if isCreate {
+			opStr = "INSERT"
+		}
+		parsedCUD.xPath = xPath(fmt.Sprintf("%s %s %s", cudXPath, opStr, parsedCUD.qName))
+
 		cmd.parsedCUDs = append(cmd.parsedCUDs, parsedCUD)
 	}
 	return err
