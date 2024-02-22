@@ -20,7 +20,10 @@ import (
 	"github.com/robfig/cron/v3"
 )
 
-var expireTime string
+var (
+	expireTime           string
+	jsonFormatBackupList bool
+)
 
 // nolint
 func newBackupCmd() *cobra.Command {
@@ -86,6 +89,7 @@ func newBackupCmd() *cobra.Command {
 			return nil
 		}
 	}
+	backupListCmd.PersistentFlags().BoolVar(&jsonFormatBackupList, "json", false, "Output in JSON format")
 
 	backupNowCmd := &cobra.Command{
 		Use:   "now",
@@ -361,14 +365,21 @@ func getBackupList(cluster *clusterType) (string, error) {
 		return "", err
 	}
 
-	err = newScriptExecuter(cluster.sshKey, "").run("backup-list.sh")
+	args := []string{}
+	if jsonFormatBackupList {
+		args = []string{"json"}
+	}
+
+	if err = newScriptExecuter(cluster.sshKey, "").run("backup-list.sh", args...); err != nil {
+		return "", nil
+	}
 
 	fContent, e := ioutil.ReadFile(backupFName)
 	if e != nil {
 		return "", e
 	}
 
-	return string(fContent), err
+	return string(fContent), nil
 }
 
 func deleteExpireBacups(cluster *clusterType, hostAddr string) error {
