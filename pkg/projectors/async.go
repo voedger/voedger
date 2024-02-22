@@ -17,6 +17,7 @@ import (
 	"github.com/untillpro/goutils/logger"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/cluster"
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -274,8 +275,17 @@ func (a *asyncActualizer) readPlogToTheEnd() error {
 	return a.readPlogByBatches(func(batch *[]plogEvent) (err error) {
 		*batch = (*batch)[:0]
 
-		ap, err := a.conf.AppPartitions.Borrow(a.conf.AppQName, a.conf.Partition, cluster.ProcessorKind_Actualizer)
-		if err != nil {
+		var ap appparts.IAppPartition
+		for {
+			// TODO: eliminate endless loop
+			ap, err = a.conf.AppPartitions.Borrow(a.conf.AppQName, a.conf.Partition, cluster.ProcessorKind_Actualizer)
+			if err == nil {
+				break
+			}
+			if errors.Is(err, appparts.ErrNotFound) || errors.Is(err, appparts.ErrNotAvailableEngines) {
+				time.Sleep(time.Millisecond)
+				continue
+			}
 			return err
 		}
 
@@ -300,8 +310,17 @@ func (a *asyncActualizer) readPlogToOffset(tillOffset istructs.Offset) error {
 	return a.readPlogByBatches(func(batch *[]plogEvent) (err error) {
 		*batch = (*batch)[:0]
 
-		ap, err := a.conf.AppPartitions.Borrow(a.conf.AppQName, a.conf.Partition, cluster.ProcessorKind_Actualizer)
-		if err != nil {
+		var ap appparts.IAppPartition
+		for {
+			// TODO: eliminate endless loop
+			ap, err = a.conf.AppPartitions.Borrow(a.conf.AppQName, a.conf.Partition, cluster.ProcessorKind_Actualizer)
+			if err == nil {
+				break
+			}
+			if errors.Is(err, appparts.ErrNotFound) || errors.Is(err, appparts.ErrNotAvailableEngines) {
+				time.Sleep(time.Millisecond)
+				continue
+			}
 			return err
 		}
 
