@@ -1,0 +1,50 @@
+{{define "package"}}
+
+{{if .HeaderFileContent}}
+{{.HeaderFileContent}}
+{{end}}
+
+package {{.Name}}
+{{range .Imports}}
+import "{{.}}"
+{{end}}
+
+// package variables
+{{range .Items}}
+var Package_{{.Name}} = struct {
+{{range .Items}}
+	{{.Type}}_{{..Name}} {{.Type}}_{{..Name}}_{{.Name}}
+{{end}}
+}
+{
+{{range .Items}}
+	{{.Type}}_{{.Name}}: {{.Type}}_{{..Name}}_{{.Name}}{
+		Type: Type{qname: "{{..Name}}.{{..Name}}_{{.Name}}"},
+	},
+{{end}}
+}
+
+// package items
+{{range .Items}}
+/*
+{{.SqlContent}}
+*/
+type {{.Type}}_{{.Package.Name}}_{{.Name}} struct {
+	Type
+}
+
+type Value_{{.Type}}_{{.Package.Name}}_{{.Name}} struct{ tv exttinygo.TValue }
+
+{{range .Fields}}
+func (v *Value_{{.Type}}_{{..Package.Name}}_{{..Name}}) {{.GetMethodName}}() {{.Type}} {
+    return v.tv.As{{capitalize .Type}}("{{.Name}}")
+}
+{{end}}
+
+func (v *{{.Type}}_{{.Package.Name}}_{{.Name}}) MustGetValue(id ID) Value_{{.Type}}_{{.Package.Name}}_{{.Name}} {
+	kb := exttinygo.KeyBuilder(exttinygo.StorageRecords, {{.QName}})
+	return Value_{{.Type}}_{{.Package.Name}}_{{.Name}}{tv: exttinygo.MustGetValue(kb)}
+}
+{{end}}
+
+{{end}}

@@ -1,0 +1,29 @@
+{{define "package_item"}}
+/*
+{{.SqlContent}}
+*/
+type {{.Type}}_{{.Package.Name}}_{{.Name}} struct {
+	Type
+}
+
+type Value_{{.Type}}_{{.Package.Name}}_{{.Name}} struct{ tv exttinygo.TValue }
+
+{{range .Fields}}
+func (v *Value_{{.Type}}_{{..Package.Name}}_{{..Name}}) {{.GetMethodName}}() {{.Type}} {
+    return v.tv.As{{capitalize .Type}}("{{.Name}}")
+}
+{{end}}
+
+func (v *Value_{{.Type}}_{{.Package.Name}}_{{.Name}}) Get_article_number() int32 {
+	return v.tv.AsInt32("article_number")
+}
+
+func (v *Value_{{.Type}}_{{.Package.Name}}_{{.Name}}) Name() string {
+	return v.tv.AsString("name")
+}
+
+func (v *{{.Type}}_{{.Package.Name}}_{{.Name}}) MustGetValue(id ID) Value_{{.Type}}_{{.Package.Name}}_{{.Name}} {
+	kb := exttinygo.KeyBuilder(exttinygo.StorageRecords, {{.QName}})
+	return Value_{{.Type}}_{{.Package.Name}}_{{.Name}}{tv: exttinygo.MustGetValue(kb)}
+}
+{{end}}

@@ -1,0 +1,14 @@
+{{define "package_var"}}
+var Package_{{.Name}} = struct {
+{{range .Items}}
+	{{.Type}}_{{..Name}} {{.Type}}_{{..Name}}_{{.Name}}
+{{end}}
+}
+{
+{{range .Items}}
+	{{.Type}}_{{.Name}}: {{.Type}}_{{..Name}}_{{.Name}}{
+		Type: Type{qname: "{{..Name}}.{{..Name}}_{{.Name}}"},
+	},
+{{end}}
+}
+{{end}}

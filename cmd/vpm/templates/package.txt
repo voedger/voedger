@@ -1,0 +1,5 @@
+{{define "package"}}
+{{template "package_header" .}}
+
+{{template "package_body" .}}
+{{end}}
