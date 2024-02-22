@@ -10,7 +10,7 @@ import "errors"
 var ErrNotFound = errors.New("not found")
 
 const (
-	errAppNotFound       = "application %v not found: %w"
+	ErrAppNotFound       = "application %v not found: %w"
 	errPartitionNotFound = "application %v partition %v not found: %w"
 )
 
