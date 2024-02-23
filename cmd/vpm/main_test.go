@@ -278,6 +278,15 @@ func TestCompileErrors(t *testing.T) {
 				"schema2.sql:7:13",
 			},
 		},
+		{
+			name: "package schema - package local name redeclared",
+			dir:  filepath.Join(tempDir, "test", "myapperr"),
+			expectedErrPositions: []string{
+				"schema2.sql:7:13",
+				"schema1.sql:7:33",
+				"schema3.sql:4:1",
+			},
+		},
 	}
 
 	for _, tc := range testCases {
