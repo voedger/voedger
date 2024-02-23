@@ -61,11 +61,11 @@ func (v *View_air_PbillDates) MustGetValue(year int32, dayOfYear int32) Value_Vi
 	return Value_View_untill_PbillDates{tv: exttinygo.MustGetValue(kb), kb: kb}
 }
 
-func (v *View_air_PbillDates) NewIntent(year int32, dayOfYear int32) View_untill_PbillDates_Intent {
+func (v *View_air_PbillDates) NewIntent(year int32, dayOfYear int32) *View_untill_PbillDates_Intent {
 	kb := exttinygo.KeyBuilder(exttinygo.StorageViewRecords, Package_air.View_PbillDates.qname)
 	kb.PutInt32("Year", year)
 	kb.PutInt32("DayOfYear", dayOfYear)
-	return View_untill_PbillDates_Intent{intent: exttinygo.NewValue(kb)}
+	return &View_untill_PbillDates_Intent{intent: exttinygo.NewValue(kb)}
 }
 
 func (v *View_air_PbillDates) QueryValue(year int32, dayOfYear int32) (value Value_View_untill_PbillDates, ok bool) {
@@ -99,10 +99,16 @@ type View_untill_PbillDates_Intent struct {
 	intent exttinygo.TIntent
 }
 
-func (i *View_untill_PbillDates_Intent) Set_FirstOffset(value int32) {
+func (i *View_untill_PbillDates_Intent) Set_FirstOffset(value int32) *View_untill_PbillDates_Intent {
 	i.intent.PutInt32("FirstOffset", value)
+	return i
 }
 
-func (i *View_untill_PbillDates_Intent) Set_LastOffset(value int32) {
+func (i *View_untill_PbillDates_Intent) Set_LastOffset(value int32) *View_untill_PbillDates_Intent {
 	i.intent.PutInt32("LastOffset", value)
+	return i
+}
+
+func (i *View_untill_PbillDates_Intent) Intent() exttinygo.TIntent {
+	return i.intent
 }

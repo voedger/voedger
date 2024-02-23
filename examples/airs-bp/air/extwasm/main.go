@@ -8,7 +8,7 @@ package main
 import "extwasm/orm"
 
 // Command
-func UpdateArticle() {
+func Pbill() {
 	// Query untill.Articles
 	{
 		// v := orm.Package_untill.Articles.MustGetValue(orm.ID(12))

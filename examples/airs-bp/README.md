@@ -29,7 +29,9 @@ func hostRowWriterPutBytes(id uint64, typ uint32, namePtr, nameSize, valuePtr, v
 
 ## Schemas
 
-### github.com/untillpro/airs-bp3/apps/untill/airsbp/schemas.sql
+### airsbp
+
+https://github.com/untillpro/airs-bp3/blob/main/apps/untill/airsbp/schemas.sql
 
 ```sql
 -- Copyright (c) 2020-present unTill Pro, Ltd.
@@ -44,7 +46,9 @@ APPLICATION airsbp (
 );
 ```
 
-### github.com/untillpro/airs-bp3/packages/air/air.sql
+### air
+
+https://github.com/untillpro/airs-bp3/blob/main/packages/air/air.sql
 
 ```sql
 -- Copyright (c) 2020-present unTill Pro, Ltd.
@@ -68,9 +72,15 @@ WORKSPACE RestaurantWS (
 		LastOffset int64 NOT NULL,
 		PRIMARY KEY ((Year), DayOfYear)
 	) AS RESULT OF FillPbillDates;
+
+	COMMAND Orders(untill.orders);
+	COMMAND Pbill(untill.pbill) RETURNS CmdPBillResult;
+
 ```
 
-### github.com/untillpro/airs-scheme/bp3
+### untill
+
+https://github.com/untillpro/airs-scheme/blob/master/bp3/schema.sql
 
 ```sql
 TABLE articles INHERITS CDoc (
