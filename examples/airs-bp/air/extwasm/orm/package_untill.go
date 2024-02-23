@@ -68,13 +68,8 @@ func (v *Value_ODoc_untill_pbill) Get_number() ID {
 	return ID(v.tv.AsInt64("id_number"))
 }
 
-func (v *Value_ODoc_untill_pbill) Get_pbill_item() (res []Value_ORecord_untill_pbill_item) {
-
-	res = make([]Value_ORecord_untill_pbill_item, 0, v.tv.Len())
-	for i := 0; i < v.tv.Len(); i++ {
-		res = append(res, Value_ORecord_untill_pbill_item{tv: v.tv.GetAsValue(int(i))})
-	}
-	return res
+func (v *Value_ODoc_untill_pbill) Get_pbill_item() (res Collection_ORecord_untill_pbill_item) {
+	return Collection_ORecord_untill_pbill_item{tv: v.tv.AsValue("pbill_item")}
 }
 
 type ORecord_untill_pbill_item struct {
@@ -82,3 +77,31 @@ type ORecord_untill_pbill_item struct {
 }
 
 type Value_ORecord_untill_pbill_item struct{ tv exttinygo.TValue }
+
+func (v *Value_ORecord_untill_pbill_item) Get_id_untill_users() ID {
+	return ID(v.tv.AsInt64("id_untill_users"))
+}
+
+func (v *Value_ORecord_untill_pbill_item) Get_tableno() int32 {
+	return v.tv.AsInt32("tableno")
+}
+
+func (v *Value_ORecord_untill_pbill_item) Get_rowbeg() int32 {
+	return v.tv.AsInt32("rowbeg")
+}
+
+type Collection_ORecord_untill_pbill_item struct {
+	tv  exttinygo.TValue
+	len int
+}
+
+func (v *Collection_ORecord_untill_pbill_item) Len() int {
+	if v.len == 0 {
+		v.len = v.tv.Len() + 1
+	}
+	return v.len - 1
+}
+
+func (v *Collection_ORecord_untill_pbill_item) Get(i int) Value_ORecord_untill_pbill_item {
+	return Value_ORecord_untill_pbill_item{tv: v.tv.GetAsValue(i)}
+}

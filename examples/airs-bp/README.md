@@ -26,7 +26,6 @@ func hostPanic(msgPtr, msgSize uint32)
 func hostRowWriterPutBytes(id uint64, typ uint32, namePtr, nameSize, valuePtr, valueSize uint32)
 ```
 
-
 ## Schemas
 
 ### airsbp
@@ -74,7 +73,12 @@ WORKSPACE RestaurantWS (
 	) AS RESULT OF FillPbillDates;
 
 	COMMAND Orders(untill.orders);
+
 	COMMAND Pbill(untill.pbill) RETURNS CmdPBillResult;
+
+	TYPE CmdPBillResult (
+		Number int32 NOT NULL
+	);
 
 ```
 

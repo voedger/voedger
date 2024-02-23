@@ -9,11 +9,22 @@ import "extwasm/orm"
 
 // Command
 func Pbill() {
-	// Query untill.Articles
-	{
-		// v := orm.Package_untill.Articles.MustGetValue(orm.ID(12))
-		// intent := v.NewIntent()
 
+	// Query untill.pbill from the ArgumentObject
+	{
+		pbill := orm.Package_air.Command_Pbill.ArgumentObject()
+
+		// Basic types fields
+		pbill.Get_id_bill()
+		pbill.Get_id_untill_users()
+
+		// Container
+		pbill_items := pbill.Get_pbill_item()
+		for i := 0; i < pbill_items.Len(); i++ {
+			item := pbill_items.Get(i)
+			item.Get_rowbeg()
+			item.Get_tableno()
+		}
 	}
 }
 
