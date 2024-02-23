@@ -38,7 +38,7 @@ func (v *Value_Table_untill_articles) Name() string {
 }
 
 func (v *CDoc_untill_articles) MustGetValue(id ID) Value_Table_untill_articles {
-	kb := exttinygo.KeyBuilder(exttinygo.StorageRecords, Package_air.ODoc_ProformaPrinted.qname)
+	kb := exttinygo.KeyBuilder(exttinygo.Record, Package_air.ODoc_ProformaPrinted.qname)
 	return Value_Table_untill_articles{tv: exttinygo.MustGetValue(kb)}
 }
 
@@ -70,8 +70,8 @@ func (v *Value_ODoc_untill_pbill) Get_number() ID {
 
 func (v *Value_ODoc_untill_pbill) Get_pbill_item() (res []Value_ORecord_untill_pbill_item) {
 
-	res = make([]Value_ORecord_untill_pbill_item, 0, v.tv.Length())
-	for i := uint32(0); i < v.tv.Length(); i++ {
+	res = make([]Value_ORecord_untill_pbill_item, 0, v.tv.Len())
+	for i := 0; i < v.tv.Len(); i++ {
 		res = append(res, Value_ORecord_untill_pbill_item{tv: v.tv.GetAsValue(int(i))})
 	}
 	return res

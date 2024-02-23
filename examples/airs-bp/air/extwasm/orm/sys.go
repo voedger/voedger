@@ -16,3 +16,5 @@ type Type struct {
 func (t *Type) QName() QName {
 	return t.qname
 }
+
+type Event struct {}

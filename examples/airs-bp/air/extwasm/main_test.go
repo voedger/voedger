@@ -8,10 +8,10 @@ import (
 	exttinygo "github.com/voedger/exttinygo"
 )
 
-func Test_Projector_MyProjector(t *testing.T) {
+func Test_Pbill(t *testing.T) {
 
 	// // Should use test name to check appdef and prepare test context
-	// exttest.InitTest(t)
+	exttest.InitTest(t)
 
 	// Prepare first test data
 	{
