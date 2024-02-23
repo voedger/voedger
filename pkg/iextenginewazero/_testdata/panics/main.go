@@ -41,7 +41,7 @@ func canExistIncorrectKey() {
 
 //export mustExist
 func mustExist() {
-	ext.MustGetValue(ext.KeyBuilder(ext.StorageRecords, ext.NullEntity))
+	ext.MustGetValue(ext.KeyBuilder(ext.Record, ext.NullEntity))
 }
 
 //export readIncorrectKeyBuilder
@@ -81,7 +81,7 @@ func incorrectKeyBuilderOnUpdateValue() {
 
 //export incorrectValueOnUpdateValue
 func incorrectValueOnUpdateValue() {
-	ext.UpdateValue(ext.KeyBuilder(ext.StorageEvent, ext.NullEntity), ext.TValue(123))
+	ext.UpdateValue(ext.KeyBuilder(ext.Event, ext.NullEntity), ext.TValue(123))
 }
 
 //export incorrectIntentId
@@ -119,7 +119,7 @@ func newValueError() {
 
 //export updateValueError
 func updateValueError() {
-	event := ext.MustGetValue(ext.KeyBuilder(ext.StorageEvent, ext.NullEntity))
+	event := ext.MustGetValue(ext.KeyBuilder(ext.Event, ext.NullEntity))
 	ext.UpdateValue(ext.KeyBuilder("sys.IoErrorStorage", ext.NullEntity), event)
 }
 
@@ -132,7 +132,7 @@ func asStringMemoryOverflow() {
 
 //export wrongFieldName
 func wrongFieldName() {
-	key := ext.KeyBuilder("sys.View", "pkg.TestView")
+	key := ext.KeyBuilder(ext.View, "pkg.TestView")
 	key.PutInt32("wrong", 1)
 	key.PutInt32("cc", 1)
 	ext.MustGetValue(key)

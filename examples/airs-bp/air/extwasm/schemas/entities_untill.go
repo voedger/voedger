@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024-present unTill Software Development Group B. V. 
+ * Copyright (c) 2024-present unTill Software Development Group B. V.
  * @author Maxim Geraskin
  */
 
@@ -34,6 +34,6 @@ func (v *Untill_articles_Value) Name() string {
 }
 
 func (v *Untill_articles) MustGetValue(id ID) Untill_articles_Value {
-	kb := exttinygo.KeyBuilder(exttinygo.StorageRecords, Air.ProformaPrinted.QName)
+	kb := exttinygo.KeyBuilder(exttinygo.Record, Air.ProformaPrinted.QName)
 	return Untill_articles_Value{tv: exttinygo.MustGetValue(kb)}
 }
