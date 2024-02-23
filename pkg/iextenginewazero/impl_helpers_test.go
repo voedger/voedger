@@ -3,7 +3,7 @@
     @author Michael Saigachenko
 */
 
-package iextenginewasm
+package iextenginewazero
 
 import (
 	"encoding/json"
@@ -20,9 +20,6 @@ import (
 
 var errTestIOError = errors.New("test i/o error")
 
-var storageEvent = appdef.NewQName("sys", "EventStorage")
-var storageSendmail = appdef.NewQName("sys", "SendMailStorage")
-var storageRecords = appdef.NewQName("sys", "RecordsStorage")
 var storageTest = appdef.NewQName("sys", "Test")
 var storageTest2 = appdef.NewQName("sys", "Test2")
 var storageTest3 = appdef.NewQName("sys", "Test3")
@@ -75,7 +72,7 @@ func (s *mockIo) CanExist(key istructs.IStateKeyBuilder) (value istructs.IStateV
 	if k.storage == storageIoError {
 		return nil, false, errTestIOError
 	}
-	if k.storage == storageEvent {
+	if k.storage == state.Event {
 		if projectorMode {
 			mv.Data["offs"] = int32(12345)
 			mv.Data["qname"] = "air.UpdateSubscription"
@@ -143,10 +140,10 @@ func (s *mockIo) CanExist(key istructs.IStateKeyBuilder) (value istructs.IStateV
 		mv.Data["а39"] = vvv
 		return &mv, true, nil
 	}
-	if k.storage == storageSendmail {
+	if k.storage == state.SendMail {
 		return &mv, true, nil
 	}
-	if k.storage == storageRecords {
+	if k.storage == state.Record {
 		return &mv, false, nil
 	}
 	return nil, false, errors.New("unsupported storage: " + k.storage.Pkg() + "." + k.storage.Entity())
@@ -161,7 +158,7 @@ func (s *mockIo) MustExist(key istructs.IStateKeyBuilder) (value istructs.IState
 	if k.storage == storageIoError {
 		return nil, errTestIOError
 	}
-	if k.storage == storageRecords {
+	if k.storage == state.Record {
 		return nil, state.ErrNotExists
 	}
 	v, ok, err := s.CanExist(key)

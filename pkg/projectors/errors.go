@@ -6,4 +6,4 @@ package projectors
 
 import "errors"
 
-var errBatchFull = errors.New("chunk full") // internale error to indicate that chunk for PLog read is full
+var errBatchFull = errors.New("batch full") // internal error to indicate that the batch for reading is full

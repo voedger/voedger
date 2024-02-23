@@ -2,7 +2,7 @@
   - Copyright (c) 2023-present unTill Software Development Group B.V.
     @author Michael Saigachenko
 */
-package iextenginewasm
+package iextenginewazero
 
 import "github.com/voedger/voedger/pkg/iextengine"
 

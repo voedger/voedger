@@ -13,11 +13,11 @@ import (
 //
 //export exampleCommand
 func exampleCommand() {
-	event := ext.MustGetValue(ext.KeyBuilder(ext.StorageEvent, ext.NullEntity))
+	event := ext.MustGetValue(ext.KeyBuilder(ext.Event, ext.NullEntity))
 	arg := event.AsValue("arg")
 
 	if event.AsString("qname") == "sys.InvitationAccepted" {
-		mail := ext.NewValue(ext.KeyBuilder(ext.StorageSendmail, ext.NullEntity))
+		mail := ext.NewValue(ext.KeyBuilder(ext.SendMail, ext.NullEntity))
 		mail.PutString("from", "test@gmail.com")
 		mail.PutString("to", arg.AsString("UserEmail"))
 		mail.PutString("body", "You are invited")
@@ -28,13 +28,13 @@ func exampleCommand() {
 //
 //export updateSubscriptionProjector
 func updateSubscriptionProjector() {
-	event := ext.MustGetValue(ext.KeyBuilder(ext.StorageEvent, ext.NullEntity))
+	event := ext.MustGetValue(ext.KeyBuilder(ext.Event, ext.NullEntity))
 
 	if event.AsString("qname") == "air.UpdateSubscription" {
 		json := event.AsValue("arg")
 		subscr := json.AsValue("subscription")
 		customer := json.AsValue("customer")
-		mail := ext.NewValue(ext.KeyBuilder(ext.StorageSendmail, ext.NullEntity))
+		mail := ext.NewValue(ext.KeyBuilder(ext.SendMail, ext.NullEntity))
 		mail.PutString("from", "test@gmail.com")
 		mail.PutString("to", customer.AsString("email"))
 		mail.PutString("body", "Your subscription has been updated. New status: "+subscr.AsString("status"))
@@ -43,10 +43,10 @@ func updateSubscriptionProjector() {
 
 //export incrementProjector
 func incrementProjector() {
-	key := ext.KeyBuilder("sys.View", "pkg.TestView")
+	key := ext.KeyBuilder(ext.View, "pkg.TestView")
 	key.PutInt32("pk", 1)
 	key.PutInt32("cc", 1)
-	exists, value := ext.QueryValue(key)
+	value, exists := ext.QueryValue(key)
 	if !exists {
 		ext.NewValue(key).PutInt32("vv", 1)
 	} else {

@@ -3,12 +3,12 @@
 *  @author Michael Saigachenko
  */
 
-package extensions
+package exttinygo
 
 var KeyBuilder func(storage, entity string) (b TKeyBuilder) = keyBuilderImpl
 
 // QueryValue queries value. When not exists it returns exists=false and value=nil.
-var QueryValue func(key TKeyBuilder) (exists bool, value TValue) = queryValueImpl
+var QueryValue func(key TKeyBuilder) (value TValue, exists bool) = queryValueImpl
 
 // MustGetValue gets value. Panics when value is not exist
 var MustGetValue func(key TKeyBuilder) TValue = mustGetValueImpl
@@ -36,7 +36,7 @@ type IKey interface {
 }
 
 type IValue interface {
-	Length() uint32
+	Len() int
 
 	AsString(name string) string
 	AsBytes(name string) []byte
