@@ -90,7 +90,7 @@ var mybytes = make([]byte, 5)
 func testNoAllocs() {
 
 	// KeyBuilder
-	kb := ext.KeyBuilder(ext.StorageEvent, ext.NullEntity)
+	kb := ext.KeyBuilder(ext.Event, ext.NullEntity)
 	kb.PutString("somekey", "somevalue")
 	kb.PutBytes("somebytes", mybytes)
 
@@ -115,7 +115,7 @@ func testNoAllocs() {
 	testRead()
 
 	// NewValue
-	mail := ext.NewValue(ext.KeyBuilder(ext.StorageSendmail, ext.NullEntity))
+	mail := ext.NewValue(ext.KeyBuilder(ext.SendMail, ext.NullEntity))
 	mail.PutString("from", "test@gmail.com")
 	mail.PutInt32("port", 668)
 	mail.PutBytes("key", mybytes)
@@ -128,7 +128,7 @@ func testNoAllocs() {
 
 //export testQueryValue
 func testQueryValue() {
-	kb := ext.KeyBuilder(ext.StorageRecords, ext.NullEntity)
+	kb := ext.KeyBuilder(ext.Record, ext.NullEntity)
 	_, exists := ext.QueryValue(kb)
 	require.EqualBool(false, exists)
 }

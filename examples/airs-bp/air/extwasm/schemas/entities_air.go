@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024-present unTill Software Development Group B. V. 
+ * Copyright (c) 2024-present unTill Software Development Group B. V.
  * @author Maxim Geraskin
  */
 
@@ -45,7 +45,7 @@ func (v *Air_ProformaPrinted_Value) BillID() int64 {
 }
 
 func (pp *Air_ProformaPrinted) MustGetValue(id ID) Air_ProformaPrinted_Value {
-	kb := exttinygo.KeyBuilder(exttinygo.StorageRecords, Air.ProformaPrinted.QName)
+	kb := exttinygo.KeyBuilder(exttinygo.Record, Air.ProformaPrinted.QName)
 	return Air_ProformaPrinted_Value{tv: exttinygo.MustGetValue(kb)}
 }
 
@@ -82,7 +82,7 @@ func (v *Untill_PbillDates_Value) LastOffset() int32 {
 }
 
 func (pp *Air_PbillDates) MustGetValue(year int32, dayOfYear int32) Untill_PbillDates_Value {
-	kb := exttinygo.KeyBuilder(exttinygo.StorageViewRecords, Air.PbillDates.QName)
+	kb := exttinygo.KeyBuilder(exttinygo.View, Air.PbillDates.QName)
 	kb.PutInt32("Year", year)
 	kb.PutInt32("DayOfYear", dayOfYear)
 	return Untill_PbillDates_Value{tv: exttinygo.MustGetValue(kb)}

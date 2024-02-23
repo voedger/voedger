@@ -20,7 +20,7 @@ var arr []*int32
 
 //export arrAppend
 func arrAppend() {
-	event := ext.MustGetValue(ext.KeyBuilder(ext.StorageEvent, ext.NullEntity))
+	event := ext.MustGetValue(ext.KeyBuilder(ext.Event, ext.NullEntity))
 	n := event.AsInt32("offs")
 	arr = append(arr, &n)
 }
