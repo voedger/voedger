@@ -41,7 +41,7 @@ var ErrStorageDeclaredOnlyInSys = errors.New("storages are only declared in sys 
 var ErrPkgFolderNotFound = errors.New("pkg folder not found")
 
 func ErrLocalPackageNameRedeclared(localPkgName, newLocalPkgName string) error {
-	return fmt.Errorf("local package name %s was redeclared as %s. use only one way to write the local package name", localPkgName, newLocalPkgName)
+	return fmt.Errorf("local package name %s was redeclared as %s", localPkgName, newLocalPkgName)
 }
 
 func ErrAppDoesNotDefineUseOfPackage(name string) error {
