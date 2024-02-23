@@ -275,22 +275,46 @@ func defineApp(c *basicContext) {
 
 func buildAppSchemaImpl(packages []*PackageSchemaAST) (*AppSchemaAST, error) {
 
-	pkgmap := make(map[string]*PackageSchemaAST)
+	pkgMap := make(map[string]*PackageSchemaAST)
+	pkgPathLocalNames := make(map[string]string, len(packages))
+	var importErrors []error
 	for _, p := range packages {
-		if _, ok := pkgmap[p.QualifiedPackageName]; ok {
+		if _, ok := pkgMap[p.QualifiedPackageName]; ok {
 			return nil, ErrPackageRedeclared(p.QualifiedPackageName)
 		}
-		pkgmap[p.QualifiedPackageName] = p
+		// check for local package name redeclaration
+		for _, imp := range p.Ast.Imports {
+			localPkgName, ok := pkgPathLocalNames[imp.Name]
+			if !ok {
+				if imp.Alias != nil {
+					pkgPathLocalNames[imp.Name] = string(*imp.Alias)
+				} else {
+					pkgPathLocalNames[imp.Name] = filepath.Base(imp.Name)
+				}
+				continue
+			}
+
+			newLocalPkgName := filepath.Base(imp.Name)
+			if imp.Alias != nil {
+				newLocalPkgName = string(*imp.Alias)
+			}
+			if newLocalPkgName != localPkgName {
+				importErrors = append(importErrors, fmt.Errorf("%s: %w", imp.Pos.String(), ErrLocalPackageNameRedeclared(localPkgName, newLocalPkgName)))
+			}
+		}
+		pkgMap[p.QualifiedPackageName] = p
 	}
 
 	appSchema := &AppSchemaAST{
-		Packages: pkgmap,
+		Packages: pkgMap,
 	}
 
 	c := basicContext{
 		app:  appSchema,
 		errs: make([]error, 0),
 	}
+
+	c.errs = append(c.errs, importErrors...)
 
 	defineApp(&c)
 

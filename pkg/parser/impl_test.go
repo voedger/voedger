@@ -1499,9 +1499,9 @@ func Test_AppSchema(t *testing.T) {
 	require.NoError(err)
 
 	fs, err = ParseFile("example3.sql", `
-	IMPORT SCHEMA 'github.com/untillpro/airsbp3/pkg2' AS p2;
+	IMPORT SCHEMA 'github.com/untillpro/airsbp3/pkg2' AS air1;
 	WORKSPACE myWorkspace (
-		USE TABLE p2.MyTable;
+		USE TABLE air1.MyTable;
 	);
 	`)
 	require.NoError(err)
@@ -1615,7 +1615,7 @@ func Test_Scope(t *testing.T) {
 
 	// *****  main
 	fs, err := ParseFile("example1.sql", `
-	IMPORT SCHEMA 'github.com/untillpro/airsbp3/pkg1';
+	IMPORT SCHEMA 'github.com/untillpro/airsbp3/pkg1' AS p1;
 	IMPORT SCHEMA 'github.com/untillpro/airsbp3/pkg2';
 	APPLICATION test(
 		USE pkg1;
