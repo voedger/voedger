@@ -7,6 +7,7 @@ package iextenginewazero
 
 import (
 	"context"
+	"embed"
 	"net/url"
 	"testing"
 	"time"
@@ -19,6 +20,7 @@ import (
 	"github.com/voedger/voedger/pkg/iratesce"
 	"github.com/voedger/voedger/pkg/istorage/mem"
 	istorageimpl "github.com/voedger/voedger/pkg/istorage/provider"
+	"github.com/voedger/voedger/pkg/parser"
 
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
@@ -424,7 +426,7 @@ func Test_WithState(t *testing.T) {
 	const ws = istructs.WSID(1)
 
 	// build app
-	app := appStructs(
+	app := appStructsFromCallback(
 		func(appDef appdef.IAppDefBuilder) {
 			projectors.ProvideViewDef(appDef, testView, func(view appdef.IViewBuilder) {
 				view.KeyBuilder().PartKeyBuilder().AddField(pk, appdef.DataKind_int32)
@@ -490,7 +492,7 @@ func Test_StatePanic(t *testing.T) {
 	const bundlesLimit = 5
 	const ws = istructs.WSID(1)
 
-	app := appStructs(
+	app := appStructsFromCallback(
 		func(appDef appdef.IAppDefBuilder) {
 			projectors.ProvideViewDef(appDef, testView, func(view appdef.IViewBuilder) {
 				view.KeyBuilder().PartKeyBuilder().AddField(pk, appdef.DataKind_int32)
@@ -533,11 +535,7 @@ type (
 	appCfgCallback func(cfg *istructsmem.AppConfigType)
 )
 
-func appStructs(prepareAppDef appDefCallback, prepareAppCfg appCfgCallback) istructs.IAppStructs {
-	appDef := appdef.New()
-	if prepareAppDef != nil {
-		prepareAppDef(appDef)
-	}
+func appStructs(appDef appdef.IAppDefBuilder, prepareAppCfg appCfgCallback) istructs.IAppStructs {
 	cfgs := make(istructsmem.AppConfigsType, 1)
 	cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, appDef)
 	if prepareAppCfg != nil {
@@ -556,4 +554,49 @@ func appStructs(prepareAppDef appDefCallback, prepareAppCfg appCfgCallback) istr
 		panic(err)
 	}
 	return structs
+}
+
+func appStructsFromCallback(prepareAppDef appDefCallback, prepareAppCfg appCfgCallback) istructs.IAppStructs {
+	appDef := appdef.New()
+	if prepareAppDef != nil {
+		prepareAppDef(appDef)
+	}
+	return appStructs(appDef, prepareAppCfg)
+}
+
+//go:embed sql_example_syspkg/*.sql
+var sfs embed.FS
+
+func appStructsFromSQL(appdefSql string, prepareAppCfg appCfgCallback) istructs.IAppStructs {
+	appDef := appdef.New()
+
+	fs, err := parser.ParseFile("file1.sql", appdefSql)
+	if err != nil {
+		panic(err)
+	}
+
+	pkg, err := parser.BuildPackageSchema("test/main", []*parser.FileSchemaAST{fs})
+	if err != nil {
+		panic(err)
+	}
+
+	pkgSys, err := parser.ParsePackageDir(appdef.SysPackage, sfs, "sql_example_syspkg")
+	if err != nil {
+		panic(err)
+	}
+
+	packages, err := parser.BuildAppSchema([]*parser.PackageSchemaAST{
+		pkgSys,
+		pkg,
+	})
+	if err != nil {
+		panic(err)
+	}
+
+	err = parser.BuildAppDefs(packages, appDef)
+	if err != nil {
+		panic(err)
+	}
+
+	return appStructs(appDef, prepareAppCfg)
 }
