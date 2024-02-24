@@ -540,13 +540,13 @@ func Test_Order(t *testing.T) {
 	const pk = "pk"
 	const vv = "vv"
 	const intentsLimit = 5
-	const bundlesLimit = 5
 	const ws = istructs.WSID(1)
 	const partition = istructs.PartitionID(1)
 
 	require := require.New(t)
-	testQName := appdef.NewQName("pkg", "Command")
-	testView := appdef.NewQName("pkg", "TestView")
+	testQName := appdef.NewQName("main", "NewOrder")
+	testProjector := appdef.NewQName("main", "CalcOrderedItems")
+	testView := appdef.NewQName("pkg", "OrderedItems")
 
 	app := appStructsFromSQL(`APPLICATION test(); 
 		WORKSPACE Restaurant (
@@ -558,16 +558,17 @@ func Test_Order(t *testing.T) {
 				Items TABLE order_items (
 					Quantity int32,
 					SinglePrice currency,
-					Article ref,
+					Article ref
 				)
 			);
 			VIEW OrderedItems (
 				Year int32,
 				Month int32,
 				Day int32,
-				Amount currency
+				Amount currency,
+				PRIMARY KEY ((Year), Month, Day)
 			) AS RESULT OF CalcOrderedItems;
-			EXTENSION ENGINE BUILTIN(
+			EXTENSION ENGINE WASM(
 				COMMAND NewOrder(Order);
 				PROJECTOR CalcOrderedItems AFTER EXECUTE ON NewOrder INTENTS(View(OrderedItems));
 			);
@@ -575,6 +576,13 @@ func Test_Order(t *testing.T) {
 		`,
 		func(cfg *istructsmem.AppConfigType) {
 			cfg.Resources.Add(istructsmem.NewCommandFunction(testQName, istructsmem.NullCommandExec))
+			cfg.AddAsyncProjectors(func(partition istructs.PartitionID) istructs.Projector {
+				return istructs.Projector{
+					Name: testProjector,
+					Func: nil,
+				}
+			})
+
 		})
 	appFunc := func() istructs.IAppStructs {
 		return app
@@ -611,7 +619,7 @@ func Test_Order(t *testing.T) {
 	require.NoError(err)
 
 	// Invoke extension again
-	require.NoError(extEngine.Invoke(context.Background(), iextengine.NewExtQName(testPkg, extension), state))
+	require.NoError(extEngine.Invoke(context.Background(), iextengine.NewExtQName(testPkg, newOrderExtName), state))
 	err = state.ApplyIntents()
 	require.NoError(err)
 
