@@ -8,9 +8,10 @@ package orm
 import exttinygo "github.com/voedger/exttinygo"
 
 var Package_air = struct {
-	Command_Pbill        Command_air_Pbill
-	ODoc_ProformaPrinted ODoc_air_ProformaPrinted
-	View_PbillDates      View_air_PbillDates
+	Command_Pbill          Command_air_Pbill
+	ODoc_ProformaPrinted   ODoc_air_ProformaPrinted
+	View_PbillDates        View_air_PbillDates
+	WSingleton_NextNumbers WSingleton_air_NextNumbers
 }{
 	Command_Pbill: Command_air_Pbill{
 		Type: Type{qname: "github.com/untillpro/airs-bp3/packages/air.Pbill"},
@@ -20,6 +21,9 @@ var Package_air = struct {
 	},
 	View_PbillDates: View_air_PbillDates{
 		Type: Type{qname: "github.com/untillpro/airs-bp3/packages/air.PbillDates"},
+	},
+	WSingleton_NextNumbers: WSingleton_air_NextNumbers{
+		Type: Type{qname: "github.com/untillpro/airs-bp3/packages/air.NextNumbers"},
 	},
 }
 
@@ -60,6 +64,54 @@ type ODoc_air_ProformaPrinted struct {
 }
 
 /*
+	TABLE NextNumbers INHERITS Singleton (
+		NextPBillNumber int32
+	);
+*/
+
+type WSingleton_air_NextNumbers struct {
+	Type
+}
+
+func (w *WSingleton_air_NextNumbers) QueryValue() (value Value_WSingleton_air_NextNumbers, ok bool) {
+	kb := exttinygo.KeyBuilder(exttinygo.View, Package_air.WSingleton_NextNumbers.qname)
+	tv, ok := exttinygo.QueryValue(kb)
+	if !ok {
+		return Value_WSingleton_air_NextNumbers{}, false
+	}
+	kb.PutInt64(FieldNameSysID, tv.AsInt64(FieldNameSysID))
+	return Value_WSingleton_air_NextNumbers{tv: tv, kb: kb}, true
+}
+
+func (w *WSingleton_air_NextNumbers) NewIntent() Intent_WSingleton_air_NextNumbers {
+	kb := exttinygo.KeyBuilder(exttinygo.Record, w.qname)
+	// We do not set ID since it's a singleton
+	return Intent_WSingleton_air_NextNumbers{intent: exttinygo.NewValue(kb)}
+}
+
+type Value_WSingleton_air_NextNumbers struct {
+	tv exttinygo.TValue
+	kb exttinygo.TKeyBuilder
+}
+
+func (v *Value_WSingleton_air_NextNumbers) NewIntent() Intent_WSingleton_air_NextNumbers {
+	return Intent_WSingleton_air_NextNumbers{intent: exttinygo.NewValue(v.kb)}
+}
+
+func (v *Value_WSingleton_air_NextNumbers) Get_NextPBillNumber() int32 {
+	return v.tv.AsInt32("NextPBillNumber")
+}
+
+type Intent_WSingleton_air_NextNumbers struct {
+	intent exttinygo.TIntent
+}
+
+func (i *Intent_WSingleton_air_NextNumbers) Set_NextPBillNumber(value int32) *Intent_WSingleton_air_NextNumbers {
+	i.intent.PutInt32("NextPBillNumber", value)
+	return i
+}
+
+/*
 VIEW PbillDates (
 
 	Year int32 NOT NULL,
@@ -82,7 +134,7 @@ func (v *View_air_PbillDates) MustGetValue(year int32, dayOfYear int32) Value_Vi
 }
 
 func (v *View_air_PbillDates) NewIntent(year int32, dayOfYear int32) *Intent_View_untill_PbillDates {
-	kb := exttinygo.KeyBuilder(exttinygo.View, Package_air.View_PbillDates.qname)
+	kb := exttinygo.KeyBuilder(exttinygo.View, v.qname)
 	kb.PutInt32("Year", year)
 	kb.PutInt32("DayOfYear", dayOfYear)
 	return &Intent_View_untill_PbillDates{intent: exttinygo.NewValue(kb)}

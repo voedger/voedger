@@ -80,6 +80,10 @@ WORKSPACE RestaurantWS (
 		Number int32 NOT NULL
 	);
 
+	TABLE NextNumbers INHERITS Singleton (
+		NextPBillNumber int32
+	);
+
 ```
 
 ### untill
@@ -87,6 +91,15 @@ WORKSPACE RestaurantWS (
 https://github.com/untillpro/airs-scheme/blob/master/bp3/schema.sql
 
 ```sql
+
+TABLE bill INHERITS WDoc (
+	close_datetime int64,
+	table_name varchar(50),
+	tableno int32 NOT NULL,
+	id_untill_users ref(untill_users) NOT NULL,
+	table_part varchar(1) NOT NULL,
+)	
+
 TABLE articles INHERITS CDoc (
 	article_number int32,
 	name varchar(255),

@@ -5,17 +5,22 @@
 
 package main
 
-import "extwasm/orm"
+import (
+	"extwasm/orm"
+	"time"
+)
 
 // Command
 func Pbill() {
+
+	var refBill orm.Ref
 
 	// Query untill.pbill from the ArgumentObject
 	{
 		pbill := orm.Package_air.Command_Pbill.ArgumentObject()
 
 		// Basic types fields
-		pbill.Get_id_bill()
+		refBill = pbill.Get_id_bill()
 		pbill.Get_id_untill_users()
 
 		// Container
@@ -26,6 +31,28 @@ func Pbill() {
 			item.Get_tableno()
 		}
 	}
+
+	// Prepare intent for Package_untill.WDoc_pbill
+	{
+		intent := orm.Package_untill.WDoc_pbill.NewIntent(refBill.ID())
+		intent.Set_close_datetime(time.Now().UnixMicro())
+	}
+
+	// Prepare intent for Package_air.WSingleton_NextNumbers
+	{
+		nextNumberValue, nextNumberOk := orm.Package_air.WSingleton_NextNumbers.QueryValue()
+		var nextNumber int32
+		var intent orm.Intent_WSingleton_air_NextNumbers
+		if !nextNumberOk {
+			nextNumber = 1
+			intent = orm.Package_air.WSingleton_NextNumbers.NewIntent()
+		} else {
+			nextNumber = nextNumberValue.Get_NextPBillNumber()
+			intent = nextNumberValue.NewIntent()
+		}
+		intent.Set_NextPBillNumber(nextNumber + 1)
+	}
+
 }
 
 func MyProjector() {

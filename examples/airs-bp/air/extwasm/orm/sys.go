@@ -9,10 +9,15 @@ import exttinygo "github.com/voedger/exttinygo"
 
 type QName = string
 
+type Ref int64
+
+func (r Ref) ID() ID { return ID(r) }
+
 type ID int64
 
 const (
 	FieldNameEventArgumentObject = "ArgumentObject"
+	FieldNameSysID               = "sys.ID"
 )
 
 type Type struct {
