@@ -24,6 +24,29 @@ func exampleCommand() {
 	}
 }
 
+//export NewOrder
+func NewOrder() {
+	arg := ext.MustGetValue(ext.KeyBuilder(ext.Arg, ext.NullEntity))
+
+	items := arg.AsValue("Items")
+	var totalPrice := 0
+	for i := 0; i < items.Len(); i++ {
+		item := items.GetAsValue(i)
+		totalPrice += item.AsInt32("Quantity") * item.AsInt64("SinglePrice")
+	}
+
+	key := ext.KeyBuilder(ext.View, "pkg.OrderedItems")
+	key.PutInt32("Year", arg.AsInt32("Year"))
+	key.PutInt32("Month", arg.AsInt32("Month"))
+	key.PutInt32("Day", arg.AsInt32("Day"))
+	value, exists := ext.QueryValue(key)
+	if !exists {
+		ext.NewValue(key).PutInt64("Amount", totalPrice)
+	} else {
+		ext.UpdateValue(key, value).PutInt32("Amount", value.AsInt64("Amount")+totalPrice)
+	}
+}
+
 // Handle JSON
 //
 //export updateSubscriptionProjector

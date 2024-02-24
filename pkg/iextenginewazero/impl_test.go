@@ -535,6 +535,98 @@ type (
 	appCfgCallback func(cfg *istructsmem.AppConfigType)
 )
 
+func Test_Order(t *testing.T) {
+	const cc = "cc"
+	const pk = "pk"
+	const vv = "vv"
+	const intentsLimit = 5
+	const bundlesLimit = 5
+	const ws = istructs.WSID(1)
+	const partition = istructs.PartitionID(1)
+
+	require := require.New(t)
+	testQName := appdef.NewQName("pkg", "Command")
+	testView := appdef.NewQName("pkg", "TestView")
+
+	app := appStructsFromSQL(`APPLICATION test(); 
+		WORKSPACE Restaurant (
+			TABLE Order INHERITS ODoc (
+				Year int64,
+				Month int64,
+				Day int64,
+				Waiter ref,
+				Items TABLE order_items (
+					Quantity int32,
+					SinglePrice currency,
+					Article ref,
+				)
+			);
+			VIEW OrderedItems (
+				Year int32,
+				Month int32,
+				Day int32,
+				Amount currency
+			) AS RESULT OF CalcOrderedItems;
+			EXTENSION ENGINE BUILTIN(
+				COMMAND NewOrder(Order);
+				PROJECTOR CalcOrderedItems AFTER EXECUTE ON NewOrder INTENTS(View(OrderedItems));
+			);
+		)
+		`,
+		func(cfg *istructsmem.AppConfigType) {
+			cfg.Resources.Add(istructsmem.NewCommandFunction(testQName, istructsmem.NullCommandExec))
+		})
+	appFunc := func() istructs.IAppStructs {
+		return app
+	}
+
+	state := state.ProvideCommandProcessorStateFactory()(context.Background(), appFunc, state.SimplePartitionIDFunc(partition),
+		state.SimpleWSIDFunc(ws), nil, nil, nil, nil, intentsLimit, nil)
+
+	const newOrderExtName = "NewOrder"
+
+	ctx := context.Background()
+	moduleUrl := testModuleURL("./_testdata/basicusage/pkg.wasm")
+	packages := []iextengine.ExtensionPackage{
+		{
+			QualifiedName:  testPkg,
+			ModuleUrl:      moduleUrl,
+			ExtensionNames: []string{newOrderExtName},
+		},
+	}
+	factory := ProvideExtensionEngineFactory(true)
+	engines, err := factory.New(ctx, packages, &iextengine.ExtEngineConfig{}, 1)
+	if err != nil {
+		panic(err)
+	}
+	extEngine := engines[0]
+	defer extEngine.Close(ctx)
+	//
+	// Invoke extension
+	//
+	err = extEngine.Invoke(context.Background(), iextengine.NewExtQName(testPkg, newOrderExtName), state)
+	require.NoError(err)
+
+	err = state.ApplyIntents()
+	require.NoError(err)
+
+	// Invoke extension again
+	require.NoError(extEngine.Invoke(context.Background(), iextengine.NewExtQName(testPkg, extension), state))
+	err = state.ApplyIntents()
+	require.NoError(err)
+
+	// Test view
+	kb := app.ViewRecords().KeyBuilder(testView)
+	kb.PartitionKey().PutInt32(pk, 1)
+	kb.ClusteringColumns().PutInt32(cc, 1)
+	value, err := app.ViewRecords().Get(ws, kb)
+
+	require.NoError(err)
+	require.NotNil(value)
+	require.Equal(int32(2), value.AsInt32(vv))
+
+}
+
 func appStructs(appDef appdef.IAppDefBuilder, prepareAppCfg appCfgCallback) istructs.IAppStructs {
 	cfgs := make(istructsmem.AppConfigsType, 1)
 	cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, appDef)
