@@ -1,3 +1,6 @@
+-- Copyright (c) 2024-present unTill Software Development Group B. V.
+-- @author Maxim Geraskin
+
 IMPORT SCHEMA 'github.com/untillpro/airs-scheme/bp3' AS untill;
 
 WORKSPACE RestaurantWS (
