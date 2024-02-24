@@ -6,14 +6,16 @@
 package exttinygo
 
 const (
-	StorageEvent       = "sys.EventStorage"
-	StorageSendmail    = "sys.SendMailStorage"
-	StorageRecords     = "sys.RecordsStorage"
-	StorageViewRecords = "sys.ViewRecordsStorage"
-	StorageWLog        = "sys.WLogStorage"
-	StoragePLog        = "sys.PLogStorage"
-	StorageHTTP        = "sys.HTTPStorage"
-	StorageAppSecrets  = "sys.AppSecretsStorage"
+	Event          = "sys.Event"
+	SendMail       = "sys.SendMail"
+	Record         = "sys.Record"
+	View           = "sys.View"
+	WLog           = "sys.WLog"
+	PLog           = "sys.PLog"
+	Http           = "sys.Http"
+	AppSecret      = "sys.AppSecret"
+	RequestSubject = "sys.RequestSubject"
+	Result         = "sys.Result"
 
 	NullEntity = ""
 )
