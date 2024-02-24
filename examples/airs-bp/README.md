@@ -7,6 +7,7 @@ Prototype of extensions to build airs-bp application
 - [vpm schema](https://github.com/voedger/voedger/issues/1476)
 - https://github.com/voedger/voedger/tree/main/staging/src/github.com/voedger/exttinygo
 - https://github.com/voedger/voedger/blob/main/pkg/iextenginewazero/_testdata/basicusage/main.go
+- https://github.com/untillpro/airs-bp3/blob/2d0d38d1b73f85165a520659cf1e5cad4e67a950/packages/air/pbilldates/impl_fillpbilldates.go#L25
 
 ## Problems
 
