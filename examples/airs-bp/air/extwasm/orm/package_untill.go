@@ -34,7 +34,6 @@ type WDoc_untill_bill struct {
 	Type
 }
 
-
 func (w *WDoc_untill_bill) QueryValue(id ID) (Value_Table_untill_bill, bool) {
 	kb := exttinygo.KeyBuilder(exttinygo.Record, w.qname)
 	kb.PutInt64(FieldNameSysID, int64(id))
@@ -81,8 +80,9 @@ type Intent_WDoc_untill_bill struct {
 	intent exttinygo.TIntent
 }
 
-func (i *Intent_WDoc_untill_bill) Set_close_datetime(v int64) {
+func (i *Intent_WDoc_untill_bill) Set_close_datetime(v int64) *Intent_WDoc_untill_bill {
 	i.intent.PutInt64("close_datetime", v)
+	return i
 }
 
 /*

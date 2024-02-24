@@ -36,23 +36,4 @@ func Test_Pbill(t *testing.T) {
 			}
 		}
 	}
-
-	// Prepare second test data
-	{
-		exttest.ResetState()
-		{
-			intent := orm.Package_air.View_PbillDates.NewIntent(3020, 2)
-			intent.Set_FirstOffset(20)
-			intent.Set_LastOffset(17)
-
-			exttest.CommitIntentsToState()
-		}
-
-		MyProjector()
-		// Test intents
-		{
-
-		}
-	}
-
 }
