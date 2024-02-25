@@ -21,6 +21,7 @@ var (
 	RequestSubject = appdef.NewQName(appdef.SysPackage, "RequestSubject")
 	Result         = appdef.NewQName(appdef.SysPackage, "Result")
 	Event          = appdef.NewQName(appdef.SysPackage, "Event")
+	Arg            = appdef.NewQName(appdef.SysPackage, "Arg")
 )
 
 const (

@@ -243,7 +243,8 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 				state.SimpleWSIDFunc(qw.msg.WSID()),
 				qw.secretReader,
 				func() []iauthnz.Principal { return qw.principals },
-				func() string { return qw.msg.Token() })
+				func() string { return qw.msg.Token() },
+				nil) // TODO: provide ArgFunc
 			qw.execQueryArgs.State = qw.state
 			return
 		}),
