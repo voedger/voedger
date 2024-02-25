@@ -5,6 +5,9 @@ Prototype of extensions to build airs-bp application
 ## Context
 
 - [vpm schema](https://github.com/voedger/voedger/issues/1476)
+- https://github.com/voedger/voedger/tree/main/staging/src/github.com/voedger/exttinygo
+- https://github.com/voedger/voedger/blob/main/pkg/iextenginewazero/_testdata/basicusage/main.go
+- https://github.com/untillpro/airs-bp3/blob/2d0d38d1b73f85165a520659cf1e5cad4e67a950/packages/air/pbilldates/impl_fillpbilldates.go#L25
 
 ## Problems
 
@@ -24,10 +27,11 @@ func hostPanic(msgPtr, msgSize uint32)
 func hostRowWriterPutBytes(id uint64, typ uint32, namePtr, nameSize, valuePtr, valueSize uint32)
 ```
 
-
 ## Schemas
 
-### github.com/untillpro/airs-bp3/apps/untill/airsbp/schemas.sql
+### airsbp
+
+https://github.com/untillpro/airs-bp3/blob/main/apps/untill/airsbp/schemas.sql
 
 ```sql
 -- Copyright (c) 2020-present unTill Pro, Ltd.
@@ -42,7 +46,9 @@ APPLICATION airsbp (
 );
 ```
 
-### github.com/untillpro/airs-bp3/packages/air/air.sql
+### air
+
+https://github.com/untillpro/airs-bp3/blob/main/packages/air/air.sql
 
 ```sql
 -- Copyright (c) 2020-present unTill Pro, Ltd.
@@ -66,11 +72,35 @@ WORKSPACE RestaurantWS (
 		LastOffset int64 NOT NULL,
 		PRIMARY KEY ((Year), DayOfYear)
 	) AS RESULT OF FillPbillDates;
+
+	COMMAND Orders(untill.orders);
+
+	COMMAND Pbill(untill.pbill) RETURNS CmdPBillResult;
+
+	TYPE CmdPBillResult (
+		Number int32 NOT NULL
+	);
+
+	TABLE NextNumbers INHERITS Singleton (
+		NextPBillNumber int32
+	);
+
 ```
 
-### github.com/untillpro/airs-scheme/bp3
+### untill
+
+https://github.com/untillpro/airs-scheme/blob/master/bp3/schema.sql
 
 ```sql
+
+TABLE bill INHERITS WDoc (
+	close_datetime int64,
+	table_name varchar(50),
+	tableno int32 NOT NULL,
+	id_untill_users ref(untill_users) NOT NULL,
+	table_part varchar(1) NOT NULL,
+)	
+
 TABLE articles INHERITS CDoc (
 	article_number int32,
 	name varchar(255),
@@ -86,4 +116,20 @@ TABLE untill_users INHERITS CDoc (
 	language varchar(100),
     ...
 )
+
+
+TABLE pbill INHERITS ODoc (
+	id_bill int64 NOT NULL,
+	id_untill_users ref(untill_users) NOT NULL,
+	number int32,
+	pbill_item pbill_item
+}
+
+
+TABLE pbill_item INHERITS ORecord (
+	id_untill_users ref(untill_users) NOT NULL,
+	tableno int32 NOT NULL,
+	rowbeg int32 NOT NULL
+)
+
 ```
