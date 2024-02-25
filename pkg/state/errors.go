@@ -6,6 +6,7 @@ package state
 
 import (
 	"errors"
+	"fmt"
 )
 
 var ErrNotSupported = errors.New("not supported")
@@ -29,5 +30,5 @@ func errUndefined(name string) error {
 }
 
 func errIndexOutOfBounds(index int) error {
-	return errors.New("index out of bounds: " + string(index))
+	return fmt.Errorf("index out of bounds: %d", index)
 }
