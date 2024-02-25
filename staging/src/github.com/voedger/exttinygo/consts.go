@@ -16,6 +16,7 @@ const (
 	AppSecret      = "sys.AppSecret"
 	RequestSubject = "sys.RequestSubject"
 	Result         = "sys.Result"
+	Arg            = "sys.Arg"
 
 	NullEntity = ""
 )

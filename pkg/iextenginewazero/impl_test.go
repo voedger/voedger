@@ -35,52 +35,172 @@ var extIO = &mockIo{}
 const testPkg = "test"
 
 func Test_BasicUsage(t *testing.T) {
-
-	const exampleCommand = "exampleCommand"
-	const updateSubscriptionProjector = "updateSubscriptionProjector"
-
+	// Test Consts
+	const intentsLimit = 5
+	const bundlesLimit = 5
+	offset := istructs.Offset(123)
+	const ws = istructs.WSID(1)
+	const partition = istructs.PartitionID(1)
 	require := require.New(t)
-	ctx := context.Background()
+	newOrderCmd := appdef.NewQName("main", "NewOrder")
+	calcOrderedItemsProjector := appdef.NewQName("main", "CalcOrderedItems")
+	orderedItemsView := appdef.NewQName("main", "OrderedItems")
 
+	// Prepare app
+	app := appStructsFromSQL(`APPLICATION test(); 
+		WORKSPACE Restaurant (
+			TABLE Order INHERITS ODoc (
+				Year int32,
+				Month int32,
+				Day int32,
+				Waiter ref,
+				Items TABLE OrderItems (
+					Quantity int32,
+					SinglePrice currency,
+					Article ref
+				)
+			);
+			VIEW OrderedItems (
+				Year int32,
+				Month int32,
+				Day int32,
+				Amount currency,
+				PRIMARY KEY ((Year), Month, Day)
+			) AS RESULT OF CalcOrderedItems;
+			EXTENSION ENGINE WASM(
+				COMMAND NewOrder(Order);
+				PROJECTOR CalcOrderedItems AFTER EXECUTE ON NewOrder INTENTS(View(OrderedItems));
+			);
+		)
+		`,
+		func(cfg *istructsmem.AppConfigType) {
+			cfg.Resources.Add(istructsmem.NewCommandFunction(newOrderCmd, istructsmem.NullCommandExec))
+			cfg.AddAsyncProjectors(func(partition istructs.PartitionID) istructs.Projector {
+				return istructs.Projector{
+					Name: calcOrderedItemsProjector,
+					Func: nil,
+				}
+			})
+		})
+
+	// Build NewOrder event
+	eventFunc := func() istructs.IPLogEvent {
+		reb := app.Events().GetNewRawEventBuilder(istructs.NewRawEventBuilderParams{
+			GenericRawEventBuilderParams: istructs.GenericRawEventBuilderParams{
+				Workspace:         ws,
+				HandlingPartition: partition,
+				PLogOffset:        offset,
+				QName:             newOrderCmd,
+			},
+		})
+		orderBuilder := reb.ArgumentObjectBuilder()
+
+		orderBuilder.PutRecordID(appdef.SystemField_ID, 1)
+		orderBuilder.PutInt32("Year", 2023)
+		orderBuilder.PutInt32("Month", 1)
+		orderBuilder.PutInt32("Day", 1)
+		items := orderBuilder.ChildBuilder("Items")
+		items.PutRecordID(appdef.SystemField_ID, 2)
+		items.PutInt32("Quantity", 1)
+		items.PutInt64("SinglePrice", 100)
+		items = orderBuilder.ChildBuilder("Items")
+		items.PutRecordID(appdef.SystemField_ID, 3)
+		items.PutInt32("Quantity", 2)
+		items.PutInt64("SinglePrice", 50)
+
+		rawEvent, err := reb.BuildRawEvent()
+		if err != nil {
+			panic(err)
+		}
+
+		event, err := app.Events().PutPlog(rawEvent, nil, istructsmem.NewIDGenerator())
+		if err != nil {
+			panic(err)
+		}
+		return event
+	}
+
+	// Create state
+	state := state.ProvideAsyncActualizerStateFactory()(context.Background(), app, nil, state.SimpleWSIDFunc(ws), nil, nil, eventFunc, intentsLimit, bundlesLimit)
+
+	// Create extension package from WASM
+	const calcOrderedItems = "CalcOrderedItems"
+	ctx := context.Background()
 	moduleUrl := testModuleURL("./_testdata/basicusage/pkg.wasm")
 	packages := []iextengine.ExtensionPackage{
 		{
 			QualifiedName:  testPkg,
 			ModuleUrl:      moduleUrl,
-			ExtensionNames: []string{exampleCommand, updateSubscriptionProjector},
+			ExtensionNames: []string{calcOrderedItems},
 		},
 	}
+
+	// Create extension engine
 	factory := ProvideExtensionEngineFactory(true)
 	engines, err := factory.New(ctx, packages, &iextengine.ExtEngineConfig{}, 1)
-	extEngine := engines[0]
 	if err != nil {
 		panic(err)
 	}
+	extEngine := engines[0]
 	defer extEngine.Close(ctx)
 	//
-	// Invoke command
+	// Invoke extension
 	//
-	require.NoError(extEngine.Invoke(context.Background(), iextengine.NewExtQName(testPkg, exampleCommand), extIO))
-	require.Len(extIO.intents, 1)
-	v := extIO.intents[0].value.(*mockValueBuilder)
+	err = extEngine.Invoke(context.Background(), iextengine.NewExtQName(testPkg, calcOrderedItems), state)
+	require.NoError(err)
 
-	require.Equal("test@gmail.com", v.items["from"])
-	require.Equal("email@user.com", v.items["to"])
-	require.Equal("You are invited", v.items["body"])
+	ready, err := state.ApplyIntents()
+	require.NoError(err)
+	require.False(ready)
 
-	//
-	// Invoke projector which parses JSON
-	//
-	extIO = &mockIo{}    // reset intents
-	projectorMode = true // state will return different Event
-	require.NoError(extEngine.Invoke(context.Background(), iextengine.NewExtQName(testPkg, updateSubscriptionProjector), extIO))
+	// Invoke extension again
+	require.NoError(extEngine.Invoke(context.Background(), iextengine.NewExtQName(testPkg, calcOrderedItems), state))
+	ready, err = state.ApplyIntents()
+	require.NoError(err)
+	require.False(ready)
 
-	require.Len(extIO.intents, 1)
-	v = extIO.intents[0].value.(*mockValueBuilder)
+	// Flush bundles with intents
+	require.NoError(state.FlushBundles())
 
-	require.Equal("test@gmail.com", v.items["from"])
-	require.Equal("customer@test.com", v.items["to"])
-	require.Equal("Your subscription has been updated. New status: active", v.items["body"])
+	// Test view, must be calculated from 2 events
+	kb := app.ViewRecords().KeyBuilder(orderedItemsView)
+	kb.PartitionKey().PutInt32("Year", 2023)
+	kb.ClusteringColumns().PutInt32("Month", 1)
+	kb.ClusteringColumns().PutInt32("Day", 1)
+	value, err := app.ViewRecords().Get(ws, kb)
+
+	require.NoError(err)
+	require.NotNil(value)
+	require.Equal(int64(400), value.AsInt64("Amount"))
+}
+
+func appStructs(appDef appdef.IAppDefBuilder, prepareAppCfg appCfgCallback) istructs.IAppStructs {
+	cfgs := make(istructsmem.AppConfigsType, 1)
+	cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, appDef)
+	if prepareAppCfg != nil {
+		prepareAppCfg(cfg)
+	}
+
+	asf := mem.Provide()
+	storageProvider := istorageimpl.Provide(asf)
+	prov := istructsmem.Provide(
+		cfgs,
+		iratesce.TestBucketsFactory,
+		payloads.ProvideIAppTokensFactory(itokensjwt.TestTokensJWT()),
+		storageProvider)
+	structs, err := prov.AppStructs(istructs.AppQName_test1_app1)
+	if err != nil {
+		panic(err)
+	}
+	return structs
+}
+
+func appStructsFromCallback(prepareAppDef appDefCallback, prepareAppCfg appCfgCallback) istructs.IAppStructs {
+	appDef := appdef.New()
+	if prepareAppDef != nil {
+		prepareAppDef(appDef)
+	}
+	return appStructs(appDef, prepareAppCfg)
 }
 
 func requireMemStat(t *testing.T, wasmEngine *wazeroExtEngine, mallocs, frees, heapInUse uint32) {
@@ -534,135 +654,6 @@ type (
 	appDefCallback func(appDef appdef.IAppDefBuilder)
 	appCfgCallback func(cfg *istructsmem.AppConfigType)
 )
-
-func Test_Order(t *testing.T) {
-	const cc = "cc"
-	const pk = "pk"
-	const vv = "vv"
-	const intentsLimit = 5
-	const ws = istructs.WSID(1)
-	const partition = istructs.PartitionID(1)
-
-	require := require.New(t)
-	testQName := appdef.NewQName("main", "NewOrder")
-	testProjector := appdef.NewQName("main", "CalcOrderedItems")
-	testView := appdef.NewQName("pkg", "OrderedItems")
-
-	app := appStructsFromSQL(`APPLICATION test(); 
-		WORKSPACE Restaurant (
-			TABLE Order INHERITS ODoc (
-				Year int64,
-				Month int64,
-				Day int64,
-				Waiter ref,
-				Items TABLE order_items (
-					Quantity int32,
-					SinglePrice currency,
-					Article ref
-				)
-			);
-			VIEW OrderedItems (
-				Year int32,
-				Month int32,
-				Day int32,
-				Amount currency,
-				PRIMARY KEY ((Year), Month, Day)
-			) AS RESULT OF CalcOrderedItems;
-			EXTENSION ENGINE WASM(
-				COMMAND NewOrder(Order);
-				PROJECTOR CalcOrderedItems AFTER EXECUTE ON NewOrder INTENTS(View(OrderedItems));
-			);
-		)
-		`,
-		func(cfg *istructsmem.AppConfigType) {
-			cfg.Resources.Add(istructsmem.NewCommandFunction(testQName, istructsmem.NullCommandExec))
-			cfg.AddAsyncProjectors(func(partition istructs.PartitionID) istructs.Projector {
-				return istructs.Projector{
-					Name: testProjector,
-					Func: nil,
-				}
-			})
-
-		})
-	appFunc := func() istructs.IAppStructs {
-		return app
-	}
-
-	state := state.ProvideCommandProcessorStateFactory()(context.Background(), appFunc, state.SimplePartitionIDFunc(partition),
-		state.SimpleWSIDFunc(ws), nil, nil, nil, nil, intentsLimit, nil)
-
-	const newOrderExtName = "NewOrder"
-
-	ctx := context.Background()
-	moduleUrl := testModuleURL("./_testdata/basicusage/pkg.wasm")
-	packages := []iextengine.ExtensionPackage{
-		{
-			QualifiedName:  testPkg,
-			ModuleUrl:      moduleUrl,
-			ExtensionNames: []string{newOrderExtName},
-		},
-	}
-	factory := ProvideExtensionEngineFactory(true)
-	engines, err := factory.New(ctx, packages, &iextengine.ExtEngineConfig{}, 1)
-	if err != nil {
-		panic(err)
-	}
-	extEngine := engines[0]
-	defer extEngine.Close(ctx)
-	//
-	// Invoke extension
-	//
-	err = extEngine.Invoke(context.Background(), iextengine.NewExtQName(testPkg, newOrderExtName), state)
-	require.NoError(err)
-
-	err = state.ApplyIntents()
-	require.NoError(err)
-
-	// Invoke extension again
-	require.NoError(extEngine.Invoke(context.Background(), iextengine.NewExtQName(testPkg, newOrderExtName), state))
-	err = state.ApplyIntents()
-	require.NoError(err)
-
-	// Test view
-	kb := app.ViewRecords().KeyBuilder(testView)
-	kb.PartitionKey().PutInt32(pk, 1)
-	kb.ClusteringColumns().PutInt32(cc, 1)
-	value, err := app.ViewRecords().Get(ws, kb)
-
-	require.NoError(err)
-	require.NotNil(value)
-	require.Equal(int32(2), value.AsInt32(vv))
-
-}
-
-func appStructs(appDef appdef.IAppDefBuilder, prepareAppCfg appCfgCallback) istructs.IAppStructs {
-	cfgs := make(istructsmem.AppConfigsType, 1)
-	cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, appDef)
-	if prepareAppCfg != nil {
-		prepareAppCfg(cfg)
-	}
-
-	asf := mem.Provide()
-	storageProvider := istorageimpl.Provide(asf)
-	prov := istructsmem.Provide(
-		cfgs,
-		iratesce.TestBucketsFactory,
-		payloads.ProvideIAppTokensFactory(itokensjwt.TestTokensJWT()),
-		storageProvider)
-	structs, err := prov.AppStructs(istructs.AppQName_test1_app1)
-	if err != nil {
-		panic(err)
-	}
-	return structs
-}
-
-func appStructsFromCallback(prepareAppDef appDefCallback, prepareAppCfg appCfgCallback) istructs.IAppStructs {
-	appDef := appdef.New()
-	if prepareAppDef != nil {
-		prepareAppDef(appDef)
-	}
-	return appStructs(appDef, prepareAppCfg)
-}
 
 //go:embed sql_example_syspkg/*.sql
 var sfs embed.FS

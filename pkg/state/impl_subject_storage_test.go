@@ -24,7 +24,7 @@ func TestSubjectStorage_BasicUsage(t *testing.T) {
 	}}
 	token := "token"
 	tokenFunc := func() string { return token }
-	s := ProvideCommandProcessorStateFactory()(context.Background(), func() istructs.IAppStructs { return &nilAppStructs{} }, nil, nil, nil, nil, func() []iauthnz.Principal { return principals }, tokenFunc, 1, nil)
+	s := ProvideCommandProcessorStateFactory()(context.Background(), func() istructs.IAppStructs { return &nilAppStructs{} }, nil, nil, nil, nil, func() []iauthnz.Principal { return principals }, tokenFunc, 1, nil, nil)
 	k, err := s.KeyBuilder(RequestSubject, appdef.NullQName)
 	require.NoError(err)
 

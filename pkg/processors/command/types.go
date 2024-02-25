@@ -126,7 +126,8 @@ type hostStateProvider struct {
 
 func newHostStateProvider(ctx context.Context, pid istructs.PartitionID, secretReader isecrets.ISecretReader) *hostStateProvider {
 	p := &hostStateProvider{}
-	p.state = state.ProvideCommandProcessorStateFactory()(ctx, p.getAppStructs, state.SimplePartitionIDFunc(pid), p.getWSID, secretReader, p.getCUD, p.getPrincipals, p.getToken, builtin.MaxCUDs, p.getCmdResultBuilder)
+	// TODO: provide ArgFunc
+	p.state = state.ProvideCommandProcessorStateFactory()(ctx, p.getAppStructs, state.SimplePartitionIDFunc(pid), p.getWSID, secretReader, p.getCUD, p.getPrincipals, p.getToken, builtin.MaxCUDs, p.getCmdResultBuilder, nil)
 	return p
 }
 
