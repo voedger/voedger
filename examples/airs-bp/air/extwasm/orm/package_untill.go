@@ -35,21 +35,21 @@ type WDoc_untill_bill struct {
 }
 
 func (w *WDoc_untill_bill) QueryValue(id ID) (Value_Table_untill_bill, bool) {
-	kb := exttinygo.KeyBuilder(exttinygo.Record, w.qname)
+	kb := exttinygo.KeyBuilder(exttinygo.StorageRecord, w.qname)
 	kb.PutInt64(FieldNameSysID, int64(id))
 	tv, exists := exttinygo.QueryValue(kb)
 	return Value_Table_untill_bill{tv: tv, kb: kb}, exists
 }
 
 func (w *WDoc_untill_bill) MustGetValue(id ID) Value_Table_untill_bill {
-	kb := exttinygo.KeyBuilder(exttinygo.Record, w.qname)
+	kb := exttinygo.KeyBuilder(exttinygo.StorageRecord, w.qname)
 	kb.PutInt64(FieldNameSysID, int64(id))
 	tv := exttinygo.MustGetValue(kb)
 	return Value_Table_untill_bill{tv: tv, kb: kb}
 }
 
 func (w *WDoc_untill_bill) NewIntent(id ID) Intent_WDoc_untill_bill {
-	kb := exttinygo.KeyBuilder(exttinygo.Record, w.qname)
+	kb := exttinygo.KeyBuilder(exttinygo.StorageRecord, w.qname)
 	kb.PutInt64(FieldNameSysID, int64(id))
 	return Intent_WDoc_untill_bill{intent: exttinygo.NewValue(kb)}
 }
@@ -111,7 +111,7 @@ func (v *Value_Table_untill_articles) Name() string {
 }
 
 func (v *CDoc_untill_articles) MustGetValue(id ID) Value_Table_untill_articles {
-	kb := exttinygo.KeyBuilder(exttinygo.Record, Package_air.ODoc_ProformaPrinted.qname)
+	kb := exttinygo.KeyBuilder(exttinygo.StorageRecord, Package_air.ODoc_ProformaPrinted.qname)
 	return Value_Table_untill_articles{tv: exttinygo.MustGetValue(kb)}
 }
 

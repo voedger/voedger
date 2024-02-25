@@ -14,7 +14,7 @@ import (
 //
 //export CalcOrderedItems
 func CalcOrderedItems() {
-	event := ext.MustGetValue(ext.KeyBuilder(ext.Event, ext.NullEntity))
+	event := ext.MustGetValue(ext.KeyBuilder(ext.StorageEvent, ext.NullEntity))
 	arg := event.AsValue("ArgumentObject")
 	items := arg.AsValue("Items")
 	var totalPrice int64
@@ -22,7 +22,7 @@ func CalcOrderedItems() {
 		item := items.GetAsValue(i)
 		totalPrice += int64(item.AsInt32("Quantity")) * item.AsInt64("SinglePrice")
 	}
-	key := ext.KeyBuilder(ext.View, "main.OrderedItems")
+	key := ext.KeyBuilder(ext.StorageView, "main.OrderedItems")
 	key.PutInt32("Year", arg.AsInt32("Year"))
 	key.PutInt32("Month", arg.AsInt32("Month"))
 	key.PutInt32("Day", arg.AsInt32("Day"))
@@ -38,13 +38,13 @@ func CalcOrderedItems() {
 //
 //export updateSubscriptionProjector
 func updateSubscriptionProjector() {
-	event := ext.MustGetValue(ext.KeyBuilder(ext.Event, ext.NullEntity))
+	event := ext.MustGetValue(ext.KeyBuilder(ext.StorageEvent, ext.NullEntity))
 
 	if event.AsString("qname") == "air.UpdateSubscription" {
 		json := event.AsValue("arg")
 		subscr := json.AsValue("subscription")
 		customer := json.AsValue("customer")
-		mail := ext.NewValue(ext.KeyBuilder(ext.SendMail, ext.NullEntity))
+		mail := ext.NewValue(ext.KeyBuilder(ext.StorageSendMail, ext.NullEntity))
 		mail.PutString("from", "test@gmail.com")
 		mail.PutString("to", customer.AsString("email"))
 		mail.PutString("body", "Your subscription has been updated. New status: "+subscr.AsString("status"))
@@ -53,7 +53,7 @@ func updateSubscriptionProjector() {
 
 //export incrementProjector
 func incrementProjector() {
-	key := ext.KeyBuilder(ext.View, "pkg.TestView")
+	key := ext.KeyBuilder(ext.StorageView, "pkg.TestView")
 	key.PutInt32("pk", 1)
 	key.PutInt32("cc", 1)
 	value, exists := ext.QueryValue(key)
