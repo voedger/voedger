@@ -30,9 +30,10 @@ type CmdResultBuilderFunc func() istructs.IObjectBuilder
 type PrincipalsFunc func() []iauthnz.Principal
 type TokenFunc func() string
 type PLogEventFunc func() istructs.IPLogEvent
-type CommandProcessorStateFactory func(ctx context.Context, appStructsFunc AppStructsFunc, partitionIDFunc PartitionIDFunc, wsidFunc WSIDFunc, secretReader isecrets.ISecretReader, cudFunc CUDFunc, principalPayloadFunc PrincipalsFunc, tokenFunc TokenFunc, intentsLimit int, cmdResultBuilderFunc CmdResultBuilderFunc) IHostState
+type ArgFunc func() istructs.IObject
+type CommandProcessorStateFactory func(ctx context.Context, appStructsFunc AppStructsFunc, partitionIDFunc PartitionIDFunc, wsidFunc WSIDFunc, secretReader isecrets.ISecretReader, cudFunc CUDFunc, principalPayloadFunc PrincipalsFunc, tokenFunc TokenFunc, intentsLimit int, cmdResultBuilderFunc CmdResultBuilderFunc, argFunc ArgFunc) IHostState
 type SyncActualizerStateFactory func(ctx context.Context, appStructs istructs.IAppStructs, partitionIDFunc PartitionIDFunc, wsidFunc WSIDFunc, n10nFunc N10nFunc, secretReader isecrets.ISecretReader, intentsLimit int) IHostState
-type QueryProcessorStateFactory func(ctx context.Context, appStructs istructs.IAppStructs, partitionIDFunc PartitionIDFunc, wsidFunc WSIDFunc, secretReader isecrets.ISecretReader, principalPayloadFunc PrincipalsFunc, tokenFunc TokenFunc) IHostState
+type QueryProcessorStateFactory func(ctx context.Context, appStructs istructs.IAppStructs, partitionIDFunc PartitionIDFunc, wsidFunc WSIDFunc, secretReader isecrets.ISecretReader, principalPayloadFunc PrincipalsFunc, tokenFunc TokenFunc, argFunc ArgFunc) IHostState
 type AsyncActualizerStateFactory func(ctx context.Context, appStructs istructs.IAppStructs, partitionIDFunc PartitionIDFunc, wsidFunc WSIDFunc, n10nFunc N10nFunc, secretReader isecrets.ISecretReader, eventFunc PLogEventFunc, intentsLimit, bundlesLimit int,
 	opts ...ActualizerStateOptFunc) IBundledHostState
 
@@ -312,6 +313,41 @@ func (v *recordsValue) FieldNames(cb func(fieldName string)) {
 	v.record.FieldNames(cb)
 }
 
+type objectArrayContainerValue struct {
+	baseStateValue
+	object    istructs.IObject
+	container string
+}
+
+func (v *objectArrayContainerValue) GetAsString(int) string      { panic(ErrNotSupported) }
+func (v *objectArrayContainerValue) GetAsBytes(int) []byte       { panic(ErrNotSupported) }
+func (v *objectArrayContainerValue) GetAsInt32(int) int32        { panic(ErrNotSupported) }
+func (v *objectArrayContainerValue) GetAsInt64(int) int64        { panic(ErrNotSupported) }
+func (v *objectArrayContainerValue) GetAsFloat32(int) float32    { panic(ErrNotSupported) }
+func (v *objectArrayContainerValue) GetAsFloat64(int) float64    { panic(ErrNotSupported) }
+func (v *objectArrayContainerValue) GetAsQName(int) appdef.QName { panic(ErrNotSupported) }
+func (v *objectArrayContainerValue) GetAsBool(int) bool          { panic(ErrNotSupported) }
+func (v *objectArrayContainerValue) GetAsValue(i int) (result istructs.IStateValue) {
+	index := 0
+	v.object.Children(v.container, func(o istructs.IObject) {
+		if index == i {
+			result = &objectValue{object: o}
+		}
+		index++
+	})
+	if result == nil {
+		panic(errIndexOutOfBounds(i))
+	}
+	return
+}
+func (v *objectArrayContainerValue) Length() int {
+	var result int
+	v.object.Children(v.container, func(i istructs.IObject) {
+		result++
+	})
+	return result
+}
+
 type objectValue struct {
 	baseStateValue
 	object istructs.IObject
@@ -330,15 +366,17 @@ func (v *objectValue) RecordIDs(includeNulls bool, cb func(string, istructs.Reco
 	v.object.RecordIDs(includeNulls, cb)
 }
 func (v *objectValue) FieldNames(cb func(string)) { v.object.FieldNames(cb) }
-func (v *objectValue) AsValue(name string) istructs.IStateValue {
-	var o istructs.IObject
-	v.object.Children(name, func(i istructs.IObject) {
-		o = i
+func (v *objectValue) AsValue(name string) (result istructs.IStateValue) {
+	v.object.Containers(func(name string) {
+		result = &objectArrayContainerValue{
+			object:    v.object,
+			container: name,
+		}
 	})
-	if o != nil {
-		return &objectValue{object: o}
+	if result == nil {
+		panic(errUndefined(name))
 	}
-	panic(errUndefined(name))
+	return
 }
 
 type pLogValue struct {
