@@ -28,7 +28,7 @@ var Package_air = struct {
 }
 
 /*
-	COMMAND Pbill(untill.pbill) RETURNS CmdPBillResult;
+COMMAND Pbill(untill.pbill) RETURNS CmdPBillResult;
 */
 type Command_air_Pbill struct {
 	Type
@@ -41,11 +41,13 @@ func (c *Command_air_Pbill) ArgumentObject() Value_ODoc_untill_pbill {
 
 /*
 TYPE CmdPBillResult (
+
 	Number int32 NOT NULL
+
 )
 */
 func (v *Command_air_Pbill) Result(number int32) {
-	result := exttinygo.NewValue(exttinygo.KeyBuilder(exttinygo.Result, exttinygo.NullEntity))
+	result := exttinygo.NewValue(exttinygo.KeyBuilder(exttinygo.StorageResult, exttinygo.NullEntity))
 	result.PutInt32("Number", number)
 }
 
@@ -74,7 +76,7 @@ type WSingleton_air_NextNumbers struct {
 }
 
 func (w *WSingleton_air_NextNumbers) QueryValue() (value Value_WSingleton_air_NextNumbers, ok bool) {
-	kb := exttinygo.KeyBuilder(exttinygo.View, Package_air.WSingleton_NextNumbers.qname)
+	kb := exttinygo.KeyBuilder(exttinygo.StorageView, Package_air.WSingleton_NextNumbers.qname)
 	tv, ok := exttinygo.QueryValue(kb)
 	if !ok {
 		return Value_WSingleton_air_NextNumbers{}, false
@@ -84,7 +86,7 @@ func (w *WSingleton_air_NextNumbers) QueryValue() (value Value_WSingleton_air_Ne
 }
 
 func (w *WSingleton_air_NextNumbers) NewIntent() Intent_WSingleton_air_NextNumbers {
-	kb := exttinygo.KeyBuilder(exttinygo.Record, w.qname)
+	kb := exttinygo.KeyBuilder(exttinygo.StorageRecord, w.qname)
 	// We do not set ID since it's a singleton
 	return Intent_WSingleton_air_NextNumbers{intent: exttinygo.NewValue(kb)}
 }
@@ -127,21 +129,21 @@ type View_air_PbillDates struct {
 }
 
 func (v *View_air_PbillDates) MustGetValue(year int32, dayOfYear int32) Value_View_untill_PbillDates {
-	kb := exttinygo.KeyBuilder(exttinygo.View, Package_air.View_PbillDates.qname)
+	kb := exttinygo.KeyBuilder(exttinygo.StorageView, Package_air.View_PbillDates.qname)
 	kb.PutInt32("Year", year)
 	kb.PutInt32("DayOfYear", dayOfYear)
 	return Value_View_untill_PbillDates{tv: exttinygo.MustGetValue(kb), kb: kb}
 }
 
 func (v *View_air_PbillDates) NewIntent(year int32, dayOfYear int32) *Intent_View_untill_PbillDates {
-	kb := exttinygo.KeyBuilder(exttinygo.View, v.qname)
+	kb := exttinygo.KeyBuilder(exttinygo.StorageView, v.qname)
 	kb.PutInt32("Year", year)
 	kb.PutInt32("DayOfYear", dayOfYear)
 	return &Intent_View_untill_PbillDates{intent: exttinygo.NewValue(kb)}
 }
 
 func (v *View_air_PbillDates) QueryValue(year int32, dayOfYear int32) (value Value_View_untill_PbillDates, ok bool) {
-	kb := exttinygo.KeyBuilder(exttinygo.View, Package_air.View_PbillDates.qname)
+	kb := exttinygo.KeyBuilder(exttinygo.StorageView, Package_air.View_PbillDates.qname)
 	kb.PutInt32("Year", year)
 	kb.PutInt32("DayOfYear", dayOfYear)
 	tv, ok := exttinygo.QueryValue(kb)
