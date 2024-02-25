@@ -340,11 +340,12 @@ func (v *objectArrayContainerValue) GetAsValue(i int) (result istructs.IStateVal
 	}
 	return
 }
-func (v *objectArrayContainerValue) Length() (len int) {
+func (v *objectArrayContainerValue) Length() int {
+	var result int
 	v.object.Children(v.container, func(i istructs.IObject) {
-		len++
+		result++
 	})
-	return
+	return result
 }
 
 type objectValue struct {
