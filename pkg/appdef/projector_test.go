@@ -52,6 +52,7 @@ func Test_AppDef_AddProjector(t *testing.T) {
 			require.Equal(TypeKind_Projector, prj.Kind())
 			require.Equal(prjName, prj.QName())
 			require.False(prj.Sync())
+			require.Empty(prj.EventsMap())
 		})
 
 		prj.
@@ -117,6 +118,17 @@ func Test_AppDef_AddProjector(t *testing.T) {
 				}
 			})
 			require.Equal(3, cnt)
+		})
+
+		t.Run("must be ok obtain events map", func(t *testing.T) {
+			events := prj.EventsMap()
+			require.Len(events, 3)
+			require.Contains(events, cmdName)
+			require.EqualValues([]ProjectorEventKind{ProjectorEventKind_Execute}, events[cmdName])
+			require.Contains(events, objName)
+			require.EqualValues([]ProjectorEventKind{ProjectorEventKind_ExecuteWithParam}, events[objName])
+			require.Contains(events, recName)
+			require.EqualValues(ProjectorEventKind_AnyChanges, events[recName])
 		})
 
 		require.True(prj.WantErrors())

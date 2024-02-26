@@ -195,7 +195,7 @@ func (a *asyncActualizer) finit() {
 }
 
 func (a *asyncActualizer) keepReading() (err error) {
-	err = a.readPlogToTheEnd()
+	err = a.readPlogToTheEnd(a.readCtx.ctx)
 	if err != nil {
 		a.cancelChannel(err)
 		return
@@ -205,7 +205,7 @@ func (a *asyncActualizer) keepReading() (err error) {
 			logger.Trace(fmt.Sprintf("%s received n10n: offset %d, last handled: %d", a.name, offset, a.offset))
 		}
 		if a.offset < offset {
-			err = a.readPlogToOffset(offset)
+			err = a.readPlogToOffset(a.readCtx.ctx, offset)
 			if err != nil {
 				a.conf.LogError(a.name, err)
 				a.readCtx.cancelWithError(err)
@@ -271,21 +271,27 @@ func (a *asyncActualizer) readPlogByBatches(readBatch readPLogBatch) error {
 	return nil
 }
 
-func (a *asyncActualizer) readPlogToTheEnd() error {
+func (a *asyncActualizer) borrowAppPart(ctx context.Context) (ap appparts.IAppPartition, err error) {
+	for ctx.Err() == nil {
+		// TODO: implement sleep until successful borrow?
+		if ap, err = a.conf.AppPartitions.Borrow(a.conf.AppQName, a.conf.Partition, cluster.ProcessorKind_Actualizer); err == nil {
+			return ap, nil
+		}
+		if errors.Is(err, appparts.ErrNotFound) || errors.Is(err, appparts.ErrNotAvailableEngines) {
+			time.Sleep(borrowRetryDelay)
+			continue
+		}
+		return nil, err
+	}
+	return nil, ctx.Err()
+}
+
+func (a *asyncActualizer) readPlogToTheEnd(ctx context.Context) error {
 	return a.readPlogByBatches(func(batch *[]plogEvent) (err error) {
 		*batch = (*batch)[:0]
 
-		var ap appparts.IAppPartition
-		for {
-			// TODO: eliminate endless loop
-			ap, err = a.conf.AppPartitions.Borrow(a.conf.AppQName, a.conf.Partition, cluster.ProcessorKind_Actualizer)
-			if err == nil {
-				break
-			}
-			if errors.Is(err, appparts.ErrNotFound) || errors.Is(err, appparts.ErrNotAvailableEngines) {
-				time.Sleep(time.Millisecond)
-				continue
-			}
+		ap, err := a.borrowAppPart(ctx)
+		if err != nil {
 			return err
 		}
 
@@ -306,21 +312,12 @@ func (a *asyncActualizer) readPlogToTheEnd() error {
 	})
 }
 
-func (a *asyncActualizer) readPlogToOffset(tillOffset istructs.Offset) error {
+func (a *asyncActualizer) readPlogToOffset(ctx context.Context, tillOffset istructs.Offset) error {
 	return a.readPlogByBatches(func(batch *[]plogEvent) (err error) {
 		*batch = (*batch)[:0]
 
-		var ap appparts.IAppPartition
-		for {
-			// TODO: eliminate endless loop
-			ap, err = a.conf.AppPartitions.Borrow(a.conf.AppQName, a.conf.Partition, cluster.ProcessorKind_Actualizer)
-			if err == nil {
-				break
-			}
-			if errors.Is(err, appparts.ErrNotFound) || errors.Is(err, appparts.ErrNotAvailableEngines) {
-				time.Sleep(time.Millisecond)
-				continue
-			}
+		ap, err := a.borrowAppPart(ctx)
+		if err != nil {
 			return err
 		}
 
@@ -381,7 +378,7 @@ func (p *asyncProjector) DoAsync(_ context.Context, work pipeline.IWorkpiece) (o
 		p.aametrics.Set(aaCurrentOffset, p.partition, p.projector.Name, float64(w.pLogOffset))
 	}
 
-	triggeringQNames := triggeringQNames(p.iProjector)
+	triggeringQNames := p.iProjector.EventsMap()
 	if isAcceptable(w.event, p.iProjector.WantErrors(), triggeringQNames, p.iProjector.App()) {
 		err = p.projector.Func(w.event, p.state, p.state)
 		if err != nil {

@@ -17,6 +17,9 @@ type IProjector interface {
 	// Events enumerated in alphabetical QNames order.
 	Events(func(IProjectorEvent))
 
+	// Returns events to trigger as map.
+	EventsMap() map[QName][]ProjectorEventKind
+
 	// Returns is projector is able to handle `sys.Error` events.
 	// False by default.
 	WantErrors() bool
