@@ -39,7 +39,7 @@ func (asp *implIAppStorageProvider) AppStorage(appQName istructs.AppQName) (stor
 	}
 
 	if len(appStorageDesc.Error) == 0 && appStorageDesc.Status == istorage.AppStorageStatus_Pending {
-		if err := asp.asf.Init(asp.getKeyspaceName(appStorageDesc.SafeName)); err != nil {
+		if err := asp.asf.Init(asp.clarifyKeyspaceName(appStorageDesc.SafeName)); err != nil {
 			appStorageDesc.Error = err.Error()
 		} else {
 			appStorageDesc.Status = istorage.AppStorageStatus_Done
@@ -52,21 +52,27 @@ func (asp *implIAppStorageProvider) AppStorage(appQName istructs.AppQName) (stor
 	if len(appStorageDesc.Error) > 0 {
 		return nil, fmt.Errorf("%s: %w: %s", appStorageDesc.SafeName.String(), ErrStorageInitError, appStorageDesc.Error)
 	}
-	if storage, err = asp.asf.AppStorage(asp.getKeyspaceName(appStorageDesc.SafeName)); err == nil {
+	if storage, err = asp.asf.AppStorage(asp.clarifyKeyspaceName(appStorageDesc.SafeName)); err == nil {
 		asp.cache[appQName] = storage
 	}
 	return storage, err
 }
 
 func (asp *implIAppStorageProvider) getMetaStorage() (istorage.IAppStorage, error) {
-	if err := asp.asf.Init(asp.getKeyspaceName(istorage.SysMetaSafeName)); err != nil && err != istorage.ErrStorageAlreadyExists {
+	if err := asp.asf.Init(asp.clarifyKeyspaceName(istorage.SysMetaSafeName)); err != nil && err != istorage.ErrStorageAlreadyExists {
 		return nil, err
 	}
-	return asp.asf.AppStorage(asp.getKeyspaceName(istorage.SysMetaSafeName))
+	return asp.asf.AppStorage(asp.clarifyKeyspaceName(istorage.SysMetaSafeName))
 }
 
-func (asp *implIAppStorageProvider) getKeyspaceName(sn istorage.SafeAppName) istorage.SafeAppName {
+func (asp *implIAppStorageProvider) clarifyKeyspaceName(sn istorage.SafeAppName) istorage.SafeAppName {
 	if coreutils.IsTest() {
+		// unique safe keyspace name is generated at istorage.NewSafeAppName()
+		// uuid suffix is need in tests only avoiding the case:
+		// - go test ./... in github using Scylla
+		// - integration tests for different packages are run in simultaneously in separate processes
+		// - 2 processes using the same shared VIT config -> 2 VITs are initialized on the same keyspaces names -> conflict when e.g. creating the same logins
+		// see also getNewAppStorageDesc() below
 		newName := sn.String() + asp.suffix
 		newName = strings.ReplaceAll(newName, "-", "")
 		if len(newName) > istorage.MaxSafeNameLength {
