@@ -69,7 +69,7 @@ func TestInitErrorPersistence(t *testing.T) {
 	require.NoError(err)
 
 	// init the storage manually to force the error
-	app1SafeName = asp.(*implIAppStorageProvider).getKeyspaceName(app1SafeName)
+	app1SafeName = asp.(*implIAppStorageProvider).clarifyKeyspaceName(app1SafeName)
 	require.NoError(asf.Init(app1SafeName))
 
 	// expect an error

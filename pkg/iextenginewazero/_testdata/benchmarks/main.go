@@ -14,14 +14,14 @@ const StorageTest2 = "sys.Test2"
 
 //export oneGetOneIntent5calls
 func oneGetOneIntent5calls() {
-	ext.MustGetValue(ext.KeyBuilder(ext.Event, ext.NullEntity))
-	mail := ext.NewValue(ext.KeyBuilder(ext.SendMail, ext.NullEntity))
+	ext.MustGetValue(ext.KeyBuilder(ext.StorageEvent, ext.NullEntity))
+	mail := ext.NewValue(ext.KeyBuilder(ext.StorageSendMail, ext.NullEntity))
 	mail.PutString("from", "test@gmail.com")
 }
 
 //export oneGetNoIntents2calls
 func oneGetNoIntents2calls() {
-	ext.MustGetValue(ext.KeyBuilder(ext.Event, ext.NullEntity))
+	ext.MustGetValue(ext.KeyBuilder(ext.StorageEvent, ext.NullEntity))
 }
 
 //export oneGetLongStr3calls

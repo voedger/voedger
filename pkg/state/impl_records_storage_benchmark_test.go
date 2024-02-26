@@ -21,7 +21,7 @@ BenchmarkRecordsGet-20    	23072106	        55.72 ns/op	      16 B/op	       1 a
 func BenchmarkRecordsGet(b *testing.B) {
 	mockRec = &mockBenchRec{}
 	appStructs := &mockAppStr{}
-	s := ProvideQueryProcessorStateFactory()(context.Background(), appStructs, nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil)
+	s := ProvideQueryProcessorStateFactory()(context.Background(), appStructs, nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil, nil)
 	k1, err := s.KeyBuilder(Record, appdef.NullQName)
 	if err != nil {
 		panic(err)
