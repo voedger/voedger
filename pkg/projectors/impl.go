@@ -72,7 +72,7 @@ func newSyncBranch(conf SyncActualizerConf, projectorFactory istructs.ProjectorF
 		conf.SecretReader,
 		conf.IntentsLimit)
 	iProjector := conf.AppStructs().AppDef().Projector(projector.Name)
-	triggeringQNames := triggeringQNames(iProjector)
+	triggeringQNames := iProjector.EventsMap()
 	fn = pipeline.ForkBranch(pipeline.NewSyncPipeline(conf.Ctx, pipelineName,
 		pipeline.WireFunc("Projector", func(_ context.Context, _ interface{}) (err error) {
 			if !isAcceptable(service.event, iProjector.WantErrors(), triggeringQNames, conf.AppStructs().AppDef()) {
@@ -84,14 +84,6 @@ func newSyncBranch(conf SyncActualizerConf, projectorFactory istructs.ProjectorF
 			return s.ValidateIntents()
 		})))
 	return
-}
-
-func triggeringQNames(iProjector appdef.IProjector) map[appdef.QName][]appdef.ProjectorEventKind {
-	triggeringQNames := map[appdef.QName][]appdef.ProjectorEventKind{}
-	iProjector.Events(func(pe appdef.IProjectorEvent) {
-		triggeringQNames[pe.On().QName()] = append(triggeringQNames[pe.On().QName()], pe.Kind()...)
-	})
-	return triggeringQNames
 }
 
 type syncErrorHandler struct {

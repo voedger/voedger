@@ -17,6 +17,7 @@ type projector struct {
 	extension
 	sync      bool
 	events    projectorEvents
+	eventsMap map[QName][]ProjectorEventKind
 	sysErrors bool
 	states    storages
 	intents   storages
@@ -24,9 +25,10 @@ type projector struct {
 
 func newProjector(app *appDef, name QName) *projector {
 	prj := &projector{
-		events:  make(projectorEvents),
-		states:  make(storages),
-		intents: make(storages),
+		events:    make(projectorEvents),
+		eventsMap: make(map[QName][]ProjectorEventKind),
+		states:    make(storages),
+		intents:   make(storages),
 	}
 	prj.extension = makeExtension(app, name, TypeKind_Projector, prj)
 	app.appendType(prj)
@@ -48,8 +50,11 @@ func (prj *projector) AddEvent(on QName, event ...ProjectorEventKind) IProjector
 		TypeKind_ODoc, TypeKind_Object: // Execute with
 		if e, ok := prj.events[on]; ok {
 			e.addKind(event...)
+			prj.eventsMap[on] = e.Kind()
 		} else {
-			prj.events[on] = newProjectorEvent(t, event...)
+			e := newProjectorEvent(t, event...)
+			prj.events[on] = e
+			prj.eventsMap[on] = e.Kind()
 		}
 	default:
 		panic(fmt.Errorf("%v: %v is not applicable for projector event: %w", prj, t, ErrInvalidProjectorEventKind))
@@ -72,6 +77,10 @@ func (prj *projector) Events(cb func(IProjectorEvent)) {
 	for _, n := range ord {
 		cb(prj.events[n])
 	}
+}
+
+func (prj *projector) EventsMap() map[QName][]ProjectorEventKind {
+	return prj.eventsMap
 }
 
 func (prj *projector) Intents(cb func(storage QName, names QNames)) {
