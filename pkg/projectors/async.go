@@ -271,25 +271,28 @@ func (a *asyncActualizer) readPlogByBatches(readBatch readPLogBatch) error {
 	return nil
 }
 
+func (a *asyncActualizer) borrowAppPart(ctx context.Context) (ap appparts.IAppPartition, err error) {
+	for ctx.Err() == nil {
+		// TODO: implement sleep until successful borrow?
+		if ap, err = a.conf.AppPartitions.Borrow(a.conf.AppQName, a.conf.Partition, cluster.ProcessorKind_Actualizer); err == nil {
+			return ap, nil
+		}
+		if errors.Is(err, appparts.ErrNotFound) || errors.Is(err, appparts.ErrNotAvailableEngines) {
+			time.Sleep(borrowRetryDelay)
+			continue
+		}
+		return nil, err
+	}
+	return nil, ctx.Err()
+}
+
 func (a *asyncActualizer) readPlogToTheEnd(ctx context.Context) error {
 	return a.readPlogByBatches(func(batch *[]plogEvent) (err error) {
 		*batch = (*batch)[:0]
 
-		var ap appparts.IAppPartition
-		for ctx.Err() == nil {
-			// TODO: implement sleep until successful borrow?
-			ap, err = a.conf.AppPartitions.Borrow(a.conf.AppQName, a.conf.Partition, cluster.ProcessorKind_Actualizer)
-			if err == nil {
-				break
-			}
-			if errors.Is(err, appparts.ErrNotFound) || errors.Is(err, appparts.ErrNotAvailableEngines) {
-				time.Sleep(borrowRetryDelay)
-				continue
-			}
+		ap, err := a.borrowAppPart(ctx)
+		if err != nil {
 			return err
-		}
-		if ctx.Err() != nil {
-			return ctx.Err()
 		}
 
 		defer ap.Release()
@@ -313,17 +316,8 @@ func (a *asyncActualizer) readPlogToOffset(ctx context.Context, tillOffset istru
 	return a.readPlogByBatches(func(batch *[]plogEvent) (err error) {
 		*batch = (*batch)[:0]
 
-		var ap appparts.IAppPartition
-		for {
-			// TODO: implement sleep until successful borrow?
-			ap, err = a.conf.AppPartitions.Borrow(a.conf.AppQName, a.conf.Partition, cluster.ProcessorKind_Actualizer)
-			if err == nil {
-				break
-			}
-			if errors.Is(err, appparts.ErrNotFound) || errors.Is(err, appparts.ErrNotAvailableEngines) {
-				time.Sleep(borrowRetryDelay)
-				continue
-			}
+		ap, err := a.borrowAppPart(ctx)
+		if err != nil {
 			return err
 		}
 
