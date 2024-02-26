@@ -3,7 +3,7 @@
     @author Michael Saigachenko
 */
 
-package iextenginewasm
+package iextenginewazero
 
 import (
 	"context"

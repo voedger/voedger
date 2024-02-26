@@ -12,7 +12,7 @@ import (
 )
 
 func implProvideQueryProcessorState(ctx context.Context, appStructs istructs.IAppStructs, partitionIDFunc PartitionIDFunc, wsidFunc WSIDFunc,
-	secretReader isecrets.ISecretReader, principalsFunc PrincipalsFunc, tokenFunc TokenFunc) IHostState {
+	secretReader isecrets.ISecretReader, principalsFunc PrincipalsFunc, tokenFunc TokenFunc, argFunc ArgFunc) IHostState {
 	bs := newHostState("QueryProcessor", 0)
 
 	bs.addStorage(View, &viewRecordsStorage{
@@ -45,6 +45,10 @@ func implProvideQueryProcessorState(ctx context.Context, appStructs istructs.IAp
 	bs.addStorage(RequestSubject, &subjectStorage{
 		principalsFunc: principalsFunc,
 		tokenFunc:      tokenFunc,
+	}, S_GET)
+
+	bs.addStorage(Arg, &argStorage{
+		argFunc: argFunc,
 	}, S_GET)
 
 	return bs

@@ -20,7 +20,7 @@ func TestHostState_BasicUsage(t *testing.T) {
 
 	factory := ProvideQueryProcessorStateFactory()
 	appStructs := mockedHostStateStructs()
-	hostState := factory(context.Background(), appStructs, nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil)
+	hostState := factory(context.Background(), appStructs, nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil, nil)
 
 	// Declare simple extension
 	extension := func(state istructs.IState) {
@@ -611,7 +611,7 @@ func hostStateForTest(s IStateStorage) IHostState {
 	return hs
 }
 func emptyHostStateForTest(s IStateStorage) (istructs.IState, istructs.IIntents) {
-	bs := ProvideQueryProcessorStateFactory()(context.Background(), &nilAppStructs{}, nil, nil, nil, nil, nil).(*hostState)
+	bs := ProvideQueryProcessorStateFactory()(context.Background(), &nilAppStructs{}, nil, nil, nil, nil, nil, nil).(*hostState)
 	bs.addStorage(testStorage, s, math.MinInt)
 	return bs, bs
 }

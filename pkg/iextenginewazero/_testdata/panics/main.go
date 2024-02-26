@@ -41,7 +41,7 @@ func canExistIncorrectKey() {
 
 //export mustExist
 func mustExist() {
-	ext.MustGetValue(ext.KeyBuilder(ext.StorageRecords, ext.NullEntity))
+	ext.MustGetValue(ext.KeyBuilder(ext.StorageRecord, ext.NullEntity))
 }
 
 //export readIncorrectKeyBuilder
@@ -66,7 +66,7 @@ func incorrectValue2() {
 
 //export incorrectValue3
 func incorrectValue3() {
-	ext.TValue(123).Length()
+	ext.TValue(123).Len()
 }
 
 //export incorrectKeyBuilderOnNewValue
@@ -93,7 +93,7 @@ func incorrectIntentId() {
 func readPanic() {
 	key := ext.KeyBuilder("sys.Test", ext.NullEntity)
 	ext.ReadValues(key, func(ext.TKey, ext.TValue) {
-		ext.TValue(123).Length()
+		ext.TValue(123).Len()
 	})
 }
 
@@ -132,7 +132,7 @@ func asStringMemoryOverflow() {
 
 //export wrongFieldName
 func wrongFieldName() {
-	key := ext.KeyBuilder("sys.View", "pkg.TestView")
+	key := ext.KeyBuilder(ext.StorageView, "pkg.TestView")
 	key.PutInt32("wrong", 1)
 	key.PutInt32("cc", 1)
 	ext.MustGetValue(key)

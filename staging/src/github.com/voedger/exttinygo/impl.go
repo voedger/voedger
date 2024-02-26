@@ -3,7 +3,7 @@
 *  @author Michael Saigachenko
  */
 
-package extensions
+package exttinygo
 
 import (
 	"runtime"
@@ -22,12 +22,12 @@ func Panic(msg string) {
 
 const maxUint = ^uint64(0)
 
-func queryValueImpl(key TKeyBuilder) (bool, TValue) {
+func queryValueImpl(key TKeyBuilder) (TValue, bool) {
 	id := hostQueryValue(uint64(key))
 	if id != maxUint {
-		return true, TValue(id)
+		return TValue(id), true
 	} else {
-		return false, TValue(0)
+		return TValue(0), false
 	}
 }
 

@@ -5,6 +5,6 @@
 *  @author Michael Saigachenko
  */
 
-package extensions
+package exttinygo
 
 type extint = uintptr

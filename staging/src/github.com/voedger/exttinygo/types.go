@@ -3,7 +3,7 @@
 *  @author Michael Saigachenko
  */
 
-package extensions
+package exttinygo
 
 type QName struct {
 	Pkg    string

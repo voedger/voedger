@@ -42,11 +42,10 @@ var now = time.Now()
 var timeFunc = coreutils.TimeFunc(func() time.Time { return now })
 
 var (
-	appName       istructs.AppQName    = istructs.AppQName_test1_app1
-	appPartsCount                      = 1
-	appEngines                         = cluster.PoolSize(10, 100, 10)
-	partID        istructs.PartitionID = 5
-	wsID          istructs.WSID        = 15
+	appName    istructs.AppQName    = istructs.AppQName_test1_app1
+	appEngines                      = cluster.PoolSize(10, 100, 10)
+	partID     istructs.PartitionID = 5
+	wsID       istructs.WSID        = 15
 
 	qNameFunction         = appdef.NewQName("bo", "FindArticlesByModificationTimeStampRange")
 	qNameQryDenied        = appdef.NewQName(appdef.SysPackage, "TestDeniedQry") // same as in ACL
@@ -343,7 +342,7 @@ func TestBasicUsage_ServiceFactory(t *testing.T) {
 	appParts, cleanAppParts, err := appparts.New(appStructsProvider)
 	require.NoError(err)
 	defer cleanAppParts()
-	appParts.DeployApp(appName, appDef, appPartsCount, appEngines)
+	appParts.DeployApp(appName, appDef, appEngines)
 	appParts.DeployAppPartitions(appName, []istructs.PartitionID{partID})
 
 	authn := iauthnzimpl.NewDefaultAuthenticator(iauthnzimpl.TestSubjectRolesGetter)
@@ -1095,7 +1094,7 @@ func TestRateLimiter(t *testing.T) {
 	appParts, cleanAppParts, err := appparts.New(appStructsProvider)
 	require.NoError(err)
 	defer cleanAppParts()
-	appParts.DeployApp(appName, appDef, appPartsCount, appEngines)
+	appParts.DeployApp(appName, appDef, appEngines)
 	appParts.DeployAppPartitions(appName, []istructs.PartitionID{partID})
 
 	// create aquery processor
@@ -1152,7 +1151,7 @@ func TestAuthnz(t *testing.T) {
 	require.NoError(err)
 	defer cleanAppParts()
 
-	appParts.DeployApp(appName, appDef, appPartsCount, appEngines)
+	appParts.DeployApp(appName, appDef, appEngines)
 	appParts.DeployAppPartitions(appName, []istructs.PartitionID{partID})
 
 	authn := iauthnzimpl.NewDefaultAuthenticator(iauthnzimpl.TestSubjectRolesGetter)

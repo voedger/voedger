@@ -95,7 +95,7 @@ func testNoAllocs() {
 	kb.PutBytes("somebytes", mybytes)
 
 	// QueryValue
-	exists, event := ext.QueryValue(kb)
+	event, exists := ext.QueryValue(kb)
 	require.EqualBool(true, exists)
 	require.EqualInt32(int32(12345), event.AsInt32("offs"))
 
@@ -115,7 +115,7 @@ func testNoAllocs() {
 	testRead()
 
 	// NewValue
-	mail := ext.NewValue(ext.KeyBuilder(ext.StorageSendmail, ext.NullEntity))
+	mail := ext.NewValue(ext.KeyBuilder(ext.StorageSendMail, ext.NullEntity))
 	mail.PutString("from", "test@gmail.com")
 	mail.PutInt32("port", 668)
 	mail.PutBytes("key", mybytes)
@@ -128,8 +128,8 @@ func testNoAllocs() {
 
 //export testQueryValue
 func testQueryValue() {
-	kb := ext.KeyBuilder(ext.StorageRecords, ext.NullEntity)
-	exists, _ := ext.QueryValue(kb)
+	kb := ext.KeyBuilder(ext.StorageRecord, ext.NullEntity)
+	_, exists := ext.QueryValue(kb)
 	require.EqualBool(false, exists)
 }
 

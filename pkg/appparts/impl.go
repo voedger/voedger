@@ -31,7 +31,7 @@ func newAppPartitions(structs istructs.IAppStructsProvider, actualizer SyncActua
 	return a, func() {}, err
 }
 
-func (aps *apps) DeployApp(name istructs.AppQName, def appdef.IAppDef, partsCount int, engines [cluster.ProcessorKind_Count]int) {
+func (aps *apps) DeployApp(name istructs.AppQName, def appdef.IAppDef, engines [cluster.ProcessorKind_Count]int) {
 	aps.mx.Lock()
 	defer aps.mx.Unlock()
 
@@ -46,7 +46,7 @@ func (aps *apps) DeployApp(name istructs.AppQName, def appdef.IAppDef, partsCoun
 		panic(err)
 	}
 
-	a.deploy(def, appStructs, partsCount, engines)
+	a.deploy(def, appStructs, engines)
 }
 
 func (aps *apps) DeployAppPartitions(appName istructs.AppQName, partIDs []istructs.PartitionID) {
@@ -55,7 +55,7 @@ func (aps *apps) DeployAppPartitions(appName istructs.AppQName, partIDs []istruc
 
 	a, ok := aps.apps[appName]
 	if !ok {
-		panic(fmt.Errorf(errAppNotFound, appName, ErrNotFound))
+		panic(fmt.Errorf(ErrAppNotFound, appName, ErrNotFound))
 	}
 
 	for _, id := range partIDs {
@@ -67,7 +67,7 @@ func (aps *apps) DeployAppPartitions(appName istructs.AppQName, partIDs []istruc
 func (aps *apps) AppDef(appName istructs.AppQName) (appdef.IAppDef, error) {
 	app, ok := aps.apps[appName]
 	if !ok {
-		return nil, fmt.Errorf(errAppNotFound, appName, ErrNotFound)
+		return nil, fmt.Errorf(ErrAppNotFound, appName, ErrNotFound)
 	}
 	return app.def, nil
 }
@@ -75,7 +75,7 @@ func (aps *apps) AppDef(appName istructs.AppQName) (appdef.IAppDef, error) {
 func (aps *apps) AppPartsCount(appName istructs.AppQName) (int, error) {
 	app, ok := aps.apps[appName]
 	if !ok {
-		return 0, fmt.Errorf(errAppNotFound, appName, ErrNotFound)
+		return 0, fmt.Errorf(ErrAppNotFound, appName, ErrNotFound)
 	}
 	return len(app.parts), nil
 }
@@ -86,7 +86,7 @@ func (aps *apps) Borrow(appName istructs.AppQName, partID istructs.PartitionID, 
 
 	app, ok := aps.apps[appName]
 	if !ok {
-		return nil, fmt.Errorf(errAppNotFound, appName, ErrNotFound)
+		return nil, fmt.Errorf(ErrAppNotFound, appName, ErrNotFound)
 	}
 
 	part, ok := app.parts[partID]

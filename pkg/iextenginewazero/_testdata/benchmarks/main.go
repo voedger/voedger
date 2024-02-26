@@ -15,7 +15,7 @@ const StorageTest2 = "sys.Test2"
 //export oneGetOneIntent5calls
 func oneGetOneIntent5calls() {
 	ext.MustGetValue(ext.KeyBuilder(ext.StorageEvent, ext.NullEntity))
-	mail := ext.NewValue(ext.KeyBuilder(ext.StorageSendmail, ext.NullEntity))
+	mail := ext.NewValue(ext.KeyBuilder(ext.StorageSendMail, ext.NullEntity))
 	mail.PutString("from", "test@gmail.com")
 }
 

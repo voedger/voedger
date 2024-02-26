@@ -39,7 +39,7 @@ func TestWrongTypes(t *testing.T) {
 	appParts, cleanAppParts, err := appparts.New(appStructsProvider)
 	require.NoError(err)
 	defer cleanAppParts()
-	appParts.DeployApp(appName, appDef, appPartsCount, appEngines)
+	appParts.DeployApp(appName, appDef, appEngines)
 	appParts.DeployAppPartitions(appName, []istructs.PartitionID{partID})
 
 	queryProcessor := ProvideServiceFactory()(

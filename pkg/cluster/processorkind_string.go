@@ -10,13 +10,13 @@ func _() {
 	var x [1]struct{}
 	_ = x[ProcessorKind_Command-0]
 	_ = x[ProcessorKind_Query-1]
-	_ = x[ProcessorKind_Projector-2]
+	_ = x[ProcessorKind_Actualizer-2]
 	_ = x[ProcessorKind_Count-3]
 }
 
-const _ProcessorKind_name = "ProcessorKind_CommandProcessorKind_QueryProcessorKind_ProjectorProcessorKind_Count"
+const _ProcessorKind_name = "ProcessorKind_CommandProcessorKind_QueryProcessorKind_ActualizerProcessorKind_Count"
 
-var _ProcessorKind_index = [...]uint8{0, 21, 40, 63, 82}
+var _ProcessorKind_index = [...]uint8{0, 21, 40, 64, 83}
 
 func (i ProcessorKind) String() string {
 	if i >= ProcessorKind(len(_ProcessorKind_index)-1) {

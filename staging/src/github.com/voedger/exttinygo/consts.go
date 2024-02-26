@@ -3,17 +3,21 @@
 *  @author Michael Saigachenko
  */
 
-package extensions
+package exttinygo
 
 const (
-	StorageEvent       = "sys.EventStorage"
-	StorageSendmail    = "sys.SendMailStorage"
-	StorageRecords     = "sys.RecordsStorage"
-	StorageViewRecords = "sys.ViewRecordsStorage"
-	StorageWLog        = "sys.WLogStorage"
-	StoragePLog        = "sys.PLogStorage"
-	StorageHTTP        = "sys.HTTPStorage"
-	StorageAppSecrets  = "sys.AppSecretsStorage"
+	StorageEvent          = "sys.Event"
+	StorageSendMail       = "sys.SendMail"
+	StorageRecord         = "sys.Record"
+	StorageView           = "sys.View"
+	StorageWLog           = "sys.WLog"
+	StoragePLog           = "sys.PLog"
+	StorageHttp           = "sys.Http"
+	StorageAppSecret      = "sys.AppSecret"
+	StorageRequestSubject = "sys.RequestSubject"
+	StorageResult         = "sys.Result"
+	StorageArg            = "sys.Arg"
+	StorageCommandContext = "sys.CommandContext"
 
 	NullEntity = ""
 )

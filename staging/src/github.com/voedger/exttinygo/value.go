@@ -3,14 +3,14 @@
 *  @author Michael Saigachenko
  */
 
-package extensions
+package exttinygo
 
 import (
 	"unsafe"
 )
 
-func (v TValue) Length() uint32 {
-	return hostValueLength(uint64(v))
+func (v TValue) Len() int {
+	return int(hostValueLength(uint64(v)))
 }
 
 func (v TValue) AsString(name string) string {

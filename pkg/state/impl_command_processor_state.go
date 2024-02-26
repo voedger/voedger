@@ -13,7 +13,7 @@ import (
 
 func implProvideCommandProcessorState(ctx context.Context, appStructsFunc AppStructsFunc, partitionIDFunc PartitionIDFunc,
 	wsidFunc WSIDFunc, secretReader isecrets.ISecretReader, cudFunc CUDFunc, principalsFunc PrincipalsFunc,
-	tokenFunc TokenFunc, intentsLimit int, cmdResultBuilderFunc CmdResultBuilderFunc) IHostState {
+	tokenFunc TokenFunc, intentsLimit int, cmdResultBuilderFunc CmdResultBuilderFunc, argFunc ArgFunc) IHostState {
 	bs := newHostState("CommandProcessor", intentsLimit)
 
 	bs.addStorage(View, &viewRecordsStorage{
@@ -50,6 +50,10 @@ func implProvideCommandProcessorState(ctx context.Context, appStructsFunc AppStr
 	bs.addStorage(Result, &cmdResultStorage{
 		cmdResultBuilderFunc: cmdResultBuilderFunc,
 	}, S_INSERT)
+
+	bs.addStorage(Arg, &argStorage{
+		argFunc: argFunc,
+	}, S_GET)
 
 	return bs
 }
