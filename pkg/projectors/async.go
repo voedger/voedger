@@ -381,7 +381,7 @@ func (p *asyncProjector) DoAsync(_ context.Context, work pipeline.IWorkpiece) (o
 		p.aametrics.Set(aaCurrentOffset, p.partition, p.projector.Name, float64(w.pLogOffset))
 	}
 
-	triggeringQNames := triggeringQNames(p.iProjector)
+	triggeringQNames := p.iProjector.EventsMap()
 	if isAcceptable(w.event, p.iProjector.WantErrors(), triggeringQNames, p.iProjector.App()) {
 		err = p.projector.Func(w.event, p.state, p.state)
 		if err != nil {
