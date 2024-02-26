@@ -283,7 +283,7 @@ func (a *asyncActualizer) readPlogToTheEnd(ctx context.Context) error {
 				break
 			}
 			if errors.Is(err, appparts.ErrNotFound) || errors.Is(err, appparts.ErrNotAvailableEngines) {
-				time.Sleep(time.Millisecond)
+				time.Sleep(borrowRetryDelay)
 				continue
 			}
 			return err
@@ -321,7 +321,7 @@ func (a *asyncActualizer) readPlogToOffset(ctx context.Context, tillOffset istru
 				break
 			}
 			if errors.Is(err, appparts.ErrNotFound) || errors.Is(err, appparts.ErrNotAvailableEngines) {
-				time.Sleep(time.Millisecond)
+				time.Sleep(borrowRetryDelay)
 				continue
 			}
 			return err
