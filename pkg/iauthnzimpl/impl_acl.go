@@ -108,8 +108,8 @@ var defaultACL = ACL{
 			qNamesPattern: []appdef.QName{qNameCmdUpdateSubscription},
 			principalsPattern: [][]iauthnz.Principal{
 				{
-					// AND
 					{Kind: iauthnz.PrincipalKind_Role, QName: iauthnz.QNameRoleProfileOwner},
+					// AND
 					{Kind: iauthnz.PrincipalKind_User, Name: untillChargebeeAgentLogin},
 				},
 			},
@@ -220,8 +220,8 @@ var defaultACL = ACL{
 			opKindsPattern: []iauthnz.OperationKindType{iauthnz.OperationKind_SELECT},
 			qNamesPattern:  []appdef.QName{qNameCDocUPProfile},
 			principalsPattern: [][]iauthnz.Principal{
-				// OR
 				{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleUntillPaymentsUser}},
+				// OR
 				{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleUntillPaymentsReseller}},
 			},
 		},
@@ -240,8 +240,8 @@ var defaultACL = ACL{
 				qNameQryCollection,
 			},
 			principalsPattern: [][]iauthnz.Principal{
-				// OR
 				{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleUntillPaymentsUser}},
+				// OR
 				{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleUntillPaymentsReseller}},
 			},
 		},
@@ -293,8 +293,8 @@ var defaultACL = ACL{
 			opKindsPattern: []iauthnz.OperationKindType{iauthnz.OperationKind_EXECUTE},
 			qNamesPattern:  []appdef.QName{qNameCmdRegenerateUPProfileApiToken},
 			principalsPattern: [][]iauthnz.Principal{
-				// OR
 				{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleUntillPaymentsReseller}},
+				// OR
 				{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleUntillPaymentsUser}},
 			},
 		},
@@ -324,8 +324,8 @@ var defaultACL = ACL{
 				qNameCmdRetryTransferUPPayout,
 			},
 			principalsPattern: [][]iauthnz.Principal{
-				// OR
 				{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleUntillPaymentsReseller}},
+				// OR
 				{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleUntillPaymentsUser}},
 			},
 		},
