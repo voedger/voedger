@@ -7,7 +7,7 @@ package appdef
 
 // Object type.
 //
-// Ref. to object.go for implementation
+// Ref to object.go for implementation
 type IObject interface {
 	IStructure
 

@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// Short test form. Full test ref. to gdoc_test.go
+// Short test form. Full test ref to odoc_test.go
 func Test_AppDef_AddODoc(t *testing.T) {
 	require := require.New(t)
 

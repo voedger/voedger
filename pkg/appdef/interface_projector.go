@@ -54,9 +54,7 @@ type IProjectorEvent interface {
 	Kind() []ProjectorEventKind
 }
 
-// Events enumeration to trigger the projector.
-//
-// Ref. to projector-event-kind.go for constants and methods
+// Events enumeration to trigger the projector
 type ProjectorEventKind uint8
 
 //go:generate stringer -type=ProjectorEventKind -output=stringer_projectoreventkind.go

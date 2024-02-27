@@ -23,7 +23,7 @@ type ICDocBuilder interface {
 
 // Configuration document record.
 //
-// Ref. to cdoc.go for implementation
+// Ref to cdoc.go for implementation
 type ICRecord interface {
 	IContainedRecord
 

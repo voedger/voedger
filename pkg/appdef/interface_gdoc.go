@@ -7,7 +7,7 @@ package appdef
 
 // Global document.
 //
-// Ref. to gdoc.go for implementation
+// Ref to gdoc.go for implementation
 type IGDoc interface {
 	IDoc
 
@@ -22,7 +22,7 @@ type IGDocBuilder interface {
 
 // Global document record.
 //
-// Ref. to gdoc.go for implementation
+// Ref to gdoc.go for implementation
 type IGRecord interface {
 	IContainedRecord
 

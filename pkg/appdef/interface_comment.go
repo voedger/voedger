@@ -9,7 +9,7 @@ package appdef
 //
 // Any type may have comment
 //
-// Ref to commented.go for implementation
+// Ref to comment.go for implementation
 type IComment interface {
 	// Returns comment
 	Comment() string

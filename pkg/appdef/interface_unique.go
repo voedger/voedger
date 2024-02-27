@@ -10,7 +10,7 @@ package appdef
 // - TypeKind_CDoc and TypeKind_CRecord,
 // - TypeKind_WDoc and TypeKind_WRecord
 //
-// Ref. to unique.go for implementation
+// Ref to unique.go for implementation
 type IUniques interface {
 	// Return unique by qualified name.
 	//

@@ -9,7 +9,7 @@ package appdef
 // Command may have unlogged parameter.
 // Unlogged parameter is a secure parameter that is not logged.
 //
-// Ref. to command.go for implementation
+// Ref to command.go for implementation
 type ICommand interface {
 	IFunction
 

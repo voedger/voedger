@@ -9,7 +9,7 @@ package appdef
 //
 // Function may be query or command.
 //
-// Ref. to function.go for implementation
+// Ref to function.go for implementation
 type IFunction interface {
 	IExtension
 

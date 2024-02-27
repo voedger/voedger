@@ -10,8 +10,6 @@ package appdef
 // Qualified name
 //
 // <pkg>.<entity>
-//
-// Ref to qname.go for constants and methods
 type QName struct {
 	pkg    string
 	entity string

@@ -22,7 +22,7 @@ const (
 //	- TypeKind_WDoc and TypeKind_WRecord,
 //	- TypeKind_Object,
 //
-// Ref. to container.go for implementation
+// Ref to container.go for implementation
 type IContainers interface {
 	// Finds container by name.
 	//

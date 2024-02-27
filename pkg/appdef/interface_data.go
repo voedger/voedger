@@ -39,11 +39,10 @@ const (
 //
 // Describe simple types, like string, number, date, etc.
 //
-// Ref. to data.go for implementation
+// Ref to data.go for implementation
 type IData interface {
 	IType
 
-	// Ref. to data-kind.go for details.
 	DataKind() DataKind
 
 	// Ancestor	type.

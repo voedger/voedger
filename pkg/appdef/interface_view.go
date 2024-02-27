@@ -34,7 +34,7 @@ type IViewBuilder interface {
 
 // View full (pk + cc) key.
 //
-// Ref. to view.go for implementation
+// Ref to view.go for implementation
 type IViewKey interface {
 	// All key fields, include partition key and clustering columns.
 	//
@@ -65,7 +65,7 @@ type IViewKeyBuilder interface {
 //	(ViewValue_Size + ClustCols_Size) * KeysPerPartition.
 // https://opensource.com/article/20/5/apache-cassandra#:~:text=As%20a%20rule%20of%20thumb%2C,design%20supports%20desired%20cluster%20performance
 //
-// Ref. to view.go for implementation
+// Ref to view.go for implementation
 type IViewPartKey interface {
 	// Partition key fields.
 	IFields
@@ -97,7 +97,7 @@ type IViewPartKeyBuilder interface {
 
 // Defines fields for sorting values inside partition.
 //
-// Ref. to view.go for implementation
+// Ref to view.go for implementation
 type IViewClustCols interface {
 	// Clustering columns fields.
 	IFields
@@ -131,7 +131,7 @@ type IViewClustColsBuilder interface {
 
 // View value. Like a structure, view value has fields, but has not containers and uniques.
 //
-// Ref. to view.go for implementation
+// Ref to view.go for implementation
 type IViewValue interface {
 	// View value fields.
 	IFields

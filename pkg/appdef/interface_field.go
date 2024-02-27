@@ -26,7 +26,7 @@ var VerificationKind_Any = []VerificationKind{VerificationKind_EMail, Verificati
 //	- TypeKind_Object and TypeKind_Element,
 //	- TypeKind_ViewRecord
 //
-// Ref. to field.go for implementation
+// Ref to field.go for implementation
 type IFields interface {
 	// Finds field by name.
 	//
@@ -145,7 +145,7 @@ type IField interface {
 //
 // Use Refs() to obtain list of target references.
 //
-// Ref. to fields.go for implementation
+// Ref to fields.go for implementation
 type IRefField interface {
 	IField
 
