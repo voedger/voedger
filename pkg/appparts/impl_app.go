@@ -8,6 +8,7 @@ package appparts
 import (
 	"context"
 	"fmt"
+	"sync"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appparts/internal/pool"
@@ -61,7 +62,7 @@ func (a *app) deploy(def appdef.IAppDef, structs istructs.IAppStructs, engines [
 		for i := 0; i < cnt; i++ {
 			ee[i] = newEngine(cluster.ProcessorKind(k))
 		}
-		a.engines[k] = pool.New[*engine](ee)
+		a.engines[k] = pool.New(ee)
 	}
 }
 
@@ -97,12 +98,19 @@ type partitionRT struct {
 	borrowed   *engine
 }
 
+var partionRTPool = sync.Pool{
+	New: func() interface{} {
+		return &partitionRT{}
+	},
+}
+
 func newPartitionRT(part *partition) *partitionRT {
-	rt := &partitionRT{
-		part:       part,
-		appDef:     part.app.def,
-		appStructs: part.app.structs,
-	}
+	rt := partionRTPool.Get().(*partitionRT)
+
+	rt.part = part
+	rt.appDef = part.app.def
+	rt.appStructs = part.app.structs
+
 	return rt
 }
 
@@ -115,6 +123,7 @@ func (rt *partitionRT) Release() {
 		rt.borrowed = nil
 		e.release()
 	}
+	partionRTPool.Put(rt)
 }
 
 func (rt *partitionRT) DoSyncActualizer(ctx context.Context, work interface{}) error {
