@@ -28,6 +28,7 @@ type APIs struct {
 	coreutils.IFederation
 	coreutils.TimeFunc
 	NumCommandProcessors coreutils.CommandProcessorsCount
+	NumQueryProcessors   coreutils.QueryProcessorsCount
 	appparts.IAppPartitions
 }
 

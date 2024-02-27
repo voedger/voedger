@@ -21,9 +21,9 @@ func (ab VVMAppsBuilder) Add(appQName istructs.AppQName, builder apps.AppBuilder
 	ab[appQName] = builder
 }
 
-func (hap VVMAppsBuilder) PrepareAppsExtensionPoints() map[istructs.AppQName]extensionpoints.IExtensionPoint {
+func (ab VVMAppsBuilder) PrepareAppsExtensionPoints() map[istructs.AppQName]extensionpoints.IExtensionPoint {
 	seps := map[istructs.AppQName]extensionpoints.IExtensionPoint{}
-	for appQName := range hap {
+	for appQName := range ab {
 		seps[appQName] = extensionpoints.NewRootExtensionPoint()
 	}
 	return seps
@@ -45,8 +45,8 @@ func buillAppFromPackagesFS(fses []parser.PackageFS, adf appdef.IAppDefBuilder) 
 	return parser.BuildAppDefs(appSchemaAST, adf)
 }
 
-func (hap VVMAppsBuilder) Build(cfgs istructsmem.AppConfigsType, apis apps.APIs, appsEPs map[istructs.AppQName]extensionpoints.IExtensionPoint) (builtInApps []apppartsctl.BuiltInApp, err error) {
-	for appQName, appBuilder := range hap {
+func (ab VVMAppsBuilder) BuiltInAppsPackages(cfgs istructsmem.AppConfigsType, apis apps.APIs, appsEPs map[istructs.AppQName]extensionpoints.IExtensionPoint) (builtInAppsPackages []BuiltInAppsPackages, err error) {
+	for appQName, appBuilder := range ab {
 		adb := appdef.New()
 		appEPs := appsEPs[appQName]
 		cfg := cfgs.AddConfig(appQName, adb)
@@ -54,15 +54,18 @@ func (hap VVMAppsBuilder) Build(cfgs istructsmem.AppConfigsType, apis apps.APIs,
 		if err := buillAppFromPackagesFS(builtInAppDef.Packages, adb); err != nil {
 			return nil, err
 		}
-		builtInApp := apppartsctl.BuiltInApp{
-			Name:           appQName,
-			PartsCount:     builtInAppDef.PartsCount,
-			EnginePoolSize: builtInAppDef.EnginePoolSize,
+		biltInAppPackages := BuiltInAppsPackages{
+			BuiltInApp: apppartsctl.BuiltInApp{
+				Name:           appQName,
+				PartsCount:     builtInAppDef.PartsCount,
+				EnginePoolSize: builtInAppDef.EnginePoolSize,
+			},
+			Packages: builtInAppDef.Packages,
 		}
-		if builtInApp.Def, err = adb.Build(); err != nil {
+		if biltInAppPackages.Def, err = adb.Build(); err != nil {
 			return nil, err
 		}
-		builtInApps = append(builtInApps, builtInApp)
+		builtInAppsPackages = append(builtInAppsPackages, biltInAppPackages)
 	}
-	return builtInApps, nil
+	return builtInAppsPackages, nil
 }

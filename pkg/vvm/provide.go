@@ -120,7 +120,7 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 		provideBlobAppStorage,
 		provideBlobberAppStruct,
 		provideVVMApps,
-		provideBuiltInApps,
+		provideBuiltInAppsPackages,
 		provideBlobberClusterAppID,
 		provideServiceChannelFactory,
 		provideBlobStorage,
@@ -165,6 +165,7 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 		provideAppPartsCtlPipelineService,
 		apppartsctl.New,
 		appparts.NewWithActualizer,
+		provideBuiltInApps,
 		// wire.Value(vvmConfig.NumCommandProcessors) -> (wire bug?) value github.com/untillpro/airs-bp3/vvm.CommandProcessorsCount can't be used: vvmConfig is not declared in package scope
 		wire.FieldsOf(&vvmConfig,
 			"NumCommandProcessors",
@@ -183,6 +184,14 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 			"SecretsReader",
 		),
 	))
+}
+
+func provideBuiltInApps(builtInAppsPackages []BuiltInAppsPackages) []apppartsctl.BuiltInApp {
+	res := make([]apppartsctl.BuiltInApp, len(builtInAppsPackages))
+	for i, pkg := range builtInAppsPackages {
+		res[i] = pkg.BuiltInApp
+	}
+	return res
 }
 
 func provideAppPartsCtlPipelineService(ctl apppartsctl.IAppPartitionsController) IAppPartsCtlPipelineService {
@@ -328,8 +337,8 @@ func provideVVMApps(builtInApps []apppartsctl.BuiltInApp) (vvmApps VVMApps) {
 	return vvmApps
 }
 
-func provideBuiltInApps(vvmConfig *VVMConfig, cfgs istructsmem.AppConfigsType, apis apps.APIs, appsEPs map[istructs.AppQName]extensionpoints.IExtensionPoint) ([]apppartsctl.BuiltInApp, error) {
-	return vvmConfig.VVMAppsBuilder.Build(cfgs, apis, appsEPs)
+func provideBuiltInAppsPackages(vvmConfig *VVMConfig, cfgs istructsmem.AppConfigsType, apis apps.APIs, appsEPs map[istructs.AppQName]extensionpoints.IExtensionPoint) ([]BuiltInAppsPackages, error) {
+	return vvmConfig.VVMAppsBuilder.BuiltInAppsPackages(cfgs, apis, appsEPs)
 }
 
 func provideServiceChannelFactory(vvmConfig *VVMConfig, procbus iprocbus.IProcBus) ServiceChannelFactory {
@@ -473,7 +482,7 @@ func provideCommandChannelFactory(sch ServiceChannelFactory) CommandChannelFacto
 	}
 }
 
-func provideQueryProcessors(qpCount QueryProcessorsCount, qc QueryChannel, appParts appparts.IAppPartitions, qpFactory queryprocessor.ServiceFactory,
+func provideQueryProcessors(qpCount coreutils.QueryProcessorsCount, qc QueryChannel, appParts appparts.IAppPartitions, qpFactory queryprocessor.ServiceFactory,
 	imetrics imetrics.IMetrics, vvm commandprocessor.VVMName, mpq MaxPrepareQueriesType, authn iauthnz.IAuthenticator, authz iauthnz.IAuthorizer) OperatorQueryProcessors {
 	forks := make([]pipeline.ForkOperatorOptionFunc, qpCount)
 	resultSenderFactory := func(ctx context.Context, sender ibus.ISender) queryprocessor.IResultSenderClosable {

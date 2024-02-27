@@ -117,16 +117,18 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 		IFederation:          iFederation,
 		TimeFunc:             timeFunc,
 		NumCommandProcessors: commandProcessorsCount,
+		NumQueryProcessors:   queryProcessorsCount,
 		IAppPartitions:       iAppPartitions,
 	}
 	v5 := provideAppsExtensionPoints(vvmConfig)
-	v6, err := provideBuiltInApps(vvmConfig, appConfigsType, apIs, v5)
+	v6, err := provideBuiltInAppsPackages(vvmConfig, appConfigsType, apIs, v5)
 	if err != nil {
 		cleanup2()
 		cleanup()
 		return nil, nil, err
 	}
-	vvmApps := provideVVMApps(v6)
+	v7 := provideBuiltInApps(v6)
+	vvmApps := provideVVMApps(v7)
 	operatorAppServicesFactory := provideOperatorAppServices(appServiceFactory, vvmApps, iAppStructsProvider)
 	vvmPortType := vvmConfig.VVMPort
 	routerParams := provideRouterParams(vvmConfig, vvmPortType, vvmIdx)
@@ -157,19 +159,19 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 	commandProcessorsChannelGroupIdxType := provideProcessorChannelGroupIdxCommand(vvmConfig)
 	queryProcessorsChannelGroupIdxType := provideProcessorChannelGroupIdxQuery(vvmConfig)
 	iBus := provideIBus(iAppPartitions, iProcBus, commandProcessorsChannelGroupIdxType, queryProcessorsChannelGroupIdxType, commandProcessorsCount, vvmApps)
-	v7, err := provideAppsWSAmounts(vvmApps, iAppStructsProvider)
+	v8, err := provideAppsWSAmounts(vvmApps, iAppStructsProvider)
 	if err != nil {
 		cleanup2()
 		cleanup()
 		return nil, nil, err
 	}
-	routerServices := provideRouterServices(vvmCtx, routerParams, busTimeout, in10nBroker, quotas, timeFunc, blobberServiceChannels, blobMaxSizeType, blobberAppClusterID, blobStorage, routerAppStorage, cache, iBus, vvmPortSource, v7)
+	routerServices := provideRouterServices(vvmCtx, routerParams, busTimeout, in10nBroker, quotas, timeFunc, blobberServiceChannels, blobMaxSizeType, blobberAppClusterID, blobStorage, routerAppStorage, cache, iBus, vvmPortSource, v8)
 	routerServiceOperator := provideRouterServiceFactory(routerServices)
 	metricsServicePortInitial := vvmConfig.MetricsServicePort
 	metricsServicePort := provideMetricsServicePort(metricsServicePortInitial, vvmIdx)
 	metricsService := metrics.ProvideMetricsService(vvmCtx, metricsServicePort, iMetrics)
 	metricsServiceOperator := provideMetricsServiceOperator(metricsService)
-	iAppPartitionsController, cleanup3, err := apppartsctl.New(iAppPartitions, v6)
+	iAppPartitionsController, cleanup3, err := apppartsctl.New(iAppPartitions, v7)
 	if err != nil {
 		cleanup2()
 		cleanup()
@@ -177,13 +179,13 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 	}
 	iAppPartsCtlPipelineService := provideAppPartsCtlPipelineService(iAppPartitionsController)
 	servicePipeline := provideServicePipeline(vvmCtx, operatorCommandProcessors, operatorQueryProcessors, operatorAppServicesFactory, routerServiceOperator, metricsServiceOperator, iAppPartsCtlPipelineService)
-	v8 := provideMetricsServicePortGetter(metricsService)
+	v9 := provideMetricsServicePortGetter(metricsService)
 	vvm := &VVM{
 		ServicePipeline:     servicePipeline,
 		APIs:                apIs,
 		AppsExtensionPoints: v5,
-		MetricsServicePort:  v8,
-		BuiltInApps:         v6,
+		MetricsServicePort:  v9,
+		BuiltInAppsPackages: v6,
 	}
 	return vvm, func() {
 		cleanup3()
@@ -230,6 +232,14 @@ func (vvm *VoedgerVM) Shutdown() {
 func (vvm *VoedgerVM) Launch() error {
 	ignition := struct{}{}
 	return vvm.ServicePipeline.SendSync(ignition)
+}
+
+func provideBuiltInApps(builtInAppsPackages []BuiltInAppsPackages) []apppartsctl.BuiltInApp {
+	res := make([]apppartsctl.BuiltInApp, len(builtInAppsPackages))
+	for i, pkg := range builtInAppsPackages {
+		res[i] = pkg.BuiltInApp
+	}
+	return res
 }
 
 func provideAppPartsCtlPipelineService(ctl apppartsctl.IAppPartitionsController) IAppPartsCtlPipelineService {
@@ -374,8 +384,8 @@ func provideVVMApps(builtInApps []apppartsctl.BuiltInApp) (vvmApps VVMApps) {
 	return vvmApps
 }
 
-func provideBuiltInApps(vvmConfig *VVMConfig, cfgs istructsmem.AppConfigsType, apis apps.APIs, appsEPs map[istructs.AppQName]extensionpoints.IExtensionPoint) ([]apppartsctl.BuiltInApp, error) {
-	return vvmConfig.VVMAppsBuilder.Build(cfgs, apis, appsEPs)
+func provideBuiltInAppsPackages(vvmConfig *VVMConfig, cfgs istructsmem.AppConfigsType, apis apps.APIs, appsEPs map[istructs.AppQName]extensionpoints.IExtensionPoint) ([]BuiltInAppsPackages, error) {
+	return vvmConfig.VVMAppsBuilder.BuiltInAppsPackages(cfgs, apis, appsEPs)
 }
 
 func provideServiceChannelFactory(vvmConfig *VVMConfig, procbus iprocbus.IProcBus) ServiceChannelFactory {
@@ -482,7 +492,7 @@ func provideCommandChannelFactory(sch ServiceChannelFactory) CommandChannelFacto
 	}
 }
 
-func provideQueryProcessors(qpCount QueryProcessorsCount, qc QueryChannel, appParts appparts.IAppPartitions, qpFactory queryprocessor.ServiceFactory, imetrics2 imetrics.IMetrics,
+func provideQueryProcessors(qpCount coreutils.QueryProcessorsCount, qc QueryChannel, appParts appparts.IAppPartitions, qpFactory queryprocessor.ServiceFactory, imetrics2 imetrics.IMetrics,
 	vvm commandprocessor.VVMName, mpq MaxPrepareQueriesType, authn iauthnz.IAuthenticator, authz iauthnz.IAuthorizer) OperatorQueryProcessors {
 	forks := make([]pipeline.ForkOperatorOptionFunc, qpCount)
 	resultSenderFactory := func(ctx context.Context, sender ibus.ISender) queryprocessor.IResultSenderClosable {

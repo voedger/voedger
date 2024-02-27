@@ -136,7 +136,7 @@ func newVit(t *testing.T, vitCfg *VITConfig, useCas bool) *VIT {
 	require.NoError(t, vit.Launch())
 
 	// deploy custom apps and its partitions first
-	for _, builtInApp := range vit.BuiltInApps {
+	for _, builtInApp := range vit.BuiltInAppsPackages {
 		if builtInApp.Name.IsSys() {
 			continue
 		}

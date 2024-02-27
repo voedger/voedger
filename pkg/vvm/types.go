@@ -22,6 +22,7 @@ import (
 	"github.com/voedger/voedger/pkg/isecrets"
 	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/parser"
 	"github.com/voedger/voedger/pkg/pipeline"
 	commandprocessor "github.com/voedger/voedger/pkg/processors/command"
 	"github.com/voedger/voedger/pkg/router"
@@ -55,10 +56,11 @@ type ServiceChannelFactory func(pcgt ProcessorChannelType, channelIdx int) iproc
 type AppStorageFactory func(appQName istructs.AppQName, appStorage istorage.IAppStorage) istorage.IAppStorage
 type StorageCacheSizeType int
 type VVMApps []istructs.AppQName
+type BuiltInAppsPackages struct {
+	apppartsctl.BuiltInApp
+	Packages []parser.PackageFS
+}
 
-// type AppsPackages map[istructs.AppQName]apps.AppPackages
-
-type QueryProcessorsCount int
 type BusTimeout time.Duration
 type FederationURL func() *url.URL
 type VVMIdxType int
@@ -102,7 +104,7 @@ type VVM struct {
 	apps.APIs
 	AppsExtensionPoints map[istructs.AppQName]extensionpoints.IExtensionPoint
 	MetricsServicePort  func() metrics.MetricsServicePort
-	BuiltInApps         []apppartsctl.BuiltInApp
+	BuiltInAppsPackages []BuiltInAppsPackages
 }
 
 type AppsExtensionPoints map[istructs.AppQName]extensionpoints.IExtensionPoint
@@ -125,7 +127,7 @@ type VVMConfig struct {
 	BLOBMaxSize                router.BLOBMaxSizeType
 	Name                       commandprocessor.VVMName
 	NumCommandProcessors       coreutils.CommandProcessorsCount
-	NumQueryProcessors         QueryProcessorsCount
+	NumQueryProcessors         coreutils.QueryProcessorsCount
 	MaxPrepareQueries          MaxPrepareQueriesType
 	StorageCacheSize           StorageCacheSizeType
 	processorsChannels         []ProcesorChannel
