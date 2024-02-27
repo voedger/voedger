@@ -17,33 +17,20 @@ import (
 )
 
 func Provide(smtpCfg smtp.Cfg) apps.AppBuilder {
-	return func(apis apps.APIs, cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) apps.AppPackages {
+	return func(apis apps.APIs, cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) apps.BuiltInAppDef {
 		sysPackageFS := sys.Provide(cfg, appDefBuilder, smtpCfg, ep, nil, apis.TimeFunc, apis.ITokens, apis.IFederation, apis.IAppStructsProvider, apis.IAppTokensFactory,
 			apis.NumCommandProcessors, nil, apis.IAppStorageProvider)
 		routerAppPackageFS := parser.PackageFS{
 			QualifiedPackageName: RouterAppFQN,
 			FS:                   routerAppSchemaFS,
 		}
-		return apps.AppPackages{
+		return apps.BuiltInAppDef{
 			AppQName: istructs.AppQName_sys_router,
 			Packages: []parser.PackageFS{sysPackageFS, routerAppPackageFS},
+			AppDeploymentDescriptor: cluster.AppDeploymentDescriptor{
+				PartsCount:     DefDeploymentPartsCount,
+				EnginePoolSize: DefDeploymentEnginePoolSize,
+			},
 		}
 	}
-}
-
-// Returns router application definition
-func AppDef() appdef.IAppDef {
-	appDef, err := apps.BuildAppDefFromFS(RouterAppFQN, routerAppSchemaFS, ".")
-	if err != nil {
-		panic(err)
-	}
-	return appDef
-}
-
-// Returns router partitions count
-func PartsCount() int { return DefDeploymentPartsCount }
-
-// Returns router engines pool sizes
-func EnginePoolSize() [cluster.ProcessorKind_Count]int {
-	return DefDeploymentEnginePoolSize
 }

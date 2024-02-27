@@ -95,15 +95,14 @@ type PostDocDesc struct {
 	IsSingleton bool
 }
 
-// type VVMAppBuilder func(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, sep IStandardExtensionPoints)
-type VVMAppsBuilder map[istructs.AppQName][]apps.AppBuilder
+type VVMAppsBuilder map[istructs.AppQName]apps.AppBuilder
 
 type VVM struct {
 	ServicePipeline
 	apps.APIs
 	AppsExtensionPoints map[istructs.AppQName]extensionpoints.IExtensionPoint
 	MetricsServicePort  func() metrics.MetricsServicePort
-	AppsPackages        []apps.AppPackages
+	BuiltInApps         []apppartsctl.BuiltInApp
 }
 
 type AppsExtensionPoints map[istructs.AppQName]extensionpoints.IExtensionPoint

@@ -6,6 +6,7 @@ package vvm
 
 import (
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/apppartsctl"
 	"github.com/voedger/voedger/pkg/apps"
 	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -13,10 +14,11 @@ import (
 	"github.com/voedger/voedger/pkg/parser"
 )
 
-func (hap VVMAppsBuilder) Add(appQName istructs.AppQName, builder apps.AppBuilder) {
-	builders := hap[appQName]
-	builders = append(builders, builder)
-	hap[appQName] = builders
+func (ab VVMAppsBuilder) Add(appQName istructs.AppQName, builder apps.AppBuilder) {
+	if _, ok := ab[appQName]; ok {
+		panic(appQName.String() + " builder already added")
+	}
+	ab[appQName] = builder
 }
 
 func (hap VVMAppsBuilder) PrepareAppsExtensionPoints() map[istructs.AppQName]extensionpoints.IExtensionPoint {
@@ -43,26 +45,24 @@ func buillAppFromPackagesFS(fses []parser.PackageFS, adf appdef.IAppDefBuilder) 
 	return parser.BuildAppDefs(appSchemaAST, adf)
 }
 
-func (hap VVMAppsBuilder) Build(cfgs istructsmem.AppConfigsType, apis apps.APIs, appsEPs map[istructs.AppQName]extensionpoints.IExtensionPoint) (appsPackages []apps.AppPackages, err error) {
-	for appQName, appBuilders := range hap {
-		adf := appdef.New()
+func (hap VVMAppsBuilder) Build(cfgs istructsmem.AppConfigsType, apis apps.APIs, appsEPs map[istructs.AppQName]extensionpoints.IExtensionPoint) (builtInApps []apppartsctl.BuiltInApp, err error) {
+	for appQName, appBuilder := range hap {
+		adb := appdef.New()
 		appEPs := appsEPs[appQName]
-		cfg := cfgs.AddConfig(appQName, adf)
-		appPackagesFS := []parser.PackageFS{}
-		for _, appBuilder := range appBuilders {
-			appPackages := appBuilder(apis, cfg, adf, appEPs)
-			appPackagesFS = append(appPackagesFS, appPackages.Packages...)
-		}
-		if err := buillAppFromPackagesFS(appPackagesFS, adf); err != nil {
+		cfg := cfgs.AddConfig(appQName, adb)
+		builtInAppDef := appBuilder(apis, cfg, adb, appEPs)
+		if err := buillAppFromPackagesFS(builtInAppDef.Packages, adb); err != nil {
 			return nil, err
 		}
-		if _, err := adf.Build(); err != nil {
+		builtInApp := apppartsctl.BuiltInApp{
+			Name:           appQName,
+			PartsCount:     builtInAppDef.PartsCount,
+			EnginePoolSize: builtInAppDef.EnginePoolSize,
+		}
+		if builtInApp.Def, err = adb.Build(); err != nil {
 			return nil, err
 		}
-		appsPackages = append(appsPackages, apps.AppPackages{
-			AppQName: appQName,
-			Packages: appPackagesFS,
-		})
+		builtInApps = append(builtInApps, builtInApp)
 	}
-	return appsPackages, nil
+	return builtInApps, nil
 }

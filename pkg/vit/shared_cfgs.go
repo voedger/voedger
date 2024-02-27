@@ -79,7 +79,7 @@ var (
 	MockCmdExec func(input string) error
 )
 
-func ProvideApp2(apis apps.APIs, cfg *istructsmem.AppConfigType, adf appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) apps.AppPackages {
+func ProvideApp2(apis apps.APIs, cfg *istructsmem.AppConfigType, adf appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) apps.BuiltInAppDef {
 	buildInfo, ok := debug.ReadBuildInfo()
 	if !ok {
 		panic("no build info")
@@ -91,13 +91,14 @@ func ProvideApp2(apis apps.APIs, cfg *istructsmem.AppConfigType, adf appdef.IApp
 		FS:                   SchemaTestApp2FS,
 	}
 	cfg.Resources.Add(istructsmem.NewCommandFunction(appdef.NewQName(app2PkgName, "testCmd"), istructsmem.NullCommandExec))
-	return apps.AppPackages{
-		AppQName: istructs.AppQName_test1_app2,
-		Packages: []parser.PackageFS{sysPackageFS, app2PackageFS},
+	return apps.BuiltInAppDef{
+		AppQName:                istructs.AppQName_test1_app2,
+		Packages:                []parser.PackageFS{sysPackageFS, app2PackageFS},
+		AppDeploymentDescriptor: TestAppDeploymentDescriptor,
 	}
 }
 
-func ProvideApp1(apis apps.APIs, cfg *istructsmem.AppConfigType, adf appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) apps.AppPackages {
+func ProvideApp1(apis apps.APIs, cfg *istructsmem.AppConfigType, adf appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) apps.BuiltInAppDef {
 	// sys package
 	buildInfo, ok := debug.ReadBuildInfo()
 	if !ok {
@@ -194,8 +195,9 @@ func ProvideApp1(apis apps.APIs, cfg *istructsmem.AppConfigType, adf appdef.IApp
 		QualifiedPackageName: "github.com/voedger/voedger/pkg/vit/app1pkg",
 		FS:                   SchemaTestApp1FS,
 	}
-	return apps.AppPackages{
-		AppQName: istructs.AppQName_test1_app1,
-		Packages: []parser.PackageFS{sysPackageFS, app1PackageFS},
+	return apps.BuiltInAppDef{
+		AppQName:                istructs.AppQName_test1_app1,
+		Packages:                []parser.PackageFS{sysPackageFS, app1PackageFS},
+		AppDeploymentDescriptor: TestAppDeploymentDescriptor,
 	}
 }
