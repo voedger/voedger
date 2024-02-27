@@ -74,8 +74,6 @@ const (
 // # Type
 //
 // Type describes the entity, such as document, record or view.
-//
-// Ref to type.go for implementation
 type IType interface {
 	IComment
 

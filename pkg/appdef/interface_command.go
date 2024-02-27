@@ -8,8 +8,6 @@ package appdef
 // Command is a function that changes system state.
 // Command may have unlogged parameter.
 // Unlogged parameter is a secure parameter that is not logged.
-//
-// Ref to command.go for implementation
 type ICommand interface {
 	IFunction
 

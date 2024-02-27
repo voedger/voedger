@@ -6,8 +6,6 @@
 package appdef
 
 // Structure is a type with fields, containers and uniques.
-//
-// Ref to structure.go for implementation
 type IStructure interface {
 	IType
 	IFields
@@ -31,8 +29,6 @@ type IStructureBuilder interface {
 // Record is a structure.
 //
 // Record has ID field.
-//
-// Ref to structure.go for implementation
 type IRecord interface {
 	IStructure
 
@@ -48,8 +44,6 @@ type IRecordBuilder interface {
 // Document is a record.
 //
 // Document can contains records.
-//
-// Ref to structure.go for implementation
 type IDoc interface {
 	IRecord
 
@@ -63,8 +57,6 @@ type IDocBuilder interface {
 }
 
 // Contained record is a record that has parent.
-//
-// Ref to structure.go for implementation
 type IContainedRecord interface {
 	IRecord
 

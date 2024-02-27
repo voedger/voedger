@@ -9,8 +9,6 @@ package appdef
 // - TypeKind_GDoc and TypeKind_GRecord,
 // - TypeKind_CDoc and TypeKind_CRecord,
 // - TypeKind_WDoc and TypeKind_WRecord
-//
-// Ref to unique.go for implementation
 type IUniques interface {
 	// Return unique by qualified name.
 	//
@@ -56,8 +54,6 @@ type IUniquesBuilder interface {
 }
 
 // Describe single unique for structure.
-//
-// Ref to unique.go for implementation
 type IUnique interface {
 	IComment
 

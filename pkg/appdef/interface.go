@@ -6,8 +6,6 @@
 package appdef
 
 // Application definition is a set of types, views, commands, queries and workspaces.
-//
-// Ref to apdef.go for implementation
 type IAppDef interface {
 	IComment
 	IWithTypes

@@ -38,8 +38,6 @@ const (
 // Data type interface.
 //
 // Describe simple types, like string, number, date, etc.
-//
-// Ref to data.go for implementation
 type IData interface {
 	IType
 

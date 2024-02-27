@@ -8,8 +8,6 @@ package appdef
 // Function is a type of extension that can take params and return value.
 //
 // Function may be query or command.
-//
-// Ref to function.go for implementation
 type IFunction interface {
 	IExtension
 

@@ -25,8 +25,6 @@ var VerificationKind_Any = []VerificationKind{VerificationKind_EMail, Verificati
 //	- TypeKind_WDoc and TypeKind_WRecord,
 //	- TypeKind_Object and TypeKind_Element,
 //	- TypeKind_ViewRecord
-//
-// Ref to field.go for implementation
 type IFields interface {
 	// Finds field by name.
 	//
@@ -104,8 +102,6 @@ type IFieldsBuilder interface {
 }
 
 // Describe single field.
-//
-// Ref to field.go for constants and implementation
 type IField interface {
 	IComment
 
@@ -144,8 +140,6 @@ type IField interface {
 // Reference field. Describe field with DataKind_RecordID.
 //
 // Use Refs() to obtain list of target references.
-//
-// Ref to fields.go for implementation
 type IRefField interface {
 	IField
 

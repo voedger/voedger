@@ -8,8 +8,6 @@ package appdef
 // See [Issue #488](https://github.com/voedger/voedger/issues/488)
 //
 // Any type may have comment
-//
-// Ref to comment.go for implementation
 type IComment interface {
 	// Returns comment
 	Comment() string

@@ -13,8 +13,6 @@ package appdef
 //	- TypeKind_WDoc and TypeKind_WRecord,
 //	- TypeKind_Object and TypeKind_Element
 //	- TypeKind_Workspace
-//
-// Ref to abstract.go for implementation
 type IWithAbstract interface {
 	// Returns is type abstract
 	Abstract() bool

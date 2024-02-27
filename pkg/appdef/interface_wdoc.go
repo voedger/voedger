@@ -6,8 +6,6 @@
 package appdef
 
 // Workflow document.
-//
-// Ref to wdoc.go for implementation
 type IWDoc interface {
 	IDoc
 
@@ -21,8 +19,6 @@ type IWDocBuilder interface {
 }
 
 // Workflow document record.
-//
-// Ref to wdoc.go for implementation
 type IWRecord interface {
 	IContainedRecord
 

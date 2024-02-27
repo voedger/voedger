@@ -21,8 +21,6 @@ const (
 //	- TypeKind_ODoc and TypeKind_CRecord,
 //	- TypeKind_WDoc and TypeKind_WRecord,
 //	- TypeKind_Object,
-//
-// Ref to container.go for implementation
 type IContainers interface {
 	// Finds container by name.
 	//
@@ -52,8 +50,6 @@ type IContainersBuilder interface {
 }
 
 // Describes single inclusion of child in parent.
-//
-// Ref to container.go for implementation
 type IContainer interface {
 	IComment
 

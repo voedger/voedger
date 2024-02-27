@@ -11,7 +11,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// Short test form. Full test ref to wdoc_test.go
 func Test_AppDef_AddWDoc(t *testing.T) {
 	require := require.New(t)
 

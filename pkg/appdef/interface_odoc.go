@@ -6,8 +6,6 @@
 package appdef
 
 // Operation document.
-//
-// Ref to odoc.go for implementation
 type IODoc interface {
 	IDoc
 
@@ -21,8 +19,6 @@ type IODocBuilder interface {
 }
 
 // Operation document record.
-//
-// Ref to odoc.go for implementation
 type IORecord interface {
 	IContainedRecord
 

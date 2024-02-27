@@ -19,8 +19,6 @@ const (
 )
 
 // Entry point is a type that can be executed.
-//
-// Ref to extension.go for implementation
 type IExtension interface {
 	IType
 
