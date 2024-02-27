@@ -36,6 +36,7 @@ func (aps *apps) DeployApp(name istructs.AppQName, def appdef.IAppDef, engines [
 	defer aps.mx.Unlock()
 
 	a, ok := aps.apps[name]
+	// TODO: panic ErrNotSupported if app already exists
 	if !ok {
 		a = newApplication(aps, name)
 		aps.apps[name] = a

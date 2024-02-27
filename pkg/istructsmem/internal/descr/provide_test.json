@@ -2,6 +2,7 @@
   "Name": "test1/app1",
   "Packages": {
     "test": {
+      "Path": "test/path",
       "DataTypes": {
         "test.number": {
           "Comment": "natural (positive) integer",

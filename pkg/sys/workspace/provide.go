@@ -19,7 +19,7 @@ func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder
 	// c.sys.InitChildWorkspace
 	cfg.Resources.Add(istructsmem.NewCommandFunction(
 		authnz.QNameCommandInitChildWorkspace,
-		execCmdInitChildWorkspace,
+		provideExecCmdInitChildWorkspace(appDefBuilder),
 	))
 
 	// c.sys.CreateWorkspaceID
