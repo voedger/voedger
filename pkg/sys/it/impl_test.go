@@ -45,7 +45,7 @@ const app2pkg = "app2pkg"
 func TestBasicUsage(t *testing.T) {
 	require := require.New(t)
 	cfg := it.NewOwnVITConfig(
-		it.WithApp(istructs.AppQName_test1_app2, func(apis apps.APIs, cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) apps.AppPackages {
+		it.WithApp(istructs.AppQName_test1_app2, func(apis apps.APIs, cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) apps.BuiltInAppDef {
 			qNameCmdGreeter := appdef.NewQName(app2pkg, "Greeter")
 			cfg.Resources.Add(istructsmem.NewQueryFunction(
 				qNameCmdGreeter,
@@ -63,9 +63,10 @@ func TestBasicUsage(t *testing.T) {
 				QualifiedPackageName: "github.com/voedger/voedger/pkg/vit/app2pkg",
 				FS:                   testAppSQL,
 			}
-			return apps.AppPackages{
-				AppQName: istructs.AppQName_test1_app2,
-				Packages: []parser.PackageFS{sysPackageFS, appPackageFS},
+			return apps.BuiltInAppDef{
+				AppQName:                istructs.AppQName_test1_app2,
+				Packages:                []parser.PackageFS{sysPackageFS, appPackageFS},
+				AppDeploymentDescriptor: it.TestAppDeploymentDescriptor,
 			}
 		}),
 	)
