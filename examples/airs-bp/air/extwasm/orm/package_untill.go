@@ -131,6 +131,7 @@ type ODoc_untill_pbill struct {
 type Value_ODoc_untill_pbill struct{ tv exttinygo.TValue }
 
 func (v *Value_ODoc_untill_pbill) Get_id_bill() Ref {
+	// !!! Note that Ref is returned rather than ID
 	return Ref(v.tv.AsInt64("id_bill"))
 }
 func (v *Value_ODoc_untill_pbill) Get_id_untill_users() Ref {
