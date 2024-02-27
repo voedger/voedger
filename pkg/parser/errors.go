@@ -40,6 +40,10 @@ var ErrPackageWithSameNameAlreadyIncludedInApp = errors.New("package with the sa
 var ErrStorageDeclaredOnlyInSys = errors.New("storages are only declared in sys package")
 var ErrPkgFolderNotFound = errors.New("pkg folder not found")
 
+func ErrLocalPackageNameRedeclared(localPkgName, newLocalPkgName string) error {
+	return fmt.Errorf("local package name %s was redeclared as %s", localPkgName, newLocalPkgName)
+}
+
 func ErrAppDoesNotDefineUseOfPackage(name string) error {
 	return fmt.Errorf("application does not define use of package %s", name)
 }
