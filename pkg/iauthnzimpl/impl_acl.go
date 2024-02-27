@@ -208,6 +208,8 @@ var defaultACL = ACL{
 				qNameQryListPaidSubscriptionResellers,
 				// https://dev.untill.com/projects/#!679811
 				qNameQryIsDirectReseller,
+				// https://dev.untill.com/projects/#!675263
+				qNameQryPaidSubscriptionInvoicesReport,
 			},
 			principalsPattern: [][]iauthnz.Principal{{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleAirReseller}}},
 		},
