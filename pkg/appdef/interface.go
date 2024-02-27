@@ -12,6 +12,24 @@ type IAppDef interface {
 	IComment
 	IWithTypes
 
+	// Returns package path by package local name.
+	//
+	// Returns empty string if not found
+	PackageFullPath(localName string) string
+
+	// Returns package local name by package path.
+	//
+	// Returns empty string if not found
+	PackageLocalName(fullPath string) string
+
+	// Return all local names of application packages in alphabetical order
+	PackageLocalNames() []string
+
+	// Enumerates all application packages.
+	//
+	// Packages are enumerated in alphabetical order by local name
+	Packages(func(localName, fullPath string))
+
 	// Return data type by name.
 	//
 	// Returns nil if not found.
@@ -133,6 +151,16 @@ type IAppDef interface {
 type IAppDefBuilder interface {
 	IAppDef
 	ICommentBuilder
+
+	// Adds new package with specified local name and path.
+	//
+	// # Panics:
+	//   - if local name is empty,
+	//   - if local name is invalid,
+	//   - if package with local name already exists,
+	//   - if path is empty,
+	//   - if package with path already exists.
+	AddPackage(localName, path string) IAppDefBuilder
 
 	// Adds new data type with specified name and kind.
 	//
