@@ -12,59 +12,52 @@ import (
 	"github.com/untillpro/goutils/iterate"
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
-	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys/authnz"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-func provideExecCmdInitChildWorkspace(appDef appdef.IAppDef) istructsmem.ExecCommandClosure {
-	return func(args istructs.ExecCommandArgs) (err error) {
-		wsName := args.ArgumentObject.AsString(authnz.Field_WSName)
-		kb, err := args.State.KeyBuilder(state.View, QNameViewChildWorkspaceIdx)
-		if err != nil {
-			return
-		}
-		kb.PutInt32(field_dummy, 1)
-		kb.PutString(authnz.Field_WSName, wsName)
-		_, ok, err := args.State.CanExist(kb)
-		if err != nil {
-			return
-		}
-
-		if ok {
-			return coreutils.NewHTTPErrorf(http.StatusConflict, fmt.Sprintf("child workspace with name %s already exists", wsName))
-		}
-
-		wsKind := args.ArgumentObject.AsQName(authnz.Field_WSKind)
-		if appDef.WorkspaceByDescriptor(wsKind) == nil {
-			return coreutils.NewHTTPErrorf(http.StatusBadRequest, fmt.Sprintf("provided WSKind %s is not a QName of a workspace descriptor", wsKind))
-		}
-
-		wsKindInitializationData := args.ArgumentObject.AsString(authnz.Field_WSKindInitializationData)
-		templateName := args.ArgumentObject.AsString(field_TemplateName)
-		wsClusterID := args.ArgumentObject.AsInt32(authnz.Field_WSClusterID)
-		templateParams := args.ArgumentObject.AsString(Field_TemplateParams)
-
-		// Create cdoc.sys.ChildWorkspace
-		kb, err = args.State.KeyBuilder(state.Record, authnz.QNameCDocChildWorkspace)
-		if err != nil {
-			return
-		}
-		cdocChildWS, err := args.Intents.NewValue(kb)
-		if err != nil {
-			return
-		}
-		cdocChildWS.PutRecordID(appdef.SystemField_ID, 1)
-		cdocChildWS.PutString(authnz.Field_WSName, wsName)
-		cdocChildWS.PutQName(authnz.Field_WSKind, wsKind)
-		cdocChildWS.PutString(authnz.Field_WSKindInitializationData, wsKindInitializationData)
-		cdocChildWS.PutString(field_TemplateName, templateName)
-		cdocChildWS.PutInt32(authnz.Field_WSClusterID, wsClusterID)
-		cdocChildWS.PutString(Field_TemplateParams, templateParams)
-
-		return err
+func execCmdInitChildWorkspace(args istructs.ExecCommandArgs) (err error) {
+	wsName := args.ArgumentObject.AsString(authnz.Field_WSName)
+	kb, err := args.State.KeyBuilder(state.View, QNameViewChildWorkspaceIdx)
+	if err != nil {
+		return
 	}
+	kb.PutInt32(field_dummy, 1)
+	kb.PutString(authnz.Field_WSName, wsName)
+	_, ok, err := args.State.CanExist(kb)
+	if err != nil {
+		return
+	}
+
+	if ok {
+		return coreutils.NewHTTPErrorf(http.StatusConflict, fmt.Sprintf("child workspace with name %s already exists", wsName))
+	}
+
+	wsKind := args.ArgumentObject.AsQName(authnz.Field_WSKind)
+	wsKindInitializationData := args.ArgumentObject.AsString(authnz.Field_WSKindInitializationData)
+	templateName := args.ArgumentObject.AsString(field_TemplateName)
+	wsClusterID := args.ArgumentObject.AsInt32(authnz.Field_WSClusterID)
+	templateParams := args.ArgumentObject.AsString(Field_TemplateParams)
+
+	// Create cdoc.sys.ChildWorkspace
+	kb, err = args.State.KeyBuilder(state.Record, authnz.QNameCDocChildWorkspace)
+	if err != nil {
+		return
+	}
+	cdocChildWS, err := args.Intents.NewValue(kb)
+	if err != nil {
+		return
+	}
+	cdocChildWS.PutRecordID(appdef.SystemField_ID, 1)
+	cdocChildWS.PutString(authnz.Field_WSName, wsName)
+	cdocChildWS.PutQName(authnz.Field_WSKind, wsKind)
+	cdocChildWS.PutString(authnz.Field_WSKindInitializationData, wsKindInitializationData)
+	cdocChildWS.PutString(field_TemplateName, templateName)
+	cdocChildWS.PutInt32(authnz.Field_WSClusterID, wsClusterID)
+	cdocChildWS.PutString(Field_TemplateParams, templateParams)
+
+	return err
 }
 
 var projectorChildWorkspaceIdx = func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
