@@ -14,28 +14,6 @@ import (
 	"strings"
 )
 
-const (
-	// System package name
-	SysPackage = "sys"
-
-	// Used as delimiter in qualified names
-	QNameQualifierChar = "."
-
-	// Used as prefix for names of system fields and containers
-	SystemPackagePrefix = SysPackage + QNameQualifierChar
-)
-
-// Null (empty) QName
-var (
-	QNameForNull = NewQName(NullName, NullName)
-	NullQName    = QNameForNull
-)
-
-// QNameANY denotes that a Function param or result can be any type
-//
-// See #858 (Support QNameAny as function result)
-var QNameANY = NewQName(SysPackage, AnyName)
-
 // Compare two qualified names
 func CompareQName(a, b QName) int {
 	if a.pkg != b.pkg {

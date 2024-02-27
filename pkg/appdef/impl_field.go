@@ -329,9 +329,6 @@ func validateTypeFields(t IType) (err error) {
 	return err
 }
 
-// NullFields is used for return then IFields is not supported
-var NullFields = new(nullFields)
-
 type nullFields struct{}
 
 func (f *nullFields) Field(name string) IField       { return nil }

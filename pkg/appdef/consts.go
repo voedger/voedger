@@ -10,6 +10,25 @@ import "math"
 // Maximum identifier length
 const MaxIdentLen = 255
 
+// Any name
+const AnyName = "ANY"
+
+const (
+	// System package name
+	SysPackage = "sys"
+
+	// Used as delimiter in qualified names
+	QNameQualifierChar = "."
+
+	// Used as prefix for names of system fields and containers
+	SystemPackagePrefix = SysPackage + QNameQualifierChar
+)
+
+// QNameANY denotes that a Function param or result can be any type
+//
+// See #858 (Support QNameAny as function result)
+var QNameANY = NewQName(SysPackage, AnyName)
+
 // Maximum fields per one structured type
 const MaxTypeFieldCount = 65536
 

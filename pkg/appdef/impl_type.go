@@ -111,9 +111,6 @@ func validateType(t IType) (err error) {
 	return err
 }
 
-// NullType is used for return then type is not founded
-var NullType = new(nullType)
-
 const nullTypeString = "null type"
 
 type nullType struct{ nullComment }
