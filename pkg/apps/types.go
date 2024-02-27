@@ -8,6 +8,7 @@ package apps
 import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appparts"
+	"github.com/voedger/voedger/pkg/cluster"
 	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -27,19 +28,17 @@ type APIs struct {
 	coreutils.IFederation
 	coreutils.TimeFunc
 	NumCommandProcessors coreutils.CommandProcessorsCount
+	NumQueryProcessors   coreutils.QueryProcessorsCount
 	appparts.IAppPartitions
 }
 
-type AppBuilder func(apis APIs, cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) AppPackages
+type AppBuilder func(apis APIs, cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) BuiltInAppDef
 type SchemasExportedContent map[string]map[string][]byte // packageName->schemaFilePath->content
-//	type PackageDesc struct {
-//		FQN string
-//		FS  embed.FS
-//	}
-type AppPackages struct {
-	AppQName istructs.AppQName
-	Packages []parser.PackageFS
-}
 type CLIParams struct {
 	Storage string
+}
+type BuiltInAppDef struct {
+	cluster.AppDeploymentDescriptor
+	AppQName istructs.AppQName
+	Packages []parser.PackageFS
 }

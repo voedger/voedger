@@ -17,33 +17,20 @@ import (
 )
 
 func Provide(smtpCfg smtp.Cfg) apps.AppBuilder {
-	return func(apis apps.APIs, cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) apps.AppPackages {
+	return func(apis apps.APIs, cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) apps.BuiltInAppDef {
 		sysPackageFS := sys.Provide(cfg, appDefBuilder, smtpCfg, ep, nil, apis.TimeFunc, apis.ITokens, apis.IFederation, apis.IAppStructsProvider, apis.IAppTokensFactory,
 			apis.NumCommandProcessors, nil, apis.IAppStorageProvider) // need to generate AppWorkspaces only
 		blobberAppPackageFS := parser.PackageFS{
 			QualifiedPackageName: BlobberAppFQN,
 			FS:                   blobberSchemaFS,
 		}
-		return apps.AppPackages{
+		return apps.BuiltInAppDef{
 			AppQName: istructs.AppQName_sys_blobber,
 			Packages: []parser.PackageFS{sysPackageFS, blobberAppPackageFS},
+			AppDeploymentDescriptor: cluster.AppDeploymentDescriptor{
+				PartsCount:     DefDeploymentPartsCount,
+				EnginePoolSize: DefDeploymentEnginePoolSize,
+			},
 		}
 	}
-}
-
-// Returns blobber application definition
-func AppDef() appdef.IAppDef {
-	appDef, err := apps.BuildAppDefFromFS(BlobberAppFQN, blobberSchemaFS, ".")
-	if err != nil {
-		panic(err)
-	}
-	return appDef
-}
-
-// Returns blobber partitions count
-func PartsCount() int { return DefDeploymentPartsCount }
-
-// Returns blobber engines pool sizes
-func EnginePoolSize() [cluster.ProcessorKind_Count]int {
-	return DefDeploymentEnginePoolSize
 }
