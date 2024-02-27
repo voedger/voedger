@@ -22,10 +22,13 @@ type IAppDef interface {
 	// Returns empty string if not found
 	PackageLocalName(fullPath string) string
 
+	// Return all local names of application packages in alphabetical order
+	PackageLocalNames() []string
+
 	// Enumerates all application packages.
 	//
 	// Packages are enumerated in alphabetical order by local name
-	PackageLocalNames() []string
+	Packages(func(localName, fullPath string))
 
 	// Return data type by name.
 	//

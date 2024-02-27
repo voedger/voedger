@@ -35,6 +35,22 @@ func Test_AppDef_AddPackage(t *testing.T) {
 		require.Equal("example/path", app.PackageFullPath("example"))
 
 		require.EqualValues([]string{"example", "test"}, app.PackageLocalNames())
+
+		cnt := 0
+		app.Packages(func(localName, fullPath string) {
+			switch cnt {
+			case 0:
+				require.Equal("example", localName)
+				require.Equal("example/path", fullPath)
+			case 1:
+				require.Equal("test", localName)
+				require.Equal("test/path", fullPath)
+			default:
+				require.Fail("unexpected package %v (%v)", localName, fullPath)
+			}
+			cnt++
+		})
+		require.Equal(2, cnt)
 	})
 
 	t.Run("should be empties if unknown packages", func(t *testing.T) {

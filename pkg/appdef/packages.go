@@ -46,6 +46,12 @@ func (p *packages) add(local, path string) {
 	p.pathByLocal[local] = path
 }
 
+func (p *packages) forEach(cb func(local, path string)) {
+	for _, local := range p.local {
+		cb(local, p.pathByLocal[local])
+	}
+}
+
 func (p *packages) localNameByPath(path string) string {
 	return p.localByPath[path]
 }

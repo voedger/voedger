@@ -33,10 +33,16 @@ func ExampleIAppDefBuilder_AddPackage() {
 		fmt.Println(app.PackageLocalName("example/path"), app.PackageFullPath("example"))
 
 		fmt.Println(app.PackageLocalNames())
+
+		app.Packages(func(localName, fullPath string) {
+			fmt.Println(localName, fullPath)
+		})
 	}
 
 	// Output:
 	// test test/path
 	// example example/path
 	// [example test]
+	// example example/path
+	// test test/path
 }

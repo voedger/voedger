@@ -210,6 +210,10 @@ func (app *appDef) PackageLocalNames() []string {
 	return app.packages.localNames()
 }
 
+func (app *appDef) Packages(cb func(local, path string)) {
+	app.packages.forEach(cb)
+}
+
 func (app *appDef) Projector(name QName) IProjector {
 	if t := app.typeByKind(name, TypeKind_Projector); t != nil {
 		return t.(IProjector)
