@@ -47,6 +47,7 @@ func (c *buildContext) build() error {
 		c.workspaces,
 		c.alterWorkspaces,
 		c.inheritedWorkspaces,
+		c.packages,
 	}
 	for _, step := range steps {
 		if err := step(); err != nil {
@@ -95,6 +96,13 @@ func (c *buildContext) useStmtInWs(wsctx *wsBuildCtx, stmtPackage string, stmt i
 	if useWorkspace, ok := stmt.(*UseWorkspaceStmt); ok {
 		wsctx.builder.AddType(useWorkspace.qName)
 	}
+}
+
+func (c *buildContext) packages() error {
+	for localName, fullPath := range c.app.LocalNameToFullPath {
+		c.builder.AddPackage(localName, fullPath)
+	}
+	return nil
 }
 
 func (c *buildContext) rates() error {
