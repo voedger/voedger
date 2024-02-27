@@ -22,7 +22,7 @@ func CalcOrderedItems() {
 		item := items.GetAsValue(i)
 		totalPrice += int64(item.AsInt32("Quantity")) * item.AsInt64("SinglePrice")
 	}
-	key := ext.KeyBuilder(ext.StorageView, "main.OrderedItems")
+	key := ext.KeyBuilder(ext.StorageView, "github.com/untillpro/airs-bp3/packages/air.OrderedItems")
 	key.PutInt32("Year", arg.AsInt32("Year"))
 	key.PutInt32("Month", arg.AsInt32("Month"))
 	key.PutInt32("Day", arg.AsInt32("Day"))

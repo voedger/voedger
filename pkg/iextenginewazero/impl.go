@@ -380,6 +380,16 @@ func (f *wazeroExtEngine) decodeStr(ptr, size uint32) string {
 	panic(ErrUnableToReadMemory)
 }
 
+func (f *wazeroExtEngine) parseQname(value string) (qname appdef.QName, err error) {
+	//	path, name := filepath.Split(value)
+
+	qname, err = appdef.ParseQName(value)
+	if err != nil {
+		return
+	}
+	return
+}
+
 func (f *wazeroExtEngine) hostGetKey(storagePtr, storageSize, entityPtr, entitySize uint32) (res uint64) {
 
 	var storage appdef.QName
@@ -391,7 +401,7 @@ func (f *wazeroExtEngine) hostGetKey(storagePtr, storageSize, entityPtr, entityS
 	}
 	entitystr := f.decodeStr(entityPtr, entitySize)
 	if entitystr != "" {
-		entity, err = appdef.ParseQName(entitystr)
+		entity, err = f.parseQname(entitystr)
 		if err != nil {
 			panic(err)
 		}

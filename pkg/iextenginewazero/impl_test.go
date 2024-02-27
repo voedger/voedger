@@ -42,12 +42,12 @@ func Test_BasicUsage(t *testing.T) {
 	const ws = istructs.WSID(1)
 	const partition = istructs.PartitionID(1)
 	require := require.New(t)
-	newOrderCmd := appdef.NewQName("main", "NewOrder")
-	calcOrderedItemsProjector := appdef.NewQName("main", "CalcOrderedItems")
-	orderedItemsView := appdef.NewQName("main", "OrderedItems")
+	newOrderCmd := appdef.NewQName("air", "NewOrder")
+	calcOrderedItemsProjector := appdef.NewQName("air", "CalcOrderedItems")
+	orderedItemsView := appdef.NewQName("air", "OrderedItems")
 
 	// Prepare app
-	app := appStructsFromSQL(`APPLICATION test(); 
+	app := appStructsFromSQL("github.com/untillpro/airs-bp3/packages/air", `APPLICATION test(); 
 		WORKSPACE Restaurant (
 			TABLE Order INHERITS ODoc (
 				Year int32,
@@ -658,7 +658,7 @@ type (
 //go:embed sql_example_syspkg/*.sql
 var sfs embed.FS
 
-func appStructsFromSQL(appdefSql string, prepareAppCfg appCfgCallback) istructs.IAppStructs {
+func appStructsFromSQL(packagePath string, appdefSql string, prepareAppCfg appCfgCallback) istructs.IAppStructs {
 	appDef := appdef.New()
 
 	fs, err := parser.ParseFile("file1.sql", appdefSql)
@@ -666,7 +666,7 @@ func appStructsFromSQL(appdefSql string, prepareAppCfg appCfgCallback) istructs.
 		panic(err)
 	}
 
-	pkg, err := parser.BuildPackageSchema("test/main", []*parser.FileSchemaAST{fs})
+	pkg, err := parser.BuildPackageSchema(packagePath, []*parser.FileSchemaAST{fs})
 	if err != nil {
 		panic(err)
 	}
