@@ -87,6 +87,8 @@ var defaultACL = ACL{
 				qNameCDocWorkspaceKindDevice,
 				qNameCDocWorkspaceKindRestaurant,
 				qNameCDocWorkspaceKindAppWorkspace,
+				qNameCDocReseller,
+				qNameCDocUntillPayments,
 			},
 			opKindsPattern:    []iauthnz.OperationKindType{iauthnz.OperationKind_UPDATE},
 			principalsPattern: [][]iauthnz.Principal{{{Kind: iauthnz.PrincipalKind_Role, QName: iauthnz.QNameRoleWorkspaceOwner}}},
