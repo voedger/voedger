@@ -23,6 +23,8 @@ var expectedJson string
 func TestBasicUsage(t *testing.T) {
 	appDef := appdef.New()
 
+	appDef.AddPackage("test", "test/path")
+
 	numName := appdef.NewQName("test", "number")
 	strName := appdef.NewQName("test", "string")
 

@@ -16,6 +16,7 @@ import (
 //   - IAppDefBuilder
 type appDef struct {
 	comment
+	packages     *packages
 	types        map[QName]interface{}
 	typesOrdered []interface{}
 	wsDesc       map[QName]IWorkspace
@@ -23,8 +24,9 @@ type appDef struct {
 
 func newAppDef() *appDef {
 	app := appDef{
-		types:  make(map[QName]interface{}),
-		wsDesc: make(map[QName]IWorkspace),
+		packages: newPackages(),
+		types:    make(map[QName]interface{}),
+		wsDesc:   make(map[QName]IWorkspace),
 	}
 	app.makeSysPackage()
 	return &app
@@ -67,6 +69,11 @@ func (app *appDef) AddODoc(name QName) IODocBuilder {
 
 func (app *appDef) AddORecord(name QName) IORecordBuilder {
 	return newORecord(app, name)
+}
+
+func (app *appDef) AddPackage(localName, path string) IAppDefBuilder {
+	app.packages.add(localName, path)
+	return app
 }
 
 func (app *appDef) AddProjector(name QName) IProjectorBuilder {
@@ -189,6 +196,22 @@ func (app *appDef) ORecord(name QName) IORecord {
 		return t.(IORecord)
 	}
 	return nil
+}
+
+func (app *appDef) PackageLocalName(path string) string {
+	return app.packages.localNameByPath(path)
+}
+
+func (app *appDef) PackageFullPath(local string) string {
+	return app.packages.pathByLocalName(local)
+}
+
+func (app *appDef) PackageLocalNames() []string {
+	return app.packages.localNames()
+}
+
+func (app *appDef) Packages(cb func(local, path string)) {
+	app.packages.forEach(cb)
 }
 
 func (app *appDef) Projector(name QName) IProjector {
