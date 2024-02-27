@@ -76,7 +76,9 @@ func newVit(t *testing.T, vitCfg *VITConfig, useCas bool) *VIT {
 	cfg.MetricsServicePort = 0
 
 	cfg.TimeFunc = coreutils.TimeFunc(func() time.Time { return ts.now() })
-	cfg.SecretsReader = itokensjwt.ProvideTestSecretsReader(cfg.SecretsReader)
+	if !coreutils.IsTest() {
+		cfg.SecretsReader = itokensjwt.ProvideTestSecretsReader(cfg.SecretsReader)
+	}
 
 	emailMessagesChan := make(chan smtptest.Message, 1) // must be buffered
 	cfg.ActualizerStateOpts = append(cfg.ActualizerStateOpts, state.WithEmailMessagesChan(emailMessagesChan))
