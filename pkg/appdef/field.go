@@ -9,6 +9,7 @@ package appdef
 import (
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 )
 
@@ -339,3 +340,42 @@ func (f *nullFields) Fields() []IField               { return []IField{} }
 func (f *nullFields) RefField(name string) IRefField { return nil }
 func (f *nullFields) RefFields() []IRefField         { return []IRefField{} }
 func (f *nullFields) UserFieldCount() int            { return 0 }
+
+func (k VerificationKind) MarshalJSON() ([]byte, error) {
+	var s string
+	if k < VerificationKind_FakeLast {
+		s = strconv.Quote(k.String())
+	} else {
+		const base = 10
+		s = strconv.FormatUint(uint64(k), base)
+	}
+	return []byte(s), nil
+}
+
+// Renders an VerificationKind in human-readable form, without "VerificationKind_" prefix,
+// suitable for debugging or error messages
+func (k VerificationKind) TrimString() string {
+	const pref = "VerificationKind_"
+	return strings.TrimPrefix(k.String(), pref)
+}
+
+func (k *VerificationKind) UnmarshalJSON(data []byte) (err error) {
+	text := string(data)
+	if t, err := strconv.Unquote(text); err == nil {
+		text = t
+		for v := VerificationKind(0); v < VerificationKind_FakeLast; v++ {
+			if v.String() == text {
+				*k = v
+				return nil
+			}
+		}
+	}
+
+	var i uint64
+	const base, wordBits = 10, 16
+	i, err = strconv.ParseUint(text, base, wordBits)
+	if err == nil {
+		*k = VerificationKind(i)
+	}
+	return err
+}

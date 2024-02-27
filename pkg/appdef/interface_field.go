@@ -5,10 +5,18 @@
 
 package appdef
 
-// Field Verification kind.
-//
-// Ref. verification-king.go for constants and methods
+// Field Verification kind
 type VerificationKind uint8
+
+//go:generate stringer -type=VerificationKind -output=stringer_verificationkind.go
+
+const (
+	VerificationKind_EMail VerificationKind = iota
+	VerificationKind_Phone
+	VerificationKind_FakeLast
+)
+
+var VerificationKind_Any = []VerificationKind{VerificationKind_EMail, VerificationKind_Phone}
 
 // Final types with fields are:
 //	- TypeKind_GDoc and TypeKind_GRecord,

@@ -7,6 +7,8 @@ package appdef
 
 import (
 	"fmt"
+	"strconv"
+	"strings"
 )
 
 // # Implements:
@@ -60,4 +62,22 @@ func (ex *extension) SetName(name string) IExtensionBuilder {
 func (ex extension) String() string {
 	// BuiltIn-function «test.func»
 	return fmt.Sprintf("%s-%v", ex.Engine().TrimString(), ex.typ.String())
+}
+
+func (k ExtensionEngineKind) MarshalText() ([]byte, error) {
+	var s string
+	if k < ExtensionEngineKind_Count {
+		s = k.String()
+	} else {
+		const base = 10
+		s = strconv.FormatUint(uint64(k), base)
+	}
+	return []byte(s), nil
+}
+
+// Renders an ExtensionEngineKind in human-readable form, without "ExtensionEngineKind_" prefix,
+// suitable for debugging or error messages
+func (k ExtensionEngineKind) TrimString() string {
+	const pref = "ExtensionEngineKind_"
+	return strings.TrimPrefix(k.String(), pref)
 }

@@ -8,6 +8,7 @@ package appdef
 import (
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 )
 
@@ -207,4 +208,44 @@ func (ss storages) enum(cb func(storage QName, names QNames)) {
 	for _, n := range ord {
 		cb(n, ss[n])
 	}
+}
+
+func (i ProjectorEventKind) MarshalText() ([]byte, error) {
+	var s string
+	if (i > 0) && (i < ProjectorEventKind_Count) {
+		s = i.String()
+	} else {
+		const base = 10
+		s = strconv.FormatUint(uint64(i), base)
+	}
+	return []byte(s), nil
+}
+
+// Renders an ProjectorEventKind in human-readable form, without `ProjectorEventKind_` prefix,
+// suitable for debugging or error messages
+func (i ProjectorEventKind) TrimString() string {
+	const pref = "ProjectorEventKind_"
+	return strings.TrimPrefix(i.String(), pref)
+}
+
+// Returns is event kind compatible with type kind.
+//
+// # Compatibles:
+//
+//   - Any document or record can be inserted.
+//   - Any document or record, except ODoc and ORecord, can be updated, activated or deactivated.
+//   - Only command can be executed.
+//   - Only object or ODoc can be parameter for command execute with.
+func (i ProjectorEventKind) typeCompatible(kind TypeKind) bool {
+	switch i {
+	case ProjectorEventKind_Insert, ProjectorEventKind_Update, ProjectorEventKind_Activate, ProjectorEventKind_Deactivate:
+		return kind == TypeKind_GDoc || kind == TypeKind_GRecord ||
+			kind == TypeKind_CDoc || kind == TypeKind_CRecord ||
+			kind == TypeKind_WDoc || kind == TypeKind_WRecord
+	case ProjectorEventKind_Execute:
+		return kind == TypeKind_Command
+	case ProjectorEventKind_ExecuteWithParam:
+		return kind == TypeKind_Object || kind == TypeKind_ODoc
+	}
+	return false
 }

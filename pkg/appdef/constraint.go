@@ -11,6 +11,8 @@ import (
 	"math"
 	"regexp"
 	"slices"
+	"strconv"
+	"strings"
 )
 
 // Return new minimum length constraint for string or bytes data types.
@@ -225,4 +227,22 @@ func (c dataConstraint) String() (s string) {
 		s = s[:maxLen-1] + ellipsis
 	}
 	return s
+}
+
+func (k ConstraintKind) MarshalText() ([]byte, error) {
+	var s string
+	if k < ConstraintKind_Count {
+		s = k.String()
+	} else {
+		const base = 10
+		s = strconv.FormatUint(uint64(k), base)
+	}
+	return []byte(s), nil
+}
+
+// Renders an DataConstraintKind in human-readable form, without "DataConstraintKind_" prefix,
+// suitable for debugging or error messages
+func (k ConstraintKind) TrimString() string {
+	const pref = "ConstraintKind_"
+	return strings.TrimPrefix(k.String(), pref)
 }

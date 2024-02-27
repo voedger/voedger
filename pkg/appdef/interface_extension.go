@@ -10,6 +10,16 @@ package appdef
 // Ref. to extension-engine-kind.go for constants and methods
 type ExtensionEngineKind uint8
 
+//go:generate stringer -type=ExtensionEngineKind -output=stringer_extensionenginekind.go
+
+const (
+	ExtensionEngineKind_null ExtensionEngineKind = iota
+	ExtensionEngineKind_BuiltIn
+	ExtensionEngineKind_WASM
+
+	ExtensionEngineKind_Count
+)
+
 // Entry point is a type that can be executed.
 //
 // Ref. to extension.go for implementation

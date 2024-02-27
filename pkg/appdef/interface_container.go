@@ -10,6 +10,11 @@ package appdef
 // Ref. occurs.go for constants and methods
 type Occurs uint16
 
+const (
+	Occurs_Unbounded    = Occurs(0xffff)
+	Occurs_UnboundedStr = "unbounded"
+)
+
 // Final structures with containers are:
 //	- TypeKind_GDoc and TypeKind_GRecord,
 //	- TypeKind_CDoc and TypeKind_CRecord,

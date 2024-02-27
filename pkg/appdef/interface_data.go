@@ -10,6 +10,31 @@ package appdef
 // Ref. data-kind.go for constants and methods
 type DataKind uint8
 
+//go:generate stringer -type=DataKind -output=stringer_datakind.go
+
+const (
+	// null - no-value type. Returned when the requested type does not exist
+	DataKind_null DataKind = iota
+
+	DataKind_int32
+	DataKind_int64
+	DataKind_float32
+	DataKind_float64
+	DataKind_bytes
+	DataKind_string
+	DataKind_QName
+	DataKind_bool
+
+	DataKind_RecordID
+
+	// Complex types
+
+	DataKind_Record
+	DataKind_Event
+
+	DataKind_FakeLast
+)
+
 // Data type interface.
 //
 // Describe simple types, like string, number, date, etc.
@@ -47,6 +72,26 @@ type IDataBuilder interface {
 //
 // Ref. data-constraint-kind.go for constants and methods.
 type ConstraintKind uint8
+
+//go:generate stringer -type=ConstraintKind -output=stringer_constraintkind.go
+
+const (
+	// null - no-value type. Returned when the requested kind does not exist
+	ConstraintKind_null ConstraintKind = iota
+
+	ConstraintKind_MinLen
+	ConstraintKind_MaxLen
+	ConstraintKind_Pattern
+
+	ConstraintKind_MinIncl
+	ConstraintKind_MinExcl
+	ConstraintKind_MaxIncl
+	ConstraintKind_MaxExcl
+
+	ConstraintKind_Enum
+
+	ConstraintKind_Count
+)
 
 // Data constraint interface.
 //

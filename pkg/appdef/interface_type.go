@@ -1,17 +1,26 @@
 /*
  * Copyright (c) 2021-present Sigma-Soft, Ltd.
  * @author: Nikolay Nikitin
- * @author Maxim Geraskin
  */
 
 package appdef
 
-import (
-	"strconv"
-	"strings"
-)
+// # QName
+//
+// Qualified name
+//
+// <pkg>.<entity>
+//
+// Ref to qname.go for constants and methods
+type QName struct {
+	pkg    string
+	entity string
+}
 
-//go:generate stringer -type=TypeKind -output=type-kind_string.go
+// Types kinds enumeration
+type TypeKind uint8
+
+//go:generate stringer -type=TypeKind -output=stringer_typekind.go
 
 const (
 	TypeKind_null TypeKind = iota
@@ -64,36 +73,46 @@ const (
 	TypeKind_FakeLast
 )
 
-// Is data kind allowed.
-func (k TypeKind) DataKindAvailable(d DataKind) bool {
-	return typeKindProps[k].fieldKinds[d]
+// # Type
+//
+// Type describes the entity, such as document, record or view.
+//
+// Ref to type.go for implementation
+type IType interface {
+	IComment
+
+	// Parent cache
+	App() IAppDef
+
+	// Type qualified name.
+	QName() QName
+
+	// Type kind
+	Kind() TypeKind
+
+	// Returns is type from system package.
+	IsSystem() bool
 }
 
-// Is specified system field exists and required.
-func (k TypeKind) HasSystemField(f string) (exists, required bool) {
-	required, exists = typeKindProps[k].systemFields[f]
-	return exists, required
+// Interface describes the entity with types.
+type IWithTypes interface {
+	// Returns type by name.
+	//
+	// If not found then empty type with TypeKind_null is returned
+	Type(name QName) IType
+
+	// Returns type by name.
+	//
+	// Returns nil if type not found.
+	TypeByName(name QName) IType
+
+	// Enumerates all internal types.
+	//
+	// Types are enumerated in alphabetical order of QNames.
+	Types(func(IType))
 }
 
-// Is specified type kind may be used in child containers.
-func (k TypeKind) ContainerKindAvailable(s TypeKind) bool {
-	return typeKindProps[k].containerKinds[s]
-}
-
-func (k TypeKind) MarshalText() ([]byte, error) {
-	var s string
-	if k < TypeKind_FakeLast {
-		s = k.String()
-	} else {
-		const base = 10
-		s = strconv.FormatUint(uint64(k), base)
-	}
-	return []byte(s), nil
-}
-
-// Renders an TypeKind in human-readable form, without `TypeKind_` prefix,
-// suitable for debugging or error messages
-func (k TypeKind) TrimString() string {
-	const pref = "TypeKind_"
-	return strings.TrimPrefix(k.String(), pref)
+type ITypeBuilder interface {
+	IType
+	ICommentBuilder
 }

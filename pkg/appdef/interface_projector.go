@@ -59,6 +59,27 @@ type IProjectorEvent interface {
 // Ref. to projector-event-kind.go for constants and methods
 type ProjectorEventKind uint8
 
+//go:generate stringer -type=ProjectorEventKind -output=stringer_projectoreventkind.go
+
+const (
+	ProjectorEventKind_Insert ProjectorEventKind = iota + 1
+	ProjectorEventKind_Update
+	ProjectorEventKind_Activate
+	ProjectorEventKind_Deactivate
+	ProjectorEventKind_Execute
+	ProjectorEventKind_ExecuteWithParam
+
+	ProjectorEventKind_Count
+)
+
+// ProjectorEventKind_AnyChanges describes events for record any change.
+var ProjectorEventKind_AnyChanges = []ProjectorEventKind{
+	ProjectorEventKind_Insert,
+	ProjectorEventKind_Update,
+	ProjectorEventKind_Activate,
+	ProjectorEventKind_Deactivate,
+}
+
 type IProjectorBuilder interface {
 	IProjector
 	IExtensionBuilder
