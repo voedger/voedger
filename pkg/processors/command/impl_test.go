@@ -76,7 +76,7 @@ func TestBasicUsage(t *testing.T) {
 				require.Equal(testCDoc.String(), cuds[0].fields[appdef.SystemField_QName])
 				close(cudsCheck)
 			}
-			require.Equal(istructs.WSID(1), args.PrepareArgs.Workspace)
+			require.Equal(istructs.WSID(1), args.PrepareArgs.WSID)
 			require.NotNil(args.State)
 
 			// просто проверим, что мы получили то, что передал клиент

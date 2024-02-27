@@ -544,11 +544,6 @@ func (cmdProc *cmdProc) validateCUDsQNames(ctx context.Context, work interface{}
 		return nil
 	}
 	return iterate.ForEachError(cmd.rawEvent.CUDs, func(cud istructs.ICUDRow) error {
-		appDefCUDTypeKind := cmd.AppDef().Type(cud.QName()).Kind()
-		if appDefCUDTypeKind == appdef.TypeKind_CRecord || appDefCUDTypeKind == appdef.TypeKind_WRecord || appDefCUDTypeKind == appdef.TypeKind_GRecord {
-			// skip containers because parser does not add it to workspace
-			return nil
-		}
 		if cmd.iWorkspace.Type(cud.QName()) == appdef.NullType {
 			return coreutils.NewHTTPErrorf(http.StatusBadRequest, fmt.Errorf("doc %s mentioned in resulting CUDs does not exist in the workspace %s",
 				cud.QName(), cmd.wsDesc.AsQName(authnz.Field_WSKind)))
