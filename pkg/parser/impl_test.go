@@ -245,7 +245,7 @@ func Test_BasicUsage(t *testing.T) {
 	require.Equal(1, intentsCount)
 
 	localNames := builder.PackageLocalNames()
-	require.Equal(3, len(localNames))
+	require.Len(localNames, 3)
 	require.Contains(localNames, "main")
 	require.Contains(localNames, "air")
 	require.Contains(localNames, "untill")
