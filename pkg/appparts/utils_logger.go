@@ -6,7 +6,6 @@
 package appparts
 
 import (
-	"fmt"
 	"sync"
 	"time"
 
@@ -20,7 +19,7 @@ type intervalLogger struct {
 }
 
 func (l *intervalLogger) error(err error) {
-	e := fmt.Sprint(err)
+	e := err.Error()
 
 	l.mx.Lock()
 	if t, ok := l.errs[e]; ok {
