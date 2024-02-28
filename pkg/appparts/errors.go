@@ -5,13 +5,24 @@
 
 package appparts
 
-import "errors"
+import (
+	"errors"
+	"fmt"
 
-var ErrNotFound = errors.New("not found")
+	"github.com/voedger/voedger/pkg/cluster"
+)
 
-const (
-	ErrAppNotFound       = "application %v not found: %w"
+var (
+	ErrNotFound          = errors.New("not found")
+	errAppNotFound       = "application %v not found: %w"
 	errPartitionNotFound = "application %v partition %v not found: %w"
 )
 
-var ErrNotAvailableEngines = errors.New("no available engines")
+var (
+	ErrNotAvailableEngines                                    = errors.New("no available engines")
+	errNotAvailableEngines [cluster.ProcessorKind_Count]error = [cluster.ProcessorKind_Count]error{
+		fmt.Errorf("%w %s", ErrNotAvailableEngines, cluster.ProcessorKind_Command.TrimString()),
+		fmt.Errorf("%w %s", ErrNotAvailableEngines, cluster.ProcessorKind_Query.TrimString()),
+		fmt.Errorf("%w %s", ErrNotAvailableEngines, cluster.ProcessorKind_Actualizer.TrimString()),
+	}
+)
