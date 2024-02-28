@@ -52,9 +52,9 @@ func TestDynoBufSchemes(t *testing.T) {
 			AddField("recIDField", appdef.DataKind_RecordID, false)
 
 		view := appDefBuilder.AddView(appdef.NewQName("test", "view"))
-		view.KeyBuilder().PartKeyBuilder().AddField("pk1", appdef.DataKind_int64)
-		view.KeyBuilder().ClustColsBuilder().AddField("cc1", appdef.DataKind_string, appdef.MaxLen(100))
-		view.ValueBuilder().AddRefField("val1", true)
+		view.Key().PartKey().AddField("pk1", appdef.DataKind_int64)
+		view.Key().ClustCols().AddField("cc1", appdef.DataKind_string, appdef.MaxLen(100))
+		view.Value().AddRefField("val1", true)
 
 		sch, err := appDefBuilder.Build()
 		require.NoError(err)

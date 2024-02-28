@@ -3,7 +3,13 @@
 -- Copyright (c) 2020-present unTill Pro, Ltd.
 
 -- note: this schema is for tests only. Voedger sys package uses copy of this schema
-APPLICATION TEST();
+IMPORT SCHEMA 'pkg1' AS pkg2;
+IMPORT SCHEMA 'pkg2' AS pkg1;
+
+APPLICATION TEST(
+	USE pkg1;
+	USE pkg2;
+);
 
 ABSTRACT TABLE CRecord();
 ABSTRACT TABLE WRecord();
@@ -30,6 +36,8 @@ WORKSPACE SomeWorkspace(
         WSKindInitializationData    varchar(1024),
         ProfileCluster              int64, -- ValueChanged: int32 in old version, int64 in new version
         ProfileToken                int64, -- ValueChanged: int32 in old version, int64 in new version
+        myfield1 ref(pkg1.MyTable1),
+        myfield2 ref(pkg2.MyTable1),
         NewField                    varchar -- appending field is allowed
     );
     TABLE OneMoreTable INHERITS CDoc(

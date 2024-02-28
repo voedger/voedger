@@ -17,6 +17,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appdefcompat"
+	"github.com/voedger/voedger/pkg/compile"
 	"github.com/voedger/voedger/pkg/parser"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
@@ -36,7 +37,7 @@ func newCompatCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			compileRes, err := compile(params.WorkingDir)
+			compileRes, err := compile.Compile(params.Dir)
 			if err != nil {
 				return err
 			}
@@ -48,8 +49,8 @@ func newCompatCmd() *cobra.Command {
 	return cmd
 }
 
-// compat checks compatibility of schemas in working dir with baseline schemas in target dir
-func compat(compileRes *compileResult, params vpmParams, ignores [][]string) error {
+// compat checks compatibility of schemas in dir versus baseline schemas in target dir
+func compat(compileRes *compile.Result, params vpmParams, ignores [][]string) error {
 	baselineDir := params.TargetDir
 	var errs []error
 	baselineAppDef, err := appDefFromBaselineDir(baselineDir)
@@ -57,13 +58,8 @@ func compat(compileRes *compileResult, params vpmParams, ignores [][]string) err
 		errs = append(errs, coreutils.SplitErrors(err)...)
 	}
 
-	compiledAppDef, err := appDefFromCompiled(compileRes)
-	if err != nil {
-		errs = append(errs, coreutils.SplitErrors(err)...)
-	}
-
-	if baselineAppDef != nil && compiledAppDef != nil {
-		compatErrs := appdefcompat.CheckBackwardCompatibility(baselineAppDef, compiledAppDef)
+	if baselineAppDef != nil && compileRes.AppDef != nil {
+		compatErrs := appdefcompat.CheckBackwardCompatibility(baselineAppDef, compileRes.AppDef)
 		compatErrs = appdefcompat.IgnoreCompatibilityErrors(compatErrs, ignores)
 		errObjs := make([]error, len(compatErrs.Errors))
 		for i, err := range compatErrs.Errors {
@@ -89,22 +85,6 @@ func readIgnoreFile(ignoreFilePath string) ([][]string, error) {
 		return splitIgnorePaths(ignoreInfoObj.Ignore), nil
 	}
 	return nil, nil
-}
-
-// appDefFromCompiled builds app def from compiled result
-func appDefFromCompiled(compileRes *compileResult) (appdef.IAppDef, error) {
-	var errs []error
-
-	builder := appdef.New()
-	if err := parser.BuildAppDefs(compileRes.appSchemaAST, builder); err != nil {
-		errs = append(errs, err)
-	}
-
-	appDef, err := builder.Build()
-	if err != nil {
-		errs = append(errs, err)
-	}
-	return appDef, errors.Join(errs...)
 }
 
 // appDefFromBaselineDir builds app def from baseline dir
@@ -180,16 +160,18 @@ func appDefFromBaselineDir(baselineDir string) (appdef.IAppDef, error) {
 		errs = append(errs, err)
 	}
 	// build app def from app AST
-	builder := appdef.New()
-	if err := parser.BuildAppDefs(appAST, builder); err != nil {
-		errs = append(errs, err)
+	if appAST != nil {
+		builder := appdef.New()
+		if err := parser.BuildAppDefs(appAST, builder); err != nil {
+			errs = append(errs, err)
+		}
+		appDef, err := builder.Build()
+		if err != nil {
+			errs = append(errs, err)
+		}
+		return appDef, errors.Join(errs...)
 	}
-	appDef, err := builder.Build()
-	if err != nil {
-		errs = append(errs, err)
-	}
-
-	return appDef, errors.Join(errs...)
+	return nil, errors.Join(errs...)
 }
 
 // splitIgnorePaths splits list of ignore paths into list of path parts

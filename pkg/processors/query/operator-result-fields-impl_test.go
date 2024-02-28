@@ -19,20 +19,35 @@ func TestResultFieldsOperator_DoSync(t *testing.T) {
 	t.Run("Should set result fields", func(t *testing.T) {
 		require := require.New(t)
 
-		appDef := appdef.New()
+		var (
+			appDef  appdef.IAppDef
+			rootObj appdef.IObject
+		)
 
-		addObject := func(n appdef.QName) appdef.IType {
-			o := appDef.AddObject(n)
-			o.AddField("name", appdef.DataKind_string, false)
-			return o
-		}
-		addObject(appdef.NewQName("_", "root"))
-		addObject(appdef.NewQName("f", "first_children_1"))
-		addObject(appdef.NewQName("f", "deep_children_1"))
-		addObject(appdef.NewQName("f", "very_deep_children_1"))
-		addObject(appdef.NewQName("s", "first_children_2"))
-		addObject(appdef.NewQName("s", "deep_children_1"))
-		addObject(appdef.NewQName("s", "very_deep_children_1"))
+		t.Run("Should set result fields", func(t *testing.T) {
+			adb := appdef.New()
+
+			addObject := func(n appdef.QName) {
+				o := adb.AddObject(n)
+				o.AddField("name", appdef.DataKind_string, false)
+			}
+			addObject(appdef.NewQName("_", "root"))
+			addObject(appdef.NewQName("f", "first_children_1"))
+			addObject(appdef.NewQName("f", "deep_children_1"))
+			addObject(appdef.NewQName("f", "very_deep_children_1"))
+			addObject(appdef.NewQName("s", "first_children_2"))
+			addObject(appdef.NewQName("s", "deep_children_1"))
+			addObject(appdef.NewQName("s", "very_deep_children_1"))
+
+			objName := appdef.NewQName("test", "root")
+			addObject(objName)
+
+			app, err := adb.Build()
+			require.NoError(err)
+
+			appDef = app
+			rootObj = app.Object(objName)
+		})
 
 		commonFields := []IResultField{resultField{field: "name"}}
 
@@ -181,7 +196,7 @@ func TestResultFieldsOperator_DoSync(t *testing.T) {
 
 		operator := &ResultFieldsOperator{
 			elements:   elements,
-			rootFields: newFieldsKinds(addObject(appdef.NewQName("test", "root"))),
+			rootFields: newFieldsKinds(rootObj),
 			fieldsDefs: newFieldsDefs(appDef),
 			metrics:    &testMetrics{},
 		}

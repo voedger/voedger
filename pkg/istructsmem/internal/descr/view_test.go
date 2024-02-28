@@ -28,14 +28,14 @@ func Test_View(t *testing.T) {
 
 		view := appDef.AddView(viewName)
 		view.SetComment("view comment")
-		view.KeyBuilder().PartKeyBuilder().
+		view.Key().PartKey().
 			AddField("pk_int", appdef.DataKind_int64).
 			AddRefField("pk_ref", docName)
-		view.KeyBuilder().ClustColsBuilder().
+		view.Key().ClustCols().
 			AddField("cc_int", appdef.DataKind_int64).
 			AddRefField("cc_ref", docName).
 			AddField("cc_name", appdef.DataKind_string, appdef.MaxLen(100))
-		view.ValueBuilder().
+		view.Value().
 			AddField("vv_int", appdef.DataKind_int64, true).
 			AddRefField("vv_ref", true, docName).
 			AddField("vv_code", appdef.DataKind_string, false, appdef.MaxLen(10), appdef.Pattern(`^\w+$`)).

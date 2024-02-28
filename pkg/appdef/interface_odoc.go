@@ -14,7 +14,6 @@ type IODoc interface {
 }
 
 type IODocBuilder interface {
-	IODoc
 	IDocBuilder
 }
 
@@ -27,6 +26,5 @@ type IORecord interface {
 }
 
 type IORecordBuilder interface {
-	IORecord
 	IContainedRecordBuilder
 }

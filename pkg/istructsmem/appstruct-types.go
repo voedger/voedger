@@ -152,7 +152,7 @@ func (cfg *AppConfigType) prepare(buckets irates.IBuckets, appStorage istorage.I
 }
 
 func (cfg *AppConfigType) validateResources() error {
-	err :=  iterate.ForEachError(cfg.AppDef.Types, func(tp appdef.IType) error {
+	err := iterate.ForEachError(cfg.AppDef.Types, func(tp appdef.IType) error {
 		switch tp.Kind() {
 		case appdef.TypeKind_Query, appdef.TypeKind_Command:
 			r := cfg.Resources.QueryResource(tp.QName())
@@ -194,7 +194,7 @@ func (cfg *AppConfigType) validateResources() error {
 	if err != nil {
 		return err
 	}
-	err =  iterate.ForEachError(cfg.Resources.Resources, func(qName appdef.QName) error {
+	err = iterate.ForEachError(cfg.Resources.Resources, func(qName appdef.QName) error {
 		if cfg.AppDef.Type(qName).Kind() == appdef.TypeKind_null {
 			return fmt.Errorf("exec of func %s is defined but the func is not defined in SQL", qName)
 		}

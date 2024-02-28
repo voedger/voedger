@@ -209,7 +209,7 @@ func TestRecoveryOnSyncProjectorError(t *testing.T) {
 				},
 			}
 		})
-		appDef.AddProjector(failingProjQName).AddEvent(cudQName, appdef.ProjectorEventKind_Execute).SetSync(true)
+		appDef.AddProjector(failingProjQName).SetSync(true).Events().Add(cudQName, appdef.ProjectorEventKind_Execute)
 		cfg.Resources.Add(istructsmem.NewCommandFunction(cudQName, istructsmem.NullCommandExec))
 	})
 	defer tearDown(app)
@@ -404,7 +404,7 @@ func Test400BadRequestOnCUDErrors(t *testing.T) {
 	}
 }
 
-func Test400BadRequests(t *testing.T) {
+func TestErrors(t *testing.T) {
 	require := require.New(t)
 
 	testCmdQNameParams := appdef.NewQName(appdef.SysPackage, "TestParams")
@@ -435,17 +435,18 @@ func Test400BadRequests(t *testing.T) {
 		desc string
 		ibus.Request
 		expectedMessageLike string
+		expectedStatusCode  int
 	}{
-		{"unknown app", ibus.Request{AppQName: "untill/unknown"}, "application untill/unknown not found"}, // TODO: simplify
-		{"bad request body", ibus.Request{Body: []byte("{wrong")}, "failed to unmarshal request body: invalid character 'w' looking for beginning of object key string"},
-		{"unknown func", ibus.Request{Resource: "c.sys.Unknown"}, "unknown function"},
-		{"args: field of wrong type provided", ibus.Request{Body: []byte(`{"args":{"Text":42}}`)}, "wrong field type"},
-		{"args: not an object", ibus.Request{Body: []byte(`{"args":42}`)}, `"args" field must be an object`},
-		{"args: missing at all with a required field", ibus.Request{Body: []byte(`{}`)}, ""},
-		{"unloggedArgs: not an object", ibus.Request{Body: []byte(`{"unloggedArgs":42,"args":{"Text":"txt"}}`)}, `"unloggedArgs" field must be an object`},
-		{"unloggedArgs: field of wrong type provided", ibus.Request{Body: []byte(`{"unloggedArgs":{"Password":42},"args":{"Text":"txt"}}`)}, "wrong field type"},
-		{"unloggedArgs: missing required field of unlogged args, no unlogged args at all", ibus.Request{Body: []byte(`{"args":{"Text":"txt"}}`)}, ""},
-		{"cuds: not an object", ibus.Request{Body: []byte(`{"args":{"Text":"hello"},"unloggedArgs":{"Password":"123"},"cuds":42}`)}, `field 'cuds' must be an array of objects`},
+		{"unknown app", ibus.Request{AppQName: "untill/unknown"}, "application untill/unknown not found", http.StatusServiceUnavailable},
+		{"bad request body", ibus.Request{Body: []byte("{wrong")}, "failed to unmarshal request body: invalid character 'w' looking for beginning of object key string", http.StatusBadRequest},
+		{"unknown func", ibus.Request{Resource: "c.sys.Unknown"}, "unknown function", http.StatusBadRequest},
+		{"args: field of wrong type provided", ibus.Request{Body: []byte(`{"args":{"Text":42}}`)}, "wrong field type", http.StatusBadRequest},
+		{"args: not an object", ibus.Request{Body: []byte(`{"args":42}`)}, `"args" field must be an object`, http.StatusBadRequest},
+		{"args: missing at all with a required field", ibus.Request{Body: []byte(`{}`)}, "", http.StatusBadRequest},
+		{"unloggedArgs: not an object", ibus.Request{Body: []byte(`{"unloggedArgs":42,"args":{"Text":"txt"}}`)}, `"unloggedArgs" field must be an object`, http.StatusBadRequest},
+		{"unloggedArgs: field of wrong type provided", ibus.Request{Body: []byte(`{"unloggedArgs":{"Password":42},"args":{"Text":"txt"}}`)}, "wrong field type", http.StatusBadRequest},
+		{"unloggedArgs: missing required field of unlogged args, no unlogged args at all", ibus.Request{Body: []byte(`{"args":{"Text":"txt"}}`)}, "", http.StatusBadRequest},
+		{"cuds: not an object", ibus.Request{Body: []byte(`{"args":{"Text":"hello"},"unloggedArgs":{"Password":"123"},"cuds":42}`)}, `field 'cuds' must be an array of objects`, http.StatusBadRequest},
 	}
 
 	for _, c := range cases {
@@ -464,13 +465,13 @@ func Test400BadRequests(t *testing.T) {
 				req.Resource = c.Resource
 			}
 			resp, sections, secErr, err := app.bus.SendRequest2(app.ctx, req, coreutils.GetTestBustTimeout())
-			require.NoError(err)
+			require.NoError(err, c.desc)
 			require.Nil(secErr)
 			require.Nil(sections)
-			require.Equal(http.StatusBadRequest, resp.StatusCode)
-			require.Equal(coreutils.ApplicationJSON, resp.ContentType)
-			require.Contains(string(resp.Data), jsonEscape(c.expectedMessageLike))
-			require.Contains(string(resp.Data), `"HTTPStatus":400`, c.desc)
+			require.Equal(c.expectedStatusCode, resp.StatusCode, c.desc)
+			require.Equal(coreutils.ApplicationJSON, resp.ContentType, c.desc)
+			require.Contains(string(resp.Data), jsonEscape(c.expectedMessageLike), c.desc)
+			require.Contains(string(resp.Data), fmt.Sprintf(`"HTTPStatus":%d`, c.expectedStatusCode), c.desc)
 		})
 	}
 }

@@ -20,6 +20,7 @@ var constrains = []NodeConstraint{
 	{NodeNameClustColsFields, ConstraintNonModifiable},
 	{NodeNameCommandArgs, ConstraintNonModifiable},
 	{NodeNameCommandResult, ConstraintNonModifiable},
+	{NodeNamePackages, ConstraintAppendOnly | ConstraintOrderChangeOnly},
 }
 
 func checkBackwardCompatibility(oldAppDef, newAppDef appdef.IAppDef) (cerrs *CompatibilityErrors) {
@@ -135,6 +136,7 @@ func buildQNameNode(parentNode *CompatibilityTreeNode, item appdef.IType, name s
 func buildAppDefNode(parentNode *CompatibilityTreeNode, item appdef.IAppDef) (node *CompatibilityTreeNode) {
 	node = newNode(parentNode, NodeNameAppDef, nil)
 	node.Props = append(node.Props, buildTypesNode(node, item, false))
+	node.Props = append(node.Props, buildPackagesNode(node, item))
 	return
 }
 
@@ -221,6 +223,14 @@ func buildTypesNode(parentNode *CompatibilityTreeNode, item appdef.IWithTypes, q
 	return
 }
 
+func buildPackagesNode(parentNode *CompatibilityTreeNode, item appdef.IAppDef) (node *CompatibilityTreeNode) {
+	node = newNode(parentNode, NodeNamePackages, nil)
+	item.Packages(func(localName, fullPath string) {
+		node.Props = append(node.Props, newNode(node, fullPath, localName))
+	})
+	return
+}
+
 func buildDescriptorNode(parentNode *CompatibilityTreeNode, item appdef.QName) (node *CompatibilityTreeNode) {
 	node = newNode(parentNode, NodeNameDescriptor, item.String())
 	return
@@ -291,16 +301,18 @@ func checkConstraint(oldTreePath []string, m *matchNodesResult, constraint Const
 		}
 	}
 
-	if len(m.ReorderedNodeNames) > 0 && len(m.DeletedNodeNames) == 0 {
-		if constraint == ConstraintNonModifiable || constraint&ConstraintAppendOnly > 0 {
-			errorType := ErrorTypeOrderChanged
-			if constraint == ConstraintNonModifiable {
-				errorType = ErrorTypeNodeModified
-			}
-			for _, reorderedNodeName := range m.ReorderedNodeNames {
-				newOldPath := make([]string, len(oldTreePath)+1)
-				copy(newOldPath, append(oldTreePath, reorderedNodeName))
-				cerrs = append(cerrs, newCompatibilityError(constraint, newOldPath, errorType))
+	if constraint&ConstraintOrderChangeOnly == 0 {
+		if len(m.ReorderedNodeNames) > 0 && len(m.DeletedNodeNames) == 0 {
+			if constraint == ConstraintNonModifiable || constraint&ConstraintAppendOnly > 0 {
+				errorType := ErrorTypeOrderChanged
+				if constraint == ConstraintNonModifiable {
+					errorType = ErrorTypeNodeModified
+				}
+				for _, reorderedNodeName := range m.ReorderedNodeNames {
+					newOldPath := make([]string, len(oldTreePath)+1)
+					copy(newOldPath, append(oldTreePath, reorderedNodeName))
+					cerrs = append(cerrs, newCompatibilityError(constraint, newOldPath, errorType))
+				}
 			}
 		}
 	}

@@ -18,7 +18,7 @@ import (
 func provideStateFunc(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder) {
 	cfg.Resources.Add(istructsmem.NewQueryFunction(
 		qNameQueryState,
-		stateFuncExec(appDefBuilder)))
+		stateFuncExec(appDefBuilder.AppDef())))
 }
 
 func stateFuncExec(appDef appdef.IAppDef) istructsmem.ExecQueryClosure {

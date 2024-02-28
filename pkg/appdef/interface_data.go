@@ -56,7 +56,6 @@ type IData interface {
 
 type IDataBuilder interface {
 	ITypeBuilder
-	IData
 
 	// Add data constraint.
 	//

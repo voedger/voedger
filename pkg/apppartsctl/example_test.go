@@ -25,17 +25,21 @@ import (
 )
 
 func Example() {
-	appDefBuilder := func(verInfo ...string) appdef.IAppDefBuilder {
+	buildAppDef := func(verInfo ...string) (appdef.IAppDefBuilder, appdef.IAppDef) {
 		adb := appdef.New()
 		adb.AddCDoc(appdef.NewQName("ver", "info")).SetComment(verInfo...)
-		return adb
+		app, err := adb.Build()
+		if err != nil {
+			panic(err)
+		}
+		return adb, app
 	}
 
 	appConfigs := istructsmem.AppConfigsType{}
-	appDef_1_v1 := appDefBuilder("app-1 ver.1")
-	appDef_2_v1 := appDefBuilder("app-2 ver.1")
-	appConfigs.AddConfig(istructs.AppQName_test1_app1, appDef_1_v1)
-	appConfigs.AddConfig(istructs.AppQName_test1_app2, appDef_2_v1)
+	adb_1_v1, app_1_v1 := buildAppDef("app-1 ver.1")
+	adb_2_v1, app_2_v1 := buildAppDef("app-2 ver.1")
+	appConfigs.AddConfig(istructs.AppQName_test1_app1, adb_1_v1)
+	appConfigs.AddConfig(istructs.AppQName_test1_app2, adb_2_v1)
 
 	appStructs := istructsmem.Provide(
 		appConfigs,
@@ -51,11 +55,11 @@ func Example() {
 
 	appPartsCtl, cleanupCtl, err := apppartsctl.New(appParts, []apppartsctl.BuiltInApp{
 		{Name: istructs.AppQName_test1_app1,
-			Def:            appDef_1_v1,
+			Def:            app_1_v1,
 			PartsCount:     2,
 			EnginePoolSize: [cluster.ProcessorKind_Count]int{2, 2, 2}},
 		{Name: istructs.AppQName_test1_app2,
-			Def:            appDef_2_v1,
+			Def:            app_2_v1,
 			PartsCount:     3,
 			EnginePoolSize: [cluster.ProcessorKind_Count]int{2, 2, 2}},
 	})

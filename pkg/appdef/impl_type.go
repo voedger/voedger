@@ -14,7 +14,6 @@ import (
 
 // # Implements:
 //   - IType
-//   - ITypeBuilder
 type typ struct {
 	comment
 	app  *appDef
@@ -54,9 +53,25 @@ func (t *typ) String() string {
 	return fmt.Sprintf("%s «%v»", t.Kind().TrimString(), t.QName())
 }
 
+// # Implements:
+//   - ITypeBuilder
+type typeBuilder struct {
+	commentBuilder
+	*typ
+}
+
+func makeTypeBuilder(typ *typ) typeBuilder {
+	return typeBuilder{
+		commentBuilder: makeCommentBuilder(&typ.comment),
+		typ:            typ,
+	}
+}
+
+func (t *typeBuilder) String() string { return t.typ.String() }
+
 type typeRef struct {
 	name QName
-	t    IType
+	typ  IType
 }
 
 // Returns type by reference.
@@ -69,16 +84,16 @@ func (r *typeRef) target(tt IWithTypes) IType {
 	if r.name == QNameANY {
 		return AnyType
 	}
-	if (r.t == nil) || (r.t.QName() != r.name) {
-		r.t = tt.TypeByName(r.name)
+	if (r.typ == nil) || (r.typ.QName() != r.name) {
+		r.typ = tt.TypeByName(r.name)
 	}
-	return r.t
+	return r.typ
 }
 
 // Sets reference name
 func (r *typeRef) setName(n QName) {
 	r.name = n
-	r.t = nil
+	r.typ = nil
 }
 
 // Returns is reference valid

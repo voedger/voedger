@@ -29,31 +29,34 @@ var (
 		"recordID": appdef.DataKind_RecordID,
 	}
 
-	testAppDef = func() appdef.IAppDefBuilder {
-		app := appdef.New()
+	testAppDef = func(t *testing.T) appdef.IAppDef {
+		adb := appdef.New()
 
-		obj := app.AddObject(testQName)
+		obj := adb.AddObject(testQName)
 		addFieldDefs(obj, testFieldDefs)
 
-		simpleObj := app.AddObject(testQNameSimple)
+		simpleObj := adb.AddObject(testQNameSimple)
 		simpleObj.AddField("int32", appdef.DataKind_int32, false)
 
-		view := app.AddView(testQNameView)
-		view.KeyBuilder().PartKeyBuilder().AddField("pk", appdef.DataKind_int64)
-		view.KeyBuilder().ClustColsBuilder().AddField("cc", appdef.DataKind_string)
+		view := adb.AddView(testQNameView)
+		view.Key().PartKey().AddField("pk", appdef.DataKind_int64)
+		view.Key().ClustCols().AddField("cc", appdef.DataKind_string)
 		iValueFields := map[string]appdef.DataKind{}
 		for n, k := range testFieldDefs {
 			iValueFields[n] = k
 		}
 		iValueFields["record"] = appdef.DataKind_Record
 		for n, k := range iValueFields {
-			view.ValueBuilder().AddField(n, k, false)
+			view.Value().AddField(n, k, false)
 		}
 
-		ws := app.AddWorkspace(testWS)
+		ws := adb.AddWorkspace(testWS)
 		ws.AddType(testQName)
 		ws.AddType(testQNameSimple)
 		ws.AddType(appdef.NewQName("test", "view"))
+
+		app, err := adb.Build()
+		require.NoError(t, err)
 
 		return app
 	}
@@ -114,7 +117,7 @@ func TestToMap_Basic(t *testing.T) {
 		},
 	}
 
-	appDef := testAppDef()
+	appDef := testAppDef(t)
 	ws := appDef.Workspace(testWS)
 
 	t.Run("ObjectToMap", func(t *testing.T) {
@@ -168,7 +171,7 @@ func TestToMap_Filter(t *testing.T) {
 		return false
 	})
 
-	appDef := testAppDef()
+	appDef := testAppDef(t)
 	ws := appDef.Workspace(testWS)
 
 	t.Run("ObjectToMap", func(t *testing.T) {
@@ -211,7 +214,7 @@ func TestMToMap_NonNilsOnly_Filter(t *testing.T) {
 		appdef.SystemField_QName: testQName.String(),
 	}
 
-	appDef := testAppDef()
+	appDef := testAppDef(t)
 	ws := appDef.Workspace(testWS)
 
 	t.Run("ObjectToMap", func(t *testing.T) {
@@ -243,7 +246,7 @@ func TestMToMap_NonNilsOnly_Filter(t *testing.T) {
 func TestReadValue(t *testing.T) {
 	require := require.New(t)
 
-	appDefs := testAppDef()
+	appDefs := testAppDef(t)
 	ws := appDefs.Workspace(testWS)
 
 	iValueValues := map[string]interface{}{}

@@ -14,6 +14,5 @@ type IQuery interface {
 }
 
 type IQueryBuilder interface {
-	IQuery
 	IFunctionBuilder
 }

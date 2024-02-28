@@ -23,8 +23,6 @@ func Test_AppDef_AddWorkspace(t *testing.T) {
 		ws := appDef.AddWorkspace(wsName)
 
 		t.Run("must be ok to set workspace descriptor", func(t *testing.T) {
-			require.Equal(NullQName, ws.Descriptor())
-
 			_ = appDef.AddCDoc(descName)
 			ws.SetDescriptor(descName)
 		})
@@ -33,6 +31,9 @@ func Test_AppDef_AddWorkspace(t *testing.T) {
 			_ = appDef.AddObject(objName)
 			ws.AddType(objName)
 		})
+
+		require.NotNil(ws.Workspace(), "should be ok to get workspace definition before build")
+		require.Equal(ws.Workspace().Descriptor(), descName, "should be ok to get workspace descriptor before build")
 
 		a, err := appDef.Build()
 		require.NoError(err)
@@ -102,7 +103,6 @@ func Test_AppDef_SetDescriptor(t *testing.T) {
 
 		appDef := New()
 		ws := appDef.AddWorkspace(wsName)
-		require.Equal(NullQName, ws.Descriptor())
 		_ = appDef.AddCDoc(descName)
 		ws.SetDescriptor(descName)
 
