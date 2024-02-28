@@ -10,6 +10,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -241,26 +242,36 @@ type (
 		istructs.Offset
 		istructs.IPLogEvent
 	}
+	plogBatch []plogEvent
 
 	// Should return:
 	//	- events in batch and no error, if events succussfully read
 	//	- no events (empty batch) and no error, if all events are read
 	//	- no events (empty  batch) and error, if error occurs while reading PLog.
 	// Should not return simultaneously any events (non empty batch) and error
-	readPLogBatch func(batch *[]plogEvent) error
+	readPLogBatch func(*plogBatch) error
 )
 
+var plogBatchesPool = sync.Pool{
+	New: func() interface{} {
+		b := make(plogBatch, 0, plogReadBatchSize)
+		return &b
+	},
+}
+
 func (a *asyncActualizer) readPlogByBatches(readBatch readPLogBatch) error {
-	batch := make([]plogEvent, 0, plogReadBatchSize)
+	batch := plogBatchesPool.Get().(*plogBatch)
+	defer plogBatchesPool.Put(batch)
 	for a.readCtx.ctx.Err() == nil {
-		if err := readBatch(&batch); err != nil {
+		if err := readBatch(batch); err != nil {
 			return err
 		}
-		if len(batch) == 0 {
+		if len(*batch) == 0 {
 			break
 		}
-		for i := 0; i < len(batch); i++ {
-			if err := a.handleEvent(batch[i].Offset, batch[i].IPLogEvent); err != nil {
+		for i := 0; i < len(*batch); i++ {
+			e := (*batch)[i]
+			if err := a.handleEvent(e.Offset, e.IPLogEvent); err != nil {
 				return err
 			}
 			if a.readCtx.ctx.Err() != nil {
@@ -287,7 +298,7 @@ func (a *asyncActualizer) borrowAppPart(ctx context.Context) (ap appparts.IAppPa
 }
 
 func (a *asyncActualizer) readPlogToTheEnd(ctx context.Context) error {
-	return a.readPlogByBatches(func(batch *[]plogEvent) (err error) {
+	return a.readPlogByBatches(func(batch *plogBatch) (err error) {
 		*batch = (*batch)[:0]
 
 		ap, err := a.borrowAppPart(ctx)
@@ -313,7 +324,7 @@ func (a *asyncActualizer) readPlogToTheEnd(ctx context.Context) error {
 }
 
 func (a *asyncActualizer) readPlogToOffset(ctx context.Context, tillOffset istructs.Offset) error {
-	return a.readPlogByBatches(func(batch *[]plogEvent) (err error) {
+	return a.readPlogByBatches(func(batch *plogBatch) (err error) {
 		*batch = (*batch)[:0]
 
 		ap, err := a.borrowAppPart(ctx)
