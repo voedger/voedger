@@ -32,7 +32,7 @@ import (
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-//go:embed sys.sql
+//go:embed *.sql
 var SysFS embed.FS
 
 func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, smtpCfg smtp.Cfg,
