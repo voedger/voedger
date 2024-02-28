@@ -39,6 +39,7 @@ func TestBasicUsage_DescribeSchema(t *testing.T) {
 		require.NoError(json.Unmarshal([]byte(desc), &actual))
 
 		expected := map[string]interface{}{
+			"Path": "github.com/voedger/voedger/pkg/vit/app2pkg",
 			"Structures": map[string]interface{}{
 				"app2pkg.test_ws": map[string]interface{}{
 					"Fields": []interface{}{
