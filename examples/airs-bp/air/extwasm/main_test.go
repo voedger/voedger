@@ -13,9 +13,10 @@ import (
 	exttinygo "github.com/voedger/exttinygo"
 )
 
-func Test_Pbill(t *testing.T) {
+func Test_FillPbillDates(t *testing.T) {
 
-	// // Should use test name to check appdef and prepare test context
+	// Should use test name to check appdef and prepare test context
+	// FillPbillDates
 	exttest.InitTest(t)
 
 	// Prepare first test data

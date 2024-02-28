@@ -55,6 +55,7 @@ type IFederation interface {
 type TimeFunc func() time.Time
 
 type CommandProcessorsCount int
+type QueryProcessorsCount int
 
 type PathReader struct {
 	rootPath string

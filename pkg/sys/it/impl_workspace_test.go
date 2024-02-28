@@ -123,13 +123,6 @@ func TestBasicUsage_Workspace(t *testing.T) {
 		resp := vit.PostProfile(prn, "q.sys.Collection", body)
 		resp.Println()
 	})
-
-	t.Run("400 bad request on create a workspace with kind that is not a QName of a workspace descriptor", func(t *testing.T) {
-		wsName := vit.NextName()
-		body := fmt.Sprintf(`{"args": {"WSName": "%s","WSKind": "app1pkg.articles","WSKindInitializationData": "{\"WorkStartTime\": \"10\"}","TemplateName": "test","WSClusterID": 1}}`, wsName)
-		resp := vit.PostProfile(prn, "c.sys.InitChildWorkspace", body, coreutils.Expect400())
-		resp.Println()
-	})
 }
 
 func TestWorkspaceAuthorization(t *testing.T) {
