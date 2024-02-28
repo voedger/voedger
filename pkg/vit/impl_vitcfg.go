@@ -13,10 +13,8 @@ import (
 	"github.com/voedger/voedger/pkg/apps/sys/blobberapp"
 	"github.com/voedger/voedger/pkg/apps/sys/registryapp"
 	"github.com/voedger/voedger/pkg/apps/sys/routerapp"
-	"github.com/voedger/voedger/pkg/cluster"
 	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/istructs"
-	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/sys/smtp"
 	"github.com/voedger/voedger/pkg/sys/workspace"
 	coreutils "github.com/voedger/voedger/pkg/utils"
@@ -167,11 +165,7 @@ func WithApp(appQName istructs.AppQName, updater apps.AppBuilder, appOpts ...App
 			panic("app already added")
 		}
 		app := &app{
-			name: appQName,
-			deployment: cluster.AppDeploymentDescriptor{
-				PartsCount:     DefaultTestAppPartsCount,
-				EnginePoolSize: DefaultTestAppEnginesPool,
-			},
+			name:                  appQName,
 			ws:                    map[string]WSParams{},
 			verifiedValuesIntents: map[string]verifiedValueIntent{},
 		}
@@ -181,12 +175,12 @@ func WithApp(appQName istructs.AppQName, updater apps.AppBuilder, appOpts ...App
 			appOpt(app, vpc.vvmCfg)
 		}
 		// to append tests templates to already declared templates
-		for _, wsTempalateFunc := range app.wsTemplateFuncs {
-			vpc.vvmCfg.VVMAppsBuilder.Add(appQName, func(appAPI apps.APIs, cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) (appPackages apps.AppPackages) {
-				wsTempalateFunc(ep)
-				return
-			})
-		}
+		// for _, wsTempalateFunc := range app.wsTemplateFuncs {
+		// 	vpc.vvmCfg.VVMAppsBuilder.Add(appQName, func(appAPI apps.APIs, cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) (appPackages apps.AppPackages) {
+		// 		wsTempalateFunc(ep)
+		// 		return
+		// 	})
+		// }
 	}
 }
 

@@ -42,4 +42,8 @@ var (
 		Period:                time.Hour,
 		MaxAllowedPerDuration: 4,
 	}
+	TestAppDeploymentDescriptor = cluster.AppDeploymentDescriptor{
+		PartsCount:     DefaultTestAppPartsCount,
+		EnginePoolSize: DefaultTestAppEnginesPool,
+	}
 )
