@@ -56,23 +56,9 @@ func onReadValue(key, value uint64) {
 	currentReadCallback(TKey(key), TValue(value))
 }
 
-//export hostReadValues
-func hostReadValues(keyId uint64)
-
-//export hostGetValue
-func hostGetValue(keyId uint64) (result uint64)
-
 /*
 	returns 0 when not exists
 */
-//export hostQueryValue
-func hostQueryValue(keyId uint64) (result uint64)
-
-//export hostNewValue
-func hostNewValue(keyId uint64) uint64
-
-//export hostUpdateValue
-func hostUpdateValue(keyId uint64, existingValueId uint64) uint64
 
 //lint:ignore U1000 this is an exported func
 //export WasmAbiVersion_0_0_1
@@ -114,30 +100,3 @@ func getHeapSys() uint64 {
 func gc() {
 	runtime.GC()
 }
-
-//export hostPanic
-func hostPanic(msgPtr, msgSize uint32)
-
-//export hostRowWriterPutString
-func hostRowWriterPutString(id uint64, typ uint32, namePtr, nameSize, valuePtr, valueSize uint32)
-
-//export hostRowWriterPutBytes
-func hostRowWriterPutBytes(id uint64, typ uint32, namePtr, nameSize, valuePtr, valueSize uint32)
-
-//export hostRowWriterPutQName
-func hostRowWriterPutQName(id uint64, typ uint32, namePtr, nameSize, pkgPtr, pkgSize, entityPtr, entitySize uint32)
-
-//export hostRowWriterPutIntBool
-func hostRowWriterPutBool(id uint64, typ uint32, namePtr, nameSize, value uint32)
-
-//export hostRowWriterPutInt32
-func hostRowWriterPutInt32(id uint64, typ uint32, namePtr, nameSize, value uint32)
-
-//export hostRowWriterPutInt64
-func hostRowWriterPutInt64(id uint64, typ uint32, namePtr, nameSize uint32, value uint64)
-
-//export hostRowWriterPutFloat32
-func hostRowWriterPutFloat32(id uint64, typ uint32, namePtr, nameSize uint32, value float32)
-
-//export hostRowWriterPutFloat64
-func hostRowWriterPutFloat64(id uint64, typ uint32, namePtr, nameSize uint32, value float64)

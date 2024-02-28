@@ -89,3 +89,7 @@ func MyProjector() {
 		}
 	}
 }
+
+func main() {
+
+}
