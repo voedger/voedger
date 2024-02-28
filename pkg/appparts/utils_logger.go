@@ -25,6 +25,7 @@ func (l *intervalLogger) error(err error) {
 	l.mx.Lock()
 	if t, ok := l.errs[e]; ok {
 		if time.Since(t) < l.interval {
+			l.mx.Unlock()
 			return
 		}
 	}
