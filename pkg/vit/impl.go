@@ -26,6 +26,7 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
+	"github.com/voedger/voedger/pkg/itokensjwt"
 	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/state/smtptest"
 	"github.com/voedger/voedger/pkg/sys/authnz"
@@ -75,6 +76,9 @@ func newVit(t *testing.T, vitCfg *VITConfig, useCas bool) *VIT {
 	cfg.MetricsServicePort = 0
 
 	cfg.TimeFunc = coreutils.TimeFunc(func() time.Time { return ts.now() })
+	if !coreutils.IsTest() {
+		cfg.SecretsReader = itokensjwt.ProvideTestSecretsReader(cfg.SecretsReader)
+	}
 
 	emailMessagesChan := make(chan smtptest.Message, 1) // must be buffered
 	cfg.ActualizerStateOpts = append(cfg.ActualizerStateOpts, state.WithEmailMessagesChan(emailMessagesChan))
@@ -106,6 +110,14 @@ func newVit(t *testing.T, vitCfg *VITConfig, useCas bool) *VIT {
 	vvm, err := vvm.ProvideVVM(&cfg, 0)
 	require.NoError(t, err)
 
+	// register workspace templates
+	for _, app := range vitPreConfig.vitApps {
+		ep := vvm.AppsExtensionPoints[app.name]
+		for _, tf := range app.wsTemplateFuncs {
+			tf(ep)
+		}
+	}
+
 	vit := &VIT{
 		VoedgerVM:            vvm,
 		VVMConfig:            &cfg,
@@ -124,18 +136,16 @@ func newVit(t *testing.T, vitCfg *VITConfig, useCas bool) *VIT {
 	require.NoError(t, vit.Launch())
 
 	// deploy custom apps and its partitions first
-	for _, app := range vitPreConfig.vitApps {
-		if app.name.IsSys() {
+	for _, builtInApp := range vit.BuiltInAppsPackages {
+		if builtInApp.Name.IsSys() {
 			continue
 		}
-		as, err := vit.AppStructs(app.name)
-		require.NoError(t, err)
-		vit.VVM.APIs.IAppPartitions.DeployApp(app.name, as.AppDef(), app.deployment.EnginePoolSize)
+		vit.VVM.APIs.IAppPartitions.DeployApp(builtInApp.Name, builtInApp.Def, builtInApp.EnginePoolSize)
 		appParts := []istructs.PartitionID{}
-		for pid := 0; pid < app.deployment.PartsCount; pid++ {
+		for pid := 0; pid < builtInApp.PartsCount; pid++ {
 			appParts = append(appParts, istructs.PartitionID(pid))
 		}
-		vit.VVM.APIs.IAppPartitions.DeployAppPartitions(app.name, appParts)
+		vit.VVM.APIs.IAppPartitions.DeployAppPartitions(builtInApp.Name, appParts)
 	}
 
 	for _, app := range vitPreConfig.vitApps {

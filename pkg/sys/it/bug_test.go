@@ -85,7 +85,7 @@ func TestBug_QueryProcessorMustStopOnClientDisconnect(t *testing.T) {
 
 func Test409OnRepeatedlyUsedRawIDsInResultCUDs(t *testing.T) {
 	vitCfg := it.NewOwnVITConfig(
-		it.WithApp(istructs.AppQName_test1_app2, func(apis apps.APIs, cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) apps.AppPackages {
+		it.WithApp(istructs.AppQName_test1_app2, func(apis apps.APIs, cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) apps.BuiltInAppDef {
 
 			sysPackageFS := sys.Provide(cfg, appDefBuilder, smtp.Cfg{}, ep, nil, apis.TimeFunc, apis.ITokens, apis.IFederation, apis.IAppStructsProvider, apis.IAppTokensFactory,
 				apis.NumCommandProcessors, nil, apis.IAppStorageProvider)
@@ -124,9 +124,10 @@ func Test409OnRepeatedlyUsedRawIDsInResultCUDs(t *testing.T) {
 				QualifiedPackageName: "github.com/voedger/voedger/pkg/vit/app2pkg",
 				FS:                   it.SchemaTestApp2FS,
 			}
-			return apps.AppPackages{
-				AppQName: istructs.AppQName_test1_app2,
-				Packages: []parser.PackageFS{sysPackageFS, appPackageFS},
+			return apps.BuiltInAppDef{
+				AppQName:                istructs.AppQName_test1_app2,
+				Packages:                []parser.PackageFS{sysPackageFS, appPackageFS},
+				AppDeploymentDescriptor: it.TestAppDeploymentDescriptor,
 			}
 		}, it.WithUserLogin("login", "1")),
 	)

@@ -34,7 +34,12 @@ type Command_air_Pbill struct {
 	Type
 }
 
+// !!! ArgumentObject result type is defined by the  command statement
+// 	COMMAND Pbill(untill.pbill) RETURNS CmdPBillResult;
 func (c *Command_air_Pbill) ArgumentObject() Value_ODoc_untill_pbill {
+
+	// !!! return host["StorageCommandContext]["ArgumentObject"]
+
 	kb := exttinygo.KeyBuilder(exttinygo.StorageCommandContext, exttinygo.NullEntity)
 	return Value_ODoc_untill_pbill{tv: exttinygo.MustGetValue(kb).AsValue(FieldNameEventArgumentObject)}
 }
@@ -76,7 +81,8 @@ type WSingleton_air_NextNumbers struct {
 }
 
 func (w *WSingleton_air_NextNumbers) QueryValue() (value Value_WSingleton_air_NextNumbers, ok bool) {
-	kb := exttinygo.KeyBuilder(exttinygo.StorageView, Package_air.WSingleton_NextNumbers.qname)
+	kb := exttinygo.KeyBuilder(exttinygo.StorageRecord, Package_air.WSingleton_NextNumbers.qname)
+	// !!! No key fields since it's a singleton
 	tv, ok := exttinygo.QueryValue(kb)
 	if !ok {
 		return Value_WSingleton_air_NextNumbers{}, false
@@ -87,7 +93,7 @@ func (w *WSingleton_air_NextNumbers) QueryValue() (value Value_WSingleton_air_Ne
 
 func (w *WSingleton_air_NextNumbers) NewIntent() Intent_WSingleton_air_NextNumbers {
 	kb := exttinygo.KeyBuilder(exttinygo.StorageRecord, w.qname)
-	// We do not set ID since it's a singleton
+	// !!! We do not set ID since it's a singleton
 	return Intent_WSingleton_air_NextNumbers{intent: exttinygo.NewValue(kb)}
 }
 
