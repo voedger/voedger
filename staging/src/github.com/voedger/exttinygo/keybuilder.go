@@ -52,6 +52,3 @@ func (i TKeyBuilder) PutBool(name string, value bool) {
 	}
 	hostRowWriterPutBool(uint64(i), 0, uint32(uintptr(unsafe.Pointer(unsafe.StringData(name)))), uint32(len(name)), v)
 }
-
-//export hostGetKey
-func hostGetKey(storagePtr, storageSize, entityPtr, entitySize uint32) uint64
