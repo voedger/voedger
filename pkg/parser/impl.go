@@ -261,6 +261,7 @@ func defineApp(c *basicContext) {
 		pkg.Name = string(use.Name)
 	}
 
+	c.app.LocalNameToFullPath = make(map[string]string, len(c.app.Packages))
 	for _, p := range c.app.Packages {
 		if p.QualifiedPackageName == appdef.SysPackage {
 			p.Name = appdef.SysPackage
@@ -269,7 +270,10 @@ func defineApp(c *basicContext) {
 
 		if p.Name == "" {
 			c.err(ErrAppDoesNotDefineUseOfPackage(p.QualifiedPackageName))
+			continue
 		}
+
+		c.app.LocalNameToFullPath[p.Name] = p.QualifiedPackageName
 	}
 }
 

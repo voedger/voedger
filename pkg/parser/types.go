@@ -32,6 +32,8 @@ type AppSchemaAST struct {
 
 	// key = Fully Qualified Name
 	Packages map[string]*PackageSchemaAST
+
+	LocalNameToFullPath map[string]string
 }
 
 type IReadFS interface {

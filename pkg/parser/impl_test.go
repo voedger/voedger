@@ -54,9 +54,6 @@ func Test_BasicUsage(t *testing.T) {
 	untillPkgAST, err := ParsePackageDir("github.com/untillpro/untill", fsUntill, "sql_example_app/untill")
 	require.NoError(err)
 
-	// := repr.String(pkgExample, repr.Indent(" "), repr.IgnorePrivate())
-	// fmt.Println(parsedSchemaStr)
-
 	appSchema, err := BuildAppSchema([]*PackageSchemaAST{
 		getSysPackageAST(),
 		mainPkgAST,
@@ -246,6 +243,20 @@ func Test_BasicUsage(t *testing.T) {
 		}
 	})
 	require.Equal(1, intentsCount)
+
+	localNames := builder.PackageLocalNames()
+	require.Len(localNames, 3)
+	require.Contains(localNames, "main")
+	require.Contains(localNames, "air")
+	require.Contains(localNames, "untill")
+
+	require.Equal("github.com/untillpro/main", builder.PackageFullPath("main"))
+	require.Equal("github.com/untillpro/airsbp", builder.PackageFullPath("air"))
+	require.Equal("github.com/untillpro/untill", builder.PackageFullPath("untill"))
+
+	require.Equal("main", builder.PackageLocalName("github.com/untillpro/main"))
+	require.Equal("air", builder.PackageLocalName("github.com/untillpro/airsbp"))
+	require.Equal("untill", builder.PackageLocalName("github.com/untillpro/untill"))
 
 	_, err = builder.Build()
 	require.NoError(err)
