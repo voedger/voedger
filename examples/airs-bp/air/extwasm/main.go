@@ -7,10 +7,13 @@ package main
 
 import (
 	"extwasm/orm"
+	"fmt"
 	"time"
 )
 
 // Command
+//
+//export Pbill
 func Pbill() {
 
 	var refBill orm.Ref
@@ -42,7 +45,7 @@ func Pbill() {
 	{
 		nextNumberValue, nextNumberOk := orm.Package_air.WSingleton_NextNumbers.QueryValue()
 		var nextNumber int32
-		var intent orm.Intent_WSingleton_air_NextNumbers
+		var intent *orm.Intent_WSingleton_air_NextNumbers
 		if !nextNumberOk {
 			nextNumber = 1
 			intent = orm.Package_air.WSingleton_NextNumbers.NewIntent()
@@ -55,6 +58,7 @@ func Pbill() {
 
 }
 
+// nolint revive
 func MyProjector() {
 
 	// Query air.PbillDates
@@ -91,5 +95,6 @@ func MyProjector() {
 }
 
 func main() {
-
+	fmt.Println("Hello, World!")
+	Pbill()
 }

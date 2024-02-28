@@ -100,7 +100,7 @@ type CDoc_untill_articles struct {
 type Value_Table_untill_articles struct{ tv exttinygo.TValue }
 
 type Intent_CDoc_untill_articles struct {
-	intent exttinygo.TIntent
+
 }
 
 func (v *Value_Table_untill_articles) Get_article_number() int32 {
