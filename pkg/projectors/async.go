@@ -262,8 +262,7 @@ func (a *asyncActualizer) readPlogByBatches(readBatch readPLogBatch) error {
 		if len(a.plogBatch) == 0 {
 			break
 		}
-		for i := 0; i < len(a.plogBatch); i++ {
-			e := (a.plogBatch)[i]
+		for _, e := range a.plogBatch {
 			if err := a.handleEvent(e.Offset, e.IPLogEvent); err != nil {
 				return err
 			}
