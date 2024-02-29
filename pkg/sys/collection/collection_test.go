@@ -88,11 +88,12 @@ func buildAppParts(t *testing.T) (appParts appparts.IAppPartitions, cleanup func
 				AddField(field_After, appdef.DataKind_int64, true).(appdef.IType).QName()).
 			SetResult(adb.AddObject(appdef.NewQName(appdef.SysPackage, "StateResult")).
 				AddField(field_State, appdef.DataKind_string, true).(appdef.IType).QName())
-		wsDesc := adb.AddSingleton(qNameWorkspaceDescriptor) // stub to make tests work
+		wsDesc := adb.AddCDoc(qNameWorkspaceDescriptor) // stub to make tests work
 		wsDesc.
 			AddField("WSKind", appdef.DataKind_QName, true).
 			AddField("Status", appdef.DataKind_int32, true)
-		adb.AddSingleton(qNameTestWSKind)
+		wsDesc.SetSingleton()
+		adb.AddCDoc(qNameTestWSKind).SetSingleton()
 
 	}
 	{ // "modify" function
