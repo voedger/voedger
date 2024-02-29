@@ -74,6 +74,9 @@ func (a *asyncActualizer) Prepare(interface{}) error {
 }
 func (a *asyncActualizer) Run(ctx context.Context) {
 	var err error
+	if err = a.waitForAppDeploy(ctx); err != nil {
+		panic(err)
+	}
 	for ctx.Err() == nil {
 		if err = a.init(ctx); err == nil {
 			logger.Trace(a.name, "started")
@@ -95,6 +98,21 @@ func (a *asyncActualizer) Stop() {}
 func (a *asyncActualizer) cancelChannel(e error) {
 	a.readCtx.cancelWithError(e)
 	a.conf.Broker.WatchChannel(a.readCtx.ctx, a.conf.channel, func(projection in10n.ProjectionKey, offset istructs.Offset) {})
+}
+
+func (a *asyncActualizer) waitForAppDeploy(ctx context.Context) error {
+	for ctx.Err() == nil {
+		ap, err := a.conf.AppPartitions.Borrow(a.conf.AppQName, a.conf.Partition, cluster.ProcessorKind_Actualizer)
+		if err == nil {
+			ap.Release()
+			return nil
+		}
+		if !errors.Is(err, appparts.ErrNotFound) {
+			return err
+		}
+		time.Sleep(borrowRetryDelay)
+	}
+	return nil // consider "context canceled" as expected error
 }
 
 func (a *asyncActualizer) init(ctx context.Context) (err error) {
@@ -273,11 +291,10 @@ func (a *asyncActualizer) readPlogByBatches(readBatch readPLogBatch) error {
 
 func (a *asyncActualizer) borrowAppPart(ctx context.Context) (ap appparts.IAppPartition, err error) {
 	for ctx.Err() == nil {
-		// TODO: implement sleep until successful borrow?
 		if ap, err = a.conf.AppPartitions.Borrow(a.conf.AppQName, a.conf.Partition, cluster.ProcessorKind_Actualizer); err == nil {
 			return ap, nil
 		}
-		if errors.Is(err, appparts.ErrNotFound) || errors.Is(err, appparts.ErrNotAvailableEngines) {
+		if errors.Is(err, appparts.ErrNotAvailableEngines) {
 			time.Sleep(borrowRetryDelay)
 			continue
 		}
