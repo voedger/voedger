@@ -7,7 +7,6 @@ package main
 
 import (
 	"extwasm/orm"
-	"fmt"
 	"time"
 )
 
@@ -55,7 +54,6 @@ func Pbill() {
 		}
 		intent.Set_NextPBillNumber(nextNumber + 1)
 	}
-
 }
 
 // nolint revive
@@ -95,6 +93,5 @@ func MyProjector() {
 }
 
 func main() {
-	fmt.Println("Hello, World!")
 	Pbill()
 }

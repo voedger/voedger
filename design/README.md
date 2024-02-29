@@ -13,7 +13,7 @@ Notation based on:
 - [Entity–relationship model](https://en.wikipedia.org/wiki/Entity%E2%80%93relationship_model), describes interrelated things of interest in a specific domain of knowledge
 
 ```mermaid
-flowchart TD
+graph TD
 
   %% Entities =================================
 
@@ -37,7 +37,7 @@ flowchart TD
   
   SoftwareService([Software Service]):::S  
   
-  User:::B
+  User["Human actor (e.g. User)"]:::B
   Company{{"Non-human actor (e.g. Company)"}}:::B
   BusinessProcess(Business Process):::B
 
@@ -55,7 +55,7 @@ flowchart TD
   SoftwareService -.->|generates| Data
 
   SoftwareService --- |used by| BusinessProcess
-  BusinessProcess --- |assigned to| User["Human actor (e.g. User)"]
+  BusinessProcess --- |assigned to| User
 
   Data -.->|used by| SoftwareComponent2
 
@@ -69,6 +69,65 @@ flowchart TD
   classDef B fill:#FFFFB5,color:#333
   classDef S fill:#B5FFFF
   classDef H fill:#C9E7B7
+```
+
+## Roles & Services
+
+```mermaid
+  graph TD
+
+  %% Entities ====================
+
+  Admin[Admin]:::B
+  Developer[Developer]:::B
+  User[User]:::B
+
+  mod.exttinygo:::S
+  cmd.vpm:::S
+  cmd.voedger:::S
+  cmd.ctool:::S  
+  grafana[extsoft.grafana]:::G
+  alertmanager[extsoft.alertmanager]:::G
+  scylla[extsoft.scylla]:::G
+
+  DBMS(DBMS):::S
+  Development(Development):::S
+
+  ClusterMgmt(Cluster Management):::S
+  AppMgmt(Application Management):::S
+  Monitoring(Monitoring):::S
+  Alerting(Alerting):::S
+  RunApp(Application Execution):::S
+
+  %% Relations ====================
+
+  scylla --> DBMS
+  DBMS --> cmd.voedger
+
+  mod.exttinygo --> Development
+  cmd.vpm --> Development
+  Development --> Developer
+
+  cmd.ctool --> ClusterMgmt
+  ClusterMgmt --> Admin
+
+
+  grafana --> Monitoring
+  alertmanager --> Alerting
+  Monitoring --> Admin
+  Alerting --> Admin
+
+  cmd.voedger --> AppMgmt
+  AppMgmt --> Admin
+
+  cmd.voedger --> RunApp
+  RunApp --> User
+
+
+  classDef B fill:#FFFFB5
+  classDef S fill:#B5FFFF
+  classDef H fill:#C9E7B7
+  classDef G fill:#FFFFFF,stroke:#000000, stroke-width:1px, stroke-dasharray: 5 5
 ```
 
 

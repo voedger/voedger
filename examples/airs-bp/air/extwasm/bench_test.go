@@ -5,6 +5,7 @@ import (
 	_ "embed"
 	"io"
 	"log"
+	"strconv"
 	"testing"
 	"time"
 
@@ -19,35 +20,53 @@ import (
 //go:embed extnogc.wasm
 var extnogc []byte
 
-func Benchmark_Pbill_Compiler(b *testing.B) {
-
-	ctx := context.Background()
-	r, mod := newrm(b, extnogc, true)
-	defer r.Close(ctx)
-
-	f := mod.ExportedFunction("Pbill")
-
-	for i := 0; i < b.N; i++ {
-		callCtx, cancel := context.WithTimeout(ctx, time.Second*100)
-		_, err := f.Call(callCtx)
-		if err != nil {
-			b.Fatal(err)
-		}
-		cancel()
-	}
+func Benchmark_Pbill(b *testing.B) {
+	runBenchFunc(b, "Pbill", true)
+	runBenchFunc(b, "Pbill", false)
 }
 
-func Benchmark_Pbill_Interpreter(b *testing.B) {
+func Benchmark_Sin(b *testing.B) {
+	runBenchFunc(b, "Sin", true, 3, 4)
+	runBenchFunc(b, "Sin", false, 3, 4)
+}
 
+func Benchmark_StupidPow(b *testing.B) {
+	runBenchFunc(b, "StupidPow", true, 2, 200)
+	runBenchFunc(b, "StupidPow", true, 2, 400)
+	runBenchFunc(b, "StupidPow", false, 2, 200)
+	runBenchFunc(b, "StupidPow", false, 2, 400)
+}
+
+func runBenchFunc(b *testing.B, fname string, compiler bool, args ...uint64) {
+	benchName := fname
+	if len(args) > 0 {
+		benchName += "("
+		for idx, arg := range args {
+			if idx > 0 {
+				benchName += ","
+			}
+			benchName += strconv.FormatUint(arg, 10)
+		}
+		benchName += ")"
+	}
+	if compiler {
+		benchName += "_Compiler"
+	} else {
+		benchName += "_Interpreter"
+	}
+	b.Run(benchName, func(b *testing.B) { benchFunc(b, fname, compiler, args...) })
+}
+
+func benchFunc(b *testing.B, fname string, compiler bool, args ...uint64) {
 	ctx := context.Background()
-	r, mod := newrm(b, extnogc, false)
+	r, mod := newrm(b, extnogc, compiler)
 	defer r.Close(ctx)
 
-	f := mod.ExportedFunction("Pbill")
+	f := mod.ExportedFunction(fname)
 
 	for i := 0; i < b.N; i++ {
 		callCtx, cancel := context.WithTimeout(ctx, time.Second*100)
-		_, err := f.Call(callCtx)
+		_, err := f.Call(callCtx, args...)
 		if err != nil {
 			b.Fatal(err)
 		}
