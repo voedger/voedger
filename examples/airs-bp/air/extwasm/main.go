@@ -35,9 +35,9 @@ func Pbill() {
 		}
 	}
 
-	// Prepare intent for Package_untill.WDoc_pbill
+	// Prepare intent for Package_untill.WDoc_bill
 	{
-		intent := orm.Package_untill.WDoc_pbill.NewIntent(refBill.ID())
+		intent := orm.Package_untill.WDoc_bill.NewIntent(refBill.ID())
 		intent.Set_close_datetime(time.Now().UnixMicro())
 	}
 

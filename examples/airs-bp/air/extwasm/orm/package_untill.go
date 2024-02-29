@@ -10,13 +10,13 @@ import exttinygo "github.com/voedger/exttinygo"
 var Package_untill = struct {
 	CDoc_articles CDoc_untill_articles
 	ODoc_pbill    ODoc_untill_pbill
-	WDoc_pbill    WDoc_untill_bill
+	WDoc_bill     WDoc_untill_bill
 }{
 	CDoc_articles: CDoc_untill_articles{
 		Type: Type{qname: "https://github.com/untillpro/airs-scheme/blob/master/bp3.untill_articles"},
 	},
-	WDoc_pbill: WDoc_untill_bill{
-		Type: Type{qname: "https://github.com/untillpro/airs-scheme/blob/master/bp3.pbill"},
+	WDoc_bill: WDoc_untill_bill{
+		Type: Type{qname: "https://github.com/untillpro/airs-scheme/blob/master/bp3.bill"},
 	},
 }
 
@@ -100,7 +100,6 @@ type CDoc_untill_articles struct {
 type Value_Table_untill_articles struct{ tv exttinygo.TValue }
 
 type Intent_CDoc_untill_articles struct {
-
 }
 
 func (v *Value_Table_untill_articles) Get_article_number() int32 {
