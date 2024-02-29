@@ -93,16 +93,12 @@ func (aps *apps) Borrow(appName istructs.AppQName, partID istructs.PartitionID, 
 
 	app, ok := aps.apps[appName]
 	if !ok {
-		err := fmt.Errorf(errAppNotFound, appName, ErrNotFound)
-		minuteLogger.error(err)
-		return nil, err
+		return nil, fmt.Errorf(errAppNotFound, appName, ErrNotFound)
 	}
 
 	part, ok := app.parts[partID]
 	if !ok {
-		err := fmt.Errorf(errPartitionNotFound, appName, partID, ErrNotFound)
-		minuteLogger.error(err)
-		return nil, err
+		return nil, fmt.Errorf(errPartitionNotFound, appName, partID, ErrNotFound)
 	}
 
 	borrowed, err := part.borrow(proc)

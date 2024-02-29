@@ -12,7 +12,7 @@ import (
 
 // Singletons IDs system view.
 //
-//	Use ID() to obtain singleton CDoc record ID by its QName.
+//	Use ID() to obtain singleton ID by its QName.
 //	Use Prepare() to load Singletons from storage.
 type Singletons struct {
 	qNames  map[appdef.QName]istructs.RecordID

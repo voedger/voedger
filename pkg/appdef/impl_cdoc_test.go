@@ -65,7 +65,7 @@ func Test_AppDef_AddCDoc(t *testing.T) {
 	})
 }
 
-func Test_AppDef_AddSingleton(t *testing.T) {
+func Test_AppDef_AddCDocSingleton(t *testing.T) {
 	require := require.New(t)
 
 	docName := NewQName("test", "doc")
@@ -74,10 +74,11 @@ func Test_AppDef_AddSingleton(t *testing.T) {
 
 	t.Run("must be ok to add singleton", func(t *testing.T) {
 		appDef := New()
-		doc := appDef.AddSingleton(docName)
+		doc := appDef.AddCDoc(docName)
 		doc.
 			AddField("f1", DataKind_int64, true).
 			AddField("f2", DataKind_string, false)
+		doc.SetSingleton()
 
 		a, err := appDef.Build()
 		require.NoError(err)

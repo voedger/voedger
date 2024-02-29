@@ -39,8 +39,9 @@ func TestAppConfigsType_AddConfig(t *testing.T) {
 		appStructs := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
 
 		t.Run("must be ok to change appDef after add config", func(t *testing.T) {
-			appDef.AddSingleton(appdef.NewQName("test", "doc")).
-				AddField("field", appdef.DataKind_int64, true)
+			doc := appDef.AddCDoc(appdef.NewQName("test", "doc"))
+			doc.AddField("field", appdef.DataKind_int64, true)
+			doc.SetSingleton()
 			appStr, err := appStructs.AppStructs(app)
 			require.NoError(err)
 			require.NotNil(appStr)
@@ -144,7 +145,8 @@ func TestErrorsAppConfigsType(t *testing.T) {
 
 	appDef := func() appdef.IAppDefBuilder {
 		app := appdef.New()
-		doc := app.AddSingleton(appdef.NewQName("test", "doc"))
+		doc := app.AddCDoc(appdef.NewQName("test", "doc"))
+		doc.SetSingleton()
 		doc.AddField("f1", appdef.DataKind_string, true)
 		doc.AddContainer("rec", appdef.NewQName("test", "rec"), 0, 1)
 		doc.AddUnique(appdef.UniqueQName(doc.QName(), "f1"), []string{"f1"})

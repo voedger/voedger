@@ -36,6 +36,21 @@ func (w *workpiece) Release() {
 	w.event.Release()
 }
 
+type (
+	plogEvent struct {
+		istructs.Offset
+		istructs.IPLogEvent
+	}
+	plogBatch []plogEvent
+
+	// Should return:
+	//	- events in batch and no error, if events succussfully read
+	//	- no events (empty batch) and no error, if all events are read
+	//	- no events (empty  batch) and error, if error occurs while reading PLog.
+	// Should not return simultaneously any events (non empty batch) and error
+	readPLogBatch func(*plogBatch) error
+)
+
 // implements ServiceOperator
 type asyncActualizer struct {
 	conf         AsyncActualizerConf
@@ -46,6 +61,7 @@ type asyncActualizer struct {
 	name         string
 	readCtx      *asyncActualizerContextState
 	projErrState int32 // 0 - no error, 1 - error
+	plogBatch          // [50]plogEvent
 }
 
 func (a *asyncActualizer) Prepare(interface{}) error {
@@ -60,8 +76,8 @@ func (a *asyncActualizer) Prepare(interface{}) error {
 	if a.conf.FlushInterval == 0 {
 		a.conf.FlushInterval = defaultFlushInterval
 	}
-	if a.conf.FlushPositionInverval == 0 {
-		a.conf.FlushPositionInverval = defaultFlushPositionInterval
+	if a.conf.FlushPositionInterval == 0 {
+		a.conf.FlushPositionInterval = defaultFlushPositionInterval
 	}
 	if a.conf.AfterError == nil {
 		a.conf.AfterError = time.After
@@ -116,6 +132,8 @@ func (a *asyncActualizer) waitForAppDeploy(ctx context.Context) error {
 }
 
 func (a *asyncActualizer) init(ctx context.Context) (err error) {
+	a.plogBatch = make(plogBatch, 0, plogReadBatchSize)
+
 	a.structs = a.conf.AppStructs() // TODO: must be borrowed and finally released
 	a.readCtx = &asyncActualizerContextState{}
 
@@ -139,7 +157,7 @@ func (a *asyncActualizer) init(ctx context.Context) (err error) {
 	p := &asyncProjector{
 		partition:             a.conf.Partition,
 		aametrics:             a.conf.AAMetrics,
-		flushPositionInterval: a.conf.FlushPositionInverval,
+		flushPositionInterval: a.conf.FlushPositionInterval,
 		lastSave:              time.Now(),
 		projErrState:          &a.projErrState,
 		metrics:               a.conf.Metrics,
@@ -254,31 +272,16 @@ func (a *asyncActualizer) handleEvent(pLogOffset istructs.Offset, event istructs
 	return
 }
 
-type (
-	plogEvent struct {
-		istructs.Offset
-		istructs.IPLogEvent
-	}
-
-	// Should return:
-	//	- events in batch and no error, if events succussfully read
-	//	- no events (empty batch) and no error, if all events are read
-	//	- no events (empty  batch) and error, if error occurs while reading PLog.
-	// Should not return simultaneously any events (non empty batch) and error
-	readPLogBatch func(batch *[]plogEvent) error
-)
-
 func (a *asyncActualizer) readPlogByBatches(readBatch readPLogBatch) error {
-	batch := make([]plogEvent, 0, plogReadBatchSize)
 	for a.readCtx.ctx.Err() == nil {
-		if err := readBatch(&batch); err != nil {
+		if err := readBatch(&a.plogBatch); err != nil {
 			return err
 		}
-		if len(batch) == 0 {
+		if len(a.plogBatch) == 0 {
 			break
 		}
-		for i := 0; i < len(batch); i++ {
-			if err := a.handleEvent(batch[i].Offset, batch[i].IPLogEvent); err != nil {
+		for _, e := range a.plogBatch {
+			if err := a.handleEvent(e.Offset, e.IPLogEvent); err != nil {
 				return err
 			}
 			if a.readCtx.ctx.Err() != nil {
@@ -304,7 +307,7 @@ func (a *asyncActualizer) borrowAppPart(ctx context.Context) (ap appparts.IAppPa
 }
 
 func (a *asyncActualizer) readPlogToTheEnd(ctx context.Context) error {
-	return a.readPlogByBatches(func(batch *[]plogEvent) (err error) {
+	return a.readPlogByBatches(func(batch *plogBatch) (err error) {
 		*batch = (*batch)[:0]
 
 		ap, err := a.borrowAppPart(ctx)
@@ -330,7 +333,7 @@ func (a *asyncActualizer) readPlogToTheEnd(ctx context.Context) error {
 }
 
 func (a *asyncActualizer) readPlogToOffset(ctx context.Context, tillOffset istructs.Offset) error {
-	return a.readPlogByBatches(func(batch *[]plogEvent) (err error) {
+	return a.readPlogByBatches(func(batch *plogBatch) (err error) {
 		*batch = (*batch)[:0]
 
 		ap, err := a.borrowAppPart(ctx)
