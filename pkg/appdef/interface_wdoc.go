@@ -7,7 +7,7 @@ package appdef
 
 // Workflow document.
 type IWDoc interface {
-	IDoc
+	ISingleton
 
 	// Unwanted type assertion stub
 	isWDoc()
@@ -15,7 +15,7 @@ type IWDoc interface {
 
 type IWDocBuilder interface {
 	IWDoc
-	IDocBuilder
+	ISingletonBuilder
 }
 
 // Workflow document record.

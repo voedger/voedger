@@ -8,25 +8,18 @@ package appdef
 // # Implements:
 //   - ICDoc, ICDocBuilder
 type cDoc struct {
-	doc
-	singleton bool
+	singleton
 }
 
 // Creates a new CDoc
 func newCDoc(app *appDef, name QName) *cDoc {
 	d := &cDoc{}
-	d.doc = makeDoc(app, name, TypeKind_CDoc, d)
+	d.singleton = makeSingleton(app, name, TypeKind_CDoc, d)
 	app.appendType(d)
 	return d
 }
 
-func (d *cDoc) SetSingleton() {
-	d.singleton = true
-}
-
-func (d *cDoc) Singleton() bool {
-	return d.singleton
-}
+func (d *cDoc) isCDoc() {}
 
 // # Implements:
 //   - ICRecord, ICRecordBuilder
