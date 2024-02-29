@@ -10,7 +10,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"sync"
 	"sync/atomic"
 	"time"
 
@@ -37,6 +36,21 @@ func (w *workpiece) Release() {
 	w.event.Release()
 }
 
+type (
+	plogEvent struct {
+		istructs.Offset
+		istructs.IPLogEvent
+	}
+	plogBatch []plogEvent
+
+	// Should return:
+	//	- events in batch and no error, if events succussfully read
+	//	- no events (empty batch) and no error, if all events are read
+	//	- no events (empty  batch) and error, if error occurs while reading PLog.
+	// Should not return simultaneously any events (non empty batch) and error
+	readPLogBatch func(*plogBatch) error
+)
+
 // implements ServiceOperator
 type asyncActualizer struct {
 	conf         AsyncActualizerConf
@@ -47,6 +61,7 @@ type asyncActualizer struct {
 	name         string
 	readCtx      *asyncActualizerContextState
 	projErrState int32 // 0 - no error, 1 - error
+	plogBatch          // [50]plogEvent
 }
 
 func (a *asyncActualizer) Prepare(interface{}) error {
@@ -99,6 +114,8 @@ func (a *asyncActualizer) cancelChannel(e error) {
 }
 
 func (a *asyncActualizer) init(ctx context.Context) (err error) {
+	a.plogBatch = make(plogBatch, 0, plogReadBatchSize)
+
 	a.structs = a.conf.AppStructs() // TODO: must be borrowed and finally released
 	a.readCtx = &asyncActualizerContextState{}
 
@@ -237,40 +254,16 @@ func (a *asyncActualizer) handleEvent(pLogOffset istructs.Offset, event istructs
 	return
 }
 
-type (
-	plogEvent struct {
-		istructs.Offset
-		istructs.IPLogEvent
-	}
-	plogBatch []plogEvent
-
-	// Should return:
-	//	- events in batch and no error, if events succussfully read
-	//	- no events (empty batch) and no error, if all events are read
-	//	- no events (empty  batch) and error, if error occurs while reading PLog.
-	// Should not return simultaneously any events (non empty batch) and error
-	readPLogBatch func(*plogBatch) error
-)
-
-var plogBatchesPool = sync.Pool{
-	New: func() interface{} {
-		b := make(plogBatch, 0, plogReadBatchSize)
-		return &b
-	},
-}
-
 func (a *asyncActualizer) readPlogByBatches(readBatch readPLogBatch) error {
-	batch := plogBatchesPool.Get().(*plogBatch)
-	defer plogBatchesPool.Put(batch)
 	for a.readCtx.ctx.Err() == nil {
-		if err := readBatch(batch); err != nil {
+		if err := readBatch(&a.plogBatch); err != nil {
 			return err
 		}
-		if len(*batch) == 0 {
+		if len(a.plogBatch) == 0 {
 			break
 		}
-		for i := 0; i < len(*batch); i++ {
-			e := (*batch)[i]
+		for i := 0; i < len(a.plogBatch); i++ {
+			e := (a.plogBatch)[i]
 			if err := a.handleEvent(e.Offset, e.IPLogEvent); err != nil {
 				return err
 			}
