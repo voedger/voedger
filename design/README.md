@@ -98,6 +98,7 @@ graph TD
   Monitoring(Monitoring):::S
   Alerting(Alerting):::S
   RunApp(Application Execution):::S
+  APIGateway(API Gateway):::S
 
   %% Relations ====================
 
@@ -121,7 +122,10 @@ graph TD
   AppMgmt --> Admin
 
   cmd.voedger --> RunApp
-  RunApp --> User
+  RunApp -.- APIGateway
+
+  cmd.voedger --> APIGateway
+  APIGateway --> User
 
 
   classDef B fill:#FFFFB5
