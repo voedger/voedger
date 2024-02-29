@@ -8,12 +8,12 @@ package appdef
 // # Implements:
 //   - IWDoc, IWDocBuilder
 type wDoc struct {
-	doc
+	singleton
 }
 
 func newWDoc(app *appDef, name QName) *wDoc {
 	d := &wDoc{}
-	d.doc = makeDoc(app, name, TypeKind_WDoc, d)
+	d.singleton = makeSingleton(app, name, TypeKind_WDoc, d)
 	app.appendType(d)
 	return d
 }

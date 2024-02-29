@@ -163,7 +163,7 @@ func getTestCfg(require *require.Assertions, prepareAppDef func(appdef.IAppDefBu
 		AddField("sys.ID", appdef.DataKind_RecordID, true).
 		AddField("name", appdef.DataKind_string, true).
 		AddField("id_department", appdef.DataKind_int64, true)
-	adb.AddSingleton(authnz.QNameCDocWorkspaceDescriptor) // need to avoid error cdoc.sys.wsdesc missing
+	adb.AddCDoc(authnz.QNameCDocWorkspaceDescriptor).SetSingleton() // need to avoid error cdoc.sys.wsdesc missing
 	adb.AddQuery(qNameFunction).SetParam(qNameFindArticlesByModificationTimeStampRangeParams).SetResult(appdef.NewQName("bo", "Article"))
 	adb.AddCommand(istructs.QNameCommandCUD)
 	adb.AddQuery(qNameQryDenied)
