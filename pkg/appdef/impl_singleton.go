@@ -16,7 +16,7 @@ type singleton struct {
 // Makes new singleton
 func makeSingleton(app *appDef, name QName, kind TypeKind, parent interface{}) singleton {
 	s := singleton{}
-	s.doc = makeDoc(app, name, TypeKind_CDoc, s)
+	s.doc = makeDoc(app, name, kind, parent)
 	return s
 }
 

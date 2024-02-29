@@ -64,3 +64,36 @@ func Test_AppDef_AddWDoc(t *testing.T) {
 		})
 	})
 }
+
+func Test_AppDef_AddWDocSingleton(t *testing.T) {
+	require := require.New(t)
+
+	docName := NewQName("test", "doc")
+
+	var app IAppDef
+
+	t.Run("must be ok to add singleton", func(t *testing.T) {
+		appDef := New()
+		doc := appDef.AddWDoc(docName)
+		doc.
+			AddField("f1", DataKind_int64, true).
+			AddField("f2", DataKind_string, false)
+		doc.SetSingleton()
+
+		a, err := appDef.Build()
+		require.NoError(err)
+
+		app = a
+	})
+
+	t.Run("must be ok to find builded singleton", func(t *testing.T) {
+		typ := app.Type(docName)
+		require.Equal(TypeKind_WDoc, typ.Kind())
+
+		doc := app.WDoc(docName)
+		require.Equal(TypeKind_WDoc, doc.Kind())
+		require.Equal(typ.(IWDoc), doc)
+
+		require.True(doc.Singleton())
+	})
+}

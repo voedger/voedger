@@ -199,14 +199,6 @@ type IAppDefBuilder interface {
 	//   - if type with name already exists.
 	AddCDoc(name QName) ICDocBuilder
 
-	// Adds new singleton CDoc type with specified name.
-	//
-	// # Panics:
-	//   - if name is empty (appdef.NullQName),
-	//   - if name is invalid,
-	//   - if type with name already exists.
-	AddSingleton(name QName) ICDocBuilder
-
 	// Adds new CRecord type with specified name.
 	//
 	// # Panics:
