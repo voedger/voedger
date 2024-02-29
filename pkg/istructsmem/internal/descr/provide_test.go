@@ -36,7 +36,8 @@ func TestBasicUsage(t *testing.T) {
 	s := appDef.AddData(strName, appdef.DataKind_string, appdef.NullQName)
 	s.AddConstraints(appdef.MinLen(1), appdef.MaxLen(100), appdef.Pattern(`^\w+$`, "only word characters allowed"))
 
-	doc := appDef.AddSingleton(docName)
+	doc := appDef.AddCDoc(docName)
+	doc.SetSingleton()
 	doc.
 		AddField("f1", appdef.DataKind_int64, true).
 		SetFieldComment("f1", "field comment").
