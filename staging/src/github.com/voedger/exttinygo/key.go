@@ -48,30 +48,3 @@ func (v TKey) AsBool(name string) bool {
 	ret := hostKeyAsBool(uint64(v), uint32(uintptr(unsafe.Pointer(unsafe.StringData(name)))), uint32(len(name)))
 	return ret > 0
 }
-
-//export hostKeyAsString
-func hostKeyAsString(id uint64, namePtr, nameSize uint32) uint64
-
-//export hostKeyAsBytes
-func hostKeyAsBytes(id uint64, namePtr, nameSize uint32) uint64
-
-//export hostKeyAsQNamePkg
-func hostKeyAsQNamePkg(id uint64, namePtr, nameSize uint32) uint64
-
-//export hostKeyAsQNameEntity
-func hostKeyAsQNameEntity(id uint64, namePtr, nameSize uint32) uint64
-
-//export hostKeyAsBool
-func hostKeyAsBool(id uint64, namePtr, nameSize uint32) uint64
-
-//export hostKeyAsInt32
-func hostKeyAsInt32(id uint64, namePtr, nameSize uint32) uint32
-
-//export hostKeyAsInt64
-func hostKeyAsInt64(id uint64, namePtr, nameSize uint32) uint64
-
-//export hostKeyAsFloat32
-func hostKeyAsFloat32(id uint64, namePtr, nameSize uint32) float32
-
-//export hostKeyAsFloat64
-func hostKeyAsFloat64(id uint64, namePtr, nameSize uint32) float64

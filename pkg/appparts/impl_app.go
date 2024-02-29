@@ -7,7 +7,6 @@ package appparts
 
 import (
 	"context"
-	"fmt"
 	"sync"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -135,7 +134,7 @@ func (rt *partitionRT) init(proc cluster.ProcessorKind) error {
 	pool := rt.part.app.engines[proc]
 	engine, err := pool.Borrow() // will be released in (*engine).release()
 	if err != nil {
-		return fmt.Errorf("%w (%w): %s", ErrNotAvailableEngines, err, proc.TrimString())
+		return errNotAvailableEngines[proc]
 	}
 	engine.pool = pool
 	rt.borrowed = engine
