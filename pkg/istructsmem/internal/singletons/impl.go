@@ -27,7 +27,7 @@ func newSingletons() *Singletons {
 	}
 }
 
-// Returns ID for CDoc singleton with specified QName
+// Returns ID for singleton with specified QName
 func (st *Singletons) ID(qName appdef.QName) (istructs.RecordID, error) {
 	if id, ok := st.qNames[qName]; ok {
 		return id, nil
@@ -98,10 +98,10 @@ func (st *Singletons) load01(storage istorage.IAppStorage) error {
 func (st *Singletons) collectAllSingletons(appDef appdef.IAppDef) (err error) {
 	appDef.Types(
 		func(t appdef.IType) {
-			if cDoc, ok := t.(appdef.ICDoc); ok {
-				if cDoc.Singleton() {
+			if singleton, ok := t.(appdef.ISingleton); ok {
+				if singleton.Singleton() {
 					err = errors.Join(err,
-						st.collectSingleton(cDoc.QName()))
+						st.collectSingleton(singleton.QName()))
 				}
 			}
 		})
@@ -109,7 +109,7 @@ func (st *Singletons) collectAllSingletons(appDef appdef.IAppDef) (err error) {
 	return err
 }
 
-// collectSingleton checks is CDoc singleton in cache. If not then adds it with new ID
+// collectSingleton checks is singleton in cache. If not then adds it with new ID
 func (st *Singletons) collectSingleton(qname appdef.QName) error {
 
 	if _, ok := st.qNames[qname]; ok {
