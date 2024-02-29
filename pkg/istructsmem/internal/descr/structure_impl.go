@@ -43,8 +43,8 @@ func (s *Structure) read(str appdef.IStructure) {
 		s.UniqueField = uf.Name()
 	}
 
-	if cDoc, ok := str.(appdef.ICDoc); ok {
-		if cDoc.Singleton() {
+	if singleton, ok := str.(appdef.ISingleton); ok {
+		if singleton.Singleton() {
 			s.Singleton = true
 		}
 	}

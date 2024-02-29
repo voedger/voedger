@@ -283,6 +283,8 @@ var defaultACL = ACL{
 				qNameQryGetUPLocationSubjects,
 				// https://dev.untill.com/projects/#!659825
 				qNameQryGetLocationDailyUPReport,
+				// https://dev.untill.com/projects/#!653069
+				qNameCmdVoidUntillPayment,
 			},
 			principalsPattern: [][]iauthnz.Principal{
 				{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleUntillPaymentsUser}},
