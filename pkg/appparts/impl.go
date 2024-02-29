@@ -66,6 +66,9 @@ func (aps *apps) DeployAppPartitions(appName istructs.AppQName, partIDs []istruc
 }
 
 func (aps *apps) AppDef(appName istructs.AppQName) (appdef.IAppDef, error) {
+	aps.mx.Lock()
+	defer aps.mx.Unlock()
+
 	app, ok := aps.apps[appName]
 	if !ok {
 		return nil, fmt.Errorf(errAppNotFound, appName, ErrNotFound)
@@ -74,6 +77,9 @@ func (aps *apps) AppDef(appName istructs.AppQName) (appdef.IAppDef, error) {
 }
 
 func (aps *apps) AppPartsCount(appName istructs.AppQName) (int, error) {
+	aps.mx.Lock()
+	defer aps.mx.Unlock()
+
 	app, ok := aps.apps[appName]
 	if !ok {
 		return 0, fmt.Errorf(errAppNotFound, appName, ErrNotFound)
