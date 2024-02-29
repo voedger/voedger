@@ -76,8 +76,8 @@ func (a *asyncActualizer) Prepare(interface{}) error {
 	if a.conf.FlushInterval == 0 {
 		a.conf.FlushInterval = defaultFlushInterval
 	}
-	if a.conf.FlushPositionInverval == 0 {
-		a.conf.FlushPositionInverval = defaultFlushPositionInterval
+	if a.conf.FlushPositionInterval == 0 {
+		a.conf.FlushPositionInterval = defaultFlushPositionInterval
 	}
 	if a.conf.AfterError == nil {
 		a.conf.AfterError = time.After
@@ -139,7 +139,7 @@ func (a *asyncActualizer) init(ctx context.Context) (err error) {
 	p := &asyncProjector{
 		partition:             a.conf.Partition,
 		aametrics:             a.conf.AAMetrics,
-		flushPositionInterval: a.conf.FlushPositionInverval,
+		flushPositionInterval: a.conf.FlushPositionInterval,
 		lastSave:              time.Now(),
 		projErrState:          &a.projErrState,
 		metrics:               a.conf.Metrics,

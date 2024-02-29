@@ -43,8 +43,8 @@ type AsyncActualizerConf struct {
 	BundlesLimit int
 	//FlushInterval specifies how often the current actualizer flushes changes to underlying storage, optional, default value is 100 milliseconds
 	FlushInterval time.Duration
-	// FlushPositionInverval specifies how often actializer must save it's position, even when no events has been processed by actualizer. Default is 1 minute
-	FlushPositionInverval time.Duration
+	// FlushPositionInterval specifies how often actializer must save it's position, even when no events has been processed by actualizer. Default is 1 minute
+	FlushPositionInterval time.Duration
 
 	VvmName string
 	Metrics imetrics.IMetrics
