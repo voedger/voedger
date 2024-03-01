@@ -471,7 +471,7 @@ func (f *wazeroExtEngine) allocAndSend(buf []byte) (result uint64) {
 		panic(e)
 	}
 	if !f.pkg.module.Memory().Write(addrPkg, buf) {
-		panic(e)
+		panic(errMemoryOutOfRange)
 	}
 	return (uint64(addrPkg) << uint64(bitsInFourBytes)) | uint64(len(buf))
 }
