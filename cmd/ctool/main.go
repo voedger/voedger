@@ -66,17 +66,18 @@ func main() {
 	}
 }
 
+// nolint
 func cursorOff() {
 	cmd := exec.Command("setterm", "--cursor", "off")
 	cmd.Stdout = os.Stdout
 	cmd.Run()
 }
 
+// nolint
 func cursorOn() {
 	cmd := exec.Command("setterm", "--cursor", "on")
 	cmd.Stdout = os.Stdout
 	cmd.Run()
-
 }
 
 var rootCmd *cobra.Command

@@ -39,6 +39,7 @@ func selectIndicator() []string {
 	indicators3 := []string{"⣾", "⣽", "⣻", "⢿", "⡿", "⣟", "⣯", "⣷"}
 
 	indicators := [][]string{indicators1, indicators2, indicators3}
+	// nolint
 	randomIndex := rand.Intn(len(indicators))
 	return indicators[randomIndex]
 }
