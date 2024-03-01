@@ -1069,7 +1069,7 @@ func Test_AsynchronousActualizer_Stress_Buffered(t *testing.T) {
 					Broker:                broker,
 					AAMetrics:             &metrics,
 					LogError:              func(args ...interface{}) {},
-					FlushPositionInverval: 10 * time.Second,
+					FlushPositionInterval: 10 * time.Second,
 				}
 
 				projectorFactory := func(partition istructs.PartitionID) istructs.Projector {

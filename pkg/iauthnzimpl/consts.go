@@ -90,6 +90,7 @@ var (
 	qNameQryListPaidSubscriptionInvoices            = appdef.NewQName(airPackage, "ListPaidSubscriptionInvoices")
 	qNameQryListPaidSubscriptionResellers           = appdef.NewQName(airPackage, "ListPaidSubscriptionResellers")
 	qNameQryPaidSubscriptionInvoicesReport          = appdef.NewQName(airPackage, "PaidSubscriptionInvoicesReport")
+	qNameCmdVoidUntillPayment                       = appdef.NewQName(airPackage, "VoidUntillPayment")
 
 	// Air roles
 	qNameRoleResellersAdmin         = appdef.NewQName(airPackage, "ResellersAdmin")
