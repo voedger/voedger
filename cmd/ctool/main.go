@@ -8,6 +8,7 @@ package main
 import (
 	_ "embed"
 	"os"
+	"os/exec"
 	"path/filepath"
 
 	"github.com/fatih/color"
@@ -38,7 +39,8 @@ var green func(a ...interface{}) string
 
 // nolint
 func main() {
-
+	cursorOff()
+	defer cursorOn()
 	ex, err := os.Executable()
 	if err != nil {
 		panic(err)
@@ -59,8 +61,22 @@ func main() {
 	err = execRootCmd(os.Args, version)
 	if err != nil {
 		loggerError(err.Error())
+		cursorOn()
 		os.Exit(1)
 	}
+}
+
+func cursorOff() {
+	cmd := exec.Command("setterm", "--cursor", "off")
+	cmd.Stdout = os.Stdout
+	cmd.Run()
+}
+
+func cursorOn() {
+	cmd := exec.Command("setterm", "--cursor", "on")
+	cmd.Stdout = os.Stdout
+	cmd.Run()
+
 }
 
 var rootCmd *cobra.Command
@@ -81,6 +97,7 @@ func execRootCmd(args []string, ver string) error {
 		newBackupCmd(),
 		newAcmeCmd(),
 		newRestoreCmd(),
+		newGrafanaCmd(),
 	)
 	rootCmd.SilenceErrors = true
 	rootCmd.PersistentFlags().BoolVar(&dryRun, "dry-run", false, "Perform a dry run of the command without making any actual changes")

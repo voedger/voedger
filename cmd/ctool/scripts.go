@@ -10,6 +10,7 @@ import (
 	"io"
 	"io/fs"
 	"io/ioutil"
+	"math/rand"
 	"os"
 	"path/filepath"
 	"strings"
@@ -25,13 +26,29 @@ var scriptsFS embed.FS
 
 var scriptsTempDir string
 
+var indicator []string
+
 type scriptExecuterType struct {
 	outputPrefix string
 	sshKeyPath   string
 }
 
+func selectIndicator() []string {
+	indicators1 := []string{"|", "/", "-", "\\"}
+	indicators2 := []string{"◐", "◓", "◑", "◒"}
+	indicators3 := []string{"⣾", "⣽", "⣻", "⢿", "⡿", "⣟", "⣯", "⣷"}
+
+	indicators := [][]string{indicators1, indicators2, indicators3}
+	randomIndex := rand.Intn(len(indicators))
+	return indicators[randomIndex]
+}
+
 func showProgress(done chan bool) {
-	indicators := []string{"|", "/", "-", "\\"}
+
+	if len(indicator) == 0 {
+		indicator = selectIndicator()
+	}
+
 	i := 0
 	for {
 		select {
@@ -40,9 +57,9 @@ func showProgress(done chan bool) {
 			return
 		default:
 			if !verbose() {
-				fmt.Printf(green("\r%s\r"), indicators[i])
+				fmt.Printf(green("\r%s\r"), indicator[i])
 			}
-			i = (i + 1) % len(indicators)
+			i = (i + 1) % len(indicator)
 			time.Sleep(100 * time.Millisecond)
 		}
 	}
@@ -77,8 +94,13 @@ func (se *scriptExecuterType) run(scriptName string, args ...string) error {
 			stderrWriter = logFile
 		}
 	} else {
-		stdoutWriter = os.Stdout
-		stderrWriter = os.Stderr
+		if verbose() {
+			stdoutWriter = os.Stdout
+			stderrWriter = os.Stderr
+		} else {
+			stdoutWriter = nil
+			stderrWriter = nil
+		}
 	}
 
 	done := make(chan bool)
