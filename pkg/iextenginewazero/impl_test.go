@@ -42,12 +42,12 @@ func Test_BasicUsage(t *testing.T) {
 	const ws = istructs.WSID(1)
 	const partition = istructs.PartitionID(1)
 	require := require.New(t)
-	newOrderCmd := appdef.NewQName("main", "NewOrder")
-	calcOrderedItemsProjector := appdef.NewQName("main", "CalcOrderedItems")
-	orderedItemsView := appdef.NewQName("main", "OrderedItems")
+	newOrderCmd := appdef.NewQName("air", "NewOrder")
+	calcOrderedItemsProjector := appdef.NewQName("air", "CalcOrderedItems")
+	orderedItemsView := appdef.NewQName("air", "OrderedItems")
 
 	// Prepare app
-	app := appStructsFromSQL(`APPLICATION test(); 
+	app := appStructsFromSQL("github.com/untillpro/airs-bp3/packages/air", `APPLICATION test(); 
 		WORKSPACE Restaurant (
 			TABLE Order INHERITS ODoc (
 				Year int32,
@@ -500,6 +500,20 @@ func Test_AsBytesOverflow(t *testing.T) {
 	require.ErrorContains(err, "alloc")
 }
 
+func Test_KeyPutQName(t *testing.T) {
+	const putQName = "keyPutQName"
+	require := require.New(t)
+	ctx := context.Background()
+	moduleUrl := testModuleURL("./_testdata/tests/pkg.wasm")
+	extEngine, err := testFactoryHelper(ctx, moduleUrl, []string{putQName}, iextengine.ExtEngineConfig{}, false)
+	require.NoError(err)
+	defer extEngine.Close(ctx)
+	wasmEngine := extEngine.(*wazeroExtEngine)
+	requireMemStatEx(t, wasmEngine, 1, 0, WasmPreallocatedBufferSize, WasmPreallocatedBufferSize)
+	err = extEngine.Invoke(context.Background(), iextengine.NewExtQName(testPkg, putQName), extIO)
+	require.NoError(err)
+}
+
 func Test_NoAllocs(t *testing.T) {
 	const testNoAllocs = "testNoAllocs"
 	extIO = &mockIo{}
@@ -521,8 +535,10 @@ func Test_NoAllocs(t *testing.T) {
 	require.Len(extIO.intents, 2)
 	v0 := extIO.intents[0].value.(*mockValueBuilder)
 
+	// new value
 	require.Equal("test@gmail.com", v0.items["from"])
 	require.Equal(int32(668), v0.items["port"])
+	require.Equal(appdef.NewQName(testPackageLocalPath, "test"), v0.items["qname"])
 	bytes := (v0.items["key"]).([]byte)
 	require.Len(bytes, 5)
 
@@ -553,6 +569,7 @@ func Test_WithState(t *testing.T) {
 				view.KeyBuilder().ClustColsBuilder().AddField(cc, appdef.DataKind_int32)
 				view.ValueBuilder().AddField(vv, appdef.DataKind_int32, true)
 			})
+			appDef.AddPackage("pkg", "pkg")
 		},
 		func(cfg *istructsmem.AppConfigType) {})
 	state := state.ProvideAsyncActualizerStateFactory()(context.Background(), app, nil, state.SimpleWSIDFunc(ws), nil, nil, nil, intentsLimit, bundlesLimit)
@@ -619,11 +636,13 @@ func Test_StatePanic(t *testing.T) {
 				view.KeyBuilder().ClustColsBuilder().AddField(cc, appdef.DataKind_int32)
 				view.ValueBuilder().AddField(vv, appdef.DataKind_int32, true)
 			})
+			appDef.AddPackage("pkg", "pkg")
 		},
 		func(cfg *istructsmem.AppConfigType) {})
 	state := state.ProvideAsyncActualizerStateFactory()(context.Background(), app, nil, state.SimpleWSIDFunc(ws), nil, nil, nil, intentsLimit, bundlesLimit)
 
 	const extname = "wrongFieldName"
+	const undefinedPackage = "undefinedPackage"
 
 	require := require.New(t)
 	ctx := context.Background()
@@ -633,7 +652,7 @@ func Test_StatePanic(t *testing.T) {
 		{
 			QualifiedName:  testPkg,
 			ModuleUrl:      moduleUrl,
-			ExtensionNames: []string{extname},
+			ExtensionNames: []string{extname, undefinedPackage},
 		},
 	}
 	factory := ProvideExtensionEngineFactory(true)
@@ -648,6 +667,12 @@ func Test_StatePanic(t *testing.T) {
 	//
 	err = extEngine.Invoke(context.Background(), iextengine.NewExtQName(testPkg, extname), state)
 	require.ErrorContains(err, "int32-type field «wrong» is not found")
+
+	//
+	// Invoke extension
+	//
+	err = extEngine.Invoke(context.Background(), iextengine.NewExtQName(testPkg, undefinedPackage), state)
+	require.ErrorContains(err, errUndefinedPackage("github.com/company/pkg").Error())
 }
 
 type (
@@ -658,7 +683,7 @@ type (
 //go:embed sql_example_syspkg/*.sql
 var sfs embed.FS
 
-func appStructsFromSQL(appdefSql string, prepareAppCfg appCfgCallback) istructs.IAppStructs {
+func appStructsFromSQL(packagePath string, appdefSql string, prepareAppCfg appCfgCallback) istructs.IAppStructs {
 	appDef := appdef.New()
 
 	fs, err := parser.ParseFile("file1.sql", appdefSql)
@@ -666,7 +691,7 @@ func appStructsFromSQL(appdefSql string, prepareAppCfg appCfgCallback) istructs.
 		panic(err)
 	}
 
-	pkg, err := parser.BuildPackageSchema("test/main", []*parser.FileSchemaAST{fs})
+	pkg, err := parser.BuildPackageSchema(packagePath, []*parser.FileSchemaAST{fs})
 	if err != nil {
 		panic(err)
 	}
