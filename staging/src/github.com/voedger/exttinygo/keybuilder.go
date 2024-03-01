@@ -40,7 +40,7 @@ func (i TKeyBuilder) PutBytes(name string, value []byte) {
 
 func (i TKeyBuilder) PutQName(name string, value QName) {
 	hostRowWriterPutQName(uint64(i), 0, uint32(uintptr(unsafe.Pointer(unsafe.StringData(name)))), uint32(len(name)),
-		uint32(uintptr(unsafe.Pointer(unsafe.StringData(value.Pkg)))), uint32(len(value.Entity)),
+		uint32(uintptr(unsafe.Pointer(unsafe.StringData(value.Pkg)))), uint32(len(value.Pkg)),
 		uint32(uintptr(unsafe.Pointer(unsafe.StringData(value.Entity)))), uint32(len(value.Entity)),
 	)
 }

@@ -337,7 +337,7 @@ func (f *wazeroExtEngine) Invoke(ctx context.Context, extension iextengine.ExtQN
 	var ok bool
 	f.pkg, ok = f.modules[extension.PackageName]
 	if !ok {
-		return undefinedPackage(extension.PackageName)
+		return errUndefinedPackage(extension.PackageName)
 	}
 
 	funct := f.pkg.exts[extension.ExtName]
@@ -380,14 +380,21 @@ func (f *wazeroExtEngine) decodeStr(ptr, size uint32) string {
 	panic(ErrUnableToReadMemory)
 }
 
-func (f *wazeroExtEngine) parseQname(value string) (qname appdef.QName, err error) {
-	//	path, name := filepath.Split(value)
+func (f *wazeroExtEngine) parseQname(value string) (qname appdef.QName) {
 
-	qname, err = appdef.ParseQName(value)
-	if err != nil {
-		return
+	pos := strings.LastIndex(value, ".")
+	if pos == -1 {
+		panic(fmt.Errorf("%w: %v", appdef.ErrInvalidQNameStringRepresentation, value))
 	}
-	return
+
+	packageFullPath := value[:pos]
+	entityName := value[pos+1:]
+	localName := f.io.PackageLocalName(packageFullPath)
+	if localName == "" {
+		panic(errUndefinedPackage(packageFullPath))
+	}
+
+	return appdef.NewQName(localName, entityName)
 }
 
 func (f *wazeroExtEngine) hostGetKey(storagePtr, storageSize, entityPtr, entitySize uint32) (res uint64) {
@@ -401,10 +408,7 @@ func (f *wazeroExtEngine) hostGetKey(storagePtr, storageSize, entityPtr, entityS
 	}
 	entitystr := f.decodeStr(entityPtr, entitySize)
 	if entitystr != "" {
-		entity, err = f.parseQname(entitystr)
-		if err != nil {
-			panic(err)
-		}
+		entity = f.parseQname(entitystr)
 	}
 	k, e := f.io.KeyBuilder(storage, entity)
 	if e != nil {
@@ -538,7 +542,8 @@ func (f *wazeroExtEngine) hostKeyAsBool(id uint64, namePtr uint32, nameSize uint
 func (f *wazeroExtEngine) hostKeyAsQNamePkg(id uint64, namePtr uint32, nameSize uint32) (result uint64) {
 	key, name := f.keyargs(id, namePtr, nameSize)
 	qname := key.AsQName(name)
-	return f.allocAndSend([]byte(qname.Pkg()))
+	fullPkg := f.io.PackageFullPath(qname.Pkg())
+	return f.allocAndSend([]byte(fullPkg))
 }
 
 func (f *wazeroExtEngine) hostKeyAsQNameEntity(id uint64, namePtr uint32, nameSize uint32) (result uint64) {
@@ -571,7 +576,8 @@ func (f *wazeroExtEngine) hostValueGetAsQNameEntity(value uint64, index uint32) 
 func (f *wazeroExtEngine) hostValueGetAsQNamePkg(value uint64, index uint32) (result uint64) {
 	v := f.value(value)
 	qname := v.GetAsQName(int(index))
-	return f.allocAndSend([]byte(qname.Pkg()))
+	fullPkg := f.io.PackageFullPath(qname.Pkg())
+	return f.allocAndSend([]byte(fullPkg))
 }
 
 func (f *wazeroExtEngine) hostValueGetAsBytes(value uint64, index uint32) (result uint64) {
@@ -660,7 +666,8 @@ func (f *wazeroExtEngine) hostValueAsQNameEntity(id uint64, namePtr uint32, name
 func (f *wazeroExtEngine) hostValueAsQNamePkg(id uint64, namePtr uint32, nameSize uint32) (result uint64) {
 	v, name := f.valueargs(id, namePtr, nameSize)
 	qname := v.AsQName(name)
-	return f.allocAndSend([]byte(qname.Pkg()))
+	fullPkg := f.io.PackageFullPath(qname.Pkg())
+	return f.allocAndSend([]byte(fullPkg))
 }
 
 func (f *wazeroExtEngine) hostValueAsValue(id uint64, namePtr uint32, nameSize uint32) (result uint64) {
@@ -710,7 +717,7 @@ func (f *wazeroExtEngine) allocBuf(size uint32) (addr uint32, err error) {
 func (f *wazeroExtEngine) getFrees(packageName string, ctx context.Context) (uint64, error) {
 	pkg, ok := f.modules[packageName]
 	if !ok {
-		return 0, undefinedPackage(packageName)
+		return 0, errUndefinedPackage(packageName)
 	}
 	res, err := pkg.funcGetFrees.Call(ctx)
 	if err != nil {
@@ -722,7 +729,7 @@ func (f *wazeroExtEngine) getFrees(packageName string, ctx context.Context) (uin
 func (f *wazeroExtEngine) gc(packageName string, ctx context.Context) error {
 	pkg, ok := f.modules[packageName]
 	if !ok {
-		return undefinedPackage(packageName)
+		return errUndefinedPackage(packageName)
 	}
 	_, err := pkg.funcGc.Call(ctx)
 	if err != nil {
@@ -734,7 +741,7 @@ func (f *wazeroExtEngine) gc(packageName string, ctx context.Context) error {
 func (f *wazeroExtEngine) getHeapinuse(packageName string, ctx context.Context) (uint64, error) {
 	pkg, ok := f.modules[packageName]
 	if !ok {
-		return 0, undefinedPackage(packageName)
+		return 0, errUndefinedPackage(packageName)
 	}
 	res, err := pkg.funcGetHeapInuse.Call(ctx)
 	if err != nil {
@@ -746,7 +753,7 @@ func (f *wazeroExtEngine) getHeapinuse(packageName string, ctx context.Context) 
 func (f *wazeroExtEngine) getHeapSys(packageName string, ctx context.Context) (uint64, error) {
 	pkg, ok := f.modules[packageName]
 	if !ok {
-		return 0, undefinedPackage(packageName)
+		return 0, errUndefinedPackage(packageName)
 	}
 	res, err := pkg.funcGetHeapSys.Call(ctx)
 	if err != nil {
@@ -758,7 +765,7 @@ func (f *wazeroExtEngine) getHeapSys(packageName string, ctx context.Context) (u
 func (f *wazeroExtEngine) getMallocs(packageName string, ctx context.Context) (uint64, error) {
 	pkg, ok := f.modules[packageName]
 	if !ok {
-		return 0, undefinedPackage(packageName)
+		return 0, errUndefinedPackage(packageName)
 	}
 	res, err := pkg.funcGetMallocs.Call(ctx)
 	if err != nil {
@@ -841,11 +848,12 @@ func (f *wazeroExtEngine) hostRowWriterPutInt64(id uint64, typ uint32, namePtr u
 	writer.PutInt64(name, value)
 }
 
-func (f *wazeroExtEngine) hostRowWriterPutQName(id uint64, typ uint32, namePtr uint32, nameSize uint32, value int64, pkgPtr, pkgSize, entityPtr, entitySize uint32) {
+func (f *wazeroExtEngine) hostRowWriterPutQName(id uint64, typ uint32, namePtr uint32, nameSize uint32, pkgPtr, pkgSize, entityPtr, entitySize uint32) {
 	writer, name := f.getWriterArgs(id, typ, namePtr, nameSize)
 	pkg := f.decodeStr(pkgPtr, pkgSize)
 	entity := f.decodeStr(entityPtr, entitySize)
-	writer.PutQName(name, appdef.NewQName(pkg, entity))
+	localPkg := f.io.PackageLocalName(pkg)
+	writer.PutQName(name, appdef.NewQName(localPkg, entity))
 }
 
 func (f *wazeroExtEngine) hostRowWriterPutBool(id uint64, typ uint32, namePtr uint32, nameSize uint32, value int32) {
