@@ -76,7 +76,7 @@ func TestBasicUsage(t *testing.T) {
 				require.Equal(testCDoc.String(), cuds[0].fields[appdef.SystemField_QName])
 				close(cudsCheck)
 			}
-			require.Equal(istructs.WSID(1), args.PrepareArgs.Workspace)
+			require.Equal(istructs.WSID(1), args.PrepareArgs.WSID)
 			require.NotNil(args.State)
 
 			// просто проверим, что мы получили то, что передал клиент
@@ -237,7 +237,6 @@ func TestRecoveryOnSyncProjectorError(t *testing.T) {
 	require.Equal(istructs.NewCDocCRecordID(istructs.FirstBaseRecordID)+4, istructs.RecordID(respData["NewIDs"].(map[string]interface{})["1"].(float64)))
 	require.Equal(istructs.NewRecordID(istructs.FirstBaseRecordID)+2, istructs.RecordID(respData["NewIDs"].(map[string]interface{})["2"].(float64)))
 	require.Equal(istructs.NewCDocCRecordID(istructs.FirstBaseRecordID)+5, istructs.RecordID(respData["NewIDs"].(map[string]interface{})["3"].(float64)))
-
 }
 
 func TestRecovery(t *testing.T) {
@@ -729,8 +728,7 @@ func setUp(t *testing.T, prepare func(appDef appdef.IAppDefBuilder, cfg *istruct
 		if authHeaders, ok := request.Header[coreutils.Authorization]; ok {
 			token = strings.TrimPrefix(authHeaders[0], "Bearer ")
 		}
-		command := appDef.Command(cmdQName)
-		icm := NewCommandMessage(ctx, request.Body, appQName, istructs.WSID(request.WSID), sender, testAppPartID, command, token, "")
+		icm := NewCommandMessage(ctx, request.Body, appQName, istructs.WSID(request.WSID), sender, testAppPartID, cmdQName, token, "")
 		serviceChannel <- icm
 	})
 
