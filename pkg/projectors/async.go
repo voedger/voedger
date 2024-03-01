@@ -123,6 +123,9 @@ func (a *asyncActualizer) waitForAppDeploy(ctx context.Context) error {
 			ap.Release()
 			return nil
 		}
+		if errors.Is(err, appparts.ErrNotAvailableEngines) {
+			return nil
+		}
 		if !errors.Is(err, appparts.ErrNotFound) {
 			return err
 		}
