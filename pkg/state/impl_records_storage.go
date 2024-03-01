@@ -5,15 +5,18 @@
 package state
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
+	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 type recordsStorage struct {
 	recordsFunc recordsFunc
 	cudFunc     CUDFunc
+	appDefFunc  appDefFunc
 	wsidFunc    WSIDFunc
 }
 
@@ -110,4 +113,9 @@ func (s *recordsStorage) ProvideValueBuilder(key istructs.IStateKeyBuilder, _ is
 }
 func (s *recordsStorage) ProvideValueBuilderForUpdate(_ istructs.IStateKeyBuilder, existingValue istructs.IStateValue, _ istructs.IStateValueBuilder) istructs.IStateValueBuilder {
 	return &recordsValueBuilder{rw: s.cudFunc().Update(existingValue.AsRecord(""))}
+}
+func (s *recordsStorage) ToJSON(sv istructs.IStateValue, _ ...interface{}) (string, error) {
+	obj := coreutils.FieldsToMap(sv, s.appDefFunc())
+	bb, err := json.Marshal(&obj)
+	return string(bb), err
 }
