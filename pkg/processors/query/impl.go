@@ -190,7 +190,7 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 		}),
 		operator("check cdoc.sys.WorkspaceDescriptor existence", func(ctx context.Context, qw *queryWork) (err error) {
 			if !coreutils.IsDummyWS(qw.msg.WSID()) && qw.wsDesc.QName() == appdef.NullQName {
-				// TODO: ws init check is simpl here comparing to command processor because we need just IWorkspace to get the query from it. No WSDesc -> no IWorkspace -> need to check WSDesc existence
+				// TODO: ws init check is simplified here because we need just IWorkspace to get the query from it.
 				return processors.ErrWSNotInited
 			}
 			return nil

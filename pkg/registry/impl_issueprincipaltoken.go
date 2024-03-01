@@ -47,6 +47,7 @@ func provideIssuePrincipalTokenExec(itokens itokens.ITokens) istructsmem.ExecQue
 		if err != nil {
 			return coreutils.NewHTTPErrorf(http.StatusBadRequest, "failed to parse app qualified name", appQName.String(), ":", err)
 		}
+		// TODO: check we're called at our AppWSID?
 
 		cdocLogin, doesLoginExist, err := GetCDocLogin(login, args.State, args.WSID, appName)
 		if err != nil {
