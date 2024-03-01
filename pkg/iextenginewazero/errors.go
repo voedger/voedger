@@ -16,6 +16,8 @@ var (
 	PanicIncorrectIntent     = "incorrect intent"
 )
 
+var errMemoryOutOfRange = errors.New("memory out of range")
+
 func missingExportedFunction(name string) error {
 	return errors.New("missing exported function: " + name)
 }
