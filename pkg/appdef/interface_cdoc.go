@@ -7,18 +7,15 @@ package appdef
 
 // Configuration document.
 type ICDoc interface {
-	IDoc
+	ISingleton
 
-	// Returns is singleton
-	Singleton() bool
+	// Unwanted type assertion stub
+	isCDoc()
 }
 
 type ICDocBuilder interface {
 	ICDoc
-	IDocBuilder
-
-	// Sets CDoc singleton
-	SetSingleton()
+	ISingletonBuilder
 }
 
 // Configuration document record.

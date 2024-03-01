@@ -69,20 +69,25 @@ classDiagram
         <<interface>>
     }
 
+    ISingleton --|> IDoc : inherits
+    class ISingleton {
+        <<interface>>
+        +Singleton() bool
+    }
+
     IGDoc --|> IDoc : inherits
     class IGDoc {
         <<interface>>
         +Kind()* TypeKind_GDoc
     }
 
-    ICDoc --|> IDoc : inherits
+    ICDoc --|> ISingleton : inherits
     class ICDoc {
         <<interface>>
         +Kind()* TypeKind_CDoc
-        +Singleton() bool
     }
 
-    IWDoc --|> IDoc : inherits
+    IWDoc --|> ISingleton : inherits
     class IWDoc {
         <<interface>>
         +Kind()* TypeKind_WDoc
@@ -291,20 +296,25 @@ classDiagram
         <<interface>>
     }
 
+    ISingleton --|> IDoc : inherits
+    class ISingleton {
+        <<interface>>
+        +Singleton() bool
+    }
+
     IGDoc --|> IDoc : inherits
     class IGDoc {
         <<interface>>
         +Kind()* TypeKind_GDoc
     }
 
-    ICDoc --|> IDoc : inherits
+    ICDoc --|> ISingleton : inherits
     class ICDoc {
         <<interface>>
         +Kind()* TypeKind_CDoc
-        +Singleton() bool
     }
 
-    IWDoc --|> IDoc : inherits
+    IWDoc --|> ISingleton : inherits
     class IWDoc {
         <<interface>>
         +Kind()* TypeKind_WDoc
@@ -368,8 +378,7 @@ classDiagram
 
   class ICDoc {
     <<Interface>>
-    IDoc
-    +Singleton() bool
+    ISingleton
   }
   ICDoc "1" o--> "0..*" ICRecord : children
 
@@ -381,7 +390,7 @@ classDiagram
 
   class IWDoc {
     <<Interface>>
-    IDoc
+    ISingleton
   }
   IWDoc "1" o--> "0..*" IWRecord : children
 
@@ -667,3 +676,7 @@ Invalid names examples:
 
 - Maximum fields per unique is 256
 - Maximum uniques per structure is 100.
+
+### Singletons
+
+- Maximum singletons per application is 512.
