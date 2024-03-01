@@ -21,7 +21,7 @@ var (
 	RequestSubject = appdef.NewQName(appdef.SysPackage, "RequestSubject")
 	Result         = appdef.NewQName(appdef.SysPackage, "Result")
 	Event          = appdef.NewQName(appdef.SysPackage, "Event")
-	Arg            = appdef.NewQName(appdef.SysPackage, "Arg")
+	CommandContext = appdef.NewQName(appdef.SysPackage, "CommandContext")
 )
 
 const (
@@ -43,6 +43,7 @@ const (
 	Field_ValidEvent                    = "ValidEvent"
 	Field_QName                         = "QName"
 	Field_ArgumentObject                = "ArgumentObject"
+	Field_ArgumentUnloggedObject        = "ArgumentUnloggedObject"
 	Field_Synced                        = "Synced"
 	Field_Count                         = "Count"
 	Field_ID                            = "ID"
