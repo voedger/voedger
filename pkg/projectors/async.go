@@ -119,7 +119,7 @@ func (a *asyncActualizer) cancelChannel(e error) {
 func (a *asyncActualizer) waitForAppDeploy(ctx context.Context) error {
 	for ctx.Err() == nil {
 		ap, err := a.conf.AppPartitions.Borrow(a.conf.AppQName, a.conf.Partition, cluster.ProcessorKind_Actualizer)
-		if err == nil ||  errors.Is(err, appparts.ErrNotAvailableEngines) {
+		if err == nil || errors.Is(err, appparts.ErrNotAvailableEngines) {
 			ap.Release()
 			return nil
 		}
