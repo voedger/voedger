@@ -56,16 +56,14 @@ func WithNonNilsOnly() MapperOpt {
 	}
 }
 
-// IWorkspace is required as the source to get list of fields from
-// failed to add this information to IRowReader so it is simpler to keep IWorkspace here
-func FieldsToMap(obj istructs.IRowReader, ws appdef.IWorkspace, optFuncs ...MapperOpt) (res map[string]interface{}) {
+func FieldsToMap(obj istructs.IRowReader, appDef appdef.IAppDef, optFuncs ...MapperOpt) (res map[string]interface{}) {
 	res = map[string]interface{}{}
 
 	qn := obj.AsQName(appdef.SystemField_QName)
 	if qn == appdef.NullQName {
 		return
 	}
-	t := ws.Type(qn)
+	t := appDef.Type(qn)
 
 	opts := &mapperOpts{}
 	for _, optFunc := range optFuncs {
@@ -80,7 +78,7 @@ func FieldsToMap(obj istructs.IRowReader, ws appdef.IWorkspace, optFuncs ...Mapp
 		}
 		if kind == appdef.DataKind_Record {
 			if v, ok := obj.(istructs.IValue); ok {
-				res[fieldName] = FieldsToMap(v.AsRecord(fieldName), ws, optFuncs...)
+				res[fieldName] = FieldsToMap(v.AsRecord(fieldName), appDef, optFuncs...)
 			} else {
 				panic("DataKind_Record field met -> IValue must be provided")
 			}
@@ -104,17 +102,16 @@ func FieldsToMap(obj istructs.IRowReader, ws appdef.IWorkspace, optFuncs ...Mapp
 	return res
 }
 
-func ObjectToMap(obj istructs.IObject, ws appdef.IWorkspace, opts ...MapperOpt) (res map[string]interface{}) {
+func ObjectToMap(obj istructs.IObject, appDef appdef.IAppDef, opts ...MapperOpt) (res map[string]interface{}) {
 	if obj.QName() == appdef.NullQName {
 		return map[string]interface{}{}
 	}
-	res = FieldsToMap(obj, ws, opts...)
+	res = FieldsToMap(obj, appDef, opts...)
 	obj.Containers(func(container string) {
 		var childMap map[string]interface{}
 		cont := []map[string]interface{}{}
 		obj.Children(container, func(c istructs.IObject) {
-			
-			childMap = ObjectToMap(c, ws, opts...)
+			childMap = ObjectToMap(c, appDef, opts...)
 			cont = append(cont, childMap)
 		})
 		res[container] = cont
