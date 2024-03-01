@@ -19,7 +19,7 @@ import (
 
 func execQrySqlQuery(asp istructs.IAppStructsProvider, appQName istructs.AppQName, numCommandProcessors coreutils.CommandProcessorsCount) func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 	return func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
-		wsid := args.Workspace
+		wsid := args.WSID
 		if index := strings.Index(args.ArgumentObject.AsString(field_Query), flag_WSID); index != -1 {
 			v, err := strconv.Atoi(args.ArgumentObject.AsString(field_Query)[index+len(flag_WSID):])
 			if err != nil {
@@ -66,13 +66,13 @@ func execQrySqlQuery(asp istructs.IAppStructsProvider, appQName istructs.AppQNam
 
 		switch appStructs.AppDef().Type(source).Kind() {
 		case appdef.TypeKind_ViewRecord:
-			return readViewRecords(ctx, wsid, appdef.NewQName(table.Qualifier.String(), table.Name.String()), whereExpr, appStructs, f, callback)
+			return readViewRecords(ctx, wsid, appdef.NewQName(table.Qualifier.String(), table.Name.String()), whereExpr, appStructs, f, callback, args.Workspace)
 		case appdef.TypeKind_CDoc:
 			fallthrough
 		case appdef.TypeKind_CRecord:
 			fallthrough
 		case appdef.TypeKind_WDoc:
-			return readRecords(wsid, source, whereExpr, appStructs, f, callback)
+			return readRecords(wsid, source, whereExpr, appStructs, f, callback, args.Workspace)
 		default:
 			if source != plog && source != wlog {
 				break
@@ -82,9 +82,9 @@ func execQrySqlQuery(asp istructs.IAppStructsProvider, appQName istructs.AppQNam
 				return e
 			}
 			if source == plog {
-				return readPlog(ctx, wsid, numCommandProcessors, offset, limit, appStructs, f, callback)
+				return readPlog(ctx, wsid, numCommandProcessors, offset, limit, appStructs, f, callback, args.Workspace)
 			}
-			return readWlog(ctx, wsid, offset, limit, appStructs, f, callback)
+			return readWlog(ctx, wsid, offset, limit, appStructs, f, callback, args.Workspace)
 		}
 
 		return fmt.Errorf("unsupported source: %s", source)
