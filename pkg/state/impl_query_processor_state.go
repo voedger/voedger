@@ -14,7 +14,7 @@ import (
 
 func implProvideQueryProcessorState(ctx context.Context, appStructs istructs.IAppStructs, partitionIDFunc PartitionIDFunc, wsidFunc WSIDFunc,
 	secretReader isecrets.ISecretReader, principalsFunc PrincipalsFunc, tokenFunc TokenFunc, argFunc ArgFunc) IHostState {
-	bs := newHostState("QueryProcessor", 0)
+	bs := newHostState("QueryProcessor", 0, func() istructs.IAppStructs { return appStructs })
 
 	bs.addStorage(View, &viewRecordsStorage{
 		ctx:             ctx,
