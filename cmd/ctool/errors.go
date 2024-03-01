@@ -5,7 +5,10 @@
 
 package main
 
-import "errors"
+import (
+	"errors"
+	"fmt"
+)
 
 // nolint
 var (
@@ -76,3 +79,5 @@ var ErrInvalidExpireTime = errors.New("invalid expire time")
 var ErrBackupNotExist = errors.New("backup does not exist")
 
 const errBackupNotExistOnHost = "backup %s does not exist on host %s: %w"
+
+var ErrGrafanaPasswordIsTooShort = fmt.Errorf("password must be at least %d characters long", minGrafanaPasswordLength)
