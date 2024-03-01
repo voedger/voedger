@@ -80,6 +80,11 @@ func provideIBus(appParts appparts.IAppPartitions, procbus iprocbus.IProcBus,
 			coreutils.ReplyInternalServerError(sender, "failed to get app partitions count", err)
 			return
 		}
+		if appPartsCount == 0 {
+			// TODO: find the better soultion, see https://github.com/voedger/voedger/issues/1584
+			coreutils.ReplyErrf(sender, http.StatusServiceUnavailable, fmt.Sprintf("app %s partitions are not deployed yet", appQName))
+			return
+		}
 
 		deliverToProcessors(request, requestCtx, appQName, sender, funcType, procbus, token, cpchIdx, qpcgIdx, cpAmount, appPartsCount)
 	})

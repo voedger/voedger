@@ -62,7 +62,7 @@ func TestCounterOperator_DoAsync(t *testing.T) {
 			releaseCounter: 3,
 		},
 	}
-	outWorkIsPresent := func(outWork pipeline.IWorkpiece, err error) bool {
+	outWorkIsPresent := func(outWork pipeline.IWorkpiece, _ error) bool {
 		return outWork != nil
 	}
 	for _, test := range tests {

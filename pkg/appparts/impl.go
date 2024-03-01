@@ -56,7 +56,7 @@ func (aps *apps) DeployAppPartitions(appName istructs.AppQName, partIDs []istruc
 
 	a, ok := aps.apps[appName]
 	if !ok {
-		panic(fmt.Errorf(ErrAppNotFound, appName, ErrNotFound))
+		panic(fmt.Errorf(errAppNotFound, appName, ErrNotFound))
 	}
 
 	for _, id := range partIDs {
@@ -66,17 +66,23 @@ func (aps *apps) DeployAppPartitions(appName istructs.AppQName, partIDs []istruc
 }
 
 func (aps *apps) AppDef(appName istructs.AppQName) (appdef.IAppDef, error) {
+	aps.mx.Lock()
+	defer aps.mx.Unlock()
+
 	app, ok := aps.apps[appName]
 	if !ok {
-		return nil, fmt.Errorf(ErrAppNotFound, appName, ErrNotFound)
+		return nil, fmt.Errorf(errAppNotFound, appName, ErrNotFound)
 	}
 	return app.def, nil
 }
 
 func (aps *apps) AppPartsCount(appName istructs.AppQName) (int, error) {
+	aps.mx.Lock()
+	defer aps.mx.Unlock()
+
 	app, ok := aps.apps[appName]
 	if !ok {
-		return 0, fmt.Errorf(ErrAppNotFound, appName, ErrNotFound)
+		return 0, fmt.Errorf(errAppNotFound, appName, ErrNotFound)
 	}
 	return len(app.parts), nil
 }
@@ -87,7 +93,7 @@ func (aps *apps) Borrow(appName istructs.AppQName, partID istructs.PartitionID, 
 
 	app, ok := aps.apps[appName]
 	if !ok {
-		return nil, fmt.Errorf(ErrAppNotFound, appName, ErrNotFound)
+		return nil, fmt.Errorf(errAppNotFound, appName, ErrNotFound)
 	}
 
 	part, ok := app.parts[partID]
