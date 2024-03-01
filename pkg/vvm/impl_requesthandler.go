@@ -36,7 +36,7 @@ func provideIBus(appParts appparts.IAppPartitions, procbus iprocbus.IProcBus,
 			coreutils.ReplyBadRequest(sender, "wrong function name: "+request.Resource)
 			return
 		}
-		funcQName, err := appdef.ParseQName(request.Resource[2:])
+		qName, err := appdef.ParseQName(request.Resource[2:])
 		if err != nil {
 			coreutils.ReplyBadRequest(sender, "wrong function name: "+request.Resource)
 			return
@@ -57,6 +57,18 @@ func provideIBus(appParts appparts.IAppPartitions, procbus iprocbus.IProcBus,
 			return
 		}
 
+		appDef, err := appParts.AppDef(appQName)
+		if err != nil {
+			coreutils.ReplyInternalServerError(sender, "failed to get AppDef", err)
+			return
+		}
+
+		funcKindMark := request.Resource[:1]
+		funcType, isHandled := getFuncType(appDef, qName, sender, funcKindMark)
+		if isHandled {
+			return
+		}
+
 		token, err := getPrincipalToken(request)
 		if err != nil {
 			coreutils.ReplyAccessDeniedUnauthorized(sender, err.Error())
@@ -74,16 +86,16 @@ func provideIBus(appParts appparts.IAppPartitions, procbus iprocbus.IProcBus,
 			return
 		}
 
-		deliverToProcessors(request, requestCtx, appQName, sender, funcQName, procbus, token, cpchIdx, qpcgIdx, cpAmount, appPartsCount)
+		deliverToProcessors(request, requestCtx, appQName, sender, funcType, procbus, token, cpchIdx, qpcgIdx, cpAmount, appPartsCount)
 	})
 }
 
-func deliverToProcessors(request ibus.Request, requestCtx context.Context, appQName istructs.AppQName, sender ibus.ISender, funcQName appdef.QName,
+func deliverToProcessors(request ibus.Request, requestCtx context.Context, appQName istructs.AppQName, sender ibus.ISender, funcType appdef.IType,
 	procbus iprocbus.IProcBus, token string, cpchIdx CommandProcessorsChannelGroupIdxType, qpcgIdx QueryProcessorsChannelGroupIdxType,
 	cpCount coreutils.CommandProcessorsCount, appPartsCount int) {
 	switch request.Resource[:1] {
 	case "q":
-		iqm := queryprocessor.NewQueryMessage(requestCtx, appQName, istructs.PartitionID(request.PartitionNumber), istructs.WSID(request.WSID), sender, request.Body, funcQName, request.Host, token)
+		iqm := queryprocessor.NewQueryMessage(requestCtx, appQName, istructs.PartitionID(request.PartitionNumber), istructs.WSID(request.WSID), sender, request.Body, funcType.(appdef.IQuery), request.Host, token)
 		if !procbus.Submit(int(qpcgIdx), 0, iqm) {
 			coreutils.ReplyErrf(sender, http.StatusServiceUnavailable, "no query processors available")
 		}
@@ -91,13 +103,30 @@ func deliverToProcessors(request ibus.Request, requestCtx context.Context, appQN
 		partitionID := istructs.PartitionID(request.WSID % int64(appPartsCount))
 		// TODO: use appQName to calculate processorIdx in solid range [0..cpCount)
 		processorIdx := int64(partitionID) % int64(cpCount)
-		icm := commandprocessor.NewCommandMessage(requestCtx, request.Body, appQName, istructs.WSID(request.WSID), sender, partitionID, funcQName, token, request.Host)
+		icm := commandprocessor.NewCommandMessage(requestCtx, request.Body, appQName, istructs.WSID(request.WSID), sender, partitionID, funcType.(appdef.ICommand), token, request.Host)
 		if !procbus.Submit(int(cpchIdx), int(processorIdx), icm) {
 			coreutils.ReplyErrf(sender, http.StatusServiceUnavailable, fmt.Sprintf("command processor of partition %d is busy", partitionID))
 		}
-	default:
-		coreutils.ReplyBadRequest(sender, fmt.Sprintf(`wrong function mark "%s" for function %s`, request.Resource[:1], funcQName))
 	}
+}
+
+func getFuncType(appDef appdef.IAppDef, qName appdef.QName, sender ibus.ISender, funcKindMark string) (appdef.IType, bool) {
+	tp := appDef.Type(qName)
+	switch tp.Kind() {
+	case appdef.TypeKind_null:
+		coreutils.ReplyBadRequest(sender, "unknown function "+qName.String())
+		return nil, true
+	case appdef.TypeKind_Query:
+		if funcKindMark == "q" {
+			return tp, false
+		}
+	case appdef.TypeKind_Command:
+		if funcKindMark == "c" {
+			return tp, false
+		}
+	}
+	coreutils.ReplyBadRequest(sender, fmt.Sprintf(`wrong function kind "%s" for function %s`, funcKindMark, qName))
+	return nil, true
 }
 
 func getPrincipalToken(request ibus.Request) (token string, err error) {

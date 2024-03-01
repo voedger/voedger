@@ -121,6 +121,8 @@ func TestBasicUsage_Workspace(t *testing.T) {
 	t.Run("read user workspaces list", func(t *testing.T) {
 		body := `{"args":{"Schema":"sys.ChildWorkspace"},"elements":[{"fields":["WSName","WSKind","WSID","WSError"]}]}`
 		resp := vit.PostProfile(prn, "q.sys.Collection", body)
+		// note: wsKind is rendered as {} because q.sys.Collection appends QName to the object to marshal to JSON by value
+		// whereas appdef.QName.MarshalJSON() func has pointer receiver
 		resp.Println()
 	})
 }

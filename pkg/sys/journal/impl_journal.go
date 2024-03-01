@@ -18,13 +18,13 @@ import (
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-func provideQryJournal(cfg *istructsmem.AppConfigType, ep extensionpoints.IExtensionPoint) {
+func provideQryJournal(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) {
 	cfg.Resources.Add(istructsmem.NewQueryFunction(
 		appdef.NewQName(appdef.SysPackage, "Journal"),
-		qryJournalExec(ep),
+		qryJournalExec(ep, appDefBuilder),
 	))
 }
-func qryJournalExec(ep extensionpoints.IExtensionPoint) istructsmem.ExecQueryClosure {
+func qryJournalExec( /*jdi vvm.IEPJournalIndices, jp vvm.IEPJournalPredicates, */ ep extensionpoints.IExtensionPoint, appDef appdef.IAppDef) istructsmem.ExecQueryClosure {
 	return func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 		var fo, lo int64
 		ji := ep.ExtensionPoint(EPJournalIndices)
@@ -43,7 +43,7 @@ func qryJournalExec(ep extensionpoints.IExtensionPoint) istructsmem.ExecQueryClo
 			return err
 		}
 
-		f, err := NewFilter(args.Workspace, strings.Split(args.ArgumentObject.AsString(Field_EventTypes), ","), jp)
+		f, err := NewFilter(appDef, strings.Split(args.ArgumentObject.AsString(Field_EventTypes), ","), jp)
 		if err != nil {
 			return err
 		}
@@ -52,7 +52,7 @@ func qryJournalExec(ep extensionpoints.IExtensionPoint) istructsmem.ExecQueryClo
 			if fo == int64(0) {
 				return
 			}
-			eo, err := NewEventObject(value.AsEvent("").(istructs.IWLogEvent), args.Workspace, f, coreutils.WithNonNilsOnly())
+			eo, err := NewEventObject(value.AsEvent("").(istructs.IWLogEvent), appDef, f, coreutils.WithNonNilsOnly())
 			if err != nil {
 				return err
 			}

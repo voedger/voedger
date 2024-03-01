@@ -5,6 +5,8 @@
 package sys_it
 
 import (
+	"context"
+	"embed"
 	"encoding/base64"
 	"fmt"
 	"sync"
@@ -13,13 +15,82 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/apps"
+	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/istructs"
-	"github.com/voedger/voedger/pkg/state"
+	"github.com/voedger/voedger/pkg/istructsmem"
+	"github.com/voedger/voedger/pkg/parser"
+	"github.com/voedger/voedger/pkg/sys"
 	"github.com/voedger/voedger/pkg/sys/authnz"
+	"github.com/voedger/voedger/pkg/sys/smtp"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 	it "github.com/voedger/voedger/pkg/vit"
 	"github.com/voedger/voedger/pkg/vvm"
 )
+
+type greeterRR struct {
+	istructs.NullObject
+	text string
+}
+
+func (e *greeterRR) AsString(name string) string {
+	return "hello, " + e.text
+}
+
+//go:embed testapp.sql
+var testAppSQL embed.FS
+
+const app2pkg = "app2pkg"
+
+func TestBasicUsage(t *testing.T) {
+	require := require.New(t)
+	cfg := it.NewOwnVITConfig(
+		it.WithApp(istructs.AppQName_test1_app2, func(apis apps.APIs, cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) apps.BuiltInAppDef {
+			qNameCmdGreeter := appdef.NewQName(app2pkg, "Greeter")
+			cfg.Resources.Add(istructsmem.NewQueryFunction(
+				qNameCmdGreeter,
+				func(_ context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
+					text := args.ArgumentObject.AsString("Text")
+					var rr = &greeterRR{text: text}
+					return callback(rr)
+				},
+			))
+
+			// need to read cdoc.sys.Subject on auth
+			sysPackageFS := sys.Provide(cfg, appDefBuilder, smtp.Cfg{}, ep, nil, apis.TimeFunc, apis.ITokens, apis.IFederation, apis.IAppStructsProvider, apis.IAppTokensFactory,
+				apis.NumCommandProcessors, nil, apis.IAppStorageProvider)
+			appPackageFS := parser.PackageFS{
+				QualifiedPackageName: "github.com/voedger/voedger/pkg/vit/app2pkg",
+				FS:                   testAppSQL,
+			}
+			return apps.BuiltInAppDef{
+				AppQName:                istructs.AppQName_test1_app2,
+				Packages:                []parser.PackageFS{sysPackageFS, appPackageFS},
+				AppDeploymentDescriptor: it.TestAppDeploymentDescriptor,
+			}
+		}),
+	)
+	vit := it.NewVIT(t, &cfg)
+	defer vit.TearDown()
+
+	// отправим POST-запрос
+	body := `
+	{
+		"args": {
+		  "Text": "world"
+		},
+		"elements": [
+		  {
+			"fields": ["Res"]
+		  }
+		]
+	  }
+	`
+	ws := vit.DummyWS(istructs.AppQName_test1_app2, 1)
+	resp := vit.PostWSSys(ws, "q.app2pkg.Greeter", body)
+	require.Equal(`{"sections":[{"type":"","elements":[[[["hello, world"]]]]}]}`, resp.Body)
+	resp.Println()
+}
 
 func TestAppWSAutoInitialization(t *testing.T) {
 	require := require.New(t)
@@ -60,21 +131,21 @@ func TestAuthorization(t *testing.T) {
 	t.Run("basic usage", func(t *testing.T) {
 		t.Run("Bearer scheme", func(t *testing.T) {
 			sys := vit.GetSystemPrincipal(istructs.AppQName_test1_app1)
-			vit.PostWS(ws, "c.sys.CUD", body, coreutils.WithHeaders(coreutils.Authorization, "Bearer "+sys.Token))
+			vit.PostApp(istructs.AppQName_test1_app1, prn.ProfileWSID, "c.sys.CUD", body, coreutils.WithHeaders(coreutils.Authorization, "Bearer "+sys.Token))
 		})
 
 		t.Run("Basic scheme", func(t *testing.T) {
 			t.Run("token in username only", func(t *testing.T) {
 				basicAuthHeader := base64.StdEncoding.EncodeToString([]byte(prn.Token + ":"))
-				vit.PostWS(ws, "c.sys.CUD", body, coreutils.WithHeaders(coreutils.Authorization, "Basic "+basicAuthHeader))
+				vit.PostApp(istructs.AppQName_test1_app1, prn.ProfileWSID, "c.sys.CUD", body, coreutils.WithHeaders(coreutils.Authorization, "Basic "+basicAuthHeader))
 			})
 			t.Run("token in password only", func(t *testing.T) {
 				basicAuthHeader := base64.StdEncoding.EncodeToString([]byte(":" + prn.Token))
-				vit.PostWS(ws, "c.sys.CUD", body, coreutils.WithHeaders(coreutils.Authorization, "Basic "+basicAuthHeader))
+				vit.PostApp(istructs.AppQName_test1_app1, prn.ProfileWSID, "c.sys.CUD", body, coreutils.WithHeaders(coreutils.Authorization, "Basic "+basicAuthHeader))
 			})
 			t.Run("token is splitted over username and password", func(t *testing.T) {
 				basicAuthHeader := base64.StdEncoding.EncodeToString([]byte(prn.Token[:len(prn.Token)/2] + ":" + prn.Token[len(prn.Token)/2:]))
-				vit.PostWS(ws, "c.sys.CUD", body, coreutils.WithHeaders(coreutils.Authorization, "Basic "+basicAuthHeader))
+				vit.PostApp(istructs.AppQName_test1_app1, prn.ProfileWSID, "c.sys.CUD", body, coreutils.WithHeaders(coreutils.Authorization, "Basic "+basicAuthHeader))
 			})
 		})
 	})
@@ -175,7 +246,7 @@ func Test503OnNoQueryProcessorsAvailable(t *testing.T) {
 	}
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
-	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+
 	body := `{"args": {"Input": "world"},"elements": [{"fields": ["Res"]}]}`
 	postDone := sync.WaitGroup{}
 	sys := vit.GetSystemPrincipal(istructs.AppQName_test1_app1)
@@ -183,13 +254,12 @@ func Test503OnNoQueryProcessorsAvailable(t *testing.T) {
 		postDone.Add(1)
 		go func() {
 			defer postDone.Done()
-			vit.PostWS(ws, "q.app1pkg.MockQry", body, coreutils.WithAuthorizeBy(sys.Token))
+			vit.PostApp(istructs.AppQName_test1_app1, 1, "q.app1pkg.MockQry", body, coreutils.WithAuthorizeBy(sys.Token))
 		}()
 
 		<-funcStarted
 	}
 
-	// one more request to any WSID -> 503 service unavailable
 	vit.PostApp(istructs.AppQName_test1_app1, 1, "q.sys.Echo", body, coreutils.Expect503(), coreutils.WithAuthorizeBy(sys.Token))
 
 	for i := 0; i < int(vit.VVMConfig.NumQueryProcessors); i++ {
@@ -249,72 +319,5 @@ func TestIsActiveValidation(t *testing.T) {
 	t.Run("deny insert a deactivated record", func(t *testing.T) {
 		body := `{"cuds":[{"fields":{"sys.ID": 1,"sys.QName":"app1pkg.air_table_plan","sys.IsActive":false}}]}`
 		vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect403()).Println()
-	})
-}
-
-func TestTakeQNamesFromWorkspace(t *testing.T) {
-	vit := it.NewVIT(t, &it.SharedConfig_App1)
-	defer vit.TearDown()
-
-	t.Run("command", func(t *testing.T) {
-		t.Run("existence", func(t *testing.T) {
-
-			anotherWS := vit.WS(istructs.AppQName_test1_app1, "test_ws_another")
-			body := fmt.Sprintf(`{"args":{"Arg1":%d}}`, 1)
-			// c.app1pkg.TestCmd is not defined in test_ws_anotherWS workspace -> 400 bad request
-			vit.PostWS(anotherWS, "c.app1pkg.TestCmd", body, coreutils.Expect400("command app1pkg.TestCmd does not exist in workspace app1pkg.test_wsWS_another"))
-
-			ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
-			body = "{}"
-			// c.app1pkg.testCmd is defined in test_wsWS workspace -> 400 bad request
-			vit.PostWS(ws, "c.app1pkg.testCmd", body, coreutils.Expect400("command app1pkg.testCmd does not exist in workspace app1pkg.test_wsWS"))
-		})
-
-		t.Run("type", func(t *testing.T) {
-			ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
-			body := "{}"
-			// c.app1pkg.testCmd is defined in test_wsWS workspace -> 400 bad request
-			vit.PostWS(ws, "c.app1pkg.MockQry", body, coreutils.Expect400("app1pkg.MockQry is not a command"))
-		})
-	})
-
-	t.Run("query", func(t *testing.T) {
-		t.Run("existensce", func(t *testing.T) {
-			anotherWS := vit.WS(istructs.AppQName_test1_app1, "test_ws_another")
-			body := `{"args":{"Input":"str"}}`
-			// q.app1pkg.MockQry is not defined in test_ws_anotherWS workspace -> 400 bad request
-			vit.PostWS(anotherWS, "q.app1pkg.MockQry", body, coreutils.Expect400("query app1pkg.MockQry does not exist in workspace app1pkg.test_wsWS_another"))
-		})
-		t.Run("type", func(t *testing.T) {
-			anotherWS := vit.WS(istructs.AppQName_test1_app1, "test_ws_another")
-			body := fmt.Sprintf(`{"args":{"Arg1":%d}}`, 1)
-			vit.PostWS(anotherWS, "q.app1pkg.testCmd", body, coreutils.Expect400("app1pkg.testCmd is not a query"))
-		})
-	})
-
-	t.Run("CUDs QNames", func(t *testing.T) {
-		t.Run("CUD in the request", func(t *testing.T) {
-			anotherWS := vit.WS(istructs.AppQName_test1_app1, "test_ws_another")
-			body := `{"cuds":[{"fields":{"sys.ID": 1,"sys.QName":"app1pkg.options"}}]}`
-			// try to insert a QName that does not exist in the workspace -> 403 foribidden ??? or 400 bad request ???
-			vit.PostWS(anotherWS, "c.sys.CUD", body, coreutils.Expect400("app1pkg.options", "does not exist in the workspace app1pkg.test_ws_another"))
-		})
-		t.Run("CUD produced by a command", func(t *testing.T) {
-			it.MockCmdExec = func(input string, args istructs.ExecCommandArgs) error {
-				kb, err := args.State.KeyBuilder(state.Record, appdef.NewQName("app1pkg", "docInAnotherWS"))
-				if err != nil {
-					return err
-				}
-				vb, err := args.Intents.NewValue(kb)
-				if err != nil {
-					return err
-				}
-				vb.PutRecordID(appdef.SystemField_ID, 1)
-				return nil
-			}
-			body := `{"args":{"Input":"Str"}}`
-			ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
-			vit.PostWS(ws, "c.app1pkg.MockCmd", body, coreutils.Expect400("app1pkg.docInAnotherWS", "does not exist in the workspace app1pkg.test_ws"))
-		})
 	})
 }
