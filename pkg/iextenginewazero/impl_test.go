@@ -84,54 +84,54 @@ func Test_BasicUsage(t *testing.T) {
 		})
 
 	// Build NewOrder event
-	eventFunc := func() istructs.IPLogEvent {
-		reb := app.Events().GetNewRawEventBuilder(istructs.NewRawEventBuilderParams{
-			GenericRawEventBuilderParams: istructs.GenericRawEventBuilderParams{
-				Workspace:         ws,
-				HandlingPartition: partition,
-				PLogOffset:        offset,
-				QName:             newOrderCmd,
-			},
-		})
-		orderBuilder := reb.ArgumentObjectBuilder()
-
-		orderBuilder.PutRecordID(appdef.SystemField_ID, 1)
-		orderBuilder.PutInt32("Year", 2023)
-		orderBuilder.PutInt32("Month", 1)
-		orderBuilder.PutInt32("Day", 1)
-		items := orderBuilder.ChildBuilder("Items")
-		items.PutRecordID(appdef.SystemField_ID, 2)
-		items.PutInt32("Quantity", 1)
-		items.PutInt64("SinglePrice", 100)
-		items = orderBuilder.ChildBuilder("Items")
-		items.PutRecordID(appdef.SystemField_ID, 3)
-		items.PutInt32("Quantity", 2)
-		items.PutInt64("SinglePrice", 50)
-
-		rawEvent, err := reb.BuildRawEvent()
-		if err != nil {
-			panic(err)
-		}
-
-		event, err := app.Events().PutPlog(rawEvent, nil, istructsmem.NewIDGenerator())
-		if err != nil {
-			panic(err)
-		}
-		return event
+	reb := app.Events().GetNewRawEventBuilder(istructs.NewRawEventBuilderParams{
+		GenericRawEventBuilderParams: istructs.GenericRawEventBuilderParams{
+			Workspace:         ws,
+			HandlingPartition: partition,
+			PLogOffset:        offset,
+			QName:             newOrderCmd,
+		},
+	})
+	orderBuilder := reb.ArgumentObjectBuilder()
+	orderBuilder.PutRecordID(appdef.SystemField_ID, 1)
+	orderBuilder.PutInt32("Year", 2023)
+	orderBuilder.PutInt32("Month", 1)
+	orderBuilder.PutInt32("Day", 1)
+	items := orderBuilder.ChildBuilder("Items")
+	items.PutRecordID(appdef.SystemField_ID, 2)
+	items.PutInt32("Quantity", 1)
+	items.PutInt64("SinglePrice", 100)
+	items = orderBuilder.ChildBuilder("Items")
+	items.PutRecordID(appdef.SystemField_ID, 3)
+	items.PutInt32("Quantity", 2)
+	items.PutInt64("SinglePrice", 50)
+	rawEvent, err := reb.BuildRawEvent()
+	if err != nil {
+		panic(err)
+	}
+	event, err := app.Events().PutPlog(rawEvent, nil, istructsmem.NewIDGenerator())
+	if err != nil {
+		panic(err)
 	}
 
-	// Create state
-	state := state.ProvideAsyncActualizerStateFactory()(context.Background(), app, nil, state.SimpleWSIDFunc(ws), nil, nil, eventFunc, intentsLimit, bundlesLimit)
+	eventFunc := func() istructs.IPLogEvent { return event }
+	cudFunc := func() istructs.ICUD { return reb.CUDBuilder() }
+	argFunc := func() istructs.IObject { return event.ArgumentObject() }
+	unloggedArgFunc := func() istructs.IObject { return nil }
+	appFunc := func() istructs.IAppStructs { return app }
+
+	// Create states for Command processor and Actualizer
+	actualizerState := state.ProvideAsyncActualizerStateFactory()(context.Background(), app, nil, state.SimpleWSIDFunc(ws), nil, nil, eventFunc, intentsLimit, bundlesLimit)
+	cmdProcState := state.ProvideCommandProcessorStateFactory()(context.Background(), appFunc, nil, state.SimpleWSIDFunc(ws), nil, cudFunc, nil, nil, intentsLimit, nil, argFunc, unloggedArgFunc)
 
 	// Create extension package from WASM
-	const calcOrderedItems = "CalcOrderedItems"
 	ctx := context.Background()
 	moduleUrl := testModuleURL("./_testdata/basicusage/pkg.wasm")
 	packages := []iextengine.ExtensionPackage{
 		{
 			QualifiedName:  testPkg,
 			ModuleUrl:      moduleUrl,
-			ExtensionNames: []string{calcOrderedItems},
+			ExtensionNames: []string{calcOrderedItemsProjector.Entity(), newOrderCmd.Entity()},
 		},
 	}
 
@@ -144,23 +144,27 @@ func Test_BasicUsage(t *testing.T) {
 	extEngine := engines[0]
 	defer extEngine.Close(ctx)
 	//
-	// Invoke extension
+	// Invoke command
 	//
-	err = extEngine.Invoke(context.Background(), iextengine.NewExtQName(testPkg, calcOrderedItems), state)
+	err = extEngine.Invoke(context.Background(), iextengine.NewExtQName(testPkg, newOrderCmd.Entity()), cmdProcState)
 	require.NoError(err)
-
-	ready, err := state.ApplyIntents()
+	//
+	// Invoke projector
+	//
+	err = extEngine.Invoke(context.Background(), iextengine.NewExtQName(testPkg, calcOrderedItemsProjector.Entity()), actualizerState)
+	require.NoError(err)
+	ready, err := actualizerState.ApplyIntents()
 	require.NoError(err)
 	require.False(ready)
 
-	// Invoke extension again
-	require.NoError(extEngine.Invoke(context.Background(), iextengine.NewExtQName(testPkg, calcOrderedItems), state))
-	ready, err = state.ApplyIntents()
+	// Invoke projector again
+	require.NoError(extEngine.Invoke(context.Background(), iextengine.NewExtQName(testPkg, calcOrderedItemsProjector.Entity()), actualizerState))
+	ready, err = actualizerState.ApplyIntents()
 	require.NoError(err)
 	require.False(ready)
 
 	// Flush bundles with intents
-	require.NoError(state.FlushBundles())
+	require.NoError(actualizerState.FlushBundles())
 
 	// Test view, must be calculated from 2 events
 	kb := app.ViewRecords().KeyBuilder(orderedItemsView)
