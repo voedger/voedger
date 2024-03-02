@@ -15,7 +15,7 @@ import (
 func implProvideCommandProcessorState(ctx context.Context, appStructsFunc AppStructsFunc, partitionIDFunc PartitionIDFunc,
 	wsidFunc WSIDFunc, secretReader isecrets.ISecretReader, cudFunc CUDFunc, principalsFunc PrincipalsFunc,
 	tokenFunc TokenFunc, intentsLimit int, cmdResultBuilderFunc CmdResultBuilderFunc, argFunc ArgFunc) IHostState {
-	bs := newHostState("CommandProcessor", intentsLimit)
+	bs := newHostState("CommandProcessor", intentsLimit, appStructsFunc)
 
 	bs.addStorage(View, &viewRecordsStorage{
 		ctx:             ctx,

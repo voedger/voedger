@@ -40,6 +40,7 @@ type ExtEngineConfig struct {
 type IExtensionIO interface {
 	istructs.IState
 	istructs.IIntents
+	istructs.IPkgNameResolver
 }
 
 // 1 package = 1 ext engine instance

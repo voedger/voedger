@@ -98,6 +98,17 @@ type IIntents interface {
 	// UpdateValue returns a value builder to update existing value
 	UpdateValue(key IStateKeyBuilder, existingValue IStateValue) (builder IStateValueBuilder, err error)
 }
+type IPkgNameResolver interface {
+	// Returns package path by package local name.
+	//
+	// Returns empty string if not found
+	PackageFullPath(localName string) string
+
+	// Returns package local name by package path.
+	//
+	// Returns empty string if not found
+	PackageLocalName(fullPath string) string
+}
 type IStateValue interface {
 	IValue
 	AsValue(name string) IStateValue

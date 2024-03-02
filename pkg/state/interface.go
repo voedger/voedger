@@ -52,6 +52,7 @@ type IWithUpdate interface {
 type IHostState interface {
 	istructs.IState
 	istructs.IIntents
+	istructs.IPkgNameResolver
 
 	// ValidateIntents validates intents
 	ValidateIntents() (err error)
@@ -66,6 +67,7 @@ type IHostState interface {
 type IBundledHostState interface {
 	istructs.IState
 	istructs.IIntents
+	istructs.IPkgNameResolver
 
 	// ApplyIntents validates and stores intents to bundles
 	ApplyIntents() (readyToFlushBundle bool, err error)
