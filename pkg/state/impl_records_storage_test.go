@@ -235,7 +235,7 @@ func TestRecordsStorage_Insert(t *testing.T) {
 		On("PutString", fieldName, value)
 	cud := &mockCUD{}
 	cud.On("Create").Return(rw)
-	s := ProvideCommandProcessorStateFactory()(context.Background(), nil, nil, SimpleWSIDFunc(istructs.NullWSID), nil, func() istructs.ICUD { return cud }, nil, nil, 1, nil, nil)
+	s := ProvideCommandProcessorStateFactory()(context.Background(), nil, nil, SimpleWSIDFunc(istructs.NullWSID), nil, func() istructs.ICUD { return cud }, nil, nil, 1, nil, nil, nil)
 	kb, err := s.KeyBuilder(Record, testRecordQName1)
 	require.NoError(err)
 
@@ -257,7 +257,7 @@ func TestRecordsStorage_Update(t *testing.T) {
 	sv := &recordsValue{record: r}
 	cud := &mockCUD{}
 	cud.On("Update", mock.Anything).Return(rw)
-	s := ProvideCommandProcessorStateFactory()(context.Background(), nil, nil, SimpleWSIDFunc(istructs.NullWSID), nil, func() istructs.ICUD { return cud }, nil, nil, 1, nil, nil)
+	s := ProvideCommandProcessorStateFactory()(context.Background(), nil, nil, SimpleWSIDFunc(istructs.NullWSID), nil, func() istructs.ICUD { return cud }, nil, nil, 1, nil, nil, nil)
 	kb, err := s.KeyBuilder(Record, testRecordQName1)
 	require.NoError(err)
 
