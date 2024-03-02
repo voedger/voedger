@@ -1,77 +1,49 @@
+# Voedger Design
+
+Voedger product architecture and design. [Archimate-like notation](notation.md) is used.
+
 ## Top-level sections
 
-- [Operations Concepts](#operations-concepts)
+- [Roles & Services](#roles--services)
+- [Operation Concepts](#operations-concepts)
 - [Development Concepts](#development-concepts)
 - [Editions](#editions)
 - [Detailed design](#detailed-design)
 
+---
+## Roles & Services
 
-## Notation
-
-Notation based on:
-- [ArchiMate](https://en.wikipedia.org/wiki/ArchiMate) (/ˈɑːrkɪmeɪt/ AR-ki-mayt; originally from Architecture-Animate), open and independent enterprise architecture modeling language
-- [Entity–relationship model](https://en.wikipedia.org/wiki/Entity%E2%80%93relationship_model), describes interrelated things of interest in a specific domain of knowledge
+### Development Services
 
 ```mermaid
-graph TD
+  graph TD
 
-  %% Entities =================================
+  %% Entities ====================
 
-  Infrastructure{{Infrastructure}}:::H
-  Database[(Database)]:::H
-  Table:::H
-  Field([Field]):::H
-  Data:::H
-  DataField1([Field1]):::H
-  DataField2([Field2]):::H
+  Developer[Developer]:::B
 
-  ProductLine[[Product Line]]:::S
-    ProductLine --- Product1[Product 1]:::S
-    ProductLine --- Product2[Product 2]:::S
+  vsqlddl[\VSQL DDL/]:::H  
+  mod.exttinygo:::S
+  cmd.vpm:::S
 
-  SoftwareComponents:::G
-  subgraph SoftwareComponents[Group of elements]
-    SoftwareComponent[Software Component 1]:::S
-    SoftwareComponent2[Software Component 2]:::S
-  end
+  Development([Development]):::S
+
   
-  SoftwareService([Software Service]):::S  
-  
-  User["Human actor (e.g. User)"]:::B
-  Company{{"Non-human actor (e.g. Company)"}}:::B
-  BusinessProcess(Business Process):::B
+  %% Relations ====================
+
+  mod.exttinygo --> Development
+  cmd.vpm --> Development
+  Development --> Developer
+  vsqlddl --> Development
 
 
-  %% Relations =================================
-
-  Infrastructure ---|runs| SoftwareComponents
-
-  SoftwareComponent --- |provides| SoftwareService
-
-  Infrastructure --x Database
-  Database ---x|has few| Table
-  Table ---x|has few| Field
-
-  SoftwareService -.->|generates| Data
-
-  SoftwareService --- |used by| BusinessProcess
-  BusinessProcess --- |assigned to| User
-
-  Data -.->|used by| SoftwareComponent2
-
-  Data --- DataField1
-  Data --- DataField2
-
-  Product2 --- |used by| Company
-  Company --- |has| BusinessProcess
-
-  classDef G fill:#FFFFFF,stroke:#000000, stroke-width:1px, stroke-dasharray: 5 5
-  classDef B fill:#FFFFB5,color:#333
+  classDef B fill:#FFFFB5
   classDef S fill:#B5FFFF
   classDef H fill:#C9E7B7
+  classDef G fill:#FFFFFF,stroke:#000000, stroke-width:1px, stroke-dasharray: 5 5
 ```
 
-## Roles & Services
+### Operation Services
 
 ```mermaid
   graph TD
@@ -79,39 +51,30 @@ graph TD
   %% Entities ====================
 
   Admin[Admin]:::B
-  Developer[Developer]:::B
   User[User]:::B
 
-  mod.exttinygo:::S
-  cmd.vpm:::S
   cmd.voedger:::S
   cmd.ctool:::S  
   grafana[extsoft.grafana]:::G
   alertmanager[extsoft.alertmanager]:::G
   scylla[extsoft.scylla]:::G
 
-  DBMS(DBMS):::S
-  Development(Development):::S
-
-  ClusterMgmt(Cluster Management):::S
-  AppMgmt(Application Management):::S
-  Monitoring(Monitoring):::S
-  Alerting(Alerting):::S
-  RunApp(Application Execution):::S
-  APIGateway(API Gateway):::S
+  DBMS([DBMS]):::S
+  
+  ClusterMgmt([Cluster Management]):::S
+  Monitoring([Monitoring]):::S
+  Alerting([Alerting]):::S
+  AppMgmt([Application Management]):::S  
+  RunApp([Application Execution]):::S
+  APIGateway([API Gateway]):::S
 
   %% Relations ====================
 
   scylla --> DBMS
   DBMS --> cmd.voedger
 
-  mod.exttinygo --> Development
-  cmd.vpm --> Development
-  Development --> Developer
-
   cmd.ctool --> ClusterMgmt
   ClusterMgmt --> Admin
-
 
   grafana --> Monitoring
   alertmanager --> Alerting
@@ -127,15 +90,22 @@ graph TD
   cmd.voedger --> APIGateway
   APIGateway --> User
 
-
   classDef B fill:#FFFFB5
   classDef S fill:#B5FFFF
   classDef H fill:#C9E7B7
   classDef G fill:#FFFFFF,stroke:#000000, stroke-width:1px, stroke-dasharray: 5 5
 ```
 
+Prefixes
+- *cmd*: command line utility
+- *mod*: Go module
+- *extsoft*: external software
 
-## Operations Concepts
+Detailed design
+- [Services](services.md)
+
+---
+## Operation Concepts
 
 ### Federation
 
@@ -452,7 +422,7 @@ type IAppPartition interface {
 ```
 - [Detailed design](edge/README.md)
 
-
+---
 ## Development Concepts
 
 ### Schemas
