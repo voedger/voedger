@@ -16,7 +16,6 @@ const (
 	StorageAppSecret      = "sys.AppSecret"
 	StorageRequestSubject = "sys.RequestSubject"
 	StorageResult         = "sys.Result"
-	StorageArg            = "sys.Arg"
 	StorageCommandContext = "sys.CommandContext"
 
 	NullEntity = ""
