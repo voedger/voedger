@@ -5,6 +5,7 @@ import (
 	_ "embed"
 	"io"
 	"log"
+	"os"
 	"strconv"
 	"testing"
 	"time"
@@ -14,11 +15,6 @@ import (
 	"github.com/tetratelabs/wazero/api"
 	"github.com/tetratelabs/wazero/imports/wasi_snapshot_preview1"
 )
-
-// Use build.sh to build
-//
-//go:embed extnogc.wasm
-var extnogc []byte
 
 func Benchmark_Pbill(b *testing.B) {
 	runBenchFunc(b, "Pbill", true)
@@ -59,7 +55,7 @@ func runBenchFunc(b *testing.B, fname string, compiler bool, args ...uint64) {
 
 func benchFunc(b *testing.B, fname string, compiler bool, args ...uint64) {
 	ctx := context.Background()
-	r, mod := newrm(b, extnogc, compiler)
+	r, mod := newrm(b, extnogc(b), compiler)
 	defer r.Close(ctx)
 
 	f := mod.ExportedFunction(fname)
@@ -139,4 +135,19 @@ func newrm(b require.TestingT, bytes []byte, compiler bool) (wazero.Runtime, api
 
 	require.NoError(b, err)
 	return r, mod
+}
+
+var extnogcbytes []byte
+
+func extnogc(t require.TestingT) []byte {
+	if extnogcbytes != nil {
+		return extnogcbytes
+	}
+	extnogcbytes, err := os.ReadFile("extnogc.wasm")
+	if err != nil {
+		// nolint error-is-as
+		t.Errorf("error loading extnogc.wasm, use build.sh to make it. error: %s", err)
+		t.FailNow()
+	}
+	return extnogcbytes
 }
