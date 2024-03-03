@@ -637,7 +637,7 @@ func analyseWith(with *[]WithItem, statement IStatement, c *iterateCtx) {
 
 func preAnalyseTable(v *TableStmt, c *iterateCtx) {
 	var err error
-	v.tableTypeKind, v.singletone, err = getTableTypeKind(v, c.pkg, c)
+	v.tableTypeKind, v.singleton, err = getTableTypeKind(v, c.pkg, c)
 	if err != nil {
 		c.stmtErr(&v.Pos, err)
 		return
@@ -739,7 +739,7 @@ func analyseNestedTables(items []TableItemExpr, rootTableKind appdef.TypeKind, c
 				}
 			} else {
 				var err error
-				nestedTable.tableTypeKind, nestedTable.singletone, err = getTableTypeKind(nestedTable, c.pkg, c)
+				nestedTable.tableTypeKind, nestedTable.singleton, err = getTableTypeKind(nestedTable, c.pkg, c)
 				if err != nil {
 					c.stmtErr(pos, err)
 					return
@@ -940,7 +940,7 @@ func getTableInheritanceChain(table *TableStmt, c *iterateCtx) (chain []tableNod
 	return
 }
 
-func getTableTypeKind(table *TableStmt, pkg *PackageSchemaAST, c *iterateCtx) (kind appdef.TypeKind, singletone bool, err error) {
+func getTableTypeKind(table *TableStmt, pkg *PackageSchemaAST, c *iterateCtx) (kind appdef.TypeKind, singleton bool, err error) {
 
 	kind = appdef.TypeKind_null
 	check := func(node tableNode) {
@@ -963,16 +963,20 @@ func getTableTypeKind(table *TableStmt, pkg *PackageSchemaAST, c *iterateCtx) (k
 			if node.table.Name == nameWRecord {
 				kind = appdef.TypeKind_WRecord
 			}
-			if node.table.Name == nameSingleton {
+			if (node.table.Name == nameSingletonDeprecated) || (node.table.Name == nameCSingleton) {
 				kind = appdef.TypeKind_CDoc
-				singletone = true
+				singleton = true
+			}
+			if node.table.Name == nameWSingleton {
+				kind = appdef.TypeKind_WDoc
+				singleton = true
 			}
 		}
 	}
 
 	check(tableNode{pkg: pkg, table: table})
 	if kind != appdef.TypeKind_null {
-		return kind, singletone, nil
+		return kind, singleton, nil
 	}
 
 	chain, e := getTableInheritanceChain(table, c)
@@ -982,7 +986,7 @@ func getTableTypeKind(table *TableStmt, pkg *PackageSchemaAST, c *iterateCtx) (k
 	for _, t := range chain {
 		check(t)
 		if kind != appdef.TypeKind_null {
-			return kind, singletone, nil
+			return kind, singleton, nil
 		}
 	}
 	return appdef.TypeKind_null, false, ErrUndefinedTableKind

@@ -729,7 +729,7 @@ type TableStmt struct {
 	Items         []TableItemExpr `parser:"'(' @@? (',' @@)* ')'"`
 	With          []WithItem      `parser:"('WITH' @@ (',' @@)* )?"`
 	tableTypeKind appdef.TypeKind // filled on the analysis stage
-	singletone    bool
+	singleton     bool
 }
 
 func (s *TableStmt) GetName() string { return string(s.Name) }
