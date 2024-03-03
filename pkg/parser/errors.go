@@ -153,12 +153,12 @@ func ErrStorageRequiresEntity(name string) error {
 	return fmt.Errorf("storage %s requires entity", name)
 }
 
-func ErrStorageNotInProjectorState(name string) error {
-	return fmt.Errorf("storage %s is not available in the state of projectors", name)
+func ErrStorageNotInState(name string) error {
+	return fmt.Errorf("this kind of extension cannot use storage %s in the state", name)
 }
 
-func ErrStorageNotInProjectorIntents(name string) error {
-	return fmt.Errorf("storage %s is not available in the intents of projectors", name)
+func ErrStorageNotInIntents(name string) error {
+	return fmt.Errorf("this kind of extension cannot use storage %s in the intents", name)
 }
 
 func ErrRedefined(name string) error {
