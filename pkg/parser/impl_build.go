@@ -505,8 +505,8 @@ func (c *buildContext) table(schema *PackageSchemaAST, table *TableStmt, ictx *i
 	c.pushDef(qname, table.tableTypeKind)
 	c.addComments(table, c.defCtx().defBuilder.(appdef.ICommentBuilder))
 	c.fillTable(table, ictx)
-	if table.singletone {
-		c.defCtx().defBuilder.(appdef.ICDocBuilder).SetSingleton()
+	if table.singleton {
+		c.defCtx().defBuilder.(appdef.ISingletonBuilder).SetSingleton()
 	}
 	if table.Abstract {
 		c.defCtx().defBuilder.(appdef.IWithAbstractBuilder).SetAbstract()

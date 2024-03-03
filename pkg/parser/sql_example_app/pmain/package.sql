@@ -58,7 +58,8 @@ TAG BackofficeTag;
         - CDoc (Configuration)
         - ODoc (Operational)
         - WDoc (Workflow)
-        - Singleton (Configration singleton)
+        - CSingleton (Configration singleton)
+        - WSingleton (Workflow singleton)
 
     Nested tables must have one of the following tables as a root anchestor:
         - CRecord (Configuration)
@@ -95,13 +96,18 @@ TABLE TablePlan INHERITS CDoc (
 TABLE ScreenGroup INHERITS CDoc();
 
 /*
-    Singletones are always CDOC. Error is thrown on attempt to declare it as WDOC or ODOC
+    CSingletones is a configration singleton.
     These comments are included in the statement definition, but may be overridden with `WITH Comment=...`
 */
-TABLE SubscriptionProfile INHERITS Singleton (
+TABLE SubscriptionProfile INHERITS CSingleton (
     CustomerID varchar,
     CustomerKind int,
     CompanyName varchar
+);
+
+TABLE Transaction INHERITS WSingleton (
+    OpenDatetime timestamp,
+    CloseDatetime timestamp
 );
 
 -- Package-level extensions
