@@ -229,7 +229,7 @@ WORKSPACE MyWorkspace (
         COMMAND NewOrder(air.Order, UNLOGGED air.TypeWithName) RETURNS air.Order;
 
         -- Command can return void (in this case `RETURNS void` may be omitted)
-        COMMAND NewOrder2(air.Order) RETURNS void;
+        COMMAND NewOrder2(air.Order) STATE(AppSecret) INTENTS(Record(Transaction)) RETURNS void;
 
         COMMAND RestorePassword(RestorePasswordParam) RETURNS void;
 
@@ -244,7 +244,7 @@ WORKSPACE MyWorkspace (
         QUERY _Query1() RETURNS air.Order WITH Comment='A comment';
 
         -- Query which can return any value
-        QUERY Query2(air.Order) RETURNS any;
+        QUERY Query2(air.Order) STATE(AppSecret, Http) RETURNS any;
     );
 
     -- Object scope is PER APP PARTITION PER IP
