@@ -20,6 +20,7 @@ var constrains = []NodeConstraint{
 	{NodeNameClustColsFields, ConstraintNonModifiable},
 	{NodeNameCommandArgs, ConstraintNonModifiable},
 	{NodeNameCommandResult, ConstraintNonModifiable},
+	{NodeNamePackages, ConstraintAppendOnly},
 }
 
 func checkBackwardCompatibility(oldAppDef, newAppDef appdef.IAppDef) (cerrs *CompatibilityErrors) {
@@ -135,6 +136,7 @@ func buildQNameNode(parentNode *CompatibilityTreeNode, item appdef.IType, name s
 func buildAppDefNode(parentNode *CompatibilityTreeNode, item appdef.IAppDef) (node *CompatibilityTreeNode) {
 	node = newNode(parentNode, NodeNameAppDef, nil)
 	node.Props = append(node.Props, buildTypesNode(node, item, false))
+	node.Props = append(node.Props, buildPackagesNode(node, item))
 	return
 }
 
@@ -217,6 +219,14 @@ func buildTypesNode(parentNode *CompatibilityTreeNode, item appdef.IWithTypes, q
 		} else {
 			node.Props = append(node.Props, buildTreeNode(node, t))
 		}
+	})
+	return
+}
+
+func buildPackagesNode(parentNode *CompatibilityTreeNode, item appdef.IAppDef) (node *CompatibilityTreeNode) {
+	node = newNode(parentNode, NodeNamePackages, nil)
+	item.Packages(func(localName, fullPath string) {
+		node.Props = append(node.Props, newNode(node, fullPath, localName))
 	})
 	return
 }
