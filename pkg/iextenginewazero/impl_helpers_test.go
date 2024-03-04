@@ -23,14 +23,32 @@ var errTestIOError = errors.New("test i/o error")
 var storageTest = appdef.NewQName("sys", "Test")
 var storageTest2 = appdef.NewQName("sys", "Test2")
 var storageTest3 = appdef.NewQName("sys", "Test3")
+var storageTestQname = appdef.NewQName("sys", "TestQName")
 var storageIoError = appdef.NewQName("sys", "IoErrorStorage")
-
 var projectorMode bool
+
+const testPackageLocalPath = "testpkg1"
+const testPackageFullPath = "github.com/voedger/testpkg1"
 
 type mockIo struct {
 	istructs.IState
 	istructs.IIntents
+	istructs.IPkgNameResolver
 	intents []intent
+}
+
+func (s *mockIo) PackageFullPath(localName string) string {
+	if localName == testPackageLocalPath {
+		return testPackageFullPath
+	}
+	return localName
+
+}
+func (s *mockIo) PackageLocalName(fullPath string) string {
+	if fullPath == testPackageFullPath {
+		return testPackageLocalPath
+	}
+	return fullPath
 }
 
 func testModuleURL(path string) (u *url.URL) {
@@ -53,6 +71,7 @@ func (s *mockIo) KeyBuilder(storage, entity appdef.QName) (builder istructs.ISta
 	return &mockKeyBuilder{
 		entity:  entity,
 		storage: storage,
+		data:    map[string]interface{}{},
 	}, nil
 }
 
@@ -104,6 +123,7 @@ func (s *mockIo) CanExist(key istructs.IStateKeyBuilder) (value istructs.IStateV
 		mv.index[0] = int32(123)
 		mv.index[1] = "test string"
 		mv.index[2] = make([]byte, 1024)
+		mv.index[3] = appdef.NewQName(testPackageLocalPath, "test")
 		return &mv, true, nil
 	}
 	if k.storage == storageTest2 {
@@ -138,6 +158,13 @@ func (s *mockIo) CanExist(key istructs.IStateKeyBuilder) (value istructs.IStateV
 		mv.Data["а37"] = vvv
 		mv.Data["а38"] = vvv
 		mv.Data["а39"] = vvv
+		return &mv, true, nil
+	}
+	if k.storage == storageTestQname {
+		qn := k.data["qname"].(appdef.QName)
+		if qn.Pkg() != testPackageLocalPath {
+			return nil, false, errors.New("unexpected package: " + qn.Pkg())
+		}
 		return &mv, true, nil
 	}
 	if k.storage == state.SendMail {
@@ -198,7 +225,7 @@ func (s *mockIo) Read(key istructs.IStateKeyBuilder, callback istructs.ValueCall
 			mk.Data["f64"] = float64(i) + 0.01
 			mk.Data["str"] = fmt.Sprintf("key%d", i)
 			mk.Data["bytes"] = []byte{byte(i), 2, 3}
-			mk.Data["qname"] = appdef.NewQName("keypkg", fmt.Sprintf("e%d", i))
+			mk.Data["qname"] = appdef.NewQName(testPackageLocalPath, fmt.Sprintf("e%d", i))
 			mk.Data["bool"] = true
 
 			mv := mockValue{
@@ -210,7 +237,7 @@ func (s *mockIo) Read(key istructs.IStateKeyBuilder, callback istructs.ValueCall
 			mv.Data["f64"] = float64(i) + 0.0001
 			mv.Data["str"] = fmt.Sprintf("value%d", i)
 			mv.Data["bytes"] = []byte{3, 2, 1}
-			mv.Data["qname"] = appdef.NewQName("valuepkg", fmt.Sprintf("ee%d", i))
+			mv.Data["qname"] = appdef.NewQName(testPackageLocalPath, fmt.Sprintf("ee%d", i))
 			mv.Data["bool"] = false
 			if err := callback(&mk, &mv); err != nil {
 				return err
@@ -224,6 +251,7 @@ func (s *mockIo) Read(key istructs.IStateKeyBuilder, callback istructs.ValueCall
 type mockKeyBuilder struct {
 	entity  appdef.QName
 	storage appdef.QName
+	data    map[string]interface{}
 }
 
 func (kb *mockKeyBuilder) Storage() appdef.QName                            { return kb.storage }
@@ -237,7 +265,7 @@ func (kb *mockKeyBuilder) PutFloat32(name string, value float32)            {}
 func (kb *mockKeyBuilder) PutFloat64(name string, value float64)            {}
 func (kb *mockKeyBuilder) PutBytes(name string, value []byte)               {}
 func (kb *mockKeyBuilder) PutString(name, value string)                     {}
-func (kb *mockKeyBuilder) PutQName(name string, value appdef.QName)         {}
+func (kb *mockKeyBuilder) PutQName(name string, value appdef.QName)         { kb.data[name] = value }
 func (kb *mockKeyBuilder) PutBool(name string, value bool)                  {}
 func (kb *mockKeyBuilder) PutRecordID(name string, value istructs.RecordID) {}
 
@@ -273,7 +301,7 @@ func (v *mockValue) GetAsFloat32(index int) float32    { return 0 }
 func (v *mockValue) GetAsFloat64(index int) float64    { return 0 }
 func (v *mockValue) GetAsBytes(index int) []byte       { return v.index[index].([]byte) }
 func (v *mockValue) GetAsString(index int) string      { return v.index[index].(string) }
-func (v *mockValue) GetAsQName(index int) appdef.QName { return appdef.NullQName }
+func (v *mockValue) GetAsQName(index int) appdef.QName { return v.index[index].(appdef.QName) }
 func (v *mockValue) GetAsBool(index int) bool          { return false }
 
 func (v *mockValue) Length() int                              { return 0 }
@@ -362,7 +390,7 @@ func (kb *mockValueBuilder) PutFloat32(name string, value float32)            {}
 func (kb *mockValueBuilder) PutFloat64(name string, value float64)            {}
 func (kb *mockValueBuilder) PutBytes(name string, value []byte)               { kb.items[name] = value }
 func (kb *mockValueBuilder) PutString(name, value string)                     { kb.items[name] = value }
-func (kb *mockValueBuilder) PutQName(name string, value appdef.QName)         {}
+func (kb *mockValueBuilder) PutQName(name string, value appdef.QName)         { kb.items[name] = value }
 func (kb *mockValueBuilder) PutBool(name string, value bool)                  {}
 func (kb *mockValueBuilder) PutRecordID(name string, value istructs.RecordID) {}
 func (kb *mockValueBuilder) PutFromJSON(map[string]any)                       {}

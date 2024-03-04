@@ -42,12 +42,12 @@ func Test_BasicUsage(t *testing.T) {
 	const ws = istructs.WSID(1)
 	const partition = istructs.PartitionID(1)
 	require := require.New(t)
-	newOrderCmd := appdef.NewQName("main", "NewOrder")
-	calcOrderedItemsProjector := appdef.NewQName("main", "CalcOrderedItems")
-	orderedItemsView := appdef.NewQName("main", "OrderedItems")
+	newOrderCmd := appdef.NewQName("air", "NewOrder")
+	calcOrderedItemsProjector := appdef.NewQName("air", "CalcOrderedItems")
+	orderedItemsView := appdef.NewQName("air", "OrderedItems")
 
 	// Prepare app
-	app := appStructsFromSQL(`APPLICATION test(); 
+	app := appStructsFromSQL("github.com/untillpro/airs-bp3/packages/air", `APPLICATION test(); 
 		WORKSPACE Restaurant (
 			TABLE Order INHERITS ODoc (
 				Year int32,
@@ -84,54 +84,54 @@ func Test_BasicUsage(t *testing.T) {
 		})
 
 	// Build NewOrder event
-	eventFunc := func() istructs.IPLogEvent {
-		reb := app.Events().GetNewRawEventBuilder(istructs.NewRawEventBuilderParams{
-			GenericRawEventBuilderParams: istructs.GenericRawEventBuilderParams{
-				Workspace:         ws,
-				HandlingPartition: partition,
-				PLogOffset:        offset,
-				QName:             newOrderCmd,
-			},
-		})
-		orderBuilder := reb.ArgumentObjectBuilder()
-
-		orderBuilder.PutRecordID(appdef.SystemField_ID, 1)
-		orderBuilder.PutInt32("Year", 2023)
-		orderBuilder.PutInt32("Month", 1)
-		orderBuilder.PutInt32("Day", 1)
-		items := orderBuilder.ChildBuilder("Items")
-		items.PutRecordID(appdef.SystemField_ID, 2)
-		items.PutInt32("Quantity", 1)
-		items.PutInt64("SinglePrice", 100)
-		items = orderBuilder.ChildBuilder("Items")
-		items.PutRecordID(appdef.SystemField_ID, 3)
-		items.PutInt32("Quantity", 2)
-		items.PutInt64("SinglePrice", 50)
-
-		rawEvent, err := reb.BuildRawEvent()
-		if err != nil {
-			panic(err)
-		}
-
-		event, err := app.Events().PutPlog(rawEvent, nil, istructsmem.NewIDGenerator())
-		if err != nil {
-			panic(err)
-		}
-		return event
+	reb := app.Events().GetNewRawEventBuilder(istructs.NewRawEventBuilderParams{
+		GenericRawEventBuilderParams: istructs.GenericRawEventBuilderParams{
+			Workspace:         ws,
+			HandlingPartition: partition,
+			PLogOffset:        offset,
+			QName:             newOrderCmd,
+		},
+	})
+	orderBuilder := reb.ArgumentObjectBuilder()
+	orderBuilder.PutRecordID(appdef.SystemField_ID, 1)
+	orderBuilder.PutInt32("Year", 2023)
+	orderBuilder.PutInt32("Month", 1)
+	orderBuilder.PutInt32("Day", 1)
+	items := orderBuilder.ChildBuilder("Items")
+	items.PutRecordID(appdef.SystemField_ID, 2)
+	items.PutInt32("Quantity", 1)
+	items.PutInt64("SinglePrice", 100)
+	items = orderBuilder.ChildBuilder("Items")
+	items.PutRecordID(appdef.SystemField_ID, 3)
+	items.PutInt32("Quantity", 2)
+	items.PutInt64("SinglePrice", 50)
+	rawEvent, err := reb.BuildRawEvent()
+	if err != nil {
+		panic(err)
+	}
+	event, err := app.Events().PutPlog(rawEvent, nil, istructsmem.NewIDGenerator())
+	if err != nil {
+		panic(err)
 	}
 
-	// Create state
-	state := state.ProvideAsyncActualizerStateFactory()(context.Background(), app, nil, state.SimpleWSIDFunc(ws), nil, nil, eventFunc, intentsLimit, bundlesLimit)
+	eventFunc := func() istructs.IPLogEvent { return event }
+	cudFunc := func() istructs.ICUD { return reb.CUDBuilder() }
+	argFunc := func() istructs.IObject { return event.ArgumentObject() }
+	unloggedArgFunc := func() istructs.IObject { return nil }
+	appFunc := func() istructs.IAppStructs { return app }
+
+	// Create states for Command processor and Actualizer
+	actualizerState := state.ProvideAsyncActualizerStateFactory()(context.Background(), app, nil, state.SimpleWSIDFunc(ws), nil, nil, eventFunc, intentsLimit, bundlesLimit)
+	cmdProcState := state.ProvideCommandProcessorStateFactory()(context.Background(), appFunc, nil, state.SimpleWSIDFunc(ws), nil, cudFunc, nil, nil, intentsLimit, nil, argFunc, unloggedArgFunc)
 
 	// Create extension package from WASM
-	const calcOrderedItems = "CalcOrderedItems"
 	ctx := context.Background()
 	moduleUrl := testModuleURL("./_testdata/basicusage/pkg.wasm")
 	packages := []iextengine.ExtensionPackage{
 		{
 			QualifiedName:  testPkg,
 			ModuleUrl:      moduleUrl,
-			ExtensionNames: []string{calcOrderedItems},
+			ExtensionNames: []string{calcOrderedItemsProjector.Entity(), newOrderCmd.Entity()},
 		},
 	}
 
@@ -144,23 +144,27 @@ func Test_BasicUsage(t *testing.T) {
 	extEngine := engines[0]
 	defer extEngine.Close(ctx)
 	//
-	// Invoke extension
+	// Invoke command
 	//
-	err = extEngine.Invoke(context.Background(), iextengine.NewExtQName(testPkg, calcOrderedItems), state)
+	err = extEngine.Invoke(context.Background(), iextengine.NewExtQName(testPkg, newOrderCmd.Entity()), cmdProcState)
 	require.NoError(err)
-
-	ready, err := state.ApplyIntents()
+	//
+	// Invoke projector
+	//
+	err = extEngine.Invoke(context.Background(), iextengine.NewExtQName(testPkg, calcOrderedItemsProjector.Entity()), actualizerState)
+	require.NoError(err)
+	ready, err := actualizerState.ApplyIntents()
 	require.NoError(err)
 	require.False(ready)
 
-	// Invoke extension again
-	require.NoError(extEngine.Invoke(context.Background(), iextengine.NewExtQName(testPkg, calcOrderedItems), state))
-	ready, err = state.ApplyIntents()
+	// Invoke projector again
+	require.NoError(extEngine.Invoke(context.Background(), iextengine.NewExtQName(testPkg, calcOrderedItemsProjector.Entity()), actualizerState))
+	ready, err = actualizerState.ApplyIntents()
 	require.NoError(err)
 	require.False(ready)
 
 	// Flush bundles with intents
-	require.NoError(state.FlushBundles())
+	require.NoError(actualizerState.FlushBundles())
 
 	// Test view, must be calculated from 2 events
 	kb := app.ViewRecords().KeyBuilder(orderedItemsView)
@@ -500,6 +504,20 @@ func Test_AsBytesOverflow(t *testing.T) {
 	require.ErrorContains(err, "alloc")
 }
 
+func Test_KeyPutQName(t *testing.T) {
+	const putQName = "keyPutQName"
+	require := require.New(t)
+	ctx := context.Background()
+	moduleUrl := testModuleURL("./_testdata/tests/pkg.wasm")
+	extEngine, err := testFactoryHelper(ctx, moduleUrl, []string{putQName}, iextengine.ExtEngineConfig{}, false)
+	require.NoError(err)
+	defer extEngine.Close(ctx)
+	wasmEngine := extEngine.(*wazeroExtEngine)
+	requireMemStatEx(t, wasmEngine, 1, 0, WasmPreallocatedBufferSize, WasmPreallocatedBufferSize)
+	err = extEngine.Invoke(context.Background(), iextengine.NewExtQName(testPkg, putQName), extIO)
+	require.NoError(err)
+}
+
 func Test_NoAllocs(t *testing.T) {
 	const testNoAllocs = "testNoAllocs"
 	extIO = &mockIo{}
@@ -521,8 +539,10 @@ func Test_NoAllocs(t *testing.T) {
 	require.Len(extIO.intents, 2)
 	v0 := extIO.intents[0].value.(*mockValueBuilder)
 
+	// new value
 	require.Equal("test@gmail.com", v0.items["from"])
 	require.Equal(int32(668), v0.items["port"])
+	require.Equal(appdef.NewQName(testPackageLocalPath, "test"), v0.items["qname"])
 	bytes := (v0.items["key"]).([]byte)
 	require.Len(bytes, 5)
 
@@ -553,6 +573,7 @@ func Test_WithState(t *testing.T) {
 				view.KeyBuilder().ClustColsBuilder().AddField(cc, appdef.DataKind_int32)
 				view.ValueBuilder().AddField(vv, appdef.DataKind_int32, true)
 			})
+			appDef.AddPackage("pkg", "pkg")
 		},
 		func(cfg *istructsmem.AppConfigType) {})
 	state := state.ProvideAsyncActualizerStateFactory()(context.Background(), app, nil, state.SimpleWSIDFunc(ws), nil, nil, nil, intentsLimit, bundlesLimit)
@@ -619,11 +640,13 @@ func Test_StatePanic(t *testing.T) {
 				view.KeyBuilder().ClustColsBuilder().AddField(cc, appdef.DataKind_int32)
 				view.ValueBuilder().AddField(vv, appdef.DataKind_int32, true)
 			})
+			appDef.AddPackage("pkg", "pkg")
 		},
 		func(cfg *istructsmem.AppConfigType) {})
 	state := state.ProvideAsyncActualizerStateFactory()(context.Background(), app, nil, state.SimpleWSIDFunc(ws), nil, nil, nil, intentsLimit, bundlesLimit)
 
 	const extname = "wrongFieldName"
+	const undefinedPackage = "undefinedPackage"
 
 	require := require.New(t)
 	ctx := context.Background()
@@ -633,7 +656,7 @@ func Test_StatePanic(t *testing.T) {
 		{
 			QualifiedName:  testPkg,
 			ModuleUrl:      moduleUrl,
-			ExtensionNames: []string{extname},
+			ExtensionNames: []string{extname, undefinedPackage},
 		},
 	}
 	factory := ProvideExtensionEngineFactory(true)
@@ -648,6 +671,12 @@ func Test_StatePanic(t *testing.T) {
 	//
 	err = extEngine.Invoke(context.Background(), iextengine.NewExtQName(testPkg, extname), state)
 	require.ErrorContains(err, "int32-type field «wrong» is not found")
+
+	//
+	// Invoke extension
+	//
+	err = extEngine.Invoke(context.Background(), iextengine.NewExtQName(testPkg, undefinedPackage), state)
+	require.ErrorContains(err, errUndefinedPackage("github.com/company/pkg").Error())
 }
 
 type (
@@ -658,7 +687,7 @@ type (
 //go:embed sql_example_syspkg/*.sql
 var sfs embed.FS
 
-func appStructsFromSQL(appdefSql string, prepareAppCfg appCfgCallback) istructs.IAppStructs {
+func appStructsFromSQL(packagePath string, appdefSql string, prepareAppCfg appCfgCallback) istructs.IAppStructs {
 	appDef := appdef.New()
 
 	fs, err := parser.ParseFile("file1.sql", appdefSql)
@@ -666,7 +695,7 @@ func appStructsFromSQL(appdefSql string, prepareAppCfg appCfgCallback) istructs.
 		panic(err)
 	}
 
-	pkg, err := parser.BuildPackageSchema("test/main", []*parser.FileSchemaAST{fs})
+	pkg, err := parser.BuildPackageSchema(packagePath, []*parser.FileSchemaAST{fs})
 	if err != nil {
 		panic(err)
 	}

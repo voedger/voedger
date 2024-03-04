@@ -23,10 +23,11 @@ BACKUP_FOLDER="/mnt/backup/voedger/"
 HOST1="db-node-1"
 HOST2="db-node-2"
 HOST3="db-node-3"
+SSH_USER=$LOGNAME
 
-HOST1_BACKUP_NAMES=$(utils_ssh ubuntu@${HOST1} "find ${BACKUP_FOLDER} -mindepth 1 -maxdepth 1 -type d -printf '%f\n' 2>/dev/null" | sort -u)
-HOST2_BACKUP_NAMES=$(utils_ssh ubuntu@${HOST2} "find ${BACKUP_FOLDER} -mindepth 1 -maxdepth 1 -type d -printf '%f\n' 2>/dev/null" | sort -u)
-HOST3_BACKUP_NAMES=$(utils_ssh ubuntu@${HOST3} "find ${BACKUP_FOLDER} -mindepth 1 -maxdepth 1 -type d -printf '%f\n' 2>/dev/null" | sort -u)
+HOST1_BACKUP_NAMES=$(utils_ssh ${SSH_USER}@${HOST1} "find ${BACKUP_FOLDER} -mindepth 1 -maxdepth 1 -type d -printf '%f\n' 2>/dev/null" | sort -u)
+HOST2_BACKUP_NAMES=$(utils_ssh ${SSH_USER}@${HOST2} "find ${BACKUP_FOLDER} -mindepth 1 -maxdepth 1 -type d -printf '%f\n' 2>/dev/null" | sort -u)
+HOST3_BACKUP_NAMES=$(utils_ssh ${SSH_USER}@${HOST3} "find ${BACKUP_FOLDER} -mindepth 1 -maxdepth 1 -type d -printf '%f\n' 2>/dev/null" | sort -u)
 
 NAMES="${HOST1_BACKUP_NAMES}"$'\n'"${HOST2_BACKUP_NAMES}"$'\n'"${HOST3_BACKUP_NAMES}"
 

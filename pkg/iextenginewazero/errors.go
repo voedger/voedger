@@ -16,11 +16,13 @@ var (
 	PanicIncorrectIntent     = "incorrect intent"
 )
 
+var errMemoryOutOfRange = errors.New("memory out of range")
+
 func missingExportedFunction(name string) error {
 	return errors.New("missing exported function: " + name)
 }
 
-func undefinedPackage(name string) error {
+func errUndefinedPackage(name string) error {
 	return errors.New("undefined package: " + name)
 }
 

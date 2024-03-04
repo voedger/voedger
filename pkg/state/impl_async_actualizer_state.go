@@ -33,7 +33,7 @@ func implProvideAsyncActualizerState(ctx context.Context, appStructs istructs.IA
 		optFunc(opts)
 	}
 	state := &bundledHostState{
-		hostState:    newHostState("AsyncActualizer", intentsLimit),
+		hostState:    newHostState("AsyncActualizer", intentsLimit, func() istructs.IAppStructs { return appStructs }),
 		bundlesLimit: bundlesLimit,
 		bundles:      make(map[appdef.QName]bundle),
 	}

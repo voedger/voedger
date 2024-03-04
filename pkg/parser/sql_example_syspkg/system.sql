@@ -10,7 +10,11 @@ ABSTRACT TABLE CDoc INHERITS CRecord();
 ABSTRACT TABLE ODoc INHERITS ORecord();
 ABSTRACT TABLE WDoc INHERITS WRecord();
 
-ABSTRACT TABLE Singleton INHERITS CDoc();
+ABSTRACT TABLE CSingleton INHERITS CDoc();
+ABSTRACT TABLE WSingleton INHERITS WDoc();
+
+-- Deprecated, use CSingleton instead
+ABSTRACT TABLE Singleton INHERITS CSingleton();
 
 ABSTRACT WORKSPACE Workspace (
     TYPE CreateLoginParams(
