@@ -54,7 +54,7 @@ projectors.AppStructsFunc -.- projectors.SyncActualizerConf
 istructs.PartitionID -.- projectors.SyncActualizerConf
 projectors.ProvideAsyncActualizerFactory --> projectors.AsyncActualizerFactory
 projectors.SyncActualizerConf -.- projectors.AsyncActualizerFactory
-istructs.ProjectorFactory -.- projectors.AsyncActualizerFactory
+istructs.ProjectorFactory -....- projectors.AsyncActualizerFactory
 
 istructs.ProjectorFactory --> istructs.Projector
 
