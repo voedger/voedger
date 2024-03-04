@@ -20,7 +20,7 @@ var constrains = []NodeConstraint{
 	{NodeNameClustColsFields, ConstraintNonModifiable},
 	{NodeNameCommandArgs, ConstraintNonModifiable},
 	{NodeNameCommandResult, ConstraintNonModifiable},
-	{NodeNamePackages, ConstraintAppendOnly},
+	{NodeNamePackages, ConstraintAppendOnly | ConstraintOrderChangeOnly},
 }
 
 func checkBackwardCompatibility(oldAppDef, newAppDef appdef.IAppDef) (cerrs *CompatibilityErrors) {
@@ -301,16 +301,18 @@ func checkConstraint(oldTreePath []string, m *matchNodesResult, constraint Const
 		}
 	}
 
-	if len(m.ReorderedNodeNames) > 0 && len(m.DeletedNodeNames) == 0 {
-		if constraint == ConstraintNonModifiable || constraint&ConstraintAppendOnly > 0 {
-			errorType := ErrorTypeOrderChanged
-			if constraint == ConstraintNonModifiable {
-				errorType = ErrorTypeNodeModified
-			}
-			for _, reorderedNodeName := range m.ReorderedNodeNames {
-				newOldPath := make([]string, len(oldTreePath)+1)
-				copy(newOldPath, append(oldTreePath, reorderedNodeName))
-				cerrs = append(cerrs, newCompatibilityError(constraint, newOldPath, errorType))
+	if constraint&ConstraintOrderChangeOnly == 0 {
+		if len(m.ReorderedNodeNames) > 0 && len(m.DeletedNodeNames) == 0 {
+			if constraint == ConstraintNonModifiable || constraint&ConstraintAppendOnly > 0 {
+				errorType := ErrorTypeOrderChanged
+				if constraint == ConstraintNonModifiable {
+					errorType = ErrorTypeNodeModified
+				}
+				for _, reorderedNodeName := range m.ReorderedNodeNames {
+					newOldPath := make([]string, len(oldTreePath)+1)
+					copy(newOldPath, append(oldTreePath, reorderedNodeName))
+					cerrs = append(cerrs, newCompatibilityError(constraint, newOldPath, errorType))
+				}
 			}
 		}
 	}

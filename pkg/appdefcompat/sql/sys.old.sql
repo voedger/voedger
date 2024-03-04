@@ -3,7 +3,13 @@
 -- Copyright (c) 2020-present unTill Pro, Ltd.
 
 -- note: this schema is for tests only. Voedger sys package uses copy of this schema
-APPLICATION TEST();
+IMPORT SCHEMA 'pkg1' AS pkg1;
+IMPORT SCHEMA 'pkg2' AS pkg2;
+
+APPLICATION TEST(
+	USE pkg1;
+	USE pkg2;
+);
 
 ABSTRACT TABLE CRecord();
 ABSTRACT TABLE WRecord();
@@ -25,7 +31,9 @@ WORKSPACE SomeWorkspace(
         SubjectKind                 int32,
         WSKindInitializationData    varchar(1024),
         ProfileCluster              int32,
-        ProfileToken                int32
+        ProfileToken                int32,
+        myfield1 ref(pkg1.MyTable1),
+        myfield2 ref(pkg2.MyTable1)
     );
     TYPE CreateLoginUnloggedParams(
         Email varchar,
