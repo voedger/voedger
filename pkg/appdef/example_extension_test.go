@@ -20,6 +20,9 @@ func ExampleIAppDef_Extensions() {
 	parName := appdef.NewQName("test", "param")
 	resName := appdef.NewQName("test", "res")
 
+	sysViews := appdef.NewQName("sys", "views")
+	viewName := appdef.NewQName("test", "view")
+
 	// how to build AppDef with extensions
 	{
 		appDef := appdef.New()
@@ -37,7 +40,8 @@ func ExampleIAppDef_Extensions() {
 
 		prj := appDef.AddProjector(prjName)
 		prj.
-			AddEvent(cmdName, appdef.ProjectorEventKind_Execute)
+			AddEvent(cmdName, appdef.ProjectorEventKind_Execute).
+			IntentsBuilder().Add(sysViews, viewName)
 
 		_ = appDef.AddObject(parName)
 		_ = appDef.AddObject(resName)
@@ -70,11 +74,11 @@ func ExampleIAppDef_Extensions() {
 				prj.Events(func(e appdef.IProjectorEvent) {
 					fmt.Println(" - event    :", e)
 				})
-				prj.States(func(s appdef.QName, names appdef.QNames) {
-					fmt.Println(" - state    :", s, names)
+				prj.States().Enum(func(s appdef.IStorage) {
+					fmt.Println(" - state    :", s)
 				})
-				prj.Intents(func(s appdef.QName, names appdef.QNames) {
-					fmt.Println(" - intent   :", s, names)
+				prj.Intents().Enum(func(s appdef.IStorage) {
+					fmt.Println(" - intent   :", s)
 				})
 			}
 		})
@@ -90,5 +94,6 @@ func ExampleIAppDef_Extensions() {
 	//  - result   : any type
 	// 3. BuiltIn-Projector «test.projector» :
 	//  - event    : Command «test.cmd» [Execute]
+	//  - intent   : Storage «sys.views» [test.view]
 	// Overall 3 extensions(s)
 }

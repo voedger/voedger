@@ -20,25 +20,15 @@ type IProjector interface {
 	// Returns events to trigger as map.
 	EventsMap() map[QName][]ProjectorEventKind
 
+	// Returns projector states.
+	States() IStorages
+
+	// Returns projector intents.
+	Intents() IStorages
+
 	// Returns is projector is able to handle `sys.Error` events.
 	// False by default.
 	WantErrors() bool
-
-	// Returns projector states.
-	//
-	// State is a storage to get data.
-	//
-	// States storages enumerated in alphabetical QNames order.
-	// Names slice in every intent storage is sorted and deduplicated.
-	States(func(storage QName, names QNames))
-
-	// Returns projector intents.
-	//
-	// Intent is a storage to put data.
-	//
-	// Intents storages enumerated in alphabetical QNames order.
-	// Names slice in every intent storage is sorted and deduplicated.
-	Intents(func(storage QName, names QNames))
 }
 
 // Describe event to trigger the projector.
@@ -103,19 +93,15 @@ type IProjectorBuilder interface {
 	// Sets event comment.
 	//
 	// # Panics:
-	//	- if event for QName is not added
+	//	- if event for QName is not added.
 	SetEventComment(on QName, comment ...string) IProjectorBuilder
 
-	// Sets is projector is able to handle `sys.Error` events
+	// Returns projector states builder.
+	StatesBuilder() IStoragesBuilder
+
+	// Returns projector intents builder.
+	IntentsBuilder() IStoragesBuilder
+
+	// Sets is projector is able to handle `sys.Error` events.
 	SetWantErrors() IProjectorBuilder
-
-	// Adds state to the projector.
-	//
-	// If storage with name is already exists in states then names will be added to existing storage.
-	AddState(storage QName, names ...QName) IProjectorBuilder
-
-	// Adds intent to the projector.
-	//
-	// If storage with name is already exists in intents then names will be added to existing storage.
-	AddIntent(storage QName, names ...QName) IProjectorBuilder
 }

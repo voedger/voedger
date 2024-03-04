@@ -13,14 +13,6 @@ import (
 	"strings"
 )
 
-const (
-	SystemField_ID        = SystemPackagePrefix + "ID"
-	SystemField_ParentID  = SystemPackagePrefix + "ParentID"
-	SystemField_IsActive  = SystemPackagePrefix + "IsActive"
-	SystemField_Container = SystemPackagePrefix + "Container"
-	SystemField_QName     = SystemPackagePrefix + "QName"
-)
-
 // # Implements:
 //   - IField
 type field struct {

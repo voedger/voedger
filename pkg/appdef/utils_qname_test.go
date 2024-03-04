@@ -8,6 +8,7 @@ package appdef
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"reflect"
@@ -348,6 +349,45 @@ func TestQNamesFrom(t *testing.T) {
 				}
 				if q.Contains(MustParseQName("test.unknown")) {
 					t.Errorf("QNamesFrom(%v).Contains(test.unknown) returns true", tt.args)
+				}
+			}
+		})
+	}
+}
+
+func TestValidQNames(t *testing.T) {
+	type args struct {
+		qName []QName
+	}
+	tests := []struct {
+		name    string
+		args    args
+		wantOk  bool
+		wantErr error
+	}{
+		{"should be ok with empty names", args{[]QName{}}, true, nil},
+		{"should be ok with null name", args{[]QName{NullQName}}, true, nil},
+		{"should be ok with valid names", args{[]QName{NewQName("test", "name1"), NewQName("test", "name2")}}, true, nil},
+		{"should be error with invalid name", args{[]QName{NewQName("test", "name"), NewQName("naked", "🔫")}}, false, ErrInvalidName},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			gotOk, gotErr := ValidQNames(tt.args.qName...)
+			if gotOk != tt.wantOk {
+				t.Errorf("ValidQNames() = %v, want %v", gotOk, tt.wantOk)
+			}
+			if tt.wantErr == nil {
+				if gotErr != nil {
+					t.Errorf("unexpected error %v for ValidQNames(%v)", gotErr, tt.args.qName)
+				}
+			}
+			if tt.wantErr != nil {
+				if gotErr == nil {
+					t.Errorf("expected error %v, but no error for ValidQNames(%v)", tt.wantErr, tt.args.qName)
+				} else {
+					if !errors.Is(gotErr, tt.wantErr) {
+						t.Errorf("ValidQNames(%v) returns error «%v» which is not expected error «%v»", tt.args.qName, gotErr, tt.wantErr)
+					}
 				}
 			}
 		})

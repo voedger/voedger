@@ -20,18 +20,18 @@ type projector struct {
 	events    projectorEvents
 	eventsMap map[QName][]ProjectorEventKind
 	sysErrors bool
-	states    storages
-	intents   storages
+	states    *storages
+	intents   *storages
 }
 
 func newProjector(app *appDef, name QName) *projector {
 	prj := &projector{
 		events:    make(projectorEvents),
 		eventsMap: make(map[QName][]ProjectorEventKind),
-		states:    make(storages),
-		intents:   make(storages),
 	}
 	prj.extension = makeExtension(app, name, TypeKind_Projector, prj)
+	prj.states = newStorages(prj)
+	prj.intents = newStorages(prj)
 	app.appendType(prj)
 	return prj
 }
@@ -63,16 +63,6 @@ func (prj *projector) AddEvent(on QName, event ...ProjectorEventKind) IProjector
 	return prj
 }
 
-func (prj *projector) AddState(storage QName, names ...QName) IProjectorBuilder {
-	prj.states.add(storage, names...)
-	return prj
-}
-
-func (prj *projector) AddIntent(storage QName, names ...QName) IProjectorBuilder {
-	prj.intents.add(storage, names...)
-	return prj
-}
-
 func (prj *projector) Events(cb func(IProjectorEvent)) {
 	ord := QNamesFromMap(prj.events)
 	for _, n := range ord {
@@ -84,8 +74,12 @@ func (prj *projector) EventsMap() map[QName][]ProjectorEventKind {
 	return prj.eventsMap
 }
 
-func (prj *projector) Intents(cb func(storage QName, names QNames)) {
-	prj.intents.enum(cb)
+func (prj *projector) Intents() IStorages {
+	return prj.intents
+}
+
+func (prj *projector) IntentsBuilder() IStoragesBuilder {
+	return prj.intents
 }
 
 func (prj *projector) SetEventComment(record QName, comment ...string) IProjectorBuilder {
@@ -95,6 +89,14 @@ func (prj *projector) SetEventComment(record QName, comment ...string) IProjecto
 	}
 	e.SetComment(comment...)
 	return prj
+}
+
+func (prj *projector) States() IStorages {
+	return prj.states
+}
+
+func (prj *projector) StatesBuilder() IStoragesBuilder {
+	return prj.states
 }
 
 func (prj *projector) SetSync(sync bool) IProjectorBuilder {
@@ -110,10 +112,6 @@ func (prj *projector) SetWantErrors() IProjectorBuilder {
 func (prj *projector) Sync() bool { return prj.sync }
 
 func (prj *projector) WantErrors() bool { return prj.sysErrors }
-
-func (prj *projector) States(cb func(storage QName, names QNames)) {
-	prj.states.enum(cb)
-}
 
 // Validates projector
 //
@@ -189,24 +187,6 @@ func (e *projectorEvent) addKind(kind ...ProjectorEventKind) {
 			panic(fmt.Errorf("%s event is not applicable with %v: %w", k.TrimString(), e.on, ErrInvalidProjectorEventKind))
 		}
 		e.kinds |= 1 << k
-	}
-}
-
-type storages map[QName]QNames
-
-func (ss storages) add(name QName, names ...QName) {
-	q, ok := ss[name]
-	if !ok {
-		q = QNames{}
-	}
-	q.Add(names...)
-	ss[name] = q
-}
-
-func (ss storages) enum(cb func(storage QName, names QNames)) {
-	ord := QNamesFromMap(ss)
-	for _, n := range ord {
-		cb(n, ss[n])
 	}
 }
 
