@@ -93,7 +93,7 @@ classDef S fill:#B5FFFF
 
 ## Analysis
 
-- ??? projectors.SyncActualizerConf - ProjectorFactory
+- ??? where it comes from [] AsyncProjectorFactories
 
 ## Proposal
 
