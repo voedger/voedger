@@ -11,6 +11,8 @@ import (
 )
 
 // Command
+//
+//export Pbill
 func Pbill() {
 
 	var refBill orm.Ref
@@ -32,9 +34,9 @@ func Pbill() {
 		}
 	}
 
-	// Prepare intent for Package_untill.WDoc_pbill
+	// Prepare intent for Package_untill.WDoc_bill
 	{
-		intent := orm.Package_untill.WDoc_pbill.NewIntent(refBill.ID())
+		intent := orm.Package_untill.WDoc_bill.NewIntent(refBill.ID())
 		intent.Set_close_datetime(time.Now().UnixMicro())
 	}
 
@@ -42,7 +44,7 @@ func Pbill() {
 	{
 		nextNumberValue, nextNumberOk := orm.Package_air.WSingleton_NextNumbers.QueryValue()
 		var nextNumber int32
-		var intent orm.Intent_WSingleton_air_NextNumbers
+		var intent *orm.Intent_WSingleton_air_NextNumbers
 		if !nextNumberOk {
 			nextNumber = 1
 			intent = orm.Package_air.WSingleton_NextNumbers.NewIntent()
@@ -52,9 +54,9 @@ func Pbill() {
 		}
 		intent.Set_NextPBillNumber(nextNumber + 1)
 	}
-
 }
 
+// nolint revive
 func MyProjector() {
 
 	// Query air.PbillDates
@@ -91,5 +93,5 @@ func MyProjector() {
 }
 
 func main() {
-
+	Pbill()
 }

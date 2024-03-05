@@ -403,7 +403,7 @@ func (s *Statement) SetComments(comments []string) {
 	s.Comments = comments
 }
 
-type ProjectorStorage struct {
+type StateStorage struct {
 	Storage  DefQName   `parser:"@@"`
 	Entities []DefQName `parser:"( '(' @@ (',' @@)* ')')?"`
 
@@ -437,8 +437,8 @@ type ProjectorStmt struct {
 	Sync            bool               `parser:"@'SYNC'?"`
 	Name            Ident              `parser:"'PROJECTOR' @Ident"`
 	Triggers        []ProjectorTrigger `parser:"@@ ('OR' @@)*"`
-	State           []ProjectorStorage `parser:"('STATE'   '(' @@ (',' @@)* ')' )?"`
-	Intents         []ProjectorStorage `parser:"('INTENTS' '(' @@ (',' @@)* ')' )?"`
+	State           []StateStorage     `parser:"('STATE'   '(' @@ (',' @@)* ')' )?"`
+	Intents         []StateStorage     `parser:"('INTENTS' '(' @@ (',' @@)* ')' )?"`
 	IncludingErrors bool               `parser:"@('INCLUDING' 'ERRORS')?"`
 	Engine          EngineType         // Initialized with 1st pass
 }
@@ -675,6 +675,8 @@ type CommandStmt struct {
 	Name          Ident           `parser:"'COMMAND' @Ident"`
 	Param         *AnyOrVoidOrDef `parser:"('(' @@? "`
 	UnloggedParam *AnyOrVoidOrDef `parser:"(','? UNLOGGED @@)? ')')?"`
+	State         []StateStorage  `parser:"('STATE'   '(' @@ (',' @@)* ')' )?"`
+	Intents       []StateStorage  `parser:"('INTENTS' '(' @@ (',' @@)* ')' )?"`
 	Returns       *AnyOrVoidOrDef `parser:"('RETURNS' @@)?"`
 	With          []WithItem      `parser:"('WITH' @@ (',' @@)* )?"`
 	Engine        EngineType      // Initialized with 1st pass
@@ -698,6 +700,7 @@ type QueryStmt struct {
 	Statement
 	Name    Ident           `parser:"'QUERY' @Ident"`
 	Param   *AnyOrVoidOrDef `parser:"('(' @@? ')')?"`
+	State   []StateStorage  `parser:"('STATE'   '(' @@ (',' @@)* ')' )?"`
 	Returns AnyOrVoidOrDef  `parser:"'RETURNS' @@"`
 	With    []WithItem      `parser:"('WITH' @@ (',' @@)* )?"`
 	Engine  EngineType      // Initialized with 1st pass
@@ -729,7 +732,7 @@ type TableStmt struct {
 	Items         []TableItemExpr `parser:"'(' @@? (',' @@)* ')'"`
 	With          []WithItem      `parser:"('WITH' @@ (',' @@)* )?"`
 	tableTypeKind appdef.TypeKind // filled on the analysis stage
-	singletone    bool
+	singleton     bool
 }
 
 func (s *TableStmt) GetName() string { return string(s.Name) }

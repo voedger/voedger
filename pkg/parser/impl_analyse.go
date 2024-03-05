@@ -373,7 +373,7 @@ func analyseView(view *ViewStmt, c *iterateCtx) {
 		return
 	}
 
-	var intentForView *ProjectorStorage
+	var intentForView *StateStorage
 	for i := 0; i < len(projector.Intents) && intentForView == nil; i++ {
 		var isView bool
 		intent := projector.Intents[i]
@@ -434,6 +434,8 @@ func analyzeCommand(cmd *CommandStmt, c *iterateCtx) {
 		resolve(*cmd.Returns.Def)
 	}
 	analyseWith(&cmd.With, cmd, c)
+	checkState(cmd.State, c, func(sc *StorageScope) bool { return sc.Commands })
+	checkIntents(cmd.Intents, c, func(sc *StorageScope) bool { return sc.Commands })
 }
 
 func analyzeQuery(query *QueryStmt, c *iterateCtx) {
@@ -449,7 +451,101 @@ func analyzeQuery(query *QueryStmt, c *iterateCtx) {
 		}
 	}
 	analyseWith(&query.With, query, c)
+	checkState(query.State, c, func(sc *StorageScope) bool { return sc.Queries })
+}
 
+func checkStorageEntity(key *StateStorage, f *StorageStmt, c *iterateCtx) error {
+	if f.EntityRecord {
+		if len(key.Entities) == 0 {
+			return ErrStorageRequiresEntity(key.Storage.String())
+		}
+		for _, entity := range key.Entities {
+			resolveFunc := func(f *TableStmt, pkg *PackageSchemaAST) error {
+				if f.Abstract {
+					return ErrAbstractTableNotAlowedInProjectors(entity.String())
+				}
+				key.entityQNames = append(key.entityQNames, pkg.NewQName(entity.Name))
+				return nil
+			}
+			if err2 := resolveInCtx(entity, c, resolveFunc); err2 != nil {
+				return err2
+			}
+		}
+	}
+	if f.EntityView {
+		if len(key.Entities) == 0 {
+			return ErrStorageRequiresEntity(key.Storage.String())
+		}
+		for _, entity := range key.Entities {
+			if err2 := resolveInCtx(entity, c, func(view *ViewStmt, pkg *PackageSchemaAST) error {
+				key.entityQNames = append(key.entityQNames, pkg.NewQName(entity.Name))
+				return nil
+			}); err2 != nil {
+				return err2
+			}
+		}
+	}
+	return nil
+}
+
+type checkScopeFunc func(sc *StorageScope) bool
+
+func checkState(state []StateStorage, c *iterateCtx, scope checkScopeFunc) {
+	for i := range state {
+		key := &state[i]
+		if err := resolveInCtx(key.Storage, c, func(f *StorageStmt, pkg *PackageSchemaAST) error {
+			if e := checkStorageEntity(key, f, c); e != nil {
+				return e
+			}
+			read := false
+			for _, op := range f.Ops {
+				if op.Get || op.GetBatch || op.Read {
+					for i := range op.Scope {
+						if scope(&op.Scope[i]) {
+							read = true
+							break
+						}
+					}
+				}
+			}
+			if !read {
+				return ErrStorageNotInState(key.Storage.String())
+			}
+			key.storageQName = pkg.NewQName(key.Storage.Name)
+			return nil
+		}); err != nil {
+			c.stmtErr(&key.Storage.Pos, err)
+		}
+	}
+}
+
+func checkIntents(intents []StateStorage, c *iterateCtx, scope checkScopeFunc) {
+	for i := range intents {
+		key := &intents[i]
+		if err := resolveInCtx(key.Storage, c, func(f *StorageStmt, pkg *PackageSchemaAST) error {
+			if e := checkStorageEntity(key, f, c); e != nil {
+				return e
+			}
+			read := false
+			for _, op := range f.Ops {
+				if op.Insert || op.Update {
+					for i := range op.Scope {
+						if scope(&op.Scope[i]) {
+							read = true
+							break
+						}
+					}
+				}
+			}
+			if !read {
+				return ErrStorageNotInIntents(key.Storage.String())
+			}
+			key.storageQName = pkg.NewQName(key.Storage.Name)
+			return nil
+		}); err != nil {
+			c.stmtErr(&key.Storage.Pos, err)
+		}
+	}
 }
 
 func analyseProjector(v *ProjectorStmt, c *iterateCtx) {
@@ -522,95 +618,8 @@ func analyseProjector(v *ProjectorStmt, c *iterateCtx) {
 			}
 		}
 	}
-
-	checkEntity := func(key *ProjectorStorage, f *StorageStmt) error {
-		if f.EntityRecord {
-			if len(key.Entities) == 0 {
-				return ErrStorageRequiresEntity(key.Storage.String())
-			}
-			for _, entity := range key.Entities {
-				resolveFunc := func(f *TableStmt, pkg *PackageSchemaAST) error {
-					if f.Abstract {
-						return ErrAbstractTableNotAlowedInProjectors(entity.String())
-					}
-					key.entityQNames = append(key.entityQNames, pkg.NewQName(entity.Name))
-					return nil
-				}
-				if err2 := resolveInCtx(entity, c, resolveFunc); err2 != nil {
-					return err2
-				}
-			}
-		}
-		if f.EntityView {
-			if len(key.Entities) == 0 {
-				return ErrStorageRequiresEntity(key.Storage.String())
-			}
-			for _, entity := range key.Entities {
-				if err2 := resolveInCtx(entity, c, func(view *ViewStmt, pkg *PackageSchemaAST) error {
-					key.entityQNames = append(key.entityQNames, pkg.NewQName(entity.Name))
-					return nil
-				}); err2 != nil {
-					return err2
-				}
-			}
-		}
-		return nil
-	}
-
-	for i := range v.State {
-		key := &v.State[i]
-		if err := resolveInCtx(key.Storage, c, func(f *StorageStmt, pkg *PackageSchemaAST) error {
-			if e := checkEntity(key, f); e != nil {
-				return e
-			}
-			read := false
-			for _, op := range f.Ops {
-				if op.Get || op.GetBatch || op.Read {
-					for _, sc := range op.Scope {
-						if sc.Projectors {
-							read = true
-							break
-						}
-					}
-				}
-			}
-			if !read {
-				return ErrStorageNotInProjectorState(key.Storage.String())
-			}
-			key.storageQName = pkg.NewQName(key.Storage.Name)
-			return nil
-		}); err != nil {
-			c.stmtErr(&key.Storage.Pos, err)
-		}
-	}
-
-	for i := range v.Intents {
-		key := &v.Intents[i]
-		if err := resolveInCtx(key.Storage, c, func(f *StorageStmt, pkg *PackageSchemaAST) error {
-			if e := checkEntity(key, f); e != nil {
-				return e
-			}
-			read := false
-			for _, op := range f.Ops {
-				if op.Insert || op.Update {
-					for _, sc := range op.Scope {
-						if sc.Projectors {
-							read = true
-							break
-						}
-					}
-				}
-			}
-			if !read {
-				return ErrStorageNotInProjectorIntents(key.Storage.String())
-			}
-			key.storageQName = pkg.NewQName(key.Storage.Name)
-			return nil
-		}); err != nil {
-			c.stmtErr(&key.Storage.Pos, err)
-		}
-	}
-
+	checkState(v.State, c, func(sc *StorageScope) bool { return sc.Projectors })
+	checkIntents(v.Intents, c, func(sc *StorageScope) bool { return sc.Projectors })
 }
 
 // Note: function may update with argument
@@ -637,7 +646,7 @@ func analyseWith(with *[]WithItem, statement IStatement, c *iterateCtx) {
 
 func preAnalyseTable(v *TableStmt, c *iterateCtx) {
 	var err error
-	v.tableTypeKind, v.singletone, err = getTableTypeKind(v, c.pkg, c)
+	v.tableTypeKind, v.singleton, err = getTableTypeKind(v, c.pkg, c)
 	if err != nil {
 		c.stmtErr(&v.Pos, err)
 		return
@@ -739,7 +748,7 @@ func analyseNestedTables(items []TableItemExpr, rootTableKind appdef.TypeKind, c
 				}
 			} else {
 				var err error
-				nestedTable.tableTypeKind, nestedTable.singletone, err = getTableTypeKind(nestedTable, c.pkg, c)
+				nestedTable.tableTypeKind, nestedTable.singleton, err = getTableTypeKind(nestedTable, c.pkg, c)
 				if err != nil {
 					c.stmtErr(pos, err)
 					return
@@ -940,7 +949,7 @@ func getTableInheritanceChain(table *TableStmt, c *iterateCtx) (chain []tableNod
 	return
 }
 
-func getTableTypeKind(table *TableStmt, pkg *PackageSchemaAST, c *iterateCtx) (kind appdef.TypeKind, singletone bool, err error) {
+func getTableTypeKind(table *TableStmt, pkg *PackageSchemaAST, c *iterateCtx) (kind appdef.TypeKind, singleton bool, err error) {
 
 	kind = appdef.TypeKind_null
 	check := func(node tableNode) {
@@ -963,16 +972,20 @@ func getTableTypeKind(table *TableStmt, pkg *PackageSchemaAST, c *iterateCtx) (k
 			if node.table.Name == nameWRecord {
 				kind = appdef.TypeKind_WRecord
 			}
-			if node.table.Name == nameSingleton {
+			if (node.table.Name == nameSingletonDeprecated) || (node.table.Name == nameCSingleton) {
 				kind = appdef.TypeKind_CDoc
-				singletone = true
+				singleton = true
+			}
+			if node.table.Name == nameWSingleton {
+				kind = appdef.TypeKind_WDoc
+				singleton = true
 			}
 		}
 	}
 
 	check(tableNode{pkg: pkg, table: table})
 	if kind != appdef.TypeKind_null {
-		return kind, singletone, nil
+		return kind, singleton, nil
 	}
 
 	chain, e := getTableInheritanceChain(table, c)
@@ -982,7 +995,7 @@ func getTableTypeKind(table *TableStmt, pkg *PackageSchemaAST, c *iterateCtx) (k
 	for _, t := range chain {
 		check(t)
 		if kind != appdef.TypeKind_null {
-			return kind, singletone, nil
+			return kind, singleton, nil
 		}
 	}
 	return appdef.TypeKind_null, false, ErrUndefinedTableKind

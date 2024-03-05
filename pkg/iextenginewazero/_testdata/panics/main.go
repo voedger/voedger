@@ -138,5 +138,11 @@ func wrongFieldName() {
 	ext.MustGetValue(key)
 }
 
+//export undefinedPackage
+func undefinedPackage() {
+	key := ext.KeyBuilder("sys.Test", "github.com/company/pkg.Undefined")
+	ext.MustGetValue(key)
+}
+
 func main() {
 }

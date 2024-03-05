@@ -139,9 +139,12 @@ func Test_BasicUsage(t *testing.T) {
 	require.NotNil(field)
 	require.Equal("Field is added to any table inherited from NestedWithName\nThe current comment is also added to scheme for this field", field.Comment())
 
-	// multinine comments
-	singleton := builder.CDoc(appdef.NewQName("main", "SubscriptionProfile"))
-	require.Equal("Singletones are always CDOC. Error is thrown on attempt to declare it as WDOC or ODOC\nThese comments are included in the statement definition, but may be overridden with `WITH Comment=...`", singleton.Comment())
+	csingleton := builder.CDoc(appdef.NewQName("main", "SubscriptionProfile"))
+	require.True(csingleton.Singleton())
+	require.Equal("CSingletones is a configration singleton.\nThese comments are included in the statement definition, but may be overridden with `WITH Comment=...`", csingleton.Comment())
+
+	wsingletone := builder.WDoc(appdef.NewQName("main", "Transaction"))
+	require.True(wsingletone.Singleton())
 
 	cmd := builder.Command(appdef.NewQName("main", "NewOrder"))
 	require.Equal("Commands can only be declared in workspaces\nCommand can have optional argument and/or unlogged argument\nCommand can return TYPE", cmd.Comment())

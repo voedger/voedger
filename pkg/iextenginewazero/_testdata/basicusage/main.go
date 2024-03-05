@@ -9,6 +9,23 @@ import (
 	ext "github.com/voedger/exttinygo"
 )
 
+// BasicUsage test Example Command
+//
+//export NewOrder
+func NewOrder() {
+	event := ext.MustGetValue(ext.KeyBuilder(ext.StorageCommandContext, ext.NullEntity))
+	arg := event.AsValue("ArgumentObject")
+	items := arg.AsValue("Items")
+	var totalPrice int64
+	for i := 0; i < items.Len(); i++ {
+		item := items.GetAsValue(i)
+		totalPrice += int64(item.AsInt32("Quantity")) * item.AsInt64("SinglePrice")
+	}
+	if totalPrice <= 0 {
+		panic("negative order amount")
+	}
+}
+
 // BasicUsage test Example Projector.
 // Projector calculates the total amount of the ordered items.
 //
@@ -22,7 +39,7 @@ func CalcOrderedItems() {
 		item := items.GetAsValue(i)
 		totalPrice += int64(item.AsInt32("Quantity")) * item.AsInt64("SinglePrice")
 	}
-	key := ext.KeyBuilder(ext.StorageView, "main.OrderedItems")
+	key := ext.KeyBuilder(ext.StorageView, "github.com/untillpro/airs-bp3/packages/air.OrderedItems")
 	key.PutInt32("Year", arg.AsInt32("Year"))
 	key.PutInt32("Month", arg.AsInt32("Month"))
 	key.PutInt32("Day", arg.AsInt32("Day"))

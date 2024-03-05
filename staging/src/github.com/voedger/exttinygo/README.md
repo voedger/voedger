@@ -1,5 +1,10 @@
 # exttinygo
 
+## Principles
+
+- Exchange buffer: 1MB of memory is pre-allocated for each instance of the extension
+- gc=leaking
+
 ## Usage
 
 ```go

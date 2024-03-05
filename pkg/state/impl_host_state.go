@@ -12,6 +12,8 @@ import (
 )
 
 type hostState struct {
+	istructs.IPkgNameResolver
+	appStructsFunc AppStructsFunc
 	name           string
 	storages       map[appdef.QName]IStateStorage
 	withGet        map[appdef.QName]IWithGet
@@ -24,7 +26,7 @@ type hostState struct {
 	intentsLimit   int
 }
 
-func newHostState(name string, intentsLimit int) *hostState {
+func newHostState(name string, intentsLimit int, appStructsFunc AppStructsFunc) *hostState {
 	return &hostState{
 		name:           name,
 		storages:       make(map[appdef.QName]IStateStorage),
@@ -36,11 +38,20 @@ func newHostState(name string, intentsLimit int) *hostState {
 		withUpdate:     make(map[appdef.QName]IWithUpdate),
 		intents:        make(map[appdef.QName][]ApplyBatchItem),
 		intentsLimit:   intentsLimit,
+		appStructsFunc: appStructsFunc,
 	}
 }
 
 func supports(ops int, op int) bool {
 	return ops&op == op
+}
+
+func (s *hostState) PackageFullPath(localName string) string {
+	return s.appStructsFunc().AppDef().PackageFullPath(localName)
+}
+
+func (s *hostState) PackageLocalName(fullPath string) string {
+	return s.appStructsFunc().AppDef().PackageLocalName(fullPath)
 }
 
 func (s *hostState) addStorage(storageName appdef.QName, storage IStateStorage, ops int) {
