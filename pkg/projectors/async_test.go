@@ -332,7 +332,9 @@ func Test_AsynchronousActualizer_ErrorAndRestore(t *testing.T) {
 			ProvideViewDef(appDef, decProjectionView, buildProjectionView)
 			appDef.AddCommand(testQName)
 			// add not-View and not-Record state to make the projector NonBuffered
-			appDef.AddProjector(name).AddEvent(testQName, appdef.ProjectorEventKind_Execute).AddState(state.Http)
+			prj := appDef.AddProjector(name)
+			prj.AddEvent(testQName, appdef.ProjectorEventKind_Execute)
+			prj.StatesBuilder().Add(state.Http)
 		},
 		func(cfg *istructsmem.AppConfigType) {
 			cfg.Resources.Add(istructsmem.NewCommandFunction(testQName, istructsmem.NullCommandExec))
@@ -698,7 +700,9 @@ func Test_AsynchronousActualizer_NonBuffered(t *testing.T) {
 			ProvideViewDef(appDef, decProjectionView, buildProjectionView)
 			appDef.AddCommand(testQName)
 			// add not-View and not-Record intent to make the projector NonBuffered
-			appDef.AddProjector(incrementorName).AddEvent(testQName, appdef.ProjectorEventKind_Execute).AddIntent(state.Http)
+			prj := appDef.AddProjector(incrementorName)
+			prj.AddEvent(testQName, appdef.ProjectorEventKind_Execute)
+			prj.IntentsBuilder().Add(state.Http)
 		},
 		func(cfg *istructsmem.AppConfigType) {
 			cfg.Resources.Add(istructsmem.NewCommandFunction(testQName, istructsmem.NullCommandExec))
