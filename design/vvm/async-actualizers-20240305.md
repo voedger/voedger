@@ -2,7 +2,7 @@
 
 https://github.com/voedger/voedger/issues/1464
 
-## Current design
+## Design
 
 - [vvm.provideAsyncActualizersFactory()](https://github.com/voedger/voedger/blob/43469aef2ed4878dfa3cb7dca304c87350547a8d/pkg/vvm/wire_gen.go#L518)
 - vvm.provideOperatorAppServices()
@@ -93,7 +93,55 @@ classDef S fill:#B5FFFF
 
 ## Analysis
 
-- ??? where it comes from [] AsyncProjectorFactories
+- istructsmem.AppConfigType
+```go
+type AppConfigType struct {
+  ...
+	syncProjectorFactories  []istructs.ProjectorFactory
+	asyncProjectorFactories []istructs.ProjectorFactory
+	cudValidators           []istructs.CUDValidator
+	eventValidators         []istructs.EventValidator
+  ...
+}
+```  
+- iextengine.IExtensionEngineFactories: `map[appdef.ExtensionEngineKind]IExtensionEngineFactory`
+- iextengine.IExtensionEngineFactory: `New(ctx context.Context, packages []ExtensionPackage, config *ExtEngineConfig, numEngines int) ([]IExtensionEngine, error)`
+- iextengine.ExtensionPackage
+```go
+type ExtensionPackage struct {
+	QualifiedName  string
+	ModuleUrl      *url.URL
+	ExtensionNames []string
+}
+
+type IExtensionIO interface {
+	istructs.IState
+	istructs.IIntents
+	istructs.IPkgNameResolver
+}
+
+type IExtensionEngine interface {
+	SetLimits(limits ExtensionLimits)
+	Invoke(ctx context.Context, extName ExtQName, io IExtensionIO) (err error)
+	Close(ctx context.Context)
+}
+```
+- istructs.Projector: `Func func(event IPLogEvent, state IState, intents IIntents) (err error)`
+- Projector example: invite.provideAsyncProjectorApplyCancelAcceptedInviteFactory
 
 ## Proposal
 
+- iextengine.ExtQName.PackageName => [Path](https://cs.opensource.google/go/go/+/refs/tags/go1.22.0:src/go/types/package.go;drc=b490bdc27d5576e5ccdac33755c0156d609e1bb9;l=33)
+- Projectors shall be accessible through ExtEngineKind_BuiltIn
+  - `istructs.IState.PLogEvent() IPLogEvent`
+  - state: sync projectors: Put event
+  - state: async projectors: Put event
+  - Wrapper around istructs.Projector that gets IPLogEvent and passes to istructs.Projector
+- istructs.Projector: `Func func(event IPLogEvent, state IState, intents IIntents) (err error)`
+- DoProjector
+```go
+IAppPartition {
+	// 
+	DoProjector(qname istructs.QName, state istructs.IState, intents istructs.IIntents) (err error)
+}
+```
