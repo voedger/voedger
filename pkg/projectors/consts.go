@@ -37,6 +37,7 @@ const (
 	actualizerErrorDelay         = time.Second * 30
 	n10nChannelDuration          = 100 * 365 * 24 * time.Hour
 	borrowRetryDelay             = 50 * time.Millisecond
+	initFailureErrorLogInterval  = 30 * time.Second
 )
 
 var PLogUpdatesQName = appdef.NewQName(appdef.SysPackage, "PLogUpdates")
