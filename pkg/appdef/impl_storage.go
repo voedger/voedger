@@ -35,15 +35,13 @@ func (s *storage) String() string {
 // # Implements:
 //   - IStorages & IStoragesBuilder
 type storages struct {
-	emb      interface{}
 	storages map[QName]*storage
 	qnames   map[QName]QNames
 	ordered  QNames
 }
 
-func newStorages(embeds interface{}) *storages {
+func newStorages() *storages {
 	return &storages{
-		emb:      embeds,
 		storages: make(map[QName]*storage),
 		qnames:   make(map[QName]QNames),
 		ordered:  make(QNames, 0),
@@ -52,13 +50,13 @@ func newStorages(embeds interface{}) *storages {
 
 func (ss *storages) Add(name QName, names ...QName) IStoragesBuilder {
 	if name == NullQName {
-		panic(fmt.Errorf("%v: empty storage name: %w", ss.embeds(), ErrNameMissed))
+		panic(fmt.Errorf("empty storage name: %w", ErrNameMissed))
 	}
 	if ok, err := ValidQName(name); !ok {
-		panic(fmt.Errorf("%v: invalid storage name «%v»: %w", ss.embeds(), name, err))
+		panic(fmt.Errorf("invalid storage name «%v»: %w", name, err))
 	}
 	if ok, err := ValidQNames(names...); !ok {
-		panic(fmt.Errorf("%v: invalid names for storage «%v»: %w", ss.embeds(), name, err))
+		panic(fmt.Errorf("invalid names for storage «%v»: %w", name, err))
 	}
 	s, ok := ss.storages[name]
 	if ok {
@@ -85,7 +83,7 @@ func (ss *storages) SetComment(name QName, comment string) IStoragesBuilder {
 		s.SetComment(comment)
 		return ss
 	}
-	panic(fmt.Errorf("%v: storage «%v» not found: %w", ss.embeds(), name, ErrNameNotFound))
+	panic(fmt.Errorf("storage «%v» not found: %w", name, ErrNameNotFound))
 }
 
 func (ss *storages) Storage(name QName) IStorage {
@@ -93,9 +91,4 @@ func (ss *storages) Storage(name QName) IStorage {
 		return s
 	}
 	return nil
-}
-
-// Returns type that embeds storages
-func (ss *storages) embeds() IType {
-	return ss.emb.(IType)
 }

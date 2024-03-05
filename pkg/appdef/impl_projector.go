@@ -28,10 +28,10 @@ func newProjector(app *appDef, name QName) *projector {
 	prj := &projector{
 		events:    make(projectorEvents),
 		eventsMap: make(map[QName][]ProjectorEventKind),
+		states:    newStorages(),
+		intents:   newStorages(),
 	}
 	prj.extension = makeExtension(app, name, TypeKind_Projector, prj)
-	prj.states = newStorages(prj)
-	prj.intents = newStorages(prj)
 	app.appendType(prj)
 	return prj
 }
