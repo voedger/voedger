@@ -384,10 +384,8 @@ func TestValidQNames(t *testing.T) {
 			if tt.wantErr != nil {
 				if gotErr == nil {
 					t.Errorf("expected error %v, but no error for ValidQNames(%v)", tt.wantErr, tt.args.qName)
-				} else {
-					if !errors.Is(gotErr, tt.wantErr) {
-						t.Errorf("ValidQNames(%v) returns error «%v» which is not expected error «%v»", tt.args.qName, gotErr, tt.wantErr)
-					}
+				} else if !errors.Is(gotErr, tt.wantErr) {
+					t.Errorf("ValidQNames(%v) returns error «%v» which is not expected error «%v»", tt.args.qName, gotErr, tt.wantErr)
 				}
 			}
 		})
