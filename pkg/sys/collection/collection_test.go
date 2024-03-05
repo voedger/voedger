@@ -61,10 +61,13 @@ func buildAppParts(t *testing.T) (appParts appparts.IAppPartitions, cleanup func
 		adb.AddCRecord(istructs.QNameCRecord)
 		adb.AddORecord(istructs.QNameORecord)
 		adb.AddWRecord(istructs.QNameWRecord)
-		adb.AddProjector(QNameProjectorCollection).
+
+		prj := adb.AddProjector(QNameProjectorCollection)
+		prj.
 			AddEvent(istructs.QNameCRecord, appdef.ProjectorEventKind_Insert, appdef.ProjectorEventKind_Update).
-			AddIntent(state.View, QNameCollectionView).
 			SetSync(true)
+		prj.IntentsBuilder().
+			Add(state.View, QNameCollectionView)
 	}
 	{
 		// fill IAppDef with funcs. That is done here manually because we o not use sys.sql here
