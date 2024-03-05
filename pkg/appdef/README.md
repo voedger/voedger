@@ -176,10 +176,10 @@ classDiagram
         <<interface>>
         +Kind()* TypeKind_Projector
         +Extension() IExtension
-        +Events() []IProjectorEvent
         +WantErrors() bool
-        +States() [QName]QNames
-        +Intents() [QName]QNames
+        +Events() IProjectorEvents
+        +States() IStorages
+        +Intents() IStorages
     }
 
     IWorkspace --|> IType : inherits
@@ -600,13 +600,14 @@ classDiagram
         <<interface>>
         +Kind()* TypeKind_Projector
         +Extension() IExtension
-        +Events() []IProjectorEvent
         +WantErrors() bool
-        +States() [QName]QNames
-        +Intents() [QName]QNames
+        +Events() IProjectorEvents
+        +States() IStorages
+        +Intents() IStorages
     }
 
-    IProjector "1" *--> "1..*" IProjectorEvent : Events
+    IProjector "1" *--> "1" IProjectorEvents : Events
+    IProjectorEvents "1" *--> "1..*" IProjectorEvent : Events
     class IProjectorEvent {
         <<interface>>
         +Comment() []string
@@ -625,10 +626,12 @@ classDiagram
         ExecuteWithParam
     }
 
-    IProjector "1" *--> "0..*" storage : States
-    IProjector "1" *--> "0..*" storage : Intents
-    class storage {
+    IProjector "1" *--> "1" IStorages : States
+    IProjector "1" *--> "1" IStorages : Intents
+    IStorages "1" *--> "0..*" IStorage : Storages
+    class IStorage {
         QName
+        +Comment() : []string
         +QNames() []QName
     }
 ```
