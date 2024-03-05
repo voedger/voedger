@@ -35,14 +35,16 @@ func ExampleIAppDefBuilder_AddProjector() {
 		v.SetComment("view is intent for projector")
 
 		prj := appDef.AddProjector(prjName)
-		prj.
-			AddEvent(recName, appdef.ProjectorEventKind_AnyChanges...).
-			SetEventComment(recName, fmt.Sprintf("run projector every time when %v is changed", recName)).
-			SetWantErrors()
-		prj.StatesBuilder().
-			Add(sysRecords, docName)
-		prj.IntentsBuilder().
-			Add(sysViews, viewName)
+		prj.SetWantErrors()
+		prj.Events().
+			Add(recName, appdef.ProjectorEventKind_AnyChanges...).
+			SetComment(recName, fmt.Sprintf("run projector every time when %v is changed", recName))
+		prj.States().
+			Add(sysRecords, docName).
+			SetComment(sysRecords, "projector needs to read «test.doc» from «sys.records» storage")
+		prj.Intents().
+			Add(sysViews, viewName).
+			SetComment(sysViews, "projector needs to update «test.view» from «sys.views» storage")
 
 		if a, err := appDef.Build(); err == nil {
 			app = a
@@ -55,17 +57,17 @@ func ExampleIAppDefBuilder_AddProjector() {
 	{
 		prj := app.Projector(prjName)
 		fmt.Println(prj, ":")
-		prj.Events(func(e appdef.IProjectorEvent) {
+		prj.Events().Enum(func(e appdef.IProjectorEvent) {
 			fmt.Println(" - event:", e, e.Comment())
 		})
 		if prj.WantErrors() {
 			fmt.Println(" - want sys.error events")
 		}
 		prj.States().Enum(func(s appdef.IStorage) {
-			fmt.Println(" - state:", s)
+			fmt.Println(" - state:", s, s.Comment())
 		})
 		prj.Intents().Enum(func(s appdef.IStorage) {
-			fmt.Println(" - intent:", s)
+			fmt.Println(" - intent:", s, s.Comment())
 		})
 
 		fmt.Println(app.Projector(appdef.NewQName("test", "unknown")))
@@ -84,8 +86,8 @@ func ExampleIAppDefBuilder_AddProjector() {
 	// BuiltIn-Projector «test.projector» :
 	//  - event: CRecord «test.record» [Insert Update Activate Deactivate] run projector every time when test.record is changed
 	//  - want sys.error events
-	//  - state: Storage «sys.records» [test.doc]
-	//  - intent: Storage «sys.views» [test.view]
+	//  - state: Storage «sys.records» [test.doc] projector needs to read «test.doc» from «sys.records» storage
+	//  - intent: Storage «sys.views» [test.view] projector needs to update «test.view» from «sys.views» storage
 	// <nil>
 	// 1 BuiltIn-Projector «test.projector»
 }

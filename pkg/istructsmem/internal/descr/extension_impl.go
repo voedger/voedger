@@ -83,7 +83,7 @@ func newProjector() *Projector {
 
 func (p *Projector) read(prj appdef.IProjector) {
 	p.Extension.read(prj)
-	prj.Events(func(ev appdef.IProjectorEvent) {
+	prj.Events().Enum(func(ev appdef.IProjectorEvent) {
 		e := ProjectorEvent{}
 		e.read(ev)
 		p.Events[e.On] = e

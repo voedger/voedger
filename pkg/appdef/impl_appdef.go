@@ -77,7 +77,8 @@ func (app *appDef) AddPackage(localName, path string) IAppDefBuilder {
 }
 
 func (app *appDef) AddProjector(name QName) IProjectorBuilder {
-	return newProjector(app, name)
+	projector := newProjector(app, name)
+	return newProjectorBuilder(projector)
 }
 
 func (app *appDef) AddQuery(name QName) IQueryBuilder {

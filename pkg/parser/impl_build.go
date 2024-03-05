@@ -292,7 +292,7 @@ func (c *buildContext) projectors() error {
 					}
 				}
 				for _, qn := range trigger.qNames {
-					builder.AddEvent(qn, evKinds...)
+					builder.Events().Add(qn, evKinds...)
 				}
 			}
 
@@ -300,10 +300,10 @@ func (c *buildContext) projectors() error {
 				builder.SetWantErrors()
 			}
 			for _, intent := range proj.Intents {
-				builder.IntentsBuilder().Add(intent.storageQName, intent.entityQNames...)
+				builder.Intents().Add(intent.storageQName, intent.entityQNames...)
 			}
 			for _, state := range proj.State {
-				builder.StatesBuilder().Add(state.storageQName, state.entityQNames...)
+				builder.States().Add(state.storageQName, state.entityQNames...)
 			}
 
 			c.addComments(proj, builder)

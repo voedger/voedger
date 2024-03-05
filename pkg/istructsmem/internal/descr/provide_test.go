@@ -28,6 +28,9 @@ func TestBasicUsage(t *testing.T) {
 	numName := appdef.NewQName("test", "number")
 	strName := appdef.NewQName("test", "string")
 
+	sysRecords := appdef.NewQName("sys", "records")
+	sysViews := appdef.NewQName("sys", "views")
+
 	docName, recName := appdef.NewQName("test", "doc"), appdef.NewQName("test", "rec")
 
 	n := appDef.AddData(numName, appdef.DataKind_int64, appdef.NullQName, appdef.MinIncl(1))
@@ -83,15 +86,16 @@ func TestBasicUsage(t *testing.T) {
 
 	prj := appDef.AddProjector(appdef.NewQName("test", "projector"))
 	prj.
-		AddEvent(recName, appdef.ProjectorEventKind_AnyChanges...).SetEventComment(recName, "run projector every time when «test.rec» is changed").
-		AddEvent(cmdName).SetEventComment(cmdName, "run projector every time when «test.cmd» command is executed").
-		AddEvent(objName).SetEventComment(objName, "run projector every time when any command with «test.obj» argument is executed").
 		SetWantErrors().
 		SetEngine(appdef.ExtensionEngineKind_WASM)
-	prj.StatesBuilder().
-		Add(appdef.NewQName("sys", "records"), docName, recName)
-	prj.IntentsBuilder().
-		Add(appdef.NewQName("sys", "views"), viewName)
+	prj.Events().
+		Add(recName, appdef.ProjectorEventKind_AnyChanges...).SetComment(recName, "run projector every time when «test.rec» is changed").
+		Add(cmdName).SetComment(cmdName, "run projector every time when «test.cmd» command is executed").
+		Add(objName).SetComment(objName, "run projector every time when any command with «test.obj» argument is executed")
+	prj.States().
+		Add(sysRecords, docName, recName).SetComment(sysRecords, "needs to read «test.doc» and «test.rec» from «sys.records» storage")
+	prj.Intents().
+		Add(sysViews, viewName).SetComment(sysViews, "needs to update «test.view» from «sys.views» storage")
 
 	res := &mockResources{}
 	res.

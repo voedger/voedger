@@ -272,7 +272,7 @@ func TestErrorsAppConfigsType(t *testing.T) {
 					adb.AddCDoc(qName2)
 					adb.AddProjector(qName).
 						SetSync(true).
-						AddEvent(qName2, appdef.ProjectorEventKind_Insert)
+						Events().Add(qName2, appdef.ProjectorEventKind_Insert)
 					cfgs := make(AppConfigsType, 1)
 					_ = cfgs.AddConfig(istructs.AppQName_test1_app1, adb)
 					provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
@@ -300,7 +300,7 @@ func TestErrorsAppConfigsType(t *testing.T) {
 					adb.AddCDoc(qName2)
 					adb.AddProjector(qName).
 						SetSync(true).
-						AddEvent(qName2, appdef.ProjectorEventKind_Insert)
+						Events().Add(qName2, appdef.ProjectorEventKind_Insert)
 					cfgs := make(AppConfigsType, 1)
 					cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, adb)
 					cfg.AddAsyncProjectors(func(partition istructs.PartitionID) istructs.Projector {
@@ -321,7 +321,7 @@ func TestErrorsAppConfigsType(t *testing.T) {
 					adb.AddCDoc(qName2)
 					adb.AddProjector(qName).
 						SetSync(false).
-						AddEvent(qName2, appdef.ProjectorEventKind_Insert)
+						Events().Add(qName2, appdef.ProjectorEventKind_Insert)
 					cfgs := make(AppConfigsType, 1)
 					_ = cfgs.AddConfig(istructs.AppQName_test1_app1, adb)
 					provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
@@ -349,7 +349,7 @@ func TestErrorsAppConfigsType(t *testing.T) {
 					adb.AddCDoc(qName2)
 					adb.AddProjector(qName).
 						SetSync(false).
-						AddEvent(qName2, appdef.ProjectorEventKind_Insert)
+						Events().Add(qName2, appdef.ProjectorEventKind_Insert)
 					cfgs := make(AppConfigsType, 1)
 					cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, adb)
 					cfg.AddSyncProjectors(func(partition istructs.PartitionID) istructs.Projector {
@@ -368,7 +368,7 @@ func TestErrorsAppConfigsType(t *testing.T) {
 					adb.AddCDoc(qName2)
 					adb.AddProjector(qName).
 						SetSync(true).
-						AddEvent(qName2, appdef.ProjectorEventKind_Insert)
+						Events().Add(qName2, appdef.ProjectorEventKind_Insert)
 					cfgs := make(AppConfigsType, 1)
 					cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, adb)
 					cfg.AddAsyncProjectors(func(partition istructs.PartitionID) istructs.Projector {

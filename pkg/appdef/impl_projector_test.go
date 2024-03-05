@@ -50,27 +50,18 @@ func Test_AppDef_AddProjector(t *testing.T) {
 
 		prj := appDef.AddProjector(prjName)
 
-		t.Run("test newly created projector", func(t *testing.T) {
-			require.Equal(TypeKind_Projector, prj.Kind())
-			require.Equal(prjName, prj.QName())
-			require.False(prj.Sync())
-			require.Empty(prj.EventsMap())
-		})
-
 		prj.
 			SetSync(true).
-			AddEvent(recName).
-			SetEventComment(recName, fmt.Sprintf("run projector after change %v", recName)).
-			AddEvent(cmdName).
-			SetEventComment(cmdName, fmt.Sprintf("run projector after execute %v", cmdName)).
-			AddEvent(objName).
-			SetEventComment(objName, fmt.Sprintf("run projector after execute any command with parameter %v", objName)).
 			SetWantErrors()
-		prj.StatesBuilder().
+		prj.Events().
+			Add(recName).SetComment(recName, fmt.Sprintf("run projector after change %v", recName)).
+			Add(cmdName).SetComment(cmdName, fmt.Sprintf("run projector after execute %v", cmdName)).
+			Add(objName).SetComment(objName, fmt.Sprintf("run projector after execute any command with parameter %v", objName))
+		prj.States().
 			Add(sysRecords, docName).
-			Add(sysRecords, recName, rec2Name). // should be ok to add storage «sys.records» twice, qnames must coincate
+			Add(sysRecords, recName, rec2Name). // should be ok to add storage «sys.records» twice, qnames must concate
 			Add(sysWLog)
-		prj.IntentsBuilder().
+		prj.Intents().
 			Add(sysViews, viewName).
 			SetComment(sysViews, "view is intent for projector")
 
@@ -101,8 +92,10 @@ func Test_AppDef_AddProjector(t *testing.T) {
 		require.Equal(ExtensionEngineKind_BuiltIn, prj.Engine())
 
 		t.Run("must be ok enum events", func(t *testing.T) {
+			require.EqualValues(3, prj.Events().Len())
+
 			cnt := 0
-			prj.Events(func(e IProjectorEvent) {
+			prj.Events().Enum(func(e IProjectorEvent) {
 				cnt++
 				switch cnt {
 				case 1:
@@ -125,17 +118,26 @@ func Test_AppDef_AddProjector(t *testing.T) {
 				}
 			})
 			require.Equal(3, cnt)
-		})
 
-		t.Run("must be ok obtain events map", func(t *testing.T) {
-			events := prj.EventsMap()
-			require.Len(events, 3)
-			require.Contains(events, cmdName)
-			require.EqualValues([]ProjectorEventKind{ProjectorEventKind_Execute}, events[cmdName])
-			require.Contains(events, objName)
-			require.EqualValues([]ProjectorEventKind{ProjectorEventKind_ExecuteWithParam}, events[objName])
-			require.Contains(events, recName)
-			require.EqualValues(ProjectorEventKind_AnyChanges, events[recName])
+			t.Run("must be ok obtain events map", func(t *testing.T) {
+				events := prj.Events().Map()
+				require.Len(events, 3)
+				require.Contains(events, cmdName)
+				require.EqualValues([]ProjectorEventKind{ProjectorEventKind_Execute}, events[cmdName])
+				require.Contains(events, objName)
+				require.EqualValues([]ProjectorEventKind{ProjectorEventKind_ExecuteWithParam}, events[objName])
+				require.Contains(events, recName)
+				require.EqualValues(ProjectorEventKind_AnyChanges, events[recName])
+			})
+
+			t.Run("must be ok to get event by name", func(t *testing.T) {
+				event := prj.Events().Event(cmdName)
+				require.NotNil(event)
+				require.Equal(cmdName, event.On().QName())
+				require.EqualValues([]ProjectorEventKind{ProjectorEventKind_Execute}, event.Kind())
+
+				require.Nil(prj.Events().Event(NewQName("test", "unknown")), "should be nil for unknown event")
+			})
 		})
 
 		require.True(prj.WantErrors())
@@ -235,10 +237,10 @@ func Test_AppDef_AddProjector(t *testing.T) {
 		prj.
 			SetEngine(ExtensionEngineKind_WASM).
 			SetName("customExtensionName")
-		prj.
-			AddEvent(recName, ProjectorEventKind_Insert, ProjectorEventKind_Update).
-			AddEvent(recName, ProjectorEventKind_Activate, ProjectorEventKind_Deactivate).
-			SetEventComment(recName, "event can be added twice")
+		prj.Events().
+			Add(recName, ProjectorEventKind_Insert, ProjectorEventKind_Update).
+			Add(recName, ProjectorEventKind_Activate, ProjectorEventKind_Deactivate). // event can be added twice
+			SetComment(recName, "event can be added twice")
 		app, err := apb.Build()
 		require.NoError(err)
 
@@ -248,8 +250,9 @@ func Test_AppDef_AddProjector(t *testing.T) {
 		require.Equal(ExtensionEngineKind_WASM, p.Engine())
 
 		t.Run("must be ok enum events", func(t *testing.T) {
+			require.EqualValues(1, p.Events().Len())
 			cnt := 0
-			p.Events(func(e IProjectorEvent) {
+			p.Events().Enum(func(e IProjectorEvent) {
 				cnt++
 				switch cnt {
 				case 1:
@@ -297,38 +300,38 @@ func Test_AppDef_AddProjector(t *testing.T) {
 		apb := New()
 		prj := apb.AddProjector(NewQName("test", "projector"))
 
-		require.Panics(func() { prj.StatesBuilder().Add(NullQName) }, "panic if state name is empty")
-		require.Panics(func() { prj.StatesBuilder().Add(NewQName("naked", "🔫")) }, "panic if state name is invalid")
-		require.Panics(func() { prj.StatesBuilder().Add(sysRecords, NewQName("naked", "🔫")) }, "panic if state names contains invalid")
-		require.Panics(func() { prj.StatesBuilder().SetComment(NewQName("unknown", "storage"), "comment") }, "panic if comment unknown state")
+		require.Panics(func() { prj.States().Add(NullQName) }, "panic if state name is empty")
+		require.Panics(func() { prj.States().Add(NewQName("naked", "🔫")) }, "panic if state name is invalid")
+		require.Panics(func() { prj.States().Add(sysRecords, NewQName("naked", "🔫")) }, "panic if state names contains invalid")
+		require.Panics(func() { prj.States().SetComment(NewQName("unknown", "storage"), "comment") }, "panic if comment unknown state")
 	})
 
 	t.Run("panics while build intents", func(t *testing.T) {
 		apb := New()
 		prj := apb.AddProjector(NewQName("test", "projector"))
 
-		require.Panics(func() { prj.IntentsBuilder().Add(NullQName) }, "panic if intent name is empty")
-		require.Panics(func() { prj.IntentsBuilder().Add(NewQName("naked", "🔫")) }, "panic if intent name is invalid")
-		require.Panics(func() { prj.IntentsBuilder().Add(sysRecords, NewQName("naked", "🔫")) }, "panic if intent names contains invalid")
-		require.Panics(func() { prj.IntentsBuilder().SetComment(NewQName("unknown", "storage"), "comment") }, "panic if comment unknown intent")
+		require.Panics(func() { prj.Intents().Add(NullQName) }, "panic if intent name is empty")
+		require.Panics(func() { prj.Intents().Add(NewQName("naked", "🔫")) }, "panic if intent name is invalid")
+		require.Panics(func() { prj.Intents().Add(sysRecords, NewQName("naked", "🔫")) }, "panic if intent names contains invalid")
+		require.Panics(func() { prj.Intents().SetComment(NewQName("unknown", "storage"), "comment") }, "panic if comment unknown intent")
 	})
 
 	t.Run("panic while build events", func(t *testing.T) {
 		apb := New()
 		prj := apb.AddProjector(NewQName("test", "projector"))
 
-		require.Panics(func() { prj.AddEvent(NullQName) }, "panic if event type is empty")
-		require.Panics(func() { prj.AddEvent(NewQName("test", "unknown")) }, "panic if event type is unknown")
-		require.Panics(func() { prj.AddEvent(QNameANY) }, "panic if event type is not record, command or command parameter")
-		require.Panics(func() { prj.SetEventComment(NewQName("test", "unknown"), "comment") }, "panic if comment unknown event")
+		require.Panics(func() { prj.Events().Add(NullQName) }, "panic if event type is empty")
+		require.Panics(func() { prj.Events().Add(NewQName("test", "unknown")) }, "panic if event type is unknown")
+		require.Panics(func() { prj.Events().Add(QNameANY) }, "panic if event type is not record, command or command parameter")
+		require.Panics(func() { prj.Events().SetComment(NewQName("test", "unknown"), "comment") }, "panic if comment unknown event")
 
 		t.Run("panic if event is incompatible with type", func(t *testing.T) {
 			_ = apb.AddCRecord(recName)
 			_ = apb.AddObject(objName)
 			_ = apb.AddCommand(cmdName).SetParam(objName)
-			require.Panics(func() { prj.AddEvent(recName, ProjectorEventKind_Execute) })
-			require.Panics(func() { prj.AddEvent(objName, ProjectorEventKind_Update) })
-			require.Panics(func() { prj.AddEvent(cmdName, ProjectorEventKind_ExecuteWithParam) })
+			require.Panics(func() { prj.Events().Add(recName, ProjectorEventKind_Execute) })
+			require.Panics(func() { prj.Events().Add(objName, ProjectorEventKind_Update) })
+			require.Panics(func() { prj.Events().Add(cmdName, ProjectorEventKind_ExecuteWithParam) })
 		})
 	})
 }

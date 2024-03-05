@@ -184,7 +184,7 @@ func Test_BasicUsage(t *testing.T) {
 	proj := builder.Projector(appdef.NewQName("main", "RecordsRegistryProjector"))
 	require.NotNil(proj)
 	eventsCount := 0
-	proj.Events(func(ie appdef.IProjectorEvent) {
+	proj.Events().Enum(func(ie appdef.IProjectorEvent) {
 		eventsCount++
 		k, on := ie.Kind(), ie.On().QName()
 		require.Len(k, 3)
@@ -199,12 +199,13 @@ func Test_BasicUsage(t *testing.T) {
 		}
 	})
 	require.Equal(2, eventsCount)
+	require.Equal(eventsCount, proj.Events().Len())
 
 	// Execute Projector
 	proj = builder.Projector(appdef.NewQName("main", "UpdateDashboard"))
 	require.NotNil(proj)
 	eventsCount = 0
-	proj.Events(func(ie appdef.IProjectorEvent) {
+	proj.Events().Enum(func(ie appdef.IProjectorEvent) {
 		eventsCount++
 		if eventsCount == 1 {
 			require.Len(ie.Kind(), 1)
@@ -216,6 +217,8 @@ func Test_BasicUsage(t *testing.T) {
 			require.Equal(appdef.NewQName("main", "NewOrder2"), ie.On().QName())
 		}
 	})
+	require.Equal(2, eventsCount)
+	require.Equal(eventsCount, proj.Events().Len())
 
 	stateCount := 0
 	proj.States().Enum(func(storage appdef.IStorage) {
@@ -229,6 +232,7 @@ func Test_BasicUsage(t *testing.T) {
 		}
 	})
 	require.Equal(2, stateCount)
+	require.Equal(stateCount, proj.States().Len())
 
 	intentsCount := 0
 	proj.Intents().Enum(func(storage appdef.IStorage) {
@@ -243,6 +247,7 @@ func Test_BasicUsage(t *testing.T) {
 		}
 	})
 	require.Equal(1, intentsCount)
+	require.Equal(intentsCount, proj.Intents().Len())
 
 	localNames := builder.PackageLocalNames()
 	require.Len(localNames, 3)

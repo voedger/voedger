@@ -63,10 +63,9 @@ func buildAppParts(t *testing.T) (appParts appparts.IAppPartitions, cleanup func
 		adb.AddWRecord(istructs.QNameWRecord)
 
 		prj := adb.AddProjector(QNameProjectorCollection)
-		prj.
-			AddEvent(istructs.QNameCRecord, appdef.ProjectorEventKind_Insert, appdef.ProjectorEventKind_Update).
-			SetSync(true)
-		prj.IntentsBuilder().
+		prj.SetSync(true).
+			Events().Add(istructs.QNameCRecord, appdef.ProjectorEventKind_Insert, appdef.ProjectorEventKind_Update)
+		prj.Intents().
 			Add(state.View, QNameCollectionView)
 	}
 	{

@@ -70,6 +70,8 @@ func (ss *storages) Add(name QName, names ...QName) IStoragesBuilder {
 	return ss
 }
 
+func (ss *storages) Len() int { return len(ss.storages) }
+
 func (ss *storages) Map() map[QName]QNames { return ss.qnames }
 
 func (ss *storages) Enum(cb func(IStorage)) {

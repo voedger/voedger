@@ -56,8 +56,8 @@ func TestBasicUsage_AsynchronousActualizer(t *testing.T) {
 			ProvideViewDef(appDef, incProjectionView, buildProjectionView)
 			ProvideViewDef(appDef, decProjectionView, buildProjectionView)
 			appDef.AddCommand(testQName)
-			appDef.AddProjector(incrementorName).AddEvent(testQName, appdef.ProjectorEventKind_Execute)
-			appDef.AddProjector(decrementorName).AddEvent(testQName, appdef.ProjectorEventKind_Execute)
+			appDef.AddProjector(incrementorName).Events().Add(testQName, appdef.ProjectorEventKind_Execute)
+			appDef.AddProjector(decrementorName).Events().Add(testQName, appdef.ProjectorEventKind_Execute)
 		},
 		func(cfg *istructsmem.AppConfigType) {
 			cfg.Resources.Add(istructsmem.NewCommandFunction(testQName, istructsmem.NullCommandExec))
@@ -157,7 +157,7 @@ func Test_AsynchronousActualizer_FlushByRange(t *testing.T) {
 			ProvideViewDef(appDef, incProjectionView, buildProjectionView)
 			ProvideViewDef(appDef, decProjectionView, buildProjectionView)
 			appDef.AddCommand(testQName)
-			appDef.AddProjector(incrementorName).AddEvent(testQName, appdef.ProjectorEventKind_Execute)
+			appDef.AddProjector(incrementorName).Events().Add(testQName, appdef.ProjectorEventKind_Execute)
 		},
 		func(cfg *istructsmem.AppConfigType) {
 			cfg.Resources.Add(istructsmem.NewCommandFunction(testQName, istructsmem.NullCommandExec))
@@ -242,7 +242,7 @@ func Test_AsynchronousActualizer_FlushByInterval(t *testing.T) {
 			ProvideViewDef(appDef, incProjectionView, buildProjectionView)
 			ProvideViewDef(appDef, decProjectionView, buildProjectionView)
 			appDef.AddCommand(testQName)
-			appDef.AddProjector(incrementorName).AddEvent(testQName, appdef.ProjectorEventKind_Execute)
+			appDef.AddProjector(incrementorName).Events().Add(testQName, appdef.ProjectorEventKind_Execute)
 		},
 		func(cfg *istructsmem.AppConfigType) {
 			cfg.Resources.Add(istructsmem.NewCommandFunction(testQName, istructsmem.NullCommandExec))
@@ -333,8 +333,8 @@ func Test_AsynchronousActualizer_ErrorAndRestore(t *testing.T) {
 			appDef.AddCommand(testQName)
 			// add not-View and not-Record state to make the projector NonBuffered
 			prj := appDef.AddProjector(name)
-			prj.AddEvent(testQName, appdef.ProjectorEventKind_Execute)
-			prj.StatesBuilder().Add(state.Http)
+			prj.Events().Add(testQName, appdef.ProjectorEventKind_Execute)
+			prj.States().Add(state.Http)
 		},
 		func(cfg *istructsmem.AppConfigType) {
 			cfg.Resources.Add(istructsmem.NewCommandFunction(testQName, istructsmem.NullCommandExec))
@@ -452,7 +452,7 @@ func Test_AsynchronousActualizer_ResumeReadAfterNotifications(t *testing.T) {
 			ProvideViewDef(appDef, incProjectionView, buildProjectionView)
 			ProvideViewDef(appDef, decProjectionView, buildProjectionView)
 			appDef.AddCommand(testQName)
-			appDef.AddProjector(incrementorName).AddEvent(testQName, appdef.ProjectorEventKind_Execute)
+			appDef.AddProjector(incrementorName).Events().Add(testQName, appdef.ProjectorEventKind_Execute)
 		},
 		func(cfg *istructsmem.AppConfigType) {
 			cfg.Resources.Add(istructsmem.NewCommandFunction(testQName, istructsmem.NullCommandExec))
@@ -588,7 +588,7 @@ func Test_AsynchronousActualizer_Stress(t *testing.T) {
 			ProvideViewDef(appDef, incProjectionView, buildProjectionView)
 			ProvideViewDef(appDef, decProjectionView, buildProjectionView)
 			appDef.AddCommand(testQName)
-			appDef.AddProjector(incrementorName).AddEvent(testQName, appdef.ProjectorEventKind_Execute)
+			appDef.AddProjector(incrementorName).Events().Add(testQName, appdef.ProjectorEventKind_Execute)
 		},
 		func(cfg *istructsmem.AppConfigType) {
 			cfg.Resources.Add(istructsmem.NewCommandFunction(testQName, istructsmem.NullCommandExec))
@@ -701,8 +701,8 @@ func Test_AsynchronousActualizer_NonBuffered(t *testing.T) {
 			appDef.AddCommand(testQName)
 			// add not-View and not-Record intent to make the projector NonBuffered
 			prj := appDef.AddProjector(incrementorName)
-			prj.AddEvent(testQName, appdef.ProjectorEventKind_Execute)
-			prj.IntentsBuilder().Add(state.Http)
+			prj.Events().Add(testQName, appdef.ProjectorEventKind_Execute)
+			prj.Intents().Add(state.Http)
 		},
 		func(cfg *istructsmem.AppConfigType) {
 			cfg.Resources.Add(istructsmem.NewCommandFunction(testQName, istructsmem.NullCommandExec))
@@ -831,7 +831,7 @@ func Test_AsynchronousActualizer_Stress_NonBuffered(t *testing.T) {
 		func(appDef appdef.IAppDefBuilder) {
 			appDef.AddCommand(projectorFilter)
 			appDef.AddCommand(testQName)
-			appDef.AddProjector(incrementorName).AddEvent(projectorFilter, appdef.ProjectorEventKind_Execute)
+			appDef.AddProjector(incrementorName).Events().Add(projectorFilter, appdef.ProjectorEventKind_Execute)
 		},
 		func(cfg *istructsmem.AppConfigType) {
 			cfg.Resources.Add(istructsmem.NewCommandFunction(projectorFilter, istructsmem.NullCommandExec))
@@ -1010,7 +1010,7 @@ func Test_AsynchronousActualizer_Stress_Buffered(t *testing.T) {
 		func(appDef appdef.IAppDefBuilder) {
 			appDef.AddCommand(projectorFilter)
 			appDef.AddCommand(testQName)
-			appDef.AddProjector(incrementorName).AddEvent(projectorFilter, appdef.ProjectorEventKind_Execute)
+			appDef.AddProjector(incrementorName).Events().Add(projectorFilter, appdef.ProjectorEventKind_Execute)
 		},
 		func(cfg *istructsmem.AppConfigType) {
 			cfg.Resources.Add(istructsmem.NewCommandFunction(projectorFilter, istructsmem.NullCommandExec))

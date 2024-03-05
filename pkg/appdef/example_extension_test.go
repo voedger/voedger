@@ -39,9 +39,10 @@ func ExampleIAppDef_Extensions() {
 			SetResult(appdef.QNameANY)
 
 		prj := appDef.AddProjector(prjName)
-		prj.
-			AddEvent(cmdName, appdef.ProjectorEventKind_Execute).
-			IntentsBuilder().Add(sysViews, viewName)
+		prj.Events().
+			Add(cmdName, appdef.ProjectorEventKind_Execute)
+		prj.Intents().
+			Add(sysViews, viewName)
 
 		_ = appDef.AddObject(parName)
 		_ = appDef.AddObject(resName)
@@ -71,7 +72,7 @@ func ExampleIAppDef_Extensions() {
 				fmt.Println(" - result   :", qry.Result())
 			case appdef.TypeKind_Projector:
 				prj := ex.(appdef.IProjector)
-				prj.Events(func(e appdef.IProjectorEvent) {
+				prj.Events().Enum(func(e appdef.IProjectorEvent) {
 					fmt.Println(" - event    :", e)
 				})
 				prj.States().Enum(func(s appdef.IStorage) {

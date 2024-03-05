@@ -27,6 +27,9 @@ type IStorages interface {
 	// Names slice in every storage is sorted and deduplicated.
 	Enum(func(IStorage))
 
+	// Returns number of storages.
+	Len() int
+
 	// Returns storages as map.
 	Map() map[QName]QNames
 }

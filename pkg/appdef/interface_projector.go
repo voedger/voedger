@@ -12,13 +12,8 @@ type IProjector interface {
 	// Returns is synchronous projector.
 	Sync() bool
 
-	// Enumerate events to trigger the projector.
-	//
-	// Events enumerated in alphabetical QNames order.
-	Events(func(IProjectorEvent))
-
-	// Returns events to trigger as map.
-	EventsMap() map[QName][]ProjectorEventKind
+	// Events to trigger.
+	Events() IProjectorEvents
 
 	// Returns projector states.
 	States() IStorages
@@ -29,6 +24,25 @@ type IProjector interface {
 	// Returns is projector is able to handle `sys.Error` events.
 	// False by default.
 	WantErrors() bool
+}
+
+// Describe all events to trigger the projector.
+type IProjectorEvents interface {
+	// Enumerate events to trigger the projector.
+	//
+	// Events enumerated in alphabetical QNames order.
+	Enum(func(IProjectorEvent))
+
+	// Returns event by name.
+	//
+	// Returns nil if event not found.
+	Event(QName) IProjectorEvent
+
+	// Returns number of events.
+	Len() int
+
+	// Returns events to trigger as map.
+	Map() map[QName][]ProjectorEventKind
 }
 
 // Describe event to trigger the projector.
@@ -69,12 +83,25 @@ var ProjectorEventKind_AnyChanges = []ProjectorEventKind{
 }
 
 type IProjectorBuilder interface {
-	IProjector
 	IExtensionBuilder
 
 	// Sets is synchronous projector.
 	SetSync(bool) IProjectorBuilder
 
+	// Events builder.
+	Events() IProjectorEventsBuilder
+
+	// Returns projector states builder.
+	States() IStoragesBuilder
+
+	// Returns projector intents builder.
+	Intents() IStoragesBuilder
+
+	// Sets is projector is able to handle `sys.Error` events.
+	SetWantErrors() IProjectorBuilder
+}
+
+type IProjectorEventsBuilder interface {
 	// Adds event to trigger the projector.
 	//
 	// QName can be some record type or command.
@@ -88,20 +115,11 @@ type IProjectorBuilder interface {
 	//	- if QName is empty (NullQName)
 	//	- if QName type is not a record and not a command
 	//	- if event kind is not applicable for QName type.
-	AddEvent(on QName, event ...ProjectorEventKind) IProjectorBuilder
+	Add(on QName, event ...ProjectorEventKind) IProjectorEventsBuilder
 
 	// Sets event comment.
 	//
 	// # Panics:
 	//	- if event for QName is not added.
-	SetEventComment(on QName, comment ...string) IProjectorBuilder
-
-	// Returns projector states builder.
-	StatesBuilder() IStoragesBuilder
-
-	// Returns projector intents builder.
-	IntentsBuilder() IStoragesBuilder
-
-	// Sets is projector is able to handle `sys.Error` events.
-	SetWantErrors() IProjectorBuilder
+	SetComment(on QName, comment ...string) IProjectorEventsBuilder
 }
