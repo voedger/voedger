@@ -81,14 +81,17 @@ func TestBasicUsage(t *testing.T) {
 		SetParam(objName).
 		SetResult(appdef.QNameANY)
 
-	appDef.AddProjector(appdef.NewQName("test", "projector")).
+	prj := appDef.AddProjector(appdef.NewQName("test", "projector"))
+	prj.
 		AddEvent(recName, appdef.ProjectorEventKind_AnyChanges...).SetEventComment(recName, "run projector every time when «test.rec» is changed").
 		AddEvent(cmdName).SetEventComment(cmdName, "run projector every time when «test.cmd» command is executed").
 		AddEvent(objName).SetEventComment(objName, "run projector every time when any command with «test.obj» argument is executed").
 		SetWantErrors().
-		AddState(appdef.NewQName("sys", "records"), docName, recName).
-		AddIntent(appdef.NewQName("sys", "views"), viewName).
 		SetEngine(appdef.ExtensionEngineKind_WASM)
+	prj.StatesBuilder().
+		Add(appdef.NewQName("sys", "records"), docName, recName)
+	prj.IntentsBuilder().
+		Add(appdef.NewQName("sys", "views"), viewName)
 
 	res := &mockResources{}
 	res.
