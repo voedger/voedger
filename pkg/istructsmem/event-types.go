@@ -445,7 +445,7 @@ func (cud *cudType) regenerateIDsPlan(generator istructs.IIDGenerator) (newIDs n
 
 		var storeID istructs.RecordID
 
-		if cDoc, ok := rec.typ.(appdef.ICDoc); ok && cDoc.Singleton() {
+		if singleton, ok := rec.typ.(appdef.ISingleton); ok && singleton.Singleton() {
 			if storeID, err = cud.appCfg.singletons.ID(rec.QName()); err != nil {
 				return nil, err
 			}
