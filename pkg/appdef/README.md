@@ -599,7 +599,6 @@ classDiagram
     class IProjector {
         <<interface>>
         +Kind()* TypeKind_Projector
-        +Extension() IExtension
         +WantErrors() bool
         +Events() IProjectorEvents
         +States() IStorages
@@ -608,6 +607,13 @@ classDiagram
 
     IProjector "1" *--> "1" IProjectorEvents : Events
     IProjectorEvents "1" *--> "1..*" IProjectorEvent : Events
+    class IProjectorEvents {
+        <<interface>>
+        +Enum(func(IProjectorEvent))
+        +Event(QName) IProjectorEvent
+        +Len() int
+        +Map() map[QName] []ProjectorEventKind
+    }
     class IProjectorEvent {
         <<interface>>
         +Comment() []string
@@ -628,10 +634,18 @@ classDiagram
 
     IProjector "1" *--> "1" IStorages : States
     IProjector "1" *--> "1" IStorages : Intents
+    class IStorages {
+        <<interface>>
+        +Enum(func(IStorage))
+        +Len() int
+        +Map() map[QName] []QName
+        +Storage(QName) IStorage
+    }
     IStorages "1" *--> "0..*" IStorage : Storages
     class IStorage {
-        QName
+        <<interface>>
         +Comment() : []string
+        +Name(): QName
         +QNames() []QName
     }
 ```
