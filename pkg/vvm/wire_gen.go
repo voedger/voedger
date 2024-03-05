@@ -105,7 +105,7 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 	asyncActualizersFactory := provideAsyncActualizersFactory(iAppPartitions, iAppStructsProvider, in10nBroker, asyncActualizerFactory, iSecretReader, iMetrics)
 	v4 := vvmConfig.ActualizerStateOpts
 	appPartitionFactory := provideAppPartitionFactory(asyncActualizersFactory, v4)
-	appServiceFactory := provideAppServiceFactory(appPartitionFactory, commandProcessorsCount)
+	appServiceFactory := provideAppServiceFactory(appPartitionFactory)
 	vvmPortSource := provideVVMPortSource()
 	iFederation := provideIFederation(vvmConfig, vvmPortSource)
 	apIs := apps.APIs{
@@ -127,9 +127,7 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 		cleanup()
 		return nil, nil, err
 	}
-	v7 := provideBuiltInApps(v6)
-	vvmApps := provideVVMApps(v7)
-	operatorAppServicesFactory := provideOperatorAppServices(appServiceFactory, vvmApps, iAppStructsProvider)
+	operatorAppServicesFactory := provideOperatorAppServices(appServiceFactory, v6, iAppStructsProvider)
 	vvmPortType := vvmConfig.VVMPort
 	routerParams := provideRouterParams(vvmConfig, vvmPortType, vvmIdx)
 	busTimeout := vvmConfig.BusTimeout
@@ -158,6 +156,8 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 	cache := dbcertcache.ProvideDbCache(routerAppStorage)
 	commandProcessorsChannelGroupIdxType := provideProcessorChannelGroupIdxCommand(vvmConfig)
 	queryProcessorsChannelGroupIdxType := provideProcessorChannelGroupIdxQuery(vvmConfig)
+	v7 := provideBuiltInApps(v6)
+	vvmApps := provideVVMApps(v7)
 	iBus := provideIBus(iAppPartitions, iProcBus, commandProcessorsChannelGroupIdxType, queryProcessorsChannelGroupIdxType, commandProcessorsCount, vvmApps)
 	v8, err := provideAppsWSAmounts(vvmApps, iAppStructsProvider)
 	if err != nil {
@@ -557,12 +557,11 @@ func provideAppPartitionFactory(aaf AsyncActualizersFactory, opts []state.Actual
 	}
 }
 
-// forks appPartition(just async actualizers for now) by cmd processors amount (or by partitions amount) per one app
-// [partitionAmount]appPartition(asyncActualizers)
-func provideAppServiceFactory(apf AppPartitionFactory, cpCount coreutils.CommandProcessorsCount) AppServiceFactory {
-	return func(vvmCtx context.Context, appQName istructs.AppQName, asyncProjectorFactories AsyncProjectorFactories) pipeline.ISyncOperator {
-		forks := make([]pipeline.ForkOperatorOptionFunc, cpCount)
-		for i := 0; i < int(cpCount); i++ {
+// forks appPartition(just async actualizers for now) of one app by amount of partitions of the app
+func provideAppServiceFactory(apf AppPartitionFactory) AppServiceFactory {
+	return func(vvmCtx context.Context, appQName istructs.AppQName, asyncProjectorFactories AsyncProjectorFactories, appPartsCount int) pipeline.ISyncOperator {
+		forks := make([]pipeline.ForkOperatorOptionFunc, appPartsCount)
+		for i := 0; i < int(appPartsCount); i++ {
 			forks[i] = pipeline.ForkBranch(apf(vvmCtx, appQName, asyncProjectorFactories, istructs.PartitionID(i)))
 		}
 		return pipeline.ForkOperator(pipeline.ForkSame, forks[0], forks[1:]...)
@@ -571,18 +570,18 @@ func provideAppServiceFactory(apf AppPartitionFactory, cpCount coreutils.Command
 
 // forks appServices per apps
 // [appsAmount]appServices
-func provideOperatorAppServices(apf AppServiceFactory, vvmApps VVMApps, asp istructs.IAppStructsProvider) OperatorAppServicesFactory {
+func provideOperatorAppServices(apf AppServiceFactory, builtInAppsPackages []BuiltInAppsPackages, asp istructs.IAppStructsProvider) OperatorAppServicesFactory {
 	return func(vvmCtx context.Context) pipeline.ISyncOperator {
 		var branches []pipeline.ForkOperatorOptionFunc
-		for _, appQName := range vvmApps {
-			as, err := asp.AppStructs(appQName)
+		for _, builtInAppPackages := range builtInAppsPackages {
+			as, err := asp.AppStructs(builtInAppPackages.Name)
 			if err != nil {
 				panic(err)
 			}
 			if len(as.AsyncProjectors()) == 0 {
 				continue
 			}
-			branch := pipeline.ForkBranch(apf(vvmCtx, appQName, as.AsyncProjectors()))
+			branch := pipeline.ForkBranch(apf(vvmCtx, builtInAppPackages.Name, as.AsyncProjectors(), builtInAppPackages.PartsCount))
 			branches = append(branches, branch)
 		}
 		if len(branches) == 0 {
