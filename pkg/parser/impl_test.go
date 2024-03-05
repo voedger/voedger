@@ -218,28 +218,28 @@ func Test_BasicUsage(t *testing.T) {
 	})
 
 	stateCount := 0
-	proj.States(func(storage appdef.QName, names appdef.QNames) {
+	proj.States().Enum(func(storage appdef.IStorage) {
 		stateCount++
 		if stateCount == 1 {
-			require.Equal(appdef.NewQName("sys", "AppSecret"), storage)
-			require.Empty(names)
+			require.Equal(appdef.NewQName("sys", "AppSecret"), storage.Name())
+			require.Empty(storage.Names())
 		} else if stateCount == 2 {
-			require.Equal(appdef.NewQName("sys", "Http"), storage)
-			require.Empty(names)
+			require.Equal(appdef.NewQName("sys", "Http"), storage.Name())
+			require.Empty(storage.Names())
 		}
 	})
 	require.Equal(2, stateCount)
 
 	intentsCount := 0
-	proj.Intents(func(storage appdef.QName, names appdef.QNames) {
+	proj.Intents().Enum(func(storage appdef.IStorage) {
 		intentsCount++
 		if intentsCount == 1 {
-			require.Equal(appdef.NewQName("sys", "View"), storage)
-			require.Len(names, 4)
-			require.Equal(appdef.NewQName("main", "ActiveTablePlansView"), names[0])
-			require.Equal(appdef.NewQName("main", "DashboardView"), names[1])
-			require.Equal(appdef.NewQName("main", "NotificationsHistory"), names[2])
-			require.Equal(appdef.NewQName("main", "XZReports"), names[3])
+			require.Equal(appdef.NewQName("sys", "View"), storage.Name())
+			require.Len(storage.Names(), 4)
+			require.Equal(appdef.NewQName("main", "ActiveTablePlansView"), storage.Names()[0])
+			require.Equal(appdef.NewQName("main", "DashboardView"), storage.Names()[1])
+			require.Equal(appdef.NewQName("main", "NotificationsHistory"), storage.Names()[2])
+			require.Equal(appdef.NewQName("main", "XZReports"), storage.Names()[3])
 		}
 	})
 	require.Equal(1, intentsCount)

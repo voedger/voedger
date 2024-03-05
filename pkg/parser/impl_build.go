@@ -300,10 +300,10 @@ func (c *buildContext) projectors() error {
 				builder.SetWantErrors()
 			}
 			for _, intent := range proj.Intents {
-				builder.AddIntent(intent.storageQName, intent.entityQNames...)
+				builder.IntentsBuilder().Add(intent.storageQName, intent.entityQNames...)
 			}
 			for _, state := range proj.State {
-				builder.AddState(state.storageQName, state.entityQNames...)
+				builder.StatesBuilder().Add(state.storageQName, state.entityQNames...)
 			}
 
 			c.addComments(proj, builder)
