@@ -256,8 +256,7 @@ func GetQualifiedPackageName(pkgName Ident, schema *SchemaAST) string {
 			return imp.Name
 		}
 	}
-	return string(pkgName)
-	//return ""
+	return ""
 }
 
 func findPackage(pnkName Ident, c *iterateCtx) (*PackageSchemaAST, error) {
