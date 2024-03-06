@@ -59,7 +59,7 @@ func provideIBus(appParts appparts.IAppPartitions, procbus iprocbus.IProcBus,
 
 		appDef, err := appParts.AppDef(appQName)
 		if err != nil {
-			coreutils.ReplyInternalServerError(sender, "failed to get AppDef", err)
+			coreutils.ReplyErrf(sender, http.StatusServiceUnavailable, "app is not deployed", err)
 			return
 		}
 
