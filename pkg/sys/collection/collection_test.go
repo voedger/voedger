@@ -181,7 +181,7 @@ func buildAppParts(t *testing.T) (appParts appparts.IAppPartitions, cleanup func
 
 	appParts, cleanup, err = appparts.New(provider)
 	require.NoError(err)
-	appParts.DeployApp(test.appQName, appDef, test.appEngines)
+	appParts.DeployApp(test.appQName, appDef, test.totalPartitions, test.appEngines)
 	appParts.DeployAppPartitions(test.appQName, []istructs.PartitionID{test.partition})
 
 	// create stub for cdoc.sys.WorkspaceDescriptor to make query processor work

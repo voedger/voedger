@@ -36,20 +36,22 @@ func (e *engine) release() {
 }
 
 type app struct {
-	apps    *apps
-	name    istructs.AppQName
-	def     appdef.IAppDef
-	structs istructs.IAppStructs
-	engines [cluster.ProcessorKind_Count]*pool.Pool[*engine]
+	apps       *apps
+	name       istructs.AppQName
+	partsCount int
+	def        appdef.IAppDef
+	structs    istructs.IAppStructs
+	engines    [cluster.ProcessorKind_Count]*pool.Pool[*engine]
 	// no locks need. Owned apps structure will locks access to this structure
 	parts map[istructs.PartitionID]*partition
 }
 
-func newApplication(apps *apps, name istructs.AppQName) *app {
+func newApplication(apps *apps, name istructs.AppQName, partsCount int) *app {
 	return &app{
-		apps:  apps,
-		name:  name,
-		parts: map[istructs.PartitionID]*partition{},
+		apps:       apps,
+		name:       name,
+		partsCount: partsCount,
+		parts:      map[istructs.PartitionID]*partition{},
 	}
 }
 

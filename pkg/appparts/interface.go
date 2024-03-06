@@ -19,8 +19,10 @@ import (
 type IAppPartitions interface {
 	// Adds new application or update existing.
 	//
+	// partsCount - total partitions count for the application.
+	//
 	// If application with the same name exists, then its definition will be updated.
-	DeployApp(name istructs.AppQName, def appdef.IAppDef, engines [cluster.ProcessorKind_Count]int)
+	DeployApp(name istructs.AppQName, def appdef.IAppDef, partsCount int, engines [cluster.ProcessorKind_Count]int)
 
 	// Deploys new partitions for specified application or update existing.
 	//
@@ -35,7 +37,9 @@ type IAppPartitions interface {
 	// Returns nil and error if app not exists.
 	AppDef(istructs.AppQName) (appdef.IAppDef, error)
 
-	// Returns application partitions count.
+	// Returns _total_ application partitions count.
+	//
+	// This is a configuration value for the application, independent of how many sections are currently deployed.
 	//
 	// Returns 0 and error if app not exists.
 	AppPartsCount(istructs.AppQName) (int, error)
