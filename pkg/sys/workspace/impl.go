@@ -119,7 +119,7 @@ func execCmdCreateWorkspaceID(asp istructs.IAppStructsProvider, appQName istruct
 		if err != nil {
 			return err
 		}
-		newWSID, err := GetNextWSID(args.Workpiece.(interface{ Context() context.Context }).Context(), as, args.Workspace.ClusterID())
+		newWSID, err := GetNextWSID(args.Workpiece.(interface{ Context() context.Context }).Context(), as, args.WSID.ClusterID())
 		if err != nil {
 			return err
 		}
@@ -222,7 +222,7 @@ func execCmdCreateWorkspace(now coreutils.TimeFunc, asp istructs.IAppStructsProv
 		// Check that CDoc<sys.WorkspaceDescriptor> does not exist yet (IRecords.GetSingleton())
 		wsKindInitializationDataStr := args.ArgumentObject.AsString(authnz.Field_WSKindInitializationData)
 		wsKind := args.ArgumentObject.AsQName(authnz.Field_WSKind)
-		newWSID := args.Workspace
+		newWSID := args.WSID
 
 		wsKindInitializationData := map[string]interface{}{}
 

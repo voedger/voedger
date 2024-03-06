@@ -50,7 +50,7 @@ func TestBasicUsage_SynchronousActualizer(t *testing.T) {
 	require := require.New(t)
 
 	_, cleanup, _, appStructs := deployTestApp(
-		istructs.AppQName_test1_app1, []istructs.PartitionID{1}, false,
+		istructs.AppQName_test1_app1, 1, []istructs.PartitionID{1}, false,
 		func(appDef appdef.IAppDefBuilder) {
 			ProvideViewDef(appDef, incProjectionView, buildProjectionView)
 			ProvideViewDef(appDef, decProjectionView, buildProjectionView)
@@ -181,6 +181,7 @@ type (
 
 func deployTestApp(
 	appName istructs.AppQName,
+	appPartsCount int,
 	partID []istructs.PartitionID,
 	cachedStorage bool,
 	prepareAppDef appDefCallback,
@@ -230,7 +231,7 @@ func deployTestApp(
 		panic(err)
 	}
 
-	appParts.DeployApp(appName, appDef, cluster.PoolSize(10, 10, 10))
+	appParts.DeployApp(appName, appDef, appPartsCount, cluster.PoolSize(10, 10, 10))
 	appParts.DeployAppPartitions(appName, partID)
 
 	return appParts, cleanup, metrics, appStructs
@@ -240,7 +241,7 @@ func Test_ErrorInSyncActualizer(t *testing.T) {
 	require := require.New(t)
 
 	_, cleanup, _, appStructs := deployTestApp(
-		istructs.AppQName_test1_app1, []istructs.PartitionID{1}, false,
+		istructs.AppQName_test1_app1, 1, []istructs.PartitionID{1}, false,
 		func(appDef appdef.IAppDefBuilder) {
 			ProvideViewDef(appDef, incProjectionView, buildProjectionView)
 			ProvideViewDef(appDef, decProjectionView, buildProjectionView)

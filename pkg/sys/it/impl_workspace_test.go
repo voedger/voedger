@@ -121,8 +121,13 @@ func TestBasicUsage_Workspace(t *testing.T) {
 	t.Run("read user workspaces list", func(t *testing.T) {
 		body := `{"args":{"Schema":"sys.ChildWorkspace"},"elements":[{"fields":["WSName","WSKind","WSID","WSError"]}]}`
 		resp := vit.PostProfile(prn, "q.sys.Collection", body)
-		// note: wsKind is rendered as {} because q.sys.Collection appends QName to the object to marshal to JSON by value
-		// whereas appdef.QName.MarshalJSON() func has pointer receiver
+		resp.Println()
+	})
+
+	t.Run("400 bad request on create a workspace with kind that is not a QName of a workspace descriptor", func(t *testing.T) {
+		wsName := vit.NextName()
+		body := fmt.Sprintf(`{"args": {"WSName": "%s","WSKind": "app1pkg.articles","WSKindInitializationData": "{\"WorkStartTime\": \"10\"}","TemplateName": "test","WSClusterID": 1}}`, wsName)
+		resp := vit.PostProfile(prn, "c.sys.InitChildWorkspace", body, coreutils.Expect400())
 		resp.Println()
 	})
 }

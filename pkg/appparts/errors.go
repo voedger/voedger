@@ -13,9 +13,10 @@ import (
 )
 
 var (
-	ErrNotFound          = errors.New("not found")
-	errAppNotFound       = "application %v not found: %w"
-	errPartitionNotFound = "application %v partition %v not found: %w"
+	ErrNotFound                = errors.New("not found")
+	errAppCannotToBeRedeployed = "application %v can not to be redeployed: %w"
+	errAppNotFound             = "application %v not found: %w"
+	errPartitionNotFound       = "application %v partition %v not found: %w"
 )
 
 var (
