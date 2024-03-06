@@ -91,7 +91,7 @@ ABSTRACT WORKSPACE Workspace (
 	);
 
 	-- target app, new WSID
-	TABLE WorkspaceDescriptor INHERITS Singleton (
+	TABLE WorkspaceDescriptor INHERITS CSingleton (
 		-- owner* fields made non-required for app workspaces
 		OwnerWSID int64,
 		OwnerQName qname, -- Deprecated: use OwnerQName2
@@ -111,12 +111,6 @@ ABSTRACT WORKSPACE Workspace (
 		Status int32,
 		OwnerQName2 text
 	);
-
-	-- TABLE UserProfile INHERITS Singleton (DisplayName varchar);
-
-	-- TABLE DeviceProfile INHERITS Singleton ();
-
-	-- TABLE AppWorkspace INHERITS Singleton ();
 
 	TABLE BLOB INHERITS WDoc (status int32 NOT NULL);
 
