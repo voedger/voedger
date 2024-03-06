@@ -212,8 +212,13 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 			return nil
 		}),
 		operator("get IWorkspace", func(ctx context.Context, qw *queryWork) (err error) {
-			if qw.wsDesc.QName() != appdef.NullQName { // otherwise the workspace is dummy
-				qw.iWorkspace = qw.appStructs.AppDef().WorkspaceByDescriptor(qw.wsDesc.AsQName(authnz.Field_WSKind))
+			if qw.wsDesc.QName() == appdef.NullQName {
+				// workspace is dummy
+				return nil
+			}
+			if qw.iWorkspace = qw.appStructs.AppDef().WorkspaceByDescriptor(qw.wsDesc.AsQName(authnz.Field_WSKind)); qw.iWorkspace == nil {
+				return coreutils.NewHTTPErrorf(http.StatusInternalServerError, fmt.Sprintf("workspace is not found in AppDef by cdoc.sys.WorkspaceDescriptor.WSKind %s",
+					qw.wsDesc.AsQName(authnz.Field_WSKind)))
 			}
 			return nil
 		}),
