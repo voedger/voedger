@@ -14,6 +14,5 @@ type IObject interface {
 }
 
 type IObjectBuilder interface {
-	IObject
 	IStructureBuilder
 }

@@ -18,7 +18,7 @@ type projector struct {
 	extension
 	sync      bool
 	sysErrors bool
-	events    *projectorEvents
+	events    *events
 	states    *storages
 	intents   *storages
 }
@@ -29,45 +29,59 @@ func newProjector(app *appDef, name QName) *projector {
 		states:  newStorages(),
 		intents: newStorages(),
 	}
-	prj.extension = makeExtension(app, name, TypeKind_Projector, prj)
+	prj.extension = makeExtension(app, name, TypeKind_Projector)
 	app.appendType(prj)
 	return prj
 }
 
-func (prj *projector) Events() IProjectorEvents { return prj.events }
+func (prj projector) Events() IProjectorEvents { return prj.events }
 
-func (prj *projector) Intents() IStorages { return prj.intents }
+func (prj projector) Intents() IStorages { return prj.intents }
 
-func (prj *projector) States() IStorages { return prj.states }
+func (prj projector) States() IStorages { return prj.states }
 
-func (prj *projector) Sync() bool { return prj.sync }
+func (prj projector) Sync() bool { return prj.sync }
 
-func (prj *projector) WantErrors() bool { return prj.sysErrors }
+func (prj projector) WantErrors() bool { return prj.sysErrors }
+
+func (prj *projector) setSync(sync bool) { prj.sync = sync }
+
+func (prj *projector) setWantErrors() { prj.sysErrors = true }
 
 // # Implements:
 //   - IProjectorBuilder
 type projectorBuilder struct {
+	extensionBuilder
 	*projector
+	events  *eventsBuilder
+	states  *storagesBuilder
+	intents *storagesBuilder
 }
 
-func newProjectorBuilder(prj *projector) *projectorBuilder {
-	return &projectorBuilder{prj}
+func newProjectorBuilder(projector *projector) *projectorBuilder {
+	return &projectorBuilder{
+		extensionBuilder: makeExtensionBuilder(&projector.extension),
+		projector:        projector,
+		events:           newEventsBuilder(projector.events),
+		states:           newStoragesBuilder(projector.states),
+		intents:          newStoragesBuilder(projector.intents),
+	}
 }
 
-func (prj *projectorBuilder) Events() IProjectorEventsBuilder { return prj.projector.events }
+func (pb *projectorBuilder) Events() IProjectorEventsBuilder { return pb.events }
 
-func (prj *projectorBuilder) Intents() IStoragesBuilder { return prj.projector.intents }
+func (pb *projectorBuilder) Intents() IStoragesBuilder { return pb.intents }
 
-func (prj *projectorBuilder) States() IStoragesBuilder { return prj.projector.states }
+func (pb *projectorBuilder) States() IStoragesBuilder { return pb.states }
 
-func (prj *projectorBuilder) SetSync(sync bool) IProjectorBuilder {
-	prj.projector.sync = sync
-	return prj
+func (pb *projectorBuilder) SetSync(sync bool) IProjectorBuilder {
+	pb.projector.setSync(sync)
+	return pb
 }
 
-func (prj *projectorBuilder) SetWantErrors() IProjectorBuilder {
-	prj.projector.sysErrors = true
-	return prj
+func (pb *projectorBuilder) SetWantErrors() IProjectorBuilder {
+	pb.projector.setWantErrors()
+	return pb
 }
 
 // Validates projector
@@ -84,22 +98,40 @@ func (prj *projector) Validate() (err error) {
 
 // # Implements:
 //   - IProjectorEvents
-//   - IProjectorEventsBuilder
-type projectorEvents struct {
+type events struct {
 	app       *appDef
-	events    map[QName]*projectorEvent
+	events    map[QName]*event
 	eventsMap map[QName][]ProjectorEventKind
 }
 
-func newProjectorEvents(app *appDef) *projectorEvents {
-	return &projectorEvents{
+func newProjectorEvents(app *appDef) *events {
+	return &events{
 		app:       app,
-		events:    make(map[QName]*projectorEvent),
+		events:    make(map[QName]*event),
 		eventsMap: make(map[QName][]ProjectorEventKind),
 	}
 }
 
-func (ee *projectorEvents) Add(on QName, event ...ProjectorEventKind) IProjectorEventsBuilder {
+func (ee events) Enum(cb func(IProjectorEvent)) {
+	ord := QNamesFromMap(ee.events)
+	for _, n := range ord {
+		cb(ee.events[n])
+	}
+}
+
+func (ee events) Event(name QName) IProjectorEvent {
+	return ee.events[name]
+}
+
+func (ee events) Len() int {
+	return len(ee.events)
+}
+
+func (ee events) Map() map[QName][]ProjectorEventKind {
+	return ee.eventsMap
+}
+
+func (ee *events) add(on QName, event ...ProjectorEventKind) {
 	if on == NullQName {
 		panic(ErrNameMissed)
 	}
@@ -116,54 +148,55 @@ func (ee *projectorEvents) Add(on QName, event ...ProjectorEventKind) IProjector
 		if ok {
 			e.addKind(event...)
 		} else {
-			e = newProjectorEvent(t, event...)
+			e = newEvent(t, event...)
 			ee.events[on] = e
 		}
 		ee.eventsMap[on] = e.Kind()
 	default:
 		panic(fmt.Errorf("%v is not applicable for projector event: %w", t, ErrInvalidProjectorEventKind))
 	}
-	return ee
 }
 
-func (ee projectorEvents) Enum(cb func(IProjectorEvent)) {
-	ord := QNamesFromMap(ee.events)
-	for _, n := range ord {
-		cb(ee.events[n])
-	}
-}
-
-func (ee projectorEvents) Event(name QName) IProjectorEvent {
-	return ee.events[name]
-}
-
-func (ee projectorEvents) Len() int {
-	return len(ee.events)
-}
-
-func (ee projectorEvents) Map() map[QName][]ProjectorEventKind {
-	return ee.eventsMap
-}
-
-func (ee *projectorEvents) SetComment(record QName, comment ...string) IProjectorEventsBuilder {
+func (ee *events) setComment(record QName, comment ...string) {
 	e, ok := ee.events[record]
 	if !ok {
 		panic(ErrNameNotFound)
 	}
-	e.SetComment(comment...)
-	return ee
+	e.comment.setComment(comment...)
+}
+
+// # Implements:
+//   - IProjectorEventsBuilder
+type eventsBuilder struct {
+	*events
+}
+
+func newEventsBuilder(events *events) *eventsBuilder {
+	return &eventsBuilder{
+		events: events,
+	}
+}
+
+func (eb *eventsBuilder) Add(on QName, event ...ProjectorEventKind) IProjectorEventsBuilder {
+	eb.events.add(on, event...)
+	return eb
+}
+
+func (eb *eventsBuilder) SetComment(record QName, comment ...string) IProjectorEventsBuilder {
+	eb.events.setComment(record, comment...)
+	return eb
 }
 
 // # Implements:
 //   - IProjectorEvent
-type projectorEvent struct {
+type event struct {
 	comment
 	on    IType
 	kinds uint64 // bitmap[ProjectorEventKind]
 }
 
-func newProjectorEvent(on IType, kind ...ProjectorEventKind) *projectorEvent {
-	p := &projectorEvent{on: on}
+func newEvent(on IType, kind ...ProjectorEventKind) *event {
+	p := &event{on: on}
 
 	if len(kind) > 0 {
 		p.addKind(kind...)
@@ -182,7 +215,7 @@ func newProjectorEvent(on IType, kind ...ProjectorEventKind) *projectorEvent {
 	return p
 }
 
-func (e *projectorEvent) Kind() (kinds []ProjectorEventKind) {
+func (e *event) Kind() (kinds []ProjectorEventKind) {
 	for k := ProjectorEventKind(1); k < ProjectorEventKind_Count; k++ {
 		if e.kinds&(1<<k) != 0 {
 			kinds = append(kinds, k)
@@ -191,11 +224,11 @@ func (e *projectorEvent) Kind() (kinds []ProjectorEventKind) {
 	return kinds
 }
 
-func (e *projectorEvent) On() IType {
+func (e *event) On() IType {
 	return e.on
 }
 
-func (e projectorEvent) String() string {
+func (e event) String() string {
 	s := []string{}
 	for _, k := range e.Kind() {
 		s = append(s, k.TrimString())
@@ -207,7 +240,7 @@ func (e projectorEvent) String() string {
 //
 // # Panics:
 //   - if event kind is not compatible with type.
-func (e *projectorEvent) addKind(kind ...ProjectorEventKind) {
+func (e *event) addKind(kind ...ProjectorEventKind) {
 	for _, k := range kind {
 		if !k.typeCompatible(e.on.Kind()) {
 			panic(fmt.Errorf("%s event is not applicable with %v: %w", k.TrimString(), e.on, ErrInvalidProjectorEventKind))

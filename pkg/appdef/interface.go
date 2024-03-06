@@ -147,7 +147,6 @@ type IAppDef interface {
 }
 
 type IAppDefBuilder interface {
-	IAppDef
 	ICommentBuilder
 
 	// Adds new package with specified local name and path.

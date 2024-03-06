@@ -34,7 +34,6 @@ type IExtension interface {
 }
 
 type IExtensionBuilder interface {
-	IExtension
 	ITypeBuilder
 
 	// Sets name.

@@ -20,7 +20,6 @@ type IWorkspace interface {
 }
 
 type IWorkspaceBuilder interface {
-	IWorkspace
 	ITypeBuilder
 	IWithAbstractBuilder
 

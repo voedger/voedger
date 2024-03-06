@@ -13,18 +13,15 @@ import (
 
 // # Implements:
 //   - IExtension
-//   - IExtensionBuilder
 type extension struct {
 	typ
-	embeds interface{}
 	name   string
 	engine ExtensionEngineKind
 }
 
-func makeExtension(app *appDef, name QName, kind TypeKind, embeds interface{}) extension {
+func makeExtension(app *appDef, name QName, kind TypeKind) extension {
 	e := extension{
 		typ:    makeType(app, name, kind),
-		embeds: embeds,
 		name:   name.Entity(),
 		engine: ExtensionEngineKind_BuiltIn,
 	}
@@ -40,15 +37,19 @@ func (ex extension) Engine() ExtensionEngineKind {
 	return ex.engine
 }
 
-func (ex *extension) SetEngine(engine ExtensionEngineKind) IExtensionBuilder {
+func (ex extension) String() string {
+	// BuiltIn-function «test.func»
+	return fmt.Sprintf("%s-%v", ex.Engine().TrimString(), ex.typ.String())
+}
+
+func (ex *extension) setEngine(engine ExtensionEngineKind) {
 	if (engine == ExtensionEngineKind_null) || (engine >= ExtensionEngineKind_Count) {
 		panic(fmt.Errorf("%v: extension engine kind «%v» is invalid: %w", ex, engine, ErrInvalidExtensionEngineKind))
 	}
 	ex.engine = engine
-	return ex.embeds.(IExtensionBuilder)
 }
 
-func (ex *extension) SetName(name string) IExtensionBuilder {
+func (ex *extension) setName(name string) {
 	if name == "" {
 		panic(fmt.Errorf("%v: extension name is empty: %w", ex, ErrNameMissed))
 	}
@@ -56,12 +57,30 @@ func (ex *extension) SetName(name string) IExtensionBuilder {
 		panic(fmt.Errorf("%v: extension name «%s» is not valid: %w", ex, name, err))
 	}
 	ex.name = name
-	return ex.embeds.(IExtensionBuilder)
 }
 
-func (ex extension) String() string {
-	// BuiltIn-function «test.func»
-	return fmt.Sprintf("%s-%v", ex.Engine().TrimString(), ex.typ.String())
+// # Implements:
+//   - IExtensionBuilder
+type extensionBuilder struct {
+	typeBuilder
+	*extension
+}
+
+func makeExtensionBuilder(extension *extension) extensionBuilder {
+	return extensionBuilder{
+		typeBuilder: makeTypeBuilder(&extension.typ),
+		extension:   extension,
+	}
+}
+
+func (exb *extensionBuilder) SetEngine(engine ExtensionEngineKind) IExtensionBuilder {
+	exb.extension.setEngine(engine)
+	return exb
+}
+
+func (exb *extensionBuilder) SetName(name string) IExtensionBuilder {
+	exb.extension.setName(name)
+	return exb
 }
 
 func (k ExtensionEngineKind) MarshalText() ([]byte, error) {

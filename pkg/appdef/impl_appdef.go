@@ -13,7 +13,6 @@ import (
 
 // # Implements:
 //   - IAppDef
-//   - IAppDefBuilder
 type appDef struct {
 	comment
 	packages     *packages
@@ -30,92 +29,6 @@ func newAppDef() *appDef {
 	}
 	app.makeSysPackage()
 	return &app
-}
-
-func (app *appDef) AddCDoc(name QName) ICDocBuilder {
-	return newCDoc(app, name)
-}
-
-func (app *appDef) AddCommand(name QName) ICommandBuilder {
-	return newCommand(app, name)
-}
-
-func (app *appDef) AddCRecord(name QName) ICRecordBuilder {
-	return newCRecord(app, name)
-}
-
-func (app *appDef) AddData(name QName, kind DataKind, ancestor QName, constraints ...IConstraint) IDataBuilder {
-	d := newData(app, name, kind, ancestor)
-	d.AddConstraints(constraints...)
-	app.appendType(d)
-	return d
-}
-
-func (app *appDef) AddGDoc(name QName) IGDocBuilder {
-	return newGDoc(app, name)
-}
-
-func (app *appDef) AddGRecord(name QName) IGRecordBuilder {
-	return newGRecord(app, name)
-}
-
-func (app *appDef) AddObject(name QName) IObjectBuilder {
-	return newObject(app, name)
-}
-
-func (app *appDef) AddODoc(name QName) IODocBuilder {
-	return newODoc(app, name)
-}
-
-func (app *appDef) AddORecord(name QName) IORecordBuilder {
-	return newORecord(app, name)
-}
-
-func (app *appDef) AddPackage(localName, path string) IAppDefBuilder {
-	app.packages.add(localName, path)
-	return app
-}
-
-func (app *appDef) AddProjector(name QName) IProjectorBuilder {
-	projector := newProjector(app, name)
-	return newProjectorBuilder(projector)
-}
-
-func (app *appDef) AddQuery(name QName) IQueryBuilder {
-	return newQuery(app, name)
-}
-
-func (app *appDef) AddSingleton(name QName) ICDocBuilder {
-	doc := newCDoc(app, name)
-	doc.SetSingleton()
-	return doc
-}
-
-func (app *appDef) AddView(name QName) IViewBuilder {
-	return newView(app, name)
-}
-
-func (app *appDef) AddWDoc(name QName) IWDocBuilder {
-	return newWDoc(app, name)
-}
-
-func (app *appDef) AddWRecord(name QName) IWRecordBuilder {
-	return newWRecord(app, name)
-}
-
-func (app *appDef) AddWorkspace(name QName) IWorkspaceBuilder {
-	return newWorkspace(app, name)
-}
-
-func (app *appDef) Build() (result IAppDef, err error) {
-	app.Types(func(t IType) {
-		err = errors.Join(err, validateType(t))
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	return app, nil
 }
 
 func (app *appDef) CDoc(name QName) (d ICDoc) {
@@ -337,6 +250,87 @@ func (app *appDef) WorkspaceByDescriptor(name QName) IWorkspace {
 	return app.wsDesc[name]
 }
 
+func (app *appDef) addCDoc(name QName) ICDocBuilder {
+	cDoc := newCDoc(app, name)
+	return newCDocBuilder(cDoc)
+}
+
+func (app *appDef) addCommand(name QName) ICommandBuilder {
+	cmd := newCommand(app, name)
+	return newCommandBuilder(cmd)
+}
+
+func (app *appDef) addCRecord(name QName) ICRecordBuilder {
+	cRec := newCRecord(app, name)
+	return newCRecordBuilder(cRec)
+}
+
+func (app *appDef) addData(name QName, kind DataKind, ancestor QName, constraints ...IConstraint) IDataBuilder {
+	d := newData(app, name, kind, ancestor)
+	d.addConstraints(constraints...)
+	app.appendType(d)
+	return newDataBuilder(d)
+}
+
+func (app *appDef) addGDoc(name QName) IGDocBuilder {
+	gDoc := newGDoc(app, name)
+	return newGDocBuilder(gDoc)
+}
+
+func (app *appDef) addGRecord(name QName) IGRecordBuilder {
+	gRec := newGRecord(app, name)
+	return newGRecordBuilder(gRec)
+}
+
+func (app *appDef) addObject(name QName) IObjectBuilder {
+	obj := newObject(app, name)
+	return newObjectBuilder(obj)
+}
+
+func (app *appDef) addODoc(name QName) IODocBuilder {
+	oDoc := newODoc(app, name)
+	return newODocBuilder(oDoc)
+}
+
+func (app *appDef) addORecord(name QName) IORecordBuilder {
+	oRec := newORecord(app, name)
+	return newORecordBuilder(oRec)
+}
+
+func (app *appDef) addPackage(localName, path string) {
+	app.packages.add(localName, path)
+}
+
+func (app *appDef) addProjector(name QName) IProjectorBuilder {
+	projector := newProjector(app, name)
+	return newProjectorBuilder(projector)
+}
+
+func (app *appDef) addQuery(name QName) IQueryBuilder {
+	q := newQuery(app, name)
+	return newQueryBuilder(q)
+}
+
+func (app *appDef) addView(name QName) IViewBuilder {
+	view := newView(app, name)
+	return newViewBuilder(view)
+}
+
+func (app *appDef) addWDoc(name QName) IWDocBuilder {
+	wDoc := newWDoc(app, name)
+	return newWDocBuilder(wDoc)
+}
+
+func (app *appDef) addWRecord(name QName) IWRecordBuilder {
+	wRec := newWRecord(app, name)
+	return newWRecordBuilder(wRec)
+}
+
+func (app *appDef) addWorkspace(name QName) IWorkspaceBuilder {
+	ws := newWorkspace(app, name)
+	return newWorkspaceBuilder(ws)
+}
+
 func (app *appDef) appendType(t interface{}) {
 	typ := t.(IType)
 	name := typ.QName()
@@ -349,6 +343,13 @@ func (app *appDef) appendType(t interface{}) {
 
 	app.types[name] = t
 	app.typesOrdered = nil
+}
+
+func (app *appDef) build() (err error) {
+	app.Types(func(t IType) {
+		err = errors.Join(err, validateType(t))
+	})
+	return err
 }
 
 // Makes system package.
@@ -373,4 +374,62 @@ func (app *appDef) typeByKind(name QName, kind TypeKind) interface{} {
 		}
 	}
 	return nil
+}
+
+// # Implements:
+//   - IAppDefBuilder
+type appDefBuilder struct {
+	commentBuilder
+	app *appDef
+}
+
+func newAppDefBuilder(app *appDef) *appDefBuilder {
+	return &appDefBuilder{
+		commentBuilder: makeCommentBuilder(&app.comment),
+		app:            app,
+	}
+}
+
+func (ab *appDefBuilder) AddCDoc(name QName) ICDocBuilder { return ab.app.addCDoc(name) }
+
+func (ab *appDefBuilder) AddCommand(name QName) ICommandBuilder { return ab.app.addCommand(name) }
+
+func (ab *appDefBuilder) AddCRecord(name QName) ICRecordBuilder { return ab.app.addCRecord(name) }
+
+func (ab *appDefBuilder) AddData(name QName, kind DataKind, ancestor QName, constraints ...IConstraint) IDataBuilder {
+	return ab.app.addData(name, kind, ancestor, constraints...)
+}
+
+func (ab *appDefBuilder) AddGDoc(name QName) IGDocBuilder { return ab.app.addGDoc(name) }
+
+func (ab *appDefBuilder) AddGRecord(name QName) IGRecordBuilder { return ab.app.addGRecord(name) }
+
+func (ab *appDefBuilder) AddObject(name QName) IObjectBuilder { return ab.app.addObject(name) }
+
+func (ab *appDefBuilder) AddODoc(name QName) IODocBuilder { return ab.app.addODoc(name) }
+
+func (ab *appDefBuilder) AddORecord(name QName) IORecordBuilder { return ab.app.addORecord(name) }
+
+func (ab *appDefBuilder) AddPackage(localName, path string) IAppDefBuilder {
+	ab.app.addPackage(localName, path)
+	return ab
+}
+
+func (ab *appDefBuilder) AddProjector(name QName) IProjectorBuilder { return ab.app.addProjector(name) }
+
+func (ab *appDefBuilder) AddQuery(name QName) IQueryBuilder { return ab.app.addQuery(name) }
+
+func (ab *appDefBuilder) AddView(name QName) IViewBuilder { return ab.app.addView(name) }
+
+func (ab *appDefBuilder) AddWDoc(name QName) IWDocBuilder { return ab.app.addWDoc(name) }
+
+func (ab *appDefBuilder) AddWRecord(name QName) IWRecordBuilder { return ab.app.addWRecord(name) }
+
+func (ab *appDefBuilder) AddWorkspace(name QName) IWorkspaceBuilder { return ab.app.addWorkspace(name) }
+
+func (ab *appDefBuilder) Build() (IAppDef, error) {
+	if err := ab.app.build(); err != nil {
+		return nil, err
+	}
+	return ab.app, nil
 }

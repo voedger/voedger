@@ -12,7 +12,6 @@ import (
 
 // # Implements:
 //   - ICommand
-//   - ICommandBuilder
 type command struct {
 	function
 	unl typeRef
@@ -20,13 +19,8 @@ type command struct {
 
 func newCommand(app *appDef, name QName) *command {
 	cmd := &command{}
-	cmd.function = makeFunc(app, name, TypeKind_Command, cmd)
+	cmd.function = makeFunc(app, name, TypeKind_Command)
 	app.appendType(cmd)
-	return cmd
-}
-
-func (cmd *command) SetUnloggedParam(name QName) ICommandBuilder {
-	cmd.unl.setName(name)
 	return cmd
 }
 
@@ -50,4 +44,25 @@ func (cmd *command) Validate() (err error) {
 	}
 
 	return err
+}
+
+func (cmd *command) setUnloggedParam(name QName) {
+	cmd.unl.setName(name)
+}
+
+type commandBuilder struct {
+	functionBuilder
+	*command
+}
+
+func newCommandBuilder(command *command) *commandBuilder {
+	return &commandBuilder{
+		functionBuilder: makeFunctionBuilder(&command.function),
+		command:         command,
+	}
+}
+
+func (cb *commandBuilder) SetUnloggedParam(name QName) ICommandBuilder {
+	cb.command.setUnloggedParam(name)
+	return cb
 }

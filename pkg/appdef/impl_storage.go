@@ -33,7 +33,7 @@ func (s *storage) String() string {
 }
 
 // # Implements:
-//   - IStorages & IStoragesBuilder
+//   - IStorages
 type storages struct {
 	storages map[QName]*storage
 	qnames   map[QName]QNames
@@ -48,7 +48,24 @@ func newStorages() *storages {
 	}
 }
 
-func (ss *storages) Add(name QName, names ...QName) IStoragesBuilder {
+func (ss *storages) Len() int { return len(ss.storages) }
+
+func (ss *storages) Map() map[QName]QNames { return ss.qnames }
+
+func (ss *storages) Enum(cb func(IStorage)) {
+	for _, n := range ss.ordered {
+		cb(ss.storages[n])
+	}
+}
+
+func (ss *storages) Storage(name QName) IStorage {
+	if s, ok := ss.storages[name]; ok {
+		return s
+	}
+	return nil
+}
+
+func (ss *storages) add(name QName, names ...QName) {
 	if name == NullQName {
 		panic(fmt.Errorf("empty storage name: %w", ErrNameMissed))
 	}
@@ -67,30 +84,34 @@ func (ss *storages) Add(name QName, names ...QName) IStoragesBuilder {
 		ss.ordered.Add(name)
 	}
 	ss.qnames[name] = s.names
-	return ss
 }
 
-func (ss *storages) Len() int { return len(ss.storages) }
-
-func (ss *storages) Map() map[QName]QNames { return ss.qnames }
-
-func (ss *storages) Enum(cb func(IStorage)) {
-	for _, n := range ss.ordered {
-		cb(ss.storages[n])
-	}
-}
-
-func (ss *storages) SetComment(name QName, comment string) IStoragesBuilder {
+func (ss *storages) setComment(name QName, comment string) {
 	if s, ok := ss.storages[name]; ok {
-		s.SetComment(comment)
-		return ss
+		s.comment.setComment(comment)
+		return
 	}
 	panic(fmt.Errorf("storage «%v» not found: %w", name, ErrNameNotFound))
 }
 
-func (ss *storages) Storage(name QName) IStorage {
-	if s, ok := ss.storages[name]; ok {
-		return s
+// # Implements:
+//   - IStoragesBuilder
+type storagesBuilder struct {
+	storages *storages
+}
+
+func newStoragesBuilder(storages *storages) *storagesBuilder {
+	return &storagesBuilder{
+		storages: storages,
 	}
-	return nil
+}
+
+func (sb *storagesBuilder) Add(name QName, names ...QName) IStoragesBuilder {
+	sb.storages.add(name, names...)
+	return sb
+}
+
+func (sb *storagesBuilder) SetComment(name QName, comment string) IStoragesBuilder {
+	sb.storages.setComment(name, comment)
+	return sb
 }

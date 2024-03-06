@@ -11,10 +11,9 @@ import (
 )
 
 // # Implements:
-//   - IWorkspace, IWorkspaceBuilder
+//   - IWorkspace
 type workspace struct {
 	typ
-	comment
 	withAbstract
 	types        map[QName]interface{}
 	typesOrdered []interface{}
@@ -27,17 +26,6 @@ func newWorkspace(app *appDef, name QName) *workspace {
 		types: make(map[QName]interface{}),
 	}
 	app.appendType(ws)
-	return ws
-}
-
-func (ws *workspace) AddType(name QName) IWorkspaceBuilder {
-	t := ws.app.TypeByName(name)
-	if t == nil {
-		panic(fmt.Errorf("unable to add unknown type «%v» to workspace «%v»: %w", name, ws.QName(), ErrNameNotFound))
-	}
-
-	ws.types[name] = t
-	ws.typesOrdered = nil
 	return ws
 }
 
@@ -62,6 +50,13 @@ func (ws *workspace) TypeByName(name QName) IType {
 	return nil
 }
 
+func (ws *workspace) Validate() error {
+	if (ws.desc != nil) && ws.desc.Abstract() && !ws.Abstract() {
+		return fmt.Errorf("workspace %q should be abstract because descriptor %q is abstract: %w", ws.QName(), ws.desc.QName(), ErrWorkspaceShouldBeAbstract)
+	}
+	return nil
+}
+
 func (ws *workspace) Types(cb func(IType)) {
 	if ws.typesOrdered == nil {
 		ws.typesOrdered = make([]interface{}, 0, len(ws.types))
@@ -77,10 +72,20 @@ func (ws *workspace) Types(cb func(IType)) {
 	}
 }
 
-func (ws *workspace) SetDescriptor(q QName) IWorkspaceBuilder {
+func (ws *workspace) addType(name QName) {
+	t := ws.app.TypeByName(name)
+	if t == nil {
+		panic(fmt.Errorf("unable to add unknown type «%v» to workspace «%v»: %w", name, ws.QName(), ErrNameNotFound))
+	}
+
+	ws.types[name] = t
+	ws.typesOrdered = nil
+}
+
+func (ws *workspace) setDescriptor(q QName) {
 	old := ws.Descriptor()
 	if old == q {
-		return ws
+		return
 	}
 
 	if (old != NullQName) && (ws.app.wsDesc[old] == ws) {
@@ -89,23 +94,41 @@ func (ws *workspace) SetDescriptor(q QName) IWorkspaceBuilder {
 
 	if q == NullQName {
 		ws.desc = nil
-		return ws
+		return
 	}
 
 	if ws.desc = ws.app.CDoc(q); ws.desc == nil {
 		panic(fmt.Errorf("type «%v» is unknown CDoc name to assign as descriptor for workspace «%v»: %w", q, ws.QName(), ErrNameNotFound))
 	}
 	if ws.desc.Abstract() {
-		ws.SetAbstract()
+		ws.withAbstract.setAbstract()
 	}
 
 	ws.app.wsDesc[q] = ws
+}
+
+// # Implements:
+//   - IWorkspaceBuilder
+type workspaceBuilder struct {
+	typeBuilder
+	withAbstractBuilder
+	*workspace
+}
+
+func newWorkspaceBuilder(workspace *workspace) *workspaceBuilder {
+	return &workspaceBuilder{
+		typeBuilder:         makeTypeBuilder(&workspace.typ),
+		withAbstractBuilder: makeWithAbstractBuilder(&workspace.withAbstract),
+		workspace:           workspace,
+	}
+}
+
+func (ws *workspaceBuilder) AddType(name QName) IWorkspaceBuilder {
+	ws.workspace.addType(name)
 	return ws
 }
 
-func (ws *workspace) Validate() error {
-	if (ws.desc != nil) && ws.desc.Abstract() && !ws.Abstract() {
-		return fmt.Errorf("workspace %q should be abstract because descriptor %q is abstract: %w", ws.QName(), ws.desc.QName(), ErrWorkspaceShouldBeAbstract)
-	}
-	return nil
+func (ws *workspaceBuilder) SetDescriptor(q QName) IWorkspaceBuilder {
+	ws.workspace.setDescriptor(q)
+	return ws
 }

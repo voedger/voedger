@@ -14,7 +14,6 @@ type ICDoc interface {
 }
 
 type ICDocBuilder interface {
-	ICDoc
 	ISingletonBuilder
 }
 
@@ -27,6 +26,5 @@ type ICRecord interface {
 }
 
 type ICRecordBuilder interface {
-	ICRecord
 	IContainedRecordBuilder
 }
