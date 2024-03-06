@@ -33,7 +33,7 @@ func Test_FillPbillDates(t *testing.T) {
 
 		_ = stateIntents
 		_ = expectedIntents
-		// exttest.RunAndCheck(stateIntents, Pbill, expectedIntents)
+		// exttest.RunProjectorAndCheck(event, stateIntents, Pbill, expectedIntents)
 
 		{
 			// Test intents

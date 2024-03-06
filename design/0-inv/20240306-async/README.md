@@ -93,6 +93,7 @@ classDef S fill:#B5FFFF
 
 ## Analysis
 
+
 - istructsmem.AppConfigType
 ```go
 type AppConfigType struct {
@@ -131,17 +132,27 @@ type IExtensionEngine interface {
 
 ## Proposal
 
-- iextengine.ExtQName.PackageName => [Path](https://cs.opensource.google/go/go/+/refs/tags/go1.22.0:src/go/types/package.go;drc=b490bdc27d5576e5ccdac33755c0156d609e1bb9;l=33)
+- iextengine.ExtQName.PackageName => 
 - Projectors shall be accessible through ExtEngineKind_BuiltIn
   - `istructs.IState.PLogEvent() IPLogEvent`
   - state: sync projectors: Put event
   - state: async projectors: Put event
   - Wrapper around istructs.Projector that gets IPLogEvent and passes to istructs.Projector
+  - apppartsctl.New*()
 - istructs.Projector: `Func func(event IPLogEvent, state IState, intents IIntents) (err error)`
-- DoProjector
+- IAppPartition.DoProjector
 ```go
 IAppPartition {
-	// 
+	// DoSyncActualizer shall use same internal implementation
 	DoProjector(qname istructs.QName, state istructs.IState, intents istructs.IIntents) (err error)
 }
+```
+- appparts.IAppPartitions
+```go
+// @ConcurrentAccess
+type IAppPartitions interface {
+	// Adds new application or update existing.
+	//
+	// If application with the same name exists, then its definition will be updated.
+	DeployApp(name istructs.AppQName, def appdef.IAppDef, perPartitionEngines [cluster.ProcessorKind]int)
 ```
