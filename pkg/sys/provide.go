@@ -56,7 +56,7 @@ func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder
 
 func ProvidePackageFS() parser.PackageFS {
 	return parser.PackageFS{
-		QualifiedPackageName: appdef.SysPackage,
-		FS:                   SysFS,
+		Path: appdef.SysPackage,
+		FS:   SysFS,
 	}
 }

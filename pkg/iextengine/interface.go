@@ -55,12 +55,12 @@ type IExtensionEngine interface {
 type IExtensionEngineFactories map[appdef.ExtensionEngineKind]IExtensionEngineFactory
 
 type ExtQName struct {
-	PackageName string // Fully qualified package name
+	PackagePath string
 	ExtName     string
 }
 
 func (n ExtQName) String() string {
-	return n.PackageName + "." + n.ExtName
+	return n.PackagePath + "." + n.ExtName
 }
 
 type BuiltInExtFunc func(ctx context.Context, io IExtensionIO) error
