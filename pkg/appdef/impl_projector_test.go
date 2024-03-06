@@ -90,6 +90,7 @@ func Test_AppDef_AddProjector(t *testing.T) {
 
 		require.Equal(prjName.Entity(), prj.Name())
 		require.Equal(ExtensionEngineKind_BuiltIn, prj.Engine())
+		require.True(prj.Sync())
 
 		t.Run("must be ok enum events", func(t *testing.T) {
 			require.EqualValues(3, prj.Events().Len())
@@ -158,6 +159,7 @@ func Test_AppDef_AddProjector(t *testing.T) {
 				}
 			})
 			require.Equal(2, cnt)
+			require.Equal(cnt, prj.States().Len())
 
 			t.Run("must be ok to get states as map", func(t *testing.T) {
 				states := prj.States().Map()
@@ -192,6 +194,7 @@ func Test_AppDef_AddProjector(t *testing.T) {
 				}
 			})
 			require.Equal(1, cnt)
+			require.Equal(cnt, prj.Intents().Len())
 
 			t.Run("must be ok to get intents as map", func(t *testing.T) {
 				intents := prj.Intents().Map()

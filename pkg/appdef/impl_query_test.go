@@ -53,6 +53,7 @@ func Test_AppDef_AddQuery(t *testing.T) {
 		query := app.Query(queryName)
 		require.Equal(TypeKind_Query, query.Kind())
 		require.Equal(q, query)
+		require.NotPanics(func() { query.isQuery() })
 
 		require.Equal(queryName.Entity(), query.Name())
 		require.Equal(ExtensionEngineKind_BuiltIn, query.Engine())

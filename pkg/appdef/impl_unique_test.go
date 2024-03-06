@@ -82,7 +82,7 @@ func Test_def_AddUnique(t *testing.T) {
 		}, "panics if invalid unique name")
 
 		require.Panics(func() {
-			doc.AddUnique(NewQName("test", "user$uniqueFullName"), []string{"name", "surname", "lastName"})
+			doc.AddUnique(un1, []string{"name", "surname", "lastName"})
 		}, "panics unique with name is already exists")
 
 		require.Panics(func() {

@@ -192,6 +192,7 @@ func TestAddView(t *testing.T) {
 				}
 			}
 			require.Equal(pk.FieldCount(), cnt)
+			require.NotPanics(func() { pk.isPartKey() })
 		})
 
 		t.Run("must be ok to read view clustering columns", func(t *testing.T) {
@@ -212,6 +213,7 @@ func TestAddView(t *testing.T) {
 				}
 			}
 			require.Equal(cc.FieldCount(), cnt)
+			require.NotPanics(func() { cc.isClustCols() })
 		})
 
 		t.Run("must be ok to read view value", func(t *testing.T) {
@@ -234,6 +236,7 @@ func TestAddView(t *testing.T) {
 				}
 			}
 			require.Equal(val.FieldCount(), cnt)
+			require.NotPanics(func() { val.isViewValue() })
 		})
 
 		t.Run("must be ok to cast Type() as IView", func(t *testing.T) {

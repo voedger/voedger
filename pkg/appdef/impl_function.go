@@ -43,8 +43,7 @@ func (f *function) Validate() (err error) {
 		err = errors.Join(err, fmt.Errorf("%v: invalid or unknown parameter type: %w", f, e))
 	} else if typ := f.Param(); typ != nil {
 		switch typ.Kind() {
-		case TypeKind_Any: // ok
-		case TypeKind_Data, TypeKind_ODoc, TypeKind_Object: // ok
+		case TypeKind_Any, TypeKind_Data, TypeKind_ODoc, TypeKind_Object: // ok
 		default:
 			err = errors.Join(err, fmt.Errorf("%v: parameter type is %v, must be ODoc, Object or Data: %w", f, typ, ErrInvalidTypeKind))
 		}

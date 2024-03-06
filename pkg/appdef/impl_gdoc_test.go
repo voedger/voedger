@@ -6,6 +6,7 @@
 package appdef
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -50,6 +51,8 @@ func Test_AppDef_AddGDoc(t *testing.T) {
 
 			app = a
 		})
+
+		require.Equal(fmt.Sprint(doc), fmt.Sprint(app.GDoc(docName)))
 	})
 
 	require.NotNil(app)
@@ -65,6 +68,8 @@ func Test_AppDef_AddGDoc(t *testing.T) {
 		doc := app.GDoc(docName)
 		require.Equal(TypeKind_GDoc, doc.Kind())
 		require.Equal(d, doc)
+		require.NotPanics(func() { doc.isDoc() })
+		require.NotPanics(func() { doc.isGDoc() })
 
 		require.NotNil(doc.Field(SystemField_QName))
 		require.Equal(doc.SystemField_QName(), doc.Field(SystemField_QName))
@@ -91,6 +96,7 @@ func Test_AppDef_AddGDoc(t *testing.T) {
 			rec := app.GRecord(recName)
 			require.Equal(TypeKind_GRecord, rec.Kind())
 			require.Equal(r, rec)
+			require.NotPanics(func() { rec.isGRecord() })
 
 			require.NotNil(rec.Field(SystemField_QName))
 			require.Equal(rec.SystemField_QName(), rec.Field(SystemField_QName))

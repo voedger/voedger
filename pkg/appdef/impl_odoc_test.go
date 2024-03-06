@@ -43,6 +43,7 @@ func Test_AppDef_AddODoc(t *testing.T) {
 		doc := app.ODoc(docName)
 		require.Equal(TypeKind_ODoc, doc.Kind())
 		require.Equal(typ.(IODoc), doc)
+		require.NotPanics(func() { doc.isODoc() })
 
 		require.Equal(2, doc.UserFieldCount())
 		require.Equal(DataKind_int64, doc.Field("f1").DataKind())
@@ -56,6 +57,7 @@ func Test_AppDef_AddODoc(t *testing.T) {
 			rec := app.ORecord(recName)
 			require.Equal(TypeKind_ORecord, rec.Kind())
 			require.Equal(typ.(IORecord), rec)
+			require.NotPanics(func() { rec.isORecord() })
 
 			require.Equal(2, rec.UserFieldCount())
 			require.Equal(DataKind_int64, rec.Field("f1").DataKind())
