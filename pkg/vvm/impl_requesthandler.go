@@ -57,18 +57,6 @@ func provideIBus(appParts appparts.IAppPartitions, procbus iprocbus.IProcBus,
 			return
 		}
 
-		appDef, err := appParts.AppDef(appQName)
-		if err != nil {
-			coreutils.ReplyErrf(sender, http.StatusServiceUnavailable, "app is not deployed", err)
-			return
-		}
-
-		funcKindMark := request.Resource[:1]
-		funcType, isHandled := getFuncType(appDef, qName, sender, funcKindMark)
-		if isHandled {
-			return
-		}
-
 		token, err := getPrincipalToken(request)
 		if err != nil {
 			coreutils.ReplyAccessDeniedUnauthorized(sender, err.Error())
@@ -77,6 +65,11 @@ func provideIBus(appParts appparts.IAppPartitions, procbus iprocbus.IProcBus,
 
 		appPartsCount, err := appParts.AppPartsCount(appQName)
 		if err != nil {
+			if errors.Is(err, appparts.ErrNotFound) {
+				coreutils.ReplyErrf(sender, http.StatusServiceUnavailable, fmt.Sprintf("app %s is not deployed yet", appQName))
+				return
+			}
+			// notest
 			coreutils.ReplyInternalServerError(sender, "failed to get app partitions count", err)
 			return
 		}
