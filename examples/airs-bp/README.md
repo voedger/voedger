@@ -81,7 +81,7 @@ WORKSPACE RestaurantWS (
 		Number int32 NOT NULL
 	);
 
-	TABLE NextNumbers INHERITS Singleton (
+	TABLE NextNumbers INHERITS CSingleton (
 		NextPBillNumber int32
 	);
 
@@ -99,7 +99,7 @@ TABLE bill INHERITS WDoc (
 	tableno int32 NOT NULL,
 	id_untill_users ref(untill_users) NOT NULL,
 	table_part varchar(1) NOT NULL,
-)	
+)
 
 TABLE articles INHERITS CDoc (
 	article_number int32,
