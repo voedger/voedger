@@ -32,7 +32,7 @@ func (ab VVMAppsBuilder) PrepareAppsExtensionPoints() map[istructs.AppQName]exte
 func buillAppFromPackagesFS(fses []parser.PackageFS, adf appdef.IAppDefBuilder) error {
 	packageSchemaASTs := []*parser.PackageSchemaAST{}
 	for _, fs := range fses {
-		packageSchemaAST, err := parser.ParsePackageDir(fs.QualifiedPackageName, fs.FS, ".")
+		packageSchemaAST, err := parser.ParsePackageDir(fs.Path, fs.FS, ".")
 		if err != nil {
 			return err
 		}
