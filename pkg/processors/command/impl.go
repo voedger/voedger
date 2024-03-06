@@ -194,15 +194,15 @@ func (cmdProc *cmdProc) buildCommandArgs(_ context.Context, work interface{}) (e
 	return
 }
 
-func updateIDGeneratorFromO(root istructs.IObject, ws appdef.IWorkspace, idGen istructs.IIDGenerator) {
+func updateIDGeneratorFromO(root istructs.IObject, types appdef.IWithTypes, idGen istructs.IIDGenerator) {
 	// new IDs only here because update is not allowed for ODocs in Args
-	idGen.UpdateOnSync(root.AsRecordID(appdef.SystemField_ID), ws.Type(root.QName()))
+	idGen.UpdateOnSync(root.AsRecordID(appdef.SystemField_ID), types.Type(root.QName()))
 	root.Containers(func(container string) {
 		// order of containers here is the order in the schema
 		// but order in the request could be different
 		// that is not a problem because for ODocs/ORecords ID generator will bump next ID only if syncID is actually next
 		root.Children(container, func(c istructs.IObject) {
-			updateIDGeneratorFromO(c, ws, idGen)
+			updateIDGeneratorFromO(c, types, idGen)
 		})
 	})
 }
@@ -215,7 +215,7 @@ func (cmdProc *cmdProc) recovery(ctx context.Context, cmd *cmdWorkpiece) (*appPa
 	var lastPLogEvent istructs.IPLogEvent // TODO: how to release?
 	cb := func(plogOffset istructs.Offset, event istructs.IPLogEvent) (err error) {
 		ws := ap.getWorkspace(event.Workspace())
-		// cmd.iWorkspace could be nil so let's take QNames from cmd.AppDef()
+
 		event.CUDs(func(rec istructs.ICUDRow) {
 			if rec.IsNew() {
 				t := cmd.AppDef().Type(rec.QName())
@@ -224,7 +224,11 @@ func (cmdProc *cmdProc) recovery(ctx context.Context, cmd *cmdWorkpiece) (*appPa
 		})
 		ao := event.ArgumentObject()
 		if cmd.AppDef().Type(ao.QName()).Kind() == appdef.TypeKind_ODoc {
-			updateIDGeneratorFromO(ao, cmd.iWorkspace, ws.idGenerator)
+			if coreutils.IsDummyWS(cmd.cmdMes.WSID()) || cmd.cmdMes.QName() == workspacemgmt.QNameCommandCreateWorkspace {
+				updateIDGeneratorFromO(ao, cmd.AppDef(), ws.idGenerator)
+			} else {
+				updateIDGeneratorFromO(ao, cmd.iWorkspace, ws.idGenerator)
+			}
 		}
 		ws.NextWLogOffset = event.WLogOffset() + 1
 		ap.nextPLogOffset = plogOffset + 1
