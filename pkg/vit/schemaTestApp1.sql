@@ -3,6 +3,16 @@
 
 APPLICATION app1();
 
+ALTERABLE WORKSPACE test_wsWS_another (
+	DESCRIPTOR test_ws_another ();
+
+	TABLE docInAnotherWS INHERITS CDoc();
+
+	EXTENSION ENGINE BUILTIN (
+		COMMAND testCmd();
+	);
+);
+
 ALTERABLE WORKSPACE test_wsWS (
 
 	DESCRIPTOR test_ws (
@@ -429,7 +439,7 @@ ALTERABLE WORKSPACE test_wsWS (
 		UNIQUEFIELD Int
 	);
 
-	TABLE Config INHERITS Singleton (
+	TABLE Config INHERITS CSingleton (
 		Fld1 varchar NOT NULL
 	);
 

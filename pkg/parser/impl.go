@@ -88,17 +88,21 @@ func parseFSImpl(fs IReadFS, dir string) (schemas []*FileSchemaAST, errs []error
 			schema, err := parseImpl(entry.Name(), string(bytes))
 			if err != nil {
 				errs = append(errs, err)
+			} else {
+				schemas = append(schemas, &FileSchemaAST{
+					FileName: entry.Name(),
+					Ast:      schema,
+				})
 			}
-			schemas = append(schemas, &FileSchemaAST{
-				FileName: entry.Name(),
-				Ast:      schema,
-			})
 		}
+	}
+	if len(errs) > 0 {
+		return nil, errs
 	}
 	if len(schemas) == 0 {
 		return nil, []error{ErrDirContainsNoSchemaFiles}
 	}
-	return schemas, errs
+	return schemas, nil
 }
 
 func buildPackageSchemaImpl(qualifiedPackageName string, asts []*FileSchemaAST) (*PackageSchemaAST, error) {
