@@ -138,13 +138,13 @@ func validateEventCUDsIDs(ev *eventType, ids map[istructs.RecordID]appdef.QName)
 		}
 		ids[id] = rec.QName()
 
-		if cDoc, ok := rec.typ.(appdef.ICDoc); ok && cDoc.Singleton() {
-			if id, ok := st[cDoc.QName()]; ok {
+		if singleton, ok := rec.typ.(appdef.ISingleton); ok && singleton.Singleton() {
+			if id, ok := st[singleton.QName()]; ok {
 				err = errors.Join(err,
-					// event «sys.CUD» repeatedly creates then same singleton CDoc «test.CDoc» (raw record ID «1» and «2»)
-					validateErrorf(ECode_InvalidRecordID, errRepeatedSingletonCreation, ev, cDoc, id, rec.id, ErrRecordIDUniqueViolation))
+					// event «sys.CUD» repeatedly creates the same singleton «test.CDoc» (raw record ID «1» and «2»)
+					validateErrorf(ECode_InvalidRecordID, errRepeatedSingletonCreation, ev, singleton, id, rec.id, ErrRecordIDUniqueViolation))
 			}
-			st[cDoc.QName()] = rec.id
+			st[singleton.QName()] = rec.id
 		}
 	}
 

@@ -455,17 +455,17 @@ func (recs *appRecordsType) validEvent(ev *eventType) (err error) {
 	}
 
 	for _, rec := range ev.cud.creates {
-		if cDoc, ok := rec.typ.(appdef.ICDoc); ok && cDoc.Singleton() {
+		if singleton, ok := rec.typ.(appdef.ISingleton); ok && singleton.Singleton() {
 			id, err := recs.app.config.singletons.ID(rec.QName())
 			if err != nil {
 				return err
 			}
 			exists, err := load(id, nil)
 			if err != nil {
-				return fmt.Errorf("error checking singleton CDoc «%v» record «%d» existence: %w", rec.QName(), id, err)
+				return fmt.Errorf("error checking singleton «%v» record «%d» existence: %w", rec.QName(), id, err)
 			}
 			if exists {
-				return fmt.Errorf("can not create singleton, CDoc «%v» record «%d» already exists: %w", rec.QName(), id, ErrRecordIDUniqueViolation)
+				return fmt.Errorf("can not create singleton, «%v» record «%d» already exists: %w", rec.QName(), id, ErrRecordIDUniqueViolation)
 			}
 		}
 	}
