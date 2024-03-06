@@ -29,9 +29,9 @@ func ExampleIAppDefBuilder_AddProjector() {
 		appDef.AddCDoc(docName).SetComment("doc is state for projector")
 
 		v := appDef.AddView(viewName)
-		v.KeyBuilder().PartKeyBuilder().AddDataField("id", appdef.SysData_RecordID)
-		v.KeyBuilder().ClustColsBuilder().AddDataField("name", appdef.SysData_String)
-		v.ValueBuilder().AddDataField("data", appdef.SysData_bytes, false, appdef.MaxLen(1024))
+		v.Key().PartKey().AddDataField("id", appdef.SysData_RecordID)
+		v.Key().ClustCols().AddDataField("name", appdef.SysData_String)
+		v.Value().AddDataField("data", appdef.SysData_bytes, false, appdef.MaxLen(1024))
 		v.SetComment("view is intent for projector")
 
 		prj := appDef.AddProjector(prjName)

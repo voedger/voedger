@@ -40,9 +40,9 @@ func Test_AppDef_AddProjector(t *testing.T) {
 		appDef.AddCDoc(docName).SetComment("doc is state for projector")
 
 		v := appDef.AddView(viewName)
-		v.KeyBuilder().PartKeyBuilder().AddDataField("id", SysData_RecordID)
-		v.KeyBuilder().ClustColsBuilder().AddDataField("name", SysData_String)
-		v.ValueBuilder().AddDataField("data", SysData_bytes, false, MaxLen(1024))
+		v.Key().PartKey().AddDataField("id", SysData_RecordID)
+		v.Key().ClustCols().AddDataField("name", SysData_String)
+		v.Value().AddDataField("data", SysData_bytes, false, MaxLen(1024))
 		v.SetComment("view is intent for projector")
 
 		_ = appDef.AddObject(objName)

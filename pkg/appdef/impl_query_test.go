@@ -24,10 +24,6 @@ func Test_AppDef_AddQuery(t *testing.T) {
 		_ = appDef.AddObject(resName)
 
 		query := appDef.AddQuery(queryName)
-		require.Equal(TypeKind_Query, query.Kind())
-		require.Equal(query, appDef.Query(queryName))
-		require.Nil(query.Param())
-		require.Nil(query.Result())
 
 		t.Run("must be ok to assign query params and result", func(t *testing.T) {
 			query.

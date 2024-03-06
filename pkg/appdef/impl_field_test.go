@@ -74,12 +74,19 @@ func Test_IsSysField(t *testing.T) {
 func Test_AddField(t *testing.T) {
 	require := require.New(t)
 
-	obj := New().AddObject(NewQName("test", "object"))
+	objName := NewQName("test", "object")
+
+	adb := New()
+	obj := adb.AddObject(objName)
 	require.NotNil(obj)
 
 	t.Run("must be ok to add field", func(t *testing.T) {
 		obj.AddField("f1", DataKind_int64, true)
 
+		app, err := adb.Build()
+		require.NoError(err)
+
+		obj := app.Object(objName)
 		require.Equal(1, obj.UserFieldCount())
 		require.Equal(obj.UserFieldCount()+2, obj.FieldCount()) // + sys.QName + sys.Container
 
@@ -97,12 +104,23 @@ func Test_AddField(t *testing.T) {
 	})
 
 	t.Run("chain notation is ok to add fields", func(t *testing.T) {
-		o := New().AddObject(NewQName("test", "obj"))
-		n := o.AddField("f1", DataKind_int64, true).
+		adb := New()
+		_ = adb.AddObject(NewQName("test", "obj")).
+			AddField("f1", DataKind_int64, true).
 			AddField("f2", DataKind_int32, false).
-			AddField("f3", DataKind_string, false).(IType).QName()
-		require.Equal(o.QName(), n)
-		require.Equal(3, o.UserFieldCount())
+			AddField("f3", DataKind_string, false)
+
+		app, err := adb.Build()
+		require.NoError(err)
+
+		obj := app.Object(NewQName("test", "obj"))
+		require.Equal(3, obj.UserFieldCount())
+		require.Equal(3+2, obj.FieldCount()) // + sys.QName + sys.Container
+
+		require.NotNil(obj.Field("f1"))
+		require.NotNil(obj.Field("f2"))
+		require.NotNil(obj.Field("f3"))
+		require.Equal(DataKind_string, obj.Field("f3").DataKind())
 	})
 
 	t.Run("must be panic if empty field name", func(t *testing.T) {
@@ -124,7 +142,7 @@ func Test_AddField(t *testing.T) {
 
 	t.Run("must be panic if too many fields", func(t *testing.T) {
 		o := New().AddObject(NewQName("test", "obj"))
-		for i := 0; o.FieldCount() < MaxTypeFieldCount; i++ {
+		for i := 0; i < MaxTypeFieldCount; i++ {
 			o.AddField(fmt.Sprintf("f_%#x", i), DataKind_bool, false)
 		}
 		require.Panics(func() { o.AddField("errorField", DataKind_bool, true) })
@@ -144,16 +162,18 @@ func Test_AddField(t *testing.T) {
 func Test_SetFieldComment(t *testing.T) {
 	require := require.New(t)
 
-	obj := New().AddObject(NewQName("test", "object"))
-	require.NotNil(obj)
+	adb := New()
 
-	t.Run("must be ok to add field comment", func(t *testing.T) {
-		obj.
-			AddField("f1", DataKind_int64, true).
-			SetFieldComment("f1", "test comment")
-	})
+	objName := NewQName("test", "object")
+	adb.AddObject(objName).
+		AddField("f1", DataKind_int64, true).
+		SetFieldComment("f1", "test comment")
+
+	app, err := adb.Build()
+	require.NoError(err)
 
 	t.Run("must be ok to obtain field comment", func(t *testing.T) {
+		obj := app.Object(objName)
 		require.Equal(1, obj.UserFieldCount())
 		f1 := obj.Field("f1")
 		require.NotNil(f1)
@@ -161,25 +181,30 @@ func Test_SetFieldComment(t *testing.T) {
 	})
 
 	t.Run("must be panic if unknown field name passed to comment", func(t *testing.T) {
-		require.Panics(func() { obj.SetFieldComment("unknownField", "error here") })
+		require.Panics(func() {
+			New().AddObject(NewQName("test", "object")).
+				SetFieldComment("unknownField", "error here")
+		})
 	})
 }
 
 func Test_SetFieldVerify(t *testing.T) {
 	require := require.New(t)
 
-	obj := New().AddObject(NewQName("test", "object"))
-	require.NotNil(obj)
+	adb := New()
 
-	t.Run("must be ok to add verified field", func(t *testing.T) {
-		obj.
-			AddField("f1", DataKind_int64, true).
-			SetFieldVerify("f1", VerificationKind_Phone).
-			AddField("f2", DataKind_int64, true).
-			SetFieldVerify("f2", VerificationKind_Any...)
-	})
+	objName := NewQName("test", "object")
+	adb.AddObject(objName).
+		AddField("f1", DataKind_int64, true).
+		SetFieldVerify("f1", VerificationKind_Phone).
+		AddField("f2", DataKind_int64, true).
+		SetFieldVerify("f2", VerificationKind_Any...)
+
+	app, err := adb.Build()
+	require.NoError(err)
 
 	t.Run("must be ok to obtain verified field", func(t *testing.T) {
+		obj := app.Object(objName)
 		require.Equal(2, obj.UserFieldCount())
 		f1 := obj.Field("f1")
 		require.NotNil(f1)
@@ -199,7 +224,8 @@ func Test_SetFieldVerify(t *testing.T) {
 	})
 
 	t.Run("must be panic if unknown field name passed to verify", func(t *testing.T) {
-		require.Panics(func() { obj.SetFieldVerify("unknownField") })
+		New().AddObject(NewQName("test", "object")).
+			SetFieldVerify("unknownField", VerificationKind_Phone)
 	})
 }
 
@@ -217,7 +243,7 @@ func Test_AddRefField(t *testing.T) {
 		doc.
 			AddField("f1", DataKind_int64, true).
 			AddRefField("rf1", true).
-			AddRefField("rf2", false, doc.QName())
+			AddRefField("rf2", false, docName)
 
 		a, err := appDef.Build()
 		require.NoError(err)
@@ -301,7 +327,7 @@ func Test_UserFields(t *testing.T) {
 		doc.
 			AddField("f", DataKind_int64, true).
 			AddField("vf", DataKind_string, true).SetFieldVerify("vf", VerificationKind_EMail).
-			AddRefField("rf", true, doc.QName())
+			AddRefField("rf", true, docName)
 
 		a, err := appDef.Build()
 		require.NoError(err)

@@ -15,39 +15,49 @@ import (
 func Test_type_AddContainer(t *testing.T) {
 	require := require.New(t)
 
-	appDef := New()
-	root := appDef.AddObject(NewQName("test", "root"))
+	adb := New()
+
+	rootName := NewQName("test", "root")
+	root := adb.AddObject(rootName)
 	require.NotNil(root)
 
 	childName := NewQName("test", "child")
-	_ = appDef.AddObject(childName)
+	_ = adb.AddObject(childName)
 
 	t.Run("must be ok to add container", func(t *testing.T) {
 		root.AddContainer("c1", childName, 1, Occurs_Unbounded)
 
-		require.Equal(1, root.ContainerCount())
-		c := root.Container("c1")
-		require.NotNil(c)
+		app, err := adb.Build()
+		require.NoError(err)
+		require.NotNil(app)
 
-		require.Equal("c1", c.Name())
+		root := app.Object(rootName)
+		require.NotNil(root)
 
-		require.Equal(childName, c.QName())
-		typ := c.Type()
-		require.NotNil(typ)
-		require.Equal(childName, typ.QName())
-		require.Equal(TypeKind_Object, typ.Kind())
+		require.EqualValues(1, root.ContainerCount())
 
-		require.EqualValues(1, c.MinOccurs())
-		require.Equal(Occurs_Unbounded, c.MaxOccurs())
+		c1 := root.Container("c1")
+		require.NotNil(c1)
+		require.EqualValues(childName, c1.Type().QName())
 	})
 
 	t.Run("chain notation is ok to add containers", func(t *testing.T) {
-		obj := New().AddObject(NewQName("test", "obj"))
-		n := obj.AddContainer("c1", childName, 1, Occurs_Unbounded).
+		adb := New()
+		_ = adb.AddObject(rootName).
+			AddContainer("c1", childName, 1, Occurs_Unbounded).
 			AddContainer("c2", childName, 1, Occurs_Unbounded).
 			AddContainer("c3", childName, 1, Occurs_Unbounded).(IType).QName()
-		require.Equal(obj.QName(), n)
-		require.Equal(3, obj.ContainerCount())
+
+		app, err := adb.Build()
+		require.NoError(err)
+
+		obj := app.Object(rootName)
+		require.NotNil(obj)
+		require.EqualValues(3, obj.ContainerCount())
+		require.NotNil(obj.Container("c1"))
+		require.NotNil(obj.Container("c2"))
+		require.NotNil(obj.Container("c3"))
+		require.Nil(obj.Container("unknown"))
 	})
 
 	t.Run("must be panic if empty container name", func(t *testing.T) {
@@ -73,9 +83,8 @@ func Test_type_AddContainer(t *testing.T) {
 
 	t.Run("must be panic if container type is incompatible", func(t *testing.T) {
 		docName := NewQName("test", "doc")
-		_ = appDef.AddCDoc(docName)
+		_ = adb.AddCDoc(docName)
 		require.Panics(func() { root.AddContainer("c2", docName, 1, 1) })
-		require.Nil(root.Container("c2"))
 	})
 
 	t.Run("must be panic if too many containers", func(t *testing.T) {

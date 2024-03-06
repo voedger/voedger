@@ -21,36 +21,26 @@ func Test_AppDef_AddGDoc(t *testing.T) {
 		appDef := New()
 
 		doc := appDef.AddGDoc(docName)
-		require.Equal(TypeKind_GDoc, doc.Kind())
-		require.Equal(doc, appDef.GDoc(docName))
 
 		t.Run("must be ok to add doc fields", func(t *testing.T) {
 			doc.
 				AddField("f1", DataKind_int64, true).
 				AddField("f2", DataKind_string, false)
-			require.Equal(2, doc.UserFieldCount())
 		})
 
 		t.Run("must be ok to add child", func(t *testing.T) {
 			rec := appDef.AddGRecord(recName)
-			require.Equal(TypeKind_GRecord, rec.Kind())
-			require.Equal(rec, appDef.GRecord(recName))
-
 			doc.AddContainer("rec", recName, 0, Occurs_Unbounded)
-			require.Equal(1, doc.ContainerCount())
-			require.Equal(rec, doc.Container("rec").Type())
 
 			t.Run("must be ok to add rec fields", func(t *testing.T) {
 				rec.
 					AddField("f1", DataKind_int64, true).
 					AddField("f2", DataKind_string, false)
-				require.Equal(2, rec.UserFieldCount())
 			})
 		})
 
 		t.Run("must be ok to make doc abstract", func(t *testing.T) {
 			doc.SetAbstract()
-			require.True(doc.Abstract())
 		})
 
 		t.Run("must be ok to build", func(t *testing.T) {
