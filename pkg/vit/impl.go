@@ -135,19 +135,6 @@ func newVit(t *testing.T, vitCfg *VITConfig, useCas bool) *VIT {
 	// запустим сервер
 	require.NoError(t, vit.Launch())
 
-	// deploy custom apps and its partitions first
-	for _, builtInApp := range vit.BuiltInAppsPackages {
-		if builtInApp.Name.IsSys() {
-			continue
-		}
-		vit.VVM.APIs.IAppPartitions.DeployApp(builtInApp.Name, builtInApp.Def, builtInApp.EnginePoolSize)
-		appParts := []istructs.PartitionID{}
-		for pid := 0; pid < builtInApp.PartsCount; pid++ {
-			appParts = append(appParts, istructs.PartitionID(pid))
-		}
-		vit.VVM.APIs.IAppPartitions.DeployAppPartitions(builtInApp.Name, appParts)
-	}
-
 	for _, app := range vitPreConfig.vitApps {
 		// generate verified value tokens if queried
 		//                desiredValue token
