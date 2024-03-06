@@ -6,6 +6,7 @@
 package appparts
 
 import (
+	"errors"
 	"fmt"
 	"sync"
 
@@ -31,16 +32,16 @@ func newAppPartitions(structs istructs.IAppStructsProvider, actualizer SyncActua
 	return a, func() {}, err
 }
 
-func (aps *apps) DeployApp(name istructs.AppQName, def appdef.IAppDef, engines [cluster.ProcessorKind_Count]int) {
+func (aps *apps) DeployApp(name istructs.AppQName, def appdef.IAppDef, partsCount int, engines [cluster.ProcessorKind_Count]int) {
 	aps.mx.Lock()
 	defer aps.mx.Unlock()
 
-	a, ok := aps.apps[name]
-	// TODO: panic ErrNotSupported if app already exists
-	if !ok {
-		a = newApplication(aps, name)
-		aps.apps[name] = a
+	if _, ok := aps.apps[name]; ok {
+		panic(fmt.Errorf(errAppCannotToBeRedeployed, name, errors.ErrUnsupported))
 	}
+
+	a := newApplication(aps, name, partsCount)
+	aps.apps[name] = a
 
 	appStructs, err := aps.structs.AppStructsByDef(name, def)
 	if err != nil {
@@ -76,6 +77,9 @@ func (aps *apps) AppDef(appName istructs.AppQName) (appdef.IAppDef, error) {
 	return app.def, nil
 }
 
+// Returns _total_ application partitions count.
+//
+// This is a configuration value for the application, independent of how many sections are currently deployed.
 func (aps *apps) AppPartsCount(appName istructs.AppQName) (int, error) {
 	aps.mx.Lock()
 	defer aps.mx.Unlock()
@@ -84,7 +88,7 @@ func (aps *apps) AppPartsCount(appName istructs.AppQName) (int, error) {
 	if !ok {
 		return 0, fmt.Errorf(errAppNotFound, appName, ErrNotFound)
 	}
-	return len(app.parts), nil
+	return app.partsCount, nil
 }
 
 func (aps *apps) Borrow(appName istructs.AppQName, partID istructs.PartitionID, proc cluster.ProcessorKind) (IAppPartition, error) {
