@@ -113,7 +113,6 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 		provideQueryProcessors,
 		provideAppServiceFactory,
 		provideAppPartitionFactory,
-		//provideSyncActualizerFactory,
 		provideAsyncActualizersFactory,
 		provideRouterServiceFactory,
 		provideOperatorAppServices,
