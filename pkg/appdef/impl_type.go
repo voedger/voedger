@@ -67,6 +67,8 @@ func makeTypeBuilder(typ *typ) typeBuilder {
 	}
 }
 
+func (t *typeBuilder) String() string { return t.typ.String() }
+
 type typeRef struct {
 	name QName
 	typ  IType

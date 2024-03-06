@@ -246,7 +246,9 @@ func (ff *fields) setFieldComment(name string, comment ...string) {
 	if fld == nil {
 		panic(fmt.Errorf("field «%s» not found: %w", name, ErrNameNotFound))
 	}
-	fld.(ICommentBuilder).SetComment(comment...)
+	if fld, ok := fld.(interface{ setComment(comment ...string) }); ok {
+		fld.setComment(comment...)
+	}
 }
 
 func (ff *fields) setFieldVerify(name string, vk ...VerificationKind) {

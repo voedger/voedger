@@ -142,7 +142,7 @@ func Test_AddField(t *testing.T) {
 
 	t.Run("must be panic if too many fields", func(t *testing.T) {
 		o := New().AddObject(NewQName("test", "obj"))
-		for i := 0; i < MaxTypeFieldCount; i++ {
+		for i := 0; i < MaxTypeFieldCount-2; i++ { // -2 because sys.QName, sys.Container
 			o.AddField(fmt.Sprintf("f_%#x", i), DataKind_bool, false)
 		}
 		require.Panics(func() { o.AddField("errorField", DataKind_bool, true) })
@@ -224,8 +224,10 @@ func Test_SetFieldVerify(t *testing.T) {
 	})
 
 	t.Run("must be panic if unknown field name passed to verify", func(t *testing.T) {
-		New().AddObject(NewQName("test", "object")).
-			SetFieldVerify("unknownField", VerificationKind_Phone)
+		require.Panics(func() {
+			New().AddObject(NewQName("test", "object")).
+				SetFieldVerify("unknownField", VerificationKind_Phone)
+		})
 	})
 }
 

@@ -83,6 +83,8 @@ func (exb *extensionBuilder) SetName(name string) IExtensionBuilder {
 	return exb
 }
 
+func (exb extensionBuilder) String() string { return exb.extension.String() }
+
 func (k ExtensionEngineKind) MarshalText() ([]byte, error) {
 	var s string
 	if k < ExtensionEngineKind_Count {

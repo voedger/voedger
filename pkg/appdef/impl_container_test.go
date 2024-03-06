@@ -43,10 +43,11 @@ func Test_type_AddContainer(t *testing.T) {
 
 	t.Run("chain notation is ok to add containers", func(t *testing.T) {
 		adb := New()
+		_ = adb.AddObject(childName)
 		_ = adb.AddObject(rootName).
 			AddContainer("c1", childName, 1, Occurs_Unbounded).
 			AddContainer("c2", childName, 1, Occurs_Unbounded).
-			AddContainer("c3", childName, 1, Occurs_Unbounded).(IType).QName()
+			AddContainer("c3", childName, 1, Occurs_Unbounded)
 
 		app, err := adb.Build()
 		require.NoError(err)

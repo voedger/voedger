@@ -29,9 +29,9 @@ func Test_AppDef_AddCommand(t *testing.T) {
 		t.Run("must be ok to assign cmd parameter and result", func(t *testing.T) {
 			cmd.SetEngine(ExtensionEngineKind_BuiltIn)
 			cmd.
-				SetParam(parName).(ICommandBuilder).
-				SetUnloggedParam(unlName).
+				SetParam(parName).
 				SetResult(resName)
+			cmd.SetUnloggedParam(unlName)
 		})
 
 		t.Run("must be ok to build", func(t *testing.T) {

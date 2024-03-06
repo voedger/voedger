@@ -174,7 +174,9 @@ func NewConstraint(kind ConstraintKind, value any, c ...string) IConstraint {
 			panic(fmt.Errorf("unsupported enumeration type: %T", value))
 		}
 		if len(c) > 0 {
-			enum.(ICommentBuilder).SetComment(c...)
+			if enum, ok := enum.(*dataConstraint); ok {
+				enum.comment.setComment(c...)
+			}
 		}
 		return enum
 	}
