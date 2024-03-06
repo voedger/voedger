@@ -19,7 +19,7 @@ ABSTRACT WORKSPACE Workspace (
 	);
 
 	-- target app, new WSID
-	TABLE WorkspaceDescriptor INHERITS Singleton (
+	TABLE WorkspaceDescriptor INHERITS CSingleton (
 		-- owner* fields made non-required for app workspaces
 		OwnerWSID int64,
 		OwnerQName qname, -- Deprecated: use OwnerQName2

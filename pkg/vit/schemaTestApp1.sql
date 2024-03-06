@@ -439,7 +439,7 @@ ALTERABLE WORKSPACE test_wsWS (
 		UNIQUEFIELD Int
 	);
 
-	TABLE Config INHERITS Singleton (
+	TABLE Config INHERITS CSingleton (
 		Fld1 varchar NOT NULL
 	);
 
