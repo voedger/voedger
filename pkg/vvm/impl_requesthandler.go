@@ -57,6 +57,18 @@ func provideIBus(appParts appparts.IAppPartitions, procbus iprocbus.IProcBus,
 			return
 		}
 
+		appDef, err := appParts.AppDef(appQName)
+		if err != nil {
+			coreutils.ReplyErrf(sender, http.StatusServiceUnavailable, "app is not deployed", err)
+			return
+		}
+
+		funcKindMark := request.Resource[:1]
+		funcType, isHandled := getFuncType(appDef, qName, sender, funcKindMark)
+		if isHandled {
+			return
+		}
+
 		token, err := getPrincipalToken(request)
 		if err != nil {
 			coreutils.ReplyAccessDeniedUnauthorized(sender, err.Error())

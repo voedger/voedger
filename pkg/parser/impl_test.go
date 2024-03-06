@@ -2262,3 +2262,12 @@ func Test_RefsFromInheritedWs(t *testing.T) {
 		);
 	);`)
 }
+
+//go:embed test/pkg1.sql
+var pkg1FS embed.FS
+
+func Test_Panic1(t *testing.T) {
+	ast, errs := ParsePackageDir(appdef.SysPackage, pkg1FS, "test")
+	require.ErrorContains(t, errs, "no valid schema files")
+	require.Nil(t, ast)
+}
