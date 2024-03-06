@@ -557,7 +557,7 @@ classDiagram
   }
 ```
 
-### Functions, commands, queries and projectors
+### Extensions
 
 ```mermaid
     classDiagram
@@ -566,6 +566,8 @@ classDiagram
         <<interface>>
         +Name() string
         +Engine() ExtensionEngineKind
+        +States() IStorages
+        +Intents() IStorages
     }
 
     IExtension "1" ..> "1" ExtensionEngineKind : Engine
@@ -573,6 +575,23 @@ classDiagram
         <<enumeration>>
         BuiltIn
         WASM
+    }
+
+    IExtension "1" *--> "1" IStorages : States
+    IExtension "1" *--> "1" IStorages : Intents
+    class IStorages {
+        <<interface>>
+        +Enum(func(IStorage))
+        +Len() int
+        +Map() map[QName] []QName
+        +Storage(QName) IStorage
+    }
+    IStorages "1" *--> "0..*" IStorage : Storages
+    class IStorage {
+        <<interface>>
+        +Comment() : []string
+        +Name(): QName
+        +QNames() []QName
     }
 
     IExtension <|-- IFunction : inherits
@@ -601,12 +620,10 @@ classDiagram
         +Kind()* TypeKind_Projector
         +WantErrors() bool
         +Events() IProjectorEvents
-        +States() IStorages
-        +Intents() IStorages
     }
 
     IProjector "1" *--> "1" IProjectorEvents : Events
-    IProjectorEvents "1" *--> "1..*" IProjectorEvent : Events
+    IProjectorEvents "1" *--> "1..*" IProjectorEvent : Event
     class IProjectorEvents {
         <<interface>>
         +Enum(func(IProjectorEvent))
@@ -630,23 +647,6 @@ classDiagram
         Deactivate
         Execute
         ExecuteWithParam
-    }
-
-    IProjector "1" *--> "1" IStorages : States
-    IProjector "1" *--> "1" IStorages : Intents
-    class IStorages {
-        <<interface>>
-        +Enum(func(IStorage))
-        +Len() int
-        +Map() map[QName] []QName
-        +Storage(QName) IStorage
-    }
-    IStorages "1" *--> "0..*" IStorage : Storages
-    class IStorage {
-        <<interface>>
-        +Comment() : []string
-        +Name(): QName
-        +QNames() []QName
     }
 ```
 
