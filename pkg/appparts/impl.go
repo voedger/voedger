@@ -36,13 +36,11 @@ func (aps *apps) DeployApp(name istructs.AppQName, def appdef.IAppDef, partsCoun
 	aps.mx.Lock()
 	defer aps.mx.Unlock()
 
-	a, ok := aps.apps[name]
-	// TODO: panic ErrNotSupported if app already exists
-	if ok {
+	if _, ok := aps.apps[name]; ok {
 		panic(fmt.Errorf(errAppCannotToBeRedeployed, name, errors.ErrUnsupported))
 	}
 
-	a = newApplication(aps, name, partsCount)
+	a := newApplication(aps, name, partsCount)
 	aps.apps[name] = a
 
 	appStructs, err := aps.structs.AppStructsByDef(name, def)
