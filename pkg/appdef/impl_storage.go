@@ -6,6 +6,7 @@
 package appdef
 
 import (
+	"errors"
 	"fmt"
 )
 
@@ -14,13 +15,15 @@ import (
 type storage struct {
 	comment
 	QName
+	app   *appDef
 	names QNames
 }
 
-func newStorage(name QName, names ...QName) *storage {
+func newStorage(app *appDef, name QName, names ...QName) *storage {
 	return &storage{
 		comment: makeComment(),
 		QName:   name,
+		app:     app,
 		names:   QNamesFrom(names...),
 	}
 }
@@ -32,16 +35,29 @@ func (s *storage) String() string {
 	return fmt.Sprintf("Storage «%v» %v", s.QName, s.names)
 }
 
+func (s storage) validate() (err error) {
+	for _, n := range s.names {
+		if s.app.TypeByName(n) == nil {
+			err = errors.Join(err,
+				fmt.Errorf("storage «%v» has unknown qname «%v»: %w", s.QName, n, ErrNameNotFound))
+			break
+		}
+	}
+	return err
+}
+
 // # Implements:
 //   - IStorages
 type storages struct {
+	app      *appDef
 	storages map[QName]*storage
 	qnames   map[QName]QNames
 	ordered  QNames
 }
 
-func newStorages() *storages {
+func newStorages(app *appDef) *storages {
 	return &storages{
+		app:      app,
 		storages: make(map[QName]*storage),
 		qnames:   make(map[QName]QNames),
 		ordered:  make(QNames, 0),
@@ -79,7 +95,7 @@ func (ss *storages) add(name QName, names ...QName) {
 	if ok {
 		s.names.Add(names...)
 	} else {
-		s = newStorage(name, names...)
+		s = newStorage(ss.app, name, names...)
 		ss.storages[name] = s
 		ss.ordered.Add(name)
 	}
@@ -92,6 +108,13 @@ func (ss *storages) setComment(name QName, comment string) {
 		return
 	}
 	panic(fmt.Errorf("storage «%v» not found: %w", name, ErrNameNotFound))
+}
+
+func (ss storages) validate() (err error) {
+	for _, s := range ss.storages {
+		err = errors.Join(err, s.validate())
+	}
+	return err
 }
 
 // # Implements:

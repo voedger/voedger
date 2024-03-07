@@ -62,8 +62,7 @@ func Test_AppDef_AddProjector(t *testing.T) {
 			Add(sysRecords, recName, rec2Name). // should be ok to add storage «sys.records» twice, qnames must concate
 			Add(sysWLog)
 		prj.Intents().
-			Add(sysViews, viewName).
-			SetComment(sysViews, "view is intent for projector")
+			Add(sysViews, viewName).SetComment(sysViews, "view is intent for projector")
 
 		t.Run("must be ok to build", func(t *testing.T) {
 			a, err := appDef.Build()
@@ -273,12 +272,26 @@ func Test_AppDef_AddProjector(t *testing.T) {
 	})
 
 	t.Run("projector validation errors", func(t *testing.T) {
-		t.Run(" should error if empty events", func(t *testing.T) {
+		t.Run("should be error if empty events", func(t *testing.T) {
 			apb := New()
 			prj := apb.AddProjector(prjName)
 			_, err := apb.Build()
 			require.ErrorIs(err, ErrEmptyProjectorEvents)
 			require.Contains(err.Error(), fmt.Sprint(prj))
+		})
+
+		t.Run("should be error if unknown names in states", func(t *testing.T) {
+			apb := New()
+			apb.AddCRecord(recName)
+			prj := apb.AddProjector(prjName)
+			prj.SetName("customExtensionName")
+			prj.Events().
+				Add(recName, ProjectorEventKind_Insert)
+			prj.States().
+				Add(NewQName("sys", "records"), recName, NewQName("test", "unknown"))
+			_, err := apb.Build()
+			require.ErrorIs(err, ErrNameNotFound)
+			require.Contains(err.Error(), "test.unknown")
 		})
 	})
 

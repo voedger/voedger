@@ -6,6 +6,7 @@
 package appdef
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -26,8 +27,8 @@ func makeExtension(app *appDef, name QName, kind TypeKind) extension {
 		typ:     makeType(app, name, kind),
 		name:    name.Entity(),
 		engine:  ExtensionEngineKind_BuiltIn,
-		states:  newStorages(),
-		intents: newStorages(),
+		states:  newStorages(app),
+		intents: newStorages(app),
 	}
 
 	return e
@@ -44,6 +45,17 @@ func (ex extension) States() IStorages { return ex.states }
 func (ex extension) String() string {
 	// BuiltIn-function «test.func»
 	return fmt.Sprintf("%s-%v", ex.Engine().TrimString(), ex.typ.String())
+}
+
+// Validates extension
+//
+// # Returns error:
+//   - if storages (states or intents) contains unknown qname(s)
+func (ex extension) Validate() error {
+	return errors.Join(
+		ex.states.validate(),
+		ex.intents.validate(),
+	)
 }
 
 func (ex *extension) setEngine(engine ExtensionEngineKind) {
