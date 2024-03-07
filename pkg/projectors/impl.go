@@ -72,7 +72,7 @@ func newSyncBranch(conf SyncActualizerConf, projectorFactory istructs.ProjectorF
 		conf.SecretReader,
 		conf.IntentsLimit)
 	iProjector := conf.AppStructs().AppDef().Projector(projector.Name)
-	triggeringQNames := iProjector.EventsMap()
+	triggeringQNames := iProjector.Events().Map()
 	fn = pipeline.ForkBranch(pipeline.NewSyncPipeline(conf.Ctx, pipelineName,
 		pipeline.WireFunc("Projector", func(_ context.Context, _ interface{}) (err error) {
 			if !isAcceptable(service.event, iProjector.WantErrors(), triggeringQNames, conf.AppStructs().AppDef()) {
@@ -123,7 +123,7 @@ func provideViewDefImpl(appDef appdef.IAppDefBuilder, qname appdef.QName, buildF
 
 func provideOffsetsDefImpl(adb appdef.IAppDefBuilder) {
 	view := adb.AddView(qnameProjectionOffsets)
-	view.KeyBuilder().PartKeyBuilder().AddField(partitionFld, appdef.DataKind_int32)
-	view.KeyBuilder().ClustColsBuilder().AddField(projectorNameFld, appdef.DataKind_QName)
-	view.ValueBuilder().AddField(offsetFld, appdef.DataKind_int64, true)
+	view.Key().PartKey().AddField(partitionFld, appdef.DataKind_int32)
+	view.Key().ClustCols().AddField(projectorNameFld, appdef.DataKind_QName)
+	view.Value().AddField(offsetFld, appdef.DataKind_int64, true)
 }

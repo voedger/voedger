@@ -14,7 +14,6 @@ type IWDoc interface {
 }
 
 type IWDocBuilder interface {
-	IWDoc
 	ISingletonBuilder
 }
 
@@ -27,6 +26,5 @@ type IWRecord interface {
 }
 
 type IWRecordBuilder interface {
-	IWRecord
 	IContainedRecordBuilder
 }

@@ -419,7 +419,7 @@ func borrowAppPart(_ context.Context, qw *queryWork) error {
 	switch err := qw.borrow(); {
 	case err == nil:
 		return nil
-	case errors.Is(err, appparts.ErrNotAvailableEngines):
+	case errors.Is(err, appparts.ErrNotAvailableEngines), errors.Is(err, appparts.ErrNotFound): // partition is not deployed yet -> ErrNotFound
 		return coreutils.WrapSysError(err, http.StatusServiceUnavailable)
 	default:
 		return coreutils.WrapSysError(err, http.StatusBadRequest)

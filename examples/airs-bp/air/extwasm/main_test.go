@@ -22,6 +22,9 @@ func Test_FillPbillDates(t *testing.T) {
 	// Prepare first test data
 	{
 		stateIntents := []exttinygo.TIntent{
+			/*
+				orm.NewEvent().Set_QName(orm.Package_air.Command_Pbill.QName()).
+			*/
 			orm.Package_air.View_PbillDates.NewIntent(2020, 1).Set_FirstOffset(20).Set_LastOffset(17).Intent(),
 			orm.Package_air.View_PbillDates.NewIntent(2021, 2).Set_FirstOffset(21).Set_LastOffset(18).Intent(),
 			// exttest.Event.NewIntent().Set_QName("").Intent(),
@@ -33,7 +36,7 @@ func Test_FillPbillDates(t *testing.T) {
 
 		_ = stateIntents
 		_ = expectedIntents
-		// exttest.RunAndCheck(stateIntents, Pbill, expectedIntents)
+		// exttest.RunProjectorAndCheck(event, stateIntents, Pbill, expectedIntents)
 
 		{
 			// Test intents

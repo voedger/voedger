@@ -17,27 +17,41 @@ import (
 	"github.com/voedger/voedger/pkg/parser"
 )
 
-//go:embed sql/old.sql
-var oldFS embed.FS
+//go:embed sql/sys.old.sql
+var oldSysSchemaFS embed.FS
 
-//go:embed sql/new.sql
-var newFS embed.FS
+//go:embed sql/pkg1.old.sql
+var oldPkg1SchemaFS embed.FS
 
-func getSysPackageAST(file parser.IReadFS) (*parser.PackageSchemaAST, error) {
-	return parser.ParsePackageDir(appdef.SysPackage, file, "sql")
-}
+//go:embed sql/pkg2.sql
+var pkg2SchemaFS embed.FS
+
+//go:embed sql/sys.new.sql
+var newSysSchemaFS embed.FS
+
+//go:embed sql/pkg1.new.sql
+var newPkg1SchemaFS embed.FS
 
 func Test_Basic(t *testing.T) {
-	oldPkgAST, err := getSysPackageAST(oldFS)
+	oldSysPkgAST, err := parser.ParsePackageDir(appdef.SysPackage, oldSysSchemaFS, "sql")
 	require.NoError(t, err)
 
-	oldPackages, err := parser.BuildAppSchema([]*parser.PackageSchemaAST{oldPkgAST})
+	oldPkg1AST, err := parser.ParsePackageDir("pkg1", oldPkg1SchemaFS, "sql")
 	require.NoError(t, err)
 
-	newPkgAST, err := getSysPackageAST(newFS)
+	pkg2AST, err := parser.ParsePackageDir("pkg2", pkg2SchemaFS, "sql")
 	require.NoError(t, err)
 
-	newPackages, err := parser.BuildAppSchema([]*parser.PackageSchemaAST{newPkgAST})
+	oldPackages, err := parser.BuildAppSchema([]*parser.PackageSchemaAST{oldSysPkgAST, oldPkg1AST, pkg2AST})
+	require.NoError(t, err)
+
+	newSysPkgAST, err := parser.ParsePackageDir(appdef.SysPackage, newSysSchemaFS, "sql")
+	require.NoError(t, err)
+
+	newPkg1AST, err := parser.ParsePackageDir("pkg1", newPkg1SchemaFS, "sql")
+	require.NoError(t, err)
+
+	newPackages, err := parser.BuildAppSchema([]*parser.PackageSchemaAST{newSysPkgAST, newPkg1AST, pkg2AST})
 	require.NoError(t, err)
 
 	oldBuilder := appdef.New()
@@ -74,6 +88,8 @@ func Test_Basic(t *testing.T) {
 			{OldTreePath: []string{"AppDef", "Types", "sys.SomeView", "Fields", "E"}, ErrorType: ErrorTypeValueChanged},
 			{OldTreePath: []string{"AppDef", "Types", "sys.SomeView", "ClustColsFields", "B"}, ErrorType: ErrorTypeValueChanged},
 			{OldTreePath: []string{"AppDef", "Types", "sys.AnotherOneTable", "Uniques", "sys.AnotherOneTable$uniques$01", "UniqueFields"}, ErrorType: ErrorTypeNodeModified},
+			{OldTreePath: []string{"AppDef", "Packages", "pkg1"}, ErrorType: ErrorTypeValueChanged},
+			{OldTreePath: []string{"AppDef", "Packages", "pkg2"}, ErrorType: ErrorTypeValueChanged},
 		}
 		compatErrors := CheckBackwardCompatibility(oldAppDef, newAppDef)
 		fmt.Println(compatErrors.Error())

@@ -7,6 +7,7 @@ package descr
 
 import (
 	"fmt"
+	"maps"
 
 	"github.com/voedger/voedger/pkg/appdef"
 )
@@ -82,18 +83,14 @@ func newProjector() *Projector {
 
 func (p *Projector) read(prj appdef.IProjector) {
 	p.Extension.read(prj)
-	prj.Events(func(ev appdef.IProjectorEvent) {
+	prj.Events().Enum(func(ev appdef.IProjectorEvent) {
 		e := ProjectorEvent{}
 		e.read(ev)
 		p.Events[e.On] = e
 	})
 	p.WantErrors = prj.WantErrors()
-	prj.States(func(storage appdef.QName, names appdef.QNames) {
-		p.States[storage] = appdef.QNamesFrom(names...)
-	})
-	prj.Intents(func(storage appdef.QName, names appdef.QNames) {
-		p.Intents[storage] = appdef.QNamesFrom(names...)
-	})
+	p.States = maps.Clone(prj.States().Map())
+	p.Intents = maps.Clone(prj.Intents().Map())
 }
 
 func (e *ProjectorEvent) read(ev appdef.IProjectorEvent) {

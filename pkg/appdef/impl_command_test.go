@@ -25,18 +25,13 @@ func Test_AppDef_AddCommand(t *testing.T) {
 		_ = appDef.AddObject(resName)
 
 		cmd := appDef.AddCommand(cmdName)
-		require.Equal(TypeKind_Command, cmd.Kind())
-		require.Equal(cmd, appDef.Command(cmdName))
-		require.Nil(cmd.Param())
-		require.Nil(cmd.UnloggedParam())
-		require.Nil(cmd.Result())
 
 		t.Run("must be ok to assign cmd parameter and result", func(t *testing.T) {
 			cmd.SetEngine(ExtensionEngineKind_BuiltIn)
 			cmd.
-				SetParam(parName).(ICommandBuilder).
-				SetUnloggedParam(unlName).
+				SetParam(parName).
 				SetResult(resName)
+			cmd.SetUnloggedParam(unlName)
 		})
 
 		t.Run("must be ok to build", func(t *testing.T) {

@@ -26,25 +26,25 @@ func ParseFile(fileName, content string) (*FileSchemaAST, error) {
 
 // BuildPackageSchema merges File Schema ASTs into Package Schema AST.
 // Performs package-level semantic analysis
-func BuildPackageSchema(qualifiedPackageName string, asts []*FileSchemaAST) (*PackageSchemaAST, error) {
-	return buildPackageSchemaImpl(qualifiedPackageName, asts)
+func BuildPackageSchema(path string, asts []*FileSchemaAST) (*PackageSchemaAST, error) {
+	return buildPackageSchemaImpl(path, asts)
 }
 
 // ParsePackageDir is a helper which parses all SQL schemas from specified FS and returns Package Schema.
-func ParsePackageDir(qualifiedPackageName string, fs IReadFS, subDir string) (ast *PackageSchemaAST, err error) {
-	ast, _, err = ParsePackageDirCollectingFiles(qualifiedPackageName, fs, subDir)
+func ParsePackageDir(path string, fs IReadFS, subDir string) (ast *PackageSchemaAST, err error) {
+	ast, _, err = ParsePackageDirCollectingFiles(path, fs, subDir)
 	return
 }
 
 // ParsePackageDirCollectingFiles is a helper which parses all SQL schemas from specified FS
 // Returns package schema and list of schema file names which were parsed
-func ParsePackageDirCollectingFiles(qualifiedPackageName string, fs IReadFS, subDir string) (*PackageSchemaAST, []string, error) {
+func ParsePackageDirCollectingFiles(path string, fs IReadFS, subDir string) (*PackageSchemaAST, []string, error) {
 	asts, errs := parseFSImpl(fs, subDir)
 	fileNames := make([]string, len(asts))
 	for i, fileAst := range asts {
 		fileNames[i] = fileAst.FileName
 	}
-	packageAst, packageBuildErr := BuildPackageSchema(qualifiedPackageName, asts)
+	packageAst, packageBuildErr := BuildPackageSchema(path, asts)
 	if packageBuildErr != nil {
 		errs = append(errs, coreutils.SplitErrors(packageBuildErr)...)
 	}

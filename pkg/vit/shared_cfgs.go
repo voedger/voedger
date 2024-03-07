@@ -90,8 +90,8 @@ func ProvideApp2(apis apps.APIs, cfg *istructsmem.AppConfigType, adf appdef.IApp
 	sysPackageFS := sys.Provide(cfg, adf, TestSMTPCfg, ep, nil, apis.TimeFunc, apis.ITokens, apis.IFederation, apis.IAppStructsProvider, apis.IAppTokensFactory,
 		apis.NumCommandProcessors, buildInfo, apis.IAppStorageProvider)
 	app2PackageFS := parser.PackageFS{
-		QualifiedPackageName: "github.com/voedger/voedger/pkg/vit/app2pkg",
-		FS:                   SchemaTestApp2FS,
+		Path: "github.com/voedger/voedger/pkg/vit/app2pkg",
+		FS:   SchemaTestApp2FS,
 	}
 	cfg.Resources.Add(istructsmem.NewCommandFunction(appdef.NewQName(app2PkgName, "testCmd"), istructsmem.NullCommandExec))
 	return apps.BuiltInAppDef{
@@ -197,8 +197,8 @@ func ProvideApp1(apis apps.APIs, cfg *istructsmem.AppConfigType, adf appdef.IApp
 	cfg.Resources.Add(istructsmem.NewCommandFunction(appdef.NewQName(app1PkgName, "testCmd"), istructsmem.NullCommandExec))
 
 	app1PackageFS := parser.PackageFS{
-		QualifiedPackageName: "github.com/voedger/voedger/pkg/vit/app1pkg",
-		FS:                   SchemaTestApp1FS,
+		Path: "github.com/voedger/voedger/pkg/vit/app1pkg",
+		FS:   SchemaTestApp1FS,
 	}
 	return apps.BuiltInAppDef{
 		AppQName:                istructs.AppQName_test1_app1,

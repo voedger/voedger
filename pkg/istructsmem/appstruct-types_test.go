@@ -39,12 +39,19 @@ func TestAppConfigsType_AddConfig(t *testing.T) {
 		appStructs := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
 
 		t.Run("must be ok to change appDef after add config", func(t *testing.T) {
-			doc := appDef.AddCDoc(appdef.NewQName("test", "doc"))
+			docName := appdef.NewQName("test", "doc")
+			doc := appDef.AddCDoc(docName)
 			doc.AddField("field", appdef.DataKind_int64, true)
 			doc.SetSingleton()
 			appStr, err := appStructs.AppStructs(app)
 			require.NoError(err)
 			require.NotNil(appStr)
+			t.Run("should be ok to retrieve changed doc from AppStructs", func(t *testing.T) {
+				doc := appStr.AppDef().CDoc(docName)
+				require.Equal(docName, doc.QName())
+				require.True(doc.Singleton())
+				require.Equal(appdef.DataKind_int64, doc.Field("field").DataKind())
+			})
 		})
 	})
 
@@ -143,14 +150,16 @@ func TestAppConfigsType_GetConfig(t *testing.T) {
 func TestErrorsAppConfigsType(t *testing.T) {
 	require := require.New(t)
 
+	docName, recName := appdef.NewQName("test", "doc"), appdef.NewQName("test", "rec")
+
 	appDef := func() appdef.IAppDefBuilder {
 		app := appdef.New()
-		doc := app.AddCDoc(appdef.NewQName("test", "doc"))
+		doc := app.AddCDoc(docName)
 		doc.SetSingleton()
 		doc.AddField("f1", appdef.DataKind_string, true)
-		doc.AddContainer("rec", appdef.NewQName("test", "rec"), 0, 1)
-		doc.AddUnique(appdef.UniqueQName(doc.QName(), "f1"), []string{"f1"})
-		app.AddCRecord(appdef.NewQName("test", "rec"))
+		doc.AddContainer("rec", recName, 0, 1)
+		doc.AddUnique(appdef.UniqueQName(docName, "f1"), []string{"f1"})
+		app.AddCRecord(recName)
 		return app
 	}()
 
@@ -161,8 +170,11 @@ func TestErrorsAppConfigsType(t *testing.T) {
 		_ = cfgs.AddConfig(istructs.AppQName_test1_app1, appDef)
 		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
 
-		_, err := provider.AppStructs(istructs.AppQName_test1_app1)
+		as, err := provider.AppStructs(istructs.AppQName_test1_app1)
 		require.NoError(err)
+		require.NotNil(as)
+		require.Equal(docName, as.AppDef().CDoc(docName).QName())
+		require.Equal(recName, as.AppDef().CRecord(recName).QName())
 	})
 
 	t.Run("must be error to provide app structure if error while read versions", func(t *testing.T) {
@@ -272,7 +284,7 @@ func TestErrorsAppConfigsType(t *testing.T) {
 					adb.AddCDoc(qName2)
 					adb.AddProjector(qName).
 						SetSync(true).
-						AddEvent(qName2, appdef.ProjectorEventKind_Insert)
+						Events().Add(qName2, appdef.ProjectorEventKind_Insert)
 					cfgs := make(AppConfigsType, 1)
 					_ = cfgs.AddConfig(istructs.AppQName_test1_app1, adb)
 					provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
@@ -300,7 +312,7 @@ func TestErrorsAppConfigsType(t *testing.T) {
 					adb.AddCDoc(qName2)
 					adb.AddProjector(qName).
 						SetSync(true).
-						AddEvent(qName2, appdef.ProjectorEventKind_Insert)
+						Events().Add(qName2, appdef.ProjectorEventKind_Insert)
 					cfgs := make(AppConfigsType, 1)
 					cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, adb)
 					cfg.AddAsyncProjectors(func(partition istructs.PartitionID) istructs.Projector {
@@ -321,7 +333,7 @@ func TestErrorsAppConfigsType(t *testing.T) {
 					adb.AddCDoc(qName2)
 					adb.AddProjector(qName).
 						SetSync(false).
-						AddEvent(qName2, appdef.ProjectorEventKind_Insert)
+						Events().Add(qName2, appdef.ProjectorEventKind_Insert)
 					cfgs := make(AppConfigsType, 1)
 					_ = cfgs.AddConfig(istructs.AppQName_test1_app1, adb)
 					provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
@@ -349,7 +361,7 @@ func TestErrorsAppConfigsType(t *testing.T) {
 					adb.AddCDoc(qName2)
 					adb.AddProjector(qName).
 						SetSync(false).
-						AddEvent(qName2, appdef.ProjectorEventKind_Insert)
+						Events().Add(qName2, appdef.ProjectorEventKind_Insert)
 					cfgs := make(AppConfigsType, 1)
 					cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, adb)
 					cfg.AddSyncProjectors(func(partition istructs.PartitionID) istructs.Projector {
@@ -368,7 +380,7 @@ func TestErrorsAppConfigsType(t *testing.T) {
 					adb.AddCDoc(qName2)
 					adb.AddProjector(qName).
 						SetSync(true).
-						AddEvent(qName2, appdef.ProjectorEventKind_Insert)
+						Events().Add(qName2, appdef.ProjectorEventKind_Insert)
 					cfgs := make(AppConfigsType, 1)
 					cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, adb)
 					cfg.AddAsyncProjectors(func(partition istructs.PartitionID) istructs.Projector {

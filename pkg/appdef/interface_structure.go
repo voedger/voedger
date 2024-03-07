@@ -18,7 +18,6 @@ type IStructure interface {
 }
 
 type IStructureBuilder interface {
-	IStructure
 	ITypeBuilder
 	IFieldsBuilder
 	IContainersBuilder
@@ -37,7 +36,6 @@ type IRecord interface {
 }
 
 type IRecordBuilder interface {
-	IRecord
 	IStructureBuilder
 }
 
@@ -52,7 +50,6 @@ type IDoc interface {
 }
 
 type IDocBuilder interface {
-	IDoc
 	IRecordBuilder
 }
 
@@ -68,6 +65,5 @@ type IContainedRecord interface {
 }
 
 type IContainedRecordBuilder interface {
-	IContainedRecord
 	IRecordBuilder
 }

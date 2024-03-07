@@ -47,18 +47,19 @@ func TestBasicUsage(t *testing.T) {
 		AddField("Photo", DataKind_bytes, false)
 
 	buyerView := adb.AddView(NewQName("test", "viewBuyerByHeight"))
-	buyerView.KeyBuilder().PartKeyBuilder().AddField("Height", DataKind_float32)
-	buyerView.KeyBuilder().ClustColsBuilder().AddField("Buyer", DataKind_string, MaxLen(100))
-	buyerView.ValueBuilder().AddRefField("BuyerID", true, docName)
+	buyerView.Key().PartKey().AddField("Height", DataKind_float32)
+	buyerView.Key().ClustCols().AddField("Buyer", DataKind_string, MaxLen(100))
+	buyerView.Value().AddRefField("BuyerID", true, docName)
 
-	buyerObj := adb.AddObject(NewQName("test", "buyer"))
+	buyerObjName := NewQName("test", "buyer")
+	buyerObj := adb.AddObject(buyerObjName)
 	buyerObj.
 		AddField("Name", DataKind_string, true).
 		AddField("Age", DataKind_int32, false).
 		AddField("isHuman", DataKind_bool, false)
 
 	newBuyerCmd := adb.AddCommand(NewQName("test", "cmdNewBuyer"))
-	newBuyerCmd.SetParam(buyerObj.QName())
+	newBuyerCmd.SetParam(buyerObjName)
 
 	appDef, err := adb.Build()
 

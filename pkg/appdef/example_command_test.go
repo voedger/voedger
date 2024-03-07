@@ -26,9 +26,9 @@ func ExampleIAppDefBuilder_AddCommand() {
 		cmd := appDef.AddCommand(cmdName)
 		cmd.SetEngine(appdef.ExtensionEngineKind_WASM)
 		cmd.
-			SetParam(parName).(appdef.ICommandBuilder).
-			SetUnloggedParam(unlName).
+			SetParam(parName).
 			SetResult(resName)
+		cmd.SetUnloggedParam(unlName)
 
 		_ = appDef.AddObject(parName)
 		_ = appDef.AddObject(unlName)

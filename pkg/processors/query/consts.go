@@ -21,6 +21,8 @@ const (
 )
 
 var (
-	qNamePosDepartment = appdef.NewQName("pos", "Department")
-	qNameXLowerCase    = appdef.NewQName("x", "lower_case")
+	// test only constants
+	qNamePosDepartment       = appdef.NewQName("pos", "Department")
+	qNamePosDepartmentResult = appdef.NewQName("pos", "DepartmentResult")
+	qNameXLowerCase          = appdef.NewQName("x", "lower_case")
 )

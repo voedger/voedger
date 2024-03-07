@@ -664,9 +664,8 @@ func Test_IObjectBuilderBuild(t *testing.T) {
 
 	t.Run("must be ok to build test application", func(t *testing.T) {
 		oDoc := appDef.AddODoc(docName)
-		oDoc.
-			AddField("RequiredField", appdef.DataKind_string, true).(appdef.IODocBuilder).
-			AddContainer("child", recName, 0, appdef.Occurs_Unbounded)
+		oDoc.AddField("RequiredField", appdef.DataKind_string, true)
+		oDoc.AddContainer("child", recName, 0, appdef.Occurs_Unbounded)
 		_ = appDef.AddORecord(recName)
 	})
 

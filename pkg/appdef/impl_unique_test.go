@@ -45,7 +45,6 @@ func Test_def_AddUnique(t *testing.T) {
 		require.Equal(2, doc.UniqueCount())
 
 		u := doc.UniqueByName(un2)
-		require.Equal(doc.QName(), u.ParentStructure().QName())
 		require.Len(u.Fields(), 3)
 		require.Equal("lastName", u.Fields()[0].Name())
 		require.Equal("name", u.Fields()[1].Name())
@@ -83,11 +82,11 @@ func Test_def_AddUnique(t *testing.T) {
 		}, "panics if invalid unique name")
 
 		require.Panics(func() {
-			doc.AddUnique(NewQName("test", "user$uniqueFullName"), []string{"name", "surname", "lastName"})
+			doc.AddUnique(un1, []string{"name", "surname", "lastName"})
 		}, "panics unique with name is already exists")
 
 		require.Panics(func() {
-			doc.AddUnique(doc.QName(), []string{"name", "surname", "lastName"})
+			doc.AddUnique(qName, []string{"name", "surname", "lastName"})
 		}, "panics if type with unique name is exists")
 
 		require.Panics(func() {
