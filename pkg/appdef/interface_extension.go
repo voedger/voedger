@@ -54,4 +54,10 @@ type IExtensionBuilder interface {
 
 	// Sets engine.
 	SetEngine(ExtensionEngineKind) IExtensionBuilder
+
+	// Returns states builder.
+	States() IStoragesBuilder
+
+	// Returns intents builder.
+	Intents() IStoragesBuilder
 }
