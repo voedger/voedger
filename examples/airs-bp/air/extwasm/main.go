@@ -44,7 +44,7 @@ func Pbill() {
 	{
 		nextNumberValue, nextNumberOk := orm.Package_air.WSingleton_NextNumbers.QueryValue()
 		var nextNumber int32
-		var intent *orm.Intent_WSingleton_air_NextNumbers
+		var intent orm.Intent_WSingleton_air_NextNumbers
 		if !nextNumberOk {
 			nextNumber = 1
 			intent = orm.Package_air.WSingleton_NextNumbers.NewIntent()
