@@ -252,7 +252,7 @@ func GetQualifiedPackageName(pkgName Ident, schema *SchemaAST) string {
 	suffix := fmt.Sprintf("/%s", pkgName)
 	for i := 0; i < len(schema.Imports); i++ {
 		imp := schema.Imports[i]
-		if strings.HasSuffix(imp.Name, suffix) {
+		if strings.HasSuffix(imp.Name, suffix) || imp.Name == string(pkgName) {
 			return imp.Name
 		}
 	}

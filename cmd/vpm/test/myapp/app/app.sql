@@ -2,8 +2,14 @@
 -- @author Alisher Nurmanov
 
 IMPORT SCHEMA 'mypkg1';
+IMPORT SCHEMA 'mypkg2';
 
-TABLE MyTable2 INHERITS ODoc (
-    myfield2 int32 NOT NULL,
+APPLICATION APP(
+	USE mypkg1;
+	USE mypkg2;
+);
+
+TABLE MyTable INHERITS ODoc (
+    myfield2 ref(mypkg2.MyTable2) NOT NULL,
     myfield3 ref(mypkg1.MyTable1) NOT NULL
 );
