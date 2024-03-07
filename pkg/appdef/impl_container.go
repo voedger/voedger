@@ -40,13 +40,13 @@ func (cont *container) Type() IType {
 	return cont.typ
 }
 
-func (cont *container) MaxOccurs() Occurs { return cont.maxOccurs }
+func (cont container) MaxOccurs() Occurs { return cont.maxOccurs }
 
-func (cont *container) MinOccurs() Occurs { return cont.minOccurs }
+func (cont container) MinOccurs() Occurs { return cont.minOccurs }
 
-func (cont *container) Name() string { return cont.name }
+func (cont container) Name() string { return cont.name }
 
-func (cont *container) QName() QName { return cont.qName }
+func (cont container) QName() QName { return cont.qName }
 
 func (cont container) String() string {
 	return fmt.Sprintf("container «%s: %v»", cont.Name(), cont.QName())
@@ -62,27 +62,27 @@ type containers struct {
 }
 
 func makeContainers(app *appDef, typeKind TypeKind) containers {
-	c := containers{
+	cc := containers{
 		app:               app,
 		typeKind:          typeKind,
 		containers:        make(map[string]*container),
 		containersOrdered: make([]IContainer, 0)}
-	return c
+	return cc
 }
 
-func (c containers) Container(name string) IContainer {
-	if c, ok := c.containers[name]; ok {
+func (cc containers) Container(name string) IContainer {
+	if c, ok := cc.containers[name]; ok {
 		return c
 	}
 	return nil
 }
 
-func (c containers) ContainerCount() int {
-	return len(c.containersOrdered)
+func (cc containers) ContainerCount() int {
+	return len(cc.containersOrdered)
 }
 
-func (c containers) Containers() []IContainer {
-	return c.containersOrdered
+func (cc containers) Containers() []IContainer {
+	return cc.containersOrdered
 }
 
 func (cc *containers) addContainer(name string, contType QName, minOccurs, maxOccurs Occurs, comment ...string) {

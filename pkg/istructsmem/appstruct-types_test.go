@@ -46,7 +46,7 @@ func TestAppConfigsType_AddConfig(t *testing.T) {
 			appStr, err := appStructs.AppStructs(app)
 			require.NoError(err)
 			require.NotNil(appStr)
-			t.Run("should be ok to retrive changed doc from AppStructs", func(t *testing.T) {
+			t.Run("should be ok to retrieve changed doc from AppStructs", func(t *testing.T) {
 				doc := appStr.AppDef().CDoc(docName)
 				require.Equal(docName, doc.QName())
 				require.True(doc.Singleton())
