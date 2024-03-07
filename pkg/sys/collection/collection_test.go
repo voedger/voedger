@@ -66,7 +66,7 @@ func buildAppParts(t *testing.T) (appParts appparts.IAppPartitions, cleanup func
 		prj.SetSync(true).
 			Events().Add(istructs.QNameCRecord, appdef.ProjectorEventKind_Insert, appdef.ProjectorEventKind_Update)
 		prj.Intents().
-			Add(state.View, QNameCollectionView)
+			Add(state.View, QNameCollectionView) // this view will be added below
 	}
 	{
 		// fill IAppDef with funcs. That is done here manually because we o not use sys.sql here
@@ -177,10 +177,6 @@ func buildAppParts(t *testing.T) (appParts appparts.IAppPartitions, cleanup func
 		wsBuilder.AddType(test.tableArticlePriceExceptions)
 	}
 
-	// TODO: remove it after https://github.com/voedger/voedger/issues/56
-	appDef, err := adb.Build()
-	require.NoError(err)
-
 	// kept here to keep local tests working without sql
 	projectors.ProvideViewDef(adb, QNameCollectionView, func(b appdef.IViewBuilder) {
 		b.Key().PartKey().AddField(Field_PartKey, appdef.DataKind_int32)
@@ -192,6 +188,10 @@ func buildAppParts(t *testing.T) (appParts appparts.IAppPartitions, cleanup func
 			AddField(Field_Record, appdef.DataKind_Record, true).
 			AddField(state.ColOffset, appdef.DataKind_int64, true)
 	})
+
+	// TODO: remove it after https://github.com/voedger/voedger/issues/56
+	appDef, err := adb.Build()
+	require.NoError(err)
 
 	provider := istructsmem.Provide(cfgs, iratesce.TestBucketsFactory,
 		payloads.ProvideIAppTokensFactory(itokensjwt.TestTokensJWT()), asp)
