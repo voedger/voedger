@@ -74,7 +74,7 @@ flowchart TD
   classDef H fill:#C9E7B7
 ```
 
-## ControlLoop_AppPartition
+## apppartsctl.ControlLoop
 
 ```mermaid
 flowchart TD
@@ -88,20 +88,18 @@ flowchart TD
   VVM:::G
   subgraph VVM
     ControlLoop_AppPartition:::G
-    subgraph ControlLoop_AppPartition
+    subgraph ControlLoop_AppPartition["apppartsctl.ControlLoop"]
       AppPartition_SPReader:::S
       DownloadImage:::S
       ParseAppSchemaFiles:::S
-      BuildAppPartition:::S
       DownloadImage --> ParseAppSchemaFiles
-      ParseAppSchemaFiles --> BuildAppPartition     
     end
     AppSchemaFiles[(folder.AppSchemaFiles)]:::H
     AppDef[(AppDef)]:::S
     AppPartitions[(AppPartitions)]:::S
     AppPartition:::S
       Cache([Cache]):::S
-      AppSchema([AppSchema]):::S
+      AppSchema(["AppDef"]):::S
       Version([Version]):::S
     ExtEngine:::S
       
@@ -109,7 +107,7 @@ flowchart TD
     Processors[[Processors]]:::S
 
 
-    ExtensionEngineFactories:::S
+    ExtensionEngineFactories["iextengine.IExtensionEngineFactories"]:::S
 
   end
 
@@ -124,9 +122,6 @@ flowchart TD
   DownloadImage -.-> |*.sql etc.| AppSchemaFiles
   AppSchemaFiles -.-> ParseAppSchemaFiles
   ParseAppSchemaFiles -.-> AppDef
-  AppDef -.-> BuildAppPartition
-  ExtensionEngineFactories -.-> BuildAppPartition
-  BuildAppPartition -.-> AppPartitions
 
   AppPartitions --x AppPartition
   AppPartition --- Cache
@@ -136,6 +131,8 @@ flowchart TD
 
   AppPartitions -.-> IAppStructsProvider
   IAppStructsProvider -.-> Processors
+  ExtensionEngineFactories -.-> AppPartitions
+  AppDef -.-> AppPartitions
   
 
   classDef G fill:#FFFFFF,stroke:#000000, stroke-width:1px, stroke-dasharray: 5 5
