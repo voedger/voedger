@@ -431,6 +431,12 @@ func (c *buildContext) commands() error {
 			} else {
 				b.SetEngine(appdef.ExtensionEngineKind_BuiltIn)
 			}
+			for _, intent := range cmd.Intents {
+				b.Intents().Add(intent.storageQName, intent.entityQNames...)
+			}
+			for _, state := range cmd.State {
+				b.States().Add(state.storageQName, state.entityQNames...)
+			}
 		})
 	}
 	return nil
@@ -454,6 +460,11 @@ func (c *buildContext) queries() error {
 			} else {
 				b.SetEngine(appdef.ExtensionEngineKind_BuiltIn)
 			}
+
+			for _, state := range q.State {
+				b.States().Add(state.storageQName, state.entityQNames...)
+			}
+
 		})
 	}
 	return nil
