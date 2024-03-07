@@ -85,12 +85,6 @@ type IProjectorBuilder interface {
 	// Events builder.
 	Events() IProjectorEventsBuilder
 
-	// Returns projector states builder.
-	States() IStoragesBuilder
-
-	// Returns projector intents builder.
-	Intents() IStoragesBuilder
-
 	// Sets is projector is able to handle `sys.Error` events.
 	SetWantErrors() IProjectorBuilder
 }
