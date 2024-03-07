@@ -21,81 +21,89 @@ import (
 var expectedJson string
 
 func TestBasicUsage(t *testing.T) {
-	appDef := appdef.New()
+	appDef := func() appdef.IAppDef {
+		adb := appdef.New()
 
-	appDef.AddPackage("test", "test/path")
+		adb.AddPackage("test", "test/path")
 
-	numName := appdef.NewQName("test", "number")
-	strName := appdef.NewQName("test", "string")
+		numName := appdef.NewQName("test", "number")
+		strName := appdef.NewQName("test", "string")
 
-	sysRecords := appdef.NewQName("sys", "records")
-	sysViews := appdef.NewQName("sys", "views")
+		sysRecords := appdef.NewQName("sys", "records")
+		sysViews := appdef.NewQName("sys", "views")
 
-	docName, recName := appdef.NewQName("test", "doc"), appdef.NewQName("test", "rec")
+		docName, recName := appdef.NewQName("test", "doc"), appdef.NewQName("test", "rec")
 
-	n := appDef.AddData(numName, appdef.DataKind_int64, appdef.NullQName, appdef.MinIncl(1))
-	n.SetComment("natural (positive) integer")
+		n := adb.AddData(numName, appdef.DataKind_int64, appdef.NullQName, appdef.MinIncl(1))
+		n.SetComment("natural (positive) integer")
 
-	s := appDef.AddData(strName, appdef.DataKind_string, appdef.NullQName)
-	s.AddConstraints(appdef.MinLen(1), appdef.MaxLen(100), appdef.Pattern(`^\w+$`, "only word characters allowed"))
+		s := adb.AddData(strName, appdef.DataKind_string, appdef.NullQName)
+		s.AddConstraints(appdef.MinLen(1), appdef.MaxLen(100), appdef.Pattern(`^\w+$`, "only word characters allowed"))
 
-	doc := appDef.AddCDoc(docName)
-	doc.SetSingleton()
-	doc.
-		AddField("f1", appdef.DataKind_int64, true).
-		SetFieldComment("f1", "field comment").
-		AddField("f2", appdef.DataKind_string, false, appdef.MinLen(4), appdef.MaxLen(4), appdef.Pattern(`^\w+$`)).
-		AddDataField("numField", numName, false).
-		AddRefField("mainChild", false, recName).(appdef.ICDocBuilder).
-		AddContainer("rec", recName, 0, 100, "container comment").(appdef.ICDocBuilder).
-		AddUnique(appdef.UniqueQName(docName, "unique1"), []string{"f1", "f2"})
-	doc.SetComment(`comment 1`, `comment 2`)
+		doc := adb.AddCDoc(docName)
+		doc.SetSingleton()
+		doc.
+			AddField("f1", appdef.DataKind_int64, true).
+			SetFieldComment("f1", "field comment").
+			AddField("f2", appdef.DataKind_string, false, appdef.MinLen(4), appdef.MaxLen(4), appdef.Pattern(`^\w+$`)).
+			AddDataField("numField", numName, false).
+			AddRefField("mainChild", false, recName)
+		doc.AddContainer("rec", recName, 0, 100, "container comment")
+		doc.AddUnique(appdef.UniqueQName(docName, "unique1"), []string{"f1", "f2"})
+		doc.SetComment(`comment 1`, `comment 2`)
 
-	rec := appDef.AddCRecord(recName)
-	rec.
-		AddField("f1", appdef.DataKind_int64, true).
-		AddField("f2", appdef.DataKind_string, false).
-		AddField("phone", appdef.DataKind_string, true, appdef.MinLen(1), appdef.MaxLen(25)).
-		SetFieldVerify("phone", appdef.VerificationKind_Any...).(appdef.ICRecordBuilder).
-		SetUniqueField("phone").
-		AddUnique(appdef.UniqueQName(recName, "uniq1"), []string{"f1"})
+		rec := adb.AddCRecord(recName)
+		rec.
+			AddField("f1", appdef.DataKind_int64, true).
+			AddField("f2", appdef.DataKind_string, false).
+			AddField("phone", appdef.DataKind_string, true, appdef.MinLen(1), appdef.MaxLen(25)).
+			SetFieldVerify("phone", appdef.VerificationKind_Any...)
+		rec.
+			SetUniqueField("phone").
+			AddUnique(appdef.UniqueQName(recName, "uniq1"), []string{"f1"})
 
-	viewName := appdef.NewQName("test", "view")
-	view := appDef.AddView(viewName)
-	view.Key().PartKey().
-		AddField("pk_1", appdef.DataKind_int64)
-	view.Key().ClustCols().
-		AddField("cc_1", appdef.DataKind_string, appdef.MaxLen(100))
-	view.Value().
-		AddDataField("vv_code", strName, true).
-		AddRefField("vv_1", true, docName)
+		viewName := appdef.NewQName("test", "view")
+		view := adb.AddView(viewName)
+		view.Key().PartKey().
+			AddField("pk_1", appdef.DataKind_int64)
+		view.Key().ClustCols().
+			AddField("cc_1", appdef.DataKind_string, appdef.MaxLen(100))
+		view.Value().
+			AddDataField("vv_code", strName, true).
+			AddRefField("vv_1", true, docName)
 
-	objName := appdef.NewQName("test", "obj")
-	obj := appDef.AddObject(objName)
-	obj.AddField("f1", appdef.DataKind_string, true)
+		objName := appdef.NewQName("test", "obj")
+		obj := adb.AddObject(objName)
+		obj.AddField("f1", appdef.DataKind_string, true)
 
-	cmdName := appdef.NewQName("test", "cmd")
-	appDef.AddCommand(cmdName).
-		SetUnloggedParam(objName).
-		SetParam(objName).
-		SetEngine(appdef.ExtensionEngineKind_WASM)
+		cmdName := appdef.NewQName("test", "cmd")
+		adb.AddCommand(cmdName).
+			SetUnloggedParam(objName).
+			SetParam(objName).
+			SetEngine(appdef.ExtensionEngineKind_WASM)
 
-	appDef.AddQuery(appdef.NewQName("test", "query")).
-		SetParam(objName).
-		SetResult(appdef.QNameANY)
+		adb.AddQuery(appdef.NewQName("test", "query")).
+			SetParam(objName).
+			SetResult(appdef.QNameANY)
 
-	prj := appDef.AddProjector(appdef.NewQName("test", "projector"))
-	prj.
-		SetWantErrors().
-		SetEngine(appdef.ExtensionEngineKind_WASM)
-	prj.Events().
-		Add(recName, appdef.ProjectorEventKind_AnyChanges...).SetComment(recName, "run projector every time when «test.rec» is changed").
-		Add(cmdName).SetComment(cmdName, "run projector every time when «test.cmd» command is executed").
-		Add(objName).SetComment(objName, "run projector every time when any command with «test.obj» argument is executed")
-	prj.States().
-		Add(sysRecords, docName, recName).SetComment(sysRecords, "needs to read «test.doc» and «test.rec» from «sys.records» storage")
-	prj.Intents().
-		Add(sysViews, viewName).SetComment(sysViews, "needs to update «test.view» from «sys.views» storage")
+		prj := adb.AddProjector(appdef.NewQName("test", "projector"))
+		prj.
+			SetWantErrors().
+			SetEngine(appdef.ExtensionEngineKind_WASM)
+		prj.Events().
+			Add(recName, appdef.ProjectorEventKind_AnyChanges...).SetComment(recName, "run projector every time when «test.rec» is changed").
+			Add(cmdName).SetComment(cmdName, "run projector every time when «test.cmd» command is executed").
+			Add(objName).SetComment(objName, "run projector every time when any command with «test.obj» argument is executed")
+		prj.States().
+			Add(sysRecords, docName, recName).SetComment(sysRecords, "needs to read «test.doc» and «test.rec» from «sys.records» storage")
+		prj.Intents().
+			Add(sysViews, viewName).SetComment(sysViews, "needs to update «test.view» from «sys.views» storage")
+
+		app, err := adb.Build()
+		require.NoError(t, err)
+
+		return app
+	}()
 
 	res := &mockResources{}
 	res.
