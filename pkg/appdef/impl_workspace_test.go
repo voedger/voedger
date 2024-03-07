@@ -32,6 +32,9 @@ func Test_AppDef_AddWorkspace(t *testing.T) {
 			ws.AddType(objName)
 		})
 
+		require.NotNil(ws.Workspace(), "should be ok to get workspace definition before build")
+		require.Equal(ws.Workspace().Descriptor(), descName, "should be ok to get workspace descriptor before build")
+
 		a, err := appDef.Build()
 		require.NoError(err)
 

@@ -75,13 +75,24 @@ func TestBasicUsage_RowsProcessorFactory(t *testing.T) {
 		On("MustExist", mock.Anything).Return(department("Alcohol drinks")).Once().
 		On("MustExist", mock.Anything).Return(department("Sweet")).Once()
 
-	appDef := appdef.New()
-	departmentObj := appDef.AddObject(qNamePosDepartment)
-	departmentObj.AddField("name", appdef.DataKind_string, false)
-	resultMeta := appDef.AddObject(appdef.NewQName("pos", "DepartmentResult"))
-	resultMeta.
-		AddField("id", appdef.DataKind_int64, true).
-		AddField("name", appdef.DataKind_string, false)
+	var (
+		appDef     appdef.IAppDef
+		resultMeta appdef.IObject
+	)
+	t.Run(" should be ok to build appDef and resultMeta", func(t *testing.T) {
+		adb := appdef.New()
+		adb.AddObject(qNamePosDepartment).
+			AddField("name", appdef.DataKind_string, false)
+		resBld := adb.AddObject(qNamePosDepartmentResult)
+		resBld.
+			AddField("id", appdef.DataKind_int64, true).
+			AddField("name", appdef.DataKind_string, false)
+		app, err := adb.Build()
+		require.NoError(err)
+
+		appDef = app
+		resultMeta = app.Object(qNamePosDepartmentResult)
+	})
 
 	params := queryParams{
 		elements: []IElement{
@@ -390,8 +401,19 @@ func TestBasicUsage_ServiceFactory(t *testing.T) {
 func TestRawMode(t *testing.T) {
 	require := require.New(t)
 
-	appDef := appdef.New()
-	resultMeta := appDef.AddObject(istructs.QNameRaw)
+	var (
+		appDef     appdef.IAppDef
+		resultMeta appdef.IObject
+	)
+	t.Run(" should be ok to build appDef and resultMeta", func(t *testing.T) {
+		adb := appdef.New()
+		adb.AddObject(istructs.QNameRaw)
+		app, err := adb.Build()
+		require.NoError(err)
+
+		appDef = app
+		resultMeta = app.Object(istructs.QNameRaw)
+	})
 
 	result := ""
 	rs := testResultSenderClosable{
@@ -1079,7 +1101,7 @@ func TestRateLimiter(t *testing.T) {
 				AddField("fld", appdef.DataKind_string, false)
 			qry := appDef.AddQuery(qName)
 			qry.SetParam(qNameMyFuncParams).SetResult(qNameMyFuncResults)
-			wsb.AddType(qry.QName())
+			wsb.AddType(qName)
 		},
 		func(cfg *istructsmem.AppConfigType) {
 			myFunc := istructsmem.NewQueryFunction(qName, istructsmem.NullQueryExec)

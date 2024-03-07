@@ -168,12 +168,12 @@ func buildAppParts(t *testing.T) (appParts appparts.IAppPartitions, cleanup func
 
 	// kept here to keep local tests working without sql
 	projectors.ProvideViewDef(adb, QNameCollectionView, func(b appdef.IViewBuilder) {
-		b.KeyBuilder().PartKeyBuilder().AddField(Field_PartKey, appdef.DataKind_int32)
-		b.KeyBuilder().ClustColsBuilder().
+		b.Key().PartKey().AddField(Field_PartKey, appdef.DataKind_int32)
+		b.Key().ClustCols().
 			AddField(Field_DocQName, appdef.DataKind_QName).
 			AddRefField(field_DocID).
 			AddRefField(field_ElementID)
-		b.ValueBuilder().
+		b.Value().
 			AddField(Field_Record, appdef.DataKind_Record, true).
 			AddField(state.ColOffset, appdef.DataKind_int64, true)
 	})

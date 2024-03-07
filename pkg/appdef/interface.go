@@ -286,6 +286,12 @@ type IAppDefBuilder interface {
 	//   - if type with name already exists.
 	AddWorkspace(QName) IWorkspaceBuilder
 
+	// Returns application definition while building.
+	//
+	// Can be called before or after all entities added.
+	// Does not validate application definition, some types may be invalid.
+	AppDef() IAppDef
+
 	// Builds application definition.
 	//
 	// Validates and returns builded application type or error.

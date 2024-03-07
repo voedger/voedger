@@ -37,4 +37,10 @@ type IWorkspaceBuilder interface {
 	//	- if name is not defined for application
 	//	- if name is not CDoc
 	SetDescriptor(QName) IWorkspaceBuilder
+
+	// Returns workspace definition while building.
+	//
+	// Can be called before or after all workspace entities added.
+	// Does not validate workspace definition, may be invalid.
+	Workspace() IWorkspace
 }

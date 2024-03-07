@@ -123,12 +123,14 @@ func newWorkspaceBuilder(workspace *workspace) *workspaceBuilder {
 	}
 }
 
-func (ws *workspaceBuilder) AddType(name QName) IWorkspaceBuilder {
-	ws.workspace.addType(name)
-	return ws
+func (wb *workspaceBuilder) AddType(name QName) IWorkspaceBuilder {
+	wb.workspace.addType(name)
+	return wb
 }
 
-func (ws *workspaceBuilder) SetDescriptor(q QName) IWorkspaceBuilder {
-	ws.workspace.setDescriptor(q)
-	return ws
+func (wb *workspaceBuilder) SetDescriptor(q QName) IWorkspaceBuilder {
+	wb.workspace.setDescriptor(q)
+	return wb
 }
+
+func (wb *workspaceBuilder) Workspace() IWorkspace { return wb.workspace }

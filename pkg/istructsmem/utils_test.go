@@ -206,9 +206,16 @@ func TestObjectFillAndGet(t *testing.T) {
 func TestIBucketsFromIAppStructs(t *testing.T) {
 	require := require.New(t)
 
-	cfgs := AppConfigsType{}
-	cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, appdef.New())
 	funcQName := appdef.NewQName("my", "func")
+
+	cfgs := AppConfigsType{}
+	cfg := cfgs.AddConfig(istructs.AppQName_test1_app1,
+		func() appdef.IAppDefBuilder {
+			adb := appdef.New()
+			adb.AddCommand(funcQName)
+			return adb
+		}())
+
 	rlExpected := istructs.RateLimit{
 		Period:                1,
 		MaxAllowedPerDuration: 2,

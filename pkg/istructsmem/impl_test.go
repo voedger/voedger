@@ -46,7 +46,10 @@ func TestBasicUsage(t *testing.T) {
 	appConfigs := func() AppConfigsType {
 		bld := appdef.New()
 
-		saleParamsDoc := bld.AddODoc(appdef.NewQName("test", "SaleParams"))
+		saleParamsName := appdef.NewQName("test", "SaleParams")
+		saleSecureParamsName := appdef.NewQName("test", "saleSecureArgs")
+
+		saleParamsDoc := bld.AddODoc(saleParamsName)
 		saleParamsDoc.
 			AddField("Buyer", appdef.DataKind_string, true).
 			AddField("Age", appdef.DataKind_int32, false).
@@ -65,7 +68,7 @@ func TestBasicUsage(t *testing.T) {
 			AddField("Code", appdef.DataKind_int64, true).
 			AddField("Weight", appdef.DataKind_float64, false)
 
-		saleSecureParamsObj := bld.AddObject(appdef.NewQName("test", "saleSecureArgs"))
+		saleSecureParamsObj := bld.AddObject(saleSecureParamsName)
 		saleSecureParamsObj.
 			AddField("password", appdef.DataKind_string, true)
 
@@ -78,7 +81,9 @@ func TestBasicUsage(t *testing.T) {
 			AddField("Photo", appdef.DataKind_bytes, false)
 
 		qNameCmdTestSale := appdef.NewQName("test", "Sale")
-		bld.AddCommand(qNameCmdTestSale).SetUnloggedParam(saleSecureParamsObj.QName()).SetParam(saleParamsDoc.QName())
+		bld.AddCommand(qNameCmdTestSale).
+			SetUnloggedParam(saleSecureParamsName).
+			SetParam(saleParamsName)
 
 		cfgs := make(AppConfigsType, 1)
 		cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, bld)
@@ -193,12 +198,12 @@ func TestBasicUsage_ViewRecords(t *testing.T) {
 	appConfigs := func() AppConfigsType {
 		bld := appdef.New()
 		view := bld.AddView(appdef.NewQName("test", "viewDrinks"))
-		view.KeyBuilder().PartKeyBuilder().AddField("partitionKey1", appdef.DataKind_int64)
-		view.KeyBuilder().ClustColsBuilder().
+		view.Key().PartKey().AddField("partitionKey1", appdef.DataKind_int64)
+		view.Key().ClustCols().
 			AddField("clusteringColumn1", appdef.DataKind_int64).
 			AddField("clusteringColumn2", appdef.DataKind_bool).
 			AddField("clusteringColumn3", appdef.DataKind_string, appdef.MaxLen(100))
-		view.ValueBuilder().
+		view.Value().
 			AddField("id", appdef.DataKind_int64, true).
 			AddField("name", appdef.DataKind_string, true).
 			AddField("active", appdef.DataKind_bool, true)
@@ -465,10 +470,16 @@ func Test_BasicUsageDescribePackages(t *testing.T) {
 	app := func() istructs.IAppStructs {
 		appDef := appdef.New()
 
-		rec := appDef.AddCRecord(appdef.NewQName("types", "CRec"))
+		docQName := appdef.NewQName("types", "CDoc")
+		recQName := appdef.NewQName("types", "CRec")
+		viewQName := appdef.NewQName("types", "View")
+		cmdQName := appdef.NewQName("commands", "cmd")
+		queryQName := appdef.NewQName("commands", "query")
+		argQName := appdef.NewQName("types", "Arg")
+
+		rec := appDef.AddCRecord(recQName)
 		rec.AddField("int", appdef.DataKind_int64, false)
 
-		docQName := appdef.NewQName("types", "CDoc")
 		doc := appDef.AddCDoc(docQName)
 		doc.AddField("str", appdef.DataKind_string, true)
 		doc.AddField("fld", appdef.DataKind_int32, true)
@@ -476,33 +487,34 @@ func Test_BasicUsageDescribePackages(t *testing.T) {
 		un1 := appdef.NewQName(appdef.SysPackage, "uniq1")
 		doc.AddUnique(un1, []string{"str"})
 
-		doc.AddContainer("rec", rec.QName(), 0, appdef.Occurs_Unbounded)
+		doc.AddContainer("rec", recQName, 0, appdef.Occurs_Unbounded)
 
-		viewName := appdef.NewQName("types", "View")
-		view := appDef.AddView(viewName)
-		view.KeyBuilder().PartKeyBuilder().AddField("int", appdef.DataKind_int64)
-		view.KeyBuilder().ClustColsBuilder().AddField("str", appdef.DataKind_string, appdef.MaxLen(100))
-		view.ValueBuilder().AddField("bool", appdef.DataKind_bool, false)
+		view := appDef.AddView(viewQName)
+		view.Key().PartKey().AddField("int", appdef.DataKind_int64)
+		view.Key().ClustCols().AddField("str", appdef.DataKind_string, appdef.MaxLen(100))
+		view.Value().AddField("bool", appdef.DataKind_bool, false)
 
-		arg := appDef.AddObject(appdef.NewQName("types", "Arg"))
+		arg := appDef.AddObject(argQName)
 		arg.AddField("bool", appdef.DataKind_bool, false)
 
-		qNameCmd := appdef.NewQName("commands", "cmd")
-		qNameQry := appdef.NewQName("commands", "query")
-		appDef.AddCommand(qNameCmd).SetParam(arg.QName()).SetResult(doc.QName())
-		appDef.AddQuery(qNameQry).SetParam(arg.QName()).SetResult(appdef.QNameANY)
+		appDef.AddCommand(cmdQName).
+			SetParam(argQName).
+			SetResult(docQName)
+		appDef.AddQuery(queryQName).
+			SetParam(argQName).
+			SetResult(appdef.QNameANY)
 
 		cfgs := make(AppConfigsType)
 		cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, appDef)
 
-		cfg.Resources.Add(NewCommandFunction(qNameCmd, NullCommandExec))
-		cfg.Resources.Add(NewQueryFunction(qNameQry, NullQueryExec))
+		cfg.Resources.Add(NewCommandFunction(cmdQName, NullCommandExec))
+		cfg.Resources.Add(NewQueryFunction(queryQName, NullQueryExec))
 
-		cfg.FunctionRateLimits.AddAppLimit(qNameQry, istructs.RateLimit{
+		cfg.FunctionRateLimits.AddAppLimit(queryQName, istructs.RateLimit{
 			Period:                1,
 			MaxAllowedPerDuration: 2,
 		})
-		cfg.FunctionRateLimits.AddWorkspaceLimit(qNameQry, istructs.RateLimit{
+		cfg.FunctionRateLimits.AddWorkspaceLimit(queryQName, istructs.RateLimit{
 			Period:                3,
 			MaxAllowedPerDuration: 4,
 		})

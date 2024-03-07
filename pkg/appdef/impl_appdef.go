@@ -427,6 +427,8 @@ func (ab *appDefBuilder) AddWRecord(name QName) IWRecordBuilder { return ab.app.
 
 func (ab *appDefBuilder) AddWorkspace(name QName) IWorkspaceBuilder { return ab.app.addWorkspace(name) }
 
+func (ab appDefBuilder) AppDef() IAppDef { return ab.app }
+
 func (ab *appDefBuilder) Build() (IAppDef, error) {
 	if err := ab.app.build(); err != nil {
 		return nil, err

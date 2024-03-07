@@ -368,13 +368,13 @@ func test() *testDataType {
 
 		{
 			view := appDef.AddView(testData.testViewRecord.name)
-			view.KeyBuilder().PartKeyBuilder().
+			view.Key().PartKey().
 				AddField(testData.testViewRecord.partFields.partition, appdef.DataKind_int32).
 				AddField(testData.testViewRecord.partFields.workspace, appdef.DataKind_int64)
-			view.KeyBuilder().ClustColsBuilder().
+			view.Key().ClustCols().
 				AddField(testData.testViewRecord.ccolsFields.device, appdef.DataKind_int32).
 				AddField(testData.testViewRecord.ccolsFields.sorter, appdef.DataKind_string, appdef.MaxLen(100))
-			view.ValueBuilder().
+			view.Value().
 				AddField(testData.testViewRecord.valueFields.buyer, appdef.DataKind_string, true).
 				AddField(testData.testViewRecord.valueFields.age, appdef.DataKind_int32, false).
 				AddField(testData.testViewRecord.valueFields.heights, appdef.DataKind_float32, false).
