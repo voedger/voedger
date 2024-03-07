@@ -34,7 +34,6 @@ const (
 	NodeNameUniques         = "Uniques"
 	NodeNameUniqueFields    = "UniqueFields"
 	NodeNameAbstract        = "Abstract"
-	NodeNameParent          = "Parent"
 	NodeNameContainers      = "Containers"
 	NodeNameAppDef          = "AppDef"
 	NodeNameDescriptor      = "Descriptor"
@@ -45,4 +44,5 @@ const (
 	NodeNameQueryArgs       = "QueryArgs"
 	NodeNameQueryResult     = "QueryResult"
 	NodeNameUnloggedArgs    = "UnloggedArgs"
+	NodeNamePackages        = "Packages"
 )
