@@ -14,7 +14,6 @@ type IGDoc interface {
 }
 
 type IGDocBuilder interface {
-	IGDoc
 	IDocBuilder
 }
 
@@ -27,6 +26,5 @@ type IGRecord interface {
 }
 
 type IGRecordBuilder interface {
-	IGRecord
 	IContainedRecordBuilder
 }

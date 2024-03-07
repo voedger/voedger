@@ -32,6 +32,15 @@ var QNameANY = NewQName(SysPackage, AnyName)
 // Maximum fields per one structured type
 const MaxTypeFieldCount = 65536
 
+// System field names
+const (
+	SystemField_ID        = SystemPackagePrefix + "ID"
+	SystemField_ParentID  = SystemPackagePrefix + "ParentID"
+	SystemField_IsActive  = SystemPackagePrefix + "IsActive"
+	SystemField_Container = SystemPackagePrefix + "Container"
+	SystemField_QName     = SystemPackagePrefix + "QName"
+)
+
 // Maximum containers per one structured type
 const MaxTypeContainerCount = 65536
 

@@ -61,40 +61,57 @@ func buildAppParts(t *testing.T) (appParts appparts.IAppPartitions, cleanup func
 		adb.AddCRecord(istructs.QNameCRecord)
 		adb.AddORecord(istructs.QNameORecord)
 		adb.AddWRecord(istructs.QNameWRecord)
-		adb.AddProjector(QNameProjectorCollection).
-			AddEvent(istructs.QNameCRecord, appdef.ProjectorEventKind_Insert, appdef.ProjectorEventKind_Update).
-			AddIntent(state.View, QNameCollectionView).
-			SetSync(true)
+
+		prj := adb.AddProjector(QNameProjectorCollection)
+		prj.SetSync(true).
+			Events().Add(istructs.QNameCRecord, appdef.ProjectorEventKind_Insert, appdef.ProjectorEventKind_Update)
+		prj.Intents().
+			Add(state.View, QNameCollectionView) // this view will be added below
 	}
 	{
 		// fill IAppDef with funcs. That is done here manually because we o not use sys.sql here
 		qNameCollectionParams := appdef.NewQName(appdef.SysPackage, "CollectionParams")
 
 		// will add func definitions to AppDef manually because local test does not use sql. In runtime these definitions will come from sys.sql
+		adb.AddObject(qNameCollectionParams).
+			AddField(field_Schema, appdef.DataKind_string, true).
+			AddField(field_ID, appdef.DataKind_RecordID, false)
+
 		adb.AddQuery(qNameQueryCollection).
-			SetParam(adb.AddObject(qNameCollectionParams).
-				AddField(field_Schema, appdef.DataKind_string, true).
-				AddField(field_ID, appdef.DataKind_RecordID, false).(appdef.IType).QName()).
+			SetParam(qNameCollectionParams).
 			SetResult(appdef.QNameANY)
 
+		qNameGetCDocParams := appdef.NewQName(appdef.SysPackage, "GetCDocParams")
+		adb.AddObject(qNameGetCDocParams).
+			AddField(field_ID, appdef.DataKind_int64, true)
+
+		qNameGetCDocResult := appdef.NewQName(appdef.SysPackage, "GetCDocResult")
+		adb.AddObject(qNameGetCDocResult).
+			AddField("Result", appdef.DataKind_string, true)
+
 		adb.AddQuery(qNameQueryGetCDoc).
-			SetParam(adb.AddObject(appdef.NewQName(appdef.SysPackage, "GetCDocParams")).
-				AddField(field_ID, appdef.DataKind_int64, true).(appdef.IType).QName()).
-			SetResult(adb.AddObject(appdef.NewQName(appdef.SysPackage, "GetCDocResult")).
-				AddField("Result", appdef.DataKind_string, true).(appdef.IType).QName())
+			SetParam(qNameGetCDocParams).
+			SetResult(qNameGetCDocResult)
+
+		qNameStateParams := appdef.NewQName(appdef.SysPackage, "StateParams")
+		adb.AddObject(qNameStateParams).
+			AddField(field_After, appdef.DataKind_int64, true)
+
+		qNameStateResult := appdef.NewQName(appdef.SysPackage, "StateResult")
+		adb.AddObject(qNameStateResult).
+			AddField(field_State, appdef.DataKind_string, true)
 
 		adb.AddQuery(qNameQueryState).
-			SetParam(adb.AddObject(appdef.NewQName(appdef.SysPackage, "StateParams")).
-				AddField(field_After, appdef.DataKind_int64, true).(appdef.IType).QName()).
-			SetResult(adb.AddObject(appdef.NewQName(appdef.SysPackage, "StateResult")).
-				AddField(field_State, appdef.DataKind_string, true).(appdef.IType).QName())
+			SetParam(qNameStateParams).
+			SetResult(qNameStateResult)
+
 		wsDesc := adb.AddCDoc(qNameWorkspaceDescriptor) // stub to make tests work
 		wsDesc.
 			AddField("WSKind", appdef.DataKind_QName, true).
 			AddField("Status", appdef.DataKind_int32, true)
 		wsDesc.SetSingleton()
-		adb.AddCDoc(qNameTestWSKind).SetSingleton()
 
+		adb.AddCDoc(qNameTestWSKind).SetSingleton()
 	}
 	{ // "modify" function
 		adb.AddCommand(test.modifyCmdName)
@@ -160,21 +177,21 @@ func buildAppParts(t *testing.T) (appParts appparts.IAppPartitions, cleanup func
 		wsBuilder.AddType(test.tableArticlePriceExceptions)
 	}
 
-	// TODO: remove it after https://github.com/voedger/voedger/issues/56
-	appDef, err := adb.Build()
-	require.NoError(err)
-
 	// kept here to keep local tests working without sql
 	projectors.ProvideViewDef(adb, QNameCollectionView, func(b appdef.IViewBuilder) {
-		b.KeyBuilder().PartKeyBuilder().AddField(Field_PartKey, appdef.DataKind_int32)
-		b.KeyBuilder().ClustColsBuilder().
+		b.Key().PartKey().AddField(Field_PartKey, appdef.DataKind_int32)
+		b.Key().ClustCols().
 			AddField(Field_DocQName, appdef.DataKind_QName).
 			AddRefField(field_DocID).
 			AddRefField(field_ElementID)
-		b.ValueBuilder().
+		b.Value().
 			AddField(Field_Record, appdef.DataKind_Record, true).
 			AddField(state.ColOffset, appdef.DataKind_int64, true)
 	})
+
+	// TODO: remove it after https://github.com/voedger/voedger/issues/56
+	appDef, err := adb.Build()
+	require.NoError(err)
 
 	provider := istructsmem.Provide(cfgs, iratesce.TestBucketsFactory,
 		payloads.ProvideIAppTokensFactory(itokensjwt.TestTokensJWT()), asp)

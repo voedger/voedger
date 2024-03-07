@@ -37,50 +37,50 @@ func TestAddView(t *testing.T) {
 		vb.SetComment("test view")
 
 		t.Run("must be ok to add partition key fields", func(t *testing.T) {
-			vb.KeyBuilder().PartKeyBuilder().AddDataField("pkF1", numName)
-			vb.KeyBuilder().PartKeyBuilder().AddField("pkF2", DataKind_bool)
+			vb.Key().PartKey().AddDataField("pkF1", numName)
+			vb.Key().PartKey().AddField("pkF2", DataKind_bool)
 
 			t.Run("panic if field already exists in view", func(t *testing.T) {
 				require.Panics(func() {
-					vb.KeyBuilder().PartKeyBuilder().AddField("pkF1", DataKind_int64)
+					vb.Key().PartKey().AddField("pkF1", DataKind_int64)
 				})
 			})
 
 			t.Run("panic if variable length field added to pk", func(t *testing.T) {
 				require.Panics(func() {
-					vb.KeyBuilder().PartKeyBuilder().AddField("pkF3", DataKind_string)
+					vb.Key().PartKey().AddField("pkF3", DataKind_string)
 				})
 				require.Panics(func() {
-					vb.KeyBuilder().PartKeyBuilder().AddDataField("pkF3", digsData)
+					vb.Key().PartKey().AddDataField("pkF3", digsData)
 				})
 			})
 
 			t.Run("panic if unknown data type field added to pk", func(t *testing.T) {
 				require.Panics(func() {
-					vb.KeyBuilder().PartKeyBuilder().AddDataField("pkF3", NewQName("test", "unknown"))
+					vb.Key().PartKey().AddDataField("pkF3", NewQName("test", "unknown"))
 				})
 			})
 		})
 
 		t.Run("must be ok to add clustering columns fields", func(t *testing.T) {
-			vb.KeyBuilder().ClustColsBuilder().AddField("ccF1", DataKind_int64)
-			vb.KeyBuilder().ClustColsBuilder().AddRefField("ccF2", docName)
+			vb.Key().ClustCols().AddField("ccF1", DataKind_int64)
+			vb.Key().ClustCols().AddRefField("ccF2", docName)
 
 			t.Run("panic if field already exists in view", func(t *testing.T) {
 				require.Panics(func() {
-					vb.KeyBuilder().ClustColsBuilder().AddField("ccF1", DataKind_int64)
+					vb.Key().ClustCols().AddField("ccF1", DataKind_int64)
 				})
 			})
 
 			t.Run("panic if unknown data type field added to cc", func(t *testing.T) {
 				require.Panics(func() {
-					vb.KeyBuilder().ClustColsBuilder().AddDataField("ccF3", NewQName("test", "unknown"))
+					vb.Key().ClustCols().AddDataField("ccF3", NewQName("test", "unknown"))
 				})
 			})
 		})
 
 		t.Run("must be ok to add value fields", func(t *testing.T) {
-			vb.ValueBuilder().
+			vb.Value().
 				AddField("valF1", DataKind_bool, true).
 				AddDataField("valF2", digsData, false, MaxLen(100)).SetFieldComment("valF2", "up to 100 digits")
 		})
@@ -192,6 +192,7 @@ func TestAddView(t *testing.T) {
 				}
 			}
 			require.Equal(pk.FieldCount(), cnt)
+			require.NotPanics(func() { pk.isPartKey() })
 		})
 
 		t.Run("must be ok to read view clustering columns", func(t *testing.T) {
@@ -212,6 +213,7 @@ func TestAddView(t *testing.T) {
 				}
 			}
 			require.Equal(cc.FieldCount(), cnt)
+			require.NotPanics(func() { cc.isClustCols() })
 		})
 
 		t.Run("must be ok to read view value", func(t *testing.T) {
@@ -234,6 +236,7 @@ func TestAddView(t *testing.T) {
 				}
 			}
 			require.Equal(val.FieldCount(), cnt)
+			require.NotPanics(func() { val.isViewValue() })
 		})
 
 		t.Run("must be ok to cast Type() as IView", func(t *testing.T) {
@@ -246,7 +249,7 @@ func TestAddView(t *testing.T) {
 			require.Equal(v, view)
 		})
 
-		require.Nil(adb.View(NewQName("test", "unknown")), "find unknown view must return nil")
+		require.Nil(app.View(NewQName("test", "unknown")), "find unknown view must return nil")
 
 		t.Run("must be nil if not view", func(t *testing.T) {
 			require.Nil(app.View(docName))
@@ -260,23 +263,23 @@ func TestAddView(t *testing.T) {
 	})
 
 	t.Run("must be ok to add fields to view after app build", func(t *testing.T) {
-		vb.KeyBuilder().PartKeyBuilder().
+		vb.Key().PartKey().
 			AddRefField("pkF3", docName).
 			SetFieldComment("pkF3", "test comment")
 
-		vb.KeyBuilder().ClustColsBuilder().
+		vb.Key().ClustCols().
 			AddDataField("ccF3", kbName).SetFieldComment("ccF3", "one KB")
 
 		t.Run("panic if add second variable length field", func(t *testing.T) {
 			require.Panics(func() {
-				vb.KeyBuilder().ClustColsBuilder().AddField("ccF3_1", DataKind_bytes)
+				vb.Key().ClustCols().AddField("ccF3_1", DataKind_bytes)
 			})
 			require.Panics(func() {
-				vb.KeyBuilder().ClustColsBuilder().AddDataField("ccF3_1", kbName)
+				vb.Key().ClustCols().AddDataField("ccF3_1", kbName)
 			})
 		})
 
-		vb.ValueBuilder().
+		vb.Value().
 			AddRefField("valF3", false, docName).
 			AddField("valF4", DataKind_bytes, false, MaxLen(1024)).SetFieldComment("valF4", "test comment").
 			AddField("valF5", DataKind_bool, false).SetFieldVerify("valF5", VerificationKind_EMail)
@@ -356,14 +359,14 @@ func TestViewValidate(t *testing.T) {
 		require.ErrorIs(err, ErrFieldsMissed)
 	})
 
-	v.KeyBuilder().PartKeyBuilder().AddField("pk1", DataKind_bool)
+	v.Key().PartKey().AddField("pk1", DataKind_bool)
 
 	t.Run("must be error if no ccols fields", func(t *testing.T) {
 		_, err := app.Build()
 		require.ErrorIs(err, ErrFieldsMissed)
 	})
 
-	v.KeyBuilder().ClustColsBuilder().AddField("cc1", DataKind_string, MaxLen(100))
+	v.Key().ClustCols().AddField("cc1", DataKind_string, MaxLen(100))
 	_, err := app.Build()
 	require.NoError(err)
 }

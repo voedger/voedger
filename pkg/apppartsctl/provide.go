@@ -25,6 +25,8 @@ type BuiltInApp struct {
 	Def appdef.IAppDef
 
 	// Number of partitions. Partitions IDs will be generated from 0 to PartsCount-1
+	//
+	// PartsCount should contain _total_ number of partitions, not only to deploy.
 	PartsCount int
 
 	// EnginePoolSize pools size for each processor kind

@@ -9,29 +9,42 @@ import "strings"
 
 // # Implements:
 //  - IComment
-//	- ICommentBuilder
 type comment struct {
-	c string
+	string
 }
 
 // Creates and returns new comment.
 func makeComment(v ...string) comment {
-	return comment{c: strings.Join(v, "\n")}
+	return comment{strings.Join(v, "\n")}
 }
 
 func (c *comment) Comment() string {
-	return c.c
+	return c.string
 }
 
 func (c *comment) CommentLines() []string {
-	if len(c.c) == 0 {
+	if len(c.string) == 0 {
 		return []string{}
 	}
-	return strings.Split(c.c, "\n")
+	return strings.Split(c.string, "\n")
 }
 
-func (c *comment) SetComment(v ...string) {
-	c.c = strings.Join(v, "\n")
+func (c *comment) setComment(v ...string) {
+	c.string = strings.Join(v, "\n")
+}
+
+type commentBuilder struct {
+	*comment
+}
+
+func makeCommentBuilder(comment *comment) commentBuilder {
+	return commentBuilder{
+		comment: comment,
+	}
+}
+
+func (cb *commentBuilder) SetComment(v ...string) {
+	cb.comment.setComment(v...)
 }
 
 type nullComment struct{}

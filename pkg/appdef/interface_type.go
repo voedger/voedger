@@ -109,6 +109,5 @@ type IWithTypes interface {
 }
 
 type ITypeBuilder interface {
-	IType
 	ICommentBuilder
 }

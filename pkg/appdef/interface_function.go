@@ -19,7 +19,6 @@ type IFunction interface {
 }
 
 type IFunctionBuilder interface {
-	IFunction
 	IExtensionBuilder
 
 	// Sets function parameter. Must be known type from next kinds:

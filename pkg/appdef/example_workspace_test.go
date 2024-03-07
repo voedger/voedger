@@ -26,9 +26,12 @@ func ExampleIWorkspace() {
 		appDef.AddCRecord(recName).
 			AddField("r1", appdef.DataKind_int64, true).
 			AddField("r2", appdef.DataKind_string, false)
-		appDef.AddCDoc(docName).
+
+		cDoc := appDef.AddCDoc(docName)
+		cDoc.
 			AddField("d1", appdef.DataKind_int64, true).
-			AddField("d2", appdef.DataKind_string, false).(appdef.ICDocBuilder).
+			AddField("d2", appdef.DataKind_string, false)
+		cDoc.
 			AddContainer("rec", recName, 0, 100)
 
 		appDef.AddWorkspace(wsName).

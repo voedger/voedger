@@ -19,8 +19,6 @@ type IWithAbstract interface {
 }
 
 type IWithAbstractBuilder interface {
-	IWithAbstract
-
 	// Makes type abstract
 	SetAbstract()
 }

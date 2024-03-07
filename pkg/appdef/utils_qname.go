@@ -8,6 +8,7 @@ package appdef
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"slices"
 	"strconv"
@@ -161,4 +162,14 @@ func (qns QNames) Contains(n QName) bool {
 // Returns index of QName in slice and true if found.
 func (qns QNames) Find(n QName) (int, bool) {
 	return slices.BinarySearchFunc(qns, n, CompareQName)
+}
+
+// Returns is slice with valid qNames and error if not
+func ValidQNames(qName ...QName) (ok bool, err error) {
+	for _, q := range qName {
+		if ok, e := ValidQName(q); !ok {
+			err = errors.Join(err, e)
+		}
+	}
+	return err == nil, err
 }
