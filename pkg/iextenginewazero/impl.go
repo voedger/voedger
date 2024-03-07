@@ -335,9 +335,9 @@ func (f *wazeroExtEngine) recover() {
 func (f *wazeroExtEngine) Invoke(ctx context.Context, extension iextengine.ExtQName, io iextengine.IExtensionIO) (err error) {
 
 	var ok bool
-	f.pkg, ok = f.modules[extension.PackageName]
+	f.pkg, ok = f.modules[extension.PackagePath]
 	if !ok {
-		return errUndefinedPackage(extension.PackageName)
+		return errUndefinedPackage(extension.PackagePath)
 	}
 
 	funct := f.pkg.exts[extension.ExtName]
@@ -714,10 +714,10 @@ func (f *wazeroExtEngine) allocBuf(size uint32) (addr uint32, err error) {
 	return addr, nil
 }
 
-func (f *wazeroExtEngine) getFrees(packageName string, ctx context.Context) (uint64, error) {
-	pkg, ok := f.modules[packageName]
+func (f *wazeroExtEngine) getFrees(packagePath string, ctx context.Context) (uint64, error) {
+	pkg, ok := f.modules[packagePath]
 	if !ok {
-		return 0, errUndefinedPackage(packageName)
+		return 0, errUndefinedPackage(packagePath)
 	}
 	res, err := pkg.funcGetFrees.Call(ctx)
 	if err != nil {
@@ -726,10 +726,10 @@ func (f *wazeroExtEngine) getFrees(packageName string, ctx context.Context) (uin
 	return res[0], nil
 }
 
-func (f *wazeroExtEngine) gc(packageName string, ctx context.Context) error {
-	pkg, ok := f.modules[packageName]
+func (f *wazeroExtEngine) gc(packagePath string, ctx context.Context) error {
+	pkg, ok := f.modules[packagePath]
 	if !ok {
-		return errUndefinedPackage(packageName)
+		return errUndefinedPackage(packagePath)
 	}
 	_, err := pkg.funcGc.Call(ctx)
 	if err != nil {
@@ -738,10 +738,10 @@ func (f *wazeroExtEngine) gc(packageName string, ctx context.Context) error {
 	return nil
 }
 
-func (f *wazeroExtEngine) getHeapinuse(packageName string, ctx context.Context) (uint64, error) {
-	pkg, ok := f.modules[packageName]
+func (f *wazeroExtEngine) getHeapinuse(packagePath string, ctx context.Context) (uint64, error) {
+	pkg, ok := f.modules[packagePath]
 	if !ok {
-		return 0, errUndefinedPackage(packageName)
+		return 0, errUndefinedPackage(packagePath)
 	}
 	res, err := pkg.funcGetHeapInuse.Call(ctx)
 	if err != nil {
@@ -750,10 +750,10 @@ func (f *wazeroExtEngine) getHeapinuse(packageName string, ctx context.Context) 
 	return res[0], nil
 }
 
-func (f *wazeroExtEngine) getHeapSys(packageName string, ctx context.Context) (uint64, error) {
-	pkg, ok := f.modules[packageName]
+func (f *wazeroExtEngine) getHeapSys(packagePath string, ctx context.Context) (uint64, error) {
+	pkg, ok := f.modules[packagePath]
 	if !ok {
-		return 0, errUndefinedPackage(packageName)
+		return 0, errUndefinedPackage(packagePath)
 	}
 	res, err := pkg.funcGetHeapSys.Call(ctx)
 	if err != nil {
@@ -762,10 +762,10 @@ func (f *wazeroExtEngine) getHeapSys(packageName string, ctx context.Context) (u
 	return res[0], nil
 }
 
-func (f *wazeroExtEngine) getMallocs(packageName string, ctx context.Context) (uint64, error) {
-	pkg, ok := f.modules[packageName]
+func (f *wazeroExtEngine) getMallocs(packagePath string, ctx context.Context) (uint64, error) {
+	pkg, ok := f.modules[packagePath]
 	if !ok {
-		return 0, errUndefinedPackage(packageName)
+		return 0, errUndefinedPackage(packagePath)
 	}
 	res, err := pkg.funcGetMallocs.Call(ctx)
 	if err != nil {

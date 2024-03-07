@@ -4,6 +4,6 @@
 */
 package iextengine
 
-func NewExtQName(packageName, extName string) ExtQName {
-	return ExtQName{packageName, extName}
+func NewExtQName(packagePath, extName string) ExtQName {
+	return ExtQName{packagePath, extName}
 }

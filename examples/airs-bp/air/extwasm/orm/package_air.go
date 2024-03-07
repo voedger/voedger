@@ -71,7 +71,7 @@ type ODoc_air_ProformaPrinted struct {
 }
 
 /*
-	TABLE NextNumbers INHERITS Singleton (
+	TABLE NextNumbers INHERITS CSingleton (
 		NextPBillNumber int32
 	);
 */

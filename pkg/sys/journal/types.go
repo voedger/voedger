@@ -14,31 +14,31 @@ import (
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-type predicate func(appDef appdef.IAppDef, qName appdef.QName) bool
+type predicate func(iws appdef.IWorkspace, qName appdef.QName) bool
 
 type Filter struct {
 	predicates []predicate
-	appDef     appdef.IAppDef
+	iWorkspace appdef.IWorkspace
 }
 
-func NewFilter(appDef appdef.IAppDef, eventTypes []string, epJournalPredicates extensionpoints.IExtensionPoint) (Filter, error) {
+func NewFilter(iws appdef.IWorkspace, eventTypes []string, epJournalPredicates extensionpoints.IExtensionPoint) (Filter, error) {
 	pp := make([]predicate, len(eventTypes))
 	for i, eventType := range eventTypes {
 		p, ok := epJournalPredicates.Find(eventType)
 		if !ok {
 			return Filter{}, fmt.Errorf("invalid event type: %s", eventType)
 		}
-		pp[i] = p.(func(appDef appdef.IAppDef, qName appdef.QName) bool)
+		pp[i] = p.(func(iws appdef.IWorkspace, qName appdef.QName) bool)
 	}
 	return Filter{
 		predicates: pp,
-		appDef:     appDef,
+		iWorkspace: iws,
 	}, nil
 }
 
 func (f Filter) isMatch(qName appdef.QName) bool {
 	for _, p := range f.predicates {
-		if p(f.appDef, qName) {
+		if p(f.iWorkspace, qName) {
 			return true
 		}
 	}
@@ -55,7 +55,7 @@ type EventObject struct {
 func (o *EventObject) AsInt64(name string) int64 { return o.Data[name] }
 func (o *EventObject) AsString(string) string    { return o.JSON }
 
-func NewEventObject(event istructs.IWLogEvent, appDef appdef.IAppDef, f Filter, opts ...coreutils.MapperOpt) (o *EventObject, err error) {
+func NewEventObject(event istructs.IWLogEvent, iWorkspace appdef.IWorkspace, f Filter, opts ...coreutils.MapperOpt) (o *EventObject, err error) {
 	var bb []byte
 	data := make(map[string]interface{})
 	data["sys.QName"] = event.QName().String()
@@ -65,7 +65,7 @@ func NewEventObject(event istructs.IWLogEvent, appDef appdef.IAppDef, f Filter, 
 	data["SyncedAt"] = event.SyncedAt()
 	noArgs := true
 	if f.isMatch(event.ArgumentObject().QName()) {
-		data["args"] = coreutils.ObjectToMap(event.ArgumentObject(), appDef, opts...)
+		data["args"] = coreutils.ObjectToMap(event.ArgumentObject(), iWorkspace, opts...)
 		noArgs = false
 	}
 	cuds := make([]map[string]interface{}, 0)
@@ -77,7 +77,7 @@ func NewEventObject(event istructs.IWLogEvent, appDef appdef.IAppDef, f Filter, 
 		cud["sys.ID"] = rec.ID()
 		cud["sys.QName"] = rec.QName().String()
 		cud["IsNew"] = rec.IsNew()
-		cud["fields"] = coreutils.FieldsToMap(rec, appDef, opts...)
+		cud["fields"] = coreutils.FieldsToMap(rec, iWorkspace, opts...)
 		cuds = append(cuds, cud)
 	})
 	data["cuds"] = cuds

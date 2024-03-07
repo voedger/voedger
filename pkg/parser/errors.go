@@ -15,7 +15,7 @@ import (
 
 var ErrDirContainsNoSchemaFiles = errors.New("no schema files in directory")
 var ErrNoQualifiedName = errors.New("empty qualified name")
-var ErrEmptyFileAstList = errors.New("empty file ast list")
+var ErrEmptyFileAstList = errors.New("no valid schema files")
 var ErrFunctionParamsIncorrect = errors.New("function parameters do not match")
 var ErrFunctionResultIncorrect = errors.New("function result do not match")
 var ErrPrimaryKeyRedefined = errors.New("redefinition of primary key")

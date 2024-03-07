@@ -117,6 +117,7 @@ func (a *asyncActualizer) cancelChannel(e error) {
 }
 
 func (a *asyncActualizer) waitForAppDeploy(ctx context.Context) error {
+	start := time.Now()
 	for ctx.Err() == nil {
 		ap, err := a.conf.AppPartitions.Borrow(a.conf.AppQName, a.conf.Partition, cluster.ProcessorKind_Actualizer)
 		if err == nil || errors.Is(err, appparts.ErrNotAvailableEngines) {
@@ -127,6 +128,10 @@ func (a *asyncActualizer) waitForAppDeploy(ctx context.Context) error {
 		}
 		if !errors.Is(err, appparts.ErrNotFound) {
 			return err
+		}
+		if time.Since(start) >= initFailureErrorLogInterval {
+			logger.Error(fmt.Sprintf("app %s part %d actualizer %s: failed to init in 30 seconds", a.conf.AppQName, a.conf.Partition, a.name))
+			start = time.Now()
 		}
 		time.Sleep(borrowRetryDelay)
 	}

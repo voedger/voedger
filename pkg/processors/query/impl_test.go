@@ -44,11 +44,14 @@ var timeFunc = coreutils.TimeFunc(func() time.Time { return now })
 var (
 	appName    istructs.AppQName    = istructs.AppQName_test1_app1
 	appEngines                      = cluster.PoolSize(10, 100, 10)
+	partCount                       = 10
 	partID     istructs.PartitionID = 5
 	wsID       istructs.WSID        = 15
 
-	qNameFunction  = appdef.NewQName("bo", "FindArticlesByModificationTimeStampRange")
-	qNameQryDenied = appdef.NewQName(appdef.SysPackage, "TestDeniedQry") // same as in ACL
+	qNameFunction         = appdef.NewQName("bo", "FindArticlesByModificationTimeStampRange")
+	qNameQryDenied        = appdef.NewQName(appdef.SysPackage, "TestDeniedQry") // same as in ACL
+	qNameTestWSDescriptor = appdef.NewQName(appdef.SysPackage, "test_ws")
+	qNameTestWS           = appdef.NewQName(appdef.SysPackage, "test_wsWS")
 )
 
 func TestBasicUsage_RowsProcessorFactory(t *testing.T) {
@@ -143,7 +146,7 @@ func TestBasicUsage_RowsProcessorFactory(t *testing.T) {
 	require.Equal(`[[[3,"White wine","Alcohol drinks"]]]`, result)
 }
 
-func getTestCfg(require *require.Assertions, prepareAppDef func(appdef.IAppDefBuilder), cfgFunc ...func(cfg *istructsmem.AppConfigType)) (appDef appdef.IAppDef, asp istructs.IAppStructsProvider, appTokens istructs.IAppTokens) {
+func getTestCfg(require *require.Assertions, prepareAppDef func(adb appdef.IAppDefBuilder, wsb appdef.IWorkspaceBuilder), cfgFunc ...func(cfg *istructsmem.AppConfigType)) (appDef appdef.IAppDef, asp istructs.IAppStructsProvider, appTokens istructs.IAppTokens) {
 	cfgs := make(istructsmem.AppConfigsType)
 	asf := mem.Provide()
 	storageProvider := istorageimpl.Provide(asf)
@@ -154,6 +157,10 @@ func getTestCfg(require *require.Assertions, prepareAppDef func(appdef.IAppDefBu
 	qNameArticle := appdef.NewQName("bo", "Article")
 
 	adb := appdef.New()
+	wsb := adb.AddWorkspace(qNameTestWS)
+	adb.AddCDoc(qNameTestWSDescriptor)
+	wsb.SetDescriptor(qNameTestWSDescriptor)
+
 	adb.AddObject(qNameFindArticlesByModificationTimeStampRangeParams).
 		AddField("from", appdef.DataKind_int64, false).
 		AddField("till", appdef.DataKind_int64, false)
@@ -163,13 +170,27 @@ func getTestCfg(require *require.Assertions, prepareAppDef func(appdef.IAppDefBu
 		AddField("sys.ID", appdef.DataKind_RecordID, true).
 		AddField("name", appdef.DataKind_string, true).
 		AddField("id_department", appdef.DataKind_int64, true)
-	adb.AddCDoc(authnz.QNameCDocWorkspaceDescriptor).SetSingleton() // need to avoid error cdoc.sys.wsdesc missing
+
+	// simplified cdoc.sys.WorkspaceDescriptor
+	wsDescBuilder := adb.AddCDoc(authnz.QNameCDocWorkspaceDescriptor)
+	wsDescBuilder.
+		AddField(authnz.Field_WSKind, appdef.DataKind_QName, false).
+		AddField(authnz.Field_Status, appdef.DataKind_int32, false)
+	wsDescBuilder.SetSingleton()
+
 	adb.AddQuery(qNameFunction).SetParam(qNameFindArticlesByModificationTimeStampRangeParams).SetResult(appdef.NewQName("bo", "Article"))
 	adb.AddCommand(istructs.QNameCommandCUD)
 	adb.AddQuery(qNameQryDenied)
+	wsb.AddType(qNameDepartment)
+	wsb.AddType(qNameArticle)
+	wsb.AddType(qNameArticle)
+	wsb.AddType(authnz.QNameCDocWorkspaceDescriptor)
+	wsb.AddType(qNameFunction)
+	wsb.AddType(istructs.QNameCommandCUD)
+	wsb.AddType(qNameQryDenied)
 
 	if prepareAppDef != nil {
-		prepareAppDef(adb)
+		prepareAppDef(adb, wsb)
 	}
 
 	cfg := cfgs.AddConfig(appName, adb)
@@ -247,7 +268,40 @@ func getTestCfg(require *require.Assertions, prepareAppDef func(appdef.IAppDefBu
 	require.NoError(as.Records().Apply(pLogEvent))
 	err = as.Events().PutWlog(pLogEvent)
 	require.NoError(err)
+	plogOffset++
+	wlogOffset++
+
 	appTokens = payloads.TestAppTokensFactory(tokens).New(appName)
+
+	// create stub for cdoc.sys.WorkspaceDescriptor to make query processor work
+	require.NoError(err)
+	now := time.Now()
+	grebp = istructs.GenericRawEventBuilderParams{
+		HandlingPartition: partID,
+		Workspace:         wsID,
+		QName:             istructs.QNameCommandCUD,
+		RegisteredAt:      istructs.UnixMilli(now.UnixMilli()),
+		PLogOffset:        plogOffset,
+		WLogOffset:        wlogOffset,
+	}
+	reb = as.Events().GetSyncRawEventBuilder(
+		istructs.SyncRawEventBuilderParams{
+			GenericRawEventBuilderParams: grebp,
+			SyncedAt:                     istructs.UnixMilli(now.UnixMilli()),
+		},
+	)
+	cdocWSDesc := reb.CUDBuilder().Create(authnz.QNameCDocWorkspaceDescriptor)
+	cdocWSDesc.PutRecordID(appdef.SystemField_ID, 1)
+	cdocWSDesc.PutInt32(authnz.Field_Status, int32(authnz.WorkspaceStatus_Active))
+	cdocWSDesc.PutQName(authnz.Field_WSKind, qNameTestWSDescriptor)
+	rawEvent, err = reb.BuildRawEvent()
+	require.NoError(err)
+	pLogEvent, err = as.Events().PutPlog(rawEvent, nil, istructsmem.NewIDGenerator())
+	require.NoError(err)
+	defer pLogEvent.Release()
+	require.NoError(as.Records().Apply(pLogEvent))
+	require.NoError(as.Events().PutWlog(pLogEvent))
+
 	return appDef, asp, appTokens
 }
 
@@ -291,7 +345,7 @@ func TestBasicUsage_ServiceFactory(t *testing.T) {
 	appParts, cleanAppParts, err := appparts.New(appStructsProvider)
 	require.NoError(err)
 	defer cleanAppParts()
-	appParts.DeployApp(appName, appDef, appEngines)
+	appParts.DeployApp(appName, appDef, partCount, appEngines)
 	appParts.DeployAppPartitions(appName, []istructs.PartitionID{partID})
 
 	authn := iauthnzimpl.NewDefaultAuthenticator(iauthnzimpl.TestSubjectRolesGetter)
@@ -309,9 +363,8 @@ func TestBasicUsage_ServiceFactory(t *testing.T) {
 		queryProcessor.Run(processorCtx)
 		wg.Done()
 	}()
-	query := appDef.Query(qNameFunction) // nnv: Suspicious code!! Should be borrowed AppPartition.AppDef() instead of appDef?
 	systemToken := getSystemToken(appTokens)
-	serviceChannel <- NewQueryMessage(context.Background(), appName, partID, wsID, nil, body, query, "127.0.0.1", systemToken)
+	serviceChannel <- NewQueryMessage(context.Background(), appName, partID, wsID, nil, body, qNameFunction, "127.0.0.1", systemToken)
 	<-done
 	processorCtxCancel()
 	wg.Wait()
@@ -1020,11 +1073,13 @@ func TestRateLimiter(t *testing.T) {
 	qNameMyFuncResults := appdef.NewQName(appdef.SysPackage, "results")
 	qName := appdef.NewQName(appdef.SysPackage, "myFunc")
 	appDef, appStructsProvider, appTokens := getTestCfg(require,
-		func(appDef appdef.IAppDefBuilder) {
+		func(appDef appdef.IAppDefBuilder, wsb appdef.IWorkspaceBuilder) {
 			appDef.AddObject(qNameMyFuncParams)
 			appDef.AddObject(qNameMyFuncResults).
 				AddField("fld", appdef.DataKind_string, false)
-			appDef.AddQuery(qName).SetParam(qNameMyFuncParams).SetResult(qNameMyFuncResults)
+			qry := appDef.AddQuery(qName)
+			qry.SetParam(qNameMyFuncParams).SetResult(qNameMyFuncResults)
+			wsb.AddType(qry.QName())
 		},
 		func(cfg *istructsmem.AppConfigType) {
 			myFunc := istructsmem.NewQueryFunction(qName, istructsmem.NullQueryExec)
@@ -1042,7 +1097,7 @@ func TestRateLimiter(t *testing.T) {
 	appParts, cleanAppParts, err := appparts.New(appStructsProvider)
 	require.NoError(err)
 	defer cleanAppParts()
-	appParts.DeployApp(appName, appDef, appEngines)
+	appParts.DeployApp(appName, appDef, partCount, appEngines)
 	appParts.DeployAppPartitions(appName, []istructs.PartitionID{partID})
 
 	// create aquery processor
@@ -1065,14 +1120,13 @@ func TestRateLimiter(t *testing.T) {
 
 	// execute query
 	// first 2 - ok
-	query := appDef.Query(qName)
-	serviceChannel <- NewQueryMessage(context.Background(), appName, partID, wsID, nil, body, query, "127.0.0.1", systemToken)
+	serviceChannel <- NewQueryMessage(context.Background(), appName, partID, wsID, nil, body, qName, "127.0.0.1", systemToken)
 	require.NoError(<-errs)
-	serviceChannel <- NewQueryMessage(context.Background(), appName, partID, wsID, nil, body, query, "127.0.0.1", systemToken)
+	serviceChannel <- NewQueryMessage(context.Background(), appName, partID, wsID, nil, body, qName, "127.0.0.1", systemToken)
 	require.NoError(<-errs)
 
 	// 3rd exceeds the limit - not often than twice per minute
-	serviceChannel <- NewQueryMessage(context.Background(), appName, partID, wsID, nil, body, query, "127.0.0.1", systemToken)
+	serviceChannel <- NewQueryMessage(context.Background(), appName, partID, wsID, nil, body, qName, "127.0.0.1", systemToken)
 	require.Error(<-errs)
 }
 
@@ -1100,7 +1154,7 @@ func TestAuthnz(t *testing.T) {
 	require.NoError(err)
 	defer cleanAppParts()
 
-	appParts.DeployApp(appName, appDef, appEngines)
+	appParts.DeployApp(appName, appDef, partCount, appEngines)
 	appParts.DeployAppPartitions(appName, []istructs.PartitionID{partID})
 
 	authn := iauthnzimpl.NewDefaultAuthenticator(iauthnzimpl.TestSubjectRolesGetter)
@@ -1112,10 +1166,9 @@ func TestAuthnz(t *testing.T) {
 		3, // max concurrent queries
 		metrics, "vvm", authn, authz)
 	go queryProcessor.Run(context.Background())
-	query := appDef.Query(qNameFunction)
 
 	t.Run("no token for a query that requires authorization -> 403 unauthorized", func(t *testing.T) {
-		serviceChannel <- NewQueryMessage(context.Background(), appName, partID, wsID, nil, body, query, "127.0.0.1", "")
+		serviceChannel <- NewQueryMessage(context.Background(), appName, partID, wsID, nil, body, qNameFunction, "127.0.0.1", "")
 		var se coreutils.SysError
 		require.ErrorAs(<-errs, &se)
 		require.Equal(http.StatusForbidden, se.HTTPStatus)
@@ -1125,17 +1178,15 @@ func TestAuthnz(t *testing.T) {
 		systemToken := getSystemToken(appTokens)
 		// make the token be expired
 		now = now.Add(2 * time.Minute)
-		serviceChannel <- NewQueryMessage(context.Background(), appName, partID, wsID, nil, body, query, "127.0.0.1", systemToken)
+		serviceChannel <- NewQueryMessage(context.Background(), appName, partID, wsID, nil, body, qNameFunction, "127.0.0.1", systemToken)
 		var se coreutils.SysError
 		require.ErrorAs(<-errs, &se)
 		require.Equal(http.StatusUnauthorized, se.HTTPStatus)
 	})
 
-	t.Run("token provided by querying is denied -> 403 forbidden", func(t *testing.T) {
-		wsid := istructs.WSID(1)
-		token := getTestToken(appTokens, wsid)
-		deniedQuery := appDef.Query(qNameQryDenied) // nnv: Suspicious code!!
-		serviceChannel <- NewQueryMessage(context.Background(), appName, partID, wsid, nil, body, deniedQuery, "127.0.0.1", token)
+	t.Run("token provided, query a denied func -> 403 forbidden", func(t *testing.T) {
+		token := getTestToken(appTokens, wsID)
+		serviceChannel <- NewQueryMessage(context.Background(), appName, partID, wsID, nil, body, qNameQryDenied, "127.0.0.1", token)
 		var se coreutils.SysError
 		require.ErrorAs(<-errs, &se)
 		require.Equal(http.StatusForbidden, se.HTTPStatus)

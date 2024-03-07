@@ -239,7 +239,7 @@ func analyseAlterWorkspace(u *AlterWorkspaceStmt, c *iterateCtx) {
 }
 
 func analyseStorage(u *StorageStmt, c *iterateCtx) {
-	if c.pkg.QualifiedPackageName != appdef.SysPackage {
+	if c.pkg.Path != appdef.SysPackage {
 		c.stmtErr(&u.Pos, ErrStorageDeclaredOnlyInSys)
 	}
 }
@@ -565,7 +565,7 @@ func analyseProjector(v *ProjectorStmt, c *iterateCtx) {
 				}
 
 				resolveFunc := func(table *TableStmt, pkg *PackageSchemaAST) error {
-					sysDoc := (pkg.QualifiedPackageName == appdef.SysPackage) && (table.Name == nameCRecord || table.Name == nameWRecord)
+					sysDoc := (pkg.Path == appdef.SysPackage) && (table.Name == nameCRecord || table.Name == nameWRecord)
 					if table.Abstract && !sysDoc {
 						return ErrAbstractTableNotAlowedInProjectors(qname.String())
 					}
@@ -953,7 +953,7 @@ func getTableTypeKind(table *TableStmt, pkg *PackageSchemaAST, c *iterateCtx) (k
 
 	kind = appdef.TypeKind_null
 	check := func(node tableNode) {
-		if node.pkg.QualifiedPackageName == appdef.SysPackage {
+		if node.pkg.Path == appdef.SysPackage {
 			if node.table.Name == nameCDOC {
 				kind = appdef.TypeKind_CDoc
 			}

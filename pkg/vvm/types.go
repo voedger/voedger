@@ -36,7 +36,7 @@ type OperatorCommandProcessors pipeline.ISyncOperator
 type OperatorCommandProcessor pipeline.ISyncOperator
 type OperatorQueryProcessors pipeline.ISyncOperator
 type OperatorQueryProcessor pipeline.ISyncOperator
-type AppServiceFactory func(ctx context.Context, appQName istructs.AppQName, asyncProjectorFactories AsyncProjectorFactories) pipeline.ISyncOperator
+type AppServiceFactory func(ctx context.Context, appQName istructs.AppQName, asyncProjectorFactories AsyncProjectorFactories, appPartsCount int) pipeline.ISyncOperator
 type AppPartitionFactory func(ctx context.Context, appQName istructs.AppQName, asyncProjectorFactories AsyncProjectorFactories, partitionID istructs.PartitionID) pipeline.ISyncOperator
 type AsyncActualizersFactory func(ctx context.Context, appQName istructs.AppQName, asyncProjectorFactories AsyncProjectorFactories, partitionID istructs.PartitionID, opts []state.ActualizerStateOptFunc) pipeline.ISyncOperator
 type OperatorAppServicesFactory func(ctx context.Context) pipeline.ISyncOperator
