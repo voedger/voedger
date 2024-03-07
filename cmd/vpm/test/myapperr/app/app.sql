@@ -6,7 +6,7 @@ IMPORT SCHEMA 'mypkg4';
 IMPORT SCHEMA 'github.com/voedger/voedger/pkg/registry' AS reg;
 
 APPLICATION APP (
-	USE mypkg3;
-	USE mypkg4;
-	USE reg;
+    USE mypkg3;
+    USE mypkg4;
+    USE reg;
 );

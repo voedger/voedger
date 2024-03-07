@@ -5,8 +5,8 @@ IMPORT SCHEMA 'mypkg1';
 IMPORT SCHEMA 'mypkg2';
 
 APPLICATION APP(
-	USE mypkg1;
-	USE mypkg2;
+    USE mypkg1;
+    USE mypkg2;
 );
 
 TABLE MyTable INHERITS ODoc (
