@@ -36,7 +36,7 @@ type Command_air_Pbill struct {
 
 // !!! ArgumentObject result type is defined by the  command statement
 // 	COMMAND Pbill(untill.pbill) RETURNS CmdPBillResult;
-func (c *Command_air_Pbill) ArgumentObject() Value_ODoc_untill_pbill {
+func (c Command_air_Pbill) ArgumentObject() Value_ODoc_untill_pbill {
 
 	// !!! return host["StorageCommandContext]["ArgumentObject"]
 
@@ -51,7 +51,7 @@ TYPE CmdPBillResult (
 
 )
 */
-func (c *Command_air_Pbill) Result(number int32) {
+func (c Command_air_Pbill) Result(number int32) {
 	result := exttinygo.NewValue(exttinygo.KeyBuilder(exttinygo.StorageResult, exttinygo.NullEntity))
 	result.PutInt32("Number", number)
 }
@@ -80,7 +80,7 @@ type WSingleton_air_NextNumbers struct {
 	Type
 }
 
-func (w *WSingleton_air_NextNumbers) QueryValue() (value Value_WSingleton_air_NextNumbers, ok bool) {
+func (w WSingleton_air_NextNumbers) QueryValue() (value Value_WSingleton_air_NextNumbers, ok bool) {
 	kb := exttinygo.KeyBuilder(exttinygo.StorageRecord, Package_air.WSingleton_NextNumbers.qname)
 	// !!! No key fields since it's a singleton
 	tv, ok := exttinygo.QueryValue(kb)
@@ -91,10 +91,10 @@ func (w *WSingleton_air_NextNumbers) QueryValue() (value Value_WSingleton_air_Ne
 	return Value_WSingleton_air_NextNumbers{tv: tv, kb: kb}, true
 }
 
-func (w *WSingleton_air_NextNumbers) NewIntent() *Intent_WSingleton_air_NextNumbers {
+func (w WSingleton_air_NextNumbers) NewIntent() Intent_WSingleton_air_NextNumbers {
 	kb := exttinygo.KeyBuilder(exttinygo.StorageRecord, w.qname)
 	// !!! We do not set ID since it's a singleton
-	return &Intent_WSingleton_air_NextNumbers{intent: exttinygo.NewValue(kb)}
+	return Intent_WSingleton_air_NextNumbers{intent: exttinygo.NewValue(kb)}
 }
 
 type Value_WSingleton_air_NextNumbers struct {
@@ -102,11 +102,11 @@ type Value_WSingleton_air_NextNumbers struct {
 	kb exttinygo.TKeyBuilder
 }
 
-func (v *Value_WSingleton_air_NextNumbers) NewIntent() *Intent_WSingleton_air_NextNumbers {
-	return &Intent_WSingleton_air_NextNumbers{intent: exttinygo.NewValue(v.kb)}
+func (v Value_WSingleton_air_NextNumbers) NewIntent() Intent_WSingleton_air_NextNumbers {
+	return Intent_WSingleton_air_NextNumbers{intent: exttinygo.NewValue(v.kb)}
 }
 
-func (v *Value_WSingleton_air_NextNumbers) Get_NextPBillNumber() int32 {
+func (v Value_WSingleton_air_NextNumbers) Get_NextPBillNumber() int32 {
 	return v.tv.AsInt32("NextPBillNumber")
 }
 
@@ -114,7 +114,7 @@ type Intent_WSingleton_air_NextNumbers struct {
 	intent exttinygo.TIntent
 }
 
-func (i *Intent_WSingleton_air_NextNumbers) Set_NextPBillNumber(value int32) *Intent_WSingleton_air_NextNumbers {
+func (i Intent_WSingleton_air_NextNumbers) Set_NextPBillNumber(value int32) Intent_WSingleton_air_NextNumbers {
 	i.intent.PutInt32("NextPBillNumber", value)
 	return i
 }
@@ -134,21 +134,21 @@ type View_air_PbillDates struct {
 	Type
 }
 
-func (v *View_air_PbillDates) MustGetValue(year int32, dayOfYear int32) Value_View_untill_PbillDates {
+func (v View_air_PbillDates) MustGetValue(year int32, dayOfYear int32) Value_View_untill_PbillDates {
 	kb := exttinygo.KeyBuilder(exttinygo.StorageView, Package_air.View_PbillDates.qname)
 	kb.PutInt32("Year", year)
 	kb.PutInt32("DayOfYear", dayOfYear)
 	return Value_View_untill_PbillDates{tv: exttinygo.MustGetValue(kb), kb: kb}
 }
 
-func (v *View_air_PbillDates) NewIntent(year int32, dayOfYear int32) *Intent_View_untill_PbillDates {
+func (v View_air_PbillDates) NewIntent(year int32, dayOfYear int32) Intent_View_untill_PbillDates {
 	kb := exttinygo.KeyBuilder(exttinygo.StorageView, v.qname)
 	kb.PutInt32("Year", year)
 	kb.PutInt32("DayOfYear", dayOfYear)
-	return &Intent_View_untill_PbillDates{intent: exttinygo.NewValue(kb)}
+	return Intent_View_untill_PbillDates{intent: exttinygo.NewValue(kb)}
 }
 
-func (v *View_air_PbillDates) QueryValue(year int32, dayOfYear int32) (value Value_View_untill_PbillDates, ok bool) {
+func (v View_air_PbillDates) QueryValue(year int32, dayOfYear int32) (value Value_View_untill_PbillDates, ok bool) {
 	kb := exttinygo.KeyBuilder(exttinygo.StorageView, Package_air.View_PbillDates.qname)
 	kb.PutInt32("Year", year)
 	kb.PutInt32("DayOfYear", dayOfYear)
@@ -164,31 +164,31 @@ type Value_View_untill_PbillDates struct {
 	kb exttinygo.TKeyBuilder
 }
 
-func (v *Value_View_untill_PbillDates) Get_FirstOffset() int32 {
+func (v Value_View_untill_PbillDates) Get_FirstOffset() int32 {
 	return v.tv.AsInt32("FirstOffset")
 }
-func (v *Value_View_untill_PbillDates) Get_LastOffset() int32 {
+func (v Value_View_untill_PbillDates) Get_LastOffset() int32 {
 	return v.tv.AsInt32("LastOffset")
 }
 
-func (v *Value_View_untill_PbillDates) NewIntent() *Intent_View_untill_PbillDates {
-	return &Intent_View_untill_PbillDates{intent: exttinygo.NewValue(v.kb)}
+func (v Value_View_untill_PbillDates) NewIntent() Intent_View_untill_PbillDates {
+	return Intent_View_untill_PbillDates{intent: exttinygo.NewValue(v.kb)}
 }
 
 type Intent_View_untill_PbillDates struct {
 	intent exttinygo.TIntent
 }
 
-func (i *Intent_View_untill_PbillDates) Set_FirstOffset(value int32) *Intent_View_untill_PbillDates {
+func (i Intent_View_untill_PbillDates) Set_FirstOffset(value int32) Intent_View_untill_PbillDates {
 	i.intent.PutInt32("FirstOffset", value)
 	return i
 }
 
-func (i *Intent_View_untill_PbillDates) Set_LastOffset(value int32) *Intent_View_untill_PbillDates {
+func (i Intent_View_untill_PbillDates) Set_LastOffset(value int32) Intent_View_untill_PbillDates {
 	i.intent.PutInt32("LastOffset", value)
 	return i
 }
 
-func (i *Intent_View_untill_PbillDates) Intent() exttinygo.TIntent {
+func (i Intent_View_untill_PbillDates) Intent() exttinygo.TIntent {
 	return i.intent
 }

@@ -64,13 +64,11 @@ appparts.IAppPartitions -.- vvm.provideAsyncActualizersFactory
 projectors.AsyncActualizerFactory -.- vvm.provideAsyncActualizersFactory
 projectors.AsyncActualizerFactory --> pipeline.ISyncOperator3
 
-
 state.ActualizerStateOptFunc -..- |"[]"| vvm.provideAppPartitionFactory
 vvm.provideAsyncActualizersFactory ----> vvm.AsyncActualizersFactory
 vvm.provideAppPartitionFactory --> vvm.AppPartitionFactory
 istructs.AppQName -.- vvm.AppPartitionFactory
 vvm.AsyncProjectorFactories -.- vvm.AppPartitionFactory
-
 
 vvm.AppPartitionFactory -.- vvm.provideAppServiceFactory
 vvm.AppPartitionFactory --> pipeline.ISyncOperator2
@@ -132,27 +130,34 @@ type IExtensionEngine interface {
 
 ## Proposal
 
-- iextengine.ExtQName.PackageName => 
-- Projectors shall be accessible through ExtEngineKind_BuiltIn
-  - `istructs.IState.PLogEvent() IPLogEvent`
-  - state: sync projectors: Put event
-  - state: async projectors: Put event
-  - Wrapper around istructs.Projector that gets IPLogEvent and passes to istructs.Projector
-  - apppartsctl.New*()
-- istructs.Projector: `Func func(event IPLogEvent, state IState, intents IIntents) (err error)`
-- IAppPartition.DoProjector
+### Projectors shall be accessible through ExtEngineKind_BuiltIn
+
+- `istructs.IState.PLogEvent() IPLogEvent`
+- state: sync projectors: Put event
+- state: async projectors: Put event
+- IAppPartition(s)
 ```go
-IAppPartition {
-	// DoSyncActualizer shall use same internal implementation
-	DoProjector(qname istructs.QName, state istructs.IState, intents istructs.IIntents) (err error)
-}
-```
-- appparts.IAppPartitions
-```go
-// @ConcurrentAccess
 type IAppPartitions interface {
 	// Adds new application or update existing.
 	//
 	// If application with the same name exists, then its definition will be updated.
-	DeployApp(name istructs.AppQName, def appdef.IAppDef, perPartitionEngines [cluster.ProcessorKind]int)
+	DeployApp(name istructs.AppQName, def appdef.IAppDef, perPartitionEngines [cluster.ProcessorKind]int, numPartitions int)
+
 ```
+- Use IAppPartition.DoProjector in async actualizer
+  - Wire: Register all projectors in `iextenginebuiltin.ProvideExtensionEngineFactory`
+    - Wrapper around istructs.Projector that gets IPLogEvent and passes to istructs.Projector
+  - `appparts.NewWithEngines(engfacts iextengine.IExtensionEngineFactories)`
+  - IAppPartition.DoProjector
+```go
+type IAppPartition interface {
+	// DoSyncActualizer uses same internal implementation
+	DoProjector(qname istructs.QName, state istructs.IState, intents istructs.IIntents) (err error)
+}  	
+```
+  - Use DoProjector in async actualizer
+  - Use DoProjector in `IAppPartition.DoSyncActualizer`
+
+### Migrate to Actualizers Processors
+
+- ???
