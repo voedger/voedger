@@ -19,26 +19,18 @@ type projector struct {
 	sync      bool
 	sysErrors bool
 	events    *events
-	states    *storages
-	intents   *storages
 }
 
 func newProjector(app *appDef, name QName) *projector {
 	prj := &projector{
-		events:  newProjectorEvents(app),
-		states:  newStorages(),
-		intents: newStorages(),
+		extension: makeExtension(app, name, TypeKind_Projector),
+		events:    newProjectorEvents(app),
 	}
-	prj.extension = makeExtension(app, name, TypeKind_Projector)
 	app.appendType(prj)
 	return prj
 }
 
 func (prj projector) Events() IProjectorEvents { return prj.events }
-
-func (prj projector) Intents() IStorages { return prj.intents }
-
-func (prj projector) States() IStorages { return prj.states }
 
 func (prj projector) Sync() bool { return prj.sync }
 
@@ -53,9 +45,7 @@ func (prj *projector) setWantErrors() { prj.sysErrors = true }
 type projectorBuilder struct {
 	extensionBuilder
 	*projector
-	events  *eventsBuilder
-	states  *storagesBuilder
-	intents *storagesBuilder
+	events *eventsBuilder
 }
 
 func newProjectorBuilder(projector *projector) *projectorBuilder {
@@ -63,16 +53,10 @@ func newProjectorBuilder(projector *projector) *projectorBuilder {
 		extensionBuilder: makeExtensionBuilder(&projector.extension),
 		projector:        projector,
 		events:           newEventsBuilder(projector.events),
-		states:           newStoragesBuilder(projector.states),
-		intents:          newStoragesBuilder(projector.intents),
 	}
 }
 
 func (pb *projectorBuilder) Events() IProjectorEventsBuilder { return pb.events }
-
-func (pb *projectorBuilder) Intents() IStoragesBuilder { return pb.intents }
-
-func (pb *projectorBuilder) States() IStoragesBuilder { return pb.states }
 
 func (pb *projectorBuilder) SetSync(sync bool) IProjectorBuilder {
 	pb.projector.setSync(sync)

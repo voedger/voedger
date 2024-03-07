@@ -15,27 +15,31 @@ import (
 //   - IExtension
 type extension struct {
 	typ
-	name   string
-	engine ExtensionEngineKind
+	name    string
+	engine  ExtensionEngineKind
+	states  *storages
+	intents *storages
 }
 
 func makeExtension(app *appDef, name QName, kind TypeKind) extension {
 	e := extension{
-		typ:    makeType(app, name, kind),
-		name:   name.Entity(),
-		engine: ExtensionEngineKind_BuiltIn,
+		typ:     makeType(app, name, kind),
+		name:    name.Entity(),
+		engine:  ExtensionEngineKind_BuiltIn,
+		states:  newStorages(),
+		intents: newStorages(),
 	}
 
 	return e
 }
 
-func (ex extension) Name() string {
-	return ex.name
-}
+func (ex extension) Intents() IStorages { return ex.intents }
 
-func (ex extension) Engine() ExtensionEngineKind {
-	return ex.engine
-}
+func (ex extension) Name() string { return ex.name }
+
+func (ex extension) Engine() ExtensionEngineKind { return ex.engine }
+
+func (ex extension) States() IStorages { return ex.states }
 
 func (ex extension) String() string {
 	// BuiltIn-function «test.func»
@@ -64,14 +68,20 @@ func (ex *extension) setName(name string) {
 type extensionBuilder struct {
 	typeBuilder
 	*extension
+	states  *storagesBuilder
+	intents *storagesBuilder
 }
 
 func makeExtensionBuilder(extension *extension) extensionBuilder {
 	return extensionBuilder{
 		typeBuilder: makeTypeBuilder(&extension.typ),
 		extension:   extension,
+		states:      newStoragesBuilder(extension.states),
+		intents:     newStoragesBuilder(extension.intents),
 	}
 }
+
+func (exb *extensionBuilder) Intents() IStoragesBuilder { return exb.intents }
 
 func (exb *extensionBuilder) SetEngine(engine ExtensionEngineKind) IExtensionBuilder {
 	exb.extension.setEngine(engine)
@@ -82,6 +92,8 @@ func (exb *extensionBuilder) SetName(name string) IExtensionBuilder {
 	exb.extension.setName(name)
 	return exb
 }
+
+func (exb *extensionBuilder) States() IStoragesBuilder { return exb.states }
 
 func (exb extensionBuilder) String() string { return exb.extension.String() }
 

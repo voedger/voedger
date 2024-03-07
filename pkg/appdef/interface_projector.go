@@ -15,12 +15,6 @@ type IProjector interface {
 	// Events to trigger.
 	Events() IProjectorEvents
 
-	// Returns projector states.
-	States() IStorages
-
-	// Returns projector intents.
-	Intents() IStorages
-
 	// Returns is projector is able to handle `sys.Error` events.
 	// False by default.
 	WantErrors() bool

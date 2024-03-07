@@ -31,6 +31,16 @@ type IExtension interface {
 	//
 	// After construction new extension has a default BuiltIn engine.
 	Engine() ExtensionEngineKind
+
+	// Returns states.
+	//
+	// States are used to retrieve data.
+	States() IStorages
+
+	// Returns intents.
+	//
+	// Intents are used to store data.
+	Intents() IStorages
 }
 
 type IExtensionBuilder interface {
