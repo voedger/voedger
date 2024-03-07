@@ -16,7 +16,6 @@ type ICommand interface {
 }
 
 type ICommandBuilder interface {
-	ICommand
 	IFunctionBuilder
 
 	// Sets command unlogged (secure) parameter. Must be known type from next kinds:

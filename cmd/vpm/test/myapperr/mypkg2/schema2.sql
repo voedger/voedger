@@ -1,8 +1,9 @@
 -- Copyright (c) 2023-present unTill Pro, Ltd.
 -- @author Alisher Nurmanov
 
-IMPORT SCHEMA 'github.com/voedger/voedger/pkg/registry';
+IMPORT SCHEMA 'mypkg1';
 
 TABLE MyTable2 INHERITS ODoc (
-    MyField int23 NOT NULL
+    MyField int23 NOT NULL,
+    myfield3 ref(mypkg1.MyTable1) NOT NULL
 );

@@ -43,6 +43,7 @@ func Test_AppDef_AddObject(t *testing.T) {
 		root := app.Object(rootName)
 		require.Equal(TypeKind_Object, root.Kind())
 		require.Equal(typ.(IObject), root)
+		require.NotPanics(func() { root.isObject() })
 
 		require.NotNil(root.Field(SystemField_QName))
 

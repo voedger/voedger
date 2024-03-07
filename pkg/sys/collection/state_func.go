@@ -18,7 +18,7 @@ import (
 func provideStateFunc(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder) {
 	cfg.Resources.Add(istructsmem.NewQueryFunction(
 		qNameQueryState,
-		stateFuncExec(appDefBuilder)))
+		stateFuncExec(appDefBuilder.AppDef())))
 }
 
 func stateFuncExec(appDef appdef.IAppDef) istructsmem.ExecQueryClosure {
@@ -41,7 +41,7 @@ func stateFuncExec(appDef appdef.IAppDef) istructsmem.ExecQueryClosure {
 			if !ok {
 				data[record.QName().String()] = make(map[istructs.RecordID]map[string]interface{})
 			}
-			recordData := coreutils.FieldsToMap(record, appDef, coreutils.Filter(func(name string, kind appdef.DataKind) bool {
+			recordData := coreutils.FieldsToMap(record, args.Workspace, coreutils.Filter(func(name string, kind appdef.DataKind) bool {
 				return name != appdef.SystemField_QName && name != appdef.SystemField_Container
 			}))
 			data[record.QName().String()][record.ID()] = recordData

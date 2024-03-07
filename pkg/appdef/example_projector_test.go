@@ -29,18 +29,22 @@ func ExampleIAppDefBuilder_AddProjector() {
 		appDef.AddCDoc(docName).SetComment("doc is state for projector")
 
 		v := appDef.AddView(viewName)
-		v.KeyBuilder().PartKeyBuilder().AddDataField("id", appdef.SysData_RecordID)
-		v.KeyBuilder().ClustColsBuilder().AddDataField("name", appdef.SysData_String)
-		v.ValueBuilder().AddDataField("data", appdef.SysData_bytes, false, appdef.MaxLen(1024))
+		v.Key().PartKey().AddDataField("id", appdef.SysData_RecordID)
+		v.Key().ClustCols().AddDataField("name", appdef.SysData_String)
+		v.Value().AddDataField("data", appdef.SysData_bytes, false, appdef.MaxLen(1024))
 		v.SetComment("view is intent for projector")
 
 		prj := appDef.AddProjector(prjName)
-		prj.
-			AddEvent(recName, appdef.ProjectorEventKind_AnyChanges...).
-			SetEventComment(recName, fmt.Sprintf("run projector every time when %v is changed", recName)).
-			SetWantErrors().
-			AddState(sysRecords, docName).
-			AddIntent(sysViews, viewName)
+		prj.SetWantErrors()
+		prj.Events().
+			Add(recName, appdef.ProjectorEventKind_AnyChanges...).
+			SetComment(recName, fmt.Sprintf("run projector every time when %v is changed", recName))
+		prj.States().
+			Add(sysRecords, docName).
+			SetComment(sysRecords, "projector needs to read «test.doc» from «sys.records» storage")
+		prj.Intents().
+			Add(sysViews, viewName).
+			SetComment(sysViews, "projector needs to update «test.view» from «sys.views» storage")
 
 		if a, err := appDef.Build(); err == nil {
 			app = a
@@ -53,17 +57,17 @@ func ExampleIAppDefBuilder_AddProjector() {
 	{
 		prj := app.Projector(prjName)
 		fmt.Println(prj, ":")
-		prj.Events(func(e appdef.IProjectorEvent) {
+		prj.Events().Enum(func(e appdef.IProjectorEvent) {
 			fmt.Println(" - event:", e, e.Comment())
 		})
 		if prj.WantErrors() {
 			fmt.Println(" - want sys.error events")
 		}
-		prj.States(func(s appdef.QName, names appdef.QNames) {
-			fmt.Println(" - state:", s, names)
+		prj.States().Enum(func(s appdef.IStorage) {
+			fmt.Println(" - state:", s, s.Comment())
 		})
-		prj.Intents(func(s appdef.QName, names appdef.QNames) {
-			fmt.Println(" - intent:", s, names)
+		prj.Intents().Enum(func(s appdef.IStorage) {
+			fmt.Println(" - intent:", s, s.Comment())
 		})
 
 		fmt.Println(app.Projector(appdef.NewQName("test", "unknown")))
@@ -82,8 +86,8 @@ func ExampleIAppDefBuilder_AddProjector() {
 	// BuiltIn-Projector «test.projector» :
 	//  - event: CRecord «test.record» [Insert Update Activate Deactivate] run projector every time when test.record is changed
 	//  - want sys.error events
-	//  - state: sys.records [test.doc]
-	//  - intent: sys.views [test.view]
+	//  - state: Storage «sys.records» [test.doc] projector needs to read «test.doc» from «sys.records» storage
+	//  - intent: Storage «sys.views» [test.view] projector needs to update «test.view» from «sys.views» storage
 	// <nil>
 	// 1 BuiltIn-Projector «test.projector»
 }

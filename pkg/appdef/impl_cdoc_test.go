@@ -43,6 +43,7 @@ func Test_AppDef_AddCDoc(t *testing.T) {
 		doc := app.CDoc(docName)
 		require.Equal(TypeKind_CDoc, doc.Kind())
 		require.Equal(typ.(ICDoc), doc)
+		require.NotPanics(func() { doc.isCDoc() })
 
 		require.Equal(2, doc.UserFieldCount())
 		require.Equal(DataKind_int64, doc.Field("f1").DataKind())

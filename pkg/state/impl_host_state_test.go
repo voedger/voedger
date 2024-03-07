@@ -19,7 +19,8 @@ func TestHostState_BasicUsage(t *testing.T) {
 	require := require.New(t)
 
 	factory := ProvideQueryProcessorStateFactory()
-	hostState := factory(context.Background(), mockedHostStateStructs(), nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil, nil)
+	appStructs := mockedHostStateStructs()
+	hostState := factory(context.Background(), appStructs, nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil, nil)
 
 	// Declare simple extension
 	extension := func(state istructs.IState) {
@@ -76,9 +77,9 @@ func mockedHostStateStructs() istructs.IAppStructs {
 	appDef := appdef.New()
 
 	view := appDef.AddView(testViewRecordQName1)
-	view.KeyBuilder().PartKeyBuilder().AddField("pkFld", appdef.DataKind_int64)
-	view.KeyBuilder().ClustColsBuilder().AddField("ccFld", appdef.DataKind_string)
-	view.ValueBuilder().
+	view.Key().PartKey().AddField("pkFld", appdef.DataKind_int64)
+	view.Key().ClustCols().AddField("ccFld", appdef.DataKind_string)
+	view.Value().
 		AddField("vFld", appdef.DataKind_int64, false).
 		AddField(ColOffset, appdef.DataKind_int64, false)
 

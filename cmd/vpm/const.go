@@ -6,9 +6,6 @@
 package main
 
 const (
-	dummyAppName         = "dummyApp"
-	sysQPN               = "github.com/voedger/voedger/pkg/sys"
-	sysSchemaSqlFileName = "sys.sql"
 	pkgDirName           = "pkg"
 	defaultPermissions   = 0766
 	baselineInfoFileName = "baseline.json"

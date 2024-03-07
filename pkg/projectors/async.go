@@ -117,6 +117,7 @@ func (a *asyncActualizer) cancelChannel(e error) {
 }
 
 func (a *asyncActualizer) waitForAppDeploy(ctx context.Context) error {
+	start := time.Now()
 	for ctx.Err() == nil {
 		ap, err := a.conf.AppPartitions.Borrow(a.conf.AppQName, a.conf.Partition, cluster.ProcessorKind_Actualizer)
 		if err == nil || errors.Is(err, appparts.ErrNotAvailableEngines) {
@@ -127,6 +128,10 @@ func (a *asyncActualizer) waitForAppDeploy(ctx context.Context) error {
 		}
 		if !errors.Is(err, appparts.ErrNotFound) {
 			return err
+		}
+		if time.Since(start) >= initFailureErrorLogInterval {
+			logger.Error(fmt.Sprintf("app %s part %d actualizer %s: failed to init in 30 seconds", a.conf.AppQName, a.conf.Partition, a.name))
+			start = time.Now()
 		}
 		time.Sleep(borrowRetryDelay)
 	}
@@ -148,12 +153,14 @@ func (a *asyncActualizer) init(ctx context.Context) (err error) {
 	}
 
 	// https://github.com/voedger/voedger/issues/1048
-	hasIntentsExceptViewAndRecord, _, _ := iterate.FindFirstMap(iProjector.Intents, func(storage appdef.QName, _ appdef.QNames) bool {
-		return storage != state.View && storage != state.Record
+	hasIntentsExceptViewAndRecord, _ := iterate.FindFirst(iProjector.Intents().Enum, func(storage appdef.IStorage) bool {
+		n := storage.Name()
+		return n != state.View && n != state.Record
 	})
 	// https://github.com/voedger/voedger/issues/1092
-	hasStatesExceptViewAndRecord, _, _ := iterate.FindFirstMap(iProjector.States, func(storage appdef.QName, _ appdef.QNames) bool {
-		return storage != state.View && storage != state.Record
+	hasStatesExceptViewAndRecord, _ := iterate.FindFirst(iProjector.States().Enum, func(storage appdef.IStorage) bool {
+		n := storage.Name()
+		return n != state.View && n != state.Record
 	})
 	nonBuffered := hasIntentsExceptViewAndRecord || hasStatesExceptViewAndRecord
 	p := &asyncProjector{
@@ -400,7 +407,7 @@ func (p *asyncProjector) DoAsync(_ context.Context, work pipeline.IWorkpiece) (o
 		p.aametrics.Set(aaCurrentOffset, p.partition, p.projector.Name, float64(w.pLogOffset))
 	}
 
-	triggeringQNames := p.iProjector.EventsMap()
+	triggeringQNames := p.iProjector.Events().Map()
 	if isAcceptable(w.event, p.iProjector.WantErrors(), triggeringQNames, p.iProjector.App()) {
 		err = p.projector.Func(w.event, p.state, p.state)
 		if err != nil {

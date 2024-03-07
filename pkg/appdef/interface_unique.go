@@ -57,9 +57,6 @@ type IUniquesBuilder interface {
 type IUnique interface {
 	IComment
 
-	// Returns parent structure
-	ParentStructure() IStructure
-
 	// Returns qualified name of unique.
 	Name() QName
 

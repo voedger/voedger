@@ -32,13 +32,13 @@ import (
 	queryprocessor "github.com/voedger/voedger/pkg/processors/query"
 	"github.com/voedger/voedger/pkg/projectors"
 	"github.com/voedger/voedger/pkg/state"
+	"github.com/voedger/voedger/pkg/sys/authnz"
 	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
 )
 
 var cocaColaDocID istructs.RecordID
-var collectionQuery appdef.IQuery
-var getCDocQuery appdef.IQuery
-var stateQuery appdef.IQuery
+var qNameWorkspaceDescriptor = appdef.NewQName(appdef.SysPackage, "WorkspaceDescriptor")
+var qNameTestWSKind = appdef.NewQName(appdef.SysPackage, "test_ws")
 
 const maxPrepareQueries = 10
 
@@ -61,33 +61,57 @@ func buildAppParts(t *testing.T) (appParts appparts.IAppPartitions, cleanup func
 		adb.AddCRecord(istructs.QNameCRecord)
 		adb.AddORecord(istructs.QNameORecord)
 		adb.AddWRecord(istructs.QNameWRecord)
-		adb.AddProjector(QNameProjectorCollection).
-			AddEvent(istructs.QNameCRecord, appdef.ProjectorEventKind_Insert, appdef.ProjectorEventKind_Update).
-			AddIntent(state.View, QNameCollectionView).
-			SetSync(true)
+
+		prj := adb.AddProjector(QNameProjectorCollection)
+		prj.SetSync(true).
+			Events().Add(istructs.QNameCRecord, appdef.ProjectorEventKind_Insert, appdef.ProjectorEventKind_Update)
+		prj.Intents().
+			Add(state.View, QNameCollectionView) // this view will be added below
 	}
 	{
 		// fill IAppDef with funcs. That is done here manually because we o not use sys.sql here
 		qNameCollectionParams := appdef.NewQName(appdef.SysPackage, "CollectionParams")
 
 		// will add func definitions to AppDef manually because local test does not use sql. In runtime these definitions will come from sys.sql
+		adb.AddObject(qNameCollectionParams).
+			AddField(field_Schema, appdef.DataKind_string, true).
+			AddField(field_ID, appdef.DataKind_RecordID, false)
+
 		adb.AddQuery(qNameQueryCollection).
-			SetParam(adb.AddObject(qNameCollectionParams).
-				AddField(field_Schema, appdef.DataKind_string, true).
-				AddField(field_ID, appdef.DataKind_RecordID, false).(appdef.IType).QName()).
+			SetParam(qNameCollectionParams).
 			SetResult(appdef.QNameANY)
 
+		qNameGetCDocParams := appdef.NewQName(appdef.SysPackage, "GetCDocParams")
+		adb.AddObject(qNameGetCDocParams).
+			AddField(field_ID, appdef.DataKind_int64, true)
+
+		qNameGetCDocResult := appdef.NewQName(appdef.SysPackage, "GetCDocResult")
+		adb.AddObject(qNameGetCDocResult).
+			AddField("Result", appdef.DataKind_string, true)
+
 		adb.AddQuery(qNameQueryGetCDoc).
-			SetParam(adb.AddObject(appdef.NewQName(appdef.SysPackage, "GetCDocParams")).
-				AddField(field_ID, appdef.DataKind_int64, true).(appdef.IType).QName()).
-			SetResult(adb.AddObject(appdef.NewQName(appdef.SysPackage, "GetCDocResult")).
-				AddField("Result", appdef.DataKind_string, true).(appdef.IType).QName())
+			SetParam(qNameGetCDocParams).
+			SetResult(qNameGetCDocResult)
+
+		qNameStateParams := appdef.NewQName(appdef.SysPackage, "StateParams")
+		adb.AddObject(qNameStateParams).
+			AddField(field_After, appdef.DataKind_int64, true)
+
+		qNameStateResult := appdef.NewQName(appdef.SysPackage, "StateResult")
+		adb.AddObject(qNameStateResult).
+			AddField(field_State, appdef.DataKind_string, true)
 
 		adb.AddQuery(qNameQueryState).
-			SetParam(adb.AddObject(appdef.NewQName(appdef.SysPackage, "StateParams")).
-				AddField(field_After, appdef.DataKind_int64, true).(appdef.IType).QName()).
-			SetResult(adb.AddObject(appdef.NewQName(appdef.SysPackage, "StateResult")).
-				AddField(field_State, appdef.DataKind_string, true).(appdef.IType).QName())
+			SetParam(qNameStateParams).
+			SetResult(qNameStateResult)
+
+		wsDesc := adb.AddCDoc(qNameWorkspaceDescriptor) // stub to make tests work
+		wsDesc.
+			AddField("WSKind", appdef.DataKind_QName, true).
+			AddField("Status", appdef.DataKind_int32, true)
+		wsDesc.SetSingleton()
+
+		adb.AddCDoc(qNameTestWSKind).SetSingleton()
 	}
 	{ // "modify" function
 		adb.AddCommand(test.modifyCmdName)
@@ -137,33 +161,75 @@ func buildAppParts(t *testing.T) (appParts appparts.IAppPartitions, cleanup func
 			AddField(test.articlePriceExceptionsPriceIdent, appdef.DataKind_float32, true)
 	}
 
-	// TODO: remove it after https://github.com/voedger/voedger/issues/56
-	appDef, err := adb.Build()
-	require.NoError(err)
+	{
+		// Workspace
+		wsBuilder := adb.AddWorkspace(appdef.NewQName(appdef.SysPackage, "test_wsWS"))
+		wsBuilder.SetDescriptor(qNameTestWSKind)
+		wsBuilder.AddType(qNameQueryCollection)
+		wsBuilder.AddType(qNameQueryGetCDoc)
+		wsBuilder.AddType(qNameQueryState)
+		wsBuilder.AddType(test.modifyCmdName)
+		wsBuilder.AddType(test.tableArticles)
+		wsBuilder.AddType(test.tableDepartments)
+		wsBuilder.AddType(test.tablePeriods)
+		wsBuilder.AddType(test.tablePrices)
+		wsBuilder.AddType(test.tableArticlePrices)
+		wsBuilder.AddType(test.tableArticlePriceExceptions)
+	}
 
 	// kept here to keep local tests working without sql
 	projectors.ProvideViewDef(adb, QNameCollectionView, func(b appdef.IViewBuilder) {
-		b.KeyBuilder().PartKeyBuilder().AddField(Field_PartKey, appdef.DataKind_int32)
-		b.KeyBuilder().ClustColsBuilder().
+		b.Key().PartKey().AddField(Field_PartKey, appdef.DataKind_int32)
+		b.Key().ClustCols().
 			AddField(Field_DocQName, appdef.DataKind_QName).
 			AddRefField(field_DocID).
 			AddRefField(field_ElementID)
-		b.ValueBuilder().
+		b.Value().
 			AddField(Field_Record, appdef.DataKind_Record, true).
 			AddField(state.ColOffset, appdef.DataKind_int64, true)
 	})
 
-	collectionQuery = appDef.Query(qNameQueryCollection)
-	getCDocQuery = appDef.Query(qNameQueryGetCDoc)
-	stateQuery = appDef.Query(qNameQueryState)
+	// TODO: remove it after https://github.com/voedger/voedger/issues/56
+	appDef, err := adb.Build()
+	require.NoError(err)
 
 	provider := istructsmem.Provide(cfgs, iratesce.TestBucketsFactory,
 		payloads.ProvideIAppTokensFactory(itokensjwt.TestTokensJWT()), asp)
 
 	appParts, cleanup, err = appparts.New(provider)
 	require.NoError(err)
-	appParts.DeployApp(test.appQName, appDef, test.appEngines)
+	appParts.DeployApp(test.appQName, appDef, test.totalPartitions, test.appEngines)
 	appParts.DeployAppPartitions(test.appQName, []istructs.PartitionID{test.partition})
+
+	// create stub for cdoc.sys.WorkspaceDescriptor to make query processor work
+	as, err := provider.AppStructs(istructs.AppQName_test1_app1)
+	require.NoError(err)
+	now := time.Now()
+	grebp := istructs.GenericRawEventBuilderParams{
+		HandlingPartition: test.partition,
+		Workspace:         test.workspace,
+		QName:             istructs.QNameCommandCUD,
+		RegisteredAt:      istructs.UnixMilli(now.UnixMilli()),
+		PLogOffset:        1,
+		WLogOffset:        1,
+	}
+	reb := as.Events().GetSyncRawEventBuilder(
+		istructs.SyncRawEventBuilderParams{
+			GenericRawEventBuilderParams: grebp,
+			SyncedAt:                     istructs.UnixMilli(now.UnixMilli()),
+		},
+	)
+	cdocWSDesc := reb.CUDBuilder().Create(qNameWorkspaceDescriptor)
+	cdocWSDesc.PutRecordID(appdef.SystemField_ID, 1)
+	cdocWSDesc.PutQName("WSKind", qNameTestWSKind)
+	cdocWSDesc.PutInt32("Status", int32(authnz.WorkspaceStatus_Active))
+	rawEvent, err := reb.BuildRawEvent()
+	require.NoError(err)
+	pLogEvent, err := as.Events().PutPlog(rawEvent, nil, istructsmem.NewIDGenerator())
+	require.NoError(err)
+	defer pLogEvent.Release()
+	require.NoError(as.Records().Apply(pLogEvent))
+	require.NoError(as.Events().PutWlog(pLogEvent))
 
 	return appParts, cleanup
 }
@@ -466,7 +532,7 @@ func TestBasicUsage_QueryFunc_Collection(t *testing.T) {
 	go queryProcessor.Run(context.Background())
 	sysToken, err := payloads.GetSystemPrincipalTokenApp(appTokens)
 	require.NoError(err)
-	serviceChannel <- queryprocessor.NewQueryMessage(context.Background(), test.appQName, test.partition, test.workspace, nil, request, collectionQuery, "", sysToken)
+	serviceChannel <- queryprocessor.NewQueryMessage(context.Background(), test.appQName, test.partition, test.workspace, nil, request, qNameQueryCollection, "", sysToken)
 	<-out.done
 
 	out.requireNoError(require)
@@ -582,7 +648,7 @@ func TestBasicUsage_QueryFunc_CDoc(t *testing.T) {
 	go queryProcessor.Run(context.Background())
 	sysToken, err := payloads.GetSystemPrincipalTokenApp(appTokens)
 	require.NoError(err)
-	serviceChannel <- queryprocessor.NewQueryMessage(context.Background(), test.appQName, test.partition, test.workspace, nil, []byte(request), getCDocQuery, "", sysToken)
+	serviceChannel <- queryprocessor.NewQueryMessage(context.Background(), test.appQName, test.partition, test.workspace, nil, []byte(request), qNameQueryGetCDoc, "", sysToken)
 	<-out.done
 
 	out.requireNoError(require)
@@ -702,7 +768,7 @@ func TestBasicUsage_State(t *testing.T) {
 	sysToken, err := payloads.GetSystemPrincipalTokenApp(appTokens)
 	require.NoError(err)
 	serviceChannel <- queryprocessor.NewQueryMessage(context.Background(), test.appQName, test.partition, test.workspace, nil, []byte(`{"args":{"After":0},"elements":[{"fields":["State"]}]}`),
-		stateQuery, "", sysToken)
+		qNameQueryState, "", sysToken)
 	<-out.done
 
 	out.requireNoError(require)
@@ -871,7 +937,7 @@ func TestState_withAfterArgument(t *testing.T) {
 	sysToken, err := payloads.GetSystemPrincipalTokenApp(appTokens)
 	require.NoError(err)
 	serviceChannel <- queryprocessor.NewQueryMessage(context.Background(), test.appQName, test.partition, test.workspace, nil, []byte(`{"args":{"After":5},"elements":[{"fields":["State"]}]}`),
-		stateQuery, "", sysToken)
+		qNameQueryState, "", sysToken)
 	<-out.done
 
 	out.requireNoError(require)

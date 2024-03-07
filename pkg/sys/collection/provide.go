@@ -16,8 +16,8 @@ func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder
 		collectionFuncExec,
 	))
 
-	provideQryCDoc(cfg, appDefBuilder)
+	provideQryCDoc(cfg)
 	provideStateFunc(cfg, appDefBuilder)
 
-	cfg.AddSyncProjectors(collectionProjectorFactory(appDefBuilder))
+	cfg.AddSyncProjectors(collectionProjectorFactory(appDefBuilder.AppDef()))
 }

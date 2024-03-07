@@ -34,9 +34,9 @@ func validateWSKindInitializationData(as istructs.IAppStructs, data map[string]i
 // kept here because impossible to define in sql
 func provideViewNextWSID(appDefBuilder appdef.IAppDefBuilder) {
 	projectors.ProvideViewDef(appDefBuilder, QNameViewNextBaseWSID, func(b appdef.IViewBuilder) {
-		b.KeyBuilder().PartKeyBuilder().AddField(fldDummy1, appdef.DataKind_int32)
-		b.KeyBuilder().ClustColsBuilder().AddField(fldDummy2, appdef.DataKind_int32)
-		b.ValueBuilder().AddField(fldNextBaseWSID, appdef.DataKind_int64, true)
+		b.Key().PartKey().AddField(fldDummy1, appdef.DataKind_int32)
+		b.Key().ClustCols().AddField(fldDummy2, appdef.DataKind_int32)
+		b.Value().AddField(fldNextBaseWSID, appdef.DataKind_int64, true)
 	})
 }
 

@@ -48,16 +48,16 @@ import (
 func TestBasicUsage_AsynchronousActualizer(t *testing.T) {
 	require := require.New(t)
 
-	appName, partitionNr := istructs.AppQName_test1_app1, istructs.PartitionID(1) // test within partition 1
+	appName, totalPartitions, partitionNr := istructs.AppQName_test1_app1, 1, istructs.PartitionID(1) // test within partition 1
 
 	appParts, cleanup, _, appStructs := deployTestApp(
-		appName, []istructs.PartitionID{partitionNr}, false,
+		appName, totalPartitions, []istructs.PartitionID{partitionNr}, false,
 		func(appDef appdef.IAppDefBuilder) {
 			ProvideViewDef(appDef, incProjectionView, buildProjectionView)
 			ProvideViewDef(appDef, decProjectionView, buildProjectionView)
 			appDef.AddCommand(testQName)
-			appDef.AddProjector(incrementorName).AddEvent(testQName, appdef.ProjectorEventKind_Execute)
-			appDef.AddProjector(decrementorName).AddEvent(testQName, appdef.ProjectorEventKind_Execute)
+			appDef.AddProjector(incrementorName).Events().Add(testQName, appdef.ProjectorEventKind_Execute)
+			appDef.AddProjector(decrementorName).Events().Add(testQName, appdef.ProjectorEventKind_Execute)
 		},
 		func(cfg *istructsmem.AppConfigType) {
 			cfg.Resources.Add(istructsmem.NewCommandFunction(testQName, istructsmem.NullCommandExec))
@@ -149,15 +149,15 @@ func TestBasicUsage_AsynchronousActualizer(t *testing.T) {
 func Test_AsynchronousActualizer_FlushByRange(t *testing.T) {
 	require := require.New(t)
 
-	appName, partitionNr := istructs.AppQName_test1_app1, istructs.PartitionID(2) // test within partition 2
+	appName, totalPartitions, partitionNr := istructs.AppQName_test1_app1, 2, istructs.PartitionID(2) // test within partition 2
 
 	appParts, cleanup, _, appStructs := deployTestApp(
-		appName, []istructs.PartitionID{partitionNr}, false,
+		appName, totalPartitions, []istructs.PartitionID{partitionNr}, false,
 		func(appDef appdef.IAppDefBuilder) {
 			ProvideViewDef(appDef, incProjectionView, buildProjectionView)
 			ProvideViewDef(appDef, decProjectionView, buildProjectionView)
 			appDef.AddCommand(testQName)
-			appDef.AddProjector(incrementorName).AddEvent(testQName, appdef.ProjectorEventKind_Execute)
+			appDef.AddProjector(incrementorName).Events().Add(testQName, appdef.ProjectorEventKind_Execute)
 		},
 		func(cfg *istructsmem.AppConfigType) {
 			cfg.Resources.Add(istructsmem.NewCommandFunction(testQName, istructsmem.NullCommandExec))
@@ -234,15 +234,15 @@ func Test_AsynchronousActualizer_FlushByRange(t *testing.T) {
 func Test_AsynchronousActualizer_FlushByInterval(t *testing.T) {
 	require := require.New(t)
 
-	appName, partitionNr := istructs.AppQName_test1_app1, istructs.PartitionID(1) // test within partition 1
+	appName, totalPartitions, partitionNr := istructs.AppQName_test1_app1, 1, istructs.PartitionID(1) // test within partition 1
 
 	appParts, cleanup, _, appStructs := deployTestApp(
-		appName, []istructs.PartitionID{partitionNr}, false,
+		appName, totalPartitions, []istructs.PartitionID{partitionNr}, false,
 		func(appDef appdef.IAppDefBuilder) {
 			ProvideViewDef(appDef, incProjectionView, buildProjectionView)
 			ProvideViewDef(appDef, decProjectionView, buildProjectionView)
 			appDef.AddCommand(testQName)
-			appDef.AddProjector(incrementorName).AddEvent(testQName, appdef.ProjectorEventKind_Execute)
+			appDef.AddProjector(incrementorName).Events().Add(testQName, appdef.ProjectorEventKind_Execute)
 		},
 		func(cfg *istructsmem.AppConfigType) {
 			cfg.Resources.Add(istructsmem.NewCommandFunction(testQName, istructsmem.NullCommandExec))
@@ -322,17 +322,19 @@ func getProjectorsInError(metrics imetrics.IMetrics, appName istructs.AppQName, 
 func Test_AsynchronousActualizer_ErrorAndRestore(t *testing.T) {
 	require := require.New(t)
 
-	appName, partitionNr := istructs.AppQName_test1_app1, istructs.PartitionID(1) // test within partition 1
+	appName, totalPartitions, partitionNr := istructs.AppQName_test1_app1, 1, istructs.PartitionID(1) // test within partition 1
 	name := appdef.NewQName("test", "failing_projector")
 
 	appParts, cleanup, _, appStructs := deployTestApp(
-		appName, []istructs.PartitionID{partitionNr}, false,
+		appName, totalPartitions, []istructs.PartitionID{partitionNr}, false,
 		func(appDef appdef.IAppDefBuilder) {
 			ProvideViewDef(appDef, incProjectionView, buildProjectionView)
 			ProvideViewDef(appDef, decProjectionView, buildProjectionView)
 			appDef.AddCommand(testQName)
 			// add not-View and not-Record state to make the projector NonBuffered
-			appDef.AddProjector(name).AddEvent(testQName, appdef.ProjectorEventKind_Execute).AddState(state.Http)
+			prj := appDef.AddProjector(name)
+			prj.Events().Add(testQName, appdef.ProjectorEventKind_Execute)
+			prj.States().Add(state.Http)
 		},
 		func(cfg *istructsmem.AppConfigType) {
 			cfg.Resources.Add(istructsmem.NewCommandFunction(testQName, istructsmem.NullCommandExec))
@@ -442,15 +444,15 @@ func Test_AsynchronousActualizer_ErrorAndRestore(t *testing.T) {
 func Test_AsynchronousActualizer_ResumeReadAfterNotifications(t *testing.T) {
 	require := require.New(t)
 
-	appName, partitionNr := istructs.AppQName_test1_app1, istructs.PartitionID(1) // test within partition 1
+	appName, totalPartitions, partitionNr := istructs.AppQName_test1_app1, 1, istructs.PartitionID(1) // test within partition 1
 
 	appParts, cleanup, _, appStructs := deployTestApp(
-		appName, []istructs.PartitionID{partitionNr}, false,
+		appName, totalPartitions, []istructs.PartitionID{partitionNr}, false,
 		func(appDef appdef.IAppDefBuilder) {
 			ProvideViewDef(appDef, incProjectionView, buildProjectionView)
 			ProvideViewDef(appDef, decProjectionView, buildProjectionView)
 			appDef.AddCommand(testQName)
-			appDef.AddProjector(incrementorName).AddEvent(testQName, appdef.ProjectorEventKind_Execute)
+			appDef.AddProjector(incrementorName).Events().Add(testQName, appdef.ProjectorEventKind_Execute)
 		},
 		func(cfg *istructsmem.AppConfigType) {
 			cfg.Resources.Add(istructsmem.NewCommandFunction(testQName, istructsmem.NullCommandExec))
@@ -578,15 +580,15 @@ func Test_AsynchronousActualizer_Stress(t *testing.T) {
 
 	require := require.New(t)
 
-	appName, partitionNr := istructs.AppQName_test1_app1, istructs.PartitionID(1) // test within partition 1
+	appName, totalPartitions, partitionNr := istructs.AppQName_test1_app1, 1, istructs.PartitionID(1) // test within partition 1
 
 	appParts, cleanup, _, appStructs := deployTestApp(
-		appName, []istructs.PartitionID{partitionNr}, false,
+		appName, totalPartitions, []istructs.PartitionID{partitionNr}, false,
 		func(appDef appdef.IAppDefBuilder) {
 			ProvideViewDef(appDef, incProjectionView, buildProjectionView)
 			ProvideViewDef(appDef, decProjectionView, buildProjectionView)
 			appDef.AddCommand(testQName)
-			appDef.AddProjector(incrementorName).AddEvent(testQName, appdef.ProjectorEventKind_Execute)
+			appDef.AddProjector(incrementorName).Events().Add(testQName, appdef.ProjectorEventKind_Execute)
 		},
 		func(cfg *istructsmem.AppConfigType) {
 			cfg.Resources.Add(istructsmem.NewCommandFunction(testQName, istructsmem.NullCommandExec))
@@ -689,16 +691,18 @@ func (m *simpleMetrics) Set(metricName string, partition istructs.PartitionID, p
 func Test_AsynchronousActualizer_NonBuffered(t *testing.T) {
 	require := require.New(t)
 
-	appName, partitionNr := istructs.AppQName_test1_app1, istructs.PartitionID(2) // test within partition 2
+	appName, totalPartitions, partitionNr := istructs.AppQName_test1_app1, 2, istructs.PartitionID(2) // test within partition 2
 
 	appParts, cleanup, _, appStructs := deployTestApp(
-		appName, []istructs.PartitionID{partitionNr}, false,
+		appName, totalPartitions, []istructs.PartitionID{partitionNr}, false,
 		func(appDef appdef.IAppDefBuilder) {
 			ProvideViewDef(appDef, incProjectionView, buildProjectionView)
 			ProvideViewDef(appDef, decProjectionView, buildProjectionView)
 			appDef.AddCommand(testQName)
 			// add not-View and not-Record intent to make the projector NonBuffered
-			appDef.AddProjector(incrementorName).AddEvent(testQName, appdef.ProjectorEventKind_Execute).AddIntent(state.Http)
+			prj := appDef.AddProjector(incrementorName)
+			prj.Events().Add(testQName, appdef.ProjectorEventKind_Execute)
+			prj.Intents().Add(state.Http)
 		},
 		func(cfg *istructsmem.AppConfigType) {
 			cfg.Resources.Add(istructsmem.NewCommandFunction(testQName, istructsmem.NullCommandExec))
@@ -823,11 +827,11 @@ func Test_AsynchronousActualizer_Stress_NonBuffered(t *testing.T) {
 	}
 
 	appParts, cleanup, metrics, appStructs := deployTestApp(
-		appName, partID, true,
+		appName, totalPartitions, partID, true,
 		func(appDef appdef.IAppDefBuilder) {
 			appDef.AddCommand(projectorFilter)
 			appDef.AddCommand(testQName)
-			appDef.AddProjector(incrementorName).AddEvent(projectorFilter, appdef.ProjectorEventKind_Execute)
+			appDef.AddProjector(incrementorName).Events().Add(projectorFilter, appdef.ProjectorEventKind_Execute)
 		},
 		func(cfg *istructsmem.AppConfigType) {
 			cfg.Resources.Add(istructsmem.NewCommandFunction(projectorFilter, istructsmem.NullCommandExec))
@@ -1002,11 +1006,11 @@ func Test_AsynchronousActualizer_Stress_Buffered(t *testing.T) {
 	}
 
 	appParts, cleanup, metrics, appStructs := deployTestApp(
-		appName, partID, true,
+		appName, totalPartitions, partID, true,
 		func(appDef appdef.IAppDefBuilder) {
 			appDef.AddCommand(projectorFilter)
 			appDef.AddCommand(testQName)
-			appDef.AddProjector(incrementorName).AddEvent(projectorFilter, appdef.ProjectorEventKind_Execute)
+			appDef.AddProjector(incrementorName).Events().Add(projectorFilter, appdef.ProjectorEventKind_Execute)
 		},
 		func(cfg *istructsmem.AppConfigType) {
 			cfg.Resources.Add(istructsmem.NewCommandFunction(projectorFilter, istructsmem.NullCommandExec))

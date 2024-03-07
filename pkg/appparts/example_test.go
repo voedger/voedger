@@ -21,17 +21,21 @@ import (
 )
 
 func Example() {
-	appDefBuilder := func(verInfo ...string) appdef.IAppDefBuilder {
+	buildAppDef := func(verInfo ...string) (appdef.IAppDefBuilder, appdef.IAppDef) {
 		adb := appdef.New()
 		adb.AddCDoc(appdef.NewQName("ver", "info")).SetComment(verInfo...)
-		return adb
+		app, err := adb.Build()
+		if err != nil {
+			panic(err)
+		}
+		return adb, app
 	}
 
 	appConfigs := istructsmem.AppConfigsType{}
-	appDef_1_v1 := appDefBuilder("app-1 ver.1")
-	appDef_2_v1 := appDefBuilder("app-2 ver.1")
-	appConfigs.AddConfig(istructs.AppQName_test1_app1, appDef_1_v1)
-	appConfigs.AddConfig(istructs.AppQName_test1_app2, appDef_2_v1)
+	adb_1_v1, app_1_v1 := buildAppDef("app-1 ver.1")
+	adb_2_v1, app_2_v1 := buildAppDef("app-2 ver.1")
+	appConfigs.AddConfig(istructs.AppQName_test1_app1, adb_1_v1)
+	appConfigs.AddConfig(istructs.AppQName_test1_app2, adb_2_v1)
 
 	appStructs := istructsmem.Provide(
 		appConfigs,
@@ -56,8 +60,8 @@ func Example() {
 
 	fmt.Println("*** Add ver 1 ***")
 
-	appParts.DeployApp(istructs.AppQName_test1_app1, appDef_1_v1, cluster.PoolSize(2, 2, 2))
-	appParts.DeployApp(istructs.AppQName_test1_app2, appDef_2_v1, cluster.PoolSize(2, 2, 2))
+	appParts.DeployApp(istructs.AppQName_test1_app1, app_1_v1, 1, cluster.PoolSize(2, 2, 2))
+	appParts.DeployApp(istructs.AppQName_test1_app2, app_2_v1, 1, cluster.PoolSize(2, 2, 2))
 
 	appParts.DeployAppPartitions(istructs.AppQName_test1_app1, []istructs.PartitionID{1})
 	appParts.DeployAppPartitions(istructs.AppQName_test1_app2, []istructs.PartitionID{1})
@@ -78,41 +82,10 @@ func Example() {
 
 	report(a2_v1_p1)
 
-	fmt.Println("*** Update to ver 2 ***")
-
-	appDef_1_v2 := appDefBuilder("app-1 ver.2")
-	appDef_2_v2 := appDefBuilder("app-2 ver.2")
-	appConfigs.AddConfig(istructs.AppQName_test1_app1, appDef_1_v2)
-	appConfigs.AddConfig(istructs.AppQName_test1_app2, appDef_2_v2)
-
-	appParts.DeployApp(istructs.AppQName_test1_app2, appDef_2_v2, cluster.PoolSize(2, 2, 2))
-	appParts.DeployApp(istructs.AppQName_test1_app1, appDef_1_v2, cluster.PoolSize(2, 2, 2))
-
-	a2_v2_p1, err := appParts.Borrow(istructs.AppQName_test1_app2, 1, cluster.ProcessorKind_Actualizer)
-	if err != nil {
-		panic(err)
-	}
-	defer a2_v2_p1.Release()
-
-	report(a2_v2_p1)
-
-	a1_v2_p1, err := appParts.Borrow(istructs.AppQName_test1_app1, 1, cluster.ProcessorKind_Command)
-	if err != nil {
-		panic(err)
-	}
-	defer a2_v2_p1.Release()
-
-	report(a1_v2_p1)
-
 	// Output:
 	// *** Add ver 1 ***
 	// test1/app1 partition 1
 	// - CDoc «ver.info» app-1 ver.1
 	// test1/app2 partition 1
 	// - CDoc «ver.info» app-2 ver.1
-	// *** Update to ver 2 ***
-	// test1/app2 partition 1
-	// - CDoc «ver.info» app-2 ver.2
-	// test1/app1 partition 1
-	// - CDoc «ver.info» app-1 ver.2
 }

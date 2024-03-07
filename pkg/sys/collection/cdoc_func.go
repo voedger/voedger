@@ -19,78 +19,79 @@ import (
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-func provideQryCDoc(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder) {
+func provideQryCDoc(cfg *istructsmem.AppConfigType) {
 	cfg.Resources.Add(istructsmem.NewQueryFunction(
 		qNameQueryGetCDoc,
-		execQryCDoc(appDefBuilder)))
+		execQryCDoc))
 }
 
-func execQryCDoc(appDef appdef.IAppDef) istructsmem.ExecQueryClosure {
-	return func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
-		rkb, err := args.State.KeyBuilder(state.Record, appdef.NullQName)
-		if err != nil {
-			return
-		}
-		rkb.PutRecordID(state.Field_ID, istructs.RecordID(args.ArgumentObject.AsInt64(field_ID)))
-		rsv, err := args.State.MustExist(rkb)
-		if err != nil {
-			return
-		}
-
-		vrkb, err := args.State.KeyBuilder(state.View, QNameCollectionView)
-		if err != nil {
-			return
-		}
-		vrkb.PutQName(Field_DocQName, rsv.AsQName(appdef.SystemField_QName))
-		vrkb.PutInt32(Field_PartKey, PartitionKeyCollection)
-		vrkb.PutRecordID(field_DocID, rsv.AsRecordID(appdef.SystemField_ID))
-
-		var doc *collectionObject
-
-		// build tree
-		err = args.State.Read(vrkb, func(key istructs.IKey, value istructs.IStateValue) (err error) {
-			rec := value.AsRecord(Field_Record)
-			if doc == nil {
-				cobj := newCollectionObject(rec)
-				doc = cobj
-			} else {
-				doc.addRawRecord(rec)
-			}
-			return
-		})
-		if err != nil {
-			return
-		}
-
-		if doc == nil {
-			return coreutils.NewHTTPErrorf(http.StatusNotFound, "Document not found")
-		}
-
-		doc.handleRawRecords()
-
-		var bytes []byte
-		var obj map[string]interface{}
-		refs := make(map[istructs.RecordID]bool)
-		obj, err = convert(doc, appDef, refs, istructs.NullRecordID)
-		if err != nil {
-			return
-		}
-		err = addRefs(obj, refs, args.State, appDef)
-		if err != nil {
-			return
-		}
-		bytes, err = marshal(obj)
-		if err != nil {
-			return
-		}
-		return callback(&cdocObject{data: string(bytes)})
+func execQryCDoc(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
+	rkb, err := args.State.KeyBuilder(state.Record, appdef.NullQName)
+	if err != nil {
+		return
 	}
+	rkb.PutRecordID(state.Field_ID, istructs.RecordID(args.ArgumentObject.AsInt64(field_ID)))
+	rsv, err := args.State.MustExist(rkb)
+	if err != nil {
+		return
+	}
+
+	vrkb, err := args.State.KeyBuilder(state.View, QNameCollectionView)
+	if err != nil {
+		return
+	}
+	vrkb.PutQName(Field_DocQName, rsv.AsQName(appdef.SystemField_QName))
+	vrkb.PutInt32(Field_PartKey, PartitionKeyCollection)
+	vrkb.PutRecordID(field_DocID, rsv.AsRecordID(appdef.SystemField_ID))
+
+	var doc *collectionObject
+
+	// build tree
+	err = args.State.Read(vrkb, func(key istructs.IKey, value istructs.IStateValue) (err error) {
+		rec := value.AsRecord(Field_Record)
+		if doc == nil {
+			cobj := newCollectionObject(rec)
+			doc = cobj
+		} else {
+			doc.addRawRecord(rec)
+		}
+		return
+	})
+	if err != nil {
+		return
+	}
+
+	if doc == nil {
+		return coreutils.NewHTTPErrorf(http.StatusNotFound, "Document not found")
+	}
+
+	doc.handleRawRecords()
+
+	var bytes []byte
+	var obj map[string]interface{}
+	refs := make(map[istructs.RecordID]bool)
+	obj, err = convert(doc, args.Workspace, refs, istructs.NullRecordID)
+	if err != nil {
+		return
+	}
+	err = addRefs(obj, refs, args.State, args.Workspace)
+	if err != nil {
+		return
+	}
+	bytes, err = marshal(obj)
+	if err != nil {
+		return
+	}
+	return callback(&cdocObject{data: string(bytes)})
 }
-func convert(doc istructs.IObject, appDef appdef.IAppDef, refs map[istructs.RecordID]bool, parent istructs.RecordID) (obj map[string]interface{}, err error) {
+
+func convert(doc istructs.IObject, iWorkspace appdef.IWorkspace, refs map[istructs.RecordID]bool, parent istructs.RecordID) (obj map[string]interface{}, err error) {
 	if doc == nil {
 		return nil, nil
 	}
-	obj = coreutils.FieldsToMap(doc, appDef, coreutils.Filter(func(fieldName string, kind appdef.DataKind) bool {
+	// unable to use ObjectToMap because of filter:
+	// field of the root is filtering -> no problem, field of a container is filtering -> `doc` var here ir root, it does not contain fields of container -> panic
+	obj = coreutils.FieldsToMap(doc, iWorkspace, coreutils.Filter(func(fieldName string, kind appdef.DataKind) bool {
 		if skipField(fieldName) {
 			return false
 		}
@@ -109,7 +110,7 @@ func convert(doc istructs.IObject, appDef appdef.IAppDef, refs map[istructs.Reco
 		doc.Children(container, func(c istructs.IObject) {
 			var childObj map[string]interface{}
 			if err == nil {
-				childObj, err = convert(c.(*collectionObject), appDef, refs, doc.AsRecord().ID())
+				childObj, err = convert(c.(*collectionObject), iWorkspace, refs, doc.AsRecord().ID())
 				if err == nil {
 					list = append(list, childObj)
 				}
@@ -122,7 +123,7 @@ func convert(doc istructs.IObject, appDef appdef.IAppDef, refs map[istructs.Reco
 
 	return obj, nil
 }
-func addRefs(obj map[string]interface{}, refs map[istructs.RecordID]bool, s istructs.IState, appDef appdef.IAppDef) error {
+func addRefs(obj map[string]interface{}, refs map[istructs.RecordID]bool, s istructs.IState, iWorkspace appdef.IWorkspace) error {
 	if len(refs) == 0 {
 		return nil
 	}
@@ -151,7 +152,7 @@ func addRefs(obj map[string]interface{}, refs map[istructs.RecordID]bool, s istr
 		recKey := strconv.FormatInt(int64(recordId), DEC)
 		if _, ok := recmap[recKey]; !ok {
 			child := newCollectionObject(rkv.AsRecord(""))
-			obj, err := convert(child, appDef, nil, istructs.NullRecordID)
+			obj, err := convert(child, iWorkspace, nil, istructs.NullRecordID)
 			if err != nil {
 				return err
 			}

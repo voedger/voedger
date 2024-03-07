@@ -13,8 +13,8 @@ import (
 
 // includes sys
 // all sql files should be in the root of the fs
-func BuildAppDefFromFS(qualifiedPackageName string, fs parser.IReadFS, subDir string, additionalPackagesFS ...parser.PackageFS) (appdef.IAppDef, error) {
-	appPackageAst, err := parser.ParsePackageDir(qualifiedPackageName, fs, subDir)
+func BuildAppDefFromFS(path string, fs parser.IReadFS, subDir string, additionalPackagesFS ...parser.PackageFS) (appdef.IAppDef, error) {
+	appPackageAst, err := parser.ParsePackageDir(path, fs, subDir)
 	if err != nil {
 		return nil, err
 	}
@@ -24,7 +24,7 @@ func BuildAppDefFromFS(qualifiedPackageName string, fs parser.IReadFS, subDir st
 	}
 	packagesAST := []*parser.PackageSchemaAST{appPackageAst, sysPackageAST}
 	for _, adds := range additionalPackagesFS {
-		additionalPackageAST, err := parser.ParsePackageDir(adds.QualifiedPackageName, adds.FS, ".")
+		additionalPackageAST, err := parser.ParsePackageDir(adds.Path, adds.FS, ".")
 		if err != nil {
 			return nil, err
 		}

@@ -88,21 +88,25 @@ func parseFSImpl(fs IReadFS, dir string) (schemas []*FileSchemaAST, errs []error
 			schema, err := parseImpl(entry.Name(), string(bytes))
 			if err != nil {
 				errs = append(errs, err)
+			} else {
+				schemas = append(schemas, &FileSchemaAST{
+					FileName: entry.Name(),
+					Ast:      schema,
+				})
 			}
-			schemas = append(schemas, &FileSchemaAST{
-				FileName: entry.Name(),
-				Ast:      schema,
-			})
 		}
+	}
+	if len(errs) > 0 {
+		return nil, errs
 	}
 	if len(schemas) == 0 {
 		return nil, []error{ErrDirContainsNoSchemaFiles}
 	}
-	return schemas, errs
+	return schemas, nil
 }
 
-func buildPackageSchemaImpl(qualifiedPackageName string, asts []*FileSchemaAST) (*PackageSchemaAST, error) {
-	if qualifiedPackageName == "" {
+func buildPackageSchemaImpl(path string, asts []*FileSchemaAST) (*PackageSchemaAST, error) {
+	if path == "" {
 		return nil, ErrNoQualifiedName
 	}
 	if len(asts) == 0 {
@@ -119,8 +123,8 @@ func buildPackageSchemaImpl(qualifiedPackageName string, asts []*FileSchemaAST) 
 	cleanupImports(headAst)
 
 	return &PackageSchemaAST{
-		QualifiedPackageName: qualifiedPackageName,
-		Ast:                  headAst,
+		Path: path,
+		Ast:  headAst,
 	}, errors.Join(errs...)
 }
 
@@ -234,7 +238,7 @@ func defineApp(c *basicContext) {
 	}
 
 	c.app.Name = string(app.Name)
-	appAst.Name = getPackageName(appAst.QualifiedPackageName)
+	appAst.Name = getPackageName(appAst.Path)
 	pkgNames := make(map[string]bool)
 	pkgNames[appAst.Name] = true
 
@@ -263,17 +267,17 @@ func defineApp(c *basicContext) {
 
 	c.app.LocalNameToFullPath = make(map[string]string, len(c.app.Packages))
 	for _, p := range c.app.Packages {
-		if p.QualifiedPackageName == appdef.SysPackage {
+		if p.Path == appdef.SysPackage {
 			p.Name = appdef.SysPackage
 			continue
 		}
 
 		if p.Name == "" {
-			c.err(ErrAppDoesNotDefineUseOfPackage(p.QualifiedPackageName))
+			c.err(ErrAppDoesNotDefineUseOfPackage(p.Path))
 			continue
 		}
 
-		c.app.LocalNameToFullPath[p.Name] = p.QualifiedPackageName
+		c.app.LocalNameToFullPath[p.Name] = p.Path
 	}
 }
 
@@ -283,8 +287,8 @@ func buildAppSchemaImpl(packages []*PackageSchemaAST) (*AppSchemaAST, error) {
 	pkgPathLocalNames := make(map[string]string, len(packages))
 	var importErrors []error
 	for _, p := range packages {
-		if _, ok := pkgMap[p.QualifiedPackageName]; ok {
-			return nil, ErrPackageRedeclared(p.QualifiedPackageName)
+		if _, ok := pkgMap[p.Path]; ok {
+			return nil, ErrPackageRedeclared(p.Path)
 		}
 		// check for local package name redeclaration
 		for _, imp := range p.Ast.Imports {
@@ -306,7 +310,7 @@ func buildAppSchemaImpl(packages []*PackageSchemaAST) (*AppSchemaAST, error) {
 				importErrors = append(importErrors, fmt.Errorf("%s: %w", imp.Pos.String(), ErrLocalPackageNameRedeclared(localPkgName, newLocalPkgName)))
 			}
 		}
-		pkgMap[p.QualifiedPackageName] = p
+		pkgMap[p.Path] = p
 	}
 
 	appSchema := &AppSchemaAST{

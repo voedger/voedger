@@ -21,9 +21,9 @@ type FileSchemaAST struct {
 }
 
 type PackageSchemaAST struct {
-	Name                 string // Fill on the analysis stage, when the APPLICATION statement is found
-	QualifiedPackageName string
-	Ast                  *SchemaAST
+	Name string // Fill on the analysis stage, when the APPLICATION statement is found
+	Path string
+	Ast  *SchemaAST
 }
 
 type AppSchemaAST struct {
@@ -42,8 +42,8 @@ type IReadFS interface {
 }
 
 type PackageFS struct {
-	QualifiedPackageName string
-	FS                   IReadFS
+	Path string
+	FS   IReadFS
 }
 
 type Ident string

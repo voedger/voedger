@@ -18,27 +18,36 @@ import (
 )
 
 func TestEnrichmentOperator_DoSync(t *testing.T) {
+
 	t.Run("Should set reference fields", func(t *testing.T) {
 		require := require.New(t)
 
-		appDef := appdef.New()
+		appDef := func() appdef.IAppDef {
+			adb := appdef.New()
 
-		addObject := func(n appdef.QName) {
-			appDef.AddObject(n).
-				AddField("id_lower_case_name", appdef.DataKind_RecordID, false)
-		}
-		addObject(appdef.NewQName("_", "root"))
-		addObject(appdef.NewQName("f", "first_children_1"))
-		addObject(appdef.NewQName("f", "deep_children_1"))
-		addObject(appdef.NewQName("f", "very_deep_children_1"))
-		addObject(appdef.NewQName("s", "first_children_2"))
-		addObject(appdef.NewQName("s", "deep_children_1"))
-		addObject(appdef.NewQName("s", "very_deep_children_1"))
+			addObject := func(n appdef.QName) {
+				adb.AddObject(n).
+					AddField("id_lower_case_name", appdef.DataKind_RecordID, false)
+			}
+
+			addObject(appdef.NewQName("_", "root"))
+			addObject(appdef.NewQName("f", "first_children_1"))
+			addObject(appdef.NewQName("f", "deep_children_1"))
+			addObject(appdef.NewQName("f", "very_deep_children_1"))
+			addObject(appdef.NewQName("s", "first_children_2"))
+			addObject(appdef.NewQName("s", "deep_children_1"))
+			addObject(appdef.NewQName("s", "very_deep_children_1"))
+
+			adb.AddObject(qNameXLowerCase).
+				AddField("name", appdef.DataKind_string, false)
+
+			app, err := adb.Build()
+			require.NoError(err)
+
+			return app
+		}()
 
 		commonFields := []IRefField{refField{field: "id_lower_case_name", ref: "name", key: "id_lower_case_name/name"}}
-
-		appDef.AddObject(qNameXLowerCase).
-			AddField("name", appdef.DataKind_string, false)
 
 		elements := []IElement{
 			element{

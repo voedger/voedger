@@ -569,9 +569,9 @@ func Test_WithState(t *testing.T) {
 	app := appStructsFromCallback(
 		func(appDef appdef.IAppDefBuilder) {
 			projectors.ProvideViewDef(appDef, testView, func(view appdef.IViewBuilder) {
-				view.KeyBuilder().PartKeyBuilder().AddField(pk, appdef.DataKind_int32)
-				view.KeyBuilder().ClustColsBuilder().AddField(cc, appdef.DataKind_int32)
-				view.ValueBuilder().AddField(vv, appdef.DataKind_int32, true)
+				view.Key().PartKey().AddField(pk, appdef.DataKind_int32)
+				view.Key().ClustCols().AddField(cc, appdef.DataKind_int32)
+				view.Value().AddField(vv, appdef.DataKind_int32, true)
 			})
 			appDef.AddPackage("pkg", "pkg")
 		},
@@ -636,9 +636,9 @@ func Test_StatePanic(t *testing.T) {
 	app := appStructsFromCallback(
 		func(appDef appdef.IAppDefBuilder) {
 			projectors.ProvideViewDef(appDef, testView, func(view appdef.IViewBuilder) {
-				view.KeyBuilder().PartKeyBuilder().AddField(pk, appdef.DataKind_int32)
-				view.KeyBuilder().ClustColsBuilder().AddField(cc, appdef.DataKind_int32)
-				view.ValueBuilder().AddField(vv, appdef.DataKind_int32, true)
+				view.Key().PartKey().AddField(pk, appdef.DataKind_int32)
+				view.Key().ClustCols().AddField(cc, appdef.DataKind_int32)
+				view.Value().AddField(vv, appdef.DataKind_int32, true)
 			})
 			appDef.AddPackage("pkg", "pkg")
 		},

@@ -50,13 +50,13 @@ func TestBasicUsage_SynchronousActualizer(t *testing.T) {
 	require := require.New(t)
 
 	_, cleanup, _, appStructs := deployTestApp(
-		istructs.AppQName_test1_app1, []istructs.PartitionID{1}, false,
+		istructs.AppQName_test1_app1, 1, []istructs.PartitionID{1}, false,
 		func(appDef appdef.IAppDefBuilder) {
 			ProvideViewDef(appDef, incProjectionView, buildProjectionView)
 			ProvideViewDef(appDef, decProjectionView, buildProjectionView)
 			appDef.AddCommand(testQName)
-			appDef.AddProjector(incrementorName).AddEvent(testQName, appdef.ProjectorEventKind_Execute).SetSync(true)
-			appDef.AddProjector(decrementorName).AddEvent(testQName, appdef.ProjectorEventKind_Execute).SetSync(true)
+			appDef.AddProjector(incrementorName).SetSync(true).Events().Add(testQName, appdef.ProjectorEventKind_Execute)
+			appDef.AddProjector(decrementorName).SetSync(true).Events().Add(testQName, appdef.ProjectorEventKind_Execute)
 		},
 		func(cfg *istructsmem.AppConfigType) {
 			cfg.AddSyncProjectors(
@@ -169,9 +169,9 @@ var (
 )
 
 var buildProjectionView = func(view appdef.IViewBuilder) {
-	view.KeyBuilder().PartKeyBuilder().AddField("pk", appdef.DataKind_int32)
-	view.KeyBuilder().ClustColsBuilder().AddField("cc", appdef.DataKind_int32)
-	view.ValueBuilder().AddField(colValue, appdef.DataKind_int32, true)
+	view.Key().PartKey().AddField("pk", appdef.DataKind_int32)
+	view.Key().ClustCols().AddField("cc", appdef.DataKind_int32)
+	view.Value().AddField(colValue, appdef.DataKind_int32, true)
 }
 
 type (
@@ -181,6 +181,7 @@ type (
 
 func deployTestApp(
 	appName istructs.AppQName,
+	appPartsCount int,
 	partID []istructs.PartitionID,
 	cachedStorage bool,
 	prepareAppDef appDefCallback,
@@ -191,16 +192,21 @@ func deployTestApp(
 	metrics imetrics.IMetrics,
 	appStructs istructs.IAppStructs,
 ) {
-	appDef := appdef.New()
+	appDefBuilder := appdef.New()
 	if prepareAppDef != nil {
-		prepareAppDef(appDef)
+		prepareAppDef(appDefBuilder)
 	}
-	provideOffsetsDefImpl(appDef)
+	provideOffsetsDefImpl(appDefBuilder)
 
 	cfgs := make(istructsmem.AppConfigsType, 1)
-	cfg := cfgs.AddConfig(appName, appDef)
+	cfg := cfgs.AddConfig(appName, appDefBuilder)
 	if prepareAppCfg != nil {
 		prepareAppCfg(cfg)
+	}
+
+	appDef, err := appDefBuilder.Build()
+	if err != nil {
+		panic(err)
 	}
 
 	var storageProvider istorage.IAppStorageProvider
@@ -218,8 +224,6 @@ func deployTestApp(
 		payloads.ProvideIAppTokensFactory(itokensjwt.TestTokensJWT()),
 		storageProvider)
 
-	var err error
-
 	appStructs, err = appStructsProvider.AppStructs(appName)
 	if err != nil {
 		panic(err)
@@ -230,7 +234,7 @@ func deployTestApp(
 		panic(err)
 	}
 
-	appParts.DeployApp(appName, appDef, cluster.PoolSize(10, 10, 10))
+	appParts.DeployApp(appName, appDef, appPartsCount, cluster.PoolSize(10, 10, 10))
 	appParts.DeployAppPartitions(appName, partID)
 
 	return appParts, cleanup, metrics, appStructs
@@ -240,13 +244,13 @@ func Test_ErrorInSyncActualizer(t *testing.T) {
 	require := require.New(t)
 
 	_, cleanup, _, appStructs := deployTestApp(
-		istructs.AppQName_test1_app1, []istructs.PartitionID{1}, false,
+		istructs.AppQName_test1_app1, 1, []istructs.PartitionID{1}, false,
 		func(appDef appdef.IAppDefBuilder) {
 			ProvideViewDef(appDef, incProjectionView, buildProjectionView)
 			ProvideViewDef(appDef, decProjectionView, buildProjectionView)
 			appDef.AddCommand(testQName)
-			appDef.AddProjector(incrementorName).AddEvent(testQName, appdef.ProjectorEventKind_Execute).SetSync(true)
-			appDef.AddProjector(decrementorName).AddEvent(testQName, appdef.ProjectorEventKind_Execute).SetSync(true)
+			appDef.AddProjector(incrementorName).SetSync(true).Events().Add(testQName, appdef.ProjectorEventKind_Execute)
+			appDef.AddProjector(decrementorName).SetSync(true).Events().Add(testQName, appdef.ProjectorEventKind_Execute)
 		},
 		func(cfg *istructsmem.AppConfigType) {
 			cfg.AddSyncProjectors(

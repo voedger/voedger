@@ -6,6 +6,7 @@
 package appdef
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -21,36 +22,26 @@ func Test_AppDef_AddGDoc(t *testing.T) {
 		appDef := New()
 
 		doc := appDef.AddGDoc(docName)
-		require.Equal(TypeKind_GDoc, doc.Kind())
-		require.Equal(doc, appDef.GDoc(docName))
 
 		t.Run("must be ok to add doc fields", func(t *testing.T) {
 			doc.
 				AddField("f1", DataKind_int64, true).
 				AddField("f2", DataKind_string, false)
-			require.Equal(2, doc.UserFieldCount())
 		})
 
 		t.Run("must be ok to add child", func(t *testing.T) {
 			rec := appDef.AddGRecord(recName)
-			require.Equal(TypeKind_GRecord, rec.Kind())
-			require.Equal(rec, appDef.GRecord(recName))
-
 			doc.AddContainer("rec", recName, 0, Occurs_Unbounded)
-			require.Equal(1, doc.ContainerCount())
-			require.Equal(rec, doc.Container("rec").Type())
 
 			t.Run("must be ok to add rec fields", func(t *testing.T) {
 				rec.
 					AddField("f1", DataKind_int64, true).
 					AddField("f2", DataKind_string, false)
-				require.Equal(2, rec.UserFieldCount())
 			})
 		})
 
 		t.Run("must be ok to make doc abstract", func(t *testing.T) {
 			doc.SetAbstract()
-			require.True(doc.Abstract())
 		})
 
 		t.Run("must be ok to build", func(t *testing.T) {
@@ -60,6 +51,8 @@ func Test_AppDef_AddGDoc(t *testing.T) {
 
 			app = a
 		})
+
+		require.Equal(fmt.Sprint(doc), fmt.Sprint(app.GDoc(docName)))
 	})
 
 	require.NotNil(app)
@@ -75,6 +68,8 @@ func Test_AppDef_AddGDoc(t *testing.T) {
 		doc := app.GDoc(docName)
 		require.Equal(TypeKind_GDoc, doc.Kind())
 		require.Equal(d, doc)
+		require.NotPanics(func() { doc.isDoc() })
+		require.NotPanics(func() { doc.isGDoc() })
 
 		require.NotNil(doc.Field(SystemField_QName))
 		require.Equal(doc.SystemField_QName(), doc.Field(SystemField_QName))
@@ -101,6 +96,7 @@ func Test_AppDef_AddGDoc(t *testing.T) {
 			rec := app.GRecord(recName)
 			require.Equal(TypeKind_GRecord, rec.Kind())
 			require.Equal(r, rec)
+			require.NotPanics(func() { rec.isGRecord() })
 
 			require.NotNil(rec.Field(SystemField_QName))
 			require.Equal(rec.SystemField_QName(), rec.Field(SystemField_QName))

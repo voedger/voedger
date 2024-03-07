@@ -82,6 +82,12 @@ type NodeConstraint struct {
 ### CompatibilityTree example
 
 - AppDef AppDef
+  - Packages
+    - packagePath1 LocalName1
+    - packagePath2 LocalName2
+    - packagePath3 LocalName3
+    - packagePath4 LocalName4
+    - packagePath5 LocalName5
   - Types
     - pkg1.Workspace1 // IWorkspace
       - Types

@@ -69,14 +69,13 @@ func Benchmark_pipelineIService_Sequential(b *testing.B) {
 		3, // MaxPrepareQueries
 		imetrics.Provide(), "vvm", authn, authz)
 	go queryProcessor.Run(context.Background())
-	query := appDef.Query(qNameFunction) // nnv: Suspicious code!! Should be borrowed AppPartition.AppDef() instead of appDef?
 	start := time.Now()
 	sysToken := getSystemToken(appTokens)
 
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		serviceChannel <- NewQueryMessage(context.Background(), appName, partID, wsID, nil, body, query, "", sysToken)
+		serviceChannel <- NewQueryMessage(context.Background(), appName, partID, wsID, nil, body, qNameFunction, "", sysToken)
 		<-res
 	}
 
@@ -139,13 +138,12 @@ func Benchmark_pipelineIService_Parallel(b *testing.B) {
 			3, // MaxPrepareQueries
 			imetrics.Provide(), "vvm", authn, authz)
 		go queryProcessor.Run(context.Background())
-		query := appDef.Query(qNameFunction) // nnv: Suspicious code!! Should be borrowed AppPartition.AppDef() instead of appDef?
 		sysToken := getSystemToken(appTokens)
 
 		b.ResetTimer()
 
 		for pb.Next() {
-			serviceChannel <- NewQueryMessage(context.Background(), appName, partID, wsID, nil, body, query, "", sysToken)
+			serviceChannel <- NewQueryMessage(context.Background(), appName, partID, wsID, nil, body, qNameFunction, "", sysToken)
 			<-res
 		}
 	})

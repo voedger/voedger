@@ -12,33 +12,31 @@ type IProjector interface {
 	// Returns is synchronous projector.
 	Sync() bool
 
-	// Enumerate events to trigger the projector.
-	//
-	// Events enumerated in alphabetical QNames order.
-	Events(func(IProjectorEvent))
-
-	// Returns events to trigger as map.
-	EventsMap() map[QName][]ProjectorEventKind
+	// Events to trigger.
+	Events() IProjectorEvents
 
 	// Returns is projector is able to handle `sys.Error` events.
 	// False by default.
 	WantErrors() bool
+}
 
-	// Returns projector states.
+// Describe all events to trigger the projector.
+type IProjectorEvents interface {
+	// Enumerate events to trigger the projector.
 	//
-	// State is a storage to get data.
-	//
-	// States storages enumerated in alphabetical QNames order.
-	// Names slice in every intent storage is sorted and deduplicated.
-	States(func(storage QName, names QNames))
+	// Events enumerated in alphabetical QNames order.
+	Enum(func(IProjectorEvent))
 
-	// Returns projector intents.
+	// Returns event by name.
 	//
-	// Intent is a storage to put data.
-	//
-	// Intents storages enumerated in alphabetical QNames order.
-	// Names slice in every intent storage is sorted and deduplicated.
-	Intents(func(storage QName, names QNames))
+	// Returns nil if event not found.
+	Event(QName) IProjectorEvent
+
+	// Returns number of events.
+	Len() int
+
+	// Returns events to trigger as map.
+	Map() map[QName][]ProjectorEventKind
 }
 
 // Describe event to trigger the projector.
@@ -79,12 +77,25 @@ var ProjectorEventKind_AnyChanges = []ProjectorEventKind{
 }
 
 type IProjectorBuilder interface {
-	IProjector
 	IExtensionBuilder
 
 	// Sets is synchronous projector.
 	SetSync(bool) IProjectorBuilder
 
+	// Events builder.
+	Events() IProjectorEventsBuilder
+
+	// Returns projector states builder.
+	States() IStoragesBuilder
+
+	// Returns projector intents builder.
+	Intents() IStoragesBuilder
+
+	// Sets is projector is able to handle `sys.Error` events.
+	SetWantErrors() IProjectorBuilder
+}
+
+type IProjectorEventsBuilder interface {
 	// Adds event to trigger the projector.
 	//
 	// QName can be some record type or command.
@@ -98,24 +109,11 @@ type IProjectorBuilder interface {
 	//	- if QName is empty (NullQName)
 	//	- if QName type is not a record and not a command
 	//	- if event kind is not applicable for QName type.
-	AddEvent(on QName, event ...ProjectorEventKind) IProjectorBuilder
+	Add(on QName, event ...ProjectorEventKind) IProjectorEventsBuilder
 
 	// Sets event comment.
 	//
 	// # Panics:
-	//	- if event for QName is not added
-	SetEventComment(on QName, comment ...string) IProjectorBuilder
-
-	// Sets is projector is able to handle `sys.Error` events
-	SetWantErrors() IProjectorBuilder
-
-	// Adds state to the projector.
-	//
-	// If storage with name is already exists in states then names will be added to existing storage.
-	AddState(storage QName, names ...QName) IProjectorBuilder
-
-	// Adds intent to the projector.
-	//
-	// If storage with name is already exists in intents then names will be added to existing storage.
-	AddIntent(storage QName, names ...QName) IProjectorBuilder
+	//	- if event for QName is not added.
+	SetComment(on QName, comment ...string) IProjectorEventsBuilder
 }
