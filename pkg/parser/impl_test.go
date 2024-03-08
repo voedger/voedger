@@ -2296,4 +2296,9 @@ func Test_Identifiers(t *testing.T) {
 	);`)
 	require.ErrorContains(err, "file1.sql:3:263: unexpected token")
 
+	_, err = ParseFile("file1.sql", `APPLICATION app1();
+	WORKSPACE w (
+		ROLE r世界;
+	);`)
+	require.ErrorContains(err, "file1.sql:3:9: invalid input text")
 }
