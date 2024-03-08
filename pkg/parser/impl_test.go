@@ -256,9 +256,9 @@ func Test_BasicUsage(t *testing.T) {
 	require.Equal(intentsCount, proj.Intents().Len())
 
 	cmd = app.Command(appdef.NewQName("main", "NewOrder2"))
-	require.Len(cmd.States().Len(), 1)
+	require.Equal(1, cmd.States().Len())
 	require.NotNil(cmd.States().Storage(appdef.NewQName("sys", "AppSecret")))
-	require.Len(cmd.Intents().Len(), 1)
+	require.Equal(1, cmd.States().Len())
 	intent := cmd.Intents().Storage(appdef.NewQName("sys", "Record"))
 	require.NotNil(intent)
 	require.True(intent.Names().Contains(appdef.NewQName("main", "Transaction")))
