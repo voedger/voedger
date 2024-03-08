@@ -182,7 +182,7 @@ func Test_BasicUsage(t *testing.T) {
 	require.Equal(appdef.DataKind_int32, crec.Field("Kind").DataKind())
 
 	// QUERY
-	q1 := app.Query(appdef.NewQName("main", "_Query1"))
+	q1 := app.Query(appdef.NewQName("main", "Query11"))
 	require.NotNil(q1)
 	require.Equal(appdef.TypeKind_Query, q1.Kind())
 
@@ -1738,8 +1738,8 @@ func Test_Alter_Workspace_In_Package(t *testing.T) {
 	require.NoError(err)
 
 	fs1, err := ParseFile("file1.sql", `
-		ALTERABLE WORKSPACE _Ws(
-			TABLE _wst1 INHERITS CDoc();
+		ALTERABLE WORKSPACE Ws0(
+			TABLE wst01 INHERITS CDoc();
 		);
 		ABSTRACT WORKSPACE AWs(
 			TABLE awst1 INHERITS CDoc();
@@ -1750,8 +1750,8 @@ func Test_Alter_Workspace_In_Package(t *testing.T) {
 	`)
 	require.NoError(err)
 	fs2, err := ParseFile("file2.sql", `
-		ALTER WORKSPACE _Ws(
-			TABLE _wst2 INHERITS CDoc();
+		ALTER WORKSPACE Ws0(
+			TABLE wst02 INHERITS CDoc();
 		);
 		ALTER WORKSPACE AWs(
 			TABLE awst2 INHERITS CDoc();
@@ -2279,4 +2279,21 @@ func Test_Panic1(t *testing.T) {
 	ast, errs := ParsePackageDir(appdef.SysPackage, pkg1FS, "test")
 	require.ErrorContains(t, errs, "no valid schema files")
 	require.Nil(t, ast)
+}
+
+func Test_Identifiers(t *testing.T) {
+	require := assertions(t)
+
+	_, err := ParseFile("file1.sql", `APPLICATION app1();
+	WORKSPACE w (
+		ROLE _role;
+	);`)
+	require.ErrorContains(err, "file1.sql:3:8: invalid input text")
+
+	_, err = ParseFile("file1.sql", `APPLICATION app1();
+	WORKSPACE w (
+		ROLE r234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890r23456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456;
+	);`)
+	require.ErrorContains(err, "file1.sql:3:263: unexpected token")
+
 }
