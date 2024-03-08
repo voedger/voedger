@@ -241,7 +241,7 @@ WORKSPACE MyWorkspace (
         QUERY Query1 RETURNS void;
 
         -- WITH Comment... overrides this comment
-        QUERY _Query1() RETURNS air.Order WITH Comment='A comment';
+        QUERY Query11() RETURNS air.Order WITH Comment='A comment';
 
         -- Query which can return any value
         QUERY Query2(air.Order) STATE(AppSecret, Http) RETURNS any;
