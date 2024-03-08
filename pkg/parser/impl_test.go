@@ -255,6 +255,14 @@ func Test_BasicUsage(t *testing.T) {
 	require.Equal(1, intentsCount)
 	require.Equal(intentsCount, proj.Intents().Len())
 
+	cmd = app.Command(appdef.NewQName("main", "NewOrder2"))
+	require.Equal(1, cmd.States().Len())
+	require.NotNil(cmd.States().Storage(appdef.NewQName("sys", "AppSecret")))
+	require.Equal(1, cmd.States().Len())
+	intent := cmd.Intents().Storage(appdef.NewQName("sys", "Record"))
+	require.NotNil(intent)
+	require.True(intent.Names().Contains(appdef.NewQName("main", "Transaction")))
+
 	localNames := app.PackageLocalNames()
 	require.Len(localNames, 3)
 	require.Contains(localNames, "main")
