@@ -2338,4 +2338,32 @@ func Test_RefsWorkspaces(t *testing.T) {
 		"file.sql:5:10: table t1 not included into workspace",
 		"file.sql:8:10: table t1 not included into workspace",
 		"file.sql:11:10: table t1 not included into workspace")
+
+	require.NoAppSchemaError(`APPLICATION test();
+	WORKSPACE w2 (
+		TABLE t1 INHERITS WDoc(
+			items TABLE t2(
+				items TABLE t3()
+			)
+		);
+		TABLE tab2 INHERITS WDoc(
+			f1 ref(t2),
+			f2 ref(t3) 
+		);
+		TYPE typ2(
+			f1 ref(t2), 
+			f2 ref(t3) 
+		);
+		VIEW test(
+			f1 ref(t2),
+			f2 ref(t3),
+			PRIMARY KEY(f1)
+		) AS RESULT OF Proj1;
+
+		EXTENSION ENGINE BUILTIN (
+			PROJECTOR Proj1 AFTER EXECUTE ON (Orders) INTENTS (View(test));
+			COMMAND Orders()
+		);
+
+	);`)
 }

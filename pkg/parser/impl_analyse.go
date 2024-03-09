@@ -295,6 +295,17 @@ func analyseAlterWorkspace(u *AlterWorkspaceStmt, c *iterateCtx) {
 		return
 	}
 	// find all included statements
+
+	var iterTableItems func(ws *WorkspaceStmt, wsctx *wsCtx, items []TableItemExpr)
+	iterTableItems = func(ws *WorkspaceStmt, wsctx *wsCtx, items []TableItemExpr) {
+		for i := range items {
+			if items[i].NestedTable != nil {
+				useStmtInWs(wsctx, wsctx.pkg.Name, &items[i].NestedTable.Table)
+				iterTableItems(ws, wsctx, items[i].NestedTable.Table.Items)
+			}
+		}
+	}
+
 	var iter func(wsctx *wsCtx, coll IStatementCollection)
 	iter = func(wsctx *wsCtx, coll IStatementCollection) {
 		coll.Iterate(func(stmt interface{}) {
@@ -305,12 +316,7 @@ func analyseAlterWorkspace(u *AlterWorkspaceStmt, c *iterateCtx) {
 				}
 			}
 			if t, ok := stmt.(*TableStmt); ok {
-				for i := range t.Items {
-					if t.Items[i].NestedTable != nil {
-						useStmtInWs(wsctx, wsctx.pkg.Name, &t.Items[i].NestedTable.Table)
-						iter(wsctx, &t.Items[i].NestedTable.Table)
-					}
-				}
+				iterTableItems(wsctx.ws, wsctx, t.Items)
 			}
 		})
 	}
@@ -813,6 +819,16 @@ func analyseWorkspace(v *WorkspaceStmt, c *iterateCtx) {
 	// find all included QNames
 	var iter func(ws *WorkspaceStmt, wsctx *wsCtx, coll IStatementCollection)
 
+	var iterTableItems func(ws *WorkspaceStmt, wsctx *wsCtx, items []TableItemExpr)
+	iterTableItems = func(ws *WorkspaceStmt, wsctx *wsCtx, items []TableItemExpr) {
+		for i := range items {
+			if items[i].NestedTable != nil {
+				useStmtInWs(wsctx, wsctx.pkg.Name, &items[i].NestedTable.Table)
+				iterTableItems(ws, wsctx, items[i].NestedTable.Table.Items)
+			}
+		}
+	}
+
 	iter = func(ws *WorkspaceStmt, wsctx *wsCtx, coll IStatementCollection) {
 		coll.Iterate(func(stmt interface{}) {
 			useStmtInWs(wsctx, wsctx.pkg.Name, stmt)
@@ -822,12 +838,7 @@ func analyseWorkspace(v *WorkspaceStmt, c *iterateCtx) {
 				}
 			}
 			if t, ok := stmt.(*TableStmt); ok {
-				for i := range t.Items {
-					if t.Items[i].NestedTable != nil {
-						useStmtInWs(wsctx, wsctx.pkg.Name, &t.Items[i].NestedTable.Table)
-						iter(ws, wsctx, &t.Items[i].NestedTable.Table)
-					}
-				}
+				iterTableItems(ws, wsctx, t.Items)
 			}
 		})
 	}
