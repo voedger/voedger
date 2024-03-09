@@ -19,6 +19,13 @@ type iterateCtx struct {
 	pkg        *PackageSchemaAST
 	collection IStatementCollection
 	parent     *iterateCtx
+	wsCtxs     map[*WorkspaceStmt]*wsCtx
+}
+
+func (c *iterateCtx) setPkg(pkg *PackageSchemaAST) {
+	c.pkg = pkg
+	c.collection = pkg.Ast
+	c.parent = nil
 }
 
 func FindApplication(p *PackageSchemaAST) (result *ApplicationStmt, err error) {
@@ -33,48 +40,98 @@ func FindApplication(p *PackageSchemaAST) (result *ApplicationStmt, err error) {
 	return result, nil
 }
 
-func preAnalyse(c *basicContext, p *PackageSchemaAST) {
-	iteratePackage(p, c, func(stmt interface{}, ictx *iterateCtx) {
-		switch v := stmt.(type) {
-		case *TableStmt:
-			preAnalyseTable(v, ictx)
-		}
-	})
+func preAnalyse(c *basicContext, packages []*PackageSchemaAST) {
+	for _, p := range packages {
+		iteratePackage(p, c, func(stmt interface{}, ictx *iterateCtx) {
+			switch v := stmt.(type) {
+			case *TableStmt:
+				preAnalyseTable(v, ictx)
+			}
+		})
+	}
 }
 
-func analyse(c *basicContext, p *PackageSchemaAST) {
-	iteratePackage(p, c, func(stmt interface{}, ictx *iterateCtx) {
-		switch v := stmt.(type) {
-		case *CommandStmt:
-			analyzeCommand(v, ictx)
-		case *QueryStmt:
-			analyzeQuery(v, ictx)
-		case *ProjectorStmt:
-			analyseProjector(v, ictx)
-		case *TableStmt:
-			analyseTable(v, ictx)
-		case *WorkspaceStmt:
-			analyseWorkspace(v, ictx)
-		case *TypeStmt:
-			analyseType(v, ictx)
-		case *ViewStmt:
-			analyseView(v, ictx)
-		case *UseTableStmt:
-			analyseUseTable(v, ictx)
-		case *UseWorkspaceStmt:
-			analyseUseWorkspace(v, ictx)
-		case *AlterWorkspaceStmt:
-			analyseAlterWorkspace(v, ictx)
-		case *StorageStmt:
-			analyseStorage(v, ictx)
-		case *RateStmt:
-			analyseRate(v, ictx)
-		case *LimitStmt:
-			analyseLimit(v, ictx)
-		case *GrantStmt:
-			analyseGrant(v, ictx)
-		}
-	})
+func analyse(c *basicContext, packages []*PackageSchemaAST) {
+	wsIncludeCtxs := make(map[*WorkspaceStmt]*wsCtx)
+	ictx := &iterateCtx{
+		basicContext: c,
+		parent:       nil,
+		wsCtxs:       wsIncludeCtxs,
+	}
+	// Pass 1
+	for _, p := range packages {
+		ictx.setPkg(p)
+		iterateContext(ictx, func(stmt interface{}, ictx *iterateCtx) {
+			switch v := stmt.(type) {
+			case *CommandStmt:
+				analyzeCommand(v, ictx)
+			case *QueryStmt:
+				analyzeQuery(v, ictx)
+			case *ProjectorStmt:
+				analyseProjector(v, ictx)
+			case *TableStmt:
+				analyseTable(v, ictx)
+			case *TypeStmt:
+				analyseType(v, ictx)
+			case *ViewStmt:
+				analyseView(v, ictx)
+			case *UseTableStmt:
+				analyseUseTable(v, ictx)
+			case *UseWorkspaceStmt:
+				analyseUseWorkspace(v, ictx)
+			case *StorageStmt:
+				analyseStorage(v, ictx)
+			case *RateStmt:
+				analyseRate(v, ictx)
+			case *LimitStmt:
+				analyseLimit(v, ictx)
+			case *GrantStmt:
+				analyseGrant(v, ictx)
+			}
+		})
+	}
+	// Pass 2
+	for _, p := range packages {
+		ictx.setPkg(p)
+		iterateContext(ictx, func(stmt interface{}, ictx *iterateCtx) {
+			if v, ok := stmt.(*WorkspaceStmt); ok {
+				analyseWorkspace(v, ictx)
+			}
+		})
+	}
+	// Pass 3
+	for _, p := range packages {
+		ictx.setPkg(p)
+		iterateContext(ictx, func(stmt interface{}, ictx *iterateCtx) {
+			if v, ok := stmt.(*AlterWorkspaceStmt); ok {
+				analyseAlterWorkspace(v, ictx)
+			}
+		})
+	}
+	// Pass 4
+	for _, p := range packages {
+		ictx.setPkg(p)
+		iterateContext(ictx, func(stmt interface{}, ictx *iterateCtx) {
+			if v, ok := stmt.(*WorkspaceStmt); ok {
+				includeFromInheritedWorkspaces(v, ictx)
+			}
+		})
+	}
+	// Pass 5
+	for _, p := range packages {
+		ictx.setPkg(p)
+		iterateContext(ictx, func(stmt interface{}, ictx *iterateCtx) {
+			if v, ok := stmt.(*TableStmt); ok {
+				analyseRefFields(v.Items, ictx)
+			}
+			if v, ok := stmt.(*TypeStmt); ok {
+				analyseRefFields(v.Items, ictx)
+			}
+			if v, ok := stmt.(*ViewStmt); ok {
+				analyseViewRefFields(v.Items, ictx)
+			}
+		})
+	}
 }
 
 func analyseGrant(grant *GrantStmt, c *iterateCtx) {
@@ -235,7 +292,29 @@ func analyseAlterWorkspace(u *AlterWorkspaceStmt, c *iterateCtx) {
 	err := resolveInCtx(u.Name, c, resolveFunc)
 	if err != nil {
 		c.stmtErr(&u.Name.Pos, err)
+		return
 	}
+	// find all included statements
+	var iter func(wsctx *wsCtx, coll IStatementCollection)
+	iter = func(wsctx *wsCtx, coll IStatementCollection) {
+		coll.Iterate(func(stmt interface{}) {
+			useStmtInWs(wsctx, c.pkg.Name, stmt)
+			if collection, ok := stmt.(IStatementCollection); ok {
+				if _, isWorkspace := stmt.(*WorkspaceStmt); !isWorkspace {
+					iter(wsctx, collection)
+				}
+			}
+			if t, ok := stmt.(*TableStmt); ok {
+				for i := range t.Items {
+					if t.Items[i].NestedTable != nil {
+						useStmtInWs(wsctx, wsctx.pkg.Name, &t.Items[i].NestedTable.Table)
+						iter(wsctx, &t.Items[i].NestedTable.Table)
+					}
+				}
+			}
+		})
+	}
+	iter(c.wsCtxs[u.alteredWorkspace], u)
 }
 
 func analyseStorage(u *StorageStmt, c *iterateCtx) {
@@ -307,20 +386,6 @@ func analyseView(view *ViewStmt, c *iterateCtx) {
 				c.stmtErr(&rf.Name.Pos, ErrRedefined(string(rf.Name.Value)))
 			} else {
 				fields[string(rf.Name.Value)] = i
-			}
-			for i := range rf.RefDocs {
-				refDoc := &rf.RefDocs[i]
-				err := resolveInCtx(*refDoc, c, func(f *TableStmt, pkg *PackageSchemaAST) error {
-					if f.Abstract {
-						return ErrReferenceToAbstractTable(refDoc.String())
-					}
-					rf.refQNames = append(rf.refQNames, pkg.NewQName(f.Name))
-					return nil
-				})
-				if err != nil {
-					c.stmtErr(&refDoc.Pos, err)
-					continue
-				}
 			}
 		}
 	}
@@ -682,7 +747,28 @@ func analyseType(v *TypeStmt, c *iterateCtx) {
 	analyseFields(v.Items, c, false)
 }
 
+func useStmtInWs(wsctx *wsCtx, stmtPackage string, stmt interface{}) {
+	if named, ok := stmt.(INamedStatement); ok {
+		if supported(stmt) {
+			wsctx.ws.qNames = append(wsctx.ws.qNames, appdef.NewQName(stmtPackage, named.GetName()))
+		}
+	}
+	if useTable, ok := stmt.(*UseTableStmt); ok {
+		wsctx.ws.qNames = append(wsctx.ws.qNames, useTable.qNames...)
+	}
+	if useWorkspace, ok := stmt.(*UseWorkspaceStmt); ok {
+		wsctx.ws.qNames = append(wsctx.ws.qNames, useWorkspace.qName)
+	}
+}
+
 func analyseWorkspace(v *WorkspaceStmt, c *iterateCtx) {
+
+	wsc := &wsCtx{
+		pkg:  c.pkg,
+		ws:   v,
+		ictx: c,
+	}
+	c.wsCtxs[v] = wsc
 
 	var chain []DefQName
 	var checkChain func(qn DefQName) error
@@ -713,6 +799,7 @@ func analyseWorkspace(v *WorkspaceStmt, c *iterateCtx) {
 		chain = make([]DefQName, 0)
 		if err := checkChain(inherits); err != nil {
 			c.stmtErr(&inherits.Pos, err)
+			return
 		}
 	}
 	if v.Descriptor != nil {
@@ -722,6 +809,78 @@ func analyseWorkspace(v *WorkspaceStmt, c *iterateCtx) {
 		analyseNestedTables(v.Descriptor.Items, appdef.TypeKind_CDoc, c)
 		analyseFieldSets(v.Descriptor.Items, c)
 	}
+
+	// find all included QNames
+	var iter func(ws *WorkspaceStmt, wsctx *wsCtx, coll IStatementCollection)
+
+	iter = func(ws *WorkspaceStmt, wsctx *wsCtx, coll IStatementCollection) {
+		coll.Iterate(func(stmt interface{}) {
+			useStmtInWs(wsctx, wsctx.pkg.Name, stmt)
+			if collection, ok := stmt.(IStatementCollection); ok {
+				if _, isWorkspace := stmt.(*WorkspaceStmt); !isWorkspace {
+					iter(ws, wsctx, collection)
+				}
+			}
+			if t, ok := stmt.(*TableStmt); ok {
+				for i := range t.Items {
+					if t.Items[i].NestedTable != nil {
+						useStmtInWs(wsctx, wsctx.pkg.Name, &t.Items[i].NestedTable.Table)
+						iter(ws, wsctx, &t.Items[i].NestedTable.Table)
+					}
+				}
+			}
+		})
+	}
+
+	iter(v, wsc, v)
+}
+
+type wsCtx struct {
+	pkg  *PackageSchemaAST
+	ws   *WorkspaceStmt
+	ictx *iterateCtx
+}
+
+func includeFromInheritedWorkspaces(ws *WorkspaceStmt, c *iterateCtx) error {
+	sysWorkspace, err := lookupInSysPackage(c.basicContext, DefQName{Package: appdef.SysPackage, Name: rootWorkspaceName})
+	if err != nil {
+		return err
+	}
+	var addFromInheritedWs func(ws *WorkspaceStmt, wsctx *wsCtx)
+	var added []*WorkspaceStmt
+
+	addFromInheritedWs = func(ws *WorkspaceStmt, wsctx *wsCtx) {
+		inheritsAnything := false
+		added = append(added, ws)
+		for _, inherits := range ws.Inherits {
+
+			inheritsAnything = true
+			baseWs, _, err := lookupInCtx[*WorkspaceStmt](inherits, wsctx.ictx)
+			if err != nil {
+				c.stmtErr(&ws.Pos, err)
+				return
+			}
+			if baseWs == sysWorkspace {
+				c.stmtErr(&ws.Pos, ErrInheritanceFromSysWorkspaceNotAllowed)
+				return
+			}
+
+			for _, item := range added {
+				if item == baseWs {
+					return // circular reference
+				}
+			}
+
+			addFromInheritedWs(baseWs, wsctx)
+			wsctx.ws.qNames = append(wsctx.ws.qNames, c.wsCtxs[baseWs].ws.qNames...)
+			added = append(added, baseWs)
+		}
+		if !inheritsAnything {
+			wsctx.ws.qNames = append(wsctx.ws.qNames, c.wsCtxs[sysWorkspace].ws.qNames...)
+		}
+	}
+	addFromInheritedWs(ws, c.wsCtxs[ws])
+	return nil
 }
 
 func analyseNestedTables(items []TableItemExpr, rootTableKind appdef.TypeKind, c *iterateCtx) {
@@ -860,20 +1019,6 @@ func analyseFields(items []TableItemExpr, c *iterateCtx, isTable bool) {
 				}
 			}
 		}
-		if item.RefField != nil {
-			rf := item.RefField
-			for i := range rf.RefDocs {
-				if err := resolveInCtx(rf.RefDocs[i], c, func(f *TableStmt, _ *PackageSchemaAST) error {
-					if f.Abstract {
-						return ErrReferenceToAbstractTable(rf.RefDocs[i].String())
-					}
-					return nil
-				}); err != nil {
-					c.stmtErr(&rf.RefDocs[i].Pos, err)
-					continue
-				}
-			}
-		}
 		if item.NestedTable != nil {
 			nestedTable := &item.NestedTable.Table
 			analyseFields(nestedTable.Items, c, true)
@@ -905,6 +1050,64 @@ func analyseFields(items []TableItemExpr, c *iterateCtx, isTable bool) {
 						continue
 					}
 					fieldsInUniques = append(fieldsInUniques, field)
+				}
+			}
+		}
+	}
+}
+
+func analyseRefFields(items []TableItemExpr, c *iterateCtx) {
+	for i := range items {
+		item := items[i]
+		if item.RefField != nil {
+			rf := item.RefField
+			for i := range rf.RefDocs {
+				if err := resolveInCtx(rf.RefDocs[i], c, func(f *TableStmt, tblPkg *PackageSchemaAST) error {
+					if f.Abstract {
+						return ErrReferenceToAbstractTable(rf.RefDocs[i].String())
+					}
+					ws := getCurrentWorkspace(c)
+					if ws != nil {
+						refQname := tblPkg.NewQName(f.Name)
+						if !ws.containsQName(refQname) {
+							return ErrReferenceToTableNotInWorkspace(rf.RefDocs[i].String())
+						}
+					}
+					return nil
+				}); err != nil {
+					c.stmtErr(&rf.RefDocs[i].Pos, err)
+					continue
+				}
+			}
+		}
+		if item.NestedTable != nil {
+			nestedTable := &item.NestedTable.Table
+			analyseRefFields(nestedTable.Items, c)
+		}
+	}
+}
+
+func analyseViewRefFields(items []ViewItemExpr, c *iterateCtx) {
+	for i := range items {
+		item := items[i]
+		if item.RefField != nil {
+			rf := item.RefField
+			for i := range rf.RefDocs {
+				if err := resolveInCtx(rf.RefDocs[i], c, func(f *TableStmt, tblPkg *PackageSchemaAST) error {
+					if f.Abstract {
+						return ErrReferenceToAbstractTable(rf.RefDocs[i].String())
+					}
+					ws := getCurrentWorkspace(c)
+					if ws != nil {
+						refQname := tblPkg.NewQName(f.Name)
+						if !ws.containsQName(refQname) {
+							return ErrReferenceToTableNotInWorkspace(rf.RefDocs[i].String())
+						}
+					}
+					return nil
+				}); err != nil {
+					c.stmtErr(&rf.RefDocs[i].Pos, err)
+					continue
 				}
 			}
 		}

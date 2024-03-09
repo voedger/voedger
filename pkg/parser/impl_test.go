@@ -350,10 +350,8 @@ func Test_Refs_NestedTables(t *testing.T) {
 	require.EqualValues(appdef.QNames{appdef.NewQName("pkg1", "table3")}, ref1.Refs())
 }
 
-func Test_CircularReferences(t *testing.T) {
-
+func Test_CircularReferencesTables(t *testing.T) {
 	require := require.New(t)
-
 	// Tables
 	fs, err := ParseFile("file1.sql", `APPLICATION test();
 	ABSTRACT TABLE table2 INHERITS table2 ();
@@ -370,7 +368,6 @@ func Test_CircularReferences(t *testing.T) {
 		getSysPackageAST(),
 		pkg,
 	})
-
 	require.EqualError(err, strings.Join([]string{
 		"file1.sql:2:2: circular reference in INHERITS",
 		"file1.sql:3:2: circular reference in INHERITS",
@@ -378,9 +375,12 @@ func Test_CircularReferences(t *testing.T) {
 		"file1.sql:5:2: circular reference in INHERITS",
 		"file1.sql:6:2: circular reference in INHERITS",
 	}, "\n"))
+}
 
+func Test_CircularReferencesWorkspaces(t *testing.T) {
+	require := require.New(t)
 	// Workspaces
-	fs, err = ParseFile("file1.sql", `APPLICATION test();
+	fs, err := ParseFile("file1.sql", `APPLICATION test();
 	ABSTRACT WORKSPACE w1();
 		ABSTRACT WORKSPACE w2 INHERITS w1,w2(
 		TABLE table4 INHERITS CDoc();
@@ -390,14 +390,13 @@ func Test_CircularReferences(t *testing.T) {
 	ABSTRACT WORKSPACE w5 INHERITS w3();
 	`)
 	require.NoError(err)
-	pkg, err = BuildPackageSchema("pkg/test", []*FileSchemaAST{fs})
+	pkg, err := BuildPackageSchema("pkg/test", []*FileSchemaAST{fs})
 	require.NoError(err)
 
 	_, err = BuildAppSchema([]*PackageSchemaAST{
 		getSysPackageAST(),
 		pkg,
 	})
-
 	require.EqualError(err, strings.Join([]string{
 		"file1.sql:3:37: circular reference in INHERITS",
 		"file1.sql:6:33: circular reference in INHERITS",
@@ -731,13 +730,13 @@ func Test_AbstractTables(t *testing.T) {
 	})
 	require.EqualError(err, strings.Join([]string{
 		"file1.sql:5:25: base table must be abstract",
-		"file1.sql:9:10: reference to abstract table AbstractTable",
 		"file1.sql:19:29: projector refers to abstract table AbstractTable",
 		"file1.sql:24:21: projector refers to abstract table AbstractTable",
 		"file1.sql:28:10: projector refers to abstract table AbstractTable",
 		"file1.sql:32:11: nested abstract table AbstractTable",
 		"file1.sql:34:13: use of abstract table AbstractTable",
 		"file1.sql:37:4: nested abstract table Nested",
+		"file1.sql:9:10: reference to abstract table AbstractTable",
 	}, "\n"))
 
 }
@@ -1723,8 +1722,10 @@ func Test_Scope_TableRefs(t *testing.T) {
 	require.NoError(err)
 	_, err = BuildAppSchema([]*PackageSchemaAST{getSysPackageAST(), main, pkg1})
 	require.EqualError(err, strings.Join([]string{
+		"example2.sql:10:11: table PkgTable not included into workspace",
 		"example2.sql:16:11: undefined table: MyTable",
 		"example2.sql:17:11: undefined table: MyTable2",
+		"example2.sql:18:11: table PkgTable not included into workspace",
 		"example2.sql:19:11: undefined table: MyInnerTable",
 	}, "\n"))
 
@@ -2105,8 +2106,8 @@ TABLE MyTable1 INHERITS ODocUnknown ( MyField ref(registry.Login) NOT NULL );
 	_, err := BuildAppSchema([]*PackageSchemaAST{pkgApp1, getSysPackageAST()})
 	require.EqualError(err, strings.Join([]string{
 		"source.sql:2:1: undefined table kind",
-		"source.sql:2:51: registry undefined",
 		"source.sql:2:25: undefined table: ODocUnknown",
+		"source.sql:2:51: registry undefined",
 	}, "\n"))
 
 }
@@ -2309,4 +2310,32 @@ func Test_Identifiers(t *testing.T) {
 		ROLE r世界;
 	);`)
 	require.ErrorContains(err, "file1.sql:3:9: invalid input text")
+}
+
+func Test_RefsWorkspaces(t *testing.T) {
+	require := assertions(t)
+
+	require.AppSchemaError(`APPLICATION test();
+	TABLE t1 INHERITS WDoc();
+	WORKSPACE w2 (
+		TABLE tab2 INHERITS WDoc(
+			f ref(t1) -- error, t1 is not in the workspace
+		);
+		TYPE typ2(
+			f ref(t1) -- error, t1 is not in the workspace
+		);
+		VIEW test(
+			f ref(t1), -- error, t1 is not in the workspace
+			PRIMARY KEY(f)
+		) AS RESULT OF Proj1;
+
+		EXTENSION ENGINE BUILTIN (
+			PROJECTOR Proj1 AFTER EXECUTE ON (Orders) INTENTS (View(test));
+			COMMAND Orders()
+		);
+
+	);`,
+		"file.sql:5:10: table t1 not included into workspace",
+		"file.sql:8:10: table t1 not included into workspace",
+		"file.sql:11:10: table t1 not included into workspace")
 }

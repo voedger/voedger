@@ -109,6 +109,10 @@ func ErrReferenceToAbstractTable(tblName string) error {
 	return fmt.Errorf("reference to abstract table %s", tblName)
 }
 
+func ErrReferenceToTableNotInWorkspace(tblName string) error {
+	return fmt.Errorf("table %s not included into workspace", tblName)
+}
+
 func ErrNestedAbstractTable(tblName string) error {
 	return fmt.Errorf("nested abstract table %s", tblName)
 }

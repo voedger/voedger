@@ -326,13 +326,9 @@ func buildAppSchemaImpl(packages []*PackageSchemaAST) (*AppSchemaAST, error) {
 
 	defineApp(&c)
 
-	for _, p := range packages {
-		preAnalyse(&c, p)
-	}
+	preAnalyse(&c, packages)
 
-	for _, p := range packages {
-		analyse(&c, p)
-	}
+	analyse(&c, packages)
 
 	if len(c.errs) > 0 {
 		return nil, errors.Join(c.errs...)

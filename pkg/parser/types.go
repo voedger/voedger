@@ -222,6 +222,18 @@ type WorkspaceStmt struct {
 	Inherits   []DefQName           `parser:"('INHERITS' @@ (',' @@)* )? '('"`
 	Descriptor *WsDescriptorStmt    `parser:"('DESCRIPTOR' @@)?"`
 	Statements []WorkspaceStatement `parser:"@@? (';' @@)* ';'? ')'"`
+
+	// filled on the analysis stage
+	qNames []appdef.QName
+}
+
+func (s *WorkspaceStmt) containsQName(qName appdef.QName) bool {
+	for i := 0; i < len(s.qNames); i++ {
+		if s.qNames[i] == qName {
+			return true
+		}
+	}
+	return false
 }
 
 func (s WorkspaceStmt) GetName() string { return string(s.Name) }
