@@ -25,8 +25,6 @@ ALTERABLE WORKSPACE AppWorkspaceWS (
 );
 
 ABSTRACT WORKSPACE ProfileWS (
-	DESCRIPTOR Profile ();
-
 	TYPE RefreshPrincipalTokenResult (
 		NewPrincipalToken text NOT NULL
 	);
