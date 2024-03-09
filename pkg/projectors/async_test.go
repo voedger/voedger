@@ -287,7 +287,8 @@ func Test_AsynchronousActualizer_FlushByInterval(t *testing.T) {
 		Broker:        broker,
 	}
 	actualizerFactory := ProvideAsyncActualizerFactory()
-	actualizer, err := actualizerFactory(conf, incrementorFactory)
+	projector := appStructs.AsyncProjectors()[incrementorName]
+	actualizer, err := actualizerFactory(conf, projector)
 	require.NoError(err)
 
 	t0 := time.Now()
@@ -396,7 +397,9 @@ func Test_AsynchronousActualizer_ErrorAndRestore(t *testing.T) {
 	}
 	attempts := 0
 
-	factory := func(partition istructs.PartitionID) istructs.Projector {
+	тут надо разбираться, почему в AppStruct передан один код проектора, а тут возник другой?
+	
+	factory := func() istructs.Projector {
 		return istructs.Projector{Name: name, Func: func(event istructs.IPLogEvent, state istructs.IState, intents istructs.IIntents) (err error) {
 			if event.Workspace() == 1002 {
 				if attempts == 0 {
@@ -410,7 +413,8 @@ func Test_AsynchronousActualizer_ErrorAndRestore(t *testing.T) {
 	}
 
 	actualizerFactory := ProvideAsyncActualizerFactory()
-	actualizer, err := actualizerFactory(conf, factory)
+	projector := factory()
+	actualizer, err := actualizerFactory(conf, projector)
 	require.NoError(err)
 	require.NoError(actualizer.DoSync(conf.Ctx, struct{}{})) // Start service
 
