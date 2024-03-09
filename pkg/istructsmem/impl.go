@@ -150,8 +150,8 @@ func (app *appStructsType) SyncProjectors() []istructs.ProjectorFactory {
 	return app.config.syncProjectorFactories
 }
 
-func (app *appStructsType) AsyncProjectors() []istructs.ProjectorFactory {
-	return app.config.asyncProjectorFactories
+func (app *appStructsType) AsyncProjectors() map[appdef.QName]istructs.Projector {
+	return app.config.asyncProjectors
 }
 
 func (app *appStructsType) CUDValidators() []istructs.CUDValidator {

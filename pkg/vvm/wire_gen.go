@@ -516,8 +516,7 @@ func provideCommandProcessors(cpCount coreutils.CommandProcessorsCount, ccf Comm
 }
 
 func provideAsyncActualizersFactory(appParts appparts.IAppPartitions, appStructsProvider istructs.IAppStructsProvider, n10nBroker in10n.IN10nBroker, asyncActualizerFactory projectors.AsyncActualizerFactory, secretReader isecrets.ISecretReader, metrics2 imetrics.IMetrics) AsyncActualizersFactory {
-	return func(vvmCtx context.Context, appQName istructs.AppQName, asyncProjectorFactories AsyncProjectorFactories, partitionID istructs.PartitionID, opts []state.ActualizerStateOptFunc) pipeline.ISyncOperator {
-		var asyncProjectors []pipeline.ForkOperatorOptionFunc
+	return func(vvmCtx context.Context, appQName istructs.AppQName, asyncProjectors AsyncProjectors, partitionID istructs.PartitionID, opts []state.ActualizerStateOptFunc) pipeline.ISyncOperator {
 		appStructs, err := appStructsProvider.AppStructs(appQName)
 		if err != nil {
 			panic(err)
@@ -538,31 +537,31 @@ func provideAsyncActualizersFactory(appParts appparts.IAppPartitions, appStructs
 			Metrics:       metrics2,
 		}
 
-		asyncProjectors = make([]pipeline.ForkOperatorOptionFunc, len(asyncProjectorFactories))
-
-		for i, asyncProjectorFactory := range asyncProjectorFactories {
-			asyncProjector, err := asyncActualizerFactory(conf, asyncProjectorFactory)
+		forkOps := make([]pipeline.ForkOperatorOptionFunc, len(asyncProjectors))
+		for _, prj := range asyncProjectors {
+			asyncActualizer, err := asyncActualizerFactory(conf, prj)
 			if err != nil {
 				panic(err)
 			}
-			asyncProjectors[i] = pipeline.ForkBranch(asyncProjector)
+			forkOps = append(forkOps, pipeline.ForkBranch(asyncActualizer))
 		}
-		return pipeline.ForkOperator(func(work interface{}, branchNumber int) (fork interface{}, err error) { return struct{}{}, nil }, asyncProjectors[0], asyncProjectors[1:]...)
+
+		return pipeline.ForkOperator(func(work interface{}, branchNumber int) (fork interface{}, err error) { return struct{}{}, nil }, forkOps[0], forkOps[1:]...)
 	}
 }
 
 func provideAppPartitionFactory(aaf AsyncActualizersFactory, opts []state.ActualizerStateOptFunc) AppPartitionFactory {
-	return func(vvmCtx context.Context, appQName istructs.AppQName, asyncProjectorFactories AsyncProjectorFactories, partitionID istructs.PartitionID) pipeline.ISyncOperator {
-		return aaf(vvmCtx, appQName, asyncProjectorFactories, partitionID, opts)
+	return func(vvmCtx context.Context, appQName istructs.AppQName, asyncProjectors AsyncProjectors, partitionID istructs.PartitionID) pipeline.ISyncOperator {
+		return aaf(vvmCtx, appQName, asyncProjectors, partitionID, opts)
 	}
 }
 
 // forks appPartition(just async actualizers for now) of one app by amount of partitions of the app
 func provideAppServiceFactory(apf AppPartitionFactory) AppServiceFactory {
-	return func(vvmCtx context.Context, appQName istructs.AppQName, asyncProjectorFactories AsyncProjectorFactories, appPartsCount int) pipeline.ISyncOperator {
+	return func(vvmCtx context.Context, appQName istructs.AppQName, asyncProjectors AsyncProjectors, appPartsCount int) pipeline.ISyncOperator {
 		forks := make([]pipeline.ForkOperatorOptionFunc, appPartsCount)
 		for i := 0; i < int(appPartsCount); i++ {
-			forks[i] = pipeline.ForkBranch(apf(vvmCtx, appQName, asyncProjectorFactories, istructs.PartitionID(i)))
+			forks[i] = pipeline.ForkBranch(apf(vvmCtx, appQName, asyncProjectors, istructs.PartitionID(i)))
 		}
 		return pipeline.ForkOperator(pipeline.ForkSame, forks[0], forks[1:]...)
 	}

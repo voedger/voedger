@@ -185,7 +185,7 @@ func ProvideApp1(apis apps.APIs, cfg *istructsmem.AppConfigType, adf appdef.IApp
 		istructsmem.NullCommandExec,
 	))
 
-	cfg.AddAsyncProjectors(func(istructs.PartitionID) istructs.Projector {
+	cfg.AddAsyncProjectors(func() istructs.Projector {
 		return istructs.Projector{
 			Name: appdef.NewQName(app1PkgName, "ProjDummy"),
 			Func: func(event istructs.IPLogEvent, state istructs.IState, intents istructs.IIntents) (err error) {

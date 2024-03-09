@@ -17,8 +17,8 @@ import (
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-func provideAsyncProjectorApplyUpdateInviteRolesFactory(timeFunc coreutils.TimeFunc, federation coreutils.IFederation, appQName istructs.AppQName, tokens itokens.ITokens, smtpCfg smtp.Cfg) istructs.ProjectorFactory {
-	return func(partition istructs.PartitionID) istructs.Projector {
+func provideAsyncProjectorApplyUpdateInviteRolesFactory(timeFunc coreutils.TimeFunc, federation coreutils.IFederation, appQName istructs.AppQName, tokens itokens.ITokens, smtpCfg smtp.Cfg) istructs.AsyncProjectorFactory {
+	return func() istructs.Projector {
 		return istructs.Projector{
 			Name: qNameAPApplyUpdateInviteRoles,
 			Func: applyUpdateInviteRolesProjector(timeFunc, federation, appQName, tokens, smtpCfg),

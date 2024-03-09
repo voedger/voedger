@@ -79,7 +79,7 @@ type WorkToEventFunc func(work interface{}) istructs.IPLogEvent
 
 // AsyncActualizerFactory returns the ServiceOperator<AsyncActualizer>
 // workpiece must implement projectors.IAsyncActualizerWork
-type AsyncActualizerFactory func(conf AsyncActualizerConf, projection istructs.ProjectorFactory) (pipeline.ISyncOperator, error)
+type AsyncActualizerFactory func(conf AsyncActualizerConf, projection istructs.Projector) (pipeline.ISyncOperator, error)
 
 // SyncActualizerFactory returns the Operator<SyncActualizer>
 // Workpiece is ...?
