@@ -16,6 +16,8 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/untillpro/goutils/exec"
 	"github.com/untillpro/goutils/logger"
+
+	"github.com/voedger/voedger/pkg/compile"
 )
 
 func newBaselineCmd() *cobra.Command {
@@ -29,11 +31,11 @@ func newBaselineCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			compileRes, err := compile(params.WorkingDir)
+			compileRes, err := compile.Compile(params.Dir)
 			if err != nil {
 				return err
 			}
-			return baseline(compileRes, params.WorkingDir, params.TargetDir)
+			return baseline(compileRes, params.Dir, params.TargetDir)
 		},
 	}
 	initGlobalFlags(cmd, &params)
@@ -41,31 +43,31 @@ func newBaselineCmd() *cobra.Command {
 }
 
 // baseline creates baseline schemas in target dir
-func baseline(compileRes *compileResult, workingDir, targetDir string) error {
+func baseline(compileRes *compile.Result, dir, targetDir string) error {
 	if err := createBaselineDir(targetDir); err != nil {
 		return err
 	}
 
 	pkgDir := filepath.Join(targetDir, pkgDirName)
-	if err := saveBaselineSchemas(compileRes.pkgFiles, pkgDir); err != nil {
+	if err := saveBaselineSchemas(compileRes.PkgFiles, pkgDir); err != nil {
 		return err
 	}
 
-	if err := saveBaselineInfo(compileRes, workingDir, targetDir); err != nil {
+	if err := saveBaselineInfo(compileRes, dir, targetDir); err != nil {
 		return err
 	}
 	return nil
 }
 
-func saveBaselineInfo(compileRes *compileResult, workingDir, baselineDir string) error {
+func saveBaselineInfo(compileRes *compile.Result, dir, baselineDir string) error {
 	var gitCommitHash string
 	sb := new(strings.Builder)
-	if err := new(exec.PipedExec).Command("git", "rev-parse", "HEAD").WorkingDir(workingDir).Run(sb, nil); err == nil {
+	if err := new(exec.PipedExec).Command("git", "rev-parse", "HEAD").WorkingDir(dir).Run(sb, nil); err == nil {
 		gitCommitHash = strings.TrimSpace(sb.String())
 	}
 
 	baselineInfoObj := baselineInfo{
-		BaselinePackageUrl: compileRes.modulePath,
+		BaselinePackageUrl: compileRes.ModulePath,
 		Timestamp:          time.Now().In(time.FixedZone("GMT", 0)).Format(timestampFormat),
 		GitCommitHash:      gitCommitHash,
 	}
