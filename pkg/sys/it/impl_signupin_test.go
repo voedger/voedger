@@ -157,9 +157,9 @@ func TestDeviceProfile(t *testing.T) {
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 	loginName := vit.NextName()
-	deviceLogin := vit.SignUpDevice(loginName, "123", istructs.AppQName_test1_app1)
+	deviceLogin := vit.SignUpDevice(loginName, "123", istructs.AppQName_test1_app2)
 	devicePrn := vit.SignIn(deviceLogin)
-	as, err := vit.AppStructs(istructs.AppQName_test1_app1)
+	as, err := vit.AppStructs(istructs.AppQName_test1_app2)
 	require.NoError(err)
 	devicePrnPayload := payloads.PrincipalPayload{}
 	_, err = as.AppTokens().ValidateToken(devicePrn.Token, &devicePrnPayload)
@@ -171,11 +171,12 @@ func TestDeviceProfile(t *testing.T) {
 		vit.PostProfile(devicePrn, "q.sys.Collection", body)
 	})
 
-	t.Run("refresh device principal token", func(t *testing.T) {
+	t.Run("refresh the device principal token", func(t *testing.T) {
 		// simulate delay to make the new token be different
 		vit.TimeAdd(time.Minute)
 		body := `{"args":{},"elements":[{"fields":["NewPrincipalToken"]}]}`
 		resp := vit.PostProfile(devicePrn, "q.sys.RefreshPrincipalToken", body)
 		require.NotEqual(devicePrn.Token, resp.SectionRow()[0].(string))
 	})
+
 }
