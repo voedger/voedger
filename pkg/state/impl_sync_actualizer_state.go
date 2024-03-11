@@ -11,9 +11,21 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
+type syncActualizerState struct {
+	*hostState
+	eventFunc PLogEventFunc
+}
+
+func (s *syncActualizerState) PLogEvent() istructs.IPLogEvent {
+	return s.eventFunc()
+}
+
 func implProvideSyncActualizerState(ctx context.Context, appStructs istructs.IAppStructs, partitionIDFunc PartitionIDFunc,
-	wsidFunc WSIDFunc, n10nFunc N10nFunc, secretReader isecrets.ISecretReader, intentsLimit int) IHostState {
-	hs := newHostState("SyncActualizer", intentsLimit, func() istructs.IAppStructs { return appStructs })
+	wsidFunc WSIDFunc, n10nFunc N10nFunc, secretReader isecrets.ISecretReader, eventFunc PLogEventFunc, intentsLimit int) IHostState {
+	hs := &syncActualizerState{
+		hostState: newHostState("SyncActualizer", intentsLimit, func() istructs.IAppStructs { return appStructs }),
+		eventFunc: eventFunc,
+	}
 	hs.addStorage(View, &viewRecordsStorage{
 		ctx:             ctx,
 		viewRecordsFunc: func() istructs.IViewRecords { return appStructs.ViewRecords() },
