@@ -28,13 +28,13 @@ ABSTRACT WORKSPACE ProfileWS (
 	TYPE RefreshPrincipalTokenResult (
 		NewPrincipalToken text NOT NULL
 	);
-	
+
 	EXTENSION ENGINE BUILTIN (
 		QUERY RefreshPrincipalToken RETURNS RefreshPrincipalTokenResult;
 	);
 );
 
-WORKSPACE DeviceProfileWS INHERITS ProfileWS (
+ALTERABLE WORKSPACE DeviceProfileWS INHERITS ProfileWS (
 	DESCRIPTOR DeviceProfile ();
 );
 

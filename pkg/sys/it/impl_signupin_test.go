@@ -166,7 +166,16 @@ func TestDeviceProfile(t *testing.T) {
 	require.NoError(err)
 	require.Equal(istructs.SubjectKind_Device, devicePrnPayload.SubjectKind)
 
-	// try to exec a simple operation in device profile
-	body := `{"args":{"Schema":"sys.WorkspaceDescriptor"},"elements":[{"fields":["sys.ID"]}]}`
-	vit.PostProfile(devicePrn, "q.sys.Collection", body)
+	t.Run("exec a simple operation in the device profile", func(t *testing.T) {
+		body := `{"args":{"Schema":"sys.WorkspaceDescriptor"},"elements":[{"fields":["sys.ID"]}]}`
+		vit.PostProfile(devicePrn, "q.sys.Collection", body)
+	})
+
+	t.Run("refresh device principal token", func(t *testing.T) {
+		// simulate delay to make the new token be different
+		vit.TimeAdd(time.Minute)
+		body := `{"args":{},"elements":[{"fields":["NewPrincipalToken"]}]}`
+		resp := vit.PostProfile(devicePrn, "q.sys.RefreshPrincipalToken", body)
+		require.NotEqual(devicePrn.Token, resp.SectionRow()[0].(string))
+	})
 }
