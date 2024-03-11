@@ -39,10 +39,13 @@ func Test_Basic(t *testing.T) {
 	oldPkg1AST, err := parser.ParsePackageDir("pkg1", oldPkg1SchemaFS, "sql")
 	require.NoError(t, err)
 
-	pkg2AST, err := parser.ParsePackageDir("pkg2", pkg2SchemaFS, "sql")
+	oldpkg2AST, err := parser.ParsePackageDir("pkg2", pkg2SchemaFS, "sql")
 	require.NoError(t, err)
 
-	oldPackages, err := parser.BuildAppSchema([]*parser.PackageSchemaAST{oldSysPkgAST, oldPkg1AST, pkg2AST})
+	newpkg2AST, err := parser.ParsePackageDir("pkg2", pkg2SchemaFS, "sql")
+	require.NoError(t, err)
+
+	oldPackages, err := parser.BuildAppSchema([]*parser.PackageSchemaAST{oldSysPkgAST, oldPkg1AST, oldpkg2AST})
 	require.NoError(t, err)
 
 	newSysPkgAST, err := parser.ParsePackageDir(appdef.SysPackage, newSysSchemaFS, "sql")
@@ -51,7 +54,7 @@ func Test_Basic(t *testing.T) {
 	newPkg1AST, err := parser.ParsePackageDir("pkg1", newPkg1SchemaFS, "sql")
 	require.NoError(t, err)
 
-	newPackages, err := parser.BuildAppSchema([]*parser.PackageSchemaAST{newSysPkgAST, newPkg1AST, pkg2AST})
+	newPackages, err := parser.BuildAppSchema([]*parser.PackageSchemaAST{newSysPkgAST, newPkg1AST, newpkg2AST})
 	require.NoError(t, err)
 
 	oldBuilder := appdef.New()

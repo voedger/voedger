@@ -111,6 +111,19 @@ func lookupInSysPackage[stmtType *WorkspaceStmt](ctx *basicContext, fn DefQName)
 	return s, e
 }
 
+func getCurrentWorkspace(ictx *iterateCtx) *WorkspaceStmt {
+	var ic *iterateCtx = ictx
+	var ws *WorkspaceStmt = nil
+	for ic != nil && ws == nil {
+		if _, isWorkspace := ic.collection.(*WorkspaceStmt); isWorkspace {
+			ws = ic.collection.(*WorkspaceStmt)
+			break
+		}
+		ic = ic.parent
+	}
+	return ws
+}
+
 func lookupInCtx[stmtType *TableStmt | *TypeStmt | *FunctionStmt | *CommandStmt | *RateStmt | *TagStmt | *ProjectorStmt |
 	*WorkspaceStmt | *ViewStmt | *StorageStmt | *LimitStmt | *QueryStmt | *RoleStmt | *WsDescriptorStmt | *DeclareStmt](fn DefQName, ictx *iterateCtx) (stmtType, *PackageSchemaAST, error) {
 	schema, err := getTargetSchema(fn, ictx)
@@ -142,17 +155,7 @@ func lookupInCtx[stmtType *TableStmt | *TypeStmt | *FunctionStmt | *CommandStmt 
 	}
 
 	if schema == ictx.pkg {
-
-		// Am I in a workspace?
-		var ic *iterateCtx = ictx
-		var ws *WorkspaceStmt = nil
-		for ic != nil && ws == nil {
-			if _, isWorkspace := ic.collection.(*WorkspaceStmt); isWorkspace {
-				ws = ic.collection.(*WorkspaceStmt)
-				break
-			}
-			ic = ic.parent
-		}
+		ws := getCurrentWorkspace(ictx)
 		// First look in the current workspace
 		if ws != nil {
 			ws.Iterate(lookupCallback)
@@ -223,6 +226,7 @@ func iterateContext(ictx *iterateCtx, callback func(stmt interface{}, ctx *itera
 				collection:   collection,
 				pkg:          ictx.pkg,
 				parent:       ictx,
+				wsCtxs:       ictx.wsCtxs,
 			}
 			iterateContext(iNestedCtx, callback)
 		}
