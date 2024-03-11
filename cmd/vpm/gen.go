@@ -12,12 +12,14 @@ import (
 	"go/format"
 	"os"
 	"path/filepath"
+	"regexp"
+	"strings"
 	"text/template"
 
 	"github.com/spf13/cobra"
 
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/parser"
+	"github.com/voedger/voedger/pkg/compile"
 )
 
 //go:embed templates/*
@@ -45,25 +47,22 @@ func newGenOrmCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			compileRes, err := compile(params.WorkingDir)
+			compileRes, err := compile.Compile(params.Dir)
 			if err != nil {
 				return err
 			}
 			return genOrm(compileRes, params)
 		},
 	}
+	cmd.SilenceErrors = true
+	cmd.Flags().StringVarP(&params.Dir, "change-dir", "C", "", "Change to dir before running the command. Any files named on the command line are interpreted after changing directories. If used, this flag must be the first one in the command line.")
 	cmd.Flags().StringVarP(&params.HeaderFile, "header-file", "", "", " path to file to insert as a header to generated files")
 	return cmd
 }
 
 // genOrm generates ORM from the given working directory
-func genOrm(compileRes *compileResult, params vpmParams) error {
+func genOrm(compileRes *compile.Result, params vpmParams) error {
 	ormDirPath, err := createOrmDir(params.TargetDir)
-	if err != nil {
-		return err
-	}
-
-	appDef, err := appDefFromCompiled(compileRes)
 	if err != nil {
 		return err
 	}
@@ -73,56 +72,77 @@ func genOrm(compileRes *compileResult, params vpmParams) error {
 		return err
 	}
 
-	for qpn, packageAst := range compileRes.appSchemaAST.Packages {
-		packageData, err := fillOrmPackageData(qpn, packageAst, appDef, headerContent)
+	pkgLocalNames := compileRes.AppDef.PackageLocalNames()
+	pkgObjs := make(map[string][]interface{}) // mapping of package local names to list of its objects
+	for _, pkgLocalName := range pkgLocalNames {
+		pkgObjs[pkgLocalName] = make([]interface{}, 0)
+	}
+
+	reg := regexp.MustCompile("(.*)\\.(.*)")
+
+	compileRes.AppDef.Types(func(iType appdef.IType) {
+		if workspace, ok := iType.(appdef.IWorkspace); ok {
+			workspace.Types(func(iType appdef.IType) {
+				qName := iType.QName().String()
+				matches := reg.FindStringSubmatch(qName)
+				pkgObjs[matches[1]] = append(pkgObjs[matches[1]], iType)
+			})
+		}
+	})
+
+	for pkgLocalName, objs := range pkgObjs {
+		ormPkgData, err := fillOrmPackageData(pkgLocalName, objs, headerContent)
 		if err != nil {
 			return err
 		}
 
-		ormFile, err := generateOrmFile(packageData)
+		ormFile, err := fillTemplate("package", ormPkgData)
 		if err != nil {
 			return err
 		}
 
-		if err := os.WriteFile(filepath.Join(ormDirPath, fmt.Sprintf("package_%s.go", qpn)), ormFile, defaultPermissions); err != nil {
+		filePath := filepath.Join(ormDirPath, fmt.Sprintf("package_%s.go", pkgLocalName))
+		if err := os.WriteFile(filePath, ormFile, defaultPermissions); err != nil {
 			return err
 		}
 	}
-
+	if err := os.WriteFile(filepath.Join(ormDirPath, "sys.go"), []byte(sysContent), defaultPermissions); err != nil {
+		return err
+	}
 	return nil
 }
 
-func fillOrmPackageData(qpn string, packageAst *parser.PackageSchemaAST, appDef appdef.IAppDef, headerFileContent string) (ormPackageData, error) {
+func fillOrmPackageData(pkgLocalName string, objs []interface{}, headerFileContent string) (ormPackageData, error) {
 	pkgData := ormPackageData{
-		Name:              qpn,
+		Name:              pkgLocalName,
 		HeaderFileContent: headerFileContent,
 		Imports:           []string{"import exttinygo \"github.com/voedger/exttinygo\""},
 		Items:             make([]ormTableData, 0),
 	}
 
-	var qNames []appdef.QName
-	appDef.DataTypes(false, func(data appdef.IData) {
-		qNames = append(qNames, data.QName())
-	})
-
-	for _, stmt := range packageAst.Ast.Statements {
-		if stmt.Table != nil {
+	for _, obj := range objs {
+		switch t := obj.(type) {
+		case appdef.IODoc:
 			tableData := ormTableData{
 				Package:    pkgData,
-				Name:       stmt.Table.GetName(),
-				Type:       fmt.Sprintf("%sTable", stmt.Table.Name),
+				TypeQName:  "typeQname",
+				Name:       getName(t),
+				Type:       getType(t),
 				SqlContent: "Here will be SQL content of the table.",
 				Fields:     make([]ormFieldData, 0),
 			}
 
-			for _, field := range stmt.Table.Items {
-				fieldData := ormFieldData{
-					Type: appDef.Data(appdef.NewQName(qpn, stmt.Table.GetName())),
-					//Name:          field.GetName(),
-					GetMethodName: fmt.Sprintf("Get%s", "Field"),
+			for _, field := range t.Fields() {
+				fieldType := getFieldType(field)
+				if fieldType != "unknown" {
+					fieldData := ormFieldData{
+						Table:         tableData,
+						Type:          getFieldType(field),
+						Name:          field.Name(),
+						GetMethodName: fmt.Sprintf("Get_%s", field.Name()),
+					}
+					tableData.Fields = append(tableData.Fields, fieldData)
 				}
-
-				tableData.Fields = append(tableData.Fields, fieldData)
 			}
 
 			pkgData.Items = append(pkgData.Items, tableData)
@@ -131,29 +151,21 @@ func fillOrmPackageData(qpn string, packageAst *parser.PackageSchemaAST, appDef 
 	return pkgData, nil
 }
 
-func generateOrmFile(templateData interface{}) ([]byte, error) {
-	switch t := templateData.(type) {
-	case ormPackageData:
-		return fillTemplate("solid_package", t)
-	default:
-		return nil, fmt.Errorf("unknown template data type: %T", t)
-	}
-}
-
 func fillTemplate(templateName string, payload interface{}) ([]byte, error) {
 	templateContent, err := fsTemplates.ReadFile(fmt.Sprintf("templates/%s.txt", templateName))
 	if err != nil {
 		return nil, fmt.Errorf("failed to read template: %w", err)
 	}
 
-	tmpl := template.New(templateName)
-	tmpl, err = tmpl.Parse(string(templateContent))
+	t := template.New(templateName)
+	t.Funcs(template.FuncMap{"capitalize": capitalizeFirst})
+	t, err = t.Parse(string(templateContent))
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse template: %w", err)
 	}
 
 	var filledTemplate bytes.Buffer
-	if err := tmpl.Execute(&filledTemplate, payload); err != nil {
+	if err := t.Execute(&filledTemplate, payload); err != nil {
 		return nil, fmt.Errorf("failed to fill template: %w", err)
 	}
 
@@ -181,4 +193,50 @@ func createOrmDir(dir string) (string, error) {
 		}
 	}
 	return ormDirPath, os.MkdirAll(ormDirPath, defaultPermissions)
+}
+
+func getName(obj interface{}) string {
+	return strings.ToLower(obj.(appdef.IType).QName().Entity())
+}
+
+func getType(obj interface{}) string {
+	switch obj.(type) {
+	case appdef.IODoc:
+		return "ODoc"
+	case appdef.ICDoc:
+		return "CDoc"
+	case appdef.IWDoc:
+		return "WDoc"
+	default:
+		return "Unknown"
+	}
+}
+
+func getFieldType(field appdef.IField) string {
+	switch field.DataKind() {
+	case appdef.DataKind_bool:
+		return "bool"
+	case appdef.DataKind_int32:
+		return "int32"
+	case appdef.DataKind_int64:
+		return "int64"
+	case appdef.DataKind_float32:
+		return "float32"
+	case appdef.DataKind_float64:
+		return "float64"
+	case appdef.DataKind_bytes:
+		return "bytes"
+	case appdef.DataKind_string:
+		return "string"
+	default:
+		return "unknown"
+	}
+}
+
+// Custom function to capitalize the first letter of a string
+func capitalizeFirst(s string) string {
+	if len(s) == 0 {
+		return s
+	}
+	return strings.ToUpper(s[:1]) + s[1:]
 }

@@ -240,3 +240,15 @@ func TestPkgRegistryCompile(t *testing.T) {
 	err = execRootCmd([]string{"vpm", "compile", "-C", "registry"}, "1.0.0")
 	require.NoError(err)
 }
+
+func TestGenOrmBasicUsage(t *testing.T) {
+	require := require.New(t)
+
+	wd, err := os.Getwd()
+	require.NoError(err)
+
+	workDir := filepath.Join(wd, "test", "genorm", "app")
+
+	err = execRootCmd([]string{"vpm", "gen", "orm", "-C", workDir}, "1.0.0")
+	require.NoError(err)
+}

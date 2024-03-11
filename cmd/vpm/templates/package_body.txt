@@ -1,8 +1,0 @@
-{{define "package_body"}}
-{{template "package_var" .}}
-
-{{range .Items}}
-{{template "package_item" .}}
-{{end}}
-
-{{end}}

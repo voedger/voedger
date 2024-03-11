@@ -36,6 +36,7 @@ type ormPackageData struct {
 
 type ormTableData struct {
 	Package    ormPackageData
+	TypeQName  string
 	Name       string
 	Type       string
 	SqlContent string
@@ -43,6 +44,7 @@ type ormTableData struct {
 }
 
 type ormFieldData struct {
+	Table         ormTableData
 	Type          string
 	Name          string
 	GetMethodName string
