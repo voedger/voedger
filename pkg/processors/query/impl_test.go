@@ -359,7 +359,7 @@ func TestBasicUsage_ServiceFactory(t *testing.T) {
 	appParts.DeployApp(appName, appDef, partCount, appEngines)
 	appParts.DeployAppPartitions(appName, []istructs.PartitionID{partID})
 
-	authn := iauthnzimpl.NewDefaultAuthenticator(iauthnzimpl.TestSubjectRolesGetter)
+	authn := iauthnzimpl.NewDefaultAuthenticator(iauthnzimpl.TestSubjectRolesGetter, iauthnzimpl.TestIsDeviceAllowedFunc)
 	authz := iauthnzimpl.NewDefaultAuthorizer()
 	queryProcessor := ProvideServiceFactory()(
 		serviceChannel,
@@ -1124,7 +1124,7 @@ func TestRateLimiter(t *testing.T) {
 
 	// create aquery processor
 	metrics := imetrics.Provide()
-	authn := iauthnzimpl.NewDefaultAuthenticator(iauthnzimpl.TestSubjectRolesGetter)
+	authn := iauthnzimpl.NewDefaultAuthenticator(iauthnzimpl.TestSubjectRolesGetter, iauthnzimpl.TestIsDeviceAllowedFunc)
 	authz := iauthnzimpl.NewDefaultAuthorizer()
 	queryProcessor := ProvideServiceFactory()(
 		serviceChannel,
@@ -1179,7 +1179,7 @@ func TestAuthnz(t *testing.T) {
 	appParts.DeployApp(appName, appDef, partCount, appEngines)
 	appParts.DeployAppPartitions(appName, []istructs.PartitionID{partID})
 
-	authn := iauthnzimpl.NewDefaultAuthenticator(iauthnzimpl.TestSubjectRolesGetter)
+	authn := iauthnzimpl.NewDefaultAuthenticator(iauthnzimpl.TestSubjectRolesGetter, iauthnzimpl.TestIsDeviceAllowedFunc)
 	authz := iauthnzimpl.NewDefaultAuthorizer()
 	queryProcessor := ProvideServiceFactory()(
 		serviceChannel,

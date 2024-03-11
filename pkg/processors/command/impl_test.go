@@ -738,7 +738,7 @@ func setUp(t *testing.T, prepare func(appDef appdef.IAppDefBuilder, cfg *istruct
 	appTokens := payloads.ProvideIAppTokensFactory(tokens).New(testAppName)
 	systemToken, err := payloads.GetSystemPrincipalTokenApp(appTokens)
 	require.NoError(err)
-	cmdProcessorFactory := ProvideServiceFactory(appParts, time.Now, n10nBroker, imetrics.Provide(), "vvm", iauthnzimpl.NewDefaultAuthenticator(iauthnzimpl.TestSubjectRolesGetter), iauthnzimpl.NewDefaultAuthorizer(), secretReader)
+	cmdProcessorFactory := ProvideServiceFactory(appParts, time.Now, n10nBroker, imetrics.Provide(), "vvm", iauthnzimpl.NewDefaultAuthenticator(iauthnzimpl.TestSubjectRolesGetter, iauthnzimpl.TestIsDeviceAllowedFunc), iauthnzimpl.NewDefaultAuthorizer(), secretReader)
 	cmdProcService := cmdProcessorFactory(serviceChannel, testAppPartID)
 
 	go func() {

@@ -71,7 +71,7 @@ func TestBasicUsage(t *testing.T) {
 			},
 		},
 	})
-	authn := NewDefaultAuthenticator(TestSubjectRolesGetter)
+	authn := NewDefaultAuthenticator(TestSubjectRolesGetter, TestIsDeviceAllowedFunc)
 	authz := NewDefaultAuthorizer()
 	t.Run("authenticate in the profile", func(t *testing.T) {
 		req := iauthnz.AuthnRequest{
@@ -405,7 +405,7 @@ func TestAuthenticate(t *testing.T) {
 	subjectsGetter := func(context.Context, string, istructs.IAppStructs, istructs.WSID) ([]appdef.QName, error) {
 		return *subjects, nil
 	}
-	authn := NewDefaultAuthenticator(subjectsGetter)
+	authn := NewDefaultAuthenticator(subjectsGetter, TestIsDeviceAllowedFunc)
 	for _, tc := range testCases {
 		localVarSubjects := &tc.subjects
 		t.Run(tc.desc, func(t *testing.T) {
@@ -500,7 +500,7 @@ func TestAuthorize(t *testing.T) {
 			},
 		},
 	})
-	authn := NewDefaultAuthenticator(TestSubjectRolesGetter)
+	authn := NewDefaultAuthenticator(TestSubjectRolesGetter, TestIsDeviceAllowedFunc)
 	authz := NewDefaultAuthorizer()
 
 	testCmd := appdef.NewQName(appdef.SysPackage, "testcmd")
@@ -942,7 +942,7 @@ func TestErrors(t *testing.T) {
 	appTokens := payloads.ProvideIAppTokensFactory(tokens).New(istructs.AppQName_test1_app1)
 
 	appStructs := &implIAppStructs{}
-	authn := NewDefaultAuthenticator(TestSubjectRolesGetter)
+	authn := NewDefaultAuthenticator(TestSubjectRolesGetter, TestIsDeviceAllowedFunc)
 
 	t.Run("wrong token", func(t *testing.T) {
 		req := iauthnz.AuthnRequest{
@@ -999,7 +999,7 @@ func BenchmarkBasic(b *testing.B) {
 	require.NoError(b, err)
 	var principals []iauthnz.Principal
 	appStructs := &implIAppStructs{}
-	authn := NewDefaultAuthenticator(TestSubjectRolesGetter)
+	authn := NewDefaultAuthenticator(TestSubjectRolesGetter, TestIsDeviceAllowedFunc)
 	authz := NewDefaultAuthorizer()
 	reqn := iauthnz.AuthnRequest{
 		Host:        "127.0.0.1",

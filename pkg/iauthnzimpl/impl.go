@@ -145,20 +145,24 @@ func (i *implIAuthenticator) Authenticate(requestContext context.Context, as ist
 			QName: iauthnz.QNameRoleWorkspaceDevice,
 		}
 		if !slices.Contains(principals, prnWSDevice) {
-			compRec, _, err := GetComputersRecByDeviceProfileWSID(as, req.RequestWSID, deviceProfileWSID)
-			if err != nil {
-				return nil, principalPayload, err
+			if i.isDeviceAllowed() {
+				principals = append(principals, prnWSDevice)
 			}
-			if compRec.QName() == appdef.NullQName {
-				break
-			}
-			if compRec.AsBool(appdef.SystemField_IsActive) {
-				principals = append(principals, iauthnz.Principal{
-					Kind:  iauthnz.PrincipalKind_Role,
-					WSID:  deviceProfileWSID,
-					QName: iauthnz.QNameRoleWorkspaceDevice,
-				})
-			}
+
+			// compRec, _, err := GetComputersRecByDeviceProfileWSID(as, req.RequestWSID, deviceProfileWSID)
+			// if err != nil {
+			// 	return nil, principalPayload, err
+			// }
+			// if compRec.QName() == appdef.NullQName {
+			// 	break
+			// }
+			// if compRec.AsBool(appdef.SystemField_IsActive) {
+			// 	principals = append(principals, iauthnz.Principal{
+			// 		Kind:  iauthnz.PrincipalKind_Role,
+			// 		WSID:  deviceProfileWSID,
+			// 		QName: iauthnz.QNameRoleWorkspaceDevice,
+			// 	})
+			// }
 		}
 	}
 

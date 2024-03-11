@@ -12,6 +12,13 @@ func NewDefaultAuthorizer() iauthnz.IAuthorizer {
 	return &implIAuthorizer{acl: defaultACL}
 }
 
-func NewDefaultAuthenticator(subjectRolesGetter SubjectGetterFunc) iauthnz.IAuthenticator {
-	return &implIAuthenticator{subjectRolesGetter: subjectRolesGetter}
+func NewDefaultAuthenticator(subjectRolesGetter SubjectGetterFunc, isDeviceAllowedFunc IsDeviceAllowedFunc) iauthnz.IAuthenticator {
+	return &implIAuthenticator{
+		subjectRolesGetter: subjectRolesGetter,
+		isDeviceAllowed:    isDeviceAllowedFunc,
+	}
+}
+
+func TestIsDeviceAllowedFunc() bool {
+	return true
 }

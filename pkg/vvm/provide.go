@@ -185,6 +185,14 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 	))
 }
 
+func provideIsDevicaAllowedFunc(ep extensionpoints.IExtensionPoint) iauthnzimpl.IsDeviceAllowedFunc {
+	val, ok := ep.Find(apps.EPIsDeviceAllowedFunc)
+	if !ok {
+		return iauthnzimpl.TestIsDeviceAllowedFunc
+	}
+	return val.(iauthnzimpl.IsDeviceAllowedFunc)
+}
+
 func provideBuiltInApps(builtInAppsPackages []BuiltInAppsPackages) []apppartsctl.BuiltInApp {
 	res := make([]apppartsctl.BuiltInApp, len(builtInAppsPackages))
 	for i, pkg := range builtInAppsPackages {
