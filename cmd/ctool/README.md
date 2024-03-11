@@ -139,7 +139,7 @@ Flags:
 
 Example of the `ctool backup list` command
 
-    $ ./ctool backup list --json
+    $ ./ctool backup list --json --ssh-key ~/adm.key
 
 **Database restore**
 
@@ -148,7 +148,8 @@ Example of the `ctool backup list` command
 `<backup name>` - the name of the folder with a backup. If the name of the folder is not absolute, then it is searched on the cluster DBNodes in the `/mnt/backup/voneedger/` folder. To perform the database restore, it is necessary that the folder `<backup name>` exist on all the cluster DBNodes.
 
 Flags:
-`<--ssh-key>` - Path to SSH key
+
+`--ssh-key` - Path to SSH key
 
 Example of the `ctool restore` command
 
