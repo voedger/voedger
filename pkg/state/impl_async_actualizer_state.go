@@ -25,6 +25,15 @@ type actualizerStateOpts struct {
 	messages chan smtptest.Message
 }
 
+type asyncActualizerState struct {
+	*bundledHostState
+	eventFunc PLogEventFunc
+}
+
+func (s *asyncActualizerState) PLogEvent() istructs.IPLogEvent {
+	return s.eventFunc()
+}
+
 func implProvideAsyncActualizerState(ctx context.Context, appStructs istructs.IAppStructs, partitionIDFunc PartitionIDFunc, wsidFunc WSIDFunc, n10nFunc N10nFunc, secretReader isecrets.ISecretReader, eventFunc PLogEventFunc, intentsLimit, bundlesLimit int,
 	optFuncs ...ActualizerStateOptFunc) IBundledHostState {
 
@@ -32,10 +41,14 @@ func implProvideAsyncActualizerState(ctx context.Context, appStructs istructs.IA
 	for _, optFunc := range optFuncs {
 		optFunc(opts)
 	}
-	state := &bundledHostState{
-		hostState:    newHostState("AsyncActualizer", intentsLimit, func() istructs.IAppStructs { return appStructs }),
-		bundlesLimit: bundlesLimit,
-		bundles:      make(map[appdef.QName]bundle),
+
+	state := &asyncActualizerState{
+		bundledHostState: &bundledHostState{
+			hostState:    newHostState("AsyncActualizer", intentsLimit, func() istructs.IAppStructs { return appStructs }),
+			bundlesLimit: bundlesLimit,
+			bundles:      make(map[appdef.QName]bundle),
+		},
+		eventFunc: eventFunc,
 	}
 
 	state.addStorage(View, &viewRecordsStorage{
