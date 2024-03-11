@@ -90,6 +90,9 @@ type IState interface {
 
 	// Read reads all values according to the get and return them in callback
 	Read(key IStateKeyBuilder, callback ValueCallback) (err error)
+
+	// For projectors
+	PLogEvent() IPLogEvent
 }
 type IIntents interface {
 	// NewValue returns a new value builder for given get
