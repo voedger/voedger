@@ -329,7 +329,7 @@ func TestAuthenticate(t *testing.T) {
 			},
 			expectedPrincipals: []iauthnz.Principal{
 				{Kind: iauthnz.PrincipalKind_Device, WSID: 1},
-				{Kind: iauthnz.PrincipalKind_Role, WSID: 1, QName: iauthnz.QNameRoleWorkspaceDevice},
+				{Kind: iauthnz.PrincipalKind_Role, WSID: 1, QName: iauthnz.QNameRoleProfileOwner},
 				{Kind: iauthnz.PrincipalKind_Host, Name: "127.0.0.1"},
 			},
 		},
