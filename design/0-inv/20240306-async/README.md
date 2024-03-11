@@ -1,4 +1,4 @@
-# Design partition + async actualizers 
+# IAppPartitions + async actualizers 
 
 https://github.com/voedger/voedger/issues/1464
 
