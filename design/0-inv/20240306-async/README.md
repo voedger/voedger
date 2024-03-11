@@ -2,7 +2,7 @@
 
 https://github.com/voedger/voedger/issues/1464
 
-## Design
+## Context
 
 - [vvm.provideAsyncActualizersFactory()](https://github.com/voedger/voedger/blob/43469aef2ed4878dfa3cb7dca304c87350547a8d/pkg/vvm/wire_gen.go#L518)
 - vvm.provideOperatorAppServices()
