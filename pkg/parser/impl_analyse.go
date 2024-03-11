@@ -852,10 +852,11 @@ type wsCtx struct {
 	ictx *iterateCtx
 }
 
-func includeFromInheritedWorkspaces(ws *WorkspaceStmt, c *iterateCtx) error {
+func includeFromInheritedWorkspaces(ws *WorkspaceStmt, c *iterateCtx) {
 	sysWorkspace, err := lookupInSysPackage(c.basicContext, DefQName{Package: appdef.SysPackage, Name: rootWorkspaceName})
 	if err != nil {
-		return err
+		c.stmtErr(&ws.Pos, err)
+		return
 	}
 	var addFromInheritedWs func(ws *WorkspaceStmt, wsctx *wsCtx)
 	var added []*WorkspaceStmt
@@ -891,7 +892,6 @@ func includeFromInheritedWorkspaces(ws *WorkspaceStmt, c *iterateCtx) error {
 		}
 	}
 	addFromInheritedWs(ws, c.wsCtxs[ws])
-	return nil
 }
 
 func analyseNestedTables(items []TableItemExpr, rootTableKind appdef.TypeKind, c *iterateCtx) {
