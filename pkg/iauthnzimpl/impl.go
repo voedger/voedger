@@ -145,19 +145,13 @@ func (i *implIAuthenticator) Authenticate(requestContext context.Context, as ist
 			QName: iauthnz.QNameRoleWorkspaceDevice,
 		}
 		if !slices.Contains(principals, prnWSDevice) {
-			compRec, _, err := GetComputersRecByDeviceProfileWSID(as, req.RequestWSID, deviceProfileWSID)
+			isDeviceAllowed := i.isDeviceAllowedFuncs[as.AppQName()]
+			deviceAllowed, err := isDeviceAllowed(as, req.RequestWSID, deviceProfileWSID)
 			if err != nil {
-				return nil, principalPayload, err
+				return nil, payloads.PrincipalPayload{}, err
 			}
-			if compRec.QName() == appdef.NullQName {
-				break
-			}
-			if compRec.AsBool(appdef.SystemField_IsActive) {
-				principals = append(principals, iauthnz.Principal{
-					Kind:  iauthnz.PrincipalKind_Role,
-					WSID:  deviceProfileWSID,
-					QName: iauthnz.QNameRoleWorkspaceDevice,
-				})
+			if deviceAllowed {
+				principals = append(principals, prnWSDevice)
 			}
 		}
 	}
