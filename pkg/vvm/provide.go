@@ -165,6 +165,7 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 		apppartsctl.New,
 		appparts.NewWithActualizer,
 		provideBuiltInApps,
+		provideIsDevicaAllowedFunc,
 		// wire.Value(vvmConfig.NumCommandProcessors) -> (wire bug?) value github.com/untillpro/airs-bp3/vvm.CommandProcessorsCount can't be used: vvmConfig is not declared in package scope
 		wire.FieldsOf(&vvmConfig,
 			"NumCommandProcessors",
@@ -185,12 +186,19 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 	))
 }
 
-func provideIsDevicaAllowedFunc(ep extensionpoints.IExtensionPoint) iauthnzimpl.IsDeviceAllowedFunc {
-	val, ok := ep.Find(apps.EPIsDeviceAllowedFunc)
-	if !ok {
-		return iauthnzimpl.TestIsDeviceAllowedFunc
+func provideIsDevicaAllowedFunc(appEPs map[istructs.AppQName]extensionpoints.IExtensionPoint, _ []BuiltInAppsPackages /*need to make it called in correct order*/) iauthnzimpl.IsDeviceAllowedFuncs {
+	res := iauthnzimpl.IsDeviceAllowedFuncs{}
+	for appQName, appEP := range appEPs {
+		val, ok := appEP.Find(apps.EPIsDeviceAllowedFunc)
+		if !ok {
+			res[appQName] = func(as istructs.IAppStructs, requestWSID istructs.WSID, deviceProfileWSID istructs.WSID) (ok bool, err error) {
+				return true, nil
+			}
+		} else {
+			res[appQName] = val.(iauthnzimpl.IsDeviceAllowedFunc)
+		}
 	}
-	return val.(iauthnzimpl.IsDeviceAllowedFunc)
+	return res
 }
 
 func provideBuiltInApps(builtInAppsPackages []BuiltInAppsPackages) []apppartsctl.BuiltInApp {
