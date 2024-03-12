@@ -53,4 +53,6 @@ func CommandContext() Value_CommandContext {
 	return Value_CommandContext{tv: exttinygo.MustGetValue(kb)}
 }
 `
+	unknownFieldType  = "unknown"
+	unknownObjectType = "Unknown"
 )

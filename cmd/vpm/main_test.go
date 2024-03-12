@@ -247,8 +247,9 @@ func TestGenOrmBasicUsage(t *testing.T) {
 	wd, err := os.Getwd()
 	require.NoError(err)
 
-	workDir := filepath.Join(wd, "test", "genorm", "app")
+	dir := filepath.Join(wd, "test", "genorm", "app")
+	headerFile := filepath.Join(wd, "test", "genorm", "app", "header.txt")
 
-	err = execRootCmd([]string{"vpm", "gen", "orm", "-C", workDir}, "1.0.0")
+	err = execRootCmd([]string{"vpm", "gen", "orm", "-C", dir, "--header-file", headerFile}, "1.0.0")
 	require.NoError(err)
 }

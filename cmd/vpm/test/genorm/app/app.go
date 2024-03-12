@@ -10,10 +10,16 @@ import (
 	"mypkg2"
 
 	_ "github.com/voedger/voedger/pkg/sys"
+
+	"app/orm"
 )
 
 func main() {
+	orm.CommandContext()
 	println("app")
 	mypkg1.MyFunc1()
 	mypkg2.MyFunc2()
+
+	val := orm.Package_mypkg1.ODoc_mytable1.MustGetValue(0)
+	val.Get_field1()
 }

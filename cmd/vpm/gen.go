@@ -62,7 +62,7 @@ func newGenOrmCmd() *cobra.Command {
 
 // genOrm generates ORM from the given working directory
 func genOrm(compileRes *compile.Result, params vpmParams) error {
-	ormDirPath, err := createOrmDir(params.TargetDir)
+	dir, err := createOrmDir(params.TargetDir)
 	if err != nil {
 		return err
 	}
@@ -72,15 +72,27 @@ func genOrm(compileRes *compile.Result, params vpmParams) error {
 		return err
 	}
 
-	pkgLocalNames := compileRes.AppDef.PackageLocalNames()
+	for pkgLocalName, objs := range gatherPackageObjs(compileRes.AppDef) {
+		if len(objs) == 0 {
+			continue
+		}
+		if err := generatePackage(pkgLocalName, objs, headerContent, dir); err != nil {
+			return err
+		}
+	}
+	return generateSysPackage(dir)
+}
+
+func gatherPackageObjs(appDef appdef.IAppDef) map[string][]interface{} {
 	pkgObjs := make(map[string][]interface{}) // mapping of package local names to list of its objects
+	pkgLocalNames := appDef.PackageLocalNames()
 	for _, pkgLocalName := range pkgLocalNames {
 		pkgObjs[pkgLocalName] = make([]interface{}, 0)
 	}
 
 	reg := regexp.MustCompile("(.*)\\.(.*)")
 
-	compileRes.AppDef.Types(func(iType appdef.IType) {
+	appDef.Types(func(iType appdef.IType) {
 		if workspace, ok := iType.(appdef.IWorkspace); ok {
 			workspace.Types(func(iType appdef.IType) {
 				qName := iType.QName().String()
@@ -89,30 +101,34 @@ func genOrm(compileRes *compile.Result, params vpmParams) error {
 			})
 		}
 	})
-
-	for pkgLocalName, objs := range pkgObjs {
-		ormPkgData, err := fillOrmPackageData(pkgLocalName, objs, headerContent)
-		if err != nil {
-			return err
-		}
-
-		ormFile, err := fillTemplate("package", ormPkgData)
-		if err != nil {
-			return err
-		}
-
-		filePath := filepath.Join(ormDirPath, fmt.Sprintf("package_%s.go", pkgLocalName))
-		if err := os.WriteFile(filePath, ormFile, defaultPermissions); err != nil {
-			return err
-		}
-	}
-	if err := os.WriteFile(filepath.Join(ormDirPath, "sys.go"), []byte(sysContent), defaultPermissions); err != nil {
-		return err
-	}
-	return nil
+	return pkgObjs
 }
 
-func fillOrmPackageData(pkgLocalName string, objs []interface{}, headerFileContent string) (ormPackageData, error) {
+func generatePackage(pkgLocalName string, objs []interface{}, headerFileContent, dir string) error {
+	pkgData, err := fillPackageData(pkgLocalName, objs, headerFileContent)
+	if err != nil {
+		return err
+	}
+
+	pkgFile, err := fillTemplate("package", pkgData)
+	if err != nil {
+		return err
+	}
+
+	filePath := filepath.Join(dir, fmt.Sprintf("package_%s.go", pkgLocalName))
+	return saveFile(filePath, pkgFile)
+}
+
+func generateSysPackage(dir string) error {
+	sysFilePath := filepath.Join(dir, "sys.go")
+	return saveFile(sysFilePath, []byte(sysContent))
+}
+
+func saveFile(filePath string, content []byte) error {
+	return os.WriteFile(filePath, content, defaultPermissions)
+}
+
+func fillPackageData(pkgLocalName string, objs []interface{}, headerFileContent string) (ormPackageData, error) {
 	pkgData := ormPackageData{
 		Name:              pkgLocalName,
 		HeaderFileContent: headerFileContent,
@@ -134,12 +150,12 @@ func fillOrmPackageData(pkgLocalName string, objs []interface{}, headerFileConte
 
 			for _, field := range t.Fields() {
 				fieldType := getFieldType(field)
-				if fieldType != "unknown" {
+				if fieldType != unknownFieldType {
 					fieldData := ormFieldData{
 						Table:         tableData,
 						Type:          getFieldType(field),
 						Name:          field.Name(),
-						GetMethodName: fmt.Sprintf("Get_%s", field.Name()),
+						GetMethodName: fmt.Sprintf("Get_%s", strings.ToLower(field.Name())),
 					}
 					tableData.Fields = append(tableData.Fields, fieldData)
 				}
@@ -152,7 +168,7 @@ func fillOrmPackageData(pkgLocalName string, objs []interface{}, headerFileConte
 }
 
 func fillTemplate(templateName string, payload interface{}) ([]byte, error) {
-	templateContent, err := fsTemplates.ReadFile(fmt.Sprintf("templates/%s.txt", templateName))
+	templateContent, err := fsTemplates.ReadFile(fmt.Sprintf("templates/%s.gotmpl", templateName))
 	if err != nil {
 		return nil, fmt.Errorf("failed to read template: %w", err)
 	}
@@ -208,7 +224,7 @@ func getType(obj interface{}) string {
 	case appdef.IWDoc:
 		return "WDoc"
 	default:
-		return "Unknown"
+		return unknownObjectType
 	}
 }
 
@@ -229,7 +245,7 @@ func getFieldType(field appdef.IField) string {
 	case appdef.DataKind_string:
 		return "string"
 	default:
-		return "unknown"
+		return unknownFieldType
 	}
 }
 
