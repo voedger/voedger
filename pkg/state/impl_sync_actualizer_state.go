@@ -41,11 +41,6 @@ func implProvideSyncActualizerState(ctx context.Context, appStructs istructs.IAp
 		eventsFunc: func() istructs.IEvents { return appStructs.Events() },
 		wsidFunc:   wsidFunc,
 	}, S_GET)
-	hs.addStorage(PLog, &pLogStorage{
-		ctx:             ctx,
-		eventsFunc:      func() istructs.IEvents { return appStructs.Events() },
-		partitionIDFunc: partitionIDFunc,
-	}, S_GET)
 	hs.addStorage(AppSecret, &appSecretsStorage{secretReader: secretReader}, S_GET)
 	return hs
 }

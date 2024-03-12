@@ -111,14 +111,3 @@ func TestWLogKeyBuilder(t *testing.T) {
 		require.Equal(t, "wlog wsid - 30, offset - 20, count - 10", kb.(fmt.Stringer).String())
 	})
 }
-func TestPLogKeyBuilder(t *testing.T) {
-	t.Run("String", func(t *testing.T) {
-		s := &pLogStorage{partitionIDFunc: func() istructs.PartitionID { return istructs.PartitionID(42) }}
-		kb := s.NewKeyBuilder(appdef.NullQName, nil)
-		kb.PutInt64(Field_Count, 10)
-		kb.PutInt64(Field_Offset, 20)
-		kb.PutInt32(Field_PartitionID, 30)
-
-		require.Equal(t, "plog partitionID - 30, offset - 20, count - 10", kb.(fmt.Stringer).String())
-	})
-}

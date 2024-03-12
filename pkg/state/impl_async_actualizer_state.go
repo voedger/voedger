@@ -69,12 +69,6 @@ func implProvideAsyncActualizerState(ctx context.Context, appStructs istructs.IA
 		wsidFunc:   wsidFunc,
 	}, S_GET|S_READ)
 
-	state.addStorage(PLog, &pLogStorage{
-		ctx:             ctx,
-		eventsFunc:      func() istructs.IEvents { return appStructs.Events() },
-		partitionIDFunc: partitionIDFunc,
-	}, S_GET|S_READ)
-
 	state.addStorage(SendMail, &sendMailStorage{
 		messages: opts.messages,
 	}, S_INSERT)
