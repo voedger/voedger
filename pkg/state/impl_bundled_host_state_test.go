@@ -527,6 +527,6 @@ func TestAsyncActualizerState_Read(t *testing.T) {
 }
 func asyncActualizerStateWithTestStateStorage(s *mockStorage) istructs.IState {
 	as := ProvideAsyncActualizerStateFactory()(context.Background(), &nilAppStructs{}, nil, nil, nil, nil, nil, 10, 10)
-	as.(*bundledHostState).addStorage(testStorage, s, S_GET_BATCH|S_READ)
+	as.(*asyncActualizerState).addStorage(testStorage, s, S_GET_BATCH|S_READ)
 	return as
 }

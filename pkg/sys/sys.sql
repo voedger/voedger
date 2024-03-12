@@ -24,7 +24,17 @@ ALTERABLE WORKSPACE AppWorkspaceWS (
 	DESCRIPTOR AppWorkspace ();
 );
 
-WORKSPACE DeviceProfileWS (
+ABSTRACT WORKSPACE ProfileWS (
+	TYPE RefreshPrincipalTokenResult (
+		NewPrincipalToken text NOT NULL
+	);
+
+	EXTENSION ENGINE BUILTIN (
+		QUERY RefreshPrincipalToken RETURNS RefreshPrincipalTokenResult;
+	);
+);
+
+ALTERABLE WORKSPACE DeviceProfileWS INHERITS ProfileWS (
 	DESCRIPTOR DeviceProfile ();
 );
 

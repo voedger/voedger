@@ -92,22 +92,10 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 		return nil, nil, err
 	}
 	v3 := provideSubjectGetterFunc()
-	iAuthenticator := iauthnzimpl.NewDefaultAuthenticator(v3)
-	iAuthorizer := iauthnzimpl.NewDefaultAuthorizer()
-	serviceFactory := commandprocessor.ProvideServiceFactory(iAppPartitions, timeFunc, in10nBroker, iMetrics, vvmName, iAuthenticator, iAuthorizer, iSecretReader)
-	operatorCommandProcessors := provideCommandProcessors(commandProcessorsCount, commandChannelFactory, serviceFactory)
-	queryProcessorsCount := vvmConfig.NumQueryProcessors
-	queryChannel := provideQueryChannel(serviceChannelFactory)
-	queryprocessorServiceFactory := queryprocessor.ProvideServiceFactory()
-	maxPrepareQueriesType := vvmConfig.MaxPrepareQueries
-	operatorQueryProcessors := provideQueryProcessors(queryProcessorsCount, queryChannel, iAppPartitions, queryprocessorServiceFactory, iMetrics, vvmName, maxPrepareQueriesType, iAuthenticator, iAuthorizer)
-	asyncActualizerFactory := projectors.ProvideAsyncActualizerFactory()
-	asyncActualizersFactory := provideAsyncActualizersFactory(iAppPartitions, iAppStructsProvider, in10nBroker, asyncActualizerFactory, iSecretReader, iMetrics)
-	v4 := vvmConfig.ActualizerStateOpts
-	appPartitionFactory := provideAppPartitionFactory(asyncActualizersFactory, v4)
-	appServiceFactory := provideAppServiceFactory(appPartitionFactory)
+	v4 := provideAppsExtensionPoints(vvmConfig)
 	vvmPortSource := provideVVMPortSource()
 	iFederation := provideIFederation(vvmConfig, vvmPortSource)
+	queryProcessorsCount := vvmConfig.NumQueryProcessors
 	apIs := apps.APIs{
 		ITokens:              iTokens,
 		IAppStructsProvider:  iAppStructsProvider,
@@ -120,14 +108,27 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 		NumQueryProcessors:   queryProcessorsCount,
 		IAppPartitions:       iAppPartitions,
 	}
-	v5 := provideAppsExtensionPoints(vvmConfig)
-	v6, err := provideBuiltInAppsPackages(vvmConfig, appConfigsType, apIs, v5)
+	v5, err := provideBuiltInAppsPackages(vvmConfig, appConfigsType, apIs, v4)
 	if err != nil {
 		cleanup2()
 		cleanup()
 		return nil, nil, err
 	}
-	operatorAppServicesFactory := provideOperatorAppServices(appServiceFactory, v6, iAppStructsProvider)
+	isDeviceAllowedFuncs := provideIsDevicaAllowedFunc(v4, v5)
+	iAuthenticator := iauthnzimpl.NewDefaultAuthenticator(v3, isDeviceAllowedFuncs)
+	iAuthorizer := iauthnzimpl.NewDefaultAuthorizer()
+	serviceFactory := commandprocessor.ProvideServiceFactory(iAppPartitions, timeFunc, in10nBroker, iMetrics, vvmName, iAuthenticator, iAuthorizer, iSecretReader)
+	operatorCommandProcessors := provideCommandProcessors(commandProcessorsCount, commandChannelFactory, serviceFactory)
+	queryChannel := provideQueryChannel(serviceChannelFactory)
+	queryprocessorServiceFactory := queryprocessor.ProvideServiceFactory()
+	maxPrepareQueriesType := vvmConfig.MaxPrepareQueries
+	operatorQueryProcessors := provideQueryProcessors(queryProcessorsCount, queryChannel, iAppPartitions, queryprocessorServiceFactory, iMetrics, vvmName, maxPrepareQueriesType, iAuthenticator, iAuthorizer)
+	asyncActualizerFactory := projectors.ProvideAsyncActualizerFactory()
+	asyncActualizersFactory := provideAsyncActualizersFactory(iAppPartitions, iAppStructsProvider, in10nBroker, asyncActualizerFactory, iSecretReader, iMetrics)
+	v6 := vvmConfig.ActualizerStateOpts
+	appPartitionFactory := provideAppPartitionFactory(asyncActualizersFactory, v6)
+	appServiceFactory := provideAppServiceFactory(appPartitionFactory)
+	operatorAppServicesFactory := provideOperatorAppServices(appServiceFactory, v5, iAppStructsProvider)
 	vvmPortType := vvmConfig.VVMPort
 	routerParams := provideRouterParams(vvmConfig, vvmPortType, vvmIdx)
 	busTimeout := vvmConfig.BusTimeout
@@ -156,7 +157,7 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 	cache := dbcertcache.ProvideDbCache(routerAppStorage)
 	commandProcessorsChannelGroupIdxType := provideProcessorChannelGroupIdxCommand(vvmConfig)
 	queryProcessorsChannelGroupIdxType := provideProcessorChannelGroupIdxQuery(vvmConfig)
-	v7 := provideBuiltInApps(v6)
+	v7 := provideBuiltInApps(v5)
 	vvmApps := provideVVMApps(v7)
 	iBus := provideIBus(iAppPartitions, iProcBus, commandProcessorsChannelGroupIdxType, queryProcessorsChannelGroupIdxType, commandProcessorsCount, vvmApps)
 	v8, err := provideAppsWSAmounts(vvmApps, iAppStructsProvider)
@@ -183,9 +184,9 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 	vvm := &VVM{
 		ServicePipeline:     servicePipeline,
 		APIs:                apIs,
-		AppsExtensionPoints: v5,
+		AppsExtensionPoints: v4,
 		MetricsServicePort:  v9,
-		BuiltInAppsPackages: v6,
+		BuiltInAppsPackages: v5,
 	}
 	return vvm, func() {
 		cleanup3()
@@ -232,6 +233,21 @@ func (vvm *VoedgerVM) Shutdown() {
 func (vvm *VoedgerVM) Launch() error {
 	ignition := struct{}{}
 	return vvm.ServicePipeline.SendSync(ignition)
+}
+
+func provideIsDevicaAllowedFunc(appEPs map[istructs.AppQName]extensionpoints.IExtensionPoint, _ []BuiltInAppsPackages) iauthnzimpl.IsDeviceAllowedFuncs {
+	res := iauthnzimpl.IsDeviceAllowedFuncs{}
+	for appQName, appEP := range appEPs {
+		val, ok := appEP.Find(apps.EPIsDeviceAllowedFunc)
+		if !ok {
+			res[appQName] = func(as istructs.IAppStructs, requestWSID istructs.WSID, deviceProfileWSID istructs.WSID) (ok bool, err error) {
+				return true, nil
+			}
+		} else {
+			res[appQName] = val.(iauthnzimpl.IsDeviceAllowedFunc)
+		}
+	}
+	return res
 }
 
 func provideBuiltInApps(builtInAppsPackages []BuiltInAppsPackages) []apppartsctl.BuiltInApp {

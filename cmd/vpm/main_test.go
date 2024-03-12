@@ -227,7 +227,7 @@ func TestPkgRegistryCompile(t *testing.T) {
 	require := require.New(t)
 
 	wd, err := os.Getwd()
-	pkgDirLocalPath := wd[:strings.LastIndex(wd, "/cmd/vpm")] + "/pkg"
+	pkgDirLocalPath := wd[:strings.LastIndex(wd, filepath.FromSlash("/cmd/vpm"))] + filepath.FromSlash("/pkg")
 
 	require.NoError(err)
 	defer func() {

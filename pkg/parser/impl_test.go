@@ -182,7 +182,7 @@ func Test_BasicUsage(t *testing.T) {
 	require.Equal(appdef.DataKind_int32, crec.Field("Kind").DataKind())
 
 	// QUERY
-	q1 := app.Query(appdef.NewQName("main", "_Query1"))
+	q1 := app.Query(appdef.NewQName("main", "Query11"))
 	require.NotNil(q1)
 	require.Equal(appdef.TypeKind_Query, q1.Kind())
 
@@ -254,6 +254,14 @@ func Test_BasicUsage(t *testing.T) {
 	})
 	require.Equal(1, intentsCount)
 	require.Equal(intentsCount, proj.Intents().Len())
+
+	cmd = app.Command(appdef.NewQName("main", "NewOrder2"))
+	require.Equal(1, cmd.States().Len())
+	require.NotNil(cmd.States().Storage(appdef.NewQName("sys", "AppSecret")))
+	require.Equal(1, cmd.States().Len())
+	intent := cmd.Intents().Storage(appdef.NewQName("sys", "Record"))
+	require.NotNil(intent)
+	require.True(intent.Names().Contains(appdef.NewQName("main", "Transaction")))
 
 	localNames := app.PackageLocalNames()
 	require.Len(localNames, 3)
@@ -342,10 +350,8 @@ func Test_Refs_NestedTables(t *testing.T) {
 	require.EqualValues(appdef.QNames{appdef.NewQName("pkg1", "table3")}, ref1.Refs())
 }
 
-func Test_CircularReferences(t *testing.T) {
-
+func Test_CircularReferencesTables(t *testing.T) {
 	require := require.New(t)
-
 	// Tables
 	fs, err := ParseFile("file1.sql", `APPLICATION test();
 	ABSTRACT TABLE table2 INHERITS table2 ();
@@ -362,7 +368,6 @@ func Test_CircularReferences(t *testing.T) {
 		getSysPackageAST(),
 		pkg,
 	})
-
 	require.EqualError(err, strings.Join([]string{
 		"file1.sql:2:2: circular reference in INHERITS",
 		"file1.sql:3:2: circular reference in INHERITS",
@@ -370,9 +375,12 @@ func Test_CircularReferences(t *testing.T) {
 		"file1.sql:5:2: circular reference in INHERITS",
 		"file1.sql:6:2: circular reference in INHERITS",
 	}, "\n"))
+}
 
+func Test_CircularReferencesWorkspaces(t *testing.T) {
+	require := require.New(t)
 	// Workspaces
-	fs, err = ParseFile("file1.sql", `APPLICATION test();
+	fs, err := ParseFile("file1.sql", `APPLICATION test();
 	ABSTRACT WORKSPACE w1();
 		ABSTRACT WORKSPACE w2 INHERITS w1,w2(
 		TABLE table4 INHERITS CDoc();
@@ -382,14 +390,13 @@ func Test_CircularReferences(t *testing.T) {
 	ABSTRACT WORKSPACE w5 INHERITS w3();
 	`)
 	require.NoError(err)
-	pkg, err = BuildPackageSchema("pkg/test", []*FileSchemaAST{fs})
+	pkg, err := BuildPackageSchema("pkg/test", []*FileSchemaAST{fs})
 	require.NoError(err)
 
 	_, err = BuildAppSchema([]*PackageSchemaAST{
 		getSysPackageAST(),
 		pkg,
 	})
-
 	require.EqualError(err, strings.Join([]string{
 		"file1.sql:3:37: circular reference in INHERITS",
 		"file1.sql:6:33: circular reference in INHERITS",
@@ -723,13 +730,13 @@ func Test_AbstractTables(t *testing.T) {
 	})
 	require.EqualError(err, strings.Join([]string{
 		"file1.sql:5:25: base table must be abstract",
-		"file1.sql:9:10: reference to abstract table AbstractTable",
 		"file1.sql:19:29: projector refers to abstract table AbstractTable",
 		"file1.sql:24:21: projector refers to abstract table AbstractTable",
 		"file1.sql:28:10: projector refers to abstract table AbstractTable",
 		"file1.sql:32:11: nested abstract table AbstractTable",
 		"file1.sql:34:13: use of abstract table AbstractTable",
 		"file1.sql:37:4: nested abstract table Nested",
+		"file1.sql:9:10: reference to abstract table AbstractTable",
 	}, "\n"))
 
 }
@@ -1715,8 +1722,10 @@ func Test_Scope_TableRefs(t *testing.T) {
 	require.NoError(err)
 	_, err = BuildAppSchema([]*PackageSchemaAST{getSysPackageAST(), main, pkg1})
 	require.EqualError(err, strings.Join([]string{
+		"example2.sql:10:11: table PkgTable not included into workspace",
 		"example2.sql:16:11: undefined table: MyTable",
 		"example2.sql:17:11: undefined table: MyTable2",
+		"example2.sql:18:11: table PkgTable not included into workspace",
 		"example2.sql:19:11: undefined table: MyInnerTable",
 	}, "\n"))
 
@@ -1738,8 +1747,8 @@ func Test_Alter_Workspace_In_Package(t *testing.T) {
 	require.NoError(err)
 
 	fs1, err := ParseFile("file1.sql", `
-		ALTERABLE WORKSPACE _Ws(
-			TABLE _wst1 INHERITS CDoc();
+		ALTERABLE WORKSPACE Ws0(
+			TABLE wst01 INHERITS CDoc();
 		);
 		ABSTRACT WORKSPACE AWs(
 			TABLE awst1 INHERITS CDoc();
@@ -1750,8 +1759,8 @@ func Test_Alter_Workspace_In_Package(t *testing.T) {
 	`)
 	require.NoError(err)
 	fs2, err := ParseFile("file2.sql", `
-		ALTER WORKSPACE _Ws(
-			TABLE _wst2 INHERITS CDoc();
+		ALTER WORKSPACE Ws0(
+			TABLE wst02 INHERITS CDoc();
 		);
 		ALTER WORKSPACE AWs(
 			TABLE awst2 INHERITS CDoc();
@@ -2097,8 +2106,8 @@ TABLE MyTable1 INHERITS ODocUnknown ( MyField ref(registry.Login) NOT NULL );
 	_, err := BuildAppSchema([]*PackageSchemaAST{pkgApp1, getSysPackageAST()})
 	require.EqualError(err, strings.Join([]string{
 		"source.sql:2:1: undefined table kind",
-		"source.sql:2:51: registry undefined",
 		"source.sql:2:25: undefined table: ODocUnknown",
+		"source.sql:2:51: registry undefined",
 	}, "\n"))
 
 }
@@ -2279,4 +2288,82 @@ func Test_Panic1(t *testing.T) {
 	ast, errs := ParsePackageDir(appdef.SysPackage, pkg1FS, "test")
 	require.ErrorContains(t, errs, "no valid schema files")
 	require.Nil(t, ast)
+}
+
+func Test_Identifiers(t *testing.T) {
+	require := assertions(t)
+
+	_, err := ParseFile("file1.sql", `APPLICATION app1();
+	WORKSPACE w (
+		ROLE _role;
+	);`)
+	require.ErrorContains(err, "file1.sql:3:8: invalid input text")
+
+	_, err = ParseFile("file1.sql", `APPLICATION app1();
+	WORKSPACE w (
+		ROLE r234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890r23456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456;
+	);`)
+	require.ErrorContains(err, "file1.sql:3:263: unexpected token")
+
+	_, err = ParseFile("file1.sql", `APPLICATION app1();
+	WORKSPACE w (
+		ROLE r世界;
+	);`)
+	require.ErrorContains(err, "file1.sql:3:9: invalid input text")
+}
+
+func Test_RefsWorkspaces(t *testing.T) {
+	require := assertions(t)
+
+	require.AppSchemaError(`APPLICATION test();
+	TABLE t1 INHERITS WDoc();
+	WORKSPACE w2 (
+		TABLE tab2 INHERITS WDoc(
+			f ref(t1) -- error, t1 is not in the workspace
+		);
+		TYPE typ2(
+			f ref(t1) -- error, t1 is not in the workspace
+		);
+		VIEW test(
+			f ref(t1), -- error, t1 is not in the workspace
+			PRIMARY KEY(f)
+		) AS RESULT OF Proj1;
+
+		EXTENSION ENGINE BUILTIN (
+			PROJECTOR Proj1 AFTER EXECUTE ON (Orders) INTENTS (View(test));
+			COMMAND Orders()
+		);
+
+	);`,
+		"file.sql:5:10: table t1 not included into workspace",
+		"file.sql:8:10: table t1 not included into workspace",
+		"file.sql:11:10: table t1 not included into workspace")
+
+	require.NoAppSchemaError(`APPLICATION test();
+	WORKSPACE w2 (
+		TABLE t1 INHERITS WDoc(
+			items TABLE t2(
+				items TABLE t3()
+			)
+		);
+		TABLE tab2 INHERITS WDoc(
+			f1 ref(t2),
+			f2 ref(t3) 
+		);
+		TYPE typ2(
+			f1 ref(t2), 
+			f2 ref(t3) 
+		);
+		VIEW test(
+			f1 ref(t2),
+			f2 ref(t3),
+			PRIMARY KEY(f1)
+		) AS RESULT OF Proj1;
+
+		EXTENSION ENGINE BUILTIN (
+			PROJECTOR Proj1 AFTER EXECUTE ON (Orders) INTENTS (View(test));
+			COMMAND Orders()
+		);
+
+	);`)
 }

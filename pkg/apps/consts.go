@@ -12,6 +12,7 @@ import (
 
 const (
 	EPSchemasFS             extensionpoints.EPKey = "SchemasFS"
+	EPIsDeviceAllowedFunc   extensionpoints.EPKey = "IsDeviceAllowedFunc"
 	storageTypeCas1         string                = "cas1"
 	storageTypeCas3         string                = "cas3"
 	storageTypeMem          string                = "mem"

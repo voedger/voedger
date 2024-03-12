@@ -22,9 +22,8 @@ import (
 )
 
 const (
-	alienWSID                 = 3
-	nonInitedWSID             = 4
-	unlinkedDeviceProfileWSID = 5
+	alienWSID     = 3
+	nonInitedWSID = 4
 )
 
 func TestBasicUsage(t *testing.T) {
@@ -48,7 +47,7 @@ func TestBasicUsage(t *testing.T) {
 	token, err := appTokens.IssueToken(time.Minute, &pp)
 	require.NoError(err)
 
-	appStructs := AppStructsWithTestStorage(map[istructs.WSID]map[appdef.QName]map[istructs.RecordID]map[string]interface{}{
+	appStructs := AppStructsWithTestStorage(istructs.AppQName_test1_app1, map[istructs.WSID]map[appdef.QName]map[istructs.RecordID]map[string]interface{}{
 		// WSID 1 is the user profile, not necessary to store docs there
 
 		// workspace owned by the user
@@ -71,7 +70,7 @@ func TestBasicUsage(t *testing.T) {
 			},
 		},
 	})
-	authn := NewDefaultAuthenticator(TestSubjectRolesGetter)
+	authn := NewDefaultAuthenticator(TestSubjectRolesGetter, TestIsDeviceAllowedFuncs)
 	authz := NewDefaultAuthorizer()
 	t.Run("authenticate in the profile", func(t *testing.T) {
 		req := iauthnz.AuthnRequest{
@@ -190,13 +189,9 @@ func TestAuthenticate(t *testing.T) {
 	deviceToken, err := appTokens.IssueToken(time.Minute, &pp)
 	require.NoError(err)
 
-	pp.ProfileWSID = unlinkedDeviceProfileWSID
-	unlinkedDeviceToken, err := appTokens.IssueToken(time.Minute, &pp)
-	require.NoError(err)
-
 	qNameCDocComputers := appdef.NewQName("untill", "computers")
 
-	appStructs := AppStructsWithTestStorage(map[istructs.WSID]map[appdef.QName]map[istructs.RecordID]map[string]interface{}{
+	appStructs := AppStructsWithTestStorage(istructs.AppQName_test1_app1, map[istructs.WSID]map[appdef.QName]map[istructs.RecordID]map[string]interface{}{
 		// WSID 1 is the user profile
 		istructs.WSID(1): {
 			qNameViewDeviceProfileWSIDIdx: {
@@ -206,13 +201,6 @@ func TestAuthenticate(t *testing.T) {
 					appdef.SystemField_IsActive: true,
 					field_ComputersID:           istructs.RecordID(2),
 					field_RestaurantComputersID: istructs.RecordID(3),
-				},
-				4: {
-					field_dummy:                 int32(1),
-					field_DeviceProfileWSID:     int64(unlinkedDeviceProfileWSID),
-					appdef.SystemField_IsActive: true,
-					field_ComputersID:           istructs.RecordID(5),
-					field_RestaurantComputersID: istructs.RecordID(6),
 				},
 			},
 			// wrong to store in the user profile wsid, but ok for test
@@ -341,19 +329,7 @@ func TestAuthenticate(t *testing.T) {
 			},
 			expectedPrincipals: []iauthnz.Principal{
 				{Kind: iauthnz.PrincipalKind_Device, WSID: 1},
-				{Kind: iauthnz.PrincipalKind_Role, WSID: 1, QName: iauthnz.QNameRoleWorkspaceDevice},
-				{Kind: iauthnz.PrincipalKind_Host, Name: "127.0.0.1"},
-			},
-		},
-		{
-			desc: "unlinked device -> host + device",
-			req: iauthnz.AuthnRequest{
-				Host:        "127.0.0.1",
-				RequestWSID: 1,
-				Token:       unlinkedDeviceToken,
-			},
-			expectedPrincipals: []iauthnz.Principal{
-				{Kind: iauthnz.PrincipalKind_Device, WSID: unlinkedDeviceProfileWSID},
+				{Kind: iauthnz.PrincipalKind_Role, WSID: 1, QName: iauthnz.QNameRoleProfileOwner},
 				{Kind: iauthnz.PrincipalKind_Host, Name: "127.0.0.1"},
 			},
 		},
@@ -405,14 +381,14 @@ func TestAuthenticate(t *testing.T) {
 	subjectsGetter := func(context.Context, string, istructs.IAppStructs, istructs.WSID) ([]appdef.QName, error) {
 		return *subjects, nil
 	}
-	authn := NewDefaultAuthenticator(subjectsGetter)
+	authn := NewDefaultAuthenticator(subjectsGetter, TestIsDeviceAllowedFuncs)
 	for _, tc := range testCases {
 		localVarSubjects := &tc.subjects
 		t.Run(tc.desc, func(t *testing.T) {
 			subjects = localVarSubjects
 			principals, _, err := authn.Authenticate(context.Background(), appStructs, appTokens, tc.req)
 			require.NoError(err)
-			require.Equal(tc.expectedPrincipals, principals)
+			require.Equal(tc.expectedPrincipals, principals, tc.desc)
 		})
 	}
 }
@@ -446,13 +422,9 @@ func TestAuthorize(t *testing.T) {
 	deviceToken, err := appTokens.IssueToken(time.Minute, &pp)
 	require.NoError(err)
 
-	pp.ProfileWSID = unlinkedDeviceProfileWSID
-	unlinkedDeviceToken, err := appTokens.IssueToken(time.Minute, &pp)
-	require.NoError(err)
-
 	qNameCDocComputers := appdef.NewQName("untill", "computers")
 
-	appStructs := AppStructsWithTestStorage(map[istructs.WSID]map[appdef.QName]map[istructs.RecordID]map[string]interface{}{
+	appStructs := AppStructsWithTestStorage(istructs.AppQName_test1_app1, map[istructs.WSID]map[appdef.QName]map[istructs.RecordID]map[string]interface{}{
 		// workspace owned by the user
 		istructs.WSID(2): {
 			qNameCDocWorkspaceDescriptor: {
@@ -468,13 +440,6 @@ func TestAuthorize(t *testing.T) {
 					appdef.SystemField_IsActive: true,
 					field_ComputersID:           istructs.RecordID(3),
 					field_RestaurantComputersID: istructs.RecordID(4),
-				},
-				5: {
-					field_dummy:                 int32(1),
-					field_DeviceProfileWSID:     int64(unlinkedDeviceProfileWSID),
-					appdef.SystemField_IsActive: true,
-					field_ComputersID:           istructs.RecordID(6),
-					field_RestaurantComputersID: istructs.RecordID(7),
 				},
 			},
 			// wrong to store in the user profile wsid, but ok for test
@@ -500,7 +465,7 @@ func TestAuthorize(t *testing.T) {
 			},
 		},
 	})
-	authn := NewDefaultAuthenticator(TestSubjectRolesGetter)
+	authn := NewDefaultAuthenticator(TestSubjectRolesGetter, TestIsDeviceAllowedFuncs)
 	authz := NewDefaultAuthorizer()
 
 	testCmd := appdef.NewQName(appdef.SysPackage, "testcmd")
@@ -592,18 +557,6 @@ func TestAuthorize(t *testing.T) {
 				Resource:      testCmd,
 			},
 			expected: true,
-		},
-		{
-			desc: "execute in an owned workspace with an unlinked device token -> !ok",
-			reqn: iauthnz.AuthnRequest{
-				RequestWSID: 2,
-				Token:       unlinkedDeviceToken,
-			},
-			reqz: iauthnz.AuthzRequest{
-				OperationKind: iauthnz.OperationKind_EXECUTE,
-				Resource:      testCmd,
-			},
-			expected: false,
 		},
 	}
 
@@ -942,7 +895,7 @@ func TestErrors(t *testing.T) {
 	appTokens := payloads.ProvideIAppTokensFactory(tokens).New(istructs.AppQName_test1_app1)
 
 	appStructs := &implIAppStructs{}
-	authn := NewDefaultAuthenticator(TestSubjectRolesGetter)
+	authn := NewDefaultAuthenticator(TestSubjectRolesGetter, TestIsDeviceAllowedFuncs)
 
 	t.Run("wrong token", func(t *testing.T) {
 		req := iauthnz.AuthnRequest{
@@ -999,7 +952,7 @@ func BenchmarkBasic(b *testing.B) {
 	require.NoError(b, err)
 	var principals []iauthnz.Principal
 	appStructs := &implIAppStructs{}
-	authn := NewDefaultAuthenticator(TestSubjectRolesGetter)
+	authn := NewDefaultAuthenticator(TestSubjectRolesGetter, TestIsDeviceAllowedFuncs)
 	authz := NewDefaultAuthorizer()
 	reqn := iauthnz.AuthnRequest{
 		Host:        "127.0.0.1",
@@ -1024,14 +977,15 @@ func BenchmarkBasic(b *testing.B) {
 	}
 }
 
-func AppStructsWithTestStorage(data map[istructs.WSID]map[appdef.QName]map[istructs.RecordID]map[string]interface{}) istructs.IAppStructs {
+func AppStructsWithTestStorage(appQName istructs.AppQName, data map[istructs.WSID]map[appdef.QName]map[istructs.RecordID]map[string]interface{}) istructs.IAppStructs {
 	recs := &implIRecords{data: data}
-	return &implIAppStructs{records: recs, views: &implIViewRecords{records: recs}}
+	return &implIAppStructs{records: recs, views: &implIViewRecords{records: recs}, appQName: appQName}
 }
 
 type implIAppStructs struct {
-	records *implIRecords
-	views   *implIViewRecords
+	records  *implIRecords
+	views    *implIViewRecords
+	appQName istructs.AppQName
 }
 
 func (as *implIAppStructs) AppDef() appdef.IAppDef                             { panic("") }
@@ -1041,7 +995,7 @@ func (as *implIAppStructs) ViewRecords() istructs.IViewRecords                 {
 func (as *implIAppStructs) ObjectBuilder(appdef.QName) istructs.IObjectBuilder { panic("") }
 func (as *implIAppStructs) Resources() istructs.IResources                     { panic("") }
 func (as *implIAppStructs) ClusterAppID() istructs.ClusterAppID                { panic("") }
-func (as *implIAppStructs) AppQName() istructs.AppQName                        { panic("") }
+func (as *implIAppStructs) AppQName() istructs.AppQName                        { return as.appQName }
 func (as *implIAppStructs) IsFunctionRateLimitsExceeded(appdef.QName, istructs.WSID) bool {
 	panic("")
 }

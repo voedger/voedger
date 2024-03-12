@@ -95,18 +95,20 @@ func (i *implIAuthenticator) Authenticate(requestContext context.Context, as ist
 		principals = append(principals, prn)
 	}
 
-	switch pkt {
-	case iauthnz.PrincipalKind_User:
-		if req.RequestWSID == profileWSID {
-			prnProfileOwner := iauthnz.Principal{
-				Kind:  iauthnz.PrincipalKind_Role,
-				WSID:  req.RequestWSID,
-				QName: iauthnz.QNameRoleProfileOwner,
-			}
-			if !slices.Contains(principals, prnProfileOwner) {
-				principals = append(principals, prnProfileOwner)
-			}
-		} else {
+	if req.RequestWSID == profileWSID {
+		// allow user or device to work in its profile
+		prnProfileOwner := iauthnz.Principal{
+			Kind:  iauthnz.PrincipalKind_Role,
+			WSID:  req.RequestWSID,
+			QName: iauthnz.QNameRoleProfileOwner,
+		}
+		if !slices.Contains(principals, prnProfileOwner) {
+			principals = append(principals, prnProfileOwner)
+		}
+	} else {
+		// not the profile -> check if we could work in that workspace
+		switch pkt {
+		case iauthnz.PrincipalKind_User:
 			wsDesc, err := as.Records().GetSingleton(req.RequestWSID, qNameCDocWorkspaceDescriptor)
 			if err != nil {
 				return nil, principalPayload, err
@@ -136,28 +138,22 @@ func (i *implIAuthenticator) Authenticate(requestContext context.Context, as ist
 					}
 				}
 			}
-		}
-	case iauthnz.PrincipalKind_Device:
-		deviceProfileWSID := principalPayload.ProfileWSID
-		prnWSDevice := iauthnz.Principal{
-			Kind:  iauthnz.PrincipalKind_Role,
-			WSID:  deviceProfileWSID,
-			QName: iauthnz.QNameRoleWorkspaceDevice,
-		}
-		if !slices.Contains(principals, prnWSDevice) {
-			compRec, _, err := GetComputersRecByDeviceProfileWSID(as, req.RequestWSID, deviceProfileWSID)
-			if err != nil {
-				return nil, principalPayload, err
+		case iauthnz.PrincipalKind_Device:
+			deviceProfileWSID := principalPayload.ProfileWSID
+			prnWSDevice := iauthnz.Principal{
+				Kind:  iauthnz.PrincipalKind_Role,
+				WSID:  deviceProfileWSID,
+				QName: iauthnz.QNameRoleWorkspaceDevice,
 			}
-			if compRec.QName() == appdef.NullQName {
-				break
-			}
-			if compRec.AsBool(appdef.SystemField_IsActive) {
-				principals = append(principals, iauthnz.Principal{
-					Kind:  iauthnz.PrincipalKind_Role,
-					WSID:  deviceProfileWSID,
-					QName: iauthnz.QNameRoleWorkspaceDevice,
-				})
+			if !slices.Contains(principals, prnWSDevice) {
+				isDeviceAllowed := i.isDeviceAllowedFuncs[as.AppQName()]
+				deviceAllowed, err := isDeviceAllowed(as, req.RequestWSID, deviceProfileWSID)
+				if err != nil {
+					return nil, payloads.PrincipalPayload{}, err
+				}
+				if deviceAllowed {
+					principals = append(principals, prnWSDevice)
+				}
 			}
 		}
 	}

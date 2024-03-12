@@ -17,7 +17,8 @@ type implIAuthorizer struct {
 }
 
 type implIAuthenticator struct {
-	subjectRolesGetter SubjectGetterFunc
+	subjectRolesGetter   SubjectGetterFunc
+	isDeviceAllowedFuncs IsDeviceAllowedFuncs
 }
 
 type ACElem struct {
@@ -38,3 +39,6 @@ type PatternType struct {
 type ACPolicyType int
 
 type SubjectGetterFunc = func(requestContext context.Context, name string, as istructs.IAppStructs, wsid istructs.WSID) ([]appdef.QName, error)
+
+type IsDeviceAllowedFunc = func(as istructs.IAppStructs, requestWSID istructs.WSID, deviceProfileWSID istructs.WSID) (ok bool, err error)
+type IsDeviceAllowedFuncs map[istructs.AppQName]IsDeviceAllowedFunc

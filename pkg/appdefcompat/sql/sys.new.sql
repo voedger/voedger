@@ -25,6 +25,8 @@ WORKSPACE Workspace ( -- ValueChanged: Abstract flag must not be changed
 );
 
 WORKSPACE SomeWorkspace(
+    USE TABLE pkg1.*;
+    USE TABLE pkg2.*;
     TYPE CreateLoginUnloggedParams(
         Password varchar, -- OrderChanged
         Email varchar --OrderChanged

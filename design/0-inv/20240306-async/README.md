@@ -1,8 +1,8 @@
-# Design partition + async actualizers 
+# IAppPartitions + async actualizers 
 
 https://github.com/voedger/voedger/issues/1464
 
-## Design
+## Context
 
 - [vvm.provideAsyncActualizersFactory()](https://github.com/voedger/voedger/blob/43469aef2ed4878dfa3cb7dca304c87350547a8d/pkg/vvm/wire_gen.go#L518)
 - vvm.provideOperatorAppServices()
@@ -144,19 +144,18 @@ type IAppPartitions interface {
 	DeployApp(name istructs.AppQName, def appdef.IAppDef, perPartitionEngines [cluster.ProcessorKind]int, numPartitions int)
 
 ```
-- Use IAppPartition.DoProjector in async actualizer
+- Use `IAppPartition.Invoke` in async actualizer
   - Wire: Register all projectors in `iextenginebuiltin.ProvideExtensionEngineFactory`
     - Wrapper around istructs.Projector that gets IPLogEvent and passes to istructs.Projector
   - `appparts.NewWithEngines(engfacts iextengine.IExtensionEngineFactories)`
-  - IAppPartition.DoProjector
+  - IAppPartition.Invoke
 ```go
 type IAppPartition interface {
-	// DoSyncActualizer uses same internal implementation
-	DoProjector(qname istructs.QName, state istructs.IState, intents istructs.IIntents) (err error)
+	Invoke(qname istructs.QName, state istructs.IState, intents istructs.IIntents) (err error)
 }  	
 ```
-  - Use DoProjector in async actualizer
-  - Use DoProjector in `IAppPartition.DoSyncActualizer`
+  - Use `Invoke()` in async actualizer
+  - Use `Invoke()` in `IAppPartition.DoSyncActualizer`
 
 ### Migrate to Actualizers Processors
 

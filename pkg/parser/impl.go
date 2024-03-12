@@ -42,7 +42,7 @@ func parseImpl(fileName string, content string) (*SchemaAST, error) {
 		{Name: "TABLE", Pattern: `TABLE`},
 		{Name: "PRIMARYKEY", Pattern: `PRIMARY[ \r\n\t]+KEY`},
 		{Name: "String", Pattern: `('(\\'|[^'])*')`},
-		{Name: "Ident", Pattern: `([a-zA-Z_]\w*)|("[a-zA-Z_]\w*")`},
+		{Name: "Ident", Pattern: `([a-zA-Z]\w{0,254})|("[a-zA-Z]\w{0,254}")`},
 		{Name: "Whitespace", Pattern: `[ \r\n\t]+`},
 	})
 
@@ -326,13 +326,9 @@ func buildAppSchemaImpl(packages []*PackageSchemaAST) (*AppSchemaAST, error) {
 
 	defineApp(&c)
 
-	for _, p := range packages {
-		preAnalyse(&c, p)
-	}
+	preAnalyse(&c, packages)
 
-	for _, p := range packages {
-		analyse(&c, p)
-	}
+	analyse(&c, packages)
 
 	if len(c.errs) > 0 {
 		return nil, errors.Join(c.errs...)
