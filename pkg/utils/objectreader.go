@@ -65,6 +65,9 @@ func FieldsToMap(obj istructs.IRowReader, ws appdef.IWorkspace, optFuncs ...Mapp
 	if qn == appdef.NullQName {
 		return
 	}
+	if qn == istructs.QNameRaw {
+		
+	}
 	t := ws.Type(qn)
 
 	opts := &mapperOpts{}
@@ -113,7 +116,7 @@ func ObjectToMap(obj istructs.IObject, ws appdef.IWorkspace, opts ...MapperOpt) 
 		var childMap map[string]interface{}
 		cont := []map[string]interface{}{}
 		obj.Children(container, func(c istructs.IObject) {
-			
+
 			childMap = ObjectToMap(c, ws, opts...)
 			cont = append(cont, childMap)
 		})

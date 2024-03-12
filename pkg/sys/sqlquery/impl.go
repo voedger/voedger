@@ -179,3 +179,46 @@ func getFilter(f func(string) bool) coreutils.MapperOpt {
 		return f(name)
 	})
 }
+
+func renderDbEvent(data map[string]interface{}, f *filter, event istructs.IDbEvent, iws appdef.IWorkspace) {
+	if f.filter("QName") {
+		data["QName"] = event.QName().String()
+	}
+	if f.filter("ArgumentObject") {
+		data["ArgumentObject"] = coreutils.ObjectToMap(event.ArgumentObject(), iws)
+	}
+	if f.filter("CUDs") {
+		cuds := make([]map[string]interface{}, 0)
+		event.CUDs(func(rec istructs.ICUDRow) {
+			cudData := make(map[string]interface{})
+			cudData["sys.ID"] = rec.ID()
+			cudData["sys.QName"] = rec.QName().String()
+			cudData["IsNew"] = rec.IsNew()
+			cudData["fields"] = coreutils.FieldsToMap(rec, iws)
+			cuds = append(cuds, cudData)
+		})
+		data["CUDs"] = cuds
+	}
+	if f.filter("RegisteredAt") {
+		data["RegisteredAt"] = event.RegisteredAt()
+	}
+	if f.filter("Synced") {
+		data["Synced"] = event.Synced()
+	}
+	if f.filter("DeviceID") {
+		data["DeviceID"] = event.DeviceID()
+	}
+	if f.filter("SyncedAt") {
+		data["SyncedAt"] = event.SyncedAt()
+	}
+	if f.filter("Error") {
+		if event.Error() != nil {
+			errorData := make(map[string]interface{})
+			errorData["ErrStr"] = event.Error().ErrStr()
+			errorData["QNameFromParams"] = event.Error().QNameFromParams().String()
+			errorData["ValidEvent"] = event.Error().ValidEvent()
+			errorData["OriginalEventBytes"] = event.Error().OriginalEventBytes()
+			data["Error"] = errorData
+		}
+	}
+}
