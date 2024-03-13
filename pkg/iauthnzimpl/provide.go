@@ -6,12 +6,22 @@ package iauthnzimpl
 
 import (
 	"github.com/voedger/voedger/pkg/iauthnz"
+	"github.com/voedger/voedger/pkg/istructs"
 )
 
 func NewDefaultAuthorizer() iauthnz.IAuthorizer {
 	return &implIAuthorizer{acl: defaultACL}
 }
 
-func NewDefaultAuthenticator(subjectRolesGetter SubjectGetterFunc) iauthnz.IAuthenticator {
-	return &implIAuthenticator{subjectRolesGetter: subjectRolesGetter}
+func NewDefaultAuthenticator(subjectRolesGetter SubjectGetterFunc, isDeviceAllowedFuncs IsDeviceAllowedFuncs) iauthnz.IAuthenticator {
+	return &implIAuthenticator{
+		subjectRolesGetter:   subjectRolesGetter,
+		isDeviceAllowedFuncs: isDeviceAllowedFuncs,
+	}
+}
+
+var TestIsDeviceAllowedFuncs = IsDeviceAllowedFuncs{
+	istructs.AppQName_test1_app1: func(as istructs.IAppStructs, requestWSID istructs.WSID, deviceProfileWSID istructs.WSID) (ok bool, err error) {
+		return true, nil
+	},
 }

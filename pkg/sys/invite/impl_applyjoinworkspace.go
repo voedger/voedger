@@ -17,8 +17,8 @@ import (
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-func provideAsyncProjectorApplyJoinWorkspaceFactory(timeFunc coreutils.TimeFunc, federation coreutils.IFederation, appQName istructs.AppQName, tokens itokens.ITokens) istructs.ProjectorFactory {
-	return func(partition istructs.PartitionID) istructs.Projector {
+func provideAsyncProjectorApplyJoinWorkspaceFactory(timeFunc coreutils.TimeFunc, federation coreutils.IFederation, appQName istructs.AppQName, tokens itokens.ITokens) istructs.AsyncProjectorFactory {
+	return func() istructs.Projector {
 		return istructs.Projector{
 			Name: qNameAPApplyJoinWorkspace,
 			Func: applyJoinWorkspace(timeFunc, federation, appQName, tokens),

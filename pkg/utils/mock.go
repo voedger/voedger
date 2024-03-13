@@ -127,6 +127,10 @@ func (m *MockState) Read(key istructs.IStateKeyBuilder, callback istructs.ValueC
 	args := m.Called(key, callback)
 	return args.Error(0)
 }
+func (m *MockState) PLogEvent() istructs.IPLogEvent {
+	args := m.Called()
+	return args.Get(0).(istructs.IPLogEvent)
+}
 
 type MockStateKeyBuilder struct {
 	mock.Mock

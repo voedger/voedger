@@ -118,10 +118,9 @@ func TestToMap_Basic(t *testing.T) {
 	}
 
 	appDef := testAppDef(t)
-	ws := appDef.Workspace(testWS)
 
 	t.Run("ObjectToMap", func(t *testing.T) {
-		m := ObjectToMap(obj, ws)
+		m := ObjectToMap(obj, appDef)
 		testBasic(testQName, m, require)
 		containerObjects := m["container"].([]map[string]interface{})
 		require.Len(containerObjects, 1)
@@ -131,7 +130,7 @@ func TestToMap_Basic(t *testing.T) {
 	})
 
 	t.Run("FieldsToMap", func(t *testing.T) {
-		m := FieldsToMap(obj, ws)
+		m := FieldsToMap(obj, appDef)
 		testBasic(testQName, m, require)
 	})
 
@@ -141,9 +140,9 @@ func TestToMap_Basic(t *testing.T) {
 			Id:   42,
 			Data: map[string]interface{}{},
 		}
-		m := ObjectToMap(obj, ws)
+		m := ObjectToMap(obj, appDef)
 		require.Empty(m)
-		m = FieldsToMap(obj, ws)
+		m = FieldsToMap(obj, appDef)
 		require.Empty(m)
 	})
 }
@@ -172,10 +171,9 @@ func TestToMap_Filter(t *testing.T) {
 	})
 
 	appDef := testAppDef(t)
-	ws := appDef.Workspace(testWS)
 
 	t.Run("ObjectToMap", func(t *testing.T) {
-		m := ObjectToMap(obj, ws, filter)
+		m := ObjectToMap(obj, appDef, filter)
 		require.Equal(2, count)
 		require.Len(m, 2)
 		v, ok := m["bool"].(bool)
@@ -185,7 +183,7 @@ func TestToMap_Filter(t *testing.T) {
 	})
 
 	t.Run("FieldsToMap", func(t *testing.T) {
-		m := FieldsToMap(obj, ws, filter)
+		m := FieldsToMap(obj, appDef, filter)
 		require.Equal(4, count)
 		require.Len(m, 2)
 		v, ok := m["bool"].(bool)
@@ -215,17 +213,16 @@ func TestMToMap_NonNilsOnly_Filter(t *testing.T) {
 	}
 
 	appDef := testAppDef(t)
-	ws := appDef.Workspace(testWS)
 
 	t.Run("ObjectToMap", func(t *testing.T) {
-		m := ObjectToMap(obj, ws, WithNonNilsOnly(), Filter(func(name string, kind appdef.DataKind) bool {
+		m := ObjectToMap(obj, appDef, WithNonNilsOnly(), Filter(func(name string, kind appdef.DataKind) bool {
 			return name != "float32"
 		}))
 		require.Equal(expected, m)
 	})
 
 	t.Run("FieldsToMap", func(t *testing.T) {
-		m := FieldsToMap(obj, ws, WithNonNilsOnly(), Filter(func(name string, kind appdef.DataKind) bool {
+		m := FieldsToMap(obj, appDef, WithNonNilsOnly(), Filter(func(name string, kind appdef.DataKind) bool {
 			return name != "float32"
 		}))
 		require.Equal(expected, m)
@@ -238,7 +235,7 @@ func TestMToMap_NonNilsOnly_Filter(t *testing.T) {
 		expected := map[string]interface{}{
 			"string": "str",
 		}
-		m := ObjectToMap(obj, ws, WithNonNilsOnly(), filter)
+		m := ObjectToMap(obj, appDef, WithNonNilsOnly(), filter)
 		require.Equal(expected, m)
 	})
 }
@@ -246,8 +243,7 @@ func TestMToMap_NonNilsOnly_Filter(t *testing.T) {
 func TestReadValue(t *testing.T) {
 	require := require.New(t)
 
-	appDefs := testAppDef(t)
-	ws := appDefs.Workspace(testWS)
+	appDef := testAppDef(t)
 
 	iValueValues := map[string]interface{}{}
 	for k, v := range testData {
@@ -266,7 +262,7 @@ func TestReadValue(t *testing.T) {
 	}
 
 	t.Run("FieldsToMap", func(t *testing.T) {
-		m := FieldsToMap(iValue, ws)
+		m := FieldsToMap(iValue, appDef)
 		testBasic(testQNameView, m, require)
 		require.Equal(
 			map[string]interface{}{"int32": int32(42), appdef.SystemField_QName: "test.QNameSimple", appdef.SystemField_Container: ""},
@@ -275,7 +271,7 @@ func TestReadValue(t *testing.T) {
 	})
 
 	t.Run("FieldsToMap non-nils only", func(t *testing.T) {
-		m := FieldsToMap(iValue, ws, WithNonNilsOnly())
+		m := FieldsToMap(iValue, appDef, WithNonNilsOnly())
 		testBasic(testQNameView, m, require)
 		require.Equal(
 			map[string]interface{}{"int32": int32(42), appdef.SystemField_QName: "test.QNameSimple"},
@@ -288,8 +284,8 @@ func TestReadValue(t *testing.T) {
 			Name: testQName,
 			Data: iValueValues,
 		}
-		require.Panics(func() { FieldsToMap(obj, ws) })
-		require.Panics(func() { FieldsToMap(obj, ws, WithNonNilsOnly()) })
+		require.Panics(func() { FieldsToMap(obj, appDef) })
+		require.Panics(func() { FieldsToMap(obj, appDef, WithNonNilsOnly()) })
 	})
 }
 

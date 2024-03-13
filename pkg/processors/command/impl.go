@@ -89,7 +89,7 @@ func (c *cmdWorkpiece) WSID() istructs.WSID {
 // borrows app partition for command
 func (c *cmdWorkpiece) borrow() (err error) {
 	if c.appPart, err = c.appParts.Borrow(c.cmdMes.AppQName(), c.cmdMes.PartitionID(), cluster.ProcessorKind_Command); err != nil {
-		if errors.Is(err, appparts.ErrNotFound) || errors.Is(err, appparts.ErrNotAvailableEngines) {  // partition is not deployed yet -> ErrNotFound
+		if errors.Is(err, appparts.ErrNotFound) || errors.Is(err, appparts.ErrNotAvailableEngines) { // partition is not deployed yet -> ErrNotFound
 			return coreutils.NewHTTPError(http.StatusServiceUnavailable, err)
 		}
 		// notest
@@ -229,11 +229,7 @@ func (cmdProc *cmdProc) recovery(ctx context.Context, cmd *cmdWorkpiece) (*appPa
 		})
 		ao := event.ArgumentObject()
 		if cmd.AppDef().Type(ao.QName()).Kind() == appdef.TypeKind_ODoc {
-			if coreutils.IsDummyWS(cmd.cmdMes.WSID()) || cmd.cmdMes.QName() == workspacemgmt.QNameCommandCreateWorkspace {
-				updateIDGeneratorFromO(ao, cmd.AppDef(), ws.idGenerator)
-			} else {
-				updateIDGeneratorFromO(ao, cmd.iWorkspace, ws.idGenerator)
-			}
+			updateIDGeneratorFromO(ao, cmd.AppDef(), ws.idGenerator)
 		}
 		ws.NextWLogOffset = event.WLogOffset() + 1
 		ap.nextPLogOffset = plogOffset + 1
@@ -567,10 +563,10 @@ func parseCUDs(_ context.Context, work interface{}) (err error) {
 	if err != nil {
 		return err
 	}
+	if len(cuds) > builtin.MaxCUDs {
+		return coreutils.NewHTTPErrorf(http.StatusBadRequest, "too many cuds: ", len(cuds), " is in the request, max is ", builtin.MaxCUDs)
+	}
 	for cudNumber, cudIntf := range cuds {
-		if cudNumber > builtin.MaxCUDs {
-			return coreutils.NewHTTPErrorf(http.StatusBadRequest, "too many cuds, max is", builtin.MaxCUDs)
-		}
 		cudXPath := xPath("cuds[" + strconv.Itoa(cudNumber) + "]")
 		cudDataMap, ok := cudIntf.(map[string]interface{})
 		if !ok {
@@ -741,7 +737,7 @@ func sendResponse(cmd *cmdWorkpiece, handlingError error) {
 		}
 	}
 	if cmd.cmdResult != nil {
-		cmdResult := coreutils.ObjectToMap(cmd.cmdResult, cmd.iWorkspace)
+		cmdResult := coreutils.ObjectToMap(cmd.cmdResult, cmd.AppDef())
 		cmdResultBytes, err := json.Marshal(cmdResult)
 		if err != nil {
 			// notest

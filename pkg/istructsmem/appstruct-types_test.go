@@ -315,11 +315,7 @@ func TestErrorsAppConfigsType(t *testing.T) {
 						Events().Add(qName2, appdef.ProjectorEventKind_Insert)
 					cfgs := make(AppConfigsType, 1)
 					cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, adb)
-					cfg.AddAsyncProjectors(func(partition istructs.PartitionID) istructs.Projector {
-						return istructs.Projector{
-							Name: qName,
-						}
-					})
+					cfg.AddAsyncProjectors(func() istructs.Projector { return istructs.Projector{Name: qName} })
 					provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
 					_, err := provider.AppStructs(istructs.AppQName_test1_app1)
 					require.Error(err)
@@ -345,11 +341,7 @@ func TestErrorsAppConfigsType(t *testing.T) {
 					adb := appdef.New()
 					cfgs := make(AppConfigsType, 1)
 					cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, adb)
-					cfg.AddAsyncProjectors(func(partition istructs.PartitionID) istructs.Projector {
-						return istructs.Projector{
-							Name: qName,
-						}
-					})
+					cfg.AddAsyncProjectors(func() istructs.Projector { return istructs.Projector{Name: qName} })
 					provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
 					_, err := provider.AppStructs(istructs.AppQName_test1_app1)
 					require.Error(err)
@@ -383,11 +375,7 @@ func TestErrorsAppConfigsType(t *testing.T) {
 						Events().Add(qName2, appdef.ProjectorEventKind_Insert)
 					cfgs := make(AppConfigsType, 1)
 					cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, adb)
-					cfg.AddAsyncProjectors(func(partition istructs.PartitionID) istructs.Projector {
-						return istructs.Projector{
-							Name: qName,
-						}
-					})
+					cfg.AddAsyncProjectors(func() istructs.Projector { return istructs.Projector{Name: qName} })
 					cfg.AddSyncProjectors(func(partition istructs.PartitionID) istructs.Projector {
 						return istructs.Projector{
 							Name: qName,
