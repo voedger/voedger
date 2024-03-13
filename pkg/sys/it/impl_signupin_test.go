@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/voedger/voedger/pkg/istructs"
+	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 	it "github.com/voedger/voedger/pkg/vit"
 )
@@ -149,4 +150,33 @@ func TestSignInErrors(t *testing.T) {
 			login, istructs.AppQName_test1_app1.String())
 		vit.PostApp(istructs.AppQName_sys_registry, pseudoWSID, "q.registry.IssuePrincipalToken", body, coreutils.Expect401()).Println()
 	})
+}
+
+func TestDeviceProfile(t *testing.T) {
+	require := require.New(t)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
+	loginName := vit.NextName()
+	deviceLogin := vit.SignUpDevice(loginName, "123", istructs.AppQName_test1_app2)
+	devicePrn := vit.SignIn(deviceLogin)
+	as, err := vit.AppStructs(istructs.AppQName_test1_app2)
+	require.NoError(err)
+	devicePrnPayload := payloads.PrincipalPayload{}
+	_, err = as.AppTokens().ValidateToken(devicePrn.Token, &devicePrnPayload)
+	require.NoError(err)
+	require.Equal(istructs.SubjectKind_Device, devicePrnPayload.SubjectKind)
+
+	t.Run("exec a simple operation in the device profile", func(t *testing.T) {
+		body := `{"args":{"Schema":"sys.WorkspaceDescriptor"},"elements":[{"fields":["sys.ID"]}]}`
+		vit.PostProfile(devicePrn, "q.sys.Collection", body)
+	})
+
+	t.Run("refresh the device principal token", func(t *testing.T) {
+		// simulate delay to make the new token be different
+		vit.TimeAdd(time.Minute)
+		body := `{"args":{},"elements":[{"fields":["NewPrincipalToken"]}]}`
+		resp := vit.PostProfile(devicePrn, "q.sys.RefreshPrincipalToken", body)
+		require.NotEqual(devicePrn.Token, resp.SectionRow()[0].(string))
+	})
+
 }

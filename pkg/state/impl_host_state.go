@@ -26,6 +26,10 @@ type hostState struct {
 	intentsLimit   int
 }
 
+func (s *hostState) PLogEvent() istructs.IPLogEvent {
+	panic("PLogEvent only available in actualizers")
+}
+
 func newHostState(name string, intentsLimit int, appStructsFunc AppStructsFunc) *hostState {
 	return &hostState{
 		name:           name,

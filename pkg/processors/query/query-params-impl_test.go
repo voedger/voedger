@@ -31,7 +31,7 @@ func TestWrongTypes(t *testing.T) {
 		}
 	}
 	done := make(chan struct{})
-	authn := iauthnzimpl.NewDefaultAuthenticator(iauthnzimpl.TestSubjectRolesGetter)
+	authn := iauthnzimpl.NewDefaultAuthenticator(iauthnzimpl.TestSubjectRolesGetter, iauthnzimpl.TestIsDeviceAllowedFuncs)
 	authz := iauthnzimpl.NewDefaultAuthorizer()
 
 	appDef, appStructsProvider, appTokens := getTestCfg(require, nil)

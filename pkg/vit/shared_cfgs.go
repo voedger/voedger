@@ -94,6 +94,10 @@ func ProvideApp2(apis apps.APIs, cfg *istructsmem.AppConfigType, adf appdef.IApp
 		FS:   SchemaTestApp2FS,
 	}
 	cfg.Resources.Add(istructsmem.NewCommandFunction(appdef.NewQName(app2PkgName, "testCmd"), istructsmem.NullCommandExec))
+	ep.AddNamed(apps.EPIsDeviceAllowedFunc, func(as istructs.IAppStructs, requestWSID istructs.WSID, deviceProfileWSID istructs.WSID) (ok bool, err error) {
+		// simulate we could not work in any non-profile WS
+		return false, err
+	})
 	return apps.BuiltInAppDef{
 		AppQName:                istructs.AppQName_test1_app2,
 		Packages:                []parser.PackageFS{sysPackageFS, app2PackageFS},
@@ -195,6 +199,7 @@ func ProvideApp1(apis apps.APIs, cfg *istructsmem.AppConfigType, adf appdef.IApp
 	})
 
 	cfg.Resources.Add(istructsmem.NewCommandFunction(appdef.NewQName(app1PkgName, "testCmd"), istructsmem.NullCommandExec))
+	cfg.Resources.Add(istructsmem.NewCommandFunction(appdef.NewQName(app1PkgName, "TestCmdRawArg"), istructsmem.NullCommandExec))
 
 	app1PackageFS := parser.PackageFS{
 		Path: "github.com/voedger/voedger/pkg/vit/app1pkg",

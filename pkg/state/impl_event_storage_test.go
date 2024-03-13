@@ -48,38 +48,42 @@ func TestEventStorage_Get(t *testing.T) {
 	offset := istructs.Offset(123)
 	tQname := appdef.NewQName("main", "t1")
 
+	reb := app.Events().GetNewRawEventBuilder(istructs.NewRawEventBuilderParams{
+		GenericRawEventBuilderParams: istructs.GenericRawEventBuilderParams{
+			Workspace:         wsid,
+			HandlingPartition: partitionNr,
+			PLogOffset:        offset,
+			QName:             testQName,
+		},
+	})
+	argb := reb.ArgumentObjectBuilder()
+	argb.PutInt32("i", 1)
+	_, err := argb.Build()
+	require.NoError(err)
+
+	cud := reb.CUDBuilder()
+	rw := cud.Create(tQname)
+	rw.PutRecordID(appdef.SystemField_ID, 1)
+	rw.PutInt32("x", 1)
+
+	rawEvent, err := reb.BuildRawEvent()
+	if err != nil {
+		panic(err)
+	}
+
+	event, err := app.Events().PutPlog(rawEvent, nil, istructsmem.NewIDGenerator())
+	if err != nil {
+		panic(err)
+	}
+
 	eventFunc := func() istructs.IPLogEvent {
-		reb := app.Events().GetNewRawEventBuilder(istructs.NewRawEventBuilderParams{
-			GenericRawEventBuilderParams: istructs.GenericRawEventBuilderParams{
-				Workspace:         wsid,
-				HandlingPartition: partitionNr,
-				PLogOffset:        offset,
-				QName:             testQName,
-			},
-		})
-		argb := reb.ArgumentObjectBuilder()
-		argb.PutInt32("i", 1)
-		_, err := argb.Build()
-		require.NoError(err)
-
-		cud := reb.CUDBuilder()
-		rw := cud.Create(tQname)
-		rw.PutRecordID(appdef.SystemField_ID, 1)
-		rw.PutInt32("x", 1)
-
-		rawEvent, err := reb.BuildRawEvent()
-		if err != nil {
-			panic(err)
-		}
-
-		event, err := app.Events().PutPlog(rawEvent, nil, istructsmem.NewIDGenerator())
-		if err != nil {
-			panic(err)
-		}
 		return event
 	}
 
 	s := ProvideAsyncActualizerStateFactory()(context.Background(), app, nil, nil, nil, nil, eventFunc, 0, 0)
+
+	require.Equal(event, s.PLogEvent())
+
 	kb, err := s.KeyBuilder(Event, appdef.NullQName)
 	require.NoError(err)
 	value, err := s.MustExist(kb)
@@ -106,6 +110,10 @@ func TestEventStorage_Get(t *testing.T) {
 	require.NotNil(cud1)
 	require.Equal(int32(1), cud1.AsInt32("x"))
 	require.Equal(tQname, cud1.AsQName("sys.QName"))
+
+	// test sync actualizer state
+	syncState := ProvideSyncActualizerStateFactory()(context.Background(), app, nil, nil, nil, nil, eventFunc, 0)
+	require.Equal(event, syncState.PLogEvent())
 }
 
 type (

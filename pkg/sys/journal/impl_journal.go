@@ -21,10 +21,10 @@ import (
 func provideQryJournal(cfg *istructsmem.AppConfigType, ep extensionpoints.IExtensionPoint) {
 	cfg.Resources.Add(istructsmem.NewQueryFunction(
 		appdef.NewQName(appdef.SysPackage, "Journal"),
-		qryJournalExec(ep),
+		qryJournalExec(ep, cfg.AppDef),
 	))
 }
-func qryJournalExec(ep extensionpoints.IExtensionPoint) istructsmem.ExecQueryClosure {
+func qryJournalExec(ep extensionpoints.IExtensionPoint, appDef appdef.IAppDef) istructsmem.ExecQueryClosure {
 	return func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 		var fo, lo int64
 		ji := ep.ExtensionPoint(EPJournalIndices)
@@ -52,7 +52,7 @@ func qryJournalExec(ep extensionpoints.IExtensionPoint) istructsmem.ExecQueryClo
 			if fo == int64(0) {
 				return
 			}
-			eo, err := NewEventObject(value.AsEvent("").(istructs.IWLogEvent), args.Workspace, f, coreutils.WithNonNilsOnly())
+			eo, err := NewEventObject(value.AsEvent("").(istructs.IWLogEvent), appDef, f, coreutils.WithNonNilsOnly())
 			if err != nil {
 				return err
 			}

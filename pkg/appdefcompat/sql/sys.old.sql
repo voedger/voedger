@@ -25,6 +25,8 @@ ABSTRACT WORKSPACE Workspace (
 );
 
 WORKSPACE SomeWorkspace(
+    USE TABLE pkg1.*;
+    USE TABLE pkg2.*;
     TYPE CreateLoginParams(
         Login                       varchar,
         AppName                     varchar,

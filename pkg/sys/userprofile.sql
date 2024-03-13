@@ -1,7 +1,7 @@
 -- Copyright (c) 2024-present unTill Software Development Group B.V.
 -- @author Denis Gribanov
 
-ALTERABLE WORKSPACE UserProfileWS (
+ALTERABLE WORKSPACE UserProfileWS INHERITS ProfileWS (
 	DESCRIPTOR UserProfile (
 		DisplayName varchar
 	);
@@ -16,10 +16,6 @@ ALTERABLE WORKSPACE UserProfileWS (
 
 	TYPE DescribePackageResult (
 		PackageDesc text NOT NULL
-	);
-
-	TYPE RefreshPrincipalTokenResult (
-		NewPrincipalToken text NOT NULL
 	);
 
 	TYPE InitiateEmailVerificationParams (
@@ -56,7 +52,6 @@ ALTERABLE WORKSPACE UserProfileWS (
 	EXTENSION ENGINE BUILTIN (
 		QUERY DescribePackageNames RETURNS DescribePackageNamesResult;
 		QUERY DescribePackage(DescribePackageParams) RETURNS DescribePackageResult;
-		QUERY RefreshPrincipalToken RETURNS RefreshPrincipalTokenResult;
 		QUERY InitiateEmailVerification(InitiateEmailVerificationParams) RETURNS InitialEmailVerificationResult;
 		QUERY IssueVerifiedValueToken(IssueVerifiedValueTokenParams) RETURNS IssueVerifiedValueTokenResult;
 		COMMAND SendEmailVerificationCode(SendEmailVerificationParams);

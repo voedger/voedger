@@ -32,12 +32,6 @@ func implProvideQueryProcessorState(ctx context.Context, appStructs istructs.IAp
 		wsidFunc:   wsidFunc,
 	}, S_GET|S_READ)
 
-	bs.addStorage(PLog, &pLogStorage{
-		ctx:             ctx,
-		eventsFunc:      func() istructs.IEvents { return appStructs.Events() },
-		partitionIDFunc: partitionIDFunc,
-	}, S_GET|S_READ)
-
 	bs.addStorage(Http, &httpStorage{}, S_READ)
 
 	bs.addStorage(AppSecret, &appSecretsStorage{secretReader: secretReader}, S_GET)
