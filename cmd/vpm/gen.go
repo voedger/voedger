@@ -73,7 +73,7 @@ func genOrm(compileRes *compile.Result, params vpmParams) error {
 	}
 
 	for pkgLocalName, objs := range gatherPackageObjs(compileRes.AppDef) {
-		if len(objs) == 0 {
+		if len(objs) == 0 || pkgLocalName == appdef.SysPackage {
 			continue
 		}
 		if err := generatePackage(pkgLocalName, objs, headerContent, dir); err != nil {
@@ -110,7 +110,7 @@ func generatePackage(pkgLocalName string, objs []interface{}, headerFileContent,
 		return err
 	}
 
-	pkgFile, err := fillTemplate("package", pkgData)
+	pkgFile, err := fillTemplate(pkgData)
 	if err != nil {
 		return err
 	}
@@ -135,10 +135,9 @@ func fillPackageData(pkgLocalName string, objs []interface{}, headerFileContent 
 		Imports:           []string{"import exttinygo \"github.com/voedger/exttinygo\""},
 		Items:             make([]ormTableData, 0),
 	}
-
 	for _, obj := range objs {
 		switch t := obj.(type) {
-		case appdef.IODoc:
+		case appdef.ICDoc, appdef.IWDoc, appdef.IView, appdef.ISingleton, appdef.IODoc:
 			tableData := ormTableData{
 				Package:    pkgData,
 				TypeQName:  "typeQname",
@@ -148,14 +147,15 @@ func fillPackageData(pkgLocalName string, objs []interface{}, headerFileContent 
 				Fields:     make([]ormFieldData, 0),
 			}
 
-			for _, field := range t.Fields() {
+			for _, field := range t.(appdef.IFields).Fields() {
 				fieldType := getFieldType(field)
+				fieldName := normalizeName(field.Name())
 				if fieldType != unknownFieldType {
 					fieldData := ormFieldData{
 						Table:         tableData,
 						Type:          getFieldType(field),
-						Name:          field.Name(),
-						GetMethodName: fmt.Sprintf("Get_%s", strings.ToLower(field.Name())),
+						Name:          fieldName,
+						GetMethodName: fmt.Sprintf("Get_%s", strings.ToLower(fieldName)),
 					}
 					tableData.Fields = append(tableData.Fields, fieldData)
 				}
@@ -167,21 +167,22 @@ func fillPackageData(pkgLocalName string, objs []interface{}, headerFileContent 
 	return pkgData, nil
 }
 
-func fillTemplate(templateName string, payload interface{}) ([]byte, error) {
-	templateContent, err := fsTemplates.ReadFile(fmt.Sprintf("templates/%s.gotmpl", templateName))
+func fillTemplate(payload interface{}) ([]byte, error) {
+	templatesDir, err := fsTemplates.ReadDir("templates")
 	if err != nil {
-		return nil, fmt.Errorf("failed to read template: %w", err)
+		return nil, fmt.Errorf("failed to read templates directory: %w", err)
+	}
+	templates := make([]string, 0)
+	for _, file := range templatesDir {
+		templates = append(templates, fmt.Sprintf("templates/%s", file.Name()))
 	}
 
-	t := template.New(templateName)
-	t.Funcs(template.FuncMap{"capitalize": capitalizeFirst})
-	t, err = t.Parse(string(templateContent))
+	t, err := template.New("package").Funcs(template.FuncMap{"capitalize": capitalizeFirst}).ParseFiles(templates...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse template: %w", err)
 	}
-
 	var filledTemplate bytes.Buffer
-	if err := t.Execute(&filledTemplate, payload); err != nil {
+	if err := t.ExecuteTemplate(&filledTemplate, "package", payload); err != nil {
 		return nil, fmt.Errorf("failed to fill template: %w", err)
 	}
 
@@ -211,8 +212,12 @@ func createOrmDir(dir string) (string, error) {
 	return ormDirPath, os.MkdirAll(ormDirPath, defaultPermissions)
 }
 
+func normalizeName(name string) string {
+	return strings.ReplaceAll(name, ".", "_")
+}
+
 func getName(obj interface{}) string {
-	return strings.ToLower(obj.(appdef.IType).QName().Entity())
+	return normalizeName(strings.ToLower(obj.(appdef.IType).QName().Entity()))
 }
 
 func getType(obj interface{}) string {
@@ -223,6 +228,10 @@ func getType(obj interface{}) string {
 		return "CDoc"
 	case appdef.IWDoc:
 		return "WDoc"
+	case appdef.IView:
+		return "View"
+	case appdef.ISingleton:
+		return "WSingleton"
 	default:
 		return unknownObjectType
 	}
@@ -256,3 +265,6 @@ func capitalizeFirst(s string) string {
 	}
 	return strings.ToUpper(s[:1]) + s[1:]
 }
+
+// TODO: Add QueryValue to template
+// TODO: Add NewIntent to template

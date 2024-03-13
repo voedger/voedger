@@ -1,0 +1,17 @@
+{{define "item"}}
+
+// package items
+type {{.Type}}_{{.Package.Name}}_{{.Name}} struct {
+    Type
+}
+
+type Value_{{.Type}}_{{.Package.Name}}_{{.Name}} struct{
+    tv exttinygo.TValue
+	{{if or (eq .Type "WDoc") (eq .Type "View")}}kb exttinygo.TKeyBuilder{{end}}
+}
+
+{{template "fields" .}}
+
+{{template "methods" .}}
+
+{{end}}
