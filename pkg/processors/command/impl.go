@@ -89,7 +89,7 @@ func (c *cmdWorkpiece) WSID() istructs.WSID {
 // borrows app partition for command
 func (c *cmdWorkpiece) borrow() (err error) {
 	if c.appPart, err = c.appParts.Borrow(c.cmdMes.AppQName(), c.cmdMes.PartitionID(), cluster.ProcessorKind_Command); err != nil {
-		if errors.Is(err, appparts.ErrNotFound) || errors.Is(err, appparts.ErrNotAvailableEngines) {  // partition is not deployed yet -> ErrNotFound
+		if errors.Is(err, appparts.ErrNotFound) || errors.Is(err, appparts.ErrNotAvailableEngines) { // partition is not deployed yet -> ErrNotFound
 			return coreutils.NewHTTPError(http.StatusServiceUnavailable, err)
 		}
 		// notest
@@ -563,10 +563,10 @@ func parseCUDs(_ context.Context, work interface{}) (err error) {
 	if err != nil {
 		return err
 	}
+	if len(cuds) > builtin.MaxCUDs {
+		return coreutils.NewHTTPErrorf(http.StatusBadRequest, "too many cuds: ", len(cuds), " is in the request, max is ", builtin.MaxCUDs)
+	}
 	for cudNumber, cudIntf := range cuds {
-		if cudNumber > builtin.MaxCUDs {
-			return coreutils.NewHTTPErrorf(http.StatusBadRequest, "too many cuds, max is", builtin.MaxCUDs)
-		}
 		cudXPath := xPath("cuds[" + strconv.Itoa(cudNumber) + "]")
 		cudDataMap, ok := cudIntf.(map[string]interface{})
 		if !ok {

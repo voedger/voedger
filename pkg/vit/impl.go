@@ -35,7 +35,7 @@ import (
 	"github.com/voedger/voedger/pkg/vvm"
 )
 
-func NewVIT(t *testing.T, vitCfg *VITConfig, opts ...vitOptFunc) (vit *VIT) {
+func NewVIT(t testing.TB, vitCfg *VITConfig, opts ...vitOptFunc) (vit *VIT) {
 	useCas := coreutils.IsCassandraStorage()
 	if !vitCfg.isShared {
 		vit = newVit(t, vitCfg, useCas)
@@ -68,7 +68,7 @@ func NewVIT(t *testing.T, vitCfg *VITConfig, opts ...vitOptFunc) (vit *VIT) {
 	return vit
 }
 
-func newVit(t *testing.T, vitCfg *VITConfig, useCas bool) *VIT {
+func newVit(t testing.TB, vitCfg *VITConfig, useCas bool) *VIT {
 	cfg := vvm.NewVVMDefaultConfig()
 
 	// only dynamic ports are used in tests
@@ -520,7 +520,7 @@ func ScanSSE(data []byte, atEOF bool) (advance int, token []byte, err error) {
 	return 0, nil, nil
 }
 
-func (ec emailCaptor) checkEmpty(t *testing.T) {
+func (ec emailCaptor) checkEmpty(t testing.TB) {
 	select {
 	case _, ok := <-ec:
 		if ok {
