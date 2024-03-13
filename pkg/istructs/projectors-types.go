@@ -11,8 +11,4 @@ type Projector struct {
 	Func func(event IPLogEvent, state IState, intents IIntents) (err error)
 }
 
-// ProjectorFactory creates a istructs.Projector
-type (
-	ProjectorFactory      func(PartitionID) Projector
-	AsyncProjectorFactory func() Projector
-)
+type Projectors map[appdef.QName]Projector

@@ -20,13 +20,10 @@ import (
 )
 
 func provideRefIntegrityValidation(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder) {
-	registryProjector := func(partition istructs.PartitionID) istructs.Projector {
-		return istructs.Projector{
-			Name: qNameRecordsRegistryProjector,
-			Func: provideRecordsRegistryProjector(cfg),
-		}
-	}
-	cfg.AddSyncProjectors(registryProjector)
+	cfg.AddSyncProjectors(istructs.Projector{
+		Name: qNameRecordsRegistryProjector,
+		Func: provideRecordsRegistryProjector(cfg),
+	})
 	cfg.AddCUDValidators(provideRefIntegrityValidator())
 }
 

@@ -15,12 +15,10 @@ import (
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-func provideAsyncProjectorApplyCancelAcceptedInviteFactory(timeFunc coreutils.TimeFunc, federation coreutils.IFederation, appQName istructs.AppQName, tokens itokens.ITokens) istructs.AsyncProjectorFactory {
-	return func() istructs.Projector {
-		return istructs.Projector{
-			Name: qNameAPApplyCancelAcceptedInvite,
-			Func: applyCancelAcceptedInvite(timeFunc, federation, appQName, tokens),
-		}
+func asyncProjectorApplyCancelAcceptedInvite(timeFunc coreutils.TimeFunc, federation coreutils.IFederation, appQName istructs.AppQName, tokens itokens.ITokens) istructs.Projector {
+	return istructs.Projector{
+		Name: qNameAPApplyCancelAcceptedInvite,
+		Func: applyCancelAcceptedInvite(timeFunc, federation, appQName, tokens),
 	}
 }
 

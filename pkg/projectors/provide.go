@@ -55,6 +55,6 @@ func NewSyncActualizerFactoryFactory(actualizerFactory SyncActualizerFactory, se
 			},
 			IntentsLimit: builtin.MaxCUDs,
 		}
-		return actualizerFactory(conf, appStructs.SyncProjectors()[0], appStructs.SyncProjectors()[1:]...)
+		return actualizerFactory(conf, appStructs.SyncProjectors())
 	}
 }
