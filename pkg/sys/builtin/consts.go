@@ -19,7 +19,7 @@ var (
 const (
 	field_ExistingQName = "ExistingQName"
 	field_NewQName      = "NewQName"
-	MaxCUDs             = 351 // max rawID in perftest template is 351
+	MaxCUDs             = 100
 	Field_IDHi          = "IDHi"
 	Field_ID            = "ID"
 	Field_WLogOffset    = "WLogOffset"
