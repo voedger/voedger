@@ -20,7 +20,7 @@ import (
 // Voedger Integration Test
 type VIT struct {
 	lock sync.Mutex
-	T    *testing.T
+	T    testing.TB
 	*vvm.VoedgerVM
 	*vvm.VVMConfig
 	cleanups             []func(vit *VIT)
