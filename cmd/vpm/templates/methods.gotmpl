@@ -1,6 +1,6 @@
 {{define "methods"}}
 
-{{if or (eq .Type "WDoc") (eq .Type "View")}}
+{{if or (eq .Type "WDoc") (eq .Type "View") (eq .Type "WSingleton")}}
 func (v {{.Type}}_{{.Package.Name}}_{{.Name}}) QueryValue(id ID) (Value_{{.Type}}_{{.Package.Name}}_{{.Name}}, bool) {
 	kb := exttinygo.KeyBuilder(exttinygo.StorageRecord, v.qname)
 	kb.PutInt64(FieldNameSysID, int64(id))
@@ -27,7 +27,7 @@ func (v {{.Type}}_{{.Package.Name}}_{{.Name}}) Get(id ID) (Value_{{.Type}}_{{.Pa
 }
 {{end}}
 
-{{if or (eq .Type "WDoc") (eq .Type "View")}}
+{{if or (eq .Type "WDoc") (eq .Type "View") (eq .Type "WSingleton")}}
 func (v {{.Type}}_{{.Package.Name}}_{{.Name}}) NewIntent(id ID) Intent_{{.Type}}_{{.Package.Name}}_{{.Name}} {
 	kb := exttinygo.KeyBuilder(exttinygo.StorageRecord, v.qname)
 	kb.PutInt64(FieldNameSysID, int64(id))

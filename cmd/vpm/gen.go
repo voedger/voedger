@@ -139,7 +139,8 @@ func fillPackageData(pkgLocalName string, objs []interface{}, headerFileContent 
 		switch t := obj.(type) {
 		case appdef.ICDoc, appdef.IWDoc, appdef.IView, appdef.ISingleton, appdef.IODoc:
 			tableData := ormTableData{
-				Package:    pkgData,
+				Package: pkgData,
+				// TODO: fetch typeQName from the object
 				TypeQName:  "typeQname",
 				Name:       getName(t),
 				Type:       getType(t),
@@ -147,6 +148,7 @@ func fillPackageData(pkgLocalName string, objs []interface{}, headerFileContent 
 				Fields:     make([]ormFieldData, 0),
 			}
 
+			// fetching fields
 			for _, field := range t.(appdef.IFields).Fields() {
 				fieldType := getFieldType(field)
 				fieldName := normalizeName(field.Name())
@@ -160,6 +162,7 @@ func fillPackageData(pkgLocalName string, objs []interface{}, headerFileContent 
 					tableData.Fields = append(tableData.Fields, fieldData)
 				}
 			}
+			// TODO: read keys for each table
 
 			pkgData.Items = append(pkgData.Items, tableData)
 		}
@@ -266,6 +269,4 @@ func capitalizeFirst(s string) string {
 	return strings.ToUpper(s[:1]) + s[1:]
 }
 
-// TODO: Add QueryValue to template
-// TODO: Add NewIntent to template
-// TODO: read keys for each table
+// TODO: add to templates Set-methods for Intent_* types
