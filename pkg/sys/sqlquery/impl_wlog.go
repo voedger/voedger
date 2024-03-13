@@ -14,7 +14,7 @@ import (
 )
 
 func readWlog(ctx context.Context, wsid istructs.WSID, offset istructs.Offset, count int, appStructs istructs.IAppStructs, f *filter, callback istructs.ExecQueryCallback,
-	iws appdef.IWorkspace) error {
+	appDef appdef.IAppDef) error {
 	if !f.acceptAll {
 		for field := range f.fields {
 			if !wlogDef[field] {
@@ -29,7 +29,7 @@ func readWlog(ctx context.Context, wsid istructs.WSID, offset istructs.Offset, c
 			data["WlogOffset"] = wlogOffset
 		}
 
-		renderDbEvent(data, f, event, iws)
+		renderDbEvent(data, f, event, appDef)
 
 		bb, err := json.Marshal(data)
 		if err != nil {

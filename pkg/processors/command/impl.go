@@ -229,11 +229,7 @@ func (cmdProc *cmdProc) recovery(ctx context.Context, cmd *cmdWorkpiece) (*appPa
 		})
 		ao := event.ArgumentObject()
 		if cmd.AppDef().Type(ao.QName()).Kind() == appdef.TypeKind_ODoc {
-			if coreutils.IsDummyWS(cmd.cmdMes.WSID()) || cmd.cmdMes.QName() == workspacemgmt.QNameCommandCreateWorkspace {
-				updateIDGeneratorFromO(ao, cmd.AppDef(), ws.idGenerator)
-			} else {
-				updateIDGeneratorFromO(ao, cmd.iWorkspace, ws.idGenerator)
-			}
+			updateIDGeneratorFromO(ao, cmd.AppDef(), ws.idGenerator)
 		}
 		ws.NextWLogOffset = event.WLogOffset() + 1
 		ap.nextPLogOffset = plogOffset + 1
@@ -741,7 +737,7 @@ func sendResponse(cmd *cmdWorkpiece, handlingError error) {
 		}
 	}
 	if cmd.cmdResult != nil {
-		cmdResult := coreutils.ObjectToMap(cmd.cmdResult, cmd.iWorkspace)
+		cmdResult := coreutils.ObjectToMap(cmd.cmdResult, cmd.AppDef())
 		cmdResultBytes, err := json.Marshal(cmdResult)
 		if err != nil {
 			// notest

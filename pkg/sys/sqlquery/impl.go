@@ -86,7 +86,7 @@ func execQrySqlQuery(asp istructs.IAppStructsProvider, appQName istructs.AppQNam
 		case appdef.TypeKind_CRecord:
 			fallthrough
 		case appdef.TypeKind_WDoc:
-			return readRecords(wsid, source, whereExpr, appStructs, f, callback, ws)
+			return readRecords(wsid, source, whereExpr, appStructs, f, callback)
 		default:
 			if source != plog && source != wlog {
 				break
@@ -96,9 +96,9 @@ func execQrySqlQuery(asp istructs.IAppStructsProvider, appQName istructs.AppQNam
 				return e
 			}
 			if source == plog {
-				return readPlog(ctx, wsid, numCommandProcessors, offset, limit, appStructs, f, callback, ws)
+				return readPlog(ctx, wsid, numCommandProcessors, offset, limit, appStructs, f, callback, appStructs.AppDef())
 			}
-			return readWlog(ctx, wsid, offset, limit, appStructs, f, callback, ws)
+			return readWlog(ctx, wsid, offset, limit, appStructs, f, callback, appStructs.AppDef())
 		}
 
 		return fmt.Errorf("unsupported source: %s", source)
@@ -180,24 +180,15 @@ func getFilter(f func(string) bool) coreutils.MapperOpt {
 	})
 }
 
-func renderDbEvent(data map[string]interface{}, f *filter, event istructs.IDbEvent, iws appdef.IWorkspace) {
+func renderDbEvent(data map[string]interface{}, f *filter, event istructs.IDbEvent, appDef appdef.IAppDef) {
 	if f.filter("QName") {
 		data["QName"] = event.QName().String()
 	}
 	if f.filter("ArgumentObject") {
-		data["ArgumentObject"] = coreutils.ObjectToMap(event.ArgumentObject(), iws)
+		data["ArgumentObject"] = coreutils.ObjectToMap(event.ArgumentObject(), appDef)
 	}
 	if f.filter("CUDs") {
-		cuds := make([]map[string]interface{}, 0)
-		event.CUDs(func(rec istructs.ICUDRow) {
-			cudData := make(map[string]interface{})
-			cudData["sys.ID"] = rec.ID()
-			cudData["sys.QName"] = rec.QName().String()
-			cudData["IsNew"] = rec.IsNew()
-			cudData["fields"] = coreutils.FieldsToMap(rec, iws)
-			cuds = append(cuds, cudData)
-		})
-		data["CUDs"] = cuds
+		data["CUDs"] = coreutils.CUDsToMap(event, appDef)
 	}
 	if f.filter("RegisteredAt") {
 		data["RegisteredAt"] = event.RegisteredAt()

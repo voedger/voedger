@@ -14,8 +14,8 @@ import (
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-func readPlog(ctx context.Context, wsid istructs.WSID, numCommandProcessors coreutils.CommandProcessorsCount, offset istructs.Offset, count int, appStructs istructs.IAppStructs, f *filter, callback istructs.ExecQueryCallback,
-	iws appdef.IWorkspace) error {
+func readPlog(ctx context.Context, wsid istructs.WSID, numCommandProcessors coreutils.CommandProcessorsCount, offset istructs.Offset, count int,
+	appStructs istructs.IAppStructs, f *filter, callback istructs.ExecQueryCallback, appDef appdef.IAppDef) error {
 	if !f.acceptAll {
 		for field := range f.fields {
 			if !plogDef[field] {
@@ -35,7 +35,7 @@ func readPlog(ctx context.Context, wsid istructs.WSID, numCommandProcessors core
 			data["WLogOffset"] = event.WLogOffset()
 		}
 
-		renderDbEvent(data, f, event, iws)
+		renderDbEvent(data, f, event, appDef)
 
 		bb, err := json.Marshal(data)
 		if err != nil {
