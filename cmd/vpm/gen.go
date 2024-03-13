@@ -268,3 +268,4 @@ func capitalizeFirst(s string) string {
 
 // TODO: Add QueryValue to template
 // TODO: Add NewIntent to template
+// TODO: read keys for each table

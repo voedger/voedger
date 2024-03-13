@@ -10,6 +10,10 @@ type Value_{{.Type}}_{{.Package.Name}}_{{.Name}} struct{
 	{{if or (eq .Type "WDoc") (eq .Type "View")}}kb exttinygo.TKeyBuilder{{end}}
 }
 
+type Intent_{{.Type}}_{{.Package.Name}}_{{.Name}} struct{
+	intent exttinygo.TIntent
+}
+
 {{template "fields" .}}
 
 {{template "methods" .}}

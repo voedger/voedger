@@ -1,13 +1,11 @@
 {{define "fields"}}
 
 {{if .Fields}}
-
 {{range .Fields}}
-func (v *Value_{{.Table.Type}}_{{.Table.Package.Name}}_{{.Table.Name}}) {{.GetMethodName}}() {{.Type}} {
+func (v Value_{{.Table.Type}}_{{.Table.Package.Name}}_{{.Table.Name}}) {{.GetMethodName}}() {{.Type}} {
     return v.tv.As{{capitalize .Type}}("{{.Name}}")
 }
 {{end}}
-
 {{end}}
 
 {{end}}
