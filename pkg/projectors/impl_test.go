@@ -61,10 +61,10 @@ func TestBasicUsage_SynchronousActualizer(t *testing.T) {
 		func(cfg *istructsmem.AppConfigType) {
 			cfg.AddSyncProjectors(
 				func(istructs.PartitionID) istructs.Projector {
-					return istructs.Projector{Name: incrementorName}
+					return istructs.Projector{Name: incrementorName, Func: incrementor}
 				},
 				func(istructs.PartitionID) istructs.Projector {
-					return istructs.Projector{Name: decrementorName}
+					return istructs.Projector{Name: decrementorName, Func: decrementor}
 				},
 			)
 			cfg.Resources.Add(istructsmem.NewCommandFunction(testQName, istructsmem.NullCommandExec))
@@ -78,7 +78,9 @@ func TestBasicUsage_SynchronousActualizer(t *testing.T) {
 		Partition:  istructs.PartitionID(1),
 		AppStructs: func() istructs.IAppStructs { return appStructs },
 	}
-	actualizer := actualizerFactory(conf, incrementorFactory, decrementorFactory)
+	projectors := appStructs.SyncProjectors()
+	require.Len(projectors, 2)
+	actualizer := actualizerFactory(conf, projectors[0], projectors[1:]...)
 
 	// create partition processor pipeline
 	processor := pipeline.NewSyncPipeline(context.Background(), "partition processor", pipeline.WireSyncOperator("actualizer", actualizer))
@@ -109,10 +111,10 @@ var incProjectionView = appdef.NewQName("pkg", "Incremented")
 var decProjectionView = appdef.NewQName("pkg", "Decremented")
 
 var (
-	incrementorFactory = func(partition istructs.PartitionID) istructs.Projector {
+	incrementorFactory = func() istructs.Projector {
 		return istructs.Projector{Name: incrementorName, Func: incrementor}
 	}
-	decrementorFactory = func(partition istructs.PartitionID) istructs.Projector {
+	decrementorFactory = func() istructs.Projector {
 		return istructs.Projector{Name: decrementorName, Func: decrementor}
 	}
 )
@@ -255,10 +257,10 @@ func Test_ErrorInSyncActualizer(t *testing.T) {
 		func(cfg *istructsmem.AppConfigType) {
 			cfg.AddSyncProjectors(
 				func(istructs.PartitionID) istructs.Projector {
-					return istructs.Projector{Name: incrementorName}
+					return istructs.Projector{Name: incrementorName, Func: incrementor}
 				},
 				func(istructs.PartitionID) istructs.Projector {
-					return istructs.Projector{Name: decrementorName}
+					return istructs.Projector{Name: decrementorName, Func: decrementor}
 				},
 			)
 			cfg.Resources.Add(istructsmem.NewCommandFunction(testQName, istructsmem.NullCommandExec))
@@ -272,7 +274,9 @@ func Test_ErrorInSyncActualizer(t *testing.T) {
 		Partition:  istructs.PartitionID(1),
 		AppStructs: func() istructs.IAppStructs { return appStructs },
 	}
-	actualizer := actualizerFactory(conf, incrementorFactory, decrementorFactory)
+	projectors := appStructs.SyncProjectors()
+	require.Len(projectors, 2)
+	actualizer := actualizerFactory(conf, projectors[0], projectors[1:]...)
 
 	// create partition processor pipeline
 	processor := pipeline.NewSyncPipeline(context.Background(), "partition processor", pipeline.WireSyncOperator("actualizer", actualizer))

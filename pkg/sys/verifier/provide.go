@@ -17,7 +17,7 @@ func Provide(cfg *istructsmem.AppConfigType, itokens itokens.ITokens, federation
 	provideQryInitiateEmailVerification(cfg, itokens, asp, federation)
 	provideQryIssueVerifiedValueToken(cfg, itokens, asp)
 	provideCmdSendEmailVerificationCode(cfg)
-	cfg.AddAsyncProjectors(func(partition istructs.PartitionID) istructs.Projector {
+	cfg.AddAsyncProjectors(func() istructs.Projector {
 		return istructs.Projector{
 			Name: qNameAPApplySendEmailVerificationCode,
 			Func: applySendEmailVerificationCode(federation, smtpCfg, timeFunc),

@@ -16,10 +16,10 @@ import (
 	"github.com/voedger/voedger/pkg/state"
 )
 
-func asyncActualizerFactory(conf AsyncActualizerConf, factory istructs.ProjectorFactory) (pipeline.ISyncOperator, error) {
+func asyncActualizerFactory(conf AsyncActualizerConf, projector istructs.Projector) (pipeline.ISyncOperator, error) {
 	return pipeline.ServiceOperator(&asyncActualizer{
-		factory: factory,
-		conf:    conf,
+		projector: projector,
+		conf:      conf,
 	}), nil
 }
 

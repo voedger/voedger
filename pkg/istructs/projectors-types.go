@@ -12,4 +12,7 @@ type Projector struct {
 }
 
 // ProjectorFactory creates a istructs.Projector
-type ProjectorFactory func(partition PartitionID) Projector
+type (
+	ProjectorFactory      func(PartitionID) Projector
+	AsyncProjectorFactory func() Projector
+)

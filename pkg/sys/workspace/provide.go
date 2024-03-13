@@ -70,8 +70,8 @@ func provideSyncProjectorChildWorkspaceIdxFactory() istructs.ProjectorFactory {
 
 // Projector<A, InitializeWorkspace>
 func provideAsyncProjectorInitializeWorkspace(federation coreutils.IFederation, nowFunc coreutils.TimeFunc, appQName istructs.AppQName, ep extensionpoints.IExtensionPoint,
-	tokensAPI itokens.ITokens, wsPostInitFunc WSPostInitFunc) istructs.ProjectorFactory {
-	return func(partition istructs.PartitionID) istructs.Projector {
+	tokensAPI itokens.ITokens, wsPostInitFunc WSPostInitFunc) istructs.AsyncProjectorFactory {
+	return func() istructs.Projector {
 		return istructs.Projector{
 			Name: qNameAPInitializeWorkspace,
 			Func: initializeWorkspaceProjector(nowFunc, appQName, federation, ep, tokensAPI, wsPostInitFunc),
@@ -80,8 +80,8 @@ func provideAsyncProjectorInitializeWorkspace(federation coreutils.IFederation, 
 }
 
 // Projector<A, InvokeCreateWorkspaceID>
-func provideAsyncProjectorFactoryInvokeCreateWorkspaceID(federation coreutils.IFederation, appQName istructs.AppQName, tokensAPI itokens.ITokens) istructs.ProjectorFactory {
-	return func(partition istructs.PartitionID) istructs.Projector {
+func provideAsyncProjectorFactoryInvokeCreateWorkspaceID(federation coreutils.IFederation, appQName istructs.AppQName, tokensAPI itokens.ITokens) istructs.AsyncProjectorFactory {
+	return func() istructs.Projector {
 		return istructs.Projector{
 			Name: qNameAPInvokeCreateWorkspaceID,
 			Func: invokeCreateWorkspaceIDProjector(federation, appQName, tokensAPI),
@@ -90,8 +90,8 @@ func provideAsyncProjectorFactoryInvokeCreateWorkspaceID(federation coreutils.IF
 }
 
 // Projector<A, InvokeCreateWorkspace>
-func provideAsyncProjectorFactoryInvokeCreateWorkspace(federation coreutils.IFederation, appQName istructs.AppQName, tokensAPI itokens.ITokens) istructs.ProjectorFactory {
-	return func(partition istructs.PartitionID) istructs.Projector {
+func provideAsyncProjectorFactoryInvokeCreateWorkspace(federation coreutils.IFederation, appQName istructs.AppQName, tokensAPI itokens.ITokens) istructs.AsyncProjectorFactory {
+	return func() istructs.Projector {
 		return istructs.Projector{
 			Name: qNameAPInvokeCreateWorkspace,
 			Func: invokeCreateWorkspaceProjector(federation, appQName, tokensAPI),
