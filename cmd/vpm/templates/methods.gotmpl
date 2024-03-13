@@ -5,13 +5,13 @@ func (v {{.Type}}_{{.Package.Name}}_{{.Name}}) QueryValue(id ID) (Value_{{.Type}
 	kb := exttinygo.KeyBuilder(exttinygo.StorageRecord, v.qname)
 	kb.PutInt64(FieldNameSysID, int64(id))
 	tv, exists := exttinygo.QueryValue(kb)
-	return Value_Table_untill_bill{tv: tv, kb: kb}, exists
+	return Value_{{.Type}}_{{.Package.Name}}_{{.Name}}{tv: tv, kb: kb}, exists
 }
 {{end}}
 
 {{if or (eq .Type "WDoc") (eq .Type "View") (eq .Type "CDoc")}}
 func (v {{.Type}}_{{.Package.Name}}_{{.Name}}) MustGet(id ID) Value_{{.Type}}_{{.Package.Name}}_{{.Name}} {
-	kb := exttinygo.KeyBuilder(exttinygo.StorageRecords, v.qname)
+	kb := exttinygo.KeyBuilder(exttinygo.StorageRecord, v.qname)
 	kb.PutInt64(FieldNameSysID, int64(id))
 	tv := exttinygo.MustGetValue(kb)
 	return Value_{{.Type}}_{{.Package.Name}}_{{.Name}}{tv: tv{{if or (eq .Type "WDoc") (eq .Type "View")}}, kb: kb{{end}}}
@@ -20,7 +20,7 @@ func (v {{.Type}}_{{.Package.Name}}_{{.Name}}) MustGet(id ID) Value_{{.Type}}_{{
 
 {{if or (eq .Type "Container")}}
 func (v {{.Type}}_{{.Package.Name}}_{{.Name}}) Get(id ID) (Value_{{.Type}}_{{.Package.Name}}_{{.Name}}, bool) {
-	kb := exttinygo.KeyBuilder(exttinygo.StorageRecords, v.qname)
+	kb := exttinygo.KeyBuilder(exttinygo.StorageRecord, v.qname)
 	kb.PutInt64(FieldNameSysID, int64(id))
 	tv, exists := exttinygo.QueryValue(kb)
 	return Value_{{.Type}}_{{.Package.Name}}_{{.Name}}{tv: tv{{if or (eq .Type "WDoc") (eq .Type "View")}}, kb: kb{{end}}}, exists
