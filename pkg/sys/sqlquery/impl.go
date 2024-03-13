@@ -86,7 +86,7 @@ func execQrySqlQuery(asp istructs.IAppStructsProvider, appQName istructs.AppQNam
 		case appdef.TypeKind_CRecord:
 			fallthrough
 		case appdef.TypeKind_WDoc:
-			return readRecords(wsid, source, whereExpr, appStructs, f, callback, ws)
+			return readRecords(wsid, source, whereExpr, appStructs, f, callback)
 		default:
 			if source != plog && source != wlog {
 				break
@@ -96,9 +96,9 @@ func execQrySqlQuery(asp istructs.IAppStructsProvider, appQName istructs.AppQNam
 				return e
 			}
 			if source == plog {
-				return readPlog(ctx, wsid, numCommandProcessors, offset, limit, appStructs, f, callback, ws)
+				return readPlog(ctx, wsid, numCommandProcessors, offset, limit, appStructs, f, callback, appStructs.AppDef())
 			}
-			return readWlog(ctx, wsid, offset, limit, appStructs, f, callback, ws)
+			return readWlog(ctx, wsid, offset, limit, appStructs, f, callback, appStructs.AppDef())
 		}
 
 		return fmt.Errorf("unsupported source: %s", source)
@@ -178,4 +178,38 @@ func getFilter(f func(string) bool) coreutils.MapperOpt {
 	return coreutils.Filter(func(name string, kind appdef.DataKind) bool {
 		return f(name)
 	})
+}
+
+func renderDbEvent(data map[string]interface{}, f *filter, event istructs.IDbEvent, appDef appdef.IAppDef) {
+	if f.filter("QName") {
+		data["QName"] = event.QName().String()
+	}
+	if f.filter("ArgumentObject") {
+		data["ArgumentObject"] = coreutils.ObjectToMap(event.ArgumentObject(), appDef)
+	}
+	if f.filter("CUDs") {
+		data["CUDs"] = coreutils.CUDsToMap(event, appDef)
+	}
+	if f.filter("RegisteredAt") {
+		data["RegisteredAt"] = event.RegisteredAt()
+	}
+	if f.filter("Synced") {
+		data["Synced"] = event.Synced()
+	}
+	if f.filter("DeviceID") {
+		data["DeviceID"] = event.DeviceID()
+	}
+	if f.filter("SyncedAt") {
+		data["SyncedAt"] = event.SyncedAt()
+	}
+	if f.filter("Error") {
+		if event.Error() != nil {
+			errorData := make(map[string]interface{})
+			errorData["ErrStr"] = event.Error().ErrStr()
+			errorData["QNameFromParams"] = event.Error().QNameFromParams().String()
+			errorData["ValidEvent"] = event.Error().ValidEvent()
+			errorData["OriginalEventBytes"] = event.Error().OriginalEventBytes()
+			data["Error"] = errorData
+		}
+	}
 }
