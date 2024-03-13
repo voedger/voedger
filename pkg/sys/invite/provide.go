@@ -23,15 +23,15 @@ func Provide(cfg *istructsmem.AppConfigType, timeFunc coreutils.TimeFunc,
 	provideCmdUpdateJoinedWorkspaceRoles(cfg)
 	provideCmdDeactivateJoinedWorkspace(cfg)
 	cfg.AddAsyncProjectors(
-		provideAsyncProjectorApplyInvitationFactory(timeFunc, federation, cfg.Name, itokens, smtpCfg),
-		provideAsyncProjectorApplyJoinWorkspaceFactory(timeFunc, federation, cfg.Name, itokens),
-		provideAsyncProjectorApplyUpdateInviteRolesFactory(timeFunc, federation, cfg.Name, itokens, smtpCfg),
-		provideAsyncProjectorApplyCancelAcceptedInviteFactory(timeFunc, federation, cfg.Name, itokens),
-		provideAsyncProjectorApplyLeaveWorkspaceFactory(timeFunc, federation, cfg.Name, itokens),
+		asyncProjectorApplyInvitation(timeFunc, federation, cfg.Name, itokens, smtpCfg),
+		asyncProjectorApplyJoinWorkspace(timeFunc, federation, cfg.Name, itokens),
+		asyncProjectorApplyUpdateInviteRoles(timeFunc, federation, cfg.Name, itokens, smtpCfg),
+		asyncProjectorApplyCancelAcceptedInvite(timeFunc, federation, cfg.Name, itokens),
+		asyncProjectorApplyLeaveWorkspace(timeFunc, federation, cfg.Name, itokens),
 	)
 	cfg.AddSyncProjectors(
-		provideSyncProjectorInviteIndexFactory(),
-		provideSyncProjectorJoinedWorkspaceIndexFactory(),
-		applyViewSubjectsIdx,
+		syncProjectorInviteIndex(),
+		syncProjectorJoinedWorkspaceIndex(),
+		applyViewSubjectsIdx(),
 	)
 }

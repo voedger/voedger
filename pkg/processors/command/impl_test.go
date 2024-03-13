@@ -197,8 +197,8 @@ func TestRecoveryOnSyncProjectorError(t *testing.T) {
 		appDef.AddCommand(cudQName)
 
 		failingProjQName := appdef.NewQName(appdef.SysPackage, "Failer")
-		cfg.AddSyncProjectors(func(partition istructs.PartitionID) istructs.Projector {
-			return istructs.Projector{
+		cfg.AddSyncProjectors(
+			istructs.Projector{
 				Name: failingProjQName,
 				Func: func(event istructs.IPLogEvent, state istructs.IState, intents istructs.IIntents) (err error) {
 					counter++
@@ -207,8 +207,7 @@ func TestRecoveryOnSyncProjectorError(t *testing.T) {
 					}
 					return nil
 				},
-			}
-		})
+			})
 		appDef.AddProjector(failingProjQName).SetSync(true).Events().Add(cudQName, appdef.ProjectorEventKind_Execute)
 		cfg.Resources.Add(istructsmem.NewCommandFunction(cudQName, istructsmem.NullCommandExec))
 	})

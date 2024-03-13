@@ -83,4 +83,4 @@ type AsyncActualizerFactory func(conf AsyncActualizerConf, projection istructs.P
 
 // SyncActualizerFactory returns the Operator<SyncActualizer>
 // Workpiece is ...?
-type SyncActualizerFactory func(conf SyncActualizerConf, projection istructs.ProjectorFactory, otherProjections ...istructs.ProjectorFactory) pipeline.ISyncOperator
+type SyncActualizerFactory func(conf SyncActualizerConf, projectors istructs.Projectors) pipeline.ISyncOperator

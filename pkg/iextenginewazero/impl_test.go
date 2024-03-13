@@ -75,9 +75,7 @@ func Test_BasicUsage(t *testing.T) {
 		`,
 		func(cfg *istructsmem.AppConfigType) {
 			cfg.Resources.Add(istructsmem.NewCommandFunction(newOrderCmd, istructsmem.NullCommandExec))
-			cfg.AddAsyncProjectors(func() istructs.Projector {
-				return istructs.Projector{Name: calcOrderedItemsProjector}
-			})
+			cfg.AddAsyncProjectors(istructs.Projector{Name: calcOrderedItemsProjector})
 		})
 
 	// Build NewOrder event
