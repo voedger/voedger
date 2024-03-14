@@ -54,25 +54,26 @@ type AppConfigType struct {
 
 	dynoSchemes *dynobuf.DynoBufSchemes
 
-	storage                istorage.IAppStorage // will be initialized on prepare()
-	versions               *vers.Versions
-	qNames                 *qnames.QNames
-	cNames                 *containers.Containers
-	singletons             *singletons.Singletons
-	prepared               bool
-	app                    *appStructsType
-	FunctionRateLimits     functionRateLimits
-	syncProjectorFactories []istructs.ProjectorFactory
-	asyncProjectors        map[appdef.QName]istructs.Projector
-	cudValidators          []istructs.CUDValidator
-	eventValidators        []istructs.EventValidator
+	storage            istorage.IAppStorage // will be initialized on prepare()
+	versions           *vers.Versions
+	qNames             *qnames.QNames
+	cNames             *containers.Containers
+	singletons         *singletons.Singletons
+	prepared           bool
+	app                *appStructsType
+	FunctionRateLimits functionRateLimits
+	syncProjectors     istructs.Projectors
+	asyncProjectors    istructs.Projectors
+	cudValidators      []istructs.CUDValidator
+	eventValidators    []istructs.EventValidator
 }
 
 func newAppConfig(appName istructs.AppQName, appDef appdef.IAppDefBuilder) *AppConfigType {
 	cfg := AppConfigType{
 		Name:            appName,
 		Params:          makeAppConfigParams(),
-		asyncProjectors: make(map[appdef.QName]istructs.Projector),
+		syncProjectors:  make(istructs.Projectors),
+		asyncProjectors: make(istructs.Projectors),
 	}
 
 	qNameID, ok := istructs.ClusterApps[appName]
@@ -162,18 +163,8 @@ func (cfg *AppConfigType) validateResources() error {
 			}
 		case appdef.TypeKind_Projector:
 			prj := tp.(appdef.IProjector)
-			syncFound := false
-			asyncFound := false
-			for _, pFunc := range cfg.syncProjectorFactories {
-				p := pFunc(0)
-				if p.Name == prj.QName() {
-					syncFound = true
-					break
-				}
-			}
-			if _, ok := cfg.asyncProjectors[prj.QName()]; ok {
-				asyncFound = true
-			}
+			_, syncFound := cfg.syncProjectors[prj.QName()]
+			_, asyncFound := cfg.asyncProjectors[prj.QName()]
 			if !syncFound && !asyncFound {
 				return fmt.Errorf("exec of %v is not defined", prj)
 			}
@@ -202,10 +193,9 @@ func (cfg *AppConfigType) validateResources() error {
 		return err
 	}
 
-	for _, pFunc := range cfg.syncProjectorFactories {
-		p := pFunc(0)
-		if cfg.AppDef.TypeByName(p.Name) == nil {
-			return fmt.Errorf("exec of sync projector %s is defined but the projector is not defined in SQL", p.Name)
+	for _, prj := range cfg.syncProjectors {
+		if cfg.AppDef.TypeByName(prj.Name) == nil {
+			return fmt.Errorf("exec of sync projector %s is defined but the projector is not defined in SQL", prj.Name)
 		}
 	}
 	for _, prj := range cfg.asyncProjectors {
@@ -216,13 +206,14 @@ func (cfg *AppConfigType) validateResources() error {
 	return nil
 }
 
-func (cfg *AppConfigType) AddSyncProjectors(sp ...istructs.ProjectorFactory) {
-	cfg.syncProjectorFactories = append(cfg.syncProjectorFactories, sp...)
+func (cfg *AppConfigType) AddSyncProjectors(pp ...istructs.Projector) {
+	for _, p := range pp {
+		cfg.syncProjectors[p.Name] = p
+	}
 }
 
-func (cfg *AppConfigType) AddAsyncProjectors(ap ...istructs.AsyncProjectorFactory) {
-	for _, factory := range ap {
-		p := factory()
+func (cfg *AppConfigType) AddAsyncProjectors(pp ...istructs.Projector) {
+	for _, p := range pp {
 		cfg.asyncProjectors[p.Name] = p
 	}
 }

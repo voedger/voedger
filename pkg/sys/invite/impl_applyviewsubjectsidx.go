@@ -9,7 +9,7 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
-func applyViewSubjectsIdx(partition istructs.PartitionID) istructs.Projector {
+func applyViewSubjectsIdx() istructs.Projector {
 	return istructs.Projector{
 		Name: QNameApplyViewSubjectsIdx,
 		Func: applyViewSubjectsIdxProjector,

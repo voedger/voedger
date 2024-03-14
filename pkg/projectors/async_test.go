@@ -61,7 +61,7 @@ func TestBasicUsage_AsynchronousActualizer(t *testing.T) {
 		},
 		func(cfg *istructsmem.AppConfigType) {
 			cfg.Resources.Add(istructsmem.NewCommandFunction(testQName, istructsmem.NullCommandExec))
-			cfg.AddAsyncProjectors(incrementorFactory, decrementorFactory)
+			cfg.AddAsyncProjectors(testIncrementor, testDecrementor)
 		})
 	defer cleanup()
 
@@ -156,7 +156,7 @@ func Test_AsynchronousActualizer_FlushByRange(t *testing.T) {
 		},
 		func(cfg *istructsmem.AppConfigType) {
 			cfg.Resources.Add(istructsmem.NewCommandFunction(testQName, istructsmem.NullCommandExec))
-			cfg.AddAsyncProjectors(incrementorFactory)
+			cfg.AddAsyncProjectors(testIncrementor)
 		})
 	defer cleanup()
 
@@ -240,7 +240,7 @@ func Test_AsynchronousActualizer_FlushByInterval(t *testing.T) {
 		},
 		func(cfg *istructsmem.AppConfigType) {
 			cfg.Resources.Add(istructsmem.NewCommandFunction(testQName, istructsmem.NullCommandExec))
-			cfg.AddAsyncProjectors(incrementorFactory)
+			cfg.AddAsyncProjectors(testIncrementor)
 		})
 	defer cleanup()
 
@@ -335,8 +335,8 @@ func Test_AsynchronousActualizer_ErrorAndRestore(t *testing.T) {
 		},
 		func(cfg *istructsmem.AppConfigType) {
 			cfg.Resources.Add(istructsmem.NewCommandFunction(testQName, istructsmem.NullCommandExec))
-			cfg.AddAsyncProjectors(func() istructs.Projector {
-				return istructs.Projector{
+			cfg.AddAsyncProjectors(
+				istructs.Projector{
 					Name: name,
 					Func: func(event istructs.IPLogEvent, state istructs.IState, intents istructs.IIntents) (err error) {
 						if event.Workspace() == 1002 {
@@ -348,8 +348,7 @@ func Test_AsynchronousActualizer_ErrorAndRestore(t *testing.T) {
 						}
 						return nil
 					},
-				}
-			})
+				})
 		})
 	defer cleanup()
 
@@ -453,7 +452,7 @@ func Test_AsynchronousActualizer_ResumeReadAfterNotifications(t *testing.T) {
 		},
 		func(cfg *istructsmem.AppConfigType) {
 			cfg.Resources.Add(istructsmem.NewCommandFunction(testQName, istructsmem.NullCommandExec))
-			cfg.AddAsyncProjectors(incrementorFactory)
+			cfg.AddAsyncProjectors(testIncrementor)
 		})
 	defer cleanup()
 
@@ -590,7 +589,7 @@ func Test_AsynchronousActualizer_Stress(t *testing.T) {
 		},
 		func(cfg *istructsmem.AppConfigType) {
 			cfg.Resources.Add(istructsmem.NewCommandFunction(testQName, istructsmem.NullCommandExec))
-			cfg.AddAsyncProjectors(incrementorFactory)
+			cfg.AddAsyncProjectors(testIncrementor)
 		})
 	defer cleanup()
 
@@ -704,7 +703,7 @@ func Test_AsynchronousActualizer_NonBuffered(t *testing.T) {
 		},
 		func(cfg *istructsmem.AppConfigType) {
 			cfg.Resources.Add(istructsmem.NewCommandFunction(testQName, istructsmem.NullCommandExec))
-			cfg.AddAsyncProjectors(incrementorFactory)
+			cfg.AddAsyncProjectors(testIncrementor)
 		})
 	defer cleanup()
 
@@ -832,7 +831,7 @@ func Test_AsynchronousActualizer_Stress_NonBuffered(t *testing.T) {
 		func(cfg *istructsmem.AppConfigType) {
 			cfg.Resources.Add(istructsmem.NewCommandFunction(projectorFilter, istructsmem.NullCommandExec))
 			cfg.Resources.Add(istructsmem.NewCommandFunction(testQName, istructsmem.NullCommandExec))
-			cfg.AddAsyncProjectors(incrementorFactory)
+			cfg.AddAsyncProjectors(testIncrementor)
 		})
 	defer cleanup()
 
@@ -1005,7 +1004,7 @@ func Test_AsynchronousActualizer_Stress_Buffered(t *testing.T) {
 		func(cfg *istructsmem.AppConfigType) {
 			cfg.Resources.Add(istructsmem.NewCommandFunction(projectorFilter, istructsmem.NullCommandExec))
 			cfg.Resources.Add(istructsmem.NewCommandFunction(testQName, istructsmem.NullCommandExec))
-			cfg.AddAsyncProjectors(incrementorFactory)
+			cfg.AddAsyncProjectors(testIncrementor)
 		})
 	defer cleanup()
 

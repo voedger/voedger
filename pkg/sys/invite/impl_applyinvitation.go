@@ -19,12 +19,10 @@ import (
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-func provideAsyncProjectorApplyInvitationFactory(timeFunc coreutils.TimeFunc, federation coreutils.IFederation, appQName istructs.AppQName, tokens itokens.ITokens, smtpCfg smtp.Cfg) istructs.AsyncProjectorFactory {
-	return func() istructs.Projector {
-		return istructs.Projector{
-			Name: qNameAPApplyInvitation,
-			Func: applyInvitationProjector(timeFunc, federation, appQName, tokens, smtpCfg),
-		}
+func asyncProjectorApplyInvitation(timeFunc coreutils.TimeFunc, federation coreutils.IFederation, appQName istructs.AppQName, tokens itokens.ITokens, smtpCfg smtp.Cfg) istructs.Projector {
+	return istructs.Projector{
+		Name: qNameAPApplyInvitation,
+		Func: applyInvitationProjector(timeFunc, federation, appQName, tokens, smtpCfg),
 	}
 }
 

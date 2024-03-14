@@ -62,8 +62,8 @@ type IAppStructs interface {
 	// Describe package content
 	DescribePackage(pkgName string) interface{}
 
-	SyncProjectors() []ProjectorFactory
-	AsyncProjectors() map[appdef.QName]Projector
+	SyncProjectors() Projectors
+	AsyncProjectors() Projectors
 
 	CUDValidators() []CUDValidator
 	EventValidators() []EventValidator
