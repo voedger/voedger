@@ -3,7 +3,6 @@ module app
 go 1.21.6
 
 require (
-	github.com/voedger/exttinygo v0.0.0-20240217175805-b6b68f2dda03
 	github.com/voedger/voedger v0.0.0-20240221154408-4b495284da45
 )
 

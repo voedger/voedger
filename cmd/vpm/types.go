@@ -29,18 +29,21 @@ type ignoreInfo struct {
 // types for ORM generating
 type ormPackageData struct {
 	Name              string
+	FullPath          string
 	HeaderFileContent string
 	Imports           []string
 	Items             []ormTableData
 }
 
 type ormTableData struct {
-	Package    ormPackageData
-	TypeQName  string
-	Name       string
-	Type       string
-	SqlContent string
-	Fields     []ormFieldData
+	Package      ormPackageData
+	TypeQName    string
+	Name         string
+	Type         string
+	SqlContent   string
+	Fields       []ormFieldData
+	Keys         []ormFieldData
+	NonKeyFields []ormFieldData
 }
 
 type ormFieldData struct {

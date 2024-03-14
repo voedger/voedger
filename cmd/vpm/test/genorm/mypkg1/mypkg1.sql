@@ -7,4 +7,7 @@ WORKSPACE MyWorkspace1(
         Field11 varchar,
         Field22 bool
     );
+-- 	TABLE NextNumbers INHERITS CSingleton (
+-- 		NextPBillNumber int32
+-- 	);
 );

@@ -5,7 +5,7 @@
 
 package orm
 
-import exttinygo "github.com/voedger/exttinygo"
+import "github.com/voedger/exttinygo"
 
 var Package_untill = struct {
 	CDoc_articles CDoc_untill_articles
@@ -13,10 +13,10 @@ var Package_untill = struct {
 	WDoc_bill     WDoc_untill_bill
 }{
 	CDoc_articles: CDoc_untill_articles{
-		Type: Type{qname: "https://github.com/untillpro/airs-scheme/blob/master/bp3.untill_articles"},
+		Type: Type{qname: "https://github.com/untillpro/airs-scheme/bp3.untill_articles"},
 	},
 	WDoc_bill: WDoc_untill_bill{
-		Type: Type{qname: "https://github.com/untillpro/airs-scheme/blob/master/bp3.bill"},
+		Type: Type{qname: "https://github.com/untillpro/airs-scheme/bp3.bill"},
 	},
 }
 
@@ -110,7 +110,7 @@ func (v Value_Table_untill_articles) Name() string {
 }
 
 func (v CDoc_untill_articles) MustGetValue(id ID) Value_Table_untill_articles {
-	kb := exttinygo.KeyBuilder(exttinygo.StorageRecord, Package_air.ODoc_ProformaPrinted.qname)
+	kb := exttinygo.KeyBuilder(exttinygo.StorageRecord, v.qname)
 	return Value_Table_untill_articles{tv: exttinygo.MustGetValue(kb)}
 }
 

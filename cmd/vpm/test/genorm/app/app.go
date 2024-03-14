@@ -3,7 +3,7 @@
  * @author Alisher Nurmanov
  */
 
-package app
+package main
 
 import (
 	"mypkg1"
@@ -15,11 +15,10 @@ import (
 )
 
 func main() {
-	orm.CommandContext()
 	println("app")
 	mypkg1.MyFunc1()
 	mypkg2.MyFunc2()
 
-	val := orm.Package_mypkg1.ODoc_mytable1.MustGetValue(0)
-	val.Get_field1()
+	val := orm.Package_mypkg1.WDoc_mytable11.MustGet(0)
+	val.Get_field22()
 }

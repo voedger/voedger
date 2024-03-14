@@ -12,7 +12,9 @@ import (
 	"strings"
 	"testing"
 
+	//"github.com/otiai10/copy"
 	"github.com/stretchr/testify/require"
+	"github.com/untillpro/goutils/exec"
 	"github.com/untillpro/goutils/logger"
 
 	coreutils "github.com/voedger/voedger/pkg/utils"
@@ -244,12 +246,21 @@ func TestPkgRegistryCompile(t *testing.T) {
 func TestGenOrmBasicUsage(t *testing.T) {
 	require := require.New(t)
 
+	// !!! Does not work in temp dir because of ref to staging version of exttinygo package in go.work file
+	//tempDir := t.TempDir()
+	// !!! But works in current dir
 	wd, err := os.Getwd()
 	require.NoError(err)
 
-	dir := filepath.Join(wd, "test", "genorm", "app")
-	headerFile := filepath.Join(wd, "test", "genorm", "app", "header.txt")
+	//err = copy.Copy(filepath.Join(wd, "test", "genorm"), tempDir)
+	//require.NoError(err)
 
+	//dir := filepath.Join(tempDir, "app")
+	dir := filepath.Join(wd, "test", "genorm", "app")
+	headerFile := filepath.Join(dir, "header.txt")
 	err = execRootCmd([]string{"vpm", "gen", "orm", "-C", dir, "--header-file", headerFile}, "1.0.0")
+	require.NoError(err)
+
+	err = new(exec.PipedExec).Command("go", "build", "-C", dir).Run(os.Stdout, os.Stderr)
 	require.NoError(err)
 }
