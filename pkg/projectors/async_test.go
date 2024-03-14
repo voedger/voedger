@@ -94,10 +94,10 @@ func TestBasicUsage_AsynchronousActualizer(t *testing.T) {
 	_ = storeProjectorOffset(appStructs, partitionNr, decrementorName, istructs.Offset(4))
 
 	broker, cleanup := in10nmem.ProvideEx2(in10n.Quotas{
-		Channels:               2,
-		ChannelsPerSubject:     2,
-		Subsciptions:           2,
-		SubsciptionsPerSubject: 2,
+		Channels:                2,
+		ChannelsPerSubject:      2,
+		Subscriptions:           2,
+		SubscriptionsPerSubject: 2,
 	}, time.Now)
 	defer cleanup()
 
@@ -180,10 +180,10 @@ func Test_AsynchronousActualizer_FlushByRange(t *testing.T) {
 	withCancel, cancelCtx := context.WithCancel(context.Background())
 
 	broker, cleanup := in10nmem.ProvideEx2(in10n.Quotas{
-		Channels:               2,
-		ChannelsPerSubject:     2,
-		Subsciptions:           2,
-		SubsciptionsPerSubject: 2,
+		Channels:                2,
+		ChannelsPerSubject:      2,
+		Subscriptions:           2,
+		SubscriptionsPerSubject: 2,
 	}, time.Now)
 	defer cleanup()
 
@@ -257,10 +257,10 @@ func Test_AsynchronousActualizer_FlushByInterval(t *testing.T) {
 	withCancel, cancelCtx := context.WithCancel(context.Background())
 
 	broker, cleanup := in10nmem.ProvideEx2(in10n.Quotas{
-		Channels:               2,
-		ChannelsPerSubject:     2,
-		Subsciptions:           2,
-		SubsciptionsPerSubject: 2,
+		Channels:                2,
+		ChannelsPerSubject:      2,
+		Subscriptions:           2,
+		SubscriptionsPerSubject: 2,
 	}, time.Now)
 	defer cleanup()
 
@@ -367,10 +367,10 @@ func Test_AsynchronousActualizer_ErrorAndRestore(t *testing.T) {
 	chanAfterError := make(chan time.Time)
 
 	broker, cleanup := in10nmem.ProvideEx2(in10n.Quotas{
-		Channels:               2,
-		ChannelsPerSubject:     2,
-		Subsciptions:           2,
-		SubsciptionsPerSubject: 2,
+		Channels:                2,
+		ChannelsPerSubject:      2,
+		Subscriptions:           2,
+		SubscriptionsPerSubject: 2,
 	}, time.Now)
 	defer cleanup()
 
@@ -470,10 +470,10 @@ func Test_AsynchronousActualizer_ResumeReadAfterNotifications(t *testing.T) {
 	metrics := imetrics.Provide()
 
 	broker, cleanup := in10nmem.ProvideEx2(in10n.Quotas{
-		Channels:               2,
-		ChannelsPerSubject:     2,
-		Subsciptions:           2,
-		SubsciptionsPerSubject: 2,
+		Channels:                2,
+		ChannelsPerSubject:      2,
+		Subscriptions:           2,
+		SubscriptionsPerSubject: 2,
 	}, time.Now)
 	defer cleanup()
 
@@ -610,10 +610,10 @@ func Test_AsynchronousActualizer_Stress(t *testing.T) {
 	withCancel, cancelCtx := context.WithCancel(context.Background())
 
 	broker, cleanup := in10nmem.ProvideEx2(in10n.Quotas{
-		Channels:               2,
-		ChannelsPerSubject:     2,
-		Subsciptions:           2,
-		SubsciptionsPerSubject: 2,
+		Channels:                2,
+		ChannelsPerSubject:      2,
+		Subscriptions:           2,
+		SubscriptionsPerSubject: 2,
 	}, time.Now)
 	defer cleanup()
 
@@ -719,10 +719,10 @@ func Test_AsynchronousActualizer_NonBuffered(t *testing.T) {
 	withCancel, cancelCtx := context.WithCancel(context.Background())
 
 	broker, cleanup := in10nmem.ProvideEx2(in10n.Quotas{
-		Channels:               2,
-		ChannelsPerSubject:     2,
-		Subsciptions:           2,
-		SubsciptionsPerSubject: 2,
+		Channels:                2,
+		ChannelsPerSubject:      2,
+		Subscriptions:           2,
+		SubscriptionsPerSubject: 2,
 	}, time.Now)
 	defer cleanup()
 
@@ -840,10 +840,10 @@ func Test_AsynchronousActualizer_Stress_NonBuffered(t *testing.T) {
 	withCancel, cancelCtx := context.WithCancel(context.Background())
 
 	broker, cleanup := in10nmem.ProvideEx2(in10n.Quotas{
-		Channels:               totalPartitions * projectorsPerPartition,
-		ChannelsPerSubject:     totalPartitions * projectorsPerPartition,
-		Subsciptions:           totalPartitions * projectorsPerPartition,
-		SubsciptionsPerSubject: totalPartitions * projectorsPerPartition,
+		Channels:                totalPartitions * projectorsPerPartition,
+		ChannelsPerSubject:      totalPartitions * projectorsPerPartition,
+		Subscriptions:           totalPartitions * projectorsPerPartition,
+		SubscriptionsPerSubject: totalPartitions * projectorsPerPartition,
 	}, time.Now)
 	defer cleanup()
 
@@ -1013,10 +1013,10 @@ func Test_AsynchronousActualizer_Stress_Buffered(t *testing.T) {
 	withCancel, cancelCtx := context.WithCancel(context.Background())
 
 	broker, cleanup := in10nmem.ProvideEx2(in10n.Quotas{
-		Channels:               totalPartitions * projectorsPerPartition,
-		ChannelsPerSubject:     totalPartitions * projectorsPerPartition,
-		Subsciptions:           totalPartitions * projectorsPerPartition,
-		SubsciptionsPerSubject: totalPartitions * projectorsPerPartition,
+		Channels:                totalPartitions * projectorsPerPartition,
+		ChannelsPerSubject:      totalPartitions * projectorsPerPartition,
+		Subscriptions:           totalPartitions * projectorsPerPartition,
+		SubscriptionsPerSubject: totalPartitions * projectorsPerPartition,
 	}, time.Now)
 	defer cleanup()
 

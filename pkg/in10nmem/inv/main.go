@@ -25,10 +25,10 @@ func main() {
 	const BigNumber = 1000000000000000000
 
 	quotas := in10n.Quotas{
-		Channels:               BigNumber,
-		ChannelsPerSubject:     BigNumber,
-		Subsciptions:           BigNumber,
-		SubsciptionsPerSubject: BigNumber,
+		Channels:                BigNumber,
+		ChannelsPerSubject:      BigNumber,
+		Subscriptions:           BigNumber,
+		SubscriptionsPerSubject: BigNumber,
 	}
 
 	if len(os.Args) < 2 {
