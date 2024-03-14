@@ -30,6 +30,7 @@ func (v {{.Type}}_{{.Package.Name}}_{{.Name}}) Get(id ID) (Value_{{.Type}}_{{.Pa
 {{if or (eq .Type "WDoc") (eq .Type "View") (eq .Type "WSingleton")}}
 func (v {{.Type}}_{{.Package.Name}}_{{.Name}}) NewIntent(id ID) Intent_{{.Type}}_{{.Package.Name}}_{{.Name}} {
 	kb := exttinygo.KeyBuilder(exttinygo.StorageRecord, v.qname)
+	{{if ne .Type "WSingleton"}}kb.PutInt64(FieldNameSysID, int64(id)){{end}}
 	kb.PutInt64(FieldNameSysID, int64(id))
 	return Intent_{{.Type}}_{{.Package.Name}}_{{.Name}}{intent: exttinygo.NewValue(kb)}
 }

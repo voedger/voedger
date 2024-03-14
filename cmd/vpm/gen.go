@@ -12,7 +12,6 @@ import (
 	"go/format"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
 	"text/template"
 
@@ -76,7 +75,7 @@ func genOrm(compileRes *compile.Result, params vpmParams) error {
 		if len(objs) == 0 || pkgLocalName == appdef.SysPackage {
 			continue
 		}
-		if err := generatePackage(pkgLocalName, objs, headerContent, dir); err != nil {
+		if err := generatePackage(pkgLocalName, compileRes.AppDef.PackageFullPath(pkgLocalName), objs, headerContent, dir); err != nil {
 			return err
 		}
 	}
@@ -90,22 +89,19 @@ func gatherPackageObjs(appDef appdef.IAppDef) map[string][]interface{} {
 		pkgObjs[pkgLocalName] = make([]interface{}, 0)
 	}
 
-	reg := regexp.MustCompile("(.*)\\.(.*)")
-
 	appDef.Types(func(iType appdef.IType) {
 		if workspace, ok := iType.(appdef.IWorkspace); ok {
 			workspace.Types(func(iType appdef.IType) {
-				qName := iType.QName().String()
-				matches := reg.FindStringSubmatch(qName)
-				pkgObjs[matches[1]] = append(pkgObjs[matches[1]], iType)
+				qName := iType.QName()
+				pkgObjs[qName.Pkg()] = append(pkgObjs[qName.Pkg()], iType)
 			})
 		}
 	})
 	return pkgObjs
 }
 
-func generatePackage(pkgLocalName string, objs []interface{}, headerFileContent, dir string) error {
-	pkgData, err := fillPackageData(pkgLocalName, objs, headerFileContent)
+func generatePackage(pkgLocalName, pkgFullPath string, objs []interface{}, headerFileContent, dir string) error {
+	pkgData, err := fillPackageData(pkgLocalName, pkgFullPath, objs, headerFileContent)
 	if err != nil {
 		return err
 	}
@@ -128,9 +124,10 @@ func saveFile(filePath string, content []byte) error {
 	return os.WriteFile(filePath, content, defaultPermissions)
 }
 
-func fillPackageData(pkgLocalName string, objs []interface{}, headerFileContent string) (ormPackageData, error) {
+func fillPackageData(pkgLocalName, pkgFullPath string, objs []interface{}, headerFileContent string) (ormPackageData, error) {
 	pkgData := ormPackageData{
 		Name:              pkgLocalName,
+		FullPath:          pkgFullPath,
 		HeaderFileContent: headerFileContent,
 		Imports:           []string{"import exttinygo \"github.com/voedger/exttinygo\""},
 		Items:             make([]ormTableData, 0),
@@ -139,9 +136,8 @@ func fillPackageData(pkgLocalName string, objs []interface{}, headerFileContent 
 		switch t := obj.(type) {
 		case appdef.ICDoc, appdef.IWDoc, appdef.IView, appdef.ISingleton, appdef.IODoc:
 			tableData := ormTableData{
-				Package: pkgData,
-				// TODO: fetch typeQName from the object
-				TypeQName:  "typeQname",
+				Package:    pkgData,
+				TypeQName:  fmt.Sprintf("%s.%s", pkgFullPath, getName(t)),
 				Name:       getName(t),
 				Type:       getType(t),
 				SqlContent: "Here will be SQL content of the table.",
@@ -270,3 +266,4 @@ func capitalizeFirst(s string) string {
 }
 
 // TODO: add to templates Set-methods for Intent_* types
+// TODO: process Command, View, WSingletone
