@@ -19,7 +19,7 @@ import (
 type apps struct {
 	structs               istructs.IAppStructsProvider
 	syncActualizerFactory SyncActualizerFactory
-	extEngineFactory      iextengine.ExtensionEngineFactories
+	extEngineFactories    iextengine.ExtensionEngineFactories
 	apps                  map[istructs.AppQName]*app
 	mx                    sync.RWMutex
 }
@@ -28,7 +28,7 @@ func newAppPartitions(asp istructs.IAppStructsProvider, saf SyncActualizerFactor
 	a := &apps{
 		structs:               asp,
 		syncActualizerFactory: saf,
-		extEngineFactory:      eef,
+		extEngineFactories:    eef,
 		apps:                  map[istructs.AppQName]*app{},
 		mx:                    sync.RWMutex{},
 	}

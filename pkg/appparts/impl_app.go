@@ -12,19 +12,22 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appparts/internal/pool"
 	"github.com/voedger/voedger/pkg/cluster"
+	"github.com/voedger/voedger/pkg/iextengine"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/pipeline"
 )
 
 // engine placeholder
 type engine struct {
+	iextengine.IExtensionEngine
 	cluster.ProcessorKind
 	pool *pool.Pool[*engine]
 }
 
-func newEngine(kind cluster.ProcessorKind) *engine {
+func newEngine(e iextengine.IExtensionEngine, kind cluster.ProcessorKind) *engine {
 	return &engine{
-		ProcessorKind: kind,
+		IExtensionEngine: e,
+		ProcessorKind:    kind,
 	}
 }
 
@@ -61,7 +64,7 @@ func (a *app) deploy(def appdef.IAppDef, structs istructs.IAppStructs, engines [
 	for k, cnt := range engines {
 		ee := make([]*engine, cnt)
 		for i := 0; i < cnt; i++ {
-			ee[i] = newEngine(cluster.ProcessorKind(k))
+			ee[i] = newEngine(nil, cluster.ProcessorKind(k))
 		}
 		a.engines[k] = pool.New(ee)
 	}
