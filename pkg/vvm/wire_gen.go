@@ -16,6 +16,8 @@ import (
 	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/iauthnzimpl"
 	"github.com/voedger/voedger/pkg/iblobstoragestg"
+	"github.com/voedger/voedger/pkg/iextengine"
+	"github.com/voedger/voedger/pkg/iextenginebuiltin"
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/in10nmem"
 	"github.com/voedger/voedger/pkg/iprocbus"
@@ -114,7 +116,7 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 		cleanup()
 		return nil, nil, err
 	}
-	isDeviceAllowedFuncs := provideIsDevicaAllowedFunc(v4, v5)
+	isDeviceAllowedFuncs := provideIsDeviceAllowedFunc(v4, v5)
 	iAuthenticator := iauthnzimpl.NewDefaultAuthenticator(v3, isDeviceAllowedFuncs)
 	iAuthorizer := iauthnzimpl.NewDefaultAuthorizer()
 	serviceFactory := commandprocessor.ProvideServiceFactory(iAppPartitions, timeFunc, in10nBroker, iMetrics, vvmName, iAuthenticator, iAuthorizer, iSecretReader)
@@ -212,10 +214,10 @@ func ProvideVVM(vvmCfg *VVMConfig, vvmIdx VVMIdxType) (voedgerVM *VoedgerVM, err
 	}, ProcessorChannel_Query,
 	)
 	vvmCfg.Quotas = in10n.Quotas{
-		Channels:               int(DefaultQuotasChannelsFactor * vvmCfg.NumCommandProcessors),
-		ChannelsPerSubject:     DefaultQuotasChannelsPerSubject,
-		Subsciptions:           int(DefaultQuotasSubscriptionsFactor * vvmCfg.NumCommandProcessors),
-		SubsciptionsPerSubject: DefaultQuotasSubscriptionsPerSubject,
+		Channels:                int(DefaultQuotasChannelsFactor * vvmCfg.NumCommandProcessors),
+		ChannelsPerSubject:      DefaultQuotasChannelsPerSubject,
+		Subscriptions:           int(DefaultQuotasSubscriptionsFactor * vvmCfg.NumCommandProcessors),
+		SubscriptionsPerSubject: DefaultQuotasSubscriptionsPerSubject,
 	}
 	voedgerVM.VVM, voedgerVM.vvmCleanup, err = ProvideCluster(ctx, vvmCfg, vvmIdx)
 	if err != nil {
@@ -235,7 +237,11 @@ func (vvm *VoedgerVM) Launch() error {
 	return vvm.ServicePipeline.SendSync(ignition)
 }
 
-func provideIsDevicaAllowedFunc(appEPs map[istructs.AppQName]extensionpoints.IExtensionPoint, _ []BuiltInAppsPackages) iauthnzimpl.IsDeviceAllowedFuncs {
+func ProvideExtEngineFactories(cfgs istructsmem.AppConfigsType) iextengine.ExtensionEngineFactories {
+	return iextengine.ExtensionEngineFactories{appdef.ExtensionEngineKind_BuiltIn: iextenginebuiltin.ProvideExtensionEngineFactory(provideAppsBuiltInExtFuncs(cfgs))}
+}
+
+func provideIsDeviceAllowedFunc(appEPs map[istructs.AppQName]extensionpoints.IExtensionPoint, _ []BuiltInAppsPackages) iauthnzimpl.IsDeviceAllowedFuncs {
 	res := iauthnzimpl.IsDeviceAllowedFuncs{}
 	for appQName, appEP := range appEPs {
 		val, ok := appEP.Find(apps.EPIsDeviceAllowedFunc)
@@ -336,7 +342,7 @@ func provideMetricsServicePort(msp MetricsServicePortInitial, vvmIdx VVMIdxType)
 }
 
 // VVMPort could be dynamic -> need a source to get the actual port later
-// just calling RouterService.GetPort() causes wire cycle: RouterService requires IBus->VVMApps->FederatioURL->VVMPort->RouterService
+// just calling RouterService.GetPort() causes wire cycle: RouterService requires IBus->VVMApps->FederationURL->VVMPort->RouterService
 // so we need something in the middle of FederationURL and RouterService: FederationURL reads VVMPortSource, RouterService writes it.
 func provideVVMPortSource() *VVMPortSource {
 	return &VVMPortSource{}
@@ -433,8 +439,8 @@ func provideChannelGroups(cfg *VVMConfig) (res []iprocbusmem.ChannelGroup) {
 }
 
 func provideCachingAppStorageProvider(vvmCfg *VVMConfig, storageCacheSize StorageCacheSizeType, metrics2 imetrics.IMetrics,
-	vvmName commandprocessor.VVMName, uncachingProivder IAppStorageUncachingProviderFactory) (istorage.IAppStorageProvider, error) {
-	aspNonCaching := uncachingProivder()
+	vvmName commandprocessor.VVMName, uncachingProvider IAppStorageUncachingProviderFactory) (istorage.IAppStorageProvider, error) {
+	aspNonCaching := uncachingProvider()
 	res := istoragecache.Provide(int(storageCacheSize), aspNonCaching, metrics2, string(vvmName))
 	return res, nil
 }

@@ -22,6 +22,8 @@ import (
 
 	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/apppartsctl"
+	"github.com/voedger/voedger/pkg/iextengine"
+	"github.com/voedger/voedger/pkg/iextenginebuiltin"
 	"github.com/voedger/voedger/pkg/router"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -103,6 +105,12 @@ func (vvm *VoedgerVM) Launch() error {
 	return vvm.ServicePipeline.SendSync(ignition)
 }
 
+func ProvideExtEngineFactories(cfgs istructsmem.AppConfigsType) iextengine.ExtensionEngineFactories {
+	return iextengine.ExtensionEngineFactories{
+		appdef.ExtensionEngineKind_BuiltIn: iextenginebuiltin.ProvideExtensionEngineFactory(provideAppsBuiltInExtFuncs(cfgs)),
+	}
+}
+
 // vvmCtx must be cancelled by the caller right before vvm.ServicePipeline.Close()
 func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxType) (*VVM, func(), error) {
 	panic(wire.Build(
@@ -114,6 +122,7 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 		provideAppServiceFactory,
 		provideAppPartitionFactory,
 		provideAsyncActualizersFactory,
+		//ProvideExtEngineFactories,
 		provideRouterServiceFactory,
 		provideOperatorAppServices,
 		provideBlobAppStorage,
