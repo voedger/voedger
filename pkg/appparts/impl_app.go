@@ -77,7 +77,7 @@ func newPartition(app *app, id istructs.PartitionID) *partition {
 	part := &partition{
 		app:            app,
 		id:             id,
-		syncActualizer: app.apps.actualizer(app.structs, id),
+		syncActualizer: app.apps.syncActualizerFactory(app.structs, id),
 	}
 	return part
 }

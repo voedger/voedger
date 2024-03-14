@@ -6,6 +6,7 @@
 package appparts
 
 import (
+	"github.com/voedger/voedger/pkg/iextengine"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/pipeline"
 )
@@ -20,5 +21,10 @@ func New(structs istructs.IAppStructsProvider) (ap IAppPartitions, cleanup func(
 }
 
 func NewWithActualizer(structs istructs.IAppStructsProvider, actualizer SyncActualizerFactory) (ap IAppPartitions, cleanup func(), err error) {
-	return newAppPartitions(structs, actualizer)
+	return newAppPartitions(structs, actualizer, iextengine.ExtensionEngineFactories{})
+}
+
+func NewWithActualizerWithExtEnginesFactories(structs istructs.IAppStructsProvider, actualizer SyncActualizerFactory,
+	eef iextengine.ExtensionEngineFactories) (ap IAppPartitions, cleanup func(), err error) {
+	return newAppPartitions(structs, actualizer, eef)
 }
