@@ -285,6 +285,8 @@ var defaultACL = ACL{
 				qNameQryGetLocationDailyUPReport,
 				// https://dev.untill.com/projects/#!653069
 				qNameCmdVoidUntillPayment,
+				// https://dev.untill.com/projects/#!683625
+				qNameQryCreateTap2PaySession,
 			},
 			principalsPattern: [][]iauthnz.Principal{
 				{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleUntillPaymentsUser}},
