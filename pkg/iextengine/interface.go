@@ -52,7 +52,7 @@ type IExtensionEngine interface {
 	Close(ctx context.Context)
 }
 
-type IExtensionEngineFactories map[appdef.ExtensionEngineKind]IExtensionEngineFactory
+type ExtensionEngineFactories map[appdef.ExtensionEngineKind]IExtensionEngineFactory
 
 type ExtQName struct {
 	PackagePath string
