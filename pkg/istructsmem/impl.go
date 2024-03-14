@@ -140,18 +140,19 @@ func (app *appStructsType) AppQName() istructs.AppQName {
 	return app.config.Name
 }
 
+func (app *appStructsType) AppTokens() istructs.IAppTokens {
+	return app.appTokens
+}
+
+// istructs.IAppStructs.AsyncProjectors
+func (app *appStructsType) AsyncProjectors() istructs.Projectors {
+	return app.config.AsyncProjectors()
+}
+
 // IAppStructs.Buckets() - wrong, import cycle between istructs and irates
 // so let's add simple method to use it at utils.IBucketsFromIAppStructs()
 func (app *appStructsType) Buckets() irates.IBuckets {
 	return app.buckets
-}
-
-func (app *appStructsType) SyncProjectors() istructs.Projectors {
-	return app.config.syncProjectors
-}
-
-func (app *appStructsType) AsyncProjectors() istructs.Projectors {
-	return app.config.asyncProjectors
 }
 
 func (app *appStructsType) CUDValidators() []istructs.CUDValidator {
@@ -160,14 +161,6 @@ func (app *appStructsType) CUDValidators() []istructs.CUDValidator {
 
 func (app *appStructsType) EventValidators() []istructs.EventValidator {
 	return app.config.eventValidators
-}
-
-func (app *appStructsType) WSAmount() istructs.AppWSAmount {
-	return app.appWSAmount
-}
-
-func (app *appStructsType) AppTokens() istructs.IAppTokens {
-	return app.appTokens
 }
 
 func (app *appStructsType) IsFunctionRateLimitsExceeded(funcQName appdef.QName, wsid istructs.WSID) bool {
@@ -194,6 +187,15 @@ func (app *appStructsType) IsFunctionRateLimitsExceeded(funcQName appdef.QName, 
 		keys = append(keys, key)
 	}
 	return !app.buckets.TakeTokens(keys, 1)
+}
+
+// istructs.IAppStructs.SyncProjectors
+func (app *appStructsType) SyncProjectors() istructs.Projectors {
+	return app.config.SyncProjectors()
+}
+
+func (app *appStructsType) WSAmount() istructs.AppWSAmount {
+	return app.appWSAmount
 }
 
 func (app *appStructsType) describe() *descr.Application {
