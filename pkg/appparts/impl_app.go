@@ -7,6 +7,7 @@ package appparts
 
 import (
 	"context"
+	"errors"
 	"sync"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -58,13 +59,20 @@ func newApplication(apps *apps, name istructs.AppQName, partsCount int) *app {
 	}
 }
 
-func (a *app) deploy(def appdef.IAppDef, structs istructs.IAppStructs, engines [cluster.ProcessorKind_Count]int) {
+func (a *app) deploy(def appdef.IAppDef, structs istructs.IAppStructs, numEngines [cluster.ProcessorKind_Count]int) {
 	a.def = def
 	a.structs = structs
-	for k, cnt := range engines {
+
+	ctx := context.Background()
+	for k, cnt := range numEngines {
+		// TODO: add support for WASM engine
+		extEngines, err := a.apps.extEngineFactories[appdef.ExtensionEngineKind_BuiltIn].New(ctx, []iextengine.ExtensionPackage{}, nil, cnt)
+		if err != nil {
+			panic(err)
+		}
 		ee := make([]*engine, cnt)
 		for i := 0; i < cnt; i++ {
-			ee[i] = newEngine(nil, cluster.ProcessorKind(k))
+			ee[i] = newEngine(extEngines[i], cluster.ProcessorKind(k))
 		}
 		a.engines[k] = pool.New(ee)
 	}
@@ -121,6 +129,16 @@ func newPartitionRT(part *partition) *partitionRT {
 func (rt *partitionRT) App() istructs.AppQName           { return rt.part.app.name }
 func (rt *partitionRT) AppStructs() istructs.IAppStructs { return rt.appStructs }
 func (rt *partitionRT) ID() istructs.PartitionID         { return rt.part.id }
+
+func (rt *partitionRT) Invoke(ctx context.Context, name appdef.QName, state istructs.IState, intents istructs.IIntents) error {
+	// io := iextengine.NewExtensionIO(state, intents, rt.appDef, rt.appStructs)
+	// extName := rt.app.appDef.FullQName(name)
+	// if extName = appdef.NullFullQName {
+	//    return undefinedExtension(name)
+	// }
+	// return rt.borrowed.Invoke(ctx, extName, io)
+	return errors.ErrUnsupported
+}
 
 func (rt *partitionRT) Release() {
 	if e := rt.borrowed; e != nil {

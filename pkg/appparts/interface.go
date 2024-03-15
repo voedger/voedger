@@ -22,7 +22,7 @@ type IAppPartitions interface {
 	// partsCount - total partitions count for the application.
 	//
 	// If application with the same name exists, then its definition will be updated.
-	DeployApp(name istructs.AppQName, def appdef.IAppDef, partsCount int, engines [cluster.ProcessorKind_Count]int)
+	DeployApp(name istructs.AppQName, def appdef.IAppDef, partsCount int, numEngines [cluster.ProcessorKind_Count]int)
 
 	// Deploys new partitions for specified application or update existing.
 	//
@@ -61,4 +61,7 @@ type IAppPartition interface {
 	Release()
 
 	DoSyncActualizer(ctx context.Context, work interface{}) (err error)
+
+	// Invoke extension engine.
+	Invoke(ctx context.Context, name appdef.QName, state istructs.IState, intents istructs.IIntents) error
 }
