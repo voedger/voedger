@@ -119,12 +119,6 @@ func (s *cachedAppStorage) Get(pKey []byte, cCols []byte, data *[]byte) (ok bool
 		s.mGetCachedTotal.Increase(1.0)
 		return len(*data) != 0, nil
 	}
-	// if logger.IsVerbose() {
-	// 	stack := string(debug.Stack())
-	// 	logger.Verbose(stack)
-	// 	qNameID := binary.BigEndian.Uint16(pKey)
-	// 	logger.Verbose(fmt.Sprintf("missed cache by QNameID = %d", qNameID))
-	// }
 	ok, err = s.storage.Get(pKey, cCols, data)
 	if err != nil {
 		return false, err
@@ -184,6 +178,14 @@ func (s *cachedAppStorage) Read(ctx context.Context, pKey []byte, startCCols, fi
 	s.mReadTotal.Increase(1.0)
 
 	return s.storage.Read(ctx, pKey, startCCols, finishCCols, cb)
+}
+
+func (s *cachedAppStorage) SetTestDelayGet(delay time.Duration) {
+	s.storage.(istorage.IStorageDelaySetter).SetTestDelayGet(delay)
+}
+
+func (s *cachedAppStorage) SetTestDelayPut(delay time.Duration) {
+	s.storage.(istorage.IStorageDelaySetter).SetTestDelayPut(delay)
 }
 
 func makeKey(pKey []byte, cCols []byte) (res []byte) {

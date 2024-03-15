@@ -8,6 +8,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 	"unicode"
 
 	"github.com/google/uuid"
@@ -105,4 +106,10 @@ func getUUID() string {
 // TODO: remove it
 func NewTestSafeName(appName string) SafeAppName {
 	return SafeAppName{appName}
+}
+
+// used in tests only
+type IStorageDelaySetter interface {
+	SetTestDelayGet(time.Duration)
+	SetTestDelayPut(time.Duration)
 }

@@ -9,6 +9,7 @@ import (
 	"context"
 	"sort"
 	"sync"
+	"time"
 
 	"github.com/voedger/voedger/pkg/istorage"
 )
@@ -34,13 +35,18 @@ func (s *appStorageFactory) Init(appName istorage.SafeAppName) error {
 }
 
 type appStorage struct {
-	storage map[string]map[string][]byte
-	lock    sync.RWMutex
+	storage      map[string]map[string][]byte
+	lock         sync.RWMutex
+	testDelayGet time.Duration // used in tests only
+	testDelayPut time.Duration // used in tests only
 }
 
 func (s *appStorage) Put(pKey []byte, cCols []byte, value []byte) (err error) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
+	if s.testDelayPut > 0 {
+		time.Sleep(s.testDelayPut)
+	}
 	p := s.storage[string(pKey)]
 	if p == nil {
 		p = make(map[string][]byte)
@@ -134,6 +140,9 @@ func (s *appStorage) Read(ctx context.Context, pKey []byte, startCCols, finishCC
 func (s *appStorage) Get(pKey []byte, cCols []byte, data *[]byte) (ok bool, err error) {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
+	if s.testDelayGet > 0 {
+		time.Sleep(s.testDelayGet)
+	}
 	p, ok := s.storage[string(pKey)]
 	if !ok {
 		return
@@ -160,4 +169,16 @@ func copySlice(src []byte) []byte {
 	dst := make([]byte, len(src))
 	copy(dst, src)
 	return dst
+}
+
+func (s *appStorage) SetTestDelayGet(delay time.Duration) {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+	s.testDelayGet = delay
+}
+
+func (s *appStorage) SetTestDelayPut(delay time.Duration) {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+	s.testDelayPut = delay
 }

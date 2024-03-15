@@ -488,6 +488,40 @@ func (vit *VIT) CaptureEmail() (msg smtptest.Message) {
 	return
 }
 
+// sets delay on IAppStorage.Get() in mem implementation
+// will be automatically reset to 0 on TearDown
+func (vit *VIT) SetMemStorageGetDelay(delay time.Duration) {
+	vit.T.Helper()
+	vit.getStorageDelaySetter().SetTestDelayPut(delay)
+	vit.cleanups = append(vit.cleanups, func(vit *VIT) {
+		vit.getStorageDelaySetter().SetTestDelayPut(0)
+	})
+}
+
+// sets delay on IAppStorage.Put() in mem implementation
+// will be automatically reset to 0 on TearDown
+func (vit *VIT) SetMemStoragePutDelay(delay time.Duration) {
+	vit.T.Helper()
+	vit.getStorageDelaySetter().SetTestDelayPut(delay)
+	vit.cleanups = append(vit.cleanups, func(vit *VIT) {
+		vit.getStorageDelaySetter().SetTestDelayPut(0)
+	})
+}
+
+func (vit *VIT) getStorageDelaySetter() istorage.IStorageDelaySetter {
+	vit.T.Helper()
+	for anyAppQName := range vit.VVMAppsBuilder {
+		as, err := vit.AppStorage(anyAppQName)
+		require.NoError(vit.T, err)
+		delaySetter, ok := as.(istorage.IStorageDelaySetter)
+		if !ok {
+			vit.T.Fatal("IAppStorage implementation is not in-mem")
+		}
+		return delaySetter
+	}
+	panic("")
+}
+
 func (ts *timeService) now() time.Time {
 	ts.m.Lock()
 	res := ts.currentInstant
