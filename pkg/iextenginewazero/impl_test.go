@@ -118,7 +118,7 @@ func Test_BasicUsage(t *testing.T) {
 	appFunc := func() istructs.IAppStructs { return app }
 
 	// Create states for Command processor and Actualizer
-	actualizerState := state.ProvideAsyncActualizerStateFactory()(context.Background(), app, nil, state.SimpleWSIDFunc(ws), nil, nil, eventFunc, intentsLimit, bundlesLimit)
+	actualizerState := state.ProvideAsyncActualizerStateFactory()(context.Background(), appFunc, nil, state.SimpleWSIDFunc(ws), nil, nil, eventFunc, intentsLimit, bundlesLimit)
 	cmdProcState := state.ProvideCommandProcessorStateFactory()(context.Background(), appFunc, nil, state.SimpleWSIDFunc(ws), nil, cudFunc, nil, nil, intentsLimit, nil, argFunc, unloggedArgFunc)
 
 	// Create extension package from WASM
@@ -573,7 +573,8 @@ func Test_WithState(t *testing.T) {
 			appDef.AddPackage("pkg", "pkg")
 		},
 		func(cfg *istructsmem.AppConfigType) {})
-	state := state.ProvideAsyncActualizerStateFactory()(context.Background(), app, nil, state.SimpleWSIDFunc(ws), nil, nil, nil, intentsLimit, bundlesLimit)
+	appFunc := func() istructs.IAppStructs { return app }
+	state := state.ProvideAsyncActualizerStateFactory()(context.Background(), appFunc, nil, state.SimpleWSIDFunc(ws), nil, nil, nil, intentsLimit, bundlesLimit)
 
 	// build packages
 	moduleUrl := testModuleURL("./_testdata/basicusage/pkg.wasm")
@@ -640,7 +641,8 @@ func Test_StatePanic(t *testing.T) {
 			appDef.AddPackage("pkg", "pkg")
 		},
 		func(cfg *istructsmem.AppConfigType) {})
-	state := state.ProvideAsyncActualizerStateFactory()(context.Background(), app, nil, state.SimpleWSIDFunc(ws), nil, nil, nil, intentsLimit, bundlesLimit)
+	appFunc := func() istructs.IAppStructs { return app }
+	state := state.ProvideAsyncActualizerStateFactory()(context.Background(), appFunc, nil, state.SimpleWSIDFunc(ws), nil, nil, nil, intentsLimit, bundlesLimit)
 
 	const extname = "wrongFieldName"
 	const undefinedPackage = "undefinedPackage"

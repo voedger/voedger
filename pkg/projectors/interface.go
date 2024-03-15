@@ -28,7 +28,7 @@ type AsyncActualizerConf struct {
 	Ctx           context.Context
 	AppQName      istructs.AppQName
 	AppPartitions appparts.IAppPartitions
-	AppStructs    AppStructsFunc
+	AppStructs    state.AppStructsFunc
 	SecretReader  isecrets.ISecretReader
 	Partition     istructs.PartitionID
 	// Optional. Default value: `time.After`
@@ -54,8 +54,6 @@ type AsyncActualizerConf struct {
 	Opts    []state.ActualizerStateOptFunc
 }
 
-type AppStructsFunc func() istructs.IAppStructs
-
 type AsyncActualizerMetrics interface {
 	Increase(metricName string, partition istructs.PartitionID, projection appdef.QName, valueDelta float64)
 	Set(metricName string, partition istructs.PartitionID, projection appdef.QName, value float64)
@@ -63,7 +61,7 @@ type AsyncActualizerMetrics interface {
 
 type SyncActualizerConf struct {
 	Ctx          context.Context
-	AppStructs   AppStructsFunc
+	AppStructs   state.AppStructsFunc
 	SecretReader isecrets.ISecretReader
 	Partition    istructs.PartitionID
 	// Fork responsible for cloning work

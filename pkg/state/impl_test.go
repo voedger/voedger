@@ -114,6 +114,10 @@ type nilAppStructs struct {
 	istructs.IAppStructs
 }
 
+func nilAppStructsFunc() istructs.IAppStructs {
+	return &nilAppStructs{}
+}
+
 func (s *nilAppStructs) AppDef() appdef.IAppDef             { return nil }
 func (s *nilAppStructs) Events() istructs.IEvents           { return nil }
 func (s *nilAppStructs) Records() istructs.IRecords         { return nil }
@@ -278,11 +282,11 @@ func (s *mockStorage) Get(key istructs.IStateKeyBuilder) (value istructs.IStateV
 func (s *mockStorage) Read(key istructs.IStateKeyBuilder, callback istructs.ValueCallback) (err error) {
 	return s.Called(key, callback).Error(0)
 }
-func (s *mockStorage) ProvideValueBuilder(key istructs.IStateKeyBuilder, existingBuilder istructs.IStateValueBuilder) istructs.IStateValueBuilder {
-	return s.Called(key, existingBuilder).Get(0).(istructs.IStateValueBuilder)
+func (s *mockStorage) ProvideValueBuilder(key istructs.IStateKeyBuilder, existingBuilder istructs.IStateValueBuilder) (istructs.IStateValueBuilder, error) {
+	return s.Called(key, existingBuilder).Get(0).(istructs.IStateValueBuilder), nil
 }
-func (s *mockStorage) ProvideValueBuilderForUpdate(key istructs.IStateKeyBuilder, existingValue istructs.IStateValue, existingBuilder istructs.IStateValueBuilder) istructs.IStateValueBuilder {
-	return s.Called(key, existingValue, existingBuilder).Get(0).(istructs.IStateValueBuilder)
+func (s *mockStorage) ProvideValueBuilderForUpdate(key istructs.IStateKeyBuilder, existingValue istructs.IStateValue, existingBuilder istructs.IStateValueBuilder) (istructs.IStateValueBuilder, error) {
+	return s.Called(key, existingValue, existingBuilder).Get(0).(istructs.IStateValueBuilder), nil
 }
 func (s *mockStorage) Validate(items []ApplyBatchItem) (err error) {
 	return s.Called(items).Error(0)

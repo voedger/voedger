@@ -19,8 +19,7 @@ func TestHostState_BasicUsage(t *testing.T) {
 	require := require.New(t)
 
 	factory := ProvideQueryProcessorStateFactory()
-	appStructs := mockedHostStateStructs()
-	hostState := factory(context.Background(), appStructs, nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil, nil)
+	hostState := factory(context.Background(), mockedHostStateStructs, nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil, nil)
 
 	// Declare simple extension
 	extension := func(state istructs.IState) {
@@ -534,7 +533,7 @@ func TestHostState_ValidateIntents(t *testing.T) {
 		ms := &mockStorage{}
 		ms.
 			On("NewKeyBuilder", appdef.NullQName, nil).Return(newKeyBuilder(testStorage, appdef.NullQName)).
-			On("ProvideValueBuilder", mock.Anything, mock.Anything).Return(&viewValueBuilder{}).
+			On("ProvideValueBuilder", mock.Anything, mock.Anything).Return(&viewValueBuilder{}, nil).
 			On("Validate", mock.Anything).Return(nil)
 		s := hostStateForTest(ms)
 		kb, err := s.KeyBuilder(testStorage, appdef.NullQName)
@@ -558,7 +557,7 @@ func TestHostState_ValidateIntents(t *testing.T) {
 		ms := &mockStorage{}
 		ms.
 			On("NewKeyBuilder", appdef.NullQName, nil).Return(newKeyBuilder(testStorage, appdef.NullQName)).
-			On("ProvideValueBuilder", mock.Anything, mock.Anything).Return(&viewValueBuilder{}).
+			On("ProvideValueBuilder", mock.Anything, mock.Anything).Return(&viewValueBuilder{}, nil).
 			On("Validate", mock.Anything).Return(errTest)
 		s := hostStateForTest(ms)
 		kb, err := s.KeyBuilder(testStorage, appdef.NullQName)
@@ -576,7 +575,7 @@ func TestHostState_ApplyIntents(t *testing.T) {
 		ms := &mockStorage{}
 		ms.
 			On("NewKeyBuilder", appdef.NullQName, nil).Return(newKeyBuilder(testStorage, appdef.NullQName)).
-			On("ProvideValueBuilder", mock.Anything, mock.Anything).Return(&viewValueBuilder{}).
+			On("ProvideValueBuilder", mock.Anything, mock.Anything).Return(&viewValueBuilder{}, nil).
 			On("ApplyBatch", mock.Anything).Return(nil)
 		s := hostStateForTest(ms)
 		kb, err := s.KeyBuilder(testStorage, appdef.NullQName)
@@ -592,7 +591,7 @@ func TestHostState_ApplyIntents(t *testing.T) {
 		ms := &mockStorage{}
 		ms.
 			On("NewKeyBuilder", appdef.NullQName, nil).Return(newKeyBuilder(testStorage, appdef.NullQName)).
-			On("ProvideValueBuilder", mock.Anything, mock.Anything).Return(&viewValueBuilder{}).
+			On("ProvideValueBuilder", mock.Anything, mock.Anything).Return(&viewValueBuilder{}, nil).
 			On("ApplyBatch", mock.Anything).Return(errTest)
 		s := hostStateForTest(ms)
 		kb, err := s.KeyBuilder(testStorage, appdef.NullQName)
@@ -611,7 +610,7 @@ func hostStateForTest(s IStateStorage) IHostState {
 	return hs
 }
 func emptyHostStateForTest(s IStateStorage) (istructs.IState, istructs.IIntents) {
-	bs := ProvideQueryProcessorStateFactory()(context.Background(), &nilAppStructs{}, nil, nil, nil, nil, nil, nil).(*hostState)
+	bs := ProvideQueryProcessorStateFactory()(context.Background(), nilAppStructsFunc, nil, nil, nil, nil, nil, nil).(*hostState)
 	bs.addStorage(testStorage, s, math.MinInt)
 	return bs, bs
 }

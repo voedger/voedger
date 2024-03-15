@@ -65,7 +65,7 @@ func newSyncBranch(conf SyncActualizerConf, projectorFactory istructs.ProjectorF
 	pipelineName := fmt.Sprintf("[%d] %s", conf.Partition, projector.Name)
 	s = state.ProvideSyncActualizerStateFactory()(
 		conf.Ctx,
-		conf.AppStructs(),
+		conf.AppStructs,
 		state.SimplePartitionIDFunc(conf.Partition),
 		service.getWSID,
 		conf.N10nFunc,

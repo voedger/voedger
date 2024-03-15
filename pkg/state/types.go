@@ -33,9 +33,9 @@ type PLogEventFunc func() istructs.IPLogEvent
 type ArgFunc func() istructs.IObject
 type UnloggedArgFunc func() istructs.IObject
 type CommandProcessorStateFactory func(ctx context.Context, appStructsFunc AppStructsFunc, partitionIDFunc PartitionIDFunc, wsidFunc WSIDFunc, secretReader isecrets.ISecretReader, cudFunc CUDFunc, principalPayloadFunc PrincipalsFunc, tokenFunc TokenFunc, intentsLimit int, cmdResultBuilderFunc CmdResultBuilderFunc, argFunc ArgFunc, unloggedArgFunc UnloggedArgFunc) IHostState
-type SyncActualizerStateFactory func(ctx context.Context, appStructs istructs.IAppStructs, partitionIDFunc PartitionIDFunc, wsidFunc WSIDFunc, n10nFunc N10nFunc, secretReader isecrets.ISecretReader, eventFunc PLogEventFunc, intentsLimit int) IHostState
-type QueryProcessorStateFactory func(ctx context.Context, appStructs istructs.IAppStructs, partitionIDFunc PartitionIDFunc, wsidFunc WSIDFunc, secretReader isecrets.ISecretReader, principalPayloadFunc PrincipalsFunc, tokenFunc TokenFunc, argFunc ArgFunc) IHostState
-type AsyncActualizerStateFactory func(ctx context.Context, appStructs istructs.IAppStructs, partitionIDFunc PartitionIDFunc, wsidFunc WSIDFunc, n10nFunc N10nFunc, secretReader isecrets.ISecretReader, eventFunc PLogEventFunc, intentsLimit, bundlesLimit int,
+type SyncActualizerStateFactory func(ctx context.Context, appStructsFunc AppStructsFunc, partitionIDFunc PartitionIDFunc, wsidFunc WSIDFunc, n10nFunc N10nFunc, secretReader isecrets.ISecretReader, eventFunc PLogEventFunc, intentsLimit int) IHostState
+type QueryProcessorStateFactory func(ctx context.Context, appStructsFunc AppStructsFunc, partitionIDFunc PartitionIDFunc, wsidFunc WSIDFunc, secretReader isecrets.ISecretReader, principalPayloadFunc PrincipalsFunc, tokenFunc TokenFunc, argFunc ArgFunc) IHostState
+type AsyncActualizerStateFactory func(ctx context.Context, appStructsFunc AppStructsFunc, partitionIDFunc PartitionIDFunc, wsidFunc WSIDFunc, n10nFunc N10nFunc, secretReader isecrets.ISecretReader, eventFunc PLogEventFunc, intentsLimit, bundlesLimit int,
 	opts ...ActualizerStateOptFunc) IBundledHostState
 
 type eventsFunc func() istructs.IEvents
@@ -833,4 +833,54 @@ func (c *resultValueBuilder) PutNumber(name string, value float64) {
 }
 func (c *resultValueBuilder) PutRecordID(name string, value istructs.RecordID) {
 	c.resultBuilder.PutRecordID(name, value)
+}
+
+type wsTypeVailidator struct {
+	appStructsFunc AppStructsFunc
+	wsidQNames     map[istructs.WSID]appdef.QName
+}
+
+func newWsTypeValidator(appStructsFunc AppStructsFunc) wsTypeVailidator {
+	return wsTypeVailidator{
+		appStructsFunc: appStructsFunc,
+		wsidQNames:     make(map[istructs.WSID]appdef.QName),
+	}
+}
+
+// Returns NullQName if not found
+func (s *wsTypeVailidator) getWSIDQName(wsid istructs.WSID) (appdef.QName, error) {
+	qname, ok := s.wsidQNames[wsid]
+	if !ok {
+		wsDesc, err := s.appStructsFunc().Records().GetSingleton(wsid, qNameCDocWorkspaceDescriptor)
+		if err != nil {
+			// notest
+			return appdef.NullQName, err
+		}
+		qname = wsDesc.QName()
+		if len(s.wsidQNames) < wsidTypeValidatorCacheSize {
+			s.wsidQNames[wsid] = qname
+		}
+	}
+	return qname, nil
+}
+
+func (v *wsTypeVailidator) validate(wsid istructs.WSID, entity appdef.QName) error {
+	if wsid != istructs.NullWSID { // NullWSID only stores actualizer offsets
+		wsQname, err := v.getWSIDQName(wsid)
+		if err != nil {
+			// notest
+			return err
+		}
+		if wsQname == appdef.NullQName {
+			return fmt.Errorf("%w: %d", errWorkspaceNotFound, wsid)
+		}
+		ws := v.appStructsFunc().AppDef().Workspace(wsQname)
+		if ws == nil {
+			return fmt.Errorf("%w: %s", errWorkspaceUndefined, wsQname.String())
+		}
+		if ws.TypeByName(entity) == nil {
+			return typeIsNotDefinedInWorkspace(entity, wsQname)
+		}
+	}
+	return nil
 }

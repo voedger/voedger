@@ -104,10 +104,10 @@ func (s *recordsStorage) GetBatch(items []GetBatchItem) (err error) {
 }
 func (s *recordsStorage) Validate([]ApplyBatchItem) (err error)   { return }
 func (s *recordsStorage) ApplyBatch([]ApplyBatchItem) (err error) { return }
-func (s *recordsStorage) ProvideValueBuilder(key istructs.IStateKeyBuilder, _ istructs.IStateValueBuilder) istructs.IStateValueBuilder {
+func (s *recordsStorage) ProvideValueBuilder(key istructs.IStateKeyBuilder, _ istructs.IStateValueBuilder) (istructs.IStateValueBuilder, error) {
 	rw := s.cudFunc().Create(key.(*recordsKeyBuilder).entity)
-	return &recordsValueBuilder{rw: rw}
+	return &recordsValueBuilder{rw: rw}, nil
 }
-func (s *recordsStorage) ProvideValueBuilderForUpdate(_ istructs.IStateKeyBuilder, existingValue istructs.IStateValue, _ istructs.IStateValueBuilder) istructs.IStateValueBuilder {
-	return &recordsValueBuilder{rw: s.cudFunc().Update(existingValue.AsRecord(""))}
+func (s *recordsStorage) ProvideValueBuilderForUpdate(_ istructs.IStateKeyBuilder, existingValue istructs.IStateValue, _ istructs.IStateValueBuilder) (istructs.IStateValueBuilder, error) {
+	return &recordsValueBuilder{rw: s.cudFunc().Update(existingValue.AsRecord(""))}, nil
 }

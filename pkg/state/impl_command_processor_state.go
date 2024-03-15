@@ -16,11 +16,7 @@ func implProvideCommandProcessorState(ctx context.Context, appStructsFunc AppStr
 	tokenFunc TokenFunc, intentsLimit int, cmdResultBuilderFunc CmdResultBuilderFunc, argFunc ArgFunc, unloggedArgFunc UnloggedArgFunc) IHostState {
 	bs := newHostState("CommandProcessor", intentsLimit, appStructsFunc)
 
-	bs.addStorage(View, &viewRecordsStorage{
-		ctx:             ctx,
-		viewRecordsFunc: func() istructs.IViewRecords { return appStructsFunc().ViewRecords() },
-		wsidFunc:        wsidFunc,
-	}, S_GET|S_GET_BATCH)
+	bs.addStorage(View, newViewRecordsStorage(ctx, appStructsFunc, wsidFunc, nil), S_GET|S_GET_BATCH)
 
 	bs.addStorage(Record, &recordsStorage{
 		recordsFunc: func() istructs.IRecords { return appStructsFunc().Records() },
