@@ -21,15 +21,13 @@ const (
 
 package orm
 
-import exttinygo "github.com/voedger/exttinygo"
+import "github.com/voedger/voedger/pkg/exttinygo"
 
 type QName = string
-
 type Ref int64
-
 func (r Ref) ID() ID { return ID(r) }
-
 type ID int64
+type Bytes []byte
 
 const (
 	FieldNameEventArgumentObject = "ArgumentObject"
@@ -45,7 +43,6 @@ func (t *Type) QName() QName {
 }
 
 type Event struct{}
-
 type Value_CommandContext struct{ tv exttinygo.TValue }
 
 func CommandContext() Value_CommandContext {
@@ -53,6 +50,6 @@ func CommandContext() Value_CommandContext {
 	return Value_CommandContext{tv: exttinygo.MustGetValue(kb)}
 }
 `
-	unknownFieldType  = "unknown"
-	unknownObjectType = "Unknown"
+	unknownType     = "Unknown"
+	exttinygoImport = "\"github.com/voedger/voedger/pkg/exttinygo\""
 )

@@ -6,15 +6,15 @@
 
 package orm
 {{range .Imports}}
-{{.}}
+import {{.}}
 {{end}}
 
 // package variables
 var Package_{{.Name}} = struct {
 {{range .Items}}{{.Type}}_{{.Name}} {{.Type}}_{{$.Name}}_{{.Name}}
 {{end}}
-}{
-{{range .Items}}{{.Type}}_{{.Name}}: {{.Type}}_{{$.Name}}_{{.Name}}{
+}{  {{range .Items}}
+    {{.Type}}_{{.Name}}: {{.Type}}_{{$.Name}}_{{.Name}}{
         Type: Type{qname: "{{.TypeQName}}"},
     },{{end}}
 }

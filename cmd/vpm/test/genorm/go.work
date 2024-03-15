@@ -4,5 +4,4 @@ use (
 	./mypkg1
 	./mypkg2
 	./app
-	../../../../staging/src/github.com/voedger/exttinygo
 )

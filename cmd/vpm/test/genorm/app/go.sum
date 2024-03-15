@@ -167,6 +167,8 @@ github.com/voedger/exttinygo v0.0.0-20240217175805-b6b68f2dda03 h1:HHxRKzJTMK4D9
 github.com/voedger/exttinygo v0.0.0-20240217175805-b6b68f2dda03/go.mod h1:oZJZ6vpm6f6mX1YH4Lz7sREDaBI/UUPqDLLMC+37UMw=
 github.com/voedger/voedger v0.0.0-20240221154408-4b495284da45 h1:XeiWk2kaOau54KGyEWtVMu07XVXFMFyYTn4iBhNriXM=
 github.com/voedger/voedger v0.0.0-20240221154408-4b495284da45/go.mod h1:bPQrnsbJnz73cGQ8dp4KHnHxv2TFfMvubZNBG+F5WMc=
+github.com/voedger/voedger v0.0.0-20240315095646-3b8ad52c913b h1:wYAYA75VAWVQ14rSvNgTuSfJ/WkNHSiuVSt2QFdVH4M=
+github.com/voedger/voedger v0.0.0-20240315095646-3b8ad52c913b/go.mod h1:un5eZGaXYzKyzqaN42eQuKOpR+FdW+jDxq8FQ7XfY34=
 github.com/wneessen/go-mail v0.3.9 h1:Q4DbCk3htT5DtDWKeMgNXCiHc4bBY/vv/XQPT6XDXzc=
 github.com/wneessen/go-mail v0.3.9/go.mod h1:zxOlafWCP/r6FEhAaRgH4IC1vg2YXxO0Nar9u0IScZ8=
 go.opencensus.io v0.18.0/go.mod h1:vKdFvxhtzZ9onBp9VKHK8z/sRpBMnKAsufL7wlDrCOA=

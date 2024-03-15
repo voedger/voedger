@@ -1,18 +1,24 @@
 {{define "item"}}
 
-// package items
+/*
+{{.SqlContent}}
+*/
 type {{.Type}}_{{.Package.Name}}_{{.Name}} struct {
     Type
 }
 
+{{if and (ne .Type "Command") (ne .Type "Query")}}
 type Value_{{.Type}}_{{.Package.Name}}_{{.Name}} struct{
     tv exttinygo.TValue
-	{{if or (eq .Type "WDoc") (eq .Type "View")}}kb exttinygo.TKeyBuilder{{end}}
+	{{if or (eq .Type "WDoc") (eq .Type "View") (eq .Type "WSingleton")}}kb exttinygo.TKeyBuilder{{end}}
 }
+{{end}}
 
+{{if and (ne .Type "Command") (ne .Type "Query")}}
 type Intent_{{.Type}}_{{.Package.Name}}_{{.Name}} struct{
 	intent exttinygo.TIntent
 }
+{{end}}
 
 {{template "fields" .}}
 

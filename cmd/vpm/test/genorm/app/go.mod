@@ -2,9 +2,7 @@ module app
 
 go 1.21.6
 
-require (
-	github.com/voedger/voedger v0.0.0-20240221154408-4b495284da45
-)
+require github.com/voedger/voedger v0.0.0-20240315095646-3b8ad52c913b
 
 require (
 	github.com/alecthomas/participle/v2 v2.1.1 // indirect

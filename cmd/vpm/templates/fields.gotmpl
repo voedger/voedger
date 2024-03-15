@@ -1,11 +1,23 @@
 {{define "fields"}}
 
+{{if or (eq .Type "View") (eq .Type "WDoc") (eq .Type "ODoc") (eq .Type "CDoc") (eq .Type "WSingletone") (eq .Type "Object")}}
 {{if .Fields}}
+
 {{range .Fields}}
 func (v Value_{{.Table.Type}}_{{.Table.Package.Name}}_{{.Table.Name}}) {{.GetMethodName}}() {{.Type}} {
-    return v.tv.As{{capitalize .Type}}("{{.Name}}")
+	{{if eq .Type "Ref"}}return Ref(v.tv.AsInt64("{{.Name}}")){{else}}return v.tv.As{{capitalize .Type}}("{{.Name}}"){{end}}
+}
+{{end}}
+
+{{if or (eq .Type "View") (eq .Type "WDoc")}}
+{{range .Fields}}
+func (i Intent_{{.Table.Type}}_{{.Table.Package.Name}}_{{.Table.Name}}) {{.SetMethodName}}(value {{.Type}}) Intent_{{.Table.Type}}_{{.Table.Package.Name}}_{{.Table.Name}} {
+	{{if eq .Type "Ref"}}i.intent.PutInt64("{{.Name}}", int64(value)){{else}}i.intent.Put{{capitalize .Type}}("{{.Name}}", value){{end}}
+	return i
 }
 {{end}}
 {{end}}
 
+{{end}}
+{{end}}
 {{end}}

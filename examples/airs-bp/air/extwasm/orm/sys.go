@@ -11,6 +11,8 @@ type QName = string
 
 type Ref int64
 
+type Bytes []byte
+
 func (r Ref) ID() ID { return ID(r) }
 
 type ID int64

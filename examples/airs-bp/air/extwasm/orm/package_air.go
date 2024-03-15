@@ -35,7 +35,8 @@ type Command_air_Pbill struct {
 }
 
 // !!! ArgumentObject result type is defined by the  command statement
-// 	COMMAND Pbill(untill.pbill) RETURNS CmdPBillResult;
+//
+//	COMMAND Pbill(untill.pbill) RETURNS CmdPBillResult;
 func (c Command_air_Pbill) ArgumentObject() Value_ODoc_untill_pbill {
 
 	// !!! return host["StorageCommandContext]["ArgumentObject"]
