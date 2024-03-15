@@ -50,7 +50,6 @@ import (
 	queryprocessor "github.com/voedger/voedger/pkg/processors/query"
 	"github.com/voedger/voedger/pkg/projectors"
 	"github.com/voedger/voedger/pkg/state"
-	"github.com/voedger/voedger/pkg/sys/builtin"
 	"github.com/voedger/voedger/pkg/sys/invite"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 	dbcertcache "github.com/voedger/voedger/pkg/vvm/db_cert_cache"
@@ -500,7 +499,7 @@ func provideAsyncActualizersFactory(appParts appparts.IAppPartitions, appStructs
 			Partition:     partitionID,
 			Broker:        n10nBroker,
 			Opts:          opts,
-			IntentsLimit:  builtin.MaxCUDs,
+			IntentsLimit:  projectors.DefaultIntentsLimit,
 			FlushInterval: actualizerFlushInterval,
 			Metrics:       metrics,
 		}
