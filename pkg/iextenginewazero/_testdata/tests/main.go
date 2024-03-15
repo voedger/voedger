@@ -6,8 +6,8 @@
 package main
 
 import (
-	ext "github.com/voedger/exttinygo"
-	require "github.com/voedger/exttinygo/require"
+	ext "github.com/voedger/voedger/pkg/exttinygo"
+	require "github.com/voedger/voedger/pkg/exttinygo/require"
 )
 
 type expVal struct {

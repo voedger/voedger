@@ -26,9 +26,8 @@ func queryValueImpl(key TKeyBuilder) (TValue, bool) {
 	id := hostQueryValue(uint64(key))
 	if id != maxUint {
 		return TValue(id), true
-	} else {
-		return TValue(0), false
 	}
+	return TValue(0), false
 }
 
 func mustGetValueImpl(key TKeyBuilder) TValue {

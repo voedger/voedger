@@ -11,7 +11,7 @@
 package main
 
 import (
-	ext "github.com/voedger/exttinygo"
+	ext "github.com/voedger/voedger/pkg/exttinygo"
 )
 
 //export exampleExtension
