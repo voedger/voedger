@@ -77,6 +77,8 @@ func (app *appDef) Extensions(cb func(e IExtension)) {
 	})
 }
 
+func (app appDef) FullQName(name QName) FullQName { return app.packages.fullQName(name) }
+
 func (app *appDef) GDoc(name QName) IGDoc {
 	if t := app.typeByKind(name, TypeKind_GDoc); t != nil {
 		return t.(IGDoc)
@@ -90,6 +92,8 @@ func (app *appDef) GRecord(name QName) IGRecord {
 	}
 	return nil
 }
+
+func (app appDef) LocalQName(name FullQName) QName { return app.packages.localQName(name) }
 
 func (app *appDef) Object(name QName) IObject {
 	if t := app.typeByKind(name, TypeKind_Object); t != nil {

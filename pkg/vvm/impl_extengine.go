@@ -69,10 +69,11 @@ func provideAppsBuiltInExtFuncs(cfgs istructsmem.AppConfigsType) iextengine.Buil
 					panic(fmt.Errorf("application «%v»: %v implementation not found", app, ext))
 				}
 
-				extName := iextengine.ExtQName{
-					PackagePath: cfg.AppDef.PackageFullPath(name.Pkg()),
-					ExtName:     ext.Name(),
+				extName := cfg.AppDef.FullQName(name)
+				if extName == appdef.NullFullQName {
+					panic(fmt.Errorf("application «%v»: package %v full path is unknown", app, name.Pkg()))
 				}
+
 				funcs[extName] = fn
 			})
 	}

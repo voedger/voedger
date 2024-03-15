@@ -9,6 +9,7 @@ package appdef
 type IAppDef interface {
 	IComment
 	IWithTypes
+	IWithPackages
 
 	// Returns package path by package local name.
 	//
@@ -148,16 +149,7 @@ type IAppDef interface {
 
 type IAppDefBuilder interface {
 	ICommentBuilder
-
-	// Adds new package with specified local name and path.
-	//
-	// # Panics:
-	//   - if local name is empty,
-	//   - if local name is invalid,
-	//   - if package with local name already exists,
-	//   - if path is empty,
-	//   - if package with path already exists.
-	AddPackage(localName, path string) IAppDefBuilder
+	IPackagesBuilder
 
 	// Adds new data type with specified name and kind.
 	//

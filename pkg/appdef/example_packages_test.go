@@ -17,8 +17,8 @@ func ExampleIAppDefBuilder_AddPackage() {
 	{
 		appDef := appdef.New()
 
-		appDef.AddPackage("test", "test/path")
-		appDef.AddPackage("example", "example/path")
+		appDef.AddPackage("test", "test.com/path")
+		appDef.AddPackage("example", "example.com/path")
 
 		if a, err := appDef.Build(); err == nil {
 			app = a
@@ -29,20 +29,25 @@ func ExampleIAppDefBuilder_AddPackage() {
 
 	// how to inspect builded AppDef with packages
 	{
-		fmt.Println(app.PackageLocalName("test/path"), app.PackageFullPath("test"))
-		fmt.Println(app.PackageLocalName("example/path"), app.PackageFullPath("example"))
+		fmt.Println(app.PackageLocalName("test.com/path"), app.PackageFullPath("test"))
+		fmt.Println(app.PackageLocalName("example.com/path"), app.PackageFullPath("example"))
 
 		fmt.Println(app.PackageLocalNames())
 
 		app.Packages(func(localName, fullPath string) {
 			fmt.Println(localName, fullPath)
 		})
+
+		fmt.Println(app.FullQName(appdef.NewQName("test", "name")))
+		fmt.Println(app.LocalQName(appdef.NewFullQName("example.com/path", "name")))
 	}
 
 	// Output:
-	// test test/path
-	// example example/path
+	// test test.com/path
+	// example example.com/path
 	// [example test]
-	// example example/path
-	// test test/path
+	// example example.com/path
+	// test test.com/path
+	// test.com/path.name
+	// example.name
 }
