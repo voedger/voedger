@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/iextengine"
 )
 
@@ -21,7 +22,7 @@ type extensionEngine struct {
 
 func (e extensionEngine) SetLimits(limits iextengine.ExtensionLimits) {}
 
-func (e extensionEngine) Invoke(ctx context.Context, extName iextengine.ExtQName, io iextengine.IExtensionIO) (err error) {
+func (e extensionEngine) Invoke(ctx context.Context, extName appdef.FullQName, io iextengine.IExtensionIO) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			err = fmt.Errorf("extension panic: %v", r)
