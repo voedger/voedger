@@ -146,12 +146,12 @@ func (app *appStructsType) Buckets() irates.IBuckets {
 	return app.buckets
 }
 
-func (app *appStructsType) SyncProjectors() []istructs.ProjectorFactory {
-	return app.config.syncProjectorFactories
+func (app *appStructsType) SyncProjectors() istructs.Projectors {
+	return app.config.syncProjectors
 }
 
-func (app *appStructsType) AsyncProjectors() []istructs.ProjectorFactory {
-	return app.config.asyncProjectorFactories
+func (app *appStructsType) AsyncProjectors() istructs.Projectors {
+	return app.config.asyncProjectors
 }
 
 func (app *appStructsType) CUDValidators() []istructs.CUDValidator {

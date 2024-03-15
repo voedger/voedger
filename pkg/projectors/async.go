@@ -54,7 +54,7 @@ type (
 // implements ServiceOperator
 type asyncActualizer struct {
 	conf         AsyncActualizerConf
-	factory      istructs.ProjectorFactory
+	projector    istructs.Projector
 	pipeline     pipeline.IAsyncPipeline
 	structs      istructs.IAppStructs
 	offset       istructs.Offset
@@ -146,19 +146,18 @@ func (a *asyncActualizer) init(ctx context.Context) (err error) {
 
 	a.readCtx.ctx, a.readCtx.cancel = context.WithCancel(ctx)
 
-	projector := a.factory(a.conf.Partition)
-	iProjector := a.structs.AppDef().Projector(projector.Name)
-	if iProjector == nil {
-		return fmt.Errorf("async projector %s is not defined in AppDef", projector.Name)
+	prjType := a.structs.AppDef().Projector(a.projector.Name)
+	if prjType == nil {
+		return fmt.Errorf("async projector %s is not defined in AppDef", a.projector.Name)
 	}
 
 	// https://github.com/voedger/voedger/issues/1048
-	hasIntentsExceptViewAndRecord, _ := iterate.FindFirst(iProjector.Intents().Enum, func(storage appdef.IStorage) bool {
+	hasIntentsExceptViewAndRecord, _ := iterate.FindFirst(prjType.Intents().Enum, func(storage appdef.IStorage) bool {
 		n := storage.Name()
 		return n != state.View && n != state.Record
 	})
 	// https://github.com/voedger/voedger/issues/1092
-	hasStatesExceptViewAndRecord, _ := iterate.FindFirst(iProjector.States().Enum, func(storage appdef.IStorage) bool {
+	hasStatesExceptViewAndRecord, _ := iterate.FindFirst(prjType.States().Enum, func(storage appdef.IStorage) bool {
 		n := storage.Name()
 		return n != state.View && n != state.Record
 	})
@@ -172,8 +171,8 @@ func (a *asyncActualizer) init(ctx context.Context) (err error) {
 		metrics:               a.conf.Metrics,
 		vvmName:               a.conf.VvmName,
 		appQName:              a.conf.AppQName,
-		projector:             projector,
-		iProjector:            iProjector,
+		projector:             a.projector,
+		iProjector:            prjType,
 		nonBuffered:           nonBuffered,
 	}
 

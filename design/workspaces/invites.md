@@ -146,6 +146,9 @@ stateDiagram-v2
 
     Inviter ->> workspace: c.sys.InitiateInvitationByEMail()
     activate workspace
+        opt cdoc.sys.Subject exists by login && cdoc.sys.Invite.State is !Cancelled & !Left (allow re-invite otherwise)
+            workspace -->> Inviter: subject already exists
+        end
         workspace ->> workspace: Create/Update cdoc.Invite, State=ToBeInvited, Login=args.Email, Email, Roles, ExpireDatetime
         note over workspace: Update if exists cdoc.Invite where Login == args.EMail
         workspace -->> Inviter: OK

@@ -90,8 +90,19 @@ func (s *viewRecordsStorage) ApplyBatch(items []ApplyBatchItem) (err error) {
 			nn[n10n{wsid: k.wsid, view: k.view}] = v.offset
 		}
 	}
+	var nullWsidBatch []istructs.ViewKV
 	for wsid, batch := range batches {
+		if wsid == istructs.NullWSID { // Actualizer offsets must be updated in the last order
+			nullWsidBatch = batch
+			continue
+		}
 		err = s.viewRecordsFunc().PutBatch(wsid, batch)
+		if err != nil {
+			return err
+		}
+	}
+	if len(nullWsidBatch) > 0 {
+		err = s.viewRecordsFunc().PutBatch(istructs.NullWSID, nullWsidBatch)
 		if err != nil {
 			return err
 		}

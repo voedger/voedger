@@ -19,10 +19,5 @@ func Provide(cfg *istructsmem.AppConfigType, ep extensionpoints.IExtensionPoint)
 	jp := ep.ExtensionPoint(EPJournalPredicates)
 	jp.AddNamed("all", func(schemas appdef.IWorkspace, qName appdef.QName) bool { return true }) // default predicate
 
-	cfg.AddAsyncProjectors(func(partition istructs.PartitionID) istructs.Projector {
-		return istructs.Projector{
-			Name: QNameProjectorWLogDates,
-			Func: wLogDatesProjector,
-		}
-	})
+	cfg.AddAsyncProjectors(istructs.Projector{Name: QNameProjectorWLogDates, Func: wLogDatesProjector})
 }

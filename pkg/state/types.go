@@ -114,25 +114,6 @@ func (b *logKeyBuilder) PutInt64(name string, value int64) {
 	}
 }
 
-type pLogKeyBuilder struct {
-	logKeyBuilder
-	partitionID istructs.PartitionID
-}
-
-func (b *pLogKeyBuilder) Storage() appdef.QName {
-	return PLog
-}
-
-func (b *pLogKeyBuilder) String() string {
-	return fmt.Sprintf("plog partitionID - %d, offset - %d, count - %d", b.partitionID, b.offset, b.count)
-}
-
-func (b *pLogKeyBuilder) PutInt32(name string, value int32) {
-	if name == Field_PartitionID {
-		b.partitionID = istructs.PartitionID(value)
-	}
-}
-
 type wLogKeyBuilder struct {
 	logKeyBuilder
 	wsid istructs.WSID

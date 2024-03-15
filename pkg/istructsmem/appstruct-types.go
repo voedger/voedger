@@ -54,24 +54,26 @@ type AppConfigType struct {
 
 	dynoSchemes *dynobuf.DynoBufSchemes
 
-	storage                 istorage.IAppStorage // will be initialized on prepare()
-	versions                *vers.Versions
-	qNames                  *qnames.QNames
-	cNames                  *containers.Containers
-	singletons              *singletons.Singletons
-	prepared                bool
-	app                     *appStructsType
-	FunctionRateLimits      functionRateLimits
-	syncProjectorFactories  []istructs.ProjectorFactory
-	asyncProjectorFactories []istructs.ProjectorFactory
-	cudValidators           []istructs.CUDValidator
-	eventValidators         []istructs.EventValidator
+	storage            istorage.IAppStorage // will be initialized on prepare()
+	versions           *vers.Versions
+	qNames             *qnames.QNames
+	cNames             *containers.Containers
+	singletons         *singletons.Singletons
+	prepared           bool
+	app                *appStructsType
+	FunctionRateLimits functionRateLimits
+	syncProjectors     istructs.Projectors
+	asyncProjectors    istructs.Projectors
+	cudValidators      []istructs.CUDValidator
+	eventValidators    []istructs.EventValidator
 }
 
 func newAppConfig(appName istructs.AppQName, appDef appdef.IAppDefBuilder) *AppConfigType {
 	cfg := AppConfigType{
-		Name:   appName,
-		Params: makeAppConfigParams(),
+		Name:            appName,
+		Params:          makeAppConfigParams(),
+		syncProjectors:  make(istructs.Projectors),
+		asyncProjectors: make(istructs.Projectors),
 	}
 
 	qNameID, ok := istructs.ClusterApps[appName]
@@ -160,33 +162,20 @@ func (cfg *AppConfigType) validateResources() error {
 				return fmt.Errorf("exec of func %s is not defined", tp.QName())
 			}
 		case appdef.TypeKind_Projector:
-			syncFound := false
-			asyncFound := false
-			for _, pFunc := range cfg.syncProjectorFactories {
-				p := pFunc(0)
-				if p.Name == tp.QName() {
-					syncFound = true
-					break
-				}
-			}
-			for _, pFunc := range cfg.asyncProjectorFactories {
-				p := pFunc(0)
-				if p.Name == tp.QName() {
-					asyncFound = true
-					break
-				}
-			}
+			prj := tp.(appdef.IProjector)
+			_, syncFound := cfg.syncProjectors[prj.QName()]
+			_, asyncFound := cfg.asyncProjectors[prj.QName()]
 			if !syncFound && !asyncFound {
-				return fmt.Errorf("exec of projector %s is not defined", tp.QName())
+				return fmt.Errorf("exec of %v is not defined", prj)
 			}
 			if syncFound && asyncFound {
-				return fmt.Errorf("exec of projector %s is defined twice: sync and async", tp.QName())
+				return fmt.Errorf("exec for %v is defined twice: sync and async", prj)
 			}
-			if tp.(appdef.IProjector).Sync() && asyncFound {
-				return fmt.Errorf("exec of sync projector %s is defined as async", tp.QName())
+			if prj.Sync() && asyncFound {
+				return fmt.Errorf("exec of %v is defined as async", prj)
 			}
-			if !tp.(appdef.IProjector).Sync() && syncFound {
-				return fmt.Errorf("exec of async projector %s is defined as sync", tp.QName())
+			if !prj.Sync() && syncFound {
+				return fmt.Errorf("exec of %v is defined as sync", prj)
 			}
 		}
 		return nil
@@ -203,27 +192,30 @@ func (cfg *AppConfigType) validateResources() error {
 	if err != nil {
 		return err
 	}
-	for _, pFunc := range cfg.asyncProjectorFactories {
-		p := pFunc(0)
-		if cfg.AppDef.Type(p.Name).Kind() == appdef.TypeKind_null {
-			return fmt.Errorf("exec of projector %s is defined but the projector is not defined in SQL", p.Name)
+
+	for _, prj := range cfg.syncProjectors {
+		if cfg.AppDef.TypeByName(prj.Name) == nil {
+			return fmt.Errorf("exec of sync projector %s is defined but the projector is not defined in SQL", prj.Name)
 		}
 	}
-	for _, pFunc := range cfg.syncProjectorFactories {
-		p := pFunc(0)
-		if cfg.AppDef.Type(p.Name).Kind() == appdef.TypeKind_null {
-			return fmt.Errorf("exec of projector %s is defined but the projector is not defined in SQL", p.Name)
+	for _, prj := range cfg.asyncProjectors {
+		if cfg.AppDef.TypeByName(prj.Name) == nil {
+			return fmt.Errorf("exec of async projector %s is defined but the projector is not defined in SQL", prj.Name)
 		}
 	}
 	return nil
 }
 
-func (cfg *AppConfigType) AddSyncProjectors(sp ...istructs.ProjectorFactory) {
-	cfg.syncProjectorFactories = append(cfg.syncProjectorFactories, sp...)
+func (cfg *AppConfigType) AddSyncProjectors(pp ...istructs.Projector) {
+	for _, p := range pp {
+		cfg.syncProjectors[p.Name] = p
+	}
 }
 
-func (cfg *AppConfigType) AddAsyncProjectors(ap ...istructs.ProjectorFactory) {
-	cfg.asyncProjectorFactories = append(cfg.asyncProjectorFactories, ap...)
+func (cfg *AppConfigType) AddAsyncProjectors(pp ...istructs.Projector) {
+	for _, p := range pp {
+		cfg.asyncProjectors[p.Name] = p
+	}
 }
 
 func (cfg *AppConfigType) AddCUDValidators(cudValidators ...istructs.CUDValidator) {

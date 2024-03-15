@@ -17,8 +17,7 @@ import (
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-func readRecords(wsid istructs.WSID, qName appdef.QName, expr sqlparser.Expr, appStructs istructs.IAppStructs, f *filter, callback istructs.ExecQueryCallback,
-	iws appdef.IWorkspace) error {
+func readRecords(wsid istructs.WSID, qName appdef.QName, expr sqlparser.Expr, appStructs istructs.IAppStructs, f *filter, callback istructs.ExecQueryCallback) error {
 	rr := make([]istructs.RecordGetBatchItem, 0)
 
 	findIDs := func(expr sqlparser.Expr) error {
@@ -94,7 +93,7 @@ func readRecords(wsid istructs.WSID, qName appdef.QName, expr sqlparser.Expr, ap
 			return fmt.Errorf("record with ID '%d' has mismatching QName '%s'", r.Record.ID(), r.Record.QName())
 		}
 
-		data := coreutils.FieldsToMap(r.Record, iws, getFilter(f.filter))
+		data := coreutils.FieldsToMap(r.Record, appStructs.AppDef(), getFilter(f.filter))
 		bb, e := json.Marshal(data)
 		if e != nil {
 			return e

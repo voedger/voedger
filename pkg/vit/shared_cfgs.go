@@ -189,16 +189,15 @@ func ProvideApp1(apis apps.APIs, cfg *istructsmem.AppConfigType, adf appdef.IApp
 		istructsmem.NullCommandExec,
 	))
 
-	cfg.AddAsyncProjectors(func(istructs.PartitionID) istructs.Projector {
-		return istructs.Projector{
+	cfg.AddAsyncProjectors(
+		istructs.Projector{
 			Name: appdef.NewQName(app1PkgName, "ProjDummy"),
-			Func: func(event istructs.IPLogEvent, state istructs.IState, intents istructs.IIntents) (err error) {
-				return nil
-			},
-		}
-	})
+			Func: func(istructs.IPLogEvent, istructs.IState, istructs.IIntents) (err error) { return nil },
+		},
+	)
 
 	cfg.Resources.Add(istructsmem.NewCommandFunction(appdef.NewQName(app1PkgName, "testCmd"), istructsmem.NullCommandExec))
+	cfg.Resources.Add(istructsmem.NewCommandFunction(appdef.NewQName(app1PkgName, "TestCmdRawArg"), istructsmem.NullCommandExec))
 
 	app1PackageFS := parser.PackageFS{
 		Path: "github.com/voedger/voedger/pkg/vit/app1pkg",

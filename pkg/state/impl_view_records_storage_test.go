@@ -189,3 +189,70 @@ func TestViewRecordsStorage_toJSON(_ *testing.T) {
 		On("AsQName", mock.Anything).Return(testViewRecordQName1)
 
 }
+
+func TestViewRecordsStorage_ApplyBatch_NullWSIDGoesLast(t *testing.T) {
+	require := require.New(t)
+
+	appDef := appdef.New()
+
+	appliedWSIDs := make([]istructs.WSID, 0)
+
+	view := appDef.AddView(testViewRecordQName1)
+	view.Key().PartKey().AddField("pkk", appdef.DataKind_int64)
+	view.Key().ClustCols().AddField("cck", appdef.DataKind_string)
+	view.Value().AddField("vk", appdef.DataKind_string, false)
+
+	viewRecords := &mockViewRecords{}
+	viewRecords.
+		On("KeyBuilder", testViewRecordQName1).Return(&nilKeyBuilder{}).
+		On("NewValueBuilder", testViewRecordQName1).Return(&nilValueBuilder{}).
+		On("PutBatch", mock.Anything, mock.Anything).Run(func(args mock.Arguments) {
+		appliedWSIDs = append(appliedWSIDs, args[0].(istructs.WSID))
+	}).
+		Return(nil)
+	appStructs := &mockAppStructs{}
+	appStructs.
+		On("AppDef").Return(appDef).
+		On("ViewRecords").Return(viewRecords).
+		On("Records").Return(&nilRecords{}).
+		On("Events").Return(&nilEvents{})
+
+	putViewRec := func(s IBundledHostState) {
+		kb, err := s.KeyBuilder(View, testViewRecordQName1)
+		require.NoError(err)
+		_, err = s.NewValue(kb)
+		require.NoError(err)
+	}
+
+	putOffset := func(s IBundledHostState) {
+		kb, err := s.KeyBuilder(View, testViewRecordQName1)
+		kb.PutInt64(Field_WSID, int64(istructs.NullWSID))
+		require.NoError(err)
+		_, err = s.NewValue(kb)
+		require.NoError(err)
+	}
+
+	applyAndFlush := func(s IBundledHostState) {
+		readyToFlush, err := s.ApplyIntents()
+		require.False(readyToFlush)
+		require.NoError(err)
+		err = s.FlushBundles()
+		require.NoError(err)
+	}
+
+	s := ProvideAsyncActualizerStateFactory()(context.Background(), appStructs, nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil, 10, 10)
+	putViewRec(s)
+	putViewRec(s)
+	putOffset(s)
+	applyAndFlush(s)
+	require.Len(appliedWSIDs, 2)
+	require.Equal(istructs.NullWSID, appliedWSIDs[1])
+
+	appliedWSIDs = appliedWSIDs[:0]
+	putOffset(s)
+	putViewRec(s)
+	putViewRec(s)
+	applyAndFlush(s)
+	require.Len(appliedWSIDs, 2)
+	require.Equal(istructs.NullWSID, appliedWSIDs[1])
+}

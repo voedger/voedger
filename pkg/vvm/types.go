@@ -36,15 +36,13 @@ type OperatorCommandProcessors pipeline.ISyncOperator
 type OperatorCommandProcessor pipeline.ISyncOperator
 type OperatorQueryProcessors pipeline.ISyncOperator
 type OperatorQueryProcessor pipeline.ISyncOperator
-type AppServiceFactory func(ctx context.Context, appQName istructs.AppQName, asyncProjectorFactories AsyncProjectorFactories, appPartsCount int) pipeline.ISyncOperator
-type AppPartitionFactory func(ctx context.Context, appQName istructs.AppQName, asyncProjectorFactories AsyncProjectorFactories, partitionID istructs.PartitionID) pipeline.ISyncOperator
-type AsyncActualizersFactory func(ctx context.Context, appQName istructs.AppQName, asyncProjectorFactories AsyncProjectorFactories, partitionID istructs.PartitionID, opts []state.ActualizerStateOptFunc) pipeline.ISyncOperator
+type AppServiceFactory func(ctx context.Context, appQName istructs.AppQName, asyncProjectors istructs.Projectors, appPartsCount int) pipeline.ISyncOperator
+type AppPartitionFactory func(ctx context.Context, appQName istructs.AppQName, asyncProjectors istructs.Projectors, partitionID istructs.PartitionID) pipeline.ISyncOperator
+type AsyncActualizersFactory func(ctx context.Context, appQName istructs.AppQName, asyncProjectors istructs.Projectors, partitionID istructs.PartitionID, opts []state.ActualizerStateOptFunc) pipeline.ISyncOperator
 type OperatorAppServicesFactory func(ctx context.Context) pipeline.ISyncOperator
 type CommandChannelFactory func(channelIdx int) commandprocessor.CommandChannel
 type QueryChannel iprocbus.ServiceChannel
 type RouterServiceOperator pipeline.ISyncOperator
-type AsyncProjectorFactories []istructs.ProjectorFactory
-type SyncProjectorFactories []istructs.ProjectorFactory
 type BlobberAppClusterID istructs.ClusterAppID
 type BlobStorage iblobstorage.IBLOBStorage
 type BlobAppStorage istorage.IAppStorage

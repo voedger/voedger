@@ -516,6 +516,8 @@ ALTERABLE WORKSPACE test_wsWS (
 
 		COMMAND CmdODocOne(odoc1);
 		COMMAND CmdODocTwo(odoc2, UNLOGGED odoc2);
+
+		COMMAND TestCmdRawArg(sys.Raw);
 		PROJECTOR ProjDummy AFTER INSERT ON (CRecord) INTENTS(View(View)); -- does nothing, only to define view.app1pkg.View
 	);
 );

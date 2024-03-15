@@ -10,12 +10,10 @@ import (
 	"github.com/voedger/voedger/pkg/state"
 )
 
-func provideSyncProjectorInviteIndexFactory() istructs.ProjectorFactory {
-	return func(partition istructs.PartitionID) istructs.Projector {
-		return istructs.Projector{
-			Name: qNameProjectorInviteIndex,
-			Func: inviteIndexProjector,
-		}
+func syncProjectorInviteIndex() istructs.Projector {
+	return istructs.Projector{
+		Name: qNameProjectorInviteIndex,
+		Func: inviteIndexProjector,
 	}
 }
 

@@ -34,12 +34,6 @@ func implProvideCommandProcessorState(ctx context.Context, appStructsFunc AppStr
 		wsidFunc:   wsidFunc,
 	}, S_GET)
 
-	bs.addStorage(PLog, &pLogStorage{
-		ctx:             ctx,
-		eventsFunc:      func() istructs.IEvents { return appStructsFunc().Events() },
-		partitionIDFunc: partitionIDFunc,
-	}, S_GET)
-
 	bs.addStorage(AppSecret, &appSecretsStorage{secretReader: secretReader}, S_GET)
 
 	bs.addStorage(RequestSubject, &subjectStorage{
