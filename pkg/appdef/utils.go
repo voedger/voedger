@@ -50,6 +50,7 @@ func ValidIdent(ident string) (bool, error) {
 }
 
 // TODO: implement
+// Parsing a URI Reference with a Regular Expression [RFC3986, app B](https://datatracker.ietf.org/doc/html/rfc3986#appendix-B)
 func ValidPackagePath(path string) (bool, error) {
 	if len(path) < 1 {
 		return false, ErrNameMissed
