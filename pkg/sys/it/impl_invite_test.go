@@ -202,8 +202,8 @@ func TestInvite_BasicUsage(t *testing.T) {
 	initiateUpdateInviteRoles(inviteID)
 	initiateUpdateInviteRoles(inviteID2)
 
-	WaitForInviteState(vit, ws, inviteID, invite.State_ToUpdateRoles)
-	WaitForInviteState(vit, ws, inviteID2, invite.State_ToUpdateRoles)
+	WaitForInviteState(vit, ws, inviteID, invite.State_Joined, invite.State_ToUpdateRoles)
+	WaitForInviteState(vit, ws, inviteID2, invite.State_Joined, invite.State_ToUpdateRoles)
 	cDocInvite = findCDocInviteByID(inviteID)
 
 	require.Equal(float64(vit.Now().UnixMilli()), cDocInvite[8])
