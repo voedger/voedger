@@ -6,11 +6,12 @@
 package main
 
 import (
-	"extwasm/exttest"
-	"extwasm/orm"
 	"testing"
 
-	exttinygo "github.com/voedger/exttinygo"
+	"extwasm/exttest"
+	"extwasm/orm"
+
+	"github.com/voedger/voedger/pkg/exttinygo"
 )
 
 func Test_FillPbillDates(t *testing.T) {
