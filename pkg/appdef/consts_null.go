@@ -10,8 +10,9 @@ const NullName = ""
 
 // Null (empty) QName
 var (
-	QNameForNull = NewQName(NullName, NullName)
-	NullQName    = QNameForNull
+	QNameForNull  = NewQName(NullName, NullName)
+	NullQName     = QNameForNull
+	NullFullQName = NewFullQName(NullName, NullName)
 )
 
 // NullType is used for return then type is not founded

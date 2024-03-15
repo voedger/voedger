@@ -48,3 +48,11 @@ func ValidIdent(ident string) (bool, error) {
 
 	return true, nil
 }
+
+// TODO: implement
+func ValidPackagePath(path string) (bool, error) {
+	if len(path) < 1 {
+		return false, ErrNameMissed
+	}
+	return true, nil
+}
