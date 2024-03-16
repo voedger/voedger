@@ -82,12 +82,25 @@ func mockedHostStateStructs() istructs.IAppStructs {
 		AddField("vFld", appdef.DataKind_int64, false).
 		AddField(ColOffset, appdef.DataKind_int64, false)
 
+	mockWorkspaceRecord := &mockRecord{}
+	mockWorkspaceRecord.On("QName").Return(testWSQName)
+	mockedRecords := &mockRecords{}
+	mockedRecords.On("GetSingleton", istructs.WSID(1), mock.Anything).Return(mockWorkspaceRecord, nil)
+
+	ws := appDef.AddWorkspace(testWSQName)
+	ws.AddType(testViewRecordQName1)
+
+	app, err := appDef.Build()
+	if err != nil {
+		panic(err)
+	}
+
 	appStructs := &mockAppStructs{}
 	appStructs.
-		On("AppDef").Return(appDef).
+		On("AppDef").Return(app).
 		On("ViewRecords").Return(viewRecords).
 		On("Events").Return(&nilEvents{}).
-		On("Records").Return(&nilRecords{})
+		On("Records").Return(mockedRecords)
 	return appStructs
 }
 func TestHostState_KeyBuilder_Should_return_unknown_storage_ID_error(t *testing.T) {

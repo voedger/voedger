@@ -15,30 +15,55 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
+func mockedStructs(t *testing.T) (*mockAppStructs, *mockViewRecords) {
+	appDef := appdef.New()
+
+	view := appDef.AddView(testViewRecordQName1)
+	view.Key().PartKey().AddField("pkk", appdef.DataKind_int64)
+	view.Key().ClustCols().AddField("cck", appdef.DataKind_string)
+	view.Value().AddField("vk", appdef.DataKind_string, false)
+
+	view = appDef.AddView(testViewRecordQName2)
+	view.Key().PartKey().AddField("pkk", appdef.DataKind_int64)
+	view.Key().ClustCols().AddField("cck", appdef.DataKind_string)
+	view.Value().AddField("vk", appdef.DataKind_string, false)
+
+	mockWorkspaceRecord := &mockRecord{}
+	mockWorkspaceRecord.On("QName").Return(testWSQName)
+	mockedRecords := &mockRecords{}
+	mockedRecords.On("GetSingleton", istructs.WSID(1), mock.Anything).Return(mockWorkspaceRecord, nil)
+
+	mockedViews := &mockViewRecords{}
+	mockedViews.On("KeyBuilder", testViewRecordQName1).Return(newKeyBuilder(View, testViewRecordQName1))
+
+	ws := appDef.AddWorkspace(testWSQName)
+	ws.AddType(testViewRecordQName1)
+	ws.AddType(testViewRecordQName2)
+
+	app, err := appDef.Build()
+	require.NoError(t, err)
+
+	appStructs := &mockAppStructs{}
+	appStructs.
+		On("AppDef").Return(app).
+		On("Records").Return(mockedRecords).
+		On("Events").Return(&nilEvents{}).
+		On("ViewRecords").Return(mockedViews)
+
+	return appStructs, mockedViews
+}
+
 func TestViewRecordsStorage_GetBatch(t *testing.T) {
 	t.Run("Should be ok", func(t *testing.T) {
 		require := require.New(t)
 
-		appDef := appdef.New()
-		view := appDef.AddView(testViewRecordQName1)
-		view.Key().PartKey().AddField("pkk", appdef.DataKind_int64)
-		view.Key().ClustCols().AddField("cck", appdef.DataKind_string)
-		view.Value().AddField("vk", appdef.DataKind_string, false)
+		mockedStructs, mockedViews := mockedStructs(t)
+		valueOnGet := &mockValue{}
+		valueOnGet.On("AsString", "vk").Return("value")
+		mockedViews.
+			On("Get", istructs.WSID(1), mock.Anything).Return(valueOnGet, nil)
 
-		value := &mockValue{}
-		value.On("AsString", "vk").Return("value")
-		viewRecords := &mockViewRecords{}
-		viewRecords.
-			On("KeyBuilder", testViewRecordQName1).Return(newKeyBuilder(View, testViewRecordQName1)).
-			On("Get", istructs.WSID(1), mock.Anything).Return(value, nil)
-
-		appStructs := &mockAppStructs{}
-		appStructs.
-			On("AppDef").Return(appDef).
-			On("Records").Return(&nilRecords{}).
-			On("Events").Return(&nilEvents{}).
-			On("ViewRecords").Return(viewRecords)
-		s := ProvideQueryProcessorStateFactory()(context.Background(), appStructsFunc(appStructs), nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil, nil)
+		s := ProvideQueryProcessorStateFactory()(context.Background(), appStructsFunc(mockedStructs), nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil, nil)
 		k, e := s.KeyBuilder(View, testViewRecordQName1)
 		require.NoError(e)
 		k.PutInt64("pkk", 64)
@@ -52,25 +77,11 @@ func TestViewRecordsStorage_GetBatch(t *testing.T) {
 	})
 	t.Run("Should return error on get", func(t *testing.T) {
 		require := require.New(t)
-
-		appDef := appdef.New()
-
-		view := appDef.AddView(testViewRecordQName1)
-		view.Key().PartKey().AddField("pkk", appdef.DataKind_int64)
-		view.Key().ClustCols().AddField("cck", appdef.DataKind_string)
-		view.Value().AddField("vk", appdef.DataKind_string, false)
-
-		viewRecords := &mockViewRecords{}
-		viewRecords.
-			On("KeyBuilder", testViewRecordQName1).Return(newKeyBuilder(View, testViewRecordQName1)).
+		mockedStructs, mockedViews := mockedStructs(t)
+		mockedViews.
 			On("Get", istructs.WSID(1), mock.Anything).Return(nil, errTest)
-		appStructs := &mockAppStructs{}
-		appStructs.
-			On("AppDef").Return(appDef).
-			On("Records").Return(&nilRecords{}).
-			On("Events").Return(&nilEvents{}).
-			On("ViewRecords").Return(viewRecords)
-		s := ProvideQueryProcessorStateFactory()(context.Background(), appStructsFunc(appStructs), nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil, nil)
+
+		s := ProvideQueryProcessorStateFactory()(context.Background(), appStructsFunc(mockedStructs), nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil, nil)
 		k, err := s.KeyBuilder(View, testViewRecordQName1)
 		require.NoError(err)
 		k.PutInt64("pkk", 64)
@@ -84,78 +95,47 @@ func TestViewRecordsStorage_GetBatch(t *testing.T) {
 func TestViewRecordsStorage_Read(t *testing.T) {
 	t.Run("Should be ok", func(t *testing.T) {
 		require := require.New(t)
+		mockedStructs, mockedViews := mockedStructs(t)
 		touched := false
-		viewRecords := &mockViewRecords{}
-		viewRecords.
-			On("KeyBuilder", testViewRecordQName1).Return(newKeyBuilder(View, testViewRecordQName1)).
+		mockedViews.
 			On("Read", context.Background(), istructs.WSID(1), mock.Anything, mock.AnythingOfType("istructs.ValuesCallback")).
 			Return(nil).
 			Run(func(args mock.Arguments) {
 				require.NotNil(args.Get(2))
 				require.NoError(args.Get(3).(istructs.ValuesCallback)(nil, nil))
 			})
-		appStructs := &mockAppStructs{}
-		appStructs.
-			On("AppDef").Return(&nilAppDef{}).
-			On("Records").Return(&nilRecords{}).
-			On("Events").Return(&nilEvents{}).
-			On("ViewRecords").Return(viewRecords)
-		s := ProvideQueryProcessorStateFactory()(context.Background(), appStructsFunc(appStructs), nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil, nil)
+		s := ProvideQueryProcessorStateFactory()(context.Background(), appStructsFunc(mockedStructs), nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil, nil)
 		k, err := s.KeyBuilder(View, testViewRecordQName1)
 		require.NoError(err)
-
 		err = s.Read(k, func(istructs.IKey, istructs.IStateValue) error {
 			touched = true
 			return nil
 		})
 		require.NoError(err)
-
 		require.True(touched)
 	})
 	t.Run("Should return error on read", func(t *testing.T) {
 		require := require.New(t)
-		viewRecords := &mockViewRecords{}
-		viewRecords.
+		mockedStructs, mockedViews := mockedStructs(t)
+		mockedViews.
 			On("KeyBuilder", testViewRecordQName1).Return(newKeyBuilder(View, testViewRecordQName1)).
 			On("Read", context.Background(), istructs.WSID(1), mock.Anything, mock.Anything).
 			Return(errTest)
-		appStructs := &mockAppStructs{}
-		appStructs.
-			On("AppDef").Return(&nilAppDef{}).
-			On("Records").Return(&nilRecords{}).
-			On("Events").Return(&nilEvents{}).
-			On("ViewRecords").Return(viewRecords)
-		s := ProvideQueryProcessorStateFactory()(context.Background(), appStructsFunc(appStructs), nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil, nil)
+		s := ProvideQueryProcessorStateFactory()(context.Background(), appStructsFunc(mockedStructs), nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil, nil)
 		k, err := s.KeyBuilder(View, testViewRecordQName1)
 		require.NoError(err)
-
 		err = s.Read(k, func(istructs.IKey, istructs.IStateValue) error { return nil })
-
 		require.ErrorIs(err, errTest)
 	})
 }
 func TestViewRecordsStorage_ApplyBatch_should_return_error_on_put_batch(t *testing.T) {
 	require := require.New(t)
-
-	appDef := appdef.New()
-
-	view := appDef.AddView(testViewRecordQName1)
-	view.Key().PartKey().AddField("pkk", appdef.DataKind_int64)
-	view.Key().ClustCols().AddField("cck", appdef.DataKind_string)
-	view.Value().AddField("vk", appdef.DataKind_string, false)
-
-	viewRecords := &mockViewRecords{}
-	viewRecords.
+	mockedStructs, mockedViews := mockedStructs(t)
+	mockedViews.
 		On("KeyBuilder", testViewRecordQName1).Return(&nilKeyBuilder{}).
 		On("NewValueBuilder", testViewRecordQName1).Return(&nilValueBuilder{}).
 		On("PutBatch", istructs.WSID(1), mock.Anything).Return(errTest)
-	appStructs := &mockAppStructs{}
-	appStructs.
-		On("AppDef").Return(appDef).
-		On("ViewRecords").Return(viewRecords).
-		On("Records").Return(&nilRecords{}).
-		On("Events").Return(&nilEvents{})
-	s := ProvideAsyncActualizerStateFactory()(context.Background(), appStructsFunc(appStructs), nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil, 10, 10)
+	s := ProvideAsyncActualizerStateFactory()(context.Background(), appStructsFunc(mockedStructs), nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil, 10, 10)
 	kb, err := s.KeyBuilder(View, testViewRecordQName1)
 	require.NoError(err)
 	_, err = s.NewValue(kb)
@@ -163,59 +143,23 @@ func TestViewRecordsStorage_ApplyBatch_should_return_error_on_put_batch(t *testi
 	readyToFlush, err := s.ApplyIntents()
 	require.False(readyToFlush)
 	require.NoError(err)
-
 	err = s.FlushBundles()
-
 	require.ErrorIs(err, errTest)
-}
-
-func TestViewRecordsStorage_toJSON(_ *testing.T) {
-
-	appDef := appdef.New()
-
-	view := appDef.AddView(testViewRecordQName1)
-	view.Key().PartKey().AddField("pkFld", appdef.DataKind_int64)
-	view.Key().ClustCols().AddField("ccFld", appdef.DataKind_string)
-	view.Value().
-		AddRefField("ID", false).
-		AddField("Name", appdef.DataKind_string, false).
-		AddField("Count", appdef.DataKind_int64, false)
-
-	value := &mockValue{}
-	value.
-		On("AsRecordID", "ID").Return(istructs.RecordID(42)).
-		On("AsString", "Name").Return("John").
-		On("AsInt64", "Count").Return(int64(1001)).
-		On("AsQName", mock.Anything).Return(testViewRecordQName1)
-
 }
 
 func TestViewRecordsStorage_ApplyBatch_NullWSIDGoesLast(t *testing.T) {
 	require := require.New(t)
 
-	appDef := appdef.New()
+	mockedStructs, mockedViews := mockedStructs(t)
 
 	appliedWSIDs := make([]istructs.WSID, 0)
-
-	view := appDef.AddView(testViewRecordQName1)
-	view.Key().PartKey().AddField("pkk", appdef.DataKind_int64)
-	view.Key().ClustCols().AddField("cck", appdef.DataKind_string)
-	view.Value().AddField("vk", appdef.DataKind_string, false)
-
-	viewRecords := &mockViewRecords{}
-	viewRecords.
+	mockedViews.
 		On("KeyBuilder", testViewRecordQName1).Return(&nilKeyBuilder{}).
 		On("NewValueBuilder", testViewRecordQName1).Return(&nilValueBuilder{}).
 		On("PutBatch", mock.Anything, mock.Anything).Run(func(args mock.Arguments) {
 		appliedWSIDs = append(appliedWSIDs, args[0].(istructs.WSID))
 	}).
 		Return(nil)
-	appStructs := &mockAppStructs{}
-	appStructs.
-		On("AppDef").Return(appDef).
-		On("ViewRecords").Return(viewRecords).
-		On("Records").Return(&nilRecords{}).
-		On("Events").Return(&nilEvents{})
 
 	putViewRec := func(s IBundledHostState) {
 		kb, err := s.KeyBuilder(View, testViewRecordQName1)
@@ -240,7 +184,7 @@ func TestViewRecordsStorage_ApplyBatch_NullWSIDGoesLast(t *testing.T) {
 		require.NoError(err)
 	}
 
-	s := ProvideAsyncActualizerStateFactory()(context.Background(), appStructsFunc(appStructs), nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil, 10, 10)
+	s := ProvideAsyncActualizerStateFactory()(context.Background(), appStructsFunc(mockedStructs), nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil, 10, 10)
 	putViewRec(s)
 	putViewRec(s)
 	putOffset(s)

@@ -865,7 +865,7 @@ func (s *wsTypeVailidator) getWSIDQName(wsid istructs.WSID) (appdef.QName, error
 }
 
 func (v *wsTypeVailidator) validate(wsid istructs.WSID, entity appdef.QName) error {
-	if wsid != istructs.NullWSID { // NullWSID only stores actualizer offsets
+	if wsid != istructs.NullWSID && v.appStructsFunc().Records() != nil { // NullWSID only stores actualizer offsets
 		wsQname, err := v.getWSIDQName(wsid)
 		if err != nil {
 			// notest
