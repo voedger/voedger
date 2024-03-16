@@ -8,9 +8,17 @@ ABSTRACT TABLE ORecord();
 ABSTRACT TABLE CDoc INHERITS CRecord();
 ABSTRACT TABLE ODoc INHERITS ORecord();
 ABSTRACT TABLE WDoc INHERITS WRecord();
-ABSTRACT TABLE Singleton INHERITS CDoc();
-ABSTRACT WORKSPACE Workspace ();
+ABSTRACT TABLE CSingleton INHERITS CDoc();
+ABSTRACT WORKSPACE Workspace(
+	EXTENSION ENGINE WASM(
+        COMMAND NewWorkspace();
+    );
+);
 ALTERABLE WORKSPACE Profile();
+
+TABLE WorkspaceDescriptor INHERITS CSingleton (
+	WSKind qname NOT NULL
+);
 
 TYPE Raw(
     Body   varchar(65535)

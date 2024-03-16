@@ -39,7 +39,7 @@ func CalcOrderedItems() {
 		item := items.GetAsValue(i)
 		totalPrice += int64(item.AsInt32("Quantity")) * item.AsInt64("SinglePrice")
 	}
-	key := ext.KeyBuilder(ext.StorageView, "github.com/untillpro/airs-bp3/packages/air.OrderedItems")
+	key := ext.KeyBuilder(ext.StorageView, "github.com/untillpro/airs-bp3/packages/mypkg.OrderedItems")
 	key.PutInt32("Year", arg.AsInt32("Year"))
 	key.PutInt32("Month", arg.AsInt32("Month"))
 	key.PutInt32("Day", arg.AsInt32("Day"))
@@ -70,7 +70,7 @@ func updateSubscriptionProjector() {
 
 //export incrementProjector
 func incrementProjector() {
-	key := ext.KeyBuilder(ext.StorageView, "pkg.TestView")
+	key := ext.KeyBuilder(ext.StorageView, "mypkg.TestView")
 	key.PutInt32("pk", 1)
 	key.PutInt32("cc", 1)
 	value, exists := ext.QueryValue(key)
