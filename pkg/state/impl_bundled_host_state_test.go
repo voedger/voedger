@@ -75,7 +75,8 @@ func mockedAppStructs() istructs.IAppStructs {
 		On("PutBatch", istructs.WSID(1), mock.AnythingOfType("[]istructs.ViewKV")).Return(nil)
 
 	mockWorkspaceRecord := &mockRecord{}
-	mockWorkspaceRecord.On("QName").Return(testWSQName)
+	mockWorkspaceRecord.On("AsQName", "WSKind").Return(testWSQName)
+	mockWorkspaceRecord.On("QName").Return(qNameCDocWorkspaceDescriptor)
 	mockedRecords := &mockRecords{}
 	mockedRecords.On("GetSingleton", istructs.WSID(1), mock.Anything).Return(mockWorkspaceRecord, nil)
 
