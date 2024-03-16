@@ -21,33 +21,37 @@ import (
 	"github.com/voedger/voedger/pkg/istorage/mem"
 	istorageimpl "github.com/voedger/voedger/pkg/istorage/provider"
 	"github.com/voedger/voedger/pkg/parser"
+	"github.com/voedger/voedger/pkg/sys/authnz"
 
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	"github.com/voedger/voedger/pkg/itokensjwt"
-	"github.com/voedger/voedger/pkg/projectors"
 	"github.com/voedger/voedger/pkg/state"
 )
 
 var extIO = &mockIo{}
+var offset istructs.Offset
+var newWorkspaceCmd = appdef.NewQName("sys", "NewWorkspace")
+var testView = appdef.NewQName(testPkg, "TestView")
+var dummyCommand = appdef.NewQName(testPkg, "Dummy")
+var dummyProj = appdef.NewQName(testPkg, "DummyProj")
 
-const testPkg = "test"
+const testPkg = "mypkg"
+const ws = istructs.WSID(1)
+const partition = istructs.PartitionID(1)
 
 func Test_BasicUsage(t *testing.T) {
 	// Test Consts
 	const intentsLimit = 5
 	const bundlesLimit = 5
-	offset := istructs.Offset(123)
-	const ws = istructs.WSID(1)
-	const partition = istructs.PartitionID(1)
 	require := require.New(t)
-	newOrderCmd := appdef.NewQName("air", "NewOrder")
-	calcOrderedItemsProjector := appdef.NewQName("air", "CalcOrderedItems")
-	orderedItemsView := appdef.NewQName("air", "OrderedItems")
+	newOrderCmd := appdef.NewQName(testPkg, "NewOrder")
+	calcOrderedItemsProjector := appdef.NewQName(testPkg, "CalcOrderedItems")
+	orderedItemsView := appdef.NewQName(testPkg, "OrderedItems")
 
 	// Prepare app
-	app := appStructsFromSQL("github.com/untillpro/airs-bp3/packages/air", `APPLICATION test(); 
+	app := appStructsFromSQL("github.com/untillpro/airs-bp3/packages/"+testPkg, `APPLICATION test(); 
 		WORKSPACE Restaurant (
 			TABLE Order INHERITS ODoc (
 				Year int32,
@@ -85,7 +89,7 @@ func Test_BasicUsage(t *testing.T) {
 		GenericRawEventBuilderParams: istructs.GenericRawEventBuilderParams{
 			Workspace:         ws,
 			HandlingPartition: partition,
-			PLogOffset:        offset,
+			PLogOffset:        offset + 1,
 			QName:             newOrderCmd,
 		},
 	})
@@ -180,6 +184,7 @@ func appStructs(appDef appdef.IAppDefBuilder, prepareAppCfg appCfgCallback) istr
 	cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, appDef)
 	if prepareAppCfg != nil {
 		prepareAppCfg(cfg)
+		cfg.Resources.Add(istructsmem.NewCommandFunction(newWorkspaceCmd, istructsmem.NullCommandExec))
 	}
 
 	asf := mem.Provide()
@@ -194,14 +199,6 @@ func appStructs(appDef appdef.IAppDefBuilder, prepareAppCfg appCfgCallback) istr
 		panic(err)
 	}
 	return structs
-}
-
-func appStructsFromCallback(prepareAppDef appDefCallback, prepareAppCfg appCfgCallback) istructs.IAppStructs {
-	appDef := appdef.New()
-	if prepareAppDef != nil {
-		prepareAppDef(appDef)
-	}
-	return appStructs(appDef, prepareAppCfg)
 }
 
 func requireMemStat(t *testing.T, wasmEngine *wazeroExtEngine, mallocs, frees, heapInUse uint32) {
@@ -553,7 +550,6 @@ func Test_WithState(t *testing.T) {
 	require := require.New(t)
 	ctx := context.Background()
 
-	testView := appdef.NewQName("pkg", "TestView")
 	const extension = "incrementProjector"
 	const cc = "cc"
 	const pk = "pk"
@@ -562,17 +558,25 @@ func Test_WithState(t *testing.T) {
 	const bundlesLimit = 5
 	const ws = istructs.WSID(1)
 
+	app := appStructsFromSQL(testPkg, `APPLICATION test(); 
+		WORKSPACE Restaurant (
+			VIEW TestView (
+				pk int32,
+				cc int32,
+				vv int32,
+				PRIMARY KEY ((pk), cc)
+			) AS RESULT OF DummyProj;
+			EXTENSION ENGINE WASM(
+				COMMAND Dummy();
+				PROJECTOR DummyProj AFTER EXECUTE ON Dummy INTENTS(View(TestView));
+			);
+		)`,
+		func(cfg *istructsmem.AppConfigType) {
+			cfg.Resources.Add(istructsmem.NewCommandFunction(dummyCommand, istructsmem.NullCommandExec))
+			cfg.AddAsyncProjectors(func() istructs.Projector { return istructs.Projector{Name: dummyProj} })
+		})
+
 	// build app
-	app := appStructsFromCallback(
-		func(appDef appdef.IAppDefBuilder) {
-			projectors.ProvideViewDef(appDef, testView, func(view appdef.IViewBuilder) {
-				view.Key().PartKey().AddField(pk, appdef.DataKind_int32)
-				view.Key().ClustCols().AddField(cc, appdef.DataKind_int32)
-				view.Value().AddField(vv, appdef.DataKind_int32, true)
-			})
-			appDef.AddPackage("pkg", "pkg")
-		},
-		func(cfg *istructsmem.AppConfigType) {})
 	appFunc := func() istructs.IAppStructs { return app }
 	state := state.ProvideAsyncActualizerStateFactory()(context.Background(), appFunc, nil, state.SimpleWSIDFunc(ws), nil, nil, nil, intentsLimit, bundlesLimit)
 
@@ -623,24 +627,27 @@ func Test_WithState(t *testing.T) {
 
 func Test_StatePanic(t *testing.T) {
 
-	testView := appdef.NewQName("pkg", "TestView")
-	const cc = "cc"
-	const pk = "pk"
-	const vv = "vv"
 	const intentsLimit = 5
 	const bundlesLimit = 5
 	const ws = istructs.WSID(1)
 
-	app := appStructsFromCallback(
-		func(appDef appdef.IAppDefBuilder) {
-			projectors.ProvideViewDef(appDef, testView, func(view appdef.IViewBuilder) {
-				view.Key().PartKey().AddField(pk, appdef.DataKind_int32)
-				view.Key().ClustCols().AddField(cc, appdef.DataKind_int32)
-				view.Value().AddField(vv, appdef.DataKind_int32, true)
-			})
-			appDef.AddPackage("pkg", "pkg")
-		},
-		func(cfg *istructsmem.AppConfigType) {})
+	app := appStructsFromSQL(testPkg, `APPLICATION test(); 
+		WORKSPACE Restaurant (
+			VIEW TestView (
+				pk int32,
+				cc int32,
+				vv int32,
+				PRIMARY KEY ((pk), cc)
+			) AS RESULT OF DummyProj;
+			EXTENSION ENGINE WASM(
+				COMMAND Dummy();
+				PROJECTOR DummyProj AFTER EXECUTE ON Dummy INTENTS(View(TestView));
+			);
+		)`,
+		func(cfg *istructsmem.AppConfigType) {
+			cfg.Resources.Add(istructsmem.NewCommandFunction(dummyCommand, istructsmem.NullCommandExec))
+			cfg.AddAsyncProjectors(func() istructs.Projector { return istructs.Projector{Name: dummyProj} })
+		})
 	appFunc := func() istructs.IAppStructs { return app }
 	state := state.ProvideAsyncActualizerStateFactory()(context.Background(), appFunc, nil, state.SimpleWSIDFunc(ws), nil, nil, nil, intentsLimit, bundlesLimit)
 
@@ -679,7 +686,6 @@ func Test_StatePanic(t *testing.T) {
 }
 
 type (
-	appDefCallback func(appDef appdef.IAppDefBuilder)
 	appCfgCallback func(cfg *istructsmem.AppConfigType)
 )
 
@@ -687,6 +693,7 @@ type (
 var sfs embed.FS
 
 func appStructsFromSQL(packagePath string, appdefSql string, prepareAppCfg appCfgCallback) istructs.IAppStructs {
+	offset = istructs.Offset(123)
 	appDef := appdef.New()
 
 	fs, err := parser.ParseFile("file1.sql", appdefSql)
@@ -717,5 +724,30 @@ func appStructsFromSQL(packagePath string, appdefSql string, prepareAppCfg appCf
 		panic(err)
 	}
 
-	return appStructs(appDef, prepareAppCfg)
+	app := appStructs(appDef, prepareAppCfg)
+
+	// Create workspace
+	rebWs := app.Events().GetNewRawEventBuilder(istructs.NewRawEventBuilderParams{
+		GenericRawEventBuilderParams: istructs.GenericRawEventBuilderParams{
+			Workspace:         ws,
+			HandlingPartition: partition,
+			PLogOffset:        offset,
+			QName:             newWorkspaceCmd,
+		},
+	})
+	cud := rebWs.CUDBuilder().Create(authnz.QNameCDocWorkspaceDescriptor)
+	cud.PutRecordID(appdef.SystemField_ID, 1)
+	cud.PutQName("WSKind", appdef.NewQName(testPkg, "Restaurant"))
+	rawWsEvent, err := rebWs.BuildRawEvent()
+	if err != nil {
+		panic(err)
+	}
+	wsEvent, err := app.Events().PutPlog(rawWsEvent, nil, istructsmem.NewIDGenerator())
+	if err != nil {
+		panic(err)
+	}
+	app.Records().Apply(wsEvent)
+
+	return app
+
 }
