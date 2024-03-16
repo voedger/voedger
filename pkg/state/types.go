@@ -837,49 +837,49 @@ func (c *resultValueBuilder) PutRecordID(name string, value istructs.RecordID) {
 
 type wsTypeVailidator struct {
 	appStructsFunc AppStructsFunc
-	wsidQNames     map[istructs.WSID]appdef.QName
+	wsidKinds      map[istructs.WSID]appdef.QName
 }
 
 func newWsTypeValidator(appStructsFunc AppStructsFunc) wsTypeVailidator {
 	return wsTypeVailidator{
 		appStructsFunc: appStructsFunc,
-		wsidQNames:     make(map[istructs.WSID]appdef.QName),
+		wsidKinds:      make(map[istructs.WSID]appdef.QName),
 	}
 }
 
 // Returns NullQName if not found
-func (s *wsTypeVailidator) getWSIDQName(wsid istructs.WSID) (appdef.QName, error) {
-	qname, ok := s.wsidQNames[wsid]
+func (s *wsTypeVailidator) getWSIDKind(wsid istructs.WSID) (appdef.QName, error) {
+	wsKind, ok := s.wsidKinds[wsid]
 	if !ok {
 		wsDesc, err := s.appStructsFunc().Records().GetSingleton(wsid, qNameCDocWorkspaceDescriptor)
 		if err != nil {
 			// notest
 			return appdef.NullQName, err
 		}
-		qname = wsDesc.QName()
-		if len(s.wsidQNames) < wsidTypeValidatorCacheSize {
-			s.wsidQNames[wsid] = qname
+		if wsDesc.QName() == appdef.NullQName {
+			return appdef.NullQName, fmt.Errorf("%w: %d", errWorkspaceDescriptorNotFound, wsid)
+		}
+		wsKind = wsDesc.AsQName(field_WSKind)
+		if len(s.wsidKinds) < wsidTypeValidatorCacheSize {
+			s.wsidKinds[wsid] = wsKind
 		}
 	}
-	return qname, nil
+	return wsKind, nil
 }
 
 func (v *wsTypeVailidator) validate(wsid istructs.WSID, entity appdef.QName) error {
 	if wsid != istructs.NullWSID && v.appStructsFunc().Records() != nil { // NullWSID only stores actualizer offsets
-		wsQname, err := v.getWSIDQName(wsid)
+		wsKind, err := v.getWSIDKind(wsid)
 		if err != nil {
 			// notest
 			return err
 		}
-		if wsQname == appdef.NullQName {
-			return fmt.Errorf("%w: %d", errWorkspaceNotFound, wsid)
-		}
-		ws := v.appStructsFunc().AppDef().Workspace(wsQname)
+		ws := v.appStructsFunc().AppDef().Workspace(wsKind)
 		if ws == nil {
-			return fmt.Errorf("%w: %s", errWorkspaceUndefined, wsQname.String())
+			return fmt.Errorf("%w: %s", errWorkspaceUndefined, wsKind.String())
 		}
 		if ws.TypeByName(entity) == nil {
-			return typeIsNotDefinedInWorkspace(entity, wsQname)
+			return typeIsNotDefinedInWorkspace(entity, wsKind)
 		}
 	}
 	return nil

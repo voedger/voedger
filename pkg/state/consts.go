@@ -86,4 +86,5 @@ const (
 var (
 	emptyApplyBatchItem          = ApplyBatchItem{}
 	qNameCDocWorkspaceDescriptor = appdef.NewQName(appdef.SysPackage, "WorkspaceDescriptor")
+	field_WSKind                 = "WSKind"
 )

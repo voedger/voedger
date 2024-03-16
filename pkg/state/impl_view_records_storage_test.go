@@ -29,7 +29,7 @@ func mockedStructs(t *testing.T) (*mockAppStructs, *mockViewRecords) {
 	view.Value().AddField("vk", appdef.DataKind_string, false)
 
 	mockWorkspaceRecord := &mockRecord{}
-	mockWorkspaceRecord.On("QName").Return(testWSQName)
+	mockWorkspaceRecord.On("AsQName", "WSKind").Return(testWSQName)
 	mockedRecords := &mockRecords{}
 	mockedRecords.On("GetSingleton", istructs.WSID(1), mock.Anything).Return(mockWorkspaceRecord, nil)
 
