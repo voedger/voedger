@@ -492,9 +492,9 @@ func (vit *VIT) CaptureEmail() (msg smtptest.Message) {
 // will be automatically reset to 0 on TearDown
 func (vit *VIT) SetMemStorageGetDelay(delay time.Duration) {
 	vit.T.Helper()
-	vit.getStorageDelaySetter().SetTestDelayPut(delay)
+	vit.getStorageDelaySetter().SetTestDelayGet(delay)
 	vit.cleanups = append(vit.cleanups, func(vit *VIT) {
-		vit.getStorageDelaySetter().SetTestDelayPut(0)
+		vit.getStorageDelaySetter().SetTestDelayGet(0)
 	})
 }
 
