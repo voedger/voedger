@@ -16,13 +16,14 @@ import (
 )
 
 var (
-	testRecordQName1     = appdef.NewQName("test", "record1")
-	testRecordQName2     = appdef.NewQName("test", "record2")
-	testRecordQName3     = appdef.NewQName("test", "record3")
-	testViewRecordQName1 = appdef.NewQName("test", "viewRecord1")
-	testViewRecordQName2 = appdef.NewQName("test", "viewRecord2")
-	testStorage          = appdef.NewQName("test", "testStorage")
-	testWSQName          = appdef.NewQName("test", "testWS")
+	testRecordQName1      = appdef.NewQName("test", "record1")
+	testRecordQName2      = appdef.NewQName("test", "record2")
+	testRecordQName3      = appdef.NewQName("test", "record3")
+	testViewRecordQName1  = appdef.NewQName("test", "viewRecord1")
+	testViewRecordQName2  = appdef.NewQName("test", "viewRecord2")
+	testStorage           = appdef.NewQName("test", "testStorage")
+	testWSQName           = appdef.NewQName("test", "testWS")
+	testWSDescriptorQName = appdef.NewQName("test", "testWSDescriptor")
 )
 
 func TestSimpleWSIDFunc(t *testing.T) {

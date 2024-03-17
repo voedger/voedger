@@ -75,12 +75,14 @@ func mockedAppStructs() istructs.IAppStructs {
 		On("PutBatch", istructs.WSID(1), mock.AnythingOfType("[]istructs.ViewKV")).Return(nil)
 
 	mockWorkspaceRecord := &mockRecord{}
-	mockWorkspaceRecord.On("AsQName", "WSKind").Return(testWSQName)
+	mockWorkspaceRecord.On("AsQName", "WSKind").Return(testWSDescriptorQName)
 	mockWorkspaceRecord.On("QName").Return(qNameCDocWorkspaceDescriptor)
 	mockedRecords := &mockRecords{}
 	mockedRecords.On("GetSingleton", istructs.WSID(1), mock.Anything).Return(mockWorkspaceRecord, nil)
 
 	appDefBuilder := appdef.New()
+	wsDesc := appDefBuilder.AddCDoc(testWSDescriptorQName)
+	wsDesc.AddField(field_WSKind, appdef.DataKind_bytes, false)
 	view := appDefBuilder.AddView(testViewRecordQName1)
 	view.Key().PartKey().AddField("pkFld", appdef.DataKind_int64)
 	view.Key().ClustCols().AddField("ccFld", appdef.DataKind_string)
@@ -89,6 +91,7 @@ func mockedAppStructs() istructs.IAppStructs {
 		AddField(ColOffset, appdef.DataKind_int64, true)
 	ws := appDefBuilder.AddWorkspace(testWSQName)
 	ws.AddType(testViewRecordQName1)
+	ws.SetDescriptor(testWSDescriptorQName)
 	appDef, err := appDefBuilder.Build()
 	if err != nil {
 		panic(err)

@@ -29,7 +29,7 @@ func mockedStructs(t *testing.T) (*mockAppStructs, *mockViewRecords) {
 	view.Value().AddField("vk", appdef.DataKind_string, false)
 
 	mockWorkspaceRecord := &mockRecord{}
-	mockWorkspaceRecord.On("AsQName", "WSKind").Return(testWSQName)
+	mockWorkspaceRecord.On("AsQName", "WSKind").Return(testWSDescriptorQName)
 	mockWorkspaceRecord.On("QName").Return(qNameCDocWorkspaceDescriptor)
 	mockedRecords := &mockRecords{}
 	mockedRecords.On("GetSingleton", istructs.WSID(1), mock.Anything).Return(mockWorkspaceRecord, nil)
@@ -37,9 +37,13 @@ func mockedStructs(t *testing.T) (*mockAppStructs, *mockViewRecords) {
 	mockedViews := &mockViewRecords{}
 	mockedViews.On("KeyBuilder", testViewRecordQName1).Return(newKeyBuilder(View, testViewRecordQName1))
 
+	wsDesc := appDef.AddCDoc(testWSDescriptorQName)
+	wsDesc.AddField(field_WSKind, appdef.DataKind_bytes, false)
+
 	ws := appDef.AddWorkspace(testWSQName)
 	ws.AddType(testViewRecordQName1)
 	ws.AddType(testViewRecordQName2)
+	ws.SetDescriptor(testWSDescriptorQName)
 
 	app, err := appDef.Build()
 	require.NoError(t, err)

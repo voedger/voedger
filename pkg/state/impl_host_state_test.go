@@ -83,13 +83,17 @@ func mockedHostStateStructs() istructs.IAppStructs {
 		AddField(ColOffset, appdef.DataKind_int64, false)
 
 	mockWorkspaceRecord := &mockRecord{}
-	mockWorkspaceRecord.On("AsQName", "WSKind").Return(testWSQName)
+	mockWorkspaceRecord.On("AsQName", "WSKind").Return(testWSDescriptorQName)
 	mockWorkspaceRecord.On("QName").Return(qNameCDocWorkspaceDescriptor)
 	mockedRecords := &mockRecords{}
 	mockedRecords.On("GetSingleton", istructs.WSID(1), mock.Anything).Return(mockWorkspaceRecord, nil)
 
+	wsDesc := appDef.AddCDoc(testWSDescriptorQName)
+	wsDesc.AddField(field_WSKind, appdef.DataKind_bytes, false)
+
 	ws := appDef.AddWorkspace(testWSQName)
 	ws.AddType(testViewRecordQName1)
+	ws.SetDescriptor(testWSDescriptorQName)
 
 	app, err := appDef.Build()
 	if err != nil {
