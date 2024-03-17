@@ -36,6 +36,7 @@ var newWorkspaceCmd = appdef.NewQName("sys", "NewWorkspace")
 var testView = appdef.NewQName(testPkg, "TestView")
 var dummyCommand = appdef.NewQName(testPkg, "Dummy")
 var dummyProj = appdef.NewQName(testPkg, "DummyProj")
+var testWorkspaceDescriptor = appdef.NewQName(testPkg, "RestaurantDescriptor")
 
 const testPkg = "mypkg"
 const ws = istructs.WSID(1)
@@ -53,6 +54,7 @@ func Test_BasicUsage(t *testing.T) {
 	// Prepare app
 	app := appStructsFromSQL("github.com/untillpro/airs-bp3/packages/"+testPkg, `APPLICATION test(); 
 		WORKSPACE Restaurant (
+			DESCRIPTOR RestaurantDescriptor ();
 			TABLE Order INHERITS ODoc (
 				Year int32,
 				Month int32,
@@ -560,6 +562,7 @@ func Test_WithState(t *testing.T) {
 
 	app := appStructsFromSQL(testPkg, `APPLICATION test(); 
 		WORKSPACE Restaurant (
+			DESCRIPTOR RestaurantDescriptor ();
 			VIEW TestView (
 				pk int32,
 				cc int32,
@@ -633,6 +636,7 @@ func Test_StatePanic(t *testing.T) {
 
 	app := appStructsFromSQL(testPkg, `APPLICATION test(); 
 		WORKSPACE Restaurant (
+			DESCRIPTOR RestaurantDescriptor ();
 			VIEW TestView (
 				pk int32,
 				cc int32,
@@ -737,7 +741,7 @@ func appStructsFromSQL(packagePath string, appdefSql string, prepareAppCfg appCf
 	})
 	cud := rebWs.CUDBuilder().Create(authnz.QNameCDocWorkspaceDescriptor)
 	cud.PutRecordID(appdef.SystemField_ID, 1)
-	cud.PutQName("WSKind", appdef.NewQName(testPkg, "Restaurant"))
+	cud.PutQName("WSKind", testWorkspaceDescriptor)
 	rawWsEvent, err := rebWs.BuildRawEvent()
 	if err != nil {
 		panic(err)
