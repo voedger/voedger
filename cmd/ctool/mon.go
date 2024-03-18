@@ -45,7 +45,7 @@ func newMonCmd() *cobra.Command {
 
 }
 
-func prometheusAdminPassword(cmd *cobra.Command, args []string) error {
+func monPassword(cmd *cobra.Command, args []string) error {
 	cluster := newCluster()
 	if cluster.Draft {
 		return ErrClusterConfNotFound
@@ -53,7 +53,7 @@ func prometheusAdminPassword(cmd *cobra.Command, args []string) error {
 
 	password := args[0]
 
-	if err := setPrometheusAdminPassword(cluster, password, []string{"app-node-1", "app-node-2"}); err != nil {
+	if err := setMonPassword(cluster, password, []string{"app-node-1", "app-node-2"}); err != nil {
 		return err
 	}
 
@@ -71,15 +71,15 @@ func hashedPassword(password string) (string, error) {
 	return string(hash), nil
 }
 
-func checkPrometheusPassword(password string) error {
-	if len(password) < minPrometheusPasswordLength {
-		return ErrPrometheusPasswordIsTooShort
+func checkMonPassword(password string) error {
+	if len(password) < minMonPasswordLength {
+		return ErrMonPasswordIsTooShort
 	}
 	return nil
 }
 
-func setPrometheusAdminPassword(cluster *clusterType, password string, hosts []string) error {
-	if err := checkPrometheusPassword(password); err != nil {
+func setMonPassword(cluster *clusterType, password string, hosts []string) error {
+	if err := checkMonPassword(password); err != nil {
 		return err
 	}
 
