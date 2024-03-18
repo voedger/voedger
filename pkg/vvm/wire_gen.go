@@ -39,7 +39,6 @@ import (
 	"github.com/voedger/voedger/pkg/projectors"
 	"github.com/voedger/voedger/pkg/router"
 	"github.com/voedger/voedger/pkg/state"
-	"github.com/voedger/voedger/pkg/sys/builtin"
 	"github.com/voedger/voedger/pkg/sys/invite"
 	"github.com/voedger/voedger/pkg/utils"
 	"github.com/voedger/voedger/pkg/vvm/db_cert_cache"
@@ -553,7 +552,7 @@ func provideAsyncActualizersFactory(appParts appparts.IAppPartitions, appStructs
 			Partition:     partitionID,
 			Broker:        n10nBroker,
 			Opts:          opts,
-			IntentsLimit:  builtin.MaxCUDs,
+			IntentsLimit:  projectors.DefaultIntentsLimit,
 			FlushInterval: actualizerFlushInterval,
 			Metrics:       metrics2,
 		}

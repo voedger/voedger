@@ -9,6 +9,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/sys/builtin"
 )
 
 var (
@@ -38,6 +39,7 @@ const (
 	n10nChannelDuration          = 100 * 365 * 24 * time.Hour
 	borrowRetryDelay             = 50 * time.Millisecond
 	initFailureErrorLogInterval  = 30 * time.Second
+	DefaultIntentsLimit          = builtin.MaxCUDs * 10
 )
 
 var PLogUpdatesQName = appdef.NewQName(appdef.SysPackage, "PLogUpdates")

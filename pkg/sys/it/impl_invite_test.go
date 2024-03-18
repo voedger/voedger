@@ -6,6 +6,7 @@ package sys_it
 
 import (
 	"fmt"
+	"log"
 	"strings"
 	"testing"
 
@@ -201,8 +202,8 @@ func TestInvite_BasicUsage(t *testing.T) {
 	initiateUpdateInviteRoles(inviteID)
 	initiateUpdateInviteRoles(inviteID2)
 
-	WaitForInviteState(vit, ws, inviteID, invite.State_ToUpdateRoles)
-	WaitForInviteState(vit, ws, inviteID2, invite.State_ToUpdateRoles)
+	WaitForInviteState(vit, ws, inviteID, invite.State_Joined, invite.State_ToUpdateRoles)
+	WaitForInviteState(vit, ws, inviteID2, invite.State_Joined, invite.State_ToUpdateRoles)
 	cDocInvite = findCDocInviteByID(inviteID)
 
 	require.Equal(float64(vit.Now().UnixMilli()), cDocInvite[8])
@@ -256,6 +257,14 @@ func TestInvite_BasicUsage(t *testing.T) {
 	require.False(cDocSubject[4].(bool))
 
 	//TODO check InviteeProfile joined workspace
+
+	//Re-invite
+	newRoles := "new.roles"
+	InitiateInvitationByEMail(vit, ws, expireDatetime, email2, newRoles, inviteEmailTemplate, inviteEmailSubject)
+	log.Println(vit.CaptureEmail().Body)
+	WaitForInviteState(vit, ws, inviteID2, invite.State_Left, invite.State_Invited)
+	cDocInvite = findCDocInviteByID(inviteID2)
+	require.Equal(newRoles, cDocInvite[3].(string))
 }
 
 func TestCancelSentInvite(t *testing.T) {

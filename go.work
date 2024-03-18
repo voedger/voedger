@@ -5,6 +5,5 @@ use (
 	./cmd/ctool
 	./cmd/edger
 	./pkg/iextenginewazero/_testdata
-	./staging/src/github.com/voedger/exttinygo
 	./examples/airs-bp/air/extwasm
 )
