@@ -46,11 +46,12 @@ func collectionProjector(appDef appdef.IAppDef) istructs.Projector {
 				if !isNew {
 					sv, ok, err := s.CanExist(kb)
 					if err != nil {
+						// notest
 						return err
 					}
 					if ok && sv.AsInt64(state.ColOffset) >= int64(event.WLogOffset()) {
 						// skip for idempotency
-						return err
+						return nil
 					}
 				}
 				vb, err := intents.NewValue(kb)
@@ -101,7 +102,7 @@ func collectionProjector(appDef appdef.IAppDef) istructs.Projector {
 			}
 			for _, kbAndID := range keyBuildersAndIDs {
 				record := is.cache[kbAndID.id]
-				root, err := is.findRootf(record.ID())
+				root, err := is.findRootByID(record.ID())
 				if err != nil {
 					return err
 				}
@@ -129,51 +130,29 @@ type idService struct {
 }
 
 func (s *idService) findRecordByID(id istructs.RecordID) (record istructs.IRecord, err error) {
-	record, ok := s.cache[id]
-	if ok {
-		return
-	}
-
 	kb, err := s.state.KeyBuilder(state.Record, appdef.NullQName)
 	if err != nil {
-		return
+		return nil, err
 	}
 	kb.PutRecordID(state.Field_ID, id)
 
 	sv, err := s.state.MustExist(kb)
 	if err != nil {
-		return
+		return nil, err
 	}
-	record = sv.AsRecord("")
-
-	s.cache[id] = record
-	return
+	return sv.AsRecord(""), nil
 }
 
-func (s *idService) findRootf(id istructs.RecordID) (root istructs.IRecord, err error) {
+func (s *idService) findRootByID(id istructs.RecordID) (root istructs.IRecord, err error) {
 	rec := s.cache[id]
 	if rec == nil {
-		var err error
-		rec, err = s.findRecordByID(id)
-		if err != nil {
+		if rec, err = s.findRecordByID(id); err != nil {
 			return nil, err
 		}
 		s.cache[id] = rec
-
 	}
 	if rec.Parent() == istructs.NullRecordID {
 		return rec, nil
 	}
-	return s.findRootf(rec.Parent())
-}
-
-func (s *idService) findRootByID(id istructs.RecordID) (record istructs.IRecord, err error) {
-	record, err = s.findRecordByID(id)
-	if err != nil {
-		return
-	}
-	if record.Parent() == istructs.NullRecordID {
-		return
-	}
-	return s.findRootByID(record.Parent())
+	return s.findRootByID(rec.Parent())
 }
