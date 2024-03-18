@@ -330,6 +330,8 @@ var defaultACL = ACL{
 				qNameQryGetUPInvoiceParties,
 				qNameQryGetUPTransferInstrument,
 				qNameCmdRetryTransferUPPayout,
+				// https://dev.untill.com/projects/#!685617
+				qNameQryGetUPLocationRates,
 			},
 			principalsPattern: [][]iauthnz.Principal{
 				{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleUntillPaymentsReseller}},
