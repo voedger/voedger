@@ -161,6 +161,18 @@ func buildAppParts(t *testing.T) (appParts appparts.IAppPartitions, cleanup func
 			AddField(test.articlePriceExceptionsPriceIdent, appdef.DataKind_float32, true)
 	}
 
+	// kept here to keep local tests working without sql
+	projectors.ProvideViewDef(adb, QNameCollectionView, func(b appdef.IViewBuilder) {
+		b.Key().PartKey().AddField(Field_PartKey, appdef.DataKind_int32)
+		b.Key().ClustCols().
+			AddField(Field_DocQName, appdef.DataKind_QName).
+			AddRefField(field_DocID).
+			AddRefField(field_ElementID)
+		b.Value().
+			AddField(Field_Record, appdef.DataKind_Record, true).
+			AddField(state.ColOffset, appdef.DataKind_int64, true)
+	})
+
 	{
 		// Workspace
 		wsBuilder := adb.AddWorkspace(appdef.NewQName(appdef.SysPackage, "test_wsWS"))
@@ -175,19 +187,8 @@ func buildAppParts(t *testing.T) (appParts appparts.IAppPartitions, cleanup func
 		wsBuilder.AddType(test.tablePrices)
 		wsBuilder.AddType(test.tableArticlePrices)
 		wsBuilder.AddType(test.tableArticlePriceExceptions)
+		wsBuilder.AddType(QNameCollectionView)
 	}
-
-	// kept here to keep local tests working without sql
-	projectors.ProvideViewDef(adb, QNameCollectionView, func(b appdef.IViewBuilder) {
-		b.Key().PartKey().AddField(Field_PartKey, appdef.DataKind_int32)
-		b.Key().ClustCols().
-			AddField(Field_DocQName, appdef.DataKind_QName).
-			AddRefField(field_DocID).
-			AddRefField(field_ElementID)
-		b.Value().
-			AddField(Field_Record, appdef.DataKind_Record, true).
-			AddField(state.ColOffset, appdef.DataKind_int64, true)
-	})
 
 	// TODO: remove it after https://github.com/voedger/voedger/issues/56
 	appDef, err := adb.Build()

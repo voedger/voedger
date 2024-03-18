@@ -37,6 +37,6 @@ func errIndexOutOfBounds(index int) error {
 	return fmt.Errorf("index out of bounds: %d", index)
 }
 
-func typeIsNotDefinedInWorkspace(typ, ws appdef.QName) error {
-	return fmt.Errorf("%s is not available in workspace %s", typ.String(), ws.String())
+func typeIsNotDefinedInWorkspaceWithDescriptor(typ, ws appdef.QName) error {
+	return fmt.Errorf("%s is not available in workspace with descriptor %s", typ.String(), ws.String())
 }

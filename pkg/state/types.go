@@ -879,7 +879,7 @@ func (v *wsTypeVailidator) validate(wsid istructs.WSID, entity appdef.QName) err
 			return fmt.Errorf("%w: %s", errWorkspaceUndefined, wsKind.String())
 		}
 		if ws.TypeByName(entity) == nil {
-			return typeIsNotDefinedInWorkspace(entity, wsKind)
+			return typeIsNotDefinedInWorkspaceWithDescriptor(entity, wsKind)
 		}
 	}
 	return nil
