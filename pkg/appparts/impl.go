@@ -6,8 +6,6 @@
 package appparts
 
 import (
-	"errors"
-	"fmt"
 	"sync"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -40,7 +38,7 @@ func (aps *apps) DeployApp(name istructs.AppQName, def appdef.IAppDef, partsCoun
 	defer aps.mx.Unlock()
 
 	if _, ok := aps.apps[name]; ok {
-		panic(fmt.Errorf(errAppCannotToBeRedeployed, name, errors.ErrUnsupported))
+		panic(errAppCannotToBeRedeployed(name))
 	}
 
 	a := newApplication(aps, name, partsCount)
@@ -60,7 +58,7 @@ func (aps *apps) DeployAppPartitions(appName istructs.AppQName, partIDs []istruc
 
 	a, ok := aps.apps[appName]
 	if !ok {
-		panic(fmt.Errorf(errAppNotFound, appName, ErrNotFound))
+		panic(errAppNotFound(appName))
 	}
 
 	for _, id := range partIDs {
@@ -75,7 +73,7 @@ func (aps *apps) AppDef(appName istructs.AppQName) (appdef.IAppDef, error) {
 
 	app, ok := aps.apps[appName]
 	if !ok {
-		return nil, fmt.Errorf(errAppNotFound, appName, ErrNotFound)
+		return nil, errAppNotFound(appName)
 	}
 	return app.def, nil
 }
@@ -89,7 +87,7 @@ func (aps *apps) AppPartsCount(appName istructs.AppQName) (int, error) {
 
 	app, ok := aps.apps[appName]
 	if !ok {
-		return 0, fmt.Errorf(errAppNotFound, appName, ErrNotFound)
+		return 0, errAppNotFound(appName)
 	}
 	return app.partsCount, nil
 }
@@ -100,12 +98,12 @@ func (aps *apps) Borrow(appName istructs.AppQName, partID istructs.PartitionID, 
 
 	app, ok := aps.apps[appName]
 	if !ok {
-		return nil, fmt.Errorf(errAppNotFound, appName, ErrNotFound)
+		return nil, errAppNotFound(appName)
 	}
 
 	part, ok := app.parts[partID]
 	if !ok {
-		return nil, fmt.Errorf(errPartitionNotFound, appName, partID, ErrNotFound)
+		return nil, errPartitionNotFound(appName, partID)
 	}
 
 	borrowed, err := part.borrow(proc)

@@ -7,7 +7,6 @@ package appparts
 
 import (
 	"context"
-	"errors"
 	"sync"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -131,13 +130,13 @@ func (rt *partitionRT) AppStructs() istructs.IAppStructs { return rt.appStructs 
 func (rt *partitionRT) ID() istructs.PartitionID         { return rt.part.id }
 
 func (rt *partitionRT) Invoke(ctx context.Context, name appdef.QName, state istructs.IState, intents istructs.IIntents) error {
-	// io := iextengine.NewExtensionIO(state, intents, rt.appDef, rt.appStructs)
-	// extName := rt.app.appDef.FullQName(name)
-	// if extName = appdef.NullFullQName {
-	//    return undefinedExtension(name)
-	// }
-	// return rt.borrowed.Invoke(ctx, extName, io)
-	return errors.ErrUnsupported
+	extName := rt.appDef.FullQName(name)
+	if extName == appdef.NullFullQName {
+		return errUndefinedExtension(name)
+	}
+	io := iextengine.NewExtensionIO(rt.appDef, state, intents)
+
+	return rt.borrowed.Invoke(ctx, extName, io)
 }
 
 func (rt *partitionRT) Release() {
