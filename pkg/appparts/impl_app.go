@@ -125,9 +125,15 @@ func newPartitionRT(part *partition) *partitionRT {
 	return rt
 }
 
-func (rt *partitionRT) App() istructs.AppQName           { return rt.part.app.name }
+func (rt *partitionRT) App() istructs.AppQName { return rt.part.app.name }
+
 func (rt *partitionRT) AppStructs() istructs.IAppStructs { return rt.appStructs }
-func (rt *partitionRT) ID() istructs.PartitionID         { return rt.part.id }
+
+func (rt *partitionRT) DoSyncActualizer(ctx context.Context, work interface{}) error {
+	return rt.part.syncActualizer.DoSync(ctx, work)
+}
+
+func (rt *partitionRT) ID() istructs.PartitionID { return rt.part.id }
 
 func (rt *partitionRT) Invoke(ctx context.Context, name appdef.QName, state istructs.IState, intents istructs.IIntents) error {
 	extName := rt.appDef.FullQName(name)
@@ -145,10 +151,6 @@ func (rt *partitionRT) Release() {
 		e.release()
 	}
 	partionRTPool.Put(rt)
-}
-
-func (rt *partitionRT) DoSyncActualizer(ctx context.Context, work interface{}) error {
-	return rt.part.syncActualizer.DoSync(ctx, work)
 }
 
 // Initialize partition RT structures for use

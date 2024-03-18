@@ -11,24 +11,6 @@ type IAppDef interface {
 	IWithTypes
 	IWithPackages
 
-	// Returns package path by package local name.
-	//
-	// Returns empty string if not found
-	PackageFullPath(localName string) string
-
-	// Returns package local name by package path.
-	//
-	// Returns empty string if not found
-	PackageLocalName(fullPath string) string
-
-	// Return all local names of application packages in alphabetical order
-	PackageLocalNames() []string
-
-	// Enumerates all application packages.
-	//
-	// Packages are enumerated in alphabetical order by local name
-	Packages(func(localName, fullPath string))
-
 	// Return data type by name.
 	//
 	// Returns nil if not found.
