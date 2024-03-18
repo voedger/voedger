@@ -174,6 +174,7 @@ func (a *asyncActualizer) init(ctx context.Context) (err error) {
 		projector:             a.projector,
 		iProjector:            prjType,
 		nonBuffered:           nonBuffered,
+		appParts:              a.conf.AppPartitions,
 	}
 
 	if p.metrics != nil {
@@ -301,17 +302,7 @@ func (a *asyncActualizer) readPlogByBatches(readBatch readPLogBatch) error {
 }
 
 func (a *asyncActualizer) borrowAppPart(ctx context.Context) (ap appparts.IAppPartition, err error) {
-	for ctx.Err() == nil {
-		if ap, err = a.conf.AppPartitions.Borrow(a.conf.AppQName, a.conf.Partition, cluster.ProcessorKind_Actualizer); err == nil {
-			return ap, nil
-		}
-		if errors.Is(err, appparts.ErrNotAvailableEngines) {
-			time.Sleep(borrowRetryDelay)
-			continue
-		}
-		return nil, err
-	}
-	return nil, ctx.Err()
+	return a.conf.AppPartitions.WaitForBorrow(ctx, a.conf.AppQName, a.conf.Partition, cluster.ProcessorKind_Actualizer)
 }
 
 func (a *asyncActualizer) readPlogToTheEnd(ctx context.Context) error {
@@ -394,9 +385,10 @@ type asyncProjector struct {
 	appQName              istructs.AppQName
 	iProjector            appdef.IProjector
 	nonBuffered           bool
+	appParts              appparts.IAppPartitions
 }
 
-func (p *asyncProjector) DoAsync(_ context.Context, work pipeline.IWorkpiece) (outWork pipeline.IWorkpiece, err error) {
+func (p *asyncProjector) DoAsync(ctx context.Context, work pipeline.IWorkpiece) (outWork pipeline.IWorkpiece, err error) {
 	defer work.Release()
 	w := work.(*workpiece)
 
@@ -408,7 +400,17 @@ func (p *asyncProjector) DoAsync(_ context.Context, work pipeline.IWorkpiece) (o
 
 	triggeringQNames := p.iProjector.Events().Map()
 	if isAcceptable(w.event, p.iProjector.WantErrors(), triggeringQNames, p.iProjector.App()) {
-		err = p.projector.Func(w.event, p.state, p.state)
+		ap, err := p.borrowAppPart(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("wsid[%d] offset[%d]: %w", w.event.Workspace(), w.event.WLogOffset(), err)
+		}
+
+		err = ap.Invoke(ctx, p.projector.Name, p.state, p.state)
+
+		ap.Release()
+
+		//err = p.projector.Func(w.event, p.state, p.state)
+
 		if err != nil {
 			return nil, fmt.Errorf("wsid[%d] offset[%d]: %w", w.event.Workspace(), w.event.WLogOffset(), err)
 		}
@@ -433,6 +435,11 @@ func (p *asyncProjector) DoAsync(_ context.Context, work pipeline.IWorkpiece) (o
 func (p *asyncProjector) Flush(_ pipeline.OpFuncFlush) (err error) { return p.flush() }
 func (p *asyncProjector) WSIDProvider() istructs.WSID              { return p.event.Workspace() }
 func (p *asyncProjector) EventProvider() istructs.IPLogEvent       { return p.event }
+
+func (p *asyncProjector) borrowAppPart(ctx context.Context) (ap appparts.IAppPartition, err error) {
+	return p.appParts.WaitForBorrow(ctx, p.appQName, p.partition, cluster.ProcessorKind_Actualizer)
+}
+
 func (p *asyncProjector) savePosition() error {
 	defer func() {
 		p.acceptedSinceSave = false
