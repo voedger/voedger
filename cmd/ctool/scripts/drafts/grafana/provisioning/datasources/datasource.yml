@@ -7,3 +7,8 @@ datasources:
   isDefault: true
   access: proxy
   editable: true
+  basicAuth: true
+  basicAuthUser: "voedger"
+  basicAuthPassword: "voedger"
+  jsonData:
+    httpMethod: "POST"
