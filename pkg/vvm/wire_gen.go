@@ -16,8 +16,7 @@ import (
 	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/iauthnzimpl"
 	"github.com/voedger/voedger/pkg/iblobstoragestg"
-	"github.com/voedger/voedger/pkg/iextengine"
-	"github.com/voedger/voedger/pkg/iextenginebuiltin"
+	"github.com/voedger/voedger/pkg/iextengineimpl"
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/in10nmem"
 	"github.com/voedger/voedger/pkg/iprocbus"
@@ -87,7 +86,8 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 	quotas := vvmConfig.Quotas
 	in10nBroker, cleanup := in10nmem.ProvideEx2(quotas, timeFunc)
 	v2 := projectors.NewSyncActualizerFactoryFactory(syncActualizerFactory, iSecretReader, in10nBroker)
-	iAppPartitions, cleanup2, err := appparts.NewWithActualizer(iAppStructsProvider, v2)
+	extensionEngineFactories := iextengineimpl.ProvideExtEngineFactories(appConfigsType)
+	iAppPartitions, cleanup2, err := appparts.NewWithActualizerWithExtEnginesFactories(iAppStructsProvider, v2, extensionEngineFactories)
 	if err != nil {
 		cleanup()
 		return nil, nil, err
@@ -234,10 +234,6 @@ func (vvm *VoedgerVM) Shutdown() {
 func (vvm *VoedgerVM) Launch() error {
 	ignition := struct{}{}
 	return vvm.ServicePipeline.SendSync(ignition)
-}
-
-func ProvideExtEngineFactories(cfgs istructsmem.AppConfigsType) iextengine.ExtensionEngineFactories {
-	return iextengine.ExtensionEngineFactories{appdef.ExtensionEngineKind_BuiltIn: iextenginebuiltin.ProvideExtensionEngineFactory(provideAppsBuiltInExtFuncs(cfgs))}
 }
 
 func provideIsDeviceAllowedFunc(appEPs map[istructs.AppQName]extensionpoints.IExtensionPoint, _ []BuiltInAppsPackages) iauthnzimpl.IsDeviceAllowedFuncs {
