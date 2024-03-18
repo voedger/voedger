@@ -8,7 +8,6 @@ datasources:
   access: proxy
   editable: true
   basicAuth: true
-  basicAuthUser: admin
-  basicAuthPassword: admin
-  jsonData:
-    httpMethod: "POST"
+  basicAuthUser: voedger
+  secureJsonData:
+     basicAuthPassword: voedger
