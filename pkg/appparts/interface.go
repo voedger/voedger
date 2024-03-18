@@ -48,6 +48,11 @@ type IAppPartitions interface {
 	//
 	// If partition not exist, returns error.
 	Borrow(istructs.AppQName, istructs.PartitionID, cluster.ProcessorKind) (IAppPartition, error)
+
+	// Waits for partition to be available and borrows it.
+	//
+	// If partition not exist, returns error.
+	WaitForBorrow(context.Context, istructs.AppQName, istructs.PartitionID, cluster.ProcessorKind) (IAppPartition, error)
 }
 
 // Application partition.

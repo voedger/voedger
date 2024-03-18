@@ -6,7 +6,10 @@
 package appparts
 
 import (
+	"context"
+	"errors"
 	"sync"
+	"time"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/cluster"
@@ -112,4 +115,19 @@ func (aps *apps) Borrow(appName istructs.AppQName, partID istructs.PartitionID, 
 	}
 
 	return borrowed, nil
+}
+
+func (aps *apps) WaitForBorrow(ctx context.Context, appName istructs.AppQName, partID istructs.PartitionID, proc cluster.ProcessorKind) (IAppPartition, error) {
+	for ctx.Err() == nil {
+		ap, err := aps.Borrow(appName, partID, proc)
+		if err == nil {
+			return ap, nil
+		}
+		if errors.Is(err, ErrNotAvailableEngines) {
+			time.Sleep(AppPartitionBorrowRetryDelay)
+			continue
+		}
+		return nil, err
+	}
+	return nil, ctx.Err()
 }
