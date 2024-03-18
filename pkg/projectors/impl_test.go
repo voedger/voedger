@@ -16,6 +16,7 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/cluster"
+	"github.com/voedger/voedger/pkg/iextengineimpl"
 	"github.com/voedger/voedger/pkg/iratesce"
 	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istorage/mem"
@@ -221,7 +222,13 @@ func deployTestApp(
 		panic(err)
 	}
 
-	appParts, cleanup, err = appparts.New(appStructsProvider)
+	appParts, cleanup, err = appparts.NewWithActualizerWithExtEnginesFactories(
+		appStructsProvider,
+		func(istructs.IAppStructs, istructs.PartitionID) pipeline.ISyncOperator {
+			return &pipeline.NOOP{}
+		},
+		iextengineimpl.ProvideExtEngineFactories(cfgs),
+	)
 	if err != nil {
 		panic(err)
 	}
