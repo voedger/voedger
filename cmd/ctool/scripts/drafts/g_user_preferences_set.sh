@@ -19,10 +19,10 @@ HOST=$1
 ADMIN_USER=$2
 ADMIN_PASSWORD=$3
 
-DASHBOARD_ID="HiA8ldL7z"
+DASHBOARD_ID="1"
 
 GLOBAL_PREF_PAYLOAD="{\"theme\":\"dark\", \
-           \"homeDashboardUID\":\"$DASHBOARD_ID\", \
+           \"homeDashboardId\":\"$DASHBOARD_ID\", \
                    \"timezone\":\"utc\"}"
 
 # Set preferences on all app nodes hosts
