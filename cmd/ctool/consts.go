@@ -77,7 +77,7 @@ const (
 	envVoedgerAcmeDomains = "VOEDGER_ACME_DOMAINS"
 	envVoedgerSshKey      = "VOEDGER_SSH_KEY"
 
-	minGrafanaPasswordLength = 5
+	minMonPasswordLength = 5
 )
 
 const comma = ","
