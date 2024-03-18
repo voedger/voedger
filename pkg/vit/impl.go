@@ -240,8 +240,8 @@ func handleWSParam(vit *VIT, appWS *AppWorkspace, appWorkspaces map[string]*AppW
 	}
 }
 
-func NewVITLocalCassandra(t *testing.T, vitCfg *VITConfig, opts ...vitOptFunc) (vit *VIT) {
-	vit = newVit(t, vitCfg, true)
+func NewVITLocalCassandra(tb testing.TB, vitCfg *VITConfig, opts ...vitOptFunc) (vit *VIT) {
+	vit = newVit(tb, vitCfg, true)
 	for _, opt := range opts {
 		opt(vit)
 	}
