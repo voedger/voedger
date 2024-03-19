@@ -563,12 +563,12 @@ func Test_WithState(t *testing.T) {
 	// build app
 	app := appStructsFromCallback(
 		func(appDef appdef.IAppDefBuilder) {
+			appDef.AddPackage("pkg", "pkg")
 			projectors.ProvideViewDef(appDef, testView, func(view appdef.IViewBuilder) {
 				view.Key().PartKey().AddField(pk, appdef.DataKind_int32)
 				view.Key().ClustCols().AddField(cc, appdef.DataKind_int32)
 				view.Value().AddField(vv, appdef.DataKind_int32, true)
 			})
-			appDef.AddPackage("pkg", "pkg")
 		},
 		func(cfg *istructsmem.AppConfigType) {})
 	state := state.ProvideAsyncActualizerStateFactory()(context.Background(), app, nil, state.SimpleWSIDFunc(ws), nil, nil, nil, intentsLimit, bundlesLimit)
@@ -630,12 +630,12 @@ func Test_StatePanic(t *testing.T) {
 
 	app := appStructsFromCallback(
 		func(appDef appdef.IAppDefBuilder) {
+			appDef.AddPackage("pkg", "pkg")
 			projectors.ProvideViewDef(appDef, testView, func(view appdef.IViewBuilder) {
 				view.Key().PartKey().AddField(pk, appdef.DataKind_int32)
 				view.Key().ClustCols().AddField(cc, appdef.DataKind_int32)
 				view.Value().AddField(vv, appdef.DataKind_int32, true)
 			})
-			appDef.AddPackage("pkg", "pkg")
 		},
 		func(cfg *istructsmem.AppConfigType) {})
 	state := state.ProvideAsyncActualizerStateFactory()(context.Background(), app, nil, state.SimpleWSIDFunc(ws), nil, nil, nil, intentsLimit, bundlesLimit)
