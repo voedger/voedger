@@ -19,14 +19,8 @@ HOST=$1
 ADMIN_USER=$2
 ADMIN_PASSWORD=$3
 DATASOURCE_NAME="Prometheus"
-NEW_BASIC_AUTH_USER="vsvs111"
+NEW_BASIC_AUTH_USER="voedger"
 NEW_BASIC_AUTH_PASSWORD="$4"
-
-# User details
-USER_NAME="voedger"
-USER_LOGIN="voedger"
-USER_PASSWORD="voedger"
-
 
 DsIDbyName() {
   local name="$1"
@@ -34,7 +28,7 @@ DsIDbyName() {
   local url="http://$HOST:3000/api/datasources/name/$name"
 
   resp=$(curl -s -u "$ADMIN_USER:$ADMIN_PASSWORD" "$url")
-  echo $(echo "$resp" | jq '.id')
+  jq '.id' <<< "$resp"
 }
 
 
