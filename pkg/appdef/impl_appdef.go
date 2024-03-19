@@ -360,6 +360,7 @@ func (app *appDef) build() (err error) {
 //
 // Should be called after appDef is created.
 func (app *appDef) makeSysPackage() {
+	app.packages.add(SysPackage, SysPackagePath)
 	app.makeSysDataTypes()
 }
 

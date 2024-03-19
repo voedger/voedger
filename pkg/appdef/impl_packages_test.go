@@ -34,7 +34,7 @@ func Test_AppDef_AddPackage(t *testing.T) {
 		require.Equal("example", app.PackageLocalName("example.com/path"))
 		require.Equal("example.com/path", app.PackageFullPath("example"))
 
-		require.EqualValues([]string{"example", "test"}, app.PackageLocalNames())
+		require.EqualValues([]string{"example", "sys", "test"}, app.PackageLocalNames())
 
 		cnt := 0
 		app.Packages(func(localName, fullPath string) {
@@ -43,6 +43,9 @@ func Test_AppDef_AddPackage(t *testing.T) {
 				require.Equal("example", localName)
 				require.Equal("example.com/path", fullPath)
 			case 1:
+				require.Equal(SysPackage, localName)
+				require.Equal(SysPackagePath, fullPath)
+			case 2:
 				require.Equal("test", localName)
 				require.Equal("test.com/path", fullPath)
 			default:
@@ -50,10 +53,13 @@ func Test_AppDef_AddPackage(t *testing.T) {
 			}
 			cnt++
 		})
-		require.Equal(2, cnt)
+		require.Equal(3, cnt)
 	})
 
 	t.Run("should be reconvert full-local qualified names", func(t *testing.T) {
+		require.Equal(NewQName(SysPackage, "name"), app.LocalQName(NewFullQName(SysPackagePath, "name")))
+		require.Equal(NewFullQName(SysPackagePath, "name"), app.FullQName(NewQName(SysPackage, "name")))
+
 		require.Equal(NewQName("test", "name"), app.LocalQName(NewFullQName("test.com/path", "name")))
 		require.Equal(NewFullQName("test.com/path", "name"), app.FullQName(NewQName("test", "name")))
 
@@ -87,5 +93,10 @@ func Test_AppDef_AddPackage(t *testing.T) {
 				appDef.AddPackage("test1", "test.com/path")
 				appDef.AddPackage("test2", "test.com/path")
 			}, "should be panic if reuse path")
+
+		require.Panics(
+			func() {
+				appDef.AddPackage(SysPackage, "test.com/sys")
+			}, "should be panic if attempt to redefine sys package")
 	})
 }

@@ -54,9 +54,12 @@ func Test_NullAppDef(t *testing.T) {
 		}
 	})
 
+	t.Run("should be return sys package only", func(t *testing.T) {
+		require.Equal([]string{SysPackage}, app.PackageLocalNames())
+	})
+
 	t.Run("should be null return other members", func(t *testing.T) {
 		require.Empty(app.Comment())
-		require.Empty(app.PackageLocalNames())
 
 		require.Zero(
 			func() int {

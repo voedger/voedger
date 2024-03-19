@@ -45,8 +45,9 @@ func ExampleIAppDefBuilder_AddPackage() {
 	// Output:
 	// test test.com/test
 	// example example.com/example
-	// [example test]
+	// [example sys test]
 	// example example.com/example
+	// sys voedger.com/packages/sys
 	// test test.com/test
 	// test.com/test.name
 	// example.name
