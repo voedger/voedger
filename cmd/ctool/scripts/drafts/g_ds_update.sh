@@ -44,6 +44,11 @@ dsID=$(DsIDbyName "${DATASOURCE_NAME}")
 UPDATE_DS_PAYLOAD=$(cat <<-EOF
   {
     "id": ${dsID},
+    "name": "${DATASOURCE_NAME}",
+    "type": "prometheus",
+    "isDefault": true,
+    "access": "proxy",
+    "editable": true,
     "basicAuth": true,
     "basicAuthUser": "${NEW_BASIC_AUTH_USER}",
     "secureJsonData": {
