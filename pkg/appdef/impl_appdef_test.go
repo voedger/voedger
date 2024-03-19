@@ -25,12 +25,17 @@ func TestNew(t *testing.T) {
 
 	require.Equal(adb.AppDef(), app, "should be ok get AppDef after build")
 
-	t.Run("must ok to read well known types", func(t *testing.T) {
+	t.Run("must ok to read sys package", func(t *testing.T) {
+		require.Equal([]string{SysPackage}, app.PackageLocalNames())
+		require.Equal(SysPackagePath, app.PackageFullPath(SysPackage))
+	})
+
+	t.Run("must ok to read sys types", func(t *testing.T) {
 		require.Equal(NullType, app.TypeByName(NullQName))
 		require.Equal(AnyType, app.TypeByName(QNameANY))
 	})
 
-	t.Run("must ok to read well known data", func(t *testing.T) {
+	t.Run("must ok to read sys data types", func(t *testing.T) {
 		require.Equal(SysData_RecordID, app.Data(SysData_RecordID).QName())
 		require.Equal(SysData_String, app.Data(SysData_String).QName())
 		require.Equal(SysData_bytes, app.Data(SysData_bytes).QName())
@@ -56,6 +61,7 @@ func Test_NullAppDef(t *testing.T) {
 
 	t.Run("should be return sys package only", func(t *testing.T) {
 		require.Equal([]string{SysPackage}, app.PackageLocalNames())
+		require.Equal(SysPackagePath, app.PackageFullPath(SysPackage))
 	})
 
 	t.Run("should be null return other members", func(t *testing.T) {

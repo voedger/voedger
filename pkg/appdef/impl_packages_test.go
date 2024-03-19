@@ -17,12 +17,12 @@ func Test_AppDef_AddPackage(t *testing.T) {
 	var app IAppDef
 
 	t.Run("should be ok to add package", func(t *testing.T) {
-		appDef := New()
+		adb := New()
 
-		appDef.AddPackage("test", "test.com/path")
-		appDef.AddPackage("example", "example.com/path")
+		adb.AddPackage("test", "test.com/path")
+		adb.AddPackage("example", "example.com/path")
 
-		a, err := appDef.Build()
+		a, err := adb.Build()
 		require.NoError(err)
 		app = a
 	})
@@ -76,27 +76,27 @@ func Test_AppDef_AddPackage(t *testing.T) {
 	})
 
 	t.Run("test panics", func(t *testing.T) {
-		appDef := New()
+		adb := New()
 
-		require.Panics(func() { appDef.AddPackage("", "test.com/path") }, "should be panic if empty name")
-		require.Panics(func() { appDef.AddPackage("naked 🔫", "test.com/path") }, "should be panic if invalid name")
-		require.Panics(func() { appDef.AddPackage("test", "") }, "should be panic if empty path")
+		require.Panics(func() { adb.AddPackage("", "test.com/path") }, "should be panic if empty name")
+		require.Panics(func() { adb.AddPackage("naked 🔫", "test.com/path") }, "should be panic if invalid name")
+		require.Panics(func() { adb.AddPackage("test", "") }, "should be panic if empty path")
 
 		require.Panics(
 			func() {
-				appDef.AddPackage("test", "test1.com/path")
-				appDef.AddPackage("test", "test2.com/path")
+				adb.AddPackage("test", "test1.com/path")
+				adb.AddPackage("test", "test2.com/path")
 			}, "should be panic if reuse local name")
 
 		require.Panics(
 			func() {
-				appDef.AddPackage("test1", "test.com/path")
-				appDef.AddPackage("test2", "test.com/path")
+				adb.AddPackage("test1", "test.com/path")
+				adb.AddPackage("test2", "test.com/path")
 			}, "should be panic if reuse path")
 
 		require.Panics(
 			func() {
-				appDef.AddPackage(SysPackage, "test.com/sys")
+				adb.AddPackage(SysPackage, "test.com/sys")
 			}, "should be panic if attempt to redefine sys package")
 	})
 }
