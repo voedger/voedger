@@ -53,6 +53,7 @@ func TestBasicUsage_SynchronousActualizer(t *testing.T) {
 	_, cleanup, _, appStructs := deployTestApp(
 		istructs.AppQName_test1_app1, 1, []istructs.PartitionID{1}, false,
 		func(appDef appdef.IAppDefBuilder) {
+			appDef.AddPackage("test", "test.com/test")
 			ProvideViewDef(appDef, incProjectionView, buildProjectionView)
 			ProvideViewDef(appDef, decProjectionView, buildProjectionView)
 			appDef.AddCommand(testQName)
@@ -245,6 +246,7 @@ func Test_ErrorInSyncActualizer(t *testing.T) {
 	_, cleanup, _, appStructs := deployTestApp(
 		istructs.AppQName_test1_app1, 1, []istructs.PartitionID{1}, false,
 		func(appDef appdef.IAppDefBuilder) {
+			appDef.AddPackage("test", "test.com/test")
 			ProvideViewDef(appDef, incProjectionView, buildProjectionView)
 			ProvideViewDef(appDef, decProjectionView, buildProjectionView)
 			appDef.AddCommand(testQName)

@@ -53,6 +53,7 @@ func TestBasicUsage_AsynchronousActualizer(t *testing.T) {
 	appParts, cleanup, _, appStructs := deployTestApp(
 		appName, totalPartitions, []istructs.PartitionID{partitionNr}, false,
 		func(appDef appdef.IAppDefBuilder) {
+			appDef.AddPackage("test", "test.com/test")
 			ProvideViewDef(appDef, incProjectionView, buildProjectionView)
 			ProvideViewDef(appDef, decProjectionView, buildProjectionView)
 			appDef.AddCommand(testQName)
@@ -149,6 +150,7 @@ func Test_AsynchronousActualizer_FlushByRange(t *testing.T) {
 	appParts, cleanup, _, appStructs := deployTestApp(
 		appName, totalPartitions, []istructs.PartitionID{partitionNr}, false,
 		func(appDef appdef.IAppDefBuilder) {
+			appDef.AddPackage("test", "test.com/test")
 			ProvideViewDef(appDef, incProjectionView, buildProjectionView)
 			ProvideViewDef(appDef, decProjectionView, buildProjectionView)
 			appDef.AddCommand(testQName)
@@ -233,6 +235,7 @@ func Test_AsynchronousActualizer_FlushByInterval(t *testing.T) {
 	appParts, cleanup, _, appStructs := deployTestApp(
 		appName, totalPartitions, []istructs.PartitionID{partitionNr}, false,
 		func(appDef appdef.IAppDefBuilder) {
+			appDef.AddPackage("test", "test.com/test")
 			ProvideViewDef(appDef, incProjectionView, buildProjectionView)
 			ProvideViewDef(appDef, decProjectionView, buildProjectionView)
 			appDef.AddCommand(testQName)
@@ -325,6 +328,7 @@ func Test_AsynchronousActualizer_ErrorAndRestore(t *testing.T) {
 	appParts, cleanup, _, appStructs := deployTestApp(
 		appName, totalPartitions, []istructs.PartitionID{partitionNr}, false,
 		func(appDef appdef.IAppDefBuilder) {
+			appDef.AddPackage("test", "test.com/test")
 			ProvideViewDef(appDef, incProjectionView, buildProjectionView)
 			ProvideViewDef(appDef, decProjectionView, buildProjectionView)
 			appDef.AddCommand(testQName)
@@ -445,6 +449,7 @@ func Test_AsynchronousActualizer_ResumeReadAfterNotifications(t *testing.T) {
 	appParts, cleanup, _, appStructs := deployTestApp(
 		appName, totalPartitions, []istructs.PartitionID{partitionNr}, false,
 		func(appDef appdef.IAppDefBuilder) {
+			appDef.AddPackage("test", "test.com/test")
 			ProvideViewDef(appDef, incProjectionView, buildProjectionView)
 			ProvideViewDef(appDef, decProjectionView, buildProjectionView)
 			appDef.AddCommand(testQName)
@@ -582,6 +587,7 @@ func Test_AsynchronousActualizer_Stress(t *testing.T) {
 	appParts, cleanup, _, appStructs := deployTestApp(
 		appName, totalPartitions, []istructs.PartitionID{partitionNr}, false,
 		func(appDef appdef.IAppDefBuilder) {
+			appDef.AddPackage("test", "test.com/test")
 			ProvideViewDef(appDef, incProjectionView, buildProjectionView)
 			ProvideViewDef(appDef, decProjectionView, buildProjectionView)
 			appDef.AddCommand(testQName)
@@ -693,6 +699,7 @@ func Test_AsynchronousActualizer_NonBuffered(t *testing.T) {
 	appParts, cleanup, _, appStructs := deployTestApp(
 		appName, totalPartitions, []istructs.PartitionID{partitionNr}, false,
 		func(appDef appdef.IAppDefBuilder) {
+			appDef.AddPackage("test", "test.com/test")
 			ProvideViewDef(appDef, incProjectionView, buildProjectionView)
 			ProvideViewDef(appDef, decProjectionView, buildProjectionView)
 			appDef.AddCommand(testQName)
@@ -824,6 +831,7 @@ func Test_AsynchronousActualizer_Stress_NonBuffered(t *testing.T) {
 	appParts, cleanup, metrics, appStructs := deployTestApp(
 		appName, totalPartitions, partID, true,
 		func(appDef appdef.IAppDefBuilder) {
+			appDef.AddPackage("test", "test.com/test")
 			appDef.AddCommand(projectorFilter)
 			appDef.AddCommand(testQName)
 			appDef.AddProjector(incrementorName).Events().Add(projectorFilter, appdef.ProjectorEventKind_Execute)
@@ -997,6 +1005,7 @@ func Test_AsynchronousActualizer_Stress_Buffered(t *testing.T) {
 	appParts, cleanup, metrics, appStructs := deployTestApp(
 		appName, totalPartitions, partID, true,
 		func(appDef appdef.IAppDefBuilder) {
+			appDef.AddPackage("test", "test.com/test")
 			appDef.AddCommand(projectorFilter)
 			appDef.AddCommand(testQName)
 			appDef.AddProjector(incrementorName).Events().Add(projectorFilter, appdef.ProjectorEventKind_Execute)
