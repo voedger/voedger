@@ -27,7 +27,7 @@ DashIDbyUID() {
   local resp
   local dashboard_id
 
-  resp=$(curl -s -u --user "$ADMIN_USER":"$ADMIN_PASSWORD" "$api_url")
+  resp=$(curl -s --user "$ADMIN_USER":"$ADMIN_PASSWORD" "$api_url")
   dashboard_id=$(echo "$resp" | jq '.dashboard.id')
 
   if [ "$dashboard_id" != "null" ]; then
