@@ -228,7 +228,7 @@ func deployTestApp(
 		func(istructs.IAppStructs, istructs.PartitionID) pipeline.ISyncOperator {
 			return &pipeline.NOOP{}
 		},
-		iextengineimpl.ProvideExtEngineFactories(cfgs),
+		iextengineimpl.ProvideExtEngineFactories(iextengineimpl.FilledAppConfigsType{AppConfigsType: cfgs}),
 	)
 	if err != nil {
 		panic(err)

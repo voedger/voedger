@@ -162,11 +162,12 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 		provideStorageFactory,
 		provideIAppStorageUncachingProviderFactory,
 		provideAppPartsCtlPipelineService,
-		apppartsctl.New,
+		provideIsDeviceAllowedFunc,
+		provideBuiltInApps,
+		provideFilledAppConfigsType,
 		iextengineimpl.ProvideExtEngineFactories,
 		appparts.NewWithActualizerWithExtEnginesFactories,
-		provideBuiltInApps,
-		provideIsDeviceAllowedFunc,
+		apppartsctl.New,
 		// wire.Value(vvmConfig.NumCommandProcessors) -> (wire bug?) value github.com/untillpro/airs-bp3/vvm.CommandProcessorsCount can't be used: vvmConfig is not declared in package scope
 		wire.FieldsOf(&vvmConfig,
 			"NumCommandProcessors",
@@ -185,6 +186,13 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 			"SecretsReader",
 		),
 	))
+}
+
+func provideFilledAppConfigsType(
+	cfgs istructsmem.AppConfigsType,
+	_ []BuiltInAppsPackages, /*need to make it called in correct order*/
+) iextengineimpl.FilledAppConfigsType {
+	return iextengineimpl.FilledAppConfigsType{AppConfigsType: cfgs}
 }
 
 func provideIsDeviceAllowedFunc(appEPs map[istructs.AppQName]extensionpoints.IExtensionPoint, _ []BuiltInAppsPackages /*need to make it called in correct order*/) iauthnzimpl.IsDeviceAllowedFuncs {

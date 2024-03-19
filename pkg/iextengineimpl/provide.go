@@ -12,7 +12,9 @@ import (
 	"github.com/voedger/voedger/pkg/istructsmem"
 )
 
-func ProvideExtEngineFactories(cfgs istructsmem.AppConfigsType) iextengine.ExtensionEngineFactories {
+type FilledAppConfigsType struct{ istructsmem.AppConfigsType }
+
+func ProvideExtEngineFactories(cfgs FilledAppConfigsType) iextengine.ExtensionEngineFactories {
 	return iextengine.ExtensionEngineFactories{
 		appdef.ExtensionEngineKind_BuiltIn: iextenginebuiltin.ProvideExtensionEngineFactory(provideAppsBuiltInExtFuncs(cfgs)),
 	}
