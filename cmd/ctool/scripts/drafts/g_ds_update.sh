@@ -19,7 +19,7 @@ HOST=$1
 ADMIN_USER=$2
 ADMIN_PASSWORD=$3
 DATASOURCE_NAME="Prometheus"
-NEW_BASIC_AUTH_USER="vsvs"
+NEW_BASIC_AUTH_USER="vsvs11"
 NEW_BASIC_AUTH_PASSWORD="$4"
 
 # User details
@@ -46,6 +46,7 @@ UPDATE_DS_PAYLOAD=$(cat <<-EOF
     "id": ${dsID},
     "name": "${DATASOURCE_NAME}",
     "type": "prometheus",
+    "basicAuth": true,
     "basicAuthUser": "${NEW_BASIC_AUTH_USER}",
     "secureJsonData": {
         "basicAuthPassword": "${NEW_BASIC_AUTH_PASSWORD}"
