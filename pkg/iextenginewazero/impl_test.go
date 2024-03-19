@@ -195,11 +195,11 @@ func appStructs(appDef appdef.IAppDefBuilder, prepareAppCfg appCfgCallback) istr
 }
 
 func appStructsFromCallback(prepareAppDef appDefCallback, prepareAppCfg appCfgCallback) istructs.IAppStructs {
-	appDef := appdef.New()
+	adb := appdef.New()
 	if prepareAppDef != nil {
-		prepareAppDef(appDef)
+		prepareAppDef(adb)
 	}
-	return appStructs(appDef, prepareAppCfg)
+	return appStructs(adb, prepareAppCfg)
 }
 
 func requireMemStat(t *testing.T, wasmEngine *wazeroExtEngine, mallocs, frees, heapInUse uint32) {
@@ -683,7 +683,7 @@ type (
 var sfs embed.FS
 
 func appStructsFromSQL(packagePath string, appdefSql string, prepareAppCfg appCfgCallback) istructs.IAppStructs {
-	appDef := appdef.New()
+	adb := appdef.New()
 
 	fs, err := parser.ParseFile("file1.sql", appdefSql)
 	if err != nil {
@@ -708,10 +708,10 @@ func appStructsFromSQL(packagePath string, appdefSql string, prepareAppCfg appCf
 		panic(err)
 	}
 
-	err = parser.BuildAppDefs(packages, appDef)
+	err = parser.BuildAppDefs(packages, adb)
 	if err != nil {
 		panic(err)
 	}
 
-	return appStructs(appDef, prepareAppCfg)
+	return appStructs(adb, prepareAppCfg)
 }
