@@ -42,14 +42,7 @@ DsIDbyName() {
 dsID=$(DsIDbyName "${DATASOURCE_NAME}")
 
 UPDATE_DS_PAYLOAD=$(cat <<-EOF
-  {
-    "id": ${dsID},
-    "basicAuth": true,
-    "basicAuthUser": "${NEW_BASIC_AUTH_USER}",
-    "secureJsonData": {
-        "basicAuthPassword": "${NEW_BASIC_AUTH_PASSWORD}"
-    }
-  }
+{"id": ${dsID},"basicAuth": true,"basicAuthUser": "${NEW_BASIC_AUTH_USER}","secureJsonData": {"basicAuthPassword": "${NEW_BASIC_AUTH_PASSWORD}"}}
 EOF
 )
 
