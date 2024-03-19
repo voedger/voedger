@@ -19,7 +19,25 @@ HOST=$1
 ADMIN_USER=$2
 ADMIN_PASSWORD=$3
 
-DASHBOARD_ID=1
+DASHBOARD_UID="HiA8ldL7z"
+
+DashIDbyUID() {
+  local dashboard_uid="$1"
+  local api_url="http://${HOST}:3000/api/dashboards/uid/${dashboard_uid}"
+  local resp
+  local dashboard_id
+
+  resp=$(curl -s -u --user "$ADMIN_USER":"$ADMIN_PASSWORD" "$api_url")
+  dashboard_id=$(echo "$resp" | jq '.dashboard.id')
+
+  if [ "$dashboard_id" != "null" ]; then
+    echo "$dashboard_id"
+  else
+    echo "Dashboard с UID $dashboard_uid не найден." >&2
+    return 1
+  fi
+}
+DASHBOARD_ID=$(DashIDbyUID $DASHBOARD_UID)
 
 GLOBAL_PREF_PAYLOAD="{\"theme\":\"dark\", \
            \"homeDashboardId\":$DASHBOARD_ID, \
