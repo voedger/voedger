@@ -42,7 +42,14 @@ DsIDbyName() {
 dsID=$(DsIDbyName "${DATASOURCE_NAME}")
 
 UPDATE_DS_PAYLOAD=$(cat <<-EOF
-{"id": ${dsID},"basicAuth": true,"basicAuthUser": "${NEW_BASIC_AUTH_USER}","secureJsonData": {"basicAuthPassword": "${NEW_BASIC_AUTH_PASSWORD}"}}
+  {
+    "id": ${dsID},
+    "basicAuth": true,
+    "basicAuthUser": "${NEW_BASIC_AUTH_USER}",
+    "secureJsonData": {
+        "basicAuthPassword": "${NEW_BASIC_AUTH_PASSWORD}"
+    }
+  }
 EOF
 )
 
@@ -51,7 +58,7 @@ if [ "$dsID" == "null" ]; then
   exit 1
 fi
 
-http_resp=$(curl -s -o /dev/null -w "%{http_code}" -X PUT -u "${ADMIN_USER}:${ADMIN_PASSWORD}" -H "Content-Type: application/json" -d "$UPDATE_DS_PAYLOAD" "http://$HOST:3000/api/datasources/$dsID")
+http_resp=$(curl -s -o /dev/null -w "%{http_code}" -X PUT -u "${ADMIN_USER}:${ADMIN_PASSWORD}" -H "Accept: application/json" -H "Content-Type: application/json" -d "$UPDATE_DS_PAYLOAD" "http://$HOST:3000/api/datasources/$dsID")
 
 if [ "$http_resp" -eq 200 ]; then
     echo "Datasource '${DATASOURCE_NAME}' update with success."
