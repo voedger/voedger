@@ -90,6 +90,8 @@ EOF
       utils_ssh "$SSH_USER@$1" 'cat > ~/grafana/provisioning/dashboards/swarmprom-prometheus-dash.json'
    cat ./grafana/provisioning/dashboards/swarmprom-services-dash.json | \
       utils_ssh "$SSH_USER@$1" 'cat > ~/grafana/provisioning/dashboards/swarmprom-services-dash.json'
+   cat ./grafana/provisioning/dashboards/bp3-processors.json | \
+      utils_ssh "$SSH_USER@$1" 'cat > ~/grafana/provisioning/dashboards/bp3-processors.json'
    cat ./grafana/provisioning/dashboards/swarmprom_dashboards.yml | \
       utils_ssh "$SSH_USER@$1" 'cat > ~/grafana/provisioning/dashboards/swarmprom_dashboards.yml'
 
