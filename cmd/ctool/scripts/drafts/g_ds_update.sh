@@ -38,8 +38,12 @@ DsIDbyName() {
 }
 
 
+
+dsID=$(DsIDbyName "${DATASOURCE_NAME}")
+
 UPDATE_DS_PAYLOAD=$(cat <<-EOF
   {
+    "id": ${dsID},
     "basicAuth": true,
     "basicAuthUser": "${NEW_BASIC_AUTH_USER}",
     "secureJsonData": {
@@ -48,8 +52,6 @@ UPDATE_DS_PAYLOAD=$(cat <<-EOF
   }
 EOF
 )
-
-dsID=$(DsIDbyName "${DATASOURCE_NAME}")
 
 if [ "$dsID" == "null" ]; then
   echo "Datasource '$DATASOURCE_NAME' not found."
