@@ -360,9 +360,11 @@ func Test_LoadStoreRecord_Bytes(t *testing.T) {
 		newFieldName := func(oldValue string) string { return oldValue + "_1" }
 		oldFieldName := func(newValue string) string { return newValue[:len(newValue)-2] }
 
-		appDef := appdef.New()
+		adb := appdef.New()
+		adb.AddPackage("test", "test.com/test")
+
 		t.Run("must be ok to build application", func(t *testing.T) {
-			newCDoc := appDef.AddCDoc(test.testCDoc)
+			newCDoc := adb.AddCDoc(test.testCDoc)
 
 			oldCDoc := rec1.appCfg.AppDef.CDoc(test.testCDoc)
 			for _, f := range oldCDoc.Fields() {
@@ -370,10 +372,10 @@ func Test_LoadStoreRecord_Bytes(t *testing.T) {
 					newCDoc.AddField(newFieldName(f.Name()), f.DataKind(), f.Required())
 				}
 			}
-			appDef.AddObject(test.tablePhotos) // for reading QName_1 field value
+			adb.AddObject(test.tablePhotos) // for reading QName_1 field value
 		})
 
-		newConfig := newAppConfig(test.AppCfg.Name, appDef)
+		newConfig := newAppConfig(test.AppCfg.Name, adb)
 
 		err := newConfig.prepare(nil, test.AppCfg.storage)
 		require.NoError(err)

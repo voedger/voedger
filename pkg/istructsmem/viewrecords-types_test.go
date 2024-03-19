@@ -27,9 +27,11 @@ func Test_KeyType(t *testing.T) {
 	appConfigs := func() AppConfigsType {
 		cfgs := make(AppConfigsType, 1)
 
-		appDef := appdef.New()
+		adb := appdef.New()
+		adb.AddPackage("test", "test.com/test")
+
 		t.Run("must be ok to build view", func(t *testing.T) {
-			view := appDef.AddView(viewName)
+			view := adb.AddView(viewName)
 			view.Key().PartKey().
 				AddField("pk_int32", appdef.DataKind_int32).
 				AddField("pk_int64", appdef.DataKind_int64).
@@ -53,7 +55,7 @@ func Test_KeyType(t *testing.T) {
 				AddField("val_string", appdef.DataKind_string, false, appdef.MaxLen(1024))
 		})
 
-		_ = cfgs.AddConfig(istructs.AppQName_test1_app1, appDef)
+		_ = cfgs.AddConfig(istructs.AppQName_test1_app1, adb)
 
 		return cfgs
 	}
@@ -174,9 +176,10 @@ func TestCore_ViewRecords(t *testing.T) {
 	appConfigs := func() AppConfigsType {
 		cfgs := make(AppConfigsType, 1)
 
-		appDef := appdef.New()
+		adb := appdef.New()
+		adb.AddPackage("test", "test.com/test")
 		t.Run("must be ok to build application", func(t *testing.T) {
-			view := appDef.AddView(appdef.NewQName("test", "viewDrinks"))
+			view := adb.AddView(appdef.NewQName("test", "viewDrinks"))
 			view.Key().PartKey().
 				AddField("partitionKey1", appdef.DataKind_int64)
 			view.Key().ClustCols().
@@ -188,7 +191,7 @@ func TestCore_ViewRecords(t *testing.T) {
 				AddField("name", appdef.DataKind_string, true).
 				AddField("active", appdef.DataKind_bool, true)
 
-			otherView := appDef.AddView(appdef.NewQName("test", "otherView"))
+			otherView := adb.AddView(appdef.NewQName("test", "otherView"))
 			otherView.Key().PartKey().
 				AddField("partitionKey1", appdef.DataKind_QName)
 			otherView.Key().ClustCols().
@@ -199,7 +202,7 @@ func TestCore_ViewRecords(t *testing.T) {
 				AddField("valueField1", appdef.DataKind_int64, false)
 		})
 
-		_ = cfgs.AddConfig(istructs.AppQName_test1_app1, appDef)
+		_ = cfgs.AddConfig(istructs.AppQName_test1_app1, adb)
 
 		return cfgs
 	}
@@ -783,9 +786,10 @@ func Test_LoadStoreViewRecord_Bytes(t *testing.T) {
 
 	viewName := appdef.NewQName("test", "view")
 
-	appDef := appdef.New()
+	adb := appdef.New()
+	adb.AddPackage("test", "test.com/test")
 	t.Run("must be ok to build application", func(t *testing.T) {
-		v := appDef.AddView(viewName)
+		v := adb.AddView(viewName)
 		v.Key().PartKey().
 			AddField("pf_int32", appdef.DataKind_int32).
 			AddField("pf_int64", appdef.DataKind_int64).
@@ -819,7 +823,7 @@ func Test_LoadStoreViewRecord_Bytes(t *testing.T) {
 
 	cfg := func() *AppConfigType {
 		cfgs := make(AppConfigsType, 1)
-		cfg := cfgs.AddConfig(istructs.AppQName_test1_app2, appDef)
+		cfg := cfgs.AddConfig(istructs.AppQName_test1_app2, adb)
 
 		storage, err := simpleStorageProvider().AppStorage(istructs.AppQName_test1_app1)
 		require.NoError(err)
@@ -917,9 +921,10 @@ func Test_ViewRecords_ClustColumnsQName(t *testing.T) {
 	//
 	appConfigs := func() AppConfigsType {
 
-		appDef := appdef.New()
+		adb := appdef.New()
+		adb.AddPackage("test", "test.com/test")
 		t.Run("must be ok to build application", func(t *testing.T) {
-			v := appDef.AddView(appdef.NewQName("test", "viewDrinks"))
+			v := adb.AddView(appdef.NewQName("test", "viewDrinks"))
 			v.Key().PartKey().
 				AddField("partitionKey1", appdef.DataKind_int64)
 			v.Key().ClustCols().
@@ -930,11 +935,11 @@ func Test_ViewRecords_ClustColumnsQName(t *testing.T) {
 				AddField("name", appdef.DataKind_string, true).
 				AddField("active", appdef.DataKind_bool, true)
 
-			_ = appDef.AddObject(appdef.NewQName("test", "obj1"))
+			_ = adb.AddObject(appdef.NewQName("test", "obj1"))
 		})
 
 		cfgs := make(AppConfigsType, 1)
-		_ = cfgs.AddConfig(istructs.AppQName_test1_app1, appDef)
+		_ = cfgs.AddConfig(istructs.AppQName_test1_app1, adb)
 
 		return cfgs
 	}
@@ -991,9 +996,10 @@ func Test_ViewRecord_GetBatch(t *testing.T) {
 	championshipsView := appdef.NewQName("test", "championships")
 	championsView := appdef.NewQName("test", "champions")
 
-	appDef := appdef.New()
+	adb := appdef.New()
+	adb.AddPackage("test", "test.com/test")
 	t.Run("must be ok to build application", func(t *testing.T) {
-		v := appDef.AddView(championshipsView)
+		v := adb.AddView(championshipsView)
 		v.Key().PartKey().
 			AddField("Year", appdef.DataKind_int32)
 		v.Key().ClustCols().
@@ -1002,7 +1008,7 @@ func Test_ViewRecord_GetBatch(t *testing.T) {
 			AddField("Country", appdef.DataKind_string, true).
 			AddField("City", appdef.DataKind_string, false)
 
-		v = appDef.AddView(championsView)
+		v = adb.AddView(championsView)
 		v.Key().PartKey().
 			AddField("Year", appdef.DataKind_int32)
 		v.Key().ClustCols().
@@ -1015,7 +1021,7 @@ func Test_ViewRecord_GetBatch(t *testing.T) {
 	storageProvider := teststore.NewStorageProvider(storage)
 
 	cfgs := make(AppConfigsType, 1)
-	_ = cfgs.AddConfig(istructs.AppQName_test1_app1, appDef)
+	_ = cfgs.AddConfig(istructs.AppQName_test1_app1, adb)
 	provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
 
 	app, err := provider.AppStructs(istructs.AppQName_test1_app1)
@@ -1264,9 +1270,10 @@ func Test_ViewRecordStructure(t *testing.T) {
 
 	viewName := appdef.NewQName("test", "view")
 
-	appDef := appdef.New()
+	adb := appdef.New()
+	adb.AddPackage("test", "test.com/test")
 	t.Run("must be ok to build application", func(t *testing.T) {
-		v := appDef.AddView(viewName)
+		v := adb.AddView(viewName)
 		v.Key().PartKey().
 			AddField("ValueDateYear", appdef.DataKind_int32)
 		v.Key().ClustCols().
@@ -1281,7 +1288,7 @@ func Test_ViewRecordStructure(t *testing.T) {
 
 	cfg := func() *AppConfigType {
 		cfgs := make(AppConfigsType, 1)
-		cfg := cfgs.AddConfig(istructs.AppQName_test1_app2, appDef)
+		cfg := cfgs.AddConfig(istructs.AppQName_test1_app2, adb)
 
 		storage, err := simpleStorageProvider().AppStorage(istructs.AppQName_test1_app1)
 		require.NoError(err)

@@ -34,10 +34,11 @@ func Test_BasicUsage(t *testing.T) {
 	testName := appdef.NewQName("test", "doc")
 
 	testAppDef := func() appdef.IAppDef {
-		app := appdef.New()
-		doc := app.AddCDoc(testName)
+		adb := appdef.New()
+		adb.AddPackage("test", "test.com/test")
+		doc := adb.AddCDoc(testName)
 		doc.SetSingleton()
-		appDef, err := app.Build()
+		appDef, err := adb.Build()
 		if err != nil {
 			panic(err)
 		}
@@ -108,21 +109,22 @@ func Test_SingletonsGetID(t *testing.T) {
 			err = versions.Prepare(storage)
 			require.NoError(err)
 
-			app := appdef.New()
+			adb := appdef.New()
+			adb.AddPackage("test", "test.com/test")
 
 			{
-				doc := app.AddCDoc(cDocName)
+				doc := adb.AddCDoc(cDocName)
 				doc.SetSingleton()
 				doc.AddField("f1", appdef.DataKind_QName, true)
 			}
 
 			{
-				doc := app.AddWDoc(wDocName)
+				doc := adb.AddWDoc(wDocName)
 				doc.SetSingleton()
 				doc.AddField("f1", appdef.DataKind_QName, true)
 			}
 
-			appDef, err := app.Build()
+			appDef, err := adb.Build()
 			require.NoError(err)
 
 			return storage, versions, appDef
@@ -212,11 +214,13 @@ func Test_Singletons_Errors(t *testing.T) {
 		err := versions.Prepare(storage)
 		require.NoError(err)
 
-		app := appdef.New()
-		doc := app.AddCDoc(cDocName)
+		adb := appdef.New()
+		adb.AddPackage("test", "test.com/test")
+
+		doc := adb.AddCDoc(cDocName)
 		doc.SetSingleton()
 		doc.AddField("f1", appdef.DataKind_QName, true)
-		appDef, err := app.Build()
+		appDef, err := adb.Build()
 		require.NoError(err)
 
 		stone := New()
@@ -232,12 +236,14 @@ func Test_Singletons_Errors(t *testing.T) {
 		err := versions.Prepare(storage)
 		require.NoError(err)
 
-		appDefBuilder := appdef.New()
+		adb := appdef.New()
+		adb.AddPackage("test", "test.com/test")
+
 		for id := istructs.FirstSingletonID; id <= istructs.MaxSingletonID; id++ {
-			doc := appDefBuilder.AddCDoc(appdef.NewQName("test", fmt.Sprintf("doc_%v", id)))
+			doc := adb.AddCDoc(appdef.NewQName("test", fmt.Sprintf("doc_%v", id)))
 			doc.SetSingleton()
 		}
-		appDef, err := appDefBuilder.Build()
+		appDef, err := adb.Build()
 		require.NoError(err)
 
 		st := New()

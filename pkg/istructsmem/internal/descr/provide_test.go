@@ -23,7 +23,6 @@ var expectedJson string
 func TestBasicUsage(t *testing.T) {
 	appDef := func() appdef.IAppDef {
 		adb := appdef.New()
-
 		adb.AddPackage("test", "test/path")
 
 		numName := appdef.NewQName("test", "number")
