@@ -31,8 +31,6 @@ DsIDbyName() {
   jq '.id' <<< "$resp"
 }
 
-
-
 dsID=$(DsIDbyName "${DATASOURCE_NAME}")
 
 UPDATE_DS_PAYLOAD=$(cat <<-EOF

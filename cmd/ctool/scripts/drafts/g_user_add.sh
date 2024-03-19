@@ -28,7 +28,6 @@ CREATE_USER_PAYLOAD="{\"name\":\"${USER_NAME}\", \
                      \"login\":\"${USER_LOGIN}\", \
                   \"password\":\"${USER_PASSWORD}\"}"
 
-# Create users on multiple hosts using a loop
   API_URL="http://$HOST:3000/api/admin/users"
 
   # Create user using curl and parse response with jq
