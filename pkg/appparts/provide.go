@@ -6,9 +6,7 @@
 package appparts
 
 import (
-	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/iextengine"
-	"github.com/voedger/voedger/pkg/iextenginebuiltin"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/pipeline"
 )
@@ -29,9 +27,7 @@ func NewWithActualizer(structs istructs.IAppStructsProvider, actualizer SyncActu
 	return NewWithActualizerWithExtEnginesFactories(
 		structs,
 		actualizer,
-		iextengine.ExtensionEngineFactories{
-			appdef.ExtensionEngineKind_BuiltIn: iextenginebuiltin.ProvideExtensionEngineFactory(iextengine.BuiltInExtFuncs{}),
-		},
+		iextengine.ExtensionEngineFactories{},
 	)
 }
 

@@ -10,6 +10,13 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
+// creates and returns new instance of IExtensionIO
+func NewExtensionIO(appdef appdef.IAppDef, state istructs.IState, intents istructs.IIntents) IExtensionIO {
+	return newExtensionIO(appdef, state, intents)
+}
+
+// # Implements:
+//   - iextengine.IExtensionIO
 type extensionIO struct {
 	istructs.IState
 	istructs.IIntents

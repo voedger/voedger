@@ -3,7 +3,7 @@
  * @author: Nikolay Nikitin
  */
 
-package iextengineimpl
+package provide
 
 import (
 	"context"
@@ -12,15 +12,16 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/iextengine"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/istructsmem"
 )
 
 // provides all built-in extension functions for all specified applications
 //
 // # Panics:
 //   - if any extension implementation not found
-func provideAppsBuiltInExtFuncs(cfgs FilledAppConfigsType) iextengine.BuiltInExtFuncs {
+func provideAppsBuiltInExtFuncs(cfgs istructsmem.AppConfigsType) iextengine.BuiltInExtFuncs {
 	funcs := make(iextengine.BuiltInExtFuncs)
-	for app := range cfgs.AppConfigsType {
+	for app := range cfgs {
 		cfg := cfgs.GetConfig(app)
 
 		cfg.AppDef.Extensions(

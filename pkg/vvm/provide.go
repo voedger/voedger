@@ -22,7 +22,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/apppartsctl"
-	"github.com/voedger/voedger/pkg/iextengineimpl"
+	iextengineprovide "github.com/voedger/voedger/pkg/iextengine/provide"
 	"github.com/voedger/voedger/pkg/router"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -164,8 +164,8 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 		provideAppPartsCtlPipelineService,
 		provideIsDeviceAllowedFunc,
 		provideBuiltInApps,
-		provideFilledAppConfigsType,
-		iextengineimpl.ProvideExtEngineFactories,
+		provideExtEngineFactoriesConfig,
+		iextengineprovide.ProvideExtEngineFactories,
 		appparts.NewWithActualizerWithExtEnginesFactories,
 		apppartsctl.New,
 		// wire.Value(vvmConfig.NumCommandProcessors) -> (wire bug?) value github.com/untillpro/airs-bp3/vvm.CommandProcessorsCount can't be used: vvmConfig is not declared in package scope
@@ -188,11 +188,14 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 	))
 }
 
-func provideFilledAppConfigsType(
+func provideExtEngineFactoriesConfig(
 	cfgs istructsmem.AppConfigsType,
 	_ []BuiltInAppsPackages, /*need to make it called in correct order*/
-) iextengineimpl.FilledAppConfigsType {
-	return iextengineimpl.FilledAppConfigsType{AppConfigsType: cfgs}
+) iextengineprovide.ExtEngineFactoriesConfig {
+	return iextengineprovide.ExtEngineFactoriesConfig{
+		AppConfigs:  cfgs,
+		WASMCompile: false,
+	}
 }
 
 func provideIsDeviceAllowedFunc(appEPs map[istructs.AppQName]extensionpoints.IExtensionPoint, _ []BuiltInAppsPackages /*need to make it called in correct order*/) iauthnzimpl.IsDeviceAllowedFuncs {

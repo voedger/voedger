@@ -4,6 +4,6 @@ use (
 	.
 	./cmd/ctool
 	./cmd/edger
-	./pkg/iextenginewazero/_testdata
+	./pkg/iextengine/engines/wazero/_testdata
 	./examples/airs-bp/air/extwasm
 )
