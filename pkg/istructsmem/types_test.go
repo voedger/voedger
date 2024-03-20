@@ -70,11 +70,11 @@ func Test_dynoBufValue(t *testing.T) {
 	t.Run("test float32", func(t *testing.T) {
 		v, err := row.dynoBufValue(float32(7.7), appdef.DataKind_float32)
 		require.NoError(err)
-		require.EqualValues(7.7, v)
+		require.EqualValues(float32(7.7), v)
 
 		v, err = row.dynoBufValue(float64(7.7), appdef.DataKind_float32)
 		require.NoError(err)
-		require.EqualValues(7.7, v)
+		require.EqualValues(float32(7.7), v)
 
 		v, err = row.dynoBufValue("7.7", appdef.DataKind_float32)
 		require.ErrorIs(err, ErrWrongFieldType)
