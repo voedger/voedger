@@ -285,6 +285,8 @@ var defaultACL = ACL{
 				qNameQryGetLocationDailyUPReport,
 				// https://dev.untill.com/projects/#!653069
 				qNameCmdVoidUntillPayment,
+				// https://dev.untill.com/projects/#!683625
+				qNameQryCreateTap2PaySession,
 			},
 			principalsPattern: [][]iauthnz.Principal{
 				{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleUntillPaymentsUser}},
@@ -328,6 +330,8 @@ var defaultACL = ACL{
 				qNameQryGetUPInvoiceParties,
 				qNameQryGetUPTransferInstrument,
 				qNameCmdRetryTransferUPPayout,
+				// https://dev.untill.com/projects/#!685617
+				qNameQryGetUPLocationRates,
 			},
 			principalsPattern: [][]iauthnz.Principal{
 				{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleUntillPaymentsReseller}},

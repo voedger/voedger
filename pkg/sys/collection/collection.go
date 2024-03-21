@@ -14,6 +14,12 @@ import (
 	"github.com/voedger/voedger/pkg/state"
 )
 
+type kbAndID struct {
+	istructs.IStateKeyBuilder
+	id    istructs.RecordID
+	isNew bool
+}
+
 func collectionProjector(appDef appdef.IAppDef) istructs.Projector {
 	return istructs.Projector{
 		Name: QNameProjectorCollection,
@@ -26,6 +32,7 @@ func collectionProjector(appDef appdef.IAppDef) istructs.Projector {
 			newKey := func(docQname appdef.QName, docID, elementID istructs.RecordID) (kb istructs.IStateKeyBuilder, err error) {
 				kb, err = s.KeyBuilder(state.View, QNameCollectionView)
 				if err != nil {
+					// notest
 					return
 				}
 				kb.PutInt32(Field_PartKey, PartitionKeyCollection)
@@ -35,34 +42,67 @@ func collectionProjector(appDef appdef.IAppDef) istructs.Projector {
 				return
 			}
 
-			apply := func(kb istructs.IStateKeyBuilder, record istructs.IRecord) (err error) {
-				sv, ok, err := s.CanExist(kb)
-				if err != nil {
-					return
-				}
-				if ok && sv.AsInt64(state.ColOffset) >= int64(event.WLogOffset()) {
-					// skip for idempotency
-					return
+			apply := func(kb istructs.IStateKeyBuilder, record istructs.IRecord, isNew bool) (err error) {
+				if !isNew {
+					sv, ok, err := s.CanExist(kb)
+					if err != nil {
+						// notest
+						return err
+					}
+					if ok && sv.AsInt64(state.ColOffset) >= int64(event.WLogOffset()) {
+						// skip for idempotency
+						return nil
+					}
 				}
 				vb, err := intents.NewValue(kb)
 				if err != nil {
-					return
+					// notest
+					return err
 				}
 				vb.PutInt64(state.ColOffset, int64(event.WLogOffset()))
 				vb.PutRecord(Field_Record, record)
-				return
+				return nil
 			}
 
-			return iterate.ForEachError(event.CUDs, func(rec istructs.ICUDRow) error {
+			keyBuildersAndIDs := []kbAndID{}
+			err = iterate.ForEachError(event.CUDs, func(rec istructs.ICUDRow) error {
 				kind := appDef.Type(rec.QName()).Kind()
 				if kind != appdef.TypeKind_CDoc && kind != appdef.TypeKind_CRecord {
 					return nil
 				}
-				record, err := is.findRecordByID(rec.ID())
+				kb, err := is.state.KeyBuilder(state.Record, appdef.NullQName)
 				if err != nil {
+					// notest
 					return err
 				}
-				root, err := is.findRootByID(rec.ID())
+				kb.PutRecordID(state.Field_ID, rec.ID())
+				keyBuildersAndIDs = append(keyBuildersAndIDs, kbAndID{
+					IStateKeyBuilder: kb,
+					id:               rec.ID(),
+					isNew:            rec.IsNew(),
+				})
+				return nil
+			})
+			if err != nil {
+				// notest
+				return err
+			}
+
+			keyBuilders := make([]istructs.IStateKeyBuilder, len(keyBuildersAndIDs))
+			for i, kbID := range keyBuildersAndIDs {
+				keyBuilders[i] = kbID.IStateKeyBuilder
+			}
+			err = is.state.MustExistAll(keyBuilders, func(key istructs.IKeyBuilder, sv istructs.IStateValue, ok bool) (err error) {
+				record := sv.AsRecord("")
+				is.cache[record.ID()] = record
+				return nil
+			})
+			if err != nil {
+				return err
+			}
+			for _, kbAndID := range keyBuildersAndIDs {
+				record := is.cache[kbAndID.id]
+				root, err := is.findRootByID(record.ID())
 				if err != nil {
 					return err
 				}
@@ -72,10 +112,14 @@ func collectionProjector(appDef appdef.IAppDef) istructs.Projector {
 				}
 				kb, err := newKey(root.QName(), root.ID(), elementID)
 				if err != nil {
+					// notest
 					return err
 				}
-				return apply(kb, record)
-			})
+				if err = apply(kb, record, kbAndID.isNew); err != nil {
+					return err
+				}
+			}
+			return nil
 		},
 	}
 }
@@ -86,33 +130,29 @@ type idService struct {
 }
 
 func (s *idService) findRecordByID(id istructs.RecordID) (record istructs.IRecord, err error) {
-	record, ok := s.cache[id]
-	if ok {
-		return
-	}
-
 	kb, err := s.state.KeyBuilder(state.Record, appdef.NullQName)
 	if err != nil {
-		return
+		return nil, err
 	}
 	kb.PutRecordID(state.Field_ID, id)
 
 	sv, err := s.state.MustExist(kb)
 	if err != nil {
-		return
+		return nil, err
 	}
-	record = sv.AsRecord("")
-
-	s.cache[id] = record
-	return
+	return sv.AsRecord(""), nil
 }
-func (s *idService) findRootByID(id istructs.RecordID) (record istructs.IRecord, err error) {
-	record, err = s.findRecordByID(id)
-	if err != nil {
-		return
+
+func (s *idService) findRootByID(id istructs.RecordID) (root istructs.IRecord, err error) {
+	rec := s.cache[id]
+	if rec == nil {
+		if rec, err = s.findRecordByID(id); err != nil {
+			return nil, err
+		}
+		s.cache[id] = rec
 	}
-	if record.Parent() == istructs.NullRecordID {
-		return
+	if rec.Parent() == istructs.NullRecordID {
+		return rec, nil
 	}
-	return s.findRootByID(record.Parent())
+	return s.findRootByID(rec.Parent())
 }

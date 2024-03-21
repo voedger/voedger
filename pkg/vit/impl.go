@@ -240,8 +240,8 @@ func handleWSParam(vit *VIT, appWS *AppWorkspace, appWorkspaces map[string]*AppW
 	}
 }
 
-func NewVITLocalCassandra(t *testing.T, vitCfg *VITConfig, opts ...vitOptFunc) (vit *VIT) {
-	vit = newVit(t, vitCfg, true)
+func NewVITLocalCassandra(tb testing.TB, vitCfg *VITConfig, opts ...vitOptFunc) (vit *VIT) {
+	vit = newVit(tb, vitCfg, true)
 	for _, opt := range opts {
 		opt(vit)
 	}
@@ -486,6 +486,43 @@ func (vit *VIT) CaptureEmail() (msg smtptest.Message) {
 		vit.T.Fatal("no email messages")
 	}
 	return
+}
+
+// sets delay on IAppStorage.Get() in mem implementation
+// will be automatically reset to 0 on TearDown
+func (vit *VIT) SetMemStorageGetDelay(delay time.Duration) {
+	vit.T.Helper()
+	vit.iterateDelaySetters(func(delaySetter istorage.IStorageDelaySetter) {
+		delaySetter.SetTestDelayGet(delay)
+		vit.cleanups = append(vit.cleanups, func(vit *VIT) {
+			delaySetter.SetTestDelayGet(0)
+		})
+	})
+}
+
+// sets delay on IAppStorage.Put() in mem implementation
+// will be automatically reset to 0 on TearDown
+func (vit *VIT) SetMemStoragePutDelay(delay time.Duration) {
+	vit.T.Helper()
+	vit.iterateDelaySetters(func(delaySetter istorage.IStorageDelaySetter) {
+		delaySetter.SetTestDelayPut(delay)
+		vit.cleanups = append(vit.cleanups, func(vit *VIT) {
+			delaySetter.SetTestDelayPut(0)
+		})
+	})
+}
+
+func (vit *VIT) iterateDelaySetters(cb func(delaySetter istorage.IStorageDelaySetter)) {
+	vit.T.Helper()
+	for anyAppQName := range vit.VVMAppsBuilder {
+		as, err := vit.AppStorage(anyAppQName)
+		require.NoError(vit.T, err)
+		delaySetter, ok := as.(istorage.IStorageDelaySetter)
+		if !ok {
+			vit.T.Fatal("IAppStorage implementation is not in-mem")
+		}
+		cb(delaySetter)
+	}
 }
 
 func (ts *timeService) now() time.Time {
