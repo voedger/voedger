@@ -1690,7 +1690,7 @@ func Test_objectType_FillFromJSON(t *testing.T) {
 				require.Equal(test.testObj, o.QName())
 				require.EqualValues(1, o.AsInt32("int32"))
 				require.EqualValues(2, o.AsInt64("int64"))
-				require.EqualValues(3.3, o.AsFloat32("float32"))
+				require.EqualValues(float32(3.3), o.AsFloat32("float32"))
 				require.EqualValues(4.4, o.AsFloat64("float64"))
 				require.EqualValues(true, o.AsBool("bool"))
 				require.EqualValues("test", o.AsString("string"))

@@ -14,7 +14,6 @@ import (
 	"github.com/voedger/voedger/pkg/isecrets"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/pipeline"
-	"github.com/voedger/voedger/pkg/sys/builtin"
 )
 
 func ProvideAsyncActualizerFactory() AsyncActualizerFactory {
@@ -53,7 +52,7 @@ func NewSyncActualizerFactoryFactory(actualizerFactory SyncActualizerFactory, se
 					WS:         wsid,
 				}, offset)
 			},
-			IntentsLimit: builtin.MaxCUDs,
+			IntentsLimit: DefaultIntentsLimit,
 		}
 		return actualizerFactory(conf, appStructs.SyncProjectors())
 	}

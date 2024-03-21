@@ -24,11 +24,11 @@ func (v TKey) AsInt64(name string) int64 {
 }
 
 func (v TKey) AsFloat32(name string) float32 {
-	return float32(hostKeyAsFloat32(uint64(v), uint32(uintptr(unsafe.Pointer(unsafe.StringData(name)))), uint32(len(name))))
+	return hostKeyAsFloat32(uint64(v), uint32(uintptr(unsafe.Pointer(unsafe.StringData(name)))), uint32(len(name)))
 }
 
 func (v TKey) AsFloat64(name string) float64 {
-	return float64(hostKeyAsFloat64(uint64(v), uint32(uintptr(unsafe.Pointer(unsafe.StringData(name)))), uint32(len(name))))
+	return hostKeyAsFloat64(uint64(v), uint32(uintptr(unsafe.Pointer(unsafe.StringData(name)))), uint32(len(name)))
 }
 
 func (v TKey) AsBytes(name string) (ret []byte) {

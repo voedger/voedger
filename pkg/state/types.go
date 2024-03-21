@@ -98,6 +98,7 @@ func (b *keyBuilder) Equals(src istructs.IKeyBuilder) bool {
 	}
 	return true
 }
+func (b *keyBuilder) ToBytes(istructs.WSID) ([]byte, []byte, error) { panic(ErrNotSupported) }
 
 type logKeyBuilder struct {
 	istructs.IStateKeyBuilder
