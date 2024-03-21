@@ -36,6 +36,7 @@ import (
 	"github.com/voedger/voedger/pkg/processors"
 	"github.com/voedger/voedger/pkg/projectors"
 	coreutils "github.com/voedger/voedger/pkg/utils"
+	wsdescutil "github.com/voedger/voedger/pkg/utils/wsdesc"
 	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
 	"github.com/voedger/voedger/staging/src/github.com/untillpro/ibusmem"
 )
@@ -202,7 +203,7 @@ func TestRecoveryOnSyncProjectorError(t *testing.T) {
 				Name: failingProjQName,
 				Func: func(event istructs.IPLogEvent, state istructs.IState, intents istructs.IIntents) (err error) {
 					counter++
-					if counter == 2 {
+					if counter == 3 { // 1st event is insert WorkspaceDescriptor stub
 						return testErr
 					}
 					return nil
@@ -218,7 +219,7 @@ func TestRecoveryOnSyncProjectorError(t *testing.T) {
 
 	// ok to c.sys.CUD
 	respData := sendCUD(t, 1, app)
-	require.Equal(1, int(respData["CurrentWLogOffset"].(float64)))
+	require.Equal(2, int(respData["CurrentWLogOffset"].(float64))) // 1st is WorkspaceDescriptor stub insert
 	require.Equal(istructs.NewCDocCRecordID(istructs.FirstBaseRecordID), istructs.RecordID(respData["NewIDs"].(map[string]interface{})["1"].(float64)))
 	require.Equal(istructs.NewRecordID(istructs.FirstBaseRecordID), istructs.RecordID(respData["NewIDs"].(map[string]interface{})["2"].(float64)))
 	require.Equal(istructs.NewCDocCRecordID(istructs.FirstBaseRecordID)+1, istructs.RecordID(respData["NewIDs"].(map[string]interface{})["3"].(float64)))
@@ -232,7 +233,7 @@ func TestRecoveryOnSyncProjectorError(t *testing.T) {
 
 	// 3rd c.sys.CUD - > recovery procedure must re-apply 2nd event (PLog, records and WLog), then 3rd event is processed ok (sync projectors are ok)
 	respData = sendCUD(t, 1, app)
-	require.Equal(3, int(respData["CurrentWLogOffset"].(float64)))
+	require.Equal(4, int(respData["CurrentWLogOffset"].(float64)))
 	require.Equal(istructs.NewCDocCRecordID(istructs.FirstBaseRecordID)+4, istructs.RecordID(respData["NewIDs"].(map[string]interface{})["1"].(float64)))
 	require.Equal(istructs.NewRecordID(istructs.FirstBaseRecordID)+2, istructs.RecordID(respData["NewIDs"].(map[string]interface{})["2"].(float64)))
 	require.Equal(istructs.NewCDocCRecordID(istructs.FirstBaseRecordID)+5, istructs.RecordID(respData["NewIDs"].(map[string]interface{})["3"].(float64)))
@@ -262,7 +263,7 @@ func TestRecovery(t *testing.T) {
 
 	restartCmdProc(&app)
 	respData = sendCUD(t, 1, app)
-	require.Equal(2, int(respData["CurrentWLogOffset"].(float64)))
+	require.Equal(3, int(respData["CurrentWLogOffset"].(float64)))
 	require.Equal(istructs.NewCDocCRecordID(istructs.FirstBaseRecordID)+2, istructs.RecordID(respData["NewIDs"].(map[string]interface{})["1"].(float64)))
 	require.Equal(istructs.NewRecordID(istructs.FirstBaseRecordID)+1, istructs.RecordID(respData["NewIDs"].(map[string]interface{})["2"].(float64)))
 	require.Equal(istructs.NewCDocCRecordID(istructs.FirstBaseRecordID)+3, istructs.RecordID(respData["NewIDs"].(map[string]interface{})["3"].(float64)))
@@ -276,7 +277,7 @@ func TestRecovery(t *testing.T) {
 
 	restartCmdProc(&app)
 	respData = sendCUD(t, 1, app)
-	require.Equal(3, int(respData["CurrentWLogOffset"].(float64)))
+	require.Equal(4, int(respData["CurrentWLogOffset"].(float64)))
 	require.Equal(istructs.NewCDocCRecordID(istructs.FirstBaseRecordID)+4, istructs.RecordID(respData["NewIDs"].(map[string]interface{})["1"].(float64)))
 	require.Equal(istructs.NewRecordID(istructs.FirstBaseRecordID)+2, istructs.RecordID(respData["NewIDs"].(map[string]interface{})["2"].(float64)))
 	require.Equal(istructs.NewCDocCRecordID(istructs.FirstBaseRecordID)+5, istructs.RecordID(respData["NewIDs"].(map[string]interface{})["3"].(float64)))
@@ -685,6 +686,9 @@ func setUp(t *testing.T, prepare func(appDef appdef.IAppDefBuilder, cfg *istruct
 	// build application
 	adb := appdef.New()
 	adb.AddObject(istructs.QNameRaw).AddField(processors.Field_RawObject_Body, appdef.DataKind_string, true, appdef.MaxLen(appdef.MaxFieldLength))
+	wsdescutil.AddWorkspaceDescriptorStubDef(adb)
+	qNameTestWSKind := appdef.NewQName(appdef.SysPackage, "TestWSKind")
+	adb.AddCDoc(qNameTestWSKind).SetSingleton()
 	cfg := cfgs.AddConfig(istructs.AppQName_untill_airs_bp, adb)
 	if prepare != nil {
 		prepare(adb, cfg)
@@ -745,9 +749,13 @@ func setUp(t *testing.T, prepare func(appDef appdef.IAppDefBuilder, cfg *istruct
 		close(done)
 	}()
 
-	// skip checking workspace initialization
-	coreutils.AddDummyWS(1)
-	coreutils.AddDummyWS(2)
+
+	as, err := appStructsProvider.AppStructs(istructs.AppQName_untill_airs_bp)
+	require.NoError(err)
+	err = wsdescutil.CreateCDocWorkspaceDescriptorStub(as, 1, 1, qNameTestWSKind)
+	require.NoError(err)
+	err = wsdescutil.CreateCDocWorkspaceDescriptorStub(as, 1, 2, qNameTestWSKind)
+	require.NoError(err)
 
 	return testApp{
 		cfg:               cfg,
