@@ -171,8 +171,7 @@ func Test_KeyType(t *testing.T) {
 	})
 
 	t.Run("should be ok IValueBuilder.ToBytes()", func(t *testing.T) {
-		var vb istructs.IValueBuilder
-		vb = newValue(appCfg, viewName)
+		vb := newValue(appCfg, viewName)
 		vb.PutString("val_string", "test string")
 
 		b, err := vb.ToBytes()
