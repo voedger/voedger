@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+
+CASSANDRA_TESTS_ENABLED=1 go test -v -count=1 ./...
