@@ -7,14 +7,12 @@ package registry
 import (
 	"context"
 	"fmt"
-	"net/http"
 
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/itokens"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	"github.com/voedger/voedger/pkg/sys/authnz"
-	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 // q.registry.IssuePrincipalToken
@@ -44,9 +42,7 @@ func provideIssuePrincipalTokenExec(itokens itokens.ITokens) istructsmem.ExecQue
 			// validated already on c.registry.CreateLogin
 			return err
 		}
-		if err != nil {
-			return coreutils.NewHTTPErrorf(http.StatusBadRequest, "failed to parse app qualified name", appQName.String(), ":", err)
-		}
+
 		// TODO: check we're called at our AppWSID?
 
 		cdocLogin, doesLoginExist, err := GetCDocLogin(login, args.State, args.WSID, appName)
