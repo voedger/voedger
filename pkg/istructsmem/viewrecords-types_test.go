@@ -97,6 +97,13 @@ func Test_KeyType(t *testing.T) {
 
 	require.NoError(key.build())
 
+	t.Run("should be ok IKeyBuilder.ToBytes()", func(t *testing.T) {
+		pk, cc, err := key.ToBytes(0)
+		require.NoError(err)
+		require.NotEmpty(pk)
+		require.NotEmpty(cc)
+	})
+
 	testIKey := func(t *testing.T, key *keyType) {
 		k := istructs.IKey(key)
 
@@ -163,6 +170,15 @@ func Test_KeyType(t *testing.T) {
 		t.Run("key must supports IKey interface", func(t *testing.T) { testIKey(t, dupe) })
 
 		require.True(key.Equals(dupe))
+	})
+
+	t.Run("should be ok IValueBuilder.ToBytes()", func(t *testing.T) {
+		vb := newValue(appCfg, viewName)
+		vb.PutString("val_string", "test string")
+
+		b, err := vb.ToBytes()
+		require.NoError(err)
+		require.NotEmpty(b)
 	})
 }
 
@@ -481,6 +497,7 @@ func TestCore_ViewRecords(t *testing.T) {
 
 		t.Run("Must have error if empty partition key", func(t *testing.T) {
 			kb := viewRecords.KeyBuilder(appdef.NewQName("test", "viewDrinks"))
+
 			err := viewRecords.Read(context.Background(), 1, kb, func(key istructs.IKey, value istructs.IValue) (err error) {
 				return nil
 			})
@@ -518,6 +535,13 @@ func TestCore_ViewRecords(t *testing.T) {
 				kb.PutBool("errorField", true)
 				err := viewRecords.Put(1, kb, nil)
 				require.ErrorIs(err, ErrNameNotFound)
+
+				t.Run("should be error IKeyBuilder.ToBytes()", func(t *testing.T) {
+					pk, cc, err := kb.ToBytes(0)
+					require.ErrorIs(err, ErrNameNotFound)
+					require.Empty(pk)
+					require.Empty(cc)
+				})
 			})
 
 			t.Run("Must read and error", func(t *testing.T) {
@@ -610,6 +634,12 @@ func TestCore_ViewRecords(t *testing.T) {
 
 			err := viewRecords.Put(1, kb, vb)
 			require.ErrorIs(err, ErrNameNotFound)
+
+			t.Run("should be error IValueBuilder.ToBytes()", func(t *testing.T) {
+				v, err := vb.ToBytes()
+				require.ErrorIs(err, ErrNameNotFound)
+				require.Empty(v)
+			})
 		})
 
 		t.Run("Must have error if key and value are from different views", func(t *testing.T) {
