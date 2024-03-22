@@ -4,7 +4,11 @@
 
 package cas
 
-import "time"
+import (
+	"time"
+
+	"github.com/gocql/gocql"
+)
 
 // ConnectionTimeout s.e.
 const (
@@ -13,3 +17,5 @@ const (
 	retryAttempt             = 3
 	SimpleWithReplication    = "{'class': 'SimpleStrategy', 'replication_factor': '1'}"
 )
+
+var DefaultConsistency = gocql.Quorum
