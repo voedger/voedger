@@ -17,6 +17,7 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 	it "github.com/voedger/voedger/pkg/vit"
+	sys_test_template "github.com/voedger/voedger/pkg/vit/testdata"
 )
 
 const (
@@ -29,6 +30,14 @@ const (
 
 // Read from many goroutines.
 // Read result does not matter.
+
+var cfg = it.NewSharedVITConfig(
+	it.WithApp(istructs.AppQName_untill_airs_bp, it.ProvideApp1,
+		it.WithWorkspaceTemplate(it.QNameApp1_TestWSKind, "test_template", sys_test_template.TestTemplateFS),
+		it.WithUserLogin("login", "pwd"),
+	),
+)
+
 func Test_Race_CUDSimpleRead(t *testing.T) {
 	if coreutils.IsCassandraStorage() {
 		return
