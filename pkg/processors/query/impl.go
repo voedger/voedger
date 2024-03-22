@@ -223,8 +223,7 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 			return nil
 		}),
 		operator("get IQuery", func(ctx context.Context, qw *queryWork) (err error) {
-			var queryType appdef.IType
-			queryType = qw.iWorkspace.Type(qw.msg.QName())
+			queryType := qw.iWorkspace.Type(qw.msg.QName())
 			if queryType.Kind() == appdef.TypeKind_null {
 				return coreutils.NewHTTPErrorf(http.StatusBadRequest, fmt.Sprintf("query %s does not exist in workspace %s", qw.msg.QName(), qw.iWorkspace.QName()))
 			}
@@ -288,11 +287,7 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 			}
 			if qw.resultType.QName() == appdef.QNameANY {
 				qNameResultType := qw.queryFunc.ResultType(qw.execQueryArgs.PrepareArgs)
-				// if coreutils.IsDummyWS(qw.msg.WSID()) {
-				// 	qw.resultType = qw.appStructs.AppDef().Type(qNameResultType)
-				// } else {
-					qw.resultType = qw.iWorkspace.Type(qNameResultType)
-				// }
+				qw.resultType = qw.iWorkspace.Type(qNameResultType)
 				if qw.resultType.Kind() == appdef.TypeKind_null {
 					return coreutils.NewHTTPError(http.StatusBadRequest, fmt.Errorf("%s query result type %s does not exist in workspace %s", qw.iQuery.QName(), qNameResultType, qw.iWorkspace.QName()))
 				}

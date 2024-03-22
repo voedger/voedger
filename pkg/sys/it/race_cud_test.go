@@ -311,7 +311,7 @@ func Test_Race_CUDManyWriteCheckResult(t *testing.T) {
 	wg.Wait()
 }
 
-// // Read & Write from many goroutines with different WSID
+// Read & Write from many goroutines with different WSID
 func Test_Race_CUDManyWriteReadCheckResult(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
