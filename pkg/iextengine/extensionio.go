@@ -23,7 +23,7 @@ type extensionIO struct {
 	appDef appdef.IAppDef
 }
 
-func newExtensionIO(appDef appdef.IAppDef, state istructs.IState, intents istructs.IIntents) *extensionIO {
+func newExtensionIO(appDef appdef.IAppDef, state istructs.IState, intents istructs.IIntents) IExtensionIO {
 	return &extensionIO{
 		IState:   state,
 		IIntents: intents,

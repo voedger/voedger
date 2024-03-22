@@ -406,10 +406,9 @@ func (p *asyncProjector) DoAsync(ctx context.Context, work pipeline.IWorkpiece) 
 		}
 
 		err = ap.Invoke(ctx, p.projector.Name, p.state, p.state)
+		//err = p.projector.Func(w.event, p.state, p.state)
 
 		ap.Release()
-
-		//err = p.projector.Func(w.event, p.state, p.state)
 
 		if err != nil {
 			return nil, fmt.Errorf("wsid[%d] offset[%d]: %w", w.event.Workspace(), w.event.WLogOffset(), err)
