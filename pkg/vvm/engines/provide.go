@@ -3,13 +3,13 @@
  * @author: Nikolay Nikitin
  */
 
-package provide
+package engines
 
 import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/iextengine"
-	builtin "github.com/voedger/voedger/pkg/iextengine/engines/builtin"
-	wazero "github.com/voedger/voedger/pkg/iextengine/engines/wazero"
+	builtin "github.com/voedger/voedger/pkg/iextengine/builtin"
+	wazero "github.com/voedger/voedger/pkg/iextengine/wazero"
 	"github.com/voedger/voedger/pkg/istructsmem"
 )
 

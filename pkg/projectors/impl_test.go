@@ -16,7 +16,6 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/cluster"
-	iextengineprovide "github.com/voedger/voedger/pkg/iextengine/provide"
 	"github.com/voedger/voedger/pkg/iratesce"
 	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istorage/mem"
@@ -29,6 +28,7 @@ import (
 	imetrics "github.com/voedger/voedger/pkg/metrics"
 	"github.com/voedger/voedger/pkg/pipeline"
 	"github.com/voedger/voedger/pkg/state"
+	"github.com/voedger/voedger/pkg/vvm/engines"
 )
 
 // Design: Projection Actualizers
@@ -228,7 +228,7 @@ func deployTestApp(
 		func(istructs.IAppStructs, istructs.PartitionID) pipeline.ISyncOperator {
 			return &pipeline.NOOP{}
 		},
-		iextengineprovide.ProvideExtEngineFactories(iextengineprovide.ExtEngineFactoriesConfig{
+		engines.ProvideExtEngineFactories(engines.ExtEngineFactoriesConfig{
 			AppConfigs:  cfgs,
 			WASMCompile: false,
 		}),
