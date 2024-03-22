@@ -268,6 +268,7 @@ func (kb *mockKeyBuilder) PutString(name, value string)                     {}
 func (kb *mockKeyBuilder) PutQName(name string, value appdef.QName)         { kb.data[name] = value }
 func (kb *mockKeyBuilder) PutBool(name string, value bool)                  {}
 func (kb *mockKeyBuilder) PutRecordID(name string, value istructs.RecordID) {}
+func (kb *mockKeyBuilder) ToBytes(istructs.WSID) ([]byte, []byte, error)    { return nil, nil, nil }
 
 // Tries to make conversion from value to a name type
 func (kb *mockKeyBuilder) PutNumber(name string, value float64) {}
@@ -380,23 +381,20 @@ type mockValueBuilder struct {
 	items map[string]interface{}
 }
 
-func (kb *mockValueBuilder) BuildValue() istructs.IStateValue                 { return nil }
-func (kb *mockValueBuilder) PutRecord(name string, record istructs.IRecord)   {}
-func (kb *mockValueBuilder) PutEvent(name string, event istructs.IDbEvent)    {}
-func (kb *mockValueBuilder) Build() istructs.IValue                           { return nil }
-func (kb *mockValueBuilder) PutInt32(name string, value int32)                { kb.items[name] = value }
-func (kb *mockValueBuilder) PutInt64(name string, value int64)                {}
-func (kb *mockValueBuilder) PutFloat32(name string, value float32)            {}
-func (kb *mockValueBuilder) PutFloat64(name string, value float64)            {}
-func (kb *mockValueBuilder) PutBytes(name string, value []byte)               { kb.items[name] = value }
-func (kb *mockValueBuilder) PutString(name, value string)                     { kb.items[name] = value }
-func (kb *mockValueBuilder) PutQName(name string, value appdef.QName)         { kb.items[name] = value }
-func (kb *mockValueBuilder) PutBool(name string, value bool)                  {}
-func (kb *mockValueBuilder) PutRecordID(name string, value istructs.RecordID) {}
-func (kb *mockValueBuilder) PutFromJSON(map[string]any)                       {}
-
-// Tries to make conversion from value to a name type
-func (kb *mockValueBuilder) PutNumber(name string, value float64) {}
-
-// Tries to make conversion from value to a name type
-func (kb *mockValueBuilder) PutChars(name string, value string) {}
+func (vb *mockValueBuilder) BuildValue() istructs.IStateValue                 { return nil }
+func (vb *mockValueBuilder) PutRecord(name string, record istructs.IRecord)   {}
+func (vb *mockValueBuilder) PutEvent(name string, event istructs.IDbEvent)    {}
+func (vb *mockValueBuilder) Build() istructs.IValue                           { return nil }
+func (vb *mockValueBuilder) PutInt32(name string, value int32)                { vb.items[name] = value }
+func (vb *mockValueBuilder) PutInt64(name string, value int64)                {}
+func (vb *mockValueBuilder) PutFloat32(name string, value float32)            {}
+func (vb *mockValueBuilder) PutFloat64(name string, value float64)            {}
+func (vb *mockValueBuilder) PutBytes(name string, value []byte)               { vb.items[name] = value }
+func (vb *mockValueBuilder) PutString(name, value string)                     { vb.items[name] = value }
+func (vb *mockValueBuilder) PutQName(name string, value appdef.QName)         { vb.items[name] = value }
+func (vb *mockValueBuilder) PutBool(name string, value bool)                  {}
+func (vb *mockValueBuilder) PutRecordID(name string, value istructs.RecordID) {}
+func (vb *mockValueBuilder) PutFromJSON(map[string]any)                       {}
+func (vb *mockValueBuilder) ToBytes() ([]byte, error)                         { return nil, nil }
+func (vb *mockValueBuilder) PutNumber(name string, value float64)             {}
+func (vb *mockValueBuilder) PutChars(name string, value string)               {}
