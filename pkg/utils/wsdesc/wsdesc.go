@@ -20,20 +20,22 @@ func AddWorkspaceDescriptorStubDef(adb appdef.IAppDefBuilder) {
 		AddField("WSKind", appdef.DataKind_QName, true).
 		AddField("Status", appdef.DataKind_int32, true).
 		AddField("InitCompletedAtMs", appdef.DataKind_int64, true).
-		AddField("InitError", appdef.DataKind_string, false)
+		AddField("InitError", appdef.DataKind_string, false).
+		AddField("WSName", appdef.DataKind_string, false).
+		AddField("CreatedAtMs", appdef.DataKind_int64, false)
 
 	wsDesc.SetSingleton()
 }
 
-func CreateCDocWorkspaceDescriptorStub(as istructs.IAppStructs, partNum istructs.PartitionID, wsid istructs.WSID, wsKind appdef.QName) error {
+func CreateCDocWorkspaceDescriptorStub(as istructs.IAppStructs, partNum istructs.PartitionID, wsid istructs.WSID, wsKind appdef.QName, plogOffset istructs.Offset, wlogOffset istructs.Offset) error {
 	now := time.Now()
 	grebp := istructs.GenericRawEventBuilderParams{
 		HandlingPartition: partNum,
 		Workspace:         wsid,
 		QName:             istructs.QNameCommandCUD,
 		RegisteredAt:      istructs.UnixMilli(now.UnixMilli()),
-		PLogOffset:        1,
-		WLogOffset:        1,
+		PLogOffset:        plogOffset,
+		WLogOffset:        wlogOffset,
 	}
 	reb := as.Events().GetSyncRawEventBuilder(
 		istructs.SyncRawEventBuilderParams{
@@ -46,6 +48,8 @@ func CreateCDocWorkspaceDescriptorStub(as istructs.IAppStructs, partNum istructs
 	cdocWSDesc.PutQName("WSKind", wsKind)
 	cdocWSDesc.PutInt32("Status", int32(authnz.WorkspaceStatus_Active))
 	cdocWSDesc.PutInt64("InitCompletedAtMs", now.UnixMilli())
+	cdocWSDesc.PutString("WSName", "stub workspace")
+	cdocWSDesc.PutInt64("CreatedAtMs", now.UnixMilli())
 	rawEvent, err := reb.BuildRawEvent()
 	if err != nil {
 		return err

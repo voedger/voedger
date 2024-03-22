@@ -412,3 +412,16 @@ func getWorkspaceInitAwaitTimeout() time.Duration {
 	}
 	return defaultWorkspaceAwaitTimeout
 }
+
+func DummyWS(wsKind appdef.QName, wsid istructs.WSID, ownerPrn *Principal) *AppWorkspace {
+	return &AppWorkspace{
+		WorkspaceDescriptor: WorkspaceDescriptor{
+			WSParams: WSParams{
+				Kind:      wsKind,
+				ClusterID: istructs.MainClusterID,
+			},
+			WSID: wsid,
+		},
+		Owner: ownerPrn,
+	}
+}

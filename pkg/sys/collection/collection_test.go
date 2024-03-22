@@ -199,7 +199,7 @@ func buildAppParts(t *testing.T) (appParts appparts.IAppPartitions, cleanup func
 	// create stub for cdoc.sys.WorkspaceDescriptor to make query processor work
 	as, err := provider.AppStructs(test.appQName)
 	require.NoError(err)
-	err = wsdescutil.CreateCDocWorkspaceDescriptorStub(as, test.partition, test.workspace, qNameTestWSKind)
+	err = wsdescutil.CreateCDocWorkspaceDescriptorStub(as, test.partition, test.workspace, qNameTestWSKind, 1, 1)
 	require.NoError(err)
 
 	return appParts, cleanup

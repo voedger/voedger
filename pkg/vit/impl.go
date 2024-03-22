@@ -196,6 +196,9 @@ func newVit(t testing.TB, vitCfg *VITConfig, useCas bool) *VIT {
 			handleWSParam(vit, appWorkspaces[wsd.Name], appWorkspaces, verifiedValues, sysToken)
 		}
 	}
+	if vitPreConfig.postInitFunc != nil {
+		vitPreConfig.postInitFunc(vit)
+	}
 	return vit
 }
 
