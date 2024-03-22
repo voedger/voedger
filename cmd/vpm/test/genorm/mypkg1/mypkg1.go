@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2024-present unTill Pro, Ltd.
+ * @author Alisher Nurmanov
+ */
+
 package mypkg1
 
 import (
