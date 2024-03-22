@@ -196,6 +196,9 @@ func newVit(t testing.TB, vitCfg *VITConfig, useCas bool) *VIT {
 			handleWSParam(vit, appWorkspaces[wsd.Name], appWorkspaces, verifiedValues, sysToken)
 		}
 	}
+	if vitPreConfig.postInitFunc != nil {
+		vitPreConfig.postInitFunc(vit)
+	}
 	return vit
 }
 
@@ -240,34 +243,13 @@ func handleWSParam(vit *VIT, appWS *AppWorkspace, appWorkspaces map[string]*AppW
 	}
 }
 
-func NewVITLocalCassandra(t *testing.T, vitCfg *VITConfig, opts ...vitOptFunc) (vit *VIT) {
-	vit = newVit(t, vitCfg, true)
+func NewVITLocalCassandra(tb testing.TB, vitCfg *VITConfig, opts ...vitOptFunc) (vit *VIT) {
+	vit = newVit(tb, vitCfg, true)
 	for _, opt := range opts {
 		opt(vit)
 	}
 
 	return vit
-}
-
-// WSID as wsid[0] or 1, system owner
-// command processor will skip initialization check for that workspace
-func (vit *VIT) DummyWS(appQName istructs.AppQName, awsid ...istructs.WSID) *AppWorkspace {
-	wsid := istructs.WSID(1)
-	if len(awsid) > 0 {
-		wsid = awsid[0]
-	}
-	coreutils.AddDummyWS(wsid)
-	sysPrn := vit.GetSystemPrincipal(appQName)
-	return &AppWorkspace{
-		WorkspaceDescriptor: WorkspaceDescriptor{
-			WSParams: WSParams{
-				Kind:      appdef.NullQName,
-				ClusterID: istructs.MainClusterID,
-			},
-			WSID: wsid,
-		},
-		Owner: sysPrn,
-	}
 }
 
 func (vit *VIT) WS(appQName istructs.AppQName, wsName string) *AppWorkspace {
@@ -492,9 +474,11 @@ func (vit *VIT) CaptureEmail() (msg smtptest.Message) {
 // will be automatically reset to 0 on TearDown
 func (vit *VIT) SetMemStorageGetDelay(delay time.Duration) {
 	vit.T.Helper()
-	vit.getStorageDelaySetter().SetTestDelayPut(delay)
-	vit.cleanups = append(vit.cleanups, func(vit *VIT) {
-		vit.getStorageDelaySetter().SetTestDelayPut(0)
+	vit.iterateDelaySetters(func(delaySetter istorage.IStorageDelaySetter) {
+		delaySetter.SetTestDelayGet(delay)
+		vit.cleanups = append(vit.cleanups, func(vit *VIT) {
+			delaySetter.SetTestDelayGet(0)
+		})
 	})
 }
 
@@ -502,13 +486,15 @@ func (vit *VIT) SetMemStorageGetDelay(delay time.Duration) {
 // will be automatically reset to 0 on TearDown
 func (vit *VIT) SetMemStoragePutDelay(delay time.Duration) {
 	vit.T.Helper()
-	vit.getStorageDelaySetter().SetTestDelayPut(delay)
-	vit.cleanups = append(vit.cleanups, func(vit *VIT) {
-		vit.getStorageDelaySetter().SetTestDelayPut(0)
+	vit.iterateDelaySetters(func(delaySetter istorage.IStorageDelaySetter) {
+		delaySetter.SetTestDelayPut(delay)
+		vit.cleanups = append(vit.cleanups, func(vit *VIT) {
+			delaySetter.SetTestDelayPut(0)
+		})
 	})
 }
 
-func (vit *VIT) getStorageDelaySetter() istorage.IStorageDelaySetter {
+func (vit *VIT) iterateDelaySetters(cb func(delaySetter istorage.IStorageDelaySetter)) {
 	vit.T.Helper()
 	for anyAppQName := range vit.VVMAppsBuilder {
 		as, err := vit.AppStorage(anyAppQName)
@@ -517,9 +503,8 @@ func (vit *VIT) getStorageDelaySetter() istorage.IStorageDelaySetter {
 		if !ok {
 			vit.T.Fatal("IAppStorage implementation is not in-mem")
 		}
-		return delaySetter
+		cb(delaySetter)
 	}
-	panic("")
 }
 
 func (ts *timeService) now() time.Time {

@@ -24,7 +24,7 @@ import (
 func NewOwnVITConfig(opts ...vitConfigOptFunc) VITConfig {
 	// helper: implicitly append sys apps
 	opts = append(opts,
-		WithApp(istructs.AppQName_sys_registry, registryapp.Provide(smtp.Cfg{})),
+		WithApp(istructs.AppQName_sys_registry, registryapp.Provide(smtp.Cfg{}, DefaultTestAppPartsCount)),
 		WithApp(istructs.AppQName_sys_blobber, blobberapp.Provide(smtp.Cfg{})),
 		WithApp(istructs.AppQName_sys_router, routerapp.Provide(smtp.Cfg{})),
 	)
@@ -155,6 +155,12 @@ func WithCleanup(cleanup func(*VIT)) vitConfigOptFunc {
 func WithInit(initFunc func()) vitConfigOptFunc {
 	return func(vpc *vitPreConfig) {
 		vpc.initFuncs = append(vpc.initFuncs, initFunc)
+	}
+}
+
+func WithPostInit(postInitFunc func(vit *VIT)) vitConfigOptFunc {
+	return func(vpc *vitPreConfig) {
+		vpc.postInitFunc = postInitFunc
 	}
 }
 
