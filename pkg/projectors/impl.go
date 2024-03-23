@@ -23,7 +23,7 @@ func asyncActualizerFactory(conf AsyncActualizerConf, projector istructs.Project
 	}), nil
 }
 
-func syncActualizerFactory(conf SyncActualizerConf, projection istructs.ProjectorFactory, otherProjections ...istructs.ProjectorFactory) pipeline.ISyncOperator {
+func syncActualizerFactory(conf SyncActualizerConf, projectors istructs.Projectors) pipeline.ISyncOperator {
 	if conf.IntentsLimit == 0 {
 		conf.IntentsLimit = defaultIntentsLimit
 	}
@@ -31,13 +31,10 @@ func syncActualizerFactory(conf SyncActualizerConf, projection istructs.Projecto
 		conf.WorkToEvent = func(work interface{}) istructs.IPLogEvent { return work.(istructs.IPLogEvent) }
 	}
 	service := &eventService{}
-	ss := make([]state.IHostState, 0, len(otherProjections)+1)
-	bb := make([]pipeline.ForkOperatorOptionFunc, 0, len(otherProjections))
-	b, s := newSyncBranch(conf, projection, service)
-	bb = append(bb, b)
-	ss = append(ss, s)
-	for _, otherProjection := range otherProjections {
-		b, s = newSyncBranch(conf, otherProjection, service)
+	ss := make([]state.IHostState, 0, len(projectors))
+	bb := make([]pipeline.ForkOperatorOptionFunc, 0, len(projectors))
+	for _, p := range projectors {
+		b, s := newSyncBranch(conf, p, service)
 		ss = append(ss, s)
 		bb = append(bb, b)
 	}
@@ -60,8 +57,7 @@ func syncActualizerFactory(conf SyncActualizerConf, projection istructs.Projecto
 		pipeline.WireSyncOperator("ErrorHandler", h))
 }
 
-func newSyncBranch(conf SyncActualizerConf, projectorFactory istructs.ProjectorFactory, service *eventService) (fn pipeline.ForkOperatorOptionFunc, s state.IHostState) {
-	projector := projectorFactory(conf.Partition)
+func newSyncBranch(conf SyncActualizerConf, projector istructs.Projector, service *eventService) (fn pipeline.ForkOperatorOptionFunc, s state.IHostState) {
 	pipelineName := fmt.Sprintf("[%d] %s", conf.Partition, projector.Name)
 	s = state.ProvideSyncActualizerStateFactory()(
 		conf.Ctx,

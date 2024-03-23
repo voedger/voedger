@@ -35,7 +35,7 @@ import (
 	"github.com/voedger/voedger/pkg/vvm"
 )
 
-func NewVIT(t *testing.T, vitCfg *VITConfig, opts ...vitOptFunc) (vit *VIT) {
+func NewVIT(t testing.TB, vitCfg *VITConfig, opts ...vitOptFunc) (vit *VIT) {
 	useCas := coreutils.IsCassandraStorage()
 	if !vitCfg.isShared {
 		vit = newVit(t, vitCfg, useCas)
@@ -68,7 +68,7 @@ func NewVIT(t *testing.T, vitCfg *VITConfig, opts ...vitOptFunc) (vit *VIT) {
 	return vit
 }
 
-func newVit(t *testing.T, vitCfg *VITConfig, useCas bool) *VIT {
+func newVit(t testing.TB, vitCfg *VITConfig, useCas bool) *VIT {
 	cfg := vvm.NewVVMDefaultConfig()
 
 	// only dynamic ports are used in tests
@@ -240,8 +240,8 @@ func handleWSParam(vit *VIT, appWS *AppWorkspace, appWorkspaces map[string]*AppW
 	}
 }
 
-func NewVITLocalCassandra(t *testing.T, vitCfg *VITConfig, opts ...vitOptFunc) (vit *VIT) {
-	vit = newVit(t, vitCfg, true)
+func NewVITLocalCassandra(tb testing.TB, vitCfg *VITConfig, opts ...vitOptFunc) (vit *VIT) {
+	vit = newVit(tb, vitCfg, true)
 	for _, opt := range opts {
 		opt(vit)
 	}
@@ -488,6 +488,43 @@ func (vit *VIT) CaptureEmail() (msg smtptest.Message) {
 	return
 }
 
+// sets delay on IAppStorage.Get() in mem implementation
+// will be automatically reset to 0 on TearDown
+func (vit *VIT) SetMemStorageGetDelay(delay time.Duration) {
+	vit.T.Helper()
+	vit.iterateDelaySetters(func(delaySetter istorage.IStorageDelaySetter) {
+		delaySetter.SetTestDelayGet(delay)
+		vit.cleanups = append(vit.cleanups, func(vit *VIT) {
+			delaySetter.SetTestDelayGet(0)
+		})
+	})
+}
+
+// sets delay on IAppStorage.Put() in mem implementation
+// will be automatically reset to 0 on TearDown
+func (vit *VIT) SetMemStoragePutDelay(delay time.Duration) {
+	vit.T.Helper()
+	vit.iterateDelaySetters(func(delaySetter istorage.IStorageDelaySetter) {
+		delaySetter.SetTestDelayPut(delay)
+		vit.cleanups = append(vit.cleanups, func(vit *VIT) {
+			delaySetter.SetTestDelayPut(0)
+		})
+	})
+}
+
+func (vit *VIT) iterateDelaySetters(cb func(delaySetter istorage.IStorageDelaySetter)) {
+	vit.T.Helper()
+	for anyAppQName := range vit.VVMAppsBuilder {
+		as, err := vit.AppStorage(anyAppQName)
+		require.NoError(vit.T, err)
+		delaySetter, ok := as.(istorage.IStorageDelaySetter)
+		if !ok {
+			vit.T.Fatal("IAppStorage implementation is not in-mem")
+		}
+		cb(delaySetter)
+	}
+}
+
 func (ts *timeService) now() time.Time {
 	ts.m.Lock()
 	res := ts.currentInstant
@@ -520,7 +557,7 @@ func ScanSSE(data []byte, atEOF bool) (advance int, token []byte, err error) {
 	return 0, nil, nil
 }
 
-func (ec emailCaptor) checkEmpty(t *testing.T) {
+func (ec emailCaptor) checkEmpty(t testing.TB) {
 	select {
 	case _, ok := <-ec:
 		if ok {

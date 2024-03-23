@@ -92,28 +92,34 @@ const (
 	EmailTemplatePlaceholder_Email            = "${Email}"
 )
 
-var inviteValidStates = map[appdef.QName]map[int32]bool{
-	qNameCmdInitiateInvitationByEMail: {
+var (
+	inviteValidStates = map[appdef.QName]map[int32]bool{
+		qNameCmdInitiateInvitationByEMail: {
+			State_Cancelled: true,
+			State_Left:      true,
+			State_Invited:   true,
+		},
+		qNameCmdInitiateJoinWorkspace: {
+			State_Invited: true,
+		},
+		qNameCmdInitiateUpdateInviteRoles: {
+			State_Joined: true,
+		},
+		qNameCmdInitiateCancelAcceptedInvite: {
+			State_Joined: true,
+		},
+		qNameCmdInitiateLeaveWorkspace: {
+			State_Joined: true,
+		},
+		qNameCmdCancelSentInvite: {
+			State_Invited: true,
+		},
+	}
+	reInviteAllowedForState = map[int32]bool{
 		State_Cancelled: true,
 		State_Left:      true,
-		State_Invited:   true,
-	},
-	qNameCmdInitiateJoinWorkspace: {
-		State_Invited: true,
-	},
-	qNameCmdInitiateUpdateInviteRoles: {
-		State_Joined: true,
-	},
-	qNameCmdInitiateCancelAcceptedInvite: {
-		State_Joined: true,
-	},
-	qNameCmdInitiateLeaveWorkspace: {
-		State_Joined: true,
-	},
-	qNameCmdCancelSentInvite: {
-		State_Invited: true,
-	},
-}
+	}
+)
 
 const (
 	base = 10

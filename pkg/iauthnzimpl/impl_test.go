@@ -999,14 +999,14 @@ func (as *implIAppStructs) AppQName() istructs.AppQName                        {
 func (as *implIAppStructs) IsFunctionRateLimitsExceeded(appdef.QName, istructs.WSID) bool {
 	panic("")
 }
-func (as *implIAppStructs) DescribePackageNames() []string                       { panic("") }
-func (as *implIAppStructs) DescribePackage(string) interface{}                   { panic("") }
-func (as *implIAppStructs) SyncProjectors() []istructs.ProjectorFactory          { panic("") }
-func (as *implIAppStructs) AsyncProjectors() map[appdef.QName]istructs.Projector { panic("") }
-func (as *implIAppStructs) CUDValidators() []istructs.CUDValidator               { panic("") }
-func (as *implIAppStructs) EventValidators() []istructs.EventValidator           { panic("") }
-func (as *implIAppStructs) WSAmount() istructs.AppWSAmount                       { panic("") }
-func (as *implIAppStructs) AppTokens() istructs.IAppTokens                       { panic("") }
+func (as *implIAppStructs) DescribePackageNames() []string             { panic("") }
+func (as *implIAppStructs) DescribePackage(string) interface{}         { panic("") }
+func (as *implIAppStructs) SyncProjectors() istructs.Projectors        { panic("") }
+func (as *implIAppStructs) AsyncProjectors() istructs.Projectors       { panic("") }
+func (as *implIAppStructs) CUDValidators() []istructs.CUDValidator     { panic("") }
+func (as *implIAppStructs) EventValidators() []istructs.EventValidator { panic("") }
+func (as *implIAppStructs) WSAmount() istructs.AppWSAmount             { panic("") }
+func (as *implIAppStructs) AppTokens() istructs.IAppTokens             { panic("") }
 
 type implIRecords struct {
 	data map[istructs.WSID]map[appdef.QName]map[istructs.RecordID]map[string]interface{}
@@ -1116,9 +1116,10 @@ type implIKeyBuilder struct {
 	qName appdef.QName
 }
 
-func (kb *implIKeyBuilder) PartitionKey() istructs.IRowWriter      { return &kb.TestObject }
-func (kb *implIKeyBuilder) ClusteringColumns() istructs.IRowWriter { return &kb.TestObject }
-func (kb *implIKeyBuilder) Equals(istructs.IKeyBuilder) bool       { panic("implement me") }
+func (kb *implIKeyBuilder) PartitionKey() istructs.IRowWriter             { return &kb.TestObject }
+func (kb *implIKeyBuilder) ClusteringColumns() istructs.IRowWriter        { return &kb.TestObject }
+func (kb *implIKeyBuilder) Equals(istructs.IKeyBuilder) bool              { panic("implement me") }
+func (kb *implIKeyBuilder) ToBytes(istructs.WSID) ([]byte, []byte, error) { return nil, nil, nil }
 
 type implIValue struct {
 	coreutils.TestObject

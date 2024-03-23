@@ -17,7 +17,7 @@ import (
 	"github.com/voedger/voedger/pkg/sys/smtp"
 )
 
-func Provide(smtpCfg smtp.Cfg) apps.AppBuilder {
+func Provide(smtpCfg smtp.Cfg, partsCount int) apps.AppBuilder {
 	return func(apis apps.APIs, cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) apps.BuiltInAppDef {
 
 		// sys package
@@ -26,17 +26,18 @@ func Provide(smtpCfg smtp.Cfg) apps.AppBuilder {
 
 		// sys/registry resources
 		registryPackageFS := registry.Provide(cfg, apis.IAppStructsProvider, apis.ITokens, apis.IFederation)
-		cfg.AddSyncProjectors(registry.ProvideSyncProjectorLoginIdxFactory())
+		cfg.AddSyncProjectors(registry.ProvideSyncProjectorLoginIdx())
 		registryAppPackageFS := parser.PackageFS{
 			Path: RegistryAppFQN,
 			FS:   registryAppSchemaFS,
 		}
+
 		return apps.BuiltInAppDef{
 			AppQName: istructs.AppQName_sys_registry,
 			Packages: []parser.PackageFS{sysPackageFS, registryPackageFS, registryAppPackageFS},
 			AppDeploymentDescriptor: cluster.AppDeploymentDescriptor{
-				PartsCount:     DefDeploymentPartsCount,
-				EnginePoolSize: DefDeploymentEnginePoolSize,
+				PartsCount:     partsCount,
+				EnginePoolSize: cluster.PoolSize(partsCount, DefDeploymentQPCount, partsCount),
 			},
 		}
 	}

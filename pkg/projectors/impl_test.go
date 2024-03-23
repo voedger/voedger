@@ -65,14 +65,7 @@ func TestBasicUsage_SynchronousActualizer(t *testing.T) {
 			ws.AddType(decProjectionView)
 		},
 		func(cfg *istructsmem.AppConfigType) {
-			cfg.AddSyncProjectors(
-				func(istructs.PartitionID) istructs.Projector {
-					return istructs.Projector{Name: incrementorName, Func: incrementor}
-				},
-				func(istructs.PartitionID) istructs.Projector {
-					return istructs.Projector{Name: decrementorName, Func: decrementor}
-				},
-			)
+			cfg.AddSyncProjectors(testIncrementor, testDecrementor)
 			cfg.Resources.Add(istructsmem.NewCommandFunction(testQName, istructsmem.NullCommandExec))
 		})
 	defer cleanup()
@@ -88,7 +81,7 @@ func TestBasicUsage_SynchronousActualizer(t *testing.T) {
 	}
 	projectors := appStructs.SyncProjectors()
 	require.Len(projectors, 2)
-	actualizer := actualizerFactory(conf, projectors[0], projectors[1:]...)
+	actualizer := actualizerFactory(conf, projectors)
 
 	// create partition processor pipeline
 	processor := pipeline.NewSyncPipeline(context.Background(), "partition processor", pipeline.WireSyncOperator("actualizer", actualizer))
@@ -111,7 +104,7 @@ func TestBasicUsage_SynchronousActualizer(t *testing.T) {
 }
 
 var (
-	incrementorName = appdef.NewQName("test", "incremenor_projector")
+	incrementorName = appdef.NewQName("test", "incrementor_projector")
 	decrementorName = appdef.NewQName("test", "decrementor_projector")
 )
 
@@ -121,62 +114,59 @@ var testWorkspace = appdef.NewQName("pkg", "TestWorkspace")
 var testWorkspaceDescriptor = appdef.NewQName("pkg", "TestWorkspaceDescriptor")
 
 var (
-	incrementorFactory = func() istructs.Projector {
-		return istructs.Projector{Name: incrementorName, Func: incrementor}
+	testIncrementor = istructs.Projector{
+		Name: incrementorName,
+		Func: func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
+			wsid := event.Workspace()
+			if wsid == 1099 {
+				return errors.New("test err")
+			}
+			key, err := s.KeyBuilder(state.View, incProjectionView)
+			if err != nil {
+				return
+			}
+			key.PutInt32("pk", 0)
+			key.PutInt32("cc", 0)
+			el, ok, err := s.CanExist(key)
+			if err != nil {
+				return
+			}
+			eb, err := intents.NewValue(key)
+			if err != nil {
+				return
+			}
+			if ok {
+				eb.PutInt32("myvalue", el.AsInt32("myvalue")+1)
+			} else {
+				eb.PutInt32("myvalue", 1)
+			}
+			return
+		},
 	}
-	decrementorFactory = func() istructs.Projector {
-		return istructs.Projector{Name: decrementorName, Func: decrementor}
-	}
-)
-
-var (
-	incrementor = func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
-		wsid := event.Workspace()
-		if wsid == 1099 {
-			return errors.New("test err")
-		}
-		key, err := s.KeyBuilder(state.View, incProjectionView)
-		if err != nil {
+	testDecrementor = istructs.Projector{
+		Name: decrementorName,
+		Func: func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
+			key, err := s.KeyBuilder(state.View, decProjectionView)
+			if err != nil {
+				return
+			}
+			key.PutInt32("pk", 0)
+			key.PutInt32("cc", 0)
+			el, ok, err := s.CanExist(key)
+			if err != nil {
+				return
+			}
+			eb, err := intents.NewValue(key)
+			if err != nil {
+				return
+			}
+			if ok {
+				eb.PutInt32("myvalue", el.AsInt32("myvalue")-1)
+			} else {
+				eb.PutInt32("myvalue", -1)
+			}
 			return
-		}
-		key.PutInt32("pk", 0)
-		key.PutInt32("cc", 0)
-		el, ok, err := s.CanExist(key)
-		if err != nil {
-			return
-		}
-		eb, err := intents.NewValue(key)
-		if err != nil {
-			return
-		}
-		if ok {
-			eb.PutInt32("myvalue", el.AsInt32("myvalue")+1)
-		} else {
-			eb.PutInt32("myvalue", 1)
-		}
-		return
-	}
-	decrementor = func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
-		key, err := s.KeyBuilder(state.View, decProjectionView)
-		if err != nil {
-			return
-		}
-		key.PutInt32("pk", 0)
-		key.PutInt32("cc", 0)
-		el, ok, err := s.CanExist(key)
-		if err != nil {
-			return
-		}
-		eb, err := intents.NewValue(key)
-		if err != nil {
-			return
-		}
-		if ok {
-			eb.PutInt32("myvalue", el.AsInt32("myvalue")-1)
-		} else {
-			eb.PutInt32("myvalue", -1)
-		}
-		return
+		},
 	}
 )
 
@@ -306,14 +296,7 @@ func Test_ErrorInSyncActualizer(t *testing.T) {
 			ws.AddType(decProjectionView)
 		},
 		func(cfg *istructsmem.AppConfigType) {
-			cfg.AddSyncProjectors(
-				func(istructs.PartitionID) istructs.Projector {
-					return istructs.Projector{Name: incrementorName, Func: incrementor}
-				},
-				func(istructs.PartitionID) istructs.Projector {
-					return istructs.Projector{Name: decrementorName, Func: decrementor}
-				},
-			)
+			cfg.AddSyncProjectors(testIncrementor, testDecrementor)
 			cfg.Resources.Add(istructsmem.NewCommandFunction(testQName, istructsmem.NullCommandExec))
 		})
 	defer cleanup()
@@ -327,7 +310,7 @@ func Test_ErrorInSyncActualizer(t *testing.T) {
 	}
 	projectors := appStructs.SyncProjectors()
 	require.Len(projectors, 2)
-	actualizer := actualizerFactory(conf, projectors[0], projectors[1:]...)
+	actualizer := actualizerFactory(conf, projectors)
 
 	createWS(appStructs, istructs.WSID(1001), testWorkspaceDescriptor, istructs.PartitionID(1), istructs.Offset(1))
 	createWS(appStructs, istructs.WSID(1002), testWorkspaceDescriptor, istructs.PartitionID(1), istructs.Offset(1))

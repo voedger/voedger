@@ -5,7 +5,7 @@
 
 package orm
 
-import exttinygo "github.com/voedger/exttinygo"
+import "github.com/voedger/voedger/pkg/exttinygo"
 
 type QName = string
 

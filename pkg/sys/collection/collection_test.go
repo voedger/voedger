@@ -1183,5 +1183,8 @@ func provideSyncActualizer(ctx context.Context, as istructs.IAppStructs, partiti
 		N10nFunc:   func(view appdef.QName, wsid istructs.WSID, offset istructs.Offset) {},
 	}
 	actualizerFactory := projectors.ProvideSyncActualizerFactory()
-	return actualizerFactory(actualizerConfig, collectionProjectorFactory(as.AppDef()))
+	projectors := make(istructs.Projectors, 1)
+	p := collectionProjector(as.AppDef())
+	projectors[p.Name] = p
+	return actualizerFactory(actualizerConfig, projectors)
 }

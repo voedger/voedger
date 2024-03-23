@@ -54,7 +54,8 @@ func execCmdInitiateInvitationByEMail(timeFunc coreutils.TimeFunc) func(args ist
 			if err != nil {
 				return err
 			}
-			if subjectExists && svCDocInvite.AsInt32(field_State) > State_Invited {
+
+			if subjectExists && !reInviteAllowedForState[svCDocInvite.AsInt32(field_State)] {
 				// If Subject exists by token.Login and state is not ToBeInvited and not Invited -> subject already exists error
 				return coreutils.NewHTTPError(http.StatusBadRequest, ErrSubjectAlreadyExists)
 			}

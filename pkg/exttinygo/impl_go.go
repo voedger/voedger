@@ -7,42 +7,32 @@
 
 package exttinygo
 
-type extint = int
-
 func hostPanic(msgPtr, msgSize uint32) {
 
 }
 
 func hostRowWriterPutString(id uint64, typ uint32, namePtr, nameSize, valuePtr, valueSize uint32) {
-	return
 }
 
 func hostRowWriterPutBytes(id uint64, typ uint32, namePtr, nameSize, valuePtr, valueSize uint32) {
-	return
 }
 
 func hostRowWriterPutQName(id uint64, typ uint32, namePtr, nameSize, pkgPtr, pkgSize, entityPtr, entitySize uint32) {
-	return
 }
 
 func hostRowWriterPutBool(id uint64, typ uint32, namePtr, nameSize, value uint32) {
-	return
 }
 
 func hostRowWriterPutInt32(id uint64, typ uint32, namePtr, nameSize, value uint32) {
-	return
 }
 
 func hostRowWriterPutInt64(id uint64, typ uint32, namePtr, nameSize uint32, value uint64) {
-	return
 }
 
 func hostRowWriterPutFloat32(id uint64, typ uint32, namePtr, nameSize uint32, value float32) {
-	return
 }
 
 func hostRowWriterPutFloat64(id uint64, typ uint32, namePtr, nameSize uint32, value float64) {
-	return
 }
 
 func hostGetKey(storagePtr, storageSize, entityPtr, entitySize uint32) uint64 {
@@ -182,7 +172,6 @@ func hostKeyAsFloat64(id uint64, namePtr, nameSize uint32) float64 {
 }
 
 func hostReadValues(keyId uint64) {
-	return
 }
 
 func hostGetValue(keyId uint64) (result uint64) {

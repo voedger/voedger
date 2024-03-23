@@ -94,6 +94,7 @@ linters-settings:
       - "4"
       - "5"
       - "10"
+      - "32"
       - "42"
       - "100"
   testifylint:
