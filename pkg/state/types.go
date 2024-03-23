@@ -877,7 +877,8 @@ func (v *wsTypeVailidator) validate(wsid istructs.WSID, entity appdef.QName) err
 		}
 		ws := v.appStructsFunc().AppDef().WorkspaceByDescriptor(wsKind)
 		if ws == nil {
-			return fmt.Errorf("%w: %s", errWorkspaceUndefined, wsKind.String())
+			// notest
+			return errDescriptorForUndefinedWorkspace
 		}
 		if ws.TypeByName(entity) == nil {
 			return typeIsNotDefinedInWorkspaceWithDescriptor(entity, wsKind)

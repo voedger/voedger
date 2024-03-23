@@ -27,7 +27,7 @@ var errFieldByNameIsNotAnObjectOrArray = errors.New("field by name is not an obj
 var errFieldByIndexIsNotAnObjectOrArray = errors.New("field by index is not an object or array")
 var errNotImplemented = errors.New("not implemented")
 var errWorkspaceDescriptorNotFound = errors.New("WorkspaceDescriptor not found in workspace")
-var errWorkspaceUndefined = errors.New("workspace undefined")
+var errDescriptorForUndefinedWorkspace = errors.New("workspace descriptor for undefined workspace")
 
 func errUndefined(name string) error {
 	return errors.New(name + " undefined")

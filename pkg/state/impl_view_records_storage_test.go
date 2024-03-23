@@ -15,7 +15,7 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
-func mockedStructs(t *testing.T) (*mockAppStructs, *mockViewRecords) {
+func mockedStructs2(t *testing.T, addWsDescriptor bool) (*mockAppStructs, *mockViewRecords) {
 	appDef := appdef.New()
 
 	view := appDef.AddView(testViewRecordQName1)
@@ -37,8 +37,10 @@ func mockedStructs(t *testing.T) (*mockAppStructs, *mockViewRecords) {
 	mockedViews := &mockViewRecords{}
 	mockedViews.On("KeyBuilder", testViewRecordQName1).Return(newKeyBuilder(View, testViewRecordQName1))
 
-	wsDesc := appDef.AddCDoc(testWSDescriptorQName)
-	wsDesc.AddField(field_WSKind, appdef.DataKind_bytes, false)
+	if addWsDescriptor {
+		wsDesc := appDef.AddCDoc(testWSDescriptorQName)
+		wsDesc.AddField(field_WSKind, appdef.DataKind_bytes, false)
+	}
 
 	ws := appDef.AddWorkspace(testWSQName)
 	ws.AddType(testViewRecordQName1)
@@ -56,6 +58,10 @@ func mockedStructs(t *testing.T) (*mockAppStructs, *mockViewRecords) {
 		On("ViewRecords").Return(mockedViews)
 
 	return appStructs, mockedViews
+}
+
+func mockedStructs(t *testing.T) (*mockAppStructs, *mockViewRecords) {
+	return mockedStructs2(t, true)
 }
 
 func TestViewRecordsStorage_GetBatch(t *testing.T) {
@@ -204,4 +210,73 @@ func TestViewRecordsStorage_ApplyBatch_NullWSIDGoesLast(t *testing.T) {
 	applyAndFlush(s)
 	require.Len(appliedWSIDs, 2)
 	require.Equal(istructs.NullWSID, appliedWSIDs[1])
+}
+
+func TestViewRecordsStorage_ValidateInWorkspaces(t *testing.T) {
+	require := require.New(t)
+
+	mockedStructs, mockedViews := mockedStructs(t)
+	mockedViews.
+		On("KeyBuilder", mock.Anything).Return(&nilKeyBuilder{}).
+		On("NewValueBuilder", mock.Anything).Return(&nilValueBuilder{}).
+		On("Get", istructs.WSID(1), mock.Anything).Return(&nilValue{}, nil).
+		On("PutBatch", mock.Anything, mock.Anything).Return(nil)
+	s := ProvideAsyncActualizerStateFactory()(context.Background(), appStructsFunc(mockedStructs), nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil, 10, 10)
+
+	wrongQName := appdef.NewQName("test", "viewRecordX")
+	wrongKb, err := s.KeyBuilder(View, wrongQName)
+	require.NoError(err)
+	expectedError := typeIsNotDefinedInWorkspaceWithDescriptor(wrongQName, testWSDescriptorQName)
+
+	t.Run("NewValue should validate for unavailable views", func(t *testing.T) {
+		value, err := s.NewValue(wrongKb)
+		require.Error(err, expectedError)
+		require.Nil(value)
+	})
+
+	t.Run("UpdateValue should validate for unavailable workspaces", func(t *testing.T) {
+		value, err := s.UpdateValue(wrongKb, nil)
+		require.Error(err, expectedError)
+		require.Nil(value)
+	})
+
+	t.Run("CanExist should validate for unavailable views", func(t *testing.T) {
+		value, ok, err := s.CanExist(wrongKb)
+		require.Error(err, expectedError)
+		require.Nil(value)
+		require.False(ok)
+	})
+
+	t.Run("MustExist should validate for unavailable views", func(t *testing.T) {
+		value, err := s.MustExist(wrongKb)
+		require.Error(err, expectedError)
+		require.Nil(value)
+	})
+
+	t.Run("MustNotExist should validate for unavailable views", func(t *testing.T) {
+		err := s.MustNotExist(wrongKb)
+		require.Error(err, expectedError)
+	})
+
+	t.Run("CanExistAll should validate for unavailable views", func(t *testing.T) {
+		correctKb, err := s.KeyBuilder(View, testViewRecordQName1)
+		require.NoError(err)
+		err = s.CanExistAll([]istructs.IStateKeyBuilder{wrongKb, correctKb}, nil)
+		require.Error(err, expectedError)
+	})
+
+	t.Run("MustExistAll should validate for unavailable views", func(t *testing.T) {
+		correctKb, err := s.KeyBuilder(View, testViewRecordQName1)
+		require.NoError(err)
+		err = s.MustExistAll([]istructs.IStateKeyBuilder{wrongKb, correctKb}, nil)
+		require.Error(err, expectedError)
+	})
+
+	t.Run("MustNotExistAll should validate for unavailable views", func(t *testing.T) {
+		correctKb, err := s.KeyBuilder(View, testViewRecordQName1)
+		require.NoError(err)
+		err = s.MustNotExistAll([]istructs.IStateKeyBuilder{wrongKb, correctKb})
+		require.Error(err, expectedError)
+	})
+
 }

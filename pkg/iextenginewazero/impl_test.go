@@ -574,7 +574,7 @@ func Test_WithState(t *testing.T) {
 		)`,
 		func(cfg *istructsmem.AppConfigType) {
 			cfg.Resources.Add(istructsmem.NewCommandFunction(dummyCommand, istructsmem.NullCommandExec))
-			cfg.AddAsyncProjectors(func() istructs.Projector { return istructs.Projector{Name: dummyProj} })
+			cfg.AddAsyncProjectors(istructs.Projector{Name: dummyProj})
 		})
 
 	// build app
@@ -648,7 +648,7 @@ func Test_StatePanic(t *testing.T) {
 		)`,
 		func(cfg *istructsmem.AppConfigType) {
 			cfg.Resources.Add(istructsmem.NewCommandFunction(dummyCommand, istructsmem.NullCommandExec))
-			cfg.AddAsyncProjectors(func() istructs.Projector { return istructs.Projector{Name: dummyProj} })
+			cfg.AddAsyncProjectors(istructs.Projector{Name: dummyProj})
 		})
 	appFunc := func() istructs.IAppStructs { return app }
 	state := state.ProvideAsyncActualizerStateFactory()(context.Background(), appFunc, nil, state.SimpleWSIDFunc(ws), nil, nil, nil, intentsLimit, bundlesLimit)
