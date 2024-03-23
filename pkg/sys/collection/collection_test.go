@@ -32,12 +32,11 @@ import (
 	queryprocessor "github.com/voedger/voedger/pkg/processors/query"
 	"github.com/voedger/voedger/pkg/projectors"
 	"github.com/voedger/voedger/pkg/state"
-	"github.com/voedger/voedger/pkg/sys/authnz"
+	wsdescutil "github.com/voedger/voedger/pkg/utils/wsdesc"
 	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
 )
 
 var cocaColaDocID istructs.RecordID
-var qNameWorkspaceDescriptor = appdef.NewQName(appdef.SysPackage, "WorkspaceDescriptor")
 var qNameTestWSKind = appdef.NewQName(appdef.SysPackage, "test_ws")
 
 const maxPrepareQueries = 10
@@ -105,11 +104,7 @@ func buildAppParts(t *testing.T) (appParts appparts.IAppPartitions, cleanup func
 			SetParam(qNameStateParams).
 			SetResult(qNameStateResult)
 
-		wsDesc := adb.AddCDoc(qNameWorkspaceDescriptor) // stub to make tests work
-		wsDesc.
-			AddField("WSKind", appdef.DataKind_QName, true).
-			AddField("Status", appdef.DataKind_int32, true)
-		wsDesc.SetSingleton()
+		wsdescutil.AddWorkspaceDescriptorStubDef(adb)
 
 		adb.AddCDoc(qNameTestWSKind).SetSingleton()
 	}
@@ -203,34 +198,10 @@ func buildAppParts(t *testing.T) (appParts appparts.IAppPartitions, cleanup func
 	appParts.DeployAppPartitions(test.appQName, []istructs.PartitionID{test.partition})
 
 	// create stub for cdoc.sys.WorkspaceDescriptor to make query processor work
-	as, err := provider.AppStructs(istructs.AppQName_test1_app1)
+	as, err := provider.AppStructs(test.appQName)
 	require.NoError(err)
-	now := time.Now()
-	grebp := istructs.GenericRawEventBuilderParams{
-		HandlingPartition: test.partition,
-		Workspace:         test.workspace,
-		QName:             istructs.QNameCommandCUD,
-		RegisteredAt:      istructs.UnixMilli(now.UnixMilli()),
-		PLogOffset:        1,
-		WLogOffset:        1,
-	}
-	reb := as.Events().GetSyncRawEventBuilder(
-		istructs.SyncRawEventBuilderParams{
-			GenericRawEventBuilderParams: grebp,
-			SyncedAt:                     istructs.UnixMilli(now.UnixMilli()),
-		},
-	)
-	cdocWSDesc := reb.CUDBuilder().Create(qNameWorkspaceDescriptor)
-	cdocWSDesc.PutRecordID(appdef.SystemField_ID, 1)
-	cdocWSDesc.PutQName("WSKind", qNameTestWSKind)
-	cdocWSDesc.PutInt32("Status", int32(authnz.WorkspaceStatus_Active))
-	rawEvent, err := reb.BuildRawEvent()
+	err = wsdescutil.CreateCDocWorkspaceDescriptorStub(as, test.partition, test.workspace, qNameTestWSKind, 1, 1)
 	require.NoError(err)
-	pLogEvent, err := as.Events().PutPlog(rawEvent, nil, istructsmem.NewIDGenerator())
-	require.NoError(err)
-	defer pLogEvent.Release()
-	require.NoError(as.Records().Apply(pLogEvent))
-	require.NoError(as.Events().PutWlog(pLogEvent))
 
 	return appParts, cleanup
 }
