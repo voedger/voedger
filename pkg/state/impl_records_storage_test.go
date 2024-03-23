@@ -15,6 +15,26 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
+func createAppDef() appdef.IAppDef {
+	appDef := appdef.New()
+	appDef.AddObject(testRecordQName1).
+		AddField("number", appdef.DataKind_int64, false)
+	appDef.AddObject(testRecordQName2).
+		AddField("age", appdef.DataKind_int64, false)
+	wsDesc := appDef.AddCDoc(testWSDescriptorQName)
+	wsDesc.AddField(field_WSKind, appdef.DataKind_bytes, false)
+	ws := appDef.AddWorkspace(testWSQName)
+	ws.AddType(testRecordQName1)
+	ws.AddType(testRecordQName2)
+	ws.SetDescriptor(testWSDescriptorQName)
+
+	app, err := appDef.Build()
+	if err != nil {
+		panic(err)
+	}
+	return app
+}
+
 func TestRecordsStorage_GetBatch(t *testing.T) {
 	type result struct {
 		key    istructs.IKeyBuilder
@@ -56,9 +76,12 @@ func TestRecordsStorage_GetBatch(t *testing.T) {
 		appDef.AddObject(testRecordQName2).
 			AddField("age", appdef.DataKind_int64, false)
 
+		app, err := appDef.Build()
+		require.NoError(err)
+
 		appStructs := &mockAppStructs{}
 		appStructs.
-			On("AppDef").Return(appDef).
+			On("AppDef").Return(app).
 			On("Records").Return(records).
 			On("ViewRecords").Return(&nilViewRecords{}).
 			On("Events").Return(&nilEvents{})
@@ -122,21 +145,21 @@ func TestRecordsStorage_GetBatch(t *testing.T) {
 		})
 		nullRecord := &mockRecord{}
 		nullRecord.On("QName").Return(appdef.NullQName)
+
+		mockWorkspaceRecord := &mockRecord{}
+		mockWorkspaceRecord.On("AsQName", "WSKind").Return(testWSDescriptorQName)
+		mockWorkspaceRecord.On("QName").Return(qNameCDocWorkspaceDescriptor)
+
 		records := &mockRecords{}
 		records.
 			On("GetSingleton", istructs.WSID(1), testRecordQName1).Return(singleton1, nil).
 			On("GetSingleton", istructs.WSID(2), testRecordQName2).Return(nullRecord, nil).
-			On("GetSingleton", istructs.WSID(3), testRecordQName2).Return(singleton2, nil)
-
-		appDef := appdef.New()
-		appDef.AddObject(testRecordQName1).
-			AddField("number", appdef.DataKind_int64, false)
-		appDef.AddObject(testRecordQName2).
-			AddField("age", appdef.DataKind_int64, false)
+			On("GetSingleton", istructs.WSID(3), testRecordQName2).Return(singleton2, nil).
+			On("GetSingleton", mock.Anything, qNameCDocWorkspaceDescriptor).Return(mockWorkspaceRecord, nil)
 
 		appStructs := &mockAppStructs{}
 		appStructs.
-			On("AppDef").Return(appDef).
+			On("AppDef").Return(createAppDef()).
 			On("Records").Return(records).
 			On("ViewRecords").Return(&nilViewRecords{}).
 			On("Events").Return(&nilEvents{})
@@ -191,7 +214,7 @@ func TestRecordsStorage_GetBatch(t *testing.T) {
 		records.On("Get", istructs.WSID(1), true, mock.Anything).Return(nil, errTest)
 		appStructs := &mockAppStructs{}
 		appStructs.
-			On("AppDef").Return(&nilAppDef{}).
+			On("AppDef").Return(createAppDef()).
 			On("Records").Return(records).
 			On("ViewRecords").Return(&nilViewRecords{}).
 			On("Events").Return(&nilEvents{})
@@ -207,11 +230,17 @@ func TestRecordsStorage_GetBatch(t *testing.T) {
 	})
 	t.Run("Should return error on get singleton", func(t *testing.T) {
 		require := require.New(t)
+
+		mockWorkspaceRecord := &mockRecord{}
+		mockWorkspaceRecord.On("AsQName", "WSKind").Return(testWSDescriptorQName)
+		mockWorkspaceRecord.On("QName").Return(qNameCDocWorkspaceDescriptor)
+
 		records := &mockRecords{}
 		records.On("GetSingleton", istructs.WSID(1), testRecordQName1).Return(&mockRecord{}, errTest)
+		records.On("GetSingleton", mock.Anything, qNameCDocWorkspaceDescriptor).Return(mockWorkspaceRecord, nil)
 		appStructs := &mockAppStructs{}
 		appStructs.
-			On("AppDef").Return(&nilAppDef{}).
+			On("AppDef").Return(createAppDef()).
 			On("Records").Return(records).
 			On("ViewRecords").Return(&nilViewRecords{}).
 			On("Events").Return(&nilEvents{})
@@ -268,4 +297,81 @@ func TestRecordsStorage_Update(t *testing.T) {
 	require.NoError(s.ValidateIntents())
 	require.NoError(s.ApplyIntents())
 	rw.AssertExpectations(t)
+}
+
+func TestRecordsStorage_ValidateInWorkspaces_Reads(t *testing.T) {
+	require := require.New(t)
+
+	mockedStructs, mockedViews := mockedStructs(t)
+	mockedViews.
+		On("KeyBuilder", mock.Anything).Return(&nilKeyBuilder{}).
+		On("NewValueBuilder", mock.Anything).Return(&nilValueBuilder{}).
+		On("Get", istructs.WSID(1), mock.Anything).Return(&nilValue{}, nil).
+		On("PutBatch", mock.Anything, mock.Anything).Return(nil)
+
+	s := ProvideAsyncActualizerStateFactory()(context.Background(), appStructsFunc(mockedStructs), nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil, 10, 10)
+
+	wrongSingleton := appdef.NewQName("test", "RecordX")
+	wrongKb, err := s.KeyBuilder(Record, appdef.NullQName)
+	wrongKb.PutQName(Field_Singleton, wrongSingleton)
+	require.NoError(err)
+	expectedError := typeIsNotDefinedInWorkspaceWithDescriptor(wrongSingleton, testWSDescriptorQName)
+
+	t.Run("CanExist should validate for unavailable records", func(t *testing.T) {
+		value, ok, err := s.CanExist(wrongKb)
+		require.EqualError(err, expectedError.Error())
+		require.Nil(value)
+		require.False(ok)
+	})
+
+	t.Run("CanExistAll should validate for unavailable records", func(t *testing.T) {
+		err = s.CanExistAll([]istructs.IStateKeyBuilder{wrongKb}, nil)
+		require.EqualError(err, expectedError.Error())
+	})
+
+	t.Run("MustExist should validate for unavailable records", func(t *testing.T) {
+		value, err := s.MustExist(wrongKb)
+		require.EqualError(err, expectedError.Error())
+		require.Nil(value)
+	})
+
+	t.Run("MustNotExist should validate for unavailable records", func(t *testing.T) {
+		err := s.MustNotExist(wrongKb)
+		require.EqualError(err, expectedError.Error())
+	})
+
+	t.Run("MustExistAll should validate for unavailable records", func(t *testing.T) {
+		err = s.MustExistAll([]istructs.IStateKeyBuilder{wrongKb}, nil)
+		require.EqualError(err, expectedError.Error())
+	})
+
+	t.Run("MustNotExistAll should validate for unavailable records", func(t *testing.T) {
+		err = s.MustNotExistAll([]istructs.IStateKeyBuilder{wrongKb})
+		require.EqualError(err, expectedError.Error())
+	})
+}
+
+func TestRecordsStorage_ValidateInWorkspaces_Writes(t *testing.T) {
+	require := require.New(t)
+
+	mockedStructs, mockedViews := mockedStructs(t)
+	mockedViews.
+		On("KeyBuilder", mock.Anything).Return(&nilKeyBuilder{}).
+		On("NewValueBuilder", mock.Anything).Return(&nilValueBuilder{}).
+		On("Get", istructs.WSID(1), mock.Anything).Return(&nilValue{}, nil).
+		On("PutBatch", mock.Anything, mock.Anything).Return(nil)
+
+	s := ProvideCommandProcessorStateFactory()(context.Background(), appStructsFunc(mockedStructs), nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil, nil, 10, nil, nil, nil)
+
+	wrongSingleton := appdef.NewQName("test", "RecordX")
+	wrongKb, err := s.KeyBuilder(Record, wrongSingleton)
+	require.NoError(err)
+	expectedError := typeIsNotDefinedInWorkspaceWithDescriptor(wrongSingleton, testWSDescriptorQName)
+
+	t.Run("NewValue should validate for unavailable records", func(t *testing.T) {
+		builder, err := s.NewValue(wrongKb)
+		require.EqualError(err, expectedError.Error())
+		require.Nil(builder)
+	})
+
 }

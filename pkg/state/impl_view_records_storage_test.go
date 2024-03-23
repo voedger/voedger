@@ -230,53 +230,53 @@ func TestViewRecordsStorage_ValidateInWorkspaces(t *testing.T) {
 
 	t.Run("NewValue should validate for unavailable views", func(t *testing.T) {
 		value, err := s.NewValue(wrongKb)
-		require.Error(err, expectedError)
+		require.EqualError(err, expectedError.Error())
 		require.Nil(value)
 	})
 
 	t.Run("UpdateValue should validate for unavailable workspaces", func(t *testing.T) {
 		value, err := s.UpdateValue(wrongKb, nil)
-		require.Error(err, expectedError)
+		require.EqualError(err, expectedError.Error())
 		require.Nil(value)
 	})
 
 	t.Run("CanExist should validate for unavailable views", func(t *testing.T) {
 		value, ok, err := s.CanExist(wrongKb)
-		require.Error(err, expectedError)
+		require.EqualError(err, expectedError.Error())
 		require.Nil(value)
 		require.False(ok)
 	})
 
 	t.Run("MustExist should validate for unavailable views", func(t *testing.T) {
 		value, err := s.MustExist(wrongKb)
-		require.Error(err, expectedError)
+		require.EqualError(err, expectedError.Error())
 		require.Nil(value)
 	})
 
 	t.Run("MustNotExist should validate for unavailable views", func(t *testing.T) {
 		err := s.MustNotExist(wrongKb)
-		require.Error(err, expectedError)
+		require.EqualError(err, expectedError.Error())
 	})
 
 	t.Run("CanExistAll should validate for unavailable views", func(t *testing.T) {
 		correctKb, err := s.KeyBuilder(View, testViewRecordQName1)
 		require.NoError(err)
 		err = s.CanExistAll([]istructs.IStateKeyBuilder{wrongKb, correctKb}, nil)
-		require.Error(err, expectedError)
+		require.EqualError(err, expectedError.Error())
 	})
 
 	t.Run("MustExistAll should validate for unavailable views", func(t *testing.T) {
 		correctKb, err := s.KeyBuilder(View, testViewRecordQName1)
 		require.NoError(err)
 		err = s.MustExistAll([]istructs.IStateKeyBuilder{wrongKb, correctKb}, nil)
-		require.Error(err, expectedError)
+		require.EqualError(err, expectedError.Error())
 	})
 
 	t.Run("MustNotExistAll should validate for unavailable views", func(t *testing.T) {
 		correctKb, err := s.KeyBuilder(View, testViewRecordQName1)
 		require.NoError(err)
 		err = s.MustNotExistAll([]istructs.IStateKeyBuilder{wrongKb, correctKb})
-		require.Error(err, expectedError)
+		require.EqualError(err, expectedError.Error())
 	})
 
 }

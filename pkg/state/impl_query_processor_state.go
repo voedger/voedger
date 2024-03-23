@@ -16,11 +16,7 @@ func implProvideQueryProcessorState(ctx context.Context, appStructsFunc AppStruc
 	bs := newHostState("QueryProcessor", 0, appStructsFunc)
 
 	bs.addStorage(View, newViewRecordsStorage(ctx, appStructsFunc, wsidFunc, nil), S_GET|S_GET_BATCH|S_READ)
-
-	bs.addStorage(Record, &recordsStorage{
-		recordsFunc: func() istructs.IRecords { return appStructsFunc().Records() },
-		wsidFunc:    wsidFunc,
-	}, S_GET|S_GET_BATCH)
+	bs.addStorage(Record, newRecordsStorage(appStructsFunc, wsidFunc, nil), S_GET|S_GET_BATCH)
 
 	bs.addStorage(WLog, &wLogStorage{
 		ctx:        ctx,

@@ -52,11 +52,7 @@ func implProvideAsyncActualizerState(ctx context.Context, appStructsFunc AppStru
 	}
 
 	state.addStorage(View, newViewRecordsStorage(ctx, appStructsFunc, wsidFunc, n10nFunc), S_GET|S_GET_BATCH|S_READ|S_INSERT|S_UPDATE)
-
-	state.addStorage(Record, &recordsStorage{
-		recordsFunc: func() istructs.IRecords { return appStructsFunc().Records() },
-		wsidFunc:    wsidFunc,
-	}, S_GET|S_GET_BATCH)
+	state.addStorage(Record, newRecordsStorage(appStructsFunc, wsidFunc, nil), S_GET|S_GET_BATCH)
 
 	state.addStorage(WLog, &wLogStorage{
 		ctx:        ctx,

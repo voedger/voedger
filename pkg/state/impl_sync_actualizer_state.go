@@ -27,10 +27,7 @@ func implProvideSyncActualizerState(ctx context.Context, appStructsFunc AppStruc
 		eventFunc: eventFunc,
 	}
 	hs.addStorage(View, newViewRecordsStorage(ctx, appStructsFunc, wsidFunc, n10nFunc), S_GET|S_GET_BATCH|S_INSERT|S_UPDATE)
-	hs.addStorage(Record, &recordsStorage{
-		recordsFunc: func() istructs.IRecords { return appStructsFunc().Records() },
-		wsidFunc:    wsidFunc,
-	}, S_GET|S_GET_BATCH)
+	hs.addStorage(Record, newRecordsStorage(appStructsFunc, wsidFunc, nil), S_GET|S_GET_BATCH)
 	hs.addStorage(WLog, &wLogStorage{
 		ctx:        ctx,
 		eventsFunc: func() istructs.IEvents { return appStructsFunc().Events() },
