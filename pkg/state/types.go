@@ -849,7 +849,7 @@ func newWsTypeValidator(appStructsFunc AppStructsFunc) wsTypeVailidator {
 }
 
 // Returns NullQName if not found
-func (s *wsTypeVailidator) getWSIDKind(wsid istructs.WSID) (appdef.QName, error) {
+func (s *wsTypeVailidator) getWSIDKind(wsid istructs.WSID, entity appdef.QName) (appdef.QName, error) {
 	wsKind, ok := s.wsidKinds[wsid]
 	if !ok {
 		wsDesc, err := s.appStructsFunc().Records().GetSingleton(wsid, qNameCDocWorkspaceDescriptor)
@@ -858,6 +858,10 @@ func (s *wsTypeVailidator) getWSIDKind(wsid istructs.WSID) (appdef.QName, error)
 			return appdef.NullQName, err
 		}
 		if wsDesc.QName() == appdef.NullQName {
+			if s.appStructsFunc().AppDef().WorkspaceByDescriptor(entity) != nil {
+				// Special case. sys.CreateWorkspace creates WSKind while WorkspaceDescriptor is not applied yet.
+				return entity, nil
+			}
 			return appdef.NullQName, fmt.Errorf("%w: %d", errWorkspaceDescriptorNotFound, wsid)
 		}
 		wsKind = wsDesc.AsQName(field_WSKind)
@@ -869,8 +873,11 @@ func (s *wsTypeVailidator) getWSIDKind(wsid istructs.WSID) (appdef.QName, error)
 }
 
 func (v *wsTypeVailidator) validate(wsid istructs.WSID, entity appdef.QName) error {
+	if entity == qNameCDocWorkspaceDescriptor {
+		return nil // This QName always can be read and write. Otherwise sys.CreateWorkspace is not able to create descriptor.
+	}
 	if wsid != istructs.NullWSID && v.appStructsFunc().Records() != nil { // NullWSID only stores actualizer offsets
-		wsKind, err := v.getWSIDKind(wsid)
+		wsKind, err := v.getWSIDKind(wsid, entity)
 		if err != nil {
 			// notest
 			return err
