@@ -100,6 +100,7 @@ func mockedAppStructs() istructs.IAppStructs {
 	appStructs := &mockAppStructs{}
 	appStructs.
 		On("AppDef").Return(appDef).
+		On("AppQName").Return(testAppQName).
 		On("ViewRecords").Return(viewRecords).
 		On("Events").Return(&nilEvents{}).
 		On("Records").Return(mockedRecords)

@@ -24,6 +24,7 @@ var (
 	testStorage           = appdef.NewQName("test", "testStorage")
 	testWSQName           = appdef.NewQName("test", "testWS")
 	testWSDescriptorQName = appdef.NewQName("test", "testWSDescriptor")
+	testAppQName          = istructs.NewAppQName("test", "testApp")
 )
 
 func TestSimpleWSIDFunc(t *testing.T) {
@@ -145,6 +146,9 @@ type mockAppStructs struct {
 	mock.Mock
 }
 
+func (s *mockAppStructs) AppQName() istructs.AppQName {
+	return s.Called().Get(0).(istructs.AppQName)
+}
 func (s *mockAppStructs) AppDef() appdef.IAppDef {
 	return s.Called().Get(0).(appdef.IAppDef)
 }

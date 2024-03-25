@@ -82,6 +82,7 @@ func TestRecordsStorage_GetBatch(t *testing.T) {
 		appStructs := &mockAppStructs{}
 		appStructs.
 			On("AppDef").Return(app).
+			On("AppQName").Return(testAppQName).
 			On("Records").Return(records).
 			On("ViewRecords").Return(&nilViewRecords{}).
 			On("Events").Return(&nilEvents{})
@@ -160,6 +161,7 @@ func TestRecordsStorage_GetBatch(t *testing.T) {
 		appStructs := &mockAppStructs{}
 		appStructs.
 			On("AppDef").Return(createAppDef()).
+			On("AppQName").Return(testAppQName).
 			On("Records").Return(records).
 			On("ViewRecords").Return(&nilViewRecords{}).
 			On("Events").Return(&nilEvents{})
@@ -215,6 +217,7 @@ func TestRecordsStorage_GetBatch(t *testing.T) {
 		appStructs := &mockAppStructs{}
 		appStructs.
 			On("AppDef").Return(createAppDef()).
+			On("AppQName").Return(testAppQName).
 			On("Records").Return(records).
 			On("ViewRecords").Return(&nilViewRecords{}).
 			On("Events").Return(&nilEvents{})
@@ -241,6 +244,7 @@ func TestRecordsStorage_GetBatch(t *testing.T) {
 		appStructs := &mockAppStructs{}
 		appStructs.
 			On("AppDef").Return(createAppDef()).
+			On("AppQName").Return(testAppQName).
 			On("Records").Return(records).
 			On("ViewRecords").Return(&nilViewRecords{}).
 			On("Events").Return(&nilEvents{})

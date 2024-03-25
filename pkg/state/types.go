@@ -836,21 +836,27 @@ func (c *resultValueBuilder) PutRecordID(name string, value istructs.RecordID) {
 	c.resultBuilder.PutRecordID(name, value)
 }
 
+type wsTypeKey struct {
+	wsid     istructs.WSID
+	appQName istructs.AppQName
+}
+
 type wsTypeVailidator struct {
 	appStructsFunc AppStructsFunc
-	wsidKinds      map[istructs.WSID]appdef.QName
+	wsidKinds      map[wsTypeKey]appdef.QName
 }
 
 func newWsTypeValidator(appStructsFunc AppStructsFunc) wsTypeVailidator {
 	return wsTypeVailidator{
 		appStructsFunc: appStructsFunc,
-		wsidKinds:      make(map[istructs.WSID]appdef.QName),
+		wsidKinds:      make(map[wsTypeKey]appdef.QName),
 	}
 }
 
 // Returns NullQName if not found
 func (s *wsTypeVailidator) getWSIDKind(wsid istructs.WSID, entity appdef.QName) (appdef.QName, error) {
-	wsKind, ok := s.wsidKinds[wsid]
+	key := wsTypeKey{wsid: wsid, appQName: s.appStructsFunc().AppQName()}
+	wsKind, ok := s.wsidKinds[key]
 	if !ok {
 		wsDesc, err := s.appStructsFunc().Records().GetSingleton(wsid, qNameCDocWorkspaceDescriptor)
 		if err != nil {
@@ -866,7 +872,7 @@ func (s *wsTypeVailidator) getWSIDKind(wsid istructs.WSID, entity appdef.QName) 
 		}
 		wsKind = wsDesc.AsQName(field_WSKind)
 		if len(s.wsidKinds) < wsidTypeValidatorCacheSize {
-			s.wsidKinds[wsid] = wsKind
+			s.wsidKinds[key] = wsKind
 		}
 	}
 	return wsKind, nil

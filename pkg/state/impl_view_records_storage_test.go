@@ -53,6 +53,7 @@ func mockedStructs2(t *testing.T, addWsDescriptor bool) (*mockAppStructs, *mockV
 	appStructs := &mockAppStructs{}
 	appStructs.
 		On("AppDef").Return(app).
+		On("AppQName").Return(testAppQName).
 		On("Records").Return(mockedRecords).
 		On("Events").Return(&nilEvents{}).
 		On("ViewRecords").Return(mockedViews)
