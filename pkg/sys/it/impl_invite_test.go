@@ -202,19 +202,19 @@ func TestInvite_BasicUsage(t *testing.T) {
 	initiateUpdateInviteRoles(inviteID)
 	initiateUpdateInviteRoles(inviteID2)
 
-	WaitForInviteState(vit, ws, inviteID, invite.State_Joined, invite.State_ToUpdateRoles)
-	WaitForInviteState(vit, ws, inviteID2, invite.State_Joined, invite.State_ToUpdateRoles)
-	cDocInvite = findCDocInviteByID(inviteID)
-
-	require.Equal(float64(vit.Now().UnixMilli()), cDocInvite[8])
-
-	//Check that emails were send
+	//Check that emails were sent
 	require.Equal(updatedRoles, vit.CaptureEmail().Body)
 	message := vit.CaptureEmail()
 	require.Equal(updateRolesEmailSubject, message.Subject)
 	require.Equal(it.TestSMTPCfg.GetFrom(), message.From)
 	require.Equal([]string{email2}, message.To)
 	require.Equal(updatedRoles, message.Body)
+
+	WaitForInviteState(vit, ws, inviteID, invite.State_Joined, invite.State_ToUpdateRoles, invite.State_Joined)
+	WaitForInviteState(vit, ws, inviteID2, invite.State_Joined, invite.State_ToUpdateRoles, invite.State_Joined)
+	cDocInvite = findCDocInviteByID(inviteID)
+
+	require.Equal(float64(vit.Now().UnixMilli()), cDocInvite[8])
 
 	cDocSubject = findCDocSubjectByLogin(email2)
 

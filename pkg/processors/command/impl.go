@@ -145,7 +145,7 @@ func (cmdProc *cmdProc) getAppPartition(ctx context.Context, work interface{}) (
 
 func getIWorkspace(_ context.Context, work interface{}) (err error) {
 	cmd := work.(*cmdWorkpiece)
-	if !coreutils.IsDummyWS(cmd.cmdMes.WSID()) && cmd.cmdMes.QName() != workspacemgmt.QNameCommandCreateWorkspace {
+	if cmd.cmdMes.QName() != workspacemgmt.QNameCommandCreateWorkspace {
 		cmd.iWorkspace = cmd.appStructs.AppDef().WorkspaceByDescriptor(cmd.wsDesc.AsQName(authnz.Field_WSKind))
 	}
 	return nil
@@ -287,20 +287,14 @@ func (cmdProc *cmdProc) putPLog(_ context.Context, work interface{}) (err error)
 
 func getWSDesc(_ context.Context, work interface{}) (err error) {
 	cmd := work.(*cmdWorkpiece)
-	if !coreutils.IsDummyWS(cmd.cmdMes.WSID()) {
-		cmd.wsDesc, err = cmd.appStructs.Records().GetSingleton(cmd.cmdMes.WSID(), authnz.QNameCDocWorkspaceDescriptor)
-	}
-
-	return
+	cmd.wsDesc, err = cmd.appStructs.Records().GetSingleton(cmd.cmdMes.WSID(), authnz.QNameCDocWorkspaceDescriptor)
+	return err
 }
 
 func checkWSInitialized(_ context.Context, work interface{}) (err error) {
 	cmd := work.(*cmdWorkpiece)
 	wsDesc := work.(*cmdWorkpiece).wsDesc
 	cmdQName := cmd.cmdMes.QName()
-	if coreutils.IsDummyWS(cmd.cmdMes.WSID()) {
-		return nil
-	}
 	if cmdQName == workspacemgmt.QNameCommandCreateWorkspace ||
 		cmdQName == workspacemgmt.QNameCommandCreateWorkspaceID || // happens on creating a child of an another workspace
 		cmdQName == builtin.QNameCommandInit {
@@ -326,9 +320,6 @@ func checkWSInitialized(_ context.Context, work interface{}) (err error) {
 
 func checkWSActive(_ context.Context, work interface{}) (err error) {
 	cmd := work.(*cmdWorkpiece)
-	if coreutils.IsDummyWS(cmd.cmdMes.WSID()) {
-		return nil
-	}
 	if iauthnz.IsSystemPrincipal(cmd.principals, cmd.cmdMes.WSID()) {
 		// system -> allow to work in any case
 		return nil
