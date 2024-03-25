@@ -28,7 +28,10 @@ func NewWithActualizer(structs istructs.IAppStructsProvider, actualizer SyncActu
 		structs,
 		actualizer,
 		func(istructs.AppQName) iextengine.ExtensionEngineFactories {
-			return iextengine.ExtensionEngineFactories{}
+			return iextengine.ExtensionEngineFactories{
+				iextengine.ExtEngineKind_BuiltIn: iextengine.NullExtensionEngineFactory,
+				iextengine.ExtEngineKind_WASM:    iextengine.NullExtensionEngineFactory,
+			}
 		},
 	)
 }
