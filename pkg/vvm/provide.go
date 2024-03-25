@@ -10,6 +10,7 @@ package vvm
 
 import (
 	"context"
+	"fmt"
 	"net/url"
 	"strconv"
 	"strings"
@@ -22,6 +23,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/apppartsctl"
+	"github.com/voedger/voedger/pkg/iextengine"
 	"github.com/voedger/voedger/pkg/router"
 	"github.com/voedger/voedger/pkg/vvm/engines"
 
@@ -164,9 +166,7 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 		provideAppPartsCtlPipelineService,
 		provideIsDeviceAllowedFunc,
 		provideBuiltInApps,
-		provideExtEngineFactoriesConfig,
-		engines.ProvideExtEngineFactories,
-		appparts.NewWithActualizerWithExtEnginesFactories,
+		provideAppPartitions,
 		apppartsctl.New,
 		// wire.Value(vvmConfig.NumCommandProcessors) -> (wire bug?) value github.com/untillpro/airs-bp3/vvm.CommandProcessorsCount can't be used: vvmConfig is not declared in package scope
 		wire.FieldsOf(&vvmConfig,
@@ -188,14 +188,26 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 	))
 }
 
-func provideExtEngineFactoriesConfig(
+func provideAppPartitions(
 	cfgs istructsmem.AppConfigsType,
+	asp istructs.IAppStructsProvider,
+	actualizer appparts.SyncActualizerFactory,
 	_ []BuiltInAppsPackages, /*need to make it called in correct order*/
-) engines.ExtEngineFactoriesConfig {
-	return engines.ExtEngineFactoriesConfig{
-		AppConfigs:  cfgs,
-		WASMCompile: false,
+) (ap appparts.IAppPartitions, cleanup func(), err error) {
+
+	eff := func(app istructs.AppQName) iextengine.ExtensionEngineFactories {
+		appCfg := cfgs.GetConfig(app)
+		if appCfg == nil {
+			panic(fmt.Errorf("app config not found for %s", app))
+		}
+		eefCfg := engines.ExtEngineFactoriesConfig{
+			AppConfig:   appCfg,
+			WASMCompile: false,
+		}
+		return engines.ProvideExtEngineFactories(eefCfg)
 	}
+
+	return appparts.NewWithActualizerWithExtEnginesFactories(asp, actualizer, eff)
 }
 
 func provideIsDeviceAllowedFunc(appEPs map[istructs.AppQName]extensionpoints.IExtensionPoint, _ []BuiltInAppsPackages /*need to make it called in correct order*/) iauthnzimpl.IsDeviceAllowedFuncs {

@@ -62,10 +62,12 @@ func (a *app) deploy(def appdef.IAppDef, structs istructs.IAppStructs, numEngine
 	a.def = def
 	a.structs = structs
 
+	eef := a.apps.extEngineFactoriesFactory(a.name)
+
 	ctx := context.Background()
 	for k, cnt := range numEngines {
 		// TODO: add support for WASM engine
-		extEngines, err := a.apps.extEngineFactories[appdef.ExtensionEngineKind_BuiltIn].New(ctx, []iextengine.ExtensionPackage{}, nil, cnt)
+		extEngines, err := eef[appdef.ExtensionEngineKind_BuiltIn].New(ctx, []iextengine.ExtensionPackage{}, nil, cnt)
 		if err != nil {
 			panic(err)
 		}

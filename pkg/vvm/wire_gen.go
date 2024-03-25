@@ -8,6 +8,7 @@ package vvm
 
 import (
 	"context"
+	"fmt"
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/apppartsctl"
@@ -16,6 +17,7 @@ import (
 	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/iauthnzimpl"
 	"github.com/voedger/voedger/pkg/iblobstoragestg"
+	"github.com/voedger/voedger/pkg/iextengine"
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/in10nmem"
 	"github.com/voedger/voedger/pkg/iprocbus"
@@ -106,9 +108,7 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 		cleanup()
 		return nil, nil, err
 	}
-	extEngineFactoriesConfig := provideExtEngineFactoriesConfig(appConfigsType, v4)
-	extensionEngineFactories := engines.ProvideExtEngineFactories(extEngineFactoriesConfig)
-	iAppPartitions, cleanup2, err := appparts.NewWithActualizerWithExtEnginesFactories(iAppStructsProvider, v2, extensionEngineFactories)
+	iAppPartitions, cleanup2, err := provideAppPartitions(appConfigsType, iAppStructsProvider, v2, v4)
 	if err != nil {
 		cleanup()
 		return nil, nil, err
@@ -235,14 +235,26 @@ func (vvm *VoedgerVM) Launch() error {
 	return vvm.ServicePipeline.SendSync(ignition)
 }
 
-func provideExtEngineFactoriesConfig(
+func provideAppPartitions(
 	cfgs istructsmem.AppConfigsType,
+	asp istructs.IAppStructsProvider,
+	actualizer appparts.SyncActualizerFactory,
 	_ []BuiltInAppsPackages,
-) engines.ExtEngineFactoriesConfig {
-	return engines.ExtEngineFactoriesConfig{
-		AppConfigs:  cfgs,
-		WASMCompile: false,
+) (ap appparts.IAppPartitions, cleanup func(), err error) {
+
+	eff := func(app istructs.AppQName) iextengine.ExtensionEngineFactories {
+		appCfg := cfgs.GetConfig(app)
+		if appCfg == nil {
+			panic(fmt.Errorf("app config not found for %s", app))
+		}
+		eefCfg := engines.ExtEngineFactoriesConfig{
+			AppConfig:   appCfg,
+			WASMCompile: false,
+		}
+		return engines.ProvideExtEngineFactories(eefCfg)
 	}
+
+	return appparts.NewWithActualizerWithExtEnginesFactories(asp, actualizer, eff)
 }
 
 func provideIsDeviceAllowedFunc(appEPs map[istructs.AppQName]extensionpoints.IExtensionPoint, _ []BuiltInAppsPackages) iauthnzimpl.IsDeviceAllowedFuncs {

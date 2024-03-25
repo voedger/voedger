@@ -27,11 +27,15 @@ func NewWithActualizer(structs istructs.IAppStructsProvider, actualizer SyncActu
 	return NewWithActualizerWithExtEnginesFactories(
 		structs,
 		actualizer,
-		iextengine.ExtensionEngineFactories{},
+		func(istructs.AppQName) iextengine.ExtensionEngineFactories {
+			return iextengine.ExtensionEngineFactories{}
+		},
 	)
 }
 
+type ExtensionEngineFactoriesFactory func(istructs.AppQName) iextengine.ExtensionEngineFactories
+
 func NewWithActualizerWithExtEnginesFactories(structs istructs.IAppStructsProvider, actualizer SyncActualizerFactory,
-	eef iextengine.ExtensionEngineFactories) (ap IAppPartitions, cleanup func(), err error) {
-	return newAppPartitions(structs, actualizer, eef)
+	eff ExtensionEngineFactoriesFactory) (ap IAppPartitions, cleanup func(), err error) {
+	return newAppPartitions(structs, actualizer, eff)
 }

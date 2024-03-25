@@ -16,6 +16,7 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/cluster"
+	"github.com/voedger/voedger/pkg/iextengine"
 	"github.com/voedger/voedger/pkg/iratesce"
 	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istorage/mem"
@@ -228,10 +229,14 @@ func deployTestApp(
 		func(istructs.IAppStructs, istructs.PartitionID) pipeline.ISyncOperator {
 			return &pipeline.NOOP{}
 		},
-		engines.ProvideExtEngineFactories(engines.ExtEngineFactoriesConfig{
-			AppConfigs:  cfgs,
-			WASMCompile: false,
-		}),
+		func(app istructs.AppQName) iextengine.ExtensionEngineFactories {
+			return engines.ProvideExtEngineFactories(
+				engines.ExtEngineFactoriesConfig{
+					AppConfig:   cfgs.GetConfig(app),
+					WASMCompile: false,
+				},
+			)
+		},
 	)
 	if err != nil {
 		panic(err)

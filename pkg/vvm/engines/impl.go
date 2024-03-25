@@ -15,68 +15,65 @@ import (
 	"github.com/voedger/voedger/pkg/istructsmem"
 )
 
-// provides all built-in extension functions for all specified applications
+// provides all built-in extension functions for specified application config
 //
 // # Panics:
 //   - if any extension implementation not found
 //   - if any extension package full path is unknown
-func provideAppsBuiltInExtFuncs(cfgs istructsmem.AppConfigsType) iextengine.BuiltInExtFuncs {
+func provideAppsBuiltInExtFuncs(cfg *istructsmem.AppConfigType) iextengine.BuiltInExtFuncs {
 	funcs := make(iextengine.BuiltInExtFuncs)
-	for app := range cfgs {
-		cfg := cfgs.GetConfig(app)
 
-		cfg.AppDef.Extensions(
-			func(ext appdef.IExtension) {
-				if ext.Engine() != appdef.ExtensionEngineKind_BuiltIn {
-					return
-				}
-				name := ext.QName()
+	cfg.AppDef.Extensions(
+		func(ext appdef.IExtension) {
+			if ext.Engine() != appdef.ExtensionEngineKind_BuiltIn {
+				return
+			}
+			name := ext.QName()
 
-				var fn iextengine.BuiltInExtFunc
+			var fn iextengine.BuiltInExtFunc
 
-				switch ext.Kind() {
-				case appdef.TypeKind_Command:
-					if cmd, ok := cfg.Resources.QueryResource(name).(istructs.ICommandFunction); ok {
-						fn = func(_ context.Context, io iextengine.IExtensionIO) error {
-							return cmd.Exec(istructs.ExecCommandArgs{State: io, Intents: io})
-						}
-					}
-				case appdef.TypeKind_Query:
-					if query, ok := cfg.Resources.QueryResource(name).(istructs.IQueryFunction); ok {
-						fn = func(ctx context.Context, io iextengine.IExtensionIO) error {
-							return query.Exec(
-								ctx,
-								istructs.ExecQueryArgs{State: io},
-								// TODO: add query result handler
-								func(istructs.IObject) error { return nil },
-							)
-						}
-					}
-				case appdef.TypeKind_Projector:
-					var prj istructs.Projector
-					if ext.(appdef.IProjector).Sync() {
-						prj = cfg.SyncProjectors()[name]
-					} else {
-						prj = cfg.AsyncProjectors()[name]
-					}
-					if prj.Name != appdef.NullQName {
-						fn = func(_ context.Context, io iextengine.IExtensionIO) error {
-							return prj.Func(io.PLogEvent(), io, io)
-						}
+			switch ext.Kind() {
+			case appdef.TypeKind_Command:
+				if cmd, ok := cfg.Resources.QueryResource(name).(istructs.ICommandFunction); ok {
+					fn = func(_ context.Context, io iextengine.IExtensionIO) error {
+						return cmd.Exec(istructs.ExecCommandArgs{State: io, Intents: io})
 					}
 				}
-
-				if fn == nil {
-					panic(fmt.Errorf("application «%v»: %v implementation not found", app, ext))
+			case appdef.TypeKind_Query:
+				if query, ok := cfg.Resources.QueryResource(name).(istructs.IQueryFunction); ok {
+					fn = func(ctx context.Context, io iextengine.IExtensionIO) error {
+						return query.Exec(
+							ctx,
+							istructs.ExecQueryArgs{State: io},
+							// TODO: add query result handler
+							func(istructs.IObject) error { return nil },
+						)
+					}
 				}
-
-				extName := cfg.AppDef.FullQName(name)
-				if extName == appdef.NullFullQName {
-					panic(fmt.Errorf("application «%v»: package %v full path is unknown", app, name.Pkg()))
+			case appdef.TypeKind_Projector:
+				var prj istructs.Projector
+				if ext.(appdef.IProjector).Sync() {
+					prj = cfg.SyncProjectors()[name]
+				} else {
+					prj = cfg.AsyncProjectors()[name]
 				}
+				if prj.Name != appdef.NullQName {
+					fn = func(_ context.Context, io iextengine.IExtensionIO) error {
+						return prj.Func(io.PLogEvent(), io, io)
+					}
+				}
+			}
 
-				funcs[extName] = fn
-			})
-	}
+			if fn == nil {
+				panic(fmt.Errorf("application «%v»: %v implementation not found", cfg.Name, ext))
+			}
+
+			extName := cfg.AppDef.FullQName(name)
+			if extName == appdef.NullFullQName {
+				panic(fmt.Errorf("application «%v»: package %v full path is unknown", cfg.Name, name.Pkg()))
+			}
+
+			funcs[extName] = fn
+		})
 	return funcs
 }

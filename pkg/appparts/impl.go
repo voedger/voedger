@@ -13,25 +13,24 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/cluster"
-	"github.com/voedger/voedger/pkg/iextengine"
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
 type apps struct {
-	structs               istructs.IAppStructsProvider
-	syncActualizerFactory SyncActualizerFactory
-	extEngineFactories    iextengine.ExtensionEngineFactories
-	apps                  map[istructs.AppQName]*app
-	mx                    sync.RWMutex
+	structs                   istructs.IAppStructsProvider
+	syncActualizerFactory     SyncActualizerFactory
+	extEngineFactoriesFactory ExtensionEngineFactoriesFactory
+	apps                      map[istructs.AppQName]*app
+	mx                        sync.RWMutex
 }
 
-func newAppPartitions(asp istructs.IAppStructsProvider, saf SyncActualizerFactory, eef iextengine.ExtensionEngineFactories) (ap IAppPartitions, cleanup func(), err error) {
+func newAppPartitions(asp istructs.IAppStructsProvider, saf SyncActualizerFactory, eff ExtensionEngineFactoriesFactory) (ap IAppPartitions, cleanup func(), err error) {
 	a := &apps{
-		structs:               asp,
-		syncActualizerFactory: saf,
-		extEngineFactories:    eef,
-		apps:                  map[istructs.AppQName]*app{},
-		mx:                    sync.RWMutex{},
+		structs:                   asp,
+		syncActualizerFactory:     saf,
+		extEngineFactoriesFactory: eff,
+		apps:                      map[istructs.AppQName]*app{},
+		mx:                        sync.RWMutex{},
 	}
 	return a, func() {}, err
 }
