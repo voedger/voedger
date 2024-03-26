@@ -39,7 +39,6 @@ type AsyncActualizerStateFactory func(ctx context.Context, appStructsFunc AppStr
 	opts ...ActualizerStateOptFunc) IBundledHostState
 
 type eventsFunc func() istructs.IEvents
-type viewRecordsFunc func() istructs.IViewRecords
 type recordsFunc func() istructs.IRecords
 
 type ApplyBatchItem struct {
@@ -854,25 +853,25 @@ func newWsTypeValidator(appStructsFunc AppStructsFunc) wsTypeVailidator {
 }
 
 // Returns NullQName if not found
-func (s *wsTypeVailidator) getWSIDKind(wsid istructs.WSID, entity appdef.QName) (appdef.QName, error) {
-	key := wsTypeKey{wsid: wsid, appQName: s.appStructsFunc().AppQName()}
-	wsKind, ok := s.wsidKinds[key]
+func (v *wsTypeVailidator) getWSIDKind(wsid istructs.WSID, entity appdef.QName) (appdef.QName, error) {
+	key := wsTypeKey{wsid: wsid, appQName: v.appStructsFunc().AppQName()}
+	wsKind, ok := v.wsidKinds[key]
 	if !ok {
-		wsDesc, err := s.appStructsFunc().Records().GetSingleton(wsid, qNameCDocWorkspaceDescriptor)
+		wsDesc, err := v.appStructsFunc().Records().GetSingleton(wsid, qNameCDocWorkspaceDescriptor)
 		if err != nil {
 			// notest
 			return appdef.NullQName, err
 		}
 		if wsDesc.QName() == appdef.NullQName {
-			if s.appStructsFunc().AppDef().WorkspaceByDescriptor(entity) != nil {
+			if v.appStructsFunc().AppDef().WorkspaceByDescriptor(entity) != nil {
 				// Special case. sys.CreateWorkspace creates WSKind while WorkspaceDescriptor is not applied yet.
 				return entity, nil
 			}
 			return appdef.NullQName, fmt.Errorf("%w: %d", errWorkspaceDescriptorNotFound, wsid)
 		}
 		wsKind = wsDesc.AsQName(field_WSKind)
-		if len(s.wsidKinds) < wsidTypeValidatorCacheSize {
-			s.wsidKinds[key] = wsKind
+		if len(v.wsidKinds) < wsidTypeValidatorCacheSize {
+			v.wsidKinds[key] = wsKind
 		}
 	}
 	return wsKind, nil
