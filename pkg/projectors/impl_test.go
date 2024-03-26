@@ -28,7 +28,10 @@ import (
 	imetrics "github.com/voedger/voedger/pkg/metrics"
 	"github.com/voedger/voedger/pkg/pipeline"
 	"github.com/voedger/voedger/pkg/state"
+	"github.com/voedger/voedger/pkg/sys/authnz"
 )
+
+var newWorkspaceCmd = appdef.NewQName("sys", "NewWorkspace")
 
 // Design: Projection Actualizers
 // https://dev.heeus.io/launchpad/#!12850
@@ -57,12 +60,17 @@ func TestBasicUsage_SynchronousActualizer(t *testing.T) {
 			appDef.AddCommand(testQName)
 			appDef.AddProjector(incrementorName).SetSync(true).Events().Add(testQName, appdef.ProjectorEventKind_Execute)
 			appDef.AddProjector(decrementorName).SetSync(true).Events().Add(testQName, appdef.ProjectorEventKind_Execute)
+			ws := addWS(appDef, testWorkspace, testWorkspaceDescriptor)
+			ws.AddType(incProjectionView)
+			ws.AddType(decProjectionView)
 		},
 		func(cfg *istructsmem.AppConfigType) {
 			cfg.AddSyncProjectors(testIncrementor, testDecrementor)
 			cfg.Resources.Add(istructsmem.NewCommandFunction(testQName, istructsmem.NullCommandExec))
 		})
 	defer cleanup()
+	createWS(appStructs, istructs.WSID(1001), testWorkspaceDescriptor, istructs.PartitionID(1), istructs.Offset(1))
+	createWS(appStructs, istructs.WSID(1002), testWorkspaceDescriptor, istructs.PartitionID(1), istructs.Offset(1))
 	actualizerFactory := ProvideSyncActualizerFactory()
 
 	// create actualizer with two factories
@@ -102,6 +110,8 @@ var (
 
 var incProjectionView = appdef.NewQName("pkg", "Incremented")
 var decProjectionView = appdef.NewQName("pkg", "Decremented")
+var testWorkspace = appdef.NewQName("pkg", "TestWorkspace")
+var testWorkspaceDescriptor = appdef.NewQName("pkg", "TestWorkspaceDescriptor")
 
 var (
 	testIncrementor = istructs.Projector{
@@ -189,12 +199,18 @@ func deployTestApp(
 		prepareAppDef(appDefBuilder)
 	}
 	provideOffsetsDefImpl(appDefBuilder)
+	appDefBuilder.AddCommand(newWorkspaceCmd)
 
 	cfgs := make(istructsmem.AppConfigsType, 1)
 	cfg := cfgs.AddConfig(appName, appDefBuilder)
 	if prepareAppCfg != nil {
 		prepareAppCfg(cfg)
+		cfg.Resources.Add(istructsmem.NewCommandFunction(newWorkspaceCmd, istructsmem.NullCommandExec))
 	}
+
+	wsDescr := appDefBuilder.AddCDoc(authnz.QNameCDocWorkspaceDescriptor)
+	wsDescr.AddField(authnz.Field_WSKind, appdef.DataKind_QName, true)
+	wsDescr.SetSingleton()
 
 	appDef, err := appDefBuilder.Build()
 	if err != nil {
@@ -232,6 +248,38 @@ func deployTestApp(
 	return appParts, cleanup, metrics, appStructs
 }
 
+func addWS(appDef appdef.IAppDefBuilder, wsKind, wsDescriptorKind appdef.QName) appdef.IWorkspaceBuilder {
+	descr := appDef.AddCDoc(wsDescriptorKind)
+	descr.AddField("WSKind", appdef.DataKind_QName, true)
+	ws := appDef.AddWorkspace(wsKind)
+	ws.SetDescriptor(wsDescriptorKind)
+	return ws
+}
+
+func createWS(appStructs istructs.IAppStructs, ws istructs.WSID, wsDescriptorKind appdef.QName, partition istructs.PartitionID, offset istructs.Offset) {
+	// Create workspace
+	rebWs := appStructs.Events().GetNewRawEventBuilder(istructs.NewRawEventBuilderParams{
+		GenericRawEventBuilderParams: istructs.GenericRawEventBuilderParams{
+			Workspace:         ws,
+			HandlingPartition: partition,
+			PLogOffset:        offset,
+			QName:             newWorkspaceCmd,
+		},
+	})
+	cud := rebWs.CUDBuilder().Create(authnz.QNameCDocWorkspaceDescriptor)
+	cud.PutRecordID(appdef.SystemField_ID, 1)
+	cud.PutQName("WSKind", wsDescriptorKind)
+	rawWsEvent, err := rebWs.BuildRawEvent()
+	if err != nil {
+		panic(err)
+	}
+	wsEvent, err := appStructs.Events().PutPlog(rawWsEvent, nil, istructsmem.NewIDGenerator())
+	if err != nil {
+		panic(err)
+	}
+	appStructs.Records().Apply(wsEvent)
+}
+
 func Test_ErrorInSyncActualizer(t *testing.T) {
 	require := require.New(t)
 
@@ -243,6 +291,9 @@ func Test_ErrorInSyncActualizer(t *testing.T) {
 			appDef.AddCommand(testQName)
 			appDef.AddProjector(incrementorName).SetSync(true).Events().Add(testQName, appdef.ProjectorEventKind_Execute)
 			appDef.AddProjector(decrementorName).SetSync(true).Events().Add(testQName, appdef.ProjectorEventKind_Execute)
+			ws := addWS(appDef, testWorkspace, testWorkspaceDescriptor)
+			ws.AddType(incProjectionView)
+			ws.AddType(decProjectionView)
 		},
 		func(cfg *istructsmem.AppConfigType) {
 			cfg.AddSyncProjectors(testIncrementor, testDecrementor)
@@ -260,6 +311,10 @@ func Test_ErrorInSyncActualizer(t *testing.T) {
 	projectors := appStructs.SyncProjectors()
 	require.Len(projectors, 2)
 	actualizer := actualizerFactory(conf, projectors)
+
+	createWS(appStructs, istructs.WSID(1001), testWorkspaceDescriptor, istructs.PartitionID(1), istructs.Offset(1))
+	createWS(appStructs, istructs.WSID(1002), testWorkspaceDescriptor, istructs.PartitionID(1), istructs.Offset(1))
+	createWS(appStructs, istructs.WSID(1099), testWorkspaceDescriptor, istructs.PartitionID(1), istructs.Offset(1))
 
 	// create partition processor pipeline
 	processor := pipeline.NewSyncPipeline(context.Background(), "partition processor", pipeline.WireSyncOperator("actualizer", actualizer))

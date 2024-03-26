@@ -58,12 +58,18 @@ func TestBasicUsage_AsynchronousActualizer(t *testing.T) {
 			appDef.AddCommand(testQName)
 			appDef.AddProjector(incrementorName).Events().Add(testQName, appdef.ProjectorEventKind_Execute)
 			appDef.AddProjector(decrementorName).Events().Add(testQName, appdef.ProjectorEventKind_Execute)
+			ws := addWS(appDef, testWorkspace, testWorkspaceDescriptor)
+			ws.AddType(incProjectionView)
+			ws.AddType(decProjectionView)
 		},
 		func(cfg *istructsmem.AppConfigType) {
 			cfg.Resources.Add(istructsmem.NewCommandFunction(testQName, istructsmem.NullCommandExec))
 			cfg.AddAsyncProjectors(testIncrementor, testDecrementor)
 		})
 	defer cleanup()
+
+	createWS(appStructs, istructs.WSID(1001), testWorkspaceDescriptor, istructs.PartitionID(1), istructs.Offset(1))
+	createWS(appStructs, istructs.WSID(1002), testWorkspaceDescriptor, istructs.PartitionID(1), istructs.Offset(1))
 
 	f := pLogFiller{
 		app:       appStructs,
@@ -153,12 +159,18 @@ func Test_AsynchronousActualizer_FlushByRange(t *testing.T) {
 			ProvideViewDef(appDef, decProjectionView, buildProjectionView)
 			appDef.AddCommand(testQName)
 			appDef.AddProjector(incrementorName).Events().Add(testQName, appdef.ProjectorEventKind_Execute)
+			ws := addWS(appDef, testWorkspace, testWorkspaceDescriptor)
+			ws.AddType(incProjectionView)
+			ws.AddType(decProjectionView)
 		},
 		func(cfg *istructsmem.AppConfigType) {
 			cfg.Resources.Add(istructsmem.NewCommandFunction(testQName, istructsmem.NullCommandExec))
 			cfg.AddAsyncProjectors(testIncrementor)
 		})
 	defer cleanup()
+
+	createWS(appStructs, istructs.WSID(1001), testWorkspaceDescriptor, istructs.PartitionID(1), istructs.Offset(1))
+	createWS(appStructs, istructs.WSID(1002), testWorkspaceDescriptor, istructs.PartitionID(1), istructs.Offset(1))
 
 	f := pLogFiller{
 		app:       appStructs,
@@ -237,12 +249,18 @@ func Test_AsynchronousActualizer_FlushByInterval(t *testing.T) {
 			ProvideViewDef(appDef, decProjectionView, buildProjectionView)
 			appDef.AddCommand(testQName)
 			appDef.AddProjector(incrementorName).Events().Add(testQName, appdef.ProjectorEventKind_Execute)
+			ws := addWS(appDef, testWorkspace, testWorkspaceDescriptor)
+			ws.AddType(incProjectionView)
+			ws.AddType(decProjectionView)
 		},
 		func(cfg *istructsmem.AppConfigType) {
 			cfg.Resources.Add(istructsmem.NewCommandFunction(testQName, istructsmem.NullCommandExec))
 			cfg.AddAsyncProjectors(testIncrementor)
 		})
 	defer cleanup()
+
+	createWS(appStructs, istructs.WSID(1001), testWorkspaceDescriptor, istructs.PartitionID(1), istructs.Offset(1))
+	createWS(appStructs, istructs.WSID(1002), testWorkspaceDescriptor, istructs.PartitionID(1), istructs.Offset(1))
 
 	f := pLogFiller{
 		app:       appStructs,
@@ -332,6 +350,9 @@ func Test_AsynchronousActualizer_ErrorAndRestore(t *testing.T) {
 			prj := appDef.AddProjector(name)
 			prj.Events().Add(testQName, appdef.ProjectorEventKind_Execute)
 			prj.States().Add(state.Http)
+			ws := addWS(appDef, testWorkspace, testWorkspaceDescriptor)
+			ws.AddType(incProjectionView)
+			ws.AddType(decProjectionView)
 		},
 		func(cfg *istructsmem.AppConfigType) {
 			cfg.Resources.Add(istructsmem.NewCommandFunction(testQName, istructsmem.NullCommandExec))
@@ -351,6 +372,9 @@ func Test_AsynchronousActualizer_ErrorAndRestore(t *testing.T) {
 				})
 		})
 	defer cleanup()
+
+	createWS(appStructs, istructs.WSID(1001), testWorkspaceDescriptor, istructs.PartitionID(1), istructs.Offset(1))
+	createWS(appStructs, istructs.WSID(1002), testWorkspaceDescriptor, istructs.PartitionID(1), istructs.Offset(1))
 
 	f := pLogFiller{
 		app:       appStructs,
@@ -449,12 +473,18 @@ func Test_AsynchronousActualizer_ResumeReadAfterNotifications(t *testing.T) {
 			ProvideViewDef(appDef, decProjectionView, buildProjectionView)
 			appDef.AddCommand(testQName)
 			appDef.AddProjector(incrementorName).Events().Add(testQName, appdef.ProjectorEventKind_Execute)
+			ws := addWS(appDef, testWorkspace, testWorkspaceDescriptor)
+			ws.AddType(incProjectionView)
+			ws.AddType(decProjectionView)
 		},
 		func(cfg *istructsmem.AppConfigType) {
 			cfg.Resources.Add(istructsmem.NewCommandFunction(testQName, istructsmem.NullCommandExec))
 			cfg.AddAsyncProjectors(testIncrementor)
 		})
 	defer cleanup()
+
+	createWS(appStructs, istructs.WSID(1001), testWorkspaceDescriptor, istructs.PartitionID(1), istructs.Offset(1))
+	createWS(appStructs, istructs.WSID(1002), testWorkspaceDescriptor, istructs.PartitionID(1), istructs.Offset(1))
 
 	f := pLogFiller{
 		app:       appStructs,
@@ -586,12 +616,18 @@ func Test_AsynchronousActualizer_Stress(t *testing.T) {
 			ProvideViewDef(appDef, decProjectionView, buildProjectionView)
 			appDef.AddCommand(testQName)
 			appDef.AddProjector(incrementorName).Events().Add(testQName, appdef.ProjectorEventKind_Execute)
+			ws := addWS(appDef, testWorkspace, testWorkspaceDescriptor)
+			ws.AddType(incProjectionView)
+			ws.AddType(decProjectionView)
 		},
 		func(cfg *istructsmem.AppConfigType) {
 			cfg.Resources.Add(istructsmem.NewCommandFunction(testQName, istructsmem.NullCommandExec))
 			cfg.AddAsyncProjectors(testIncrementor)
 		})
 	defer cleanup()
+
+	createWS(appStructs, istructs.WSID(1001), testWorkspaceDescriptor, istructs.PartitionID(1), istructs.Offset(1))
+	createWS(appStructs, istructs.WSID(1002), testWorkspaceDescriptor, istructs.PartitionID(1), istructs.Offset(1))
 
 	f := pLogFiller{
 		app:       appStructs,
@@ -700,6 +736,9 @@ func Test_AsynchronousActualizer_NonBuffered(t *testing.T) {
 			prj := appDef.AddProjector(incrementorName)
 			prj.Events().Add(testQName, appdef.ProjectorEventKind_Execute)
 			prj.Intents().Add(state.Http)
+			ws := addWS(appDef, testWorkspace, testWorkspaceDescriptor)
+			ws.AddType(incProjectionView)
+			ws.AddType(decProjectionView)
 		},
 		func(cfg *istructsmem.AppConfigType) {
 			cfg.Resources.Add(istructsmem.NewCommandFunction(testQName, istructsmem.NullCommandExec))
@@ -707,6 +746,7 @@ func Test_AsynchronousActualizer_NonBuffered(t *testing.T) {
 		})
 	defer cleanup()
 
+	createWS(appStructs, istructs.WSID(1001), testWorkspaceDescriptor, istructs.PartitionID(1), istructs.Offset(1))
 	f := pLogFiller{
 		app:       appStructs,
 		partition: partitionNr,
