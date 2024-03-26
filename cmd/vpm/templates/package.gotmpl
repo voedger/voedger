@@ -1,0 +1,24 @@
+{{define "package"}}
+
+{{if .HeaderFileContent}}
+{{.HeaderFileContent}}
+{{end}}
+
+package orm
+{{range .Imports}}
+import {{.}}
+{{end}}
+
+// package variables
+var Package_{{.Name}} = struct {
+{{range .Items}}{{.Type}}_{{.Name}} {{.Type}}_{{$.Name}}_{{.Name}}
+{{end}}
+}{  {{range .Items}}
+    {{.Type}}_{{.Name}}: {{.Type}}_{{$.Name}}_{{.Name}}{
+        Type: Type{qname: "{{.TypeQName}}"},
+    },{{end}}
+}
+
+{{range .Items}}{{template "item" .}}{{end}}
+
+{{end}}

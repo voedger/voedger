@@ -12,7 +12,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/otiai10/copy"
 	"github.com/stretchr/testify/require"
+	"github.com/untillpro/goutils/exec"
 	"github.com/untillpro/goutils/logger"
 
 	coreutils "github.com/voedger/voedger/pkg/utils"
@@ -239,4 +241,38 @@ func TestPkgRegistryCompile(t *testing.T) {
 
 	err = execRootCmd([]string{"vpm", "compile", "-C", "registry"}, "1.0.0")
 	require.NoError(err)
+}
+
+func TestGenOrmBasicUsage(t *testing.T) {
+	require := require.New(t)
+
+	// uncomment this line to see verbose logs
+	// logger.SetLogLevel(logger.LogLevelVerbose)
+
+	var err error
+	var tempDir string
+	if logger.IsVerbose() {
+		tempDir, err = os.MkdirTemp("", "test_genorm")
+		require.NoError(err)
+	} else {
+		tempDir = t.TempDir()
+	}
+
+	wd, err := os.Getwd()
+	require.NoError(err)
+
+	err = copy.Copy(filepath.Join(wd, "test", "genorm"), tempDir)
+	require.NoError(err)
+
+	dir := filepath.Join(tempDir, "app")
+	headerFile := filepath.Join(dir, "header.txt")
+	err = execRootCmd([]string{"vpm", "gen", "orm", "-C", dir, "--header-file", headerFile}, "1.0.0")
+	require.NoError(err)
+
+	err = new(exec.PipedExec).Command("go", "build", "-C", dir).Run(os.Stdout, os.Stderr)
+	require.NoError(err)
+
+	if logger.IsVerbose() {
+		logger.Verbose(fmt.Sprintf("orm directory: %s", filepath.Join(dir, "orm")))
+	}
 }
