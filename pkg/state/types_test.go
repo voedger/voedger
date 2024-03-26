@@ -14,6 +14,12 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
+func appStructsFunc(app istructs.IAppStructs) AppStructsFunc {
+	return func() istructs.IAppStructs {
+		return app
+	}
+}
+
 func TestBundle(t *testing.T) {
 	newKey := func(qname appdef.QName, id istructs.RecordID) (k istructs.IStateKeyBuilder) {
 		k = &viewKeyBuilder{

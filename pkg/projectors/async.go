@@ -189,7 +189,7 @@ func (a *asyncActualizer) init(ctx context.Context) (err error) {
 
 	p.state = state.ProvideAsyncActualizerStateFactory()(
 		ctx,
-		a.structs,
+		func() istructs.IAppStructs { return a.structs },
 		state.SimplePartitionIDFunc(a.conf.Partition),
 		p.WSIDProvider,
 		func(view appdef.QName, wsid istructs.WSID, offset istructs.Offset) {
