@@ -19,7 +19,7 @@ HOST=$1
 ADMIN_USER=$2
 ADMIN_PASSWORD=$3
 
-DASHBOARD_UID="HiA8ldL7z"
+DASHBOARD_UID="DMxOsLJSk2"
 
 DashIDbyUID() {
   local dashboard_uid="$1"
