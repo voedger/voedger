@@ -19,9 +19,10 @@ func Test_def_AddUnique(t *testing.T) {
 	un1 := UniqueQName(qName, "EMail")
 	un2 := UniqueQName(qName, "Full")
 
-	appDef := New()
+	adb := New()
+	adb.AddPackage("test", "test.com/test")
 
-	doc := appDef.AddCDoc(qName)
+	doc := adb.AddCDoc(qName)
 	require.NotNil(doc)
 
 	doc.
@@ -36,7 +37,7 @@ func Test_def_AddUnique(t *testing.T) {
 		AddUnique(un2, []string{"name", "surname", "lastName"})
 
 	t.Run("test is ok", func(t *testing.T) {
-		app, err := appDef.Build()
+		app, err := adb.Build()
 		require.NoError(err)
 
 		doc := app.CDoc(qName)
@@ -98,7 +99,9 @@ func Test_def_AddUnique(t *testing.T) {
 		}, "if fields has duplicates")
 
 		t.Run("panics if too many fields", func(t *testing.T) {
-			rec := New().AddCRecord(NewQName("test", "rec"))
+			adb := New()
+			adb.AddPackage("test", "test.com/test")
+			rec := adb.AddCRecord(NewQName("test", "rec"))
 			fldNames := []string{}
 			for i := 0; i <= MaxTypeUniqueFieldsCount; i++ {
 				n := fmt.Sprintf("f_%#x", i)
@@ -125,7 +128,9 @@ func Test_def_AddUnique(t *testing.T) {
 		}, "if fields not exists")
 
 		t.Run("panics if too many uniques", func(t *testing.T) {
-			rec := New().AddCRecord(NewQName("test", "rec"))
+			adb := New()
+			adb.AddPackage("test", "test.com/test")
+			rec := adb.AddCRecord(NewQName("test", "rec"))
 			for i := 0; i < MaxTypeUniqueCount; i++ {
 				n := fmt.Sprintf("f_%#x", i)
 				rec.AddField(n, DataKind_int32, false)
@@ -142,9 +147,11 @@ func Test_type_UniqueField(t *testing.T) {
 	require := require.New(t)
 
 	qName := NewQName("test", "user")
-	appDef := New()
 
-	doc := appDef.AddCDoc(qName)
+	adb := New()
+	adb.AddPackage("test", "test.com/test")
+
+	doc := adb.AddCDoc(qName)
 	require.NotNil(doc)
 
 	doc.
@@ -157,7 +164,7 @@ func Test_type_UniqueField(t *testing.T) {
 	doc.SetUniqueField("eMail")
 
 	t.Run("test is ok", func(t *testing.T) {
-		app, err := appDef.Build()
+		app, err := adb.Build()
 		require.NoError(err)
 
 		d := app.CDoc(qName)
@@ -171,7 +178,7 @@ func Test_type_UniqueField(t *testing.T) {
 	t.Run("must be ok to clear unique field", func(t *testing.T) {
 		doc.SetUniqueField("")
 
-		app, err := appDef.Build()
+		app, err := adb.Build()
 		require.NoError(err)
 
 		d := app.CDoc(qName)

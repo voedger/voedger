@@ -69,6 +69,15 @@ func (app *appDef) DataTypes(incSys bool, cb func(IData)) {
 	})
 }
 
+func (app *appDef) Extension(name QName) IExtension {
+	if t := app.TypeByName(name); t != nil {
+		if r, ok := t.(IExtension); ok {
+			return r
+		}
+	}
+	return nil
+}
+
 func (app *appDef) Extensions(cb func(e IExtension)) {
 	app.Types(func(t IType) {
 		if ex, ok := t.(IExtension); ok {
@@ -76,6 +85,8 @@ func (app *appDef) Extensions(cb func(e IExtension)) {
 		}
 	})
 }
+
+func (app appDef) FullQName(name QName) FullQName { return app.packages.fullQName(name) }
 
 func (app *appDef) GDoc(name QName) IGDoc {
 	if t := app.typeByKind(name, TypeKind_GDoc); t != nil {
@@ -90,6 +101,8 @@ func (app *appDef) GRecord(name QName) IGRecord {
 	}
 	return nil
 }
+
+func (app appDef) LocalQName(name FullQName) QName { return app.packages.localQName(name) }
 
 func (app *appDef) Object(name QName) IObject {
 	if t := app.typeByKind(name, TypeKind_Object); t != nil {
@@ -356,6 +369,7 @@ func (app *appDef) build() (err error) {
 //
 // Should be called after appDef is created.
 func (app *appDef) makeSysPackage() {
+	app.packages.add(SysPackage, SysPackagePath)
 	app.makeSysDataTypes()
 }
 

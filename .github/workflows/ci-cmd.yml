@@ -11,7 +11,6 @@ jobs:
     with: 
       test_folder: 'cmd/ctool/'
       ignore_copyright: 'pkg/apps/sys.monitor/site.main'
-      ignore_bp3: 'true'
       short_test: 'true'
     secrets:
       reporeading_token: ${{ secrets.REPOREADING_TOKEN }}
@@ -23,7 +22,6 @@ jobs:
     with: 
       test_folder: 'cmd/edger/'
       ignore_copyright: 'pkg/apps/sys.monitor/site.main'
-      ignore_bp3: 'true'
       short_test: 'true'
     secrets:
       reporeading_token: ${{ secrets.REPOREADING_TOKEN }}
@@ -35,7 +33,6 @@ jobs:
     with: 
       test_folder: 'cmd/vpm/'
       ignore_copyright: 'pkg/apps/sys.monitor/site.main'
-      ignore_bp3: 'true'
       short_test: 'true'
     secrets:
       reporeading_token: ${{ secrets.REPOREADING_TOKEN }}
@@ -47,9 +44,7 @@ jobs:
     with: 
       test_folder: 'cmd/voedger/'
       ignore_copyright: 'pkg/apps/sys.monitor/site.main'
-      ignore_bp3: 'false'
       short_test: 'true'
-      commit_name: "${{ github.event.head_commit.message }} ${{ github.event.head_commit.id }}"
     secrets:
       reporeading_token: ${{ secrets.REPOREADING_TOKEN }}
       codecov_token: ${{ secrets.CODECOV_TOKEN }}

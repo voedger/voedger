@@ -33,13 +33,12 @@ type PLogEventFunc func() istructs.IPLogEvent
 type ArgFunc func() istructs.IObject
 type UnloggedArgFunc func() istructs.IObject
 type CommandProcessorStateFactory func(ctx context.Context, appStructsFunc AppStructsFunc, partitionIDFunc PartitionIDFunc, wsidFunc WSIDFunc, secretReader isecrets.ISecretReader, cudFunc CUDFunc, principalPayloadFunc PrincipalsFunc, tokenFunc TokenFunc, intentsLimit int, cmdResultBuilderFunc CmdResultBuilderFunc, argFunc ArgFunc, unloggedArgFunc UnloggedArgFunc) IHostState
-type SyncActualizerStateFactory func(ctx context.Context, appStructs istructs.IAppStructs, partitionIDFunc PartitionIDFunc, wsidFunc WSIDFunc, n10nFunc N10nFunc, secretReader isecrets.ISecretReader, eventFunc PLogEventFunc, intentsLimit int) IHostState
-type QueryProcessorStateFactory func(ctx context.Context, appStructs istructs.IAppStructs, partitionIDFunc PartitionIDFunc, wsidFunc WSIDFunc, secretReader isecrets.ISecretReader, principalPayloadFunc PrincipalsFunc, tokenFunc TokenFunc, argFunc ArgFunc) IHostState
-type AsyncActualizerStateFactory func(ctx context.Context, appStructs istructs.IAppStructs, partitionIDFunc PartitionIDFunc, wsidFunc WSIDFunc, n10nFunc N10nFunc, secretReader isecrets.ISecretReader, eventFunc PLogEventFunc, intentsLimit, bundlesLimit int,
+type SyncActualizerStateFactory func(ctx context.Context, appStructsFunc AppStructsFunc, partitionIDFunc PartitionIDFunc, wsidFunc WSIDFunc, n10nFunc N10nFunc, secretReader isecrets.ISecretReader, eventFunc PLogEventFunc, intentsLimit int) IHostState
+type QueryProcessorStateFactory func(ctx context.Context, appStructsFunc AppStructsFunc, partitionIDFunc PartitionIDFunc, wsidFunc WSIDFunc, secretReader isecrets.ISecretReader, principalPayloadFunc PrincipalsFunc, tokenFunc TokenFunc, argFunc ArgFunc) IHostState
+type AsyncActualizerStateFactory func(ctx context.Context, appStructsFunc AppStructsFunc, partitionIDFunc PartitionIDFunc, wsidFunc WSIDFunc, n10nFunc N10nFunc, secretReader isecrets.ISecretReader, eventFunc PLogEventFunc, intentsLimit, bundlesLimit int,
 	opts ...ActualizerStateOptFunc) IBundledHostState
 
 type eventsFunc func() istructs.IEvents
-type viewRecordsFunc func() istructs.IViewRecords
 type recordsFunc func() istructs.IRecords
 
 type ApplyBatchItem struct {
@@ -834,4 +833,68 @@ func (c *resultValueBuilder) PutNumber(name string, value float64) {
 }
 func (c *resultValueBuilder) PutRecordID(name string, value istructs.RecordID) {
 	c.resultBuilder.PutRecordID(name, value)
+}
+
+type wsTypeKey struct {
+	wsid     istructs.WSID
+	appQName istructs.AppQName
+}
+
+type wsTypeVailidator struct {
+	appStructsFunc AppStructsFunc
+	wsidKinds      map[wsTypeKey]appdef.QName
+}
+
+func newWsTypeValidator(appStructsFunc AppStructsFunc) wsTypeVailidator {
+	return wsTypeVailidator{
+		appStructsFunc: appStructsFunc,
+		wsidKinds:      make(map[wsTypeKey]appdef.QName),
+	}
+}
+
+// Returns NullQName if not found
+func (v *wsTypeVailidator) getWSIDKind(wsid istructs.WSID, entity appdef.QName) (appdef.QName, error) {
+	key := wsTypeKey{wsid: wsid, appQName: v.appStructsFunc().AppQName()}
+	wsKind, ok := v.wsidKinds[key]
+	if !ok {
+		wsDesc, err := v.appStructsFunc().Records().GetSingleton(wsid, qNameCDocWorkspaceDescriptor)
+		if err != nil {
+			// notest
+			return appdef.NullQName, err
+		}
+		if wsDesc.QName() == appdef.NullQName {
+			if v.appStructsFunc().AppDef().WorkspaceByDescriptor(entity) != nil {
+				// Special case. sys.CreateWorkspace creates WSKind while WorkspaceDescriptor is not applied yet.
+				return entity, nil
+			}
+			return appdef.NullQName, fmt.Errorf("%w: %d", errWorkspaceDescriptorNotFound, wsid)
+		}
+		wsKind = wsDesc.AsQName(field_WSKind)
+		if len(v.wsidKinds) < wsidTypeValidatorCacheSize {
+			v.wsidKinds[key] = wsKind
+		}
+	}
+	return wsKind, nil
+}
+
+func (v *wsTypeVailidator) validate(wsid istructs.WSID, entity appdef.QName) error {
+	if entity == qNameCDocWorkspaceDescriptor {
+		return nil // This QName always can be read and write. Otherwise sys.CreateWorkspace is not able to create descriptor.
+	}
+	if wsid != istructs.NullWSID && v.appStructsFunc().Records() != nil { // NullWSID only stores actualizer offsets
+		wsKind, err := v.getWSIDKind(wsid, entity)
+		if err != nil {
+			// notest
+			return err
+		}
+		ws := v.appStructsFunc().AppDef().WorkspaceByDescriptor(wsKind)
+		if ws == nil {
+			// notest
+			return errDescriptorForUndefinedWorkspace
+		}
+		if ws.TypeByName(entity) == nil {
+			return typeIsNotDefinedInWorkspaceWithDescriptor(entity, wsKind)
+		}
+	}
+	return nil
 }

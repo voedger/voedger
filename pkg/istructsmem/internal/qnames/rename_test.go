@@ -32,9 +32,11 @@ func TestRenameQName(t *testing.T) {
 		err := versions.Prepare(storage)
 		require.NoError(err)
 
-		appDefBuilder := appdef.New()
-		_ = appDefBuilder.AddObject(oldQName)
-		appDef, err := appDefBuilder.Build()
+		adb := appdef.New()
+		adb.AddPackage("test", "test.com/test")
+
+		_ = adb.AddObject(oldQName)
+		appDef, err := adb.Build()
 		require.NoError(err)
 
 		names := New()
@@ -85,10 +87,12 @@ func TestRenameQName_Errors(t *testing.T) {
 		err := versions.Prepare(storage)
 		require.NoError(err)
 
-		appDefBuilder := appdef.New()
-		_ = appDefBuilder.AddObject(oldQName)
-		_ = appDefBuilder.AddObject(other)
-		appDef, err := appDefBuilder.Build()
+		adb := appdef.New()
+		adb.AddPackage("test", "test.com/test")
+
+		_ = adb.AddObject(oldQName)
+		_ = adb.AddObject(other)
+		appDef, err := adb.Build()
 		require.NoError(err)
 
 		names := New()
@@ -166,9 +170,11 @@ func TestRenameQName_Fails(t *testing.T) {
 		err := versions.Prepare(storage)
 		require.NoError(err)
 
-		appDefBuilder := appdef.New()
-		_ = appDefBuilder.AddObject(oldQName)
-		appDef, err := appDefBuilder.Build()
+		adb := appdef.New()
+		adb.AddPackage("test", "test.com/test")
+
+		_ = adb.AddObject(oldQName)
+		appDef, err := adb.Build()
 		require.NoError(err)
 
 		names := New()

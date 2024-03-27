@@ -12,23 +12,22 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appparts/internal/pool"
 	"github.com/voedger/voedger/pkg/cluster"
+	"github.com/voedger/voedger/pkg/iextengine"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/pipeline"
 )
 
 // engine placeholder
-type engine struct {
-	cluster.ProcessorKind
-	pool *pool.Pool[*engine]
+type engines struct {
+	byKind [appdef.ExtensionEngineKind_Count]iextengine.IExtensionEngine
+	pool   *pool.Pool[*engines]
 }
 
-func newEngine(kind cluster.ProcessorKind) *engine {
-	return &engine{
-		ProcessorKind: kind,
-	}
+func newEngines() *engines {
+	return &engines{}
 }
 
-func (e *engine) release() {
+func (e *engines) release() {
 	if p := e.pool; p != nil {
 		e.pool = nil
 		p.Release(e)
@@ -41,7 +40,7 @@ type app struct {
 	partsCount int
 	def        appdef.IAppDef
 	structs    istructs.IAppStructs
-	engines    [cluster.ProcessorKind_Count]*pool.Pool[*engine]
+	engines    [cluster.ProcessorKind_Count]*pool.Pool[*engines]
 	// no locks need. Owned apps structure will locks access to this structure
 	parts map[istructs.PartitionID]*partition
 }
@@ -55,13 +54,30 @@ func newApplication(apps *apps, name istructs.AppQName, partsCount int) *app {
 	}
 }
 
-func (a *app) deploy(def appdef.IAppDef, structs istructs.IAppStructs, engines [cluster.ProcessorKind_Count]int) {
+func (a *app) deploy(def appdef.IAppDef, structs istructs.IAppStructs, numEngines [cluster.ProcessorKind_Count]int) {
 	a.def = def
 	a.structs = structs
-	for k, cnt := range engines {
-		ee := make([]*engine, cnt)
+
+	eef := a.apps.extEngineFactoriesFactory(a.name)
+
+	ctx := context.Background()
+	for k, cnt := range numEngines {
+		extEngines := make([][]iextengine.IExtensionEngine, appdef.ExtensionEngineKind_Count)
+
+		for ek, ef := range eef {
+			ee, err := ef.New(ctx, []iextengine.ExtensionPackage{}, &iextengine.DefaultExtEngineConfig, cnt)
+			if err != nil {
+				panic(err)
+			}
+			extEngines[ek] = ee
+		}
+
+		ee := make([]*engines, cnt)
 		for i := 0; i < cnt; i++ {
-			ee[i] = newEngine(cluster.ProcessorKind(k))
+			ee[i] = newEngines()
+			for ek := range eef {
+				ee[i].byKind[ek] = extEngines[ek][i]
+			}
 		}
 		a.engines[k] = pool.New(ee)
 	}
@@ -77,7 +93,7 @@ func newPartition(app *app, id istructs.PartitionID) *partition {
 	part := &partition{
 		app:            app,
 		id:             id,
-		syncActualizer: app.apps.actualizer(app.structs, id),
+		syncActualizer: app.apps.syncActualizerFactory(app.structs, id),
 	}
 	return part
 }
@@ -96,7 +112,7 @@ type partitionRT struct {
 	part       *partition
 	appDef     appdef.IAppDef
 	appStructs istructs.IAppStructs
-	borrowed   *engine
+	borrowed   *engines
 }
 
 var partionRTPool = sync.Pool{
@@ -115,9 +131,30 @@ func newPartitionRT(part *partition) *partitionRT {
 	return rt
 }
 
-func (rt *partitionRT) App() istructs.AppQName           { return rt.part.app.name }
+func (rt *partitionRT) App() istructs.AppQName { return rt.part.app.name }
+
 func (rt *partitionRT) AppStructs() istructs.IAppStructs { return rt.appStructs }
-func (rt *partitionRT) ID() istructs.PartitionID         { return rt.part.id }
+
+func (rt *partitionRT) DoSyncActualizer(ctx context.Context, work interface{}) error {
+	return rt.part.syncActualizer.DoSync(ctx, work)
+}
+
+func (rt *partitionRT) ID() istructs.PartitionID { return rt.part.id }
+
+func (rt *partitionRT) Invoke(ctx context.Context, name appdef.QName, state istructs.IState, intents istructs.IIntents) error {
+	e := rt.appDef.Extension(name)
+	if e == nil {
+		return errUndefinedExtension(name)
+	}
+
+	extName := rt.appDef.FullQName(name)
+	if extName == appdef.NullFullQName {
+		return errUndefinedExtension(name)
+	}
+	io := iextengine.NewExtensionIO(rt.appDef, state, intents)
+
+	return rt.borrowed.byKind[e.Engine()].Invoke(ctx, extName, io)
+}
 
 func (rt *partitionRT) Release() {
 	if e := rt.borrowed; e != nil {
@@ -125,10 +162,6 @@ func (rt *partitionRT) Release() {
 		e.release()
 	}
 	partionRTPool.Put(rt)
-}
-
-func (rt *partitionRT) DoSyncActualizer(ctx context.Context, work interface{}) error {
-	return rt.part.syncActualizer.DoSync(ctx, work)
 }
 
 // Initialize partition RT structures for use

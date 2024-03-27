@@ -189,7 +189,7 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 			return err
 		}),
 		operator("check cdoc.sys.WorkspaceDescriptor existence", func(ctx context.Context, qw *queryWork) (err error) {
-			if !coreutils.IsDummyWS(qw.msg.WSID()) && qw.wsDesc.QName() == appdef.NullQName {
+			if qw.wsDesc.QName() == appdef.NullQName {
 				// TODO: ws init check is simplified here because we need just IWorkspace to get the query from it.
 				return processors.ErrWSNotInited
 			}
@@ -223,12 +223,7 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 			return nil
 		}),
 		operator("get IQuery", func(ctx context.Context, qw *queryWork) (err error) {
-			var queryType appdef.IType
-			if coreutils.IsDummyWS(qw.msg.WSID()) {
-				queryType = qw.appStructs.AppDef().Type(qw.msg.QName())
-			} else {
-				queryType = qw.iWorkspace.Type(qw.msg.QName())
-			}
+			queryType := qw.iWorkspace.Type(qw.msg.QName())
 			if queryType.Kind() == appdef.TypeKind_null {
 				return coreutils.NewHTTPErrorf(http.StatusBadRequest, fmt.Sprintf("query %s does not exist in workspace %s", qw.msg.QName(), qw.iWorkspace.QName()))
 			}
@@ -271,7 +266,7 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 		operator("create state", func(ctx context.Context, qw *queryWork) (err error) {
 			qw.state = state.ProvideQueryProcessorStateFactory()(
 				qw.msg.RequestCtx(),
-				qw.appStructs,
+				func() istructs.IAppStructs { return qw.appStructs },
 				state.SimplePartitionIDFunc(qw.msg.Partition()),
 				state.SimpleWSIDFunc(qw.msg.WSID()),
 				qw.secretReader,
@@ -292,11 +287,7 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 			}
 			if qw.resultType.QName() == appdef.QNameANY {
 				qNameResultType := qw.queryFunc.ResultType(qw.execQueryArgs.PrepareArgs)
-				if coreutils.IsDummyWS(qw.msg.WSID()) {
-					qw.resultType = qw.appStructs.AppDef().Type(qNameResultType)
-				} else {
-					qw.resultType = qw.iWorkspace.Type(qNameResultType)
-				}
+				qw.resultType = qw.iWorkspace.Type(qNameResultType)
 				if qw.resultType.Kind() == appdef.TypeKind_null {
 					return coreutils.NewHTTPError(http.StatusBadRequest, fmt.Errorf("%s query result type %s does not exist in workspace %s", qw.iQuery.QName(), qNameResultType, qw.iWorkspace.QName()))
 				}

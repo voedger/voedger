@@ -19,18 +19,19 @@ func Test_AppDef_AddCDoc(t *testing.T) {
 	var app IAppDef
 
 	t.Run("must be ok to add document", func(t *testing.T) {
-		apb := New()
-		doc := apb.AddCDoc(docName)
+		adb := New()
+		adb.AddPackage("test", "test.com/test")
+		doc := adb.AddCDoc(docName)
 		doc.
 			AddField("f1", DataKind_int64, true).
 			AddField("f2", DataKind_string, false)
 		doc.AddContainer("rec", recName, 0, Occurs_Unbounded)
-		rec := apb.AddCRecord(recName)
+		rec := adb.AddCRecord(recName)
 		rec.
 			AddField("f1", DataKind_int64, true).
 			AddField("f2", DataKind_string, false)
 
-		a, err := apb.Build()
+		a, err := adb.Build()
 		require.NoError(err)
 
 		app = a
@@ -74,14 +75,15 @@ func Test_AppDef_AddCDocSingleton(t *testing.T) {
 	var app IAppDef
 
 	t.Run("must be ok to add singleton", func(t *testing.T) {
-		appDef := New()
-		doc := appDef.AddCDoc(docName)
+		adb := New()
+		adb.AddPackage("test", "test.com/test")
+		doc := adb.AddCDoc(docName)
 		doc.
 			AddField("f1", DataKind_int64, true).
 			AddField("f2", DataKind_string, false)
 		doc.SetSingleton()
 
-		a, err := appDef.Build()
+		a, err := adb.Build()
 		require.NoError(err)
 
 		app = a

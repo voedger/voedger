@@ -264,11 +264,13 @@ func Test_BasicUsage(t *testing.T) {
 	require.True(intent.Names().Contains(appdef.NewQName("main", "Transaction")))
 
 	localNames := app.PackageLocalNames()
-	require.Len(localNames, 3)
+	require.Len(localNames, 4)
+	require.Contains(localNames, appdef.SysPackage)
 	require.Contains(localNames, "main")
 	require.Contains(localNames, "air")
 	require.Contains(localNames, "untill")
 
+	require.Equal(appdef.SysPackagePath, app.PackageFullPath(appdef.SysPackage))
 	require.Equal("github.com/untillpro/main", app.PackageFullPath("main"))
 	require.Equal("github.com/untillpro/airsbp", app.PackageFullPath("air"))
 	require.Equal("github.com/untillpro/untill", app.PackageFullPath("untill"))

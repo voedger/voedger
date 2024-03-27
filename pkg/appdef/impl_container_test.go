@@ -16,6 +16,7 @@ func Test_type_AddContainer(t *testing.T) {
 	require := require.New(t)
 
 	adb := New()
+	adb.AddPackage("test", "test.com/test")
 
 	rootName := NewQName("test", "root")
 	root := adb.AddObject(rootName)
@@ -43,6 +44,7 @@ func Test_type_AddContainer(t *testing.T) {
 
 	t.Run("chain notation is ok to add containers", func(t *testing.T) {
 		adb := New()
+		adb.AddPackage("test", "test.com/test")
 		_ = adb.AddObject(childName)
 		_ = adb.AddObject(rootName).
 			AddContainer("c1", childName, 1, Occurs_Unbounded).
@@ -101,6 +103,7 @@ func TestValidateContainer(t *testing.T) {
 	require := require.New(t)
 
 	app := New()
+	app.AddPackage("test", "test.com/test")
 	doc := app.AddCDoc(NewQName("test", "doc"))
 	doc.AddContainer("rec", NewQName("test", "rec"), 0, Occurs_Unbounded)
 

@@ -34,7 +34,7 @@ func (s *asyncActualizerState) PLogEvent() istructs.IPLogEvent {
 	return s.eventFunc()
 }
 
-func implProvideAsyncActualizerState(ctx context.Context, appStructs istructs.IAppStructs, partitionIDFunc PartitionIDFunc, wsidFunc WSIDFunc, n10nFunc N10nFunc, secretReader isecrets.ISecretReader, eventFunc PLogEventFunc, intentsLimit, bundlesLimit int,
+func implProvideAsyncActualizerState(ctx context.Context, appStructsFunc AppStructsFunc, partitionIDFunc PartitionIDFunc, wsidFunc WSIDFunc, n10nFunc N10nFunc, secretReader isecrets.ISecretReader, eventFunc PLogEventFunc, intentsLimit, bundlesLimit int,
 	optFuncs ...ActualizerStateOptFunc) IBundledHostState {
 
 	opts := &actualizerStateOpts{}
@@ -44,28 +44,19 @@ func implProvideAsyncActualizerState(ctx context.Context, appStructs istructs.IA
 
 	state := &asyncActualizerState{
 		bundledHostState: &bundledHostState{
-			hostState:    newHostState("AsyncActualizer", intentsLimit, func() istructs.IAppStructs { return appStructs }),
+			hostState:    newHostState("AsyncActualizer", intentsLimit, appStructsFunc),
 			bundlesLimit: bundlesLimit,
 			bundles:      make(map[appdef.QName]bundle),
 		},
 		eventFunc: eventFunc,
 	}
 
-	state.addStorage(View, &viewRecordsStorage{
-		ctx:             ctx,
-		viewRecordsFunc: func() istructs.IViewRecords { return appStructs.ViewRecords() },
-		wsidFunc:        wsidFunc,
-		n10nFunc:        n10nFunc,
-	}, S_GET|S_GET_BATCH|S_READ|S_INSERT|S_UPDATE)
-
-	state.addStorage(Record, &recordsStorage{
-		recordsFunc: func() istructs.IRecords { return appStructs.Records() },
-		wsidFunc:    wsidFunc,
-	}, S_GET|S_GET_BATCH)
+	state.addStorage(View, newViewRecordsStorage(ctx, appStructsFunc, wsidFunc, n10nFunc), S_GET|S_GET_BATCH|S_READ|S_INSERT|S_UPDATE)
+	state.addStorage(Record, newRecordsStorage(appStructsFunc, wsidFunc, nil), S_GET|S_GET_BATCH)
 
 	state.addStorage(WLog, &wLogStorage{
 		ctx:        ctx,
-		eventsFunc: func() istructs.IEvents { return appStructs.Events() },
+		eventsFunc: func() istructs.IEvents { return appStructsFunc().Events() },
 		wsidFunc:   wsidFunc,
 	}, S_GET|S_READ)
 

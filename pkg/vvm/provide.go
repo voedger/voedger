@@ -10,6 +10,7 @@ package vvm
 
 import (
 	"context"
+	"fmt"
 	"net/url"
 	"strconv"
 	"strings"
@@ -22,7 +23,9 @@ import (
 
 	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/apppartsctl"
+	"github.com/voedger/voedger/pkg/iextengine"
 	"github.com/voedger/voedger/pkg/router"
+	"github.com/voedger/voedger/pkg/vvm/engines"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/apps"
@@ -79,10 +82,10 @@ func ProvideVVM(vvmCfg *VVMConfig, vvmIdx VVMIdxType) (voedgerVM *VoedgerVM, err
 		ProcessorChannel_Query,
 	)
 	vvmCfg.Quotas = in10n.Quotas{
-		Channels:               int(DefaultQuotasChannelsFactor * vvmCfg.NumCommandProcessors),
-		ChannelsPerSubject:     DefaultQuotasChannelsPerSubject,
-		Subsciptions:           int(DefaultQuotasSubscriptionsFactor * vvmCfg.NumCommandProcessors),
-		SubsciptionsPerSubject: DefaultQuotasSubscriptionsPerSubject,
+		Channels:                int(DefaultQuotasChannelsFactor * vvmCfg.NumCommandProcessors),
+		ChannelsPerSubject:      DefaultQuotasChannelsPerSubject,
+		Subscriptions:           int(DefaultQuotasSubscriptionsFactor * vvmCfg.NumCommandProcessors),
+		SubscriptionsPerSubject: DefaultQuotasSubscriptionsPerSubject,
 	}
 	voedgerVM.VVM, voedgerVM.vvmCleanup, err = ProvideCluster(ctx, vvmCfg, vvmIdx)
 	if err != nil {
@@ -161,10 +164,10 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 		provideStorageFactory,
 		provideIAppStorageUncachingProviderFactory,
 		provideAppPartsCtlPipelineService,
-		apppartsctl.New,
-		appparts.NewWithActualizer,
+		provideIsDeviceAllowedFunc,
 		provideBuiltInApps,
-		provideIsDevicaAllowedFunc,
+		provideAppPartitions,
+		apppartsctl.New,
 		// wire.Value(vvmConfig.NumCommandProcessors) -> (wire bug?) value github.com/untillpro/airs-bp3/vvm.CommandProcessorsCount can't be used: vvmConfig is not declared in package scope
 		wire.FieldsOf(&vvmConfig,
 			"NumCommandProcessors",
@@ -185,7 +188,29 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 	))
 }
 
-func provideIsDevicaAllowedFunc(appEPs map[istructs.AppQName]extensionpoints.IExtensionPoint, _ []BuiltInAppsPackages /*need to make it called in correct order*/) iauthnzimpl.IsDeviceAllowedFuncs {
+func provideAppPartitions(
+	cfgs istructsmem.AppConfigsType,
+	asp istructs.IAppStructsProvider,
+	actualizer appparts.SyncActualizerFactory,
+	_ []BuiltInAppsPackages, /*need to make it called in correct order*/
+) (ap appparts.IAppPartitions, cleanup func(), err error) {
+
+	eff := func(app istructs.AppQName) iextengine.ExtensionEngineFactories {
+		appCfg := cfgs.GetConfig(app)
+		if appCfg == nil {
+			panic(fmt.Errorf("app config not found for %s", app))
+		}
+		eefCfg := engines.ExtEngineFactoriesConfig{
+			AppConfig:   appCfg,
+			WASMCompile: false,
+		}
+		return engines.ProvideExtEngineFactories(eefCfg)
+	}
+
+	return appparts.NewWithActualizerWithExtEnginesFactories(asp, actualizer, eff)
+}
+
+func provideIsDeviceAllowedFunc(appEPs map[istructs.AppQName]extensionpoints.IExtensionPoint, _ []BuiltInAppsPackages /*need to make it called in correct order*/) iauthnzimpl.IsDeviceAllowedFuncs {
 	res := iauthnzimpl.IsDeviceAllowedFuncs{}
 	for appQName, appEP := range appEPs {
 		val, ok := appEP.Find(apps.EPIsDeviceAllowedFunc)
@@ -287,7 +312,7 @@ func provideMetricsServicePort(msp MetricsServicePortInitial, vvmIdx VVMIdxType)
 }
 
 // VVMPort could be dynamic -> need a source to get the actual port later
-// just calling RouterService.GetPort() causes wire cycle: RouterService requires IBus->VVMApps->FederatioURL->VVMPort->RouterService
+// just calling RouterService.GetPort() causes wire cycle: RouterService requires IBus->VVMApps->FederationURL->VVMPort->RouterService
 // so we need something in the middle of FederationURL and RouterService: FederationURL reads VVMPortSource, RouterService writes it.
 func provideVVMPortSource() *VVMPortSource {
 	return &VVMPortSource{}
@@ -384,8 +409,8 @@ func provideChannelGroups(cfg *VVMConfig) (res []iprocbusmem.ChannelGroup) {
 }
 
 func provideCachingAppStorageProvider(vvmCfg *VVMConfig, storageCacheSize StorageCacheSizeType, metrics imetrics.IMetrics,
-	vvmName commandprocessor.VVMName, uncachingProivder IAppStorageUncachingProviderFactory) (istorage.IAppStorageProvider, error) {
-	aspNonCaching := uncachingProivder()
+	vvmName commandprocessor.VVMName, uncachingProvider IAppStorageUncachingProviderFactory) (istorage.IAppStorageProvider, error) {
+	aspNonCaching := uncachingProvider()
 	res := istoragecache.Provide(int(storageCacheSize), aspNonCaching, metrics, string(vvmName))
 	return res, nil
 }

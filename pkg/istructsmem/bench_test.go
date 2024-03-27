@@ -68,9 +68,10 @@ func bench_BuildRawEvent(b *testing.B, numOfIntFields int) {
 
 	// application
 	appDef := func() appdef.IAppDefBuilder {
-		app := appdef.New()
+		adb := appdef.New()
+		adb.AddPackage("test", "test.com/test")
 
-		doc := app.AddODoc(oDocQName)
+		doc := adb.AddODoc(oDocQName)
 		for i := 0; i < numOfIntFields; i++ {
 
 			intFieldName := fmt.Sprintf("i%v", i)
@@ -84,8 +85,8 @@ func bench_BuildRawEvent(b *testing.B, numOfIntFields int) {
 			stringFieldValues[stringFieldName] = stringFieldName
 
 		}
-		app.AddCommand(cmdQName).SetParam(oDocQName)
-		return app
+		adb.AddCommand(cmdQName).SetParam(oDocQName)
+		return adb
 	}
 
 	// Con

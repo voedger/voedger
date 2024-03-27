@@ -16,13 +16,15 @@ import (
 )
 
 var (
-	testRecordQName1     = appdef.NewQName("test", "record1")
-	testRecordQName2     = appdef.NewQName("test", "record2")
-	testRecordQName3     = appdef.NewQName("test", "record3")
-	testViewRecordQName1 = appdef.NewQName("test", "viewRecord1")
-	testViewRecordQName2 = appdef.NewQName("test", "viewRecord2")
-	testStorage          = appdef.NewQName("test", "testStorage")
-	testWSQName          = appdef.NewQName("test", "testWS")
+	testRecordQName1      = appdef.NewQName("test", "record1")
+	testRecordQName2      = appdef.NewQName("test", "record2")
+	testRecordQName3      = appdef.NewQName("test", "record3")
+	testViewRecordQName1  = appdef.NewQName("test", "viewRecord1")
+	testViewRecordQName2  = appdef.NewQName("test", "viewRecord2")
+	testStorage           = appdef.NewQName("test", "testStorage")
+	testWSQName           = appdef.NewQName("test", "testWS")
+	testWSDescriptorQName = appdef.NewQName("test", "testWSDescriptor")
+	testAppQName          = istructs.NewAppQName("test", "testApp")
 )
 
 func TestSimpleWSIDFunc(t *testing.T) {
@@ -114,6 +116,10 @@ type nilAppStructs struct {
 	istructs.IAppStructs
 }
 
+func nilAppStructsFunc() istructs.IAppStructs {
+	return &nilAppStructs{}
+}
+
 func (s *nilAppStructs) AppDef() appdef.IAppDef             { return nil }
 func (s *nilAppStructs) Events() istructs.IEvents           { return nil }
 func (s *nilAppStructs) Records() istructs.IRecords         { return nil }
@@ -140,6 +146,9 @@ type mockAppStructs struct {
 	mock.Mock
 }
 
+func (s *mockAppStructs) AppQName() istructs.AppQName {
+	return s.Called().Get(0).(istructs.AppQName)
+}
 func (s *mockAppStructs) AppDef() appdef.IAppDef {
 	return s.Called().Get(0).(appdef.IAppDef)
 }
@@ -278,11 +287,11 @@ func (s *mockStorage) Get(key istructs.IStateKeyBuilder) (value istructs.IStateV
 func (s *mockStorage) Read(key istructs.IStateKeyBuilder, callback istructs.ValueCallback) (err error) {
 	return s.Called(key, callback).Error(0)
 }
-func (s *mockStorage) ProvideValueBuilder(key istructs.IStateKeyBuilder, existingBuilder istructs.IStateValueBuilder) istructs.IStateValueBuilder {
-	return s.Called(key, existingBuilder).Get(0).(istructs.IStateValueBuilder)
+func (s *mockStorage) ProvideValueBuilder(key istructs.IStateKeyBuilder, existingBuilder istructs.IStateValueBuilder) (istructs.IStateValueBuilder, error) {
+	return s.Called(key, existingBuilder).Get(0).(istructs.IStateValueBuilder), nil
 }
-func (s *mockStorage) ProvideValueBuilderForUpdate(key istructs.IStateKeyBuilder, existingValue istructs.IStateValue, existingBuilder istructs.IStateValueBuilder) istructs.IStateValueBuilder {
-	return s.Called(key, existingValue, existingBuilder).Get(0).(istructs.IStateValueBuilder)
+func (s *mockStorage) ProvideValueBuilderForUpdate(key istructs.IStateKeyBuilder, existingValue istructs.IStateValue, existingBuilder istructs.IStateValueBuilder) (istructs.IStateValueBuilder, error) {
+	return s.Called(key, existingValue, existingBuilder).Get(0).(istructs.IStateValueBuilder), nil
 }
 func (s *mockStorage) Validate(items []ApplyBatchItem) (err error) {
 	return s.Called(items).Error(0)

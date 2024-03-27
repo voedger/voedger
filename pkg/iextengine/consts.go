@@ -5,8 +5,9 @@
 
 package iextengine
 
-const ExtEngineKind_BuiltIn = 0
-const ExtEngineKind_WASM = 1
-
 const DefaultMemoryLimitPages = 256
 const MemoryPageSize = 65536
+
+var DefaultExtEngineConfig = ExtEngineConfig{
+	MemoryLimitPages: DefaultMemoryLimitPages,
+}

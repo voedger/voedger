@@ -1186,7 +1186,7 @@ func getTableTypeKind(table *TableStmt, pkg *PackageSchemaAST, c *iterateCtx) (k
 			if node.table.Name == nameWRecord {
 				kind = appdef.TypeKind_WRecord
 			}
-			if (node.table.Name == nameSingletonDeprecated) || (node.table.Name == nameCSingleton) {
+			if node.table.Name == nameCSingleton {
 				kind = appdef.TypeKind_CDoc
 				singleton = true
 			}
