@@ -16,6 +16,7 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/cluster"
+	"github.com/voedger/voedger/pkg/iextengine"
 	"github.com/voedger/voedger/pkg/iratesce"
 	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istorage/mem"
@@ -29,6 +30,7 @@ import (
 	"github.com/voedger/voedger/pkg/pipeline"
 	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys/authnz"
+	"github.com/voedger/voedger/pkg/vvm/engines"
 )
 
 var newWorkspaceCmd = appdef.NewQName("sys", "NewWorkspace")
@@ -55,6 +57,7 @@ func TestBasicUsage_SynchronousActualizer(t *testing.T) {
 	_, cleanup, _, appStructs := deployTestApp(
 		istructs.AppQName_test1_app1, 1, []istructs.PartitionID{1}, false,
 		func(appDef appdef.IAppDefBuilder) {
+			appDef.AddPackage("test", "test.com/test")
 			ProvideViewDef(appDef, incProjectionView, buildProjectionView)
 			ProvideViewDef(appDef, decProjectionView, buildProjectionView)
 			appDef.AddCommand(testQName)
@@ -237,7 +240,20 @@ func deployTestApp(
 		panic(err)
 	}
 
-	appParts, cleanup, err = appparts.New(appStructsProvider)
+	appParts, cleanup, err = appparts.NewWithActualizerWithExtEnginesFactories(
+		appStructsProvider,
+		func(istructs.IAppStructs, istructs.PartitionID) pipeline.ISyncOperator {
+			return &pipeline.NOOP{}
+		},
+		func(app istructs.AppQName) iextengine.ExtensionEngineFactories {
+			return engines.ProvideExtEngineFactories(
+				engines.ExtEngineFactoriesConfig{
+					AppConfig:   cfgs.GetConfig(app),
+					WASMCompile: false,
+				},
+			)
+		},
+	)
 	if err != nil {
 		panic(err)
 	}
@@ -286,6 +302,7 @@ func Test_ErrorInSyncActualizer(t *testing.T) {
 	_, cleanup, _, appStructs := deployTestApp(
 		istructs.AppQName_test1_app1, 1, []istructs.PartitionID{1}, false,
 		func(appDef appdef.IAppDefBuilder) {
+			appDef.AddPackage("test", "test.com/test")
 			ProvideViewDef(appDef, incProjectionView, buildProjectionView)
 			ProvideViewDef(appDef, decProjectionView, buildProjectionView)
 			appDef.AddCommand(testQName)

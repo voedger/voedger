@@ -21,6 +21,7 @@ func Test_checkConstraints(t *testing.T) {
 	obj := func() appdef.IObject {
 		name := appdef.NewQName("test", "obj")
 		adb := appdef.New()
+		adb.AddPackage("test", "test.com/test")
 
 		obj := adb.AddObject(name)
 		obj.

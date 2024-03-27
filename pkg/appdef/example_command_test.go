@@ -21,20 +21,21 @@ func ExampleIAppDefBuilder_AddCommand() {
 
 	// how to build AppDef with command
 	{
-		appDef := appdef.New()
+		adb := appdef.New()
+		adb.AddPackage("test", "test.com/test")
 
-		cmd := appDef.AddCommand(cmdName)
+		cmd := adb.AddCommand(cmdName)
 		cmd.SetEngine(appdef.ExtensionEngineKind_WASM)
 		cmd.
 			SetParam(parName).
 			SetResult(resName)
 		cmd.SetUnloggedParam(unlName)
 
-		_ = appDef.AddObject(parName)
-		_ = appDef.AddObject(unlName)
-		_ = appDef.AddObject(resName)
+		_ = adb.AddObject(parName)
+		_ = adb.AddObject(unlName)
+		_ = adb.AddObject(resName)
 
-		if a, err := appDef.Build(); err == nil {
+		if a, err := adb.Build(); err == nil {
 			app = a
 		} else {
 			panic(err)

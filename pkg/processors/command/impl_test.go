@@ -702,10 +702,10 @@ func setUp(t *testing.T, prepare func(appDef appdef.IAppDefBuilder, cfg *istruct
 
 	secretReader := isecretsimpl.ProvideSecretReader()
 	n10nBroker, n10nBrokerCleanup := in10nmem.ProvideEx2(in10n.Quotas{
-		Channels:               1000,
-		ChannelsPerSubject:     10,
-		Subsciptions:           1000,
-		SubsciptionsPerSubject: 10,
+		Channels:                1000,
+		ChannelsPerSubject:      10,
+		Subscriptions:           1000,
+		SubscriptionsPerSubject: 10,
 	}, time.Now)
 
 	// prepare the AppParts to borrow AppStructs

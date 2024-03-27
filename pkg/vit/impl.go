@@ -178,6 +178,7 @@ func newVit(t testing.TB, vitCfg *VITConfig, useCas bool) *VIT {
 			}
 		}
 
+		// time.Sleep(10 * time.Second)
 		sysToken, err := payloads.GetSystemPrincipalToken(vit, app.name)
 		require.NoError(vit.T, err)
 		for _, wsd := range app.ws {

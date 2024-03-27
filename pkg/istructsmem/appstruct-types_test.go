@@ -29,8 +29,9 @@ func TestAppConfigsType_AddConfig(t *testing.T) {
 	t.Run("must be ok to add config for known app", func(t *testing.T) {
 		cfgs := make(AppConfigsType)
 		app, id := istructs.AppQName_test1_app1, istructs.ClusterAppID_test1_app1
-		appDef := appdef.New()
-		cfg := cfgs.AddConfig(app, appDef)
+		adb := appdef.New()
+		adb.AddPackage("test", "test.com/test")
+		cfg := cfgs.AddConfig(app, adb)
 		require.NotNil(cfg)
 		require.Equal(cfg.Name, app)
 		require.Equal(cfg.ClusterAppID, id)
@@ -40,7 +41,7 @@ func TestAppConfigsType_AddConfig(t *testing.T) {
 
 		t.Run("must be ok to change appDef after add config", func(t *testing.T) {
 			docName := appdef.NewQName("test", "doc")
-			doc := appDef.AddCDoc(docName)
+			doc := adb.AddCDoc(docName)
 			doc.AddField("field", appdef.DataKind_int64, true)
 			doc.SetSingleton()
 			appStr, err := appStructs.AppStructs(app)
@@ -57,10 +58,12 @@ func TestAppConfigsType_AddConfig(t *testing.T) {
 
 	t.Run("must be error to make invalid changes in appDef after add config", func(t *testing.T) {
 		cfgs := make(AppConfigsType)
-		appDef := appdef.New()
-		_ = cfgs.AddConfig(istructs.AppQName_test1_app1, appDef)
+		adb := appdef.New()
+		adb.AddPackage("test", "test.com/test")
 
-		appDef.AddObject(appdef.NewQName("test", "obj")).
+		_ = cfgs.AddConfig(istructs.AppQName_test1_app1, adb)
+
+		adb.AddObject(appdef.NewQName("test", "obj")).
 			AddContainer("unknown", appdef.NewQName("test", "unknown"), 0, 1) // <- error here: reference to unknown element type
 
 		_, storageProvider := teststore.New()
@@ -84,10 +87,11 @@ func TestAppConfigsType_AddConfig(t *testing.T) {
 		require.Panics(func() {
 			_ = cfgs.AddConfig(istructs.AppQName_test1_app1,
 				func() appdef.IAppDefBuilder {
-					app := appdef.New()
-					app.AddObject(appdef.NewQName("test", "obj")).
+					adb := appdef.New()
+					adb.AddPackage("test", "test.com/test")
+					adb.AddObject(appdef.NewQName("test", "obj")).
 						AddContainer("unknown", appdef.NewQName("test", "unknown"), 0, 1) // <- error here: reference to unknown element type
-					return app
+					return adb
 				}())
 		})
 	})
@@ -153,14 +157,15 @@ func TestErrorsAppConfigsType(t *testing.T) {
 	docName, recName := appdef.NewQName("test", "doc"), appdef.NewQName("test", "rec")
 
 	appDef := func() appdef.IAppDefBuilder {
-		app := appdef.New()
-		doc := app.AddCDoc(docName)
+		adb := appdef.New()
+		adb.AddPackage("test", "test.com/test")
+		doc := adb.AddCDoc(docName)
 		doc.SetSingleton()
 		doc.AddField("f1", appdef.DataKind_string, true)
 		doc.AddContainer("rec", recName, 0, 1)
 		doc.AddUnique(appdef.UniqueQName(docName, "f1"), []string{"f1"})
-		app.AddCRecord(recName)
-		return app
+		adb.AddCRecord(recName)
+		return adb
 	}()
 
 	storage, storageProvider := teststore.New()
@@ -235,6 +240,7 @@ func TestErrorsAppConfigsType(t *testing.T) {
 		t.Run("query", func(t *testing.T) {
 			t.Run("missing in cfg", func(t *testing.T) {
 				adb := appdef.New()
+				adb.AddPackage("test", "test.com/test")
 				adb.AddQuery(qName)
 				cfgs := make(AppConfigsType, 1)
 				_ = cfgs.AddConfig(istructs.AppQName_test1_app1, adb)
@@ -257,6 +263,7 @@ func TestErrorsAppConfigsType(t *testing.T) {
 		t.Run("command", func(t *testing.T) {
 			t.Run("missing in cfg", func(t *testing.T) {
 				adb := appdef.New()
+				adb.AddPackage("test", "test.com/test")
 				adb.AddCommand(qName)
 				cfgs := make(AppConfigsType, 1)
 				_ = cfgs.AddConfig(istructs.AppQName_test1_app1, adb)
@@ -280,6 +287,7 @@ func TestErrorsAppConfigsType(t *testing.T) {
 			t.Run("sync", func(t *testing.T) {
 				t.Run("missing in cfg", func(t *testing.T) {
 					adb := appdef.New()
+					adb.AddPackage("test", "test.com/test")
 					qName2 := appdef.NewQName("test", "qName2")
 					adb.AddCDoc(qName2)
 					adb.AddProjector(qName).
@@ -304,6 +312,7 @@ func TestErrorsAppConfigsType(t *testing.T) {
 				})
 				t.Run("defined as async in cfg", func(t *testing.T) {
 					adb := appdef.New()
+					adb.AddPackage("test", "test.com/test")
 					qName2 := appdef.NewQName("test", "qName2")
 					adb.AddCDoc(qName2)
 					adb.AddProjector(qName).
@@ -321,6 +330,7 @@ func TestErrorsAppConfigsType(t *testing.T) {
 			t.Run("async", func(t *testing.T) {
 				t.Run("missing in cfg", func(t *testing.T) {
 					adb := appdef.New()
+					adb.AddPackage("test", "test.com/test")
 					qName2 := appdef.NewQName("test", "qName2")
 					adb.AddCDoc(qName2)
 					adb.AddProjector(qName).
@@ -345,6 +355,7 @@ func TestErrorsAppConfigsType(t *testing.T) {
 				})
 				t.Run("defined as sync in cfg", func(t *testing.T) {
 					adb := appdef.New()
+					adb.AddPackage("test", "test.com/test")
 					qName2 := appdef.NewQName("test", "qName2")
 					adb.AddCDoc(qName2)
 					adb.AddProjector(qName).
@@ -360,6 +371,7 @@ func TestErrorsAppConfigsType(t *testing.T) {
 				})
 				t.Run("defined twice in cfg", func(t *testing.T) {
 					adb := appdef.New()
+					adb.AddPackage("test", "test.com/test")
 					qName2 := appdef.NewQName("test", "qName2")
 					adb.AddCDoc(qName2)
 					adb.AddProjector(qName).
