@@ -1,9 +1,8 @@
 IMPORT SCHEMA 'mypkg1';
 
-WORKSPACE MyWorkspace2(
+WORKSPACE MyWorkspace2 INHERITS mypkg1.MyWorkspace1(
     TABLE MyTable2 INHERITS CDoc(
         Field3 varchar,
-        Field4 int32--,
-        --Field1 ref(mypkg1.MyWorkspace1.MyTable1) NOT NULL
+        Field4 int32
     );
 );

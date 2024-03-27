@@ -3,7 +3,7 @@
  * @author Alisher Nurmanov
  */
 
-package main
+package app
 
 import (
 	"mypkg1"
@@ -12,7 +12,7 @@ import (
 	_ "github.com/voedger/voedger/pkg/sys"
 )
 
-func main() {
+func AppFunc() {
 	println("app")
 	mypkg1.MyFunc1()
 	mypkg2.MyFunc2()

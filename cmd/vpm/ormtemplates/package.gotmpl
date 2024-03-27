@@ -5,9 +5,8 @@
 {{end}}
 
 package orm
-{{range .Imports}}
-import {{.}}
-{{end}}
+
+import "github.com/voedger/voedger/pkg/exttinygo"
 
 // package variables
 var Package_{{.Name}} = struct {

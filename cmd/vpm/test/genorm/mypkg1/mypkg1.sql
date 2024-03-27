@@ -1,4 +1,4 @@
-WORKSPACE MyWorkspace1(
+ABSTRACT WORKSPACE MyWorkspace1(
     TABLE MyTable1 INHERITS CDoc(
         Field1 varchar,
         Field2 varchar
@@ -11,6 +11,10 @@ WORKSPACE MyWorkspace1(
         Field11 varchar,
         Field22 bool,
         Field33 int32
+    );
+    TYPE T1 (
+        Field1 varchar,
+        Field2 varchar
     );
 	TABLE NextNumbers INHERITS WSingleton (
 		NextPBillNumber int32

@@ -35,12 +35,12 @@ type ormPackageInfo struct {
 
 type ormPackage struct {
 	ormPackageInfo
-	Imports []string
-	Items   []interface{}
+	Items []interface{}
 }
 
 type ormPackageItem struct {
 	Package    ormPackageInfo
+	QName      string
 	TypeQName  string
 	Name       string
 	Type       string
@@ -59,6 +59,19 @@ type ormCommand struct {
 	ArgumentObject         interface{}
 	UnloggedArgumentObject interface{}
 	ResultObjectFields     []ormField
+}
+
+func getQName(obj interface{}) string {
+	switch t := obj.(type) {
+	case ormPackageItem:
+		return t.QName
+	case ormTableItem:
+		return t.QName
+	case ormCommand:
+		return t.QName
+	default:
+		panic("unknown type")
+	}
 }
 
 type ormField struct {

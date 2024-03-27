@@ -243,7 +243,7 @@ func TestPkgRegistryCompile(t *testing.T) {
 	require.NoError(err)
 }
 
-func TestGenOrmBasicUsage(t *testing.T) {
+func TestOrmBasicUsage(t *testing.T) {
 	require := require.New(t)
 
 	// uncomment this line to see verbose logs
@@ -264,15 +264,40 @@ func TestGenOrmBasicUsage(t *testing.T) {
 	err = copy.Copy(filepath.Join(wd, "test", "genorm"), tempDir)
 	require.NoError(err)
 
-	dir := filepath.Join(tempDir, "app")
-	headerFile := filepath.Join(dir, "header.txt")
-	err = execRootCmd([]string{"vpm", "gen", "orm", "-C", dir, "--header-file", headerFile}, "1.0.0")
-	require.NoError(err)
-
-	err = new(exec.PipedExec).Command("go", "build", "-C", dir).Run(os.Stdout, os.Stderr)
-	require.NoError(err)
-
-	if logger.IsVerbose() {
-		logger.Verbose(fmt.Sprintf("orm directory: %s", filepath.Join(dir, "orm")))
+	tests := []struct {
+		dir string
+	}{
+		{
+			dir: "mypkg1",
+		},
+		{
+			dir: "mypkg2",
+		},
+		{
+			dir: "app",
+		},
 	}
+
+	for _, tc := range tests {
+		t.Run(tc.dir, func(t *testing.T) {
+			dir := filepath.Join(tempDir, tc.dir)
+			if logger.IsVerbose() {
+				logger.Verbose("------------------------------------------------------------------------")
+				logger.Verbose(fmt.Sprintf("test dir: %s", filepath.Join(dir, internalDirName, ormDirName)))
+			}
+
+			headerFile := filepath.Join(dir, "header.txt")
+			err = execRootCmd([]string{"vpm", "orm", "-C", dir, "--header-file", headerFile}, "1.0.0")
+			require.NoError(err)
+
+			err = new(exec.PipedExec).Command("go", "build", "-C", dir).Run(os.Stdout, os.Stderr)
+			require.NoError(err)
+
+			if logger.IsVerbose() {
+				logger.Verbose(fmt.Sprintf("orm directory: %s", filepath.Join(dir, internalDirName, ormDirName)))
+				logger.Verbose("------------------------------------------------------------------------")
+			}
+		})
+	}
+
 }

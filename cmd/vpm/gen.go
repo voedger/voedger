@@ -8,7 +8,6 @@ package main
 import (
 	"bytes"
 	"embed"
-	"errors"
 	"fmt"
 	"go/format"
 	"os"
@@ -21,24 +20,13 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/compile"
+	"github.com/voedger/voedger/pkg/sys"
 )
 
-//go:embed templates/*
+//go:embed ormtemplates/*
 var fsTemplates embed.FS
 
-func newGenCmd() *cobra.Command {
-	params := vpmParams{}
-	cmd := &cobra.Command{
-		Use:   "gen",
-		Short: "generate",
-	}
-	cmd.AddCommand(newGenOrmCmd())
-
-	initGlobalFlags(cmd, &params)
-	return cmd
-}
-
-func newGenOrmCmd() *cobra.Command {
+func newOrmCmd() *cobra.Command {
 	params := vpmParams{}
 	cmd := &cobra.Command{
 		Use:   "orm [--header-file]",
@@ -52,7 +40,7 @@ func newGenOrmCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			return genOrm(compileRes, params)
+			return generateOrm(compileRes, params)
 		},
 	}
 	cmd.SilenceErrors = true
@@ -61,9 +49,8 @@ func newGenOrmCmd() *cobra.Command {
 	return cmd
 }
 
-// genOrm generates ORM from the given working directory
-func genOrm(compileRes *compile.Result, params vpmParams) error {
-	var errList []error
+// generateOrm generates ORM from the given working directory
+func generateOrm(compileRes *compile.Result, params vpmParams) error {
 	dir, err := createOrmDir(params.TargetDir)
 	if err != nil {
 		return err
@@ -71,128 +58,118 @@ func genOrm(compileRes *compile.Result, params vpmParams) error {
 
 	headerContent, err := getHeaderFileContent(params.HeaderFile)
 	if err != nil {
-		errList = append(errList, err)
+		return err
 	}
 
-	pkgObjs, pkgInfos := gatherPackageObjs(compileRes.AppDef, headerContent)
-	for pkgLocalName, objs := range pkgObjs {
-		if len(objs) == 0 {
-			continue
-		}
-		// generate package_*.go module
-		genPkgErrors := generatePackage(pkgLocalName, pkgInfos, objs, dir)
-		errList = append(errList, genPkgErrors...)
+	iTypeObjs, pkgInfos, currentPkgLocalName := getPkgAppDefObjs(compileRes.ModulePath, compileRes.AppDef, headerContent)
+	pkgData := getOrmData(currentPkgLocalName, pkgInfos, iTypeObjs)
+	if err := generateOrmFiles(pkgData, dir); err != nil {
+		return err
 	}
-	// generate types.go module
-	if err := generateTypesModule(dir); err != nil {
-		errList = append(errList, err)
-	}
-	return errors.Join(errList...)
+	return nil
 }
 
-func gatherPackageObjs(appDef appdef.IAppDef, headerContent string) (map[string][]appdef.IType, map[string]ormPackageInfo) {
+// getPkgAppDefObjs gathers objects from the current package
+// and returns a list of objects, a map of package local names to its info and the current package local name
+func getPkgAppDefObjs(packagePath string, appDef appdef.IAppDef, headerContent string) (iTypeObjs []appdef.IType, pkgInfos map[string]ormPackageInfo, currentPkgLocalName string) {
 	uniqueObjects := make([]string, 0)
-	pkgObjs := make(map[string][]appdef.IType)  // mapping of package local names to list of its objects
-	pkgInfos := make(map[string]ormPackageInfo) // mapping of package local names to its info
-	pkgLocalNames := appDef.PackageLocalNames()
-	for _, pkgLocalName := range pkgLocalNames {
-		pkgObjs[pkgLocalName] = make([]appdef.IType, 0)
+	iTypeObjs = make([]appdef.IType, 0)        // list of package objects
+	pkgInfos = make(map[string]ormPackageInfo) // mapping of package local names to its info
+	// sys package is implicitly added to the list of packages,
+	// so we need to add it manually
+	currentPkgLocalName = appdef.SysPackage
+	pkgInfos[appdef.SysPackage] = ormPackageInfo{
+		Name:              appdef.SysPackage,
+		FullPath:          sys.PackagePath,
+		HeaderFileContent: headerContent,
 	}
-
-	collectObjectsFunc := func(iType appdef.IType) {
-		if _, ok := iType.(appdef.IWorkspace); ok {
-			return
+	appDef.Packages(func(localName, fullPath string) {
+		if fullPath == packagePath {
+			currentPkgLocalName = localName
 		}
-		qName := iType.QName()
-		pkgLocalName := qName.Pkg()
+		pkgInfos[localName] = ormPackageInfo{
+			Name:              localName,
+			FullPath:          fullPath,
+			HeaderFileContent: headerContent,
+		}
+	})
+
+	collectITypeObjs := func(iTypeObj appdef.IType) {
+		// skip abstract types
+		if iAbstract, ok := iTypeObj.(appdef.IWithAbstract); ok {
+			if iAbstract.Abstract() {
+				return
+			}
+		}
+		qName := iTypeObj.QName()
 		if !slices.Contains(uniqueObjects, qName.String()) {
-			pkgObjs[pkgLocalName] = append(pkgObjs[pkgLocalName], iType)
+			iTypeObjs = append(iTypeObjs, iTypeObj)
 			uniqueObjects = append(uniqueObjects, qName.String())
 		}
 	}
 
-	appDef.Types(func(iType appdef.IType) {
-		pkgLocalName := iType.QName().Pkg()
-		// if the object is in the system package, we collect it
-		if pkgLocalName == appdef.SysPackage {
-			collectObjectsFunc(iType)
-			return
-		}
-		// for other packages we collect objects inside the workspaces
-		if workspace, ok := iType.(appdef.IWorkspace); ok {
-			workspace.Types(collectObjectsFunc)
+	// gather objects from the current package
+	appDef.Types(func(iTypeObj appdef.IType) {
+		if iTypeObj.QName().Pkg() == currentPkgLocalName {
+			if workspace, ok := iTypeObj.(appdef.IWorkspace); ok {
+				workspace.Types(collectITypeObjs)
+			}
 		}
 	})
-
-	for pkgLocalName := range pkgObjs {
-		pkgFullPath := appDef.PackageFullPath(pkgLocalName)
-		if pkgFullPath == "" {
-			pkgFullPath = appdef.SysPackage
-		}
-		pkgInfos[pkgLocalName] = ormPackageInfo{
-			Name:              pkgLocalName,
-			FullPath:          pkgFullPath,
-			HeaderFileContent: headerContent,
-		}
-	}
-	return pkgObjs, pkgInfos
+	return
 }
 
-func generatePackage(pkgLocalName string, pkgInfos map[string]ormPackageInfo, objs []appdef.IType, dir string) []error {
-	var errList []error
-	pkgData, errs := fillPackageData(pkgLocalName, pkgInfos, objs)
-	errList = append(errList, errs...)
-
-	pkgFile, err := fillTemplate(pkgData)
-	if err != nil {
-		errList = append(errList, err)
+func generateOrmFiles(pkgData map[ormPackageInfo][]interface{}, dir string) error {
+	for pkgInfo, pkgItems := range pkgData {
+		ormPkgData := ormPackage{
+			ormPackageInfo: pkgInfo,
+			Items:          pkgItems,
+		}
+		if err := generateOrmFile(pkgInfo.Name, ormPkgData, dir); err != nil {
+			return err
+		}
 	}
-
-	filePath := filepath.Join(dir, fmt.Sprintf("package_%s.go", pkgLocalName))
-	if err := saveFile(filePath, pkgFile); err != nil {
-		errList = append(errList, err)
-	}
-	return errList
-}
-
-func generateTypesModule(dir string) error {
 	sysFilePath := filepath.Join(dir, "types.go")
-	return saveFile(sysFilePath, []byte(sysContent))
+	return os.WriteFile(sysFilePath, []byte(sysContent), defaultPermissions)
 }
 
-func saveFile(filePath string, content []byte) error {
-	return os.WriteFile(filePath, content, defaultPermissions)
-}
-
-func fillPackageData(pkgLocalName string, pkgInfos map[string]ormPackageInfo, objs []appdef.IType) (ormPackage, []error) {
-	var errList []error
-	pkgData := ormPackage{
-		ormPackageInfo: pkgInfos[pkgLocalName],
-		Imports:        []string{exttinygoImport},
-		Items:          make([]interface{}, 0),
+func generateOrmFile(localName string, ormPkgData ormPackage, dir string) error {
+	ormFileContent, err := fillInTemplate(ormPkgData)
+	if err != nil {
+		return err
 	}
-	for _, obj := range objs {
-		item := getPackageItem(pkgLocalName, pkgInfos, obj)
-		if item != nil {
-			pkgData.Items = append(pkgData.Items, item)
-		}
+
+	filePath := filepath.Join(dir, fmt.Sprintf("package_%s.go", localName))
+	if err := os.WriteFile(filePath, ormFileContent, defaultPermissions); err != nil {
+		return err
 	}
-	return pkgData, errList
+	return nil
 }
 
-func newPackageItem(defaultPkgLocalName string, pkgInfos map[string]ormPackageInfo, obj interface{}) ormPackageItem {
+func getOrmData(localName string, pkgInfos map[string]ormPackageInfo, iTypeObjs []appdef.IType) (pkgData map[ormPackageInfo][]interface{}) {
+	pkgData = make(map[ormPackageInfo][]interface{})
+	uniquePkgQNames := make(map[ormPackageInfo][]string)
+	for _, obj := range iTypeObjs {
+		processITypeObj(localName, pkgInfos, pkgData, uniquePkgQNames, obj)
+	}
+	return
+}
+
+func newPackageItem(defaultLocalName string, pkgInfos map[string]ormPackageInfo, obj interface{}) ormPackageItem {
 	name := getName(obj)
-	pkgLocalName := defaultPkgLocalName
+	qName := obj.(appdef.IType).QName()
+	localName := defaultLocalName
 	if obj != nil {
-		pkgLocalName = obj.(appdef.IType).QName().Pkg()
+		localName = qName.Pkg()
 	}
-	pkgInfo := pkgInfos[pkgLocalName]
+	pkgInfo := pkgInfos[localName]
 	return ormPackageItem{
 		Package:    pkgInfo,
+		QName:      qName.String(),
 		TypeQName:  fmt.Sprintf("%s.%s", pkgInfo.FullPath, name),
 		Name:       name,
 		Type:       getObjType(obj),
-		SqlContent: "Here will be SQL content of the table.",
+		SqlContent: dummySqlContent,
 	}
 }
 
@@ -207,14 +184,16 @@ func newFieldItem(tableData ormTableItem, field appdef.IField) ormField {
 	}
 }
 
-func getPackageItem(pkgLocalName string, pkgInfos map[string]ormPackageInfo, obj appdef.IType) interface{} {
+func processITypeObj(localName string, pkgInfos map[string]ormPackageInfo, pkgData map[ormPackageInfo][]interface{}, uniquePkgQNames map[ormPackageInfo][]string, obj appdef.IType) (newItem interface{}) {
 	if obj == nil {
 		return nil
 	}
-	pkgItem := newPackageItem(pkgLocalName, pkgInfos, obj)
+
+	pkgItem := newPackageItem(localName, pkgInfos, obj)
 	if pkgItem.Type == unknownType {
 		return nil
 	}
+
 	switch t := obj.(type) {
 	case appdef.ICDoc, appdef.IWDoc, appdef.IView, appdef.IODoc, appdef.IObject:
 		tableData := ormTableItem{
@@ -250,16 +229,16 @@ func getPackageItem(pkgLocalName string, pkgInfos map[string]ormPackageInfo, obj
 				tableData.Fields = append(tableData.Fields, fieldItem)
 			}
 		}
-		return tableData
+		newItem = tableData
 	case appdef.ICommand, appdef.IQuery:
 		var resultFields []ormField
-		argumentObj := getPackageItem(pkgLocalName, pkgInfos, t.(appdef.IFunction).Param())
+		argumentObj := processITypeObj(localName, pkgInfos, pkgData, uniquePkgQNames, t.(appdef.IFunction).Param())
 
 		var unloggedArgumentObj interface{}
 		if iCommand, ok := t.(appdef.ICommand); ok {
-			unloggedArgumentObj = getPackageItem(pkgLocalName, pkgInfos, iCommand.UnloggedParam())
+			unloggedArgumentObj = processITypeObj(localName, pkgInfos, pkgData, uniquePkgQNames, iCommand.UnloggedParam())
 		}
-		if resultObj := getPackageItem(pkgLocalName, pkgInfos, t.(appdef.IFunction).Result()); resultObj != nil {
+		if resultObj := processITypeObj(localName, pkgInfos, pkgData, uniquePkgQNames, t.(appdef.IFunction).Result()); resultObj != nil {
 			if tableData, ok := resultObj.(ormTableItem); ok {
 				resultFields = tableData.Fields
 			}
@@ -271,24 +250,31 @@ func getPackageItem(pkgLocalName string, pkgInfos map[string]ormPackageInfo, obj
 			ResultObjectFields:     resultFields,
 			UnloggedArgumentObject: unloggedArgumentObj,
 		}
-		return commandItem
+		newItem = commandItem
 	default:
 		typeKind := t.Kind()
 		if typeKind == appdef.TypeKind_Object {
-			return getPackageItem(pkgLocalName, pkgInfos, t.(appdef.IObject))
+			return processITypeObj(localName, pkgInfos, pkgData, uniquePkgQNames, t.(appdef.IObject))
 		}
-		return pkgItem
+		newItem = pkgItem
 	}
+	// add new package item to the package data
+	if !slices.Contains(uniquePkgQNames[pkgItem.Package], getQName(newItem)) {
+		pkgData[pkgItem.Package] = append(pkgData[pkgItem.Package], newItem)
+		uniquePkgQNames[pkgItem.Package] = append(uniquePkgQNames[pkgItem.Package], getQName(newItem))
+	}
+	return
 }
 
-func fillTemplate(payload interface{}) ([]byte, error) {
-	templatesDir, err := fsTemplates.ReadDir("templates")
+func fillInTemplate(ormPkgData ormPackage) ([]byte, error) {
+	templatesDir, err := fsTemplates.ReadDir("ormtemplates")
 	if err != nil {
 		return nil, fmt.Errorf("failed to read templates directory: %w", err)
 	}
+
 	templates := make([]string, 0)
 	for _, file := range templatesDir {
-		templates = append(templates, fmt.Sprintf("templates/%s", file.Name()))
+		templates = append(templates, fmt.Sprintf("ormtemplates/%s", file.Name()))
 	}
 
 	t, err := template.New("package").Funcs(template.FuncMap{
@@ -298,15 +284,14 @@ func fillTemplate(payload interface{}) ([]byte, error) {
 			}
 			return strings.ToUpper(s[:1]) + s[1:]
 		},
-		"lower": func(s string) string {
-			return strings.ToLower(s)
-		},
+		"lower": strings.ToLower,
 	}).ParseFiles(templates...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse template: %w", err)
 	}
+
 	var filledTemplate bytes.Buffer
-	if err := t.ExecuteTemplate(&filledTemplate, "package", payload); err != nil {
+	if err := t.ExecuteTemplate(&filledTemplate, "package", ormPkgData); err != nil {
 		return nil, fmt.Errorf("failed to fill template: %w", err)
 	}
 
@@ -315,7 +300,7 @@ func fillTemplate(payload interface{}) ([]byte, error) {
 
 func getHeaderFileContent(headerFilePath string) (string, error) {
 	if headerFilePath == "" {
-		return "", nil
+		return defaultOrmFilesHeaderComment, nil
 	}
 
 	headerFileContent, err := os.ReadFile(headerFilePath)
@@ -327,7 +312,7 @@ func getHeaderFileContent(headerFilePath string) (string, error) {
 }
 
 func createOrmDir(dir string) (string, error) {
-	ormDirPath := filepath.Join(dir, ormDirName)
+	ormDirPath := filepath.Join(dir, internalDirName, ormDirName)
 	if _, err := os.Stat(ormDirPath); os.IsExist(err) {
 		if err := os.RemoveAll(ormDirPath); err != nil {
 			return "", err
