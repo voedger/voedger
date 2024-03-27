@@ -113,6 +113,11 @@ type IAppDef interface {
 	// Projectors are enumerated in alphabetical order by QName.
 	Projectors(func(IProjector))
 
+	// Return extension by name.
+	//
+	// Returns nil if not found.
+	Extension(QName) IExtension
+
 	// Enumerates all application extensions (commands, queries and extensions)
 	//
 	// Extensions are enumerated in alphabetical order by QName

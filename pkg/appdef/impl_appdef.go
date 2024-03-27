@@ -69,6 +69,15 @@ func (app *appDef) DataTypes(incSys bool, cb func(IData)) {
 	})
 }
 
+func (app *appDef) Extension(name QName) IExtension {
+	if t := app.TypeByName(name); t != nil {
+		if r, ok := t.(IExtension); ok {
+			return r
+		}
+	}
+	return nil
+}
+
 func (app *appDef) Extensions(cb func(e IExtension)) {
 	app.Types(func(t IType) {
 		if ex, ok := t.(IExtension); ok {
