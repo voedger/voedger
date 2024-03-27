@@ -18,20 +18,16 @@ import (
 )
 
 // engine placeholder
-type engine struct {
-	iextengine.IExtensionEngine
-	cluster.ProcessorKind
-	pool *pool.Pool[*engine]
+type engines struct {
+	byKind [appdef.ExtensionEngineKind_Count]iextengine.IExtensionEngine
+	pool   *pool.Pool[*engines]
 }
 
-func newEngine(e iextengine.IExtensionEngine, kind cluster.ProcessorKind) *engine {
-	return &engine{
-		IExtensionEngine: e,
-		ProcessorKind:    kind,
-	}
+func newEngines() *engines {
+	return &engines{}
 }
 
-func (e *engine) release() {
+func (e *engines) release() {
 	if p := e.pool; p != nil {
 		e.pool = nil
 		p.Release(e)
@@ -44,7 +40,7 @@ type app struct {
 	partsCount int
 	def        appdef.IAppDef
 	structs    istructs.IAppStructs
-	engines    [cluster.ProcessorKind_Count]*pool.Pool[*engine]
+	engines    [cluster.ProcessorKind_Count]*pool.Pool[*engines]
 	// no locks need. Owned apps structure will locks access to this structure
 	parts map[istructs.PartitionID]*partition
 }
@@ -66,14 +62,22 @@ func (a *app) deploy(def appdef.IAppDef, structs istructs.IAppStructs, numEngine
 
 	ctx := context.Background()
 	for k, cnt := range numEngines {
-		// TODO: add support for WASM engine
-		extEngines, err := eef[appdef.ExtensionEngineKind_BuiltIn].New(ctx, []iextengine.ExtensionPackage{}, nil, cnt)
-		if err != nil {
-			panic(err)
+		extEngines := make([][]iextengine.IExtensionEngine, appdef.ExtensionEngineKind_Count)
+
+		for ek, ef := range eef {
+			ee, err := ef.New(ctx, []iextengine.ExtensionPackage{}, &iextengine.DefaultExtEngineConfig, cnt)
+			if err != nil {
+				panic(err)
+			}
+			extEngines[ek] = ee
 		}
-		ee := make([]*engine, cnt)
+
+		ee := make([]*engines, cnt)
 		for i := 0; i < cnt; i++ {
-			ee[i] = newEngine(extEngines[i], cluster.ProcessorKind(k))
+			ee[i] = newEngines()
+			for ek := range eef {
+				ee[i].byKind[ek] = extEngines[ek][i]
+			}
 		}
 		a.engines[k] = pool.New(ee)
 	}
@@ -108,7 +112,7 @@ type partitionRT struct {
 	part       *partition
 	appDef     appdef.IAppDef
 	appStructs istructs.IAppStructs
-	borrowed   *engine
+	borrowed   *engines
 }
 
 var partionRTPool = sync.Pool{
@@ -138,13 +142,18 @@ func (rt *partitionRT) DoSyncActualizer(ctx context.Context, work interface{}) e
 func (rt *partitionRT) ID() istructs.PartitionID { return rt.part.id }
 
 func (rt *partitionRT) Invoke(ctx context.Context, name appdef.QName, state istructs.IState, intents istructs.IIntents) error {
+	e := rt.appDef.Extension(name)
+	if e == nil {
+		return errUndefinedExtension(name)
+	}
+
 	extName := rt.appDef.FullQName(name)
 	if extName == appdef.NullFullQName {
 		return errUndefinedExtension(name)
 	}
 	io := iextengine.NewExtensionIO(rt.appDef, state, intents)
 
-	return rt.borrowed.Invoke(ctx, extName, io)
+	return rt.borrowed.byKind[e.Engine()].Invoke(ctx, extName, io)
 }
 
 func (rt *partitionRT) Release() {
