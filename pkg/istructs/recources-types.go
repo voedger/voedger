@@ -93,6 +93,8 @@ type IState interface {
 
 	// For projectors
 	PLogEvent() IPLogEvent
+
+	App() AppQName
 }
 type IIntents interface {
 	// NewValue returns a new value builder for given get
