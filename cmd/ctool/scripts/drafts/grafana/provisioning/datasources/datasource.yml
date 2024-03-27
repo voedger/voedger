@@ -7,3 +7,7 @@ datasources:
   isDefault: true
   access: proxy
   editable: true
+  basicAuth: true
+  basicAuthUser: voedger
+  secureJsonData:
+     basicAuthPassword: voedger
