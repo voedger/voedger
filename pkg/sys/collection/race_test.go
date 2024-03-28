@@ -12,7 +12,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/cluster"
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
@@ -59,14 +58,8 @@ func newTSIdsGenerator() *TSidsGeneratorType {
 func Test_Race_SimpleInsertOne(t *testing.T) {
 	req := require.New(t)
 
-	appParts, cleanup := buildAppParts(t)
+	_, appStructs, cleanup := deployTestApp(t)
 	defer cleanup()
-
-	appPart, err := appParts.Borrow(test.appQName, test.partition, cluster.ProcessorKind_Command)
-	req.NoError(err)
-	defer appPart.Release()
-
-	as := appPart.AppStructs()
 
 	idGen := newTSIdsGenerator()
 	wg := sync.WaitGroup{}
@@ -74,10 +67,10 @@ func Test_Race_SimpleInsertOne(t *testing.T) {
 		wg.Add(1)
 		go func(areq *require.Assertions, _ istructs.IAppStructs, aidGen *TSidsGeneratorType) {
 			defer wg.Done()
-			saveEvent(areq, as, idGen, newTSModify(as, aidGen, func(event istructs.IRawEventBuilder) {
+			saveEvent(areq, appStructs, idGen, newTSModify(appStructs, aidGen, func(event istructs.IRawEventBuilder) {
 				newDepartmentCUD(event, 1, 1, "Cold Drinks")
 			}))
-		}(req, as, idGen)
+		}(req, appStructs, idGen)
 	}
 	wg.Wait()
 }
@@ -85,14 +78,8 @@ func Test_Race_SimpleInsertOne(t *testing.T) {
 func Test_Race_SimpleInsertMany(t *testing.T) {
 	req := require.New(t)
 
-	appParts, cleanup := buildAppParts(t)
+	_, appStructs, cleanup := deployTestApp(t)
 	defer cleanup()
-
-	appPart, err := appParts.Borrow(test.appQName, test.partition, cluster.ProcessorKind_Command)
-	req.NoError(err)
-	defer appPart.Release()
-
-	as := appPart.AppStructs()
 
 	idGen := newTSIdsGenerator()
 	wg := sync.WaitGroup{}
@@ -100,10 +87,10 @@ func Test_Race_SimpleInsertMany(t *testing.T) {
 		wg.Add(1)
 		go func(areq *require.Assertions, _ istructs.IAppStructs, aidGen *TSidsGeneratorType, ai int) {
 			defer wg.Done()
-			saveEvent(areq, as, idGen, newTSModify(as, aidGen, func(event istructs.IRawEventBuilder) {
+			saveEvent(areq, appStructs, idGen, newTSModify(appStructs, aidGen, func(event istructs.IRawEventBuilder) {
 				newDepartmentCUD(event, istructs.RecordID(ai), int32(ai), "Hot Drinks"+strconv.Itoa(ai))
 			}))
-		}(req, as, idGen, i+1)
+		}(req, appStructs, idGen, i+1)
 	}
 	wg.Wait()
 }

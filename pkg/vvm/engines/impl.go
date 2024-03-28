@@ -70,7 +70,7 @@ func provideAppsBuiltInExtFuncs(cfg *istructsmem.AppConfigType) iextengine.Built
 
 			extName := cfg.AppDef.FullQName(name)
 			if extName == appdef.NullFullQName {
-				panic(fmt.Errorf("application «%v»: package %v full path is unknown", cfg.Name, name.Pkg()))
+				panic(fmt.Errorf("application «%v»: package «%s» full path is unknown", cfg.Name, name.Pkg()))
 			}
 
 			funcs[extName] = fn
