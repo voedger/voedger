@@ -56,6 +56,7 @@ func Test_BasicUsage_Projector(t *testing.T) {
 
 	defer ctx.Close()
 
+	ctx.PutSecret("encryptionKey", []byte("idkfa"))
 	ctx.PutView(testWSID, appdef.NewFullQName(testPkg, "OrderedItems"), func(key istructs.IKeyBuilder, value istructs.IValueBuilder) {
 		key.PutInt32("Year", 2023)
 		key.PutInt32("Month", 1)
