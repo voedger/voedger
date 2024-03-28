@@ -66,6 +66,11 @@ func (c *cmdWorkpiece) AppDef() appdef.IAppDef {
 	return c.appStructs.AppDef()
 }
 
+// should be used for Invoke projector by sync actualizer
+func (c *cmdWorkpiece) AppPartition() appparts.IAppPartition {
+	return c.appPart
+}
+
 // need for collection.ProvideSyncActualizer(), q.sys.EnrichPrincipalToken, c.sys.ChangePassword
 func (c *cmdWorkpiece) AppQName() istructs.AppQName {
 	return c.cmdMes.AppQName()
