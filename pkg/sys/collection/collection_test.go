@@ -17,7 +17,6 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appparts"
-	"github.com/voedger/voedger/pkg/cluster"
 	"github.com/voedger/voedger/pkg/iauthnzimpl"
 	"github.com/voedger/voedger/pkg/iextengine"
 	"github.com/voedger/voedger/pkg/in10n"
@@ -32,7 +31,6 @@ import (
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	"github.com/voedger/voedger/pkg/itokensjwt"
 	imetrics "github.com/voedger/voedger/pkg/metrics"
-	"github.com/voedger/voedger/pkg/pipeline"
 	queryprocessor "github.com/voedger/voedger/pkg/processors/query"
 	"github.com/voedger/voedger/pkg/projectors"
 	"github.com/voedger/voedger/pkg/state"
@@ -234,70 +232,6 @@ func deployTestApp(t *testing.T) (appParts appparts.IAppPartitions, appStructs i
 	}
 
 	return appParts, as, cleanup
-}
-
-type testCmdWorkpeace struct {
-	appPart appparts.IAppPartition
-	event   istructs.IPLogEvent
-}
-
-func (w testCmdWorkpeace) AppPartition() appparts.IAppPartition { return w.appPart }
-func (w testCmdWorkpeace) Event() istructs.IPLogEvent           { return w.event }
-
-func (w *testCmdWorkpeace) Borrow(ctx context.Context, appParts appparts.IAppPartitions) (err error) {
-	w.appPart, err = appParts.WaitForBorrow(ctx, test.appQName, test.partition, cluster.ProcessorKind_Command)
-	return err
-}
-
-func (w *testCmdWorkpeace) Command(e any) error {
-	w.event = e.(istructs.IPLogEvent)
-	return nil
-}
-
-func (w *testCmdWorkpeace) Actualizers(ctx context.Context) error {
-	return w.appPart.DoSyncActualizer(ctx, w)
-}
-
-func (w *testCmdWorkpeace) Release() error {
-	p := w.appPart
-	w.appPart = nil
-	if p != nil {
-		p.Release()
-	}
-	return nil
-}
-
-type testProc struct {
-	pipeline.ISyncPipeline
-	appParts  appparts.IAppPartitions
-	ctx       context.Context
-	workpeace testCmdWorkpeace
-}
-
-func testProcessor(appParts appparts.IAppPartitions) *testProc {
-	proc := &testProc{
-		appParts:  appParts,
-		ctx:       context.Background(),
-		workpeace: testCmdWorkpeace{},
-	}
-	proc.ISyncPipeline = pipeline.NewSyncPipeline(proc.ctx, "partition processor",
-		pipeline.WireSyncOperator("Borrow", pipeline.NewSyncOp(
-			func(ctx context.Context, _ interface{}) error {
-				return proc.workpeace.Borrow(ctx, appParts)
-			})),
-		pipeline.WireSyncOperator("Command", pipeline.NewSyncOp(
-			func(_ context.Context, event interface{}) error {
-				return proc.workpeace.Command(event)
-			})),
-		pipeline.WireSyncOperator("SyncActualizers", pipeline.NewSyncOp(
-			func(ctx context.Context, _ interface{}) error {
-				return proc.workpeace.Actualizers(ctx)
-			})),
-		pipeline.WireSyncOperator("Release", pipeline.NewSyncOp(
-			func(context.Context, interface{}) error {
-				return proc.workpeace.Release()
-			})))
-	return proc
 }
 
 // Test executes 3 operations with CUDs:
