@@ -274,7 +274,7 @@ func (f *implIFederation) GET(relativeURL string, body string, optFuncs ...ReqOp
 
 // status code expected -> DiscardBody, ResponseHandler are used
 // status code is unexpected -> DiscardBody, ResponseHandler are ignored, body is read out, wrapped ErrUnexpectedStatusCode is returned
-func (f *implIHTTPClient) Req(urlStr string, body string, optFuncs ...ReqOptFunc) (*HTTPResponse, error) {
+func (c *implIHTTPClient) Req(urlStr string, body string, optFuncs ...ReqOptFunc) (*HTTPResponse, error) {
 	opts := &reqOpts{
 		headers:   map[string]string{},
 		cookies:   map[string]string{},
@@ -315,7 +315,7 @@ func (f *implIHTTPClient) Req(urlStr string, body string, optFuncs ...ReqOptFunc
 	deadline := time.UnixMilli(opts.timeoutMs)
 	tryNum := 0
 	for time.Now().Before(deadline) {
-		if resp, err = req(urlStr, body, f.client, opts); err != nil {
+		if resp, err = req(urlStr, body, c.client, opts); err != nil {
 			return nil, err
 		}
 		if opts.responseHandler == nil {
