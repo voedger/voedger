@@ -38,17 +38,19 @@ func TestBasicUsage_Metrics(t *testing.T) {
 func TestMetricsService(t *testing.T) {
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
+	client := coreutils.NewIHTTPClient()
+	defer client.CloseIdleConnections()
 
 	t.Run("service check", func(t *testing.T) {
-		log.Println(vit.MetricsRequest(coreutils.WithRelativeURL("/metrics/check")))
+		log.Println(vit.MetricsRequest(client, coreutils.WithRelativeURL("/metrics/check")))
 	})
 
 	t.Run("404 on wrong url", func(t *testing.T) {
-		log.Println(vit.MetricsRequest(coreutils.WithRelativeURL("/unknown"), coreutils.Expect404()))
+		log.Println(vit.MetricsRequest(client, coreutils.WithRelativeURL("/unknown"), coreutils.Expect404()))
 	})
 
 	t.Run("404 on wrong method", func(t *testing.T) {
-		log.Println(vit.MetricsRequest(coreutils.WithMethod(http.MethodPost), coreutils.Expect404()))
+		log.Println(vit.MetricsRequest(client, coreutils.WithMethod(http.MethodPost), coreutils.Expect404()))
 	})
 }
 
@@ -56,12 +58,14 @@ func TestCommandProcessorMetrics(t *testing.T) {
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 	require := require.New(t)
+	client := coreutils.NewIHTTPClient()
+	defer client.CloseIdleConnections()
 
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
 	body := `{"cuds": [{"fields": {"sys.ID": 1,"sys.QName": "app1pkg.articles","name": "cola","article_manual": 1,"article_hash": 2,"hideonhold": 3,"time_active": 4,"control_active": 5}}]}`
 	vit.PostWS(ws, "c.sys.CUD", body)
 
-	metrics := vit.MetricsRequest()
+	metrics := vit.MetricsRequest(client)
 
 	require.Contains(metrics, commandprocessor.CommandsTotal)
 	require.Contains(metrics, commandprocessor.CommandsSeconds)

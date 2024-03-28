@@ -28,7 +28,7 @@ import (
 
 func (vit *VIT) GetBLOB(appQName istructs.AppQName, wsid istructs.WSID, blobID int64, token string) *BLOB {
 	vit.T.Helper()
-	resp, err := coreutils.FederationReq(vit.IFederation.URL(), fmt.Sprintf(`blob/%s/%d/%d`, appQName.String(), wsid, blobID), "", coreutils.WithAuthorizeBy(token))
+	resp, err := vit.GET(fmt.Sprintf(`blob/%s/%d/%d`, appQName.String(), wsid, blobID), "", coreutils.WithAuthorizeBy(token))
 	require.NoError(vit.T, err)
 	contentDisposition := resp.HTTPResp.Header.Get("Content-Disposition")
 	_, params, err := mime.ParseMediaType(contentDisposition)
@@ -303,7 +303,7 @@ func (vit *VIT) SubscribeForN10nCleanup(p SubscriptionParameters, viewQName appd
 	query := fmt.Sprintf(`{"SubjectLogin":"test_%d","ProjectionKey":[{"App":"%s","Projection":"%s","WS":%d}]}`,
 		p.GetWSID(), p.GetAppQName(), viewQName, p.GetWSID())
 	params.Add("payload", query)
-	httpResp, err := coreutils.FederationReq(vit.IFederation.URL(), fmt.Sprintf("n10n/channel?%s", params.Encode()), "",
+	httpResp, err := vit.GET(fmt.Sprintf("n10n/channel?%s", params.Encode()), "",
 		coreutils.WithLongPolling())
 	require.NoError(vit.T, err)
 
@@ -372,10 +372,10 @@ func (vit *VIT) SubscribeForN10n(p SubscriptionParameters, viewQName appdef.QNam
 	return n10nChan
 }
 
-func (vit *VIT) MetricsRequest(opts ...coreutils.ReqOptFunc) (resp string) {
+func (vit *VIT) MetricsRequest(client coreutils.IHTTPClient, opts ...coreutils.ReqOptFunc) (resp string) {
 	vit.T.Helper()
 	url := fmt.Sprintf("http://127.0.0.1:%d/metrics", vit.VoedgerVM.MetricsServicePort())
-	res, err := coreutils.Req(url, "", opts...)
+	res, err := client.Req(url, "", opts...)
 	require.NoError(vit.T, err)
 	return res.Body
 }
