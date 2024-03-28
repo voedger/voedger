@@ -89,7 +89,7 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 	in10nBroker, cleanup := in10nmem.ProvideEx2(quotas, timeFunc)
 	v2 := projectors.NewSyncActualizerFactoryFactory(syncActualizerFactory, iSecretReader, in10nBroker)
 	vvmPortSource := provideVVMPortSource()
-	iFederation := provideIFederation(vvmConfig, vvmPortSource)
+	iFederation, cleanup2 := provideIFederation(vvmConfig, vvmPortSource)
 	queryProcessorsCount := vvmConfig.NumQueryProcessors
 	apIs := apps.APIs{
 		ITokens:              iTokens,
@@ -105,11 +105,13 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 	v3 := provideAppsExtensionPoints(vvmConfig)
 	v4, err := provideBuiltInAppsPackages(vvmConfig, appConfigsType, apIs, v3)
 	if err != nil {
+		cleanup2()
 		cleanup()
 		return nil, nil, err
 	}
-	iAppPartitions, cleanup2, err := provideAppPartitions(appConfigsType, iAppStructsProvider, v2, v4)
+	iAppPartitions, cleanup3, err := provideAppPartitions(appConfigsType, iAppStructsProvider, v2, v4)
 	if err != nil {
+		cleanup2()
 		cleanup()
 		return nil, nil, err
 	}
@@ -136,6 +138,7 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 	blobMaxSizeType := vvmConfig.BLOBMaxSize
 	blobberAppStruct, err := provideBlobberAppStruct(iAppStructsProvider)
 	if err != nil {
+		cleanup3()
 		cleanup2()
 		cleanup()
 		return nil, nil, err
@@ -143,6 +146,7 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 	blobberAppClusterID := provideBlobberClusterAppID(blobberAppStruct)
 	blobAppStorage, err := provideBlobAppStorage(iAppStorageProvider)
 	if err != nil {
+		cleanup3()
 		cleanup2()
 		cleanup()
 		return nil, nil, err
@@ -150,6 +154,7 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 	blobStorage := provideBlobStorage(blobAppStorage, timeFunc)
 	routerAppStorage, err := provideRouterAppStorage(iAppStorageProvider)
 	if err != nil {
+		cleanup3()
 		cleanup2()
 		cleanup()
 		return nil, nil, err
@@ -162,6 +167,7 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 	iBus := provideIBus(iAppPartitions, iProcBus, commandProcessorsChannelGroupIdxType, queryProcessorsChannelGroupIdxType, commandProcessorsCount, vvmApps)
 	v8, err := provideAppsWSAmounts(vvmApps, iAppStructsProvider)
 	if err != nil {
+		cleanup3()
 		cleanup2()
 		cleanup()
 		return nil, nil, err
@@ -172,8 +178,9 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 	metricsServicePort := provideMetricsServicePort(metricsServicePortInitial, vvmIdx)
 	metricsService := metrics.ProvideMetricsService(vvmCtx, metricsServicePort, iMetrics)
 	metricsServiceOperator := provideMetricsServiceOperator(metricsService)
-	iAppPartitionsController, cleanup3, err := apppartsctl.New(iAppPartitions, v7)
+	iAppPartitionsController, cleanup4, err := apppartsctl.New(iAppPartitions, v7)
 	if err != nil {
+		cleanup3()
 		cleanup2()
 		cleanup()
 		return nil, nil, err
@@ -189,6 +196,7 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 		BuiltInAppsPackages: v4,
 	}
 	return vvm, func() {
+		cleanup4()
 		cleanup3()
 		cleanup2()
 		cleanup()
@@ -369,7 +377,7 @@ func provideMetricsServiceOperator(ms metrics.MetricsService) MetricsServiceOper
 }
 
 // TODO: consider vvmIdx
-func provideIFederation(cfg *VVMConfig, vvmPortSource *VVMPortSource) coreutils.IFederation {
+func provideIFederation(cfg *VVMConfig, vvmPortSource *VVMPortSource) (coreutils.IFederation, func()) {
 	return coreutils.NewIFederation(func() *url.URL {
 		if cfg.FederationURL != nil {
 			return cfg.FederationURL
