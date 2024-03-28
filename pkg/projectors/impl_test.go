@@ -10,6 +10,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 
@@ -17,7 +18,10 @@ import (
 	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/cluster"
 	"github.com/voedger/voedger/pkg/iextengine"
+	"github.com/voedger/voedger/pkg/in10n"
+	"github.com/voedger/voedger/pkg/in10nmem"
 	"github.com/voedger/voedger/pkg/iratesce"
+	"github.com/voedger/voedger/pkg/isecretsimpl"
 	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istorage/mem"
 	istorageimpl "github.com/voedger/voedger/pkg/istorage/provider"
@@ -27,7 +31,6 @@ import (
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	"github.com/voedger/voedger/pkg/itokensjwt"
 	imetrics "github.com/voedger/voedger/pkg/metrics"
-	"github.com/voedger/voedger/pkg/pipeline"
 	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys/authnz"
 	"github.com/voedger/voedger/pkg/vvm/engines"
@@ -54,7 +57,7 @@ var newWorkspaceCmd = appdef.NewQName("sys", "NewWorkspace")
 func TestBasicUsage_SynchronousActualizer(t *testing.T) {
 	require := require.New(t)
 
-	_, cleanup, _, appStructs := deployTestApp(
+	appParts, cleanup, _, appStructs := deployTestApp(
 		istructs.AppQName_test1_app1, 1, []istructs.PartitionID{1}, false,
 		func(appDef appdef.IAppDefBuilder) {
 			appDef.AddPackage("test", "test.com/test")
@@ -74,30 +77,31 @@ func TestBasicUsage_SynchronousActualizer(t *testing.T) {
 	defer cleanup()
 	createWS(appStructs, istructs.WSID(1001), testWorkspaceDescriptor, istructs.PartitionID(1), istructs.Offset(1))
 	createWS(appStructs, istructs.WSID(1002), testWorkspaceDescriptor, istructs.PartitionID(1), istructs.Offset(1))
-	actualizerFactory := ProvideSyncActualizerFactory()
 
-	// create actualizer with two factories
-	conf := SyncActualizerConf{
-		Ctx:        context.Background(),
-		Partition:  istructs.PartitionID(1),
-		AppStructs: func() istructs.IAppStructs { return appStructs },
-	}
-	projectors := appStructs.SyncProjectors()
-	require.Len(projectors, 2)
-	actualizer := actualizerFactory(conf, projectors)
+	t.Run("Emulate the command processor", func(t *testing.T) {
+		ctx := context.Background()
+		appPart, err := appParts.WaitForBorrow(ctx, istructs.AppQName_test1_app1, istructs.PartitionID(1), cluster.ProcessorKind_Command)
+		require.NoError(err)
 
-	// create partition processor pipeline
-	processor := pipeline.NewSyncPipeline(context.Background(), "partition processor", pipeline.WireSyncOperator("actualizer", actualizer))
+		defer appPart.Release()
 
-	// feed partition processor
-	require.NoError(processor.SendSync(&plogEventMock{wsid: 1001}))
-	require.NoError(processor.SendSync(&plogEventMock{wsid: 1001}))
-	require.NoError(processor.SendSync(&plogEventMock{wsid: 1002}))
-	require.NoError(processor.SendSync(&plogEventMock{wsid: 1001}))
-	require.NoError(processor.SendSync(&plogEventMock{wsid: 1001}))
-	require.NoError(processor.SendSync(&plogEventMock{wsid: 1001}))
-	require.NoError(processor.SendSync(&plogEventMock{wsid: 1002}))
-	require.NoError(processor.SendSync(&plogEventMock{wsid: 1002}))
+		require.NoError(appPart.DoSyncActualizer(ctx, &cmdWorkpieceMock{appPart: appPart,
+			event: &plogEventMock{wsid: 1001}}))
+		require.NoError(appPart.DoSyncActualizer(ctx, &cmdWorkpieceMock{appPart: appPart,
+			event: &plogEventMock{wsid: 1001}}))
+		require.NoError(appPart.DoSyncActualizer(ctx, &cmdWorkpieceMock{appPart: appPart,
+			event: &plogEventMock{wsid: 1002}}))
+		require.NoError(appPart.DoSyncActualizer(ctx, &cmdWorkpieceMock{appPart: appPart,
+			event: &plogEventMock{wsid: 1001}}))
+		require.NoError(appPart.DoSyncActualizer(ctx, &cmdWorkpieceMock{appPart: appPart,
+			event: &plogEventMock{wsid: 1001}}))
+		require.NoError(appPart.DoSyncActualizer(ctx, &cmdWorkpieceMock{appPart: appPart,
+			event: &plogEventMock{wsid: 1001}}))
+		require.NoError(appPart.DoSyncActualizer(ctx, &cmdWorkpieceMock{appPart: appPart,
+			event: &plogEventMock{wsid: 1002}}))
+		require.NoError(appPart.DoSyncActualizer(ctx, &cmdWorkpieceMock{appPart: appPart,
+			event: &plogEventMock{wsid: 1002}}))
+	})
 
 	// now read the projection values in workspaces
 	require.Equal(int32(5), getProjectionValue(require, appStructs, incProjectionView, istructs.WSID(1001)))
@@ -115,6 +119,7 @@ var incProjectionView = appdef.NewQName("pkg", "Incremented")
 var decProjectionView = appdef.NewQName("pkg", "Decremented")
 var testWorkspace = appdef.NewQName("pkg", "TestWorkspace")
 var testWorkspaceDescriptor = appdef.NewQName("pkg", "TestWorkspaceDescriptor")
+var testError = errors.New("test error")
 
 var (
 	testIncrementor = istructs.Projector{
@@ -122,7 +127,7 @@ var (
 		Func: func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
 			wsid := event.Workspace()
 			if wsid == 1099 {
-				return errors.New("test err")
+				return testError
 			}
 			key, err := s.KeyBuilder(state.View, incProjectionView)
 			if err != nil {
@@ -240,11 +245,17 @@ func deployTestApp(
 		panic(err)
 	}
 
-	appParts, cleanup, err = appparts.NewWithActualizerWithExtEnginesFactories(
+	secretReader := isecretsimpl.ProvideSecretReader()
+	n10nBroker, n10nBrokerCleanup := in10nmem.ProvideEx2(in10n.Quotas{
+		Channels:                1000,
+		ChannelsPerSubject:      10,
+		Subscriptions:           1000,
+		SubscriptionsPerSubject: 10,
+	}, time.Now)
+
+	appParts, appPartsCleanup, err := appparts.NewWithActualizerWithExtEnginesFactories(
 		appStructsProvider,
-		func(istructs.IAppStructs, istructs.PartitionID) pipeline.ISyncOperator {
-			return &pipeline.NOOP{}
-		},
+		NewSyncActualizerFactoryFactory(ProvideSyncActualizerFactory(), secretReader, n10nBroker),
 		func(app istructs.AppQName) iextengine.ExtensionEngineFactories {
 			return engines.ProvideExtEngineFactories(
 				engines.ExtEngineFactoriesConfig{
@@ -260,6 +271,11 @@ func deployTestApp(
 
 	appParts.DeployApp(appName, appDef, appPartsCount, cluster.PoolSize(10, 10, 10))
 	appParts.DeployAppPartitions(appName, partID)
+
+	cleanup = func() {
+		appPartsCleanup()
+		n10nBrokerCleanup()
+	}
 
 	return appParts, cleanup, metrics, appStructs
 }
@@ -299,7 +315,7 @@ func createWS(appStructs istructs.IAppStructs, ws istructs.WSID, wsDescriptorKin
 func Test_ErrorInSyncActualizer(t *testing.T) {
 	require := require.New(t)
 
-	_, cleanup, _, appStructs := deployTestApp(
+	appParts, cleanup, _, appStructs := deployTestApp(
 		istructs.AppQName_test1_app1, 1, []istructs.PartitionID{1}, false,
 		func(appDef appdef.IAppDefBuilder) {
 			appDef.AddPackage("test", "test.com/test")
@@ -317,32 +333,28 @@ func Test_ErrorInSyncActualizer(t *testing.T) {
 			cfg.Resources.Add(istructsmem.NewCommandFunction(testQName, istructsmem.NullCommandExec))
 		})
 	defer cleanup()
-	actualizerFactory := ProvideSyncActualizerFactory()
-
-	// create actualizer with two factories
-	conf := SyncActualizerConf{
-		Ctx:        context.Background(),
-		Partition:  istructs.PartitionID(1),
-		AppStructs: func() istructs.IAppStructs { return appStructs },
-	}
-	projectors := appStructs.SyncProjectors()
-	require.Len(projectors, 2)
-	actualizer := actualizerFactory(conf, projectors)
 
 	createWS(appStructs, istructs.WSID(1001), testWorkspaceDescriptor, istructs.PartitionID(1), istructs.Offset(1))
 	createWS(appStructs, istructs.WSID(1002), testWorkspaceDescriptor, istructs.PartitionID(1), istructs.Offset(1))
 	createWS(appStructs, istructs.WSID(1099), testWorkspaceDescriptor, istructs.PartitionID(1), istructs.Offset(1))
 
-	// create partition processor pipeline
-	processor := pipeline.NewSyncPipeline(context.Background(), "partition processor", pipeline.WireSyncOperator("actualizer", actualizer))
+	t.Run("Emulate the command processor", func(t *testing.T) {
+		ctx := context.Background()
+		appPart, err := appParts.WaitForBorrow(ctx, istructs.AppQName_test1_app1, istructs.PartitionID(1), cluster.ProcessorKind_Command)
+		require.NoError(err)
 
-	// feed partition processor
-	require.NoError(processor.SendSync(&plogEventMock{wsid: 1001}))
-	require.NoError(processor.SendSync(&plogEventMock{wsid: 1001}))
-	require.NoError(processor.SendSync(&plogEventMock{wsid: 1002}))
-	err := processor.SendSync(&plogEventMock{wsid: 1099})
-	require.Error(err)
-	require.Equal("test err", err.Error())
+		defer appPart.Release()
+
+		require.NoError(appPart.DoSyncActualizer(ctx, &cmdWorkpieceMock{appPart: appPart,
+			event: &plogEventMock{wsid: 1001}}))
+		require.NoError(appPart.DoSyncActualizer(ctx, &cmdWorkpieceMock{appPart: appPart,
+			event: &plogEventMock{wsid: 1001}}))
+		require.NoError(appPart.DoSyncActualizer(ctx, &cmdWorkpieceMock{appPart: appPart,
+			event: &plogEventMock{wsid: 1002}}))
+
+		require.ErrorContains(appPart.DoSyncActualizer(ctx, &cmdWorkpieceMock{appPart: appPart,
+			event: &plogEventMock{wsid: 1099}}), testError.Error())
+	})
 
 	// now read the projection values in workspaces
 	require.Equal(int32(2), getProjectionValue(require, appStructs, incProjectionView, istructs.WSID(1001)))

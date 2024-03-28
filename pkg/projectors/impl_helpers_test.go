@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
 )
@@ -41,6 +42,14 @@ func (e *plogEventMock) RegisteredAt() istructs.UnixMilli     { return 0 }
 func (e *plogEventMock) Synced() bool                         { return false }
 func (e *plogEventMock) DeviceID() istructs.ConnectedDeviceID { return 0 }
 func (e *plogEventMock) SyncedAt() istructs.UnixMilli         { return 0 }
+
+type cmdWorkpieceMock struct {
+	appPart appparts.IAppPartition
+	event   istructs.IPLogEvent
+}
+
+func (w *cmdWorkpieceMock) AppPartition() appparts.IAppPartition { return w.appPart }
+func (w *cmdWorkpieceMock) Event() istructs.IPLogEvent           { return w.event }
 
 func storeProjectorOffset(appStructs istructs.IAppStructs, partition istructs.PartitionID, projectorName appdef.QName, offset istructs.Offset) error {
 	kb := appStructs.ViewRecords().KeyBuilder(qnameProjectionOffsets)
