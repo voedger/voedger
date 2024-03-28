@@ -3,13 +3,14 @@
     @author Michael Saigachenko
 */
 
-package iextenginetestctx
+package iextenginetestctx_test
 
 import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/appdef"
+	test "github.com/voedger/voedger/pkg/iextengine/testctx"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/state"
 )
@@ -20,10 +21,10 @@ const testWSID = istructs.WSID(1)
 func Test_BasicUsage_Command(t *testing.T) {
 
 	require := require.New(t)
-	ctx := NewPackageContext(
+	ctx := test.NewPackageContext(
 		"./_testdata/basicusage",
 		appdef.ExtensionEngineKind_WASM,
-		ProcKind_CommandProcessor,
+		test.ProcKind_CommandProcessor,
 		testPkg)
 
 	defer ctx.Close()
@@ -47,12 +48,12 @@ func Test_BasicUsage_Command(t *testing.T) {
 func Test_BasicUsage_Projector(t *testing.T) {
 
 	require := require.New(t)
-	ctx := NewPackageContext(
+	ctx := test.NewPackageContext(
 		"./_testdata/basicusage",
 		appdef.ExtensionEngineKind_WASM,
-		ProcKind_Actualizer,
+		test.ProcKind_Actualizer,
 		testPkg,
-		TestWorkspace{WorkspaceDescriptor: "RestaurantDescriptor", WSID: testWSID})
+		test.TestWorkspace{WorkspaceDescriptor: "RestaurantDescriptor", WSID: testWSID})
 
 	defer ctx.Close()
 
