@@ -119,7 +119,7 @@ var incProjectionView = appdef.NewQName("pkg", "Incremented")
 var decProjectionView = appdef.NewQName("pkg", "Decremented")
 var testWorkspace = appdef.NewQName("pkg", "TestWorkspace")
 var testWorkspaceDescriptor = appdef.NewQName("pkg", "TestWorkspaceDescriptor")
-var testError = errors.New("test error")
+var errTestError = errors.New("test error")
 
 var (
 	testIncrementor = istructs.Projector{
@@ -127,7 +127,7 @@ var (
 		Func: func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
 			wsid := event.Workspace()
 			if wsid == 1099 {
-				return testError
+				return errTestError
 			}
 			key, err := s.KeyBuilder(state.View, incProjectionView)
 			if err != nil {
@@ -353,7 +353,7 @@ func Test_ErrorInSyncActualizer(t *testing.T) {
 			event: &plogEventMock{wsid: 1002}}))
 
 		require.ErrorContains(appPart.DoSyncActualizer(ctx, &cmdWorkpieceMock{appPart: appPart,
-			event: &plogEventMock{wsid: 1099}}), testError.Error())
+			event: &plogEventMock{wsid: 1099}}), errTestError.Error())
 	})
 
 	// now read the projection values in workspaces
