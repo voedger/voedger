@@ -256,7 +256,8 @@ type AlterWorkspaceStmt struct {
 	A          int                  `parser:"'('"`
 	Statements []WorkspaceStatement `parser:"@@? (';' @@)* ';'? ')'"`
 
-	alteredWorkspace *WorkspaceStmt // filled on the analysis stage
+	alteredWorkspace    *WorkspaceStmt    // filled on the analysis stage
+	alteredWorkspacePkg *PackageSchemaAST // filled on the analysis stage
 }
 
 func (s *AlterWorkspaceStmt) Iterate(callback func(stmt interface{})) {
@@ -437,9 +438,10 @@ type ProjectorCommandAction struct {
 }
 
 type ProjectorTrigger struct {
+	CronSchedule  *string                 `parser:"('CRON' @String) | ("`
 	ExecuteAction *ProjectorCommandAction `parser:"'AFTER' (@@"`
 	TableActions  []ProjectionTableAction `parser:"| (@@ ('OR' @@)* ))"`
-	QNames        []DefQName              `parser:"'ON' (('(' @@ (',' @@)* ')') | @@)!"`
+	QNames        []DefQName              `parser:"'ON' (('(' @@ (',' @@)* ')') | @@)!)"`
 
 	qNames []appdef.QName // filled on the analysis stage
 }
