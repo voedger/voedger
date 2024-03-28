@@ -229,6 +229,12 @@ func TestViewRecordsStorage_ValidateInWorkspaces(t *testing.T) {
 	require.NoError(err)
 	expectedError := typeIsNotDefinedInWorkspaceWithDescriptor(wrongQName, testWSDescriptorQName)
 
+	t.Run("App() should return value", func(t *testing.T) {
+		app := s.App()
+		require.NotNil(app)
+		require.Equal(testAppQName, app)
+	})
+
 	t.Run("NewValue should validate for unavailable views", func(t *testing.T) {
 		value, err := s.NewValue(wrongKb)
 		require.EqualError(err, expectedError.Error())

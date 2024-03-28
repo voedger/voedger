@@ -30,6 +30,10 @@ func (s *hostState) PLogEvent() istructs.IPLogEvent {
 	panic("PLogEvent only available in actualizers")
 }
 
+func (s *hostState) App() istructs.AppQName {
+	return s.appStructsFunc().AppQName()
+}
+
 func newHostState(name string, intentsLimit int, appStructsFunc AppStructsFunc) *hostState {
 	return &hostState{
 		name:           name,
