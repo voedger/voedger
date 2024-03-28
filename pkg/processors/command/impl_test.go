@@ -21,6 +21,7 @@ import (
 	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/cluster"
 	"github.com/voedger/voedger/pkg/iauthnzimpl"
+	"github.com/voedger/voedger/pkg/iextengine"
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/in10nmem"
 	"github.com/voedger/voedger/pkg/iratesce"
@@ -37,6 +38,7 @@ import (
 	"github.com/voedger/voedger/pkg/projectors"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 	wsdescutil "github.com/voedger/voedger/pkg/utils/wsdesc"
+	"github.com/voedger/voedger/pkg/vvm/engines"
 	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
 	"github.com/voedger/voedger/staging/src/github.com/untillpro/ibusmem"
 )
@@ -201,7 +203,7 @@ func TestRecoveryOnSyncProjectorError(t *testing.T) {
 		cfg.AddSyncProjectors(
 			istructs.Projector{
 				Name: failingProjQName,
-				Func: func(event istructs.IPLogEvent, state istructs.IState, intents istructs.IIntents) (err error) {
+				Func: func(istructs.IPLogEvent, istructs.IState, istructs.IIntents) error {
 					counter++
 					if counter == 3 { // 1st event is insert WorkspaceDescriptor stub
 						return testErr
@@ -213,9 +215,6 @@ func TestRecoveryOnSyncProjectorError(t *testing.T) {
 		cfg.Resources.Add(istructsmem.NewCommandFunction(cudQName, istructsmem.NullCommandExec))
 	})
 	defer tearDown(app)
-
-	cmdCUD := istructsmem.NewCommandFunction(cudQName, istructsmem.NullCommandExec)
-	app.cfg.Resources.Add(cmdCUD)
 
 	// ok to c.sys.CUD
 	respData := sendCUD(t, 1, app)
@@ -709,8 +708,17 @@ func setUp(t *testing.T, prepare func(appDef appdef.IAppDefBuilder, cfg *istruct
 	}, time.Now)
 
 	// prepare the AppParts to borrow AppStructs
-	appParts, appPartsClean, err := appparts.NewWithActualizer(appStructsProvider,
-		projectors.NewSyncActualizerFactoryFactory(projectors.ProvideSyncActualizerFactory(), secretReader, n10nBroker))
+	appParts, appPartsClean, err := appparts.NewWithActualizerWithExtEnginesFactories(appStructsProvider,
+		projectors.NewSyncActualizerFactoryFactory(projectors.ProvideSyncActualizerFactory(), secretReader, n10nBroker),
+		func(app istructs.AppQName) iextengine.ExtensionEngineFactories {
+			return engines.ProvideExtEngineFactories(
+				engines.ExtEngineFactoriesConfig{
+					AppConfig:   cfgs.GetConfig(app),
+					WASMCompile: false,
+				},
+			)
+		},
+	)
 	require.NoError(err)
 	defer appPartsClean()
 
@@ -748,7 +756,6 @@ func setUp(t *testing.T, prepare func(appDef appdef.IAppDefBuilder, cfg *istruct
 		cmdProcService.Run(ctx)
 		close(done)
 	}()
-
 
 	as, err := appStructsProvider.AppStructs(istructs.AppQName_untill_airs_bp)
 	require.NoError(err)
