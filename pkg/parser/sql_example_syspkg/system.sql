@@ -31,6 +31,8 @@ ABSTRACT WORKSPACE Workspace (
     )
 );
 
+ALTERABLE WORKSPACE AppWorkspaceWS();
+
 ALTERABLE WORKSPACE Profile(
 
 );
