@@ -131,6 +131,10 @@ func (m *MockState) PLogEvent() istructs.IPLogEvent {
 	args := m.Called()
 	return args.Get(0).(istructs.IPLogEvent)
 }
+func (m *MockState) App() istructs.AppQName {
+	args := m.Called()
+	return args.Get(0).(istructs.AppQName)
+}
 
 type MockStateKeyBuilder struct {
 	mock.Mock
