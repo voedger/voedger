@@ -7,12 +7,14 @@
 package projectors
 
 import (
+	"context"
 	"errors"
 
 	"github.com/stretchr/testify/require"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appparts"
+	"github.com/voedger/voedger/pkg/cluster"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
 )
@@ -50,6 +52,20 @@ type cmdWorkpieceMock struct {
 
 func (w *cmdWorkpieceMock) AppPartition() appparts.IAppPartition { return w.appPart }
 func (w *cmdWorkpieceMock) Event() istructs.IPLogEvent           { return w.event }
+
+type cmdProcMock struct {
+	appParts appparts.IAppPartitions
+}
+
+func (p cmdProcMock) TestEvent(wsid istructs.WSID) error {
+	appPart, err := p.appParts.Borrow(istructs.AppQName_test1_app1, istructs.PartitionID(1), cluster.ProcessorKind_Command)
+	if err != nil {
+		return err
+	}
+	defer appPart.Release()
+
+	return appPart.DoSyncActualizer(context.Background(), &cmdWorkpieceMock{appPart: appPart, event: &plogEventMock{wsid: wsid}})
+}
 
 func storeProjectorOffset(appStructs istructs.IAppStructs, partition istructs.PartitionID, projectorName appdef.QName, offset istructs.Offset) error {
 	kb := appStructs.ViewRecords().KeyBuilder(qnameProjectionOffsets)

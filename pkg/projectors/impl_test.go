@@ -7,7 +7,6 @@
 package projectors
 
 import (
-	"context"
 	"errors"
 	"testing"
 	"time"
@@ -79,35 +78,23 @@ func TestBasicUsage_SynchronousActualizer(t *testing.T) {
 	createWS(appStructs, istructs.WSID(1002), testWorkspaceDescriptor, istructs.PartitionID(1), istructs.Offset(1))
 
 	t.Run("Emulate the command processor", func(t *testing.T) {
-		ctx := context.Background()
-		appPart, err := appParts.WaitForBorrow(ctx, istructs.AppQName_test1_app1, istructs.PartitionID(1), cluster.ProcessorKind_Command)
-		require.NoError(err)
+		proc := cmdProcMock{appParts}
 
-		defer appPart.Release()
-
-		require.NoError(appPart.DoSyncActualizer(ctx, &cmdWorkpieceMock{appPart: appPart,
-			event: &plogEventMock{wsid: 1001}}))
-		require.NoError(appPart.DoSyncActualizer(ctx, &cmdWorkpieceMock{appPart: appPart,
-			event: &plogEventMock{wsid: 1001}}))
-		require.NoError(appPart.DoSyncActualizer(ctx, &cmdWorkpieceMock{appPart: appPart,
-			event: &plogEventMock{wsid: 1002}}))
-		require.NoError(appPart.DoSyncActualizer(ctx, &cmdWorkpieceMock{appPart: appPart,
-			event: &plogEventMock{wsid: 1001}}))
-		require.NoError(appPart.DoSyncActualizer(ctx, &cmdWorkpieceMock{appPart: appPart,
-			event: &plogEventMock{wsid: 1001}}))
-		require.NoError(appPart.DoSyncActualizer(ctx, &cmdWorkpieceMock{appPart: appPart,
-			event: &plogEventMock{wsid: 1001}}))
-		require.NoError(appPart.DoSyncActualizer(ctx, &cmdWorkpieceMock{appPart: appPart,
-			event: &plogEventMock{wsid: 1002}}))
-		require.NoError(appPart.DoSyncActualizer(ctx, &cmdWorkpieceMock{appPart: appPart,
-			event: &plogEventMock{wsid: 1002}}))
+		proc.TestEvent(1001)
+		proc.TestEvent(1001)
+		proc.TestEvent(1002)
+		proc.TestEvent(1001)
+		proc.TestEvent(1001)
+		proc.TestEvent(1001)
+		proc.TestEvent(1002)
+		proc.TestEvent(1002)
 	})
 
 	// now read the projection values in workspaces
-	require.Equal(int32(5), getProjectionValue(require, appStructs, incProjectionView, istructs.WSID(1001)))
-	require.Equal(int32(3), getProjectionValue(require, appStructs, incProjectionView, istructs.WSID(1002)))
-	require.Equal(int32(-5), getProjectionValue(require, appStructs, decProjectionView, istructs.WSID(1001)))
-	require.Equal(int32(-3), getProjectionValue(require, appStructs, decProjectionView, istructs.WSID(1002)))
+	require.EqualValues(5, getProjectionValue(require, appStructs, incProjectionView, 1001))
+	require.EqualValues(3, getProjectionValue(require, appStructs, incProjectionView, 1002))
+	require.EqualValues(-5, getProjectionValue(require, appStructs, decProjectionView, 1001))
+	require.EqualValues(-3, getProjectionValue(require, appStructs, decProjectionView, 1002))
 }
 
 var (
@@ -339,28 +326,19 @@ func Test_ErrorInSyncActualizer(t *testing.T) {
 	createWS(appStructs, istructs.WSID(1099), testWorkspaceDescriptor, istructs.PartitionID(1), istructs.Offset(1))
 
 	t.Run("Emulate the command processor", func(t *testing.T) {
-		ctx := context.Background()
-		appPart, err := appParts.WaitForBorrow(ctx, istructs.AppQName_test1_app1, istructs.PartitionID(1), cluster.ProcessorKind_Command)
-		require.NoError(err)
+		proc := cmdProcMock{appParts}
 
-		defer appPart.Release()
-
-		require.NoError(appPart.DoSyncActualizer(ctx, &cmdWorkpieceMock{appPart: appPart,
-			event: &plogEventMock{wsid: 1001}}))
-		require.NoError(appPart.DoSyncActualizer(ctx, &cmdWorkpieceMock{appPart: appPart,
-			event: &plogEventMock{wsid: 1001}}))
-		require.NoError(appPart.DoSyncActualizer(ctx, &cmdWorkpieceMock{appPart: appPart,
-			event: &plogEventMock{wsid: 1002}}))
-
-		require.ErrorContains(appPart.DoSyncActualizer(ctx, &cmdWorkpieceMock{appPart: appPart,
-			event: &plogEventMock{wsid: 1099}}), errTestError.Error())
+		require.NoError(proc.TestEvent(1001))
+		require.NoError(proc.TestEvent(1001))
+		require.NoError(proc.TestEvent(1002))
+		require.ErrorContains(proc.TestEvent(1099), errTestError.Error())
 	})
 
 	// now read the projection values in workspaces
-	require.Equal(int32(2), getProjectionValue(require, appStructs, incProjectionView, istructs.WSID(1001)))
-	require.Equal(int32(1), getProjectionValue(require, appStructs, incProjectionView, istructs.WSID(1002)))
-	require.Equal(int32(-2), getProjectionValue(require, appStructs, decProjectionView, istructs.WSID(1001)))
-	require.Equal(int32(-1), getProjectionValue(require, appStructs, decProjectionView, istructs.WSID(1002)))
-	require.Equal(int32(0), getProjectionValue(require, appStructs, incProjectionView, istructs.WSID(1099)))
-	require.Equal(int32(0), getProjectionValue(require, appStructs, decProjectionView, istructs.WSID(1099)))
+	require.EqualValues(2, getProjectionValue(require, appStructs, incProjectionView, istructs.WSID(1001)))
+	require.EqualValues(1, getProjectionValue(require, appStructs, incProjectionView, istructs.WSID(1002)))
+	require.EqualValues(-2, getProjectionValue(require, appStructs, decProjectionView, istructs.WSID(1001)))
+	require.EqualValues(-1, getProjectionValue(require, appStructs, decProjectionView, istructs.WSID(1002)))
+	require.EqualValues(0, getProjectionValue(require, appStructs, incProjectionView, istructs.WSID(1099)))
+	require.EqualValues(0, getProjectionValue(require, appStructs, decProjectionView, istructs.WSID(1099)))
 }
