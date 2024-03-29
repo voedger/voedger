@@ -64,7 +64,7 @@ func (bm *blobBaseMessage) Release() {
 func blobReadMessageHandler(bbm blobBaseMessage, blobReadDetails blobReadDetails, blobStorage iblobstorage.IBLOBStorage, bus ibus.IBus, busTimeout time.Duration) {
 	defer close(bbm.doneChan)
 
-	// request to HVM to check the principalToken
+	// request to VVM to check the principalToken
 	req := ibus.Request{
 		Method:   ibus.HTTPMethodPOST,
 		WSID:     int64(bbm.wsid),
@@ -114,7 +114,7 @@ func blobReadMessageHandler(bbm blobBaseMessage, blobReadDetails blobReadDetails
 func writeBLOB(ctx context.Context, wsid int64, appQName string, header map[string][]string, resp http.ResponseWriter,
 	clusterAppBlobberID istructs.ClusterAppID, blobName, blobMimeType string, blobStorage iblobstorage.IBLOBStorage, body io.ReadCloser,
 	blobMaxSize int64, bus ibus.IBus, busTimeout time.Duration) (blobID int64) {
-	// request HVM for check the principalToken and get a blobID
+	// request VVM for check the principalToken and get a blobID
 	req := ibus.Request{
 		Method:   ibus.HTTPMethodPOST,
 		WSID:     wsid,
@@ -233,9 +233,9 @@ func blobWriteMessageHandlerSingle(bbm blobBaseMessage, blobWriteDetails blobWri
 	}
 }
 
-// ctx here is HVM context. It used to track HVM shutdown. Blobber will use the request's context
-func blobMessageHandler(hvmCtx context.Context, sc iprocbus.ServiceChannel, blobStorage iblobstorage.IBLOBStorage, bus ibus.IBus, busTimeout time.Duration) {
-	for hvmCtx.Err() == nil {
+// ctx here is VVM context. It used to track VVM shutdown. Blobber will use the request's context
+func blobMessageHandler(vvmCtx context.Context, sc iprocbus.ServiceChannel, blobStorage iblobstorage.IBLOBStorage, bus ibus.IBus, busTimeout time.Duration) {
+	for vvmCtx.Err() == nil {
 		select {
 		case mesIntf := <-sc:
 			blobMessage := mesIntf.(blobMessage)
@@ -247,7 +247,7 @@ func blobMessageHandler(hvmCtx context.Context, sc iprocbus.ServiceChannel, blob
 			case blobWriteDetailsMultipart:
 				blobWriteMessageHandlerMultipart(blobMessage.blobBaseMessage, blobStorage, blobDetails.boundary, bus, busTimeout)
 			}
-		case <-hvmCtx.Done():
+		case <-vvmCtx.Done():
 			return
 		}
 	}

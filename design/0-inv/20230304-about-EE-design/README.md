@@ -48,9 +48,9 @@ flowchart TD
     subgraph Database[Database Layer]
         DBNode1{{DBNode1}}:::H
         DBNode2{{DBNode2}}:::H
-        DBNode3{{DBNode3}}:::H            
-    end    
- 
+        DBNode3{{DBNode3}}:::H
+    end
+
     %% Relations ====================
 
     Routing -.- Applications
@@ -60,7 +60,7 @@ flowchart TD
     classDef S fill:#B5FFFF
     classDef H fill:#C9E7B7
     classDef G fill:#FFFFFF,stroke:#000000, stroke-width:1px, stroke-dasharray: 5 5
-```    
+```
 
 - RouterNode: Узлы маршрутизации
 - VVMNode: Узлы виртуальных машин
@@ -82,13 +82,13 @@ flowchart TD
 
     VVMNode{{VVMNode}}:::H
 
-    VVMNode --x|up to 8| VVM["VVM(HVM)"]:::S
+    VVMNode --x|up to 8| VVM["VVM"]:::S
 
     classDef B fill:#FFFFB5
     classDef S fill:#B5FFFF
     classDef H fill:#C9E7B7
     classDef G fill:#FFFFFF,stroke:#000000, stroke-width:1px, stroke-dasharray: 5 5
-```  
+```
 
 
 Why 8 VVMs per VVMNode?
@@ -125,7 +125,7 @@ flowchart TD
 
     App[App]:::S
     AppPartition[AppPartition]:::S
-    VVM["VVM(HVM)"]:::S
+    VVM["VVM"]:::S
 
     %% Relations ====================
 
@@ -135,7 +135,7 @@ flowchart TD
     VVMNode -.-x|runs up to 8| VVM
 
     App --x AppPartition
-    
+
     VVM -.-x |processes few| AppPartition
 
 
@@ -196,4 +196,3 @@ Problems
   - Solution: FoundationDB ???
   - FoundationDB problem: space used by App?
   - FoundationDB problem: removing application can take a lot (for Cassandra we just removes keyspace)
-  
