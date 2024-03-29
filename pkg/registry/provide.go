@@ -28,7 +28,7 @@ func Provide(cfg *istructsmem.AppConfigType, asp istructs.IAppStructsProvider, i
 	provideChangePassword(cfg)
 	provideResetPassword(cfg, itokens, federation)
 	cfg.AddAsyncProjectors(
-		provideAsyncProjectorInvokeCreateWorkspaceID(federation, cfg.Name, itokens),
+		provideAsyncProjectorInvokeCreateWorkspaceID(federation, itokens),
 	)
 	return ProvidePackageFS()
 }
@@ -40,10 +40,10 @@ func ProvidePackageFS() parser.PackageFS {
 	}
 }
 
-func provideAsyncProjectorInvokeCreateWorkspaceID(federation coreutils.IFederation, appQName istructs.AppQName, tokensAPI itokens.ITokens) istructs.Projector {
+func provideAsyncProjectorInvokeCreateWorkspaceID(federation coreutils.IFederation, tokensAPI itokens.ITokens) istructs.Projector {
 	return istructs.Projector{
 		Name: qNameProjectorInvokeCreateWorkspaceID_registry,
-		Func: invokeCreateWorkspaceIDProjector(federation, appQName, tokensAPI),
+		Func: invokeCreateWorkspaceIDProjector(federation, tokensAPI),
 	}
 }
 

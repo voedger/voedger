@@ -17,14 +17,14 @@ import (
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-func asyncProjectorApplyUpdateInviteRoles(timeFunc coreutils.TimeFunc, federation coreutils.IFederation, appQName istructs.AppQName, tokens itokens.ITokens, smtpCfg smtp.Cfg) istructs.Projector {
+func asyncProjectorApplyUpdateInviteRoles(timeFunc coreutils.TimeFunc, federation coreutils.IFederation, tokens itokens.ITokens, smtpCfg smtp.Cfg) istructs.Projector {
 	return istructs.Projector{
 		Name: qNameAPApplyUpdateInviteRoles,
-		Func: applyUpdateInviteRolesProjector(timeFunc, federation, appQName, tokens, smtpCfg),
+		Func: applyUpdateInviteRolesProjector(timeFunc, federation, tokens, smtpCfg),
 	}
 }
 
-func applyUpdateInviteRolesProjector(timeFunc coreutils.TimeFunc, federation coreutils.IFederation, appQName istructs.AppQName, tokens itokens.ITokens, smtpCfg smtp.Cfg) func(event istructs.IPLogEvent, state istructs.IState, intents istructs.IIntents) (err error) {
+func applyUpdateInviteRolesProjector(timeFunc coreutils.TimeFunc, federation coreutils.IFederation, tokens itokens.ITokens, smtpCfg smtp.Cfg) func(event istructs.IPLogEvent, state istructs.IState, intents istructs.IIntents) (err error) {
 	return func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
 		skbCDocInvite, err := s.KeyBuilder(state.Record, qNameCDocInvite)
 		if err != nil {
@@ -45,6 +45,8 @@ func applyUpdateInviteRolesProjector(timeFunc coreutils.TimeFunc, federation cor
 		if err != nil {
 			return
 		}
+
+		appQName := s.App()
 
 		token, err := payloads.GetSystemPrincipalToken(tokens, appQName)
 		if err != nil {
