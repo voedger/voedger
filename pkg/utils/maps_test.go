@@ -49,17 +49,17 @@ func TestPairsToMapErrors(t *testing.T) {
 	}
 }
 
-func TestMarshal(t *testing.T) {
+func TestMapToObject(t *testing.T) {
 	o := &TestObject{
 		Data: map[string]interface{}{},
 	}
 	require := require.New(t)
-	require.NoError(Marshal(o, map[string]interface{}{
+	require.NoError(MapToObject(map[string]interface{}{
 		"float64": float64(42),
 		"str":     "str1",
 		"bool":    true,
 		"any":     nil, // will be ignored
-	}))
+	}, o))
 	require.Len(o.Data, 3)
 	require.Equal(float64(42), o.Data["float64"])
 	require.Equal("str1", o.Data["str"])
@@ -67,5 +67,5 @@ func TestMarshal(t *testing.T) {
 	require.True(ok)
 	require.True(v)
 
-	require.Error(Marshal(o, map[string]interface{}{"fld": 42}))
+	require.Error(MapToObject(map[string]interface{}{"fld": 42}, o))
 }
