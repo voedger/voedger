@@ -15,15 +15,15 @@ import (
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-func asyncProjectorApplyCancelAcceptedInvite(timeFunc coreutils.TimeFunc, federation coreutils.IFederation, appQName istructs.AppQName, tokens itokens.ITokens) istructs.Projector {
+func asyncProjectorApplyCancelAcceptedInvite(timeFunc coreutils.TimeFunc, federation coreutils.IFederation, tokens itokens.ITokens) istructs.Projector {
 	return istructs.Projector{
 		Name: qNameAPApplyCancelAcceptedInvite,
-		Func: applyCancelAcceptedInvite(timeFunc, federation, appQName, tokens),
+		Func: applyCancelAcceptedInvite(timeFunc, federation, tokens),
 	}
 }
 
 // AFTER EXEC c.sys.InitiateCancelAcceptedInvite
-func applyCancelAcceptedInvite(timeFunc coreutils.TimeFunc, federation coreutils.IFederation, appQName istructs.AppQName, tokens itokens.ITokens) func(event istructs.IPLogEvent, state istructs.IState, intents istructs.IIntents) (err error) {
+func applyCancelAcceptedInvite(timeFunc coreutils.TimeFunc, federation coreutils.IFederation, tokens itokens.ITokens) func(event istructs.IPLogEvent, state istructs.IState, intents istructs.IIntents) (err error) {
 	return func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
 		skbCDocInvite, err := s.KeyBuilder(state.Record, qNameCDocInvite)
 		if err != nil {
@@ -44,6 +44,8 @@ func applyCancelAcceptedInvite(timeFunc coreutils.TimeFunc, federation coreutils
 		if err != nil {
 			return
 		}
+
+		appQName := s.App()
 
 		token, err := payloads.GetSystemPrincipalToken(tokens, appQName)
 		if err != nil {

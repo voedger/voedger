@@ -16,14 +16,14 @@ import (
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-func asyncProjectorApplyLeaveWorkspace(timeFunc coreutils.TimeFunc, federation coreutils.IFederation, appQName istructs.AppQName, tokens itokens.ITokens) istructs.Projector {
+func asyncProjectorApplyLeaveWorkspace(timeFunc coreutils.TimeFunc, federation coreutils.IFederation, tokens itokens.ITokens) istructs.Projector {
 	return istructs.Projector{
 		Name: qNameAPApplyLeaveWorkspace,
-		Func: applyLeaveWorkspace(timeFunc, federation, appQName, tokens),
+		Func: applyLeaveWorkspace(timeFunc, federation, tokens),
 	}
 }
 
-func applyLeaveWorkspace(timeFunc coreutils.TimeFunc, federation coreutils.IFederation, appQName istructs.AppQName, tokens itokens.ITokens) func(event istructs.IPLogEvent, state istructs.IState, intents istructs.IIntents) (err error) {
+func applyLeaveWorkspace(timeFunc coreutils.TimeFunc, federation coreutils.IFederation, tokens itokens.ITokens) func(event istructs.IPLogEvent, state istructs.IState, intents istructs.IIntents) (err error) {
 	return func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
 		return iterate.ForEachError(event.CUDs, func(rec istructs.ICUDRow) error {
 			//TODO additional check that CUD only once?
@@ -50,6 +50,8 @@ func applyLeaveWorkspace(timeFunc coreutils.TimeFunc, federation coreutils.IFede
 			if err != nil {
 				return err
 			}
+
+			appQName := s.App()
 
 			token, err := payloads.GetSystemPrincipalToken(tokens, appQName)
 			if err != nil {

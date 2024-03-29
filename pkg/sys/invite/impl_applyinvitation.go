@@ -19,15 +19,15 @@ import (
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-func asyncProjectorApplyInvitation(timeFunc coreutils.TimeFunc, federation coreutils.IFederation, appQName istructs.AppQName, tokens itokens.ITokens, smtpCfg smtp.Cfg) istructs.Projector {
+func asyncProjectorApplyInvitation(timeFunc coreutils.TimeFunc, federation coreutils.IFederation, tokens itokens.ITokens, smtpCfg smtp.Cfg) istructs.Projector {
 	return istructs.Projector{
 		Name: qNameAPApplyInvitation,
-		Func: applyInvitationProjector(timeFunc, federation, appQName, tokens, smtpCfg),
+		Func: applyInvitationProjector(timeFunc, federation, tokens, smtpCfg),
 	}
 }
 
 // AFTER EXECUTE ON (InitiateInvitationByEMail)
-func applyInvitationProjector(timeFunc coreutils.TimeFunc, federation coreutils.IFederation, appQName istructs.AppQName, tokens itokens.ITokens, smtpCfg smtp.Cfg) func(event istructs.IPLogEvent, state istructs.IState, intents istructs.IIntents) (err error) {
+func applyInvitationProjector(timeFunc coreutils.TimeFunc, federation coreutils.IFederation, tokens itokens.ITokens, smtpCfg smtp.Cfg) func(event istructs.IPLogEvent, state istructs.IState, intents istructs.IIntents) (err error) {
 	return func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
 		skbViewInviteIndex, err := s.KeyBuilder(state.View, qNameViewInviteIndex)
 		if err != nil {
@@ -100,6 +100,7 @@ func applyInvitationProjector(timeFunc coreutils.TimeFunc, federation coreutils.
 		}
 
 		// Update cdoc.Invite State=Invited
+		appQName := s.App()
 		authToken, err := payloads.GetSystemPrincipalToken(tokens, appQName)
 		if err != nil {
 			return

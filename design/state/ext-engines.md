@@ -73,23 +73,23 @@ flowchart TD
 # WasmEngine: Lifecycle
 ```mermaid
 sequenceDiagram
-    participant HVM
+    participant VVM
     participant CP
     participant ExtInstance
     participant WasmEngine
     participant ProxyWasm
-    HVM->>ExtInstance: Create Instance
-    HVM->>WasmEngine: Create Instance
+    VVM->>ExtInstance: Create Instance
+    VVM->>WasmEngine: Create Instance
     WasmEngine->>ProxyWasm: WasmAbiVersion()
     WasmEngine->>ProxyWasm: WasmInit()
-    HVM->>CP: Create Instance (ExtInstances, WasmEngine)
+    VVM->>CP: Create Instance (ExtInstances, WasmEngine)
     loop commands
     CP->>ExtInstance: Invoke(args)
     ExtInstance->>WasmEngine: Invoke(name, args)
     WasmEngine->>ProxyWasm: WasmRun()
     WasmEngine->>ProxyWasm: WasmReset()
     end
-    HVM->>WasmEngine: Finit()
+    VVM->>WasmEngine: Finit()
     WasmEngine->>ProxyWasm: WasmFinit()
 ```
 
@@ -101,7 +101,7 @@ sequenceDiagram
     participant HostState
     participant ProxyWasm
     participant ProxyHost
-    participant WasmState 
+    participant WasmState
     participant WasmExt
     ExtInstance->>+WasmEngine: Invoke(name, args)
     WasmEngine->>+ProxyWasm: WasmRun(sz_name, kind, arg_ptr)
@@ -113,7 +113,7 @@ sequenceDiagram
     note right of WasmExt: fill key
     WasmExt->>+WasmState: MustExist(key)
     WasmState->>+ProxyHost: HostGetElem(key_ptr)
-    ProxyHost->>HostState: KeyBuilder(storage, ...)    
+    ProxyHost->>HostState: KeyBuilder(storage, ...)
     ProxyHost->>HostState: MustExist(key)
     HostState->>ProxyHost: IStateElement
     ProxyHost->>-WasmState: elem_ptr
@@ -121,7 +121,7 @@ sequenceDiagram
     WasmExt->>WasmState: ValueBuilder(key)
     WasmState->>WasmExt: WasmElementBuilder
     note right of WasmExt: fill element
-    WasmExt->>ProxyWasm: Done Run() 
+    WasmExt->>ProxyWasm: Done Run()
     deactivate WasmExt
     ProxyWasm->>-WasmEngine: Done WasmRun *intents
     WasmEngine->>HostState: NewValue(key1)
@@ -140,14 +140,14 @@ sequenceDiagram
     participant HostState
     participant ProxyWasmHost
     participant ProxyWasm
-    participant WasmState 
+    participant WasmState
     participant WasmExt
     WasmExt->>WasmState: KeyBuilder(storage, ...)
     WasmState->>WasmExt: WasmKeyBuilder
     note right of WasmExt: fill key
     WasmExt->>+WasmState: Read(ctx_id, key)
     WasmState->>+ProxyWasmHost: HostReadElems(ctx_id, key_ptr)
-    ProxyWasmHost->>HostState: KeyBuilder(storage, ...)    
+    ProxyWasmHost->>HostState: KeyBuilder(storage, ...)
     ProxyWasmHost->>HostState: Read(key, callback)
     HostState->>ProxyWasmHost: IStateElement
     ProxyWasmHost->>ProxyWasm: WasmOnRead(ctx_id, key_ptr, elem_ptr)
@@ -164,7 +164,7 @@ sequenceDiagram
 # Wasm ABI
 The list of functions to be exported by WASM:
 ```go
-    WasmAbiVersion_X_Y() 
+    WasmAbiVersion_X_Y()
 
     // Called by host when client is initialized
     WasmInit()
@@ -183,7 +183,7 @@ The list of functions to be exported by WASM:
     // Called by host when client is finalized
     // Must cleanup the resources
     WasmFinit()
-    
+
     // Called by HostReadElems
     WasmOnRead(ctx_id int32, key_ptr int32, element_ptr int32)
 ```

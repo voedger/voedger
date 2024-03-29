@@ -57,7 +57,7 @@ func provideDeactivateWorkspace(cfg *istructsmem.AppConfigType, tokensAPI itoken
 	// target app, target WSID
 	cfg.AddAsyncProjectors(istructs.Projector{
 		Name: qNameProjectorApplyDeactivateWorkspace,
-		Func: projectorApplyDeactivateWorkspace(federation, cfg.Name, tokensAPI, asp),
+		Func: projectorApplyDeactivateWorkspace(federation, tokensAPI, asp),
 	})
 }
 
@@ -179,7 +179,7 @@ func cmdOnChildWorkspaceDeactivatedExec(args istructs.ExecCommandArgs) (err erro
 }
 
 // target app, target WSID
-func projectorApplyDeactivateWorkspace(federation coreutils.IFederation, appQName istructs.AppQName, tokensAPI itokens.ITokens,
+func projectorApplyDeactivateWorkspace(federation coreutils.IFederation, tokensAPI itokens.ITokens,
 	asp istructs.IAppStructsProvider) func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
 	return func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
 		kb, err := s.KeyBuilder(state.Record, authnz.QNameCDocWorkspaceDescriptor)
@@ -196,6 +196,8 @@ func projectorApplyDeactivateWorkspace(federation coreutils.IFederation, appQNam
 		ownerApp := wsDesc.AsString(Field_OwnerApp)
 		ownerWSID := wsDesc.AsInt64(Field_OwnerWSID)
 		ownerID := wsDesc.AsInt64(Field_OwnerID)
+
+		appQName := s.App()
 
 		sysToken, err := payloads.GetSystemPrincipalToken(tokensAPI, appQName)
 		if err != nil {
