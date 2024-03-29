@@ -685,14 +685,14 @@ func (cmdProc *cmdProc) authorizeCUDs(_ context.Context, work interface{}) (err 
 func (cmdProc *cmdProc) writeCUDs(_ context.Context, work interface{}) (err error) {
 	cmd := work.(*cmdWorkpiece)
 	for _, parsedCUD := range cmd.parsedCUDs {
-		var rowWriter istructs.IRowWriter
+		var cud istructs.IRowWriter
 		if parsedCUD.opKind == iauthnz.OperationKind_INSERT {
-			rowWriter = cmd.reb.CUDBuilder().Create(parsedCUD.qName)
-			rowWriter.PutRecordID(appdef.SystemField_ID, istructs.RecordID(parsedCUD.id))
+			cud = cmd.reb.CUDBuilder().Create(parsedCUD.qName)
+			cud.PutRecordID(appdef.SystemField_ID, istructs.RecordID(parsedCUD.id))
 		} else {
-			rowWriter = cmd.reb.CUDBuilder().Update(parsedCUD.existingRecord)
+			cud = cmd.reb.CUDBuilder().Update(parsedCUD.existingRecord)
 		}
-		if err := coreutils.Marshal(rowWriter, parsedCUD.fields); err != nil {
+		if err := coreutils.MapToObject(parsedCUD.fields, cud); err != nil {
 			return parsedCUD.xPath.Error(err)
 		}
 	}

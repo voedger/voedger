@@ -24,7 +24,7 @@ func validateWSKindInitializationData(as istructs.IAppStructs, data map[string]i
 	aob := reb.ArgumentObjectBuilder()
 	aob.PutQName(appdef.SystemField_QName, t.QName())
 	aob.PutRecordID(appdef.SystemField_ID, 1)
-	if err = coreutils.Marshal(aob, data); err != nil {
+	if err = coreutils.MapToObject(data, aob); err != nil {
 		return err
 	}
 	_, err = aob.Build()
