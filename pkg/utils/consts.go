@@ -25,4 +25,6 @@ const (
 	emailVerificationCodeSymbols                 = "1234567890"
 	maxByte                                      = ^byte(0)
 	byteRangeToEmailVerifcationSymbolsRangeCoeff = (float32(maxByte) + 1) / float32(len(emailVerificationCodeSymbols))
+	requestRetryDelayOnConnRefused               = 20 * time.Millisecond
+	requestRetryTimeout                          = 4 * time.Second
 )
