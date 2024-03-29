@@ -1,4 +1,4 @@
-# Command Processor 
+# Command Processor
 ## Architecture
 ```mermaid
 erDiagram
@@ -36,13 +36,13 @@ CommandFunction }|--|| CommandProcessor: "executed by"
 Validator }|--|| CommandProcessor: "executed by"
 CommandProcessor ||--|{ StateStorage: "applies intents to"
 CommandProcessor ||--|{ ExtensionEngine: uses
-ExtensionEngine }|--|| HVM: "provided by"
-CommandProcessor }|--|| HVM: "created by"
+ExtensionEngine }|--|| VVM: "provided by"
+CommandProcessor }|--|| VVM: "created by"
 CommandProcessor }|--|| Bus_HTTPProcessor: "called by"
-Bus_HTTPProcessor ||--|| HVM: "created by"
+Bus_HTTPProcessor ||--|| VVM: "created by"
 ```
 ## Notes
-- Command Function can only generate IIntents of one type (CUDs). 
+- Command Function can only generate IIntents of one type (CUDs).
 - `cuds: [...]` is not a part of ANY command anymore
 - `c.sys.CUD` is not available anymore as a separate function
 
@@ -58,4 +58,4 @@ Bus_HTTPProcessor ||--|| HVM: "created by"
 - Every App's Command represented by separate Rest API resource
     - POST `/api/rest/<wsid>/<cmd_qname>`
 
-    
+
