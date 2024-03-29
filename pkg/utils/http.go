@@ -251,11 +251,22 @@ func req(url string, body string, client *http.Client, opts *reqOpts) (*http.Res
 			Value: v,
 		})
 	}
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("request do() failed: %w", err)
+	start := time.Now()
+	for time.Since(start) < requestRetryTimeout {
+		resp, err := client.Do(req)
+		if err != nil {
+			if IsWSAEError(err, WSAECONNREFUSED) {
+				// https://github.com/voedger/voedger/issues/1694
+				time.Sleep(requestRetryDelayOnConnRefused)
+				continue
+			}
+			// notest
+			return nil, fmt.Errorf("request do() failed: %w", err)
+		}
+		return resp, nil
 	}
-	return resp, nil
+	// notest
+	return nil, errors.New("request do() retry timeout")
 }
 
 // wrapped ErrUnexpectedStatusCode is returned -> *HTTPResponse contains a valid response body
@@ -467,7 +478,10 @@ func readBody(resp *http.Response) (string, error) {
 func discardRespBody(resp *http.Response) error {
 	_, err := io.Copy(io.Discard, resp.Body)
 	if err != nil {
-		return fmt.Errorf("failed to discard response body: %w", err)
+		// https://github.com/voedger/voedger/issues/1694
+		if !IsWSAEError(err, WSAECONNRESET) {
+			return fmt.Errorf("failed to discard response body: %w", err)
+		}
 	}
 	return nil
 }

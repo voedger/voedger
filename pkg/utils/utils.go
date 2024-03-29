@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/voedger/voedger/pkg/istructs"
@@ -68,4 +69,15 @@ func SplitErrors(joinedError error) (errs []error) {
 		return []error{joinedError}
 	}
 	return
+}
+
+func IsWSAEError(err error, errno syscall.Errno) bool {
+	var sysCallErr *os.SyscallError
+	if errors.As(err, &sysCallErr) {
+		var syscallErrno syscall.Errno
+		if errors.As(sysCallErr.Err, &syscallErrno) {
+			return syscallErrno == errno
+		}
+	}
+	return false
 }
