@@ -25,7 +25,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/untillpro/goutils/logger"
 	"golang.org/x/exp/slices"
-	"golang.org/x/sys/windows"
 
 	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
 )
@@ -256,7 +255,7 @@ func req(url string, body string, client *http.Client, opts *reqOpts) (*http.Res
 	for time.Since(start) < requestRetryTimeout {
 		resp, err := client.Do(req)
 		if err != nil {
-			if IsWSAEError(err, windows.WSAECONNREFUSED) {
+			if IsWSAEError(err, WSAECONNREFUSED) {
 				// https://github.com/voedger/voedger/issues/1694
 				time.Sleep(requestRetryDelayOnConnRefused)
 				continue
@@ -480,7 +479,7 @@ func discardRespBody(resp *http.Response) error {
 	_, err := io.Copy(io.Discard, resp.Body)
 	if err != nil {
 		// https://github.com/voedger/voedger/issues/1694
-		if !IsWSAEError(err, windows.WSAECONNRESET) {
+		if !IsWSAEError(err, WSAECONNRESET) {
 			return fmt.Errorf("failed to discard response body: %w", err)
 		}
 	}
