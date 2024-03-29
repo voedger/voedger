@@ -60,10 +60,10 @@ imetrics_Provide ||..|| imetrics_IMetrics : "provides"
 
 ce-se_CLI ||..|| params : "parses cmd line and provides *struct"
 params ||..|| storageCacheSize : has
-params ||..|| hvmName : has
+params ||..|| vvmName : has
 params ||..|| driverParams : has
 params ||..|| appStorageDriverName : has
-os_HostName ||..|| hvmName : "is default for"
+os_HostName ||..|| vvmName : "is default for"
 
 driverParams ||..|| appStorageProviderFactory : "used by"
 driverParams ||..|| appStorageProviderFactory : "used by"
@@ -78,7 +78,7 @@ ce-se_provideIAppStorageProvider ||..|| istorage_IAppStorageProvider : returns
 istorage_IAppStorageProvider ||..|| ce-se_NewAppPartitionStorageFactory : "passed to"
 imetrics_IMetrics ||..|| ce-se_NewAppPartitionStorageFactory : "passed to"
 storageCacheSize ||..|| ce-se_NewAppPartitionStorageFactory : "passed to"
-hvmName ||..|| ce-se_NewAppPartitionStorageFactory : "passed to"
+vvmName ||..|| ce-se_NewAppPartitionStorageFactory : "passed to"
 storageCacheSize ||..|| ce-se_NewAppPartitionStorageFactory : "passed to"
 istorage_IAppStorageProvider ||..|| ce-se_NewAppPartitionStorageFactory : "passed to"
 ce-se_NewAppPartitionStorageFactory ||..|| ce-se_AppPartitionStorages : "returns *struct"
