@@ -3,7 +3,7 @@
     @author Michael Saigachenko
 */
 
-package iextenginetestctx
+package istatetestctx
 
 import "github.com/voedger/voedger/pkg/istructs"
 

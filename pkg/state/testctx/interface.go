@@ -3,7 +3,7 @@
     @author Michael Saigachenko
 */
 
-package iextenginetestctx
+package istatetestctx
 
 import (
 	"github.com/voedger/voedger/pkg/appdef"
@@ -16,12 +16,6 @@ type IExtTestContext interface {
 	PutView(testWSID istructs.WSID, entity appdef.FullQName, callback ViewValueCallback)
 	PutSecret(name string, secret []byte)
 
-	// Invoke
-	Invoke(Extension appdef.FullQName) error
-
 	// Intent
 	HasIntent(storage appdef.QName, entity appdef.FullQName, callback HasIntentCallback) bool
-
-	// Close
-	Close()
 }

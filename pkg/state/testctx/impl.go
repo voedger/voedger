@@ -3,19 +3,17 @@
     @author Michael Saigachenko
 */
 
-package iextenginetestctx
+package istatetestctx
 
 import (
 	"context"
 	"embed"
 	"fmt"
-	"net/url"
 	"path/filepath"
 	"reflect"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/iextengine"
-	iextenginewazero "github.com/voedger/voedger/pkg/iextengine/wazero"
 	"github.com/voedger/voedger/pkg/iratesce"
 	"github.com/voedger/voedger/pkg/isecrets"
 	"github.com/voedger/voedger/pkg/istorage/mem"
@@ -32,10 +30,10 @@ import (
 )
 
 type extPackageContext struct {
-	ctx          context.Context
-	appStructs   istructs.IAppStructs
-	appDef       appdef.IAppDef
-	engine       iextengine.IExtensionEngine
+	ctx        context.Context
+	appStructs istructs.IAppStructs
+	appDef     appdef.IAppDef
+	// engine       iextengine.IExtensionEngine
 	io           iextengine.IExtensionIO
 	cud          istructs.ICUD
 	event        istructs.IPLogEvent
@@ -54,7 +52,7 @@ func (s *secretReader) ReadSecret(name string) (bb []byte, err error) {
 	return nil, fmt.Errorf("secret not found: %s", name)
 }
 
-func newModuleURL(path string) (u *url.URL) {
+/*func newModuleURL(path string) (u *url.URL) {
 	path, err := filepath.Abs(path)
 	if err != nil {
 		panic(err)
@@ -64,14 +62,14 @@ func newModuleURL(path string) (u *url.URL) {
 		panic(err)
 	}
 	return
-}
+}*/
 
-func NewPackageContext(packageDir string, extKind appdef.ExtensionEngineKind, processorKind int, packagePath string, createWorkspaces ...TestWorkspace) IExtTestContext {
+func NewPackageContext(processorKind int, packagePath string, createWorkspaces ...TestWorkspace) IExtTestContext {
 	ctx := &extPackageContext{}
 	ctx.ctx = context.Background()
 	ctx.secretReader = &secretReader{secrets: make(map[string][]byte)}
-	ctx.buildAppDef(packagePath, packageDir, createWorkspaces...)
-	ctx.buildEngine(packagePath, packageDir, extKind)
+	ctx.buildAppDef(packagePath, ".", createWorkspaces...)
+	//ctx.buildEngine(packagePath, packageDir, extKind)
 	ctx.buildState(processorKind)
 	return ctx
 }
@@ -84,9 +82,9 @@ func (ctx *extPackageContext) Arg() istructs.IObject {
 	return ctx.event.ArgumentObject() // TODO: For QP must be different
 }
 
-func (ctx *extPackageContext) Close() {
+/*func (ctx *extPackageContext) Close() {
 	ctx.engine.Close(context.Background())
-}
+}*/
 
 func (ctx *extPackageContext) buildState(processorKind int) {
 
@@ -110,6 +108,7 @@ func (ctx *extPackageContext) buildState(processorKind int) {
 	}
 }
 
+/*
 func (ctx *extPackageContext) buildEngine(packagePath string, packageDir string, engineKind appdef.ExtensionEngineKind) {
 	var extNames []string
 
@@ -136,7 +135,7 @@ func (ctx *extPackageContext) buildEngine(packagePath string, packageDir string,
 		panic(err)
 	}
 	ctx.engine = engines[0]
-}
+}*/
 
 //go:embed testsys/*.sql
 var fsTestSys embed.FS
@@ -250,9 +249,9 @@ func (ctx *extPackageContext) buildAppDef(packagePath string, packageDir string,
 
 }
 
-func (ctx *extPackageContext) Invoke(name appdef.FullQName) error {
+/*func (ctx *extPackageContext) Invoke(name appdef.FullQName) error {
 	return ctx.engine.Invoke(context.Background(), name, ctx.io)
-}
+}*/
 
 func (ctx *extPackageContext) PutEvent(wsid istructs.WSID, name appdef.FullQName, cb NewEventCallback) {
 	localPkgName := ctx.appDef.PackageLocalName(name.PkgPath())
@@ -305,16 +304,20 @@ func (ctx *extPackageContext) HasIntent(storage appdef.QName, entity appdef.Full
 	if err != nil {
 		panic(err)
 	}
+	intent := ctx.io.FindIntent(kb)
+	if intent == nil {
+		return false
+	}
+	bIntens, err := intent.ToBytes()
+	if err != nil {
+		panic(err)
+	}
+
 	vb, err := ctx.io.NewValue(kb)
 	if err != nil {
 		panic(err)
 	}
 	callback(kb, vb)
-	intent := ctx.io.FindIntent(kb)
-	bIntens, err := intent.ToBytes()
-	if err != nil {
-		panic(err)
-	}
 	bVb, err := vb.ToBytes()
 	if err != nil {
 		panic(err)
