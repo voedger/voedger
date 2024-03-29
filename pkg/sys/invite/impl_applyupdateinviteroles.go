@@ -52,8 +52,7 @@ func applyUpdateInviteRolesProjector(timeFunc coreutils.TimeFunc, federation cor
 		}
 
 		//Update subject
-		_, err = coreutils.FederationFunc(
-			federation.URL(),
+		_, err = federation.Func(
 			fmt.Sprintf("api/%s/%d/c.sys.CUD", appQName, event.Workspace()),
 			fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"Roles":"%s"}}]}`, svCDocSubject.AsRecordID(appdef.SystemField_ID), event.ArgumentObject().AsString(Field_Roles)),
 			coreutils.WithAuthorizeBy(token),
@@ -63,8 +62,7 @@ func applyUpdateInviteRolesProjector(timeFunc coreutils.TimeFunc, federation cor
 		}
 
 		//Update joined workspace roles
-		_, err = coreutils.FederationFunc(
-			federation.URL(),
+		_, err = federation.Func(
 			fmt.Sprintf("api/%s/%d/c.sys.UpdateJoinedWorkspaceRoles", appQName, svCDocInvite.AsInt64(field_InviteeProfileWSID)),
 			fmt.Sprintf(`{"args":{"Roles":"%s","InvitingWorkspaceWSID":%d}}`, event.ArgumentObject().AsString(Field_Roles), event.Workspace()),
 			coreutils.WithAuthorizeBy(token),
@@ -111,8 +109,7 @@ func applyUpdateInviteRolesProjector(timeFunc coreutils.TimeFunc, federation cor
 		}
 
 		//Update invite
-		_, err = coreutils.FederationFunc(
-			federation.URL(),
+		_, err = federation.Func(
 			fmt.Sprintf("api/%s/%d/c.sys.CUD", appQName, event.Workspace()),
 			fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"State":%d,"Updated":%d,"Roles":"%s"}}]}`, event.ArgumentObject().AsRecordID(field_InviteID), State_Joined, timeFunc().UnixMilli(), event.ArgumentObject().AsString(Field_Roles)),
 			coreutils.WithAuthorizeBy(token),

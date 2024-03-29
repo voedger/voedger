@@ -25,7 +25,7 @@ const (
 	DefaultRetryAfterSecondsOn503        = 1
 	DefaultMaxPrepareQueries             = 10
 	DefaultBLOBMaxSize                   = router.BLOBMaxSizeType(20971520) // 20Mb
-	DefaultVVMPort                       = router.DefaultRouterPort
+	DefaultVVMPort                       = router.DefaultPort
 	actualizerFlushInterval              = time.Millisecond * 500
 	defaultCassandraPort                 = 9042
 )

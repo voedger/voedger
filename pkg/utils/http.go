@@ -17,6 +17,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -26,8 +27,6 @@ import (
 	"golang.org/x/exp/slices"
 
 	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
-
-	"github.com/voedger/voedger/pkg/istructs"
 )
 
 func NewHTTPErrorf(httpStatus int, args ...interface{}) SysError {
@@ -261,19 +260,21 @@ func req(url string, body string, client *http.Client, opts *reqOpts) (*http.Res
 
 // wrapped ErrUnexpectedStatusCode is returned -> *HTTPResponse contains a valid response body
 // otherwise if err != nil (e.g. socket error)-> *HTTPResponse is nil
-func FederationPOST(federationUrl *url.URL, relativeURL string, body string, optFuncs ...ReqOptFunc) (*HTTPResponse, error) {
+func (f *implIFederation) POST(relativeURL string, body string, optFuncs ...ReqOptFunc) (*HTTPResponse, error) {
 	optFuncs = append(optFuncs, WithMethod(http.MethodPost))
-	return FederationReq(federationUrl, relativeURL, body, optFuncs...)
+	url := f.federationURL().String() + "/" + relativeURL
+	return f.httpClient.Req(url, body, optFuncs...)
 }
 
-func FederationReq(federationUrl *url.URL, relativeURL string, body string, optFuncs ...ReqOptFunc) (*HTTPResponse, error) {
-	url := federationUrl.String() + "/" + relativeURL
-	return Req(url, body, optFuncs...)
+func (f *implIFederation) GET(relativeURL string, body string, optFuncs ...ReqOptFunc) (*HTTPResponse, error) {
+	optFuncs = append(optFuncs, WithMethod(http.MethodGet))
+	url := f.federationURL().String() + "/" + relativeURL
+	return f.httpClient.Req(url, body, optFuncs...)
 }
 
 // status code expected -> DiscardBody, ResponseHandler are used
 // status code is unexpected -> DiscardBody, ResponseHandler are ignored, body is read out, wrapped ErrUnexpectedStatusCode is returned
-func Req(urlStr string, body string, optFuncs ...ReqOptFunc) (*HTTPResponse, error) {
+func (c *implIHTTPClient) Req(urlStr string, body string, optFuncs ...ReqOptFunc) (*HTTPResponse, error) {
 	opts := &reqOpts{
 		headers:   map[string]string{},
 		cookies:   map[string]string{},
@@ -309,24 +310,16 @@ func Req(urlStr string, body string, optFuncs ...ReqOptFunc) (*HTTPResponse, err
 		netURL.Path = opts.relativeURL
 		urlStr = netURL.String()
 	}
-	tr := http.DefaultTransport.(*http.Transport).Clone()
-	tr.DialContext = func(ctx context.Context, network, addr string) (net.Conn, error) {
-		dialer := net.Dialer{}
-		conn, err := dialer.DialContext(ctx, network, addr)
-		if err != nil {
-			return nil, err
-		}
-		err = conn.(*net.TCPConn).SetLinger(0)
-		return conn, err
-	}
-	client := &http.Client{Transport: tr}
 	var resp *http.Response
 	var err error
 	deadline := time.UnixMilli(opts.timeoutMs)
 	tryNum := 0
 	for time.Now().Before(deadline) {
-		if resp, err = req(urlStr, body, client, opts); err != nil {
+		if resp, err = req(urlStr, body, c.client, opts); err != nil {
 			return nil, err
+		}
+		if opts.responseHandler == nil {
+			defer resp.Body.Close()
 		}
 		if resp.StatusCode == http.StatusServiceUnavailable && !slices.Contains(opts.expectedHTTPCodes, http.StatusServiceUnavailable) {
 			if err := discardRespBody(resp); err != nil {
@@ -381,6 +374,10 @@ func Req(urlStr string, body string, optFuncs ...ReqOptFunc) (*HTTPResponse, err
 	return httpResponse, statusErr
 }
 
+func (c *implIHTTPClient) CloseIdleConnections() {
+	c.client.CloseIdleConnections()
+}
+
 func containsAllMessages(strs []string, toFind string) bool {
 	for _, str := range strs {
 		if !strings.Contains(toFind, str) {
@@ -390,8 +387,8 @@ func containsAllMessages(strs []string, toFind string) bool {
 	return true
 }
 
-func FederationFunc(federationUrl *url.URL, relativeURL string, body string, optFuncs ...ReqOptFunc) (*FuncResponse, error) {
-	httpResp, err := FederationPOST(federationUrl, relativeURL, body, optFuncs...)
+func (f *implIFederation) Func(relativeURL string, body string, optFuncs ...ReqOptFunc) (*FuncResponse, error) {
+	httpResp, err := f.POST(relativeURL, body, optFuncs...)
 	isUnexpectedCode := errors.Is(err, ErrUnexpectedStatusCode)
 	if err != nil && !isUnexpectedCode {
 		return nil, err
@@ -464,13 +461,11 @@ func (resp *HTTPResponse) RequireContainsError(t *testing.T, messagePart string)
 
 func readBody(resp *http.Response) (string, error) {
 	respBody, err := io.ReadAll(resp.Body)
-	resp.Body.Close()
 	return string(respBody), err
 }
 
 func discardRespBody(resp *http.Response) error {
 	_, err := io.Copy(io.Discard, resp.Body)
-	resp.Body.Close()
 	if err != nil {
 		return fmt.Errorf("failed to discard response body: %w", err)
 	}
@@ -511,18 +506,49 @@ func (fe FuncError) Unwrap() error {
 	return fe.SysError
 }
 
+type implIHTTPClient struct {
+	client *http.Client
+}
+
 type implIFederation struct {
+	httpClient    IHTTPClient
 	federationURL func() *url.URL
 }
 
-func (f *implIFederation) POST(appQName istructs.AppQName, wsid istructs.WSID, fn string, body string, opts ...ReqOptFunc) (*HTTPResponse, error) {
-	return FederationPOST(f.federationURL(), fmt.Sprintf(`api/%s/%d/%s`, appQName, wsid, fn), body, opts...)
+func (f *implIFederation) URLStr() string {
+	return f.federationURL().String()
 }
 
-func (f *implIFederation) URL() *url.URL {
-	return f.federationURL()
+func (f *implIFederation) Port() int {
+	res, err := strconv.Atoi(f.federationURL().Port())
+	if err != nil {
+		// notest
+		panic(err)
+	}
+	return res
 }
 
-func NewIFederation(federationURL func() *url.URL) IFederation {
-	return &implIFederation{federationURL: federationURL}
+func NewIHTTPClient() IHTTPClient {
+	// set linger - see https://github.com/voedger/voedger/issues/415
+	tr := http.DefaultTransport.(*http.Transport).Clone()
+	tr.DialContext = func(ctx context.Context, network, addr string) (net.Conn, error) {
+		dialer := net.Dialer{}
+		// return dialer.DialContext(ctx, network, addr)
+		conn, err := dialer.DialContext(ctx, network, addr)
+		if err != nil {
+			return nil, err
+		}
+
+		err = conn.(*net.TCPConn).SetLinger(0)
+		return conn, err
+	}
+	return &implIHTTPClient{client: &http.Client{Transport: tr}}
+}
+
+func NewIFederation(federationURL func() *url.URL) (federation IFederation, cleanup func()) {
+	fed := &implIFederation{
+		httpClient:    NewIHTTPClient(),
+		federationURL: federationURL,
+	}
+	return fed, fed.httpClient.CloseIdleConnections
 }

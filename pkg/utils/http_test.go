@@ -204,9 +204,10 @@ func TestHTTP(t *testing.T) {
 	port := listener.Addr().(*net.TCPAddr).Port
 	federationURL, err := url.Parse(fmt.Sprintf("http://127.0.0.1:%d", port))
 	require.NoError(err)
-	federation := NewIFederation(func() *url.URL {
+	federation, cleanup := NewIFederation(func() *url.URL {
 		return federationURL
 	})
+	defer cleanup()
 
 	t.Run("basic", func(t *testing.T) {
 		handler = func(w http.ResponseWriter, r *http.Request) {
@@ -214,7 +215,7 @@ func TestHTTP(t *testing.T) {
 			require.NoError(err)
 			w.Write([]byte(fmt.Sprintf("hello, %s", string(body))))
 		}
-		resp, err := FederationPOST(federation.URL(), "test", "world")
+		resp, err := federation.POST("test", "world")
 		require.NoError(err)
 		require.Equal("hello, world", resp.Body)
 		require.Equal(http.StatusOK, resp.HTTPResp.StatusCode)
@@ -228,7 +229,7 @@ func TestHTTP(t *testing.T) {
 			require.Equal("headerValue", r.Header["Header-Key"][0])
 			require.Equal("Bearer authorizationValue", r.Header["Authorization"][0])
 		}
-		resp, err := FederationPOST(federation.URL(), "test", "world",
+		resp, err := federation.POST("test", "world",
 			WithCookies("cookieKey", "cookieValue"),
 			WithHeaders("Header-Key", "headerValue"),
 			WithAuthorizeBy("authorizationValue"),
