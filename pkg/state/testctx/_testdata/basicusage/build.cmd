@@ -1,1 +1,0 @@
-tinygo build --no-debug -o pkg.wasm -scheduler=none -gc=leaking -target=wasi -opt=2 -print-allocs=.
