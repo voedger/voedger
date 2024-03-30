@@ -3,7 +3,7 @@
     @author Michael Saigachenko
 */
 
-package istatetestctx
+package exttinygotests
 
 import (
 	"context"
@@ -11,8 +11,11 @@ import (
 	"fmt"
 	"path/filepath"
 	"reflect"
+	"testing"
 
+	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/exttinygo"
 	"github.com/voedger/voedger/pkg/iextengine"
 	"github.com/voedger/voedger/pkg/iratesce"
 	"github.com/voedger/voedger/pkg/isecrets"
@@ -38,7 +41,13 @@ type extPackageContext struct {
 	event        istructs.IPLogEvent
 	plogGen      istructs.IIDGenerator
 	secretReader isecrets.ISecretReader
+
+	keyBuilders   []istructs.IStateKeyBuilder
+	values        []istructs.IStateValue
+	valueBuilders []istructs.IValueBuilder
 }
+
+var currentCtx *extPackageContext
 
 type secretReader struct {
 	secrets map[string][]byte
@@ -52,13 +61,38 @@ func (s *secretReader) ReadSecret(name string) (bb []byte, err error) {
 }
 
 func NewPackageContext(processorKind int, packagePath string, createWorkspaces ...TestWorkspace) IExtTestContext {
-	ctx := &extPackageContext{}
-	ctx.ctx = context.Background()
-	ctx.secretReader = &secretReader{secrets: make(map[string][]byte)}
-	ctx.buildAppDef(packagePath, ".", createWorkspaces...)
-	//ctx.buildEngine(packagePath, packageDir, extKind)
-	ctx.buildState(processorKind)
-	return ctx
+	currentCtx = &extPackageContext{}
+	currentCtx.ctx = context.Background()
+	currentCtx.secretReader = &secretReader{secrets: make(map[string][]byte)}
+	currentCtx.buildAppDef(packagePath, ".", createWorkspaces...)
+	currentCtx.buildState(processorKind)
+
+	exttinygo.KeyBuilder = func(storage, entity string) (kb exttinygo.TKeyBuilder) {
+		storageQname := appdef.MustParseQName(storage)
+		var entityQname appdef.QName
+		if entity == "" {
+			entityQname = appdef.NullQName
+		} else {
+			entityFullQname := appdef.MustParseFullQName(entity)
+			entityLocalPkg := currentCtx.io.PackageLocalName(entityFullQname.PkgPath())
+			entityQname = appdef.NewQName(entityLocalPkg, entityFullQname.Entity())
+
+		}
+		skb, err := currentCtx.io.KeyBuilder(storageQname, entityQname)
+		if err != nil {
+			panic(err)
+		}
+		kb = exttinygo.TKeyBuilder(len(currentCtx.keyBuilders))
+		currentCtx.keyBuilders = append(currentCtx.keyBuilders, skb)
+		return kb
+	}
+
+	initExt()
+	initKeyBuilder()
+	initValue()
+	initIntent()
+
+	return currentCtx
 }
 
 func (ctx *extPackageContext) WSID() istructs.WSID {
@@ -247,31 +281,52 @@ func (ctx *extPackageContext) PutSecret(name string, secret []byte) {
 	ctx.secretReader.(*secretReader).secrets[name] = secret
 }
 
-func (ctx *extPackageContext) HasIntent(storage appdef.QName, entity appdef.FullQName, callback HasIntentCallback) bool {
+type intentAssertions struct {
+	t   *testing.T
+	kb  istructs.IStateKeyBuilder
+	vb  istructs.IStateValueBuilder
+	ctx *extPackageContext
+}
+
+func (ia *intentAssertions) Exists() {
+	require.NotNil(ia.t, ia.vb, "Expected intent to exist")
+}
+
+func (ia *intentAssertions) Equal(vbc ValueBuilderCallback) {
+	if ia.vb == nil {
+		panic("intent not found")
+	}
+	bIntens, err := ia.vb.ToBytes()
+	if err != nil {
+		panic(err)
+	}
+
+	vb, err := ia.ctx.io.NewValue(ia.kb)
+	if err != nil {
+		panic(err)
+	}
+	vbc(vb)
+	bVb, err := vb.ToBytes()
+	if err != nil {
+		panic(err)
+	}
+
+	require.True(ia.t, reflect.DeepEqual(bIntens, bVb), "Expected intents to be equal")
+
+}
+
+func (ctx *extPackageContext) RequireIntent(t *testing.T, storage appdef.QName, entity appdef.FullQName, kbc KeyBuilderCallback) IIntentAssertions {
 	localPkgName := ctx.appDef.PackageLocalName(entity.PkgPath())
 	localEntity := appdef.NewQName(localPkgName, entity.Entity())
 	kb, err := ctx.io.KeyBuilder(storage, localEntity)
 	if err != nil {
 		panic(err)
 	}
-	intent := ctx.io.FindIntent(kb)
-	if intent == nil {
-		return false
+	kbc(kb)
+	return &intentAssertions{
+		t:   t,
+		kb:  kb,
+		vb:  ctx.io.FindIntent(kb),
+		ctx: ctx,
 	}
-	bIntens, err := intent.ToBytes()
-	if err != nil {
-		panic(err)
-	}
-
-	vb, err := ctx.io.NewValue(kb)
-	if err != nil {
-		panic(err)
-	}
-	callback(kb, vb)
-	bVb, err := vb.ToBytes()
-	if err != nil {
-		panic(err)
-	}
-
-	return reflect.DeepEqual(bIntens, bVb)
 }

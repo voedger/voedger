@@ -8,19 +8,16 @@ package main
 import (
 	"testing"
 
-	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/appdef"
+	test "github.com/voedger/voedger/pkg/exttinygo/exttinygotests"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/state"
-	test "github.com/voedger/voedger/pkg/state/testctx"
 )
 
 const testPkg = "github.com/untillpro/airs-bp3/packages/mypkg"
 const testWSID = istructs.WSID(1)
 
 func Test_CalcOrderedItems(t *testing.T) {
-
-	require := require.New(t)
 
 	// Construct test context
 	ctx := test.NewPackageContext(
@@ -52,11 +49,12 @@ func Test_CalcOrderedItems(t *testing.T) {
 	CalcOrderedItems()
 
 	// Check the intent
-	require.True(ctx.HasIntent(state.View, appdef.NewFullQName(testPkg, "OrderedItems"), func(key istructs.IStateKeyBuilder, value istructs.IStateValueBuilder) {
+	ctx.RequireIntent(t, state.View, appdef.NewFullQName(testPkg, "OrderedItems"), func(key istructs.IStateKeyBuilder) {
 		key.PutInt32("Year", 2023)
 		key.PutInt32("Month", 1)
 		key.PutInt32("Day", 1)
+	}).Equal(func(value istructs.IStateValueBuilder) {
 		value.PutInt64("Amount", 200)
-	}))
+	})
 
 }

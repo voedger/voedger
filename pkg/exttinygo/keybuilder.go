@@ -14,8 +14,14 @@ func keyBuilderImpl(storage, entity string) TKeyBuilder {
 		uint32(uintptr(unsafe.Pointer(unsafe.StringData(entity)))), uint32(len(entity))))
 }
 
-func (k TKeyBuilder) PutInt32(name string, value int32) {
+var KeyBuilderPutInt32 func(k TKeyBuilder, name string, value int32) = keyBuilderPutInt32
+
+func keyBuilderPutInt32(k TKeyBuilder, name string, value int32) {
 	hostRowWriterPutInt32(uint64(k), 0, uint32(uintptr(unsafe.Pointer(unsafe.StringData(name)))), uint32(len(name)), uint32(value))
+}
+
+func (k TKeyBuilder) PutInt32(name string, value int32) {
+	KeyBuilderPutInt32(k, name, value)
 }
 
 func (k TKeyBuilder) PutInt64(name string, value int64) {

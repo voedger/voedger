@@ -9,12 +9,17 @@ import (
 	"unsafe"
 )
 
+// TODO: move to internal?
+var IntentPutInt64 = func(i TIntent, name string, value int64) {
+	hostRowWriterPutInt64(uint64(i), 1, uint32(uintptr(unsafe.Pointer(unsafe.StringData(name)))), uint32(len(name)), uint64(value))
+}
+
 func (i TIntent) PutInt32(name string, value int32) {
 	hostRowWriterPutInt32(uint64(i), 1, uint32(uintptr(unsafe.Pointer(unsafe.StringData(name)))), uint32(len(name)), uint32(value))
 }
 
 func (i TIntent) PutInt64(name string, value int64) {
-	hostRowWriterPutInt64(uint64(i), 1, uint32(uintptr(unsafe.Pointer(unsafe.StringData(name)))), uint32(len(name)), uint64(value))
+	IntentPutInt64(i, name, value)
 }
 
 func (i TIntent) PutFloat32(name string, value float32) {

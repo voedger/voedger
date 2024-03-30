@@ -9,8 +9,29 @@ import (
 	"unsafe"
 )
 
-func (v TValue) Len() int {
+// TODO: move to internal?
+var ValueLen = func(v TValue) int {
 	return int(hostValueLength(uint64(v)))
+}
+
+var ValueAsValue = func(v TValue, name string) TValue {
+	return TValue(hostValueAsValue(uint64(v), uint32(uintptr(unsafe.Pointer(unsafe.StringData(name)))), uint32(len(name))))
+}
+
+var ValueGetAsValue = func(v TValue, index int) TValue {
+	return TValue(hostValueGetAsValue(uint64(v), uint32(index)))
+}
+
+var ValueAsInt32 = func(v TValue, name string) int32 {
+	return int32(hostValueAsInt32(uint64(v), uint32(uintptr(unsafe.Pointer(unsafe.StringData(name)))), uint32(len(name))))
+}
+
+var ValueAsInt64 = func(v TValue, name string) int64 {
+	return int64(hostValueAsInt64(uint64(v), uint32(uintptr(unsafe.Pointer(unsafe.StringData(name)))), uint32(len(name))))
+}
+
+func (v TValue) Len() int {
+	return ValueLen(v)
 }
 
 func (v TValue) AsString(name string) string {
@@ -24,11 +45,11 @@ func (v TValue) AsBytes(name string) (ret []byte) {
 }
 
 func (v TValue) AsInt32(name string) int32 {
-	return int32(hostValueAsInt32(uint64(v), uint32(uintptr(unsafe.Pointer(unsafe.StringData(name)))), uint32(len(name))))
+	return ValueAsInt32(v, name)
 }
 
 func (v TValue) AsInt64(name string) int64 {
-	return int64(hostValueAsInt64(uint64(v), uint32(uintptr(unsafe.Pointer(unsafe.StringData(name)))), uint32(len(name))))
+	return ValueAsInt64(v, name)
 }
 
 func (v TValue) AsFloat32(name string) float32 {
@@ -53,7 +74,7 @@ func (v TValue) AsBool(name string) bool {
 }
 
 func (v TValue) AsValue(name string) TValue {
-	return TValue(hostValueAsValue(uint64(v), uint32(uintptr(unsafe.Pointer(unsafe.StringData(name)))), uint32(len(name))))
+	return ValueAsValue(v, name)
 }
 
 func (v TValue) GetAsBytes(index int) (ret []byte) {
@@ -81,7 +102,7 @@ func (v TValue) GetAsFloat64(index int) float64 {
 }
 
 func (v TValue) GetAsValue(index int) TValue {
-	return TValue(hostValueGetAsValue(uint64(v), uint32(index)))
+	return ValueGetAsValue(v, index)
 }
 
 func (v TValue) GetAsQName(index int) QName {
