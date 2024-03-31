@@ -5,22 +5,30 @@
 
 package safestate
 
-import "github.com/voedger/voedger/pkg/appdef"
-
 type TSafeKeyBuilder int64
+type TSafeValue int64
+type TSafeIntent int64
 
 type ISafeState interface {
-	KeyBuilder(storage, entity appdef.QName) TSafeKeyBuilder
+	// Basic functions
+	KeyBuilder(storage, entityFullQname string) TSafeKeyBuilder
+	MustGetValue(key TSafeKeyBuilder) TSafeValue
+	QueryValue(key TSafeKeyBuilder) (value TSafeValue, ok bool)
+	NewValue(key TSafeKeyBuilder) (v TSafeIntent)
+	UpdateValue(key TSafeKeyBuilder, existingValue TSafeValue) (v TSafeIntent)
 
-	// CanExist(key TSafeKeyBuilder) (value IStateValue, ok bool, err error)
+	// Key Builder
 
-	// CanExistAll(keys []IStateKeyBuilder, callback StateValueCallback) (err error)
+	KeyBuilderPutInt32(key TSafeKeyBuilder, name string, value int32)
 
-	// MustExist(key IStateKeyBuilder) (value IStateValue, err error)
+	// Value
 
-	// MustExistAll(keys []IStateKeyBuilder, callback StateValueCallback) (err error)
+	ValueAsValue(v TSafeValue, name string) (result TSafeValue)
+	ValueLen(v TSafeValue) int
+	ValueGetAsValue(v TSafeValue, index int) (result TSafeValue)
+	ValueAsInt32(v TSafeValue, name string) int32
+	ValueAsInt64(v TSafeValue, name string) int64
 
-	// MustNotExist(key IStateKeyBuilder) (err error)
-
-	// MustNotExistAll(keys []IStateKeyBuilder) (err error)
+	// Intent
+	IntentPutInt64(v TSafeIntent, name string, value int64)
 }

@@ -1,9 +1,8 @@
 /*
-  - Copyright (c) 2023-present unTill Software Development Group B.V.
-    @author Michael Saigachenko
-*/
-
-package exttinygotests
+ * Copyright (c) 2024-present unTill Software Development Group B. V.
+ * @author Michael Saigachenko
+ */
+package teststate
 
 import (
 	"context"
@@ -15,41 +14,41 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/exttinygo"
-	"github.com/voedger/voedger/pkg/iextengine"
 	"github.com/voedger/voedger/pkg/iratesce"
 	"github.com/voedger/voedger/pkg/isecrets"
 	"github.com/voedger/voedger/pkg/istorage/mem"
-	istorageimpl "github.com/voedger/voedger/pkg/istorage/provider"
-	"github.com/voedger/voedger/pkg/state/safestate"
-	"github.com/voedger/voedger/pkg/state/teststate"
-	"github.com/voedger/voedger/pkg/sys/authnz"
 
+	istorageimpl "github.com/voedger/voedger/pkg/istorage/provider"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	"github.com/voedger/voedger/pkg/itokensjwt"
 	"github.com/voedger/voedger/pkg/parser"
 	"github.com/voedger/voedger/pkg/state"
+	"github.com/voedger/voedger/pkg/sys/authnz"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-type extPackageContext struct {
+type testState struct {
+	state.IUnsafeState
+
 	ctx          context.Context
 	appStructs   istructs.IAppStructs
 	appDef       appdef.IAppDef
-	io           iextengine.IExtensionIO
 	cud          istructs.ICUD
 	event        istructs.IPLogEvent
 	plogGen      istructs.IIDGenerator
 	secretReader isecrets.ISecretReader
-
-	keyBuilders   []istructs.IStateKeyBuilder
-	values        []istructs.IStateValue
-	valueBuilders []istructs.IValueBuilder
 }
 
-var currentCtx *extPackageContext
+func NewTestState(processorKind int, packagePath string, createWorkspaces ...TestWorkspace) ITestState {
+	ts := &testState{}
+	ts.ctx = context.Background()
+	ts.secretReader = &secretReader{secrets: make(map[string][]byte)}
+	ts.buildAppDef(packagePath, ".", createWorkspaces...)
+	ts.buildState(processorKind)
+	return ts
+}
 
 type secretReader struct {
 	secrets map[string][]byte
@@ -62,27 +61,15 @@ func (s *secretReader) ReadSecret(name string) (bb []byte, err error) {
 	return nil, fmt.Errorf("secret not found: %s", name)
 }
 
-func NewTestState(processorKind int, packagePath string, createWorkspaces ...teststate.TestWorkspace) teststate.ITestState {
-
-	ts := teststate.NewTestState(processorKind, packagePath, createWorkspaces...)
-	safestate := safestate.ProvideSafeState(ts)
-
-	exttinygo.KeyBuilder = func(storage, entity string) (b exttinygo.TKeyBuilder) {
-		return exttinygo.TKeyBuilder(safestate.KeyBuilder(storage, entity))
-	}
-
-	return ts
-}
-
-func (ctx *extPackageContext) WSID() istructs.WSID {
+func (ctx *testState) WSID() istructs.WSID {
 	return ctx.event.Workspace() // TODO: For QP must be different
 }
 
-func (ctx *extPackageContext) Arg() istructs.IObject {
+func (ctx *testState) Arg() istructs.IObject {
 	return ctx.event.ArgumentObject() // TODO: For QP must be different
 }
 
-func (ctx *extPackageContext) buildState(processorKind int) {
+func (ctx *testState) buildState(processorKind int) {
 
 	appFunc := func() istructs.IAppStructs { return ctx.appStructs }
 	eventFunc := func() istructs.IPLogEvent { return ctx.event }
@@ -96,18 +83,18 @@ func (ctx *extPackageContext) buildState(processorKind int) {
 
 	switch processorKind {
 	case ProcKind_Actualizer:
-		ctx.io = state.ProvideAsyncActualizerStateFactory()(ctx.ctx, appFunc, partitionIDFunc, wsidFunc, nil, ctx.secretReader, eventFunc, IntentsLimit, BundlesLimit)
+		ctx.IUnsafeState = state.ProvideAsyncActualizerStateFactory()(ctx.ctx, appFunc, partitionIDFunc, wsidFunc, nil, ctx.secretReader, eventFunc, IntentsLimit, BundlesLimit)
 	case ProcKind_CommandProcessor:
-		ctx.io = state.ProvideCommandProcessorStateFactory()(ctx.ctx, appFunc, partitionIDFunc, wsidFunc, ctx.secretReader, cudFunc, nil, nil, IntentsLimit, nil, argFunc, unloggedArgFunc)
+		ctx.IUnsafeState = state.ProvideCommandProcessorStateFactory()(ctx.ctx, appFunc, partitionIDFunc, wsidFunc, ctx.secretReader, cudFunc, nil, nil, IntentsLimit, nil, argFunc, unloggedArgFunc)
 	case ProcKind_QueryProcessor:
-		ctx.io = state.ProvideQueryProcessorStateFactory()(ctx.ctx, appFunc, partitionIDFunc, wsidFunc, ctx.secretReader, nil, nil, argFunc)
+		ctx.IUnsafeState = state.ProvideQueryProcessorStateFactory()(ctx.ctx, appFunc, partitionIDFunc, wsidFunc, ctx.secretReader, nil, nil, argFunc)
 	}
 }
 
 //go:embed testsys/*.sql
 var fsTestSys embed.FS
 
-func (ctx *extPackageContext) buildAppDef(packagePath string, packageDir string, createWorkspaces ...TestWorkspace) {
+func (ctx *testState) buildAppDef(packagePath string, packageDir string, createWorkspaces ...TestWorkspace) {
 
 	absPath, err := filepath.Abs(packageDir)
 	if err != nil {
@@ -216,7 +203,7 @@ func (ctx *extPackageContext) buildAppDef(packagePath string, packageDir string,
 
 }
 
-func (ctx *extPackageContext) PutEvent(wsid istructs.WSID, name appdef.FullQName, cb NewEventCallback) {
+func (ctx *testState) PutEvent(wsid istructs.WSID, name appdef.FullQName, cb NewEventCallback) {
 	localPkgName := ctx.appDef.PackageLocalName(name.PkgPath())
 	reb := ctx.appStructs.Events().GetNewRawEventBuilder(istructs.NewRawEventBuilderParams{
 		GenericRawEventBuilderParams: istructs.GenericRawEventBuilderParams{
@@ -241,7 +228,7 @@ func (ctx *extPackageContext) PutEvent(wsid istructs.WSID, name appdef.FullQName
 	ctx.event = event
 }
 
-func (ctx *extPackageContext) PutView(wsid istructs.WSID, entity appdef.FullQName, callback ViewValueCallback) {
+func (ctx *testState) PutView(wsid istructs.WSID, entity appdef.FullQName, callback ViewValueCallback) {
 	localPkgName := ctx.appDef.PackageLocalName(entity.PkgPath())
 	v := TestViewValue{
 		wsid: wsid,
@@ -256,7 +243,7 @@ func (ctx *extPackageContext) PutView(wsid istructs.WSID, entity appdef.FullQNam
 	}
 }
 
-func (ctx *extPackageContext) PutSecret(name string, secret []byte) {
+func (ctx *testState) PutSecret(name string, secret []byte) {
 	ctx.secretReader.(*secretReader).secrets[name] = secret
 }
 
@@ -264,7 +251,7 @@ type intentAssertions struct {
 	t   *testing.T
 	kb  istructs.IStateKeyBuilder
 	vb  istructs.IStateValueBuilder
-	ctx *extPackageContext
+	ctx *testState
 }
 
 func (ia *intentAssertions) Exists() {
@@ -280,7 +267,7 @@ func (ia *intentAssertions) Equal(vbc ValueBuilderCallback) {
 		panic(err)
 	}
 
-	vb, err := ia.ctx.io.NewValue(ia.kb)
+	vb, err := ia.ctx.IUnsafeState.NewValue(ia.kb)
 	if err != nil {
 		panic(err)
 	}
@@ -294,10 +281,10 @@ func (ia *intentAssertions) Equal(vbc ValueBuilderCallback) {
 
 }
 
-func (ctx *extPackageContext) RequireIntent(t *testing.T, storage appdef.QName, entity appdef.FullQName, kbc KeyBuilderCallback) IIntentAssertions {
+func (ctx *testState) RequireIntent(t *testing.T, storage appdef.QName, entity appdef.FullQName, kbc KeyBuilderCallback) IIntentAssertions {
 	localPkgName := ctx.appDef.PackageLocalName(entity.PkgPath())
 	localEntity := appdef.NewQName(localPkgName, entity.Entity())
-	kb, err := ctx.io.KeyBuilder(storage, localEntity)
+	kb, err := ctx.IUnsafeState.KeyBuilder(storage, localEntity)
 	if err != nil {
 		panic(err)
 	}
@@ -305,7 +292,7 @@ func (ctx *extPackageContext) RequireIntent(t *testing.T, storage appdef.QName, 
 	return &intentAssertions{
 		t:   t,
 		kb:  kb,
-		vb:  ctx.io.FindIntent(kb),
+		vb:  ctx.IUnsafeState.FindIntent(kb),
 		ctx: ctx,
 	}
 }
