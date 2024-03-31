@@ -12,6 +12,7 @@ import (
 	test "github.com/voedger/voedger/pkg/exttinygo/exttinygotests"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/state"
+	"github.com/voedger/voedger/pkg/state/teststate"
 )
 
 const testPkg = "github.com/untillpro/airs-bp3/packages/mypkg"
@@ -20,10 +21,10 @@ const testWSID = istructs.WSID(1)
 func Test_CalcOrderedItems(t *testing.T) {
 
 	// Construct test context
-	ctx := test.NewPackageContext(
-		test.ProcKind_Actualizer,
+	ctx := test.NewTestState(
+		teststate.ProcKind_Actualizer,
 		testPkg,
-		test.TestWorkspace{WorkspaceDescriptor: "RestaurantDescriptor", WSID: testWSID})
+		teststate.TestWorkspace{WorkspaceDescriptor: "RestaurantDescriptor", WSID: testWSID})
 
 	// Fill state
 	ctx.PutSecret("encryptionKey", []byte("idkfa"))
