@@ -166,12 +166,11 @@ func newPackageItem(defaultLocalName string, pkgInfos map[string]ormPackageInfo,
 	}
 	pkgInfo := pkgInfos[localName]
 	return ormPackageItem{
-		Package:    pkgInfo,
-		QName:      qName.String(),
-		TypeQName:  fmt.Sprintf("%s.%s", pkgInfo.FullPath, name),
-		Name:       name,
-		Type:       getObjType(obj),
-		SqlContent: dummySqlContent,
+		Package:   pkgInfo,
+		QName:     qName.String(),
+		TypeQName: fmt.Sprintf("%s.%s", pkgInfo.FullPath, name),
+		Name:      name,
+		Type:      getObjType(obj),
 	}
 }
 

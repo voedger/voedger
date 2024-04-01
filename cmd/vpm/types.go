@@ -39,11 +39,12 @@ type ormPackage struct {
 }
 
 type ormPackageItem struct {
-	Package    ormPackageInfo
-	QName      string
-	TypeQName  string
-	Name       string
-	Type       string
+	Package   ormPackageInfo
+	QName     string
+	TypeQName string
+	Name      string
+	Type      string
+	// TODO: find a way to extract sql-code of the package item from parser/appdef
 	SqlContent string
 }
 
