@@ -314,7 +314,7 @@ func TestTakeQNamesFromWorkspace(t *testing.T) {
 			}
 			body := `{"args":{"Input":"Str"}}`
 			ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
-			vit.PostWS(ws, "c.app1pkg.MockCmd", body, coreutils.Expect400("app1pkg.docInAnotherWS", "does not exist in the workspace app1pkg.test_ws"))
+			vit.PostWS(ws, "c.app1pkg.MockCmd", body, coreutils.WithExpectedCode(500, "app1pkg.docInAnotherWS is not available in workspace with descriptor app1pkg.test_ws"))
 		})
 	})
 }

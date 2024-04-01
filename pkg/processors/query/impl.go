@@ -266,7 +266,7 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 		operator("create state", func(ctx context.Context, qw *queryWork) (err error) {
 			qw.state = state.ProvideQueryProcessorStateFactory()(
 				qw.msg.RequestCtx(),
-				qw.appStructs,
+				func() istructs.IAppStructs { return qw.appStructs },
 				state.SimplePartitionIDFunc(qw.msg.Partition()),
 				state.SimpleWSIDFunc(qw.msg.WSID()),
 				qw.secretReader,

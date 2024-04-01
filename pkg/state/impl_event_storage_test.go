@@ -80,7 +80,7 @@ func TestEventStorage_Get(t *testing.T) {
 		return event
 	}
 
-	s := ProvideAsyncActualizerStateFactory()(context.Background(), app, nil, nil, nil, nil, eventFunc, 0, 0)
+	s := ProvideAsyncActualizerStateFactory()(context.Background(), appStructsFunc(app), nil, nil, nil, nil, eventFunc, 0, 0)
 
 	require.Equal(event, s.PLogEvent())
 
@@ -112,7 +112,7 @@ func TestEventStorage_Get(t *testing.T) {
 	require.Equal(tQname, cud1.AsQName("sys.QName"))
 
 	// test sync actualizer state
-	syncState := ProvideSyncActualizerStateFactory()(context.Background(), app, nil, nil, nil, nil, eventFunc, 0)
+	syncState := ProvideSyncActualizerStateFactory()(context.Background(), appStructsFunc(app), nil, nil, nil, nil, eventFunc, 0)
 	require.Equal(event, syncState.PLogEvent())
 }
 

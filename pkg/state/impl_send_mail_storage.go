@@ -135,6 +135,6 @@ func (s *sendMailStorage) ApplyBatch(items []ApplyBatchItem) (err error) {
 	}
 	return nil
 }
-func (s *sendMailStorage) ProvideValueBuilder(istructs.IStateKeyBuilder, istructs.IStateValueBuilder) istructs.IStateValueBuilder {
-	return nil
+func (s *sendMailStorage) ProvideValueBuilder(istructs.IStateKeyBuilder, istructs.IStateValueBuilder) (istructs.IStateValueBuilder, error) {
+	return nil, nil
 }

@@ -16,6 +16,7 @@ func TestAddView(t *testing.T) {
 	require := require.New(t)
 
 	adb := New()
+	adb.AddPackage("test", "test.com/test")
 
 	numName := NewQName("test", "natural")
 	_ = adb.AddData(numName, DataKind_int64, NullQName, MinExcl(0))
@@ -349,24 +350,27 @@ func TestAddView(t *testing.T) {
 func TestViewValidate(t *testing.T) {
 	require := require.New(t)
 
-	app := New()
 	viewName := NewQName("test", "view")
-	v := app.AddView(viewName)
+
+	adb := New()
+	adb.AddPackage("test", "test.com/test")
+
+	v := adb.AddView(viewName)
 	require.NotNil(v)
 
 	t.Run("must be error if no pkey fields", func(t *testing.T) {
-		_, err := app.Build()
+		_, err := adb.Build()
 		require.ErrorIs(err, ErrFieldsMissed)
 	})
 
 	v.Key().PartKey().AddField("pk1", DataKind_bool)
 
 	t.Run("must be error if no ccols fields", func(t *testing.T) {
-		_, err := app.Build()
+		_, err := adb.Build()
 		require.ErrorIs(err, ErrFieldsMissed)
 	})
 
 	v.Key().ClustCols().AddField("cc1", DataKind_string, MaxLen(100))
-	_, err := app.Build()
+	_, err := adb.Build()
 	require.NoError(err)
 }

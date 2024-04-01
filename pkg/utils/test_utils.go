@@ -146,7 +146,7 @@ func (o *TestObject) Containers(cb func(container string)) {
 	}
 }
 
-func GetTestBustTimeout() time.Duration {
+func GetTestBusTimeout() time.Duration {
 	if IsDebug() {
 		return time.Hour
 	}

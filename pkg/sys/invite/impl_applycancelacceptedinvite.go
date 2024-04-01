@@ -15,15 +15,15 @@ import (
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-func asyncProjectorApplyCancelAcceptedInvite(timeFunc coreutils.TimeFunc, federation coreutils.IFederation, appQName istructs.AppQName, tokens itokens.ITokens) istructs.Projector {
+func asyncProjectorApplyCancelAcceptedInvite(timeFunc coreutils.TimeFunc, federation coreutils.IFederation, tokens itokens.ITokens) istructs.Projector {
 	return istructs.Projector{
 		Name: qNameAPApplyCancelAcceptedInvite,
-		Func: applyCancelAcceptedInvite(timeFunc, federation, appQName, tokens),
+		Func: applyCancelAcceptedInvite(timeFunc, federation, tokens),
 	}
 }
 
 // AFTER EXEC c.sys.InitiateCancelAcceptedInvite
-func applyCancelAcceptedInvite(timeFunc coreutils.TimeFunc, federation coreutils.IFederation, appQName istructs.AppQName, tokens itokens.ITokens) func(event istructs.IPLogEvent, state istructs.IState, intents istructs.IIntents) (err error) {
+func applyCancelAcceptedInvite(timeFunc coreutils.TimeFunc, federation coreutils.IFederation, tokens itokens.ITokens) func(event istructs.IPLogEvent, state istructs.IState, intents istructs.IIntents) (err error) {
 	return func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
 		skbCDocInvite, err := s.KeyBuilder(state.Record, qNameCDocInvite)
 		if err != nil {
@@ -45,14 +45,15 @@ func applyCancelAcceptedInvite(timeFunc coreutils.TimeFunc, federation coreutils
 			return
 		}
 
+		appQName := s.App()
+
 		token, err := payloads.GetSystemPrincipalToken(tokens, appQName)
 		if err != nil {
 			return
 		}
 
 		// Update subject
-		_, err = coreutils.FederationFunc(
-			federation.URL(),
+		_, err = federation.Func(
 			fmt.Sprintf("api/%s/%d/c.sys.CUD", appQName, event.Workspace()),
 			fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"sys.IsActive":false}}]}`, svCDocSubject.AsRecordID(appdef.SystemField_ID)),
 			coreutils.WithAuthorizeBy(token),
@@ -62,8 +63,7 @@ func applyCancelAcceptedInvite(timeFunc coreutils.TimeFunc, federation coreutils
 		}
 
 		// Deactivate joined workspace
-		_, err = coreutils.FederationFunc(
-			federation.URL(),
+		_, err = federation.Func(
 			fmt.Sprintf("api/%s/%d/c.sys.DeactivateJoinedWorkspace", appQName, svCDocInvite.AsInt64(field_InviteeProfileWSID)),
 			fmt.Sprintf(`{"args":{"InvitingWorkspaceWSID":%d}}`, event.Workspace()),
 			coreutils.WithAuthorizeBy(token),
@@ -73,8 +73,7 @@ func applyCancelAcceptedInvite(timeFunc coreutils.TimeFunc, federation coreutils
 		}
 
 		// Update invite
-		_, err = coreutils.FederationFunc(
-			federation.URL(),
+		_, err = federation.Func(
 			fmt.Sprintf("api/%s/%d/c.sys.CUD", appQName, event.Workspace()),
 			fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"State":%d,"Updated":%d}}]}`, event.ArgumentObject().AsRecordID(field_InviteID), State_Cancelled, timeFunc().UnixMilli()),
 			coreutils.WithAuthorizeBy(token),

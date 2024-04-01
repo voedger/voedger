@@ -34,10 +34,10 @@ func TestBasicUsage(t *testing.T) {
 	}
 
 	quotasExample := in10n.Quotas{
-		Channels:               1,
-		ChannelsPerSubject:     1,
-		Subsciptions:           1,
-		SubsciptionsPerSubject: 1,
+		Channels:                1,
+		ChannelsPerSubject:      1,
+		Subscriptions:           1,
+		SubscriptionsPerSubject: 1,
 	}
 	req := require.New(t)
 	ctx, cancel := context.WithCancel(context.Background())
@@ -126,10 +126,10 @@ func TestWatchNotExistsChannel(t *testing.T) {
 	req := require.New(t)
 
 	quotasExample := in10n.Quotas{
-		Channels:               1,
-		ChannelsPerSubject:     1,
-		Subsciptions:           1,
-		SubsciptionsPerSubject: 1,
+		Channels:                1,
+		ChannelsPerSubject:      1,
+		Subscriptions:           1,
+		SubscriptionsPerSubject: 1,
 	}
 
 	broker := Provide(quotasExample)
@@ -153,10 +153,10 @@ func TestWatchNotExistsChannel(t *testing.T) {
 func TestQuotas(t *testing.T) {
 	req := require.New(t)
 	quotasExample := in10n.Quotas{
-		Channels:               100,
-		ChannelsPerSubject:     10,
-		Subsciptions:           1000,
-		SubsciptionsPerSubject: 100,
+		Channels:                100,
+		ChannelsPerSubject:      10,
+		Subscriptions:           1000,
+		SubscriptionsPerSubject: 100,
 	}
 
 	t.Run("Test channel quotas per subject. We create more channels than allowed for subject.", func(t *testing.T) {

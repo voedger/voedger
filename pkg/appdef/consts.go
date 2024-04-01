@@ -22,6 +22,9 @@ const (
 
 	// Used as prefix for names of system fields and containers
 	SystemPackagePrefix = SysPackage + QNameQualifierChar
+
+	// System package path
+	SysPackagePath = "voedger.com/packages/sys"
 )
 
 // QNameANY denotes that a Function param or result can be any type

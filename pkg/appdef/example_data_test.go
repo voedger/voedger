@@ -25,22 +25,23 @@ func ExampleIAppDefBuilder_AddData() {
 
 	// how to build AppDef with data types
 	{
-		appDef := appdef.New()
+		adb := appdef.New()
+		adb.AddPackage("test", "test.com/test")
 
-		appDef.AddData(numName, appdef.DataKind_int64, appdef.NullQName, appdef.MinExcl(0)).SetComment("Natural number")
+		adb.AddData(numName, appdef.DataKind_int64, appdef.NullQName, appdef.MinExcl(0)).SetComment("Natural number")
 
-		_ = appDef.AddData(floatName, appdef.DataKind_float64, appdef.NullQName)
+		_ = adb.AddData(floatName, appdef.DataKind_float64, appdef.NullQName)
 
-		_ = appDef.AddData(strName, appdef.DataKind_string, appdef.NullQName, appdef.MinLen(1), appdef.MaxLen(4))
+		_ = adb.AddData(strName, appdef.DataKind_string, appdef.NullQName, appdef.MinLen(1), appdef.MaxLen(4))
 
-		_ = appDef.AddData(tokenName, appdef.DataKind_string, strName, appdef.Pattern("^[a-z]+$"))
+		_ = adb.AddData(tokenName, appdef.DataKind_string, strName, appdef.Pattern("^[a-z]+$"))
 
-		_ = appDef.AddData(weekDayName, appdef.DataKind_string, strName, appdef.Enum("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"))
+		_ = adb.AddData(weekDayName, appdef.DataKind_string, strName, appdef.Enum("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"))
 
-		appDef.AddData(jsonName, appdef.DataKind_string, appdef.NullQName,
+		adb.AddData(jsonName, appdef.DataKind_string, appdef.NullQName,
 			appdef.MaxLen(appdef.MaxFieldLength)).SetComment("JSON string up to 64K")
 
-		if a, err := appDef.Build(); err == nil {
+		if a, err := adb.Build(); err == nil {
 			app = a
 		} else {
 			panic(err)

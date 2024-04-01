@@ -7,6 +7,8 @@ package state
 import (
 	"errors"
 	"fmt"
+
+	"github.com/voedger/voedger/pkg/appdef"
 )
 
 var ErrNotSupported = errors.New("not supported")
@@ -24,6 +26,9 @@ var errCurrentValueIsNotAnArray = errors.New("current value is not an array")
 var errFieldByNameIsNotAnObjectOrArray = errors.New("field by name is not an object or array")
 var errFieldByIndexIsNotAnObjectOrArray = errors.New("field by index is not an object or array")
 var errNotImplemented = errors.New("not implemented")
+var errEntityRequiredForValueBuilder = errors.New("entity required for ValueBuilder")
+var errWorkspaceDescriptorNotFound = errors.New("WorkspaceDescriptor not found in workspace")
+var errDescriptorForUndefinedWorkspace = errors.New("workspace descriptor for undefined workspace")
 
 func errUndefined(name string) error {
 	return errors.New(name + " undefined")
@@ -31,4 +36,8 @@ func errUndefined(name string) error {
 
 func errIndexOutOfBounds(index int) error {
 	return fmt.Errorf("index out of bounds: %d", index)
+}
+
+func typeIsNotDefinedInWorkspaceWithDescriptor(typ, ws appdef.QName) error {
+	return fmt.Errorf("%s is not available in workspace with descriptor %s", typ.String(), ws.String())
 }

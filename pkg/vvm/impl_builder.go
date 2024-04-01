@@ -29,7 +29,7 @@ func (ab VVMAppsBuilder) PrepareAppsExtensionPoints() map[istructs.AppQName]exte
 	return seps
 }
 
-func buillAppFromPackagesFS(fses []parser.PackageFS, adf appdef.IAppDefBuilder) error {
+func buildAppFromPackagesFS(fses []parser.PackageFS, adf appdef.IAppDefBuilder) error {
 	packageSchemaASTs := []*parser.PackageSchemaAST{}
 	for _, fs := range fses {
 		packageSchemaAST, err := parser.ParsePackageDir(fs.Path, fs.FS, ".")
@@ -51,7 +51,7 @@ func (ab VVMAppsBuilder) BuiltInAppsPackages(cfgs istructsmem.AppConfigsType, ap
 		appEPs := appsEPs[appQName]
 		cfg := cfgs.AddConfig(appQName, adb)
 		builtInAppDef := appBuilder(apis, cfg, adb, appEPs)
-		if err := buillAppFromPackagesFS(builtInAppDef.Packages, adb); err != nil {
+		if err := buildAppFromPackagesFS(builtInAppDef.Packages, adb); err != nil {
 			return nil, err
 		}
 		biltInAppPackages := BuiltInAppsPackages{

@@ -19,18 +19,20 @@ func Test_AppDef_AddODoc(t *testing.T) {
 	var app IAppDef
 
 	t.Run("must be ok to add document", func(t *testing.T) {
-		appDef := New()
-		doc := appDef.AddODoc(docName)
+		adb := New()
+		adb.AddPackage("test", "test.com/test")
+
+		doc := adb.AddODoc(docName)
 		doc.
 			AddField("f1", DataKind_int64, true).
 			AddField("f2", DataKind_string, false)
 		doc.AddContainer("rec", recName, 0, Occurs_Unbounded)
-		rec := appDef.AddORecord(recName)
+		rec := adb.AddORecord(recName)
 		rec.
 			AddField("f1", DataKind_int64, true).
 			AddField("f2", DataKind_string, false)
 
-		a, err := appDef.Build()
+		a, err := adb.Build()
 		require.NoError(err)
 
 		app = a

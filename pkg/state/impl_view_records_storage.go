@@ -14,22 +14,38 @@ import (
 )
 
 type viewRecordsStorage struct {
-	ctx             context.Context
-	viewRecordsFunc viewRecordsFunc
-	wsidFunc        WSIDFunc
-	n10nFunc        N10nFunc
+	ctx              context.Context
+	appStructsFunc   AppStructsFunc
+	wsidFunc         WSIDFunc
+	n10nFunc         N10nFunc
+	wsTypeVailidator wsTypeVailidator
+}
+
+func newViewRecordsStorage(ctx context.Context, appStructsFunc AppStructsFunc, wsidFunc WSIDFunc, n10nFunc N10nFunc) *viewRecordsStorage {
+	return &viewRecordsStorage{
+		ctx:              ctx,
+		appStructsFunc:   appStructsFunc,
+		wsidFunc:         wsidFunc,
+		n10nFunc:         n10nFunc,
+		wsTypeVailidator: newWsTypeValidator(appStructsFunc),
+	}
 }
 
 func (s *viewRecordsStorage) NewKeyBuilder(entity appdef.QName, _ istructs.IStateKeyBuilder) (newKeyBuilder istructs.IStateKeyBuilder) {
 	return &viewKeyBuilder{
-		IKeyBuilder: s.viewRecordsFunc().KeyBuilder(entity),
+		IKeyBuilder: s.appStructsFunc().ViewRecords().KeyBuilder(entity),
 		view:        entity,
 		wsid:        s.wsidFunc(),
 	}
 }
+
 func (s *viewRecordsStorage) Get(key istructs.IStateKeyBuilder) (value istructs.IStateValue, err error) {
 	k := key.(*viewKeyBuilder)
-	v, err := s.viewRecordsFunc().Get(k.wsid, k.IKeyBuilder)
+	err = s.wsTypeVailidator.validate(k.wsid, k.view)
+	if err != nil {
+		return nil, err
+	}
+	v, err := s.appStructsFunc().ViewRecords().Get(k.wsid, k.IKeyBuilder)
 	if err != nil {
 		if errors.Is(err, istructsmem.ErrRecordNotFound) {
 			return nil, nil
@@ -49,11 +65,14 @@ func (s *viewRecordsStorage) GetBatch(items []GetBatchItem) (err error) {
 	batches := make(map[istructs.WSID][]istructs.ViewRecordGetBatchItem)
 	for itemIdx, item := range items {
 		k := item.key.(*viewKeyBuilder)
+		if err = s.wsTypeVailidator.validate(k.wsid, k.view); err != nil {
+			return err
+		}
 		wsidToItemIdx[k.wsid] = append(wsidToItemIdx[k.wsid], itemIdx)
 		batches[k.wsid] = append(batches[k.wsid], istructs.ViewRecordGetBatchItem{Key: k.IKeyBuilder})
 	}
 	for wsid, batch := range batches {
-		err = s.viewRecordsFunc().GetBatch(wsid, batch)
+		err = s.appStructsFunc().ViewRecords().GetBatch(wsid, batch)
 		if err != nil {
 			return
 		}
@@ -75,8 +94,11 @@ func (s *viewRecordsStorage) Read(kb istructs.IStateKeyBuilder, callback istruct
 			value: v,
 		})
 	}
-	vrkb := kb.(*viewKeyBuilder)
-	return s.viewRecordsFunc().Read(s.ctx, vrkb.wsid, vrkb.IKeyBuilder, cb)
+	k := kb.(*viewKeyBuilder)
+	if err = s.wsTypeVailidator.validate(k.wsid, k.view); err != nil {
+		return err
+	}
+	return s.appStructsFunc().ViewRecords().Read(s.ctx, k.wsid, k.IKeyBuilder, cb)
 }
 func (s *viewRecordsStorage) Validate([]ApplyBatchItem) (err error) { return err }
 func (s *viewRecordsStorage) ApplyBatch(items []ApplyBatchItem) (err error) {
@@ -96,13 +118,13 @@ func (s *viewRecordsStorage) ApplyBatch(items []ApplyBatchItem) (err error) {
 			nullWsidBatch = batch
 			continue
 		}
-		err = s.viewRecordsFunc().PutBatch(wsid, batch)
+		err = s.appStructsFunc().ViewRecords().PutBatch(wsid, batch)
 		if err != nil {
 			return err
 		}
 	}
 	if len(nullWsidBatch) > 0 {
-		err = s.viewRecordsFunc().PutBatch(istructs.NullWSID, nullWsidBatch)
+		err = s.appStructsFunc().ViewRecords().PutBatch(istructs.NullWSID, nullWsidBatch)
 		if err != nil {
 			return err
 		}
@@ -112,17 +134,25 @@ func (s *viewRecordsStorage) ApplyBatch(items []ApplyBatchItem) (err error) {
 	}
 	return err
 }
-func (s *viewRecordsStorage) ProvideValueBuilder(kb istructs.IStateKeyBuilder, _ istructs.IStateValueBuilder) istructs.IStateValueBuilder {
+func (s *viewRecordsStorage) ProvideValueBuilder(kb istructs.IStateKeyBuilder, _ istructs.IStateValueBuilder) (istructs.IStateValueBuilder, error) {
+	k := kb.(*viewKeyBuilder)
+	if err := s.wsTypeVailidator.validate(k.wsid, k.view); err != nil {
+		return nil, err
+	}
 	return &viewValueBuilder{
-		IValueBuilder: s.viewRecordsFunc().NewValueBuilder(kb.(*viewKeyBuilder).view),
+		IValueBuilder: s.appStructsFunc().ViewRecords().NewValueBuilder(k.view),
 		offset:        istructs.NullOffset,
 		entity:        kb.Entity(),
-	}
+	}, nil
 }
-func (s *viewRecordsStorage) ProvideValueBuilderForUpdate(kb istructs.IStateKeyBuilder, existingValue istructs.IStateValue, _ istructs.IStateValueBuilder) istructs.IStateValueBuilder {
+func (s *viewRecordsStorage) ProvideValueBuilderForUpdate(kb istructs.IStateKeyBuilder, existingValue istructs.IStateValue, _ istructs.IStateValueBuilder) (istructs.IStateValueBuilder, error) {
+	k := kb.(*viewKeyBuilder)
+	if err := s.wsTypeVailidator.validate(k.wsid, k.view); err != nil {
+		return nil, err
+	}
 	return &viewValueBuilder{
-		IValueBuilder: s.viewRecordsFunc().UpdateValueBuilder(kb.(*viewKeyBuilder).view, existingValue.(*viewValue).value),
+		IValueBuilder: s.appStructsFunc().ViewRecords().UpdateValueBuilder(kb.(*viewKeyBuilder).view, existingValue.(*viewValue).value),
 		offset:        istructs.NullOffset,
 		entity:        kb.Entity(),
-	}
+	}, nil
 }

@@ -27,7 +27,8 @@ import (
 func Example() {
 	buildAppDef := func(verInfo ...string) (appdef.IAppDefBuilder, appdef.IAppDef) {
 		adb := appdef.New()
-		adb.AddCDoc(appdef.NewQName("ver", "info")).SetComment(verInfo...)
+		adb.AddPackage("test", "test.com/test")
+		adb.AddCDoc(appdef.NewQName("test", "verInfo")).SetComment(verInfo...)
 		app, err := adb.Build()
 		if err != nil {
 			panic(err)
@@ -105,7 +106,7 @@ func Example() {
 
 	// Output:
 	// test1/app1 part 1
-	// - CDoc «ver.info» app-1 ver.1
+	// - CDoc «test.verInfo» app-1 ver.1
 	// test1/app2 part 1
-	// - CDoc «ver.info» app-2 ver.1
+	// - CDoc «test.verInfo» app-2 ver.1
 }

@@ -41,26 +41,28 @@ func TestResourceEnumerator(t *testing.T) {
 
 	t.Run("builds app", func(t *testing.T) {
 
-		appDef := appdef.New()
+		adb := appdef.New()
+		adb.AddPackage("test", "test.com/test")
+
 		t.Run("must be ok to build application", func(t *testing.T) {
-			doc := appDef.AddODoc(oDocName)
+			doc := adb.AddODoc(oDocName)
 			doc.
 				AddField("Int32", appdef.DataKind_int32, true).
 				AddField("String", appdef.DataKind_string, false)
 
-			obj := appDef.AddObject(oObjName)
+			obj := adb.AddObject(oObjName)
 			obj.
 				AddField("Int32", appdef.DataKind_int32, true).
 				AddField("String", appdef.DataKind_string, false)
 
-			appDef.AddCommand(cmdCreateDoc).SetParam(oDocName)
-			appDef.AddCommand(cmdCreateObj).SetParam(oObjName)
-			appDef.AddCommand(cmdCreateObjUnlogged).SetUnloggedParam(oObjName)
-			appDef.AddCommand(cmdCUD)
+			adb.AddCommand(cmdCreateDoc).SetParam(oDocName)
+			adb.AddCommand(cmdCreateObj).SetParam(oObjName)
+			adb.AddCommand(cmdCreateObjUnlogged).SetUnloggedParam(oObjName)
+			adb.AddCommand(cmdCUD)
 		})
 
 		cfgs := make(AppConfigsType, 1)
-		cfg = cfgs.AddConfig(istructs.AppQName_test1_app1, appDef)
+		cfg = cfgs.AddConfig(istructs.AppQName_test1_app1, adb)
 
 		cfg.Resources.Add(NewCommandFunction(cmdCreateDoc, NullCommandExec))
 		cfg.Resources.Add(NewCommandFunction(cmdCreateObj, NullCommandExec))

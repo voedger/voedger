@@ -7,7 +7,6 @@ package sys_it
 import (
 	"context"
 	"errors"
-	"fmt"
 	"io"
 	"net"
 	"net/http"
@@ -51,14 +50,16 @@ func TestBasicUsage_ReverseProxy(t *testing.T) {
 	for srcURL, expectedURLPath := range cases {
 		targetHandler.setExpectedURLPath(expectedURLPath)
 
-		resp := vit.PostFree(fmt.Sprintf("http://127.0.0.1:%s/%s", vit.IFederation.URL().Port(), srcURL), body)
+		// resp := vit.PostFree(fmt.Sprintf("http://127.0.0.1:%s/%s", vit.IFederation.URL().Port(), srcURL), body)
+		resp := vit.Post(srcURL, body)
 		require.Equal(`hello world`, resp.Body) // guarantees that expectedURLPath is checked by the handler
 	}
 
 	t.Run("route domain", func(t *testing.T) {
 		targetHandler.setExpectedURLPath("/grafana/foo/")
 		targetHandler.setExpectedHost("127.0.0.1")
-		resp := vit.PostFree(fmt.Sprintf("http://localhost:%s/grafana/foo/?Datadfsdfsdfsdfdf", vit.IFederation.URL().Port()), body)
+		// resp := vit.PostFree(fmt.Sprintf("http://localhost:%s/grafana/foo/?Datadfsdfsdfsdfdf", vit.IFederation.URL().Port()), body)
+		resp := vit.Post("grafana/foo/?Datadfsdfsdfsdfdf", body)
 		require.Equal(`hello world`, resp.Body)
 	})
 

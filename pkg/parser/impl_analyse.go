@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/alecthomas/participle/v2/lexer"
+	"github.com/robfig/cron/v3"
 
 	"github.com/voedger/voedger/pkg/appdef"
 )
@@ -46,6 +47,8 @@ func preAnalyse(c *basicContext, packages []*PackageSchemaAST) {
 			switch v := stmt.(type) {
 			case *TableStmt:
 				preAnalyseTable(v, ictx)
+			case *AlterWorkspaceStmt:
+				preAnalyseAlterWorkspace(v, ictx)
 			}
 		})
 	}
@@ -282,18 +285,6 @@ func analyseUseWorkspace(u *UseWorkspaceStmt, c *iterateCtx) {
 }
 
 func analyseAlterWorkspace(u *AlterWorkspaceStmt, c *iterateCtx) {
-	resolveFunc := func(w *WorkspaceStmt, schema *PackageSchemaAST) error {
-		if !w.Alterable && schema != c.pkg {
-			return ErrWorkspaceIsNotAlterable(u.Name.String())
-		}
-		u.alteredWorkspace = w
-		return nil
-	}
-	err := resolveInCtx(u.Name, c, resolveFunc)
-	if err != nil {
-		c.stmtErr(&u.Name.Pos, err)
-		return
-	}
 	// find all included statements
 
 	var iterTableItems func(ws *WorkspaceStmt, wsctx *wsCtx, items []TableItemExpr)
@@ -320,7 +311,9 @@ func analyseAlterWorkspace(u *AlterWorkspaceStmt, c *iterateCtx) {
 			}
 		})
 	}
-	iter(c.wsCtxs[u.alteredWorkspace], u)
+	if u.alteredWorkspace != nil {
+		iter(c.wsCtxs[u.alteredWorkspace], u)
+	}
 }
 
 func analyseStorage(u *StorageStmt, c *iterateCtx) {
@@ -619,9 +612,39 @@ func checkIntents(intents []StateStorage, c *iterateCtx, scope checkScopeFunc) {
 	}
 }
 
+func preAnalyseAlterWorkspace(u *AlterWorkspaceStmt, c *iterateCtx) {
+	resolveFunc := func(w *WorkspaceStmt, schema *PackageSchemaAST) error {
+		if !w.Alterable && schema != c.pkg {
+			return ErrWorkspaceIsNotAlterable(u.Name.String())
+		}
+		u.alteredWorkspace = w
+		u.alteredWorkspacePkg = schema
+		return nil
+	}
+	err := resolveInCtx(u.Name, c, resolveFunc)
+	if err != nil {
+		c.stmtErr(&u.Name.Pos, err)
+		return
+	}
+}
+
 func analyseProjector(v *ProjectorStmt, c *iterateCtx) {
 	for i := range v.Triggers {
 		trigger := &v.Triggers[i]
+
+		if trigger.CronSchedule != nil {
+			specParser := cron.NewParser(cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow)
+			_, err := specParser.Parse(*trigger.CronSchedule)
+			if err != nil {
+				c.stmtErr(&v.Pos, ErrInvalidCronSchedule(*trigger.CronSchedule))
+			}
+			ws := getCurrentAlterWorkspace(c)
+			if ws == nil || ws.alteredWorkspace == nil || ws.alteredWorkspacePkg == nil || ws.alteredWorkspacePkg.Path != appdef.SysPackage || ws.alteredWorkspace.Name != appWorkspaceName {
+				c.stmtErr(&v.Pos, ErrScheduledProjectorNotInAppWorkspace)
+			}
+
+		}
+
 		for _, qname := range trigger.QNames {
 			if len(trigger.TableActions) > 0 {
 
@@ -689,6 +712,7 @@ func analyseProjector(v *ProjectorStmt, c *iterateCtx) {
 			}
 		}
 	}
+
 	checkState(v.State, c, func(sc *StorageScope) bool { return sc.Projectors })
 	checkIntents(v.Intents, c, func(sc *StorageScope) bool { return sc.Projectors })
 }
@@ -1186,7 +1210,7 @@ func getTableTypeKind(table *TableStmt, pkg *PackageSchemaAST, c *iterateCtx) (k
 			if node.table.Name == nameWRecord {
 				kind = appdef.TypeKind_WRecord
 			}
-			if (node.table.Name == nameSingletonDeprecated) || (node.table.Name == nameCSingleton) {
+			if node.table.Name == nameCSingleton {
 				kind = appdef.TypeKind_CDoc
 				singleton = true
 			}

@@ -25,6 +25,6 @@ func (s *cmdResultStorage) ApplyBatch([]ApplyBatchItem) (err error) {
 	panic("not applicable")
 }
 
-func (s *cmdResultStorage) ProvideValueBuilder(istructs.IStateKeyBuilder, istructs.IStateValueBuilder) istructs.IStateValueBuilder {
-	return &resultValueBuilder{resultBuilder: s.cmdResultBuilderFunc()}
+func (s *cmdResultStorage) ProvideValueBuilder(istructs.IStateKeyBuilder, istructs.IStateValueBuilder) (istructs.IStateValueBuilder, error) {
+	return &resultValueBuilder{resultBuilder: s.cmdResultBuilderFunc()}, nil
 }

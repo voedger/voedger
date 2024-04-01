@@ -21,34 +21,40 @@ import (
 	"github.com/voedger/voedger/pkg/istorage/mem"
 	istorageimpl "github.com/voedger/voedger/pkg/istorage/provider"
 	"github.com/voedger/voedger/pkg/parser"
+	"github.com/voedger/voedger/pkg/sys/authnz"
 
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	"github.com/voedger/voedger/pkg/itokensjwt"
-	"github.com/voedger/voedger/pkg/projectors"
 	"github.com/voedger/voedger/pkg/state"
 )
 
 var extIO = &mockIo{}
+var offset istructs.Offset
+var newWorkspaceCmd = appdef.NewQName("sys", "NewWorkspace")
+var testView = appdef.NewQName(testPkg, "TestView")
+var dummyCommand = appdef.NewQName(testPkg, "Dummy")
+var dummyProj = appdef.NewQName(testPkg, "DummyProj")
+var testWorkspaceDescriptor = appdef.NewQName(testPkg, "RestaurantDescriptor")
 
-const testPkg = "test"
+const testPkg = "mypkg"
+const ws = istructs.WSID(1)
+const partition = istructs.PartitionID(1)
 
 func Test_BasicUsage(t *testing.T) {
 	// Test Consts
 	const intentsLimit = 5
 	const bundlesLimit = 5
-	offset := istructs.Offset(123)
-	const ws = istructs.WSID(1)
-	const partition = istructs.PartitionID(1)
 	require := require.New(t)
-	newOrderCmd := appdef.NewQName("air", "NewOrder")
-	calcOrderedItemsProjector := appdef.NewQName("air", "CalcOrderedItems")
-	orderedItemsView := appdef.NewQName("air", "OrderedItems")
+	newOrderCmd := appdef.NewQName(testPkg, "NewOrder")
+	calcOrderedItemsProjector := appdef.NewQName(testPkg, "CalcOrderedItems")
+	orderedItemsView := appdef.NewQName(testPkg, "OrderedItems")
 
 	// Prepare app
-	app := appStructsFromSQL("github.com/untillpro/airs-bp3/packages/air", `APPLICATION test(); 
+	app := appStructsFromSQL("github.com/untillpro/airs-bp3/packages/"+testPkg, `APPLICATION test(); 
 		WORKSPACE Restaurant (
+			DESCRIPTOR RestaurantDescriptor ();
 			TABLE Order INHERITS ODoc (
 				Year int32,
 				Month int32,
@@ -83,7 +89,7 @@ func Test_BasicUsage(t *testing.T) {
 		GenericRawEventBuilderParams: istructs.GenericRawEventBuilderParams{
 			Workspace:         ws,
 			HandlingPartition: partition,
-			PLogOffset:        offset,
+			PLogOffset:        offset + 1,
 			QName:             newOrderCmd,
 		},
 	})
@@ -116,7 +122,7 @@ func Test_BasicUsage(t *testing.T) {
 	appFunc := func() istructs.IAppStructs { return app }
 
 	// Create states for Command processor and Actualizer
-	actualizerState := state.ProvideAsyncActualizerStateFactory()(context.Background(), app, nil, state.SimpleWSIDFunc(ws), nil, nil, eventFunc, intentsLimit, bundlesLimit)
+	actualizerState := state.ProvideAsyncActualizerStateFactory()(context.Background(), appFunc, nil, state.SimpleWSIDFunc(ws), nil, nil, eventFunc, intentsLimit, bundlesLimit)
 	cmdProcState := state.ProvideCommandProcessorStateFactory()(context.Background(), appFunc, nil, state.SimpleWSIDFunc(ws), nil, cudFunc, nil, nil, intentsLimit, nil, argFunc, unloggedArgFunc)
 
 	// Create extension package from WASM
@@ -141,19 +147,19 @@ func Test_BasicUsage(t *testing.T) {
 	//
 	// Invoke command
 	//
-	err = extEngine.Invoke(context.Background(), iextengine.NewExtQName(testPkg, newOrderCmd.Entity()), cmdProcState)
+	err = extEngine.Invoke(context.Background(), appdef.NewFullQName(testPkg, newOrderCmd.Entity()), cmdProcState)
 	require.NoError(err)
 	//
 	// Invoke projector
 	//
-	err = extEngine.Invoke(context.Background(), iextengine.NewExtQName(testPkg, calcOrderedItemsProjector.Entity()), actualizerState)
+	err = extEngine.Invoke(context.Background(), appdef.NewFullQName(testPkg, calcOrderedItemsProjector.Entity()), actualizerState)
 	require.NoError(err)
 	ready, err := actualizerState.ApplyIntents()
 	require.NoError(err)
 	require.False(ready)
 
 	// Invoke projector again
-	require.NoError(extEngine.Invoke(context.Background(), iextengine.NewExtQName(testPkg, calcOrderedItemsProjector.Entity()), actualizerState))
+	require.NoError(extEngine.Invoke(context.Background(), appdef.NewFullQName(testPkg, calcOrderedItemsProjector.Entity()), actualizerState))
 	ready, err = actualizerState.ApplyIntents()
 	require.NoError(err)
 	require.False(ready)
@@ -178,6 +184,7 @@ func appStructs(appDef appdef.IAppDefBuilder, prepareAppCfg appCfgCallback) istr
 	cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, appDef)
 	if prepareAppCfg != nil {
 		prepareAppCfg(cfg)
+		cfg.Resources.Add(istructsmem.NewCommandFunction(newWorkspaceCmd, istructsmem.NullCommandExec))
 	}
 
 	asf := mem.Provide()
@@ -192,14 +199,6 @@ func appStructs(appDef appdef.IAppDefBuilder, prepareAppCfg appCfgCallback) istr
 		panic(err)
 	}
 	return structs
-}
-
-func appStructsFromCallback(prepareAppDef appDefCallback, prepareAppCfg appCfgCallback) istructs.IAppStructs {
-	appDef := appdef.New()
-	if prepareAppDef != nil {
-		prepareAppDef(appDef)
-	}
-	return appStructs(appDef, prepareAppCfg)
 }
 
 func requireMemStat(t *testing.T, wasmEngine *wazeroExtEngine, mallocs, frees, heapInUse uint32) {
@@ -255,16 +254,16 @@ func Test_Allocs_ManualGC(t *testing.T) {
 
 	requireMemStatEx(t, wasmEngine, 1, 0, expectedHeapSize, WasmPreallocatedBufferSize)
 
-	require.NoError(extEngine.Invoke(context.Background(), iextengine.NewExtQName(testPkg, arrAppend), extIO))
+	require.NoError(extEngine.Invoke(context.Background(), appdef.NewFullQName(testPkg, arrAppend), extIO))
 	requireMemStatEx(t, wasmEngine, 3, 0, expectedHeapSize, WasmPreallocatedBufferSize+32)
 
-	require.NoError(extEngine.Invoke(context.Background(), iextengine.NewExtQName(testPkg, arrAppend), extIO))
+	require.NoError(extEngine.Invoke(context.Background(), appdef.NewFullQName(testPkg, arrAppend), extIO))
 	requireMemStatEx(t, wasmEngine, 5, 0, expectedHeapSize, WasmPreallocatedBufferSize+64)
 
-	require.NoError(extEngine.Invoke(context.Background(), iextengine.NewExtQName(testPkg, arrAppend), extIO))
+	require.NoError(extEngine.Invoke(context.Background(), appdef.NewFullQName(testPkg, arrAppend), extIO))
 	requireMemStatEx(t, wasmEngine, 7, 0, expectedHeapSize, WasmPreallocatedBufferSize+6*16)
 
-	require.NoError(extEngine.Invoke(context.Background(), iextengine.NewExtQName(testPkg, arrReset), extIO))
+	require.NoError(extEngine.Invoke(context.Background(), appdef.NewFullQName(testPkg, arrReset), extIO))
 	requireMemStatEx(t, wasmEngine, 7, 0, expectedHeapSize, WasmPreallocatedBufferSize+6*16)
 
 	require.NoError(wasmEngine.gc(testPkg, ctx))
@@ -292,8 +291,8 @@ func Test_Allocs_AutoGC(t *testing.T) {
 
 	calculatedHeapInUse := WasmPreallocatedBufferSize
 	for calculatedHeapInUse < expectedHeapSize-16 {
-		require.NoError(extEngine.Invoke(context.Background(), iextengine.NewExtQName(testPkg, arrAppend), extIO))
-		require.NoError(extEngine.Invoke(context.Background(), iextengine.NewExtQName(testPkg, arrReset), extIO))
+		require.NoError(extEngine.Invoke(context.Background(), appdef.NewFullQName(testPkg, arrAppend), extIO))
+		require.NoError(extEngine.Invoke(context.Background(), appdef.NewFullQName(testPkg, arrReset), extIO))
 		calculatedHeapInUse += 32
 		expectedAllocs += 2
 	}
@@ -302,13 +301,13 @@ func Test_Allocs_AutoGC(t *testing.T) {
 	requireMemStatEx(t, wasmEngine, expectedAllocs, expectedFrees, expectedHeapSize, expectedHeapSize-16)
 
 	// next call will trigger auto-GC
-	require.NoError(extEngine.Invoke(context.Background(), iextengine.NewExtQName(testPkg, arrAppend), extIO))
+	require.NoError(extEngine.Invoke(context.Background(), appdef.NewFullQName(testPkg, arrAppend), extIO))
 	expectedAllocs += 2
 	expectedFrees += expectedAllocs - 7
 	requireMemStat(t, wasmEngine, expectedAllocs, expectedFrees, WasmPreallocatedBufferSize+96)
 
 	// next call will not trigger auto-GC
-	require.NoError(extEngine.Invoke(context.Background(), iextengine.NewExtQName(testPkg, arrReset), extIO))
+	require.NoError(extEngine.Invoke(context.Background(), appdef.NewFullQName(testPkg, arrReset), extIO))
 	requireMemStat(t, wasmEngine, expectedAllocs, expectedFrees, WasmPreallocatedBufferSize+96) // stays the same
 
 }
@@ -340,11 +339,11 @@ func Test_NoGc_MemoryOverflow(t *testing.T) {
 	calculatedHeapInUse := WasmPreallocatedBufferSize
 	err = nil
 	for calculatedHeapInUse < 0x20*iextengine.MemoryPageSize {
-		err = wasmEngine.Invoke(context.Background(), iextengine.NewExtQName(testPkg, arrAppend), extIO)
+		err = wasmEngine.Invoke(context.Background(), appdef.NewFullQName(testPkg, arrAppend), extIO)
 		if err != nil {
 			break
 		}
-		err = wasmEngine.Invoke(context.Background(), iextengine.NewExtQName(testPkg, arrReset), extIO)
+		err = wasmEngine.Invoke(context.Background(), appdef.NewFullQName(testPkg, arrReset), extIO)
 		if err != nil {
 			break
 		}
@@ -367,7 +366,7 @@ func Test_SetLimitsExecutionInterval(t *testing.T) {
 	defer cancel()
 
 	t0 := time.Now()
-	err = extEngine.Invoke(ctxTimeout, iextengine.NewExtQName(testPkg, "longFunc"), extIO)
+	err = extEngine.Invoke(ctxTimeout, appdef.NewFullQName(testPkg, "longFunc"), extIO)
 
 	require.ErrorIs(err, sys.NewExitError(sys.ExitCodeDeadlineExceeded))
 	require.Less(time.Since(t0), maxDuration*4)
@@ -418,7 +417,7 @@ func Test_HandlePanics(t *testing.T) {
 	defer extEngine.Close(ctx)
 
 	for _, test := range tests {
-		e := extEngine.Invoke(context.Background(), iextengine.NewExtQName(testPkg, test.name), extIO)
+		e := extEngine.Invoke(context.Background(), appdef.NewFullQName(testPkg, test.name), extIO)
 		require.ErrorContains(e, test.expect)
 	}
 }
@@ -433,7 +432,7 @@ func Test_QueryValue(t *testing.T) {
 	require.NoError(err)
 	defer extEngine.Close(ctx)
 
-	err = extEngine.Invoke(context.Background(), iextengine.NewExtQName(testPkg, testQueryValue), extIO)
+	err = extEngine.Invoke(context.Background(), appdef.NewFullQName(testPkg, testQueryValue), extIO)
 	require.NoError(err)
 }
 
@@ -447,15 +446,15 @@ func Test_RecoverEngine(t *testing.T) {
 	require.NoError(err)
 	defer extEngine.Close(ctx)
 
-	require.NoError(extEngine.Invoke(context.Background(), iextengine.NewExtQName(testPkg, arrAppend2), extIO))
-	require.NoError(extEngine.Invoke(context.Background(), iextengine.NewExtQName(testPkg, arrAppend2), extIO))
-	require.NoError(extEngine.Invoke(context.Background(), iextengine.NewExtQName(testPkg, arrAppend2), extIO))
-	require.Error(extEngine.Invoke(context.Background(), iextengine.NewExtQName(testPkg, arrAppend2), extIO))
+	require.NoError(extEngine.Invoke(context.Background(), appdef.NewFullQName(testPkg, arrAppend2), extIO))
+	require.NoError(extEngine.Invoke(context.Background(), appdef.NewFullQName(testPkg, arrAppend2), extIO))
+	require.NoError(extEngine.Invoke(context.Background(), appdef.NewFullQName(testPkg, arrAppend2), extIO))
+	require.Error(extEngine.Invoke(context.Background(), appdef.NewFullQName(testPkg, arrAppend2), extIO))
 
-	require.NoError(extEngine.Invoke(context.Background(), iextengine.NewExtQName(testPkg, arrAppend2), extIO))
-	require.NoError(extEngine.Invoke(context.Background(), iextengine.NewExtQName(testPkg, arrAppend2), extIO))
-	require.NoError(extEngine.Invoke(context.Background(), iextengine.NewExtQName(testPkg, arrAppend2), extIO))
-	require.Error(extEngine.Invoke(context.Background(), iextengine.NewExtQName(testPkg, arrAppend2), extIO))
+	require.NoError(extEngine.Invoke(context.Background(), appdef.NewFullQName(testPkg, arrAppend2), extIO))
+	require.NoError(extEngine.Invoke(context.Background(), appdef.NewFullQName(testPkg, arrAppend2), extIO))
+	require.NoError(extEngine.Invoke(context.Background(), appdef.NewFullQName(testPkg, arrAppend2), extIO))
+	require.Error(extEngine.Invoke(context.Background(), appdef.NewFullQName(testPkg, arrAppend2), extIO))
 }
 
 func Test_Read(t *testing.T) {
@@ -466,7 +465,7 @@ func Test_Read(t *testing.T) {
 	extEngine, err := testFactoryHelper(ctx, moduleUrl, []string{testRead}, iextengine.ExtEngineConfig{}, false)
 	require.NoError(err)
 	defer extEngine.Close(ctx)
-	err = extEngine.Invoke(context.Background(), iextengine.NewExtQName(testPkg, testRead), extIO)
+	err = extEngine.Invoke(context.Background(), appdef.NewFullQName(testPkg, testRead), extIO)
 	require.NoError(err)
 }
 
@@ -480,7 +479,7 @@ func Test_AsBytes(t *testing.T) {
 	defer extEngine.Close(ctx)
 	wasmEngine := extEngine.(*wazeroExtEngine)
 	requireMemStatEx(t, wasmEngine, 1, 0, WasmPreallocatedBufferSize, WasmPreallocatedBufferSize)
-	err = extEngine.Invoke(context.Background(), iextengine.NewExtQName(testPkg, asBytes), extIO)
+	err = extEngine.Invoke(context.Background(), appdef.NewFullQName(testPkg, asBytes), extIO)
 	require.NoError(err)
 	requireMemStatEx(t, wasmEngine, 2, 0, WasmPreallocatedBufferSize+2000000, WasmPreallocatedBufferSize+2000000)
 }
@@ -495,7 +494,7 @@ func Test_AsBytesOverflow(t *testing.T) {
 	defer extEngine.Close(ctx)
 	wasmEngine := extEngine.(*wazeroExtEngine)
 	requireMemStatEx(t, wasmEngine, 1, 0, WasmPreallocatedBufferSize, WasmPreallocatedBufferSize)
-	err = extEngine.Invoke(context.Background(), iextengine.NewExtQName(testPkg, asBytes), extIO)
+	err = extEngine.Invoke(context.Background(), appdef.NewFullQName(testPkg, asBytes), extIO)
 	require.ErrorContains(err, "alloc")
 }
 
@@ -509,7 +508,7 @@ func Test_KeyPutQName(t *testing.T) {
 	defer extEngine.Close(ctx)
 	wasmEngine := extEngine.(*wazeroExtEngine)
 	requireMemStatEx(t, wasmEngine, 1, 0, WasmPreallocatedBufferSize, WasmPreallocatedBufferSize)
-	err = extEngine.Invoke(context.Background(), iextengine.NewExtQName(testPkg, putQName), extIO)
+	err = extEngine.Invoke(context.Background(), appdef.NewFullQName(testPkg, putQName), extIO)
 	require.NoError(err)
 }
 
@@ -527,7 +526,7 @@ func Test_NoAllocs(t *testing.T) {
 	wasmEngine := extEngine.(*wazeroExtEngine)
 	requireMemStatEx(t, wasmEngine, 1, 0, WasmPreallocatedBufferSize, WasmPreallocatedBufferSize)
 
-	err = extEngine.Invoke(context.Background(), iextengine.NewExtQName(testPkg, testNoAllocs), extIO)
+	err = extEngine.Invoke(context.Background(), appdef.NewFullQName(testPkg, testNoAllocs), extIO)
 	require.NoError(err)
 
 	requireMemStatEx(t, wasmEngine, 1, 0, WasmPreallocatedBufferSize, WasmPreallocatedBufferSize)
@@ -551,7 +550,6 @@ func Test_WithState(t *testing.T) {
 	require := require.New(t)
 	ctx := context.Background()
 
-	testView := appdef.NewQName("pkg", "TestView")
 	const extension = "incrementProjector"
 	const cc = "cc"
 	const pk = "pk"
@@ -560,18 +558,28 @@ func Test_WithState(t *testing.T) {
 	const bundlesLimit = 5
 	const ws = istructs.WSID(1)
 
+	app := appStructsFromSQL(testPkg, `APPLICATION test(); 
+		WORKSPACE Restaurant (
+			DESCRIPTOR RestaurantDescriptor ();
+			VIEW TestView (
+				pk int32,
+				cc int32,
+				vv int32,
+				PRIMARY KEY ((pk), cc)
+			) AS RESULT OF DummyProj;
+			EXTENSION ENGINE WASM(
+				COMMAND Dummy();
+				PROJECTOR DummyProj AFTER EXECUTE ON Dummy INTENTS(View(TestView));
+			);
+		)`,
+		func(cfg *istructsmem.AppConfigType) {
+			cfg.Resources.Add(istructsmem.NewCommandFunction(dummyCommand, istructsmem.NullCommandExec))
+			cfg.AddAsyncProjectors(istructs.Projector{Name: dummyProj})
+		})
+
 	// build app
-	app := appStructsFromCallback(
-		func(appDef appdef.IAppDefBuilder) {
-			projectors.ProvideViewDef(appDef, testView, func(view appdef.IViewBuilder) {
-				view.Key().PartKey().AddField(pk, appdef.DataKind_int32)
-				view.Key().ClustCols().AddField(cc, appdef.DataKind_int32)
-				view.Value().AddField(vv, appdef.DataKind_int32, true)
-			})
-			appDef.AddPackage("pkg", "pkg")
-		},
-		func(cfg *istructsmem.AppConfigType) {})
-	state := state.ProvideAsyncActualizerStateFactory()(context.Background(), app, nil, state.SimpleWSIDFunc(ws), nil, nil, nil, intentsLimit, bundlesLimit)
+	appFunc := func() istructs.IAppStructs { return app }
+	state := state.ProvideAsyncActualizerStateFactory()(context.Background(), appFunc, nil, state.SimpleWSIDFunc(ws), nil, nil, nil, intentsLimit, bundlesLimit)
 
 	// build packages
 	moduleUrl := testModuleURL("./_testdata/basicusage/pkg.wasm")
@@ -593,13 +601,13 @@ func Test_WithState(t *testing.T) {
 	defer extEngine.Close(ctx)
 
 	// Invoke extension
-	require.NoError(extEngine.Invoke(context.Background(), iextengine.NewExtQName(testPkg, extension), state))
+	require.NoError(extEngine.Invoke(context.Background(), appdef.NewFullQName(testPkg, extension), state))
 	ready, err := state.ApplyIntents()
 	require.NoError(err)
 	require.False(ready)
 
 	// Invoke extension again
-	require.NoError(extEngine.Invoke(context.Background(), iextengine.NewExtQName(testPkg, extension), state))
+	require.NoError(extEngine.Invoke(context.Background(), appdef.NewFullQName(testPkg, extension), state))
 	ready, err = state.ApplyIntents()
 	require.NoError(err)
 	require.False(ready)
@@ -620,25 +628,30 @@ func Test_WithState(t *testing.T) {
 
 func Test_StatePanic(t *testing.T) {
 
-	testView := appdef.NewQName("pkg", "TestView")
-	const cc = "cc"
-	const pk = "pk"
-	const vv = "vv"
 	const intentsLimit = 5
 	const bundlesLimit = 5
 	const ws = istructs.WSID(1)
 
-	app := appStructsFromCallback(
-		func(appDef appdef.IAppDefBuilder) {
-			projectors.ProvideViewDef(appDef, testView, func(view appdef.IViewBuilder) {
-				view.Key().PartKey().AddField(pk, appdef.DataKind_int32)
-				view.Key().ClustCols().AddField(cc, appdef.DataKind_int32)
-				view.Value().AddField(vv, appdef.DataKind_int32, true)
-			})
-			appDef.AddPackage("pkg", "pkg")
-		},
-		func(cfg *istructsmem.AppConfigType) {})
-	state := state.ProvideAsyncActualizerStateFactory()(context.Background(), app, nil, state.SimpleWSIDFunc(ws), nil, nil, nil, intentsLimit, bundlesLimit)
+	app := appStructsFromSQL(testPkg, `APPLICATION test(); 
+		WORKSPACE Restaurant (
+			DESCRIPTOR RestaurantDescriptor ();
+			VIEW TestView (
+				pk int32,
+				cc int32,
+				vv int32,
+				PRIMARY KEY ((pk), cc)
+			) AS RESULT OF DummyProj;
+			EXTENSION ENGINE WASM(
+				COMMAND Dummy();
+				PROJECTOR DummyProj AFTER EXECUTE ON Dummy INTENTS(View(TestView));
+			);
+		)`,
+		func(cfg *istructsmem.AppConfigType) {
+			cfg.Resources.Add(istructsmem.NewCommandFunction(dummyCommand, istructsmem.NullCommandExec))
+			cfg.AddAsyncProjectors(istructs.Projector{Name: dummyProj})
+		})
+	appFunc := func() istructs.IAppStructs { return app }
+	state := state.ProvideAsyncActualizerStateFactory()(context.Background(), appFunc, nil, state.SimpleWSIDFunc(ws), nil, nil, nil, intentsLimit, bundlesLimit)
 
 	const extname = "wrongFieldName"
 	const undefinedPackage = "undefinedPackage"
@@ -664,18 +677,17 @@ func Test_StatePanic(t *testing.T) {
 	//
 	// Invoke extension
 	//
-	err = extEngine.Invoke(context.Background(), iextengine.NewExtQName(testPkg, extname), state)
+	err = extEngine.Invoke(context.Background(), appdef.NewFullQName(testPkg, extname), state)
 	require.ErrorContains(err, "int32-type field «wrong» is not found")
 
 	//
 	// Invoke extension
 	//
-	err = extEngine.Invoke(context.Background(), iextengine.NewExtQName(testPkg, undefinedPackage), state)
+	err = extEngine.Invoke(context.Background(), appdef.NewFullQName(testPkg, undefinedPackage), state)
 	require.ErrorContains(err, errUndefinedPackage("github.com/company/pkg").Error())
 }
 
 type (
-	appDefCallback func(appDef appdef.IAppDefBuilder)
 	appCfgCallback func(cfg *istructsmem.AppConfigType)
 )
 
@@ -683,6 +695,7 @@ type (
 var sfs embed.FS
 
 func appStructsFromSQL(packagePath string, appdefSql string, prepareAppCfg appCfgCallback) istructs.IAppStructs {
+	offset = istructs.Offset(123)
 	appDef := appdef.New()
 
 	fs, err := parser.ParseFile("file1.sql", appdefSql)
@@ -713,5 +726,30 @@ func appStructsFromSQL(packagePath string, appdefSql string, prepareAppCfg appCf
 		panic(err)
 	}
 
-	return appStructs(appDef, prepareAppCfg)
+	app := appStructs(appDef, prepareAppCfg)
+
+	// Create workspace
+	rebWs := app.Events().GetNewRawEventBuilder(istructs.NewRawEventBuilderParams{
+		GenericRawEventBuilderParams: istructs.GenericRawEventBuilderParams{
+			Workspace:         ws,
+			HandlingPartition: partition,
+			PLogOffset:        offset,
+			QName:             newWorkspaceCmd,
+		},
+	})
+	cud := rebWs.CUDBuilder().Create(authnz.QNameCDocWorkspaceDescriptor)
+	cud.PutRecordID(appdef.SystemField_ID, 1)
+	cud.PutQName("WSKind", testWorkspaceDescriptor)
+	rawWsEvent, err := rebWs.BuildRawEvent()
+	if err != nil {
+		panic(err)
+	}
+	wsEvent, err := app.Events().PutPlog(rawWsEvent, nil, istructsmem.NewIDGenerator())
+	if err != nil {
+		panic(err)
+	}
+	app.Records().Apply(wsEvent)
+
+	return app
+
 }

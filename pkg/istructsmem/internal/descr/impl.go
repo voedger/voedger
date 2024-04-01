@@ -21,6 +21,9 @@ func (a *Application) read(app istructs.IAppStructs, rateLimits map[appdef.QName
 	a.Packages = make(map[string]*Package)
 
 	app.AppDef().Packages(func(localName, fullPath string) {
+		if localName == appdef.SysPackage {
+			return
+		}
 		pkg := newPackage()
 		pkg.Name = localName
 		pkg.Path = fullPath

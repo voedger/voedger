@@ -69,8 +69,8 @@ type ProjectionKey struct {
 }
 
 type Quotas struct {
-	Channels               int
-	ChannelsPerSubject     int
-	Subsciptions           int
-	SubsciptionsPerSubject int
+	Channels                int
+	ChannelsPerSubject      int
+	Subscriptions           int
+	SubscriptionsPerSubject int
 }

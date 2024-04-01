@@ -25,29 +25,30 @@ func ExampleIAppDef_Extensions() {
 
 	// how to build AppDef with extensions
 	{
-		appDef := appdef.New()
+		adb := appdef.New()
+		adb.AddPackage("test", "test.com/test")
 
-		cmd := appDef.AddCommand(cmdName)
+		cmd := adb.AddCommand(cmdName)
 		cmd.SetEngine(appdef.ExtensionEngineKind_WASM)
 		cmd.
 			SetParam(parName).
 			SetResult(resName)
 
-		qry := appDef.AddQuery(qrName)
+		qry := adb.AddQuery(qrName)
 		qry.
 			SetParam(parName).
 			SetResult(appdef.QNameANY)
 
-		prj := appDef.AddProjector(prjName)
+		prj := adb.AddProjector(prjName)
 		prj.Events().
 			Add(cmdName, appdef.ProjectorEventKind_Execute)
 		prj.Intents().
 			Add(sysViews, viewName)
 
-		_ = appDef.AddObject(parName)
-		_ = appDef.AddObject(resName)
+		_ = adb.AddObject(parName)
+		_ = adb.AddObject(resName)
 
-		if a, err := appDef.Build(); err == nil {
+		if a, err := adb.Build(); err == nil {
 			app = a
 		} else {
 			panic(err)
@@ -86,6 +87,12 @@ func ExampleIAppDef_Extensions() {
 		fmt.Printf("Overall %d extension(s)", cnt)
 	}
 
+	// how to find extension
+	{
+		ext := app.Extension(cmdName)
+		fmt.Println("Extension:", ext)
+	}
+
 	// 1. WASM-Command «test.cmd» :
 	//  - parameter: Object «test.param»
 	//  - unl.param: <nil>
@@ -97,4 +104,5 @@ func ExampleIAppDef_Extensions() {
 	//  - event    : Command «test.cmd» [Execute]
 	//  - intent   : Storage «sys.views» [test.view]
 	// Overall 3 extensions(s)
+	// Extension: WASM-Command «test.cmd»
 }

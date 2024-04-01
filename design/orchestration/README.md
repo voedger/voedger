@@ -7,7 +7,7 @@ How to deploy Heeus application into some Heeus federation
 - No intermediate package managers like artifactory, jfrog etc.
 - Application is deployed using Application Images (AppImage) + Deployment Descriptor (Deployment)
 - AppImage presents on every server node (is downloaded by Agent)
-- Application is executed by Application Partitions 
+- Application is executed by Application Partitions
 
 ### Best practices
 
@@ -57,7 +57,7 @@ erDiagram
     env map "DB_HOST = 'db01.example.com'"
     resources map "cpu  = 500 #MHz, memory = 1024 #MB"
   }
-``` 
+```
 ### Agents
 ```mermaid
 erDiagram
@@ -68,12 +68,12 @@ erDiagram
   Replica |{ .. || Agent: "executed by"
   Replica |{ .. || Host: "scheduled to"
   Agent || .. || HostAgent: "can be"
-  Agent || .. || HVMAgent: "can be"
+  Agent || .. || VVMAgent: "can be"
   Host ||..|| HostAgent: "runs one"
-  Host ||..|| HVM: "runs one"
-  HVM ||..|| HVMAgent: "has one"
+  Host ||..|| VVM: "runs one"
+  VVM ||..|| VVMAgent: "has one"
   HostAgent ||..|{ Executable: "controls"
   HostAgent ||..|{ Container: "controls"
-  HVMAgent ||..|{ AppPartition: "controls"
-  Executable ||..|| HVM : "can be"
-```  
+  VVMAgent ||..|{ AppPartition: "controls"
+  Executable ||..|| VVM : "can be"
+```

@@ -14,10 +14,10 @@ erDiagram
   User ||--|| ContainerImage: "uploads"
   Deployment ||--|| Scheduler : "scheduled by"
   Scheduler ||--|{ Job: creates
-  Job |{..|| Agent: "downloaded to HVM by"
+  Job |{..|| Agent: "downloaded to VVM by"
   Job ||..|| AppPartition: "one per"
-  AppImage ||..|| AppJobDriver: "downloaded to HVM and executed by"
-  ContainerImage ||..|| ContainerJobDriver: "downloaded to HVM and executed by"
+  AppImage ||..|| AppJobDriver: "downloaded to VVM and executed by"
+  ContainerImage ||..|| ContainerJobDriver: "downloaded to VVM and executed by"
   Agent ||..|{ JobDriver: "works with several"
   AppJobDriver ||..|| JobDriver: "is"
   ContainerJobDriver ||..|| JobDriver: "is"
@@ -61,7 +61,7 @@ erDiagram
   - build%-wasm.sh
     - Produces package.wasm %+ package.json (data schemas)
   - build%-wasm.sh from Heeus (скрипт из шаблона пакета для TypeScript, reference, рекомендованный, boilerplate, etalon, standart, origin)
-    - Uses TypeScript builder to build package.json 
+    - Uses TypeScript builder to build package.json
     - Builds wasm from AssemblyScript sources
 
 ### User: Upload App Image2

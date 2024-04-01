@@ -19,23 +19,25 @@ func Test_AppDef_AddWorkspace(t *testing.T) {
 	var app IAppDef
 
 	t.Run("must be ok to add workspace", func(t *testing.T) {
-		appDef := New()
-		ws := appDef.AddWorkspace(wsName)
+		adb := New()
+		adb.AddPackage("test", "test.com/test")
+
+		ws := adb.AddWorkspace(wsName)
 
 		t.Run("must be ok to set workspace descriptor", func(t *testing.T) {
-			_ = appDef.AddCDoc(descName)
+			_ = adb.AddCDoc(descName)
 			ws.SetDescriptor(descName)
 		})
 
 		t.Run("must be ok to add some object to workspace", func(t *testing.T) {
-			_ = appDef.AddObject(objName)
+			_ = adb.AddObject(objName)
 			ws.AddType(objName)
 		})
 
 		require.NotNil(ws.Workspace(), "should be ok to get workspace definition before build")
 		require.Equal(ws.Workspace().Descriptor(), descName, "should be ok to get workspace descriptor before build")
 
-		a, err := appDef.Build()
+		a, err := adb.Build()
 		require.NoError(err)
 
 		app = a
@@ -83,14 +85,16 @@ func Test_AppDef_AddWorkspace(t *testing.T) {
 	})
 
 	t.Run("must be panic if unknown descriptor assigned to workspace", func(t *testing.T) {
-		appDef := New()
-		ws := appDef.AddWorkspace(wsName)
+		adb := New()
+		adb.AddPackage("test", "test.com/test")
+		ws := adb.AddWorkspace(wsName)
 		require.Panics(func() { ws.SetDescriptor(NewQName("unknown", "type")) })
 	})
 
 	t.Run("must be panic if add unknown type to workspace", func(t *testing.T) {
-		appDef := New()
-		ws := appDef.AddWorkspace(wsName)
+		adb := New()
+		adb.AddPackage("test", "test.com/test")
+		ws := adb.AddWorkspace(wsName)
 		require.Panics(func() { ws.AddType(NewQName("unknown", "type")) })
 	})
 }
@@ -101,12 +105,14 @@ func Test_AppDef_SetDescriptor(t *testing.T) {
 	t.Run("must be ok to add workspace with descriptor", func(t *testing.T) {
 		wsName, descName := NewQName("test", "ws"), NewQName("test", "desc")
 
-		appDef := New()
-		ws := appDef.AddWorkspace(wsName)
-		_ = appDef.AddCDoc(descName)
+		adb := New()
+		adb.AddPackage("test", "test.com/test")
+
+		ws := adb.AddWorkspace(wsName)
+		_ = adb.AddCDoc(descName)
 		ws.SetDescriptor(descName)
 
-		app, err := appDef.Build()
+		app, err := adb.Build()
 		require.NoError(err)
 
 		t.Run("must be ok to find workspace by descriptor", func(t *testing.T) {
@@ -124,19 +130,21 @@ func Test_AppDef_SetDescriptor(t *testing.T) {
 	t.Run("must be ok to change ws descriptor", func(t *testing.T) {
 		wsName, descName, desc1Name := NewQName("test", "ws"), NewQName("test", "desc"), NewQName("test", "desc1")
 
-		appDef := New()
-		ws := appDef.AddWorkspace(wsName)
-		_ = appDef.AddCDoc(descName)
+		adb := New()
+		adb.AddPackage("test", "test.com/test")
+
+		ws := adb.AddWorkspace(wsName)
+		_ = adb.AddCDoc(descName)
 		ws.SetDescriptor(descName)
 
 		t.Run("must be ok to assign descriptor twice", func(t *testing.T) {
 			ws.SetDescriptor(descName)
 		})
 
-		_ = appDef.AddCDoc(desc1Name)
+		_ = adb.AddCDoc(desc1Name)
 		ws.SetDescriptor(desc1Name)
 
-		app, err := appDef.Build()
+		app, err := adb.Build()
 		require.NoError(err)
 
 		t.Run("must be ok to find workspace by changed descriptor", func(t *testing.T) {
@@ -151,7 +159,7 @@ func Test_AppDef_SetDescriptor(t *testing.T) {
 		t.Run("must be ok to clear descriptor", func(t *testing.T) {
 			ws.SetDescriptor(NullQName)
 
-			app, err = appDef.Build()
+			app, err = adb.Build()
 			require.NoError(err)
 
 			require.Nil(app.WorkspaceByDescriptor(descName))
@@ -172,14 +180,16 @@ func Test_AppDef_AddWorkspaceAbstract(t *testing.T) {
 	var app IAppDef
 
 	t.Run("must be ok to add abstract workspace", func(t *testing.T) {
-		appDef := New()
-		ws := appDef.AddWorkspace(wsName)
+		adb := New()
+		adb.AddPackage("test", "test.com/test")
 
-		desc := appDef.AddCDoc(descName)
+		ws := adb.AddWorkspace(wsName)
+
+		desc := adb.AddCDoc(descName)
 		desc.SetAbstract()
 		ws.SetDescriptor(descName)
 
-		a, err := appDef.Build()
+		a, err := adb.Build()
 		require.NoError(err)
 
 		app = a
@@ -194,20 +204,22 @@ func Test_AppDef_AddWorkspaceAbstract(t *testing.T) {
 	})
 
 	t.Run("must be error to set descriptor abstract after assign to workspace", func(t *testing.T) {
-		appDef := New()
-		ws := appDef.AddWorkspace(wsName)
+		adb := New()
+		adb.AddPackage("test", "test.com/test")
 
-		desc := appDef.AddCDoc(descName)
+		ws := adb.AddWorkspace(wsName)
+
+		desc := adb.AddCDoc(descName)
 		ws.SetDescriptor(descName)
 
 		desc.SetAbstract()
 
-		_, err := appDef.Build()
+		_, err := adb.Build()
 		require.ErrorIs(err, ErrWorkspaceShouldBeAbstract)
 
 		t.Run("but must be ok to fix this error by making the workspace abstract", func(t *testing.T) {
 			ws.SetAbstract()
-			_, err := appDef.Build()
+			_, err := adb.Build()
 			require.NoError(err)
 		})
 	})

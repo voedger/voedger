@@ -264,11 +264,13 @@ func Test_BasicUsage(t *testing.T) {
 	require.True(intent.Names().Contains(appdef.NewQName("main", "Transaction")))
 
 	localNames := app.PackageLocalNames()
-	require.Len(localNames, 3)
+	require.Len(localNames, 4)
+	require.Contains(localNames, appdef.SysPackage)
 	require.Contains(localNames, "main")
 	require.Contains(localNames, "air")
 	require.Contains(localNames, "untill")
 
+	require.Equal(appdef.SysPackagePath, app.PackageFullPath(appdef.SysPackage))
 	require.Equal("github.com/untillpro/main", app.PackageFullPath("main"))
 	require.Equal("github.com/untillpro/airsbp", app.PackageFullPath("air"))
 	require.Equal("github.com/untillpro/untill", app.PackageFullPath("untill"))
@@ -2366,4 +2368,52 @@ func Test_RefsWorkspaces(t *testing.T) {
 		);
 
 	);`)
+}
+
+func Test_ScheduledProjectors(t *testing.T) {
+
+	t.Run("bad workspace", func(t *testing.T) {
+		require := assertions(t)
+		require.AppSchemaError(`APPLICATION test();
+			WORKSPACE w2 (
+				VIEW test(
+					i int32,
+					PRIMARY KEY(i)
+				) AS RESULT OF Proj1;
+
+				EXTENSION ENGINE BUILTIN (
+					PROJECTOR Proj1 CRON '1 0 * * *' INTENTS (View(test));
+				);
+			);`, "file.sql:9:6: scheduled projector must be in app workspace")
+	})
+
+	t.Run("bad cron", func(t *testing.T) {
+		require := assertions(t)
+		require.AppSchemaError(`APPLICATION test();
+			ALTER WORKSPACE AppWorkspaceWS (
+				VIEW test(
+					i int32,
+					PRIMARY KEY(i)
+				) AS RESULT OF Proj1;
+
+				EXTENSION ENGINE BUILTIN (
+					PROJECTOR Proj1 CRON 'blah' INTENTS (View(test));
+				);
+			);`, "file.sql:9:6: invalid cron schedule: blah")
+	})
+
+	t.Run("good cron", func(t *testing.T) {
+		require := assertions(t)
+		require.NoAppSchemaError(`APPLICATION test();
+ALTER WORKSPACE sys.AppWorkspaceWS (
+	VIEW test(
+		i int32,
+		PRIMARY KEY(i)
+	) AS RESULT OF ScheduledProjector;
+
+	EXTENSION ENGINE BUILTIN (
+		PROJECTOR ScheduledProjector CRON '1 0 * * *' INTENTS (View(test));
+	);
+);`)
+	})
 }

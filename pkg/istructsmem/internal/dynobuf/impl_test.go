@@ -19,8 +19,10 @@ func TestDynoBufSchemes(t *testing.T) {
 	var appDef appdef.IAppDef
 
 	t.Run("must ok to build application", func(t *testing.T) {
-		appDefBuilder := appdef.New()
-		root := appDefBuilder.AddObject(appdef.NewQName("test", "root"))
+		adb := appdef.New()
+		adb.AddPackage("test", "test.com/test")
+
+		root := adb.AddObject(appdef.NewQName("test", "root"))
 		root.
 			AddField("int32Field", appdef.DataKind_int32, true).
 			AddField("int64Field", appdef.DataKind_int64, false).
@@ -33,7 +35,7 @@ func TestDynoBufSchemes(t *testing.T) {
 		root.
 			AddContainer("child", appdef.NewQName("test", "child"), 1, appdef.Occurs_Unbounded)
 
-		child := appDefBuilder.AddObject(appdef.NewQName("test", "child"))
+		child := adb.AddObject(appdef.NewQName("test", "child"))
 		child.
 			AddField("int32Field", appdef.DataKind_int32, true).
 			AddField("int64Field", appdef.DataKind_int64, false).
@@ -47,16 +49,16 @@ func TestDynoBufSchemes(t *testing.T) {
 		child.
 			AddContainer("grandChild", appdef.NewQName("test", "grandChild"), 0, 1)
 
-		grandChild := appDefBuilder.AddObject(appdef.NewQName("test", "grandChild"))
+		grandChild := adb.AddObject(appdef.NewQName("test", "grandChild"))
 		grandChild.
 			AddField("recIDField", appdef.DataKind_RecordID, false)
 
-		view := appDefBuilder.AddView(appdef.NewQName("test", "view"))
+		view := adb.AddView(appdef.NewQName("test", "view"))
 		view.Key().PartKey().AddField("pk1", appdef.DataKind_int64)
 		view.Key().ClustCols().AddField("cc1", appdef.DataKind_string, appdef.MaxLen(100))
 		view.Value().AddRefField("val1", true)
 
-		sch, err := appDefBuilder.Build()
+		sch, err := adb.Build()
 		require.NoError(err)
 
 		appDef = sch

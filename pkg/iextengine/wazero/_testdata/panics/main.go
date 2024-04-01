@@ -132,7 +132,7 @@ func asStringMemoryOverflow() {
 
 //export wrongFieldName
 func wrongFieldName() {
-	key := ext.KeyBuilder(ext.StorageView, "pkg.TestView")
+	key := ext.KeyBuilder(ext.StorageView, "mypkg.TestView")
 	key.PutInt32("wrong", 1)
 	key.PutInt32("cc", 1)
 	ext.MustGetValue(key)

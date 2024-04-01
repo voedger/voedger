@@ -18,4 +18,5 @@ type metricsService struct {
 	pipeline.NOPService
 	*http.Server
 	listener net.Listener
+	port     int
 }

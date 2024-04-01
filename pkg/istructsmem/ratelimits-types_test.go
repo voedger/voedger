@@ -19,8 +19,10 @@ import (
 func TestRateLimits_BasicUsage(t *testing.T) {
 	require := require.New(t)
 	cfgs := make(AppConfigsType)
-	cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, appdef.New())
-	qName1 := appdef.NewQName(appdef.SysPackage, "myFunc")
+	adb := appdef.New()
+	adb.AddPackage("test", "test.com/test")
+	cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, adb)
+	qName1 := appdef.NewQName("test", "myFunc")
 
 	provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider())
 
