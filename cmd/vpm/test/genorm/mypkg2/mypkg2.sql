@@ -1,3 +1,6 @@
+-- Copyright (c) 2024-present unTill Pro, Ltd.
+-- @author Alisher Nurmanov
+
 IMPORT SCHEMA 'mypkg1';
 
 WORKSPACE MyWorkspace2 INHERITS mypkg1.MyWorkspace1(

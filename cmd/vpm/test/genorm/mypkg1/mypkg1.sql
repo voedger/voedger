@@ -1,3 +1,6 @@
+-- Copyright (c) 2024-present unTill Pro, Ltd.
+-- @author Alisher Nurmanov
+
 ABSTRACT WORKSPACE MyWorkspace1(
     TABLE MyTable1 INHERITS CDoc(
         Field1 varchar,
