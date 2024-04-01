@@ -122,30 +122,58 @@ func getPkgAppDefObjs(packagePath string, appDef appdef.IAppDef, headerContent s
 }
 
 func generateOrmFiles(pkgData map[ormPackageInfo][]interface{}, dir string) error {
+	ormFiles := make([]string, 0, len(pkgData)+1)
 	for pkgInfo, pkgItems := range pkgData {
 		ormPkgData := ormPackage{
 			ormPackageInfo: pkgInfo,
 			Items:          pkgItems,
 		}
-		if err := generateOrmFile(pkgInfo.Name, ormPkgData, dir); err != nil {
+		ormFilePath, err := generateOrmFile(pkgInfo.Name, ormPkgData, dir)
+		if err != nil {
+			return fmt.Errorf(errInGeneratingOrmFileFormat, ormFilePath, err)
+		}
+		ormFiles = append(ormFiles, ormFilePath)
+	}
+
+	sysFilePath := filepath.Join(dir, "types.go")
+	ormFiles = append(ormFiles, sysFilePath)
+	if err := os.WriteFile(sysFilePath, []byte(sysContent), defaultPermissions); err != nil {
+		return fmt.Errorf(errInGeneratingOrmFileFormat, sysFilePath, err)
+	}
+
+	return formatOrmFiles(ormFiles)
+}
+
+func formatOrmFiles(ormFiles []string) error {
+	for _, ormFile := range ormFiles {
+		ormFileContent, err := os.ReadFile(ormFile)
+		if err != nil {
+			return err
+		}
+
+		formattedContent, err := format.Source(ormFileContent)
+		if err != nil {
+			return err
+		}
+
+		if err := os.WriteFile(ormFile, formattedContent, defaultPermissions); err != nil {
 			return err
 		}
 	}
-	sysFilePath := filepath.Join(dir, "types.go")
-	return os.WriteFile(sysFilePath, []byte(sysContent), defaultPermissions)
+	return nil
 }
 
-func generateOrmFile(localName string, ormPkgData ormPackage, dir string) error {
+func generateOrmFile(localName string, ormPkgData ormPackage, dir string) (filePath string, err error) {
+	filePath = filepath.Join(dir, fmt.Sprintf("package_%s.go", localName))
 	ormFileContent, err := fillInTemplate(ormPkgData)
 	if err != nil {
-		return err
+		return filePath, err
 	}
 
-	filePath := filepath.Join(dir, fmt.Sprintf("package_%s.go", localName))
 	if err := os.WriteFile(filePath, ormFileContent, defaultPermissions); err != nil {
-		return err
+		return filePath, err
 	}
-	return nil
+	return filePath, nil
 }
 
 func getOrmData(localName string, pkgInfos map[string]ormPackageInfo, iTypeObjs []appdef.IType) (pkgData map[ormPackageInfo][]interface{}) {
