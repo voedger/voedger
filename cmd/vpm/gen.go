@@ -26,6 +26,7 @@ import (
 
 //go:embed ormtemplates/*
 var ormTemplatesFS embed.FS
+var reservedWords = []string{"type"}
 
 func newOrmCmd() *cobra.Command {
 	params := vpmParams{}
@@ -344,8 +345,12 @@ func createOrmDir(dir string) (string, error) {
 	return ormDirPath, os.MkdirAll(ormDirPath, defaultPermissions)
 }
 
-func normalizeName(name string) string {
-	return strings.ReplaceAll(name, ".", "_")
+func normalizeName(name string) (newName string) {
+	newName = strings.ReplaceAll(name, ".", "_")
+	if slices.Contains(reservedWords, strings.ToLower(newName)) {
+		newName += "_"
+	}
+	return
 }
 
 func getName(obj interface{}) string {
