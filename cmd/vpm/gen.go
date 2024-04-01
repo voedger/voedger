@@ -10,6 +10,7 @@ import (
 	"embed"
 	"fmt"
 	"go/format"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"slices"
@@ -24,7 +25,7 @@ import (
 )
 
 //go:embed ormtemplates/*
-var fsTemplates embed.FS
+var ormTemplatesFS embed.FS
 
 func newOrmCmd() *cobra.Command {
 	params := vpmParams{}
@@ -110,6 +111,7 @@ func getPkgAppDefObjs(packagePath string, appDef appdef.IAppDef, headerContent s
 
 	// gather objects from the current package
 	appDef.Types(func(iTypeObj appdef.IType) {
+		// TODO: ALTER WORKSPACE does not work because that workspace could be from an another package
 		if iTypeObj.QName().Pkg() == currentPkgLocalName {
 			if workspace, ok := iTypeObj.(appdef.IWorkspace); ok {
 				workspace.Types(collectITypeObjs)
@@ -267,16 +269,10 @@ func processITypeObj(localName string, pkgInfos map[string]ormPackageInfo, pkgDa
 }
 
 func fillInTemplate(ormPkgData ormPackage) ([]byte, error) {
-	templatesDir, err := fsTemplates.ReadDir("ormtemplates")
+	ormTemplates, err := fs.Sub(ormTemplatesFS, "ormtemplates")
 	if err != nil {
 		return nil, fmt.Errorf("failed to read templates directory: %w", err)
 	}
-
-	templates := make([]string, 0)
-	for _, file := range templatesDir {
-		templates = append(templates, fmt.Sprintf("ormtemplates/%s", file.Name()))
-	}
-
 	t, err := template.New("package").Funcs(template.FuncMap{
 		"capitalize": func(s string) string {
 			if len(s) == 0 {
@@ -285,7 +281,7 @@ func fillInTemplate(ormPkgData ormPackage) ([]byte, error) {
 			return strings.ToUpper(s[:1]) + s[1:]
 		},
 		"lower": strings.ToLower,
-	}).ParseFiles(templates...)
+	}).ParseFS(ormTemplates, "*")
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse template: %w", err)
 	}

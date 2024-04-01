@@ -244,6 +244,9 @@ func TestPkgRegistryCompile(t *testing.T) {
 }
 
 func TestOrmBasicUsage(t *testing.T) {
+	if testing.Short() {
+		t.Skip()
+	}
 	require := require.New(t)
 
 	// uncomment this line to see verbose logs
