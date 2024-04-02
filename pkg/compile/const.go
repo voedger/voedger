@@ -6,7 +6,7 @@
 package compile
 
 const (
-	dummyAppName      = "dummyApp"
+	DummyAppName      = "dummyApp"
 	sysSchemaFileName = "sys.sql"
 	voedgerPath       = "github.com/voedger/voedger"
 )

@@ -130,13 +130,13 @@ func getDummyAppPackageAst(imports []parser.ImportStmt) (*parser.PackageSchemaAS
 			Statements: []parser.RootStatement{
 				{
 					Application: &parser.ApplicationStmt{
-						Name: dummyAppName,
+						Name: DummyAppName,
 					},
 				},
 			},
 		},
 	}
-	return parser.BuildPackageSchema(dummyAppName, []*parser.FileSchemaAST{fileAst})
+	return parser.BuildPackageSchema(DummyAppName, []*parser.FileSchemaAST{fileAst})
 }
 
 func getUseStmts(imports []parser.ImportStmt) []parser.UseStmt {

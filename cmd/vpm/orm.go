@@ -32,7 +32,7 @@ func newOrmCmd() *cobra.Command {
 	params := vpmParams{}
 	cmd := &cobra.Command{
 		Use:   "orm [--header-file]",
-		Short: "generate ORM",
+		Short: "generate orm",
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
 			params, err = prepareParams(params, args)
 			if err != nil {
