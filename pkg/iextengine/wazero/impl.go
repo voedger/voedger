@@ -44,6 +44,8 @@ type wazeroExtPkg struct {
 }
 
 type wazeroExtEngine struct {
+	app istructs.AppQName
+
 	compile bool
 	config  *iextengine.ExtEngineConfig
 	modules map[string]*wazeroExtPkg
@@ -76,9 +78,10 @@ type extensionEngineFactory struct {
 	compile bool
 }
 
-func (f extensionEngineFactory) New(ctx context.Context, _ istructs.AppQName, packages []iextengine.ExtensionPackage, config *iextengine.ExtEngineConfig, numEngines int) (engines []iextengine.IExtensionEngine, err error) {
+func (f extensionEngineFactory) New(ctx context.Context, app istructs.AppQName, packages []iextengine.ExtensionPackage, config *iextengine.ExtEngineConfig, numEngines int) (engines []iextengine.IExtensionEngine, err error) {
 	for i := 0; i < numEngines; i++ {
 		engine := &wazeroExtEngine{
+			app:     app,
 			modules: make(map[string]*wazeroExtPkg),
 			config:  config,
 			compile: f.compile,

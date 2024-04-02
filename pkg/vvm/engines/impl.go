@@ -23,7 +23,8 @@ import (
 func provideAppsBuiltInExtFuncs(cfgs istructsmem.AppConfigsType) iextengine.BuiltInExtFuncs {
 	funcs := make(iextengine.BuiltInExtFuncs)
 
-	for _, cfg := range cfgs {
+	for app, cfg := range cfgs {
+		appFuncs := make(iextengine.BuiltInAppExtFuncs)
 		cfg.AppDef.Extensions(
 			func(ext appdef.IExtension) {
 				if ext.Engine() != appdef.ExtensionEngineKind_BuiltIn {
@@ -66,16 +67,18 @@ func provideAppsBuiltInExtFuncs(cfgs istructsmem.AppConfigsType) iextengine.Buil
 				}
 
 				if fn == nil {
-					panic(fmt.Errorf("application «%v»: %v implementation not found", cfg.Name, ext))
+					panic(fmt.Errorf("application «%v»: %v implementation not found", app, ext))
 				}
 
 				extName := cfg.AppDef.FullQName(name)
 				if extName == appdef.NullFullQName {
-					panic(fmt.Errorf("application «%v»: package «%s» full path is unknown", cfg.Name, name.Pkg()))
+					panic(fmt.Errorf("application «%v»: package «%s» full path is unknown", app, name.Pkg()))
 				}
 
-				funcs[extName] = fn
+				appFuncs[extName] = fn
 			})
+
+		funcs[app] = appFuncs
 	}
 	return funcs
 }
