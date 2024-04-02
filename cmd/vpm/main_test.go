@@ -12,7 +12,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/otiai10/copy"
 	"github.com/stretchr/testify/require"
 	"github.com/untillpro/goutils/exec"
 	"github.com/untillpro/goutils/logger"
@@ -249,7 +248,8 @@ func TestOrmBasicUsage(t *testing.T) {
 	}
 	require := require.New(t)
 
-	// uncomment this line to see verbose logs
+	// uncomment this line to keep the result geerated during test
+	// the resulting dir will be printed
 	// logger.SetLogLevel(logger.LogLevelVerbose)
 
 	var err error
@@ -264,7 +264,7 @@ func TestOrmBasicUsage(t *testing.T) {
 	wd, err := os.Getwd()
 	require.NoError(err)
 
-	err = copy.Copy(filepath.Join(wd, "test", "genorm"), tempDir)
+	err = coreutils.CopyDir(filepath.Join(wd, "test", "genorm"), tempDir)
 	require.NoError(err)
 
 	tests := []struct {
