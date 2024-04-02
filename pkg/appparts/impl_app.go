@@ -58,7 +58,7 @@ func (a *app) deploy(def appdef.IAppDef, structs istructs.IAppStructs, numEngine
 	a.def = def
 	a.structs = structs
 
-	eef := a.apps.extEngineFactoriesFactory(a.name)
+	eef := a.apps.extEngineFactories
 
 	ctx := context.Background()
 	for k, cnt := range numEngines {

@@ -28,11 +28,9 @@ func NewWithActualizer(structs istructs.IAppStructsProvider, actualizer SyncActu
 	return NewWithActualizerWithExtEnginesFactories(
 		structs,
 		actualizer,
-		func(istructs.AppQName) iextengine.ExtensionEngineFactories {
-			return iextengine.ExtensionEngineFactories{
-				appdef.ExtensionEngineKind_BuiltIn: iextengine.NullExtensionEngineFactory,
-				appdef.ExtensionEngineKind_WASM:    iextengine.NullExtensionEngineFactory,
-			}
+		iextengine.ExtensionEngineFactories{
+			appdef.ExtensionEngineKind_BuiltIn: iextengine.NullExtensionEngineFactory,
+			appdef.ExtensionEngineKind_WASM:    iextengine.NullExtensionEngineFactory,
 		},
 	)
 }
@@ -40,6 +38,6 @@ func NewWithActualizer(structs istructs.IAppStructsProvider, actualizer SyncActu
 type ExtensionEngineFactoriesFactory func(istructs.AppQName) iextengine.ExtensionEngineFactories
 
 func NewWithActualizerWithExtEnginesFactories(structs istructs.IAppStructsProvider, actualizer SyncActualizerFactory,
-	eff ExtensionEngineFactoriesFactory) (ap IAppPartitions, cleanup func(), err error) {
-	return newAppPartitions(structs, actualizer, eff)
+	eef iextengine.ExtensionEngineFactories) (ap IAppPartitions, cleanup func(), err error) {
+	return newAppPartitions(structs, actualizer, eef)
 }

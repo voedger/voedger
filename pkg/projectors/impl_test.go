@@ -16,7 +16,6 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/cluster"
-	"github.com/voedger/voedger/pkg/iextengine"
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/in10nmem"
 	"github.com/voedger/voedger/pkg/iratesce"
@@ -243,15 +242,11 @@ func deployTestApp(
 	appParts, appPartsCleanup, err := appparts.NewWithActualizerWithExtEnginesFactories(
 		appStructsProvider,
 		NewSyncActualizerFactoryFactory(ProvideSyncActualizerFactory(), secretReader, n10nBroker),
-		func(app istructs.AppQName) iextengine.ExtensionEngineFactories {
-			return engines.ProvideExtEngineFactories(
-				engines.ExtEngineFactoriesConfig{
-					AppConfig:   cfgs.GetConfig(app),
-					WASMCompile: false,
-				},
-			)
-		},
-	)
+		engines.ProvideExtEngineFactories(
+			engines.ExtEngineFactoriesConfig{
+				AppConfigs:  cfgs,
+				WASMCompile: false,
+			}))
 	if err != nil {
 		panic(err)
 	}
