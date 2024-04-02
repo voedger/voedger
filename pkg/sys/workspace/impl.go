@@ -286,7 +286,7 @@ func execCmdCreateWorkspace(now coreutils.TimeFunc, asp istructs.IAppStructsProv
 				return err
 			}
 			cdocWSKind.PutRecordID(appdef.SystemField_ID, 2)
-			return coreutils.Marshal(cdocWSKind, wsKindInitializationData) // validated already in func()
+			return coreutils.MapToObject(wsKindInitializationData, cdocWSKind) // validated already in func()
 		}
 		return nil
 	}
