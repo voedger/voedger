@@ -6,7 +6,6 @@
 package workspace
 
 import (
-	"context"
 	"fmt"
 	"net/http"
 
@@ -23,8 +22,7 @@ import (
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-func provideDeactivateWorkspace(cfg *istructsmem.AppConfigType, tokensAPI itokens.ITokens, federation coreutils.IFederation,
-	asp istructs.IAppStructsProvider) {
+func provideDeactivateWorkspace(cfg *istructsmem.AppConfigType, tokensAPI itokens.ITokens, federation coreutils.IFederation) {
 
 	// c.sys.DeactivateWorkspace
 	// target app, target WSID
@@ -57,7 +55,7 @@ func provideDeactivateWorkspace(cfg *istructsmem.AppConfigType, tokensAPI itoken
 	// target app, target WSID
 	cfg.AddAsyncProjectors(istructs.Projector{
 		Name: qNameProjectorApplyDeactivateWorkspace,
-		Func: projectorApplyDeactivateWorkspace(federation, tokensAPI, asp),
+		Func: projectorApplyDeactivateWorkspace(federation, tokensAPI),
 	})
 }
 
@@ -179,8 +177,7 @@ func cmdOnChildWorkspaceDeactivatedExec(args istructs.ExecCommandArgs) (err erro
 }
 
 // target app, target WSID
-func projectorApplyDeactivateWorkspace(federation coreutils.IFederation, tokensAPI itokens.ITokens,
-	asp istructs.IAppStructsProvider) func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
+func projectorApplyDeactivateWorkspace(federation coreutils.IFederation, tokensAPI itokens.ITokens) func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
 	return func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
 		kb, err := s.KeyBuilder(state.Record, authnz.QNameCDocWorkspaceDescriptor)
 		if err != nil {
@@ -206,24 +203,23 @@ func projectorApplyDeactivateWorkspace(federation coreutils.IFederation, tokensA
 		}
 
 		// Foreach cdoc.sys.Subject
-		as, err := asp.AppStructs(appQName)
+		subjectsKB, err := s.KeyBuilder(state.View, collection.QNameCollectionView)
 		if err != nil {
 			// notest
 			return err
 		}
-		subjectsKB := as.ViewRecords().KeyBuilder(collection.QNameCollectionView)
 		subjectsKB.PutInt32(collection.Field_PartKey, collection.PartitionKeyCollection)
 		subjectsKB.PutQName(collection.Field_DocQName, invite.QNameCDocSubject)
-		err = as.ViewRecords().Read(context.Background(), event.Workspace(), subjectsKB, func(_ istructs.IKey, value istructs.IValue) (err error) {
+		err = s.Read(subjectsKB, func(_ istructs.IKey, value istructs.IStateValue) (err error) {
 			subject := value.AsRecord(collection.Field_Record)
 			if istructs.SubjectKindType(subject.AsInt32(authnz.Field_SubjectKind)) != istructs.SubjectKind_User {
 				return nil
 			}
 			profileWSID := istructs.WSID(subject.AsInt64(invite.Field_ProfileWSID))
+			
 			// app is always current
 			// impossible to have logins from different apps among subjects (Michael said)
 			url := fmt.Sprintf(`api/%s/%d/c.sys.OnJoinedWorkspaceDeactivated`, appQName, profileWSID)
-
 			body := fmt.Sprintf(`{"args":{"InvitedToWSID":%d}}`, event.Workspace())
 			_, err = federation.Func(url, body, coreutils.WithAuthorizeBy(sysToken), coreutils.WithDiscardResponse())
 			return err
