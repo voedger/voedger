@@ -320,7 +320,7 @@ func fillInTemplate(ormPkgData ormPackage) ([]byte, error) {
 		return nil, fmt.Errorf("failed to fill template: %w", err)
 	}
 
-	return format.Source(filledTemplate.Bytes())
+	return filledTemplate.Bytes(), nil
 }
 
 func getHeaderFileContent(headerFilePath string) (string, error) {
