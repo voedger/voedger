@@ -104,6 +104,10 @@ func getPkgAppDefObjs(packagePath string, appDef appdef.IAppDef, headerContent s
 			}
 		}
 		qName := iTypeObj.QName()
+		// skip types from other packages
+		if qName.Pkg() != currentPkgLocalName {
+			return
+		}
 		if !slices.Contains(uniqueObjects, qName.String()) {
 			iTypeObjs = append(iTypeObjs, iTypeObj)
 			uniqueObjects = append(uniqueObjects, qName.String())
@@ -112,11 +116,8 @@ func getPkgAppDefObjs(packagePath string, appDef appdef.IAppDef, headerContent s
 
 	// gather objects from the current package
 	appDef.Types(func(iTypeObj appdef.IType) {
-		// TODO: ALTER WORKSPACE does not work because that workspace could be from an another package
-		if iTypeObj.QName().Pkg() == currentPkgLocalName {
-			if workspace, ok := iTypeObj.(appdef.IWorkspace); ok {
-				workspace.Types(collectITypeObjs)
-			}
+		if workspace, ok := iTypeObj.(appdef.IWorkspace); ok {
+			workspace.Types(collectITypeObjs)
 		}
 	})
 	return

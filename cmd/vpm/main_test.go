@@ -271,13 +271,19 @@ func TestOrmBasicUsage(t *testing.T) {
 		dir string
 	}{
 		{
+			dir: "app",
+		},
+		{
 			dir: "mypkg1",
 		},
 		{
 			dir: "mypkg2",
 		},
 		{
-			dir: "app",
+			dir: "mypkg3",
+		},
+		{
+			dir: "mypkg4",
 		},
 	}
 
