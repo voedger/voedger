@@ -44,7 +44,7 @@ func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder
 	provideViewNextWSID(appDefBuilder)
 
 	// deactivate workspace
-	provideDeactivateWorkspace(cfg, tokensAPI, federation, asp)
+	provideDeactivateWorkspace(cfg, tokensAPI, federation)
 
 	// projectors
 	cfg.AddAsyncProjectors(

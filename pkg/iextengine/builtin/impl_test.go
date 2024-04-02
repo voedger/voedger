@@ -13,6 +13,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/iextengine"
+	"github.com/voedger/voedger/pkg/istructs"
 )
 
 func Test_BasicUsage(t *testing.T) {
@@ -25,7 +26,7 @@ func Test_BasicUsage(t *testing.T) {
 	ext1func := func(ctx context.Context, io iextengine.IExtensionIO) error {
 		counter++
 		if counter == 3 {
-			return errors.New("test")
+			return errors.New("test error")
 		}
 		return nil
 	}
@@ -35,22 +36,24 @@ func Test_BasicUsage(t *testing.T) {
 	}
 
 	factory := ProvideExtensionEngineFactory(iextengine.BuiltInExtFuncs{
-		ext1name: ext1func,
-		ext2name: ext2func,
+		istructs.AppQName_test1_app1: iextengine.BuiltInAppExtFuncs{
+			ext1name: ext1func,
+			ext2name: ext2func,
+		},
 	})
 
-	engines, err := factory.New(context.Background(), nil, nil, 5)
+	engines, err := factory.New(context.Background(), istructs.AppQName_test1_app1, nil, nil, 5)
 	require.NoError(err)
 	require.Len(engines, 5)
 
 	require.NoError(engines[0].Invoke(context.Background(), ext1name, nil))
 	require.NoError(engines[1].Invoke(context.Background(), ext1name, nil))
-	require.ErrorContains(engines[2].Invoke(context.Background(), ext1name, nil), "test")
+	require.ErrorContains(engines[2].Invoke(context.Background(), ext1name, nil), "test error")
 	require.NoError(engines[3].Invoke(context.Background(), ext2name, nil))
 	require.NoError(engines[4].Invoke(context.Background(), ext2name, nil))
 	require.ErrorContains(engines[2].Invoke(context.Background(), appdef.NewFullQName("test", "ext3"), nil), "undefined extension: test.ext3")
-	require.Equal(1, counter)
 
+	require.Equal(1, counter)
 }
 
 func Test_Panics(t *testing.T) {
@@ -63,10 +66,12 @@ func Test_Panics(t *testing.T) {
 	}
 
 	factory := ProvideExtensionEngineFactory(iextengine.BuiltInExtFuncs{
-		ext1name: ext1func,
+		istructs.AppQName_test1_app1: iextengine.BuiltInAppExtFuncs{
+			ext1name: ext1func,
+		},
 	})
 
-	engines, err := factory.New(context.Background(), nil, nil, 5)
+	engines, err := factory.New(context.Background(), istructs.AppQName_test1_app1, nil, nil, 5)
 	require.NoError(err)
 	require.Len(engines, 5)
 

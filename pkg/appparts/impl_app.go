@@ -58,14 +58,16 @@ func (a *app) deploy(def appdef.IAppDef, structs istructs.IAppStructs, numEngine
 	a.def = def
 	a.structs = structs
 
-	eef := a.apps.extEngineFactoriesFactory(a.name)
+	eef := a.apps.extEngineFactories
 
 	ctx := context.Background()
 	for k, cnt := range numEngines {
 		extEngines := make([][]iextengine.IExtensionEngine, appdef.ExtensionEngineKind_Count)
 
 		for ek, ef := range eef {
-			ee, err := ef.New(ctx, []iextengine.ExtensionPackage{}, &iextengine.DefaultExtEngineConfig, cnt)
+			// TODO: prepare []iextengine.ExtensionPackage from IAppDef
+			// TODO: should pass iextengine.ExtEngineConfig from somewhere (Provide?)
+			ee, err := ef.New(ctx, a.name, []iextengine.ExtensionPackage{}, &iextengine.DefaultExtEngineConfig, cnt)
 			if err != nil {
 				panic(err)
 			}
