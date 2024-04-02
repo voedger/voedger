@@ -14,13 +14,13 @@ import (
 )
 
 type ExtEngineFactoriesConfig struct {
-	AppConfig   *istructsmem.AppConfigType
+	AppConfigs  istructsmem.AppConfigsType
 	WASMCompile bool
 }
 
 func ProvideExtEngineFactories(cfg ExtEngineFactoriesConfig) iextengine.ExtensionEngineFactories {
 	return iextengine.ExtensionEngineFactories{
-		appdef.ExtensionEngineKind_BuiltIn: builtin.ProvideExtensionEngineFactory(provideAppsBuiltInExtFuncs(cfg.AppConfig)),
+		appdef.ExtensionEngineKind_BuiltIn: builtin.ProvideExtensionEngineFactory(provideAppsBuiltInExtFuncs(cfg.AppConfigs)),
 		appdef.ExtensionEngineKind_WASM:    wazero.ProvideExtensionEngineFactory(cfg.WASMCompile),
 	}
 }
