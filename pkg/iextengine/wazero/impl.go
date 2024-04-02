@@ -76,7 +76,7 @@ type extensionEngineFactory struct {
 	compile bool
 }
 
-func (f extensionEngineFactory) New(ctx context.Context, packages []iextengine.ExtensionPackage, config *iextengine.ExtEngineConfig, numEngines int) (engines []iextengine.IExtensionEngine, err error) {
+func (f extensionEngineFactory) New(ctx context.Context, _ istructs.AppQName, packages []iextengine.ExtensionPackage, config *iextengine.ExtEngineConfig, numEngines int) (engines []iextengine.IExtensionEngine, err error) {
 	for i := 0; i < numEngines; i++ {
 		engine := &wazeroExtEngine{
 			modules: make(map[string]*wazeroExtPkg),

@@ -13,6 +13,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/iextengine"
+	"github.com/voedger/voedger/pkg/istructs"
 )
 
 func Test_BasicUsage(t *testing.T) {
@@ -39,7 +40,7 @@ func Test_BasicUsage(t *testing.T) {
 		ext2name: ext2func,
 	})
 
-	engines, err := factory.New(context.Background(), nil, nil, 5)
+	engines, err := factory.New(context.Background(), istructs.AppQName_test1_app1, nil, nil, 5)
 	require.NoError(err)
 	require.Len(engines, 5)
 
@@ -66,7 +67,7 @@ func Test_Panics(t *testing.T) {
 		ext1name: ext1func,
 	})
 
-	engines, err := factory.New(context.Background(), nil, nil, 5)
+	engines, err := factory.New(context.Background(), istructs.AppQName_test1_app1, nil, nil, 5)
 	require.NoError(err)
 	require.Len(engines, 5)
 

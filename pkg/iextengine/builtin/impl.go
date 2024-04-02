@@ -10,6 +10,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/iextengine"
+	"github.com/voedger/voedger/pkg/istructs"
 )
 
 type extensionEngineFactory struct {
@@ -36,7 +37,7 @@ func (e extensionEngine) Invoke(ctx context.Context, extName appdef.FullQName, i
 
 func (e extensionEngine) Close(ctx context.Context) {}
 
-func (f extensionEngineFactory) New(_ context.Context, _ []iextengine.ExtensionPackage, _ *iextengine.ExtEngineConfig, numEngines int) (result []iextengine.IExtensionEngine, err error) {
+func (f extensionEngineFactory) New(_ context.Context, _ istructs.AppQName, _ []iextengine.ExtensionPackage, _ *iextengine.ExtEngineConfig, numEngines int) (result []iextengine.IExtensionEngine, err error) {
 	result = make([]iextengine.IExtensionEngine, numEngines)
 	for i := 0; i < numEngines; i++ {
 		result[i] = &extensionEngine{f.funcs}
