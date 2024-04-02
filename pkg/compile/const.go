@@ -8,4 +8,5 @@ package compile
 const (
 	dummyAppName      = "dummyApp"
 	sysSchemaFileName = "sys.sql"
+	voedgerPath       = "github.com/voedger/voedger"
 )

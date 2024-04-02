@@ -13,6 +13,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/untillpro/goutils/exec"
 	"github.com/untillpro/goutils/logger"
 
 	coreutils "github.com/voedger/voedger/pkg/utils"
@@ -239,4 +240,73 @@ func TestPkgRegistryCompile(t *testing.T) {
 
 	err = execRootCmd([]string{"vpm", "compile", "-C", "registry"}, "1.0.0")
 	require.NoError(err)
+}
+
+func TestOrmBasicUsage(t *testing.T) {
+	if testing.Short() {
+		t.Skip()
+	}
+	require := require.New(t)
+
+	// uncomment this line to keep the result geerated during test
+	// the resulting dir will be printed
+	// logger.SetLogLevel(logger.LogLevelVerbose)
+
+	var err error
+	var tempDir string
+	if logger.IsVerbose() {
+		tempDir, err = os.MkdirTemp("", "test_genorm")
+		require.NoError(err)
+	} else {
+		tempDir = t.TempDir()
+	}
+
+	wd, err := os.Getwd()
+	require.NoError(err)
+
+	err = coreutils.CopyDir(filepath.Join(wd, "test", "genorm"), tempDir)
+	require.NoError(err)
+
+	tests := []struct {
+		dir string
+	}{
+		{
+			dir: "app",
+		},
+		{
+			dir: "mypkg1",
+		},
+		{
+			dir: "mypkg2",
+		},
+		{
+			dir: "mypkg3",
+		},
+		{
+			dir: "mypkg4",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.dir, func(t *testing.T) {
+			dir := filepath.Join(tempDir, tc.dir)
+			if logger.IsVerbose() {
+				logger.Verbose("------------------------------------------------------------------------")
+				logger.Verbose(fmt.Sprintf("test dir: %s", filepath.Join(dir, internalDirName, ormDirName)))
+			}
+
+			headerFile := filepath.Join(dir, "header.txt")
+			err = execRootCmd([]string{"vpm", "orm", "-C", dir, "--header-file", headerFile}, "1.0.0")
+			require.NoError(err)
+
+			err = new(exec.PipedExec).Command("go", "build", "-C", dir).Run(os.Stdout, os.Stderr)
+			require.NoError(err)
+
+			if logger.IsVerbose() {
+				logger.Verbose(fmt.Sprintf("orm directory: %s", filepath.Join(dir, internalDirName, ormDirName)))
+				logger.Verbose("------------------------------------------------------------------------")
+			}
+		})
+	}
+
 }

@@ -33,15 +33,17 @@ func compile(dir string) (*Result, error) {
 	pkgFiles := make(map[string][]string)
 
 	// compile sys package first
-	sysPackageAst, compileSysErrs := compileDependency(loadedPkgs, appdef.SysPackage, nil, importedStmts, pkgFiles)
+	sysPackageAst, compileSysErrs, isSysDir := compileSysPackage(dir, loadedPkgs, importedStmts, pkgFiles)
+	//sysPackageAst, compileSysErrs := compileDependency(loadedPkgs, appdef.SysPackage, nil, importedStmts, pkgFiles)
 	pkgs = append(pkgs, sysPackageAst...)
 	errs = append(errs, compileSysErrs...)
 
-	// compile working dir after sys package
-	compileDirPackageAst, compileDirErrs := compileDir(loadedPkgs, dir, loadedPkgs.modulePath, nil, importedStmts, pkgFiles)
-	pkgs = append(pkgs, compileDirPackageAst...)
-	errs = append(errs, compileDirErrs...)
-
+	if !isSysDir {
+		// compile working dir after sys package
+		compileDirPackageAst, compileDirErrs := compileDir(loadedPkgs, dir, loadedPkgs.packagePath, nil, importedStmts, pkgFiles)
+		pkgs = append(pkgs, compileDirPackageAst...)
+		errs = append(errs, compileDirErrs...)
+	}
 	// add dummy app schema if no app schema found
 	if !hasAppSchema(pkgs) {
 		appPackageAst, err := getDummyAppPackageAst(maps.Values(importedStmts))
@@ -80,12 +82,31 @@ func compile(dir string) (*Result, error) {
 			}
 		}
 		return &Result{
-			ModulePath: loadedPkgs.modulePath,
+			ModulePath: loadedPkgs.packagePath,
 			PkgFiles:   pkgFiles,
 			AppDef:     appDef,
 		}, errors.Join(errs...)
 	}
 	return nil, errors.Join(errs...)
+}
+
+func compileSysPackage(dir string, loadedPkgs *loadedPackages, importedStmts map[string]parser.ImportStmt, pkgFiles map[string][]string) (pkgAsts []*parser.PackageSchemaAST, errs []error, isSysDir bool) {
+	if loadedPkgs.modulePath == voedgerPath {
+		rootPkgPath := loadedPkgs.rootPkgs[0].PkgPath
+		relPath := rootPkgPath[len(voedgerPath):]
+		baseDir := dir
+		if len(relPath) > 0 {
+			baseDir = dir[:len(dir)-len(relPath)]
+		}
+		sysPkgDir := filepath.Join(baseDir, "pkg/sys")
+		if dir == sysPkgDir {
+			isSysDir = true
+		}
+		pkgAsts, errs = compileDir(loadedPkgs, sysPkgDir, appdef.SysPackage, nil, importedStmts, pkgFiles)
+		return
+	}
+	pkgAsts, errs = compileDependency(loadedPkgs, appdef.SysPackage, nil, importedStmts, pkgFiles)
+	return
 }
 
 func hasAppSchema(packages []*parser.PackageSchemaAST) bool {
@@ -238,13 +259,13 @@ func loadPackages(dir string) (*loadedPackages, error) {
 
 	importedPkgs := allImportedPackages(rootPkgs)
 
-	var modulePath string
 	if len(rootPkgs) > 0 && rootPkgs[0].Module != nil {
-		modulePath = rootPkgs[0].Module.Path
 		return &loadedPackages{
 			importedPkgs: importedPkgs,
 			rootPkgs:     rootPkgs,
-			modulePath:   modulePath,
+			modulePath:   rootPkgs[0].Module.Path,
+			packagePath:  rootPkgs[0].PkgPath,
+			name:         rootPkgs[0].Name,
 		}, nil
 	}
 	return nil, fmt.Errorf("cannot find module path for %s", dir)
