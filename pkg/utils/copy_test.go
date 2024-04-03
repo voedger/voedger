@@ -56,5 +56,17 @@ func TestCopy(t *testing.T) {
 }
 
 func TestCopyErrors(t *testing.T) {
+	require := require.New(t)
+	tempDirSrc := t.TempDir()
+	tempDirDst := t.TempDir()
+	unexisingDir := filepath.Join(tempDirSrc, "unexisting")
 
+	require.Error(CopyDir("", ""))
+	require.Error(CopyDir("", tempDirDst))
+	require.Error(CopyDir(unexisingDir, ""))
+	require.Error(CopyDir(unexisingDir, ""))
+	require.Error(CopyFile("", ""))
+	require.Error(CopyFile("", tempDirDst))
+	require.Error(CopyFile(unexisingDir, ""))
+	require.Error(CopyFile(unexisingDir, ""))
 }
