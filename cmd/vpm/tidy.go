@@ -1,9 +1,15 @@
+/*
+ * Copyright (c) 2024-present unTill Pro, Ltd.
+ * @author Alisher Nurmanov
+ */
+
 package main
 
 import (
 	"slices"
 
 	"github.com/spf13/cobra"
+
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/compile"
 )

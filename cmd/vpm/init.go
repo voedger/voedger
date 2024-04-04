@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2024-present unTill Pro, Ltd.
+ * @author Alisher Nurmanov
+ */
+
 package main
 
 import (
@@ -10,6 +15,7 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/untillpro/goutils/exec"
+
 	"github.com/voedger/voedger/pkg/compile"
 )
 
