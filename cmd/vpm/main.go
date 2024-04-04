@@ -36,6 +36,8 @@ func execRootCmd(args []string, ver string) error {
 		newBaselineCmd(),
 		newCompatCmd(),
 		newOrmCmd(),
+		newInitCmd(),
+		newTidyCmd(),
 	)
 	rootCmd.InitDefaultHelpCmd()
 	rootCmd.InitDefaultCompletionCmd()

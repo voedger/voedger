@@ -46,9 +46,6 @@ func TestCompileBasicUsage(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			//err := os.Chdir(tc.dir)
-			//require.NoError(err)
-
 			err = execRootCmd([]string{"vpm", "compile", "-C", tc.dir}, "1.0.0")
 			require.NoError(err)
 		})
@@ -309,4 +306,49 @@ func TestOrmBasicUsage(t *testing.T) {
 		})
 	}
 
+}
+
+func TestInitBasicUsage(t *testing.T) {
+	if testing.Short() {
+		t.Skip()
+	}
+	require := require.New(t)
+
+	dir := t.TempDir()
+	packagePath := "github.com/account/repo"
+	err := execRootCmd([]string{"vpm", "init", "-C", dir, packagePath}, "1.0.0")
+	require.NoError(err)
+
+	require.FileExists(filepath.Join(dir, goModFileName))
+	require.FileExists(filepath.Join(dir, goSumFileName))
+	require.FileExists(filepath.Join(dir, packagesGenFileName))
+}
+
+func TestTidyBasicUsage(t *testing.T) {
+	if testing.Short() {
+		t.Skip()
+	}
+	require := require.New(t)
+
+	var err error
+	var tempDir string
+	if logger.IsVerbose() {
+		tempDir, err = os.MkdirTemp("", "test_genorm")
+		require.NoError(err)
+	} else {
+		tempDir = t.TempDir()
+	}
+
+	wd, err := os.Getwd()
+	require.NoError(err)
+
+	err = coreutils.CopyDir(filepath.Join(wd, "test", "genorm"), tempDir)
+	require.NoError(err)
+
+	dir := filepath.Join(tempDir, "mypkg5")
+
+	err = execRootCmd([]string{"vpm", "tidy", "-C", dir}, "1.0.0")
+	require.NoError(err)
+
+	require.FileExists(filepath.Join(dir, goSumFileName))
 }

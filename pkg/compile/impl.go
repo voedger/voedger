@@ -91,9 +91,9 @@ func compile(dir string) (*Result, error) {
 }
 
 func compileSysPackage(dir string, loadedPkgs *loadedPackages, importedStmts map[string]parser.ImportStmt, pkgFiles map[string][]string) (pkgAsts []*parser.PackageSchemaAST, errs []error, isSysDir bool) {
-	if loadedPkgs.modulePath == voedgerPath {
+	if loadedPkgs.modulePath == VoedgerPath {
 		rootPkgPath := loadedPkgs.rootPkgs[0].PkgPath
-		relPath := rootPkgPath[len(voedgerPath):]
+		relPath := rootPkgPath[len(VoedgerPath):]
 		baseDir := dir
 		if len(relPath) > 0 {
 			baseDir = dir[:len(dir)-len(relPath)]
@@ -130,13 +130,13 @@ func getDummyAppPackageAst(imports []parser.ImportStmt) (*parser.PackageSchemaAS
 			Statements: []parser.RootStatement{
 				{
 					Application: &parser.ApplicationStmt{
-						Name: dummyAppName,
+						Name: DummyAppName,
 					},
 				},
 			},
 		},
 	}
-	return parser.BuildPackageSchema(dummyAppName, []*parser.FileSchemaAST{fileAst})
+	return parser.BuildPackageSchema(DummyAppName, []*parser.FileSchemaAST{fileAst})
 }
 
 func getUseStmts(imports []parser.ImportStmt) []parser.UseStmt {

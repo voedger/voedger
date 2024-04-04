@@ -32,7 +32,7 @@ func newOrmCmd() *cobra.Command {
 	params := vpmParams{}
 	cmd := &cobra.Command{
 		Use:   "orm [--header-file]",
-		Short: "generate ORM",
+		Short: "generate orm",
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
 			params, err = prepareParams(params, args)
 			if err != nil {
@@ -66,6 +66,10 @@ func generateOrm(compileRes *compile.Result, params vpmParams) error {
 	iTypeObjs, pkgInfos, currentPkgLocalName := getPkgAppDefObjs(compileRes.ModulePath, compileRes.AppDef, headerContent)
 	pkgData := getOrmData(currentPkgLocalName, pkgInfos, iTypeObjs)
 	if err := generateOrmFiles(pkgData, dir); err != nil {
+		return err
+	}
+	// update dependencies if go.mod file exists
+	if err := updateDependencies(dir); err != nil {
 		return err
 	}
 	return nil
