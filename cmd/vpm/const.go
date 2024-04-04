@@ -59,6 +59,7 @@ func CommandContext() Value_CommandContext {
 
 const (
 	goModFileName        = "go.mod"
+	goSumFileName        = "go.sum"
 	packagesGenFileName  = "packages_gen.go"
 	goModContentTemplate = `module %s
 

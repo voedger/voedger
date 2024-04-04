@@ -33,7 +33,7 @@ func newTidyCmd() *cobra.Command {
 
 func tidy(appDef appdef.IAppDef, dir string) error {
 	packageName := filepath.Base(dir)
-	if err := createPackagesGen(getImports(appDef, packageName), dir, packageName); err != nil {
+	if err := createPackagesGen(getImports(appDef, packageName), dir, packageName, true); err != nil {
 		return err
 	}
 	if err := updateDependencies(dir); err != nil {

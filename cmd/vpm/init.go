@@ -35,7 +35,7 @@ func initPackage(dir string) error {
 	if err := createGoMod(dir, packageName); err != nil {
 		return err
 	}
-	if err := createPackagesGen(nil, dir, packageName); err != nil {
+	if err := createPackagesGen(nil, dir, packageName, false); err != nil {
 		return err
 	}
 	if err := updateDependencies(dir); err != nil {
@@ -45,7 +45,11 @@ func initPackage(dir string) error {
 }
 
 func updateDependencies(dir string) error {
-	return new(exec.PipedExec).Command("go", "mod", "tidy").WorkingDir(dir).Run(nil, nil)
+	goModFilePath := filepath.Join(dir, goModFileName)
+	if _, err := os.Stat(goModFilePath); !os.IsNotExist(err) {
+		return new(exec.PipedExec).Command("go", "mod", "tidy").WorkingDir(dir).Run(nil, nil)
+	}
+	return nil
 }
 
 func createGoMod(dir, packageName string) error {
@@ -64,10 +68,12 @@ func createGoMod(dir, packageName string) error {
 	return nil
 }
 
-func createPackagesGen(imports []string, dir, packageName string) error {
+func createPackagesGen(imports []string, dir, packageName string, recreate bool) error {
 	filePath := filepath.Join(dir, packagesGenFileName)
-	if _, err := os.Stat(filePath); !os.IsNotExist(err) {
-		return fmt.Errorf("%s already exists", filePath)
+	if !recreate {
+		if _, err := os.Stat(filePath); !os.IsNotExist(err) {
+			return fmt.Errorf("%s already exists", filePath)
+		}
 	}
 
 	strBuffer := &strings.Builder{}

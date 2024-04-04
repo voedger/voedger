@@ -68,6 +68,10 @@ func generateOrm(compileRes *compile.Result, params vpmParams) error {
 	if err := generateOrmFiles(pkgData, dir); err != nil {
 		return err
 	}
+	// update dependencies if go.mod file exists
+	if err := updateDependencies(dir); err != nil {
+		return err
+	}
 	return nil
 }
 
