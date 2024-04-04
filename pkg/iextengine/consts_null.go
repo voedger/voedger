@@ -10,6 +10,7 @@ import (
 
 	"github.com/juju/errors"
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/istructs"
 )
 
 var NullExtensionEngine IExtensionEngine = nullExtensionEngine{}
@@ -28,7 +29,7 @@ func (nullExtensionEngine) Close(context.Context) {}
 
 type nullExtensionEngineFactory struct{}
 
-func (nullExtensionEngineFactory) New(_ context.Context, _ []ExtensionPackage, _ *ExtEngineConfig, numEngines int) ([]IExtensionEngine, error) {
+func (nullExtensionEngineFactory) New(_ context.Context, _ istructs.AppQName, _ []ExtensionPackage, _ *ExtEngineConfig, numEngines int) ([]IExtensionEngine, error) {
 	ee := make([]IExtensionEngine, numEngines)
 	for i := 0; i < numEngines; i++ {
 		ee[i] = NullExtensionEngine

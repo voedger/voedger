@@ -4,8 +4,12 @@
 */
 package iextenginebuiltin
 
-import "errors"
+import (
+	"fmt"
 
-func undefinedExtension(name string) error {
-	return errors.New("undefined extension: " + name)
+	"github.com/voedger/voedger/pkg/istructs"
+)
+
+func undefinedExtension(app istructs.AppQName, ext string) error {
+	return fmt.Errorf("app %v: undefined extension: %v", app, ext)
 }

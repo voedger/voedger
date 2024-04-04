@@ -10,7 +10,6 @@ package vvm
 
 import (
 	"context"
-	"fmt"
 	"net/url"
 	"strconv"
 	"strings"
@@ -23,7 +22,6 @@ import (
 
 	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/apppartsctl"
-	"github.com/voedger/voedger/pkg/iextengine"
 	"github.com/voedger/voedger/pkg/router"
 	"github.com/voedger/voedger/pkg/vvm/engines"
 
@@ -195,19 +193,12 @@ func provideAppPartitions(
 	_ []BuiltInAppsPackages, /*need to make it called in correct order*/
 ) (ap appparts.IAppPartitions, cleanup func(), err error) {
 
-	eff := func(app istructs.AppQName) iextengine.ExtensionEngineFactories {
-		appCfg := cfgs.GetConfig(app)
-		if appCfg == nil {
-			panic(fmt.Errorf("app config not found for %s", app))
-		}
-		eefCfg := engines.ExtEngineFactoriesConfig{
-			AppConfig:   appCfg,
-			WASMCompile: false,
-		}
-		return engines.ProvideExtEngineFactories(eefCfg)
-	}
+	eef := engines.ProvideExtEngineFactories(engines.ExtEngineFactoriesConfig{
+		AppConfigs:  cfgs,
+		WASMCompile: false,
+	})
 
-	return appparts.NewWithActualizerWithExtEnginesFactories(asp, actualizer, eff)
+	return appparts.NewWithActualizerWithExtEnginesFactories(asp, actualizer, eef)
 }
 
 func provideIsDeviceAllowedFunc(appEPs map[istructs.AppQName]extensionpoints.IExtensionPoint, _ []BuiltInAppsPackages /*need to make it called in correct order*/) iauthnzimpl.IsDeviceAllowedFuncs {

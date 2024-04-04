@@ -55,7 +55,8 @@ type IExtensionEngine interface {
 type ExtensionEngineFactories map[appdef.ExtensionEngineKind]IExtensionEngineFactory
 
 type BuiltInExtFunc func(ctx context.Context, io IExtensionIO) error
-type BuiltInExtFuncs map[appdef.FullQName]BuiltInExtFunc // Provided to construct factory of engines
+type BuiltInAppExtFuncs map[appdef.FullQName]BuiltInExtFunc
+type BuiltInExtFuncs map[istructs.AppQName]BuiltInAppExtFuncs // Provided to construct factory of engines
 
 type ExtensionPackage struct {
 	QualifiedName  string
@@ -67,5 +68,5 @@ type IExtensionEngineFactory interface {
 	// LocalPath is a path package data can be got from
 	// - packages is not used for ExtensionEngineKind_BuiltIn
 	// - config is not used for ExtensionEngineKind_BuiltIn
-	New(ctx context.Context, packages []ExtensionPackage, config *ExtEngineConfig, numEngines int) ([]IExtensionEngine, error)
+	New(ctx context.Context, app istructs.AppQName, packages []ExtensionPackage, config *ExtEngineConfig, numEngines int) ([]IExtensionEngine, error)
 }
