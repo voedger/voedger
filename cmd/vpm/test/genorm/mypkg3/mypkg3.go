@@ -3,7 +3,7 @@
  * @author Alisher Nurmanov
  */
 
-package main
+package mypkg3
 
 import (
 	_ "github.com/voedger/voedger/pkg/sys"

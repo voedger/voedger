@@ -19,6 +19,8 @@ github.com/VictoriaMetrics/fastcache v1.12.1 h1:i0mICQuojGDL3KblA7wUNlY5lOK6a4bw
 github.com/VictoriaMetrics/fastcache v1.12.1/go.mod h1:tX04vaqcNoQeGLD+ra5pU5sWkuxnzWhEzLwhP9w653o=
 github.com/VictoriaMetrics/fastcache v1.12.2 h1:N0y9ASrJ0F6h0QaC3o6uJb3NIZ9VKLjCM7NQbSmF7WI=
 github.com/VictoriaMetrics/fastcache v1.12.2/go.mod h1:AmC+Nzz1+3G2eCPapF6UcsnkThDcMsQicp4xDukwJYI=
+github.com/agiledragon/gomonkey/v2 v2.1.0 h1:+5Dbq8a1fn89IgVk35O233R41FH0nBKFPn50wDZpNs0=
+github.com/agiledragon/gomonkey/v2 v2.1.0/go.mod h1:ap1AmDzcVOAz1YpeJ3TCzIgstoaWLA6jbbgxfB4w2iY=
 github.com/alecthomas/assert/v2 v2.3.0 h1:mAsH2wmvjsuvyBvAmCtm7zFsBlb8mIHx5ySLVdDZXL0=
 github.com/alecthomas/assert/v2 v2.3.0/go.mod h1:pXcQ2Asjp247dahGEmsZ6ru0UVwnkhktn7S0bBDLxvQ=
 github.com/alecthomas/participle/v2 v2.1.1 h1:hrjKESvSqGHzRb4yW1ciisFJ4p3MGYih6icjJvbsmV8=
@@ -237,7 +239,9 @@ github.com/hashicorp/golang-lru/v2 v2.0.4 h1:7GHuZcgid37q8o5i3QI9KMT4nCWQQ3Kx3Ov
 github.com/hashicorp/golang-lru/v2 v2.0.4/go.mod h1:QeFd9opnmA6QUJc5vARoKUSoFhyfM2/ZepoAG6RGpeM=
 github.com/hashicorp/golang-lru/v2 v2.0.7 h1:a+bsQ5rvGLjzHuww6tVxozPZFVghXaHOwFs4luLUK2k=
 github.com/hashicorp/golang-lru/v2 v2.0.7/go.mod h1:QeFd9opnmA6QUJc5vARoKUSoFhyfM2/ZepoAG6RGpeM=
+github.com/heeus/core-logger v0.0.0-20211015110533-1499b5b04842 h1:X2LRJXKOT3cBYOIoVPDFd/Rockq14waiag6T5QGZdNY=
 github.com/heeus/core-logger v0.0.0-20211015110533-1499b5b04842/go.mod h1:yTNAkvEhCxUhuMB0g8OJKjve8tHAUIQ9MmRDn0z20b0=
+github.com/heeus/core-pipeline v0.0.0-20211025163220-94fd8d3d8939 h1:Q9Qam7ZFn9gACkIZoZAXpbKYLXMr2gJ7KtzmIzDvuVY=
 github.com/heeus/core-pipeline v0.0.0-20211025163220-94fd8d3d8939/go.mod h1:285jU5GHo8YFDPd60Q6y+Ls4hCqyg3tDKBqLHxUHdrU=
 github.com/hexops/gotextdiff v1.0.3 h1:gitA9+qJrrTCsiCl7+kh75nPqQt1cx4ZkudSTLoUqJM=
 github.com/hexops/gotextdiff v1.0.3/go.mod h1:pSWU5MAI3yDq+fZBTazCSJysOMbxWL1BSow5/V2vxeg=
@@ -267,6 +271,7 @@ github.com/juju/testing v0.0.0-20191001232224-ce9dec17d28b/go.mod h1:63prj8cnj0t
 github.com/kisielk/gotool v1.0.0 h1:AV2c/EiW3KqPNT9ZKl07ehoAGi4C5/01Cfbblndcapg=
 github.com/kisielk/gotool v1.0.0/go.mod h1:XhKaO+MFFWcvkIS/tQcRk01m1F5IRFswLeQ+oQHNcck=
 github.com/klauspost/compress v1.13.4/go.mod h1:8dP1Hq4DHOhN9w426knH3Rhby4rFm6D8eO+e+Dq5Gzg=
+github.com/klauspost/compress v1.13.6 h1:P76CopJELS0TiO2mebmnzgWaajssP/EszplttgQxcgc=
 github.com/klauspost/compress v1.13.6/go.mod h1:/3/Vjq9QcHkK5uEr5lBEmyoZ1iFhe47etQ6QUkpK6sk=
 github.com/konsorten/go-windows-terminal-sequences v1.0.3 h1:CE8S1cTafDpPvMhIxNJKvHsGVBgn1xWYf1NbHQhywc8=
 github.com/konsorten/go-windows-terminal-sequences v1.0.3/go.mod h1:T0+1ngSBFLxvqU3pZ+m/2kptfBszLMUkC4ZK/EgS/cQ=
@@ -296,6 +301,7 @@ github.com/matttproud/golang_protobuf_extensions v1.0.4/go.mod h1:BSXmuO+STAnVfr
 github.com/microcosm-cc/bluemonday v1.0.1 h1:SIYunPjnlXcW+gVfvm0IlSeR5U3WZUOLfVmqg85Go44=
 github.com/microcosm-cc/bluemonday v1.0.1/go.mod h1:hsXNsILzKxV+sX77C5b8FSuKF00vh2OMYv+xgHpAMF4=
 github.com/minio/highwayhash v1.0.1/go.mod h1:BQskDq+xkJ12lmlUUi7U0M5Swg3EWR+dLTk+kldvVxY=
+github.com/minio/highwayhash v1.0.2 h1:Aak5U0nElisjDCfPSG79Tgzkn2gl66NxOMspRrKnA/g=
 github.com/minio/highwayhash v1.0.2/go.mod h1:BQskDq+xkJ12lmlUUi7U0M5Swg3EWR+dLTk+kldvVxY=
 github.com/modern-go/concurrent v0.0.0-20180228061459-e0a39a4cb421/go.mod h1:6dJC0mAP4ikYIbvyc7fijjWJddQyLn8Ig3JB5CqoB9Q=
 github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd h1:TRLaZ9cD/w8PVh93nsPXa1VrQ6jlwL5oN8l14QlcNfg=
@@ -305,10 +311,15 @@ github.com/modern-go/reflect2 v1.0.1 h1:9f412s+6RmYXLWZSEzVVgPGK7C2PphHj5RJrvfx9
 github.com/modern-go/reflect2 v1.0.1/go.mod h1:bx2lNnkwVCuqBIxFjflWJWanXIb3RllmbCylyMrvgv0=
 github.com/nats-io/jwt v1.1.0 h1:+vOlgtM0ZsF46GbmUoadq0/2rChNS45gtxHEa3H1gqM=
 github.com/nats-io/jwt v1.1.0/go.mod h1:n3cvmLfBfnpV4JJRN7lRYCyZnw48ksGsbThGXEk4w9M=
+github.com/nats-io/jwt/v2 v2.1.0 h1:1UbfD5g1xTdWmSeRV8bh/7u+utTiBsRtWhLl1PixZp4=
 github.com/nats-io/jwt/v2 v2.1.0/go.mod h1:0tqz9Hlu6bCBFLWAASKhE5vUA4c24L9KPUUgvwumE/k=
+github.com/nats-io/nats-server/v2 v2.6.2 h1:uMydiSENbgRPsXHBYDvVVVx1d0inut/zd+DvISIGCi8=
 github.com/nats-io/nats-server/v2 v2.6.2/go.mod h1:CNi6dJQ5H+vWqaoWKjCGtqBt7ai/xOTLiocUqhK6ews=
+github.com/nats-io/nats.go v1.13.0 h1:LvYqRB5epIzZWQp6lmeltOOZNLqCvm4b+qfvzZO03HE=
 github.com/nats-io/nats.go v1.13.0/go.mod h1:BPko4oXsySz4aSWeFgOHLZs3G4Jq4ZAyE6/zMCxRT6w=
+github.com/nats-io/nkeys v0.3.0 h1:cgM5tL53EvYRU+2YLXIK0G2mJtK12Ft9oeooSZMA2G8=
 github.com/nats-io/nkeys v0.3.0/go.mod h1:gvUNGjVcM2IPr5rCsRsC6Wb3Hr2CQAm08dsxtV6A5y4=
+github.com/nats-io/nuid v1.0.1 h1:5iA8DT8V7q8WK2EScv2padNa/rTESc1KdnPw4TC2paw=
 github.com/nats-io/nuid v1.0.1/go.mod h1:19wcPz3Ph3q0Jbyiqsd0kePYG7A95tJPxeL+1OSON2c=
 github.com/neelance/astrewrite v0.0.0-20160511093645-99348263ae86 h1:D6paGObi5Wud7xg83MaEFyjxQB1W5bz5d0IFppr+ymk=
 github.com/neelance/astrewrite v0.0.0-20160511093645-99348263ae86/go.mod h1:kHJEU3ofeGjhHklVoIGuVj85JJwZ6kWPaJwCIxgnFmo=
@@ -438,10 +449,14 @@ github.com/untillpro/airc-ticket-layouts v0.0.0-20231206153240-cef9360e9f6f/go.m
 github.com/untillpro/airs-bp3 v1.202111031426.2-0.20240404103458-5a5a5018add9/go.mod h1:7nG+sp9zBL00p0dPe43X3PHVXc4jEueE+3iMnZgx1e4=
 github.com/untillpro/airs-bp3 v1.202111031426.2-0.20240404145225-a225777a3f1b h1:KusgtKYch7xmYV50d1zsuch9gOjjE2en5wFLRC2qaUg=
 github.com/untillpro/airs-bp3 v1.202111031426.2-0.20240404145225-a225777a3f1b/go.mod h1:7nG+sp9zBL00p0dPe43X3PHVXc4jEueE+3iMnZgx1e4=
+github.com/untillpro/airs-bp3 v1.202111031437.1 h1:hhczSTPiJnUCn8Dnp1t1VbjI0lvGRme3KqCx1RHXcAg=
+github.com/untillpro/airs-bp3 v1.202111031437.1/go.mod h1:ordBoSALjGLGJoJhH70YEyP4JOe4ADk+MwZp/cdrOvY=
 github.com/untillpro/airs-ibus v0.0.0-20211023095014-ac94d11f5a63/go.mod h1:1I4FoKKps86qZfFCh+QjcGFXPlNgYHF68L4L04bAU6k=
 github.com/untillpro/airs-ibus v0.0.0-20230904100809-21eaae083040 h1:6IkhNm6unxJpCqkdKk1QvOmuTV7VL+JMAFDQDGqoeJw=
 github.com/untillpro/airs-ibus v0.0.0-20230904100809-21eaae083040/go.mod h1:q6sL+/tsxO3upNtujUUG/5B316qvPjy5aHc1uR/W+C0=
+github.com/untillpro/airs-ibusnats v0.0.0-20211018104923-d92fe97fc139 h1:FJpJf1fUzes8YXE6+gl2IkCEau3QdwYVdEjg+Y8OrKU=
 github.com/untillpro/airs-ibusnats v0.0.0-20211018104923-d92fe97fc139/go.mod h1:KCI1OlAqbKMdQI3WkaEFp9JFFgb7ux5KHcmutX2vg0Q=
+github.com/untillpro/airs-router2 v0.0.0-20211022124358-2bc6c2e64d71 h1:oTczsqE2nPNCr/kFYs3VrgNDWvMDvfyx4HCgkGBmirk=
 github.com/untillpro/airs-router2 v0.0.0-20211022124358-2bc6c2e64d71/go.mod h1:ThWQl75NjtvaO/uptp/kOxvvqaxBQ60wNDYlFXSHVM8=
 github.com/untillpro/airs-scheme v0.0.0-20240324164738-2e723403d35a h1:+P1BjMh70m7LKMB6lYbxjr/oZRrOPox4r+asNf5pAIw=
 github.com/untillpro/airs-scheme v0.0.0-20240324164738-2e723403d35a/go.mod h1:9hqGOX9pgqiQ9cL5GrebLNpMLuz5w9w60SOHP2PnUDM=
@@ -449,7 +464,9 @@ github.com/untillpro/dynobuffers v0.0.0-20221105082727-4ed4b8227195 h1:nq0/Di+aB
 github.com/untillpro/dynobuffers v0.0.0-20221105082727-4ed4b8227195/go.mod h1:+q8szMmVnNfUqqieAtVi96uYPBrdy+BhZoHBzxgdCUM=
 github.com/untillpro/dynobuffers v0.0.0-20230713140001-b1cab92744c0 h1:977ETAfOLB3ua5/VAvBAhuqZ9QO4uP8D5WSooAv9nVk=
 github.com/untillpro/dynobuffers v0.0.0-20230713140001-b1cab92744c0/go.mod h1:+q8szMmVnNfUqqieAtVi96uYPBrdy+BhZoHBzxgdCUM=
+github.com/untillpro/gochips v1.12.1-0.20191205115612-9cd10d0ac2b3 h1:6FcNUgKOtK6UqrjFGlW80WfrwgLjZPBdpUadFkw3mRw=
 github.com/untillpro/gochips v1.12.1-0.20191205115612-9cd10d0ac2b3/go.mod h1:us8QSJtQx+8SiWFqh2oAT7UMzhF73t21p3WFGn6Apao=
+github.com/untillpro/godif v0.18.0 h1:m3/5jc8oJCyU5lYHeZwG0deq+lYoCXNFqAwVMhiQ+Ks=
 github.com/untillpro/godif v0.18.0/go.mod h1:Yi639zQ/XMuW5ArnXOqs1zx+7o9POvgmtgaNyDh1lUE=
 github.com/untillpro/gojay v1.2.17-0.20201109133446-b1069e05b56c h1:1oN5J8ueU7ai8rVENgfjVK9vmjEBTRqsvHe6o2p3xU8=
 github.com/untillpro/gojay v1.2.17-0.20201109133446-b1069e05b56c/go.mod h1:wHiWFBGIA2fG/tCRDfHII3S8LW1+DB1SEx4UinSXwdM=
@@ -613,6 +630,7 @@ golang.org/x/time v0.0.0-20180412165947-fbb02b2291d2/go.mod h1:tRJNPiyCQ0inRvYxb
 golang.org/x/time v0.0.0-20181108054448-85acf8d2951c h1:fqgJT0MGcGpPgpWU7VRdRjuArfcOvC4AoJmILihzhDg=
 golang.org/x/time v0.0.0-20181108054448-85acf8d2951c/go.mod h1:tRJNPiyCQ0inRvYxbN9jk5I+vvW/OXSQhTDSoE431IQ=
 golang.org/x/time v0.0.0-20200416051211-89c76fbcd5d1/go.mod h1:tRJNPiyCQ0inRvYxbN9jk5I+vvW/OXSQhTDSoE431IQ=
+golang.org/x/time v0.0.0-20210723032227-1f47c861a9ac h1:7zkz7BUtwNFFqcowJ+RIgu2MaV/MapERkDIy+mwPyjs=
 golang.org/x/time v0.0.0-20210723032227-1f47c861a9ac/go.mod h1:tRJNPiyCQ0inRvYxbN9jk5I+vvW/OXSQhTDSoE431IQ=
 golang.org/x/tools v0.0.0-20180828015842-6cd1fcedba52/go.mod h1:n7NCudcB/nEzxVGmLbDWY5pfWTLqBcC2KZ6jyYvM4mQ=
 golang.org/x/tools v0.0.0-20180917221912-90fa682c2a6e/go.mod h1:n7NCudcB/nEzxVGmLbDWY5pfWTLqBcC2KZ6jyYvM4mQ=

@@ -46,9 +46,6 @@ func TestCompileBasicUsage(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			//err := os.Chdir(tc.dir)
-			//require.NoError(err)
-
 			err = execRootCmd([]string{"vpm", "compile", "-C", tc.dir}, "1.0.0")
 			require.NoError(err)
 		})
