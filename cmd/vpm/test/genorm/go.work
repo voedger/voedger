@@ -5,6 +5,5 @@ use (
 	./mypkg2
 	./mypkg3
 	./mypkg4
-	./mypkg5
 	./app
 )

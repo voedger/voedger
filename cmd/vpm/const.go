@@ -63,7 +63,7 @@ const (
 	packagesGenFileName  = "packages_gen.go"
 	goModContentTemplate = `module %s
 
-go %s
+go 1.21.6
 
 require github.com/voedger/voedger v0.0.0-20240315095646-3b8ad52c913b
 

@@ -317,30 +317,14 @@ func TestInitBasicUsage(t *testing.T) {
 	}
 	require := require.New(t)
 
-	//var err error
-	//var tempDir string
-	//if logger.IsVerbose() {
-	//	tempDir, err = os.MkdirTemp("", "test_genorm")
-	//	require.NoError(err)
-	//} else {
-	//	tempDir = t.TempDir()
-	//}
-	//
-	//wd, err := os.Getwd()
-	//require.NoError(err)
-	//
-	//err = coreutils.CopyDir(filepath.Join(wd, "test", "genorm", "mypkg5"), tempDir)
-	//require.NoError(err)
-
+	dir := t.TempDir()
 	//dir := "/Users/alisher/projects/untill/voedger/cmd/vpm/test/genorm/mypkg5"
-	dir := "/Users/alisher/projects/untill/voedger/cmd/vpm/test/genorm/mypkg3"
 	err := execRootCmd([]string{"vpm", "init", "-C", dir}, "1.0.0")
 	require.NoError(err)
 
-	if logger.IsVerbose() {
-		logger.Verbose(fmt.Sprintf("orm directory: %s", filepath.Join(dir, internalDirName, ormDirName)))
-		logger.Verbose("------------------------------------------------------------------------")
-	}
+	require.FileExists(filepath.Join(dir, goModFileName))
+	require.FileExists(filepath.Join(dir, goSumFileName))
+	require.FileExists(filepath.Join(dir, packagesGenFileName))
 }
 
 func TestTidyBasicUsage(t *testing.T) {
@@ -348,9 +332,22 @@ func TestTidyBasicUsage(t *testing.T) {
 		t.Skip()
 	}
 	require := require.New(t)
+
 	//dir := "/Users/alisher/projects/untill/voedger/cmd/vpm/test/genorm/mypkg5"
-	dir := "/Users/alisher/projects/untill/voedger/cmd/vpm/test/genorm/mypkg3"
-	err := execRootCmd([]string{"vpm", "tidy", "-C", dir}, "1.0.0")
+	dir := t.TempDir()
+	err := execRootCmd([]string{"vpm", "init", "-C", dir}, "1.0.0")
 	require.NoError(err)
 
+	require.FileExists(filepath.Join(dir, goModFileName))
+	require.FileExists(filepath.Join(dir, goSumFileName))
+	require.FileExists(filepath.Join(dir, packagesGenFileName))
+
+	err = os.Remove(filepath.Join(dir, goSumFileName))
+	require.NoError(err)
+	require.NoFileExists(filepath.Join(dir, goSumFileName))
+
+	err = execRootCmd([]string{"vpm", "tidy", "-C", dir}, "1.0.0")
+	require.NoError(err)
+
+	require.FileExists(filepath.Join(dir, goSumFileName))
 }

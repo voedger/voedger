@@ -5,7 +5,6 @@ import (
 	"go/format"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -35,7 +34,7 @@ func initPackage(dir string) error {
 	if err := createGoMod(dir, packageName); err != nil {
 		return err
 	}
-	if err := createPackagesGen(nil, dir, packageName, false); err != nil {
+	if err := createPackagesGen(nil, dir, false); err != nil {
 		return err
 	}
 	if err := updateDependencies(dir); err != nil {
@@ -58,17 +57,14 @@ func createGoMod(dir, packageName string) error {
 		return fmt.Errorf("%s already exists", filePath)
 	}
 
-	goVersion := runtime.Version()
-	versionNumber := strings.TrimSpace(strings.TrimPrefix(goVersion, "go"))
-
-	goModContent := fmt.Sprintf(goModContentTemplate, packageName, versionNumber)
+	goModContent := fmt.Sprintf(goModContentTemplate, packageName)
 	if err := os.WriteFile(filePath, []byte(goModContent), defaultPermissions); err != nil {
 		return err
 	}
 	return nil
 }
 
-func createPackagesGen(imports []string, dir, packageName string, recreate bool) error {
+func createPackagesGen(imports []string, dir string, recreate bool) error {
 	filePath := filepath.Join(dir, packagesGenFileName)
 	if !recreate {
 		if _, err := os.Stat(filePath); !os.IsNotExist(err) {

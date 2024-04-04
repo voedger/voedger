@@ -19,11 +19,12 @@ func newTidyCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			var appDef appdef.IAppDef
 			compileRes, err := compile.Compile(params.Dir)
-			if err != nil {
-				return err
+			if err == nil {
+				appDef = compileRes.AppDef
 			}
-			return tidy(compileRes.AppDef, params.Dir)
+			return tidy(appDef, params.Dir)
 		},
 	}
 	cmd.Flags().StringVarP(&params.Dir, "change-dir", "C", "", "Change to dir before running the command. Any files named on the command line are interpreted after changing directories. If used, this flag must be the first one in the command line.")
@@ -33,7 +34,7 @@ func newTidyCmd() *cobra.Command {
 
 func tidy(appDef appdef.IAppDef, dir string) error {
 	packageName := filepath.Base(dir)
-	if err := createPackagesGen(getImports(appDef, packageName), dir, packageName, true); err != nil {
+	if err := createPackagesGen(getImports(appDef, packageName), dir, true); err != nil {
 		return err
 	}
 	if err := updateDependencies(dir); err != nil {
@@ -44,11 +45,13 @@ func tidy(appDef appdef.IAppDef, dir string) error {
 
 func getImports(appDef appdef.IAppDef, packageName string) []string {
 	var imports []string
-	exceptedPaths := []string{compile.DummyAppName, appdef.SysPackagePath, packageName}
-	appDef.Packages(func(localName, fullPath string) {
-		if !slices.Contains(exceptedPaths, fullPath) {
-			imports = append(imports, fullPath)
-		}
-	})
+	if appDef != nil {
+		exceptedPaths := []string{compile.DummyAppName, appdef.SysPackagePath, packageName}
+		appDef.Packages(func(localName, fullPath string) {
+			if !slices.Contains(exceptedPaths, fullPath) {
+				imports = append(imports, fullPath)
+			}
+		})
+	}
 	return imports
 }
