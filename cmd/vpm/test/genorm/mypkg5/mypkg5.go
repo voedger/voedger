@@ -3,12 +3,15 @@
  * @author Alisher Nurmanov
  */
 
-package main
+package mypkg5
 
 import (
+	"mypkg1"
+
 	_ "github.com/voedger/voedger/pkg/sys"
 )
 
-func MyFunc3() {
-	println("mypkg3.MyFunc3")
+func MyFunc5() {
+	println("mypkg5.MyFunc5")
+	mypkg1.MyFunc1()
 }

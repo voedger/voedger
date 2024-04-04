@@ -91,9 +91,9 @@ func compile(dir string) (*Result, error) {
 }
 
 func compileSysPackage(dir string, loadedPkgs *loadedPackages, importedStmts map[string]parser.ImportStmt, pkgFiles map[string][]string) (pkgAsts []*parser.PackageSchemaAST, errs []error, isSysDir bool) {
-	if loadedPkgs.modulePath == voedgerPath {
+	if loadedPkgs.modulePath == VoedgerPath {
 		rootPkgPath := loadedPkgs.rootPkgs[0].PkgPath
-		relPath := rootPkgPath[len(voedgerPath):]
+		relPath := rootPkgPath[len(VoedgerPath):]
 		baseDir := dir
 		if len(relPath) > 0 {
 			baseDir = dir[:len(dir)-len(relPath)]
