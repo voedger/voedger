@@ -65,9 +65,8 @@ const (
 	goModContentTemplate                = `module %s
 
 go %s
-
 `
-	packagesGenContentTemplate = `/*  DO NOT EDIT. This code is generated via vpm. */
+	packagesGenContentTemplate = defaultOrmFilesHeaderComment + `
 
 package main
 
