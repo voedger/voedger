@@ -431,17 +431,17 @@ func deployMonDockerStack(cluster *clusterType) error {
 	}
 
 	loggerInfo("Adding user voedger to Grafana on app-node-1")
-	if err = addGrafanUser(cluster.nodeByHost("app-node-1"), "voedger"); err != nil {
+	if err = addGrafanUser(cluster.nodeByHost("app-node-1"), voedger); err != nil {
 		return err
 	}
 
 	loggerInfo("Adding user voedger to Grafana on app-node-2")
-	if err = addGrafanUser(cluster.nodeByHost("app-node-2"), "voedger"); err != nil {
+	if err = addGrafanUser(cluster.nodeByHost("app-node-2"), voedger); err != nil {
 		return err
 	}
 
 	loggerInfo("Voedger's password resetting to monitoring stack")
-	if err = setMonPassword(cluster, "voedger"); err != nil {
+	if err = setMonPassword(cluster, voedger); err != nil {
 		return err
 	}
 
@@ -665,12 +665,12 @@ func replaceSeAppNode(cluster *clusterType) error {
 	}
 
 	loggerInfo("Adding user voedger to Grafana on ", newNode.nodeName(), newNode.address())
-	if err = addGrafanUser(newNode, "voedger"); err != nil {
+	if err = addGrafanUser(newNode, voedger); err != nil {
 		return err
 	}
 
 	loggerInfo("Voedger's password resetting to monitoring stack")
-	if err = setMonPassword(cluster, "voedger"); err != nil {
+	if err = setMonPassword(cluster, voedger); err != nil {
 		return err
 	}
 

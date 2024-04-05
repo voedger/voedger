@@ -87,7 +87,7 @@ func setMonPassword(cluster *clusterType, password string) error {
 		return err
 	}
 
-	if err = setGrafanaAdminPassword(cluster, "admin"); err != nil {
+	if err = setGrafanaAdminPassword(cluster, admin); err != nil {
 		return err
 	}
 
@@ -96,12 +96,12 @@ func setMonPassword(cluster *clusterType, password string) error {
 	}
 
 	if err = newScriptExecuter(cluster.sshKey, "").
-		run("g-ds-update.sh", cluster.nodeByHost("app-node-1").address(), "admin", "admin", password); err != nil {
+		run("g-ds-update.sh", cluster.nodeByHost("app-node-1").address(), admin, admin, password); err != nil {
 		return err
 	}
 
 	if err = newScriptExecuter(cluster.sshKey, "").
-		run("g-ds-update.sh", cluster.nodeByHost("app-node-2").address(), "admin", "admin", password); err != nil {
+		run("g-ds-update.sh", cluster.nodeByHost("app-node-2").address(), admin, admin, password); err != nil {
 		return err
 	}
 
@@ -117,6 +117,7 @@ func setMonPassword(cluster *clusterType, password string) error {
 }
 
 // installation of a random password for the voedger user in the monitoring stack
+// nolint
 func setMonRandomPassword(cluster *clusterType) error {
 
 	return setMonPassword(cluster, randomPassword(minMonPasswordLength))
@@ -127,17 +128,17 @@ func setGrafanaPassword(cluster *clusterType, password string) error {
 
 	var err error
 
-	if err = setGrafanaAdminPassword(cluster, "admin"); err != nil {
+	if err = setGrafanaAdminPassword(cluster, admin); err != nil {
 		return err
 	}
 
 	if err = newScriptExecuter(cluster.sshKey, "").
-		run("g-user-password-set.sh", cluster.nodeByHost("app-node-1").address(), "admin", "admin", password); err != nil {
+		run("g-user-password-set.sh", cluster.nodeByHost("app-node-1").address(), admin, admin, password); err != nil {
 		return err
 	}
 
 	if err = newScriptExecuter(cluster.sshKey, "").
-		run("g-user-password-set.sh", cluster.nodeByHost("app-node-2").address(), "admin", "admin", password); err != nil {
+		run("g-user-password-set.sh", cluster.nodeByHost("app-node-2").address(), admin, admin, password); err != nil {
 		return err
 	}
 
@@ -194,6 +195,7 @@ func setPrometheusPassword(cluster *clusterType, password string) error {
 }
 
 // rendom password installation for voedger user in Prometheus
+// nolint
 func setPrometheusRandomPassword(cluster *clusterType) error {
 
 	return setPrometheusPassword(cluster, randomPassword(minMonPasswordLength))
@@ -208,27 +210,27 @@ func addGrafanUser(node *nodeType, password string) error {
 		return err
 	}
 
-	if err = setGrafanaAdminPassword(node.cluster, "admin"); err != nil {
+	if err = setGrafanaAdminPassword(node.cluster, admin); err != nil {
 		return err
 	}
 
 	if err = newScriptExecuter(node.cluster.sshKey, "").
-		run("g-user-preferences-set.sh", node.address(), "admin", "admin"); err != nil {
+		run("g-user-preferences-set.sh", node.address(), admin, admin); err != nil {
 		return err
 	}
 
 	if err = newScriptExecuter(node.cluster.sshKey, "").
-		run("g-user-add.sh", node.address(), "admin", "admin"); err != nil {
+		run("g-user-add.sh", node.address(), admin, admin); err != nil {
 		return err
 	}
 
 	if err = newScriptExecuter(node.cluster.sshKey, "").
-		run("g-user-password-set.sh", node.address(), "admin", "admin", password); err != nil {
+		run("g-user-password-set.sh", node.address(), admin, admin, password); err != nil {
 		return err
 	}
 
 	if err = newScriptExecuter(node.cluster.sshKey, "").
-		run("g-ds-update.sh", node.address(), "admin", "admin", password); err != nil {
+		run("g-ds-update.sh", node.address(), admin, admin, password); err != nil {
 		return err
 	}
 

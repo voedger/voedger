@@ -79,6 +79,8 @@ const (
 
 	minMonPasswordLength = 5
 	monUserName          = "voedger"
+	admin                = "admin"
+	voedger              = "voedger"
 )
 
 const comma = ","
