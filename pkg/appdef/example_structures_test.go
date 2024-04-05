@@ -18,31 +18,32 @@ func ExampleIAppDef_Structures() {
 
 	// how to build AppDef with structures
 	{
-		appDef := appdef.New()
+		adb := appdef.New()
+		adb.AddPackage("test", "test.com/test")
 
-		doc := appDef.AddCDoc(docName)
+		doc := adb.AddCDoc(docName)
 		doc.
 			AddField("f1", appdef.DataKind_int64, true).
 			AddField("f2", appdef.DataKind_string, false)
 		doc.AddContainer("rec", recName, 0, appdef.Occurs_Unbounded)
 
-		rec := appDef.AddCRecord(recName)
+		rec := adb.AddCRecord(recName)
 		rec.
 			AddField("f1", appdef.DataKind_int64, true).
 			AddField("f2", appdef.DataKind_string, false)
 
-		obj := appDef.AddObject(objName)
+		obj := adb.AddObject(objName)
 		obj.
 			AddField("f1", appdef.DataKind_int64, true).
 			AddField("f2", appdef.DataKind_string, false)
 		obj.AddContainer("child", childName, 0, appdef.Occurs_Unbounded)
 
-		child := appDef.AddObject(childName)
+		child := adb.AddObject(childName)
 		child.
 			AddField("f1", appdef.DataKind_int64, true).
 			AddField("f2", appdef.DataKind_string, false)
 
-		if a, err := appDef.Build(); err == nil {
+		if a, err := adb.Build(); err == nil {
 			app = a
 		} else {
 			panic(err)

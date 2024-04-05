@@ -226,9 +226,17 @@ func (cfg *AppConfigType) AddEventValidators(eventValidators ...istructs.EventVa
 	cfg.eventValidators = append(cfg.eventValidators, eventValidators...)
 }
 
+func (cfg *AppConfigType) AsyncProjectors() istructs.Projectors {
+	return cfg.asyncProjectors
+}
+
 // Returns is application configuration prepared
 func (cfg *AppConfigType) Prepared() bool {
 	return cfg.prepared
+}
+
+func (cfg *AppConfigType) SyncProjectors() istructs.Projectors {
+	return cfg.syncProjectors
 }
 
 // Application configuration parameters

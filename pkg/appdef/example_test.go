@@ -17,14 +17,15 @@ func Example() {
 
 	// how to build AppDef with CDoc
 	{
-		appDef := appdef.New()
+		adb := appdef.New()
+		adb.AddPackage("test", "test.com/test")
 
-		doc := appDef.AddCDoc(docName)
+		doc := adb.AddCDoc(docName)
 		doc.SetComment("This is example doc")
 		doc.
 			AddField("f1", appdef.DataKind_int64, true).SetFieldComment("f1", "Field may have comments too").
 			AddField("f2", appdef.DataKind_string, false)
-		rec := appDef.AddCRecord(recName)
+		rec := adb.AddCRecord(recName)
 
 		doc.AddContainer("rec", recName, 0, appdef.Occurs_Unbounded)
 
@@ -32,7 +33,7 @@ func Example() {
 			AddField("f1", appdef.DataKind_int64, true).
 			AddField("f2", appdef.DataKind_string, false)
 
-		if a, err := appDef.Build(); err == nil {
+		if a, err := adb.Build(); err == nil {
 			app = a
 		} else {
 			panic(err)

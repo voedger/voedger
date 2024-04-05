@@ -7,7 +7,6 @@ package apps
 
 import (
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/cluster"
 	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/istorage"
@@ -29,7 +28,7 @@ type APIs struct {
 	coreutils.TimeFunc
 	NumCommandProcessors coreutils.CommandProcessorsCount
 	NumQueryProcessors   coreutils.QueryProcessorsCount
-	appparts.IAppPartitions
+	//appparts.IAppPartitions
 }
 
 type AppBuilder func(apis APIs, cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) BuiltInAppDef

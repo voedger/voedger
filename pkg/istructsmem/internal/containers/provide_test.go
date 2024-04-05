@@ -27,10 +27,12 @@ func Test_BasicUsage(t *testing.T) {
 	}
 
 	testName := "test"
-	appDefBuilder := appdef.New()
-	appDefBuilder.AddObject(appdef.NewQName("test", "obj")).
+	adb := appdef.New()
+	adb.AddPackage("test", "test.com/test")
+
+	adb.AddObject(appdef.NewQName("test", "obj")).
 		AddContainer(testName, appdef.NewQName("test", "obj"), 0, appdef.Occurs_Unbounded)
-	appDef, err := appDefBuilder.Build()
+	appDef, err := adb.Build()
 	if err != nil {
 		panic(err)
 	}

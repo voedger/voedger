@@ -66,6 +66,11 @@ func (c *cmdWorkpiece) AppDef() appdef.IAppDef {
 	return c.appStructs.AppDef()
 }
 
+// should be used for Invoke projector by sync actualizer
+func (c *cmdWorkpiece) AppPartition() appparts.IAppPartition {
+	return c.appPart
+}
+
 // need for collection.ProvideSyncActualizer(), q.sys.EnrichPrincipalToken, c.sys.ChangePassword
 func (c *cmdWorkpiece) AppQName() istructs.AppQName {
 	return c.cmdMes.AppQName()
@@ -145,7 +150,7 @@ func (cmdProc *cmdProc) getAppPartition(ctx context.Context, work interface{}) (
 
 func getIWorkspace(_ context.Context, work interface{}) (err error) {
 	cmd := work.(*cmdWorkpiece)
-	if !coreutils.IsDummyWS(cmd.cmdMes.WSID()) && cmd.cmdMes.QName() != workspacemgmt.QNameCommandCreateWorkspace {
+	if cmd.cmdMes.QName() != workspacemgmt.QNameCommandCreateWorkspace {
 		cmd.iWorkspace = cmd.appStructs.AppDef().WorkspaceByDescriptor(cmd.wsDesc.AsQName(authnz.Field_WSKind))
 	}
 	return nil
@@ -287,20 +292,14 @@ func (cmdProc *cmdProc) putPLog(_ context.Context, work interface{}) (err error)
 
 func getWSDesc(_ context.Context, work interface{}) (err error) {
 	cmd := work.(*cmdWorkpiece)
-	if !coreutils.IsDummyWS(cmd.cmdMes.WSID()) {
-		cmd.wsDesc, err = cmd.appStructs.Records().GetSingleton(cmd.cmdMes.WSID(), authnz.QNameCDocWorkspaceDescriptor)
-	}
-
-	return
+	cmd.wsDesc, err = cmd.appStructs.Records().GetSingleton(cmd.cmdMes.WSID(), authnz.QNameCDocWorkspaceDescriptor)
+	return err
 }
 
 func checkWSInitialized(_ context.Context, work interface{}) (err error) {
 	cmd := work.(*cmdWorkpiece)
 	wsDesc := work.(*cmdWorkpiece).wsDesc
 	cmdQName := cmd.cmdMes.QName()
-	if coreutils.IsDummyWS(cmd.cmdMes.WSID()) {
-		return nil
-	}
 	if cmdQName == workspacemgmt.QNameCommandCreateWorkspace ||
 		cmdQName == workspacemgmt.QNameCommandCreateWorkspaceID || // happens on creating a child of an another workspace
 		cmdQName == builtin.QNameCommandInit {
@@ -326,9 +325,6 @@ func checkWSInitialized(_ context.Context, work interface{}) (err error) {
 
 func checkWSActive(_ context.Context, work interface{}) (err error) {
 	cmd := work.(*cmdWorkpiece)
-	if coreutils.IsDummyWS(cmd.cmdMes.WSID()) {
-		return nil
-	}
 	if iauthnz.IsSystemPrincipal(cmd.principals, cmd.cmdMes.WSID()) {
 		// system -> allow to work in any case
 		return nil
@@ -689,14 +685,14 @@ func (cmdProc *cmdProc) authorizeCUDs(_ context.Context, work interface{}) (err 
 func (cmdProc *cmdProc) writeCUDs(_ context.Context, work interface{}) (err error) {
 	cmd := work.(*cmdWorkpiece)
 	for _, parsedCUD := range cmd.parsedCUDs {
-		var rowWriter istructs.IRowWriter
+		var cud istructs.IRowWriter
 		if parsedCUD.opKind == iauthnz.OperationKind_INSERT {
-			rowWriter = cmd.reb.CUDBuilder().Create(parsedCUD.qName)
-			rowWriter.PutRecordID(appdef.SystemField_ID, istructs.RecordID(parsedCUD.id))
+			cud = cmd.reb.CUDBuilder().Create(parsedCUD.qName)
+			cud.PutRecordID(appdef.SystemField_ID, istructs.RecordID(parsedCUD.id))
 		} else {
-			rowWriter = cmd.reb.CUDBuilder().Update(parsedCUD.existingRecord)
+			cud = cmd.reb.CUDBuilder().Update(parsedCUD.existingRecord)
 		}
-		if err := coreutils.Marshal(rowWriter, parsedCUD.fields); err != nil {
+		if err := coreutils.MapToObject(parsedCUD.fields, cud); err != nil {
 			return parsedCUD.xPath.Error(err)
 		}
 	}

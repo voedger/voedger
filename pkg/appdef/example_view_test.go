@@ -19,12 +19,13 @@ func ExampleIView() {
 
 	// how to build AppDef with view
 	{
-		appDef := appdef.New()
+		adb := appdef.New()
+		adb.AddPackage("test", "test.com/test")
 
 		docName := appdef.NewQName("test", "doc")
-		_ = appDef.AddCDoc(docName)
+		_ = adb.AddCDoc(docName)
 
-		view := appDef.AddView(viewName)
+		view := adb.AddView(viewName)
 		view.SetComment("view comment")
 		view.Key().PartKey().
 			AddField("pk_int", appdef.DataKind_int64).
@@ -38,7 +39,7 @@ func ExampleIView() {
 			AddRefField("vv_ref", true, docName).
 			AddField("vv_code", appdef.DataKind_string, false, appdef.MaxLen(10), appdef.Pattern(`^\w+$`)).
 			AddField("vv_data", appdef.DataKind_bytes, false, appdef.MaxLen(1024))
-		if a, err := appDef.Build(); err == nil {
+		if a, err := adb.Build(); err == nil {
 			app = a
 		} else {
 			panic(err)

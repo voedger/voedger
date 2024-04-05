@@ -418,6 +418,10 @@ func TestBasicUsage_AsyncPipeline_FlushByTimer(t *testing.T) {
 	t.Run("Should flush with valid workpieces", func(t *testing.T) {
 		mustHave := func(result *sync.Map, key string) bool {
 			_, ok := result.Load(key)
+			for !ok {
+				time.Sleep(time.Duration(10) * time.Millisecond)
+				_, ok = result.Load(key)
+			}
 			return ok
 		}
 		times := 0
@@ -447,12 +451,10 @@ func TestBasicUsage_AsyncPipeline_FlushByTimer(t *testing.T) {
 				}).create(), time.Duration(20)*time.Millisecond))
 
 		require.NoError(t, pipeline.SendAsync(userEntry{role: "admin", name: "John"}))
-		time.Sleep(time.Duration(50) * time.Millisecond)
 		require.True(t, mustHave(result, "JOHN"))
 		require.NoError(t, pipeline.SendAsync(userEntry{role: "admin", name: "Chip"}))
 		require.NoError(t, pipeline.SendAsync(userEntry{role: "waiter", name: "Wrong man"}))
 		require.NoError(t, pipeline.SendAsync(userEntry{role: "admin", name: "Dale"}))
-		time.Sleep(time.Duration(50) * time.Millisecond)
 		require.True(t, mustHave(result, "CHIP"))
 		require.True(t, mustHave(result, "DALE"))
 		require.GreaterOrEqual(t, times, 1)

@@ -18,13 +18,14 @@ func Test_AppDef_AddCommand(t *testing.T) {
 	cmdName, parName, unlName, resName := NewQName("test", "cmd"), NewQName("test", "par"), NewQName("test", "unl"), NewQName("test", "res")
 
 	t.Run("must be ok to add command", func(t *testing.T) {
-		appDef := New()
+		adb := New()
+		adb.AddPackage("test", "test.com/test")
 
-		_ = appDef.AddObject(parName)
-		_ = appDef.AddObject(unlName)
-		_ = appDef.AddObject(resName)
+		_ = adb.AddObject(parName)
+		_ = adb.AddObject(unlName)
+		_ = adb.AddObject(resName)
 
-		cmd := appDef.AddCommand(cmdName)
+		cmd := adb.AddCommand(cmdName)
 
 		t.Run("must be ok to assign cmd parameter and result", func(t *testing.T) {
 			cmd.SetEngine(ExtensionEngineKind_BuiltIn)
@@ -35,7 +36,7 @@ func Test_AppDef_AddCommand(t *testing.T) {
 		})
 
 		t.Run("must be ok to build", func(t *testing.T) {
-			a, err := appDef.Build()
+			a, err := adb.Build()
 			require.NoError(err)
 			require.NotNil(a)
 
@@ -93,47 +94,41 @@ func Test_AppDef_AddCommand(t *testing.T) {
 	})
 
 	t.Run("panic if name is empty", func(t *testing.T) {
-		apb := New()
-		require.Panics(func() {
-			apb.AddCommand(NullQName)
-		})
+		adb := New()
+		require.Panics(func() { adb.AddCommand(NullQName) })
 	})
 
 	t.Run("panic if name is invalid", func(t *testing.T) {
-		apb := New()
-		require.Panics(func() {
-			apb.AddCommand(NewQName("naked", "🔫"))
-		})
+		adb := New()
+		require.Panics(func() { adb.AddCommand(NewQName("naked", "🔫")) })
 	})
 
 	t.Run("panic if type with name already exists", func(t *testing.T) {
 		testName := NewQName("test", "dupe")
-		apb := New()
-		apb.AddObject(testName)
-		require.Panics(func() {
-			apb.AddCommand(testName)
-		})
+		adb := New()
+		adb.AddPackage("test", "test.com/test")
+		adb.AddObject(testName)
+		require.Panics(func() { adb.AddCommand(testName) })
 	})
 
 	t.Run("panic if extension name is empty", func(t *testing.T) {
-		apb := New()
-		cmd := apb.AddCommand(NewQName("test", "cmd"))
-		require.Panics(func() {
-			cmd.SetName("")
-		})
+		adb := New()
+		adb.AddPackage("test", "test.com/test")
+		cmd := adb.AddCommand(NewQName("test", "cmd"))
+		require.Panics(func() { cmd.SetName("") })
 	})
 
 	t.Run("panic if extension name is invalid", func(t *testing.T) {
-		apb := New()
-		cmd := apb.AddCommand(NewQName("test", "cmd"))
-		require.Panics(func() {
-			cmd.SetName("naked 🔫")
-		})
+		adb := New()
+		adb.AddPackage("test", "test.com/test")
+		cmd := adb.AddCommand(NewQName("test", "cmd"))
+		require.Panics(func() { cmd.SetName("naked 🔫") })
 	})
 
 	t.Run("panic if extension kind is invalid", func(t *testing.T) {
-		apb := New()
-		cmd := apb.AddCommand(NewQName("test", "cmd"))
+		adb := New()
+		adb.AddPackage("test", "test.com/test")
+		cmd := adb.AddCommand(NewQName("test", "cmd"))
 		require.Panics(func() { cmd.SetEngine(ExtensionEngineKind_null) })
 		require.Panics(func() { cmd.SetEngine(ExtensionEngineKind_Count) })
 	})
@@ -142,26 +137,27 @@ func Test_AppDef_AddCommand(t *testing.T) {
 func Test_CommandValidate(t *testing.T) {
 	require := require.New(t)
 
-	appDef := New()
+	adb := New()
+	adb.AddPackage("test", "test.com/test")
 	obj := NewQName("test", "obj")
-	_ = appDef.AddObject(obj)
+	_ = adb.AddObject(obj)
 	bad := NewQName("test", "workspace")
-	_ = appDef.AddWorkspace(bad)
+	_ = adb.AddWorkspace(bad)
 	unknown := NewQName("test", "unknown")
 
-	cmd := appDef.AddCommand(NewQName("test", "cmd"))
+	cmd := adb.AddCommand(NewQName("test", "cmd"))
 
 	t.Run("errors in parameter", func(t *testing.T) {
 		t.Run("must error if parameter name is unknown", func(t *testing.T) {
 			cmd.SetParam(unknown)
-			_, err := appDef.Build()
+			_, err := adb.Build()
 			require.ErrorIs(err, ErrNameNotFound)
 			require.ErrorContains(err, unknown.String())
 		})
 
 		t.Run("must error if deprecated parameter type", func(t *testing.T) {
 			cmd.SetParam(bad)
-			_, err := appDef.Build()
+			_, err := adb.Build()
 			require.ErrorIs(err, ErrInvalidTypeKind)
 			require.ErrorContains(err, bad.String())
 		})
@@ -172,14 +168,14 @@ func Test_CommandValidate(t *testing.T) {
 	t.Run("errors in unlogged parameter", func(t *testing.T) {
 		t.Run("must error if unlogged parameter name is unknown", func(t *testing.T) {
 			cmd.SetUnloggedParam(unknown)
-			_, err := appDef.Build()
+			_, err := adb.Build()
 			require.ErrorIs(err, ErrNameNotFound)
 			require.ErrorContains(err, unknown.String())
 		})
 
 		t.Run("must error if deprecated unlogged parameter type", func(t *testing.T) {
 			cmd.SetUnloggedParam(bad)
-			_, err := appDef.Build()
+			_, err := adb.Build()
 			require.ErrorIs(err, ErrInvalidTypeKind)
 			require.ErrorContains(err, bad.String())
 		})
@@ -190,14 +186,14 @@ func Test_CommandValidate(t *testing.T) {
 	t.Run("errors in result", func(t *testing.T) {
 		t.Run("must error if result object name is unknown", func(t *testing.T) {
 			cmd.SetResult(unknown)
-			_, err := appDef.Build()
+			_, err := adb.Build()
 			require.ErrorIs(err, ErrNameNotFound)
 			require.ErrorContains(err, unknown.String())
 		})
 
 		t.Run("must error if deprecated unlogged parameter type", func(t *testing.T) {
 			cmd.SetResult(bad)
-			_, err := appDef.Build()
+			_, err := adb.Build()
 			require.ErrorIs(err, ErrInvalidTypeKind)
 			require.ErrorContains(err, bad.String())
 		})
@@ -205,6 +201,6 @@ func Test_CommandValidate(t *testing.T) {
 		cmd.SetResult(obj)
 	})
 
-	_, err := appDef.Build()
+	_, err := adb.Build()
 	require.NoError(err)
 }

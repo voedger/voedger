@@ -78,7 +78,7 @@ func provideIEVExec(appQName istructs.AppQName, itokens itokens.ITokens, asp ist
 
 		// c.sys.SendEmailVerificationCode
 		body := fmt.Sprintf(`{"args":{"VerificationCode":"%s","Email":"%s","Reason":"%s","Language":"%s"}}`, verificationCode, email, verifyEmailReason, lng)
-		if _, err = coreutils.FederationFunc(federation.URL(), fmt.Sprintf("api/%s/%d/c.sys.SendEmailVerificationCode", appQName, args.WSID), body,
+		if _, err = federation.Func(fmt.Sprintf("api/%s/%d/c.sys.SendEmailVerificationCode", appQName, args.WSID), body,
 			coreutils.WithDiscardResponse(), coreutils.WithAuthorizeBy(systemPrincipalToken)); err != nil {
 			return fmt.Errorf("c.sys.SendEmailVerificationCode failed: %w", err)
 		}
@@ -221,5 +221,5 @@ func getVerificationEmailBody(federation coreutils.IFederation, verificationCode
 		%d &copy; unTill
 	</div>
 </div>
-`, text1, verificationCode, text2, federation.URL().String(), text3, time.Now().Year())
+`, text1, verificationCode, text2, federation.URLStr(), text3, time.Now().Year())
 }

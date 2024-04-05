@@ -32,7 +32,7 @@ import (
 // Projector<A, InvokeCreateWorkspaceID>
 // triggered by CDoc<ChildWorkspace> (not a singleton)
 // targetApp/userProfileWSID
-func invokeCreateWorkspaceIDProjector(federation coreutils.IFederation, appQName istructs.AppQName, tokensAPI itokens.ITokens) func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
+func invokeCreateWorkspaceIDProjector(federation coreutils.IFederation, tokensAPI itokens.ITokens) func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
 	return func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
 		return iterate.ForEachError(event.CUDs, func(rec istructs.ICUDRow) error {
 			if rec.QName() != authnz.QNameCDocChildWorkspace || !rec.IsNew() {
@@ -43,6 +43,7 @@ func invokeCreateWorkspaceIDProjector(federation coreutils.IFederation, appQName
 			wsKind := rec.AsQName(authnz.Field_WSKind)
 			templateName := rec.AsString(field_TemplateName)
 			templateParams := rec.AsString(Field_TemplateParams)
+			appQName := s.App()
 			targetApp := appQName.String()
 			targetClusterID := istructs.MainClusterID // TODO: on https://github.com/voedger/voedger/commit/1e7ce3f2c546e9bf1332edb31a5beed5954bc476 was NullClusetrID!
 			wsidToCallCreateWSIDAt := coreutils.GetPseudoWSID(ownerWSID, wsName, targetClusterID)
@@ -78,7 +79,7 @@ func ApplyInvokeCreateWorkspaceID(federation coreutils.IFederation, appQName ist
 		return fmt.Errorf("aproj.sys.InvokeCreateWorkspaceID: %w", err)
 	}
 
-	if _, err = coreutils.FederationFunc(federation.URL(), createWSIDCmdURL, body,
+	if _, err = federation.Func(createWSIDCmdURL, body,
 		coreutils.WithAuthorizeBy(systemPrincipalToken),
 		coreutils.WithDiscardResponse(),
 		coreutils.WithExpectedCode(http.StatusOK),
@@ -181,7 +182,7 @@ func workspaceIDIdxProjector(event istructs.IPLogEvent, s istructs.IState, inten
 // Projector<A, InvokeCreateWorkspace>
 // triggered by CDoc<WorkspaceID>
 // targetApp/appWS
-func invokeCreateWorkspaceProjector(federation coreutils.IFederation, appQName istructs.AppQName, tokensAPI itokens.ITokens) func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
+func invokeCreateWorkspaceProjector(federation coreutils.IFederation, tokensAPI itokens.ITokens) func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
 	return func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
 		return iterate.ForEachError(event.CUDs, func(rec istructs.ICUDRow) error {
 			if rec.QName() != QNameCDocWorkspaceID || !rec.IsNew() { // skip on update cdoc.sys.WorkspaceID on e.g. deactivate workspace
@@ -200,13 +201,14 @@ func invokeCreateWorkspaceProjector(federation coreutils.IFederation, appQName i
 			templateParams := rec.AsString(Field_TemplateParams)
 			body := fmt.Sprintf(`{"args":{"OwnerWSID":%d,"OwnerQName2":"%s","OwnerID":%d,"OwnerApp":"%s","WSName":"%s","WSKind":"%s","WSKindInitializationData":%q,"TemplateName":"%s","TemplateParams":%q}}`,
 				ownerWSID, ownerQName, ownerID, ownerApp, wsName, wsKind.String(), wsKindInitializationData, templateName, templateParams)
+			appQName := s.App()
 			createWSCmdURL := fmt.Sprintf("api/%s/%d/c.sys.CreateWorkspace", appQName.String(), newWSID)
 			logger.Info("aproj.sys.InvokeCreateWorkspace: request to " + createWSCmdURL)
 			systemPrincipalToken, err := payloads.GetSystemPrincipalToken(tokensAPI, appQName)
 			if err != nil {
 				return fmt.Errorf("aproj.sys.InvokeCreateWorkspace: %w", err)
 			}
-			if _, err = coreutils.FederationFunc(federation.URL(), createWSCmdURL, body, coreutils.WithAuthorizeBy(systemPrincipalToken), coreutils.WithDiscardResponse()); err != nil {
+			if _, err = federation.Func(createWSCmdURL, body, coreutils.WithAuthorizeBy(systemPrincipalToken), coreutils.WithDiscardResponse()); err != nil {
 				return fmt.Errorf("aproj.sys.InvokeCreateWorkspace: c.sys.CreateWorkspace failed: %w", err)
 			}
 			return nil
@@ -284,7 +286,7 @@ func execCmdCreateWorkspace(now coreutils.TimeFunc, asp istructs.IAppStructsProv
 				return err
 			}
 			cdocWSKind.PutRecordID(appdef.SystemField_ID, 2)
-			return coreutils.Marshal(cdocWSKind, wsKindInitializationData) // validated already in func()
+			return coreutils.MapToObject(wsKindInitializationData, cdocWSKind) // validated already in func()
 		}
 		return nil
 	}
@@ -292,7 +294,7 @@ func execCmdCreateWorkspace(now coreutils.TimeFunc, asp istructs.IAppStructsProv
 
 // Projector<A, InitializeWorkspace>
 // triggered by CDoc<WorkspaceDescriptor>
-func initializeWorkspaceProjector(nowFunc coreutils.TimeFunc, targetAppQName istructs.AppQName, federation coreutils.IFederation, ep extensionpoints.IExtensionPoint,
+func initializeWorkspaceProjector(nowFunc coreutils.TimeFunc, federation coreutils.IFederation, ep extensionpoints.IExtensionPoint,
 	tokensAPI itokens.ITokens, wsPostInitFunc WSPostInitFunc) func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
 	return func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
 		return iterate.ForEachError(event.CUDs, func(rec istructs.ICUDRow) error {
@@ -335,6 +337,8 @@ func initializeWorkspaceProjector(nowFunc coreutils.TimeFunc, targetAppQName ist
 
 			info(workspace, newWSName, "init started")
 
+			targetAppQName := s.App()
+
 			systemPrincipalToken_TargetApp, err := payloads.GetSystemPrincipalToken(tokensAPI, targetAppQName)
 			if err != nil {
 				return fmt.Errorf("%s: %w", logPrefix, err)
@@ -368,7 +372,7 @@ func initializeWorkspaceProjector(nowFunc coreutils.TimeFunc, targetAppQName ist
 					wsDescr.ID(), authnz.QNameCDocWorkspaceDescriptor, Field_InitStartedAtMs, nowFunc().UnixMilli())
 				info("updating initStartedAtMs:", updateWSDescrURL)
 
-				if _, err := coreutils.FederationFunc(federation.URL(), updateWSDescrURL, body, coreutils.WithAuthorizeBy(systemPrincipalToken_TargetApp), coreutils.WithDiscardResponse()); err != nil {
+				if _, err := federation.Func(updateWSDescrURL, body, coreutils.WithAuthorizeBy(systemPrincipalToken_TargetApp), coreutils.WithDiscardResponse()); err != nil {
 					er("failed to update initStartedAtMs:", err)
 					return nil
 				}
@@ -385,7 +389,7 @@ func initializeWorkspaceProjector(nowFunc coreutils.TimeFunc, targetAppQName ist
 				}
 				body = fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"sys.QName":"%s","%s":%q,"%s":%d}}]}`,
 					wsDescr.ID(), authnz.QNameCDocWorkspaceDescriptor, Field_InitError, wsErrStr, Field_InitCompletedAtMs, nowFunc().UnixMilli())
-				if _, err = coreutils.FederationFunc(federation.URL(), updateWSDescrURL, body, coreutils.WithAuthorizeBy(systemPrincipalToken_TargetApp), coreutils.WithDiscardResponse()); err != nil {
+				if _, err = federation.Func(updateWSDescrURL, body, coreutils.WithAuthorizeBy(systemPrincipalToken_TargetApp), coreutils.WithDiscardResponse()); err != nil {
 					er("failed to update initError+initCompletedAtMs:", err)
 					return nil
 				}
@@ -394,7 +398,7 @@ func initializeWorkspaceProjector(nowFunc coreutils.TimeFunc, targetAppQName ist
 				wsError = errors.New("workspace data initialization was interrupted")
 				body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.QName":"%s","%s":%q,"%s":%d}}]}`,
 					authnz.QNameCDocWorkspaceDescriptor, Field_InitError, wsError.Error(), Field_InitCompletedAtMs, nowFunc().UnixMilli())
-				if _, err = coreutils.FederationFunc(federation.URL(), updateWSDescrURL, body, coreutils.WithAuthorizeBy(systemPrincipalToken_TargetApp), coreutils.WithDiscardResponse()); err != nil {
+				if _, err = federation.Func(updateWSDescrURL, body, coreutils.WithAuthorizeBy(systemPrincipalToken_TargetApp), coreutils.WithDiscardResponse()); err != nil {
 					er("failed to update initError+initCompletedAtMs:", err)
 					return nil
 				}
@@ -430,7 +434,7 @@ func updateOwner(rec istructs.ICUDRow, ownerApp string, newWSID int64, err error
 		ownerApp, ownerWSID, newWSID, errStr))
 	body := fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"%s":%d,"%s":%q}}]}`,
 		ownerID, authnz.Field_WSID, newWSID, authnz.Field_WSError, errStr)
-	if _, err = coreutils.FederationFunc(federation.URL(), updateOwnerURL, body, coreutils.WithAuthorizeBy(principalToken), coreutils.WithDiscardResponse()); err != nil {
+	if _, err = federation.Func(updateOwnerURL, body, coreutils.WithAuthorizeBy(principalToken), coreutils.WithDiscardResponse()); err != nil {
 		errorLogger("failed to updateOwner:", err)
 	}
 	return err == nil

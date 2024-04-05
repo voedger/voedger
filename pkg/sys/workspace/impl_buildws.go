@@ -53,7 +53,7 @@ func buildWorkspace(templateName string, ep extensionpoints.IExtensionPoint, wsK
 		// notest
 		return err
 	}
-	if _, err := coreutils.FederationFunc(federation.URL(), cudURL, string(bb), coreutils.WithAuthorizeBy(systemPrincipalToken), coreutils.WithDiscardResponse()); err != nil {
+	if _, err := federation.Func(cudURL, string(bb), coreutils.WithAuthorizeBy(systemPrincipalToken), coreutils.WithDiscardResponse()); err != nil {
 		return fmt.Errorf("c.sys.CUD failed: %w", err)
 	}
 	logger.Info(fmt.Sprintf("workspace %s build completed", wsName))
@@ -79,7 +79,7 @@ func uploadBLOBs(blobs []BLOB, federation coreutils.IFederation, appQName istruc
 		uploadBLOBURL := fmt.Sprintf("blob/%s/%d?name=%s&mimeType=%s", appQName.String(), wsid, blob.Name, blob.MimeType)
 		logger.Info("workspace build: uploading blob", blob.Name, "url:", uploadBLOBURL)
 
-		resp, err := coreutils.FederationPOST(federation.URL(), uploadBLOBURL, string(blob.Content), coreutils.WithAuthorizeBy(principalToken))
+		resp, err := federation.POST(uploadBLOBURL, string(blob.Content), coreutils.WithAuthorizeBy(principalToken))
 		if err != nil {
 			return nil, fmt.Errorf("blob %s: %w", blob.Name, err)
 		}

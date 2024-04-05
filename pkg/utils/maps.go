@@ -25,7 +25,7 @@ func PairsToMap(pairs []string, m map[string]string) error {
 	return nil
 }
 
-func Marshal(rw istructs.IRowWriter, data map[string]interface{}) (err error) {
+func MapToObject(data map[string]interface{}, rw istructs.IRowWriter) (err error) {
 	for fieldName, vIntf := range data {
 		switch v := vIntf.(type) {
 		case nil:
@@ -36,7 +36,7 @@ func Marshal(rw istructs.IRowWriter, data map[string]interface{}) (err error) {
 		case bool:
 			rw.PutBool(fieldName, v)
 		default:
-			return fmt.Errorf("field %s: marshal unsupported value type %#v", fieldName, vIntf)
+			return fmt.Errorf("field %s: unsupported value type %#v", fieldName, vIntf)
 		}
 	}
 	return nil

@@ -207,8 +207,10 @@ func TestIBucketsFromIAppStructs(t *testing.T) {
 	require := require.New(t)
 
 	cfgs := AppConfigsType{}
-	cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, appdef.New())
-	funcQName := appdef.NewQName("my", "func")
+	adb := appdef.New()
+	adb.AddPackage("test", "test.com/test")
+	cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, adb)
+	funcQName := appdef.NewQName("test", "myFunc")
 
 	rlExpected := istructs.RateLimit{
 		Period:                1,

@@ -28,8 +28,12 @@ const (
 	TestEmail       = "123@123.com"
 	TestEmail2      = "124@124.com"
 	TestServicePort = 10000
-	app1PkgName     = "app1pkg"
-	app2PkgName     = "app2pkg"
+
+	app1PkgName = "app1pkg"
+	app1PkgPath = "github.com/voedger/voedger/pkg/vit/app1pkg"
+
+	app2PkgName = "app2pkg"
+	app2PkgPath = "github.com/voedger/voedger/pkg/vit/app2pkg"
 )
 
 var (
@@ -82,15 +86,15 @@ var (
 	MockCmdExec func(input string, args istructs.ExecCommandArgs) error
 )
 
-func ProvideApp2(apis apps.APIs, cfg *istructsmem.AppConfigType, adf appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) apps.BuiltInAppDef {
+func ProvideApp2(apis apps.APIs, cfg *istructsmem.AppConfigType, adb appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) apps.BuiltInAppDef {
 	buildInfo, ok := debug.ReadBuildInfo()
 	if !ok {
 		panic("no build info")
 	}
-	sysPackageFS := sys.Provide(cfg, adf, TestSMTPCfg, ep, nil, apis.TimeFunc, apis.ITokens, apis.IFederation, apis.IAppStructsProvider, apis.IAppTokensFactory,
+	sysPackageFS := sys.Provide(cfg, adb, TestSMTPCfg, ep, nil, apis.TimeFunc, apis.ITokens, apis.IFederation, apis.IAppStructsProvider, apis.IAppTokensFactory,
 		apis.NumCommandProcessors, buildInfo, apis.IAppStorageProvider)
 	app2PackageFS := parser.PackageFS{
-		Path: "github.com/voedger/voedger/pkg/vit/app2pkg",
+		Path: app2PkgPath,
 		FS:   SchemaTestApp2FS,
 	}
 	cfg.Resources.Add(istructsmem.NewCommandFunction(appdef.NewQName(app2PkgName, "testCmd"), istructsmem.NullCommandExec))
@@ -105,13 +109,13 @@ func ProvideApp2(apis apps.APIs, cfg *istructsmem.AppConfigType, adf appdef.IApp
 	}
 }
 
-func ProvideApp1(apis apps.APIs, cfg *istructsmem.AppConfigType, adf appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) apps.BuiltInAppDef {
+func ProvideApp1(apis apps.APIs, cfg *istructsmem.AppConfigType, adb appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) apps.BuiltInAppDef {
 	// sys package
 	buildInfo, ok := debug.ReadBuildInfo()
 	if !ok {
 		panic("no build info")
 	}
-	sysPackageFS := sys.Provide(cfg, adf, TestSMTPCfg, ep, nil, apis.TimeFunc, apis.ITokens, apis.IFederation, apis.IAppStructsProvider, apis.IAppTokensFactory,
+	sysPackageFS := sys.Provide(cfg, adb, TestSMTPCfg, ep, nil, apis.TimeFunc, apis.ITokens, apis.IFederation, apis.IAppStructsProvider, apis.IAppTokensFactory,
 		apis.NumCommandProcessors, buildInfo, apis.IAppStorageProvider)
 
 	// for rates test
@@ -200,7 +204,7 @@ func ProvideApp1(apis apps.APIs, cfg *istructsmem.AppConfigType, adf appdef.IApp
 	cfg.Resources.Add(istructsmem.NewCommandFunction(appdef.NewQName(app1PkgName, "TestCmdRawArg"), istructsmem.NullCommandExec))
 
 	app1PackageFS := parser.PackageFS{
-		Path: "github.com/voedger/voedger/pkg/vit/app1pkg",
+		Path: app1PkgPath,
 		FS:   SchemaTestApp1FS,
 	}
 	return apps.BuiltInAppDef{

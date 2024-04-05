@@ -27,15 +27,16 @@ func Test_AppDef_AddData(t *testing.T) {
 	tokenName := NewQName("test", "token")
 
 	t.Run("must be ok to add data types", func(t *testing.T) {
-		appDef := New()
+		adb := New()
+		adb.AddPackage("test", "test.com/test")
 
-		_ = appDef.AddData(intName, DataKind_int64, NullQName)
-		_ = appDef.AddData(strName, DataKind_string, NullQName)
-		token := appDef.AddData(tokenName, DataKind_string, strName)
+		_ = adb.AddData(intName, DataKind_int64, NullQName)
+		_ = adb.AddData(strName, DataKind_string, NullQName)
+		token := adb.AddData(tokenName, DataKind_string, strName)
 		token.AddConstraints(MinLen(1), MaxLen(100), Pattern(`^\w+$`, "only word characters allowed"))
 
 		t.Run("must be ok to build", func(t *testing.T) {
-			a, err := appDef.Build()
+			a, err := adb.Build()
 			require.NoError(err)
 			require.NotNil(a)
 
@@ -104,72 +105,61 @@ func Test_AppDef_AddData(t *testing.T) {
 		require.Equal(3, cnt)
 	})
 
-	t.Run("check nil returns", func(t *testing.T) {
-		unknown := NewQName("test", "unknown")
-		require.Nil(app.Data(unknown))
-	})
+	require.Nil(app.Data(NewQName("test", "unknown")), "check nil returns")
 
-	t.Run("panic if name is empty", func(t *testing.T) {
-		apb := New()
-		require.Panics(func() {
-			apb.AddData(NullQName, DataKind_int64, NullQName)
-		})
-	})
+	require.Panics(func() {
+		New().AddData(NullQName, DataKind_int64, NullQName)
+	}, "panic if name is empty")
 
-	t.Run("panic if name is invalid", func(t *testing.T) {
-		apb := New()
-		require.Panics(func() {
-			apb.AddData(NewQName("naked", "🔫"), DataKind_QName, NullQName)
-		})
-	})
+	require.Panics(func() {
+		New().AddData(NewQName("naked", "🔫"), DataKind_QName, NullQName)
+	}, "panic if name is invalid")
 
 	t.Run("panic if type with name already exists", func(t *testing.T) {
-		apb := New()
-		apb.AddObject(intName)
+		adb := New()
+		adb.AddPackage("test", "test.com/test")
+		adb.AddObject(intName)
 		require.Panics(func() {
-			apb.AddData(intName, DataKind_int64, NullQName)
+			adb.AddData(intName, DataKind_int64, NullQName)
 		})
 	})
 
-	t.Run("panic if unknown system ancestor", func(t *testing.T) {
-		apb := New()
-		require.Panics(func() {
-			apb.AddData(intName, DataKind_null, NullQName)
-		})
-	})
+	require.Panics(func() {
+		New().AddData(intName, DataKind_null, NullQName)
+	}, "panic if unknown system ancestor")
 
-	t.Run("panic if ancestor is not found", func(t *testing.T) {
-		apb := New()
-		require.Panics(func() {
-			apb.AddData(intName, DataKind_int64,
-				NewQName("test", "unknown"), // <- error here
-			)
-		})
-	})
+	require.Panics(func() {
+		New().AddData(intName, DataKind_int64,
+			NewQName("test", "unknown"), // <- error here
+		)
+	}, "panic if ancestor is not found")
 
 	t.Run("panic if ancestor is not data type", func(t *testing.T) {
 		objName := NewQName("test", "object")
-		apb := New()
-		_ = apb.AddObject(objName)
+		adb := New()
+		adb.AddPackage("test", "test.com/test")
+		_ = adb.AddObject(objName)
 		require.Panics(func() {
-			apb.AddData(intName, DataKind_int64,
+			adb.AddData(intName, DataKind_int64,
 				objName, // <- error here
 			)
 		})
 	})
 
 	t.Run("panic if ancestor has different kind", func(t *testing.T) {
-		apb := New()
-		_ = apb.AddData(strName, DataKind_string, NullQName)
+		adb := New()
+		adb.AddPackage("test", "test.com/test")
+		_ = adb.AddData(strName, DataKind_string, NullQName)
 		require.Panics(func() {
-			apb.AddData(intName, DataKind_int64, strName)
+			adb.AddData(intName, DataKind_int64, strName)
 		})
 	})
 
 	t.Run("panic if incompatible constraints", func(t *testing.T) {
-		apb := New()
-		require.Panics(func() { _ = apb.AddData(strName, DataKind_string, NullQName, MinIncl(1)) })
-		require.Panics(func() { _ = apb.AddData(intName, DataKind_float64, NullQName, MaxLen(100)) })
+		adb := New()
+		adb.AddPackage("test", "test.com/test")
+		require.Panics(func() { _ = adb.AddData(strName, DataKind_string, NullQName, MinIncl(1)) })
+		require.Panics(func() { _ = adb.AddData(intName, DataKind_float64, NullQName, MaxLen(100)) })
 	})
 }
 
@@ -481,6 +471,7 @@ func Test_data_AddConstraint(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			adb := New()
+			adb.AddPackage("test", "test.com/test")
 			d := adb.AddData(NewQName("test", "test"), tt.args.da, NullQName)
 			if tt.wantPanic {
 				require.Panics(func() { d.AddConstraints(NewConstraint(tt.args.ck, tt.args.cv)) })

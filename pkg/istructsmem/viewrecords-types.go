@@ -470,6 +470,16 @@ func (key *keyType) RecordIDs(includeNulls bool, cb func(string, istructs.Record
 	key.ccolsRow.RecordIDs(includeNulls, cb)
 }
 
+// istructs.IKeyBuilder.ToBytes
+func (key *keyType) ToBytes(ws istructs.WSID) (pk, cc []byte, err error) {
+	if err := key.build(); err != nil {
+		return nil, nil, err
+	}
+
+	pk, cc = key.storeToBytes(ws)
+	return pk, cc, nil
+}
+
 // valueType implements IValue, IValueBuilder
 type valueType struct {
 	rowType
@@ -533,4 +543,11 @@ func (val *valueType) Build() istructs.IValue {
 	value := newValue(val.appCfg, val.viewName)
 	value.copyFrom(&val.rowType)
 	return value
+}
+
+func (val *valueType) ToBytes() ([]byte, error) {
+	if err := val.build(); err != nil {
+		return nil, err
+	}
+	return val.storeToBytes(), nil
 }

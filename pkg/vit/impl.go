@@ -9,7 +9,6 @@ import (
 	_ "embed"
 	"encoding/json"
 	"fmt"
-	"net/http"
 	"runtime"
 	"strconv"
 	"sync"
@@ -178,6 +177,7 @@ func newVit(t testing.TB, vitCfg *VITConfig, useCas bool) *VIT {
 			}
 		}
 
+		// time.Sleep(10 * time.Second)
 		sysToken, err := payloads.GetSystemPrincipalToken(vit, app.name)
 		require.NoError(vit.T, err)
 		for _, wsd := range app.ws {
@@ -195,6 +195,9 @@ func newVit(t testing.TB, vitCfg *VITConfig, useCas bool) *VIT {
 
 			handleWSParam(vit, appWorkspaces[wsd.Name], appWorkspaces, verifiedValues, sysToken)
 		}
+	}
+	if vitPreConfig.postInitFunc != nil {
+		vitPreConfig.postInitFunc(vit)
 	}
 	return vit
 }
@@ -247,27 +250,6 @@ func NewVITLocalCassandra(tb testing.TB, vitCfg *VITConfig, opts ...vitOptFunc) 
 	}
 
 	return vit
-}
-
-// WSID as wsid[0] or 1, system owner
-// command processor will skip initialization check for that workspace
-func (vit *VIT) DummyWS(appQName istructs.AppQName, awsid ...istructs.WSID) *AppWorkspace {
-	wsid := istructs.WSID(1)
-	if len(awsid) > 0 {
-		wsid = awsid[0]
-	}
-	coreutils.AddDummyWS(wsid)
-	sysPrn := vit.GetSystemPrincipal(appQName)
-	return &AppWorkspace{
-		WorkspaceDescriptor: WorkspaceDescriptor{
-			WSParams: WSParams{
-				Kind:      appdef.NullQName,
-				ClusterID: istructs.MainClusterID,
-			},
-			WSID: wsid,
-		},
-		Owner: sysPrn,
-	}
 }
 
 func (vit *VIT) WS(appQName istructs.AppQName, wsName string) *AppWorkspace {
@@ -366,17 +348,9 @@ func (vit *VIT) PostWSSys(ws *AppWorkspace, funcName string, body string, opts .
 	return vit.PostApp(ws.Owner.AppQName, ws.WSID, funcName, body, opts...)
 }
 
-func (vit *VIT) PostFree(url string, body string, opts ...coreutils.ReqOptFunc) *coreutils.HTTPResponse {
-	vit.T.Helper()
-	opts = append(opts, coreutils.WithMethod(http.MethodPost))
-	res, err := coreutils.Req(url, body, opts...)
-	require.NoError(vit.T, err)
-	return res
-}
-
 func (vit *VIT) Post(url string, body string, opts ...coreutils.ReqOptFunc) *coreutils.HTTPResponse {
 	vit.T.Helper()
-	res, err := coreutils.FederationPOST(vit.IFederation.URL(), url, body, opts...)
+	res, err := vit.POST(url, body, opts...)
 	require.NoError(vit.T, err)
 	return res
 }
@@ -384,14 +358,14 @@ func (vit *VIT) Post(url string, body string, opts ...coreutils.ReqOptFunc) *cor
 func (vit *VIT) PostApp(appQName istructs.AppQName, wsid istructs.WSID, funcName string, body string, opts ...coreutils.ReqOptFunc) *coreutils.FuncResponse {
 	vit.T.Helper()
 	url := fmt.Sprintf("api/%s/%d/%s", appQName, wsid, funcName)
-	res, err := coreutils.FederationFunc(vit.IFederation.URL(), url, body, opts...)
+	res, err := vit.Func(url, body, opts...)
 	require.NoError(vit.T, err)
 	return res
 }
 
 func (vit *VIT) Get(url string, opts ...coreutils.ReqOptFunc) *coreutils.HTTPResponse {
 	vit.T.Helper()
-	res, err := coreutils.FederationReq(vit.IFederation.URL(), url, "", opts...)
+	res, err := vit.GET(url, "", opts...)
 	require.NoError(vit.T, err)
 	return res
 }

@@ -183,7 +183,7 @@ Subject:
 - `cdoc.WorkspaceDescriptor`, `cdoc.WorkspaceID`, `c.sys.CeateWorkspace`, `c.sys.CreateWorkspaceID`:
   - `ownerID`, `ownerQName2`, `ownerWSID` fields are made non-required becuase they are empty in App Workspace
   - `ownerApp` field added to know in which app to update the owner
-- AppWorkspaces are [initialized automatically](https://github.com/untillpro/airs-bp3/blob/21010-AD-Workspace-ER/hvm/provide.go#L53) after wiring the HVM before launch
+- AppWorkspaces are [initialized automatically](https://github.com/untillpro/airs-bp3/blob/21010-AD-Workspace-ER/hvm/provide.go#L53) after wiring the VVM before launch
   - for each app
     - PLog and WLog offsets are starting from `istructs.FirstOffset`
     - for each App WS Number

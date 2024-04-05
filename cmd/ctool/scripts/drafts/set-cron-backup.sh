@@ -19,9 +19,8 @@ else
 fi
 SCHEDULE=$1
 SSH_PORT=$2
-SSH_USER=$LOGNAME
-CTOOL_PATH="/home/${SSH_USER}/ctool/ctool"
-KEY_PATH="/home/${SSH_USER}/ctool/pkey"
+CTOOL_PATH="~/ctool/ctool"
+KEY_PATH="~/ctool/pkey"
 CRON_HOST_NAME="app-node-1"
 CRON_HOST=$(nslookup ${CRON_HOST_NAME} | awk '/^Address: / { print $2 }')
 DB_NODE_1_HOST=$(nslookup "db-node-1" | awk '/^Address: / { print $2 }')

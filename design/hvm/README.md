@@ -21,7 +21,7 @@ ProvideCluster(WithApps(
 ))
 type Cluster struct {
 	ServicePipeline
-	HVMAPI
+	VVMAPI
 
 }
 ```
@@ -30,10 +30,10 @@ type Cluster struct {
 ```mermaid
 erDiagram
 
-	HVMConfig ||..|| AppPartitionConfig: has
-	HVMConfig ||..|| HVM: "used to build"
-	HVMConfig ||..|| os_Args: "built using e.g."
-	HVM ||..|{ AppPartition: contains
+	VVMConfig ||..|| AppPartitionConfig: has
+	VVMConfig ||..|| VVM: "used to build"
+	VVMConfig ||..|| os_Args: "built using e.g."
+	VVM ||..|{ AppPartition: contains
 
 	AppPartitionConfig {
 		CommandProcessorsAmount int
@@ -51,10 +51,10 @@ erDiagram
 ```mermaid
 erDiagram
 
-	HVMConfig ||..|| DefaultAppPartitionConfig: has
-	HVMConfig ||..|| HVM: "used to build"
-	HVMConfig ||..|| os_Args: "built using e.g."
-	HVM ||..|{ AppPartition: contains
+	VVMConfig ||..|| DefaultAppPartitionConfig: has
+	VVMConfig ||..|| VVM: "used to build"
+	VVMConfig ||..|| os_Args: "built using e.g."
+	VVM ||..|{ AppPartition: contains
 
 	App{
 
@@ -78,11 +78,11 @@ erDiagram
 ```mermaid
 erDiagram
 
-HVM ||--|| ServicePipeline: has
-HVM ||--|| HVMAPI: "has struct of interfaces"
-HVM ||--|{ IHVMApp: "has per app"
-HVM ||--|| MetricsServicePort: "has func"
-HVM ||..|| struct: is
+VVM ||--|| ServicePipeline: has
+VVM ||--|| VVMAPI: "has struct of interfaces"
+VVM ||--|{ IVVMApp: "has per app"
+VVM ||--|| MetricsServicePort: "has func"
+VVM ||..|| struct: is
 
 ServicePipeline ||..|| ISyncPipeline: is
 ServicePipeline ||--|| ForkOperator_SP : "has single"

@@ -39,10 +39,11 @@ func TestContainers(t *testing.T) {
 	if err := containers.Prepare(storage, versions,
 		func() appdef.IAppDef {
 			objName := appdef.NewQName("test", "object")
-			appDef := appdef.New()
-			appDef.AddObject(objName).
+			adb := appdef.New()
+			adb.AddPackage("test", "test.com/test")
+			adb.AddObject(objName).
 				AddContainer(containerName, objName, 0, 1)
-			result, err := appDef.Build()
+			result, err := adb.Build()
 			require.NoError(err)
 			return result
 		}()); err != nil {
@@ -89,10 +90,11 @@ func TestContainers(t *testing.T) {
 			if err := containers2.Prepare(storage, versions,
 				func() appdef.IAppDef {
 					objName := appdef.NewQName("test", "object")
-					appDef := appdef.New()
-					appDef.AddObject(objName).
+					adb := appdef.New()
+					adb.AddPackage("test", "test.com/test")
+					adb.AddObject(objName).
 						AddContainer(containerName, objName, 0, 1)
-					result, err := appDef.Build()
+					result, err := adb.Build()
 					require.NoError(err)
 					return result
 				}()); err != nil {
@@ -199,13 +201,14 @@ func TestContainersPrepareErrors(t *testing.T) {
 		names := New()
 		err := names.Prepare(storage, versions,
 			func() appdef.IAppDef {
-				appDef := appdef.New()
+				adb := appdef.New()
+				adb.AddPackage("test", "test.com/test")
 				qName := appdef.NewQName("test", "test")
-				obj := appDef.AddObject(qName)
+				obj := adb.AddObject(qName)
 				for i := 0; i <= MaxAvailableContainerID; i++ {
 					obj.AddContainer(fmt.Sprintf("cont_%d", i), qName, 0, 1)
 				}
-				result, err := appDef.Build()
+				result, err := adb.Build()
 				require.NoError(err)
 				return result
 			}())
@@ -230,10 +233,11 @@ func TestContainersPrepareErrors(t *testing.T) {
 			err := names.Prepare(storage, versions,
 				func() appdef.IAppDef {
 					objName := appdef.NewQName("test", "object")
-					appDef := appdef.New()
-					appDef.AddObject(objName).
+					adb := appdef.New()
+					adb.AddPackage("test", "test.com/test")
+					adb.AddObject(objName).
 						AddContainer(containerName, objName, 0, 1)
-					result, err := appDef.Build()
+					result, err := adb.Build()
 					require.NoError(err)
 					return result
 				}())
@@ -254,10 +258,11 @@ func TestContainersPrepareErrors(t *testing.T) {
 			err := names.Prepare(storage, versions,
 				func() appdef.IAppDef {
 					objName := appdef.NewQName("test", "object")
-					appDef := appdef.New()
-					appDef.AddObject(objName).
+					adb := appdef.New()
+					adb.AddPackage("test", "test.com/test")
+					adb.AddObject(objName).
 						AddContainer(containerName, objName, 0, 1)
-					result, err := appDef.Build()
+					result, err := adb.Build()
 					require.NoError(err)
 					return result
 				}())

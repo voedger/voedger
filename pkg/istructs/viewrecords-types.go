@@ -14,6 +14,11 @@ type IKeyBuilder interface {
 	ClusteringColumns() IRowWriter
 	// Equals returns is src key builder has the same QName and field values. See #!21906
 	Equals(src IKeyBuilder) bool
+
+	// Puts key to bytes for specified workspace id
+	//
+	// Returns error if there were errors when calling Put-methods
+	ToBytes(WSID) (pk, cc []byte, err error)
 }
 
 type IValueBuilder interface {
@@ -25,6 +30,11 @@ type IValueBuilder interface {
 	// @Tricky
 	PutEvent(name string, event IDbEvent)
 	Build() IValue
+
+	// Writes value data to bytes.
+	//
+	// Returns error if there were errors when calling Put-methods
+	ToBytes() ([]byte, error)
 }
 
 // @Tricky

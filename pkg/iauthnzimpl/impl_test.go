@@ -1116,9 +1116,10 @@ type implIKeyBuilder struct {
 	qName appdef.QName
 }
 
-func (kb *implIKeyBuilder) PartitionKey() istructs.IRowWriter      { return &kb.TestObject }
-func (kb *implIKeyBuilder) ClusteringColumns() istructs.IRowWriter { return &kb.TestObject }
-func (kb *implIKeyBuilder) Equals(istructs.IKeyBuilder) bool       { panic("implement me") }
+func (kb *implIKeyBuilder) PartitionKey() istructs.IRowWriter             { return &kb.TestObject }
+func (kb *implIKeyBuilder) ClusteringColumns() istructs.IRowWriter        { return &kb.TestObject }
+func (kb *implIKeyBuilder) Equals(istructs.IKeyBuilder) bool              { panic("implement me") }
+func (kb *implIKeyBuilder) ToBytes(istructs.WSID) ([]byte, []byte, error) { return nil, nil, nil }
 
 type implIValue struct {
 	coreutils.TestObject

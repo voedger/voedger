@@ -11,6 +11,7 @@ import (
 	"fmt"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/pipeline"
 	"github.com/voedger/voedger/pkg/state"
@@ -61,22 +62,26 @@ func newSyncBranch(conf SyncActualizerConf, projector istructs.Projector, servic
 	pipelineName := fmt.Sprintf("[%d] %s", conf.Partition, projector.Name)
 	s = state.ProvideSyncActualizerStateFactory()(
 		conf.Ctx,
-		conf.AppStructs(),
+		conf.AppStructs,
 		state.SimplePartitionIDFunc(conf.Partition),
 		service.getWSID,
 		conf.N10nFunc,
 		conf.SecretReader,
 		service.getEvent,
 		conf.IntentsLimit)
-	iProjector := conf.AppStructs().AppDef().Projector(projector.Name)
-	triggeringQNames := iProjector.Events().Map()
 	fn = pipeline.ForkBranch(pipeline.NewSyncPipeline(conf.Ctx, pipelineName,
-		pipeline.WireFunc("Projector", func(_ context.Context, _ interface{}) (err error) {
-			if !isAcceptable(service.event, iProjector.WantErrors(), triggeringQNames, conf.AppStructs().AppDef()) {
-				return nil
-			}
-			return projector.Func(service.event, s, s)
-		}),
+		pipeline.WireFunc("Projector",
+			func(ctx context.Context, work interface{}) error {
+				appPart := work.(interface{ AppPartition() appparts.IAppPartition }).AppPartition()
+				appDef := appPart.AppStructs().AppDef()
+				prj := appDef.Projector(projector.Name)
+				event := s.PLogEvent()
+				if !isAcceptable(event, prj.WantErrors(), prj.Events().Map(), appDef) {
+					return nil
+				}
+				return appPart.Invoke(ctx, projector.Name, s, s)
+				// return projector.Func(service.event, s, s)
+			}),
 		pipeline.WireFunc("IntentsValidator", func(_ context.Context, _ interface{}) (err error) {
 			return s.ValidateIntents()
 		})))

@@ -24,10 +24,10 @@ As a system architect I want to know which metrics are needed for the monitor ap
 
 ## API Functional Design
 - General
-  - select list of nodes (hvms and dbs)
+  - select list of nodes (vvms and dbs)
 - Time-series charts
   - select list of metrics by the time range (from..till)
-- Dashboard current values / gauges 
+- Dashboard current values / gauges
   - select last metric value (select top 1 metric from the time range order by time desc)
 - Dashboard current values / rates (CPU load, IOPS)
   - select first and last metric value from the interval
@@ -47,7 +47,7 @@ As a system architect I want to know which metrics are needed for the monitor ap
 
 ## API
 The following query functions are available in the API:
-- `q.monitor.GetNodes` ([{nodename: 'worker1', hvm: true},...])
+- `q.monitor.GetNodes` ([{nodename: 'worker1', vvm: true},...])
 - `q.monitor.GetApps` ([{app: 'sys/monitor, version: '1.2.3', partitions: 1, uptime: 123123123}])
 - `q.monitor.GetMetrics` (return all values for requested metrics over time interval for given app)
   - in:
@@ -55,7 +55,7 @@ The following query functions are available in the API:
     - till
     - app
     - list of metrics
-    - list of hvms
+    - list of vvms
   - out: array of objects:
     - metric_name
     - app
@@ -96,7 +96,7 @@ RPS
 - Gets the list of ['heeus_cp_commands_total', 'heeus_qp_commands_total'] metrics from `q.monitor.GetMetrics` for app 'sys' and given interval
 - Calculates `rate` over values to show number per second
 
-Status Codes 
+Status Codes
 - Gets the list of ['heeus_http_status_2xx_total', 'heeus_http_status_4xx_total', 'heeus_http_status_5xx_total', 'heeus_http_status_503_total'] metrics from `q.monitor.GetMetrics` for app 'sys' and given interval
 - Calculates `diff` over values to show number per interval
 
@@ -143,7 +143,7 @@ App RPS
 - Gets the list of ['heeus_cp_commands_total', 'heeus_qp_commands_total'] metrics from `q.monitor.GetMetrics` for given app and interval
 - Calculates `rate` over values to show number per second
 
-App Status Codes 
+App Status Codes
 - Gets the list of ['heeus_http_status_2xx_total', 'heeus_http_status_4xx_total', 'heeus_http_status_5xx_total', 'heeus_http_status_503_total'] metrics from `q.monitor.GetMetrics` for given app and interval
 - Calculates `diff` over values to show number per interval
 
@@ -158,8 +158,8 @@ App Execution Time / Command Processor
 - Calculates `diff` over values to show the execution time: diff(seconds)/diff(total)
 
 App Execution Time / Query Processor
-- Gets the list of ['heeus_qp_queries_total', 
-                'heeus_qp_queries_seconds', 'heeus_qp_build_seconds', 
+- Gets the list of ['heeus_qp_queries_total',
+                'heeus_qp_queries_seconds', 'heeus_qp_build_seconds',
                 'heeus_qp_exec_seconds', 'heeus_qp_exec_fields_seconds',
                 'heeus_qp_exec_enrich_seconds', 'heeus_qp_exec_filter_seconds',
                 'heeus_qp_exec_order_seconds','heeus_qp_exec_count_seconds',
@@ -184,36 +184,36 @@ App Top 10 Slow Projectors
 ???
 
 App Storage / IOPS
-- Gets the list of ['heeus_istoragecache_get_total', 
-                'heeus_istoragecache_getbatch_total', 'heeus_istoragecache_put_total', 
+- Gets the list of ['heeus_istoragecache_get_total',
+                'heeus_istoragecache_getbatch_total', 'heeus_istoragecache_put_total',
                 'heeus_istoragecache_putbatch_total', 'heeus_istoragecache_read_total'] metrics from `q.monitor.GetMetrics` for given app and interval
 - Calculates `rate` over values to show the ops per seconds
 
 App Storage / Execution Time
 - Gets the list of ['heeus_istoragecache_get_seconds', 'heeus_istoragecache_get_total',
-                        'heeus_istoragecache_getbatch_seconds', 'heeus_istoragecache_getbatch_total', 
-                        'heeus_istoragecache_put_seconds', 'heeus_istoragecache_put_total', 
-                        'heeus_istoragecache_putbatch_seconds', 'heeus_istoragecache_putbatch_total', 
+                        'heeus_istoragecache_getbatch_seconds', 'heeus_istoragecache_getbatch_total',
+                        'heeus_istoragecache_put_seconds', 'heeus_istoragecache_put_total',
+                        'heeus_istoragecache_putbatch_seconds', 'heeus_istoragecache_putbatch_total',
                         'heeus_istoragecache_read_seconds', 'heeus_istoragecache_read_total'] metrics from `q.monitor.GetMetrics` for given app and interval
 - Calculates `diff` over values to show the execution time: diff(seconds)/diff(total)
-  
+
 
 App Storage / Cache hits
 - Gets the list of ['heeus_istoragecache_get_total', 'heeus_istoragecache_get_cached_total',
                 'heeus_istoragecache_getbatch_total', 'heeus_istoragecache_getbatch_cached_total'] metrics from `q.monitor.GetMetrics` for given app and interval
 - Calculates `diff` over values to show the execution time: diff(cached)/diff(total)
-  
-## Metrics 
+
+## Metrics
 ### Writing Metrics
 Metrics are periodically scraped by Monitor app and saved in `monitor.MetricsView` with the timestamps
 
 ### List of Metrics
-|                      Metric                       |  HVM  | Partitioned |
+|                      Metric                       |  VVM  | Partitioned |
 | ------------------------------------------------- | ----- | ----------- |
-| heeus_http_status_2xx_total                       | yes   | no 
-| heeus_http_status_4xx_total                       | yes   | no 
-| heeus_http_status_5xx_total                       | yes   | no 
-| heeus_http_status_503_total                       | yes   | no  
+| heeus_http_status_2xx_total                       | yes   | no
+| heeus_http_status_4xx_total                       | yes   | no
+| heeus_http_status_5xx_total                       | yes   | no
+| heeus_http_status_503_total                       | yes   | no
 | heeus_cp_http_status_503_total                    | yes   | no
 | heeus_cp_http_status_4xx_total                    | yes   | no
 | heeus_cp_http_status_5xx_total                    | yes   | no
@@ -250,7 +250,7 @@ Metrics are periodically scraped by Monitor app and saved in `monitor.MetricsVie
 | heeus_qp_exec_count_seconds                       | yes   | no
 | heeus_qp_exec_send_seconds                        | yes   | no
 | heeus_partition_cp_commands_total                 | yes   | yes
-| heeus_partition_qp_commands_total                 | yes   | yes 
+| heeus_partition_qp_commands_total                 | yes   | yes
 | node_cpu_idle_seconds_total                       | no    | no
 | node_memory_memavailable_bytes                    | no    | no
 | node_memory_memtotal_bytes                        | no    | no
@@ -260,17 +260,17 @@ Metrics are periodically scraped by Monitor app and saved in `monitor.MetricsVie
 | node_disk_write_bytes_total                       | no    | no
 | node_disk_reads_completed_total                   | no    | no
 | node_disk_writes_completed_total                  | no    | no
- 
+
 ### Metrics View
-- PK: app, day_in_month 
+- PK: app, day_in_month
 - CC: metric_name, timestamp, node
 - partition
 - value: float64
 
 Partition size calculation:
 - Scrape every 15 seconds = 5760 scrapes per day
-- 9 non-hvm metrics 
-- 40 hvm metrics (38 non-partitioned and 2 partitioned)
+- 9 non-vvm metrics
+- 40 vvm metrics (38 non-partitioned and 2 partitioned)
 - 1 node, 3 apps x 10 partitions:
   - values per day: (1 [node] * 9 + 3 [apps] * 38 + 2 * 10 [partitions]) * 5760 = 823680
   - partition size: ?
@@ -278,7 +278,7 @@ Partition size calculation:
   - values per day: (5 [nodes] * 9 + 5 [apps] * (38 + 2 * 10 [partitions])) * 5760 = 1929600
   - partition size: ?
 - 50 worker + 3 dbs, 5 apps x 10 partitions, 5 apps x 100 partitions
-  - values per day: (50 [nodes] * 9 + 5 [apps] * (38 + 2 * 10 [partitions]) + 5 
+  - values per day: (50 [nodes] * 9 + 5 [apps] * (38 + 2 * 10 [partitions]) + 5
   [apps] * (38 + 2 * 100 [partitions])) * 5760 = 11116800
   - partition size: ?
 

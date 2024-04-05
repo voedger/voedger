@@ -16,7 +16,9 @@ import (
 
 	"github.com/voedger/voedger/pkg/istructs"
 	coreutils "github.com/voedger/voedger/pkg/utils"
+	wsdescutil "github.com/voedger/voedger/pkg/utils/wsdesc"
 	it "github.com/voedger/voedger/pkg/vit"
+	sys_test_template "github.com/voedger/voedger/pkg/vit/testdata"
 )
 
 const (
@@ -24,11 +26,33 @@ const (
 	writeCnt = 20
 )
 
+var cfg = it.NewSharedVITConfig(
+	it.WithApp(istructs.AppQName_test1_app1, it.ProvideApp1,
+		it.WithWorkspaceTemplate(it.QNameApp1_TestWSKind, "test_template", sys_test_template.TestTemplateFS),
+		it.WithUserLogin("login", "pwd"),
+		it.WithChildWorkspace(it.QNameApp1_TestWSKind, "test_ws", "test_template", "", "login", map[string]interface{}{"IntFld": 42}),
+	),
+	it.WithPostInit(func(vit *it.VIT) {
+		as, err := vit.AppStructs(istructs.AppQName_test1_app1)
+		require.NoError(vit.T, err)
+		plogOffsets := map[istructs.PartitionID]istructs.Offset{}
+		for wsNum := 0; wsNum < writeCnt; wsNum++ {
+			wsid := istructs.WSID(wsNum + int(istructs.MaxPseudoBaseWSID))
+			partNum := coreutils.PartitionID(wsid, vit.NumCommandProcessors)
+			pLogOffset := plogOffsets[partNum]
+			err = wsdescutil.CreateCDocWorkspaceDescriptorStub(as, partNum, istructs.WSID(wsNum+int(istructs.MaxPseudoBaseWSID)), it.QNameApp1_TestWSKind, pLogOffset, 1)
+			require.NoError(vit.T, err)
+			plogOffsets[partNum]++
+		}
+	}),
+)
+
 // One WSID
 //*****************************************
 
 // Read from many goroutines.
 // Read result does not matter.
+
 func Test_Race_CUDSimpleRead(t *testing.T) {
 	if coreutils.IsCassandraStorage() {
 		return
@@ -243,18 +267,20 @@ func Test_Race_CUDManyReadCheckResult(t *testing.T) {
 	if coreutils.IsCassandraStorage() {
 		return
 	}
-	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	vit := it.NewVIT(t, &cfg)
 	defer vit.TearDown()
 
 	var cntWS int = readCnt
+	sysPrn := vit.GetSystemPrincipal(istructs.AppQName_test1_app1)
 
 	wg := sync.WaitGroup{}
 	for prtIdx := istructs.WSID(1); int(prtIdx) < cntWS; prtIdx++ {
 		wg.Add(1)
-		go func(wsid istructs.WSID) {
+		go func(wsidNum istructs.WSID) {
 			defer wg.Done()
-			ws := vit.DummyWS(istructs.AppQName_test1_app1, wsid+istructs.MaxPseudoBaseWSID)
-			readArt(vit, ws)
+			wsid := wsidNum + istructs.MaxPseudoBaseWSID
+			dummyWS := it.DummyWS(it.QNameApp1_TestWSKind, wsid, sysPrn)
+			readArt(vit, dummyWS)
 		}(prtIdx)
 	}
 	wg.Wait()
@@ -265,19 +291,21 @@ func Test_Race_CUDManyWriteCheckResult(t *testing.T) {
 	if coreutils.IsCassandraStorage() {
 		return
 	}
-	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	vit := it.NewVIT(t, &cfg)
 	defer vit.TearDown()
 
 	var cntWS int = writeCnt
 	var prtIdx istructs.WSID
+	sysPrn := vit.GetSystemPrincipal(istructs.AppQName_test1_app1)
 
 	wg := sync.WaitGroup{}
 	for prtIdx = 1; int(prtIdx) < cntWS; prtIdx++ {
 		wg.Add(1)
-		go func(wsid istructs.WSID) {
+		go func(wsidNum istructs.WSID) {
 			defer wg.Done()
-			ws := vit.DummyWS(istructs.AppQName_test1_app1, wsid+istructs.MaxPseudoBaseWSID)
-			writeArt(ws, vit)
+			wsid := wsidNum + istructs.MaxPseudoBaseWSID
+			dummyWS := it.DummyWS(it.QNameApp1_TestWSKind, wsid, sysPrn)
+			writeArt(dummyWS, vit)
 		}(prtIdx)
 	}
 	wg.Wait()
@@ -291,28 +319,31 @@ func Test_Race_CUDManyWriteReadCheckResult(t *testing.T) {
 	if coreutils.IsCassandraStorage() {
 		return
 	}
-	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	vit := it.NewVIT(t, &cfg)
 	defer vit.TearDown()
 
 	var cntWS int = writeCnt
 	var prtIdx istructs.WSID
+	sysPrn := vit.GetSystemPrincipal(istructs.AppQName_test1_app1)
 
 	for k := 1; k < 10; k++ {
 		wg := sync.WaitGroup{}
 		for prtIdx = 1; int(prtIdx) < cntWS; prtIdx++ {
 			wg.Add(1)
-			go func(wsid istructs.WSID) {
+			go func(wsidNum istructs.WSID) {
 				defer wg.Done()
-				ws := vit.DummyWS(istructs.AppQName_test1_app1, wsid+istructs.MaxPseudoBaseWSID)
-				writeArt(ws, vit)
+				wsid := wsidNum + istructs.MaxPseudoBaseWSID
+				dummyWS := it.DummyWS(it.QNameApp1_TestWSKind, wsid, sysPrn)
+				writeArt(dummyWS, vit)
 			}(prtIdx)
 		}
 		for prtIdx = 1; int(prtIdx) < cntWS; prtIdx++ {
 			wg.Add(1)
-			go func(wsid istructs.WSID) {
+			go func(wsidNum istructs.WSID) {
 				defer wg.Done()
-				ws := vit.DummyWS(istructs.AppQName_test1_app1, wsid+istructs.MaxPseudoBaseWSID)
-				readArt(vit, ws)
+				wsid := wsidNum + istructs.MaxPseudoBaseWSID
+				dummyWS := it.DummyWS(it.QNameApp1_TestWSKind, wsid, sysPrn)
+				readArt(vit, dummyWS)
 			}(prtIdx)
 		}
 		wg.Wait()

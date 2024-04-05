@@ -19,18 +19,20 @@ func Test_AppDef_AddObject(t *testing.T) {
 	var app IAppDef
 
 	t.Run("must be ok to add objects", func(t *testing.T) {
-		appDef := New()
-		root := appDef.AddObject(rootName)
+		adb := New()
+		adb.AddPackage("test", "test.com/test")
+
+		root := adb.AddObject(rootName)
 		root.
 			AddField("f1", DataKind_int64, true).
 			AddField("f2", DataKind_string, false)
 		root.AddContainer("child", childName, 0, Occurs_Unbounded)
-		child := appDef.AddObject(childName)
+		child := adb.AddObject(childName)
 		child.
 			AddField("f1", DataKind_int64, true).
 			AddField("f2", DataKind_string, false)
 
-		a, err := appDef.Build()
+		a, err := adb.Build()
 		require.NoError(err)
 
 		app = a

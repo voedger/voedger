@@ -15,6 +15,16 @@ type QName struct {
 	entity string
 }
 
+// # FullQName
+//
+// Full qualified name
+//
+// <pkgPath>.<entity>
+type FullQName struct {
+	pkgPath string
+	entity  string
+}
+
 // Types kinds enumeration
 type TypeKind uint8
 

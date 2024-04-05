@@ -7,7 +7,7 @@
  * Deep refactoring, no timers
  *
  * This source code is licensed under the MIT license found in the
- * LICENSE file in the root directory of this source tree. 
+ * LICENSE file in the root directory of this source tree.
  */
 
 package in10nmem
@@ -61,10 +61,10 @@ func Test_SubscribeUnsubscribe(t *testing.T) {
 	}
 
 	quotasExample := in10n.Quotas{
-		Channels:               10,
-		ChannelsPerSubject:     10,
-		Subsciptions:           10,
-		SubsciptionsPerSubject: 10,
+		Channels:                10,
+		ChannelsPerSubject:      10,
+		Subscriptions:           10,
+		SubscriptionsPerSubject: 10,
 	}
 	req := require.New(t)
 
@@ -157,10 +157,10 @@ func TestWatchNotExistsChannel(t *testing.T) {
 	req := require.New(t)
 
 	quotasExample := in10n.Quotas{
-		Channels:               1,
-		ChannelsPerSubject:     1,
-		Subsciptions:           1,
-		SubsciptionsPerSubject: 1,
+		Channels:                1,
+		ChannelsPerSubject:      1,
+		Subscriptions:           1,
+		SubscriptionsPerSubject: 1,
 	}
 
 	broker, cleanup := ProvideEx2(quotasExample, time.Now)
@@ -188,10 +188,10 @@ func TestQuotas(t *testing.T) {
 
 	req := require.New(t)
 	quotasExample := in10n.Quotas{
-		Channels:               100,
-		ChannelsPerSubject:     10,
-		Subsciptions:           1000,
-		SubsciptionsPerSubject: 100,
+		Channels:                100,
+		ChannelsPerSubject:      10,
+		Subscriptions:           1000,
+		SubscriptionsPerSubject: 100,
 	}
 
 	t.Run("Test channel quotas per subject. We create more channels than allowed for subject.", func(t *testing.T) {

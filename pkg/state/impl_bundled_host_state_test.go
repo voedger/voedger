@@ -18,10 +18,9 @@ func TestBundledHostState_BasicUsage(t *testing.T) {
 	require := require.New(t)
 	factory := ProvideAsyncActualizerStateFactory()
 	n10nFn := func(view appdef.QName, wsid istructs.WSID, offset istructs.Offset) {}
-	appStructs := mockedAppStructs()
 
 	// Create instance of async actualizer state
-	aaState := factory(context.Background(), appStructs, nil, SimpleWSIDFunc(istructs.WSID(1)), n10nFn, nil, nil, 2, 1)
+	aaState := factory(context.Background(), mockedAppStructs, nil, SimpleWSIDFunc(istructs.WSID(1)), n10nFn, nil, nil, 2, 1)
 
 	// Declare simple extension
 	extension := func(state istructs.IState, intents istructs.IIntents) {
@@ -75,7 +74,15 @@ func mockedAppStructs() istructs.IAppStructs {
 		On("NewValueBuilder", testViewRecordQName1).Return(mvb2).Once().
 		On("PutBatch", istructs.WSID(1), mock.AnythingOfType("[]istructs.ViewKV")).Return(nil)
 
+	mockWorkspaceRecord := &mockRecord{}
+	mockWorkspaceRecord.On("AsQName", "WSKind").Return(testWSDescriptorQName)
+	mockWorkspaceRecord.On("QName").Return(qNameCDocWorkspaceDescriptor)
+	mockedRecords := &mockRecords{}
+	mockedRecords.On("GetSingleton", istructs.WSID(1), mock.Anything).Return(mockWorkspaceRecord, nil)
+
 	appDefBuilder := appdef.New()
+	wsDesc := appDefBuilder.AddCDoc(testWSDescriptorQName)
+	wsDesc.AddField(field_WSKind, appdef.DataKind_bytes, false)
 	view := appDefBuilder.AddView(testViewRecordQName1)
 	view.Key().PartKey().AddField("pkFld", appdef.DataKind_int64)
 	view.Key().ClustCols().AddField("ccFld", appdef.DataKind_string)
@@ -84,6 +91,7 @@ func mockedAppStructs() istructs.IAppStructs {
 		AddField(ColOffset, appdef.DataKind_int64, true)
 	ws := appDefBuilder.AddWorkspace(testWSQName)
 	ws.AddType(testViewRecordQName1)
+	ws.SetDescriptor(testWSDescriptorQName)
 	appDef, err := appDefBuilder.Build()
 	if err != nil {
 		panic(err)
@@ -92,84 +100,13 @@ func mockedAppStructs() istructs.IAppStructs {
 	appStructs := &mockAppStructs{}
 	appStructs.
 		On("AppDef").Return(appDef).
+		On("AppQName").Return(testAppQName).
 		On("ViewRecords").Return(viewRecords).
 		On("Events").Return(&nilEvents{}).
-		On("Records").Return(&nilRecords{})
+		On("Records").Return(mockedRecords)
 	return appStructs
 }
 
-func TestAsyncActualizerState_BasicUsage_Old(t *testing.T) {
-	require := require.New(t)
-	touched := false
-	n10nFn := func(view appdef.QName, wsid istructs.WSID, offset istructs.Offset) {
-		touched = true
-		require.Equal(testViewRecordQName1, view)
-		require.Equal(istructs.WSID(1), wsid)
-		require.Equal(istructs.Offset(46), offset)
-	}
-	mv := &mockValue{}
-	mv.
-		On("AsInt64", "vFld").Return(int64(10)).
-		On("AsInt64", ColOffset).Return(int64(45))
-	mvb1 := &mockValueBuilder{}
-	mvb1.
-		On("PutInt64", "vFld", int64(10)).
-		On("PutInt64", ColOffset, int64(45)).
-		On("Build").Return(mv)
-	mvb2 := &mockValueBuilder{}
-	mvb2.
-		On("PutInt64", "vFld", int64(17)).
-		On("PutInt64", ColOffset, int64(46))
-	mkb := &mockKeyBuilder{}
-	mkb.
-		On("PutInt64", "pkFld", int64(64)).
-		On("Equals", mock.Anything).Return(true)
-	viewRecords := &mockViewRecords{}
-	viewRecords.
-		On("KeyBuilder", testViewRecordQName1).Return(mkb).
-		On("NewValueBuilder", testViewRecordQName1).Return(mvb1).
-		On("UpdateValueBuilder", testViewRecordQName1, mock.Anything).Return(mvb2).
-		On("PutBatch", istructs.WSID(1), mock.AnythingOfType("[]istructs.ViewKV")).Return(nil)
-	appStructs := &mockAppStructs{}
-	appStructs.
-		On("AppDef").Return(&nilAppDef{}).
-		On("ViewRecords").Return(viewRecords).
-		On("Events").Return(&nilEvents{}).
-		On("Records").Return(&nilRecords{})
-	s := ProvideAsyncActualizerStateFactory()(context.Background(), appStructs, nil, SimpleWSIDFunc(istructs.WSID(1)), n10nFn, nil, nil, 2, 1)
-
-	//Create key
-	kb, err := s.KeyBuilder(View, testViewRecordQName1)
-	require.NoError(err)
-	kb.PutInt64("pkFld", 64)
-
-	//Create new value and put it to bundle
-	eb, err := s.NewValue(kb)
-	require.NoError(err)
-	eb.PutInt64("vFld", 10)
-	eb.PutInt64(ColOffset, 45)
-	readyToFlush, err := s.ApplyIntents()
-	require.NoError(err)
-	require.True(readyToFlush)
-
-	//Get value from bundle by key
-	el, err := s.MustExist(kb)
-	require.NoError(err)
-	eb, err = s.UpdateValue(kb, el)
-	require.NoError(err)
-	eb.PutInt64("vFld", el.AsInt64("vFld")+int64(7))
-	eb.PutInt64(ColOffset, 46)
-
-	//Store key-value pair in under laying storage
-	readyToFlush, _ = s.ApplyIntents()
-	require.True(readyToFlush)
-	_ = s.FlushBundles()
-
-	require.True(touched)
-	mvb1.AssertExpectations(t)
-	mvb2.AssertExpectations(t)
-	mkb.AssertExpectations(t)
-}
 func TestAsyncActualizerState_CanExist(t *testing.T) {
 	t.Run("Should be ok", func(t *testing.T) {
 		require := require.New(t)
@@ -441,11 +378,8 @@ func TestAsyncActualizerState_Read(t *testing.T) {
 	t.Run("Should flush bundle before read", func(t *testing.T) {
 		require := require.New(t)
 		touched := false
-
-		appDef := appdef.New() // Def() must return NullDef
-
-		viewRecords := &mockViewRecords{}
-		viewRecords.
+		mockedStructs, mockedViews := mockedStructs(t)
+		mockedViews.
 			On("KeyBuilder", testViewRecordQName1).Return(&nilKeyBuilder{}).
 			On("KeyBuilder", testViewRecordQName2).Return(&nilKeyBuilder{}).
 			On("NewValueBuilder", testViewRecordQName1).Return(&nilValueBuilder{}).
@@ -460,13 +394,8 @@ func TestAsyncActualizerState_Read(t *testing.T) {
 			Run(func(args mock.Arguments) {
 				_ = args.Get(3).(istructs.ValuesCallback)(&nilKey{}, &nilValue{})
 			})
-		appStructs := &mockAppStructs{}
-		appStructs.
-			On("AppDef").Return(appDef).
-			On("ViewRecords").Return(viewRecords).
-			On("Records").Return(&nilRecords{}).
-			On("Events").Return(&nilEvents{})
-		s := ProvideAsyncActualizerStateFactory()(context.Background(), appStructs, nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil, 10, 10)
+
+		s := ProvideAsyncActualizerStateFactory()(context.Background(), func() istructs.IAppStructs { return mockedStructs }, nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil, 10, 10)
 		kb1, err := s.KeyBuilder(View, testViewRecordQName1)
 		require.NoError(err)
 		kb2, err := s.KeyBuilder(View, testViewRecordQName2)
@@ -489,21 +418,14 @@ func TestAsyncActualizerState_Read(t *testing.T) {
 	t.Run("Should return error when error occurred on apply batch", func(t *testing.T) {
 		require := require.New(t)
 		touched := false
-		appDef := appdef.New() // Def() must return NullDef
-		viewRecords := &mockViewRecords{}
-		viewRecords.
+		mockedStructs, mockedViews := mockedStructs(t)
+		mockedViews.
 			On("KeyBuilder", testViewRecordQName1).Return(&nilKeyBuilder{}).
 			On("KeyBuilder", testViewRecordQName2).Return(&nilKeyBuilder{}).
 			On("NewValueBuilder", testViewRecordQName1).Return(&nilValueBuilder{}).
 			On("NewValueBuilder", testViewRecordQName2).Return(&nilValueBuilder{}).
 			On("PutBatch", istructs.WSID(1), mock.AnythingOfType("[]istructs.ViewKV")).Return(errTest)
-		appStructs := &mockAppStructs{}
-		appStructs.
-			On("AppDef").Return(appDef).
-			On("ViewRecords").Return(viewRecords).
-			On("Records").Return(&nilRecords{}).
-			On("Events").Return(&nilEvents{})
-		s := ProvideAsyncActualizerStateFactory()(context.Background(), appStructs, nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil, 10, 10)
+		s := ProvideAsyncActualizerStateFactory()(context.Background(), func() istructs.IAppStructs { return mockedStructs }, nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil, 10, 10)
 		kb1, err := s.KeyBuilder(View, testViewRecordQName1)
 		require.NoError(err)
 		kb2, err := s.KeyBuilder(View, testViewRecordQName2)
@@ -526,7 +448,7 @@ func TestAsyncActualizerState_Read(t *testing.T) {
 	})
 }
 func asyncActualizerStateWithTestStateStorage(s *mockStorage) istructs.IState {
-	as := ProvideAsyncActualizerStateFactory()(context.Background(), &nilAppStructs{}, nil, nil, nil, nil, nil, 10, 10)
+	as := ProvideAsyncActualizerStateFactory()(context.Background(), nilAppStructsFunc, nil, nil, nil, nil, nil, 10, 10)
 	as.(*asyncActualizerState).addStorage(testStorage, s, S_GET_BATCH|S_READ)
 	return as
 }
