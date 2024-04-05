@@ -44,7 +44,7 @@ dst_name=$(getent hosts "$dst_ip" | awk '{print $2}')
 
 ssh-keyscan -p "$(utils_SSH_PORT)" -H "$dst_name" >> ~/.ssh/known_hosts
 
-snapshot=$(curl -X POST http://$src_ip:9090/api/v1/admin/tsdb/snapshot | jq -r '.data.name') 
+snapshot=$(curl -u voedger:voedger -X POST http://$src_ip:9090/api/v1/admin/tsdb/snapshot | jq -r '.data.name') 
 # Make the snapshot on source host
 if [ -z $snapshot ]; then
   echo "Error make prometheus snapshot."

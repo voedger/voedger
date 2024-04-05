@@ -98,7 +98,7 @@ func execRootCmd(args []string, ver string) error {
 		newBackupCmd(),
 		newAcmeCmd(),
 		newRestoreCmd(),
-		newGrafanaCmd(),
+		newMonCmd(),
 	)
 	rootCmd.SilenceErrors = true
 	rootCmd.PersistentFlags().BoolVar(&dryRun, "dry-run", false, "Perform a dry run of the command without making any actual changes")
