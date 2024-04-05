@@ -23,8 +23,35 @@ AppNode2=$2
 
 cat ./docker-compose-mon.yml | \
     sed "s/{{.AppNode1}}/app-node-1/g; s/{{.AppNode2}}/app-node-2/g" \
-    | utils_ssh "$SSH_USER@$AppNode1" 'cat > ~/docker-compose-mon.yml'
+    | utils_ssh "$SSH_USER@$AppNode1" "cat > ~/docker-compose-mon.yml"
 
 utils_ssh "$SSH_USER@$AppNode1" "docker stack deploy --compose-file ~/docker-compose-mon.yml MonDockerStack"
+
+
+echo "Waiting for services in MonDockerStack to start..."
+
+while true; do
+    services=$(utils_ssh "$SSH_USER@$AppNode1" "docker service ls --format '{{.Name}}' | grep 'MonDockerStack'")
+
+    all_running=true
+    for service in $services; do
+        replicas=$(utils_ssh "$SSH_USER@$AppNode1" "docker service ps --format '{{.CurrentState}}' $service | grep Running | wc -l")
+
+        desired_replicas=$(utils_ssh "$SSH_USER@$AppNode1" "docker service inspect --format '{{.Spec.Mode.Replicated.Replicas}}' $service")
+
+        if [ "$replicas" != "$desired_replicas" ]; then
+            all_running=false
+            break
+        fi
+    done
+
+    if [ "$all_running" = true ]; then
+        echo "All services in MonDockerStack are running."
+        break
+    else
+        echo "Not all services are running yet. Waiting..."
+        sleep 10
+    fi
+done
 
 set +x

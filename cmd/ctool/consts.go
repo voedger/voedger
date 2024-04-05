@@ -78,6 +78,7 @@ const (
 	envVoedgerSshKey      = "VOEDGER_SSH_KEY"
 
 	minMonPasswordLength = 5
+	monUserName          = "voedger"
 )
 
 const comma = ","

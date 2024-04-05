@@ -419,13 +419,29 @@ func deployMonDockerStack(cluster *clusterType) error {
 	conf := newSeConfigType(cluster)
 
 	if err = newScriptExecuter(cluster.sshKey, fmt.Sprintf("%s %s", conf.AppNode1, conf.AppNode2)).
-		run("mon-node-prepare.sh", conf.AppNode1Name, conf.AppNode2Name, conf.DBNode1Name, conf.DBNode2Name, conf.DBNode3Name); err != nil {
-
+		//		run("mon-node-prepare.sh", conf.AppNode1Name, conf.AppNode2Name, conf.DBNode1Name, conf.DBNode2Name, conf.DBNode3Name); err != nil {
+		run("mon-node-prepare.sh", conf.AppNode1, conf.AppNode2, conf.DBNode1, conf.DBNode2, conf.DBNode3); err != nil {
 		return err
 	}
 
 	if err = newScriptExecuter(cluster.sshKey, fmt.Sprintf("%s %s", conf.AppNode1, conf.AppNode2)).
-		run("mon-stack-start.sh", conf.AppNode1Name, conf.AppNode2Name); err != nil {
+		//		run("mon-stack-start.sh", conf.AppNode1Name, conf.AppNode2Name); err != nil {
+		run("mon-stack-start.sh", conf.AppNode1, conf.AppNode2); err != nil {
+		return err
+	}
+
+	loggerInfo("Adding user voedger to Grafana on app-node-1")
+	if err = addGrafanUser(cluster.nodeByHost("app-node-1"), "voedger"); err != nil {
+		return err
+	}
+
+	loggerInfo("Adding user voedger to Grafana on app-node-2")
+	if err = addGrafanUser(cluster.nodeByHost("app-node-2"), "voedger"); err != nil {
+		return err
+	}
+
+	loggerInfo("Voedger's password resetting to monitoring stack")
+	if err = setMonPassword(cluster, "voedger"); err != nil {
 		return err
 	}
 
@@ -576,11 +592,14 @@ func replaceSeAppNode(cluster *clusterType) error {
 	newAddr := cluster.Cmd.Args[1]
 
 	var liveOldAddr string
+	var liveOldHost string
 
 	if conf.AppNode1 == newAddr {
 		liveOldAddr = conf.AppNode2
+		liveOldHost = "app-node-2"
 	} else {
 		liveOldAddr = conf.AppNode1
+		liveOldHost = "app-node-1"
 	}
 
 	var newNode *nodeType
@@ -612,6 +631,19 @@ func replaceSeAppNode(cluster *clusterType) error {
 		return err
 	}
 
+	password := "voedger"
+	hash, err := hashedPassword(password)
+	if err != nil {
+		return err
+	}
+
+	args := []string{password, hash, liveOldHost}
+
+	if err = newScriptExecuter(cluster.sshKey, "").
+		run("prometheus-voedger-password.sh", args...); err != nil {
+		return err
+	}
+
 	loggerInfo("Copy prometheus data base from", liveOldAddr, "to", newAddr)
 	// nolint
 	if err = newScriptExecuter(cluster.sshKey, fmt.Sprintf("%s, %s", liveOldAddr, newAddr)).
@@ -622,11 +654,27 @@ func replaceSeAppNode(cluster *clusterType) error {
 	loggerInfo("Mon node prepare ", newAddr)
 	// nolint
 	if err = newScriptExecuter(cluster.sshKey, newAddr).
-		run("mon-node-prepare.sh", conf.AppNode1Name, conf.AppNode2Name, conf.DBNode1Name, conf.DBNode2Name, conf.DBNode3Name); err != nil {
+		run("mon-node-prepare.sh", conf.AppNode1, conf.AppNode2, conf.DBNode1, conf.DBNode2, conf.DBNode3); err != nil {
 		return err
 	}
 
-	loggerInfo(fmt.Sprintf("Node %s [%s -> %s] replaced successfully", newNode.nodeName(), oldAddr, newAddr))
+	if err = newScriptExecuter(cluster.sshKey, fmt.Sprintf("%s %s", conf.AppNode1, conf.AppNode2)).
+		//		run("mon-stack-start.sh", conf.AppNode1Name, conf.AppNode2Name); err != nil {
+		run("mon-stack-start.sh", conf.AppNode1, conf.AppNode2); err != nil {
+		return err
+	}
+
+	loggerInfo("Adding user voedger to Grafana on ", newNode.nodeName(), newNode.address())
+	if err = addGrafanUser(newNode, "voedger"); err != nil {
+		return err
+	}
+
+	loggerInfo("Voedger's password resetting to monitoring stack")
+	if err = setMonPassword(cluster, "voedger"); err != nil {
+		return err
+	}
+
+	loggerInfoGreen(fmt.Sprintf("Node %s [%s -> %s] replaced successfully", newNode.nodeName(), oldAddr, newAddr))
 	return nil
 }
 

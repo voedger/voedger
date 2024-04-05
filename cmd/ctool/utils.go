@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"math/rand"
 	"os"
 	"path/filepath"
 	"strings"
@@ -200,4 +201,16 @@ func captureStdoutStderr(f func() error) (stdout string, stderr string, err erro
 	wg.Wait()
 	return
 
+}
+
+// nolint
+func randomPassword(length int) string {
+	letterBytes := "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+
+	passwordBytes := make([]byte, length)
+	for i := range passwordBytes {
+		// nolint
+		passwordBytes[i] = letterBytes[rand.Intn(len(letterBytes))]
+	}
+	return string(passwordBytes)
 }
