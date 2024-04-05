@@ -23,7 +23,7 @@ func newInitCmd() *cobra.Command {
 	params := vpmParams{}
 	cmd := &cobra.Command{
 		Use:   "init",
-		Short: "Initialize a new package",
+		Short: "initialize a new package",
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
 			params, err = prepareParams(params, args)
 			if err != nil {
@@ -50,44 +50,48 @@ func initPackage(dir, packagePath string) error {
 	if err := createPackagesGen(nil, dir, false); err != nil {
 		return err
 	}
-	if err := updateDependencies(dir); err != nil {
-		return err
-	}
-	return nil
+	return execGoModTidy(dir)
 }
 
-func updateDependencies(dir string) error {
+func execGoModTidy(dir string) error {
 	// TODO: go mod tidy's output must be logged to the user as well if error occurs
-	goModFilePath := filepath.Join(dir, goModFileName)
-	if _, err := os.Stat(goModFilePath); !os.IsNotExist(err) {
-		return new(exec.PipedExec).Command("go", "mod", "tidy").WorkingDir(dir).Run(nil, nil)
-	}
-	return nil
+	return new(exec.PipedExec).Command("go", "mod", "tidy").WorkingDir(dir).Run(nil, nil)
 }
 
 func createGoMod(dir, packagePath string) error {
 	filePath := filepath.Join(dir, goModFileName)
-	if _, err := os.Stat(filePath); !os.IsNotExist(err) {
+
+	exists, err := exists(filePath)
+	if err != nil {
+		// notest
+		return err
+	}
+	if exists {
 		return fmt.Errorf("%s already exists", filePath)
 	}
 
 	goVersion := runtime.Version()
-	versionNumber := strings.TrimSpace(strings.TrimPrefix(goVersion, "go"))
-	goModContent := fmt.Sprintf(goModContentTemplate, packagePath, versionNumber)
+	goVersionNumber := strings.TrimSpace(strings.TrimPrefix(goVersion, "go"))
+	goModContent := fmt.Sprintf(goModContentTemplate, packagePath, goVersionNumber)
 	if err := os.WriteFile(filePath, []byte(goModContent), defaultPermissions); err != nil {
 		return err
 	}
-	if err := getDependency(dir, compile.VoedgerPath); err != nil {
+	if err := execGoGet(dir, compile.VoedgerPath); err != nil {
 		return err
 	}
 	return nil
 }
 
 func createPackagesGen(imports []string, dir string, recreate bool) error {
-	filePath := filepath.Join(dir, packagesGenFileName)
+	packagesGenFilePath := filepath.Join(dir, packagesGenFileName)
 	if !recreate {
-		if _, err := os.Stat(filePath); !os.IsNotExist(err) {
-			return fmt.Errorf("%s already exists", filePath)
+		exists, err := exists(packagesGenFilePath)
+		if err != nil {
+			// notest
+			return err
+		}
+		if exists {
+			return fmt.Errorf("%s already exists", packagesGenFilePath)
 		}
 	}
 
@@ -102,23 +106,25 @@ func createPackagesGen(imports []string, dir string, recreate bool) error {
 		return err
 	}
 
-	if err := os.WriteFile(filePath, packagesGenContentFormatted, defaultPermissions); err != nil {
+	if err := os.WriteFile(packagesGenFilePath, packagesGenContentFormatted, defaultPermissions); err != nil {
 		return err
 	}
 	return nil
 }
 
-func getDependency(dir, packagePath string) error {
-	return new(exec.PipedExec).Command("go", "get", fmt.Sprintf("%s@main", packagePath)).WorkingDir(dir).Run(nil, nil)
+func execGoGet(goModDir, dependencyToGet string) error {
+	// TODO: go mod tidy's output must be logged to the user as well if error occurs
+	return new(exec.PipedExec).Command("go", "get", fmt.Sprintf("%s@main", dependencyToGet)).WorkingDir(goModDir).Run(nil, nil)
 }
 
-func getDependencies(dir string, imports []string) error {
-	for _, imp := range imports {
-		if strings.Contains(imp, "/") {
-			if err := getDependency(dir, imp); err != nil {
-				return err
-			}
-		}
+func exists(filePath string) (exists bool, err error) {
+	_, err = os.Stat(filePath)
+	if err == nil || os.IsExist(err) {
+		return true, nil
 	}
-	return nil
+	if os.IsNotExist(err) {
+		return false, nil
+	}
+	// notest
+	return false, err
 }
