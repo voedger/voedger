@@ -29,7 +29,7 @@ var expectedKeys []expVal = []expVal{
 		f64:     1.01,
 		str:     "key1",
 		bytes:   []byte{1, 2, 3},
-		qname:   ext.QName{Pkg: "github.com/voedger/testpkg1", Entity: "e1"},
+		qname:   ext.QName{FullPkgName: "github.com/voedger/testpkg1", Entity: "e1"},
 		boolean: true,
 	},
 	expVal{
@@ -39,7 +39,7 @@ var expectedKeys []expVal = []expVal{
 		f64:     2.01,
 		str:     "key2",
 		bytes:   []byte{2, 2, 3},
-		qname:   ext.QName{Pkg: "github.com/voedger/testpkg1", Entity: "e2"},
+		qname:   ext.QName{FullPkgName: "github.com/voedger/testpkg1", Entity: "e2"},
 		boolean: true,
 	},
 	expVal{
@@ -49,7 +49,7 @@ var expectedKeys []expVal = []expVal{
 		f64:     3.01,
 		str:     "key3",
 		bytes:   []byte{3, 2, 3},
-		qname:   ext.QName{Pkg: "github.com/voedger/testpkg1", Entity: "e3"},
+		qname:   ext.QName{FullPkgName: "github.com/voedger/testpkg1", Entity: "e3"},
 		boolean: true,
 	},
 }
@@ -62,7 +62,7 @@ var expectedValues []expVal = []expVal{
 		f64:     1.0001,
 		str:     "value1",
 		bytes:   []byte{3, 2, 1},
-		qname:   ext.QName{Pkg: "github.com/voedger/testpkg1", Entity: "ee1"},
+		qname:   ext.QName{FullPkgName: "github.com/voedger/testpkg1", Entity: "ee1"},
 		boolean: false,
 	},
 	expVal{
@@ -72,7 +72,7 @@ var expectedValues []expVal = []expVal{
 		f64:     2.0001,
 		str:     "value2",
 		bytes:   []byte{3, 2, 1},
-		qname:   ext.QName{Pkg: "github.com/voedger/testpkg1", Entity: "ee2"},
+		qname:   ext.QName{FullPkgName: "github.com/voedger/testpkg1", Entity: "ee2"},
 		boolean: false,
 	},
 	expVal{
@@ -82,7 +82,7 @@ var expectedValues []expVal = []expVal{
 		f64:     3.0001,
 		str:     "value3",
 		bytes:   []byte{3, 2, 1},
-		qname:   ext.QName{Pkg: "github.com/voedger/testpkg1", Entity: "e33"},
+		qname:   ext.QName{FullPkgName: "github.com/voedger/testpkg1", Entity: "e33"},
 		boolean: false,
 	},
 }
@@ -151,7 +151,7 @@ func testNoAllocs() {
 	require.EqualInt32(int32(123), value.GetAsInt32(0))
 	require.EqualString("test string", value.GetAsString(1))
 	bytes := value.GetAsBytes(2)
-	require.EqualQName(ext.QName{Pkg: "github.com/voedger/testpkg1", Entity: "test"}, value.GetAsQName(3))
+	require.EqualQName(ext.QName{FullPkgName: "github.com/voedger/testpkg1", Entity: "test"}, value.GetAsQName(3))
 
 	require.EqualBool(true, len(bytes) == 1024)
 
@@ -163,7 +163,7 @@ func testNoAllocs() {
 	mail.PutString("from", "test@gmail.com")
 	mail.PutInt32("port", 668)
 	mail.PutBytes("key", mybytes)
-	mail.PutQName("qname", ext.QName{Pkg: "github.com/voedger/testpkg1", Entity: "test"})
+	mail.PutQName("qname", ext.QName{FullPkgName: "github.com/voedger/testpkg1", Entity: "test"})
 
 	// UpdateValue
 	updatedValue := ext.UpdateValue(kb, event)
@@ -181,7 +181,7 @@ func testQueryValue() {
 //export keyPutQName
 func keyPutQName() {
 	kb := ext.KeyBuilder("sys.TestQName", ext.NullEntity)
-	kb.PutQName("qname", ext.QName{Pkg: "github.com/voedger/testpkg1", Entity: "test"})
+	kb.PutQName("qname", ext.QName{FullPkgName: "github.com/voedger/testpkg1", Entity: "test"})
 	_ = ext.MustGetValue(kb)
 }
 
