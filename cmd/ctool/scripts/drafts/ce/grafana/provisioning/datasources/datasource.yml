@@ -1,0 +1,13 @@
+apiVersion: 1
+
+datasources:
+- name: Prometheus
+  type: prometheus
+  url: http://${VOEDGER_CE_NODE}:9090 
+  isDefault: true
+  access: proxy
+  editable: true
+  basicAuth: true
+  basicAuthUser: voedger
+  secureJsonData:
+     basicAuthPassword: voedger

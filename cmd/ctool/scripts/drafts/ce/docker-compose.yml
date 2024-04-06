@@ -1,0 +1,102 @@
+# Copyright (c) 2024 Sigma-Soft, Ltd.
+# @author Aleksei Ponomarev
+
+version: '3.7'
+
+services:
+
+  scylla:
+    image: scylladb/scylla:5.1.13
+    command: --overprovisioned 1 --listen-address ${VOEDGER_CE_NODE}
+    network_mode: "host"
+    healthcheck:
+      test: ["CMD-SHELL", "nodetool status | grep -q '^UN' && exit 0 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+    volumes:
+      - /var/lib/scylla:/var/lib/scylla
+
+  prometheus:
+    image: prom/prometheus:v2.44.0
+    volumes:
+      - /prometheus:/prometheus
+      - ${HOME}/prometheus:/etc/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--web.config.file=/etc/prometheus/web.yml'
+      - '--web.enable-admin-api'
+      - '--web.enable-lifecycle'
+      - '--web.route-prefix=/'
+      - '--web.external-url=http://${VOEDGER_CE_NODE}:9090/prometheus/'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=30d'
+    restart: unless-stopped
+    network_mode: "host"
+    logging:
+      driver: "local"
+      options: 
+        max-size: 10m
+        max-file: "3"
+
+  grafana:
+    image: grafana/grafana:8.3.4
+    volumes:
+      - ${HOME}/grafana/grafana.ini:/etc/grafana/grafana.ini
+      - ${HOME}/grafana/provisioning/datasources/datasource.yml:/etc/grafana/provisioning/datasources/datasource.yml
+      - ${HOME}/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards
+      - /var/lib/grafana:/var/lib/grafana
+    network_mode: "host"
+    logging:
+      driver: "local"
+      options: 
+        max-size: 10m
+        max-file: "3"
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.47.1
+    network_mode: "host"
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:rw
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+    restart: unless-stopped
+
+  alertmanager:
+    image: prom/alertmanager:v0.26.0
+    volumes:
+      - /alertmanager:/alertmanager
+      - ${HOME}/alertmanager:/etc/alertmanager
+    command:
+      - '--config.file=/etc/alertmanager/config.yml'
+      - '--storage.path=/alertmanager'
+    restart: unless-stopped
+    network_mode: "host"
+
+  node-exporter:
+    image: prom/node-exporter:v1.6.1
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command: 
+      - '--path.procfs=/host/proc' 
+      - '--path.sysfs=/host/sys'
+      - '--path.rootfs=/rootfs'
+      - '--collector.filesystem.ignored-mount-points=^/(sys|proc|dev|host|etc)($$|/)'
+      - '--web.listen-address=:9200'
+    network_mode: "host"
+    restart: unless-stopped
+
+  voedger:
+    image: voedger/voedger:0.0.1-alpha
+    depends_on:
+      - scylla
+    environment:
+      - VOEDGER_HTTP_PORT=${VOEDGER_HTTP_PORT}
+      - VOEDGER_STORAGE_TYPE=cas1
+      - VOEDGER_ACME_DOMAINS=${VOEDGER_ACME_DOMAINS}
+    restart: unless-stopped
+    network_mode: "host"
