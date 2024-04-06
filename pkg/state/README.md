@@ -9,6 +9,7 @@ flowchart TD
     teststate:::G
     iextengine:::G
     application:::G
+    wazero:::G
     subgraph exttinygo
         internal.State["var StateAPI"]
         hostAPI["hostStateApi"]
