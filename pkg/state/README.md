@@ -18,6 +18,7 @@ flowchart TD
         end
     end
     subgraph state
+        IState
         subgraph isafeapi
             ISafeAPI["ISafeAPI"]
         end
@@ -49,6 +50,8 @@ flowchart TD
     NewTestAPI -.-> |2. calls| safestate.Provide
     NewTestAPI -.-> |3. sets| internal.State
     ITestState -.-> |implements| ITestAPI
+    ITestState -.-> |implements| IState
+    ProcessorState -.-> |implements| IState
     ITestAPI -.-> |used by| Test
     safestate.Provide -.-> |to provide| ISafeAPI
 
