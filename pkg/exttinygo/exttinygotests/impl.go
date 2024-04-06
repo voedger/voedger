@@ -13,6 +13,6 @@ import (
 
 func NewTestAPI(processorKind int, packagePath string, createWorkspaces ...teststate.TestWorkspace) teststate.ITestAPI {
 	ts := teststate.NewTestState(processorKind, packagePath, createWorkspaces...)
-	internal.State = safestate.Provide(ts)
+	internal.StateAPI = safestate.Provide(ts)
 	return ts
 }

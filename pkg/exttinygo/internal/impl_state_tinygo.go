@@ -13,20 +13,18 @@ import (
 
 const maxUint = ^uint64(0)
 
-var State safe.ISafeAPI = exttinygoStateAPI{}
+type hostStateAPI struct{}
 
-type exttinygoStateAPI struct{}
-
-func (exttinygoStateAPI) KeyBuilder(storage, entity string) safe.TKeyBuilder {
+func (hostStateAPI) KeyBuilder(storage, entity string) safe.TKeyBuilder {
 	return safe.TKeyBuilder(hostGetKey(uint32(uintptr(unsafe.Pointer(unsafe.StringData(storage)))), uint32(len(storage)),
 		uint32(uintptr(unsafe.Pointer(unsafe.StringData(entity)))), uint32(len(entity))))
 }
 
-func (exttinygoStateAPI) MustGetValue(key safe.TKeyBuilder) safe.TValue {
+func (hostStateAPI) MustGetValue(key safe.TKeyBuilder) safe.TValue {
 	return safe.TValue(hostGetValue(uint64(key)))
 }
 
-func (exttinygoStateAPI) QueryValue(key safe.TKeyBuilder) (safe.TValue, bool) {
+func (hostStateAPI) QueryValue(key safe.TKeyBuilder) (safe.TValue, bool) {
 	id := hostQueryValue(uint64(key))
 	if id != maxUint {
 		return safe.TValue(id), true
@@ -34,53 +32,53 @@ func (exttinygoStateAPI) QueryValue(key safe.TKeyBuilder) (safe.TValue, bool) {
 	return safe.TValue(0), false
 }
 
-func (exttinygoStateAPI) NewValue(key safe.TKeyBuilder) safe.TIntent {
+func (hostStateAPI) NewValue(key safe.TKeyBuilder) safe.TIntent {
 	return safe.TIntent(hostNewValue(uint64(key)))
 }
 
-func (exttinygoStateAPI) UpdateValue(key safe.TKeyBuilder, existingValue safe.TValue) safe.TIntent {
+func (hostStateAPI) UpdateValue(key safe.TKeyBuilder, existingValue safe.TValue) safe.TIntent {
 	return safe.TIntent(hostUpdateValue(uint64(key), uint64(existingValue)))
 }
 
 var CurrentReadCallback func(key safe.TKey, value safe.TValue)
 
-func (exttinygoStateAPI) ReadValues(key safe.TKeyBuilder, callback func(key safe.TKey, value safe.TValue)) {
+func (hostStateAPI) ReadValues(key safe.TKeyBuilder, callback func(key safe.TKey, value safe.TValue)) {
 	CurrentReadCallback = callback
 	hostReadValues(uint64(key))
 }
 
 // Key Builder
-func (exttinygoStateAPI) KeyBuilderPutInt32(key safe.TKeyBuilder, name string, value int32) {
+func (hostStateAPI) KeyBuilderPutInt32(key safe.TKeyBuilder, name string, value int32) {
 	hostRowWriterPutInt32(uint64(key), 0, uint32(uintptr(unsafe.Pointer(unsafe.StringData(name)))), uint32(len(name)), uint32(value))
 }
 
-func (exttinygoStateAPI) KeyBuilderPutInt64(key safe.TKeyBuilder, name string, value int64) {
+func (hostStateAPI) KeyBuilderPutInt64(key safe.TKeyBuilder, name string, value int64) {
 	hostRowWriterPutInt64(uint64(key), 0, uint32(uintptr(unsafe.Pointer(unsafe.StringData(name)))), uint32(len(name)), uint64(value))
 }
 
-func (exttinygoStateAPI) KeyBuilderPutFloat32(key safe.TKeyBuilder, name string, value float32) {
+func (hostStateAPI) KeyBuilderPutFloat32(key safe.TKeyBuilder, name string, value float32) {
 	hostRowWriterPutFloat32(uint64(key), 0, uint32(uintptr(unsafe.Pointer(unsafe.StringData(name)))), uint32(len(name)), value)
 }
 
-func (exttinygoStateAPI) KeyBuilderPutFloat64(key safe.TKeyBuilder, name string, value float64) {
+func (hostStateAPI) KeyBuilderPutFloat64(key safe.TKeyBuilder, name string, value float64) {
 	hostRowWriterPutFloat64(uint64(key), 0, uint32(uintptr(unsafe.Pointer(unsafe.StringData(name)))), uint32(len(name)), value)
 }
 
-func (exttinygoStateAPI) KeyBuilderPutString(key safe.TKeyBuilder, name string, value string) {
+func (hostStateAPI) KeyBuilderPutString(key safe.TKeyBuilder, name string, value string) {
 	hostRowWriterPutString(uint64(key), 0, uint32(uintptr(unsafe.Pointer(unsafe.StringData(name)))), uint32(len(name)), uint32(uintptr(unsafe.Pointer(unsafe.StringData(value)))), uint32(len(value)))
 }
 
-func (exttinygoStateAPI) KeyBuilderPutBytes(key safe.TKeyBuilder, name string, value []byte) {
+func (hostStateAPI) KeyBuilderPutBytes(key safe.TKeyBuilder, name string, value []byte) {
 	hostRowWriterPutBytes(uint64(key), 0, uint32(uintptr(unsafe.Pointer(unsafe.StringData(name)))), uint32(len(name)), uint32(uintptr(unsafe.Pointer(unsafe.SliceData(value)))), uint32(len(value)))
 }
 
-func (exttinygoStateAPI) KeyBuilderPutQName(key safe.TKeyBuilder, name string, value safe.QName) {
+func (hostStateAPI) KeyBuilderPutQName(key safe.TKeyBuilder, name string, value safe.QName) {
 	hostRowWriterPutQName(uint64(key), 0, uint32(uintptr(unsafe.Pointer(unsafe.StringData(name)))), uint32(len(name)),
 		uint32(uintptr(unsafe.Pointer(unsafe.StringData(value.FullPkgName)))), uint32(len(value.FullPkgName)),
 		uint32(uintptr(unsafe.Pointer(unsafe.StringData(value.Entity)))), uint32(len(value.Entity)))
 }
 
-func (exttinygoStateAPI) KeyBuilderPutBool(key safe.TKeyBuilder, name string, value bool) {
+func (hostStateAPI) KeyBuilderPutBool(key safe.TKeyBuilder, name string, value bool) {
 	var v uint32
 	if value {
 		v = 1
@@ -90,31 +88,31 @@ func (exttinygoStateAPI) KeyBuilderPutBool(key safe.TKeyBuilder, name string, va
 
 // Intent
 
-func (exttinygoStateAPI) IntentPutInt64(i safe.TIntent, name string, value int64) {
+func (hostStateAPI) IntentPutInt64(i safe.TIntent, name string, value int64) {
 	hostRowWriterPutInt64(uint64(i), 1, uint32(uintptr(unsafe.Pointer(unsafe.StringData(name)))), uint32(len(name)), uint64(value))
 }
 
-func (exttinygoStateAPI) IntentPutInt32(i safe.TIntent, name string, value int32) {
+func (hostStateAPI) IntentPutInt32(i safe.TIntent, name string, value int32) {
 	hostRowWriterPutInt32(uint64(i), 1, uint32(uintptr(unsafe.Pointer(unsafe.StringData(name)))), uint32(len(name)), uint32(value))
 }
 
-func (exttinygoStateAPI) IntentPutFloat32(i safe.TIntent, name string, value float32) {
+func (hostStateAPI) IntentPutFloat32(i safe.TIntent, name string, value float32) {
 	hostRowWriterPutFloat32(uint64(i), 1, uint32(uintptr(unsafe.Pointer(unsafe.StringData(name)))), uint32(len(name)), value)
 }
 
-func (exttinygoStateAPI) IntentPutFloat64(i safe.TIntent, name string, value float64) {
+func (hostStateAPI) IntentPutFloat64(i safe.TIntent, name string, value float64) {
 	hostRowWriterPutFloat64(uint64(i), 1, uint32(uintptr(unsafe.Pointer(unsafe.StringData(name)))), uint32(len(name)), value)
 }
 
-func (exttinygoStateAPI) IntentPutString(i safe.TIntent, name string, value string) {
+func (hostStateAPI) IntentPutString(i safe.TIntent, name string, value string) {
 	hostRowWriterPutString(uint64(i), 1, uint32(uintptr(unsafe.Pointer(unsafe.StringData(name)))), uint32(len(name)), uint32(uintptr(unsafe.Pointer(unsafe.StringData(value)))), uint32(len(value)))
 }
 
-func (exttinygoStateAPI) IntentPutBytes(i safe.TIntent, name string, value []byte) {
+func (hostStateAPI) IntentPutBytes(i safe.TIntent, name string, value []byte) {
 	hostRowWriterPutBytes(uint64(i), 1, uint32(uintptr(unsafe.Pointer(unsafe.StringData(name)))), uint32(len(name)), uint32(uintptr(unsafe.Pointer(unsafe.SliceData(value)))), uint32(len(value)))
 }
 
-func (exttinygoStateAPI) IntentPutQName(i safe.TIntent, name string, value safe.QName) {
+func (hostStateAPI) IntentPutQName(i safe.TIntent, name string, value safe.QName) {
 	hostRowWriterPutQName(uint64(i), 1,
 		uint32(uintptr(unsafe.Pointer(unsafe.StringData(name)))), uint32(len(name)),
 		uint32(uintptr(unsafe.Pointer(unsafe.StringData(value.FullPkgName)))), uint32(len(value.FullPkgName)),
@@ -122,7 +120,7 @@ func (exttinygoStateAPI) IntentPutQName(i safe.TIntent, name string, value safe.
 	)
 }
 
-func (exttinygoStateAPI) IntentPutBool(i safe.TIntent, name string, value bool) {
+func (hostStateAPI) IntentPutBool(i safe.TIntent, name string, value bool) {
 	var v uint32
 	if value {
 		v = 1
@@ -131,37 +129,37 @@ func (exttinygoStateAPI) IntentPutBool(i safe.TIntent, name string, value bool) 
 }
 
 // Value
-func (exttinygoStateAPI) ValueAsValue(v safe.TValue, name string) safe.TValue {
+func (hostStateAPI) ValueAsValue(v safe.TValue, name string) safe.TValue {
 	return safe.TValue(hostValueAsValue(uint64(v), uint32(uintptr(unsafe.Pointer(unsafe.StringData(name)))), uint32(len(name))))
 }
 
-func (exttinygoStateAPI) ValueAsInt32(v safe.TValue, name string) int32 {
+func (hostStateAPI) ValueAsInt32(v safe.TValue, name string) int32 {
 	return int32(hostValueAsInt32(uint64(v), uint32(uintptr(unsafe.Pointer(unsafe.StringData(name)))), uint32(len(name))))
 }
 
-func (exttinygoStateAPI) ValueAsInt64(v safe.TValue, name string) int64 {
+func (hostStateAPI) ValueAsInt64(v safe.TValue, name string) int64 {
 	return int64(hostValueAsInt64(uint64(v), uint32(uintptr(unsafe.Pointer(unsafe.StringData(name)))), uint32(len(name))))
 }
 
-func (exttinygoStateAPI) ValueAsFloat32(v safe.TValue, name string) float32 {
+func (hostStateAPI) ValueAsFloat32(v safe.TValue, name string) float32 {
 	return hostValueAsFloat32(uint64(v), uint32(uintptr(unsafe.Pointer(unsafe.StringData(name)))), uint32(len(name)))
 }
 
-func (exttinygoStateAPI) ValueAsFloat64(v safe.TValue, name string) float64 {
+func (hostStateAPI) ValueAsFloat64(v safe.TValue, name string) float64 {
 	return hostValueAsFloat64(uint64(v), uint32(uintptr(unsafe.Pointer(unsafe.StringData(name)))), uint32(len(name)))
 }
 
-func (exttinygoStateAPI) ValueAsString(v safe.TValue, name string) string {
+func (hostStateAPI) ValueAsString(v safe.TValue, name string) string {
 	ptr := hostValueAsString(uint64(v), uint32(uintptr(unsafe.Pointer(unsafe.StringData(name)))), uint32(len(name)))
 	return decodeString(ptr)
 }
 
-func (exttinygoStateAPI) ValueAsBytes(v safe.TValue, name string) []byte {
+func (hostStateAPI) ValueAsBytes(v safe.TValue, name string) []byte {
 	ptr := hostValueAsBytes(uint64(v), uint32(uintptr(unsafe.Pointer(unsafe.StringData(name)))), uint32(len(name)))
 	return decodeSlice(ptr)
 }
 
-func (exttinygoStateAPI) ValueAsQName(v safe.TValue, name string) safe.QName {
+func (hostStateAPI) ValueAsQName(v safe.TValue, name string) safe.QName {
 	pkgPtr := hostValueAsQNamePkg(uint64(v), uint32(uintptr(unsafe.Pointer(unsafe.StringData(name)))), uint32(len(name)))
 	entityPtr := hostValueAsQNameEntity(uint64(v), uint32(uintptr(unsafe.Pointer(unsafe.StringData(name)))), uint32(len(name)))
 	return safe.QName{
@@ -170,21 +168,21 @@ func (exttinygoStateAPI) ValueAsQName(v safe.TValue, name string) safe.QName {
 	}
 }
 
-func (exttinygoStateAPI) ValueAsBool(v safe.TValue, name string) bool {
+func (hostStateAPI) ValueAsBool(v safe.TValue, name string) bool {
 	return hostValueAsBool(uint64(v), uint32(uintptr(unsafe.Pointer(unsafe.StringData(name)))), uint32(len(name))) > 0
 }
 
-func (exttinygoStateAPI) ValueGetAsBytes(v safe.TValue, index int) []byte {
+func (hostStateAPI) ValueGetAsBytes(v safe.TValue, index int) []byte {
 	ptr := hostValueGetAsBytes(uint64(v), uint32(index))
 	return decodeSlice(ptr)
 }
 
-func (exttinygoStateAPI) ValueGetAsString(v safe.TValue, index int) string {
+func (hostStateAPI) ValueGetAsString(v safe.TValue, index int) string {
 	ptr := hostValueGetAsString(uint64(v), uint32(index))
 	return decodeString(ptr)
 }
 
-func (exttinygoStateAPI) ValueGetAsQName(v safe.TValue, index int) safe.QName {
+func (hostStateAPI) ValueGetAsQName(v safe.TValue, index int) safe.QName {
 	pkgPtr := hostValueGetAsQNamePkg(uint64(v), uint32(index))
 	entityPtr := hostValueGetAsQNameEntity(uint64(v), uint32(index))
 	return safe.QName{
@@ -193,60 +191,60 @@ func (exttinygoStateAPI) ValueGetAsQName(v safe.TValue, index int) safe.QName {
 	}
 }
 
-func (exttinygoStateAPI) ValueGetAsBool(v safe.TValue, index int) bool {
+func (hostStateAPI) ValueGetAsBool(v safe.TValue, index int) bool {
 	return hostValueGetAsBool(uint64(v), uint32(index)) > 0
 }
 
-func (exttinygoStateAPI) ValueGetAsInt32(v safe.TValue, index int) int32 {
+func (hostStateAPI) ValueGetAsInt32(v safe.TValue, index int) int32 {
 	return int32(hostValueGetAsInt32(uint64(v), uint32(index)))
 }
 
-func (exttinygoStateAPI) ValueGetAsInt64(v safe.TValue, index int) int64 {
+func (hostStateAPI) ValueGetAsInt64(v safe.TValue, index int) int64 {
 	return int64(hostValueGetAsInt64(uint64(v), uint32(index)))
 }
 
-func (exttinygoStateAPI) ValueGetAsFloat32(v safe.TValue, index int) float32 {
+func (hostStateAPI) ValueGetAsFloat32(v safe.TValue, index int) float32 {
 	return hostValueGetAsFloat32(uint64(v), uint32(index))
 }
 
-func (exttinygoStateAPI) ValueGetAsFloat64(v safe.TValue, index int) float64 {
+func (hostStateAPI) ValueGetAsFloat64(v safe.TValue, index int) float64 {
 	return hostValueGetAsFloat64(uint64(v), uint32(index))
 }
 
-func (exttinygoStateAPI) ValueLen(v safe.TValue) int {
+func (hostStateAPI) ValueLen(v safe.TValue) int {
 	return int(hostValueLength(uint64(v)))
 }
 
-func (exttinygoStateAPI) ValueGetAsValue(v safe.TValue, index int) safe.TValue {
+func (hostStateAPI) ValueGetAsValue(v safe.TValue, index int) safe.TValue {
 	return safe.TValue(hostValueGetAsValue(uint64(v), uint32(index)))
 }
 
 // Key
-func (exttinygoStateAPI) KeyAsInt32(k safe.TKey, name string) int32 {
+func (hostStateAPI) KeyAsInt32(k safe.TKey, name string) int32 {
 	return int32(hostKeyAsInt32(uint64(k), uint32(uintptr(unsafe.Pointer(unsafe.StringData(name)))), uint32(len(name))))
 }
 
-func (exttinygoStateAPI) KeyAsInt64(k safe.TKey, name string) int64 {
+func (hostStateAPI) KeyAsInt64(k safe.TKey, name string) int64 {
 	return int64(hostKeyAsInt64(uint64(k), uint32(uintptr(unsafe.Pointer(unsafe.StringData(name)))), uint32(len(name))))
 }
 
-func (exttinygoStateAPI) KeyAsFloat32(k safe.TKey, name string) float32 {
+func (hostStateAPI) KeyAsFloat32(k safe.TKey, name string) float32 {
 	return hostKeyAsFloat32(uint64(k), uint32(uintptr(unsafe.Pointer(unsafe.StringData(name)))), uint32(len(name)))
 }
 
-func (exttinygoStateAPI) KeyAsFloat64(k safe.TKey, name string) float64 {
+func (hostStateAPI) KeyAsFloat64(k safe.TKey, name string) float64 {
 	return hostKeyAsFloat64(uint64(k), uint32(uintptr(unsafe.Pointer(unsafe.StringData(name)))), uint32(len(name)))
 }
 
-func (exttinygoStateAPI) KeyAsBytes(k safe.TKey, name string) []byte {
+func (hostStateAPI) KeyAsBytes(k safe.TKey, name string) []byte {
 	return decodeSlice(hostKeyAsBytes(uint64(k), uint32(uintptr(unsafe.Pointer(unsafe.StringData(name)))), uint32(len(name))))
 }
 
-func (exttinygoStateAPI) KeyAsString(k safe.TKey, name string) string {
+func (hostStateAPI) KeyAsString(k safe.TKey, name string) string {
 	return decodeString(hostKeyAsString(uint64(k), uint32(uintptr(unsafe.Pointer(unsafe.StringData(name)))), uint32(len(name))))
 }
 
-func (exttinygoStateAPI) KeyAsQName(k safe.TKey, name string) safe.QName {
+func (hostStateAPI) KeyAsQName(k safe.TKey, name string) safe.QName {
 	pkgPtr := hostKeyAsQNamePkg(uint64(k), uint32(uintptr(unsafe.Pointer(unsafe.StringData(name)))), uint32(len(name)))
 	entityPtr := hostKeyAsQNameEntity(uint64(k), uint32(uintptr(unsafe.Pointer(unsafe.StringData(name)))), uint32(len(name)))
 	return safe.QName{
@@ -255,7 +253,7 @@ func (exttinygoStateAPI) KeyAsQName(k safe.TKey, name string) safe.QName {
 	}
 }
 
-func (exttinygoStateAPI) KeyAsBool(k safe.TKey, name string) bool {
+func (hostStateAPI) KeyAsBool(k safe.TKey, name string) bool {
 	return hostKeyAsBool(uint64(k), uint32(uintptr(unsafe.Pointer(unsafe.StringData(name)))), uint32(len(name))) > 0
 }
 

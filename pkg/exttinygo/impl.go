@@ -23,16 +23,16 @@ func Panic(msg string) {
 }
 
 func keyBuilderImpl(storage, entity string) (b TKeyBuilder) {
-	return TKeyBuilder(internal.State.KeyBuilder(storage, entity))
+	return TKeyBuilder(internal.StateAPI.KeyBuilder(storage, entity))
 }
 
 func queryValueImpl(key TKeyBuilder) (value TValue, exists bool) {
-	v, exsts := internal.State.QueryValue(safe.TKeyBuilder(key))
+	v, exsts := internal.StateAPI.QueryValue(safe.TKeyBuilder(key))
 	return TValue(v), exsts
 }
 
 func mustGetValueImpl(key TKeyBuilder) TValue {
-	return TValue(internal.State.MustGetValue(safe.TKeyBuilder(key)))
+	return TValue(internal.StateAPI.MustGetValue(safe.TKeyBuilder(key)))
 }
 
 var readCallback func(key TKey, value TValue)
@@ -43,13 +43,13 @@ var safeReadCallback = func(key safe.TKey, value safe.TValue) {
 
 func readValuesImpl(key TKeyBuilder, cb func(key TKey, value TValue)) {
 	readCallback = cb
-	internal.State.ReadValues(safe.TKeyBuilder(key), safeReadCallback)
+	internal.StateAPI.ReadValues(safe.TKeyBuilder(key), safeReadCallback)
 }
 
 func updateValueImpl(key TKeyBuilder, existingValue TValue) TIntent {
-	return TIntent(internal.State.UpdateValue(safe.TKeyBuilder(key), safe.TValue(existingValue)))
+	return TIntent(internal.StateAPI.UpdateValue(safe.TKeyBuilder(key), safe.TValue(existingValue)))
 }
 
 func newValueImpl(key TKeyBuilder) TIntent {
-	return TIntent(internal.State.NewValue(safe.TKeyBuilder(key)))
+	return TIntent(internal.StateAPI.NewValue(safe.TKeyBuilder(key)))
 }
