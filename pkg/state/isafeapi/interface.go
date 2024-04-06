@@ -3,7 +3,7 @@
  * @author Michael Saigachenko
  */
 
-package isafestate
+package isafeapi
 
 type TKeyBuilder int64
 type TKey int64
@@ -14,7 +14,7 @@ type QName struct {
 	Entity      string
 }
 
-type ISafeState interface {
+type ISafeAPI interface {
 	// Basic functions
 	KeyBuilder(storage, entityFullQname string) TKeyBuilder
 	MustGetValue(key TKeyBuilder) TValue

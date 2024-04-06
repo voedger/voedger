@@ -30,7 +30,7 @@ import (
 )
 
 type testState struct {
-	state.IUnsafeState
+	state.IState
 
 	ctx          context.Context
 	appStructs   istructs.IAppStructs
@@ -83,11 +83,11 @@ func (ctx *testState) buildState(processorKind int) {
 
 	switch processorKind {
 	case ProcKind_Actualizer:
-		ctx.IUnsafeState = state.ProvideAsyncActualizerStateFactory()(ctx.ctx, appFunc, partitionIDFunc, wsidFunc, nil, ctx.secretReader, eventFunc, IntentsLimit, BundlesLimit)
+		ctx.IState = state.ProvideAsyncActualizerStateFactory()(ctx.ctx, appFunc, partitionIDFunc, wsidFunc, nil, ctx.secretReader, eventFunc, IntentsLimit, BundlesLimit)
 	case ProcKind_CommandProcessor:
-		ctx.IUnsafeState = state.ProvideCommandProcessorStateFactory()(ctx.ctx, appFunc, partitionIDFunc, wsidFunc, ctx.secretReader, cudFunc, nil, nil, IntentsLimit, nil, argFunc, unloggedArgFunc)
+		ctx.IState = state.ProvideCommandProcessorStateFactory()(ctx.ctx, appFunc, partitionIDFunc, wsidFunc, ctx.secretReader, cudFunc, nil, nil, IntentsLimit, nil, argFunc, unloggedArgFunc)
 	case ProcKind_QueryProcessor:
-		ctx.IUnsafeState = state.ProvideQueryProcessorStateFactory()(ctx.ctx, appFunc, partitionIDFunc, wsidFunc, ctx.secretReader, nil, nil, argFunc)
+		ctx.IState = state.ProvideQueryProcessorStateFactory()(ctx.ctx, appFunc, partitionIDFunc, wsidFunc, ctx.secretReader, nil, nil, argFunc)
 	}
 }
 
@@ -267,7 +267,7 @@ func (ia *intentAssertions) Equal(vbc ValueBuilderCallback) {
 		panic(err)
 	}
 
-	vb, err := ia.ctx.IUnsafeState.NewValue(ia.kb)
+	vb, err := ia.ctx.IState.NewValue(ia.kb)
 	if err != nil {
 		panic(err)
 	}
@@ -284,7 +284,7 @@ func (ia *intentAssertions) Equal(vbc ValueBuilderCallback) {
 func (ctx *testState) RequireIntent(t *testing.T, storage appdef.QName, entity appdef.FullQName, kbc KeyBuilderCallback) IIntentAssertions {
 	localPkgName := ctx.appDef.PackageLocalName(entity.PkgPath())
 	localEntity := appdef.NewQName(localPkgName, entity.Entity())
-	kb, err := ctx.IUnsafeState.KeyBuilder(storage, localEntity)
+	kb, err := ctx.IState.KeyBuilder(storage, localEntity)
 	if err != nil {
 		panic(err)
 	}
@@ -292,7 +292,7 @@ func (ctx *testState) RequireIntent(t *testing.T, storage appdef.QName, entity a
 	return &intentAssertions{
 		t:   t,
 		kb:  kb,
-		vb:  ctx.IUnsafeState.FindIntent(kb),
+		vb:  ctx.IState.FindIntent(kb),
 		ctx: ctx,
 	}
 }

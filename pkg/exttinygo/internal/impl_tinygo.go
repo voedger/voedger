@@ -10,7 +10,7 @@ package internal
 import (
 	"runtime"
 
-	"github.com/voedger/voedger/pkg/state/isafestate"
+	"github.com/voedger/voedger/pkg/state/isafeapi"
 )
 
 type extint = uintptr
@@ -153,7 +153,7 @@ func hostGetValue(keyId uint64) (result uint64)
 //lint:ignore U1000 this is an exported func
 //export WasmOnReadValue
 func onReadValue(key, value uint64) {
-	CurrentReadCallback(isafestate.TKey(key), isafestate.TValue(value))
+	CurrentReadCallback(isafeapi.TKey(key), isafeapi.TValue(value))
 }
 
 /*

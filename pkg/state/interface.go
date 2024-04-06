@@ -49,14 +49,14 @@ type IWithUpdate interface {
 	ProvideValueBuilderForUpdate(key istructs.IStateKeyBuilder, existingValue istructs.IStateValue, existingBuilder istructs.IStateValueBuilder) (istructs.IStateValueBuilder, error)
 }
 
-type IUnsafeState interface {
+type IState interface {
 	istructs.IState
 	istructs.IIntents
 	istructs.IPkgNameResolver
 }
 
 type IHostState interface {
-	IUnsafeState
+	IState
 
 	// ValidateIntents validates intents
 	ValidateIntents() (err error)
@@ -69,7 +69,7 @@ type IHostState interface {
 // IBundledHostState buffers changes in "bundles" when ApplyIntents is called.
 // Further Read- and *Exist operations see these changes.
 type IBundledHostState interface {
-	IUnsafeState
+	IState
 
 	// ApplyIntents validates and stores intents to bundles
 	ApplyIntents() (readyToFlushBundle bool, err error)

@@ -17,8 +17,7 @@ type ViewValueCallback func(key istructs.IKeyBuilder, value istructs.IValueBuild
 type KeyBuilderCallback func(key istructs.IStateKeyBuilder)
 type ValueBuilderCallback func(value istructs.IStateValueBuilder)
 
-type ITestState interface {
-	state.IUnsafeState
+type ITestAPI interface {
 	// State
 	PutEvent(wsid istructs.WSID, name appdef.FullQName, cb NewEventCallback)
 	PutView(testWSID istructs.WSID, entity appdef.FullQName, callback ViewValueCallback)
@@ -26,6 +25,11 @@ type ITestState interface {
 
 	// Intent
 	RequireIntent(t *testing.T, storage appdef.QName, entity appdef.FullQName, kb KeyBuilderCallback) IIntentAssertions
+}
+
+type ITestState interface {
+	state.IState
+	ITestAPI
 }
 
 type IIntentAssertions interface {

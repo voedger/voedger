@@ -7,7 +7,7 @@ package exttinygo
 
 import (
 	"github.com/voedger/voedger/pkg/exttinygo/internal"
-	safe "github.com/voedger/voedger/pkg/state/isafestate"
+	safe "github.com/voedger/voedger/pkg/state/isafeapi"
 )
 
 func (k TKey) AsInt32(name string) int32 {

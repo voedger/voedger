@@ -21,21 +21,21 @@ const testWSID = istructs.WSID(1)
 func Test_CalcOrderedItems(t *testing.T) {
 
 	// Construct test context
-	ctx := test.NewTestState(
+	test := test.NewTestAPI(
 		teststate.ProcKind_Actualizer,
 		testPkg,
 		teststate.TestWorkspace{WorkspaceDescriptor: "RestaurantDescriptor", WSID: testWSID})
 
 	// Fill state
-	ctx.PutSecret("encryptionKey", []byte("idkfa"))
-	ctx.PutView(testWSID, appdef.NewFullQName(testPkg, "OrderedItems"), func(key istructs.IKeyBuilder, value istructs.IValueBuilder) {
+	test.PutSecret("encryptionKey", []byte("idkfa"))
+	test.PutView(testWSID, appdef.NewFullQName(testPkg, "OrderedItems"), func(key istructs.IKeyBuilder, value istructs.IValueBuilder) {
 		key.PutInt32("Year", 2023)
 		key.PutInt32("Month", 1)
 		key.PutInt32("Day", 1)
 		value.PutInt64("Amount", 100)
 	})
 
-	ctx.PutEvent(testWSID, appdef.NewFullQName(testPkg, "Order"), func(arg istructs.IObjectBuilder, _ istructs.ICUD) {
+	test.PutEvent(testWSID, appdef.NewFullQName(testPkg, "Order"), func(arg istructs.IObjectBuilder, _ istructs.ICUD) {
 		arg.PutRecordID(appdef.SystemField_ID, 1)
 		arg.PutInt32("Year", 2023)
 		arg.PutInt32("Month", 1)
@@ -50,7 +50,7 @@ func Test_CalcOrderedItems(t *testing.T) {
 	CalcOrderedItems()
 
 	// Check the intent
-	ctx.RequireIntent(t, state.View, appdef.NewFullQName(testPkg, "OrderedItems"), func(key istructs.IStateKeyBuilder) {
+	test.RequireIntent(t, state.View, appdef.NewFullQName(testPkg, "OrderedItems"), func(key istructs.IStateKeyBuilder) {
 		key.PutInt32("Year", 2023)
 		key.PutInt32("Month", 1)
 		key.PutInt32("Day", 1)

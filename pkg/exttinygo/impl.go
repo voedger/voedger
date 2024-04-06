@@ -9,7 +9,7 @@ import (
 	"unsafe"
 
 	"github.com/voedger/voedger/pkg/exttinygo/internal"
-	safe "github.com/voedger/voedger/pkg/state/isafestate"
+	safe "github.com/voedger/voedger/pkg/state/isafeapi"
 )
 
 func Assert(condition bool, msg string) {
