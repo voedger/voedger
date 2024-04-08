@@ -103,13 +103,13 @@ func mkCommandDirAndLogFile(cmd *cobra.Command, cluster *clusterType) error {
 	}
 
 	time.Sleep(time.Second * 1)
-	commandDirName = fmt.Sprintf("%s-%s", time.Now().Format("20060102-150405"), s)
+	commandDirName = filepath.Join(logFolder, fmt.Sprintf("%s-%s", time.Now().Format("20060102-150405"), s))
 
 	if cluster.dryRun {
 		commandDirName = filepath.Join(dryRunDir, commandDirName)
 	}
 
-	err := os.Mkdir(commandDirName, rwxrwxrwx)
+	err := os.MkdirAll(commandDirName, rwxrwxrwx)
 	if err == nil {
 		fName := filepath.Join(commandDirName, s+".log")
 		logFile, err = os.Create(fName)
