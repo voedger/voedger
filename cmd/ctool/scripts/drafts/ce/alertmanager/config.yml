@@ -1,0 +1,15 @@
+route:
+  receiver: 'email'
+
+receivers:
+  - name: 'email'
+
+#    example configuration for sending email over gmail service
+#    email_configs:
+#      - to: user@company.com
+#        from: user@company.com
+#        smarthost: smtp.gmail.com:587
+#        auth_username: <google user account>
+#        auth_identity: <google user account>
+#        auth_password: <auth password>
+#        send_resolved: true

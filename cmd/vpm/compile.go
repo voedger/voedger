@@ -38,12 +38,18 @@ func makeAbsPath(dir string) (string, error) {
 	if !filepath.IsAbs(dir) {
 		wd, err := os.Getwd()
 		if err != nil {
+			// notest
 			return "", fmt.Errorf("failed to get working directory: %w", err)
 		}
 		dir = filepath.Clean(filepath.Join(wd, dir))
 	}
-	if _, err := os.Stat(dir); os.IsNotExist(err) {
-		return "", fmt.Errorf("failed to open %s", dir)
+	exists, err := exists(dir)
+	if err != nil {
+		// notest
+		return "", err
+	}
+	if !exists {
+		return "", fmt.Errorf("%s not exists", dir)
 	}
 	return dir, nil
 }

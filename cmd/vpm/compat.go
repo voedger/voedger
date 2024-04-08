@@ -92,11 +92,21 @@ func appDefFromBaselineDir(baselineDir string) (appdef.IAppDef, error) {
 	var errs []error
 
 	pkgDirPath := filepath.Join(baselineDir, pkgDirName)
-	if _, err := os.Stat(pkgDirPath); os.IsNotExist(err) {
+	pkgDirPathExists, err := exists(pkgDirPath)
+	if err != nil {
+		// notest
+		return nil, err
+	}
+	if !pkgDirPathExists {
 		return nil, fmt.Errorf("baseline directory does not contain %s subdirectory", pkgDirName)
 	}
 	baselineJsonFilePath := filepath.Join(baselineDir, baselineInfoFileName)
-	if _, err := os.Stat(baselineJsonFilePath); os.IsNotExist(err) {
+	baselineJsonFilePathExists, err := exists(baselineJsonFilePath)
+	if err != nil {
+		// notest
+		return nil, err
+	}
+	if !baselineJsonFilePathExists {
 		return nil, fmt.Errorf("baseline directory does not contain %s file", baselineInfoFileName)
 	}
 

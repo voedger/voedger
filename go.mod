@@ -33,7 +33,7 @@ require (
 	go.etcd.io/bbolt v1.3.9
 	golang.org/x/crypto v0.21.0
 	golang.org/x/exp v0.0.0-20240314144324-c7f7c6466f7f
-	golang.org/x/net v0.22.0
+	golang.org/x/net v0.23.0
 	golang.org/x/text v0.14.0
 	golang.org/x/tools v0.19.0
 	gopkg.in/yaml.v2 v2.4.0

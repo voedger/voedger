@@ -111,7 +111,12 @@ func saveBaselineSchemas(pkgFiles packageFiles, baselineDir string) error {
 }
 
 func createBaselineDir(dir string) error {
-	if _, err := os.Stat(dir); !os.IsNotExist(err) {
+	exists, err := exists(dir)
+	if err != nil {
+		// notest
+		return err
+	}
+	if exists {
 		return fmt.Errorf("baseline directory already exists: %s", dir)
 	}
 	pkgDir := filepath.Join(dir, pkgDirName)

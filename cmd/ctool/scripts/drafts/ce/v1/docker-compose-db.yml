@@ -1,0 +1,15 @@
+# Copyright (c) 2024 Sigma-Soft, Ltd.
+# @author Aleksei Ponomarev
+
+version: '3.7'
+
+services:
+
+  scylla:
+    image: scylladb/scylla:5.1.13
+    command: --developer-mode 1 --io-setup 0
+    ports:
+      - ${VOEDGER_CE_NODE}:9042:9042
+      - ${VOEDGER_CE_NODE}:9160:9160
+    volumes:
+      - /var/lib/scylla:/var/lib/scylla
