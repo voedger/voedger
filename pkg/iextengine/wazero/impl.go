@@ -22,6 +22,8 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/iextengine"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/state/isafeapi"
+	"github.com/voedger/voedger/pkg/state/safestate"
 )
 
 type wazeroExtPkg struct {
@@ -61,9 +63,9 @@ type wazeroExtEngine struct {
 	wasiCloser    api.Closer
 
 	// Invoke-related!
-	io  iextengine.IExtensionIO
-	ctx context.Context
-	pkg *wazeroExtPkg
+	safeApi isafeapi.ISafeAPI
+	ctx     context.Context
+	pkg     *wazeroExtPkg
 }
 
 type allocatedBuf struct {
@@ -345,7 +347,7 @@ func (f *wazeroExtEngine) Invoke(ctx context.Context, extension appdef.FullQName
 		return invalidExtensionName(extension.Entity())
 	}
 
-	f.io = io
+	f.safeApi = safestate.Provide(io)
 	f.ctx = ctx
 
 	if len(f.keys) > 0 {
@@ -380,43 +382,10 @@ func (f *wazeroExtEngine) decodeStr(ptr, size uint32) string {
 	panic(ErrUnableToReadMemory)
 }
 
-func (f *wazeroExtEngine) parseQname(value string) (qname appdef.QName) {
-
-	pos := strings.LastIndex(value, ".")
-	if pos == -1 {
-		panic(fmt.Errorf("%w: %v", appdef.ErrInvalidQNameStringRepresentation, value))
-	}
-
-	packageFullPath := value[:pos]
-	entityName := value[pos+1:]
-	localName := f.io.PackageLocalName(packageFullPath)
-	if localName == "" {
-		panic(errUndefinedPackage(packageFullPath))
-	}
-
-	return appdef.NewQName(localName, entityName)
-}
-
 func (f *wazeroExtEngine) hostGetKey(storagePtr, storageSize, entityPtr, entitySize uint32) (res uint64) {
-
-	var storage appdef.QName
-	var entity appdef.QName
-	var err error
-	storage, err = appdef.ParseQName(f.decodeStr(storagePtr, storageSize))
-	if err != nil {
-		panic(err)
-	}
+	storageFull := f.decodeStr(storagePtr, storageSize)
 	entitystr := f.decodeStr(entityPtr, entitySize)
-	if entitystr != "" {
-		entity = f.parseQname(entitystr)
-	}
-	k, e := f.io.KeyBuilder(storage, entity)
-	if e != nil {
-		panic(e)
-	}
-	res = uint64(len(f.keyBuilders))
-	f.keyBuilders = append(f.keyBuilders, k)
-	return
+	return uint64(f.safeApi.KeyBuilder(storageFull, entitystr))
 }
 
 func (f *wazeroExtEngine) hostPanic(namePtr, nameSize uint32) {
@@ -424,34 +393,16 @@ func (f *wazeroExtEngine) hostPanic(namePtr, nameSize uint32) {
 }
 
 func (f *wazeroExtEngine) hostReadValues(keyId uint64) {
-	if int(keyId) >= len(f.keyBuilders) {
-		panic(PanicIncorrectKeyBuilder)
-	}
-	first := true
-	keyIndex := len(f.keys)
-	valueIndex := len(f.values)
-	err := f.io.Read(f.keyBuilders[keyId], func(key istructs.IKey, value istructs.IStateValue) (err error) {
-		if first {
-			f.keys = append(f.keys, key)
-			f.values = append(f.values, value)
-			first = false
-		} else { // replace
-			f.keys[keyIndex] = key
-			f.values[valueIndex] = value
+	f.safeApi.ReadValues(isafeapi.TKeyBuilder(keyId), func(key isafeapi.TKey, value isafeapi.TValue) {
+		_, err := f.pkg.funcOnReadValue.Call(f.ctx, uint64(key), uint64(value))
+		if err != nil {
+			panic(err.Error())
 		}
-		_, err = f.pkg.funcOnReadValue.Call(f.ctx, uint64(keyIndex), uint64(valueIndex))
-		return err
 	})
-	if err != nil {
-		panic(err.Error())
-	}
 }
 
 func (f *wazeroExtEngine) hostMustExist(keyId uint64) (result uint64) {
 
-	if int(keyId) >= len(f.keyBuilders) {
-		panic(PanicIncorrectKeyBuilder)
-	}
 	v, e := f.io.MustExist(f.keyBuilders[keyId])
 	if e != nil {
 		panic(e)

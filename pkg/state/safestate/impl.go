@@ -39,6 +39,9 @@ func (s *safeState) KeyBuilder(storage, entityFull string) isafeapi.TKeyBuilder 
 }
 
 func (s *safeState) MustGetValue(key isafeapi.TKeyBuilder) isafeapi.TValue {
+	if int(key) >= len(s.keyBuilders) {
+		panic(PanicIncorrectKeyBuilder)
+	}
 	sv, err := s.state.MustExist(s.keyBuilders[key])
 	if err != nil {
 		panic(err)
@@ -82,6 +85,9 @@ func (s *safeState) UpdateValue(key isafeapi.TKeyBuilder, existingValue isafeapi
 }
 
 func (s *safeState) ReadValues(kb isafeapi.TKeyBuilder, callback func(isafeapi.TKey, isafeapi.TValue)) {
+	if int(kb) >= len(s.keyBuilders) {
+		panic(PanicIncorrectKeyBuilder)
+	}
 	first := true
 	safeKey := isafeapi.TKey(len(s.keys))
 	safeValue := isafeapi.TValue(len(s.values))
