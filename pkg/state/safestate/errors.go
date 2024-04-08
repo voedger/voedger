@@ -7,4 +7,7 @@ package safestate
 
 var (
 	PanicIncorrectKeyBuilder = "incorrect key builder"
+	PanicIncorrectKey        = "incorrect key"
+	PanicIncorrectValue      = "incorrect value"
+	PanicIncorrectIntent     = "incorrect intent"
 )

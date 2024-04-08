@@ -5,6 +5,8 @@
 package safestate
 
 import (
+	"errors"
+
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/state"
@@ -16,10 +18,11 @@ type safeState struct {
 	keyBuilders   []istructs.IStateKeyBuilder
 	keys          []istructs.IKey
 	values        []istructs.IStateValue
-	valueBuilders []istructs.IValueBuilder
+	valueBuilders []istructs.IStateValueBuilder
 }
 
 func (s *safeState) KeyBuilder(storage, entityFull string) isafeapi.TKeyBuilder {
+
 	storageQname := appdef.MustParseQName(storage)
 	var entityQname appdef.QName
 	if entityFull == "" {
@@ -27,6 +30,11 @@ func (s *safeState) KeyBuilder(storage, entityFull string) isafeapi.TKeyBuilder 
 	} else {
 		entityFullQname := appdef.MustParseFullQName(entityFull)
 		entityLocalPkg := s.state.PackageLocalName(entityFullQname.PkgPath())
+
+		if entityLocalPkg == "" {
+			panic(errors.New("undefined package: " + entityFullQname.PkgPath()))
+		}
+
 		entityQname = appdef.NewQName(entityLocalPkg, entityFullQname.Entity())
 	}
 	skb, err := s.state.KeyBuilder(storageQname, entityQname)
@@ -38,11 +46,15 @@ func (s *safeState) KeyBuilder(storage, entityFull string) isafeapi.TKeyBuilder 
 	return kb
 }
 
-func (s *safeState) MustGetValue(key isafeapi.TKeyBuilder) isafeapi.TValue {
+func (s *safeState) kb(key isafeapi.TKeyBuilder) istructs.IStateKeyBuilder {
 	if int(key) >= len(s.keyBuilders) {
 		panic(PanicIncorrectKeyBuilder)
 	}
-	sv, err := s.state.MustExist(s.keyBuilders[key])
+	return s.keyBuilders[key]
+}
+
+func (s *safeState) MustGetValue(key isafeapi.TKeyBuilder) isafeapi.TValue {
+	sv, err := s.state.MustExist(s.kb(key))
 	if err != nil {
 		panic(err)
 	}
@@ -52,7 +64,7 @@ func (s *safeState) MustGetValue(key isafeapi.TKeyBuilder) isafeapi.TValue {
 }
 
 func (s *safeState) QueryValue(key isafeapi.TKeyBuilder) (isafeapi.TValue, bool) {
-	sv, ok, err := s.state.CanExist(s.keyBuilders[key])
+	sv, ok, err := s.state.CanExist(s.kb(key))
 	if err != nil {
 		panic(err)
 	}
@@ -65,7 +77,7 @@ func (s *safeState) QueryValue(key isafeapi.TKeyBuilder) (isafeapi.TValue, bool)
 }
 
 func (s *safeState) NewValue(key isafeapi.TKeyBuilder) isafeapi.TIntent {
-	svb, err := s.state.NewValue(s.keyBuilders[key])
+	svb, err := s.state.NewValue(s.kb(key))
 	if err != nil {
 		panic(err)
 	}
@@ -75,7 +87,7 @@ func (s *safeState) NewValue(key isafeapi.TKeyBuilder) isafeapi.TIntent {
 }
 
 func (s *safeState) UpdateValue(key isafeapi.TKeyBuilder, existingValue isafeapi.TValue) isafeapi.TIntent {
-	svb, err := s.state.UpdateValue(s.keyBuilders[key], s.values[existingValue])
+	svb, err := s.state.UpdateValue(s.kb(key), s.value(existingValue))
 	if err != nil {
 		panic(err)
 	}
@@ -85,13 +97,10 @@ func (s *safeState) UpdateValue(key isafeapi.TKeyBuilder, existingValue isafeapi
 }
 
 func (s *safeState) ReadValues(kb isafeapi.TKeyBuilder, callback func(isafeapi.TKey, isafeapi.TValue)) {
-	if int(kb) >= len(s.keyBuilders) {
-		panic(PanicIncorrectKeyBuilder)
-	}
 	first := true
 	safeKey := isafeapi.TKey(len(s.keys))
 	safeValue := isafeapi.TValue(len(s.values))
-	err := s.state.Read(s.keyBuilders[kb], func(key istructs.IKey, value istructs.IStateValue) error {
+	err := s.state.Read(s.kb(kb), func(key istructs.IKey, value istructs.IStateValue) error {
 		if first {
 			s.keys = append(s.keys, key)
 			s.values = append(s.values, value)
@@ -111,69 +120,69 @@ func (s *safeState) ReadValues(kb isafeapi.TKeyBuilder, callback func(isafeapi.T
 
 // Key Builder
 func (s *safeState) KeyBuilderPutInt32(key isafeapi.TKeyBuilder, name string, value int32) {
-	s.keyBuilders[key].PutInt32(name, value)
+	s.kb(key).PutInt32(name, value)
 }
 
 func (s *safeState) KeyBuilderPutInt64(key isafeapi.TKeyBuilder, name string, value int64) {
-	s.keyBuilders[key].PutInt64(name, value)
+	s.kb(key).PutInt64(name, value)
 }
 
 func (s *safeState) KeyBuilderPutFloat32(key isafeapi.TKeyBuilder, name string, value float32) {
-	s.keyBuilders[key].PutFloat32(name, value)
+	s.kb(key).PutFloat32(name, value)
 }
 
 func (s *safeState) KeyBuilderPutFloat64(key isafeapi.TKeyBuilder, name string, value float64) {
-	s.keyBuilders[key].PutFloat64(name, value)
+	s.kb(key).PutFloat64(name, value)
 }
 
 func (s *safeState) KeyBuilderPutString(key isafeapi.TKeyBuilder, name string, value string) {
-	s.keyBuilders[key].PutString(name, value)
+	s.kb(key).PutString(name, value)
 }
 
 func (s *safeState) KeyBuilderPutBytes(key isafeapi.TKeyBuilder, name string, value []byte) {
-	s.keyBuilders[key].PutBytes(name, value)
+	s.kb(key).PutBytes(name, value)
 }
 
 func (s *safeState) KeyBuilderPutQName(key isafeapi.TKeyBuilder, name string, value isafeapi.QName) {
 	localpkgName := s.state.PackageLocalName(value.FullPkgName)
-	s.keyBuilders[key].PutQName(name, appdef.NewQName(localpkgName, value.Entity))
+	s.kb(key).PutQName(name, appdef.NewQName(localpkgName, value.Entity))
 }
 
 func (s *safeState) KeyBuilderPutBool(key isafeapi.TKeyBuilder, name string, value bool) {
-	s.keyBuilders[key].PutBool(name, value)
+	s.kb(key).PutBool(name, value)
 }
 
 // Value
 
 func (s *safeState) ValueAsValue(v isafeapi.TValue, name string) (result isafeapi.TValue) {
+	sv := s.value(v).AsValue(name)
 	result = isafeapi.TValue(len(s.values))
-	sv := s.values[v].AsValue(name)
 	s.values = append(s.values, sv)
 	return result
 }
 
 func (s *safeState) ValueAsInt32(v isafeapi.TValue, name string) int32 {
-	return s.values[v].AsInt32(name)
+	return s.value(v).AsInt32(name)
 }
 
 func (s *safeState) ValueAsInt64(v isafeapi.TValue, name string) int64 {
-	return s.values[v].AsInt64(name)
+	return s.value(v).AsInt64(name)
 }
 
 func (s *safeState) ValueAsFloat32(v isafeapi.TValue, name string) float32 {
-	return s.values[v].AsFloat32(name)
+	return s.value(v).AsFloat32(name)
 }
 
 func (s *safeState) ValueAsFloat64(v isafeapi.TValue, name string) float64 {
-	return s.values[v].AsFloat64(name)
+	return s.value(v).AsFloat64(name)
 }
 
 func (s *safeState) ValueAsBytes(v isafeapi.TValue, name string) []byte {
-	return s.values[v].AsBytes(name)
+	return s.value(v).AsBytes(name)
 }
 
 func (s *safeState) ValueAsQName(v isafeapi.TValue, name string) isafeapi.QName {
-	qname := s.values[v].AsQName(name)
+	qname := s.value(v).AsQName(name)
 	return isafeapi.QName{
 		FullPkgName: s.state.PackageFullPath(qname.Pkg()),
 		Entity:      qname.Entity(),
@@ -181,46 +190,46 @@ func (s *safeState) ValueAsQName(v isafeapi.TValue, name string) isafeapi.QName 
 }
 
 func (s *safeState) ValueAsBool(v isafeapi.TValue, name string) bool {
-	return s.values[v].AsBool(name)
+	return s.value(v).AsBool(name)
 }
 
 func (s *safeState) ValueAsString(v isafeapi.TValue, name string) string {
-	return s.values[v].AsString(name)
+	return s.value(v).AsString(name)
 }
 
 func (s *safeState) ValueLen(v isafeapi.TValue) int {
-	return s.values[v].Length()
+	return s.value(v).Length()
 }
 
 func (s *safeState) ValueGetAsValue(v isafeapi.TValue, index int) (result isafeapi.TValue) {
+	sv := s.value(v).GetAsValue(index)
 	result = isafeapi.TValue(len(s.values))
-	sv := s.values[v].GetAsValue(index)
 	s.values = append(s.values, sv)
 	return result
 }
 
 func (s *safeState) ValueGetAsInt32(v isafeapi.TValue, index int) int32 {
-	return s.values[v].GetAsInt32(index)
+	return s.value(v).GetAsInt32(index)
 }
 
 func (s *safeState) ValueGetAsInt64(v isafeapi.TValue, index int) int64 {
-	return s.values[v].GetAsInt64(index)
+	return s.value(v).GetAsInt64(index)
 }
 
 func (s *safeState) ValueGetAsFloat32(v isafeapi.TValue, index int) float32 {
-	return s.values[v].GetAsFloat32(index)
+	return s.value(v).GetAsFloat32(index)
 }
 
 func (s *safeState) ValueGetAsFloat64(v isafeapi.TValue, index int) float64 {
-	return s.values[v].GetAsFloat64(index)
+	return s.value(v).GetAsFloat64(index)
 }
 
 func (s *safeState) ValueGetAsBytes(v isafeapi.TValue, index int) []byte {
-	return s.values[v].GetAsBytes(index)
+	return s.value(v).GetAsBytes(index)
 }
 
 func (s *safeState) ValueGetAsQName(v isafeapi.TValue, index int) isafeapi.QName {
-	qname := s.values[v].GetAsQName(index)
+	qname := s.value(v).GetAsQName(index)
 	return isafeapi.QName{
 		FullPkgName: s.state.PackageFullPath(qname.Pkg()),
 		Entity:      qname.Entity(),
@@ -228,75 +237,97 @@ func (s *safeState) ValueGetAsQName(v isafeapi.TValue, index int) isafeapi.QName
 }
 
 func (s *safeState) ValueGetAsBool(v isafeapi.TValue, index int) bool {
-	return s.values[v].GetAsBool(index)
+	return s.value(v).GetAsBool(index)
 }
 
 func (s *safeState) ValueGetAsString(v isafeapi.TValue, index int) string {
-	return s.values[v].GetAsString(index)
+	return s.value(v).GetAsString(index)
+}
+
+func (s *safeState) value(v isafeapi.TValue) istructs.IStateValue {
+	if int(v) >= len(s.values) {
+		panic(PanicIncorrectValue)
+	}
+	return s.values[v]
 }
 
 // Intent
 
+func (s *safeState) vb(v isafeapi.TIntent) istructs.IStateValueBuilder {
+	if int(v) >= len(s.valueBuilders) {
+		panic(PanicIncorrectIntent)
+	}
+	return s.valueBuilders[v]
+}
+
 func (s *safeState) IntentPutInt64(v isafeapi.TIntent, name string, value int64) {
-	s.valueBuilders[v].PutInt64(name, value)
+	s.vb(v).PutInt64(name, value)
 }
 
 func (s *safeState) IntentPutBool(v isafeapi.TIntent, name string, value bool) {
-	s.valueBuilders[v].PutBool(name, value)
+	s.vb(v).PutBool(name, value)
 }
 
 func (s *safeState) IntentPutString(v isafeapi.TIntent, name string, value string) {
-	s.valueBuilders[v].PutString(name, value)
+	s.vb(v).PutString(name, value)
 }
 
 func (s *safeState) IntentPutBytes(v isafeapi.TIntent, name string, value []byte) {
-	s.valueBuilders[v].PutBytes(name, value)
+	s.vb(v).PutBytes(name, value)
 }
 
 func (s *safeState) IntentPutQName(v isafeapi.TIntent, name string, value isafeapi.QName) {
 	localpkgName := s.state.PackageLocalName(value.FullPkgName)
-	s.valueBuilders[v].PutQName(name, appdef.NewQName(localpkgName, value.Entity))
+	s.vb(v).PutQName(name, appdef.NewQName(localpkgName, value.Entity))
 }
 
 func (s *safeState) IntentPutInt32(v isafeapi.TIntent, name string, value int32) {
-	s.valueBuilders[v].PutInt32(name, value)
+	s.vb(v).PutInt32(name, value)
 }
 
 func (s *safeState) IntentPutFloat32(v isafeapi.TIntent, name string, value float32) {
-	s.valueBuilders[v].PutFloat32(name, value)
+	s.vb(v).PutFloat32(name, value)
 }
 
 func (s *safeState) IntentPutFloat64(v isafeapi.TIntent, name string, value float64) {
-	s.valueBuilders[v].PutFloat64(name, value)
+	s.vb(v).PutFloat64(name, value)
 }
 
 // Key
+
+func (s *safeState) key(k isafeapi.TKey) istructs.IKey {
+	if int(k) >= len(s.keys) {
+		panic(PanicIncorrectKey)
+	}
+	return s.keys[k]
+}
+
 func (s *safeState) KeyAsInt32(k isafeapi.TKey, name string) int32 {
-	return s.keys[k].AsInt32(name)
+	return s.key(k).AsInt32(name)
 }
 
 func (s *safeState) KeyAsInt64(k isafeapi.TKey, name string) int64 {
-	return s.keys[k].AsInt64(name)
+	return s.key(k).AsInt64(name)
 }
 
 func (s *safeState) KeyAsFloat32(k isafeapi.TKey, name string) float32 {
-	return s.keys[k].AsFloat32(name)
+	return s.key(k).AsFloat32(name)
 }
 
 func (s *safeState) KeyAsFloat64(k isafeapi.TKey, name string) float64 {
-	return s.keys[k].AsFloat64(name)
+	return s.key(k).AsFloat64(name)
 }
 
 func (s *safeState) KeyAsBytes(k isafeapi.TKey, name string) []byte {
-	return s.keys[k].AsBytes(name)
+	return s.key(k).AsBytes(name)
 }
 
 func (s *safeState) KeyAsString(k isafeapi.TKey, name string) string {
-	return s.keys[k].AsString(name)
+	return s.key(k).AsString(name)
 }
 
 func (s *safeState) KeyAsQName(k isafeapi.TKey, name string) isafeapi.QName {
-	qname := s.keys[k].AsQName(name)
+	qname := s.key(k).AsQName(name)
 	return isafeapi.QName{
 		FullPkgName: s.state.PackageFullPath(qname.Pkg()),
 		Entity:      qname.Entity(),
@@ -304,5 +335,5 @@ func (s *safeState) KeyAsQName(k isafeapi.TKey, name string) isafeapi.QName {
 }
 
 func (s *safeState) KeyAsBool(k isafeapi.TKey, name string) bool {
-	return s.keys[k].AsBool(name)
+	return s.key(k).AsBool(name)
 }

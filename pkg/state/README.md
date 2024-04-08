@@ -1,4 +1,10 @@
+## Principles
+- SafeAPI is a low-level API for State which implements the following principles:
+    - used by extension engines
+    - automatically converts package paths: extensions work with full paths
 
+
+## Design
 ```mermaid
 flowchart TD
     exttinygo:::G
@@ -62,7 +68,8 @@ flowchart TD
 
     Processor --> |has| ProcessorState
     ProcessorState -.-> |wrapped with| safestate.Provide
-    ISafeAPI -.-> |"passed to Invoke(...)"| IExtensionEngine
+    IState -.-> |"passed to Invoke(...)"| IExtensionEngine
+    safestate.Provide -.-> |called by| IExtensionEngineWazero
 
     Test -.-> |calls| Extension
     clientStateAPI -.-> |used by|Extension

@@ -21,6 +21,7 @@ import (
 	"github.com/voedger/voedger/pkg/istorage/mem"
 	istorageimpl "github.com/voedger/voedger/pkg/istorage/provider"
 	"github.com/voedger/voedger/pkg/parser"
+	"github.com/voedger/voedger/pkg/state/safestate"
 	"github.com/voedger/voedger/pkg/sys/authnz"
 
 	"github.com/voedger/voedger/pkg/istructs"
@@ -383,20 +384,20 @@ func Test_HandlePanics(t *testing.T) {
 		{"incorrectStorageQname", "invalid string representation of qualified name: foo"},
 		{"incorrectEntityQname", "invalid string representation of qualified name: abc"},
 		{"unsupportedStorage", "unsupported storage"},
-		{"incorrectKeyBuilder", PanicIncorrectKeyBuilder},
-		{"canExistIncorrectKey", PanicIncorrectKeyBuilder},
-		{"mustExistIncorrectKey", PanicIncorrectKeyBuilder},
-		{"readIncorrectKeyBuilder", PanicIncorrectKeyBuilder},
-		{"incorrectKey", PanicIncorrectKey},
-		{"incorrectValue", PanicIncorrectValue},
-		{"incorrectValue2", PanicIncorrectValue},
-		{"incorrectValue3", PanicIncorrectValue},
+		{"incorrectKeyBuilder", safestate.PanicIncorrectKeyBuilder},
+		{"canExistIncorrectKey", safestate.PanicIncorrectKeyBuilder},
+		{"mustExistIncorrectKey", safestate.PanicIncorrectKeyBuilder},
+		{"readIncorrectKeyBuilder", safestate.PanicIncorrectKeyBuilder},
+		{"incorrectKey", safestate.PanicIncorrectKey},
+		{"incorrectValue", safestate.PanicIncorrectValue},
+		{"incorrectValue2", safestate.PanicIncorrectValue},
+		{"incorrectValue3", safestate.PanicIncorrectValue},
 		{"mustExist", state.ErrNotExists.Error()},
-		{"incorrectKeyBuilderOnNewValue", PanicIncorrectKeyBuilder},
-		{"incorrectKeyBuilderOnUpdateValue", PanicIncorrectKeyBuilder},
-		{"incorrectValueOnUpdateValue", PanicIncorrectValue},
-		{"incorrectIntentId", PanicIncorrectIntent},
-		{"readPanic", PanicIncorrectValue},
+		{"incorrectKeyBuilderOnNewValue", safestate.PanicIncorrectKeyBuilder},
+		{"incorrectKeyBuilderOnUpdateValue", safestate.PanicIncorrectKeyBuilder},
+		{"incorrectValueOnUpdateValue", safestate.PanicIncorrectValue},
+		{"incorrectIntentId", safestate.PanicIncorrectIntent},
+		{"readPanic", safestate.PanicIncorrectValue},
 		{"readError", errTestIOError.Error()},
 		{"queryError", errTestIOError.Error()},
 		{"newValueError", errTestIOError.Error()},

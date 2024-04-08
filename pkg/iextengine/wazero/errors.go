@@ -9,10 +9,6 @@ import "errors"
 
 var (
 	ErrUnableToReadMemory = errors.New("unable to read result from WASM module")
-
-	PanicIncorrectKey    = "incorrect key"
-	PanicIncorrectValue  = "incorrect value"
-	PanicIncorrectIntent = "incorrect intent"
 )
 
 var errMemoryOutOfRange = errors.New("memory out of range")
