@@ -16,6 +16,7 @@ flowchart TD
     iextengine:::G
     application:::G
     wazero:::G
+    processors:::G
     subgraph exttinygo
         internal.State["var StateAPI"]
         hostAPI["hostStateApi"]
@@ -48,6 +49,9 @@ flowchart TD
 
         IExtensionEngine["IExtensionEngine"]
     end
+    subgraph processors
+        Processor
+    end
     
     internal.State -.-> |by default initialized with| hostAPI
     internal.State -.-> |of type| ISafeAPI
@@ -58,16 +62,15 @@ flowchart TD
     NewTestAPI -.-> |3. sets| internal.State
     ITestState -.-> |implements| ITestAPI
     ITestState -.-> |implements| IState
-    ProcessorState -.-> |implements| IState
+    
     ITestAPI -.-> |used by| Test
     safestate.Provide -.-> |to provide| ISafeAPI
 
     hostAPI -.-> |calls host functions| IExtensionEngineWazero
     IExtensionEngine -.-> |can be| IExtensionEngineWazero
 
-
-    Processor --> |has| ProcessorState
-    ProcessorState -.-> |wrapped with| safestate.Provide
+    Processor --> |has| IState
+    IState -.-> |passed to| safestate.Provide
     IState -.-> |"passed to Invoke(...)"| IExtensionEngine
     safestate.Provide -.-> |called by| IExtensionEngineWazero
 
