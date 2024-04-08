@@ -81,6 +81,8 @@ const (
 	monUserName          = "voedger"
 	admin                = "admin"
 	voedger              = "voedger"
+
+	logFolder = "log"
 )
 
 const comma = ","
