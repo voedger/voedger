@@ -481,6 +481,23 @@ func TestCore_ViewRecords(t *testing.T) {
 			require.ErrorIs(err, ErrTypeChanged)
 		})
 
+		t.Run("Must have error if holes in clustering column", func(t *testing.T) {
+			kb := viewRecords.KeyBuilder(appdef.NewQName("test", "viewDrinks"))
+			pk := kb.PartitionKey()
+			pk.PutInt64("partitionKey1", 1)
+			cc := kb.ClusteringColumns()
+			cc.PutInt64("clusteringColumn1", 100)
+			cc.PutString("clusteringColumn3", "s")
+			cnt := 0
+			err := viewRecords.Read(context.Background(), 1, kb, func(istructs.IKey, istructs.IValue) (err error) {
+				cnt++
+				return nil
+			})
+			require.ErrorIs(err, ErrFieldIsEmpty)
+			require.ErrorContains(err, "hole at field «clusteringColumn2»")
+			require.Zero(cnt)
+		})
+
 		t.Run("Must have error if wrong value type", func(t *testing.T) {
 			kb := viewRecords.KeyBuilder(appdef.NewQName("test", "viewDrinks"))
 			kb.PutInt64("partitionKey1", 1)
