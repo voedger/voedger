@@ -62,7 +62,7 @@ func baseline(compileRes *compile.Result, dir, targetDir string) error {
 func saveBaselineInfo(compileRes *compile.Result, dir, baselineDir string) error {
 	var gitCommitHash string
 	sb := new(strings.Builder)
-	if err := new(exec.PipedExec).Command("git", "rev-parse", "HEAD").WorkingDir(dir).Run(sb, nil); err == nil {
+	if err := new(exec.PipedExec).Command("git", "rev-parse", "HEAD").WorkingDir(dir).Run(sb, os.Stderr); err == nil {
 		gitCommitHash = strings.TrimSpace(sb.String())
 	}
 

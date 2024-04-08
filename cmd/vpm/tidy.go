@@ -35,7 +35,7 @@ func newTidyCmd() *cobra.Command {
 			return tidy(compileRes.AppDef, compileRes.ModulePath, params.Dir)
 		},
 	}
-	cmd.Flags().StringVarP(&params.Dir, "change-dir", "C", "", "Change to dir before running the command. Any files named on the command line are interpreted after changing directories. If used, this flag must be the first one in the command line.")
+	initGlobalFlags(cmd, &params)
 	return cmd
 
 }

@@ -72,3 +72,8 @@ func makeFirstLetterSmall(s string) string {
 	}
 	return strings.ToLower(s[0:1]) + s[1:]
 }
+
+func initGlobalFlags(cmd *cobra.Command, params *vpmParams) {
+	cmd.SilenceErrors = true
+	cmd.Flags().StringVarP(&params.Dir, "change-dir", "C", "", "Change to dir before running the command. Any files named on the command line are interpreted after changing directories. If used, this flag must be the first one in the command line.")
+}

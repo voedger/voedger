@@ -8,6 +8,7 @@ package main
 import (
 	"fmt"
 	"go/format"
+	"io"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -15,6 +16,7 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/untillpro/goutils/exec"
+	"github.com/untillpro/goutils/logger"
 
 	"github.com/voedger/voedger/pkg/compile"
 )
@@ -29,13 +31,10 @@ func newInitCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			if len(args) == 0 {
-				return fmt.Errorf(packagePathIsNotDeterminedErrFormat, params.Dir)
-			}
-			return initPackage(params.Dir, args[0])
+			return initPackage(params.Dir, params.PackagePath)
 		},
 	}
-	cmd.Flags().StringVarP(&params.Dir, "change-dir", "C", "", "Change to dir before running the command. Any files named on the command line are interpreted after changing directories. If used, this flag must be the first one in the command line.")
+	initGlobalFlags(cmd, &params)
 	return cmd
 
 }
@@ -54,8 +53,11 @@ func initPackage(dir, packagePath string) error {
 }
 
 func execGoModTidy(dir string) error {
-	// TODO: go mod tidy's output must be logged to the user as well if error occurs
-	return new(exec.PipedExec).Command("go", "mod", "tidy").WorkingDir(dir).Run(nil, nil)
+	var stdout io.Writer
+	if logger.IsVerbose() {
+		stdout = os.Stdout
+	}
+	return new(exec.PipedExec).Command("go", "mod", "tidy").WorkingDir(dir).Run(stdout, os.Stderr)
 }
 
 func createGoMod(dir, packagePath string) error {
@@ -113,8 +115,11 @@ func createPackagesGen(imports []string, dir string, recreate bool) error {
 }
 
 func execGoGet(goModDir, dependencyToGet string) error {
-	// TODO: go mod tidy's output must be logged to the user as well if error occurs
-	return new(exec.PipedExec).Command("go", "get", fmt.Sprintf("%s@main", dependencyToGet)).WorkingDir(goModDir).Run(nil, nil)
+	var stdout io.Writer
+	if logger.IsVerbose() {
+		stdout = os.Stdout
+	}
+	return new(exec.PipedExec).Command("go", "get", fmt.Sprintf("%s@main", dependencyToGet)).WorkingDir(goModDir).Run(stdout, os.Stderr)
 }
 
 func exists(filePath string) (exists bool, err error) {

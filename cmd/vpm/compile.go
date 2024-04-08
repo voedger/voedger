@@ -54,14 +54,10 @@ func makeAbsPath(dir string) (string, error) {
 	return dir, nil
 }
 
-func initGlobalFlags(cmd *cobra.Command, params *vpmParams) {
-	cmd.SilenceErrors = true
-	cmd.Flags().StringVarP(&params.Dir, "change-dir", "C", "", "Change to dir before running the command. Any files named on the command line are interpreted after changing directories. If used, this flag must be the first one in the command line.")
-}
-
 func prepareParams(params vpmParams, args []string) (newParams vpmParams, err error) {
 	if len(args) > 0 {
 		params.TargetDir = filepath.Clean(args[0])
+		params.PackagePath = args[0]
 	}
 	newParams = params
 	newParams.Dir, err = makeAbsPath(params.Dir)
