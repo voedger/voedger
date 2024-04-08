@@ -72,7 +72,8 @@ flowchart TD
     Processor --> |has| IState
     IState -.-> |passed to| safestate.Provide
     IState -.-> |"passed to Invoke(...)"| IExtensionEngine
-    safestate.Provide -.-> |called by| IExtensionEngineWazero
+%%    safestate.Provide -.-> |called by| IExtensionEngineWazero
+IExtensionEngineWazero -.-> |calls| safestate.Provide
 
     Test -.-> |calls| Extension
     clientStateAPI -.-> |used by|Extension
