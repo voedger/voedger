@@ -16,22 +16,15 @@ import (
 	"github.com/voedger/voedger/pkg/compile"
 )
 
-func newCompileCmd() *cobra.Command {
-	params := vpmParams{}
+func newCompileCmd(params *vpmParams) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "compile",
 		Short: "compile voedger application",
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
-			params, err = prepareParams(cmd, params, args)
-			if err != nil {
-				return err
-			}
-
 			_, err = compile.Compile(params.Dir)
 			return
 		},
 	}
-	initGlobalFlags(cmd, &params)
 	return cmd
 }
 
@@ -55,7 +48,7 @@ func makeAbsPath(dir string) (string, error) {
 	return dir, nil
 }
 
-func prepareParams(cmd *cobra.Command, params vpmParams, args []string) (newParams vpmParams, err error) {
+func prepareParams(cmd *cobra.Command, params *vpmParams, args []string) (err error) {
 	if len(args) > 0 {
 		switch {
 		case strings.Contains(cmd.Use, "init"):
@@ -64,16 +57,15 @@ func prepareParams(cmd *cobra.Command, params vpmParams, args []string) (newPara
 			params.TargetDir = filepath.Clean(args[0])
 		}
 	}
-	newParams = params
-	newParams.Dir, err = makeAbsPath(params.Dir)
+	params.Dir, err = makeAbsPath(params.Dir)
 	if err != nil {
 		return
 	}
-	if newParams.IgnoreFile != "" {
-		newParams.IgnoreFile = filepath.Clean(newParams.IgnoreFile)
+	if params.IgnoreFile != "" {
+		params.IgnoreFile = filepath.Clean(params.IgnoreFile)
 	}
-	if newParams.TargetDir == "" {
-		newParams.TargetDir = newParams.Dir
+	if params.TargetDir == "" {
+		params.TargetDir = params.Dir
 	}
-	return
+	return nil
 }

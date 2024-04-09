@@ -22,17 +22,12 @@ import (
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-func newCompatCmd() *cobra.Command {
-	params := vpmParams{}
+func newCompatCmd(params *vpmParams) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "compat [baseline-folder]",
+		Use:   "compat baseline-folder",
 		Short: "check backward compatibility",
-		Args:  showHelpIfLackOfArgs(1),
+		Args:  showHelpIfNotExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
-			params, err = prepareParams(cmd, params, args)
-			if err != nil {
-				return err
-			}
 			ignores, err := readIgnoreFile(params.IgnoreFile)
 			if err != nil {
 				return err
@@ -44,13 +39,12 @@ func newCompatCmd() *cobra.Command {
 			return compat(compileRes, params, ignores)
 		},
 	}
-	initGlobalFlags(cmd, &params)
 	cmd.Flags().StringVarP(&params.IgnoreFile, "ignore", "", "", "path to yaml file which contains list of errors to be ignored")
 	return cmd
 }
 
 // compat checks compatibility of schemas in dir versus baseline schemas in target dir
-func compat(compileRes *compile.Result, params vpmParams, ignores [][]string) error {
+func compat(compileRes *compile.Result, params *vpmParams, ignores [][]string) error {
 	baselineDir := params.TargetDir
 	var errs []error
 	baselineAppDef, err := appDefFromBaselineDir(baselineDir)
@@ -193,10 +187,11 @@ func splitIgnorePaths(ignores []string) (res [][]string) {
 	return
 }
 
-func showHelpIfLackOfArgs(n int) cobra.PositionalArgs {
+func showHelpIfNotExactArgs(n int) cobra.PositionalArgs {
 	return func(cmd *cobra.Command, args []string) error {
-		if len(args) < n {
-			return cmd.Help()
+		if len(args) != n {
+			_ = cmd.Help()
+			return errors.New("unexpected args provided")
 		}
 		return nil
 	}

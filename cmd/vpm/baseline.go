@@ -20,17 +20,12 @@ import (
 	"github.com/voedger/voedger/pkg/compile"
 )
 
-func newBaselineCmd() *cobra.Command {
-	params := vpmParams{}
+func newBaselineCmd(params *vpmParams) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "baseline [baseline-folder]",
+		Use:   "baseline baseline-folder",
 		Short: "create baseline schemas",
-		Args:  showHelpIfLackOfArgs(1),
+		Args:  showHelpIfNotExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
-			params, err = prepareParams(cmd, params, args)
-			if err != nil {
-				return err
-			}
 			compileRes, err := compile.Compile(params.Dir)
 			if err != nil {
 				return err
@@ -38,7 +33,6 @@ func newBaselineCmd() *cobra.Command {
 			return baseline(compileRes, params.Dir, params.TargetDir)
 		},
 	}
-	initGlobalFlags(cmd, &params)
 	return cmd
 }
 

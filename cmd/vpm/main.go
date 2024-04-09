@@ -27,21 +27,26 @@ func main() {
 }
 
 func execRootCmd(args []string, ver string) error {
+	params := &vpmParams{}
 	rootCmd := cobrau.PrepareRootCmd(
 		"vpm",
 		"",
 		args,
 		ver,
-		newCompileCmd(),
-		newBaselineCmd(),
-		newCompatCmd(),
-		newOrmCmd(),
-		newInitCmd(),
-		newTidyCmd(),
+		newCompileCmd(params),
+		newBaselineCmd(params),
+		newCompatCmd(params),
+		newOrmCmd(params),
+		newInitCmd(params),
+		newTidyCmd(params),
 	)
 	rootCmd.InitDefaultHelpCmd()
 	rootCmd.InitDefaultCompletionCmd()
 	correctCommandTexts(rootCmd)
+	initGlobalFlags(rootCmd, params)
+	rootCmd.PersistentPreRunE = func(cmd *cobra.Command, args []string) error {
+		return prepareParams(cmd, params, args)
+	}
 	return cobrau.ExecCommandAndCatchInterrupt(rootCmd)
 }
 
@@ -75,5 +80,5 @@ func makeFirstLetterSmall(s string) string {
 
 func initGlobalFlags(cmd *cobra.Command, params *vpmParams) {
 	cmd.SilenceErrors = true
-	cmd.Flags().StringVarP(&params.Dir, "change-dir", "C", "", "Change to dir before running the command. Any files named on the command line are interpreted after changing directories. If used, this flag must be the first one in the command line.")
+	cmd.PersistentFlags().StringVarP(&params.Dir, "change-dir", "C", "", "change to dir before running the command. Any files named on the command line are interpreted after changing directories")
 }

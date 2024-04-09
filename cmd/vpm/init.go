@@ -17,26 +17,22 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/untillpro/goutils/exec"
 	"github.com/untillpro/goutils/logger"
+	"golang.org/x/mod/semver"
 
 	"github.com/voedger/voedger/pkg/compile"
 )
 
 var minimalRequiredGoVersionValue = minimalRequiredGoVersion
 
-func newInitCmd() *cobra.Command {
-	params := vpmParams{}
+func newInitCmd(params *vpmParams) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "init",
+		Use:   "init module-path",
 		Short: "initialize a new package",
+		Args:  showHelpIfNotExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
-			params, err = prepareParams(cmd, params, args)
-			if err != nil {
-				return err
-			}
 			return initPackage(params.Dir, params.PackagePath)
 		},
 	}
-	initGlobalFlags(cmd, &params)
 	return cmd
 
 }
@@ -77,7 +73,7 @@ func createGoMod(dir, packagePath string) error {
 	goVersion := runtime.Version()
 	goVersionNumber := strings.TrimSpace(strings.TrimPrefix(goVersion, "go"))
 	if !checkGoVersion(goVersionNumber) {
-		return fmt.Errorf(unsupportedGoVersionErrFormat, goVersionNumber, minimalRequiredGoVersion)
+		return fmt.Errorf(unsupportedGoVersionErrFormat, goVersionNumber)
 	}
 
 	goModContent := fmt.Sprintf(goModContentTemplate, packagePath, goVersionNumber)
@@ -91,19 +87,7 @@ func createGoMod(dir, packagePath string) error {
 }
 
 func checkGoVersion(goVersionNumber string) bool {
-	parts := strings.Split(goVersionNumber, ".")
-	minParts := strings.Split(minimalRequiredGoVersionValue, ".")
-	for i, minPart := range minParts {
-		if i >= len(parts) {
-			return false
-		}
-		if parts[i] > minPart {
-			return true
-		} else if parts[i] < minPart {
-			return false
-		}
-	}
-	return true
+	return semver.Compare("v"+goVersionNumber, "v"+minimalRequiredGoVersionValue) >= 0
 }
 
 func createPackagesGen(imports []string, dir string, recreate bool) error {
