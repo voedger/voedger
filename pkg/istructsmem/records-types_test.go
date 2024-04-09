@@ -185,3 +185,53 @@ func Test_RecordsRead(t *testing.T) {
 		require.ErrorIs(err, ErrUnknownCodec)
 	})
 }
+
+func Test_RecordsPutJSON(t *testing.T) {
+	require := require.New(t)
+	test := test()
+
+	storage := teststore.NewStorage()
+	storageProvider := teststore.NewStorageProvider(storage)
+
+	provider := Provide(test.AppConfigs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
+
+	app, err := provider.AppStructs(test.appName)
+	require.NoError(err)
+
+	testJSON := make(map[appdef.FieldName]any)
+	testJSON[appdef.SystemField_QName] = test.testCDoc.String()
+	testJSON[appdef.SystemField_ID] = float64(100500)
+	testJSON["int32"] = float64(1)
+	testJSON["int64"] = float64(2)
+	testJSON["float32"] = float64(3)
+	testJSON["float64"] = float64(4)
+	// cspell:disable
+	testJSON["bytes"] = `AQIDBA==`
+	// cspell:enable
+	testJSON["string"] = `naked 🔫`
+	testJSON["QName"] = test.testCRec.String()
+	testJSON["bool"] = true
+	testJSON["RecordID"] = float64(100501)
+
+	t.Run("should be ok to put record from JSON", func(t *testing.T) {
+		err := app.Records().PutJSON(test.workspace, testJSON)
+		require.NoError(err)
+
+		t.Run("should be ok to read record", func(t *testing.T) {
+			rec2, err := app.Records().Get(test.workspace, true, 100500)
+			require.NoError(err)
+
+			require.EqualValues(test.testCDoc, rec2.QName())
+			require.EqualValues(100500, rec2.ID())
+			require.EqualValues(1, rec2.AsInt32("int32"))
+			require.EqualValues(2, rec2.AsInt64("int64"))
+			require.EqualValues(3, rec2.AsFloat32("float32"))
+			require.EqualValues(4, rec2.AsFloat64("float64"))
+			require.Equal([]byte{1, 2, 3, 4}, rec2.AsBytes("bytes"))
+			require.Equal(`naked 🔫`, rec2.AsString("string"))
+			require.Equal(test.testCRec, rec2.AsQName("QName"))
+			require.True(rec2.AsBool("bool"))
+			require.EqualValues(100501, rec2.AsRecordID("RecordID"))
+		})
+	})
+}

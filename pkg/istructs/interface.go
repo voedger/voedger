@@ -102,6 +102,9 @@ type IRecords interface {
 	// Panics if event is not valid
 	Apply2(event IPLogEvent, cb func(r IRecord)) (err error)
 
+	// @ConcurrentAccess RW
+	PutJSON(WSID, map[appdef.FieldName]any) error
+
 	// @ConcurrentAccess R
 	// Can read GDoc, CDoc, ODoc, WDoc records
 	// If record not found NullRecord with QName() == NullQName is returned

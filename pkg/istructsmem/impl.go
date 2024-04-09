@@ -568,3 +568,26 @@ func (recs *appRecordsType) GetSingleton(workspace istructs.WSID, qName appdef.Q
 	}
 	return recs.Get(workspace, true, id)
 }
+
+// istructs.IRecords.PutJSON
+func (recs *appRecordsType) PutJSON(ws istructs.WSID, j map[appdef.FieldName]any) error {
+	rec := newRecord(recs.app.config)
+
+	rec.PutFromJSON(j)
+
+	if rec.QName() == appdef.NullQName {
+		return fmt.Errorf("can not put record with null QName: %w", ErrFieldIsEmpty)
+	}
+	if rec.ID() == istructs.NullRecordID {
+		return fmt.Errorf("can not put record with null ID: %w", ErrFieldIsEmpty)
+	}
+	if rec.ID().IsRaw() {
+		return fmt.Errorf("can not put record with raw ID: %w", ErrRawRecordIDUnexpected)
+	}
+
+	if err := rec.build(); err != nil {
+		return err
+	}
+
+	return recs.putRecord(ws, rec.ID(), rec.storeToBytes())
+}

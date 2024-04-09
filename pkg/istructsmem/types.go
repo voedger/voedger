@@ -757,6 +757,22 @@ func (row *rowType) PutFloat64(name appdef.FieldName, value float64) {
 
 // istructs.IRowWriter.PutFromJSON
 func (row *rowType) PutFromJSON(j map[appdef.FieldName]any) {
+	if row.QName() == appdef.NullQName {
+		if n, ok := j[appdef.SystemField_QName]; ok {
+			if n, ok := n.(string); ok {
+				qName, err := appdef.ParseQName(n)
+				if err != nil {
+					row.collectErrorf(errFieldConvertErrorWrap, appdef.SystemField_QName, n, appdef.DataKind_QName.TrimString(), err)
+					return
+				}
+				row.setQName(qName)
+			} else {
+				row.collectErrorf(errFieldConvertErrorWrap, appdef.SystemField_QName, n, appdef.DataKind_QName.TrimString(), ErrWrongFieldType)
+				return
+			}
+		}
+	}
+
 	for n, v := range j {
 		switch fv := v.(type) {
 		case float64:
