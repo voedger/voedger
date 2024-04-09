@@ -70,7 +70,7 @@ type IRowReader interface {
 	AsRecordID(appdef.FieldName) RecordID
 
 	// consts.NullRecord will be returned as null-values
-	RecordIDs(includeNulls bool, cb func(name appdef.FieldName, value RecordID))
+	RecordIDs(includeNulls bool, cb func(appdef.FieldName, RecordID))
 	FieldNames(cb func(appdef.FieldName))
 }
 
@@ -81,7 +81,7 @@ type IRowWriter interface {
 	PutInt32(appdef.FieldName, int32)
 	PutInt64(appdef.FieldName, int64)
 	PutFloat32(appdef.FieldName, float32)
-	PutFloat64(string, float64)
+	PutFloat64(appdef.FieldName, float64)
 
 	// Puts value into bytes or raw data field.
 	PutBytes(appdef.FieldName, []byte)

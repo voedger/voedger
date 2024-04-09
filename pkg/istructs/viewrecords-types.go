@@ -45,8 +45,8 @@ type IValue interface {
 
 	// The following methods panic if cell type does not match
 
-	AsRecord(name string) (record IRecord)
-	AsEvent(name string) (event IDbEvent)
+	AsRecord(appdef.FieldName) IRecord
+	AsEvent(appdef.FieldName) IDbEvent
 }
 
 type IKey interface {
