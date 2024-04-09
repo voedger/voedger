@@ -62,6 +62,8 @@ const (
 	goSumFileName                       = "go.sum"
 	packagesGenFileName                 = "packages_gen.go"
 	packagePathIsNotDeterminedErrFormat = "vpm: cannot determine module path for source directory %s"
+	unsupportedGoVersionErrFormat       = "vpm: unsupported go version %s, minimal required go version is %s"
+	minimalRequiredGoVersion            = "1.22.2"
 	goModContentTemplate                = `module %s
 
 go %s

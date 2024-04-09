@@ -21,13 +21,15 @@ import (
 	"github.com/voedger/voedger/pkg/compile"
 )
 
+var minimalRequiredGoVersionValue = minimalRequiredGoVersion
+
 func newInitCmd() *cobra.Command {
 	params := vpmParams{}
 	cmd := &cobra.Command{
 		Use:   "init",
 		Short: "initialize a new package",
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
-			params, err = prepareParams(params, args)
+			params, err = prepareParams(cmd, params, args)
 			if err != nil {
 				return err
 			}
@@ -74,6 +76,10 @@ func createGoMod(dir, packagePath string) error {
 
 	goVersion := runtime.Version()
 	goVersionNumber := strings.TrimSpace(strings.TrimPrefix(goVersion, "go"))
+	if !checkGoVersion(goVersionNumber) {
+		return fmt.Errorf(unsupportedGoVersionErrFormat, goVersionNumber, minimalRequiredGoVersion)
+	}
+
 	goModContent := fmt.Sprintf(goModContentTemplate, packagePath, goVersionNumber)
 	if err := os.WriteFile(filePath, []byte(goModContent), defaultPermissions); err != nil {
 		return err
@@ -82,6 +88,22 @@ func createGoMod(dir, packagePath string) error {
 		return err
 	}
 	return nil
+}
+
+func checkGoVersion(goVersionNumber string) bool {
+	parts := strings.Split(goVersionNumber, ".")
+	minParts := strings.Split(minimalRequiredGoVersionValue, ".")
+	for i, minPart := range minParts {
+		if i >= len(parts) {
+			return false
+		}
+		if parts[i] > minPart {
+			return true
+		} else if parts[i] < minPart {
+			return false
+		}
+	}
+	return true
 }
 
 func createPackagesGen(imports []string, dir string, recreate bool) error {

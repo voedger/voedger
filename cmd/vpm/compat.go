@@ -29,7 +29,7 @@ func newCompatCmd() *cobra.Command {
 		Short: "check backward compatibility",
 		Args:  showHelpIfLackOfArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
-			params, err = prepareParams(params, args)
+			params, err = prepareParams(cmd, params, args)
 			if err != nil {
 				return err
 			}

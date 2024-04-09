@@ -314,14 +314,23 @@ func TestInitBasicUsage(t *testing.T) {
 	}
 	require := require.New(t)
 
-	dir := t.TempDir()
 	packagePath := "github.com/account/repo"
+
+	// test minimal required go version in normal case
+	dir := t.TempDir()
+	minimalRequiredGoVersionValue = "1.12"
 	err := execRootCmd([]string{"vpm", "init", "-C", dir, packagePath}, "1.0.0")
 	require.NoError(err)
-
 	require.FileExists(filepath.Join(dir, goModFileName))
 	require.FileExists(filepath.Join(dir, goSumFileName))
 	require.FileExists(filepath.Join(dir, packagesGenFileName))
+
+	// test unsupported go version
+	dir = t.TempDir()
+	minimalRequiredGoVersionValue = "9.99.999"
+	err = execRootCmd([]string{"vpm", "init", "-C", dir, packagePath}, "1.0.0")
+	require.Error(err)
+	require.Contains(err.Error(), "unsupported go version")
 }
 
 func TestTidyBasicUsage(t *testing.T) {

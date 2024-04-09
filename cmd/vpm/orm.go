@@ -34,7 +34,7 @@ func newOrmCmd() *cobra.Command {
 		Use:   "orm [--header-file]",
 		Short: "generate orm for package",
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
-			params, err = prepareParams(params, args)
+			params, err = prepareParams(cmd, params, args)
 			if err != nil {
 				return err
 			}
@@ -53,7 +53,7 @@ func newOrmCmd() *cobra.Command {
 
 // generateOrm generates ORM from the given working directory
 func generateOrm(compileRes *compile.Result, params vpmParams) error {
-	dir, err := createOrmDir(params.TargetDir)
+	dir, err := createOrmDir(params.Dir)
 	if err != nil {
 		return err
 	}

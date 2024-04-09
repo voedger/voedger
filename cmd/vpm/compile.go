@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -21,7 +22,7 @@ func newCompileCmd() *cobra.Command {
 		Use:   "compile",
 		Short: "compile voedger application",
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
-			params, err = prepareParams(params, args)
+			params, err = prepareParams(cmd, params, args)
 			if err != nil {
 				return err
 			}
@@ -54,10 +55,14 @@ func makeAbsPath(dir string) (string, error) {
 	return dir, nil
 }
 
-func prepareParams(params vpmParams, args []string) (newParams vpmParams, err error) {
+func prepareParams(cmd *cobra.Command, params vpmParams, args []string) (newParams vpmParams, err error) {
 	if len(args) > 0 {
-		params.TargetDir = filepath.Clean(args[0])
-		params.PackagePath = args[0]
+		switch {
+		case strings.Contains(cmd.Use, "init"):
+			params.PackagePath = args[0]
+		case strings.Contains(cmd.Use, "baseline") || strings.Contains(cmd.Use, "compat"):
+			params.TargetDir = filepath.Clean(args[0])
+		}
 	}
 	newParams = params
 	newParams.Dir, err = makeAbsPath(params.Dir)
