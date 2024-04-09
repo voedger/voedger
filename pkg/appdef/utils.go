@@ -49,6 +49,11 @@ func ValidIdent(ident string) (bool, error) {
 	return true, nil
 }
 
+// Returns is string is valid identifier and error if not
+func ValidFieldName(ident FieldName) (bool, error) {
+	return ValidIdent(string(ident))
+}
+
 // TODO: implement
 // Parsing a URI Reference with a Regular Expression [RFC3986, app B](https://datatracker.ietf.org/doc/html/rfc3986#appendix-B)
 func ValidPackagePath(path string) (bool, error) {

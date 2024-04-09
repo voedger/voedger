@@ -33,8 +33,8 @@ func Test_def_AddUnique(t *testing.T) {
 		AddField("sex", DataKind_bool, false).
 		AddField("eMail", DataKind_string, false)
 	doc.
-		AddUnique(un1, []string{"eMail"}).
-		AddUnique(un2, []string{"name", "surname", "lastName"})
+		AddUnique(un1, []FieldName{"eMail"}).
+		AddUnique(un2, []FieldName{"name", "surname", "lastName"})
 
 	t.Run("test is ok", func(t *testing.T) {
 		app, err := adb.Build()
@@ -75,36 +75,36 @@ func Test_def_AddUnique(t *testing.T) {
 	t.Run("test panics", func(t *testing.T) {
 
 		require.Panics(func() {
-			doc.AddUnique(NullQName, []string{"sex"})
+			doc.AddUnique(NullQName, []FieldName{"sex"})
 		}, "panics if empty unique name")
 
 		require.Panics(func() {
-			doc.AddUnique(NewQName("naked", "🔫"), []string{"sex"})
+			doc.AddUnique(NewQName("naked", "🔫"), []FieldName{"sex"})
 		}, "panics if invalid unique name")
 
 		require.Panics(func() {
-			doc.AddUnique(un1, []string{"name", "surname", "lastName"})
+			doc.AddUnique(un1, []FieldName{"name", "surname", "lastName"})
 		}, "panics unique with name is already exists")
 
 		require.Panics(func() {
-			doc.AddUnique(qName, []string{"name", "surname", "lastName"})
+			doc.AddUnique(qName, []FieldName{"name", "surname", "lastName"})
 		}, "panics if type with unique name is exists")
 
 		require.Panics(func() {
-			doc.AddUnique(NewQName("test", "user$uniqueEmpty"), []string{})
+			doc.AddUnique(NewQName("test", "user$uniqueEmpty"), []FieldName{})
 		}, "panics if fields set is empty")
 
 		require.Panics(func() {
-			doc.AddUnique(NewQName("test", "user$uniqueFiledDup"), []string{"birthday", "birthday"})
+			doc.AddUnique(NewQName("test", "user$uniqueFiledDup"), []FieldName{"birthday", "birthday"})
 		}, "if fields has duplicates")
 
 		t.Run("panics if too many fields", func(t *testing.T) {
 			adb := New()
 			adb.AddPackage("test", "test.com/test")
 			rec := adb.AddCRecord(NewQName("test", "rec"))
-			fldNames := []string{}
+			fldNames := []FieldName{}
 			for i := 0; i <= MaxTypeUniqueFieldsCount; i++ {
-				n := fmt.Sprintf("f_%#x", i)
+				n := FieldName(fmt.Sprintf("f_%#x", i))
 				rec.AddField(n, DataKind_bool, false)
 				fldNames = append(fldNames, n)
 			}
@@ -112,19 +112,19 @@ func Test_def_AddUnique(t *testing.T) {
 		})
 
 		require.Panics(func() {
-			doc.AddUnique(NewQName("test", "user$uniqueFieldsSetDup"), []string{"name", "surname", "lastName"})
+			doc.AddUnique(NewQName("test", "user$uniqueFieldsSetDup"), []FieldName{"name", "surname", "lastName"})
 		}, "if fields set is already exists")
 
 		require.Panics(func() {
-			doc.AddUnique(NewQName("test", "user$uniqueFieldsSetOverlaps"), []string{"surname"})
+			doc.AddUnique(NewQName("test", "user$uniqueFieldsSetOverlaps"), []FieldName{"surname"})
 		}, "if fields set overlaps exists")
 
 		require.Panics(func() {
-			doc.AddUnique(NewQName("test", "user$uniqueFieldsSetOverlapped"), []string{"eMail", "birthday"})
+			doc.AddUnique(NewQName("test", "user$uniqueFieldsSetOverlapped"), []FieldName{"eMail", "birthday"})
 		}, "if fields set overlapped by exists")
 
 		require.Panics(func() {
-			doc.AddUnique(NewQName("test", "user$uniqueFieldsUnknown"), []string{"unknown"})
+			doc.AddUnique(NewQName("test", "user$uniqueFieldsUnknown"), []FieldName{"unknown"})
 		}, "if fields not exists")
 
 		t.Run("panics if too many uniques", func(t *testing.T) {
@@ -132,12 +132,12 @@ func Test_def_AddUnique(t *testing.T) {
 			adb.AddPackage("test", "test.com/test")
 			rec := adb.AddCRecord(NewQName("test", "rec"))
 			for i := 0; i < MaxTypeUniqueCount; i++ {
-				n := fmt.Sprintf("f_%#x", i)
+				n := FieldName(fmt.Sprintf("f_%#x", i))
 				rec.AddField(n, DataKind_int32, false)
-				rec.AddUnique(NewQName("test", fmt.Sprintf("rec$uniques$%s", n)), []string{n})
+				rec.AddUnique(NewQName("test", fmt.Sprintf("rec$uniques$%s", n)), []FieldName{n})
 			}
 			rec.AddField("lastStraw", DataKind_int32, false)
-			require.Panics(func() { rec.AddUnique(NewQName("test", "rec$uniques$lastStraw"), []string{"lastStraw"}) })
+			require.Panics(func() { rec.AddUnique(NewQName("test", "rec$uniques$lastStraw"), []FieldName{"lastStraw"}) })
 		})
 	})
 }
