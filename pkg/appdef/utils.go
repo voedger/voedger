@@ -49,9 +49,9 @@ func ValidIdent(ident string) (bool, error) {
 	return true, nil
 }
 
-// Returns is string is valid identifier and error if not
+// Returns is string is valid field name and error if not
 func ValidFieldName(ident FieldName) (bool, error) {
-	return ValidIdent(string(ident))
+	return ValidIdent(ident)
 }
 
 // TODO: implement

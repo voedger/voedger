@@ -151,7 +151,7 @@ func Test_AddField(t *testing.T) {
 		adb.AddPackage("test", "test.com/test")
 		o := adb.AddObject(NewQName("test", "obj"))
 		for i := 0; i < MaxTypeFieldCount-2; i++ { // -2 because sys.QName, sys.Container
-			o.AddField(FieldName(fmt.Sprintf("f_%#x", i)), DataKind_bool, false)
+			o.AddField(fmt.Sprintf("f_%#x", i), DataKind_bool, false)
 		}
 		require.Panics(func() { o.AddField("errorField", DataKind_bool, true) })
 	})
