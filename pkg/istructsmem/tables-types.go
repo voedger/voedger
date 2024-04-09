@@ -56,7 +56,7 @@ func NewNullRecord(id istructs.RecordID) istructs.IRecord {
 }
 
 // istructs.ICUDRow.ModifiedFields
-func (row *rowType) ModifiedFields(cb func(fieldName string, newValue interface{})) {
+func (row *rowType) ModifiedFields(cb func(fieldName appdef.FieldName, newValue interface{})) {
 	row.dyB.IterateFields(nil, func(name string, value interface{}) bool {
 		cb(name, value)
 		return true

@@ -330,7 +330,7 @@ func Test_rowType_PutFromJSON(t *testing.T) {
 
 	bld := test.AppStructs.ObjectBuilder(test.testRow)
 
-	data := map[string]any{
+	data := map[appdef.FieldName]any{
 		"int32":    float64(1),
 		"int64":    float64(2),
 		"float32":  float64(3),
@@ -628,10 +628,10 @@ func Test_rowType_FieldNames(t *testing.T) {
 		row := makeRow(test.AppCfg)
 
 		cnt := 0
-		row.FieldNames(func(fieldName string) {
+		row.FieldNames(func(fieldName appdef.FieldName) {
 			cnt++
 		})
-		require.Equal(0, cnt)
+		require.Zero(cnt)
 	})
 
 	t.Run("new test row must have only QName field", func(t *testing.T) {
@@ -639,7 +639,7 @@ func Test_rowType_FieldNames(t *testing.T) {
 		row.setQName(test.testRow)
 
 		cnt := 0
-		row.FieldNames(func(fieldName string) {
+		row.FieldNames(func(fieldName appdef.FieldName) {
 			require.Equal(appdef.SystemField_QName, fieldName)
 			cnt++
 		})
@@ -650,8 +650,8 @@ func Test_rowType_FieldNames(t *testing.T) {
 		row := newTestRow()
 
 		cnt := 0
-		names := make(map[string]bool)
-		row.FieldNames(func(fieldName string) {
+		names := make(map[appdef.FieldName]bool)
+		row.FieldNames(func(fieldName appdef.FieldName) {
 			require.False(names[fieldName])
 			names[fieldName] = true
 			cnt++
@@ -664,8 +664,8 @@ func Test_rowType_FieldNames(t *testing.T) {
 		rec.PutRecordID(appdef.SystemField_ParentID, 5)
 		rec.PutString(appdef.SystemField_Container, "rec")
 
-		sys := make(map[string]interface{})
-		rec.FieldNames(func(fieldName string) {
+		sys := make(map[appdef.FieldName]interface{})
+		rec.FieldNames(func(fieldName appdef.FieldName) {
 			if appdef.IsSysField(fieldName) {
 				switch rec.fieldDef(fieldName).DataKind() {
 				case appdef.DataKind_QName:

@@ -413,7 +413,7 @@ func TestModifiedFields(t *testing.T) {
 
 	t.Run("no modifications", func(t *testing.T) {
 		rec := newRecord(test.AppCfg)
-		rec.ModifiedFields(func(fieldName string, newValue interface{}) {
+		rec.ModifiedFields(func(fieldName appdef.FieldName, newValue interface{}) {
 			t.Fail()
 		})
 	})
@@ -423,11 +423,11 @@ func TestModifiedFields(t *testing.T) {
 		rec.PutInt32("int32", 42)
 		rec.PutBool(appdef.SystemField_IsActive, false) // should be mentioned on ModifiedFields()
 		require.NoError(rec.build())
-		actualModifications := map[string]bool{}
-		rec.ModifiedFields(func(fieldName string, newValue interface{}) {
+		actualModifications := map[appdef.FieldName]bool{}
+		rec.ModifiedFields(func(fieldName appdef.FieldName, newValue interface{}) {
 			actualModifications[fieldName] = true
 		})
-		expectedModifications := map[string]bool{
+		expectedModifications := map[appdef.FieldName]bool{
 			"int32":                     true,
 			appdef.SystemField_IsActive: true,
 		}
