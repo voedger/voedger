@@ -104,7 +104,7 @@ func Test_def_AddUnique(t *testing.T) {
 			rec := adb.AddCRecord(NewQName("test", "rec"))
 			fldNames := []FieldName{}
 			for i := 0; i <= MaxTypeUniqueFieldsCount; i++ {
-				n := FieldName(fmt.Sprintf("f_%#x", i))
+				n := fmt.Sprintf("f_%#x", i)
 				rec.AddField(n, DataKind_bool, false)
 				fldNames = append(fldNames, n)
 			}
@@ -132,7 +132,7 @@ func Test_def_AddUnique(t *testing.T) {
 			adb.AddPackage("test", "test.com/test")
 			rec := adb.AddCRecord(NewQName("test", "rec"))
 			for i := 0; i < MaxTypeUniqueCount; i++ {
-				n := FieldName(fmt.Sprintf("f_%#x", i))
+				n := fmt.Sprintf("f_%#x", i)
 				rec.AddField(n, DataKind_int32, false)
 				rec.AddUnique(NewQName("test", fmt.Sprintf("rec$uniques$%s", n)), []FieldName{n})
 			}

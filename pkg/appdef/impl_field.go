@@ -82,7 +82,7 @@ func (fld *field) setVerify(k ...VerificationKind) {
 
 // Returns is field system
 func IsSysField(n FieldName) bool {
-	return strings.HasPrefix(string(n), SystemPackagePrefix) && // fast check
+	return strings.HasPrefix(n, SystemPackagePrefix) && // fast check
 		// then more accuracy
 		((n == SystemField_QName) ||
 			(n == SystemField_ID) ||
