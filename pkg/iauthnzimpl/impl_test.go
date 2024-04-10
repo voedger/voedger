@@ -1012,10 +1012,9 @@ type implIRecords struct {
 	data map[istructs.WSID]map[appdef.QName]map[istructs.RecordID]map[string]interface{}
 }
 
-func (r *implIRecords) Apply(event istructs.IPLogEvent) (err error) { panic("") }
-func (r *implIRecords) Apply2(event istructs.IPLogEvent, cb func(r istructs.IRecord)) (err error) {
-	panic("")
-}
+func (implIRecords) Apply(istructs.IPLogEvent) error                          { panic("") }
+func (implIRecords) Apply2(istructs.IPLogEvent, func(istructs.IRecord)) error { panic("") }
+func (implIRecords) PutJSON(istructs.WSID, map[appdef.FieldName]any) error    { panic("") }
 func (r *implIRecords) Get(wsid istructs.WSID, _ bool, id istructs.RecordID) (record istructs.IRecord, err error) {
 	if wsData, ok := r.data[wsid]; ok {
 		for qName, qNameRecs := range wsData {
@@ -1028,14 +1027,12 @@ func (r *implIRecords) Get(wsid istructs.WSID, _ bool, id istructs.RecordID) (re
 	}
 	return istructsmem.NewNullRecord(id), nil
 }
-func (r *implIRecords) GetBatch(workspace istructs.WSID, highConsistency bool, ids []istructs.RecordGetBatchItem) (err error) {
-	panic("")
-}
+func (implIRecords) GetBatch(istructs.WSID, bool, []istructs.RecordGetBatchItem) error { panic("") }
 func (r *implIRecords) GetSingleton(wsid istructs.WSID, qName appdef.QName) (record istructs.IRecord, err error) {
 	if wsData, ok := r.data[wsid]; ok {
 		if qNameRecs, ok := wsData[qName]; ok {
 			if len(qNameRecs) > 1 {
-				panic(">1 records for a signleton")
+				panic(">1 records for a singleton")
 			}
 			for _, data := range qNameRecs {
 				return &implIRecord{qName: qName, TestObject: coreutils.TestObject{Data: data}}, nil
@@ -1044,9 +1041,7 @@ func (r *implIRecords) GetSingleton(wsid istructs.WSID, qName appdef.QName) (rec
 	}
 	return istructsmem.NewNullRecord(istructs.NullRecordID), nil
 }
-func (r *implIRecords) Read(workspace istructs.WSID, highConsistency bool, id istructs.RecordID) (record istructs.IRecord, err error) {
-	panic("")
-}
+func (implIRecords) Read(istructs.WSID, bool, istructs.RecordID) (istructs.IRecord, error) { panic("") }
 
 type implIRecord struct {
 	coreutils.TestObject
