@@ -473,6 +473,11 @@ func (row *rowType) storeToBytes() []byte {
 	return buf.Bytes()
 }
 
+// returns row type definition
+func (row *rowType) typeDef() appdef.IType {
+	return row.typ
+}
+
 // verifyToken verifies specified token for specified field and returns successfully verified token payload value or error
 func (row *rowType) verifyToken(fld appdef.IField, token string) (value interface{}, err error) {
 	payload := payloads.VerifiedValuePayload{}
@@ -757,20 +762,23 @@ func (row *rowType) PutFloat64(name appdef.FieldName, value float64) {
 
 // istructs.IRowWriter.PutFromJSON
 func (row *rowType) PutFromJSON(j map[appdef.FieldName]any) {
-	if row.QName() == appdef.NullQName {
-		if n, ok := j[appdef.SystemField_QName]; ok {
-			if n, ok := n.(string); ok {
-				qName, err := appdef.ParseQName(n)
-				if err != nil {
-					row.collectErrorf(errFieldConvertErrorWrap, appdef.SystemField_QName, n, appdef.DataKind_QName.TrimString(), err)
-					return
-				}
-				row.setQName(qName)
-			} else {
-				row.collectErrorf(errFieldConvertErrorWrap, appdef.SystemField_QName, n, appdef.DataKind_QName.TrimString(), ErrWrongFieldType)
+	if n, ok := j[appdef.SystemField_QName]; ok {
+		if n, ok := n.(string); ok {
+			qName, err := appdef.ParseQName(n)
+			if err != nil {
+				row.collectErrorf(errFieldConvertErrorWrap, appdef.SystemField_QName, n, appdef.DataKind_QName.TrimString(), err)
 				return
 			}
+			row.setQName(qName)
+		} else {
+			row.collectErrorf(errFieldConvertErrorWrap, appdef.SystemField_QName, n, appdef.DataKind_QName.TrimString(), ErrWrongFieldType)
+			return
 		}
+	}
+
+	if (row.QName() == appdef.NullQName) && (len(j) > 0) {
+		row.collectErrorf("can not put record with null QName: %w", ErrFieldIsEmpty)
+		return
 	}
 
 	for n, v := range j {

@@ -575,18 +575,19 @@ func (recs *appRecordsType) PutJSON(ws istructs.WSID, j map[appdef.FieldName]any
 
 	rec.PutFromJSON(j)
 
-	if rec.QName() == appdef.NullQName {
-		return fmt.Errorf("can not put record with null QName: %w", ErrFieldIsEmpty)
-	}
-	if rec.ID() == istructs.NullRecordID {
-		return fmt.Errorf("can not put record with null ID: %w", ErrFieldIsEmpty)
-	}
-	if rec.ID().IsRaw() {
-		return fmt.Errorf("can not put record with raw ID: %w", ErrRawRecordIDUnexpected)
-	}
-
 	if err := rec.build(); err != nil {
 		return err
+	}
+
+	if _, ok := rec.typeDef().(appdef.IRecord); !ok {
+		return fmt.Errorf("%v is not record type: %w", rec.typeDef(), ErrWrongType)
+	}
+
+	if rec.ID() == istructs.NullRecordID {
+		return fmt.Errorf("can not put record with null %s: %w", appdef.SystemField_ID, ErrFieldIsEmpty)
+	}
+	if rec.ID().IsRaw() {
+		return fmt.Errorf("can not put record with raw %s: %w", appdef.SystemField_ID, ErrRawRecordIDUnexpected)
 	}
 
 	return recs.putRecord(ws, rec.ID(), rec.storeToBytes())

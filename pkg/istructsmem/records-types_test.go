@@ -234,4 +234,62 @@ func Test_RecordsPutJSON(t *testing.T) {
 			require.EqualValues(100501, rec2.AsRecordID("RecordID"))
 		})
 	})
+
+	t.Run("enum fails to put record from JSON", func(t *testing.T) {
+		var err error
+		t.Run("should fail to put record with invalid QName", func(t *testing.T) {
+			testJSON := make(map[appdef.FieldName]any)
+
+			testJSON[appdef.SystemField_QName] = 123
+			err = app.Records().PutJSON(test.workspace, testJSON)
+			require.ErrorIs(err, ErrWrongFieldType)
+			require.ErrorContains(err, appdef.SystemField_QName)
+
+			testJSON[appdef.SystemField_QName] = `naked 🔫`
+			err = app.Records().PutJSON(test.workspace, testJSON)
+			require.ErrorIs(err, appdef.ErrInvalidQNameStringRepresentation)
+			require.ErrorContains(err, appdef.SystemField_QName)
+
+			testJSON[appdef.SystemField_QName] = appdef.NullQName.String()
+			err = app.Records().PutJSON(test.workspace, testJSON)
+			require.ErrorIs(err, ErrFieldIsEmpty)
+			require.ErrorContains(err, `null QName`)
+
+			testJSON[appdef.SystemField_QName] = test.testObj.String()
+			err = app.Records().PutJSON(test.workspace, testJSON)
+			require.ErrorIs(err, ErrWrongType)
+			require.ErrorContains(err, test.testObj.String())
+		})
+
+		t.Run("should fail to put record with invalid RecordID", func(t *testing.T) {
+			testJSON := make(map[appdef.FieldName]any)
+			testJSON[appdef.SystemField_QName] = test.testCDoc.String()
+
+			err = app.Records().PutJSON(test.workspace, testJSON)
+			require.ErrorIs(err, ErrFieldIsEmpty)
+			require.ErrorContains(err, appdef.SystemField_ID)
+
+			testJSON[appdef.SystemField_ID] = float64(0)
+			err = app.Records().PutJSON(test.workspace, testJSON)
+			require.ErrorIs(err, ErrFieldIsEmpty)
+			require.ErrorContains(err, appdef.SystemField_ID)
+
+			testJSON[appdef.SystemField_ID] = float64(1)
+			err = app.Records().PutJSON(test.workspace, testJSON)
+			require.ErrorIs(err, ErrRawRecordIDUnexpected)
+			require.ErrorContains(err, appdef.SystemField_ID)
+		})
+
+		t.Run("should fail to put record with invalid data", func(t *testing.T) {
+			testJSON := make(map[appdef.FieldName]any)
+			testJSON[appdef.SystemField_QName] = test.testCDoc.String()
+			testJSON[appdef.SystemField_ID] = float64(100500)
+
+			testJSON["unknown field"] = `naked 🔫`
+
+			err = app.Records().PutJSON(test.workspace, testJSON)
+			require.ErrorIs(err, ErrNameNotFound)
+			require.ErrorContains(err, "unknown field")
+		})
+	})
 }

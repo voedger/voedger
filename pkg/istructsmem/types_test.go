@@ -25,12 +25,15 @@ func Test_rowNullType(t *testing.T) {
 
 	row.setQName(appdef.NullQName)
 	require.Equal(appdef.NullQName, row.QName())
+	require.Equal(appdef.NullType, row.typeDef())
 
 	row.setType(appdef.NullType)
 	require.Equal(appdef.NullQName, row.QName())
+	require.Equal(appdef.NullType, row.typeDef())
 
 	row.setType(nil)
 	require.Equal(appdef.NullQName, row.QName())
+	require.Equal(appdef.NullType, row.typeDef())
 }
 
 func Test_dynoBufValue(t *testing.T) {
