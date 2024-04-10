@@ -73,7 +73,7 @@ func saveBaselineInfo(compileRes *compile.Result, dir, baselineDir string) error
 	}
 
 	baselineInfoFilePath := filepath.Join(baselineDir, baselineInfoFileName)
-	if err := os.WriteFile(baselineInfoFilePath, content, defaultPermissions); err != nil {
+	if err := os.WriteFile(baselineInfoFilePath, content, coreutils.FileMode_rw_rw_rw_); err != nil {
 		return err
 	}
 	if logger.IsVerbose() {
@@ -85,7 +85,7 @@ func saveBaselineInfo(compileRes *compile.Result, dir, baselineDir string) error
 func saveBaselineSchemas(pkgFiles packageFiles, baselineDir string) error {
 	for qpn, files := range pkgFiles {
 		packageDir := filepath.Join(baselineDir, qpn)
-		if err := os.MkdirAll(packageDir, defaultPermissions); err != nil {
+		if err := os.MkdirAll(packageDir, coreutils.FileMode_rwxrwxrwx); err != nil {
 			return err
 		}
 		for _, file := range files {
@@ -97,7 +97,7 @@ func saveBaselineSchemas(pkgFiles packageFiles, baselineDir string) error {
 			if err != nil {
 				return err
 			}
-			if err := os.WriteFile(filePath, fileContent, defaultPermissions); err != nil {
+			if err := os.WriteFile(filePath, fileContent, coreutils.FileMode_rw_rw_rw_); err != nil {
 				return err
 			}
 			if logger.IsVerbose() {
@@ -118,5 +118,5 @@ func createBaselineDir(dir string) error {
 		return fmt.Errorf("baseline directory already exists: %s", dir)
 	}
 	pkgDir := filepath.Join(dir, pkgDirName)
-	return os.MkdirAll(pkgDir, defaultPermissions)
+	return os.MkdirAll(pkgDir, coreutils.FileMode_rwxrwxrwx)
 }

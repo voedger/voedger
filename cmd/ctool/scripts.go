@@ -18,7 +18,7 @@ import (
 
 	"github.com/untillpro/goutils/exec"
 	coreutils "github.com/voedger/voedger/pkg/utils"
-	"golang.org/x/crypto/ssh/terminal"
+	"golang.org/x/term"
 )
 
 //go:embed scripts/drafts/*
@@ -190,7 +190,7 @@ func prepareScripts(scriptFileNames ...string) error {
 		dir := filepath.Dir(destFileName)
 
 		// nolint
-		err = os.MkdirAll(dir, rwxrwxrwx) // os.ModePerm)
+		err = os.MkdirAll(dir, coreutils.FileMode_rwxrwxrwx) // os.ModePerm)
 		if err != nil {
 			return err
 		}
@@ -201,7 +201,7 @@ func prepareScripts(scriptFileNames ...string) error {
 		}
 
 		defer newFile.Close()
-		if err = os.Chmod(destFileName, rwxrwxrwx); err != nil {
+		if err = os.Chmod(destFileName, coreutils.FileMode_rwxrwxrwx); err != nil {
 			return err
 		}
 
@@ -226,11 +226,11 @@ func extractAllScripts() error {
 				return err
 			}
 			destPath := filepath.Join(scriptsTempDir, strings.TrimPrefix(path, "scripts/drafts"))
-			err = os.MkdirAll(filepath.Dir(destPath), rwxrwxrwx)
+			err = os.MkdirAll(filepath.Dir(destPath), coreutils.FileMode_rwxrwxrwx)
 			if err != nil {
 				return err
 			}
-			err = os.WriteFile(destPath, content, rwxrwxrwx)
+			err = os.WriteFile(destPath, content, coreutils.FileMode_rwxrwxrwx)
 			if err != nil {
 				return err
 			}
@@ -242,7 +242,7 @@ func extractAllScripts() error {
 // nolint
 func inputPassword(pass *string) error {
 
-	bytePassword, err := terminal.ReadPassword(int(os.Stdin.Fd()))
+	bytePassword, err := term.ReadPassword(int(os.Stdin.Fd()))
 	if err == nil {
 		*pass = string(bytePassword)
 		return nil
@@ -270,7 +270,7 @@ func prepareScriptFromTemplate(scriptFileName string, data interface{}) error {
 	}
 	defer destFile.Close()
 
-	err = destFile.Chmod(rw_rw_rw_)
+	err = destFile.Chmod(coreutils.FileMode_rw_rw_rw_)
 	if err != nil {
 		return err
 	}

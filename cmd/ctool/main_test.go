@@ -325,7 +325,7 @@ fi
 		require.NoError(err)
 	}()
 
-	err = os.WriteFile(filepath.Join(scriptsTempDir, "test-script.sh"), []byte(script), 0700)
+	err = os.WriteFile(filepath.Join(scriptsTempDir, "test-script.sh"), []byte(script), coreutils.FileMode_rw_rw_rw_)
 	require.NoError(err)
 
 	err = os.Setenv("TEST_VAR", "test_value")

@@ -2,8 +2,8 @@
 #
 # Copyright (c) 2024 Sigma-Soft, Ltd.
 # @author Dmitry Molchanovsky
-# 
-# 
+#
+#
 # displays a list of available backups on three DBNodes
 set -euo pipefail
 
@@ -76,8 +76,8 @@ else
         if echo "${HOST3_BACKUP_NAMES}" | grep -q "${BACKUP_NAME}"; then
             HOSTS+="${HOST3}"
         fi
-     
-        echo "${BACKUP_NAME}  |  ${HOSTS}"   
+
+        echo "${BACKUP_NAME}  |  ${HOSTS}"
     done
     } > backups.lst
 fi

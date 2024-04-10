@@ -32,7 +32,7 @@ func (p *appStorageFactory) AppStorage(appName istorage.SafeAppName) (s istorage
 	if !exists {
 		return nil, istorage.ErrStorageDoesNotExist
 	}
-	db, err := bolt.Open(dbName, rw_rw_rw_, bolt.DefaultOptions)
+	db, err := bolt.Open(dbName, coreutils.FileMode_rw_rw_rw_, bolt.DefaultOptions)
 	if err != nil {
 		// notest
 		return nil, err
@@ -50,11 +50,11 @@ func (p *appStorageFactory) Init(appName istorage.SafeAppName) error {
 	if exists {
 		return istorage.ErrStorageAlreadyExists
 	}
-	if err = os.MkdirAll(p.bboltParams.DBDir, rwxrwxrwx); err != nil {
+	if err = os.MkdirAll(p.bboltParams.DBDir, coreutils.FileMode_rwxrwxrwx); err != nil {
 		// notest
 		return err
 	}
-	db, err := bolt.Open(dbName, rw_rw_rw_, bolt.DefaultOptions)
+	db, err := bolt.Open(dbName, coreutils.FileMode_rw_rw_rw_, bolt.DefaultOptions)
 	if err != nil {
 		// notest
 		return err

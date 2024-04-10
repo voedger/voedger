@@ -78,7 +78,7 @@ func createGoMod(dir, packagePath string) error {
 	}
 
 	goModContent := fmt.Sprintf(goModContentTemplate, packagePath, goVersionNumber)
-	if err := os.WriteFile(filePath, []byte(goModContent), defaultPermissions); err != nil {
+	if err := os.WriteFile(filePath, []byte(goModContent), coreutils.FileMode_rw_rw_rw_); err != nil {
 		return err
 	}
 	if err := execGoGet(dir, compile.VoedgerPath); err != nil {
@@ -115,7 +115,7 @@ func createPackagesGen(imports []string, dir string, recreate bool) error {
 		return err
 	}
 
-	if err := os.WriteFile(packagesGenFilePath, packagesGenContentFormatted, defaultPermissions); err != nil {
+	if err := os.WriteFile(packagesGenFilePath, packagesGenContentFormatted, coreutils.FileMode_rw_rw_rw_); err != nil {
 		return err
 	}
 	return nil

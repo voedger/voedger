@@ -70,7 +70,7 @@ func newCluster() *clusterType {
 			return nil
 		}
 		if !exists {
-			err := os.Mkdir(dryRunDir, rwxrwxrwx)
+			err := os.Mkdir(dryRunDir, coreutils.FileMode_rwxrwxrwx)
 			if err != nil {
 				loggerError(err.Error())
 				return nil
@@ -382,7 +382,7 @@ func (c *cmdType) validate(cluster *clusterType) error {
 // or
 // init [SE] [ipAddr1] [ipAddr2] [ipAddr3] [ipAddr4] [ipAddr5]
 // nolint
-func validateInitCmd(cmd *cmdType, cluster *clusterType) error {
+func validateInitCmd(cmd *cmdType, _ *clusterType) error {
 
 	if len(cmd.Args) == 0 {
 		return ErrMissingCommandArguments
@@ -399,7 +399,7 @@ func validateInitCmd(cmd *cmdType, cluster *clusterType) error {
 }
 
 // update [desiredVersion]
-func validateUpgradeCmd(cmd *cmdType, cluster *clusterType) error {
+func validateUpgradeCmd(_ *cmdType, _ *clusterType) error {
 	return nil
 }
 
@@ -713,7 +713,7 @@ func (c *clusterType) saveToJSON() error {
 		if err != nil {
 			return err
 		}
-		err = os.WriteFile(c.configFileName, b, rwxrwxrwx)
+		err = os.WriteFile(c.configFileName, b, coreutils.FileMode_rwxrwxrwx)
 	}
 	return err
 }
