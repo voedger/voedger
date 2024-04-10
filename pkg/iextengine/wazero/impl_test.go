@@ -680,7 +680,7 @@ func Test_StatePanic(t *testing.T) {
 	// Invoke extension
 	//
 	err = extEngine.Invoke(context.Background(), appdef.NewFullQName(testPkg, extname), state)
-	require.ErrorContains(err, "int32-type field «wrong» is not found")
+	require.ErrorContains(err, "field «wrong» is not found")
 
 	//
 	// Invoke extension
