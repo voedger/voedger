@@ -129,8 +129,7 @@ func execGoGet(goModDir, dependencyToGet string) error {
 }
 
 func exists(filePath string) (exists bool, err error) {
-	_, err = os.Stat(filePath)
-	if err == nil || os.IsExist(err) {
+	if _, err = os.Stat(filePath); err == nil {
 		return true, nil
 	}
 	if os.IsNotExist(err) {
