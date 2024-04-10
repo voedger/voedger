@@ -693,14 +693,14 @@ type (
 	appCfgCallback func(cfg *istructsmem.AppConfigType)
 )
 
-//go:embed sql_example_syspkg/*.sql
+//go:embed sql_example_syspkg/*.vsql
 var sfs embed.FS
 
 func appStructsFromSQL(packagePath string, appdefSql string, prepareAppCfg appCfgCallback) istructs.IAppStructs {
 	offset = istructs.Offset(123)
 	appDef := appdef.New()
 
-	fs, err := parser.ParseFile("file1.sql", appdefSql)
+	fs, err := parser.ParseFile("file1.vsql", appdefSql)
 	if err != nil {
 		panic(err)
 	}

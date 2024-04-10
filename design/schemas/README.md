@@ -1,7 +1,7 @@
 # Schemas
 
-- example: [AIR workspaces](./air.sql)
-- example: [AIR views](./air-views.sql)
-- example: [AIRSBP schema main SQL file](./airsbp.sql)
-- example: [unTill tables](./untill-tables.sql)
+- example: [AIR workspaces](./air.vsql)
+- example: [AIR views](./air-views.vsql)
+- example: [AIRSBP schema main SQL file](./airsbp.vsql)
+- example: [unTill tables](./untill-tables.vsql)
 - [Schema SQL Syntax](./syntax.md)
