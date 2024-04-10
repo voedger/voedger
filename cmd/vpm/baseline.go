@@ -88,7 +88,10 @@ func saveBaselineSchemas(pkgFiles packageFiles, baselineDir string) error {
 			return err
 		}
 		for _, file := range files {
-			filePath := filepath.Join(packageDir, filepath.Base(file))
+			base := filepath.Base(file)
+			fileNameExtensionless := base[:len(base)-len(filepath.Ext(base))]
+			filePath := filepath.Join(packageDir, fileNameExtensionless+".vsql")
+
 			fileContent, err := os.ReadFile(file)
 			if err != nil {
 				return err

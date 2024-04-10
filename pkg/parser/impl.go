@@ -69,7 +69,8 @@ func parseFSImpl(fs IReadFS, dir string) (schemas []*FileSchemaAST, errs []error
 		return nil, []error{err}
 	}
 	for _, entry := range entries {
-		if strings.ToLower(filepath.Ext(entry.Name())) == ".sql" {
+		fileExt := filepath.Ext(entry.Name())
+		if strings.ToLower(fileExt) == ".vsql" || strings.ToLower(fileExt) == ".sql" {
 			var fpath string
 			if _, ok := fs.(embed.FS); ok {
 				if dir == "." || dir == "" {
