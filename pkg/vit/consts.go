@@ -27,9 +27,9 @@ var (
 	ts              = &timeService{currentInstant: DefaultTestTime}
 	vits            = map[*VITConfig]*VIT{}
 	DefaultTestTime = time.UnixMilli(1649667286774) // 2022-04-11 11:54:46 +0300 MSK
-	//go:embed schemaTestApp1.sql
+	//go:embed schemaTestApp1.vsql
 	SchemaTestApp1FS embed.FS
-	//go:embed schemaTestApp2.sql
+	//go:embed schemaTestApp2.vsql
 	SchemaTestApp2FS embed.FS
 
 	DefaultTestAppPartsCount  = 10

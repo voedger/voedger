@@ -17,16 +17,11 @@ import (
 	"github.com/voedger/voedger/pkg/compile"
 )
 
-func newTidyCmd() *cobra.Command {
-	params := vpmParams{}
+func newTidyCmd(params *vpmParams) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "tidy",
 		Short: "add missing and remove unused modules",
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
-			params, err = prepareParams(params, args)
-			if err != nil {
-				return err
-			}
 			compileRes, err := compile.Compile(params.Dir)
 			if err != nil {
 				logger.Error("failed to compile, will try to exec 'go mod tidy' anyway")
@@ -35,7 +30,6 @@ func newTidyCmd() *cobra.Command {
 			return tidy(compileRes.AppDef, compileRes.ModulePath, params.Dir)
 		},
 	}
-	cmd.Flags().StringVarP(&params.Dir, "change-dir", "C", "", "Change to dir before running the command. Any files named on the command line are interpreted after changing directories. If used, this flag must be the first one in the command line.")
 	return cmd
 
 }

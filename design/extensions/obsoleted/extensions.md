@@ -1,5 +1,5 @@
 # Declaration of extensions in vSQL.
-This is a draft of vSQL syntax. Current version of the syntax can be found [here](../../pkg/parser/sql_example_app/pmain/package.sql)
+This is a draft of vSQL syntax. Current version of the syntax can be found [here](../../pkg/parser/sql_example_app/pmain/package.vsql)
 
 ## Declaration in PackageSchema
 ### Projector
@@ -72,4 +72,4 @@ Creates in the current package:
 # See Also
 - [Heeus: Repository & Application Schema](https://github.com/heeus/heeus-design#repository--application-schema)
 - https://github.com/heeus/heeus
-- https://github.com/heeus/inv-go/blob/master/20220221-parsing/participle/schema.sql
+- https://github.com/heeus/inv-go/blob/master/20220221-parsing/participle/schema.vsql

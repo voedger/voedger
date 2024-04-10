@@ -11,7 +11,7 @@ import (
 	"github.com/voedger/voedger/pkg/cluster"
 )
 
-//go:embed schema.sql
+//go:embed schema.vsql
 var routerAppSchemaFS embed.FS
 
 const RouterAppFQN = "github.com/voedger/voedger/pkg/apps/sys/routerapp"
