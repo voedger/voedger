@@ -471,10 +471,8 @@ func (key *keyType) PutFromJSON(j map[appdef.FieldName]any) {
 	for f, v := range j {
 		if key.view.Key().PartKey().Field(f) != nil {
 			pkJ[f] = v
-		} else {
-			if key.view.Key().ClustCols().Field(f) != nil {
-				ccJ[f] = v
-			}
+		} else if key.view.Key().ClustCols().Field(f) != nil {
+			ccJ[f] = v
 		}
 	}
 
