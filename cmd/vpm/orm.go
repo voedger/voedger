@@ -28,16 +28,11 @@ import (
 var ormTemplatesFS embed.FS
 var reservedWords = []string{"type"}
 
-func newOrmCmd() *cobra.Command {
-	params := vpmParams{}
+func newOrmCmd(params *vpmParams) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "orm [--header-file]",
+		Use:   "orm",
 		Short: "generate orm for package",
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
-			params, err = prepareParams(params, args)
-			if err != nil {
-				return err
-			}
 			compileRes, err := compile.Compile(params.Dir)
 			if err != nil {
 				return err
@@ -45,15 +40,13 @@ func newOrmCmd() *cobra.Command {
 			return generateOrm(compileRes, params)
 		},
 	}
-	cmd.SilenceErrors = true
-	cmd.Flags().StringVarP(&params.Dir, "change-dir", "C", "", "Change to dir before running the command. Any files named on the command line are interpreted after changing directories. If used, this flag must be the first one in the command line.")
-	cmd.Flags().StringVarP(&params.HeaderFile, "header-file", "", "", " path to file to insert as a header to generated files")
+	cmd.Flags().StringVarP(&params.HeaderFile, "header-file", "", "", "path to file to insert as a header to generated files")
 	return cmd
 }
 
 // generateOrm generates ORM from the given working directory
-func generateOrm(compileRes *compile.Result, params vpmParams) error {
-	dir, err := createOrmDir(params.TargetDir)
+func generateOrm(compileRes *compile.Result, params *vpmParams) error {
+	dir, err := createOrmDir(params.Dir)
 	if err != nil {
 		return err
 	}
