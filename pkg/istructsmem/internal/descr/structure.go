@@ -15,13 +15,13 @@ type Structure struct {
 	Fields      []*Field           `json:",omitempty"`
 	Containers  []*Container       `json:",omitempty"`
 	Uniques     map[string]*Unique `json:",omitempty"`
-	UniqueField string             `json:",omitempty"`
+	UniqueField appdef.FieldName   `json:",omitempty"`
 	Singleton   bool               `json:",omitempty"`
 }
 
 type Field struct {
 	Comment    string `json:",omitempty"`
-	Name       string
+	Name       appdef.FieldName
 	DataType   *Data         `json:",omitempty"`
 	Data       *appdef.QName `json:",omitempty"`
 	Required   bool          `json:",omitempty"`
@@ -40,5 +40,5 @@ type Container struct {
 type Unique struct {
 	Comment string `json:",omitempty"`
 	Name    appdef.QName
-	Fields  []string
+	Fields  []appdef.FieldName
 }
