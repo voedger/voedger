@@ -151,7 +151,58 @@ func (vr *appViewRecords) PutBatch(workspace istructs.WSID, recs []istructs.View
 }
 
 func (vr *appViewRecords) PutJSON(ws istructs.WSID, j map[appdef.FieldName]any) error {
-	return errors.ErrUnsupported
+	viewName := appdef.NullQName
+
+	if v, ok := j[appdef.SystemField_QName]; ok {
+		if value, ok := v.(string); ok {
+			if qName, err := appdef.ParseQName(value); err == nil {
+				viewName = qName
+			} else {
+				return fmt.Errorf(errFieldConvertErrorWrap, appdef.SystemField_QName, value, appdef.DataKind_QName.TrimString(), err)
+			}
+		} else {
+			return fmt.Errorf(errFieldConvertErrorWrap, appdef.SystemField_QName, v, appdef.DataKind_QName.TrimString(), ErrWrongFieldType)
+		}
+	}
+
+	if viewName == appdef.NullQName {
+		return fmt.Errorf("%w: %v", ErrFieldIsEmpty, appdef.SystemField_QName)
+	}
+
+	view := vr.app.config.AppDef.View(viewName)
+	if view == nil {
+		return fmt.Errorf(errViewNotFoundWrap, viewName, ErrNameNotFound)
+	}
+
+	key := newKey(vr.app.config, viewName)
+	value := newValue(vr.app.config, viewName)
+
+	keyJ := make(map[appdef.FieldName]any)
+	valueJ := make(map[appdef.FieldName]any)
+
+	for f, v := range j {
+		if view.Key().Field(f) != nil {
+			keyJ[f] = v
+		} else {
+			if view.Value().Field(f) != nil {
+				valueJ[f] = v
+			} else {
+				return fmt.Errorf(errFieldNotFoundWrap, f, view, ErrNameNotFound)
+			}
+		}
+	}
+
+	key.PutFromJSON(keyJ)
+	if err := key.build(); err != nil {
+		return err
+	}
+
+	value.PutFromJSON(valueJ)
+	if err := value.build(); err != nil {
+		return err
+	}
+
+	return vr.Put(ws, key, value)
 }
 
 // istructs.IViewRecords.Read
@@ -414,8 +465,21 @@ func (key *keyType) PutFloat64(name appdef.FieldName, value float64) {
 
 // istructs.IRowWriter.PutFromJSON
 func (key *keyType) PutFromJSON(j map[appdef.FieldName]any) {
-	key.partRow.PutFromJSON(j)
-	key.ccolsRow.PutFromJSON(j)
+	pkJ := make(map[appdef.FieldName]any)
+	ccJ := make(map[appdef.FieldName]any)
+
+	for f, v := range j {
+		if key.view.Key().PartKey().Field(f) != nil {
+			pkJ[f] = v
+		} else {
+			if key.view.Key().ClustCols().Field(f) != nil {
+				ccJ[f] = v
+			}
+		}
+	}
+
+	key.partRow.PutFromJSON(pkJ)
+	key.ccolsRow.PutFromJSON(ccJ)
 }
 
 // istructs.IRowWriter.PutInt32

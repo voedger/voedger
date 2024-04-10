@@ -218,20 +218,20 @@ func Test_RecordsPutJSON(t *testing.T) {
 		require.NoError(err)
 
 		t.Run("should be ok to read record", func(t *testing.T) {
-			rec2, err := app.Records().Get(test.workspace, true, 100500)
+			r, err := app.Records().Get(test.workspace, true, 100500)
 			require.NoError(err)
 
-			require.EqualValues(test.testCDoc, rec2.QName())
-			require.EqualValues(100500, rec2.ID())
-			require.EqualValues(1, rec2.AsInt32("int32"))
-			require.EqualValues(2, rec2.AsInt64("int64"))
-			require.EqualValues(3, rec2.AsFloat32("float32"))
-			require.EqualValues(4, rec2.AsFloat64("float64"))
-			require.Equal([]byte{1, 2, 3, 4}, rec2.AsBytes("bytes"))
-			require.Equal(`naked 🔫`, rec2.AsString("string"))
-			require.Equal(test.testCRec, rec2.AsQName("QName"))
-			require.True(rec2.AsBool("bool"))
-			require.EqualValues(100501, rec2.AsRecordID("RecordID"))
+			require.EqualValues(test.testCDoc, r.QName())
+			require.EqualValues(100500, r.ID())
+			require.EqualValues(1, r.AsInt32("int32"))
+			require.EqualValues(2, r.AsInt64("int64"))
+			require.EqualValues(3, r.AsFloat32("float32"))
+			require.EqualValues(4, r.AsFloat64("float64"))
+			require.Equal([]byte{1, 2, 3, 4}, r.AsBytes("bytes"))
+			require.Equal(`naked 🔫`, r.AsString("string"))
+			require.Equal(test.testCRec, r.AsQName("QName"))
+			require.True(r.AsBool("bool"))
+			require.EqualValues(100501, r.AsRecordID("RecordID"))
 		})
 	})
 
@@ -243,7 +243,7 @@ func Test_RecordsPutJSON(t *testing.T) {
 			json[appdef.SystemField_QName] = appdef.NullQName.String()
 			err = app.Records().PutJSON(test.workspace, json)
 			require.ErrorIs(err, ErrFieldIsEmpty)
-			require.ErrorContains(err, `null QName`)
+			require.ErrorContains(err, appdef.SystemField_QName)
 
 			json[appdef.SystemField_QName] = 123
 			err = app.Records().PutJSON(test.workspace, json)

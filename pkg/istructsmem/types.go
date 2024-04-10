@@ -204,7 +204,7 @@ func (row *rowType) fieldMustExists(name appdef.FieldName, k appdef.DataKind, ot
 			}
 		}
 	}
-	panic(fmt.Errorf(errFieldNotFoundWrap, k.TrimString(), name, row.QName(), ErrNameNotFound))
+	panic(fmt.Errorf(errTypedFieldNotFoundWrap, k.TrimString(), name, row, ErrNameNotFound))
 }
 
 // Loads row from bytes
@@ -264,7 +264,7 @@ func (row *rowType) putValue(name appdef.FieldName, kind dynobuffers.FieldType, 
 
 	fld := row.fieldDef(name)
 	if fld == nil {
-		row.collectErrorf(errFieldNotFoundWrap, dynobuf.FieldTypeToString(kind), name, row.QName(), ErrNameNotFound)
+		row.collectErrorf(errFieldNotFoundWrap, name, row, ErrNameNotFound)
 		return
 	}
 
@@ -777,7 +777,7 @@ func (row *rowType) PutFromJSON(j map[appdef.FieldName]any) {
 	}
 
 	if (row.QName() == appdef.NullQName) && (len(j) > 0) {
-		row.collectErrorf("can not put record with null QName: %w", ErrFieldIsEmpty)
+		row.collectErrorf("%w: %v", ErrFieldIsEmpty, appdef.SystemField_QName)
 		return
 	}
 
@@ -797,7 +797,7 @@ func (row *rowType) PutFromJSON(j map[appdef.FieldName]any) {
 func (row *rowType) PutNumber(name appdef.FieldName, value float64) {
 	fld := row.fieldDef(name)
 	if fld == nil {
-		row.collectErrorf(errFieldNotFoundWrap, "number", name, row.QName(), ErrNameNotFound)
+		row.collectErrorf(errFieldNotFoundWrap, name, row, ErrNameNotFound)
 		return
 	}
 
@@ -858,7 +858,7 @@ func (row *rowType) PutQName(name appdef.FieldName, value appdef.QName) {
 func (row *rowType) PutChars(name appdef.FieldName, value string) {
 	fld := row.fieldDef(name)
 	if fld == nil {
-		row.collectErrorf(errFieldNotFoundWrap, "chars", name, row.QName(), ErrNameNotFound)
+		row.collectErrorf(errFieldNotFoundWrap, name, row, ErrNameNotFound)
 		return
 	}
 
