@@ -53,7 +53,6 @@ func TestCompileBasicUsage(t *testing.T) {
 }
 
 func TestBaselineBasicUsage(t *testing.T) {
-	logger.SetLogLevel(logger.LogLevelVerbose)
 	require := require.New(t)
 
 	wd, err := os.Getwd()
