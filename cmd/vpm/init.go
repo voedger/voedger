@@ -28,7 +28,7 @@ func newInitCmd(params *vpmParams) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "init module-path",
 		Short: "initialize a new package",
-		Args:  showHelpIfNotExactArgs(1),
+		Args:  exactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
 			return initPackage(params.Dir, params.PackagePath)
 		},

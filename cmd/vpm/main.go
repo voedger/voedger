@@ -47,7 +47,17 @@ func execRootCmd(args []string, ver string) error {
 	rootCmd.PersistentPreRunE = func(cmd *cobra.Command, args []string) error {
 		return prepareParams(cmd, params, args)
 	}
+	setNoArgs(rootCmd)
 	return cobrau.ExecCommandAndCatchInterrupt(rootCmd)
+}
+
+func setNoArgs(cmd *cobra.Command) {
+	if cmd.Args == nil {
+		cmd.Args = exactArgs(0)
+	}
+	for _, subCmd := range cmd.Commands() {
+		setNoArgs(subCmd)
+	}
 }
 
 // correctCommandTexts makes first letter of command and its flags descriptions small

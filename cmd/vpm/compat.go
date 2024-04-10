@@ -26,7 +26,7 @@ func newCompatCmd(params *vpmParams) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "compat baseline-folder",
 		Short: "check backward compatibility",
-		Args:  showHelpIfNotExactArgs(1),
+		Args:  exactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
 			ignores, err := readIgnoreFile(params.IgnoreFile)
 			if err != nil {
@@ -187,10 +187,9 @@ func splitIgnorePaths(ignores []string) (res [][]string) {
 	return
 }
 
-func showHelpIfNotExactArgs(n int) cobra.PositionalArgs {
+func exactArgs(n int) cobra.PositionalArgs {
 	return func(cmd *cobra.Command, args []string) error {
 		if len(args) != n {
-			_ = cmd.Help()
 			return errors.New("unexpected args provided")
 		}
 		return nil

@@ -24,7 +24,7 @@ func newBaselineCmd(params *vpmParams) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "baseline baseline-folder",
 		Short: "create baseline schemas",
-		Args:  showHelpIfNotExactArgs(1),
+		Args:  exactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
 			compileRes, err := compile.Compile(params.Dir)
 			if err != nil {
