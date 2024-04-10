@@ -9,7 +9,7 @@ import (
 	"embed"
 )
 
-//go:embed schema.sql
+//go:embed schema.vsql
 var registryAppSchemaFS embed.FS
 
 const RegistryAppFQN = "github.com/voedger/voedger/pkg/apps/sys/registryapp"

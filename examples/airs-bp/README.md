@@ -31,7 +31,7 @@ func hostRowWriterPutBytes(id uint64, typ uint32, namePtr, nameSize, valuePtr, v
 
 ### airsbp
 
-https://github.com/untillpro/airs-bp3/blob/main/apps/untill/airsbp/schemas.sql
+https://github.com/untillpro/airs-bp3/blob/main/apps/untill/airsbp/schemas.vsql
 
 ```sql
 -- Copyright (c) 2020-present unTill Pro, Ltd.
@@ -48,7 +48,7 @@ APPLICATION airsbp (
 
 ### air
 
-https://github.com/untillpro/airs-bp3/blob/main/packages/air/air.sql
+https://github.com/untillpro/airs-bp3/blob/main/packages/air/air.vsql
 
 ```sql
 -- Copyright (c) 2020-present unTill Pro, Ltd.
@@ -89,7 +89,7 @@ WORKSPACE RestaurantWS (
 
 ### untill
 
-https://github.com/untillpro/airs-scheme/blob/master/bp3/schema.sql
+https://github.com/untillpro/airs-scheme/blob/master/bp3/schema.vsql
 
 ```sql
 

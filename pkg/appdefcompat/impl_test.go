@@ -17,19 +17,19 @@ import (
 	"github.com/voedger/voedger/pkg/parser"
 )
 
-//go:embed sql/sys.old.sql
+//go:embed sql/sys.old.vsql
 var oldSysSchemaFS embed.FS
 
-//go:embed sql/pkg1.old.sql
+//go:embed sql/pkg1.old.vsql
 var oldPkg1SchemaFS embed.FS
 
-//go:embed sql/pkg2.sql
+//go:embed sql/pkg2.vsql
 var pkg2SchemaFS embed.FS
 
-//go:embed sql/sys.new.sql
+//go:embed sql/sys.new.vsql
 var newSysSchemaFS embed.FS
 
-//go:embed sql/pkg1.new.sql
+//go:embed sql/pkg1.new.vsql
 var newPkg1SchemaFS embed.FS
 
 func Test_Basic(t *testing.T) {
