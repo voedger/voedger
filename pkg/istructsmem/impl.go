@@ -579,8 +579,13 @@ func (recs *appRecordsType) PutJSON(ws istructs.WSID, j map[appdef.FieldName]any
 		return err
 	}
 
-	if _, ok := rec.typeDef().(appdef.IRecord); !ok {
-		return fmt.Errorf("%v is not record type: %w", rec.typeDef(), ErrWrongType)
+	storable := func(k appdef.TypeKind) bool {
+		return k == appdef.TypeKind_GDoc || k == appdef.TypeKind_CDoc || k == appdef.TypeKind_WDoc ||
+			k == appdef.TypeKind_GRecord || k == appdef.TypeKind_CRecord || k == appdef.TypeKind_WRecord
+	}
+
+	if k := rec.typeDef().Kind(); !storable(k) {
+		return fmt.Errorf("%v is not storable record type: %w", rec.typeDef(), ErrWrongType)
 	}
 
 	if rec.ID() == istructs.NullRecordID {

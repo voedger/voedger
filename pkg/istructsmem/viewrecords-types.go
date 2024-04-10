@@ -150,6 +150,10 @@ func (vr *appViewRecords) PutBatch(workspace istructs.WSID, recs []istructs.View
 	return vr.app.config.storage.PutBatch(batch)
 }
 
+func (vr *appViewRecords) PutJSON(ws istructs.WSID, j map[appdef.FieldName]any) error {
+	return errors.ErrUnsupported
+}
+
 // istructs.IViewRecords.Read
 func (vr *appViewRecords) Read(ctx context.Context, workspace istructs.WSID, key istructs.IKeyBuilder, cb istructs.ValuesCallback) (err error) {
 
