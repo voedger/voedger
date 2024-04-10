@@ -103,6 +103,10 @@ type IRecords interface {
 	Apply2(event IPLogEvent, cb func(r IRecord)) (err error)
 
 	// @ConcurrentAccess RW
+	//
+	// Attention! This method does not perform a full validation of the recorded data :
+	// - The values of referenced record IDs are not checked
+	// - The fullness of the required fields is not checked
 	PutJSON(WSID, map[appdef.FieldName]any) error
 
 	// @ConcurrentAccess R
