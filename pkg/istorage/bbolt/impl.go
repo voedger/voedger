@@ -15,6 +15,7 @@ import (
 	bolt "go.etcd.io/bbolt"
 
 	"github.com/voedger/voedger/pkg/istorage"
+	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 type appStorageFactory struct {
@@ -23,8 +24,12 @@ type appStorageFactory struct {
 
 func (p *appStorageFactory) AppStorage(appName istorage.SafeAppName) (s istorage.IAppStorage, err error) {
 	dbName := filepath.Join(p.bboltParams.DBDir, appName.String()+".db")
-	_, err = os.Stat(dbName)
-	if os.IsNotExist(err) {
+	exists, err := coreutils.Exists(dbName)
+	if err != nil {
+		// notest
+		return nil, err
+	}
+	if !exists {
 		return nil, istorage.ErrStorageDoesNotExist
 	}
 	db, err := bolt.Open(dbName, rw_rw_rw_, bolt.DefaultOptions)
@@ -37,13 +42,13 @@ func (p *appStorageFactory) AppStorage(appName istorage.SafeAppName) (s istorage
 
 func (p *appStorageFactory) Init(appName istorage.SafeAppName) error {
 	dbName := filepath.Join(p.bboltParams.DBDir, appName.String()+".db")
-	_, err := os.Stat(dbName)
-	if err == nil {
-		return istorage.ErrStorageAlreadyExists
-	}
-	if !os.IsNotExist(err) {
+	exists, err := coreutils.Exists(dbName)
+	if err != nil {
 		// notest
 		return err
+	}
+	if exists {
+		return istorage.ErrStorageAlreadyExists
 	}
 	if err = os.MkdirAll(p.bboltParams.DBDir, rwxrwxrwx); err != nil {
 		// notest

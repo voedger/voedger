@@ -18,6 +18,7 @@ import (
 	"github.com/untillpro/goutils/logger"
 
 	"github.com/voedger/voedger/pkg/compile"
+	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 func newBaselineCmd(params *vpmParams) *cobra.Command {
@@ -108,7 +109,7 @@ func saveBaselineSchemas(pkgFiles packageFiles, baselineDir string) error {
 }
 
 func createBaselineDir(dir string) error {
-	exists, err := exists(dir)
+	exists, err := coreutils.Exists(dir)
 	if err != nil {
 		// notest
 		return err

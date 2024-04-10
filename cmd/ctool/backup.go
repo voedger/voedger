@@ -8,7 +8,6 @@ package main
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -16,6 +15,7 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
+	coreutils "github.com/voedger/voedger/pkg/utils"
 
 	"github.com/robfig/cron/v3"
 )
@@ -93,7 +93,7 @@ func newBackupCmd() *cobra.Command {
 
 	backupNowCmd := &cobra.Command{
 		Use:   "now",
-		Short: "Backap database",
+		Short: "Backup database",
 		Args: func(cmd *cobra.Command, args []string) error {
 			if len(args) != 0 {
 				return ErrInvalidNumberOfArguments
@@ -190,7 +190,13 @@ func validateBackupNodeCmd(cmd *cmdType, cluster *clusterType) error {
 		err = errors.Join(err, fmt.Errorf(errHostNotFoundInCluster, cmd.Args[1], ErrHostNotFoundInCluster))
 	}
 
-	if !fileExists(cmd.Args[3]) {
+	exists, errExists := coreutils.Exists(cmd.Args[3])
+	if errExists != nil {
+		// notest
+		err = errors.Join(err, errExists)
+		return err
+	}
+	if !exists {
 		err = errors.Join(err, fmt.Errorf(errSshKeyNotFound, cmd.Args[3], ErrFileNotFound))
 	}
 
@@ -374,7 +380,7 @@ func getBackupList(cluster *clusterType) (string, error) {
 		return "", nil
 	}
 
-	fContent, e := ioutil.ReadFile(backupFName)
+	fContent, e := os.ReadFile(backupFName)
 	if e != nil {
 		return "", e
 	}

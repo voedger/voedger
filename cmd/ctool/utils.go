@@ -8,7 +8,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"math/rand"
 	"os"
 	"path/filepath"
@@ -18,6 +17,7 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/untillpro/goutils/logger"
+	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 var logFile *os.File
@@ -115,9 +115,6 @@ func mkCommandDirAndLogFile(cmd *cobra.Command, cluster *clusterType) error {
 		logFile, err = os.Create(fName)
 		if err == nil {
 			logFile, err = os.OpenFile(fName, os.O_RDWR, rw_rw_rw_)
-			if err != nil {
-				panic(err)
-			}
 		}
 	}
 	return err
@@ -125,31 +122,33 @@ func mkCommandDirAndLogFile(cmd *cobra.Command, cluster *clusterType) error {
 
 // creates a temporary folder for running scripts, if it doesn't exist
 func createScriptsTempDir() error {
-	if scriptTempDirExists() {
+	exists, err := scriptTempDirExists()
+	if err != nil {
+		// notest
+		return err
+	}
+	if exists {
 		return nil
 	}
-	dir, err := ioutil.TempDir("", "scripts")
+	dir, err := os.MkdirTemp("", "scripts")
 	if err == nil {
 		scriptsTempDir = dir
 	}
 	return err
 }
 
-func scriptTempDirExists() bool {
-	if scriptsTempDir == "" {
-		return false
-	}
-
-	if _, err := os.Stat(scriptsTempDir); err == nil {
-		return true
-	}
-
-	return false
+func scriptTempDirExists() (bool, error) {
+	return coreutils.Exists(scriptsTempDir)
 }
 
 // deletes the temporary scripts folder, if it exists
 func deleteScriptsTempDir() error {
-	if !scriptTempDirExists() {
+	exists, err := scriptTempDirExists()
+	if err != nil {
+		// notest
+		return err
+	}
+	if !exists {
 		return nil
 	}
 	return os.RemoveAll(scriptsTempDir)

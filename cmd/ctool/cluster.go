@@ -10,7 +10,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"net"
 	"os"
 	"os/user"
@@ -21,6 +20,7 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/untillpro/goutils/logger"
+	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 var dryRun bool
@@ -63,7 +63,13 @@ func newCluster() *clusterType {
 	if cluster.dryRun {
 
 		dryRunDir := filepath.Join(dir, dryRunDir)
-		if _, err := os.Stat(dryRunDir); os.IsNotExist(err) {
+		exists, err := coreutils.Exists(dryRunDir)
+		if err != nil {
+			// notest
+			loggerError(err.Error())
+			return nil
+		}
+		if !exists {
 			err := os.Mkdir(dryRunDir, rwxrwxrwx)
 			if err != nil {
 				loggerError(err.Error())
@@ -75,13 +81,25 @@ func newCluster() *clusterType {
 		// Remove the old dry run configuration file
 		// Under tests, you do not need to delete for the possibility of testing command sequences
 		if !testing.Testing() {
-			if fileExists(dryRunClusterConfigFileName) {
+			exists, err := coreutils.Exists(dryRunClusterConfigFileName)
+			if err != nil {
+				// notest
+				loggerError(err.Error())
+				return nil
+			}
+			if exists {
 				os.Remove(dryRunClusterConfigFileName)
 			}
 		}
 
-		if fileExists(cluster.configFileName) {
-			if err := copyFile(cluster.configFileName, dryRunClusterConfigFileName); err != nil {
+		exists, err = coreutils.Exists(cluster.configFileName)
+		if err != nil {
+			// notest
+			loggerError(err.Error())
+			return nil
+		}
+		if exists {
+			if err := coreutils.CopyFile(cluster.configFileName, dryRunClusterConfigFileName); err != nil {
 				loggerError(err.Error())
 				return nil
 			}
@@ -90,7 +108,13 @@ func newCluster() *clusterType {
 		cluster.configFileName = dryRunClusterConfigFileName
 	}
 
-	if cluster.clusterConfigFileExists() {
+	exists, err := cluster.clusterConfigFileExists()
+	if err != nil {
+		// notest
+		loggerError(err.Error())
+		return nil
+	}
+	if exists {
 		cluster.exists = true
 		if err := cluster.loadFromJSON(); err != nil {
 			loggerError(err.Error())
@@ -689,7 +713,7 @@ func (c *clusterType) saveToJSON() error {
 		if err != nil {
 			return err
 		}
-		err = ioutil.WriteFile(c.configFileName, b, rwxrwxrwx)
+		err = os.WriteFile(c.configFileName, b, rwxrwxrwx)
 	}
 	return err
 }
@@ -704,15 +728,8 @@ func (c *clusterType) addressInReplacedList(address string) bool {
 	return false
 }
 
-func (c *clusterType) clusterConfigFileExists() bool {
-	_, err := os.Stat(c.configFileName)
-	if err == nil {
-		return true
-	}
-	if os.IsNotExist(err) {
-		return false
-	}
-	return false
+func (c *clusterType) clusterConfigFileExists() (bool, error) {
+	return coreutils.Exists(c.configFileName)
 }
 
 func (c *clusterType) loadFromJSON() error {
@@ -732,7 +749,12 @@ func (c *clusterType) loadFromJSON() error {
 		}
 	}()
 
-	if !c.clusterConfigFileExists() {
+	exists, err := c.clusterConfigFileExists()
+	if err != nil {
+		// notest
+		return err
+	}
+	if !exists {
 		return ErrClusterConfNotFound
 	}
 
@@ -894,7 +916,12 @@ func (c *clusterType) checkVersion() error {
 
 	var clusterVersion string
 
-	if c.clusterConfigFileExists() && !c.Cmd.isEmpty() {
+	exists, err := c.clusterConfigFileExists()
+	if err != nil {
+		// notest
+		return err
+	}
+	if exists && !c.Cmd.isEmpty() {
 		clusterVersion = c.DesiredClusterVersion
 	}
 

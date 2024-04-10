@@ -22,6 +22,7 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/compile"
 	"github.com/voedger/voedger/pkg/sys"
+	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 //go:embed ormtemplates/*
@@ -335,7 +336,7 @@ func getHeaderFileContent(headerFilePath string) (string, error) {
 
 func createOrmDir(dir string) (string, error) {
 	ormDirPath := filepath.Join(dir, internalDirName, ormDirName)
-	exists, err := exists(ormDirPath)
+	exists, err := coreutils.Exists(ormDirPath)
 	if err != nil {
 		// notest
 		return "", err
