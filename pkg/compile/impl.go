@@ -34,7 +34,6 @@ func compile(dir string) (*Result, error) {
 
 	// compile sys package first
 	sysPackageAst, compileSysErrs, isSysDir := compileSysPackage(dir, loadedPkgs, importedStmts, pkgFiles)
-	//sysPackageAst, compileSysErrs := compileDependency(loadedPkgs, appdef.SysPackage, nil, importedStmts, pkgFiles)
 	pkgs = append(pkgs, sysPackageAst...)
 	errs = append(errs, compileSysErrs...)
 

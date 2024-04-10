@@ -11,7 +11,7 @@ import (
 	"github.com/voedger/voedger/pkg/cluster"
 )
 
-//go:embed schema.sql
+//go:embed schema.vsql
 var blobberSchemaFS embed.FS
 
 const BlobberAppFQN = "github.com/voedger/voedger/pkg/apps/sys/blobberapp"

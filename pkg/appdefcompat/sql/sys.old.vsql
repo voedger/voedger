@@ -47,7 +47,7 @@ WORKSPACE SomeWorkspace(
         C int32,
         UNIQUE (B, A)
     );
-    TABLE SomeTable INHERITS CDoc( -- NodeRemoved: removed in new.sql
+    TABLE SomeTable INHERITS CDoc( -- NodeRemoved: removed in new.vsql
         A varchar,
         B varchar
     );
@@ -88,7 +88,7 @@ WORKSPACE SomeWorkspace(
 );
 
 ALTERABLE WORKSPACE Profile(
-    TABLE ProfileTable INHERITS CDoc(-- NodeRemoved: removed in new.sql
+    TABLE ProfileTable INHERITS CDoc(-- NodeRemoved: removed in new.vsql
         A varchar
     );
 );

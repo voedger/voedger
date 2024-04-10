@@ -57,7 +57,7 @@ func deployTestApp(t *testing.T) (appParts appparts.IAppPartitions, appStructs i
 
 		adb.AddPackage("test", "test.org/test")
 
-		// this should be done in tests only. Runtime -> the projector is defined in sys.sql already
+		// this should be done in tests only. Runtime -> the projector is defined in sys.vsql already
 		adb.AddCDoc(istructs.QNameCDoc)
 		adb.AddODoc(istructs.QNameODoc)
 		adb.AddWDoc(istructs.QNameWDoc)
@@ -72,10 +72,10 @@ func deployTestApp(t *testing.T) (appParts appparts.IAppPartitions, appStructs i
 			Add(state.View, QNameCollectionView) // this view will be added below
 	}
 	{
-		// fill IAppDef with funcs. That is done here manually because we o not use sys.sql here
+		// fill IAppDef with funcs. That is done here manually because we o not use sys.vsql here
 		qNameCollectionParams := appdef.NewQName(appdef.SysPackage, "CollectionParams")
 
-		// will add func definitions to AppDef manually because local test does not use sql. In runtime these definitions will come from sys.sql
+		// will add func definitions to AppDef manually because local test does not use sql. In runtime these definitions will come from sys.vsql
 		adb.AddObject(qNameCollectionParams).
 			AddField(field_Schema, appdef.DataKind_string, true).
 			AddField(field_ID, appdef.DataKind_RecordID, false)
