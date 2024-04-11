@@ -51,10 +51,6 @@ func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder
 	invite.Provide(cfg, timeFunc, federation, itokens, smtpCfg)
 	uniques.Provide(cfg, appDefBuilder)
 	describe.Provide(cfg, asp)
-	return ProvidePackageFS()
-}
-
-func ProvidePackageFS() parser.PackageFS {
 	return parser.PackageFS{
 		Path: appdef.SysPackage,
 		FS:   SysFS,
