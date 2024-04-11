@@ -7,10 +7,10 @@ package cluster
 
 import "embed"
 
-//go:embed schema.sql
-var schemaSQL embed.FS
+//go:embed clusterws.vsql
+var schemaFS embed.FS
 
 const (
-	ClusterPackage = "cluster"
-	ClusterAppFQN  = "github.com/voedger/voedger/pkg/apps/sys/clusterapp"
+	ClusterPackage    = "cluster"
+	ClusterPackageFQN = "github.com/voedger/voedger/pkg/" + ClusterPackage
 )
