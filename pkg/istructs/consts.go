@@ -137,6 +137,7 @@ const (
 	ClusterAppID_sys_blobber
 	ClusterAppID_sys_router
 	ClusterAppID_untill_resellerportal
+	ClusterAppID_sys_cluster
 	ClusterAppID_FakeLast
 )
 
@@ -157,6 +158,7 @@ var AppQName_test2_app2 = NewAppQName("test2", "app2")
 var AppQName_sys_blobber = NewAppQName(SysOwner, "blobber")
 var AppQName_sys_router = NewAppQName(SysOwner, "router") // For ACME certificates
 var AppQName_untill_resellerportal = NewAppQName("untill", "resellerportal")
+var AppQName_sys_cluster = NewAppQName(SysOwner, "cluster")
 
 // Cluster applications
 
@@ -171,6 +173,7 @@ var ClusterApps = map[AppQName]ClusterAppID{
 	AppQName_sys_blobber:           ClusterAppID_sys_blobber,
 	AppQName_sys_router:            ClusterAppID_sys_router,
 	AppQName_untill_resellerportal: ClusterAppID_untill_resellerportal,
+	AppQName_sys_cluster:           ClusterAppID_sys_cluster,
 }
 
 const (
