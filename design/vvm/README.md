@@ -119,7 +119,7 @@ flowchart TD
   AppPartition_SPReader --> DownloadImage
 
   ws.Cluster -.-> |BLOBs| DownloadImage
-  DownloadImage -.-> |*.sql etc.| AppSchemaFiles
+  DownloadImage -.-> |*.vsql etc.| AppSchemaFiles
   AppSchemaFiles -.-> ParseAppSchemaFiles
   ParseAppSchemaFiles -.-> AppDef
 

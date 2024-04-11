@@ -22,22 +22,18 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/compile"
 	"github.com/voedger/voedger/pkg/sys"
+	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 //go:embed ormtemplates/*
 var ormTemplatesFS embed.FS
 var reservedWords = []string{"type"}
 
-func newOrmCmd() *cobra.Command {
-	params := vpmParams{}
+func newOrmCmd(params *vpmParams) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "orm [--header-file]",
+		Use:   "orm",
 		Short: "generate orm for package",
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
-			params, err = prepareParams(params, args)
-			if err != nil {
-				return err
-			}
 			compileRes, err := compile.Compile(params.Dir)
 			if err != nil {
 				return err
@@ -45,15 +41,13 @@ func newOrmCmd() *cobra.Command {
 			return generateOrm(compileRes, params)
 		},
 	}
-	cmd.SilenceErrors = true
-	cmd.Flags().StringVarP(&params.Dir, "change-dir", "C", "", "Change to dir before running the command. Any files named on the command line are interpreted after changing directories. If used, this flag must be the first one in the command line.")
-	cmd.Flags().StringVarP(&params.HeaderFile, "header-file", "", "", " path to file to insert as a header to generated files")
+	cmd.Flags().StringVarP(&params.HeaderFile, "header-file", "", "", "path to file to insert as a header to generated files")
 	return cmd
 }
 
 // generateOrm generates ORM from the given working directory
-func generateOrm(compileRes *compile.Result, params vpmParams) error {
-	dir, err := createOrmDir(params.TargetDir)
+func generateOrm(compileRes *compile.Result, params *vpmParams) error {
+	dir, err := createOrmDir(params.Dir)
 	if err != nil {
 		return err
 	}
@@ -143,7 +137,7 @@ func generateOrmFiles(pkgData map[ormPackageInfo][]interface{}, dir string) erro
 
 	sysFilePath := filepath.Join(dir, "types.go")
 	ormFiles = append(ormFiles, sysFilePath)
-	if err := os.WriteFile(sysFilePath, []byte(sysContent), defaultPermissions); err != nil {
+	if err := os.WriteFile(sysFilePath, []byte(sysContent), coreutils.FileMode_rw_rw_rw_); err != nil {
 		return fmt.Errorf(errInGeneratingOrmFileFormat, sysFilePath, err)
 	}
 
@@ -162,7 +156,7 @@ func formatOrmFiles(ormFiles []string) error {
 			return err
 		}
 
-		if err := os.WriteFile(ormFile, formattedContent, defaultPermissions); err != nil {
+		if err := os.WriteFile(ormFile, formattedContent, coreutils.FileMode_rw_rw_rw_); err != nil {
 			return err
 		}
 	}
@@ -176,7 +170,7 @@ func generateOrmFile(localName string, ormPkgData ormPackage, dir string) (fileP
 		return filePath, err
 	}
 
-	if err := os.WriteFile(filePath, ormFileContent, defaultPermissions); err != nil {
+	if err := os.WriteFile(filePath, ormFileContent, coreutils.FileMode_rw_rw_rw_); err != nil {
 		return filePath, err
 	}
 	return filePath, nil
@@ -342,7 +336,7 @@ func getHeaderFileContent(headerFilePath string) (string, error) {
 
 func createOrmDir(dir string) (string, error) {
 	ormDirPath := filepath.Join(dir, internalDirName, ormDirName)
-	exists, err := exists(ormDirPath)
+	exists, err := coreutils.Exists(ormDirPath)
 	if err != nil {
 		// notest
 		return "", err
@@ -352,7 +346,7 @@ func createOrmDir(dir string) (string, error) {
 			return "", err
 		}
 	}
-	return ormDirPath, os.MkdirAll(ormDirPath, defaultPermissions)
+	return ormDirPath, os.MkdirAll(ormDirPath, coreutils.FileMode_rwxrwxrwx)
 }
 
 func normalizeName(name string) (newName string) {

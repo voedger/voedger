@@ -9,28 +9,23 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/spf13/cobra"
 
 	"github.com/voedger/voedger/pkg/compile"
+	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-func newCompileCmd() *cobra.Command {
-	params := vpmParams{}
+func newCompileCmd(params *vpmParams) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "compile",
 		Short: "compile voedger application",
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
-			params, err = prepareParams(params, args)
-			if err != nil {
-				return err
-			}
-
 			_, err = compile.Compile(params.Dir)
 			return
 		},
 	}
-	initGlobalFlags(cmd, &params)
 	return cmd
 }
 
@@ -43,7 +38,7 @@ func makeAbsPath(dir string) (string, error) {
 		}
 		dir = filepath.Clean(filepath.Join(wd, dir))
 	}
-	exists, err := exists(dir)
+	exists, err := coreutils.Exists(dir)
 	if err != nil {
 		// notest
 		return "", err
@@ -54,25 +49,24 @@ func makeAbsPath(dir string) (string, error) {
 	return dir, nil
 }
 
-func initGlobalFlags(cmd *cobra.Command, params *vpmParams) {
-	cmd.SilenceErrors = true
-	cmd.Flags().StringVarP(&params.Dir, "change-dir", "C", "", "Change to dir before running the command. Any files named on the command line are interpreted after changing directories. If used, this flag must be the first one in the command line.")
-}
-
-func prepareParams(params vpmParams, args []string) (newParams vpmParams, err error) {
+func prepareParams(cmd *cobra.Command, params *vpmParams, args []string) (err error) {
 	if len(args) > 0 {
-		params.TargetDir = filepath.Clean(args[0])
+		switch {
+		case strings.Contains(cmd.Use, "init"):
+			params.PackagePath = args[0]
+		case strings.Contains(cmd.Use, "baseline") || strings.Contains(cmd.Use, "compat"):
+			params.TargetDir = filepath.Clean(args[0])
+		}
 	}
-	newParams = params
-	newParams.Dir, err = makeAbsPath(params.Dir)
+	params.Dir, err = makeAbsPath(params.Dir)
 	if err != nil {
 		return
 	}
-	if newParams.IgnoreFile != "" {
-		newParams.IgnoreFile = filepath.Clean(newParams.IgnoreFile)
+	if params.IgnoreFile != "" {
+		params.IgnoreFile = filepath.Clean(params.IgnoreFile)
 	}
-	if newParams.TargetDir == "" {
-		newParams.TargetDir = newParams.Dir
+	if params.TargetDir == "" {
+		params.TargetDir = params.Dir
 	}
-	return
+	return nil
 }

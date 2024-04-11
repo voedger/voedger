@@ -54,59 +54,59 @@ const (
 // panics if name does not exist in type
 // If field is nil zero value is returned
 type IRowReader interface {
-	AsInt32(name string) int32
-	AsInt64(name string) int64
-	AsFloat32(name string) float32
-	AsFloat64(name string) float64
+	AsInt32(appdef.FieldName) int32
+	AsInt64(appdef.FieldName) int64
+	AsFloat32(appdef.FieldName) float32
+	AsFloat64(appdef.FieldName) float64
 
 	// Returns bytes or raw field value
-	AsBytes(name string) []byte
+	AsBytes(appdef.FieldName) []byte
 
 	// Returns string or raw field value
-	AsString(name string) string
+	AsString(appdef.FieldName) string
 
-	AsQName(name string) appdef.QName
-	AsBool(name string) bool
-	AsRecordID(name string) RecordID
+	AsQName(appdef.FieldName) appdef.QName
+	AsBool(appdef.FieldName) bool
+	AsRecordID(appdef.FieldName) RecordID
 
 	// consts.NullRecord will be returned as null-values
-	RecordIDs(includeNulls bool, cb func(name string, value RecordID))
-	FieldNames(cb func(fieldName string))
+	RecordIDs(includeNulls bool, cb func(appdef.FieldName, RecordID))
+	FieldNames(cb func(appdef.FieldName))
 }
 
 type IRowWriter interface {
 
 	// The following functions panics if name has different type then value
 
-	PutInt32(name string, value int32)
-	PutInt64(name string, value int64)
-	PutFloat32(name string, value float32)
-	PutFloat64(name string, value float64)
+	PutInt32(appdef.FieldName, int32)
+	PutInt64(appdef.FieldName, int64)
+	PutFloat32(appdef.FieldName, float32)
+	PutFloat64(appdef.FieldName, float64)
 
 	// Puts value into bytes or raw data field.
-	PutBytes(name string, value []byte)
+	PutBytes(appdef.FieldName, []byte)
 
 	// Puts value into string or raw data field.
-	PutString(name, value string)
+	PutString(appdef.FieldName, string)
 
-	PutQName(name string, value appdef.QName)
-	PutBool(name string, value bool)
-	PutRecordID(name string, value RecordID)
+	PutQName(appdef.FieldName, appdef.QName)
+	PutBool(appdef.FieldName, bool)
+	PutRecordID(appdef.FieldName, RecordID)
 
 	// Puts value into int23, int64, float32, float64 or RecordID data type fields.
 	//
 	// Tries to make conversion from value to a name type
-	PutNumber(name string, value float64)
+	PutNumber(appdef.FieldName, float64)
 
 	// Puts value into string, bytes or QName data type field.
 	//
 	// Tries to make conversion from value to a name type
-	PutChars(name string, value string)
+	PutChars(appdef.FieldName, string)
 
 	// Puts value into fields. Field names are taken from map keys, values are taken from map values.
 	//
 	// Calls PutNumber for numbers and RecordIDs, PutChars for strings, bytes and QNames.
-	PutFromJSON(map[string]any)
+	PutFromJSON(map[appdef.FieldName]any)
 }
 
 // App Workspace amount type. Need to wire

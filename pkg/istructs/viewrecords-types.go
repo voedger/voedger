@@ -6,6 +6,8 @@
 
 package istructs
 
+import "github.com/voedger/voedger/pkg/appdef"
+
 // ref. also https://cassandra.apache.org/doc/latest/cassandra/cql/ddl.html
 // FIXME implement IRowWriter
 type IKeyBuilder interface {
@@ -25,10 +27,10 @@ type IValueBuilder interface {
 	IRowWriter
 
 	// @Tricky
-	PutRecord(name string, record IRecord)
+	PutRecord(appdef.FieldName, IRecord)
 
 	// @Tricky
-	PutEvent(name string, event IDbEvent)
+	PutEvent(appdef.FieldName, IDbEvent)
 	Build() IValue
 
 	// Writes value data to bytes.
@@ -43,8 +45,8 @@ type IValue interface {
 
 	// The following methods panic if cell type does not match
 
-	AsRecord(name string) (record IRecord)
-	AsEvent(name string) (event IDbEvent)
+	AsRecord(appdef.FieldName) IRecord
+	AsEvent(appdef.FieldName) IDbEvent
 }
 
 type IKey interface {

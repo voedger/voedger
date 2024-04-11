@@ -158,7 +158,7 @@ WORKSPACE Restaurant (
         height int
     )
 
-    -- see also: untill-tables.sql
+    -- see also: untill-tables.vsql
 
     -------------------------------------------------------------------------------------
     -- ACLs
@@ -221,7 +221,7 @@ WORKSPACE Restaurant (
         PRIMARY KEY((Year), Month, Day, Kind, Number)
     ) AS RESULT OF UpdateXZReportsView
 
-    -- see also air-views.sql
+    -- see also air-views.vsql
 
 )
 

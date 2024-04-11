@@ -155,7 +155,7 @@ func (k TypeKind) DataKindAvailable(d DataKind) bool {
 }
 
 // Is specified system field exists and required.
-func (k TypeKind) HasSystemField(f string) (exists, required bool) {
+func (k TypeKind) HasSystemField(f FieldName) (exists, required bool) {
 	required, exists = typeKindProps[k].systemFields[f]
 	return exists, required
 }
@@ -186,12 +186,12 @@ func (k TypeKind) TrimString() string {
 // Type kind properties
 var typeKindProps = map[TypeKind]struct {
 	fieldKinds     map[DataKind]bool
-	systemFields   map[string]bool
+	systemFields   map[FieldName]bool
 	containerKinds map[TypeKind]bool
 }{
 	TypeKind_null: {
 		fieldKinds:     map[DataKind]bool{},
-		systemFields:   map[string]bool{},
+		systemFields:   map[FieldName]bool{},
 		containerKinds: map[TypeKind]bool{},
 	},
 	TypeKind_GDoc: {
@@ -206,7 +206,7 @@ var typeKindProps = map[TypeKind]struct {
 			DataKind_bool:     true,
 			DataKind_RecordID: true,
 		},
-		systemFields: map[string]bool{
+		systemFields: map[FieldName]bool{
 			SystemField_ID:       true,
 			SystemField_QName:    true,
 			SystemField_IsActive: false, // exists, but not required
@@ -227,7 +227,7 @@ var typeKindProps = map[TypeKind]struct {
 			DataKind_bool:     true,
 			DataKind_RecordID: true,
 		},
-		systemFields: map[string]bool{
+		systemFields: map[FieldName]bool{
 			SystemField_ID:       true,
 			SystemField_QName:    true,
 			SystemField_IsActive: false,
@@ -248,7 +248,7 @@ var typeKindProps = map[TypeKind]struct {
 			DataKind_bool:     true,
 			DataKind_RecordID: true,
 		},
-		systemFields: map[string]bool{
+		systemFields: map[FieldName]bool{
 			SystemField_ID:    true,
 			SystemField_QName: true,
 		},
@@ -269,7 +269,7 @@ var typeKindProps = map[TypeKind]struct {
 			DataKind_bool:     true,
 			DataKind_RecordID: true,
 		},
-		systemFields: map[string]bool{
+		systemFields: map[FieldName]bool{
 			SystemField_ID:       true,
 			SystemField_QName:    true,
 			SystemField_IsActive: false,
@@ -290,7 +290,7 @@ var typeKindProps = map[TypeKind]struct {
 			DataKind_bool:     true,
 			DataKind_RecordID: true,
 		},
-		systemFields: map[string]bool{
+		systemFields: map[FieldName]bool{
 			SystemField_ID:        true,
 			SystemField_QName:     true,
 			SystemField_ParentID:  true,
@@ -313,7 +313,7 @@ var typeKindProps = map[TypeKind]struct {
 			DataKind_bool:     true,
 			DataKind_RecordID: true,
 		},
-		systemFields: map[string]bool{
+		systemFields: map[FieldName]bool{
 			SystemField_ID:        true,
 			SystemField_QName:     true,
 			SystemField_ParentID:  true,
@@ -336,7 +336,7 @@ var typeKindProps = map[TypeKind]struct {
 			DataKind_bool:     true,
 			DataKind_RecordID: true,
 		},
-		systemFields: map[string]bool{
+		systemFields: map[FieldName]bool{
 			SystemField_ID:        true,
 			SystemField_QName:     true,
 			SystemField_ParentID:  true,
@@ -358,7 +358,7 @@ var typeKindProps = map[TypeKind]struct {
 			DataKind_bool:     true,
 			DataKind_RecordID: true,
 		},
-		systemFields: map[string]bool{
+		systemFields: map[FieldName]bool{
 			SystemField_ID:        true,
 			SystemField_QName:     true,
 			SystemField_ParentID:  true,
@@ -383,7 +383,7 @@ var typeKindProps = map[TypeKind]struct {
 			DataKind_Record:   true,
 			DataKind_Event:    true,
 		},
-		systemFields: map[string]bool{
+		systemFields: map[FieldName]bool{
 			SystemField_QName: true,
 		},
 		containerKinds: map[TypeKind]bool{},
@@ -400,7 +400,7 @@ var typeKindProps = map[TypeKind]struct {
 			DataKind_bool:     true,
 			DataKind_RecordID: true,
 		},
-		systemFields: map[string]bool{
+		systemFields: map[FieldName]bool{
 			SystemField_QName:     true,
 			SystemField_Container: false, // exists, but required for nested (child) objects only
 		},
@@ -410,17 +410,17 @@ var typeKindProps = map[TypeKind]struct {
 	},
 	TypeKind_Query: {
 		fieldKinds:     map[DataKind]bool{},
-		systemFields:   map[string]bool{},
+		systemFields:   map[FieldName]bool{},
 		containerKinds: map[TypeKind]bool{},
 	},
 	TypeKind_Command: {
 		fieldKinds:     map[DataKind]bool{},
-		systemFields:   map[string]bool{},
+		systemFields:   map[FieldName]bool{},
 		containerKinds: map[TypeKind]bool{},
 	},
 	TypeKind_Workspace: {
 		fieldKinds:     map[DataKind]bool{},
-		systemFields:   map[string]bool{},
+		systemFields:   map[FieldName]bool{},
 		containerKinds: map[TypeKind]bool{},
 	},
 }

@@ -475,7 +475,7 @@ func makeTmpContent(require *require.Assertions, pattern string) (dir string, fi
 
 	fileName = "tmpcontext.txt"
 
-	err = os.WriteFile(filepath.Join(dir, fileName), []byte(filepath.Base(pattern)), 0644)
+	err = os.WriteFile(filepath.Join(dir, fileName), []byte(filepath.Base(pattern)), coreutils.FileMode_rw_rw_rw_)
 	require.NoError(err)
 
 	return dir, fileName

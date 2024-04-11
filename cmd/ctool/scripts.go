@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
-	"io/ioutil"
 	"math/rand"
 	"os"
 	"path/filepath"
@@ -18,7 +17,8 @@ import (
 	"time"
 
 	"github.com/untillpro/goutils/exec"
-	"golang.org/x/crypto/ssh/terminal"
+	coreutils "github.com/voedger/voedger/pkg/utils"
+	"golang.org/x/term"
 )
 
 //go:embed scripts/drafts/*
@@ -135,16 +135,17 @@ func getEnvValue1(key string) string {
 	return value
 }
 
-func scriptExists(scriptFileName string) bool {
+func scriptExists(scriptFileName string) (bool, error) {
 	if scriptsTempDir == "" {
-		return false
+		return false, nil
 	}
 
-	if _, err := os.Stat(filepath.Join(scriptsTempDir, scriptFileName)); err == nil {
-		return true
+	exists, err := coreutils.Exists(filepath.Join(scriptsTempDir, scriptFileName))
+	if err != nil {
+		// notest
+		return false, err
 	}
-
-	return false
+	return exists, nil
 }
 
 func prepareScripts(scriptFileNames ...string) error {
@@ -169,7 +170,12 @@ func prepareScripts(scriptFileNames ...string) error {
 
 	for _, fileName := range scriptFileNames {
 
-		if scriptExists(fileName) {
+		exists, err := scriptExists(fileName)
+		if err != nil {
+			// notest
+			return err
+		}
+		if exists {
 			continue
 		}
 
@@ -184,7 +190,7 @@ func prepareScripts(scriptFileNames ...string) error {
 		dir := filepath.Dir(destFileName)
 
 		// nolint
-		err = os.MkdirAll(dir, rwxrwxrwx) // os.ModePerm)
+		err = os.MkdirAll(dir, coreutils.FileMode_rwxrwxrwx) // os.ModePerm)
 		if err != nil {
 			return err
 		}
@@ -195,7 +201,7 @@ func prepareScripts(scriptFileNames ...string) error {
 		}
 
 		defer newFile.Close()
-		if err = os.Chmod(destFileName, rwxrwxrwx); err != nil {
+		if err = os.Chmod(destFileName, coreutils.FileMode_rwxrwxrwx); err != nil {
 			return err
 		}
 
@@ -220,11 +226,11 @@ func extractAllScripts() error {
 				return err
 			}
 			destPath := filepath.Join(scriptsTempDir, strings.TrimPrefix(path, "scripts/drafts"))
-			err = os.MkdirAll(filepath.Dir(destPath), rwxrwxrwx)
+			err = os.MkdirAll(filepath.Dir(destPath), coreutils.FileMode_rwxrwxrwx)
 			if err != nil {
 				return err
 			}
-			err = ioutil.WriteFile(destPath, content, rwxrwxrwx)
+			err = os.WriteFile(destPath, content, coreutils.FileMode_rwxrwxrwx)
 			if err != nil {
 				return err
 			}
@@ -236,7 +242,7 @@ func extractAllScripts() error {
 // nolint
 func inputPassword(pass *string) error {
 
-	bytePassword, err := terminal.ReadPassword(int(os.Stdin.Fd()))
+	bytePassword, err := term.ReadPassword(int(os.Stdin.Fd()))
 	if err == nil {
 		*pass = string(bytePassword)
 		return nil
@@ -264,7 +270,7 @@ func prepareScriptFromTemplate(scriptFileName string, data interface{}) error {
 	}
 	defer destFile.Close()
 
-	err = destFile.Chmod(rw_rw_rw_)
+	err = destFile.Chmod(coreutils.FileMode_rw_rw_rw_)
 	if err != nil {
 		return err
 	}
@@ -275,50 +281,4 @@ func prepareScriptFromTemplate(scriptFileName string, data interface{}) error {
 	}
 
 	return nil
-}
-
-// nolint
-func copyFile(src, dest string) error {
-	sourceFile, err := os.Open(src)
-	if err != nil {
-		return err
-	}
-	defer sourceFile.Close()
-
-	destFile, err := os.Create(dest)
-	if err != nil {
-		return err
-	}
-	defer destFile.Close()
-
-	_, err = io.Copy(destFile, sourceFile)
-	if err != nil {
-		return err
-	}
-
-	err = destFile.Sync()
-	if err != nil {
-		return err
-	}
-
-	sourceInfo, err := os.Stat(src)
-	if err != nil {
-		return err
-	}
-
-	err = os.Chmod(dest, sourceInfo.Mode())
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// nolint
-func fileExists(filename string) bool {
-	_, err := os.Stat(filename)
-	if os.IsNotExist(err) {
-		return false
-	}
-	return true
 }

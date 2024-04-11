@@ -828,6 +828,139 @@ func newEntry(viewRecords istructs.IViewRecords, wsid istructs.WSID, idDepartmen
 	}
 }
 
+func Test_ViewRecordsPutJSON(t *testing.T) {
+	require := require.New(t)
+
+	const viewName = `test.view`
+
+	storage := teststore.NewStorage()
+	storageProvider := teststore.NewStorageProvider(storage)
+
+	appCfgs := func() AppConfigsType {
+		cfgs := make(AppConfigsType, 1)
+
+		adb := appdef.New()
+		adb.AddPackage("test", "test.com/test")
+		t.Run("must be ok to build application", func(t *testing.T) {
+			view := adb.AddView(appdef.MustParseQName(viewName))
+			view.Key().PartKey().
+				AddField("pk1", appdef.DataKind_int64)
+			view.Key().ClustCols().
+				AddField("cc1", appdef.DataKind_int64).
+				AddField("cc2", appdef.DataKind_string, appdef.MaxLen(64))
+			view.Value().
+				AddField("v1", appdef.DataKind_float32, true).
+				AddField("v2", appdef.DataKind_string, true)
+		})
+		_ = cfgs.AddConfig(istructs.AppQName_test1_app1, adb)
+		return cfgs
+	}()
+
+	app, err := Provide(appCfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider).AppStructs(istructs.AppQName_test1_app1)
+	require.NoError(err)
+
+	t.Run("should be ok to put view record via PutJSON", func(t *testing.T) {
+		json := make(map[appdef.FieldName]any)
+		json[appdef.SystemField_QName] = viewName
+		json["pk1"] = float64(1)
+		json["cc1"] = float64(2)
+		json["cc2"] = "test sort"
+		json["v1"] = float64(3)
+		json["v2"] = "naked 🔫"
+
+		err := app.ViewRecords().PutJSON(33, json)
+		require.NoError(err)
+
+		t.Run("should be ok to read view record", func(t *testing.T) {
+			k := app.ViewRecords().KeyBuilder(appdef.MustParseQName(viewName))
+			k.PutInt64("pk1", 1)
+			k.PutInt64("cc1", 2)
+			k.PutString("cc2", "test sort")
+			v, err := app.ViewRecords().Get(33, k)
+			require.NoError(err)
+
+			require.EqualValues(viewName, v.AsQName(appdef.SystemField_QName).String())
+			require.EqualValues(3, v.AsFloat32("v1"))
+			require.EqualValues("naked 🔫", v.AsString("v2"))
+		})
+	})
+
+	t.Run("errors test", func(t *testing.T) {
+		var err error
+		t.Run("should be error if wrong view name", func(t *testing.T) {
+			json := make(map[appdef.FieldName]any)
+
+			err = app.ViewRecords().PutJSON(1, json)
+			require.ErrorIs(err, ErrFieldIsEmpty)
+			require.ErrorContains(err, appdef.SystemField_QName)
+
+			json[appdef.SystemField_QName] = appdef.NullQName.String()
+			err = app.ViewRecords().PutJSON(1, json)
+			require.ErrorIs(err, ErrFieldIsEmpty)
+			require.ErrorContains(err, appdef.SystemField_QName)
+
+			json[appdef.SystemField_QName] = 123
+			err = app.ViewRecords().PutJSON(1, json)
+			require.ErrorIs(err, ErrWrongFieldType)
+			require.ErrorContains(err, appdef.SystemField_QName)
+
+			json[appdef.SystemField_QName] = `naked 🔫`
+			err = app.ViewRecords().PutJSON(1, json)
+			require.ErrorIs(err, appdef.ErrInvalidQNameStringRepresentation)
+			require.ErrorContains(err, appdef.SystemField_QName)
+
+			json[appdef.SystemField_QName] = `test.unknown`
+			err = app.ViewRecords().PutJSON(1, json)
+			require.ErrorIs(err, ErrNameNotFound)
+			require.ErrorContains(err, `test.unknown`)
+		})
+
+		t.Run("should be error if key errors", func(t *testing.T) {
+			json := make(map[appdef.FieldName]any)
+			json[appdef.SystemField_QName] = viewName
+
+			err = app.ViewRecords().PutJSON(1, json)
+			require.ErrorIs(err, ErrFieldIsEmpty)
+			require.ErrorContains(err, "pk1")
+
+			json["pk1"] = "error value"
+			err = app.ViewRecords().PutJSON(1, json)
+			require.ErrorIs(err, ErrWrongFieldType)
+			require.ErrorContains(err, "pk1")
+
+			json["pk1"] = float64(1)
+			err = app.ViewRecords().PutJSON(1, json)
+			require.ErrorIs(err, ErrFieldIsEmpty)
+			require.ErrorContains(err, "cc1")
+
+			json["pk1"] = float64(1)
+			json["cc1"] = float64(2)
+			err = app.ViewRecords().PutJSON(1, json)
+			require.ErrorIs(err, ErrFieldIsEmpty)
+			require.ErrorContains(err, "cc2")
+		})
+
+		t.Run("should be error if value errors", func(t *testing.T) {
+			json := make(map[appdef.FieldName]any)
+			json[appdef.SystemField_QName] = viewName
+			json["pk1"] = float64(1)
+			json["cc1"] = float64(2)
+			json["cc2"] = `test sort`
+
+			json["unknownField"] = `value`
+			err = app.ViewRecords().PutJSON(1, json)
+			require.ErrorIs(err, ErrNameNotFound)
+			require.ErrorContains(err, "unknownField")
+
+			delete(json, "unknownField")
+			json["v1"] = `value`
+			err = app.ViewRecords().PutJSON(1, json)
+			require.ErrorIs(err, ErrWrongFieldType)
+			require.ErrorContains(err, "v1")
+		})
+	})
+}
+
 func Test_LoadStoreViewRecord_Bytes(t *testing.T) {
 	require := require.New(t)
 

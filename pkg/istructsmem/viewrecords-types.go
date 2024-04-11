@@ -150,6 +150,61 @@ func (vr *appViewRecords) PutBatch(workspace istructs.WSID, recs []istructs.View
 	return vr.app.config.storage.PutBatch(batch)
 }
 
+func (vr *appViewRecords) PutJSON(ws istructs.WSID, j map[appdef.FieldName]any) error {
+	viewName := appdef.NullQName
+
+	if v, ok := j[appdef.SystemField_QName]; ok {
+		if value, ok := v.(string); ok {
+			if qName, err := appdef.ParseQName(value); err == nil {
+				viewName = qName
+			} else {
+				return fmt.Errorf(errFieldConvertErrorWrap, appdef.SystemField_QName, value, appdef.DataKind_QName.TrimString(), err)
+			}
+		} else {
+			return fmt.Errorf(errFieldConvertErrorWrap, appdef.SystemField_QName, v, appdef.DataKind_QName.TrimString(), ErrWrongFieldType)
+		}
+	}
+
+	if viewName == appdef.NullQName {
+		return fmt.Errorf("%w: %v", ErrFieldIsEmpty, appdef.SystemField_QName)
+	}
+
+	view := vr.app.config.AppDef.View(viewName)
+	if view == nil {
+		return fmt.Errorf(errViewNotFoundWrap, viewName, ErrNameNotFound)
+	}
+
+	key := newKey(vr.app.config, viewName)
+	value := newValue(vr.app.config, viewName)
+
+	keyJ := make(map[appdef.FieldName]any)
+	valueJ := make(map[appdef.FieldName]any)
+
+	for f, v := range j {
+		if view.Key().Field(f) != nil {
+			keyJ[f] = v
+		} else {
+			if view.Value().Field(f) != nil {
+				valueJ[f] = v
+			} else {
+				return fmt.Errorf(errFieldNotFoundWrap, f, view, ErrNameNotFound)
+			}
+		}
+	}
+
+	key.PutFromJSON(keyJ)
+	if err := key.build(); err != nil {
+		return err
+	}
+
+	value.PutFromJSON(valueJ)
+	if err := value.build(); err != nil {
+		return err
+	}
+
+	return vr.Put(ws, key, value)
+}
+
 // istructs.IViewRecords.Read
 func (vr *appViewRecords) Read(ctx context.Context, workspace istructs.WSID, key istructs.IKeyBuilder, cb istructs.ValuesCallback) (err error) {
 
@@ -248,7 +303,7 @@ func (key *keyType) storeToBytes(ws istructs.WSID) (pKey, cKey []byte) {
 }
 
 // istructs.IRowReader.AsBool
-func (key *keyType) AsBool(name string) bool {
+func (key *keyType) AsBool(name appdef.FieldName) bool {
 	if key.partRow.fieldDef(name) != nil {
 		return key.partRow.AsBool(name)
 	}
@@ -256,12 +311,12 @@ func (key *keyType) AsBool(name string) bool {
 }
 
 // istructs.IRowReader.AsBytes
-func (key *keyType) AsBytes(name string) []byte {
+func (key *keyType) AsBytes(name appdef.FieldName) []byte {
 	return key.ccolsRow.AsBytes(name)
 }
 
 // istructs.IRowReader.AsFloat32
-func (key *keyType) AsFloat32(name string) float32 {
+func (key *keyType) AsFloat32(name appdef.FieldName) float32 {
 	if key.partRow.fieldDef(name) != nil {
 		return key.partRow.AsFloat32(name)
 	}
@@ -269,7 +324,7 @@ func (key *keyType) AsFloat32(name string) float32 {
 }
 
 // istructs.IRowReader.AsFloat64
-func (key *keyType) AsFloat64(name string) float64 {
+func (key *keyType) AsFloat64(name appdef.FieldName) float64 {
 	if key.partRow.fieldDef(name) != nil {
 		return key.partRow.AsFloat64(name)
 	}
@@ -277,7 +332,7 @@ func (key *keyType) AsFloat64(name string) float64 {
 }
 
 // istructs.IRowReader.AsInt32
-func (key *keyType) AsInt32(name string) int32 {
+func (key *keyType) AsInt32(name appdef.FieldName) int32 {
 	if key.partRow.fieldDef(name) != nil {
 		return key.partRow.AsInt32(name)
 	}
@@ -285,7 +340,7 @@ func (key *keyType) AsInt32(name string) int32 {
 }
 
 // istructs.IRowReader.AsInt64
-func (key *keyType) AsInt64(name string) int64 {
+func (key *keyType) AsInt64(name appdef.FieldName) int64 {
 	if key.partRow.fieldDef(name) != nil {
 		return key.partRow.AsInt64(name)
 	}
@@ -293,7 +348,7 @@ func (key *keyType) AsInt64(name string) int64 {
 }
 
 // istructs.IRowReader.AsQName
-func (key *keyType) AsQName(name string) appdef.QName {
+func (key *keyType) AsQName(name appdef.FieldName) appdef.QName {
 	if name == appdef.SystemField_QName {
 		// special case: «sys.QName» field must return view name
 		return key.viewName
@@ -305,7 +360,7 @@ func (key *keyType) AsQName(name string) appdef.QName {
 }
 
 // istructs.IRowReader.AsRecordID
-func (key *keyType) AsRecordID(name string) istructs.RecordID {
+func (key *keyType) AsRecordID(name appdef.FieldName) istructs.RecordID {
 	if key.partRow.fieldDef(name) != nil {
 		return key.partRow.AsRecordID(name)
 	}
@@ -313,7 +368,7 @@ func (key *keyType) AsRecordID(name string) istructs.RecordID {
 }
 
 // istructs.IRowReader.AsString
-func (key *keyType) AsString(name string) string {
+func (key *keyType) AsString(name appdef.FieldName) string {
 	return key.ccolsRow.AsString(name)
 }
 
@@ -361,7 +416,7 @@ func (key *keyType) Equals(src istructs.IKeyBuilder) bool {
 }
 
 // istructs.IRowReader.FieldNames
-func (key *keyType) FieldNames(cb func(string)) {
+func (key *keyType) FieldNames(cb func(appdef.FieldName)) {
 	key.partRow.FieldNames(cb)
 	key.ccolsRow.FieldNames(cb)
 }
@@ -372,7 +427,7 @@ func (key *keyType) PartitionKey() istructs.IRowWriter {
 }
 
 // istructs.IRowWriter.PutBool
-func (key *keyType) PutBool(name string, value bool) {
+func (key *keyType) PutBool(name appdef.FieldName, value bool) {
 	if key.partRow.fieldDef(name) != nil {
 		key.partRow.PutBool(name, value)
 	} else {
@@ -381,17 +436,17 @@ func (key *keyType) PutBool(name string, value bool) {
 }
 
 // istructs.IRowWriter.PutBytes
-func (key *keyType) PutBytes(name string, value []byte) {
+func (key *keyType) PutBytes(name appdef.FieldName, value []byte) {
 	key.ccolsRow.PutBytes(name, value)
 }
 
 // istructs.IRowWriter.PutChars
-func (key *keyType) PutChars(name string, value string) {
+func (key *keyType) PutChars(name appdef.FieldName, value string) {
 	key.ccolsRow.PutChars(name, value)
 }
 
 // istructs.IRowWriter.PutFloat32
-func (key *keyType) PutFloat32(name string, value float32) {
+func (key *keyType) PutFloat32(name appdef.FieldName, value float32) {
 	if key.partRow.fieldDef(name) != nil {
 		key.partRow.PutFloat32(name, value)
 	} else {
@@ -400,7 +455,7 @@ func (key *keyType) PutFloat32(name string, value float32) {
 }
 
 // istructs.IRowWriter.PutFloat64
-func (key *keyType) PutFloat64(name string, value float64) {
+func (key *keyType) PutFloat64(name appdef.FieldName, value float64) {
 	if key.partRow.fieldDef(name) != nil {
 		key.partRow.PutFloat64(name, value)
 	} else {
@@ -409,13 +464,24 @@ func (key *keyType) PutFloat64(name string, value float64) {
 }
 
 // istructs.IRowWriter.PutFromJSON
-func (key *keyType) PutFromJSON(j map[string]any) {
-	key.partRow.PutFromJSON(j)
-	key.ccolsRow.PutFromJSON(j)
+func (key *keyType) PutFromJSON(j map[appdef.FieldName]any) {
+	pkJ := make(map[appdef.FieldName]any)
+	ccJ := make(map[appdef.FieldName]any)
+
+	for f, v := range j {
+		if key.view.Key().PartKey().Field(f) != nil {
+			pkJ[f] = v
+		} else if key.view.Key().ClustCols().Field(f) != nil {
+			ccJ[f] = v
+		}
+	}
+
+	key.partRow.PutFromJSON(pkJ)
+	key.ccolsRow.PutFromJSON(ccJ)
 }
 
 // istructs.IRowWriter.PutInt32
-func (key *keyType) PutInt32(name string, value int32) {
+func (key *keyType) PutInt32(name appdef.FieldName, value int32) {
 	if key.partRow.fieldDef(name) != nil {
 		key.partRow.PutInt32(name, value)
 	} else {
@@ -424,7 +490,7 @@ func (key *keyType) PutInt32(name string, value int32) {
 }
 
 // istructs.IRowWriter.PutInt64
-func (key *keyType) PutInt64(name string, value int64) {
+func (key *keyType) PutInt64(name appdef.FieldName, value int64) {
 	if key.partRow.fieldDef(name) != nil {
 		key.partRow.PutInt64(name, value)
 	} else {
@@ -433,7 +499,7 @@ func (key *keyType) PutInt64(name string, value int64) {
 }
 
 // istructs.IRowWriter.PutNumber
-func (key *keyType) PutNumber(name string, value float64) {
+func (key *keyType) PutNumber(name appdef.FieldName, value float64) {
 	if key.partRow.fieldDef(name) != nil {
 		key.partRow.PutNumber(name, value)
 	} else {
@@ -442,7 +508,7 @@ func (key *keyType) PutNumber(name string, value float64) {
 }
 
 // istructs.IRowWriter.PutQName
-func (key *keyType) PutQName(name string, value appdef.QName) {
+func (key *keyType) PutQName(name appdef.FieldName, value appdef.QName) {
 	if key.partRow.fieldDef(name) != nil {
 		key.partRow.PutQName(name, value)
 	} else {
@@ -451,7 +517,7 @@ func (key *keyType) PutQName(name string, value appdef.QName) {
 }
 
 // istructs.IRowWriter.PutRecordID
-func (key *keyType) PutRecordID(name string, value istructs.RecordID) {
+func (key *keyType) PutRecordID(name appdef.FieldName, value istructs.RecordID) {
 	if key.partRow.fieldDef(name) != nil {
 		key.partRow.PutRecordID(name, value)
 	} else {
@@ -460,12 +526,12 @@ func (key *keyType) PutRecordID(name string, value istructs.RecordID) {
 }
 
 // istructs.IRowWriter.PutString
-func (key *keyType) PutString(name string, value string) {
+func (key *keyType) PutString(name appdef.FieldName, value string) {
 	key.ccolsRow.PutString(name, value)
 }
 
 // istructs.IRowReader.RecordIDs
-func (key *keyType) RecordIDs(includeNulls bool, cb func(string, istructs.RecordID)) {
+func (key *keyType) RecordIDs(includeNulls bool, cb func(appdef.FieldName, istructs.RecordID)) {
 	key.partRow.RecordIDs(includeNulls, cb)
 	key.ccolsRow.RecordIDs(includeNulls, cb)
 }
