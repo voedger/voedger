@@ -3,8 +3,4 @@
 
 WORKSPACE ClusterWS (
 	DESCRIPTOR Cluster();
-
-	TYPE x (
-		F1 int32
-	);
 );

@@ -9,7 +9,7 @@ import "github.com/voedger/voedger/pkg/parser"
 
 func Provide() parser.PackageFS {
 	return parser.PackageFS{
-		Path: ClusterPackage,
+		Path: ClusterPackageFQN,
 		FS:   schemaFS,
 	}
 }
