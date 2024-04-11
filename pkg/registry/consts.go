@@ -50,6 +50,6 @@ var (
 	errPasswordIsIncorrect                            = coreutils.NewHTTPErrorf(http.StatusUnauthorized, "password is incorrect")
 	errLoginOrPasswordIsIncorrect                     = coreutils.NewHTTPErrorf(http.StatusUnauthorized, "login or password is incorrect")
 
-	//go:embed appws.sql
+	//go:embed appws.vsql
 	schemasFS embed.FS
 )

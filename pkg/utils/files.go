@@ -20,7 +20,7 @@ func CopyDir(src, dst string) error {
 	if err = os.MkdirAll(dst, srcinfo.Mode()); err != nil {
 		return err
 	}
-	
+
 	dirEntries, err := os.ReadDir(src)
 	if err != nil {
 		// notest
@@ -60,6 +60,11 @@ func CopyFile(src, dst string) error {
 		return err
 	}
 
+	if err = dstF.Sync(); err != nil {
+		// notest
+		return err
+	}
+
 	srcinfo, err := os.Stat(src)
 	if err != nil {
 		// notest
@@ -67,4 +72,15 @@ func CopyFile(src, dst string) error {
 	}
 
 	return os.Chmod(dst, srcinfo.Mode())
+}
+
+func Exists(filePath string) (exists bool, err error) {
+	if _, err = os.Stat(filePath); err == nil {
+		return true, nil
+	}
+	if os.IsNotExist(err) {
+		return false, nil
+	}
+	// notest
+	return false, err
 }

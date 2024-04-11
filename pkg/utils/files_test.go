@@ -11,6 +11,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 )
 
@@ -21,18 +22,18 @@ func TestCopy(t *testing.T) {
 	dir1 := filepath.Join(tempDirSrc, "dir1")
 	dir2 := filepath.Join(tempDirSrc, "dir2")
 	dir1dir3 := filepath.Join(dir1, "dir3")
-	require.NoError(os.MkdirAll(dir1, 0777))
-	require.NoError(os.MkdirAll(dir2, 0777))
-	require.NoError(os.MkdirAll(dir1dir3, 0777))
+	require.NoError(os.MkdirAll(dir1, FileMode_rwxrwxrwx))
+	require.NoError(os.MkdirAll(dir2, FileMode_rwxrwxrwx))
+	require.NoError(os.MkdirAll(dir1dir3, FileMode_rwxrwxrwx))
 	file0 := filepath.Join(tempDirSrc, "file0.txt")
 	file1 := filepath.Join(dir1, "file1.txt")
 	file2 := filepath.Join(dir2, "file2.txt")
 	file3 := filepath.Join(dir1dir3, "file3.txt")
 
-	require.NoError(os.WriteFile(file0, []byte("file0 content"), 0777))
-	require.NoError(os.WriteFile(file1, []byte("file1 content"), 0777))
-	require.NoError(os.WriteFile(file2, []byte("file2 content"), 0777))
-	require.NoError(os.WriteFile(file3, []byte("file3 content"), 0777))
+	require.NoError(os.WriteFile(file0, []byte("file0 content"), FileMode_rw_rw_rw_))
+	require.NoError(os.WriteFile(file1, []byte("file1 content"), FileMode_rw_rw_rw_))
+	require.NoError(os.WriteFile(file2, []byte("file2 content"), FileMode_rw_rw_rw_))
+	require.NoError(os.WriteFile(file3, []byte("file3 content"), FileMode_rw_rw_rw_))
 
 	require.NoError(CopyDir(tempDirSrc, tempDirDst))
 	file0 = strings.ReplaceAll(file0, tempDirSrc, tempDirDst)
@@ -69,4 +70,23 @@ func TestCopyErrors(t *testing.T) {
 	require.Error(CopyFile("", tempDirDst))
 	require.Error(CopyFile(unexisingDir, ""))
 	require.Error(CopyFile(unexisingDir, ""))
+}
+
+func TestExists(t *testing.T) {
+	require := require.New(t)
+	t.Run("file", func(t *testing.T) {
+		exists, err := Exists("files_test.go")
+		require.NoError(err)
+		require.True(exists)
+
+		exists, err = Exists(uuid.New().String())
+		require.NoError(err)
+		require.False(exists)
+	})
+
+	t.Run("dir",func(t *testing.T) {
+		exists, err := Exists("wsdesc")
+		require.NoError(err)
+		require.True(exists)
+	})
 }

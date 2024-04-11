@@ -9,7 +9,6 @@ const (
 	pkgDirName           = "pkg"
 	ormDirName           = "orm"
 	internalDirName      = "internal"
-	defaultPermissions   = 0766
 	baselineInfoFileName = "baseline.json"
 	timestampFormat      = "Mon, 02 Jan 2006 15:04:05.000 GMT"
 )
@@ -62,6 +61,8 @@ const (
 	goSumFileName                       = "go.sum"
 	packagesGenFileName                 = "packages_gen.go"
 	packagePathIsNotDeterminedErrFormat = "vpm: cannot determine module path for source directory %s"
+	minimalRequiredGoVersion            = "1.22.2"
+	unsupportedGoVersionErrFormat       = "vpm: unsupported go version %s, minimal required go version is " + minimalRequiredGoVersion
 	goModContentTemplate                = `module %s
 
 go %s

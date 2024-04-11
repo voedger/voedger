@@ -163,7 +163,7 @@ func TestErrorsAppConfigsType(t *testing.T) {
 		doc.SetSingleton()
 		doc.AddField("f1", appdef.DataKind_string, true)
 		doc.AddContainer("rec", recName, 0, 1)
-		doc.AddUnique(appdef.UniqueQName(docName, "f1"), []string{"f1"})
+		doc.AddUnique(appdef.UniqueQName(docName, "f1"), []appdef.FieldName{"f1"})
 		adb.AddCRecord(recName)
 		return adb
 	}()

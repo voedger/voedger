@@ -92,7 +92,7 @@ func isAcceptable(event istructs.IPLogEvent, wantErrors bool, triggeringQNames m
 				}
 			case appdef.ProjectorEventKind_Activate:
 				if !rec.IsNew() {
-					activated, _, _ := iterate.FindFirstMap(rec.ModifiedFields, func(fieldName string, newValue interface{}) bool {
+					activated, _, _ := iterate.FindFirstMap(rec.ModifiedFields, func(fieldName appdef.FieldName, newValue interface{}) bool {
 						return fieldName == appdef.SystemField_IsActive && newValue.(bool)
 					})
 					if activated {
@@ -101,7 +101,7 @@ func isAcceptable(event istructs.IPLogEvent, wantErrors bool, triggeringQNames m
 				}
 			case appdef.ProjectorEventKind_Deactivate:
 				if !rec.IsNew() {
-					deactivated, _, _ := iterate.FindFirstMap(rec.ModifiedFields, func(fieldName string, newValue interface{}) bool {
+					deactivated, _, _ := iterate.FindFirstMap(rec.ModifiedFields, func(fieldName appdef.FieldName, newValue interface{}) bool {
 						return fieldName == appdef.SystemField_IsActive && !newValue.(bool)
 					})
 					if deactivated {
