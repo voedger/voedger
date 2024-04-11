@@ -14,7 +14,7 @@ import (
 
 func Test_IsSysField(t *testing.T) {
 	type args struct {
-		name string
+		name FieldName
 	}
 	tests := []struct {
 		name string

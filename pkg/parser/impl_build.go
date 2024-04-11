@@ -440,7 +440,7 @@ func (c *buildContext) addDataTypeField(field *FieldExpr) {
 	}
 
 	bld := c.defCtx().defBuilder.(appdef.IFieldsBuilder)
-	fieldName := string(field.Name)
+	fieldName := appdef.FieldName(field.Name)
 	sysDataKind := dataTypeToDataKind(*field.Type.DataType)
 
 	if field.Type.DataType.Bytes != nil {

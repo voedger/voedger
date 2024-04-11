@@ -7,7 +7,7 @@ package appdef
 
 import (
 	"fmt"
-	"sort"
+	"slices"
 )
 
 // # Implements:
@@ -18,12 +18,12 @@ type unique struct {
 	fields []IField
 }
 
-func newUnique(name QName, fieldNames []string, fields IFields) *unique {
+func newUnique(name QName, fieldNames []FieldName, fields IFields) *unique {
 	u := &unique{
 		name:   name,
 		fields: make([]IField, 0),
 	}
-	sort.Strings(fieldNames)
+	slices.Sort(fieldNames)
 	for _, f := range fieldNames {
 		fld := fields.Field(f)
 		if fld == nil {
@@ -60,12 +60,12 @@ func makeUniques(app *appDef, fields IFields) uniques {
 	return uu
 }
 
-func (uu *uniques) setUniqueField(name string) {
+func (uu *uniques) setUniqueField(name FieldName) {
 	if name == NullName {
 		uu.field = nil
 		return
 	}
-	if ok, err := ValidIdent(name); !ok {
+	if ok, err := ValidFieldName(name); !ok {
 		panic((fmt.Errorf("unique field name «%v» is invalid: %w", name, err)))
 	}
 
@@ -96,7 +96,7 @@ func (uu uniques) Uniques() map[QName]IUnique {
 	return uu.uniques
 }
 
-func (uu *uniques) addUnique(name QName, fields []string, comment ...string) {
+func (uu *uniques) addUnique(name QName, fields []FieldName, comment ...string) {
 	if name == NullQName {
 		panic(fmt.Errorf("unique name cannot be empty: %w", ErrNameMissed))
 	}
@@ -125,7 +125,7 @@ func (uu *uniques) addUnique(name QName, fields []string, comment ...string) {
 	}
 
 	for n, un := range uu.uniques {
-		ff := make([]string, 0)
+		ff := make([]FieldName, 0)
 		for _, f := range un.Fields() {
 			ff = append(ff, f.Name())
 		}
@@ -156,12 +156,12 @@ func makeUniquesBuilder(uniques *uniques) uniquesBuilder {
 	}
 }
 
-func (ub *uniquesBuilder) AddUnique(name QName, fields []string, comment ...string) IUniquesBuilder {
+func (ub *uniquesBuilder) AddUnique(name QName, fields []FieldName, comment ...string) IUniquesBuilder {
 	ub.addUnique(name, fields, comment...)
 	return ub
 }
 
-func (ub *uniquesBuilder) SetUniqueField(name string) IUniquesBuilder {
+func (ub *uniquesBuilder) SetUniqueField(name FieldName) IUniquesBuilder {
 	ub.setUniqueField(name)
 	return ub
 }

@@ -11,6 +11,8 @@ import (
 	"strconv"
 )
 
+// TODO: type ContainerName = string
+
 // # Implements:
 //   - Container
 type container struct {
