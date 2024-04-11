@@ -360,3 +360,32 @@ func TestTidyBasicUsage(t *testing.T) {
 
 	require.FileExists(filepath.Join(dir, goSumFileName))
 }
+
+func TestBuildBasicUsage(t *testing.T) {
+	if testing.Short() {
+		t.Skip()
+	}
+	require := require.New(t)
+
+	var err error
+	var tempDir string
+	if logger.IsVerbose() {
+		tempDir, err = os.MkdirTemp("", "test_genorm")
+		require.NoError(err)
+	} else {
+		tempDir = t.TempDir()
+	}
+
+	wd, err := os.Getwd()
+	require.NoError(err)
+
+	err = coreutils.CopyDir(filepath.Join(wd, "test", "genorm"), tempDir)
+	require.NoError(err)
+
+	dir := filepath.Join(tempDir, "app")
+
+	err = execRootCmd([]string{"vpm", "build", "-C", dir, "-o", "qwerty"}, "1.0.0")
+	require.NoError(err)
+
+	require.FileExists(filepath.Join(dir, "qwerty.var"))
+}

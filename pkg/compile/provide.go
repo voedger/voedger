@@ -6,6 +6,6 @@
 package compile
 
 // Compile loads a synthetic AppDef from a folder
-func Compile(dir string) (*Result, error) {
-	return compile(dir)
+func Compile(dir string, checkAppSchema bool) (*Result, error) {
+	return compile(dir, checkAppSchema)
 }

@@ -22,7 +22,7 @@ func newTidyCmd(params *vpmParams) *cobra.Command {
 		Use:   "tidy",
 		Short: "add missing and remove unused modules",
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
-			compileRes, err := compile.Compile(params.Dir)
+			compileRes, err := compile.Compile(params.Dir, false)
 			if err != nil {
 				logger.Error("failed to compile, will try to exec 'go mod tidy' anyway")
 				return errors.Join(err, execGoModTidy(params.Dir))

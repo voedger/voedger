@@ -20,7 +20,7 @@ import (
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-func compile(dir string) (*Result, error) {
+func compile(dir string, checkAppSchema bool) (*Result, error) {
 	var errs []error
 
 	loadedPkgs, err := loadPackages(dir)
@@ -44,7 +44,11 @@ func compile(dir string) (*Result, error) {
 		errs = append(errs, compileDirErrs...)
 	}
 	// add dummy app schema if no app schema found
-	if !hasAppSchema(pkgs) {
+	appSchemaExists := hasAppSchema(pkgs)
+	if checkAppSchema && !appSchemaExists {
+		return nil, ErrAppSchemaNotFound
+	}
+	if !appSchemaExists {
 		appPackageAst, err := getDummyAppPackageAst(maps.Values(importedStmts))
 		if err != nil {
 			errs = append(errs, err)

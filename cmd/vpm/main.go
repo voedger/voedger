@@ -39,7 +39,7 @@ func execRootCmd(args []string, ver string) error {
 		newOrmCmd(params),
 		newInitCmd(params),
 		newTidyCmd(params),
-		newBuildCmd(),
+		newBuildCmd(params),
 	)
 	rootCmd.InitDefaultHelpCmd()
 	rootCmd.InitDefaultCompletionCmd()
