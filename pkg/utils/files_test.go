@@ -11,6 +11,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 )
 
@@ -69,4 +70,23 @@ func TestCopyErrors(t *testing.T) {
 	require.Error(CopyFile("", tempDirDst))
 	require.Error(CopyFile(unexisingDir, ""))
 	require.Error(CopyFile(unexisingDir, ""))
+}
+
+func TestExists(t *testing.T) {
+	require := require.New(t)
+	t.Run("file", func(t *testing.T) {
+		exists, err := Exists("files_test.go")
+		require.NoError(err)
+		require.True(exists)
+
+		exists, err = Exists(uuid.New().String())
+		require.NoError(err)
+		require.False(exists)
+	})
+
+	t.Run("dir",func(t *testing.T) {
+		exists, err := Exists("wsdesc")
+		require.NoError(err)
+		require.True(exists)
+	})
 }
