@@ -22,6 +22,7 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/compile"
 	"github.com/voedger/voedger/pkg/sys"
+	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 //go:embed ormtemplates/*
@@ -136,7 +137,7 @@ func generateOrmFiles(pkgData map[ormPackageInfo][]interface{}, dir string) erro
 
 	sysFilePath := filepath.Join(dir, "types.go")
 	ormFiles = append(ormFiles, sysFilePath)
-	if err := os.WriteFile(sysFilePath, []byte(sysContent), defaultPermissions); err != nil {
+	if err := os.WriteFile(sysFilePath, []byte(sysContent), coreutils.FileMode_rw_rw_rw_); err != nil {
 		return fmt.Errorf(errInGeneratingOrmFileFormat, sysFilePath, err)
 	}
 
@@ -155,7 +156,7 @@ func formatOrmFiles(ormFiles []string) error {
 			return err
 		}
 
-		if err := os.WriteFile(ormFile, formattedContent, defaultPermissions); err != nil {
+		if err := os.WriteFile(ormFile, formattedContent, coreutils.FileMode_rw_rw_rw_); err != nil {
 			return err
 		}
 	}
@@ -169,7 +170,7 @@ func generateOrmFile(localName string, ormPkgData ormPackage, dir string) (fileP
 		return filePath, err
 	}
 
-	if err := os.WriteFile(filePath, ormFileContent, defaultPermissions); err != nil {
+	if err := os.WriteFile(filePath, ormFileContent, coreutils.FileMode_rw_rw_rw_); err != nil {
 		return filePath, err
 	}
 	return filePath, nil
@@ -335,7 +336,7 @@ func getHeaderFileContent(headerFilePath string) (string, error) {
 
 func createOrmDir(dir string) (string, error) {
 	ormDirPath := filepath.Join(dir, internalDirName, ormDirName)
-	exists, err := exists(ormDirPath)
+	exists, err := coreutils.Exists(ormDirPath)
 	if err != nil {
 		// notest
 		return "", err
@@ -345,7 +346,7 @@ func createOrmDir(dir string) (string, error) {
 			return "", err
 		}
 	}
-	return ormDirPath, os.MkdirAll(ormDirPath, defaultPermissions)
+	return ormDirPath, os.MkdirAll(ormDirPath, coreutils.FileMode_rwxrwxrwx)
 }
 
 func normalizeName(name string) (newName string) {

@@ -20,6 +20,7 @@ import (
 	"golang.org/x/mod/semver"
 
 	"github.com/voedger/voedger/pkg/compile"
+	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 var minimalRequiredGoVersionValue = minimalRequiredGoVersion
@@ -61,7 +62,7 @@ func execGoModTidy(dir string) error {
 func createGoMod(dir, packagePath string) error {
 	filePath := filepath.Join(dir, goModFileName)
 
-	exists, err := exists(filePath)
+	exists, err := coreutils.Exists(filePath)
 	if err != nil {
 		// notest
 		return err
@@ -77,7 +78,7 @@ func createGoMod(dir, packagePath string) error {
 	}
 
 	goModContent := fmt.Sprintf(goModContentTemplate, packagePath, goVersionNumber)
-	if err := os.WriteFile(filePath, []byte(goModContent), defaultPermissions); err != nil {
+	if err := os.WriteFile(filePath, []byte(goModContent), coreutils.FileMode_rw_rw_rw_); err != nil {
 		return err
 	}
 	if err := execGoGet(dir, compile.VoedgerPath); err != nil {
@@ -93,7 +94,7 @@ func checkGoVersion(goVersionNumber string) bool {
 func createPackagesGen(imports []string, dir string, recreate bool) error {
 	packagesGenFilePath := filepath.Join(dir, packagesGenFileName)
 	if !recreate {
-		exists, err := exists(packagesGenFilePath)
+		exists, err := coreutils.Exists(packagesGenFilePath)
 		if err != nil {
 			// notest
 			return err
@@ -114,7 +115,7 @@ func createPackagesGen(imports []string, dir string, recreate bool) error {
 		return err
 	}
 
-	if err := os.WriteFile(packagesGenFilePath, packagesGenContentFormatted, defaultPermissions); err != nil {
+	if err := os.WriteFile(packagesGenFilePath, packagesGenContentFormatted, coreutils.FileMode_rw_rw_rw_); err != nil {
 		return err
 	}
 	return nil
@@ -126,15 +127,4 @@ func execGoGet(goModDir, dependencyToGet string) error {
 		stdout = os.Stdout
 	}
 	return new(exec.PipedExec).Command("go", "get", fmt.Sprintf("%s@main", dependencyToGet)).WorkingDir(goModDir).Run(stdout, os.Stderr)
-}
-
-func exists(filePath string) (exists bool, err error) {
-	if _, err = os.Stat(filePath); err == nil {
-		return true, nil
-	}
-	if os.IsNotExist(err) {
-		return false, nil
-	}
-	// notest
-	return false, err
 }
