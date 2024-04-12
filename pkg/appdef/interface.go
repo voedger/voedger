@@ -11,16 +11,7 @@ type IAppDef interface {
 	IWithTypes
 	IWithPackages
 	IWithDataTypes
-
-	// Return GDoc by name.
-	//
-	// Returns nil if not found.
-	GDoc(name QName) IGDoc
-
-	// Return GRecord by name.
-	//
-	// Returns nil if not found.
-	GRecord(name QName) IGRecord
+	IWithGDocs
 
 	// Return CDoc by name.
 	//
@@ -122,22 +113,7 @@ type IAppDefBuilder interface {
 	ICommentBuilder
 	IPackagesBuilder
 	IDataTypesBuilder
-
-	// Adds new GDoc type with specified name.
-	//
-	// # Panics:
-	//   - if name is empty (appdef.NullQName),
-	//   - if name is invalid,
-	//   - if type with name already exists.
-	AddGDoc(name QName) IGDocBuilder
-
-	// Adds new GRecord type with specified name.
-	//
-	// # Panics:
-	//   - if name is empty (appdef.NullQName),
-	//   - if name is invalid,
-	//   - if type with name already exists.
-	AddGRecord(name QName) IGRecordBuilder
+	IGDocsBuilder
 
 	// Adds new CDoc type with specified name.
 	//

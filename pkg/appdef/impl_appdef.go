@@ -95,11 +95,27 @@ func (app *appDef) GDoc(name QName) IGDoc {
 	return nil
 }
 
+func (app *appDef) GDocs(cb func(IGDoc)) {
+	app.Types(func(t IType) {
+		if d, ok := t.(IGDoc); ok {
+			cb(d)
+		}
+	})
+}
+
 func (app *appDef) GRecord(name QName) IGRecord {
 	if t := app.typeByKind(name, TypeKind_GRecord); t != nil {
 		return t.(IGRecord)
 	}
 	return nil
+}
+
+func (app *appDef) GRecords(cb func(IGRecord)) {
+	app.Types(func(t IType) {
+		if r, ok := t.(IGRecord); ok {
+			cb(r)
+		}
+	})
 }
 
 func (app appDef) LocalQName(name FullQName) QName { return app.packages.localQName(name) }

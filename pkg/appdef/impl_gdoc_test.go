@@ -115,6 +115,23 @@ func Test_AppDef_AddGDoc(t *testing.T) {
 		})
 	})
 
+	t.Run("must be ok to enumerate docs", func(t *testing.T) {
+		var docs []QName
+		app.GDocs(func(doc IGDoc) {
+			docs = append(docs, doc.QName())
+		})
+		require.Len(docs, 1)
+		require.Equal(docName, docs[0])
+		t.Run("must be ok to enumerate recs", func(t *testing.T) {
+			var recs []QName
+			app.GRecords(func(rec IGRecord) {
+				recs = append(recs, rec.QName())
+			})
+			require.Len(recs, 1)
+			require.Equal(recName, recs[0])
+		})
+	})
+
 	t.Run("check nil returns", func(t *testing.T) {
 		unknown := NewQName("test", "unknown")
 		require.Equal(NullType, app.Type(unknown))
