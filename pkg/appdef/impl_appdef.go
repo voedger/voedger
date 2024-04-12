@@ -143,6 +143,14 @@ func (app *appDef) Object(name QName) IObject {
 	return nil
 }
 
+func (app *appDef) Objects(cb func(IObject)) {
+	app.Types(func(t IType) {
+		if o, ok := t.(IObject); ok {
+			cb(o)
+		}
+	})
+}
+
 func (app *appDef) ODoc(name QName) IODoc {
 	if t := app.typeByKind(name, TypeKind_ODoc); t != nil {
 		return t.(IODoc)

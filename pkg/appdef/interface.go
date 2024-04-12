@@ -16,11 +16,7 @@ type IAppDef interface {
 	IWithWDocs
 	IWithSingletons
 	IWithODocs
-
-	// Return Object by name.
-	//
-	// Returns nil if not found.
-	Object(name QName) IObject
+	IWithObjects
 
 	// Return record by name.
 	//
@@ -91,14 +87,7 @@ type IAppDefBuilder interface {
 	ICDocsBuilder
 	IWDocsBuilder
 	IODocsBuilder
-
-	// Adds new Object type with specified name.
-	//
-	// # Panics:
-	//   - if name is empty (appdef.NullQName),
-	//   - if name is invalid,
-	//   - if type with name already exists.
-	AddObject(name QName) IObjectBuilder
+	IObjectsBuilder
 
 	// Adds new types for view.
 	//
