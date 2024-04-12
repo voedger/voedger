@@ -22,7 +22,7 @@ func newCompileCmd(params *vpmParams) *cobra.Command {
 		Use:   "compile",
 		Short: "compile voedger application",
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
-			_, err = compile.Compile(params.Dir, false)
+			_, err = compile.Compile(params.Dir)
 			return
 		},
 	}

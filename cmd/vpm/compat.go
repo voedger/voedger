@@ -32,7 +32,7 @@ func newCompatCmd(params *vpmParams) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			compileRes, err := compile.Compile(params.Dir, false)
+			compileRes, err := compile.Compile(params.Dir)
 			if err != nil {
 				return err
 			}

@@ -24,7 +24,7 @@ func newBuildCmd(params *vpmParams) *cobra.Command {
 		Use:   "build [-C] [-o <archive-name>]",
 		Short: "build",
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
-			if _, err := compile.Compile(params.Dir, true); err != nil {
+			if _, err := compile.CompileNoDummyApp(params.Dir); err != nil {
 				return err
 			}
 			return build(params)

@@ -34,7 +34,7 @@ func newOrmCmd(params *vpmParams) *cobra.Command {
 		Use:   "orm",
 		Short: "generate orm for package",
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
-			compileRes, err := compile.Compile(params.Dir, false)
+			compileRes, err := compile.Compile(params.Dir)
 			if err != nil {
 				return err
 			}

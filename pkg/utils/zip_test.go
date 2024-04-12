@@ -45,16 +45,16 @@ Aenean malesuada nisi non nisl dictum vestibulum`
 	for _, filePath := range filePaths {
 		filesToZip = append(filesToZip, filepath.Join(tmpDir, filepath.Join(filePath...)))
 
-		err := os.MkdirAll(filepath.Join(tmpDir, filepath.Join(filePath[:len(filePath)-1]...)), 0755)
+		err := os.MkdirAll(filepath.Join(tmpDir, filepath.Join(filePath[:len(filePath)-1]...)), FileMode_rwxrwxrwx)
 		require.NoError(err)
-		err = os.WriteFile(filepath.Join(tmpDir, filepath.Join(filePath...)), []byte(content), 0644)
+		err = os.WriteFile(filepath.Join(tmpDir, filepath.Join(filePath...)), []byte(content), FileMode_rw_rw_rw_)
 		require.NoError(err)
 	}
 
 	// Test zipping and unzipping
 	zipFilePath := filepath.Join(tmpDir, "test.zip")
 	destDir := filepath.Join(tmpDir, "unzipped")
-	err := os.Mkdir(destDir, 0755)
+	err := os.Mkdir(destDir, FileMode_rwxrwxrwx)
 	require.NoError(err)
 
 	// Test zipping

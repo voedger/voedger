@@ -17,15 +17,11 @@ func Zip(zipFilePath string, filesToZip []string) error {
 	if err != nil {
 		return err
 	}
-	defer func() {
-		_ = zipFile.Close()
-	}()
+	defer zipFile.Close()
 
 	// Create a new zip writer
 	zipWriter := zip.NewWriter(zipFile)
-	defer func() {
-		_ = zipWriter.Close()
-	}()
+	defer zipWriter.Close()
 
 	// Add files to the zip archive
 	for _, file := range filesToZip {
@@ -42,9 +38,7 @@ func addFileToZip(zipWriter *zip.Writer, fileName string) error {
 	if err != nil {
 		return err
 	}
-	defer func() {
-		_ = fileToZip.Close()
-	}()
+	defer fileToZip.Close()
 
 	// Get file info
 	fileInfo, err := fileToZip.Stat()
@@ -91,8 +85,6 @@ func Unzip(zipFileName, destDir string) error {
 		if err != nil {
 			return err
 		}
-		defer func() {
-		}()
 
 		// Create the corresponding file on the disk
 		extractedFilePath := filepath.Join(destDir, filepath.Base(file.Name))
