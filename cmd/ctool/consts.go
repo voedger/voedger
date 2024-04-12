@@ -11,10 +11,6 @@ const (
 	clusterEditionCE = "CE"
 	clusterEditionSE = "SE"
 
-	// permissions
-	rwxrwxrwx = 0777
-	rw_rw_rw_ = 0666
-
 	// name of the cluster configuration file
 	clusterConfFileName  = "cluster.json"
 	scyllaConfigFileName = "scylla.yaml"
@@ -83,6 +79,8 @@ const (
 	voedger              = "voedger"
 
 	logFolder = "log"
+
+	alertManagerConfigFile = "~/alertmanager/config.yml"
 )
 
 const comma = ","

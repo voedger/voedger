@@ -51,26 +51,26 @@ type (
 		syncTime           istructs.UnixMilli
 
 		// event command tree entities
-		buyerIdent     string
+		buyerIdent     appdef.FieldName
 		buyerValue     string
-		ageIdent       string
+		ageIdent       appdef.FieldName
 		ageValue       int32
-		heightIdent    string
+		heightIdent    appdef.FieldName
 		heightValue    float32
-		humanIdent     string
+		humanIdent     appdef.FieldName
 		humanValue     bool
-		photoIdent     string
+		photoIdent     appdef.FieldName
 		photoValue     []byte
-		remarkIdent    string
+		remarkIdent    appdef.FieldName
 		remarkValue    string
-		emptinessIdent string
+		emptinessIdent appdef.FieldName
 		emptinessValue string
-		saleIdent      string
-		basketIdent    string
-		goodIdent      string
-		nameIdent      string
-		codeIdent      string
-		weightIdent    string
+		saleIdent      appdef.FieldName
+		basketIdent    appdef.FieldName
+		goodIdent      appdef.FieldName
+		nameIdent      appdef.FieldName
+		codeIdent      appdef.FieldName
+		weightIdent    appdef.FieldName
 		goodCount      int
 		goodNames      []string
 		goodCodes      []int64
@@ -97,7 +97,7 @@ type (
 
 		queryPhotoFunctionName       appdef.QName
 		queryPhotoFunctionParamsName appdef.QName
-		photoRawIdent                string
+		photoRawIdent                appdef.FieldName
 		photoRawValue                []byte
 
 		// tested rows
@@ -121,23 +121,23 @@ type (
 	}
 
 	testViewRecordPartKeyFieldsType struct {
-		partition string
-		workspace string
+		partition appdef.FieldName
+		workspace appdef.FieldName
 	}
 
 	testViewRecordClustKeyFieldsType struct {
-		device string
-		sorter string
+		device appdef.FieldName
+		sorter appdef.FieldName
 	}
 
 	testViewRecordValueFieldsType struct {
-		buyer   string
-		age     string
-		heights string
-		human   string
-		photo   string
-		record  string
-		event   string
+		buyer   appdef.FieldName
+		age     appdef.FieldName
+		heights appdef.FieldName
+		human   appdef.FieldName
+		photo   appdef.FieldName
+		record  appdef.FieldName
+		event   appdef.FieldName
 	}
 )
 

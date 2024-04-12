@@ -6,11 +6,10 @@
 package main
 
 import (
-	"fmt"
 	"os"
-	"strings"
 
 	"github.com/spf13/cobra"
+	"golang.org/x/mod/semver"
 )
 
 func newUpgradeCmd() *cobra.Command {
@@ -37,37 +36,7 @@ func newUpgradeCmd() *cobra.Command {
 // return -1 if version1 < version2
 // return 0 if version1 = version2
 func compareVersions(version1 string, version2 string) int {
-	v1Components := strings.Split(version1, ".")
-	v2Components := strings.Split(version2, ".")
-
-	for i := 0; i < len(v1Components) || i < len(v2Components); i++ {
-		v1 := 0
-		v2 := 0
-
-		if i < len(v1Components) {
-			v1 = parseVersionComponent(v1Components[i])
-		}
-		if i < len(v2Components) {
-			v2 = parseVersionComponent(v2Components[i])
-		}
-
-		if v1 > v2 {
-			return 1
-		} else if v1 < v2 {
-			return -1
-		}
-	}
-
-	return 0
-}
-
-func parseVersionComponent(component string) int {
-	if strings.Contains(component, "-") {
-		component = strings.Split(component, "-")[0]
-	}
-	var version int
-	fmt.Sscanf(component, "%d", &version)
-	return version
+	return semver.Compare("v"+version1, "v"+version2)
 }
 
 func upgrade(cmd *cobra.Command, args []string) error {

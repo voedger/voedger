@@ -86,7 +86,7 @@ func appDefFromBaselineDir(baselineDir string) (appdef.IAppDef, error) {
 	var errs []error
 
 	pkgDirPath := filepath.Join(baselineDir, pkgDirName)
-	pkgDirPathExists, err := exists(pkgDirPath)
+	pkgDirPathExists, err := coreutils.Exists(pkgDirPath)
 	if err != nil {
 		// notest
 		return nil, err
@@ -95,7 +95,7 @@ func appDefFromBaselineDir(baselineDir string) (appdef.IAppDef, error) {
 		return nil, fmt.Errorf("baseline directory does not contain %s subdirectory", pkgDirName)
 	}
 	baselineJsonFilePath := filepath.Join(baselineDir, baselineInfoFileName)
-	baselineJsonFilePathExists, err := exists(baselineJsonFilePath)
+	baselineJsonFilePathExists, err := coreutils.Exists(baselineJsonFilePath)
 	if err != nil {
 		// notest
 		return nil, err

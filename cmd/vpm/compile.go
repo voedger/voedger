@@ -14,6 +14,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/voedger/voedger/pkg/compile"
+	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 func newCompileCmd(params *vpmParams) *cobra.Command {
@@ -37,7 +38,7 @@ func makeAbsPath(dir string) (string, error) {
 		}
 		dir = filepath.Clean(filepath.Join(wd, dir))
 	}
-	exists, err := exists(dir)
+	exists, err := coreutils.Exists(dir)
 	if err != nil {
 		// notest
 		return "", err

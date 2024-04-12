@@ -120,7 +120,7 @@ func (row *rowType) dynoBufValue(value interface{}, kind appdef.DataKind) (inter
 	return nil, fmt.Errorf("value has type «%T», but «%s» expected: %w", value, kind.TrimString(), ErrWrongFieldType)
 }
 
-func dynoBufGetWord(dyB *dynobuffers.Buffer, fieldName string) (value uint16, ok bool) {
+func dynoBufGetWord(dyB *dynobuffers.Buffer, fieldName appdef.FieldName) (value uint16, ok bool) {
 	if b := dyB.GetByteArray(fieldName); b != nil {
 		if bytes := b.Bytes(); len(bytes) == 2 {
 			value = binary.BigEndian.Uint16(bytes)

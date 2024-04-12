@@ -16,9 +16,9 @@ import (
 	"github.com/voedger/voedger/pkg/sys/smtp"
 )
 
-func Provide(smtpCfg smtp.Cfg) apps.AppBuilder {
+func Provide() apps.AppBuilder {
 	return func(apis apps.APIs, cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) apps.BuiltInAppDef {
-		sysPackageFS := sys.Provide(cfg, appDefBuilder, smtpCfg, ep, nil, apis.TimeFunc, apis.ITokens, apis.IFederation, apis.IAppStructsProvider, apis.IAppTokensFactory,
+		sysPackageFS := sys.Provide(cfg, appDefBuilder, smtp.Cfg{}, ep, nil, apis.TimeFunc, apis.ITokens, apis.IFederation, apis.IAppStructsProvider, apis.IAppTokensFactory,
 			apis.NumCommandProcessors, nil, apis.IAppStorageProvider)
 		routerAppPackageFS := parser.PackageFS{
 			Path: RouterAppFQN,
