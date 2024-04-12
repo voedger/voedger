@@ -469,7 +469,7 @@ func Test_Workspace_Defs(t *testing.T) {
 
 func Test_Workspace_Defs2(t *testing.T) {
 	require := require.New(t)
-	fs, err := ParseFile("file1.vsql", `IMPORT SCHEMA 'test/pkg2'; 
+	fs, err := ParseFile("file1.vsql", `IMPORT SCHEMA 'test/pkg2';
 		APPLICATION test(
 			USE pkg2;
 		);
@@ -1588,7 +1588,7 @@ func Test_AppSchemaErrors(t *testing.T) {
 		USE air1;
 		USE pkg3;
 		)`, "file2.vsql:3:3: air1 undefined",
-		"application does not define use of package github.com/untillpro/airsbp3/pkg2")
+		"application does not define use of package github.com/untillpro/airsbp3/pkg2. Check if the package is defined in IMPORT SCHEMA and parsed under the same name")
 
 	f(`IMPORT SCHEMA 'github.com/untillpro/airsbp3/pkg2' AS air1;
 		IMPORT SCHEMA 'github.com/untillpro/airsbp3/pkg3';
@@ -1619,7 +1619,7 @@ func Test_AppSchemaErrors(t *testing.T) {
 			USE pkg3;
 			USE air1;
 		)
-		`, "file2.vsql:5:4: could not import github.com/untillpro/airsbp3/pkgX")
+		`, "file2.vsql:5:4: could not import github.com/untillpro/airsbp3/pkgX. Check if the package is parsed under exactly this name")
 }
 
 func Test_AppIn2Schemas(t *testing.T) {
@@ -2350,11 +2350,11 @@ func Test_RefsWorkspaces(t *testing.T) {
 		);
 		TABLE tab2 INHERITS WDoc(
 			f1 ref(t2),
-			f2 ref(t3) 
+			f2 ref(t3)
 		);
 		TYPE typ2(
-			f1 ref(t2), 
-			f2 ref(t3) 
+			f1 ref(t2),
+			f2 ref(t3)
 		);
 		VIEW test(
 			f1 ref(t2),

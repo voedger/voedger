@@ -47,7 +47,7 @@ func ErrLocalPackageNameRedeclared(localPkgName, newLocalPkgName string) error {
 }
 
 func ErrAppDoesNotDefineUseOfPackage(name string) error {
-	return fmt.Errorf("application does not define use of package %s", name)
+	return fmt.Errorf("application does not define use of package %s. Check if the package is defined in IMPORT SCHEMA and parsed under the same name", name)
 }
 
 func ErrInvalidCronSchedule(schedule string) error {
@@ -104,7 +104,7 @@ func ErrCheckRegexpErr(e error) error {
 
 // Golang: could not import github.com/alecthomas/participle/v2/asd (no required module provides package "github.com/alecthomas/participle/v2/asd")
 func ErrCouldNotImport(pkgName string) error {
-	return fmt.Errorf("could not import %s", pkgName)
+	return fmt.Errorf("could not import %s. Check if the package is parsed under exactly this name", pkgName)
 }
 
 func ErrUnexpectedRootTableKind(kind int) error {

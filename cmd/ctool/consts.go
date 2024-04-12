@@ -79,6 +79,8 @@ const (
 	voedger              = "voedger"
 
 	logFolder = "log"
+
+	alertManagerConfigFile = "~/alertmanager/config.yml"
 )
 
 const comma = ","
