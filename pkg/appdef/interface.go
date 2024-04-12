@@ -8,20 +8,11 @@ package appdef
 // Application definition is a set of types, views, commands, queries and workspaces.
 type IAppDef interface {
 	IWithComment
-	IWithTypes
 	IWithPackages
+	IWithTypes
 	IWithDataTypes
 	IWithGDocs
-
-	// Return CDoc by name.
-	//
-	// Returns nil if not found.
-	CDoc(name QName) ICDoc
-
-	// Return CRecord by name.
-	//
-	// Returns nil if not found.
-	CRecord(name QName) ICRecord
+	IWithCDocs
 
 	// Return WDoc by name.
 	//
@@ -114,22 +105,7 @@ type IAppDefBuilder interface {
 	IPackagesBuilder
 	IDataTypesBuilder
 	IGDocsBuilder
-
-	// Adds new CDoc type with specified name.
-	//
-	// # Panics:
-	//   - if name is empty (appdef.NullQName),
-	//   - if name is invalid,
-	//   - if type with name already exists.
-	AddCDoc(name QName) ICDocBuilder
-
-	// Adds new CRecord type with specified name.
-	//
-	// # Panics:
-	//   - if name is empty (appdef.NullQName),
-	//   - if name is invalid,
-	//   - if type with name already exists.
-	AddCRecord(name QName) ICRecordBuilder
+	ICDocsBuilder
 
 	// Adds new WDoc type with specified name.
 	//

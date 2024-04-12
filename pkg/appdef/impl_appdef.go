@@ -38,6 +38,14 @@ func (app *appDef) CDoc(name QName) (d ICDoc) {
 	return nil
 }
 
+func (app *appDef) CDocs(cb func(ICDoc)) {
+	app.Types(func(t IType) {
+		if d, ok := t.(ICDoc); ok {
+			cb(d)
+		}
+	})
+}
+
 func (app *appDef) Command(name QName) ICommand {
 	if t := app.typeByKind(name, TypeKind_Command); t != nil {
 		return t.(ICommand)
@@ -50,6 +58,14 @@ func (app *appDef) CRecord(name QName) ICRecord {
 		return t.(ICRecord)
 	}
 	return nil
+}
+
+func (app *appDef) CRecords(cb func(ICRecord)) {
+	app.Types(func(t IType) {
+		if r, ok := t.(ICRecord); ok {
+			cb(r)
+		}
+	})
 }
 
 func (app *appDef) Data(name QName) IData {
