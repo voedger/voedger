@@ -14,6 +14,7 @@ type IAppDef interface {
 	IWithGDocs
 	IWithCDocs
 	IWithWDocs
+	IWithSingletons
 
 	// Return ODoc by name.
 	//

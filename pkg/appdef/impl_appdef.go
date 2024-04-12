@@ -212,6 +212,23 @@ func (app *appDef) Records(cb func(IRecord)) {
 	})
 }
 
+func (app *appDef) Singleton(name QName) ISingleton {
+	if t := app.TypeByName(name); t != nil {
+		if s, ok := t.(ISingleton); ok {
+			return s
+		}
+	}
+	return nil
+}
+
+func (app *appDef) Singletons(cb func(s ISingleton)) {
+	app.Types(func(t IType) {
+		if s, ok := t.(ISingleton); ok {
+			cb(s)
+		}
+	})
+}
+
 func (app *appDef) Structures(cb func(s IStructure)) {
 	app.Types(func(t IType) {
 		if s, ok := t.(IStructure); ok {
