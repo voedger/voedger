@@ -277,11 +277,27 @@ func (app *appDef) WDoc(name QName) IWDoc {
 	return nil
 }
 
+func (app *appDef) WDocs(cb func(IWDoc)) {
+	app.Types(func(t IType) {
+		if d, ok := t.(IWDoc); ok {
+			cb(d)
+		}
+	})
+}
+
 func (app *appDef) WRecord(name QName) IWRecord {
 	if t := app.typeByKind(name, TypeKind_WRecord); t != nil {
 		return t.(IWRecord)
 	}
 	return nil
+}
+
+func (app *appDef) WRecords(cb func(IWRecord)) {
+	app.Types(func(t IType) {
+		if r, ok := t.(IWRecord); ok {
+			cb(r)
+		}
+	})
 }
 
 func (app *appDef) Workspace(name QName) IWorkspace {

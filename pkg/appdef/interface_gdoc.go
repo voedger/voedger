@@ -33,7 +33,7 @@ type IWithGDocs interface {
 	// Return GDoc by name.
 	//
 	// Returns nil if not found.
-	GDoc(name QName) IGDoc
+	GDoc(QName) IGDoc
 
 	// Enumerates all global documents
 	//
@@ -43,7 +43,7 @@ type IWithGDocs interface {
 	// Return GRecord by name.
 	//
 	// Returns nil if not found.
-	GRecord(name QName) IGRecord
+	GRecord(QName) IGRecord
 
 	// Enumerates all global records
 	//
@@ -58,7 +58,7 @@ type IGDocsBuilder interface {
 	//   - if name is empty (appdef.NullQName),
 	//   - if name is invalid,
 	//   - if type with name already exists.
-	AddGDoc(name QName) IGDocBuilder
+	AddGDoc(QName) IGDocBuilder
 
 	// Adds new GRecord type with specified name.
 	//
@@ -66,5 +66,5 @@ type IGDocsBuilder interface {
 	//   - if name is empty (appdef.NullQName),
 	//   - if name is invalid,
 	//   - if type with name already exists.
-	AddGRecord(name QName) IGRecordBuilder
+	AddGRecord(QName) IGRecordBuilder
 }

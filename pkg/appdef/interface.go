@@ -13,16 +13,7 @@ type IAppDef interface {
 	IWithDataTypes
 	IWithGDocs
 	IWithCDocs
-
-	// Return WDoc by name.
-	//
-	// Returns nil if not found.
-	WDoc(name QName) IWDoc
-
-	// Return WRecord by name.
-	//
-	// Returns nil if not found.
-	WRecord(name QName) IWRecord
+	IWithWDocs
 
 	// Return ODoc by name.
 	//
@@ -106,22 +97,7 @@ type IAppDefBuilder interface {
 	IDataTypesBuilder
 	IGDocsBuilder
 	ICDocsBuilder
-
-	// Adds new WDoc type with specified name.
-	//
-	// # Panics:
-	//   - if name is empty (appdef.NullQName),
-	//   - if name is invalid,
-	//   - if type with name already exists.
-	AddWDoc(name QName) IWDocBuilder
-
-	// Adds new WRecord type with specified name.
-	//
-	// # Panics:
-	//   - if name is empty (appdef.NullQName),
-	//   - if name is invalid,
-	//   - if type with name already exists.
-	AddWRecord(name QName) IWRecordBuilder
+	IWDocsBuilder
 
 	// Adds new ODoc type with specified name.
 	//
