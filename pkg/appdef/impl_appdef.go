@@ -150,11 +150,27 @@ func (app *appDef) ODoc(name QName) IODoc {
 	return nil
 }
 
+func (app *appDef) ODocs(cb func(IODoc)) {
+	app.Types(func(t IType) {
+		if d, ok := t.(IODoc); ok {
+			cb(d)
+		}
+	})
+}
+
 func (app *appDef) ORecord(name QName) IORecord {
 	if t := app.typeByKind(name, TypeKind_ORecord); t != nil {
 		return t.(IORecord)
 	}
 	return nil
+}
+
+func (app *appDef) ORecords(cb func(IORecord)) {
+	app.Types(func(t IType) {
+		if r, ok := t.(IORecord); ok {
+			cb(r)
+		}
+	})
 }
 
 func (app *appDef) PackageLocalName(path string) string {

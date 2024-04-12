@@ -15,16 +15,7 @@ type IAppDef interface {
 	IWithCDocs
 	IWithWDocs
 	IWithSingletons
-
-	// Return ODoc by name.
-	//
-	// Returns nil if not found.
-	ODoc(name QName) IODoc
-
-	// Return ORecord by name.
-	//
-	// Returns nil if not found.
-	ORecord(name QName) IORecord
+	IWithODocs
 
 	// Return Object by name.
 	//
@@ -99,22 +90,7 @@ type IAppDefBuilder interface {
 	IGDocsBuilder
 	ICDocsBuilder
 	IWDocsBuilder
-
-	// Adds new ODoc type with specified name.
-	//
-	// # Panics:
-	//   - if name is empty (appdef.NullQName),
-	//   - if name is invalid,
-	//   - if type with name already exists.
-	AddODoc(name QName) IODocBuilder
-
-	// Adds new ORecord type with specified name.
-	//
-	// # Panics:
-	//   - if name is empty (appdef.NullQName),
-	//   - if name is invalid,
-	//   - if type with name already exists.
-	AddORecord(name QName) IORecordBuilder
+	IODocsBuilder
 
 	// Adds new Object type with specified name.
 	//
