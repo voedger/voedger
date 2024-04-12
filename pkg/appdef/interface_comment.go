@@ -8,7 +8,7 @@ package appdef
 // See [Issue #488](https://github.com/voedger/voedger/issues/488)
 //
 // Any type may have comment
-type IComment interface {
+type IWithComment interface {
 	// Returns comment
 	Comment() string
 

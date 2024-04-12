@@ -85,7 +85,7 @@ const (
 //
 // Type describes the entity, such as document, record or view.
 type IType interface {
-	IComment
+	IWithComment
 
 	// Parent cache
 	App() IAppDef

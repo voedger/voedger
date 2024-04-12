@@ -7,7 +7,7 @@ package appdef
 
 // Application definition is a set of types, views, commands, queries and workspaces.
 type IAppDef interface {
-	IComment
+	IWithComment
 	IWithTypes
 	IWithPackages
 

@@ -6,7 +6,7 @@
 package appdef
 
 type IStorage interface {
-	IComment
+	IWithComment
 
 	// Returns storage name.
 	Name() QName
