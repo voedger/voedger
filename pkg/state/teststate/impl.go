@@ -275,7 +275,9 @@ type intentAssertions struct {
 }
 
 func (ia *intentAssertions) Exists() {
-	require.NotNil(ia.t, ia.vb, "Expected intent to exist")
+	if ia.vb == nil {
+		require.Fail(ia.t, "Expected intent to exist")
+	}
 }
 
 func (ia *intentAssertions) Equal(vbc ValueBuilderCallback) {
@@ -297,8 +299,9 @@ func (ia *intentAssertions) Equal(vbc ValueBuilderCallback) {
 		panic(err)
 	}
 
-	require.True(ia.t, reflect.DeepEqual(bIntens, bVb), "Expected intents to be equal")
-
+	if !reflect.DeepEqual(bIntens, bVb) {
+		require.Fail(ia.t, "Expected intents to be equal")
+	}
 }
 
 func (ctx *testState) RequireIntent(t *testing.T, storage appdef.QName, entity appdef.FullQName, kbc KeyBuilderCallback) IIntentAssertions {

@@ -19,5 +19,6 @@ WORKSPACE TestWorkspace (
         COMMAND dummyCmd();
         COMMAND CmdToTestWlogStorage(cmdToTestWlogStorageParam) RETURNS cmdToTestWlogStorageResult;
         PROJECTOR ProjectorToTestWlogStorage AFTER EXECUTE ON CmdToTestWlogStorage INTENTS(View(Results));
+        PROJECTOR ProjectorToTestSendMailStorage AFTER EXECUTE ON CmdToTestWlogStorage INTENTS(SendMail);
     );
 )

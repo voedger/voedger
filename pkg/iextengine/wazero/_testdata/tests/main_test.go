@@ -14,12 +14,14 @@ import (
 const testPkg = "github.com/org/app/packages/mypkg"
 const testWSID = istructs.WSID(1)
 
-func Test_CmdToTestWlogStorage(t *testing.T) {
+func Test_Storages(t *testing.T) {
 	// Construct test context
 	test := test.NewTestAPI(
 		teststate.ProcKind_Actualizer,
 		testPkg,
 		teststate.TestWorkspace{WorkspaceDescriptor: "TestWorkspaceDescriptor", WSID: testWSID})
+
+	test.PutSecret("smtpPassword", []byte("GOD"))
 
 	offs1 := test.PutEvent(testWSID, appdef.NewFullQName(testPkg, "dummyCmd"), func(_ istructs.IObjectBuilder, _ istructs.ICUD) {})
 	offs2 := test.PutEvent(testWSID, appdef.NewFullQName(testPkg, "dummyCmd"), func(_ istructs.IObjectBuilder, _ istructs.ICUD) {})
@@ -33,11 +35,21 @@ func Test_CmdToTestWlogStorage(t *testing.T) {
 
 	// Call the extension
 	ProjectorToTestWlogStorage()
-
-	// Check the intent
 	test.RequireIntent(t, state.View, appdef.NewFullQName(testPkg, "Results"), func(_ istructs.IStateKeyBuilder) {}).Equal(func(value istructs.IStateValueBuilder) {
 		value.PutInt32("IntVal", 2)
 		value.PutQName("QNameVal", appdef.NewQName(teststate.TestPkgAlias, "dummyCmd"))
 	})
 
+	// Call the extension
+	ProjectorToTestSendMailStorage()
+	test.RequireIntent(t, state.SendMail, appdef.NullFullQName, func(email istructs.IStateKeyBuilder) {
+		email.PutString("Host", "smtp.gmail.com")
+		email.PutInt32("Port", 587)
+		email.PutString("From", "no-reply@gmail.com")
+		email.PutString("To", "email@gmail.com")
+		email.PutString("Subject", "Test")
+		email.PutString("Body", "TheBody")
+		email.PutString("Username", "User")
+		email.PutString("Password", "GOD")
+	}).Exists()
 }

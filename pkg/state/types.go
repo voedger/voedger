@@ -12,6 +12,7 @@ import (
 	"io"
 	"maps"
 	"net/http"
+	"slices"
 	"strings"
 	"time"
 
@@ -464,6 +465,32 @@ type sendMailKeyBuilder struct {
 	to  []string
 	cc  []string
 	bcc []string
+}
+
+func (b *sendMailKeyBuilder) Equals(src istructs.IKeyBuilder) bool {
+	kb, ok := src.(*sendMailKeyBuilder)
+	if !ok {
+		return false
+	}
+	if !slices.Equal(b.to, kb.to) {
+		return false
+	}
+	if !slices.Equal(b.cc, kb.cc) {
+		return false
+	}
+	if !slices.Equal(b.bcc, kb.bcc) {
+		return false
+	}
+	if b.storage != kb.storage {
+		return false
+	}
+	if b.entity != kb.entity {
+		return false
+	}
+	if !maps.Equal(b.data, kb.data) {
+		return false
+	}
+	return true
 }
 
 func (b *sendMailKeyBuilder) PutString(name string, value string) {

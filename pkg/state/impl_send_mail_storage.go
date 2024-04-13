@@ -19,6 +19,10 @@ type sendMailStorage struct {
 	messages chan smtptest.Message // not nil in tests only
 }
 
+type sendMailValueBuilder struct {
+	istructs.IStateValueBuilder
+}
+
 func (s *sendMailStorage) NewKeyBuilder(appdef.QName, istructs.IStateKeyBuilder) istructs.IStateKeyBuilder {
 	return &sendMailKeyBuilder{
 		keyBuilder: newKeyBuilder(SendMail, appdef.NullQName),
@@ -136,5 +140,5 @@ func (s *sendMailStorage) ApplyBatch(items []ApplyBatchItem) (err error) {
 	return nil
 }
 func (s *sendMailStorage) ProvideValueBuilder(istructs.IStateKeyBuilder, istructs.IStateValueBuilder) (istructs.IStateValueBuilder, error) {
-	return nil, nil
+	return &sendMailValueBuilder{}, nil
 }

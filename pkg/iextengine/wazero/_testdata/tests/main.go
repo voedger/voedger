@@ -214,6 +214,25 @@ func ProjectorToTestWlogStorage() {
 	result.PutQName("QNameVal", qname)
 }
 
+//export ProjectorToTestSendMailStorage
+func ProjectorToTestSendMailStorage() {
+	secret := ext.KeyBuilder(ext.StorageAppSecret, ext.NullEntity)
+	secret.PutString("Secret", "smtpPassword")
+	smtpPassword := ext.MustGetValue(secret)
+
+	email := ext.KeyBuilder(ext.StorageSendMail, ext.NullEntity)
+	email.PutString("Host", "smtp.gmail.com")
+	email.PutInt32("Port", 587)
+	email.PutString("From", "no-reply@gmail.com")
+	email.PutString("To", "email@gmail.com")
+	email.PutString("Subject", "Test")
+	email.PutString("Username", "User")
+	email.PutString("Password", smtpPassword.AsString(""))
+	email.PutString("Body", "TheBody")
+
+	_ = ext.NewValue(email)
+}
+
 func main() {
 
 }
