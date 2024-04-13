@@ -8,7 +8,9 @@ package appdef
 // Application definition is a set of types, views, commands, queries and workspaces.
 type IAppDef interface {
 	IWithComment
+
 	IWithPackages
+	IWithWorkspaces
 
 	IWithTypes
 	IWithDataTypes
@@ -28,39 +30,27 @@ type IAppDef interface {
 	IWithCommands
 	IWithQueries
 	IWithProjectors
-
-	// Returns workspace by name.
-	//
-	// Returns nil if not found.
-	Workspace(QName) IWorkspace
-
-	// Returns workspace by descriptor.
-	//
-	// Returns nil if not found.
-	WorkspaceByDescriptor(QName) IWorkspace
 }
 
 type IAppDefBuilder interface {
 	ICommentBuilder
+
 	IPackagesBuilder
+	IWorkspacesBuilder
+
 	IDataTypesBuilder
+
 	IGDocsBuilder
 	ICDocsBuilder
 	IWDocsBuilder
 	IODocsBuilder
 	IObjectsBuilder
+
 	IViewsBuilder
+
 	ICommandsBuilder
 	IQueriesBuilder
 	IProjectorsBuilder
-
-	// Adds new workspace.
-	//
-	// # Panics:
-	//   - if name is empty (appdef.NullQName),
-	//   - if name is invalid,
-	//   - if type with name already exists.
-	AddWorkspace(QName) IWorkspaceBuilder
 
 	// Returns application definition while building.
 	//

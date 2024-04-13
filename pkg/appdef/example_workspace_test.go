@@ -47,6 +47,16 @@ func ExampleIWorkspace() {
 		}
 	}
 
+	// how to enum workspaces
+	{
+		cnt := 0
+		app.Workspaces(func(ws appdef.IWorkspace) {
+			cnt++
+			fmt.Println(cnt, ws)
+		})
+		fmt.Println("overall:", cnt)
+	}
+
 	// how to inspect workspace
 	{
 		// how to find workspace by name
@@ -71,6 +81,8 @@ func ExampleIWorkspace() {
 	}
 
 	// Output:
+	// 1 Workspace «test.ws»
+	// overall: 1
 	// workspace "test.ws": TypeKind_Workspace
 	// workspace "test.ws" descriptor is "test.desc"
 	// - Type: "test.doc", kind: TypeKind_CDoc

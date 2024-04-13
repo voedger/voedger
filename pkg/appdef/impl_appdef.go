@@ -381,6 +381,14 @@ func (app *appDef) Workspace(name QName) IWorkspace {
 	return nil
 }
 
+func (app *appDef) Workspaces(cb func(IWorkspace)) {
+	app.Types(func(t IType) {
+		if ws, ok := t.(IWorkspace); ok {
+			cb(ws)
+		}
+	})
+}
+
 func (app *appDef) WorkspaceByDescriptor(name QName) IWorkspace {
 	return app.wsDesc[name]
 }
