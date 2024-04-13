@@ -220,6 +220,14 @@ func (app *appDef) Projectors(cb func(IProjector)) {
 	})
 }
 
+func (app *appDef) Queries(cb func(IQuery)) {
+	app.Types(func(t IType) {
+		if q, ok := t.(IQuery); ok {
+			cb(q)
+		}
+	})
+}
+
 func (app *appDef) Query(name QName) IQuery {
 	if t := app.typeByKind(name, TypeKind_Query); t != nil {
 		return t.(IQuery)

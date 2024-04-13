@@ -21,11 +21,7 @@ type IAppDef interface {
 	IWithRecords
 	IWithViews
 	IWithCommands
-
-	// Returns Query by name.
-	//
-	// Returns nil if not found.
-	Query(QName) IQuery
+	IWithQueries
 
 	// Return projector by name.
 	//
@@ -69,14 +65,7 @@ type IAppDefBuilder interface {
 	IObjectsBuilder
 	IViewsBuilder
 	ICommandsBuilder
-
-	// Adds new query.
-	//
-	// # Panics:
-	//   - if name is empty (appdef.NullQName),
-	//   - if name is invalid,
-	//   - if type with name already exists.
-	AddQuery(QName) IQueryBuilder
+	IQueriesBuilder
 
 	// Adds new projector.
 	//
