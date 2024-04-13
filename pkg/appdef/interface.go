@@ -18,16 +18,7 @@ type IAppDef interface {
 	IWithODocs
 	IWithObjects
 	IWithStructures
-
-	// Return record by name.
-	//
-	// Returns nil if not found.
-	Record(QName) IRecord
-
-	// Enumerates all application records, e.g. documents and contained records
-	//
-	// Records are enumerated in alphabetical order by QName
-	Records(func(IRecord))
+	IWithRecords
 
 	// Return View by name.
 	//

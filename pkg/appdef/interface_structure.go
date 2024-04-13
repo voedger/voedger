@@ -51,6 +51,18 @@ type IRecordBuilder interface {
 	IStructureBuilder
 }
 
+type IWithRecords interface {
+	// Return record by name.
+	//
+	// Returns nil if not found.
+	Record(QName) IRecord
+
+	// Enumerates all application records, e.g. documents and contained records
+	//
+	// Records are enumerated in alphabetical order by QName
+	Records(func(IRecord))
+}
+
 // Document is a record.
 //
 // Document can contains records.
