@@ -181,6 +181,7 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 	vvm := &VVM{
 		ServicePipeline:     servicePipeline,
 		APIs:                apIs,
+		IAppPartitions:      iAppPartitions,
 		AppsExtensionPoints: v3,
 		MetricsServicePort:  v9,
 		BuiltInAppsPackages: v4,
