@@ -38,6 +38,7 @@ type testState struct {
 	cud          istructs.ICUD
 	event        istructs.IPLogEvent
 	plogGen      istructs.IIDGenerator
+	wsOffsets    map[istructs.WSID]istructs.Offset
 	secretReader isecrets.ISecretReader
 }
 
@@ -73,7 +74,7 @@ func (ctx *testState) buildState(processorKind int) {
 
 	appFunc := func() istructs.IAppStructs { return ctx.appStructs }
 	eventFunc := func() istructs.IPLogEvent { return ctx.event }
-	partitionIDFunc := func() istructs.PartitionID { return testPartition }
+	partitionIDFunc := func() istructs.PartitionID { return TestPartition }
 	cudFunc := func() istructs.ICUD { return ctx.cud }
 	argFunc := func() istructs.IObject { return ctx.Arg() }
 	unloggedArgFunc := func() istructs.IObject { return nil }
@@ -114,7 +115,7 @@ func (ctx *testState) buildAppDef(packagePath string, packageDir string, createW
 		APPLICATION test(
 			USE %s;
 		);
-	`, packagePath, testPkgAlias, testPkgAlias))
+	`, packagePath, TestPkgAlias, TestPkgAlias))
 	if err != nil {
 		panic(err)
 	}
@@ -147,7 +148,7 @@ func (ctx *testState) buildAppDef(packagePath string, packageDir string, createW
 	cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, adb)
 	cfg.Resources.Add(istructsmem.NewCommandFunction(newWorkspaceCmd, istructsmem.NullCommandExec))
 	ctx.appDef.Extensions(func(i appdef.IExtension) {
-		if i.QName().Pkg() == testPkgAlias {
+		if i.QName().Pkg() == TestPkgAlias {
 			if proj, ok := i.(appdef.IProjector); ok {
 				if proj.Sync() {
 					cfg.AddSyncProjectors(istructs.Projector{Name: i.QName()})
@@ -175,18 +176,19 @@ func (ctx *testState) buildAppDef(packagePath string, packageDir string, createW
 	}
 	ctx.appStructs = structs
 	ctx.plogGen = istructsmem.NewIDGenerator()
+	ctx.wsOffsets = make(map[istructs.WSID]istructs.Offset)
 
 	for _, ws := range createWorkspaces {
 		rebWs := ctx.appStructs.Events().GetNewRawEventBuilder(istructs.NewRawEventBuilderParams{
 			GenericRawEventBuilderParams: istructs.GenericRawEventBuilderParams{
 				Workspace:         istructs.WSID(ws.WSID),
-				HandlingPartition: testPartition,
+				HandlingPartition: TestPartition,
 				QName:             newWorkspaceCmd,
 			},
 		})
 		cud := rebWs.CUDBuilder().Create(authnz.QNameCDocWorkspaceDescriptor)
 		cud.PutRecordID(appdef.SystemField_ID, istructs.RecordID(1))
-		cud.PutQName("WSKind", appdef.NewQName(testPkgAlias, ws.WorkspaceDescriptor))
+		cud.PutQName("WSKind", appdef.NewQName(TestPkgAlias, ws.WorkspaceDescriptor))
 		rawWsEvent, err := rebWs.BuildRawEvent()
 		if err != nil {
 			panic(err)
@@ -203,14 +205,25 @@ func (ctx *testState) buildAppDef(packagePath string, packageDir string, createW
 
 }
 
-func (ctx *testState) PutEvent(wsid istructs.WSID, name appdef.FullQName, cb NewEventCallback) {
+func (ctx *testState) nextWSOffs(ws istructs.WSID) istructs.Offset {
+	offs, ok := ctx.wsOffsets[ws]
+	if !ok {
+		offs = istructs.Offset(0)
+	}
+	offs += 1
+	ctx.wsOffsets[ws] = offs
+	return offs
+}
+
+func (ctx *testState) PutEvent(wsid istructs.WSID, name appdef.FullQName, cb NewEventCallback) (wLogOffs istructs.Offset) {
 	localPkgName := ctx.appDef.PackageLocalName(name.PkgPath())
+	wLogOffs = ctx.nextWSOffs(wsid)
 	reb := ctx.appStructs.Events().GetNewRawEventBuilder(istructs.NewRawEventBuilderParams{
 		GenericRawEventBuilderParams: istructs.GenericRawEventBuilderParams{
 			Workspace:         wsid,
-			HandlingPartition: testPartition,
-			//			PLogOffset:        offset + 1,
-			QName: appdef.NewQName(localPkgName, name.Entity()),
+			HandlingPartition: TestPartition,
+			QName:             appdef.NewQName(localPkgName, name.Entity()),
+			WLogOffset:        wLogOffs,
 		},
 	})
 	if cb != nil {
@@ -225,7 +238,14 @@ func (ctx *testState) PutEvent(wsid istructs.WSID, name appdef.FullQName, cb New
 	if err != nil {
 		panic(err)
 	}
+
+	err = ctx.appStructs.Events().PutWlog(event)
+	if err != nil {
+		panic(err)
+	}
+
 	ctx.event = event
+	return wLogOffs
 }
 
 func (ctx *testState) PutView(wsid istructs.WSID, entity appdef.FullQName, callback ViewValueCallback) {

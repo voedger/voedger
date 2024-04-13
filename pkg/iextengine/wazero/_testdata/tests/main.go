@@ -185,6 +185,35 @@ func keyPutQName() {
 	_ = ext.MustGetValue(kb)
 }
 
+//export CmdToTestWlogStorage
+func ProjectorToTestWlogStorage() {
+	event := ext.MustGetValue(ext.KeyBuilder(ext.StorageEvent, ext.NullEntity))
+	arg := event.AsValue("ArgumentObject")
+	offs := arg.AsInt64("Offset")
+	count := arg.AsInt64("Count")
+
+	kb := ext.KeyBuilder(ext.StorageWLog, ext.NullEntity)
+	kb.PutInt64("Offset", offs)
+
+	// read 1 item
+	wlogEntry := ext.MustGetValue(kb)
+	qname := wlogEntry.AsQName("QName")
+
+	// read range
+	kb = ext.KeyBuilder(ext.StorageWLog, ext.NullEntity)
+	kb.PutInt64("Offset", offs)
+	kb.PutInt64("Count", count)
+
+	var readValues int32
+	ext.ReadValues(kb, func(key ext.TKey, value ext.TValue) {
+		readValues++
+	})
+
+	result := ext.NewValue(ext.KeyBuilder(ext.StorageView, "github.com/org/app/packages/mypkg.Results"))
+	result.PutInt32("IntVal", readValues)
+	result.PutQName("QNameVal", qname)
+}
+
 func main() {
 
 }

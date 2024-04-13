@@ -16,8 +16,8 @@ const (
 )
 
 const (
-	testPkgAlias  = "tstpkg"
-	testPartition = istructs.PartitionID(1)
+	TestPkgAlias  = "tstpkg"
+	TestPartition = istructs.PartitionID(1)
 )
 
 var IntentsLimit = 10
