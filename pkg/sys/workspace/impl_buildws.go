@@ -5,7 +5,6 @@
 package workspace
 
 import (
-	"encoding/json"
 	"fmt"
 	"strconv"
 
@@ -36,24 +35,9 @@ func buildWorkspace(templateName string, ep extensionpoints.IExtensionPoint, wsK
 	// update IDs in workspace template data with new blobs IDs
 	updateBLOBsIDsMap(wsTemplateData, blobsMap)
 
-	templateCUDs := make([]cud, 0, len(wsTemplateData))
-	for _, record := range wsTemplateData {
-		c := cud{
-			Fields: make(map[string]interface{}),
-		}
-		for field, value := range record {
-			c.Fields[field] = value
-		}
-		templateCUDs = append(templateCUDs, c)
-	}
+	cudBody := coreutils.JSONMapToCUDBody(wsTemplateData)
 	cudURL := fmt.Sprintf("api/%s/%d/c.sys.CUD", targetAppQName.String(), newWSID)
-	bb, err := json.Marshal(cuds{Cuds: templateCUDs})
-	if err != nil {
-		// validated already
-		// notest
-		return err
-	}
-	if _, err := federation.Func(cudURL, string(bb), coreutils.WithAuthorizeBy(systemPrincipalToken), coreutils.WithDiscardResponse()); err != nil {
+	if _, err := federation.Func(cudURL, cudBody, coreutils.WithAuthorizeBy(systemPrincipalToken), coreutils.WithDiscardResponse()); err != nil {
 		return fmt.Errorf("c.sys.CUD failed: %w", err)
 	}
 	logger.Info(fmt.Sprintf("workspace %s build completed", wsName))
