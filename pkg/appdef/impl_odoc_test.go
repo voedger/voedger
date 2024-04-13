@@ -67,4 +67,21 @@ func Test_AppDef_AddODoc(t *testing.T) {
 			require.Equal(0, rec.ContainerCount())
 		})
 	})
+
+	t.Run("must be ok to enumerate docs", func(t *testing.T) {
+		var docs []QName
+		app.ODocs(func(doc IODoc) {
+			docs = append(docs, doc.QName())
+		})
+		require.Len(docs, 1)
+		require.Equal(docName, docs[0])
+		t.Run("must be ok to enumerate recs", func(t *testing.T) {
+			var recs []QName
+			app.ORecords(func(rec IORecord) {
+				recs = append(recs, rec.QName())
+			})
+			require.Len(recs, 1)
+			require.Equal(recName, recs[0])
+		})
+	})
 }

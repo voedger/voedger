@@ -19,6 +19,18 @@ type IView interface {
 	Value() IViewValue
 }
 
+type IWithViews interface {
+	// Return View by name.
+	//
+	// Returns nil if not found.
+	View(name QName) IView
+
+	// Enumerates all application views
+	//
+	// Views are enumerated in alphabetical order by QName
+	Views(func(IView))
+}
+
 type IViewBuilder interface {
 	ITypeBuilder
 
@@ -27,6 +39,16 @@ type IViewBuilder interface {
 
 	// Returns view value builder
 	Value() IViewValueBuilder
+}
+
+type IViewsBuilder interface {
+	// Adds new types for view.
+	//
+	// # Panics:
+	//   - if name is empty (appdef.NullQName),
+	//   - if name is invalid,
+	//   - if type with name already exists.
+	AddView(QName) IViewBuilder
 }
 
 // View full (pk + cc) key.
