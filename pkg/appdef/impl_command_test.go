@@ -73,16 +73,13 @@ func Test_AppDef_AddCommand(t *testing.T) {
 
 	t.Run("must be ok to enum commands", func(t *testing.T) {
 		cnt := 0
-		app.Extensions(func(ex IExtension) {
+		app.Commands(func(c ICommand) {
 			cnt++
 			switch cnt {
 			case 1:
-				cmd, ok := ex.(ICommand)
-				require.True(ok)
-				require.Equal(TypeKind_Command, cmd.Kind())
-				require.Equal(cmdName, cmd.QName())
+				require.Equal(cmdName, c.QName())
 			default:
-				require.Failf("unexpected extension", "extension: %v", ex)
+				require.Failf("unexpected command", "command: %v", c)
 			}
 		})
 		require.Equal(1, cnt)

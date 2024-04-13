@@ -44,3 +44,30 @@ type IWorkspaceBuilder interface {
 	// Does not validate workspace definition, may be invalid.
 	Workspace() IWorkspace
 }
+
+type IWithWorkspaces interface {
+	// Returns workspace by name.
+	//
+	// Returns nil if not found.
+	Workspace(QName) IWorkspace
+
+	// Returns workspace by descriptor.
+	//
+	// Returns nil if not found.
+	WorkspaceByDescriptor(QName) IWorkspace
+
+	// Enumerates all application workspaces.
+	//
+	// Workspaces are enumerated in alphabetical order by QName
+	Workspaces(func(IWorkspace))
+}
+
+type IWorkspacesBuilder interface {
+	// Adds new workspace.
+	//
+	// # Panics:
+	//   - if name is empty (appdef.NullQName),
+	//   - if name is invalid,
+	//   - if type with name already exists.
+	AddWorkspace(QName) IWorkspaceBuilder
+}

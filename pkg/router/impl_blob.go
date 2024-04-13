@@ -42,14 +42,13 @@ type blobReadDetails struct {
 }
 
 type blobBaseMessage struct {
-	req                 *http.Request
-	resp                http.ResponseWriter
-	doneChan            chan struct{}
-	wsid                istructs.WSID
-	appQName            istructs.AppQName
-	header              map[string][]string
-	clusterAppBlobberID istructs.ClusterAppID
-	blobMaxSize         BLOBMaxSizeType
+	req         *http.Request
+	resp        http.ResponseWriter
+	doneChan    chan struct{}
+	wsid        istructs.WSID
+	appQName    istructs.AppQName
+	header      map[string][]string
+	blobMaxSize BLOBMaxSizeType
 }
 
 type blobMessage struct {
@@ -86,7 +85,7 @@ func blobReadMessageHandler(bbm blobBaseMessage, blobReadDetails blobReadDetails
 
 	// read the BLOB
 	key := iblobstorage.KeyType{
-		AppID: bbm.clusterAppBlobberID,
+		AppID: istructs.ClusterAppID_sys_blobber,
 		WSID:  bbm.wsid,
 		ID:    blobReadDetails.blobID,
 	}
@@ -112,7 +111,7 @@ func blobReadMessageHandler(bbm blobBaseMessage, blobReadDetails blobReadDetails
 }
 
 func writeBLOB(ctx context.Context, wsid int64, appQName string, header map[string][]string, resp http.ResponseWriter,
-	clusterAppBlobberID istructs.ClusterAppID, blobName, blobMimeType string, blobStorage iblobstorage.IBLOBStorage, body io.ReadCloser,
+	blobName, blobMimeType string, blobStorage iblobstorage.IBLOBStorage, body io.ReadCloser,
 	blobMaxSize int64, bus ibus.IBus, busTimeout time.Duration) (blobID int64) {
 	// request VVM for check the principalToken and get a blobID
 	req := ibus.Request{
@@ -143,7 +142,7 @@ func writeBLOB(ctx context.Context, wsid int64, appQName string, header map[stri
 	blobID = int64(newIDs["1"].(float64))
 	// write the BLOB
 	key := iblobstorage.KeyType{
-		AppID: clusterAppBlobberID,
+		AppID: istructs.ClusterAppID_sys_blobber,
 		WSID:  istructs.WSID(wsid),
 		ID:    istructs.RecordID(blobID),
 	}
@@ -211,7 +210,7 @@ func blobWriteMessageHandlerMultipart(bbm blobBaseMessage, blobStorage iblobstor
 			contentType = "application/x-binary"
 		}
 		part.Header[coreutils.Authorization] = bbm.header[coreutils.Authorization] // add auth header for c.sys.*BLOBHelper
-		blobID := writeBLOB(bbm.req.Context(), int64(bbm.wsid), bbm.appQName.String(), part.Header, bbm.resp, bbm.clusterAppBlobberID,
+		blobID := writeBLOB(bbm.req.Context(), int64(bbm.wsid), bbm.appQName.String(), part.Header, bbm.resp,
 			params["name"], contentType, blobStorage, part, int64(bbm.blobMaxSize), bus, busTimeout)
 		if blobID == 0 {
 			return // request handled
@@ -226,7 +225,7 @@ func blobWriteMessageHandlerSingle(bbm blobBaseMessage, blobWriteDetails blobWri
 	bus ibus.IBus, busTimeout time.Duration) {
 	defer close(bbm.doneChan)
 
-	blobID := writeBLOB(bbm.req.Context(), int64(bbm.wsid), bbm.appQName.String(), header, bbm.resp, bbm.clusterAppBlobberID, blobWriteDetails.name,
+	blobID := writeBLOB(bbm.req.Context(), int64(bbm.wsid), bbm.appQName.String(), header, bbm.resp, blobWriteDetails.name,
 		blobWriteDetails.mimeType, blobStorage, bbm.req.Body, int64(bbm.blobMaxSize), bus, busTimeout)
 	if blobID > 0 {
 		WriteTextResponse(bbm.resp, strconv.FormatInt(blobID, decimalBase), http.StatusOK)
@@ -263,14 +262,13 @@ func (s *httpService) blobRequestHandler(resp http.ResponseWriter, req *http.Req
 	}
 	mes := blobMessage{
 		blobBaseMessage: blobBaseMessage{
-			req:                 req,
-			resp:                resp,
-			wsid:                istructs.WSID(wsid),
-			doneChan:            make(chan struct{}),
-			appQName:            istructs.NewAppQName(vars[AppOwner], vars[AppName]),
-			header:              req.Header,
-			clusterAppBlobberID: s.ClusterAppBlobberID,
-			blobMaxSize:         s.BLOBMaxSize,
+			req:         req,
+			resp:        resp,
+			wsid:        istructs.WSID(wsid),
+			doneChan:    make(chan struct{}),
+			appQName:    istructs.NewAppQName(vars[AppOwner], vars[AppName]),
+			header:      req.Header,
+			blobMaxSize: s.BLOBMaxSize,
 		},
 		blobDetails: details,
 	}
