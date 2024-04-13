@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2021-present Sigma-Soft, Ltd.
+ * @author: Nikolay Nikitin
  */
 
 package appdef_test
@@ -40,11 +41,17 @@ func ExampleIWorkspace() {
 			AddType(recName).
 			AddType(docName)
 
-		if a, err := adb.Build(); err == nil {
-			app = a
-		} else {
-			panic(err)
-		}
+		app = adb.MustBuild()
+	}
+
+	// how to enum workspaces
+	{
+		cnt := 0
+		app.Workspaces(func(ws appdef.IWorkspace) {
+			cnt++
+			fmt.Println(cnt, ws)
+		})
+		fmt.Println("overall:", cnt)
 	}
 
 	// how to inspect workspace
@@ -71,6 +78,8 @@ func ExampleIWorkspace() {
 	}
 
 	// Output:
+	// 1 Workspace «test.ws»
+	// overall: 1
 	// workspace "test.ws": TypeKind_Workspace
 	// workspace "test.ws" descriptor is "test.desc"
 	// - Type: "test.doc", kind: TypeKind_CDoc

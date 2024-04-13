@@ -71,4 +71,14 @@ func Test_AppDef_AddObject(t *testing.T) {
 			require.Zero(child.ContainerCount())
 		})
 	})
+
+	t.Run("must be ok to enumerate objects", func(t *testing.T) {
+		var objects []QName
+		app.Objects(func(obj IObject) {
+			objects = append(objects, obj.QName())
+		})
+		require.Len(objects, 2)
+		require.Equal(childName, objects[0])
+		require.Equal(rootName, objects[1])
+	})
 }

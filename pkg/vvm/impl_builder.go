@@ -50,11 +50,11 @@ func (ab VVMAppsBuilder) BuiltInAppsPackages(cfgs istructsmem.AppConfigsType, ap
 		adb := appdef.New()
 		appEPs := appsEPs[appQName]
 		cfg := cfgs.AddConfig(appQName, adb)
-		builtInAppDef := appBuilder(apis, cfg, adb, appEPs)
+		builtInAppDef := appBuilder(apis, cfg, appEPs)
 		if err := buildAppFromPackagesFS(builtInAppDef.Packages, adb); err != nil {
 			return nil, err
 		}
-		biltInAppPackages := BuiltInAppPackages{
+		builtInAppPackages := BuiltInAppPackages{
 			BuiltInApp: apppartsctl.BuiltInApp{
 				Name:           appQName,
 				PartsCount:     builtInAppDef.PartsCount,
@@ -62,10 +62,10 @@ func (ab VVMAppsBuilder) BuiltInAppsPackages(cfgs istructsmem.AppConfigsType, ap
 			},
 			Packages: builtInAppDef.Packages,
 		}
-		if biltInAppPackages.Def, err = adb.Build(); err != nil {
+		if builtInAppPackages.Def, err = adb.Build(); err != nil {
 			return nil, err
 		}
-		builtInAppsPackages = append(builtInAppsPackages, biltInAppPackages)
+		builtInAppsPackages = append(builtInAppsPackages, builtInAppPackages)
 	}
 	return builtInAppsPackages, nil
 }

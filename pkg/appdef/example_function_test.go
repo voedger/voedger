@@ -11,16 +11,16 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 )
 
-func ExampleIAppDefBuilder_AddCommand() {
+func ExampleIAppDef_Functions() {
 
 	var app appdef.IAppDef
 
 	cmdName := appdef.NewQName("test", "cmd")
 	parName := appdef.NewQName("test", "param")
-	unlName := appdef.NewQName("test", "secure")
 	resName := appdef.NewQName("test", "res")
+	queryName := appdef.NewQName("test", "query")
 
-	// how to build AppDef with command
+	// how to build AppDef with functions
 	{
 		adb := appdef.New()
 		adb.AddPackage("test", "test.com/test")
@@ -30,39 +30,50 @@ func ExampleIAppDefBuilder_AddCommand() {
 		cmd.
 			SetParam(parName).
 			SetResult(resName)
-		cmd.SetUnloggedParam(unlName)
+
+		query := adb.AddQuery(queryName)
+		query.SetResult(resName)
 
 		_ = adb.AddObject(parName)
-		_ = adb.AddObject(unlName)
 		_ = adb.AddObject(resName)
 
 		app = adb.MustBuild()
 	}
 
-	// how to enum commands
+	// how to enum functions
 	{
 		cnt := 0
-		app.Commands(func(c appdef.ICommand) {
+		app.Functions(func(f appdef.IFunction) {
 			cnt++
-			fmt.Println(cnt, c)
+			fmt.Println(cnt, f)
 		})
-		fmt.Println("overall command(s):", cnt)
+		fmt.Println("overall function(s):", cnt)
 	}
 
-	// how to inspect builded AppDef with command
+	// how to find functions
 	{
-		cmd := app.Command(cmdName)
+		cmd := app.Function(cmdName)
 		fmt.Println(cmd, ":")
 		fmt.Println(" - parameter:", cmd.Param())
-		fmt.Println(" - unl.param:", cmd.UnloggedParam())
 		fmt.Println(" - result   :", cmd.Result())
+
+		query := app.Function(queryName)
+		fmt.Println(query, ":")
+		fmt.Println(" - parameter:", query.Param())
+		fmt.Println(" - result   :", query.Result())
+
+		fmt.Println("Search unknown:", app.Function(appdef.NewQName("test", "unknown")))
 	}
 
 	// Output:
 	// 1 WASM-Command «test.cmd»
-	// overall command(s): 1
+	// 2 BuiltIn-Query «test.query»
+	// overall function(s): 2
 	// WASM-Command «test.cmd» :
 	//  - parameter: Object «test.param»
-	//  - unl.param: Object «test.secure»
 	//  - result   : Object «test.res»
+	// BuiltIn-Query «test.query» :
+	//  - parameter: <nil>
+	//  - result   : Object «test.res»
+	// Search unknown: <nil>
 }
