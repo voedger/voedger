@@ -53,6 +53,14 @@ func (app *appDef) Command(name QName) ICommand {
 	return nil
 }
 
+func (app *appDef) Commands(cb func(ICommand)) {
+	app.Types(func(t IType) {
+		if c, ok := t.(ICommand); ok {
+			cb(c)
+		}
+	})
+}
+
 func (app *appDef) CRecord(name QName) ICRecord {
 	if t := app.typeByKind(name, TypeKind_CRecord); t != nil {
 		return t.(ICRecord)

@@ -43,6 +43,16 @@ func ExampleIAppDefBuilder_AddCommand() {
 		}
 	}
 
+	// how to enum commands
+	{
+		cnt := 0
+		app.Commands(func(c appdef.ICommand) {
+			cnt++
+			fmt.Println(cnt, c)
+		})
+		fmt.Println("overall command(s):", cnt)
+	}
+
 	// how to inspect builded AppDef with command
 	{
 		cmd := app.Command(cmdName)
@@ -53,6 +63,8 @@ func ExampleIAppDefBuilder_AddCommand() {
 	}
 
 	// Output:
+	// 1 WASM-Command «test.cmd»
+	// overall command(s): 1
 	// WASM-Command «test.cmd» :
 	//  - parameter: Object «test.param»
 	//  - unl.param: Object «test.secure»

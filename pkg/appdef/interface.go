@@ -20,11 +20,7 @@ type IAppDef interface {
 	IWithStructures
 	IWithRecords
 	IWithViews
-
-	// Returns Command by name.
-	//
-	// Returns nil if not found.
-	Command(QName) ICommand
+	IWithCommands
 
 	// Returns Query by name.
 	//
@@ -72,14 +68,7 @@ type IAppDefBuilder interface {
 	IODocsBuilder
 	IObjectsBuilder
 	IViewsBuilder
-
-	// Adds new command.
-	//
-	// # Panics:
-	//   - if name is empty (appdef.NullQName),
-	//   - if name is invalid,
-	//   - if type with name already exists.
-	AddCommand(QName) ICommandBuilder
+	ICommandsBuilder
 
 	// Adds new query.
 	//
