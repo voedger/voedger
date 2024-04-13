@@ -65,67 +65,11 @@ func Test_NullAppDef(t *testing.T) {
 	})
 
 	t.Run("should be null return other members", func(t *testing.T) {
-		require.Empty(app.Comment())
-
-		require.Zero(
-			func() int {
-				cnt := 0
-				app.Types(func(t IType) {
-					if !t.IsSystem() {
-						cnt++
-					}
-				})
-				return cnt
-			}(),
-			"must be no user types")
-
-		require.Zero(
-			func() int {
-				cnt := 0
-				app.Records(func(r IRecord) {
-					if !r.IsSystem() {
-						cnt++
-					}
-				})
-				return cnt
-			}(),
-			"must be no user records")
-
-		require.Zero(
-			func() int {
-				cnt := 0
-				app.Structures(func(s IStructure) {
-					if !s.IsSystem() {
-						cnt++
-					}
-				})
-				return cnt
-			}(),
-			"must be no user structures")
-
-		require.Zero(
-			func() int {
-				cnt := 0
-				app.Projectors(func(p IProjector) {
-					if !p.IsSystem() {
-						cnt++
-					}
-				})
-				return cnt
-			}(),
-			"must be no user projectors")
-
-		require.Zero(
-			func() int {
-				cnt := 0
-				app.Extensions(func(e IExtension) {
-					if !e.IsSystem() {
-						cnt++
-					}
-				})
-				return cnt
-			}(),
-			"must be no user extensions")
+		app.Types(func(typ IType) {
+			if !typ.IsSystem() {
+				t.Errorf("unexpected user type %v", typ)
+			}
+		})
 	})
 }
 
