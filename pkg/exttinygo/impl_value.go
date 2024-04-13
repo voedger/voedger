@@ -7,81 +7,81 @@ package exttinygo
 
 import (
 	"github.com/voedger/voedger/pkg/exttinygo/internal"
-	"github.com/voedger/voedger/pkg/state/isafeapi"
+	safe "github.com/voedger/voedger/pkg/state/isafestateapi"
 )
 
 func (v TValue) AsInt32(name string) int32 {
-	return internal.StateAPI.ValueAsInt32(isafeapi.TValue(v), name)
+	return internal.SafeStateAPI.ValueAsInt32(safe.TValue(v), name)
 }
 
 func (v TValue) AsInt64(name string) int64 {
-	return internal.StateAPI.ValueAsInt64(isafeapi.TValue(v), name)
+	return internal.SafeStateAPI.ValueAsInt64(safe.TValue(v), name)
 }
 
 func (v TValue) AsFloat32(name string) float32 {
-	return internal.StateAPI.ValueAsFloat32(isafeapi.TValue(v), name)
+	return internal.SafeStateAPI.ValueAsFloat32(safe.TValue(v), name)
 }
 
 func (v TValue) AsFloat64(name string) float64 {
-	return internal.StateAPI.ValueAsFloat64(isafeapi.TValue(v), name)
+	return internal.SafeStateAPI.ValueAsFloat64(safe.TValue(v), name)
 }
 
 func (v TValue) AsString(name string) string {
-	return internal.StateAPI.ValueAsString(isafeapi.TValue(v), name)
+	return internal.SafeStateAPI.ValueAsString(safe.TValue(v), name)
 }
 
 func (v TValue) AsBytes(name string) []byte {
-	return internal.StateAPI.ValueAsBytes(isafeapi.TValue(v), name)
+	return internal.SafeStateAPI.ValueAsBytes(safe.TValue(v), name)
 }
 
 func (v TValue) AsQName(name string) QName {
-	return QName(internal.StateAPI.ValueAsQName(isafeapi.TValue(v), name))
+	return QName(internal.SafeStateAPI.ValueAsQName(safe.TValue(v), name))
 }
 
 func (v TValue) AsBool(name string) bool {
-	return internal.StateAPI.ValueAsBool(isafeapi.TValue(v), name)
+	return internal.SafeStateAPI.ValueAsBool(safe.TValue(v), name)
 }
 
 func (v TValue) AsValue(name string) TValue {
-	return TValue(internal.StateAPI.ValueAsValue(isafeapi.TValue(v), name))
+	return TValue(internal.SafeStateAPI.ValueAsValue(safe.TValue(v), name))
 }
 
 func (v TValue) Len() int {
-	return internal.StateAPI.ValueLen(isafeapi.TValue(v))
+	return internal.SafeStateAPI.ValueLen(safe.TValue(v))
 }
 
 func (v TValue) GetAsValue(index int) TValue {
-	return TValue(internal.StateAPI.ValueGetAsValue(isafeapi.TValue(v), index))
+	return TValue(internal.SafeStateAPI.ValueGetAsValue(safe.TValue(v), index))
 }
 
 func (v TValue) GetAsInt32(index int) int32 {
-	return internal.StateAPI.ValueGetAsInt32(isafeapi.TValue(v), index)
+	return internal.SafeStateAPI.ValueGetAsInt32(safe.TValue(v), index)
 }
 
 func (v TValue) GetAsInt64(index int) int64 {
-	return internal.StateAPI.ValueGetAsInt64(isafeapi.TValue(v), index)
+	return internal.SafeStateAPI.ValueGetAsInt64(safe.TValue(v), index)
 }
 
 func (v TValue) GetAsFloat32(index int) float32 {
-	return internal.StateAPI.ValueGetAsFloat32(isafeapi.TValue(v), index)
+	return internal.SafeStateAPI.ValueGetAsFloat32(safe.TValue(v), index)
 }
 
 func (v TValue) GetAsFloat64(index int) float64 {
-	return internal.StateAPI.ValueGetAsFloat64(isafeapi.TValue(v), index)
+	return internal.SafeStateAPI.ValueGetAsFloat64(safe.TValue(v), index)
 }
 
 func (v TValue) GetAsBytes(index int) []byte {
-	return internal.StateAPI.ValueGetAsBytes(isafeapi.TValue(v), index)
+	return internal.SafeStateAPI.ValueGetAsBytes(safe.TValue(v), index)
 }
 
 func (v TValue) GetAsQName(index int) QName {
-	return QName(internal.StateAPI.ValueGetAsQName(isafeapi.TValue(v), index))
+	return QName(internal.SafeStateAPI.ValueGetAsQName(safe.TValue(v), index))
 }
 
 func (v TValue) GetAsBool(index int) bool {
-	return internal.StateAPI.ValueGetAsBool(isafeapi.TValue(v), index)
+	return internal.SafeStateAPI.ValueGetAsBool(safe.TValue(v), index)
 }
 
 func (v TValue) GetAsString(index int) string {
-	return internal.StateAPI.ValueGetAsString(isafeapi.TValue(v), index)
+	return internal.SafeStateAPI.ValueGetAsString(safe.TValue(v), index)
 }

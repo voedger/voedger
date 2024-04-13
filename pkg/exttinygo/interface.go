@@ -6,7 +6,7 @@
 package exttinygo
 
 import (
-	safe "github.com/voedger/voedger/pkg/state/isafeapi"
+	safe "github.com/voedger/voedger/pkg/state/isafestateapi"
 )
 
 type TKeyBuilder safe.TKeyBuilder

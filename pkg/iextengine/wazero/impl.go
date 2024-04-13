@@ -21,7 +21,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/iextengine"
-	"github.com/voedger/voedger/pkg/state/isafeapi"
+	safe "github.com/voedger/voedger/pkg/state/isafestateapi"
 	"github.com/voedger/voedger/pkg/state/safestate"
 )
 
@@ -54,7 +54,7 @@ type wazeroExtEngine struct {
 	wasiCloser api.Closer
 
 	// Invoke-related!
-	safeApi isafeapi.ISafeAPI
+	safeApi safe.IStateSafeAPI
 
 	ctx context.Context
 	pkg *wazeroExtPkg
@@ -369,7 +369,7 @@ func (f *wazeroExtEngine) hostPanic(namePtr, nameSize uint32) {
 }
 
 func (f *wazeroExtEngine) hostReadValues(keyId uint64) {
-	f.safeApi.ReadValues(isafeapi.TKeyBuilder(keyId), func(key isafeapi.TKey, value isafeapi.TValue) {
+	f.safeApi.ReadValues(safe.TKeyBuilder(keyId), func(key safe.TKey, value safe.TValue) {
 		_, err := f.pkg.funcOnReadValue.Call(f.ctx, uint64(key), uint64(value))
 		if err != nil {
 			panic(err.Error())
@@ -378,13 +378,13 @@ func (f *wazeroExtEngine) hostReadValues(keyId uint64) {
 }
 
 func (f *wazeroExtEngine) hostMustExist(keyId uint64) (result uint64) {
-	return uint64(f.safeApi.MustGetValue(isafeapi.TKeyBuilder(keyId)))
+	return uint64(f.safeApi.MustGetValue(safe.TKeyBuilder(keyId)))
 }
 
 const maxUint64 = ^uint64(0)
 
 func (f *wazeroExtEngine) hostCanExist(keyId uint64) (result uint64) {
-	v, ok := f.safeApi.QueryValue(isafeapi.TKeyBuilder(keyId))
+	v, ok := f.safeApi.QueryValue(safe.TKeyBuilder(keyId))
 	if !ok {
 		return maxUint64
 	}
@@ -403,25 +403,25 @@ func (f *wazeroExtEngine) allocAndSend(buf []byte) (result uint64) {
 }
 
 func (f *wazeroExtEngine) hostKeyAsString(id uint64, namePtr uint32, nameSize uint32) (result uint64) {
-	v := f.safeApi.KeyAsString(isafeapi.TKey(id), f.decodeStr(namePtr, nameSize))
+	v := f.safeApi.KeyAsString(safe.TKey(id), f.decodeStr(namePtr, nameSize))
 	return f.allocAndSend([]byte(v))
 }
 
 func (f *wazeroExtEngine) hostKeyAsBytes(id uint64, namePtr uint32, nameSize uint32) (result uint64) {
-	v := f.safeApi.KeyAsBytes(isafeapi.TKey(id), f.decodeStr(namePtr, nameSize))
+	v := f.safeApi.KeyAsBytes(safe.TKey(id), f.decodeStr(namePtr, nameSize))
 	return f.allocAndSend(v)
 }
 
 func (f *wazeroExtEngine) hostKeyAsInt32(id uint64, namePtr uint32, nameSize uint32) (result uint32) {
-	return uint32(f.safeApi.KeyAsInt32(isafeapi.TKey(id), f.decodeStr(namePtr, nameSize)))
+	return uint32(f.safeApi.KeyAsInt32(safe.TKey(id), f.decodeStr(namePtr, nameSize)))
 }
 
 func (f *wazeroExtEngine) hostKeyAsInt64(id uint64, namePtr uint32, nameSize uint32) (result uint64) {
-	return uint64(f.safeApi.KeyAsInt64(isafeapi.TKey(id), f.decodeStr(namePtr, nameSize)))
+	return uint64(f.safeApi.KeyAsInt64(safe.TKey(id), f.decodeStr(namePtr, nameSize)))
 }
 
 func (f *wazeroExtEngine) hostKeyAsBool(id uint64, namePtr uint32, nameSize uint32) (result uint64) {
-	b := f.safeApi.KeyAsBool(isafeapi.TKey(id), f.decodeStr(namePtr, nameSize))
+	b := f.safeApi.KeyAsBool(safe.TKey(id), f.decodeStr(namePtr, nameSize))
 	if b {
 		return uint64(1)
 	}
@@ -429,44 +429,44 @@ func (f *wazeroExtEngine) hostKeyAsBool(id uint64, namePtr uint32, nameSize uint
 }
 
 func (f *wazeroExtEngine) hostKeyAsQNamePkg(id uint64, namePtr uint32, nameSize uint32) (result uint64) {
-	qname := f.safeApi.KeyAsQName(isafeapi.TKey(id), f.decodeStr(namePtr, nameSize))
+	qname := f.safeApi.KeyAsQName(safe.TKey(id), f.decodeStr(namePtr, nameSize))
 	return f.allocAndSend([]byte(qname.FullPkgName))
 }
 
 func (f *wazeroExtEngine) hostKeyAsQNameEntity(id uint64, namePtr uint32, nameSize uint32) (result uint64) {
-	qname := f.safeApi.KeyAsQName(isafeapi.TKey(id), f.decodeStr(namePtr, nameSize))
+	qname := f.safeApi.KeyAsQName(safe.TKey(id), f.decodeStr(namePtr, nameSize))
 	return f.allocAndSend([]byte(qname.Entity))
 }
 
 func (f *wazeroExtEngine) hostKeyAsFloat32(key uint64, namePtr uint32, nameSize uint32) (result float32) {
-	return f.safeApi.KeyAsFloat32(isafeapi.TKey(key), f.decodeStr(namePtr, nameSize))
+	return f.safeApi.KeyAsFloat32(safe.TKey(key), f.decodeStr(namePtr, nameSize))
 }
 
 func (f *wazeroExtEngine) hostKeyAsFloat64(key uint64, namePtr uint32, nameSize uint32) (result float64) {
-	return f.safeApi.KeyAsFloat64(isafeapi.TKey(key), f.decodeStr(namePtr, nameSize))
+	return f.safeApi.KeyAsFloat64(safe.TKey(key), f.decodeStr(namePtr, nameSize))
 }
 
 func (f *wazeroExtEngine) hostValueGetAsString(value uint64, index uint32) (result uint64) {
-	v := f.safeApi.ValueGetAsString(isafeapi.TValue(value), int(index))
+	v := f.safeApi.ValueGetAsString(safe.TValue(value), int(index))
 	return f.allocAndSend([]byte(v))
 }
 
 func (f *wazeroExtEngine) hostValueGetAsQNameEntity(value uint64, index uint32) (result uint64) {
-	qname := f.safeApi.ValueGetAsQName(isafeapi.TValue(value), int(index))
+	qname := f.safeApi.ValueGetAsQName(safe.TValue(value), int(index))
 	return f.allocAndSend([]byte(qname.Entity))
 }
 
 func (f *wazeroExtEngine) hostValueGetAsQNamePkg(value uint64, index uint32) (result uint64) {
-	qname := f.safeApi.ValueGetAsQName(isafeapi.TValue(value), int(index))
+	qname := f.safeApi.ValueGetAsQName(safe.TValue(value), int(index))
 	return f.allocAndSend([]byte(qname.FullPkgName))
 }
 
 func (f *wazeroExtEngine) hostValueGetAsBytes(value uint64, index uint32) (result uint64) {
-	return f.allocAndSend(f.safeApi.ValueGetAsBytes(isafeapi.TValue(value), int(index)))
+	return f.allocAndSend(f.safeApi.ValueGetAsBytes(safe.TValue(value), int(index)))
 }
 
 func (f *wazeroExtEngine) hostValueGetAsBool(value uint64, index uint32) (result uint64) {
-	b := f.safeApi.ValueGetAsBool(isafeapi.TValue(value), int(index))
+	b := f.safeApi.ValueGetAsBool(safe.TValue(value), int(index))
 	if b {
 		return 1
 	}
@@ -474,45 +474,45 @@ func (f *wazeroExtEngine) hostValueGetAsBool(value uint64, index uint32) (result
 }
 
 func (f *wazeroExtEngine) hostValueGetAsInt32(value uint64, index uint32) (result int32) {
-	return f.safeApi.ValueGetAsInt32(isafeapi.TValue(value), int(index))
+	return f.safeApi.ValueGetAsInt32(safe.TValue(value), int(index))
 }
 
 func (f *wazeroExtEngine) hostValueGetAsInt64(value uint64, index uint32) (result uint64) {
-	return uint64(f.safeApi.ValueGetAsInt64(isafeapi.TValue(value), int(index)))
+	return uint64(f.safeApi.ValueGetAsInt64(safe.TValue(value), int(index)))
 }
 
 func (f *wazeroExtEngine) hostValueGetAsFloat32(id uint64, index uint32) float32 {
-	return f.safeApi.ValueGetAsFloat32(isafeapi.TValue(id), int(index))
+	return f.safeApi.ValueGetAsFloat32(safe.TValue(id), int(index))
 }
 
 func (f *wazeroExtEngine) hostValueGetAsFloat64(id uint64, index uint32) float64 {
-	return f.safeApi.ValueGetAsFloat64(isafeapi.TValue(id), int(index))
+	return f.safeApi.ValueGetAsFloat64(safe.TValue(id), int(index))
 }
 
 func (f *wazeroExtEngine) hostValueGetAsValue(val uint64, index uint32) (result uint64) {
-	return uint64(f.safeApi.ValueGetAsValue(isafeapi.TValue(val), int(index)))
+	return uint64(f.safeApi.ValueGetAsValue(safe.TValue(val), int(index)))
 }
 
 func (f *wazeroExtEngine) hostValueAsString(id uint64, namePtr uint32, nameSize uint32) (result uint64) {
-	s := f.safeApi.ValueAsString(isafeapi.TValue(id), f.decodeStr(namePtr, nameSize))
+	s := f.safeApi.ValueAsString(safe.TValue(id), f.decodeStr(namePtr, nameSize))
 	return f.allocAndSend([]byte(s))
 }
 
 func (f *wazeroExtEngine) hostValueAsBytes(id uint64, namePtr uint32, nameSize uint32) (result uint64) {
-	b := f.safeApi.ValueAsBytes(isafeapi.TValue(id), f.decodeStr(namePtr, nameSize))
+	b := f.safeApi.ValueAsBytes(safe.TValue(id), f.decodeStr(namePtr, nameSize))
 	return f.allocAndSend(b)
 }
 
 func (f *wazeroExtEngine) hostValueAsInt32(id uint64, namePtr uint32, nameSize uint32) (result int32) {
-	return f.safeApi.ValueAsInt32(isafeapi.TValue(id), f.decodeStr(namePtr, nameSize))
+	return f.safeApi.ValueAsInt32(safe.TValue(id), f.decodeStr(namePtr, nameSize))
 }
 
 func (f *wazeroExtEngine) hostValueAsInt64(id uint64, namePtr uint32, nameSize uint32) (result uint64) {
-	return uint64(f.safeApi.ValueAsInt64(isafeapi.TValue(id), f.decodeStr(namePtr, nameSize)))
+	return uint64(f.safeApi.ValueAsInt64(safe.TValue(id), f.decodeStr(namePtr, nameSize)))
 }
 
 func (f *wazeroExtEngine) hostValueAsBool(id uint64, namePtr uint32, nameSize uint32) (result uint64) {
-	b := f.safeApi.ValueAsBool(isafeapi.TValue(id), f.decodeStr(namePtr, nameSize))
+	b := f.safeApi.ValueAsBool(safe.TValue(id), f.decodeStr(namePtr, nameSize))
 	if b {
 		return 1
 	}
@@ -520,29 +520,29 @@ func (f *wazeroExtEngine) hostValueAsBool(id uint64, namePtr uint32, nameSize ui
 }
 
 func (f *wazeroExtEngine) hostValueAsFloat32(id uint64, namePtr, nameSize uint32) float32 {
-	return f.safeApi.ValueAsFloat32(isafeapi.TValue(id), f.decodeStr(namePtr, nameSize))
+	return f.safeApi.ValueAsFloat32(safe.TValue(id), f.decodeStr(namePtr, nameSize))
 }
 
 func (f *wazeroExtEngine) hostValueAsFloat64(id uint64, namePtr, nameSize uint32) float64 {
-	return f.safeApi.ValueAsFloat64(isafeapi.TValue(id), f.decodeStr(namePtr, nameSize))
+	return f.safeApi.ValueAsFloat64(safe.TValue(id), f.decodeStr(namePtr, nameSize))
 }
 
 func (f *wazeroExtEngine) hostValueAsQNameEntity(id uint64, namePtr uint32, nameSize uint32) (result uint64) {
-	qname := f.safeApi.ValueAsQName(isafeapi.TValue(id), f.decodeStr(namePtr, nameSize))
+	qname := f.safeApi.ValueAsQName(safe.TValue(id), f.decodeStr(namePtr, nameSize))
 	return f.allocAndSend([]byte(qname.Entity))
 }
 
 func (f *wazeroExtEngine) hostValueAsQNamePkg(id uint64, namePtr uint32, nameSize uint32) (result uint64) {
-	qname := f.safeApi.ValueAsQName(isafeapi.TValue(id), f.decodeStr(namePtr, nameSize))
+	qname := f.safeApi.ValueAsQName(safe.TValue(id), f.decodeStr(namePtr, nameSize))
 	return f.allocAndSend([]byte(qname.FullPkgName))
 }
 
 func (f *wazeroExtEngine) hostValueAsValue(id uint64, namePtr uint32, nameSize uint32) (result uint64) {
-	return uint64(f.safeApi.ValueAsValue(isafeapi.TValue(id), f.decodeStr(namePtr, nameSize)))
+	return uint64(f.safeApi.ValueAsValue(safe.TValue(id), f.decodeStr(namePtr, nameSize)))
 }
 
 func (f *wazeroExtEngine) hostValueLength(id uint64) (result uint32) {
-	return uint32(f.safeApi.ValueLen(isafeapi.TValue(id)))
+	return uint32(f.safeApi.ValueLen(safe.TValue(id)))
 }
 
 func (f *wazeroExtEngine) allocBuf(size uint32) (addr uint32, err error) {
@@ -635,18 +635,18 @@ func (f *wazeroExtEngine) getMallocs(packagePath string, ctx context.Context) (u
 }
 
 func (f *wazeroExtEngine) hostNewValue(keyId uint64) uint64 {
-	return uint64(f.safeApi.NewValue(isafeapi.TKeyBuilder(keyId)))
+	return uint64(f.safeApi.NewValue(safe.TKeyBuilder(keyId)))
 }
 
 func (f *wazeroExtEngine) hostUpdateValue(keyId, existingValueId uint64) (result uint64) {
-	return uint64(f.safeApi.UpdateValue(isafeapi.TKeyBuilder(keyId), isafeapi.TValue(existingValueId)))
+	return uint64(f.safeApi.UpdateValue(safe.TKeyBuilder(keyId), safe.TValue(existingValueId)))
 }
 
 func (f *wazeroExtEngine) hostRowWriterPutString(id uint64, typ uint32, namePtr uint32, nameSize, valuePtr, valueSize uint32) {
 	if typ == 0 {
-		f.safeApi.KeyBuilderPutString(isafeapi.TKeyBuilder(id), f.decodeStr(namePtr, nameSize), f.decodeStr(valuePtr, valueSize))
+		f.safeApi.KeyBuilderPutString(safe.TKeyBuilder(id), f.decodeStr(namePtr, nameSize), f.decodeStr(valuePtr, valueSize))
 	} else {
-		f.safeApi.IntentPutString(isafeapi.TIntent(id), f.decodeStr(namePtr, nameSize), f.decodeStr(valuePtr, valueSize))
+		f.safeApi.IntentPutString(safe.TIntent(id), f.decodeStr(namePtr, nameSize), f.decodeStr(valuePtr, valueSize))
 	}
 }
 
@@ -658,60 +658,60 @@ func (f *wazeroExtEngine) hostRowWriterPutBytes(id uint64, typ uint32, namePtr u
 		panic(ErrUnableToReadMemory)
 	}
 	if typ == 0 {
-		f.safeApi.KeyBuilderPutBytes(isafeapi.TKeyBuilder(id), f.decodeStr(namePtr, nameSize), bytes)
+		f.safeApi.KeyBuilderPutBytes(safe.TKeyBuilder(id), f.decodeStr(namePtr, nameSize), bytes)
 	} else {
-		f.safeApi.IntentPutBytes(isafeapi.TIntent(id), f.decodeStr(namePtr, nameSize), bytes)
+		f.safeApi.IntentPutBytes(safe.TIntent(id), f.decodeStr(namePtr, nameSize), bytes)
 	}
 }
 
 func (f *wazeroExtEngine) hostRowWriterPutInt32(id uint64, typ uint32, namePtr uint32, nameSize uint32, value int32) {
 	if typ == 0 {
-		f.safeApi.KeyBuilderPutInt32(isafeapi.TKeyBuilder(id), f.decodeStr(namePtr, nameSize), value)
+		f.safeApi.KeyBuilderPutInt32(safe.TKeyBuilder(id), f.decodeStr(namePtr, nameSize), value)
 	} else {
-		f.safeApi.IntentPutInt32(isafeapi.TIntent(id), f.decodeStr(namePtr, nameSize), value)
+		f.safeApi.IntentPutInt32(safe.TIntent(id), f.decodeStr(namePtr, nameSize), value)
 	}
 }
 
 func (f *wazeroExtEngine) hostRowWriterPutInt64(id uint64, typ uint32, namePtr uint32, nameSize uint32, value int64) {
 	if typ == 0 {
-		f.safeApi.KeyBuilderPutInt64(isafeapi.TKeyBuilder(id), f.decodeStr(namePtr, nameSize), value)
+		f.safeApi.KeyBuilderPutInt64(safe.TKeyBuilder(id), f.decodeStr(namePtr, nameSize), value)
 	} else {
-		f.safeApi.IntentPutInt64(isafeapi.TIntent(id), f.decodeStr(namePtr, nameSize), value)
+		f.safeApi.IntentPutInt64(safe.TIntent(id), f.decodeStr(namePtr, nameSize), value)
 	}
 }
 
 func (f *wazeroExtEngine) hostRowWriterPutQName(id uint64, typ uint32, namePtr uint32, nameSize uint32, pkgPtr, pkgSize, entityPtr, entitySize uint32) {
-	qname := isafeapi.QName{
+	qname := safe.QName{
 		FullPkgName: f.decodeStr(pkgPtr, pkgSize),
 		Entity:      f.decodeStr(entityPtr, entitySize),
 	}
 	if typ == 0 {
-		f.safeApi.KeyBuilderPutQName(isafeapi.TKeyBuilder(id), f.decodeStr(namePtr, nameSize), qname)
+		f.safeApi.KeyBuilderPutQName(safe.TKeyBuilder(id), f.decodeStr(namePtr, nameSize), qname)
 	} else {
-		f.safeApi.IntentPutQName(isafeapi.TIntent(id), f.decodeStr(namePtr, nameSize), qname)
+		f.safeApi.IntentPutQName(safe.TIntent(id), f.decodeStr(namePtr, nameSize), qname)
 	}
 }
 
 func (f *wazeroExtEngine) hostRowWriterPutBool(id uint64, typ uint32, namePtr uint32, nameSize uint32, value int32) {
 	if typ == 0 {
-		f.safeApi.KeyBuilderPutBool(isafeapi.TKeyBuilder(id), f.decodeStr(namePtr, nameSize), value > 0)
+		f.safeApi.KeyBuilderPutBool(safe.TKeyBuilder(id), f.decodeStr(namePtr, nameSize), value > 0)
 	} else {
-		f.safeApi.IntentPutBool(isafeapi.TIntent(id), f.decodeStr(namePtr, nameSize), value > 0)
+		f.safeApi.IntentPutBool(safe.TIntent(id), f.decodeStr(namePtr, nameSize), value > 0)
 	}
 }
 
 func (f *wazeroExtEngine) hostRowWriterPutFloat32(id uint64, typ uint32, namePtr uint32, nameSize uint32, value float32) {
 	if typ == 0 {
-		f.safeApi.KeyBuilderPutFloat32(isafeapi.TKeyBuilder(id), f.decodeStr(namePtr, nameSize), value)
+		f.safeApi.KeyBuilderPutFloat32(safe.TKeyBuilder(id), f.decodeStr(namePtr, nameSize), value)
 	} else {
-		f.safeApi.IntentPutFloat32(isafeapi.TIntent(id), f.decodeStr(namePtr, nameSize), value)
+		f.safeApi.IntentPutFloat32(safe.TIntent(id), f.decodeStr(namePtr, nameSize), value)
 	}
 }
 
 func (f *wazeroExtEngine) hostRowWriterPutFloat64(id uint64, typ uint32, namePtr, nameSize uint32, value float64) {
 	if typ == 0 {
-		f.safeApi.KeyBuilderPutFloat64(isafeapi.TKeyBuilder(id), f.decodeStr(namePtr, nameSize), value)
+		f.safeApi.KeyBuilderPutFloat64(safe.TKeyBuilder(id), f.decodeStr(namePtr, nameSize), value)
 	} else {
-		f.safeApi.IntentPutFloat64(isafeapi.TIntent(id), f.decodeStr(namePtr, nameSize), value)
+		f.safeApi.IntentPutFloat64(safe.TIntent(id), f.decodeStr(namePtr, nameSize), value)
 	}
 }

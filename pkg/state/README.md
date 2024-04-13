@@ -1,7 +1,8 @@
 ## Principles
-- SafeAPI is a low-level API for State which implements the following principles:
+- SafeStateAPI is a low-level API for State which implements the following principles:
     - used by extension engines
-    - automatically converts package paths: extensions work with full paths
+    - automatically converts package paths (extensions work with full paths)
+    - Keys, Values, Key- and Value-Builders are represented with numbers, to be transferred between Host and Extension environments.
 
 
 ## Design
@@ -18,9 +19,9 @@ flowchart TD
     wazero:::G
     processors:::G
     subgraph exttinygo
-        internal.State["var StateAPI"]
-        hostAPI["hostStateApi"]
-        clientStateAPI["clientStateAPI"]
+        internal.State["var SafeStateAPI"]
+        hostAPI["hostSafeStateApi"]
+        clientStateAPI["Client State API"]
         subgraph exttinygotests
             NewTestAPI["NewTestAPI(...)"]
         end
@@ -28,7 +29,7 @@ flowchart TD
     subgraph state
         IState
         subgraph isafeapi
-            ISafeAPI["ISafeAPI"]
+            IStateSafeAPI["IStateSafeAPI"]
         end
         subgraph teststate
             ITestState["ITestState"]
@@ -54,7 +55,7 @@ flowchart TD
     end
     
     internal.State -.-> |by default initialized with| hostAPI
-    internal.State -.-> |of type| ISafeAPI
+    internal.State -.-> |of type| IStateSafeAPI
     internal.State -.-> |used by| clientStateAPI
 
     NewTestAPI -.-> |1. constructs| ITestState
@@ -64,7 +65,7 @@ flowchart TD
     ITestState -.-> |implements| IState
     
     ITestAPI -.-> |used by| Test
-    safestate.Provide -.-> |to provide| ISafeAPI
+    safestate.Provide -.-> |to provide| IStateSafeAPI
 
     hostAPI -.-> |calls host functions| IExtensionEngineWazero
     IExtensionEngine -.-> |can be| IExtensionEngineWazero
@@ -73,8 +74,7 @@ flowchart TD
     IState -.-> |passed to| safestate.Provide
     IState -.-> |"passed to Invoke(...)"| IExtensionEngine
 %%    safestate.Provide -.-> |called by| IExtensionEngineWazero
-IExtensionEngineWazero -.-> |calls| safestate.Provide
-
+    IExtensionEngineWazero -.-> |calls| safestate.Provide
     Test -.-> |calls| Extension
     clientStateAPI -.-> |used by|Extension
 

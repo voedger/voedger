@@ -5,6 +5,6 @@
 
 package internal
 
-import safe "github.com/voedger/voedger/pkg/state/isafeapi"
+import safe "github.com/voedger/voedger/pkg/state/isafestateapi"
 
-var StateAPI safe.ISafeAPI = hostStateAPI{}
+var SafeStateAPI safe.IStateSafeAPI = hostSafeStateAPI{}

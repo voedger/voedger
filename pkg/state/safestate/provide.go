@@ -8,11 +8,11 @@ package safestate
 import (
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/state"
-	"github.com/voedger/voedger/pkg/state/isafeapi"
+	safe "github.com/voedger/voedger/pkg/state/isafestateapi"
 )
 
 // oldApi is optional, to allow re-usage
-func Provide(state state.IState, oldApi isafeapi.ISafeAPI) isafeapi.ISafeAPI {
+func Provide(state state.IState, oldApi safe.IStateSafeAPI) safe.IStateSafeAPI {
 	if oldApi != nil {
 		// reuse
 		ss := oldApi.(*safeState)
