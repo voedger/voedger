@@ -33,11 +33,7 @@ func ExampleIAppDefBuilder_AddQuery() {
 		_ = adb.AddObject(parName)
 		_ = adb.AddObject(resName)
 
-		if a, err := adb.Build(); err == nil {
-			app = a
-		} else {
-			panic(err)
-		}
+		app = adb.MustBuild()
 	}
 
 	// how to enum queries

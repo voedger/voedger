@@ -36,11 +36,7 @@ func ExampleIAppDefBuilder_AddCommand() {
 		_ = adb.AddObject(unlName)
 		_ = adb.AddObject(resName)
 
-		if a, err := adb.Build(); err == nil {
-			app = a
-		} else {
-			panic(err)
-		}
+		app = adb.MustBuild()
 	}
 
 	// how to enum commands

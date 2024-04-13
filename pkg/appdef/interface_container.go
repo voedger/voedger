@@ -49,7 +49,7 @@ type IContainersBuilder interface {
 
 // Describes single inclusion of child in parent.
 type IContainer interface {
-	IWithComment
+	IWithComments
 
 	// Returns name of container
 	Name() string

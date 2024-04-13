@@ -7,7 +7,7 @@ package appdef
 
 // Application definition is a set of types, views, commands, queries and workspaces.
 type IAppDef interface {
-	IWithComment
+	IWithComments
 
 	IWithPackages
 	IWithWorkspaces
@@ -33,7 +33,7 @@ type IAppDef interface {
 }
 
 type IAppDefBuilder interface {
-	ICommentBuilder
+	ICommentsBuilder
 
 	IPackagesBuilder
 	IWorkspacesBuilder
@@ -63,4 +63,12 @@ type IAppDefBuilder interface {
 	// Validates and returns builded application type or error.
 	// Must be called after all entities added.
 	Build() (IAppDef, error)
+
+	// Builds application definition.
+	//
+	// Validates and returns builded application type.
+	// Must be called after all entities added.
+	//
+	// # Panics if error occurred.
+	MustBuild() IAppDef
 }

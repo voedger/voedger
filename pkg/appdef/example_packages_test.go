@@ -15,16 +15,12 @@ func ExampleIAppDefBuilder_AddPackage() {
 
 	// how to build AppDef with packages
 	{
-		appDef := appdef.New()
+		adb := appdef.New()
 
-		appDef.AddPackage("test", "test.com/test")
-		appDef.AddPackage("example", "example.com/example")
+		adb.AddPackage("test", "test.com/test")
+		adb.AddPackage("example", "example.com/example")
 
-		if a, err := appDef.Build(); err == nil {
-			app = a
-		} else {
-			panic(err)
-		}
+		app = adb.MustBuild()
 	}
 
 	// how to inspect builded AppDef with packages

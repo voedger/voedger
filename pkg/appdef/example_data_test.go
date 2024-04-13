@@ -42,11 +42,7 @@ func ExampleIAppDefBuilder_AddData() {
 		adb.AddData(jsonName, appdef.DataKind_string, appdef.NullQName,
 			appdef.MaxLen(appdef.MaxFieldLength)).SetComment("JSON string up to 64K")
 
-		if a, err := adb.Build(); err == nil {
-			app = a
-		} else {
-			panic(err)
-		}
+		app = adb.MustBuild()
 	}
 
 	// how to inspect data types in builded AppDef

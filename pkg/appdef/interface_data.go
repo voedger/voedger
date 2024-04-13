@@ -131,7 +131,7 @@ const (
 //
 // Ref. data-constraint.go for constraints constructors and methods.
 type IConstraint interface {
-	IWithComment
+	IWithComments
 
 	// Returns constraint kind.
 	Kind() ConstraintKind

@@ -34,11 +34,7 @@ func ExampleIAppDef_Singletons() {
 			AddField("f2", appdef.DataKind_string, false)
 		wDoc.SetSingleton()
 
-		if a, err := adb.Build(); err == nil {
-			app = a
-		} else {
-			panic(err)
-		}
+		app = adb.MustBuild()
 	}
 
 	// how to inspect builded AppDef with singletons

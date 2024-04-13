@@ -41,7 +41,7 @@ type IProjectorEvents interface {
 
 // Describe event to trigger the projector.
 type IProjectorEvent interface {
-	IWithComment
+	IWithComments
 
 	// Returns type to trigger projector.
 	//

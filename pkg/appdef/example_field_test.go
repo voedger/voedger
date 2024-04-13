@@ -29,11 +29,7 @@ func ExampleIFieldsBuilder_AddField() {
 			AddField("barCode", appdef.DataKind_bytes, false, appdef.MaxLen(4096)).
 			SetFieldComment("barCode", "Bar code scan data, up to 4 KB")
 
-		if a, err := adb.Build(); err == nil {
-			app = a
-		} else {
-			panic(err)
-		}
+		app = adb.MustBuild()
 	}
 
 	// how to inspect fields

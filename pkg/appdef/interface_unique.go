@@ -55,7 +55,7 @@ type IUniquesBuilder interface {
 
 // Describe single unique for structure.
 type IUnique interface {
-	IWithComment
+	IWithComments
 
 	// Returns qualified name of unique.
 	Name() QName

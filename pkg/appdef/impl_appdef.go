@@ -579,3 +579,10 @@ func (ab *appDefBuilder) Build() (IAppDef, error) {
 	}
 	return ab.app, nil
 }
+
+func (ab *appDefBuilder) MustBuild() IAppDef {
+	if err := ab.app.build(); err != nil {
+		panic(err)
+	}
+	return ab.app
+}

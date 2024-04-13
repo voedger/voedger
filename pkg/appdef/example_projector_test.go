@@ -47,11 +47,7 @@ func ExampleIAppDefBuilder_AddProjector() {
 			Add(sysViews, viewName).
 			SetComment(sysViews, "projector needs to update «test.view» from «sys.views» storage")
 
-		if a, err := adb.Build(); err == nil {
-			app = a
-		} else {
-			panic(err)
-		}
+		app = adb.MustBuild()
 	}
 
 	// how to inspect builded AppDef with projector

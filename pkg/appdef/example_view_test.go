@@ -39,11 +39,8 @@ func ExampleIView() {
 			AddRefField("vv_ref", true, docName).
 			AddField("vv_code", appdef.DataKind_string, false, appdef.MaxLen(10), appdef.Pattern(`^\w+$`)).
 			AddField("vv_data", appdef.DataKind_bytes, false, appdef.MaxLen(1024))
-		if a, err := adb.Build(); err == nil {
-			app = a
-		} else {
-			panic(err)
-		}
+
+		app = adb.MustBuild()
 	}
 
 	// now to enum views
