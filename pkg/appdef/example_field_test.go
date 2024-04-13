@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2021-present Sigma-Soft, Ltd.
+ * @author: Nikolay Nikitin
  */
 
 package appdef_test
@@ -100,11 +101,7 @@ func ExampleIFieldsBuilder_AddDataField() {
 			AddDataField("month", monthName, true).
 			SetFieldComment("month", "Month number natural up to 12")
 
-		if a, err := adb.Build(); err == nil {
-			app = a
-		} else {
-			panic(err)
-		}
+		app = adb.MustBuild()
 	}
 
 	// how to inspect fields
@@ -162,11 +159,7 @@ func ExampleIFieldsBuilder_SetFieldVerify() {
 			SetFieldComment("pin", "Secret four digits pin code").
 			SetFieldVerify("pin", appdef.VerificationKind_EMail, appdef.VerificationKind_Phone)
 
-		if a, err := adb.Build(); err == nil {
-			app = a
-		} else {
-			panic(err)
-		}
+		app = adb.MustBuild()
 	}
 
 	// how to inspect verified field
