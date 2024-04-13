@@ -27,6 +27,7 @@ type IAppDef interface {
 	IWithViews
 
 	IWithExtensions
+	IWithFunctions
 	IWithCommands
 	IWithQueries
 	IWithProjectors

@@ -95,14 +95,14 @@ func (app *appDef) DataTypes(incSys bool, cb func(IData)) {
 
 func (app *appDef) Extension(name QName) IExtension {
 	if t := app.TypeByName(name); t != nil {
-		if r, ok := t.(IExtension); ok {
-			return r
+		if ex, ok := t.(IExtension); ok {
+			return ex
 		}
 	}
 	return nil
 }
 
-func (app *appDef) Extensions(cb func(e IExtension)) {
+func (app *appDef) Extensions(cb func(IExtension)) {
 	app.Types(func(t IType) {
 		if ex, ok := t.(IExtension); ok {
 			cb(ex)
@@ -117,6 +117,23 @@ func (app *appDef) GDoc(name QName) IGDoc {
 		return t.(IGDoc)
 	}
 	return nil
+}
+
+func (app *appDef) Function(name QName) IFunction {
+	if t := app.TypeByName(name); t != nil {
+		if f, ok := t.(IFunction); ok {
+			return f
+		}
+	}
+	return nil
+}
+
+func (app *appDef) Functions(cb func(IFunction)) {
+	app.Types(func(t IType) {
+		if f, ok := t.(IFunction); ok {
+			cb(f)
+		}
+	})
 }
 
 func (app *appDef) GDocs(cb func(IGDoc)) {
