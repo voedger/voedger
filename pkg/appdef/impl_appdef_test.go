@@ -128,3 +128,16 @@ func Test_NullAppDef(t *testing.T) {
 			"must be no user extensions")
 	})
 }
+
+func Test_appDefBuilder_MustBuild(t *testing.T) {
+	require := require.New(t)
+
+	require.NotNil(New().MustBuild(), "Should be ok if no errors in builder")
+
+	t.Run("should panic if errors in builder", func(t *testing.T) {
+		adb := New()
+		adb.AddView(NewQName("test", "emptyView"))
+
+		require.Panics(func() { _ = adb.MustBuild() })
+	})
+}
