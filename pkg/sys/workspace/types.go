@@ -10,14 +10,6 @@ import (
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-type cud struct {
-	Fields map[string]interface{} `json:"fields"`
-}
-
-type cuds struct {
-	Cuds []cud `json:"cuds"`
-}
-
 // template recordID -> template fieldName -> uploaded blobID to set to fieldName
 type blobsMap map[int64]map[string]int64
 
@@ -30,5 +22,3 @@ type BLOB struct {
 }
 
 type WSPostInitFunc func(targetAppQName istructs.AppQName, wsKind appdef.QName, newWSID istructs.WSID, federation coreutils.IFederation, authToken string) (err error)
-
-
