@@ -25,6 +25,18 @@ type IStructureBuilder interface {
 	IWithAbstractBuilder
 }
 
+type IWithStructures interface {
+	// Return structure by name.
+	//
+	// Returns nil if not found.
+	Structure(QName) IStructure
+
+	// Enumerates all application structures
+	//
+	// Structures are enumerated in alphabetical order by QName
+	Structures(func(IStructure))
+}
+
 // Record is a structure.
 //
 // Record has ID field.

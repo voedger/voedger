@@ -245,7 +245,7 @@ func (app *appDef) Singleton(name QName) ISingleton {
 	return nil
 }
 
-func (app *appDef) Singletons(cb func(s ISingleton)) {
+func (app *appDef) Singletons(cb func(ISingleton)) {
 	app.Types(func(t IType) {
 		if s, ok := t.(ISingleton); ok {
 			cb(s)
@@ -253,7 +253,16 @@ func (app *appDef) Singletons(cb func(s ISingleton)) {
 	})
 }
 
-func (app *appDef) Structures(cb func(s IStructure)) {
+func (app *appDef) Structure(name QName) IStructure {
+	if t := app.TypeByName(name); t != nil {
+		if s, ok := t.(IStructure); ok {
+			return s
+		}
+	}
+	return nil
+}
+
+func (app *appDef) Structures(cb func(IStructure)) {
 	app.Types(func(t IType) {
 		if s, ok := t.(IStructure); ok {
 			cb(s)

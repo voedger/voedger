@@ -53,6 +53,7 @@ func ExampleIAppDef_Structures() {
 
 	// how to inspect builded AppDef with structures
 	{
+		// how to enum structures
 		cnt := 0
 		app.Structures(func(s appdef.IStructure) {
 			cnt++
@@ -60,8 +61,11 @@ func ExampleIAppDef_Structures() {
 			fmt.Printf("- user/overall field count: %d/%d\n", s.UserFieldCount(), s.FieldCount())
 			fmt.Printf("- container count: %d\n", s.ContainerCount())
 		})
-
 		fmt.Printf("Overall %d structures\n", cnt)
+
+		// how to find structure by name
+		fmt.Println(app.Structure(docName))
+		fmt.Println(app.Structure(appdef.NewQName("test", "unknown")))
 	}
 
 	// how to inspect builded AppDef with records
@@ -93,6 +97,8 @@ func ExampleIAppDef_Structures() {
 	// - user/overall field count: 2/7
 	// - container count: 0
 	// Overall 4 structures
+	// CDoc «test.document»
+	// <nil>
 	// 1. CDoc «test.document»
 	// - user/overall field count: 2/5
 	// - container count: 1

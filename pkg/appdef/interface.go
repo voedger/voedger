@@ -17,6 +17,7 @@ type IAppDef interface {
 	IWithSingletons
 	IWithODocs
 	IWithObjects
+	IWithStructures
 
 	// Return record by name.
 	//
@@ -27,11 +28,6 @@ type IAppDef interface {
 	//
 	// Records are enumerated in alphabetical order by QName
 	Records(func(IRecord))
-
-	// Enumerates all application structures
-	//
-	// Structures are enumerated in alphabetical order by QName
-	Structures(func(IStructure))
 
 	// Return View by name.
 	//
