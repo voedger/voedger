@@ -19,7 +19,7 @@ type ValueBuilderCallback func(value istructs.IStateValueBuilder)
 
 type ITestAPI interface {
 	// State
-	PutEvent(wsid istructs.WSID, name appdef.FullQName, cb NewEventCallback) (wLogOffs istructs.Offset)
+	PutEvent(wsid istructs.WSID, name appdef.FullQName, cb NewEventCallback) (wLogOffs istructs.Offset, newRecordIds []istructs.RecordID)
 	PutView(testWSID istructs.WSID, entity appdef.FullQName, callback ViewValueCallback)
 	PutSecret(name string, secret []byte)
 

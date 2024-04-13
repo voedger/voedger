@@ -215,7 +215,7 @@ func (ctx *testState) nextWSOffs(ws istructs.WSID) istructs.Offset {
 	return offs
 }
 
-func (ctx *testState) PutEvent(wsid istructs.WSID, name appdef.FullQName, cb NewEventCallback) (wLogOffs istructs.Offset) {
+func (ctx *testState) PutEvent(wsid istructs.WSID, name appdef.FullQName, cb NewEventCallback) (wLogOffs istructs.Offset, newRecordIds []istructs.RecordID) {
 	localPkgName := ctx.appDef.PackageLocalName(name.PkgPath())
 	wLogOffs = ctx.nextWSOffs(wsid)
 	reb := ctx.appStructs.Events().GetNewRawEventBuilder(istructs.NewRawEventBuilderParams{
@@ -244,8 +244,17 @@ func (ctx *testState) PutEvent(wsid istructs.WSID, name appdef.FullQName, cb New
 		panic(err)
 	}
 
+	newRecordIds = make([]istructs.RecordID, 0)
+	err = ctx.appStructs.Records().Apply2(event, func(r istructs.IRecord) {
+		newRecordIds = append(newRecordIds, r.ID())
+	})
+
+	if err != nil {
+		panic(err)
+	}
+
 	ctx.event = event
-	return wLogOffs
+	return wLogOffs, newRecordIds
 }
 
 func (ctx *testState) PutView(wsid istructs.WSID, entity appdef.FullQName, callback ViewValueCallback) {

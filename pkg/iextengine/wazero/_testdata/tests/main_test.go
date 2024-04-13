@@ -14,7 +14,7 @@ import (
 const testPkg = "github.com/org/app/packages/mypkg"
 const testWSID = istructs.WSID(1)
 
-func Test_Storages(t *testing.T) {
+func Test_ActualizerStorages(t *testing.T) {
 	// Construct test context
 	test := test.NewTestAPI(
 		teststate.ProcKind_Actualizer,
@@ -23,8 +23,8 @@ func Test_Storages(t *testing.T) {
 
 	test.PutSecret("smtpPassword", []byte("GOD"))
 
-	offs1 := test.PutEvent(testWSID, appdef.NewFullQName(testPkg, "dummyCmd"), func(_ istructs.IObjectBuilder, _ istructs.ICUD) {})
-	offs2 := test.PutEvent(testWSID, appdef.NewFullQName(testPkg, "dummyCmd"), func(_ istructs.IObjectBuilder, _ istructs.ICUD) {})
+	offs1, _ := test.PutEvent(testWSID, appdef.NewFullQName(testPkg, "dummyCmd"), func(_ istructs.IObjectBuilder, _ istructs.ICUD) {})
+	offs2, _ := test.PutEvent(testWSID, appdef.NewFullQName(testPkg, "dummyCmd"), func(_ istructs.IObjectBuilder, _ istructs.ICUD) {})
 	require.Equal(t, istructs.Offset(1), offs1)
 	require.Equal(t, istructs.Offset(2), offs2)
 
@@ -52,4 +52,8 @@ func Test_Storages(t *testing.T) {
 		email.PutString("Username", "User")
 		email.PutString("Password", "GOD")
 	}).Exists()
+}
+
+func Test_CommandStorages(t *testing.T) {
+
 }
