@@ -45,7 +45,7 @@ func buildAppFromPackagesFS(fses []parser.PackageFS, adf appdef.IAppDefBuilder) 
 	return parser.BuildAppDefs(appSchemaAST, adf)
 }
 
-func (ab VVMAppsBuilder) BuiltInAppsPackages(cfgs istructsmem.AppConfigsType, apis apps.APIs, appsEPs map[istructs.AppQName]extensionpoints.IExtensionPoint) (builtInAppsPackages []BuiltInAppsPackages, err error) {
+func (ab VVMAppsBuilder) BuiltInAppsPackages(cfgs istructsmem.AppConfigsType, apis apps.APIs, appsEPs map[istructs.AppQName]extensionpoints.IExtensionPoint) (builtInAppsPackages []BuiltInAppPackages, err error) {
 	for appQName, appBuilder := range ab {
 		adb := appdef.New()
 		appEPs := appsEPs[appQName]
@@ -54,7 +54,7 @@ func (ab VVMAppsBuilder) BuiltInAppsPackages(cfgs istructsmem.AppConfigsType, ap
 		if err := buildAppFromPackagesFS(builtInAppDef.Packages, adb); err != nil {
 			return nil, err
 		}
-		biltInAppPackages := BuiltInAppsPackages{
+		biltInAppPackages := BuiltInAppPackages{
 			BuiltInApp: apppartsctl.BuiltInApp{
 				Name:           appQName,
 				PartsCount:     builtInAppDef.PartsCount,

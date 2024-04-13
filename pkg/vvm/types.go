@@ -54,9 +54,9 @@ type ServiceChannelFactory func(pcgt ProcessorChannelType, channelIdx int) iproc
 type AppStorageFactory func(appQName istructs.AppQName, appStorage istorage.IAppStorage) istorage.IAppStorage
 type StorageCacheSizeType int
 type VVMApps []istructs.AppQName
-type BuiltInAppsPackages struct {
+type BuiltInAppPackages struct {
 	apppartsctl.BuiltInApp
-	Packages []parser.PackageFS
+	Packages []parser.PackageFS // need for build baseline schemas
 }
 
 type BusTimeout time.Duration
@@ -102,7 +102,7 @@ type VVM struct {
 	apps.APIs
 	AppsExtensionPoints map[istructs.AppQName]extensionpoints.IExtensionPoint
 	MetricsServicePort  func() metrics.MetricsServicePort
-	BuiltInAppsPackages []BuiltInAppsPackages
+	BuiltInAppsPackages []BuiltInAppPackages
 }
 
 type AppsExtensionPoints map[istructs.AppQName]extensionpoints.IExtensionPoint
