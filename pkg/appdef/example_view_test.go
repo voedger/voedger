@@ -46,6 +46,16 @@ func ExampleIView() {
 		}
 	}
 
+	// now to enum views
+	{
+		cnt := 0
+		app.Views(func(v appdef.IView) {
+			cnt++
+			fmt.Println(cnt, v)
+		})
+		fmt.Println("overall view(s):", cnt)
+	}
+
 	// how to inspect view
 	{
 		// how to find view by name
@@ -100,6 +110,8 @@ func ExampleIView() {
 	}
 
 	// Output:
+	// 1 ViewRecord «test.view»
+	// overall view(s): 1
 	// view "test.view": TypeKind_ViewRecord, view comment
 	// view has 10 fields:
 	// - sys.QName: QName, sys, required

@@ -320,6 +320,14 @@ func (app *appDef) View(name QName) IView {
 	return nil
 }
 
+func (app *appDef) Views(cb func(IView)) {
+	app.Types(func(t IType) {
+		if v, ok := t.(IView); ok {
+			cb(v)
+		}
+	})
+}
+
 func (app *appDef) WDoc(name QName) IWDoc {
 	if t := app.typeByKind(name, TypeKind_WDoc); t != nil {
 		return t.(IWDoc)

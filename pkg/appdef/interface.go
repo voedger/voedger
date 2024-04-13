@@ -19,11 +19,7 @@ type IAppDef interface {
 	IWithObjects
 	IWithStructures
 	IWithRecords
-
-	// Return View by name.
-	//
-	// Returns nil if not found.
-	View(name QName) IView
+	IWithViews
 
 	// Returns Command by name.
 	//
@@ -75,14 +71,7 @@ type IAppDefBuilder interface {
 	IWDocsBuilder
 	IODocsBuilder
 	IObjectsBuilder
-
-	// Adds new types for view.
-	//
-	// # Panics:
-	//   - if name is empty (appdef.NullQName),
-	//   - if name is invalid,
-	//   - if type with name already exists.
-	AddView(QName) IViewBuilder
+	IViewsBuilder
 
 	// Adds new command.
 	//
