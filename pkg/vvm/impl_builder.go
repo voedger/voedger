@@ -50,7 +50,7 @@ func (ab VVMAppsBuilder) BuiltInAppsPackages(cfgs istructsmem.AppConfigsType, ap
 		adb := appdef.New()
 		appEPs := appsEPs[appQName]
 		cfg := cfgs.AddConfig(appQName, adb)
-		builtInAppDef := appBuilder(apis, cfg, adb, appEPs)
+		builtInAppDef := appBuilder(apis, cfg, appEPs)
 		if err := buildAppFromPackagesFS(builtInAppDef.Packages, adb); err != nil {
 			return nil, err
 		}
