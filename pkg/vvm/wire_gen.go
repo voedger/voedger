@@ -134,14 +134,6 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 	busTimeout := vvmConfig.BusTimeout
 	blobberServiceChannels := vvmConfig.BlobberServiceChannels
 	blobMaxSizeType := vvmConfig.BLOBMaxSize
-	blobberAppStruct, err := provideBlobberAppStruct(iAppStructsProvider)
-	if err != nil {
-		cleanup3()
-		cleanup2()
-		cleanup()
-		return nil, nil, err
-	}
-	blobberAppClusterID := provideBlobberClusterAppID(blobberAppStruct)
 	blobAppStorage, err := provideBlobAppStorage(iAppStorageProvider)
 	if err != nil {
 		cleanup3()
@@ -170,7 +162,7 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 		cleanup()
 		return nil, nil, err
 	}
-	routerServices := provideRouterServices(vvmCtx, routerParams, busTimeout, in10nBroker, quotas, timeFunc, blobberServiceChannels, blobMaxSizeType, blobberAppClusterID, blobStorage, routerAppStorage, cache, iBus, vvmPortSource, v8)
+	routerServices := provideRouterServices(vvmCtx, routerParams, busTimeout, in10nBroker, quotas, timeFunc, blobberServiceChannels, blobMaxSizeType, blobStorage, routerAppStorage, cache, iBus, vvmPortSource, v8)
 	routerServiceOperator := provideRouterServiceFactory(routerServices)
 	metricsServicePortInitial := vvmConfig.MetricsServicePort
 	metricsServicePort := provideMetricsServicePort(metricsServicePortInitial, vvmIdx)
@@ -245,7 +237,7 @@ func provideAppPartitions(
 	cfgs istructsmem.AppConfigsType,
 	asp istructs.IAppStructsProvider,
 	actualizer appparts.SyncActualizerFactory,
-	_ []BuiltInAppsPackages,
+	_ []BuiltInAppPackages,
 ) (ap appparts.IAppPartitions, cleanup func(), err error) {
 
 	eef := engines.ProvideExtEngineFactories(engines.ExtEngineFactoriesConfig{
@@ -256,7 +248,7 @@ func provideAppPartitions(
 	return appparts.NewWithActualizerWithExtEnginesFactories(asp, actualizer, eef)
 }
 
-func provideIsDeviceAllowedFunc(appEPs map[istructs.AppQName]extensionpoints.IExtensionPoint, _ []BuiltInAppsPackages) iauthnzimpl.IsDeviceAllowedFuncs {
+func provideIsDeviceAllowedFunc(appEPs map[istructs.AppQName]extensionpoints.IExtensionPoint, _ []BuiltInAppPackages) iauthnzimpl.IsDeviceAllowedFuncs {
 	res := iauthnzimpl.IsDeviceAllowedFuncs{}
 	for appQName, appEP := range appEPs {
 		val, ok := appEP.Find(apps.EPIsDeviceAllowedFunc)
@@ -271,7 +263,7 @@ func provideIsDeviceAllowedFunc(appEPs map[istructs.AppQName]extensionpoints.IEx
 	return res
 }
 
-func provideBuiltInApps(builtInAppsPackages []BuiltInAppsPackages) []apppartsctl.BuiltInApp {
+func provideBuiltInApps(builtInAppsPackages []BuiltInAppPackages) []apppartsctl.BuiltInApp {
 	res := make([]apppartsctl.BuiltInApp, len(builtInAppsPackages))
 	for i, pkg := range builtInAppsPackages {
 		res[i] = pkg.BuiltInApp
@@ -421,7 +413,7 @@ func provideVVMApps(builtInApps []apppartsctl.BuiltInApp) (vvmApps VVMApps) {
 	return vvmApps
 }
 
-func provideBuiltInAppsPackages(vvmConfig *VVMConfig, cfgs istructsmem.AppConfigsType, apis apps.APIs, appsEPs map[istructs.AppQName]extensionpoints.IExtensionPoint) ([]BuiltInAppsPackages, error) {
+func provideBuiltInAppsPackages(vvmConfig *VVMConfig, cfgs istructsmem.AppConfigsType, apis apps.APIs, appsEPs map[istructs.AppQName]extensionpoints.IExtensionPoint) ([]BuiltInAppPackages, error) {
 	return vvmConfig.VVMAppsBuilder.BuiltInAppsPackages(cfgs, apis, appsEPs)
 }
 
@@ -469,14 +461,6 @@ func (s *switchByAppName) Switch(work interface{}) (branchName string, err error
 	return work.(interface{ AppQName() istructs.AppQName }).AppQName().String(), nil
 }
 
-func provideBlobberAppStruct(asp istructs.IAppStructsProvider) (BlobberAppStruct, error) {
-	return asp.AppStructs(istructs.AppQName_sys_blobber)
-}
-
-func provideBlobberClusterAppID(bas BlobberAppStruct) BlobberAppClusterID {
-	return BlobberAppClusterID(bas.ClusterAppID())
-}
-
 func provideBlobAppStorage(astp istorage.IAppStorageProvider) (BlobAppStorage, error) {
 	return astp.AppStorage(istructs.AppQName_sys_blobber)
 }
@@ -491,10 +475,9 @@ func provideRouterAppStorage(astp istorage.IAppStorageProvider) (dbcertcache.Rou
 
 // port 80 -> [0] is http server, port 443 -> [0] is https server, [1] is acme server
 func provideRouterServices(vvmCtx context.Context, rp router.RouterParams, busTimeout BusTimeout, broker in10n.IN10nBroker, quotas in10n.Quotas,
-	nowFunc coreutils.TimeFunc, bsc router.BlobberServiceChannels, bms router.BLOBMaxSizeType, blobberClusterAppID BlobberAppClusterID, blobStorage BlobStorage,
+	nowFunc coreutils.TimeFunc, bsc router.BlobberServiceChannels, bms router.BLOBMaxSizeType, blobStorage BlobStorage,
 	routerAppStorage dbcertcache.RouterAppStorage, autocertCache autocert.Cache, bus ibus.IBus, vvmPortSource *VVMPortSource, appsWSAmounts map[istructs.AppQName]istructs.AppWSAmount) RouterServices {
 	bp := &router.BlobberParams{
-		ClusterAppBlobberID:    uint32(blobberClusterAppID),
 		ServiceChannels:        bsc,
 		BLOBStorage:            blobStorage,
 		BLOBWorkersNum:         DefaultBLOBWorkersNum,
@@ -605,7 +588,7 @@ func provideAppServiceFactory(apf AppPartitionFactory) AppServiceFactory {
 
 // forks appServices per apps
 // [appsAmount]appServices
-func provideOperatorAppServices(apf AppServiceFactory, builtInAppsPackages []BuiltInAppsPackages, asp istructs.IAppStructsProvider) OperatorAppServicesFactory {
+func provideOperatorAppServices(apf AppServiceFactory, builtInAppsPackages []BuiltInAppPackages, asp istructs.IAppStructsProvider) OperatorAppServicesFactory {
 	return func(vvmCtx context.Context) pipeline.ISyncOperator {
 		var branches []pipeline.ForkOperatorOptionFunc
 		for _, builtInAppPackages := range builtInAppsPackages {
