@@ -22,16 +22,7 @@ type IAppDef interface {
 	IWithViews
 	IWithCommands
 	IWithQueries
-
-	// Return projector by name.
-	//
-	// Returns nil if not found.
-	Projector(QName) IProjector
-
-	// Enumerates all application projectors.
-	//
-	// Projectors are enumerated in alphabetical order by QName.
-	Projectors(func(IProjector))
+	IWithProjectors
 
 	// Return extension by name.
 	//
@@ -66,14 +57,7 @@ type IAppDefBuilder interface {
 	IViewsBuilder
 	ICommandsBuilder
 	IQueriesBuilder
-
-	// Adds new projector.
-	//
-	// # Panics:
-	//   - if name is empty (appdef.NullQName),
-	//   - if name is invalid,
-	//   - if type with name already exists.
-	AddProjector(QName) IProjectorBuilder
+	IProjectorsBuilder
 
 	// Adds new workspace.
 	//

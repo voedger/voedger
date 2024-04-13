@@ -111,3 +111,25 @@ type IProjectorEventsBuilder interface {
 	//	- if event for QName is not added.
 	SetComment(on QName, comment ...string) IProjectorEventsBuilder
 }
+
+type IWithProjectors interface {
+	// Return projector by name.
+	//
+	// Returns nil if not found.
+	Projector(QName) IProjector
+
+	// Enumerates all application projectors.
+	//
+	// Projectors are enumerated in alphabetical order by QName.
+	Projectors(func(IProjector))
+}
+
+type IProjectorsBuilder interface {
+	// Adds new projector.
+	//
+	// # Panics:
+	//   - if name is empty (appdef.NullQName),
+	//   - if name is invalid,
+	//   - if type with name already exists.
+	AddProjector(QName) IProjectorBuilder
+}
