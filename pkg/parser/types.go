@@ -7,12 +7,12 @@ package parser
 
 import (
 	"fmt"
-	"io/fs"
 	"strings"
 
 	"github.com/alecthomas/participle/v2/lexer"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 type FileSchemaAST struct {
@@ -36,14 +36,9 @@ type AppSchemaAST struct {
 	LocalNameToFullPath map[string]string
 }
 
-type IReadFS interface {
-	fs.ReadDirFS
-	fs.ReadFileFS
-}
-
 type PackageFS struct {
 	Path string
-	FS   IReadFS
+	FS   coreutils.IReadFS
 }
 
 type Ident string
