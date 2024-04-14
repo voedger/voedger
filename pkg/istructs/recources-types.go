@@ -135,6 +135,7 @@ type IStateValue interface {
 type IStateValueBuilder interface {
 	IValueBuilder
 	BuildValue() IStateValue
+	Equal(to IStateValueBuilder) bool // used in TestState
 }
 type IStateKeyBuilder interface {
 	IKeyBuilder

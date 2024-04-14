@@ -41,7 +41,7 @@ func Test_ActualizerStorages(t *testing.T) {
 	})
 
 	// Call the extension
-	ProjectorToTestSendMailStorage()
+	ProjectorToTestSendMailAndSecretsStorage()
 	test.RequireIntent(t, state.SendMail, appdef.NullFullQName, func(email istructs.IStateKeyBuilder) {
 		email.PutString("Host", "smtp.gmail.com")
 		email.PutInt32("Port", 587)
@@ -55,5 +55,29 @@ func Test_ActualizerStorages(t *testing.T) {
 }
 
 func Test_CommandStorages(t *testing.T) {
+	test := test.NewTestAPI(
+		teststate.ProcKind_CommandProcessor,
+		testPkg,
+		teststate.TestWorkspace{WorkspaceDescriptor: "TestWorkspaceDescriptor", WSID: testWSID})
 
+	// Create a Doc1 record
+	_, newIds := test.PutEvent(testWSID, appdef.NewFullQName(testPkg, "dummyCmd"), func(_ istructs.IObjectBuilder, cud istructs.ICUD) {
+		c := cud.Create(appdef.NewQName(teststate.TestPkgAlias, "Doc1"))
+		c.PutRecordID(appdef.SystemField_ID, 1)
+		c.PutInt32("Value", 42)
+	})
+	require.Len(t, newIds, 1)
+
+	test.PutEvent(testWSID, appdef.NewFullQName(testPkg, "CmdToTestRecordStorage"), func(arg istructs.IObjectBuilder, _ istructs.ICUD) {
+		arg.PutInt64("IdToRead", int64(newIds[0]))
+	})
+	CmdToTestRecordStorage()
+
+	test.RequireIntent(t, state.Result, appdef.NullFullQName, func(_ istructs.IStateKeyBuilder) {}).Equal(func(value istructs.IStateValueBuilder) {
+		value.PutInt32("ReadValue", 42)
+	})
+
+	test.RequireIntent(t, state.Record, appdef.NewFullQName(testPkg, "Doc1"), func(_ istructs.IStateKeyBuilder) {}).Equal(func(value istructs.IStateValueBuilder) {
+		value.PutInt32("Value", 43)
+	})
 }

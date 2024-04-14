@@ -9,7 +9,6 @@ import (
 	"embed"
 	"fmt"
 	"path/filepath"
-	"reflect"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -70,6 +69,18 @@ func (ctx *testState) Arg() istructs.IObject {
 	return ctx.event.ArgumentObject() // TODO: For QP must be different
 }
 
+func (ctx *testState) ResultBuilder() istructs.IObjectBuilder {
+	if ctx.event == nil {
+		panic("no current event")
+	}
+	qname := ctx.event.QName()
+	command := ctx.appDef.Command(qname)
+	if command == nil {
+		panic(fmt.Sprintf("%v is not a command", qname))
+	}
+	return ctx.appStructs.ObjectBuilder(command.Result().QName())
+}
+
 func (ctx *testState) buildState(processorKind int) {
 
 	appFunc := func() istructs.IAppStructs { return ctx.appStructs }
@@ -81,12 +92,15 @@ func (ctx *testState) buildState(processorKind int) {
 	wsidFunc := func() istructs.WSID {
 		return ctx.WSID()
 	}
+	resultBuilderFunc := func() istructs.IObjectBuilder {
+		return ctx.ResultBuilder()
+	}
 
 	switch processorKind {
 	case ProcKind_Actualizer:
 		ctx.IState = state.ProvideAsyncActualizerStateFactory()(ctx.ctx, appFunc, partitionIDFunc, wsidFunc, nil, ctx.secretReader, eventFunc, IntentsLimit, BundlesLimit)
 	case ProcKind_CommandProcessor:
-		ctx.IState = state.ProvideCommandProcessorStateFactory()(ctx.ctx, appFunc, partitionIDFunc, wsidFunc, ctx.secretReader, cudFunc, nil, nil, IntentsLimit, nil, argFunc, unloggedArgFunc)
+		ctx.IState = state.ProvideCommandProcessorStateFactory()(ctx.ctx, appFunc, partitionIDFunc, wsidFunc, ctx.secretReader, cudFunc, nil, nil, IntentsLimit, resultBuilderFunc, argFunc, unloggedArgFunc)
 	case ProcKind_QueryProcessor:
 		ctx.IState = state.ProvideQueryProcessorStateFactory()(ctx.ctx, appFunc, partitionIDFunc, wsidFunc, ctx.secretReader, nil, nil, argFunc)
 	}
@@ -293,22 +307,14 @@ func (ia *intentAssertions) Equal(vbc ValueBuilderCallback) {
 	if ia.vb == nil {
 		panic("intent not found")
 	}
-	bIntens, err := ia.vb.ToBytes()
-	if err != nil {
-		panic(err)
-	}
 
 	vb, err := ia.ctx.IState.NewValue(ia.kb)
 	if err != nil {
 		panic(err)
 	}
 	vbc(vb)
-	bVb, err := vb.ToBytes()
-	if err != nil {
-		panic(err)
-	}
 
-	if !reflect.DeepEqual(bIntens, bVb) {
+	if !ia.vb.Equal(vb) {
 		require.Fail(ia.t, "Expected intents to be equal")
 	}
 }

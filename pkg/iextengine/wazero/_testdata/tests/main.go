@@ -185,7 +185,7 @@ func keyPutQName() {
 	_ = ext.MustGetValue(kb)
 }
 
-//export CmdToTestWlogStorage
+//export ProjectorToTestWlogStorage
 func ProjectorToTestWlogStorage() {
 	event := ext.MustGetValue(ext.KeyBuilder(ext.StorageEvent, ext.NullEntity))
 	arg := event.AsValue("ArgumentObject")
@@ -214,8 +214,8 @@ func ProjectorToTestWlogStorage() {
 	result.PutQName("QNameVal", qname)
 }
 
-//export ProjectorToTestSendMailStorage
-func ProjectorToTestSendMailStorage() {
+//export ProjectorToTestSendMailAndSecretsStorage
+func ProjectorToTestSendMailAndSecretsStorage() {
 	secret := ext.KeyBuilder(ext.StorageAppSecret, ext.NullEntity)
 	secret.PutString("Secret", "smtpPassword")
 	smtpPassword := ext.MustGetValue(secret)
@@ -231,6 +231,21 @@ func ProjectorToTestSendMailStorage() {
 	email.PutString("Body", "TheBody")
 
 	_ = ext.NewValue(email)
+}
+
+func CmdToTestRecordStorage() {
+	arg := ext.MustGetValue(ext.KeyBuilder(ext.StorageCommandContext, ext.NullEntity)).AsValue("ArgumentObject")
+	idToRead := arg.AsInt64("IdToRead")
+
+	kb := ext.KeyBuilder(ext.StorageRecord, ext.NullEntity)
+	kb.PutInt64("ID", idToRead)
+	rec := ext.MustGetValue(kb)
+
+	result := ext.NewValue(ext.KeyBuilder(ext.StorageResult, ext.NullEntity))
+	result.PutInt32("ReadValue", rec.AsInt32("Value"))
+
+	cud := ext.NewValue(ext.KeyBuilder(ext.StorageRecord, "github.com/org/app/packages/mypkg.Doc1"))
+	cud.PutInt32("Value", 43)
 }
 
 func main() {

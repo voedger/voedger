@@ -12,6 +12,7 @@ import (
 	"io"
 	"maps"
 	"net/http"
+	"reflect"
 	"slices"
 	"strings"
 	"time"
@@ -143,6 +144,23 @@ type recordsKeyBuilder struct {
 	entity    appdef.QName
 }
 
+func (b *recordsKeyBuilder) Equals(src istructs.IKeyBuilder) bool {
+	kb, ok := src.(*recordsKeyBuilder)
+	if !ok {
+		return false
+	}
+	if b.id != kb.id {
+		return false
+	}
+	if b.singleton != kb.singleton {
+		return false
+	}
+	if b.wsid != kb.wsid {
+		return false
+	}
+	return true
+}
+
 func (b *recordsKeyBuilder) Storage() appdef.QName {
 	return Record
 }
@@ -163,6 +181,10 @@ func (b *recordsKeyBuilder) String() string {
 func (b *recordsKeyBuilder) PutInt64(name string, value int64) {
 	if name == Field_WSID {
 		b.wsid = istructs.WSID(value)
+		return
+	}
+	if name == Field_ID {
+		b.id = istructs.RecordID(value)
 		return
 	}
 	// TODO ???
@@ -192,6 +214,13 @@ type recordsValueBuilder struct {
 	rw istructs.IRowWriter
 }
 
+func (b *recordsValueBuilder) Equal(src istructs.IStateValueBuilder) bool {
+	vb, ok := src.(*recordsValueBuilder)
+	if !ok {
+		return false
+	}
+	return reflect.DeepEqual(b.rw, vb.rw) // TODO: does that work?
+}
 func (b *recordsValueBuilder) PutInt32(name string, value int32)        { b.rw.PutInt32(name, value) }
 func (b *recordsValueBuilder) PutInt64(name string, value int64)        { b.rw.PutInt64(name, value) }
 func (b *recordsValueBuilder) PutBytes(name string, value []byte)       { b.rw.PutBytes(name, value) }
@@ -250,6 +279,21 @@ type viewValueBuilder struct {
 	istructs.IValueBuilder
 	offset istructs.Offset
 	entity appdef.QName
+}
+
+// used in tests
+func (b *viewValueBuilder) Equal(src istructs.IStateValueBuilder) bool {
+	bThis, err := b.IValueBuilder.ToBytes()
+	if err != nil {
+		panic(err)
+	}
+
+	bSrc, err := src.ToBytes()
+	if err != nil {
+		panic(err)
+	}
+
+	return reflect.DeepEqual(bThis, bSrc)
 }
 
 func (b *viewValueBuilder) PutInt64(name string, value int64) {
@@ -821,10 +865,29 @@ func newResultKeyBuilder() *resultKeyBuilder {
 		},
 	}
 }
+func (*resultKeyBuilder) Equals(src istructs.IKeyBuilder) bool {
+	_, ok := src.(*resultKeyBuilder)
+	return ok
+}
 
 type resultValueBuilder struct {
 	istructs.IStateValueBuilder
 	resultBuilder istructs.IObjectBuilder
+}
+
+func (c *resultValueBuilder) Equal(src istructs.IStateValueBuilder) bool {
+	if _, ok := src.(*resultValueBuilder); !ok {
+		return false
+	}
+	o1, err := c.resultBuilder.Build()
+	if err != nil {
+		panic(err)
+	}
+	o2, err := src.(*resultValueBuilder).resultBuilder.Build()
+	if err != nil {
+		panic(err)
+	}
+	return reflect.DeepEqual(o1, o2)
 }
 
 func (c *resultValueBuilder) PutInt32(name string, value int32) {
