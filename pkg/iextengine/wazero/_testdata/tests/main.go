@@ -185,8 +185,8 @@ func keyPutQName() {
 	_ = ext.MustGetValue(kb)
 }
 
-//export ProjectorToTestWlogStorage
-func ProjectorToTestWlogStorage() {
+//export ProjectorTestStorageWLog
+func ProjectorTestStorageWLog() {
 	event := ext.MustGetValue(ext.KeyBuilder(ext.StorageEvent, ext.NullEntity))
 	arg := event.AsValue("ArgumentObject")
 	offs := arg.AsInt64("Offset")
@@ -214,11 +214,24 @@ func ProjectorToTestWlogStorage() {
 	result.PutQName("QNameVal", qname)
 }
 
-//export ProjectorToTestSendMailAndSecretsStorage
-func ProjectorToTestSendMailAndSecretsStorage() {
+//export ProjectorTestStorages
+func ProjectorTestStorages() {
 	secret := ext.KeyBuilder(ext.StorageAppSecret, ext.NullEntity)
 	secret.PutString("Secret", "smtpPassword")
 	smtpPassword := ext.MustGetValue(secret)
+
+	var userName string
+	http := ext.KeyBuilder(ext.StorageHttp, ext.NullEntity)
+	http.PutString("Method", "GET")
+	http.PutString("Url", "/getUsername")
+	http.PutInt64("HTTPClientTimeoutMilliseconds", 1000)
+	http.PutString("Header", "my-header: my-value")
+	http.PutString("Header", "Content-type: application/json")
+	ext.ReadValues(http, func(key ext.TKey, value ext.TValue) {
+		if value.AsInt32("StatusCode") == 200 {
+			userName = string(value.AsBytes("Body"))
+		}
+	})
 
 	email := ext.KeyBuilder(ext.StorageSendMail, ext.NullEntity)
 	email.PutString("Host", "smtp.gmail.com")
@@ -226,14 +239,15 @@ func ProjectorToTestSendMailAndSecretsStorage() {
 	email.PutString("From", "no-reply@gmail.com")
 	email.PutString("To", "email@gmail.com")
 	email.PutString("Subject", "Test")
-	email.PutString("Username", "User")
+	email.PutString("Username", userName)
 	email.PutString("Password", smtpPassword.AsString(""))
 	email.PutString("Body", "TheBody")
 
 	_ = ext.NewValue(email)
 }
 
-func CmdToTestRecordStorage() {
+//export CommandTestStorages
+func CommandTestStorages() {
 	arg := ext.MustGetValue(ext.KeyBuilder(ext.StorageCommandContext, ext.NullEntity)).AsValue("ArgumentObject")
 	idToRead := arg.AsInt64("IdToRead")
 
@@ -241,8 +255,19 @@ func CmdToTestRecordStorage() {
 	kb.PutInt64("ID", idToRead)
 	rec := ext.MustGetValue(kb)
 
+	kb = ext.KeyBuilder(ext.StorageRequestSubject, ext.NullEntity)
+	principal := ext.MustGetValue(kb)
+	wsid := principal.AsInt64("ProfileWSID")
+	kind := principal.AsInt32("Kind")
+	name := principal.AsString("Name")
+	token := principal.AsString("Token")
+
 	result := ext.NewValue(ext.KeyBuilder(ext.StorageResult, ext.NullEntity))
 	result.PutInt32("ReadValue", rec.AsInt32("Value"))
+	result.PutInt64("ReadWSID", wsid)
+	result.PutInt32("ReadKind", kind)
+	result.PutString("ReadName", name)
+	result.PutString("ReadToken", token)
 
 	cud := ext.NewValue(ext.KeyBuilder(ext.StorageRecord, "github.com/org/app/packages/mypkg.Doc1"))
 	cud.PutInt32("Value", 43)

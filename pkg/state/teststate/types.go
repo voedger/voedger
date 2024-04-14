@@ -4,7 +4,12 @@
  */
 package teststate
 
-import "github.com/voedger/voedger/pkg/istructs"
+import (
+	"io"
+	"time"
+
+	"github.com/voedger/voedger/pkg/istructs"
+)
 
 type TestWorkspace struct {
 	WorkspaceDescriptor string
@@ -16,4 +21,18 @@ type TestViewValue struct {
 	vr   istructs.IViewRecords
 	Key  istructs.IKeyBuilder
 	Val  istructs.IValueBuilder
+}
+
+type HttpRequest struct {
+	Timeout time.Duration
+	Method  string
+	URL     string
+	Body    io.Reader
+	Headers map[string]string
+}
+
+type HttpResponse struct {
+	Status  int
+	Body    []byte
+	Headers map[string][]string
 }

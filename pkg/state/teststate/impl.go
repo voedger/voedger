@@ -8,11 +8,14 @@ import (
 	"context"
 	"embed"
 	"fmt"
+	"io"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/iratesce"
 	"github.com/voedger/voedger/pkg/isecrets"
 	"github.com/voedger/voedger/pkg/istorage/mem"
@@ -39,6 +42,9 @@ type testState struct {
 	plogGen      istructs.IIDGenerator
 	wsOffsets    map[istructs.WSID]istructs.Offset
 	secretReader isecrets.ISecretReader
+	httpHandler  HttpHandlerFunc
+	principals   []iauthnz.Principal
+	token        string
 }
 
 func NewTestState(processorKind int, packagePath string, createWorkspaces ...TestWorkspace) ITestState {
@@ -81,6 +87,29 @@ func (ctx *testState) ResultBuilder() istructs.IObjectBuilder {
 	return ctx.appStructs.ObjectBuilder(command.Result().QName())
 }
 
+func (ctx *testState) Request(timeout time.Duration, method, url string, body io.Reader, headers map[string]string) (statusCode int, resBody []byte, resHeaders map[string][]string, err error) {
+	if ctx.httpHandler == nil {
+		panic("http handler not set")
+	}
+	req := HttpRequest{
+		Timeout: timeout,
+		Method:  method,
+		URL:     url,
+		Body:    body,
+		Headers: headers,
+	}
+	resp, err := ctx.httpHandler(req)
+	if err != nil {
+		return 0, nil, nil, err
+	}
+	return resp.Status, resp.Body, resp.Headers, nil
+}
+
+func (ctx *testState) PutRequestSubject(principals []iauthnz.Principal, token string) {
+	ctx.principals = principals
+	ctx.token = token
+}
+
 func (ctx *testState) buildState(processorKind int) {
 
 	appFunc := func() istructs.IAppStructs { return ctx.appStructs }
@@ -95,14 +124,20 @@ func (ctx *testState) buildState(processorKind int) {
 	resultBuilderFunc := func() istructs.IObjectBuilder {
 		return ctx.ResultBuilder()
 	}
+	principalsFunc := func() []iauthnz.Principal {
+		return ctx.principals
+	}
+	tokenFunc := func() string {
+		return ctx.token
+	}
 
 	switch processorKind {
 	case ProcKind_Actualizer:
-		ctx.IState = state.ProvideAsyncActualizerStateFactory()(ctx.ctx, appFunc, partitionIDFunc, wsidFunc, nil, ctx.secretReader, eventFunc, IntentsLimit, BundlesLimit)
+		ctx.IState = state.ProvideAsyncActualizerStateFactory()(ctx.ctx, appFunc, partitionIDFunc, wsidFunc, nil, ctx.secretReader, eventFunc, IntentsLimit, BundlesLimit, state.WithCustomHttpClient(ctx))
 	case ProcKind_CommandProcessor:
-		ctx.IState = state.ProvideCommandProcessorStateFactory()(ctx.ctx, appFunc, partitionIDFunc, wsidFunc, ctx.secretReader, cudFunc, nil, nil, IntentsLimit, resultBuilderFunc, argFunc, unloggedArgFunc)
+		ctx.IState = state.ProvideCommandProcessorStateFactory()(ctx.ctx, appFunc, partitionIDFunc, wsidFunc, ctx.secretReader, cudFunc, principalsFunc, tokenFunc, IntentsLimit, resultBuilderFunc, argFunc, unloggedArgFunc)
 	case ProcKind_QueryProcessor:
-		ctx.IState = state.ProvideQueryProcessorStateFactory()(ctx.ctx, appFunc, partitionIDFunc, wsidFunc, ctx.secretReader, nil, nil, argFunc)
+		ctx.IState = state.ProvideQueryProcessorStateFactory()(ctx.ctx, appFunc, partitionIDFunc, wsidFunc, ctx.secretReader, principalsFunc, tokenFunc, argFunc, state.QPWithCustomHttpClient(ctx))
 	}
 }
 
@@ -227,6 +262,10 @@ func (ctx *testState) nextWSOffs(ws istructs.WSID) istructs.Offset {
 	offs += 1
 	ctx.wsOffsets[ws] = offs
 	return offs
+}
+
+func (ctx *testState) PutHttpHandler(handler HttpHandlerFunc) {
+	ctx.httpHandler = handler
 }
 
 func (ctx *testState) PutEvent(wsid istructs.WSID, name appdef.FullQName, cb NewEventCallback) (wLogOffs istructs.Offset, newRecordIds []istructs.RecordID) {

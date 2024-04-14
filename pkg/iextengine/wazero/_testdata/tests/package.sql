@@ -8,11 +8,15 @@ WORKSPACE TestWorkspace (
         ReadQName qname,
         ReadValues int32
     );
-    TYPE CmdToTestRecordStorageParam(
+    TYPE CommandTestStoragesParam(
         IdToRead ref(Doc1)
     );
-    TYPE CmdToTestRecordStorageResult(
-        ReadValue int32
+    TYPE CommandTestStoragesResult(
+        ReadValue int32,
+        ReadName varchar,
+        ReadToken varchar,
+        ReadKind int32,
+        ReadWSID int64
     );
     VIEW Results(
         Pk int32,
@@ -20,15 +24,15 @@ WORKSPACE TestWorkspace (
         IntVal int32,
         QNameVal qname,
         PRIMARY KEY((Pk), Key)
-    ) AS RESULT OF ProjectorToTestWlogStorage;
+    ) AS RESULT OF ProjectorTestStorageWLog;
     TABLE Doc1 INHERITS CDoc(
         Value int32
     );
     EXTENSION ENGINE WASM(
         COMMAND dummyCmd();
         COMMAND CmdToTestWlogStorage(cmdToTestWlogStorageParam) RETURNS cmdToTestWlogStorageResult;
-        COMMAND CmdToTestRecordStorage(CmdToTestRecordStorageParam) RETURNS CmdToTestRecordStorageResult;
-        PROJECTOR ProjectorToTestWlogStorage AFTER EXECUTE ON CmdToTestWlogStorage INTENTS(View(Results));
-        PROJECTOR ProjectorToTestSendMailStorage AFTER EXECUTE ON CmdToTestWlogStorage INTENTS(SendMail);
+        COMMAND CommandTestStorages(CommandTestStoragesParam) RETURNS CommandTestStoragesResult;
+        PROJECTOR ProjectorTestStorageWLog AFTER EXECUTE ON CmdToTestWlogStorage INTENTS(View(Results));
+        PROJECTOR ProjectorTestStorages AFTER EXECUTE ON CmdToTestWlogStorage INTENTS(SendMail);
     );
 )

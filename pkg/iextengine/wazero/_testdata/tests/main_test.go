@@ -6,6 +6,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/appdef"
 	test "github.com/voedger/voedger/pkg/exttinygo/exttinygotests"
+	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/state/teststate"
@@ -34,14 +35,20 @@ func Test_ActualizerStorages(t *testing.T) {
 	})
 
 	// Call the extension
-	ProjectorToTestWlogStorage()
+	ProjectorTestStorageWLog()
 	test.RequireIntent(t, state.View, appdef.NewFullQName(testPkg, "Results"), func(_ istructs.IStateKeyBuilder) {}).Equal(func(value istructs.IStateValueBuilder) {
 		value.PutInt32("IntVal", 2)
 		value.PutQName("QNameVal", appdef.NewQName(teststate.TestPkgAlias, "dummyCmd"))
 	})
 
-	// Call the extension
-	ProjectorToTestSendMailAndSecretsStorage()
+	// Call the extension to test SendMail, Http and Secret
+	test.PutHttpHandler(func(req teststate.HttpRequest) (resp teststate.HttpResponse, err error) {
+		if req.Method == "GET" {
+			return teststate.HttpResponse{Status: 200, Body: []byte("Ivan")}, nil
+		}
+		return teststate.HttpResponse{Status: 404, Body: []byte("Not Found")}, nil
+	})
+	ProjectorTestStorages()
 	test.RequireIntent(t, state.SendMail, appdef.NullFullQName, func(email istructs.IStateKeyBuilder) {
 		email.PutString("Host", "smtp.gmail.com")
 		email.PutInt32("Port", 587)
@@ -49,9 +56,10 @@ func Test_ActualizerStorages(t *testing.T) {
 		email.PutString("To", "email@gmail.com")
 		email.PutString("Subject", "Test")
 		email.PutString("Body", "TheBody")
-		email.PutString("Username", "User")
+		email.PutString("Username", "Ivan")
 		email.PutString("Password", "GOD")
 	}).Exists()
+
 }
 
 func Test_CommandStorages(t *testing.T) {
@@ -68,13 +76,18 @@ func Test_CommandStorages(t *testing.T) {
 	})
 	require.Len(t, newIds, 1)
 
-	test.PutEvent(testWSID, appdef.NewFullQName(testPkg, "CmdToTestRecordStorage"), func(arg istructs.IObjectBuilder, _ istructs.ICUD) {
+	test.PutEvent(testWSID, appdef.NewFullQName(testPkg, "CommandTestStorages"), func(arg istructs.IObjectBuilder, _ istructs.ICUD) {
 		arg.PutInt64("IdToRead", int64(newIds[0]))
 	})
-	CmdToTestRecordStorage()
+	test.PutRequestSubject([]iauthnz.Principal{{Kind: iauthnz.PrincipalKind_User, WSID: testWSID, Name: "ivan@gmail.com"}}, "atoken")
+	CommandTestStorages()
 
 	test.RequireIntent(t, state.Result, appdef.NullFullQName, func(_ istructs.IStateKeyBuilder) {}).Equal(func(value istructs.IStateValueBuilder) {
 		value.PutInt32("ReadValue", 42)
+		value.PutString("ReadName", "ivan@gmail.com")
+		value.PutInt64("ReadWSID", int64(testWSID))
+		value.PutInt32("ReadKind", int32(istructs.SubjectKind_User))
+		value.PutString("ReadToken", "atoken")
 	})
 
 	test.RequireIntent(t, state.Record, appdef.NewFullQName(testPkg, "Doc1"), func(_ istructs.IStateKeyBuilder) {}).Equal(func(value istructs.IStateValueBuilder) {
