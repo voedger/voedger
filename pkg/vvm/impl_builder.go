@@ -54,16 +54,19 @@ func (ab VVMAppsBuilder) BuiltInAppsPackages(cfgs istructsmem.AppConfigsType, ap
 		if err := buildAppFromPackagesFS(builtInAppDef.Packages, adb); err != nil {
 			return nil, err
 		}
+		// query IAppStructs to build IAppDef only once - on AppConfigType.preapre()
+		_, err = apis.IAppStructsProvider.AppStructs(appQName)
+		if err != nil {
+			return nil, err
+		}
 		builtInAppPackages := BuiltInAppPackages{
 			BuiltInApp: apppartsctl.BuiltInApp{
 				Name:           appQName,
 				PartsCount:     builtInAppDef.PartsCount,
 				EnginePoolSize: builtInAppDef.EnginePoolSize,
+				Def:            cfg.AppDef,
 			},
 			Packages: builtInAppDef.Packages,
-		}
-		if builtInAppPackages.Def, err = adb.Build(); err != nil {
-			return nil, err
 		}
 		builtInAppsPackages = append(builtInAppsPackages, builtInAppPackages)
 	}
