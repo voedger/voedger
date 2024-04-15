@@ -29,7 +29,7 @@ var expectedKeys []expVal = []expVal{
 		f64:     1.01,
 		str:     "key1",
 		bytes:   []byte{1, 2, 3},
-		qname:   ext.QName{Pkg: "github.com/voedger/testpkg1", Entity: "e1"},
+		qname:   ext.QName{FullPkgName: "github.com/voedger/testpkg1", Entity: "e1"},
 		boolean: true,
 	},
 	expVal{
@@ -39,7 +39,7 @@ var expectedKeys []expVal = []expVal{
 		f64:     2.01,
 		str:     "key2",
 		bytes:   []byte{2, 2, 3},
-		qname:   ext.QName{Pkg: "github.com/voedger/testpkg1", Entity: "e2"},
+		qname:   ext.QName{FullPkgName: "github.com/voedger/testpkg1", Entity: "e2"},
 		boolean: true,
 	},
 	expVal{
@@ -49,7 +49,7 @@ var expectedKeys []expVal = []expVal{
 		f64:     3.01,
 		str:     "key3",
 		bytes:   []byte{3, 2, 3},
-		qname:   ext.QName{Pkg: "github.com/voedger/testpkg1", Entity: "e3"},
+		qname:   ext.QName{FullPkgName: "github.com/voedger/testpkg1", Entity: "e3"},
 		boolean: true,
 	},
 }
@@ -62,7 +62,7 @@ var expectedValues []expVal = []expVal{
 		f64:     1.0001,
 		str:     "value1",
 		bytes:   []byte{3, 2, 1},
-		qname:   ext.QName{Pkg: "github.com/voedger/testpkg1", Entity: "ee1"},
+		qname:   ext.QName{FullPkgName: "github.com/voedger/testpkg1", Entity: "ee1"},
 		boolean: false,
 	},
 	expVal{
@@ -72,7 +72,7 @@ var expectedValues []expVal = []expVal{
 		f64:     2.0001,
 		str:     "value2",
 		bytes:   []byte{3, 2, 1},
-		qname:   ext.QName{Pkg: "github.com/voedger/testpkg1", Entity: "ee2"},
+		qname:   ext.QName{FullPkgName: "github.com/voedger/testpkg1", Entity: "ee2"},
 		boolean: false,
 	},
 	expVal{
@@ -82,7 +82,7 @@ var expectedValues []expVal = []expVal{
 		f64:     3.0001,
 		str:     "value3",
 		bytes:   []byte{3, 2, 1},
-		qname:   ext.QName{Pkg: "github.com/voedger/testpkg1", Entity: "e33"},
+		qname:   ext.QName{FullPkgName: "github.com/voedger/testpkg1", Entity: "e33"},
 		boolean: false,
 	},
 }
@@ -151,7 +151,7 @@ func testNoAllocs() {
 	require.EqualInt32(int32(123), value.GetAsInt32(0))
 	require.EqualString("test string", value.GetAsString(1))
 	bytes := value.GetAsBytes(2)
-	require.EqualQName(ext.QName{Pkg: "github.com/voedger/testpkg1", Entity: "test"}, value.GetAsQName(3))
+	require.EqualQName(ext.QName{FullPkgName: "github.com/voedger/testpkg1", Entity: "test"}, value.GetAsQName(3))
 
 	require.EqualBool(true, len(bytes) == 1024)
 
@@ -163,7 +163,7 @@ func testNoAllocs() {
 	mail.PutString("from", "test@gmail.com")
 	mail.PutInt32("port", 668)
 	mail.PutBytes("key", mybytes)
-	mail.PutQName("qname", ext.QName{Pkg: "github.com/voedger/testpkg1", Entity: "test"})
+	mail.PutQName("qname", ext.QName{FullPkgName: "github.com/voedger/testpkg1", Entity: "test"})
 
 	// UpdateValue
 	updatedValue := ext.UpdateValue(kb, event)
@@ -181,8 +181,96 @@ func testQueryValue() {
 //export keyPutQName
 func keyPutQName() {
 	kb := ext.KeyBuilder("sys.TestQName", ext.NullEntity)
-	kb.PutQName("qname", ext.QName{Pkg: "github.com/voedger/testpkg1", Entity: "test"})
+	kb.PutQName("qname", ext.QName{FullPkgName: "github.com/voedger/testpkg1", Entity: "test"})
 	_ = ext.MustGetValue(kb)
+}
+
+//export ProjectorTestStorageWLog
+func ProjectorTestStorageWLog() {
+	event := ext.MustGetValue(ext.KeyBuilder(ext.StorageEvent, ext.NullEntity))
+	arg := event.AsValue("ArgumentObject")
+	offs := arg.AsInt64("Offset")
+	count := arg.AsInt64("Count")
+
+	kb := ext.KeyBuilder(ext.StorageWLog, ext.NullEntity)
+	kb.PutInt64("Offset", offs)
+
+	// read 1 item
+	wlogEntry := ext.MustGetValue(kb)
+	qname := wlogEntry.AsQName("QName")
+
+	// read range
+	kb = ext.KeyBuilder(ext.StorageWLog, ext.NullEntity)
+	kb.PutInt64("Offset", offs)
+	kb.PutInt64("Count", count)
+
+	var readValues int32
+	ext.ReadValues(kb, func(key ext.TKey, value ext.TValue) {
+		readValues++
+	})
+
+	result := ext.NewValue(ext.KeyBuilder(ext.StorageView, "github.com/org/app/packages/mypkg.Results"))
+	result.PutInt32("IntVal", readValues)
+	result.PutQName("QNameVal", qname)
+}
+
+//export ProjectorTestStorages
+func ProjectorTestStorages() {
+	secret := ext.KeyBuilder(ext.StorageAppSecret, ext.NullEntity)
+	secret.PutString("Secret", "smtpPassword")
+	smtpPassword := ext.MustGetValue(secret)
+
+	var userName string
+	http := ext.KeyBuilder(ext.StorageHttp, ext.NullEntity)
+	http.PutString("Method", "GET")
+	http.PutString("Url", "/getUsername")
+	http.PutInt64("HTTPClientTimeoutMilliseconds", 1000)
+	http.PutString("Header", "my-header: my-value")
+	http.PutString("Header", "Content-type: application/json")
+	ext.ReadValues(http, func(key ext.TKey, value ext.TValue) {
+		if value.AsInt32("StatusCode") == 200 {
+			userName = string(value.AsBytes("Body"))
+		}
+	})
+
+	email := ext.KeyBuilder(ext.StorageSendMail, ext.NullEntity)
+	email.PutString("Host", "smtp.gmail.com")
+	email.PutInt32("Port", 587)
+	email.PutString("From", "no-reply@gmail.com")
+	email.PutString("To", "email@gmail.com")
+	email.PutString("Subject", "Test")
+	email.PutString("Username", userName)
+	email.PutString("Password", smtpPassword.AsString(""))
+	email.PutString("Body", "TheBody")
+
+	_ = ext.NewValue(email)
+}
+
+//export CommandTestStorages
+func CommandTestStorages() {
+	arg := ext.MustGetValue(ext.KeyBuilder(ext.StorageCommandContext, ext.NullEntity)).AsValue("ArgumentObject")
+	idToRead := arg.AsInt64("IdToRead")
+
+	kb := ext.KeyBuilder(ext.StorageRecord, ext.NullEntity)
+	kb.PutInt64("ID", idToRead)
+	rec := ext.MustGetValue(kb)
+
+	kb = ext.KeyBuilder(ext.StorageRequestSubject, ext.NullEntity)
+	principal := ext.MustGetValue(kb)
+	wsid := principal.AsInt64("ProfileWSID")
+	kind := principal.AsInt32("Kind")
+	name := principal.AsString("Name")
+	token := principal.AsString("Token")
+
+	result := ext.NewValue(ext.KeyBuilder(ext.StorageResult, ext.NullEntity))
+	result.PutInt32("ReadValue", rec.AsInt32("Value"))
+	result.PutInt64("ReadWSID", wsid)
+	result.PutInt32("ReadKind", kind)
+	result.PutString("ReadName", name)
+	result.PutString("ReadToken", token)
+
+	cud := ext.NewValue(ext.KeyBuilder(ext.StorageRecord, "github.com/org/app/packages/mypkg.Doc1"))
+	cud.PutInt32("Value", 43)
 }
 
 func main() {

@@ -5,6 +5,16 @@
 
 package exttinygo
 
+import (
+	safe "github.com/voedger/voedger/pkg/state/isafestateapi"
+)
+
+type TKeyBuilder safe.TKeyBuilder
+type TIntent safe.TIntent
+type TValue safe.TValue
+type TKey safe.TKey
+type QName safe.QName
+
 var KeyBuilder func(storage, entity string) (b TKeyBuilder) = keyBuilderImpl
 
 // QueryValue queries value. When not exists it returns exists=false and value=nil.
@@ -24,6 +34,7 @@ var UpdateValue func(key TKeyBuilder, existingValue TValue) TIntent = updateValu
 // NewValue creates intent for new value
 var NewValue func(key TKeyBuilder) TIntent = newValueImpl
 
+/*
 type IKey interface {
 	AsString(name string) string
 	AsInt32(name string) int32
@@ -77,3 +88,4 @@ type IKeyBuilder interface {
 type IIntent interface {
 	IRowWriter
 }
+*/

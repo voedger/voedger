@@ -46,8 +46,8 @@ func EqualBytes(expected, actual []byte) {
 }
 
 func EqualQName(expected, actual ext.QName) {
-	if len(expected.Entity) != len(actual.Entity) || len(expected.Pkg) != len(actual.Pkg) {
-		ext.Panic("QName not equal. Expected: " + expected.Pkg + "." + expected.Entity + butGotPhrase + actual.Pkg + "." + actual.Entity)
+	if len(expected.Entity) != len(actual.Entity) || len(expected.FullPkgName) != len(actual.FullPkgName) {
+		ext.Panic("QName not equal. Expected: " + expected.FullPkgName + "." + expected.Entity + butGotPhrase + actual.FullPkgName + "." + actual.Entity)
 	}
 }
 
