@@ -15,10 +15,10 @@ import (
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-func provideStateFunc(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder) {
+func provideStateFunc(cfg *istructsmem.AppConfigType) {
 	cfg.Resources.Add(istructsmem.NewQueryFunction(
 		qNameQueryState,
-		stateFuncExec(appDefBuilder.AppDef())))
+		stateFuncExec(cfg.AppDef)))
 }
 
 func stateFuncExec(appDef appdef.IAppDef) istructsmem.ExecQueryClosure {

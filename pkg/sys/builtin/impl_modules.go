@@ -16,7 +16,7 @@ import (
 	istructsmem "github.com/voedger/voedger/pkg/istructsmem"
 )
 
-func provideQryModules(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, buildInfo *debug.BuildInfo) {
+func provideQryModules(cfg *istructsmem.AppConfigType, buildInfo *debug.BuildInfo) {
 	cfg.Resources.Add(istructsmem.NewQueryFunction(
 		appdef.NewQName(appdef.SysPackage, "Modules"),
 		provideQryModulesExec(buildInfo),

@@ -19,7 +19,7 @@ import (
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-func provideRefIntegrityValidation(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder) {
+func provideRefIntegrityValidation(cfg *istructsmem.AppConfigType) {
 	cfg.AddSyncProjectors(istructs.Projector{
 		Name: qNameRecordsRegistryProjector,
 		Func: provideRecordsRegistryProjector(cfg),
