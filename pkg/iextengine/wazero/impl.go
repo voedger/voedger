@@ -21,6 +21,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/iextengine"
+	"github.com/voedger/voedger/pkg/istructs"
 	safe "github.com/voedger/voedger/pkg/state/isafestateapi"
 	"github.com/voedger/voedger/pkg/state/safestate"
 )
