@@ -14,11 +14,11 @@ import (
 
 type appPartitionsController struct {
 	parts appparts.IAppPartitions
-	apps  []BuiltInApp
+	builtInApps  []BuiltInApp
 }
 
 func newAppPartitionsController(parts appparts.IAppPartitions, apps []BuiltInApp) (ctl IAppPartitionsController, cleanup func(), err error) {
-	apc := appPartitionsController{parts: parts, apps: apps}
+	apc := appPartitionsController{parts: parts, builtInApps: apps}
 
 	return &apc, func() {}, err
 }
@@ -28,14 +28,13 @@ func (ctl *appPartitionsController) Prepare() (err error) {
 }
 
 func (ctl *appPartitionsController) Run(ctx context.Context) {
-
-	for _, app := range ctl.apps {
-		ctl.parts.DeployApp(app.Name, app.Def, app.PartsCount, app.EnginePoolSize)
-		ids := make([]istructs.PartitionID, app.PartsCount)
-		for id := 0; id < app.PartsCount; id++ {
+	for _, builtinApp := range ctl.builtInApps {
+		ctl.parts.DeployApp(builtinApp.Name, builtinApp.Def, builtinApp.PartsCount, builtinApp.EnginePoolSize)
+		ids := make([]istructs.PartitionID, builtinApp.PartsCount)
+		for id := 0; id < builtinApp.PartsCount; id++ {
 			ids[id] = istructs.PartitionID(id)
 		}
-		ctl.parts.DeployAppPartitions(app.Name, ids)
+		ctl.parts.DeployAppPartitions(builtinApp.Name, ids)
 	}
 
 	<-ctx.Done()
