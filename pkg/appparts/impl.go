@@ -117,6 +117,14 @@ func (aps *apps) Borrow(appName istructs.AppQName, partID istructs.PartitionID, 
 	return borrowed, nil
 }
 
+func (aps *apps) GetPartitionID(appName istructs.AppQName, ws istructs.WSID) istructs.PartitionID {
+	pc, err := aps.AppPartsCount(appName)
+	if err != nil {
+		panic(err)
+	}
+	return istructs.PartitionID(int(ws) % pc)
+}
+
 func (aps *apps) WaitForBorrow(ctx context.Context, appName istructs.AppQName, partID istructs.PartitionID, proc cluster.ProcessorKind) (IAppPartition, error) {
 	for ctx.Err() == nil {
 		ap, err := aps.Borrow(appName, partID, proc)
