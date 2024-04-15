@@ -40,12 +40,18 @@ var ErrPackageWithSameNameAlreadyIncludedInApp = errors.New("package with the sa
 var ErrStorageDeclaredOnlyInSys = errors.New("storages are only declared in sys package")
 var ErrPkgFolderNotFound = errors.New("pkg folder not found")
 
+var ErrScheduledProjectorNotInAppWorkspace = errors.New("scheduled projector must be in app workspace")
+
 func ErrLocalPackageNameRedeclared(localPkgName, newLocalPkgName string) error {
 	return fmt.Errorf("local package name %s was redeclared as %s", localPkgName, newLocalPkgName)
 }
 
 func ErrAppDoesNotDefineUseOfPackage(name string) error {
-	return fmt.Errorf("application does not define use of package %s", name)
+	return fmt.Errorf("application does not define use of package %s. Check if the package is defined in IMPORT SCHEMA and parsed under the same name", name)
+}
+
+func ErrInvalidCronSchedule(schedule string) error {
+	return fmt.Errorf("invalid cron schedule: %s", schedule)
 }
 
 func ErrUndefinedCommand(name DefQName) error {
@@ -98,7 +104,7 @@ func ErrCheckRegexpErr(e error) error {
 
 // Golang: could not import github.com/alecthomas/participle/v2/asd (no required module provides package "github.com/alecthomas/participle/v2/asd")
 func ErrCouldNotImport(pkgName string) error {
-	return fmt.Errorf("could not import %s", pkgName)
+	return fmt.Errorf("could not import %s. Check if the package is parsed under exactly this name", pkgName)
 }
 
 func ErrUnexpectedRootTableKind(kind int) error {

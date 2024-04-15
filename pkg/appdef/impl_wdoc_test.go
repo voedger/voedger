@@ -67,6 +67,24 @@ func Test_AppDef_AddWDoc(t *testing.T) {
 			require.Zero(rec.ContainerCount())
 		})
 	})
+
+	t.Run("must be ok to enumerate docs", func(t *testing.T) {
+		var docs []QName
+		app.WDocs(func(doc IWDoc) {
+			docs = append(docs, doc.QName())
+		})
+		require.Len(docs, 1)
+		require.Equal(docName, docs[0])
+		t.Run("must be ok to enumerate recs", func(t *testing.T) {
+			var recs []QName
+			app.WRecords(func(rec IWRecord) {
+				recs = append(recs, rec.QName())
+			})
+			require.Len(recs, 1)
+			require.Equal(recName, recs[0])
+		})
+	})
+
 }
 
 func Test_AppDef_AddWDocSingleton(t *testing.T) {

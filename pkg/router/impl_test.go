@@ -380,8 +380,8 @@ func setUp(t *testing.T, handlerFunc func(requestCtx context.Context, sender ibu
 	}
 	rp := RouterParams{
 		Port:             0,
-		WriteTimeout:     DefaultWriteTimeout,
-		ReadTimeout:      DefaultReadTimeout,
+		WriteTimeout:     DefaultRouterWriteTimeout,
+		ReadTimeout:      DefaultRouterReadTimeout,
 		ConnectionsLimit: DefaultConnectionsLimit,
 	}
 	bus := ibusmem.Provide(func(requestCtx context.Context, sender ibus.ISender, request ibus.Request) {

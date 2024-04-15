@@ -8,12 +8,9 @@ package coreutils
 import (
 	"io/fs"
 	"net/http"
-	"net/url"
 	"os"
 	"path/filepath"
 	"time"
-
-	"github.com/voedger/voedger/pkg/istructs"
 )
 
 type EmbedFS interface {
@@ -48,8 +45,16 @@ type FuncError struct {
 }
 
 type IFederation interface {
-	POST(appQName istructs.AppQName, wsid istructs.WSID, fn string, body string, opts ...ReqOptFunc) (*HTTPResponse, error)
-	URL() *url.URL
+	POST(relativeURL string, body string, optFuncs ...ReqOptFunc) (*HTTPResponse, error)
+	GET(relativeURL string, body string, optFuncs ...ReqOptFunc) (*HTTPResponse, error)
+	Func(relativeURL string, body string, optFuncs ...ReqOptFunc) (*FuncResponse, error)
+	URLStr() string
+	Port() int
+}
+
+type IHTTPClient interface {
+	Req(urlStr string, body string, optFuncs ...ReqOptFunc) (*HTTPResponse, error)
+	CloseIdleConnections()
 }
 
 type TimeFunc func() time.Time
@@ -81,4 +86,12 @@ func (r *PathReader) ReadFile(name string) ([]byte, error) {
 
 type IErrUnwrapper interface {
 	Unwrap() []error
+}
+
+type CUD struct {
+	Fields map[string]interface{} `json:"fields"`
+}
+
+type CUDs struct {
+	Cuds []CUD `json:"cuds"`
 }

@@ -45,27 +45,30 @@ func buildAppFromPackagesFS(fses []parser.PackageFS, adf appdef.IAppDefBuilder) 
 	return parser.BuildAppDefs(appSchemaAST, adf)
 }
 
-func (ab VVMAppsBuilder) BuiltInAppsPackages(cfgs istructsmem.AppConfigsType, apis apps.APIs, appsEPs map[istructs.AppQName]extensionpoints.IExtensionPoint) (builtInAppsPackages []BuiltInAppsPackages, err error) {
+func (ab VVMAppsBuilder) BuiltInAppsPackages(cfgs istructsmem.AppConfigsType, apis apps.APIs, appsEPs map[istructs.AppQName]extensionpoints.IExtensionPoint) (builtInAppsPackages []BuiltInAppPackages, err error) {
 	for appQName, appBuilder := range ab {
 		adb := appdef.New()
 		appEPs := appsEPs[appQName]
 		cfg := cfgs.AddConfig(appQName, adb)
-		builtInAppDef := appBuilder(apis, cfg, adb, appEPs)
+		builtInAppDef := appBuilder(apis, cfg, appEPs)
 		if err := buildAppFromPackagesFS(builtInAppDef.Packages, adb); err != nil {
 			return nil, err
 		}
-		biltInAppPackages := BuiltInAppsPackages{
+		// query IAppStructs to build IAppDef only once - on AppConfigType.preapre()
+		_, err = apis.IAppStructsProvider.AppStructs(appQName)
+		if err != nil {
+			return nil, err
+		}
+		builtInAppPackages := BuiltInAppPackages{
 			BuiltInApp: apppartsctl.BuiltInApp{
 				Name:           appQName,
 				PartsCount:     builtInAppDef.PartsCount,
 				EnginePoolSize: builtInAppDef.EnginePoolSize,
+				Def:            cfg.AppDef,
 			},
 			Packages: builtInAppDef.Packages,
 		}
-		if biltInAppPackages.Def, err = adb.Build(); err != nil {
-			return nil, err
-		}
-		builtInAppsPackages = append(builtInAppsPackages, biltInAppPackages)
+		builtInAppsPackages = append(builtInAppsPackages, builtInAppPackages)
 	}
 	return builtInAppsPackages, nil
 }

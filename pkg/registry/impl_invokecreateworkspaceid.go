@@ -22,7 +22,7 @@ import (
 
 // sys/registry app, triggered by cdoc.registry.Login
 // at pseudoWSID translated to AppWSID
-func invokeCreateWorkspaceIDProjector(federation coreutils.IFederation, appQName istructs.AppQName, tokensAPI itokens.ITokens) func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
+func invokeCreateWorkspaceIDProjector(federation coreutils.IFederation, tokensAPI itokens.ITokens) func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
 	return func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
 		return iterate.ForEachError(event.CUDs, func(rec istructs.ICUDRow) error {
 			if rec.QName() != QNameCDocLogin || !rec.IsNew() {
@@ -45,7 +45,7 @@ func invokeCreateWorkspaceIDProjector(federation coreutils.IFederation, appQName
 			wsidToCallCreateWSIDAt := istructs.NewWSID(targetClusterID, ownerWSID.BaseWSID())
 			templateName := ""
 			templateParams := ""
-			return workspace.ApplyInvokeCreateWorkspaceID(federation, appQName, tokensAPI, wsName, wsKind, wsidToCallCreateWSIDAt,
+			return workspace.ApplyInvokeCreateWorkspaceID(federation, s.App(), tokensAPI, wsName, wsKind, wsidToCallCreateWSIDAt,
 				targetApp, templateName, templateParams, rec, ownerWSID)
 		})
 	}

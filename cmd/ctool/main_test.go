@@ -6,7 +6,6 @@
 package main
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -14,6 +13,7 @@ import (
 	"github.com/fatih/color"
 	"github.com/stretchr/testify/require"
 	"github.com/untillpro/goutils/logger"
+	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 var testVersion string = "0.0.1-dummy"
@@ -325,7 +325,7 @@ fi
 		require.NoError(err)
 	}()
 
-	err = ioutil.WriteFile(filepath.Join(scriptsTempDir, "test-script.sh"), []byte(script), 0700)
+	err = os.WriteFile(filepath.Join(scriptsTempDir, "test-script.sh"), []byte(script), coreutils.FileMode_rw_rw_rw_)
 	require.NoError(err)
 
 	err = os.Setenv("TEST_VAR", "test_value")
@@ -343,27 +343,27 @@ fi
 
 func deleteClusterJson() error {
 	fname := "cluster.json"
-	if _, err := os.Stat(fname); os.IsNotExist(err) {
+	exists, err := coreutils.Exists(fname)
+	if err != nil {
+		// notest
+		return err
+	}
+	if !exists {
 		return nil
 	}
 
-	err := os.Remove(fname)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return os.Remove(fname)
 }
 
 func deleteDryRunDir() error {
-	if _, err := os.Stat(dryRunDir); os.IsNotExist(err) {
+	exists, err := coreutils.Exists(dryRunDir)
+	if err != nil {
+		// notest
+		return err
+	}
+	if !exists {
 		return nil
 	}
 
-	err := os.RemoveAll(dryRunDir)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return os.RemoveAll(dryRunDir)
 }

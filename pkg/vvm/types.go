@@ -12,6 +12,7 @@ import (
 	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/apppartsctl"
 	"github.com/voedger/voedger/pkg/apps"
 	"github.com/voedger/voedger/pkg/extensionpoints"
@@ -54,9 +55,9 @@ type ServiceChannelFactory func(pcgt ProcessorChannelType, channelIdx int) iproc
 type AppStorageFactory func(appQName istructs.AppQName, appStorage istorage.IAppStorage) istorage.IAppStorage
 type StorageCacheSizeType int
 type VVMApps []istructs.AppQName
-type BuiltInAppsPackages struct {
+type BuiltInAppPackages struct {
 	apppartsctl.BuiltInApp
-	Packages []parser.PackageFS
+	Packages []parser.PackageFS // need for build baseline schemas
 }
 
 type BusTimeout time.Duration
@@ -100,9 +101,10 @@ type VVMAppsBuilder map[istructs.AppQName]apps.AppBuilder
 type VVM struct {
 	ServicePipeline
 	apps.APIs
+	appparts.IAppPartitions
 	AppsExtensionPoints map[istructs.AppQName]extensionpoints.IExtensionPoint
 	MetricsServicePort  func() metrics.MetricsServicePort
-	BuiltInAppsPackages []BuiltInAppsPackages
+	BuiltInAppsPackages []BuiltInAppPackages
 }
 
 type AppsExtensionPoints map[istructs.AppQName]extensionpoints.IExtensionPoint

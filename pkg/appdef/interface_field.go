@@ -18,6 +18,8 @@ const (
 
 var VerificationKind_Any = []VerificationKind{VerificationKind_EMail, VerificationKind_Phone}
 
+type FieldName = string
+
 // Final types with fields are:
 //	- TypeKind_GDoc and TypeKind_GRecord,
 //	- TypeKind_CDoc and TypeKind_CRecord,
@@ -29,7 +31,7 @@ type IFields interface {
 	// Finds field by name.
 	//
 	// Returns nil if not found.
-	Field(name string) IField
+	Field(FieldName) IField
 
 	// Returns fields count
 	FieldCount() int
@@ -40,7 +42,7 @@ type IFields interface {
 	// Finds reference field by name.
 	//
 	// Returns nil if field is not found, or field found but it is not a reference field
-	RefField(name string) IRefField
+	RefField(FieldName) IRefField
 
 	// All reference fields. System field (sys.ParentID) is also included
 	RefFields() []IRefField
@@ -58,7 +60,7 @@ type IFieldsBuilder interface {
 	//   - if field with name is already exists,
 	//   - if specified data kind is not allowed by structured type kind,
 	//	 - if constraints are not compatible with specified data type.
-	AddField(name string, kind DataKind, required bool, constraints ...IConstraint) IFieldsBuilder
+	AddField(name FieldName, kind DataKind, required bool, constraints ...IConstraint) IFieldsBuilder
 
 	// Adds field with specified data type.
 	//
@@ -72,7 +74,7 @@ type IFieldsBuilder interface {
 	//   - if specified data type is not found,
 	//   - if specified data kind is not allowed by structured type kind,
 	//	 - if constraints are not compatible with specified data type.
-	AddDataField(name string, data QName, required bool, constraints ...IConstraint) IFieldsBuilder
+	AddDataField(name FieldName, data QName, required bool, constraints ...IConstraint) IFieldsBuilder
 
 	// Adds reference field specified name and target refs.
 	//
@@ -80,7 +82,7 @@ type IFieldsBuilder interface {
 	//   - if name is empty,
 	//   - if name is invalid,
 	//   - if field with name is already exists.
-	AddRefField(name string, required bool, ref ...QName) IFieldsBuilder
+	AddRefField(name FieldName, required bool, ref ...QName) IFieldsBuilder
 
 	// Sets fields comment.
 	// Useful for reference or verified fields, what Add×××Field has not comments
@@ -88,7 +90,7 @@ type IFieldsBuilder interface {
 	//
 	// # Panics:
 	//   - if field not found.
-	SetFieldComment(name string, comment ...string) IFieldsBuilder
+	SetFieldComment(name FieldName, comment ...string) IFieldsBuilder
 
 	// Sets verification kind for specified field.
 	//
@@ -96,15 +98,15 @@ type IFieldsBuilder interface {
 	//
 	// # Panics:
 	//   - if field not found.
-	SetFieldVerify(name string, vk ...VerificationKind) IFieldsBuilder
+	SetFieldVerify(FieldName, ...VerificationKind) IFieldsBuilder
 }
 
 // Describe single field.
 type IField interface {
-	IComment
+	IWithComments
 
 	// Returns field name
-	Name() string
+	Name() FieldName
 
 	// Returns data type
 	Data() IData

@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
 	istorageimpl "github.com/voedger/voedger/pkg/istorage/provider"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -19,7 +20,7 @@ import (
 	"github.com/voedger/voedger/pkg/istructsmem"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	"github.com/voedger/voedger/pkg/itokensjwt"
-	parser "github.com/voedger/voedger/pkg/parser"
+	"github.com/voedger/voedger/pkg/parser"
 )
 
 func TestEventStorage_Get(t *testing.T) {
@@ -120,13 +121,13 @@ type (
 	appCfgCallback func(cfg *istructsmem.AppConfigType)
 )
 
-//go:embed sql_example_syspkg/*.sql
+//go:embed sql_example_syspkg/*.vsql
 var sfs embed.FS
 
 func appStructs(appdefSql string, prepareAppCfg appCfgCallback) istructs.IAppStructs {
 	appDef := appdef.New()
 
-	fs, err := parser.ParseFile("file1.sql", appdefSql)
+	fs, err := parser.ParseFile("file1.vsql", appdefSql)
 	if err != nil {
 		panic(err)
 	}

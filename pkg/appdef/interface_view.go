@@ -19,6 +19,18 @@ type IView interface {
 	Value() IViewValue
 }
 
+type IWithViews interface {
+	// Return View by name.
+	//
+	// Returns nil if not found.
+	View(name QName) IView
+
+	// Enumerates all application views
+	//
+	// Views are enumerated in alphabetical order by QName
+	Views(func(IView))
+}
+
 type IViewBuilder interface {
 	ITypeBuilder
 
@@ -27,6 +39,16 @@ type IViewBuilder interface {
 
 	// Returns view value builder
 	Value() IViewValueBuilder
+}
+
+type IViewsBuilder interface {
+	// Adds new types for view.
+	//
+	// # Panics:
+	//   - if name is empty (appdef.NullQName),
+	//   - if name is invalid,
+	//   - if type with name already exists.
+	AddView(QName) IViewBuilder
 }
 
 // View full (pk + cc) key.
@@ -71,9 +93,9 @@ type IViewPartKeyBuilder interface {
 	// # Panics:
 	//	- if field already exists in clustering columns or value fields,
 	//	- if not fixed size data kind.
-	AddField(name string, kind DataKind, constraints ...IConstraint) IViewPartKeyBuilder
-	AddDataField(name string, dataType QName, constraints ...IConstraint) IViewPartKeyBuilder
-	AddRefField(name string, ref ...QName) IViewPartKeyBuilder
+	AddField(name FieldName, kind DataKind, constraints ...IConstraint) IViewPartKeyBuilder
+	AddDataField(name FieldName, dataType QName, constraints ...IConstraint) IViewPartKeyBuilder
+	AddRefField(name FieldName, ref ...QName) IViewPartKeyBuilder
 
 	// Sets fields comment.
 	// Useful for reference or verified fields, what Add×××Field has not comments
@@ -81,7 +103,7 @@ type IViewPartKeyBuilder interface {
 	//
 	// # Panics:
 	//   - if field not found.
-	SetFieldComment(name string, comment ...string) IViewPartKeyBuilder
+	SetFieldComment(name FieldName, comment ...string) IViewPartKeyBuilder
 }
 
 // Defines fields for sorting values inside partition.
@@ -101,9 +123,9 @@ type IViewClustColsBuilder interface {
 	// # Panics:
 	//	- if field already exists in view;
 	//	- if already contains a variable length field.
-	AddField(name string, kind DataKind, constraints ...IConstraint) IViewClustColsBuilder
-	AddDataField(name string, dataType QName, constraints ...IConstraint) IViewClustColsBuilder
-	AddRefField(name string, ref ...QName) IViewClustColsBuilder
+	AddField(name FieldName, kind DataKind, constraints ...IConstraint) IViewClustColsBuilder
+	AddDataField(name FieldName, dataType QName, constraints ...IConstraint) IViewClustColsBuilder
+	AddRefField(name FieldName, ref ...QName) IViewClustColsBuilder
 
 	// Sets fields comment.
 	// Useful for reference or verified fields, what Add×××Field has not comments
@@ -111,7 +133,7 @@ type IViewClustColsBuilder interface {
 	//
 	// # Panics:
 	//   - if field not found.
-	SetFieldComment(name string, comment ...string) IViewClustColsBuilder
+	SetFieldComment(name FieldName, comment ...string) IViewClustColsBuilder
 }
 
 // View value. Like a structure, view value has fields, but has not containers and uniques.

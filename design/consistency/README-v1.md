@@ -5,7 +5,7 @@ Consistency handling design
 
 
 ## Motivation
-One of the main challenges in CQRS systems is eventual consistency of the Read Model. 
+One of the main challenges in CQRS systems is eventual consistency of the Read Model.
 [Microsoft Azure Documentation](https://learn.microsoft.com/en-us/azure/architecture/patterns/cqrs):
 
 > Eventual consistency. If you separate the read and write databases, the read data may be stale. The read model store must be updated to reflect changes to the write model store, and it can be difficult to detect when a user has issued a request based on stale read data.
@@ -13,18 +13,18 @@ One of the main challenges in CQRS systems is eventual consistency of the Read M
 Scenarios:
 
 - Client wants to read ASAP, consistency doesn't matter
-  - Examples: 
+  - Examples:
     - Read dashboard figures
     - Read journal (WLog) for building reports
 - Client wants to read the data which reflects the last operation made by Client
   - New operations from other clients can be seen
-  - Examples: 
+  - Examples:
     - Read transaction history after making an order or payment (not used atm)
 - Client wants the data snapshot
   - Examples:
     - Read the BO state
-    - Read the TablesOverview 
-- Read by [Projectors](./inv-projector-reads.md) 
+    - Read the TablesOverview
+- Read by [Projectors](./inv-projector-reads.md)
 - Read by [Command Functions](./inv-cmdfunction-reads.md) and Validators
 
 ### Literature review
@@ -45,7 +45,7 @@ Based on [inv-articles-consistency.md](inv-articles-consistency.md)
     - Uniquiely identifies the event
 - Projection version, Version
     - The offset of the last event, applied to the projection
-- Last offset 
+- Last offset
     - Offset of the last event, handled by Command Processor
 
 ## Principles
@@ -61,7 +61,7 @@ Based on [inv-articles-consistency.md](inv-articles-consistency.md)
 *When the result combines data from more than one projection
 
 **Offset - specified by read operation (or the last offset if not specified)
-  
+
 - Isolation levels in components:
     - QueryProcessor: isolation level defined by request, one of:
         - Read Uncommitted (default)
@@ -75,7 +75,7 @@ Based on [inv-articles-consistency.md](inv-articles-consistency.md)
 
 ## Concepts
 
-- AppPartition has `WsProjectionsState` component which keeps the current statuses and versions of workspace projections. 
+- AppPartition has `WsProjectionsState` component which keeps the current statuses and versions of workspace projections.
     - Status of the projection (idle, raw, active) is needed to provide [Lazy Projections](../projectors/lazy-projections.md).
 AppPartition
 - Intents for projections are applied in batches, One batch per workspace. The projection versions are increased in the same batch. Version in `WsProjectionsState` is updated when the intents are applied for this workspace.
@@ -84,7 +84,7 @@ AppPartition
 
 ```mermaid
 erDiagram
-HVM ||--|{ AppPartition: handles
+VVM ||--|{ AppPartition: handles
 AppPartition ||--|{ QueryProcessor: has
 AppPartition ||--|| CommandProcessor: has
 AppPartition ||--|{ Actualizer: has
@@ -135,7 +135,7 @@ RecordsStorage ||--|| WsProjectionsState: "get offset from"
 ### Command Processor
 - Command Processor always reads with Isolation Level "Read Commited", and offset = last WLog Offset, means that the projection must be updated with previous event for this workspace.
 - If a projection is not consistent, 503 is thrown immediately.
-- Commands Processor do not inserts records. It only saves validated `CUDs` in the event (a special CUD storage?). The records are inserted/updated by system-defined projector. 
+- Commands Processor do not inserts records. It only saves validated `CUDs` in the event (a special CUD storage?). The records are inserted/updated by system-defined projector.
 
 ## All Actualizers are Asynchronous
 A new notification mechanism between CP and AA, ref. https://github.com/heeus/inv-wasm/tree/master/20220828-sync-projectors

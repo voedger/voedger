@@ -19,6 +19,8 @@ type Result struct {
 }
 
 type loadedPackages struct {
+	name         string
+	packagePath  string
 	modulePath   string
 	rootPkgs     []*packages.Package
 	importedPkgs map[string]*packages.Package // map of imported package path to *packages.Package

@@ -39,7 +39,7 @@ type IUniquesBuilder interface {
 	//   - if fields has duplicates,
 	//   - if fields is already exists or overlaps with an existing unique,
 	//   - if some field not found.
-	AddUnique(name QName, fields []string, comment ...string) IUniquesBuilder
+	AddUnique(name QName, fields []FieldName, comment ...string) IUniquesBuilder
 
 	// Sets single field unique.
 	// Calling SetUniqueField again changes unique field. If specified name is empty, then clears unique field.
@@ -50,12 +50,12 @@ type IUniquesBuilder interface {
 	//   - if field name is invalid,
 	//   - if field not found,
 	//   - if field is not required.
-	SetUniqueField(name string) IUniquesBuilder
+	SetUniqueField(FieldName) IUniquesBuilder
 }
 
 // Describe single unique for structure.
 type IUnique interface {
-	IComment
+	IWithComments
 
 	// Returns qualified name of unique.
 	Name() QName

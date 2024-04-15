@@ -5,6 +5,7 @@
 package coreutils
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -12,7 +13,7 @@ import (
 )
 
 // panics on an unsupported kind guessing that pair <name, kind> could be taken from IDef.Fields() callback only
-func ReadByKind(name string, kind appdef.DataKind, rr istructs.IRowReader) interface{} {
+func ReadByKind(name appdef.FieldName, kind appdef.DataKind, rr istructs.IRowReader) interface{} {
 	switch kind {
 	case appdef.DataKind_int32:
 		return rr.AsInt32(name)
@@ -70,7 +71,7 @@ func FieldsToMap(obj istructs.IRowReader, appDef appdef.IAppDef, optFuncs ...Map
 		optFunc(opts)
 	}
 
-	proceedField := func(fieldName string, kind appdef.DataKind) {
+	proceedField := func(fieldName appdef.FieldName, kind appdef.DataKind) {
 		if opts.filter != nil {
 			if !opts.filter(fieldName, kind) {
 				return
@@ -89,7 +90,7 @@ func FieldsToMap(obj istructs.IRowReader, appDef appdef.IAppDef, optFuncs ...Map
 
 	if fields, ok := t.(appdef.IFields); ok {
 		if opts.nonNilsOnly {
-			obj.FieldNames(func(fieldName string) {
+			obj.FieldNames(func(fieldName appdef.FieldName) {
 				proceedField(fieldName, fields.Field(fieldName).DataKind())
 			})
 		} else {
@@ -157,4 +158,22 @@ func CUDsToMap(event istructs.IDbEvent, appDef appdef.IAppDef, optFuncs ...CUDsO
 		cuds = append(cuds, cudData)
 	})
 	return cuds
+}
+
+func JSONMapToCUDBody(data []map[string]interface{}) string {
+	cuds := make([]CUD, 0, len(data))
+	for _, record := range data {
+		c := CUD{
+			Fields: make(map[string]interface{}),
+		}
+		for field, value := range record {
+			c.Fields[field] = value
+		}
+		cuds = append(cuds, c)
+	}
+	bb, err := json.Marshal(CUDs{Cuds: cuds})
+	if err != nil {
+		panic(err)
+	}
+	return string(bb)
 }

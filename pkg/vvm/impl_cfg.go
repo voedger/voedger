@@ -35,7 +35,7 @@ func NewVVMDefaultConfig() VVMConfig {
 		RouteDomains:           map[string]string{},
 		RouterWriteTimeout:     router.DefaultRouterWriteTimeout, // same
 		RouterReadTimeout:      router.DefaultRouterWriteTimeout, // same
-		RouterConnectionsLimit: router.DefaultRouterConnectionsLimit,
+		RouterConnectionsLimit: router.DefaultConnectionsLimit,
 		BLOBMaxSize:            DefaultBLOBMaxSize,
 		TimeFunc:               DefaultTimeFunc,
 		Name:                   commandprocessor.VVMName(hostname),

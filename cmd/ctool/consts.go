@@ -11,10 +11,6 @@ const (
 	clusterEditionCE = "CE"
 	clusterEditionSE = "SE"
 
-	// permissions
-	rwxrwxrwx = 0777
-	rw_rw_rw_ = 0666
-
 	// name of the cluster configuration file
 	clusterConfFileName  = "cluster.json"
 	scyllaConfigFileName = "scylla.yaml"
@@ -77,7 +73,14 @@ const (
 	envVoedgerAcmeDomains = "VOEDGER_ACME_DOMAINS"
 	envVoedgerSshKey      = "VOEDGER_SSH_KEY"
 
-	minGrafanaPasswordLength = 5
+	minMonPasswordLength = 5
+	monUserName          = "voedger"
+	admin                = "admin"
+	voedger              = "voedger"
+
+	logFolder = "log"
+
+	alertManagerConfigFile = "~/alertmanager/config.yml"
 )
 
 const comma = ","

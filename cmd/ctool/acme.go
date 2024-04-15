@@ -62,7 +62,12 @@ func newAcmeCmd() *cobra.Command {
 func acmeAdd(cmd *cobra.Command, args []string) error {
 	cluster := newCluster()
 
-	if !cluster.clusterConfigFileExists() {
+	exists, err := cluster.clusterConfigFileExists()
+	if err != nil {
+		// notest
+		return err
+	}
+	if !exists {
 		return ErrClusterConfNotFound
 	}
 
@@ -94,7 +99,12 @@ func acmeAdd(cmd *cobra.Command, args []string) error {
 func acmeRemove(cmd *cobra.Command, args []string) error {
 	cluster := newCluster()
 
-	if !cluster.clusterConfigFileExists() {
+	exists, err := cluster.clusterConfigFileExists()
+	if err != nil {
+		// notest
+		return err
+	}
+	if !exists {
 		return ErrClusterConfNotFound
 	}
 
@@ -126,7 +136,12 @@ func acmeRemove(cmd *cobra.Command, args []string) error {
 func acmeList(cmd *cobra.Command, args []string) error {
 	cluster := newCluster()
 
-	if !cluster.clusterConfigFileExists() {
+	exists, err := cluster.clusterConfigFileExists()
+	if err != nil {
+		// notest
+		return err
+	}
+	if !exists {
 		return ErrClusterConfNotFound
 	}
 

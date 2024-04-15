@@ -68,25 +68,19 @@ func Test_AppDef_AddQuery(t *testing.T) {
 
 	t.Run("must be ok to enum queries", func(t *testing.T) {
 		cnt := 0
-		app.Extensions(func(ex IExtension) {
+		app.Queries(func(q IQuery) {
 			cnt++
 			switch cnt {
 			case 1:
-				cmd, ok := ex.(IQuery)
-				require.True(ok)
-				require.Equal(TypeKind_Query, cmd.Kind())
-				require.Equal(queryName, cmd.QName())
+				require.Equal(queryName, q.QName())
 			default:
-				require.Failf("unexpected extension", "extension: %v", ex)
+				require.Failf("unexpected query", "query: %v", q)
 			}
 		})
 		require.Equal(1, cnt)
 	})
 
-	t.Run("check nil returns", func(t *testing.T) {
-		unknown := NewQName("test", "unknown")
-		require.Nil(app.Query(unknown))
-	})
+	require.Nil(app.Query(NewQName("test", "unknown")), "check nil returns")
 
 	require.Panics(func() {
 		New().AddQuery(NullQName)

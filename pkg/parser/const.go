@@ -23,6 +23,7 @@ const (
 )
 
 const rootWorkspaceName = "Workspace"
+const appWorkspaceName = "AppWorkspaceWS"
 
 const ExportedAppsFile = "apps.yaml"
 const ExportedPkgFolder = "pkg"

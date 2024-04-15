@@ -19,3 +19,15 @@ type ISingletonBuilder interface {
 	// Устанавливает, что документ является синглтоном
 	SetSingleton()
 }
+
+type IWithSingletons interface {
+	// Return Singleton by name.
+	//
+	// Returns nil if not found.
+	Singleton(QName) ISingleton
+
+	// Enumerates all application singletons
+	//
+	// Singletons are enumerated in alphabetical order by QName
+	Singletons(func(ISingleton))
+}

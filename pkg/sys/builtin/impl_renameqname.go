@@ -12,7 +12,7 @@ import (
 	"github.com/voedger/voedger/pkg/istructsmem/qrename"
 )
 
-func proivideRenameQName(cfg *istructsmem.AppConfigType, adb appdef.IAppDefBuilder, asp istorage.IAppStorageProvider) {
+func proivideRenameQName(cfg *istructsmem.AppConfigType, asp istorage.IAppStorageProvider) {
 	cfg.Resources.Add(istructsmem.NewCommandFunction(
 		appdef.NewQName(appdef.SysPackage, "RenameQName"),
 		provideExecCmdRenameQName(asp, cfg)))

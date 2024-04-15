@@ -102,6 +102,17 @@ type IRecords interface {
 	// Panics if event is not valid
 	Apply2(event IPLogEvent, cb func(r IRecord)) (err error)
 
+	// @ConcurrentAccess RW
+	//
+	// Record system fields sys.QName and sys.ID should be filled.
+	// Data type name in sys.QName should be storable record type.
+	// Record ID in sys.ID should not be a raw ID.
+	//
+	// Attention! This method does not perform a full validation of the recorded data :
+	// - The values of referenced record IDs are not checked
+	// - The fullness of the required fields is not checked
+	PutJSON(WSID, map[appdef.FieldName]any) error
+
 	// @ConcurrentAccess R
 	// Can read GDoc, CDoc, ODoc, WDoc records
 	// If record not found NullRecord with QName() == NullQName is returned
@@ -134,6 +145,16 @@ type IViewRecords interface {
 	Put(workspace WSID, key IKeyBuilder, value IValueBuilder) (err error)
 
 	PutBatch(workspace WSID, batch []ViewKV) (err error)
+
+	// @ConcurrentAccess RW
+	//
+	// View name should be passed in sys.QName field.
+	// All key fields should be filled.
+	//
+	// Attention! This method does not perform a full validation of the recorded data :
+	// - The values of referenced record IDs are not checked
+	// - The fullness of the required view value fields is not checked
+	PutJSON(WSID, map[appdef.FieldName]any) error
 
 	// All fields must be filled in in the key (panic otherwise)
 	Get(workspace WSID, key IKeyBuilder) (value IValue, err error)

@@ -22,17 +22,12 @@ import (
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-func newCompatCmd() *cobra.Command {
-	params := vpmParams{}
+func newCompatCmd(params *vpmParams) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "compat [baseline-folder]",
+		Use:   "compat baseline-folder",
 		Short: "check backward compatibility",
-		Args:  showHelpIfLackOfArgs(1),
+		Args:  exactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
-			params, err = prepareParams(params, args)
-			if err != nil {
-				return err
-			}
 			ignores, err := readIgnoreFile(params.IgnoreFile)
 			if err != nil {
 				return err
@@ -44,13 +39,12 @@ func newCompatCmd() *cobra.Command {
 			return compat(compileRes, params, ignores)
 		},
 	}
-	initGlobalFlags(cmd, &params)
 	cmd.Flags().StringVarP(&params.IgnoreFile, "ignore", "", "", "path to yaml file which contains list of errors to be ignored")
 	return cmd
 }
 
 // compat checks compatibility of schemas in dir versus baseline schemas in target dir
-func compat(compileRes *compile.Result, params vpmParams, ignores [][]string) error {
+func compat(compileRes *compile.Result, params *vpmParams, ignores [][]string) error {
 	baselineDir := params.TargetDir
 	var errs []error
 	baselineAppDef, err := appDefFromBaselineDir(baselineDir)
@@ -92,11 +86,21 @@ func appDefFromBaselineDir(baselineDir string) (appdef.IAppDef, error) {
 	var errs []error
 
 	pkgDirPath := filepath.Join(baselineDir, pkgDirName)
-	if _, err := os.Stat(pkgDirPath); os.IsNotExist(err) {
+	pkgDirPathExists, err := coreutils.Exists(pkgDirPath)
+	if err != nil {
+		// notest
+		return nil, err
+	}
+	if !pkgDirPathExists {
 		return nil, fmt.Errorf("baseline directory does not contain %s subdirectory", pkgDirName)
 	}
 	baselineJsonFilePath := filepath.Join(baselineDir, baselineInfoFileName)
-	if _, err := os.Stat(baselineJsonFilePath); os.IsNotExist(err) {
+	baselineJsonFilePathExists, err := coreutils.Exists(baselineJsonFilePath)
+	if err != nil {
+		// notest
+		return nil, err
+	}
+	if !baselineJsonFilePathExists {
 		return nil, fmt.Errorf("baseline directory does not contain %s file", baselineInfoFileName)
 	}
 
@@ -106,7 +110,7 @@ func appDefFromBaselineDir(baselineDir string) (appdef.IAppDef, error) {
 		if err != nil {
 			return err
 		}
-		if !info.IsDir() && filepath.Ext(path) == ".sql" {
+		if !info.IsDir() && filepath.Ext(path) == ".vsql" {
 			schemaFiles = append(schemaFiles, path)
 		}
 		return nil
@@ -183,10 +187,10 @@ func splitIgnorePaths(ignores []string) (res [][]string) {
 	return
 }
 
-func showHelpIfLackOfArgs(n int) cobra.PositionalArgs {
+func exactArgs(n int) cobra.PositionalArgs {
 	return func(cmd *cobra.Command, args []string) error {
-		if len(args) < n {
-			return cmd.Help()
+		if len(args) != n {
+			return errors.New("unexpected args provided")
 		}
 		return nil
 	}

@@ -32,29 +32,25 @@ import (
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-//go:embed *.sql
+//go:embed *.vsql
 var SysFS embed.FS
 
-func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, smtpCfg smtp.Cfg,
+func Provide(cfg *istructsmem.AppConfigType, smtpCfg smtp.Cfg,
 	ep extensionpoints.IExtensionPoint, wsPostInitFunc workspace.WSPostInitFunc, timeFunc coreutils.TimeFunc, itokens itokens.ITokens, federation coreutils.IFederation,
 	asp istructs.IAppStructsProvider, atf payloads.IAppTokensFactory, numCommandProcessors coreutils.CommandProcessorsCount, buildInfo *debug.BuildInfo,
 	storageProvider istorage.IAppStorageProvider) parser.PackageFS {
 	blobber.ProvideBlobberCmds(cfg)
-	collection.Provide(cfg, appDefBuilder)
+	collection.Provide(cfg)
 	journal.Provide(cfg, ep)
-	builtin.Provide(cfg, appDefBuilder, buildInfo, storageProvider)
-	workspace.Provide(cfg, appDefBuilder, asp, timeFunc, itokens, federation, itokens, ep, wsPostInitFunc)
+	builtin.Provide(cfg, buildInfo, storageProvider)
+	workspace.Provide(cfg, cfg.AppDefBuilder(), asp, timeFunc, itokens, federation, itokens, ep, wsPostInitFunc)
 	sqlquery.Provide(cfg, asp, numCommandProcessors)
-	projectors.ProvideOffsetsDef(appDefBuilder)
+	projectors.ProvideOffsetsDef(cfg.AppDefBuilder())
 	verifier.Provide(cfg, itokens, federation, asp, smtpCfg, timeFunc)
 	authnz.Provide(cfg, itokens, atf)
 	invite.Provide(cfg, timeFunc, federation, itokens, smtpCfg)
-	uniques.Provide(cfg, appDefBuilder)
+	uniques.Provide(cfg)
 	describe.Provide(cfg, asp)
-	return ProvidePackageFS()
-}
-
-func ProvidePackageFS() parser.PackageFS {
 	return parser.PackageFS{
 		Path: appdef.SysPackage,
 		FS:   SysFS,

@@ -39,6 +39,8 @@ var dummyCommand = appdef.NewQName(testPkg, "Dummy")
 var dummyProj = appdef.NewQName(testPkg, "DummyProj")
 var testWorkspaceDescriptor = appdef.NewQName(testPkg, "RestaurantDescriptor")
 
+var testApp = istructs.AppQName_test1_app1
+
 const testPkg = "mypkg"
 const ws = istructs.WSID(1)
 const partition = istructs.PartitionID(1)
@@ -139,7 +141,7 @@ func Test_BasicUsage(t *testing.T) {
 
 	// Create extension engine
 	factory := ProvideExtensionEngineFactory(true)
-	engines, err := factory.New(ctx, packages, &iextengine.ExtEngineConfig{}, 1)
+	engines, err := factory.New(ctx, app.AppQName(), packages, &iextengine.ExtEngineConfig{}, 1)
 	if err != nil {
 		panic(err)
 	}
@@ -230,7 +232,7 @@ func testFactoryHelper(ctx context.Context, moduleUrl *url.URL, funcs []string, 
 			ExtensionNames: funcs,
 		},
 	}
-	engines, err := ProvideExtensionEngineFactory(compile).New(ctx, packages, &cfg, 1)
+	engines, err := ProvideExtensionEngineFactory(compile).New(ctx, testApp, packages, &cfg, 1)
 	if err != nil {
 		return nil, err
 	}
@@ -594,7 +596,7 @@ func Test_WithState(t *testing.T) {
 
 	// build extension engine
 	factory := ProvideExtensionEngineFactory(true)
-	engines, err := factory.New(ctx, packages, &iextengine.ExtEngineConfig{}, 1)
+	engines, err := factory.New(ctx, app.AppQName(), packages, &iextengine.ExtEngineConfig{}, 1)
 	if err != nil {
 		panic(err)
 	}
@@ -669,7 +671,7 @@ func Test_StatePanic(t *testing.T) {
 		},
 	}
 	factory := ProvideExtensionEngineFactory(true)
-	engines, err := factory.New(ctx, packages, &iextengine.ExtEngineConfig{}, 1)
+	engines, err := factory.New(ctx, app.AppQName(), packages, &iextengine.ExtEngineConfig{}, 1)
 	if err != nil {
 		panic(err)
 	}
@@ -679,7 +681,7 @@ func Test_StatePanic(t *testing.T) {
 	// Invoke extension
 	//
 	err = extEngine.Invoke(context.Background(), appdef.NewFullQName(testPkg, extname), state)
-	require.ErrorContains(err, "int32-type field «wrong» is not found")
+	require.ErrorContains(err, "field «wrong» is not found")
 
 	//
 	// Invoke extension
@@ -692,14 +694,14 @@ type (
 	appCfgCallback func(cfg *istructsmem.AppConfigType)
 )
 
-//go:embed sql_example_syspkg/*.sql
+//go:embed sql_example_syspkg/*.vsql
 var sfs embed.FS
 
 func appStructsFromSQL(packagePath string, appdefSql string, prepareAppCfg appCfgCallback) istructs.IAppStructs {
 	offset = istructs.Offset(123)
 	appDef := appdef.New()
 
-	fs, err := parser.ParseFile("file1.sql", appdefSql)
+	fs, err := parser.ParseFile("file1.vsql", appdefSql)
 	if err != nil {
 		panic(err)
 	}
