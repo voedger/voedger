@@ -45,7 +45,10 @@ type IAppPartitions interface {
 	AppPartsCount(istructs.AppQName) (int, error)
 
 	// Returns partition ID for specified workspace
-	GetPartitionID(istructs.AppQName, istructs.WSID) istructs.PartitionID
+	//
+	// # Panics:
+	// 	- if application not exists
+	AppWorkspacePartitionID(istructs.AppQName, istructs.WSID) istructs.PartitionID
 
 	// Borrows and returns a partition.
 	//

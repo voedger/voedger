@@ -117,7 +117,7 @@ func (aps *apps) Borrow(appName istructs.AppQName, partID istructs.PartitionID, 
 	return borrowed, nil
 }
 
-func (aps *apps) GetPartitionID(appName istructs.AppQName, ws istructs.WSID) istructs.PartitionID {
+func (aps *apps) AppWorkspacePartitionID(appName istructs.AppQName, ws istructs.WSID) istructs.PartitionID {
 	pc, err := aps.AppPartsCount(appName)
 	if err != nil {
 		panic(err)
