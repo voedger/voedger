@@ -28,3 +28,43 @@ type IGRecord interface {
 type IGRecordBuilder interface {
 	IContainedRecordBuilder
 }
+
+type IWithGDocs interface {
+	// Return GDoc by name.
+	//
+	// Returns nil if not found.
+	GDoc(QName) IGDoc
+
+	// Enumerates all global documents
+	//
+	// Global documents are enumerated in alphabetical order by QName
+	GDocs(func(IGDoc))
+
+	// Return GRecord by name.
+	//
+	// Returns nil if not found.
+	GRecord(QName) IGRecord
+
+	// Enumerates all global records
+	//
+	// Global records are enumerated in alphabetical order by QName
+	GRecords(func(IGRecord))
+}
+
+type IGDocsBuilder interface {
+	// Adds new GDoc type with specified name.
+	//
+	// # Panics:
+	//   - if name is empty (appdef.NullQName),
+	//   - if name is invalid,
+	//   - if type with name already exists.
+	AddGDoc(QName) IGDocBuilder
+
+	// Adds new GRecord type with specified name.
+	//
+	// # Panics:
+	//   - if name is empty (appdef.NullQName),
+	//   - if name is invalid,
+	//   - if type with name already exists.
+	AddGRecord(QName) IGRecordBuilder
+}

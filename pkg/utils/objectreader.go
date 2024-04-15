@@ -5,6 +5,7 @@
 package coreutils
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -157,4 +158,22 @@ func CUDsToMap(event istructs.IDbEvent, appDef appdef.IAppDef, optFuncs ...CUDsO
 		cuds = append(cuds, cudData)
 	})
 	return cuds
+}
+
+func JSONMapToCUDBody(data []map[string]interface{}) string {
+	cuds := make([]CUD, 0, len(data))
+	for _, record := range data {
+		c := CUD{
+			Fields: make(map[string]interface{}),
+		}
+		for field, value := range record {
+			c.Fields[field] = value
+		}
+		cuds = append(cuds, c)
+	}
+	bb, err := json.Marshal(CUDs{Cuds: cuds})
+	if err != nil {
+		panic(err)
+	}
+	return string(bb)
 }

@@ -65,66 +65,23 @@ func Test_NullAppDef(t *testing.T) {
 	})
 
 	t.Run("should be null return other members", func(t *testing.T) {
-		require.Empty(app.Comment())
+		app.Types(func(typ IType) {
+			if !typ.IsSystem() {
+				t.Errorf("unexpected user type %v", typ)
+			}
+		})
+	})
+}
 
-		require.Zero(
-			func() int {
-				cnt := 0
-				app.Types(func(t IType) {
-					if !t.IsSystem() {
-						cnt++
-					}
-				})
-				return cnt
-			}(),
-			"must be no user types")
+func Test_appDefBuilder_MustBuild(t *testing.T) {
+	require := require.New(t)
 
-		require.Zero(
-			func() int {
-				cnt := 0
-				app.Records(func(r IRecord) {
-					if !r.IsSystem() {
-						cnt++
-					}
-				})
-				return cnt
-			}(),
-			"must be no user records")
+	require.NotNil(New().MustBuild(), "Should be ok if no errors in builder")
 
-		require.Zero(
-			func() int {
-				cnt := 0
-				app.Structures(func(s IStructure) {
-					if !s.IsSystem() {
-						cnt++
-					}
-				})
-				return cnt
-			}(),
-			"must be no user structures")
+	t.Run("should panic if errors in builder", func(t *testing.T) {
+		adb := New()
+		adb.AddView(NewQName("test", "emptyView"))
 
-		require.Zero(
-			func() int {
-				cnt := 0
-				app.Projectors(func(p IProjector) {
-					if !p.IsSystem() {
-						cnt++
-					}
-				})
-				return cnt
-			}(),
-			"must be no user projectors")
-
-		require.Zero(
-			func() int {
-				cnt := 0
-				app.Extensions(func(e IExtension) {
-					if !e.IsSystem() {
-						cnt++
-					}
-				})
-				return cnt
-			}(),
-			"must be no user extensions")
+		require.Panics(func() { _ = adb.MustBuild() })
 	})
 }

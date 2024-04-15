@@ -138,8 +138,6 @@ func (db *dataBuilder) AddConstraints(cc ...IConstraint) IDataBuilder {
 	return db
 }
 
-func (db *dataBuilder) String() string { return db.data.String() }
-
 // Returns name of system data type by data kind.
 //
 // Returns NullQName if data kind is out of bounds.

@@ -65,7 +65,6 @@ type BlobberServiceChannels []iprocbusmem.ChannelGroup
 
 type BlobberParams struct {
 	ServiceChannels        []iprocbusmem.ChannelGroup
-	ClusterAppBlobberID    istructs.ClusterAppID
 	BLOBStorage            iblobstorage.IBLOBStorage
 	BLOBWorkersNum         int
 	procBus                iprocbus.IProcBus

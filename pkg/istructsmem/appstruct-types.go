@@ -239,6 +239,15 @@ func (cfg *AppConfigType) SyncProjectors() istructs.Projectors {
 	return cfg.syncProjectors
 }
 
+// need to build view.sys.NextBaseWSID and view.sys.projectionOffsets
+// could be called on application build stage only
+func (cfg *AppConfigType) AppDefBuilder() appdef.IAppDefBuilder {
+	if cfg.prepared {
+		panic("IAppStructsProvider.AppStructs() is called already for the app -> IAppDef is built already -> wrong to work with IAppDefBuilder")
+	}
+	return cfg.appDefBuilder
+}
+
 // Application configuration parameters
 type AppConfigParams struct {
 	// PLog events cache size.
