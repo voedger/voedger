@@ -10,7 +10,7 @@ package internal
 import (
 	"runtime"
 
-	"github.com/voedger/voedger/pkg/state/isafeapi"
+	isafeapi "github.com/voedger/voedger/pkg/state/isafestateapi"
 )
 
 type extint = uintptr
