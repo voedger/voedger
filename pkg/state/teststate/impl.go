@@ -230,7 +230,7 @@ func (ctx *testState) buildAppDef(packagePath string, packageDir string, createW
 	for _, ws := range createWorkspaces {
 		rebWs := ctx.appStructs.Events().GetNewRawEventBuilder(istructs.NewRawEventBuilderParams{
 			GenericRawEventBuilderParams: istructs.GenericRawEventBuilderParams{
-				Workspace:         istructs.WSID(ws.WSID),
+				Workspace:         ws.WSID,
 				HandlingPartition: TestPartition,
 				QName:             newWorkspaceCmd,
 			},
