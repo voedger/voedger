@@ -11,6 +11,7 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/cluster"
 	"github.com/voedger/voedger/pkg/istructs"
+	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 // Application partitions manager.
@@ -22,7 +23,7 @@ type IAppPartitions interface {
 	// partsCount - total partitions count for the application.
 	//
 	// If application with the same name exists, then its definition will be updated.
-	DeployApp(name istructs.AppQName, def appdef.IAppDef, partsCount int, numEngines [cluster.ProcessorKind_Count]int)
+	DeployApp(name istructs.AppQName, def appdef.IAppDef, partsCount coreutils.NumAppPartitions, numEngines [cluster.ProcessorKind_Count]int)
 
 	// Deploys new partitions for specified application or update existing.
 	//
@@ -42,7 +43,7 @@ type IAppPartitions interface {
 	// This is a configuration value for the application, independent of how many sections are currently deployed.
 	//
 	// Returns 0 and error if app not exists.
-	AppPartsCount(istructs.AppQName) (int, error)
+	AppPartsCount(istructs.AppQName) (coreutils.NumAppPartitions, error)
 
 	// Returns partition ID for specified workspace
 	//

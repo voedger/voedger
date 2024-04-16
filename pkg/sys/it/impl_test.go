@@ -26,15 +26,15 @@ func TestAppWSAutoInitialization(t *testing.T) {
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
-	checkCDocsWSDesc(vit.VVM, require)
+	checkCDocsWSDesc(vit.VVMConfig, vit.VVM, require)
 
 	// further calls -> nothing happens, expect not errors
 	require.NoError(vvm.BuildAppWorkspaces(vit.VVM, vit.VVMConfig))
-	checkCDocsWSDesc(vit.VVM, require)
+	checkCDocsWSDesc(vit.VVMConfig, vit.VVM, require)
 }
 
-func checkCDocsWSDesc(vvm *vvm.VVM, require *require.Assertions) {
-	for appQName := range vvm.AppConfigsType {
+func checkCDocsWSDesc(vvmCfg *vvm.VVMConfig, vvm *vvm.VVM, require *require.Assertions) {
+	for appQName := range vvmCfg.VVMAppsBuilder {
 		as, err := vvm.AppStructs(istructs.AppQName_test1_app1)
 		require.NoError(err)
 		for wsNum := 0; istructs.AppWSAmount(wsNum) < as.WSAmount(); wsNum++ {
@@ -179,7 +179,7 @@ func Test503OnNoQueryProcessorsAvailable(t *testing.T) {
 	body := `{"args": {"Input": "world"},"elements": [{"fields": ["Res"]}]}`
 	postDone := sync.WaitGroup{}
 	sys := vit.GetSystemPrincipal(istructs.AppQName_test1_app1)
-	for i := 0; i < int(vit.VVMConfig.NumQueryProcessors); i++ {
+	for i := 0; i < int(vit.VVMConfig.NumCommandProcessors); i++ {
 		postDone.Add(1)
 		go func() {
 			defer postDone.Done()
