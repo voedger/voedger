@@ -17,7 +17,8 @@ import (
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-func Provide(smtpCfg smtp.Cfg) apps.AppBuilder {
+// for historical reason num partitions of sys/registry must be equal to numCP
+func Provide(smtpCfg smtp.Cfg, numCP coreutils.NumCommandProcessors) apps.AppBuilder {
 	return func(apis apps.APIs, cfg *istructsmem.AppConfigType, ep extensionpoints.IExtensionPoint) apps.BuiltInAppDef {
 
 		// sys package
@@ -36,8 +37,8 @@ func Provide(smtpCfg smtp.Cfg) apps.AppBuilder {
 			AppQName: istructs.AppQName_sys_registry,
 			Packages: []parser.PackageFS{sysPackageFS, registryPackageFS, registryAppPackageFS},
 			AppDeploymentDescriptor: cluster.AppDeploymentDescriptor{
-				NumParts:       coreutils.NumAppPartitions(apis.NumCommandProcessors),
-				EnginePoolSize: cluster.PoolSize(int(apis.NumCommandProcessors), DefDeploymentQPCount, int(apis.NumCommandProcessors)),
+				NumParts:       coreutils.NumAppPartitions(numCP),
+				EnginePoolSize: cluster.PoolSize(int(numCP), DefDeploymentQPCount, int(numCP)),
 			},
 		}
 	}
