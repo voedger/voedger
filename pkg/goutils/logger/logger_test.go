@@ -18,8 +18,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"github.com/untillpro/goutils/logger"
-	"github.com/untillpro/goutils/testingu"
+	"github.com/voedger/voedger/pkg/goutils/logger"
+	"github.com/voedger/voedger/pkg/goutils/testingu"
 )
 
 func Test_BasicUsage(t *testing.T) {
@@ -85,7 +85,6 @@ func Test_BasicUsage_CustomPrintLine(t *testing.T) {
 
 	require := require.New(t)
 
-
 	// Define myPrintLine
 	myPrintLine := func(level logger.TLogLevel, line string) {
 		line = line + "myPrintLine"
@@ -93,7 +92,7 @@ func Test_BasicUsage_CustomPrintLine(t *testing.T) {
 	}
 
 	// Use myPrintLine as logger.PrintLine
-	
+
 	logger.PrintLine = myPrintLine
 	defer func() {
 		logger.PrintLine = logger.DefaultPrintLine

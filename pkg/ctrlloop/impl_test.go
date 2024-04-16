@@ -13,7 +13,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/untillpro/goutils/logger"
+	"github.com/voedger/voedger/pkg/goutils/logger"
 )
 
 func Test_BasicUsage(t *testing.T) {

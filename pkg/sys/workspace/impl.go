@@ -15,8 +15,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/untillpro/goutils/iterate"
-	"github.com/untillpro/goutils/logger"
+	"github.com/voedger/voedger/pkg/goutils/iterate"
+	"github.com/voedger/voedger/pkg/goutils/logger"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/extensionpoints"

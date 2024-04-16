@@ -9,7 +9,7 @@ import (
 	"fmt"
 
 	"github.com/spf13/cobra"
-	"github.com/untillpro/goutils/logger"
+	"github.com/voedger/voedger/pkg/goutils/logger"
 )
 
 /*

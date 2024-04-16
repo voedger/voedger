@@ -18,7 +18,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/untillpro/goutils/exec"
+	"github.com/voedger/voedger/pkg/goutils/exec"
 )
 
 func Test_PassEnvironmentVariable(t *testing.T) {

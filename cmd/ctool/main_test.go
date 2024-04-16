@@ -12,7 +12,7 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/stretchr/testify/require"
-	"github.com/untillpro/goutils/logger"
+	"github.com/voedger/voedger/pkg/goutils/logger"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 

@@ -5,7 +5,7 @@
 package invite
 
 import (
-	"github.com/untillpro/goutils/iterate"
+	"github.com/voedger/voedger/pkg/goutils/iterate"
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
