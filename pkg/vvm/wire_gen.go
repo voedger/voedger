@@ -88,16 +88,13 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 	v2 := projectors.NewSyncActualizerFactoryFactory(syncActualizerFactory, iSecretReader, in10nBroker)
 	vvmPortSource := provideVVMPortSource()
 	iFederation, cleanup2 := provideIFederation(vvmConfig, vvmPortSource)
-	numQueryProcessors := vvmConfig.NumQueryProcessors
 	apIs := apps.APIs{
-		ITokens:              iTokens,
-		IAppStructsProvider:  iAppStructsProvider,
-		IAppStorageProvider:  iAppStorageProvider,
-		IAppTokensFactory:    iAppTokensFactory,
-		IFederation:          iFederation,
-		TimeFunc:             timeFunc,
-		NumQueryProcessors:   numQueryProcessors,
-		NumCommandProcessors: numCommandProcessors,
+		ITokens:             iTokens,
+		IAppStructsProvider: iAppStructsProvider,
+		IAppStorageProvider: iAppStorageProvider,
+		IAppTokensFactory:   iAppTokensFactory,
+		IFederation:         iFederation,
+		TimeFunc:            timeFunc,
 	}
 	appsArtefacts, err := provideBuiltInAppsArtefacts(vvmConfig, apIs, appConfigsTypeEmpty)
 	if err != nil {
@@ -117,6 +114,7 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 	iAuthorizer := iauthnzimpl.NewDefaultAuthorizer()
 	serviceFactory := commandprocessor.ProvideServiceFactory(iAppPartitions, timeFunc, in10nBroker, iMetrics, vvmName, iAuthenticator, iAuthorizer, iSecretReader)
 	operatorCommandProcessors := provideCommandProcessors(numCommandProcessors, commandChannelFactory, serviceFactory)
+	numQueryProcessors := vvmConfig.NumQueryProcessors
 	queryChannel := provideQueryChannel(serviceChannelFactory)
 	queryprocessorServiceFactory := queryprocessor.ProvideServiceFactory()
 	maxPrepareQueriesType := vvmConfig.MaxPrepareQueries
