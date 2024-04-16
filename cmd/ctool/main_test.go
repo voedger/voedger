@@ -8,6 +8,7 @@ package main
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/fatih/color"
@@ -304,6 +305,11 @@ func TestAcmeDomains(t *testing.T) {
 
 // Testing the availability of the variable environment from scripts caused by PipedExec
 func TestVariableEnvironment(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Windows is not supported")
+		return
+	}
+
 	require := require.New(t)
 
 	dryRun = true
