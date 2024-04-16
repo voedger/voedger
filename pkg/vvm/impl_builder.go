@@ -62,7 +62,7 @@ func (ab VVMAppsBuilder) BuiltInAppsPackages(cfgs istructsmem.AppConfigsType, ap
 		builtInAppPackages := BuiltInAppPackages{
 			BuiltInApp: apppartsctl.BuiltInApp{
 				Name:           appQName,
-				PartsCount:     builtInAppDef.PartsCount,
+				NumParts:       builtInAppDef.NumParts,
 				EnginePoolSize: builtInAppDef.EnginePoolSize,
 				Def:            cfg.AppDef,
 			},

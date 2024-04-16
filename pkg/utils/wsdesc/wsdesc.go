@@ -27,6 +27,7 @@ func AddWorkspaceDescriptorStubDef(adb appdef.IAppDefBuilder) {
 	wsDesc.SetSingleton()
 }
 
+// wrong to provide IAppPartitions istead of providing the ready-to-use partNum because tests of CP and QP would become more complicated
 func CreateCDocWorkspaceDescriptorStub(as istructs.IAppStructs, partNum istructs.PartitionID, wsid istructs.WSID, wsKind appdef.QName, plogOffset istructs.Offset, wlogOffset istructs.Offset) error {
 	now := time.Now()
 	grebp := istructs.GenericRawEventBuilderParams{

@@ -8,12 +8,11 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
-	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-func Provide(cfg *istructsmem.AppConfigType, asp istructs.IAppStructsProvider, numCommandProcessors coreutils.CommandProcessorsCount) {
+func Provide(cfg *istructsmem.AppConfigType, asp istructs.IAppStructsProvider) {
 	cfg.Resources.Add(istructsmem.NewQueryFunction(
 		appdef.NewQName(appdef.SysPackage, "SqlQuery"),
-		execQrySqlQuery(asp, cfg.Name, numCommandProcessors),
+		execQrySqlQuery(asp, cfg.Name),
 	))
 }

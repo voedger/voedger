@@ -56,10 +56,6 @@ func ServerAddress(port int) string {
 	return fmt.Sprintf("%s:%d", addr, port)
 }
 
-func PartitionID(wsid istructs.WSID, numCommandProcessors CommandProcessorsCount) istructs.PartitionID {
-	return istructs.PartitionID(int(wsid) % int(numCommandProcessors))
-}
-
 func SplitErrors(joinedError error) (errs []error) {
 	if joinedError != nil {
 		var pErr IErrUnwrapper
@@ -80,4 +76,9 @@ func IsWSAEError(err error, errno syscall.Errno) bool {
 		}
 	}
 	return false
+}
+
+// used in BuildAppWorkspaces() only because there are no apps in IAppPartitions on that moment
+func AppPartitionID(wsid istructs.WSID, numAppPartitions NumAppPartitions) istructs.PartitionID {
+	return istructs.PartitionID(int(wsid) % int(numAppPartitions))
 }

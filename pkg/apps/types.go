@@ -20,14 +20,14 @@ import (
 type APIs struct {
 	itokens.ITokens
 	istructs.IAppStructsProvider
-	istructsmem.AppConfigsType
 	istorage.IAppStorageProvider
 	payloads.IAppTokensFactory
 	coreutils.IFederation
 	coreutils.TimeFunc
-	NumCommandProcessors coreutils.CommandProcessorsCount
-	NumQueryProcessors   coreutils.QueryProcessorsCount
-	//appparts.IAppPartitions
+	NumQueryProcessors   coreutils.NumQueryProcessors
+	NumCommandProcessors coreutils.NumCommandProcessors
+	// IAppPartitions - wrong, wire cycle: `appparts.NewWithActualizerWithExtEnginesFactories(asp, actualizer, eef) IAppPartitions`` accepts engines.ProvideExtEngineFactories()
+	//                                     that requires filled AppConfigsType, but AppConfigsType requires apps.APIs with IAppPartitions
 }
 
 type AppBuilder func(apis APIs, cfg *istructsmem.AppConfigType, ep extensionpoints.IExtensionPoint) BuiltInAppDef
