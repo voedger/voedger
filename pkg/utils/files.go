@@ -34,13 +34,13 @@ func CopyFileFS(srcFS fs.FS, src, dst string, optFuncs ...CopyOpt) error {
 	return copyFileFSOpts(srcFS, src, dst, opts)
 }
 
-func CopyFile(src, dst string) error {
-	return CopyFileFS(os.DirFS(filepath.Clean(src)), src, dst)
+func CopyFile(src, dst string, optFuncs ...CopyOpt) error {
+	return CopyFileFS(os.DirFS(filepath.Clean(src)), src, dst, optFuncs...)
 }
 
-func CopyDir(src, dst string) error {
+func CopyDir(src, dst string, optFuncs ...CopyOpt) error {
 	readDirFS := os.DirFS(src).(IReadFS)
-	return CopyDirFS(readDirFS, ".", dst)
+	return CopyDirFS(readDirFS, ".", dst, optFuncs...)
 }
 
 func copyDirFSOpts(srcFS IReadFS, src, dst string, opts *copyOpts) error {
@@ -157,8 +157,8 @@ func WithSkipExisting() CopyOpt {
 	}
 }
 
-func WithFilterFiles(files []string) CopyOpt {
+func WithFilterFilesWithRelativePaths(filesWithRelativePaths []string) CopyOpt {
 	return func(co *copyOpts) {
-		co.files = files
+		co.files = filesWithRelativePaths
 	}
 }
