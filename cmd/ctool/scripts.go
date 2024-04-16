@@ -133,19 +133,6 @@ func getEnvValue1(key string) string {
 	return value
 }
 
-// func scriptExists(scriptFileName string) (bool, error) {
-// 	if scriptsTempDir == "" {
-// 		return false, nil
-// 	}
-
-// 	exists, err := coreutils.Exists(filepath.Join(scriptsTempDir, scriptFileName))
-// 	if err != nil {
-// 		// notest
-// 		return false, err
-// 	}
-// 	return exists, nil
-// }
-
 func prepareScripts(scriptFileNames ...string) error {
 
 	// nolint
@@ -164,61 +151,6 @@ func prepareScripts(scriptFileNames ...string) error {
 		return err
 	}
 	return nil
-	// if len(scriptFileNames) == 0 {
-	// 	err = coreutils.CopyDirFS(scriptsFS, "scripts/drafts", scriptsTempDir, coreutils.WithFileMode(coreutils.FileMode_rwxrwxrwx))
-	// 	if err != nil {
-	// 		loggerError(err.Error())
-	// 		return err
-	// 	}
-	// 	return nil
-	// }
-
-	// return coreutils.CopyDirFS(scriptsFS, "./scripts/drafts", scriptsTempDir, coreutils.WithFilterFiles(scriptFileNames),
-	// 	coreutils.WithSkipExisting())
-	// for _, fileName := range scriptFileNames {
-
-	// 	exists, err := scriptExists(fileName)
-	// 	if err != nil {
-	// 		// notest
-	// 		return err
-	// 	}
-	// 	if exists {
-	// 		continue
-	// 	}
-
-	// 	file, err := scriptsFS.Open("./scripts/drafts/" + fileName)
-	// 	if err != nil {
-	// 		return err
-	// 	}
-	// 	defer file.Close()
-
-	// 	destFileName := filepath.Join(scriptsTempDir, fileName)
-
-	// 	dir := filepath.Dir(destFileName)
-
-	// 	// nolint
-	// 	err = os.MkdirAll(dir, coreutils.FileMode_rwxrwxrwx) // os.ModePerm)
-	// 	if err != nil {
-	// 		return err
-	// 	}
-
-	// 	newFile, err := os.Create(destFileName)
-	// 	if err != nil {
-	// 		return err
-	// 	}
-
-	// 	defer newFile.Close()
-	// 	if err = os.Chmod(destFileName, coreutils.FileMode_rwxrwxrwx); err != nil {
-	// 		return err
-	// 	}
-
-	// 	if _, err = io.Copy(newFile, file); err != nil {
-	// 		return err
-	// 	}
-
-	// }
-
-	// return nil
 }
 
 // nolint
