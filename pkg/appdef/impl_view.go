@@ -146,7 +146,7 @@ func newViewPartKey(v *view) *viewPartKey {
 func (pk *viewPartKey) addDataField(name FieldName, dataType QName, constraints ...IConstraint) {
 	d := pk.view.typ.app.Data(dataType)
 	if d == nil {
-		panic(fmt.Errorf("%v: view partition key field «%s» has unknown data type «%s»: %w", pk.view.QName(), name, dataType, ErrNameNotFound))
+		panic(fmt.Errorf("%v: view partition key field «%s» has unknown data type «%s»: %w", pk.view.QName(), name, dataType, ErrTypeNotFound))
 	}
 	if k := d.DataKind(); !k.IsFixed() {
 		panic(fmt.Errorf("%v: view partition key field «%s» has variable length type «%s»: %w", pk.view.QName(), name, k.TrimString(), ErrInvalidDataKind))
@@ -240,7 +240,7 @@ func newViewClustCols(v *view) *viewClustCols {
 func (cc *viewClustCols) addDataField(name FieldName, dataType QName, constraints ...IConstraint) {
 	d := cc.app.Data(dataType)
 	if d == nil {
-		panic(fmt.Errorf("%v: data type «%v» not found: %w", cc.view, dataType, ErrNameNotFound))
+		panic(fmt.Errorf("%v: data type «%v» not found: %w", cc.view, dataType, ErrTypeNotFound))
 	}
 
 	cc.panicIfVarFieldDuplication(name, d.DataKind())

@@ -297,7 +297,7 @@ func Test_AppDef_AddProjector(t *testing.T) {
 			prj.States().
 				Add(NewQName("sys", "records"), recName, NewQName("test", "unknown"))
 			_, err := adb.Build()
-			require.ErrorIs(err, ErrNameNotFound)
+			require.ErrorIs(err, ErrTypeNotFound)
 			require.Contains(err.Error(), "test.unknown")
 		})
 	})
@@ -378,7 +378,7 @@ func Test_AppDef_AddScheduledProjector(t *testing.T) {
 	viewName := NewQName("test", "view")
 
 	// cron schedule string
-	cronSchedule := `0 0 * * *`
+	cronSchedule := `@every 2m30s`
 
 	prjName := NewQName("test", "projector")
 
@@ -418,15 +418,17 @@ func Test_AppDef_AddScheduledProjector(t *testing.T) {
 	})
 
 	t.Run("scheduled projector validation errors", func(t *testing.T) {
-		// t.Run("should be error if invalid cron string", func(t *testing.T) {
-		// 	adb := New()
-		// 	adb.AddPackage("test", "test.com/test")
+		t.Run("should be error if invalid cron string", func(t *testing.T) {
+			adb := New()
+			adb.AddPackage("test", "test.com/test")
 
-		// 	prj := adb.AddProjector(prjName)
-		// 	_, err := adb.Build()
-		// 	require.ErrorIs(err, ErrEmptyProjectorEvents)
-		// 	require.Contains(err.Error(), fmt.Sprint(prj))
-		// })
+			prj := adb.AddProjector(prjName)
+			prj.SetCronSchedule("naked 🔫")
+			_, err := adb.Build()
+			require.ErrorIs(err, ErrInvalidProjectorCronSchedule)
+			require.Contains(err.Error(), fmt.Sprint(prj))
+			require.Contains(err.Error(), "naked 🔫")
+		})
 	})
 }
 

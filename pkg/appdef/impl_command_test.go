@@ -148,7 +148,7 @@ func Test_CommandValidate(t *testing.T) {
 		t.Run("must error if parameter name is unknown", func(t *testing.T) {
 			cmd.SetParam(unknown)
 			_, err := adb.Build()
-			require.ErrorIs(err, ErrNameNotFound)
+			require.ErrorIs(err, ErrTypeNotFound)
 			require.ErrorContains(err, unknown.String())
 		})
 
@@ -166,7 +166,7 @@ func Test_CommandValidate(t *testing.T) {
 		t.Run("must error if unlogged parameter name is unknown", func(t *testing.T) {
 			cmd.SetUnloggedParam(unknown)
 			_, err := adb.Build()
-			require.ErrorIs(err, ErrNameNotFound)
+			require.ErrorIs(err, ErrTypeNotFound)
 			require.ErrorContains(err, unknown.String())
 		})
 
@@ -184,7 +184,7 @@ func Test_CommandValidate(t *testing.T) {
 		t.Run("must error if result object name is unknown", func(t *testing.T) {
 			cmd.SetResult(unknown)
 			_, err := adb.Build()
-			require.ErrorIs(err, ErrNameNotFound)
+			require.ErrorIs(err, ErrTypeNotFound)
 			require.ErrorContains(err, unknown.String())
 		})
 

@@ -10,6 +10,8 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+
+	"github.com/robfig/cron/v3"
 )
 
 // # Implements:
@@ -84,9 +86,18 @@ func (pb *projectorBuilder) SetWantErrors() IProjectorBuilder {
 //   - if events set is empty
 func (prj *projector) Validate() (err error) {
 	err = prj.extension.Validate()
+
 	if (len(prj.events.events) == 0) && (prj.cronSchedule == "") {
 		err = errors.Join(err,
 			fmt.Errorf("%v: events set is empty: %w", prj, ErrEmptyProjectorEvents))
+	}
+
+	if prj.cronSchedule != "" {
+		_, e := cron.ParseStandard(prj.cronSchedule)
+		if e != nil {
+			err = errors.Join(err,
+				fmt.Errorf("%v: %w: %w", prj, ErrInvalidProjectorCronSchedule, e))
+		}
 	}
 	return err
 }
@@ -133,7 +144,7 @@ func (ee *events) add(on QName, event ...ProjectorEventKind) {
 
 	t := ee.app.TypeByName(on)
 	if t == nil {
-		panic(fmt.Errorf("type «%v» not found: %w", on, ErrNameNotFound))
+		panic(fmt.Errorf("type «%v» not found: %w", on, ErrTypeNotFound))
 	}
 	switch t.Kind() {
 	case TypeKind_GDoc, TypeKind_GRecord, TypeKind_CDoc, TypeKind_CRecord, TypeKind_WDoc, TypeKind_WRecord, // CUD

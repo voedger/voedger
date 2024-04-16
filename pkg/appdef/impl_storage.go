@@ -39,7 +39,7 @@ func (s storage) validate() (err error) {
 	for _, n := range s.names {
 		if s.app.TypeByName(n) == nil {
 			err = errors.Join(err,
-				fmt.Errorf("storage «%v» has unknown qname «%v»: %w", s.QName, n, ErrNameNotFound))
+				fmt.Errorf("storage «%v» has unknown qname «%v»: %w", s.QName, n, ErrTypeNotFound))
 			break
 		}
 	}
