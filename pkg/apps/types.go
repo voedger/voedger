@@ -26,6 +26,8 @@ type APIs struct {
 	coreutils.TimeFunc
 	NumQueryProcessors   coreutils.NumQueryProcessors
 	NumCommandProcessors coreutils.NumCommandProcessors
+	// IAppPartitions - wrong, wire cycle: `appparts.NewWithActualizerWithExtEnginesFactories(asp, actualizer, eef) IAppPartitions`` accepts engines.ProvideExtEngineFactories()
+	//                                     that requires filled AppConfigsType, but AppConfigsType requires apps.APIs with IAppPartitions
 }
 
 type AppBuilder func(apis APIs, cfg *istructsmem.AppConfigType, ep extensionpoints.IExtensionPoint) BuiltInAppDef
