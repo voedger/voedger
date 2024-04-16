@@ -45,12 +45,12 @@ type pipedCmd struct {
 	cmd               *exec.Cmd
 }
 
-func (Self *PipedExec) command(name string, stderrRedirection int, args ...string) *PipedExec {
+func (pe *PipedExec) command(name string, stderrRedirection int, args ...string) *PipedExec {
 	cmd := exec.Command(name, args...)
-	lastIdx := len(Self.cmds) - 1
+	lastIdx := len(pe.cmds) - 1
 	if lastIdx > -1 {
 		var err error
-		cmd.Stdin, err = Self.cmds[lastIdx].cmd.StdoutPipe()
+		cmd.Stdin, err = pe.cmds[lastIdx].cmd.StdoutPipe()
 		// notest
 		if err != nil {
 			panic(err)
@@ -58,31 +58,31 @@ func (Self *PipedExec) command(name string, stderrRedirection int, args ...strin
 	} else {
 		cmd.Stdin = os.Stdin
 	}
-	Self.cmds = append(Self.cmds, &pipedCmd{stderrRedirection, cmd})
-	return Self
+	pe.cmds = append(pe.cmds, &pipedCmd{stderrRedirection, cmd})
+	return pe
 }
 
 // GetCmd returns cmd with given index
-func (Self *PipedExec) GetCmd(idx int) *exec.Cmd {
-	return Self.cmds[idx].cmd
+func (pe *PipedExec) GetCmd(idx int) *exec.Cmd {
+	return pe.cmds[idx].cmd
 }
 
 // Command adds a command to a pipe
-func (Self *PipedExec) Command(name string, args ...string) *PipedExec {
-	return Self.command(name, StderrRedirectNone, args...)
+func (pe *PipedExec) Command(name string, args ...string) *PipedExec {
+	return pe.command(name, StderrRedirectNone, args...)
 }
 
 // WorkingDir sets working directory for the last command
-func (Self *PipedExec) WorkingDir(wd string) *PipedExec {
-	pipedCmd := Self.cmds[len(Self.cmds)-1]
+func (pe *PipedExec) WorkingDir(wd string) *PipedExec {
+	pipedCmd := pe.cmds[len(pe.cmds)-1]
 	pipedCmd.cmd.Dir = wd
-	return Self
+	return pe
 }
 
 // Wait until all cmds finish
-func (Self *PipedExec) Wait() error {
+func (pe *PipedExec) Wait() error {
 	var firstErr error
-	for _, cmd := range Self.cmds {
+	for _, cmd := range pe.cmds {
 		err := cmd.cmd.Wait()
 		if nil != err && firstErr == nil {
 			firstErr = err
@@ -92,21 +92,21 @@ func (Self *PipedExec) Wait() error {
 }
 
 // Start all cmds
-func (Self *PipedExec) Start(out io.Writer, err io.Writer) error {
-	for _, cmd := range Self.cmds {
+func (pe *PipedExec) Start(out io.Writer, err io.Writer) error {
+	for _, cmd := range pe.cmds {
 		if cmd.stderrRedirection == StderrRedirectNone && nil != err {
 			cmd.cmd.Stderr = err
 		}
 	}
-	lastIdx := len(Self.cmds) - 1
+	lastIdx := len(pe.cmds) - 1
 	if lastIdx < 0 {
-		return errors.New("Empty command list")
+		return errors.New("empty command list")
 	}
 	if nil != out {
-		Self.cmds[lastIdx].cmd.Stdout = out
+		pe.cmds[lastIdx].cmd.Stdout = out
 	}
 
-	for _, cmd := range Self.cmds {
+	for _, cmd := range pe.cmds {
 		logger.Verbose(cmd.cmd.Path, cmd.cmd.Args)
 		err := cmd.cmd.Start()
 		if nil != err {
@@ -117,16 +117,16 @@ func (Self *PipedExec) Start(out io.Writer, err io.Writer) error {
 }
 
 // Run starts the pipe
-func (Self *PipedExec) Run(out io.Writer, err io.Writer) error {
-	e := Self.Start(out, err)
+func (pe *PipedExec) Run(out io.Writer, err io.Writer) error {
+	e := pe.Start(out, err)
 	if nil != e {
 		return e
 	}
-	return Self.Wait()
+	return pe.Wait()
 }
 
 // RunToStrings runs the pipe and saves outputs to strings
-func (Self *PipedExec) RunToStrings() (stdout string, stderr string, err error) {
+func (pe *PipedExec) RunToStrings() (stdout string, stderr string, err error) {
 	// _, stdoutw := io.Pipe()
 	// _, stderrw := io.Pipe()
 
@@ -134,7 +134,7 @@ func (Self *PipedExec) RunToStrings() (stdout string, stderr string, err error) 
 
 	wg.Add(2)
 
-	lastCmd := Self.cmds[len(Self.cmds)-1]
+	lastCmd := pe.cmds[len(pe.cmds)-1]
 	stdoutPipe, err := lastCmd.cmd.StdoutPipe()
 	// notest
 	if nil != err {
@@ -146,7 +146,7 @@ func (Self *PipedExec) RunToStrings() (stdout string, stderr string, err error) 
 		return "", "", err
 	}
 
-	err = Self.Start(nil, nil)
+	err = pe.Start(nil, nil)
 	if nil != err {
 		return "", "", err
 	}
@@ -175,6 +175,6 @@ func (Self *PipedExec) RunToStrings() (stdout string, stderr string, err error) 
 
 	wg.Wait()
 
-	return stdout, stderr, Self.Wait()
+	return stdout, stderr, pe.Wait()
 
 }

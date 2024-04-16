@@ -30,8 +30,8 @@ func Test_PassEnvironmentVariable(t *testing.T) {
 		Command("sh", "-c", "echo $MYVAR").
 		Command("sh", "-c", "grep $MYVAR").
 		RunToStrings()
-	assert.Nil(t, err)
-	assert.Equal(t, "MYVALUE", strings.TrimSpace(stdout))
+	require.NoError(t, err)
+	require.Equal(t, "MYVALUE", strings.TrimSpace(stdout))
 	assert.Equal(t, "", strings.TrimSpace(stderr))
 }
 
@@ -52,27 +52,27 @@ func Test_Wd(t *testing.T) {
 	err = new(exec.PipedExec).
 		Command("ls").WorkingDir(tmpDir1).
 		Run(os.Stdout, os.Stdout)
-	assert.Nil(t, err)
+	require.NoError(err)
 
 	err = new(exec.PipedExec).
 		Command("ls", "1.txt").WorkingDir(tmpDir1).
 		Run(os.Stdout, os.Stdout)
-	assert.Nil(t, err)
+	require.NoError(err)
 
 	err = new(exec.PipedExec).
 		Command("ls", "2.txt").WorkingDir(tmpDir2).
 		Run(os.Stdout, os.Stdout)
-	assert.Nil(t, err)
+	require.NoError(err)
 
 	err = new(exec.PipedExec).
 		Command("ls", "1.txt").WorkingDir(tmpDir2).
 		Run(os.Stdout, os.Stdout)
-	assert.NotNil(t, err)
+	require.Error(err)
 
 	err = new(exec.PipedExec).
 		Command("ls", "2.txt").WorkingDir(tmpDir1).
 		Run(os.Stdout, os.Stdout)
-	assert.NotNil(t, err)
+	require.Error(err)
 
 }
 
@@ -113,6 +113,7 @@ func Test_EmptyCommandList(t *testing.T) {
 }
 
 func Test_KillProcessUsingFirst(t *testing.T) {
+	require := require.New(t)
 	pe := new(exec.PipedExec)
 	pe.Command("sleep", "10")
 	cmd := pe.GetCmd(0)
@@ -127,17 +128,18 @@ func Test_KillProcessUsingFirst(t *testing.T) {
 	fmt.Println("Running...")
 	err := pe.Run(os.Stdout, os.Stderr)
 	fmt.Println("err=", err)
-	assert.NotNil(t, err)
+	require.Error(err)
 }
 
 func Test_RunToStrings(t *testing.T) {
+	require := require.New(t)
 	{
 		stdouts, stderrs, err := new(exec.PipedExec).
 			Command("sh", "-c", "echo 11").
 			RunToStrings()
-		assert.Nil(t, err)
-		assert.Equal(t, "11", strings.TrimSpace(stdouts))
-		assert.Equal(t, "", stderrs)
+		require.NoError(err)
+		require.Equal("11", strings.TrimSpace(stdouts))
+		require.Equal("", stderrs)
 	}
 
 	// 1 > &2
@@ -145,9 +147,9 @@ func Test_RunToStrings(t *testing.T) {
 		stdouts, stderrs, err := new(exec.PipedExec).
 			Command("sh", "-c", "echo 11 1>&2").
 			RunToStrings()
-		assert.Nil(t, err)
-		assert.Equal(t, "11", strings.TrimSpace(stderrs))
-		assert.Equal(t, "", stdouts)
+		require.NoError(err)
+		require.Equal("11", strings.TrimSpace(stderrs))
+		require.Equal("", stdouts)
 	}
 
 	//stdout and stderr
@@ -155,7 +157,7 @@ func Test_RunToStrings(t *testing.T) {
 		stdouts, stderrs, err := new(exec.PipedExec).
 			Command("sh", "-c", "echo err 1>&2; echo std").
 			RunToStrings()
-		assert.Nil(t, err)
+		require.NoError(err)
 		assert.Equal(t, "std", strings.TrimSpace(stdouts))
 		assert.Equal(t, "err", strings.TrimSpace(stderrs))
 	}
@@ -165,7 +167,7 @@ func Test_RunToStrings(t *testing.T) {
 		stdouts, stderrs, err := new(exec.PipedExec).
 			Command("itmustbeawrongcommandPipedExecRunToStrings").
 			RunToStrings()
-		assert.NotNil(t, err)
+		require.Error(err)
 		assert.Equal(t, "", stdouts)
 		assert.Equal(t, "", stderrs)
 	}
