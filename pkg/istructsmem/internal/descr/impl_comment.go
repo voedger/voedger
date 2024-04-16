@@ -8,7 +8,7 @@ package descr
 import "github.com/voedger/voedger/pkg/appdef"
 
 func readComment(c interface{}) (text string) {
-	if comment, ok := c.(appdef.IComment); ok {
+	if comment, ok := c.(appdef.IWithComments); ok {
 		text = comment.Comment()
 	}
 	return text

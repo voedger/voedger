@@ -310,6 +310,9 @@ type MockStateValueBuilder struct {
 	mock.Mock
 }
 
+func (m *MockStateValueBuilder) Equal(src istructs.IStateValueBuilder) bool {
+	return true
+}
 func (m *MockStateValueBuilder) PutInt32(name appdef.FieldName, value int32) {
 	m.Called(name, value)
 }
@@ -416,6 +419,9 @@ type MockIntents struct {
 	mock.Mock
 }
 
+func (m *MockIntents) FindIntent(key istructs.IStateKeyBuilder) istructs.IStateValueBuilder {
+	return nil
+}
 func (m *MockIntents) NewValue(key istructs.IStateKeyBuilder) (istructs.IStateValueBuilder, error) {
 	args := m.Called(key)
 	return args.Get(0).(istructs.IStateValueBuilder), args.Error(1)

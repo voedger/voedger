@@ -293,3 +293,26 @@ func TestObjectReaderErrors(t *testing.T) {
 	require := require.New(t)
 	require.Panics(func() { ReadByKind("", appdef.DataKind_FakeLast, nil) })
 }
+
+func TestJSONMapToCUDBody(t *testing.T) {
+	t.Run("basic usage", func(t *testing.T) {
+		data := []map[string]interface{}{
+			{
+				"fld1": "val1",
+			},
+			{
+				"fld2": "val2",
+			},
+		}
+		cudBody := JSONMapToCUDBody(data)
+		require.JSONEq(t, `{"cuds":[{"fields":{"fld1":"val1"}},{"fields":{"fld2":"val2"}}]}`, cudBody)
+	})
+	t.Run("failed to marshel -> panic", func(t *testing.T) {
+		data := []map[string]interface{}{
+			{
+				"fld1": func() {},
+			},
+		}
+		require.Panics(t, func() { JSONMapToCUDBody(data) })
+	})
+}

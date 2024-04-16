@@ -125,7 +125,7 @@ func (c *buildContext) workspaces() error {
 	return nil
 }
 
-func (c *buildContext) addComments(s IStatement, builder appdef.ICommentBuilder) {
+func (c *buildContext) addComments(s IStatement, builder appdef.ICommentsBuilder) {
 	comments := s.GetComments()
 	if len(comments) > 0 {
 		builder.SetComment(comments...)
@@ -136,7 +136,7 @@ func (c *buildContext) types() error {
 	for _, schema := range c.app.Packages {
 		iteratePackageStmt(schema, &c.basicContext, func(typ *TypeStmt, ictx *iterateCtx) {
 			c.pushDef(schema.NewQName(typ.Name), appdef.TypeKind_Object)
-			c.addComments(typ, c.defCtx().defBuilder.(appdef.ICommentBuilder))
+			c.addComments(typ, c.defCtx().defBuilder.(appdef.ICommentsBuilder))
 			c.addTableItems(typ.Items, ictx)
 			c.popDef()
 		})
@@ -382,7 +382,7 @@ func (c *buildContext) workspaceDescriptor(w *WorkspaceStmt, ictx *iterateCtx) {
 			return
 		}
 		c.pushDef(qname, appdef.TypeKind_CDoc)
-		c.addComments(w.Descriptor, c.defCtx().defBuilder.(appdef.ICommentBuilder))
+		c.addComments(w.Descriptor, c.defCtx().defBuilder.(appdef.ICommentsBuilder))
 		c.addTableItems(w.Descriptor.Items, ictx)
 		c.defCtx().defBuilder.(appdef.ICDocBuilder).SetSingleton()
 		c.popDef()
@@ -395,7 +395,7 @@ func (c *buildContext) table(schema *PackageSchemaAST, table *TableStmt, ictx *i
 		return
 	}
 	c.pushDef(qname, table.tableTypeKind)
-	c.addComments(table, c.defCtx().defBuilder.(appdef.ICommentBuilder))
+	c.addComments(table, c.defCtx().defBuilder.(appdef.ICommentsBuilder))
 	c.fillTable(table, ictx)
 	if table.singleton {
 		c.defCtx().defBuilder.(appdef.ISingletonBuilder).SetSingleton()

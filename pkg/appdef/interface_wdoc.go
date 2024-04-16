@@ -28,3 +28,43 @@ type IWRecord interface {
 type IWRecordBuilder interface {
 	IContainedRecordBuilder
 }
+
+type IWithWDocs interface {
+	// Return WDoc by name.
+	//
+	// Returns nil if not found.
+	WDoc(QName) IWDoc
+
+	// Enumerates all application workflow documents
+	//
+	// Workflow documents are enumerated in alphabetical order by QName
+	WDocs(func(IWDoc))
+
+	// Return WRecord by name.
+	//
+	// Returns nil if not found.
+	WRecord(QName) IWRecord
+
+	// Enumerates all application workflow records
+	//
+	// Workflow records are enumerated in alphabetical order by QName
+	WRecords(func(IWRecord))
+}
+
+type IWDocsBuilder interface {
+	// Adds new WDoc type with specified name.
+	//
+	// # Panics:
+	//   - if name is empty (appdef.NullQName),
+	//   - if name is invalid,
+	//   - if type with name already exists.
+	AddWDoc(QName) IWDocBuilder
+
+	// Adds new WRecord type with specified name.
+	//
+	// # Panics:
+	//   - if name is empty (appdef.NullQName),
+	//   - if name is invalid,
+	//   - if type with name already exists.
+	AddWRecord(QName) IWRecordBuilder
+}

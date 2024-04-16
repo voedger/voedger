@@ -22,8 +22,4 @@ var NullType = new(nullType)
 var NullFields = new(nullFields)
 
 // NullAppDef is IAppDef without any user definitions
-var NullAppDef = func() IAppDef {
-	adb := New()
-	app, _ := adb.Build()
-	return app
-}()
+var NullAppDef = New().MustBuild()

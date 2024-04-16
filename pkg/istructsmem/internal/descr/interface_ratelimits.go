@@ -15,7 +15,3 @@ type RateLimit struct {
 	Period                time.Duration
 	MaxAllowedPerDuration uint32
 }
-
-func newRateLimit() *RateLimit {
-	return &RateLimit{}
-}

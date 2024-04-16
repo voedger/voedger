@@ -25,6 +25,18 @@ type IStructureBuilder interface {
 	IWithAbstractBuilder
 }
 
+type IWithStructures interface {
+	// Return structure by name.
+	//
+	// Returns nil if not found.
+	Structure(QName) IStructure
+
+	// Enumerates all application structures
+	//
+	// Structures are enumerated in alphabetical order by QName
+	Structures(func(IStructure))
+}
+
 // Record is a structure.
 //
 // Record has ID field.
@@ -37,6 +49,18 @@ type IRecord interface {
 
 type IRecordBuilder interface {
 	IStructureBuilder
+}
+
+type IWithRecords interface {
+	// Return record by name.
+	//
+	// Returns nil if not found.
+	Record(QName) IRecord
+
+	// Enumerates all application records, e.g. documents and contained records
+	//
+	// Records are enumerated in alphabetical order by QName
+	Records(func(IRecord))
 }
 
 // Document is a record.

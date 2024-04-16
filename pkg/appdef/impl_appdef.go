@@ -38,6 +38,14 @@ func (app *appDef) CDoc(name QName) (d ICDoc) {
 	return nil
 }
 
+func (app *appDef) CDocs(cb func(ICDoc)) {
+	app.Types(func(t IType) {
+		if d, ok := t.(ICDoc); ok {
+			cb(d)
+		}
+	})
+}
+
 func (app *appDef) Command(name QName) ICommand {
 	if t := app.typeByKind(name, TypeKind_Command); t != nil {
 		return t.(ICommand)
@@ -45,11 +53,27 @@ func (app *appDef) Command(name QName) ICommand {
 	return nil
 }
 
+func (app *appDef) Commands(cb func(ICommand)) {
+	app.Types(func(t IType) {
+		if c, ok := t.(ICommand); ok {
+			cb(c)
+		}
+	})
+}
+
 func (app *appDef) CRecord(name QName) ICRecord {
 	if t := app.typeByKind(name, TypeKind_CRecord); t != nil {
 		return t.(ICRecord)
 	}
 	return nil
+}
+
+func (app *appDef) CRecords(cb func(ICRecord)) {
+	app.Types(func(t IType) {
+		if r, ok := t.(ICRecord); ok {
+			cb(r)
+		}
+	})
 }
 
 func (app *appDef) Data(name QName) IData {
@@ -71,14 +95,14 @@ func (app *appDef) DataTypes(incSys bool, cb func(IData)) {
 
 func (app *appDef) Extension(name QName) IExtension {
 	if t := app.TypeByName(name); t != nil {
-		if r, ok := t.(IExtension); ok {
-			return r
+		if ex, ok := t.(IExtension); ok {
+			return ex
 		}
 	}
 	return nil
 }
 
-func (app *appDef) Extensions(cb func(e IExtension)) {
+func (app *appDef) Extensions(cb func(IExtension)) {
 	app.Types(func(t IType) {
 		if ex, ok := t.(IExtension); ok {
 			cb(ex)
@@ -95,11 +119,44 @@ func (app *appDef) GDoc(name QName) IGDoc {
 	return nil
 }
 
+func (app *appDef) Function(name QName) IFunction {
+	if t := app.TypeByName(name); t != nil {
+		if f, ok := t.(IFunction); ok {
+			return f
+		}
+	}
+	return nil
+}
+
+func (app *appDef) Functions(cb func(IFunction)) {
+	app.Types(func(t IType) {
+		if f, ok := t.(IFunction); ok {
+			cb(f)
+		}
+	})
+}
+
+func (app *appDef) GDocs(cb func(IGDoc)) {
+	app.Types(func(t IType) {
+		if d, ok := t.(IGDoc); ok {
+			cb(d)
+		}
+	})
+}
+
 func (app *appDef) GRecord(name QName) IGRecord {
 	if t := app.typeByKind(name, TypeKind_GRecord); t != nil {
 		return t.(IGRecord)
 	}
 	return nil
+}
+
+func (app *appDef) GRecords(cb func(IGRecord)) {
+	app.Types(func(t IType) {
+		if r, ok := t.(IGRecord); ok {
+			cb(r)
+		}
+	})
 }
 
 func (app appDef) LocalQName(name FullQName) QName { return app.packages.localQName(name) }
@@ -111,6 +168,14 @@ func (app *appDef) Object(name QName) IObject {
 	return nil
 }
 
+func (app *appDef) Objects(cb func(IObject)) {
+	app.Types(func(t IType) {
+		if o, ok := t.(IObject); ok {
+			cb(o)
+		}
+	})
+}
+
 func (app *appDef) ODoc(name QName) IODoc {
 	if t := app.typeByKind(name, TypeKind_ODoc); t != nil {
 		return t.(IODoc)
@@ -118,11 +183,27 @@ func (app *appDef) ODoc(name QName) IODoc {
 	return nil
 }
 
+func (app *appDef) ODocs(cb func(IODoc)) {
+	app.Types(func(t IType) {
+		if d, ok := t.(IODoc); ok {
+			cb(d)
+		}
+	})
+}
+
 func (app *appDef) ORecord(name QName) IORecord {
 	if t := app.typeByKind(name, TypeKind_ORecord); t != nil {
 		return t.(IORecord)
 	}
 	return nil
+}
+
+func (app *appDef) ORecords(cb func(IORecord)) {
+	app.Types(func(t IType) {
+		if r, ok := t.(IORecord); ok {
+			cb(r)
+		}
+	})
 }
 
 func (app *appDef) PackageLocalName(path string) string {
@@ -156,6 +237,14 @@ func (app *appDef) Projectors(cb func(IProjector)) {
 	})
 }
 
+func (app *appDef) Queries(cb func(IQuery)) {
+	app.Types(func(t IType) {
+		if q, ok := t.(IQuery); ok {
+			cb(q)
+		}
+	})
+}
+
 func (app *appDef) Query(name QName) IQuery {
 	if t := app.typeByKind(name, TypeKind_Query); t != nil {
 		return t.(IQuery)
@@ -180,7 +269,33 @@ func (app *appDef) Records(cb func(IRecord)) {
 	})
 }
 
-func (app *appDef) Structures(cb func(s IStructure)) {
+func (app *appDef) Singleton(name QName) ISingleton {
+	if t := app.TypeByName(name); t != nil {
+		if s, ok := t.(ISingleton); ok {
+			return s
+		}
+	}
+	return nil
+}
+
+func (app *appDef) Singletons(cb func(ISingleton)) {
+	app.Types(func(t IType) {
+		if s, ok := t.(ISingleton); ok {
+			cb(s)
+		}
+	})
+}
+
+func (app *appDef) Structure(name QName) IStructure {
+	if t := app.TypeByName(name); t != nil {
+		if s, ok := t.(IStructure); ok {
+			return s
+		}
+	}
+	return nil
+}
+
+func (app *appDef) Structures(cb func(IStructure)) {
 	app.Types(func(t IType) {
 		if s, ok := t.(IStructure); ok {
 			cb(s)
@@ -238,11 +353,27 @@ func (app *appDef) View(name QName) IView {
 	return nil
 }
 
+func (app *appDef) Views(cb func(IView)) {
+	app.Types(func(t IType) {
+		if v, ok := t.(IView); ok {
+			cb(v)
+		}
+	})
+}
+
 func (app *appDef) WDoc(name QName) IWDoc {
 	if t := app.typeByKind(name, TypeKind_WDoc); t != nil {
 		return t.(IWDoc)
 	}
 	return nil
+}
+
+func (app *appDef) WDocs(cb func(IWDoc)) {
+	app.Types(func(t IType) {
+		if d, ok := t.(IWDoc); ok {
+			cb(d)
+		}
+	})
 }
 
 func (app *appDef) WRecord(name QName) IWRecord {
@@ -252,11 +383,27 @@ func (app *appDef) WRecord(name QName) IWRecord {
 	return nil
 }
 
+func (app *appDef) WRecords(cb func(IWRecord)) {
+	app.Types(func(t IType) {
+		if r, ok := t.(IWRecord); ok {
+			cb(r)
+		}
+	})
+}
+
 func (app *appDef) Workspace(name QName) IWorkspace {
 	if t := app.typeByKind(name, TypeKind_Workspace); t != nil {
 		return t.(IWorkspace)
 	}
 	return nil
+}
+
+func (app *appDef) Workspaces(cb func(IWorkspace)) {
+	app.Types(func(t IType) {
+		if ws, ok := t.(IWorkspace); ok {
+			cb(ws)
+		}
+	})
 }
 
 func (app *appDef) WorkspaceByDescriptor(name QName) IWorkspace {
@@ -448,4 +595,11 @@ func (ab *appDefBuilder) Build() (IAppDef, error) {
 		return nil, err
 	}
 	return ab.app, nil
+}
+
+func (ab *appDefBuilder) MustBuild() IAppDef {
+	if err := ab.app.build(); err != nil {
+		panic(err)
+	}
+	return ab.app
 }

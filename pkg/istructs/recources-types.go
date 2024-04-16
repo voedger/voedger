@@ -103,6 +103,9 @@ type IIntents interface {
 
 	// UpdateValue returns a value builder to update existing value
 	UpdateValue(key IStateKeyBuilder, existingValue IStateValue) (builder IStateValueBuilder, err error)
+
+	// returns nil when not found
+	FindIntent(key IStateKeyBuilder) IStateValueBuilder
 }
 type IPkgNameResolver interface {
 	// Returns package path by package local name.
@@ -132,6 +135,7 @@ type IStateValue interface {
 type IStateValueBuilder interface {
 	IValueBuilder
 	BuildValue() IStateValue
+	Equal(to IStateValueBuilder) bool // used in TestState
 }
 type IStateKeyBuilder interface {
 	IKeyBuilder

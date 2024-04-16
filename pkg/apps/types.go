@@ -6,7 +6,6 @@
 package apps
 
 import (
-	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/cluster"
 	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/istorage"
@@ -21,17 +20,15 @@ import (
 type APIs struct {
 	itokens.ITokens
 	istructs.IAppStructsProvider
-	istructsmem.AppConfigsType
 	istorage.IAppStorageProvider
 	payloads.IAppTokensFactory
 	coreutils.IFederation
 	coreutils.TimeFunc
-	NumCommandProcessors coreutils.CommandProcessorsCount
-	NumQueryProcessors   coreutils.QueryProcessorsCount
-	//appparts.IAppPartitions
+	// IAppPartitions - wrong, wire cycle: `appparts.NewWithActualizerWithExtEnginesFactories(asp, actualizer, eef) IAppPartitions`` accepts engines.ProvideExtEngineFactories()
+	//                                     that requires filled AppConfigsType, but AppConfigsType requires apps.APIs with IAppPartitions
 }
 
-type AppBuilder func(apis APIs, cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) BuiltInAppDef
+type AppBuilder func(apis APIs, cfg *istructsmem.AppConfigType, ep extensionpoints.IExtensionPoint) BuiltInAppDef
 type SchemasExportedContent map[string]map[string][]byte // packageName->schemaFilePath->content
 type CLIParams struct {
 	Storage string

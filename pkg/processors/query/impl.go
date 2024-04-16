@@ -406,6 +406,11 @@ func (qw *queryWork) AppQName() istructs.AppQName {
 	return qw.msg.AppQName()
 }
 
+// need for sqlquery
+func (qw *queryWork) AppPartitions() appparts.IAppPartitions {
+	return qw.appParts
+}
+
 func borrowAppPart(_ context.Context, qw *queryWork) error {
 	switch err := qw.borrow(); {
 	case err == nil:

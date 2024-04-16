@@ -136,7 +136,7 @@ func validateTypeContainers(t IType) (err error) {
 		for _, cont := range cnt.Containers() {
 			contType := cont.Type()
 			if contType == nil {
-				err = errors.Join(err, fmt.Errorf("%v: container «%s» uses unknown type «%v»: %w", t, cont.Name(), cont.QName(), ErrNameNotFound))
+				err = errors.Join(err, fmt.Errorf("%v: container «%s» uses unknown type «%v»: %w", t, cont.Name(), cont.QName(), ErrTypeNotFound))
 				continue
 			}
 			if !t.Kind().ContainerKindAvailable(contType.Kind()) {

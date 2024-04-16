@@ -31,7 +31,7 @@ func newData(app *appDef, name QName, kind DataKind, anc QName) *data {
 	} else {
 		ancestor = app.Data(anc)
 		if ancestor == nil {
-			panic(fmt.Errorf("ancestor data type «%v» not found: %w", anc, ErrNameNotFound))
+			panic(fmt.Errorf("ancestor data type not found: %w: %v", ErrTypeNotFound, anc))
 		}
 		if (kind != DataKind_null) && (ancestor.DataKind() != kind) {
 			panic(fmt.Errorf("ancestor «%v» has wrong data type, %v expected: %w", anc, kind, ErrInvalidTypeKind))
@@ -137,8 +137,6 @@ func (db *dataBuilder) AddConstraints(cc ...IConstraint) IDataBuilder {
 	db.data.addConstraints(cc...)
 	return db
 }
-
-func (db *dataBuilder) String() string { return db.data.String() }
 
 // Returns name of system data type by data kind.
 //

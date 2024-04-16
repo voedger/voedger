@@ -297,7 +297,7 @@ func Test_AppDef_AddProjector(t *testing.T) {
 			prj.States().
 				Add(NewQName("sys", "records"), recName, NewQName("test", "unknown"))
 			_, err := adb.Build()
-			require.ErrorIs(err, ErrNameNotFound)
+			require.ErrorIs(err, ErrTypeNotFound)
 			require.Contains(err.Error(), "test.unknown")
 		})
 	})
@@ -362,6 +362,72 @@ func Test_AppDef_AddProjector(t *testing.T) {
 			require.Panics(func() { prj.Events().Add(recName, ProjectorEventKind_Execute) })
 			require.Panics(func() { prj.Events().Add(objName, ProjectorEventKind_Update) })
 			require.Panics(func() { prj.Events().Add(cmdName, ProjectorEventKind_ExecuteWithParam) })
+		})
+	})
+}
+
+func Test_AppDef_AddScheduledProjector(t *testing.T) {
+	require := require.New(t)
+
+	var app IAppDef
+
+	// storages
+	sysViews := NewQName(SysPackage, "views")
+
+	// intents
+	viewName := NewQName("test", "view")
+
+	// cron schedule string
+	cronSchedule := `@every 2m30s`
+
+	prjName := NewQName("test", "projector")
+
+	t.Run("must be ok to add scheduled projector", func(t *testing.T) {
+		adb := New()
+		adb.AddPackage("test", "test.com/test")
+
+		v := adb.AddView(viewName)
+		v.Key().PartKey().AddDataField("id", SysData_RecordID)
+		v.Key().ClustCols().AddDataField("name", SysData_String)
+		v.Value().AddDataField("data", SysData_bytes, false, MaxLen(1024))
+		v.SetComment("view is intent for projector")
+
+		prj := adb.AddProjector(prjName)
+		prj.SetEngine(ExtensionEngineKind_WASM)
+		prj.SetCronSchedule(cronSchedule)
+		prj.Intents().
+			Add(sysViews, viewName).SetComment(sysViews, "view is intent for projector")
+
+		t.Run("must be ok to build", func(t *testing.T) {
+			a, err := adb.Build()
+			require.NoError(err)
+			require.NotNil(a)
+
+			app = a
+		})
+	})
+
+	require.NotNil(app)
+
+	t.Run("must be ok to find builded projector", func(t *testing.T) {
+		prj := app.Projector(prjName)
+		require.Equal(ExtensionEngineKind_WASM, prj.Engine())
+		require.Equal(cronSchedule, prj.CronSchedule())
+		require.Len(prj.Intents().Map(), 1)
+		require.EqualValues(QNames{viewName}, prj.Intents().Map()[sysViews])
+	})
+
+	t.Run("scheduled projector validation errors", func(t *testing.T) {
+		t.Run("should be error if invalid cron string", func(t *testing.T) {
+			adb := New()
+			adb.AddPackage("test", "test.com/test")
+
+			prj := adb.AddProjector(prjName)
+			prj.SetCronSchedule("naked 🔫")
+			_, err := adb.Build()
+			require.ErrorIs(err, ErrInvalidProjectorCronSchedule)
+			require.Contains(err.Error(), fmt.Sprint(prj))
+			require.Contains(err.Error(), "naked 🔫")
 		})
 	})
 }
