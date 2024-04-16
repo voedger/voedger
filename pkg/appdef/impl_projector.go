@@ -16,9 +16,10 @@ import (
 //   - IProjector
 type projector struct {
 	extension
-	sync      bool
-	sysErrors bool
-	events    *events
+	sync         bool
+	sysErrors    bool
+	events       *events
+	cronSchedule string
 }
 
 func newProjector(app *appDef, name QName) *projector {
@@ -30,11 +31,15 @@ func newProjector(app *appDef, name QName) *projector {
 	return prj
 }
 
+func (prj projector) CronSchedule() string { return prj.cronSchedule }
+
 func (prj projector) Events() IProjectorEvents { return prj.events }
 
 func (prj projector) Sync() bool { return prj.sync }
 
 func (prj projector) WantErrors() bool { return prj.sysErrors }
+
+func (prj *projector) setCronSchedule(cs string) { prj.cronSchedule = cs }
 
 func (prj *projector) setSync(sync bool) { prj.sync = sync }
 
@@ -57,6 +62,11 @@ func newProjectorBuilder(projector *projector) *projectorBuilder {
 }
 
 func (pb *projectorBuilder) Events() IProjectorEventsBuilder { return pb.events }
+
+func (pb *projectorBuilder) SetCronSchedule(cs string) IProjectorBuilder {
+	pb.projector.setCronSchedule(cs)
+	return pb
+}
 
 func (pb *projectorBuilder) SetSync(sync bool) IProjectorBuilder {
 	pb.projector.setSync(sync)
