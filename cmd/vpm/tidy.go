@@ -21,31 +21,30 @@ func newTidyCmd(params *vpmParams) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "tidy",
 		Short: "add missing and remove unused modules",
-		RunE: func(cmd *cobra.Command, args []string) (err error) {
+		RunE: func(cmd *cobra.Command, args []string) error {
 			compileRes, err := compile.Compile(params.Dir)
 			if err != nil {
 				logger.Error("failed to compile, will try to exec 'go mod tidy' anyway")
-				return errors.Join(err, execGoModTidy(params.Dir))
 			}
-			return tidy(compileRes.AppDef, compileRes.ModulePath, params.Dir)
+			return errors.Join(err, tidy(compileRes.UnknownDeps, compileRes.AppDef, compileRes.ModulePath, params.Dir))
 		},
 	}
 	return cmd
 
 }
 
-func tidy(appDef appdef.IAppDef, packagePath string, dir string) error {
+func tidy(unknownDeps []string, appDef appdef.IAppDef, packagePath string, dir string) error {
 	imports := getImports(appDef, packagePath)
-	if err := createPackagesGen(imports, dir, true); err != nil {
-		return err
-	}
-	if err := getDependencies(dir, imports); err != nil {
+	if err := createPackagesGen(append(imports, unknownDeps...), dir, true); err != nil {
 		return err
 	}
 	return execGoModTidy(dir)
 }
 
 func getImports(appDef appdef.IAppDef, packagePath string) (imports []string) {
+	if appDef == nil {
+		return imports
+	}
 	excludedPaths := []string{compile.DummyAppName, appdef.SysPackagePath, packagePath}
 	appDef.Packages(func(localName, fullPath string) {
 		if !slices.Contains(excludedPaths, fullPath) {

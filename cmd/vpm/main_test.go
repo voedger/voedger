@@ -357,6 +357,4 @@ func TestTidyBasicUsage(t *testing.T) {
 
 	err = execRootCmd([]string{"vpm", "tidy", "-C", dir}, "1.0.0")
 	require.NoError(err)
-
-	require.FileExists(filepath.Join(dir, goSumFileName))
 }

@@ -70,7 +70,6 @@ func createGoMod(dir, packagePath string) error {
 	if exists {
 		return fmt.Errorf("%s already exists", filePath)
 	}
-
 	goVersion := runtime.Version()
 	goVersionNumber := strings.TrimSpace(strings.TrimPrefix(goVersion, "go"))
 	if !checkGoVersion(goVersionNumber) {

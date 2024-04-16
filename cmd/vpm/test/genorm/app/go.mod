@@ -1,6 +1,6 @@
 module app
 
-go 1.21.6
+go 1.21.4
 
 require github.com/voedger/voedger v0.0.0-20240315095646-3b8ad52c913b
 
