@@ -6,14 +6,47 @@
 package coreutils
 
 import (
+	"fmt"
 	"io"
+	"io/fs"
 	"os"
+	"path"
 	"path/filepath"
+	"slices"
 )
 
-func CopyDir(src, dst string) error {
-	srcinfo, err := os.Stat(src)
+// copies the specified dir from the provided FS to disk to path specified by dst
+// use "." src to copy the entire srcFS content
+func CopyDirFS(srcFS IReadFS, src, dst string, optFuncs ...CopyOpt) error {
+	opts := &copyOpts{}
+	for _, optFunc := range optFuncs {
+		optFunc(opts)
+	}
+	return copyDirFSOpts(srcFS, src, dst, opts)
+}
+
+// copies the specified file from the provided FS to disk to path specified by dst
+func CopyFileFS(srcFS fs.FS, src, dst string, optFuncs ...CopyOpt) error {
+	opts := &copyOpts{}
+	for _, optFunc := range optFuncs {
+		optFunc(opts)
+	}
+	return copyFileFSOpts(srcFS, src, dst, opts)
+}
+
+func CopyFile(src, dst string, optFuncs ...CopyOpt) error {
+	return CopyFileFS(os.DirFS(filepath.Clean(src)), src, dst, optFuncs...)
+}
+
+func CopyDir(src, dst string, optFuncs ...CopyOpt) error {
+	readDirFS := os.DirFS(src).(IReadFS)
+	return CopyDirFS(readDirFS, ".", dst, optFuncs...)
+}
+
+func copyDirFSOpts(srcFS IReadFS, src, dst string, opts *copyOpts) error {
+	srcinfo, err := fs.Stat(srcFS, src)
 	if err != nil {
+		// notest
 		return err
 	}
 
@@ -21,19 +54,19 @@ func CopyDir(src, dst string) error {
 		return err
 	}
 
-	dirEntries, err := os.ReadDir(src)
+	dirEntries, err := srcFS.ReadDir(src)
 	if err != nil {
 		// notest
 		return err
 	}
 
 	for _, dirEntry := range dirEntries {
-		srcFilePath := filepath.Join(src, dirEntry.Name())
+		srcFilePath := path.Join(src, dirEntry.Name()) // '/' separator must be used for fs.FS,
 		dstFilePath := filepath.Join(dst, dirEntry.Name())
 		if dirEntry.IsDir() {
-			err = CopyDir(srcFilePath, dstFilePath)
+			err = copyDirFSOpts(srcFS, srcFilePath, dstFilePath, opts)
 		} else {
-			err = CopyFile(srcFilePath, dstFilePath)
+			err = copyFileFSOpts(srcFS, srcFilePath, dstFilePath, opts)
 		}
 		if err != nil {
 			return err
@@ -42,12 +75,27 @@ func CopyDir(src, dst string) error {
 	return nil
 }
 
-func CopyFile(src, dst string) error {
-	srcF, err := os.Open(src)
+func copyFileFSOpts(srcFS fs.FS, src, dst string, opts *copyOpts) error {
+	if len(opts.files) > 0 && !slices.Contains(opts.files, src) {
+		return nil
+	}
+	srcF, err := srcFS.Open(src)
 	if err != nil {
 		return err
 	}
 	defer srcF.Close()
+
+	exists, err := Exists(dst)
+	if err != nil {
+		// notest
+		return err
+	}
+	if exists {
+		if opts.skipExisting {
+			return nil
+		}
+		return fmt.Errorf("file %s already exists: %w", dst, os.ErrExist)
+	}
 
 	dstF, err := os.Create(dst)
 	if err != nil {
@@ -65,7 +113,11 @@ func CopyFile(src, dst string) error {
 		return err
 	}
 
-	srcinfo, err := os.Stat(src)
+	if opts.fm > 0 {
+		return os.Chmod(dst, opts.fm)
+	}
+
+	srcinfo, err := fs.Stat(srcFS, src)
 	if err != nil {
 		// notest
 		return err
@@ -83,4 +135,30 @@ func Exists(filePath string) (exists bool, err error) {
 	}
 	// notest
 	return false, err
+}
+
+type copyOpts struct {
+	fm           fs.FileMode
+	skipExisting bool
+	files        []string
+}
+
+type CopyOpt func(co *copyOpts)
+
+func WithFileMode(fm fs.FileMode) CopyOpt {
+	return func(co *copyOpts) {
+		co.fm = fm
+	}
+}
+
+func WithSkipExisting() CopyOpt {
+	return func(co *copyOpts) {
+		co.skipExisting = true
+	}
+}
+
+func WithFilterFilesWithRelativePaths(filesWithRelativePaths []string) CopyOpt {
+	return func(co *copyOpts) {
+		co.files = filesWithRelativePaths
+	}
 }
