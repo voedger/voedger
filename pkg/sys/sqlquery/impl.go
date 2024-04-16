@@ -14,13 +14,14 @@ import (
 	"github.com/blastrain/vitess-sqlparser/sqlparser"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/processors"
 	"github.com/voedger/voedger/pkg/sys/authnz"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-func execQrySqlQuery(asp istructs.IAppStructsProvider, appQName istructs.AppQName, numCommandProcessors coreutils.CommandProcessorsCount) func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
+func execQrySqlQuery(asp istructs.IAppStructsProvider, appQName istructs.AppQName) func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 	return func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 		wsid := args.WSID
 		ws := args.Workspace
@@ -95,8 +96,11 @@ func execQrySqlQuery(asp istructs.IAppStructsProvider, appQName istructs.AppQNam
 			if e != nil {
 				return e
 			}
+			appParts := args.Workpiece.(interface {
+				AppPartitions() appparts.IAppPartitions
+			}).AppPartitions()
 			if source == plog {
-				return readPlog(ctx, wsid, numCommandProcessors, offset, limit, appStructs, f, callback, appStructs.AppDef())
+				return readPlog(ctx, wsid, offset, limit, appStructs, f, callback, appStructs.AppDef(), appParts)
 			}
 			return readWlog(ctx, wsid, offset, limit, appStructs, f, callback, appStructs.AppDef())
 		}

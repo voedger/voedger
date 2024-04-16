@@ -15,6 +15,7 @@ import (
 	"github.com/voedger/voedger/pkg/iextengine"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/pipeline"
+	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 // engine placeholder
@@ -37,7 +38,7 @@ func (e *engines) release() {
 type app struct {
 	apps       *apps
 	name       istructs.AppQName
-	partsCount int
+	partsCount coreutils.NumAppPartitions
 	def        appdef.IAppDef
 	structs    istructs.IAppStructs
 	engines    [cluster.ProcessorKind_Count]*pool.Pool[*engines]
@@ -45,7 +46,7 @@ type app struct {
 	parts map[istructs.PartitionID]*partition
 }
 
-func newApplication(apps *apps, name istructs.AppQName, partsCount int) *app {
+func newApplication(apps *apps, name istructs.AppQName, partsCount coreutils.NumAppPartitions) *app {
 	return &app{
 		apps:       apps,
 		name:       name,

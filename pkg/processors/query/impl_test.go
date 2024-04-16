@@ -42,11 +42,11 @@ var now = time.Now()
 var timeFunc = coreutils.TimeFunc(func() time.Time { return now })
 
 var (
-	appName    istructs.AppQName    = istructs.AppQName_test1_app1
-	appEngines                      = cluster.PoolSize(10, 100, 10)
-	partCount                       = 10
-	partID     istructs.PartitionID = 5
-	wsID       istructs.WSID        = 15
+	appName    istructs.AppQName          = istructs.AppQName_test1_app1
+	appEngines                            = cluster.PoolSize(10, 100, 10)
+	partCount  coreutils.NumAppPartitions = 10
+	partID     istructs.PartitionID       = 5
+	wsID       istructs.WSID              = 15
 
 	qNameFunction         = appdef.NewQName("bo", "FindArticlesByModificationTimeStampRange")
 	qNameQryDenied        = appdef.NewQName(appdef.SysPackage, "TestDeniedQry") // same as in ACL

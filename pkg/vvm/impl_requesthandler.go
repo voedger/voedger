@@ -26,7 +26,7 @@ import (
 
 func provideIBus(appParts appparts.IAppPartitions, procbus iprocbus.IProcBus,
 	cpchIdx CommandProcessorsChannelGroupIdxType, qpcgIdx QueryProcessorsChannelGroupIdxType,
-	cpAmount coreutils.CommandProcessorsCount, vvmApps VVMApps) ibus.IBus {
+	cpAmount coreutils.NumCommandProcessors, vvmApps VVMApps) ibus.IBus {
 	return ibusmem.Provide(func(requestCtx context.Context, sender ibus.ISender, request ibus.Request) {
 		// Handling Command/Query messages
 		// router -> SendRequest2(ctx, ...) -> requestHandler(ctx, ... ) - вот этот контекст. Если connection gracefully closed, то этот ctx.Done()
@@ -80,7 +80,7 @@ func provideIBus(appParts appparts.IAppPartitions, procbus iprocbus.IProcBus,
 
 func deliverToProcessors(request ibus.Request, requestCtx context.Context, appQName istructs.AppQName, sender ibus.ISender, funcQName appdef.QName,
 	procbus iprocbus.IProcBus, token string, cpchIdx CommandProcessorsChannelGroupIdxType, qpcgIdx QueryProcessorsChannelGroupIdxType,
-	cpCount coreutils.CommandProcessorsCount, partitionID istructs.PartitionID) {
+	cpCount coreutils.NumCommandProcessors, partitionID istructs.PartitionID) {
 	switch request.Resource[:1] {
 	case "q":
 		iqm := queryprocessor.NewQueryMessage(requestCtx, appQName, istructs.PartitionID(request.PartitionNumber), istructs.WSID(request.WSID), sender, request.Body, funcQName, request.Host, token)

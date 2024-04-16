@@ -31,6 +31,7 @@ import (
 	imetrics "github.com/voedger/voedger/pkg/metrics"
 	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys/authnz"
+	coreutils "github.com/voedger/voedger/pkg/utils"
 	"github.com/voedger/voedger/pkg/vvm/engines"
 )
 
@@ -177,7 +178,7 @@ type (
 
 func deployTestApp(
 	appName istructs.AppQName,
-	appPartsCount int,
+	appPartsCount coreutils.NumAppPartitions,
 	partID []istructs.PartitionID,
 	cachedStorage bool,
 	prepareAppDef appDefCallback,
