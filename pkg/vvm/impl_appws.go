@@ -36,6 +36,7 @@ func BuildAppWorkspaces(vvm *VVM, vvmConfig *VVMConfig) error {
 				logger.Verbose("app workspace", appQName, wsNum, "(", appWSID, ") inited already")
 				continue
 			}
+			
 			// TODO: eliminate this after move BuildAppWorkspaces to AppDeploy stage
 			totalAppPartsCount := getAppPartsCount(appQName, vvm.BuiltInAppsPackages)
 			partition := coreutils.PartitionID(appWSID, coreutils.CommandProcessorsCount(totalAppPartsCount))
