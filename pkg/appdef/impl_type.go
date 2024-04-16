@@ -101,7 +101,7 @@ func (r *typeRef) valid(tt IWithTypes) (bool, error) {
 	if (r.name == NullQName) || (r.name == QNameANY) || (r.target(tt) != nil) {
 		return true, nil
 	}
-	return false, fmt.Errorf("type «%v» is not found: %w", r.name, ErrTypeNotFound)
+	return false, fmt.Errorf("%w: %v", ErrTypeNotFound, r.name)
 }
 
 // Validate specified type.

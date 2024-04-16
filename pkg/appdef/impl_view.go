@@ -240,7 +240,7 @@ func newViewClustCols(v *view) *viewClustCols {
 func (cc *viewClustCols) addDataField(name FieldName, dataType QName, constraints ...IConstraint) {
 	d := cc.app.Data(dataType)
 	if d == nil {
-		panic(fmt.Errorf("%v: data type «%v» not found: %w", cc.view, dataType, ErrTypeNotFound))
+		panic(fmt.Errorf("%v: data type not found: %w: %v", cc.view, ErrTypeNotFound, dataType))
 	}
 
 	cc.panicIfVarFieldDuplication(name, d.DataKind())

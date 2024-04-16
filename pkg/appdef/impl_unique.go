@@ -27,7 +27,7 @@ func newUnique(name QName, fieldNames []FieldName, fields IFields) *unique {
 	for _, f := range fieldNames {
 		fld := fields.Field(f)
 		if fld == nil {
-			panic(fmt.Errorf("can not create unique «%s»: field «%s» not found: %w", name, f, ErrFieldNotFound))
+			panic(fmt.Errorf("can not create unique «%s»: %w: %v", name, ErrFieldNotFound, f))
 		}
 		u.fields = append(u.fields, fld)
 	}
@@ -71,7 +71,7 @@ func (uu *uniques) setUniqueField(name FieldName) {
 
 	fld := uu.fields.Field(name)
 	if fld == nil {
-		panic((fmt.Errorf("unique field name «%v» not found: %w", name, ErrFieldNotFound)))
+		panic((fmt.Errorf("unique field name not found: %w: %v", ErrFieldNotFound, name)))
 	}
 
 	uu.field = fld
