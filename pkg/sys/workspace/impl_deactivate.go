@@ -9,8 +9,8 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/untillpro/goutils/logger"
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/itokens"
@@ -216,7 +216,7 @@ func projectorApplyDeactivateWorkspace(federation coreutils.IFederation, tokensA
 				return nil
 			}
 			profileWSID := istructs.WSID(subject.AsInt64(invite.Field_ProfileWSID))
-			
+
 			// app is always current
 			// impossible to have logins from different apps among subjects (Michael said)
 			url := fmt.Sprintf(`api/%s/%d/c.sys.OnJoinedWorkspaceDeactivated`, appQName, profileWSID)

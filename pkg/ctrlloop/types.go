@@ -11,7 +11,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/untillpro/goutils/logger"
+	"github.com/voedger/voedger/pkg/goutils/logger"
 )
 
 type (

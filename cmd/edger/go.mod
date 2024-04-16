@@ -7,7 +7,6 @@ replace github.com/voedger/voedger => ../..
 require (
 	github.com/spf13/cobra v1.7.0
 	github.com/stretchr/testify v1.8.4
-	github.com/untillpro/goutils v0.0.0-20231117130619-11fe1908c171
 	github.com/voedger/voedger v0.0.0-00010101000000-000000000000
 )
 
