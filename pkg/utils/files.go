@@ -15,6 +15,8 @@ import (
 	"slices"
 )
 
+// copies the specified dir from the provided FS to disk to path specified by dst
+// use "." src to copy the entire srcFS content
 func CopyDirFS(srcFS IReadFS, src, dst string, optFuncs ...CopyOpt) error {
 	opts := &copyOpts{}
 	for _, optFunc := range optFuncs {
@@ -23,6 +25,7 @@ func CopyDirFS(srcFS IReadFS, src, dst string, optFuncs ...CopyOpt) error {
 	return copyDirFSOpts(srcFS, src, dst, opts)
 }
 
+// copies the specified file from the provided FS to disk to path specified by dst
 func CopyFileFS(srcFS fs.FS, src, dst string, optFuncs ...CopyOpt) error {
 	opts := &copyOpts{}
 	for _, optFunc := range optFuncs {
