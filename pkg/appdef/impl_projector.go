@@ -10,15 +10,18 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+
+	"github.com/robfig/cron/v3"
 )
 
 // # Implements:
 //   - IProjector
 type projector struct {
 	extension
-	sync      bool
-	sysErrors bool
-	events    *events
+	sync         bool
+	sysErrors    bool
+	events       *events
+	cronSchedule string
 }
 
 func newProjector(app *appDef, name QName) *projector {
@@ -30,11 +33,15 @@ func newProjector(app *appDef, name QName) *projector {
 	return prj
 }
 
+func (prj projector) CronSchedule() string { return prj.cronSchedule }
+
 func (prj projector) Events() IProjectorEvents { return prj.events }
 
 func (prj projector) Sync() bool { return prj.sync }
 
 func (prj projector) WantErrors() bool { return prj.sysErrors }
+
+func (prj *projector) setCronSchedule(cs string) { prj.cronSchedule = cs }
 
 func (prj *projector) setSync(sync bool) { prj.sync = sync }
 
@@ -58,6 +65,11 @@ func newProjectorBuilder(projector *projector) *projectorBuilder {
 
 func (pb *projectorBuilder) Events() IProjectorEventsBuilder { return pb.events }
 
+func (pb *projectorBuilder) SetCronSchedule(cs string) IProjectorBuilder {
+	pb.projector.setCronSchedule(cs)
+	return pb
+}
+
 func (pb *projectorBuilder) SetSync(sync bool) IProjectorBuilder {
 	pb.projector.setSync(sync)
 	return pb
@@ -74,9 +86,18 @@ func (pb *projectorBuilder) SetWantErrors() IProjectorBuilder {
 //   - if events set is empty
 func (prj *projector) Validate() (err error) {
 	err = prj.extension.Validate()
-	if len(prj.events.events) == 0 {
+
+	if (len(prj.events.events) == 0) && (prj.cronSchedule == "") {
 		err = errors.Join(err,
 			fmt.Errorf("%v: events set is empty: %w", prj, ErrEmptyProjectorEvents))
+	}
+
+	if prj.cronSchedule != "" {
+		_, e := cron.ParseStandard(prj.cronSchedule)
+		if e != nil {
+			err = errors.Join(err,
+				fmt.Errorf("%v: %w: %w", prj, ErrInvalidProjectorCronSchedule, e))
+		}
 	}
 	return err
 }
@@ -123,7 +144,7 @@ func (ee *events) add(on QName, event ...ProjectorEventKind) {
 
 	t := ee.app.TypeByName(on)
 	if t == nil {
-		panic(fmt.Errorf("type «%v» not found: %w", on, ErrNameNotFound))
+		panic(fmt.Errorf("%w: %v", ErrTypeNotFound, on))
 	}
 	switch t.Kind() {
 	case TypeKind_GDoc, TypeKind_GRecord, TypeKind_CDoc, TypeKind_CRecord, TypeKind_WDoc, TypeKind_WRecord, // CUD
