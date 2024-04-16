@@ -14,8 +14,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/untillpro/goutils/iterate"
-	"github.com/untillpro/goutils/logger"
+	"github.com/voedger/voedger/pkg/goutils/iterate"
+	"github.com/voedger/voedger/pkg/goutils/logger"
 	"golang.org/x/exp/maps"
 
 	"github.com/voedger/voedger/pkg/appdef"

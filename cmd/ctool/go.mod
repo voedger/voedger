@@ -7,7 +7,6 @@ require (
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/spf13/cobra v1.7.0
 	github.com/stretchr/testify v1.8.4
-	github.com/untillpro/goutils v0.0.0-20231117130619-11fe1908c171
 	golang.org/x/crypto v0.18.0
 )
 

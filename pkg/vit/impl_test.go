@@ -256,7 +256,7 @@ func TestEmailExpectation(t *testing.T) {
 	k.PutString(state.Field_Body, "Hello world")
 
 	t.Run("basic usage", func(t *testing.T) {
-		require.Nil(s.NewValue(k))
+		require.NotNil(s.NewValue(k))
 		readyToFlush, err := s.ApplyIntents()
 		require.True(readyToFlush)
 		require.NoError(err)
@@ -269,7 +269,7 @@ func TestEmailExpectation(t *testing.T) {
 		vit.TearDown()
 		newT := &testing.T{}
 		vit = NewVIT(newT, &SharedConfig_App1)
-		require.Nil(s.NewValue(k))
+		require.NotNil(s.NewValue(k))
 		readyToFlush, err := s.ApplyIntents()
 		require.True(readyToFlush)
 		require.NoError(err)

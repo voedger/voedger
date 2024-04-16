@@ -23,6 +23,7 @@ import (
 	"github.com/voedger/voedger/pkg/isecrets"
 	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/parser"
 	"github.com/voedger/voedger/pkg/pipeline"
 	commandprocessor "github.com/voedger/voedger/pkg/processors/command"
@@ -37,7 +38,7 @@ type OperatorCommandProcessors pipeline.ISyncOperator
 type OperatorCommandProcessor pipeline.ISyncOperator
 type OperatorQueryProcessors pipeline.ISyncOperator
 type OperatorQueryProcessor pipeline.ISyncOperator
-type AppServiceFactory func(ctx context.Context, appQName istructs.AppQName, asyncProjectors istructs.Projectors, appPartsCount int) pipeline.ISyncOperator
+type AppServiceFactory func(ctx context.Context, appQName istructs.AppQName, asyncProjectors istructs.Projectors, appPartsCount coreutils.NumAppPartitions) pipeline.ISyncOperator
 type AppPartitionFactory func(ctx context.Context, appQName istructs.AppQName, asyncProjectors istructs.Projectors, partitionID istructs.PartitionID) pipeline.ISyncOperator
 type AsyncActualizersFactory func(ctx context.Context, appQName istructs.AppQName, asyncProjectors istructs.Projectors, partitionID istructs.PartitionID, opts []state.ActualizerStateOptFunc) pipeline.ISyncOperator
 type OperatorAppServicesFactory func(ctx context.Context) pipeline.ISyncOperator
@@ -58,6 +59,13 @@ type VVMApps []istructs.AppQName
 type BuiltInAppPackages struct {
 	apppartsctl.BuiltInApp
 	Packages []parser.PackageFS // need for build baseline schemas
+}
+type AppConfigsTypeEmpty istructsmem.AppConfigsType
+
+type AppsArtefacts struct {
+	istructsmem.AppConfigsType
+	builtInAppPackages []BuiltInAppPackages
+	appEPs             map[istructs.AppQName]extensionpoints.IExtensionPoint
 }
 
 type BusTimeout time.Duration
@@ -126,8 +134,8 @@ type VVMConfig struct {
 	BlobberServiceChannels     router.BlobberServiceChannels
 	BLOBMaxSize                router.BLOBMaxSizeType
 	Name                       commandprocessor.VVMName
-	NumCommandProcessors       coreutils.CommandProcessorsCount
-	NumQueryProcessors         coreutils.QueryProcessorsCount
+	NumCommandProcessors       coreutils.NumCommandProcessors
+	NumQueryProcessors         coreutils.NumQueryProcessors
 	MaxPrepareQueries          MaxPrepareQueriesType
 	StorageCacheSize           StorageCacheSizeType
 	processorsChannels         []ProcesorChannel

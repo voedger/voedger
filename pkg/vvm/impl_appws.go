@@ -7,7 +7,7 @@ package vvm
 import (
 	"strconv"
 
-	"github.com/untillpro/goutils/logger"
+	"github.com/voedger/voedger/pkg/goutils/logger"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -19,7 +19,7 @@ import (
 
 // TODO: currently AppWorkspace are created automatically at MainClusterID only. Any request to any other ClusterID -> `workspace is not initialized` error
 func BuildAppWorkspaces(vvm *VVM, vvmConfig *VVMConfig) error {
-	for appQName := range vvm.AppConfigsType {
+	for appQName := range vvmConfig.VVMAppsBuilder {
 		pLogOffsets := map[istructs.PartitionID]istructs.Offset{}
 		wLogOffset := istructs.FirstOffset
 		as, err := vvm.IAppStructsProvider.AppStructs(appQName)
@@ -36,18 +36,19 @@ func BuildAppWorkspaces(vvm *VVM, vvmConfig *VVMConfig) error {
 				logger.Verbose("app workspace", appQName, wsNum, "(", appWSID, ") inited already")
 				continue
 			}
+
 			// TODO: eliminate this after move BuildAppWorkspaces to AppDeploy stage
 			totalAppPartsCount := getAppPartsCount(appQName, vvm.BuiltInAppsPackages)
-			partition := coreutils.PartitionID(appWSID, coreutils.CommandProcessorsCount(totalAppPartsCount))
-			if _, ok := pLogOffsets[partition]; !ok {
-				pLogOffsets[partition] = istructs.FirstOffset
+			partitionID := coreutils.AppPartitionID(appWSID, totalAppPartsCount)
+			if _, ok := pLogOffsets[partitionID]; !ok {
+				pLogOffsets[partitionID] = istructs.FirstOffset
 			}
 			grebp := istructs.GenericRawEventBuilderParams{
-				HandlingPartition: partition,
+				HandlingPartition: partitionID,
 				Workspace:         appWSID,
 				QName:             istructs.QNameCommandCUD,
 				RegisteredAt:      istructs.UnixMilli(vvmConfig.TimeFunc().UnixMilli()),
-				PLogOffset:        pLogOffsets[partition],
+				PLogOffset:        pLogOffsets[partitionID],
 				WLogOffset:        wLogOffset,
 			}
 			reb := as.Events().GetSyncRawEventBuilder(
@@ -72,7 +73,7 @@ func BuildAppWorkspaces(vvm *VVM, vvmConfig *VVMConfig) error {
 				return err
 			}
 			defer pLogEvent.Release()
-			pLogOffsets[partition]++
+			pLogOffsets[partitionID]++
 			if err := as.Records().Apply(pLogEvent); err != nil {
 				return err
 			}
@@ -87,12 +88,12 @@ func BuildAppWorkspaces(vvm *VVM, vvmConfig *VVMConfig) error {
 }
 
 // TODO: eliminate this after move BuildAppWorkspaces to AppDeploy stage
-func getAppPartsCount(appQName istructs.AppQName, builtins []BuiltInAppPackages) int {
+func getAppPartsCount(appQName istructs.AppQName, builtins []BuiltInAppPackages) coreutils.NumAppPartitions {
 	for _, bi := range builtins {
 		if bi.BuiltInApp.Name != appQName {
 			continue
 		}
-		return bi.PartsCount
+		return bi.NumParts
 	}
 	// notest
 	panic(appQName.String() + " not found in BuiltInAppsPackages")

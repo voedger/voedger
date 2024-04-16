@@ -22,7 +22,7 @@ import (
 	"sync"
 
 	"github.com/gorilla/mux"
-	"github.com/untillpro/goutils/logger"
+	"github.com/voedger/voedger/pkg/goutils/logger"
 	"golang.org/x/crypto/acme/autocert"
 	"golang.org/x/exp/slices"
 

@@ -21,14 +21,6 @@ func (ab VVMAppsBuilder) Add(appQName istructs.AppQName, builder apps.AppBuilder
 	ab[appQName] = builder
 }
 
-func (ab VVMAppsBuilder) PrepareAppsExtensionPoints() map[istructs.AppQName]extensionpoints.IExtensionPoint {
-	seps := map[istructs.AppQName]extensionpoints.IExtensionPoint{}
-	for appQName := range ab {
-		seps[appQName] = extensionpoints.NewRootExtensionPoint()
-	}
-	return seps
-}
-
 func buildAppFromPackagesFS(fses []parser.PackageFS, adf appdef.IAppDefBuilder) error {
 	packageSchemaASTs := []*parser.PackageSchemaAST{}
 	for _, fs := range fses {
@@ -45,27 +37,33 @@ func buildAppFromPackagesFS(fses []parser.PackageFS, adf appdef.IAppDefBuilder) 
 	return parser.BuildAppDefs(appSchemaAST, adf)
 }
 
-func (ab VVMAppsBuilder) BuiltInAppsPackages(cfgs istructsmem.AppConfigsType, apis apps.APIs, appsEPs map[istructs.AppQName]extensionpoints.IExtensionPoint) (builtInAppsPackages []BuiltInAppPackages, err error) {
+func (ab VVMAppsBuilder) BuildAppsArtefacts(apis apps.APIs, emptyCfgs AppConfigsTypeEmpty) (appsArtefacts AppsArtefacts, err error) {
+	appsArtefacts.appEPs = map[istructs.AppQName]extensionpoints.IExtensionPoint{}
+	appsArtefacts.AppConfigsType = istructsmem.AppConfigsType(emptyCfgs)
 	for appQName, appBuilder := range ab {
+		appEPs := extensionpoints.NewRootExtensionPoint()
+		appsArtefacts.appEPs[appQName] = appEPs
 		adb := appdef.New()
-		appEPs := appsEPs[appQName]
-		cfg := cfgs.AddConfig(appQName, adb)
+		cfg := appsArtefacts.AppConfigsType.AddConfig(appQName, adb)
 		builtInAppDef := appBuilder(apis, cfg, appEPs)
 		if err := buildAppFromPackagesFS(builtInAppDef.Packages, adb); err != nil {
-			return nil, err
+			return appsArtefacts, err
+		}
+		// query IAppStructs to build IAppDef only once - on AppConfigType.preapre()
+		_, err = apis.IAppStructsProvider.AppStructs(appQName)
+		if err != nil {
+			return appsArtefacts, err
 		}
 		builtInAppPackages := BuiltInAppPackages{
 			BuiltInApp: apppartsctl.BuiltInApp{
 				Name:           appQName,
-				PartsCount:     builtInAppDef.PartsCount,
+				NumParts:       builtInAppDef.NumParts,
 				EnginePoolSize: builtInAppDef.EnginePoolSize,
+				Def:            cfg.AppDef,
 			},
 			Packages: builtInAppDef.Packages,
 		}
-		if builtInAppPackages.Def, err = adb.Build(); err != nil {
-			return nil, err
-		}
-		builtInAppsPackages = append(builtInAppsPackages, builtInAppPackages)
+		appsArtefacts.builtInAppPackages = append(appsArtefacts.builtInAppPackages, builtInAppPackages)
 	}
-	return builtInAppsPackages, nil
+	return appsArtefacts, nil
 }

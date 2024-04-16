@@ -14,7 +14,6 @@ var (
 	View           = appdef.NewQName(appdef.SysPackage, "View")
 	Record         = appdef.NewQName(appdef.SysPackage, "Record")
 	WLog           = appdef.NewQName(appdef.SysPackage, "WLog")
-	PLog           = appdef.NewQName(appdef.SysPackage, "PLog")
 	Http           = appdef.NewQName(appdef.SysPackage, "Http")
 	SendMail       = appdef.NewQName(appdef.SysPackage, "SendMail")
 	AppSecret      = appdef.NewQName(appdef.SysPackage, "AppSecret")

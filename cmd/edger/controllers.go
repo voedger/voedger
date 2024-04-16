@@ -15,7 +15,7 @@ import (
 	"syscall"
 	"time"
 
-	goutilsExec "github.com/untillpro/goutils/exec"
+	goutilsExec "github.com/voedger/voedger/pkg/goutils/exec"
 )
 
 // nolint

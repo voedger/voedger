@@ -6,8 +6,10 @@
 package exttinygo
 
 import (
-	"runtime"
 	"unsafe"
+
+	"github.com/voedger/voedger/pkg/exttinygo/internal"
+	safe "github.com/voedger/voedger/pkg/state/isafestateapi"
 )
 
 func Assert(condition bool, msg string) {
@@ -17,85 +19,37 @@ func Assert(condition bool, msg string) {
 }
 
 func Panic(msg string) {
-	hostPanic(uint32(uintptr(unsafe.Pointer(unsafe.StringData(msg)))), uint32(len(msg)))
+	internal.HostPanic(uint32(uintptr(unsafe.Pointer(unsafe.StringData(msg)))), uint32(len(msg)))
 }
 
-const maxUint = ^uint64(0)
+func keyBuilderImpl(storage, entity string) (b TKeyBuilder) {
+	return TKeyBuilder(internal.SafeStateAPI.KeyBuilder(storage, entity))
+}
 
-func queryValueImpl(key TKeyBuilder) (TValue, bool) {
-	id := hostQueryValue(uint64(key))
-	if id != maxUint {
-		return TValue(id), true
-	}
-	return TValue(0), false
+func queryValueImpl(key TKeyBuilder) (value TValue, exists bool) {
+	v, exsts := internal.SafeStateAPI.QueryValue(safe.TKeyBuilder(key))
+	return TValue(v), exsts
 }
 
 func mustGetValueImpl(key TKeyBuilder) TValue {
-	return TValue(hostGetValue(uint64(key)))
+	return TValue(internal.SafeStateAPI.MustGetValue(safe.TKeyBuilder(key)))
+}
+
+var readCallback func(key TKey, value TValue)
+
+var safeReadCallback = func(key safe.TKey, value safe.TValue) {
+	readCallback(TKey(key), TValue(value))
+}
+
+func readValuesImpl(key TKeyBuilder, cb func(key TKey, value TValue)) {
+	readCallback = cb
+	internal.SafeStateAPI.ReadValues(safe.TKeyBuilder(key), safeReadCallback)
 }
 
 func updateValueImpl(key TKeyBuilder, existingValue TValue) TIntent {
-	return TIntent(hostUpdateValue(uint64(key), uint64(existingValue)))
+	return TIntent(internal.SafeStateAPI.UpdateValue(safe.TKeyBuilder(key), safe.TValue(existingValue)))
 }
 
 func newValueImpl(key TKeyBuilder) TIntent {
-	return TIntent(hostNewValue(uint64(key)))
-}
-
-func readValuesImpl(key TKeyBuilder, callback func(key TKey, value TValue)) {
-	currentReadCallback = callback
-	hostReadValues(uint64(key))
-}
-
-var currentReadCallback func(key TKey, value TValue)
-
-//lint:ignore U1000 this is an exported func
-//export WasmOnReadValue
-func onReadValue(key, value uint64) {
-	currentReadCallback(TKey(key), TValue(value))
-}
-
-/*
-	returns 0 when not exists
-*/
-
-//lint:ignore U1000 this is an exported func
-//export WasmAbiVersion_0_0_1
-func proxyABIVersion() {
-}
-
-var ms runtime.MemStats
-
-//lint:ignore U1000 this is an exported func
-//export WasmGetHeapInuse
-func getHeapInuse() uint64 {
-	runtime.ReadMemStats(&ms)
-	return ms.HeapInuse
-}
-
-//lint:ignore U1000 this is an exported func
-//export WasmGetMallocs
-func getMallocs() uint64 {
-	runtime.ReadMemStats(&ms)
-	return ms.Mallocs
-}
-
-//lint:ignore U1000 this is an exported func
-//export WasmGetFrees
-func getFrees() uint64 {
-	runtime.ReadMemStats(&ms)
-	return ms.Frees
-}
-
-//lint:ignore U1000 this is an exported func
-//export WasmGetHeapSys
-func getHeapSys() uint64 {
-	runtime.ReadMemStats(&ms)
-	return ms.HeapSys
-}
-
-//lint:ignore U1000 this is an exported func
-//export WasmGC
-func gc() {
-	runtime.GC()
+	return TIntent(internal.SafeStateAPI.NewValue(safe.TKeyBuilder(key)))
 }

@@ -38,7 +38,8 @@ var cfg = it.NewSharedVITConfig(
 		plogOffsets := map[istructs.PartitionID]istructs.Offset{}
 		for wsNum := 0; wsNum < writeCnt; wsNum++ {
 			wsid := istructs.WSID(wsNum + int(istructs.MaxPseudoBaseWSID))
-			partNum := coreutils.PartitionID(wsid, vit.NumCommandProcessors)
+			partNum, err := vit.IAppPartitions.AppWorkspacePartitionID(istructs.AppQName_test1_app1, wsid)
+			require.NoError(vit.T, err)
 			pLogOffset := plogOffsets[partNum]
 			err = wsdescutil.CreateCDocWorkspaceDescriptorStub(as, partNum, istructs.WSID(wsNum+int(istructs.MaxPseudoBaseWSID)), it.QNameApp1_TestWSKind, pLogOffset, 1)
 			require.NoError(vit.T, err)
