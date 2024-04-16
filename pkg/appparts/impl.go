@@ -123,7 +123,7 @@ func (aps *apps) AppWorkspacePartitionID(appName istructs.AppQName, ws istructs.
 	if err != nil {
 		return 0, err
 	}
-	return coreutils.AppPartitionID(ws, coreutils.NumAppPartitions(pc)), nil
+	return coreutils.AppPartitionID(ws, pc), nil
 }
 
 func (aps *apps) WaitForBorrow(ctx context.Context, appName istructs.AppQName, partID istructs.PartitionID, proc cluster.ProcessorKind) (IAppPartition, error) {
