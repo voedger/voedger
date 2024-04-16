@@ -35,31 +35,31 @@ func Test_MsgFormatter(t *testing.T) {
 func Test_CheckRightPrefix(t *testing.T) {
 	// 1. Info LogLevel = LogLevelInfo
 	SetLogLevel(LogLevelInfo)
-	assert.Equal(t, getLevelPrefix(globalLogPrinter.logLevel), infoPrefix)
+	assert.Equal(t, infoPrefix, getLevelPrefix(globalLogPrinter.logLevel))
 
 	// 2. Trace LogLevel = LogLevelTrace
 	SetLogLevel(LogLevelTrace)
-	assert.Equal(t, getLevelPrefix(globalLogPrinter.logLevel), tracePrefix)
+	assert.Equal(t, tracePrefix, getLevelPrefix(globalLogPrinter.logLevel))
 
 	// 3. Warning LogLevel = LogLevelWarning
 	SetLogLevel(LogLevelWarning)
-	assert.Equal(t, getLevelPrefix(globalLogPrinter.logLevel), warningPrefix)
+	assert.Equal(t, warningPrefix, getLevelPrefix(globalLogPrinter.logLevel))
 
 	// 4. Error LogLevel = LogLevelError
 	SetLogLevel(LogLevelError)
-	assert.Equal(t, getLevelPrefix(globalLogPrinter.logLevel), errorPrefix)
+	assert.Equal(t, errorPrefix, getLevelPrefix(globalLogPrinter.logLevel))
 
 	// 5. Unexisting level
 	SetLogLevel(7)
-	assert.Equal(t, getLevelPrefix(globalLogPrinter.logLevel), "")
+	assert.Equal(t, "", getLevelPrefix(globalLogPrinter.logLevel))
 
 	SetLogLevel(LogLevelInfo)
 }
 
 func Test_GetFuncName(t *testing.T) {
 	funcName, line := globalLogPrinter.getFuncName(2)
-	assert.Equal(t, funcName, "testing.tRunner")
-	assert.True(t, line > 0)
+	assert.Equal(t, "testing.tRunner", funcName)
+	assert.Greater(t, line, 0)
 }
 
 func Benchmark_FuncForPC(b *testing.B) {
@@ -71,7 +71,7 @@ func Benchmark_FuncForPC(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		funcName, _ = globalLogPrinter.getFuncName(2)
 	}
-	assert.Equal(b, funcName, "testing.(*B).runN")
+	assert.Equal(b, "testing.(*B).runN", funcName)
 
 	elapsed := time.Since(start).Seconds()
 	b.ReportMetric(float64(b.N)/elapsed, "rps")

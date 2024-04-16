@@ -233,7 +233,7 @@ func Test_ForEachMap(t *testing.T) {
 		keys, values := "", 0
 		ForEachMap(tested.Fields, func(k string, v int) { keys += k; values += v })
 
-		require.Equal(3, len(keys))
+		require.Len(keys, 3)
 		require.Contains(keys, "a")
 		require.Contains(keys, "b")
 		require.Contains(keys, "c")
@@ -247,7 +247,7 @@ func Test_ForEachMap(t *testing.T) {
 		keys, values := "", 0
 		ForEachMap(tested.Fields, func(k string, v int) { keys += k; values += v })
 
-		require.Equal(3, len(keys))
+		require.Len(keys, 3)
 		require.Contains(keys, "a")
 		require.Contains(keys, "b")
 		require.Contains(keys, "c")
@@ -261,7 +261,7 @@ func Test_ForEachMap(t *testing.T) {
 		keys, values := "", 0
 		ForEachMap(Map(tested), func(k string, v int) { keys += k; values += v })
 
-		require.Equal(3, len(keys))
+		require.Len(keys, 3)
 		require.Contains(keys, "a")
 		require.Contains(keys, "b")
 		require.Contains(keys, "c")

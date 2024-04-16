@@ -87,7 +87,7 @@ func Test_BasicUsage_CustomPrintLine(t *testing.T) {
 
 	// Define myPrintLine
 	myPrintLine := func(level logger.TLogLevel, line string) {
-		line = line + "myPrintLine"
+		line += "myPrintLine"
 		logger.DefaultPrintLine(level, line)
 	}
 
@@ -105,7 +105,7 @@ func Test_BasicUsage_CustomPrintLine(t *testing.T) {
 			return nil
 		})
 		require.NoError(err)
-		require.Equal(strStderr, "")
+		require.Equal("", strStderr)
 		require.Contains(strStdout, "myPrintLine")
 	}
 
@@ -124,7 +124,7 @@ func Test_SkipStackFrames(t *testing.T) {
 			return loggerHelperWithSkipStackFrames(0, "hello")
 		})
 		require.NoError(err)
-		require.Equal(strStderr, "")
+		require.Equal("", strStderr)
 		require.Contains(strStdout, funcNamePattern)
 	}
 
@@ -134,7 +134,7 @@ func Test_SkipStackFrames(t *testing.T) {
 			return loggerHelperWithSkipStackFrames(1, "hello")
 		})
 		require.NoError(err)
-		require.Equal(strStderr, "")
+		require.Equal("", strStderr)
 		require.NotContains(strStdout, funcNamePattern)
 	}
 
@@ -154,7 +154,7 @@ func Test_StdoutStderr_LogLevel(t *testing.T) {
 		})
 		require.NoError(err)
 		require.Contains(strStderr, "Error arg1 arg2")
-		require.Equal(strStdout, "")
+		require.Equal("", strStdout)
 	}
 
 	// LogLevelWarning
@@ -230,7 +230,7 @@ func (m *mystruct) iWantToLog() {
 func TestMultithread(t *testing.T) {
 	require := require.New(t)
 	r, w, err := os.Pipe()
-	require.Nil(err)
+	require.NoError(err)
 	oldStdout := os.Stdout
 	defer func() { os.Stdout = oldStdout }()
 	os.Stdout = w
@@ -256,7 +256,7 @@ func TestMultithread(t *testing.T) {
 	go func() {
 		buf := bytes.NewBuffer(nil)
 		_, err := io.Copy(buf, r)
-		require.Nil(err)
+		require.NoError(err)
 		stdout = buf.String()
 		close(wait)
 	}()
