@@ -155,7 +155,7 @@ func (ff *fields) UserFieldCount() int {
 func (ff *fields) addDataField(name FieldName, data QName, required bool, constraints ...IConstraint) {
 	d := ff.app.Data(data)
 	if d == nil {
-		panic(fmt.Errorf("data type «%v» not found: %w", data, ErrNameNotFound))
+		panic(fmt.Errorf("data type not found: %w: %v", ErrTypeNotFound, data))
 	}
 	if len(constraints) > 0 {
 		d = newAnonymousData(ff.app, d.DataKind(), data, constraints...)
@@ -244,7 +244,7 @@ func (ff *fields) makeSysFields() {
 func (ff *fields) setFieldComment(name FieldName, comment ...string) {
 	fld := ff.fields[name]
 	if fld == nil {
-		panic(fmt.Errorf("field «%s» not found: %w", name, ErrNameNotFound))
+		panic(fmt.Errorf("%w: %v", ErrFieldNotFound, name))
 	}
 	if fld, ok := fld.(interface{ setComment(comment ...string) }); ok {
 		fld.setComment(comment...)
@@ -254,7 +254,7 @@ func (ff *fields) setFieldComment(name FieldName, comment ...string) {
 func (ff *fields) setFieldVerify(name FieldName, vk ...VerificationKind) {
 	fld := ff.fields[name]
 	if fld == nil {
-		panic(fmt.Errorf("field «%s» not found: %w", name, ErrNameNotFound))
+		panic(fmt.Errorf("%w: %v", ErrFieldNotFound, name))
 	}
 	vf := fld.(interface{ setVerify(k ...VerificationKind) })
 	vf.setVerify(vk...)
@@ -335,7 +335,7 @@ func validateTypeFields(t IType) (err error) {
 			for _, n := range rf.Refs() {
 				refType := t.App().TypeByName(n)
 				if refType == nil {
-					err = errors.Join(err, fmt.Errorf("%v: reference field «%s» refs to unknown type «%v»: %w", t, rf.Name(), n, ErrNameNotFound))
+					err = errors.Join(err, fmt.Errorf("%v: reference field «%s» refs to unknown type «%v»: %w", t, rf.Name(), n, ErrTypeNotFound))
 					continue
 				}
 				if _, ok := refType.(IRecord); !ok {
