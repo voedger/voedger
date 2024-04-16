@@ -47,6 +47,8 @@ var defaultACL = ACL{
 				qNameQryIssueVerifiedValueTokenForResetPassword,
 				qNameCmdChangePassword,
 				qNameQryModules,
+				// https://dev.untill.com/projects/#!688808
+				qNameQryGetDigitalReceipt,
 			},
 		},
 		policy: ACPolicy_Allow,
