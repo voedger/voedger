@@ -84,7 +84,7 @@ func (pb *projectorBuilder) SetWantErrors() IProjectorBuilder {
 //   - if events set is empty
 func (prj *projector) Validate() (err error) {
 	err = prj.extension.Validate()
-	if len(prj.events.events) == 0 {
+	if (len(prj.events.events) == 0) && (prj.cronSchedule == "") {
 		err = errors.Join(err,
 			fmt.Errorf("%v: events set is empty: %w", prj, ErrEmptyProjectorEvents))
 	}
