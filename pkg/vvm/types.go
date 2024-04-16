@@ -23,6 +23,7 @@ import (
 	"github.com/voedger/voedger/pkg/isecrets"
 	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/parser"
 	"github.com/voedger/voedger/pkg/pipeline"
 	commandprocessor "github.com/voedger/voedger/pkg/processors/command"
@@ -58,6 +59,13 @@ type VVMApps []istructs.AppQName
 type BuiltInAppPackages struct {
 	apppartsctl.BuiltInApp
 	Packages []parser.PackageFS // need for build baseline schemas
+}
+type AppConfigsTypeEmpty istructsmem.AppConfigsType
+
+type AppsArtefacts struct {
+	istructsmem.AppConfigsType
+	builtInAppPackages []BuiltInAppPackages
+	appEPs             map[istructs.AppQName]extensionpoints.IExtensionPoint
 }
 
 type BusTimeout time.Duration
