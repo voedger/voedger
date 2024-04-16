@@ -24,7 +24,7 @@ func Provide() apps.AppBuilder {
 		}
 		clusterPackageFS := cluster.Provide()
 		sysPackageFS := sys.Provide(cfg, smtp.Cfg{}, ep, nil, apis.TimeFunc, apis.ITokens, apis.IFederation, apis.IAppStructsProvider, apis.IAppTokensFactory,
-			apis.NumCommandProcessors, nil, apis.IAppStorageProvider)
+			nil, apis.IAppStorageProvider)
 		return apps.BuiltInAppDef{
 			AppQName: istructs.AppQName_sys_cluster,
 			Packages: []parser.PackageFS{clusterAppPackageFS, clusterPackageFS, sysPackageFS},

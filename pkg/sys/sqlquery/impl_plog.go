@@ -10,12 +10,12 @@ import (
 	"fmt"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/istructs"
-	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-func readPlog(ctx context.Context, wsid istructs.WSID, numCommandProcessors coreutils.CommandProcessorsCount, offset istructs.Offset, count int,
-	appStructs istructs.IAppStructs, f *filter, callback istructs.ExecQueryCallback, appDef appdef.IAppDef) error {
+func readPlog(ctx context.Context, wsid istructs.WSID, offset istructs.Offset, count int,
+	appStructs istructs.IAppStructs, f *filter, callback istructs.ExecQueryCallback, appDef appdef.IAppDef, appParts appparts.IAppPartitions) error {
 	if !f.acceptAll {
 		for field := range f.fields {
 			if !plogDef[field] {
@@ -23,7 +23,11 @@ func readPlog(ctx context.Context, wsid istructs.WSID, numCommandProcessors core
 			}
 		}
 	}
-	return appStructs.Events().ReadPLog(ctx, coreutils.PartitionID(wsid, numCommandProcessors), offset, count, func(plogOffset istructs.Offset, event istructs.IPLogEvent) (err error) {
+	partitionID, err := appParts.AppWorkspacePartitionID(appStructs.AppQName(), wsid)
+	if err != nil {
+		return err
+	}
+	return appStructs.Events().ReadPLog(ctx, partitionID, offset, count, func(plogOffset istructs.Offset, event istructs.IPLogEvent) (err error) {
 		data := make(map[string]interface{})
 		if f.filter("PlogOffset") {
 			data["PlogOffset"] = plogOffset

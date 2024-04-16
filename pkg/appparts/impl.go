@@ -15,6 +15,7 @@ import (
 	"github.com/voedger/voedger/pkg/cluster"
 	"github.com/voedger/voedger/pkg/iextengine"
 	"github.com/voedger/voedger/pkg/istructs"
+	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 type apps struct {
@@ -36,7 +37,7 @@ func newAppPartitions(asp istructs.IAppStructsProvider, saf SyncActualizerFactor
 	return a, func() {}, err
 }
 
-func (aps *apps) DeployApp(name istructs.AppQName, def appdef.IAppDef, partsCount int, engines [cluster.ProcessorKind_Count]int) {
+func (aps *apps) DeployApp(name istructs.AppQName, def appdef.IAppDef, partsCount coreutils.NumAppPartitions, engines [cluster.ProcessorKind_Count]int) {
 	aps.mx.Lock()
 	defer aps.mx.Unlock()
 
@@ -84,7 +85,7 @@ func (aps *apps) AppDef(appName istructs.AppQName) (appdef.IAppDef, error) {
 // Returns _total_ application partitions count.
 //
 // This is a configuration value for the application, independent of how many sections are currently deployed.
-func (aps *apps) AppPartsCount(appName istructs.AppQName) (int, error) {
+func (aps *apps) AppPartsCount(appName istructs.AppQName) (coreutils.NumAppPartitions, error) {
 	aps.mx.Lock()
 	defer aps.mx.Unlock()
 
@@ -122,7 +123,7 @@ func (aps *apps) AppWorkspacePartitionID(appName istructs.AppQName, ws istructs.
 	if err != nil {
 		return 0, err
 	}
-	return istructs.PartitionID(int(ws) % pc), nil
+	return coreutils.AppPartitionID(ws, coreutils.NumAppPartitions(pc)), nil
 }
 
 func (aps *apps) WaitForBorrow(ctx context.Context, appName istructs.AppQName, partID istructs.PartitionID, proc cluster.ProcessorKind) (IAppPartition, error) {

@@ -92,7 +92,7 @@ func ProvideApp2(apis apps.APIs, cfg *istructsmem.AppConfigType, ep extensionpoi
 		panic("no build info")
 	}
 	sysPackageFS := sys.Provide(cfg, TestSMTPCfg, ep, nil, apis.TimeFunc, apis.ITokens, apis.IFederation, apis.IAppStructsProvider, apis.IAppTokensFactory,
-		apis.NumCommandProcessors, buildInfo, apis.IAppStorageProvider)
+		buildInfo, apis.IAppStorageProvider)
 	app2PackageFS := parser.PackageFS{
 		Path: app2PkgPath,
 		FS:   SchemaTestApp2FS,
@@ -116,7 +116,7 @@ func ProvideApp1(apis apps.APIs, cfg *istructsmem.AppConfigType, ep extensionpoi
 		panic("no build info")
 	}
 	sysPackageFS := sys.Provide(cfg, TestSMTPCfg, ep, nil, apis.TimeFunc, apis.ITokens, apis.IFederation, apis.IAppStructsProvider, apis.IAppTokensFactory,
-		apis.NumCommandProcessors, buildInfo, apis.IAppStorageProvider)
+		buildInfo, apis.IAppStorageProvider)
 
 	// for rates test
 	cfg.Resources.Add(istructsmem.NewQueryFunction(

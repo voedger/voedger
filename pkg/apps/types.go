@@ -20,14 +20,12 @@ import (
 type APIs struct {
 	itokens.ITokens
 	istructs.IAppStructsProvider
-	istructsmem.AppConfigsType
 	istorage.IAppStorageProvider
 	payloads.IAppTokensFactory
 	coreutils.IFederation
 	coreutils.TimeFunc
-	NumCommandProcessors coreutils.CommandProcessorsCount
-	NumQueryProcessors   coreutils.QueryProcessorsCount
-	//appparts.IAppPartitions
+	NumQueryProcessors   coreutils.NumQueryProcessors
+	NumCommandProcessors coreutils.NumCommandProcessors
 }
 
 type AppBuilder func(apis APIs, cfg *istructsmem.AppConfigType, ep extensionpoints.IExtensionPoint) BuiltInAppDef
