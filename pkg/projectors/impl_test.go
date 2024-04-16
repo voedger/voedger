@@ -31,7 +31,6 @@ import (
 	imetrics "github.com/voedger/voedger/pkg/metrics"
 	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys/authnz"
-	coreutils "github.com/voedger/voedger/pkg/utils"
 	"github.com/voedger/voedger/pkg/vvm/engines"
 )
 
@@ -178,7 +177,7 @@ type (
 
 func deployTestApp(
 	appName istructs.AppQName,
-	appPartsCount coreutils.NumAppPartitions,
+	appPartsCount istructs.NumAppPartitions,
 	partID []istructs.PartitionID,
 	cachedStorage bool,
 	prepareAppDef appDefCallback,
@@ -198,6 +197,7 @@ func deployTestApp(
 
 	cfgs := make(istructsmem.AppConfigsType, 1)
 	cfg := cfgs.AddConfig(appName, appDefBuilder)
+	cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 	if prepareAppCfg != nil {
 		prepareAppCfg(cfg)
 		cfg.Resources.Add(istructsmem.NewCommandFunction(newWorkspaceCmd, istructsmem.NullCommandExec))

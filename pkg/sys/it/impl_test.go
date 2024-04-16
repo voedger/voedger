@@ -28,18 +28,16 @@ func TestAppWSAutoInitialization(t *testing.T) {
 
 	checkCDocsWSDesc(vit.VVMConfig, vit.VVM, require)
 
-	// further calls -> nothing happens, expect not errors
+	// further calls -> nothing happens, expect no errors
 	require.NoError(vvm.BuildAppWorkspaces(vit.VVM, vit.VVMConfig))
 	checkCDocsWSDesc(vit.VVMConfig, vit.VVM, require)
 }
 
 func checkCDocsWSDesc(vvmCfg *vvm.VVMConfig, vvm *vvm.VVM, require *require.Assertions) {
 	for appQName := range vvmCfg.VVMAppsBuilder {
-		as, err := vvm.AppStructs(istructs.AppQName_test1_app1)
+		as, err := vvm.AppStructs(appQName)
 		require.NoError(err)
-		for wsNum := 0; istructs.AppWSAmount(wsNum) < as.WSAmount(); wsNum++ {
-			as, err := vvm.IAppStructsProvider.AppStructs(appQName)
-			require.NoError(err)
+		for wsNum := 0; istructs.NumAppWorkspaces(wsNum) < as.NumAppWorkspaces(); wsNum++ {
 			appWSID := istructs.NewWSID(istructs.MainClusterID, istructs.WSID(wsNum+int(istructs.FirstBaseAppWSID)))
 			existingCDocWSDesc, err := as.Records().GetSingleton(appWSID, authnz.QNameCDocWorkspaceDescriptor)
 			require.NoError(err)

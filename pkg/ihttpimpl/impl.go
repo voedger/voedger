@@ -39,18 +39,18 @@ type appInfo struct {
 }
 
 type httpProcessor struct {
-	params       ihttp.CLIParams
-	router       *router
-	server       *http.Server
-	listener     net.Listener
-	acmeServer   *http.Server
-	acmeListener net.Listener
-	acmeDomains  *sync.Map
-	certCache    autocert.Cache
-	certManager  *autocert.Manager
-	bus          ibus.IBus
-	apps         map[istructs.AppQName]*appInfo
-	appsWSAmount map[istructs.AppQName]istructs.AppWSAmount
+	params             ihttp.CLIParams
+	router             *router
+	server             *http.Server
+	listener           net.Listener
+	acmeServer         *http.Server
+	acmeListener       net.Listener
+	acmeDomains        *sync.Map
+	certCache          autocert.Cache
+	certManager        *autocert.Manager
+	bus                ibus.IBus
+	apps               map[istructs.AppQName]*appInfo
+	numsAppsWorkspaces map[istructs.AppQName]istructs.NumAppWorkspaces
 	sync.RWMutex
 }
 
@@ -204,7 +204,7 @@ func (p *httpProcessor) DeployApp(app istructs.AppQName, numPartitions uint, num
 		numPartitions: numPartitions,
 		handlers:      make(map[istructs.PartitionID]ibus.RequestHandler),
 	}
-	p.appsWSAmount[app] = istructs.AppWSAmount(numAppWS)
+	p.numsAppsWorkspaces[app] = istructs.NumAppWorkspaces(numAppWS)
 	return nil
 }
 
@@ -221,7 +221,7 @@ func (p *httpProcessor) UndeployApp(app istructs.AppQName) error {
 		}
 	}
 	delete(p.apps, app)
-	delete(p.appsWSAmount, app)
+	delete(p.numsAppsWorkspaces, app)
 	return nil
 }
 
@@ -262,7 +262,7 @@ func (p *httpProcessor) registerRoutes() {
 
 func (p *httpProcessor) httpHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		routerpkg.RequestHandler(p.bus, ibus.DefaultTimeout, p.appsWSAmount)(w, r)
+		routerpkg.RequestHandler(p.bus, ibus.DefaultTimeout, p.numsAppsWorkspaces)(w, r)
 	}
 }
 

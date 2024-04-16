@@ -68,7 +68,7 @@ type IAppStructs interface {
 	CUDValidators() []CUDValidator
 	EventValidators() []EventValidator
 
-	WSAmount() AppWSAmount
+	NumAppWorkspaces() NumAppWorkspaces
 
 	AppTokens() IAppTokens
 }

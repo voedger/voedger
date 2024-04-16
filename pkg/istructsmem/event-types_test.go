@@ -745,7 +745,8 @@ func Test_EventUpdateRawCud(t *testing.T) {
 
 	cfgs := func() AppConfigsType {
 		cfgs := make(AppConfigsType, 1)
-		cfgs.AddConfig(istructs.AppQName_test1_app1, adb)
+		cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, adb)
+		cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 		return cfgs
 	}()
 
@@ -926,7 +927,8 @@ func Test_SingletonCDocEvent(t *testing.T) {
 
 	cfgs := func() AppConfigsType {
 		cfgs := make(AppConfigsType, 1)
-		cfgs.AddConfig(istructs.AppQName_test1_app1, adb)
+		cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, adb)
+		cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 		return cfgs
 	}()
 

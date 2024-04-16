@@ -109,5 +109,7 @@ type IRowWriter interface {
 	PutFromJSON(map[appdef.FieldName]any)
 }
 
-// App Workspace amount type. Need to wire
-type AppWSAmount int
+type NumAppWorkspaces int
+type NumAppPartitions int
+type NumCommandProcessors int
+type NumQueryProcessors int

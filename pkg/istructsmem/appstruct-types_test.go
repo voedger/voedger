@@ -32,9 +32,10 @@ func TestAppConfigsType_AddConfig(t *testing.T) {
 		adb := appdef.New()
 		adb.AddPackage("test", "test.com/test")
 		cfg := cfgs.AddConfig(app, adb)
-		require.NotNil(cfg)
+		cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 		require.Equal(cfg.Name, app)
 		require.Equal(cfg.ClusterAppID, id)
+		require.Equal(istructs.DefaultNumAppWorkspaces, cfg.NumAppWorkspaces())
 
 		_, storageProvider := teststore.New()
 		appStructs := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
@@ -61,7 +62,7 @@ func TestAppConfigsType_AddConfig(t *testing.T) {
 		adb := appdef.New()
 		adb.AddPackage("test", "test.com/test")
 
-		_ = cfgs.AddConfig(istructs.AppQName_test1_app1, adb)
+		cfgs.AddConfig(istructs.AppQName_test1_app1, adb).SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 
 		adb.AddObject(appdef.NewQName("test", "obj")).
 			AddContainer("unknown", appdef.NewQName("test", "unknown"), 0, 1) // <- error here: reference to unknown element type
@@ -77,7 +78,7 @@ func TestAppConfigsType_AddConfig(t *testing.T) {
 	t.Run("must be panic to add config for unknown app", func(t *testing.T) {
 		cfgs := make(AppConfigsType)
 		require.Panics(func() {
-			_ = cfgs.AddConfig(istructs.NewAppQName("unknown", "unknown"), appdef.New())
+			cfgs.AddConfig(istructs.NewAppQName("unknown", "unknown"), appdef.New()).SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 		})
 	})
 
@@ -106,6 +107,7 @@ func TestAppConfigsType_GetConfig(t *testing.T) {
 	cfgs := make(AppConfigsType)
 	for app, id := range istructs.ClusterApps {
 		cfg := cfgs.AddConfig(app, appdef.New())
+		cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 		require.NotNil(cfg)
 		require.Equal(cfg.Name, app)
 		require.Equal(cfg.ClusterAppID, id)
@@ -172,7 +174,8 @@ func TestErrorsAppConfigsType(t *testing.T) {
 
 	t.Run("must be ok to provide app structure", func(t *testing.T) {
 		cfgs := make(AppConfigsType, 1)
-		_ = cfgs.AddConfig(istructs.AppQName_test1_app1, appDef)
+		cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, appDef)
+		cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
 
 		as, err := provider.AppStructs(istructs.AppQName_test1_app1)
@@ -188,7 +191,7 @@ func TestErrorsAppConfigsType(t *testing.T) {
 		defer storage.Reset()
 
 		cfgs := make(AppConfigsType, 1)
-		_ = cfgs.AddConfig(istructs.AppQName_test1_app1, appDef)
+		cfgs.AddConfig(istructs.AppQName_test1_app1, appDef).SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
 		_, err := provider.AppStructs(istructs.AppQName_test1_app1)
 		require.ErrorIs(err, testError)
@@ -202,7 +205,7 @@ func TestErrorsAppConfigsType(t *testing.T) {
 		defer storage.Reset()
 
 		cfgs := make(AppConfigsType, 1)
-		_ = cfgs.AddConfig(istructs.AppQName_test1_app1, appDef)
+		cfgs.AddConfig(istructs.AppQName_test1_app1, appDef).SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
 		_, err := provider.AppStructs(istructs.AppQName_test1_app1)
 		require.ErrorIs(err, vers.ErrorInvalidVersion)
@@ -216,7 +219,7 @@ func TestErrorsAppConfigsType(t *testing.T) {
 		defer storage.Reset()
 
 		cfgs := make(AppConfigsType, 1)
-		_ = cfgs.AddConfig(istructs.AppQName_test1_app1, appDef)
+		cfgs.AddConfig(istructs.AppQName_test1_app1, appDef).SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
 		_, err := provider.AppStructs(istructs.AppQName_test1_app1)
 		require.ErrorIs(err, vers.ErrorInvalidVersion)
@@ -230,7 +233,7 @@ func TestErrorsAppConfigsType(t *testing.T) {
 		defer storage.Reset()
 
 		cfgs := make(AppConfigsType, 1)
-		_ = cfgs.AddConfig(istructs.AppQName_test1_app1, appDef)
+		cfgs.AddConfig(istructs.AppQName_test1_app1, appDef).SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
 		_, err := provider.AppStructs(istructs.AppQName_test1_app1)
 		require.ErrorIs(err, vers.ErrorInvalidVersion)
@@ -243,7 +246,7 @@ func TestErrorsAppConfigsType(t *testing.T) {
 				adb.AddPackage("test", "test.com/test")
 				adb.AddQuery(qName)
 				cfgs := make(AppConfigsType, 1)
-				_ = cfgs.AddConfig(istructs.AppQName_test1_app1, adb)
+				cfgs.AddConfig(istructs.AppQName_test1_app1, adb).SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 				provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
 				_, err := provider.AppStructs(istructs.AppQName_test1_app1)
 				require.Error(err)
@@ -253,6 +256,7 @@ func TestErrorsAppConfigsType(t *testing.T) {
 				adb := appdef.New()
 				cfgs := make(AppConfigsType, 1)
 				cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, adb)
+				cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 				cfg.Resources.Add(NewQueryFunction(qName, nil))
 				provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
 				_, err := provider.AppStructs(istructs.AppQName_test1_app1)
@@ -266,7 +270,7 @@ func TestErrorsAppConfigsType(t *testing.T) {
 				adb.AddPackage("test", "test.com/test")
 				adb.AddCommand(qName)
 				cfgs := make(AppConfigsType, 1)
-				_ = cfgs.AddConfig(istructs.AppQName_test1_app1, adb)
+				cfgs.AddConfig(istructs.AppQName_test1_app1, adb).SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 				provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
 				_, err := provider.AppStructs(istructs.AppQName_test1_app1)
 				require.Error(err)
@@ -276,6 +280,7 @@ func TestErrorsAppConfigsType(t *testing.T) {
 				adb := appdef.New()
 				cfgs := make(AppConfigsType, 1)
 				cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, adb)
+				cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 				cfg.Resources.Add(NewCommandFunction(qName, nil))
 				provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
 				_, err := provider.AppStructs(istructs.AppQName_test1_app1)
@@ -294,7 +299,7 @@ func TestErrorsAppConfigsType(t *testing.T) {
 						SetSync(true).
 						Events().Add(qName2, appdef.ProjectorEventKind_Insert)
 					cfgs := make(AppConfigsType, 1)
-					_ = cfgs.AddConfig(istructs.AppQName_test1_app1, adb)
+					cfgs.AddConfig(istructs.AppQName_test1_app1, adb).SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 					provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
 					_, err := provider.AppStructs(istructs.AppQName_test1_app1)
 					require.Error(err)
@@ -304,6 +309,7 @@ func TestErrorsAppConfigsType(t *testing.T) {
 					adb := appdef.New()
 					cfgs := make(AppConfigsType, 1)
 					cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, adb)
+					cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 					cfg.AddSyncProjectors(istructs.Projector{Name: qName})
 					provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
 					_, err := provider.AppStructs(istructs.AppQName_test1_app1)
@@ -320,6 +326,7 @@ func TestErrorsAppConfigsType(t *testing.T) {
 						Events().Add(qName2, appdef.ProjectorEventKind_Insert)
 					cfgs := make(AppConfigsType, 1)
 					cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, adb)
+					cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 					cfg.AddAsyncProjectors(istructs.Projector{Name: qName})
 					provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
 					_, err := provider.AppStructs(istructs.AppQName_test1_app1)
@@ -337,7 +344,7 @@ func TestErrorsAppConfigsType(t *testing.T) {
 						SetSync(false).
 						Events().Add(qName2, appdef.ProjectorEventKind_Insert)
 					cfgs := make(AppConfigsType, 1)
-					_ = cfgs.AddConfig(istructs.AppQName_test1_app1, adb)
+					cfgs.AddConfig(istructs.AppQName_test1_app1, adb).SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 					provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
 					_, err := provider.AppStructs(istructs.AppQName_test1_app1)
 					require.Error(err)
@@ -347,6 +354,7 @@ func TestErrorsAppConfigsType(t *testing.T) {
 					adb := appdef.New()
 					cfgs := make(AppConfigsType, 1)
 					cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, adb)
+					cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 					cfg.AddAsyncProjectors(istructs.Projector{Name: qName})
 					provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
 					_, err := provider.AppStructs(istructs.AppQName_test1_app1)
@@ -363,6 +371,7 @@ func TestErrorsAppConfigsType(t *testing.T) {
 						Events().Add(qName2, appdef.ProjectorEventKind_Insert)
 					cfgs := make(AppConfigsType, 1)
 					cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, adb)
+					cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 					cfg.AddSyncProjectors(istructs.Projector{Name: qName})
 					provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
 					_, err := provider.AppStructs(istructs.AppQName_test1_app1)
@@ -379,6 +388,7 @@ func TestErrorsAppConfigsType(t *testing.T) {
 						Events().Add(qName2, appdef.ProjectorEventKind_Insert)
 					cfgs := make(AppConfigsType, 1)
 					cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, adb)
+					cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 					cfg.AddAsyncProjectors(istructs.Projector{Name: qName})
 					cfg.AddSyncProjectors(istructs.Projector{Name: qName})
 					provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
@@ -388,5 +398,32 @@ func TestErrorsAppConfigsType(t *testing.T) {
 				})
 			})
 		})
+	})
+	t.Run("unable set NumAppPartititons after prepare()", func(t *testing.T) {
+		cfgs := make(AppConfigsType, 1)
+		cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, appDef)
+		cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
+		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
+		_, err := provider.AppStructs(istructs.AppQName_test1_app1)
+		require.NoError(err)
+		require.Panics(func() { cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces) })
+	})
+
+	t.Run("unable to use IAppDefBuilder after prepare()", func(t *testing.T) {
+		cfgs := make(AppConfigsType, 1)
+		cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, appDef)
+		cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
+		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
+		_, err := provider.AppStructs(istructs.AppQName_test1_app1)
+		require.NoError(err)
+		require.Panics(func() { cfg.AppDefBuilder() })
+	})
+
+	t.Run("unable to work is NumAppWorkspaces is not set", func(t *testing.T) {
+		cfgs := make(AppConfigsType, 1)
+		cfgs.AddConfig(istructs.AppQName_test1_app1, appDef)
+		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
+		_, err := provider.AppStructs(istructs.AppQName_test1_app1)
+		require.ErrorIs(err,ErrNumAppWorkspacesNotSet )
 	})
 }
