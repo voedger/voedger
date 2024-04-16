@@ -390,13 +390,13 @@ func Test_AppDef_AddScheduledProjector(t *testing.T) {
 		v.Key().PartKey().AddDataField("id", SysData_RecordID)
 		v.Key().ClustCols().AddDataField("name", SysData_String)
 		v.Value().AddDataField("data", SysData_bytes, false, MaxLen(1024))
-		v.SetComment("view is intent for projector")
+		v.SetComment("view is state for projector")
 
 		prj := adb.AddProjector(prjName)
 		prj.SetEngine(ExtensionEngineKind_WASM)
 		prj.SetCronSchedule(cronSchedule)
-		prj.Intents().
-			Add(sysViews, viewName).SetComment(sysViews, "view is intent for projector")
+		prj.States().
+			Add(sysViews, viewName).SetComment(sysViews, "view is state for projector")
 
 		t.Run("must be ok to build", func(t *testing.T) {
 			a, err := adb.Build()
@@ -413,8 +413,9 @@ func Test_AppDef_AddScheduledProjector(t *testing.T) {
 		prj := app.Projector(prjName)
 		require.Equal(ExtensionEngineKind_WASM, prj.Engine())
 		require.Equal(cronSchedule, prj.CronSchedule())
-		require.Len(prj.Intents().Map(), 1)
-		require.EqualValues(QNames{viewName}, prj.Intents().Map()[sysViews])
+		require.Len(prj.States().Map(), 1)
+		require.EqualValues(QNames{viewName}, prj.States().Map()[sysViews])
+		require.Zero(prj.Intents().Len())
 	})
 
 	t.Run("scheduled projector validation errors", func(t *testing.T) {
@@ -428,6 +429,26 @@ func Test_AppDef_AddScheduledProjector(t *testing.T) {
 			require.ErrorIs(err, ErrInvalidProjectorCronSchedule)
 			require.Contains(err.Error(), fmt.Sprint(prj))
 			require.Contains(err.Error(), "naked 🔫")
+		})
+
+		t.Run("should be error if with intents", func(t *testing.T) {
+			adb := New()
+			adb.AddPackage("test", "test.com/test")
+
+			v := adb.AddView(viewName)
+			v.Key().PartKey().AddDataField("id", SysData_RecordID)
+			v.Key().ClustCols().AddDataField("name", SysData_String)
+			v.Value().AddDataField("data", SysData_bytes, false, MaxLen(1024))
+			v.SetComment("view is state for projector")
+
+			prj := adb.AddProjector(prjName)
+			prj.SetCronSchedule("@hourly")
+			prj.Intents().
+				Add(sysViews, viewName).SetComment(sysViews, "error here: scheduled projector shall not have intents")
+
+			_, err := adb.Build()
+			require.ErrorIs(err, ErrScheduledProjectorWithIntents)
+			require.Contains(err.Error(), fmt.Sprint(prj))
 		})
 	})
 }
