@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-present unTill Pro, Ltd. and Contributors
+ * Copyright (c) 2023-present unTill Software Development Group B. V.  and Contributors
  * @author Maxim Geraskin
  *
  * This source code is licensed under the MIT license found in the
