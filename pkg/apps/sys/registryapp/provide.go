@@ -36,7 +36,7 @@ func Provide(smtpCfg smtp.Cfg) apps.AppBuilder {
 			AppQName: istructs.AppQName_sys_registry,
 			Packages: []parser.PackageFS{sysPackageFS, registryPackageFS, registryAppPackageFS},
 			AppDeploymentDescriptor: cluster.AppDeploymentDescriptor{
-				PartsCount:     coreutils.NumAppPartitions(apis.NumCommandProcessors),
+				NumParts:       coreutils.NumAppPartitions(apis.NumCommandProcessors),
 				EnginePoolSize: cluster.PoolSize(int(apis.NumCommandProcessors), DefDeploymentQPCount, int(apis.NumCommandProcessors)),
 			},
 		}

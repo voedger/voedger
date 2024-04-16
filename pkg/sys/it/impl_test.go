@@ -179,7 +179,7 @@ func Test503OnNoQueryProcessorsAvailable(t *testing.T) {
 	body := `{"args": {"Input": "world"},"elements": [{"fields": ["Res"]}]}`
 	postDone := sync.WaitGroup{}
 	sys := vit.GetSystemPrincipal(istructs.AppQName_test1_app1)
-	for i := 0; i < int(vit.VVMConfig.NumQueryProcessors); i++ {
+	for i := 0; i < int(vit.VVMConfig.NumCommandProcessors); i++ {
 		postDone.Add(1)
 		go func() {
 			defer postDone.Done()

@@ -27,7 +27,7 @@ func Provide() apps.AppBuilder {
 			AppQName: istructs.AppQName_sys_blobber,
 			Packages: []parser.PackageFS{sysPackageFS, blobberAppPackageFS},
 			AppDeploymentDescriptor: cluster.AppDeploymentDescriptor{
-				PartsCount:     DefDeploymentPartsCount,
+				NumParts:       DefDeploymentPartsCount,
 				EnginePoolSize: DefDeploymentEnginePoolSize,
 			},
 		}

@@ -21,7 +21,7 @@ const (
 )
 
 type AppDeploymentDescriptor struct {
-	PartsCount     coreutils.NumAppPartitions
+	NumParts       coreutils.NumAppPartitions
 	EnginePoolSize [ProcessorKind_Count]int
 }
 

@@ -29,7 +29,7 @@ func Provide() apps.AppBuilder {
 			AppQName: istructs.AppQName_sys_cluster,
 			Packages: []parser.PackageFS{clusterAppPackageFS, clusterPackageFS, sysPackageFS},
 			AppDeploymentDescriptor: cluster.AppDeploymentDescriptor{
-				PartsCount:     1,
+				NumParts:       1,
 				EnginePoolSize: cluster.PoolSize(1, 1, 1),
 			},
 		}

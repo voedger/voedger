@@ -27,7 +27,7 @@ func Provide() apps.AppBuilder {
 			AppQName: istructs.AppQName_sys_router,
 			Packages: []parser.PackageFS{sysPackageFS, routerAppPackageFS},
 			AppDeploymentDescriptor: cluster.AppDeploymentDescriptor{
-				PartsCount:     DefDeploymentPartsCount,
+				NumParts:       DefDeploymentPartsCount,
 				EnginePoolSize: DefDeploymentEnginePoolSize,
 			},
 		}
