@@ -21,7 +21,6 @@ require (
 	github.com/stretchr/testify v1.9.0 // indirect
 	github.com/untillpro/dynobuffers v0.0.0-20230713140001-b1cab92744c0 // indirect
 	github.com/untillpro/gojay v1.2.17-0.20201109133446-b1069e05b56c // indirect
-	github.com/untillpro/goutils v0.0.0-20231201170327-3c33c6010100 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/wneessen/go-mail v0.4.1 // indirect
 	golang.org/x/exp v0.0.0-20240314144324-c7f7c6466f7f // indirect

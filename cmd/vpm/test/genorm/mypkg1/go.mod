@@ -20,7 +20,6 @@ require (
 	github.com/untillpro/airs-ibus v0.0.0-20230904100809-21eaae083040 // indirect
 	github.com/untillpro/dynobuffers v0.0.0-20221105082727-4ed4b8227195 // indirect
 	github.com/untillpro/gojay v1.2.17-0.20201109133446-b1069e05b56c // indirect
-	github.com/untillpro/goutils v0.0.0-20231117130619-11fe1908c171 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/wneessen/go-mail v0.3.9 // indirect
 	golang.org/x/exp v0.0.0-20230510235704-dd950f8aeaea // indirect

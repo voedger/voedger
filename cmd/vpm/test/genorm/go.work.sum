@@ -468,8 +468,6 @@ github.com/untillpro/godif v0.18.0 h1:m3/5jc8oJCyU5lYHeZwG0deq+lYoCXNFqAwVMhiQ+K
 github.com/untillpro/godif v0.18.0/go.mod h1:Yi639zQ/XMuW5ArnXOqs1zx+7o9POvgmtgaNyDh1lUE=
 github.com/untillpro/gojay v1.2.17-0.20201109133446-b1069e05b56c h1:1oN5J8ueU7ai8rVENgfjVK9vmjEBTRqsvHe6o2p3xU8=
 github.com/untillpro/gojay v1.2.17-0.20201109133446-b1069e05b56c/go.mod h1:wHiWFBGIA2fG/tCRDfHII3S8LW1+DB1SEx4UinSXwdM=
-github.com/untillpro/goutils v0.0.0-20231117130619-11fe1908c171 h1:XjKi6kNRWFy2AQ/NOcXPkAMgpNPnXNVrj0k7BHPIppA=
-github.com/untillpro/goutils v0.0.0-20231117130619-11fe1908c171/go.mod h1:D7adcEUMVzLXEjHhqZX5ss22BXJyXP3RLhJO99r8dII=
 github.com/untillpro/ibusmem v0.0.0-20211023095304-94a96e40d864/go.mod h1:o6UidVkwM8cKZsvZCnZhiORwYJBSCclyKdC5X5NVbXg=
 github.com/untillpro/ibusmem v0.0.0-20230904100952-cc8a0d2caa40 h1:rrJmRAVXaxwQExZCxBHhyJoYAJ3Q1bTquHVrRpvwgB0=
 github.com/untillpro/ibusmem v0.0.0-20230904100952-cc8a0d2caa40/go.mod h1:hOihIs7DYQIrop/ds9Beqh/hDHbrDrjWY9SVA//RCY4=

@@ -359,7 +359,7 @@ func TestTidyBasicUsage(t *testing.T) {
 	require.NoError(err)
 }
 
-func TestTidyBorderlineCases(t *testing.T) {
+func TestTidyEdgeCases(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
