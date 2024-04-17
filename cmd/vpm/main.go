@@ -96,7 +96,9 @@ func initGlobalFlags(cmd *cobra.Command, params *vpmParams) {
 func exactArgs(n int) cobra.PositionalArgs {
 	return func(cmd *cobra.Command, args []string) error {
 		runHelpFuncInstead := func(cmd *cobra.Command, args []string) error {
-			cmd.Help()
+			if err := cmd.Help(); err != nil {
+				return err
+			}
 			return nil
 		}
 		switch {
