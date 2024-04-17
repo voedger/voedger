@@ -15,7 +15,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestCopy(t *testing.T) {
+func TestCopy_BasicUsage(t *testing.T) {
 	require := require.New(t)
 	tempDirSrc := t.TempDir()
 	tempDirDst := t.TempDir()
@@ -72,6 +72,55 @@ func TestCopyErrors(t *testing.T) {
 	require.Error(CopyFile(unexisingDir, ""))
 }
 
+func TestCopyOptions(t *testing.T) {
+	require := require.New(t)
+	tempDirSrc := t.TempDir()
+	tempDirDst := t.TempDir()
+	dir1 := filepath.Join(tempDirSrc, "dir1")
+	dir2 := filepath.Join(tempDirSrc, "dir2")
+	dir1dir3 := filepath.Join(dir1, "dir3")
+	require.NoError(os.MkdirAll(dir1, FileMode_rwxrwxrwx))
+	require.NoError(os.MkdirAll(dir2, FileMode_rwxrwxrwx))
+	require.NoError(os.MkdirAll(dir1dir3, FileMode_rwxrwxrwx))
+	file0 := filepath.Join(tempDirSrc, "file0.txt")
+	file1 := filepath.Join(dir1, "file1.txt")
+	file2 := filepath.Join(dir2, "file2.txt")
+	file3 := filepath.Join(dir1dir3, "file3.txt")
+
+	require.NoError(os.WriteFile(file0, []byte("file0 content"), FileMode_rw_rw_rw_))
+	require.NoError(os.WriteFile(file1, []byte("file1 content"), FileMode_rw_rw_rw_))
+	require.NoError(os.WriteFile(file2, []byte("file2 content"), FileMode_rw_rw_rw_))
+	require.NoError(os.WriteFile(file3, []byte("file3 content"), FileMode_rw_rw_rw_))
+
+	file2 = strings.ReplaceAll(file2, tempDirSrc, tempDirDst)
+	dir2dst := filepath.Join(tempDirDst, "dir2")
+	require.NoError(os.MkdirAll(dir2dst, FileMode_rwxrwxrwx))
+	require.NoError(os.WriteFile(file2, []byte("file2 existing content"), FileMode_rw_rw_rw_))
+
+	err := CopyDir(tempDirSrc, tempDirDst, WithFilterFilesWithRelativePaths(
+		[]string{"dir1/file1.txt", "dir2/file2.txt"}), WithSkipExisting())
+	require.NoError(err)
+
+	file0 = strings.ReplaceAll(file0, tempDirSrc, tempDirDst)
+	file1 = strings.ReplaceAll(file1, tempDirSrc, tempDirDst)
+	file2 = strings.ReplaceAll(file2, tempDirSrc, tempDirDst)
+	file3 = strings.ReplaceAll(file3, tempDirSrc, tempDirDst)
+
+	exists, err := Exists(file0)
+	require.NoError(err)
+	require.False(exists)
+	file1ActualContent, err := os.ReadFile(file1)
+	require.NoError(err)
+	file2ActualContent, err := os.ReadFile(file2)
+	require.NoError(err)
+	exists, err = Exists(file3)
+	require.NoError(err)
+	require.False(exists)
+
+	require.Equal("file1 content", string(file1ActualContent))
+	require.Equal("file2 existing content", string(file2ActualContent))
+}
+
 func TestExists(t *testing.T) {
 	require := require.New(t)
 	t.Run("file", func(t *testing.T) {
@@ -84,7 +133,7 @@ func TestExists(t *testing.T) {
 		require.False(exists)
 	})
 
-	t.Run("dir",func(t *testing.T) {
+	t.Run("dir", func(t *testing.T) {
 		exists, err := Exists("wsdesc")
 		require.NoError(err)
 		require.True(exists)

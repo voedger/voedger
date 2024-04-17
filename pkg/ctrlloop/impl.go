@@ -12,7 +12,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/untillpro/goutils/logger"
+	"github.com/voedger/voedger/pkg/goutils/logger"
 )
 
 func scheduler[Key comparable, SP any, State any](in chan ControlMessage[Key, SP], dedupInCh chan statefulMessage[Key, SP, State], repeatCh chan scheduledMessage[Key, SP, State], nowTimeFunc nowTimeFunction) {
