@@ -97,3 +97,8 @@ type CUD struct {
 type CUDs struct {
 	Cuds []CUD `json:"cuds"`
 }
+
+type IReadFS interface {
+	fs.ReadDirFS
+	fs.ReadFileFS
+}

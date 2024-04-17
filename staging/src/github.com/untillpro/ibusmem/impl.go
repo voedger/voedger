@@ -13,7 +13,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/untillpro/goutils/logger"
+	"github.com/voedger/voedger/pkg/goutils/logger"
 
 	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
 )
