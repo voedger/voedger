@@ -8,15 +8,13 @@ import (
 	"embed"
 	"fmt"
 	"io"
-	"io/fs"
 	"math/rand"
 	"os"
 	"path/filepath"
-	"strings"
 	"text/template"
 	"time"
 
-	"github.com/untillpro/goutils/exec"
+	"github.com/voedger/voedger/pkg/goutils/exec"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 	"golang.org/x/term"
 )
@@ -135,19 +133,6 @@ func getEnvValue1(key string) string {
 	return value
 }
 
-func scriptExists(scriptFileName string) (bool, error) {
-	if scriptsTempDir == "" {
-		return false, nil
-	}
-
-	exists, err := coreutils.Exists(filepath.Join(scriptsTempDir, scriptFileName))
-	if err != nil {
-		// notest
-		return false, err
-	}
-	return exists, nil
-}
-
 func prepareScripts(scriptFileNames ...string) error {
 
 	// nolint
@@ -159,84 +144,13 @@ func prepareScripts(scriptFileNames ...string) error {
 	}
 
 	// If scriptfilenames is empty, then we will copy all scripts from scriptsfs
-	if len(scriptFileNames) == 0 {
-		err = extractAllScripts()
-		if err != nil {
-			loggerError(err.Error())
-			return err
-		}
-		return nil
+	err = coreutils.CopyDirFS(scriptsFS, "scripts/drafts", scriptsTempDir, coreutils.WithFilterFilesWithRelativePaths(scriptFileNames),
+		coreutils.WithSkipExisting())
+	if err != nil {
+		loggerError(err.Error())
+		return err
 	}
-
-	for _, fileName := range scriptFileNames {
-
-		exists, err := scriptExists(fileName)
-		if err != nil {
-			// notest
-			return err
-		}
-		if exists {
-			continue
-		}
-
-		file, err := scriptsFS.Open("./scripts/drafts/" + fileName)
-		if err != nil {
-			return err
-		}
-		defer file.Close()
-
-		destFileName := filepath.Join(scriptsTempDir, fileName)
-
-		dir := filepath.Dir(destFileName)
-
-		// nolint
-		err = os.MkdirAll(dir, coreutils.FileMode_rwxrwxrwx) // os.ModePerm)
-		if err != nil {
-			return err
-		}
-
-		newFile, err := os.Create(destFileName)
-		if err != nil {
-			return err
-		}
-
-		defer newFile.Close()
-		if err = os.Chmod(destFileName, coreutils.FileMode_rwxrwxrwx); err != nil {
-			return err
-		}
-
-		if _, err = io.Copy(newFile, file); err != nil {
-			return err
-		}
-
-	}
-
 	return nil
-}
-
-// save all the embedded scripts into the temporary folder
-func extractAllScripts() error {
-	return fs.WalkDir(scriptsFS, "scripts/drafts", func(path string, d fs.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		if !d.IsDir() {
-			content, err := fs.ReadFile(scriptsFS, path)
-			if err != nil {
-				return err
-			}
-			destPath := filepath.Join(scriptsTempDir, strings.TrimPrefix(path, "scripts/drafts"))
-			err = os.MkdirAll(filepath.Dir(destPath), coreutils.FileMode_rwxrwxrwx)
-			if err != nil {
-				return err
-			}
-			err = os.WriteFile(destPath, content, coreutils.FileMode_rwxrwxrwx)
-			if err != nil {
-				return err
-			}
-		}
-		return nil
-	})
 }
 
 // nolint

@@ -11,7 +11,7 @@ import (
 	"net"
 	"net/http"
 
-	"github.com/untillpro/goutils/logger"
+	"github.com/voedger/voedger/pkg/goutils/logger"
 
 	imetrics "github.com/voedger/voedger/pkg/metrics"
 	coreutils "github.com/voedger/voedger/pkg/utils"

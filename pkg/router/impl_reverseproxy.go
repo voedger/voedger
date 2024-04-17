@@ -12,8 +12,8 @@ import (
 	"strings"
 
 	"github.com/gorilla/mux"
-	"github.com/untillpro/goutils/logger"
 	"github.com/valyala/bytebufferpool"
+	"github.com/voedger/voedger/pkg/goutils/logger"
 )
 
 func parseRoutes(routesURLs map[string]route, routes map[string]string, isRewrite bool) error {

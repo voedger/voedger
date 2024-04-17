@@ -10,7 +10,7 @@ import (
 	_ "embed"
 	"os"
 
-	"github.com/untillpro/goutils/cobrau"
+	"github.com/voedger/voedger/pkg/goutils/cobrau"
 )
 
 //go:embed version
