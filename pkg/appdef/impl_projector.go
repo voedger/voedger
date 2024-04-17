@@ -98,6 +98,11 @@ func (prj *projector) Validate() (err error) {
 			err = errors.Join(err,
 				fmt.Errorf("%v: %w: %w", prj, ErrInvalidProjectorCronSchedule, e))
 		}
+
+		if prj.intents.Len() > 0 {
+			err = errors.Join(err,
+				fmt.Errorf("%v: %w", prj, ErrScheduledProjectorWithIntents))
+		}
 	}
 	return err
 }

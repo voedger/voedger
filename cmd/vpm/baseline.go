@@ -14,8 +14,8 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
-	"github.com/untillpro/goutils/exec"
-	"github.com/untillpro/goutils/logger"
+	"github.com/voedger/voedger/pkg/goutils/exec"
+	"github.com/voedger/voedger/pkg/goutils/logger"
 
 	"github.com/voedger/voedger/pkg/compile"
 	coreutils "github.com/voedger/voedger/pkg/utils"

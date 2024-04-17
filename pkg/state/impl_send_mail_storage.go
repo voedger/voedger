@@ -7,8 +7,8 @@ package state
 import (
 	"fmt"
 
-	"github.com/untillpro/goutils/logger"
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/state/smtptest"
 	coreutils "github.com/voedger/voedger/pkg/utils"
