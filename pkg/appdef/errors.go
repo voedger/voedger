@@ -51,3 +51,5 @@ var ErrInvalidProjectorEventKind = errors.New("invalid projector event kind")
 var ErrEmptyProjectorEvents = errors.New("empty projector events")
 
 var ErrInvalidProjectorCronSchedule = errors.New("invalid projector cron schedule")
+
+var ErrScheduledProjectorWithIntents = errors.New("scheduled projector shall not have intents")
