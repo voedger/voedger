@@ -6,7 +6,6 @@
 package main
 
 import (
-	"errors"
 	"slices"
 	"strings"
 
@@ -24,18 +23,23 @@ func newTidyCmd(params *vpmParams) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			compileRes, err := compile.Compile(params.Dir)
 			if err != nil {
+				logger.Error(err)
 				logger.Error("failed to compile, will try to exec 'go mod tidy' anyway")
 			}
-			return errors.Join(err, tidy(compileRes.UnknownDeps, compileRes.AppDef, compileRes.ModulePath, params.Dir))
+			return tidy(compileRes.NotFoundDeps, compileRes.AppDef, compileRes.ModulePath, params.Dir)
 		},
 	}
 	return cmd
 
 }
 
-func tidy(unknownDeps []string, appDef appdef.IAppDef, packagePath string, dir string) error {
-	imports := getImports(appDef, packagePath)
-	if err := createPackagesGen(append(imports, unknownDeps...), dir, true); err != nil {
+func tidy(notFoundDeps []string, appDef appdef.IAppDef, packagePath string, dir string) error {
+	// get imports and not found dependencies and try to get them via 'go get'
+	imports := append(getImports(appDef, packagePath), notFoundDeps...)
+	if err := getDependencies(dir, imports); err != nil {
+		return err
+	}
+	if err := createPackagesGen(imports, dir, true); err != nil {
 		return err
 	}
 	return execGoModTidy(dir)

@@ -358,3 +358,21 @@ func TestTidyBasicUsage(t *testing.T) {
 	err = execRootCmd([]string{"vpm", "tidy", "-C", dir}, "1.0.0")
 	require.NoError(err)
 }
+
+func TestTidyBorderlineCases(t *testing.T) {
+	if testing.Short() {
+		t.Skip()
+	}
+	require := require.New(t)
+
+	err := execRootCmd([]string{"vpm", "tidy", "unknown"}, "1.0.0")
+	require.Error(err)
+	require.Equal("'vpm tidy' accepts no argument. Run 'vpm tidy help'", err.Error())
+
+	err = execRootCmd([]string{"vpm", "tidy", "help"}, "1.0.0")
+	require.NoError(err)
+
+	err = execRootCmd([]string{"vpm", "tidy", "help", "adads"}, "1.0.0")
+	require.Error(err)
+	require.Equal("'vpm tidy' accepts no argument. Run 'vpm tidy help'", err.Error())
+}
