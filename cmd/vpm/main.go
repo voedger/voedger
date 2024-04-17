@@ -13,7 +13,7 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
-	"github.com/untillpro/goutils/cobrau"
+	"github.com/voedger/voedger/pkg/goutils/cobrau"
 )
 
 //go:embed version

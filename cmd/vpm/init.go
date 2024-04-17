@@ -15,8 +15,8 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
-	"github.com/untillpro/goutils/exec"
-	"github.com/untillpro/goutils/logger"
+	"github.com/voedger/voedger/pkg/goutils/exec"
+	"github.com/voedger/voedger/pkg/goutils/logger"
 	"golang.org/x/mod/semver"
 
 	"github.com/voedger/voedger/pkg/compile"

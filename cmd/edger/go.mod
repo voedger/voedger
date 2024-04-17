@@ -5,14 +5,13 @@ go 1.21.4
 replace github.com/voedger/voedger => ../..
 
 require (
-	github.com/spf13/cobra v1.7.0
-	github.com/stretchr/testify v1.8.4
-	github.com/untillpro/goutils v0.0.0-20231117130619-11fe1908c171
+	github.com/spf13/cobra v1.8.0
+	github.com/stretchr/testify v1.9.0
 	github.com/voedger/voedger v0.0.0-00010101000000-000000000000
 )
 
 require (
-	github.com/aptible/supercronic v0.2.2 // indirect
+	github.com/aptible/supercronic v0.2.29 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/kr/pretty v0.2.0 // indirect

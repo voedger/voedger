@@ -23,7 +23,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
-	"github.com/untillpro/goutils/logger"
+	"github.com/voedger/voedger/pkg/goutils/logger"
 	"golang.org/x/exp/slices"
 
 	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
