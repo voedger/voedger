@@ -13,9 +13,9 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
-	"github.com/untillpro/goutils/cobrau"
+	"github.com/voedger/voedger/pkg/goutils/cobrau"
 
-	"github.com/untillpro/goutils/logger"
+	"github.com/voedger/voedger/pkg/goutils/logger"
 )
 
 //go:embed version

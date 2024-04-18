@@ -999,9 +999,6 @@ func updateArticleCUD(bld istructs.IRawEventBuilder, app istructs.IAppStructs, a
 	if rec.QName() == appdef.NullQName {
 		panic(fmt.Sprintf("Article %d not found", articleRecordId))
 	}
-	if err != nil {
-		panic(err)
-	}
 	writer := bld.CUDBuilder().Update(rec)
 	writer.PutString(test.articleNameIdent, name)
 	writer.PutInt32(test.articleNumberIdent, number)

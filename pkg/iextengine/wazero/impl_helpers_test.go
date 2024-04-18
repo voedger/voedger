@@ -381,6 +381,7 @@ type mockValueBuilder struct {
 	items map[string]interface{}
 }
 
+func (vb *mockValueBuilder) Equal(src istructs.IStateValueBuilder) bool       { return false }
 func (vb *mockValueBuilder) BuildValue() istructs.IStateValue                 { return nil }
 func (vb *mockValueBuilder) PutRecord(name string, record istructs.IRecord)   {}
 func (vb *mockValueBuilder) PutEvent(name string, event istructs.IDbEvent)    {}

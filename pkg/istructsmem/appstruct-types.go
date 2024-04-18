@@ -8,8 +8,8 @@ package istructsmem
 import (
 	"fmt"
 
-	"github.com/untillpro/goutils/iterate"
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/goutils/iterate"
 	"github.com/voedger/voedger/pkg/irates"
 	istorage "github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istructs"

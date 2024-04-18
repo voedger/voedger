@@ -6,6 +6,7 @@
 package coreutils
 
 import (
+	"io/fs"
 	"math"
 	"syscall"
 	"time"
@@ -30,6 +31,6 @@ const (
 	requestRetryTimeout                                        = 4 * time.Second
 	WSAECONNRESET                                syscall.Errno = 10054
 	WSAECONNREFUSED                              syscall.Errno = 10061
-	FileMode_rwxrwxrwx                                         = 0777 // default for directory
-	FileMode_rw_rw_rw_                                         = 0666 // default for file
+	FileMode_rwxrwxrwx                           fs.FileMode   = 0777 // default for directory
+	FileMode_rw_rw_rw_                           fs.FileMode   = 0666 // default for file
 )

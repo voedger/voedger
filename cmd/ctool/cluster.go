@@ -19,7 +19,7 @@ import (
 	"testing"
 
 	"github.com/spf13/cobra"
-	"github.com/untillpro/goutils/logger"
+	"github.com/voedger/voedger/pkg/goutils/logger"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 

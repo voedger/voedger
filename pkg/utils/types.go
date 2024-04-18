@@ -59,8 +59,10 @@ type IHTTPClient interface {
 
 type TimeFunc func() time.Time
 
-type CommandProcessorsCount int
-type QueryProcessorsCount int
+type NumAppPartitions int
+
+type NumCommandProcessors int
+type NumQueryProcessors int
 
 type PathReader struct {
 	rootPath string
@@ -94,4 +96,9 @@ type CUD struct {
 
 type CUDs struct {
 	Cuds []CUD `json:"cuds"`
+}
+
+type IReadFS interface {
+	fs.ReadDirFS
+	fs.ReadFileFS
 }

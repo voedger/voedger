@@ -5,12 +5,18 @@
 *  @author Michael Saigachenko
  */
 
-package exttinygo
+package internal
+
+import (
+	"runtime"
+
+	isafeapi "github.com/voedger/voedger/pkg/state/isafestateapi"
+)
 
 type extint = uintptr
 
 //export hostPanic
-func hostPanic(msgPtr, msgSize uint32)
+func HostPanic(msgPtr, msgSize uint32)
 
 //export hostRowWriterPutString
 func hostRowWriterPutString(id uint64, typ uint32, namePtr, nameSize, valuePtr, valueSize uint32)
@@ -143,3 +149,54 @@ func hostReadValues(keyId uint64)
 
 //export hostGetValue
 func hostGetValue(keyId uint64) (result uint64)
+
+//lint:ignore U1000 this is an exported func
+//export WasmOnReadValue
+func onReadValue(key, value uint64) {
+	CurrentReadCallback(isafeapi.TKey(key), isafeapi.TValue(value))
+}
+
+/*
+	returns 0 when not exists
+*/
+
+//lint:ignore U1000 this is an exported func
+//export WasmAbiVersion_0_0_1
+func proxyABIVersion() {
+}
+
+var ms runtime.MemStats
+
+//lint:ignore U1000 this is an exported func
+//export WasmGetHeapInuse
+func getHeapInuse() uint64 {
+	runtime.ReadMemStats(&ms)
+	return ms.HeapInuse
+}
+
+//lint:ignore U1000 this is an exported func
+//export WasmGetMallocs
+func getMallocs() uint64 {
+	runtime.ReadMemStats(&ms)
+	return ms.Mallocs
+}
+
+//lint:ignore U1000 this is an exported func
+//export WasmGetFrees
+func getFrees() uint64 {
+	runtime.ReadMemStats(&ms)
+	return ms.Frees
+}
+
+//lint:ignore U1000 this is an exported func
+//export WasmGetHeapSys
+func getHeapSys() uint64 {
+	runtime.ReadMemStats(&ms)
+	return ms.HeapSys
+}
+
+//lint:ignore U1000 this is an exported func
+//export WasmGC
+func gc() {
+	runtime.GC()
+}

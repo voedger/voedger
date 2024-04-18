@@ -57,11 +57,11 @@ func Example() {
 	appPartsCtl, cleanupCtl, err := apppartsctl.New(appParts, []apppartsctl.BuiltInApp{
 		{Name: istructs.AppQName_test1_app1,
 			Def:            app_1_v1,
-			PartsCount:     2,
+			NumParts:       2,
 			EnginePoolSize: [cluster.ProcessorKind_Count]int{2, 2, 2}},
 		{Name: istructs.AppQName_test1_app2,
 			Def:            app_2_v1,
-			PartsCount:     3,
+			NumParts:       3,
 			EnginePoolSize: [cluster.ProcessorKind_Count]int{2, 2, 2}},
 	})
 
