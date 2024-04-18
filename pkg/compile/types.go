@@ -13,9 +13,10 @@ import (
 
 // Result is a result of compilation
 type Result struct {
-	ModulePath string              // module path of compiled module
-	PkgFiles   map[string][]string // map of package path to list of file paths belonging to the package
-	AppDef     appdef.IAppDef
+	ModulePath   string              // module path of compiled module
+	PkgFiles     map[string][]string // map of package path to list of file paths belonging to the package
+	AppDef       appdef.IAppDef
+	NotFoundDeps []string // list of not found dependencies faced during compilation
 }
 
 type loadedPackages struct {
