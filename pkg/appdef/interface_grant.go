@@ -64,7 +64,7 @@ type IGrant interface {
 type IWithGrants interface {
 	// Enumerates all grants.
 	//
-	// Grants are enumerated in the order they were added.
+	// Grants are enumerated in alphabetical order of roles, and within each role in the order they are added.
 	Grants(func(IGrant))
 
 	// Enumerates all grants with specified kind.
