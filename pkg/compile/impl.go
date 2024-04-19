@@ -8,6 +8,8 @@ package compile
 import (
 	"errors"
 	"fmt"
+	"github.com/google/uuid"
+	"os"
 	"path/filepath"
 
 	"github.com/voedger/voedger/pkg/goutils/logger"
@@ -264,6 +266,29 @@ func loadPackages(dir string, notFoundDeps map[string]struct{}) (*loadedPackages
 
 	importedPkgs := allImportedPackages(rootPkgs)
 
+	// workaround to include sys package into loading packages process
+	// create a temporary sys.go file and load packages again to get all imported packages
+	{
+		tmpDirPath, err := createTmpSysGoModule(dir)
+		if err != nil {
+			return nil, err
+		}
+		defer removeSysGoModule(tmpDirPath)
+
+		tmpPkg, err := packages.Load(&packages.Config{
+			Mode: packages.NeedName | packages.NeedFiles | packages.NeedImports | packages.NeedDeps | packages.NeedModule,
+			Dir:  filepath.Join(dir, filepath.Base(tmpDirPath)),
+		})
+		if err != nil {
+			return nil, err
+		}
+
+		importedPkgsFromTmpDir := allImportedPackages(tmpPkg)
+		for k, v := range importedPkgsFromTmpDir {
+			importedPkgs[k] = v
+		}
+	}
+
 	if len(rootPkgs) > 0 && rootPkgs[0].Module != nil {
 		return &loadedPackages{
 			importedPkgs: importedPkgs,
@@ -275,6 +300,31 @@ func loadPackages(dir string, notFoundDeps map[string]struct{}) (*loadedPackages
 	}
 	notFoundDeps[dir] = struct{}{}
 	return nil, fmt.Errorf("cannot find module path for %s", dir)
+}
+
+// createTmpSysGoModule creates a temporary directory and sys.go file inside it
+// and returns path to this temporary directory
+func createTmpSysGoModule(dir string) (string, error) {
+	tmpDirName := uuid.New().String()
+	tmpDirPath := filepath.Join(dir, tmpDirName)
+	if err := os.Mkdir(tmpDirPath, coreutils.FileMode_rwxrwxrwx); err != nil {
+		return "", err
+	}
+	tmpSysGoModulePath := filepath.Join(tmpDirPath, "sys.go")
+	tmpSysGoModuleContent := fmt.Sprintf(tmpSysGoModule, appdef.SysPackage)
+
+	if err := os.WriteFile(tmpSysGoModulePath, []byte(tmpSysGoModuleContent), coreutils.FileMode_rw_rw_rw_); err != nil {
+		return "", err
+	}
+
+	return tmpDirPath, nil
+}
+
+func removeSysGoModule(tmpDirPath string) error {
+	if err := os.RemoveAll(tmpDirPath); err != nil {
+		return err
+	}
+	return nil
 }
 
 func allImportedPackages(initialPkgs []*packages.Package) (importedPkgs map[string]*packages.Package) {

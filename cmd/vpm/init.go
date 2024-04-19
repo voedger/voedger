@@ -125,5 +125,5 @@ func execGoGet(goModDir, dependencyToGet string) error {
 	if logger.IsVerbose() {
 		stdout = os.Stdout
 	}
-	return new(exec.PipedExec).Command("go", "get", fmt.Sprintf("%s@main", dependencyToGet)).WorkingDir(goModDir).Run(stdout, os.Stderr)
+	return new(exec.PipedExec).Command("go", "get", fmt.Sprintf("%s@latest", dependencyToGet)).WorkingDir(goModDir).Run(stdout, os.Stderr)
 }

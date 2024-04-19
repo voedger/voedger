@@ -6,16 +6,18 @@
 package main
 
 import (
+	"errors"
+	"fmt"
+	"github.com/voedger/voedger/pkg/compile"
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/spf13/cobra"
-	"github.com/untillpro/goutils/exec"
-	"github.com/untillpro/goutils/logger"
+	"github.com/voedger/voedger/pkg/goutils/exec"
+	"github.com/voedger/voedger/pkg/goutils/logger"
 
-	"github.com/voedger/voedger/pkg/compile"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
@@ -23,9 +25,16 @@ func newBuildCmd(params *vpmParams) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "build [-C] [-o <archive-name>]",
 		Short: "build",
-		RunE: func(cmd *cobra.Command, args []string) (err error) {
-			if _, err := compile.CompileNoDummyApp(params.Dir); err != nil {
-				return err
+		RunE: func(cmd *cobra.Command, args []string) error {
+			compileRes, err := compile.CompileNoDummyApp(params.Dir)
+			if err != nil {
+				logger.Error(err)
+				if errors.Is(err, compile.ErrAppSchemaNotFound) {
+					return fmt.Errorf("failed to build, app schema not found.")
+				}
+				if len(compileRes.NotFoundDeps) > 0 {
+					return fmt.Errorf("failed to compile, missing dependencies. Run 'vpm init'")
+				}
 			}
 			return build(params)
 		},

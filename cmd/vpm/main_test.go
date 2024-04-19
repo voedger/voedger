@@ -359,7 +359,7 @@ func TestTidyBasicUsage(t *testing.T) {
 	require.NoError(err)
 }
 
-func TestTidyEdgeCases(t *testing.T) {
+func TestEdgeCases(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
@@ -375,6 +375,18 @@ func TestTidyEdgeCases(t *testing.T) {
 	err = execRootCmd([]string{"vpm", "tidy", "help", "adads"}, "1.0.0")
 	require.Error(err)
 	require.Equal("'vpm tidy' accepts no argument. Run 'vpm tidy help'", err.Error())
+
+	err = execRootCmd([]string{"vpm", "init", "help"}, "1.0.0")
+	require.NoError(err)
+
+	err = execRootCmd([]string{"vpm", "init", "-C", "/Users/alisher/projects/untill/voedger/examples/airs-bp/air/extwasm", "extwasm"}, "1.0.0")
+	require.Error(err)
+
+	err = execRootCmd([]string{"vpm", "tidy", "-C", "/Users/alisher/projects/untill/voedger/examples/airs-bp/air/extwasm"}, "1.0.0")
+	require.NoError(err)
+
+	err = execRootCmd([]string{"vpm", "compat", "1", "2"}, "1.0.0")
+	require.Error(err)
 }
 
 func TestBuildBasicUsage(t *testing.T) {
@@ -386,7 +398,7 @@ func TestBuildBasicUsage(t *testing.T) {
 	var err error
 	var tempDir string
 	if logger.IsVerbose() {
-		tempDir, err = os.MkdirTemp("", "test_genorm")
+		tempDir, err = os.MkdirTemp("", "test_build")
 		require.NoError(err)
 	} else {
 		tempDir = t.TempDir()
@@ -395,10 +407,11 @@ func TestBuildBasicUsage(t *testing.T) {
 	wd, err := os.Getwd()
 	require.NoError(err)
 
-	err = coreutils.CopyDir(filepath.Join(wd, "test", "genorm"), tempDir)
+	err = coreutils.CopyDir(filepath.Join(wd, "test", "build"), tempDir)
 	require.NoError(err)
 
-	dir := filepath.Join(tempDir, "app")
+	//dir := tempDir
+	dir := "/Users/alisher/projects/untill/voedger/examples/airs-bp/air/extwasm"
 
 	err = execRootCmd([]string{"vpm", "build", "-C", dir, "-o", "qwerty"}, "1.0.0")
 	require.NoError(err)

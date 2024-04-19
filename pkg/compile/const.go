@@ -10,3 +10,15 @@ const (
 	sysSchemaFileName = "sys.vsql"
 	VoedgerPath       = "github.com/voedger/voedger"
 )
+
+const (
+	tmpSysGoModule = `package %s
+
+import (
+	_ "github.com/voedger/voedger/pkg/sys"
+)
+
+func init() {
+}
+`
+)
