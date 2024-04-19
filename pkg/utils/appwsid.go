@@ -12,9 +12,9 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
-func GetAppWSID(wsid istructs.WSID, appWSAmount istructs.AppWSAmount) istructs.WSID {
+func GetAppWSID(wsid istructs.WSID, numAppWorkspaces istructs.NumAppWorkspaces) istructs.WSID {
 	baseWSID := wsid.BaseWSID()
-	appWSNumber := baseWSID % istructs.WSID(appWSAmount)
+	appWSNumber := baseWSID % istructs.WSID(numAppWorkspaces)
 	baseAppWSID := istructs.FirstBaseAppWSID + appWSNumber
 	// problem: app workspaces are automatically created in the main cluster on VVM launch
 	// request to an another cluster -> there are no App Workspaces yet

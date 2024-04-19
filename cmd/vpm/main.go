@@ -92,3 +92,25 @@ func initGlobalFlags(cmd *cobra.Command, params *vpmParams) {
 	cmd.SilenceErrors = true
 	cmd.PersistentFlags().StringVarP(&params.Dir, "change-dir", "C", "", "change to dir before running the command. Any files named on the command line are interpreted after changing directories")
 }
+
+func exactArgs(n int) cobra.PositionalArgs {
+	return func(cmd *cobra.Command, args []string) error {
+		runHelpFuncInstead := func(cmd *cobra.Command, args []string) error {
+			if err := cmd.Help(); err != nil {
+				return err
+			}
+			return nil
+		}
+		switch {
+		case len(args) == 1 && args[0] == "help":
+			cmd.RunE = runHelpFuncInstead
+			return nil
+		case n == 0 && len(args) > 0:
+			return fmt.Errorf("'%s' accepts no argument. Run '%s help'", cmd.CommandPath(), cmd.CommandPath())
+		case len(args) != n:
+			cmd.RunE = runHelpFuncInstead
+			return nil
+		}
+		return nil
+	}
+}

@@ -23,7 +23,7 @@ import (
 	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
 )
 
-func createRequest(reqMethod string, req *http.Request, rw http.ResponseWriter, appsWSAmount map[istructs.AppQName]istructs.AppWSAmount) (res ibus.Request, ok bool) {
+func createRequest(reqMethod string, req *http.Request, rw http.ResponseWriter, numsAppsWorkspaces map[istructs.AppQName]istructs.NumAppWorkspaces) (res ibus.Request, ok bool) {
 	vars := mux.Vars(req)
 	wsidStr := vars[WSID]
 	wsidInt, err := strconv.ParseInt(wsidStr, parseInt64Base, parseInt64Bits)
@@ -35,10 +35,10 @@ func createRequest(reqMethod string, req *http.Request, rw http.ResponseWriter, 
 	appQNameStr := vars[AppOwner] + istructs.AppQNameQualifierChar + vars[AppName]
 	wsid := istructs.WSID(wsidInt)
 	if appQName, err := istructs.ParseAppQName(appQNameStr); err == nil {
-		if appWSAmount, ok := appsWSAmount[appQName]; ok {
+		if numAppWorkspaces, ok := numsAppsWorkspaces[appQName]; ok {
 			baseWSID := wsid.BaseWSID()
 			if baseWSID < istructs.MaxPseudoBaseWSID {
-				wsid = coreutils.GetAppWSID(wsid, appWSAmount)
+				wsid = coreutils.GetAppWSID(wsid, numAppWorkspaces)
 			}
 		}
 	}

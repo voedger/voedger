@@ -10,7 +10,6 @@ import (
 	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/cluster"
 	"github.com/voedger/voedger/pkg/istructs"
-	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 // Returns a new instance of IAppPartitionsController.
@@ -28,7 +27,7 @@ type BuiltInApp struct {
 	// Number of partitions. Partitions IDs will be generated from 0 to NumParts-1
 	//
 	// NumParts should contain _total_ number of partitions, not only to deploy.
-	NumParts coreutils.NumAppPartitions
+	NumParts istructs.NumAppPartitions
 
 	// EnginePoolSize pools size for each processor kind
 	EnginePoolSize [cluster.ProcessorKind_Count]int
