@@ -79,6 +79,6 @@ func IsWSAEError(err error, errno syscall.Errno) bool {
 }
 
 // used in BuildAppWorkspaces() only because there are no apps in IAppPartitions on that moment
-func AppPartitionID(wsid istructs.WSID, numAppPartitions NumAppPartitions) istructs.PartitionID {
+func AppPartitionID(wsid istructs.WSID, numAppPartitions istructs.NumAppPartitions) istructs.PartitionID {
 	return istructs.PartitionID(int(wsid) % int(numAppPartitions))
 }

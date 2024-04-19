@@ -40,14 +40,14 @@ type RouterParams struct {
 type httpService struct {
 	RouterParams
 	*BlobberParams
-	router       *mux.Router
-	server       *http.Server
-	listener     net.Listener
-	n10n         in10n.IN10nBroker
-	blobWG       sync.WaitGroup
-	bus          ibus.IBus
-	busTimeout   time.Duration
-	appsWSAmount map[istructs.AppQName]istructs.AppWSAmount
+	router             *mux.Router
+	server             *http.Server
+	listener           net.Listener
+	n10n               in10n.IN10nBroker
+	blobWG             sync.WaitGroup
+	bus                ibus.IBus
+	busTimeout         time.Duration
+	numsAppsWorkspaces map[istructs.AppQName]istructs.NumAppWorkspaces
 }
 
 type httpsService struct {

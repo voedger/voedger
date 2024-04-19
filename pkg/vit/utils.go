@@ -89,7 +89,7 @@ func (vit *VIT) GetCDocLoginID(login Login) int64 {
 	vit.T.Helper()
 	as, err := vit.IAppStructsProvider.AppStructs(istructs.AppQName_sys_registry)
 	require.NoError(vit.T, err) // notest
-	appWSID := coreutils.GetAppWSID(login.PseudoProfileWSID, as.WSAmount())
+	appWSID := coreutils.GetAppWSID(login.PseudoProfileWSID, as.NumAppWorkspaces())
 	body := fmt.Sprintf(`{"args":{"query":"select CDocLoginID from registry.LoginIdx where AppWSID = %d and AppIDLoginHash = '%s/%s'"}, "elements":[{"fields":["Result"]}]}`,
 		appWSID, login.AppQName, registry.GetLoginHash(login.Name))
 	sys := vit.GetSystemPrincipal(istructs.AppQName_sys_registry)

@@ -19,9 +19,9 @@ import (
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-func CheckAppWSID(login string, urlWSID istructs.WSID, appWSAmount istructs.AppWSAmount) error {
+func CheckAppWSID(login string, urlWSID istructs.WSID, numAppWorkspaces istructs.NumAppWorkspaces) error {
 	crc16 := coreutils.CRC16([]byte(login))
-	appWSID := istructs.WSID(crc16%uint16(appWSAmount)) + istructs.FirstBaseAppWSID
+	appWSID := istructs.WSID(crc16%uint16(numAppWorkspaces)) + istructs.FirstBaseAppWSID
 	expectedAppWSID := istructs.NewWSID(urlWSID.ClusterID(), appWSID)
 	if expectedAppWSID != urlWSID {
 		return coreutils.NewHTTPErrorf(http.StatusForbidden, "wrong AppWSID: ", expectedAppWSID, " expected, ", urlWSID, " got")

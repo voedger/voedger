@@ -26,7 +26,7 @@ func BuildAppWorkspaces(vvm *VVM, vvmConfig *VVMConfig) error {
 		if err != nil {
 			return err
 		}
-		for wsNum := 0; istructs.AppWSAmount(wsNum) < as.WSAmount(); wsNum++ {
+		for wsNum := 0; istructs.NumAppWorkspaces(wsNum) < as.NumAppWorkspaces(); wsNum++ {
 			appWSID := istructs.NewWSID(istructs.MainClusterID, istructs.WSID(wsNum+int(istructs.FirstBaseAppWSID)))
 			existingCDocWSDesc, err := as.Records().GetSingleton(appWSID, authnz.QNameCDocWorkspaceDescriptor)
 			if err != nil {
@@ -88,7 +88,7 @@ func BuildAppWorkspaces(vvm *VVM, vvmConfig *VVMConfig) error {
 }
 
 // TODO: eliminate this after move BuildAppWorkspaces to AppDeploy stage
-func getAppPartsCount(appQName istructs.AppQName, builtins []BuiltInAppPackages) coreutils.NumAppPartitions {
+func getAppPartsCount(appQName istructs.AppQName, builtins []BuiltInAppPackages) istructs.NumAppPartitions {
 	for _, bi := range builtins {
 		if bi.BuiltInApp.Name != appQName {
 			continue

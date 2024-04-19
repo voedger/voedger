@@ -24,7 +24,6 @@ import (
 	imetrics "github.com/voedger/voedger/pkg/metrics"
 	"github.com/voedger/voedger/pkg/pipeline"
 	"github.com/voedger/voedger/pkg/state"
-	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 // Design: Projection Actualizers
@@ -49,7 +48,7 @@ import (
 func TestBasicUsage_AsynchronousActualizer(t *testing.T) {
 	require := require.New(t)
 
-	appName, totalPartitions, partitionNr := istructs.AppQName_test1_app1, coreutils.NumAppPartitions(1), istructs.PartitionID(1) // test within partition 1
+	appName, totalPartitions, partitionNr := istructs.AppQName_test1_app1, istructs.NumAppPartitions(1), istructs.PartitionID(1) // test within partition 1
 
 	appParts, cleanup, _, appStructs := deployTestApp(
 		appName, totalPartitions, []istructs.PartitionID{partitionNr}, false,
@@ -152,7 +151,7 @@ func TestBasicUsage_AsynchronousActualizer(t *testing.T) {
 func Test_AsynchronousActualizer_FlushByRange(t *testing.T) {
 	require := require.New(t)
 
-	appName, totalPartitions, partitionNr := istructs.AppQName_test1_app1, coreutils.NumAppPartitions(2), istructs.PartitionID(2) // test within partition 2
+	appName, totalPartitions, partitionNr := istructs.AppQName_test1_app1, istructs.NumAppPartitions(2), istructs.PartitionID(2) // test within partition 2
 
 	appParts, cleanup, _, appStructs := deployTestApp(
 		appName, totalPartitions, []istructs.PartitionID{partitionNr}, false,
@@ -243,7 +242,7 @@ func Test_AsynchronousActualizer_FlushByRange(t *testing.T) {
 func Test_AsynchronousActualizer_FlushByInterval(t *testing.T) {
 	require := require.New(t)
 
-	appName, totalPartitions, partitionNr := istructs.AppQName_test1_app1, coreutils.NumAppPartitions(1), istructs.PartitionID(1) // test within partition 1
+	appName, totalPartitions, partitionNr := istructs.AppQName_test1_app1, istructs.NumAppPartitions(1), istructs.PartitionID(1) // test within partition 1
 
 	appParts, cleanup, _, appStructs := deployTestApp(
 		appName, totalPartitions, []istructs.PartitionID{partitionNr}, false,
@@ -339,7 +338,7 @@ func getProjectorsInError(metrics imetrics.IMetrics, appName istructs.AppQName, 
 func Test_AsynchronousActualizer_ErrorAndRestore(t *testing.T) {
 	require := require.New(t)
 
-	appName, totalPartitions, partitionNr := istructs.AppQName_test1_app1, coreutils.NumAppPartitions(1), istructs.PartitionID(1) // test within partition 1
+	appName, totalPartitions, partitionNr := istructs.AppQName_test1_app1, istructs.NumAppPartitions(1), istructs.PartitionID(1) // test within partition 1
 	name := appdef.NewQName("test", "failing_projector")
 
 	attempts := 0
@@ -469,7 +468,7 @@ func Test_AsynchronousActualizer_ErrorAndRestore(t *testing.T) {
 func Test_AsynchronousActualizer_ResumeReadAfterNotifications(t *testing.T) {
 	require := require.New(t)
 
-	appName, totalPartitions, partitionNr := istructs.AppQName_test1_app1, coreutils.NumAppPartitions(1), istructs.PartitionID(1) // test within partition 1
+	appName, totalPartitions, partitionNr := istructs.AppQName_test1_app1, istructs.NumAppPartitions(1), istructs.PartitionID(1) // test within partition 1
 
 	appParts, cleanup, _, appStructs := deployTestApp(
 		appName, totalPartitions, []istructs.PartitionID{partitionNr}, false,
@@ -613,7 +612,7 @@ func Test_AsynchronousActualizer_Stress(t *testing.T) {
 
 	require := require.New(t)
 
-	appName, totalPartitions, partitionNr := istructs.AppQName_test1_app1, coreutils.NumAppPartitions(1), istructs.PartitionID(1) // test within partition 1
+	appName, totalPartitions, partitionNr := istructs.AppQName_test1_app1, istructs.NumAppPartitions(1), istructs.PartitionID(1) // test within partition 1
 
 	appParts, cleanup, _, appStructs := deployTestApp(
 		appName, totalPartitions, []istructs.PartitionID{partitionNr}, false,
@@ -731,7 +730,7 @@ func (m *simpleMetrics) Set(metricName string, partition istructs.PartitionID, p
 func Test_AsynchronousActualizer_NonBuffered(t *testing.T) {
 	require := require.New(t)
 
-	appName, totalPartitions, partitionNr := istructs.AppQName_test1_app1, coreutils.NumAppPartitions(2), istructs.PartitionID(2) // test within partition 2
+	appName, totalPartitions, partitionNr := istructs.AppQName_test1_app1, istructs.NumAppPartitions(2), istructs.PartitionID(2) // test within partition 2
 
 	appParts, cleanup, _, appStructs := deployTestApp(
 		appName, totalPartitions, []istructs.PartitionID{partitionNr}, false,

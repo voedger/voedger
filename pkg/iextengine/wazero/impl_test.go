@@ -55,7 +55,7 @@ func Test_BasicUsage(t *testing.T) {
 	orderedItemsView := appdef.NewQName(testPkg, "OrderedItems")
 
 	// Prepare app
-	app := appStructsFromSQL("github.com/untillpro/airs-bp3/packages/"+testPkg, `APPLICATION test(); 
+	app := appStructsFromSQL("github.com/untillpro/airs-bp3/packages/"+testPkg, `APPLICATION test();
 		WORKSPACE Restaurant (
 			DESCRIPTOR RestaurantDescriptor ();
 			TABLE Order INHERITS ODoc (
@@ -185,6 +185,7 @@ func Test_BasicUsage(t *testing.T) {
 func appStructs(appDef appdef.IAppDefBuilder, prepareAppCfg appCfgCallback) istructs.IAppStructs {
 	cfgs := make(istructsmem.AppConfigsType, 1)
 	cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, appDef)
+	cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 	if prepareAppCfg != nil {
 		prepareAppCfg(cfg)
 		cfg.Resources.Add(istructsmem.NewCommandFunction(newWorkspaceCmd, istructsmem.NullCommandExec))
@@ -561,7 +562,7 @@ func Test_WithState(t *testing.T) {
 	const bundlesLimit = 5
 	const ws = istructs.WSID(1)
 
-	app := appStructsFromSQL(testPkg, `APPLICATION test(); 
+	app := appStructsFromSQL(testPkg, `APPLICATION test();
 		WORKSPACE Restaurant (
 			DESCRIPTOR RestaurantDescriptor ();
 			VIEW TestView (
@@ -635,7 +636,7 @@ func Test_StatePanic(t *testing.T) {
 	const bundlesLimit = 5
 	const ws = istructs.WSID(1)
 
-	app := appStructsFromSQL(testPkg, `APPLICATION test(); 
+	app := appStructsFromSQL(testPkg, `APPLICATION test();
 		WORKSPACE Restaurant (
 			DESCRIPTOR RestaurantDescriptor ();
 			VIEW TestView (

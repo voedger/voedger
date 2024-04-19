@@ -663,10 +663,10 @@ func replyBadRequest(sender ibus.ISender, message string) {
 
 // test app deployment constants
 var (
-	testAppName                                 = istructs.AppQName_untill_airs_bp
-	testAppEngines                              = [cluster.ProcessorKind_Count]int{10, 10, 10}
-	testAppPartID    istructs.PartitionID       = 1
-	testAppPartCount coreutils.NumAppPartitions = 1
+	testAppName                                = istructs.AppQName_untill_airs_bp
+	testAppEngines                             = [cluster.ProcessorKind_Count]int{10, 10, 10}
+	testAppPartID    istructs.PartitionID      = 1
+	testAppPartCount istructs.NumAppPartitions = 1
 )
 
 func setUp(t *testing.T, prepare func(appDef appdef.IAppDefBuilder, cfg *istructsmem.AppConfigType)) testApp {
@@ -688,6 +688,7 @@ func setUp(t *testing.T, prepare func(appDef appdef.IAppDefBuilder, cfg *istruct
 	qNameTestWSKind := appdef.NewQName(appdef.SysPackage, "TestWSKind")
 	adb.AddCDoc(qNameTestWSKind).SetSingleton()
 	cfg := cfgs.AddConfig(istructs.AppQName_untill_airs_bp, adb)
+	cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 	if prepare != nil {
 		prepare(adb, cfg)
 	}
