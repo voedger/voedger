@@ -5,11 +5,8 @@
 package main
 
 import (
-	"crypto/rand"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"time"
@@ -173,16 +170,6 @@ type eventType struct {
 	Labels       map[string]string `json:"labels"`
 	GeneratorURL string            `json:"generatorURL"`
 	Status       string            `json:"status"`
-}
-
-func randomFileName(ext string) (string, error) {
-	bytes := make([]byte, 16)
-
-	if _, err := io.ReadFull(rand.Reader, bytes); err != nil {
-		return "", err
-	}
-
-	return hex.EncodeToString(bytes) + ext, nil
 }
 
 func (e *eventType) postAlert(cluster *clusterType) error {
