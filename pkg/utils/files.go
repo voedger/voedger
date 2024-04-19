@@ -50,7 +50,9 @@ func copyDirFSOpts(srcFS IReadFS, src, dst string, opts *copyOpts) error {
 		return err
 	}
 
-	if err = os.MkdirAll(dst, srcinfo.Mode()); err != nil {
+	// TODO: src is "." -> srcinfo.Mode() is weak -> permission deined on create dst within temp dir created with more strong FileMode
+	_ = srcinfo
+	if err = os.MkdirAll(dst, FileMode_rwxrwxrwx); err != nil {
 		return err
 	}
 

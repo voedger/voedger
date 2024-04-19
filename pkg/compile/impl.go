@@ -22,8 +22,9 @@ import (
 
 func compile(dir string) (*Result, error) {
 	var errs []error
+	notFoundDeps := make(map[string]struct{})
 
-	loadedPkgs, err := loadPackages(dir)
+	loadedPkgs, err := loadPackages(dir, notFoundDeps)
 	if err != nil {
 		return nil, err
 	}
@@ -33,13 +34,13 @@ func compile(dir string) (*Result, error) {
 	pkgFiles := make(map[string][]string)
 
 	// compile sys package first
-	sysPackageAst, compileSysErrs, isSysDir := compileSysPackage(dir, loadedPkgs, importedStmts, pkgFiles)
+	sysPackageAst, compileSysErrs, isSysDir := compileSysPackage(dir, loadedPkgs, importedStmts, pkgFiles, notFoundDeps)
 	pkgs = append(pkgs, sysPackageAst...)
 	errs = append(errs, compileSysErrs...)
 
 	if !isSysDir {
 		// compile working dir after sys package
-		compileDirPackageAst, compileDirErrs := compileDir(loadedPkgs, dir, loadedPkgs.packagePath, nil, importedStmts, pkgFiles)
+		compileDirPackageAst, compileDirErrs := compileDir(loadedPkgs, dir, loadedPkgs.packagePath, nil, importedStmts, pkgFiles, notFoundDeps)
 		pkgs = append(pkgs, compileDirPackageAst...)
 		errs = append(errs, compileDirErrs...)
 	}
@@ -65,13 +66,19 @@ func compile(dir string) (*Result, error) {
 	if err != nil {
 		errs = append(errs, coreutils.SplitErrors(err)...)
 	}
+
+	result := &Result{
+		ModulePath:   loadedPkgs.packagePath,
+		PkgFiles:     pkgFiles,
+		NotFoundDeps: maps.Keys(notFoundDeps),
+	}
 	// build app defs from app schema
 	if appAst != nil {
 		builder := appdef.New()
 		if err := parser.BuildAppDefs(appAst, builder); err != nil {
 			errs = append(errs, err)
 		}
-		appDef, err := builder.Build()
+		result.AppDef, err = builder.Build()
 		if err != nil {
 			errs = append(errs, err)
 		}
@@ -80,16 +87,11 @@ func compile(dir string) (*Result, error) {
 				logger.Verbose("compiling succeeded")
 			}
 		}
-		return &Result{
-			ModulePath: loadedPkgs.packagePath,
-			PkgFiles:   pkgFiles,
-			AppDef:     appDef,
-		}, errors.Join(errs...)
 	}
-	return nil, errors.Join(errs...)
+	return result, errors.Join(errs...)
 }
 
-func compileSysPackage(dir string, loadedPkgs *loadedPackages, importedStmts map[string]parser.ImportStmt, pkgFiles map[string][]string) (pkgAsts []*parser.PackageSchemaAST, errs []error, isSysDir bool) {
+func compileSysPackage(dir string, loadedPkgs *loadedPackages, importedStmts map[string]parser.ImportStmt, pkgFiles map[string][]string, notFoundDeps map[string]struct{}) (pkgAsts []*parser.PackageSchemaAST, errs []error, isSysDir bool) {
 	if loadedPkgs.modulePath == VoedgerPath {
 		rootPkgPath := loadedPkgs.rootPkgs[0].PkgPath
 		relPath := rootPkgPath[len(VoedgerPath):]
@@ -101,10 +103,10 @@ func compileSysPackage(dir string, loadedPkgs *loadedPackages, importedStmts map
 		if dir == sysPkgDir {
 			isSysDir = true
 		}
-		pkgAsts, errs = compileDir(loadedPkgs, sysPkgDir, appdef.SysPackage, nil, importedStmts, pkgFiles)
+		pkgAsts, errs = compileDir(loadedPkgs, sysPkgDir, appdef.SysPackage, nil, importedStmts, pkgFiles, notFoundDeps)
 		return
 	}
-	pkgAsts, errs = compileDependency(loadedPkgs, appdef.SysPackage, nil, importedStmts, pkgFiles)
+	pkgAsts, errs = compileDependency(loadedPkgs, appdef.SysPackage, nil, importedStmts, pkgFiles, notFoundDeps)
 	return
 }
 
@@ -190,7 +192,7 @@ func checkImportedStmts(qpn string, alias *parser.Ident, importedStmts map[strin
 	return true
 }
 
-func compileDir(loadedPkgs *loadedPackages, dir, packagePath string, alias *parser.Ident, importedStmts map[string]parser.ImportStmt, pkgFiles map[string][]string) (packages []*parser.PackageSchemaAST, errs []error) {
+func compileDir(loadedPkgs *loadedPackages, dir, packagePath string, alias *parser.Ident, importedStmts map[string]parser.ImportStmt, pkgFiles map[string][]string, notFoundDeps map[string]struct{}) (packages []*parser.PackageSchemaAST, errs []error) {
 	if ok := checkImportedStmts(packagePath, alias, importedStmts); !ok {
 		return
 	}
@@ -210,29 +212,29 @@ func compileDir(loadedPkgs *loadedPackages, dir, packagePath string, alias *pars
 	var compileDepErrs []error
 	var importedPackages []*parser.PackageSchemaAST
 	if packageAst != nil {
-		importedPackages, compileDepErrs = compileDependencies(loadedPkgs, packageAst.Ast.Imports, importedStmts, pkgFiles)
+		importedPackages, compileDepErrs = compileDependencies(loadedPkgs, packageAst.Ast.Imports, importedStmts, pkgFiles, notFoundDeps)
 		errs = append(errs, compileDepErrs...)
 	}
 	packages = append([]*parser.PackageSchemaAST{packageAst}, importedPackages...)
 	return
 }
 
-func compileDependencies(loadedPkgs *loadedPackages, imports []parser.ImportStmt, importedStmts map[string]parser.ImportStmt, pkgFiles map[string][]string) (packages []*parser.PackageSchemaAST, errs []error) {
+func compileDependencies(loadedPkgs *loadedPackages, imports []parser.ImportStmt, importedStmts map[string]parser.ImportStmt, pkgFiles map[string][]string, notFoundDeps map[string]struct{}) (packages []*parser.PackageSchemaAST, errs []error) {
 	for _, imp := range imports {
-		dependentPackages, compileDepErrs := compileDependency(loadedPkgs, imp.Name, imp.Alias, importedStmts, pkgFiles)
+		dependentPackages, compileDepErrs := compileDependency(loadedPkgs, imp.Name, imp.Alias, importedStmts, pkgFiles, notFoundDeps)
 		errs = append(errs, compileDepErrs...)
 		packages = append(packages, dependentPackages...)
 	}
 	return
 }
 
-func compileDependency(loadedPkgs *loadedPackages, depURL string, alias *parser.Ident, importedStmts map[string]parser.ImportStmt, pkgFiles map[string][]string) (packages []*parser.PackageSchemaAST, errs []error) {
+func compileDependency(loadedPkgs *loadedPackages, depURL string, alias *parser.Ident, importedStmts map[string]parser.ImportStmt, pkgFiles map[string][]string, notFoundDeps map[string]struct{}) (packages []*parser.PackageSchemaAST, errs []error) {
 	// workaround for sys package
 	depURLToFind := depURL
 	if depURL == appdef.SysPackage {
 		depURLToFind = sys.PackagePath
 	}
-	path, err := localPath(loadedPkgs, depURLToFind)
+	path, err := localPath(loadedPkgs, depURLToFind, notFoundDeps)
 	if err != nil {
 		errs = append(errs, err)
 	}
@@ -240,12 +242,12 @@ func compileDependency(loadedPkgs *loadedPackages, depURL string, alias *parser.
 		logger.Verbose(fmt.Sprintf("dependency: %s\nlocation: %s\n", depURL, path))
 	}
 	var compileDirErrs []error
-	packages, compileDirErrs = compileDir(loadedPkgs, path, depURL, alias, importedStmts, pkgFiles)
+	packages, compileDirErrs = compileDir(loadedPkgs, path, depURL, alias, importedStmts, pkgFiles, notFoundDeps)
 	errs = append(errs, compileDirErrs...)
 	return
 }
 
-func loadPackages(dir string) (*loadedPackages, error) {
+func loadPackages(dir string, notFoundDeps map[string]struct{}) (*loadedPackages, error) {
 	cfg := &packages.Config{
 		Mode: packages.NeedName | packages.NeedFiles | packages.NeedImports | packages.NeedDeps | packages.NeedModule,
 		Dir:  dir,
@@ -267,6 +269,7 @@ func loadPackages(dir string) (*loadedPackages, error) {
 			name:         rootPkgs[0].Name,
 		}, nil
 	}
+	notFoundDeps[dir] = struct{}{}
 	return nil, fmt.Errorf("cannot find module path for %s", dir)
 }
 
@@ -302,7 +305,7 @@ func allImportedPackages(initialPkgs []*packages.Package) (importedPkgs map[stri
 
 // localPath returns local path of the dependency
 // E.g. github.com/voedger/voedger/pkg/sys => /home/user/go/pkg/mod/github.com/voedger/voedger@v0.0.0-20231103100658-8d2fb878c2f9/pkg/sys
-func localPath(loadedPkgs *loadedPackages, depURL string) (localDepPath string, err error) {
+func localPath(loadedPkgs *loadedPackages, depURL string, notFoundDeps map[string]struct{}) (localDepPath string, err error) {
 	if logger.IsVerbose() {
 		logger.Verbose(fmt.Sprintf("resolving dependency %s ...", depURL))
 	}
@@ -320,5 +323,6 @@ func localPath(loadedPkgs *loadedPackages, depURL string) (localDepPath string, 
 			}
 		}
 	}
+	notFoundDeps[depURL] = struct{}{}
 	return "", fmt.Errorf("cannot find module for path %s", depURL)
 }

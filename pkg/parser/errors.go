@@ -30,6 +30,7 @@ var ErrAbstractWorkspaceDescriptor = errors.New("abstract workspace cannot have 
 var ErrNestedTablesNotSupportedInTypes = errors.New("nested tables not supported in types")
 var ErrSysWorkspaceNotFound = errors.New("sys.Workspace type not found")
 var ErrInheritanceFromSysWorkspaceNotAllowed = errors.New("explicit inheritance from sys.Workspace not allowed")
+var ErrScheduledProjectorWithIntents = errors.New("scheduled projector cannot have intents")
 
 var ErrMustBeNotNull = errors.New("field has to be NOT NULL")
 var ErrCircularReferenceInInherits = errors.New("circular reference in INHERITS")
