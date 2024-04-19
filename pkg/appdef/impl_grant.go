@@ -5,6 +5,11 @@
 
 package appdef
 
+import (
+	"fmt"
+	"strings"
+)
+
 // # Implements:
 //   - IGRant
 type grant struct {
@@ -33,3 +38,12 @@ func (g grant) Kind() GrantKind { return g.kind }
 func (g grant) Objects() QNames { return g.objects }
 
 func (g grant) Role() IRole { return g.role }
+
+func (g grant) String() string {
+	return fmt.Sprintf("grant %s to %v for %v", g.kind.TrimString(), g.objects, g.role)
+}
+
+func (k GrantKind) TrimString() string {
+	const pref = "GrantKind_"
+	return strings.TrimPrefix(k.String(), pref)
+}
