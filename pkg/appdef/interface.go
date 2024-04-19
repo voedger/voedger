@@ -31,6 +31,8 @@ type IAppDef interface {
 	IWithCommands
 	IWithQueries
 	IWithProjectors
+
+	IWithRoles
 }
 
 type IAppDefBuilder interface {
@@ -52,6 +54,8 @@ type IAppDefBuilder interface {
 	ICommandsBuilder
 	IQueriesBuilder
 	IProjectorsBuilder
+
+	IRolesBuilder
 
 	// Returns application definition while building.
 	//
