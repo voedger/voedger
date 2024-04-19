@@ -144,6 +144,30 @@ func (app *appDef) GDocs(cb func(IGDoc)) {
 	})
 }
 
+func (app appDef) Grants(cb func(IGrant)) {
+	app.Roles(func(r IRole) {
+		r.Grants(func(g IGrant) {
+			cb(g)
+		})
+	})
+}
+
+func (app appDef) GrantsByKind(k GrantKind, cb func(IGrant)) {
+	app.Grants(func(g IGrant) {
+		if g.Kind() == k {
+			cb(g)
+		}
+	})
+}
+
+func (app appDef) GrantsForObject(n QName) []IGrant {
+	grants := make([]IGrant, 0)
+	app.Roles(func(r IRole) {
+		grants = append(grants, r.GrantsForObject(n)...)
+	})
+	return grants
+}
+
 func (app *appDef) GRecord(name QName) IGRecord {
 	if t := app.typeByKind(name, TypeKind_GRecord); t != nil {
 		return t.(IGRecord)
@@ -532,6 +556,30 @@ func (app *appDef) build() (err error) {
 	return err
 }
 
+func (app *appDef) grant(kind GrantKind, objects []QName, fields []FieldName, toRole QName, comment ...string) {
+	r := app.Role(toRole)
+	if r == nil {
+		panic(fmt.Errorf("%w: %v", ErrRoleNotFound, toRole))
+	}
+	r.(*role).grant(kind, objects, fields, comment...)
+}
+
+func (app *appDef) grantAll(objects []QName, toRole QName, comment ...string) {
+	r := app.Role(toRole)
+	if r == nil {
+		panic(fmt.Errorf("%w: %v", ErrRoleNotFound, toRole))
+	}
+	r.(*role).grantAll(objects, comment...)
+}
+
+func (app *appDef) grantRoles(roles []QName, toRole QName, comment ...string) {
+	r := app.Role(toRole)
+	if r == nil {
+		panic(fmt.Errorf("%w: %v", ErrRoleNotFound, toRole))
+	}
+	r.(*role).grantRoles(roles, comment...)
+}
+
 // Makes system package.
 //
 // Should be called after appDef is created.
@@ -611,6 +659,21 @@ func (ab *appDefBuilder) AddWRecord(name QName) IWRecordBuilder { return ab.app.
 func (ab *appDefBuilder) AddWorkspace(name QName) IWorkspaceBuilder { return ab.app.addWorkspace(name) }
 
 func (ab appDefBuilder) AppDef() IAppDef { return ab.app }
+
+func (ab *appDefBuilder) Grant(kind GrantKind, objects []QName, fields []FieldName, toRole QName, comment ...string) IGrantsBuilder {
+	ab.app.grant(kind, objects, fields, toRole, comment...)
+	return ab
+}
+
+func (ab *appDefBuilder) GrantAll(objects []QName, toRole QName, comment ...string) IGrantsBuilder {
+	ab.app.grantAll(objects, toRole, comment...)
+	return ab
+}
+
+func (ab *appDefBuilder) GrantRoles(roles []QName, toRole QName, comment ...string) IGrantsBuilder {
+	ab.app.grantRoles(roles, toRole, comment...)
+	return ab
+}
 
 func (ab *appDefBuilder) Build() (IAppDef, error) {
 	if err := ab.app.build(); err != nil {

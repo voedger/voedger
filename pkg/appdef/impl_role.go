@@ -47,9 +47,57 @@ func (r role) GrantsForObject(name QName) []IGrant {
 	return gg
 }
 
-// appends a grant to the role
-func (r *role) appendGrant(g *grant) {
-	r.grants = append(r.grants, g)
+func (r *role) grant(kind GrantKind, objects []QName, fields []FieldName, comment ...string) {
+	r.grants = append(r.grants, newGrant(kind, objects, fields, r, comment...))
+}
+
+func (r *role) grantAll(objects []QName, comment ...string) {
+	gg := make(map[GrantKind]*grant)
+
+	for _, o := range QNamesFrom(objects...) {
+		t := r.app.Type(o)
+		if t == nil {
+			panic(fmt.Errorf("%w: %v", ErrTypeNotFound, o))
+		}
+
+		if _, ok := t.(IStructure); ok { // or IRecord??
+			for k := GrantKind_Insert; k <= GrantKind_Select; k++ {
+				if g, ok := gg[k]; ok {
+					g.objects.Add(o)
+				} else {
+					g := newGrant(k, []QName{o}, nil, r, comment...)
+					r.grants = append(r.grants, g)
+					gg[k] = g
+				}
+			}
+		}
+
+		if _, ok := t.(IFunction); ok {
+			if g, ok := gg[GrantKind_Execute]; ok {
+				g.objects.Add(o)
+			} else {
+				g := newGrant(GrantKind_Execute, []QName{o}, nil, r, comment...)
+				r.grants = append(r.grants, g)
+				gg[GrantKind_Execute] = g
+			}
+		}
+
+		if _, ok := t.(IWorkspace); ok {
+			for k := GrantKind_Insert; k <= GrantKind_Execute; k++ {
+				if g, ok := gg[k]; ok {
+					g.objects.Add(o)
+				} else {
+					g := newGrant(k, []QName{o}, nil, r, comment...)
+					r.grants = append(r.grants, g)
+					gg[k] = g
+				}
+			}
+		}
+	}
+}
+
+func (r *role) grantRoles(roles []QName, comment ...string) {
+	r.grants = append(r.grants, newGrant(GrantKind_Role, roles, nil, r, comment...))
 }
 
 // # Implements:
@@ -67,58 +115,16 @@ func newRoleBuilder(role *role) *roleBuilder {
 }
 
 func (rb *roleBuilder) Grant(kind GrantKind, objects []QName, fields []FieldName, comment ...string) IRoleBuilder {
-	_ = newGrant(kind, objects, fields, rb.role, comment...)
+	rb.role.grant(kind, objects, fields, comment...)
 	return rb
 }
 
 func (rb *roleBuilder) GrantAll(objects []QName, comment ...string) IRoleBuilder {
-	gg := make(map[GrantKind]*grant)
-
-	for _, o := range QNamesFrom(objects...) {
-		t := rb.role.app.Type(o)
-		if t == nil {
-			panic(fmt.Errorf("%w: %v", ErrTypeNotFound, o))
-		}
-
-		if _, ok := t.(IStructure); ok { // or IRecord??
-			for k := GrantKind_Insert; k <= GrantKind_Select; k++ {
-				g := gg[k]
-				if g == nil {
-					g = newGrant(k, QNames{o}, nil, rb.role, comment...)
-					gg[k] = g
-				} else {
-					g.objects = append(g.objects, o)
-				}
-			}
-		}
-
-		if _, ok := t.(IFunction); ok {
-			g := gg[GrantKind_Execute]
-			if g == nil {
-				g = newGrant(GrantKind_Execute, QNames{o}, nil, rb.role, comment...)
-				gg[GrantKind_Execute] = g
-			} else {
-				g.objects = append(g.objects, o)
-			}
-		}
-
-		if _, ok := t.(IWorkspace); ok {
-			for k := GrantKind_Insert; k <= GrantKind_Execute; k++ {
-				g := gg[k]
-				if g == nil {
-					g = newGrant(k, QNames{o}, nil, rb.role, comment...)
-					gg[k] = g
-				} else {
-					g.objects = append(g.objects, o)
-				}
-			}
-		}
-	}
-
+	rb.role.grantAll(objects, comment...)
 	return rb
 }
 
 func (rb *roleBuilder) GrantRoles(roles []QName, comment ...string) IRoleBuilder {
-	_ = newGrant(GrantKind_Role, roles, nil, rb.role, comment...)
+	rb.role.grantRoles(roles, comment...)
 	return rb
 }

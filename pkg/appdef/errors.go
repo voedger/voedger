@@ -22,6 +22,8 @@ var ErrTypeNotFound = fmt.Errorf("type not found: %w", ErrNameNotFound)
 
 var ErrFieldNotFound = fmt.Errorf("field not found: %w", ErrNameNotFound)
 
+var ErrRoleNotFound = fmt.Errorf("role not found: %w", ErrTypeNotFound)
+
 var ErrInvalidQNameStringRepresentation = errors.New("invalid string representation of qualified name")
 
 var ErrInvalidTypeKind = errors.New("invalid type kind")

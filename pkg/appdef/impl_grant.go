@@ -23,7 +23,6 @@ func newGrant(kind GrantKind, objects []QName, fields []FieldName, role *role, c
 		fields:  fields, // TODO: check fields validity
 		role:    role,
 	}
-	role.appendGrant(g)
 	return g
 }
 

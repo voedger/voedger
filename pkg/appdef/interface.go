@@ -33,6 +33,7 @@ type IAppDef interface {
 	IWithProjectors
 
 	IWithRoles
+	IWithGrants
 }
 
 type IAppDefBuilder interface {
@@ -56,6 +57,7 @@ type IAppDefBuilder interface {
 	IProjectorsBuilder
 
 	IRolesBuilder
+	IGrantsBuilder
 
 	// Returns application definition while building.
 	//
