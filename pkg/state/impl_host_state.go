@@ -248,6 +248,14 @@ func (s *hostState) Read(key istructs.IStateKeyBuilder, callback istructs.ValueC
 	}
 	return storage.Read(key, callback)
 }
+func (s *hostState) FindIntent(key istructs.IStateKeyBuilder) istructs.IStateValueBuilder {
+	for _, item := range s.intents[key.Storage()] {
+		if item.key.Equals(key) {
+			return item.value
+		}
+	}
+	return nil
+}
 func (s *hostState) NewValue(key istructs.IStateKeyBuilder) (eb istructs.IStateValueBuilder, err error) {
 	storage, ok := s.withInsert[key.Storage()]
 	if !ok {

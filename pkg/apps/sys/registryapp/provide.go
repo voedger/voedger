@@ -14,14 +14,16 @@ import (
 	"github.com/voedger/voedger/pkg/registry"
 	"github.com/voedger/voedger/pkg/sys"
 	"github.com/voedger/voedger/pkg/sys/smtp"
+	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-func Provide(smtpCfg smtp.Cfg) apps.AppBuilder {
+// for historical reason num partitions of sys/registry must be equal to numCP
+func Provide(smtpCfg smtp.Cfg, numCP coreutils.NumCommandProcessors) apps.AppBuilder {
 	return func(apis apps.APIs, cfg *istructsmem.AppConfigType, ep extensionpoints.IExtensionPoint) apps.BuiltInAppDef {
 
 		// sys package
 		sysPackageFS := sys.Provide(cfg, smtpCfg, ep, nil, apis.TimeFunc, apis.ITokens, apis.IFederation, apis.IAppStructsProvider, apis.IAppTokensFactory,
-			apis.NumCommandProcessors, nil, apis.IAppStorageProvider)
+			nil, apis.IAppStorageProvider)
 
 		// sys/registry resources
 		registryPackageFS := registry.Provide(cfg, apis.IAppStructsProvider, apis.ITokens, apis.IFederation)
@@ -35,8 +37,8 @@ func Provide(smtpCfg smtp.Cfg) apps.AppBuilder {
 			AppQName: istructs.AppQName_sys_registry,
 			Packages: []parser.PackageFS{sysPackageFS, registryPackageFS, registryAppPackageFS},
 			AppDeploymentDescriptor: cluster.AppDeploymentDescriptor{
-				PartsCount:     int(apis.NumCommandProcessors),
-				EnginePoolSize: cluster.PoolSize(int(apis.NumCommandProcessors), DefDeploymentQPCount, int(apis.NumCommandProcessors)),
+				NumParts:       coreutils.NumAppPartitions(numCP),
+				EnginePoolSize: cluster.PoolSize(int(numCP), DefDeploymentQPCount, int(numCP)),
 			},
 		}
 	}

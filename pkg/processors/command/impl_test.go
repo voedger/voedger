@@ -663,10 +663,10 @@ func replyBadRequest(sender ibus.ISender, message string) {
 
 // test app deployment constants
 var (
-	testAppName                           = istructs.AppQName_untill_airs_bp
-	testAppEngines                        = [cluster.ProcessorKind_Count]int{10, 10, 10}
-	testAppPartID    istructs.PartitionID = 1
-	testAppPartCount                      = 1
+	testAppName                                 = istructs.AppQName_untill_airs_bp
+	testAppEngines                              = [cluster.ProcessorKind_Count]int{10, 10, 10}
+	testAppPartID    istructs.PartitionID       = 1
+	testAppPartCount coreutils.NumAppPartitions = 1
 )
 
 func setUp(t *testing.T, prepare func(appDef appdef.IAppDefBuilder, cfg *istructsmem.AppConfigType)) testApp {

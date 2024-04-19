@@ -5,6 +5,8 @@
 
 package cluster
 
+import coreutils "github.com/voedger/voedger/pkg/utils"
+
 // ProcessorKind is a enumeration of processors.
 type ProcessorKind uint8
 
@@ -19,7 +21,7 @@ const (
 )
 
 type AppDeploymentDescriptor struct {
-	PartsCount     int
+	NumParts       coreutils.NumAppPartitions
 	EnginePoolSize [ProcessorKind_Count]int
 }
 

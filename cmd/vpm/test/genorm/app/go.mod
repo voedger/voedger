@@ -1,6 +1,6 @@
 module app
 
-go 1.21.6
+go 1.21.4
 
 require github.com/voedger/voedger v0.0.0-20240315095646-3b8ad52c913b
 
@@ -20,7 +20,6 @@ require (
 	github.com/stretchr/testify v1.8.4 // indirect
 	github.com/untillpro/dynobuffers v0.0.0-20221105082727-4ed4b8227195 // indirect
 	github.com/untillpro/gojay v1.2.17-0.20201109133446-b1069e05b56c // indirect
-	github.com/untillpro/goutils v0.0.0-20231117130619-11fe1908c171 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/wneessen/go-mail v0.3.9 // indirect
 	golang.org/x/exp v0.0.0-20240112132812-db7319d0e0e3 // indirect

@@ -15,8 +15,8 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
-	"github.com/untillpro/goutils/exec"
-	"github.com/untillpro/goutils/logger"
+	"github.com/voedger/voedger/pkg/goutils/exec"
+	"github.com/voedger/voedger/pkg/goutils/logger"
 	"golang.org/x/mod/semver"
 
 	"github.com/voedger/voedger/pkg/compile"
@@ -70,7 +70,6 @@ func createGoMod(dir, packagePath string) error {
 	if exists {
 		return fmt.Errorf("%s already exists", filePath)
 	}
-
 	goVersion := runtime.Version()
 	goVersionNumber := strings.TrimSpace(strings.TrimPrefix(goVersion, "go"))
 	if !checkGoVersion(goVersionNumber) {

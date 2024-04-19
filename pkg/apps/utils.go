@@ -9,11 +9,12 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/parser"
 	"github.com/voedger/voedger/pkg/sys"
+	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 // includes sys
 // all sql files should be in the root of the fs
-func BuildAppDefFromFS(path string, fs parser.IReadFS, subDir string, additionalPackagesFS ...parser.PackageFS) (appdef.IAppDef, error) {
+func BuildAppDefFromFS(path string, fs coreutils.IReadFS, subDir string, additionalPackagesFS ...parser.PackageFS) (appdef.IAppDef, error) {
 	appPackageAst, err := parser.ParsePackageDir(path, fs, subDir)
 	if err != nil {
 		return nil, err

@@ -18,11 +18,12 @@ import (
 	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/pipeline"
 	queryprocessor "github.com/voedger/voedger/pkg/processors/query"
+	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 type testDataType struct {
 	appQName        istructs.AppQName
-	totalPartitions int
+	totalPartitions coreutils.NumAppPartitions
 	appEngines      [cluster.ProcessorKind_Count]int
 
 	pkgName string

@@ -15,6 +15,9 @@ type IProjector interface {
 	// Events to trigger.
 	Events() IProjectorEvents
 
+	// Schedule to trigger projector as cron expression.
+	CronSchedule() string
+
 	// Returns is projector is able to handle `sys.Error` events.
 	// False by default.
 	WantErrors() bool
@@ -84,6 +87,9 @@ type IProjectorBuilder interface {
 
 	// Events builder.
 	Events() IProjectorEventsBuilder
+
+	// Schedule to trigger projector as cron expression.
+	SetCronSchedule(string) IProjectorBuilder
 
 	// Sets is projector is able to handle `sys.Error` events.
 	SetWantErrors() IProjectorBuilder

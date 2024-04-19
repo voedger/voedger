@@ -18,7 +18,7 @@ import (
 func Provide() apps.AppBuilder {
 	return func(apis apps.APIs, cfg *istructsmem.AppConfigType, ep extensionpoints.IExtensionPoint) apps.BuiltInAppDef {
 		sysPackageFS := sys.Provide(cfg, smtp.Cfg{}, ep, nil, apis.TimeFunc, apis.ITokens, apis.IFederation, apis.IAppStructsProvider, apis.IAppTokensFactory,
-			apis.NumCommandProcessors, nil, apis.IAppStorageProvider)
+			nil, apis.IAppStorageProvider)
 		routerAppPackageFS := parser.PackageFS{
 			Path: RouterAppFQN,
 			FS:   routerAppSchemaFS,
@@ -27,7 +27,7 @@ func Provide() apps.AppBuilder {
 			AppQName: istructs.AppQName_sys_router,
 			Packages: []parser.PackageFS{sysPackageFS, routerAppPackageFS},
 			AppDeploymentDescriptor: cluster.AppDeploymentDescriptor{
-				PartsCount:     DefDeploymentPartsCount,
+				NumParts:       DefDeploymentPartsCount,
 				EnginePoolSize: DefDeploymentEnginePoolSize,
 			},
 		}
