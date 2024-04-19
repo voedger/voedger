@@ -57,6 +57,19 @@ func TestAppConfigsType_AddConfig(t *testing.T) {
 		})
 	})
 
+	t.Run("misc", func(t *testing.T) {
+		cfgs := make(AppConfigsType)
+		adb := appdef.New()
+		adb.AddPackage("test", "test.com/test")
+		cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, adb)
+		cfg.SetNumAppWorkspaces(42)
+		_, storageProvider := teststore.New()
+		appStructs := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
+		as, err := appStructs.AppStructs(istructs.AppQName_test1_app1)
+		require.NoError(err)
+		require.Equal(istructs.NumAppWorkspaces(42), as.NumAppWorkspaces())
+	})
+
 	t.Run("must be error to make invalid changes in appDef after add config", func(t *testing.T) {
 		cfgs := make(AppConfigsType)
 		adb := appdef.New()
@@ -424,6 +437,6 @@ func TestErrorsAppConfigsType(t *testing.T) {
 		cfgs.AddConfig(istructs.AppQName_test1_app1, appDef)
 		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
 		_, err := provider.AppStructs(istructs.AppQName_test1_app1)
-		require.ErrorIs(err,ErrNumAppWorkspacesNotSet )
+		require.ErrorIs(err, ErrNumAppWorkspacesNotSet)
 	})
 }
