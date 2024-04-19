@@ -7,6 +7,5 @@ package appdef
 
 // Creates and return new application builder
 func New() IAppDefBuilder {
-	appDef := newAppDef()
-	return newAppDefBuilder(appDef)
+	return newAppDefBuilder(newAppDef())
 }

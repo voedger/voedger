@@ -38,7 +38,7 @@ func TestSendMailStorage_BasicUsage(t *testing.T) {
 	k.PutString(Field_BCC, "bcc1@email.com")
 	k.PutString(Field_Body, "Hello world")
 
-	require.Nil(s.NewValue(k))
+	require.NotNil(s.NewValue(k))
 	readyToFlush, err := s.ApplyIntents()
 	require.True(readyToFlush)
 	require.NoError(err)

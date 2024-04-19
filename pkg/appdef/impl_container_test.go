@@ -109,7 +109,7 @@ func TestValidateContainer(t *testing.T) {
 
 	t.Run("must be error if container type not found", func(t *testing.T) {
 		_, err := app.Build()
-		require.ErrorIs(err, ErrNameNotFound)
+		require.ErrorIs(err, ErrTypeNotFound)
 		require.ErrorContains(err, "unknown type «test.rec»")
 	})
 

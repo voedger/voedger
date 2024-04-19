@@ -59,9 +59,6 @@ type IHTTPClient interface {
 
 type TimeFunc func() time.Time
 
-type CommandProcessorsCount int
-type QueryProcessorsCount int
-
 type PathReader struct {
 	rootPath string
 }
@@ -86,4 +83,17 @@ func (r *PathReader) ReadFile(name string) ([]byte, error) {
 
 type IErrUnwrapper interface {
 	Unwrap() []error
+}
+
+type CUD struct {
+	Fields map[string]interface{} `json:"fields"`
+}
+
+type CUDs struct {
+	Cuds []CUD `json:"cuds"`
+}
+
+type IReadFS interface {
+	fs.ReadDirFS
+	fs.ReadFileFS
 }

@@ -31,14 +31,14 @@ func BuildPackageSchema(path string, asts []*FileSchemaAST) (*PackageSchemaAST, 
 }
 
 // ParsePackageDir is a helper which parses all SQL schemas from specified FS and returns Package Schema.
-func ParsePackageDir(path string, fs IReadFS, subDir string) (ast *PackageSchemaAST, err error) {
+func ParsePackageDir(path string, fs coreutils.IReadFS, subDir string) (ast *PackageSchemaAST, err error) {
 	ast, _, err = ParsePackageDirCollectingFiles(path, fs, subDir)
 	return
 }
 
 // ParsePackageDirCollectingFiles is a helper which parses all SQL schemas from specified FS
 // Returns package schema and list of schema file names which were parsed
-func ParsePackageDirCollectingFiles(path string, fs IReadFS, subDir string) (*PackageSchemaAST, []string, error) {
+func ParsePackageDirCollectingFiles(path string, fs coreutils.IReadFS, subDir string) (*PackageSchemaAST, []string, error) {
 	asts, errs := parseFSImpl(fs, subDir)
 	fileNames := make([]string, len(asts))
 	for i, fileAst := range asts {

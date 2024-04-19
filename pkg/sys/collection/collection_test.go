@@ -52,8 +52,8 @@ func deployTestApp(t *testing.T) (appParts appparts.IAppPartitions, appStructs i
 	// конфиг приложения airs-bp
 	adb := appdef.New()
 	cfg := cfgs.AddConfig(test.appQName, adb)
+	cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 	{
-		Provide(cfg, adb)
 
 		adb.AddPackage("test", "test.org/test")
 
@@ -192,6 +192,8 @@ func deployTestApp(t *testing.T) (appParts appparts.IAppPartitions, appStructs i
 	// TODO: remove it after https://github.com/voedger/voedger/issues/56
 	appDef, err := adb.Build()
 	require.NoError(err)
+
+	Provide(cfg)
 
 	appStructsProvider := istructsmem.Provide(cfgs, iratesce.TestBucketsFactory,
 		payloads.ProvideIAppTokensFactory(itokensjwt.TestTokensJWT()), asp)
@@ -997,9 +999,6 @@ func updateArticleCUD(bld istructs.IRawEventBuilder, app istructs.IAppStructs, a
 	}
 	if rec.QName() == appdef.NullQName {
 		panic(fmt.Sprintf("Article %d not found", articleRecordId))
-	}
-	if err != nil {
-		panic(err)
 	}
 	writer := bld.CUDBuilder().Update(rec)
 	writer.PutString(test.articleNameIdent, name)

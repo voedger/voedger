@@ -12,6 +12,7 @@ import (
 	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/apppartsctl"
 	"github.com/voedger/voedger/pkg/apps"
 	"github.com/voedger/voedger/pkg/extensionpoints"
@@ -22,6 +23,7 @@ import (
 	"github.com/voedger/voedger/pkg/isecrets"
 	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/parser"
 	"github.com/voedger/voedger/pkg/pipeline"
 	commandprocessor "github.com/voedger/voedger/pkg/processors/command"
@@ -36,7 +38,7 @@ type OperatorCommandProcessors pipeline.ISyncOperator
 type OperatorCommandProcessor pipeline.ISyncOperator
 type OperatorQueryProcessors pipeline.ISyncOperator
 type OperatorQueryProcessor pipeline.ISyncOperator
-type AppServiceFactory func(ctx context.Context, appQName istructs.AppQName, asyncProjectors istructs.Projectors, appPartsCount int) pipeline.ISyncOperator
+type AppServiceFactory func(ctx context.Context, appQName istructs.AppQName, asyncProjectors istructs.Projectors, appPartsCount istructs.NumAppPartitions) pipeline.ISyncOperator
 type AppPartitionFactory func(ctx context.Context, appQName istructs.AppQName, asyncProjectors istructs.Projectors, partitionID istructs.PartitionID) pipeline.ISyncOperator
 type AsyncActualizersFactory func(ctx context.Context, appQName istructs.AppQName, asyncProjectors istructs.Projectors, partitionID istructs.PartitionID, opts []state.ActualizerStateOptFunc) pipeline.ISyncOperator
 type OperatorAppServicesFactory func(ctx context.Context) pipeline.ISyncOperator
@@ -54,9 +56,16 @@ type ServiceChannelFactory func(pcgt ProcessorChannelType, channelIdx int) iproc
 type AppStorageFactory func(appQName istructs.AppQName, appStorage istorage.IAppStorage) istorage.IAppStorage
 type StorageCacheSizeType int
 type VVMApps []istructs.AppQName
-type BuiltInAppsPackages struct {
+type BuiltInAppPackages struct {
 	apppartsctl.BuiltInApp
-	Packages []parser.PackageFS
+	Packages []parser.PackageFS // need for build baseline schemas
+}
+type AppConfigsTypeEmpty istructsmem.AppConfigsType
+
+type AppsArtefacts struct {
+	istructsmem.AppConfigsType
+	builtInAppPackages []BuiltInAppPackages
+	appEPs             map[istructs.AppQName]extensionpoints.IExtensionPoint
 }
 
 type BusTimeout time.Duration
@@ -100,9 +109,10 @@ type VVMAppsBuilder map[istructs.AppQName]apps.AppBuilder
 type VVM struct {
 	ServicePipeline
 	apps.APIs
+	appparts.IAppPartitions
 	AppsExtensionPoints map[istructs.AppQName]extensionpoints.IExtensionPoint
 	MetricsServicePort  func() metrics.MetricsServicePort
-	BuiltInAppsPackages []BuiltInAppsPackages
+	BuiltInAppsPackages []BuiltInAppPackages
 }
 
 type AppsExtensionPoints map[istructs.AppQName]extensionpoints.IExtensionPoint
@@ -124,8 +134,8 @@ type VVMConfig struct {
 	BlobberServiceChannels     router.BlobberServiceChannels
 	BLOBMaxSize                router.BLOBMaxSizeType
 	Name                       commandprocessor.VVMName
-	NumCommandProcessors       coreutils.CommandProcessorsCount
-	NumQueryProcessors         coreutils.QueryProcessorsCount
+	NumCommandProcessors       istructs.NumCommandProcessors
+	NumQueryProcessors         istructs.NumQueryProcessors
 	MaxPrepareQueries          MaxPrepareQueriesType
 	StorageCacheSize           StorageCacheSizeType
 	processorsChannels         []ProcesorChannel

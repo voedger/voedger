@@ -10,7 +10,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/untillpro/goutils/logger"
+	"github.com/voedger/voedger/pkg/goutils/logger"
 	"golang.org/x/crypto/acme/autocert"
 
 	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
@@ -22,14 +22,14 @@ import (
 
 // port == 443 -> httpsService + ACMEService, otherwise -> HTTPService only, ACMEService is nil
 func Provide(vvmCtx context.Context, rp RouterParams, aBusTimeout time.Duration, broker in10n.IN10nBroker, bp *BlobberParams, autocertCache autocert.Cache,
-	bus ibus.IBus, appsWSAmount map[istructs.AppQName]istructs.AppWSAmount) (httpSrv IHTTPService, acmeSrv IACMEService) {
+	bus ibus.IBus, numsAppsWorkspaces map[istructs.AppQName]istructs.NumAppWorkspaces) (httpSrv IHTTPService, acmeSrv IACMEService) {
 	httpService := &httpService{
-		RouterParams:  rp,
-		n10n:          broker,
-		BlobberParams: bp,
-		bus:           bus,
-		busTimeout:    aBusTimeout,
-		appsWSAmount:  appsWSAmount,
+		RouterParams:       rp,
+		n10n:               broker,
+		BlobberParams:      bp,
+		bus:                bus,
+		busTimeout:         aBusTimeout,
+		numsAppsWorkspaces: numsAppsWorkspaces,
 	}
 	if bp != nil {
 		bp.procBus = iprocbusmem.Provide(bp.ServiceChannels)

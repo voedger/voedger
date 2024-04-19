@@ -103,7 +103,7 @@ type IFieldsBuilder interface {
 
 // Describe single field.
 type IField interface {
-	IComment
+	IWithComments
 
 	// Returns field name
 	Name() FieldName

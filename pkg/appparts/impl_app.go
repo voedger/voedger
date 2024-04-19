@@ -37,7 +37,7 @@ func (e *engines) release() {
 type app struct {
 	apps       *apps
 	name       istructs.AppQName
-	partsCount int
+	partsCount istructs.NumAppPartitions
 	def        appdef.IAppDef
 	structs    istructs.IAppStructs
 	engines    [cluster.ProcessorKind_Count]*pool.Pool[*engines]
@@ -45,7 +45,7 @@ type app struct {
 	parts map[istructs.PartitionID]*partition
 }
 
-func newApplication(apps *apps, name istructs.AppQName, partsCount int) *app {
+func newApplication(apps *apps, name istructs.AppQName, partsCount istructs.NumAppPartitions) *app {
 	return &app{
 		apps:       apps,
 		name:       name,

@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2021-present Sigma-Soft, Ltd.
+ * @author: Nikolay Nikitin
  */
 
 package appdef_test
@@ -15,21 +16,17 @@ func ExampleQNames() {
 	product, order, customer := appdef.NewQName("test", "product"), appdef.NewQName("test", "order"), appdef.NewQName("test", "customer")
 
 	// Create empty QNames
-
 	qnames := appdef.QNames{}
 
 	// Add some QNames
-
 	qnames.Add(product, order, customer, product)
 
 	// Iterate over QNames
-
 	for _, qname := range qnames {
 		fmt.Println(qname)
 	}
 
 	// Check is QNames contains some QName
-
 	fmt.Println(qnames.Contains(product))
 	fmt.Println(qnames.Contains(appdef.NewQName("test", "unknown")))
 

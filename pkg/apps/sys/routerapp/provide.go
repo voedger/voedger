@@ -5,7 +5,6 @@
 package routerapp
 
 import (
-	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/apps"
 	"github.com/voedger/voedger/pkg/cluster"
 	"github.com/voedger/voedger/pkg/extensionpoints"
@@ -17,9 +16,9 @@ import (
 )
 
 func Provide() apps.AppBuilder {
-	return func(apis apps.APIs, cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) apps.BuiltInAppDef {
-		sysPackageFS := sys.Provide(cfg, appDefBuilder, smtp.Cfg{}, ep, nil, apis.TimeFunc, apis.ITokens, apis.IFederation, apis.IAppStructsProvider, apis.IAppTokensFactory,
-			apis.NumCommandProcessors, nil, apis.IAppStorageProvider)
+	return func(apis apps.APIs, cfg *istructsmem.AppConfigType, ep extensionpoints.IExtensionPoint) apps.BuiltInAppDef {
+		sysPackageFS := sys.Provide(cfg, smtp.Cfg{}, ep, nil, apis.TimeFunc, apis.ITokens, apis.IFederation, apis.IAppStructsProvider, apis.IAppTokensFactory,
+			nil, apis.IAppStorageProvider)
 		routerAppPackageFS := parser.PackageFS{
 			Path: RouterAppFQN,
 			FS:   routerAppSchemaFS,
@@ -28,7 +27,7 @@ func Provide() apps.AppBuilder {
 			AppQName: istructs.AppQName_sys_router,
 			Packages: []parser.PackageFS{sysPackageFS, routerAppPackageFS},
 			AppDeploymentDescriptor: cluster.AppDeploymentDescriptor{
-				PartsCount:     DefDeploymentPartsCount,
+				NumParts:       DefDeploymentPartsCount,
 				EnginePoolSize: DefDeploymentEnginePoolSize,
 			},
 		}

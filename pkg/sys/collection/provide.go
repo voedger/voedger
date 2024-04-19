@@ -5,11 +5,10 @@
 package collection
 
 import (
-	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructsmem"
 )
 
-func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder) {
+func Provide(cfg *istructsmem.AppConfigType) {
 	cfg.Resources.Add(istructsmem.NewQueryFunctionCustomResult(
 		qNameQueryCollection,
 		collectionResultQName,
@@ -17,7 +16,7 @@ func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder
 	))
 
 	provideQryCDoc(cfg)
-	provideStateFunc(cfg, appDefBuilder)
+	provideStateFunc(cfg)
 
-	cfg.AddSyncProjectors(collectionProjector(appDefBuilder.AppDef()))
+	cfg.AddSyncProjectors(collectionProjector(cfg.AppDef))
 }

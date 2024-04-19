@@ -15,9 +15,9 @@ import (
 
 func TestBasicUsage_GetAppWSID(t *testing.T) {
 	cases := []struct {
-		wsid            istructs.WSID
-		appWSAmount     istructs.AppWSAmount
-		expectedAppWSID istructs.WSID
+		wsid             istructs.WSID
+		numAppWorkspaces istructs.NumAppWorkspaces
+		expectedAppWSID  istructs.WSID
 	}{
 		{1, 1, istructs.NewWSID(istructs.MainClusterID, istructs.MaxPseudoBaseWSID+1)},
 		{2, 1, istructs.NewWSID(istructs.MainClusterID, istructs.MaxPseudoBaseWSID+1)},
@@ -29,7 +29,7 @@ func TestBasicUsage_GetAppWSID(t *testing.T) {
 	}
 
 	for _, c := range cases {
-		require.Equal(t, c.expectedAppWSID, GetAppWSID(c.wsid, c.appWSAmount), c)
+		require.Equal(t, c.expectedAppWSID, GetAppWSID(c.wsid, c.numAppWorkspaces), c)
 	}
 }
 

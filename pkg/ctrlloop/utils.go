@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/aptible/supercronic/cronexpr"
-	"github.com/untillpro/goutils/logger"
+	"github.com/voedger/voedger/pkg/goutils/logger"
 )
 
 func getNextStartTime(cronSchedule string, startTimeTolerance time.Duration, now time.Time) time.Time {

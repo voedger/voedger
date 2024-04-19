@@ -21,6 +21,7 @@ import (
 	"github.com/voedger/voedger/pkg/istorage/mem"
 	istorageimpl "github.com/voedger/voedger/pkg/istorage/provider"
 	"github.com/voedger/voedger/pkg/parser"
+	"github.com/voedger/voedger/pkg/state/safestate"
 	"github.com/voedger/voedger/pkg/sys/authnz"
 
 	"github.com/voedger/voedger/pkg/istructs"
@@ -54,7 +55,7 @@ func Test_BasicUsage(t *testing.T) {
 	orderedItemsView := appdef.NewQName(testPkg, "OrderedItems")
 
 	// Prepare app
-	app := appStructsFromSQL("github.com/untillpro/airs-bp3/packages/"+testPkg, `APPLICATION test(); 
+	app := appStructsFromSQL("github.com/untillpro/airs-bp3/packages/"+testPkg, `APPLICATION test();
 		WORKSPACE Restaurant (
 			DESCRIPTOR RestaurantDescriptor ();
 			TABLE Order INHERITS ODoc (
@@ -184,6 +185,7 @@ func Test_BasicUsage(t *testing.T) {
 func appStructs(appDef appdef.IAppDefBuilder, prepareAppCfg appCfgCallback) istructs.IAppStructs {
 	cfgs := make(istructsmem.AppConfigsType, 1)
 	cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, appDef)
+	cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 	if prepareAppCfg != nil {
 		prepareAppCfg(cfg)
 		cfg.Resources.Add(istructsmem.NewCommandFunction(newWorkspaceCmd, istructsmem.NullCommandExec))
@@ -385,20 +387,20 @@ func Test_HandlePanics(t *testing.T) {
 		{"incorrectStorageQname", "invalid string representation of qualified name: foo"},
 		{"incorrectEntityQname", "invalid string representation of qualified name: abc"},
 		{"unsupportedStorage", "unsupported storage"},
-		{"incorrectKeyBuilder", PanicIncorrectKeyBuilder},
-		{"canExistIncorrectKey", PanicIncorrectKeyBuilder},
-		{"mustExistIncorrectKey", PanicIncorrectKeyBuilder},
-		{"readIncorrectKeyBuilder", PanicIncorrectKeyBuilder},
-		{"incorrectKey", PanicIncorrectKey},
-		{"incorrectValue", PanicIncorrectValue},
-		{"incorrectValue2", PanicIncorrectValue},
-		{"incorrectValue3", PanicIncorrectValue},
+		{"incorrectKeyBuilder", safestate.PanicIncorrectKeyBuilder},
+		{"canExistIncorrectKey", safestate.PanicIncorrectKeyBuilder},
+		{"mustExistIncorrectKey", safestate.PanicIncorrectKeyBuilder},
+		{"readIncorrectKeyBuilder", safestate.PanicIncorrectKeyBuilder},
+		{"incorrectKey", safestate.PanicIncorrectKey},
+		{"incorrectValue", safestate.PanicIncorrectValue},
+		{"incorrectValue2", safestate.PanicIncorrectValue},
+		{"incorrectValue3", safestate.PanicIncorrectValue},
 		{"mustExist", state.ErrNotExists.Error()},
-		{"incorrectKeyBuilderOnNewValue", PanicIncorrectKeyBuilder},
-		{"incorrectKeyBuilderOnUpdateValue", PanicIncorrectKeyBuilder},
-		{"incorrectValueOnUpdateValue", PanicIncorrectValue},
-		{"incorrectIntentId", PanicIncorrectIntent},
-		{"readPanic", PanicIncorrectValue},
+		{"incorrectKeyBuilderOnNewValue", safestate.PanicIncorrectKeyBuilder},
+		{"incorrectKeyBuilderOnUpdateValue", safestate.PanicIncorrectKeyBuilder},
+		{"incorrectValueOnUpdateValue", safestate.PanicIncorrectValue},
+		{"incorrectIntentId", safestate.PanicIncorrectIntent},
+		{"readPanic", safestate.PanicIncorrectValue},
 		{"readError", errTestIOError.Error()},
 		{"queryError", errTestIOError.Error()},
 		{"newValueError", errTestIOError.Error()},
@@ -560,7 +562,7 @@ func Test_WithState(t *testing.T) {
 	const bundlesLimit = 5
 	const ws = istructs.WSID(1)
 
-	app := appStructsFromSQL(testPkg, `APPLICATION test(); 
+	app := appStructsFromSQL(testPkg, `APPLICATION test();
 		WORKSPACE Restaurant (
 			DESCRIPTOR RestaurantDescriptor ();
 			VIEW TestView (
@@ -634,7 +636,7 @@ func Test_StatePanic(t *testing.T) {
 	const bundlesLimit = 5
 	const ws = istructs.WSID(1)
 
-	app := appStructsFromSQL(testPkg, `APPLICATION test(); 
+	app := appStructsFromSQL(testPkg, `APPLICATION test();
 		WORKSPACE Restaurant (
 			DESCRIPTOR RestaurantDescriptor ();
 			VIEW TestView (

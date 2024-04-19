@@ -14,7 +14,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	log "github.com/untillpro/goutils/logger"
+	log "github.com/voedger/voedger/pkg/goutils/logger"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/iratesce"
@@ -745,7 +745,8 @@ func Test_EventUpdateRawCud(t *testing.T) {
 
 	cfgs := func() AppConfigsType {
 		cfgs := make(AppConfigsType, 1)
-		cfgs.AddConfig(istructs.AppQName_test1_app1, adb)
+		cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, adb)
+		cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 		return cfgs
 	}()
 
@@ -926,7 +927,8 @@ func Test_SingletonCDocEvent(t *testing.T) {
 
 	cfgs := func() AppConfigsType {
 		cfgs := make(AppConfigsType, 1)
-		cfgs.AddConfig(istructs.AppQName_test1_app1, adb)
+		cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, adb)
+		cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 		return cfgs
 	}()
 

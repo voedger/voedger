@@ -444,8 +444,6 @@ github.com/tetratelabs/wazero v1.5.0 h1:Yz3fZHivfDiZFUXnWMPUoiW7s8tC1sjdBtlJn08q
 github.com/tetratelabs/wazero v1.5.0/go.mod h1:0U0G41+ochRKoPKCJlh0jMg1CHkyfK8kDqiirMmKY8A=
 github.com/tetratelabs/wazero v1.7.0 h1:jg5qPydno59wqjpGrHph81lbtHzTrWzwwtD4cD88+hQ=
 github.com/tetratelabs/wazero v1.7.0/go.mod h1:ytl6Zuh20R/eROuyDaGPkp82O9C/DJfXAwJfQ3X6/7Y=
-github.com/untillpro/airc-ticket-layouts v0.0.0-20231206153240-cef9360e9f6f h1:uDovXQGv0ssOT9ZQdIyDqacqIF9RNecFc/lQek3X93c=
-github.com/untillpro/airc-ticket-layouts v0.0.0-20231206153240-cef9360e9f6f/go.mod h1:YQoKFGoiYfIdMdZWhQUZyqeSQ5NrQzJZearkEuLkSq4=
 github.com/untillpro/airs-bp3 v1.202111031426.2-0.20240404103458-5a5a5018add9/go.mod h1:7nG+sp9zBL00p0dPe43X3PHVXc4jEueE+3iMnZgx1e4=
 github.com/untillpro/airs-bp3 v1.202111031426.2-0.20240404145225-a225777a3f1b h1:KusgtKYch7xmYV50d1zsuch9gOjjE2en5wFLRC2qaUg=
 github.com/untillpro/airs-bp3 v1.202111031426.2-0.20240404145225-a225777a3f1b/go.mod h1:7nG+sp9zBL00p0dPe43X3PHVXc4jEueE+3iMnZgx1e4=
@@ -470,11 +468,6 @@ github.com/untillpro/godif v0.18.0 h1:m3/5jc8oJCyU5lYHeZwG0deq+lYoCXNFqAwVMhiQ+K
 github.com/untillpro/godif v0.18.0/go.mod h1:Yi639zQ/XMuW5ArnXOqs1zx+7o9POvgmtgaNyDh1lUE=
 github.com/untillpro/gojay v1.2.17-0.20201109133446-b1069e05b56c h1:1oN5J8ueU7ai8rVENgfjVK9vmjEBTRqsvHe6o2p3xU8=
 github.com/untillpro/gojay v1.2.17-0.20201109133446-b1069e05b56c/go.mod h1:wHiWFBGIA2fG/tCRDfHII3S8LW1+DB1SEx4UinSXwdM=
-github.com/untillpro/goutils v0.0.0-20230413153406-ba6af4dbd062/go.mod h1:ipXVry4jug7qjhSKiwIM7j62//JrtNdOPSoFREN2pwk=
-github.com/untillpro/goutils v0.0.0-20231117130619-11fe1908c171 h1:XjKi6kNRWFy2AQ/NOcXPkAMgpNPnXNVrj0k7BHPIppA=
-github.com/untillpro/goutils v0.0.0-20231117130619-11fe1908c171/go.mod h1:D7adcEUMVzLXEjHhqZX5ss22BXJyXP3RLhJO99r8dII=
-github.com/untillpro/goutils v0.0.0-20231201170327-3c33c6010100 h1:FHcCDVOkPwZBul+sWI3cIpRpVKlwUGYyKT544XGmxkM=
-github.com/untillpro/goutils v0.0.0-20231201170327-3c33c6010100/go.mod h1:D7adcEUMVzLXEjHhqZX5ss22BXJyXP3RLhJO99r8dII=
 github.com/untillpro/ibusmem v0.0.0-20211023095304-94a96e40d864/go.mod h1:o6UidVkwM8cKZsvZCnZhiORwYJBSCclyKdC5X5NVbXg=
 github.com/untillpro/ibusmem v0.0.0-20230904100952-cc8a0d2caa40 h1:rrJmRAVXaxwQExZCxBHhyJoYAJ3Q1bTquHVrRpvwgB0=
 github.com/untillpro/ibusmem v0.0.0-20230904100952-cc8a0d2caa40/go.mod h1:hOihIs7DYQIrop/ds9Beqh/hDHbrDrjWY9SVA//RCY4=
@@ -491,6 +484,8 @@ github.com/voedger/voedger v0.0.0-20240315095646-3b8ad52c913b h1:wYAYA75VAWVQ14r
 github.com/voedger/voedger v0.0.0-20240315095646-3b8ad52c913b/go.mod h1:un5eZGaXYzKyzqaN42eQuKOpR+FdW+jDxq8FQ7XfY34=
 github.com/voedger/voedger v0.0.0-20240404105856-36c64df94307 h1:PxHExMrt2ElfS9R1gjtBWm83Dd5FdHB1LGdr01SKRjE=
 github.com/voedger/voedger v0.0.0-20240404105856-36c64df94307/go.mod h1:bdiLdoi+FBwp9ceZxCdJDiwHJbNgxRTgByni/pbWwKI=
+github.com/voedger/voedger v0.0.0-20240412095044-4376c0e5c94c h1:jpPE2hkk1AU7HzJ+odL6AgBCHjDaGEM3upFLLFjsgSo=
+github.com/voedger/voedger v0.0.0-20240412095044-4376c0e5c94c/go.mod h1:I7J2y28r+/vt0WVtQ7v2slh4tafFgBtr9beWE3L1Pwk=
 github.com/voedger/wazero v0.0.0-20230501104804-47700bcd4177 h1:Vz9+z9rLctBblZHADYDQD0HZQe9KcSeNR/t02rtSYC4=
 github.com/voedger/wazero v0.0.0-20230501104804-47700bcd4177/go.mod h1:ZmqlxJcWK4CrUtrm5qUMOf/OeNqHsQJtm+S+6CBJwCg=
 github.com/wneessen/go-mail v0.3.9 h1:Q4DbCk3htT5DtDWKeMgNXCiHc4bBY/vv/XQPT6XDXzc=

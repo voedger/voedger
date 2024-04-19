@@ -17,7 +17,7 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
-	"github.com/untillpro/goutils/logger"
+	"github.com/voedger/voedger/pkg/goutils/logger"
 	"golang.org/x/net/netutil"
 
 	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
@@ -51,7 +51,7 @@ func (s *httpService) Prepare(work interface{}) (err error) {
 	// https://dev.untill.com/projects/#!627072
 	s.router.SkipClean(true)
 
-	if err = s.registerHandlers(s.busTimeout, s.appsWSAmount); err != nil {
+	if err = s.registerHandlers(s.busTimeout, s.numsAppsWorkspaces); err != nil {
 		return err
 	}
 
@@ -105,7 +105,7 @@ func (s *httpService) GetPort() int {
 	return s.listener.Addr().(*net.TCPAddr).Port
 }
 
-func (s *httpService) registerHandlers(busTimeout time.Duration, appsWSAmount map[istructs.AppQName]istructs.AppWSAmount) (err error) {
+func (s *httpService) registerHandlers(busTimeout time.Duration, numsAppsWorkspaces map[istructs.AppQName]istructs.NumAppWorkspaces) (err error) {
 	redirectMatcher, err := s.getRedirectMatcher()
 	if err != nil {
 		return err
@@ -125,7 +125,7 @@ func (s *httpService) registerHandlers(busTimeout time.Duration, appsWSAmount ma
 			Name("blob read")
 	}
 	s.router.HandleFunc(fmt.Sprintf("/api/{%s}/{%s}/{%s:[0-9]+}/{%s:[a-zA-Z0-9_/.]+}", AppOwner, AppName,
-		WSID, ResourceName), corsHandler(RequestHandler(s.bus, busTimeout, appsWSAmount))).
+		WSID, ResourceName), corsHandler(RequestHandler(s.bus, busTimeout, numsAppsWorkspaces))).
 		Methods("POST", "PATCH", "OPTIONS").Name("api")
 
 	s.router.Handle("/n10n/channel", corsHandler(s.subscribeAndWatchHandler())).Methods("GET")
@@ -150,10 +150,10 @@ func (s *httpService) registerHandlers(busTimeout time.Duration, appsWSAmount ma
 	return nil
 }
 
-func RequestHandler(bus ibus.IBus, busTimeout time.Duration, appsWSAmount map[istructs.AppQName]istructs.AppWSAmount) http.HandlerFunc {
+func RequestHandler(bus ibus.IBus, busTimeout time.Duration, numsAppsWorkspaces map[istructs.AppQName]istructs.NumAppWorkspaces) http.HandlerFunc {
 	return func(resp http.ResponseWriter, req *http.Request) {
 		vars := mux.Vars(req)
-		queueRequest, ok := createRequest(req.Method, req, resp, appsWSAmount)
+		queueRequest, ok := createRequest(req.Method, req, resp, numsAppsWorkspaces)
 		if !ok {
 			return
 		}

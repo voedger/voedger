@@ -15,6 +15,18 @@ type ICommand interface {
 	UnloggedParam() IType
 }
 
+type IWithCommands interface {
+	// Returns Command by name.
+	//
+	// Returns nil if not found.
+	Command(QName) ICommand
+
+	// Enumerates all commands
+	//
+	// Commands are enumerated in alphabetical order by QName
+	Commands(func(ICommand))
+}
+
 type ICommandBuilder interface {
 	IFunctionBuilder
 
@@ -26,4 +38,14 @@ type ICommandBuilder interface {
 	// If NullQName passed then it means that command has no unlogged parameter.
 	// If QNameANY passed then it means that command unlogged parameter may be any.
 	SetUnloggedParam(QName) ICommandBuilder
+}
+
+type ICommandsBuilder interface {
+	// Adds new command.
+	//
+	// # Panics:
+	//   - if name is empty (appdef.NullQName),
+	//   - if name is invalid,
+	//   - if type with name already exists.
+	AddCommand(QName) ICommandBuilder
 }

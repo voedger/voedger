@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2021-present Sigma-Soft, Ltd.
+ * @author: Nikolay Nikitin
  */
 
 package appdef_test
@@ -35,11 +36,17 @@ func ExampleIAppDefBuilder_AddCommand() {
 		_ = adb.AddObject(unlName)
 		_ = adb.AddObject(resName)
 
-		if a, err := adb.Build(); err == nil {
-			app = a
-		} else {
-			panic(err)
-		}
+		app = adb.MustBuild()
+	}
+
+	// how to enum commands
+	{
+		cnt := 0
+		app.Commands(func(c appdef.ICommand) {
+			cnt++
+			fmt.Println(cnt, c)
+		})
+		fmt.Println("overall command(s):", cnt)
 	}
 
 	// how to inspect builded AppDef with command
@@ -52,6 +59,8 @@ func ExampleIAppDefBuilder_AddCommand() {
 	}
 
 	// Output:
+	// 1 WASM-Command «test.cmd»
+	// overall command(s): 1
 	// WASM-Command «test.cmd» :
 	//  - parameter: Object «test.param»
 	//  - unl.param: Object «test.secure»

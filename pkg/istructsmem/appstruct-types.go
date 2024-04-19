@@ -8,8 +8,8 @@ package istructsmem
 import (
 	"fmt"
 
-	"github.com/untillpro/goutils/iterate"
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/goutils/iterate"
 	"github.com/voedger/voedger/pkg/irates"
 	istorage "github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -66,6 +66,7 @@ type AppConfigType struct {
 	asyncProjectors    istructs.Projectors
 	cudValidators      []istructs.CUDValidator
 	eventValidators    []istructs.EventValidator
+	numAppWorkspaces   istructs.NumAppWorkspaces
 }
 
 func newAppConfig(appName istructs.AppQName, appDef appdef.IAppDefBuilder) *AppConfigType {
@@ -147,6 +148,10 @@ func (cfg *AppConfigType) prepare(buckets irates.IBuckets, appStorage istorage.I
 
 	if err := cfg.validateResources(); err != nil {
 		return err
+	}
+
+	if cfg.numAppWorkspaces <= 0 {
+		return fmt.Errorf("%s: %w", cfg.Name, ErrNumAppWorkspacesNotSet)
 	}
 
 	cfg.prepared = true
@@ -237,6 +242,28 @@ func (cfg *AppConfigType) Prepared() bool {
 
 func (cfg *AppConfigType) SyncProjectors() istructs.Projectors {
 	return cfg.syncProjectors
+}
+
+// need to build view.sys.NextBaseWSID and view.sys.projectionOffsets
+// could be called on application build stage only
+func (cfg *AppConfigType) AppDefBuilder() appdef.IAppDefBuilder {
+	if cfg.prepared {
+		panic("IAppStructsProvider.AppStructs() is called already for the app -> IAppDef is built already -> wrong to work with IAppDefBuilder")
+	}
+	return cfg.appDefBuilder
+}
+
+func (cfg *AppConfigType) NumAppWorkspaces() istructs.NumAppWorkspaces {
+	return cfg.numAppWorkspaces
+}
+
+// must be called after creating the AppConfigType because app will provide the deployment descriptor with the actual NumAppWorkspaces after willing the AppConfigType
+// so fisrt create AppConfigType, use it on app provide, then set the actual NumAppWorkspaces
+func (cfg *AppConfigType) SetNumAppWorkspaces(naw istructs.NumAppWorkspaces) {
+	if cfg.prepared {
+		panic("must not set NumAppWorkspaces after first IAppStructsProvider.AppStructs() call because the app is considered working")
+	}
+	cfg.numAppWorkspaces = naw
 }
 
 // Application configuration parameters

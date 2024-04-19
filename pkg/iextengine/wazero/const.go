@@ -6,10 +6,6 @@
 package iextenginewazero
 
 const bitsInFourBytes = 32
-const keysCapacity = 10
-const keysBuildersCapacity = 10
-const valuesCapacity = 10
-const valueBuildersCapacity = 10
 
 const (
 	maxMemoryPages = 0xffff

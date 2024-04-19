@@ -39,8 +39,8 @@ func Example() {
 	appConfigs := istructsmem.AppConfigsType{}
 	adb_1_v1, app_1_v1 := buildAppDef("app-1 ver.1")
 	adb_2_v1, app_2_v1 := buildAppDef("app-2 ver.1")
-	appConfigs.AddConfig(istructs.AppQName_test1_app1, adb_1_v1)
-	appConfigs.AddConfig(istructs.AppQName_test1_app2, adb_2_v1)
+	appConfigs.AddConfig(istructs.AppQName_test1_app1, adb_1_v1).SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
+	appConfigs.AddConfig(istructs.AppQName_test1_app2, adb_2_v1).SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 
 	appStructs := istructsmem.Provide(
 		appConfigs,
@@ -57,11 +57,11 @@ func Example() {
 	appPartsCtl, cleanupCtl, err := apppartsctl.New(appParts, []apppartsctl.BuiltInApp{
 		{Name: istructs.AppQName_test1_app1,
 			Def:            app_1_v1,
-			PartsCount:     2,
+			NumParts:       2,
 			EnginePoolSize: [cluster.ProcessorKind_Count]int{2, 2, 2}},
 		{Name: istructs.AppQName_test1_app2,
 			Def:            app_2_v1,
-			PartsCount:     3,
+			NumParts:       3,
 			EnginePoolSize: [cluster.ProcessorKind_Count]int{2, 2, 2}},
 	})
 

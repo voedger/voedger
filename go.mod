@@ -27,7 +27,6 @@ require (
 	github.com/stretchr/testify v1.9.0
 	github.com/tetratelabs/wazero v1.7.0
 	github.com/untillpro/dynobuffers v0.0.0-20230713140001-b1cab92744c0
-	github.com/untillpro/goutils v0.0.0-20231201170327-3c33c6010100
 	github.com/valyala/bytebufferpool v1.0.0
 	github.com/wneessen/go-mail v0.4.1
 	go.etcd.io/bbolt v1.3.9
@@ -63,7 +62,7 @@ require (
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/stretchr/objx v0.5.2 // indirect
 	github.com/untillpro/gojay v1.2.17-0.20201109133446-b1069e05b56c // indirect
-	golang.org/x/sys v0.18.0 // indirect
+	golang.org/x/sys v0.19.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

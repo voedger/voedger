@@ -5,7 +5,6 @@
 package registryapp
 
 import (
-	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/apps"
 	"github.com/voedger/voedger/pkg/cluster"
 	"github.com/voedger/voedger/pkg/extensionpoints"
@@ -17,12 +16,13 @@ import (
 	"github.com/voedger/voedger/pkg/sys/smtp"
 )
 
-func Provide(smtpCfg smtp.Cfg) apps.AppBuilder {
-	return func(apis apps.APIs, cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) apps.BuiltInAppDef {
+// for historical reason num partitions of sys/registry must be equal to numCP
+func Provide(smtpCfg smtp.Cfg, numCP istructs.NumCommandProcessors) apps.AppBuilder {
+	return func(apis apps.APIs, cfg *istructsmem.AppConfigType, ep extensionpoints.IExtensionPoint) apps.BuiltInAppDef {
 
 		// sys package
-		sysPackageFS := sys.Provide(cfg, appDefBuilder, smtpCfg, ep, nil, apis.TimeFunc, apis.ITokens, apis.IFederation, apis.IAppStructsProvider, apis.IAppTokensFactory,
-			apis.NumCommandProcessors, nil, apis.IAppStorageProvider)
+		sysPackageFS := sys.Provide(cfg, smtpCfg, ep, nil, apis.TimeFunc, apis.ITokens, apis.IFederation, apis.IAppStructsProvider, apis.IAppTokensFactory,
+			nil, apis.IAppStorageProvider)
 
 		// sys/registry resources
 		registryPackageFS := registry.Provide(cfg, apis.IAppStructsProvider, apis.ITokens, apis.IFederation)
@@ -36,8 +36,9 @@ func Provide(smtpCfg smtp.Cfg) apps.AppBuilder {
 			AppQName: istructs.AppQName_sys_registry,
 			Packages: []parser.PackageFS{sysPackageFS, registryPackageFS, registryAppPackageFS},
 			AppDeploymentDescriptor: cluster.AppDeploymentDescriptor{
-				PartsCount:     int(apis.NumCommandProcessors),
-				EnginePoolSize: cluster.PoolSize(int(apis.NumCommandProcessors), DefDeploymentQPCount, int(apis.NumCommandProcessors)),
+				NumParts:         istructs.NumAppPartitions(numCP),
+				EnginePoolSize:   cluster.PoolSize(int(numCP), DefDeploymentQPCount, int(numCP)),
+				NumAppWorkspaces: istructs.DefaultNumAppWorkspaces,
 			},
 		}
 	}

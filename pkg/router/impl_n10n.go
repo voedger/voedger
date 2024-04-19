@@ -13,7 +13,7 @@ import (
 	"strconv"
 
 	"github.com/gorilla/mux"
-	"github.com/untillpro/goutils/logger"
+	"github.com/voedger/voedger/pkg/goutils/logger"
 
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/in10nmem"

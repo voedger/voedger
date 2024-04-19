@@ -21,8 +21,15 @@ func WithEmailMessagesChan(messages chan smtptest.Message) ActualizerStateOptFun
 	}
 }
 
+func WithCustomHttpClient(client IHttpClient) ActualizerStateOptFunc {
+	return func(opts *actualizerStateOpts) {
+		opts.customHttpClient = client
+	}
+}
+
 type actualizerStateOpts struct {
-	messages chan smtptest.Message
+	messages         chan smtptest.Message
+	customHttpClient IHttpClient
 }
 
 type asyncActualizerState struct {
@@ -64,7 +71,9 @@ func implProvideAsyncActualizerState(ctx context.Context, appStructsFunc AppStru
 		messages: opts.messages,
 	}, S_INSERT)
 
-	state.addStorage(Http, &httpStorage{}, S_READ)
+	state.addStorage(Http, &httpStorage{
+		customClient: opts.customHttpClient,
+	}, S_READ)
 
 	state.addStorage(AppSecret, &appSecretsStorage{secretReader: secretReader}, S_GET)
 

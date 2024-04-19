@@ -5,9 +5,9 @@
 *  @author Michael Saigachenko
  */
 
-package exttinygo
+package internal
 
-func hostPanic(msgPtr, msgSize uint32) {
+func HostPanic(msgPtr, msgSize uint32) {
 
 }
 

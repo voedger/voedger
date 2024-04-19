@@ -11,7 +11,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"github.com/untillpro/goutils/logger"
+	"github.com/voedger/voedger/pkg/goutils/logger"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/iratesce"
@@ -88,6 +88,7 @@ func TestBasicUsage(t *testing.T) {
 
 		cfgs := make(AppConfigsType, 1)
 		cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, adb)
+		cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 		cfg.Resources.Add(NewCommandFunction(qNameCmdTestSale, NullCommandExec))
 
 		return cfgs
@@ -211,7 +212,8 @@ func TestBasicUsage_ViewRecords(t *testing.T) {
 			AddField("active", appdef.DataKind_bool, true)
 
 		cfgs := make(AppConfigsType, 1)
-		_ = cfgs.AddConfig(istructs.AppQName_test1_app1, adb)
+		cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, adb)
+		cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 
 		return cfgs
 	}
@@ -302,7 +304,8 @@ func Test_appStructsType_ObjectBuilder(t *testing.T) {
 		obj.AddContainer("child", objName, 0, appdef.Occurs_Unbounded)
 
 		cfgs := make(AppConfigsType)
-		_ = cfgs.AddConfig(istructs.AppQName_test1_app1, adb)
+		cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, adb)
+		cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 
 		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider())
 		app, err := provider.AppStructs(istructs.AppQName_test1_app1)
@@ -511,6 +514,7 @@ func Test_BasicUsageDescribePackages(t *testing.T) {
 
 		cfgs := make(AppConfigsType)
 		cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, adb)
+		cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 
 		cfg.Resources.Add(NewCommandFunction(cmdQName, NullCommandExec))
 		cfg.Resources.Add(NewQueryFunction(queryQName, NullQueryExec))
@@ -553,7 +557,8 @@ func Test_Provide(t *testing.T) {
 
 	t.Run("AppStructs() must error if unknown app name", func(t *testing.T) {
 		cfgs := make(AppConfigsType)
-		cfgs.AddConfig(istructs.AppQName_test1_app1, appdef.New())
+		cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, appdef.New())
+		cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 		p := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), nil)
 		require.NotNil(p)
 

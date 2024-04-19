@@ -42,11 +42,11 @@ var now = time.Now()
 var timeFunc = coreutils.TimeFunc(func() time.Time { return now })
 
 var (
-	appName    istructs.AppQName    = istructs.AppQName_test1_app1
-	appEngines                      = cluster.PoolSize(10, 100, 10)
-	partCount                       = 10
-	partID     istructs.PartitionID = 5
-	wsID       istructs.WSID        = 15
+	appName    istructs.AppQName         = istructs.AppQName_test1_app1
+	appEngines                           = cluster.PoolSize(10, 100, 10)
+	partCount  istructs.NumAppPartitions = 10
+	partID     istructs.PartitionID      = 5
+	wsID       istructs.WSID             = 15
 
 	qNameFunction         = appdef.NewQName("bo", "FindArticlesByModificationTimeStampRange")
 	qNameQryDenied        = appdef.NewQName(appdef.SysPackage, "TestDeniedQry") // same as in ACL
@@ -205,6 +205,7 @@ func getTestCfg(require *require.Assertions, prepareAppDef func(adb appdef.IAppD
 	}
 
 	cfg := cfgs.AddConfig(appName, adb)
+	cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 
 	asp = istructsmem.Provide(cfgs, iratesce.TestBucketsFactory, payloads.TestAppTokensFactory(tokens), storageProvider)
 

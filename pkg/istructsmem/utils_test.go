@@ -210,6 +210,7 @@ func TestIBucketsFromIAppStructs(t *testing.T) {
 	adb := appdef.New()
 	adb.AddPackage("test", "test.com/test")
 	cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, adb)
+	cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 	funcQName := appdef.NewQName("test", "myFunc")
 
 	rlExpected := istructs.RateLimit{

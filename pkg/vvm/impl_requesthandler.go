@@ -12,9 +12,9 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/untillpro/goutils/logger"
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appparts"
+	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/iprocbus"
 	"github.com/voedger/voedger/pkg/istructs"
 	commandprocessor "github.com/voedger/voedger/pkg/processors/command"
@@ -26,7 +26,7 @@ import (
 
 func provideIBus(appParts appparts.IAppPartitions, procbus iprocbus.IProcBus,
 	cpchIdx CommandProcessorsChannelGroupIdxType, qpcgIdx QueryProcessorsChannelGroupIdxType,
-	cpAmount coreutils.CommandProcessorsCount, vvmApps VVMApps) ibus.IBus {
+	cpAmount istructs.NumCommandProcessors, vvmApps VVMApps) ibus.IBus {
 	return ibusmem.Provide(func(requestCtx context.Context, sender ibus.ISender, request ibus.Request) {
 		// Handling Command/Query messages
 		// router -> SendRequest2(ctx, ...) -> requestHandler(ctx, ... ) - вот этот контекст. Если connection gracefully closed, то этот ctx.Done()
@@ -63,24 +63,24 @@ func provideIBus(appParts appparts.IAppPartitions, procbus iprocbus.IProcBus,
 			return
 		}
 
-		totalAppPartsCount, err := appParts.AppPartsCount(appQName)
+		partitionID, err := appParts.AppWorkspacePartitionID(appQName, istructs.WSID(request.WSID))
 		if err != nil {
 			if errors.Is(err, appparts.ErrNotFound) {
 				coreutils.ReplyErrf(sender, http.StatusServiceUnavailable, fmt.Sprintf("app %s is not deployed", appQName))
 				return
 			}
 			// notest
-			coreutils.ReplyInternalServerError(sender, "failed to get app partitions count", err)
+			coreutils.ReplyInternalServerError(sender, "failed to compute the partition number", err)
 			return
 		}
 
-		deliverToProcessors(request, requestCtx, appQName, sender, funcQName, procbus, token, cpchIdx, qpcgIdx, cpAmount, totalAppPartsCount)
+		deliverToProcessors(request, requestCtx, appQName, sender, funcQName, procbus, token, cpchIdx, qpcgIdx, cpAmount, partitionID)
 	})
 }
 
 func deliverToProcessors(request ibus.Request, requestCtx context.Context, appQName istructs.AppQName, sender ibus.ISender, funcQName appdef.QName,
 	procbus iprocbus.IProcBus, token string, cpchIdx CommandProcessorsChannelGroupIdxType, qpcgIdx QueryProcessorsChannelGroupIdxType,
-	cpCount coreutils.CommandProcessorsCount, totalAppPartsCount int) {
+	cpCount istructs.NumCommandProcessors, partitionID istructs.PartitionID) {
 	switch request.Resource[:1] {
 	case "q":
 		iqm := queryprocessor.NewQueryMessage(requestCtx, appQName, istructs.PartitionID(request.PartitionNumber), istructs.WSID(request.WSID), sender, request.Body, funcQName, request.Host, token)
@@ -88,7 +88,6 @@ func deliverToProcessors(request ibus.Request, requestCtx context.Context, appQN
 			coreutils.ReplyErrf(sender, http.StatusServiceUnavailable, "no query processors available")
 		}
 	case "c":
-		partitionID := istructs.PartitionID(request.WSID % int64(totalAppPartsCount))
 		// TODO: use appQName to calculate cmdProcessorIdx in solid range [0..cpCount)
 		cmdProcessorIdx := int64(partitionID) % int64(cpCount)
 		icm := commandprocessor.NewCommandMessage(requestCtx, request.Body, appQName, istructs.WSID(request.WSID), sender, partitionID, funcQName, token, request.Host)

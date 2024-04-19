@@ -15,6 +15,9 @@ type IProjector interface {
 	// Events to trigger.
 	Events() IProjectorEvents
 
+	// Schedule to trigger projector as cron expression.
+	CronSchedule() string
+
 	// Returns is projector is able to handle `sys.Error` events.
 	// False by default.
 	WantErrors() bool
@@ -41,7 +44,7 @@ type IProjectorEvents interface {
 
 // Describe event to trigger the projector.
 type IProjectorEvent interface {
-	IComment
+	IWithComments
 
 	// Returns type to trigger projector.
 	//
@@ -85,6 +88,9 @@ type IProjectorBuilder interface {
 	// Events builder.
 	Events() IProjectorEventsBuilder
 
+	// Schedule to trigger projector as cron expression.
+	SetCronSchedule(string) IProjectorBuilder
+
 	// Sets is projector is able to handle `sys.Error` events.
 	SetWantErrors() IProjectorBuilder
 }
@@ -110,4 +116,26 @@ type IProjectorEventsBuilder interface {
 	// # Panics:
 	//	- if event for QName is not added.
 	SetComment(on QName, comment ...string) IProjectorEventsBuilder
+}
+
+type IWithProjectors interface {
+	// Return projector by name.
+	//
+	// Returns nil if not found.
+	Projector(QName) IProjector
+
+	// Enumerates all application projectors.
+	//
+	// Projectors are enumerated in alphabetical order by QName.
+	Projectors(func(IProjector))
+}
+
+type IProjectorsBuilder interface {
+	// Adds new projector.
+	//
+	// # Panics:
+	//   - if name is empty (appdef.NullQName),
+	//   - if name is invalid,
+	//   - if type with name already exists.
+	AddProjector(QName) IProjectorBuilder
 }

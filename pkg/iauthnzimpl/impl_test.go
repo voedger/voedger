@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
-	"github.com/untillpro/goutils/logger"
+	"github.com/voedger/voedger/pkg/goutils/logger"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/iauthnz"
@@ -999,14 +999,14 @@ func (as *implIAppStructs) AppQName() istructs.AppQName                        {
 func (as *implIAppStructs) IsFunctionRateLimitsExceeded(appdef.QName, istructs.WSID) bool {
 	panic("")
 }
-func (as *implIAppStructs) DescribePackageNames() []string             { panic("") }
-func (as *implIAppStructs) DescribePackage(string) interface{}         { panic("") }
-func (as *implIAppStructs) SyncProjectors() istructs.Projectors        { panic("") }
-func (as *implIAppStructs) AsyncProjectors() istructs.Projectors       { panic("") }
-func (as *implIAppStructs) CUDValidators() []istructs.CUDValidator     { panic("") }
-func (as *implIAppStructs) EventValidators() []istructs.EventValidator { panic("") }
-func (as *implIAppStructs) WSAmount() istructs.AppWSAmount             { panic("") }
-func (as *implIAppStructs) AppTokens() istructs.IAppTokens             { panic("") }
+func (as *implIAppStructs) DescribePackageNames() []string              { panic("") }
+func (as *implIAppStructs) DescribePackage(string) interface{}          { panic("") }
+func (as *implIAppStructs) SyncProjectors() istructs.Projectors         { panic("") }
+func (as *implIAppStructs) AsyncProjectors() istructs.Projectors        { panic("") }
+func (as *implIAppStructs) CUDValidators() []istructs.CUDValidator      { panic("") }
+func (as *implIAppStructs) EventValidators() []istructs.EventValidator  { panic("") }
+func (as *implIAppStructs) NumAppWorkspaces() istructs.NumAppWorkspaces { panic("") }
+func (as *implIAppStructs) AppTokens() istructs.IAppTokens              { panic("") }
 
 type implIRecords struct {
 	data map[istructs.WSID]map[appdef.QName]map[istructs.RecordID]map[string]interface{}

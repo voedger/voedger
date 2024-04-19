@@ -12,7 +12,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	log "github.com/untillpro/goutils/logger"
+	log "github.com/voedger/voedger/pkg/goutils/logger"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -376,6 +376,7 @@ func Test_LoadStoreRecord_Bytes(t *testing.T) {
 		})
 
 		newConfig := newAppConfig(test.AppCfg.Name, adb)
+		newConfig.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 
 		err := newConfig.prepare(nil, test.AppCfg.storage)
 		require.NoError(err)

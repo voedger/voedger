@@ -177,7 +177,7 @@ type (
 
 func deployTestApp(
 	appName istructs.AppQName,
-	appPartsCount int,
+	appPartsCount istructs.NumAppPartitions,
 	partID []istructs.PartitionID,
 	cachedStorage bool,
 	prepareAppDef appDefCallback,
@@ -197,6 +197,7 @@ func deployTestApp(
 
 	cfgs := make(istructsmem.AppConfigsType, 1)
 	cfg := cfgs.AddConfig(appName, appDefBuilder)
+	cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 	if prepareAppCfg != nil {
 		prepareAppCfg(cfg)
 		cfg.Resources.Add(istructsmem.NewCommandFunction(newWorkspaceCmd, istructsmem.NullCommandExec))

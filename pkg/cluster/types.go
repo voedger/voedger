@@ -5,6 +5,10 @@
 
 package cluster
 
+import (
+	"github.com/voedger/voedger/pkg/istructs"
+)
+
 // ProcessorKind is a enumeration of processors.
 type ProcessorKind uint8
 
@@ -19,8 +23,9 @@ const (
 )
 
 type AppDeploymentDescriptor struct {
-	PartsCount     int
-	EnginePoolSize [ProcessorKind_Count]int
+	NumParts         istructs.NumAppPartitions
+	EnginePoolSize   [ProcessorKind_Count]int
+	NumAppWorkspaces istructs.NumAppWorkspaces
 }
 
 func PoolSize(c, q, p int) [ProcessorKind_Count]int { return [ProcessorKind_Count]int{c, q, p} }
