@@ -8,19 +8,41 @@ package appdef
 type IRole interface {
 	IType
 
-	// unwanted type assertion stub
-	isRole()
+	IWithGrants
 }
 
 type IRoleBuilder interface {
 	ITypeBuilder
+
+	// Adds new Grant with specified kind to specified objects.
+	//
+	// # Panics:
+	//   - if kind is GrantKind_null,
+	//	 - if objects are empty,
+	//	 - if objects contains unknown names,
+	//	 - if fields contains unknown names.
+	Grant(kind GrantKind, objects []QName, fields []FieldName, comment ...string) IRoleBuilder
+
+	// Adds all available grants to specified objects.
+	//
+	// If the objects are tables, then insert, update, and select operations are granted.
+	//
+	// If the objects are commands or queries, their execution is allowed.
+	//
+	// If the objects are workspaces, then:
+	//	- insert, update and select from the tables of these workspaces are granted,
+	//	- execution of commands & queries from these workspaces is granted.
+	GrantAll(objects []QName, comment ...string) IRoleBuilder
+
+	// Adds new Grant with GrantKind_Role to specified roles.
+	GrantRoles(roles []QName, comment ...string) IRoleBuilder
 }
 
 type IWithRoles interface {
 	// Returns Role by name.
 	//
 	// Returns nil if not found.
-	Role(name QName) IRole
+	Role(QName) IRole
 
 	// Enumerates all roles
 	//
