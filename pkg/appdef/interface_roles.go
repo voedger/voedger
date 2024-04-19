@@ -7,6 +7,9 @@ package appdef
 
 type IRole interface {
 	IType
+
+	// unwanted type assertion stub
+	isRole()
 }
 
 type IRoleBuilder interface {

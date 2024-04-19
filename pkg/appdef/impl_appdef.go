@@ -269,6 +269,21 @@ func (app *appDef) Records(cb func(IRecord)) {
 	})
 }
 
+func (app *appDef) Role(name QName) IRole {
+	if t := app.typeByKind(name, TypeKind_Role); t != nil {
+		return t.(IRole)
+	}
+	return nil
+}
+
+func (app *appDef) Roles(cb func(IRole)) {
+	app.Types(func(t IType) {
+		if r, ok := t.(IRole); ok {
+			cb(r)
+		}
+	})
+}
+
 func (app *appDef) Singleton(name QName) ISingleton {
 	if t := app.TypeByName(name); t != nil {
 		if s, ok := t.(ISingleton); ok {
@@ -471,6 +486,11 @@ func (app *appDef) addQuery(name QName) IQueryBuilder {
 	return newQueryBuilder(q)
 }
 
+func (app *appDef) addRole(name QName) IRoleBuilder {
+	role := newRole(app, name)
+	return newRoleBuilder(role)
+}
+
 func (app *appDef) addView(name QName) IViewBuilder {
 	view := newView(app, name)
 	return newViewBuilder(view)
@@ -579,6 +599,8 @@ func (ab *appDefBuilder) AddPackage(localName, path string) IAppDefBuilder {
 func (ab *appDefBuilder) AddProjector(name QName) IProjectorBuilder { return ab.app.addProjector(name) }
 
 func (ab *appDefBuilder) AddQuery(name QName) IQueryBuilder { return ab.app.addQuery(name) }
+
+func (ab *appDefBuilder) AddRole(name QName) IRoleBuilder { return ab.app.addRole(name) }
 
 func (ab *appDefBuilder) AddView(name QName) IViewBuilder { return ab.app.addView(name) }
 
