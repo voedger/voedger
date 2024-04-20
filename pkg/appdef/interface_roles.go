@@ -8,7 +8,7 @@ package appdef
 type IRole interface {
 	IType
 
-	IWithGrants
+	IWithPrivileges
 }
 
 type IRoleBuilder interface {
@@ -21,7 +21,7 @@ type IRoleBuilder interface {
 	//	 - if objects are empty,
 	//	 - if objects contains unknown names,
 	//	 - if fields contains unknown names.
-	Grant(kind GrantKind, objects []QName, fields []FieldName, comment ...string) IRoleBuilder
+	Grant(kind PrivilegeKind, objects []QName, fields []FieldName, comment ...string) IRoleBuilder
 
 	// Adds all available grants to specified objects.
 	//

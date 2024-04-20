@@ -23,13 +23,13 @@ func newRole(app *appDef, name QName) *role {
 	return r
 }
 
-func (r role) Grants(cb func(IGrant)) {
+func (r role) Grants(cb func(IPrivilege)) {
 	for _, g := range r.grants {
 		cb(g)
 	}
 }
 
-func (r role) GrantsByKind(k GrantKind, cb func(IGrant)) {
+func (r role) GrantsByKind(k PrivilegeKind, cb func(IPrivilege)) {
 	for _, g := range r.grants {
 		if g.Kind() == k {
 			cb(g)
@@ -37,8 +37,8 @@ func (r role) GrantsByKind(k GrantKind, cb func(IGrant)) {
 	}
 }
 
-func (r role) GrantsForObject(name QName) []IGrant {
-	gg := make([]IGrant, 0)
+func (r role) GrantsForObject(name QName) []IPrivilege {
+	gg := make([]IPrivilege, 0)
 	for _, g := range r.grants {
 		if g.Objects().Contains(name) {
 			gg = append(gg, g)
@@ -47,12 +47,12 @@ func (r role) GrantsForObject(name QName) []IGrant {
 	return gg
 }
 
-func (r *role) grant(kind GrantKind, objects []QName, fields []FieldName, comment ...string) {
+func (r *role) grant(kind PrivilegeKind, objects []QName, fields []FieldName, comment ...string) {
 	r.grants = append(r.grants, newGrant(kind, objects, fields, r, comment...))
 }
 
 func (r *role) grantAll(objects []QName, comment ...string) {
-	gg := make(map[GrantKind]*grant)
+	gg := make(map[PrivilegeKind]*grant)
 
 	for _, o := range QNamesFrom(objects...) {
 		t := r.app.Type(o)
@@ -61,7 +61,7 @@ func (r *role) grantAll(objects []QName, comment ...string) {
 		}
 
 		if _, ok := t.(IStructure); ok { // or IRecord??
-			for k := GrantKind_Insert; k <= GrantKind_Select; k++ {
+			for k := PrivilegeKind_Insert; k <= PrivilegeKind_Select; k++ {
 				if g, ok := gg[k]; ok {
 					g.objects.Add(o)
 				} else {
@@ -73,17 +73,17 @@ func (r *role) grantAll(objects []QName, comment ...string) {
 		}
 
 		if _, ok := t.(IFunction); ok {
-			if g, ok := gg[GrantKind_Execute]; ok {
+			if g, ok := gg[PrivilegeKind_Execute]; ok {
 				g.objects.Add(o)
 			} else {
-				g := newGrant(GrantKind_Execute, []QName{o}, nil, r, comment...)
+				g := newGrant(PrivilegeKind_Execute, []QName{o}, nil, r, comment...)
 				r.grants = append(r.grants, g)
-				gg[GrantKind_Execute] = g
+				gg[PrivilegeKind_Execute] = g
 			}
 		}
 
 		if _, ok := t.(IWorkspace); ok {
-			for k := GrantKind_Insert; k <= GrantKind_Execute; k++ {
+			for k := PrivilegeKind_Insert; k <= PrivilegeKind_Execute; k++ {
 				if g, ok := gg[k]; ok {
 					g.objects.Add(o)
 				} else {
@@ -97,7 +97,7 @@ func (r *role) grantAll(objects []QName, comment ...string) {
 }
 
 func (r *role) grantRoles(roles []QName, comment ...string) {
-	r.grants = append(r.grants, newGrant(GrantKind_Role, roles, nil, r, comment...))
+	r.grants = append(r.grants, newGrant(PrivilegeKind_Role, roles, nil, r, comment...))
 }
 
 // # Implements:
@@ -114,7 +114,7 @@ func newRoleBuilder(role *role) *roleBuilder {
 	}
 }
 
-func (rb *roleBuilder) Grant(kind GrantKind, objects []QName, fields []FieldName, comment ...string) IRoleBuilder {
+func (rb *roleBuilder) Grant(kind PrivilegeKind, objects []QName, fields []FieldName, comment ...string) IRoleBuilder {
 	rb.role.grant(kind, objects, fields, comment...)
 	return rb
 }

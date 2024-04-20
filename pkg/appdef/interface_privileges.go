@@ -5,38 +5,38 @@
 
 package appdef
 
-// Enumeration of grants.
-type GrantKind int8
+// Enumeration of privileges.
+type PrivilegeKind int8
 
-//go:generate stringer -type=GrantKind -output=stringer_grantkind.go
+//go:generate stringer -type=PrivilegeKind -output=stringer_privilegekind.go
 
 const (
-	GrantKind_null GrantKind = iota
+	PrivilegeKind_null PrivilegeKind = iota
 
 	// GRANT INSERT,UPDATE ON ALL TABLES WITH TAG BackofficeTag TO LocationUser;
 	// GRANT UPDATE (CloseDatetime, Client) ON TABLE Bill TO LocationUser;
 	// GRANT SELECT ON TABLE Orders TO LocationUser;
 	// GRANT INSERT ON WORKSPACE Workspace1 TO Role1;
 	// GRANT ALL ON ALL TABLES WITH TAG BackofficeTag TO LocationManager;
-	GrantKind_Insert
-	GrantKind_Update
-	GrantKind_Select
+	PrivilegeKind_Insert
+	PrivilegeKind_Update
+	PrivilegeKind_Select
 
 	// GRANT EXECUTE ON COMMAND Orders TO LocationUser;
 	// GRANT EXECUTE ON QUERY Query1 TO LocationUser;
 	// GRANT EXECUTE ON WORKSPACE TO Role2;
-	GrantKind_Execute
+	PrivilegeKind_Execute
 
 	// GRANT LocationUser TO LocationManager;
-	GrantKind_Role
+	PrivilegeKind_Role
 )
 
-// Grant represents a grant of rights to a role.
-type IGrant interface {
+// Represents a privilege (specific rights or permissions) granted to a role.
+type IPrivilege interface {
 	IWithComments
 
 	// Returns Grant kind
-	Kind() GrantKind
+	Kind() PrivilegeKind
 
 	// Returns objects which was granted.
 	//
@@ -60,18 +60,18 @@ type IGrant interface {
 	Role() IRole
 }
 
-// IWithGrants is an interface for entities that have grants.
-type IWithGrants interface {
+// IWithPrivileges is an interface for entities that have grants.
+type IWithPrivileges interface {
 	// Enumerates all grants.
 	//
 	// Grants are enumerated in alphabetical order of roles, and within each role in the order they are added.
-	Grants(func(IGrant))
+	Grants(func(IPrivilege))
 
 	// Enumerates all grants with specified kind.
-	GrantsByKind(GrantKind, func(IGrant))
+	GrantsByKind(PrivilegeKind, func(IPrivilege))
 
 	// Returns all grants for specified object.
-	GrantsForObject(QName) []IGrant
+	GrantsForObject(QName) []IPrivilege
 }
 
 type IGrantsBuilder interface {
@@ -83,7 +83,7 @@ type IGrantsBuilder interface {
 	//	 - if objects contains unknown names,
 	//	 - if fields contains unknown names,
 	//   - if role is unknown.
-	Grant(kind GrantKind, objects []QName, fields []FieldName, toRole QName, comment ...string) IGrantsBuilder
+	Grant(kind PrivilegeKind, objects []QName, fields []FieldName, toRole QName, comment ...string) IGrantsBuilder
 
 	// Adds all available grants to specified objects for specified role.
 	//

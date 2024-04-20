@@ -34,7 +34,7 @@ func ExampleIAppDefBuilder_AddRole() {
 		ws.AddType(docName)
 
 		reader := adb.AddRole(readerRoleName)
-		reader.Grant(appdef.GrantKind_Select, []appdef.QName{docName}, []appdef.FieldName{"field1"}, "grant select to doc.field1")
+		reader.Grant(appdef.PrivilegeKind_Select, []appdef.QName{docName}, []appdef.FieldName{"field1"}, "grant select to doc.field1")
 
 		writer := adb.AddRole(writerRoleName)
 		writer.GrantAll([]appdef.QName{wsName}, "grant all to test.ws")
@@ -59,15 +59,15 @@ func ExampleIAppDefBuilder_AddRole() {
 	{
 		reader := app.Role(readerRoleName)
 		fmt.Println(reader, ":")
-		reader.Grants(func(g appdef.IGrant) { fmt.Println("-", g) })
+		reader.Grants(func(g appdef.IPrivilege) { fmt.Println("-", g) })
 
 		writer := app.Role(writerRoleName)
 		fmt.Println(writer, ":")
-		writer.Grants(func(g appdef.IGrant) { fmt.Println("-", g) })
+		writer.Grants(func(g appdef.IPrivilege) { fmt.Println("-", g) })
 
 		adm := app.Role(admRoleName)
 		fmt.Println(adm, ":")
-		adm.Grants(func(g appdef.IGrant) { fmt.Println("-", g) })
+		adm.Grants(func(g appdef.IPrivilege) { fmt.Println("-", g) })
 	}
 
 	// Output:

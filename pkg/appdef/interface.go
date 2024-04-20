@@ -33,7 +33,7 @@ type IAppDef interface {
 	IWithProjectors
 
 	IWithRoles
-	IWithGrants
+	IWithPrivileges
 }
 
 type IAppDefBuilder interface {

@@ -144,24 +144,24 @@ func (app *appDef) GDocs(cb func(IGDoc)) {
 	})
 }
 
-func (app appDef) Grants(cb func(IGrant)) {
+func (app appDef) Grants(cb func(IPrivilege)) {
 	app.Roles(func(r IRole) {
-		r.Grants(func(g IGrant) {
+		r.Grants(func(g IPrivilege) {
 			cb(g)
 		})
 	})
 }
 
-func (app appDef) GrantsByKind(k GrantKind, cb func(IGrant)) {
-	app.Grants(func(g IGrant) {
+func (app appDef) GrantsByKind(k PrivilegeKind, cb func(IPrivilege)) {
+	app.Grants(func(g IPrivilege) {
 		if g.Kind() == k {
 			cb(g)
 		}
 	})
 }
 
-func (app appDef) GrantsForObject(n QName) []IGrant {
-	grants := make([]IGrant, 0)
+func (app appDef) GrantsForObject(n QName) []IPrivilege {
+	grants := make([]IPrivilege, 0)
 	app.Roles(func(r IRole) {
 		grants = append(grants, r.GrantsForObject(n)...)
 	})
@@ -556,7 +556,7 @@ func (app *appDef) build() (err error) {
 	return err
 }
 
-func (app *appDef) grant(kind GrantKind, objects []QName, fields []FieldName, toRole QName, comment ...string) {
+func (app *appDef) grant(kind PrivilegeKind, objects []QName, fields []FieldName, toRole QName, comment ...string) {
 	r := app.Role(toRole)
 	if r == nil {
 		panic(fmt.Errorf("%w: %v", ErrRoleNotFound, toRole))
@@ -660,7 +660,7 @@ func (ab *appDefBuilder) AddWorkspace(name QName) IWorkspaceBuilder { return ab.
 
 func (ab appDefBuilder) AppDef() IAppDef { return ab.app }
 
-func (ab *appDefBuilder) Grant(kind GrantKind, objects []QName, fields []FieldName, toRole QName, comment ...string) IGrantsBuilder {
+func (ab *appDefBuilder) Grant(kind PrivilegeKind, objects []QName, fields []FieldName, toRole QName, comment ...string) IGrantsBuilder {
 	ab.app.grant(kind, objects, fields, toRole, comment...)
 	return ab
 }

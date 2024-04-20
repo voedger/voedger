@@ -14,13 +14,13 @@ import (
 //   - IGRant
 type grant struct {
 	comment
-	kind    GrantKind
+	kind    PrivilegeKind
 	objects QNames
 	fields  []FieldName
 	role    *role
 }
 
-func newGrant(kind GrantKind, objects []QName, fields []FieldName, role *role, comment ...string) *grant {
+func newGrant(kind PrivilegeKind, objects []QName, fields []FieldName, role *role, comment ...string) *grant {
 	g := &grant{
 		comment: makeComment(comment...),
 		kind:    kind,
@@ -33,7 +33,7 @@ func newGrant(kind GrantKind, objects []QName, fields []FieldName, role *role, c
 
 func (g grant) Fields() []FieldName { return g.fields }
 
-func (g grant) Kind() GrantKind { return g.kind }
+func (g grant) Kind() PrivilegeKind { return g.kind }
 
 func (g grant) Objects() QNames { return g.objects }
 
@@ -43,7 +43,7 @@ func (g grant) String() string {
 	return fmt.Sprintf("grant %s to %v for %v", g.kind.TrimString(), g.objects, g.role)
 }
 
-func (k GrantKind) TrimString() string {
-	const pref = "GrantKind_"
+func (k PrivilegeKind) TrimString() string {
+	const pref = "PrivilegeKind_"
 	return strings.TrimPrefix(k.String(), pref)
 }
