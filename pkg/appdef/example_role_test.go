@@ -40,7 +40,7 @@ func ExampleIAppDefBuilder_AddRole() {
 		writer.GrantAll([]appdef.QName{wsName}, "grant all to test.ws")
 
 		adm := adb.AddRole(admRoleName)
-		adm.GrantRoles([]appdef.QName{readerRoleName, writerRoleName}, "grant reader and writer roles to adm")
+		adm.GrantAll([]appdef.QName{readerRoleName, writerRoleName}, "grant reader and writer roles to adm")
 
 		app = adb.MustBuild()
 	}
@@ -76,12 +76,12 @@ func ExampleIAppDefBuilder_AddRole() {
 	// 3 Role «test.writerRole»
 	// overall: 3
 	// Role «test.readerRole» :
-	// - grant Select to [test.doc] for Role «test.readerRole»
+	// - grant Select on [test.doc] to Role «test.readerRole»
 	// Role «test.writerRole» :
-	// - grant Insert to [test.ws] for Role «test.writerRole»
-	// - grant Update to [test.ws] for Role «test.writerRole»
-	// - grant Select to [test.ws] for Role «test.writerRole»
-	// - grant Execute to [test.ws] for Role «test.writerRole»
+	// - grant Insert on [test.ws] to Role «test.writerRole»
+	// - grant Update on [test.ws] to Role «test.writerRole»
+	// - grant Select on [test.ws] to Role «test.writerRole»
+	// - grant Execute on [test.ws] to Role «test.writerRole»
 	// Role «test.admRole» :
-	// - grant Role to [test.readerRole test.writerRole] for Role «test.admRole»
+	// - grant Role on [test.readerRole test.writerRole] to Role «test.admRole»
 }

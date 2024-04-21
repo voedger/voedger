@@ -556,28 +556,20 @@ func (app *appDef) build() (err error) {
 	return err
 }
 
-func (app *appDef) grant(kind PrivilegeKind, objects []QName, fields []FieldName, toRole QName, comment ...string) {
+func (app *appDef) grant(kind PrivilegeKind, on []QName, fields []FieldName, toRole QName, comment ...string) {
 	r := app.Role(toRole)
 	if r == nil {
 		panic(fmt.Errorf("%w: %v", ErrRoleNotFound, toRole))
 	}
-	r.(*role).grant(kind, objects, fields, comment...)
+	r.(*role).grant(kind, on, fields, comment...)
 }
 
-func (app *appDef) grantAll(objects []QName, toRole QName, comment ...string) {
+func (app *appDef) grantAll(on []QName, toRole QName, comment ...string) {
 	r := app.Role(toRole)
 	if r == nil {
 		panic(fmt.Errorf("%w: %v", ErrRoleNotFound, toRole))
 	}
-	r.(*role).grantAll(objects, comment...)
-}
-
-func (app *appDef) grantRoles(roles []QName, toRole QName, comment ...string) {
-	r := app.Role(toRole)
-	if r == nil {
-		panic(fmt.Errorf("%w: %v", ErrRoleNotFound, toRole))
-	}
-	r.(*role).grantRoles(roles, comment...)
+	r.(*role).grantAll(on, comment...)
 }
 
 // Makes system package.
@@ -593,6 +585,14 @@ func (app *appDef) makeSysDataTypes() {
 	for k := DataKind_null + 1; k < DataKind_FakeLast; k++ {
 		_ = newSysData(app, k)
 	}
+}
+
+func (app *appDef) revoke(kind PrivilegeKind, on []QName, fields []FieldName, fromRole QName, comment ...string) {
+	r := app.Role(fromRole)
+	if r == nil {
+		panic(fmt.Errorf("%w: %v", ErrRoleNotFound, fromRole))
+	}
+	r.(*role).grant(kind, on, fields, comment...)
 }
 
 // Returns type by name and kind. If type is not found then returns nil.
@@ -660,21 +660,6 @@ func (ab *appDefBuilder) AddWorkspace(name QName) IWorkspaceBuilder { return ab.
 
 func (ab appDefBuilder) AppDef() IAppDef { return ab.app }
 
-func (ab *appDefBuilder) Grant(kind PrivilegeKind, objects []QName, fields []FieldName, toRole QName, comment ...string) IPrivilegesBuilder {
-	ab.app.grant(kind, objects, fields, toRole, comment...)
-	return ab
-}
-
-func (ab *appDefBuilder) GrantAll(objects []QName, toRole QName, comment ...string) IPrivilegesBuilder {
-	ab.app.grantAll(objects, toRole, comment...)
-	return ab
-}
-
-func (ab *appDefBuilder) GrantRoles(roles []QName, toRole QName, comment ...string) IPrivilegesBuilder {
-	ab.app.grantRoles(roles, toRole, comment...)
-	return ab
-}
-
 func (ab *appDefBuilder) Build() (IAppDef, error) {
 	if err := ab.app.build(); err != nil {
 		return nil, err
@@ -682,9 +667,24 @@ func (ab *appDefBuilder) Build() (IAppDef, error) {
 	return ab.app, nil
 }
 
+func (ab *appDefBuilder) Grant(kind PrivilegeKind, on []QName, fields []FieldName, toRole QName, comment ...string) IPrivilegesBuilder {
+	ab.app.grant(kind, on, fields, toRole, comment...)
+	return ab
+}
+
+func (ab *appDefBuilder) GrantAll(on []QName, toRole QName, comment ...string) IPrivilegesBuilder {
+	ab.app.grantAll(on, toRole, comment...)
+	return ab
+}
+
 func (ab *appDefBuilder) MustBuild() IAppDef {
 	if err := ab.app.build(); err != nil {
 		panic(err)
 	}
 	return ab.app
+}
+
+func (ab *appDefBuilder) Revoke(kind PrivilegeKind, on []QName, fields []FieldName, fromRole QName, comment ...string) IPrivilegesBuilder {
+	ab.app.revoke(kind, on, fields, fromRole, comment...)
+	return ab
 }

@@ -13,43 +13,62 @@ type PrivilegeKind int8
 const (
 	PrivilegeKind_null PrivilegeKind = iota
 
-	// GRANT INSERT,UPDATE ON ALL TABLES WITH TAG BackofficeTag TO LocationUser;
-	// GRANT UPDATE (CloseDatetime, Client) ON TABLE Bill TO LocationUser;
-	// GRANT SELECT ON TABLE Orders TO LocationUser;
-	// GRANT INSERT ON WORKSPACE Workspace1 TO Role1;
-	// GRANT ALL ON ALL TABLES WITH TAG BackofficeTag TO LocationManager;
+	// # Privilege to insert records or view records.
+	// 	- Privilege applicable on records, view records or workspaces.
+	// 	- Then applied to workspaces, it means insert on all tables and views of the workspace.
+	// 	- Fields are not applicable.
 	PrivilegeKind_Insert
+
+	// # Privilege to update records or view records.
+	// 	- Privilege applicable on records, view records or workspaces.
+	// 	- Then applied to workspaces, it means update on all tables and views of the workspace.
+	// 	- Fields are applicable and specify fields of records or view records that can be updated.
 	PrivilegeKind_Update
+
+	// # Privilege to select records or view records.
+	// 	- Privilege applicable on records, view records or workspaces.
+	// 	- Then applied to workspaces, it means select on all tables and views of the workspace.
+	// 	- Fields are applicable and specify fields of records or view records that can be selected.
 	PrivilegeKind_Select
 
-	// GRANT EXECUTE ON COMMAND Orders TO LocationUser;
-	// GRANT EXECUTE ON QUERY Query1 TO LocationUser;
-	// GRANT EXECUTE ON WORKSPACE TO Role2;
+	// # Privilege to execute functions.
+	// 	- Privilege applicable on commands, queries or workspaces.
+	// 	- Then applied to workspaces, it means execute on all queries and commands of the workspace.
+	// 	- Fields are not applicable.
 	PrivilegeKind_Execute
 
-	// GRANT LocationUser TO LocationManager;
-	PrivilegeKind_Role
+	// # Privilege to inherit privileges from other roles.
+	// 	- Privilege applicable on roles only.
+	// 	- Fields are not applicable.
+	PrivilegeKind_Inherits
 )
 
-// Represents a privilege (specific rights or permissions) granted to a role.
+// Represents a privilege (specific rights or permissions) to be granted to role or revoked from.
 type IPrivilege interface {
 	IWithComments
 
 	// Returns privilege kind
 	Kind() PrivilegeKind
 
-	// Returns objects for which privilege was granted or revoked.
+	// Returns is privilege has been granted. The opposite of `IsRevoked()`
+	IsGranted() bool
+
+	// Returns is privilege has been revoked. The opposite of `IsGranted()`
+	IsRevoked() bool
+
+	// Returns objects names on which privilege was applied.
 	//
-	// For PrivilegeKind_Role returns Role names.
-	//
-	// For PrivilegeKind_Insert, GrantKind_Update and GrantKind_Select returns:
+	// # For PrivilegeKind_Insert, GrantKind_Update and GrantKind_Select:
 	//	- records or view records names or
 	//	- workspaces names.
 	//
-	// For PrivilegeKind_Execute returns:
+	// # For PrivilegeKind_Execute:
 	//	- commands & queries names or
 	//	- workspaces names.
-	Objects() QNames
+	//
+	// # For PrivilegeKind_Inherits:
+	//	- roles names.
+	On() QNames
 
 	// Returns fields (of objects) which was granted or revoked.
 	//
@@ -75,7 +94,7 @@ type IWithPrivileges interface {
 }
 
 type IPrivilegesBuilder interface {
-	// Grants new privilege with specified kind to specified objects for specified role.
+	// Grants new privilege with specified kind on specified objects to specified role.
 	//
 	// # Panics:
 	//   - if kind is PrivilegeKind_null,
@@ -83,20 +102,28 @@ type IPrivilegesBuilder interface {
 	//	 - if objects contains unknown names,
 	//	 - if fields contains unknown names,
 	//   - if role is unknown.
-	Grant(kind PrivilegeKind, objects []QName, fields []FieldName, toRole QName, comment ...string) IPrivilegesBuilder
+	Grant(kind PrivilegeKind, on []QName, fields []FieldName, toRole QName, comment ...string) IPrivilegesBuilder
 
-	// Grants all available privileges to specified objects for specified role.
+	// Grants all available privileges on specified objects to specified role.
 	//
-	// If the objects are tables, then insert, update, and select privileges are granted.
+	// If the objects are records or view records, then insert, update, and select privileges are granted.
 	//
 	// If the objects are commands or queries, their execution is granted.
 	//
 	// If the objects are workspaces, then:
-	//	- insert, update and select from the tables and views of these workspaces are granted,
+	//	- insert, update and select records and view records of these workspaces are granted,
 	//	- execution of commands & queries from these workspaces is granted.
-	GrantAll(objects []QName, toRole QName, comment ...string) IPrivilegesBuilder
+	//
+	// If the objects are roles, then all privileges from these roles are granted to specified role.
+	GrantAll(on []QName, toRole QName, comment ...string) IPrivilegesBuilder
 
-	// Grant new privilege to specified roles for specified role.
-	// The result is that the specified role will inherits all privileges from specified roles.
-	GrantRoles(roles []QName, toRole QName, comment ...string) IPrivilegesBuilder
+	// Revokes privilege with specified kind on specified objects from specified role.
+	//
+	// # Panics:
+	//   - if kind is PrivilegeKind_null,
+	//	 - if objects are empty,
+	//	 - if objects contains unknown names,
+	//	 - if fields contains unknown names,
+	//   - if role is unknown.
+	Revoke(kind PrivilegeKind, on []QName, fields []FieldName, fromRole QName, comment ...string) IPrivilegesBuilder
 }

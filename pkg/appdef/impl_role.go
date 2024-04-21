@@ -11,26 +11,26 @@ import "fmt"
 //   - IRole
 type role struct {
 	typ
-	grants []*privilege
+	privileges []*privilege
 }
 
 func newRole(app *appDef, name QName) *role {
 	r := &role{
-		typ:    makeType(app, name, TypeKind_Role),
-		grants: make([]*privilege, 0),
+		typ:        makeType(app, name, TypeKind_Role),
+		privileges: make([]*privilege, 0),
 	}
 	app.appendType(r)
 	return r
 }
 
 func (r role) Privileges(cb func(IPrivilege)) {
-	for _, g := range r.grants {
+	for _, g := range r.privileges {
 		cb(g)
 	}
 }
 
 func (r role) PrivilegesByKind(k PrivilegeKind, cb func(IPrivilege)) {
-	for _, g := range r.grants {
+	for _, g := range r.privileges {
 		if g.Kind() == k {
 			cb(g)
 		}
@@ -39,65 +39,77 @@ func (r role) PrivilegesByKind(k PrivilegeKind, cb func(IPrivilege)) {
 
 func (r role) PrivilegesFor(name QName) []IPrivilege {
 	gg := make([]IPrivilege, 0)
-	for _, g := range r.grants {
-		if g.Objects().Contains(name) {
+	for _, g := range r.privileges {
+		if g.On().Contains(name) {
 			gg = append(gg, g)
 		}
 	}
 	return gg
 }
 
-func (r *role) grant(kind PrivilegeKind, objects []QName, fields []FieldName, comment ...string) {
-	r.grants = append(r.grants, newGrant(kind, objects, fields, r, comment...))
+func (r *role) grant(kind PrivilegeKind, on []QName, fields []FieldName, comment ...string) {
+	r.privileges = append(r.privileges, newGrant(kind, on, fields, r, comment...))
 }
 
-func (r *role) grantAll(objects []QName, comment ...string) {
+func (r *role) grantAll(on []QName, comment ...string) {
 	gg := make(map[PrivilegeKind]*privilege)
 
-	for _, o := range QNamesFrom(objects...) {
+	for _, o := range QNamesFrom(on...) {
 		t := r.app.Type(o)
 		if t == nil {
 			panic(fmt.Errorf("%w: %v", ErrTypeNotFound, o))
 		}
 
-		if _, ok := t.(IStructure); ok { // or IRecord??
+		switch t.Kind() {
+		case TypeKind_GRecord, TypeKind_GDoc,
+			TypeKind_CRecord, TypeKind_CDoc,
+			TypeKind_WRecord, TypeKind_WDoc,
+			TypeKind_ORecord, TypeKind_ODoc,
+			TypeKind_Object,
+			TypeKind_ViewRecord:
 			for k := PrivilegeKind_Insert; k <= PrivilegeKind_Select; k++ {
 				if g, ok := gg[k]; ok {
-					g.objects.Add(o)
+					g.on.Add(o)
 				} else {
 					g := newGrant(k, []QName{o}, nil, r, comment...)
-					r.grants = append(r.grants, g)
+					r.privileges = append(r.privileges, g)
 					gg[k] = g
 				}
 			}
-		}
-
-		if _, ok := t.(IFunction); ok {
+		case TypeKind_Command, TypeKind_Query:
 			if g, ok := gg[PrivilegeKind_Execute]; ok {
-				g.objects.Add(o)
+				g.on.Add(o)
 			} else {
 				g := newGrant(PrivilegeKind_Execute, []QName{o}, nil, r, comment...)
-				r.grants = append(r.grants, g)
+				r.privileges = append(r.privileges, g)
 				gg[PrivilegeKind_Execute] = g
 			}
-		}
-
-		if _, ok := t.(IWorkspace); ok {
+		case TypeKind_Workspace:
 			for k := PrivilegeKind_Insert; k <= PrivilegeKind_Execute; k++ {
 				if g, ok := gg[k]; ok {
-					g.objects.Add(o)
+					g.on.Add(o)
 				} else {
 					g := newGrant(k, []QName{o}, nil, r, comment...)
-					r.grants = append(r.grants, g)
+					r.privileges = append(r.privileges, g)
 					gg[k] = g
 				}
 			}
+		case TypeKind_Role:
+			if g, ok := gg[PrivilegeKind_Inherits]; ok {
+				g.on.Add(o)
+			} else {
+				g := newGrant(PrivilegeKind_Inherits, []QName{o}, nil, r, comment...)
+				r.privileges = append(r.privileges, g)
+				gg[PrivilegeKind_Inherits] = g
+			}
+		default:
+			panic(fmt.Errorf("can not grant privileges on: %w: %v", ErrInvalidTypeKind, o))
 		}
 	}
 }
 
-func (r *role) grantRoles(roles []QName, comment ...string) {
-	r.grants = append(r.grants, newGrant(PrivilegeKind_Role, roles, nil, r, comment...))
+func (r *role) revoke(kind PrivilegeKind, on []QName, fields []FieldName, comment ...string) {
+	r.privileges = append(r.privileges, newRevoke(kind, on, fields, r, comment...))
 }
 
 // # Implements:
@@ -114,17 +126,17 @@ func newRoleBuilder(role *role) *roleBuilder {
 	}
 }
 
-func (rb *roleBuilder) Grant(kind PrivilegeKind, objects []QName, fields []FieldName, comment ...string) IRoleBuilder {
-	rb.role.grant(kind, objects, fields, comment...)
+func (rb *roleBuilder) Grant(kind PrivilegeKind, on []QName, fields []FieldName, comment ...string) IRoleBuilder {
+	rb.role.grant(kind, on, fields, comment...)
 	return rb
 }
 
-func (rb *roleBuilder) GrantAll(objects []QName, comment ...string) IRoleBuilder {
-	rb.role.grantAll(objects, comment...)
+func (rb *roleBuilder) GrantAll(on []QName, comment ...string) IRoleBuilder {
+	rb.role.grantAll(on, comment...)
 	return rb
 }
 
-func (rb *roleBuilder) GrantRoles(roles []QName, comment ...string) IRoleBuilder {
-	rb.role.grantRoles(roles, comment...)
+func (rb *roleBuilder) Revoke(kind PrivilegeKind, on []QName, fields []FieldName, comment ...string) IRoleBuilder {
+	rb.role.revoke(kind, on, fields, comment...)
 	return rb
 }

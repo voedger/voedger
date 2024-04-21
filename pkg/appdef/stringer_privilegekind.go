@@ -13,7 +13,7 @@ func _() {
 	_ = x[PrivilegeKind_Update-2]
 	_ = x[PrivilegeKind_Select-3]
 	_ = x[PrivilegeKind_Execute-4]
-	_ = x[PrivilegeKind_Role-5]
+	_ = x[PrivilegeKind_Inherits-5]
 }
 
 const _PrivilegeKind_name = "PrivilegeKind_nullPrivilegeKind_InsertPrivilegeKind_UpdatePrivilegeKind_SelectPrivilegeKind_ExecutePrivilegeKind_Role"

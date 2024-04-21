@@ -14,29 +14,37 @@ type IRole interface {
 type IRoleBuilder interface {
 	ITypeBuilder
 
-	// Adds new privilege with specified kind to specified objects.
+	// Adds new privilege with specified kind on specified objects.
 	//
 	// # Panics:
 	//   - if kind is PrivilegeKind_null,
 	//	 - if objects are empty,
 	//	 - if objects contains unknown names,
 	//	 - if fields contains unknown names.
-	Grant(kind PrivilegeKind, objects []QName, fields []FieldName, comment ...string) IRoleBuilder
+	Grant(kind PrivilegeKind, on []QName, fields []FieldName, comment ...string) IRoleBuilder
 
-	// Grants all available privileges to specified objects.
+	// Grants all available privileges on specified objects.
 	//
-	// If the objects are tables, then insert, update, and select privileges are granted.
+	// If the objects are records or view records, then insert, update, and select privileges are granted.
 	//
 	// If the objects are commands or queries, their execution is granted.
 	//
 	// If the objects are workspaces, then:
-	//	- insert, update and select from the tables and views of these workspaces are granted,
+	//	- insert, update and select records and view records of these workspaces are granted,
 	//	- execution of commands & queries from these workspaces is granted.
-	GrantAll(objects []QName, comment ...string) IRoleBuilder
+	//
+	// If the objects are roles, then all privileges from these roles are granted.
+	GrantAll(on []QName, comment ...string) IRoleBuilder
 
-	// Grant new privilege to specified roles.
-	// The result is that the builded role will inherits all privileges from specified roles.
-	GrantRoles(roles []QName, comment ...string) IRoleBuilder
+	// Revokes privilege with specified kind on specified objects.
+	//
+	// # Panics:
+	//   - if kind is PrivilegeKind_null,
+	//	 - if objects are empty,
+	//	 - if objects contains unknown names,
+	//	 - if fields contains unknown names,
+	//   - if role is unknown.
+	Revoke(kind PrivilegeKind, on []QName, fields []FieldName, comment ...string) IRoleBuilder
 }
 
 type IWithRoles interface {
