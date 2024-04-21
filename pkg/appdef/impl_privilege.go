@@ -23,13 +23,13 @@ func newRole(app *appDef, name QName) *role {
 	return r
 }
 
-func (r role) Grants(cb func(IPrivilege)) {
+func (r role) Privileges(cb func(IPrivilege)) {
 	for _, g := range r.grants {
 		cb(g)
 	}
 }
 
-func (r role) GrantsByKind(k PrivilegeKind, cb func(IPrivilege)) {
+func (r role) PrivilegesByKind(k PrivilegeKind, cb func(IPrivilege)) {
 	for _, g := range r.grants {
 		if g.Kind() == k {
 			cb(g)
@@ -37,7 +37,7 @@ func (r role) GrantsByKind(k PrivilegeKind, cb func(IPrivilege)) {
 	}
 }
 
-func (r role) GrantsForObject(name QName) []IPrivilege {
+func (r role) PrivilegesFor(name QName) []IPrivilege {
 	gg := make([]IPrivilege, 0)
 	for _, g := range r.grants {
 		if g.Objects().Contains(name) {

@@ -144,26 +144,26 @@ func (app *appDef) GDocs(cb func(IGDoc)) {
 	})
 }
 
-func (app appDef) Grants(cb func(IPrivilege)) {
+func (app appDef) Privileges(cb func(IPrivilege)) {
 	app.Roles(func(r IRole) {
-		r.Grants(func(g IPrivilege) {
+		r.Privileges(func(g IPrivilege) {
 			cb(g)
 		})
 	})
 }
 
-func (app appDef) GrantsByKind(k PrivilegeKind, cb func(IPrivilege)) {
-	app.Grants(func(g IPrivilege) {
+func (app appDef) PrivilegesByKind(k PrivilegeKind, cb func(IPrivilege)) {
+	app.Privileges(func(g IPrivilege) {
 		if g.Kind() == k {
 			cb(g)
 		}
 	})
 }
 
-func (app appDef) GrantsForObject(n QName) []IPrivilege {
+func (app appDef) PrivilegesFor(n QName) []IPrivilege {
 	grants := make([]IPrivilege, 0)
 	app.Roles(func(r IRole) {
-		grants = append(grants, r.GrantsForObject(n)...)
+		grants = append(grants, r.PrivilegesFor(n)...)
 	})
 	return grants
 }
@@ -660,17 +660,17 @@ func (ab *appDefBuilder) AddWorkspace(name QName) IWorkspaceBuilder { return ab.
 
 func (ab appDefBuilder) AppDef() IAppDef { return ab.app }
 
-func (ab *appDefBuilder) Grant(kind PrivilegeKind, objects []QName, fields []FieldName, toRole QName, comment ...string) IGrantsBuilder {
+func (ab *appDefBuilder) Grant(kind PrivilegeKind, objects []QName, fields []FieldName, toRole QName, comment ...string) IPrivilegesBuilder {
 	ab.app.grant(kind, objects, fields, toRole, comment...)
 	return ab
 }
 
-func (ab *appDefBuilder) GrantAll(objects []QName, toRole QName, comment ...string) IGrantsBuilder {
+func (ab *appDefBuilder) GrantAll(objects []QName, toRole QName, comment ...string) IPrivilegesBuilder {
 	ab.app.grantAll(objects, toRole, comment...)
 	return ab
 }
 
-func (ab *appDefBuilder) GrantRoles(roles []QName, toRole QName, comment ...string) IGrantsBuilder {
+func (ab *appDefBuilder) GrantRoles(roles []QName, toRole QName, comment ...string) IPrivilegesBuilder {
 	ab.app.grantRoles(roles, toRole, comment...)
 	return ab
 }

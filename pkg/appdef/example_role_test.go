@@ -59,15 +59,15 @@ func ExampleIAppDefBuilder_AddRole() {
 	{
 		reader := app.Role(readerRoleName)
 		fmt.Println(reader, ":")
-		reader.Grants(func(g appdef.IPrivilege) { fmt.Println("-", g) })
+		reader.Privileges(func(g appdef.IPrivilege) { fmt.Println("-", g) })
 
 		writer := app.Role(writerRoleName)
 		fmt.Println(writer, ":")
-		writer.Grants(func(g appdef.IPrivilege) { fmt.Println("-", g) })
+		writer.Privileges(func(g appdef.IPrivilege) { fmt.Println("-", g) })
 
 		adm := app.Role(admRoleName)
 		fmt.Println(adm, ":")
-		adm.Grants(func(g appdef.IPrivilege) { fmt.Println("-", g) })
+		adm.Privileges(func(g appdef.IPrivilege) { fmt.Println("-", g) })
 	}
 
 	// Output:

@@ -35,67 +35,68 @@ const (
 type IPrivilege interface {
 	IWithComments
 
-	// Returns Grant kind
+	// Returns privilege kind
 	Kind() PrivilegeKind
 
-	// Returns objects which was granted.
+	// Returns objects for which privilege was granted or revoked.
 	//
-	// For GrantKind_Role returns Role names.
+	// For PrivilegeKind_Role returns Role names.
 	//
-	// For GrantKind_Insert, GrantKind_Update and GrantKind_Select returns:
-	//	- table names or
-	//	- workspace names.
+	// For PrivilegeKind_Insert, GrantKind_Update and GrantKind_Select returns:
+	//	- records or view records names or
+	//	- workspaces names.
 	//
-	// For GrantKind_Execute returns:
+	// For PrivilegeKind_Execute returns:
 	//	- commands & queries names or
 	//	- workspaces names.
 	Objects() QNames
 
-	// Returns fields (of objects) which was granted.
+	// Returns fields (of objects) which was granted or revoked.
 	//
-	// For GrantKind_Update and GrandKind_Select returns field names of table.
+	// For PrivilegeKind_Update and PrivilegeKind_Select returns field names of records or view records.
 	Fields() []FieldName
 
-	// Returns the role to which the grant was granted.
+	// Returns the role to which the privilege was granted or revoked.
 	Role() IRole
 }
 
 // IWithPrivileges is an interface for entities that have grants.
 type IWithPrivileges interface {
-	// Enumerates all grants.
+	// Enumerates all privileges.
 	//
-	// Grants are enumerated in alphabetical order of roles, and within each role in the order they are added.
-	Grants(func(IPrivilege))
+	// Privileges are enumerated in alphabetical order of roles, and within each role in the order they are added.
+	Privileges(func(IPrivilege))
 
-	// Enumerates all grants with specified kind.
-	GrantsByKind(PrivilegeKind, func(IPrivilege))
+	// Enumerates all privileges with specified kind.
+	PrivilegesByKind(PrivilegeKind, func(IPrivilege))
 
-	// Returns all grants for specified object.
-	GrantsForObject(QName) []IPrivilege
+	// Returns all privileges for entity with specified QName.
+	PrivilegesFor(QName) []IPrivilege
 }
 
-type IGrantsBuilder interface {
-	// Adds new Grant with specified kind to specified objects for specified role.
+type IPrivilegesBuilder interface {
+	// Grants new privilege with specified kind to specified objects for specified role.
 	//
 	// # Panics:
-	//   - if kind is GrantKind_null,
+	//   - if kind is PrivilegeKind_null,
 	//	 - if objects are empty,
 	//	 - if objects contains unknown names,
 	//	 - if fields contains unknown names,
 	//   - if role is unknown.
-	Grant(kind PrivilegeKind, objects []QName, fields []FieldName, toRole QName, comment ...string) IGrantsBuilder
+	Grant(kind PrivilegeKind, objects []QName, fields []FieldName, toRole QName, comment ...string) IPrivilegesBuilder
 
-	// Adds all available grants to specified objects for specified role.
+	// Grants all available privileges to specified objects for specified role.
 	//
-	// If the objects are tables, then insert, update, and select operations are granted.
+	// If the objects are tables, then insert, update, and select privileges are granted.
 	//
-	// If the objects are commands or queries, their execution is allowed.
+	// If the objects are commands or queries, their execution is granted.
 	//
 	// If the objects are workspaces, then:
-	//	- insert, update and select from the tables of these workspaces are granted,
+	//	- insert, update and select from the tables and views of these workspaces are granted,
 	//	- execution of commands & queries from these workspaces is granted.
-	GrantAll(objects []QName, toRole QName, comment ...string) IGrantsBuilder
+	GrantAll(objects []QName, toRole QName, comment ...string) IPrivilegesBuilder
 
-	// Adds new Grant with GrantKind_Role to specified roles for specified role.
-	GrantRoles(roles []QName, toRole QName, comment ...string) IGrantsBuilder
+	// Grant new privilege to specified roles for specified role.
+	// The result is that the specified role will inherits all privileges from specified roles.
+	GrantRoles(roles []QName, toRole QName, comment ...string) IPrivilegesBuilder
 }

@@ -14,27 +14,28 @@ type IRole interface {
 type IRoleBuilder interface {
 	ITypeBuilder
 
-	// Adds new Grant with specified kind to specified objects.
+	// Adds new privilege with specified kind to specified objects.
 	//
 	// # Panics:
-	//   - if kind is GrantKind_null,
+	//   - if kind is PrivilegeKind_null,
 	//	 - if objects are empty,
 	//	 - if objects contains unknown names,
 	//	 - if fields contains unknown names.
 	Grant(kind PrivilegeKind, objects []QName, fields []FieldName, comment ...string) IRoleBuilder
 
-	// Adds all available grants to specified objects.
+	// Grants all available privileges to specified objects.
 	//
-	// If the objects are tables, then insert, update, and select operations are granted.
+	// If the objects are tables, then insert, update, and select privileges are granted.
 	//
-	// If the objects are commands or queries, their execution is allowed.
+	// If the objects are commands or queries, their execution is granted.
 	//
 	// If the objects are workspaces, then:
-	//	- insert, update and select from the tables of these workspaces are granted,
+	//	- insert, update and select from the tables and views of these workspaces are granted,
 	//	- execution of commands & queries from these workspaces is granted.
 	GrantAll(objects []QName, comment ...string) IRoleBuilder
 
-	// Adds new Grant with GrantKind_Role to specified roles.
+	// Grant new privilege to specified roles.
+	// The result is that the builded role will inherits all privileges from specified roles.
 	GrantRoles(roles []QName, comment ...string) IRoleBuilder
 }
 

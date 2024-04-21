@@ -57,7 +57,7 @@ type IAppDefBuilder interface {
 	IProjectorsBuilder
 
 	IRolesBuilder
-	IGrantsBuilder
+	IPrivilegesBuilder
 
 	// Returns application definition while building.
 	//
