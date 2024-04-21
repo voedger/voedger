@@ -11,8 +11,8 @@ import (
 )
 
 // # Implements:
-//   - IGRant
-type grant struct {
+//   - IPrivilege
+type privilege struct {
 	comment
 	kind    PrivilegeKind
 	objects QNames
@@ -20,8 +20,8 @@ type grant struct {
 	role    *role
 }
 
-func newGrant(kind PrivilegeKind, objects []QName, fields []FieldName, role *role, comment ...string) *grant {
-	g := &grant{
+func newGrant(kind PrivilegeKind, objects []QName, fields []FieldName, role *role, comment ...string) *privilege {
+	g := &privilege{
 		comment: makeComment(comment...),
 		kind:    kind,
 		objects: QNamesFrom(objects...),
@@ -31,15 +31,15 @@ func newGrant(kind PrivilegeKind, objects []QName, fields []FieldName, role *rol
 	return g
 }
 
-func (g grant) Fields() []FieldName { return g.fields }
+func (g privilege) Fields() []FieldName { return g.fields }
 
-func (g grant) Kind() PrivilegeKind { return g.kind }
+func (g privilege) Kind() PrivilegeKind { return g.kind }
 
-func (g grant) Objects() QNames { return g.objects }
+func (g privilege) Objects() QNames { return g.objects }
 
-func (g grant) Role() IRole { return g.role }
+func (g privilege) Role() IRole { return g.role }
 
-func (g grant) String() string {
+func (g privilege) String() string {
 	return fmt.Sprintf("grant %s to %v for %v", g.kind.TrimString(), g.objects, g.role)
 }
 

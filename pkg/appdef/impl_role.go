@@ -11,13 +11,13 @@ import "fmt"
 //   - IRole
 type role struct {
 	typ
-	grants []*grant
+	grants []*privilege
 }
 
 func newRole(app *appDef, name QName) *role {
 	r := &role{
 		typ:    makeType(app, name, TypeKind_Role),
-		grants: make([]*grant, 0),
+		grants: make([]*privilege, 0),
 	}
 	app.appendType(r)
 	return r
@@ -52,7 +52,7 @@ func (r *role) grant(kind PrivilegeKind, objects []QName, fields []FieldName, co
 }
 
 func (r *role) grantAll(objects []QName, comment ...string) {
-	gg := make(map[PrivilegeKind]*grant)
+	gg := make(map[PrivilegeKind]*privilege)
 
 	for _, o := range QNamesFrom(objects...) {
 		t := r.app.Type(o)
