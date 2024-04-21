@@ -35,6 +35,7 @@ type CLIParams struct {
 }
 type BuiltInAppDef struct {
 	cluster.AppDeploymentDescriptor
-	AppQName istructs.AppQName
-	Packages []parser.PackageFS
+	AppQName         istructs.AppQName
+	Packages         []parser.PackageFS
+	NumAppWorkspaces istructs.NumAppWorkspaces
 }

@@ -3,4 +3,22 @@
 
 WORKSPACE ClusterWS (
 	DESCRIPTOR Cluster();
+
+	TABLE Application INHERITS ODoc (
+		Name string,
+		NumPartitions int32,
+		NumAppWorkspace int32
+	);
+
+	VIEW DeployedApps (
+		ClusterAppID int32,
+		AppQName string,
+		DeployEventWLogOffset int64,
+		PRIMARY KEY((ClusterAppID), AppQName)
+	) AS RESULT OF ApplyDeployApp;
+
+	EXTENSION ENGINE BUILTIN (
+		COMMAND DeployApp(Application);
+		PROJECTOR ApplyDeployApp AFTER EXECUTE ON DeployApp INTENTS (View(DeployedApps));
+	);
 );

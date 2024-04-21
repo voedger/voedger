@@ -54,15 +54,23 @@ func Example() {
 	}
 	defer cleanupParts()
 
-	appPartsCtl, cleanupCtl, err := apppartsctl.New(appParts, []apppartsctl.BuiltInApp{
+	appPartsCtl, cleanupCtl, err := apppartsctl.New(appParts, []cluster.BuiltInApp{
 		{Name: istructs.AppQName_test1_app1,
-			Def:            app_1_v1,
-			NumParts:       2,
-			EnginePoolSize: [cluster.ProcessorKind_Count]int{2, 2, 2}},
+			Def: app_1_v1,
+			AppDeploymentDescriptor: cluster.AppDeploymentDescriptor{
+				NumParts:         2,
+				EnginePoolSize:   [cluster.ProcessorKind_Count]int{2, 2, 2},
+				NumAppWorkspaces: 3,
+			},
+		},
 		{Name: istructs.AppQName_test1_app2,
-			Def:            app_2_v1,
-			NumParts:       3,
-			EnginePoolSize: [cluster.ProcessorKind_Count]int{2, 2, 2}},
+			Def: app_2_v1,
+			AppDeploymentDescriptor: cluster.AppDeploymentDescriptor{
+				NumParts:         3,
+				EnginePoolSize:   [cluster.ProcessorKind_Count]int{2, 2, 2},
+				NumAppWorkspaces: 4,
+			},
+		},
 	})
 
 	if err != nil {

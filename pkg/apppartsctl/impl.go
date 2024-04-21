@@ -9,15 +9,16 @@ import (
 	"context"
 
 	"github.com/voedger/voedger/pkg/appparts"
+	"github.com/voedger/voedger/pkg/cluster"
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
 type appPartitionsController struct {
 	parts       appparts.IAppPartitions
-	builtInApps []BuiltInApp
+	builtInApps []cluster.BuiltInApp
 }
 
-func newAppPartitionsController(parts appparts.IAppPartitions, apps []BuiltInApp) (ctl IAppPartitionsController, cleanup func(), err error) {
+func newAppPartitionsController(parts appparts.IAppPartitions, apps []cluster.BuiltInApp) (ctl IAppPartitionsController, cleanup func(), err error) {
 	apc := appPartitionsController{parts: parts, builtInApps: apps}
 
 	return &apc, func() {}, err

@@ -22,6 +22,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/apppartsctl"
+	"github.com/voedger/voedger/pkg/cluster"
 	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/router"
 	"github.com/voedger/voedger/pkg/vvm/engines"
@@ -235,8 +236,8 @@ func provideIsDeviceAllowedFunc(appsArtefacts AppsArtefacts) iauthnzimpl.IsDevic
 	return res
 }
 
-func provideBuiltInApps(appsArtefacts AppsArtefacts) []apppartsctl.BuiltInApp {
-	res := make([]apppartsctl.BuiltInApp, len(appsArtefacts.builtInAppPackages))
+func provideBuiltInApps(appsArtefacts AppsArtefacts) []cluster.BuiltInApp {
+	res := make([]cluster.BuiltInApp, len(appsArtefacts.builtInAppPackages))
 	for i, pkg := range appsArtefacts.builtInAppPackages {
 		res[i] = pkg.BuiltInApp
 	}
@@ -371,7 +372,7 @@ func provideRouterParams(cfg *VVMConfig, port VVMPortType, vvmIdx VVMIdxType) ro
 	return res
 }
 
-func provideVVMApps(builtInApps []apppartsctl.BuiltInApp) (vvmApps VVMApps) {
+func provideVVMApps(builtInApps []cluster.BuiltInApp) (vvmApps VVMApps) {
 	for _, builtInApp := range builtInApps {
 		vvmApps = append(vvmApps, builtInApp.Name)
 	}

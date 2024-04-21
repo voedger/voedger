@@ -5,12 +5,25 @@
 
 package cluster
 
-import "embed"
+import (
+	"embed"
+
+	"github.com/voedger/voedger/pkg/appdef"
+)
 
 //go:embed clusterws.vsql
 var schemaFS embed.FS
 
 const (
-	ClusterPackage    = "cluster"
-	ClusterPackageFQN = "github.com/voedger/voedger/pkg/" + ClusterPackage
+	ClusterPackage              = "cluster"
+	ClusterPackageFQN           = "github.com/voedger/voedger/pkg/" + ClusterPackage
+	Field_ClusterAppID          = "ClusterAppID"
+	Field_AppQName              = "AppQName"
+	Field_DeployEventWLogOffset = "DeployEventWLogOffset"
+	Field_NumPartitions         = "NumPartitions"
+	Field_NumAppWorkspaces      = "NumAppWorkspaces"
+)
+
+var (
+	QNameViewDeployedApps = appdef.NewQName(ClusterPackage, "DeployedApps")
 )
