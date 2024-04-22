@@ -47,7 +47,7 @@ const (
 type IPrivilege interface {
 	IWithComments
 
-	// Returns privilege kind
+	// Returns privilege kinds
 	Kind() PrivilegeKind
 
 	// Returns is privilege has been granted. The opposite of `IsRevoked()`
@@ -76,7 +76,7 @@ type IPrivilege interface {
 	Fields() []FieldName
 
 	// Returns the role to which the privilege was granted or revoked.
-	Role() IRole
+	To() IRole
 }
 
 // IWithPrivileges is an interface for entities that have grants.
