@@ -5,8 +5,6 @@
 
 package appdef
 
-import "fmt"
-
 // # Implements:
 //   - IRole
 type role struct {
@@ -44,42 +42,15 @@ func (r *role) grant(kinds []PrivilegeKind, on []QName, fields []FieldName, comm
 }
 
 func (r *role) grantAll(on []QName, comment ...string) {
-	names := QNamesFrom(on...)
-	if len(names) == 0 {
-		panic(ErrPrivilegeOnMissed)
-	}
-
-	pk := PrivilegeKinds{}
-
-	o := names[0]
-	t := r.app.Type(o)
-	if t == nil {
-		panic(fmt.Errorf("%w: %v", ErrTypeNotFound, o))
-	}
-
-	switch t.Kind() {
-	case TypeKind_GRecord, TypeKind_GDoc,
-		TypeKind_CRecord, TypeKind_CDoc,
-		TypeKind_WRecord, TypeKind_WDoc,
-		TypeKind_ORecord, TypeKind_ODoc,
-		TypeKind_Object,
-		TypeKind_ViewRecord:
-		pk = PrivilegeKinds{PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select}
-	case TypeKind_Command, TypeKind_Query:
-		pk = PrivilegeKinds{PrivilegeKind_Execute}
-	case TypeKind_Workspace:
-		pk = PrivilegeKinds{PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select, PrivilegeKind_Execute}
-	case TypeKind_Role:
-		pk = PrivilegeKinds{PrivilegeKind_Inherits}
-	default:
-		panic(fmt.Errorf("can not grant privileges on: %w: %v", ErrInvalidTypeKind, o))
-	}
-
-	r.privileges = append(r.privileges, newGrant(pk, names, nil, r, comment...))
+	r.privileges = append(r.privileges, newGrantAll(on, r, comment...))
 }
 
 func (r *role) revoke(kinds []PrivilegeKind, on []QName, comment ...string) {
 	r.privileges = append(r.privileges, newRevoke(kinds, on, nil, r, comment...))
+}
+
+func (r *role) revokeAll(on []QName, comment ...string) {
+	r.privileges = append(r.privileges, newRevokeAll(on, r, comment...))
 }
 
 // # Implements:
@@ -108,5 +79,10 @@ func (rb *roleBuilder) GrantAll(on []QName, comment ...string) IRoleBuilder {
 
 func (rb *roleBuilder) Revoke(kinds []PrivilegeKind, on []QName, comment ...string) IRoleBuilder {
 	rb.role.revoke(kinds, on, comment...)
+	return rb
+}
+
+func (rb *roleBuilder) RevokeAll(on []QName, comment ...string) IRoleBuilder {
+	rb.role.revokeAll(on, comment...)
 	return rb
 }

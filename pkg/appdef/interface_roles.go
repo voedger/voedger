@@ -38,14 +38,10 @@ type IRoleBuilder interface {
 	GrantAll(on []QName, comment ...string) IRoleBuilder
 
 	// Revokes privilege with specified kinds on specified objects.
-	//
-	// # Panics:
-	//   - if kinds is empty,
-	//	 - if objects are empty,
-	//	 - if objects contains unknown names,
-	//	 - if kinds are not compatible with objects,
-	//   - if role is unknown.
 	Revoke(kinds []PrivilegeKind, on []QName, comment ...string) IRoleBuilder
+
+	// Remove all available privileges on specified objects.
+	RevokeAll(on []QName, comment ...string) IRoleBuilder
 }
 
 type IWithRoles interface {

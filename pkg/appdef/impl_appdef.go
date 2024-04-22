@@ -587,6 +587,14 @@ func (app *appDef) revoke(kinds PrivilegeKinds, on []QName, fromRole QName, comm
 	r.(*role).revoke(kinds, on, comment...)
 }
 
+func (app *appDef) revokeAll(on []QName, fromRole QName, comment ...string) {
+	r := app.Role(fromRole)
+	if r == nil {
+		panic(fmt.Errorf("%w: %v", ErrRoleNotFound, fromRole))
+	}
+	r.(*role).revokeAll(on, comment...)
+}
+
 // Returns type by name and kind. If type is not found then returns nil.
 func (app *appDef) typeByKind(name QName, kind TypeKind) interface{} {
 	if t, ok := app.types[name]; ok {
@@ -678,5 +686,10 @@ func (ab *appDefBuilder) MustBuild() IAppDef {
 
 func (ab *appDefBuilder) Revoke(kinds []PrivilegeKind, on []QName, fromRole QName, comment ...string) IPrivilegesBuilder {
 	ab.app.revoke(kinds, on, fromRole, comment...)
+	return ab
+}
+
+func (ab *appDefBuilder) RevokeAll(on []QName, fromRole QName, comment ...string) IPrivilegesBuilder {
+	ab.app.revokeAll(on, fromRole, comment...)
 	return ab
 }
