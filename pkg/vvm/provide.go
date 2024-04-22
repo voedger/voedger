@@ -22,6 +22,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/apppartsctl"
+	"github.com/voedger/voedger/pkg/btstrp"
 	"github.com/voedger/voedger/pkg/cluster"
 	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/router"
@@ -166,6 +167,7 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 		provideAppConfigsTypeEmpty,
 		provideBuiltInAppPackages,
 		provideExtensionPoints,
+		provideBootstrapOperator,
 		// wire.Value(vvmConfig.NumCommandProcessors) -> (wire bug?) value github.com/untillpro/airs-bp3/vvm.CommandProcessorsCount can't be used: vvmConfig is not declared in package scope
 		wire.FieldsOf(&vvmConfig,
 			"NumCommandProcessors",
@@ -184,6 +186,22 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 			"SecretsReader",
 		),
 	))
+}
+
+func provideBootstrapOperator(bus ibus.IBus, asp istructs.IAppStructsProvider, timeFunc coreutils.TimeFunc, appparts appparts.IAppPartitions,
+	builtinApps []cluster.BuiltInApp) BootstrapOperator {
+	var clusterBuiltinApp btstrp.ClusterBuiltInApp
+	otherApps := make([]cluster.BuiltInApp, 0, len(builtinApps)-1)
+	for _, app := range builtinApps {
+		if app.Name == istructs.AppQName_sys_cluster {
+			clusterBuiltinApp = btstrp.ClusterBuiltInApp(app)
+		} else {
+			otherApps = append(otherApps, app)
+		}
+	}
+	return pipeline.NewSyncOp(func(ctx context.Context, work interface{}) (err error) {
+		return btstrp.Bootstrap(ctx, bus, asp, timeFunc, appparts, clusterBuiltinApp, otherApps)
+	})
 }
 
 func provideExtensionPoints(appsArtefacts AppsArtefacts) map[istructs.AppQName]extensionpoints.IExtensionPoint {
@@ -577,9 +595,9 @@ func provideOperatorAppServices(apf AppServiceFactory, appsArtefacts AppsArtefac
 }
 
 func provideServicePipeline(vvmCtx context.Context, opCommandProcessors OperatorCommandProcessors, opQueryProcessors OperatorQueryProcessors, opAppServices OperatorAppServicesFactory,
-	routerServiceOp RouterServiceOperator, metricsServiceOp MetricsServiceOperator, appPartsCtl IAppPartsCtlPipelineService) ServicePipeline {
+	routerServiceOp RouterServiceOperator, metricsServiceOp MetricsServiceOperator, appPartsCtl IAppPartsCtlPipelineService, bootstrapOp BootstrapOperator) ServicePipeline {
 	return pipeline.NewSyncPipeline(vvmCtx, "ServicePipeline",
-		pipeline.WireSyncOperator("service fork operator", pipeline.ForkOperator(pipeline.ForkSame,
+		pipeline.WireSyncOperator("services", pipeline.ForkOperator(pipeline.ForkSame,
 
 			// VVM
 			pipeline.ForkBranch(pipeline.ForkOperator(pipeline.ForkSame,
@@ -596,5 +614,6 @@ func provideServicePipeline(vvmCtx context.Context, opCommandProcessors Operator
 			// Metrics http service
 			pipeline.ForkBranch(metricsServiceOp),
 		)),
+		pipeline.WireSyncOperator("bootstrap", bootstrapOp),
 	)
 }

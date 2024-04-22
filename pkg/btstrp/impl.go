@@ -7,18 +7,19 @@ package btstrp
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 	"strconv"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appparts"
-	"github.com/voedger/voedger/pkg/apppartsctl"
-	"github.com/voedger/voedger/pkg/apps"
 	"github.com/voedger/voedger/pkg/cluster"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
+	"github.com/voedger/voedger/pkg/router"
 	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys/authnz"
 	"github.com/voedger/voedger/pkg/sys/builtin"
@@ -27,135 +28,163 @@ import (
 	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
 )
 
-// is a SyncOp within VVM trunk 
-func Bootstrap(ctx context.Context, bus ibus.IBus, asp istructs.IAppStructsProvider, timeFunc coreutils.TimeFunc, appparts appparts.IAppPartitions, clusterApp ClusterBuiltInApp, otherApps []apps.BuiltInAppDef) error {
+// is a SyncOp within VVM trunk
+func Bootstrap(ctx context.Context, bus ibus.IBus, asp istructs.IAppStructsProvider, timeFunc coreutils.TimeFunc, appparts appparts.IAppPartitions, clusterApp ClusterBuiltInApp, otherApps []cluster.BuiltInApp) error {
 	// initialize cluster app workspace, use app ws amount 0
 	if err := initClusterAppWS(asp, timeFunc); err != nil {
 		return err
 	}
 
-	// deploy cluster app partition 0
+	// deploy single clusterApp partition 0
 	appparts.DeployApp(istructs.AppQName_sys_cluster, clusterApp.Def, clusterAppNumPartitions, clusterAppNumEngines)
 	appparts.DeployAppPartitions(istructs.AppQName_sys_cluster, []istructs.PartitionID{clusterAppWSIDPartitionID})
 
-	// q.cluster.QueryApp + check apps compatibility
+	// check apps compatibility
+	for _, app := range otherApps {
+		wasDeployed, deployedNumPartitions, deployedNumAppWorkspaces, err := readPreviousAppDeployment(ctx, bus, app.Name)
+		if err != nil {
+			// notest
+			return err
+		}
+
+		if !wasDeployed {
+			// not deployed, call c.cluster.DeployApp
+			if err := deployApp(ctx, bus, app); err != nil {
+				return err
+			}
+			return nil
+		}
+
+		// was deployed somewhen -> check app compatibility
+		if app.NumParts != istructs.NumAppPartitions(deployedNumPartitions) {
+			return fmt.Errorf("app %s declaring NumPartitions=%d but was previously deployed with NumPartitions=%d", app.Name, app.NumParts, deployedNumPartitions)
+		}
+		if app.NumAppWorkspaces != istructs.NumAppWorkspaces(deployedNumAppWorkspaces) {
+			return fmt.Errorf("app %s declaring NumAppWorkspaces=%d but was previously deployed with NumAppWorksaces=%d", app.Name, app.NumAppWorkspaces, deployedNumAppWorkspaces)
+		}
+	}
+
+	// appparts: deploy app and its partitions
+	for _, app := range otherApps {
+		appparts.DeployApp(app.Name, app.Def, app.NumParts, app.EnginePoolSize)
+		partitionIDs := make([]istructs.PartitionID, app.NumParts)
+		for id := istructs.NumAppPartitions(0); id < app.NumParts; id++ {
+			partitionIDs[id] = istructs.PartitionID(id)
+		}
+		appparts.DeployAppPartitions(app.Name, partitionIDs)
+	}
+
+	return nil
+
+	// // idem
+
+	// // check apps compatibility
+	// for _, app := range otherApps {
+	// 	as, err := asp.AppStructs(app.AppQName)
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// 	kb := as.ViewRecords().KeyBuilder(cluster.QNameViewDeployedApps)
+	// 	kb.PutString(cluster.Field_AppQName, as.AppQName().String())
+	// 	kb.PutInt32(cluster.Field_ClusterAppID, int32(istructs.ClusterApps[istructs.AppQName_sys_cluster]))
+	// 	v, err := as.ViewRecords().Get(clusterAppWSID, kb)
+	// 	if err != nil {
+	// 		if errors.Is(err, istructsmem.ErrRecordNotFound) {
+	// 			continue
+	// 		}
+	// 		// notest
+	// 		return err
+	// 	}
+	// 	checked := false
+	// 	deployEventWLogOffset := istructs.Offset(v.AsInt64(cluster.Field_DeployEventWLogOffset))
+	// 	err = as.Events().ReadWLog(context.TODO(), clusterAppWSID, deployEventWLogOffset, 1, func(_ istructs.Offset, event istructs.IWLogEvent) (err error) {
+	// 		deployedNumPartitions := istructs.NumAppPartitions(event.ArgumentObject().AsInt32(cluster.Field_NumPartitions))
+	// 		deployedNumAppWorkspaces := istructs.NumAppWorkspaces(event.ArgumentObject().AsInt32(cluster.Field_NumAppWorkspaces))
+	// 		if app.NumParts != deployedNumPartitions {
+	// 			return fmt.Errorf("app %s declaring NumPartitions=%d but was previously deployed with NumPartitions=%d", app.AppQName, app.NumParts, deployedNumPartitions)
+	// 		}
+	// 		if app.NumAppWorkspaces != deployedNumAppWorkspaces {
+	// 			return fmt.Errorf("app %s declaring NumAppWorkspaces=%d but was previously deployed with NumAppWorksaces=%d", app.AppQName, app.NumAppWorkspaces, deployedNumAppWorkspaces)
+	// 		}
+	// 		checked = true
+	// 		return nil
+	// 	})
+	// 	if err != nil {
+	// 		return err
+	// 	}
+
+	// 	if !checked {
+	// 		return fmt.Errorf("failed to check %s app compatibility: event is not found by view.cluster.DeployedApps.DeployEventWLogOffset=%d", app.AppQName, deployEventWLogOffset)
+	// 	}
+	// }
+
+	// // deploy apps
+	// var x apppartsctl.BuiltInApp
+	// for _, app := range otherApps {
+	// 	appparts.DeployApp(app.AppQName)
+	// }
+
+	// return nil
+}
+
+func readPreviousAppDeployment(ctx context.Context, bus ibus.IBus, appQName istructs.AppQName) (wasDeployed bool, deployedNumPartitions int, deployedNumAppWorkspaces int, err error) {
 	queryAppBusRequest := ibus.Request{
 		Method:          ibus.HTTPMethodPOST,
 		WSID:            int64(clusterAppWSID),
 		PartitionNumber: int(clusterAppWSIDPartitionID),
 		Resource:        "q.cluster.QueryApp",
 		AppQName:        istructs.AppQName_sys_cluster.String(),
+		Body:            []byte(fmt.Sprintf(`{"args":{"AppQName":"%s"},"elements":[{"fields": ["NumPartitions", "NumAppWorkspaces"]}]}`, appQName)),
 	}
-	for _, app := range otherApps {
-		queryAppBusRequest.Body = []byte(fmt.Sprintf(`{"args":{"AppQName":"%s"},"elements":[{"fields": ["NumPartitions", "NumAppWorkspaces"]}]}`, app.AppQName))
-		_, sections, secErr, err := bus.SendRequest2(ctx, queryAppBusRequest, ibus.DefaultTimeout)
-		if err != nil {
-			// notest
-			return err
+	_, sections, secErr, err := bus.SendRequest2(ctx, queryAppBusRequest, ibus.DefaultTimeout)
+	if err != nil {
+		// notest
+		return false, 0, 0, err
+	}
+	var sec ibus.ISection
+	defer func() {
+		router.DiscardSection(sec, ctx)
+		for sec := range sections {
+			router.DiscardSection(sec, ctx)
 		}
-		deployedNumPartitions := 0
-		deployedNumAppWorkspaces := 0
+	}()
+	count := 0
+	for sec = range sections {
+		arrSec, ok := sec.(ibus.IArraySection)
+		if !ok {
+			// notest
+			err = errors.New("non-array section is returned")
+			return
+		}
 		defer func() {
-			for range sections {
+			for _, ok := arrSec.Next(ctx); ok; arrSec.Next(ctx) {
 			}
 		}()
-		for sec := range sections {
-			arrSec, ok := sec.(ibus.IArraySection)
-			if !ok {
-				// notest
-				return errors.New("non-array section is returned")
-			}
-			defer func() {
-				for _, ok := arrSec.Next(ctx); ok; arrSec.Next(ctx) {
-				}
-			}()
-			count := 0
-			for elemBytes, ok := arrSec.Next(ctx); ok; elemBytes, ok = arrSec.Next(ctx) {
-				switch count {
-				case 0:
-					if deployedNumPartitions, err = strconv.Atoi(string(elemBytes)); err != nil {
-						// notest
-						return err
-					}
-					count++
-				case 1:
-					if deployedNumAppWorkspaces, err = strconv.Atoi(string(elemBytes)); err != nil {
-						// notest
-						return err
-					}
-					count++
-				default:
+
+		for elemBytes, ok := arrSec.Next(ctx); ok; elemBytes, ok = arrSec.Next(ctx) {
+			switch count {
+			case 0:
+				if deployedNumPartitions, err = strconv.Atoi(string(elemBytes)); err != nil {
 					// notest
-					return errors.New("unexpected section element received on reading q.cluster.QueryApp reply: " + string(elemBytes))
+					return
 				}
-			}
-			if count == 0 {
-				// not deployed, call c.cluster.DeployApp
-				if err := deployApp(app.AppQName); err != nil {
-					return err
+				count++
+			case 1:
+				if deployedNumAppWorkspaces, err = strconv.Atoi(string(elemBytes)); err != nil {
+					// notest
+					return
 				}
+				count++
+			default:
+				// notest
+				err = errors.New("unexpected section element received on reading q.cluster.QueryApp reply: " + string(elemBytes))
+				return
 			}
-		}
-		if *secErr != nil {
-			return *secErr
-		}
-		if app.NumParts != istructs.NumAppPartitions(deployedNumPartitions) {
-			return fmt.Errorf("app %s declaring NumPartitions=%d but was previously deployed with NumPartitions=%d", app.AppQName, app.NumParts, deployedNumPartitions)
-		}
-		if app.NumAppWorkspaces != istructs.NumAppWorkspaces(deployedNumAppWorkspaces) {
-			return fmt.Errorf("app %s declaring NumAppWorkspaces=%d but was previously deployed with NumAppWorksaces=%d", app.AppQName, app.NumAppWorkspaces, deployedNumAppWorkspaces)
 		}
 	}
-
-	// idem
-
-	// check apps compatibility
-	for _, app := range otherApps {
-		as, err := asp.AppStructs(app.AppQName)
-		if err != nil {
-			return err
-		}
-		kb := as.ViewRecords().KeyBuilder(cluster.QNameViewDeployedApps)
-		kb.PutString(cluster.Field_AppQName, as.AppQName().String())
-		kb.PutInt32(cluster.Field_ClusterAppID, int32(istructs.ClusterApps[istructs.AppQName_sys_cluster]))
-		v, err := as.ViewRecords().Get(clusterAppWSID, kb)
-		if err != nil {
-			if errors.Is(err, istructsmem.ErrRecordNotFound) {
-				continue
-			}
-			// notest
-			return err
-		}
-		checked := false
-		deployEventWLogOffset := istructs.Offset(v.AsInt64(cluster.Field_DeployEventWLogOffset))
-		err = as.Events().ReadWLog(context.TODO(), clusterAppWSID, deployEventWLogOffset, 1, func(_ istructs.Offset, event istructs.IWLogEvent) (err error) {
-			deployedNumPartitions := istructs.NumAppPartitions(event.ArgumentObject().AsInt32(cluster.Field_NumPartitions))
-			deployedNumAppWorkspaces := istructs.NumAppWorkspaces(event.ArgumentObject().AsInt32(cluster.Field_NumAppWorkspaces))
-			if app.NumParts != deployedNumPartitions {
-				return fmt.Errorf("app %s declaring NumPartitions=%d but was previously deployed with NumPartitions=%d", app.AppQName, app.NumParts, deployedNumPartitions)
-			}
-			if app.NumAppWorkspaces != deployedNumAppWorkspaces {
-				return fmt.Errorf("app %s declaring NumAppWorkspaces=%d but was previously deployed with NumAppWorksaces=%d", app.AppQName, app.NumAppWorkspaces, deployedNumAppWorkspaces)
-			}
-			checked = true
-			return nil
-		})
-		if err != nil {
-			return err
-		}
-
-		if !checked {
-			return fmt.Errorf("failed to check %s app compatibility: event is not found by view.cluster.DeployedApps.DeployEventWLogOffset=%d", app.AppQName, deployEventWLogOffset)
-		}
-	}
-
-	// deploy apps
-	var x apppartsctl.BuiltInApp
-	for _, app := range otherApps {
-		appparts.DeployApp(app.AppQName)
-	}
-
-	return nil
+	err = *secErr
+	wasDeployed = count == 2
+	return
 }
 
 func deployApp(ctx context.Context, bus ibus.IBus, builtinApp cluster.BuiltInApp) error {
@@ -165,14 +194,27 @@ func deployApp(ctx context.Context, bus ibus.IBus, builtinApp cluster.BuiltInApp
 		PartitionNumber: int(clusterAppWSIDPartitionID),
 		Resource:        "c.cluster.DeployApp",
 		AppQName:        istructs.AppQName_sys_cluster.String(),
-		Body:            []byte(fmt.Sprintf(`{"args":["AppQName":"%s","NumPartitions":%d,"NumAppWorkspaces":%d]}`, builtinApp.Name, builtinApp.NumParts, builtinApp.NumAppWorkspaces)),
+		Body: []byte(fmt.Sprintf(`{"args":["AppQName":"%s","NumPartitions":%d,"NumAppWorkspaces":%d]}`, builtinApp.Name,
+			builtinApp.NumParts, builtinApp.NumAppWorkspaces)),
 	}
 	resp, _, _, err := bus.SendRequest2(ctx, req, ibus.DefaultTimeout)
 	if err != nil {
 		// notest
 		return err
 	}
-	resp
+	if resp.StatusCode == http.StatusOK {
+		return nil
+	}
+	m := map[string]interface{}{}
+	if err = json.Unmarshal(resp.Data, &m); err != nil {
+		// notest
+		return err
+	}
+	sysErrorMap := m["sys.Error"].(map[string]interface{})
+	return coreutils.SysError{
+		HTTPStatus: int(sysErrorMap["HTTPStatus"].(float64)),
+		Message:    sysErrorMap["Message"].(string),
+	}
 }
 
 func initClusterAppWS(asp istructs.IAppStructsProvider, timeFunc coreutils.TimeFunc) error {

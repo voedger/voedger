@@ -62,6 +62,7 @@ type BuiltInAppPackages struct {
 	Packages []parser.PackageFS // need for build baseline schemas
 }
 type AppConfigsTypeEmpty istructsmem.AppConfigsType
+type BootstrapOperator pipeline.ISyncOperator
 
 type AppsArtefacts struct {
 	istructsmem.AppConfigsType
