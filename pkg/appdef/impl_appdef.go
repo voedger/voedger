@@ -152,20 +152,12 @@ func (app appDef) Privileges(cb func(IPrivilege)) {
 	})
 }
 
-func (app appDef) PrivilegesByKind(k PrivilegeKind, cb func(IPrivilege)) {
-	app.Privileges(func(g IPrivilege) {
-		if g.Kind() == k {
-			cb(g)
-		}
-	})
-}
-
-func (app appDef) PrivilegesFor(n QName) []IPrivilege {
-	grants := make([]IPrivilege, 0)
+func (app appDef) PrivilegesOn(n QName, k ...PrivilegeKind) []IPrivilege {
+	pp := make([]IPrivilege, 0)
 	app.Roles(func(r IRole) {
-		grants = append(grants, r.PrivilegesFor(n)...)
+		pp = append(pp, r.PrivilegesOn(n, k...)...)
 	})
-	return grants
+	return pp
 }
 
 func (app *appDef) GRecord(name QName) IGRecord {
@@ -556,12 +548,12 @@ func (app *appDef) build() (err error) {
 	return err
 }
 
-func (app *appDef) grant(kind PrivilegeKind, on []QName, fields []FieldName, toRole QName, comment ...string) {
+func (app *appDef) grant(kinds PrivilegeKinds, on []QName, fields []FieldName, toRole QName, comment ...string) {
 	r := app.Role(toRole)
 	if r == nil {
 		panic(fmt.Errorf("%w: %v", ErrRoleNotFound, toRole))
 	}
-	r.(*role).grant(kind, on, fields, comment...)
+	r.(*role).grant(kinds, on, fields, comment...)
 }
 
 func (app *appDef) grantAll(on []QName, toRole QName, comment ...string) {
@@ -587,12 +579,12 @@ func (app *appDef) makeSysDataTypes() {
 	}
 }
 
-func (app *appDef) revoke(kind PrivilegeKind, on []QName, fields []FieldName, fromRole QName, comment ...string) {
+func (app *appDef) revoke(kinds PrivilegeKinds, on []QName, fields []FieldName, fromRole QName, comment ...string) {
 	r := app.Role(fromRole)
 	if r == nil {
 		panic(fmt.Errorf("%w: %v", ErrRoleNotFound, fromRole))
 	}
-	r.(*role).grant(kind, on, fields, comment...)
+	r.(*role).revoke(kinds, on, fields, comment...)
 }
 
 // Returns type by name and kind. If type is not found then returns nil.
@@ -667,8 +659,8 @@ func (ab *appDefBuilder) Build() (IAppDef, error) {
 	return ab.app, nil
 }
 
-func (ab *appDefBuilder) Grant(kind PrivilegeKind, on []QName, fields []FieldName, toRole QName, comment ...string) IPrivilegesBuilder {
-	ab.app.grant(kind, on, fields, toRole, comment...)
+func (ab *appDefBuilder) Grant(kinds []PrivilegeKind, on []QName, fields []FieldName, toRole QName, comment ...string) IPrivilegesBuilder {
+	ab.app.grant(kinds, on, fields, toRole, comment...)
 	return ab
 }
 
@@ -684,7 +676,7 @@ func (ab *appDefBuilder) MustBuild() IAppDef {
 	return ab.app
 }
 
-func (ab *appDefBuilder) Revoke(kind PrivilegeKind, on []QName, fields []FieldName, fromRole QName, comment ...string) IPrivilegesBuilder {
-	ab.app.revoke(kind, on, fields, fromRole, comment...)
+func (ab *appDefBuilder) Revoke(kinds []PrivilegeKind, on []QName, fields []FieldName, fromRole QName, comment ...string) IPrivilegesBuilder {
+	ab.app.revoke(kinds, on, fields, fromRole, comment...)
 	return ab
 }

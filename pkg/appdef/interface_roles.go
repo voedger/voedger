@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-present Sigma-Soft, Ltd.
+ * Copyright (c) 2024-present Sigma-Soft, Ltd.
  * @author: Nikolay Nikitin
  */
 
@@ -17,15 +17,15 @@ type IRoleBuilder interface {
 	// Adds new privilege with specified kind on specified objects.
 	//
 	// # Panics:
-	//   - if kind is PrivilegeKind_null,
+	//   - if kinds is empty,
 	//	 - if objects are empty,
 	//	 - if objects contains unknown names,
 	//	 - if fields contains unknown names.
-	Grant(kind PrivilegeKind, on []QName, fields []FieldName, comment ...string) IRoleBuilder
+	Grant(kinds []PrivilegeKind, on []QName, fields []FieldName, comment ...string) IRoleBuilder
 
 	// Grants all available privileges on specified objects.
 	//
-	// If the objects are records or view records, then insert, update, and select privileges are granted.
+	// If the objects are records or view records, then insert, update, and select are granted.
 	//
 	// If the objects are commands or queries, their execution is granted.
 	//
@@ -39,12 +39,12 @@ type IRoleBuilder interface {
 	// Revokes privilege with specified kind on specified objects.
 	//
 	// # Panics:
-	//   - if kind is PrivilegeKind_null,
+	//   - if kinds is empty,
 	//	 - if objects are empty,
 	//	 - if objects contains unknown names,
 	//	 - if fields contains unknown names,
 	//   - if role is unknown.
-	Revoke(kind PrivilegeKind, on []QName, fields []FieldName, comment ...string) IRoleBuilder
+	Revoke(kinds []PrivilegeKind, on []QName, fields []FieldName, comment ...string) IRoleBuilder
 }
 
 type IWithRoles interface {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-present Sigma-Soft, Ltd.
+ * Copyright (c) 2024-present Sigma-Soft, Ltd.
  * @author: Nikolay Nikitin
  */
 
@@ -43,12 +43,15 @@ const (
 	PrivilegeKind_Inherits
 )
 
+// Set of PrivilegeKind
+type PrivilegeKinds []PrivilegeKind
+
 // Represents a privilege (specific rights or permissions) to be granted to role or revoked from.
 type IPrivilege interface {
 	IWithComments
 
 	// Returns privilege kinds
-	Kind() PrivilegeKind
+	Kinds() PrivilegeKinds
 
 	// Returns is privilege has been granted. The opposite of `IsRevoked()`
 	IsGranted() bool
@@ -83,30 +86,32 @@ type IPrivilege interface {
 type IWithPrivileges interface {
 	// Enumerates all privileges.
 	//
-	// Privileges are enumerated in alphabetical order of roles, and within each role in the order they are added.
+	// Privileges are enumerated in the order they are added.
 	Privileges(func(IPrivilege))
 
-	// Enumerates all privileges with specified kind.
-	PrivilegesByKind(PrivilegeKind, func(IPrivilege))
-
-	// Returns all privileges for entity with specified QName.
-	PrivilegesFor(QName) []IPrivilege
+	// Returns all privileges on specified entity, which contains at least one from specified kinds.
+	//
+	// If no kinds specified then all privileges on entity are returned.
+	//
+	// Privileges are returned in the order they are added.
+	PrivilegesOn(on QName, kind ...PrivilegeKind) []IPrivilege
 }
 
 type IPrivilegesBuilder interface {
-	// Grants new privilege with specified kind on specified objects to specified role.
+	// Grants new privilege with specified kinds on specified objects to specified role.
 	//
 	// # Panics:
-	//   - if kind is PrivilegeKind_null,
+	//   - if kinds is empty,
 	//	 - if objects are empty,
 	//	 - if objects contains unknown names,
+	//	 - if objects are mixed, e.g. records and commands,
 	//	 - if fields contains unknown names,
 	//   - if role is unknown.
-	Grant(kind PrivilegeKind, on []QName, fields []FieldName, toRole QName, comment ...string) IPrivilegesBuilder
+	Grant(kinds []PrivilegeKind, on []QName, fields []FieldName, toRole QName, comment ...string) IPrivilegesBuilder
 
 	// Grants all available privileges on specified objects to specified role.
 	//
-	// If the objects are records or view records, then insert, update, and select privileges are granted.
+	// If the objects are records or view records, then insert, update, and select are granted.
 	//
 	// If the objects are commands or queries, their execution is granted.
 	//
@@ -115,15 +120,18 @@ type IPrivilegesBuilder interface {
 	//	- execution of commands & queries from these workspaces is granted.
 	//
 	// If the objects are roles, then all privileges from these roles are granted to specified role.
+	//
+	// No mixed objects are allowed.
 	GrantAll(on []QName, toRole QName, comment ...string) IPrivilegesBuilder
 
 	// Revokes privilege with specified kind on specified objects from specified role.
 	//
 	// # Panics:
-	//   - if kind is PrivilegeKind_null,
+	//   - if kinds is empty,
 	//	 - if objects are empty,
 	//	 - if objects contains unknown names,
+	//	 - if objects are mixed, e.g. records and commands,
 	//	 - if fields contains unknown names,
 	//   - if role is unknown.
-	Revoke(kind PrivilegeKind, on []QName, fields []FieldName, fromRole QName, comment ...string) IPrivilegesBuilder
+	Revoke(kinds []PrivilegeKind, on []QName, fields []FieldName, fromRole QName, comment ...string) IPrivilegesBuilder
 }
