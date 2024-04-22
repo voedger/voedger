@@ -51,7 +51,7 @@ func (pk PrivilegeKinds) ContainsAll(kk ...PrivilegeKind) bool {
 // If no kind specified then returns true.
 func (pk PrivilegeKinds) ContainsAny(kk ...PrivilegeKind) bool {
 	for _, k := range kk {
-		if !pk.Contains(k) {
+		if pk.Contains(k) {
 			return true
 		}
 	}
