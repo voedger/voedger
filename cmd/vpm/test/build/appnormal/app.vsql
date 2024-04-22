@@ -22,7 +22,7 @@ WORKSPACE RestaurantWS (
 		FirstOffset int64 NOT NULL,
 		LastOffset int64 NOT NULL,
 		PRIMARY KEY ((Year), DayOfYear)
-	) AS RESULT OF FillPbillDates;
+	) AS RESULT OF untill.FillPbillDates;
 
 	EXTENSION ENGINE BUILTIN (
         COMMAND Orders(untill.orders);

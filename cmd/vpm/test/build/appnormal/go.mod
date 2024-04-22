@@ -7,7 +7,6 @@ require github.com/untillpro/airs-scheme v0.0.0-20240410095142-7a585227f4aa
 require (
 	github.com/alecthomas/participle/v2 v2.1.1 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
-	github.com/kr/text v0.2.0 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/robfig/cron/v3 v3.0.0 // indirect
 	github.com/stretchr/objx v0.5.2 // indirect
@@ -15,6 +14,5 @@ require (
 	github.com/voedger/voedger v0.0.0-20240420192600-dc0c37aee7d5 // indirect
 	golang.org/x/exp v0.0.0-20240314144324-c7f7c6466f7f // indirect
 	golang.org/x/text v0.14.0 // indirect
-	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

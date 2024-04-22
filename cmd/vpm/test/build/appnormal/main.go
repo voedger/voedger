@@ -3,7 +3,7 @@
  * @author Maxim Geraskin
  */
 
-package appnormal
+package main
 
 func main() {
 	println("Hello, World!")
