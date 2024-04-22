@@ -285,10 +285,7 @@ func (s *httpService) blobRequestHandler(resp http.ResponseWriter, req *http.Req
 		resp.Header().Add("Retry-After", strconv.Itoa(s.BlobberParams.RetryAfterSecondsOn503))
 		return
 	}
-	select {
-	case <-mes.doneChan:
-	case <-req.Context().Done():
-	}
+	<-mes.doneChan
 }
 
 func (s *httpService) blobReadRequestHandler() http.HandlerFunc {
