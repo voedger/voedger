@@ -20,9 +20,7 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/router"
-	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys/authnz"
-	"github.com/voedger/voedger/pkg/sys/builtin"
 	"github.com/voedger/voedger/pkg/sys/workspace"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
@@ -75,56 +73,6 @@ func Bootstrap(ctx context.Context, bus ibus.IBus, asp istructs.IAppStructsProvi
 	}
 
 	return nil
-
-	// // idem
-
-	// // check apps compatibility
-	// for _, app := range otherApps {
-	// 	as, err := asp.AppStructs(app.AppQName)
-	// 	if err != nil {
-	// 		return err
-	// 	}
-	// 	kb := as.ViewRecords().KeyBuilder(cluster.QNameViewDeployedApps)
-	// 	kb.PutString(cluster.Field_AppQName, as.AppQName().String())
-	// 	kb.PutInt32(cluster.Field_ClusterAppID, int32(istructs.ClusterApps[istructs.AppQName_sys_cluster]))
-	// 	v, err := as.ViewRecords().Get(clusterAppWSID, kb)
-	// 	if err != nil {
-	// 		if errors.Is(err, istructsmem.ErrRecordNotFound) {
-	// 			continue
-	// 		}
-	// 		// notest
-	// 		return err
-	// 	}
-	// 	checked := false
-	// 	deployEventWLogOffset := istructs.Offset(v.AsInt64(cluster.Field_DeployEventWLogOffset))
-	// 	err = as.Events().ReadWLog(context.TODO(), clusterAppWSID, deployEventWLogOffset, 1, func(_ istructs.Offset, event istructs.IWLogEvent) (err error) {
-	// 		deployedNumPartitions := istructs.NumAppPartitions(event.ArgumentObject().AsInt32(cluster.Field_NumPartitions))
-	// 		deployedNumAppWorkspaces := istructs.NumAppWorkspaces(event.ArgumentObject().AsInt32(cluster.Field_NumAppWorkspaces))
-	// 		if app.NumParts != deployedNumPartitions {
-	// 			return fmt.Errorf("app %s declaring NumPartitions=%d but was previously deployed with NumPartitions=%d", app.AppQName, app.NumParts, deployedNumPartitions)
-	// 		}
-	// 		if app.NumAppWorkspaces != deployedNumAppWorkspaces {
-	// 			return fmt.Errorf("app %s declaring NumAppWorkspaces=%d but was previously deployed with NumAppWorksaces=%d", app.AppQName, app.NumAppWorkspaces, deployedNumAppWorkspaces)
-	// 		}
-	// 		checked = true
-	// 		return nil
-	// 	})
-	// 	if err != nil {
-	// 		return err
-	// 	}
-
-	// 	if !checked {
-	// 		return fmt.Errorf("failed to check %s app compatibility: event is not found by view.cluster.DeployedApps.DeployEventWLogOffset=%d", app.AppQName, deployEventWLogOffset)
-	// 	}
-	// }
-
-	// // deploy apps
-	// var x apppartsctl.BuiltInApp
-	// for _, app := range otherApps {
-	// 	appparts.DeployApp(app.AppQName)
-	// }
-
-	// return nil
 }
 
 func readPreviousAppDeployment(ctx context.Context, bus ibus.IBus, appQName istructs.AppQName) (wasDeployed bool, deployedNumPartitions int, deployedNumAppWorkspaces int, err error) {
@@ -271,24 +219,4 @@ func initAppWS(as istructs.IAppStructs, partitionID istructs.PartitionID, wsid i
 	pLogEvent.Release()
 	logger.Verbose("app workspace", as.AppQName(), wsid-wsid.BaseWSID(), "(", wsid, ") initialized")
 	return nil
-}
-
-func FindEventByODocOrORecordID(s istructs.IState, id istructs.RecordID) (value istructs.IStateValue, err error) {
-	skbViewRecordsRegistry, err := s.KeyBuilder(state.View, builtin.QNameViewRecordsRegistry)
-	if err != nil {
-		return
-	}
-	skbViewRecordsRegistry.PutInt64(builtin.Field_IDHi, int64(builtin.CrackID(id)))
-	skbViewRecordsRegistry.PutRecordID(builtin.Field_ID, id)
-	svViewRecordsRegistry, err := s.MustExist(skbViewRecordsRegistry)
-	if err != nil {
-		return
-	}
-
-	skbWlog, err := s.KeyBuilder(state.WLog, state.WLog)
-	if err != nil {
-		return
-	}
-	skbWlog.PutInt64(state.Field_Offset, svViewRecordsRegistry.AsInt64(builtin.Field_WLogOffset))
-	return s.MustExist(skbWlog)
 }
