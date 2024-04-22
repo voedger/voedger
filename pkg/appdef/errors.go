@@ -56,6 +56,8 @@ var ErrInvalidProjectorCronSchedule = errors.New("invalid projector cron schedul
 
 var ErrScheduledProjectorWithIntents = errors.New("scheduled projector shall not have intents")
 
+var ErrInvalidPrivilegeKind = errors.New("invalid privilege kind")
+
 var ErrPrivilegeKindsMissed = fmt.Errorf("privilege kinds missed: %w", ErrNameMissed)
 
 var ErrPrivilegeOnMissed = fmt.Errorf("privilege objects missed: %w", ErrNameMissed)

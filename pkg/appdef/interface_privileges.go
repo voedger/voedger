@@ -41,6 +41,8 @@ const (
 	// 	- Privilege applicable on roles only.
 	// 	- Fields are not applicable.
 	PrivilegeKind_Inherits
+
+	PrivilegeKind_count
 )
 
 // Set of PrivilegeKind

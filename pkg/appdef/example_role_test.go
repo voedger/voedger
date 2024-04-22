@@ -76,12 +76,9 @@ func ExampleIAppDefBuilder_AddRole() {
 	// 3 Role «test.writerRole»
 	// overall: 3
 	// Role «test.readerRole» :
-	// - grant Select on [test.doc] to Role «test.readerRole»
+	// - grant [Select] on [test.doc] to Role «test.readerRole»
 	// Role «test.writerRole» :
-	// - grant Insert on [test.ws] to Role «test.writerRole»
-	// - grant Update on [test.ws] to Role «test.writerRole»
-	// - grant Select on [test.ws] to Role «test.writerRole»
-	// - grant Execute on [test.ws] to Role «test.writerRole»
+	// - grant [Insert Update Select Execute] on [test.ws] to Role «test.writerRole»
 	// Role «test.admRole» :
-	// - grant Role on [test.readerRole test.writerRole] to Role «test.admRole»
+	// - grant [Inherits] on [test.readerRole test.writerRole] to Role «test.admRole»
 }

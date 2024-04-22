@@ -6,10 +6,13 @@
 package appdef
 
 import (
+	"fmt"
 	"slices"
 	"strings"
 )
 
+// Renders an PrivilegeKind in human-readable form, without "PrivilegeKind_" prefix,
+// suitable for debugging or error messages
 func (k PrivilegeKind) TrimString() string {
 	const pref = "PrivilegeKind_"
 	return strings.TrimPrefix(k.String(), pref)
@@ -19,8 +22,12 @@ func (k PrivilegeKind) TrimString() string {
 func PrivilegeKindsFrom(kk ...PrivilegeKind) PrivilegeKinds {
 	pk := make(PrivilegeKinds, 0, len(kk))
 	for _, k := range kk {
-		if k != PrivilegeKind_null {
-			pk = append(pk, k)
+		if (k > PrivilegeKind_null) && (k < PrivilegeKind_count) {
+			if !slices.Contains(pk, k) {
+				pk = append(pk, k)
+			}
+		} else {
+			panic(fmt.Errorf("%w: %v", ErrInvalidPrivilegeKind, k))
 		}
 	}
 	return pk
@@ -51,10 +58,16 @@ func (pk PrivilegeKinds) ContainsAny(kk ...PrivilegeKind) bool {
 	return len(kk) == 0
 }
 
+// Renders an PrivilegeKinds in human-readable form, without "PrivilegeKind_" prefix,
+// suitable for debugging or error messages
 func (kk PrivilegeKinds) String() string {
-	s := ""
-	for _, k := range kk {
-		s = strings.Join([]string{s, k.TrimString()}, ", ")
+	var s string
+	for i, k := range kk {
+		if i > 0 {
+			s = strings.Join([]string{s, k.TrimString()}, " ")
+		} else {
+			s = k.TrimString()
+		}
 	}
-	return s
+	return fmt.Sprintf("[%s]", s)
 }
