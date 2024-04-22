@@ -379,12 +379,6 @@ func TestEdgeCases(t *testing.T) {
 	err = execRootCmd([]string{"vpm", "init", "help"}, "1.0.0")
 	require.NoError(err)
 
-	err = execRootCmd([]string{"vpm", "init", "-C", "/Users/alisher/projects/untill/voedger/examples/airs-bp/air/extwasm", "extwasm"}, "1.0.0")
-	require.Error(err)
-
-	err = execRootCmd([]string{"vpm", "tidy", "-C", "/Users/alisher/projects/untill/voedger/examples/airs-bp/air/extwasm"}, "1.0.0")
-	require.NoError(err)
-
 	err = execRootCmd([]string{"vpm", "compat", "1", "2"}, "1.0.0")
 	require.Error(err)
 }
@@ -410,11 +404,35 @@ func TestBuildBasicUsage(t *testing.T) {
 	err = coreutils.CopyDir(filepath.Join(wd, "test", "build"), tempDir)
 	require.NoError(err)
 
-	//dir := tempDir
-	dir := "/Users/alisher/projects/untill/voedger/examples/airs-bp/air/extwasm"
+	testCases := []struct {
+		dir    string
+		errMsg string
+	}{
+		{
+			dir:    "noappschema",
+			errMsg: "failed to build, app schema not found",
+		},
+		{
+			dir:    "nopackagesgen",
+			errMsg: fmt.Sprintf("%s not found. Run 'vpm init'", packagesGenFileName),
+		},
+		{
+			dir:    "appnormal",
+			errMsg: "",
+		},
+	}
 
-	err = execRootCmd([]string{"vpm", "build", "-C", dir, "-o", "qwerty"}, "1.0.0")
-	require.NoError(err)
+	for _, tc := range testCases {
+		t.Run(tc.dir, func(t *testing.T) {
+			dir := filepath.Join(tempDir, tc.dir)
+			err = execRootCmd([]string{"vpm", "build", "-C", dir, "-o", "qwerty"}, "1.0.0")
+			if err != nil {
+				require.Equal(tc.errMsg, err.Error())
+			} else {
+				require.FileExists(filepath.Join(dir, "qwerty.var"))
+			}
+		})
 
-	require.FileExists(filepath.Join(dir, "qwerty.var"))
+	}
+
 }

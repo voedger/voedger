@@ -3,7 +3,7 @@
 
 IMPORT SCHEMA 'github.com/untillpro/airs-scheme/bp3' AS untill;
 
-APPLICATION app(
+APPLICATION APP (
     USE untill;
 );
 
@@ -25,7 +25,7 @@ WORKSPACE RestaurantWS (
 	) AS RESULT OF FillPbillDates;
 
 	EXTENSION ENGINE BUILTIN (
-	    COMMAND Orders(untill.orders);
-	    COMMAND Pbill(untill.pbill) RETURNS CmdPBillResult;
+        COMMAND Orders(untill.orders);
+        COMMAND Pbill(untill.pbill) RETURNS CmdPBillResult;
 	);
 )

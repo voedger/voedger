@@ -72,7 +72,6 @@ go %s
 package main
 
 import (
-	//_ "github.com/voedger/voedger/pkg/sys"
 	%s
 )
 

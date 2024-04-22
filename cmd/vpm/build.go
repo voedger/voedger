@@ -30,10 +30,10 @@ func newBuildCmd(params *vpmParams) *cobra.Command {
 			if err != nil {
 				logger.Error(err)
 				if errors.Is(err, compile.ErrAppSchemaNotFound) {
-					return fmt.Errorf("failed to build, app schema not found.")
+					return fmt.Errorf("failed to build, app schema not found")
 				}
-				if len(compileRes.NotFoundDeps) > 0 {
-					return fmt.Errorf("failed to compile, missing dependencies. Run 'vpm init'")
+				if compileRes != nil && len(compileRes.NotFoundDeps) > 0 {
+					return fmt.Errorf("failed to compile, missing dependencies. Run 'vpm tidy'")
 				}
 			}
 			return build(params)
@@ -47,6 +47,11 @@ func newBuildCmd(params *vpmParams) *cobra.Command {
 
 func build(params *vpmParams) error {
 	folderName := filepath.Base(params.Dir)
+
+	if err := checkPackageGenFileExists(params.Dir); err != nil {
+		return err
+	}
+
 	wasmFilePath, err := execTinyGoBuild(params.Dir, folderName)
 	if err != nil {
 		return err
@@ -61,6 +66,18 @@ func build(params *vpmParams) error {
 	}
 
 	return coreutils.Zip(filepath.Join(params.Dir, outputArchiveName), []string{wasmFilePath})
+}
+
+func checkPackageGenFileExists(dir string) error {
+	packagesGenFilePath := filepath.Join(dir, packagesGenFileName)
+	exists, err := coreutils.Exists(packagesGenFilePath)
+	if err != nil {
+		return err
+	}
+	if !exists {
+		return fmt.Errorf("%s not found. Run 'vpm init'", packagesGenFileName)
+	}
+	return nil
 }
 
 // execTinyGoBuild builds the project using tinygo and returns the path to the resulting wasm file
