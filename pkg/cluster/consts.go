@@ -18,7 +18,7 @@ const (
 	ClusterPackage              = "cluster"
 	ClusterPackageFQN           = "github.com/voedger/voedger/pkg/" + ClusterPackage
 	Field_ClusterAppID          = "ClusterAppID"
-	Field_AppQName              = "AppQName"
+	Field_Name                  = "Name"
 	Field_DeployEventWLogOffset = "DeployEventWLogOffset"
 	Field_NumPartitions         = "NumPartitions"
 	Field_NumAppWorkspaces      = "NumAppWorkspaces"

@@ -14,7 +14,7 @@ import (
 
 func Provide(cfg *istructsmem.AppConfigType) parser.PackageFS {
 	cfg.Resources.Add(istructsmem.NewQueryFunction(appdef.NewQName(ClusterPackage, "QueryApp"), execQueryApp))
-	cfg.Resources.Add(istructsmem.NewCommandFunction(appdef.NewQName(ClusterPackage, "DeployApp"), func(args istructs.ExecCommandArgs) (err error) { return nil }))
+	cfg.Resources.Add(istructsmem.NewCommandFunction(appdef.NewQName(ClusterPackage, "DeployApp"), execDeployApp))
 	cfg.AddSyncProjectors(istructs.Projector{
 		Name: appdef.NewQName(ClusterPackage, "ApplyDeployApp"),
 		Func: applyDeployApp,

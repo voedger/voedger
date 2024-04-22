@@ -28,7 +28,7 @@ func (r *res) AsInt32(name string) int32 {
 }
 
 func execQueryApp(_ context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
-	appQNameStr := args.ArgumentObject.AsString(Field_AppQName)
+	appQNameStr := args.ArgumentObject.AsString(Field_Name)
 
 	appQName, err := istructs.ParseAppQName(appQNameStr)
 	if err != nil {
@@ -47,7 +47,7 @@ func execQueryApp(_ context.Context, args istructs.ExecQueryArgs, callback istru
 	}
 
 	kb.PutInt32(Field_ClusterAppID, int32(clusterAppID))
-	kb.PutString(Field_AppQName, appQName.String())
+	kb.PutString(Field_Name, appQName.String())
 	v, ok, err := args.State.CanExist(kb)
 	if err != nil {
 		// notest

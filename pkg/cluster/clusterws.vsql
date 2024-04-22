@@ -12,9 +12,9 @@ WORKSPACE ClusterWS (
 
 	VIEW DeployedApps (
 		ClusterAppID int32,
-		AppQName string,
+		Name string,
 		DeployEventWLogOffset int64,
-		PRIMARY KEY((ClusterAppID), AppQName)
+		PRIMARY KEY ((ClusterAppID), AppQName)
 	) AS RESULT OF ApplyDeployApp;
 
 	EXTENSION ENGINE BUILTIN (
