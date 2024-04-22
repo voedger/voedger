@@ -59,8 +59,10 @@ type wazeroExtEngine struct {
 	// Invoke-related!
 	safeApi safe.IStateSafeAPI
 
-	ctx context.Context
-	pkg *wazeroExtPkg
+	ctx             context.Context
+	pkg             *wazeroExtPkg
+	autoRecover     bool
+	numAutoRecovers int
 }
 
 type allocatedBuf struct {
@@ -76,10 +78,11 @@ type extensionEngineFactory struct {
 func (f extensionEngineFactory) New(ctx context.Context, app istructs.AppQName, packages []iextengine.ExtensionPackage, config *iextengine.ExtEngineConfig, numEngines int) (engines []iextengine.IExtensionEngine, err error) {
 	for i := 0; i < numEngines; i++ {
 		engine := &wazeroExtEngine{
-			app:     app,
-			modules: make(map[string]*wazeroExtPkg),
-			config:  config,
-			compile: f.compile,
+			app:         app,
+			modules:     make(map[string]*wazeroExtPkg),
+			config:      config,
+			compile:     f.compile,
+			autoRecover: true,
 		}
 		err = engine.init(ctx)
 		if err != nil {
@@ -344,6 +347,10 @@ func (f *wazeroExtEngine) backupMemory() {
 	copy(f.pkg.recoverMem, memory[0:])
 }
 
+func (f *wazeroExtEngine) isMemoryOverflow(err error) bool {
+	return strings.Contains(err.Error(), "runtime.alloc")
+}
+
 func (f *wazeroExtEngine) Invoke(ctx context.Context, extension appdef.FullQName, io iextengine.IExtensionIO) (err error) {
 
 	var ok bool
@@ -366,8 +373,13 @@ func (f *wazeroExtEngine) Invoke(ctx context.Context, extension appdef.FullQName
 
 	_, err = funct.Call(ctx)
 
-	if err != nil {
+	if err != nil && f.isMemoryOverflow(err) && f.autoRecover {
+		f.numAutoRecovers++
 		f.recover()
+		for i := range f.pkg.allocatedBufs {
+			f.pkg.allocatedBufs[i].offs = 0 // reuse pre-allocated memory
+		}
+		_, err = funct.Call(ctx) // second attempt
 	}
 
 	return err
