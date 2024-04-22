@@ -76,7 +76,7 @@ type IPrivilege interface {
 	Fields() []FieldName
 
 	// Returns the role to which the privilege was granted or revoked.
-	To() IRole
+	Role() IRole
 }
 
 // IWithPrivileges is an interface for entities that have grants.
