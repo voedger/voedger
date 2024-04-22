@@ -9,7 +9,5 @@ import "github.com/voedger/voedger/pkg/istructs"
 
 func applyDeployApp(event istructs.IPLogEvent, state istructs.IState, intents istructs.IIntents) (err error) {
 
-
-
 	return nil
 }
