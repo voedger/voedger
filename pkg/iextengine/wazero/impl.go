@@ -326,6 +326,24 @@ func (f *wazeroExtEngine) recover() {
 	}
 }
 
+func (f *wazeroExtEngine) selectModule(pkgPath string) error {
+	pkg, ok := f.modules[pkgPath]
+	if !ok {
+		return errUndefinedPackage(pkgPath)
+	}
+	f.pkg = pkg
+	return nil
+}
+
+func (f *wazeroExtEngine) backupMemory() {
+	memory, read := f.pkg.module.Memory().Read(0, f.pkg.module.Memory().Size())
+	if !read {
+		panic("unable to backup memory")
+	}
+	f.pkg.recoverMem = make([]byte, f.pkg.module.Memory().Size())
+	copy(f.pkg.recoverMem, memory[0:])
+}
+
 func (f *wazeroExtEngine) Invoke(ctx context.Context, extension appdef.FullQName, io iextengine.IExtensionIO) (err error) {
 
 	var ok bool
