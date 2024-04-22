@@ -22,15 +22,15 @@ func Provide() apps.AppBuilder {
 			Path: ClusterAppFQN,
 			FS:   schemaFS,
 		}
-		clusterPackageFS := cluster.Provide()
+		clusterPackageFS := cluster.Provide(cfg)
 		sysPackageFS := sys.Provide(cfg, smtp.Cfg{}, ep, nil, apis.TimeFunc, apis.ITokens, apis.IFederation, apis.IAppStructsProvider, apis.IAppTokensFactory,
 			nil, apis.IAppStorageProvider)
 		return apps.BuiltInAppDef{
 			AppQName: istructs.AppQName_sys_cluster,
 			Packages: []parser.PackageFS{clusterAppPackageFS, clusterPackageFS, sysPackageFS},
 			AppDeploymentDescriptor: cluster.AppDeploymentDescriptor{
-				NumParts:       1,
-				EnginePoolSize: cluster.PoolSize(1, 1, 1),
+				NumParts:         1,
+				EnginePoolSize:   cluster.PoolSize(1, 1, 1),
 				NumAppWorkspaces: 1,
 			},
 		}
