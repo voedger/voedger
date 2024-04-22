@@ -78,8 +78,8 @@ func (r *role) grantAll(on []QName, comment ...string) {
 	r.privileges = append(r.privileges, newGrant(pk, names, nil, r, comment...))
 }
 
-func (r *role) revoke(kinds []PrivilegeKind, on []QName, fields []FieldName, comment ...string) {
-	r.privileges = append(r.privileges, newRevoke(kinds, on, fields, r, comment...))
+func (r *role) revoke(kinds []PrivilegeKind, on []QName, comment ...string) {
+	r.privileges = append(r.privileges, newRevoke(kinds, on, nil, r, comment...))
 }
 
 // # Implements:
@@ -106,7 +106,7 @@ func (rb *roleBuilder) GrantAll(on []QName, comment ...string) IRoleBuilder {
 	return rb
 }
 
-func (rb *roleBuilder) Revoke(kinds []PrivilegeKind, on []QName, fields []FieldName, comment ...string) IRoleBuilder {
-	rb.role.revoke(kinds, on, fields, comment...)
+func (rb *roleBuilder) Revoke(kinds []PrivilegeKind, on []QName, comment ...string) IRoleBuilder {
+	rb.role.revoke(kinds, on, comment...)
 	return rb
 }

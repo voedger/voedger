@@ -579,12 +579,12 @@ func (app *appDef) makeSysDataTypes() {
 	}
 }
 
-func (app *appDef) revoke(kinds PrivilegeKinds, on []QName, fields []FieldName, fromRole QName, comment ...string) {
+func (app *appDef) revoke(kinds PrivilegeKinds, on []QName, fromRole QName, comment ...string) {
 	r := app.Role(fromRole)
 	if r == nil {
 		panic(fmt.Errorf("%w: %v", ErrRoleNotFound, fromRole))
 	}
-	r.(*role).revoke(kinds, on, fields, comment...)
+	r.(*role).revoke(kinds, on, comment...)
 }
 
 // Returns type by name and kind. If type is not found then returns nil.
@@ -676,7 +676,7 @@ func (ab *appDefBuilder) MustBuild() IAppDef {
 	return ab.app
 }
 
-func (ab *appDefBuilder) Revoke(kinds []PrivilegeKind, on []QName, fields []FieldName, fromRole QName, comment ...string) IPrivilegesBuilder {
-	ab.app.revoke(kinds, on, fields, fromRole, comment...)
+func (ab *appDefBuilder) Revoke(kinds []PrivilegeKind, on []QName, fromRole QName, comment ...string) IPrivilegesBuilder {
+	ab.app.revoke(kinds, on, fromRole, comment...)
 	return ab
 }

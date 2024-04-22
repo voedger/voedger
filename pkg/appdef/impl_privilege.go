@@ -62,7 +62,7 @@ func (g privilege) Kinds() PrivilegeKinds { return g.kinds }
 
 func (g privilege) On() QNames { return g.on }
 
-func (g privilege) Role() IRole { return g.role }
+func (g privilege) To() IRole { return g.role }
 
 func (g privilege) String() string {
 	if g.granted {

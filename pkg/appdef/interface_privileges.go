@@ -81,7 +81,7 @@ type IPrivilege interface {
 	Fields() []FieldName
 
 	// Returns the role to which the privilege was granted or revoked.
-	Role() IRole
+	To() IRole
 }
 
 // IWithPrivileges is an interface for entities that have grants.
@@ -107,6 +107,7 @@ type IPrivilegesBuilder interface {
 	//	 - if objects are empty,
 	//	 - if objects contains unknown names,
 	//	 - if objects are mixed, e.g. records and commands,
+	//	 - if kinds are not compatible with objects,
 	//	 - if fields contains unknown names,
 	//   - if role is unknown.
 	Grant(kinds []PrivilegeKind, on []QName, fields []FieldName, toRole QName, comment ...string) IPrivilegesBuilder
@@ -133,7 +134,7 @@ type IPrivilegesBuilder interface {
 	//	 - if objects are empty,
 	//	 - if objects contains unknown names,
 	//	 - if objects are mixed, e.g. records and commands,
-	//	 - if fields contains unknown names,
+	//	 - if kinds are not compatible with objects,
 	//   - if role is unknown.
-	Revoke(kinds []PrivilegeKind, on []QName, fields []FieldName, fromRole QName, comment ...string) IPrivilegesBuilder
+	Revoke(kinds []PrivilegeKind, on []QName, fromRole QName, comment ...string) IPrivilegesBuilder
 }

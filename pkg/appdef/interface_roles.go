@@ -14,12 +14,13 @@ type IRole interface {
 type IRoleBuilder interface {
 	ITypeBuilder
 
-	// Adds new privilege with specified kind on specified objects.
+	// Adds new privilege with specified kinds on specified objects.
 	//
 	// # Panics:
 	//   - if kinds is empty,
 	//	 - if objects are empty,
 	//	 - if objects contains unknown names,
+	//	 - if kinds are not compatible with objects,
 	//	 - if fields contains unknown names.
 	Grant(kinds []PrivilegeKind, on []QName, fields []FieldName, comment ...string) IRoleBuilder
 
@@ -36,15 +37,15 @@ type IRoleBuilder interface {
 	// If the objects are roles, then all privileges from these roles are granted.
 	GrantAll(on []QName, comment ...string) IRoleBuilder
 
-	// Revokes privilege with specified kind on specified objects.
+	// Revokes privilege with specified kinds on specified objects.
 	//
 	// # Panics:
 	//   - if kinds is empty,
 	//	 - if objects are empty,
 	//	 - if objects contains unknown names,
-	//	 - if fields contains unknown names,
+	//	 - if kinds are not compatible with objects,
 	//   - if role is unknown.
-	Revoke(kinds []PrivilegeKind, on []QName, fields []FieldName, comment ...string) IRoleBuilder
+	Revoke(kinds []PrivilegeKind, on []QName, comment ...string) IRoleBuilder
 }
 
 type IWithRoles interface {
