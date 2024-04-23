@@ -107,3 +107,27 @@ func TestPrivilegeKinds_ContainsAny(t *testing.T) {
 		})
 	}
 }
+
+func TestAllPrivilegesOnType(t *testing.T) {
+	tests := []struct {
+		name   string
+		tk     TypeKind
+		wantPk PrivilegeKinds
+	}{
+		{"null", TypeKind_null, nil},
+		{"GRecord", TypeKind_GRecord, PrivilegeKinds{PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select}},
+		{"CDoc", TypeKind_CDoc, PrivilegeKinds{PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select}},
+		{"View", TypeKind_ViewRecord, PrivilegeKinds{PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select}},
+		{"Command", TypeKind_Command, PrivilegeKinds{PrivilegeKind_Execute}},
+		{"Workspace", TypeKind_Workspace, PrivilegeKinds{PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select, PrivilegeKind_Execute}},
+		{"Role", TypeKind_Role, PrivilegeKinds{PrivilegeKind_Inherits}},
+		{"Projector", TypeKind_Projector, nil},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if gotPk := AllPrivilegesOnType(tt.tk); !reflect.DeepEqual(gotPk, tt.wantPk) {
+				t.Errorf("AllPrivilegesOnType(%s) = %v, want %v", tt.tk.TrimString(), gotPk, tt.wantPk)
+			}
+		})
+	}
+}

@@ -11,17 +11,10 @@ import (
 	"strings"
 )
 
-// Renders an PrivilegeKind in human-readable form, without "PrivilegeKind_" prefix,
-// suitable for debugging or error messages
-func (k PrivilegeKind) TrimString() string {
-	const pref = "PrivilegeKind_"
-	return strings.TrimPrefix(k.String(), pref)
-}
-
 // Makes PrivilegeKinds from specified kinds.
-func PrivilegeKindsFrom(kk ...PrivilegeKind) PrivilegeKinds {
-	pk := make(PrivilegeKinds, 0, len(kk))
-	for _, k := range kk {
+func PrivilegeKindsFrom(kinds ...PrivilegeKind) PrivilegeKinds {
+	pk := make(PrivilegeKinds, 0, len(kinds))
+	for _, k := range kinds {
 		if (k > PrivilegeKind_null) && (k < PrivilegeKind_count) {
 			if !slices.Contains(pk, k) {
 				pk = append(pk, k)
@@ -29,6 +22,28 @@ func PrivilegeKindsFrom(kk ...PrivilegeKind) PrivilegeKinds {
 		} else {
 			panic(fmt.Errorf("%w: %v", ErrInvalidPrivilegeKind, k))
 		}
+	}
+	return pk
+}
+
+// Returns all available privileges on specified type.
+//
+// If type can not to be privileged then returns empty slice.
+func AllPrivilegesOnType(tk TypeKind) (pk PrivilegeKinds) {
+	switch tk {
+	case TypeKind_GRecord, TypeKind_GDoc,
+		TypeKind_CRecord, TypeKind_CDoc,
+		TypeKind_WRecord, TypeKind_WDoc,
+		TypeKind_ORecord, TypeKind_ODoc,
+		TypeKind_Object,
+		TypeKind_ViewRecord:
+		pk = append(pk, PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select)
+	case TypeKind_Command, TypeKind_Query:
+		pk = append(pk, PrivilegeKind_Execute)
+	case TypeKind_Workspace:
+		pk = append(pk, PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select, PrivilegeKind_Execute)
+	case TypeKind_Role:
+		pk = append(pk, PrivilegeKind_Inherits)
 	}
 	return pk
 }
@@ -60,9 +75,9 @@ func (pk PrivilegeKinds) ContainsAny(kk ...PrivilegeKind) bool {
 
 // Renders an PrivilegeKinds in human-readable form, without "PrivilegeKind_" prefix,
 // suitable for debugging or error messages
-func (kk PrivilegeKinds) String() string {
+func (pk PrivilegeKinds) String() string {
 	var s string
-	for i, k := range kk {
+	for i, k := range pk {
 		if i > 0 {
 			s = strings.Join([]string{s, k.TrimString()}, " ")
 		} else {
@@ -72,24 +87,11 @@ func (kk PrivilegeKinds) String() string {
 	return fmt.Sprintf("[%s]", s)
 }
 
-// Returns all available privileges on specified type.
-func allPrivilegesOnType(tk TypeKind) (pk PrivilegeKinds) {
-	switch tk {
-	case TypeKind_GRecord, TypeKind_GDoc,
-		TypeKind_CRecord, TypeKind_CDoc,
-		TypeKind_WRecord, TypeKind_WDoc,
-		TypeKind_ORecord, TypeKind_ODoc,
-		TypeKind_Object,
-		TypeKind_ViewRecord:
-		pk = append(pk, PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select)
-	case TypeKind_Command, TypeKind_Query:
-		pk = append(pk, PrivilegeKind_Execute)
-	case TypeKind_Workspace:
-		pk = append(pk, PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select, PrivilegeKind_Execute)
-	case TypeKind_Role:
-		pk = append(pk, PrivilegeKind_Inherits)
-	}
-	return pk
+// Renders an PrivilegeKind in human-readable form, without "PrivilegeKind_" prefix,
+// suitable for debugging or error messages
+func (k PrivilegeKind) TrimString() string {
+	const pref = "PrivilegeKind_"
+	return strings.TrimPrefix(k.String(), pref)
 }
 
 // Validates names for privilege on. Returns sorted names without duplicates.
@@ -104,14 +106,14 @@ func validatePrivilegeOnNames(app IAppDef, on ...QName) (QNames, error) {
 	}
 
 	names := QNamesFrom(on...)
-	onKind := 0
+	onType := TypeKind_null
 
 	for _, n := range names {
 		t := app.TypeByName(n)
 		if t == nil {
 			return nil, fmt.Errorf("%w: %v", ErrTypeNotFound, n)
 		}
-		k := onKind
+		k := onType
 		switch t.Kind() {
 		case TypeKind_GRecord, TypeKind_GDoc,
 			TypeKind_CRecord, TypeKind_CDoc,
@@ -119,20 +121,20 @@ func validatePrivilegeOnNames(app IAppDef, on ...QName) (QNames, error) {
 			TypeKind_ORecord, TypeKind_ODoc,
 			TypeKind_Object,
 			TypeKind_ViewRecord:
-			k = 1
+			k = TypeKind_GRecord
 		case TypeKind_Command, TypeKind_Query:
-			k = 2
+			k = TypeKind_Command
 		case TypeKind_Workspace:
-			k = 3
+			k = TypeKind_Workspace
 		case TypeKind_Role:
-			k = 4
+			k = TypeKind_Role
 		default:
 			return nil, fmt.Errorf("type can not to be privileged: %w: %v", ErrInvalidTypeKind, t)
 		}
 
-		if onKind != k {
-			if onKind == 0 {
-				onKind = k
+		if onType != k {
+			if onType == TypeKind_null {
+				onType = k
 			} else {
 				return nil, fmt.Errorf("%w: %v and %v", ErrPrivilegeOnMixed, app.Type(names[0]), t)
 			}
