@@ -61,3 +61,5 @@ var ErrInvalidPrivilegeKind = errors.New("invalid privilege kind")
 var ErrPrivilegeKindsMissed = fmt.Errorf("privilege kinds missed: %w", ErrNameMissed)
 
 var ErrPrivilegeOnMissed = fmt.Errorf("privilege objects missed: %w", ErrNameMissed)
+
+var ErrPrivilegeOnMixed = errors.New("privilege objects mixed types")

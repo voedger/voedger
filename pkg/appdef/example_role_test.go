@@ -76,6 +76,11 @@ func ExampleIAppDefBuilder_AddRole() {
 		intruder := app.Role(intruderRoleName)
 		fmt.Println(intruder, ":")
 		intruder.Privileges(func(g appdef.IPrivilege) { fmt.Println("-", g) })
+
+		fmt.Println("Roles with select privilege on test.doc:")
+		for _, p := range app.PrivilegesOn(docName, appdef.PrivilegeKind_Select) {
+			fmt.Println("-", p)
+		}
 	}
 
 	// Output:
@@ -92,4 +97,6 @@ func ExampleIAppDefBuilder_AddRole() {
 	// - grant [Inherits] on [test.readerRole test.writerRole] to Role «test.admRole»
 	// Role «test.intruderRole» :
 	// - revoke [Insert Update Select Execute] on [test.ws] from Role «test.intruderRole»
+	// Roles with select privilege on test.doc:
+	// - grant [Select] on [test.doc] to Role «test.readerRole»
 }

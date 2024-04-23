@@ -191,3 +191,86 @@ func Test_AppDef_GrantAndRevoke(t *testing.T) {
 		})
 	})
 }
+
+func Test_AppDef_GrantAndRevokeErrors(t *testing.T) {
+	require := require.New(t)
+	t.Run("panics while to build application with roles and privileges", func(t *testing.T) {
+		adb := New()
+		adb.AddPackage("test", "test.com/test")
+
+		wsName := NewQName("test", "ws")
+		docName := NewQName("test", "doc")
+		viewName := NewQName("test", "view")
+		queryName := NewQName("test", "query")
+
+		readerRoleName := NewQName("test", "readerRole")
+		// writerRoleName := NewQName("test", "writerRole")
+
+		_ = adb.AddWorkspace(wsName)
+
+		doc := adb.AddCDoc(docName)
+		doc.AddField("field1", DataKind_int32, true)
+
+		view := adb.AddView(viewName)
+		view.Key().PartKey().AddField("pk_1", DataKind_int32)
+		view.Key().ClustCols().AddField("cc_1", DataKind_string)
+		view.Value().AddField("vf_1", DataKind_string, false)
+
+		_ = adb.AddQuery(queryName)
+
+		t.Run("should be panic if unknown role", func(t *testing.T) {
+			unknownRole := NewQName("test", "unknownRole")
+			require.Panics(func() {
+				adb.Grant(PrivilegeKinds{PrivilegeKind_Select}, []QName{docName}, nil, unknownRole)
+			}, "should be panic if grant to unknown role")
+			require.Panics(func() {
+				adb.GrantAll([]QName{docName}, unknownRole)
+			}, "should be panic if grant all to unknown role")
+			require.Panics(func() {
+				adb.Revoke(PrivilegeKinds{PrivilegeKind_Select}, []QName{docName}, unknownRole)
+			}, "should be panic if revoke from unknown role")
+			require.Panics(func() {
+				adb.RevokeAll([]QName{docName}, unknownRole)
+			}, "should be panic if revode all from unknown role")
+		})
+
+		_ = adb.AddRole(readerRoleName)
+
+		t.Run("should be panic if invalid privileges kinds", func(t *testing.T) {
+			require.Panics(func() {
+				adb.Grant(PrivilegeKinds{}, []QName{docName}, nil, readerRoleName)
+			})
+			require.Panics(func() {
+				adb.Grant(PrivilegeKinds{PrivilegeKind_null}, []QName{docName}, nil, readerRoleName)
+			})
+			require.Panics(func() {
+				adb.Grant(PrivilegeKinds{PrivilegeKind_count}, []QName{docName}, nil, readerRoleName)
+			})
+		})
+
+		t.Run("should be panic if privileges on invalid objects", func(t *testing.T) {
+			require.Panics(func() {
+				adb.Grant(PrivilegeKinds{PrivilegeKind_Select}, []QName{}, nil, readerRoleName)
+			}, "should be panic if grant on empty objects")
+			require.Panics(func() {
+				adb.GrantAll(nil, readerRoleName)
+			}, "should be panic if grant on nil objects")
+
+			require.Panics(func() {
+				adb.Grant(PrivilegeKinds{PrivilegeKind_Select}, []QName{NewQName("test", "unknown")}, nil, readerRoleName)
+			}, "should be panic if object is unknown")
+
+			require.Panics(func() {
+				adb.Grant(PrivilegeKinds{PrivilegeKind_Select}, []QName{SysData_String}, nil, readerRoleName)
+			}, "should be panic if object can't be privileged")
+
+			require.Panics(func() {
+				adb.GrantAll([]QName{docName, wsName}, readerRoleName)
+			}, "should be panic if object types are mixed")
+
+			require.Panics(func() {
+				adb.Grant([]PrivilegeKind{PrivilegeKind_Execute}, []QName{docName}, nil, readerRoleName)
+			}, "should be panic if privileges kinds are incompatible with objects")
+		})
+	})
+}

@@ -26,12 +26,18 @@ func newPrivilege(kind []PrivilegeKind, granted bool, on []QName, fields []Field
 		panic(ErrPrivilegeKindsMissed)
 	}
 
-	names := QNamesFrom(on...)
-	if len(names) == 0 {
-		panic(ErrPrivilegeOnMissed)
+	names, err := validatePrivilegeOnNames(role.app, on...)
+	if err != nil {
+		panic(err)
 	}
 
-	// TODO: check pk compatibility with names
+	o := role.app.Type(names[0])
+	allPk := allPrivilegesOnType(o.Kind())
+	for _, k := range pk {
+		if !allPk.Contains(k) {
+			panic(fmt.Errorf("%w: %v not applicable to %v", ErrInvalidPrivilegeKind, k, o))
+		}
+	}
 
 	g := &privilege{
 		comment: makeComment(comment...),
@@ -53,36 +59,12 @@ func newRevoke(kinds []PrivilegeKind, on []QName, fields []FieldName, role *role
 }
 
 func newPrivilegeAll(granted bool, on []QName, role *role, comment ...string) *privilege {
-	names := QNamesFrom(on...)
-	if len(names) == 0 {
-		panic(ErrPrivilegeOnMissed)
+	names, err := validatePrivilegeOnNames(role.app, on...)
+	if err != nil {
+		panic(err)
 	}
 
-	pk := PrivilegeKinds{}
-
-	o := names[0]
-	t := role.app.Type(o)
-	if t == nil {
-		panic(fmt.Errorf("%w: %v", ErrTypeNotFound, o))
-	}
-
-	switch t.Kind() {
-	case TypeKind_GRecord, TypeKind_GDoc,
-		TypeKind_CRecord, TypeKind_CDoc,
-		TypeKind_WRecord, TypeKind_WDoc,
-		TypeKind_ORecord, TypeKind_ODoc,
-		TypeKind_Object,
-		TypeKind_ViewRecord:
-		pk = PrivilegeKinds{PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select}
-	case TypeKind_Command, TypeKind_Query:
-		pk = PrivilegeKinds{PrivilegeKind_Execute}
-	case TypeKind_Workspace:
-		pk = PrivilegeKinds{PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select, PrivilegeKind_Execute}
-	case TypeKind_Role:
-		pk = PrivilegeKinds{PrivilegeKind_Inherits}
-	default:
-		panic(fmt.Errorf("can not grant privileges on: %w: %v", ErrInvalidTypeKind, o))
-	}
+	pk := allPrivilegesOnType(role.app.Type(names[0]).Kind())
 
 	return newPrivilege(pk, granted, names, nil, role, comment...)
 }

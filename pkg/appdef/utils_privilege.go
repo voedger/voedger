@@ -71,3 +71,73 @@ func (kk PrivilegeKinds) String() string {
 	}
 	return fmt.Sprintf("[%s]", s)
 }
+
+// Returns all available privileges on specified type.
+func allPrivilegesOnType(tk TypeKind) PrivilegeKinds {
+	switch tk {
+	case TypeKind_GRecord, TypeKind_GDoc,
+		TypeKind_CRecord, TypeKind_CDoc,
+		TypeKind_WRecord, TypeKind_WDoc,
+		TypeKind_ORecord, TypeKind_ODoc,
+		TypeKind_Object,
+		TypeKind_ViewRecord:
+		return PrivilegeKinds{PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select}
+	case TypeKind_Command, TypeKind_Query:
+		return PrivilegeKinds{PrivilegeKind_Execute}
+	case TypeKind_Workspace:
+		return PrivilegeKinds{PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select, PrivilegeKind_Execute}
+	case TypeKind_Role:
+		return PrivilegeKinds{PrivilegeKind_Inherits}
+	}
+	return nil
+}
+
+// Validates names for privilege on. Returns sorted names without duplicates.
+//
+//   - If on is empty then returns error
+//   - If on contains unknown name then returns error
+//   - If on contains name of type that can not to be privileged then returns error
+//   - If on contains names of mixed types then returns error.
+func validatePrivilegeOnNames(app IAppDef, on ...QName) (QNames, error) {
+	if len(on) == 0 {
+		return nil, ErrPrivilegeOnMissed
+	}
+
+	names := QNamesFrom(on...)
+	onKind := 0
+
+	for _, n := range names {
+		t := app.TypeByName(n)
+		if t == nil {
+			return nil, fmt.Errorf("%w: %v", ErrTypeNotFound, n)
+		}
+		k := onKind
+		switch t.Kind() {
+		case TypeKind_GRecord, TypeKind_GDoc,
+			TypeKind_CRecord, TypeKind_CDoc,
+			TypeKind_WRecord, TypeKind_WDoc,
+			TypeKind_ORecord, TypeKind_ODoc,
+			TypeKind_Object,
+			TypeKind_ViewRecord:
+			k = 1
+		case TypeKind_Command, TypeKind_Query:
+			k = 2
+		case TypeKind_Workspace:
+			k = 3
+		case TypeKind_Role:
+			k = 4
+		default:
+			return nil, fmt.Errorf("type can not to be privileged: %w: %v", ErrInvalidTypeKind, t)
+		}
+
+		if onKind != k {
+			if onKind == 0 {
+				onKind = k
+			} else {
+				return nil, fmt.Errorf("%w: %v and %v", ErrPrivilegeOnMixed, app.Type(names[0]), t)
+			}
+		}
+	}
+
+	return names, nil
+}
