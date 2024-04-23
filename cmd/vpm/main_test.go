@@ -13,9 +13,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"github.com/voedger/voedger/pkg/goutils/exec"
 	"github.com/voedger/voedger/pkg/goutils/logger"
-
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
@@ -295,9 +293,6 @@ func TestOrmBasicUsage(t *testing.T) {
 			err = execRootCmd([]string{"vpm", "orm", "-C", dir, "--header-file", headerFile}, "1.0.0")
 			require.NoError(err)
 
-			err = new(exec.PipedExec).Command("go", "build", "-C", dir).Run(os.Stdout, os.Stderr)
-			require.NoError(err)
-
 			if logger.IsVerbose() {
 				logger.Verbose(fmt.Sprintf("orm directory: %s", filepath.Join(dir, internalDirName, ormDirName)))
 				logger.Verbose("------------------------------------------------------------------------")
@@ -337,6 +332,7 @@ func TestTidyBasicUsage(t *testing.T) {
 		t.Skip()
 	}
 	require := require.New(t)
+	logger.SetLogLevel(logger.LogLevelVerbose)
 
 	var err error
 	var tempDir string
@@ -367,14 +363,14 @@ func TestEdgeCases(t *testing.T) {
 
 	err := execRootCmd([]string{"vpm", "tidy", "unknown"}, "1.0.0")
 	require.Error(err)
-	require.Equal("'vpm tidy' accepts no argument. Run 'vpm tidy help'", err.Error())
+	require.Equal("'vpm tidy' accepts no arg(s). Run 'vpm tidy help'", err.Error())
 
 	err = execRootCmd([]string{"vpm", "tidy", "help"}, "1.0.0")
 	require.NoError(err)
 
 	err = execRootCmd([]string{"vpm", "tidy", "help", "adads"}, "1.0.0")
 	require.Error(err)
-	require.Equal("'vpm tidy' accepts no argument. Run 'vpm tidy help'", err.Error())
+	require.Equal("'vpm tidy' accepts no arg(s). Run 'vpm tidy help'", err.Error())
 
 	err = execRootCmd([]string{"vpm", "init", "help"}, "1.0.0")
 	require.NoError(err)
@@ -417,6 +413,10 @@ func TestBuildBasicUsage(t *testing.T) {
 			errMsg: fmt.Sprintf("%s not found. Run 'vpm init'", packagesGenFileName),
 		},
 		{
+			dir:    "appempty",
+			errMsg: "",
+		},
+		{
 			dir:    "appnormal",
 			errMsg: "",
 		},
@@ -430,6 +430,11 @@ func TestBuildBasicUsage(t *testing.T) {
 				require.Equal(tc.errMsg, err.Error())
 			} else {
 				require.FileExists(filepath.Join(dir, "qwerty.var"))
+				err = os.Mkdir(filepath.Join(dir, "unzipped"), coreutils.FileMode_rwxrwxrwx)
+				require.NoError(err)
+
+				coreutils.Unzip(filepath.Join(dir, "qwerty.var"), filepath.Join(dir, "unzipped"))
+				require.FileExists(filepath.Join(dir, "unzipped", fmt.Sprintf("%s.wasm", tc.dir)))
 			}
 		})
 

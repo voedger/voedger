@@ -267,7 +267,9 @@ func loadPackages(dir string, notFoundDeps map[string]struct{}) (*loadedPackages
 	importedPkgs := allImportedPackages(rootPkgs)
 
 	// workaround to include sys package into loading packages process
-	// create a temporary sys.go file and load packages again to get all imported packages
+	// create a temporary sys.go file and load packages it to get all imported packages,
+	// then remove the temporary sys.go file after loading
+	// without this workaround: tinygo build fails with error "package net/http/httptest is not in std"
 	{
 		tmpDirPath, err := createTmpSysGoModule(dir)
 		if err != nil {

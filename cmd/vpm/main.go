@@ -108,14 +108,10 @@ func exactArgs(n int) cobra.PositionalArgs {
 			return nil
 		case len(args) != n:
 			strCountOfArgs := fmt.Sprintf("%d", n)
-			pluralSuffix := ""
-			switch {
-			case n > 1:
-				pluralSuffix = "s"
-			case n == 0:
+			if n == 0 {
 				strCountOfArgs = "no"
 			}
-			return fmt.Errorf("'%s' accepts %s argument%s. Run '%s help'", cmd.CommandPath(), strCountOfArgs, pluralSuffix, cmd.CommandPath())
+			return fmt.Errorf("'%s' accepts %s arg(s). Run '%s help'", cmd.CommandPath(), strCountOfArgs, cmd.CommandPath())
 		}
 		return nil
 	}
