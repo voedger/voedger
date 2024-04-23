@@ -556,7 +556,7 @@ func (app *appDef) build() (err error) {
 func (app *appDef) grant(kinds PrivilegeKinds, on []QName, fields []FieldName, toRole QName, comment ...string) {
 	r := app.Role(toRole)
 	if r == nil {
-		panic(fmt.Errorf("%w: %v", ErrRoleNotFound, toRole))
+		panic(ErrRoleNotFound(toRole))
 	}
 	r.(*role).grant(kinds, on, fields, comment...)
 }
@@ -564,7 +564,7 @@ func (app *appDef) grant(kinds PrivilegeKinds, on []QName, fields []FieldName, t
 func (app *appDef) grantAll(on []QName, toRole QName, comment ...string) {
 	r := app.Role(toRole)
 	if r == nil {
-		panic(fmt.Errorf("%w: %v", ErrRoleNotFound, toRole))
+		panic(ErrRoleNotFound(toRole))
 	}
 	r.(*role).grantAll(on, comment...)
 }
@@ -587,7 +587,7 @@ func (app *appDef) makeSysDataTypes() {
 func (app *appDef) revoke(kinds PrivilegeKinds, on []QName, fromRole QName, comment ...string) {
 	r := app.Role(fromRole)
 	if r == nil {
-		panic(fmt.Errorf("%w: %v", ErrRoleNotFound, fromRole))
+		panic(ErrRoleNotFound(fromRole))
 	}
 	r.(*role).revoke(kinds, on, comment...)
 }
@@ -595,7 +595,7 @@ func (app *appDef) revoke(kinds PrivilegeKinds, on []QName, fromRole QName, comm
 func (app *appDef) revokeAll(on []QName, fromRole QName, comment ...string) {
 	r := app.Role(fromRole)
 	if r == nil {
-		panic(fmt.Errorf("%w: %v", ErrRoleNotFound, fromRole))
+		panic(ErrRoleNotFound(fromRole))
 	}
 	r.(*role).revokeAll(on, comment...)
 }

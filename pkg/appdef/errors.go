@@ -22,7 +22,9 @@ var ErrTypeNotFound = fmt.Errorf("type not found: %w", ErrNameNotFound)
 
 var ErrFieldNotFound = fmt.Errorf("field not found: %w", ErrNameNotFound)
 
-var ErrRoleNotFound = fmt.Errorf("role not found: %w", ErrTypeNotFound)
+func ErrRoleNotFound(r QName) error {
+	return fmt.Errorf("role %v not found: %w", r, ErrTypeNotFound)
+}
 
 var ErrInvalidQNameStringRepresentation = errors.New("invalid string representation of qualified name")
 
