@@ -21,6 +21,7 @@ func ExampleIAppDefBuilder_AddRole() {
 	readerRoleName := appdef.NewQName("test", "readerRole")
 	writerRoleName := appdef.NewQName("test", "writerRole")
 	admRoleName := appdef.NewQName("test", "admRole")
+	intruderRoleName := appdef.NewQName("test", "intruderRole")
 
 	// how to build AppDef with roles
 	{
@@ -34,13 +35,16 @@ func ExampleIAppDefBuilder_AddRole() {
 		ws.AddType(docName)
 
 		reader := adb.AddRole(readerRoleName)
-		reader.Grant(appdef.PrivilegeKinds{appdef.PrivilegeKind_Select}, []appdef.QName{docName}, []appdef.FieldName{"field1"}, "grant select to doc.field1")
+		reader.Grant(appdef.PrivilegeKinds{appdef.PrivilegeKind_Select}, []appdef.QName{docName}, []appdef.FieldName{"field1"}, "grant select on doc.field1")
 
 		writer := adb.AddRole(writerRoleName)
-		writer.GrantAll([]appdef.QName{wsName}, "grant all to test.ws")
+		writer.GrantAll([]appdef.QName{wsName}, "grant all on test.ws")
 
 		adm := adb.AddRole(admRoleName)
 		adm.GrantAll([]appdef.QName{readerRoleName, writerRoleName}, "grant reader and writer roles to adm")
+
+		intruder := adb.AddRole(intruderRoleName)
+		intruder.RevokeAll([]appdef.QName{wsName}, "revoke all on test.ws")
 
 		app = adb.MustBuild()
 	}
@@ -68,17 +72,24 @@ func ExampleIAppDefBuilder_AddRole() {
 		adm := app.Role(admRoleName)
 		fmt.Println(adm, ":")
 		adm.Privileges(func(g appdef.IPrivilege) { fmt.Println("-", g) })
+
+		intruder := app.Role(intruderRoleName)
+		fmt.Println(intruder, ":")
+		intruder.Privileges(func(g appdef.IPrivilege) { fmt.Println("-", g) })
 	}
 
 	// Output:
 	// 1 Role «test.admRole»
-	// 2 Role «test.readerRole»
-	// 3 Role «test.writerRole»
-	// overall: 3
+	// 2 Role «test.intruderRole»
+	// 3 Role «test.readerRole»
+	// 4 Role «test.writerRole»
+	// overall: 4
 	// Role «test.readerRole» :
 	// - grant [Select] on [test.doc] to Role «test.readerRole»
 	// Role «test.writerRole» :
 	// - grant [Insert Update Select Execute] on [test.ws] to Role «test.writerRole»
 	// Role «test.admRole» :
 	// - grant [Inherits] on [test.readerRole test.writerRole] to Role «test.admRole»
+	// Role «test.intruderRole» :
+	// - revoke [Insert Update Select Execute] on [test.ws] from Role «test.intruderRole»
 }

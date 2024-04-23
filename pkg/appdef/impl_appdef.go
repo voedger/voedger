@@ -16,6 +16,7 @@ import (
 type appDef struct {
 	comment
 	packages     *packages
+	privileges   []*privilege
 	types        map[QName]interface{}
 	typesOrdered []interface{}
 	wsDesc       map[QName]IWorkspace
@@ -144,22 +145,6 @@ func (app *appDef) GDocs(cb func(IGDoc)) {
 	})
 }
 
-func (app appDef) Privileges(cb func(IPrivilege)) {
-	app.Roles(func(r IRole) {
-		r.Privileges(func(g IPrivilege) {
-			cb(g)
-		})
-	})
-}
-
-func (app appDef) PrivilegesOn(n QName, k ...PrivilegeKind) []IPrivilege {
-	pp := make([]IPrivilege, 0)
-	app.Roles(func(r IRole) {
-		pp = append(pp, r.PrivilegesOn(n, k...)...)
-	})
-	return pp
-}
-
 func (app *appDef) GRecord(name QName) IGRecord {
 	if t := app.typeByKind(name, TypeKind_GRecord); t != nil {
 		return t.(IGRecord)
@@ -236,6 +221,22 @@ func (app *appDef) PackageLocalNames() []string {
 
 func (app *appDef) Packages(cb func(local, path string)) {
 	app.packages.forEach(cb)
+}
+
+func (app appDef) Privileges(cb func(IPrivilege)) {
+	for _, p := range app.privileges {
+		cb(p)
+	}
+}
+
+func (app appDef) PrivilegesOn(n QName, k ...PrivilegeKind) []IPrivilege {
+	pp := make([]IPrivilege, 0)
+	for _, p := range app.privileges {
+		if p.On().Contains(n) && p.Kinds().ContainsAny(k...) {
+			pp = append(pp, p)
+		}
+	}
+	return pp
 }
 
 func (app *appDef) Projector(name QName) IProjector {
@@ -525,6 +526,10 @@ func (app *appDef) addWRecord(name QName) IWRecordBuilder {
 func (app *appDef) addWorkspace(name QName) IWorkspaceBuilder {
 	ws := newWorkspace(app, name)
 	return newWorkspaceBuilder(ws)
+}
+
+func (app *appDef) appendPrivilege(p *privilege) {
+	app.privileges = append(app.privileges, p)
 }
 
 func (app *appDef) appendType(t interface{}) {

@@ -37,20 +37,25 @@ func (r role) PrivilegesOn(on QName, kind ...PrivilegeKind) []IPrivilege {
 	return pp
 }
 
+func (r *role) appendPrivilege(p *privilege) {
+	r.privileges = append(r.privileges, p)
+	r.app.appendPrivilege(p)
+}
+
 func (r *role) grant(kinds []PrivilegeKind, on []QName, fields []FieldName, comment ...string) {
-	r.privileges = append(r.privileges, newGrant(kinds, on, fields, r, comment...))
+	r.appendPrivilege(newGrant(kinds, on, fields, r, comment...))
 }
 
 func (r *role) grantAll(on []QName, comment ...string) {
-	r.privileges = append(r.privileges, newGrantAll(on, r, comment...))
+	r.appendPrivilege(newGrantAll(on, r, comment...))
 }
 
 func (r *role) revoke(kinds []PrivilegeKind, on []QName, comment ...string) {
-	r.privileges = append(r.privileges, newRevoke(kinds, on, nil, r, comment...))
+	r.appendPrivilege(newRevoke(kinds, on, nil, r, comment...))
 }
 
 func (r *role) revokeAll(on []QName, comment ...string) {
-	r.privileges = append(r.privileges, newRevokeAll(on, r, comment...))
+	r.appendPrivilege(newRevokeAll(on, r, comment...))
 }
 
 // # Implements:
