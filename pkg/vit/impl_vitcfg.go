@@ -10,7 +10,6 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/apps"
-	"github.com/voedger/voedger/pkg/apps/sys/clusterapp"
 	"github.com/voedger/voedger/pkg/apps/sys/registryapp"
 	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -24,7 +23,6 @@ func NewOwnVITConfig(opts ...vitConfigOptFunc) VITConfig {
 	// helper: implicitly append sys apps
 	opts = append(opts,
 		WithApp(istructs.AppQName_sys_registry, registryapp.Provide(smtp.Cfg{}, vvm.DefaultNumCommandProcessors)),
-		WithApp(istructs.AppQName_sys_cluster, clusterapp.Provide()),
 	)
 	return VITConfig{opts: opts}
 }
@@ -178,13 +176,6 @@ func WithApp(appQName istructs.AppQName, updater apps.AppBuilder, appOpts ...App
 		for _, appOpt := range appOpts {
 			appOpt(app, vpc.vvmCfg)
 		}
-		// to append tests templates to already declared templates
-		// for _, wsTempalateFunc := range app.wsTemplateFuncs {
-		// 	vpc.vvmCfg.VVMAppsBuilder.Add(appQName, func(appAPI apps.APIs, cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) (appPackages apps.AppPackages) {
-		// 		wsTempalateFunc(ep)
-		// 		return
-		// 	})
-		// }
 	}
 }
 

@@ -10,7 +10,6 @@ import (
 
 	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/cluster"
-	"github.com/voedger/voedger/pkg/istructs"
 )
 
 type appPartitionsController struct {
@@ -29,14 +28,6 @@ func (ctl *appPartitionsController) Prepare() (err error) {
 }
 
 func (ctl *appPartitionsController) Run(ctx context.Context) {
-	for _, builtinApp := range ctl.builtInApps {
-		ctl.parts.DeployApp(builtinApp.Name, builtinApp.Def, builtinApp.NumParts, builtinApp.EnginePoolSize)
-		ids := make([]istructs.PartitionID, builtinApp.NumParts)
-		for id := istructs.NumAppPartitions(0); id < builtinApp.NumParts; id++ {
-			ids[id] = istructs.PartitionID(id)
-		}
-		ctl.parts.DeployAppPartitions(builtinApp.Name, ids)
-	}
 
 	<-ctx.Done()
 }

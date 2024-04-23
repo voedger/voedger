@@ -191,14 +191,14 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 func provideBootstrapOperator(bus ibus.IBus, asp istructs.IAppStructsProvider, timeFunc coreutils.TimeFunc, appparts appparts.IAppPartitions,
 	builtinApps []cluster.BuiltInApp) BootstrapOperator {
 	var clusterBuiltinApp btstrp.ClusterBuiltInApp
-	otherApps := make([]cluster.BuiltInApp, 0, len(builtinApps)-1)
-	for _, app := range builtinApps {
-		if app.Name == istructs.AppQName_sys_cluster {
-			clusterBuiltinApp = btstrp.ClusterBuiltInApp(app)
-		} else {
-			otherApps = append(otherApps, app)
-		}
-	}
+	// otherApps := make([]cluster.BuiltInApp, 0, len(builtinApps)-1)
+	// for _, app := range builtinApps {
+	// 	if app.Name == istructs.AppQName_sys_cluster {
+	// 		clusterBuiltinApp = btstrp.ClusterBuiltInApp(app)
+	// 	} else {
+	// 		otherApps = append(otherApps, app)
+	// 	}
+	// }
 	return pipeline.NewSyncOp(func(ctx context.Context, work interface{}) (err error) {
 		return btstrp.Bootstrap(ctx, bus, asp, timeFunc, appparts, clusterBuiltinApp, otherApps)
 	})
@@ -216,10 +216,10 @@ func provideAppConfigsTypeEmpty() AppConfigsTypeEmpty {
 	return AppConfigsTypeEmpty(istructsmem.AppConfigsType{})
 }
 
-// AppConfigsTypeEmpty is provided here despite it looks senceless. But ok: it is a map that fills later, on BuildCfgsAnDefs() and used after filling only
+// AppConfigsTypeEmpty is provided here despite it looks senceless. But ok: it is a map that will be filled later, on BuildAppsArtefacts(), and used after filling only
 // provide appsArtefacts.AppConfigsType here -> wire cycle: BuildappsArtefacts requires APIs requires IAppStructsProvider requires AppConfigsType obtained from BuildappsArtefacts
 // The same approach does not work for IAppPartitions implementation, because the appparts.NewWithActualizerWithExtEnginesFactories() accepts
-// iextengine.ExtensionEngineFactories that already must be initialized with filled AppConfigsType
+// iextengine.ExtensionEngineFactories that must be initialized with the already filled AppConfigsType
 func provideIAppStructsProvider(cfgs AppConfigsTypeEmpty, bucketsFactory irates.BucketsFactoryType, appTokensFactory payloads.IAppTokensFactory,
 	storageProvider istorage.IAppStorageProvider) istructs.IAppStructsProvider {
 	return istructsmem.Provide(istructsmem.AppConfigsType(cfgs), bucketsFactory, appTokensFactory, storageProvider)

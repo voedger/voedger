@@ -14,7 +14,8 @@ import (
 const clusterAppNumPartitions = istructs.NumAppPartitions(1)
 
 var (
+	// TODO: move to app cluster
 	clusterAppWSID            = istructs.NewWSID(istructs.MainClusterID, istructs.FirstBaseAppWSID) // 140737488420864
-	clusterAppWSIDPartitionID = coreutils.AppPartitionID(clusterAppWSID, clusterAppNumPartitions) // 0
+	clusterAppWSIDPartitionID = coreutils.AppPartitionID(clusterAppWSID, clusterAppNumPartitions)   // 0
 	clusterAppNumEngines      = [cluster.ProcessorKind_Count]int{int(clusterAppNumPartitions), 1, int(clusterAppNumPartitions)}
 )

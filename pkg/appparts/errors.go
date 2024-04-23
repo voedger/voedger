@@ -25,8 +25,8 @@ var (
 	}
 )
 
-func errAppCannotToBeRedeployed(name istructs.AppQName) error {
-	return fmt.Errorf("application %v can not to be redeployed: %w", name, errors.ErrUnsupported)
+func errAppCannotBeRedeployed(name istructs.AppQName) error {
+	return fmt.Errorf("application %v can not be redeployed: %w", name, errors.ErrUnsupported)
 }
 
 func errAppNotFound(name istructs.AppQName) error {

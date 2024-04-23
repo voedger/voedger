@@ -42,7 +42,7 @@ func (aps *apps) DeployApp(name istructs.AppQName, def appdef.IAppDef, partsCoun
 	defer aps.mx.Unlock()
 
 	if _, ok := aps.apps[name]; ok {
-		panic(errAppCannotToBeRedeployed(name))
+		panic(errAppCannotBeRedeployed(name))
 	}
 
 	a := newApplication(aps, name, partsCount)

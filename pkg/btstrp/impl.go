@@ -76,6 +76,9 @@ func Bootstrap(ctx context.Context, bus ibus.IBus, asp istructs.IAppStructsProvi
 }
 
 func readPreviousAppDeployment(ctx context.Context, bus ibus.IBus, appQName istructs.AppQName) (wasDeployed bool, deployedNumPartitions int, deployedNumAppWorkspaces int, err error) {
+
+	// TODO use IFederation?
+	
 	queryAppBusRequest := ibus.Request{
 		Method:          ibus.HTTPMethodPOST,
 		WSID:            int64(clusterAppWSID),

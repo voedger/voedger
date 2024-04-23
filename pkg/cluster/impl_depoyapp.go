@@ -25,21 +25,24 @@ func execDeployApp(args istructs.ExecCommandArgs) (err error) {
 		return coreutils.NewHTTPErrorf(http.StatusBadRequest, fmt.Sprintf("cluster app id is unknown for app %s", appName))
 	}
 
-	kb, err := args.State.KeyBuilder(state.View, QNameViewDeployedApps)
-	if err != nil {
-		// notest
-		return err
-	}
-	kb.PutInt32(Field_ClusterAppID, int32(clusterAppID))
-	kb.PutString(Field_Name, appName)
-	_, deployed, err := args.State.CanExist(kb)
-	if err == nil {
-		// notest
-		return err
-	}
-	if deployed {
-		return coreutils.NewHTTPErrorf(http.StatusConflict, fmt.Sprintf("app %s is deployed already", appName))
-	}
+	// kb, err := args.State.KeyBuilder(state.View, QNameViewDeployedApps)
+	// if err != nil {
+	// 	// notest
+	// 	return err
+	// }
+	// kb.PutInt32(Field_ClusterAppID, int32(clusterAppID))
+	// kb.PutString(Field_Name, appName)
+	// _, deployed, err := args.State.CanExist(kb)
+	// if err == nil {
+	// 	// notest
+	// 	return err
+	// }
+	// if deployed {
+	// 	return coreutils.NewHTTPErrorf(http.StatusConflict, fmt.Sprintf("app %s is deployed already", appName))
+	// }
+
+	// deploy app workspace
+	
 
 	return nil
 }

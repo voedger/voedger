@@ -1,0 +1,34 @@
+-- Copyright (c) 2024-present unTill Software Development Group B.V.
+-- @author Denis Gribanov
+
+ALTER WORKSPACE AppWorkspaceWS (
+
+	TABLE App INHERITS WDoc (
+		AppQName varchar, -- UNIQUE, make possible to find by it
+		NumPartitions int32,
+		NumAppWorkspace int32
+	);
+
+	-- VIEW DeployedApps (
+	-- 	ClusterAppID int32, -- see istructs.ClusterApps
+	-- 	AppQName varchar,
+	-- 	-- DeployEventWLogOffset int64,
+	-- 	AppID ref(App),
+	-- 	PRIMARY KEY ((ClusterAppID), Name)
+	-- ) AS RESULT OF ApplyDeployApp;
+
+	TYPE QueryAppArgs (
+		AppQName varchar
+	);
+
+	TYPE QueryAppResult (
+		NumAppWorkspaces int32,
+		NumPartitions int32
+	);
+
+	EXTENSION ENGINE BUILTIN (
+		COMMAND DeployApp(App);
+		QUERY QueryApp(QueryAppArgs) RETURNS QueryAppResult;
+		-- SYNC PROJECTOR ApplyDeployApp AFTER EXECUTE ON DeployApp INTENTS (View(DeployedApps));
+	);
+);

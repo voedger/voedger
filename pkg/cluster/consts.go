@@ -11,7 +11,7 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 )
 
-//go:embed clusterws.vsql
+//go:embed appws.vsql
 var schemaFS embed.FS
 
 const (
