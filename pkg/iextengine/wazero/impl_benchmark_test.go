@@ -154,24 +154,23 @@ func benchmarkRecover(b *testing.B, limitPages uint, expectedRuns int) {
 
 	we := ee.(*wazeroExtEngine)
 
+	ext := appdef.NewFullQName(testPkg, arrAppend2)
 	for runs := 0; runs < expectedRuns; runs++ {
-		if err := ee.Invoke(context.Background(), appdef.NewFullQName("test", arrAppend2), extIO); err != nil {
+		if err := ee.Invoke(context.Background(), ext, extIO); err != nil {
 			panic(err)
 		}
 	}
 
-	//TODO: memoryFull := we.module.Memory().Backup()
+	we.backupMemory()
+
+	// the next call should fail
+	if err := ee.Invoke(context.Background(), ext, extIO); err == nil {
+		panic("err expected")
+	}
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		b.StartTimer()
 		we.recover()
-		// if extAppend.Invoke(extIO) == nil {
-		// 	panic("err expected")
-		// }
-		//require.Equal(b, uint64(0x6ebc50), h)
-		b.StopTimer()
-		//we.module.Memory().Restore(memoryFull)
 	}
 }
 
@@ -184,6 +183,10 @@ func benchmarkRecoverClean(b *testing.B, limitPages uint) {
 	}
 	defer ee.Close(ctx)
 	we := ee.(*wazeroExtEngine)
+	err = we.selectModule(testPkg)
+	if err != nil {
+		panic(err)
+	}
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		we.recover()
@@ -195,11 +198,11 @@ goos: linux
 goarch: amd64
 pkg: github.com/heeus/core/iextenginewazero
 cpu: 12th Gen Intel(R) Core(TM) i7-12700
-Benchmark_Recover/2Mib-1%-20         	  491917	      2041 ns/op	       0 B/op	       0 allocs/op
-Benchmark_Recover/2Mib-50%-20        	   17457	     68422 ns/op	       0 B/op	       0 allocs/op
-Benchmark_Recover/2Mib-100%-20       	   18838	     64025 ns/op	       0 B/op	       0 allocs/op
-Benchmark_Recover/8Mib-100%-20       	    5707	    204310 ns/op	       7 B/op	       0 allocs/op
-Benchmark_Recover/100Mib-70%-20      	    6247	    192577 ns/op	      12 B/op	       0 allocs/op
+Benchmark_Recover/2Mib-1%-20         	  540308	      2011 ns/op	       0 B/op	       0 allocs/op
+Benchmark_Recover/2Mib-50%-20        	   16768	     71175 ns/op	       0 B/op	       0 allocs/op
+Benchmark_Recover/2Mib-100%-20       	   16609	     78913 ns/op	       0 B/op	       0 allocs/op
+Benchmark_Recover/8Mib-100%-20       	    3675	    352462 ns/op	       0 B/op	       0 allocs/op
+Benchmark_Recover/100Mib-70%-20      	     198	   5903974 ns/op	       0 B/op	       0 allocs/op
 */
 func Benchmark_Recover(b *testing.B) {
 	WasmPreallocatedBufferSize = 20000
