@@ -159,6 +159,30 @@ func (qns QNames) Contains(n QName) bool {
 	return ok
 }
 
+// Returns true if slice contains all specified QNames.
+//
+// If no names specified then returns true.
+func (qns QNames) ContainsAll(names ...QName) bool {
+	for _, n := range names {
+		if !qns.Contains(n) {
+			return false
+		}
+	}
+	return true
+}
+
+// Returns true if slice contains any from specified QName.
+//
+// If no names specified then returns true.
+func (qns QNames) ContainsAny(names ...QName) bool {
+	for _, n := range names {
+		if qns.Contains(n) {
+			return true
+		}
+	}
+	return len(names) == 0
+}
+
 // Returns index of QName in slice and true if found.
 func (qns QNames) Find(n QName) (int, bool) {
 	return slices.BinarySearchFunc(qns, n, CompareQName)

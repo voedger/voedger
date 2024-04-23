@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-present Sigma-Soft, Ltd.
+ * Copyright (c) 2024-present Sigma-Soft, Ltd.
  * @author: Nikolay Nikitin
  */
 
@@ -27,10 +27,10 @@ func (r role) Privileges(cb func(IPrivilege)) {
 	}
 }
 
-func (r role) PrivilegesOn(on QName, kind ...PrivilegeKind) []IPrivilege {
+func (r role) PrivilegesOn(on []QName, kind ...PrivilegeKind) []IPrivilege {
 	pp := make([]IPrivilege, 0)
 	for _, p := range r.privileges {
-		if p.On().Contains(on) && p.Kinds().ContainsAny(kind...) {
+		if p.On().ContainsAny(on...) && p.Kinds().ContainsAny(kind...) {
 			pp = append(pp, p)
 		}
 	}

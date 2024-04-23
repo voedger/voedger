@@ -78,7 +78,7 @@ func ExampleIAppDefBuilder_AddRole() {
 		intruder.Privileges(func(g appdef.IPrivilege) { fmt.Println("-", g) })
 
 		fmt.Println("Roles with select privilege on test.doc:")
-		for _, p := range app.PrivilegesOn(docName, appdef.PrivilegeKind_Select) {
+		for _, p := range app.PrivilegesOn([]appdef.QName{docName}, appdef.PrivilegeKind_Select) {
 			fmt.Println("-", p)
 		}
 	}

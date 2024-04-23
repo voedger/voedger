@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-present Sigma-Soft, Ltd.
+ * Copyright (c) 2023-present Sigma-Soft, Ltd.
  * @author: Nikolay Nikitin
  */
 

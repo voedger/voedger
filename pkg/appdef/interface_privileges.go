@@ -91,12 +91,12 @@ type IWithPrivileges interface {
 	// Privileges are enumerated in the order they are added.
 	Privileges(func(IPrivilege))
 
-	// Returns all privileges on specified entity, which contains at least one from specified kinds.
+	// Returns all privileges on specified entities, which contains at least one from specified kinds.
 	//
-	// If no kinds specified then all privileges on entity are returned.
+	// If no kinds specified then all privileges on entities are returned.
 	//
 	// Privileges are returned in the order they are added.
-	PrivilegesOn(on QName, kind ...PrivilegeKind) []IPrivilege
+	PrivilegesOn(on []QName, kind ...PrivilegeKind) []IPrivilege
 }
 
 type IPrivilegesBuilder interface {

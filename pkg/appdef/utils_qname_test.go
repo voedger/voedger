@@ -343,9 +343,6 @@ func TestQNamesFrom(t *testing.T) {
 			}
 
 			for _, n := range names {
-				if !q.Contains(n) {
-					t.Errorf("QNamesFrom(%v).Contains(%v) returns false", tt.args, n)
-				}
 				i, ok := q.Find(n)
 				if !ok {
 					t.Errorf("QNamesFrom(%v).Find(%v) returns false", tt.args, n)
@@ -353,8 +350,26 @@ func TestQNamesFrom(t *testing.T) {
 				if q[i] != n {
 					t.Errorf("QNamesFrom(%v).Find(%v) returns wrong index %v", tt.args, n, i)
 				}
-				if q.Contains(MustParseQName("test.unknown")) {
+
+				if !q.Contains(n) {
+					t.Errorf("QNamesFrom(%v).Contains(%v) returns false", tt.args, n)
+				}
+				unk := MustParseQName("test.unknown")
+				if q.Contains(unk) {
 					t.Errorf("QNamesFrom(%v).Contains(test.unknown) returns true", tt.args)
+				}
+
+				if q.ContainsAll(n, unk) {
+					t.Errorf("QNamesFrom(%v).ContainsAll(%v, %v) returns true", tt.args, n, unk)
+				}
+				if !q.ContainsAll(names[0], n) {
+					t.Errorf("QNamesFrom(%v).ContainsAll(%v, %v) returns false", tt.args, names[0], n)
+				}
+				if q.ContainsAny(unk) {
+					t.Errorf("QNamesFrom(%v).ContainsAny(%v) returns true", tt.args, unk)
+				}
+				if !q.ContainsAny(n, unk) {
+					t.Errorf("QNamesFrom(%v).ContainsAny(%v, %v) returns false", tt.args, n, unk)
 				}
 			}
 		})

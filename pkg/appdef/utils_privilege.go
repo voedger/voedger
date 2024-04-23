@@ -73,7 +73,7 @@ func (kk PrivilegeKinds) String() string {
 }
 
 // Returns all available privileges on specified type.
-func allPrivilegesOnType(tk TypeKind) PrivilegeKinds {
+func allPrivilegesOnType(tk TypeKind) (pk PrivilegeKinds) {
 	switch tk {
 	case TypeKind_GRecord, TypeKind_GDoc,
 		TypeKind_CRecord, TypeKind_CDoc,
@@ -81,15 +81,15 @@ func allPrivilegesOnType(tk TypeKind) PrivilegeKinds {
 		TypeKind_ORecord, TypeKind_ODoc,
 		TypeKind_Object,
 		TypeKind_ViewRecord:
-		return PrivilegeKinds{PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select}
+		pk = append(pk, PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select)
 	case TypeKind_Command, TypeKind_Query:
-		return PrivilegeKinds{PrivilegeKind_Execute}
+		pk = append(pk, PrivilegeKind_Execute)
 	case TypeKind_Workspace:
-		return PrivilegeKinds{PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select, PrivilegeKind_Execute}
+		pk = append(pk, PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select, PrivilegeKind_Execute)
 	case TypeKind_Role:
-		return PrivilegeKinds{PrivilegeKind_Inherits}
+		pk = append(pk, PrivilegeKind_Inherits)
 	}
-	return nil
+	return pk
 }
 
 // Validates names for privilege on. Returns sorted names without duplicates.

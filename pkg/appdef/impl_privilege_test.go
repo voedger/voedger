@@ -91,7 +91,7 @@ func Test_AppDef_GrantAndRevoke(t *testing.T) {
 			require.Equal(to, p.To().QName())
 		}
 
-		t.Run("should be ok to enum all app roles", func(t *testing.T) {
+		t.Run("should be ok to enum all app privileges", func(t *testing.T) {
 			cnt := 0
 			app.Privileges(func(p IPrivilege) {
 				cnt++
@@ -151,7 +151,7 @@ func Test_AppDef_GrantAndRevoke(t *testing.T) {
 		t.Run("should be ok to enum privileges on objects", func(t *testing.T) {
 
 			t.Run("should be ok to enum privileges on ws", func(t *testing.T) {
-				pp := app.PrivilegesOn(wsName)
+				pp := app.PrivilegesOn([]QName{wsName})
 				require.Len(pp, 4)
 
 				checkPrivilege(pp[0], true,
@@ -174,9 +174,9 @@ func Test_AppDef_GrantAndRevoke(t *testing.T) {
 					intruderRoleName)
 			})
 
-			t.Run("should be ok to enum privileges select document", func(t *testing.T) {
-				pp := app.PrivilegesOn(docName, PrivilegeKind_Select)
-				require.Len(pp, 2)
+			t.Run("should be ok to enum all select privileges", func(t *testing.T) {
+				pp := app.PrivilegesOn([]QName{}, PrivilegeKind_Select)
+				require.Len(pp, 5)
 
 				checkPrivilege(pp[0], true,
 					PrivilegeKinds{PrivilegeKind_Select},
@@ -187,6 +187,21 @@ func Test_AppDef_GrantAndRevoke(t *testing.T) {
 					PrivilegeKinds{PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select},
 					QNames{docName, viewName}, nil,
 					writerRoleName)
+
+				checkPrivilege(pp[2], true,
+					PrivilegeKinds{PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select, PrivilegeKind_Execute},
+					QNames{wsName}, nil,
+					ownerRoleName)
+
+				checkPrivilege(pp[3], true,
+					PrivilegeKinds{PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select, PrivilegeKind_Execute},
+					QNames{wsName}, nil,
+					admRoleName)
+
+				checkPrivilege(pp[4], false,
+					PrivilegeKinds{PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select, PrivilegeKind_Execute},
+					QNames{wsName}, nil,
+					intruderRoleName)
 			})
 		})
 	})
@@ -200,23 +215,13 @@ func Test_AppDef_GrantAndRevokeErrors(t *testing.T) {
 
 		wsName := NewQName("test", "ws")
 		docName := NewQName("test", "doc")
-		viewName := NewQName("test", "view")
-		queryName := NewQName("test", "query")
 
 		readerRoleName := NewQName("test", "readerRole")
-		// writerRoleName := NewQName("test", "writerRole")
 
 		_ = adb.AddWorkspace(wsName)
 
 		doc := adb.AddCDoc(docName)
 		doc.AddField("field1", DataKind_int32, true)
-
-		view := adb.AddView(viewName)
-		view.Key().PartKey().AddField("pk_1", DataKind_int32)
-		view.Key().ClustCols().AddField("cc_1", DataKind_string)
-		view.Value().AddField("vf_1", DataKind_string, false)
-
-		_ = adb.AddQuery(queryName)
 
 		t.Run("should be panic if unknown role", func(t *testing.T) {
 			unknownRole := NewQName("test", "unknownRole")
@@ -273,4 +278,22 @@ func Test_AppDef_GrantAndRevokeErrors(t *testing.T) {
 			}, "should be panic if privileges kinds are incompatible with objects")
 		})
 	})
+}
+
+func TestPrivilegeKindTrimString(t *testing.T) {
+	tests := []struct {
+		name string
+		k    PrivilegeKind
+		want string
+	}{
+		{name: "basic", k: PrivilegeKind_Update, want: "Update"},
+		{name: "out of range", k: PrivilegeKind_count + 1, want: (PrivilegeKind_count + 1).String()},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.k.TrimString(); got != tt.want {
+				t.Errorf("%v.(PrivilegeKindKind).TrimString() = %v, want %v", tt.k, got, tt.want)
+			}
+		})
+	}
 }

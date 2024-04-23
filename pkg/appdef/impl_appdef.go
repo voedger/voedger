@@ -229,10 +229,10 @@ func (app appDef) Privileges(cb func(IPrivilege)) {
 	}
 }
 
-func (app appDef) PrivilegesOn(n QName, k ...PrivilegeKind) []IPrivilege {
+func (app appDef) PrivilegesOn(n []QName, k ...PrivilegeKind) []IPrivilege {
 	pp := make([]IPrivilege, 0)
 	for _, p := range app.privileges {
-		if p.On().Contains(n) && p.Kinds().ContainsAny(k...) {
+		if p.On().ContainsAny(n...) && p.Kinds().ContainsAny(k...) {
 			pp = append(pp, p)
 		}
 	}
