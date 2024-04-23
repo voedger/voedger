@@ -154,10 +154,10 @@ func (pe *PipedExec) RunToStrings() (stdout string, stderr string, err error) {
 	go func() {
 		defer wg.Done()
 		buf := new(bytes.Buffer)
-		_, err = buf.ReadFrom(stdoutPipe)
+		_, errr := buf.ReadFrom(stdoutPipe)
 		// notestdept
-		if nil != err {
-			panic(err)
+		if nil != errr {
+			panic(errr)
 		}
 		stdout = buf.String()
 	}()
@@ -165,10 +165,10 @@ func (pe *PipedExec) RunToStrings() (stdout string, stderr string, err error) {
 	go func() {
 		defer wg.Done()
 		buf := new(bytes.Buffer)
-		_, err = buf.ReadFrom(stderrPipe)
+		_, errr := buf.ReadFrom(stderrPipe)
 		// notestdept
-		if nil != err {
-			panic(err)
+		if nil != errr {
+			panic(errr)
 		}
 		stderr = buf.String()
 	}()
