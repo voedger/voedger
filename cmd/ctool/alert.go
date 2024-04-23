@@ -5,8 +5,11 @@
 package main
 
 import (
+	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/juju/errors"
 	"github.com/spf13/cobra"
@@ -148,6 +151,44 @@ func alertConfigsUpload(cmd *cobra.Command, args []string) error {
 	}
 
 	loggerInfoGreen("Alert's configuration file uploaded successfully")
+
+	return nil
+}
+
+type customTime time.Time
+
+func (ct *customTime) MarshalJSON() ([]byte, error) {
+	t := time.Time(*ct)
+	formatted := t.Format("2006-01-02T15:04:05.99Z")
+	return []byte(fmt.Sprintf(`"%s"`, formatted)), nil
+}
+
+type eventType struct {
+	StartsAt     customTime        `json:"startsAt"`
+	EndsAt       customTime        `json:"endsAt"`
+	Annotations  map[string]string `json:"annotations"`
+	Labels       map[string]string `json:"labels"`
+	GeneratorURL string            `json:"generatorURL"`
+	Status       string            `json:"status"`
+}
+
+func (e *eventType) postAlert(cluster *clusterType) error {
+
+	eventJson, err := json.Marshal([]eventType{*e})
+	if err != nil {
+		return err
+	}
+
+	fName := filepath.Join(scriptsTempDir, "post-alert.json")
+
+	if err = os.WriteFile(fName, eventJson, coreutils.FileMode_rwxrwxrwx); err != nil {
+		return err
+	}
+
+	if err = newScriptExecuter(cluster.sshKey, "").
+		run("post-alert.sh", "post-alert.json"); err != nil {
+		return err
+	}
 
 	return nil
 }

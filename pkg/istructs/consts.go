@@ -7,7 +7,9 @@
 
 package istructs
 
-import "github.com/voedger/voedger/pkg/appdef"
+import (
+	"github.com/voedger/voedger/pkg/appdef"
+)
 
 // *********************************************************************************************************
 //
@@ -184,4 +186,4 @@ const (
 	RateLimitKind_FakeLast
 )
 
-const DefaultAppWSAmount = 10
+const DefaultNumAppWorkspaces = NumAppWorkspaces(10)

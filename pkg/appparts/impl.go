@@ -37,7 +37,7 @@ func newAppPartitions(asp istructs.IAppStructsProvider, saf SyncActualizerFactor
 	return a, func() {}, err
 }
 
-func (aps *apps) DeployApp(name istructs.AppQName, def appdef.IAppDef, partsCount coreutils.NumAppPartitions, engines [cluster.ProcessorKind_Count]int) {
+func (aps *apps) DeployApp(name istructs.AppQName, def appdef.IAppDef, partsCount istructs.NumAppPartitions, engines [cluster.ProcessorKind_Count]int) {
 	aps.mx.Lock()
 	defer aps.mx.Unlock()
 
@@ -85,7 +85,7 @@ func (aps *apps) AppDef(appName istructs.AppQName) (appdef.IAppDef, error) {
 // Returns _total_ application partitions count.
 //
 // This is a configuration value for the application, independent of how many sections are currently deployed.
-func (aps *apps) AppPartsCount(appName istructs.AppQName) (coreutils.NumAppPartitions, error) {
+func (aps *apps) AppPartsCount(appName istructs.AppQName) (istructs.NumAppPartitions, error) {
 	aps.mx.Lock()
 	defer aps.mx.Unlock()
 

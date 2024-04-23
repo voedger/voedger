@@ -59,11 +59,6 @@ type IHTTPClient interface {
 
 type TimeFunc func() time.Time
 
-type NumAppPartitions int
-
-type NumCommandProcessors int
-type NumQueryProcessors int
-
 type PathReader struct {
 	rootPath string
 }

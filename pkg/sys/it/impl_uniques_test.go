@@ -30,6 +30,7 @@ func getUniqueNumber(vit *it.VIT) (int, string) {
 }
 
 func TestBasicUsage_Uniques(t *testing.T) {
+	require := require.New(t)
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
@@ -37,7 +38,7 @@ func TestBasicUsage_Uniques(t *testing.T) {
 	num, bts := getUniqueNumber(vit)
 
 	body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.DocConstraints","Int":%d,"Str":"str","Bool":true,"Bytes":"%s"}}]}`, num, bts)
-	vit.PostWS(ws, "c.sys.CUD", body)
+	expectedRecID := vit.PostWS(ws, "c.sys.CUD", body).NewID()
 
 	t.Run("409 on duplicate basic", func(t *testing.T) {
 		body = fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.DocConstraints","Int":%d,"Str":"str","Bool":true,"Bytes":"%s"}}]}`, num, bts)
@@ -47,6 +48,33 @@ func TestBasicUsage_Uniques(t *testing.T) {
 	t.Run("409 on duplicate different fields order", func(t *testing.T) {
 		body = fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.DocConstraints","Str":"str","Bytes":"%s","Int":%d,"Bool":true}}]}`, bts, num)
 		vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect409()).Println()
+	})
+
+	t.Run("get record id by unique fields values basic", func(t *testing.T) {
+		as, err := vit.AppStructs(istructs.AppQName_test1_app1)
+		require.NoError(err)
+		btsBytes := bytes.NewBuffer(nil)
+		binary.Write(btsBytes, binary.BigEndian, uint32(num))
+		t.Run("match", func(t *testing.T) {
+			recordID, err := uniques.GetRecordIDByUniqueCombination(ws.WSID, it.QNameApp1_DocConstraints, as, map[string]interface{}{
+				"Str":   "str",
+				"Bytes": btsBytes.Bytes(),
+				"Int":   int32(num),
+				"Bool":  true,
+			})
+			require.NoError(err)
+			require.Equal(istructs.RecordID(expectedRecID), recordID)
+		})
+		t.Run("not found", func(t *testing.T) {
+			recordID, err := uniques.GetRecordIDByUniqueCombination(ws.WSID, it.QNameApp1_DocConstraints, as, map[string]interface{}{
+				"Str":   "str",
+				"Bytes": btsBytes.Bytes(),
+				"Int":   int32(num),
+				"Bool":  false, // <-- wrong here
+			})
+			require.NoError(err)
+			require.Zero(recordID)
+		})
 	})
 }
 
@@ -305,6 +333,7 @@ func TestMaxUniqueLen(t *testing.T) {
 }
 
 func TestBasicUsage_UNIQUEFIELD(t *testing.T) {
+	require := require.New(t)
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
@@ -313,10 +342,99 @@ func TestBasicUsage_UNIQUEFIELD(t *testing.T) {
 
 	// insert an initial record
 	body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.DocConstraintsOldAndNewUniques","Int":%d,"Str":"%s"}}]}`, num, bts)
-	vit.PostWS(ws, "c.sys.CUD", body)
+	expectedRecID := vit.PostWS(ws, "c.sys.CUD", body).NewID()
 
 	// fire the UNIQUEFIELD violation, avoid UNIQUE (Str) violation
 	_, newBts := getUniqueNumber(vit)
 	body = fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.DocConstraintsOldAndNewUniques","Int":%d,"Str":"%s"}}]}`, num, newBts)
 	vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect409(it.QNameApp1_DocConstraintsOldAndNewUniques.String()))
+
+	t.Run("get record id by uniquefield value", func(t *testing.T) {
+		as, err := vit.AppStructs(istructs.AppQName_test1_app1)
+		require.NoError(err)
+		recordID, err := uniques.GetRecordIDByUniqueCombination(ws.WSID, it.QNameApp1_DocConstraintsOldAndNewUniques, as, map[string]interface{}{
+			"Int": int32(num),
+		})
+		require.NoError(err)
+		require.Equal(istructs.RecordID(expectedRecID), recordID)
+	})
+}
+
+func TestRecordByUniqueValuesErrors(t *testing.T) {
+	require := require.New(t)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
+
+	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+	num, bts := getUniqueNumber(vit)
+
+	body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.DocConstraints","Int":%d,"Str":"str","Bool":true,"Bytes":"%s"}}]}`, num, bts)
+	vit.PostWS(ws, "c.sys.CUD", body)
+
+	as, err := vit.AppStructs(istructs.AppQName_test1_app1)
+	require.NoError(err)
+
+	btsBytes := bytes.NewBuffer(nil)
+	binary.Write(btsBytes, binary.BigEndian, uint32(num))
+
+	t.Run("unique does not exist by set of fields", func(t *testing.T) {
+		_, err = uniques.GetRecordIDByUniqueCombination(ws.WSID, it.QNameApp1_DocConstraints, as, nil)
+		require.ErrorIs(err, uniques.ErrUniqueNotExist)
+
+		{
+			_, err = uniques.GetRecordIDByUniqueCombination(ws.WSID, it.QNameApp1_DocConstraints, as, map[string]interface{}{
+				"Str":   "str",
+				"Bytes": btsBytes.Bytes(),
+				"Int":   int32(num),
+			})
+			require.ErrorIs(err, uniques.ErrUniqueNotExist)
+		}
+
+		{
+			_, err = uniques.GetRecordIDByUniqueCombination(ws.WSID, it.QNameApp1_DocConstraints, as, map[string]interface{}{
+				"Str":     "str",
+				"Bytes":   btsBytes.Bytes(),
+				"Int":     int32(num),
+				"Bool":    true,
+				"Another": "str",
+			})
+			require.ErrorIs(err, uniques.ErrUniqueNotExist)
+		}
+
+		{
+			_, err = uniques.GetRecordIDByUniqueCombination(ws.WSID, it.QNameApp1_DocConstraints, as, map[string]interface{}{
+				"Str":     "str",
+				"Bytes":   btsBytes.Bytes(),
+				"Int":     int32(num),
+				"Another": "str",
+			})
+			require.ErrorIs(err, uniques.ErrUniqueNotExist)
+		}
+	})
+
+	t.Run("wrong value type", func(t *testing.T) {
+		_, err = uniques.GetRecordIDByUniqueCombination(ws.WSID, it.QNameApp1_DocConstraints, as, map[string]interface{}{
+			"Str":   42,
+			"Bytes": btsBytes.Bytes(),
+			"Int":   int32(num),
+			"Bool":  true,
+		})
+		require.ErrorIs(err, appdef.ErrInvalidTypeKind)
+	})
+
+	t.Run("wrong type", func(t *testing.T) {
+		t.Run("not found", func(t *testing.T) {
+			_, err = uniques.GetRecordIDByUniqueCombination(ws.WSID, appdef.NewQName("app1pkg", "unknown"), as, map[string]interface{}{
+				"Str": 42,
+			})
+			require.ErrorIs(err, appdef.ErrTypeNotFound)
+		})
+		t.Run("not a table", func(t *testing.T) {
+			_, err = uniques.GetRecordIDByUniqueCombination(ws.WSID, appdef.NewQName("app1pkg", "RatedQryParams"), as, map[string]interface{}{
+				"Str": 42,
+			})
+			require.ErrorIs(err, appdef.ErrInvalidTypeKind)
+		})
+	})
+
 }

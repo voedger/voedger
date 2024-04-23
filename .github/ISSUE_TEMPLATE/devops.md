@@ -2,16 +2,27 @@
 name: DevOps
 about: Something nice to improve workflow
 title: ''
-labels: backlog, kind/devops
-assignees: ivvist
+labels: kind/devops, todo/triage
+assignees: ''
 
 ---
 
-## Pain/Problem/Motivation/Requirements
+## Motivation
 
-What is the pain?
+A clear and concise description of the "pain" you want to solve. E.g. "I'm always frustrated when [...]".
 
+## Functional Design
 
-## Solution
+What the system should do, the actions it should perform, and the services it should provide, without delving into how these functions will be implemented technically
 
-Propose the solution. Leave this section blank if you are not sure.
+## Technical Design
+
+Ideas about possible implementation are welcome here. You can leave this section empty.
+
+## Alternatives
+
+A clear and concise description of any alternative solutions or features you've considered.
+
+## Context
+
+Add any other context or screenshots about the feature request here.

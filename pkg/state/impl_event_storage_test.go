@@ -28,7 +28,7 @@ func TestEventStorage_Get(t *testing.T) {
 	testQName := appdef.NewQName("main", "Command")
 
 	app := appStructs(
-		`APPLICATION test(); 
+		`APPLICATION test();
 		WORKSPACE ws1 (
 			TABLE t1 INHERITS CDoc (
 				x int32
@@ -157,6 +157,7 @@ func appStructs(appdefSql string, prepareAppCfg appCfgCallback) istructs.IAppStr
 
 	cfgs := make(istructsmem.AppConfigsType, 1)
 	cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, appDef)
+	cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 	if prepareAppCfg != nil {
 		prepareAppCfg(cfg)
 	}

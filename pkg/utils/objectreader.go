@@ -177,3 +177,27 @@ func JSONMapToCUDBody(data []map[string]interface{}) string {
 	}
 	return string(bb)
 }
+
+func CheckValueByKind(val interface{}, kind appdef.DataKind) error {
+	ok := false
+	switch val.(type) {
+	case int32:
+		ok = kind == appdef.DataKind_int32
+	case int64:
+		ok = kind == appdef.DataKind_int64 || kind == appdef.DataKind_RecordID
+	case float32:
+		ok = kind == appdef.DataKind_float32
+	case float64:
+		ok = kind == appdef.DataKind_float64
+	case bool:
+		ok = kind == appdef.DataKind_bool
+	case string:
+		ok = kind == appdef.DataKind_string || kind == appdef.DataKind_QName
+	case []byte:
+		ok = kind == appdef.DataKind_bytes
+	}
+	if !ok {
+		return fmt.Errorf("provided value %v has type %T but %s is expected: %w", val, val, kind.String(), appdef.ErrInvalidTypeKind)
+	}
+	return nil
+}
