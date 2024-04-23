@@ -6,7 +6,6 @@
 package appdef
 
 import (
-	"fmt"
 	"slices"
 )
 
@@ -29,14 +28,14 @@ func (p *packages) add(local, path string) {
 		panic(err)
 	}
 	if p, ok := p.pathByLocal[local]; ok {
-		panic(fmt.Errorf("package local name «%s» already used for «%s»: %w", local, p, ErrNameUniqueViolation))
+		panic(ErrUniqueViolation("package local name «%s» already used for «%s»", local, p))
 	}
 
 	if path == "" {
-		panic(fmt.Errorf("package «%s» has empty path: %w", local, ErrNameMissed))
+		panic(ErrMissed("package «%s» path", local))
 	}
 	if l, ok := p.localByPath[path]; ok {
-		panic(fmt.Errorf("package path «%s» already used for «%s»: %w", path, l, ErrNameUniqueViolation))
+		panic(ErrUniqueViolation("package path «%s» already used for «%s»", path, l))
 	}
 
 	p.local = append(p.local, local)

@@ -23,7 +23,7 @@ type privilege struct {
 func newPrivilege(kind []PrivilegeKind, granted bool, on []QName, fields []FieldName, role *role, comment ...string) *privilege {
 	pk := PrivilegeKindsFrom(kind...)
 	if len(pk) == 0 {
-		panic(ErrPrivilegeKindsMissed)
+		panic(ErrMissed("privilege kinds"))
 	}
 
 	names, err := validatePrivilegeOnNames(role.app, on...)

@@ -297,7 +297,7 @@ func Test_AppDef_AddProjector(t *testing.T) {
 			prj.States().
 				Add(NewQName("sys", "records"), recName, NewQName("test", "unknown"))
 			_, err := adb.Build()
-			require.ErrorIs(err, ErrTypeNotFound)
+			require.ErrorIs(err, ErrNotFoundError)
 			require.Contains(err.Error(), "test.unknown")
 		})
 	})

@@ -144,12 +144,12 @@ func (ee events) Map() map[QName][]ProjectorEventKind {
 
 func (ee *events) add(on QName, event ...ProjectorEventKind) {
 	if on == NullQName {
-		panic(ErrNameMissed)
+		panic(ErrMissed("event name"))
 	}
 
 	t := ee.app.TypeByName(on)
 	if t == nil {
-		panic(fmt.Errorf("%w: %v", ErrTypeNotFound, on))
+		panic(ErrNotFound("type «%v»", on))
 	}
 	switch t.Kind() {
 	case TypeKind_GDoc, TypeKind_GRecord, TypeKind_CDoc, TypeKind_CRecord, TypeKind_WDoc, TypeKind_WRecord, // CUD
@@ -168,10 +168,10 @@ func (ee *events) add(on QName, event ...ProjectorEventKind) {
 	}
 }
 
-func (ee *events) setComment(record QName, comment ...string) {
-	e, ok := ee.events[record]
+func (ee *events) setComment(on QName, comment ...string) {
+	e, ok := ee.events[on]
 	if !ok {
-		panic(ErrNameNotFound)
+		panic(ErrNotFound("event name «%v»", on))
 	}
 	e.comment.setComment(comment...)
 }

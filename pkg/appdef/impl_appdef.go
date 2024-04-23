@@ -7,7 +7,6 @@ package appdef
 
 import (
 	"errors"
-	"fmt"
 	"sort"
 )
 
@@ -536,10 +535,10 @@ func (app *appDef) appendType(t interface{}) {
 	typ := t.(IType)
 	name := typ.QName()
 	if name == NullQName {
-		panic(fmt.Errorf("%s name cannot be empty: %w", typ.Kind().TrimString(), ErrNameMissed))
+		panic(ErrMissed("%s type name", typ.Kind().TrimString()))
 	}
 	if app.TypeByName(name) != nil {
-		panic(fmt.Errorf("type name «%s» already used: %w", name, ErrNameUniqueViolation))
+		panic(ErrUniqueViolation("type name «%v»", name))
 	}
 
 	app.types[name] = t
@@ -556,7 +555,7 @@ func (app *appDef) build() (err error) {
 func (app *appDef) grant(kinds PrivilegeKinds, on []QName, fields []FieldName, toRole QName, comment ...string) {
 	r := app.Role(toRole)
 	if r == nil {
-		panic(ErrRoleNotFound(toRole))
+		panic(ErrNotFound("role «%v»", toRole))
 	}
 	r.(*role).grant(kinds, on, fields, comment...)
 }
@@ -564,7 +563,7 @@ func (app *appDef) grant(kinds PrivilegeKinds, on []QName, fields []FieldName, t
 func (app *appDef) grantAll(on []QName, toRole QName, comment ...string) {
 	r := app.Role(toRole)
 	if r == nil {
-		panic(ErrRoleNotFound(toRole))
+		panic(ErrNotFound("role «%v»", toRole))
 	}
 	r.(*role).grantAll(on, comment...)
 }
@@ -587,7 +586,7 @@ func (app *appDef) makeSysDataTypes() {
 func (app *appDef) revoke(kinds PrivilegeKinds, on []QName, fromRole QName, comment ...string) {
 	r := app.Role(fromRole)
 	if r == nil {
-		panic(ErrRoleNotFound(fromRole))
+		panic(ErrNotFound("role «%v»", fromRole))
 	}
 	r.(*role).revoke(kinds, on, comment...)
 }
@@ -595,7 +594,7 @@ func (app *appDef) revoke(kinds PrivilegeKinds, on []QName, fromRole QName, comm
 func (app *appDef) revokeAll(on []QName, fromRole QName, comment ...string) {
 	r := app.Role(fromRole)
 	if r == nil {
-		panic(ErrRoleNotFound(fromRole))
+		panic(ErrNotFound("role «%v»", fromRole))
 	}
 	r.(*role).revokeAll(on, comment...)
 }

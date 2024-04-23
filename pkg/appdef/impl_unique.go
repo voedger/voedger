@@ -27,7 +27,7 @@ func newUnique(name QName, fieldNames []FieldName, fields IFields) *unique {
 	for _, f := range fieldNames {
 		fld := fields.Field(f)
 		if fld == nil {
-			panic(fmt.Errorf("can not create unique «%s»: %w: %v", name, ErrFieldNotFound, f))
+			panic(ErrNotFound("field «%v»", f))
 		}
 		u.fields = append(u.fields, fld)
 	}
@@ -71,7 +71,7 @@ func (uu *uniques) setUniqueField(name FieldName) {
 
 	fld := uu.fields.Field(name)
 	if fld == nil {
-		panic((fmt.Errorf("unique field name not found: %w: %v", ErrFieldNotFound, name)))
+		panic(ErrNotFound("unique field «%v»", name))
 	}
 
 	uu.field = fld
@@ -98,26 +98,26 @@ func (uu uniques) Uniques() map[QName]IUnique {
 
 func (uu *uniques) addUnique(name QName, fields []FieldName, comment ...string) {
 	if name == NullQName {
-		panic(fmt.Errorf("unique name cannot be empty: %w", ErrNameMissed))
+		panic(ErrMissed("unique name"))
 	}
 	if ok, err := ValidQName(name); !ok {
 		panic(fmt.Errorf("unique name «%v» is invalid: %w", name, err))
 	}
 	if uu.UniqueByName(name) != nil {
-		panic(fmt.Errorf("unique «%v» is already exists: %w", name, ErrNameUniqueViolation))
+		panic(ErrUniqueViolation("unique name «%v»", name))
 	}
 
 	if uu.app != nil {
 		if t := uu.app.TypeByName(name); t != nil {
-			panic(fmt.Errorf("unique name «%v» is already used by type %v: %w", name, t, ErrNameUniqueViolation))
+			panic(fmt.Errorf("unique name «%v» (already used for %v)", name, t))
 		}
 	}
 
 	if len(fields) == 0 {
-		panic(fmt.Errorf("no fields specified for unique «%v»: %w", name, ErrNameMissed))
+		panic(ErrMissed("unique «%v» fields", name))
 	}
 	if i, j := duplicates(fields); i >= 0 {
-		panic(fmt.Errorf("unique «%v» has duplicates (fields[%d] == fields[%d] == %q): %w", name, i, j, fields[i], ErrNameUniqueViolation))
+		panic(ErrUniqueViolation("fields in unique «%v» has duplicates (fields[%d] == fields[%d] == %q)", name, i, j, fields[i]))
 	}
 
 	if len(fields) > MaxTypeUniqueFieldsCount {

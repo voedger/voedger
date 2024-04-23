@@ -89,17 +89,17 @@ func (cc containers) Containers() []IContainer {
 
 func (cc *containers) addContainer(name string, contType QName, minOccurs, maxOccurs Occurs, comment ...string) {
 	if name == NullName {
-		panic(fmt.Errorf("empty container name: %w", ErrNameMissed))
+		panic(ErrMissed("container name"))
 	}
 	if ok, err := ValidIdent(name); !ok {
 		panic(fmt.Errorf("invalid container name «%v»: %w", name, err))
 	}
 	if cc.Container(name) != nil {
-		panic(fmt.Errorf("container «%v» is already exists: %w", name, ErrNameUniqueViolation))
+		panic(ErrUniqueViolation("container name «%v»", name))
 	}
 
 	if contType == NullQName {
-		panic(fmt.Errorf("missed container «%v» type name: %w", name, ErrNameMissed))
+		panic(ErrMissed(fmt.Sprintf("container «%v» type", name)))
 	}
 
 	if maxOccurs == 0 {
@@ -136,7 +136,8 @@ func validateTypeContainers(t IType) (err error) {
 		for _, cont := range cnt.Containers() {
 			contType := cont.Type()
 			if contType == nil {
-				err = errors.Join(err, fmt.Errorf("%v: container «%s» uses unknown type «%v»: %w", t, cont.Name(), cont.QName(), ErrTypeNotFound))
+				err = errors.Join(err,
+					ErrNotFound("%v container «%s» type «%v»", t, cont.Name(), cont.QName()))
 				continue
 			}
 			if !t.Kind().ContainerKindAvailable(contType.Kind()) {

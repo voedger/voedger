@@ -67,7 +67,7 @@ func (ex *extension) setEngine(engine ExtensionEngineKind) {
 
 func (ex *extension) setName(name string) {
 	if name == "" {
-		panic(fmt.Errorf("%v: extension name is empty: %w", ex, ErrNameMissed))
+		panic(ErrMissed("%v extention name", ex))
 	}
 	if ok, err := ValidIdent(name); !ok {
 		panic(fmt.Errorf("%v: extension name «%s» is not valid: %w", ex, name, err))

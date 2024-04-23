@@ -10,20 +10,44 @@ import (
 	"fmt"
 )
 
-var ErrNameMissed = errors.New("name is missed")
+var ErrMissedError = errors.New("missed")
 
-var ErrInvalidName = errors.New("name not valid")
+func ErrMissed(msg string, args ...any) error {
+	s := msg
+	if len(args) > 0 {
+		s = fmt.Sprintf(msg, args...)
+	}
+	return fmt.Errorf("%w: %s", ErrMissedError, s)
+}
 
-var ErrNameUniqueViolation = errors.New("duplicate name")
+var ErrInvalidError = errors.New("not valid")
 
-var ErrNameNotFound = errors.New("name not found")
+func ErrInvalid(msg string, args ...any) error {
+	s := msg
+	if len(args) > 0 {
+		s = fmt.Sprintf(msg, args...)
+	}
+	return fmt.Errorf("%w: %s", ErrInvalidError, s)
+}
 
-var ErrTypeNotFound = fmt.Errorf("type not found: %w", ErrNameNotFound)
+var ErrUniqueViolationError = errors.New("unique violation")
 
-var ErrFieldNotFound = fmt.Errorf("field not found: %w", ErrNameNotFound)
+func ErrUniqueViolation(msg string, args ...any) error {
+	s := msg
+	if len(args) > 0 {
+		s = fmt.Sprintf(msg, args...)
+	}
+	return fmt.Errorf("%w: %s", ErrUniqueViolationError, s)
+}
 
-func ErrRoleNotFound(r QName) error {
-	return fmt.Errorf("role %v not found: %w", r, ErrTypeNotFound)
+var ErrNotFoundError = errors.New("not found")
+
+func ErrNotFound(msg string, args ...any) error {
+	s := msg
+	if len(args) > 0 {
+		s = fmt.Sprintf(msg, args...)
+	}
+	return fmt.Errorf("%w: %s", ErrNotFoundError, s)
 }
 
 var ErrInvalidQNameStringRepresentation = errors.New("invalid string representation of qualified name")
@@ -59,9 +83,5 @@ var ErrInvalidProjectorCronSchedule = errors.New("invalid projector cron schedul
 var ErrScheduledProjectorWithIntents = errors.New("scheduled projector shall not have intents")
 
 var ErrInvalidPrivilegeKind = errors.New("invalid privilege kind")
-
-var ErrPrivilegeKindsMissed = fmt.Errorf("privilege kinds missed: %w", ErrNameMissed)
-
-var ErrPrivilegeOnMissed = fmt.Errorf("privilege objects missed: %w", ErrNameMissed)
 
 var ErrPrivilegeOnMixed = errors.New("privilege objects mixed types")

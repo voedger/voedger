@@ -155,7 +155,7 @@ func (ff *fields) UserFieldCount() int {
 func (ff *fields) addDataField(name FieldName, data QName, required bool, constraints ...IConstraint) {
 	d := ff.app.Data(data)
 	if d == nil {
-		panic(fmt.Errorf("data type not found: %w: %v", ErrTypeNotFound, data))
+		panic(ErrNotFound("data type «%v»", data))
 	}
 	if len(constraints) > 0 {
 		d = newAnonymousData(ff.app, d.DataKind(), data, constraints...)
@@ -191,10 +191,10 @@ func (ff *fields) addRefField(name FieldName, required bool, ref ...QName) {
 //   - if user field data kind is not allowed by structured type kind
 func (ff *fields) appendField(name FieldName, fld interface{}) {
 	if name == NullName {
-		panic(fmt.Errorf("empty field name: %w", ErrNameMissed))
+		panic(ErrMissed("field name"))
 	}
 	if ff.Field(name) != nil {
-		panic(fmt.Errorf("field «%s» is already exists: %w", name, ErrNameUniqueViolation))
+		panic(ErrUniqueViolation("field name «%v»", name))
 	}
 	if len(ff.fields) >= MaxTypeFieldCount {
 		panic(fmt.Errorf("maximum field count (%d) exceeds: %w", MaxTypeFieldCount, ErrTooManyFields))
@@ -244,7 +244,7 @@ func (ff *fields) makeSysFields() {
 func (ff *fields) setFieldComment(name FieldName, comment ...string) {
 	fld := ff.fields[name]
 	if fld == nil {
-		panic(fmt.Errorf("%w: %v", ErrFieldNotFound, name))
+		panic(ErrNotFound("field «%v»", name))
 	}
 	if fld, ok := fld.(interface{ setComment(comment ...string) }); ok {
 		fld.setComment(comment...)
@@ -254,7 +254,7 @@ func (ff *fields) setFieldComment(name FieldName, comment ...string) {
 func (ff *fields) setFieldVerify(name FieldName, vk ...VerificationKind) {
 	fld := ff.fields[name]
 	if fld == nil {
-		panic(fmt.Errorf("%w: %v", ErrFieldNotFound, name))
+		panic(ErrNotFound("field «%v»", name))
 	}
 	vf := fld.(interface{ setVerify(k ...VerificationKind) })
 	vf.setVerify(vk...)
@@ -335,7 +335,8 @@ func validateTypeFields(t IType) (err error) {
 			for _, n := range rf.Refs() {
 				refType := t.App().TypeByName(n)
 				if refType == nil {
-					err = errors.Join(err, fmt.Errorf("%v: reference field «%s» refs to unknown type «%v»: %w", t, rf.Name(), n, ErrTypeNotFound))
+					err = errors.Join(err,
+						ErrNotFound("%v reference field «%s» type «%v»", t, rf.Name(), n))
 					continue
 				}
 				if _, ok := refType.(IRecord); !ok {

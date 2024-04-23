@@ -389,7 +389,7 @@ func TestValidQNames(t *testing.T) {
 		{"should be ok with empty names", args{[]QName{}}, true, nil},
 		{"should be ok with null name", args{[]QName{NullQName}}, true, nil},
 		{"should be ok with valid names", args{[]QName{NewQName("test", "name1"), NewQName("test", "name2")}}, true, nil},
-		{"should be error with invalid name", args{[]QName{NewQName("test", "name"), NewQName("naked", "🔫")}}, false, ErrInvalidName},
+		{"should be error with invalid name", args{[]QName{NewQName("test", "name"), NewQName("naked", "🔫")}}, false, ErrInvalidError},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
