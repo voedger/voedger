@@ -7,13 +7,14 @@ package cluster
 
 import (
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/parser"
 )
 
-func Provide(cfg *istructsmem.AppConfigType) parser.PackageFS {
-	cfg.Resources.Add(istructsmem.NewQueryFunction(appdef.NewQName(ClusterPackage, "QueryApp"), execQueryApp))
-	cfg.Resources.Add(istructsmem.NewCommandFunction(appdef.NewQName(ClusterPackage, "DeployApp"), execDeployApp))
+func Provide(cfg *istructsmem.AppConfigType, asp istructs.IAppStructsProvider) parser.PackageFS {
+	cfg.Resources.Add(istructsmem.NewQueryFunction(appdef.NewQName(ClusterPackage, "QueryApp"), provideExecQueryApp(asp)))
+	cfg.Resources.Add(istructsmem.NewCommandFunction(appdef.NewQName(ClusterPackage, "DeployApp"), provideExecDeployApp(asp)))
 	// cfg.AddSyncProjectors(istructs.Projector{
 	// 	Name: appdef.NewQName(ClusterPackage, "ApplyDeployApp"),
 	// 	Func: applyDeployApp,

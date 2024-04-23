@@ -6,40 +6,34 @@
 package btstrp
 
 import (
-	"context"
-	"encoding/json"
-	"errors"
 	"fmt"
-	"net/http"
-	"strconv"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appparts"
+	"github.com/voedger/voedger/pkg/apps/sys/clusterapp"
 	"github.com/voedger/voedger/pkg/cluster"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
-	"github.com/voedger/voedger/pkg/router"
 	"github.com/voedger/voedger/pkg/sys/authnz"
 	"github.com/voedger/voedger/pkg/sys/workspace"
 	coreutils "github.com/voedger/voedger/pkg/utils"
-	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
 )
 
 // is a SyncOp within VVM trunk
-func Bootstrap(ctx context.Context, bus ibus.IBus, asp istructs.IAppStructsProvider, timeFunc coreutils.TimeFunc, appparts appparts.IAppPartitions, clusterApp ClusterBuiltInApp, otherApps []cluster.BuiltInApp) error {
+func Bootstrap(federation coreutils.IFederation, asp istructs.IAppStructsProvider, timeFunc coreutils.TimeFunc, appparts appparts.IAppPartitions, clusterApp ClusterBuiltInApp, otherApps []cluster.BuiltInApp) error {
 	// initialize cluster app workspace, use app ws amount 0
 	if err := initClusterAppWS(asp, timeFunc); err != nil {
 		return err
 	}
 
 	// deploy single clusterApp partition 0
-	appparts.DeployApp(istructs.AppQName_sys_cluster, clusterApp.Def, clusterAppNumPartitions, clusterAppNumEngines)
-	appparts.DeployAppPartitions(istructs.AppQName_sys_cluster, []istructs.PartitionID{clusterAppWSIDPartitionID})
+	appparts.DeployApp(istructs.AppQName_sys_cluster, clusterApp.Def, clusterapp.ClusterAppNumPartitions, clusterapp.ClusterAppNumEngines)
+	appparts.DeployAppPartitions(istructs.AppQName_sys_cluster, []istructs.PartitionID{clusterapp.ClusterAppWSIDPartitionID})
 
 	// check apps compatibility
 	for _, app := range otherApps {
-		wasDeployed, deployedNumPartitions, deployedNumAppWorkspaces, err := readPreviousAppDeployment(ctx, bus, app.Name)
+		wasDeployed, deployedNumPartitions, deployedNumAppWorkspaces, err := readPreviousAppDeployment(federation, app.Name)
 		if err != nil {
 			// notest
 			return err
@@ -47,17 +41,17 @@ func Bootstrap(ctx context.Context, bus ibus.IBus, asp istructs.IAppStructsProvi
 
 		if !wasDeployed {
 			// not deployed, call c.cluster.DeployApp
-			if err := deployApp(ctx, bus, app); err != nil {
+			if err := deployApp(federation, app); err != nil {
 				return err
 			}
 			return nil
 		}
 
 		// was deployed somewhen -> check app compatibility
-		if app.NumParts != istructs.NumAppPartitions(deployedNumPartitions) {
+		if app.NumParts != deployedNumPartitions {
 			return fmt.Errorf("app %s declaring NumPartitions=%d but was previously deployed with NumPartitions=%d", app.Name, app.NumParts, deployedNumPartitions)
 		}
-		if app.NumAppWorkspaces != istructs.NumAppWorkspaces(deployedNumAppWorkspaces) {
+		if app.NumAppWorkspaces != deployedNumAppWorkspaces {
 			return fmt.Errorf("app %s declaring NumAppWorkspaces=%d but was previously deployed with NumAppWorksaces=%d", app.Name, app.NumAppWorkspaces, deployedNumAppWorkspaces)
 		}
 	}
@@ -75,97 +69,25 @@ func Bootstrap(ctx context.Context, bus ibus.IBus, asp istructs.IAppStructsProvi
 	return nil
 }
 
-func readPreviousAppDeployment(ctx context.Context, bus ibus.IBus, appQName istructs.AppQName) (wasDeployed bool, deployedNumPartitions int, deployedNumAppWorkspaces int, err error) {
-
-	// TODO use IFederation?
-	
-	queryAppBusRequest := ibus.Request{
-		Method:          ibus.HTTPMethodPOST,
-		WSID:            int64(clusterAppWSID),
-		PartitionNumber: int(clusterAppWSIDPartitionID),
-		Resource:        "q.cluster.QueryApp",
-		AppQName:        istructs.AppQName_sys_cluster.String(),
-		Body:            []byte(fmt.Sprintf(`{"args":{"AppQName":"%s"},"elements":[{"fields": ["NumPartitions", "NumAppWorkspaces"]}]}`, appQName)),
-	}
-	_, sections, secErr, err := bus.SendRequest2(ctx, queryAppBusRequest, ibus.DefaultTimeout)
+func readPreviousAppDeployment(federation coreutils.IFederation, appQName istructs.AppQName) (wasDeployed bool, deployedNumPartitions istructs.NumAppPartitions, deployedNumAppWorkspaces istructs.NumAppWorkspaces, err error) {
+	body := fmt.Sprintf(`{"args":{"AppQName":"%s"},"elements":[{"fields": ["NumPartitions", "NumAppWorkspaces"]}]}`, appQName)
+	resp, err := federation.Func(fmt.Sprintf("api/%s/%d/q.cluster.QueryApp", istructs.AppQName_sys_cluster, clusterapp.ClusterAppWSID), body)
 	if err != nil {
-		// notest
 		return false, 0, 0, err
 	}
-	var sec ibus.ISection
-	defer func() {
-		router.DiscardSection(sec, ctx)
-		for sec := range sections {
-			router.DiscardSection(sec, ctx)
-		}
-	}()
-	count := 0
-	for sec = range sections {
-		arrSec, ok := sec.(ibus.IArraySection)
-		if !ok {
-			// notest
-			err = errors.New("non-array section is returned")
-			return
-		}
-		defer func() {
-			for _, ok := arrSec.Next(ctx); ok; arrSec.Next(ctx) {
-			}
-		}()
 
-		for elemBytes, ok := arrSec.Next(ctx); ok; elemBytes, ok = arrSec.Next(ctx) {
-			switch count {
-			case 0:
-				if deployedNumPartitions, err = strconv.Atoi(string(elemBytes)); err != nil {
-					// notest
-					return
-				}
-				count++
-			case 1:
-				if deployedNumAppWorkspaces, err = strconv.Atoi(string(elemBytes)); err != nil {
-					// notest
-					return
-				}
-				count++
-			default:
-				// notest
-				err = errors.New("unexpected section element received on reading q.cluster.QueryApp reply: " + string(elemBytes))
-				return
-			}
-		}
+	if len(resp.Sections) == 0 {
+		return false, 0, 0, nil
 	}
-	err = *secErr
-	wasDeployed = count == 2
-	return
+	deployedNumPartitions = istructs.NumAppPartitions(resp.SectionRow()[0].(float64))
+	deployedNumAppWorkspaces = istructs.NumAppWorkspaces(resp.SectionRow()[1].(float64))
+	return true, deployedNumPartitions, deployedNumAppWorkspaces, nil
 }
 
-func deployApp(ctx context.Context, bus ibus.IBus, builtinApp cluster.BuiltInApp) error {
-	req := ibus.Request{
-		Method:          ibus.HTTPMethodPOST,
-		WSID:            int64(clusterAppWSID),
-		PartitionNumber: int(clusterAppWSIDPartitionID),
-		Resource:        "c.cluster.DeployApp",
-		AppQName:        istructs.AppQName_sys_cluster.String(),
-		Body: []byte(fmt.Sprintf(`{"args":["AppQName":"%s","NumPartitions":%d,"NumAppWorkspaces":%d]}`, builtinApp.Name,
-			builtinApp.NumParts, builtinApp.NumAppWorkspaces)),
-	}
-	resp, _, _, err := bus.SendRequest2(ctx, req, ibus.DefaultTimeout)
-	if err != nil {
-		// notest
-		return err
-	}
-	if resp.StatusCode == http.StatusOK {
-		return nil
-	}
-	m := map[string]interface{}{}
-	if err = json.Unmarshal(resp.Data, &m); err != nil {
-		// notest
-		return err
-	}
-	sysErrorMap := m["sys.Error"].(map[string]interface{})
-	return coreutils.SysError{
-		HTTPStatus: int(sysErrorMap["HTTPStatus"].(float64)),
-		Message:    sysErrorMap["Message"].(string),
-	}
+func deployApp(federation coreutils.IFederation, builtinApp cluster.BuiltInApp) error {
+	body := fmt.Sprintf(`{"args":["AppQName":"%s","NumPartitions":%d,"NumAppWorkspaces":%d]}`, builtinApp.Name, builtinApp.NumParts, builtinApp.NumAppWorkspaces)
+	_, err := federation.Func(fmt.Sprintf("api/%s/%d/q.cluster.QueryApp", istructs.AppQName_sys_cluster, clusterapp.ClusterAppWSID), body, coreutils.WithDiscardResponse())
+	return err
 }
 
 func initClusterAppWS(asp istructs.IAppStructsProvider, timeFunc coreutils.TimeFunc) error {
@@ -173,14 +95,14 @@ func initClusterAppWS(asp istructs.IAppStructsProvider, timeFunc coreutils.TimeF
 	if err != nil {
 		return err
 	}
-	if err := initAppWS(as, clusterAppWSIDPartitionID, clusterAppWSID, istructs.FirstOffset, istructs.FirstOffset, istructs.UnixMilli(timeFunc().UnixMilli())); err != nil {
+	if err := InitAppWS(as, clusterapp.ClusterAppWSIDPartitionID, clusterapp.ClusterAppWSID, istructs.FirstOffset, istructs.FirstOffset, istructs.UnixMilli(timeFunc().UnixMilli())); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func initAppWS(as istructs.IAppStructs, partitionID istructs.PartitionID, wsid istructs.WSID, plogOffset, wlogOffset istructs.Offset, currentMillis istructs.UnixMilli) error {
+func InitAppWS(as istructs.IAppStructs, partitionID istructs.PartitionID, wsid istructs.WSID, plogOffset, wlogOffset istructs.Offset, currentMillis istructs.UnixMilli) error {
 	existingCDocWSDesc, err := as.Records().GetSingleton(wsid, authnz.QNameCDocWorkspaceDescriptor)
 	if err != nil {
 		return err

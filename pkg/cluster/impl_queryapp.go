@@ -9,9 +9,10 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/state"
+	"github.com/voedger/voedger/pkg/sys/uniques"
 )
 
 type res struct {
@@ -27,51 +28,44 @@ func (r *res) AsInt32(name string) int32 {
 	return r.numAppWorkspaces
 }
 
-func execQueryApp(_ context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
-	appQNameStr := args.ArgumentObject.AsString(Field_Name)
+func provideExecQueryApp(asp istructs.IAppStructsProvider) istructsmem.ExecQueryClosure {
+	return func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
+		appQNameStr := args.ArgumentObject.AsString(Field_AppQName)
+		appQName, err := istructs.ParseAppQName(appQNameStr)
+		if err != nil {
+			return fmt.Errorf("failed to parse appQName %q: %w", appQNameStr, err)
+		}
 
-	appQName, err := istructs.ParseAppQName(appQNameStr)
-	if err != nil {
-		return fmt.Errorf("failed to parse appQName %q: %w", appQNameStr, err)
-	}
+		as, err := asp.AppStructs(appQName)
+		if err != nil {
+			// notest
+			return err
+		}
+		appID, err := uniques.GetRecordIDByUniqueCombination(args.WSID, qNameWDocApp, as, map[string]interface{}{
+			Field_AppQName: appQNameStr,
+		})
+		if err != nil {
+			return err
+		}
+		if appID == istructs.NullRecordID {
+			return nil
+		}
 
-	clusterAppID, ok := istructs.ClusterApps[appQName]
-	if !ok {
-		return fmt.Errorf("cluster app ID is unknown for the app %s", appQName)
-	}
+		kb, err := args.State.KeyBuilder(state.Record, qNameWDocApp)
+		if err != nil {
+			// notest
+			return err
+		}
+		kb.PutRecordID(state.Field_ID, appID)
+		appRec, err := args.State.MustExist(kb)
+		if err != nil {
+			// notest
+			return err
+		}
 
-	kb, err := args.State.KeyBuilder(state.View, QNameViewDeployedApps)
-	if err != nil {
-		// notest
-		return err
+		return callback(&res{
+			numPartitions:    appRec.AsInt32(Field_NumPartitions),
+			numAppWorkspaces: appRec.AsInt32(Field_NumAppWorkspaces),
+		})
 	}
-
-	kb.PutInt32(Field_ClusterAppID, int32(clusterAppID))
-	kb.PutString(Field_Name, appQName.String())
-	v, ok, err := args.State.CanExist(kb)
-	if err != nil {
-		// notest
-		return err
-	}
-	if !ok {
-		return nil
-	}
-
-	if kb, err = args.State.KeyBuilder(state.WLog, appdef.NullQName); err != nil {
-		// notest
-		return err
-	}
-	kb.PutInt64(state.Field_Offset, v.AsInt64(Field_DeployEventWLogOffset))
-	kb.PutInt64(state.Field_Count, 1)
-	eventSV, err := args.State.MustExist(kb)
-	if err != nil {
-		// notest
-		return err
-	}
-
-	event := eventSV.AsEvent("").(istructs.IWLogEvent)
-	return callback(&res{
-		numPartitions:    event.ArgumentObject().AsInt32(Field_NumPartitions),
-		numAppWorkspaces: event.ArgumentObject().AsInt32(Field_NumAppWorkspaces),
-	})
 }

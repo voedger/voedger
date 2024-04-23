@@ -188,19 +188,19 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 	))
 }
 
-func provideBootstrapOperator(bus ibus.IBus, asp istructs.IAppStructsProvider, timeFunc coreutils.TimeFunc, appparts appparts.IAppPartitions,
+func provideBootstrapOperator(federation coreutils.IFederation, asp istructs.IAppStructsProvider, timeFunc coreutils.TimeFunc, appparts appparts.IAppPartitions,
 	builtinApps []cluster.BuiltInApp) BootstrapOperator {
 	var clusterBuiltinApp btstrp.ClusterBuiltInApp
-	// otherApps := make([]cluster.BuiltInApp, 0, len(builtinApps)-1)
-	// for _, app := range builtinApps {
-	// 	if app.Name == istructs.AppQName_sys_cluster {
-	// 		clusterBuiltinApp = btstrp.ClusterBuiltInApp(app)
-	// 	} else {
-	// 		otherApps = append(otherApps, app)
-	// 	}
-	// }
+	otherApps := make([]cluster.BuiltInApp, 0, len(builtinApps)-1)
+	for _, app := range builtinApps {
+		if app.Name == istructs.AppQName_sys_cluster {
+			clusterBuiltinApp = btstrp.ClusterBuiltInApp(app)
+		} else {
+			otherApps = append(otherApps, app)
+		}
+	}
 	return pipeline.NewSyncOp(func(ctx context.Context, work interface{}) (err error) {
-		return btstrp.Bootstrap(ctx, bus, asp, timeFunc, appparts, clusterBuiltinApp, otherApps)
+		return btstrp.Bootstrap(federation, asp, timeFunc, appparts, clusterBuiltinApp, otherApps)
 	})
 }
 

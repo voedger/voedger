@@ -4,18 +4,11 @@
 ALTER WORKSPACE AppWorkspaceWS (
 
 	TABLE App INHERITS WDoc (
-		AppQName varchar, -- UNIQUE, make possible to find by it
+		AppQName varchar,
 		NumPartitions int32,
-		NumAppWorkspace int32
+		NumAppWorkspace int32,
+		UNIQUE (AppQName)
 	);
-
-	-- VIEW DeployedApps (
-	-- 	ClusterAppID int32, -- see istructs.ClusterApps
-	-- 	AppQName varchar,
-	-- 	-- DeployEventWLogOffset int64,
-	-- 	AppID ref(App),
-	-- 	PRIMARY KEY ((ClusterAppID), Name)
-	-- ) AS RESULT OF ApplyDeployApp;
 
 	TYPE QueryAppArgs (
 		AppQName varchar
@@ -26,9 +19,14 @@ ALTER WORKSPACE AppWorkspaceWS (
 		NumPartitions int32
 	);
 
+	TYPE DeployAppParams (
+		AppQName varchar.
+		NumPartitions int32,
+		NumAppWorkspace int32
+	)
+
 	EXTENSION ENGINE BUILTIN (
-		COMMAND DeployApp(App);
+		COMMAND DeployApp(DeployAppParams);
 		QUERY QueryApp(QueryAppArgs) RETURNS QueryAppResult;
-		-- SYNC PROJECTOR ApplyDeployApp AFTER EXECUTE ON DeployApp INTENTS (View(DeployedApps));
 	);
 );
