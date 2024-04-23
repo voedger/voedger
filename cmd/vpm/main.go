@@ -9,6 +9,7 @@ import (
 	_ "embed"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -107,7 +108,7 @@ func exactArgs(n int) cobra.PositionalArgs {
 			cmd.RunE = runHelpFuncInstead
 			return nil
 		case len(args) != n:
-			strCountOfArgs := fmt.Sprintf("%d", n)
+			strCountOfArgs := strconv.Itoa(n)
 			if n == 0 {
 				strCountOfArgs = "no"
 			}
