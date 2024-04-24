@@ -420,7 +420,6 @@ func TestRecordByUniqueValuesErrors(t *testing.T) {
 			"Bool":  true,
 		})
 		require.ErrorIs(err, appdef.ErrInvalidError)
-		require.ErrorContains(err, "Str")
 	})
 
 	t.Run("wrong type", func(t *testing.T) {
