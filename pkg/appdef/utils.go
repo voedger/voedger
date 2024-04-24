@@ -12,7 +12,7 @@ func ValidIdent(ident string) (bool, error) {
 	}
 
 	if l := len(ident); l > MaxIdentLen {
-		return false, ErrInvalid("ident «%s» too long (%d runes)", ident, l)
+		return false, ErrOutOfBounds("ident «%s» too long (%d runes, max is %d)", ident, l, MaxIdentLen)
 	}
 
 	const (

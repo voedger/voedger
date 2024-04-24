@@ -30,10 +30,16 @@ func ErrInvalid(msg string, args ...any) error {
 	return enrichError(ErrInvalidError, msg, args...)
 }
 
-var ErrUniqueViolationError = errors.New("unique violation")
+var ErrOutOfBoundsError = errors.New("out of bounds")
 
-func ErrUniqueViolation(msg string, args ...any) error {
-	return enrichError(ErrUniqueViolationError, msg, args...)
+func ErrOutOfBounds(msg string, args ...any) error {
+	return enrichError(ErrOutOfBoundsError, msg, args...)
+}
+
+var ErrAlreadyExistsError = errors.New("already exists")
+
+func ErrAlreadyExists(msg string, args ...any) error {
+	return enrichError(ErrAlreadyExistsError, msg, args...)
 }
 
 var ErrNotFoundError = errors.New("not found")
@@ -54,38 +60,26 @@ func ErrRoleNotFound(r QName) error {
 	return ErrNotFound("role «%v»", r)
 }
 
-var ErrInvalidQNameStringRepresentation = errors.New("invalid string representation of qualified name")
+var ErrConvertError = errors.New("convert error")
 
-var ErrInvalidTypeKind = errors.New("invalid type kind")
+func ErrConvert(msg string, args ...any) error {
+	return enrichError(ErrConvertError, msg, args...)
+}
 
-var ErrTooManyFields = errors.New("too many fields")
+var ErrTooManyError = errors.New("too many")
 
-var ErrIncompatibleConstraints = errors.New("incompatible constraints")
+func ErrTooMany(msg string, args ...any) error {
+	return enrichError(ErrTooManyError, msg, args...)
+}
 
-var ErrTooManyContainers = errors.New("too many containers")
+var ErrIncompatibleError = errors.New("incompatible")
 
-var ErrTooManyUniques = errors.New("too many uniques")
+func ErrIncompatible(msg string, args ...any) error {
+	return enrichError(ErrIncompatibleError, msg, args...)
+}
 
-var ErrInvalidDataKind = errors.New("invalid data kind")
+var ErrUnsupportedError = errors.ErrUnsupported
 
-var ErrInvalidOccurs = errors.New("invalid occurs value")
-
-var ErrFieldsMissed = errors.New("fields missed")
-
-var ErrUniqueOverlaps = errors.New("unique fields overlaps")
-
-var ErrInvalidExtensionEngineKind = errors.New("extension engine kind is not valid")
-
-var ErrWorkspaceShouldBeAbstract = errors.New("workspace should be abstract")
-
-var ErrInvalidProjectorEventKind = errors.New("invalid projector event kind")
-
-var ErrEmptyProjectorEvents = errors.New("empty projector events")
-
-var ErrInvalidProjectorCronSchedule = errors.New("invalid projector cron schedule")
-
-var ErrScheduledProjectorWithIntents = errors.New("scheduled projector shall not have intents")
-
-var ErrInvalidPrivilegeKind = errors.New("invalid privilege kind")
-
-var ErrPrivilegeOnMixed = errors.New("privilege objects mixed types")
+func ErrUnsupported(msg string, args ...any) error {
+	return enrichError(ErrUnsupportedError, msg, args...)
+}

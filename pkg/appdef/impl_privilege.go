@@ -35,7 +35,7 @@ func newPrivilege(kind []PrivilegeKind, granted bool, on []QName, fields []Field
 	allPk := AllPrivilegesOnType(o.Kind())
 	for _, k := range pk {
 		if !allPk.Contains(k) {
-			panic(fmt.Errorf("%w: %v not applicable to %v", ErrInvalidPrivilegeKind, k, o))
+			panic(ErrIncompatible("privilege «%s» with %v", k, o))
 		}
 	}
 

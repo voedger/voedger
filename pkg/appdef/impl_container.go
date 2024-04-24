@@ -95,7 +95,7 @@ func (cc *containers) addContainer(name string, contType QName, minOccurs, maxOc
 		panic(fmt.Errorf("invalid container name «%v»: %w", name, err))
 	}
 	if cc.Container(name) != nil {
-		panic(ErrUniqueViolation("container name «%v»", name))
+		panic(ErrAlreadyExists("container «%v»", name))
 	}
 
 	if contType == NullQName {
@@ -103,20 +103,20 @@ func (cc *containers) addContainer(name string, contType QName, minOccurs, maxOc
 	}
 
 	if maxOccurs == 0 {
-		panic(fmt.Errorf("max occurs value (0) must be positive number: %w", ErrInvalidOccurs))
+		panic(ErrOutOfBounds("max occurs value should be positive number"))
 	}
 	if maxOccurs < minOccurs {
-		panic(fmt.Errorf("max occurs (%v) must be greater or equal to min occurs (%v): %w", maxOccurs, minOccurs, ErrInvalidOccurs))
+		panic(ErrOutOfBounds("max occurs should be greater than or equal to min occurs (%v)", minOccurs))
 	}
 
 	if typ := cc.app.TypeByName(contType); typ != nil {
 		if (cc.typeKind != TypeKind_null) && !cc.typeKind.ContainerKindAvailable(typ.Kind()) {
-			panic(fmt.Errorf("type kind «%s» does not support child container kind «%s»: %w", cc.typeKind.TrimString(), typ.Kind().TrimString(), ErrInvalidTypeKind))
+			panic(ErrInvalid("type «%v» can not to be a child of «%v»", typ, cc.typeKind.TrimString()))
 		}
 	}
 
 	if len(cc.containers) >= MaxTypeContainerCount {
-		panic(fmt.Errorf("maximum container count (%d) exceeds: %w", MaxTypeContainerCount, ErrTooManyContainers))
+		panic(ErrTooMany("containers, maximum is %d", MaxTypeContainerCount))
 	}
 
 	cont := newContainer(cc.app, name, contType, minOccurs, maxOccurs)
@@ -141,7 +141,8 @@ func validateTypeContainers(t IType) (err error) {
 				continue
 			}
 			if !t.Kind().ContainerKindAvailable(contType.Kind()) {
-				err = errors.Join(err, fmt.Errorf("%v: container «%s» type %v is incompatible: «%s» can`t contain «%s»: %w", t, cont.Name(), contType, t.Kind().TrimString(), contType.Kind().TrimString(), ErrInvalidTypeKind))
+				err = errors.Join(err,
+					ErrInvalid("type «%v» can not to be a child of «%v»", contType, t))
 			}
 		}
 	}

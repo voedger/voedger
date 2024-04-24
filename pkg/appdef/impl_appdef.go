@@ -538,7 +538,7 @@ func (app *appDef) appendType(t interface{}) {
 		panic(ErrMissed("%s type name", typ.Kind().TrimString()))
 	}
 	if app.TypeByName(name) != nil {
-		panic(ErrUniqueViolation("type name «%v»", name))
+		panic(ErrAlreadyExists("type «%v»", name))
 	}
 
 	app.types[name] = t

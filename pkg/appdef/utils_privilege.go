@@ -20,7 +20,7 @@ func PrivilegeKindsFrom(kinds ...PrivilegeKind) PrivilegeKinds {
 				pk = append(pk, k)
 			}
 		} else {
-			panic(fmt.Errorf("%w: %v", ErrInvalidPrivilegeKind, k))
+			panic(ErrOutOfBounds("privilege kind «%v»", k))
 		}
 	}
 	return pk
@@ -129,14 +129,14 @@ func validatePrivilegeOnNames(app IAppDef, on ...QName) (QNames, error) {
 		case TypeKind_Role:
 			k = TypeKind_Role
 		default:
-			return nil, fmt.Errorf("type can not to be privileged: %w: %v", ErrInvalidTypeKind, t)
+			return nil, ErrIncompatible("type «%v» can not to be privileged", t)
 		}
 
 		if onType != k {
 			if onType == TypeKind_null {
 				onType = k
 			} else {
-				return nil, fmt.Errorf("%w: %v and %v", ErrPrivilegeOnMixed, app.Type(names[0]), t)
+				return nil, ErrIncompatible("privileged object types mixed in list (%v and %v)", app.Type(names[0]), t)
 			}
 		}
 	}

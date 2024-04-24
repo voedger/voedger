@@ -167,7 +167,7 @@ func (ff *fields) addDataField(name FieldName, data QName, required bool, constr
 func (ff *fields) addField(name FieldName, kind DataKind, required bool, constraints ...IConstraint) {
 	d := ff.app.SysData(kind)
 	if d == nil {
-		panic(fmt.Errorf("system data type for data kind «%s» is not exists: %w", kind.TrimString(), ErrInvalidTypeKind))
+		panic(ErrNotFound("system data type for data kind «%s»", kind.TrimString()))
 	}
 	if len(constraints) > 0 {
 		d = newAnonymousData(ff.app, d.DataKind(), d.QName(), constraints...)
@@ -194,10 +194,10 @@ func (ff *fields) appendField(name FieldName, fld interface{}) {
 		panic(ErrMissed("field name"))
 	}
 	if ff.Field(name) != nil {
-		panic(ErrUniqueViolation("field name «%v»", name))
+		panic(ErrAlreadyExists("field «%v»", name))
 	}
 	if len(ff.fields) >= MaxTypeFieldCount {
-		panic(fmt.Errorf("maximum field count (%d) exceeds: %w", MaxTypeFieldCount, ErrTooManyFields))
+		panic(ErrTooMany("fields, maximum is %d", MaxTypeFieldCount))
 	}
 
 	if !IsSysField(name) {
@@ -206,7 +206,7 @@ func (ff *fields) appendField(name FieldName, fld interface{}) {
 		}
 		dk := fld.(IField).DataKind()
 		if (ff.typeKind != TypeKind_null) && !ff.typeKind.DataKindAvailable(dk) {
-			panic(fmt.Errorf("%v type does not support %s-data fields: %w", ff.typeKind.TrimString(), dk.TrimString(), ErrInvalidDataKind))
+			panic(ErrIncompatible("data kind «%s» with fields of «%v»", dk.TrimString(), ff.typeKind.TrimString()))
 		}
 	}
 
@@ -340,7 +340,8 @@ func validateTypeFields(t IType) (err error) {
 					continue
 				}
 				if _, ok := refType.(IRecord); !ok {
-					err = errors.Join(err, fmt.Errorf("%v: reference field «%s» refs to not a record type %v: %w", t, n, refType, ErrInvalidTypeKind))
+					err = errors.Join(err,
+						ErrInvalid("%v reference field «%s» type «%v» is not a record type", t, n, refType))
 					continue
 				}
 			}

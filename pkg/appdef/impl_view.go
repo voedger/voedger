@@ -7,7 +7,6 @@ package appdef
 
 import (
 	"errors"
-	"fmt"
 )
 
 // # Implements:
@@ -149,7 +148,7 @@ func (pk *viewPartKey) addDataField(name FieldName, dataType QName, constraints 
 		panic(ErrNotFound("%v partition key field «%s» data type «%v»", pk.view.QName(), name, dataType))
 	}
 	if k := d.DataKind(); !k.IsFixed() {
-		panic(fmt.Errorf("%v: view partition key field «%s» has variable length type «%s»: %w", pk.view.QName(), name, k.TrimString(), ErrInvalidDataKind))
+		panic(ErrIncompatible("various length %s-field «%s» with partition key of %v", k.TrimString(), name, pk.view))
 	}
 
 	pk.view.addDataField(name, dataType, true, constraints...)
@@ -159,7 +158,7 @@ func (pk *viewPartKey) addDataField(name FieldName, dataType QName, constraints 
 
 func (pk *viewPartKey) addField(name FieldName, kind DataKind, constraints ...IConstraint) {
 	if !kind.IsFixed() {
-		panic(fmt.Errorf("%v: view partition key field «%s» has variable length type «%s»: %w", pk.view.QName(), name, kind.TrimString(), ErrInvalidDataKind))
+		panic(ErrIncompatible("various length %s-field «%s» with partition key of %v", kind.TrimString(), name, pk.view))
 	}
 
 	pk.view.addField(name, kind, true, constraints...)
@@ -184,7 +183,7 @@ func (pk *viewPartKey) setFieldComment(name FieldName, comment ...string) {
 // Validates view partition key
 func (pk *viewPartKey) validate() error {
 	if pk.FieldCount() == 0 {
-		return fmt.Errorf("%v: view partition key can not to be empty: %w", pk.view.QName(), ErrFieldsMissed)
+		return ErrMissed("%v partition key fields", pk.view)
 	}
 	return nil
 }
@@ -271,7 +270,7 @@ func (cc *viewClustCols) isClustCols() {}
 // Panics if variable length field already exists
 func (cc *viewClustCols) panicIfVarFieldDuplication(name FieldName, kind DataKind) {
 	if len(cc.varField) > 0 {
-		panic(fmt.Errorf("%v: view clustering column already has a field of variable length «%s», you can not add a field «%s» after it: %w", cc.view.QName(), cc.varField, name, ErrInvalidDataKind))
+		panic(ErrUnsupported("%v clustering column already has a various length field «%s», it should be last field and no more fields can be added", cc.view, cc.varField))
 	}
 	if !kind.IsFixed() {
 		cc.varField = name
@@ -287,9 +286,8 @@ func (cc *viewClustCols) setFieldComment(name FieldName, comment ...string) {
 // Validates view clustering columns
 func (cc *viewClustCols) validate() (err error) {
 	if cc.FieldCount() == 0 {
-		return fmt.Errorf("%v: view clustering columns can not to be empty: %w", cc.view.QName(), ErrFieldsMissed)
+		return ErrMissed("%v clustering columns fields", cc.view)
 	}
-
 	return nil
 }
 

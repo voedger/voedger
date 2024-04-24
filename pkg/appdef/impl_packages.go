@@ -28,14 +28,14 @@ func (p *packages) add(local, path string) {
 		panic(err)
 	}
 	if p, ok := p.pathByLocal[local]; ok {
-		panic(ErrUniqueViolation("package local name «%s» already used for «%s»", local, p))
+		panic(ErrAlreadyExists("package local name «%s» already used for «%s»", local, p))
 	}
 
 	if path == "" {
 		panic(ErrMissed("package «%s» path", local))
 	}
 	if l, ok := p.localByPath[path]; ok {
-		panic(ErrUniqueViolation("package path «%s» already used for «%s»", path, l))
+		panic(ErrAlreadyExists("package path «%s» already used for «%s»", path, l))
 	}
 
 	p.local = append(p.local, local)

@@ -88,20 +88,17 @@ func (prj *projector) Validate() (err error) {
 	err = prj.extension.Validate()
 
 	if (len(prj.events.events) == 0) && (prj.cronSchedule == "") {
-		err = errors.Join(err,
-			fmt.Errorf("%v: events set is empty: %w", prj, ErrEmptyProjectorEvents))
+		err = errors.Join(err, ErrMissed("%v events", prj))
 	}
 
 	if prj.cronSchedule != "" {
 		_, e := cron.ParseStandard(prj.cronSchedule)
 		if e != nil {
-			err = errors.Join(err,
-				fmt.Errorf("%v: %w: %w", prj, ErrInvalidProjectorCronSchedule, e))
+			err = errors.Join(err, enrichError(e, "%v cron schedule", prj))
 		}
 
 		if prj.intents.Len() > 0 {
-			err = errors.Join(err,
-				fmt.Errorf("%v: %w", prj, ErrScheduledProjectorWithIntents))
+			err = errors.Join(err, ErrUnsupported("%v with schedule can't have intents", prj))
 		}
 	}
 	return err
@@ -164,7 +161,7 @@ func (ee *events) add(on QName, event ...ProjectorEventKind) {
 		}
 		ee.eventsMap[on] = e.Kind()
 	default:
-		panic(fmt.Errorf("%v is not applicable for projector event: %w", t, ErrInvalidProjectorEventKind))
+		panic(ErrIncompatible("%v is not applicable for projector event", t))
 	}
 }
 
@@ -254,7 +251,7 @@ func (e event) String() string {
 func (e *event) addKind(kind ...ProjectorEventKind) {
 	for _, k := range kind {
 		if !k.typeCompatible(e.on.Kind()) {
-			panic(fmt.Errorf("%s event is not applicable with %v: %w", k.TrimString(), e.on, ErrInvalidProjectorEventKind))
+			panic(ErrIncompatible("event kind «%s» is not compatible with %v", k.TrimString(), e.on))
 		}
 		e.kinds |= 1 << k
 	}

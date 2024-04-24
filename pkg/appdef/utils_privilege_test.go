@@ -36,8 +36,8 @@ func TestPrivilegeKindsFrom(t *testing.T) {
 			kk   []PrivilegeKind
 			want error
 		}{
-			{"null", []PrivilegeKind{PrivilegeKind_null}, ErrInvalidPrivilegeKind},
-			{"out of bounds", []PrivilegeKind{PrivilegeKind_count}, ErrInvalidPrivilegeKind},
+			{"null", []PrivilegeKind{PrivilegeKind_null}, ErrOutOfBoundsError},
+			{"out of bounds", []PrivilegeKind{PrivilegeKind_count}, ErrOutOfBoundsError},
 		}
 		require := require.New(t)
 		for _, tt := range tests {

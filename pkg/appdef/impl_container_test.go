@@ -135,8 +135,8 @@ func TestValidateContainer(t *testing.T) {
 		doc.AddContainer("obj", NewQName("test", "obj"), 0, 1)
 		_ = app.AddObject(NewQName("test", "obj"))
 		_, err := app.Build()
-		require.ErrorIs(err, ErrInvalidTypeKind)
-		require.ErrorContains(err, "«CDoc» can`t contain «Object»")
+		require.ErrorIs(err, ErrInvalidError)
+		require.ErrorContains(err, "test.obj")
 	})
 }
 

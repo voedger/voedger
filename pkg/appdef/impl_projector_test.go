@@ -281,7 +281,7 @@ func Test_AppDef_AddProjector(t *testing.T) {
 
 			prj := adb.AddProjector(prjName)
 			_, err := adb.Build()
-			require.ErrorIs(err, ErrEmptyProjectorEvents)
+			require.ErrorIs(err, ErrMissedError)
 			require.Contains(err.Error(), fmt.Sprint(prj))
 		})
 
@@ -426,7 +426,7 @@ func Test_AppDef_AddScheduledProjector(t *testing.T) {
 			prj := adb.AddProjector(prjName)
 			prj.SetCronSchedule("naked 🔫")
 			_, err := adb.Build()
-			require.ErrorIs(err, ErrInvalidProjectorCronSchedule)
+			require.Error(err)
 			require.Contains(err.Error(), fmt.Sprint(prj))
 			require.Contains(err.Error(), "naked 🔫")
 		})
@@ -447,7 +447,7 @@ func Test_AppDef_AddScheduledProjector(t *testing.T) {
 				Add(sysViews, viewName).SetComment(sysViews, "error here: scheduled projector shall not have intents")
 
 			_, err := adb.Build()
-			require.ErrorIs(err, ErrScheduledProjectorWithIntents)
+			require.ErrorIs(err, ErrUnsupportedError)
 			require.Contains(err.Error(), fmt.Sprint(prj))
 		})
 	})

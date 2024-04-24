@@ -80,7 +80,7 @@ func Test_ValidIdent(t *testing.T) {
 			name:    "error if too long",
 			args:    args{ident: strings.Repeat("_", MaxIdentLen) + `_`},
 			wantOk:  false,
-			wantErr: ErrInvalidError,
+			wantErr: ErrOutOfBoundsError,
 		},
 		// positive tests
 		{

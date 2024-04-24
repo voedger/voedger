@@ -43,7 +43,7 @@ func TestBasicUsage_QName(t *testing.T) {
 		q, e := ParseQName("saleOrders")
 		require.NotNil(q)
 		require.Equal(NullQName, q)
-		require.ErrorIs(e, ErrInvalidQNameStringRepresentation)
+		require.ErrorIs(e, ErrConvertError)
 	}
 
 	{
@@ -51,7 +51,7 @@ func TestBasicUsage_QName(t *testing.T) {
 		require.NotNil(ParseQName("sale.orders."))
 		require.NotNil(q)
 		require.Equal(NullQName, q)
-		require.ErrorIs(e, ErrInvalidQNameStringRepresentation)
+		require.ErrorIs(e, ErrConvertError)
 	}
 }
 
@@ -193,7 +193,7 @@ func TestQName_UnmarshalInvalidString(t *testing.T) {
 		q := NewQName("a", "b")
 
 		err = q.UnmarshalJSON([]byte("\"\""))
-		require.ErrorIs(err, ErrInvalidQNameStringRepresentation)
+		require.ErrorIs(err, ErrConvertError)
 		require.Equal(NullQName, q)
 	})
 
@@ -201,7 +201,7 @@ func TestQName_UnmarshalInvalidString(t *testing.T) {
 		q := NewQName("a", "b")
 
 		err = q.UnmarshalJSON([]byte("\"bcd\""))
-		require.ErrorIs(err, ErrInvalidQNameStringRepresentation)
+		require.ErrorIs(err, ErrConvertError)
 		require.ErrorContains(err, "bcd")
 		require.Equal(NullQName, q)
 	})
@@ -210,7 +210,7 @@ func TestQName_UnmarshalInvalidString(t *testing.T) {
 		q := NewQName("a", "b")
 
 		err = q.UnmarshalJSON([]byte("\"c..d\""))
-		require.ErrorIs(err, ErrInvalidQNameStringRepresentation)
+		require.ErrorIs(err, ErrConvertError)
 		require.ErrorContains(err, "c..d")
 		require.Equal(NullQName, q)
 	})
@@ -579,7 +579,7 @@ func TestFullQName_UnmarshalInvalidString(t *testing.T) {
 		fqn := NewFullQName("a.a/a", "b")
 
 		err = fqn.UnmarshalJSON([]byte("\"\""))
-		require.ErrorIs(err, ErrInvalidQNameStringRepresentation)
+		require.ErrorIs(err, ErrConvertError)
 		require.Equal(NullFullQName, fqn)
 	})
 
@@ -587,7 +587,7 @@ func TestFullQName_UnmarshalInvalidString(t *testing.T) {
 		fqn := NewFullQName("a.a/a", "b")
 
 		err = fqn.UnmarshalJSON([]byte("\"bcd\""))
-		require.ErrorIs(err, ErrInvalidQNameStringRepresentation)
+		require.ErrorIs(err, ErrConvertError)
 		require.ErrorContains(err, "bcd")
 		require.Equal(NullFullQName, fqn)
 	})

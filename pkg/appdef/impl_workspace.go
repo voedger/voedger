@@ -6,7 +6,6 @@
 package appdef
 
 import (
-	"fmt"
 	"sort"
 )
 
@@ -52,7 +51,7 @@ func (ws *workspace) TypeByName(name QName) IType {
 
 func (ws *workspace) Validate() error {
 	if (ws.desc != nil) && ws.desc.Abstract() && !ws.Abstract() {
-		return fmt.Errorf("workspace %q should be abstract because descriptor %q is abstract: %w", ws.QName(), ws.desc.QName(), ErrWorkspaceShouldBeAbstract)
+		return ErrIncompatible("%v should be abstract because descriptor %v is abstract", ws, ws.desc)
 	}
 	return nil
 }

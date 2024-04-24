@@ -9,7 +9,6 @@ package appdef
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"slices"
 	"strconv"
 	"strings"
@@ -50,7 +49,7 @@ func ParseQName(val string) (res QName, err error) {
 func ParseQualifiedName(val, delimiter string) (part1, part2 string, err error) {
 	s := strings.Split(val, delimiter)
 	if len(s) != 2 {
-		return NullName, NullName, fmt.Errorf("%w: %v", ErrInvalidQNameStringRepresentation, val)
+		return NullName, NullName, ErrConvert("string «%s» to QName", val)
 	}
 	return s[0], s[1], nil
 }
@@ -232,7 +231,7 @@ func ParseFullQName(val string) (FullQName, error) {
 func ParseFullQualifiedName(val string) (s1, s2 string, err error) {
 	p := strings.LastIndex(val, QNameQualifierChar)
 	if p < 0 {
-		return NullName, NullName, fmt.Errorf("%w: %v", ErrInvalidQNameStringRepresentation, val)
+		return NullName, NullName, ErrConvert("string «%s» to QName", val)
 	}
 
 	return val[:p], val[p+1:], nil

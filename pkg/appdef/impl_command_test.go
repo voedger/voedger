@@ -155,7 +155,7 @@ func Test_CommandValidate(t *testing.T) {
 		t.Run("must error if deprecated parameter type", func(t *testing.T) {
 			cmd.SetParam(bad)
 			_, err := adb.Build()
-			require.ErrorIs(err, ErrInvalidTypeKind)
+			require.ErrorIs(err, ErrInvalidError)
 			require.ErrorContains(err, bad.String())
 		})
 
@@ -173,7 +173,7 @@ func Test_CommandValidate(t *testing.T) {
 		t.Run("must error if deprecated unlogged parameter type", func(t *testing.T) {
 			cmd.SetUnloggedParam(bad)
 			_, err := adb.Build()
-			require.ErrorIs(err, ErrInvalidTypeKind)
+			require.ErrorIs(err, ErrInvalidError)
 			require.ErrorContains(err, bad.String())
 		})
 
@@ -191,7 +191,7 @@ func Test_CommandValidate(t *testing.T) {
 		t.Run("must error if deprecated unlogged parameter type", func(t *testing.T) {
 			cmd.SetResult(bad)
 			_, err := adb.Build()
-			require.ErrorIs(err, ErrInvalidTypeKind)
+			require.ErrorIs(err, ErrInvalidError)
 			require.ErrorContains(err, bad.String())
 		})
 

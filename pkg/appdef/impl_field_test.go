@@ -413,8 +413,8 @@ func TestValidateRefFields(t *testing.T) {
 	t.Run("must be error if reference field refs to non referable type", func(t *testing.T) {
 		adb.AddObject(NewQName("test", "obj"))
 		_, err := adb.Build()
-		require.ErrorIs(err, ErrInvalidTypeKind)
-		require.ErrorContains(err, "not a record type Object «test.obj»")
+		require.ErrorIs(err, ErrInvalidError)
+		require.ErrorContains(err, "«test.obj»")
 	})
 }
 

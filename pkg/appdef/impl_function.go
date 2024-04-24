@@ -45,7 +45,7 @@ func (f *function) Validate() (err error) {
 		switch typ.Kind() {
 		case TypeKind_Any, TypeKind_Data, TypeKind_ODoc, TypeKind_Object: // ok
 		default:
-			err = errors.Join(err, fmt.Errorf("%v: parameter type is %v, must be ODoc, Object or Data: %w", f, typ, ErrInvalidTypeKind))
+			err = errors.Join(err, ErrInvalid("parameter type «%v», should be ODoc, Object or Data", typ))
 		}
 	}
 
@@ -56,7 +56,7 @@ func (f *function) Validate() (err error) {
 		case TypeKind_Any: // ok
 		case TypeKind_Data, TypeKind_GDoc, TypeKind_CDoc, TypeKind_WDoc, TypeKind_ODoc, TypeKind_Object: // ok
 		default:
-			err = errors.Join(err, fmt.Errorf("%v: result type is %v, must be Document, Object or Data: %w", f, typ, ErrInvalidTypeKind))
+			err = errors.Join(err, ErrInvalid("result type «%v», should be Document, Object or Data", typ))
 		}
 	}
 

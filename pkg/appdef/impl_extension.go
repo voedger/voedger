@@ -60,7 +60,7 @@ func (ex extension) Validate() error {
 
 func (ex *extension) setEngine(engine ExtensionEngineKind) {
 	if (engine == ExtensionEngineKind_null) || (engine >= ExtensionEngineKind_Count) {
-		panic(fmt.Errorf("%v: extension engine kind «%v» is invalid: %w", ex, engine, ErrInvalidExtensionEngineKind))
+		panic(ErrOutOfBounds("%v extension engine kind «%v»", ex, engine))
 	}
 	ex.engine = engine
 }

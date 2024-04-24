@@ -42,6 +42,10 @@ func (u unique) Fields() []IField {
 	return u.fields
 }
 
+func (u unique) String() string {
+	return fmt.Sprintf("unique «%v»", u.name)
+}
+
 // # Implements:
 //   - IUniques
 type uniques struct {
@@ -104,12 +108,12 @@ func (uu *uniques) addUnique(name QName, fields []FieldName, comment ...string) 
 		panic(fmt.Errorf("unique name «%v» is invalid: %w", name, err))
 	}
 	if uu.UniqueByName(name) != nil {
-		panic(ErrUniqueViolation("unique name «%v»", name))
+		panic(ErrAlreadyExists("unique «%v»", name))
 	}
 
 	if uu.app != nil {
 		if t := uu.app.TypeByName(name); t != nil {
-			panic(fmt.Errorf("unique name «%v» (already used for %v)", name, t))
+			panic(ErrAlreadyExists("unique «%v» already used for %v", name, t))
 		}
 	}
 
@@ -117,25 +121,25 @@ func (uu *uniques) addUnique(name QName, fields []FieldName, comment ...string) 
 		panic(ErrMissed("unique «%v» fields", name))
 	}
 	if i, j := duplicates(fields); i >= 0 {
-		panic(ErrUniqueViolation("fields in unique «%v» has duplicates (fields[%d] == fields[%d] == %q)", name, i, j, fields[i]))
+		panic(ErrAlreadyExists("fields in unique «%v» has duplicates (fields[%d] == fields[%d] == %q)", name, i, j, fields[i]))
 	}
 
 	if len(fields) > MaxTypeUniqueFieldsCount {
-		panic(fmt.Errorf("unique «%v» exceeds maximum fields (%d): %w", name, MaxTypeUniqueFieldsCount, ErrTooManyFields))
+		panic(ErrTooMany("fields in unique «%v», maximum is %d", name, MaxTypeUniqueFieldsCount))
 	}
 
-	for n, un := range uu.uniques {
+	for _, un := range uu.uniques {
 		ff := make([]FieldName, 0)
 		for _, f := range un.Fields() {
 			ff = append(ff, f.Name())
 		}
 		if overlaps(fields, ff) {
-			panic(fmt.Errorf("type already has unique «%v» which overlaps with new unique «%v»: %w", n, name, ErrUniqueOverlaps))
+			panic(ErrAlreadyExists("type already has %v which fields overlaps new unique fields", un))
 		}
 	}
 
 	if len(uu.uniques) >= MaxTypeUniqueCount {
-		panic(fmt.Errorf("maximum uniques (%d) is exceeded: %w", MaxTypeUniqueCount, ErrTooManyUniques))
+		panic(ErrTooMany("uniques, maximum is %d", MaxTypeUniqueCount))
 	}
 
 	un := newUnique(name, fields, uu.fields)
