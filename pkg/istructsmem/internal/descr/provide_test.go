@@ -81,7 +81,8 @@ func TestBasicUsage(t *testing.T) {
 			SetParam(objName).
 			SetEngine(appdef.ExtensionEngineKind_WASM)
 
-		adb.AddQuery(appdef.NewQName("test", "query")).
+		queryName := appdef.NewQName("test", "query")
+		adb.AddQuery(queryName).
 			SetParam(objName).
 			SetResult(appdef.QNameANY)
 
@@ -98,7 +99,26 @@ func TestBasicUsage(t *testing.T) {
 		prj.Intents().
 			Add(sysViews, viewName).SetComment(sysViews, "needs to update «test.view» from «sys.views» storage")
 
-		_ = adb.AddRole(appdef.NewQName("test", "role"))
+		reader := adb.AddRole(appdef.NewQName("test", "reader"))
+		reader.SetComment("read-only role")
+		reader.Grant(
+			[]appdef.PrivilegeKind{appdef.PrivilegeKind_Select},
+			[]appdef.QName{docName, recName}, []appdef.FieldName{"f1", "f2"},
+			"allow reader to select some fields from test.doc and test.rec")
+		reader.Grant(
+			[]appdef.PrivilegeKind{appdef.PrivilegeKind_Select},
+			[]appdef.QName{viewName}, nil,
+			"allow reader to select all fields from test.view")
+		reader.GrantAll([]appdef.QName{queryName}, "allow reader to execute test.query")
+
+		writer := adb.AddRole(appdef.NewQName("test", "writer"))
+		writer.SetComment("read-write role")
+		writer.GrantAll([]appdef.QName{docName, recName, viewName}, "allow writer to do anything with test.doc, test.rec and test.view")
+		writer.Revoke(
+			[]appdef.PrivilegeKind{appdef.PrivilegeKind_Update},
+			[]appdef.QName{docName},
+			"disable writer to update test.doc")
+		writer.GrantAll([]appdef.QName{cmdName, queryName}, "allow writer to execute all test functions")
 
 		app, err := adb.Build()
 		require.NoError(t, err)
@@ -126,7 +146,7 @@ func TestBasicUsage(t *testing.T) {
 	require.NoError(err)
 	require.NotEmpty(json)
 
-	// os.WriteFile("C://temp//provide_test.json", json, 0644)
+	//os.WriteFile("C://temp//provide_test.json", json, 0644)
 
 	require.JSONEq(expectedJson, string(json))
 }

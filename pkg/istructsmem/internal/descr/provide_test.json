@@ -257,7 +257,53 @@
         }
       },
       "Roles": {
-        "test.role": {}
+        "test.reader": {
+          "Comment": "read-only role",
+          "Privileges": [
+            {
+              "Comment": "allow reader to select some fields from test.doc and test.rec",
+              "Access": "grant",
+              "Kinds": ["Select"],
+              "On": ["test.doc", "test.rec"],
+              "Fields": ["f1", "f2"]
+            },
+            {
+              "Comment": "allow reader to select all fields from test.view",
+              "Access": "grant",
+              "Kinds": ["Select"],
+              "On": ["test.view"]
+            },
+            {
+              "Comment": "allow reader to execute test.query",
+              "Access": "grant",
+              "Kinds": ["Execute"],
+              "On": ["test.query"]
+            }
+          ]
+        },
+        "test.writer": {
+          "Comment": "read-write role",
+          "Privileges": [
+            {
+              "Comment": "allow writer to do anything with test.doc, test.rec and test.view",
+              "Access": "grant",
+              "Kinds": ["Insert", "Update", "Select"],
+              "On": ["test.doc", "test.rec", "test.view"]
+            },
+            {
+              "Comment": "disable writer to update test.doc",
+              "Access": "revoke",
+              "Kinds": ["Update"],
+              "On": ["test.doc"]
+            },
+            {
+              "Comment": "allow writer to execute all test functions",
+              "Access": "grant",
+              "Kinds": ["Execute"],
+              "On": ["test.cmd", "test.query"]
+            }
+         ]
+        }
       }
     }
   }

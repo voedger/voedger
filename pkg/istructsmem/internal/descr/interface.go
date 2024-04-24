@@ -9,7 +9,7 @@ import "github.com/voedger/voedger/pkg/istructs"
 
 type Application struct {
 	Name     istructs.AppQName
-	Packages map[string]*Package
+	Packages map[string]*Package `json:",omitempty"`
 }
 
 type Package struct {
