@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"strings"
 )
-
+переместить это , ProcessorKind_string , type.sog отбатно в pkg/cluster???
 func (k ProcessorKind) MarshalText() ([]byte, error) {
 	var s string
 	if k < ProcessorKind_Count {
