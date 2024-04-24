@@ -2,19 +2,27 @@
 name: Feature request
 about: Suggest an idea for this project
 title: ''
-labels: kind/feature
+labels: kind/feature, todo/triage
 assignees: ''
 
 ---
 
-**Is your feature request related to a problem? Please describe.**
-A clear and concise description of what the problem is. Ex. I'm always frustrated when [...]
+## Motivation
 
-**Describe the solution you'd like**
-A clear and concise description of what you want to happen.
+A clear and concise description of the "pain" you want to solve. E.g. "I'm always frustrated when [...]".
 
-**Describe alternatives you've considered**
+## Functional Design
+
+What the system should do, the actions it should perform, and the services it should provide, without delving into how these functions will be implemented technically
+
+## Technical Design
+
+Ideas about possible implementation are welcome here. You can leave this section empty.
+
+## Alternatives
+
 A clear and concise description of any alternative solutions or features you've considered.
 
-**Additional context**
+## Context
+
 Add any other context or screenshots about the feature request here.

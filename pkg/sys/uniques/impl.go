@@ -129,13 +129,13 @@ func insert(state istructs.IState, rec istructs.IRowReader, intents istructs.IIn
 }
 
 func getUniqueViewRecord(st istructs.IState, rec istructs.IRowReader, uniqueFields []appdef.IField, uniqueQName appdef.QName) (istructs.IStateValue, istructs.IStateKeyBuilder, bool, error) {
+	uniqueKeyValues, err := getUniqueKeyValuesFromRec(rec, uniqueFields, uniqueQName)
+	if err != nil {
+		return nil, nil, false, err
+	}
 	uniqueViewRecordBuilder, err := st.KeyBuilder(state.View, qNameViewUniques)
 	if err != nil {
 		// notest
-		return nil, nil, false, err
-	}
-	uniqueKeyValues, err := getUniqueKeyValues(rec, uniqueFields, uniqueQName)
-	if err != nil {
 		return nil, nil, false, err
 	}
 	buildUniqueViewKeyByValues(uniqueViewRecordBuilder, uniqueQName, uniqueKeyValues)
@@ -150,32 +150,53 @@ func buildUniqueViewKeyByValues(kb istructs.IKeyBuilder, qName appdef.QName, uni
 	kb.PutBytes(field_Values, uniqueKeyValues)
 }
 
-func getUniqueKeyValues(rec istructs.IRowReader, uniqueFields []appdef.IField, uniqueQName appdef.QName) (res []byte, err error) {
+func getUniqueKeyValuesFromMap(values map[string]interface{}, uniqueFields []appdef.IField, uniqueQName appdef.QName) (res []byte, err error) {
+	buf := bytes.NewBuffer(nil)
+	for _, uniqueField := range uniqueFields {
+		val := values[uniqueField.Name()]
+		if err := coreutils.CheckValueByKind(val, uniqueField.DataKind()); err != nil {
+			return nil, err
+		}
+		writeUniqueKeyValue(uniqueField, val, buf, uniqueFields)
+	}
+	return buf.Bytes(), checkUniqueKeyLen(buf, uniqueQName)
+}
+
+// uniqueFields is provided just to determine if should handle backward compatibility
+func writeUniqueKeyValue(uniqueField appdef.IField, value interface{}, buf *bytes.Buffer, uniqueFields []appdef.IField) {
+	switch uniqueField.DataKind() {
+	case appdef.DataKind_string:
+		if len(uniqueFields) > 1 {
+			// backward compatibility
+			buf.WriteByte(zeroByte)
+		}
+		buf.WriteString(value.(string))
+	case appdef.DataKind_bytes:
+		if len(uniqueFields) > 1 {
+			// backward compatibility
+			buf.WriteByte(zeroByte)
+		}
+		buf.Write(value.([]byte))
+	default:
+		binary.Write(buf, binary.BigEndian, value) // nolint
+	}
+}
+
+func checkUniqueKeyLen(buf *bytes.Buffer, uniqueQName appdef.QName) error {
+	if buf.Len() > int(appdef.MaxFieldLength) {
+		return fmt.Errorf(`%w: resulting len of the unique combination "%s" is %d, max %d is allowed. Decrease len of values of unique fields`,
+			ErrUniqueValueTooLong, uniqueQName, buf.Len(), appdef.MaxFieldLength)
+	}
+	return nil
+}
+
+func getUniqueKeyValuesFromRec(rec istructs.IRowReader, uniqueFields []appdef.IField, uniqueQName appdef.QName) (res []byte, err error) {
 	buf := bytes.NewBuffer(nil)
 	for _, uniqueField := range uniqueFields {
 		val := coreutils.ReadByKind(uniqueField.Name(), uniqueField.DataKind(), rec)
-		switch uniqueField.DataKind() {
-		case appdef.DataKind_string:
-			if len(uniqueFields) > 1 {
-				// backward compatibility
-				buf.WriteByte(zeroByte)
-			}
-			buf.WriteString(val.(string))
-		case appdef.DataKind_bytes:
-			if len(uniqueFields) > 1 {
-				// backward compatibility
-				buf.WriteByte(zeroByte)
-			}
-			buf.Write(val.([]byte))
-		default:
-			binary.Write(buf, binary.BigEndian, val) // nolint
-		}
+		writeUniqueKeyValue(uniqueField, val, buf, uniqueFields)
 	}
-	if buf.Len() > int(appdef.MaxFieldLength) {
-		return nil, fmt.Errorf(`%w: resulting len of the unique combination "%s" is %d, max %d is allowed. Decrease len of values of unique fields`,
-			ErrUniqueValueTooLong, uniqueQName, buf.Len(), appdef.MaxFieldLength)
-	}
-	return buf.Bytes(), nil
+	return buf.Bytes(), checkUniqueKeyLen(buf, uniqueQName)
 }
 
 func getCurrentUniqueViewRecord(uniquesState map[appdef.QName]map[appdef.QName]map[string]*uniqueViewRecord,
@@ -239,7 +260,7 @@ func validateCUD(cudRec istructs.ICUDRow, appStructs istructs.IAppStructs, wsid 
 			return err
 		}
 	}
-	uniqueKeyValues, err = getUniqueKeyValues(rowSource, uniqueFields, uniqueQName)
+	uniqueKeyValues, err = getUniqueKeyValuesFromRec(rowSource, uniqueFields, uniqueQName)
 	if err != nil {
 		return err
 	}

@@ -133,9 +133,8 @@ func Exists(filePath string) (exists bool, err error) {
 		return true, nil
 	}
 	if os.IsNotExist(err) {
-		return false, nil
+		err = nil
 	}
-	// notest
 	return false, err
 }
 
