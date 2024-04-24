@@ -178,6 +178,7 @@ classDiagram
         +Extension() IExtension
         +WantErrors() bool
         +Events() IProjectorEvents
+        +CronSchedule() string
         +States() IStorages
         +Intents() IStorages
     }
@@ -620,6 +621,7 @@ classDiagram
         +Kind()* TypeKind_Projector
         +WantErrors() bool
         +Events() IProjectorEvents
+        +CronSchedule() string
     }
 
     IProjector "1" *--> "1" IProjectorEvents : Events

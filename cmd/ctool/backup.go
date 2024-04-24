@@ -203,18 +203,42 @@ func validateBackupNodeCmd(cmd *cmdType, cluster *clusterType) error {
 	return err
 }
 
+func newBackupErrorEvent(host string, err error) *eventType {
+	return &eventType{
+		StartsAt: customTime(time.Now()),
+		EndsAt:   customTime(time.Now().Add(time.Minute)),
+		Annotations: map[string]string{
+			"backup": "Backup failed",
+			"error":  err.Error(),
+		},
+		Labels: map[string]string{
+			alertLabelSource:   "ctool",
+			alertLabelInstance: host,
+			alertLabelSeverity: "error",
+		},
+		GeneratorURL: "http://app-node-1:9093"}
+}
+
 func backupNode(cmd *cobra.Command, args []string) error {
 	cluster := newCluster()
 
 	var err error
 
+	host := args[0]
+
 	if err = mkCommandDirAndLogFile(cmd, cluster); err != nil {
+		if e := newBackupErrorEvent(host, err).postAlert(cluster); e != nil {
+			err = errors.Join(err, e)
+		}
 		return err
 	}
 
 	if expireTime != "" {
 		expire, e := newExpireType(expireTime)
 		if e != nil {
+			if err := newBackupErrorEvent(host, e).postAlert(cluster); err != nil {
+				e = errors.Join(err, e)
+			}
 			return e
 		}
 		cluster.Cron.ExpireTime = expire.string()
@@ -223,6 +247,9 @@ func backupNode(cmd *cobra.Command, args []string) error {
 	loggerInfo("Backup node", strings.Join(args, " "))
 	if err = newScriptExecuter(cluster.sshKey, "").
 		run("backup-node.sh", args...); err != nil {
+		if e := newBackupErrorEvent(host, err).postAlert(cluster); e != nil {
+			err = errors.Join(err, e)
+		}
 		return err
 	}
 

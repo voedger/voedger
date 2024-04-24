@@ -61,19 +61,9 @@ func NewCommandMessage(requestCtx context.Context, body []byte, appQName istruct
 	}
 }
 
-// need for collection.ProvideSyncActualizer()
-func (c *cmdWorkpiece) AppDef() appdef.IAppDef {
-	return c.appStructs.AppDef()
-}
-
-// should be used for Invoke projector by sync actualizer
+// used in projectors.newSyncBranch()
 func (c *cmdWorkpiece) AppPartition() appparts.IAppPartition {
 	return c.appPart
-}
-
-// need for collection.ProvideSyncActualizer(), q.sys.EnrichPrincipalToken, c.sys.ChangePassword
-func (c *cmdWorkpiece) AppQName() istructs.AppQName {
-	return c.cmdMes.AppQName()
 }
 
 // need for sync projectors which are using wsid.GetNextWSID()
@@ -81,14 +71,9 @@ func (c *cmdWorkpiece) Context() context.Context {
 	return c.cmdMes.RequestCtx()
 }
 
-// need for collection.ProvideSyncActualizer()
+// used in projectors.NewSyncActualizerFactoryFactory
 func (c *cmdWorkpiece) Event() istructs.IPLogEvent {
 	return c.pLogEvent
-}
-
-// used by ProvideSyncActualizerFactory
-func (c *cmdWorkpiece) WSID() istructs.WSID {
-	return c.cmdMes.WSID()
 }
 
 // borrows app partition for command
@@ -161,7 +146,7 @@ func getICommand(_ context.Context, work interface{}) (err error) {
 	var cmdType appdef.IType
 	if cmd.iWorkspace == nil {
 		// DummyWS or c.sys.CreateWorkspace
-		cmdType = cmd.AppDef().Type(cmd.cmdMes.QName())
+		cmdType = cmd.appStructs.AppDef().Type(cmd.cmdMes.QName())
 	} else {
 		if cmdType = cmd.iWorkspace.Type(cmd.cmdMes.QName()); cmdType.Kind() == appdef.TypeKind_null {
 			return fmt.Errorf("command %s does not exist in workspace %s", cmd.cmdMes.QName(), cmd.iWorkspace.QName())
@@ -228,13 +213,13 @@ func (cmdProc *cmdProc) recovery(ctx context.Context, cmd *cmdWorkpiece) (*appPa
 
 		event.CUDs(func(rec istructs.ICUDRow) {
 			if rec.IsNew() {
-				t := cmd.AppDef().Type(rec.QName())
+				t := cmd.appStructs.AppDef().Type(rec.QName())
 				ws.idGenerator.UpdateOnSync(rec.ID(), t)
 			}
 		})
 		ao := event.ArgumentObject()
-		if cmd.AppDef().Type(ao.QName()).Kind() == appdef.TypeKind_ODoc {
-			updateIDGeneratorFromO(ao, cmd.AppDef(), ws.idGenerator)
+		if cmd.appStructs.AppDef().Type(ao.QName()).Kind() == appdef.TypeKind_ODoc {
+			updateIDGeneratorFromO(ao, cmd.appStructs.AppDef(), ws.idGenerator)
 		}
 		ws.NextWLogOffset = event.WLogOffset() + 1
 		ap.nextPLogOffset = plogOffset + 1
@@ -706,7 +691,7 @@ func (osp *wrongArgsCatcher) OnErr(err error, _ interface{}, _ pipeline.IWorkpie
 func (cmdProc *cmdProc) n10n(_ context.Context, work interface{}) (err error) {
 	cmd := work.(*cmdWorkpiece)
 	cmdProc.n10nBroker.Update(in10n.ProjectionKey{
-		App:        cmd.AppQName(),
+		App:        cmd.cmdMes.AppQName(),
 		Projection: projectors.PLogUpdatesQName,
 		WS:         istructs.WSID(cmdProc.pNumber),
 	}, cmd.rawEvent.PLogOffset())
@@ -724,7 +709,7 @@ func sendResponse(cmd *cmdWorkpiece, handlingError error) {
 		coreutils.ReplyErr(cmd.cmdMes.Sender(), handlingError)
 		return
 	}
-	body := bytes.NewBufferString(fmt.Sprintf(`{"CurrentWLogOffset":%d`, cmd.Event().WLogOffset()))
+	body := bytes.NewBufferString(fmt.Sprintf(`{"CurrentWLogOffset":%d`, cmd.pLogEvent.WLogOffset()))
 	if len(cmd.idGenerator.generatedIDs) > 0 {
 		body.WriteString(`,"NewIDs":{`)
 		for rawID, generatedID := range cmd.idGenerator.generatedIDs {
@@ -737,7 +722,7 @@ func sendResponse(cmd *cmdWorkpiece, handlingError error) {
 		}
 	}
 	if cmd.cmdResult != nil {
-		cmdResult := coreutils.ObjectToMap(cmd.cmdResult, cmd.AppDef())
+		cmdResult := coreutils.ObjectToMap(cmd.cmdResult, cmd.appStructs.AppDef())
 		cmdResultBytes, err := json.Marshal(cmdResult)
 		if err != nil {
 			// notest

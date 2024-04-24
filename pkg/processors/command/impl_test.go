@@ -378,7 +378,7 @@ func Test400BadRequestOnCUDErrors(t *testing.T) {
 		{`fields: sys.ID missing`, `"cuds":[{"fields":{"sys.QName":"test.Test"}}]`, `cuds[0]: "sys.ID" missing`},
 		{`fields: sys.ID is not a number (create)`, `"cuds":[{"sys.ID":"wrong","fields":{"sys.QName":"test.Test"}}]`, `cuds[0]: field 'sys.ID' must be an int64`},
 		{`fields: sys.ID is not a number (update)`, `"cuds":[{"fields":{"sys.ID":"wrong","sys.QName":"test.Test"}}]`, `cuds[0]: field 'sys.ID' must be an int64`},
-		{`fields: wrong qName`, `"cuds":[{"fields":{"sys.ID":1,"sys.QName":"wrong"}},{"fields":{"sys.ID":1,"sys.QName":"test.Test"}}]`, `invalid string representation of qualified name: wrong`},
+		{`fields: wrong qName`, `"cuds":[{"fields":{"sys.ID":1,"sys.QName":"wrong"}},{"fields":{"sys.ID":1,"sys.QName":"test.Test"}}]`, `convert error: string «wrong» to QName`},
 	}
 
 	for _, c := range cases {
@@ -663,10 +663,10 @@ func replyBadRequest(sender ibus.ISender, message string) {
 
 // test app deployment constants
 var (
-	testAppName                                 = istructs.AppQName_untill_airs_bp
-	testAppEngines                              = [cluster.ProcessorKind_Count]int{10, 10, 10}
-	testAppPartID    istructs.PartitionID       = 1
-	testAppPartCount coreutils.NumAppPartitions = 1
+	testAppName                                = istructs.AppQName_untill_airs_bp
+	testAppEngines                             = [cluster.ProcessorKind_Count]int{10, 10, 10}
+	testAppPartID    istructs.PartitionID      = 1
+	testAppPartCount istructs.NumAppPartitions = 1
 )
 
 func setUp(t *testing.T, prepare func(appDef appdef.IAppDefBuilder, cfg *istructsmem.AppConfigType)) testApp {
@@ -688,6 +688,7 @@ func setUp(t *testing.T, prepare func(appDef appdef.IAppDefBuilder, cfg *istruct
 	qNameTestWSKind := appdef.NewQName(appdef.SysPackage, "TestWSKind")
 	adb.AddCDoc(qNameTestWSKind).SetSingleton()
 	cfg := cfgs.AddConfig(istructs.AppQName_untill_airs_bp, adb)
+	cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 	if prepare != nil {
 		prepare(adb, cfg)
 	}

@@ -2376,18 +2376,13 @@ func Test_ScheduledProjectors(t *testing.T) {
 		require := assertions(t)
 		require.AppSchemaError(`APPLICATION test();
 			WORKSPACE w2 (
-				VIEW test(
-					i int32,
-					PRIMARY KEY(i)
-				) AS RESULT OF Proj1;
-
 				EXTENSION ENGINE BUILTIN (
-					PROJECTOR Proj1 CRON '1 0 * * *' INTENTS (View(test));
+					PROJECTOR Proj1 CRON '1 0 * * *';
 				);
-			);`, "file.vsql:9:6: scheduled projector must be in app workspace")
+			);`, "file.vsql:4:6: scheduled projector must be in app workspace")
 	})
 
-	t.Run("bad cron", func(t *testing.T) {
+	t.Run("bad cron and intents", func(t *testing.T) {
 		require := assertions(t)
 		require.AppSchemaError(`APPLICATION test();
 			ALTER WORKSPACE AppWorkspaceWS (
@@ -2399,20 +2394,15 @@ func Test_ScheduledProjectors(t *testing.T) {
 				EXTENSION ENGINE BUILTIN (
 					PROJECTOR Proj1 CRON 'blah' INTENTS (View(test));
 				);
-			);`, "file.vsql:9:6: invalid cron schedule: blah")
+			);`, "file.vsql:9:6: invalid cron schedule: blah", "file.vsql:9:6: scheduled projector cannot have intents")
 	})
 
 	t.Run("good cron", func(t *testing.T) {
 		require := assertions(t)
 		require.NoAppSchemaError(`APPLICATION test();
 ALTER WORKSPACE sys.AppWorkspaceWS (
-	VIEW test(
-		i int32,
-		PRIMARY KEY(i)
-	) AS RESULT OF ScheduledProjector;
-
 	EXTENSION ENGINE BUILTIN (
-		PROJECTOR ScheduledProjector CRON '1 0 * * *' INTENTS (View(test));
+		PROJECTOR ScheduledProjector CRON '1 0 * * *';
 	);
 );`)
 	})

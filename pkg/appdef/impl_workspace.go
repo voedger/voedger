@@ -6,7 +6,6 @@
 package appdef
 
 import (
-	"fmt"
 	"sort"
 )
 
@@ -52,7 +51,7 @@ func (ws *workspace) TypeByName(name QName) IType {
 
 func (ws *workspace) Validate() error {
 	if (ws.desc != nil) && ws.desc.Abstract() && !ws.Abstract() {
-		return fmt.Errorf("workspace %q should be abstract because descriptor %q is abstract: %w", ws.QName(), ws.desc.QName(), ErrWorkspaceShouldBeAbstract)
+		return ErrIncompatible("%v should be abstract because descriptor %v is abstract", ws, ws.desc)
 	}
 	return nil
 }
@@ -75,7 +74,7 @@ func (ws *workspace) Types(cb func(IType)) {
 func (ws *workspace) addType(name QName) {
 	t := ws.app.TypeByName(name)
 	if t == nil {
-		panic(fmt.Errorf("unable to add unknown type «%v» to workspace «%v»: %w", name, ws.QName(), ErrTypeNotFound))
+		panic(ErrTypeNotFound(name))
 	}
 
 	ws.types[name] = t
@@ -98,7 +97,7 @@ func (ws *workspace) setDescriptor(q QName) {
 	}
 
 	if ws.desc = ws.app.CDoc(q); ws.desc == nil {
-		panic(fmt.Errorf("type «%v» is unknown CDoc name to assign as descriptor for workspace «%v»: %w", q, ws.QName(), ErrTypeNotFound))
+		panic(ErrNotFound("CDoc «%v»", q))
 	}
 	if ws.desc.Abstract() {
 		ws.withAbstract.setAbstract()

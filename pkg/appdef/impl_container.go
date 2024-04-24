@@ -89,34 +89,34 @@ func (cc containers) Containers() []IContainer {
 
 func (cc *containers) addContainer(name string, contType QName, minOccurs, maxOccurs Occurs, comment ...string) {
 	if name == NullName {
-		panic(fmt.Errorf("empty container name: %w", ErrNameMissed))
+		panic(ErrMissed("container name"))
 	}
 	if ok, err := ValidIdent(name); !ok {
 		panic(fmt.Errorf("invalid container name «%v»: %w", name, err))
 	}
 	if cc.Container(name) != nil {
-		panic(fmt.Errorf("container «%v» is already exists: %w", name, ErrNameUniqueViolation))
+		panic(ErrAlreadyExists("container «%v»", name))
 	}
 
 	if contType == NullQName {
-		panic(fmt.Errorf("missed container «%v» type name: %w", name, ErrNameMissed))
+		panic(ErrMissed(fmt.Sprintf("container «%v» type", name)))
 	}
 
 	if maxOccurs == 0 {
-		panic(fmt.Errorf("max occurs value (0) must be positive number: %w", ErrInvalidOccurs))
+		panic(ErrOutOfBounds("max occurs value should be positive number"))
 	}
 	if maxOccurs < minOccurs {
-		panic(fmt.Errorf("max occurs (%v) must be greater or equal to min occurs (%v): %w", maxOccurs, minOccurs, ErrInvalidOccurs))
+		panic(ErrOutOfBounds("max occurs should be greater than or equal to min occurs (%v)", minOccurs))
 	}
 
 	if typ := cc.app.TypeByName(contType); typ != nil {
 		if (cc.typeKind != TypeKind_null) && !cc.typeKind.ContainerKindAvailable(typ.Kind()) {
-			panic(fmt.Errorf("type kind «%s» does not support child container kind «%s»: %w", cc.typeKind.TrimString(), typ.Kind().TrimString(), ErrInvalidTypeKind))
+			panic(ErrInvalid("type «%v» can not to be a child of «%v»", typ, cc.typeKind.TrimString()))
 		}
 	}
 
 	if len(cc.containers) >= MaxTypeContainerCount {
-		panic(fmt.Errorf("maximum container count (%d) exceeds: %w", MaxTypeContainerCount, ErrTooManyContainers))
+		panic(ErrTooMany("containers, maximum is %d", MaxTypeContainerCount))
 	}
 
 	cont := newContainer(cc.app, name, contType, minOccurs, maxOccurs)
@@ -136,11 +136,13 @@ func validateTypeContainers(t IType) (err error) {
 		for _, cont := range cnt.Containers() {
 			contType := cont.Type()
 			if contType == nil {
-				err = errors.Join(err, fmt.Errorf("%v: container «%s» uses unknown type «%v»: %w", t, cont.Name(), cont.QName(), ErrTypeNotFound))
+				err = errors.Join(err,
+					ErrNotFound("%v container «%s» type «%v»", t, cont.Name(), cont.QName()))
 				continue
 			}
 			if !t.Kind().ContainerKindAvailable(contType.Kind()) {
-				err = errors.Join(err, fmt.Errorf("%v: container «%s» type %v is incompatible: «%s» can`t contain «%s»: %w", t, cont.Name(), contType, t.Kind().TrimString(), contType.Kind().TrimString(), ErrInvalidTypeKind))
+				err = errors.Join(err,
+					ErrInvalid("type «%v» can not to be a child of «%v»", contType, t))
 			}
 		}
 	}

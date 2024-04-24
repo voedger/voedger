@@ -82,16 +82,14 @@ type appStructsType struct {
 	viewRecords appViewRecords
 	buckets     irates.IBuckets
 	descr       *descr.Application
-	appWSAmount istructs.AppWSAmount
 	appTokens   istructs.IAppTokens
 }
 
 func newAppStructs(appCfg *AppConfigType, buckets irates.IBuckets, appTokens istructs.IAppTokens) *appStructsType {
 	app := appStructsType{
-		config:      appCfg,
-		buckets:     buckets,
-		appWSAmount: istructs.DefaultAppWSAmount,
-		appTokens:   appTokens,
+		config:    appCfg,
+		buckets:   buckets,
+		appTokens: appTokens,
 	}
 	app.events = newEvents(&app)
 	app.records = newRecords(&app)
@@ -194,8 +192,8 @@ func (app *appStructsType) SyncProjectors() istructs.Projectors {
 	return app.config.SyncProjectors()
 }
 
-func (app *appStructsType) WSAmount() istructs.AppWSAmount {
-	return app.appWSAmount
+func (app *appStructsType) NumAppWorkspaces() istructs.NumAppWorkspaces {
+	return app.config.numAppWorkspaces
 }
 
 func (app *appStructsType) describe() *descr.Application {

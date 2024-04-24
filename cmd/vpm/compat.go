@@ -186,12 +186,3 @@ func splitIgnorePaths(ignores []string) (res [][]string) {
 	}
 	return
 }
-
-func exactArgs(n int) cobra.PositionalArgs {
-	return func(cmd *cobra.Command, args []string) error {
-		if len(args) != n {
-			return errors.New("unexpected args provided")
-		}
-		return nil
-	}
-}

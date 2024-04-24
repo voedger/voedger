@@ -143,7 +143,8 @@ func Test_RecordsRead(t *testing.T) {
 		defer storage.Reset()
 
 		cfgs := make(AppConfigsType, 1)
-		_ = cfgs.AddConfig(istructs.AppQName_test1_app1, appdef.New())
+		cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, appdef.New())
+		cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
 
 		app, err = provider.AppStructs(istructs.AppQName_test1_app1)
@@ -166,7 +167,8 @@ func Test_RecordsRead(t *testing.T) {
 		defer storage.Reset()
 
 		cfgs := make(AppConfigsType, 1)
-		_ = cfgs.AddConfig(istructs.AppQName_test1_app1, appdef.New())
+		cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, appdef.New())
+		cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
 
 		app, err = provider.AppStructs(istructs.AppQName_test1_app1)
@@ -252,7 +254,7 @@ func Test_RecordsPutJSON(t *testing.T) {
 
 			json[appdef.SystemField_QName] = `naked 🔫`
 			err = app.Records().PutJSON(test.workspace, json)
-			require.ErrorIs(err, appdef.ErrInvalidQNameStringRepresentation)
+			require.ErrorIs(err, appdef.ErrConvertError)
 			require.ErrorContains(err, appdef.SystemField_QName)
 
 			json[appdef.SystemField_QName] = test.testObj.String()

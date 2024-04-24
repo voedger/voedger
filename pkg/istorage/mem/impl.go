@@ -57,9 +57,20 @@ func (s *appStorage) Put(pKey []byte, cCols []byte, value []byte) (err error) {
 }
 
 func (s *appStorage) PutBatch(items []istorage.BatchItem) (err error) {
+	s.lock.Lock()
+	if s.testDelayPut > 0 {
+		time.Sleep(s.testDelayPut)
+		tmpDelayPut := s.testDelayPut
+		s.testDelayPut = 0
+		defer func() {
+			s.lock.Lock()
+			s.testDelayPut = tmpDelayPut
+			s.lock.Unlock()
+		}()
+	}
+	s.lock.Unlock()
 	for _, item := range items {
-		err = s.Put(item.PKey, item.CCols, item.Value)
-		if err != nil {
+		if err = s.Put(item.PKey, item.CCols, item.Value); err != nil {
 			return err
 		}
 	}
@@ -156,6 +167,18 @@ func (s *appStorage) Get(pKey []byte, cCols []byte, data *[]byte) (ok bool, err 
 }
 
 func (s *appStorage) GetBatch(pKey []byte, items []istorage.GetBatchItem) (err error) {
+	s.lock.Lock()
+	if s.testDelayGet > 0 {
+		time.Sleep(s.testDelayGet)
+		tmpDelayGet := s.testDelayGet
+		s.testDelayGet = 0
+		defer func() {
+			s.lock.Lock()
+			s.testDelayGet = tmpDelayGet
+			s.lock.Unlock()
+		}()
+	}
+	s.lock.Unlock()
 	for i := range items {
 		items[i].Ok, err = s.Get(pKey, items[i].CCols, items[i].Data)
 		if err != nil {

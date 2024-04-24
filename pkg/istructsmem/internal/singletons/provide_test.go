@@ -318,6 +318,6 @@ func Test_Singletons_Errors(t *testing.T) {
 		st := New()
 		err = st.Prepare(storage, versions, nil)
 
-		require.ErrorIs(err, appdef.ErrInvalidQNameStringRepresentation)
+		require.ErrorIs(err, appdef.ErrConvertError)
 	})
 }

@@ -642,6 +642,9 @@ func analyseProjector(v *ProjectorStmt, c *iterateCtx) {
 			if ws == nil || ws.alteredWorkspace == nil || ws.alteredWorkspacePkg == nil || ws.alteredWorkspacePkg.Path != appdef.SysPackage || ws.alteredWorkspace.Name != appWorkspaceName {
 				c.stmtErr(&v.Pos, ErrScheduledProjectorNotInAppWorkspace)
 			}
+			if len(v.Intents) > 0 {
+				c.stmtErr(&v.Pos, ErrScheduledProjectorWithIntents)
+			}
 
 		}
 

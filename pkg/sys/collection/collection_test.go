@@ -52,6 +52,7 @@ func deployTestApp(t *testing.T) (appParts appparts.IAppPartitions, appStructs i
 	// конфиг приложения airs-bp
 	adb := appdef.New()
 	cfg := cfgs.AddConfig(test.appQName, adb)
+	cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 	{
 
 		adb.AddPackage("test", "test.org/test")

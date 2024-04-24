@@ -43,7 +43,7 @@ func TestBasicUsage_QName(t *testing.T) {
 		q, e := ParseQName("saleOrders")
 		require.NotNil(q)
 		require.Equal(NullQName, q)
-		require.ErrorIs(e, ErrInvalidQNameStringRepresentation)
+		require.ErrorIs(e, ErrConvertError)
 	}
 
 	{
@@ -51,7 +51,7 @@ func TestBasicUsage_QName(t *testing.T) {
 		require.NotNil(ParseQName("sale.orders."))
 		require.NotNil(q)
 		require.Equal(NullQName, q)
-		require.ErrorIs(e, ErrInvalidQNameStringRepresentation)
+		require.ErrorIs(e, ErrConvertError)
 	}
 }
 
@@ -193,7 +193,7 @@ func TestQName_UnmarshalInvalidString(t *testing.T) {
 		q := NewQName("a", "b")
 
 		err = q.UnmarshalJSON([]byte("\"\""))
-		require.ErrorIs(err, ErrInvalidQNameStringRepresentation)
+		require.ErrorIs(err, ErrConvertError)
 		require.Equal(NullQName, q)
 	})
 
@@ -201,7 +201,7 @@ func TestQName_UnmarshalInvalidString(t *testing.T) {
 		q := NewQName("a", "b")
 
 		err = q.UnmarshalJSON([]byte("\"bcd\""))
-		require.ErrorIs(err, ErrInvalidQNameStringRepresentation)
+		require.ErrorIs(err, ErrConvertError)
 		require.ErrorContains(err, "bcd")
 		require.Equal(NullQName, q)
 	})
@@ -210,7 +210,7 @@ func TestQName_UnmarshalInvalidString(t *testing.T) {
 		q := NewQName("a", "b")
 
 		err = q.UnmarshalJSON([]byte("\"c..d\""))
-		require.ErrorIs(err, ErrInvalidQNameStringRepresentation)
+		require.ErrorIs(err, ErrConvertError)
 		require.ErrorContains(err, "c..d")
 		require.Equal(NullQName, q)
 	})
@@ -343,9 +343,6 @@ func TestQNamesFrom(t *testing.T) {
 			}
 
 			for _, n := range names {
-				if !q.Contains(n) {
-					t.Errorf("QNamesFrom(%v).Contains(%v) returns false", tt.args, n)
-				}
 				i, ok := q.Find(n)
 				if !ok {
 					t.Errorf("QNamesFrom(%v).Find(%v) returns false", tt.args, n)
@@ -353,8 +350,26 @@ func TestQNamesFrom(t *testing.T) {
 				if q[i] != n {
 					t.Errorf("QNamesFrom(%v).Find(%v) returns wrong index %v", tt.args, n, i)
 				}
-				if q.Contains(MustParseQName("test.unknown")) {
+
+				if !q.Contains(n) {
+					t.Errorf("QNamesFrom(%v).Contains(%v) returns false", tt.args, n)
+				}
+				unk := MustParseQName("test.unknown")
+				if q.Contains(unk) {
 					t.Errorf("QNamesFrom(%v).Contains(test.unknown) returns true", tt.args)
+				}
+
+				if q.ContainsAll(n, unk) {
+					t.Errorf("QNamesFrom(%v).ContainsAll(%v, %v) returns true", tt.args, n, unk)
+				}
+				if !q.ContainsAll(names[0], n) {
+					t.Errorf("QNamesFrom(%v).ContainsAll(%v, %v) returns false", tt.args, names[0], n)
+				}
+				if q.ContainsAny(unk) {
+					t.Errorf("QNamesFrom(%v).ContainsAny(%v) returns true", tt.args, unk)
+				}
+				if !q.ContainsAny(n, unk) {
+					t.Errorf("QNamesFrom(%v).ContainsAny(%v, %v) returns false", tt.args, n, unk)
 				}
 			}
 		})
@@ -374,7 +389,7 @@ func TestValidQNames(t *testing.T) {
 		{"should be ok with empty names", args{[]QName{}}, true, nil},
 		{"should be ok with null name", args{[]QName{NullQName}}, true, nil},
 		{"should be ok with valid names", args{[]QName{NewQName("test", "name1"), NewQName("test", "name2")}}, true, nil},
-		{"should be error with invalid name", args{[]QName{NewQName("test", "name"), NewQName("naked", "🔫")}}, false, ErrInvalidName},
+		{"should be error with invalid name", args{[]QName{NewQName("test", "name"), NewQName("naked", "🔫")}}, false, ErrInvalidError},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -564,7 +579,7 @@ func TestFullQName_UnmarshalInvalidString(t *testing.T) {
 		fqn := NewFullQName("a.a/a", "b")
 
 		err = fqn.UnmarshalJSON([]byte("\"\""))
-		require.ErrorIs(err, ErrInvalidQNameStringRepresentation)
+		require.ErrorIs(err, ErrConvertError)
 		require.Equal(NullFullQName, fqn)
 	})
 
@@ -572,7 +587,7 @@ func TestFullQName_UnmarshalInvalidString(t *testing.T) {
 		fqn := NewFullQName("a.a/a", "b")
 
 		err = fqn.UnmarshalJSON([]byte("\"bcd\""))
-		require.ErrorIs(err, ErrInvalidQNameStringRepresentation)
+		require.ErrorIs(err, ErrConvertError)
 		require.ErrorContains(err, "bcd")
 		require.Equal(NullFullQName, fqn)
 	})

@@ -43,7 +43,8 @@ var (
 		MaxAllowedPerDuration: 4,
 	}
 	TestAppDeploymentDescriptor = cluster.AppDeploymentDescriptor{
-		NumParts:       10,
-		EnginePoolSize: DefaultTestAppEnginesPool,
+		NumParts:         10,
+		EnginePoolSize:   DefaultTestAppEnginesPool,
+		NumAppWorkspaces: istructs.DefaultNumAppWorkspaces,
 	}
 )

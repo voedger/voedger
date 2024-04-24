@@ -28,8 +28,8 @@ func NewProcessor(params ihttp.CLIParams, routerStorage ihttp.IRouterStorage) (s
 			Handler:           r,
 			ReadHeaderTimeout: defaultReadHeaderTimeout,
 		},
-		apps:         make(map[istructs.AppQName]*appInfo),
-		appsWSAmount: make(map[istructs.AppQName]istructs.AppWSAmount),
+		apps:               make(map[istructs.AppQName]*appInfo),
+		numsAppsWorkspaces: make(map[istructs.AppQName]istructs.NumAppWorkspaces),
 	}
 	httpProcessor.bus = ibusmem.Provide(httpProcessor.requestHandler)
 	if len(params.AcmeDomains) > 0 {

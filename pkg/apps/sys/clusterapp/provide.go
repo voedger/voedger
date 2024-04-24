@@ -31,6 +31,7 @@ func Provide() apps.AppBuilder {
 			AppDeploymentDescriptor: cluster.AppDeploymentDescriptor{
 				NumParts:       1,
 				EnginePoolSize: cluster.PoolSize(1, 1, 1),
+				NumAppWorkspaces: 1,
 			},
 		}
 	}
