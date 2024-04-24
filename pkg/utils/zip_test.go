@@ -41,7 +41,7 @@ Aenean malesuada nisi non nisl dictum vestibulum`
 	tmpDir := t.TempDir()
 	filePaths := [][]string{{"file1.txt"}, {"file2.txt"}, {"subdir", "file3.txt"}}
 
-	var filesToZip []string
+	filesToZip := make([]string, 0, len(filePaths))
 	for _, filePath := range filePaths {
 		filesToZip = append(filesToZip, filepath.Join(tmpDir, filepath.Join(filePath...)))
 

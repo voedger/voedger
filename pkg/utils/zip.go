@@ -93,6 +93,7 @@ func Unzip(zipFileName, destDir string) error {
 			return err
 		}
 
+		// nolint
 		if _, err = io.Copy(extractedFile, zippedFile); err != nil {
 			return err
 		}

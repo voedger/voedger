@@ -203,7 +203,7 @@ func compileDir(loadedPkgs *loadedPackages, dir, packagePath string, alias *pars
 		return
 	}
 	if logger.IsVerbose() {
-		logger.Verbose(fmt.Sprintf("compiling %s", dir))
+		logger.Verbose("compiling " + dir)
 	}
 
 	packageAst, fileNames, err := parser.ParsePackageDirCollectingFiles(packagePath, coreutils.NewPathReader(dir), "")
@@ -275,7 +275,9 @@ func loadPackages(dir string, notFoundDeps map[string]struct{}) (*loadedPackages
 		if err != nil {
 			return nil, err
 		}
-		defer removeSysGoModule(tmpDirPath)
+		defer func() {
+			_ = removeSysGoModule(tmpDirPath)
+		}()
 
 		tmpPkg, err := packages.Load(&packages.Config{
 			Mode: packages.NeedName | packages.NeedFiles | packages.NeedImports | packages.NeedDeps | packages.NeedModule,

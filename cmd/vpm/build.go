@@ -30,10 +30,10 @@ func newBuildCmd(params *vpmParams) *cobra.Command {
 			if err != nil {
 				logger.Error(err)
 				if errors.Is(err, compile.ErrAppSchemaNotFound) {
-					return fmt.Errorf("failed to build, app schema not found")
+					return errors.New("failed to build, app schema not found")
 				}
 				if compileRes != nil && len(compileRes.NotFoundDeps) > 0 {
-					return fmt.Errorf("failed to compile, missing dependencies. Run 'vpm tidy'")
+					return errors.New("failed to compile, missing dependencies. Run 'vpm tidy'")
 				}
 			}
 			return build(params)
