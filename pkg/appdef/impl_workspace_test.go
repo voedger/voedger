@@ -215,7 +215,7 @@ func Test_AppDef_AddWorkspaceAbstract(t *testing.T) {
 		desc.SetAbstract()
 
 		_, err := adb.Build()
-		require.ErrorIs(err, ErrWorkspaceShouldBeAbstract)
+		require.ErrorIs(err, ErrIncompatibleError)
 
 		t.Run("but must be ok to fix this error by making the workspace abstract", func(t *testing.T) {
 			ws.SetAbstract()

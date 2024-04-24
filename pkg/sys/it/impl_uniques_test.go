@@ -419,7 +419,7 @@ func TestRecordByUniqueValuesErrors(t *testing.T) {
 			"Int":   int32(num),
 			"Bool":  true,
 		})
-		require.ErrorIs(err, appdef.ErrInvalidTypeKind)
+		require.ErrorIs(err, appdef.ErrInvalidError)
 	})
 
 	t.Run("wrong type", func(t *testing.T) {
@@ -427,13 +427,13 @@ func TestRecordByUniqueValuesErrors(t *testing.T) {
 			_, err = uniques.GetRecordIDByUniqueCombination(ws.WSID, appdef.NewQName("app1pkg", "unknown"), as, map[string]interface{}{
 				"Str": 42,
 			})
-			require.ErrorIs(err, appdef.ErrTypeNotFound)
+			require.ErrorIs(err, appdef.ErrNotFoundError)
 		})
 		t.Run("not a table", func(t *testing.T) {
 			_, err = uniques.GetRecordIDByUniqueCombination(ws.WSID, appdef.NewQName("app1pkg", "RatedQryParams"), as, map[string]interface{}{
 				"Str": 42,
 			})
-			require.ErrorIs(err, appdef.ErrInvalidTypeKind)
+			require.ErrorIs(err, appdef.ErrInvalidError)
 		})
 	})
 

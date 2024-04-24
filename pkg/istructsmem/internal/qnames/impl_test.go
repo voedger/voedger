@@ -162,7 +162,7 @@ func TestQNamesPrepareErrors(t *testing.T) {
 
 		names := New()
 		err := names.Prepare(storage, versions, nil, nil)
-		require.ErrorIs(err, appdef.ErrInvalidQNameStringRepresentation)
+		require.ErrorIs(err, appdef.ErrConvertError)
 		require.ErrorContains(err, badName)
 	})
 

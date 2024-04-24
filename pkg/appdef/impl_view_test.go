@@ -360,14 +360,14 @@ func TestViewValidate(t *testing.T) {
 
 	t.Run("must be error if no pkey fields", func(t *testing.T) {
 		_, err := adb.Build()
-		require.ErrorIs(err, ErrFieldsMissed)
+		require.ErrorIs(err, ErrMissedError)
 	})
 
 	v.Key().PartKey().AddField("pk1", DataKind_bool)
 
 	t.Run("must be error if no ccols fields", func(t *testing.T) {
 		_, err := adb.Build()
-		require.ErrorIs(err, ErrFieldsMissed)
+		require.ErrorIs(err, ErrMissedError)
 	})
 
 	v.Key().ClustCols().AddField("cc1", DataKind_string, MaxLen(100))

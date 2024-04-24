@@ -109,8 +109,8 @@ func TestValidateContainer(t *testing.T) {
 
 	t.Run("must be error if container type not found", func(t *testing.T) {
 		_, err := app.Build()
-		require.ErrorIs(err, ErrTypeNotFound)
-		require.ErrorContains(err, "unknown type «test.rec»")
+		require.ErrorIs(err, ErrNotFoundError)
+		require.ErrorContains(err, "test.rec")
 	})
 
 	rec := app.AddCRecord(NewQName("test", "rec"))
@@ -135,8 +135,8 @@ func TestValidateContainer(t *testing.T) {
 		doc.AddContainer("obj", NewQName("test", "obj"), 0, 1)
 		_ = app.AddObject(NewQName("test", "obj"))
 		_, err := app.Build()
-		require.ErrorIs(err, ErrInvalidTypeKind)
-		require.ErrorContains(err, "«CDoc» can`t contain «Object»")
+		require.ErrorIs(err, ErrInvalidError)
+		require.ErrorContains(err, "test.obj")
 	})
 }
 

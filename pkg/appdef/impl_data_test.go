@@ -636,7 +636,7 @@ func TestDataKind_IsSupportedConstraint(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := tt.k.IsSupportedConstraint(tt.args.c); got != tt.want {
+			if got := tt.k.IsCompatibleWithConstraint(tt.args.c); got != tt.want {
 				t.Errorf("%v.IsSupportedConstraint(%v) = %v, want %v", tt.k.TrimString(), tt.args.c.TrimString(), got, tt.want)
 			}
 		})
