@@ -8,6 +8,7 @@ package iextenginewazero
 import (
 	"context"
 	"embed"
+	"fmt"
 	"net/url"
 	"testing"
 	"time"
@@ -247,6 +248,7 @@ func Test_Allocs_ManualGC(t *testing.T) {
 
 	require := require.New(t)
 	ctx := context.Background()
+	WasmPreallocatedBufferSize = 1000000
 	moduleUrl := testModuleURL("./_testdata/allocs/pkggc.wasm")
 	extEngine, err := testFactoryHelper(ctx, moduleUrl, []string{arrAppend, arrReset}, iextengine.ExtEngineConfig{}, false)
 	require.NoError(err)
@@ -278,7 +280,7 @@ func Test_Allocs_AutoGC(t *testing.T) {
 
 	const arrAppend = "arrAppend"
 	const arrReset = "arrReset"
-
+	WasmPreallocatedBufferSize = 1000000
 	require := require.New(t)
 	ctx := context.Background()
 	moduleUrl := testModuleURL("./_testdata/allocs/pkggc.wasm")
@@ -320,6 +322,7 @@ func Test_NoGc_MemoryOverflow(t *testing.T) {
 
 	const arrAppend = "arrAppend"
 	const arrReset = "arrReset"
+	WasmPreallocatedBufferSize = 1000000
 
 	require := require.New(t)
 	ctx := context.Background()
@@ -384,6 +387,7 @@ type panicsUnit struct {
 
 func Test_HandlePanics(t *testing.T) {
 
+	WasmPreallocatedBufferSize = 1000000
 	tests := []panicsUnit{
 		{"incorrectStorageQname", "convert error: string «foo» to QName"},
 		{"incorrectEntityQname", "convert error: string «abc» to QName"},
@@ -443,25 +447,92 @@ func Test_QueryValue(t *testing.T) {
 
 func Test_RecoverEngine(t *testing.T) {
 
+	testWithPreallocatedBuffer := func(t *testing.T, preallocatedBufferSize uint32) {
+		t.Run(fmt.Sprintf("PreallocatedBufferSize=%d", preallocatedBufferSize), func(t *testing.T) {
+			WasmPreallocatedBufferSize = preallocatedBufferSize
+			const arrAppend2 = "arrAppend2"
+			require := require.New(t)
+			ctx := context.Background()
+			moduleUrl := testModuleURL("./_testdata/allocs/pkg.wasm")
+			extEngine, err := testFactoryHelper(ctx, moduleUrl, []string{arrAppend2}, iextengine.ExtEngineConfig{MemoryLimitPages: 0x20}, true)
+			require.NoError(err)
+			defer extEngine.Close(ctx)
+			we := extEngine.(*wazeroExtEngine)
+
+			require.NoError(extEngine.Invoke(context.Background(), appdef.NewFullQName(testPkg, arrAppend2), extIO))
+			require.Equal(0, we.numAutoRecovers) // no auto-recover during first invoke
+			heapInUseAfterFirstInvoke, err := we.getHeapinuse(testPkg, context.Background())
+			require.NoError(err)
+
+			for recoverNo := 0; recoverNo < 10; recoverNo++ { // 10 recover cycles
+				for run := 1; we.numAutoRecovers == recoverNo; { // run until auto-recover is triggered{
+					require.NoError(extEngine.Invoke(context.Background(), appdef.NewFullQName(testPkg, arrAppend2), extIO))
+					run++
+				}
+
+				require.Equal(recoverNo+1, we.numAutoRecovers)
+				heapInUseAfterRecover, err := we.getHeapinuse(testPkg, context.Background())
+				require.NoError(err)
+				require.Equal(heapInUseAfterRecover, heapInUseAfterFirstInvoke)
+			}
+		})
+	}
+
+	testWithPreallocatedBuffer(t, 1000000) // work
+	testWithPreallocatedBuffer(t, 900000)  // doesn't work
+	testWithPreallocatedBuffer(t, 800000)  // doesn't work
+	testWithPreallocatedBuffer(t, 700000)  // doesn't work
+
+	testWithPreallocatedBuffer(t, 600000) // work
+	testWithPreallocatedBuffer(t, 500000) // work
+
+	testWithPreallocatedBuffer(t, 200000)
+	testWithPreallocatedBuffer(t, 100000)
+	testWithPreallocatedBuffer(t, WasmDefaultPreallocatedBufferSize) // dpesn't work
+}
+
+func Test_RecoverEngine2(t *testing.T) {
+
+	WasmPreallocatedBufferSize = 1000000
 	const arrAppend2 = "arrAppend2"
 	require := require.New(t)
 	ctx := context.Background()
 	moduleUrl := testModuleURL("./_testdata/allocs/pkg.wasm")
-	extEngine, err := testFactoryHelper(ctx, moduleUrl, []string{arrAppend2}, iextengine.ExtEngineConfig{MemoryLimitPages: 0x20}, false)
+	extEngine, err := testFactoryHelper(ctx, moduleUrl, []string{arrAppend2}, iextengine.ExtEngineConfig{MemoryLimitPages: 0x20}, true)
 	require.NoError(err)
 	defer extEngine.Close(ctx)
 	we := extEngine.(*wazeroExtEngine)
 
-	for i := 1; i <= 3; i++ {
-		require.NoError(extEngine.Invoke(context.Background(), appdef.NewFullQName(testPkg, arrAppend2), extIO))
-		require.Equal(0, we.numAutoRecovers)
-	}
-	for i := 1; i <= 3; i++ {
-		require.NoError(extEngine.Invoke(context.Background(), appdef.NewFullQName(testPkg, arrAppend2), extIO))
-		require.Equal(1, we.numAutoRecovers)
-	}
+	require.NoError(extEngine.Invoke(context.Background(), appdef.NewFullQName(testPkg, arrAppend2), extIO))
+	require.Equal(0, we.numAutoRecovers)
+	require.NoError(extEngine.Invoke(context.Background(), appdef.NewFullQName(testPkg, arrAppend2), extIO))
+	require.Equal(0, we.numAutoRecovers)
+	require.NoError(extEngine.Invoke(context.Background(), appdef.NewFullQName(testPkg, arrAppend2), extIO))
+	require.Equal(0, we.numAutoRecovers)
+
+	require.NoError(extEngine.Invoke(context.Background(), appdef.NewFullQName(testPkg, arrAppend2), extIO))
+	require.Equal(1, we.numAutoRecovers)
+	require.NoError(extEngine.Invoke(context.Background(), appdef.NewFullQName(testPkg, arrAppend2), extIO))
+	require.Equal(1, we.numAutoRecovers)
+	require.NoError(extEngine.Invoke(context.Background(), appdef.NewFullQName(testPkg, arrAppend2), extIO))
+	require.Equal(1, we.numAutoRecovers)
+
 	require.NoError(extEngine.Invoke(context.Background(), appdef.NewFullQName(testPkg, arrAppend2), extIO))
 	require.Equal(2, we.numAutoRecovers)
+
+	// for i := 1; i <= 3; i++ {
+	// 	require.NoError(extEngine.Invoke(context.Background(), appdef.NewFullQName(testPkg, arrAppend2), extIO))
+	// 	require.Equal(0, we.numAutoRecovers)
+	// 	printHeapInfo(t, we)
+	// }
+	// for i := 1; i <= 3; i++ {
+	// 	err = extEngine.Invoke(context.Background(), appdef.NewFullQName(testPkg, arrAppend2), extIO)
+	// 	require.Equal(1, we.numAutoRecovers)
+	// 	printHeapInfo(t, we)
+	// 	require.NoError(err)
+	// }
+	// require.NoError(extEngine.Invoke(context.Background(), appdef.NewFullQName(testPkg, arrAppend2), extIO))
+	// require.Equal(2, we.numAutoRecovers)
 }
 
 func Test_Read(t *testing.T) {
