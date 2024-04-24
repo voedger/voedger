@@ -155,7 +155,7 @@ func (ff *fields) UserFieldCount() int {
 func (ff *fields) addDataField(name FieldName, data QName, required bool, constraints ...IConstraint) {
 	d := ff.app.Data(data)
 	if d == nil {
-		panic(ErrNotFound("data type «%v»", data))
+		panic(ErrTypeNotFound(data))
 	}
 	if len(constraints) > 0 {
 		d = newAnonymousData(ff.app, d.DataKind(), data, constraints...)
@@ -244,7 +244,7 @@ func (ff *fields) makeSysFields() {
 func (ff *fields) setFieldComment(name FieldName, comment ...string) {
 	fld := ff.fields[name]
 	if fld == nil {
-		panic(ErrNotFound("field «%v»", name))
+		panic(ErrFieldNotFound(name))
 	}
 	if fld, ok := fld.(interface{ setComment(comment ...string) }); ok {
 		fld.setComment(comment...)
@@ -254,7 +254,7 @@ func (ff *fields) setFieldComment(name FieldName, comment ...string) {
 func (ff *fields) setFieldVerify(name FieldName, vk ...VerificationKind) {
 	fld := ff.fields[name]
 	if fld == nil {
-		panic(ErrNotFound("field «%v»", name))
+		panic(ErrFieldNotFound(name))
 	}
 	vf := fld.(interface{ setVerify(k ...VerificationKind) })
 	vf.setVerify(vk...)

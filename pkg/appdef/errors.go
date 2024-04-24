@@ -10,44 +10,48 @@ import (
 	"fmt"
 )
 
-var ErrMissedError = errors.New("missed")
-
-func ErrMissed(msg string, args ...any) error {
+func enrichError(err error, msg string, args ...any) error {
 	s := msg
 	if len(args) > 0 {
 		s = fmt.Sprintf(msg, args...)
 	}
-	return fmt.Errorf("%w: %s", ErrMissedError, s)
+	return fmt.Errorf("%w: %s", err, s)
+}
+
+var ErrMissedError = errors.New("missed")
+
+func ErrMissed(msg string, args ...any) error {
+	return enrichError(ErrMissedError, msg, args...)
 }
 
 var ErrInvalidError = errors.New("not valid")
 
 func ErrInvalid(msg string, args ...any) error {
-	s := msg
-	if len(args) > 0 {
-		s = fmt.Sprintf(msg, args...)
-	}
-	return fmt.Errorf("%w: %s", ErrInvalidError, s)
+	return enrichError(ErrInvalidError, msg, args...)
 }
 
 var ErrUniqueViolationError = errors.New("unique violation")
 
 func ErrUniqueViolation(msg string, args ...any) error {
-	s := msg
-	if len(args) > 0 {
-		s = fmt.Sprintf(msg, args...)
-	}
-	return fmt.Errorf("%w: %s", ErrUniqueViolationError, s)
+	return enrichError(ErrUniqueViolationError, msg, args...)
 }
 
 var ErrNotFoundError = errors.New("not found")
 
 func ErrNotFound(msg string, args ...any) error {
-	s := msg
-	if len(args) > 0 {
-		s = fmt.Sprintf(msg, args...)
-	}
-	return fmt.Errorf("%w: %s", ErrNotFoundError, s)
+	return enrichError(ErrNotFoundError, msg, args...)
+}
+
+func ErrFieldNotFound(f string) error {
+	return ErrNotFound("field «%v»", f)
+}
+
+func ErrTypeNotFound(t QName) error {
+	return ErrNotFound("type «%v»", t)
+}
+
+func ErrRoleNotFound(r QName) error {
+	return ErrNotFound("role «%v»", r)
 }
 
 var ErrInvalidQNameStringRepresentation = errors.New("invalid string representation of qualified name")

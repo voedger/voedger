@@ -149,7 +149,7 @@ func (ee *events) add(on QName, event ...ProjectorEventKind) {
 
 	t := ee.app.TypeByName(on)
 	if t == nil {
-		panic(ErrNotFound("type «%v»", on))
+		panic(ErrTypeNotFound(on))
 	}
 	switch t.Kind() {
 	case TypeKind_GDoc, TypeKind_GRecord, TypeKind_CDoc, TypeKind_CRecord, TypeKind_WDoc, TypeKind_WRecord, // CUD

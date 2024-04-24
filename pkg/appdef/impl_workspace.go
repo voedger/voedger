@@ -75,7 +75,7 @@ func (ws *workspace) Types(cb func(IType)) {
 func (ws *workspace) addType(name QName) {
 	t := ws.app.TypeByName(name)
 	if t == nil {
-		panic(ErrNotFound("type «%v»", name))
+		panic(ErrTypeNotFound(name))
 	}
 
 	ws.types[name] = t

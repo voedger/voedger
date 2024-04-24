@@ -111,7 +111,7 @@ func validatePrivilegeOnNames(app IAppDef, on ...QName) (QNames, error) {
 	for _, n := range names {
 		t := app.TypeByName(n)
 		if t == nil {
-			return nil, ErrNotFound("type «%v»", n)
+			return nil, ErrTypeNotFound(n)
 		}
 		k := onType
 		switch t.Kind() {
