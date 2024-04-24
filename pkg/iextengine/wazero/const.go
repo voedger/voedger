@@ -10,7 +10,8 @@ const bitsInFourBytes = 32
 const (
 	maxMemoryPages = 0xffff
 
-	WasmPreallocatedBufferIncrease = 1000
+	WasmPreallocatedBufferIncrease    = 1000
+	WasmDefaultPreallocatedBufferSize = 64000
 )
 
-var WasmPreallocatedBufferSize uint32 = 1000000
+var WasmPreallocatedBufferSize uint32 = WasmDefaultPreallocatedBufferSize
