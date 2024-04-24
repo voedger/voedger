@@ -389,8 +389,8 @@ func Test_HandlePanics(t *testing.T) {
 
 	WasmPreallocatedBufferSize = 1000000
 	tests := []panicsUnit{
-		{"incorrectStorageQname", "invalid string representation of qualified name: foo"},
-		{"incorrectEntityQname", "invalid string representation of qualified name: abc"},
+		{"incorrectStorageQname", "convert error: string «foo» to QName"},
+		{"incorrectEntityQname", "convert error: string «abc» to QName"},
 		{"unsupportedStorage", "unsupported storage"},
 		{"incorrectKeyBuilder", safestate.PanicIncorrectKeyBuilder},
 		{"canExistIncorrectKey", safestate.PanicIncorrectKeyBuilder},

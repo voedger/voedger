@@ -474,7 +474,7 @@ func Test_rowType_PutErrors(t *testing.T) {
 
 			row.PutChars("QName", "welcome.2.error")
 
-			require.ErrorIs(row.build(), appdef.ErrInvalidQNameStringRepresentation)
+			require.ErrorIs(row.build(), appdef.ErrConvertError)
 		})
 
 		t.Run("PutChars to bytes-type fields non convertible base64 value must be error", func(t *testing.T) {

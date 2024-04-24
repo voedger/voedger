@@ -254,7 +254,7 @@ func Test_RecordsPutJSON(t *testing.T) {
 
 			json[appdef.SystemField_QName] = `naked 🔫`
 			err = app.Records().PutJSON(test.workspace, json)
-			require.ErrorIs(err, appdef.ErrInvalidQNameStringRepresentation)
+			require.ErrorIs(err, appdef.ErrConvertError)
 			require.ErrorContains(err, appdef.SystemField_QName)
 
 			json[appdef.SystemField_QName] = test.testObj.String()

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-present Sigma-Soft, Ltd.
+ * Copyright (c) 2024-present Sigma-Soft, Ltd.
  * @author: Nikolay Nikitin
  */
 
@@ -39,7 +39,7 @@ func (s storage) validate() (err error) {
 	for _, n := range s.names {
 		if s.app.TypeByName(n) == nil {
 			err = errors.Join(err,
-				fmt.Errorf("storage «%v» has unknown qname «%v»: %w", s.QName, n, ErrTypeNotFound))
+				ErrNotFound("storage «%v» type «%v»", s.QName, n))
 			break
 		}
 	}
@@ -83,7 +83,7 @@ func (ss *storages) Storage(name QName) IStorage {
 
 func (ss *storages) add(name QName, names ...QName) {
 	if name == NullQName {
-		panic(fmt.Errorf("empty storage name: %w", ErrNameMissed))
+		panic(ErrMissed("storage name"))
 	}
 	if ok, err := ValidQName(name); !ok {
 		panic(fmt.Errorf("invalid storage name «%v»: %w", name, err))
@@ -107,7 +107,7 @@ func (ss *storages) setComment(name QName, comment string) {
 		s.comment.setComment(comment)
 		return
 	}
-	panic(fmt.Errorf("storage «%v» not found: %w", name, ErrNameNotFound))
+	panic(ErrNotFound("storage «%v»", name))
 }
 
 func (ss storages) validate() (err error) {

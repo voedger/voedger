@@ -1,12 +1,11 @@
 /*
- * Copyright (c) 2021-present Sigma-Soft, Ltd.
+ * Copyright (c) 2024-present Sigma-Soft, Ltd.
  * @author: Nikolay Nikitin
  */
 
 package appdef
 
 import (
-	"fmt"
 	"slices"
 )
 
@@ -29,14 +28,14 @@ func (p *packages) add(local, path string) {
 		panic(err)
 	}
 	if p, ok := p.pathByLocal[local]; ok {
-		panic(fmt.Errorf("package local name «%s» already used for «%s»: %w", local, p, ErrNameUniqueViolation))
+		panic(ErrAlreadyExists("package local name «%s» already used for «%s»", local, p))
 	}
 
 	if path == "" {
-		panic(fmt.Errorf("package «%s» has empty path: %w", local, ErrNameMissed))
+		panic(ErrMissed("package «%s» path", local))
 	}
 	if l, ok := p.localByPath[path]; ok {
-		panic(fmt.Errorf("package path «%s» already used for «%s»: %w", path, l, ErrNameUniqueViolation))
+		panic(ErrAlreadyExists("package path «%s» already used for «%s»", path, l))
 	}
 
 	p.local = append(p.local, local)
