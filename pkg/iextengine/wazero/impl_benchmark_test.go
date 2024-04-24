@@ -124,11 +124,16 @@ func bench_extensions(b *testing.B, gc bool, compile bool) {
 goos: linux
 goarch: amd64
 cpu: 12th Gen Intel(R) Core(TM) i7-12700
-Benchmark_Extensions_NoGc/oneGetOneIntent5calls-20       	  830360	      1257 ns/op	    2119 B/op	      25 allocs/op
-Benchmark_Extensions_NoGc/oneGetNoIntents2calls-20       	 1795513	       641.7 ns/op	    1248 B/op	      13 allocs/op
-Benchmark_Extensions_NoGc/oneGetLongStr3calls-20         	 1735144	       669.2 ns/op	    1368 B/op	      13 allocs/op
-Benchmark_Extensions_NoGc/oneKey1call-20                 	 4694110	       243.9 ns/op	     280 B/op	       5 allocs/op
-Benchmark_Extensions_NoGc/doNothing-20                   	19467026	        61.33 ns/op	       0 B/op	       0 allocs/op
+Benchmark_Extensions_NoGc/Compiler/oneGetOneIntent5calls-20         	  307974	      5875 ns/op	    2988 B/op	      55 allocs/op
+Benchmark_Extensions_NoGc/Compiler/oneGetNoIntents2calls-20         	  728787	      2519 ns/op	    1728 B/op	      26 allocs/op
+Benchmark_Extensions_NoGc/Compiler/oneGetLongStr3calls-20           	   90838	     48478 ns/op	  133032 B/op	      33 allocs/op
+Benchmark_Extensions_NoGc/Compiler/oneKey1call-20                   	 1000000	      1449 ns/op	     640 B/op	      15 allocs/op
+Benchmark_Extensions_NoGc/Compiler/doNothing-20                     	 3906926	       303.5 ns/op	     160 B/op	       3 allocs/op
+Benchmark_Extensions_NoGc/Interpreter/oneGetOneIntent5calls-20      	  267399	      5619 ns/op	    3156 B/op	      61 allocs/op
+Benchmark_Extensions_NoGc/Interpreter/oneGetNoIntents2calls-20      	  628476	      2079 ns/op	    1800 B/op	      29 allocs/op
+Benchmark_Extensions_NoGc/Interpreter/oneGetLongStr3calls-20        	   31657	     43928 ns/op	  133128 B/op	      37 allocs/op
+Benchmark_Extensions_NoGc/Interpreter/oneKey1call-20                	  924883	      1109 ns/op	     688 B/op	      17 allocs/op
+Benchmark_Extensions_NoGc/Interpreter/doNothing-20                  	 3429517	       327.5 ns/op	     184 B/op	       4 allocs/op
 */
 func Benchmark_Extensions_NoGc(b *testing.B) {
 	b.Run("Compiler", func(b *testing.B) {
@@ -146,13 +151,14 @@ func benchmarkRecover(b *testing.B, limitPages uint, expectedRuns int) {
 	const arrAppend2 = "arrAppend2"
 	ctx := context.Background()
 	moduleUrl := testModuleURL("./_testdata/allocs/pkg.wasm")
-	ee, err := testFactoryHelper(ctx, moduleUrl, []string{arrAppend2}, iextengine.ExtEngineConfig{MemoryLimitPages: limitPages}, false)
+	ee, err := testFactoryHelper(ctx, moduleUrl, []string{arrAppend2}, iextengine.ExtEngineConfig{MemoryLimitPages: limitPages}, true)
 	if err != nil {
 		panic(err)
 	}
 	defer ee.Close(ctx)
 
 	we := ee.(*wazeroExtEngine)
+	we.autoRecover = false
 
 	ext := appdef.NewFullQName(testPkg, arrAppend2)
 	for runs := 0; runs < expectedRuns; runs++ {
@@ -161,7 +167,7 @@ func benchmarkRecover(b *testing.B, limitPages uint, expectedRuns int) {
 		}
 	}
 
-	we.backupMemory()
+	//we.backupMemory()
 
 	// the next call should fail
 	if err := ee.Invoke(context.Background(), ext, extIO); err == nil {
@@ -170,14 +176,14 @@ func benchmarkRecover(b *testing.B, limitPages uint, expectedRuns int) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		we.recover()
+		we.recover(context.Background())
 	}
 }
 
 func benchmarkRecoverClean(b *testing.B, limitPages uint) {
 	ctx := context.Background()
 	moduleUrl := testModuleURL("./_testdata/allocs/pkg.wasm")
-	ee, err := testFactoryHelper(ctx, moduleUrl, []string{}, iextengine.ExtEngineConfig{MemoryLimitPages: limitPages}, false)
+	ee, err := testFactoryHelper(ctx, moduleUrl, []string{}, iextengine.ExtEngineConfig{MemoryLimitPages: limitPages}, true)
 	if err != nil {
 		panic(err)
 	}
@@ -189,20 +195,19 @@ func benchmarkRecoverClean(b *testing.B, limitPages uint) {
 	}
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		we.recover()
+		we.recover(context.Background())
 	}
 }
 
 /*
 goos: linux
 goarch: amd64
-pkg: github.com/heeus/core/iextenginewazero
 cpu: 12th Gen Intel(R) Core(TM) i7-12700
-Benchmark_Recover/2Mib-1%-20         	  540308	      2011 ns/op	       0 B/op	       0 allocs/op
-Benchmark_Recover/2Mib-50%-20        	   16768	     71175 ns/op	       0 B/op	       0 allocs/op
-Benchmark_Recover/2Mib-100%-20       	   16609	     78913 ns/op	       0 B/op	       0 allocs/op
-Benchmark_Recover/8Mib-100%-20       	    3675	    352462 ns/op	       0 B/op	       0 allocs/op
-Benchmark_Recover/100Mib-70%-20      	     198	   5903974 ns/op	       0 B/op	       0 allocs/op
+Benchmark_Recover/2Mib-1%-20         	    6808	    168937 ns/op	 2221915 B/op	      61 allocs/op
+Benchmark_Recover/2Mib-50%-20        	    6200	    178177 ns/op	 2221917 B/op	      61 allocs/op
+Benchmark_Recover/2Mib-100%-20       	    6007	    191219 ns/op	 2233567 B/op	      63 allocs/op
+Benchmark_Recover/8Mib-100%-20       	    1484	    759637 ns/op	 8525009 B/op	      63 allocs/op
+Benchmark_Recover/100Mib-70%-20      	     117	   9026536 ns/op	100078791 B/op	      63 allocs/op
 */
 func Benchmark_Recover(b *testing.B) {
 	WasmPreallocatedBufferSize = 20000
