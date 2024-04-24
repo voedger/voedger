@@ -384,7 +384,6 @@ func TestBuildBasicUsage(t *testing.T) {
 		t.Skip()
 	}
 	require := require.New(t)
-
 	var err error
 	var tempDir string
 	if logger.IsVerbose() {
