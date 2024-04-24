@@ -19,7 +19,6 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appparts"
-	"github.com/voedger/voedger/pkg/cluster"
 	"github.com/voedger/voedger/pkg/iauthnzimpl"
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/in10nmem"
@@ -664,7 +663,7 @@ func replyBadRequest(sender ibus.ISender, message string) {
 // test app deployment constants
 var (
 	testAppName                                = istructs.AppQName_untill_airs_bp
-	testAppEngines                             = [cluster.ProcessorKind_Count]int{10, 10, 10}
+	testAppEngines                             = [appparts.ProcessorKind_Count]int{10, 10, 10}
 	testAppPartID    istructs.PartitionID      = 1
 	testAppPartCount istructs.NumAppPartitions = 1
 )

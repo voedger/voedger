@@ -7,10 +7,9 @@ package apppartsctl
 
 import (
 	"github.com/voedger/voedger/pkg/appparts"
-	"github.com/voedger/voedger/pkg/cluster"
 )
 
 // Returns a new instance of IAppPartitionsController.
-func New(parts appparts.IAppPartitions, apps []cluster.BuiltInApp) (ctl IAppPartitionsController, cleanup func(), err error) {
+func New(parts appparts.IAppPartitions, apps []appparts.BuiltInApp) (ctl IAppPartitionsController, cleanup func(), err error) {
 	return newAppPartitionsController(parts, apps)
 }

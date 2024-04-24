@@ -5,6 +5,6 @@
 
 package btstrp
 
-import "github.com/voedger/voedger/pkg/cluster"
+import "github.com/voedger/voedger/pkg/appparts"
 
-type ClusterBuiltInApp cluster.BuiltInApp
+type ClusterBuiltInApp appparts.BuiltInApp

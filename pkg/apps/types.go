@@ -6,7 +6,7 @@
 package apps
 
 import (
-	"github.com/voedger/voedger/pkg/cluster"
+	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -24,6 +24,7 @@ type APIs struct {
 	payloads.IAppTokensFactory
 	coreutils.IFederation
 	coreutils.TimeFunc
+	IAppPartitionsSource appparts.INumAppPartitionsSource
 	// IAppPartitions - wrong, wire cycle: `appparts.NewWithActualizerWithExtEnginesFactories(asp, actualizer, eef) IAppPartitions`` accepts engines.ProvideExtEngineFactories()
 	//                                     that requires filled AppConfigsType, but AppConfigsType requires apps.APIs with IAppPartitions
 }
@@ -34,7 +35,7 @@ type CLIParams struct {
 	Storage string
 }
 type BuiltInAppDef struct {
-	cluster.AppDeploymentDescriptor
+	appparts.AppDeploymentDescriptor
 	AppQName istructs.AppQName
 	Packages []parser.PackageFS
 }

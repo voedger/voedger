@@ -13,7 +13,6 @@ import (
 	"github.com/voedger/voedger/pkg/apppartsctl"
 	"github.com/voedger/voedger/pkg/apps"
 	"github.com/voedger/voedger/pkg/btstrp"
-	"github.com/voedger/voedger/pkg/cluster"
 	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/iauthnzimpl"
@@ -90,13 +89,15 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 	v2 := projectors.NewSyncActualizerFactoryFactory(syncActualizerFactory, iSecretReader, in10nBroker)
 	vvmPortSource := provideVVMPortSource()
 	iFederation, cleanup2 := provideIFederation(vvmConfig, vvmPortSource)
+	iNumAppPartitionsSource := proivdeINumAppPartitionsSource()
 	apIs := apps.APIs{
-		ITokens:             iTokens,
-		IAppStructsProvider: iAppStructsProvider,
-		IAppStorageProvider: iAppStorageProvider,
-		IAppTokensFactory:   iAppTokensFactory,
-		IFederation:         iFederation,
-		TimeFunc:            timeFunc,
+		ITokens:              iTokens,
+		IAppStructsProvider:  iAppStructsProvider,
+		IAppStorageProvider:  iAppStorageProvider,
+		IAppTokensFactory:    iAppTokensFactory,
+		IFederation:          iFederation,
+		TimeFunc:             timeFunc,
+		IAppPartitionsSource: iNumAppPartitionsSource,
 	}
 	appsArtefacts, err := provideBuiltInAppsArtefacts(vvmConfig, apIs, appConfigsTypeEmpty)
 	if err != nil {
@@ -174,7 +175,7 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 		return nil, nil, err
 	}
 	iAppPartsCtlPipelineService := provideAppPartsCtlPipelineService(iAppPartitionsController)
-	bootstrapOperator := provideBootstrapOperator(iBus, iAppStructsProvider, timeFunc, iAppPartitions, v5)
+	bootstrapOperator := provideBootstrapOperator(iFederation, iAppStructsProvider, timeFunc, iAppPartitions, v5)
 	servicePipeline := provideServicePipeline(vvmCtx, operatorCommandProcessors, operatorQueryProcessors, operatorAppServicesFactory, routerServiceOperator, metricsServiceOperator, iAppPartsCtlPipelineService, bootstrapOperator)
 	v7 := provideExtensionPoints(appsArtefacts)
 	v8 := provideMetricsServicePortGetter(metricsService)
@@ -221,6 +222,7 @@ func ProvideVVM(vvmCfg *VVMConfig, vvmIdx VVMIdxType) (voedgerVM *VoedgerVM, err
 	if err != nil {
 		return nil, err
 	}
+	*voedgerVM.IAppPartitionsSource = voedgerVM.IAppPartitions
 	return voedgerVM, BuildAppWorkspaces(voedgerVM.VVM, vvmCfg)
 }
 
@@ -235,10 +237,14 @@ func (vvm *VoedgerVM) Launch() error {
 	return vvm.ServicePipeline.SendSync(ignition)
 }
 
-func provideBootstrapOperator(bus ibus.IBus, asp istructs.IAppStructsProvider, timeFunc coreutils.TimeFunc, appparts2 appparts.IAppPartitions,
-	builtinApps []cluster.BuiltInApp) BootstrapOperator {
+func proivdeINumAppPartitionsSource() appparts.INumAppPartitionsSource {
+	return new(appparts.IAppPartitions)
+}
+
+func provideBootstrapOperator(federation coreutils.IFederation, asp istructs.IAppStructsProvider, timeFunc coreutils.TimeFunc, apppar appparts.IAppPartitions,
+	builtinApps []appparts.BuiltInApp) BootstrapOperator {
 	var clusterBuiltinApp btstrp.ClusterBuiltInApp
-	otherApps := make([]cluster.BuiltInApp, 0, len(builtinApps)-1)
+	otherApps := make([]appparts.BuiltInApp, 0, len(builtinApps)-1)
 	for _, app := range builtinApps {
 		if app.Name == istructs.AppQName_sys_cluster {
 			clusterBuiltinApp = btstrp.ClusterBuiltInApp(app)
@@ -247,7 +253,7 @@ func provideBootstrapOperator(bus ibus.IBus, asp istructs.IAppStructsProvider, t
 		}
 	}
 	return pipeline.NewSyncOp(func(ctx context.Context, work interface{}) (err error) {
-		return btstrp.Bootstrap(ctx, bus, asp, timeFunc, appparts2, clusterBuiltinApp, otherApps)
+		return btstrp.Bootstrap(federation, asp, timeFunc, apppar, clusterBuiltinApp, otherApps)
 	})
 }
 
@@ -263,10 +269,10 @@ func provideAppConfigsTypeEmpty() AppConfigsTypeEmpty {
 	return AppConfigsTypeEmpty(istructsmem.AppConfigsType{})
 }
 
-// AppConfigsTypeEmpty is provided here despite it looks senceless. But ok: it is a map that fills later, on BuildCfgsAnDefs() and used after filling only
+// AppConfigsTypeEmpty is provided here despite it looks senceless. But ok: it is a map that will be filled later, on BuildAppsArtefacts(), and used after filling only
 // provide appsArtefacts.AppConfigsType here -> wire cycle: BuildappsArtefacts requires APIs requires IAppStructsProvider requires AppConfigsType obtained from BuildappsArtefacts
 // The same approach does not work for IAppPartitions implementation, because the appparts.NewWithActualizerWithExtEnginesFactories() accepts
-// iextengine.ExtensionEngineFactories that already must be initialized with filled AppConfigsType
+// iextengine.ExtensionEngineFactories that must be initialized with the already filled AppConfigsType
 func provideIAppStructsProvider(cfgs AppConfigsTypeEmpty, bucketsFactory irates.BucketsFactoryType, appTokensFactory payloads.IAppTokensFactory,
 	storageProvider istorage.IAppStorageProvider) istructs.IAppStructsProvider {
 	return istructsmem.Provide(istructsmem.AppConfigsType(cfgs), bucketsFactory, appTokensFactory, storageProvider)
@@ -301,8 +307,8 @@ func provideIsDeviceAllowedFunc(appsArtefacts AppsArtefacts) iauthnzimpl.IsDevic
 	return res
 }
 
-func provideBuiltInApps(appsArtefacts AppsArtefacts) []cluster.BuiltInApp {
-	res := make([]cluster.BuiltInApp, len(appsArtefacts.builtInAppPackages))
+func provideBuiltInApps(appsArtefacts AppsArtefacts) []appparts.BuiltInApp {
+	res := make([]appparts.BuiltInApp, len(appsArtefacts.builtInAppPackages))
 	for i, pkg := range appsArtefacts.builtInAppPackages {
 		res[i] = pkg.BuiltInApp
 	}
@@ -436,7 +442,7 @@ func provideRouterParams(cfg *VVMConfig, port VVMPortType, vvmIdx VVMIdxType) ro
 	return res
 }
 
-func provideVVMApps(builtInApps []cluster.BuiltInApp) (vvmApps VVMApps) {
+func provideVVMApps(builtInApps []appparts.BuiltInApp) (vvmApps VVMApps) {
 	for _, builtInApp := range builtInApps {
 		vvmApps = append(vvmApps, builtInApp.Name)
 	}

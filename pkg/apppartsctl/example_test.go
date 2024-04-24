@@ -14,7 +14,6 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/apppartsctl"
-	"github.com/voedger/voedger/pkg/cluster"
 	"github.com/voedger/voedger/pkg/iratesce"
 	"github.com/voedger/voedger/pkg/istorage/mem"
 	"github.com/voedger/voedger/pkg/istorage/provider"
@@ -54,20 +53,20 @@ func Example() {
 	}
 	defer cleanupParts()
 
-	appPartsCtl, cleanupCtl, err := apppartsctl.New(appParts, []cluster.BuiltInApp{
+	appPartsCtl, cleanupCtl, err := apppartsctl.New(appParts, []appparts.BuiltInApp{
 		{Name: istructs.AppQName_test1_app1,
 			Def: app_1_v1,
-			AppDeploymentDescriptor: cluster.AppDeploymentDescriptor{
+			AppDeploymentDescriptor: appparts.AppDeploymentDescriptor{
 				NumParts:         2,
-				EnginePoolSize:   [cluster.ProcessorKind_Count]int{2, 2, 2},
+				EnginePoolSize:   [appparts.ProcessorKind_Count]int{2, 2, 2},
 				NumAppWorkspaces: 3,
 			},
 		},
 		{Name: istructs.AppQName_test1_app2,
 			Def: app_2_v1,
-			AppDeploymentDescriptor: cluster.AppDeploymentDescriptor{
+			AppDeploymentDescriptor: appparts.AppDeploymentDescriptor{
 				NumParts:         3,
-				EnginePoolSize:   [cluster.ProcessorKind_Count]int{2, 2, 2},
+				EnginePoolSize:   [appparts.ProcessorKind_Count]int{2, 2, 2},
 				NumAppWorkspaces: 4,
 			},
 		},
@@ -86,7 +85,7 @@ func Example() {
 	ctx, cancel := context.WithCancel(context.Background())
 	go appPartsCtl.Run(ctx)
 
-	borrow_work_release := func(appName istructs.AppQName, partID istructs.PartitionID, proc cluster.ProcessorKind) {
+	borrow_work_release := func(appName istructs.AppQName, partID istructs.PartitionID, proc appparts.ProcessorKind) {
 		part, err := appParts.Borrow(appName, partID, proc)
 		for errors.Is(err, appparts.ErrNotFound) {
 			time.Sleep(time.Nanosecond)
@@ -107,8 +106,8 @@ func Example() {
 			})
 	}
 
-	borrow_work_release(istructs.AppQName_test1_app1, 1, cluster.ProcessorKind_Command)
-	borrow_work_release(istructs.AppQName_test1_app2, 1, cluster.ProcessorKind_Query)
+	borrow_work_release(istructs.AppQName_test1_app1, 1, appparts.ProcessorKind_Command)
+	borrow_work_release(istructs.AppQName_test1_app2, 1, appparts.ProcessorKind_Query)
 
 	cancel()
 

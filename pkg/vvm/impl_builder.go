@@ -6,8 +6,8 @@ package vvm
 
 import (
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/apps"
-	"github.com/voedger/voedger/pkg/cluster"
 	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
@@ -56,7 +56,7 @@ func (ab VVMAppsBuilder) BuildAppsArtefacts(apis apps.APIs, emptyCfgs AppConfigs
 			return appsArtefacts, err
 		}
 		builtInAppPackages := BuiltInAppPackages{
-			BuiltInApp: cluster.BuiltInApp{
+			BuiltInApp: appparts.BuiltInApp{
 				Name:                    appQName,
 				Def:                     cfg.AppDef,
 				AppDeploymentDescriptor: builtInAppDef.AppDeploymentDescriptor,

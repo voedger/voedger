@@ -15,7 +15,6 @@ import (
 	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/apppartsctl"
 	"github.com/voedger/voedger/pkg/apps"
-	"github.com/voedger/voedger/pkg/cluster"
 	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/iblobstorage"
 	"github.com/voedger/voedger/pkg/in10n"
@@ -58,7 +57,7 @@ type AppStorageFactory func(appQName istructs.AppQName, appStorage istorage.IApp
 type StorageCacheSizeType int
 type VVMApps []istructs.AppQName
 type BuiltInAppPackages struct {
-	cluster.BuiltInApp
+	appparts.BuiltInApp
 	Packages []parser.PackageFS // need for build baseline schemas
 }
 type AppConfigsTypeEmpty istructsmem.AppConfigsType

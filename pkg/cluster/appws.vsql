@@ -20,9 +20,7 @@ ALTER WORKSPACE AppWorkspaceWS (
 	);
 
 	TYPE DeployAppParams (
-		AppQName varchar.
-		NumPartitions int32,
-		NumAppWorkspace int32
+		AppQName varchar
 	)
 
 	EXTENSION ENGINE BUILTIN (
