@@ -12,11 +12,14 @@ import (
 	"github.com/voedger/voedger/pkg/apps/sys/clusterapp"
 	"github.com/voedger/voedger/pkg/cluster"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/itokens"
+	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 // is a SyncOp within VVM trunk
-func Bootstrap(federation coreutils.IFederation, asp istructs.IAppStructsProvider, timeFunc coreutils.TimeFunc, appparts appparts.IAppPartitions, clusterApp ClusterBuiltInApp, otherApps []appparts.BuiltInApp) error {
+func Bootstrap(federation coreutils.IFederation, asp istructs.IAppStructsProvider, timeFunc coreutils.TimeFunc, appparts appparts.IAppPartitions,
+	clusterApp ClusterBuiltInApp, otherApps []appparts.BuiltInApp, itokens itokens.ITokens) error {
 	// initialize cluster app workspace, use app ws amount 0
 	if err := initClusterAppWS(asp, timeFunc); err != nil {
 		return err
@@ -26,9 +29,14 @@ func Bootstrap(federation coreutils.IFederation, asp istructs.IAppStructsProvide
 	appparts.DeployApp(istructs.AppQName_sys_cluster, clusterApp.Def, clusterapp.ClusterAppNumPartitions, clusterapp.ClusterAppNumEngines)
 	appparts.DeployAppPartitions(istructs.AppQName_sys_cluster, []istructs.PartitionID{clusterapp.ClusterAppWSIDPartitionID})
 
+	sysToken, err := payloads.GetSystemPrincipalToken(itokens, istructs.AppQName_sys_cluster)
+	if err != nil {
+		return err
+	}
+
 	// check apps compatibility
 	for _, app := range otherApps {
-		wasDeployed, deployedNumPartitions, deployedNumAppWorkspaces, err := readPreviousAppDeployment(federation, app.Name)
+		wasDeployed, deployedNumPartitions, deployedNumAppWorkspaces, err := readPreviousAppDeployment(federation, app.Name, sysToken)
 		if err != nil {
 			// notest
 			return err
@@ -36,10 +44,10 @@ func Bootstrap(federation coreutils.IFederation, asp istructs.IAppStructsProvide
 
 		if !wasDeployed {
 			// not deployed, call c.cluster.DeployApp
-			if err := deployApp(federation, app); err != nil {
+			if err := deployApp(federation, app.Name, app.NumParts, sysToken); err != nil {
 				return err
 			}
-			return nil
+			continue
 		}
 
 		// was deployed somewhen -> check app compatibility
@@ -64,9 +72,10 @@ func Bootstrap(federation coreutils.IFederation, asp istructs.IAppStructsProvide
 	return nil
 }
 
-func readPreviousAppDeployment(federation coreutils.IFederation, appQName istructs.AppQName) (wasDeployed bool, deployedNumPartitions istructs.NumAppPartitions, deployedNumAppWorkspaces istructs.NumAppWorkspaces, err error) {
+func readPreviousAppDeployment(federation coreutils.IFederation, appQName istructs.AppQName, sysToken string) (wasDeployed bool, deployedNumPartitions istructs.NumAppPartitions, deployedNumAppWorkspaces istructs.NumAppWorkspaces, err error) {
 	body := fmt.Sprintf(`{"args":{"AppQName":"%s"},"elements":[{"fields": ["NumPartitions", "NumAppWorkspaces"]}]}`, appQName)
-	resp, err := federation.Func(fmt.Sprintf("api/%s/%d/q.cluster.QueryApp", istructs.AppQName_sys_cluster, clusterapp.ClusterAppWSID), body)
+	resp, err := federation.Func(fmt.Sprintf("api/%s/%d/q.cluster.QueryApp", istructs.AppQName_sys_cluster, clusterapp.ClusterAppPseudoWSID), body,
+		coreutils.WithAuthorizeBy(sysToken))
 	if err != nil {
 		return false, 0, 0, err
 	}
@@ -79,20 +88,18 @@ func readPreviousAppDeployment(federation coreutils.IFederation, appQName istruc
 	return true, deployedNumPartitions, deployedNumAppWorkspaces, nil
 }
 
-func deployApp(federation coreutils.IFederation, builtinApp appparts.BuiltInApp) error {
-	body := fmt.Sprintf(`{"args":["AppQName":"%s","NumPartitions":%d,"NumAppWorkspaces":%d]}`, builtinApp.Name, builtinApp.NumParts, builtinApp.NumAppWorkspaces)
-	_, err := federation.Func(fmt.Sprintf("api/%s/%d/q.cluster.QueryApp", istructs.AppQName_sys_cluster, clusterapp.ClusterAppWSID), body, coreutils.WithDiscardResponse())
+func deployApp(federation coreutils.IFederation, appQName istructs.AppQName, numPartitions istructs.NumAppPartitions, sysToken string) error {
+	body := fmt.Sprintf(`{"args":{"AppQName":"%s","NumPartitions":%d}}`, appQName, numPartitions)
+	_, err := federation.Func(fmt.Sprintf("api/%s/%d/c.cluster.DeployApp", istructs.AppQName_sys_cluster, clusterapp.ClusterAppPseudoWSID), body,
+		coreutils.WithDiscardResponse(), coreutils.WithAuthorizeBy(sysToken))
 	return err
 }
 
 func initClusterAppWS(asp istructs.IAppStructsProvider, timeFunc coreutils.TimeFunc) error {
 	as, err := asp.AppStructs(istructs.AppQName_sys_cluster)
-	if err != nil {
-		return err
+	if err == nil {
+		_, err = cluster.InitAppWS(as, clusterapp.ClusterAppWSIDPartitionID, clusterapp.ClusterAppWSID, istructs.FirstOffset, istructs.FirstOffset,
+			istructs.UnixMilli(timeFunc().UnixMilli()))
 	}
-	if err := cluster.InitAppWS(as, clusterapp.ClusterAppWSIDPartitionID, clusterapp.ClusterAppWSID, istructs.FirstOffset, istructs.FirstOffset, istructs.UnixMilli(timeFunc().UnixMilli())); err != nil {
-		return err
-	}
-
-	return nil
+	return err
 }

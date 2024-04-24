@@ -24,7 +24,6 @@ type APIs struct {
 	payloads.IAppTokensFactory
 	coreutils.IFederation
 	coreutils.TimeFunc
-	IAppPartitionsSource appparts.INumAppPartitionsSource
 	// IAppPartitions - wrong, wire cycle: `appparts.NewWithActualizerWithExtEnginesFactories(asp, actualizer, eef) IAppPartitions`` accepts engines.ProvideExtEngineFactories()
 	//                                     that requires filled AppConfigsType, but AppConfigsType requires apps.APIs with IAppPartitions
 }

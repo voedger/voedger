@@ -8,8 +8,11 @@ package cluster
 import (
 	"log"
 	"testing"
+
+	"github.com/voedger/voedger/pkg/istructs"
 )
 
 func TestMain(t *testing.T) {
-	log.Println()
+	appWSID := istructs.NewWSID(istructs.MainClusterID, istructs.WSID(1+int(istructs.FirstBaseAppWSID)))
+	log.Println(appWSID.BaseWSID() - istructs.FirstBaseAppWSID)
 }

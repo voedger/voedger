@@ -489,7 +489,7 @@ func (vit *VIT) SetMemStoragePutDelay(delay time.Duration) {
 func (vit *VIT) iterateDelaySetters(cb func(delaySetter istorage.IStorageDelaySetter)) {
 	vit.T.Helper()
 	for anyAppQName := range vit.VVMAppsBuilder {
-		as, err := vit.AppStorage(anyAppQName)
+		as, err := vit.IAppStorageProvider.AppStorage(anyAppQName)
 		require.NoError(vit.T, err)
 		delaySetter, ok := as.(istorage.IStorageDelaySetter)
 		if !ok {

@@ -29,6 +29,7 @@ import (
 	"github.com/voedger/voedger/pkg/istoragecache"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
+	"github.com/voedger/voedger/pkg/itokens"
 	"github.com/voedger/voedger/pkg/itokens-payloads"
 	"github.com/voedger/voedger/pkg/itokensjwt"
 	"github.com/voedger/voedger/pkg/metrics"
@@ -89,15 +90,13 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 	v2 := projectors.NewSyncActualizerFactoryFactory(syncActualizerFactory, iSecretReader, in10nBroker)
 	vvmPortSource := provideVVMPortSource()
 	iFederation, cleanup2 := provideIFederation(vvmConfig, vvmPortSource)
-	iNumAppPartitionsSource := proivdeINumAppPartitionsSource()
 	apIs := apps.APIs{
-		ITokens:              iTokens,
-		IAppStructsProvider:  iAppStructsProvider,
-		IAppStorageProvider:  iAppStorageProvider,
-		IAppTokensFactory:    iAppTokensFactory,
-		IFederation:          iFederation,
-		TimeFunc:             timeFunc,
-		IAppPartitionsSource: iNumAppPartitionsSource,
+		ITokens:             iTokens,
+		IAppStructsProvider: iAppStructsProvider,
+		IAppStorageProvider: iAppStorageProvider,
+		IAppTokensFactory:   iAppTokensFactory,
+		IFederation:         iFederation,
+		TimeFunc:            timeFunc,
 	}
 	appsArtefacts, err := provideBuiltInAppsArtefacts(vvmConfig, apIs, appConfigsTypeEmpty)
 	if err != nil {
@@ -175,7 +174,7 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 		return nil, nil, err
 	}
 	iAppPartsCtlPipelineService := provideAppPartsCtlPipelineService(iAppPartitionsController)
-	bootstrapOperator := provideBootstrapOperator(iFederation, iAppStructsProvider, timeFunc, iAppPartitions, v5)
+	bootstrapOperator := provideBootstrapOperator(iFederation, iAppStructsProvider, timeFunc, iAppPartitions, v5, iTokens)
 	servicePipeline := provideServicePipeline(vvmCtx, operatorCommandProcessors, operatorQueryProcessors, operatorAppServicesFactory, routerServiceOperator, metricsServiceOperator, iAppPartsCtlPipelineService, bootstrapOperator)
 	v7 := provideExtensionPoints(appsArtefacts)
 	v8 := provideMetricsServicePortGetter(metricsService)
@@ -184,6 +183,7 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 		ServicePipeline:     servicePipeline,
 		APIs:                apIs,
 		IAppPartitions:      iAppPartitions,
+		IAppStorageFactory:  iAppStorageFactory,
 		AppsExtensionPoints: v7,
 		MetricsServicePort:  v8,
 		BuiltInAppsPackages: v9,
@@ -222,8 +222,7 @@ func ProvideVVM(vvmCfg *VVMConfig, vvmIdx VVMIdxType) (voedgerVM *VoedgerVM, err
 	if err != nil {
 		return nil, err
 	}
-	*voedgerVM.IAppPartitionsSource = voedgerVM.IAppPartitions
-	return voedgerVM, BuildAppWorkspaces(voedgerVM.VVM, vvmCfg)
+	return voedgerVM, nil
 }
 
 func (vvm *VoedgerVM) Shutdown() {
@@ -237,12 +236,8 @@ func (vvm *VoedgerVM) Launch() error {
 	return vvm.ServicePipeline.SendSync(ignition)
 }
 
-func proivdeINumAppPartitionsSource() appparts.INumAppPartitionsSource {
-	return new(appparts.IAppPartitions)
-}
-
 func provideBootstrapOperator(federation coreutils.IFederation, asp istructs.IAppStructsProvider, timeFunc coreutils.TimeFunc, apppar appparts.IAppPartitions,
-	builtinApps []appparts.BuiltInApp) BootstrapOperator {
+	builtinApps []appparts.BuiltInApp, itokens2 itokens.ITokens) BootstrapOperator {
 	var clusterBuiltinApp btstrp.ClusterBuiltInApp
 	otherApps := make([]appparts.BuiltInApp, 0, len(builtinApps)-1)
 	for _, app := range builtinApps {
@@ -253,7 +248,7 @@ func provideBootstrapOperator(federation coreutils.IFederation, asp istructs.IAp
 		}
 	}
 	return pipeline.NewSyncOp(func(ctx context.Context, work interface{}) (err error) {
-		return btstrp.Bootstrap(federation, asp, timeFunc, apppar, clusterBuiltinApp, otherApps)
+		return btstrp.Bootstrap(federation, asp, timeFunc, apppar, clusterBuiltinApp, otherApps, itokens2)
 	})
 }
 

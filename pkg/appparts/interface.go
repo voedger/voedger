@@ -76,6 +76,5 @@ type IAppPartition interface {
 }
 
 // dependency cycle: func requires IAppPartitions, provider of IAppPartitions requires already filled AppConfigsType -> impossible to provide AppConfigsType because we're filling it now
-// so let's provide the place from which ready-to-use IAppPartitions will be taken from in runtime instead of provide to funcs IAppPartitions directly in wire-time
-// after wiring VVM will write ready-to-use IAppPartitions to this place
-type INumAppPartitionsSource *IAppPartitions
+// TODO: eliminate this workaround
+// type BuiltInAppsDeploymentDescriptors map[istructs.AppQName]AppDeploymentDescriptor

@@ -11,6 +11,7 @@ import (
 )
 
 // ProcessorKind is a enumeration of processors.
+// moved here from pkg/cluster to avoid import cycle: appparts uses cluster.ProcessorKid, cluster uses appparts.IAppPartitions in c.cluster.AppDeploy
 type ProcessorKind uint8
 
 //go:generate stringer -type=ProcessorKind

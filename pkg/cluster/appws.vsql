@@ -4,9 +4,9 @@
 ALTER WORKSPACE AppWorkspaceWS (
 
 	TABLE App INHERITS WDoc (
-		AppQName varchar,
-		NumPartitions int32,
-		NumAppWorkspace int32,
+		AppQName varchar NOT NULL,
+		NumPartitions int32 NOT NULL,
+		NumAppWorkspaces int32 NOT NULL,
 		UNIQUE (AppQName)
 	);
 
@@ -20,8 +20,9 @@ ALTER WORKSPACE AppWorkspaceWS (
 	);
 
 	TYPE DeployAppParams (
-		AppQName varchar
-	)
+		AppQName varchar NOT NULL,
+		NumPartitions int32 NOT NULL -- passed here because there is no good way to get NumPartitions
+	);
 
 	EXTENSION ENGINE BUILTIN (
 		COMMAND DeployApp(DeployAppParams);

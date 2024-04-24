@@ -24,6 +24,7 @@ import (
 	"github.com/voedger/voedger/pkg/apppartsctl"
 	"github.com/voedger/voedger/pkg/btstrp"
 	"github.com/voedger/voedger/pkg/extensionpoints"
+	"github.com/voedger/voedger/pkg/itokens"
 	"github.com/voedger/voedger/pkg/router"
 	"github.com/voedger/voedger/pkg/vvm/engines"
 
@@ -90,8 +91,7 @@ func ProvideVVM(vvmCfg *VVMConfig, vvmIdx VVMIdxType) (voedgerVM *VoedgerVM, err
 	if err != nil {
 		return nil, err
 	}
-	*voedgerVM.IAppPartitionsSource = voedgerVM.IAppPartitions
-	return voedgerVM, BuildAppWorkspaces(voedgerVM.VVM, vvmCfg)
+	return voedgerVM, nil
 }
 
 func (vvm *VoedgerVM) Shutdown() {
@@ -168,7 +168,6 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 		provideBuiltInAppPackages,
 		provideExtensionPoints,
 		provideBootstrapOperator,
-		proivdeINumAppPartitionsSource,
 		// wire.Value(vvmConfig.NumCommandProcessors) -> (wire bug?) value github.com/untillpro/airs-bp3/vvm.CommandProcessorsCount can't be used: vvmConfig is not declared in package scope
 		wire.FieldsOf(&vvmConfig,
 			"NumCommandProcessors",
@@ -189,12 +188,8 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 	))
 }
 
-func proivdeINumAppPartitionsSource() appparts.INumAppPartitionsSource {
-	return new(appparts.IAppPartitions)
-}
-
 func provideBootstrapOperator(federation coreutils.IFederation, asp istructs.IAppStructsProvider, timeFunc coreutils.TimeFunc, apppar appparts.IAppPartitions,
-	builtinApps []appparts.BuiltInApp) BootstrapOperator {
+	builtinApps []appparts.BuiltInApp, itokens itokens.ITokens) BootstrapOperator {
 	var clusterBuiltinApp btstrp.ClusterBuiltInApp
 	otherApps := make([]appparts.BuiltInApp, 0, len(builtinApps)-1)
 	for _, app := range builtinApps {
@@ -205,7 +200,7 @@ func provideBootstrapOperator(federation coreutils.IFederation, asp istructs.IAp
 		}
 	}
 	return pipeline.NewSyncOp(func(ctx context.Context, work interface{}) (err error) {
-		return btstrp.Bootstrap(federation, asp, timeFunc, apppar, clusterBuiltinApp, otherApps)
+		return btstrp.Bootstrap(federation, asp, timeFunc, apppar, clusterBuiltinApp, otherApps, itokens)
 	})
 }
 
