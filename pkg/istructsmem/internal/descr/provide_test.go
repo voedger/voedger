@@ -98,6 +98,8 @@ func TestBasicUsage(t *testing.T) {
 		prj.Intents().
 			Add(sysViews, viewName).SetComment(sysViews, "needs to update «test.view» from «sys.views» storage")
 
+		_ = adb.AddRole(appdef.NewQName("test", "role"))
+
 		app, err := adb.Build()
 		require.NoError(t, err)
 
