@@ -38,7 +38,7 @@ func (cmd *command) Validate() (err error) {
 		switch typ.Kind() {
 		case TypeKind_Any, TypeKind_Data, TypeKind_ODoc, TypeKind_Object: // ok
 		default:
-			err = errors.Join(err, fmt.Errorf("%v: unlogged parameter type is %v, must be ODoc, Object or Data: %w", cmd, typ, ErrInvalidTypeKind))
+			err = errors.Join(err, ErrInvalid("unlogged parameter type «%v», should be ODoc, Object or Data", typ))
 		}
 	}
 

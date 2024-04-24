@@ -85,7 +85,7 @@ func TestAppConfigsType_AddConfig(t *testing.T) {
 
 		appStr, err := appStructs.AppStructs(istructs.AppQName_test1_app1)
 		require.Nil(appStr)
-		require.ErrorIs(err, appdef.ErrTypeNotFound)
+		require.ErrorIs(err, appdef.ErrNotFoundError)
 	})
 
 	t.Run("must be panic to add config for unknown app", func(t *testing.T) {

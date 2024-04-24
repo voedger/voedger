@@ -7,7 +7,6 @@ package appdef
 
 import (
 	"errors"
-	"fmt"
 	"sort"
 )
 
@@ -16,6 +15,7 @@ import (
 type appDef struct {
 	comment
 	packages     *packages
+	privileges   []*privilege
 	types        map[QName]interface{}
 	typesOrdered []interface{}
 	wsDesc       map[QName]IWorkspace
@@ -222,6 +222,22 @@ func (app *appDef) Packages(cb func(local, path string)) {
 	app.packages.forEach(cb)
 }
 
+func (app appDef) Privileges(cb func(IPrivilege)) {
+	for _, p := range app.privileges {
+		cb(p)
+	}
+}
+
+func (app appDef) PrivilegesOn(n []QName, k ...PrivilegeKind) []IPrivilege {
+	pp := make([]IPrivilege, 0)
+	for _, p := range app.privileges {
+		if p.On().ContainsAny(n...) && p.Kinds().ContainsAny(k...) {
+			pp = append(pp, p)
+		}
+	}
+	return pp
+}
+
 func (app *appDef) Projector(name QName) IProjector {
 	if t := app.typeByKind(name, TypeKind_Projector); t != nil {
 		return t.(IProjector)
@@ -264,6 +280,21 @@ func (app *appDef) Record(name QName) IRecord {
 func (app *appDef) Records(cb func(IRecord)) {
 	app.Structures(func(s IStructure) {
 		if r, ok := s.(IRecord); ok {
+			cb(r)
+		}
+	})
+}
+
+func (app *appDef) Role(name QName) IRole {
+	if t := app.typeByKind(name, TypeKind_Role); t != nil {
+		return t.(IRole)
+	}
+	return nil
+}
+
+func (app *appDef) Roles(cb func(IRole)) {
+	app.Types(func(t IType) {
+		if r, ok := t.(IRole); ok {
 			cb(r)
 		}
 	})
@@ -471,6 +502,11 @@ func (app *appDef) addQuery(name QName) IQueryBuilder {
 	return newQueryBuilder(q)
 }
 
+func (app *appDef) addRole(name QName) IRoleBuilder {
+	role := newRole(app, name)
+	return newRoleBuilder(role)
+}
+
 func (app *appDef) addView(name QName) IViewBuilder {
 	view := newView(app, name)
 	return newViewBuilder(view)
@@ -491,14 +527,18 @@ func (app *appDef) addWorkspace(name QName) IWorkspaceBuilder {
 	return newWorkspaceBuilder(ws)
 }
 
+func (app *appDef) appendPrivilege(p *privilege) {
+	app.privileges = append(app.privileges, p)
+}
+
 func (app *appDef) appendType(t interface{}) {
 	typ := t.(IType)
 	name := typ.QName()
 	if name == NullQName {
-		panic(fmt.Errorf("%s name cannot be empty: %w", typ.Kind().TrimString(), ErrNameMissed))
+		panic(ErrMissed("%s type name", typ.Kind().TrimString()))
 	}
 	if app.TypeByName(name) != nil {
-		panic(fmt.Errorf("type name «%s» already used: %w", name, ErrNameUniqueViolation))
+		panic(ErrAlreadyExists("type «%v»", name))
 	}
 
 	app.types[name] = t
@@ -510,6 +550,22 @@ func (app *appDef) build() (err error) {
 		err = errors.Join(err, validateType(t))
 	})
 	return err
+}
+
+func (app *appDef) grant(kinds PrivilegeKinds, on []QName, fields []FieldName, toRole QName, comment ...string) {
+	r := app.Role(toRole)
+	if r == nil {
+		panic(ErrRoleNotFound(toRole))
+	}
+	r.(*role).grant(kinds, on, fields, comment...)
+}
+
+func (app *appDef) grantAll(on []QName, toRole QName, comment ...string) {
+	r := app.Role(toRole)
+	if r == nil {
+		panic(ErrRoleNotFound(toRole))
+	}
+	r.(*role).grantAll(on, comment...)
 }
 
 // Makes system package.
@@ -525,6 +581,22 @@ func (app *appDef) makeSysDataTypes() {
 	for k := DataKind_null + 1; k < DataKind_FakeLast; k++ {
 		_ = newSysData(app, k)
 	}
+}
+
+func (app *appDef) revoke(kinds PrivilegeKinds, on []QName, fromRole QName, comment ...string) {
+	r := app.Role(fromRole)
+	if r == nil {
+		panic(ErrRoleNotFound(fromRole))
+	}
+	r.(*role).revoke(kinds, on, comment...)
+}
+
+func (app *appDef) revokeAll(on []QName, fromRole QName, comment ...string) {
+	r := app.Role(fromRole)
+	if r == nil {
+		panic(ErrRoleNotFound(fromRole))
+	}
+	r.(*role).revokeAll(on, comment...)
 }
 
 // Returns type by name and kind. If type is not found then returns nil.
@@ -580,6 +652,8 @@ func (ab *appDefBuilder) AddProjector(name QName) IProjectorBuilder { return ab.
 
 func (ab *appDefBuilder) AddQuery(name QName) IQueryBuilder { return ab.app.addQuery(name) }
 
+func (ab *appDefBuilder) AddRole(name QName) IRoleBuilder { return ab.app.addRole(name) }
+
 func (ab *appDefBuilder) AddView(name QName) IViewBuilder { return ab.app.addView(name) }
 
 func (ab *appDefBuilder) AddWDoc(name QName) IWDocBuilder { return ab.app.addWDoc(name) }
@@ -597,9 +671,29 @@ func (ab *appDefBuilder) Build() (IAppDef, error) {
 	return ab.app, nil
 }
 
+func (ab *appDefBuilder) Grant(kinds []PrivilegeKind, on []QName, fields []FieldName, toRole QName, comment ...string) IPrivilegesBuilder {
+	ab.app.grant(kinds, on, fields, toRole, comment...)
+	return ab
+}
+
+func (ab *appDefBuilder) GrantAll(on []QName, toRole QName, comment ...string) IPrivilegesBuilder {
+	ab.app.grantAll(on, toRole, comment...)
+	return ab
+}
+
 func (ab *appDefBuilder) MustBuild() IAppDef {
 	if err := ab.app.build(); err != nil {
 		panic(err)
 	}
 	return ab.app
+}
+
+func (ab *appDefBuilder) Revoke(kinds []PrivilegeKind, on []QName, fromRole QName, comment ...string) IPrivilegesBuilder {
+	ab.app.revoke(kinds, on, fromRole, comment...)
+	return ab
+}
+
+func (ab *appDefBuilder) RevokeAll(on []QName, fromRole QName, comment ...string) IPrivilegesBuilder {
+	ab.app.revokeAll(on, fromRole, comment...)
+	return ab
 }

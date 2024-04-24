@@ -26,7 +26,7 @@ func MinLen(v uint16, c ...string) IConstraint {
 //   - if value is zero
 func MaxLen(v uint16, c ...string) IConstraint {
 	if v == 0 {
-		panic(fmt.Errorf("maximum field length value is zero: %w", ErrIncompatibleConstraints))
+		panic(ErrOutOfBounds("maximum field length value is zero"))
 	}
 	return newDataConstraint(ConstraintKind_MaxLen, v, c...)
 }
@@ -50,10 +50,10 @@ func Pattern(v string, c ...string) IConstraint {
 //   - if value is +infinite
 func MinIncl(v float64, c ...string) IConstraint {
 	if math.IsNaN(v) {
-		panic(fmt.Errorf("minimum inclusive value is NaN: %w", ErrIncompatibleConstraints))
+		panic(ErrInvalid("minimum inclusive value is NaN"))
 	}
 	if math.IsInf(v, 1) {
-		panic(fmt.Errorf("minimum inclusive value is positive infinity: %w", ErrIncompatibleConstraints))
+		panic(ErrOutOfBounds("minimum inclusive value is positive infinity"))
 	}
 	return newDataConstraint(ConstraintKind_MinIncl, v, c...)
 }
@@ -65,10 +65,10 @@ func MinIncl(v float64, c ...string) IConstraint {
 //   - if value is +infinite
 func MinExcl(v float64, c ...string) IConstraint {
 	if math.IsNaN(v) {
-		panic(fmt.Errorf("minimum exclusive value is NaN: %w", ErrIncompatibleConstraints))
+		panic(ErrInvalid("minimum exclusive value is NaN"))
 	}
 	if math.IsInf(v, 1) {
-		panic(fmt.Errorf("minimum inclusive value is positive infinity: %w", ErrIncompatibleConstraints))
+		panic(ErrOutOfBounds("minimum inclusive value is positive infinity"))
 	}
 	return newDataConstraint(ConstraintKind_MinExcl, v, c...)
 }
@@ -80,10 +80,10 @@ func MinExcl(v float64, c ...string) IConstraint {
 //   - if value is -infinite
 func MaxIncl(v float64, c ...string) IConstraint {
 	if math.IsNaN(v) {
-		panic(fmt.Errorf("maximum inclusive value is NaN: %w", ErrIncompatibleConstraints))
+		panic(ErrInvalid("maximum inclusive value is NaN"))
 	}
 	if math.IsInf(v, -1) {
-		panic(fmt.Errorf("maximum inclusive value is negative infinity: %w", ErrIncompatibleConstraints))
+		panic(ErrInvalid("maximum inclusive value is negative infinity"))
 	}
 	return newDataConstraint(ConstraintKind_MaxIncl, v, c...)
 }
@@ -95,10 +95,10 @@ func MaxIncl(v float64, c ...string) IConstraint {
 //   - if value is -infinite
 func MaxExcl(v float64, c ...string) IConstraint {
 	if math.IsNaN(v) {
-		panic(fmt.Errorf("maximum exclusive value is NaN: %w", ErrIncompatibleConstraints))
+		panic(ErrInvalid("maximum exclusive value is NaN"))
 	}
 	if math.IsInf(v, -1) {
-		panic(fmt.Errorf("maximum exclusive value is negative infinity: %w", ErrIncompatibleConstraints))
+		panic(ErrOutOfBounds("maximum exclusive value is negative infinity"))
 	}
 	return newDataConstraint(ConstraintKind_MaxExcl, v, c...)
 }
@@ -124,7 +124,7 @@ type enumerable interface {
 func Enum[T enumerable](v ...T) IConstraint {
 	l := len(v)
 	if l == 0 {
-		panic(fmt.Errorf("enumeration values slice (%T) is empty: %w", v, ErrIncompatibleConstraints))
+		panic(ErrMissed("enumeration values slice (%T)", v))
 	}
 	c := make([]T, 0, l)
 	for i := 0; i < l; i++ {
