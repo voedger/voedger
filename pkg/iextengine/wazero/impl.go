@@ -312,7 +312,9 @@ func (f *wazeroExtEngine) initModule(ctx context.Context, pkgName string, wasmda
 		}
 	}
 
-	f.resetModule(ctx, ePkg)
+	if err = f.resetModule(ctx, ePkg); err != nil {
+		return err
+	}
 
 	// Check WASM SDK version
 	_, err = ePkg.funcVer.Call(ctx)
@@ -340,8 +342,7 @@ func (f *wazeroExtEngine) Close(ctx context.Context) {
 }
 
 func (f *wazeroExtEngine) recover(ctx context.Context) {
-	err := f.resetModule(ctx, f.pkg)
-	if err != nil {
+	if err := f.resetModule(ctx, f.pkg); err != nil {
 		panic(err)
 	}
 }

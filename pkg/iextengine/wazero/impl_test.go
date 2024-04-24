@@ -464,14 +464,13 @@ func Test_RecoverEngine(t *testing.T) {
 			heapInUseAfterFirstInvoke, err := we.getHeapinuse(testPkg, context.Background())
 			require.NoError(err)
 
-			for recover := 0; recover < 10; recover++ { // 10 recover cycles
-				fmt.Printf("Recovers: %d\n", recover)
-				for run := 1; we.numAutoRecovers == recover; { // run until auto-recover is triggered{
+			for recoverNo := 0; recoverNo < 10; recoverNo++ { // 10 recover cycles
+				for run := 1; we.numAutoRecovers == recoverNo; { // run until auto-recover is triggered{
 					require.NoError(extEngine.Invoke(context.Background(), appdef.NewFullQName(testPkg, arrAppend2), extIO))
 					run++
 				}
 
-				require.Equal(recover+1, we.numAutoRecovers)
+				require.Equal(recoverNo+1, we.numAutoRecovers)
 				heapInUseAfterRecover, err := we.getHeapinuse(testPkg, context.Background())
 				require.NoError(err)
 				require.Equal(heapInUseAfterRecover, heapInUseAfterFirstInvoke)
