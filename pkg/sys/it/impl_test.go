@@ -316,3 +316,9 @@ func TestTakeQNamesFromWorkspace(t *testing.T) {
 		})
 	})
 }
+
+func TestResetPreservingStorage(t *testing.T) {
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
+	vit. 
+}
