@@ -76,7 +76,7 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 	if err != nil {
 		return nil, nil, err
 	}
-	iAppStorageUncachingProviderFactory := provideIAppStorageUncachingProviderFactory(iAppStorageFactory)
+	iAppStorageUncachingProviderFactory := provideIAppStorageUncachingProviderFactory(iAppStorageFactory, vvmConfig)
 	iAppStorageProvider, err := provideCachingAppStorageProvider(vvmConfig, storageCacheSizeType, iMetrics, vvmName, iAppStorageUncachingProviderFactory)
 	if err != nil {
 		return nil, nil, err
@@ -294,9 +294,9 @@ func provideAppPartsCtlPipelineService(ctl apppartsctl.IAppPartitionsController)
 	return &AppPartsCtlPipelineService{IAppPartitionsController: ctl}
 }
 
-func provideIAppStorageUncachingProviderFactory(factory istorage.IAppStorageFactory) IAppStorageUncachingProviderFactory {
+func provideIAppStorageUncachingProviderFactory(factory istorage.IAppStorageFactory, vvmCfg *VVMConfig) IAppStorageUncachingProviderFactory {
 	return func() istorage.IAppStorageProvider {
-		return provider.Provide(factory)
+		return provider.Provide(factory, vvmCfg.KeyspaceNameSuffix)
 	}
 }
 
