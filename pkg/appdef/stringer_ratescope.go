@@ -21,7 +21,7 @@ const _RateScope_name = "RateScope_nullRateScope_AppPartitionRateScope_Workspace
 var _RateScope_index = [...]uint8{0, 14, 36, 55, 69, 81, 96}
 
 func (i RateScope) String() string {
-	if i < 0 || i >= RateScope(len(_RateScope_index)-1) {
+	if i >= RateScope(len(_RateScope_index)-1) {
 		return "RateScope(" + strconv.FormatInt(int64(i), 10) + ")"
 	}
 	return _RateScope_name[_RateScope_index[i]:_RateScope_index[i+1]]

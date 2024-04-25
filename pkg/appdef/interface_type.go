@@ -83,6 +83,7 @@ const (
 
 	// Rates and limits
 	TypeKind_Rate
+	TypeKind_Limit
 
 	TypeKind_count
 )
