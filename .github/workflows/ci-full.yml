@@ -37,7 +37,7 @@ jobs:
     with: 
       repo: 'voedger/voedger' 
       assignee: 'host6'
-      name: 'Daily test suite did not pass'
+      name: 'Daily Test failed on $(date)'
       body: ${{ needs.notify_failure.outputs.failure_url }}
       label: 'todo/triage'
     secrets:
