@@ -318,7 +318,16 @@ func TestTakeQNamesFromWorkspace(t *testing.T) {
 }
 
 func TestResetPreservingStorage(t *testing.T) {
+	asf := 
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
-	defer vit.TearDown()
-	vit. 
+	vit.TearDown()
+
+	cfg := it.NewOwnVITConfig(
+		it.WithApp(istructs.AppQName_test1_app1, it.ProvideApp1),
+		it.WithVVMConfig(func(cfg *vvm.VVMConfig) {
+			cfg.StorageFactory = func() (provider istorage.IAppStorageFactory, err error) {
+				return asf
+			}
+		})
+	)
 }
