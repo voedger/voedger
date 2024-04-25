@@ -131,3 +131,21 @@ func TestAllPrivilegesOnType(t *testing.T) {
 		})
 	}
 }
+
+func TestPrivilegeAccessControlString(t *testing.T) {
+	tests := []struct {
+		name  string
+		grant bool
+		want  string
+	}{
+		{"granted", true, "grant"},
+		{"revoked", false, "revoke"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := PrivilegeAccessControlString(tt.grant); got != tt.want {
+				t.Errorf("PrivilegeAccessControlString(%v) = %v, want %v", tt.grant, got, tt.want)
+			}
+		})
+	}
+}
