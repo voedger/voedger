@@ -5,11 +5,6 @@
 
 package appdef
 
-import (
-	"fmt"
-	"strings"
-)
-
 // Implements:
 //   - IRate
 type rate struct {
@@ -41,15 +36,4 @@ func (r rate) Period() RatePeriod {
 
 func (r rate) Scopes() RateScopes {
 	return r.scopes
-}
-
-func (r rate) String() string {
-	return fmt.Sprintf("%v %d per %v per %v", r.typ, r.count, r.period, r.scopes)
-}
-
-// Renders an RateScope in human-readable form, without `RateScope_` prefix,
-// suitable for debugging or error messages
-func (rs RateScope) TrimString() string {
-	const pref = "RateScope" + "_"
-	return strings.TrimPrefix(rs.String(), pref)
 }

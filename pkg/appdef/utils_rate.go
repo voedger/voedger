@@ -5,7 +5,11 @@
 
 package appdef
 
-import "slices"
+import (
+	"fmt"
+	"slices"
+	"strings"
+)
 
 // Makes RateScopes from specified scopes.
 func RateScopesFrom(scopes ...RateScope) RateScopes {
@@ -20,4 +24,25 @@ func RateScopesFrom(scopes ...RateScope) RateScopes {
 		}
 	}
 	return rs
+}
+
+// Renders an RateScopes in human-readable form, without "RateScopes_" prefix,
+// suitable for debugging or error messages
+func (rs RateScopes) String() string {
+	var ss string
+	for i, s := range rs {
+		if i > 0 {
+			ss = strings.Join([]string{ss, s.TrimString()}, " ")
+		} else {
+			ss = s.TrimString()
+		}
+	}
+	return fmt.Sprintf("[%s]", ss)
+}
+
+// Renders an RateScope in human-readable form, without `RateScope_` prefix,
+// suitable for debugging or error messages
+func (rs RateScope) TrimString() string {
+	const pref = "RateScope" + "_"
+	return strings.TrimPrefix(rs.String(), pref)
 }
