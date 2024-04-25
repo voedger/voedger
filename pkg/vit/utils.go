@@ -430,6 +430,8 @@ func DummyWS(wsKind appdef.QName, wsid istructs.WSID, ownerPrn *Principal) *AppW
 	}
 }
 
+// calls testBeforeRestart() then stops then VIT, then launches new VIT on the same config but with storage from previous VIT
+// cfg must be owned
 func TestRestartPreservingStorage(t *testing.T, cfg *VITConfig, testBeforeRestart, testAfterRestart func(t *testing.T, vit *VIT)) {
 	memStorage := mem.Provide()
 	cfg.opts = append(cfg.opts, WithVVMConfig(func(cfg *vvm.VVMConfig) {
