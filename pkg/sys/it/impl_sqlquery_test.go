@@ -497,5 +497,31 @@ func TestReadFromWLogWithSysRawArg(t *testing.T) {
 	require.NoError(json.Unmarshal([]byte(res), &m))
 	rawArg := m["ArgumentObject"].(map[string]interface{})["Body"].(string)
 	require.Equal("hello world", rawArg)
+}
 
+func TestReadFromAnotherAppAnotherWSID(t *testing.T) {
+	t.Skip("waiting for https://github.com/voedger/voedger/issues/1811")
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
+
+	oneAppWS := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+
+	// create a record in one workspace of one app
+	categoryName := vit.NextName()
+	body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.category","name":"%s"}}]}`, categoryName)
+	categoryID := vit.PostWS(oneAppWS, "c.sys.CUD", body).NewID()
+
+	// create a workspace in another app
+	anotherAppWSOwner := vit.GetPrincipal(istructs.AppQName_test1_app2, "login")
+	anotherAppWS := vit.CreateWorkspace(it.WSParams{
+		Name:      "anotherAppWS",
+		Kind:      it.QNameApp1_TestWSKind,
+		ClusterID: istructs.MainClusterID,
+	}, anotherAppWSOwner)
+
+	// in the another app use sql to query the record from the first app
+	body = fmt.Sprintf(`{"args":{"Query":"select * from test1.app1.%d.app1pkg.category where id = %d"},"elements":[{"fields":["Result"]}]}`, oneAppWS.WSID, categoryID)
+	resp := vit.PostWS(anotherAppWS, "q.sys.SqlQuery", body)
+	resStr := resp.SectionRow(len(resp.Sections[0].Elements) - 1)[0].(string)
+	require.Contains(t, resStr, fmt.Sprintf(`"name":"%s"`, categoryName))
 }
