@@ -7,7 +7,7 @@ package cluster
 
 import "embed"
 
-//go:embed clusterws.vsql
+//go:embed appws.vsql
 var schemaFS embed.FS
 
 const (
