@@ -149,20 +149,20 @@ func (t *anyType) Kind() TypeKind { return TypeKind_Any }
 func (t *anyType) QName() QName   { return QNameANY }
 func (t *anyType) String() string { return anyTypeString }
 
-// Is data kind allowed.
-func (k TypeKind) DataKindAvailable(d DataKind) bool {
-	return typeKindProps[k].fieldKinds[d]
+// Is specified type kind may be used in child containers.
+func (k TypeKind) ContainerKindAvailable(s TypeKind) bool {
+	return structTypeProps(k).containerKinds[s]
+}
+
+// Is field with data kind allowed.
+func (k TypeKind) FieldKindAvailable(d DataKind) bool {
+	return structTypeProps(k).fieldKinds[d]
 }
 
 // Is specified system field exists and required.
 func (k TypeKind) HasSystemField(f FieldName) (exists, required bool) {
-	required, exists = typeKindProps[k].systemFields[f]
+	required, exists = structTypeProps(k).systemFields[f]
 	return exists, required
-}
-
-// Is specified type kind may be used in child containers.
-func (k TypeKind) ContainerKindAvailable(s TypeKind) bool {
-	return typeKindProps[k].containerKinds[s]
 }
 
 func (k TypeKind) MarshalText() ([]byte, error) {
@@ -183,244 +183,239 @@ func (k TypeKind) TrimString() string {
 	return strings.TrimPrefix(k.String(), pref)
 }
 
-// Type kind properties
-var typeKindProps = map[TypeKind]struct {
+// Structural type kind properties
+type structuralTypeProps struct {
 	fieldKinds     map[DataKind]bool
 	systemFields   map[FieldName]bool
 	containerKinds map[TypeKind]bool
-}{
-	TypeKind_null: {
+}
+
+func structTypeProps(k TypeKind) structuralTypeProps {
+
+	var null = structuralTypeProps{
 		fieldKinds:     map[DataKind]bool{},
 		systemFields:   map[FieldName]bool{},
 		containerKinds: map[TypeKind]bool{},
-	},
-	TypeKind_GDoc: {
-		fieldKinds: map[DataKind]bool{
-			DataKind_int32:    true,
-			DataKind_int64:    true,
-			DataKind_float32:  true,
-			DataKind_float64:  true,
-			DataKind_bytes:    true,
-			DataKind_string:   true,
-			DataKind_QName:    true,
-			DataKind_bool:     true,
-			DataKind_RecordID: true,
+	}
+	var structs = map[TypeKind]structuralTypeProps{
+		TypeKind_GDoc: {
+			fieldKinds: map[DataKind]bool{
+				DataKind_int32:    true,
+				DataKind_int64:    true,
+				DataKind_float32:  true,
+				DataKind_float64:  true,
+				DataKind_bytes:    true,
+				DataKind_string:   true,
+				DataKind_QName:    true,
+				DataKind_bool:     true,
+				DataKind_RecordID: true,
+			},
+			systemFields: map[FieldName]bool{
+				SystemField_ID:       true,
+				SystemField_QName:    true,
+				SystemField_IsActive: false, // exists, but not required
+			},
+			containerKinds: map[TypeKind]bool{
+				TypeKind_GRecord: true,
+			},
 		},
-		systemFields: map[FieldName]bool{
-			SystemField_ID:       true,
-			SystemField_QName:    true,
-			SystemField_IsActive: false, // exists, but not required
+		TypeKind_CDoc: {
+			fieldKinds: map[DataKind]bool{
+				DataKind_int32:    true,
+				DataKind_int64:    true,
+				DataKind_float32:  true,
+				DataKind_float64:  true,
+				DataKind_bytes:    true,
+				DataKind_string:   true,
+				DataKind_QName:    true,
+				DataKind_bool:     true,
+				DataKind_RecordID: true,
+			},
+			systemFields: map[FieldName]bool{
+				SystemField_ID:       true,
+				SystemField_QName:    true,
+				SystemField_IsActive: false,
+			},
+			containerKinds: map[TypeKind]bool{
+				TypeKind_CRecord: true,
+			},
 		},
-		containerKinds: map[TypeKind]bool{
-			TypeKind_GRecord: true,
+		TypeKind_ODoc: {
+			fieldKinds: map[DataKind]bool{
+				DataKind_int32:    true,
+				DataKind_int64:    true,
+				DataKind_float32:  true,
+				DataKind_float64:  true,
+				DataKind_bytes:    true,
+				DataKind_string:   true,
+				DataKind_QName:    true,
+				DataKind_bool:     true,
+				DataKind_RecordID: true,
+			},
+			systemFields: map[FieldName]bool{
+				SystemField_ID:    true,
+				SystemField_QName: true,
+			},
+			containerKinds: map[TypeKind]bool{
+				TypeKind_ODoc:    true, // #19322!: ODocs should be able to contain ODocs
+				TypeKind_ORecord: true,
+			},
 		},
-	},
-	TypeKind_CDoc: {
-		fieldKinds: map[DataKind]bool{
-			DataKind_int32:    true,
-			DataKind_int64:    true,
-			DataKind_float32:  true,
-			DataKind_float64:  true,
-			DataKind_bytes:    true,
-			DataKind_string:   true,
-			DataKind_QName:    true,
-			DataKind_bool:     true,
-			DataKind_RecordID: true,
+		TypeKind_WDoc: {
+			fieldKinds: map[DataKind]bool{
+				DataKind_int32:    true,
+				DataKind_int64:    true,
+				DataKind_float32:  true,
+				DataKind_float64:  true,
+				DataKind_bytes:    true,
+				DataKind_string:   true,
+				DataKind_QName:    true,
+				DataKind_bool:     true,
+				DataKind_RecordID: true,
+			},
+			systemFields: map[FieldName]bool{
+				SystemField_ID:       true,
+				SystemField_QName:    true,
+				SystemField_IsActive: false,
+			},
+			containerKinds: map[TypeKind]bool{
+				TypeKind_WRecord: true,
+			},
 		},
-		systemFields: map[FieldName]bool{
-			SystemField_ID:       true,
-			SystemField_QName:    true,
-			SystemField_IsActive: false,
+		TypeKind_GRecord: {
+			fieldKinds: map[DataKind]bool{
+				DataKind_int32:    true,
+				DataKind_int64:    true,
+				DataKind_float32:  true,
+				DataKind_float64:  true,
+				DataKind_bytes:    true,
+				DataKind_string:   true,
+				DataKind_QName:    true,
+				DataKind_bool:     true,
+				DataKind_RecordID: true,
+			},
+			systemFields: map[FieldName]bool{
+				SystemField_ID:        true,
+				SystemField_QName:     true,
+				SystemField_ParentID:  true,
+				SystemField_Container: true,
+				SystemField_IsActive:  false,
+			},
+			containerKinds: map[TypeKind]bool{
+				TypeKind_GRecord: true,
+			},
 		},
-		containerKinds: map[TypeKind]bool{
-			TypeKind_CRecord: true,
+		TypeKind_CRecord: {
+			fieldKinds: map[DataKind]bool{
+				DataKind_int32:    true,
+				DataKind_int64:    true,
+				DataKind_float32:  true,
+				DataKind_float64:  true,
+				DataKind_bytes:    true,
+				DataKind_string:   true,
+				DataKind_QName:    true,
+				DataKind_bool:     true,
+				DataKind_RecordID: true,
+			},
+			systemFields: map[FieldName]bool{
+				SystemField_ID:        true,
+				SystemField_QName:     true,
+				SystemField_ParentID:  true,
+				SystemField_Container: true,
+				SystemField_IsActive:  false,
+			},
+			containerKinds: map[TypeKind]bool{
+				TypeKind_CRecord: true,
+			},
 		},
-	},
-	TypeKind_ODoc: {
-		fieldKinds: map[DataKind]bool{
-			DataKind_int32:    true,
-			DataKind_int64:    true,
-			DataKind_float32:  true,
-			DataKind_float64:  true,
-			DataKind_bytes:    true,
-			DataKind_string:   true,
-			DataKind_QName:    true,
-			DataKind_bool:     true,
-			DataKind_RecordID: true,
+		TypeKind_ORecord: {
+			fieldKinds: map[DataKind]bool{
+				DataKind_int32:    true,
+				DataKind_int64:    true,
+				DataKind_float32:  true,
+				DataKind_float64:  true,
+				DataKind_bytes:    true,
+				DataKind_string:   true,
+				DataKind_QName:    true,
+				DataKind_bool:     true,
+				DataKind_RecordID: true,
+			},
+			systemFields: map[FieldName]bool{
+				SystemField_ID:        true,
+				SystemField_QName:     true,
+				SystemField_ParentID:  true,
+				SystemField_Container: true,
+			},
+			containerKinds: map[TypeKind]bool{
+				TypeKind_ORecord: true,
+			},
 		},
-		systemFields: map[FieldName]bool{
-			SystemField_ID:    true,
-			SystemField_QName: true,
+		TypeKind_WRecord: {
+			fieldKinds: map[DataKind]bool{
+				DataKind_int32:    true,
+				DataKind_int64:    true,
+				DataKind_float32:  true,
+				DataKind_float64:  true,
+				DataKind_bytes:    true,
+				DataKind_string:   true,
+				DataKind_QName:    true,
+				DataKind_bool:     true,
+				DataKind_RecordID: true,
+			},
+			systemFields: map[FieldName]bool{
+				SystemField_ID:        true,
+				SystemField_QName:     true,
+				SystemField_ParentID:  true,
+				SystemField_Container: true,
+				SystemField_IsActive:  false,
+			},
+			containerKinds: map[TypeKind]bool{
+				TypeKind_WRecord: true,
+			},
 		},
-		containerKinds: map[TypeKind]bool{
-			TypeKind_ODoc:    true, // #19322!: ODocs should be able to contain ODocs
-			TypeKind_ORecord: true,
+		TypeKind_ViewRecord: {
+			fieldKinds: map[DataKind]bool{
+				DataKind_int32:    true,
+				DataKind_int64:    true,
+				DataKind_float32:  true,
+				DataKind_float64:  true,
+				DataKind_bytes:    true,
+				DataKind_string:   true,
+				DataKind_QName:    true,
+				DataKind_bool:     true,
+				DataKind_RecordID: true,
+				DataKind_Record:   true,
+				DataKind_Event:    true,
+			},
+			systemFields: map[FieldName]bool{
+				SystemField_QName: true,
+			},
+			containerKinds: map[TypeKind]bool{},
 		},
-	},
-	TypeKind_WDoc: {
-		fieldKinds: map[DataKind]bool{
-			DataKind_int32:    true,
-			DataKind_int64:    true,
-			DataKind_float32:  true,
-			DataKind_float64:  true,
-			DataKind_bytes:    true,
-			DataKind_string:   true,
-			DataKind_QName:    true,
-			DataKind_bool:     true,
-			DataKind_RecordID: true,
+		TypeKind_Object: {
+			fieldKinds: map[DataKind]bool{
+				DataKind_int32:    true,
+				DataKind_int64:    true,
+				DataKind_float32:  true,
+				DataKind_float64:  true,
+				DataKind_bytes:    true,
+				DataKind_string:   true,
+				DataKind_QName:    true,
+				DataKind_bool:     true,
+				DataKind_RecordID: true,
+			},
+			systemFields: map[FieldName]bool{
+				SystemField_QName:     true,
+				SystemField_Container: false, // exists, but required for nested (child) objects only
+			},
+			containerKinds: map[TypeKind]bool{
+				TypeKind_Object: true,
+			},
 		},
-		systemFields: map[FieldName]bool{
-			SystemField_ID:       true,
-			SystemField_QName:    true,
-			SystemField_IsActive: false,
-		},
-		containerKinds: map[TypeKind]bool{
-			TypeKind_WRecord: true,
-		},
-	},
-	TypeKind_GRecord: {
-		fieldKinds: map[DataKind]bool{
-			DataKind_int32:    true,
-			DataKind_int64:    true,
-			DataKind_float32:  true,
-			DataKind_float64:  true,
-			DataKind_bytes:    true,
-			DataKind_string:   true,
-			DataKind_QName:    true,
-			DataKind_bool:     true,
-			DataKind_RecordID: true,
-		},
-		systemFields: map[FieldName]bool{
-			SystemField_ID:        true,
-			SystemField_QName:     true,
-			SystemField_ParentID:  true,
-			SystemField_Container: true,
-			SystemField_IsActive:  false,
-		},
-		containerKinds: map[TypeKind]bool{
-			TypeKind_GRecord: true,
-		},
-	},
-	TypeKind_CRecord: {
-		fieldKinds: map[DataKind]bool{
-			DataKind_int32:    true,
-			DataKind_int64:    true,
-			DataKind_float32:  true,
-			DataKind_float64:  true,
-			DataKind_bytes:    true,
-			DataKind_string:   true,
-			DataKind_QName:    true,
-			DataKind_bool:     true,
-			DataKind_RecordID: true,
-		},
-		systemFields: map[FieldName]bool{
-			SystemField_ID:        true,
-			SystemField_QName:     true,
-			SystemField_ParentID:  true,
-			SystemField_Container: true,
-			SystemField_IsActive:  false,
-		},
-		containerKinds: map[TypeKind]bool{
-			TypeKind_CRecord: true,
-		},
-	},
-	TypeKind_ORecord: {
-		fieldKinds: map[DataKind]bool{
-			DataKind_int32:    true,
-			DataKind_int64:    true,
-			DataKind_float32:  true,
-			DataKind_float64:  true,
-			DataKind_bytes:    true,
-			DataKind_string:   true,
-			DataKind_QName:    true,
-			DataKind_bool:     true,
-			DataKind_RecordID: true,
-		},
-		systemFields: map[FieldName]bool{
-			SystemField_ID:        true,
-			SystemField_QName:     true,
-			SystemField_ParentID:  true,
-			SystemField_Container: true,
-		},
-		containerKinds: map[TypeKind]bool{
-			TypeKind_ORecord: true,
-		},
-	},
-	TypeKind_WRecord: {
-		fieldKinds: map[DataKind]bool{
-			DataKind_int32:    true,
-			DataKind_int64:    true,
-			DataKind_float32:  true,
-			DataKind_float64:  true,
-			DataKind_bytes:    true,
-			DataKind_string:   true,
-			DataKind_QName:    true,
-			DataKind_bool:     true,
-			DataKind_RecordID: true,
-		},
-		systemFields: map[FieldName]bool{
-			SystemField_ID:        true,
-			SystemField_QName:     true,
-			SystemField_ParentID:  true,
-			SystemField_Container: true,
-			SystemField_IsActive:  false,
-		},
-		containerKinds: map[TypeKind]bool{
-			TypeKind_WRecord: true,
-		},
-	},
-	TypeKind_ViewRecord: {
-		fieldKinds: map[DataKind]bool{
-			DataKind_int32:    true,
-			DataKind_int64:    true,
-			DataKind_float32:  true,
-			DataKind_float64:  true,
-			DataKind_bytes:    true,
-			DataKind_string:   true,
-			DataKind_QName:    true,
-			DataKind_bool:     true,
-			DataKind_RecordID: true,
-			DataKind_Record:   true,
-			DataKind_Event:    true,
-		},
-		systemFields: map[FieldName]bool{
-			SystemField_QName: true,
-		},
-		containerKinds: map[TypeKind]bool{},
-	},
-	TypeKind_Object: {
-		fieldKinds: map[DataKind]bool{
-			DataKind_int32:    true,
-			DataKind_int64:    true,
-			DataKind_float32:  true,
-			DataKind_float64:  true,
-			DataKind_bytes:    true,
-			DataKind_string:   true,
-			DataKind_QName:    true,
-			DataKind_bool:     true,
-			DataKind_RecordID: true,
-		},
-		systemFields: map[FieldName]bool{
-			SystemField_QName:     true,
-			SystemField_Container: false, // exists, but required for nested (child) objects only
-		},
-		containerKinds: map[TypeKind]bool{
-			TypeKind_Object: true,
-		},
-	},
-	TypeKind_Query: {
-		fieldKinds:     map[DataKind]bool{},
-		systemFields:   map[FieldName]bool{},
-		containerKinds: map[TypeKind]bool{},
-	},
-	TypeKind_Command: {
-		fieldKinds:     map[DataKind]bool{},
-		systemFields:   map[FieldName]bool{},
-		containerKinds: map[TypeKind]bool{},
-	},
-	TypeKind_Workspace: {
-		fieldKinds:     map[DataKind]bool{},
-		systemFields:   map[FieldName]bool{},
-		containerKinds: map[TypeKind]bool{},
-	},
+	}
+
+	if p, ok := structs[k]; ok {
+		return p
+	}
+	return null
 }
