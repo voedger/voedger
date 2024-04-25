@@ -44,7 +44,7 @@ func Bootstrap(federation coreutils.IFederation, asp istructs.IAppStructsProvide
 
 		if !wasDeployed {
 			// not deployed, call c.cluster.DeployApp
-			if err := deployApp(federation, app.Name, app.NumParts, sysToken); err != nil {
+			if err := deployApp(federation, app.Name, app.NumParts, app.NumAppWorkspaces, sysToken); err != nil {
 				return err
 			}
 			continue
@@ -52,10 +52,12 @@ func Bootstrap(federation coreutils.IFederation, asp istructs.IAppStructsProvide
 
 		// was deployed somewhen -> check app compatibility
 		if app.NumParts != deployedNumPartitions {
-			return fmt.Errorf("app %s declaring NumPartitions=%d but was previously deployed with NumPartitions=%d", app.Name, app.NumParts, deployedNumPartitions)
+			return fmt.Errorf("%w: app %s declaring NumPartitions=%d but was previously deployed with NumPartitions=%d", ErrNumPartitionsChanged,
+				app.Name, app.NumParts, deployedNumPartitions)
 		}
 		if app.NumAppWorkspaces != deployedNumAppWorkspaces {
-			return fmt.Errorf("app %s declaring NumAppWorkspaces=%d but was previously deployed with NumAppWorksaces=%d", app.Name, app.NumAppWorkspaces, deployedNumAppWorkspaces)
+			return fmt.Errorf("%w: app %s declaring NumAppWorkspaces=%d but was previously deployed with NumAppWorksaces=%d", ErrNumAppWorkspacesChanged,
+				app.Name, app.NumAppWorkspaces, deployedNumAppWorkspaces)
 		}
 	}
 
@@ -88,8 +90,9 @@ func readPreviousAppDeployment(federation coreutils.IFederation, appQName istruc
 	return true, deployedNumPartitions, deployedNumAppWorkspaces, nil
 }
 
-func deployApp(federation coreutils.IFederation, appQName istructs.AppQName, numPartitions istructs.NumAppPartitions, sysToken string) error {
-	body := fmt.Sprintf(`{"args":{"AppQName":"%s","NumPartitions":%d}}`, appQName, numPartitions)
+func deployApp(federation coreutils.IFederation, appQName istructs.AppQName, numPartitions istructs.NumAppPartitions,
+	numAppWorkspaces istructs.NumAppWorkspaces, sysToken string) error {
+	body := fmt.Sprintf(`{"args":{"AppQName":"%s","NumPartitions":%d,"NumAppWorkspaces":%d}}`, appQName, numPartitions, numAppWorkspaces)
 	_, err := federation.Func(fmt.Sprintf("api/%s/%d/c.cluster.DeployApp", istructs.AppQName_sys_cluster, clusterapp.ClusterAppPseudoWSID), body,
 		coreutils.WithDiscardResponse(), coreutils.WithAuthorizeBy(sysToken))
 	return err

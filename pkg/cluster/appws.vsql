@@ -19,14 +19,14 @@ ALTER WORKSPACE AppWorkspaceWS (
 		NumPartitions int32
 	);
 
-	TYPE DeployAppParams (
+	TYPE AppDeploymentDescriptor (
 		AppQName varchar NOT NULL,
-		NumPartitions int32 NOT NULL -- passed here because there is no good way to get NumPartitions
-		deployment descriptor here
+		NumPartitions int32 NOT NULL,
+		NumAppWorkspaces int32 NOT NULL
 	);
 
 	EXTENSION ENGINE BUILTIN (
-		COMMAND DeployApp(DeployAppParams);
+		COMMAND DeployApp(AppDeploymentDescriptor);
 		QUERY QueryApp(QueryAppArgs) RETURNS QueryAppResult;
 	);
 );

@@ -59,19 +59,20 @@ func provideExecDeployApp(asp istructs.IAppStructsProvider, timeFunc coreutils.T
 			// notest
 			return err
 		}
-		as, err := asp.AppStructs(appQName)
-		if err != nil {
-			// notest
-			return err
-		}
+
 		vb.PutRecordID(appdef.SystemField_ID, 1)
 		vb.PutString(Field_AppQName, appQNameStr)
-		numAppWorkspaces := as.NumAppWorkspaces()
+		numAppWorkspaces := istructs.NumAppWorkspaces(args.ArgumentObject.AsInt32(Field_NumAppWorkspaces))
 		numAppPartitions := istructs.NumAppPartitions(args.ArgumentObject.AsInt32(Field_NumPartitions))
 		vb.PutInt32(Field_NumAppWorkspaces, int32(numAppWorkspaces))
 		vb.PutInt32(Field_NumPartitions, int32(numAppPartitions))
 
 		// deploy app workspaces
+		as, err := asp.AppStructs(appQName)
+		if err != nil {
+			// notest
+			return err
+		}
 		_, err = InitAppWSes(as, numAppWorkspaces, numAppPartitions, istructs.UnixMilli(timeFunc().UnixMilli()))
 		return err
 	}
