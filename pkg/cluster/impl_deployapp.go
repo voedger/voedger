@@ -16,6 +16,7 @@ import (
 	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys/authnz"
 	"github.com/voedger/voedger/pkg/sys/uniques"
+	"github.com/voedger/voedger/pkg/sys/workspace"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
@@ -131,7 +132,7 @@ func InitAppWS(as istructs.IAppStructs, partitionID istructs.PartitionID, wsid i
 	cdocWSDesc.PutString(authnz.Field_WSName, "appWS0")
 	cdocWSDesc.PutQName(authnz.Field_WSKind, authnz.QNameCDoc_WorkspaceKind_AppWorkspace)
 	cdocWSDesc.PutInt64(authnz.Field_CreatedAtMs, int64(currentMillis))
-	cdocWSDesc.PutInt64(field_InitCompletedAtMs, int64(currentMillis))
+	cdocWSDesc.PutInt64(workspace.Field_InitCompletedAtMs, int64(currentMillis))
 	rawEvent, err := reb.BuildRawEvent()
 	if err != nil {
 		return false, err

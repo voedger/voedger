@@ -67,9 +67,9 @@ func writeSectionedResponse(requestCtx context.Context, w http.ResponseWriter, s
 			// consume all pending sections or elems to avoid hanging on ibusnats side
 			// normally should one pending elem or section because ibusnats implementation
 			// will terminate on next elem or section because `onSendFailed()` actually closes the context
-			DiscardSection(iSection, requestCtx)
+			discardSection(iSection, requestCtx)
 			for iSection := range sections {
-				DiscardSection(iSection, requestCtx)
+				discardSection(iSection, requestCtx)
 			}
 		}
 	}()
@@ -145,7 +145,7 @@ func writeSectionedResponse(requestCtx context.Context, w http.ResponseWriter, s
 	}
 }
 
-func DiscardSection(iSection ibus.ISection, requestCtx context.Context) {
+func discardSection(iSection ibus.ISection, requestCtx context.Context) {
 	switch t := iSection.(type) {
 	case nil:
 	case ibus.IObjectSection:

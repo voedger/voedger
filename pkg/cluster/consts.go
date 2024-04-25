@@ -15,13 +15,12 @@ import (
 var schemaFS embed.FS
 
 const (
-	ClusterPackage          = "cluster"
-	ClusterPackageFQN       = "github.com/voedger/voedger/pkg/" + ClusterPackage
-	Field_ClusterAppID      = "ClusterAppID"
-	Field_AppQName          = "AppQName"
-	Field_NumPartitions     = "NumPartitions"
-	Field_NumAppWorkspaces  = "NumAppWorkspaces"
-	field_InitCompletedAtMs = "InitCompletedAtMs" // same as workspace.Field_InitCompletedAtMs. Duplicated here to avoid import cycle
+	ClusterPackage         = "cluster"
+	ClusterPackageFQN      = "github.com/voedger/voedger/pkg/" + ClusterPackage
+	Field_ClusterAppID     = "ClusterAppID"
+	Field_AppQName         = "AppQName"
+	Field_NumPartitions    = "NumPartitions"
+	Field_NumAppWorkspaces = "NumAppWorkspaces"
 )
 
 var (

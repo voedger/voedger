@@ -27,6 +27,5 @@ func (ctl *appPartitionsController) Prepare() (err error) {
 }
 
 func (ctl *appPartitionsController) Run(ctx context.Context) {
-
 	<-ctx.Done()
 }
