@@ -21,6 +21,9 @@ func newRate(app *appDef, name QName, count RateCount, period RatePeriod, scopes
 		period: period,
 		scopes: RateScopesFrom(scopes...),
 	}
+	if len(r.scopes) == 0 {
+		r.scopes = DefaultRateScopes
+	}
 	r.typ.comment.setComment(comment...)
 	app.appendType(r)
 	return r

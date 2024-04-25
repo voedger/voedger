@@ -6,7 +6,7 @@
 package appdef
 
 // Enumeration of privileges.
-type PrivilegeKind int8
+type PrivilegeKind uint8
 
 //go:generate stringer -type=PrivilegeKind -output=stringer_privilegekind.go
 

@@ -8,7 +8,7 @@ package appdef
 import "time"
 
 // Rate scopes enumeration
-type RateScope int8
+type RateScope uint8
 
 //go:generate stringer -type=RateScope -output=stringer_ratescope.go
 const (
@@ -23,6 +23,8 @@ const (
 )
 
 type RateScopes []RateScope
+
+var DefaultRateScopes = RateScopes{RateScope_AppPartition}
 
 type (
 	RateCount  = uint
@@ -51,10 +53,12 @@ type IWithRates interface {
 type IRatesBuilder interface {
 	// Adds new Rate type with specified name.
 	//
+	// If no scope is specified, DefaultRateScopes is used.
+	//
 	// # Panics:
 	//   - if name is empty or invalid,
-	//   - if Rate with the same name already exists,
+	//   - if type with the same name already exists,
 	//   - if count is zero,
-	//   - if period is zero or negative.
+	//   - if period is zero.
 	AddRate(name QName, count RateCount, period RatePeriod, scopes []RateScope, comment ...string)
 }
