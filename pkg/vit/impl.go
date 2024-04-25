@@ -9,6 +9,7 @@ import (
 	_ "embed"
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"runtime"
 	"strconv"
 	"sync"
@@ -153,7 +154,10 @@ func newVit(t testing.TB, vitCfg *VITConfig, useCas bool) *VIT {
 
 		// создадим логины и рабочие области
 		for _, login := range app.logins {
-			vit.SignUp(login.Name, login.Pwd, login.AppQName)
+			vit.SignUp(login.Name, login.Pwd, login.AppQName,
+				WithReqOpt(coreutils.WithExpectedCode(http.StatusOK)),
+				WithReqOpt(coreutils.WithExpectedCode(http.StatusConflict)),
+			)
 			prn := vit.SignIn(login)
 			appPrincipals, ok := vit.principals[app.name]
 			if !ok {
@@ -187,7 +191,7 @@ func newVit(t testing.TB, vitCfg *VITConfig, useCas bool) *VIT {
 				appWorkspaces = map[string]*AppWorkspace{}
 				vit.appWorkspaces[app.name] = appWorkspaces
 			}
-			newAppWS := vit.CreateWorkspace(wsd, owner)
+			newAppWS := vit.CreateWorkspace(wsd, owner, coreutils.WithExpectedCode(http.StatusOK), coreutils.WithExpectedCode(http.StatusConflict))
 			newAppWS.childs = wsd.childs
 			newAppWS.docs = wsd.docs
 			newAppWS.subjects = wsd.subjects

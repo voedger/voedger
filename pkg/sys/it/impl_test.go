@@ -317,17 +317,23 @@ func TestTakeQNamesFromWorkspace(t *testing.T) {
 	})
 }
 
-func TestResetPreservingStorage(t *testing.T) {
-	asf := 
-	vit := it.NewVIT(t, &it.SharedConfig_App1)
-	vit.TearDown()
-
+func TestVITResetPreservingStorage(t *testing.T) {
 	cfg := it.NewOwnVITConfig(
-		it.WithApp(istructs.AppQName_test1_app1, it.ProvideApp1),
-		it.WithVVMConfig(func(cfg *vvm.VVMConfig) {
-			cfg.StorageFactory = func() (provider istorage.IAppStorageFactory, err error) {
-				return asf
-			}
-		})
+		it.WithApp(istructs.AppQName_test1_app1, it.ProvideApp1,
+			it.WithUserLogin("login", "1"),
+			it.WithChildWorkspace(it.QNameApp1_TestWSKind, "test_ws", "", "", "login", map[string]interface{}{"IntFld": 42}),
+		),
 	)
+	categoryID := int64(0)
+	it.TestRestartPreservingStorage(t, &cfg, func(t *testing.T, vit *it.VIT) {
+		ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+		body := `{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.category","name":"Awesome food"}}]}`
+		categoryID = vit.PostWS(ws, "c.sys.CUD", body).NewID()
+	}, func(t *testing.T, vit *it.VIT) {
+		ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+		body := fmt.Sprintf(`{"args":{"Query":"select * from app1pkg.category where id = %d"},"elements":[{"fields":["Result"]}]}`, categoryID)
+		resp := vit.PostWS(ws, "q.sys.SqlQuery", body)
+		require.Contains(t, resp.SectionRow()[0].(string), `"name":"Awesome food"`)
+		resp.Println()
+	})
 }

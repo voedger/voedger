@@ -247,9 +247,9 @@ func provideAppPartsCtlPipelineService(ctl apppartsctl.IAppPartitionsController)
 	return &AppPartsCtlPipelineService{IAppPartitionsController: ctl}
 }
 
-func provideIAppStorageUncachingProviderFactory(factory istorage.IAppStorageFactory) IAppStorageUncachingProviderFactory {
+func provideIAppStorageUncachingProviderFactory(factory istorage.IAppStorageFactory, vvmCfg *VVMConfig) IAppStorageUncachingProviderFactory {
 	return func() istorage.IAppStorageProvider {
-		return provider.Provide(factory)
+		return provider.Provide(factory, vvmCfg.KeyspaceNameSuffix)
 	}
 }
 
