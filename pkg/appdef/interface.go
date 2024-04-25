@@ -36,6 +36,7 @@ type IAppDef interface {
 	IWithPrivileges
 
 	IWithRates
+	IWithLimits
 }
 
 type IAppDefBuilder interface {
@@ -62,6 +63,7 @@ type IAppDefBuilder interface {
 	IPrivilegesBuilder
 
 	IRatesBuilder
+	ILimitsBuilder
 
 	// Returns application definition while building.
 	//

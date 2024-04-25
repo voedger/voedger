@@ -159,6 +159,21 @@ func (app *appDef) GRecords(cb func(IGRecord)) {
 	})
 }
 
+func (app *appDef) Limit(name QName) ILimit {
+	if t := app.typeByKind(name, TypeKind_Limit); t != nil {
+		return t.(ILimit)
+	}
+	return nil
+}
+
+func (app *appDef) Limits(cb func(ILimit)) {
+	app.Types(func(t IType) {
+		if l, ok := t.(ILimit); ok {
+			cb(l)
+		}
+	})
+}
+
 func (app appDef) LocalQName(name FullQName) QName { return app.packages.localQName(name) }
 
 func (app *appDef) Object(name QName) IObject {
@@ -488,6 +503,10 @@ func (app *appDef) addGRecord(name QName) IGRecordBuilder {
 	return newGRecordBuilder(gRec)
 }
 
+func (app *appDef) addLimit(name QName, on []QName, rate QName, comment ...string) {
+	_ = newLimit(app, name, on, rate, comment...)
+}
+
 func (app *appDef) addObject(name QName) IObjectBuilder {
 	obj := newObject(app, name)
 	return newObjectBuilder(obj)
@@ -655,6 +674,10 @@ func (ab *appDefBuilder) AddData(name QName, kind DataKind, ancestor QName, cons
 func (ab *appDefBuilder) AddGDoc(name QName) IGDocBuilder { return ab.app.addGDoc(name) }
 
 func (ab *appDefBuilder) AddGRecord(name QName) IGRecordBuilder { return ab.app.addGRecord(name) }
+
+func (ab *appDefBuilder) AddLimit(name QName, on []QName, rate QName, comment ...string) {
+	ab.app.addLimit(name, on, rate, comment...)
+}
 
 func (ab *appDefBuilder) AddObject(name QName) IObjectBuilder { return ab.app.addObject(name) }
 
