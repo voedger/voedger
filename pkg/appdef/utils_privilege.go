@@ -109,7 +109,7 @@ func (k PrivilegeKind) TrimString() string {
 //   - If on contains unknown name then returns error
 //   - If on contains name of type that can not to be privileged then returns error
 //   - If on contains names of mixed types then returns error.
-func validatePrivilegeOnNames(app IAppDef, on ...QName) (QNames, error) {
+func validatePrivilegeOnNames(tt IWithTypes, on ...QName) (QNames, error) {
 	if len(on) == 0 {
 		return nil, ErrMissed("privilege object names")
 	}
@@ -118,7 +118,7 @@ func validatePrivilegeOnNames(app IAppDef, on ...QName) (QNames, error) {
 	onType := TypeKind_null
 
 	for _, n := range names {
-		t := app.TypeByName(n)
+		t := tt.TypeByName(n)
 		if t == nil {
 			return nil, ErrTypeNotFound(n)
 		}
@@ -145,7 +145,7 @@ func validatePrivilegeOnNames(app IAppDef, on ...QName) (QNames, error) {
 			if onType == TypeKind_null {
 				onType = k
 			} else {
-				return nil, ErrIncompatible("privileged object types mixed in list (%v and %v)", app.Type(names[0]), t)
+				return nil, ErrIncompatible("privileged object types mixed in list (%v and %v)", tt.Type(names[0]), t)
 			}
 		}
 	}

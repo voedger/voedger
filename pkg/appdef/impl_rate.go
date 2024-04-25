@@ -7,34 +7,35 @@ package appdef
 
 import (
 	"fmt"
-	"time"
+	"strings"
 )
 
 // Implements:
 //   - IRate
 type rate struct {
 	typ
-	count  int
-	period time.Duration
+	count  RateCount
+	period RatePeriod
 	scopes RateScopes
 }
 
-func newRate(app *appDef, name QName, count int, period time.Duration, scopes []RateScope) *rate {
+func newRate(app *appDef, name QName, count RateCount, period RatePeriod, scopes []RateScope, comment ...string) *rate {
 	r := &rate{
 		typ:    makeType(app, name, TypeKind_Rate),
 		count:  count,
 		period: period,
-		scopes: scopes,
+		scopes: RateScopesFrom(scopes...),
 	}
+	r.typ.comment.setComment(comment...)
 	app.appendType(r)
 	return r
 }
 
-func (r rate) Count() int {
+func (r rate) Count() RateCount {
 	return r.count
 }
 
-func (r rate) Period() time.Duration {
+func (r rate) Period() RatePeriod {
 	return r.period
 }
 
@@ -44,4 +45,11 @@ func (r rate) Scopes() RateScopes {
 
 func (r rate) String() string {
 	return fmt.Sprintf("%v %d per %v per %v", r.typ, r.count, r.period, r.scopes)
+}
+
+// Renders an RateScope in human-readable form, without `RateScope_` prefix,
+// suitable for debugging or error messages
+func (rs RateScope) TrimString() string {
+	const pref = "RateScope" + "_"
+	return strings.TrimPrefix(rs.String(), pref)
 }

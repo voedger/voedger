@@ -15,7 +15,7 @@ import (
 type appDef struct {
 	comment
 	packages     *packages
-	privileges   []*privilege
+	privileges   []*privilege // adding order should be saved
 	types        map[QName]interface{}
 	typesOrdered []interface{}
 	wsDesc       map[QName]IWorkspace
@@ -268,6 +268,21 @@ func (app *appDef) Query(name QName) IQuery {
 	return nil
 }
 
+func (app appDef) Rate(name QName) IRate {
+	if t := app.typeByKind(name, TypeKind_Rate); t != nil {
+		return t.(IRate)
+	}
+	return nil
+}
+
+func (app appDef) Rates(cb func(IRate)) {
+	app.Types(func(t IType) {
+		if r, ok := t.(IRate); ok {
+			cb(r)
+		}
+	})
+}
+
 func (app *appDef) Record(name QName) IRecord {
 	if t := app.TypeByName(name); t != nil {
 		if r, ok := t.(IRecord); ok {
@@ -502,6 +517,10 @@ func (app *appDef) addQuery(name QName) IQueryBuilder {
 	return newQueryBuilder(q)
 }
 
+func (app *appDef) addRate(name QName, count RateCount, period RatePeriod, scopes []RateScope, comment ...string) {
+	_ = newRate(app, name, count, period, scopes, comment...)
+}
+
 func (app *appDef) addRole(name QName) IRoleBuilder {
 	role := newRole(app, name)
 	return newRoleBuilder(role)
@@ -651,6 +670,10 @@ func (ab *appDefBuilder) AddPackage(localName, path string) IAppDefBuilder {
 func (ab *appDefBuilder) AddProjector(name QName) IProjectorBuilder { return ab.app.addProjector(name) }
 
 func (ab *appDefBuilder) AddQuery(name QName) IQueryBuilder { return ab.app.addQuery(name) }
+
+func (ab *appDefBuilder) AddRate(name QName, count RateCount, period RatePeriod, scopes []RateScope, comment ...string) {
+	ab.app.addRate(name, count, period, scopes, comment...)
+}
 
 func (ab *appDefBuilder) AddRole(name QName) IRoleBuilder { return ab.app.addRole(name) }
 

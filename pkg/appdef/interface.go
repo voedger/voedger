@@ -34,6 +34,8 @@ type IAppDef interface {
 
 	IWithRoles
 	IWithPrivileges
+
+	IWithRates
 }
 
 type IAppDefBuilder interface {
@@ -58,6 +60,8 @@ type IAppDefBuilder interface {
 
 	IRolesBuilder
 	IPrivilegesBuilder
+
+	IRatesBuilder
 
 	// Returns application definition while building.
 	//
