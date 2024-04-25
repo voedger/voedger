@@ -22,6 +22,7 @@ ALTER WORKSPACE AppWorkspaceWS (
 	TYPE DeployAppParams (
 		AppQName varchar NOT NULL,
 		NumPartitions int32 NOT NULL -- passed here because there is no good way to get NumPartitions
+		deployment descriptor here
 	);
 
 	EXTENSION ENGINE BUILTIN (
