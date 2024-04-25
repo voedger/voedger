@@ -14,16 +14,16 @@ import (
 	"github.com/voedger/voedger/pkg/istructsmem"
 )
 
-// returns ID of the record indentified by the the provided unique combination
+// returns ID of the record identified by the the provided unique combination
 // returns NullRecordID if there is no record by the provided unique combination or if the record is inactive
 func GetRecordIDByUniqueCombination(wsid istructs.WSID, tableQName appdef.QName, as istructs.IAppStructs, values map[string]interface{}) (istructs.RecordID, error) {
 	tableType := as.AppDef().Type(tableQName)
 	if tableType.Kind() == appdef.TypeKind_null {
-		return 0, fmt.Errorf("%q: %w", tableQName, appdef.ErrTypeNotFound)
+		return 0, appdef.ErrNotFound("type %q", tableQName)
 	}
-	table, ok := tableType.(appdef.IDoc)
+	table, ok := tableType.(appdef.IDoc) //nnv: why IDoc but not IRecord ??
 	if !ok {
-		return 0, fmt.Errorf("%q is not a table: %w", tableQName, appdef.ErrInvalidTypeKind)
+		return 0, fmt.Errorf("%q is not a table: %w", tableQName, appdef.ErrInvalidError)
 	}
 	// let's find the unique by set of field names
 	// matchedIUnique := appdef.IUnique(nil)

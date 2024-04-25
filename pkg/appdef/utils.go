@@ -5,18 +5,14 @@
 
 package appdef
 
-import (
-	"fmt"
-)
-
 // Returns is string is valid identifier and error if not
 func ValidIdent(ident string) (bool, error) {
 	if len(ident) < 1 {
-		return false, ErrNameMissed
+		return false, ErrMissed("ident")
 	}
 
-	if len(ident) > MaxIdentLen {
-		return false, fmt.Errorf("ident too long: %w", ErrInvalidName)
+	if l := len(ident); l > MaxIdentLen {
+		return false, ErrOutOfBounds("ident «%s» too long (%d runes, max is %d)", ident, l, MaxIdentLen)
 	}
 
 	const (
@@ -41,7 +37,7 @@ func ValidIdent(ident string) (bool, error) {
 	for p, c := range ident {
 		if !letter(c) && !underScore(c) && !buck(c) {
 			if (p == 0) || !digit(c) {
-				return false, fmt.Errorf("name char «%c» at pos %d is not valid: %w", c, p, ErrInvalidName)
+				return false, ErrInvalid("ident «%s» has invalid char «%c» at pos %d", ident, c, p)
 			}
 		}
 	}
@@ -58,7 +54,7 @@ func ValidFieldName(ident FieldName) (bool, error) {
 // Parsing a URI Reference with a Regular Expression [RFC3986, app B](https://datatracker.ietf.org/doc/html/rfc3986#appendix-B)
 func ValidPackagePath(path string) (bool, error) {
 	if len(path) < 1 {
-		return false, ErrNameMissed
+		return false, ErrMissed("package path")
 	}
 	return true, nil
 }

@@ -149,6 +149,8 @@ type VVMConfig struct {
 	FederationURL       *url.URL
 	ActualizerStateOpts []state.ActualizerStateOptFunc
 	SecretsReader       isecrets.ISecretReader
+	// used in tests only
+	KeyspaceNameSuffix string
 }
 
 type resultSenderErrorFirst struct {

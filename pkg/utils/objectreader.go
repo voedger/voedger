@@ -197,7 +197,7 @@ func CheckValueByKind(val interface{}, kind appdef.DataKind) error {
 		ok = kind == appdef.DataKind_bytes
 	}
 	if !ok {
-		return fmt.Errorf("provided value %v has type %T but %s is expected: %w", val, val, kind.String(), appdef.ErrInvalidTypeKind)
+		return fmt.Errorf("provided value %v has type %T but %s is expected: %w", val, val, kind.String(), appdef.ErrInvalidError)
 	}
 	return nil
 }

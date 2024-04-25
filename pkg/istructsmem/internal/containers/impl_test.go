@@ -152,7 +152,7 @@ func TestContainersPrepareErrors(t *testing.T) {
 
 		names := New()
 		err := names.Prepare(storage, versions, nil)
-		require.ErrorIs(err, appdef.ErrInvalidName)
+		require.ErrorIs(err, appdef.ErrInvalidError)
 	})
 
 	t.Run("must be ok if deleted Container loaded from system view ", func(t *testing.T) {

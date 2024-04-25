@@ -38,7 +38,7 @@ type Container struct {
 }
 
 type Unique struct {
-	Comment string `json:",omitempty"`
-	Name    appdef.QName
+	Comment string       `json:",omitempty"`
+	Name    appdef.QName `json:"-"`
 	Fields  []appdef.FieldName
 }
