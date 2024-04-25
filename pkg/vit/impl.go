@@ -462,6 +462,10 @@ func (vit *VIT) CaptureEmail() (msg smtptest.Message) {
 	return
 }
 
+func (vit *VIT) Restart() {
+	vit.VoedgerVM.Shutdown()
+}
+
 // sets delay on IAppStorage.Get() in mem implementation
 // will be automatically reset to 0 on TearDown
 func (vit *VIT) SetMemStorageGetDelay(delay time.Duration) {
