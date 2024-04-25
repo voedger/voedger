@@ -84,7 +84,7 @@ const (
 	// Rates and limits
 	TypeKind_Rate
 
-	TypeKind_FakeLast
+	TypeKind_count
 )
 
 // # Type

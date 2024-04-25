@@ -27,7 +27,7 @@ func _() {
 	_ = x[TypeKind_Workspace-16]
 	_ = x[TypeKind_Role-17]
 	_ = x[TypeKind_Rate-18]
-	_ = x[TypeKind_FakeLast-19]
+	_ = x[TypeKind_count-19]
 }
 
 const _TypeKind_name = "TypeKind_nullTypeKind_AnyTypeKind_DataTypeKind_GDocTypeKind_CDocTypeKind_ODocTypeKind_WDocTypeKind_GRecordTypeKind_CRecordTypeKind_ORecordTypeKind_WRecordTypeKind_ViewRecordTypeKind_ObjectTypeKind_QueryTypeKind_CommandTypeKind_ProjectorTypeKind_WorkspaceTypeKind_RoleTypeKind_RateTypeKind_FakeLast"

@@ -60,8 +60,8 @@ func TestTypeKind_MarshalText(t *testing.T) {
 			want: `TypeKind_GDoc`,
 		},
 		{name: `TypeKind_FakeLast —> <number>`,
-			k:    TypeKind_FakeLast,
-			want: strconv.FormatUint(uint64(TypeKind_FakeLast), 10),
+			k:    TypeKind_count,
+			want: strconv.FormatUint(uint64(TypeKind_count), 10),
 		},
 	}
 	for _, tt := range tests {
@@ -78,7 +78,7 @@ func TestTypeKind_MarshalText(t *testing.T) {
 	}
 
 	t.Run("100% cover TypeKind.String()", func(t *testing.T) {
-		const tested = TypeKind_FakeLast + 1
+		const tested = TypeKind_count + 1
 		want := "TypeKind(" + strconv.FormatInt(int64(tested), 10) + ")"
 		got := tested.String()
 		if got != want {
@@ -95,7 +95,7 @@ func TestTypeKindTrimString(t *testing.T) {
 	}{
 		{name: "null", k: TypeKind_null, want: "null"},
 		{name: "basic", k: TypeKind_CDoc, want: "CDoc"},
-		{name: "out of range", k: TypeKind_FakeLast + 1, want: (TypeKind_FakeLast + 1).String()},
+		{name: "out of range", k: TypeKind_count + 1, want: (TypeKind_count + 1).String()},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

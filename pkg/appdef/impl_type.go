@@ -167,7 +167,7 @@ func (k TypeKind) HasSystemField(f FieldName) (exists, required bool) {
 
 func (k TypeKind) MarshalText() ([]byte, error) {
 	var s string
-	if k < TypeKind_FakeLast {
+	if k < TypeKind_count {
 		s = k.String()
 	} else {
 		const base = 10
