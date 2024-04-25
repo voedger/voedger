@@ -17,7 +17,7 @@ func _() {
 	_ = x[PrivilegeKind_count-6]
 }
 
-const _PrivilegeKind_name = "PrivilegeKind_nullPrivilegeKind_InsertPrivilegeKind_UpdatePrivilegeKind_SelectPrivilegeKind_ExecutePrivilegeKind_InheritsPrivilegeKind_Count"
+const _PrivilegeKind_name = "PrivilegeKind_nullPrivilegeKind_InsertPrivilegeKind_UpdatePrivilegeKind_SelectPrivilegeKind_ExecutePrivilegeKind_InheritsPrivilegeKind_count"
 
 var _PrivilegeKind_index = [...]uint8{0, 18, 38, 58, 78, 99, 121, 140}
 

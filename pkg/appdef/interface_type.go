@@ -81,6 +81,9 @@ const (
 	// Roles and grants
 	TypeKind_Role
 
+	// Rates and limits
+	TypeKind_Rate
+
 	TypeKind_FakeLast
 )
 
