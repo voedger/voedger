@@ -134,7 +134,7 @@ func TestExists(t *testing.T) {
 	})
 
 	t.Run("dir", func(t *testing.T) {
-		exists, err := Exists("wsdesc")
+		exists, err := Exists("testwsdesc")
 		require.NoError(err)
 		require.True(exists)
 	})

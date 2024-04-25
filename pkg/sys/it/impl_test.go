@@ -15,36 +15,9 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/state"
-	"github.com/voedger/voedger/pkg/sys/authnz"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 	it "github.com/voedger/voedger/pkg/vit"
-	"github.com/voedger/voedger/pkg/vvm"
 )
-
-func TestAppWSAutoInitialization(t *testing.T) {
-	require := require.New(t)
-	vit := it.NewVIT(t, &it.SharedConfig_App1)
-	defer vit.TearDown()
-
-	checkCDocsWSDesc(vit.VVMConfig, vit.VVM, require)
-
-	// further calls -> nothing happens, expect no errors
-	require.NoError(vvm.BuildAppWorkspaces(vit.VVM, vit.VVMConfig))
-	checkCDocsWSDesc(vit.VVMConfig, vit.VVM, require)
-}
-
-func checkCDocsWSDesc(vvmCfg *vvm.VVMConfig, vvm *vvm.VVM, require *require.Assertions) {
-	for appQName := range vvmCfg.VVMAppsBuilder {
-		as, err := vvm.AppStructs(appQName)
-		require.NoError(err)
-		for wsNum := 0; istructs.NumAppWorkspaces(wsNum) < as.NumAppWorkspaces(); wsNum++ {
-			appWSID := istructs.NewWSID(istructs.MainClusterID, istructs.WSID(wsNum+int(istructs.FirstBaseAppWSID)))
-			existingCDocWSDesc, err := as.Records().GetSingleton(appWSID, authnz.QNameCDocWorkspaceDescriptor)
-			require.NoError(err)
-			require.Equal(authnz.QNameCDocWorkspaceDescriptor, existingCDocWSDesc.QName())
-		}
-	}
-}
 
 func TestAuthorization(t *testing.T) {
 	vit := it.NewVIT(t, &it.SharedConfig_App1)

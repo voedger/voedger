@@ -57,10 +57,11 @@ type AppStorageFactory func(appQName istructs.AppQName, appStorage istorage.IApp
 type StorageCacheSizeType int
 type VVMApps []istructs.AppQName
 type BuiltInAppPackages struct {
-	apppartsctl.BuiltInApp
+	appparts.BuiltInApp
 	Packages []parser.PackageFS // need for build baseline schemas
 }
 type AppConfigsTypeEmpty istructsmem.AppConfigsType
+type BootstrapOperator pipeline.ISyncOperator
 
 type AppsArtefacts struct {
 	istructsmem.AppConfigsType
@@ -110,6 +111,7 @@ type VVM struct {
 	ServicePipeline
 	apps.APIs
 	appparts.IAppPartitions
+	istorage.IAppStorageFactory
 	AppsExtensionPoints map[istructs.AppQName]extensionpoints.IExtensionPoint
 	MetricsServicePort  func() metrics.MetricsServicePort
 	BuiltInAppsPackages []BuiltInAppPackages
