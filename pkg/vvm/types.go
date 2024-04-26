@@ -111,7 +111,6 @@ type VVM struct {
 	ServicePipeline
 	apps.APIs
 	appparts.IAppPartitions
-	istorage.IAppStorageFactory
 	AppsExtensionPoints map[istructs.AppQName]extensionpoints.IExtensionPoint
 	MetricsServicePort  func() metrics.MetricsServicePort
 	BuiltInAppsPackages []BuiltInAppPackages
