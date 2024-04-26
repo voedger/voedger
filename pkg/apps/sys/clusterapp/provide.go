@@ -6,6 +6,7 @@
 package clusterapp
 
 import (
+	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/apps"
 	"github.com/voedger/voedger/pkg/cluster"
 	"github.com/voedger/voedger/pkg/extensionpoints"
@@ -22,16 +23,16 @@ func Provide() apps.AppBuilder {
 			Path: ClusterAppFQN,
 			FS:   schemaFS,
 		}
-		clusterPackageFS := cluster.Provide()
+		clusterPackageFS := cluster.Provide(cfg, apis.IAppStructsProvider, apis.TimeFunc)
 		sysPackageFS := sys.Provide(cfg, smtp.Cfg{}, ep, nil, apis.TimeFunc, apis.ITokens, apis.IFederation, apis.IAppStructsProvider, apis.IAppTokensFactory,
 			nil, apis.IAppStorageProvider)
 		return apps.BuiltInAppDef{
 			AppQName: istructs.AppQName_sys_cluster,
 			Packages: []parser.PackageFS{clusterAppPackageFS, clusterPackageFS, sysPackageFS},
-			AppDeploymentDescriptor: cluster.AppDeploymentDescriptor{
-				NumParts:       1,
-				EnginePoolSize: cluster.PoolSize(1, 1, 1),
-				NumAppWorkspaces: 1,
+			AppDeploymentDescriptor: appparts.AppDeploymentDescriptor{
+				NumParts:         ClusterAppNumPartitions,
+				EnginePoolSize:   appparts.PoolSize(int(ClusterAppNumPartitions), 1, int(ClusterAppNumPartitions)),
+				NumAppWorkspaces: ClusterAppNumAppWS,
 			},
 		}
 	}

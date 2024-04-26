@@ -60,14 +60,14 @@ func (ex extension) Validate() error {
 
 func (ex *extension) setEngine(engine ExtensionEngineKind) {
 	if (engine == ExtensionEngineKind_null) || (engine >= ExtensionEngineKind_Count) {
-		panic(fmt.Errorf("%v: extension engine kind «%v» is invalid: %w", ex, engine, ErrInvalidExtensionEngineKind))
+		panic(ErrOutOfBounds("%v extension engine kind «%v»", ex, engine))
 	}
 	ex.engine = engine
 }
 
 func (ex *extension) setName(name string) {
 	if name == "" {
-		panic(fmt.Errorf("%v: extension name is empty: %w", ex, ErrNameMissed))
+		panic(ErrMissed("%v extension name", ex))
 	}
 	if ok, err := ValidIdent(name); !ok {
 		panic(fmt.Errorf("%v: extension name «%s» is not valid: %w", ex, name, err))

@@ -10,46 +10,76 @@ import (
 	"fmt"
 )
 
-var ErrNameMissed = errors.New("name is missed")
+func enrichError(err error, msg string, args ...any) error {
+	s := msg
+	if len(args) > 0 {
+		s = fmt.Sprintf(msg, args...)
+	}
+	return fmt.Errorf("%w: %s", err, s)
+}
 
-var ErrInvalidName = errors.New("name not valid")
+var ErrMissedError = errors.New("missed")
 
-var ErrNameUniqueViolation = errors.New("duplicate name")
+func ErrMissed(msg string, args ...any) error {
+	return enrichError(ErrMissedError, msg, args...)
+}
 
-var ErrNameNotFound = errors.New("name not found")
+var ErrInvalidError = errors.New("not valid")
 
-var ErrTypeNotFound = fmt.Errorf("type not found: %w", ErrNameNotFound)
+func ErrInvalid(msg string, args ...any) error {
+	return enrichError(ErrInvalidError, msg, args...)
+}
 
-var ErrFieldNotFound = fmt.Errorf("field not found: %w", ErrNameNotFound)
+var ErrOutOfBoundsError = errors.New("out of bounds")
 
-var ErrInvalidQNameStringRepresentation = errors.New("invalid string representation of qualified name")
+func ErrOutOfBounds(msg string, args ...any) error {
+	return enrichError(ErrOutOfBoundsError, msg, args...)
+}
 
-var ErrInvalidTypeKind = errors.New("invalid type kind")
+var ErrAlreadyExistsError = errors.New("already exists")
 
-var ErrTooManyFields = errors.New("too many fields")
+func ErrAlreadyExists(msg string, args ...any) error {
+	return enrichError(ErrAlreadyExistsError, msg, args...)
+}
 
-var ErrIncompatibleConstraints = errors.New("incompatible constraints")
+var ErrNotFoundError = errors.New("not found")
 
-var ErrTooManyContainers = errors.New("too many containers")
+func ErrNotFound(msg string, args ...any) error {
+	return enrichError(ErrNotFoundError, msg, args...)
+}
 
-var ErrTooManyUniques = errors.New("too many uniques")
+func ErrFieldNotFound(f string) error {
+	return ErrNotFound("field «%v»", f)
+}
 
-var ErrInvalidDataKind = errors.New("invalid data kind")
+func ErrTypeNotFound(t QName) error {
+	return ErrNotFound("type «%v»", t)
+}
 
-var ErrInvalidOccurs = errors.New("invalid occurs value")
+func ErrRoleNotFound(r QName) error {
+	return ErrNotFound("role «%v»", r)
+}
 
-var ErrFieldsMissed = errors.New("fields missed")
+var ErrConvertError = errors.New("convert error")
 
-var ErrUniqueOverlaps = errors.New("unique fields overlaps")
+func ErrConvert(msg string, args ...any) error {
+	return enrichError(ErrConvertError, msg, args...)
+}
 
-var ErrInvalidExtensionEngineKind = errors.New("extension engine kind is not valid")
+var ErrTooManyError = errors.New("too many")
 
-var ErrWorkspaceShouldBeAbstract = errors.New("workspace should be abstract")
+func ErrTooMany(msg string, args ...any) error {
+	return enrichError(ErrTooManyError, msg, args...)
+}
 
-var ErrInvalidProjectorEventKind = errors.New("invalid projector event kind")
+var ErrIncompatibleError = errors.New("incompatible")
 
-var ErrEmptyProjectorEvents = errors.New("empty projector events")
+func ErrIncompatible(msg string, args ...any) error {
+	return enrichError(ErrIncompatibleError, msg, args...)
+}
 
-var ErrInvalidProjectorCronSchedule = errors.New("invalid projector cron schedule")
+var ErrUnsupportedError = errors.ErrUnsupported
 
-var ErrScheduledProjectorWithIntents = errors.New("scheduled projector shall not have intents")
+func ErrUnsupported(msg string, args ...any) error {
+	return enrichError(ErrUnsupportedError, msg, args...)
+}

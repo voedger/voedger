@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/cluster"
 	"github.com/voedger/voedger/pkg/iextengine"
 	"github.com/voedger/voedger/pkg/istructs"
 	coreutils "github.com/voedger/voedger/pkg/utils"
@@ -37,12 +36,12 @@ func newAppPartitions(asp istructs.IAppStructsProvider, saf SyncActualizerFactor
 	return a, func() {}, err
 }
 
-func (aps *apps) DeployApp(name istructs.AppQName, def appdef.IAppDef, partsCount istructs.NumAppPartitions, engines [cluster.ProcessorKind_Count]int) {
+func (aps *apps) DeployApp(name istructs.AppQName, def appdef.IAppDef, partsCount istructs.NumAppPartitions, engines [ProcessorKind_Count]int) {
 	aps.mx.Lock()
 	defer aps.mx.Unlock()
 
 	if _, ok := aps.apps[name]; ok {
-		panic(errAppCannotToBeRedeployed(name))
+		panic(errAppCannotBeRedeployed(name))
 	}
 
 	a := newApplication(aps, name, partsCount)
@@ -96,7 +95,7 @@ func (aps *apps) AppPartsCount(appName istructs.AppQName) (istructs.NumAppPartit
 	return app.partsCount, nil
 }
 
-func (aps *apps) Borrow(appName istructs.AppQName, partID istructs.PartitionID, proc cluster.ProcessorKind) (IAppPartition, error) {
+func (aps *apps) Borrow(appName istructs.AppQName, partID istructs.PartitionID, proc ProcessorKind) (IAppPartition, error) {
 	aps.mx.RLock()
 	defer aps.mx.RUnlock()
 
@@ -126,7 +125,7 @@ func (aps *apps) AppWorkspacePartitionID(appName istructs.AppQName, ws istructs.
 	return coreutils.AppPartitionID(ws, pc), nil
 }
 
-func (aps *apps) WaitForBorrow(ctx context.Context, appName istructs.AppQName, partID istructs.PartitionID, proc cluster.ProcessorKind) (IAppPartition, error) {
+func (aps *apps) WaitForBorrow(ctx context.Context, appName istructs.AppQName, partID istructs.PartitionID, proc ProcessorKind) (IAppPartition, error) {
 	for ctx.Err() == nil {
 		ap, err := aps.Borrow(appName, partID, proc)
 		if err == nil {

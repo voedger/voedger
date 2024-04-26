@@ -14,7 +14,6 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appparts"
-	"github.com/voedger/voedger/pkg/cluster"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
 )
@@ -58,7 +57,7 @@ type cmdProcMock struct {
 }
 
 func (p cmdProcMock) TestEvent(wsid istructs.WSID) error {
-	appPart, err := p.appParts.Borrow(istructs.AppQName_test1_app1, istructs.PartitionID(1), cluster.ProcessorKind_Command)
+	appPart, err := p.appParts.Borrow(istructs.AppQName_test1_app1, istructs.PartitionID(1), appparts.ProcessorKind_Command)
 	if err != nil {
 		return err
 	}

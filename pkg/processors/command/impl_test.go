@@ -19,7 +19,6 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appparts"
-	"github.com/voedger/voedger/pkg/cluster"
 	"github.com/voedger/voedger/pkg/iauthnzimpl"
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/in10nmem"
@@ -36,7 +35,7 @@ import (
 	"github.com/voedger/voedger/pkg/processors"
 	"github.com/voedger/voedger/pkg/projectors"
 	coreutils "github.com/voedger/voedger/pkg/utils"
-	wsdescutil "github.com/voedger/voedger/pkg/utils/wsdesc"
+	wsdescutil "github.com/voedger/voedger/pkg/utils/testwsdesc"
 	"github.com/voedger/voedger/pkg/vvm/engines"
 	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
 	"github.com/voedger/voedger/staging/src/github.com/untillpro/ibusmem"
@@ -378,7 +377,7 @@ func Test400BadRequestOnCUDErrors(t *testing.T) {
 		{`fields: sys.ID missing`, `"cuds":[{"fields":{"sys.QName":"test.Test"}}]`, `cuds[0]: "sys.ID" missing`},
 		{`fields: sys.ID is not a number (create)`, `"cuds":[{"sys.ID":"wrong","fields":{"sys.QName":"test.Test"}}]`, `cuds[0]: field 'sys.ID' must be an int64`},
 		{`fields: sys.ID is not a number (update)`, `"cuds":[{"fields":{"sys.ID":"wrong","sys.QName":"test.Test"}}]`, `cuds[0]: field 'sys.ID' must be an int64`},
-		{`fields: wrong qName`, `"cuds":[{"fields":{"sys.ID":1,"sys.QName":"wrong"}},{"fields":{"sys.ID":1,"sys.QName":"test.Test"}}]`, `invalid string representation of qualified name: wrong`},
+		{`fields: wrong qName`, `"cuds":[{"fields":{"sys.ID":1,"sys.QName":"wrong"}},{"fields":{"sys.ID":1,"sys.QName":"test.Test"}}]`, `convert error: string «wrong» to QName`},
 	}
 
 	for _, c := range cases {
@@ -664,7 +663,7 @@ func replyBadRequest(sender ibus.ISender, message string) {
 // test app deployment constants
 var (
 	testAppName                                = istructs.AppQName_untill_airs_bp
-	testAppEngines                             = [cluster.ProcessorKind_Count]int{10, 10, 10}
+	testAppEngines                             = [appparts.ProcessorKind_Count]int{10, 10, 10}
 	testAppPartID    istructs.PartitionID      = 1
 	testAppPartCount istructs.NumAppPartitions = 1
 )

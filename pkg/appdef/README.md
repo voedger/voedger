@@ -19,6 +19,7 @@ classDiagram
         +View(QName) IView
         +Command(QName) ICommand
         +Query(QName) IQuery
+        +Role(QName) IRole
         +Projector(QName) IProjector
         +Workspace(QName) IWorkspace
     }
@@ -191,6 +192,13 @@ classDiagram
         +Descriptor() QName
         +Types() []IType
     }
+
+    IRole --|> IType : inherits
+    class IRole {
+        <<interface>>
+        +Kind()* TypeKind_Role
+        +Privileges() []IPrivilege
+    }
 ```
 
 ### Data types
@@ -198,6 +206,16 @@ classDiagram
 ```mermaid
 classDiagram
     direction BT
+
+  class IAppDef {
+    <<Interface>>
+    +DataTypes(inclSys bool) []IData
+    +SysData(DataKind) IData
+  }
+
+  IData "0..*" <--o "1" IAppDef : DataTypes
+  IData "1..DataKind_count" <--o "1" IAppDef : SysData
+
     class IType {
         <<interface>>
         +Name() QName
@@ -365,58 +383,47 @@ classDiagram
 classDiagram
   direction TB
 
-  class IGDoc {
+  class IAppDef {
     <<Interface>>
-    IDoc
+    +Structures() []IStructure
+    +Records() []IRecord
+    +Singletons() []ISingleton
+    +GDocs()[]IGDoc
+    +GRecords()[]IGRecord
+    +CDocs()[]ICDoc
+    +CRecords()[]ICRecord
+    +WDocs()[]IWDoc
+    +WRecords()[]IWRecord
+    +ODocs()[]IODoc
+    +ORecords()[]IORecord
+    +Objects()[]IObject
   }
-  IGDoc "1" o--> "0..*" IGRecord : children
+  IAppDef "1" o--> "0..*" IStructure : Structures
+  IAppDef "1" o--> "0..*" IRecord : Records
+  IAppDef "1" o--> "0..*" ISingleton : Singletons
+  IAppDef "1" o--> "0..*" IGDoc : GDocs
+  IAppDef "1" o--> "0..*" IGRecord : GRecords
+  IAppDef "1" o--> "0..*" ICDoc : CDocs
+  IAppDef "1" o--> "0..*" ICRecord : CRecords
+  IAppDef "1" o--> "0..*" IWDoc : WDocs
+  IAppDef "1" o--> "0..*" IWRecord : WRecords
+  IAppDef "1" o--> "0..*" IODoc : ODocs
+  IAppDef "1" o--> "0..*" IORecord : ORecords
+  IAppDef "1" o--> "0..*" IObject : Objects
 
-  class IGRecord {
-    <<Interface>>
-    IContainedRecord
-  }
+  IGDoc "1" o--> "0..*" IGRecord : children
   IGRecord "1" o--> "0..*" IGRecord : children
 
-  class ICDoc {
-    <<Interface>>
-    ISingleton
-  }
   ICDoc "1" o--> "0..*" ICRecord : children
-
-  class ICRecord {
-    <<Interface>>
-    IContainedRecord
-  }
   ICRecord "1" o--> "0..*" ICRecord : children
 
-  class IWDoc {
-    <<Interface>>
-    ISingleton
-  }
   IWDoc "1" o--> "0..*" IWRecord : children
-
-  class IWRecord {
-    <<Interface>>
-    IContainedRecord
-  }
   IWRecord "1" o--> "0..*" IWRecord : children
 
-  class IODoc {
-    <<Interface>>
-    IDoc
-  }
   IODoc "1" o--> "0..*" IORecord : children
-
-  class IORecord {
-    <<Interface>>
-    IContainedRecord
-  }
+  IODoc "1" o--> "0..*" IODoc : children document
   IORecord "1" o--> "0..*" IORecord : children
 
-  class IObject {
-    <<Interface>>
-    IStructure
-  }
   IObject "1" o--> "0..*" IObject : children
 ```
 
@@ -427,7 +434,7 @@ classDiagram
 
   class IField {
     <<Interface>>
-    +Name() string
+    +Name() FieldName
     +DataKind() DataKind
     +Required() bool
     +Verified() bool
@@ -437,7 +444,7 @@ classDiagram
 
   class IFields{
     <<Interface>>
-    Field(string) IField
+    Field(FieldName) IField
     FieldCount() int
     Fields() []IField
   }
@@ -556,6 +563,13 @@ classDiagram
     <<interface>>
     …
   }
+
+    class IAppDef {
+      …
+      +Views() []IView
+    }
+
+    IAppDef "1" *--> "0..*" IView : Views
 ```
 
 ### Extensions
@@ -650,9 +664,73 @@ classDiagram
         Execute
         ExecuteWithParam
     }
+
+    class IAppDef {
+      …
+      +Extensions() []IExtension
+      +Functions() []IFunction
+      +Commands() []ICommand
+      +Queries() []IQuery
+      +Projectors() []IProjector
+    }
+
+    IAppDef "1" *--> "0..*" IExtension : Extensions
+    IAppDef "1" *--> "0..*" IFunction : Functions
+    IAppDef "1" *--> "0..*" ICommand : Commands
+    IAppDef "1" *--> "0..*" IQuery : Queries
+    IAppDef "1" *--> "0..*" IProjector : Projectors
 ```
 
 *Rem*: In the above diagram the Param and Result of the function are `IType`, in future versions it will be changed to an array of `[]IParam` and renamed to plural (`Params`, `Results`).
+
+### Workspaces
+
+### Roles and privileges
+
+```mermaid
+    classDiagram
+    IType <|-- IRole : inherits
+    class IRole {
+        <<interface>>
+        +Kind()* TypeKind_Role
+        +Privileges() []IPrivilege
+    }
+
+    IRole "1" *--> "1..*" IPrivilege : On
+
+    class IPrivilege {
+        <<interface>>
+        +Comment() []string
+        +Kinds() []PrivilegeKind
+        +IsGranted() bool
+        +IsRevoked() bool
+        +On() QNames
+        +Fields() []FieldName
+    }
+
+    IPrivilege "1" *--> "1..*" PrivilegeKind : Kinds
+    
+    class PrivilegeKind {
+        <<enumeration>>
+        Insert
+        Update
+        Select
+        Execute
+        Inherits
+    }
+
+    IPrivilege "1" *--> "1..*" QName : On
+    note for QName "types on which the privilege is granted or revoked"
+
+    class IAppDef {
+      …
+      +Roles() []IRole
+      +Privileges() []IPrivilege
+    }
+
+    IAppDef "1" *--> "0..*" IRole : Roles
+    IAppDef "1" *--> "0..*" IPrivilege : all application privileges
+```
 
 ## Restrictions
 

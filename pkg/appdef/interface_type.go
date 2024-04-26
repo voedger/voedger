@@ -78,6 +78,9 @@ const (
 
 	TypeKind_Workspace
 
+	// Roles and grants
+	TypeKind_Role
+
 	TypeKind_FakeLast
 )
 

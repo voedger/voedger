@@ -27,8 +27,11 @@ import (
 )
 
 type wazeroExtPkg struct {
-	module api.Module
-	exts   map[string]api.Function
+	moduleCfg wazero.ModuleConfig
+	compiled  wazero.CompiledModule
+	module    api.Module
+	exts      map[string]api.Function
+	wasmData  []byte
 
 	funcMalloc api.Function
 	funcFree   api.Function
@@ -42,7 +45,8 @@ type wazeroExtPkg struct {
 	funcOnReadValue  api.Function
 
 	allocatedBufs []*allocatedBuf
-	recoverMem    []byte
+	//	memBackup     *api.MemoryBackup
+	//	recoverMem    []byte
 }
 
 type wazeroExtEngine struct {
@@ -59,8 +63,10 @@ type wazeroExtEngine struct {
 	// Invoke-related!
 	safeApi safe.IStateSafeAPI
 
-	ctx context.Context
-	pkg *wazeroExtPkg
+	ctx             context.Context
+	pkg             *wazeroExtPkg
+	autoRecover     bool
+	numAutoRecovers int
 }
 
 type allocatedBuf struct {
@@ -76,10 +82,11 @@ type extensionEngineFactory struct {
 func (f extensionEngineFactory) New(ctx context.Context, app istructs.AppQName, packages []iextengine.ExtensionPackage, config *iextengine.ExtEngineConfig, numEngines int) (engines []iextengine.IExtensionEngine, err error) {
 	for i := 0; i < numEngines; i++ {
 		engine := &wazeroExtEngine{
-			app:     app,
-			modules: make(map[string]*wazeroExtPkg),
-			config:  config,
-			compile: f.compile,
+			app:         app,
+			modules:     make(map[string]*wazeroExtPkg),
+			config:      config,
+			compile:     f.compile,
+			autoRecover: true,
 		}
 		err = engine.init(ctx)
 		if err != nil {
@@ -227,25 +234,21 @@ func (f *wazeroExtEngine) init(ctx context.Context) error {
 
 }
 
-func (f *wazeroExtEngine) initModule(ctx context.Context, pkgName string, wasmdata []byte, extNames []string) (err error) {
-	ePkg := &wazeroExtPkg{}
-
-	moduleCfg := wazero.NewModuleConfig().WithName("wasm").WithStdout(io.Discard).WithStderr(io.Discard)
+func (f *wazeroExtEngine) resetModule(ctx context.Context, ePkg *wazeroExtPkg) (err error) {
+	if ePkg.module != nil {
+		err = ePkg.module.Close(ctx)
+		if err != nil {
+			return err
+		}
+	}
 	if f.compile {
-		compiledWasm, err := f.rtm.CompileModule(ctx, wasmdata)
-		if err != nil {
-			return err
-		}
-
-		ePkg.module, err = f.rtm.InstantiateModule(ctx, compiledWasm, moduleCfg)
-		if err != nil {
-			return err
-		}
+		ePkg.module, err = f.rtm.InstantiateModule(ctx, ePkg.compiled, ePkg.moduleCfg)
 	} else {
-		ePkg.module, err = f.rtm.InstantiateWithConfig(ctx, wasmdata, moduleCfg)
-		if err != nil {
-			return err
-		}
+		ePkg.module, err = f.rtm.InstantiateWithConfig(ctx, ePkg.wasmData, ePkg.moduleCfg)
+	}
+
+	if err != nil {
+		return err
 	}
 
 	err = ePkg.importFuncs(map[string]*api.Function{
@@ -263,11 +266,6 @@ func (f *wazeroExtEngine) initModule(ctx context.Context, pkgName string, wasmda
 		return err
 	}
 
-	// Check WASM SDK version
-	_, err = ePkg.funcVer.Call(ctx)
-	if err != nil {
-		return errors.New("unsupported WASM version")
-	}
 	res, err := ePkg.funcMalloc.Call(ctx, uint64(WasmPreallocatedBufferSize))
 	if err != nil {
 		return err
@@ -278,31 +276,54 @@ func (f *wazeroExtEngine) initModule(ctx context.Context, pkgName string, wasmda
 		cap:  WasmPreallocatedBufferSize,
 	})
 
-	backup, read := ePkg.module.Memory().Read(0, ePkg.module.Memory().Size())
-	if !read {
-		return fmt.Errorf("unable to backup memory")
+	for name := range ePkg.exts {
+		expFunc := ePkg.module.ExportedFunction(name)
+		if expFunc != nil {
+			ePkg.exts[name] = expFunc
+		} else {
+			return missingExportedFunction(name)
+		}
 	}
 
-	ePkg.recoverMem = make([]byte, ePkg.module.Memory().Size())
-	copy(ePkg.recoverMem[0:], backup[0:])
+	return nil
+}
+
+func (f *wazeroExtEngine) initModule(ctx context.Context, pkgName string, wasmdata []byte, extNames []string) (err error) {
+	ePkg := &wazeroExtPkg{}
+	ePkg.moduleCfg = wazero.NewModuleConfig().WithName("wasm").WithStdout(io.Discard).WithStderr(io.Discard)
+
+	if f.compile {
+		ePkg.compiled, err = f.rtm.CompileModule(ctx, wasmdata)
+		if err != nil {
+			return err
+		}
+	} else {
+		ePkg.wasmData = wasmdata
+	}
 
 	ePkg.exts = make(map[string]api.Function)
 
 	for _, name := range extNames {
 		if !strings.HasPrefix(name, "Wasm") && name != "alloc" && name != "free" &&
 			name != "calloc" && name != "realloc" && name != "malloc" && name != "_start" && name != "memory" {
-			expFunc := ePkg.module.ExportedFunction(name)
-			if expFunc != nil {
-				ePkg.exts[name] = expFunc
-			} else {
-				return missingExportedFunction(name)
-			}
+			ePkg.exts[name] = nil // put to map to init later
 		} else {
 			return incorrectExtensionName(name)
 		}
 	}
 
+	if err = f.resetModule(ctx, ePkg); err != nil {
+		return err
+	}
+
+	// Check WASM SDK version
+	_, err = ePkg.funcVer.Call(ctx)
+	if err != nil {
+		return errors.New("unsupported WASM version")
+	}
+
 	f.modules[pkgName] = ePkg
+
 	return nil
 }
 
@@ -320,14 +341,26 @@ func (f *wazeroExtEngine) Close(ctx context.Context) {
 	}
 }
 
-func (f *wazeroExtEngine) recover() {
-	if !f.pkg.module.Memory().Write(0, f.pkg.recoverMem) {
-		panic("unable to restore memory")
+func (f *wazeroExtEngine) recover(ctx context.Context) {
+	if err := f.resetModule(ctx, f.pkg); err != nil {
+		panic(err)
 	}
 }
 
-func (f *wazeroExtEngine) Invoke(ctx context.Context, extension appdef.FullQName, io iextengine.IExtensionIO) (err error) {
+func (f *wazeroExtEngine) selectModule(pkgPath string) error {
+	pkg, ok := f.modules[pkgPath]
+	if !ok {
+		return errUndefinedPackage(pkgPath)
+	}
+	f.pkg = pkg
+	return nil
+}
 
+func (f *wazeroExtEngine) isMemoryOverflow(err error) bool {
+	return strings.Contains(err.Error(), "runtime.alloc")
+}
+
+func (f *wazeroExtEngine) invoke(ctx context.Context, extension appdef.FullQName, io iextengine.IExtensionIO) (err error) {
 	var ok bool
 	f.pkg, ok = f.modules[extension.PkgPath()]
 	if !ok {
@@ -346,12 +379,19 @@ func (f *wazeroExtEngine) Invoke(ctx context.Context, extension appdef.FullQName
 		f.pkg.allocatedBufs[i].offs = 0 // reuse pre-allocated memory
 	}
 
+	// fmt.Print(funct)
 	_, err = funct.Call(ctx)
 
-	if err != nil {
-		f.recover()
-	}
+	return err
+}
 
+func (f *wazeroExtEngine) Invoke(ctx context.Context, extension appdef.FullQName, io iextengine.IExtensionIO) (err error) {
+	err = f.invoke(ctx, extension, io)
+	if err != nil && f.isMemoryOverflow(err) && f.autoRecover {
+		f.numAutoRecovers++
+		f.recover(ctx)
+		err = f.invoke(ctx, extension, io)
+	}
 	return err
 }
 
