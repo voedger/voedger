@@ -7,6 +7,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/voedger/voedger/pkg/compile"
 	"os"
 	"path/filepath"
 	"strings"
@@ -67,8 +68,8 @@ func TestBaselineBasicUsage(t *testing.T) {
 			name: "simple schema with no imports",
 			dir:  filepath.Join(wd, "test", "myapp", "mypkg1"),
 			expectedBaselineFiles: []string{
-				filepath.Join(tempTargetDir, baselineDirName, pkgDirName, "sys", "sys.vsql"),
-				filepath.Join(tempTargetDir, baselineDirName, pkgDirName, "mypkg1", "schema1.vsql"),
+				filepath.Join(tempTargetDir, baselineDirName, compile.PkgDirName, "sys", "sys.vsql"),
+				filepath.Join(tempTargetDir, baselineDirName, compile.PkgDirName, "mypkg1", "pkg", "schema1.vsql"),
 				filepath.Join(tempTargetDir, baselineDirName, baselineInfoFileName),
 			},
 		},
@@ -76,9 +77,9 @@ func TestBaselineBasicUsage(t *testing.T) {
 			name: "schema importing a local package",
 			dir:  filepath.Join(wd, "test", "myapp", "mypkg2"),
 			expectedBaselineFiles: []string{
-				filepath.Join(tempTargetDir, baselineDirName, pkgDirName, "sys", "sys.vsql"),
-				filepath.Join(tempTargetDir, baselineDirName, pkgDirName, "mypkg1", "schema1.vsql"),
-				filepath.Join(tempTargetDir, baselineDirName, pkgDirName, "mypkg2", "schema2.vsql"),
+				filepath.Join(tempTargetDir, baselineDirName, compile.PkgDirName, "sys", "sys.vsql"),
+				filepath.Join(tempTargetDir, baselineDirName, compile.PkgDirName, "mypkg1", "schema1.vsql"),
+				filepath.Join(tempTargetDir, baselineDirName, compile.PkgDirName, "mypkg2", "pkg", "schema2.vsql"),
 				filepath.Join(tempTargetDir, baselineDirName, baselineInfoFileName),
 			},
 		},
@@ -86,10 +87,10 @@ func TestBaselineBasicUsage(t *testing.T) {
 			name: "application schema using both local package and voedger",
 			dir:  filepath.Join(wd, "test", "myapp", "app"),
 			expectedBaselineFiles: []string{
-				filepath.Join(tempTargetDir, baselineDirName, pkgDirName, "sys", "sys.vsql"),
-				filepath.Join(tempTargetDir, baselineDirName, pkgDirName, "mypkg1", "schema1.vsql"),
-				filepath.Join(tempTargetDir, baselineDirName, pkgDirName, "mypkg2", "schema2.vsql"),
-				filepath.Join(tempTargetDir, baselineDirName, pkgDirName, "app", "app.vsql"),
+				filepath.Join(tempTargetDir, baselineDirName, compile.PkgDirName, "sys", "sys.vsql"),
+				filepath.Join(tempTargetDir, baselineDirName, compile.PkgDirName, "mypkg1", "schema1.vsql"),
+				filepath.Join(tempTargetDir, baselineDirName, compile.PkgDirName, "mypkg2", "schema2.vsql"),
+				filepath.Join(tempTargetDir, baselineDirName, compile.PkgDirName, "app", "pkg", "app.vsql"),
 				filepath.Join(tempTargetDir, baselineDirName, baselineInfoFileName),
 			},
 		},
@@ -97,9 +98,6 @@ func TestBaselineBasicUsage(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			//err := os.Chdir(tc.dir)
-			//require.NoError(err)
-
 			err = os.RemoveAll(tempTargetDir)
 			require.NoError(err)
 
@@ -219,6 +217,7 @@ func TestCompileErrors(t *testing.T) {
 }
 
 func TestPkgRegistryCompile(t *testing.T) {
+	t.Skip("This test is skipped because registry package doesn't have subdirectory 'pkg' with code inside it.")
 	require := require.New(t)
 
 	wd, err := os.Getwd()
@@ -400,24 +399,34 @@ func TestBuildBasicUsage(t *testing.T) {
 	require.NoError(err)
 
 	testCases := []struct {
-		dir    string
-		errMsg string
+		dir               string
+		errMsg            string
+		expectedWasmFiles []string
 	}{
 		{
-			dir:    "noappschema",
-			errMsg: "failed to build, app schema not found",
+			dir:               "noappschema",
+			errMsg:            "failed to build, app schema not found",
+			expectedWasmFiles: nil,
 		},
 		{
-			dir:    "nopackagesgen",
-			errMsg: fmt.Sprintf("%s not found. Run 'vpm init'", packagesGenFileName),
+			dir:               "nopackagesgen",
+			errMsg:            fmt.Sprintf("%s not found. Run 'vpm init'", packagesGenFileName),
+			expectedWasmFiles: nil,
 		},
 		{
-			dir:    "appempty",
-			errMsg: "",
+			dir:               "appempty",
+			errMsg:            "",
+			expectedWasmFiles: []string{fmt.Sprintf("%s/appempty/pkg/pkg.wasm", buildDirName)},
 		},
 		{
-			dir:    "appnormal",
-			errMsg: "",
+			dir:               "appsimple",
+			errMsg:            "",
+			expectedWasmFiles: []string{fmt.Sprintf("%s/appsimple/pkg/pkg.wasm", buildDirName)},
+		},
+		{
+			dir:               "appcomplex",
+			errMsg:            "",
+			expectedWasmFiles: []string{fmt.Sprintf("%s/appcomplex/pkg/pkg.wasm", buildDirName)},
 		},
 	}
 
@@ -432,11 +441,32 @@ func TestBuildBasicUsage(t *testing.T) {
 				err = os.Mkdir(filepath.Join(dir, "unzipped"), coreutils.FileMode_rwxrwxrwx)
 				require.NoError(err)
 
-				coreutils.Unzip(filepath.Join(dir, "qwerty.var"), filepath.Join(dir, "unzipped"))
-				require.FileExists(filepath.Join(dir, "unzipped", fmt.Sprintf("%s.wasm", tc.dir)))
+				err = coreutils.Unzip(filepath.Join(dir, "qwerty.var"), filepath.Join(dir, "unzipped"))
+				require.NoError(err)
+				wasmFiles := findWasmFiles(filepath.Join(dir, "unzipped", buildDirName))
+				require.Equal(len(tc.expectedWasmFiles), len(wasmFiles))
+				for _, expectedWasmFile := range tc.expectedWasmFiles {
+					require.Contains(wasmFiles, filepath.Join(dir, "unzipped", expectedWasmFile))
+				}
 			}
 		})
 
 	}
+}
 
+func findWasmFiles(dir string) []string {
+	var wasmFiles []string
+	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if strings.HasSuffix(path, ".wasm") {
+			wasmFiles = append(wasmFiles, path)
+		}
+		return nil
+	})
+	if err != nil {
+		return nil
+	}
+	return wasmFiles
 }

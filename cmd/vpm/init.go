@@ -90,10 +90,16 @@ func checkGoVersion(goVersionNumber string) bool {
 	return semver.Compare("v"+goVersionNumber, "v"+minimalRequiredGoVersionValue) >= 0
 }
 
+func checkPackageGenFileExists(dir string) (bool, error) {
+	packagesGenFilePath := filepath.Join(dir, packagesGenFileName)
+	return coreutils.Exists(packagesGenFilePath)
+}
+
 func createPackagesGen(imports []string, dir string, recreate bool) error {
+	// pkg subfolder for packages
 	packagesGenFilePath := filepath.Join(dir, packagesGenFileName)
 	if !recreate {
-		exists, err := coreutils.Exists(packagesGenFilePath)
+		exists, err := checkPackageGenFileExists(dir)
 		if err != nil {
 			// notest
 			return err

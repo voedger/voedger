@@ -6,11 +6,12 @@
 package main
 
 const (
-	pkgDirName           = "pkg"
+	buildDirName         = "build"
 	ormDirName           = "orm"
 	internalDirName      = "internal"
 	baselineInfoFileName = "baseline.json"
 	timestampFormat      = "Mon, 02 Jan 2006 15:04:05.000 GMT"
+	errFmtCopyFile       = "'%s': failed to copy - %w"
 )
 
 const (
@@ -61,7 +62,7 @@ const (
 	goSumFileName                       = "go.sum"
 	packagesGenFileName                 = "packages_gen.go"
 	packagePathIsNotDeterminedErrFormat = "vpm: cannot determine module path for source directory %s"
-	minimalRequiredGoVersion            = "1.22.2"
+	minimalRequiredGoVersion            = "1.18"
 	unsupportedGoVersionErrFormat       = "vpm: unsupported go version %s, minimal required go version is " + minimalRequiredGoVersion
 	goModContentTemplate                = `module %s
 

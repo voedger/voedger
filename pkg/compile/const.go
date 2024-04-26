@@ -9,6 +9,7 @@ const (
 	DummyAppName      = "dummyApp"
 	sysSchemaFileName = "sys.vsql"
 	VoedgerPath       = "github.com/voedger/voedger"
+	PkgDirName        = "pkg"
 )
 
 const (

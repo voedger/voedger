@@ -11,6 +11,7 @@ import (
 	"github.com/google/uuid"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"golang.org/x/exp/maps"
@@ -26,7 +27,7 @@ func compile(dir string, checkAppSchema bool) (*Result, error) {
 	var errs []error
 	notFoundDeps := make(map[string]struct{})
 
-	loadedPkgs, err := loadPackages(dir, notFoundDeps)
+	loadedPkgs, err := loadPackages(filepath.Join(dir, PkgDirName), notFoundDeps)
 	if err != nil {
 		return nil, err
 	}
@@ -367,20 +368,38 @@ func localPath(loadedPkgs *loadedPackages, depURL string, notFoundDeps map[strin
 	if logger.IsVerbose() {
 		logger.Verbose(fmt.Sprintf("resolving dependency %s ...", depURL))
 	}
-	for _, pkg := range loadedPkgs.rootPkgs {
-		if pkg.PkgPath == depURL {
-			if len(pkg.GoFiles) > 0 {
-				return filepath.Dir(pkg.GoFiles[0]), nil
-			}
-		}
+	// find in root packages
+	path := getLocalPathOfTheDep(loadedPkgs.rootPkgs, depURL)
+	if path != "" {
+		return path, nil
 	}
-	for pkgPath, pkg := range loadedPkgs.importedPkgs {
-		if pkgPath == depURL {
-			if len(pkg.GoFiles) > 0 {
-				return filepath.Dir(pkg.GoFiles[0]), nil
-			}
-		}
+	// find in imported packages
+	path = getLocalPathOfTheDep(maps.Values(loadedPkgs.importedPkgs), depURL)
+	if path != "" {
+		return path, nil
 	}
 	notFoundDeps[depURL] = struct{}{}
 	return "", fmt.Errorf("cannot find module for path %s", depURL)
+}
+
+func getLocalPathOfTheDep(pkgs []*packages.Package, depURL string) string {
+	for _, pkg := range pkgs {
+		switch {
+		case pkg.PkgPath == depURL:
+			if len(pkg.GoFiles) > 0 {
+				return filepath.Dir(pkg.GoFiles[0])
+			}
+		case strings.HasPrefix(pkg.PkgPath, depURL+"/"):
+			//subDir, _ := strings.CutPrefix(pkg.PkgPath, depURL)
+			subDir := pkg.PkgPath[len(depURL):]
+			if len(pkg.GoFiles) > 0 {
+				dir, found := strings.CutSuffix(filepath.Dir(pkg.GoFiles[0]), subDir)
+				if found {
+					return dir
+				}
+				return filepath.Dir(pkg.GoFiles[0])
+			}
+		}
+	}
+	return ""
 }

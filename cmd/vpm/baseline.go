@@ -43,7 +43,7 @@ func baseline(compileRes *compile.Result, dir, targetDir string) error {
 		return err
 	}
 
-	pkgDir := filepath.Join(targetDir, pkgDirName)
+	pkgDir := filepath.Join(targetDir, compile.PkgDirName)
 	if err := saveBaselineSchemas(compileRes.PkgFiles, pkgDir); err != nil {
 		return err
 	}
@@ -54,7 +54,9 @@ func baseline(compileRes *compile.Result, dir, targetDir string) error {
 	return nil
 }
 
-func saveBaselineInfo(compileRes *compile.Result, dir, baselineDir string) error {
+// saveBaselineInfo saves baseline info into target dir
+// baseline info includes baseline package url, timestamp and git commit hash
+func saveBaselineInfo(compileRes *compile.Result, dir, targetDir string) error {
 	var gitCommitHash string
 	sb := new(strings.Builder)
 	if err := new(exec.PipedExec).Command("git", "rev-parse", "HEAD").WorkingDir(dir).Run(sb, os.Stderr); err == nil {
@@ -72,7 +74,7 @@ func saveBaselineInfo(compileRes *compile.Result, dir, baselineDir string) error
 		return err
 	}
 
-	baselineInfoFilePath := filepath.Join(baselineDir, baselineInfoFileName)
+	baselineInfoFilePath := filepath.Join(targetDir, baselineInfoFileName)
 	if err := os.WriteFile(baselineInfoFilePath, content, coreutils.FileMode_rw_rw_rw_); err != nil {
 		return err
 	}
@@ -93,12 +95,8 @@ func saveBaselineSchemas(pkgFiles packageFiles, baselineDir string) error {
 			fileNameExtensionless := base[:len(base)-len(filepath.Ext(base))]
 			filePath := filepath.Join(packageDir, fileNameExtensionless+".vsql")
 
-			fileContent, err := os.ReadFile(file)
-			if err != nil {
-				return err
-			}
-			if err := os.WriteFile(filePath, fileContent, coreutils.FileMode_rw_rw_rw_); err != nil {
-				return err
+			if err := copyFile(file, filePath); err != nil {
+				return fmt.Errorf(errFmtCopyFile, file, err)
 			}
 			if logger.IsVerbose() {
 				logger.Verbose("create baseline file: %s", filePath)
@@ -117,6 +115,6 @@ func createBaselineDir(dir string) error {
 	if exists {
 		return fmt.Errorf("baseline directory already exists: %s", dir)
 	}
-	pkgDir := filepath.Join(dir, pkgDirName)
+	pkgDir := filepath.Join(dir, compile.PkgDirName)
 	return os.MkdirAll(pkgDir, coreutils.FileMode_rwxrwxrwx)
 }
