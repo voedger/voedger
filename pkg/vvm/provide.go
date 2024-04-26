@@ -10,6 +10,7 @@ package vvm
 
 import (
 	"context"
+	"fmt"
 	"net/url"
 	"strconv"
 	"strings"
@@ -189,7 +190,7 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 }
 
 func provideBootstrapOperator(federation coreutils.IFederation, asp istructs.IAppStructsProvider, timeFunc coreutils.TimeFunc, apppar appparts.IAppPartitions,
-	builtinApps []appparts.BuiltInApp, itokens itokens.ITokens) BootstrapOperator {
+	builtinApps []appparts.BuiltInApp, itokens itokens.ITokens) (BootstrapOperator, error) {
 	var clusterBuiltinApp btstrp.ClusterBuiltInApp
 	otherApps := make([]appparts.BuiltInApp, 0, len(builtinApps)-1)
 	for _, app := range builtinApps {
@@ -199,9 +200,12 @@ func provideBootstrapOperator(federation coreutils.IFederation, asp istructs.IAp
 			otherApps = append(otherApps, app)
 		}
 	}
+	if clusterBuiltinApp.Name == istructs.NullAppQName {
+		return nil, fmt.Errorf("%s app should be added to VVM builtin apps", istructs.AppQName_sys_cluster)
+	}
 	return pipeline.NewSyncOp(func(ctx context.Context, work interface{}) (err error) {
 		return btstrp.Bootstrap(federation, asp, timeFunc, apppar, clusterBuiltinApp, otherApps, itokens)
-	})
+	}), nil
 }
 
 func provideExtensionPoints(appsArtefacts AppsArtefacts) map[istructs.AppQName]extensionpoints.IExtensionPoint {
