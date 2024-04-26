@@ -3,7 +3,7 @@
  * @author: Nikolay Nikitin
  */
 
-package cluster
+package appparts
 
 import (
 	"strconv"

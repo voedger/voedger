@@ -13,7 +13,6 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appparts"
-	"github.com/voedger/voedger/pkg/cluster"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/pipeline"
@@ -23,7 +22,7 @@ import (
 type testDataType struct {
 	appQName        istructs.AppQName
 	totalPartitions istructs.NumAppPartitions
-	appEngines      [cluster.ProcessorKind_Count]int
+	appEngines      [appparts.ProcessorKind_Count]int
 
 	pkgName string
 
@@ -75,7 +74,7 @@ const OccursUnbounded = appdef.Occurs(0xffff)
 var test = testDataType{
 	appQName:        istructs.AppQName_test1_app1,
 	totalPartitions: 100,
-	appEngines:      cluster.PoolSize(100, 100, 100),
+	appEngines:      appparts.PoolSize(100, 100, 100),
 
 	pkgName: "test",
 
@@ -128,7 +127,7 @@ func (w testCmdWorkpeace) AppPartition() appparts.IAppPartition { return w.appPa
 func (w testCmdWorkpeace) Event() istructs.IPLogEvent           { return w.event }
 
 func (w *testCmdWorkpeace) Borrow(ctx context.Context, appParts appparts.IAppPartitions) (err error) {
-	w.appPart, err = appParts.WaitForBorrow(ctx, test.appQName, test.partition, cluster.ProcessorKind_Command)
+	w.appPart, err = appParts.WaitForBorrow(ctx, test.appQName, test.partition, appparts.ProcessorKind_Command)
 	return err
 }
 

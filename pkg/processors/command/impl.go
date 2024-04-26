@@ -20,7 +20,6 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appparts"
-	"github.com/voedger/voedger/pkg/cluster"
 	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -78,7 +77,7 @@ func (c *cmdWorkpiece) Event() istructs.IPLogEvent {
 
 // borrows app partition for command
 func (c *cmdWorkpiece) borrow() (err error) {
-	if c.appPart, err = c.appParts.Borrow(c.cmdMes.AppQName(), c.cmdMes.PartitionID(), cluster.ProcessorKind_Command); err != nil {
+	if c.appPart, err = c.appParts.Borrow(c.cmdMes.AppQName(), c.cmdMes.PartitionID(), appparts.ProcessorKind_Command); err != nil {
 		if errors.Is(err, appparts.ErrNotFound) || errors.Is(err, appparts.ErrNotAvailableEngines) { // partition is not deployed yet -> ErrNotFound
 			return coreutils.NewHTTPError(http.StatusServiceUnavailable, err)
 		}

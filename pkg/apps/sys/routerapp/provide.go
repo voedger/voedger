@@ -5,8 +5,8 @@
 package routerapp
 
 import (
+	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/apps"
-	"github.com/voedger/voedger/pkg/cluster"
 	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
@@ -26,7 +26,7 @@ func Provide() apps.AppBuilder {
 		return apps.BuiltInAppDef{
 			AppQName: istructs.AppQName_sys_router,
 			Packages: []parser.PackageFS{sysPackageFS, routerAppPackageFS},
-			AppDeploymentDescriptor: cluster.AppDeploymentDescriptor{
+			AppDeploymentDescriptor: appparts.AppDeploymentDescriptor{
 				NumParts:       DefDeploymentPartsCount,
 				EnginePoolSize: DefDeploymentEnginePoolSize,
 			},

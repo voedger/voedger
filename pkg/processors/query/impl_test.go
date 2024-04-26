@@ -18,7 +18,6 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appparts"
-	"github.com/voedger/voedger/pkg/cluster"
 	"github.com/voedger/voedger/pkg/iauthnzimpl"
 	"github.com/voedger/voedger/pkg/iprocbus"
 	"github.com/voedger/voedger/pkg/iratesce"
@@ -43,7 +42,7 @@ var timeFunc = coreutils.TimeFunc(func() time.Time { return now })
 
 var (
 	appName    istructs.AppQName         = istructs.AppQName_test1_app1
-	appEngines                           = cluster.PoolSize(10, 100, 10)
+	appEngines                           = appparts.PoolSize(10, 100, 10)
 	partCount  istructs.NumAppPartitions = 10
 	partID     istructs.PartitionID      = 5
 	wsID       istructs.WSID             = 15

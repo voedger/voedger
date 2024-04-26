@@ -11,6 +11,15 @@ import (
 	"strings"
 )
 
+// Returns "grant" if grant is true, otherwise "revoke".
+func PrivilegeAccessControlString(grant bool) string {
+	var result = []string{"grant", "revoke"}
+	if grant {
+		return result[0]
+	}
+	return result[1]
+}
+
 // Makes PrivilegeKinds from specified kinds.
 func PrivilegeKindsFrom(kinds ...PrivilegeKind) PrivilegeKinds {
 	pk := make(PrivilegeKinds, 0, len(kinds))

@@ -10,7 +10,6 @@ import (
 	"fmt"
 
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/cluster"
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
@@ -18,15 +17,15 @@ var ErrNotFound = errors.New("not found")
 
 var (
 	ErrNotAvailableEngines                                    = errors.New("no available engines")
-	errNotAvailableEngines [cluster.ProcessorKind_Count]error = [cluster.ProcessorKind_Count]error{
-		fmt.Errorf("%w %s", ErrNotAvailableEngines, cluster.ProcessorKind_Command.TrimString()),
-		fmt.Errorf("%w %s", ErrNotAvailableEngines, cluster.ProcessorKind_Query.TrimString()),
-		fmt.Errorf("%w %s", ErrNotAvailableEngines, cluster.ProcessorKind_Actualizer.TrimString()),
+	errNotAvailableEngines [ProcessorKind_Count]error = [ProcessorKind_Count]error{
+		fmt.Errorf("%w %s", ErrNotAvailableEngines, ProcessorKind_Command.TrimString()),
+		fmt.Errorf("%w %s", ErrNotAvailableEngines, ProcessorKind_Query.TrimString()),
+		fmt.Errorf("%w %s", ErrNotAvailableEngines, ProcessorKind_Actualizer.TrimString()),
 	}
 )
 
-func errAppCannotToBeRedeployed(name istructs.AppQName) error {
-	return fmt.Errorf("application %v can not to be redeployed: %w", name, errors.ErrUnsupported)
+func errAppCannotBeRedeployed(name istructs.AppQName) error {
+	return fmt.Errorf("application %v can not be redeployed: %w", name, errors.ErrUnsupported)
 }
 
 func errAppNotFound(name istructs.AppQName) error {

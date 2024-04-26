@@ -130,11 +130,16 @@ func createScriptsTempDir() error {
 	if exists {
 		return nil
 	}
-	dir, err := os.MkdirTemp("", "scripts")
-	if err == nil {
-		scriptsTempDir = dir
+	var dir string
+	if dir, err = os.MkdirTemp("", "scripts"); err != nil {
+		return err
 	}
-	return err
+	scriptsTempDir = dir
+	if err = os.Chmod(scriptsTempDir, coreutils.FileMode_rwxrwxrwx); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func scriptTempDirExists() (bool, error) {

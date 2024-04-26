@@ -10,7 +10,6 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appparts"
-	"github.com/voedger/voedger/pkg/cluster"
 	"github.com/voedger/voedger/pkg/iratesce"
 	"github.com/voedger/voedger/pkg/istorage/mem"
 	"github.com/voedger/voedger/pkg/istorage/provider"
@@ -62,13 +61,13 @@ func Example() {
 
 	fmt.Println("*** Add ver 1 ***")
 
-	appParts.DeployApp(istructs.AppQName_test1_app1, app_1_v1, 1, cluster.PoolSize(2, 2, 2))
-	appParts.DeployApp(istructs.AppQName_test1_app2, app_2_v1, 1, cluster.PoolSize(2, 2, 2))
+	appParts.DeployApp(istructs.AppQName_test1_app1, app_1_v1, 1, appparts.PoolSize(2, 2, 2))
+	appParts.DeployApp(istructs.AppQName_test1_app2, app_2_v1, 1, appparts.PoolSize(2, 2, 2))
 
 	appParts.DeployAppPartitions(istructs.AppQName_test1_app1, []istructs.PartitionID{1})
 	appParts.DeployAppPartitions(istructs.AppQName_test1_app2, []istructs.PartitionID{1})
 
-	a1_v1_p1, err := appParts.Borrow(istructs.AppQName_test1_app1, 1, cluster.ProcessorKind_Command)
+	a1_v1_p1, err := appParts.Borrow(istructs.AppQName_test1_app1, 1, appparts.ProcessorKind_Command)
 	if err != nil {
 		panic(err)
 	}
@@ -76,7 +75,7 @@ func Example() {
 
 	report(a1_v1_p1)
 
-	a2_v1_p1, err := appParts.Borrow(istructs.AppQName_test1_app2, 1, cluster.ProcessorKind_Query)
+	a2_v1_p1, err := appParts.Borrow(istructs.AppQName_test1_app2, 1, appparts.ProcessorKind_Query)
 	if err != nil {
 		panic(err)
 	}
