@@ -382,12 +382,14 @@ func (app *appDef) TypeByName(name QName) IType {
 	switch name {
 	case NullQName:
 		return NullType
-	case QNameANY:
-		return AnyType
-	default:
-		if t, ok := app.types[name]; ok {
-			return t.(IType)
-		}
+	}
+
+	if t, ok := anyTypes[name]; ok {
+		return t
+	}
+
+	if t, ok := app.types[name]; ok {
+		return t.(IType)
 	}
 	return nil
 }

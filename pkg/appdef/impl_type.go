@@ -136,18 +136,18 @@ func (t *nullType) Kind() TypeKind { return TypeKind_null }
 func (t *nullType) QName() QName   { return NullQName }
 func (t *nullType) String() string { return nullTypeString }
 
-// AnyType is used for return then type is any
-var AnyType = new(anyType)
+type anyType struct {
+	nullComment
+	name QName
+}
 
-const anyTypeString = "any type"
+func newAnyType(name QName) *anyType { return &anyType{nullComment{}, name} }
 
-type anyType struct{ nullComment }
-
-func (t *anyType) App() IAppDef   { return nil }
-func (t *anyType) IsSystem() bool { return false }
-func (t *anyType) Kind() TypeKind { return TypeKind_Any }
-func (t *anyType) QName() QName   { return QNameANY }
-func (t *anyType) String() string { return anyTypeString }
+func (t anyType) App() IAppDef   { return nil }
+func (t anyType) IsSystem() bool { return true }
+func (t anyType) Kind() TypeKind { return TypeKind_Any }
+func (t anyType) QName() QName   { return t.name }
+func (t anyType) String() string { return fmt.Sprintf("%s type", t.name.Entity()) }
 
 // Is specified type kind may be used in child containers.
 func (k TypeKind) ContainerKindAvailable(s TypeKind) bool {

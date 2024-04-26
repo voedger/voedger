@@ -18,7 +18,6 @@ func ExampleIAppDefBuilder_AddRate() {
 
 	// RATE test.rate 10 PER HOUR PER APP PARTITION PER IP
 
-	cmdName := appdef.NewQName("test", "cmd")
 	rateName := appdef.NewQName("test", "rate")
 	limitName := appdef.NewQName("test", "limit")
 
@@ -27,10 +26,8 @@ func ExampleIAppDefBuilder_AddRate() {
 		adb := appdef.New()
 		adb.AddPackage("test", "test.com/test")
 
-		_ = adb.AddCommand(cmdName)
-
 		adb.AddRate(rateName, 10, time.Hour, []appdef.RateScope{appdef.RateScope_AppPartition, appdef.RateScope_IP}, "10 times per hour per partition per IP")
-		adb.AddLimit(limitName, []appdef.QName{cmdName}, rateName, "limit test.cmd execution with test.rate")
+		adb.AddLimit(limitName, []appdef.QName{appdef.QNameAnyFunction}, rateName, "limit all commands and queries execution with test.rate")
 
 		app = adb.MustBuild()
 	}
@@ -73,10 +70,10 @@ func ExampleIAppDefBuilder_AddRate() {
 	// - 1 Rate «test.rate» 10 per 1h0m0s per [AppPartition IP]
 	// overall: 1
 	// enum limits:
-	// - 1 Limit «test.limit» on [test.cmd] with Rate «test.rate»
+	// - 1 Limit «test.limit» on [sys.AnyFunction] with Rate «test.rate»
 	// overall: 1
 	// find rate:
 	// - Rate «test.rate» : 10 times per hour per partition per IP
 	// find limit:
-	// - Limit «test.limit» : limit test.cmd execution with test.rate
+	// - Limit «test.limit» : limit all commands and queries execution with test.rate
 }

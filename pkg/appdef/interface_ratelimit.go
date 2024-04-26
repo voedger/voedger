@@ -84,6 +84,13 @@ type IWithLimits interface {
 type ILimitsBuilder interface {
 	// Adds new Limit type with specified name.
 	//
+	// # Object names
+	//
+	// on which limit is applied, must be specified.
+	// If these contain a function (command or query), this limits count of execution.
+	// If these contain a structural (record or view record), this limits count of create/update operations.
+	// Object names can contain `QNameANY` or one of `QNameAny×××` names.
+	//
 	// # Panics:
 	//   - if name is empty or invalid,
 	//   - if type with the same name already exists,

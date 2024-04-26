@@ -10,8 +10,21 @@ import "math"
 // Maximum identifier length
 const MaxIdentLen = 255
 
-// Any name
-const AnyName = "ANY"
+// Any names
+const (
+	AnyName          = "ANY"
+	AnyStructureName = "AnyStructure"
+	AnyRecordName    = "AnyRecord"
+	AnyGDocName      = "AnyGDoc"
+	AnyCDocName      = "AnyCDoc"
+	AnyWDocName      = "AnyWDoc"
+	AnySingletonName = "AnySingleton"
+	AnyViewName      = "AnyView"
+	AnyExtensionName = "AnyExtension"
+	AnyFunctionName  = "AnyFunction"
+	AnyCommandName   = "AnyCommand"
+	AnyQueryName     = "AnyQuery"
+)
 
 const (
 	// System package name
@@ -27,10 +40,61 @@ const (
 	SysPackagePath = "voedger.com/packages/sys"
 )
 
-// QNameANY denotes that a Function param or result can be any type
+// QNameANY is substitution denotes that a Function param or result can be any type
 //
 // See #858 (Support QNameAny as function result)
 var QNameANY = NewQName(SysPackage, AnyName)
+
+// QNameAny××× are substitutions, which used to limit with rates. See #868 (VSQL: Rate limits)
+var (
+	// QNameAnyStructure is a substitution for any structure type (record, object or view record).
+	QNameAnyStructure = NewQName(SysPackage, AnyStructureName)
+
+	// QNameAnyStructure is a substitution for any structure type (record, object or view record).
+	QNameAnyRecord = NewQName(SysPackage, AnyRecordName)
+
+	// QNameAnyGDoc is a substitution for any GDoc type.
+	QNameAnyGDoc = NewQName(SysPackage, AnyGDocName)
+
+	// QNameAnyCDoc is a substitution for any CDoc type.
+	QNameAnyCDoc = NewQName(SysPackage, AnyCDocName)
+
+	// QNameAnyWDoc is a substitution for any WDoc type.
+	QNameAnyWDoc = NewQName(SysPackage, AnyWDocName)
+
+	// QNameAnySingleton is a substitution for any singleton type.
+	QNameAnySingleton = NewQName(SysPackage, AnySingletonName)
+
+	// QNameAnyView is a substitution for any view record type.
+	QNameAnyView = NewQName(SysPackage, AnyViewName)
+
+	// QNameAnyExtension is a substitution for any extension type (function or projector).
+	QNameAnyExtension = NewQName(SysPackage, AnyExtensionName)
+
+	// QNameAnyFunction is a substitution for any function type (command or query).
+	QNameAnyFunction = NewQName(SysPackage, AnyFunctionName)
+
+	// QNameAnyCommand is a substitution for any command type.
+	QNameAnyCommand = NewQName(SysPackage, AnyCommandName)
+
+	// QNameAnyQuery is a substitution for any query type.
+	QNameAnyQuery = NewQName(SysPackage, AnyQueryName)
+
+	anyTypes = map[QName]IType{
+		QNameANY:          AnyType,
+		QNameAnyStructure: AnyStructureType,
+		QNameAnyRecord:    AnyRecordType,
+		QNameAnyGDoc:      AnyGDocType,
+		QNameAnyCDoc:      AnyCDocType,
+		QNameAnyWDoc:      AnyWDocType,
+		QNameAnySingleton: AnySingletonType,
+		QNameAnyView:      AnyViewType,
+		QNameAnyExtension: AnyExtensionType,
+		QNameAnyFunction:  AnyFunctionType,
+		QNameAnyCommand:   AnyCommandType,
+		QNameAnyQuery:     AnyQueryType,
+	}
+)
 
 // Maximum fields per one structured type
 const MaxTypeFieldCount = 65536

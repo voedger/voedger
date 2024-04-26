@@ -128,3 +128,21 @@ type IWithTypes interface {
 type ITypeBuilder interface {
 	ICommentsBuilder
 }
+
+// AnyType is used for return then type is any
+var AnyType = newAnyType(QNameANY)
+
+// Any×××Type are used with limits and rates
+var (
+	AnyStructureType = newAnyType(QNameAnyStructure)
+	AnyRecordType    = newAnyType(QNameAnyRecord)
+	AnyGDocType      = newAnyType(QNameAnyGDoc)
+	AnyCDocType      = newAnyType(QNameAnyCDoc)
+	AnyWDocType      = newAnyType(QNameAnyWDoc)
+	AnySingletonType = newAnyType(QNameAnySingleton)
+	AnyViewType      = newAnyType(QNameAnyView)
+	AnyExtensionType = newAnyType(QNameAnyExtension)
+	AnyFunctionType  = newAnyType(QNameAnyFunction)
+	AnyCommandType   = newAnyType(QNameAnyCommand)
+	AnyQueryType     = newAnyType(QNameAnyQuery)
+)
