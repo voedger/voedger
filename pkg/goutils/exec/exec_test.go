@@ -118,15 +118,23 @@ func Test_KillProcessUsingFirst(t *testing.T) {
 	pe.Command("sleep", "10")
 	cmd := pe.GetCmd(0)
 
+	c := make(chan struct{})
+
 	go func() {
 		defer fmt.Println("Bye")
+		<-c
 		<-time.After(300 * time.Millisecond)
 		fmt.Println("Killing process...")
 		_ = cmd.Process.Kill()
 	}()
 
 	fmt.Println("Running...")
-	err := pe.Run(os.Stdout, os.Stderr)
+
+	require.NoError(pe.Start(os.Stdout, os.Stderr))
+	c <- struct{}{}
+
+	err := pe.Wait()
+
 	fmt.Println("err=", err)
 	require.Error(err)
 }
