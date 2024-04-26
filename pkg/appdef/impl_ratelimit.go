@@ -73,3 +73,7 @@ func (l limit) On() QNames {
 func (l limit) Rate() IRate {
 	return l.rate
 }
+
+func (l limit) Validate() IRate {
+	return l.rate
+}

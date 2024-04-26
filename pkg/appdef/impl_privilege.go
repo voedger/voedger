@@ -32,7 +32,7 @@ func newPrivilege(kind []PrivilegeKind, granted bool, on []QName, fields []Field
 	}
 
 	o := role.app.Type(names[0])
-	allPk := AllPrivilegesOnType(o.Kind())
+	allPk := AllPrivilegesOnType(o)
 	for _, k := range pk {
 		if !allPk.Contains(k) {
 			panic(ErrIncompatible("privilege «%s» with %v", k, o))
@@ -64,7 +64,7 @@ func newPrivilegeAll(granted bool, on []QName, role *role, comment ...string) *p
 		panic(err)
 	}
 
-	pk := AllPrivilegesOnType(role.app.Type(names[0]).Kind())
+	pk := AllPrivilegesOnType(role.app.Type(names[0]))
 
 	return newPrivilege(pk, granted, names, nil, role, comment...)
 }

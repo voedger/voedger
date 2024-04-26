@@ -108,25 +108,127 @@ func TestPrivilegeKinds_ContainsAny(t *testing.T) {
 	}
 }
 
+type mockType struct {
+	IType
+	kind TypeKind
+	name QName
+}
+
+func (m mockType) Kind() TypeKind { return m.kind }
+func (m mockType) QName() QName   { return m.name }
+
 func TestAllPrivilegesOnType(t *testing.T) {
+
+	testName := NewQName("test", "test")
+
+	type args struct {
+		kind TypeKind
+		name QName
+	}
 	tests := []struct {
 		name   string
-		tk     TypeKind
+		typ    args
 		wantPk PrivilegeKinds
 	}{
-		{"null", TypeKind_null, nil},
-		{"GRecord", TypeKind_GRecord, PrivilegeKinds{PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select}},
-		{"CDoc", TypeKind_CDoc, PrivilegeKinds{PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select}},
-		{"View", TypeKind_ViewRecord, PrivilegeKinds{PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select}},
-		{"Command", TypeKind_Command, PrivilegeKinds{PrivilegeKind_Execute}},
-		{"Workspace", TypeKind_Workspace, PrivilegeKinds{PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select, PrivilegeKind_Execute}},
-		{"Role", TypeKind_Role, PrivilegeKinds{PrivilegeKind_Inherits}},
-		{"Projector", TypeKind_Projector, nil},
+		{"null", args{TypeKind_null, NullQName},
+			nil},
+		{"Any", args{TypeKind_Any, QNameANY},
+			PrivilegeKinds{PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select, PrivilegeKind_Execute, PrivilegeKind_Inherits}},
+		{"Any record", args{TypeKind_Any, QNameAnyRecord},
+			PrivilegeKinds{PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select}},
+		{"Any command", args{TypeKind_Any, QNameAnyCommand},
+			PrivilegeKinds{PrivilegeKind_Execute}},
+		{"GRecord", args{TypeKind_GRecord, testName},
+			PrivilegeKinds{PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select}},
+		{"CDoc", args{TypeKind_CDoc, testName},
+			PrivilegeKinds{PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select}},
+		{"View", args{TypeKind_ViewRecord, testName},
+			PrivilegeKinds{PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select}},
+		{"Command", args{TypeKind_Command, testName},
+			PrivilegeKinds{PrivilegeKind_Execute}},
+		{"Workspace", args{TypeKind_Workspace, testName},
+			PrivilegeKinds{PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select, PrivilegeKind_Execute}},
+		{"Role", args{TypeKind_Role, testName},
+			PrivilegeKinds{PrivilegeKind_Inherits}},
+		{"Projector", args{TypeKind_Projector, testName},
+			nil},
 	}
+	for i := range tests {
+		tt := tests[i]
+		t.Run(tt.name, func(t *testing.T) {
+			typ := new(mockType)
+			typ.kind = tt.typ.kind
+			typ.name = tt.typ.name
+			if gotPk := AllPrivilegesOnType(typ); !reflect.DeepEqual(gotPk, tt.wantPk) {
+				t.Errorf("AllPrivilegesOnType(%s) = %v, want %v", tt.typ.kind.TrimString(), gotPk, tt.wantPk)
+			}
+		})
+	}
+}
+
+func Test_validatePrivilegeOnNames(t *testing.T) {
+
+	cdoc := NewQName("test", "cdoc")
+	gdoc := NewQName("test", "gdoc")
+	cmd := NewQName("test", "cmd")
+	query := NewQName("test", "query")
+	role := NewQName("test", "role")
+	ws := NewQName("test", "ws")
+
+	app := func() IAppDef {
+		adb := New()
+
+		_ = adb.AddCDoc(cdoc)
+		_ = adb.AddGDoc(gdoc)
+		_ = adb.AddCommand(cmd)
+		_ = adb.AddQuery(query)
+		_ = adb.AddRole(role)
+		_ = adb.AddWorkspace(ws)
+
+		return adb.MustBuild()
+	}()
+
+	tests := []struct {
+		name    string
+		on      []QName
+		want    QNames
+		wantErr error
+	}{
+		{"error: empty names", []QName{}, nil, ErrMissedError},
+		{"error: unknown name", []QName{NewQName("test", "unknown")}, nil, ErrNotFoundError},
+
+		{"ok: sys.ANY", []QName{QNameANY}, QNamesFrom(QNameANY), nil},
+		{"error: sys.ANY + test.cmd", []QName{QNameANY, cmd}, nil, ErrIncompatibleError},
+
+		{"ok: test.cdoc + test.gdoc", []QName{cdoc, gdoc}, QNamesFrom(cdoc, gdoc), nil},
+		{"ok: sys.AnyStruct", []QName{QNameAnyStructure}, QNamesFrom(QNameAnyStructure), nil},
+		{"ok: sys.AnyCDoc + test.gdoc", []QName{QNameAnyCDoc, gdoc}, QNamesFrom(QNameAnyCDoc, gdoc), nil},
+
+		{"ok: test.cmd + test.query", []QName{cmd, query}, QNamesFrom(cmd, query), nil},
+		{"ok: sys.AnyFunction", []QName{QNameAnyFunction}, QNamesFrom(QNameAnyFunction), nil},
+		{"ok: sys.AnyCommand + test.query", []QName{QNameAnyCommand, query}, QNamesFrom(QNameAnyCommand, query), nil},
+
+		{"ok test.role", []QName{role}, QNamesFrom(role), nil},
+		{"error: test.role + test.cmd", []QName{role, cmd}, nil, ErrIncompatibleError},
+
+		{"ok: test.ws", []QName{ws}, QNamesFrom(ws), nil},
+		{"err: test.ws + test.cdoc", []QName{ws, cdoc}, nil, ErrIncompatibleError},
+
+		{"error: test.cdoc + test.cmd", []QName{cdoc, cmd}, nil, ErrIncompatibleError},
+		{"error: sys.AnyView + test.role", []QName{QNameAnyView, role}, nil, ErrIncompatibleError},
+
+		{"error: sys.AnyExtension", []QName{QNameAnyExtension}, nil, ErrIncompatibleError},
+	}
+
+	require := require.New(t)
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if gotPk := AllPrivilegesOnType(tt.tk); !reflect.DeepEqual(gotPk, tt.wantPk) {
-				t.Errorf("AllPrivilegesOnType(%s) = %v, want %v", tt.tk.TrimString(), gotPk, tt.wantPk)
+			got, err := validatePrivilegeOnNames(app, tt.on...)
+			if tt.wantErr == nil {
+				require.NoError(err, "unexpected error %v in validatePrivilegeOnNames(%v)", err, tt.on)
+				require.Equal(tt.want, got, "validatePrivilegeOnNames(%v): want %v, got %v", tt.on, tt.want, got)
+			} else {
+				require.ErrorIs(err, tt.wantErr, "expected error %v in validatePrivilegeOnNames(%v)", tt.wantErr, tt.on)
 			}
 		})
 	}

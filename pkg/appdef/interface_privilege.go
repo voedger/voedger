@@ -113,6 +113,7 @@ type IPrivilegesBuilder interface {
 	Grant(kinds []PrivilegeKind, on []QName, fields []FieldName, toRole QName, comment ...string) IPrivilegesBuilder
 
 	// Grants all available privileges on specified objects to specified role.
+	// Object names can include `QNameANY` or `QNameAny×××` names.
 	//
 	// If the objects are records or view records, then insert, update, and select are granted.
 	//

@@ -38,8 +38,20 @@ func PrivilegeKindsFrom(kinds ...PrivilegeKind) PrivilegeKinds {
 // Returns all available privileges on specified type.
 //
 // If type can not to be privileged then returns empty slice.
-func AllPrivilegesOnType(tk TypeKind) (pk PrivilegeKinds) {
-	switch tk {
+func AllPrivilegesOnType(t IType) (pk PrivilegeKinds) {
+	switch t.Kind() {
+	case TypeKind_Any:
+		switch t.QName() {
+		case QNameANY:
+			pk = append(pk, PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select, PrivilegeKind_Execute, PrivilegeKind_Inherits)
+		case QNameAnyStructure, QNameAnyRecord,
+			QNameAnyGDoc, QNameAnyCDoc, QNameAnyWDoc,
+			QNameAnySingleton,
+			QNameAnyView:
+			pk = append(pk, PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select)
+		case QNameAnyFunction, QNameAnyCommand, QNameAnyQuery:
+			pk = append(pk, PrivilegeKind_Execute)
+		}
 	case TypeKind_GRecord, TypeKind_GDoc,
 		TypeKind_CRecord, TypeKind_CDoc,
 		TypeKind_WRecord, TypeKind_WDoc,
@@ -124,6 +136,20 @@ func validatePrivilegeOnNames(tt IWithTypes, on ...QName) (QNames, error) {
 		}
 		k := onType
 		switch t.Kind() {
+		case TypeKind_Any:
+			switch n {
+			case QNameANY:
+				k = TypeKind_Any
+			case QNameAnyStructure, QNameAnyRecord,
+				QNameAnyGDoc, QNameAnyCDoc, QNameAnyWDoc,
+				QNameAnySingleton,
+				QNameAnyView:
+				k = TypeKind_GRecord
+			case QNameAnyFunction, QNameAnyCommand, QNameAnyQuery:
+				k = TypeKind_Command
+			default:
+				return nil, ErrIncompatible("substitution «%v» can not to be privileged", t)
+			}
 		case TypeKind_GRecord, TypeKind_GDoc,
 			TypeKind_CRecord, TypeKind_CDoc,
 			TypeKind_WRecord, TypeKind_WDoc,
