@@ -8,6 +8,7 @@ package vvm
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appparts"
@@ -15,6 +16,7 @@ import (
 	"github.com/voedger/voedger/pkg/apps"
 	"github.com/voedger/voedger/pkg/btstrp"
 	"github.com/voedger/voedger/pkg/extensionpoints"
+	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/iauthnzimpl"
 	"github.com/voedger/voedger/pkg/iblobstoragestg"
@@ -240,7 +242,12 @@ func (vvm *VoedgerVM) Shutdown() {
 
 func (vvm *VoedgerVM) Launch() error {
 	ignition := struct{}{}
-	return vvm.ServicePipeline.SendSync(ignition)
+	err := vvm.ServicePipeline.SendSync(ignition)
+	if err != nil {
+		err = errors.Join(err, ErrVVMLaunchFailure)
+		logger.Error(err)
+	}
+	return err
 }
 
 func provideBootstrapOperator(federation coreutils.IFederation, asp istructs.IAppStructsProvider, timeFunc coreutils.TimeFunc, apppar appparts.IAppPartitions,
