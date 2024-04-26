@@ -6,7 +6,6 @@ package main
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/spf13/cobra"
 )
@@ -17,14 +16,9 @@ func newReplaceCmd() *cobra.Command {
 		Short: "Replaces the cluster node",
 		RunE:  replace,
 	}
-	replaceCmd.PersistentFlags().StringVar(&sshKey, "ssh-key", "", "Path to SSH key")
-	value, exists := os.LookupEnv(envVoedgerSshKey)
-	if !exists || value == "" {
-		if err := replaceCmd.MarkPersistentFlagRequired("ssh-key"); err != nil {
-			loggerError(err.Error())
-			return nil
-		}
-	}
+
+	addSshKeyFlag(replaceCmd)
+
 	return replaceCmd
 
 }

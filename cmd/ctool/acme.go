@@ -6,8 +6,6 @@
 package main
 
 import (
-	"os"
-
 	"github.com/spf13/cobra"
 )
 
@@ -20,14 +18,6 @@ func newAcmeCmd() *cobra.Command {
 		RunE:  acmeAdd,
 	}
 
-	acmeAddCmd.PersistentFlags().StringVar(&sshKey, "ssh-key", "", "Path to SSH key")
-	value, exists := os.LookupEnv(envVoedgerSshKey)
-	if !exists || value == "" {
-		if err := acmeAddCmd.MarkPersistentFlagRequired("ssh-key"); err != nil {
-			loggerError(err.Error())
-			return nil
-		}
-	}
 	acmeListCmd := &cobra.Command{
 		Use:   "list",
 		Short: "Displaying a list of ACME domains",
@@ -40,18 +30,13 @@ func newAcmeCmd() *cobra.Command {
 		Args:  cobra.ExactArgs(1),
 		RunE:  acmeRemove,
 	}
-	acmeRemoveCmd.PersistentFlags().StringVar(&sshKey, "ssh-key", "", "Path to SSH key")
 
-	if !exists || value == "" {
-		if err := acmeRemoveCmd.MarkPersistentFlagRequired("ssh-key"); err != nil {
-			loggerError(err.Error())
-			return nil
-		}
-	}
 	acmeCmd := &cobra.Command{
 		Use:   "acme",
 		Short: "ACME settings",
 	}
+
+	addSshKeyFlag(acmeAddCmd, acmeRemoveCmd)
 
 	acmeCmd.AddCommand(acmeAddCmd, acmeListCmd, acmeRemoveCmd)
 

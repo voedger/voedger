@@ -81,3 +81,7 @@ var ErrBackupNotExist = errors.New("backup does not exist")
 const errBackupNotExistOnHost = "backup %s does not exist on host %s: %w"
 
 var ErrMonPasswordIsTooShort = fmt.Errorf("password must be at least %d characters long", minMonPasswordLength)
+
+var ErrIsNotValidUrl = fmt.Errorf("is not a valid URL")
+
+const errIsNotValidUrl = "%s %w"

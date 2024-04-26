@@ -93,3 +93,5 @@ const (
 	alertLabelInstance = "instance"
 	alertLabelSeverity = "severity"
 )
+
+const emptyDiscordWebhookUrl = "http://discord_webhook_url"

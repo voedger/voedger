@@ -6,8 +6,6 @@
 package main
 
 import (
-	"os"
-
 	"github.com/spf13/cobra"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -25,14 +23,7 @@ func newMonCmd() *cobra.Command {
 		RunE: monPassword,
 	}
 
-	monPasswordCmd.PersistentFlags().StringVar(&sshKey, "ssh-key", "", "Path to SSH key")
-	value, exists := os.LookupEnv(envVoedgerSshKey)
-	if !exists || value == "" {
-		if err := monPasswordCmd.MarkPersistentFlagRequired("ssh-key"); err != nil {
-			loggerError(err.Error())
-			return nil
-		}
-	}
+	addSshKeyFlag(monPasswordCmd)
 
 	monCmd := &cobra.Command{
 		Use:   "mon",
