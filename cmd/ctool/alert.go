@@ -110,7 +110,6 @@ func setDiscordWebhook(cluster *clusterType, webhook string) error {
 	remoteConfigFile := filepath.Join("~", "alertmanager", "config.yml")
 	appNode1 := cluster.nodeByHost("app-node-1").address()
 	appNode2 := cluster.nodeByHost("app-node-2").address()
-	alertmanager := "alertmanager"
 
 	if webhook == emptyDiscordWebhookUrl {
 		loggerInfo(fmt.Sprintf("Removing Discord webhook from %s and %s", appNode1, appNode2))
@@ -142,9 +141,9 @@ func checkURL(s string) error {
 	u, err := url.Parse(s)
 	if err == nil && u.Scheme != "" && u.Host != "" {
 		return nil
-	} else {
-		return fmt.Errorf(errIsNotValidUrl, s, ErrIsNotValidUrl)
 	}
+
+	return fmt.Errorf(errIsNotValidUrl, s, ErrIsNotValidUrl)
 }
 
 func alertAddDiscord(cmd *cobra.Command, args []string) error {
@@ -255,7 +254,6 @@ func alertConfigsUpload(cmd *cobra.Command, args []string) error {
 
 	appNode1 := cluster.nodeByHost("app-node-1").address()
 	appNode2 := cluster.nodeByHost("app-node-2").address()
-	alertmanager := "alertmanager"
 
 	loggerInfo(fmt.Sprintf("Uploading alert's configuration file %s to %s and %s", localFile, appNode1, appNode2))
 

@@ -81,6 +81,7 @@ const (
 	logFolder = "log"
 
 	alertManagerConfigFile = "~/alertmanager/config.yml"
+	alertmanager           = "alertmanager"
 )
 
 const comma = ","
