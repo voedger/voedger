@@ -14,10 +14,14 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"testing"
 	"time"
 
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/goutils/logger"
+	"github.com/voedger/voedger/pkg/istorage"
+	"github.com/voedger/voedger/pkg/istorage/mem"
+	"github.com/voedger/voedger/pkg/vvm"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -258,7 +262,7 @@ func (vit *VIT) SignIn(login Login, optFuncs ...signInOptFunc) (prn *Principal) 
 }
 
 // owner could be *vit.Principal or *vit.AppWorkspace
-func (vit *VIT) InitChildWorkspace(wsd WSParams, ownerIntf interface{}) {
+func (vit *VIT) InitChildWorkspace(wsd WSParams, ownerIntf interface{}, opts ...coreutils.ReqOptFunc) {
 	vit.T.Helper()
 	body := fmt.Sprintf(`{
 		"args": {
@@ -273,9 +277,9 @@ func (vit *VIT) InitChildWorkspace(wsd WSParams, ownerIntf interface{}) {
 
 	switch owner := ownerIntf.(type) {
 	case *Principal:
-		vit.PostProfile(owner, "c.sys.InitChildWorkspace", body)
+		vit.PostProfile(owner, "c.sys.InitChildWorkspace", body, opts...)
 	case *AppWorkspace:
-		vit.PostWS(owner, "c.sys.InitChildWorkspace", body)
+		vit.PostWS(owner, "c.sys.InitChildWorkspace", body, opts...)
 	default:
 		panic("ownerIntf could be vit.*Principal or vit.*AppWorkspace only")
 	}
@@ -290,8 +294,8 @@ func SimpleWSParams(wsName string) WSParams {
 	}
 }
 
-func (vit *VIT) CreateWorkspace(wsp WSParams, owner *Principal) *AppWorkspace {
-	vit.InitChildWorkspace(wsp, owner)
+func (vit *VIT) CreateWorkspace(wsp WSParams, owner *Principal, opts ...coreutils.ReqOptFunc) *AppWorkspace {
+	vit.InitChildWorkspace(wsp, owner, opts...)
 	ws := vit.WaitForWorkspace(wsp.Name, owner)
 	require.Empty(vit.T, ws.WSError)
 	return ws
@@ -424,4 +428,25 @@ func DummyWS(wsKind appdef.QName, wsid istructs.WSID, ownerPrn *Principal) *AppW
 		},
 		Owner: ownerPrn,
 	}
+}
+
+// calls testBeforeRestart() then stops then VIT, then launches new VIT on the same config but with storage from previous VIT
+// then calls testAfterRestart() with the new VIT
+// cfg must be owned
+func TestRestartPreservingStorage(t *testing.T, cfg *VITConfig, testBeforeRestart, testAfterRestart func(t *testing.T, vit *VIT)) {
+	memStorage := mem.Provide()
+	cfg.opts = append(cfg.opts, WithVVMConfig(func(cfg *vvm.VVMConfig) {
+		cfg.StorageFactory = func() (provider istorage.IAppStorageFactory, err error) {
+			return memStorage, nil
+		}
+		cfg.KeyspaceNameSuffix = t.Name()
+	}))
+	func() {
+		vit := NewVIT(t, cfg)
+		defer vit.TearDown()
+		testBeforeRestart(t, vit)
+	}()
+	vit := NewVIT(t, cfg)
+	defer vit.TearDown()
+	testAfterRestart(t, vit)
 }

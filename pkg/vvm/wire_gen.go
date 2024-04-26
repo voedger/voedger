@@ -8,10 +8,12 @@ package vvm
 
 import (
 	"context"
+	"fmt"
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/apppartsctl"
 	"github.com/voedger/voedger/pkg/apps"
+	"github.com/voedger/voedger/pkg/btstrp"
 	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/iauthnzimpl"
@@ -28,6 +30,7 @@ import (
 	"github.com/voedger/voedger/pkg/istoragecache"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
+	"github.com/voedger/voedger/pkg/itokens"
 	"github.com/voedger/voedger/pkg/itokens-payloads"
 	"github.com/voedger/voedger/pkg/itokensjwt"
 	"github.com/voedger/voedger/pkg/metrics"
@@ -76,7 +79,7 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 	if err != nil {
 		return nil, nil, err
 	}
-	iAppStorageUncachingProviderFactory := provideIAppStorageUncachingProviderFactory(iAppStorageFactory)
+	iAppStorageUncachingProviderFactory := provideIAppStorageUncachingProviderFactory(iAppStorageFactory, vvmConfig)
 	iAppStorageProvider, err := provideCachingAppStorageProvider(vvmConfig, storageCacheSizeType, iMetrics, vvmName, iAppStorageUncachingProviderFactory)
 	if err != nil {
 		return nil, nil, err
@@ -172,7 +175,15 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 		return nil, nil, err
 	}
 	iAppPartsCtlPipelineService := provideAppPartsCtlPipelineService(iAppPartitionsController)
-	servicePipeline := provideServicePipeline(vvmCtx, operatorCommandProcessors, operatorQueryProcessors, operatorAppServicesFactory, routerServiceOperator, metricsServiceOperator, iAppPartsCtlPipelineService)
+	bootstrapOperator, err := provideBootstrapOperator(iFederation, iAppStructsProvider, timeFunc, iAppPartitions, v5, iTokens)
+	if err != nil {
+		cleanup4()
+		cleanup3()
+		cleanup2()
+		cleanup()
+		return nil, nil, err
+	}
+	servicePipeline := provideServicePipeline(vvmCtx, operatorCommandProcessors, operatorQueryProcessors, operatorAppServicesFactory, routerServiceOperator, metricsServiceOperator, iAppPartsCtlPipelineService, bootstrapOperator)
 	v7 := provideExtensionPoints(appsArtefacts)
 	v8 := provideMetricsServicePortGetter(metricsService)
 	v9 := provideBuiltInAppPackages(appsArtefacts)
@@ -218,7 +229,7 @@ func ProvideVVM(vvmCfg *VVMConfig, vvmIdx VVMIdxType) (voedgerVM *VoedgerVM, err
 	if err != nil {
 		return nil, err
 	}
-	return voedgerVM, BuildAppWorkspaces(voedgerVM.VVM, vvmCfg)
+	return voedgerVM, nil
 }
 
 func (vvm *VoedgerVM) Shutdown() {
@@ -230,6 +241,25 @@ func (vvm *VoedgerVM) Shutdown() {
 func (vvm *VoedgerVM) Launch() error {
 	ignition := struct{}{}
 	return vvm.ServicePipeline.SendSync(ignition)
+}
+
+func provideBootstrapOperator(federation coreutils.IFederation, asp istructs.IAppStructsProvider, timeFunc coreutils.TimeFunc, apppar appparts.IAppPartitions,
+	builtinApps []appparts.BuiltInApp, itokens2 itokens.ITokens) (BootstrapOperator, error) {
+	var clusterBuiltinApp btstrp.ClusterBuiltInApp
+	otherApps := make([]appparts.BuiltInApp, 0, len(builtinApps)-1)
+	for _, app := range builtinApps {
+		if app.Name == istructs.AppQName_sys_cluster {
+			clusterBuiltinApp = btstrp.ClusterBuiltInApp(app)
+		} else {
+			otherApps = append(otherApps, app)
+		}
+	}
+	if clusterBuiltinApp.Name == istructs.NullAppQName {
+		return nil, fmt.Errorf("%s app should be added to VVM builtin apps", istructs.AppQName_sys_cluster)
+	}
+	return pipeline.NewSyncOp(func(ctx context.Context, work interface{}) (err error) {
+		return btstrp.Bootstrap(federation, asp, timeFunc, apppar, clusterBuiltinApp, otherApps, itokens2)
+	}), nil
 }
 
 func provideExtensionPoints(appsArtefacts AppsArtefacts) map[istructs.AppQName]extensionpoints.IExtensionPoint {
@@ -244,10 +274,10 @@ func provideAppConfigsTypeEmpty() AppConfigsTypeEmpty {
 	return AppConfigsTypeEmpty(istructsmem.AppConfigsType{})
 }
 
-// AppConfigsTypeEmpty is provided here despite it looks senceless. But ok: it is a map that fills later, on BuildCfgsAnDefs() and used after filling only
+// AppConfigsTypeEmpty is provided here despite it looks senceless. But ok: it is a map that will be filled later, on BuildAppsArtefacts(), and used after filling only
 // provide appsArtefacts.AppConfigsType here -> wire cycle: BuildappsArtefacts requires APIs requires IAppStructsProvider requires AppConfigsType obtained from BuildappsArtefacts
 // The same approach does not work for IAppPartitions implementation, because the appparts.NewWithActualizerWithExtEnginesFactories() accepts
-// iextengine.ExtensionEngineFactories that already must be initialized with filled AppConfigsType
+// iextengine.ExtensionEngineFactories that must be initialized with the already filled AppConfigsType
 func provideIAppStructsProvider(cfgs AppConfigsTypeEmpty, bucketsFactory irates.BucketsFactoryType, appTokensFactory payloads.IAppTokensFactory,
 	storageProvider istorage.IAppStorageProvider) istructs.IAppStructsProvider {
 	return istructsmem.Provide(istructsmem.AppConfigsType(cfgs), bucketsFactory, appTokensFactory, storageProvider)
@@ -282,8 +312,8 @@ func provideIsDeviceAllowedFunc(appsArtefacts AppsArtefacts) iauthnzimpl.IsDevic
 	return res
 }
 
-func provideBuiltInApps(appsArtefacts AppsArtefacts) []apppartsctl.BuiltInApp {
-	res := make([]apppartsctl.BuiltInApp, len(appsArtefacts.builtInAppPackages))
+func provideBuiltInApps(appsArtefacts AppsArtefacts) []appparts.BuiltInApp {
+	res := make([]appparts.BuiltInApp, len(appsArtefacts.builtInAppPackages))
 	for i, pkg := range appsArtefacts.builtInAppPackages {
 		res[i] = pkg.BuiltInApp
 	}
@@ -294,9 +324,9 @@ func provideAppPartsCtlPipelineService(ctl apppartsctl.IAppPartitionsController)
 	return &AppPartsCtlPipelineService{IAppPartitionsController: ctl}
 }
 
-func provideIAppStorageUncachingProviderFactory(factory istorage.IAppStorageFactory) IAppStorageUncachingProviderFactory {
+func provideIAppStorageUncachingProviderFactory(factory istorage.IAppStorageFactory, vvmCfg *VVMConfig) IAppStorageUncachingProviderFactory {
 	return func() istorage.IAppStorageProvider {
-		return provider.Provide(factory)
+		return provider.Provide(factory, vvmCfg.KeyspaceNameSuffix)
 	}
 }
 
@@ -417,7 +447,7 @@ func provideRouterParams(cfg *VVMConfig, port VVMPortType, vvmIdx VVMIdxType) ro
 	return res
 }
 
-func provideVVMApps(builtInApps []apppartsctl.BuiltInApp) (vvmApps VVMApps) {
+func provideVVMApps(builtInApps []appparts.BuiltInApp) (vvmApps VVMApps) {
 	for _, builtInApp := range builtInApps {
 		vvmApps = append(vvmApps, builtInApp.Name)
 	}
@@ -621,8 +651,8 @@ func provideOperatorAppServices(apf AppServiceFactory, appsArtefacts AppsArtefac
 }
 
 func provideServicePipeline(vvmCtx context.Context, opCommandProcessors OperatorCommandProcessors, opQueryProcessors OperatorQueryProcessors, opAppServices OperatorAppServicesFactory,
-	routerServiceOp RouterServiceOperator, metricsServiceOp MetricsServiceOperator, appPartsCtl IAppPartsCtlPipelineService) ServicePipeline {
-	return pipeline.NewSyncPipeline(vvmCtx, "ServicePipeline", pipeline.WireSyncOperator("service fork operator", pipeline.ForkOperator(pipeline.ForkSame, pipeline.ForkBranch(pipeline.ForkOperator(pipeline.ForkSame, pipeline.ForkBranch(opQueryProcessors), pipeline.ForkBranch(opCommandProcessors), pipeline.ForkBranch(opAppServices(vvmCtx)), pipeline.ForkBranch(pipeline.ServiceOperator(appPartsCtl)))), pipeline.ForkBranch(routerServiceOp), pipeline.ForkBranch(metricsServiceOp),
-	)),
+	routerServiceOp RouterServiceOperator, metricsServiceOp MetricsServiceOperator, appPartsCtl IAppPartsCtlPipelineService, bootstrapOp BootstrapOperator) ServicePipeline {
+	return pipeline.NewSyncPipeline(vvmCtx, "ServicePipeline", pipeline.WireSyncOperator("services", pipeline.ForkOperator(pipeline.ForkSame, pipeline.ForkBranch(pipeline.ForkOperator(pipeline.ForkSame, pipeline.ForkBranch(opQueryProcessors), pipeline.ForkBranch(opCommandProcessors), pipeline.ForkBranch(opAppServices(vvmCtx)), pipeline.ForkBranch(pipeline.ServiceOperator(appPartsCtl)))), pipeline.ForkBranch(routerServiceOp), pipeline.ForkBranch(metricsServiceOp),
+	)), pipeline.WireSyncOperator("bootstrap", bootstrapOp),
 	)
 }

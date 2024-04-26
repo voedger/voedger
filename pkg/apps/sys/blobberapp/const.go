@@ -8,7 +8,7 @@ package blobberapp
 import (
 	"embed"
 
-	"github.com/voedger/voedger/pkg/cluster"
+	"github.com/voedger/voedger/pkg/appparts"
 )
 
 //go:embed schema.vsql
@@ -18,4 +18,4 @@ const BlobberAppFQN = "github.com/voedger/voedger/pkg/apps/sys/blobberapp"
 
 const DefDeploymentPartsCount = 10
 
-var DefDeploymentEnginePoolSize = cluster.PoolSize(10, 10, 10)
+var DefDeploymentEnginePoolSize = appparts.PoolSize(10, 10, 10)

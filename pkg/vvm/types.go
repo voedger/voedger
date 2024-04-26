@@ -57,10 +57,11 @@ type AppStorageFactory func(appQName istructs.AppQName, appStorage istorage.IApp
 type StorageCacheSizeType int
 type VVMApps []istructs.AppQName
 type BuiltInAppPackages struct {
-	apppartsctl.BuiltInApp
+	appparts.BuiltInApp
 	Packages []parser.PackageFS // need for build baseline schemas
 }
 type AppConfigsTypeEmpty istructsmem.AppConfigsType
+type BootstrapOperator pipeline.ISyncOperator
 
 type AppsArtefacts struct {
 	istructsmem.AppConfigsType
@@ -147,6 +148,8 @@ type VVMConfig struct {
 	FederationURL       *url.URL
 	ActualizerStateOpts []state.ActualizerStateOptFunc
 	SecretsReader       isecrets.ISecretReader
+	// used in tests only
+	KeyspaceNameSuffix string
 }
 
 type resultSenderErrorFirst struct {

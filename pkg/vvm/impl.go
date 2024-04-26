@@ -5,7 +5,9 @@
 
 package vvm
 
-import "context"
+import (
+	"context"
+)
 
 func (srv *AppPartsCtlPipelineService) Prepare(_ interface{}) error {
 	return srv.IAppPartitionsController.Prepare()

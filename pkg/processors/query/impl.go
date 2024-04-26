@@ -19,7 +19,6 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appparts"
-	"github.com/voedger/voedger/pkg/cluster"
 	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/iprocbus"
 	"github.com/voedger/voedger/pkg/isecrets"
@@ -385,7 +384,7 @@ func (qw *queryWork) GetPrincipals() []iauthnz.Principal {
 
 // borrows app partition for query
 func (qw *queryWork) borrow() (err error) {
-	if qw.appPart, err = qw.appParts.Borrow(qw.msg.AppQName(), qw.msg.Partition(), cluster.ProcessorKind_Query); err != nil {
+	if qw.appPart, err = qw.appParts.Borrow(qw.msg.AppQName(), qw.msg.Partition(), appparts.ProcessorKind_Query); err != nil {
 		return err
 	}
 	qw.appStructs = qw.appPart.AppStructs()
