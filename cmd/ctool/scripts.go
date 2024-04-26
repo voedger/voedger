@@ -164,7 +164,9 @@ func prepareScripts(scriptFileNames ...string) error {
 	}
 
 	cluster := newCluster()
-	updateTemplateScripts(cluster)
+	if err = updateTemplateScripts(cluster); err != nil {
+		return err
+	}
 
 	return nil
 }
