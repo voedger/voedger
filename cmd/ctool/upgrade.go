@@ -17,7 +17,9 @@ func newUpgradeCmd() *cobra.Command {
 		RunE:  upgrade,
 	}
 
-	addSshKeyFlag(upgradeCmd)
+	if !addSshKeyFlag(upgradeCmd) {
+		return nil
+	}
 
 	return upgradeCmd
 

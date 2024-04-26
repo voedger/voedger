@@ -16,7 +16,9 @@ func newRepeatCmd() *cobra.Command {
 		RunE:  repeat,
 	}
 
-	addSshKeyFlag(repeatCmd)
+	if !addSshKeyFlag(repeatCmd) {
+		return nil
+	}
 
 	return repeatCmd
 }

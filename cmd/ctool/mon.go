@@ -23,7 +23,9 @@ func newMonCmd() *cobra.Command {
 		RunE: monPassword,
 	}
 
-	addSshKeyFlag(monPasswordCmd)
+	if !addSshKeyFlag(monPasswordCmd) {
+		return nil
+	}
 
 	monCmd := &cobra.Command{
 		Use:   "mon",

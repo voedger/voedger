@@ -44,7 +44,9 @@ func newInitCmd() *cobra.Command {
 		Short: "Creates the file cluster.json for cluster",
 	}
 
-	addSshKeyFlag(initCmd)
+	if !addSshKeyFlag(initCmd) {
+		return nil
+	}
 
 	initCmd.PersistentFlags().StringVar(&acmeDomains, "acme-domain", "", "ACME domains <comma separated list>")
 

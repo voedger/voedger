@@ -27,7 +27,9 @@ func newRestoreCmd() *cobra.Command {
 		RunE: restore,
 	}
 
-	addSshKeyFlag(restoreCmd)
+	if !addSshKeyFlag(restoreCmd) {
+		return nil
+	}
 
 	return restoreCmd
 }

@@ -36,7 +36,9 @@ func newAcmeCmd() *cobra.Command {
 		Short: "ACME settings",
 	}
 
-	addSshKeyFlag(acmeAddCmd, acmeRemoveCmd)
+	if !addSshKeyFlag(acmeAddCmd, acmeRemoveCmd) {
+		return nil
+	}
 
 	acmeCmd.AddCommand(acmeAddCmd, acmeListCmd, acmeRemoveCmd)
 

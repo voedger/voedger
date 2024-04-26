@@ -17,7 +17,9 @@ func newReplaceCmd() *cobra.Command {
 		RunE:  replace,
 	}
 
-	addSshKeyFlag(replaceCmd)
+	if !addSshKeyFlag(replaceCmd) {
+		return nil
+	}
 
 	return replaceCmd
 

@@ -87,7 +87,9 @@ func newBackupCmd() *cobra.Command {
 		Short: "Backup database",
 	}
 
-	addSshKeyFlag(backupCmd)
+	if !addSshKeyFlag(backupCmd) {
+		return nil
+	}
 	backupCmd.AddCommand(backupNodeCmd, backupCronCmd, backupListCmd, backupNowCmd)
 
 	return backupCmd

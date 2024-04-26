@@ -20,8 +20,6 @@ import (
 // nolint
 func newAlertCmd() *cobra.Command {
 
-	var err error
-
 	alertAddDiscordCmd := &cobra.Command{
 		Use:   "discord",
 		Short: "Add Discord webhook",
@@ -89,7 +87,7 @@ func newAlertCmd() *cobra.Command {
 		Short: "Management of the alert",
 	}
 
-	if err = addSshKeyFlag(alertRemoveDiscordCmd, alertAddDiscordCmd, alertConfigsDownloadCmd, alertConfigsUploadCmd); err != nil {
+	if !addSshKeyFlag(alertRemoveDiscordCmd, alertAddDiscordCmd, alertConfigsDownloadCmd, alertConfigsUploadCmd) {
 		return nil
 	}
 
