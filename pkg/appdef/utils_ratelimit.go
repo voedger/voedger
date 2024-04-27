@@ -55,18 +55,12 @@ func (rs RateScope) TrimString() string {
 
 // validates object names for rate limit
 func validateLimitNames(tt IWithTypes, names QNames) (err error) {
-	var any = QNamesFrom(
+	var validAny = QNamesFrom(
 		QNameANY,
-		QNameAnyStructure,
-		QNameAnyRecord,
-		QNameAnyGDoc,
-		QNameAnyCDoc,
-		QNameAnyWDoc,
-		QNameAnySingleton,
+		QNameAnyStructure, QNameAnyRecord,
+		QNameAnyGDoc, QNameAnyCDoc, QNameAnyWDoc, QNameAnySingleton,
 		QNameAnyView,
-		QNameAnyFunction,
-		QNameAnyCommand,
-		QNameAnyQuery,
+		QNameAnyFunction, QNameAnyCommand, QNameAnyQuery,
 	)
 	if len(names) == 0 {
 		return ErrMissed("limit objects names")
@@ -81,7 +75,7 @@ func validateLimitNames(tt IWithTypes, names QNames) (err error) {
 
 		switch t.Kind() {
 		case TypeKind_Any:
-			if !any.Contains(n) {
+			if !validAny.Contains(n) {
 				err = errors.Join(err,
 					ErrIncompatible("limit any «%v»", n))
 			}

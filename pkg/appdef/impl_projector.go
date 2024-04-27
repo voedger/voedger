@@ -140,6 +140,21 @@ func (ee events) Map() map[QName][]ProjectorEventKind {
 }
 
 func (ee *events) add(on QName, event ...ProjectorEventKind) {
+	var (
+		validTypes = TypeKindsFrom(
+			TypeKind_Any,
+			TypeKind_GDoc, TypeKind_GRecord, TypeKind_CDoc, TypeKind_CRecord, TypeKind_WDoc, TypeKind_WRecord, // CUD
+			TypeKind_Command,               // Execute
+			TypeKind_ODoc, TypeKind_Object, // Execute with
+		)
+		validAny = QNamesFrom(
+			QNameAnyStructure, QNameAnyRecord, // CUD or ExecuteWith
+			QNameAnyGDoc, QNameAnyCDoc, QNameAnyWDoc, QNameAnySingleton, // CUD
+			QNameAnyODoc, QNameAnyObject, // Execute with
+			QNameAnyCommand, // Execute
+		)
+	)
+
 	if on == NullQName {
 		panic(ErrMissed("event name"))
 	}
@@ -148,21 +163,26 @@ func (ee *events) add(on QName, event ...ProjectorEventKind) {
 	if t == nil {
 		panic(ErrTypeNotFound(on))
 	}
-	switch t.Kind() {
-	case TypeKind_GDoc, TypeKind_GRecord, TypeKind_CDoc, TypeKind_CRecord, TypeKind_WDoc, TypeKind_WRecord, // CUD
-		TypeKind_Command,               // Execute
-		TypeKind_ODoc, TypeKind_Object: // Execute with
-		e, ok := ee.events[on]
-		if ok {
-			e.addKind(event...)
-		} else {
-			e = newEvent(t, event...)
-			ee.events[on] = e
-		}
-		ee.eventsMap[on] = e.Kind()
-	default:
+
+	if !validTypes.Contains(t.Kind()) {
 		panic(ErrIncompatible("%v is not applicable for projector event", t))
 	}
+
+	switch t.Kind() {
+	case TypeKind_Any:
+		if !validAny.Contains(on) {
+			panic(ErrIncompatible("substitution %v is not applicable for projector event", on))
+		}
+	}
+
+	e, ok := ee.events[on]
+	if ok {
+		e.addKind(event...)
+	} else {
+		e = newEvent(t, event...)
+		ee.events[on] = e
+	}
+	ee.eventsMap[on] = e.Kind()
 }
 
 func (ee *events) setComment(on QName, comment ...string) {
