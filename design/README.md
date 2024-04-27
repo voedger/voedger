@@ -537,7 +537,6 @@ ref. [se/README.md](se/README.md)
 Functional Design
 
 - [Orchestration](orchestration/README.md)
-- [Workspaces](workspaces/README.md)
 - [Edge Computing](edge/README.md)
 
 Non-Functional Reqiurements, aka Quality Attributes, Quality Requirements, Qualities
