@@ -6,6 +6,7 @@
 package appdef
 
 import (
+	"errors"
 	"fmt"
 	"slices"
 	"strings"
@@ -24,6 +25,11 @@ func RateScopesFrom(scopes ...RateScope) RateScopes {
 		}
 	}
 	return rs
+}
+
+// Returns is rate scopes contains the specified scope.
+func (rs RateScopes) Contains(s RateScope) bool {
+	return slices.Contains(rs, s)
 }
 
 // Renders an RateScopes in human-readable form, without "RateScopes_" prefix,
@@ -45,4 +51,48 @@ func (rs RateScopes) String() string {
 func (rs RateScope) TrimString() string {
 	const pref = "RateScope" + "_"
 	return strings.TrimPrefix(rs.String(), pref)
+}
+
+// validates object names for rate limit
+func validateLimitNames(tt IWithTypes, names QNames) (err error) {
+	var any = QNamesFrom(
+		QNameANY,
+		QNameAnyStructure,
+		QNameAnyRecord,
+		QNameAnyGDoc,
+		QNameAnyCDoc,
+		QNameAnyWDoc,
+		QNameAnySingleton,
+		QNameAnyView,
+		QNameAnyFunction,
+		QNameAnyCommand,
+		QNameAnyQuery,
+	)
+	if len(names) == 0 {
+		return ErrMissed("limit objects names")
+	}
+	for _, n := range names {
+		t := tt.TypeByName(n)
+		if t == nil {
+			err = errors.Join(err,
+				ErrNotFound("type «%v»", n))
+			continue
+		}
+
+		switch t.Kind() {
+		case TypeKind_Any:
+			if !any.Contains(n) {
+				err = errors.Join(err,
+					ErrIncompatible("limit any «%v»", n))
+			}
+		case TypeKind_Command, TypeKind_Query: //ok
+		case TypeKind_GDoc, TypeKind_CDoc, TypeKind_WDoc,
+			TypeKind_GRecord, TypeKind_CRecord, TypeKind_WRecord,
+			TypeKind_ViewRecord: //ok
+		default:
+			err = errors.Join(err,
+				ErrIncompatible("limit «%v»", n))
+		}
+	}
+	return err
 }

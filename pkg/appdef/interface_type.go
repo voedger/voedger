@@ -132,7 +132,7 @@ type ITypeBuilder interface {
 // AnyType is used for return then type is any
 var AnyType = newAnyType(QNameANY)
 
-// Any×××Type are used with limits and rates
+// Any×××Type are used for substitution, e.g. for rate limits, projector events, etc.
 var (
 	AnyStructureType = newAnyType(QNameAnyStructure)
 	AnyRecordType    = newAnyType(QNameAnyRecord)
@@ -140,6 +140,8 @@ var (
 	AnyCDocType      = newAnyType(QNameAnyCDoc)
 	AnyWDocType      = newAnyType(QNameAnyWDoc)
 	AnySingletonType = newAnyType(QNameAnySingleton)
+	AnyODocType      = newAnyType(QNameAnyODoc)
+	AnyObjectType    = newAnyType(QNameAnyObject)
 	AnyViewType      = newAnyType(QNameAnyView)
 	AnyExtensionType = newAnyType(QNameAnyExtension)
 	AnyFunctionType  = newAnyType(QNameAnyFunction)

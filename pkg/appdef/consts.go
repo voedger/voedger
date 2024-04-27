@@ -19,6 +19,8 @@ const (
 	AnyCDocName      = "AnyCDoc"
 	AnyWDocName      = "AnyWDoc"
 	AnySingletonName = "AnySingleton"
+	AnyODocName      = "AnyODoc"
+	AnyObjectName    = "AnyObject"
 	AnyViewName      = "AnyView"
 	AnyExtensionName = "AnyExtension"
 	AnyFunctionName  = "AnyFunction"
@@ -65,6 +67,12 @@ var (
 	// QNameAnySingleton is a substitution for any singleton type.
 	QNameAnySingleton = NewQName(SysPackage, AnySingletonName)
 
+	// QNameAnyODoc is a substitution for any ODoc type.
+	QNameAnyODoc = NewQName(SysPackage, AnyODocName)
+
+	// QNameAnyObject is a substitution for any Object type.
+	QNameAnyObject = NewQName(SysPackage, AnyObjectName)
+
 	// QNameAnyView is a substitution for any view record type.
 	QNameAnyView = NewQName(SysPackage, AnyViewName)
 
@@ -87,6 +95,8 @@ var (
 		QNameAnyGDoc:      AnyGDocType,
 		QNameAnyCDoc:      AnyCDocType,
 		QNameAnyWDoc:      AnyWDocType,
+		QNameAnyODoc:      AnyODocType,
+		QNameAnyObject:    AnyObjectType,
 		QNameAnySingleton: AnySingletonType,
 		QNameAnyView:      AnyViewType,
 		QNameAnyExtension: AnyExtensionType,

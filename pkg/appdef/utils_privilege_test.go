@@ -251,3 +251,21 @@ func TestPrivilegeAccessControlString(t *testing.T) {
 		})
 	}
 }
+
+func TestPrivilegeKindTrimString(t *testing.T) {
+	tests := []struct {
+		name string
+		k    PrivilegeKind
+		want string
+	}{
+		{name: "basic", k: PrivilegeKind_Update, want: "Update"},
+		{name: "out of range", k: PrivilegeKind_count + 1, want: (PrivilegeKind_count + 1).String()},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.k.TrimString(); got != tt.want {
+				t.Errorf("%v.(PrivilegeKind).TrimString() = %v, want %v", tt.k, got, tt.want)
+			}
+		})
+	}
+}

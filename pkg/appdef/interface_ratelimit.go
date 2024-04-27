@@ -84,7 +84,7 @@ type IWithLimits interface {
 type ILimitsBuilder interface {
 	// Adds new Limit type with specified name.
 	//
-	// # Object names
+	// # Limited object names
 	//
 	// on which limit is applied, must be specified.
 	// If these contain a function (command or query), this limits count of execution.
@@ -94,7 +94,7 @@ type ILimitsBuilder interface {
 	// # Panics:
 	//   - if name is empty or invalid,
 	//   - if type with the same name already exists,
-	//	 - if no rated objects names specified,
+	//	 - if no limited objects names specified,
 	//	 - if rate is not found.
 	AddLimit(name QName, on []QName, rate QName, comment ...string)
 }

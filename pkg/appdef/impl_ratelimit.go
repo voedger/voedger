@@ -74,6 +74,6 @@ func (l limit) Rate() IRate {
 	return l.rate
 }
 
-func (l limit) Validate() IRate {
-	return l.rate
+func (l limit) Validate() (err error) {
+	return validateLimitNames(l.app, l.on)
 }
