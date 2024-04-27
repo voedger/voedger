@@ -11,11 +11,11 @@ assignees: ''
 
 A clear and concise description of the "pain" you want to solve. E.g. "I'm always frustrated when [...]".
 
-## Functional Design
+## Functional design
 
 What the system should do, the actions it should perform, and the services it should provide, without delving into how these functions will be implemented technically
 
-## Technical Design
+## Technical design
 
 Ideas about possible implementation are welcome here. You can leave this section empty.
 
