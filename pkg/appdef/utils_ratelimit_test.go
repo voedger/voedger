@@ -6,62 +6,10 @@
 package appdef
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 )
-
-func TestRateScopesFrom(t *testing.T) {
-	tests := []struct {
-		name  string
-		args  []RateScope
-		want  string
-		panic bool
-	}{
-		{"empty", []RateScope{}, `[]`, false},
-		{"RateScope_AppPartition, RateScope_User", []RateScope{RateScope_AppPartition, RateScope_User}, `[AppPartition User]`, false},
-		{"deduplicate", []RateScope{RateScope_AppPartition, RateScope_AppPartition}, `[AppPartition]`, false},
-		// panics
-		{"RateScope_null", []RateScope{RateScope_null}, `[]`, true},
-		{"out of bounds", []RateScope{RateScope_count}, `[]`, true},
-	}
-
-	require := require.New(t)
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if tt.panic {
-				require.Panics(func() {
-					RateScopesFrom(tt.args...)
-				}, "RateScopesFrom(%v) should panic", tt.args)
-			} else {
-				got := fmt.Sprint(RateScopesFrom(tt.args...))
-				require.Equal(tt.want, got, "RateScopesFrom(%v) = %v, want %v", tt.args, got, tt.want)
-			}
-		})
-	}
-}
-
-func TestRateScopes_Contains(t *testing.T) {
-	tests := []struct {
-		name string
-		rs   RateScopes
-		s    RateScope
-		want bool
-	}{
-		{"empty scopes", RateScopes{}, RateScope_Workspace, false},
-		{"basic contains", RateScopesFrom(RateScope_Workspace, RateScope_IP), RateScope_Workspace, true},
-		{"basic not contains", RateScopesFrom(RateScope_AppPartition, RateScope_User), RateScope_Workspace, false},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := tt.rs.Contains(tt.s); got != tt.want {
-				t.Errorf("RateScopes(%v).Contains(%v) = %v, want %v", tt.rs, tt.s, got, tt.want)
-			}
-		})
-	}
-}
 
 func TestRateScopeTrimString(t *testing.T) {
 	tests := []struct {

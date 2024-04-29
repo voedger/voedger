@@ -5,6 +5,8 @@
 
 package appdef
 
+import "github.com/voedger/voedger/pkg/goutils/set"
+
 // Implements:
 //   - IRate
 type rate struct {
@@ -19,10 +21,10 @@ func newRate(app *appDef, name QName, count RateCount, period RatePeriod, scopes
 		typ:    makeType(app, name, TypeKind_Rate),
 		count:  count,
 		period: period,
-		scopes: RateScopesFrom(scopes...),
+		scopes: set.From(scopes...),
 	}
-	if len(r.scopes) == 0 {
-		r.scopes = DefaultRateScopes
+	if r.scopes.Len() == 0 {
+		r.scopes = DefaultRateScopes.Clone()
 	}
 	r.typ.comment.setComment(comment...)
 	app.appendType(r)

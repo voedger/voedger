@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+	"github.com/voedger/voedger/pkg/goutils/set"
 )
 
 func Test_AppDefAddRateLimit(t *testing.T) {
@@ -39,7 +40,7 @@ func Test_AppDefAddRateLimit(t *testing.T) {
 				require.Equal(rateName, r.QName())
 				require.EqualValues(10, r.Count())
 				require.Equal(time.Hour, r.Period())
-				require.Equal(RateScopesFrom(RateScope_AppPartition, RateScope_IP), r.Scopes())
+				require.Equal(set.From(RateScope_AppPartition, RateScope_IP), r.Scopes())
 				require.Equal("10 times per hour per partition per IP", r.Comment())
 			default:
 				require.FailNow("unexpected rate", "rate: %v", r)

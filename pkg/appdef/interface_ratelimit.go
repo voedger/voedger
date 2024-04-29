@@ -5,7 +5,11 @@
 
 package appdef
 
-import "time"
+import (
+	"time"
+
+	"github.com/voedger/voedger/pkg/goutils/set"
+)
 
 // Rate scopes enumeration
 type RateScope uint8
@@ -22,9 +26,9 @@ const (
 	RateScope_count
 )
 
-type RateScopes []RateScope
+type RateScopes = set.Set[RateScope]
 
-var DefaultRateScopes = RateScopes{RateScope_AppPartition}
+var DefaultRateScopes = set.From(RateScope_AppPartition)
 
 type (
 	RateCount  = uint
