@@ -2,6 +2,8 @@ name: CI cmd
 
 on:
   push:
+    branches:
+      - main
     paths:
       - 'cmd/**'
 

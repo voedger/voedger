@@ -10,6 +10,7 @@ package vvm
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/url"
 	"strconv"
@@ -25,6 +26,7 @@ import (
 	"github.com/voedger/voedger/pkg/apppartsctl"
 	"github.com/voedger/voedger/pkg/btstrp"
 	"github.com/voedger/voedger/pkg/extensionpoints"
+	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/itokens"
 	"github.com/voedger/voedger/pkg/router"
 	"github.com/voedger/voedger/pkg/vvm/engines"
@@ -103,7 +105,12 @@ func (vvm *VoedgerVM) Shutdown() {
 
 func (vvm *VoedgerVM) Launch() error {
 	ignition := struct{}{} // value has no sense
-	return vvm.ServicePipeline.SendSync(ignition)
+	err := vvm.ServicePipeline.SendSync(ignition)
+	if err != nil {
+		err = errors.Join(err, ErrVVMLaunchFailure)
+		logger.Error(err)
+	}
+	return err
 }
 
 // vvmCtx must be cancelled by the caller right before vvm.ServicePipeline.Close()

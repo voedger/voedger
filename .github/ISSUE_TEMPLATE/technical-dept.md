@@ -12,10 +12,10 @@ assignees: ''
 **Now, in current architecture**
 A clear and concise description of what the problem is.
 
-- Problem (hot): <pain which must be fixed>
-- Problem (warm): <pain which should be fixed>
+- Problem (hot): pain which MUST be fixed
+- Problem (warm): pain which SHOULD be fixed
 
-## Technical Design
+## Technical design
 
 Solution for the problems you described above.
 
