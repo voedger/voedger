@@ -57,6 +57,17 @@ func (t Month) TrimString() string {
 	return strings.TrimPrefix(t.String(), "Month_")
 }
 
+func ExampleEmpty() {
+	// This example demonstrates how to use Set type.
+
+	// Create new empty Set.
+	s := set.Empty[Month]()
+	fmt.Println(s)
+
+	// Output:
+	// []
+}
+
 func ExampleFrom() {
 	// This example demonstrates how to use Set type.
 

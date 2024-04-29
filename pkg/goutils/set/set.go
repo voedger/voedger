@@ -18,6 +18,11 @@ type Set[V ~int8 | ~uint8] struct {
 	uint64 // bit set flag
 }
 
+// Makes new empty Set of specified value type. Same as `Set[V]{}`.
+func Empty[V ~int8 | ~uint8]() Set[V] {
+	return Set[V]{}
+}
+
 // Makes new Set from specified values.
 func From[V ~int8 | ~uint8](values ...V) Set[V] {
 	var s Set[V]

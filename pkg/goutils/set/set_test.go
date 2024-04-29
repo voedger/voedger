@@ -59,7 +59,12 @@ func (t Month) TrimString() string {
 	return strings.TrimPrefix(t.String(), "Month_")
 }
 
-func TestSetFrom(t *testing.T) {
+func TestEmpty(t *testing.T) {
+	require := require.New(t)
+	require.Zero(Empty[Month]().Len())
+}
+
+func TestFrom(t *testing.T) {
 	tests := []struct {
 		name string
 		set  Set[Month]
