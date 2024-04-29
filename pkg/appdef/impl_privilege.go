@@ -15,7 +15,7 @@ import (
 //   - IPrivilege
 type privilege struct {
 	comment
-	kinds   PrivilegeKinds
+	kinds   set.Set[PrivilegeKind]
 	granted bool
 	on      QNames
 	fields  []FieldName
@@ -34,7 +34,7 @@ func newPrivilege(kind []PrivilegeKind, granted bool, on []QName, fields []Field
 	}
 
 	o := role.app.Type(names[0])
-	allPk := AllPrivilegesOnType(o)
+	allPk := allPrivilegesOnType(o)
 	if !allPk.ContainsAll(pk.AsArray()...) {
 		panic(ErrIncompatible("privilege «%s» with %v", pk, o))
 	}
@@ -64,7 +64,7 @@ func newPrivilegeAll(granted bool, on []QName, role *role, comment ...string) *p
 		panic(err)
 	}
 
-	pk := AllPrivilegesOnType(role.app.Type(names[0]))
+	pk := allPrivilegesOnType(role.app.Type(names[0]))
 
 	return newPrivilege(pk.AsArray(), granted, names, nil, role, comment...)
 }
@@ -83,7 +83,7 @@ func (g privilege) IsGranted() bool { return g.granted }
 
 func (g privilege) IsRevoked() bool { return !g.granted }
 
-func (g privilege) Kinds() PrivilegeKinds { return g.kinds }
+func (g privilege) Kinds() []PrivilegeKind { return g.kinds.AsArray() }
 
 func (g privilege) On() QNames { return g.on }
 

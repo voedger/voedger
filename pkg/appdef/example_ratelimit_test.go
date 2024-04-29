@@ -67,7 +67,7 @@ func ExampleIAppDefBuilder_AddRate() {
 
 	// Output:
 	// enum rates:
-	// - 1 Rate «test.rate» 10 per 1h0m0s per [AppPartition IP]
+	// - 1 Rate «test.rate» 10 per 1h0m0s per [RateScope_AppPartition RateScope_IP]
 	// overall: 1
 	// enum limits:
 	// - 1 Limit «test.limit» on [sys.AnyFunction] with Rate «test.rate»

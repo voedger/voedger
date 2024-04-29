@@ -5,8 +5,6 @@
 
 package appdef
 
-import "github.com/voedger/voedger/pkg/goutils/set"
-
 // Enumeration of privileges.
 type PrivilegeKind uint8
 
@@ -47,15 +45,12 @@ const (
 	PrivilegeKind_count
 )
 
-// Set of PrivilegeKind
-type PrivilegeKinds = set.Set[PrivilegeKind]
-
 // Represents a privilege (specific rights or permissions) to be granted to role or revoked from.
 type IPrivilege interface {
 	IWithComments
 
 	// Returns privilege kinds
-	Kinds() PrivilegeKinds
+	Kinds() []PrivilegeKind
 
 	// Returns is privilege has been granted. The opposite of `IsRevoked()`
 	IsGranted() bool

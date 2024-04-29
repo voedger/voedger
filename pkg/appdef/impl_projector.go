@@ -204,7 +204,7 @@ func newEvent(on IType, kind ...ProjectorEventKind) *event {
 	if len(kind) > 0 {
 		p.addKind(kind...)
 	} else {
-		kinds := allProjectorEventsForType(on)
+		kinds := allProjectorEventsOnType(on)
 		if kinds.Len() == 0 {
 			panic(ErrUnsupported("type %v can't be projector trigger", on))
 		}

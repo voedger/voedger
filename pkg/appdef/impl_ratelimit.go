@@ -13,7 +13,7 @@ type rate struct {
 	typ
 	count  RateCount
 	period RatePeriod
-	scopes RateScopes
+	scopes set.Set[RateScope]
 }
 
 func newRate(app *appDef, name QName, count RateCount, period RatePeriod, scopes []RateScope, comment ...string) *rate {
@@ -24,7 +24,7 @@ func newRate(app *appDef, name QName, count RateCount, period RatePeriod, scopes
 		scopes: set.From(scopes...),
 	}
 	if r.scopes.Len() == 0 {
-		r.scopes = DefaultRateScopes.Clone()
+		r.scopes.Set(DefaultRateScopes...)
 	}
 	r.typ.comment.setComment(comment...)
 	app.appendType(r)
@@ -39,8 +39,8 @@ func (r rate) Period() RatePeriod {
 	return r.period
 }
 
-func (r rate) Scopes() RateScopes {
-	return r.scopes
+func (r rate) Scopes() []RateScope {
+	return r.scopes.AsArray()
 }
 
 // Implements:

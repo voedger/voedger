@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"github.com/voedger/voedger/pkg/goutils/set"
 )
 
 func Test_AppDef_GrantAndRevoke(t *testing.T) {
@@ -82,7 +81,7 @@ func Test_AppDef_GrantAndRevoke(t *testing.T) {
 
 	t.Run("should be ok to check roles and privileges", func(t *testing.T) {
 
-		checkPrivilege := func(p IPrivilege, granted bool, kinds PrivilegeKinds, on QNames, fields []FieldName, to QName) {
+		checkPrivilege := func(p IPrivilege, granted bool, kinds []PrivilegeKind, on []QName, fields []FieldName, to QName) {
 			require.NotNil(p)
 			require.Equal(granted, p.IsGranted())
 			require.Equal(!granted, p.IsRevoked())
@@ -99,48 +98,48 @@ func Test_AppDef_GrantAndRevoke(t *testing.T) {
 				switch cnt {
 				case 1:
 					checkPrivilege(p, true,
-						set.From(PrivilegeKind_Select),
-						QNames{docName, viewName}, []FieldName{"field1"},
+						[]PrivilegeKind{PrivilegeKind_Select},
+						[]QName{docName, viewName}, []FieldName{"field1"},
 						readerRoleName)
 				case 2:
 					checkPrivilege(p, true,
-						set.From(PrivilegeKind_Execute),
-						QNames{queryName}, nil,
+						[]PrivilegeKind{PrivilegeKind_Execute},
+						[]QName{queryName}, nil,
 						readerRoleName)
 				case 3:
 					checkPrivilege(p, true,
-						set.From(PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select),
-						QNames{docName, viewName}, nil,
+						[]PrivilegeKind{PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select},
+						[]QName{docName, viewName}, nil,
 						writerRoleName)
 				case 4:
 					checkPrivilege(p, true,
-						set.From(PrivilegeKind_Execute),
-						QNames{cmdName, queryName}, nil,
+						[]PrivilegeKind{PrivilegeKind_Execute},
+						[]QName{cmdName, queryName}, nil,
 						writerRoleName)
 				case 5:
 					checkPrivilege(p, true,
-						set.From(PrivilegeKind_Inherits),
-						QNames{readerRoleName, writerRoleName}, nil,
+						[]PrivilegeKind{PrivilegeKind_Inherits},
+						[]QName{readerRoleName, writerRoleName}, nil,
 						workerRoleName)
 				case 6:
 					checkPrivilege(p, true,
-						set.From(PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select, PrivilegeKind_Execute),
-						QNames{wsName}, nil,
+						[]PrivilegeKind{PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select, PrivilegeKind_Execute},
+						[]QName{wsName}, nil,
 						ownerRoleName)
 				case 7:
 					checkPrivilege(p, true,
-						set.From(PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select, PrivilegeKind_Execute),
-						QNames{wsName}, nil,
+						[]PrivilegeKind{PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select, PrivilegeKind_Execute},
+						[]QName{wsName}, nil,
 						admRoleName)
 				case 8:
 					checkPrivilege(p, false,
-						set.From(PrivilegeKind_Execute),
-						QNames{wsName}, nil,
+						[]PrivilegeKind{PrivilegeKind_Execute},
+						[]QName{wsName}, nil,
 						admRoleName)
 				case 9:
 					checkPrivilege(p, false,
-						set.From(PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select, PrivilegeKind_Execute),
-						QNames{wsName}, nil,
+						[]PrivilegeKind{PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select, PrivilegeKind_Execute},
+						[]QName{wsName}, nil,
 						intruderRoleName)
 				default:
 					require.Fail("unexpected privilege", "privilege: %v", p)
@@ -156,22 +155,22 @@ func Test_AppDef_GrantAndRevoke(t *testing.T) {
 				require.Len(pp, 4)
 
 				checkPrivilege(pp[0], true,
-					set.From(PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select, PrivilegeKind_Execute),
-					QNames{wsName}, nil,
+					[]PrivilegeKind{PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select, PrivilegeKind_Execute},
+					[]QName{wsName}, nil,
 					ownerRoleName)
 
 				checkPrivilege(pp[1], true,
-					set.From(PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select, PrivilegeKind_Execute),
-					QNames{wsName}, nil,
+					[]PrivilegeKind{PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select, PrivilegeKind_Execute},
+					[]QName{wsName}, nil,
 					admRoleName)
 				checkPrivilege(pp[2], false,
-					set.From(PrivilegeKind_Execute),
-					QNames{wsName}, nil,
+					[]PrivilegeKind{PrivilegeKind_Execute},
+					[]QName{wsName}, nil,
 					admRoleName)
 
 				checkPrivilege(pp[3], false,
-					set.From(PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select, PrivilegeKind_Execute),
-					QNames{wsName}, nil,
+					[]PrivilegeKind{PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select, PrivilegeKind_Execute},
+					[]QName{wsName}, nil,
 					intruderRoleName)
 			})
 
@@ -180,28 +179,28 @@ func Test_AppDef_GrantAndRevoke(t *testing.T) {
 				require.Len(pp, 5)
 
 				checkPrivilege(pp[0], true,
-					set.From(PrivilegeKind_Select),
-					QNames{docName, viewName}, []FieldName{"field1"},
+					[]PrivilegeKind{PrivilegeKind_Select},
+					[]QName{docName, viewName}, []FieldName{"field1"},
 					readerRoleName)
 
 				checkPrivilege(pp[1], true,
-					set.From(PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select),
-					QNames{docName, viewName}, nil,
+					[]PrivilegeKind{PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select},
+					[]QName{docName, viewName}, nil,
 					writerRoleName)
 
 				checkPrivilege(pp[2], true,
-					set.From(PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select, PrivilegeKind_Execute),
-					QNames{wsName}, nil,
+					[]PrivilegeKind{PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select, PrivilegeKind_Execute},
+					[]QName{wsName}, nil,
 					ownerRoleName)
 
 				checkPrivilege(pp[3], true,
-					set.From(PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select, PrivilegeKind_Execute),
-					QNames{wsName}, nil,
+					[]PrivilegeKind{PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select, PrivilegeKind_Execute},
+					[]QName{wsName}, nil,
 					admRoleName)
 
 				checkPrivilege(pp[4], false,
-					set.From(PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select, PrivilegeKind_Execute),
-					QNames{wsName}, nil,
+					[]PrivilegeKind{PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select, PrivilegeKind_Execute},
+					[]QName{wsName}, nil,
 					intruderRoleName)
 			})
 		})

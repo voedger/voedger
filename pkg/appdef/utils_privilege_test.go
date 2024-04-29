@@ -24,9 +24,10 @@ func TestAllPrivilegesOnType(t *testing.T) {
 	tests := []struct {
 		name   string
 		typ    typ
-		wantPk PrivilegeKinds
+		wantPk set.Set[PrivilegeKind]
 	}{
-		{"null", typ{TypeKind_null, NullQName}, PrivilegeKinds{}},
+		{"null", typ{TypeKind_null, NullQName},
+			set.Empty[PrivilegeKind]()},
 		{"Any", typ{TypeKind_Any, QNameANY},
 			set.From(PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select, PrivilegeKind_Execute, PrivilegeKind_Inherits)},
 		{"Any record", typ{TypeKind_Any, QNameAnyRecord},
@@ -46,7 +47,7 @@ func TestAllPrivilegesOnType(t *testing.T) {
 		{"Role", typ{TypeKind_Role, testName},
 			set.From(PrivilegeKind_Inherits)},
 		{"Projector", typ{TypeKind_Projector, testName},
-			PrivilegeKinds{}},
+			set.Empty[PrivilegeKind]()},
 	}
 	for i := range tests {
 		tt := tests[i]
@@ -54,7 +55,7 @@ func TestAllPrivilegesOnType(t *testing.T) {
 			typ := new(mockType)
 			typ.kind = tt.typ.kind
 			typ.name = tt.typ.name
-			if gotPk := AllPrivilegesOnType(typ); !reflect.DeepEqual(gotPk, tt.wantPk) {
+			if gotPk := allPrivilegesOnType(typ); !reflect.DeepEqual(gotPk, tt.wantPk) {
 				t.Errorf("AllPrivilegesOnType(%s) = %v, want %v", tt.typ.kind.TrimString(), gotPk, tt.wantPk)
 			}
 		})

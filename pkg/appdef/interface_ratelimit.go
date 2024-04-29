@@ -7,8 +7,6 @@ package appdef
 
 import (
 	"time"
-
-	"github.com/voedger/voedger/pkg/goutils/set"
 )
 
 // Rate scopes enumeration
@@ -26,9 +24,7 @@ const (
 	RateScope_count
 )
 
-type RateScopes = set.Set[RateScope]
-
-var DefaultRateScopes = set.From(RateScope_AppPartition)
+var DefaultRateScopes = []RateScope{RateScope_AppPartition}
 
 type (
 	RateCount  = uint
@@ -39,7 +35,7 @@ type IRate interface {
 	IType
 	Count() RateCount
 	Period() RatePeriod
-	Scopes() RateScopes
+	Scopes() []RateScope
 }
 
 type IWithRates interface {

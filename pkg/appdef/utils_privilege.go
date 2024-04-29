@@ -23,7 +23,7 @@ func PrivilegeAccessControlString(grant bool) string {
 // Returns all available privileges on specified type.
 //
 // If type can not to be privileged then returns empty slice.
-func AllPrivilegesOnType(t IType) (pk PrivilegeKinds) {
+func allPrivilegesOnType(t IType) (pk set.Set[PrivilegeKind]) {
 	switch t.Kind() {
 	case TypeKind_Any:
 		switch t.QName() {
