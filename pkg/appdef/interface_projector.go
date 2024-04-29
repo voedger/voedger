@@ -98,7 +98,7 @@ type IProjectorBuilder interface {
 type IProjectorEventsBuilder interface {
 	// Adds event to trigger the projector.
 	//
-	// QName can be some record type or command.
+	// QName can be some record type or command. QName can be one of QNameAny××× compatible substitutions.
 	//
 	// If event kind is missed then default is:
 	//   - ProjectorEventKind_Any for GDoc/GRecords, CDoc/CRecords and WDoc/WRecords

@@ -17,12 +17,12 @@ func _() {
 	_ = x[PrivilegeKind_count-6]
 }
 
-const _PrivilegeKind_name = "PrivilegeKind_nullPrivilegeKind_InsertPrivilegeKind_UpdatePrivilegeKind_SelectPrivilegeKind_ExecutePrivilegeKind_InheritsPrivilegeKind_Count"
+const _PrivilegeKind_name = "PrivilegeKind_nullPrivilegeKind_InsertPrivilegeKind_UpdatePrivilegeKind_SelectPrivilegeKind_ExecutePrivilegeKind_InheritsPrivilegeKind_count"
 
 var _PrivilegeKind_index = [...]uint8{0, 18, 38, 58, 78, 99, 121, 140}
 
 func (i PrivilegeKind) String() string {
-	if i < 0 || i >= PrivilegeKind(len(_PrivilegeKind_index)-1) {
+	if i >= PrivilegeKind(len(_PrivilegeKind_index)-1) {
 		return "PrivilegeKind(" + strconv.FormatInt(int64(i), 10) + ")"
 	}
 	return _PrivilegeKind_name[_PrivilegeKind_index[i]:_PrivilegeKind_index[i+1]]
