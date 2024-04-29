@@ -359,6 +359,9 @@ func Test_AppDef_AddProjector(t *testing.T) {
 			_ = adb.AddCRecord(recName)
 			_ = adb.AddObject(objName)
 			_ = adb.AddCommand(cmdName).SetParam(objName)
+
+			require.Panics(func() { prj.Events().Add(prjName, ProjectorEventKind_Execute) })
+
 			require.Panics(func() { prj.Events().Add(recName, ProjectorEventKind_Execute) })
 			require.Panics(func() { prj.Events().Add(objName, ProjectorEventKind_Update) })
 			require.Panics(func() { prj.Events().Add(cmdName, ProjectorEventKind_ExecuteWithParam) })

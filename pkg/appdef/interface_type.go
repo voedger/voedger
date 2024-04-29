@@ -88,15 +88,6 @@ const (
 	TypeKind_count
 )
 
-// Set of TypeKind
-//
-// Is not concurrent safe.
-//
-// Does not perform bounds check with TypeKind_count, all 64 bits are used
-type TypeKinds struct {
-	uint64 // bit set flag
-}
-
 // # Type
 //
 // Type describes the entity, such as document, record or view.

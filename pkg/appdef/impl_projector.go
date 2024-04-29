@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/robfig/cron/v3"
+	"github.com/voedger/voedger/pkg/goutils/set"
 )
 
 // # Implements:
@@ -141,7 +142,7 @@ func (ee events) Map() map[QName][]ProjectorEventKind {
 
 func (ee *events) add(on QName, event ...ProjectorEventKind) {
 	var (
-		validTypes = TypeKindsFrom(
+		validTypes = set.From(
 			TypeKind_Any,
 			TypeKind_GDoc, TypeKind_GRecord, TypeKind_CDoc, TypeKind_CRecord, TypeKind_WDoc, TypeKind_WRecord, // CUD
 			TypeKind_Command,               // Execute
