@@ -19,7 +19,7 @@ type Set[V ~int8 | ~uint8] struct {
 }
 
 // Makes new Set from specified values.
-func SetFrom[V ~int8 | ~uint8](values ...V) Set[V] {
+func From[V ~int8 | ~uint8](values ...V) Set[V] {
 	var s Set[V]
 	s.Set(values...)
 	return s

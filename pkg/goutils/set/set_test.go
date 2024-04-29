@@ -65,12 +65,12 @@ func TestSetFrom(t *testing.T) {
 		set  Set[Month]
 		want string
 	}{
-		{"empty", SetFrom[Month](), "[]"},
-		{"one", SetFrom(Month_feb), "[feb]"},
-		{"two", SetFrom(Month_feb, Month_mar), "[feb mar]"},
-		{"three", SetFrom(Month_feb, Month_mar, Month_oct), "[feb mar oct]"},
-		{"should shrink duplicates", SetFrom(Month_aug, Month_aug), "[aug]"},
-		{"should accept out of bounds", SetFrom(Month_count + 1), fmt.Sprintf("[%v]", Month_count+1)},
+		{"empty", From[Month](), "[]"},
+		{"one", From(Month_feb), "[feb]"},
+		{"two", From(Month_feb, Month_mar), "[feb mar]"},
+		{"three", From(Month_feb, Month_mar, Month_oct), "[feb mar oct]"},
+		{"should shrink duplicates", From(Month_aug, Month_aug), "[aug]"},
+		{"should accept out of bounds", From(Month_count + 1), fmt.Sprintf("[%v]", Month_count+1)},
 	}
 	require := require.New(t)
 	for _, tt := range tests {
@@ -86,10 +86,10 @@ func TestSet_AsArray(t *testing.T) {
 		set  Set[Month]
 		want []Month
 	}{
-		{"empty", SetFrom[Month](), nil},
-		{"one", SetFrom(Month_may), []Month{Month_may}},
-		{"two", SetFrom(Month_may, Month_jun), []Month{Month_may, Month_jun}},
-		{"out of bounds", SetFrom(Month_may, Month_count+1), []Month{Month_may, Month_count + 1}},
+		{"empty", From[Month](), nil},
+		{"one", From(Month_may), []Month{Month_may}},
+		{"two", From(Month_may, Month_jun), []Month{Month_may, Month_jun}},
+		{"out of bounds", From(Month_may, Month_count+1), []Month{Month_may, Month_count + 1}},
 	}
 	require := require.New(t)
 	for _, tt := range tests {
@@ -106,10 +106,10 @@ func TestSet_AsInt64(t *testing.T) {
 		set  Set[Month]
 		want uint64
 	}{
-		{"empty", SetFrom[Month](), 0},
-		{"one", SetFrom(Month_may), 1 << Month_may},
-		{"two", SetFrom(Month_may, Month_jun), 1<<Month_may | 1<<Month_jun},
-		{"out of bounds", SetFrom(Month_may, Month_count+1), 1<<Month_may | 1<<(Month_count+1)},
+		{"empty", From[Month](), 0},
+		{"one", From(Month_may), 1 << Month_may},
+		{"two", From(Month_may, Month_jun), 1<<Month_may | 1<<Month_jun},
+		{"out of bounds", From(Month_may, Month_count+1), 1<<Month_may | 1<<(Month_count+1)},
 	}
 	require := require.New(t)
 	for _, tt := range tests {
@@ -124,7 +124,7 @@ func TestSet_Clear(t *testing.T) {
 	require := require.New(t)
 
 	t.Run("should be ok to clear one value", func(t *testing.T) {
-		set := SetFrom(Month_may, Month_jun)
+		set := From(Month_may, Month_jun)
 		set.Clear(Month_may)
 		require.Equal("[jun]", set.String())
 		require.Equal(1, set.Len())
@@ -132,7 +132,7 @@ func TestSet_Clear(t *testing.T) {
 	})
 
 	t.Run("should be ok to clear a few values", func(t *testing.T) {
-		set := SetFrom(Month_may, Month_jun, Month_aug)
+		set := From(Month_may, Month_jun, Month_aug)
 		set.Clear(Month_may, Month_jun)
 		require.Equal("[aug]", set.String())
 	})
@@ -145,7 +145,7 @@ func TestSet_Clear(t *testing.T) {
 }
 
 func TestSet_ClearAll(t *testing.T) {
-	set := SetFrom(Month_may, Month_jun)
+	set := From(Month_may, Month_jun)
 	set.ClearAll()
 	require.Equal(t, "[]", set.String())
 	require.Zero(t, set.Len())
@@ -160,10 +160,10 @@ func TestSet_Contains(t *testing.T) {
 		want bool
 	}{
 		{"empty", Set[Month]{}, Month_may, false},
-		{"one", SetFrom(Month_may), Month_may, true},
-		{"two", SetFrom(Month_may, Month_jun), Month_jun, true},
-		{"negative", SetFrom(Month_may, Month_jun), Month_aug, false},
-		{"out of bounds", SetFrom(Month_may, Month_jun, Month_count+1), Month_count + 1, true},
+		{"one", From(Month_may), Month_may, true},
+		{"two", From(Month_may, Month_jun), Month_jun, true},
+		{"negative", From(Month_may, Month_jun), Month_aug, false},
+		{"out of bounds", From(Month_may, Month_jun, Month_count+1), Month_count + 1, true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -184,9 +184,9 @@ func TestSet_ContainsAll(t *testing.T) {
 		{"nil in empty", Set[Month]{}, nil, true},
 		{"empty in empty", Set[Month]{}, []Month{}, true},
 		{"cdoc in empty", Set[Month]{}, []Month{Month_may}, false},
-		{"cdoc in cdoc", SetFrom(Month_may), []Month{Month_may}, true},
-		{"cdoc + odoc in cdoc", SetFrom(Month_may), []Month{Month_may, Month_jun}, false},
-		{"cdoc + odoc in cdoc + odoc", SetFrom(Month_may, Month_jun), []Month{Month_may, Month_jun}, true},
+		{"cdoc in cdoc", From(Month_may), []Month{Month_may}, true},
+		{"cdoc + odoc in cdoc", From(Month_may), []Month{Month_may, Month_jun}, false},
+		{"cdoc + odoc in cdoc + odoc", From(Month_may, Month_jun), []Month{Month_may, Month_jun}, true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -207,9 +207,9 @@ func TestSet_ContainsAny(t *testing.T) {
 		{"nil in []", Set[Month]{}, nil, true},
 		{"[] in []", Set[Month]{}, []Month{}, true},
 		{"may in []", Set[Month]{}, []Month{Month_may}, false},
-		{"may in [may]", SetFrom(Month_may), []Month{Month_may}, true},
-		{"may, jun in [may]", SetFrom(Month_may), []Month{Month_may, Month_jun}, true},
-		{"may, jun in [jul apr]", SetFrom(Month_jul, Month_apr), []Month{Month_may, Month_jun}, false},
+		{"may in [may]", From(Month_may), []Month{Month_may}, true},
+		{"may, jun in [may]", From(Month_may), []Month{Month_may, Month_jun}, true},
+		{"may, jun in [jul apr]", From(Month_jul, Month_apr), []Month{Month_may, Month_jun}, false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -228,9 +228,9 @@ func TestSet_First(t *testing.T) {
 		wantValue Month
 	}{
 		{"empty", Set[Month]{}, false, Month_jan},
-		{"one", SetFrom(Month_sep), true, Month_sep},
-		{"two", SetFrom(Month_sep, Month_apr), true, Month_apr},
-		{"out of bounds", SetFrom(Month_count + 1), true, Month_count + 1},
+		{"one", From(Month_sep), true, Month_sep},
+		{"two", From(Month_sep, Month_apr), true, Month_apr},
+		{"out of bounds", From(Month_count + 1), true, Month_count + 1},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -252,9 +252,9 @@ func TestSet_Len(t *testing.T) {
 		want int
 	}{
 		{"empty", Set[Month]{}, 0},
-		{"one", SetFrom(Month_may), 1},
-		{"two", SetFrom(Month_may, Month_feb), 2},
-		{"two + out of bounds", SetFrom(Month_may, Month_oct, Month_count+1), 3},
+		{"one", From(Month_may), 1},
+		{"two", From(Month_may, Month_feb), 2},
+		{"two + out of bounds", From(Month_may, Month_oct, Month_count+1), 3},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -272,10 +272,10 @@ func TestSet_PutInt64(t *testing.T) {
 		arg  uint64
 		want string
 	}{
-		{"empty", SetFrom(Month_jan), 0, "[]"},
-		{"one", SetFrom(Month_jan), 1 << Month_may, "[may]"},
-		{"two", SetFrom(Month_jan), 1<<Month_may | 1<<Month_jun, "[may jun]"},
-		{"out of bounds", SetFrom(Month_jan), 1<<Month_may | 1<<(Month_count+1), fmt.Sprintf("[may %v]", Month_count+1)},
+		{"empty", From(Month_jan), 0, "[]"},
+		{"one", From(Month_jan), 1 << Month_may, "[may]"},
+		{"two", From(Month_jan), 1<<Month_may | 1<<Month_jun, "[may jun]"},
+		{"out of bounds", From(Month_jan), 1<<Month_may | 1<<(Month_count+1), fmt.Sprintf("[may %v]", Month_count+1)},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -302,7 +302,7 @@ func TestSet_SetRange(t *testing.T) {
 		{"one", Set[Month]{}, args{Month_may, Month_may + 1}, "[may]"},
 		{"two", Set[Month]{}, args{Month_may, Month_may + 2}, "[may jun]"},
 		{"three", Set[Month]{}, args{Month_may, Month_may + 3}, "[may jun jul]"},
-		{"one + range", SetFrom(Month_jan), args{Month_may, Month_may + 3}, "[jan may jun jul]"},
+		{"one + range", From(Month_jan), args{Month_may, Month_may + 3}, "[jan may jun jul]"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -337,8 +337,8 @@ func TestSet_String(t *testing.T) {
 		want string
 	}{
 		{"empty", Set[Month]{}, "[]"},
-		{"one", SetFrom(Month_may), "[may]"},
-		{"two", SetFrom(Month_may, Month_nov), "[may nov]"},
+		{"one", From(Month_may), "[may]"},
+		{"two", From(Month_may, Month_nov), "[may nov]"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -349,7 +349,7 @@ func TestSet_String(t *testing.T) {
 	}
 
 	t.Run("should render WeekDay", func(t *testing.T) {
-		set := SetFrom(WeekDay_mon, WeekDay_fri)
+		set := From(WeekDay_mon, WeekDay_fri)
 		require.Equal(t, "[0 4]", set.String())
 	})
 }
