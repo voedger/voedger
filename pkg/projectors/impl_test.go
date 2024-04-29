@@ -15,7 +15,6 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appparts"
-	"github.com/voedger/voedger/pkg/cluster"
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/in10nmem"
 	"github.com/voedger/voedger/pkg/iratesce"
@@ -252,7 +251,7 @@ func deployTestApp(
 		panic(err)
 	}
 
-	appParts.DeployApp(appName, appDef, appPartsCount, cluster.PoolSize(10, 10, 10))
+	appParts.DeployApp(appName, appDef, appPartsCount, appparts.PoolSize(10, 10, 10))
 	appParts.DeployAppPartitions(appName, partID)
 
 	cleanup = func() {

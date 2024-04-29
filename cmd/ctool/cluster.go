@@ -39,6 +39,7 @@ func newCluster() *clusterType {
 		ReplacedAddresses:     make([]string, 0),
 		Cron:                  &cronType{},
 		Acme:                  &acmeType{Domains: make([]string, 0)},
+		Alert:                 &alertType{DiscordWebhook: emptyDiscordWebhookUrl},
 	}
 
 	sshKey, exists := os.LookupEnv(envVoedgerSshKey)
@@ -547,6 +548,10 @@ func (a *acmeType) removeDomains(domainsStr string) {
 	}
 }
 
+type alertType struct {
+	DiscordWebhook string `json:"DiscordWebhook,omitempty"`
+}
+
 type clusterType struct {
 	configFileName        string
 	sshKey                string
@@ -554,16 +559,52 @@ type clusterType struct {
 	dryRun                bool
 	Edition               string
 	ActualClusterVersion  string
-	DesiredClusterVersion string    `json:"DesiredClusterVersion,omitempty"`
-	SshPort               string    `json:"SSHPort,omitempty"`
-	Acme                  *acmeType `json:"Acme,omitempty"`
-	Cmd                   *cmdType  `json:"Cmd,omitempty"`
-	LastAttemptError      string    `json:"LastAttemptError,omitempty"`
-	SkipStacks            []string  `json:"SkipStacks,omitempty"`
-	Cron                  *cronType `json:"Cron,omitempty"`
+	DesiredClusterVersion string     `json:"DesiredClusterVersion,omitempty"`
+	SshPort               string     `json:"SSHPort,omitempty"`
+	Acme                  *acmeType  `json:"Acme,omitempty"`
+	Cmd                   *cmdType   `json:"Cmd,omitempty"`
+	LastAttemptError      string     `json:"LastAttemptError,omitempty"`
+	SkipStacks            []string   `json:"SkipStacks,omitempty"`
+	Cron                  *cronType  `json:"Cron,omitempty"`
+	Alert                 *alertType `json:"Alert,omitempty"`
 	Nodes                 []nodeType
 	ReplacedAddresses     []string `json:"ReplacedAddresses,omitempty"`
 	Draft                 bool     `json:"Draft,omitempty"`
+}
+
+// apply the cluster data to the template file
+func (c *clusterType) updateTemplateFile(filename string) error {
+	return prepareScriptFromTemplate(filename, c)
+	/*
+	   	content, err := os.ReadFile(filename)
+
+	   	if err != nil {
+	   		return err
+	   	}
+
+	   tmpl, err := template.New("clusterTemplate").Delims("[[", "]]").Parse(string(content))
+
+	   	if err != nil {
+	   		return err
+	   	}
+
+	   var processedTemplate bytes.Buffer
+
+	   	if err := tmpl.Execute(&processedTemplate, c); err != nil {
+	   		return err
+	   	}
+
+	   	if err = os.Chmod(filename, coreutils.FileMode_rw_rw_rw_); err != nil {
+	   		return err
+	   	}
+
+	   	if err := os.WriteFile(filename, processedTemplate.Bytes(), coreutils.FileMode_rw_rw_rw_); err != nil {
+	   		fmt.Println("Error writing to file:", err)
+	   		return err
+	   	}
+
+	   return nil
+	*/
 }
 
 func (c *clusterType) clusterControllerFunction() error {
@@ -637,6 +678,7 @@ func (c *clusterType) applyCmd(cmd *cmdType) error {
 	case ckReplace:
 		oldAddr := cmd.Args[0]
 		newAddr := cmd.Args[1]
+		cmd.SkipStacks = c.SkipStacks
 
 		if c.addressInReplacedList(newAddr) {
 			return fmt.Errorf(errAddressInReplacedList, newAddr, ErrAddressCannotBeUsed)
@@ -675,6 +717,7 @@ func (c *clusterType) applyCmd(cmd *cmdType) error {
 		}
 	case ckUpgrade:
 		c.DesiredClusterVersion = version
+		cmd.SkipStacks = c.SkipStacks
 		for i := range c.Nodes {
 			c.Nodes[i].DesiredNodeState.NodeVersion = version
 			c.Nodes[i].DesiredNodeState.Address = c.Nodes[i].ActualNodeState.Address

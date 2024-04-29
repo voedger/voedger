@@ -30,7 +30,7 @@ const (
 	TestServicePort = 10000
 
 	app1PkgName = "app1pkg"
-	app1PkgPath = "github.com/voedger/voedger/pkg/vit/app1pkg"
+	App1PkgPath = "github.com/voedger/voedger/pkg/vit/app1pkg"
 
 	app2PkgName = "app2pkg"
 	app2PkgPath = "github.com/voedger/voedger/pkg/vit/app2pkg"
@@ -204,7 +204,7 @@ func ProvideApp1(apis apps.APIs, cfg *istructsmem.AppConfigType, ep extensionpoi
 	cfg.Resources.Add(istructsmem.NewCommandFunction(appdef.NewQName(app1PkgName, "TestCmdRawArg"), istructsmem.NullCommandExec))
 
 	app1PackageFS := parser.PackageFS{
-		Path: app1PkgPath,
+		Path: App1PkgPath,
 		FS:   SchemaTestApp1FS,
 	}
 	return apps.BuiltInAppDef{

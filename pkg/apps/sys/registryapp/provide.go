@@ -5,8 +5,8 @@
 package registryapp
 
 import (
+	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/apps"
-	"github.com/voedger/voedger/pkg/cluster"
 	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
@@ -35,9 +35,9 @@ func Provide(smtpCfg smtp.Cfg, numCP istructs.NumCommandProcessors) apps.AppBuil
 		return apps.BuiltInAppDef{
 			AppQName: istructs.AppQName_sys_registry,
 			Packages: []parser.PackageFS{sysPackageFS, registryPackageFS, registryAppPackageFS},
-			AppDeploymentDescriptor: cluster.AppDeploymentDescriptor{
+			AppDeploymentDescriptor: appparts.AppDeploymentDescriptor{
 				NumParts:         istructs.NumAppPartitions(numCP),
-				EnginePoolSize:   cluster.PoolSize(int(numCP), DefDeploymentQPCount, int(numCP)),
+				EnginePoolSize:   appparts.PoolSize(int(numCP), DefDeploymentQPCount, int(numCP)),
 				NumAppWorkspaces: istructs.DefaultNumAppWorkspaces,
 			},
 		}

@@ -30,7 +30,7 @@ func (r role) Privileges(cb func(IPrivilege)) {
 func (r role) PrivilegesOn(on []QName, kind ...PrivilegeKind) []IPrivilege {
 	pp := make([]IPrivilege, 0)
 	for _, p := range r.privileges {
-		if p.On().ContainsAny(on...) && p.Kinds().ContainsAny(kind...) {
+		if p.On().ContainsAny(on...) && p.kinds.ContainsAny(kind...) {
 			pp = append(pp, p)
 		}
 	}

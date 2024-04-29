@@ -6,7 +6,7 @@
 package apps
 
 import (
-	"github.com/voedger/voedger/pkg/cluster"
+	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -34,7 +34,7 @@ type CLIParams struct {
 	Storage string
 }
 type BuiltInAppDef struct {
-	cluster.AppDeploymentDescriptor
+	appparts.AppDeploymentDescriptor
 	AppQName istructs.AppQName
 	Packages []parser.PackageFS
 }
