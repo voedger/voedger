@@ -592,7 +592,7 @@ func (app *appDef) build() (err error) {
 	return err
 }
 
-func (app *appDef) grant(kinds PrivilegeKinds, on []QName, fields []FieldName, toRole QName, comment ...string) {
+func (app *appDef) grant(kinds []PrivilegeKind, on []QName, fields []FieldName, toRole QName, comment ...string) {
 	r := app.Role(toRole)
 	if r == nil {
 		panic(ErrRoleNotFound(toRole))
@@ -623,7 +623,7 @@ func (app *appDef) makeSysDataTypes() {
 	}
 }
 
-func (app *appDef) revoke(kinds PrivilegeKinds, on []QName, fromRole QName, comment ...string) {
+func (app *appDef) revoke(kinds []PrivilegeKind, on []QName, fromRole QName, comment ...string) {
 	r := app.Role(fromRole)
 	if r == nil {
 		panic(ErrRoleNotFound(fromRole))

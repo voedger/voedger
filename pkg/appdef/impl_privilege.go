@@ -7,6 +7,8 @@ package appdef
 
 import (
 	"fmt"
+
+	"github.com/voedger/voedger/pkg/goutils/set"
 )
 
 // # Implements:
@@ -21,8 +23,8 @@ type privilege struct {
 }
 
 func newPrivilege(kind []PrivilegeKind, granted bool, on []QName, fields []FieldName, role *role, comment ...string) *privilege {
-	pk := PrivilegeKindsFrom(kind...)
-	if len(pk) == 0 {
+	pk := set.From(kind...)
+	if pk.Len() == 0 {
 		panic(ErrMissed("privilege kinds"))
 	}
 
@@ -33,10 +35,8 @@ func newPrivilege(kind []PrivilegeKind, granted bool, on []QName, fields []Field
 
 	o := role.app.Type(names[0])
 	allPk := AllPrivilegesOnType(o)
-	for _, k := range pk {
-		if !allPk.Contains(k) {
-			panic(ErrIncompatible("privilege «%s» with %v", k, o))
-		}
+	if !allPk.ContainsAll(pk.AsArray()...) {
+		panic(ErrIncompatible("privilege «%s» with %v", pk, o))
 	}
 
 	g := &privilege{
@@ -66,7 +66,7 @@ func newPrivilegeAll(granted bool, on []QName, role *role, comment ...string) *p
 
 	pk := AllPrivilegesOnType(role.app.Type(names[0]))
 
-	return newPrivilege(pk, granted, names, nil, role, comment...)
+	return newPrivilege(pk.AsArray(), granted, names, nil, role, comment...)
 }
 
 func newGrantAll(on []QName, role *role, comment ...string) *privilege {

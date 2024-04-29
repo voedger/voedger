@@ -6,9 +6,9 @@
 package appdef
 
 import (
-	"fmt"
-	"slices"
 	"strings"
+
+	"github.com/voedger/voedger/pkg/goutils/set"
 )
 
 // Returns "grant" if grant is true, otherwise "revoke".
@@ -20,21 +20,6 @@ func PrivilegeAccessControlString(grant bool) string {
 	return result[1]
 }
 
-// Makes PrivilegeKinds from specified kinds.
-func PrivilegeKindsFrom(kinds ...PrivilegeKind) PrivilegeKinds {
-	pk := make(PrivilegeKinds, 0, len(kinds))
-	for _, k := range kinds {
-		if (k > PrivilegeKind_null) && (k < PrivilegeKind_count) {
-			if !slices.Contains(pk, k) {
-				pk = append(pk, k)
-			}
-		} else {
-			panic(ErrOutOfBounds("privilege kind «%v»", k))
-		}
-	}
-	return pk
-}
-
 // Returns all available privileges on specified type.
 //
 // If type can not to be privileged then returns empty slice.
@@ -43,14 +28,14 @@ func AllPrivilegesOnType(t IType) (pk PrivilegeKinds) {
 	case TypeKind_Any:
 		switch t.QName() {
 		case QNameANY:
-			pk = append(pk, PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select, PrivilegeKind_Execute, PrivilegeKind_Inherits)
+			pk = set.From(PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select, PrivilegeKind_Execute, PrivilegeKind_Inherits)
 		case QNameAnyStructure, QNameAnyRecord,
 			QNameAnyGDoc, QNameAnyCDoc, QNameAnyWDoc,
 			QNameAnySingleton,
 			QNameAnyView:
-			pk = append(pk, PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select)
+			pk = set.From(PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select)
 		case QNameAnyFunction, QNameAnyCommand, QNameAnyQuery:
-			pk = append(pk, PrivilegeKind_Execute)
+			pk = set.From(PrivilegeKind_Execute)
 		}
 	case TypeKind_GRecord, TypeKind_GDoc,
 		TypeKind_CRecord, TypeKind_CDoc,
@@ -58,54 +43,15 @@ func AllPrivilegesOnType(t IType) (pk PrivilegeKinds) {
 		TypeKind_ORecord, TypeKind_ODoc,
 		TypeKind_Object,
 		TypeKind_ViewRecord:
-		pk = append(pk, PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select)
+		pk = set.From(PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select)
 	case TypeKind_Command, TypeKind_Query:
-		pk = append(pk, PrivilegeKind_Execute)
+		pk = set.From(PrivilegeKind_Execute)
 	case TypeKind_Workspace:
-		pk = append(pk, PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select, PrivilegeKind_Execute)
+		pk = set.From(PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select, PrivilegeKind_Execute)
 	case TypeKind_Role:
-		pk = append(pk, PrivilegeKind_Inherits)
+		pk = set.From(PrivilegeKind_Inherits)
 	}
 	return pk
-}
-
-// Returns is kinds contains the specified kind.
-func (pk PrivilegeKinds) Contains(k PrivilegeKind) bool { return slices.Contains(pk, k) }
-
-// Returns is kinds contains all specified kind.
-func (pk PrivilegeKinds) ContainsAll(kk ...PrivilegeKind) bool {
-	for _, k := range kk {
-		if !pk.Contains(k) {
-			return false
-		}
-	}
-	return true
-}
-
-// Returns is kinds contains any from specified kind.
-//
-// If no kind specified then returns true.
-func (pk PrivilegeKinds) ContainsAny(kk ...PrivilegeKind) bool {
-	for _, k := range kk {
-		if pk.Contains(k) {
-			return true
-		}
-	}
-	return len(kk) == 0
-}
-
-// Renders an PrivilegeKinds in human-readable form, without "PrivilegeKind_" prefix,
-// suitable for debugging or error messages
-func (pk PrivilegeKinds) String() string {
-	var s string
-	for i, k := range pk {
-		if i > 0 {
-			s = strings.Join([]string{s, k.TrimString()}, " ")
-		} else {
-			s = k.TrimString()
-		}
-	}
-	return fmt.Sprintf("[%s]", s)
 }
 
 // Renders an PrivilegeKind in human-readable form, without "PrivilegeKind_" prefix,

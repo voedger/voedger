@@ -10,103 +10,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/voedger/voedger/pkg/goutils/set"
 )
-
-func TestPrivilegeKindsFrom(t *testing.T) {
-	tests := []struct {
-		name string
-		kk   []PrivilegeKind
-		want PrivilegeKinds
-	}{
-		{"empty", []PrivilegeKind{}, PrivilegeKinds{}},
-		{"basic", []PrivilegeKind{PrivilegeKind_Insert, PrivilegeKind_Update}, PrivilegeKinds{PrivilegeKind_Insert, PrivilegeKind_Update}},
-		{"remove dupes", []PrivilegeKind{PrivilegeKind_Insert, PrivilegeKind_Insert}, PrivilegeKinds{PrivilegeKind_Insert}},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := PrivilegeKindsFrom(tt.kk...); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("PrivilegeKindsFrom() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-
-	t.Run("test panics", func(t *testing.T) {
-		tests := []struct {
-			name string
-			kk   []PrivilegeKind
-			want error
-		}{
-			{"null", []PrivilegeKind{PrivilegeKind_null}, ErrOutOfBoundsError},
-			{"out of bounds", []PrivilegeKind{PrivilegeKind_count}, ErrOutOfBoundsError},
-		}
-		require := require.New(t)
-		for _, tt := range tests {
-			require.Panics(func() { _ = PrivilegeKindsFrom(tt.kk...) }, tt.name)
-		}
-	})
-}
-
-func TestPrivilegeKinds_Contains(t *testing.T) {
-	tests := []struct {
-		name string
-		pk   PrivilegeKinds
-		k    PrivilegeKind
-		want bool
-	}{
-		{"empty kinds", PrivilegeKinds{}, PrivilegeKind_Insert, false},
-		{"basic contains", PrivilegeKinds{PrivilegeKind_Insert, PrivilegeKind_Update}, PrivilegeKind_Insert, true},
-		{"basic not contains", PrivilegeKinds{PrivilegeKind_Insert, PrivilegeKind_Update}, PrivilegeKind_Select, false},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := tt.pk.Contains(tt.k); got != tt.want {
-				t.Errorf("PrivilegeKinds(%v).Contains(%v) = %v, want %v", tt.pk, tt.k, got, tt.want)
-			}
-		})
-	}
-}
-
-func TestPrivilegeKinds_ContainsAll(t *testing.T) {
-	tests := []struct {
-		name string
-		pk   PrivilegeKinds
-		kk   []PrivilegeKind
-		want bool
-	}{
-		{"empty kinds", PrivilegeKinds{}, []PrivilegeKind{PrivilegeKind_Insert}, false},
-		{"empty args", PrivilegeKinds{}, []PrivilegeKind{}, true},
-		{"basic contains", PrivilegeKinds{PrivilegeKind_Insert, PrivilegeKind_Update}, []PrivilegeKind{PrivilegeKind_Insert, PrivilegeKind_Update}, true},
-		{"basic not contains", PrivilegeKinds{PrivilegeKind_Insert, PrivilegeKind_Select}, []PrivilegeKind{PrivilegeKind_Insert, PrivilegeKind_Update}, false},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := tt.pk.ContainsAll(tt.kk...); got != tt.want {
-				t.Errorf("PrivilegeKinds(%v).ContainsAll(%v) = %v, want %v", tt.pk, tt.kk, got, tt.want)
-			}
-		})
-	}
-}
-
-func TestPrivilegeKinds_ContainsAny(t *testing.T) {
-	tests := []struct {
-		name string
-		pk   PrivilegeKinds
-		kk   []PrivilegeKind
-		want bool
-	}{
-		{"empty kinds", PrivilegeKinds{}, []PrivilegeKind{PrivilegeKind_Insert}, false},
-		{"empty args", PrivilegeKinds{}, []PrivilegeKind{}, true},
-		{"basic contains", PrivilegeKinds{PrivilegeKind_Insert}, []PrivilegeKind{PrivilegeKind_Insert, PrivilegeKind_Update}, true},
-		{"basic not contains", PrivilegeKinds{PrivilegeKind_Insert, PrivilegeKind_Select}, []PrivilegeKind{PrivilegeKind_Update}, false},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := tt.pk.ContainsAny(tt.kk...); got != tt.want {
-				t.Errorf("PrivilegeKinds(%v).ContainsAny(%v) = %v, want %v", tt.pk, tt.kk, got, tt.want)
-			}
-		})
-	}
-}
 
 type mockType struct {
 	IType
@@ -130,28 +35,27 @@ func TestAllPrivilegesOnType(t *testing.T) {
 		typ    args
 		wantPk PrivilegeKinds
 	}{
-		{"null", args{TypeKind_null, NullQName},
-			nil},
+		{"null", args{TypeKind_null, NullQName}, PrivilegeKinds{}},
 		{"Any", args{TypeKind_Any, QNameANY},
-			PrivilegeKinds{PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select, PrivilegeKind_Execute, PrivilegeKind_Inherits}},
+			set.From(PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select, PrivilegeKind_Execute, PrivilegeKind_Inherits)},
 		{"Any record", args{TypeKind_Any, QNameAnyRecord},
-			PrivilegeKinds{PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select}},
+			set.From(PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select)},
 		{"Any command", args{TypeKind_Any, QNameAnyCommand},
-			PrivilegeKinds{PrivilegeKind_Execute}},
+			set.From(PrivilegeKind_Execute)},
 		{"GRecord", args{TypeKind_GRecord, testName},
-			PrivilegeKinds{PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select}},
+			set.From(PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select)},
 		{"CDoc", args{TypeKind_CDoc, testName},
-			PrivilegeKinds{PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select}},
+			set.From(PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select)},
 		{"View", args{TypeKind_ViewRecord, testName},
-			PrivilegeKinds{PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select}},
+			set.From(PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select)},
 		{"Command", args{TypeKind_Command, testName},
-			PrivilegeKinds{PrivilegeKind_Execute}},
+			set.From(PrivilegeKind_Execute)},
 		{"Workspace", args{TypeKind_Workspace, testName},
-			PrivilegeKinds{PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select, PrivilegeKind_Execute}},
+			set.From(PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select, PrivilegeKind_Execute)},
 		{"Role", args{TypeKind_Role, testName},
-			PrivilegeKinds{PrivilegeKind_Inherits}},
+			set.From(PrivilegeKind_Inherits)},
 		{"Projector", args{TypeKind_Projector, testName},
-			nil},
+			PrivilegeKinds{}},
 	}
 	for i := range tests {
 		tt := tests[i]

@@ -5,6 +5,8 @@
 
 package appdef
 
+import "github.com/voedger/voedger/pkg/goutils/set"
+
 // Enumeration of privileges.
 type PrivilegeKind uint8
 
@@ -46,7 +48,7 @@ const (
 )
 
 // Set of PrivilegeKind
-type PrivilegeKinds []PrivilegeKind
+type PrivilegeKinds = set.Set[PrivilegeKind]
 
 // Represents a privilege (specific rights or permissions) to be granted to role or revoked from.
 type IPrivilege interface {

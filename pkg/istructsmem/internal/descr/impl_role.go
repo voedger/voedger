@@ -29,7 +29,7 @@ func newPrivilege() *Privilege {
 func (p *Privilege) read(priv appdef.IPrivilege) {
 	p.Comment = readComment(priv)
 	p.Access = appdef.PrivilegeAccessControlString(priv.IsGranted())
-	for _, k := range priv.Kinds() {
+	for _, k := range priv.Kinds().AsArray() {
 		p.Kinds = append(p.Kinds, k.TrimString())
 	}
 	p.On = priv.On()
