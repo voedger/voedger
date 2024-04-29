@@ -3,7 +3,7 @@
  * @author: Nikolay Nikitin
  */
 
-package appdef
+package set
 
 import (
 	"fmt"
