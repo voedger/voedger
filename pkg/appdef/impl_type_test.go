@@ -113,3 +113,12 @@ func TestTypeKindTrimString(t *testing.T) {
 		})
 	}
 }
+
+type mockType struct {
+	IType
+	kind TypeKind
+	name QName
+}
+
+func (m mockType) Kind() TypeKind { return m.kind }
+func (m mockType) QName() QName   { return m.name }

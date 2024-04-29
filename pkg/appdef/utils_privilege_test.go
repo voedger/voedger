@@ -13,48 +13,39 @@ import (
 	"github.com/voedger/voedger/pkg/goutils/set"
 )
 
-type mockType struct {
-	IType
-	kind TypeKind
-	name QName
-}
-
-func (m mockType) Kind() TypeKind { return m.kind }
-func (m mockType) QName() QName   { return m.name }
-
 func TestAllPrivilegesOnType(t *testing.T) {
 
 	testName := NewQName("test", "test")
 
-	type args struct {
+	type typ struct {
 		kind TypeKind
 		name QName
 	}
 	tests := []struct {
 		name   string
-		typ    args
+		typ    typ
 		wantPk PrivilegeKinds
 	}{
-		{"null", args{TypeKind_null, NullQName}, PrivilegeKinds{}},
-		{"Any", args{TypeKind_Any, QNameANY},
+		{"null", typ{TypeKind_null, NullQName}, PrivilegeKinds{}},
+		{"Any", typ{TypeKind_Any, QNameANY},
 			set.From(PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select, PrivilegeKind_Execute, PrivilegeKind_Inherits)},
-		{"Any record", args{TypeKind_Any, QNameAnyRecord},
+		{"Any record", typ{TypeKind_Any, QNameAnyRecord},
 			set.From(PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select)},
-		{"Any command", args{TypeKind_Any, QNameAnyCommand},
+		{"Any command", typ{TypeKind_Any, QNameAnyCommand},
 			set.From(PrivilegeKind_Execute)},
-		{"GRecord", args{TypeKind_GRecord, testName},
+		{"GRecord", typ{TypeKind_GRecord, testName},
 			set.From(PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select)},
-		{"CDoc", args{TypeKind_CDoc, testName},
+		{"CDoc", typ{TypeKind_CDoc, testName},
 			set.From(PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select)},
-		{"View", args{TypeKind_ViewRecord, testName},
+		{"View", typ{TypeKind_ViewRecord, testName},
 			set.From(PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select)},
-		{"Command", args{TypeKind_Command, testName},
+		{"Command", typ{TypeKind_Command, testName},
 			set.From(PrivilegeKind_Execute)},
-		{"Workspace", args{TypeKind_Workspace, testName},
+		{"Workspace", typ{TypeKind_Workspace, testName},
 			set.From(PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select, PrivilegeKind_Execute)},
-		{"Role", args{TypeKind_Role, testName},
+		{"Role", typ{TypeKind_Role, testName},
 			set.From(PrivilegeKind_Inherits)},
-		{"Projector", args{TypeKind_Projector, testName},
+		{"Projector", typ{TypeKind_Projector, testName},
 			PrivilegeKinds{}},
 	}
 	for i := range tests {

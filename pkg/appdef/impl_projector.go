@@ -141,21 +141,6 @@ func (ee events) Map() map[QName][]ProjectorEventKind {
 }
 
 func (ee *events) add(on QName, event ...ProjectorEventKind) {
-	var (
-		validTypes = set.From(
-			TypeKind_Any,
-			TypeKind_GDoc, TypeKind_GRecord, TypeKind_CDoc, TypeKind_CRecord, TypeKind_WDoc, TypeKind_WRecord, // CUD
-			TypeKind_Command,               // Execute
-			TypeKind_ODoc, TypeKind_Object, // Execute with
-		)
-		validAny = QNamesFrom(
-			QNameAnyStructure, QNameAnyRecord, // CUD or ExecuteWith
-			QNameAnyGDoc, QNameAnyCDoc, QNameAnyWDoc, QNameAnySingleton, // CUD
-			QNameAnyODoc, QNameAnyObject, // Execute with
-			QNameAnyCommand, // Execute
-		)
-	)
-
 	if on == NullQName {
 		panic(ErrMissed("event name"))
 	}
@@ -163,17 +148,6 @@ func (ee *events) add(on QName, event ...ProjectorEventKind) {
 	t := ee.app.TypeByName(on)
 	if t == nil {
 		panic(ErrTypeNotFound(on))
-	}
-
-	if !validTypes.Contains(t.Kind()) {
-		panic(ErrIncompatible("%v is not applicable for projector event", t))
-	}
-
-	switch t.Kind() {
-	case TypeKind_Any:
-		if !validAny.Contains(on) {
-			panic(ErrIncompatible("substitution %v is not applicable for projector event", on))
-		}
 	}
 
 	e, ok := ee.events[on]
@@ -221,7 +195,7 @@ func (eb *eventsBuilder) SetComment(record QName, comment ...string) IProjectorE
 type event struct {
 	comment
 	on    IType
-	kinds uint64 // bitmap[ProjectorEventKind]
+	kinds set.Set[ProjectorEventKind]
 }
 
 func newEvent(on IType, kind ...ProjectorEventKind) *event {
@@ -230,27 +204,18 @@ func newEvent(on IType, kind ...ProjectorEventKind) *event {
 	if len(kind) > 0 {
 		p.addKind(kind...)
 	} else {
-		// missed kind, make defaults
-		switch on.Kind() {
-		case TypeKind_GDoc, TypeKind_GRecord, TypeKind_CDoc, TypeKind_CRecord, TypeKind_WDoc, TypeKind_WRecord:
-			p.addKind(ProjectorEventKind_AnyChanges...)
-		case TypeKind_Command:
-			p.addKind(ProjectorEventKind_Execute)
-		case TypeKind_Object, TypeKind_ODoc:
-			p.addKind(ProjectorEventKind_ExecuteWithParam)
+		kinds := allProjectorEventsForType(on)
+		if kinds.Len() == 0 {
+			panic(ErrUnsupported("type %v can't be projector trigger", on))
 		}
+		p.addKind(kinds.AsArray()...)
 	}
 
 	return p
 }
 
 func (e *event) Kind() (kinds []ProjectorEventKind) {
-	for k := ProjectorEventKind(1); k < ProjectorEventKind_Count; k++ {
-		if e.kinds&(1<<k) != 0 {
-			kinds = append(kinds, k)
-		}
-	}
-	return kinds
+	return e.kinds.AsArray()
 }
 
 func (e *event) On() IType {
@@ -271,10 +236,10 @@ func (e event) String() string {
 //   - if event kind is not compatible with type.
 func (e *event) addKind(kind ...ProjectorEventKind) {
 	for _, k := range kind {
-		if !k.typeCompatible(e.on.Kind()) {
-			panic(ErrIncompatible("event kind «%s» is not compatible with %v", k.TrimString(), e.on))
+		if ok, err := projectorEventCompatableWith(k, e.on); !ok {
+			panic(err)
 		}
-		e.kinds |= 1 << k
+		e.kinds.Set(k)
 	}
 }
 
@@ -287,33 +252,4 @@ func (i ProjectorEventKind) MarshalText() ([]byte, error) {
 		s = strconv.FormatUint(uint64(i), base)
 	}
 	return []byte(s), nil
-}
-
-// Renders an ProjectorEventKind in human-readable form, without `ProjectorEventKind_` prefix,
-// suitable for debugging or error messages
-func (i ProjectorEventKind) TrimString() string {
-	const pref = "ProjectorEventKind_"
-	return strings.TrimPrefix(i.String(), pref)
-}
-
-// Returns is event kind compatible with type kind.
-//
-// # Compatibles:
-//
-//   - Any document or record can be inserted.
-//   - Any document or record, except ODoc and ORecord, can be updated, activated or deactivated.
-//   - Only command can be executed.
-//   - Only object or ODoc can be parameter for command execute with.
-func (i ProjectorEventKind) typeCompatible(kind TypeKind) bool {
-	switch i {
-	case ProjectorEventKind_Insert, ProjectorEventKind_Update, ProjectorEventKind_Activate, ProjectorEventKind_Deactivate:
-		return kind == TypeKind_GDoc || kind == TypeKind_GRecord ||
-			kind == TypeKind_CDoc || kind == TypeKind_CRecord ||
-			kind == TypeKind_WDoc || kind == TypeKind_WRecord
-	case ProjectorEventKind_Execute:
-		return kind == TypeKind_Command
-	case ProjectorEventKind_ExecuteWithParam:
-		return kind == TypeKind_Object || kind == TypeKind_ODoc
-	}
-	return false
 }
