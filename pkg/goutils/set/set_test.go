@@ -152,6 +152,32 @@ func TestSet_ClearAll(t *testing.T) {
 	require.Empty(t, set.AsArray())
 }
 
+func TestSet_Clone(t *testing.T) {
+	tests := []struct {
+		name string
+		set  Set[Month]
+	}{
+		{"empty", Set[Month]{}},
+		{"one", From(Month_may)},
+		{"two", From(Month_may, Month_jun)},
+	}
+	require := require.New(t)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			clone := tt.set.Clone()
+			require.Equal(tt.set.String(), clone.String())
+			require.Equal(tt.set.Len(), clone.Len())
+			require.Equal(tt.set.AsArray(), clone.AsArray())
+
+			clone.Set(Month_dec)
+
+			require.NotEqual(tt.set.String(), clone.String())
+			require.Equal(tt.set.Len()+1, clone.Len())
+			require.NotEqual(tt.set.AsArray(), clone.AsArray())
+		})
+	}
+}
+
 func TestSet_Contains(t *testing.T) {
 	tests := []struct {
 		name string

@@ -58,7 +58,10 @@ func (s *Set[V]) ClearAll() {
 	s.uint64 = 0
 }
 
-// TODO: ClearRange
+// Clone returns a copy of the Set.
+func (s Set[V]) Clone() Set[V] {
+	return s
+}
 
 // Returns is Set contains specified value.
 func (s Set[V]) Contains(v V) bool {
