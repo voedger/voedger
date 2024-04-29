@@ -102,6 +102,11 @@ func (s Set[V]) Len() int {
 	return bits.OnesCount64(s.uint64)
 }
 
+// Puts uint64 value to Set.
+func (s *Set[V]) PutInt64(v uint64) {
+	s.uint64 = v
+}
+
 // Sets specified values to Set.
 func (s *Set[V]) Set(values ...V) {
 	for _, v := range values {

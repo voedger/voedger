@@ -265,6 +265,28 @@ func TestSet_Len(t *testing.T) {
 	}
 }
 
+func TestSet_PutInt64(t *testing.T) {
+	tests := []struct {
+		name string
+		set  Set[Month]
+		arg  uint64
+		want string
+	}{
+		{"empty", SetFrom(Month_jan), 0, "[]"},
+		{"one", SetFrom(Month_jan), 1 << Month_may, "[may]"},
+		{"two", SetFrom(Month_jan), 1<<Month_may | 1<<Month_jun, "[may jun]"},
+		{"out of bounds", SetFrom(Month_jan), 1<<Month_may | 1<<(Month_count+1), fmt.Sprintf("[may %v]", Month_count+1)},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.set.PutInt64(tt.arg)
+			if got := tt.set.String(); got != tt.want {
+				t.Errorf("Set.PutInt64(%v).String() = %v, want %v", tt.arg, got, tt.want)
+			}
+		})
+	}
+}
+
 func TestSet_SetRange(t *testing.T) {
 	type args struct {
 		start Month
