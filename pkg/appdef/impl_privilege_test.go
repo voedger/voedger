@@ -86,7 +86,7 @@ func Test_AppDef_GrantAndRevoke(t *testing.T) {
 			require.Equal(granted, p.IsGranted())
 			require.Equal(!granted, p.IsRevoked())
 			require.Equal(kinds, p.Kinds())
-			require.Equal(on, p.On())
+			require.EqualValues(on, p.On())
 			require.Equal(fields, p.Fields())
 			require.Equal(to, p.To().QName())
 		}
