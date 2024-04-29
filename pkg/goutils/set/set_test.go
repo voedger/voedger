@@ -100,6 +100,26 @@ func TestSet_AsArray(t *testing.T) {
 	}
 }
 
+func TestSet_AsInt64(t *testing.T) {
+	tests := []struct {
+		name string
+		set  Set[Month]
+		want uint64
+	}{
+		{"empty", SetFrom[Month](), 0},
+		{"one", SetFrom(Month_may), 1 << Month_may},
+		{"two", SetFrom(Month_may, Month_jun), 1<<Month_may | 1<<Month_jun},
+		{"out of bounds", SetFrom(Month_may, Month_count+1), 1<<Month_may | 1<<(Month_count+1)},
+	}
+	require := require.New(t)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.set.AsInt64()
+			require.EqualValues(got, tt.want, "SetFrom(%v).AsInt64() = %v, want %v", tt.set, got, tt.want)
+		})
+	}
+}
+
 func TestSet_Clear(t *testing.T) {
 	require := require.New(t)
 

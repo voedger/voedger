@@ -11,6 +11,9 @@ import (
 	"strings"
 )
 
+// Set represents a set of values of type V.
+//
+// V must be int8 or uint8.
 type Set[V ~int8 | ~uint8] struct {
 	uint64 // bit set flag
 }
@@ -36,6 +39,11 @@ func (s Set[V]) AsArray() []V {
 		}
 	}
 	return a
+}
+
+// Returns Set as uint64.
+func (s Set[V]) AsInt64() uint64 {
+	return s.uint64
 }
 
 // Clears specified elements from set.
