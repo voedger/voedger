@@ -102,7 +102,7 @@ func ExampleSet_AsBytes() {
 	fmt.Printf("%b", s.AsBytes())
 
 	// Output:
-	// [0 0 0 0 0 0 0 111]
+	// [0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 111]
 }
 
 func ExampleSet_Clear() {
@@ -202,20 +202,6 @@ func ExampleSet_Len() {
 
 	// Output:
 	// 3
-}
-
-func ExampleSet_PutInt64() {
-	// This example demonstrates how to use Set type.
-
-	// Create new Set from values.
-	s := set.From(Month_jan, Month_feb, Month_mar)
-
-	// Put uint64 bit mask to Set.
-	s.PutInt64(7)
-	fmt.Println(s)
-
-	// Output:
-	// [jan feb mar]
 }
 
 func ExampleSet_SetRange() {

@@ -65,6 +65,8 @@ func TestEmpty(t *testing.T) {
 }
 
 func TestFrom(t *testing.T) {
+	require := require.New(t)
+
 	tests := []struct {
 		name string
 		set  Set[Month]
@@ -77,8 +79,23 @@ func TestFrom(t *testing.T) {
 		{"should shrink duplicates", From(Month_aug, Month_aug), "[aug]"},
 		{"should accept out of bounds", From(Month_count + 1), fmt.Sprintf("[%v]", Month_count+1)},
 	}
-	require := require.New(t)
 	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			require.Equal(tt.want, tt.set.String(), "SetFrom(%v).String() = %v, want %v", tt.set, tt.set.String(), tt.want)
+		})
+	}
+
+	bigTests := []struct {
+		name string
+		set  Set[uint8]
+		want string
+	}{
+		{"empty", From[uint8](), "[]"},
+		{"1 63", From(uint8(1), uint8(63)), "[1 63]"},
+		{"1 63 64 127", From(uint8(1), uint8(63), uint8(64), uint8(127)), "[1 63 64 127]"},
+		{"1 63 64 127 128 255", From(uint8(1), uint8(63), uint8(64), uint8(127), uint8(128), uint8(255)), "[1 63 64 127 128 255]"},
+	}
+	for _, tt := range bigTests {
 		t.Run(tt.name, func(t *testing.T) {
 			require.Equal(tt.want, tt.set.String(), "SetFrom(%v).String() = %v, want %v", tt.set, tt.set.String(), tt.want)
 		})
@@ -86,6 +103,8 @@ func TestFrom(t *testing.T) {
 }
 
 func TestSet_AsArray(t *testing.T) {
+	require := require.New(t)
+
 	tests := []struct {
 		name string
 		set  Set[Month]
@@ -96,31 +115,66 @@ func TestSet_AsArray(t *testing.T) {
 		{"two", From(Month_may, Month_jun), []Month{Month_may, Month_jun}},
 		{"out of bounds", From(Month_may, Month_count+1), []Month{Month_may, Month_count + 1}},
 	}
-	require := require.New(t)
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got := tt.set.AsArray()
-			require.EqualValues(got, tt.want, "SetFrom(%v).AsArray() = %v, want %v", tt.set, got, tt.want)
+			require.EqualValues(tt.want, got, "SetFrom(%v).AsArray() = %v, want %v", tt.set, got, tt.want)
+		})
+	}
+
+	bigTests := []struct {
+		name string
+		set  Set[uint8]
+		want []uint8
+	}{
+		{"empty", Empty[uint8](), nil},
+		{"0 63", From(uint8(0), uint8(63)), []uint8{0, 63}},
+		{"0 63 64 127", From(uint8(0), uint8(63), uint8(64), uint8(127)), []uint8{0, 63, 64, 127}},
+		{"0 63 64 127 128 255", From(uint8(0), uint8(63), uint8(64), uint8(127), uint8(128), uint8(255)), []uint8{0, 63, 64, 127, 128, 255}},
+	}
+	for _, tt := range bigTests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.set.AsArray()
+			require.EqualValues(tt.want, got, "SetFrom(%v).AsArray() = %v, want %v", tt.set, got, tt.want)
 		})
 	}
 }
 
 func TestSet_AsBytes(t *testing.T) {
+	require := require.New(t)
+
 	tests := []struct {
 		name string
 		set  Set[Month]
 		want []byte
 	}{
-		{"empty", From[Month](), []byte{0, 0, 0, 0, 0, 0, 0, 0}},
-		{"one", From(Month_may), []byte{0, 0, 0, 0, 0, 0, 0, 0b00010000}},
-		{"two", From(Month_may, Month_jun), []byte{0, 0, 0, 0, 0, 0, 0, 0b00110000}},
-		{"out of bounds", From(Month_may, Month_count+1), []byte{0, 0, 0, 0, 0, 0, 0b00100000, 0b00010000}},
+		{"empty", From[Month](), []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}},
+		{"one", From(Month_may), []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0b00010000}},
+		{"two", From(Month_may, Month_jun), []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0b00110000}},
+		{"out of bounds", From(Month_may, Month_count+1), []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0b00100000, 0b00010000}},
 	}
-	require := require.New(t)
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got := tt.set.AsBytes()
-			require.EqualValues(got, tt.want, "SetFrom(%v).AsBytes() = %v, want %v", tt.set, got, tt.want)
+			require.EqualValues(tt.want, got, "SetFrom(%v).AsBytes() = %v, want %v", tt.set, got, tt.want)
+		})
+	}
+
+	bigTests := []struct {
+		name string
+		set  Set[uint8]
+		want []byte
+	}{
+		{"empty", Empty[uint8](), []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}},
+		{"0", From[uint8](0), []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}},
+		{"0 1 127 128", From[uint8](0, 1, 127, 128), []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0b00000001, 0b10000000, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0b00000011}},
+		{"0 1 127 128 191 192", From[uint8](0, 1, 127, 128, 191, 192), []byte{0, 0, 0, 0, 0, 0, 0, 0b000000001, 0b10000000, 0, 0, 0, 0, 0, 0, 0b00000001, 0b10000000, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0b00000011}},
+		{"0 1 127 128 191 192 253 254 255", From[uint8](0, 1, 127, 128, 191, 192, 253, 254, 255), []byte{0b11100000, 0, 0, 0, 0, 0, 0, 0b000000001, 0b10000000, 0, 0, 0, 0, 0, 0, 0b00000001, 0b10000000, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0b00000011}},
+	}
+	for _, tt := range bigTests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.set.AsBytes()
+			require.EqualValues(tt.want, got, "SetFrom(%v).AsBytes() = %v, want %v", tt.set, got, tt.want)
 		})
 	}
 }
@@ -128,33 +182,59 @@ func TestSet_AsBytes(t *testing.T) {
 func TestSet_Clear(t *testing.T) {
 	require := require.New(t)
 
-	t.Run("should be ok to clear one value", func(t *testing.T) {
-		set := From(Month_may, Month_jun)
-		set.Clear(Month_may)
-		require.Equal("[jun]", set.String())
-		require.Equal(1, set.Len())
-		require.EqualValues([]Month{Month_jun}, set.AsArray())
+	t.Run("should be safe to clear short values", func(t *testing.T) {
+		t.Run("should be ok to clear one value", func(t *testing.T) {
+			set := From(Month_may, Month_jun)
+			set.Clear(Month_may)
+			require.Equal("[jun]", set.String())
+			require.Equal(1, set.Len())
+			require.EqualValues([]Month{Month_jun}, set.AsArray())
+		})
+
+		t.Run("should be ok to clear a few values", func(t *testing.T) {
+			set := From(Month_may, Month_jun, Month_aug)
+			set.Clear(Month_may, Month_jun)
+			require.Equal("[aug]", set.String())
+		})
+
+		t.Run("should be safe to clear already cleared values", func(t *testing.T) {
+			set := Set[Month]{}
+			set.Clear(Month_may, Month_jun)
+			require.Equal("[]", set.String())
+		})
 	})
 
-	t.Run("should be ok to clear a few values", func(t *testing.T) {
-		set := From(Month_may, Month_jun, Month_aug)
-		set.Clear(Month_may, Month_jun)
-		require.Equal("[aug]", set.String())
-	})
+	t.Run("should be safe to clear big values", func(t *testing.T) {
+		set := From[uint8](0, 1, 2, 3, 126, 127, 128, 129, 253, 254, 255)
 
-	t.Run("should be safe to clear already cleared values", func(t *testing.T) {
-		set := Set[Month]{}
-		set.Clear(Month_may, Month_jun)
+		// clear odd
+		set.Clear(1, 3, 127, 129, 253, 255)
+		require.Equal("[0 2 126 128 254]", set.String())
+
+		// clear even
+		set.Clear(0, 2, 126, 128, 254)
 		require.Equal("[]", set.String())
 	})
 }
 
 func TestSet_ClearAll(t *testing.T) {
-	set := From(Month_may, Month_jun)
-	set.ClearAll()
-	require.Equal(t, "[]", set.String())
-	require.Zero(t, set.Len())
-	require.Empty(t, set.AsArray())
+	require := require.New(t)
+
+	t.Run("should be safe to clear small", func(t *testing.T) {
+		set := From(Month_may, Month_jun)
+		set.ClearAll()
+		require.Equal("[]", set.String())
+		require.Zero(set.Len())
+		require.Empty(set.AsArray())
+	})
+
+	t.Run("should be safe to clear big", func(t *testing.T) {
+		set := From[uint8](0, 1, 2, 3, 63, 64, 65, 66, 67, 126, 127, 128, 129, 191, 192, 193, 252, 253, 254, 255)
+		set.ClearAll()
+		require.Equal("[]", set.String())
+		require.Zero(set.Len())
+		require.Empty(set.AsArray())
+	})
 }
 
 func TestSet_Clone(t *testing.T) {
@@ -291,28 +371,6 @@ func TestSet_Len(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := tt.set.Len(); got != tt.want {
 				t.Errorf("Set(%v).Len() = %v, want %v", tt.set, got, tt.want)
-			}
-		})
-	}
-}
-
-func TestSet_PutInt64(t *testing.T) {
-	tests := []struct {
-		name string
-		set  Set[Month]
-		arg  uint64
-		want string
-	}{
-		{"empty", From(Month_jan), 0, "[]"},
-		{"one", From(Month_jan), 1 << Month_may, "[may]"},
-		{"two", From(Month_jan), 1<<Month_may | 1<<Month_jun, "[may jun]"},
-		{"out of bounds", From(Month_jan), 1<<Month_may | 1<<(Month_count+1), fmt.Sprintf("[may %v]", Month_count+1)},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			tt.set.PutInt64(tt.arg)
-			if got := tt.set.String(); got != tt.want {
-				t.Errorf("Set.PutInt64(%v).String() = %v, want %v", tt.arg, got, tt.want)
 			}
 		})
 	}
