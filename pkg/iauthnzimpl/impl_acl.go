@@ -49,6 +49,8 @@ var defaultACL = ACL{
 				qNameQryModules,
 				// https://dev.untill.com/projects/#!688808
 				qNameQryGetDigitalReceipt,
+				// https://dev.untill.com/projects/#!688808
+				qNameQrySendReceiptByEmail,
 			},
 		},
 		policy: ACPolicy_Allow,
