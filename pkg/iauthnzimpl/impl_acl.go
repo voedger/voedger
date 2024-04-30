@@ -336,6 +336,8 @@ var defaultACL = ACL{
 				qNameCmdRetryTransferUPPayout,
 				// https://dev.untill.com/projects/#!685617
 				qNameQryGetUPLocationRates,
+				// https://dev.untill.com/projects/#!685179
+				qNameQryUpdateShopperStatement,
 			},
 			principalsPattern: [][]iauthnz.Principal{
 				{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleUntillPaymentsReseller}},
