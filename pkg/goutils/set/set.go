@@ -6,6 +6,7 @@
 package set
 
 import (
+	"encoding/binary"
 	"fmt"
 	"math/bits"
 	"strings"
@@ -15,7 +16,7 @@ import (
 //
 // V must be int8 or uint8.
 type Set[V ~int8 | ~uint8] struct {
-	uint64 // bit set flag
+	bitmap uint64 // bit set flag
 }
 
 // Makes new empty Set of specified value type. Same as `Set[V]{}`.
@@ -34,7 +35,7 @@ func From[V ~int8 | ~uint8](values ...V) Set[V] {
 //
 // If Set is empty, returns nil.
 func (s Set[V]) AsArray() []V {
-	if s.uint64 == 0 {
+	if s.bitmap == 0 {
 		return nil
 	}
 	var a []V
@@ -46,21 +47,23 @@ func (s Set[V]) AsArray() []V {
 	return a
 }
 
-// Returns Set as uint64.
-func (s Set[V]) AsInt64() uint64 {
-	return s.uint64
+// Returns Set bitmap as big-endian bytes.
+func (s Set[V]) AsBytes() []byte {
+	b := make([]byte, 8)
+	binary.BigEndian.PutUint64(b, s.bitmap)
+	return b
 }
 
 // Clears specified elements from set.
 func (s *Set[V]) Clear(values ...V) {
 	for _, v := range values {
-		s.uint64 &^= 1 << v
+		s.bitmap &^= 1 << v
 	}
 }
 
 // Clears all elements from Set.
 func (s *Set[V]) ClearAll() {
-	s.uint64 = 0
+	s.bitmap = 0
 }
 
 // Clone returns a copy of the Set.
@@ -70,7 +73,7 @@ func (s Set[V]) Clone() Set[V] {
 
 // Returns is Set contains specified value.
 func (s Set[V]) Contains(v V) bool {
-	return s.uint64&(1<<v) != 0
+	return s.bitmap&(1<<v) != 0
 }
 
 // Returns is Set contains all from specified values.
@@ -107,25 +110,25 @@ func (s Set[V]) First() (bool, V) {
 
 // Returns count of values in Set.
 func (s Set[V]) Len() int {
-	return bits.OnesCount64(s.uint64)
+	return bits.OnesCount64(s.bitmap)
 }
 
 // Puts uint64 value to Set.
 func (s *Set[V]) PutInt64(v uint64) {
-	s.uint64 = v
+	s.bitmap = v
 }
 
 // Sets specified values to Set.
 func (s *Set[V]) Set(values ...V) {
 	for _, v := range values {
-		s.uint64 |= 1 << v
+		s.bitmap |= 1 << v
 	}
 }
 
 // Sets range of value to Set. Inclusive start, exclusive end.
 func (s *Set[V]) SetRange(start, end V) {
 	for k := start; k < end; k++ {
-		s.uint64 |= 1 << k
+		s.bitmap |= 1 << k
 	}
 }
 

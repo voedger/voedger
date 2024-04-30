@@ -92,17 +92,17 @@ func ExampleSet_AsArray() {
 	// [Month_jan Month_feb Month_mar]
 }
 
-func ExampleSet_AsInt64() {
+func ExampleSet_AsBytes() {
 	// This example demonstrates how to use Set type.
 
 	// Create new Set from values.
 	s := set.From(Month_jan, Month_feb, Month_mar)
 
-	// Receive Set as uint64 bit mask.
-	fmt.Println(s.AsInt64())
+	// Receive Set as big-endian bytes.
+	fmt.Printf("%b", s.AsBytes())
 
 	// Output:
-	// 7
+	// [0 0 0 0 0 0 0 111]
 }
 
 func ExampleSet_Clear() {

@@ -105,22 +105,22 @@ func TestSet_AsArray(t *testing.T) {
 	}
 }
 
-func TestSet_AsInt64(t *testing.T) {
+func TestSet_AsBytes(t *testing.T) {
 	tests := []struct {
 		name string
 		set  Set[Month]
-		want uint64
+		want []byte
 	}{
-		{"empty", From[Month](), 0},
-		{"one", From(Month_may), 1 << Month_may},
-		{"two", From(Month_may, Month_jun), 1<<Month_may | 1<<Month_jun},
-		{"out of bounds", From(Month_may, Month_count+1), 1<<Month_may | 1<<(Month_count+1)},
+		{"empty", From[Month](), []byte{0, 0, 0, 0, 0, 0, 0, 0}},
+		{"one", From(Month_may), []byte{0, 0, 0, 0, 0, 0, 0, 0b00010000}},
+		{"two", From(Month_may, Month_jun), []byte{0, 0, 0, 0, 0, 0, 0, 0b00110000}},
+		{"out of bounds", From(Month_may, Month_count+1), []byte{0, 0, 0, 0, 0, 0, 0b00100000, 0b00010000}},
 	}
 	require := require.New(t)
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := tt.set.AsInt64()
-			require.EqualValues(got, tt.want, "SetFrom(%v).AsInt64() = %v, want %v", tt.set, got, tt.want)
+			got := tt.set.AsBytes()
+			require.EqualValues(got, tt.want, "SetFrom(%v).AsBytes() = %v, want %v", tt.set, got, tt.want)
 		})
 	}
 }
