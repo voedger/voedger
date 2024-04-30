@@ -384,3 +384,12 @@ func TestSet_String(t *testing.T) {
 		require.Equal(t, "[0 4]", set.String())
 	})
 }
+
+func TestSetBigEnum(t *testing.T) {
+	require := require.New(t)
+
+	set := Set[uint8]{}
+	set.Set(0, 63, 64, 127, 128, 255)
+
+	require.Equal("[0 63 64 127 128 255]", set.String())
+}
