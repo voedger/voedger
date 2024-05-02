@@ -33,6 +33,8 @@ func (f EqualsFilter) IsMatch(fk FieldsKinds, outputRow IOutputRow) (bool, error
 		return outputRow.Value(f.field).(bool) == f.value.(bool), nil
 	case appdef.DataKind_RecordID:
 		return outputRow.Value(f.field).(istructs.RecordID) == istructs.RecordID(int64(f.value.(float64))), nil
+	case appdef.DataKind_QName:
+		return outputRow.Value(f.field).(string) == f.value.(string), nil
 	case appdef.DataKind_null:
 		return false, nil
 	default:
