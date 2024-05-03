@@ -205,7 +205,7 @@ func (ff *fields) appendField(name FieldName, fld interface{}) {
 			panic(fmt.Errorf("field name «%v» is invalid: %w", name, err))
 		}
 		dk := fld.(IField).DataKind()
-		if (ff.typeKind != TypeKind_null) && !ff.typeKind.DataKindAvailable(dk) {
+		if (ff.typeKind != TypeKind_null) && !ff.typeKind.FieldKindAvailable(dk) {
 			panic(ErrIncompatible("data kind «%s» with fields of «%v»", dk.TrimString(), ff.typeKind.TrimString()))
 		}
 	}

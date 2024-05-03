@@ -57,6 +57,12 @@ type IHTTPClient interface {
 	CloseIdleConnections()
 }
 
+type retrier struct {
+	macther func(err error) bool
+	timeout time.Duration
+	delay   time.Duration
+}
+
 type TimeFunc func() time.Time
 
 type PathReader struct {

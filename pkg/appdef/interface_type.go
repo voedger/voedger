@@ -81,7 +81,11 @@ const (
 	// Roles and grants
 	TypeKind_Role
 
-	TypeKind_FakeLast
+	// Rates and limits
+	TypeKind_Rate
+	TypeKind_Limit
+
+	TypeKind_count
 )
 
 // # Type
@@ -124,3 +128,23 @@ type IWithTypes interface {
 type ITypeBuilder interface {
 	ICommentsBuilder
 }
+
+// AnyType is used for return then type is any
+var AnyType = newAnyType(QNameANY)
+
+// Any×××Type are used for substitution, e.g. for rate limits, projector events, etc.
+var (
+	AnyStructureType = newAnyType(QNameAnyStructure)
+	AnyRecordType    = newAnyType(QNameAnyRecord)
+	AnyGDocType      = newAnyType(QNameAnyGDoc)
+	AnyCDocType      = newAnyType(QNameAnyCDoc)
+	AnyWDocType      = newAnyType(QNameAnyWDoc)
+	AnySingletonType = newAnyType(QNameAnySingleton)
+	AnyODocType      = newAnyType(QNameAnyODoc)
+	AnyObjectType    = newAnyType(QNameAnyObject)
+	AnyViewType      = newAnyType(QNameAnyView)
+	AnyExtensionType = newAnyType(QNameAnyExtension)
+	AnyFunctionType  = newAnyType(QNameAnyFunction)
+	AnyCommandType   = newAnyType(QNameAnyCommand)
+	AnyQueryType     = newAnyType(QNameAnyQuery)
+)

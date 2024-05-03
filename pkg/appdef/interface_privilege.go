@@ -6,7 +6,7 @@
 package appdef
 
 // Enumeration of privileges.
-type PrivilegeKind int8
+type PrivilegeKind uint8
 
 //go:generate stringer -type=PrivilegeKind -output=stringer_privilegekind.go
 
@@ -45,15 +45,12 @@ const (
 	PrivilegeKind_count
 )
 
-// Set of PrivilegeKind
-type PrivilegeKinds []PrivilegeKind
-
 // Represents a privilege (specific rights or permissions) to be granted to role or revoked from.
 type IPrivilege interface {
 	IWithComments
 
 	// Returns privilege kinds
-	Kinds() PrivilegeKinds
+	Kinds() []PrivilegeKind
 
 	// Returns is privilege has been granted. The opposite of `IsRevoked()`
 	IsGranted() bool
@@ -113,6 +110,7 @@ type IPrivilegesBuilder interface {
 	Grant(kinds []PrivilegeKind, on []QName, fields []FieldName, toRole QName, comment ...string) IPrivilegesBuilder
 
 	// Grants all available privileges on specified objects to specified role.
+	// Object names can include `QNameANY` or `QNameAny×××` names.
 	//
 	// If the objects are records or view records, then insert, update, and select are granted.
 	//
