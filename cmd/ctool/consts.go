@@ -84,6 +84,8 @@ const (
 
 	alertManagerConfigFile = "~/alertmanager/config.yml"
 	alertmanager           = "alertmanager"
+
+	ceVoedgerHttpPort = "80"
 )
 
 const comma = ","

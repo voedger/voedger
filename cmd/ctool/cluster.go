@@ -843,7 +843,7 @@ func (c *clusterType) setEnv() error {
 	}
 
 	if c.Edition == clusterEditionCE && len(c.Nodes) == 1 {
-		logger.Verbose(fmt.Sprintf("Set env %s = %s", envVoedgerHttpPort, "80"))
+		logger.Verbose(fmt.Sprintf("Set env %s = %s", envVoedgerHttpPort, ceVoedgerHttpPort))
 		if err := os.Setenv(envVoedgerHttpPort, "80"); err != nil {
 			return err
 		}
