@@ -8,3 +8,5 @@ package provider
 import "errors"
 
 var ErrStorageInitError = errors.New("storage init error")
+
+

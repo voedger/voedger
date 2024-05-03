@@ -74,8 +74,10 @@ func provideExecDeployApp(asp istructs.IAppStructsProvider, timeFunc coreutils.T
 			// notest
 			return err
 		}
-		if _, err = InitAppWSes(as, numAppWorkspaces, numAppPartitions, istructs.UnixMilli(timeFunc().UnixMilli())); err != nil {
-			return fmt.Errorf("failed to deploy %s: %w", appQName, err)
+		if !skipAppWSDeploy[as.AppQName()] {
+			if _, err = InitAppWSes(as, numAppWorkspaces, numAppPartitions, istructs.UnixMilli(timeFunc().UnixMilli())); err != nil {
+				return fmt.Errorf("failed to deploy %s: %w", appQName, err)
+			}
 		}
 		logger.Info(fmt.Sprintf("app %s successfully deployed: NumPartitions=%d, NumAppWorkspaces=%d", appQName, numAppPartitions, numAppWorkspaces))
 		return nil

@@ -608,6 +608,7 @@ func provideOperatorAppServices(apf AppServiceFactory, appsArtefacts AppsArtefac
 func provideServicePipeline(vvmCtx context.Context, opCommandProcessors OperatorCommandProcessors, opQueryProcessors OperatorQueryProcessors, opAppServices OperatorAppServicesFactory,
 	routerServiceOp RouterServiceOperator, metricsServiceOp MetricsServiceOperator, appPartsCtl IAppPartsCtlPipelineService, bootstrapOp BootstrapOperator) ServicePipeline {
 	return pipeline.NewSyncPipeline(vvmCtx, "ServicePipeline",
+		pipeline.WireSyncOperator("bootstrap", bootstrapOp),
 		pipeline.WireSyncOperator("services", pipeline.ForkOperator(pipeline.ForkSame,
 
 			// VVM
@@ -625,6 +626,5 @@ func provideServicePipeline(vvmCtx context.Context, opCommandProcessors Operator
 			// Metrics http service
 			pipeline.ForkBranch(metricsServiceOp),
 		)),
-		pipeline.WireSyncOperator("bootstrap", bootstrapOp),
 	)
 }

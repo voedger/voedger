@@ -10,8 +10,10 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/apps"
+	"github.com/voedger/voedger/pkg/apps/sys/blobberapp"
 	"github.com/voedger/voedger/pkg/apps/sys/clusterapp"
 	"github.com/voedger/voedger/pkg/apps/sys/registryapp"
+	"github.com/voedger/voedger/pkg/apps/sys/routerapp"
 	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/sys/smtp"
@@ -24,6 +26,8 @@ func NewOwnVITConfig(opts ...vitConfigOptFunc) VITConfig {
 	// helper: implicitly append sys apps
 	opts = append(opts,
 		WithApp(istructs.AppQName_sys_registry, registryapp.Provide(smtp.Cfg{}, vvm.DefaultNumCommandProcessors)),
+		WithApp(istructs.AppQName_sys_cluster, routerapp.Provide()),
+		WithApp(istructs.AppQName_sys_cluster, blobberapp.Provide()),
 		WithApp(istructs.AppQName_sys_cluster, clusterapp.Provide()),
 	)
 	return VITConfig{opts: opts}
