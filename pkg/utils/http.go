@@ -243,7 +243,7 @@ type reqOpts struct {
 	relativeURL           string
 	discardResp           bool
 	expectedSysErrorCode  int
-	retriersOnErrors       []retrier
+	retriersOnErrors      []retrier
 }
 
 func req(method, url, body string, headers, cookies map[string]string) (*http.Request, error) {
@@ -323,6 +323,8 @@ func (c *implIHTTPClient) Req(urlStr string, body string, optFuncs ...ReqOptFunc
 	var err error
 	tryNum := 0
 	startTime := time.Now()
+
+reqLoop:
 	for time.Since(startTime) < maxHTTPRequestTimeout {
 		req, err := req(opts.method, urlStr, body, opts.headers, opts.cookies)
 		if err != nil {
@@ -334,7 +336,7 @@ func (c *implIHTTPClient) Req(urlStr string, body string, optFuncs ...ReqOptFunc
 				if retrier.macther(err) {
 					if time.Since(startTime) < retrier.timeout {
 						time.Sleep(retrier.delay)
-						continue
+						continue reqLoop
 					}
 				}
 			}
