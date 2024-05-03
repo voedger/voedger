@@ -825,23 +825,37 @@ func (c *clusterType) loadFromJSON() error {
 // Installation of the necessary variables of the environment
 func (c *clusterType) setEnv() error {
 
-	logger.Verbose(fmt.Sprintf("Set env %s = %s", envVoedgerNodeSshPort, c.SshPort))
+	setEnv := "Set env %s = %s"
+
+	logger.Verbose(fmt.Sprintf(setEnv, envVoedgerNodeSshPort, c.SshPort))
 	if err := os.Setenv(envVoedgerNodeSshPort, c.SshPort); err != nil {
 		return err
 	}
 
-	logger.Verbose(fmt.Sprintf("Set env %s = %s", envVoedgerAcmeDomains, c.Acme.domains()))
+	logger.Verbose(fmt.Sprintf(setEnv, envVoedgerAcmeDomains, c.Acme.domains()))
 	if err := os.Setenv(envVoedgerAcmeDomains, c.Acme.domains()); err != nil {
 		return err
 	}
 
 	if c.sshKey != "" {
-		logger.Verbose(fmt.Sprintf("Set env %s = %s", envVoedgerSshKey, c.sshKey))
+		logger.Verbose(fmt.Sprintf(setEnv, envVoedgerSshKey, c.sshKey))
 		if err := os.Setenv(envVoedgerSshKey, c.sshKey); err != nil {
 			return err
 		}
 	}
 
+	if c.Edition == clusterEditionCE && len(c.Nodes) == 1 {
+		logger.Verbose(fmt.Sprintf(setEnv, envVoedgerHttpPort, ceVoedgerHttpPort))
+		if err := os.Setenv(envVoedgerHttpPort, "80"); err != nil {
+			return err
+		}
+
+		ceNode := c.Nodes[0].address()
+		logger.Verbose(fmt.Sprintf(setEnv, envVoedgerCeNode, ceNode))
+		if err := os.Setenv(envVoedgerCeNode, ceNode); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
@@ -851,13 +865,6 @@ func (c *clusterType) readFromInitArgs(cmd *cobra.Command, args []string) error 
 	defer c.updateNodeIndexes()
 	// nolint
 	defer c.saveToJSON()
-
-	skipStacks, err := cmd.Flags().GetStringSlice("skip-stack")
-	if err != nil {
-		fmt.Println("Error getting skip-stack values:", err)
-		return err
-	}
-	c.SkipStacks = skipStacks
 
 	if cmd == initCECmd { // CE args
 		c.Edition = clusterEditionCE
@@ -872,6 +879,13 @@ func (c *clusterType) readFromInitArgs(cmd *cobra.Command, args []string) error 
 			c.Nodes[0].DesiredNodeState.Address = "0.0.0.0"
 		}
 	} else { // SE args
+		skipStacks, err := cmd.Flags().GetStringSlice("skip-stack")
+		if err != nil {
+			fmt.Println("Error getting skip-stack values:", err)
+			return err
+		}
+		c.SkipStacks = skipStacks
+
 		c.Edition = clusterEditionSE
 		c.Nodes = make([]nodeType, 5)
 
@@ -887,7 +901,7 @@ func (c *clusterType) readFromInitArgs(cmd *cobra.Command, args []string) error 
 		}
 
 	}
-	return nil
+	return c.setEnv()
 }
 
 // nolint
