@@ -53,5 +53,10 @@ func implProvideQueryProcessorState(ctx context.Context, appStructsFunc AppStruc
 		tokenFunc:      tokenFunc,
 	}, S_GET)
 
+	bs.addStorage(QueryContext, &queryContextStorage{
+		argFunc:  argFunc,
+		wsidFunc: wsidFunc,
+	}, S_GET)
+
 	return bs
 }
