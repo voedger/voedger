@@ -89,4 +89,8 @@ EXTENSION ENGINE BUILTIN (
 	STORAGE CommandContext(
 		GET SCOPE(COMMANDS)
 	);
+
+	STORAGE QueryContext(
+		GET SCOPE(QUERIES)
+	);
 );
