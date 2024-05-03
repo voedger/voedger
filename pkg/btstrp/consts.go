@@ -8,6 +8,6 @@ package btstrp
 import "time"
 
 const (
-	retryOnHTTPErrorTimeout = 15 * time.Second
+	retryOnHTTPErrorTimeout = 30 * time.Second
 	retryOnHTTPErrorDelay   = time.Second
 )
