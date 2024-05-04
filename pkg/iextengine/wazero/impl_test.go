@@ -478,17 +478,17 @@ func Test_RecoverEngine(t *testing.T) {
 		})
 	}
 
-	testWithPreallocatedBuffer(t, 1000000) // work
-	testWithPreallocatedBuffer(t, 900000)  // doesn't work
-	testWithPreallocatedBuffer(t, 800000)  // doesn't work
-	testWithPreallocatedBuffer(t, 700000)  // doesn't work
+	testWithPreallocatedBuffer(t, 1000000)
+	testWithPreallocatedBuffer(t, 900000)
+	testWithPreallocatedBuffer(t, 800000)
+	testWithPreallocatedBuffer(t, 700000)
 
-	testWithPreallocatedBuffer(t, 600000) // work
-	testWithPreallocatedBuffer(t, 500000) // work
+	testWithPreallocatedBuffer(t, 600000)
+	testWithPreallocatedBuffer(t, 500000)
 
 	testWithPreallocatedBuffer(t, 200000)
 	testWithPreallocatedBuffer(t, 100000)
-	testWithPreallocatedBuffer(t, WasmDefaultPreallocatedBufferSize) // dpesn't work
+	testWithPreallocatedBuffer(t, WasmDefaultPreallocatedBufferSize)
 }
 
 func Test_RecoverEngine2(t *testing.T) {
