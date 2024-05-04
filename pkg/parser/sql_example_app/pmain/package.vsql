@@ -47,7 +47,8 @@ ABSTRACT TABLE NestedWithName INHERITS CRecord (
     Note: Quotes can be optionally used with identifiers
 */
 TABLE "NestedTable" INHERITS NestedWithName (
-    ItemDescr varchar -- Default length is 255
+    ItemDescr varchar, -- Default length is 255
+    ItemTitle character varying(50) -- varchar and text are aliases for 'character varying'
 );
 
 -- Declare tag to assign it later to definition(s)
@@ -75,7 +76,10 @@ TABLE TablePlan INHERITS CDoc (
     VerifiableField varchar NOT NULL VERIFIABLE, -- Verifiable field
     Int1 int DEFAULT 1 CHECK(Int1 >= 1 AND Int2 < 10000),  -- Expressions evaluating to TRUE or UNKNOWN succeed.
     Text1 varchar DEFAULT 'a',
+    BinData binary varying,
+    BinData2 varbinary, -- "varbinary" and "bytes" are aliases for "binary varying"
     "bytes" bytes, -- optional quotes
+
     ScreenGroupRef ref(ScreenGroup),
     AnyTableRef ref,
     FewTablesRef ref(ScreenGroup, TablePlan) NOT NULL,
