@@ -77,8 +77,11 @@ func (se *scriptExecuterType) run(scriptName string, args ...string) error {
 
 	var pExec *exec.PipedExec
 
+	scriptDir := filepath.Dir(scriptName)
+	scriptName = filepath.Base(scriptName)
+
 	// nolint
-	os.Chdir(scriptsTempDir)
+	os.Chdir(filepath.Join(scriptsTempDir, scriptDir))
 
 	args = append([]string{scriptName}, args...)
 	pExec = new(exec.PipedExec).Command("bash", args...)

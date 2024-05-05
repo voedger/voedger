@@ -2407,3 +2407,56 @@ ALTER WORKSPACE sys.AppWorkspaceWS (
 );`)
 	})
 }
+
+func Test_DataTypes(t *testing.T) {
+
+	require := assertions(t)
+	require.NoAppSchemaError(`APPLICATION test();
+ALTER WORKSPACE sys.AppWorkspaceWS (
+	TABLE t1 INHERITS WDoc(
+		s1_1_1 character varying(10),
+		s1_1_1 character varying,
+		s1_2_1 varchar(10),
+		s1_2_2 varchar,
+		s1_3_1 text(10),
+		s1_3_1 text,
+
+		s2_1_1 binary varying(10),
+		s2_1_1 binary varying,
+		s2_2_1 varbinary(10),
+		s2_2_2 varbinary,
+		s2_3_1 bytes(10),
+		s2_3_1 bytes,
+
+		s3_1 bigint,
+		s3_2 int64,
+
+		s4_1 integer,
+		s4_2 int32,
+		s4_3 int,
+
+		s5_1 real,
+		s5_2 float,
+		s5_3 float32,
+
+		s6_1 double precision,
+		s6_2 float64,
+
+		s7_1 decimal,
+		s7_2 money,
+		s7_3 currency,
+
+		s8_1 boolean,
+		s8_2 bool,
+
+		s9_1 binary large object,
+		s9_2 blob,
+
+		s10_1 qualified name,
+		s10_2 qname,
+
+		s11_1 record
+
+	);
+);`)
+}
