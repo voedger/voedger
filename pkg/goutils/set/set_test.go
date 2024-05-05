@@ -203,6 +203,18 @@ func TestSet_ContainsAny(t *testing.T) {
 	}
 }
 
+func TestSet_Enum(t *testing.T) {
+	require := require.New(t)
+
+	set := From[uint8](0, 1, 2, 3, 126, 127, 128, 129, 253, 254, 255)
+
+	var sum int
+	set.Enumerate(func(v uint8) {
+		sum = sum + int(v)
+	})
+	require.EqualValues(1278, sum)
+}
+
 func TestSet_First(t *testing.T) {
 	tests := []struct {
 		name      string

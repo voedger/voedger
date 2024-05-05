@@ -178,6 +178,23 @@ func ExampleSet_ContainsAny() {
 	// false
 }
 
+func ExampleSet_Enumerate() {
+	// This example demonstrates how to use Set type.
+
+	// Create new Set from values.
+	s := set.From(Month_jan, Month_feb, Month_mar)
+
+	// Enumerate values from Set.
+	s.Enumerate(func(v Month) {
+		fmt.Println(v)
+	})
+
+	// Output:
+	// Month_jan
+	// Month_feb
+	// Month_mar
+}
+
 func ExampleSet_First() {
 	// This example demonstrates how to use Set type.
 

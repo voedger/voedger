@@ -104,6 +104,22 @@ func (s Set[V]) ContainsAny(values ...V) bool {
 	return len(values) == 0
 }
 
+// Enumerate calls visit for each value in Set.
+func (s Set[V]) Enumerate(visit func(V)) {
+	for i, b := range s.bitmap {
+		if b == 0 {
+			continue
+		}
+		l := bits.TrailingZeros64(b)
+		h := 64 - bits.LeadingZeros64(b)
+		for v := l; v < h; v++ {
+			if b&(1<<v) != 0 {
+				visit(V(i*64 + v))
+			}
+		}
+	}
+}
+
 // Returns is Set filled and first value set.
 // If Set is empty, returns false and zero value.
 func (s Set[V]) First() (V, bool) {
