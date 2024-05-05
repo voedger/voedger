@@ -106,13 +106,17 @@ func (s Set[V]) ContainsAny(values ...V) bool {
 
 // Returns is Set filled and first value set.
 // If Set is empty, returns false and zero value.
-func (s Set[V]) First() (bool, V) {
-	for v := V(0); v < bits.UintSize; v++ {
-		if s.Contains(v) {
-			return true, v
+func (s Set[V]) First() (V, bool) {
+	for i, b := range s.bitmap {
+		if b == 0 {
+			continue
+		}
+		if l := bits.TrailingZeros64(b); l < 64 {
+			return V(i*64 + l), true
 		}
 	}
-	return false, V(0)
+
+	return V(0), false
 }
 
 // Returns count of values in Set.
@@ -134,7 +138,7 @@ func (s *Set[V]) Set(values ...V) {
 // Sets range of value to Set. Inclusive start, exclusive end.
 func (s *Set[V]) SetRange(start, end V) {
 	for k := start; k < end; k++ {
-		s.bitmap[0] |= 1 << k
+		s.Set(k)
 	}
 }
 

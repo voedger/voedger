@@ -188,7 +188,7 @@ func ExampleSet_First() {
 	fmt.Println(s.First())
 
 	// Output:
-	// true Month_jan
+	// Month_jan true
 }
 
 func ExampleSet_Len() {
