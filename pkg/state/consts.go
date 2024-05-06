@@ -21,6 +21,7 @@ var (
 	Result         = appdef.NewQName(appdef.SysPackage, "Result")
 	Event          = appdef.NewQName(appdef.SysPackage, "Event")
 	CommandContext = appdef.NewQName(appdef.SysPackage, "CommandContext")
+	QueryContext   = appdef.NewQName(appdef.SysPackage, "QueryContext")
 )
 
 const (

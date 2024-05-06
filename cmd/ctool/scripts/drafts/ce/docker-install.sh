@@ -18,8 +18,11 @@ if [[ $release == "20.04" ]]; then
 elif [[ $release == "22.04" ]]; then
     echo "This is Ubuntu 22.04"
     VERSION_STRING="5:20.10.23~3-0~ubuntu-jammy"
+elif [[ $release == "18.04" ]]; then
+    echo "This is Ubuntu 18.04"
+    VERSION_STRING="5:24.0.2-1~ubuntu.18.04~bionic"
 else
-    echo "This script only supports Ubuntu 20.04 and 22.04"
+    echo "This script only supports Ubuntu 20.04, 22.04 and 18.04"
     exit 1
 fi
 
