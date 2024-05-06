@@ -84,15 +84,15 @@ while [ $# -gt 0 ] && [ $count -lt 2 ]; do
   sudo mkdir -p /var/lib/grafana;
 EOF
 
-   cat ./grafana/provisioning/dashboards/swarmprom-nodes-dash.json | \
+   cat ./grafana/provisioning/dashboards/docker-swarm-nodes.json | \
       utils_ssh "$SSH_USER@$1" 'cat > ~/grafana/provisioning/dashboards/docker-swarm-nodes.json'
-   cat ./grafana/provisioning/dashboards/swarmprom-prometheus-dash.json | \
+   cat ./grafana/provisioning/dashboards/prometheus.json | \
       utils_ssh "$SSH_USER@$1" 'cat > ~/grafana/provisioning/dashboards/prometheus.json'
-   cat ./grafana/provisioning/dashboards/swarmprom-services-dash.json | \
+   cat ./grafana/provisioning/dashboards/docker-swarm-services.json | \
       utils_ssh "$SSH_USER@$1" 'cat > ~/grafana/provisioning/dashboards/docker-swarm-services.json'
    cat ./grafana/provisioning/dashboards/app-processors-v2-2-1711458922428.json | \
       utils_ssh "$SSH_USER@$1" 'cat > ~/grafana/provisioning/dashboards/app-processors-v2-2-1711458922428.json'
-   cat ./grafana/provisioning/dashboards/swarmprom_dashboards.yml | \
+   cat ./grafana/provisioning/dashboards/dashboards.yml | \
       utils_ssh "$SSH_USER@$1" 'cat > ~/grafana/provisioning/dashboards/dashboards.yml'
 
   cat ./grafana/provisioning/datasources/datasource.yml | \
