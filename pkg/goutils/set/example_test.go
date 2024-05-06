@@ -92,17 +92,17 @@ func ExampleSet_AsArray() {
 	// [Month_jan Month_feb Month_mar]
 }
 
-func ExampleSet_AsInt64() {
+func ExampleSet_AsBytes() {
 	// This example demonstrates how to use Set type.
 
 	// Create new Set from values.
 	s := set.From(Month_jan, Month_feb, Month_mar)
 
-	// Receive Set as uint64 bit mask.
-	fmt.Println(s.AsInt64())
+	// Receive Set as big-endian bytes.
+	fmt.Printf("%b", s.AsBytes())
 
 	// Output:
-	// 7
+	// [0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 111]
 }
 
 func ExampleSet_Clear() {
@@ -178,6 +178,23 @@ func ExampleSet_ContainsAny() {
 	// false
 }
 
+func ExampleSet_Enumerate() {
+	// This example demonstrates how to use Set type.
+
+	// Create new Set from values.
+	s := set.From(Month_jan, Month_feb, Month_mar)
+
+	// Enumerate values from Set.
+	s.Enumerate(func(v Month) {
+		fmt.Println(v)
+	})
+
+	// Output:
+	// Month_jan
+	// Month_feb
+	// Month_mar
+}
+
 func ExampleSet_First() {
 	// This example demonstrates how to use Set type.
 
@@ -188,7 +205,7 @@ func ExampleSet_First() {
 	fmt.Println(s.First())
 
 	// Output:
-	// true Month_jan
+	// Month_jan true
 }
 
 func ExampleSet_Len() {
@@ -202,20 +219,6 @@ func ExampleSet_Len() {
 
 	// Output:
 	// 3
-}
-
-func ExampleSet_PutInt64() {
-	// This example demonstrates how to use Set type.
-
-	// Create new Set from values.
-	s := set.From(Month_jan, Month_feb, Month_mar)
-
-	// Put uint64 bit mask to Set.
-	s.PutInt64(7)
-	fmt.Println(s)
-
-	// Output:
-	// [jan feb mar]
 }
 
 func ExampleSet_SetRange() {
