@@ -40,10 +40,10 @@ func (s Set[V]) AsArray() (a []V) {
 			continue
 		}
 		l := bits.TrailingZeros64(b)
-		h := 64 - bits.LeadingZeros64(b)
+		h := UintSize - bits.LeadingZeros64(b)
 		for v := l; v < h; v++ {
 			if b&(1<<v) != 0 {
-				a = append(a, V(i*64+v))
+				a = append(a, V(i*UintSize+v))
 			}
 		}
 	}
@@ -52,9 +52,13 @@ func (s Set[V]) AsArray() (a []V) {
 
 // Returns Set bitmap as big-endian bytes.
 func (s Set[V]) AsBytes() []byte {
-	buf := make([]byte, 32)
+	const (
+		size = 4 * 8 // 4 * 8 = 32
+		ofs  = 24    // 4 * 8 - 8 = 24
+	)
+	buf := make([]byte, size)
 	for i := range s.bitmap {
-		binary.BigEndian.PutUint64(buf[24-i*8:], s.bitmap[i])
+		binary.BigEndian.PutUint64(buf[ofs-i*8:], s.bitmap[i])
 	}
 	return buf
 }
@@ -62,7 +66,7 @@ func (s Set[V]) AsBytes() []byte {
 // Clears specified elements from set.
 func (s *Set[V]) Clear(values ...V) {
 	for _, v := range values {
-		s.bitmap[v/64] &^= 1 << (v % 64)
+		s.bitmap[v/UintSize] &^= 1 << (v % UintSize)
 	}
 }
 
@@ -80,7 +84,7 @@ func (s Set[V]) Clone() Set[V] {
 
 // Returns is Set contains specified value.
 func (s Set[V]) Contains(v V) bool {
-	return s.bitmap[v/64]&(1<<(v%64)) != 0
+	return s.bitmap[v/UintSize]&(1<<(v%UintSize)) != 0
 }
 
 // Returns is Set contains all from specified values.
@@ -111,10 +115,10 @@ func (s Set[V]) Enumerate(visit func(V)) {
 			continue
 		}
 		l := bits.TrailingZeros64(b)
-		h := 64 - bits.LeadingZeros64(b)
+		h := UintSize - bits.LeadingZeros64(b)
 		for v := l; v < h; v++ {
 			if b&(1<<v) != 0 {
-				visit(V(i*64 + v))
+				visit(V(i*UintSize + v))
 			}
 		}
 	}
@@ -127,8 +131,8 @@ func (s Set[V]) First() (V, bool) {
 		if b == 0 {
 			continue
 		}
-		if l := bits.TrailingZeros64(b); l < 64 {
-			return V(i*64 + l), true
+		if l := bits.TrailingZeros64(b); l < UintSize {
+			return V(i*UintSize + l), true
 		}
 	}
 
@@ -147,7 +151,7 @@ func (s Set[V]) Len() int {
 // Sets specified values to Set.
 func (s *Set[V]) Set(values ...V) {
 	for _, v := range values {
-		s.bitmap[v/64] |= 1 << (v % 64)
+		s.bitmap[v/UintSize] |= 1 << (v % UintSize)
 	}
 }
 
@@ -176,13 +180,15 @@ func (s Set[V]) String() string {
 			continue
 		}
 		l := bits.TrailingZeros64(b)
-		h := 64 - bits.LeadingZeros64(b)
+		h := UintSize - bits.LeadingZeros64(b)
 		for v := l; v < h; v++ {
 			if b&(1<<v) != 0 {
-				ss = append(ss, say(V(i*64+v)))
+				ss = append(ss, say(V(i*UintSize+v)))
 			}
 		}
 	}
 
 	return fmt.Sprintf("[%v]", strings.Join(ss, " "))
 }
+
+const UintSize = bits.UintSize

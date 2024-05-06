@@ -210,7 +210,7 @@ func TestSet_Enum(t *testing.T) {
 
 	var sum int
 	set.Enumerate(func(v uint8) {
-		sum = sum + int(v)
+		sum += int(v)
 	})
 	require.EqualValues(1278, sum)
 }
