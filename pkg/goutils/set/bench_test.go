@@ -32,7 +32,7 @@ func Benchmark_BasicUsage(b *testing.B) {
 	})
 }
 
-var testValues = func(b *testing.B) []byte {
+func testValues(b *testing.B) []byte {
 	values := make([]byte, 0, 256)
 	for _, i := range rand.Perm(256) {
 		values = append(values, byte(i))
@@ -43,19 +43,26 @@ var testValues = func(b *testing.B) []byte {
 	return values
 }
 
-func bench_Set(b *testing.B) {
-	v := testValues(b)
+func checkResult(b *testing.B, r []byte) {
+	require.Len(b, r, 256)
 
+	for i := 0; i < 256; i++ {
+		require.Equal(b, byte(i), r[i])
+	}
+}
+
+func bench_Set(b *testing.B) {
 	for i := 0; i < b.N; i++ {
+		v := testValues(b)
 		set := From(v...)
-		_ = set.AsArray()
+		result := set.AsArray()
+		checkResult(b, result)
 	}
 }
 
 func bench_Map(b *testing.B) {
-	v := testValues(b)
-
 	for i := 0; i < b.N; i++ {
+		v := testValues(b)
 		set := make(map[byte]struct{})
 		for _, v := range v {
 			set[v] = struct{}{}
@@ -67,13 +74,14 @@ func bench_Map(b *testing.B) {
 		}
 
 		slices.Sort(result)
+
+		checkResult(b, result)
 	}
 }
 
 func bench_Slice(b *testing.B) {
-	v := testValues(b)
-
 	for i := 0; i < b.N; i++ {
+		v := testValues(b)
 		set := make([]byte, 0, 256)
 		for _, v := range v {
 			if !slices.Contains(set, v) {
@@ -82,6 +90,7 @@ func bench_Slice(b *testing.B) {
 		}
 
 		slices.Sort(set)
+		checkResult(b, set)
 	}
 }
 
@@ -106,24 +115,31 @@ func Benchmark_WithClear(b *testing.B) {
 	})
 }
 
-func bench_SetWithClear(b *testing.B) {
-	v := testValues(b)
+func checkClearResult(b *testing.B, r []byte) {
+	require.Len(b, r, 128)
 
+	for i := 0; i < 128; i++ {
+		require.Equal(b, 2*byte(i), r[i])
+	}
+}
+
+func bench_SetWithClear(b *testing.B) {
 	for i := 0; i < b.N; i++ {
+		v := testValues(b)
 		set := From(v...)
 		for _, v := range v {
 			if v%2 == 1 {
 				set.Clear(v)
 			}
 		}
-		_ = set.AsArray()
+		result := set.AsArray()
+		checkClearResult(b, result)
 	}
 }
 
 func bench_MapWithClear(b *testing.B) {
-	v := testValues(b)
-
 	for i := 0; i < b.N; i++ {
+		v := testValues(b)
 		set := make(map[byte]struct{})
 		for _, v := range v {
 			set[v] = struct{}{}
@@ -135,17 +151,19 @@ func bench_MapWithClear(b *testing.B) {
 			}
 		}
 
-		v := make([]byte, 0, len(set))
+		result := make([]byte, 0, len(set))
 		for k := range set {
-			v = append(v, k)
+			result = append(result, k)
 		}
+
+		slices.Sort(result)
+		checkClearResult(b, result)
 	}
 }
 
 func bench_SliceWithClear(b *testing.B) {
-	v := testValues(b)
-
 	for i := 0; i < b.N; i++ {
+		v := testValues(b)
 		set := make([]byte, 0, 256)
 		for _, v := range v {
 			if !slices.Contains(set, v) {
@@ -158,5 +176,7 @@ func bench_SliceWithClear(b *testing.B) {
 		})
 
 		slices.Sort(set)
+
+		checkClearResult(b, set)
 	}
 }
