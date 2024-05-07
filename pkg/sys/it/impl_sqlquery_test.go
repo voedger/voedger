@@ -13,6 +13,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/processors"
 	"github.com/voedger/voedger/pkg/sys/sqlquery"
@@ -500,7 +501,7 @@ func TestReadFromWLogWithSysRawArg(t *testing.T) {
 }
 
 func TestReadFromAnotherAppAnotherWSID(t *testing.T) {
-	t.Skip("waiting for https://github.com/voedger/voedger/issues/1811")
+	//t.Skip("waiting for https://github.com/voedger/voedger/issues/1811")
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
@@ -513,10 +514,12 @@ func TestReadFromAnotherAppAnotherWSID(t *testing.T) {
 
 	// create a workspace in another app
 	anotherAppWSOwner := vit.GetPrincipal(istructs.AppQName_test1_app2, "login")
+	qNameApp2_TestWSKind := appdef.NewQName("app2pkg", "test_ws")
 	anotherAppWS := vit.CreateWorkspace(it.WSParams{
-		Name:      "anotherAppWS",
-		Kind:      it.QNameApp1_TestWSKind,
-		ClusterID: istructs.MainClusterID,
+		Name:         "anotherAppWS",
+		Kind:         qNameApp2_TestWSKind,
+		ClusterID:    istructs.MainClusterID,
+		InitDataJSON: `{"IntFld":42}`,
 	}, anotherAppWSOwner)
 
 	// in the another app use sql to query the record from the first app

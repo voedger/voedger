@@ -53,7 +53,7 @@ const selectQueryExpression = `^` +
 	`(?P<select>select\s+.*\s+from\s+)` + // select * from (+ trailing spaces)
 	`(?P<app>\w+\.\w+\.)?` + // appOwner.appName (+ trailing dot)
 	`(?P<ws>\d+\.)?` + // wsid (+ trailing dot)
-	`(?P<table>\w+)` + // table (clean)
+	`(?P<table>\w+\.\w+)` + // table qualified name (clean)
 	`(?P<pars>\s+.*)?` + // (leading spaces +) params
 	`$`
 

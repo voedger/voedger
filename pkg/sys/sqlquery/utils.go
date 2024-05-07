@@ -18,7 +18,7 @@ import (
 //
 // The query string should have the following format:
 //
-//	select [appOwner.appName.][wsid.]tableName[ params]
+//	select *|exp[, exp] from [appOwner.appName.][wsid.]tableQName[ params]
 func parseQueryAppWs(query string) (app istructs.AppQName, ws istructs.WSID, clean string, err error) {
 	const (
 		selectIdx int = 1 + iota
