@@ -11,6 +11,8 @@ import (
 	"os"
 	"path/filepath"
 	"time"
+
+	"github.com/voedger/voedger/pkg/istructs"
 )
 
 type EmbedFS interface {
@@ -45,9 +47,11 @@ type FuncError struct {
 }
 
 type IFederation interface {
-	POST(relativeURL string, body string, optFuncs ...ReqOptFunc) (*HTTPResponse, error)
-	GET(relativeURL string, body string, optFuncs ...ReqOptFunc) (*HTTPResponse, error)
+	// POST(relativeURL string, body string, optFuncs ...ReqOptFunc) (*HTTPResponse, error)
+	// GET(relativeURL string, body string, optFuncs ...ReqOptFunc) (*HTTPResponse, error)
 	Func(relativeURL string, body string, optFuncs ...ReqOptFunc) (*FuncResponse, error)
+	UploadBLOB(appQName istructs.AppQName, wsid istructs.WSID, blobName string, blobMimeType string, blobContent []byte,
+		optFuncs ...ReqOptFunc) (blobID int64, err error)
 	URLStr() string
 	Port() int
 }

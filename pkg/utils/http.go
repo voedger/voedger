@@ -23,6 +23,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/goutils/logger"
+	"github.com/voedger/voedger/pkg/istructs"
 	"golang.org/x/exp/slices"
 
 	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
@@ -266,10 +267,24 @@ func req(method, url, body string, headers, cookies map[string]string) (*http.Re
 
 // wrapped ErrUnexpectedStatusCode is returned -> *HTTPResponse contains a valid response body
 // otherwise if err != nil (e.g. socket error)-> *HTTPResponse is nil
-func (f *implIFederation) POST(relativeURL string, body string, optFuncs ...ReqOptFunc) (*HTTPResponse, error) {
+func (f *implIFederation) post(relativeURL string, body string, optFuncs ...ReqOptFunc) (*HTTPResponse, error) {
 	optFuncs = append(optFuncs, WithMethod(http.MethodPost))
 	url := f.federationURL().String() + "/" + relativeURL
 	return f.httpClient.Req(url, body, optFuncs...)
+}
+
+func (f *implIFederation) UploadBLOB(appQName istructs.AppQName, wsid istructs.WSID, blobName string, blobMimeType string,
+	blobContent []byte, optFuncs ...ReqOptFunc) (blobID int64, err error) {
+	uploadBLOBURL := fmt.Sprintf("blob/%s/%d?name=%s&mimeType=%s", appQName.String(), wsid, blobName, blobMimeType)
+	resp, err := f.post(uploadBLOBURL, string(blobContent), optFuncs...)
+	if err != nil {
+		return 0, err
+	}
+	newBLOBID, err := strconv.Atoi(resp.Body)
+	if err != nil {
+		return 0, fmt.Errorf("failed to parse the received blobID string: %w", err)
+	}
+	return int64(newBLOBID), nil
 }
 
 func (f *implIFederation) GET(relativeURL string, body string, optFuncs ...ReqOptFunc) (*HTTPResponse, error) {

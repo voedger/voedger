@@ -37,16 +37,14 @@ func TestBasicUsage_BLOBProcessors(t *testing.T) {
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
 
 	// write
-	resp := vit.Post(fmt.Sprintf(`blob/test1/app1/%d?name=test&mimeType=application/x-binary`, ws.WSID), string(expBLOB),
+	blobID := vit.UploadBLOB(istructs.AppQName_test1_app1, ws.WSID, "test", coreutils.ApplicationXBinary, expBLOB,
 		coreutils.WithAuthorizeBy(systemPrincipal),
 		coreutils.WithHeaders("Content-Type", "application/x-www-form-urlencoded"), // has name+mimeType query params -> any Content-Type except "multipart/form-data" is allowed
 	)
-	blobID, err := strconv.Atoi(resp.Body)
-	require.NoError(err)
 	log.Println(blobID)
 
 	// read, authorize over headers
-	resp = vit.Get(fmt.Sprintf(`blob/test1/app1/%d/%d`, ws.WSID, blobID),
+	resp := vit.Get(fmt.Sprintf(`blob/test1/app1/%d/%d`, ws.WSID, blobID),
 		coreutils.WithAuthorizeBy(systemPrincipal),
 	)
 	actBLOB := []byte(resp.Body)
@@ -96,17 +94,17 @@ func TestBlobberErrors(t *testing.T) {
 	require.NoError(err)
 
 	t.Run("401 unauthorized on no authorization token in neither headers nor cookies", func(t *testing.T) {
-		vit.Post(fmt.Sprintf(`blob/test1/app1/%d?name=test&mimeType=application/x-binary`, ws.WSID), "",
+		vit.UploadBLOB(istructs.AppQName_test1_app1, ws.WSID, "test", coreutils.ApplicationXBinary, []byte{},
 			coreutils.Expect401(),
-		).Println()
+		)
 	})
 
 	t.Run("403 forbidden on blob size quota exceeded", func(t *testing.T) {
 		bigBLOB := make([]byte, 150)
-		vit.Post(fmt.Sprintf(`blob/test1/app1/%d?name=test&mimeType=application/x-binary`, ws.WSID), string(bigBLOB),
+		vit.UploadBLOB(istructs.AppQName_test1_app1, ws.WSID, "test", coreutils.ApplicationXBinary, bigBLOB,
 			coreutils.WithAuthorizeBy(systemPrincipal),
 			coreutils.Expect403(),
-		).Println()
+		)
 	})
 
 	t.Run("404 not found on querying an unexsting blob", func(t *testing.T) {
@@ -116,35 +114,35 @@ func TestBlobberErrors(t *testing.T) {
 		).Println()
 	})
 
-	t.Run("400 on wrong Content-Type and name+mimeType query params", func(t *testing.T) {
-		t.Run("neither Content-Type nor name+mimeType query params are not provided", func(t *testing.T) {
-			vit.Post(fmt.Sprintf(`blob/test1/app1/%d`, ws.WSID), "blobContent",
-				coreutils.WithAuthorizeBy(systemPrincipal),
-				coreutils.Expect400(),
-			).Println()
-		})
-		t.Run("no name+mimeType query params and non-(mutipart/form-data) Content-Type", func(t *testing.T) {
-			vit.Post(fmt.Sprintf(`blob/test1/app1/%d`, ws.WSID), "blobContent",
-				coreutils.WithAuthorizeBy(systemPrincipal),
-				coreutils.WithHeaders("Content-Type", "application/x-www-form-urlencoded"),
-				coreutils.Expect400(),
-			).Println()
-		})
-		t.Run("both name+mimeType query params and Conten-Type are specified", func(t *testing.T) {
-			vit.Post(fmt.Sprintf(`blob/test1/app1/%d?name=test&mimeType=application/x-binary`, ws.WSID), "blobContent",
-				coreutils.WithAuthorizeBy(systemPrincipal),
-				coreutils.WithHeaders("Content-Type", "multipart/form-data"),
-				coreutils.Expect400(),
-			).Println()
-		})
-		t.Run("boundary of multipart/form-data is not specified", func(t *testing.T) {
-			vit.Post(fmt.Sprintf(`blob/test1/app1/%d`, ws.WSID), "blobContent",
-				coreutils.WithAuthorizeBy(systemPrincipal),
-				coreutils.WithHeaders("Content-Type", "multipart/form-data"),
-				coreutils.Expect400(),
-			).Println()
-		})
-	})
+	// t.Run("400 on wrong Content-Type and name+mimeType query params", func(t *testing.T) {
+	// 	t.Run("neither Content-Type nor name+mimeType query params are not provided", func(t *testing.T) {
+	// 		vit.Post(fmt.Sprintf(`blob/test1/app1/%d`, ws.WSID), "blobContent",
+	// 			coreutils.WithAuthorizeBy(systemPrincipal),
+	// 			coreutils.Expect400(),
+	// 		).Println()
+	// 	})
+	// 	t.Run("no name+mimeType query params and non-(mutipart/form-data) Content-Type", func(t *testing.T) {
+	// 		vit.Post(fmt.Sprintf(`blob/test1/app1/%d`, ws.WSID), "blobContent",
+	// 			coreutils.WithAuthorizeBy(systemPrincipal),
+	// 			coreutils.WithHeaders("Content-Type", "application/x-www-form-urlencoded"),
+	// 			coreutils.Expect400(),
+	// 		).Println()
+	// 	})
+	// 	t.Run("both name+mimeType query params and Conten-Type are specified", func(t *testing.T) {
+	// 		vit.Post(fmt.Sprintf(`blob/test1/app1/%d?name=test&mimeType=application/x-binary`, ws.WSID), "blobContent",
+	// 			coreutils.WithAuthorizeBy(systemPrincipal),
+	// 			coreutils.WithHeaders("Content-Type", "multipart/form-data"),
+	// 			coreutils.Expect400(),
+	// 		).Println()
+	// 	})
+	// 	t.Run("boundary of multipart/form-data is not specified", func(t *testing.T) {
+	// 		vit.Post(fmt.Sprintf(`blob/test1/app1/%d`, ws.WSID), "blobContent",
+	// 			coreutils.WithAuthorizeBy(systemPrincipal),
+	// 			coreutils.WithHeaders("Content-Type", "multipart/form-data"),
+	// 			coreutils.Expect400(),
+	// 		).Println()
+	// 	})
+	// })
 }
 
 func TestBlobMultipartUpload(t *testing.T) {

@@ -16,6 +16,7 @@ const (
 	Authorization                                              = "Authorization"
 	ContentType                                                = "Content-Type"
 	ApplicationJSON                                            = "application/json"
+	ApplicationXBinary                                         = "application/x-binary"
 	BearerPrefix                                               = "Bearer "
 	shortRetryOn503Delay                                       = 100 * time.Millisecond
 	longRetryOn503Delay                                        = time.Second
