@@ -1,22 +1,22 @@
 ## General-Purpose Data Types
-| Data Type (sql-2016)    | Aliases                      | Description                                                    |
-| ----------------------- | ---------------------------- | -------------------------------------------------------------- |
-| character varying [(n)] | varchar [(n)], text [(n)]    | variable-length character string. n is 1..65535, default 255   |
-| binary varying [(n)]    | varbinary [(n)], bytes [(n)] | variable-length binary data. n is 1..65535, default 255        |
-| bigint                  | int64                        | signed eight-byte integer                                      |
-| integer                 | int, int32                   | signed four-byte integer                                       |
-| real                    | float, float32               | single precision floating-point number (4 bytes)               |
-| double precision        | float64                      | double precision floating-point number (8 bytes)               |
-| timestamp               |                              | date and time (no time zone)                                   |
-| decimal                 | money, currency              | currency amount, accurate to a ten-thousandth of the units     |
-| boolean                 | bool                         | logical Boolean (true/false)                                   |
-| binary large object     | blob                         | reference to the binary data in the blobber app (RecordID)     |
+| Data Type (sql-2016)    | Aliases                      | Description                                                     |
+| ----------------------- | ---------------------------- | --------------------------------------------------------------- |
+| character varying [(n)] | varchar [(n)], text [(n)]    | variable-length character string of n bytes: 1..65535, def. 255 |
+| binary varying [(n)]    | varbinary [(n)], bytes [(n)] | variable-length binary data of n bytes: is 1..65535, def. 255   |
+| bigint                  | int64                        | signed eight-byte integer                                       |
+| integer                 | int, int32                   | signed four-byte integer                                        |
+| real                    | float, float32               | single precision floating-point number (4 bytes)                |
+| double precision        | float64                      | double precision floating-point number (8 bytes)                |
+| timestamp               |                              | date and time (no time zone)                                    |
+| boolean                 | bool                         | logical Boolean (true/false)                                    |
+| binary large object     | blob                         | binary data                                                     |
 
 ## Voedger-Specific Data Types
-| Data Type (voedger)     | Aliases                      | Description                                                    |
-| ----------------------- | ---------------------------- | -------------------------------------------------------------- |
-| qualified name          | qname                        | package and entity                                             |
-| record                  |                              | record inherited from crecord/orecord/wrecord                  |
+| Data Type (voedger)     | Aliases                      | Description                                                     |
+| ----------------------- | ---------------------------- | --------------------------------------------------------------- |
+| currency                | money                        | currency amount, accurate to a ten-thousandth of the units      |
+| qualified name          | qname                        | package and entity                                              |
+| record                  |                              | record inherited from crecord/orecord/wrecord                   |
 
 
 ## References
