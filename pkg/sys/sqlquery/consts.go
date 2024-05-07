@@ -5,6 +5,8 @@
 package sqlquery
 
 import (
+	"regexp"
+
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 )
@@ -46,3 +48,13 @@ var (
 		"Error":          true,
 	}
 )
+
+const selectQueryExpression = `^` +
+	`(?P<select>select\s+)` + // select (+ trailing spaces)
+	`(?P<app>\w+\.\w+\.)?` + // appOwner.appName (+ trailing dot)
+	`(?P<ws>\d+\.)?` + // wsid (+ trailing dot)
+	`(?P<table>\w+)` + // table (clean)
+	`(?P<pars>\s+.*)?` + // (leading spaces +) params
+	`$`
+
+var selectQueryExp = regexp.MustCompile(selectQueryExpression)
