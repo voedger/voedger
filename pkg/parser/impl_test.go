@@ -2442,7 +2442,6 @@ ALTER WORKSPACE sys.AppWorkspaceWS (
 		s6_1 double precision,
 		s6_2 float64,
 
-		s7_1 decimal,
 		s7_2 money,
 		s7_3 currency,
 
