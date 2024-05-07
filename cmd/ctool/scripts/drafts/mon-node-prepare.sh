@@ -90,8 +90,8 @@ EOF
       utils_ssh "$SSH_USER@$1" 'cat > ~/grafana/provisioning/dashboards/prometheus.json'
    cat ./grafana/provisioning/dashboards/docker-swarm-services.json | \
       utils_ssh "$SSH_USER@$1" 'cat > ~/grafana/provisioning/dashboards/docker-swarm-services.json'
-   cat ./grafana/provisioning/dashboards/app-processors-v2-2-1711458922428.json | \
-      utils_ssh "$SSH_USER@$1" 'cat > ~/grafana/provisioning/dashboards/app-processors-v2-2-1711458922428.json'
+   cat ./grafana/provisioning/dashboards/app-processors.json | \
+      utils_ssh "$SSH_USER@$1" 'cat > ~/grafana/provisioning/dashboards/app-processors.json'
    cat ./grafana/provisioning/dashboards/dashboards.yml | \
       utils_ssh "$SSH_USER@$1" 'cat > ~/grafana/provisioning/dashboards/dashboards.yml'
 

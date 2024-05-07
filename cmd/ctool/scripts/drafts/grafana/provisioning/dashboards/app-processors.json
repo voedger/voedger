@@ -24,8 +24,8 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
-  "id": 10,
-  "iteration": 1711458887536,
+  "id": 8,
+  "iteration": 1715068433696,
   "links": [],
   "liveNow": false,
   "panels": [
@@ -38,7 +38,7 @@
       },
       "id": 104,
       "options": {
-        "content": "<div style=\"text-align:center; font-size:200%\">\r\nCommand Processor\r\n<div>",
+        "content": "<div style=\"text-align:center; font-size:200%\">\r\nCommand processor\r\n<div>",
         "mode": "html"
       },
       "pluginVersion": "8.3.4",
@@ -54,7 +54,7 @@
       },
       "id": 105,
       "options": {
-        "content": "<div style=\"text-align:center; font-size:200%\">\r\nQuery Processor\r\n<div>",
+        "content": "<div style=\"text-align:center; font-size:200%\">\r\nQuery processor\r\n<div>",
         "mode": "html"
       },
       "pluginVersion": "8.3.4",
@@ -330,7 +330,7 @@
           "refId": "A"
         }
       ],
-      "title": "Projectors in Errors",
+      "title": "Projectors in errors",
       "type": "timeseries"
     },
     {
@@ -623,6 +623,10 @@
       "pluginVersion": "8.3.4",
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
           "exemplar": false,
           "expr": "voedger_projectors_in_error{app=~\"$app\"}",
           "format": "table",
@@ -632,7 +636,7 @@
           "refId": "A"
         }
       ],
-      "title": "Projectors in Errors",
+      "title": "Projectors in errors",
       "type": "table"
     },
     {
@@ -863,7 +867,7 @@
               },
               {
                 "id": "displayName",
-                "value": "Total Commands"
+                "value": "Total commands"
               }
             ]
           },
@@ -875,7 +879,7 @@
             "properties": [
               {
                 "id": "displayName",
-                "value": "Avg Latency"
+                "value": "Avg latency"
               },
               {
                 "id": "unit",
@@ -1135,7 +1139,7 @@
               },
               {
                 "id": "displayName",
-                "value": "Total Queries"
+                "value": "Total queries"
               }
             ]
           },
@@ -1147,7 +1151,7 @@
             "properties": [
               {
                 "id": "displayName",
-                "value": "Avg Latency"
+                "value": "Avg latency"
               },
               {
                 "id": "unit",
@@ -1390,7 +1394,8 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green"
+                    "color": "green",
+                    "value": null
                   },
                   {
                     "color": "red",
@@ -1398,7 +1403,7 @@
                   }
                 ]
               },
-              "unit": "percentunit"
+              "unit": "ms"
             },
             "overrides": []
           },
@@ -1406,7 +1411,7 @@
             "h": 7,
             "w": 24,
             "x": 0,
-            "y": 25
+            "y": 27
           },
           "id": 28,
           "options": {
@@ -1427,7 +1432,7 @@
               "datasource": "Prometheus",
               "editorMode": "code",
               "exemplar": true,
-              "expr": "sum(irate(voedger_cp_exec_seconds{app=~\"$app\"}[5m]))/sum(irate(voedger_cp_commands_seconds{app=~\"$app\"}[5m]))",
+              "expr": "sum(irate(voedger_cp_exec_seconds{app=~\"$app\"}[5m]))*1000",
               "interval": "",
               "legendFormat": "Exec",
               "range": true,
@@ -1437,7 +1442,7 @@
               "datasource": "Prometheus",
               "editorMode": "code",
               "exemplar": true,
-              "expr": "sum(irate(voedger_cp_projectors_seconds{app=~\"$app\"}[5m]))/sum(irate(voedger_cp_commands_seconds{app=~\"$app\"}[5m]))",
+              "expr": "sum(irate(voedger_cp_projectors_seconds{app=~\"$app\"}[5m]))*1000",
               "interval": "",
               "legendFormat": "Projectors",
               "range": true,
@@ -1447,7 +1452,7 @@
               "datasource": "Prometheus",
               "editorMode": "code",
               "exemplar": true,
-              "expr": "(sum(irate(voedger_cp_commands_seconds{app=~\"$app\"}[5m])) - sum(irate(voedger_cp_projectors_seconds{app=~\"$app\"}[5m])) - sum(irate(voedger_cp_exec_seconds{app=~\"$app\"}[5m])))/sum(irate(voedger_cp_commands_seconds{app=~\"$app\"}[5m]))",
+              "expr": "((sum(irate(voedger_cp_commands_seconds{app=~\"$app\"}[5m])) - sum(irate(voedger_cp_projectors_seconds{app=~\"$app\"}[5m])) - sum(irate(voedger_cp_exec_seconds{app=~\"$app\"}[5m]))))*1000",
               "hide": false,
               "interval": "",
               "legendFormat": "Rest",
@@ -1455,7 +1460,7 @@
               "refId": "A"
             }
           ],
-          "title": "CP Stack Time: $app",
+          "title": "CP stack time: $app",
           "type": "timeseries"
         },
         {
@@ -1498,7 +1503,8 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green"
+                    "color": "green",
+                    "value": null
                   },
                   {
                     "color": "red",
@@ -1514,7 +1520,7 @@
             "h": 7,
             "w": 24,
             "x": 0,
-            "y": 32
+            "y": 34
           },
           "id": 90,
           "options": {
@@ -1552,7 +1558,7 @@
               "refId": "D"
             }
           ],
-          "title": "QP Stack Time: $app",
+          "title": "QP stack time: $app",
           "type": "timeseries"
         },
         {
@@ -1595,7 +1601,8 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green"
+                    "color": "green",
+                    "value": null
                   },
                   {
                     "color": "red",
@@ -1603,7 +1610,7 @@
                   }
                 ]
               },
-              "unit": "percentunit"
+              "unit": "ms"
             },
             "overrides": []
           },
@@ -1611,7 +1618,7 @@
             "h": 7,
             "w": 24,
             "x": 0,
-            "y": 39
+            "y": 41
           },
           "id": 61,
           "options": {
@@ -1632,7 +1639,7 @@
               "datasource": "Prometheus",
               "editorMode": "code",
               "exemplar": true,
-              "expr": "sum(irate(voedger_qp_exec_fields_seconds{app=~\"$app\"}[5m]) or vector(0))/(sum(irate(voedger_qp_exec_fields_seconds{app=~\"$app\"}[5m]) or vector(0)) + sum(irate(voedger_qp_exec_enrich_seconds{app=~\"$app\"}[5m]) or vector(0)) + sum(irate(voedger_qp_exec_filter_seconds{app=~\"$app\"}[5m]) or vector(0)) + sum(irate(voedger_qp_exec_order_seconds{app=~\"$app\"}[5m]) or vector(0)) + sum(irate(voedger_qp_exec_count_seconds{app=~\"$app\"}[5m]) or vector(0)) + sum(irate(voedger_qp_exec_send_seconds{app=~\"$app\"}[5m]) or vector(0)))",
+              "expr": "sum(irate(voedger_qp_exec_fields_seconds{app=~\"$app\"}[5m]) or vector(0))*1000",
               "interval": "",
               "legendFormat": "Exec: Fields",
               "range": true,
@@ -1642,7 +1649,7 @@
               "datasource": "Prometheus",
               "editorMode": "code",
               "exemplar": true,
-              "expr": "sum(irate(voedger_qp_exec_enrich_seconds{app=~\"$app\"}[5m]) or vector(0))/(sum(irate(voedger_qp_exec_fields_seconds{app=~\"$app\"}[5m]) or vector(0)) + sum(irate(voedger_qp_exec_enrich_seconds{app=~\"$app\"}[5m]) or vector(0)) + sum(irate(voedger_qp_exec_filter_seconds{app=~\"$app\"}[5m]) or vector(0)) + sum(irate(voedger_qp_exec_order_seconds{app=~\"$app\"}[5m]) or vector(0)) + sum(irate(voedger_qp_exec_count_seconds{app=~\"$app\"}[5m]) or vector(0)) + sum(irate(voedger_qp_exec_send_seconds{app=~\"$app\"}[5m]) or vector(0)))",
+              "expr": "sum(irate(voedger_qp_exec_enrich_seconds{app=~\"$app\"}[5m]) or vector(0))*1000",
               "interval": "",
               "legendFormat": "Exec: Enrich",
               "range": true,
@@ -1651,7 +1658,7 @@
             {
               "datasource": "Prometheus",
               "exemplar": true,
-              "expr": "sum(irate(voedger_qp_exec_filter_seconds{app=~\"$app\"}[5m]) or vector(0))/(sum(irate(voedger_qp_exec_fields_seconds{app=~\"$app\"}[5m]) or vector(0)) + sum(irate(voedger_qp_exec_enrich_seconds{app=~\"$app\"}[5m]) or vector(0)) + sum(irate(voedger_qp_exec_filter_seconds{app=~\"$app\"}[5m]) or vector(0)) + sum(irate(voedger_qp_exec_order_seconds{app=~\"$app\"}[5m]) or vector(0)) + sum(irate(voedger_qp_exec_count_seconds{app=~\"$app\"}[5m]) or vector(0)) + sum(irate(voedger_qp_exec_send_seconds{app=~\"$app\"}[5m]) or vector(0)))",
+              "expr": "sum(irate(voedger_qp_exec_filter_seconds{app=~\"$app\"}[5m]) or vector(0))*1000",
               "hide": false,
               "interval": "",
               "legendFormat": "Exec: Filter",
@@ -1660,7 +1667,7 @@
             {
               "datasource": "Prometheus",
               "exemplar": true,
-              "expr": "sum(irate(voedger_qp_exec_order_seconds{app=~\"$app\"}[5m]) or vector(0))/(sum(irate(voedger_qp_exec_fields_seconds{app=~\"$app\"}[5m]) or vector(0)) + sum(irate(voedger_qp_exec_enrich_seconds{app=~\"$app\"}[5m]) or vector(0)) + sum(irate(voedger_qp_exec_filter_seconds{app=~\"$app\"}[5m]) or vector(0)) + sum(irate(voedger_qp_exec_order_seconds{app=~\"$app\"}[5m]) or vector(0)) + sum(irate(voedger_qp_exec_count_seconds{app=~\"$app\"}[5m]) or vector(0)) + sum(irate(voedger_qp_exec_send_seconds{app=~\"$app\"}[5m]) or vector(0)))",
+              "expr": "sum(irate(voedger_qp_exec_order_seconds{app=~\"$app\"}[5m]) or vector(0))*1000",
               "hide": false,
               "interval": "",
               "legendFormat": "Exec: Order",
@@ -1669,7 +1676,7 @@
             {
               "datasource": "Prometheus",
               "exemplar": true,
-              "expr": "sum(irate(voedger_qp_exec_count_seconds{app=~\"$app\"}[5m]) or vector(0))/(sum(irate(voedger_qp_exec_fields_seconds{app=~\"$app\"}[5m]) or vector(0)) + sum(irate(voedger_qp_exec_enrich_seconds{app=~\"$app\"}[5m]) or vector(0)) + sum(irate(voedger_qp_exec_filter_seconds{app=~\"$app\"}[5m]) or vector(0)) + sum(irate(voedger_qp_exec_order_seconds{app=~\"$app\"}[5m]) or vector(0)) + sum(irate(voedger_qp_exec_count_seconds{app=~\"$app\"}[5m]) or vector(0)) + sum(irate(voedger_qp_exec_send_seconds{app=~\"$app\"}[5m]) or vector(0)))",
+              "expr": "sum(irate(voedger_qp_exec_count_seconds{app=~\"$app\"}[5m]) or vector(0))*1000",
               "hide": false,
               "interval": "",
               "legendFormat": "Exec: Count",
@@ -1678,23 +1685,23 @@
             {
               "datasource": "Prometheus",
               "exemplar": true,
-              "expr": "sum(irate(voedger_qp_exec_send_seconds{app=~\"$app\"}[5m]) or vector(0))/(sum(irate(voedger_qp_exec_fields_seconds{app=~\"$app\"}[5m]) or vector(0)) + sum(irate(voedger_qp_exec_enrich_seconds{app=~\"$app\"}[5m]) or vector(0)) + sum(irate(voedger_qp_exec_filter_seconds{app=~\"$app\"}[5m]) or vector(0)) + sum(irate(voedger_qp_exec_order_seconds{app=~\"$app\"}[5m]) or vector(0)) + sum(irate(voedger_qp_exec_count_seconds{app=~\"$app\"}[5m]) or vector(0)) + sum(irate(voedger_qp_exec_send_seconds{app=~\"$app\"}[5m]) or vector(0)))",
+              "expr": "sum(irate(voedger_qp_exec_send_seconds{app=~\"$app\"}[5m]) or vector(0))*1000",
               "hide": false,
               "interval": "",
               "legendFormat": "Exec: Send",
               "refId": "F"
             }
           ],
-          "title": "QP Rows Processing Stack Time: $app",
+          "title": "QP rows processing stack time: $app",
           "type": "timeseries"
         }
       ],
       "repeat": "app",
-      "title": "Latency Stack: $app",
+      "title": "Latency stack: $app",
       "type": "row"
     }
   ],
-  "refresh": false,
+  "refresh": "",
   "schemaVersion": 34,
   "style": "dark",
   "tags": [],
@@ -1702,11 +1709,14 @@
     "list": [
       {
         "current": {
-          "selected": true,
+          "selected": false,
           "text": "All",
           "value": "$__all"
         },
-        "datasource": "Prometheus",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "PBFA97CFB590B2093"
+        },
         "definition": "label_values(app)",
         "hide": 0,
         "includeAll": true,
@@ -1747,9 +1757,9 @@
       "1d"
     ]
   },
-  "timezone": "",
-  "title": "App processors v2-2",
+  "timezone": "UTC",
+  "title": "App Processors",
   "uid": "DMxOsLJSk2",
-  "version": 1,
+  "version": 16,
   "weekStart": ""
 }

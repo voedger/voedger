@@ -60,3 +60,10 @@ scrape_configs:
       - targets: 
         - {{.AppNode1}}:8080
         - {{.AppNode2}}:8080
+        
+  - job_name: 'voedger'
+    scrape_interval: 10s
+    static_configs:
+      - targets:
+        - {{.AppNode1}}:8000
+        - {{.AppNode2}}:8000
