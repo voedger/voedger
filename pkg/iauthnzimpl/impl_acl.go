@@ -84,6 +84,14 @@ var defaultACL = ACL{
 		policy: ACPolicy_Deny,
 	},
 	{
+		desc: "revoke insert or update on wdoc.air.LastNumbers from all",
+		pattern: PatternType{
+			opKindsPattern: []iauthnz.OperationKindType{iauthnz.OperationKind_INSERT, iauthnz.OperationKind_UPDATE},
+			qNamesPattern:  []appdef.QName{qNameWDocLastNumbers},
+		},
+		policy: ACPolicy_Deny,
+	},
+	{
 		desc: "update only is allowed for CDoc<$wsKind> for WorkspaceOwner",
 		pattern: PatternType{
 			qNamesPattern: []appdef.QName{
