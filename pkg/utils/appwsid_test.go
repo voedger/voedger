@@ -53,9 +53,9 @@ func TestAppWSIDToPseudoWSID(t *testing.T) {
 	pseudoWSIDInitial := GetPseudoWSID(istructs.NullWSID, "test", istructs.MainClusterID)
 	appWSIDExpected := GetAppWSID(pseudoWSIDInitial, numAppWorkspaces)
 
-	// could be any but must lead to the inital appWSIDExpected
-	psuedoWSIDNew := AppWSIDToPseudoWSID(appWSIDExpected)
+	// could be any but must lead to the initial appWSIDExpected
+	psuedoWSID_someNew := AppWSIDToPseudoWSID(appWSIDExpected)
 
-	appWSIDActual := GetAppWSID(psuedoWSIDNew, numAppWorkspaces)
+	appWSIDActual := GetAppWSID(psuedoWSID_someNew, numAppWorkspaces)
 	require.Equal(t, appWSIDExpected, appWSIDActual)
 }
