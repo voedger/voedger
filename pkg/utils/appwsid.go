@@ -38,7 +38,7 @@ func GetPseudoWSID(ownerWSID istructs.WSID, entity string, clusterID istructs.Cl
 
 // resulting pseudoWSID leads to the initial appWSID
 // note: there could be many different pseudoWSIDs that leads to the same appWSID
-func AppWSIDToPseudoWSID(appWSID istructs.WSID, numAppWorkspaces istructs.NumAppWorkspaces) (pseudoWSID istructs.WSID) {
+func AppWSIDToPseudoWSID(appWSID istructs.WSID) (pseudoWSID istructs.WSID) {
 	appWSNumber := appWSID.BaseWSID() - istructs.FirstBaseAppWSID
 	return istructs.NewWSID(istructs.MainClusterID, appWSNumber)
 }
