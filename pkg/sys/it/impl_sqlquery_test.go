@@ -469,12 +469,12 @@ func TestSqlQuery(t *testing.T) {
 
 		resp.RequireError(t, "unsupported source: git.hub")
 	})
-	// t.Run("Should read sys.wlog from other workspace", func(t *testing.T) {
-	// 	wsOne := vit.PostWS(ws, "q.sys.SqlQuery", fmt.Sprintf(`{"args":{"Query":"select * from sys.wlog --wsid=%d"}}`, ws.Owner.ProfileWSID))
-	// 	wsTwo := vit.PostWS(ws, "q.sys.SqlQuery", `{"args":{"Query":"select * from sys.wlog"}}`)
+	t.Run("Should read sys.wlog from other workspace", func(t *testing.T) {
+		wsOne := vit.PostWS(ws, "q.sys.SqlQuery", fmt.Sprintf(`{"args":{"Query":"select * from %d.sys.wlog"}}`, ws.Owner.ProfileWSID))
+		wsTwo := vit.PostWS(ws, "q.sys.SqlQuery", `{"args":{"Query":"select * from sys.wlog"}}`)
 
-	// 	require.NotEqual(t, len(wsOne.Sections[0].Elements), len(wsTwo.Sections[0].Elements))
-	// })
+		require.NotEqual(t, len(wsOne.Sections[0].Elements), len(wsTwo.Sections[0].Elements))
+	})
 
 	// t.Run("400 bad request on read from non-inited workspace", func(t *testing.T) {
 	// 	vit.PostWS(ws, "q.sys.SqlQuery", `{"args":{"Query":"select * from sys.wlog --wsid=0"}}`, coreutils.Expect400(processors.ErrWSNotInited.Message))
