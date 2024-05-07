@@ -33,10 +33,11 @@ func provideQryInitiateEmailVerification(cfg *istructsmem.AppConfigType, itokens
 		QNameQueryInitiateEmailVerification,
 		provideIEVExec(cfg.Name, itokens, asp, federation),
 	))
-	cfg.FunctionRateLimits.AddWorkspaceLimit(QNameQueryInitiateEmailVerification, istructs.RateLimit{
-		Period:                InitiateEmailVerification_Period,
-		MaxAllowedPerDuration: InitiateEmailVerification_MaxAllowed,
-	})
+	// https://github.com/voedger/voedger/issues/2026, will be retuned back in https://github.com/voedger/voedger/issues/2027
+	// cfg.FunctionRateLimits.AddWorkspaceLimit(QNameQueryInitiateEmailVerification, istructs.RateLimit{
+	// 	Period:                InitiateEmailVerification_Period,
+	// 	MaxAllowedPerDuration: InitiateEmailVerification_MaxAllowed,
+	// })
 }
 
 // q.sys.InitiateEmailVerification
