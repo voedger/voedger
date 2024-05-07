@@ -25,22 +25,22 @@ func Test_parseQueryAppWs(t *testing.T) {
 		wantErr   bool
 	}{
 		{"fail: empty", args{""}, istructs.NullAppQName, 0, "", true},
-		{"fail: select without table", args{"select"}, istructs.NullAppQName, 0, "", true},
+		{"fail: no table", args{"select * from"}, istructs.NullAppQName, 0, "", true},
+		{"fail: missed select", args{"query * from table"}, istructs.NullAppQName, 0, "", true},
+		{"fail: missed from", args{"select * table"}, istructs.NullAppQName, 0, "", true},
 
-		{"OK: select table", args{"select table"}, istructs.NullAppQName, 0, "select table", false},
-		{"OK: select table args", args{"select table args"}, istructs.NullAppQName, 0, "select table args", false},
-		{"OK: select owner.app.table", args{"select owner.app.table"}, istructs.MustParseAppQName("owner/app"), 0, "select table", false},
-		{"OK: select owner.app.table args", args{"select owner.app.table args"}, istructs.MustParseAppQName("owner/app"), 0, "select table args", false},
-		{"OK: select owner.app.123.table", args{"select owner.app.123.table"}, istructs.MustParseAppQName("owner/app"), 123, "select table", false},
-		{"OK: select owner.app.123.table args", args{"select owner.app.123.table args"}, istructs.MustParseAppQName("owner/app"), 123, "select table args", false},
-		{"OK: select 123.table", args{"select 123.table"}, istructs.NullAppQName, 123, "select table", false},
-		{"OK: select 123.table args", args{"select 123.table args"}, istructs.NullAppQName, 123, "select table args", false},
+		{"OK:", args{"select * from table"}, istructs.NullAppQName, 0, "select * from table", false},
+		{"OK:", args{"select * from owner.app.table"}, istructs.MustParseAppQName("owner/app"), 0, "select * from table", false},
+		{"OK:", args{"select * from owner.app.123.table"}, istructs.MustParseAppQName("owner/app"), 123, "select * from table", false},
+		{"OK:", args{"select * from 123.table"}, istructs.NullAppQName, 123, "select * from table", false},
 
-		{"fail: select naked.🔫.table", args{"select naked.🔫.table"}, istructs.NullAppQName, 0, "", true},
-		{"fail: select ups.table", args{"select ups.table"}, istructs.NullAppQName, 0, "", true},
-		{"fail: select -123.table", args{"select -123.table"}, istructs.NullAppQName, 0, "", true},
-		{"fail: select owner.app.ups.table", args{"select owner.app.ooo.table"}, istructs.NullAppQName, 0, "", true},
-		{"fail: insert owner.app.100.table", args{"insert owner.app.100.table"}, istructs.NullAppQName, 0, "", true},
+		{"OK:", args{"select f1, f2 from table where f3 is null"}, istructs.NullAppQName, 0, "select f1, f2 from table where f3 is null", false},
+		{"OK:", args{"select f1, f2 from owner.app.123.table where f3 is null"}, istructs.MustParseAppQName("owner/app"), 123, "select f1, f2 from table where f3 is null", false},
+
+		{"fail: invalid app name", args{"select naked.🔫.table"}, istructs.NullAppQName, 0, "", true},
+		{"fail: invalid table name", args{"select ups.table"}, istructs.NullAppQName, 0, "", true},
+		{"fail: invalid ws", args{"select -123.table"}, istructs.NullAppQName, 0, "", true},
+		{"fail: invalid app or ws", args{"select owner.app.ooo.table"}, istructs.NullAppQName, 0, "", true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
