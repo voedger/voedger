@@ -31,6 +31,14 @@ func Provide(vvmCtx context.Context, rp RouterParams, aBusTimeout time.Duration,
 		busTimeout:         aBusTimeout,
 		numsAppsWorkspaces: numsAppsWorkspaces,
 	}
+	adminService = &httpService{
+		RouterParams: RouterParams{
+			Port: adminPort,
+			WriteTimeout: rp.WriteTimeout,
+			ReadTimeout: rp.ReadTimeout,
+			ConnectionsLimit: rp.ConnectionsLimit,
+		}
+	}
 	if bp != nil {
 		bp.procBus = iprocbusmem.Provide(bp.ServiceChannels)
 		for i := 0; i < bp.BLOBWorkersNum; i++ {

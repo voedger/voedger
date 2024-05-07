@@ -39,4 +39,11 @@ var (
 	onRequestCtxClosed    func()                      = nil // used in tests
 	onBeforeWriteResponse func(w http.ResponseWriter) = nil // used in tests
 	elem1                                             = map[string]interface{}{"fld1": "fld1Val"}
+	adminPort                                         = 55555 // dynamic port in tests is used
 )
+
+func init() {
+	if coreutils.IsTest() {
+		adminPort = 0
+	}
+}
