@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/voedger/voedger/pkg/goutils/logger"
+	coreutils "github.com/voedger/voedger/pkg/utils"
 	"golang.org/x/crypto/acme/autocert"
 
 	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
@@ -22,36 +23,21 @@ import (
 
 // port == 443 -> httpsService + ACMEService, otherwise -> HTTPService only, ACMEService is nil
 func Provide(vvmCtx context.Context, rp RouterParams, aBusTimeout time.Duration, broker in10n.IN10nBroker, bp *BlobberParams, autocertCache autocert.Cache,
-	bus ibus.IBus, numsAppsWorkspaces map[istructs.AppQName]istructs.NumAppWorkspaces) (httpSrv IHTTPService, acmeSrv IACMEService, adminService IAdminService) {
-	httpService := &httpService{
-		RouterParams:       rp,
-		n10n:               broker,
-		BlobberParams:      bp,
-		bus:                bus,
-		busTimeout:         aBusTimeout,
-		numsAppsWorkspaces: numsAppsWorkspaces,
-	}
-	adminService = &httpService{
-		RouterParams: RouterParams{
-			Port: adminPort,
-			WriteTimeout: rp.WriteTimeout,
-			ReadTimeout: rp.ReadTimeout,
-			ConnectionsLimit: rp.ConnectionsLimit,
-		}
-	}
-	if bp != nil {
-		bp.procBus = iprocbusmem.Provide(bp.ServiceChannels)
-		for i := 0; i < bp.BLOBWorkersNum; i++ {
-			httpService.blobWG.Add(1)
-			go func() {
-				defer httpService.blobWG.Done()
-				blobMessageHandler(vvmCtx, bp.procBus.ServiceChannel(0, 0), bp.BLOBStorage, bus, aBusTimeout)
-			}()
-		}
+	bus ibus.IBus, numsAppsWorkspaces map[istructs.AppQName]istructs.NumAppWorkspaces) (httpSrv IHTTPService, acmeSrv IACMEService, adminSrv IAdminService) {
+	httpServ := gethttpService(vvmCtx, "HTTP server", coreutils.ServerAddress(rp.Port), rp, aBusTimeout, broker, bp, bus, numsAppsWorkspaces)
 
+	adminEndpoint := "127.0.0.1:55555"
+	if coreutils.IsTest() {
+		adminEndpoint = "127.0.0.1:0"
 	}
+	adminSrv = gethttpService(vvmCtx, "Admin HTTP server", adminEndpoint, RouterParams{
+		WriteTimeout:     rp.WriteTimeout,
+		ReadTimeout:      rp.ReadTimeout,
+		ConnectionsLimit: rp.ConnectionsLimit,
+	}, aBusTimeout, broker, bp, bus, numsAppsWorkspaces)
+
 	if rp.Port != HTTPSPort {
-		return httpService, nil
+		return httpServ, nil, adminSrv
 	}
 	crtMgr := &autocert.Manager{
 		/*
@@ -70,8 +56,9 @@ func Provide(vvmCtx context.Context, rp RouterParams, aBusTimeout time.Duration,
 	if crtMgr.Cache == nil {
 		crtMgr.Cache = autocert.DirCache(rp.CertDir)
 	}
+	httpServ.name = "HTTPS server"
 	httpsService := &httpsService{
-		httpService: httpService,
+		httpService: httpServ,
 		crtMgr:      crtMgr,
 	}
 
@@ -93,5 +80,33 @@ func Provide(vvmCtx context.Context, rp RouterParams, aBusTimeout time.Duration,
 	} else {
 		acmeService.Handler = acmeServiceHadler
 	}
-	return httpsService, acmeService
+	return httpsService, acmeService, adminSrv
+}
+
+func gethttpService(vvmCtx context.Context, name string, listenAddress string, rp RouterParams, aBusTimeout time.Duration, broker in10n.IN10nBroker, bp *BlobberParams,
+	bus ibus.IBus, numsAppsWorkspaces map[istructs.AppQName]istructs.NumAppWorkspaces) *httpService {
+	httpServ := &httpService{
+		RouterParams:       rp,
+		n10n:               broker,
+		BlobberParams:      bp,
+		bus:                bus,
+		busTimeout:         aBusTimeout,
+		numsAppsWorkspaces: numsAppsWorkspaces,
+		listenAddress:      listenAddress,
+		name:               name,
+	}
+
+	каждется, надо iprocbus.IProcBus сохранять в httpService{}
+	if bp != nil {
+		procBus := iprocbusmem.Provide(bp.ServiceChannels)
+		for i := 0; i < bp.BLOBWorkersNum; i++ {
+			httpServ.blobWG.Add(1)
+			go func() {
+				defer httpServ.blobWG.Done()
+				blobMessageHandler(vvmCtx, bp.procBus.ServiceChannel(0, 0), bp.BLOBStorage, bus, aBusTimeout)
+			}()
+		}
+
+	}
+	return httpServ
 }

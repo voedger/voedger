@@ -49,7 +49,7 @@ type IFederation interface {
 	GET(relativeURL string, body string, optFuncs ...ReqOptFunc) (*HTTPResponse, error)
 	Func(relativeURL string, body string, optFuncs ...ReqOptFunc) (*FuncResponse, error)
 	URLStr() string
-	Port() int
+	AdminFunc(relativeURL string, body string, optFuncs ...ReqOptFunc) (*FuncResponse, error)
 }
 
 type IHTTPClient interface {
