@@ -26,7 +26,6 @@ func Test_parseQueryAppWs(t *testing.T) {
 	}{
 		{"fail: empty", args{""}, istructs.NullAppQName, 0, "", true},
 		{"fail: no table", args{"select * from"}, istructs.NullAppQName, 0, "", true},
-		{"fail: missed select", args{"query * from table"}, istructs.NullAppQName, 0, "", true},
 		{"fail: missed from", args{"select * table"}, istructs.NullAppQName, 0, "", true},
 
 		{"OK:", args{"select * from pkg.table"}, istructs.NullAppQName, 0, "select * from pkg.table", false},

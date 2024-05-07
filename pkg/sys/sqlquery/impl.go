@@ -23,22 +23,26 @@ import (
 func execQrySqlQuery(asp istructs.IAppStructsProvider, appQName istructs.AppQName) func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 	return func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 
-		app, wsID, cQuery, err := parseQueryAppWs(args.ArgumentObject.AsString(field_Query))
-		if err != nil {
-			return err
+		query := args.ArgumentObject.AsString(field_Query)
+		app := appQName
+		wsID := args.WSID
+
+		if a, w, c, err := parseQueryAppWs(query); err == nil {
+			if a != istructs.NullAppQName {
+				app = a
+			}
+			if w != 0 {
+				wsID = w
+			}
+			query = c
 		}
 
-		if app == istructs.NullAppQName {
-			app = appQName
-		}
 		appStructs, err := asp.AppStructs(app)
 		if err != nil {
 			return err
 		}
 
-		if wsID == 0 {
-			wsID = args.WSID
-		} else {
+		if wsID != args.WSID {
 			wsDesc, err := appStructs.Records().GetSingleton(wsID, authnz.QNameCDocWorkspaceDescriptor)
 			if err != nil {
 				// notest
@@ -52,7 +56,7 @@ func execQrySqlQuery(asp istructs.IAppStructsProvider, appQName istructs.AppQNam
 			}
 		}
 
-		stmt, err := sqlparser.Parse(cQuery)
+		stmt, err := sqlparser.Parse(query)
 		if err != nil {
 			return err
 		}

@@ -15,6 +15,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/processors"
 	"github.com/voedger/voedger/pkg/sys/sqlquery"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 	it "github.com/voedger/voedger/pkg/vit"
@@ -461,7 +462,7 @@ func TestSqlQuery(t *testing.T) {
 		body := `{"args":{"Query":" "}}`
 		resp := vit.PostWS(ws, "q.sys.SqlQuery", body, coreutils.Expect500())
 
-		resp.RequireContainsError(t, "invalid query format")
+		resp.RequireContainsError(t, "syntax error")
 	})
 	t.Run("Should return error when source of data unsupported", func(t *testing.T) {
 		body := `{"args":{"Query":"select * from git.hub"}}`
@@ -476,9 +477,9 @@ func TestSqlQuery(t *testing.T) {
 		require.NotEqual(t, len(wsOne.Sections[0].Elements), len(wsTwo.Sections[0].Elements))
 	})
 
-	// t.Run("400 bad request on read from non-inited workspace", func(t *testing.T) {
-	// 	vit.PostWS(ws, "q.sys.SqlQuery", `{"args":{"Query":"select * from sys.wlog --wsid=0"}}`, coreutils.Expect400(processors.ErrWSNotInited.Message))
-	// })
+	t.Run("400 bad request on read from non-inited workspace", func(t *testing.T) {
+		vit.PostWS(ws, "q.sys.SqlQuery", `{"args":{"Query":"select * from 555.sys.wlog"}}`, coreutils.Expect400(processors.ErrWSNotInited.Message))
+	})
 }
 
 func TestReadFromWLogWithSysRawArg(t *testing.T) {
