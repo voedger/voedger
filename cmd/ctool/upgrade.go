@@ -17,7 +17,8 @@ func newUpgradeCmd() *cobra.Command {
 		RunE:  upgrade,
 	}
 
-	if !addSshKeyFlag(upgradeCmd) {
+	c := newCluster()
+	if c.Edition != clusterEditionCE && !addSshKeyFlag(upgradeCmd) {
 		return nil
 	}
 
