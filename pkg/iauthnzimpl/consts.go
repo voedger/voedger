@@ -96,6 +96,7 @@ var (
 	qNameQryGetDigitalReceipt                       = appdef.NewQName(airPackage, "GetDigitalReceipt")
 	qNameQrySendReceiptByEmail                      = appdef.NewQName(airPackage, "SendReceiptByEmail")
 	qNameQryUpdateShopperStatement                  = appdef.NewQName(airPackage, "UpdateShopperStatement")
+	qNameWDocLastNumbers                            = appdef.NewQName(airPackage, "LastNumbers")
 
 	// Air roles
 	qNameRoleResellersAdmin         = appdef.NewQName(airPackage, "ResellersAdmin")
