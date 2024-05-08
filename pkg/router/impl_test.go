@@ -391,7 +391,6 @@ type testRouter struct {
 	wg           *sync.WaitGroup
 	httpService  pipeline.IService
 	handler      func(requestCtx context.Context, sender ibus.ISender, request ibus.Request)
-	params       RouterParams
 	bus          ibus.IBus
 	adminService pipeline.IService
 }
