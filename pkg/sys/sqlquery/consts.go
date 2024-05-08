@@ -17,7 +17,6 @@ const (
 	DefaultLimit  = 100
 	DefaultOffset = istructs.FirstOffset
 	field_Query   = "Query"
-	flag_WSID     = "--wsid="
 )
 
 var (
