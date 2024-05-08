@@ -28,6 +28,7 @@ func newTidyCmd(params *vpmParams) *cobra.Command {
 			if err := createPackagesGen(nil, params.Dir, dirName, true); err != nil {
 				return err
 			}
+
 			compileRes, err := compile.Compile(params.Dir)
 			if err != nil {
 				logger.Error(err)
@@ -36,6 +37,7 @@ func newTidyCmd(params *vpmParams) *cobra.Command {
 			if compileRes == nil {
 				return errors.New("failed to compile, check schemas")
 			}
+
 			return tidy(compileRes.NotFoundDeps, compileRes.AppDef, compileRes.ModulePath, params.Dir)
 		},
 	}

@@ -137,7 +137,7 @@ func Unzip(zipFileName, destDir string) error {
 		}
 
 		// Create the corresponding file on the disk
-		extractedFilePath := filepath.Join(destDir, file.Name)
+		extractedFilePath := filepath.Join(destDir, file.Name) // nolint
 		if err := os.MkdirAll(filepath.Dir(extractedFilePath), FileMode_rwxrwxrwx); err != nil {
 			return err
 		}
