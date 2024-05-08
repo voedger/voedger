@@ -31,6 +31,14 @@ func MapToObject(data map[string]interface{}, rw istructs.IRowWriter) (err error
 		case nil:
 		case float64:
 			rw.PutNumber(fieldName, v)
+		case float32:
+			rw.PutNumber(fieldName, float64(v))
+		case int32:
+			rw.PutNumber(fieldName, float64(v))
+		case int64:
+			rw.PutNumber(fieldName, float64(v))
+		case istructs.RecordID:
+			rw.PutNumber(fieldName, float64(v))
 		case string:
 			rw.PutChars(fieldName, v)
 		case bool:

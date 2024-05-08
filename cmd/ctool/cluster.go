@@ -39,6 +39,7 @@ func newCluster() *clusterType {
 		ReplacedAddresses:     make([]string, 0),
 		Cron:                  &cronType{},
 		Acme:                  &acmeType{Domains: make([]string, 0)},
+		Alert:                 &alertType{DiscordWebhook: emptyDiscordWebhookUrl},
 	}
 
 	sshKey, exists := os.LookupEnv(envVoedgerSshKey)
@@ -547,6 +548,10 @@ func (a *acmeType) removeDomains(domainsStr string) {
 	}
 }
 
+type alertType struct {
+	DiscordWebhook string `json:"DiscordWebhook,omitempty"`
+}
+
 type clusterType struct {
 	configFileName        string
 	sshKey                string
@@ -554,16 +559,52 @@ type clusterType struct {
 	dryRun                bool
 	Edition               string
 	ActualClusterVersion  string
-	DesiredClusterVersion string    `json:"DesiredClusterVersion,omitempty"`
-	SshPort               string    `json:"SSHPort,omitempty"`
-	Acme                  *acmeType `json:"Acme,omitempty"`
-	Cmd                   *cmdType  `json:"Cmd,omitempty"`
-	LastAttemptError      string    `json:"LastAttemptError,omitempty"`
-	SkipStacks            []string  `json:"SkipStacks,omitempty"`
-	Cron                  *cronType `json:"Cron,omitempty"`
+	DesiredClusterVersion string     `json:"DesiredClusterVersion,omitempty"`
+	SshPort               string     `json:"SSHPort,omitempty"`
+	Acme                  *acmeType  `json:"Acme,omitempty"`
+	Cmd                   *cmdType   `json:"Cmd,omitempty"`
+	LastAttemptError      string     `json:"LastAttemptError,omitempty"`
+	SkipStacks            []string   `json:"SkipStacks,omitempty"`
+	Cron                  *cronType  `json:"Cron,omitempty"`
+	Alert                 *alertType `json:"Alert,omitempty"`
 	Nodes                 []nodeType
 	ReplacedAddresses     []string `json:"ReplacedAddresses,omitempty"`
 	Draft                 bool     `json:"Draft,omitempty"`
+}
+
+// apply the cluster data to the template file
+func (c *clusterType) updateTemplateFile(filename string) error {
+	return prepareScriptFromTemplate(filename, c)
+	/*
+	   	content, err := os.ReadFile(filename)
+
+	   	if err != nil {
+	   		return err
+	   	}
+
+	   tmpl, err := template.New("clusterTemplate").Delims("[[", "]]").Parse(string(content))
+
+	   	if err != nil {
+	   		return err
+	   	}
+
+	   var processedTemplate bytes.Buffer
+
+	   	if err := tmpl.Execute(&processedTemplate, c); err != nil {
+	   		return err
+	   	}
+
+	   	if err = os.Chmod(filename, coreutils.FileMode_rw_rw_rw_); err != nil {
+	   		return err
+	   	}
+
+	   	if err := os.WriteFile(filename, processedTemplate.Bytes(), coreutils.FileMode_rw_rw_rw_); err != nil {
+	   		fmt.Println("Error writing to file:", err)
+	   		return err
+	   	}
+
+	   return nil
+	*/
 }
 
 func (c *clusterType) clusterControllerFunction() error {
@@ -637,6 +678,7 @@ func (c *clusterType) applyCmd(cmd *cmdType) error {
 	case ckReplace:
 		oldAddr := cmd.Args[0]
 		newAddr := cmd.Args[1]
+		cmd.SkipStacks = c.SkipStacks
 
 		if c.addressInReplacedList(newAddr) {
 			return fmt.Errorf(errAddressInReplacedList, newAddr, ErrAddressCannotBeUsed)
@@ -675,6 +717,7 @@ func (c *clusterType) applyCmd(cmd *cmdType) error {
 		}
 	case ckUpgrade:
 		c.DesiredClusterVersion = version
+		cmd.SkipStacks = c.SkipStacks
 		for i := range c.Nodes {
 			c.Nodes[i].DesiredNodeState.NodeVersion = version
 			c.Nodes[i].DesiredNodeState.Address = c.Nodes[i].ActualNodeState.Address
@@ -782,23 +825,37 @@ func (c *clusterType) loadFromJSON() error {
 // Installation of the necessary variables of the environment
 func (c *clusterType) setEnv() error {
 
-	logger.Verbose(fmt.Sprintf("Set env %s = %s", envVoedgerNodeSshPort, c.SshPort))
+	setEnv := "Set env %s = %s"
+
+	logger.Verbose(fmt.Sprintf(setEnv, envVoedgerNodeSshPort, c.SshPort))
 	if err := os.Setenv(envVoedgerNodeSshPort, c.SshPort); err != nil {
 		return err
 	}
 
-	logger.Verbose(fmt.Sprintf("Set env %s = %s", envVoedgerAcmeDomains, c.Acme.domains()))
+	logger.Verbose(fmt.Sprintf(setEnv, envVoedgerAcmeDomains, c.Acme.domains()))
 	if err := os.Setenv(envVoedgerAcmeDomains, c.Acme.domains()); err != nil {
 		return err
 	}
 
 	if c.sshKey != "" {
-		logger.Verbose(fmt.Sprintf("Set env %s = %s", envVoedgerSshKey, c.sshKey))
+		logger.Verbose(fmt.Sprintf(setEnv, envVoedgerSshKey, c.sshKey))
 		if err := os.Setenv(envVoedgerSshKey, c.sshKey); err != nil {
 			return err
 		}
 	}
 
+	if c.Edition == clusterEditionCE && len(c.Nodes) == 1 {
+		logger.Verbose(fmt.Sprintf(setEnv, envVoedgerHttpPort, ceVoedgerHttpPort))
+		if err := os.Setenv(envVoedgerHttpPort, "80"); err != nil {
+			return err
+		}
+
+		ceNode := c.Nodes[0].address()
+		logger.Verbose(fmt.Sprintf(setEnv, envVoedgerCeNode, ceNode))
+		if err := os.Setenv(envVoedgerCeNode, ceNode); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
@@ -808,13 +865,6 @@ func (c *clusterType) readFromInitArgs(cmd *cobra.Command, args []string) error 
 	defer c.updateNodeIndexes()
 	// nolint
 	defer c.saveToJSON()
-
-	skipStacks, err := cmd.Flags().GetStringSlice("skip-stack")
-	if err != nil {
-		fmt.Println("Error getting skip-stack values:", err)
-		return err
-	}
-	c.SkipStacks = skipStacks
 
 	if cmd == initCECmd { // CE args
 		c.Edition = clusterEditionCE
@@ -829,6 +879,13 @@ func (c *clusterType) readFromInitArgs(cmd *cobra.Command, args []string) error 
 			c.Nodes[0].DesiredNodeState.Address = "0.0.0.0"
 		}
 	} else { // SE args
+		skipStacks, err := cmd.Flags().GetStringSlice("skip-stack")
+		if err != nil {
+			fmt.Println("Error getting skip-stack values:", err)
+			return err
+		}
+		c.SkipStacks = skipStacks
+
 		c.Edition = clusterEditionSE
 		c.Nodes = make([]nodeType, 5)
 
@@ -844,7 +901,7 @@ func (c *clusterType) readFromInitArgs(cmd *cobra.Command, args []string) error 
 		}
 
 	}
-	return nil
+	return c.setEnv()
 }
 
 // nolint

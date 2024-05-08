@@ -82,3 +82,5 @@ func IsWSAEError(err error, errno syscall.Errno) bool {
 func AppPartitionID(wsid istructs.WSID, numAppPartitions istructs.NumAppPartitions) istructs.PartitionID {
 	return istructs.PartitionID(int(wsid) % int(numAppPartitions))
 }
+
+func NilAdminPortGetter() int { panic("to be tested") }

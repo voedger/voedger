@@ -41,14 +41,6 @@ func newBackupCmd() *cobra.Command {
 
 	backupNodeCmd.PersistentFlags().StringVarP(&sshPort, "ssh-port", "p", "22", "SSH port")
 	backupNodeCmd.PersistentFlags().StringVarP(&expireTime, "expire", "e", "", "Expire time for backup (e.g. 7d, 1m)")
-	backupNodeCmd.PersistentFlags().StringVar(&sshKey, "ssh-key", "", "Path to SSH key")
-	value, exists := os.LookupEnv(envVoedgerSshKey)
-	if !exists || value == "" {
-		if err := backupNodeCmd.MarkPersistentFlagRequired("ssh-key"); err != nil {
-			loggerError(err.Error())
-			return nil
-		}
-	}
 
 	backupCronCmd := &cobra.Command{
 		Use:   "cron [<cron event>]",
@@ -61,14 +53,7 @@ func newBackupCmd() *cobra.Command {
 		},
 		RunE: backupCron,
 	}
-	backupCronCmd.PersistentFlags().StringVar(&sshKey, "ssh-key", "", "Path to SSH key")
-	value, exists = os.LookupEnv(envVoedgerSshKey)
-	if !exists || value == "" {
-		if err := backupCronCmd.MarkPersistentFlagRequired("ssh-key"); err != nil {
-			loggerError(err.Error())
-			return nil
-		}
-	}
+
 	backupCronCmd.PersistentFlags().StringVarP(&expireTime, "expire", "e", "", "Expire time for backup (e.g. 7d, 1m)")
 
 	backupListCmd := &cobra.Command{
@@ -82,13 +67,7 @@ func newBackupCmd() *cobra.Command {
 		},
 		RunE: backupList,
 	}
-	backupListCmd.PersistentFlags().StringVar(&sshKey, "ssh-key", "", "Path to SSH key")
-	if !exists || value == "" {
-		if err := backupListCmd.MarkPersistentFlagRequired("ssh-key"); err != nil {
-			loggerError(err.Error())
-			return nil
-		}
-	}
+
 	backupListCmd.PersistentFlags().BoolVar(&jsonFormatBackupList, "json", false, "Output in JSON format")
 
 	backupNowCmd := &cobra.Command{
@@ -103,19 +82,14 @@ func newBackupCmd() *cobra.Command {
 		RunE: backupNow,
 	}
 
-	backupNowCmd.PersistentFlags().StringVar(&sshKey, "ssh-key", "", "Path to SSH key")
-	if !exists || value == "" {
-		if err := backupNowCmd.MarkPersistentFlagRequired("ssh-key"); err != nil {
-			loggerError(err.Error())
-			return nil
-		}
-	}
-
 	backupCmd := &cobra.Command{
 		Use:   "backup",
 		Short: "Backup database",
 	}
 
+	if !addSshKeyFlag(backupCmd) {
+		return nil
+	}
 	backupCmd.AddCommand(backupNodeCmd, backupCronCmd, backupListCmd, backupNowCmd)
 
 	return backupCmd

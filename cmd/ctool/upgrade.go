@@ -6,8 +6,6 @@
 package main
 
 import (
-	"os"
-
 	"github.com/spf13/cobra"
 	"golang.org/x/mod/semver"
 )
@@ -19,14 +17,11 @@ func newUpgradeCmd() *cobra.Command {
 		RunE:  upgrade,
 	}
 
-	upgradeCmd.PersistentFlags().StringVar(&sshKey, "ssh-key", "", "Path to SSH key")
-	value, exists := os.LookupEnv(envVoedgerSshKey)
-	if !exists || value == "" {
-		if err := upgradeCmd.MarkPersistentFlagRequired("ssh-key"); err != nil {
-			loggerError(err.Error())
-			return nil
-		}
+	c := newCluster()
+	if c.Edition != clusterEditionCE && !addSshKeyFlag(upgradeCmd) {
+		return nil
 	}
+
 	return upgradeCmd
 
 }

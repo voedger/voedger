@@ -18,7 +18,6 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appparts"
-	"github.com/voedger/voedger/pkg/cluster"
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
@@ -119,7 +118,7 @@ func (a *asyncActualizer) cancelChannel(e error) {
 func (a *asyncActualizer) waitForAppDeploy(ctx context.Context) error {
 	start := time.Now()
 	for ctx.Err() == nil {
-		ap, err := a.conf.AppPartitions.Borrow(a.conf.AppQName, a.conf.Partition, cluster.ProcessorKind_Actualizer)
+		ap, err := a.conf.AppPartitions.Borrow(a.conf.AppQName, a.conf.Partition, appparts.ProcessorKind_Actualizer)
 		if err == nil || errors.Is(err, appparts.ErrNotAvailableEngines) {
 			if ap != nil {
 				ap.Release()
@@ -302,7 +301,7 @@ func (a *asyncActualizer) readPlogByBatches(readBatch readPLogBatch) error {
 }
 
 func (a *asyncActualizer) borrowAppPart(ctx context.Context) (ap appparts.IAppPartition, err error) {
-	return a.conf.AppPartitions.WaitForBorrow(ctx, a.conf.AppQName, a.conf.Partition, cluster.ProcessorKind_Actualizer)
+	return a.conf.AppPartitions.WaitForBorrow(ctx, a.conf.AppQName, a.conf.Partition, appparts.ProcessorKind_Actualizer)
 }
 
 func (a *asyncActualizer) readPlogToTheEnd(ctx context.Context) error {
@@ -436,7 +435,7 @@ func (p *asyncProjector) WSIDProvider() istructs.WSID              { return p.ev
 func (p *asyncProjector) EventProvider() istructs.IPLogEvent       { return p.event }
 
 func (p *asyncProjector) borrowAppPart(ctx context.Context) (ap appparts.IAppPartition, err error) {
-	return p.appParts.WaitForBorrow(ctx, p.appQName, p.partition, cluster.ProcessorKind_Actualizer)
+	return p.appParts.WaitForBorrow(ctx, p.appQName, p.partition, appparts.ProcessorKind_Actualizer)
 }
 
 func (p *asyncProjector) savePosition() error {

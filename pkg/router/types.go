@@ -40,6 +40,7 @@ type RouterParams struct {
 type httpService struct {
 	RouterParams
 	*BlobberParams
+	listenAddress      string
 	router             *mux.Router
 	server             *http.Server
 	listener           net.Listener
@@ -48,6 +49,7 @@ type httpService struct {
 	bus                ibus.IBus
 	busTimeout         time.Duration
 	numsAppsWorkspaces map[istructs.AppQName]istructs.NumAppWorkspaces
+	name               string
 }
 
 type httpsService struct {

@@ -49,12 +49,18 @@ type IFederation interface {
 	GET(relativeURL string, body string, optFuncs ...ReqOptFunc) (*HTTPResponse, error)
 	Func(relativeURL string, body string, optFuncs ...ReqOptFunc) (*FuncResponse, error)
 	URLStr() string
-	Port() int
+	AdminFunc(relativeURL string, body string, optFuncs ...ReqOptFunc) (*FuncResponse, error)
 }
 
 type IHTTPClient interface {
 	Req(urlStr string, body string, optFuncs ...ReqOptFunc) (*HTTPResponse, error)
 	CloseIdleConnections()
+}
+
+type retrier struct {
+	macther func(err error) bool
+	timeout time.Duration
+	delay   time.Duration
 }
 
 type TimeFunc func() time.Time

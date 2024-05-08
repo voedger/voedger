@@ -33,6 +33,14 @@ func ParseAppQName(val string) (res AppQName, err error) {
 	return NewAppQName(s1, s2), err
 }
 
+func MustParseAppQName(val string) AppQName {
+	n, err := ParseAppQName(val)
+	if err != nil {
+		panic(err)
+	}
+	return n
+}
+
 func (aqn *AppQName) MarshalJSON() ([]byte, error) {
 	return json.Marshal(aqn.owner + AppQNameQualifierChar + aqn.name)
 }

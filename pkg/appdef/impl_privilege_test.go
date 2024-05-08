@@ -53,8 +53,8 @@ func Test_AppDef_GrantAndRevoke(t *testing.T) {
 		ws.AddType(queryName)
 
 		_ = adb.AddRole(readerRoleName)
-		adb.Grant(PrivilegeKinds{PrivilegeKind_Select}, []QName{docName, viewName}, []FieldName{"field1"}, readerRoleName, "grant select from doc & view to reader")
-		adb.Grant(PrivilegeKinds{PrivilegeKind_Execute}, []QName{queryName}, nil, readerRoleName, "grant execute query to reader")
+		adb.Grant([]PrivilegeKind{PrivilegeKind_Select}, []QName{docName, viewName}, []FieldName{"field1"}, readerRoleName, "grant select from doc & view to reader")
+		adb.Grant([]PrivilegeKind{PrivilegeKind_Execute}, []QName{queryName}, nil, readerRoleName, "grant execute query to reader")
 
 		_ = adb.AddRole(writerRoleName)
 		adb.GrantAll([]QName{docName, viewName}, writerRoleName, "grant all on doc & view to writer")
@@ -68,7 +68,7 @@ func Test_AppDef_GrantAndRevoke(t *testing.T) {
 
 		_ = adb.AddRole(admRoleName)
 		adb.GrantAll([]QName{wsName}, admRoleName, "grant all workspace privileges to admin")
-		adb.Revoke(PrivilegeKinds{PrivilegeKind_Execute}, []QName{wsName}, admRoleName, "revoke execute on workspace from admin")
+		adb.Revoke([]PrivilegeKind{PrivilegeKind_Execute}, []QName{wsName}, admRoleName, "revoke execute on workspace from admin")
 
 		_ = adb.AddRole(intruderRoleName)
 		adb.RevokeAll([]QName{wsName}, intruderRoleName, "revoke all workspace privileges from intruder")
@@ -81,12 +81,12 @@ func Test_AppDef_GrantAndRevoke(t *testing.T) {
 
 	t.Run("should be ok to check roles and privileges", func(t *testing.T) {
 
-		checkPrivilege := func(p IPrivilege, granted bool, kinds PrivilegeKinds, on QNames, fields []FieldName, to QName) {
+		checkPrivilege := func(p IPrivilege, granted bool, kinds []PrivilegeKind, on []QName, fields []FieldName, to QName) {
 			require.NotNil(p)
 			require.Equal(granted, p.IsGranted())
 			require.Equal(!granted, p.IsRevoked())
 			require.Equal(kinds, p.Kinds())
-			require.Equal(on, p.On())
+			require.EqualValues(on, p.On())
 			require.Equal(fields, p.Fields())
 			require.Equal(to, p.To().QName())
 		}
@@ -98,48 +98,48 @@ func Test_AppDef_GrantAndRevoke(t *testing.T) {
 				switch cnt {
 				case 1:
 					checkPrivilege(p, true,
-						PrivilegeKinds{PrivilegeKind_Select},
-						QNames{docName, viewName}, []FieldName{"field1"},
+						[]PrivilegeKind{PrivilegeKind_Select},
+						[]QName{docName, viewName}, []FieldName{"field1"},
 						readerRoleName)
 				case 2:
 					checkPrivilege(p, true,
-						PrivilegeKinds{PrivilegeKind_Execute},
-						QNames{queryName}, nil,
+						[]PrivilegeKind{PrivilegeKind_Execute},
+						[]QName{queryName}, nil,
 						readerRoleName)
 				case 3:
 					checkPrivilege(p, true,
-						PrivilegeKinds{PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select},
-						QNames{docName, viewName}, nil,
+						[]PrivilegeKind{PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select},
+						[]QName{docName, viewName}, nil,
 						writerRoleName)
 				case 4:
 					checkPrivilege(p, true,
-						PrivilegeKinds{PrivilegeKind_Execute},
-						QNames{cmdName, queryName}, nil,
+						[]PrivilegeKind{PrivilegeKind_Execute},
+						[]QName{cmdName, queryName}, nil,
 						writerRoleName)
 				case 5:
 					checkPrivilege(p, true,
-						PrivilegeKinds{PrivilegeKind_Inherits},
-						QNames{readerRoleName, writerRoleName}, nil,
+						[]PrivilegeKind{PrivilegeKind_Inherits},
+						[]QName{readerRoleName, writerRoleName}, nil,
 						workerRoleName)
 				case 6:
 					checkPrivilege(p, true,
-						PrivilegeKinds{PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select, PrivilegeKind_Execute},
-						QNames{wsName}, nil,
+						[]PrivilegeKind{PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select, PrivilegeKind_Execute},
+						[]QName{wsName}, nil,
 						ownerRoleName)
 				case 7:
 					checkPrivilege(p, true,
-						PrivilegeKinds{PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select, PrivilegeKind_Execute},
-						QNames{wsName}, nil,
+						[]PrivilegeKind{PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select, PrivilegeKind_Execute},
+						[]QName{wsName}, nil,
 						admRoleName)
 				case 8:
 					checkPrivilege(p, false,
-						PrivilegeKinds{PrivilegeKind_Execute},
-						QNames{wsName}, nil,
+						[]PrivilegeKind{PrivilegeKind_Execute},
+						[]QName{wsName}, nil,
 						admRoleName)
 				case 9:
 					checkPrivilege(p, false,
-						PrivilegeKinds{PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select, PrivilegeKind_Execute},
-						QNames{wsName}, nil,
+						[]PrivilegeKind{PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select, PrivilegeKind_Execute},
+						[]QName{wsName}, nil,
 						intruderRoleName)
 				default:
 					require.Fail("unexpected privilege", "privilege: %v", p)
@@ -155,22 +155,22 @@ func Test_AppDef_GrantAndRevoke(t *testing.T) {
 				require.Len(pp, 4)
 
 				checkPrivilege(pp[0], true,
-					PrivilegeKinds{PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select, PrivilegeKind_Execute},
-					QNames{wsName}, nil,
+					[]PrivilegeKind{PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select, PrivilegeKind_Execute},
+					[]QName{wsName}, nil,
 					ownerRoleName)
 
 				checkPrivilege(pp[1], true,
-					PrivilegeKinds{PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select, PrivilegeKind_Execute},
-					QNames{wsName}, nil,
+					[]PrivilegeKind{PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select, PrivilegeKind_Execute},
+					[]QName{wsName}, nil,
 					admRoleName)
 				checkPrivilege(pp[2], false,
-					PrivilegeKinds{PrivilegeKind_Execute},
-					QNames{wsName}, nil,
+					[]PrivilegeKind{PrivilegeKind_Execute},
+					[]QName{wsName}, nil,
 					admRoleName)
 
 				checkPrivilege(pp[3], false,
-					PrivilegeKinds{PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select, PrivilegeKind_Execute},
-					QNames{wsName}, nil,
+					[]PrivilegeKind{PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select, PrivilegeKind_Execute},
+					[]QName{wsName}, nil,
 					intruderRoleName)
 			})
 
@@ -179,28 +179,28 @@ func Test_AppDef_GrantAndRevoke(t *testing.T) {
 				require.Len(pp, 5)
 
 				checkPrivilege(pp[0], true,
-					PrivilegeKinds{PrivilegeKind_Select},
-					QNames{docName, viewName}, []FieldName{"field1"},
+					[]PrivilegeKind{PrivilegeKind_Select},
+					[]QName{docName, viewName}, []FieldName{"field1"},
 					readerRoleName)
 
 				checkPrivilege(pp[1], true,
-					PrivilegeKinds{PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select},
-					QNames{docName, viewName}, nil,
+					[]PrivilegeKind{PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select},
+					[]QName{docName, viewName}, nil,
 					writerRoleName)
 
 				checkPrivilege(pp[2], true,
-					PrivilegeKinds{PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select, PrivilegeKind_Execute},
-					QNames{wsName}, nil,
+					[]PrivilegeKind{PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select, PrivilegeKind_Execute},
+					[]QName{wsName}, nil,
 					ownerRoleName)
 
 				checkPrivilege(pp[3], true,
-					PrivilegeKinds{PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select, PrivilegeKind_Execute},
-					QNames{wsName}, nil,
+					[]PrivilegeKind{PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select, PrivilegeKind_Execute},
+					[]QName{wsName}, nil,
 					admRoleName)
 
 				checkPrivilege(pp[4], false,
-					PrivilegeKinds{PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select, PrivilegeKind_Execute},
-					QNames{wsName}, nil,
+					[]PrivilegeKind{PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select, PrivilegeKind_Execute},
+					[]QName{wsName}, nil,
 					intruderRoleName)
 			})
 		})
@@ -226,13 +226,13 @@ func Test_AppDef_GrantAndRevokeErrors(t *testing.T) {
 		t.Run("should be panic if unknown role", func(t *testing.T) {
 			unknownRole := NewQName("test", "unknownRole")
 			require.Panics(func() {
-				adb.Grant(PrivilegeKinds{PrivilegeKind_Select}, []QName{docName}, nil, unknownRole)
+				adb.Grant([]PrivilegeKind{PrivilegeKind_Select}, []QName{docName}, nil, unknownRole)
 			}, "should be panic if grant to unknown role")
 			require.Panics(func() {
 				adb.GrantAll([]QName{docName}, unknownRole)
 			}, "should be panic if grant all to unknown role")
 			require.Panics(func() {
-				adb.Revoke(PrivilegeKinds{PrivilegeKind_Select}, []QName{docName}, unknownRole)
+				adb.Revoke([]PrivilegeKind{PrivilegeKind_Select}, []QName{docName}, unknownRole)
 			}, "should be panic if revoke from unknown role")
 			require.Panics(func() {
 				adb.RevokeAll([]QName{docName}, unknownRole)
@@ -243,30 +243,30 @@ func Test_AppDef_GrantAndRevokeErrors(t *testing.T) {
 
 		t.Run("should be panic if invalid privileges kinds", func(t *testing.T) {
 			require.Panics(func() {
-				adb.Grant(PrivilegeKinds{}, []QName{docName}, nil, readerRoleName)
+				adb.Grant([]PrivilegeKind{}, []QName{docName}, nil, readerRoleName)
 			})
 			require.Panics(func() {
-				adb.Grant(PrivilegeKinds{PrivilegeKind_null}, []QName{docName}, nil, readerRoleName)
+				adb.Grant([]PrivilegeKind{PrivilegeKind_null}, []QName{docName}, nil, readerRoleName)
 			})
 			require.Panics(func() {
-				adb.Grant(PrivilegeKinds{PrivilegeKind_count}, []QName{docName}, nil, readerRoleName)
+				adb.Grant([]PrivilegeKind{PrivilegeKind_count}, []QName{docName}, nil, readerRoleName)
 			})
 		})
 
 		t.Run("should be panic if privileges on invalid objects", func(t *testing.T) {
 			require.Panics(func() {
-				adb.Grant(PrivilegeKinds{PrivilegeKind_Select}, []QName{}, nil, readerRoleName)
+				adb.Grant([]PrivilegeKind{PrivilegeKind_Select}, []QName{}, nil, readerRoleName)
 			}, "should be panic if grant on empty objects")
 			require.Panics(func() {
 				adb.GrantAll(nil, readerRoleName)
 			}, "should be panic if grant on nil objects")
 
 			require.Panics(func() {
-				adb.Grant(PrivilegeKinds{PrivilegeKind_Select}, []QName{NewQName("test", "unknown")}, nil, readerRoleName)
+				adb.Grant([]PrivilegeKind{PrivilegeKind_Select}, []QName{NewQName("test", "unknown")}, nil, readerRoleName)
 			}, "should be panic if object is unknown")
 
 			require.Panics(func() {
-				adb.Grant(PrivilegeKinds{PrivilegeKind_Select}, []QName{SysData_String}, nil, readerRoleName)
+				adb.Grant([]PrivilegeKind{PrivilegeKind_Select}, []QName{SysData_String}, nil, readerRoleName)
 			}, "should be panic if object can't be privileged")
 
 			require.Panics(func() {
@@ -278,22 +278,4 @@ func Test_AppDef_GrantAndRevokeErrors(t *testing.T) {
 			}, "should be panic if privileges kinds are incompatible with objects")
 		})
 	})
-}
-
-func TestPrivilegeKindTrimString(t *testing.T) {
-	tests := []struct {
-		name string
-		k    PrivilegeKind
-		want string
-	}{
-		{name: "basic", k: PrivilegeKind_Update, want: "Update"},
-		{name: "out of range", k: PrivilegeKind_count + 1, want: (PrivilegeKind_count + 1).String()},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := tt.k.TrimString(); got != tt.want {
-				t.Errorf("%v.(PrivilegeKindKind).TrimString() = %v, want %v", tt.k, got, tt.want)
-			}
-		})
-	}
 }

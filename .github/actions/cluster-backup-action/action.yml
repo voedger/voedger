@@ -75,7 +75,7 @@ runs:
       run: |
         set -euo pipefail
         set -x
-        ssh ${{ env.SSH_OPTIONS }} ubuntu@${{ env.CTOOL_IP }} "cd /home/ubuntu/voedger/cmd/ctool && ./ctool restore /home/ubuntu/backup --ssh-key /tmp/amazonKey.pem -v -p ${{ env.SSH_PORT }}"
+        ssh ${{ env.SSH_OPTIONS }} ubuntu@${{ env.CTOOL_IP }} "cd /home/ubuntu/voedger/cmd/ctool && ./ctool restore /home/ubuntu/backup --ssh-key /tmp/amazonKey.pem -v"
       shell: bash
 
     - name: Check inserted data after restore
