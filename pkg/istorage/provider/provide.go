@@ -13,8 +13,8 @@ import (
 
 // keyspaceNameSuffix is used in tests only
 // see https://dev.untill.com/projects/#!638565
-func Provide(asf istorage.IAppStorageFactory, keyspaceNameSuffix ...string) istorage.IAppStorageProvider {
-	res := &implIAppStorageProvider{
+func Provide(asf istorage.IAppStorageFactory, keyspaceNameSuffix ...string) istorage.IAppStorageInitializer {
+	res := &implIAppStorageInitializer{
 		asf:   asf,
 		cache: map[istructs.AppQName]istorage.IAppStorage{},
 	}

@@ -17,23 +17,37 @@ import (
 func TestBasicUsage(t *testing.T) {
 	require := require.New(t)
 	asf := mem.Provide()
-	asp := Provide(asf)
+	asi := Provide(asf)
 
 	app1 := istructs.NewAppQName("sys", "_") // SafeAppName is "sys"
 	app2 := istructs.NewAppQName("sys", "/") // SafeAppName is "sys{uuid}"
 
+	t.Run("not inited -> storage not inited error", func(t *testing.T) {
+		_, err := asi.AppStorage(app1)
+		require.ErrorIs(err, ErrStorageNotInited)
+	})
+
+	// init storage before obtaining
+	require.NoError(asi.Init(app1))
+	require.NoError(asi.Init(app2))
+
+	t.Run("init again -> storage inited already error", func(t *testing.T) {
+		require.ErrorIs(asi.Init(app1), ErrStorageInitedAlready)
+		require.ErrorIs(asi.Init(app2), ErrStorageInitedAlready)
+	})
+
 	// basic IAppStorage obtain
-	storage, err := asp.AppStorage(app1)
+	storage, err := asi.AppStorage(app1)
 	require.NoError(err)
-	storageApp2, err := asp.AppStorage(app2)
+	storageApp2, err := asi.AppStorage(app2)
 	require.NoError(err)
 
 	t.Run("same IAppStorage instances on AppStorage calls for the same app", func(t *testing.T) {
-		storage2, err := asp.AppStorage(app1)
+		storage2, err := asi.AppStorage(app1)
 		require.NoError(err)
 		require.Same(storage, storage2)
 
-		storageApp3, err := asp.AppStorage(app2)
+		storageApp3, err := asi.AppStorage(app2)
 		require.NoError(err)
 		require.Same(storageApp2, storageApp3)
 	})
@@ -43,11 +57,12 @@ func TestBasicUsage(t *testing.T) {
 		require.NoError(storageApp2.Put([]byte{1}, []byte{1}, []byte{2}))
 
 		// re-initialize
-		asp = Provide(asf, asp.(*implIAppStorageProvider).suffix)
+		asi = Provide(asf, asi.(*implIAppStorageInitializer).suffix)
 
 		// obtain IAppStorage for app2
 		// it should be the same as before
-		storage, err := asp.AppStorage(app2)
+		asi.Init(app2)
+		storage, err := asi.AppStorage(app2)
 		require.NoError(err)
 
 		// now check we've got into sysab for app2, not sysaa that could be if there was just single app2
@@ -69,7 +84,7 @@ func TestInitErrorPersistence(t *testing.T) {
 	require.NoError(err)
 
 	// init the storage manually to force the error
-	app1SafeName = asp.(*implIAppStorageProvider).clarifyKeyspaceName(app1SafeName)
+	app1SafeName = asp.(*implIAppStorageInitializer).clarifyKeyspaceName(app1SafeName)
 	require.NoError(asf.Init(app1SafeName))
 
 	// expect an error
@@ -78,7 +93,7 @@ func TestInitErrorPersistence(t *testing.T) {
 	require.Nil(storage)
 
 	// re-init
-	asp = Provide(asf, asp.(*implIAppStorageProvider).suffix)
+	asp = Provide(asf, asp.(*implIAppStorageInitializer).suffix)
 
 	// expect Init() error is stored in sysmeta
 	storage, err = asp.AppStorage(app1)
