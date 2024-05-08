@@ -24,17 +24,17 @@ import (
 // port == 443 -> httpsService + ACMEService, otherwise -> HTTPService only, ACMEService is nil
 func Provide(vvmCtx context.Context, rp RouterParams, aBusTimeout time.Duration, broker in10n.IN10nBroker, bp *BlobberParams, autocertCache autocert.Cache,
 	bus ibus.IBus, numsAppsWorkspaces map[istructs.AppQName]istructs.NumAppWorkspaces) (httpSrv IHTTPService, acmeSrv IACMEService, adminSrv IAdminService) {
-	httpServ := gethttpService(vvmCtx, "HTTP server", coreutils.ServerAddress(rp.Port), rp, aBusTimeout, broker, bp, bus, numsAppsWorkspaces)
+	httpServ := getHttpService(vvmCtx, "HTTP server", coreutils.ServerAddress(rp.Port), rp, aBusTimeout, broker, bp, bus, numsAppsWorkspaces)
 
 	adminEndpoint := "127.0.0.1:55555"
 	if coreutils.IsTest() {
 		adminEndpoint = "127.0.0.1:0"
 	}
-	adminSrv = gethttpService(vvmCtx, "Admin HTTP server", adminEndpoint, RouterParams{
+	adminSrv = getHttpService(vvmCtx, "Admin HTTP server", adminEndpoint, RouterParams{
 		WriteTimeout:     rp.WriteTimeout,
 		ReadTimeout:      rp.ReadTimeout,
 		ConnectionsLimit: rp.ConnectionsLimit,
-	}, aBusTimeout, broker, bp, bus, numsAppsWorkspaces)
+	}, aBusTimeout, broker, nil, bus, numsAppsWorkspaces)
 
 	if rp.Port != HTTPSPort {
 		return httpServ, nil, adminSrv
@@ -83,7 +83,7 @@ func Provide(vvmCtx context.Context, rp RouterParams, aBusTimeout time.Duration,
 	return httpsService, acmeService, adminSrv
 }
 
-func gethttpService(vvmCtx context.Context, name string, listenAddress string, rp RouterParams, aBusTimeout time.Duration, broker in10n.IN10nBroker, bp *BlobberParams,
+func getHttpService(vvmCtx context.Context, name string, listenAddress string, rp RouterParams, aBusTimeout time.Duration, broker in10n.IN10nBroker, bp *BlobberParams,
 	bus ibus.IBus, numsAppsWorkspaces map[istructs.AppQName]istructs.NumAppWorkspaces) *httpService {
 	httpServ := &httpService{
 		RouterParams:       rp,
@@ -96,9 +96,9 @@ func gethttpService(vvmCtx context.Context, name string, listenAddress string, r
 		name:               name,
 	}
 
-	каждется, надо iprocbus.IProcBus сохранять в httpService{}
+	// каждется, надо iprocbus.IProcBus сохранять в httpService{}
 	if bp != nil {
-		procBus := iprocbusmem.Provide(bp.ServiceChannels)
+		bp.procBus = iprocbusmem.Provide(bp.ServiceChannels)
 		for i := 0; i < bp.BLOBWorkersNum; i++ {
 			httpServ.blobWG.Add(1)
 			go func() {

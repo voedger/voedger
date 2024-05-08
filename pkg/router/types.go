@@ -69,7 +69,7 @@ type BlobberParams struct {
 	ServiceChannels        []iprocbusmem.ChannelGroup
 	BLOBStorage            iblobstorage.IBLOBStorage
 	BLOBWorkersNum         int
-	// procBus                iprocbus.IProcBus
+	procBus                iprocbus.IProcBus
 	RetryAfterSecondsOn503 int
 	BLOBMaxSize            BLOBMaxSizeType
 }

@@ -33,9 +33,9 @@ const (
 )
 
 var (
-	isRouterRestartTested bool
-	router                *testRouter
-	clientDisconnections  = make(chan struct{}, 1)
+	isRouterStopTested   bool
+	router               *testRouter
+	clientDisconnections = make(chan struct{}, 1)
 )
 
 func TestBasicUsage_SingleResponse(t *testing.T) {
@@ -422,11 +422,6 @@ func startRouter(t *testing.T, rp RouterParams, bus ibus.IBus, busTimeout time.D
 func setUp(t *testing.T, handlerFunc func(requestCtx context.Context, sender ibus.ISender, request ibus.Request), busTimeout time.Duration) {
 	if router != nil {
 		router.handler = handlerFunc
-		if !isRouterRestartTested {
-			// let's test router restart once
-			startRouter(t, router.params, router.bus, busTimeout)
-			isRouterRestartTested = true
-		}
 		return
 	}
 	rp := RouterParams{
@@ -456,11 +451,14 @@ func tearDown() {
 		panic("unhandled client disconnection")
 	default:
 	}
-	if isRouterRestartTested {
+	if !isRouterStopTested {
 		// let's test router shutdown once
 		router.cancel()
+		router.httpService.Stop()
+		router.adminService.Stop()
 		router.wg.Wait()
 		router = nil
+		isRouterStopTested = true
 	}
 	onBeforeWriteResponse = nil
 }
