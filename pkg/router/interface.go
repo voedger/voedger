@@ -15,3 +15,5 @@ type IHTTPService interface {
 type IACMEService interface {
 	pipeline.IService
 }
+
+type IAdminService IHTTPService

@@ -16,7 +16,6 @@ import (
 	"net"
 	"net/http"
 	"net/url"
-	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -411,18 +410,29 @@ func containsAllMessages(strs []string, toFind string) bool {
 	return true
 }
 
+func (f *implIFederation) AdminFunc(relativeURL string, body string, optFuncs ...ReqOptFunc) (*FuncResponse, error) {
+	optFuncs = append(optFuncs, WithMethod(http.MethodPost))
+	url := fmt.Sprintf("http://127.0.0.1:%d/api/%s", f.adminPortGetter(), relativeURL)
+	httpResp, err := f.httpClient.Req(url, body, optFuncs...)
+	return f.httpRespToFuncResp(httpResp, err)
+}
+
 func (f *implIFederation) Func(relativeURL string, body string, optFuncs ...ReqOptFunc) (*FuncResponse, error) {
 	httpResp, err := f.POST(relativeURL, body, optFuncs...)
-	isUnexpectedCode := errors.Is(err, ErrUnexpectedStatusCode)
-	if err != nil && !isUnexpectedCode {
-		return nil, err
+	return f.httpRespToFuncResp(httpResp, err)
+}
+
+func (f *implIFederation) httpRespToFuncResp(httpResp *HTTPResponse, httpRespErr error) (*FuncResponse, error) {
+	isUnexpectedCode := errors.Is(httpRespErr, ErrUnexpectedStatusCode)
+	if httpRespErr != nil && !isUnexpectedCode {
+		return nil, httpRespErr
 	}
 	if httpResp == nil {
 		return nil, nil
 	}
 	if isUnexpectedCode {
 		m := map[string]interface{}{}
-		if err = json.Unmarshal([]byte(httpResp.Body), &m); err != nil {
+		if err := json.Unmarshal([]byte(httpResp.Body), &m); err != nil {
 			return nil, err
 		}
 		if httpResp.HTTPResp.StatusCode == http.StatusOK {
@@ -450,7 +460,7 @@ func (f *implIFederation) Func(relativeURL string, body string, optFuncs ...ReqO
 	if len(httpResp.Body) == 0 {
 		return res, nil
 	}
-	if err = json.Unmarshal([]byte(httpResp.Body), &res); err != nil {
+	if err := json.Unmarshal([]byte(httpResp.Body), &res); err != nil {
 		return nil, err
 	}
 	if res.SysError.HTTPStatus > 0 && res.expectedSysErrorCode > 0 && res.expectedSysErrorCode != res.SysError.HTTPStatus {
@@ -538,21 +548,13 @@ type implIHTTPClient struct {
 }
 
 type implIFederation struct {
-	httpClient    IHTTPClient
-	federationURL func() *url.URL
+	httpClient      IHTTPClient
+	federationURL   func() *url.URL
+	adminPortGetter func() int
 }
 
 func (f *implIFederation) URLStr() string {
 	return f.federationURL().String()
-}
-
-func (f *implIFederation) Port() int {
-	res, err := strconv.Atoi(f.federationURL().Port())
-	if err != nil {
-		// notest
-		panic(err)
-	}
-	return res
 }
 
 func NewIHTTPClient() IHTTPClient {
@@ -572,10 +574,11 @@ func NewIHTTPClient() IHTTPClient {
 	return &implIHTTPClient{client: &http.Client{Transport: tr}}
 }
 
-func NewIFederation(federationURL func() *url.URL) (federation IFederation, cleanup func()) {
+func NewIFederation(federationURL func() *url.URL, adminPortGetter func() int) (federation IFederation, cleanup func()) {
 	fed := &implIFederation{
-		httpClient:    NewIHTTPClient(),
-		federationURL: federationURL,
+		httpClient:      NewIHTTPClient(),
+		federationURL:   federationURL,
+		adminPortGetter: adminPortGetter,
 	}
 	return fed, fed.httpClient.CloseIdleConnections
 }
