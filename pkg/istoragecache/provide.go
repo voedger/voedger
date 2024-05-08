@@ -10,11 +10,11 @@ import (
 )
 
 // Provide s.e.
-func Provide(maxBytes int, storageProvider istorage.IAppStorageProvider, metrics imetrics.IMetrics, vvmName string) istorage.IAppStorageProvider {
-	return &implCachingAppStorageProvider{
-		maxBytes:        maxBytes,
-		storageProvider: storageProvider,
-		metrics:         metrics,
-		vvmName:         vvmName,
+func Provide(maxBytes int, storageInitializer istorage.IAppStorageInitializer, metrics imetrics.IMetrics, vvmName string) istorage.IAppStorageInitializer {
+	return &implCachingAppStorageInitializer{
+		maxBytes:           maxBytes,
+		storageInitializer: storageInitializer,
+		metrics:            metrics,
+		vvmName:            vvmName,
 	}
 }

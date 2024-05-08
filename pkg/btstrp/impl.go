@@ -11,6 +11,7 @@ import (
 	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/apps/sys/clusterapp"
 	"github.com/voedger/voedger/pkg/cluster"
+	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/itokens"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
@@ -19,9 +20,19 @@ import (
 
 // is a SyncOp within VVM trunk
 func Bootstrap(federation coreutils.IFederation, asp istructs.IAppStructsProvider, timeFunc coreutils.TimeFunc, appparts appparts.IAppPartitions,
-	clusterApp ClusterBuiltInApp, otherApps []appparts.BuiltInApp, itokens itokens.ITokens) error {
+	clusterApp ClusterBuiltInApp, otherApps []appparts.BuiltInApp, itokens itokens.ITokens, asi istorage.IAppStorageInitializer) error {
 	// initialize cluster app workspace, use app ws amount 0
 	if err := initClusterAppWS(asp, timeFunc); err != nil {
+		return err
+	}
+
+	// create blobber and router storages, if needed
+	if err := asi.Init(istructs.AppQName_sys_blobber); err != nil {
+		// notest
+		return err
+	}
+	if err := asi.Init(istructs.AppQName_sys_router); err != nil {
+		// notest
 		return err
 	}
 

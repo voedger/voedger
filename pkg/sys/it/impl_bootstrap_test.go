@@ -61,7 +61,8 @@ func TestAppsDeploymentDescriptorProtection(t *testing.T) {
 		defer func() {
 			otherApps[0].AppDeploymentDescriptor.NumParts--
 		}()
-		err = btstrp.Bootstrap(vit.IFederation, vit.IAppStructsProvider, vit.TimeFunc, appParts, clusterApp, otherApps, vit.ITokens)
+		err = btstrp.Bootstrap(vit.IFederation, vit.IAppStructsProvider, vit.TimeFunc, appParts, clusterApp, otherApps, vit.ITokens,
+			vit.IAppStorageInitializer)
 		require.ErrorIs(err, btstrp.ErrNumPartitionsChanged)
 	})
 
@@ -73,7 +74,8 @@ func TestAppsDeploymentDescriptorProtection(t *testing.T) {
 		defer func() {
 			otherApps[0].AppDeploymentDescriptor.NumAppWorkspaces--
 		}()
-		err = btstrp.Bootstrap(vit.IFederation, vit.IAppStructsProvider, vit.TimeFunc, appParts, clusterApp, otherApps, vit.ITokens)
+		err = btstrp.Bootstrap(vit.IFederation, vit.IAppStructsProvider, vit.TimeFunc, appParts, clusterApp, otherApps, vit.ITokens,
+			vit.IAppStorageInitializer)
 		require.ErrorIs(err, btstrp.ErrNumAppWorkspacesChanged)
 	})
 }

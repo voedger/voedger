@@ -91,7 +91,7 @@ type VVMPortSource struct {
 	getter      func() VVMPortType
 	adminGetter func() int
 }
-type IAppStorageUncachingProviderFactory func() (provider istorage.IAppStorageProvider)
+type IAppStorageUncachingInitializerFactory func() (provider istorage.IAppStorageInitializer)
 type AppPartsCtlPipelineService struct {
 	apppartsctl.IAppPartitionsController
 }
@@ -114,6 +114,7 @@ type VVM struct {
 	ServicePipeline
 	apps.APIs
 	appparts.IAppPartitions
+	istorage.IAppStorageInitializer
 	AppsExtensionPoints map[istructs.AppQName]extensionpoints.IExtensionPoint
 	MetricsServicePort  func() metrics.MetricsServicePort
 	BuiltInAppsPackages []BuiltInAppPackages

@@ -139,6 +139,7 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 		provideRouterParams,
 		provideRouterAppStorage,
 		provideIFederation,
+		provideCachingAppStorageInitializer,
 		provideCachingAppStorageProvider,  // IAppStorageProvider
 		itokensjwt.ProvideITokens,         // ITokens
 		provideIAppStructsProvider,        // IAppStructsProvider
@@ -198,7 +199,7 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 }
 
 func provideBootstrapOperator(federation coreutils.IFederation, asp istructs.IAppStructsProvider, timeFunc coreutils.TimeFunc, apppar appparts.IAppPartitions,
-	builtinApps []appparts.BuiltInApp, itokens itokens.ITokens) (BootstrapOperator, error) {
+	builtinApps []appparts.BuiltInApp, itokens itokens.ITokens, asi istorage.IAppStorageInitializer) (BootstrapOperator, error) {
 	var clusterBuiltinApp btstrp.ClusterBuiltInApp
 	otherApps := make([]appparts.BuiltInApp, 0, len(builtinApps)-1)
 	for _, app := range builtinApps {
@@ -212,7 +213,7 @@ func provideBootstrapOperator(federation coreutils.IFederation, asp istructs.IAp
 		return nil, fmt.Errorf("%s app should be added to VVM builtin apps", istructs.AppQName_sys_cluster)
 	}
 	return pipeline.NewSyncOp(func(ctx context.Context, work interface{}) (err error) {
-		return btstrp.Bootstrap(federation, asp, timeFunc, apppar, clusterBuiltinApp, otherApps, itokens)
+		return btstrp.Bootstrap(federation, asp, timeFunc, apppar, clusterBuiltinApp, otherApps, itokens, asi)
 	}), nil
 }
 
@@ -278,8 +279,8 @@ func provideAppPartsCtlPipelineService(ctl apppartsctl.IAppPartitionsController)
 	return &AppPartsCtlPipelineService{IAppPartitionsController: ctl}
 }
 
-func provideIAppStorageUncachingProviderFactory(factory istorage.IAppStorageFactory, vvmCfg *VVMConfig) IAppStorageUncachingProviderFactory {
-	return func() istorage.IAppStorageProvider {
+func provideIAppStorageUncachingProviderFactory(factory istorage.IAppStorageFactory, vvmCfg *VVMConfig) IAppStorageUncachingInitializerFactory {
+	return func() istorage.IAppStorageInitializer {
 		return provider.Provide(factory, vvmCfg.KeyspaceNameSuffix)
 	}
 }
@@ -441,12 +442,22 @@ func provideChannelGroups(cfg *VVMConfig) (res []iprocbusmem.ChannelGroup) {
 	return
 }
 
-func provideCachingAppStorageProvider(vvmCfg *VVMConfig, storageCacheSize StorageCacheSizeType, metrics imetrics.IMetrics,
-	vvmName commandprocessor.VVMName, uncachingProvider IAppStorageUncachingProviderFactory) (istorage.IAppStorageProvider, error) {
-	aspNonCaching := uncachingProvider()
-	res := istoragecache.Provide(int(storageCacheSize), aspNonCaching, metrics, string(vvmName))
-	return res, nil
+func provideCachingAppStorageInitializer(storageCacheSize StorageCacheSizeType, metrics imetrics.IMetrics,
+	vvmName commandprocessor.VVMName, uncachingInitializer IAppStorageUncachingInitializerFactory) istorage.IAppStorageInitializer {
+	aspNonCaching := uncachingInitializer()
+	return istoragecache.Provide(int(storageCacheSize), aspNonCaching, metrics, string(vvmName))
 }
+
+func provideCachingAppStorageProvider(asi istorage.IAppStorageInitializer) istorage.IAppStorageProvider {
+	return asi
+}
+
+// func provideCachingAppStorageProvider(vvmCfg *VVMConfig, storageCacheSize StorageCacheSizeType, metrics imetrics.IMetrics,
+// 	vvmName commandprocessor.VVMName, uncachingProvider IAppStorageUncachingInitializerFactory) (istorage.IAppStorageProvider, error) {
+// 	aspNonCaching := uncachingProvider()
+// 	res := istoragecache.Provide(int(storageCacheSize), aspNonCaching, metrics, string(vvmName))
+// 	return res, nil
+// }
 
 // синхронный актуализатор один на приложение из-за storages, которые у каждого приложения свои
 // сделаем так, чтобы в командный процессор подавался свитч по appName, который выберет нужный актуализатор с нужным набором проекторов
