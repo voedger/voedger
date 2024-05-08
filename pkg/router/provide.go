@@ -26,7 +26,6 @@ func Provide(vvmCtx context.Context, rp RouterParams, aBusTimeout time.Duration,
 	bus ibus.IBus, numsAppsWorkspaces map[istructs.AppQName]istructs.NumAppWorkspaces) (httpSrv IHTTPService, acmeSrv IACMEService, adminSrv IAdminService) {
 	httpServ := getHttpService(vvmCtx, "HTTP server", coreutils.ServerAddress(rp.Port), rp, aBusTimeout, broker, bp, bus, numsAppsWorkspaces)
 
-	adminEndpoint := "127.0.0.1:55555"
 	if coreutils.IsTest() {
 		adminEndpoint = "127.0.0.1:0"
 	}
@@ -96,7 +95,6 @@ func getHttpService(vvmCtx context.Context, name string, listenAddress string, r
 		name:               name,
 	}
 
-	// каждется, надо iprocbus.IProcBus сохранять в httpService{}
 	if bp != nil {
 		bp.procBus = iprocbusmem.Provide(bp.ServiceChannels)
 		for i := 0; i < bp.BLOBWorkersNum; i++ {
