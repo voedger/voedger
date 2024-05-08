@@ -17,7 +17,6 @@ const (
 	DefaultLimit  = 100
 	DefaultOffset = istructs.FirstOffset
 	field_Query   = "Query"
-	flag_WSID     = "--wsid="
 )
 
 var (
@@ -50,7 +49,7 @@ var (
 )
 
 const selectQueryExpression = `^` +
-	`(?P<select>select\s+.*\s+from\s+)` + // select * from (+ trailing spaces)
+	`(?P<select>.*\s+from\s+)` + // select * from (+ trailing spaces)
 	`(?P<app>\w+\.\w+\.)?` + // appOwner.appName (+ trailing dot)
 	`(?P<ws>\d+\.)?` + // wsid (+ trailing dot)
 	`(?P<table>\w+\.\w+)` + // table qualified name (clean)
