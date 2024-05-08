@@ -69,7 +69,7 @@ func TestBaselineBasicUsage(t *testing.T) {
 			dir:  filepath.Join(wd, "test", "myapp", "mypkg1"),
 			expectedBaselineFiles: []string{
 				filepath.Join(tempTargetDir, baselineDirName, compile.PkgDirName, "sys", "sys.vsql"),
-				filepath.Join(tempTargetDir, baselineDirName, compile.PkgDirName, "mypkg1", "pkg", "schema1.vsql"),
+				filepath.Join(tempTargetDir, baselineDirName, compile.PkgDirName, "mypkg1", "schema1.vsql"),
 				filepath.Join(tempTargetDir, baselineDirName, baselineInfoFileName),
 			},
 		},
@@ -79,7 +79,7 @@ func TestBaselineBasicUsage(t *testing.T) {
 			expectedBaselineFiles: []string{
 				filepath.Join(tempTargetDir, baselineDirName, compile.PkgDirName, "sys", "sys.vsql"),
 				filepath.Join(tempTargetDir, baselineDirName, compile.PkgDirName, "mypkg1", "schema1.vsql"),
-				filepath.Join(tempTargetDir, baselineDirName, compile.PkgDirName, "mypkg2", "pkg", "schema2.vsql"),
+				filepath.Join(tempTargetDir, baselineDirName, compile.PkgDirName, "mypkg2", "schema2.vsql"),
 				filepath.Join(tempTargetDir, baselineDirName, baselineInfoFileName),
 			},
 		},
@@ -90,7 +90,7 @@ func TestBaselineBasicUsage(t *testing.T) {
 				filepath.Join(tempTargetDir, baselineDirName, compile.PkgDirName, "sys", "sys.vsql"),
 				filepath.Join(tempTargetDir, baselineDirName, compile.PkgDirName, "mypkg1", "schema1.vsql"),
 				filepath.Join(tempTargetDir, baselineDirName, compile.PkgDirName, "mypkg2", "schema2.vsql"),
-				filepath.Join(tempTargetDir, baselineDirName, compile.PkgDirName, "app", "pkg", "app.vsql"),
+				filepath.Join(tempTargetDir, baselineDirName, compile.PkgDirName, "app", "app.vsql"),
 				filepath.Join(tempTargetDir, baselineDirName, baselineInfoFileName),
 			},
 		},
@@ -345,10 +345,10 @@ func TestTidyBasicUsage(t *testing.T) {
 	wd, err := os.Getwd()
 	require.NoError(err)
 
-	err = coreutils.CopyDir(filepath.Join(wd, "test", "genorm"), tempDir)
+	err = coreutils.CopyDir(filepath.Join(wd, "test", "build"), tempDir)
 	require.NoError(err)
 
-	dir := filepath.Join(tempDir, "mypkg5")
+	dir := filepath.Join(tempDir, "appcomplex")
 
 	err = execRootCmd([]string{"vpm", "tidy", "-C", dir}, "1.0.0")
 	require.NoError(err)
@@ -414,19 +414,14 @@ func TestBuildBasicUsage(t *testing.T) {
 			expectedWasmFiles: nil,
 		},
 		{
-			dir:               "appempty",
-			errMsg:            "",
-			expectedWasmFiles: []string{fmt.Sprintf("%s/appempty/pkg/pkg.wasm", buildDirName)},
-		},
-		{
 			dir:               "appsimple",
 			errMsg:            "",
-			expectedWasmFiles: []string{fmt.Sprintf("%s/appsimple/pkg/pkg.wasm", buildDirName)},
+			expectedWasmFiles: []string{fmt.Sprintf("%s/appsimple/appsimple.wasm", buildDirName)},
 		},
 		{
 			dir:               "appcomplex",
 			errMsg:            "",
-			expectedWasmFiles: []string{fmt.Sprintf("%s/appcomplex/pkg/pkg.wasm", buildDirName)},
+			expectedWasmFiles: []string{fmt.Sprintf("%s/appcomplex/appcomplex.wasm", buildDirName)},
 		},
 	}
 

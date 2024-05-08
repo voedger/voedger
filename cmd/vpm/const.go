@@ -6,6 +6,7 @@
 package main
 
 const (
+	wasmDirName          = "wasm"
 	buildDirName         = "build"
 	ormDirName           = "orm"
 	internalDirName      = "internal"
@@ -70,13 +71,14 @@ go %s
 `
 	packagesGenContentTemplate = defaultOrmFilesHeaderComment + `
 
-package main
+package %s
 
 import (
 	%s
+	_ "github.com/voedger/voedger/pkg/sys"
 )
 
-func main() {
+func init() {
 	return
 }
 `

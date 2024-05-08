@@ -9,7 +9,7 @@
 package main
 
 import (
-	"appsimple/pkg/orm"
+	"appsimple/wasm/orm"
 	"time"
 )
 

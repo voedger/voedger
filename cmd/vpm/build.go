@@ -8,6 +8,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"github.com/google/uuid"
 	"github.com/voedger/voedger/pkg/compile"
 	"io"
 	"os"
@@ -26,6 +27,14 @@ func newBuildCmd(params *vpmParams) *cobra.Command {
 		Use:   "build [-C] [-o <archive-name>]",
 		Short: "build",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			exists, err := checkPackageGenFileExists(params.Dir)
+			if err != nil {
+				return err
+			}
+			if !exists {
+				return errors.New("packages_gen.go not found. Run 'vpm init'")
+			}
+
 			compileRes, err := compile.CompileNoDummyApp(params.Dir)
 			if err := checkAppSchemaNotFoundErr(err); err != nil {
 				return err
@@ -64,10 +73,13 @@ func checkCompileResult(compileRes *compile.Result) error {
 }
 
 func build(compileRes *compile.Result, params *vpmParams) error {
-	// directory to save the build info: vsql files, wasm files
-	buildInfoDir := filepath.Join(params.Dir, buildDirName)
-	// create build info directory along with vsql and wasm files
-	if err := buildDir(compileRes.PkgFiles, buildInfoDir); err != nil {
+	// temp directory to save the build info: vsql files, wasm files
+	tempBuildInfoDir := filepath.Join(os.TempDir(), uuid.New().String(), buildDirName)
+	if err := os.MkdirAll(tempBuildInfoDir, coreutils.FileMode_rwxrwxrwx); err != nil {
+		return err
+	}
+	// create temp build info directory along with vsql and wasm files
+	if err := buildDir(compileRes.PkgFiles, tempBuildInfoDir); err != nil {
 		return err
 	}
 	// set the path to the output archive, e.g. app.var
@@ -81,14 +93,14 @@ func build(compileRes *compile.Result, params *vpmParams) error {
 	archivePath := filepath.Join(params.Dir, archiveName)
 
 	// zip build info directory along with vsql and wasm files
-	return coreutils.Zip(archivePath, buildInfoDir)
+	return coreutils.Zip(archivePath, tempBuildInfoDir)
 }
 
 // buildDir creates a directory structure with vsql and wasm files
-func buildDir(pkgFiles packageFiles, baselineDir string) error {
+func buildDir(pkgFiles packageFiles, buildDirPath string) error {
 	for qpn, files := range pkgFiles {
-		dir := filepath.Join(baselineDir, qpn)
-		if err := os.MkdirAll(dir, coreutils.FileMode_rwxrwxrwx); err != nil {
+		pkgBuildDir := filepath.Join(buildDirPath, qpn)
+		if err := os.MkdirAll(pkgBuildDir, coreutils.FileMode_rwxrwxrwx); err != nil {
 			return err
 		}
 
@@ -97,7 +109,7 @@ func buildDir(pkgFiles packageFiles, baselineDir string) error {
 			base := filepath.Base(file)
 			fileNameExtensionless := base[:len(base)-len(filepath.Ext(base))]
 
-			filePath := filepath.Join(dir, fileNameExtensionless+".vsql")
+			filePath := filepath.Join(pkgBuildDir, fileNameExtensionless+".vsql")
 
 			fileContent, err := os.ReadFile(file)
 			if err != nil {
@@ -111,19 +123,27 @@ func buildDir(pkgFiles packageFiles, baselineDir string) error {
 				return fmt.Errorf(errFmtCopyFile, file, err)
 			}
 
-			// check if packages_gen.go file exists, if it does then build the package using tinygo and add the resulting wasm file
+			// build wasm files
+
+			// if wasm directory exists, build wasm file and copy it to the temp build directory
 			fileDir := filepath.Dir(file)
-			exists, err := checkPackageGenFileExists(fileDir)
+			wasmDirPath := filepath.Join(fileDir, wasmDirName)
+			exists, err := coreutils.Exists(wasmDirPath)
 			if err != nil {
 				return err
 			}
 			if exists {
-				wasmFilePath, err := execTinyGoBuild(filepath.Join(fileDir, compile.PkgDirName))
+				appName := filepath.Base(fileDir)
+				wasmFilePath, err := execTinyGoBuild(wasmDirPath, appName)
 				if err != nil {
 					return err
 				}
-				if err := copyFile(wasmFilePath, filepath.Join(dir, filepath.Base(wasmFilePath))); err != nil {
+				if err := copyFile(wasmFilePath, filepath.Join(pkgBuildDir, filepath.Base(wasmFilePath))); err != nil {
 					return fmt.Errorf(errFmtCopyFile, wasmFilePath, err)
+				}
+				// remove the wasm file after copying it to the build directory
+				if err := os.Remove(wasmFilePath); err != nil {
+					return err
 				}
 			}
 
@@ -133,14 +153,10 @@ func buildDir(pkgFiles packageFiles, baselineDir string) error {
 }
 
 // execTinyGoBuild builds the project using tinygo and returns the path to the resulting wasm file
-func execTinyGoBuild(dir string) (wasmFilePath string, err error) {
+func execTinyGoBuild(dir, appName string) (wasmFilePath string, err error) {
 	var stdout io.Writer
 
-	folderName := filepath.Base(dir)
-	if logger.IsVerbose() {
-		stdout = os.Stdout
-	}
-	wasmFileName := folderName + ".wasm"
+	wasmFileName := appName + ".wasm"
 	if err := new(exec.PipedExec).Command("tinygo", "build", "--no-debug", "-o", wasmFileName, "-scheduler=none", "-opt=2", "-gc=leaking", "-target=wasi", ".").WorkingDir(dir).Run(stdout, os.Stderr); err != nil {
 		return "", err
 	}

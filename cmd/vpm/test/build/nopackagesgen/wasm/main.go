@@ -3,12 +3,8 @@
  * @author Maxim Geraskin
  */
 
-package main
-
-func App() {
-	println("Hello, World!")
-}
+package wasm
 
 func main() {
-	App()
+	println("Hello, World!")
 }

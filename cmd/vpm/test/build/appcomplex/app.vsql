@@ -3,10 +3,12 @@
 
 IMPORT SCHEMA 'pkg1';
 IMPORT SCHEMA 'pkg2';
+--IMPORT SCHEMA 'github.com/untillpro/airs-bp3' AS bp3;
 
 APPLICATION appcomplex(
     USE pkg1;
     USE pkg2;
+    --USE bp3;
 );
 
 

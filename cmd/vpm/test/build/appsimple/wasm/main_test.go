@@ -8,8 +8,8 @@ package main
 import (
 	"testing"
 
-	"appsimple/pkg/exttest"
-	"appsimple/pkg/orm"
+	"appsimple/wasm/exttest"
+	"appsimple/wasm/orm"
 
 	"github.com/voedger/voedger/pkg/exttinygo"
 )

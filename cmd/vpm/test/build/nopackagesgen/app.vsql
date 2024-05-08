@@ -1,10 +1,7 @@
 -- Copyright (c) 2024-present unTill Software Development Group B. V.
--- @author Alisher Nurmanov
+-- @author Maxim Geraskin
 
-APPLICATION APP ();
-
--- Copyright (c) 2023-present unTill Pro, Ltd.
--- @author Alisher Nurmanov
+APPLICATION nopackagesgen();
 
 TABLE MyTable1 INHERITS ODoc (
     myfield1 int32 NOT NULL

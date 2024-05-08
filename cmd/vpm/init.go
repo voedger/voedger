@@ -17,6 +17,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/voedger/voedger/pkg/goutils/exec"
 	"github.com/voedger/voedger/pkg/goutils/logger"
+	"github.com/voedger/voedger/pkg/sys"
 	"golang.org/x/mod/semver"
 
 	"github.com/voedger/voedger/pkg/compile"
@@ -45,7 +46,7 @@ func initPackage(dir, packagePath string) error {
 	if err := createGoMod(dir, packagePath); err != nil {
 		return err
 	}
-	if err := createPackagesGen(nil, dir, false); err != nil {
+	if err := createPackagesGen(nil, dir, packagePath, false); err != nil {
 		return err
 	}
 	return execGoModTidy(dir)
@@ -95,7 +96,7 @@ func checkPackageGenFileExists(dir string) (bool, error) {
 	return coreutils.Exists(packagesGenFilePath)
 }
 
-func createPackagesGen(imports []string, dir string, recreate bool) error {
+func createPackagesGen(imports []string, dir, packagePath string, recreate bool) error {
 	// pkg subfolder for packages
 	packagesGenFilePath := filepath.Join(dir, packagesGenFileName)
 	if !recreate {
@@ -111,10 +112,13 @@ func createPackagesGen(imports []string, dir string, recreate bool) error {
 
 	strBuffer := &strings.Builder{}
 	for _, imp := range imports {
+		if imp == sys.PackagePath {
+			continue
+		}
 		strBuffer.WriteString(fmt.Sprintf("_ %q\n", imp))
 	}
 
-	packagesGenContent := fmt.Sprintf(packagesGenContentTemplate, strBuffer.String())
+	packagesGenContent := fmt.Sprintf(packagesGenContentTemplate, filepath.Base(packagePath), strBuffer.String())
 	packagesGenContentFormatted, err := format.Source([]byte(packagesGenContent))
 	if err != nil {
 		return err
