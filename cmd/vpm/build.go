@@ -9,15 +9,16 @@ import (
 	"errors"
 	"fmt"
 	"github.com/google/uuid"
-	"github.com/voedger/voedger/pkg/compile"
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/spf13/cobra"
+	"github.com/voedger/voedger/pkg/compile"
 	"github.com/voedger/voedger/pkg/goutils/exec"
 	"github.com/voedger/voedger/pkg/goutils/logger"
+	"github.com/voedger/voedger/pkg/parser"
 
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
@@ -109,7 +110,7 @@ func buildDir(pkgFiles packageFiles, buildDirPath string) error {
 			base := filepath.Base(file)
 			fileNameExtensionless := base[:len(base)-len(filepath.Ext(base))]
 
-			filePath := filepath.Join(pkgBuildDir, fileNameExtensionless+".vsql")
+			filePath := filepath.Join(pkgBuildDir, fileNameExtensionless+parser.VSqlExt)
 
 			fileContent, err := os.ReadFile(file)
 			if err != nil {

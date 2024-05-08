@@ -16,6 +16,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/voedger/voedger/pkg/goutils/exec"
 	"github.com/voedger/voedger/pkg/goutils/logger"
+	"github.com/voedger/voedger/pkg/parser"
 
 	"github.com/voedger/voedger/pkg/compile"
 	coreutils "github.com/voedger/voedger/pkg/utils"
@@ -93,7 +94,7 @@ func saveBaselineSchemas(pkgFiles packageFiles, baselineDir string) error {
 		for _, file := range files {
 			base := filepath.Base(file)
 			fileNameExtensionless := base[:len(base)-len(filepath.Ext(base))]
-			filePath := filepath.Join(packageDir, fileNameExtensionless+".vsql")
+			filePath := filepath.Join(packageDir, fileNameExtensionless+parser.VSqlExt)
 
 			if err := copyFile(file, filePath); err != nil {
 				return fmt.Errorf(errFmtCopyFile, file, err)
