@@ -30,10 +30,6 @@ func (r *res) AsInt32(name string) int32 {
 func provideExecQueryApp(asp istructs.IAppStructsProvider) istructsmem.ExecQueryClosure {
 	return func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 		appQNameStr := args.ArgumentObject.AsString(Field_AppQName)
-		// appQName, err := istructs.ParseAppQName(appQNameStr)
-		// if err != nil {
-		// 	return fmt.Errorf("failed to parse appQName %q: %w", appQNameStr, err)
-		// }
 
 		as, err := asp.AppStructs(istructs.AppQName_sys_cluster)
 		if err != nil {

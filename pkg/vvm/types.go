@@ -44,7 +44,8 @@ type AsyncActualizersFactory func(ctx context.Context, appQName istructs.AppQNam
 type OperatorAppServicesFactory func(ctx context.Context) pipeline.ISyncOperator
 type CommandChannelFactory func(channelIdx int) commandprocessor.CommandChannel
 type QueryChannel iprocbus.ServiceChannel
-type RouterServiceOperator pipeline.ISyncOperator
+type AdminEndpointServiceOperator pipeline.ISyncOperator
+type PublicEndpointServiceOperator pipeline.ISyncOperator
 type BlobberAppClusterID istructs.ClusterAppID
 type BlobStorage iblobstorage.IBLOBStorage
 type BlobAppStorage istorage.IAppStorage

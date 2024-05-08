@@ -108,19 +108,19 @@ func InitAppWSes(as istructs.IAppStructs, numAppWorkspaces istructs.NumAppWorksp
 	return res, nil
 }
 
-func InitAppWS(as istructs.IAppStructs, partitionID istructs.PartitionID, wsid istructs.WSID, plogOffset, wlogOffset istructs.Offset, currentMillis istructs.UnixMilli) (inited bool, err error) {
-	existingCDocWSDesc, err := as.Records().GetSingleton(wsid, authnz.QNameCDocWorkspaceDescriptor)
+func InitAppWS(as istructs.IAppStructs, partitionID istructs.PartitionID, appWSID istructs.WSID, plogOffset, wlogOffset istructs.Offset, currentMillis istructs.UnixMilli) (inited bool, err error) {
+	existingCDocWSDesc, err := as.Records().GetSingleton(appWSID, authnz.QNameCDocWorkspaceDescriptor)
 	if err != nil {
 		return false, err
 	}
 	if existingCDocWSDesc.QName() != appdef.NullQName {
-		logger.Verbose("app workspace", as.AppQName(), wsid-wsid.BaseWSID(), "(", wsid, ") inited already")
+		logger.Verbose("app workspace", as.AppQName(), appWSID-appWSID.BaseWSID(), "(", appWSID, ") inited already")
 		return false, nil
 	}
 
 	grebp := istructs.GenericRawEventBuilderParams{
 		HandlingPartition: partitionID,
-		Workspace:         wsid,
+		Workspace:         appWSID,
 		QName:             istructs.QNameCommandCUD,
 		RegisteredAt:      currentMillis,
 		PLogOffset:        plogOffset,
@@ -154,6 +154,6 @@ func InitAppWS(as istructs.IAppStructs, partitionID istructs.PartitionID, wsid i
 	if err = as.Events().PutWlog(pLogEvent); err != nil {
 		return false, err
 	}
-	logger.Verbose("app workspace", as.AppQName(), wsid.BaseWSID()-istructs.FirstBaseAppWSID, "(", wsid, ") initialized")
+	logger.Verbose("app workspace", as.AppQName(), appWSID.BaseWSID()-istructs.FirstBaseAppWSID, "(", appWSID, ") initialized")
 	return true, nil
 }

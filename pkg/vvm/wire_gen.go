@@ -130,45 +130,11 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 	appPartitionFactory := provideAppPartitionFactory(asyncActualizersFactory, v4)
 	appServiceFactory := provideAppServiceFactory(appPartitionFactory)
 	operatorAppServicesFactory := provideOperatorAppServices(appServiceFactory, appsArtefacts, iAppStructsProvider)
-	vvmPortType := vvmConfig.VVMPort
-	routerParams := provideRouterParams(vvmConfig, vvmPortType, vvmIdx)
-	busTimeout := vvmConfig.BusTimeout
-	blobberServiceChannels := vvmConfig.BlobberServiceChannels
-	blobMaxSizeType := vvmConfig.BLOBMaxSize
-	blobAppStorage, err := provideBlobAppStorage(iAppStorageProvider)
-	if err != nil {
-		cleanup3()
-		cleanup2()
-		cleanup()
-		return nil, nil, err
-	}
-	blobStorage := provideBlobStorage(blobAppStorage, timeFunc)
-	routerAppStorage, err := provideRouterAppStorage(iAppStorageProvider)
-	if err != nil {
-		cleanup3()
-		cleanup2()
-		cleanup()
-		return nil, nil, err
-	}
-	cache := dbcertcache.ProvideDbCache(routerAppStorage)
-	commandProcessorsChannelGroupIdxType := provideProcessorChannelGroupIdxCommand(vvmConfig)
-	queryProcessorsChannelGroupIdxType := provideProcessorChannelGroupIdxQuery(vvmConfig)
-	v5 := provideBuiltInApps(appsArtefacts)
-	vvmApps := provideVVMApps(v5)
-	iBus := provideIBus(iAppPartitions, iProcBus, commandProcessorsChannelGroupIdxType, queryProcessorsChannelGroupIdxType, numCommandProcessors, vvmApps)
-	v6, err := provideNumsAppsWorkspaces(vvmApps, iAppStructsProvider)
-	if err != nil {
-		cleanup3()
-		cleanup2()
-		cleanup()
-		return nil, nil, err
-	}
-	routerServices := provideRouterServices(vvmCtx, routerParams, busTimeout, in10nBroker, quotas, timeFunc, blobberServiceChannels, blobMaxSizeType, blobStorage, routerAppStorage, cache, iBus, vvmPortSource, v6)
-	routerServiceOperator := provideRouterServiceFactory(routerServices)
 	metricsServicePortInitial := vvmConfig.MetricsServicePort
 	metricsServicePort := provideMetricsServicePort(metricsServicePortInitial, vvmIdx)
 	metricsService := metrics.ProvideMetricsService(vvmCtx, metricsServicePort, iMetrics)
 	metricsServiceOperator := provideMetricsServiceOperator(metricsService)
+	v5 := provideBuiltInApps(appsArtefacts)
 	iAppPartitionsController, cleanup4, err := apppartsctl.New(iAppPartitions, v5)
 	if err != nil {
 		cleanup3()
@@ -185,7 +151,45 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 		cleanup()
 		return nil, nil, err
 	}
-	servicePipeline := provideServicePipeline(vvmCtx, operatorCommandProcessors, operatorQueryProcessors, operatorAppServicesFactory, routerServiceOperator, metricsServiceOperator, iAppPartsCtlPipelineService, bootstrapOperator)
+	vvmPortType := vvmConfig.VVMPort
+	routerParams := provideRouterParams(vvmConfig, vvmPortType, vvmIdx)
+	busTimeout := vvmConfig.BusTimeout
+	blobberServiceChannels := vvmConfig.BlobberServiceChannels
+	blobMaxSizeType := vvmConfig.BLOBMaxSize
+	blobAppStorage, err := provideBlobAppStorage(iAppStorageProvider)
+	if err != nil {
+		cleanup4()
+		cleanup3()
+		cleanup2()
+		cleanup()
+		return nil, nil, err
+	}
+	blobStorage := provideBlobStorage(blobAppStorage, timeFunc)
+	routerAppStorage, err := provideRouterAppStorage(iAppStorageProvider)
+	if err != nil {
+		cleanup4()
+		cleanup3()
+		cleanup2()
+		cleanup()
+		return nil, nil, err
+	}
+	cache := dbcertcache.ProvideDbCache(routerAppStorage)
+	commandProcessorsChannelGroupIdxType := provideProcessorChannelGroupIdxCommand(vvmConfig)
+	queryProcessorsChannelGroupIdxType := provideProcessorChannelGroupIdxQuery(vvmConfig)
+	vvmApps := provideVVMApps(v5)
+	iBus := provideIBus(iAppPartitions, iProcBus, commandProcessorsChannelGroupIdxType, queryProcessorsChannelGroupIdxType, numCommandProcessors, vvmApps)
+	v6, err := provideNumsAppsWorkspaces(vvmApps, iAppStructsProvider)
+	if err != nil {
+		cleanup4()
+		cleanup3()
+		cleanup2()
+		cleanup()
+		return nil, nil, err
+	}
+	routerServices := provideRouterServices(vvmCtx, routerParams, busTimeout, in10nBroker, quotas, timeFunc, blobberServiceChannels, blobMaxSizeType, blobStorage, routerAppStorage, cache, iBus, vvmPortSource, v6)
+	adminEndpointServiceOperator := provideAdminEndpointServiceOperator(routerServices)
+	publicEndpointServiceOperator := providePublicEndpointServiceOperator(routerServices)
+	servicePipeline := provideServicePipeline(vvmCtx, operatorCommandProcessors, operatorQueryProcessors, operatorAppServicesFactory, metricsServiceOperator, iAppPartsCtlPipelineService, bootstrapOperator, adminEndpointServiceOperator, publicEndpointServiceOperator)
 	v7 := provideExtensionPoints(appsArtefacts)
 	v8 := provideMetricsServicePortGetter(metricsService)
 	v9 := provideBuiltInAppPackages(appsArtefacts)
@@ -544,10 +548,13 @@ func provideRouterServices(vvmCtx context.Context, rp router.RouterParams, busTi
 	}
 }
 
-func provideRouterServiceFactory(rs RouterServices) RouterServiceOperator {
-	funcs := make([]pipeline.ForkOperatorOptionFunc, 2, 3)
+func provideAdminEndpointServiceOperator(rs RouterServices) AdminEndpointServiceOperator {
+	return pipeline.ServiceOperator(rs.IAdminService)
+}
+
+func providePublicEndpointServiceOperator(rs RouterServices) PublicEndpointServiceOperator {
+	funcs := make([]pipeline.ForkOperatorOptionFunc, 1, 2)
 	funcs[0] = pipeline.ForkBranch(pipeline.ServiceOperator(rs.IHTTPService))
-	funcs[1] = pipeline.ForkBranch(pipeline.ServiceOperator(rs.IAdminService))
 	if rs.IACMEService != nil {
 		funcs = append(funcs, pipeline.ForkBranch(pipeline.ServiceOperator(rs.IACMEService)))
 	}
@@ -662,8 +669,8 @@ func provideOperatorAppServices(apf AppServiceFactory, appsArtefacts AppsArtefac
 }
 
 func provideServicePipeline(vvmCtx context.Context, opCommandProcessors OperatorCommandProcessors, opQueryProcessors OperatorQueryProcessors, opAppServices OperatorAppServicesFactory,
-	routerServiceOp RouterServiceOperator, metricsServiceOp MetricsServiceOperator, appPartsCtl IAppPartsCtlPipelineService, bootstrapOp BootstrapOperator) ServicePipeline {
-	return pipeline.NewSyncPipeline(vvmCtx, "ServicePipeline", pipeline.WireSyncOperator("bootstrap", bootstrapOp), pipeline.WireSyncOperator("services", pipeline.ForkOperator(pipeline.ForkSame, pipeline.ForkBranch(pipeline.ForkOperator(pipeline.ForkSame, pipeline.ForkBranch(opQueryProcessors), pipeline.ForkBranch(opCommandProcessors), pipeline.ForkBranch(opAppServices(vvmCtx)), pipeline.ForkBranch(pipeline.ServiceOperator(appPartsCtl)))), pipeline.ForkBranch(routerServiceOp), pipeline.ForkBranch(metricsServiceOp),
-	)),
+	metricsServiceOp MetricsServiceOperator, appPartsCtl IAppPartsCtlPipelineService, bootstrapSyncOp BootstrapOperator,
+	adminEndpoint AdminEndpointServiceOperator, publicEndpoint PublicEndpointServiceOperator) ServicePipeline {
+	return pipeline.NewSyncPipeline(vvmCtx, "ServicePipeline", pipeline.WireSyncOperator("internal services", pipeline.ForkOperator(pipeline.ForkSame, pipeline.ForkBranch(opQueryProcessors), pipeline.ForkBranch(opCommandProcessors), pipeline.ForkBranch(pipeline.ServiceOperator(appPartsCtl)))), pipeline.WireSyncOperator("admin endpoint", adminEndpoint), pipeline.WireSyncOperator("bootstrap", bootstrapSyncOp), pipeline.WireSyncOperator("public endpoint", publicEndpoint), pipeline.WireSyncOperator("async actualizers", opAppServices(vvmCtx)),
 	)
 }

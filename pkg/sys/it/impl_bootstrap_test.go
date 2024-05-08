@@ -144,6 +144,7 @@ func TestAppWSInitIndempotency(t *testing.T) {
 
 	checkCDocsWSDesc(vit.VVMConfig, vit.VVM, require)
 
+	// init app ws again (first is done on NewVIT()) -> expect no errors + assume next tests will work as well
 	for _, app := range vit.BuiltInAppsPackages {
 		as, err := vit.AppStructs(app.Name)
 		require.NoError(err)

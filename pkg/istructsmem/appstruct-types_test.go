@@ -431,12 +431,4 @@ func TestErrorsAppConfigsType(t *testing.T) {
 		require.NoError(err)
 		require.Panics(func() { cfg.AppDefBuilder() })
 	})
-
-	t.Run("unable to work is NumAppWorkspaces is not set", func(t *testing.T) {
-		cfgs := make(AppConfigsType, 1)
-		cfgs.AddConfig(istructs.AppQName_test1_app1, appDef)
-		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
-		_, err := provider.AppStructs(istructs.AppQName_test1_app1)
-		require.ErrorIs(err, ErrNumAppWorkspacesNotSet)
-	})
 }

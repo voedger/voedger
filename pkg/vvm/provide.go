@@ -124,7 +124,6 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 		provideAppServiceFactory,
 		provideAppPartitionFactory,
 		provideAsyncActualizersFactory,
-		provideRouterServiceFactory,
 		provideOperatorAppServices,
 		provideBlobAppStorage,
 		provideVVMApps,
@@ -176,6 +175,8 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 		provideBuiltInAppPackages,
 		provideExtensionPoints,
 		provideBootstrapOperator,
+		provideAdminEndpointServiceOperator,
+		providePublicEndpointServiceOperator,
 		// wire.Value(vvmConfig.NumCommandProcessors) -> (wire bug?) value github.com/untillpro/airs-bp3/vvm.CommandProcessorsCount can't be used: vvmConfig is not declared in package scope
 		wire.FieldsOf(&vvmConfig,
 			"NumCommandProcessors",
@@ -491,10 +492,13 @@ func provideRouterServices(vvmCtx context.Context, rp router.RouterParams, busTi
 	}
 }
 
-func provideRouterServiceFactory(rs RouterServices) RouterServiceOperator {
-	funcs := make([]pipeline.ForkOperatorOptionFunc, 2, 3)
+func provideAdminEndpointServiceOperator(rs RouterServices) AdminEndpointServiceOperator {
+	return pipeline.ServiceOperator(rs.IAdminService)
+}
+
+func providePublicEndpointServiceOperator(rs RouterServices) PublicEndpointServiceOperator {
+	funcs := make([]pipeline.ForkOperatorOptionFunc, 1, 2)
 	funcs[0] = pipeline.ForkBranch(pipeline.ServiceOperator(rs.IHTTPService))
-	funcs[1] = pipeline.ForkBranch(pipeline.ServiceOperator(rs.IAdminService))
 	if rs.IACMEService != nil {
 		funcs = append(funcs, pipeline.ForkBranch(pipeline.ServiceOperator(rs.IACMEService)))
 	}
@@ -609,56 +613,18 @@ func provideOperatorAppServices(apf AppServiceFactory, appsArtefacts AppsArtefac
 	}
 }
 
-func provideServicePipeline_(vvmCtx context.Context, opCommandProcessors OperatorCommandProcessors, opQueryProcessors OperatorQueryProcessors, opAppServices OperatorAppServicesFactory,
-	routerServiceOp RouterServiceOperator, metricsServiceOp MetricsServiceOperator, appPartsCtl IAppPartsCtlPipelineService, bootstrapOp BootstrapOperator) ServicePipeline {
+func provideServicePipeline(vvmCtx context.Context, opCommandProcessors OperatorCommandProcessors, opQueryProcessors OperatorQueryProcessors,
+	opAppServices OperatorAppServicesFactory, metricsServiceOp MetricsServiceOperator, appPartsCtl IAppPartsCtlPipelineService, bootstrapSyncOp BootstrapOperator,
+	adminEndpoint AdminEndpointServiceOperator, publicEndpoint PublicEndpointServiceOperator) ServicePipeline {
 	return pipeline.NewSyncPipeline(vvmCtx, "ServicePipeline",
 		pipeline.WireSyncOperator("internal services", pipeline.ForkOperator(pipeline.ForkSame,
 			pipeline.ForkBranch(opQueryProcessors),
 			pipeline.ForkBranch(opCommandProcessors),
 			pipeline.ForkBranch(pipeline.ServiceOperator(appPartsCtl)),
 		)),
-		pipeline.WireSyncOperator("admin endpoint", nil),
-		pipeline.WireSyncOperator("bootstrap", bootstrapOp),
-		pipeline.WireSyncOperator("services", pipeline.ForkOperator(pipeline.ForkSame,
-
-			// VVM
-			pipeline.ForkBranch(pipeline.ForkOperator(pipeline.ForkSame,
-				pipeline.ForkBranch(opQueryProcessors),
-				pipeline.ForkBranch(opCommandProcessors),
-				pipeline.ForkBranch(opAppServices(vvmCtx)), // vvmCtx here is for AsyncActualizerConf at AsyncActualizerFactory only
-				pipeline.ForkBranch(pipeline.ServiceOperator(appPartsCtl)),
-			)),
-
-			// Router
-			// vvmCtx here is for blobber service to stop reading from ServiceChannel on VVM shutdown
-			pipeline.ForkBranch(routerServiceOp),
-
-			// Metrics http service
-			pipeline.ForkBranch(metricsServiceOp),
-		)),
-	)
-}
-
-func provideServicePipeline(vvmCtx context.Context, opCommandProcessors OperatorCommandProcessors, opQueryProcessors OperatorQueryProcessors, opAppServices OperatorAppServicesFactory,
-	routerServiceOp RouterServiceOperator, metricsServiceOp MetricsServiceOperator, appPartsCtl IAppPartsCtlPipelineService, bootstrapOp BootstrapOperator) ServicePipeline {
-	return pipeline.NewSyncPipeline(vvmCtx, "ServicePipeline",
-		pipeline.WireSyncOperator("bootstrap", bootstrapOp),
-		pipeline.WireSyncOperator("services", pipeline.ForkOperator(pipeline.ForkSame,
-
-			// VVM
-			pipeline.ForkBranch(pipeline.ForkOperator(pipeline.ForkSame,
-				pipeline.ForkBranch(opQueryProcessors),
-				pipeline.ForkBranch(opCommandProcessors),
-				pipeline.ForkBranch(opAppServices(vvmCtx)), // vvmCtx here is for AsyncActualizerConf at AsyncActualizerFactory only
-				pipeline.ForkBranch(pipeline.ServiceOperator(appPartsCtl)),
-			)),
-
-			// Router
-			// vvmCtx here is for blobber service to stop reading from ServiceChannel on VVM shutdown
-			pipeline.ForkBranch(routerServiceOp),
-
-			// Metrics http service
-			pipeline.ForkBranch(metricsServiceOp),
-		)),
+		pipeline.WireSyncOperator("admin endpoint", adminEndpoint),
+		pipeline.WireSyncOperator("bootstrap", bootstrapSyncOp),
+		pipeline.WireSyncOperator("public endpoint", publicEndpoint),
+		pipeline.WireSyncOperator("async actualizers", opAppServices(vvmCtx)),
 	)
 }

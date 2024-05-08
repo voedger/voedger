@@ -59,8 +59,6 @@ var ErrTypeChanged = errors.New("type has been changed")
 
 var ErrDataConstraintViolation = errors.New("data constraint violation")
 
-var ErrNumAppWorkspacesNotSet = errors.New("NumAppWorkspaces is not set")
-
 const errTypedFieldNotFoundWrap = "%s-type field «%s» is not found in %v: %w" // int32-type field «myField» is not found …
 
 const errFieldNotFoundWrap = "field «%s» is not found in %v: %w" // int32-type field «myField» is not found …

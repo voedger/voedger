@@ -106,6 +106,9 @@ func (s *httpService) Stop() {
 }
 
 func (s *httpService) GetPort() int {
+	if s.listener == nil {
+		panic("listener is not listening. Need to call http funcs before public service is sarted -> use IFederation.AdminFunc()")
+	}
 	return s.listener.Addr().(*net.TCPAddr).Port
 }
 

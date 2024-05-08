@@ -76,7 +76,7 @@ func Bootstrap(federation coreutils.IFederation, asp istructs.IAppStructsProvide
 
 func readPreviousAppDeployment(federation coreutils.IFederation, appQName istructs.AppQName, sysToken string) (wasDeployed bool, deployedNumPartitions istructs.NumAppPartitions, deployedNumAppWorkspaces istructs.NumAppWorkspaces, err error) {
 	body := fmt.Sprintf(`{"args":{"AppQName":"%s"},"elements":[{"fields": ["NumPartitions", "NumAppWorkspaces"]}]}`, appQName)
-	resp, err := federation.Func(fmt.Sprintf("api/%s/%d/q.cluster.QueryApp", istructs.AppQName_sys_cluster, clusterapp.ClusterAppPseudoWSID), body,
+	resp, err := federation.AdminFunc(fmt.Sprintf("api/%s/%d/q.cluster.QueryApp", istructs.AppQName_sys_cluster, clusterapp.ClusterAppPseudoWSID), body,
 		coreutils.WithAuthorizeBy(sysToken),
 		coreutils.WithRetryOnAnyError(retryOnHTTPErrorTimeout, retryOnHTTPErrorDelay),
 	)
@@ -95,7 +95,7 @@ func readPreviousAppDeployment(federation coreutils.IFederation, appQName istruc
 func deployApp(federation coreutils.IFederation, appQName istructs.AppQName, numPartitions istructs.NumAppPartitions,
 	numAppWorkspaces istructs.NumAppWorkspaces, sysToken string) error {
 	body := fmt.Sprintf(`{"args":{"AppQName":"%s","NumPartitions":%d,"NumAppWorkspaces":%d}}`, appQName, numPartitions, numAppWorkspaces)
-	_, err := federation.Func(fmt.Sprintf("api/%s/%d/c.cluster.DeployApp", istructs.AppQName_sys_cluster, clusterapp.ClusterAppPseudoWSID), body,
+	_, err := federation.AdminFunc(fmt.Sprintf("api/%s/%d/c.cluster.DeployApp", istructs.AppQName_sys_cluster, clusterapp.ClusterAppPseudoWSID), body,
 		coreutils.WithDiscardResponse(),
 		coreutils.WithAuthorizeBy(sysToken),
 		coreutils.WithRetryOnAnyError(retryOnHTTPErrorTimeout, retryOnHTTPErrorDelay),
