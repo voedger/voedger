@@ -324,7 +324,7 @@ type DataType struct {
 	Float32   bool         `parser:"| @('real' | 'float' | 'float32')"`
 	Float64   bool         `parser:"| @(('double' 'precision') | 'float64')"`
 	Timestamp bool         `parser:"| @'timestamp'"`
-	Currency  bool         `parser:"| @('decimal' | 'money' | 'currency')"`
+	Currency  bool         `parser:"| @('money' | 'currency')"`
 	Bool      bool         `parser:"| @('boolean' | 'bool')"`
 	Blob      bool         `parser:"| @(('binary' 'large' 'object') | 'blob')"`
 	QName     bool         `parser:"| @(('qualified' 'name') | 'qname')"`

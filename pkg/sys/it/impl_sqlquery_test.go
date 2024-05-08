@@ -13,6 +13,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/processors"
 	"github.com/voedger/voedger/pkg/sys/sqlquery"
@@ -470,14 +471,14 @@ func TestSqlQuery(t *testing.T) {
 		resp.RequireError(t, "unsupported source: git.hub")
 	})
 	t.Run("Should read sys.wlog from other workspace", func(t *testing.T) {
-		wsOne := vit.PostWS(ws, "q.sys.SqlQuery", fmt.Sprintf(`{"args":{"Query":"select * from sys.wlog --wsid=%d"}}`, ws.Owner.ProfileWSID))
+		wsOne := vit.PostWS(ws, "q.sys.SqlQuery", fmt.Sprintf(`{"args":{"Query":"select * from %d.sys.wlog"}}`, ws.Owner.ProfileWSID))
 		wsTwo := vit.PostWS(ws, "q.sys.SqlQuery", `{"args":{"Query":"select * from sys.wlog"}}`)
 
 		require.NotEqual(t, len(wsOne.Sections[0].Elements), len(wsTwo.Sections[0].Elements))
 	})
 
 	t.Run("400 bad request on read from non-inited workspace", func(t *testing.T) {
-		vit.PostWS(ws, "q.sys.SqlQuery", `{"args":{"Query":"select * from sys.wlog --wsid=0"}}`, coreutils.Expect400(processors.ErrWSNotInited.Message))
+		vit.PostWS(ws, "q.sys.SqlQuery", `{"args":{"Query":"select * from 555.sys.wlog"}}`, coreutils.Expect400(processors.ErrWSNotInited.Message))
 	})
 }
 
@@ -500,7 +501,7 @@ func TestReadFromWLogWithSysRawArg(t *testing.T) {
 }
 
 func TestReadFromAnotherAppAnotherWSID(t *testing.T) {
-	t.Skip("waiting for https://github.com/voedger/voedger/issues/1811")
+	//t.Skip("waiting for https://github.com/voedger/voedger/issues/1811")
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
@@ -513,10 +514,12 @@ func TestReadFromAnotherAppAnotherWSID(t *testing.T) {
 
 	// create a workspace in another app
 	anotherAppWSOwner := vit.GetPrincipal(istructs.AppQName_test1_app2, "login")
+	qNameApp2_TestWSKind := appdef.NewQName("app2pkg", "test_ws")
 	anotherAppWS := vit.CreateWorkspace(it.WSParams{
-		Name:      "anotherAppWS",
-		Kind:      it.QNameApp1_TestWSKind,
-		ClusterID: istructs.MainClusterID,
+		Name:         "anotherAppWS",
+		Kind:         qNameApp2_TestWSKind,
+		ClusterID:    istructs.MainClusterID,
+		InitDataJSON: `{"IntFld":42}`,
 	}, anotherAppWSOwner)
 
 	// in the another app use sql to query the record from the first app

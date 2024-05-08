@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
-	"strings"
 
 	"github.com/blastrain/vitess-sqlparser/sqlparser"
 
@@ -23,32 +22,41 @@ import (
 
 func execQrySqlQuery(asp istructs.IAppStructsProvider, appQName istructs.AppQName) func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 	return func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
-		wsid := args.WSID
-		ws := args.Workspace
-		appStructs, err := asp.AppStructs(appQName)
+
+		query := args.ArgumentObject.AsString(field_Query)
+		app := appQName
+		wsID := args.WSID
+
+		if a, w, c, err := parseQueryAppWs(query); err == nil {
+			if a != istructs.NullAppQName {
+				app = a
+			}
+			if w != 0 {
+				wsID = w
+			}
+			query = c
+		}
+
+		appStructs, err := asp.AppStructs(app)
 		if err != nil {
 			return err
 		}
-		if index := strings.Index(args.ArgumentObject.AsString(field_Query), flag_WSID); index != -1 {
-			v, err := strconv.Atoi(args.ArgumentObject.AsString(field_Query)[index+len(flag_WSID):])
-			if err != nil {
-				return err
-			}
-			wsid = istructs.WSID(v)
-			wsDesc, err := appStructs.Records().GetSingleton(wsid, authnz.QNameCDocWorkspaceDescriptor)
+
+		if wsID != args.WSID {
+			wsDesc, err := appStructs.Records().GetSingleton(wsID, authnz.QNameCDocWorkspaceDescriptor)
 			if err != nil {
 				// notest
 				return err
 			}
 			if wsDesc.QName() == appdef.NullQName {
-				return coreutils.NewHTTPErrorf(http.StatusBadRequest, fmt.Sprintf("wsid %d: %s", wsid, processors.ErrWSNotInited.Message))
+				return coreutils.NewHTTPErrorf(http.StatusBadRequest, fmt.Sprintf("wsid %d: %s", wsID, processors.ErrWSNotInited.Message))
 			}
-			if ws = appStructs.AppDef().WorkspaceByDescriptor(wsDesc.AsQName(authnz.Field_WSKind)); ws == nil {
-				return coreutils.NewHTTPErrorf(http.StatusBadRequest, fmt.Sprintf("no workspace by QName of its descriptor %s from wsid %d", wsDesc.QName(), wsid))
+			if ws := appStructs.AppDef().WorkspaceByDescriptor(wsDesc.AsQName(authnz.Field_WSKind)); ws == nil {
+				return coreutils.NewHTTPErrorf(http.StatusBadRequest, fmt.Sprintf("no workspace by QName of its descriptor %s from wsid %d", wsDesc.QName(), wsID))
 			}
 		}
 
-		stmt, err := sqlparser.Parse(args.ArgumentObject.AsString(field_Query))
+		stmt, err := sqlparser.Parse(query)
 		if err != nil {
 			return err
 		}
@@ -81,13 +89,13 @@ func execQrySqlQuery(asp istructs.IAppStructsProvider, appQName istructs.AppQNam
 
 		switch appStructs.AppDef().Type(source).Kind() {
 		case appdef.TypeKind_ViewRecord:
-			return readViewRecords(ctx, wsid, appdef.NewQName(table.Qualifier.String(), table.Name.String()), whereExpr, appStructs, f, callback, ws)
+			return readViewRecords(ctx, wsID, appdef.NewQName(table.Qualifier.String(), table.Name.String()), whereExpr, appStructs, f, callback)
 		case appdef.TypeKind_CDoc:
 			fallthrough
 		case appdef.TypeKind_CRecord:
 			fallthrough
 		case appdef.TypeKind_WDoc:
-			return readRecords(wsid, source, whereExpr, appStructs, f, callback)
+			return readRecords(wsID, source, whereExpr, appStructs, f, callback)
 		default:
 			if source != plog && source != wlog {
 				break
@@ -100,9 +108,9 @@ func execQrySqlQuery(asp istructs.IAppStructsProvider, appQName istructs.AppQNam
 				AppPartitions() appparts.IAppPartitions
 			}).AppPartitions()
 			if source == plog {
-				return readPlog(ctx, wsid, offset, limit, appStructs, f, callback, appStructs.AppDef(), appParts)
+				return readPlog(ctx, wsID, offset, limit, appStructs, f, callback, appStructs.AppDef(), appParts)
 			}
-			return readWlog(ctx, wsid, offset, limit, appStructs, f, callback, appStructs.AppDef())
+			return readWlog(ctx, wsID, offset, limit, appStructs, f, callback, appStructs.AppDef())
 		}
 
 		return fmt.Errorf("unsupported source: %s", source)

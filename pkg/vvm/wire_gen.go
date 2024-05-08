@@ -427,7 +427,7 @@ func provideIFederation(cfg *VVMConfig, vvmPortSource *VVMPortSource) (coreutils
 			panic(err)
 		}
 		return resultFU
-	})
+	}, func() int { return vvmPortSource.adminGetter() })
 }
 
 // Metrics service port could be dynamic -> need a func that will return the actual port
@@ -532,18 +532,22 @@ func provideRouterServices(vvmCtx context.Context, rp router.RouterParams, busTi
 		RetryAfterSecondsOn503: DefaultRetryAfterSecondsOn503,
 		BLOBMaxSize:            bms,
 	}
-	httpSrv, acmeSrv := router.Provide(vvmCtx, rp, time.Duration(busTimeout), broker, bp, autocertCache, bus, numsAppsWorkspaces)
+	httpSrv, acmeSrv, adminSrv := router.Provide(vvmCtx, rp, time.Duration(busTimeout), broker, bp, autocertCache, bus, numsAppsWorkspaces)
 	vvmPortSource.getter = func() VVMPortType {
 		return VVMPortType(httpSrv.GetPort())
 	}
+	vvmPortSource.adminGetter = func() int {
+		return adminSrv.GetPort()
+	}
 	return RouterServices{
-		httpSrv, acmeSrv,
+		httpSrv, acmeSrv, adminSrv,
 	}
 }
 
 func provideRouterServiceFactory(rs RouterServices) RouterServiceOperator {
-	funcs := make([]pipeline.ForkOperatorOptionFunc, 1, 2)
+	funcs := make([]pipeline.ForkOperatorOptionFunc, 2, 3)
 	funcs[0] = pipeline.ForkBranch(pipeline.ServiceOperator(rs.IHTTPService))
+	funcs[1] = pipeline.ForkBranch(pipeline.ServiceOperator(rs.IAdminService))
 	if rs.IACMEService != nil {
 		funcs = append(funcs, pipeline.ForkBranch(pipeline.ServiceOperator(rs.IACMEService)))
 	}

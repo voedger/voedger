@@ -38,6 +38,8 @@ services:
       - ~/scylla/scylla.yaml:/etc/scylla/scylla.yaml
       - ~/scylla.d:/etc/scylla.d
       - /etc/hosts:/etc/hosts
+      - ~/scylla-node-exporter/scylla-node-exporter:/etc/default/scylla-node-exporter
+      - /etc/node-exporter:/etc/node-exporter
 
   scylla2:
     image: scylladb/scylla:5.1.13
@@ -72,6 +74,8 @@ services:
       - ~/scylla/scylla.yaml:/etc/scylla/scylla.yaml
       - ~/scylla.d:/etc/scylla.d
       - /etc/hosts:/etc/hosts
+      - ~/scylla-node-exporter/scylla-node-exporter:/etc/default/scylla-node-exporter
+      - /etc/node-exporter:/etc/node-exporter
 
   scylla3:
     image: scylladb/scylla:5.1.13
@@ -106,6 +110,8 @@ services:
       - ~/scylla/scylla.yaml:/etc/scylla/scylla.yaml
       - ~/scylla.d:/etc/scylla.d
       - /etc/hosts:/etc/hosts
+      - ~/scylla-node-exporter/scylla-node-exporter:/etc/default/scylla-node-exporter
+      - /etc/node-exporter:/etc/node-exporter
 
 volumes:
   scylla1-data:

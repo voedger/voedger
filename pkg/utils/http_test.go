@@ -206,7 +206,7 @@ func TestHTTP(t *testing.T) {
 	require.NoError(err)
 	federation, cleanup := NewIFederation(func() *url.URL {
 		return federationURL
-	})
+	}, NilAdminPortGetter)
 	defer cleanup()
 
 	t.Run("basic", func(t *testing.T) {

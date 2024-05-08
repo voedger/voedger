@@ -82,11 +82,13 @@ type ProcesorChannel struct {
 type RouterServices struct {
 	router.IHTTPService
 	router.IACMEService
+	router.IAdminService
 }
 type MetricsServiceOperator pipeline.ISyncOperator
 type MetricsServicePortInitial int
 type VVMPortSource struct {
-	getter func() VVMPortType
+	getter      func() VVMPortType
+	adminGetter func() int
 }
 type IAppStorageUncachingProviderFactory func() (provider istorage.IAppStorageProvider)
 type AppPartsCtlPipelineService struct {
