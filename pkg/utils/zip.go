@@ -21,9 +21,8 @@ func Zip(zipFilePath string, objectToZip any) error {
 		if err != nil {
 			if os.IsNotExist(err) {
 				return fmt.Errorf("'%s': does not exist", t)
-			} else {
-				return fmt.Errorf("failed to check '%s' existence: %w", t, err)
 			}
+			return fmt.Errorf("failed to check '%s' existence: %w", t, err)
 		}
 		if fileInfo.IsDir() {
 			return zipDir(zipFilePath, t)
