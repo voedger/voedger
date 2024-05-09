@@ -5,19 +5,14 @@
 package sys_it
 
 import (
-	"bytes"
-	"fmt"
 	"log"
-	"mime/multipart"
-	"net/textproto"
-	"strconv"
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
 	"github.com/voedger/voedger/pkg/istructs"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
+	"github.com/voedger/voedger/pkg/sys/blobber"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 	it "github.com/voedger/voedger/pkg/vit"
 )
@@ -152,54 +147,33 @@ func TestBlobMultipartUpload(t *testing.T) {
 
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
 
-	expBLOB1 := []byte{1, 2, 3, 4, 5}
-	expBLOB2 := []byte{6, 7, 8, 9, 10}
-	BLOBs := [][]byte{expBLOB1, expBLOB2}
+	blobs := []blobber.BLOB{
+		blobber.BLOB{
+			Content: []byte{1, 2, 3, 4, 5},
+			Name:    "blob1",
+		},
+		blobber.BLOB{
+			Content: []byte{6, 7, 8, 9, 10},
+			Name:    "blob2",
+		},
+	}
+
 	as, err := vit.AppStructs(istructs.AppQName_test1_app1)
 	require.NoError(err)
 	systemPrincipalToken, err := payloads.GetSystemPrincipalTokenApp(as.AppTokens())
 	require.NoError(err)
-
-	// compose body for blobs write request
-	body := bytes.NewBuffer(nil)
-	w := multipart.NewWriter(body)
-	boundary := "----------------"
-	w.SetBoundary(boundary)
-	for i, blob := range BLOBs {
-		h := textproto.MIMEHeader{}
-		h.Set("Content-Disposition", fmt.Sprintf(`form-data; name="blob%d"`, i+1))
-		h.Set("Content-Type", "application/x-binary")
-		part, err := w.CreatePart(h)
-		require.NoError(err)
-		_, err = part.Write(blob)
-		require.NoError(err)
-	}
-	require.NoError(w.Close())
-	log.Println(body.String())
-
-	// write blobs
-	vit.Upload
-	blobIDsStr := vit.Post(fmt.Sprintf(`blob/test1/app1/%d`, ws.WSID), body.String(),
-		coreutils.WithAuthorizeBy(systemPrincipalToken),
-		coreutils.WithHeaders("Content-Type", fmt.Sprintf("multipart/form-data; boundary=%s", boundary)),
-	).Body
-	log.Println(blobIDsStr)
-
-	blobIDsStrs := strings.Split(blobIDsStr, ",")
-	blob1ID, err := strconv.Atoi(blobIDsStrs[0])
-	require.NoError(err)
-	blob2ID, err := strconv.Atoi(blobIDsStrs[1])
-	require.NoError(err)
+	blobIDs := vit.UploadBLOBs(istructs.AppQName_test1_app1, ws.WSID, blobs,
+		coreutils.WithAuthorizeBy(systemPrincipalToken))
 
 	// read blob1
-	blob := vit.GetBLOB(istructs.AppQName_test1_app1, ws.WSID, int64(blob1ID), systemPrincipalToken)
-	require.Equal("application/x-binary", blob.MimeType)
-	require.Equal(`blob1`, blob.Name)
-	require.Equal(expBLOB1, blob.Content)
+	actualBLOB1 := vit.GetBLOB(istructs.AppQName_test1_app1, ws.WSID, blobIDs[0], systemPrincipalToken)
+	require.Equal("application/x-binary", actualBLOB1.MimeType)
+	require.Equal(`blob1`, actualBLOB1.Name)
+	require.Equal(blobs[0].Content, actualBLOB1.Content)
 
 	// read blob2
-	blob = vit.GetBLOB(istructs.AppQName_test1_app1, ws.WSID, int64(blob2ID), systemPrincipalToken)
-	require.Equal("application/x-binary", blob.MimeType)
-	require.Equal(`blob2`, blob.Name)
-	require.Equal(expBLOB2, blob.Content)
+	actualBLOB2 := vit.GetBLOB(istructs.AppQName_test1_app1, ws.WSID, blobIDs[1], systemPrincipalToken)
+	require.Equal("application/x-binary", actualBLOB2.MimeType)
+	require.Equal(`blob2`, actualBLOB2.Name)
+	require.Equal(blobs[1].Content, actualBLOB2.Content)
 }

@@ -15,6 +15,7 @@ import (
 const (
 	Authorization                                              = "Authorization"
 	ContentType                                                = "Content-Type"
+	ContentDisposition                                         = "Content-Disposition"
 	ApplicationJSON                                            = "application/json"
 	ApplicationXBinary                                         = "application/x-binary"
 	BearerPrefix                                               = "Bearer "

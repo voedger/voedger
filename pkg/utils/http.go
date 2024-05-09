@@ -9,22 +9,18 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"log"
 	"net"
 	"net/http"
 	"net/url"
-	"strconv"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/goutils/logger"
-	"github.com/voedger/voedger/pkg/in10n"
-	"github.com/voedger/voedger/pkg/istructs"
 	"golang.org/x/exp/slices"
 
 	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
@@ -266,46 +262,6 @@ func req(method, url, body string, headers, cookies map[string]string) (*http.Re
 	return req, nil
 }
 
-// wrapped ErrUnexpectedStatusCode is returned -> *HTTPResponse contains a valid response body
-// otherwise if err != nil (e.g. socket error)-> *HTTPResponse is nil
-func (f *implIFederation) post(relativeURL string, body string, optFuncs ...ReqOptFunc) (*HTTPResponse, error) {
-	optFuncs = append(optFuncs, WithMethod(http.MethodPost))
-	url := f.federationURL().String() + "/" + relativeURL
-	return f.httpClient.Req(url, body, optFuncs...)
-}
-
-func (f *implIFederation) UploadBLOB(appQName istructs.AppQName, wsid istructs.WSID, blobName string, blobMimeType string,
-	blobContent []byte, optFuncs ...ReqOptFunc) (blobID int64, err error) {
-	uploadBLOBURL := fmt.Sprintf("blob/%s/%d?name=%s&mimeType=%s", appQName.String(), wsid, blobName, blobMimeType)
-	resp, err := f.post(uploadBLOBURL, string(blobContent), optFuncs...)
-	if err != nil {
-		return 0, err
-	}
-	newBLOBID, err := strconv.Atoi(resp.Body)
-	if err != nil {
-		return 0, fmt.Errorf("failed to parse the received blobID string: %w", err)
-	}
-	return int64(newBLOBID), nil
-}
-
-func (f *implIFederation) ReadBLOB(appQName istructs.AppQName, wsid istructs.WSID, blobID int64, optFuncs ...ReqOptFunc) (*HTTPResponse, error) {
-	url := fmt.Sprintf(`blob/%s/%d/%d`, appQName, wsid, blobID)
-	return f.post(url, "", optFuncs...)
-}
-
-func (f *implIFederation) N10NUpdate(key in10n.ProjectionKey, val int64, optFuncs ...ReqOptFunc) error {
-	body := fmt.Sprintf(`{"App": "%s","Projection": "%s","WS": %d}`, key.App, key.Projection, key.WS)
-	optFuncs = append(optFuncs, WithDiscardResponse())
-	_, err := f.post(fmt.Sprintf("n10n/update/%d", val), body, optFuncs...)
-	return err
-}
-
-func (f *implIFederation) GET(relativeURL string, body string, optFuncs ...ReqOptFunc) (*HTTPResponse, error) {
-	optFuncs = append(optFuncs, WithMethod(http.MethodGet))
-	url := f.federationURL().String() + "/" + relativeURL
-	return f.httpClient.Req(url, body, optFuncs...)
-}
-
 // status code expected -> DiscardBody, ResponseHandler are used
 // status code is unexpected -> DiscardBody, ResponseHandler are ignored, body is read out, wrapped ErrUnexpectedStatusCode is returned
 func (c *implIHTTPClient) Req(urlStr string, body string, optFuncs ...ReqOptFunc) (*HTTPResponse, error) {
@@ -439,52 +395,12 @@ func containsAllMessages(strs []string, toFind string) bool {
 	return true
 }
 
-func (f *implIFederation) Func(relativeURL string, body string, optFuncs ...ReqOptFunc) (*FuncResponse, error) {
-	httpResp, err := f.post(relativeURL, body, optFuncs...)
-	isUnexpectedCode := errors.Is(err, ErrUnexpectedStatusCode)
-	if err != nil && !isUnexpectedCode {
-		return nil, err
-	}
-	if httpResp == nil {
-		return nil, nil
-	}
-	if isUnexpectedCode {
-		m := map[string]interface{}{}
-		if err = json.Unmarshal([]byte(httpResp.Body), &m); err != nil {
-			return nil, err
-		}
-		if httpResp.HTTPResp.StatusCode == http.StatusOK {
-			return nil, FuncError{
-				SysError: SysError{
-					HTTPStatus: http.StatusOK,
-				},
-				ExpectedHTTPCodes: httpResp.expectedHTTPCodes,
-			}
-		}
-		sysErrorMap := m["sys.Error"].(map[string]interface{})
-		return nil, FuncError{
-			SysError: SysError{
-				HTTPStatus: int(sysErrorMap["HTTPStatus"].(float64)),
-				Message:    sysErrorMap["Message"].(string),
-			},
-			ExpectedHTTPCodes: httpResp.expectedHTTPCodes,
-		}
-	}
-	res := &FuncResponse{
-		HTTPResponse: httpResp,
-		NewIDs:       map[string]int64{},
-		CmdResult:    map[string]interface{}{},
-	}
-	if len(httpResp.Body) == 0 {
-		return res, nil
-	}
-	if err = json.Unmarshal([]byte(httpResp.Body), &res); err != nil {
-		return nil, err
-	}
-	if res.SysError.HTTPStatus > 0 && res.expectedSysErrorCode > 0 && res.expectedSysErrorCode != res.SysError.HTTPStatus {
-		return nil, fmt.Errorf("sys.Error actual status %d, expected %v: %s", res.SysError.HTTPStatus, res.expectedSysErrorCode, res.SysError.Message)
-	}
-	return res, nil
+func (resp *HTTPResponse) ExpectedSysErrorCode() int {
+	return resp.expectedSysErrorCode
+}
+
+func (resp *HTTPResponse) ExpectedHTTPCodes() []int {
+	return resp.expectedHTTPCodes
 }
 
 func (resp *HTTPResponse) Println() {
@@ -565,24 +481,6 @@ type implIHTTPClient struct {
 	client *http.Client
 }
 
-type implIFederation struct {
-	httpClient    IHTTPClient
-	federationURL func() *url.URL
-}
-
-func (f *implIFederation) URLStr() string {
-	return f.federationURL().String()
-}
-
-func (f *implIFederation) Port() int {
-	res, err := strconv.Atoi(f.federationURL().Port())
-	if err != nil {
-		// notest
-		panic(err)
-	}
-	return res
-}
-
 func NewIHTTPClient() (client IHTTPClient, clenup func()) {
 	// set linger - see https://github.com/voedger/voedger/issues/415
 	tr := http.DefaultTransport.(*http.Transport).Clone()
@@ -599,13 +497,4 @@ func NewIHTTPClient() (client IHTTPClient, clenup func()) {
 	}
 	client = &implIHTTPClient{client: &http.Client{Transport: tr}}
 	return client, client.CloseIdleConnections
-}
-
-func NewIFederation(federationURL func() *url.URL) (federation IFederation, cleanup func()) {
-	httpClient, cln := NewIHTTPClient()
-	fed := &implIFederation{
-		httpClient:    httpClient,
-		federationURL: federationURL,
-	}
-	return fed, cln
 }

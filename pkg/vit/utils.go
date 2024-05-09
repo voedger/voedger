@@ -30,11 +30,11 @@ import (
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-func (vit *VIT) GetBLOB(appQName istructs.AppQName, wsid istructs.WSID, blobID int64, token string) *BLOB {
+func (vit *VIT) GetBLOB(appQName istructs.AppQName, wsid istructs.WSID, blobID istructs.RecordID, token string) *BLOB {
 	vit.T.Helper()
-	resp, err := vit.GET(fmt.Sprintf(`blob/%s/%d/%d`, appQName.String(), wsid, blobID), "", coreutils.WithAuthorizeBy(token))
+	resp, err := vit.IFederation.ReadBLOB(appQName, wsid, blobID, coreutils.WithAuthorizeBy(token))
 	require.NoError(vit.T, err)
-	contentDisposition := resp.HTTPResp.Header.Get("Content-Disposition")
+	contentDisposition := resp.HTTPResp.Header.Get(coreutils.ContentDisposition)
 	_, params, err := mime.ParseMediaType(contentDisposition)
 	require.NoError(vit.T, err)
 	return &BLOB{

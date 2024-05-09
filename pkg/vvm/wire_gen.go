@@ -250,7 +250,7 @@ func (vvm *VoedgerVM) Launch() error {
 	return err
 }
 
-func provideBootstrapOperator(federation coreutils.IFederation, asp istructs.IAppStructsProvider, timeFunc coreutils.TimeFunc, apppar appparts.IAppPartitions,
+func provideBootstrapOperator(federation federation.IFederation, asp istructs.IAppStructsProvider, timeFunc coreutils.TimeFunc, apppar appparts.IAppPartitions,
 	builtinApps []appparts.BuiltInApp, itokens2 itokens.ITokens) (BootstrapOperator, error) {
 	var clusterBuiltinApp btstrp.ClusterBuiltInApp
 	otherApps := make([]appparts.BuiltInApp, 0, len(builtinApps)-1)
@@ -416,7 +416,7 @@ func provideMetricsServiceOperator(ms metrics.MetricsService) MetricsServiceOper
 }
 
 // TODO: consider vvmIdx
-func provideIFederation(cfg *VVMConfig, vvmPortSource *VVMPortSource) (coreutils.IFederation, func()) {
+func provideIFederation(cfg *VVMConfig, vvmPortSource *VVMPortSource) (federation.IFederation, func()) {
 	return coreutils.NewIFederation(func() *url.URL {
 		if cfg.FederationURL != nil {
 			return cfg.FederationURL

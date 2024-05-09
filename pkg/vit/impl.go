@@ -30,6 +30,7 @@ import (
 	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/state/smtptest"
 	"github.com/voedger/voedger/pkg/sys/authnz"
+	"github.com/voedger/voedger/pkg/sys/blobber"
 	"github.com/voedger/voedger/pkg/sys/verifier"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 	"github.com/voedger/voedger/pkg/vvm"
@@ -355,8 +356,15 @@ func (vit *VIT) PostWSSys(ws *AppWorkspace, funcName string, body string, opts .
 	return vit.PostApp(ws.Owner.AppQName, ws.WSID, funcName, body, opts...)
 }
 
+func (vit *VIT) UploadBLOBs(appQName istructs.AppQName, wsid istructs.WSID, blobs []blobber.BLOB, opts ...coreutils.ReqOptFunc) (blobIDs []istructs.RecordID) {
+	vit.T.Helper()
+	blobIDs, err := vit.IFederation.UploadBLOBs(appQName, wsid, blobs, opts...)
+	require.NoError(vit.T, err)
+	return blobIDs
+}
+
 func (vit *VIT) UploadBLOB(appQName istructs.AppQName, wsid istructs.WSID, blobName string, blobMimeType string, blobContent []byte,
-	opts ...coreutils.ReqOptFunc) (blobID int64) {
+	opts ...coreutils.ReqOptFunc) (blobID istructs.RecordID) {
 	vit.T.Helper()
 	blobID, err := vit.IFederation.UploadBLOB(appQName, wsid, blobName, blobMimeType, blobContent, opts...)
 	require.NoError(vit.T, err)
@@ -370,7 +378,7 @@ func (vit *VIT) Func(url string, body string, opts ...coreutils.ReqOptFunc) *cor
 	return res
 }
 
-func (vit *VIT) ReadBLOB(appQName istructs.AppQName, wsid istructs.WSID, blobID int64, optFuncs ...coreutils.ReqOptFunc) *coreutils.HTTPResponse {
+func (vit *VIT) ReadBLOB(appQName istructs.AppQName, wsid istructs.WSID, blobID istructs.RecordID, optFuncs ...coreutils.ReqOptFunc) *coreutils.HTTPResponse {
 	vit.T.Helper()
 	resp, err := vit.IFederation.ReadBLOB(appQName, wsid, blobID)
 	require.NoError(vit.T, err)
