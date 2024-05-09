@@ -85,13 +85,7 @@ func TestBasicUsage_n10n(t *testing.T) {
 	<-subscribed
 
 	// вызовем тестовый метод update для обновления проекции
-	body := `
- 		{
- 			"App": "untill/Application",
- 			"Projection": "paa.price",
- 			"WS": 1
- 		}`
-	vit.Post("n10n/update/13", body)
+	update(vit, 1)
 
 	<-done // подождем чтения
 

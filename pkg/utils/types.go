@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
@@ -52,8 +53,10 @@ type IFederation interface {
 	Func(relativeURL string, body string, optFuncs ...ReqOptFunc) (*FuncResponse, error)
 	UploadBLOB(appQName istructs.AppQName, wsid istructs.WSID, blobName string, blobMimeType string, blobContent []byte,
 		optFuncs ...ReqOptFunc) (blobID int64, err error)
+	ReadBLOB(appQName istructs.AppQName, wsid istructs.WSID, blobID int64, optFuncs ...ReqOptFunc) (*HTTPResponse, error)
 	URLStr() string
 	Port() int
+	N10NUpdate(key in10n.ProjectionKey, val int64, optFuncs ...ReqOptFunc) error
 }
 
 type IHTTPClient interface {

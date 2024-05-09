@@ -23,6 +23,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/goutils/logger"
+	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/istructs"
 	"golang.org/x/exp/slices"
 
@@ -287,6 +288,18 @@ func (f *implIFederation) UploadBLOB(appQName istructs.AppQName, wsid istructs.W
 	return int64(newBLOBID), nil
 }
 
+func (f *implIFederation) ReadBLOB(appQName istructs.AppQName, wsid istructs.WSID, blobID int64, optFuncs ...ReqOptFunc) (*HTTPResponse, error) {
+	url := fmt.Sprintf(`blob/%s/%d/%d`, appQName, wsid, blobID)
+	return f.post(url, "", optFuncs...)
+}
+
+func (f *implIFederation) N10NUpdate(key in10n.ProjectionKey, val int64, optFuncs ...ReqOptFunc) error {
+	body := fmt.Sprintf(`{"App": "%s","Projection": "%s","WS": %d}`, key.App, key.Projection, key.WS)
+	optFuncs = append(optFuncs, WithDiscardResponse())
+	_, err := f.post(fmt.Sprintf("n10n/update/%d", val), body, optFuncs...)
+	return err
+}
+
 func (f *implIFederation) GET(relativeURL string, body string, optFuncs ...ReqOptFunc) (*HTTPResponse, error) {
 	optFuncs = append(optFuncs, WithMethod(http.MethodGet))
 	url := f.federationURL().String() + "/" + relativeURL
@@ -427,7 +440,7 @@ func containsAllMessages(strs []string, toFind string) bool {
 }
 
 func (f *implIFederation) Func(relativeURL string, body string, optFuncs ...ReqOptFunc) (*FuncResponse, error) {
-	httpResp, err := f.POST(relativeURL, body, optFuncs...)
+	httpResp, err := f.post(relativeURL, body, optFuncs...)
 	isUnexpectedCode := errors.Is(err, ErrUnexpectedStatusCode)
 	if err != nil && !isUnexpectedCode {
 		return nil, err
@@ -570,7 +583,7 @@ func (f *implIFederation) Port() int {
 	return res
 }
 
-func NewIHTTPClient() IHTTPClient {
+func NewIHTTPClient() (client IHTTPClient, clenup func()) {
 	// set linger - see https://github.com/voedger/voedger/issues/415
 	tr := http.DefaultTransport.(*http.Transport).Clone()
 	tr.DialContext = func(ctx context.Context, network, addr string) (net.Conn, error) {
@@ -584,13 +597,15 @@ func NewIHTTPClient() IHTTPClient {
 		err = conn.(*net.TCPConn).SetLinger(0)
 		return conn, err
 	}
-	return &implIHTTPClient{client: &http.Client{Transport: tr}}
+	client = &implIHTTPClient{client: &http.Client{Transport: tr}}
+	return client, client.CloseIdleConnections
 }
 
 func NewIFederation(federationURL func() *url.URL) (federation IFederation, cleanup func()) {
+	httpClient, cln := NewIHTTPClient()
 	fed := &implIFederation{
-		httpClient:    NewIHTTPClient(),
+		httpClient:    httpClient,
 		federationURL: federationURL,
 	}
-	return fed, fed.httpClient.CloseIdleConnections
+	return fed, cln
 }

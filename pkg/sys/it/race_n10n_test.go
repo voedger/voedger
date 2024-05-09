@@ -8,10 +8,12 @@ import (
 	"bufio"
 	"fmt"
 	"net/url"
-	"strconv"
 	"sync"
 	"testing"
 
+	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/in10n"
+	"github.com/voedger/voedger/pkg/istructs"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 	it "github.com/voedger/voedger/pkg/vit"
 )
@@ -150,11 +152,9 @@ func subscribe(wg *sync.WaitGroup, resp *coreutils.HTTPResponse) {
 }
 
 func update(vit *it.VIT, aws int) {
-	body := fmt.Sprintf(`
-		{
-			"App": "untill/Application",
-			"Projection": "paa.price",
-			"WS": %s
-		}`, strconv.Itoa(aws))
-	vit.Post("n10n/update/13", body)
+	vit.N10NUpdate(in10n.ProjectionKey{
+		App:        istructs.NewAppQName("untill", "Application"),
+		Projection: appdef.NewQName("paa", "price"),
+		WS:         istructs.WSID(aws),
+	}, 13)
 }

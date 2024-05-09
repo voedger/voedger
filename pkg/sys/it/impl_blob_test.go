@@ -44,7 +44,7 @@ func TestBasicUsage_BLOBProcessors(t *testing.T) {
 	log.Println(blobID)
 
 	// read, authorize over headers
-	resp := vit.Get(fmt.Sprintf(`blob/test1/app1/%d/%d`, ws.WSID, blobID),
+	resp := vit.ReadBLOB(istructs.AppQName_test1_app1, ws.WSID, blobID,
 		coreutils.WithAuthorizeBy(systemPrincipal),
 	)
 	actBLOB := []byte(resp.Body)
@@ -53,7 +53,7 @@ func TestBasicUsage_BLOBProcessors(t *testing.T) {
 	require.Equal(expBLOB, actBLOB)
 
 	// read, authorize over unescaped cookies
-	resp = vit.Get(fmt.Sprintf(`blob/test1/app1/%d/%d`, ws.WSID, blobID),
+	resp = vit.ReadBLOB(istructs.AppQName_test1_app1, ws.WSID, blobID,
 		coreutils.WithCookies(coreutils.Authorization, "Bearer "+systemPrincipal),
 	)
 	actBLOB = []byte(resp.Body)
@@ -62,7 +62,7 @@ func TestBasicUsage_BLOBProcessors(t *testing.T) {
 	require.Equal(expBLOB, actBLOB)
 
 	// read, authorize over escaped cookies
-	resp = vit.Get(fmt.Sprintf(`blob/test1/app1/%d/%d`, ws.WSID, blobID),
+	resp = vit.ReadBLOB(istructs.AppQName_test1_app1, ws.WSID, blobID,
 		coreutils.WithCookies(coreutils.Authorization, "Bearer%20"+systemPrincipal),
 	)
 	actBLOB = []byte(resp.Body)
@@ -71,7 +71,7 @@ func TestBasicUsage_BLOBProcessors(t *testing.T) {
 	require.Equal(expBLOB, actBLOB)
 
 	// read, POST
-	resp = vit.Post(fmt.Sprintf(`blob/test1/app1/%d/%d`, ws.WSID, blobID), "",
+	resp = vit.ReadBLOB(istructs.AppQName_test1_app1, ws.WSID, blobID,
 		coreutils.WithAuthorizeBy(systemPrincipal),
 	)
 	actBLOB = []byte(resp.Body)
@@ -108,7 +108,7 @@ func TestBlobberErrors(t *testing.T) {
 	})
 
 	t.Run("404 not found on querying an unexsting blob", func(t *testing.T) {
-		vit.Get(fmt.Sprintf(`blob/test1/app1/%d/%d`, ws.WSID, 1),
+		vit.ReadBLOB(istructs.AppQName_test1_app1, ws.WSID, 1,
 			coreutils.WithAuthorizeBy(systemPrincipal),
 			coreutils.Expect404(),
 		).Println()
@@ -178,6 +178,7 @@ func TestBlobMultipartUpload(t *testing.T) {
 	log.Println(body.String())
 
 	// write blobs
+	vit.Upload
 	blobIDsStr := vit.Post(fmt.Sprintf(`blob/test1/app1/%d`, ws.WSID), body.String(),
 		coreutils.WithAuthorizeBy(systemPrincipalToken),
 		coreutils.WithHeaders("Content-Type", fmt.Sprintf("multipart/form-data; boundary=%s", boundary)),

@@ -129,8 +129,11 @@ func newVit(t testing.TB, vitCfg *VITConfig, useCas bool) *VIT {
 		configCleanupsAmount: len(vitPreConfig.cleanups),
 		emailCaptor:          emailMessagesChan,
 	}
+	httpClient, httpClientCleanup := coreutils.NewIHTTPClient()
+	vit.httpClient = httpClient
 
 	vit.cleanups = append(vit.cleanups, vitPreConfig.cleanups...)
+	vit.cleanups = append(vit.cleanups, func(vit *VIT) { httpClientCleanup() })
 
 	// запустим сервер
 	require.NoError(t, vit.Launch())
@@ -360,9 +363,23 @@ func (vit *VIT) UploadBLOB(appQName istructs.AppQName, wsid istructs.WSID, blobN
 	return blobID
 }
 
+func (vit *VIT) Func(url string, body string, opts ...coreutils.ReqOptFunc) *coreutils.FuncResponse {
+	vit.T.Helper()
+	res, err := vit.IFederation.Func(url, body, opts...)
+	require.NoError(vit.T, err)
+	return res
+}
+
+func (vit *VIT) ReadBLOB(appQName istructs.AppQName, wsid istructs.WSID, blobID int64, optFuncs ...coreutils.ReqOptFunc) *coreutils.HTTPResponse {
+	vit.T.Helper()
+	resp, err := vit.IFederation.ReadBLOB(appQName, wsid, blobID)
+	require.NoError(vit.T, err)
+	return resp
+}
+
 func (vit *VIT) Post(url string, body string, opts ...coreutils.ReqOptFunc) *coreutils.HTTPResponse {
 	vit.T.Helper()
-	res, err := vit.POST(url, body, opts...)
+	res, err := vit.httpClient.Req(url, body, opts...)
 	require.NoError(vit.T, err)
 	return res
 }
@@ -370,7 +387,7 @@ func (vit *VIT) Post(url string, body string, opts ...coreutils.ReqOptFunc) *cor
 func (vit *VIT) PostApp(appQName istructs.AppQName, wsid istructs.WSID, funcName string, body string, opts ...coreutils.ReqOptFunc) *coreutils.FuncResponse {
 	vit.T.Helper()
 	url := fmt.Sprintf("api/%s/%d/%s", appQName, wsid, funcName)
-	res, err := vit.Func(url, body, opts...)
+	res, err := vit.IFederation.Func(url, body, opts...)
 	require.NoError(vit.T, err)
 	return res
 }

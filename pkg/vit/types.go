@@ -32,6 +32,7 @@ type VIT struct {
 	initialGoroutinesNum int
 	configCleanupsAmount int
 	emailCaptor          emailCaptor
+	httpClient           coreutils.IHTTPClient
 }
 
 type timeService struct {
