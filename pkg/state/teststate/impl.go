@@ -118,6 +118,7 @@ func (ctx *testState) buildState(processorKind int) {
 	cudFunc := func() istructs.ICUD { return ctx.cud }
 	argFunc := func() istructs.IObject { return ctx.Arg() }
 	unloggedArgFunc := func() istructs.IObject { return nil }
+	wlogOffsetFunc := func() istructs.Offset { return ctx.event.WLogOffset() }
 	wsidFunc := func() istructs.WSID {
 		return ctx.WSID()
 	}
@@ -135,7 +136,7 @@ func (ctx *testState) buildState(processorKind int) {
 	case ProcKind_Actualizer:
 		ctx.IState = state.ProvideAsyncActualizerStateFactory()(ctx.ctx, appFunc, partitionIDFunc, wsidFunc, nil, ctx.secretReader, eventFunc, IntentsLimit, BundlesLimit, state.WithCustomHttpClient(ctx))
 	case ProcKind_CommandProcessor:
-		ctx.IState = state.ProvideCommandProcessorStateFactory()(ctx.ctx, appFunc, partitionIDFunc, wsidFunc, ctx.secretReader, cudFunc, principalsFunc, tokenFunc, IntentsLimit, resultBuilderFunc, argFunc, unloggedArgFunc)
+		ctx.IState = state.ProvideCommandProcessorStateFactory()(ctx.ctx, appFunc, partitionIDFunc, wsidFunc, ctx.secretReader, cudFunc, principalsFunc, tokenFunc, IntentsLimit, resultBuilderFunc, argFunc, unloggedArgFunc, wlogOffsetFunc)
 	case ProcKind_QueryProcessor:
 		ctx.IState = state.ProvideQueryProcessorStateFactory()(ctx.ctx, appFunc, partitionIDFunc, wsidFunc, ctx.secretReader, principalsFunc, tokenFunc, argFunc, state.QPWithCustomHttpClient(ctx))
 	}
