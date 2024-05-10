@@ -148,11 +148,11 @@ func TestBlobMultipartUpload(t *testing.T) {
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
 
 	blobs := []blobber.BLOB{
-		blobber.BLOB{
+		{
 			Content: []byte{1, 2, 3, 4, 5},
 			Name:    "blob1",
 		},
-		blobber.BLOB{
+		{
 			Content: []byte{6, 7, 8, 9, 10},
 			Name:    "blob2",
 		},

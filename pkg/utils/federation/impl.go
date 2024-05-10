@@ -6,6 +6,7 @@
 package federation
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/json"
 	"errors"
@@ -13,9 +14,11 @@ import (
 	"mime/multipart"
 	"net/http"
 	"net/textproto"
+	"net/url"
 	"strconv"
 	"strings"
 
+	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/sys/blobber"
@@ -26,6 +29,15 @@ import (
 // otherwise if err != nil (e.g. socket error)-> *HTTPResponse is nil
 func (f *implIFederation) post(relativeURL string, body string, optFuncs ...coreutils.ReqOptFunc) (*coreutils.HTTPResponse, error) {
 	optFuncs = append(optFuncs, coreutils.WithMethod(http.MethodPost))
+	return f.req(relativeURL, body, optFuncs...)
+}
+
+func (f *implIFederation) get(relativeURL string, optFuncs ...coreutils.ReqOptFunc) (*coreutils.HTTPResponse, error) {
+	optFuncs = append(optFuncs, coreutils.WithMethod(http.MethodGet))
+	return f.req(relativeURL, "", optFuncs...)
+}
+
+func (f *implIFederation) req(relativeURL string, body string, optFuncs ...coreutils.ReqOptFunc) (*coreutils.HTTPResponse, error) {
 	url := f.federationURL().String() + "/" + relativeURL
 	return f.httpClient.Req(url, body, optFuncs...)
 }
@@ -80,11 +92,14 @@ func (f *implIFederation) UploadBLOB(appQName istructs.AppQName, wsid istructs.W
 	if err != nil {
 		return 0, err
 	}
-	newBLOBID, err := strconv.Atoi(resp.Body)
-	if err != nil {
-		return 0, fmt.Errorf("failed to parse the received blobID string: %w", err)
+	if resp.HTTPResp.StatusCode == http.StatusOK {
+		newBLOBID, err := strconv.Atoi(resp.Body)
+		if err != nil {
+			return 0, fmt.Errorf("failed to parse the received blobID string: %w", err)
+		}
+		return istructs.RecordID(newBLOBID), nil
 	}
-	return istructs.RecordID(newBLOBID), nil
+	return istructs.NullRecordID, nil
 }
 
 func (f *implIFederation) ReadBLOB(appQName istructs.AppQName, wsid istructs.WSID, blobID istructs.RecordID, optFuncs ...coreutils.ReqOptFunc) (*coreutils.HTTPResponse, error) {
@@ -164,4 +179,85 @@ func (f *implIFederation) Port() int {
 		panic(err)
 	}
 	return res
+}
+
+func (f *implIFederation) N10NSubscribe(projectionKey in10n.ProjectionKey) (offsetsChan OffsetsChan, unsubscribe func(), err error) {
+	channelID := ""
+	query := fmt.Sprintf(`
+		{
+			"SubjectLogin": "test_%d",
+			"ProjectionKey": [
+				{
+					"App":"%s",
+					"Projection":"%s",
+					"WS":%d
+				}
+			]
+		}`, projectionKey.WS, projectionKey.App, projectionKey.Projection, projectionKey.WS)
+	params := url.Values{}
+	params.Add("payload", query)
+	resp, err := f.get(fmt.Sprintf("n10n/channel?%s", params.Encode()), coreutils.WithLongPolling())
+	if err != nil {
+		return nil, nil, err
+	}
+
+	subscribed := make(chan interface{})
+	offsetsChan = make(OffsetsChan)
+	go func() {
+		defer close(offsetsChan)
+		scanner := bufio.NewScanner(resp.HTTPResp.Body)
+		scanner.Split(coreutils.ScanSSE) // разбиваем на кадры sse, разделитель - два new line: "\n\n"
+		for scanner.Scan() {
+			if resp.HTTPResp.Request.Context().Err() != nil {
+				return
+			}
+			messages := strings.Split(scanner.Text(), "\n") // делим кадр на событие и данные
+			var event, data string
+			for _, str := range messages { // вычитываем
+				if strings.HasPrefix(str, "event: ") {
+					event = strings.TrimPrefix(str, "event: ")
+				}
+				if strings.HasPrefix(str, "data: ") {
+					data = strings.TrimPrefix(str, "data: ")
+				}
+			}
+			if logger.IsVerbose() {
+				logger.Verbose(fmt.Sprintf("received event: %s, data: %s", event, data))
+			}
+			if event == "channelId" {
+				channelID = data
+				close(subscribed)
+			} else {
+				offset, err := strconv.Atoi(data)
+				if err != nil {
+					panic(fmt.Sprint("failed to parse offset", data, err))
+				}
+				offsetsChan <- istructs.Offset(offset)
+			}
+		}
+	}()
+
+	<-subscribed
+
+	unsubscribe = func() {
+		body := fmt.Sprintf(`
+			{
+				"Channel": "%s",
+				"ProjectionKey":[
+					{
+						"App": "%s",
+						"Projection":"%s",
+						"WS":%d
+					}
+				]
+			}
+		`, channelID, projectionKey.App, projectionKey.Projection, projectionKey.WS)
+		params := url.Values{}
+		params.Add("payload", body)
+		f.get(fmt.Sprintf("n10n/unsubscribe?%s", params.Encode()))
+		resp.HTTPResp.Body.Close()
+		for range offsetsChan {
+		}
+	}
+	return
 }

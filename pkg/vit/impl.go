@@ -5,7 +5,6 @@
 package vit
 
 import (
-	"bytes"
 	_ "embed"
 	"encoding/json"
 	"fmt"
@@ -380,13 +379,15 @@ func (vit *VIT) Func(url string, body string, opts ...coreutils.ReqOptFunc) *cor
 
 func (vit *VIT) ReadBLOB(appQName istructs.AppQName, wsid istructs.WSID, blobID istructs.RecordID, optFuncs ...coreutils.ReqOptFunc) *coreutils.HTTPResponse {
 	vit.T.Helper()
-	resp, err := vit.IFederation.ReadBLOB(appQName, wsid, blobID)
+	resp, err := vit.IFederation.ReadBLOB(appQName, wsid, blobID, optFuncs...)
 	require.NoError(vit.T, err)
 	return resp
 }
 
-func (vit *VIT) Post(url string, body string, opts ...coreutils.ReqOptFunc) *coreutils.HTTPResponse {
+func (vit *VIT) POST(relativeURL string, body string, opts ...coreutils.ReqOptFunc) *coreutils.HTTPResponse {
 	vit.T.Helper()
+	opts = append(opts, coreutils.WithMethod(http.MethodPost))
+	url := vit.IFederation.URLStr() + "/" + relativeURL
 	res, err := vit.httpClient.Req(url, body, opts...)
 	require.NoError(vit.T, err)
 	return res
@@ -396,13 +397,6 @@ func (vit *VIT) PostApp(appQName istructs.AppQName, wsid istructs.WSID, funcName
 	vit.T.Helper()
 	url := fmt.Sprintf("api/%s/%d/%s", appQName, wsid, funcName)
 	res, err := vit.IFederation.Func(url, body, opts...)
-	require.NoError(vit.T, err)
-	return res
-}
-
-func (vit *VIT) Get(url string, opts ...coreutils.ReqOptFunc) *coreutils.HTTPResponse {
-	vit.T.Helper()
-	res, err := vit.GET(url, "", opts...)
 	require.NoError(vit.T, err)
 	return res
 }
@@ -557,19 +551,6 @@ func (ts *timeService) setCurrentInstant(now time.Time) {
 	ts.m.Lock()
 	ts.currentInstant = now
 	ts.m.Unlock()
-}
-
-func ScanSSE(data []byte, atEOF bool) (advance int, token []byte, err error) {
-	if atEOF && len(data) == 0 {
-		return 0, nil, nil
-	}
-	if i := bytes.Index(data, []byte("\n\n")); i >= 0 {
-		return i + 2, data[0:i], nil
-	}
-	if atEOF {
-		return len(data), data, nil
-	}
-	return 0, nil, nil
 }
 
 func (ec emailCaptor) checkEmpty(t testing.TB) {

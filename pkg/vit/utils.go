@@ -5,22 +5,20 @@
 package vit
 
 import (
-	"bufio"
 	"bytes"
 	"encoding/json"
 	"fmt"
 	"math"
 	"mime"
-	"net/url"
-	"strconv"
-	"strings"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/goutils/logger"
+	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istorage/mem"
+	"github.com/voedger/voedger/pkg/utils/federation"
 	"github.com/voedger/voedger/pkg/vvm"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -301,72 +299,80 @@ func (vit *VIT) CreateWorkspace(wsp WSParams, owner *Principal, opts ...coreutil
 	return ws
 }
 
-func (vit *VIT) SubscribeForN10nCleanup(p SubscriptionParameters, viewQName appdef.QName) (n10n chan int64, unsubscribe func()) {
-	n10n = make(chan int64)
-	params := url.Values{}
-	query := fmt.Sprintf(`{"SubjectLogin":"test_%d","ProjectionKey":[{"App":"%s","Projection":"%s","WS":%d}]}`,
-		p.GetWSID(), p.GetAppQName(), viewQName, p.GetWSID())
-	params.Add("payload", query)
-	httpResp, err := vit.GET(fmt.Sprintf("n10n/channel?%s", params.Encode()), "",
-		coreutils.WithLongPolling())
+func (vit *VIT) SubscribeForN10nCleanup(p SubscriptionParameters, viewQName appdef.QName) (n10n chan istructs.Offset, unsubscribe func()) {
+	vit.T.Helper()
+	offsetsChan, unsubscribe, err := vit.IFederation.N10NSubscribe(in10n.ProjectionKey{
+		App:        p.GetAppQName(),
+		Projection: viewQName,
+		WS:         p.GetWSID(),
+	})
 	require.NoError(vit.T, err)
+	return offsetsChan, unsubscribe
+	// n10n = make(chan int64)
+	// params := url.Values{}
+	// query := fmt.Sprintf(`{"SubjectLogin":"test_%d","ProjectionKey":[{"App":"%s","Projection":"%s","WS":%d}]}`,
+	// 	p.GetWSID(), p.GetAppQName(), viewQName, p.GetWSID())
+	// params.Add("payload", query)
+	// httpResp, err := vit.GET(fmt.Sprintf("n10n/channel?%s", params.Encode()), "",
+	// 	coreutils.WithLongPolling())
+	// require.NoError(vit.T, err)
 
-	scanner := bufio.NewScanner(httpResp.HTTPResp.Body)
-	scanner.Split(ScanSSE)
+	// scanner := bufio.NewScanner(httpResp.HTTPResp.Body)
+	// scanner.Split(ScanSSE)
 
-	// lets's wait for channelID
-	if !scanner.Scan() {
-		if !vit.T.Failed() {
-			vit.T.Fatal("failed to get channelID on n10n subscription")
-		}
-	}
-	messages := strings.Split(scanner.Text(), "\n")
-	require.Equal(vit.T, "event: channelId", messages[0])
-	require.True(vit.T, strings.HasPrefix(messages[1], "data: "))
-	channelIDStr := strings.TrimPrefix(messages[1], "data: ")
+	// // lets's wait for channelID
+	// if !scanner.Scan() {
+	// 	if !vit.T.Failed() {
+	// 		vit.T.Fatal("failed to get channelID on n10n subscription")
+	// 	}
+	// }
+	// messages := strings.Split(scanner.Text(), "\n")
+	// require.Equal(vit.T, "event: channelId", messages[0])
+	// require.True(vit.T, strings.HasPrefix(messages[1], "data: "))
+	// channelIDStr := strings.TrimPrefix(messages[1], "data: ")
 
-	go func() {
-		defer close(n10n)
-		for scanner.Scan() {
-			if httpResp.HTTPResp.Request.Context().Err() != nil {
-				return
-			}
-			messages := strings.Split(scanner.Text(), "\n")
-			if strings.TrimPrefix(messages[0], "event: ") == "channelId" {
-				continue
-			}
-			offset, err := strconv.Atoi(strings.TrimPrefix(messages[1], "data: "))
-			if err != nil {
-				panic(err)
-			}
-			n10n <- int64(offset)
-		}
-	}()
-	unsubscribe = func() {
-		body := fmt.Sprintf(`
-			{
-				"Channel": "%s",
-				"ProjectionKey":[
-					{
-						"App": "%s",
-						"Projection":"%s",
-						"WS":%d
-					}
-				]
-			}
-		`, channelIDStr, p.GetAppQName(), viewQName, p.GetWSID())
-		params := url.Values{}
-		params.Add("payload", body)
-		vit.Get(fmt.Sprintf("n10n/unsubscribe?%s", params.Encode()))
-		httpResp.HTTPResp.Body.Close()
-		for range n10n {
-		}
-	}
-	return n10n, unsubscribe
+	// go func() {
+	// 	defer close(n10n)
+	// 	for scanner.Scan() {
+	// 		if httpResp.HTTPResp.Request.Context().Err() != nil {
+	// 			return
+	// 		}
+	// 		messages := strings.Split(scanner.Text(), "\n")
+	// 		if strings.TrimPrefix(messages[0], "event: ") == "channelId" {
+	// 			continue
+	// 		}
+	// 		offset, err := strconv.Atoi(strings.TrimPrefix(messages[1], "data: "))
+	// 		if err != nil {
+	// 			panic(err)
+	// 		}
+	// 		n10n <- int64(offset)
+	// 	}
+	// }()
+	// unsubscribe = func() {
+	// 	body := fmt.Sprintf(`
+	// 		{
+	// 			"Channel": "%s",
+	// 			"ProjectionKey":[
+	// 				{
+	// 					"App": "%s",
+	// 					"Projection":"%s",
+	// 					"WS":%d
+	// 				}
+	// 			]
+	// 		}
+	// 	`, channelIDStr, p.GetAppQName(), viewQName, p.GetWSID())
+	// 	params := url.Values{}
+	// 	params.Add("payload", body)
+	// 	vit.Get(fmt.Sprintf("n10n/unsubscribe?%s", params.Encode()))
+	// 	httpResp.HTTPResp.Body.Close()
+	// 	for range n10n {
+	// 	}
+	// }
+	// return n10n, unsubscribe
 }
 
 // will be finalized automatically on vit.TearDown()
-func (vit *VIT) SubscribeForN10n(p SubscriptionParameters, viewQName appdef.QName) chan int64 {
+func (vit *VIT) SubscribeForN10n(p SubscriptionParameters, viewQName appdef.QName) federation.OffsetsChan {
 	n10nChan, unsubscribe := vit.SubscribeForN10nCleanup(p, viewQName)
 	vit.lock.Lock() // need to lock because the vit instance is used in different goroutines in e.g. Test_Race_RestaurantIntenseUsage()
 	vit.cleanups = append(vit.cleanups, func(vit *VIT) {

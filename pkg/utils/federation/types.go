@@ -25,9 +25,12 @@ type IFederation interface {
 	URLStr() string
 	Port() int
 	N10NUpdate(key in10n.ProjectionKey, val int64, optFuncs ...coreutils.ReqOptFunc) error
+	N10NSubscribe(projectionKey in10n.ProjectionKey) (offsetsChan OffsetsChan, unsubscribe func(), err error)
 }
 
 type implIFederation struct {
 	httpClient    coreutils.IHTTPClient
 	federationURL func() *url.URL
 }
+
+type OffsetsChan chan istructs.Offset

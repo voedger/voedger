@@ -6,6 +6,7 @@
 package coreutils
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"os"
@@ -81,4 +82,17 @@ func IsWSAEError(err error, errno syscall.Errno) bool {
 // used in BuildAppWorkspaces() only because there are no apps in IAppPartitions on that moment
 func AppPartitionID(wsid istructs.WSID, numAppPartitions istructs.NumAppPartitions) istructs.PartitionID {
 	return istructs.PartitionID(int(wsid) % int(numAppPartitions))
+}
+
+func ScanSSE(data []byte, atEOF bool) (advance int, token []byte, err error) {
+	if atEOF && len(data) == 0 {
+		return 0, nil, nil
+	}
+	if i := bytes.Index(data, []byte("\n\n")); i >= 0 {
+		return i + 2, data[0:i], nil
+	}
+	if atEOF {
+		return len(data), data, nil
+	}
+	return 0, nil, nil
 }
