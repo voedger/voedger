@@ -11,11 +11,12 @@ import (
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-func New(federationURL func() *url.URL) (federation IFederation, cleanup func()) {
+func New(federationURL func() *url.URL, adminPortGetter func() int) (federation IFederation, cleanup func()) {
 	httpClient, cln := coreutils.NewIHTTPClient()
 	fed := &implIFederation{
-		httpClient:    httpClient,
-		federationURL: federationURL,
+		httpClient:      httpClient,
+		federationURL:   federationURL,
+		adminPortGetter: adminPortGetter,
 	}
 	return fed, cln
 }

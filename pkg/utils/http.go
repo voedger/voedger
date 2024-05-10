@@ -9,6 +9,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -397,6 +398,7 @@ func containsAllMessages(strs []string, toFind string) bool {
 
 func (resp *HTTPResponse) ExpectedSysErrorCode() int {
 	return resp.expectedSysErrorCode
+}
 func (f *implIFederation) AdminFunc(relativeURL string, body string, optFuncs ...ReqOptFunc) (*FuncResponse, error) {
 	optFuncs = append(optFuncs, WithMethod(http.MethodPost))
 	url := fmt.Sprintf("http://127.0.0.1:%d/api/%s", f.adminPortGetter(), relativeURL)

@@ -121,17 +121,28 @@ func (f *implIFederation) GET(relativeURL string, body string, optFuncs ...coreu
 }
 
 func (f *implIFederation) Func(relativeURL string, body string, optFuncs ...coreutils.ReqOptFunc) (*coreutils.FuncResponse, error) {
-	httpResp, err := f.post(relativeURL, body, optFuncs...)
-	isUnexpectedCode := errors.Is(err, coreutils.ErrUnexpectedStatusCode)
-	if err != nil && !isUnexpectedCode {
-		return nil, err
+	httpResp, err := f.POST(relativeURL, body, optFuncs...)
+	return f.httpRespToFuncResp(httpResp, err)
+}
+
+func (f *implIFederation) AdminFunc(relativeURL string, body string, optFuncs ...coreutils.ReqOptFunc) (*coreutils.FuncResponse, error) {
+	optFuncs = append(optFuncs, coreutils.WithMethod(http.MethodPost))
+	url := fmt.Sprintf("http://127.0.0.1:%d/api/%s", f.adminPortGetter(), relativeURL)
+	httpResp, err := f.httpClient.Req(url, body, optFuncs...)
+	return f.httpRespToFuncResp(httpResp, err)
+}
+
+func (f *implIFederation) httpRespToFuncResp(httpResp *coreutils.HTTPResponse, httpRespErr error) (*coreutils.FuncResponse, error) {
+	isUnexpectedCode := errors.Is(httpRespErr, coreutils.ErrUnexpectedStatusCode)
+	if httpRespErr != nil && !isUnexpectedCode {
+		return nil, httpRespErr
 	}
 	if httpResp == nil {
 		return nil, nil
 	}
 	if isUnexpectedCode {
 		m := map[string]interface{}{}
-		if err = json.Unmarshal([]byte(httpResp.Body), &m); err != nil {
+		if err := json.Unmarshal([]byte(httpResp.Body), &m); err != nil {
 			return nil, err
 		}
 		if httpResp.HTTPResp.StatusCode == http.StatusOK {
@@ -159,11 +170,11 @@ func (f *implIFederation) Func(relativeURL string, body string, optFuncs ...core
 	if len(httpResp.Body) == 0 {
 		return res, nil
 	}
-	if err = json.Unmarshal([]byte(httpResp.Body), &res); err != nil {
+	if err := json.Unmarshal([]byte(httpResp.Body), &res); err != nil {
 		return nil, err
 	}
 	if res.SysError.HTTPStatus > 0 && res.ExpectedSysErrorCode() > 0 && res.ExpectedSysErrorCode() != res.SysError.HTTPStatus {
-		return nil, fmt.Errorf("sys.Error actual status %d, expected %v: %s", res.SysError.HTTPStatus, res.ExpectedSysErrorCode(), res.SysError.Message)
+		return nil, fmt.Errorf("sys.Error actual status %d, expected %v: %s", res.SysError.HTTPStatus, res.expectedSysErrorCode, res.SysError.Message)
 	}
 	return res, nil
 }

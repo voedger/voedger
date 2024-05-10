@@ -26,11 +26,13 @@ type IFederation interface {
 	Port() int
 	N10NUpdate(key in10n.ProjectionKey, val int64, optFuncs ...coreutils.ReqOptFunc) error
 	N10NSubscribe(projectionKey in10n.ProjectionKey) (offsetsChan OffsetsChan, unsubscribe func(), err error)
+	AdminFunc(relativeURL string, body string, optFuncs ...coreutils.ReqOptFunc) (*coreutils.FuncResponse, error)
 }
 
 type implIFederation struct {
-	httpClient    coreutils.IHTTPClient
-	federationURL func() *url.URL
+	httpClient      coreutils.IHTTPClient
+	federationURL   func() *url.URL
+	adminPortGetter func() int
 }
 
 type OffsetsChan chan istructs.Offset
