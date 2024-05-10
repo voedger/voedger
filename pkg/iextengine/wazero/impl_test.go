@@ -33,7 +33,8 @@ import (
 )
 
 var extIO = &mockIo{}
-var offset istructs.Offset
+var plogOffset istructs.Offset
+var wlogOffset istructs.Offset
 var newWorkspaceCmd = appdef.NewQName("sys", "NewWorkspace")
 var testView = appdef.NewQName(testPkg, "TestView")
 var dummyCommand = appdef.NewQName(testPkg, "Dummy")
@@ -93,8 +94,9 @@ func Test_BasicUsage(t *testing.T) {
 		GenericRawEventBuilderParams: istructs.GenericRawEventBuilderParams{
 			Workspace:         ws,
 			HandlingPartition: partition,
-			PLogOffset:        offset + 1,
+			PLogOffset:        plogOffset + 1,
 			QName:             newOrderCmd,
+			WLogOffset:        wlogOffset + 1,
 		},
 	})
 	orderBuilder := reb.ArgumentObjectBuilder()
@@ -124,10 +126,11 @@ func Test_BasicUsage(t *testing.T) {
 	argFunc := func() istructs.IObject { return event.ArgumentObject() }
 	unloggedArgFunc := func() istructs.IObject { return nil }
 	appFunc := func() istructs.IAppStructs { return app }
+	wlogOffsetFunc := func() istructs.Offset { return event.WLogOffset() }
 
 	// Create states for Command processor and Actualizer
 	actualizerState := state.ProvideAsyncActualizerStateFactory()(context.Background(), appFunc, nil, state.SimpleWSIDFunc(ws), nil, nil, eventFunc, intentsLimit, bundlesLimit)
-	cmdProcState := state.ProvideCommandProcessorStateFactory()(context.Background(), appFunc, nil, state.SimpleWSIDFunc(ws), nil, cudFunc, nil, nil, intentsLimit, nil, argFunc, unloggedArgFunc)
+	cmdProcState := state.ProvideCommandProcessorStateFactory()(context.Background(), appFunc, nil, state.SimpleWSIDFunc(ws), nil, cudFunc, nil, nil, intentsLimit, nil, argFunc, unloggedArgFunc, wlogOffsetFunc)
 
 	// Create extension package from WASM
 	ctx := context.Background()
@@ -773,7 +776,8 @@ type (
 var sfs embed.FS
 
 func appStructsFromSQL(packagePath string, appdefSql string, prepareAppCfg appCfgCallback) istructs.IAppStructs {
-	offset = istructs.Offset(123)
+	plogOffset = istructs.Offset(123)
+	wlogOffset = istructs.Offset(42)
 	appDef := appdef.New()
 
 	fs, err := parser.ParseFile("file1.vsql", appdefSql)
@@ -811,8 +815,9 @@ func appStructsFromSQL(packagePath string, appdefSql string, prepareAppCfg appCf
 		GenericRawEventBuilderParams: istructs.GenericRawEventBuilderParams{
 			Workspace:         ws,
 			HandlingPartition: partition,
-			PLogOffset:        offset,
+			PLogOffset:        plogOffset,
 			QName:             newWorkspaceCmd,
+			WLogOffset:        wlogOffset,
 		},
 	})
 	cud := rebWs.CUDBuilder().Create(authnz.QNameCDocWorkspaceDescriptor)

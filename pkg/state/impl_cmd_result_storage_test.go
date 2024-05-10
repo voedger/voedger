@@ -16,7 +16,8 @@ import (
 
 func TestCmdResultStorage_InsertInValue(t *testing.T) {
 	cmdResBuilder := istructs.NewNullObjectBuilder()
-	s := ProvideCommandProcessorStateFactory()(context.Background(), nil, nil, SimpleWSIDFunc(istructs.NullWSID), nil, nil, nil, nil, 1, func() istructs.IObjectBuilder { return cmdResBuilder }, nil, nil)
+	s := ProvideCommandProcessorStateFactory()(context.Background(), nil, nil, SimpleWSIDFunc(istructs.NullWSID),
+		nil, nil, nil, nil, 1, func() istructs.IObjectBuilder { return cmdResBuilder }, nil, nil, nil)
 
 	kb, err := s.KeyBuilder(Result, testRecordQName1)
 	require.NoError(t, err)
@@ -37,7 +38,8 @@ func TestCmdResultStorage_InsertInKey(t *testing.T) {
 	}()
 
 	cmdResBuilder := istructs.NewNullObjectBuilder()
-	s := ProvideCommandProcessorStateFactory()(context.Background(), nil, nil, SimpleWSIDFunc(istructs.NullWSID), nil, nil, nil, nil, 1, func() istructs.IObjectBuilder { return cmdResBuilder }, nil, nil)
+	s := ProvideCommandProcessorStateFactory()(context.Background(), nil, nil, SimpleWSIDFunc(istructs.NullWSID),
+		nil, nil, nil, nil, 1, func() istructs.IObjectBuilder { return cmdResBuilder }, nil, nil, nil)
 
 	kb, err := s.KeyBuilder(Result, testRecordQName1)
 	require.NoError(t, err)
