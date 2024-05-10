@@ -397,6 +397,63 @@ func containsAllMessages(strs []string, toFind string) bool {
 
 func (resp *HTTPResponse) ExpectedSysErrorCode() int {
 	return resp.expectedSysErrorCode
+func (f *implIFederation) AdminFunc(relativeURL string, body string, optFuncs ...ReqOptFunc) (*FuncResponse, error) {
+	optFuncs = append(optFuncs, WithMethod(http.MethodPost))
+	url := fmt.Sprintf("http://127.0.0.1:%d/api/%s", f.adminPortGetter(), relativeURL)
+	httpResp, err := f.httpClient.Req(url, body, optFuncs...)
+	return f.httpRespToFuncResp(httpResp, err)
+}
+
+func (f *implIFederation) Func(relativeURL string, body string, optFuncs ...ReqOptFunc) (*FuncResponse, error) {
+	httpResp, err := f.POST(relativeURL, body, optFuncs...)
+	return f.httpRespToFuncResp(httpResp, err)
+}
+
+func (f *implIFederation) httpRespToFuncResp(httpResp *HTTPResponse, httpRespErr error) (*FuncResponse, error) {
+	isUnexpectedCode := errors.Is(httpRespErr, ErrUnexpectedStatusCode)
+	if httpRespErr != nil && !isUnexpectedCode {
+		return nil, httpRespErr
+	}
+	if httpResp == nil {
+		return nil, nil
+	}
+	if isUnexpectedCode {
+		m := map[string]interface{}{}
+		if err := json.Unmarshal([]byte(httpResp.Body), &m); err != nil {
+			return nil, err
+		}
+		if httpResp.HTTPResp.StatusCode == http.StatusOK {
+			return nil, FuncError{
+				SysError: SysError{
+					HTTPStatus: http.StatusOK,
+				},
+				ExpectedHTTPCodes: httpResp.expectedHTTPCodes,
+			}
+		}
+		sysErrorMap := m["sys.Error"].(map[string]interface{})
+		return nil, FuncError{
+			SysError: SysError{
+				HTTPStatus: int(sysErrorMap["HTTPStatus"].(float64)),
+				Message:    sysErrorMap["Message"].(string),
+			},
+			ExpectedHTTPCodes: httpResp.expectedHTTPCodes,
+		}
+	}
+	res := &FuncResponse{
+		HTTPResponse: httpResp,
+		NewIDs:       map[string]int64{},
+		CmdResult:    map[string]interface{}{},
+	}
+	if len(httpResp.Body) == 0 {
+		return res, nil
+	}
+	if err := json.Unmarshal([]byte(httpResp.Body), &res); err != nil {
+		return nil, err
+	}
+	if res.SysError.HTTPStatus > 0 && res.expectedSysErrorCode > 0 && res.expectedSysErrorCode != res.SysError.HTTPStatus {
+		return nil, fmt.Errorf("sys.Error actual status %d, expected %v: %s", res.SysError.HTTPStatus, res.expectedSysErrorCode, res.SysError.Message)
+	}
+	return res, nil
 }
 
 func (resp *HTTPResponse) ExpectedHTTPCodes() []int {

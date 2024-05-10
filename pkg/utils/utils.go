@@ -84,6 +84,8 @@ func AppPartitionID(wsid istructs.WSID, numAppPartitions istructs.NumAppPartitio
 	return istructs.PartitionID(int(wsid) % int(numAppPartitions))
 }
 
+func NilAdminPortGetter() int { panic("to be tested") }
+
 func ScanSSE(data []byte, atEOF bool) (advance int, token []byte, err error) {
 	if atEOF && len(data) == 0 {
 		return 0, nil, nil

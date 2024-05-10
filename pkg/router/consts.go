@@ -34,9 +34,9 @@ const (
 )
 
 var (
-	bearerPrefixLen = len(coreutils.BearerPrefix)
-	// airsBPPartitionsAmount int                         = 100 // changes in tests
+	bearerPrefixLen                                   = len(coreutils.BearerPrefix)
 	onRequestCtxClosed    func()                      = nil // used in tests
 	onBeforeWriteResponse func(w http.ResponseWriter) = nil // used in tests
 	elem1                                             = map[string]interface{}{"fld1": "fld1Val"}
+	adminEndpoint                                     = "127.0.0.1:55555"
 )

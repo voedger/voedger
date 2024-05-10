@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"net"
 	"net/http"
 	"sync"
 	"testing"
@@ -32,9 +33,9 @@ const (
 )
 
 var (
-	isRouterRestartTested bool
-	router                *testRouter
-	clientDisconnections  = make(chan struct{}, 1)
+	isRouterStopTested   bool
+	router               *testRouter
+	clientDisconnections = make(chan struct{}, 1)
 )
 
 func TestBasicUsage_SingleResponse(t *testing.T) {
@@ -343,26 +344,75 @@ func TestFailedToWriteResponse(t *testing.T) {
 	<-ch
 }
 
+func TestAdminService(t *testing.T) {
+	require := require.New(t)
+	setUp(t, func(requestCtx context.Context, sender ibus.ISender, request ibus.Request) {
+		sender.SendResponse(ibus.Response{
+			ContentType: "text/plain",
+			StatusCode:  http.StatusOK,
+			Data:        []byte("test resp"),
+		})
+	}, ibus.DefaultTimeout)
+	defer tearDown()
+
+	t.Run("basic", func(t *testing.T) {
+		resp, err := http.Post(fmt.Sprintf("http://127.0.0.1:%d/api/test1/app1/%d/somefunc", router.adminPort(), testWSID), "application/json", http.NoBody)
+		require.NoError(err)
+		defer resp.Body.Close()
+
+		respBodyBytes, err := io.ReadAll(resp.Body)
+		require.NoError(err)
+		require.Equal("test resp", string(respBodyBytes))
+	})
+
+	t.Run("unable to work from non-127.0.0.1", func(t *testing.T) {
+		nonLocalhostIP := ""
+		addrs, err := net.InterfaceAddrs()
+		require.NoError(err)
+		for _, address := range addrs {
+			if ipnet, ok := address.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
+				if ipnet.IP.To4() != nil {
+					nonLocalhostIP = ipnet.IP.To4().String()
+					break
+				}
+			}
+		}
+		if len(nonLocalhostIP) == 0 {
+			t.Skip("unable to find local non-loopback ip address")
+		}
+		_, err = http.Post(fmt.Sprintf("http://%s:%d/api/test1/app1/%d/somefunc", nonLocalhostIP, router.adminPort(), testWSID), "application/json", http.NoBody)
+		require.Error(err)
+		log.Println(err)
+	})
+}
+
 type testRouter struct {
-	cancel     context.CancelFunc
-	wg         *sync.WaitGroup
-	httpServer pipeline.IService
-	handler    func(requestCtx context.Context, sender ibus.ISender, request ibus.Request)
-	params     RouterParams
-	bus        ibus.IBus
+	cancel       context.CancelFunc
+	wg           *sync.WaitGroup
+	httpService  pipeline.IService
+	handler      func(requestCtx context.Context, sender ibus.ISender, request ibus.Request)
+	bus          ibus.IBus
+	adminService pipeline.IService
 }
 
 func startRouter(t *testing.T, rp RouterParams, bus ibus.IBus, busTimeout time.Duration) {
 	ctx, cancel := context.WithCancel(context.Background())
-	httpSrv, acmeSrv := Provide(ctx, rp, busTimeout, nil, nil, nil, bus, map[istructs.AppQName]istructs.NumAppWorkspaces{istructs.AppQName_test1_app1: 10})
+	httpSrv, acmeSrv, adminService := Provide(ctx, rp, busTimeout, nil, nil, nil, bus, map[istructs.AppQName]istructs.NumAppWorkspaces{istructs.AppQName_test1_app1: 10})
 	require.Nil(t, acmeSrv)
 	require.NoError(t, httpSrv.Prepare(nil))
+	require.NoError(t, adminService.Prepare(nil))
+	router.wg.Add(2)
 	go func() {
 		defer router.wg.Done()
 		httpSrv.Run(ctx)
 	}()
+	go func() {
+		defer router.wg.Done()
+		adminService.Run(ctx)
+	}()
 	router.cancel = cancel
-	router.httpServer = httpSrv
+	router.httpService = httpSrv
+	router.adminService = adminService
 	onRequestCtxClosed = func() {
 		clientDisconnections <- struct{}{}
 	}
@@ -371,11 +421,6 @@ func startRouter(t *testing.T, rp RouterParams, bus ibus.IBus, busTimeout time.D
 func setUp(t *testing.T, handlerFunc func(requestCtx context.Context, sender ibus.ISender, request ibus.Request), busTimeout time.Duration) {
 	if router != nil {
 		router.handler = handlerFunc
-		if !isRouterRestartTested {
-			// let's test router restart once
-			startRouter(t, router.params, router.bus, busTimeout)
-			isRouterRestartTested = true
-		}
 		return
 	}
 	rp := RouterParams{
@@ -405,17 +450,24 @@ func tearDown() {
 		panic("unhandled client disconnection")
 	default:
 	}
-	if isRouterRestartTested {
+	if !isRouterStopTested {
 		// let's test router shutdown once
 		router.cancel()
+		router.httpService.Stop()
+		router.adminService.Stop()
 		router.wg.Wait()
 		router = nil
+		isRouterStopTested = true
 	}
 	onBeforeWriteResponse = nil
 }
 
 func (t testRouter) port() int {
-	return t.httpServer.(interface{ GetPort() int }).GetPort()
+	return t.httpService.(interface{ GetPort() int }).GetPort()
+}
+
+func (t testRouter) adminPort() int {
+	return t.adminService.(interface{ GetPort() int }).GetPort()
 }
 
 func expectEmptyResponse(t *testing.T, resp *http.Response) {

@@ -13,6 +13,7 @@ type commandContextStorage struct {
 	argFunc         ArgFunc
 	unloggedArgFunc UnloggedArgFunc
 	wsidFunc        WSIDFunc
+	wlogOffsetFunc  WLogOffsetFunc
 }
 
 func (s *commandContextStorage) NewKeyBuilder(_ appdef.QName, _ istructs.IStateKeyBuilder) istructs.IStateKeyBuilder {
@@ -23,6 +24,7 @@ func (s *commandContextStorage) Get(_ istructs.IStateKeyBuilder) (istructs.IStat
 		arg:         s.argFunc(),
 		unloggedArg: s.unloggedArgFunc(),
 		wsid:        s.wsidFunc(),
+		wlogOffset:  s.wlogOffsetFunc(),
 	}, nil
 }
 
@@ -31,11 +33,15 @@ type cmdContextValue struct {
 	arg         istructs.IObject
 	unloggedArg istructs.IObject
 	wsid        istructs.WSID
+	wlogOffset  istructs.Offset
 }
 
 func (v *cmdContextValue) AsInt64(name string) int64 {
-	if name == Field_Workspace {
+	switch name {
+	case Field_Workspace:
 		return int64(v.wsid)
+	case Field_WLogOffset:
+		return int64(v.wlogOffset)
 	}
 	panic(errUndefined(name))
 }
