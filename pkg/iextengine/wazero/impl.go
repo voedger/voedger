@@ -9,7 +9,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"math"
 	"os"
 	"runtime"
@@ -25,6 +24,11 @@ import (
 	safe "github.com/voedger/voedger/pkg/state/isafestateapi"
 	"github.com/voedger/voedger/pkg/state/safestate"
 )
+
+type limitedWriter struct {
+	limit int
+	buf   []byte
+}
 
 type wazeroExtPkg struct {
 	moduleCfg wazero.ModuleConfig
@@ -45,6 +49,7 @@ type wazeroExtPkg struct {
 	funcOnReadValue  api.Function
 
 	allocatedBufs []*allocatedBuf
+	stdout        limitedWriter
 	//	memBackup     *api.MemoryBackup
 	//	recoverMem    []byte
 }
@@ -77,6 +82,19 @@ type allocatedBuf struct {
 
 type extensionEngineFactory struct {
 	compile bool
+}
+
+func newLimitedWriter(limit int) limitedWriter {
+	return limitedWriter{limit: limit}
+}
+
+func (w *limitedWriter) Write(p []byte) (n int, err error) {
+	if len(w.buf)+len(p) > w.limit {
+		w.buf = append(w.buf, p[:w.limit-len(w.buf)]...)
+	} else {
+		w.buf = append(w.buf, p...)
+	}
+	return len(p), nil
 }
 
 func (f extensionEngineFactory) New(ctx context.Context, app istructs.AppQName, packages []iextengine.ExtensionPackage, config *iextengine.ExtEngineConfig, numEngines int) (engines []iextengine.IExtensionEngine, err error) {
@@ -178,7 +196,6 @@ func (f *wazeroExtEngine) init(ctx context.Context) error {
 		NewFunctionBuilder().WithFunc(f.hostMustExist).Export("hostGetValue").
 		NewFunctionBuilder().WithFunc(f.hostCanExist).Export("hostQueryValue").
 		NewFunctionBuilder().WithFunc(f.hostReadValues).Export("hostReadValues").
-		NewFunctionBuilder().WithFunc(f.hostPanic).Export("hostPanic").
 		// IKey
 		NewFunctionBuilder().WithFunc(f.hostKeyAsString).Export("hostKeyAsString").
 		NewFunctionBuilder().WithFunc(f.hostKeyAsBytes).Export("hostKeyAsBytes").
@@ -240,6 +257,7 @@ func (f *wazeroExtEngine) resetModule(ctx context.Context, ePkg *wazeroExtPkg) (
 		if err != nil {
 			return err
 		}
+		ePkg.stdout.buf = ePkg.stdout.buf[:0]
 	}
 	if f.compile {
 		ePkg.module, err = f.rtm.InstantiateModule(ctx, ePkg.compiled, ePkg.moduleCfg)
@@ -290,7 +308,9 @@ func (f *wazeroExtEngine) resetModule(ctx context.Context, ePkg *wazeroExtPkg) (
 
 func (f *wazeroExtEngine) initModule(ctx context.Context, pkgName string, wasmdata []byte, extNames []string) (err error) {
 	ePkg := &wazeroExtPkg{}
-	ePkg.moduleCfg = wazero.NewModuleConfig().WithName("wasm").WithStdout(io.Discard).WithStderr(io.Discard)
+
+	ePkg.stdout = newLimitedWriter(maxStdErrSize)
+	ePkg.moduleCfg = wazero.NewModuleConfig().WithName("wasm").WithStdout(&ePkg.stdout)
 
 	if f.compile {
 		ePkg.compiled, err = f.rtm.CompileModule(ctx, wasmdata)
@@ -360,6 +380,10 @@ func (f *wazeroExtEngine) isMemoryOverflow(err error) bool {
 	return strings.Contains(err.Error(), "runtime.alloc")
 }
 
+func (f *wazeroExtEngine) isPanic(err error) bool {
+	return strings.Contains(err.Error(), "wasm error: unreachable")
+}
+
 func (f *wazeroExtEngine) invoke(ctx context.Context, extension appdef.FullQName, io iextengine.IExtensionIO) (err error) {
 	var ok bool
 	f.pkg, ok = f.modules[extension.PkgPath()]
@@ -392,6 +416,12 @@ func (f *wazeroExtEngine) Invoke(ctx context.Context, extension appdef.FullQName
 		f.recover(ctx)
 		err = f.invoke(ctx, extension, io)
 	}
+	if err != nil && f.isPanic(err) && len(f.pkg.stdout.buf) > 0 {
+		stdout := string(f.pkg.stdout.buf)
+		if strings.HasPrefix(stdout, "panic: ") {
+			return errors.New(strings.TrimSpace(stdout))
+		}
+	}
 	return err
 }
 
@@ -406,10 +436,6 @@ func (f *wazeroExtEngine) hostGetKey(storagePtr, storageSize, entityPtr, entityS
 	storageFull := f.decodeStr(storagePtr, storageSize)
 	entitystr := f.decodeStr(entityPtr, entitySize)
 	return uint64(f.safeApi.KeyBuilder(storageFull, entitystr))
-}
-
-func (f *wazeroExtEngine) hostPanic(namePtr, nameSize uint32) {
-	panic(f.decodeStr(namePtr, nameSize))
 }
 
 func (f *wazeroExtEngine) hostReadValues(keyId uint64) {

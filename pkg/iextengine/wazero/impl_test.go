@@ -360,7 +360,7 @@ func Test_NoGc_MemoryOverflow(t *testing.T) {
 		}
 		calculatedHeapInUse += 32
 	}
-	require.ErrorContains(err, "alloc")
+	require.EqualError(err, "panic: runtime error: out of memory")
 }
 
 func Test_SetLimitsExecutionInterval(t *testing.T) {
@@ -413,7 +413,7 @@ func Test_HandlePanics(t *testing.T) {
 		{"queryError", errTestIOError.Error()},
 		{"newValueError", errTestIOError.Error()},
 		{"updateValueError", errTestIOError.Error()},
-		{"asStringMemoryOverflow", "alloc"},
+		{"asStringMemoryOverflow", "runtime error: out of memory"},
 	}
 
 	extNames := make([]string, 0, len(tests))
@@ -566,6 +566,7 @@ func Test_AsBytes(t *testing.T) {
 }
 
 func Test_AsBytesOverflow(t *testing.T) {
+	WasmPreallocatedBufferSize = 1000000
 	const asBytes = "asBytes"
 	require := require.New(t)
 	ctx := context.Background()
@@ -576,7 +577,7 @@ func Test_AsBytesOverflow(t *testing.T) {
 	wasmEngine := extEngine.(*wazeroExtEngine)
 	requireMemStatEx(t, wasmEngine, 1, 0, WasmPreallocatedBufferSize, WasmPreallocatedBufferSize)
 	err = extEngine.Invoke(context.Background(), appdef.NewFullQName(testPkg, asBytes), extIO)
-	require.ErrorContains(err, "alloc")
+	require.EqualError(err, "panic: runtime error: out of memory")
 }
 
 func Test_KeyPutQName(t *testing.T) {
@@ -835,4 +836,19 @@ func appStructsFromSQL(packagePath string, appdefSql string, prepareAppCfg appCf
 
 	return app
 
+}
+
+func Test_Panic(t *testing.T) {
+	const arrAppend = "TestPanic"
+
+	require := require.New(t)
+	ctx := context.Background()
+	WasmPreallocatedBufferSize = 1000000
+	moduleUrl := testModuleURL("./_testdata/panics/pkg.wasm")
+	extEngine, err := testFactoryHelper(ctx, moduleUrl, []string{arrAppend}, iextengine.ExtEngineConfig{}, false)
+	require.NoError(err)
+	defer extEngine.Close(ctx)
+
+	err = extEngine.Invoke(context.Background(), appdef.NewFullQName(testPkg, arrAppend), extIO)
+	require.EqualError(err, "panic: goodbye, world")
 }
