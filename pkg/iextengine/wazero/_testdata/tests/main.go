@@ -124,7 +124,7 @@ func asBytes() {
 	key := ext.KeyBuilder("sys.Test", ext.NullEntity)
 	value := ext.MustGetValue(key)
 	bytes := value.AsBytes("bytes")
-	require.EqualBool(true, len(bytes) == 2000000)
+	require.EqualInt32(2000000, int32(len(bytes)))
 }
 
 var mybytes = make([]byte, 5)
