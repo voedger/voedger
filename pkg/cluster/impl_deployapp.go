@@ -26,7 +26,7 @@ func provideExecDeployApp(asp istructs.IAppStructsProvider, timeFunc coreutils.T
 		appQNameStr := args.ArgumentObject.AsString(Field_AppQName)
 		appQName, err := istructs.ParseAppQName(appQNameStr)
 		if err != nil {
-			return coreutils.NewHTTPErrorf(http.StatusBadRequest, fmt.Sprintf("failed to parse AppQName %s: %w", appQNameStr, err))
+			return coreutils.NewHTTPErrorf(http.StatusBadRequest, fmt.Sprintf("failed to parse AppQName %s: %s", appQNameStr, err.Error()))
 		}
 
 		if appQName == istructs.AppQName_sys_cluster {
