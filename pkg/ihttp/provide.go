@@ -10,9 +10,6 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
-func NewIRouterStorage(appStorageInitializer istorage.IAppStorageInitializer) (IRouterStorage, error) {
-	if err := appStorageInitializer.Init(istructs.AppQName_sys_router); err != nil {
-		return nil, err
-	}
-	return appStorageInitializer.AppStorage(istructs.AppQName_sys_router)
+func NewIRouterStorage(appStorageProvider istorage.IAppStorageProvider) (IRouterStorage, error) {
+	return appStorageProvider.AppStorage(istructs.AppQName_sys_router)
 }

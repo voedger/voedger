@@ -15,26 +15,25 @@ import (
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-func (asi *implIAppStorageInitializer) Init(appQName istructs.AppQName) (err error) {
+func (asi *implIAppStorageProvider) AppStorage(appQName istructs.AppQName) (storage istorage.IAppStorage, err error) {
 	asi.lock.Lock()
 	defer asi.lock.Unlock()
-	if _, ok := asi.cache[appQName]; ok {
-		return ErrStorageInitedAlready
+	if storage, ok := asi.cache[appQName]; ok {
+		return storage, nil
 	}
-
 	if asi.metaStorage == nil {
 		if asi.metaStorage, err = asi.getMetaStorage(); err != nil {
-			return err
+			return nil, err
 		}
 	}
 
 	exists, appStorageDesc, err := readAppStorageDesc(appQName, asi.metaStorage)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if !exists {
 		if appStorageDesc, err = getNewAppStorageDesc(appQName, asi.metaStorage); err != nil {
-			return err
+			return nil, err
 		}
 	}
 
@@ -46,37 +45,27 @@ func (asi *implIAppStorageInitializer) Init(appQName istructs.AppQName) (err err
 		}
 		// possible: new SafeAppName written , but appDesc write is failed. No problem in this case because we'll just have an orphaned record
 		if err = storeAppDesc(appQName, appStorageDesc, asi.metaStorage); err != nil {
-			return err
+			return nil, err
 		}
 	}
 	if len(appStorageDesc.Error) > 0 {
-		return fmt.Errorf("%s: %w: %s", appStorageDesc.SafeName.String(), ErrStorageInitError, appStorageDesc.Error)
+		return nil, fmt.Errorf("%s: %w: %s", appStorageDesc.SafeName.String(), ErrStorageInitError, appStorageDesc.Error)
 	}
-	storage, err := asi.asf.AppStorage(asi.clarifyKeyspaceName(appStorageDesc.SafeName))
+	storage, err = asi.asf.AppStorage(asi.clarifyKeyspaceName(appStorageDesc.SafeName))
 	if err == nil {
 		asi.cache[appQName] = storage
 	}
-	return err
-
+	return storage, err
 }
 
-func (asi *implIAppStorageInitializer) AppStorage(appQName istructs.AppQName) (storage istorage.IAppStorage, err error) {
-	asi.lock.Lock()
-	defer asi.lock.Unlock()
-	if storage, ok := asi.cache[appQName]; ok {
-		return storage, nil
-	}
-	return nil, fmt.Errorf("%s: %w", appQName, ErrStorageNotInited)
-}
-
-func (asi *implIAppStorageInitializer) getMetaStorage() (istorage.IAppStorage, error) {
+func (asi *implIAppStorageProvider) getMetaStorage() (istorage.IAppStorage, error) {
 	if err := asi.asf.Init(asi.clarifyKeyspaceName(istorage.SysMetaSafeName)); err != nil && err != istorage.ErrStorageAlreadyExists {
 		return nil, err
 	}
 	return asi.asf.AppStorage(asi.clarifyKeyspaceName(istorage.SysMetaSafeName))
 }
 
-func (asi *implIAppStorageInitializer) clarifyKeyspaceName(sn istorage.SafeAppName) istorage.SafeAppName {
+func (asi *implIAppStorageProvider) clarifyKeyspaceName(sn istorage.SafeAppName) istorage.SafeAppName {
 	if coreutils.IsTest() {
 		// unique safe keyspace name is generated at istorage.NewSafeAppName()
 		// uuid suffix is need in tests only avoiding the case:

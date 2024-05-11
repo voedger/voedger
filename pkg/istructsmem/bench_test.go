@@ -100,7 +100,7 @@ func bench_BuildRawEvent(b *testing.B, numOfIntFields int) {
 		cfg.Resources.Add(NewCommandFunction(cmdQName, NullCommandExec))
 	}
 
-	provider := Provide(configs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageInitializer())
+	provider := Provide(configs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider())
 
 	appStructs, err := provider.AppStructs(appName)
 	require.NoError(err)

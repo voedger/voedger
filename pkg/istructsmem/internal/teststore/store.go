@@ -48,7 +48,7 @@ func (tsp *testStorageProvider) Init(appName istructs.AppQName) error {
 }
 
 // Returns new storage provider for specified test storage
-func NewStorageProvider(ts *TestMemStorage) istorage.IAppStorageInitializer {
+func NewStorageProvider(ts *TestMemStorage) istorage.IAppStorageProvider {
 	return &testStorageProvider{testStorage: ts}
 }
 
@@ -58,9 +58,6 @@ func NewStorage() *TestMemStorage {
 	asf := mem.Provide()
 	sp := provider.Provide(asf)
 	var err error
-	if err := sp.Init(istructs.AppQName_test1_app1); err != nil {
-		panic(err)
-	}
 	if s.storage, err = sp.AppStorage(istructs.AppQName_test1_app1); err != nil {
 		panic(err)
 	}
@@ -69,7 +66,7 @@ func NewStorage() *TestMemStorage {
 }
 
 // Returns new test storage and new test storage provider
-func New() (storage *TestMemStorage, provider istorage.IAppStorageInitializer) {
+func New() (storage *TestMemStorage, provider istorage.IAppStorageProvider) {
 	s := NewStorage()
 	return s, NewStorageProvider(s)
 }

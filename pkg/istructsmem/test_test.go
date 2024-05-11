@@ -30,8 +30,8 @@ type (
 		AppCfg     *AppConfigType
 		AppDef     appdef.IAppDef
 
-		StorageInitializer istorage.IAppStorageInitializer
-		Storage            istorage.IAppStorage
+		StorageProvider istorage.IAppStorageProvider
+		Storage         istorage.IAppStorage
 
 		AppStructsProvider istructs.IAppStructsProvider
 		AppStructs         istructs.IAppStructs
@@ -406,9 +406,9 @@ func test() *testDataType {
 
 		var err error
 
-		testData.StorageInitializer = istorageimpl.Provide(mem.Provide())
+		testData.StorageProvider = istorageimpl.Provide(mem.Provide())
 
-		testData.AppStructsProvider = Provide(testData.AppConfigs, iratesce.TestBucketsFactory, testTokensFactory(), testData.StorageInitializer)
+		testData.AppStructsProvider = Provide(testData.AppConfigs, iratesce.TestBucketsFactory, testTokensFactory(), testData.StorageProvider)
 		testData.AppStructs, err = testData.AppStructsProvider.AppStructsByDef(testData.appName, testData.AppDef)
 		if err != nil {
 			panic(err)

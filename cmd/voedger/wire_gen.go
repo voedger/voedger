@@ -26,8 +26,8 @@ func wireServer(httpCliParams ihttp.CLIParams, appsCliParams apps.CLIParams) (Wi
 	if err != nil {
 		return WiredServer{}, nil, err
 	}
-	iAppStorageInitializer := provideAppStorageInitializer(iAppStorageFactory)
-	iRouterStorage, err := ihttp.NewIRouterStorage(iAppStorageInitializer)
+	iAppStorageProvider := provideAppStorageProvider(iAppStorageFactory)
+	iRouterStorage, err := ihttp.NewIRouterStorage(iAppStorageProvider)
 	if err != nil {
 		return WiredServer{}, nil, err
 	}
@@ -49,7 +49,7 @@ func wireServer(httpCliParams ihttp.CLIParams, appsCliParams apps.CLIParams) (Wi
 
 // wire.go:
 
-// provideAppStorageInitializer is intended to be used by wire instead of istorage/provider.Provide, because wire can not handle variadic arguments
-func provideAppStorageInitializer(appStorageFactory istorage.IAppStorageFactory) istorage.IAppStorageInitializer {
+// provideAppStorageProvider is intended to be used by wire instead of istorage/provider.Provide, because wire can not handle variadic arguments
+func provideAppStorageProvider(appStorageFactory istorage.IAppStorageFactory) istorage.IAppStorageProvider {
 	return provider.Provide(appStorageFactory)
 }

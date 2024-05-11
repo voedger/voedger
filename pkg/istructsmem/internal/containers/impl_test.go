@@ -26,7 +26,6 @@ func TestContainers(t *testing.T) {
 	require := require.New(t)
 
 	si := istorageimpl.Provide(mem.Provide())
-	require.NoError(si.Init(istructs.AppQName_test1_app1))
 	storage, err := si.AppStorage(istructs.AppQName_test1_app1)
 	require.NoError(err)
 

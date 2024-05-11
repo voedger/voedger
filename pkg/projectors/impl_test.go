@@ -211,20 +211,20 @@ func deployTestApp(
 		panic(err)
 	}
 
-	var storageInitializer istorage.IAppStorageInitializer
+	var storageProvider istorage.IAppStorageProvider
 
 	if cachedStorage {
 		metrics = imetrics.Provide()
-		storageInitializer = istoragecache.Provide(1000000, istorageimpl.Provide(mem.Provide()), metrics, "testVM")
+		storageProvider = istoragecache.Provide(1000000, istorageimpl.Provide(mem.Provide()), metrics, "testVM")
 	} else {
-		storageInitializer = istorageimpl.Provide(mem.Provide())
+		storageProvider = istorageimpl.Provide(mem.Provide())
 	}
 
 	appStructsProvider := istructsmem.Provide(
 		cfgs,
 		iratesce.TestBucketsFactory,
 		payloads.ProvideIAppTokensFactory(itokensjwt.TestTokensJWT()),
-		storageInitializer)
+		storageProvider)
 
 	appStructs, err = appStructsProvider.AppStructs(appName)
 	if err != nil {

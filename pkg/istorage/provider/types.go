@@ -13,7 +13,7 @@ import (
 
 // IAppStorageProvider
 // IAppStorageInitializer
-type implIAppStorageInitializer struct {
+type implIAppStorageProvider struct {
 	cache       map[istructs.AppQName]istorage.IAppStorage
 	asf         istorage.IAppStorageFactory
 	lock        sync.Mutex

@@ -32,13 +32,10 @@ func Test_MyTestBasicUsage(t *testing.T) {
 
 	// creating a StorageProvider
 	factory := Provide(params)
-	storageInitializer := istorageimpl.Provide(factory)
-
-	err := storageInitializer.Init(istructs.AppQName_test1_app1)
-	require.NoError(err)
+	storageProvider := istorageimpl.Provide(factory)
 
 	// get the required AppStorage for the app
-	appStorage, err := storageInitializer.AppStorage(istructs.AppQName_test1_app1)
+	appStorage, err := storageProvider.AppStorage(istructs.AppQName_test1_app1)
 	require.NoError(err)
 
 	// write the application data to the database
@@ -76,12 +73,9 @@ func Test_PutGet(t *testing.T) {
 	defer cleanupTestData(params)
 
 	factory := Provide(params)
-	storageInitializer := istorageimpl.Provide(factory)
+	storageProvider := istorageimpl.Provide(factory)
 
-	err := storageInitializer.Init(istructs.AppQName_test1_app1)
-	require.NoError(err)
-
-	appStorage, err := storageInitializer.AppStorage(istructs.AppQName_test1_app1)
+	appStorage, err := storageProvider.AppStorage(istructs.AppQName_test1_app1)
 	require.NoError(err)
 
 	err = appStorage.Put([]byte("persons"), []byte("NNV"), []byte("Nikitin Nikolay Valeryevich"))

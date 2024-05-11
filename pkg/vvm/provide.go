@@ -139,7 +139,6 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 		provideRouterParams,
 		provideRouterAppStoragePtr,
 		provideIFederation,
-		provideCachingAppStorageInitializer,
 		provideCachingAppStorageProvider,  // IAppStorageProvider
 		itokensjwt.ProvideITokens,         // ITokens
 		provideIAppStructsProvider,        // IAppStructsProvider
@@ -199,7 +198,7 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 }
 
 func provideBootstrapOperator(federation coreutils.IFederation, asp istructs.IAppStructsProvider, timeFunc coreutils.TimeFunc, apppar appparts.IAppPartitions,
-	builtinApps []appparts.BuiltInApp, itokens itokens.ITokens, asi istorage.IAppStorageInitializer, blobberAppStoragePtr iblobstoragestg.BlobAppStoragePtr,
+	builtinApps []appparts.BuiltInApp, itokens itokens.ITokens, storageProvider istorage.IAppStorageProvider, blobberAppStoragePtr iblobstoragestg.BlobAppStoragePtr,
 	routerAppStoragePtr dbcertcache.RouterAppStoragePtr) (BootstrapOperator, error) {
 	var clusterBuiltinApp btstrp.ClusterBuiltInApp
 	otherApps := make([]appparts.BuiltInApp, 0, len(builtinApps)-1)
@@ -215,19 +214,11 @@ func provideBootstrapOperator(federation coreutils.IFederation, asp istructs.IAp
 	}
 	return pipeline.NewSyncOp(func(ctx context.Context, work interface{}) (err error) {
 		// Initialize AppStorageBlobber (* IAppStorage), AppStorageRouter (* IAppStorage)
-		if err := asi.Init(istructs.AppQName_sys_blobber); err != nil {
+		if *blobberAppStoragePtr, err = storageProvider.AppStorage(istructs.AppQName_sys_blobber); err != nil {
 			// notest
 			return err
 		}
-		if err := asi.Init(istructs.AppQName_sys_router); err != nil {
-			// notest
-			return err
-		}
-		if *blobberAppStoragePtr, err = asi.AppStorage(istructs.AppQName_sys_blobber); err != nil {
-			// notest
-			return err
-		}
-		if *routerAppStoragePtr, err = asi.AppStorage(istructs.AppQName_sys_router); err != nil {
+		if *routerAppStoragePtr, err = storageProvider.AppStorage(istructs.AppQName_sys_router); err != nil {
 			// notest
 			return err
 		}
@@ -252,8 +243,8 @@ func provideAppConfigsTypeEmpty() AppConfigsTypeEmpty {
 // The same approach does not work for IAppPartitions implementation, because the appparts.NewWithActualizerWithExtEnginesFactories() accepts
 // iextengine.ExtensionEngineFactories that must be initialized with the already filled AppConfigsType
 func provideIAppStructsProvider(cfgs AppConfigsTypeEmpty, bucketsFactory irates.BucketsFactoryType, appTokensFactory payloads.IAppTokensFactory,
-	storageInitializer istorage.IAppStorageInitializer) istructs.IAppStructsProvider {
-	return istructsmem.Provide(istructsmem.AppConfigsType(cfgs), bucketsFactory, appTokensFactory, storageInitializer)
+	storageProvider istorage.IAppStorageProvider) istructs.IAppStructsProvider {
+	return istructsmem.Provide(istructsmem.AppConfigsType(cfgs), bucketsFactory, appTokensFactory, storageProvider)
 }
 
 func provideAppPartitions(
@@ -297,8 +288,8 @@ func provideAppPartsCtlPipelineService(ctl apppartsctl.IAppPartitionsController)
 	return &AppPartsCtlPipelineService{IAppPartitionsController: ctl}
 }
 
-func provideIAppStorageUncachingProviderFactory(factory istorage.IAppStorageFactory, vvmCfg *VVMConfig) IAppStorageUncachingInitializerFactory {
-	return func() istorage.IAppStorageInitializer {
+func provideIAppStorageUncachingProviderFactory(factory istorage.IAppStorageFactory, vvmCfg *VVMConfig) IAppStorageUncachingProviderFactory {
+	return func() istorage.IAppStorageProvider {
 		return provider.Provide(factory, vvmCfg.KeyspaceNameSuffix)
 	}
 }
@@ -460,14 +451,10 @@ func provideChannelGroups(cfg *VVMConfig) (res []iprocbusmem.ChannelGroup) {
 	return
 }
 
-func provideCachingAppStorageInitializer(storageCacheSize StorageCacheSizeType, metrics imetrics.IMetrics,
-	vvmName commandprocessor.VVMName, uncachingInitializer IAppStorageUncachingInitializerFactory) istorage.IAppStorageInitializer {
-	aspNonCaching := uncachingInitializer()
+func provideCachingAppStorageProvider(storageCacheSize StorageCacheSizeType, metrics imetrics.IMetrics,
+	vvmName commandprocessor.VVMName, uncachingProvider IAppStorageUncachingProviderFactory) istorage.IAppStorageProvider {
+	aspNonCaching := uncachingProvider()
 	return istoragecache.Provide(int(storageCacheSize), aspNonCaching, metrics, string(vvmName))
-}
-
-func provideCachingAppStorageProvider(asi istorage.IAppStorageInitializer) istorage.IAppStorageProvider {
-	return asi
 }
 
 // синхронный актуализатор один на приложение из-за storages, которые у каждого приложения свои

@@ -22,20 +22,6 @@ func TestBasicUsage(t *testing.T) {
 	app1 := istructs.NewAppQName("sys", "_") // SafeAppName is "sys"
 	app2 := istructs.NewAppQName("sys", "/") // SafeAppName is "sys{uuid}"
 
-	t.Run("not inited -> storage not inited error", func(t *testing.T) {
-		_, err := asi.AppStorage(app1)
-		require.ErrorIs(err, ErrStorageNotInited)
-	})
-
-	// init storage before obtaining
-	require.NoError(asi.Init(app1))
-	require.NoError(asi.Init(app2))
-
-	t.Run("init again -> storage inited already error", func(t *testing.T) {
-		require.ErrorIs(asi.Init(app1), ErrStorageInitedAlready)
-		require.ErrorIs(asi.Init(app2), ErrStorageInitedAlready)
-	})
-
 	// basic IAppStorage obtain
 	storage, err := asi.AppStorage(app1)
 	require.NoError(err)
@@ -57,11 +43,10 @@ func TestBasicUsage(t *testing.T) {
 		require.NoError(storageApp2.Put([]byte{1}, []byte{1}, []byte{2}))
 
 		// re-initialize
-		asi = Provide(asf, asi.(*implIAppStorageInitializer).suffix)
+		asi = Provide(asf, asi.(*implIAppStorageProvider).suffix)
 
 		// obtain IAppStorage for app2
 		// it should be the same as before
-		asi.Init(app2)
 		storage, err := asi.AppStorage(app2)
 		require.NoError(err)
 
@@ -77,24 +62,24 @@ func TestBasicUsage(t *testing.T) {
 func TestInitErrorPersistence(t *testing.T) {
 	require := require.New(t)
 	asf := mem.Provide()
-	asi := Provide(asf)
+	asp := Provide(asf)
 
 	app1 := istructs.NewAppQName("sys", "_")
 	app1SafeName, err := istorage.NewSafeAppName(app1, func(name string) (bool, error) { return true, nil })
 	require.NoError(err)
 
 	// init the storage manually to force the error
-	app1SafeName = asi.(*implIAppStorageInitializer).clarifyKeyspaceName(app1SafeName)
+	app1SafeName = asp.(*implIAppStorageProvider).clarifyKeyspaceName(app1SafeName)
 	require.NoError(asf.Init(app1SafeName))
 
 	// expect an error
-	err = asi.Init(app1)
+	_, err = asp.AppStorage(app1)
 	require.ErrorIs(err, ErrStorageInitError)
 
 	// re-init
-	asi = Provide(asf, asi.(*implIAppStorageInitializer).suffix)
+	asp = Provide(asf, asp.(*implIAppStorageProvider).suffix)
 
 	// expect Init() error is stored in sysmeta
-	err = asi.Init(app1)
+	_, err = asp.AppStorage(app1)
 	require.ErrorIs(err, ErrStorageInitError)
 }

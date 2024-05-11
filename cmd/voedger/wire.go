@@ -30,14 +30,14 @@ func wireServer(httpCliParams ihttp.CLIParams, appsCliParams apps.CLIParams) (Wi
 			apps.NewDefaultRedirectionRoute,
 			apps.NewAppStorageFactory,
 			apps.NewAppRequestHandlers,
-			provideAppStorageInitializer,
+			provideAppStorageProvider,
 			wire.FieldsOf(&httpCliParams, "AcmeDomains"),
 			wire.Struct(new(WiredServer), "*"),
 		),
 	)
 }
 
-// provideAppStorageInitializer is intended to be used by wire instead of istorage/provider.Provide, because wire can not handle variadic arguments
-func provideAppStorageInitializer(appStorageFactory istorage.IAppStorageFactory) istorage.IAppStorageInitializer {
+// provideAppStorageProvider is intended to be used by wire instead of istorage/provider.Provide, because wire can not handle variadic arguments
+func provideAppStorageProvider(appStorageFactory istorage.IAppStorageFactory) istorage.IAppStorageProvider {
 	return provider.Provide(appStorageFactory)
 }
