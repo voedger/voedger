@@ -265,7 +265,10 @@ func (f *implIFederation) N10NSubscribe(projectionKey in10n.ProjectionKey) (offs
 		`, channelID, projectionKey.App, projectionKey.Projection, projectionKey.WS)
 		params := url.Values{}
 		params.Add("payload", body)
-		f.get(fmt.Sprintf("n10n/unsubscribe?%s", params.Encode()))
+		_, err := f.get(fmt.Sprintf("n10n/unsubscribe?%s", params.Encode()), coreutils.WithDiscardResponse())
+		if err != nil {
+			logger.Error("unsubscribe failed", err.Error())
+		}
 		resp.HTTPResp.Body.Close()
 		for range offsetsChan {
 		}
