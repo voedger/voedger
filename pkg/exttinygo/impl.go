@@ -6,20 +6,14 @@
 package exttinygo
 
 import (
-	"unsafe"
-
 	"github.com/voedger/voedger/pkg/exttinygo/internal"
 	safe "github.com/voedger/voedger/pkg/state/isafestateapi"
 )
 
 func Assert(condition bool, msg string) {
 	if !condition {
-		Panic("assertion failed: " + msg)
+		panic("assertion failed: " + msg)
 	}
-}
-
-func Panic(msg string) {
-	internal.HostPanic(uint32(uintptr(unsafe.Pointer(unsafe.StringData(msg)))), uint32(len(msg)))
 }
 
 func keyBuilderImpl(storage, entity string) (b TKeyBuilder) {
