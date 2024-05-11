@@ -53,7 +53,7 @@ func Test_ValidEventArgs(t *testing.T) {
 	cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, adb)
 	cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 
-	provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider())
+	provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageInitializer())
 
 	app, err := provider.AppStructs(istructs.AppQName_test1_app1)
 	require.NoError(err)
@@ -343,7 +343,7 @@ func Test_ValidSysCudEvent(t *testing.T) {
 	cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, adb)
 	cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 
-	provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider())
+	provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageInitializer())
 
 	app, err := provider.AppStructs(istructs.AppQName_test1_app1)
 	require.NoError(err)
@@ -565,7 +565,7 @@ func Test_ValidCommandEvent(t *testing.T) {
 	cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 	cfg.Resources.Add(NewCommandFunction(cmdName, NullCommandExec))
 
-	provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider())
+	provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageInitializer())
 
 	app, err := provider.AppStructs(istructs.AppQName_test1_app1)
 	require.NoError(err)
@@ -680,7 +680,7 @@ func Test_IObjectBuilderBuild(t *testing.T) {
 	cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, adb)
 	cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 
-	provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider())
+	provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageInitializer())
 
 	app, err := provider.AppStructs(istructs.AppQName_test1_app1)
 	require.NoError(err)
@@ -765,12 +765,8 @@ func Test_VerifiedFields(t *testing.T) {
 	email := "test@test.io"
 
 	tokens := testTokensFactory().New(test.appName)
-	storage, err := simpleStorageProvider().AppStorage(istructs.AppQName_test1_app1)
-	require.NoError(err)
-	asp := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider())
-	err = cfg.prepare(iratesce.TestBucketsFactory(), storage)
-	require.NoError(err)
-	_, err = asp.AppStructs(test.appName) // need to set cfg.app because IAppTokens are taken from cfg.app
+	asp := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageInitializer())
+	_, err := asp.AppStructs(test.appName) // need to set cfg.app because IAppTokens are taken from cfg.app
 	require.NoError(err)
 
 	t.Run("test row verification", func(t *testing.T) {
@@ -949,12 +945,8 @@ func Test_CharsFieldRestricts(t *testing.T) {
 	cfg := cfgs.AddConfig(test.appName, adb)
 	cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 
-	storage, err := simpleStorageProvider().AppStorage(istructs.AppQName_test1_app1)
-	require.NoError(err)
-	asp := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider())
-	err = cfg.prepare(iratesce.TestBucketsFactory(), storage)
-	require.NoError(err)
-	_, err = asp.AppStructs(test.appName)
+	asp := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageInitializer())
+	_, err := asp.AppStructs(test.appName)
 	require.NoError(err)
 
 	t.Run("test constraints", func(t *testing.T) {

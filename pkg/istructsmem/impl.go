@@ -31,12 +31,12 @@ import (
 //   - interfaces:
 //     — istructs.IAppStructsProvider
 type appStructsProviderType struct {
-	locker           sync.RWMutex
-	configs          AppConfigsType
-	structures       map[istructs.AppQName]*appStructsType
-	bucketsFactory   irates.BucketsFactoryType
-	appTokensFactory payloads.IAppTokensFactory
-	storageProvider  istorage.IAppStorageProvider
+	locker             sync.RWMutex
+	configs            AppConfigsType
+	structures         map[istructs.AppQName]*appStructsType
+	bucketsFactory     irates.BucketsFactoryType
+	appTokensFactory   payloads.IAppTokensFactory
+	storageInitializer istorage.IAppStorageInitializer
 }
 
 // istructs.IAppStructsProvider.AppStructs
@@ -54,7 +54,10 @@ func (provider *appStructsProviderType) AppStructs(appName istructs.AppQName) (s
 	if !exists || !appCfg.Prepared() {
 		buckets := provider.bucketsFactory()
 		appTokens := provider.appTokensFactory.New(appName)
-		appStorage, err := provider.storageProvider.AppStorage(appName)
+		if err := provider.storageInitializer.Init(appName); err != nil {
+			return nil, err
+		}
+		appStorage, err := provider.storageInitializer.AppStorage(appName)
 		if err != nil {
 			return nil, err
 		}

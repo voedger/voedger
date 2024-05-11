@@ -48,7 +48,6 @@ type AdminEndpointServiceOperator pipeline.ISyncOperator
 type PublicEndpointServiceOperator pipeline.ISyncOperator
 type BlobberAppClusterID istructs.ClusterAppID
 type BlobStorage iblobstorage.IBLOBStorage
-type BlobAppStorage istorage.IAppStorage
 type BlobberAppStruct istructs.IAppStructs
 type CommandProcessorsChannelGroupIdxType int
 type QueryProcessorsChannelGroupIdxType int

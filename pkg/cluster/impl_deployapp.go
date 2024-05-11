@@ -45,8 +45,31 @@ func provideExecDeployApp(asp istructs.IAppStructsProvider, timeFunc coreutils.T
 		if err != nil {
 			return err
 		}
+		numAppWorkspacesToDeploy := istructs.NumAppWorkspaces(args.ArgumentObject.AsInt32(Field_NumAppWorkspaces))
+		numAppPartitionsToDeploy := istructs.NumAppPartitions(args.ArgumentObject.AsInt32(Field_NumPartitions))
 		if wdocAppRecordID != istructs.NullRecordID {
-			// deployed already -> just return 200 ok for idempotency and to avoid app workspaces reinit
+			kb, err := args.State.KeyBuilder(state.Record, qNameWDocApp)
+			if err != nil {
+				// notest
+				return err
+			}
+			kb.PutRecordID(state.Field_ID, wdocAppRecordID)
+			appRec, err := args.State.MustExist(kb)
+			if err != nil {
+				// notest
+				return err
+			}
+			numPartitionsDeployed := istructs.NumAppPartitions(appRec.AsInt32(Field_NumPartitions))
+			numAppWorkspacesDeployed := istructs.NumAppWorkspaces(appRec.AsInt32(Field_NumAppWorkspaces))
+			if numPartitionsDeployed != numAppPartitionsToDeploy {
+				return coreutils.NewHTTPErrorf(http.StatusConflict, fmt.Sprintf("%s: app %s declaring NumPartitions=%d but was previously deployed with NumPartitions=%d", ErrNumPartitionsChanged.Error(),
+					appQName, numAppPartitionsToDeploy, numPartitionsDeployed))
+			}
+			if numAppWorkspacesDeployed != numAppWorkspacesToDeploy {
+				return coreutils.NewHTTPErrorf(http.StatusConflict, fmt.Sprintf("%s: app %s declaring NumAppWorkspaces=%d but was previously deployed with NumAppWorksaces=%d", ErrNumAppWorkspacesChanged.Error(),
+					appQName, numAppWorkspacesToDeploy, numAppWorkspacesDeployed))
+			}
+			// idempotency
 			return nil
 		}
 
@@ -63,10 +86,8 @@ func provideExecDeployApp(asp istructs.IAppStructsProvider, timeFunc coreutils.T
 
 		vb.PutRecordID(appdef.SystemField_ID, 1)
 		vb.PutString(Field_AppQName, appQNameStr)
-		numAppWorkspaces := istructs.NumAppWorkspaces(args.ArgumentObject.AsInt32(Field_NumAppWorkspaces))
-		numAppPartitions := istructs.NumAppPartitions(args.ArgumentObject.AsInt32(Field_NumPartitions))
-		vb.PutInt32(Field_NumAppWorkspaces, int32(numAppWorkspaces))
-		vb.PutInt32(Field_NumPartitions, int32(numAppPartitions))
+		vb.PutInt32(Field_NumAppWorkspaces, int32(numAppWorkspacesToDeploy))
+		vb.PutInt32(Field_NumPartitions, int32(numAppPartitionsToDeploy))
 
 		// deploy app workspaces
 		as, err := asp.AppStructs(appQName)
@@ -75,11 +96,11 @@ func provideExecDeployApp(asp istructs.IAppStructsProvider, timeFunc coreutils.T
 			return err
 		}
 		if !skipAppWSDeploy[as.AppQName()] {
-			if _, err = InitAppWSes(as, numAppWorkspaces, numAppPartitions, istructs.UnixMilli(timeFunc().UnixMilli())); err != nil {
+			if _, err = InitAppWSes(as, numAppWorkspacesToDeploy, numAppPartitionsToDeploy, istructs.UnixMilli(timeFunc().UnixMilli())); err != nil {
 				return fmt.Errorf("failed to deploy %s: %w", appQName, err)
 			}
 		}
-		logger.Info(fmt.Sprintf("app %s successfully deployed: NumPartitions=%d, NumAppWorkspaces=%d", appQName, numAppPartitions, numAppWorkspaces))
+		logger.Info(fmt.Sprintf("app %s successfully deployed: NumPartitions=%d, NumAppWorkspaces=%d", appQName, numAppPartitionsToDeploy, numAppWorkspacesToDeploy))
 		return nil
 	}
 }

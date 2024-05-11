@@ -125,7 +125,7 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 		provideAppPartitionFactory,
 		provideAsyncActualizersFactory,
 		provideOperatorAppServices,
-		provideBlobAppStorage,
+		provideBlobAppStoragePtr,
 		provideVVMApps,
 		provideBuiltInAppsArtefacts,
 		provideServiceChannelFactory,
@@ -137,7 +137,7 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 		provideCommandChannelFactory,
 		provideIBus,
 		provideRouterParams,
-		provideRouterAppStorage,
+		provideRouterAppStoragePtr,
 		provideIFederation,
 		provideCachingAppStorageInitializer,
 		provideCachingAppStorageProvider,  // IAppStorageProvider
@@ -199,7 +199,8 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 }
 
 func provideBootstrapOperator(federation coreutils.IFederation, asp istructs.IAppStructsProvider, timeFunc coreutils.TimeFunc, apppar appparts.IAppPartitions,
-	builtinApps []appparts.BuiltInApp, itokens itokens.ITokens, asi istorage.IAppStorageInitializer) (BootstrapOperator, error) {
+	builtinApps []appparts.BuiltInApp, itokens itokens.ITokens, asi istorage.IAppStorageInitializer, blobberAppStoragePtr iblobstoragestg.BlobAppStoragePtr,
+	routerAppStoragePtr dbcertcache.RouterAppStoragePtr) (BootstrapOperator, error) {
 	var clusterBuiltinApp btstrp.ClusterBuiltInApp
 	otherApps := make([]appparts.BuiltInApp, 0, len(builtinApps)-1)
 	for _, app := range builtinApps {
@@ -213,7 +214,24 @@ func provideBootstrapOperator(federation coreutils.IFederation, asp istructs.IAp
 		return nil, fmt.Errorf("%s app should be added to VVM builtin apps", istructs.AppQName_sys_cluster)
 	}
 	return pipeline.NewSyncOp(func(ctx context.Context, work interface{}) (err error) {
-		return btstrp.Bootstrap(federation, asp, timeFunc, apppar, clusterBuiltinApp, otherApps, itokens, asi)
+		// Initialize AppStorageBlobber (* IAppStorage), AppStorageRouter (* IAppStorage)
+		if err := asi.Init(istructs.AppQName_sys_blobber); err != nil {
+			// notest
+			return err
+		}
+		if err := asi.Init(istructs.AppQName_sys_router); err != nil {
+			// notest
+			return err
+		}
+		if *blobberAppStoragePtr, err = asi.AppStorage(istructs.AppQName_sys_blobber); err != nil {
+			// notest
+			return err
+		}
+		if *routerAppStoragePtr, err = asi.AppStorage(istructs.AppQName_sys_router); err != nil {
+			// notest
+			return err
+		}
+		return btstrp.Bootstrap(federation, asp, timeFunc, apppar, clusterBuiltinApp, otherApps, itokens)
 	}), nil
 }
 
@@ -234,8 +252,8 @@ func provideAppConfigsTypeEmpty() AppConfigsTypeEmpty {
 // The same approach does not work for IAppPartitions implementation, because the appparts.NewWithActualizerWithExtEnginesFactories() accepts
 // iextengine.ExtensionEngineFactories that must be initialized with the already filled AppConfigsType
 func provideIAppStructsProvider(cfgs AppConfigsTypeEmpty, bucketsFactory irates.BucketsFactoryType, appTokensFactory payloads.IAppTokensFactory,
-	storageProvider istorage.IAppStorageProvider) istructs.IAppStructsProvider {
-	return istructsmem.Provide(istructsmem.AppConfigsType(cfgs), bucketsFactory, appTokensFactory, storageProvider)
+	storageInitializer istorage.IAppStorageInitializer) istructs.IAppStructsProvider {
+	return istructsmem.Provide(istructsmem.AppConfigsType(cfgs), bucketsFactory, appTokensFactory, storageInitializer)
 }
 
 func provideAppPartitions(
@@ -452,13 +470,6 @@ func provideCachingAppStorageProvider(asi istorage.IAppStorageInitializer) istor
 	return asi
 }
 
-// func provideCachingAppStorageProvider(vvmCfg *VVMConfig, storageCacheSize StorageCacheSizeType, metrics imetrics.IMetrics,
-// 	vvmName commandprocessor.VVMName, uncachingProvider IAppStorageUncachingInitializerFactory) (istorage.IAppStorageProvider, error) {
-// 	aspNonCaching := uncachingProvider()
-// 	res := istoragecache.Provide(int(storageCacheSize), aspNonCaching, metrics, string(vvmName))
-// 	return res, nil
-// }
-
 // синхронный актуализатор один на приложение из-за storages, которые у каждого приложения свои
 // сделаем так, чтобы в командный процессор подавался свитч по appName, который выберет нужный актуализатор с нужным набором проекторов
 type switchByAppName struct {
@@ -468,22 +479,22 @@ func (s *switchByAppName) Switch(work interface{}) (branchName string, err error
 	return work.(interface{ AppQName() istructs.AppQName }).AppQName().String(), nil
 }
 
-func provideBlobAppStorage(astp istorage.IAppStorageProvider) (BlobAppStorage, error) {
-	return astp.AppStorage(istructs.AppQName_sys_blobber)
+func provideBlobAppStoragePtr(astp istorage.IAppStorageProvider) iblobstoragestg.BlobAppStoragePtr {
+	return new(istorage.IAppStorage)
 }
 
-func provideBlobStorage(bas BlobAppStorage, nowFunc coreutils.TimeFunc) BlobStorage {
+func provideBlobStorage(bas iblobstoragestg.BlobAppStoragePtr, nowFunc coreutils.TimeFunc) BlobStorage {
 	return iblobstoragestg.Provide(bas, nowFunc)
 }
 
-func provideRouterAppStorage(astp istorage.IAppStorageProvider) (dbcertcache.RouterAppStorage, error) {
-	return astp.AppStorage(istructs.AppQName_sys_router)
+func provideRouterAppStoragePtr(astp istorage.IAppStorageProvider) dbcertcache.RouterAppStoragePtr {
+	return new(istorage.IAppStorage)
 }
 
 // port 80 -> [0] is http server, port 443 -> [0] is https server, [1] is acme server
 func provideRouterServices(vvmCtx context.Context, rp router.RouterParams, busTimeout BusTimeout, broker in10n.IN10nBroker, quotas in10n.Quotas,
 	nowFunc coreutils.TimeFunc, bsc router.BlobberServiceChannels, bms router.BLOBMaxSizeType, blobStorage BlobStorage,
-	routerAppStorage dbcertcache.RouterAppStorage, autocertCache autocert.Cache, bus ibus.IBus, vvmPortSource *VVMPortSource, numsAppsWorkspaces map[istructs.AppQName]istructs.NumAppWorkspaces) RouterServices {
+	autocertCache autocert.Cache, bus ibus.IBus, vvmPortSource *VVMPortSource, numsAppsWorkspaces map[istructs.AppQName]istructs.NumAppWorkspaces) RouterServices {
 	bp := &router.BlobberParams{
 		ServiceChannels:        bsc,
 		BLOBStorage:            blobStorage,

@@ -25,7 +25,7 @@ func TestRateLimits_BasicUsage(t *testing.T) {
 	cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 	qName1 := appdef.NewQName("test", "myFunc")
 
-	provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider())
+	provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageInitializer())
 
 	// limit c.sys.myFunc func call:
 	// - per app:

@@ -27,7 +27,7 @@ func TestBasicUsage_db_cache(t *testing.T) {
 	storage, err := vit.IAppStorageProvider.AppStorage(istructs.AppQName_sys_router)
 	require.NoError(err)
 	require.NotNil(storage)
-	cache := dbcertcache.ProvideDbCache(storage)
+	cache := dbcertcache.ProvideDbCache(&storage)
 	require.NotNil(cache)
 
 	t.Run("Write certificate to router storage, using domain name as key", func(t *testing.T) {

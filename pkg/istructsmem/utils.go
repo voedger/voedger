@@ -26,8 +26,8 @@ var NullAppConfig = newAppConfig(istructs.AppQName_null, appdef.New())
 var (
 	nullDynoBuffer = dynobuffers.NewBuffer(dynobuffers.NewScheme())
 	// not a func -> golang itokensjwt.TimeFunc will be initialized on process init forever
-	testTokensFactory     = func() payloads.IAppTokensFactory { return payloads.TestAppTokensFactory(itokensjwt.TestTokensJWT()) }
-	simpleStorageProvider = func() istorage.IAppStorageProvider {
+	testTokensFactory        = func() payloads.IAppTokensFactory { return payloads.TestAppTokensFactory(itokensjwt.TestTokensJWT()) }
+	simpleStorageInitializer = func() istorage.IAppStorageInitializer {
 		asf := mem.Provide()
 		return provider.Provide(asf)
 	}

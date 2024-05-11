@@ -95,7 +95,7 @@ func TestBasicUsage(t *testing.T) {
 	}()
 
 	// gets AppStructProvider and AppStructs
-	provider := Provide(appConfigs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider())
+	provider := Provide(appConfigs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageInitializer())
 
 	app, err := provider.AppStructs(istructs.AppQName_test1_app1)
 	require.NoError(err)
@@ -218,7 +218,7 @@ func TestBasicUsage_ViewRecords(t *testing.T) {
 		return cfgs
 	}
 
-	p := Provide(appConfigs(), iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider())
+	p := Provide(appConfigs(), iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageInitializer())
 	as, err := p.AppStructs(istructs.AppQName_test1_app1)
 	require.NoError(err)
 	viewRecords := as.ViewRecords()
@@ -307,7 +307,7 @@ func Test_appStructsType_ObjectBuilder(t *testing.T) {
 		cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, adb)
 		cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 
-		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider())
+		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageInitializer())
 		app, err := provider.AppStructs(istructs.AppQName_test1_app1)
 		require.NoError(err)
 
@@ -528,7 +528,7 @@ func Test_BasicUsageDescribePackages(t *testing.T) {
 			MaxAllowedPerDuration: 4,
 		})
 
-		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider())
+		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageInitializer())
 		app, err := provider.AppStructs(istructs.AppQName_test1_app1)
 		require.NoError(err)
 
@@ -567,7 +567,7 @@ func Test_Provide(t *testing.T) {
 	})
 
 	t.Run("check application ClusterAppID() and AppQName()", func(t *testing.T) {
-		provider := Provide(test.AppConfigs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider())
+		provider := Provide(test.AppConfigs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageInitializer())
 
 		app, err := provider.AppStructs(test.appName)
 		require.NoError(err)

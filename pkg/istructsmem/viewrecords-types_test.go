@@ -1009,7 +1009,11 @@ func Test_LoadStoreViewRecord_Bytes(t *testing.T) {
 		cfg := cfgs.AddConfig(istructs.AppQName_test1_app2, adb)
 		cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 
-		storage, err := simpleStorageProvider().AppStorage(istructs.AppQName_test1_app1)
+		asi := simpleStorageInitializer()
+		if err := asi.Init(istructs.AppQName_test1_app1); err != nil {
+			panic(err)
+		}
+		storage, err := asi.AppStorage(istructs.AppQName_test1_app1)
 		require.NoError(err)
 		err = cfg.prepare(nil, storage)
 		if err != nil {
@@ -1129,7 +1133,7 @@ func Test_ViewRecords_ClustColumnsQName(t *testing.T) {
 		return cfgs
 	}
 
-	p := Provide(appConfigs(), iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider())
+	p := Provide(appConfigs(), iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageInitializer())
 	as, err := p.AppStructs(istructs.AppQName_test1_app1)
 	require.NoError(err)
 	viewRecords := as.ViewRecords()
@@ -1477,7 +1481,11 @@ func Test_ViewRecordStructure(t *testing.T) {
 		cfg := cfgs.AddConfig(istructs.AppQName_test1_app2, adb)
 		cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 
-		storage, err := simpleStorageProvider().AppStorage(istructs.AppQName_test1_app1)
+		asi := simpleStorageInitializer()
+		if err := asi.Init(istructs.AppQName_test1_app1); err != nil {
+			panic(err)
+		}
+		storage, err := asi.AppStorage(istructs.AppQName_test1_app1)
 		require.NoError(err)
 		err = cfg.prepare(nil, storage)
 		if err != nil {

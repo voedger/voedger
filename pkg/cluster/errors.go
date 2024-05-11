@@ -3,7 +3,7 @@
  * @author Denis Gribanov
  */
 
-package btstrp
+package cluster
 
 import "errors"
 

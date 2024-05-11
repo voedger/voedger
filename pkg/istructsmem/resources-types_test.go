@@ -70,13 +70,9 @@ func TestResourceEnumerator(t *testing.T) {
 		cfg.Resources.Add(NewCommandFunction(cmdCreateObjUnlogged, NullCommandExec))
 		cfg.Resources.Add(NewCommandFunction(cmdCUD, NullCommandExec))
 
-		storage, err := simpleStorageProvider().AppStorage(istructs.AppQName_test1_app1)
-		require.NoError(err)
-		err = cfg.prepare(iratesce.TestBucketsFactory(), storage)
-		require.NoError(err)
+		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageInitializer())
 
-		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider())
-
+		var err error
 		app, err = provider.AppStructs(istructs.AppQName_test1_app1)
 		require.NoError(err)
 	})

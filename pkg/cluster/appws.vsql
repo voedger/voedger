@@ -10,15 +10,6 @@ ALTER WORKSPACE AppWorkspaceWS (
 		UNIQUE (AppQName)
 	);
 
-	TYPE QueryAppArgs (
-		AppQName varchar
-	);
-
-	TYPE QueryAppResult (
-		NumAppWorkspaces int32,
-		NumPartitions int32
-	);
-
 	TYPE AppDeploymentDescriptor (
 		AppQName varchar NOT NULL,
 		NumPartitions int32 NOT NULL,
@@ -27,6 +18,5 @@ ALTER WORKSPACE AppWorkspaceWS (
 
 	EXTENSION ENGINE BUILTIN (
 		COMMAND DeployApp(AppDeploymentDescriptor);
-		QUERY QueryApp(QueryAppArgs) RETURNS QueryAppResult;
 	);
 );

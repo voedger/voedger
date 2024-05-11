@@ -218,7 +218,7 @@ func TestIBucketsFromIAppStructs(t *testing.T) {
 		MaxAllowedPerDuration: 2,
 	}
 	cfg.FunctionRateLimits.AddAppLimit(funcQName, rlExpected)
-	asp := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider())
+	asp := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageInitializer())
 	as, err := asp.AppStructs(istructs.AppQName_test1_app1)
 	require.NoError(err)
 	buckets := IBucketsFromIAppStructs(as)

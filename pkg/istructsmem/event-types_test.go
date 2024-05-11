@@ -757,7 +757,7 @@ func Test_EventUpdateRawCud(t *testing.T) {
 		testCount
 	)
 
-	provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider())
+	provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageInitializer())
 
 	ws := istructs.WSID(1)
 
@@ -932,7 +932,7 @@ func Test_SingletonCDocEvent(t *testing.T) {
 		return cfgs
 	}()
 
-	provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider())
+	provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageInitializer())
 
 	app, err := provider.AppStructs(istructs.AppQName_test1_app1)
 	require.NoError(err)
@@ -1143,7 +1143,7 @@ func TestEventBuild_Error(t *testing.T) {
 	require := require.New(t)
 	test := test()
 
-	provider := Provide(test.AppConfigs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider())
+	provider := Provide(test.AppConfigs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageInitializer())
 
 	app, err := provider.AppStructs(test.appName)
 	require.NoError(err)
@@ -1517,7 +1517,7 @@ func Test_LoadStoreErrEvent_Bytes(t *testing.T) {
 	require := require.New(t)
 	test := test()
 
-	provider := Provide(test.AppConfigs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider())
+	provider := Provide(test.AppConfigs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageInitializer())
 
 	app, err := provider.AppStructs(test.appName)
 	require.NoError(err)

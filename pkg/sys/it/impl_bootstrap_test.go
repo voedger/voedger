@@ -53,7 +53,7 @@ func TestAppsDeploymentDescriptorProtection(t *testing.T) {
 		}
 	}
 
-	t.Run("fail on NumPartitions change", func(t *testing.T) {
+	t.Run("panic on NumPartitions change", func(t *testing.T) {
 		appParts, cleanup, err := appparts.New(vit.IAppStructsProvider)
 		require.NoError(err)
 		defer cleanup()
@@ -61,12 +61,12 @@ func TestAppsDeploymentDescriptorProtection(t *testing.T) {
 		defer func() {
 			otherApps[0].AppDeploymentDescriptor.NumParts--
 		}()
-		err = btstrp.Bootstrap(vit.IFederation, vit.IAppStructsProvider, vit.TimeFunc, appParts, clusterApp, otherApps, vit.ITokens,
-			vit.IAppStorageInitializer)
-		require.ErrorIs(err, btstrp.ErrNumPartitionsChanged)
+		require.PanicsWithValue("failed to deploy app: status 409: num partitions changed: app test1/app1 declaring NumPartitions=43 but was previously deployed with NumPartitions=42", func() {
+			btstrp.Bootstrap(vit.IFederation, vit.IAppStructsProvider, vit.TimeFunc, appParts, clusterApp, otherApps, vit.ITokens)
+		})
 	})
 
-	t.Run("fail on NumAppPartitions change", func(t *testing.T) {
+	t.Run("panic on NumAppPartitions change", func(t *testing.T) {
 		appParts, cleanup, err := appparts.New(vit.IAppStructsProvider)
 		require.NoError(err)
 		defer cleanup()
@@ -74,9 +74,9 @@ func TestAppsDeploymentDescriptorProtection(t *testing.T) {
 		defer func() {
 			otherApps[0].AppDeploymentDescriptor.NumAppWorkspaces--
 		}()
-		err = btstrp.Bootstrap(vit.IFederation, vit.IAppStructsProvider, vit.TimeFunc, appParts, clusterApp, otherApps, vit.ITokens,
-			vit.IAppStorageInitializer)
-		require.ErrorIs(err, btstrp.ErrNumAppWorkspacesChanged)
+		require.PanicsWithValue("failed to deploy app: status 409: num application workspaces changed: app test1/app1 declaring NumAppWorkspaces=44 but was previously deployed with NumAppWorksaces=43", func() {
+			btstrp.Bootstrap(vit.IFederation, vit.IAppStructsProvider, vit.TimeFunc, appParts, clusterApp, otherApps, vit.ITokens)
+		})
 	})
 }
 
@@ -131,7 +131,9 @@ func TestDeployAppErrors(t *testing.T) {
 	t.Run("409 conflict on deploy already deployed", func(t *testing.T) {
 		body := fmt.Sprintf(`{"args":{"AppQName":"%s","NumPartitions":1,"NumAppWorkspaces":1}}`, istructs.AppQName_test1_app1)
 		resp := vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppPseudoWSID, "c.cluster.DeployApp", body,
-			coreutils.WithAuthorizeBy(sysToken))
+			coreutils.WithAuthorizeBy(sysToken),
+			coreutils.Expect409(),
+		)
 
 		// check nothing is made
 		require.Empty(resp.NewIDs)
