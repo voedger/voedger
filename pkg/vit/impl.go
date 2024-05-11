@@ -232,7 +232,7 @@ func handleWSParam(vit *VIT, appWS *AppWorkspace, appWorkspaces map[string]*AppW
 			roles += role.String()
 		}
 		body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"sys.Subject","Login":"%s","Roles":"%s","SubjectKind":%d,"ProfileWSID":%d}}]}`,
-			subject.login, roles, subject.subjectKind, vit.principals[appWS.GetAppQName()][subject.login].ProfileWSID)
+			subject.login, roles, subject.subjectKind, vit.principals[appWS.AppQName()][subject.login].ProfileWSID)
 		vit.PostWS(appWS, "c.sys.CUD", body, coreutils.WithAuthorizeBy(token))
 	}
 
@@ -244,7 +244,7 @@ func handleWSParam(vit *VIT, appWS *AppWorkspace, appWorkspaces map[string]*AppW
 		childAppWS.subjects = childWSParams.subjects
 		childAppWS.docs = childWSParams.docs
 		childAppWS.ownerLoginName = childWSParams.ownerLoginName
-		childAppWS.Owner = vit.GetPrincipal(appWS.GetAppQName(), childWSParams.ownerLoginName)
+		childAppWS.Owner = vit.GetPrincipal(appWS.AppQName(), childWSParams.ownerLoginName)
 		appWorkspaces[childWSParams.Name] = childAppWS
 		handleWSParam(vit, childAppWS, appWorkspaces, verifiedValues, token)
 	}

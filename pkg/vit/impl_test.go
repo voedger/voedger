@@ -74,7 +74,7 @@ func TestBasicUsage_WorkWithFunctions(t *testing.T) {
 		resp := vit.PostWS(ws, "c.sys.CUD", body)
 		require.Len(resp.NewIDs, 1)
 		require.Greater(resp.NewID(), int64(1))
-		require.Greater(resp.CurrentWLogOffset, int64(0))
+		require.Greater(resp.CurrentWLogOffset, istructs.Offset(0))
 		require.Equal(http.StatusOK, resp.HTTPResp.StatusCode)
 		require.Empty(resp.Sections)                 // not used for commands
 		require.Panics(func() { resp.SectionRow() }) // panics if not a query
@@ -132,11 +132,7 @@ func TestBasicUsage_N10N(t *testing.T) {
 
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
 
-	n10nChan := vit.SubscribeForN10n(in10n.ProjectionKey{
-		App:        istructs.AppQName_test1_app1,
-		Projection: QNameTestView,
-		WS:         ws.WSID,
-	})
+	n10nChan := vit.SubscribeForN10n(ws, QNameTestView)
 
 	// call test update to the view
 	vit.N10NUpdate(in10n.ProjectionKey{
@@ -191,7 +187,7 @@ func TestBasicUsage_POST(t *testing.T) {
 		vit.PostApp(istructs.AppQName_test1_app1, ws.WSID, "c.sys.CUD", bodyCUD, coreutils.Expect403())
 		resp := vit.PostApp(istructs.AppQName_test1_app1, ws.WSID, "c.sys.CUD", bodyCUD, coreutils.WithAuthorizeBy(ws.Owner.Token)) // FuncResponse is returned
 		require.Greater(resp.NewID(), int64(0))
-		require.Greater(resp.CurrentWLogOffset, int64(0))
+		require.Greater(resp.CurrentWLogOffset, istructs.Offset(0))
 		require.Empty(resp.Sections)                 // not used for commands
 		require.Panics(func() { resp.SectionRow() }) // not used for commands
 	})

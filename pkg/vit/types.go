@@ -101,8 +101,7 @@ type AppWorkspace struct {
 	Owner *Principal // потому что токены принципала обновляются, когда меняется время
 }
 
-func (a *AppWorkspace) GetWSID() istructs.WSID         { return a.WSID }
-func (a *AppWorkspace) GetAppQName() istructs.AppQName { return a.Owner.AppQName }
+func (a *AppWorkspace) AppQName() istructs.AppQName { return a.Owner.AppQName }
 
 type Principal struct {
 	Login

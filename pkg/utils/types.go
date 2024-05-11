@@ -11,6 +11,8 @@ import (
 	"os"
 	"path/filepath"
 	"time"
+
+	"github.com/voedger/voedger/pkg/istructs"
 )
 
 type EmbedFS interface {
@@ -34,7 +36,7 @@ type FuncResponse struct {
 		Elements [][][][]interface{} `json:"elements"`
 	} `json:"sections"`
 	NewIDs            map[string]int64
-	CurrentWLogOffset int64
+	CurrentWLogOffset istructs.Offset
 	SysError          SysError               `json:"sys.Error"`
 	CmdResult         map[string]interface{} `json:"Result"`
 }

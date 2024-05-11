@@ -299,17 +299,32 @@ func (vit *VIT) CreateWorkspace(wsp WSParams, owner *Principal, opts ...coreutil
 	return ws
 }
 
-// will be unsubscribed automatically on vit.TearDown()
-func (vit *VIT) SubscribeForN10n(pk in10n.ProjectionKey) federation.OffsetsChan {
+func (vit *VIT) SubscribeForN10n(ws *AppWorkspace, projectionQName appdef.QName) federation.OffsetsChan {
 	vit.T.Helper()
-	offsetsChan, unsubscribe, err := vit.IFederation.N10NSubscribe(pk)
-	require.NoError(vit.T, err)
+	return vit.SubscribeForN10nProjectionKey(in10n.ProjectionKey{
+		App:        ws.AppQName(),
+		Projection: projectionQName,
+		WS:         ws.WSID,
+	})
+}
+
+// will be unsubscribed automatically on vit.TearDown()
+func (vit *VIT) SubscribeForN10nProjectionKey(pk in10n.ProjectionKey) federation.OffsetsChan {
+	vit.T.Helper()
+	offsetsChan, unsubscribe := vit.SubscribeForN10nUnsubscribe(pk)
 	vit.lock.Lock() // need to lock because the vit instance is used in different goroutines in e.g. Test_Race_RestaurantIntenseUsage()
 	vit.cleanups = append(vit.cleanups, func(vit *VIT) {
 		unsubscribe()
 	})
 	vit.lock.Unlock()
 	return offsetsChan
+}
+
+func (vit *VIT) SubscribeForN10nUnsubscribe(pk in10n.ProjectionKey) (offsetsChan federation.OffsetsChan, unsubscribe func()) {
+	vit.T.Helper()
+	offsetsChan, unsubscribe, err := vit.IFederation.N10NSubscribe(pk)
+	require.NoError(vit.T, err)
+	return offsetsChan, unsubscribe
 }
 
 func (vit *VIT) MetricsRequest(client coreutils.IHTTPClient, opts ...coreutils.ReqOptFunc) (resp string) {
