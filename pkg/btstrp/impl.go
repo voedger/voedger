@@ -29,7 +29,7 @@ func Bootstrap(federation coreutils.IFederation, asp istructs.IAppStructsProvide
 	appparts.DeployApp(istructs.AppQName_sys_cluster, clusterApp.Def, clusterapp.ClusterAppNumPartitions, clusterapp.ClusterAppNumEngines)
 	appparts.DeployAppPartitions(istructs.AppQName_sys_cluster, []istructs.PartitionID{clusterapp.ClusterAppWSIDPartitionID})
 
-	// note: *IBlobberAppStorage and *IRouterAppStorage are initlaized in bootstrap sync operator, see vvm/provide.go:provideBootstrapOperator()
+	// note: *IBlobberAppStorage and *IRouterAppStorage are initialized in bootstrap sync operator, see vvm/provide.go:provideBootstrapOperator()
 
 	sysToken, err := payloads.GetSystemPrincipalToken(itokens, istructs.AppQName_sys_cluster)
 	if err != nil {

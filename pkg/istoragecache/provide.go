@@ -11,7 +11,7 @@ import (
 
 // Provide s.e.
 func Provide(maxBytes int, storageProvider istorage.IAppStorageProvider, metrics imetrics.IMetrics, vvmName string) istorage.IAppStorageProvider {
-	return &implCachingAppStorageInitializer{
+	return &implCachingAppStorageProvider{
 		maxBytes:        maxBytes,
 		storageProvider: storageProvider,
 		metrics:         metrics,

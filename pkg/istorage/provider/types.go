@@ -11,8 +11,6 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
-// IAppStorageProvider
-// IAppStorageInitializer
 type implIAppStorageProvider struct {
 	cache       map[istructs.AppQName]istorage.IAppStorage
 	asf         istorage.IAppStorageFactory

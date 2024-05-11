@@ -9,7 +9,6 @@ import (
 	"embed"
 
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/istructs"
 )
 
 //go:embed appws.vsql
@@ -27,8 +26,4 @@ const (
 var (
 	QNameViewDeployedApps = appdef.NewQName(ClusterPackage, "DeployedApps")
 	qNameWDocApp          = appdef.NewQName(ClusterPackage, "App")
-	skipAppWSDeploy       = map[istructs.AppQName]bool{
-		istructs.AppQName_sys_router:  true,
-		istructs.AppQName_sys_blobber: true,
-	}
 )

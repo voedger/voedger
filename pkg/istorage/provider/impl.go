@@ -15,57 +15,57 @@ import (
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-func (asi *implIAppStorageProvider) AppStorage(appQName istructs.AppQName) (storage istorage.IAppStorage, err error) {
-	asi.lock.Lock()
-	defer asi.lock.Unlock()
-	if storage, ok := asi.cache[appQName]; ok {
+func (asp *implIAppStorageProvider) AppStorage(appQName istructs.AppQName) (storage istorage.IAppStorage, err error) {
+	asp.lock.Lock()
+	defer asp.lock.Unlock()
+	if storage, ok := asp.cache[appQName]; ok {
 		return storage, nil
 	}
-	if asi.metaStorage == nil {
-		if asi.metaStorage, err = asi.getMetaStorage(); err != nil {
+	if asp.metaStorage == nil {
+		if asp.metaStorage, err = asp.getMetaStorage(); err != nil {
 			return nil, err
 		}
 	}
 
-	exists, appStorageDesc, err := readAppStorageDesc(appQName, asi.metaStorage)
+	exists, appStorageDesc, err := readAppStorageDesc(appQName, asp.metaStorage)
 	if err != nil {
 		return nil, err
 	}
 	if !exists {
-		if appStorageDesc, err = getNewAppStorageDesc(appQName, asi.metaStorage); err != nil {
+		if appStorageDesc, err = getNewAppStorageDesc(appQName, asp.metaStorage); err != nil {
 			return nil, err
 		}
 	}
 
 	if len(appStorageDesc.Error) == 0 && appStorageDesc.Status == istorage.AppStorageStatus_Pending {
-		if err := asi.asf.Init(asi.clarifyKeyspaceName(appStorageDesc.SafeName)); err != nil {
+		if err := asp.asf.Init(asp.clarifyKeyspaceName(appStorageDesc.SafeName)); err != nil {
 			appStorageDesc.Error = err.Error()
 		} else {
 			appStorageDesc.Status = istorage.AppStorageStatus_Done
 		}
 		// possible: new SafeAppName written , but appDesc write is failed. No problem in this case because we'll just have an orphaned record
-		if err = storeAppDesc(appQName, appStorageDesc, asi.metaStorage); err != nil {
+		if err = storeAppDesc(appQName, appStorageDesc, asp.metaStorage); err != nil {
 			return nil, err
 		}
 	}
 	if len(appStorageDesc.Error) > 0 {
 		return nil, fmt.Errorf("%s: %w: %s", appStorageDesc.SafeName.String(), ErrStorageInitError, appStorageDesc.Error)
 	}
-	storage, err = asi.asf.AppStorage(asi.clarifyKeyspaceName(appStorageDesc.SafeName))
+	storage, err = asp.asf.AppStorage(asp.clarifyKeyspaceName(appStorageDesc.SafeName))
 	if err == nil {
-		asi.cache[appQName] = storage
+		asp.cache[appQName] = storage
 	}
 	return storage, err
 }
 
-func (asi *implIAppStorageProvider) getMetaStorage() (istorage.IAppStorage, error) {
-	if err := asi.asf.Init(asi.clarifyKeyspaceName(istorage.SysMetaSafeName)); err != nil && err != istorage.ErrStorageAlreadyExists {
+func (asp *implIAppStorageProvider) getMetaStorage() (istorage.IAppStorage, error) {
+	if err := asp.asf.Init(asp.clarifyKeyspaceName(istorage.SysMetaSafeName)); err != nil && err != istorage.ErrStorageAlreadyExists {
 		return nil, err
 	}
-	return asi.asf.AppStorage(asi.clarifyKeyspaceName(istorage.SysMetaSafeName))
+	return asp.asf.AppStorage(asp.clarifyKeyspaceName(istorage.SysMetaSafeName))
 }
 
-func (asi *implIAppStorageProvider) clarifyKeyspaceName(sn istorage.SafeAppName) istorage.SafeAppName {
+func (asp *implIAppStorageProvider) clarifyKeyspaceName(sn istorage.SafeAppName) istorage.SafeAppName {
 	if coreutils.IsTest() {
 		// unique safe keyspace name is generated at istorage.NewSafeAppName()
 		// uuid suffix is need in tests only avoiding the case:
@@ -73,7 +73,7 @@ func (asi *implIAppStorageProvider) clarifyKeyspaceName(sn istorage.SafeAppName)
 		// - integration tests for different packages are run in simultaneously in separate processes
 		// - 2 processes using the same shared VIT config -> 2 VITs are initialized on the same keyspaces names -> conflict when e.g. creating the same logins
 		// see also getNewAppStorageDesc() below
-		newName := sn.String() + asi.suffix
+		newName := sn.String() + asp.suffix
 		newName = strings.ReplaceAll(newName, "-", "")
 		if len(newName) > istorage.MaxSafeNameLength {
 			newName = newName[:istorage.MaxSafeNameLength]

@@ -43,10 +43,6 @@ func (tsp *testStorageProvider) AppStorage(appName istructs.AppQName) (structs i
 	return tsp.testStorage, nil
 }
 
-func (tsp *testStorageProvider) Init(appName istructs.AppQName) error {
-	return nil
-}
-
 // Returns new storage provider for specified test storage
 func NewStorageProvider(ts *TestMemStorage) istorage.IAppStorageProvider {
 	return &testStorageProvider{testStorage: ts}

@@ -37,14 +37,14 @@ type cachedAppStorage struct {
 	mReadSeconds         *imetrics.MetricValue
 }
 
-type implCachingAppStorageInitializer struct {
+type implCachingAppStorageProvider struct {
 	storageProvider istorage.IAppStorageProvider
 	maxBytes        int
 	metrics         imetrics.IMetrics
 	vvmName         string
 }
 
-func (asp *implCachingAppStorageInitializer) AppStorage(appQName istructs.AppQName) (istorage.IAppStorage, error) {
+func (asp *implCachingAppStorageProvider) AppStorage(appQName istructs.AppQName) (istorage.IAppStorage, error) {
 	nonCachingAppStorage, err := asp.storageProvider.AppStorage(appQName)
 	if err != nil {
 		return nil, err

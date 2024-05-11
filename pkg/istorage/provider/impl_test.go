@@ -17,23 +17,23 @@ import (
 func TestBasicUsage(t *testing.T) {
 	require := require.New(t)
 	asf := mem.Provide()
-	asi := Provide(asf)
+	asp := Provide(asf)
 
 	app1 := istructs.NewAppQName("sys", "_") // SafeAppName is "sys"
 	app2 := istructs.NewAppQName("sys", "/") // SafeAppName is "sys{uuid}"
 
 	// basic IAppStorage obtain
-	storage, err := asi.AppStorage(app1)
+	storage, err := asp.AppStorage(app1)
 	require.NoError(err)
-	storageApp2, err := asi.AppStorage(app2)
+	storageApp2, err := asp.AppStorage(app2)
 	require.NoError(err)
 
 	t.Run("same IAppStorage instances on AppStorage calls for the same app", func(t *testing.T) {
-		storage2, err := asi.AppStorage(app1)
+		storage2, err := asp.AppStorage(app1)
 		require.NoError(err)
 		require.Same(storage, storage2)
 
-		storageApp3, err := asi.AppStorage(app2)
+		storageApp3, err := asp.AppStorage(app2)
 		require.NoError(err)
 		require.Same(storageApp2, storageApp3)
 	})
@@ -43,11 +43,11 @@ func TestBasicUsage(t *testing.T) {
 		require.NoError(storageApp2.Put([]byte{1}, []byte{1}, []byte{2}))
 
 		// re-initialize
-		asi = Provide(asf, asi.(*implIAppStorageProvider).suffix)
+		asp = Provide(asf, asp.(*implIAppStorageProvider).suffix)
 
 		// obtain IAppStorage for app2
 		// it should be the same as before
-		storage, err := asi.AppStorage(app2)
+		storage, err := asp.AppStorage(app2)
 		require.NoError(err)
 
 		// now check we've got into sysab for app2, not sysaa that could be if there was just single app2

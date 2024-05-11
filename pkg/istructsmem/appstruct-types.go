@@ -150,6 +150,10 @@ func (cfg *AppConfigType) prepare(buckets irates.IBuckets, appStorage istorage.I
 		return err
 	}
 
+	if cfg.numAppWorkspaces <= 0 {
+		return fmt.Errorf("%s: %w", cfg.Name, ErrNumAppWorkspacesNotSet)
+	}
+
 	cfg.prepared = true
 	return nil
 }
