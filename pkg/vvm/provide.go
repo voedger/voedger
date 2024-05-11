@@ -518,9 +518,10 @@ func provideAdminEndpointServiceOperator(rs RouterServices) AdminEndpointService
 	return pipeline.ServiceOperator(rs.IAdminService)
 }
 
-func providePublicEndpointServiceOperator(rs RouterServices) PublicEndpointServiceOperator {
-	funcs := make([]pipeline.ForkOperatorOptionFunc, 1, 2)
+func providePublicEndpointServiceOperator(rs RouterServices, metricsServiceOp MetricsServiceOperator) PublicEndpointServiceOperator {
+	funcs := make([]pipeline.ForkOperatorOptionFunc, 2, 3)
 	funcs[0] = pipeline.ForkBranch(pipeline.ServiceOperator(rs.IHTTPService))
+	funcs[1] = pipeline.ForkBranch(metricsServiceOp)
 	if rs.IACMEService != nil {
 		funcs = append(funcs, pipeline.ForkBranch(pipeline.ServiceOperator(rs.IACMEService)))
 	}
@@ -636,7 +637,7 @@ func provideOperatorAppServices(apf AppServiceFactory, appsArtefacts AppsArtefac
 }
 
 func provideServicePipeline(vvmCtx context.Context, opCommandProcessors OperatorCommandProcessors, opQueryProcessors OperatorQueryProcessors,
-	opAppServices OperatorAppServicesFactory, metricsServiceOp MetricsServiceOperator, appPartsCtl IAppPartsCtlPipelineService, bootstrapSyncOp BootstrapOperator,
+	opAppServices OperatorAppServicesFactory, appPartsCtl IAppPartsCtlPipelineService, bootstrapSyncOp BootstrapOperator,
 	adminEndpoint AdminEndpointServiceOperator, publicEndpoint PublicEndpointServiceOperator) ServicePipeline {
 	return pipeline.NewSyncPipeline(vvmCtx, "ServicePipeline",
 		pipeline.WireSyncOperator("internal services", pipeline.ForkOperator(pipeline.ForkSame,

@@ -25,8 +25,10 @@ import (
 func TestContainers(t *testing.T) {
 	require := require.New(t)
 
-	sp := istorageimpl.Provide(mem.Provide())
-	storage, _ := sp.AppStorage(istructs.AppQName_test1_app1)
+	si := istorageimpl.Provide(mem.Provide())
+	require.NoError(si.Init(istructs.AppQName_test1_app1))
+	storage, err := si.AppStorage(istructs.AppQName_test1_app1)
+	require.NoError(err)
 
 	versions := vers.New()
 	if err := versions.Prepare(storage); err != nil {

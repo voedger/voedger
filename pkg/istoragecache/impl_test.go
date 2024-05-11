@@ -315,8 +315,10 @@ func TestAppStorage_GetBatch(t *testing.T) {
 func TestTechnologyCompatibilityKit(t *testing.T) {
 	asf := mem.Provide()
 	asp := istorageimpl.Provide(asf)
-	cachingStorageProvider := Provide(testCacheSize, asp, imetrics.Provide(), "vvm")
-	storage, err := cachingStorageProvider.AppStorage(istructs.AppQName_test1_app1)
+	cachingStorageInitializer := Provide(testCacheSize, asp, imetrics.Provide(), "vvm")
+	err := cachingStorageInitializer.Init(istructs.AppQName_test1_app1)
+	require.NoError(t, err)
+	storage, err := cachingStorageInitializer.AppStorage(istructs.AppQName_test1_app1)
 	require.NoError(t, err)
 	istorage.TechnologyCompatibilityKit_Storage(t, storage)
 }

@@ -77,26 +77,24 @@ func TestBasicUsage(t *testing.T) {
 func TestInitErrorPersistence(t *testing.T) {
 	require := require.New(t)
 	asf := mem.Provide()
-	asp := Provide(asf)
+	asi := Provide(asf)
 
 	app1 := istructs.NewAppQName("sys", "_")
 	app1SafeName, err := istorage.NewSafeAppName(app1, func(name string) (bool, error) { return true, nil })
 	require.NoError(err)
 
 	// init the storage manually to force the error
-	app1SafeName = asp.(*implIAppStorageInitializer).clarifyKeyspaceName(app1SafeName)
+	app1SafeName = asi.(*implIAppStorageInitializer).clarifyKeyspaceName(app1SafeName)
 	require.NoError(asf.Init(app1SafeName))
 
 	// expect an error
-	storage, err := asp.AppStorage(app1)
+	err = asi.Init(app1)
 	require.ErrorIs(err, ErrStorageInitError)
-	require.Nil(storage)
 
 	// re-init
-	asp = Provide(asf, asp.(*implIAppStorageInitializer).suffix)
+	asi = Provide(asf, asi.(*implIAppStorageInitializer).suffix)
 
 	// expect Init() error is stored in sysmeta
-	storage, err = asp.AppStorage(app1)
+	err = asi.Init(app1)
 	require.ErrorIs(err, ErrStorageInitError)
-	require.Nil(storage)
 }

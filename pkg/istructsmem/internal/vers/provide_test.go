@@ -16,8 +16,11 @@ import (
 )
 
 func Test_BasicUsage(t *testing.T) {
-	sp := istorageimpl.Provide(mem.Provide())
-	storage, _ := sp.AppStorage(istructs.AppQName_test1_app1)
+	si := istorageimpl.Provide(mem.Provide())
+	err := si.Init(istructs.AppQName_test1_app1)
+	require.NoError(t, err)
+	storage, err := si.AppStorage(istructs.AppQName_test1_app1)
+	require.NoError(t, err)
 
 	versions := New()
 	if err := versions.Prepare(storage); err != nil {

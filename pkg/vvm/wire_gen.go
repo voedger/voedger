@@ -128,10 +128,6 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 	appPartitionFactory := provideAppPartitionFactory(asyncActualizersFactory, v4)
 	appServiceFactory := provideAppServiceFactory(appPartitionFactory)
 	operatorAppServicesFactory := provideOperatorAppServices(appServiceFactory, appsArtefacts, iAppStructsProvider)
-	metricsServicePortInitial := vvmConfig.MetricsServicePort
-	metricsServicePort := provideMetricsServicePort(metricsServicePortInitial, vvmIdx)
-	metricsService := metrics.ProvideMetricsService(vvmCtx, metricsServicePort, iMetrics)
-	metricsServiceOperator := provideMetricsServiceOperator(metricsService)
 	v5 := provideBuiltInApps(appsArtefacts)
 	iAppPartitionsController, cleanup4, err := apppartsctl.New(iAppPartitions, v5)
 	if err != nil {
@@ -172,8 +168,12 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 	}
 	routerServices := provideRouterServices(vvmCtx, routerParams, busTimeout, in10nBroker, quotas, timeFunc, blobberServiceChannels, blobMaxSizeType, blobStorage, cache, iBus, vvmPortSource, v6)
 	adminEndpointServiceOperator := provideAdminEndpointServiceOperator(routerServices)
-	publicEndpointServiceOperator := providePublicEndpointServiceOperator(routerServices)
-	servicePipeline := provideServicePipeline(vvmCtx, operatorCommandProcessors, operatorQueryProcessors, operatorAppServicesFactory, metricsServiceOperator, iAppPartsCtlPipelineService, bootstrapOperator, adminEndpointServiceOperator, publicEndpointServiceOperator)
+	metricsServicePortInitial := vvmConfig.MetricsServicePort
+	metricsServicePort := provideMetricsServicePort(metricsServicePortInitial, vvmIdx)
+	metricsService := metrics.ProvideMetricsService(vvmCtx, metricsServicePort, iMetrics)
+	metricsServiceOperator := provideMetricsServiceOperator(metricsService)
+	publicEndpointServiceOperator := providePublicEndpointServiceOperator(routerServices, metricsServiceOperator)
+	servicePipeline := provideServicePipeline(vvmCtx, operatorCommandProcessors, operatorQueryProcessors, operatorAppServicesFactory, iAppPartsCtlPipelineService, bootstrapOperator, adminEndpointServiceOperator, publicEndpointServiceOperator)
 	v7 := provideExtensionPoints(appsArtefacts)
 	v8 := provideMetricsServicePortGetter(metricsService)
 	v9 := provideBuiltInAppPackages(appsArtefacts)
@@ -558,9 +558,10 @@ func provideAdminEndpointServiceOperator(rs RouterServices) AdminEndpointService
 	return pipeline.ServiceOperator(rs.IAdminService)
 }
 
-func providePublicEndpointServiceOperator(rs RouterServices) PublicEndpointServiceOperator {
-	funcs := make([]pipeline.ForkOperatorOptionFunc, 1, 2)
+func providePublicEndpointServiceOperator(rs RouterServices, metricsServiceOp MetricsServiceOperator) PublicEndpointServiceOperator {
+	funcs := make([]pipeline.ForkOperatorOptionFunc, 2, 3)
 	funcs[0] = pipeline.ForkBranch(pipeline.ServiceOperator(rs.IHTTPService))
+	funcs[1] = pipeline.ForkBranch(metricsServiceOp)
 	if rs.IACMEService != nil {
 		funcs = append(funcs, pipeline.ForkBranch(pipeline.ServiceOperator(rs.IACMEService)))
 	}
@@ -675,7 +676,7 @@ func provideOperatorAppServices(apf AppServiceFactory, appsArtefacts AppsArtefac
 }
 
 func provideServicePipeline(vvmCtx context.Context, opCommandProcessors OperatorCommandProcessors, opQueryProcessors OperatorQueryProcessors,
-	opAppServices OperatorAppServicesFactory, metricsServiceOp MetricsServiceOperator, appPartsCtl IAppPartsCtlPipelineService, bootstrapSyncOp BootstrapOperator,
+	opAppServices OperatorAppServicesFactory, appPartsCtl IAppPartsCtlPipelineService, bootstrapSyncOp BootstrapOperator,
 	adminEndpoint AdminEndpointServiceOperator, publicEndpoint PublicEndpointServiceOperator) ServicePipeline {
 	return pipeline.NewSyncPipeline(vvmCtx, "ServicePipeline", pipeline.WireSyncOperator("internal services", pipeline.ForkOperator(pipeline.ForkSame, pipeline.ForkBranch(opQueryProcessors), pipeline.ForkBranch(opCommandProcessors), pipeline.ForkBranch(pipeline.ServiceOperator(appPartsCtl)))), pipeline.WireSyncOperator("admin endpoint", adminEndpoint), pipeline.WireSyncOperator("bootstrap", bootstrapSyncOp), pipeline.WireSyncOperator("public endpoint", publicEndpoint), pipeline.WireSyncOperator("async actualizers", opAppServices(vvmCtx)),
 	)

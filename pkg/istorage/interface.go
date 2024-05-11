@@ -11,11 +11,6 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
-type IAppStorageInitializer interface {
-	IAppStorageProvider
-	Init(appQName istructs.AppQName) error // not called for the app -> IAppStorageProvider.AppStorage(app) returns error
-}
-
 // Same as IAppStructsProvider, called per request or frequently inside services
 // implemented in istorageimpl
 type IAppStorageProvider interface {
