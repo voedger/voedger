@@ -74,11 +74,3 @@ type Quotas struct {
 	Subscriptions           int
 	SubscriptionsPerSubject int
 }
-
-func (p ProjectionKey) GetWSID() istructs.WSID {
-	return p.WS
-}
-
-func (p ProjectionKey) GetAppQName() istructs.AppQName {
-	return p.App
-}

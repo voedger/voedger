@@ -5,6 +5,7 @@
 package sys_it
 
 import (
+	"fmt"
 	"log"
 	"testing"
 
@@ -109,35 +110,35 @@ func TestBlobberErrors(t *testing.T) {
 		).Println()
 	})
 
-	// t.Run("400 on wrong Content-Type and name+mimeType query params", func(t *testing.T) {
-	// 	t.Run("neither Content-Type nor name+mimeType query params are not provided", func(t *testing.T) {
-	// 		vit.Post(fmt.Sprintf(`blob/test1/app1/%d`, ws.WSID), "blobContent",
-	// 			coreutils.WithAuthorizeBy(systemPrincipal),
-	// 			coreutils.Expect400(),
-	// 		).Println()
-	// 	})
-	// 	t.Run("no name+mimeType query params and non-(mutipart/form-data) Content-Type", func(t *testing.T) {
-	// 		vit.Post(fmt.Sprintf(`blob/test1/app1/%d`, ws.WSID), "blobContent",
-	// 			coreutils.WithAuthorizeBy(systemPrincipal),
-	// 			coreutils.WithHeaders("Content-Type", "application/x-www-form-urlencoded"),
-	// 			coreutils.Expect400(),
-	// 		).Println()
-	// 	})
-	// 	t.Run("both name+mimeType query params and Conten-Type are specified", func(t *testing.T) {
-	// 		vit.Post(fmt.Sprintf(`blob/test1/app1/%d?name=test&mimeType=application/x-binary`, ws.WSID), "blobContent",
-	// 			coreutils.WithAuthorizeBy(systemPrincipal),
-	// 			coreutils.WithHeaders("Content-Type", "multipart/form-data"),
-	// 			coreutils.Expect400(),
-	// 		).Println()
-	// 	})
-	// 	t.Run("boundary of multipart/form-data is not specified", func(t *testing.T) {
-	// 		vit.Post(fmt.Sprintf(`blob/test1/app1/%d`, ws.WSID), "blobContent",
-	// 			coreutils.WithAuthorizeBy(systemPrincipal),
-	// 			coreutils.WithHeaders("Content-Type", "multipart/form-data"),
-	// 			coreutils.Expect400(),
-	// 		).Println()
-	// 	})
-	// })
+	t.Run("400 on wrong Content-Type and name+mimeType query params", func(t *testing.T) {
+		t.Run("neither Content-Type nor name+mimeType query params are not provided", func(t *testing.T) {
+			vit.POST(fmt.Sprintf(`blob/test1/app1/%d`, ws.WSID), "blobContent",
+				coreutils.WithAuthorizeBy(systemPrincipal),
+				coreutils.Expect400(),
+			).Println()
+		})
+		t.Run("no name+mimeType query params and non-(mutipart/form-data) Content-Type", func(t *testing.T) {
+			vit.POST(fmt.Sprintf(`blob/test1/app1/%d`, ws.WSID), "blobContent",
+				coreutils.WithAuthorizeBy(systemPrincipal),
+				coreutils.WithHeaders("Content-Type", "application/x-www-form-urlencoded"),
+				coreutils.Expect400(),
+			).Println()
+		})
+		t.Run("both name+mimeType query params and Conten-Type are specified", func(t *testing.T) {
+			vit.POST(fmt.Sprintf(`blob/test1/app1/%d?name=test&mimeType=application/x-binary`, ws.WSID), "blobContent",
+				coreutils.WithAuthorizeBy(systemPrincipal),
+				coreutils.WithHeaders("Content-Type", "multipart/form-data"),
+				coreutils.Expect400(),
+			).Println()
+		})
+		t.Run("boundary of multipart/form-data is not specified", func(t *testing.T) {
+			vit.POST(fmt.Sprintf(`blob/test1/app1/%d`, ws.WSID), "blobContent",
+				coreutils.WithAuthorizeBy(systemPrincipal),
+				coreutils.WithHeaders("Content-Type", "multipart/form-data"),
+				coreutils.Expect400(),
+			).Println()
+		})
+	})
 }
 
 func TestBlobMultipartUpload(t *testing.T) {

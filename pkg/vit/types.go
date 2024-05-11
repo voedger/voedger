@@ -143,8 +143,3 @@ type signUpOpts struct {
 }
 
 type emailCaptor chan smtptest.Message
-
-type SubscriptionParameters interface {
-	GetWSID() istructs.WSID
-	GetAppQName() istructs.AppQName
-}

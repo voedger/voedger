@@ -132,7 +132,11 @@ func TestBasicUsage_N10N(t *testing.T) {
 
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
 
-	n10nChan := vit.SubscribeForN10n(ws, QNameTestView)
+	n10nChan := vit.SubscribeForN10n(in10n.ProjectionKey{
+		App:        istructs.AppQName_test1_app1,
+		Projection: QNameTestView,
+		WS:         ws.WSID,
+	})
 
 	// call test update to the view
 	vit.N10NUpdate(in10n.ProjectionKey{
