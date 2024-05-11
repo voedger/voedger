@@ -121,7 +121,7 @@ func (f *implIFederation) GET(relativeURL string, body string, optFuncs ...coreu
 }
 
 func (f *implIFederation) Func(relativeURL string, body string, optFuncs ...coreutils.ReqOptFunc) (*coreutils.FuncResponse, error) {
-	httpResp, err := f.POST(relativeURL, body, optFuncs...)
+	httpResp, err := f.post(relativeURL, body, optFuncs...)
 	return f.httpRespToFuncResp(httpResp, err)
 }
 
@@ -174,7 +174,7 @@ func (f *implIFederation) httpRespToFuncResp(httpResp *coreutils.HTTPResponse, h
 		return nil, err
 	}
 	if res.SysError.HTTPStatus > 0 && res.ExpectedSysErrorCode() > 0 && res.ExpectedSysErrorCode() != res.SysError.HTTPStatus {
-		return nil, fmt.Errorf("sys.Error actual status %d, expected %v: %s", res.SysError.HTTPStatus, res.expectedSysErrorCode, res.SysError.Message)
+		return nil, fmt.Errorf("sys.Error actual status %d, expected %v: %s", res.SysError.HTTPStatus, res.ExpectedSysErrorCode(), res.SysError.Message)
 	}
 	return res, nil
 }
