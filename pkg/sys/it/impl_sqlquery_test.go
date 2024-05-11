@@ -29,11 +29,11 @@ func TestBasicUsage_SqlQuery(t *testing.T) {
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
 	idUntillUsers := vit.GetAny("app1pkg.untill_users", ws)
 
-	findPLogOffsetByWLogOffset := func(wLogOffset int64) int64 {
+	findPLogOffsetByWLogOffset := func(wLogOffset istructs.Offset) istructs.Offset {
 		type row struct {
 			Workspace  istructs.WSID
-			PlogOffset int64
-			WLogOffset int64
+			PlogOffset istructs.Offset
+			WLogOffset istructs.Offset
 		}
 		body := `{"args":{"Query":"select Workspace, PlogOffset, WLogOffset from sys.plog limit -1"},"elements":[{"fields":["Result"]}]}`
 		resp := vit.PostWS(ws, "q.sys.SqlQuery", body)
@@ -195,7 +195,7 @@ func TestSqlQuery_wlog(t *testing.T) {
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
 	idUntillUsers := vit.GetAny("app1pkg.untill_users", ws)
 
-	var lastWLogOffset int64
+	var lastWLogOffset istructs.Offset
 	for i := 1; i <= 101; i++ {
 		tableno := vit.NextNumber()
 		body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":%d,"sys.QName":"app1pkg.bill","tableno":%d,"id_untill_users":%d,"table_part":"a","proforma":0,"working_day":"20230227"}}]}`, i, tableno, idUntillUsers)
