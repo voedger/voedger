@@ -26,8 +26,7 @@ func provideExecDeployApp(asp istructs.IAppStructsProvider, timeFunc coreutils.T
 		appQNameStr := args.ArgumentObject.AsString(Field_AppQName)
 		appQName, err := istructs.ParseAppQName(appQNameStr)
 		if err != nil {
-			// notest
-			return err
+			return coreutils.NewHTTPErrorf(http.StatusBadRequest, fmt.Sprintf("failed to parse AppQName %s: %w", appQNameStr, err))
 		}
 
 		if appQName == istructs.AppQName_sys_cluster {
@@ -43,6 +42,7 @@ func provideExecDeployApp(asp istructs.IAppStructsProvider, timeFunc coreutils.T
 			Field_AppQName: appQNameStr,
 		})
 		if err != nil {
+			// notest
 			return err
 		}
 		numAppWorkspacesToDeploy := istructs.NumAppWorkspaces(args.ArgumentObject.AsInt32(Field_NumAppWorkspaces))
@@ -96,6 +96,7 @@ func provideExecDeployApp(asp istructs.IAppStructsProvider, timeFunc coreutils.T
 			return err
 		}
 		if _, err = InitAppWSes(as, numAppWorkspacesToDeploy, numAppPartitionsToDeploy, istructs.UnixMilli(timeFunc().UnixMilli())); err != nil {
+			// notest
 			return fmt.Errorf("failed to deploy %s: %w", appQName, err)
 		}
 		logger.Info(fmt.Sprintf("app %s successfully deployed: NumPartitions=%d, NumAppWorkspaces=%d", appQName, numAppPartitionsToDeploy, numAppWorkspacesToDeploy))
@@ -116,6 +117,7 @@ func InitAppWSes(as istructs.IAppStructs, numAppWorkspaces istructs.NumAppWorksp
 		}
 		inited, err := InitAppWS(as, partitionID, appWSID, pLogOffsets[partitionID], wLogOffset, currentMillis)
 		if err != nil {
+			// notest
 			return nil, err
 		}
 		pLogOffsets[partitionID]++
@@ -130,6 +132,7 @@ func InitAppWSes(as istructs.IAppStructs, numAppWorkspaces istructs.NumAppWorksp
 func InitAppWS(as istructs.IAppStructs, partitionID istructs.PartitionID, appWSID istructs.WSID, plogOffset, wlogOffset istructs.Offset, currentMillis istructs.UnixMilli) (inited bool, err error) {
 	existingCDocWSDesc, err := as.Records().GetSingleton(appWSID, authnz.QNameCDocWorkspaceDescriptor)
 	if err != nil {
+		// notest
 		return false, err
 	}
 	if existingCDocWSDesc.QName() != appdef.NullQName {
@@ -159,18 +162,22 @@ func InitAppWS(as istructs.IAppStructs, partitionID istructs.PartitionID, appWSI
 	cdocWSDesc.PutInt64(workspace.Field_InitCompletedAtMs, int64(currentMillis))
 	rawEvent, err := reb.BuildRawEvent()
 	if err != nil {
+		// notest
 		return false, err
 	}
 	// ok to local IDGenerator here. Actual next record IDs will be determined on the partition recovery stage
 	pLogEvent, err := as.Events().PutPlog(rawEvent, nil, istructsmem.NewIDGenerator())
 	if err != nil {
+		// notest
 		return false, err
 	}
 	defer pLogEvent.Release()
 	if err := as.Records().Apply(pLogEvent); err != nil {
+		// notest
 		return false, err
 	}
 	if err = as.Events().PutWlog(pLogEvent); err != nil {
+		// notest
 		return false, err
 	}
 	logger.Verbose("app workspace", as.AppQName(), appWSID.BaseWSID()-istructs.FirstBaseAppWSID, "(", appWSID, ") initialized")

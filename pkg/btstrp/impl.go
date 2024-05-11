@@ -36,7 +36,7 @@ func Bootstrap(federation coreutils.IFederation, asp istructs.IAppStructsProvide
 		return err
 	}
 
-	// check apps compatibility
+	// check apps compatibility by calling c.cluster.DeployApp
 	for _, app := range otherApps {
 		body := fmt.Sprintf(`{"args":{"AppQName":"%s","NumPartitions":%d,"NumAppWorkspaces":%d}}`, app.Name, app.NumParts, app.NumAppWorkspaces)
 		_, err := federation.AdminFunc(fmt.Sprintf("api/%s/%d/c.cluster.DeployApp", istructs.AppQName_sys_cluster, clusterapp.ClusterAppPseudoWSID), body,
