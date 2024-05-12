@@ -395,11 +395,6 @@ func containsAllMessages(strs []string, toFind string) bool {
 	return true
 }
 
-func (f *implIFederation) AdminFunc(relativeURL string, body string, optFuncs ...ReqOptFunc) (*FuncResponse, error) {
-	optFuncs = append(optFuncs, WithMethod(http.MethodPost))
-	url := fmt.Sprintf("http://127.0.0.1:%d/%s", f.adminPortGetter(), relativeURL)
-	httpResp, err := f.httpClient.Req(url, body, optFuncs...)
-	return f.httpRespToFuncResp(httpResp, err)
 func (resp *HTTPResponse) ExpectedSysErrorCode() int {
 	return resp.expectedSysErrorCode
 }

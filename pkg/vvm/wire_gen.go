@@ -264,7 +264,7 @@ func provideBootstrapOperator(federation2 federation.IFederation, asp istructs.I
 
 			return err
 		}
-		return btstrp.Bootstrap(federation, asp, timeFunc, apppar, clusterBuiltinApp, otherApps, itokens2)
+		return btstrp.Bootstrap(federation2, asp, timeFunc, apppar, clusterBuiltinApp, otherApps, itokens2)
 	}), nil
 }
 
