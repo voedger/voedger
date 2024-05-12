@@ -989,3 +989,27 @@ func (v *wsTypeVailidator) validate(wsid istructs.WSID, entity appdef.QName) err
 	}
 	return nil
 }
+
+type baseValueBuilder struct {
+	istructs.IStateValueBuilder
+}
+
+func (b *baseValueBuilder) Equal(src istructs.IStateValueBuilder) bool {
+	return false
+}
+func (b *baseValueBuilder) PutInt32(name string, value int32)        { panic(errUndefined(name)) }
+func (b *baseValueBuilder) PutInt64(name string, value int64)        { panic(errUndefined(name)) }
+func (b *baseValueBuilder) PutBytes(name string, value []byte)       { panic(errUndefined(name)) }
+func (b *baseValueBuilder) PutString(name, value string)             { panic(errUndefined(name)) }
+func (b *baseValueBuilder) PutBool(name string, value bool)          { panic(errUndefined(name)) }
+func (b *baseValueBuilder) PutChars(name string, value string)       { panic(errUndefined(name)) }
+func (b *baseValueBuilder) PutFloat32(name string, value float32)    { panic(errUndefined(name)) }
+func (b *baseValueBuilder) PutFloat64(name string, value float64)    { panic(errUndefined(name)) }
+func (b *baseValueBuilder) PutQName(name string, value appdef.QName) { panic(errUndefined(name)) }
+func (b *baseValueBuilder) PutNumber(name string, value float64)     { panic(errUndefined(name)) }
+func (b *baseValueBuilder) PutRecordID(name string, value istructs.RecordID) {
+	panic(errUndefined(name))
+}
+func (b *baseValueBuilder) BuildValue() istructs.IStateValue {
+	panic(errNotImplemented)
+}

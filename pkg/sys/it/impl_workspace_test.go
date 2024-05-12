@@ -17,6 +17,7 @@ import (
 	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/sys/authnz"
+	"github.com/voedger/voedger/pkg/sys/blobber"
 	"github.com/voedger/voedger/pkg/sys/workspace"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 	it "github.com/voedger/voedger/pkg/vit"
@@ -264,7 +265,7 @@ func checkDemoAndDemoMinBLOBs(vit *it.VIT, templateName string, ep extensionpoin
 	blobs, _, err := workspace.ValidateTemplate(templateName, ep, wsKind)
 	require.NoError(err)
 	require.Len(blobs, 4)
-	blobsMap := map[string]workspace.BLOB{}
+	blobsMap := map[string]blobber.StoredBLOB{}
 	for _, templateBLOB := range blobs {
 		blobsMap[string(templateBLOB.Content)] = templateBLOB
 	}
@@ -285,7 +286,7 @@ func checkDemoAndDemoMinBLOBs(vit *it.VIT, templateName string, ep extensionpoin
 		} else {
 			fieldIdx = 2
 		}
-		blobID := int64(resp.SectionRow(rowIdx)[fieldIdx].(float64))
+		blobID := istructs.RecordID(resp.SectionRow(rowIdx)[fieldIdx].(float64))
 		uploadedBLOB := vit.GetBLOB(istructs.AppQName_test1_app1, wsid, blobID, token)
 		templateBLOB := blobsMap[string(uploadedBLOB.Content)]
 		require.Equal(templateBLOB.Name, uploadedBLOB.Name)

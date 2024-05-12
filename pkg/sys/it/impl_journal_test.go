@@ -106,7 +106,7 @@ func TestBasicUsage_Journal(t *testing.T) {
 			"sys.QName": "sys.CUD"
 		}`, ID, tableNum, vit.Now().UnixMilli(), idUntillUsers)
 
-	require.Equal(expectedOffset, int64(resp.SectionRow()[0].(float64)))
+	require.Equal(expectedOffset, istructs.Offset(resp.SectionRow()[0].(float64)))
 	require.Equal(int64(resp.SectionRow()[1].(float64)), vit.Now().UnixMilli())
 	require.JSONEq(expectedEvent, resp.SectionRow()[2].(string))
 
@@ -172,7 +172,7 @@ func TestBasicUsage_Journal(t *testing.T) {
 			"sys.QName": "sys.CUD"
 		}`, ID, tableNum, vit.Now().UnixMilli(), idUntillUsers)
 
-	require.Equal(expectedOffset, int64(resp.SectionRow()[0].(float64)))
+	require.Equal(expectedOffset, istructs.Offset(resp.SectionRow()[0].(float64)))
 	require.Equal(int64(resp.SectionRow()[1].(float64)), vit.Now().UnixMilli())
 	require.JSONEq(expectedEvent, resp.SectionRow()[2].(string))
 }
@@ -192,7 +192,7 @@ func TestJournal_read_in_years_range_1(t *testing.T) {
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
 	idUntillUsers := vit.GetAny("app1pkg.untill_users", ws)
 
-	createBill := func(tableNo int) int64 {
+	createBill := func(tableNo int) istructs.Offset {
 		bill := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.bill","tableno":%d,"id_untill_users":%d,"table_part":"a","proforma":3,"working_day":"20230227"}}]}`, tableNo, idUntillUsers)
 		return vit.PostWS(ws, "c.sys.CUD", bill).CurrentWLogOffset
 	}

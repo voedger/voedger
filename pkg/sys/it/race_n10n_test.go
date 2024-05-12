@@ -5,19 +5,20 @@
 package sys_it
 
 import (
-	"bufio"
-	"fmt"
-	"net/url"
-	"strconv"
 	"sync"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/in10n"
+	"github.com/voedger/voedger/pkg/istructs"
 	coreutils "github.com/voedger/voedger/pkg/utils"
+	"github.com/voedger/voedger/pkg/utils/federation"
 	it "github.com/voedger/voedger/pkg/vit"
 )
 
-// Test_Race_n10n_perSubject: Just Create channel
-func Test_Race_n10n_perSubject(t *testing.T) {
+// Test_Race_n10nCHS: Create channel and wait for subscribe
+func Test_Race_n10nCHS(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
@@ -29,54 +30,30 @@ func Test_Race_n10n_perSubject(t *testing.T) {
 
 	wg := &sync.WaitGroup{}
 	cnt := 100
-	resps := make(chan *coreutils.HTTPResponse, cnt)
-	for i := 0; i < cnt; i++ {
+	unsubscribes := []func(){}
+	offsetsChans := []federation.OffsetsChan{}
+	for wsid := istructs.WSID(0); wsid < istructs.WSID(cnt); wsid++ {
 		wg.Add(1)
-		go func(ai int) {
+		go func(wsid istructs.WSID) {
 			defer wg.Done()
-			resps <- createChannel(vit, ai)
-		}(i)
+			offsetsChan, unsubscribe, err := vit.N10NSubscribe(in10n.ProjectionKey{
+				App:        istructs.NewAppQName("untill", "Application"),
+				Projection: appdef.NewQName("paa", "price"),
+				WS:         wsid,
+			})
+			require.NoError(t, err)
+			unsubscribes = append(unsubscribes, unsubscribe)
+			offsetsChans = append(offsetsChans, offsetsChan)
+		}(wsid)
 	}
 	wg.Wait()
-	close(resps)
-
-	for resp := range resps {
-		resp.HTTPResp.Body.Close()
+	for _, unsubscribe := range unsubscribes {
+		unsubscribe()
 	}
-}
-
-// Test_Race_n10nCHS: Create channel and read event
-func Test_Race_n10nCHS(t *testing.T) {
-	if testing.Short() {
-		t.Skip()
+	for _, offsetsChan := range offsetsChans {
+		for range offsetsChan {
+		}
 	}
-	if coreutils.IsCassandraStorage() {
-		return
-	}
-	vit := it.NewVIT(t, &it.SharedConfig_App1)
-	defer vit.TearDown()
-
-	wg := sync.WaitGroup{}
-	wgSubscribe := &sync.WaitGroup{}
-	cnt := 100
-	resps := make(chan *coreutils.HTTPResponse, cnt)
-	for i := 0; i < cnt; i++ {
-		wg.Add(1)
-		wgSubscribe.Add(1)
-		go func(ai int) {
-			defer wg.Done()
-			resp := createChannel(vit, ai)
-			subscribe(wgSubscribe, resp)
-			resps <- resp
-		}(i)
-	}
-	wg.Wait()
-	close(resps)
-
-	for resp := range resps {
-		resp.HTTPResp.Body.Close()
-	}
-	wgSubscribe.Wait()
 }
 
 // Test_Race_n10nCHSU: Create channel,  read event, send update
@@ -90,71 +67,45 @@ func Test_Race_n10nCHSU(t *testing.T) {
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
+	// ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+
 	wg := sync.WaitGroup{}
-	wgSubscribe := &sync.WaitGroup{}
 	cnt := 10
-	resps := make(chan *coreutils.HTTPResponse, cnt)
-	for i := 0; i < cnt; i++ {
+	unsubscribes := []func(){}
+	offsetsChans := []federation.OffsetsChan{}
+	for wsid := istructs.WSID(0); wsid < istructs.WSID(cnt); wsid++ {
 		wg.Add(1)
-		wgSubscribe.Add(1)
-		go func(ai int) {
+		go func(wsid istructs.WSID) {
 			defer wg.Done()
-			resp := createChannel(vit, ai)
-			subscribe(wgSubscribe, resp)
-			update(vit, ai)
-			resps <- resp
-		}(i)
+
+			// create chan and subscribe
+			projectionKey := in10n.ProjectionKey{
+				App:        istructs.AppQName_test1_app1,
+				Projection: appdef.NewQName("paa", "price"),
+				WS:         wsid,
+			}
+			offsetsChan, unsubsribe, err := vit.N10NSubscribe(projectionKey)
+			require.NoError(t, err)
+			unsubscribes = append(unsubscribes, unsubsribe)
+			offsetsChans = append(offsetsChans, offsetsChan)
+
+			// upate
+			require.NoError(t, vit.N10NUpdate(projectionKey, 13))
+		}(wsid)
 	}
 	wg.Wait()
-	close(resps)
-
-	for resp := range resps {
-		resp.HTTPResp.Body.Close()
-	}
-	wgSubscribe.Wait()
-}
-
-func createChannel(vit *it.VIT, ai int) *coreutils.HTTPResponse {
-	query := fmt.Sprintf(`
-		{
-			"SubjectLogin": "paa%d",
-			"ProjectionKey": [
-				{
-					"App":"untill/Application",
-					"Projection":"paa.price",
-					"WS":1},
-				{
-					"App":"untill/Application",
-					"Projection":"paa.wine_price",
-					"WS":1
-				}
-			]
-		}`, ai)
-	params := url.Values{}
-	params.Add("payload", query)
-	resp := vit.Get(fmt.Sprintf("n10n/channel?%s", params.Encode()), coreutils.WithLongPolling())
-	return resp
-}
-
-func subscribe(wg *sync.WaitGroup, resp *coreutils.HTTPResponse) {
-	go func() {
-		defer wg.Done()
-		scanner := bufio.NewScanner(resp.HTTPResp.Body)
-		scanner.Split(it.ScanSSE) // разбиваем на кадры sse, разделитель - два new line: "\n\n"
-		for scanner.Scan() {
-			if resp.HTTPResp.Request.Context().Err() != nil {
-				return
+	wg = sync.WaitGroup{}
+	for _, offsetsChan := range offsetsChans {
+		wg.Add(1)
+		go func(offsetsChan federation.OffsetsChan) {
+			defer wg.Done()
+			for offset := range offsetsChan {
+				require.Equal(t, istructs.Offset(13), offset)
 			}
-		}
-	}()
-}
-
-func update(vit *it.VIT, aws int) {
-	body := fmt.Sprintf(`
-		{
-			"App": "untill/Application",
-			"Projection": "paa.price",
-			"WS": %s
-		}`, strconv.Itoa(aws))
-	vit.Post("n10n/update/13", body)
+		}(offsetsChan)
+	}
+	for _, unsubscribe := range unsubscribes {
+		unsubscribe()
+	}
+	wg.Wait()
 }

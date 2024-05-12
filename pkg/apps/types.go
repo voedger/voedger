@@ -15,6 +15,7 @@ import (
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	"github.com/voedger/voedger/pkg/parser"
 	coreutils "github.com/voedger/voedger/pkg/utils"
+	"github.com/voedger/voedger/pkg/utils/federation"
 )
 
 type APIs struct {
@@ -22,7 +23,7 @@ type APIs struct {
 	istructs.IAppStructsProvider
 	istorage.IAppStorageProvider
 	payloads.IAppTokensFactory
-	coreutils.IFederation
+	federation.IFederation
 	coreutils.TimeFunc
 	// IAppPartitions - wrong, wire cycle: `appparts.NewWithActualizerWithExtEnginesFactories(asp, actualizer, eef) IAppPartitions`` accepts engines.ProvideExtEngineFactories()
 	//                                     that requires filled AppConfigsType, but AppConfigsType requires apps.APIs with IAppPartitions
