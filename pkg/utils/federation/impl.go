@@ -127,7 +127,7 @@ func (f *implIFederation) Func(relativeURL string, body string, optFuncs ...core
 
 func (f *implIFederation) AdminFunc(relativeURL string, body string, optFuncs ...coreutils.ReqOptFunc) (*coreutils.FuncResponse, error) {
 	optFuncs = append(optFuncs, coreutils.WithMethod(http.MethodPost))
-	url := fmt.Sprintf("http://127.0.0.1:%d/api/%s", f.adminPortGetter(), relativeURL)
+	url := fmt.Sprintf("http://127.0.0.1:%d/%s", f.adminPortGetter(), relativeURL)
 	httpResp, err := f.httpClient.Req(url, body, optFuncs...)
 	return f.httpRespToFuncResp(httpResp, err)
 }
