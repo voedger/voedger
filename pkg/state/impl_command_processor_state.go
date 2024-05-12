@@ -33,9 +33,7 @@ func implProvideCommandProcessorState(ctx context.Context, appStructsFunc AppStr
 		tokenFunc:      tokenFunc,
 	}, S_GET)
 
-	bs.addStorage(Result, &cmdResultStorage{
-		cmdResultBuilderFunc: cmdResultBuilderFunc,
-	}, S_INSERT)
+	bs.addStorage(Result, newCmdResultStorage(cmdResultBuilderFunc), S_INSERT)
 
 	bs.addStorage(Response, &cmdResponseStorage{}, S_INSERT)
 

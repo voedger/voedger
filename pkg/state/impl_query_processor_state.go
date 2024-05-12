@@ -24,7 +24,7 @@ func QPWithCustomHttpClient(client IHttpClient) QPStateOptFunc {
 }
 
 func implProvideQueryProcessorState(ctx context.Context, appStructsFunc AppStructsFunc, partitionIDFunc PartitionIDFunc, wsidFunc WSIDFunc,
-	secretReader isecrets.ISecretReader, principalsFunc PrincipalsFunc, tokenFunc TokenFunc, argFunc ArgFunc, options ...QPStateOptFunc) IHostState {
+	secretReader isecrets.ISecretReader, principalsFunc PrincipalsFunc, tokenFunc TokenFunc, argFunc ArgFunc, queryResultFunc QNameFunc, queryCallbackFunc ExecQueryCallbackFunc, options ...QPStateOptFunc) IHostState {
 
 	opts := &qpStateOpts{}
 	for _, optFunc := range options {
@@ -59,6 +59,8 @@ func implProvideQueryProcessorState(ctx context.Context, appStructsFunc AppStruc
 	}, S_GET)
 
 	bs.addStorage(Response, &cmdResponseStorage{}, S_INSERT)
+
+	bs.addStorage(Result, newQueryResultStorage(appStructsFunc, queryResultFunc, queryCallbackFunc), S_INSERT)
 
 	return bs
 }
