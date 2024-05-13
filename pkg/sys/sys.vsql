@@ -42,6 +42,11 @@ TYPE Raw (
 
 EXTENSION ENGINE BUILTIN (
 	STORAGE Record(
+		/*
+		Key:
+			ID int64 // used to identify record by ID
+			Singletone QName // used to identify singleton 
+		*/
 		GET SCOPE(COMMANDS, QUERIES, PROJECTORS),
 		GETBATCH SCOPE(COMMANDS, QUERIES, PROJECTORS),
 		INSERT SCOPE(COMMANDS),
@@ -58,15 +63,44 @@ EXTENSION ENGINE BUILTIN (
 	) ENTITY VIEW;
 
 	STORAGE WLog(
+		/*
+		Key:
+			Offset int64
+			Count int64 (used for Read operation only)
+		Value
+			RegisteredAt int64
+			SyncedAt int64
+			DeviceID int64
+			Offset int64
+			Synced bool
+			QName qname
+			CUDs []value {
+				IsNew bool
+				...CUD fields...
+			}
+		*/
 		GET SCOPE(COMMANDS, QUERIES, PROJECTORS),
 		READ SCOPE(QUERIES, PROJECTORS)
 	);
 
 	STORAGE AppSecret(
+		/*
+		Key:
+			Secret text
+		Value:
+			Content text
+		*/
 		GET SCOPE(COMMANDS, QUERIES, PROJECTORS)
 	);
 
 	STORAGE RequestSubject(
+		/*
+		Value:
+			ProfileWSID int64
+			Kind int32
+			Name text
+			Token texts
+		*/
 		GET SCOPE(COMMANDS, QUERIES)
 	);
 
