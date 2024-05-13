@@ -44,7 +44,7 @@ func baseline(compileRes *compile.Result, dir, targetDir string) error {
 		return err
 	}
 
-	pkgDir := filepath.Join(targetDir, compile.PkgDirName)
+	pkgDir := filepath.Join(targetDir, pkgDirName)
 	if err := saveBaselineSchemas(compileRes.PkgFiles, pkgDir); err != nil {
 		return err
 	}
@@ -116,6 +116,6 @@ func createBaselineDir(dir string) error {
 	if exists {
 		return fmt.Errorf("baseline directory already exists: %s", dir)
 	}
-	pkgDir := filepath.Join(dir, compile.PkgDirName)
+	pkgDir := filepath.Join(dir, pkgDirName)
 	return os.MkdirAll(pkgDir, coreutils.FileMode_rwxrwxrwx)
 }

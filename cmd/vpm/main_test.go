@@ -7,7 +7,6 @@ package main
 
 import (
 	"fmt"
-	"github.com/voedger/voedger/pkg/compile"
 	"os"
 	"path/filepath"
 	"strings"
@@ -68,8 +67,8 @@ func TestBaselineBasicUsage(t *testing.T) {
 			name: "simple schema with no imports",
 			dir:  filepath.Join(wd, "test", "myapp", "mypkg1"),
 			expectedBaselineFiles: []string{
-				filepath.Join(tempTargetDir, baselineDirName, compile.PkgDirName, "sys", "sys.vsql"),
-				filepath.Join(tempTargetDir, baselineDirName, compile.PkgDirName, "mypkg1", "schema1.vsql"),
+				filepath.Join(tempTargetDir, baselineDirName, pkgDirName, "sys", "sys.vsql"),
+				filepath.Join(tempTargetDir, baselineDirName, pkgDirName, "mypkg1", "schema1.vsql"),
 				filepath.Join(tempTargetDir, baselineDirName, baselineInfoFileName),
 			},
 		},
@@ -77,9 +76,9 @@ func TestBaselineBasicUsage(t *testing.T) {
 			name: "schema importing a local package",
 			dir:  filepath.Join(wd, "test", "myapp", "mypkg2"),
 			expectedBaselineFiles: []string{
-				filepath.Join(tempTargetDir, baselineDirName, compile.PkgDirName, "sys", "sys.vsql"),
-				filepath.Join(tempTargetDir, baselineDirName, compile.PkgDirName, "mypkg1", "schema1.vsql"),
-				filepath.Join(tempTargetDir, baselineDirName, compile.PkgDirName, "mypkg2", "schema2.vsql"),
+				filepath.Join(tempTargetDir, baselineDirName, pkgDirName, "sys", "sys.vsql"),
+				filepath.Join(tempTargetDir, baselineDirName, pkgDirName, "mypkg1", "schema1.vsql"),
+				filepath.Join(tempTargetDir, baselineDirName, pkgDirName, "mypkg2", "schema2.vsql"),
 				filepath.Join(tempTargetDir, baselineDirName, baselineInfoFileName),
 			},
 		},
@@ -87,10 +86,10 @@ func TestBaselineBasicUsage(t *testing.T) {
 			name: "application schema using both local package and voedger",
 			dir:  filepath.Join(wd, "test", "myapp", "app"),
 			expectedBaselineFiles: []string{
-				filepath.Join(tempTargetDir, baselineDirName, compile.PkgDirName, "sys", "sys.vsql"),
-				filepath.Join(tempTargetDir, baselineDirName, compile.PkgDirName, "mypkg1", "schema1.vsql"),
-				filepath.Join(tempTargetDir, baselineDirName, compile.PkgDirName, "mypkg2", "schema2.vsql"),
-				filepath.Join(tempTargetDir, baselineDirName, compile.PkgDirName, "app", "app.vsql"),
+				filepath.Join(tempTargetDir, baselineDirName, pkgDirName, "sys", "sys.vsql"),
+				filepath.Join(tempTargetDir, baselineDirName, pkgDirName, "mypkg1", "schema1.vsql"),
+				filepath.Join(tempTargetDir, baselineDirName, pkgDirName, "mypkg2", "schema2.vsql"),
+				filepath.Join(tempTargetDir, baselineDirName, pkgDirName, "app", "app.vsql"),
 				filepath.Join(tempTargetDir, baselineDirName, baselineInfoFileName),
 			},
 		},

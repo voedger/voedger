@@ -85,14 +85,14 @@ func readIgnoreFile(ignoreFilePath string) ([][]string, error) {
 func appDefFromBaselineDir(baselineDir string) (appdef.IAppDef, error) {
 	var errs []error
 
-	pkgDirPath := filepath.Join(baselineDir, compile.PkgDirName)
+	pkgDirPath := filepath.Join(baselineDir, pkgDirName)
 	pkgDirPathExists, err := coreutils.Exists(pkgDirPath)
 	if err != nil {
 		// notest
 		return nil, err
 	}
 	if !pkgDirPathExists {
-		return nil, fmt.Errorf("baseline directory does not contain %s subdirectory", compile.PkgDirName)
+		return nil, fmt.Errorf("baseline directory does not contain %s subdirectory", pkgDirName)
 	}
 	baselineJsonFilePath := filepath.Join(baselineDir, baselineInfoFileName)
 	baselineJsonFilePathExists, err := coreutils.Exists(baselineJsonFilePath)
