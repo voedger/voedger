@@ -10,24 +10,24 @@ import (
 )
 
 type resultStorage struct {
-	cmdResultBuilderFunc CmdResultBuilderFunc
+	cmdResultBuilderFunc ObjectBuilderFunc
 	appStructsFunc       AppStructsFunc
-	qryResultType        QNameFunc
+	resultBuilderFunc    ObjectBuilderFunc
 	qryCallback          ExecQueryCallbackFunc
 	qryValueBuilder      *resultValueBuilder // last value builder
 }
 
-func newCmdResultStorage(cmdResultBuilderFunc CmdResultBuilderFunc) *resultStorage {
+func newCmdResultStorage(cmdResultBuilderFunc ObjectBuilderFunc) *resultStorage {
 	return &resultStorage{
 		cmdResultBuilderFunc: cmdResultBuilderFunc,
 	}
 }
 
-func newQueryResultStorage(appStructsFunc AppStructsFunc, qryResultType QNameFunc, qryCallback ExecQueryCallbackFunc) *resultStorage {
+func newQueryResultStorage(appStructsFunc AppStructsFunc, resultBuilderFunc ObjectBuilderFunc, qryCallback ExecQueryCallbackFunc) *resultStorage {
 	return &resultStorage{
-		appStructsFunc: appStructsFunc,
-		qryResultType:  qryResultType,
-		qryCallback:    qryCallback,
+		appStructsFunc:    appStructsFunc,
+		resultBuilderFunc: resultBuilderFunc,
+		qryCallback:       qryCallback,
 	}
 }
 
@@ -58,8 +58,7 @@ func (s *resultStorage) ApplyBatch([]ApplyBatchItem) (err error) {
 func (s *resultStorage) ProvideValueBuilder(istructs.IStateKeyBuilder, istructs.IStateValueBuilder) (istructs.IStateValueBuilder, error) {
 	if s.qryCallback != nil { // query processor
 		s.sendPrevQueryObject()
-		builder := s.appStructsFunc().ObjectBuilder(s.qryResultType())
-		s.qryValueBuilder = &resultValueBuilder{resultBuilder: builder}
+		s.qryValueBuilder = &resultValueBuilder{resultBuilder: s.resultBuilderFunc()}
 		return s.qryValueBuilder, nil
 	}
 	// command processor

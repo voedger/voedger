@@ -11,6 +11,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
@@ -31,7 +32,7 @@ func TestCmdResultStorage_InsertInValue(t *testing.T) {
 	vb.PutString(fieldName, value)
 }
 
-func TestCmdResultStorage_InsertInKey(t *testing.T) {
+func TestResultStorage_InsertInKey(t *testing.T) {
 	defer func() {
 		r := fmt.Sprint(recover())
 		require.Equal(t, "assignment to entry in nil map", r)
@@ -48,4 +49,34 @@ func TestCmdResultStorage_InsertInKey(t *testing.T) {
 	value := "value"
 
 	kb.PutString(fieldName, value)
+}
+
+func TestResultStorage_QueryProcessor(t *testing.T) {
+
+	sentObjects := make([]istructs.IObject, 0)
+
+	cmdResBuilder := istructs.NewNullObjectBuilder()
+	execQueryCallback := func() istructs.ExecQueryCallback {
+		return func(object istructs.IObject) error {
+			sentObjects = append(sentObjects, object)
+			return nil
+		}
+	}
+	s := ProvideQueryProcessorStateFactory()(context.Background(), nil, nil, SimpleWSIDFunc(istructs.NullWSID),
+		nil, nil, nil, nil, func() istructs.IObjectBuilder { return cmdResBuilder }, execQueryCallback)
+
+	kb, err := s.KeyBuilder(Result, appdef.NullQName)
+	require.NoError(t, err)
+
+	intent, err := s.NewValue(kb)
+	require.NoError(t, err)
+	require.NotNil(t, intent)
+
+	intent, err = s.NewValue(kb)
+	require.NoError(t, err)
+	require.NotNil(t, intent)
+
+	require.NoError(t, s.ApplyIntents())
+	require.Equal(t, 2, len(sentObjects))
+
 }
