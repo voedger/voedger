@@ -30,8 +30,8 @@ func Test_Race_n10nCHS(t *testing.T) {
 
 	wg := &sync.WaitGroup{}
 	cnt := 100
-	unsubscribes := []func(){}
-	offsetsChans := []federation.OffsetsChan{}
+	unsubscribes := make(chan func(), cnt)
+	offsetsChans := make(chan federation.OffsetsChan, cnt)
 	for wsid := istructs.WSID(0); wsid < istructs.WSID(cnt); wsid++ {
 		wg.Add(1)
 		go func(wsid istructs.WSID) {
@@ -42,15 +42,17 @@ func Test_Race_n10nCHS(t *testing.T) {
 				WS:         wsid,
 			})
 			require.NoError(t, err)
-			unsubscribes = append(unsubscribes, unsubscribe)
-			offsetsChans = append(offsetsChans, offsetsChan)
+			unsubscribes <- unsubscribe
+			offsetsChans <- offsetsChan
 		}(wsid)
 	}
 	wg.Wait()
-	for _, unsubscribe := range unsubscribes {
+	close(unsubscribes)
+	close(offsetsChans)
+	for unsubscribe := range unsubscribes {
 		unsubscribe()
 	}
-	for _, offsetsChan := range offsetsChans {
+	for offsetsChan := range offsetsChans {
 		for range offsetsChan {
 		}
 	}
@@ -67,12 +69,10 @@ func Test_Race_n10nCHSU(t *testing.T) {
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
-	// ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
-
 	wg := sync.WaitGroup{}
 	cnt := 10
-	unsubscribes := []func(){}
-	offsetsChans := []federation.OffsetsChan{}
+	unsubscribes := make(chan func(), cnt)
+	offsetsChans := make(chan federation.OffsetsChan, cnt)
 	for wsid := istructs.WSID(0); wsid < istructs.WSID(cnt); wsid++ {
 		wg.Add(1)
 		go func(wsid istructs.WSID) {
@@ -84,18 +84,20 @@ func Test_Race_n10nCHSU(t *testing.T) {
 				Projection: appdef.NewQName("paa", "price"),
 				WS:         wsid,
 			}
-			offsetsChan, unsubsribe, err := vit.N10NSubscribe(projectionKey)
+			offsetsChan, unsubscribe, err := vit.N10NSubscribe(projectionKey)
 			require.NoError(t, err)
-			unsubscribes = append(unsubscribes, unsubsribe)
-			offsetsChans = append(offsetsChans, offsetsChan)
+			unsubscribes <- unsubscribe
+			offsetsChans <- offsetsChan
 
 			// upate
 			require.NoError(t, vit.N10NUpdate(projectionKey, 13))
 		}(wsid)
 	}
 	wg.Wait()
+	close(unsubscribes)
+	close(offsetsChans)
 	wg = sync.WaitGroup{}
-	for _, offsetsChan := range offsetsChans {
+	for offsetsChan := range offsetsChans {
 		wg.Add(1)
 		go func(offsetsChan federation.OffsetsChan) {
 			defer wg.Done()
@@ -104,7 +106,7 @@ func Test_Race_n10nCHSU(t *testing.T) {
 			}
 		}(offsetsChan)
 	}
-	for _, unsubscribe := range unsubscribes {
+	for unsubscribe := range unsubscribes {
 		unsubscribe()
 	}
 	wg.Wait()
