@@ -43,8 +43,6 @@ func Bootstrap(federation federation.IFederation, asp istructs.IAppStructsProvid
 		_, err := federation.AdminFunc(fmt.Sprintf("api/%s/%d/c.cluster.DeployApp", istructs.AppQName_sys_cluster, clusterapp.ClusterAppPseudoWSID), body,
 			coreutils.WithDiscardResponse(),
 			coreutils.WithAuthorizeBy(sysToken),
-			// тут спросить: если будет открыт порт 55555, то балансер поймет это сразу?
-			// надо ли убрать ожидание тут? наверное, нет, т.к. балансер таки может не сразу это понять
 			coreutils.WithRetryOnAnyError(retryOnHTTPErrorTimeout, retryOnHTTPErrorDelay),
 		)
 		if err != nil {
