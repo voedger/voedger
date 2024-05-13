@@ -9,6 +9,7 @@ const bitsInFourBytes = 32
 
 const (
 	maxMemoryPages = 0xffff
+	maxStdErrSize  = 1024
 
 	WasmPreallocatedBufferIncrease    = 1000
 	WasmDefaultPreallocatedBufferSize = 64000

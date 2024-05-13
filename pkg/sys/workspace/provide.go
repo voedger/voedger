@@ -12,10 +12,11 @@ import (
 	"github.com/voedger/voedger/pkg/itokens"
 	"github.com/voedger/voedger/pkg/sys/authnz"
 	coreutils "github.com/voedger/voedger/pkg/utils"
+	"github.com/voedger/voedger/pkg/utils/federation"
 )
 
 func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, asp istructs.IAppStructsProvider, timeFunc coreutils.TimeFunc, tokensAPI itokens.ITokens,
-	federation coreutils.IFederation, itokens itokens.ITokens, ep extensionpoints.IExtensionPoint, wsPostInitFunc WSPostInitFunc) {
+	federation federation.IFederation, itokens itokens.ITokens, ep extensionpoints.IExtensionPoint, wsPostInitFunc WSPostInitFunc) {
 	// c.sys.InitChildWorkspace
 	cfg.Resources.Add(istructsmem.NewCommandFunction(
 		authnz.QNameCommandInitChildWorkspace,
@@ -67,7 +68,7 @@ func syncProjectorChildWorkspaceIdx() istructs.Projector {
 }
 
 // Projector<A, InitializeWorkspace>
-func asyncProjectorInitializeWorkspace(federation coreutils.IFederation, nowFunc coreutils.TimeFunc, ep extensionpoints.IExtensionPoint,
+func asyncProjectorInitializeWorkspace(federation federation.IFederation, nowFunc coreutils.TimeFunc, ep extensionpoints.IExtensionPoint,
 	tokensAPI itokens.ITokens, wsPostInitFunc WSPostInitFunc) istructs.Projector {
 	return istructs.Projector{
 		Name: qNameAPInitializeWorkspace,
@@ -76,7 +77,7 @@ func asyncProjectorInitializeWorkspace(federation coreutils.IFederation, nowFunc
 }
 
 // Projector<A, InvokeCreateWorkspaceID>
-func asyncProjectorInvokeCreateWorkspaceID(federation coreutils.IFederation, tokensAPI itokens.ITokens) istructs.Projector {
+func asyncProjectorInvokeCreateWorkspaceID(federation federation.IFederation, tokensAPI itokens.ITokens) istructs.Projector {
 	return istructs.Projector{
 		Name: qNameAPInvokeCreateWorkspaceID,
 		Func: invokeCreateWorkspaceIDProjector(federation, tokensAPI),
@@ -84,7 +85,7 @@ func asyncProjectorInvokeCreateWorkspaceID(federation coreutils.IFederation, tok
 }
 
 // Projector<A, InvokeCreateWorkspace>
-func asyncProjectorInvokeCreateWorkspace(federation coreutils.IFederation, tokensAPI itokens.ITokens) istructs.Projector {
+func asyncProjectorInvokeCreateWorkspace(federation federation.IFederation, tokensAPI itokens.ITokens) istructs.Projector {
 	return istructs.Projector{
 		Name: qNameAPInvokeCreateWorkspace,
 		Func: invokeCreateWorkspaceProjector(federation, tokensAPI),

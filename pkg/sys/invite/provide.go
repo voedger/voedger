@@ -9,10 +9,11 @@ import (
 	"github.com/voedger/voedger/pkg/itokens"
 	"github.com/voedger/voedger/pkg/sys/smtp"
 	coreutils "github.com/voedger/voedger/pkg/utils"
+	"github.com/voedger/voedger/pkg/utils/federation"
 )
 
 func Provide(cfg *istructsmem.AppConfigType, timeFunc coreutils.TimeFunc,
-	federation coreutils.IFederation, itokens itokens.ITokens, smtpCfg smtp.Cfg) {
+	federation federation.IFederation, itokens itokens.ITokens, smtpCfg smtp.Cfg) {
 	provideCmdInitiateInvitationByEMail(cfg, timeFunc)
 	provideCmdInitiateJoinWorkspace(cfg, timeFunc)
 	provideCmdInitiateUpdateInviteRoles(cfg, timeFunc)

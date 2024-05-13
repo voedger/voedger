@@ -38,8 +38,8 @@ func TestBasicUsage_Metrics(t *testing.T) {
 func TestMetricsService(t *testing.T) {
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
-	client := coreutils.NewIHTTPClient()
-	defer client.CloseIdleConnections()
+	client, cleanup := coreutils.NewIHTTPClient()
+	defer cleanup()
 
 	t.Run("service check", func(t *testing.T) {
 		log.Println(vit.MetricsRequest(client, coreutils.WithRelativeURL("/metrics/check")))
@@ -58,8 +58,8 @@ func TestCommandProcessorMetrics(t *testing.T) {
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 	require := require.New(t)
-	client := coreutils.NewIHTTPClient()
-	defer client.CloseIdleConnections()
+	client, cleanup := coreutils.NewIHTTPClient()
+	defer cleanup()
 
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
 	body := `{"cuds": [{"fields": {"sys.ID": 1,"sys.QName": "app1pkg.articles","name": "cola","article_manual": 1,"article_hash": 2,"hideonhold": 3,"time_active": 4,"control_active": 5}}]}`

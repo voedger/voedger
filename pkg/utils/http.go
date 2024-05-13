@@ -9,14 +9,12 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"log"
 	"net"
 	"net/http"
 	"net/url"
-	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -264,20 +262,6 @@ func req(method, url, body string, headers, cookies map[string]string) (*http.Re
 	return req, nil
 }
 
-// wrapped ErrUnexpectedStatusCode is returned -> *HTTPResponse contains a valid response body
-// otherwise if err != nil (e.g. socket error)-> *HTTPResponse is nil
-func (f *implIFederation) POST(relativeURL string, body string, optFuncs ...ReqOptFunc) (*HTTPResponse, error) {
-	optFuncs = append(optFuncs, WithMethod(http.MethodPost))
-	url := f.federationURL().String() + "/" + relativeURL
-	return f.httpClient.Req(url, body, optFuncs...)
-}
-
-func (f *implIFederation) GET(relativeURL string, body string, optFuncs ...ReqOptFunc) (*HTTPResponse, error) {
-	optFuncs = append(optFuncs, WithMethod(http.MethodGet))
-	url := f.federationURL().String() + "/" + relativeURL
-	return f.httpClient.Req(url, body, optFuncs...)
-}
-
 // status code expected -> DiscardBody, ResponseHandler are used
 // status code is unexpected -> DiscardBody, ResponseHandler are ignored, body is read out, wrapped ErrUnexpectedStatusCode is returned
 func (c *implIHTTPClient) Req(urlStr string, body string, optFuncs ...ReqOptFunc) (*HTTPResponse, error) {
@@ -411,52 +395,12 @@ func containsAllMessages(strs []string, toFind string) bool {
 	return true
 }
 
-func (f *implIFederation) Func(relativeURL string, body string, optFuncs ...ReqOptFunc) (*FuncResponse, error) {
-	httpResp, err := f.POST(relativeURL, body, optFuncs...)
-	isUnexpectedCode := errors.Is(err, ErrUnexpectedStatusCode)
-	if err != nil && !isUnexpectedCode {
-		return nil, err
-	}
-	if httpResp == nil {
-		return nil, nil
-	}
-	if isUnexpectedCode {
-		m := map[string]interface{}{}
-		if err = json.Unmarshal([]byte(httpResp.Body), &m); err != nil {
-			return nil, err
-		}
-		if httpResp.HTTPResp.StatusCode == http.StatusOK {
-			return nil, FuncError{
-				SysError: SysError{
-					HTTPStatus: http.StatusOK,
-				},
-				ExpectedHTTPCodes: httpResp.expectedHTTPCodes,
-			}
-		}
-		sysErrorMap := m["sys.Error"].(map[string]interface{})
-		return nil, FuncError{
-			SysError: SysError{
-				HTTPStatus: int(sysErrorMap["HTTPStatus"].(float64)),
-				Message:    sysErrorMap["Message"].(string),
-			},
-			ExpectedHTTPCodes: httpResp.expectedHTTPCodes,
-		}
-	}
-	res := &FuncResponse{
-		HTTPResponse: httpResp,
-		NewIDs:       map[string]int64{},
-		CmdResult:    map[string]interface{}{},
-	}
-	if len(httpResp.Body) == 0 {
-		return res, nil
-	}
-	if err = json.Unmarshal([]byte(httpResp.Body), &res); err != nil {
-		return nil, err
-	}
-	if res.SysError.HTTPStatus > 0 && res.expectedSysErrorCode > 0 && res.expectedSysErrorCode != res.SysError.HTTPStatus {
-		return nil, fmt.Errorf("sys.Error actual status %d, expected %v: %s", res.SysError.HTTPStatus, res.expectedSysErrorCode, res.SysError.Message)
-	}
-	return res, nil
+func (resp *HTTPResponse) ExpectedSysErrorCode() int {
+	return resp.expectedSysErrorCode
+}
+
+func (resp *HTTPResponse) ExpectedHTTPCodes() []int {
+	return resp.expectedHTTPCodes
 }
 
 func (resp *HTTPResponse) Println() {
@@ -537,30 +481,11 @@ type implIHTTPClient struct {
 	client *http.Client
 }
 
-type implIFederation struct {
-	httpClient    IHTTPClient
-	federationURL func() *url.URL
-}
-
-func (f *implIFederation) URLStr() string {
-	return f.federationURL().String()
-}
-
-func (f *implIFederation) Port() int {
-	res, err := strconv.Atoi(f.federationURL().Port())
-	if err != nil {
-		// notest
-		panic(err)
-	}
-	return res
-}
-
-func NewIHTTPClient() IHTTPClient {
+func NewIHTTPClient() (client IHTTPClient, clenup func()) {
 	// set linger - see https://github.com/voedger/voedger/issues/415
 	tr := http.DefaultTransport.(*http.Transport).Clone()
 	tr.DialContext = func(ctx context.Context, network, addr string) (net.Conn, error) {
 		dialer := net.Dialer{}
-		// return dialer.DialContext(ctx, network, addr)
 		conn, err := dialer.DialContext(ctx, network, addr)
 		if err != nil {
 			return nil, err
@@ -569,13 +494,6 @@ func NewIHTTPClient() IHTTPClient {
 		err = conn.(*net.TCPConn).SetLinger(0)
 		return conn, err
 	}
-	return &implIHTTPClient{client: &http.Client{Transport: tr}}
-}
-
-func NewIFederation(federationURL func() *url.URL) (federation IFederation, cleanup func()) {
-	fed := &implIFederation{
-		httpClient:    NewIHTTPClient(),
-		federationURL: federationURL,
-	}
-	return fed, fed.httpClient.CloseIdleConnections
+	client = &implIHTTPClient{client: &http.Client{Transport: tr}}
+	return client, client.CloseIdleConnections
 }

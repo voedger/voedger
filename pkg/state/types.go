@@ -34,7 +34,8 @@ type TokenFunc func() string
 type PLogEventFunc func() istructs.IPLogEvent
 type ArgFunc func() istructs.IObject
 type UnloggedArgFunc func() istructs.IObject
-type CommandProcessorStateFactory func(ctx context.Context, appStructsFunc AppStructsFunc, partitionIDFunc PartitionIDFunc, wsidFunc WSIDFunc, secretReader isecrets.ISecretReader, cudFunc CUDFunc, principalPayloadFunc PrincipalsFunc, tokenFunc TokenFunc, intentsLimit int, cmdResultBuilderFunc CmdResultBuilderFunc, argFunc ArgFunc, unloggedArgFunc UnloggedArgFunc) IHostState
+type WLogOffsetFunc func() istructs.Offset
+type CommandProcessorStateFactory func(ctx context.Context, appStructsFunc AppStructsFunc, partitionIDFunc PartitionIDFunc, wsidFunc WSIDFunc, secretReader isecrets.ISecretReader, cudFunc CUDFunc, principalPayloadFunc PrincipalsFunc, tokenFunc TokenFunc, intentsLimit int, cmdResultBuilderFunc CmdResultBuilderFunc, argFunc ArgFunc, unloggedArgFunc UnloggedArgFunc, wlogOffsetFunc WLogOffsetFunc) IHostState
 type SyncActualizerStateFactory func(ctx context.Context, appStructsFunc AppStructsFunc, partitionIDFunc PartitionIDFunc, wsidFunc WSIDFunc, n10nFunc N10nFunc, secretReader isecrets.ISecretReader, eventFunc PLogEventFunc, intentsLimit int) IHostState
 type QueryProcessorStateFactory func(ctx context.Context, appStructsFunc AppStructsFunc, partitionIDFunc PartitionIDFunc, wsidFunc WSIDFunc, secretReader isecrets.ISecretReader, principalPayloadFunc PrincipalsFunc, tokenFunc TokenFunc, argFunc ArgFunc, opts ...QPStateOptFunc) IHostState
 type AsyncActualizerStateFactory func(ctx context.Context, appStructsFunc AppStructsFunc, partitionIDFunc PartitionIDFunc, wsidFunc WSIDFunc, n10nFunc N10nFunc, secretReader isecrets.ISecretReader, eventFunc PLogEventFunc, intentsLimit, bundlesLimit int,
@@ -987,4 +988,28 @@ func (v *wsTypeVailidator) validate(wsid istructs.WSID, entity appdef.QName) err
 		}
 	}
 	return nil
+}
+
+type baseValueBuilder struct {
+	istructs.IStateValueBuilder
+}
+
+func (b *baseValueBuilder) Equal(src istructs.IStateValueBuilder) bool {
+	return false
+}
+func (b *baseValueBuilder) PutInt32(name string, value int32)        { panic(errUndefined(name)) }
+func (b *baseValueBuilder) PutInt64(name string, value int64)        { panic(errUndefined(name)) }
+func (b *baseValueBuilder) PutBytes(name string, value []byte)       { panic(errUndefined(name)) }
+func (b *baseValueBuilder) PutString(name, value string)             { panic(errUndefined(name)) }
+func (b *baseValueBuilder) PutBool(name string, value bool)          { panic(errUndefined(name)) }
+func (b *baseValueBuilder) PutChars(name string, value string)       { panic(errUndefined(name)) }
+func (b *baseValueBuilder) PutFloat32(name string, value float32)    { panic(errUndefined(name)) }
+func (b *baseValueBuilder) PutFloat64(name string, value float64)    { panic(errUndefined(name)) }
+func (b *baseValueBuilder) PutQName(name string, value appdef.QName) { panic(errUndefined(name)) }
+func (b *baseValueBuilder) PutNumber(name string, value float64)     { panic(errUndefined(name)) }
+func (b *baseValueBuilder) PutRecordID(name string, value istructs.RecordID) {
+	panic(errUndefined(name))
+}
+func (b *baseValueBuilder) BuildValue() istructs.IStateValue {
+	panic(errNotImplemented)
 }

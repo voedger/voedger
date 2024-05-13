@@ -82,6 +82,15 @@ EXTENSION ENGINE BUILTIN (
 		INSERT SCOPE(COMMANDS)
 	);
 
+	STORAGE Response(
+		/*
+		ValueBuilder:
+			StatusCode int32
+			ErrorMessage text
+		*/
+		INSERT SCOPE(COMMANDS, QUERIES)
+	);
+
 	STORAGE Event(
 		GET SCOPE(PROJECTORS)
 	);

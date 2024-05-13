@@ -17,6 +17,7 @@ const (
 	StorageResult         = "sys.Result"
 	StorageCommandContext = "sys.CommandContext"
 	StorageQueryContext   = "sys.QueryContext"
+	StorageResponse       = "sys.Response"
 
 	NullEntity = ""
 )

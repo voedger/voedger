@@ -12,11 +12,11 @@ import (
 	"github.com/voedger/voedger/pkg/itokens"
 	"github.com/voedger/voedger/pkg/parser"
 	_ "github.com/voedger/voedger/pkg/sys"
-	coreutils "github.com/voedger/voedger/pkg/utils"
+	"github.com/voedger/voedger/pkg/utils/federation"
 )
 
 func Provide(cfg *istructsmem.AppConfigType, asp istructs.IAppStructsProvider, itokens itokens.ITokens,
-	federation coreutils.IFederation) parser.PackageFS {
+	federation federation.IFederation) parser.PackageFS {
 	cfg.Resources.Add(istructsmem.NewCommandFunction(
 		QNameCommandCreateLogin,
 		execCmdCreateLogin(asp),
@@ -40,7 +40,7 @@ func ProvidePackageFS() parser.PackageFS {
 	}
 }
 
-func provideAsyncProjectorInvokeCreateWorkspaceID(federation coreutils.IFederation, tokensAPI itokens.ITokens) istructs.Projector {
+func provideAsyncProjectorInvokeCreateWorkspaceID(federation federation.IFederation, tokensAPI itokens.ITokens) istructs.Projector {
 	return istructs.Projector{
 		Name: qNameProjectorInvokeCreateWorkspaceID_registry,
 		Func: invokeCreateWorkspaceIDProjector(federation, tokensAPI),
