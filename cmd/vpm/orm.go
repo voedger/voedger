@@ -335,7 +335,7 @@ func getHeaderFileContent(headerFilePath string) (string, error) {
 }
 
 func createOrmDir(dir string) (string, error) {
-	ormDirPath := filepath.Join(dir, internalDirName, ormDirName)
+	ormDirPath := filepath.Join(dir, wasmDirName, ormDirName)
 	exists, err := coreutils.Exists(ormDirPath)
 	if err != nil {
 		// notest

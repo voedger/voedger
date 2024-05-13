@@ -9,7 +9,6 @@ const (
 	wasmDirName          = "wasm"
 	buildDirName         = "build"
 	ormDirName           = "orm"
-	internalDirName      = "internal"
 	pkgDirName           = "pkg"
 	baselineInfoFileName = "baseline.json"
 	timestampFormat      = "Mon, 02 Jan 2006 15:04:05.000 GMT"

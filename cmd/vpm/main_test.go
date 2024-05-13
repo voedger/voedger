@@ -284,7 +284,7 @@ func TestOrmBasicUsage(t *testing.T) {
 			dir := filepath.Join(tempDir, tc.dir)
 			if logger.IsVerbose() {
 				logger.Verbose("------------------------------------------------------------------------")
-				logger.Verbose(fmt.Sprintf("test dir: %s", filepath.Join(dir, internalDirName, ormDirName)))
+				logger.Verbose(fmt.Sprintf("test dir: %s", filepath.Join(dir, wasmDirName, ormDirName)))
 			}
 
 			headerFile := filepath.Join(dir, "header.txt")
@@ -292,7 +292,7 @@ func TestOrmBasicUsage(t *testing.T) {
 			require.NoError(err)
 
 			if logger.IsVerbose() {
-				logger.Verbose(fmt.Sprintf("orm directory: %s", filepath.Join(dir, internalDirName, ormDirName)))
+				logger.Verbose(fmt.Sprintf("orm directory: %s", filepath.Join(dir, wasmDirName, ormDirName)))
 				logger.Verbose("------------------------------------------------------------------------")
 			}
 		})
@@ -316,6 +316,7 @@ func TestInitBasicUsage(t *testing.T) {
 	require.FileExists(filepath.Join(dir, goModFileName))
 	require.FileExists(filepath.Join(dir, goSumFileName))
 	require.FileExists(filepath.Join(dir, packagesGenFileName))
+	require.DirExists(filepath.Join(dir, wasmDirName))
 
 	// test unsupported go version
 	dir = t.TempDir()

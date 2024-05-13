@@ -49,6 +49,9 @@ func initPackage(dir, packagePath string) error {
 	if err := createPackagesGen(nil, dir, packagePath, false); err != nil {
 		return err
 	}
+	if err := createWasmDir(dir); err != nil {
+		return err
+	}
 	return execGoModTidy(dir)
 }
 
@@ -58,6 +61,19 @@ func execGoModTidy(dir string) error {
 		stdout = os.Stdout
 	}
 	return new(exec.PipedExec).Command("go", "mod", "tidy").WorkingDir(dir).Run(stdout, os.Stderr)
+}
+
+func createWasmDir(dir string) error {
+	exists, err := coreutils.Exists(filepath.Join(dir, wasmDirName))
+	if err != nil {
+		return err
+	}
+	if !exists {
+		if err := os.Mkdir(filepath.Join(dir, wasmDirName), coreutils.FileMode_rwxrwxrwx); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func createGoMod(dir, packagePath string) error {
