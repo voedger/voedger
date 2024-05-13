@@ -39,6 +39,12 @@ func newPrivilege(kind []PrivilegeKind, granted bool, on []QName, fields []Field
 		panic(ErrIncompatible("privilege «%s» with %v", pk, o))
 	}
 
+	if len(fields) > 0 {
+		if !pk.ContainsAny(PrivilegeKind_Select, PrivilegeKind_Update) {
+			panic(ErrIncompatible("fields are not applicable for privilege «%s»", pk))
+		}
+	}
+
 	g := &privilege{
 		comment: makeComment(comment...),
 		granted: granted,

@@ -216,6 +216,9 @@ func Test_AppDef_GrantAndRevokeErrors(t *testing.T) {
 		wsName := NewQName("test", "ws")
 		docName := NewQName("test", "doc")
 
+		cmdName := NewQName("test", "cmd")
+		_ = adb.AddCommand(cmdName)
+
 		readerRoleName := NewQName("test", "readerRole")
 
 		_ = adb.AddWorkspace(wsName)
@@ -276,6 +279,12 @@ func Test_AppDef_GrantAndRevokeErrors(t *testing.T) {
 			require.Panics(func() {
 				adb.Grant([]PrivilegeKind{PrivilegeKind_Execute}, []QName{docName}, nil, readerRoleName)
 			}, "should be panic if privileges kinds are incompatible with objects")
+		})
+
+		t.Run("should be panic if privileges on invalid fields", func(t *testing.T) {
+			require.Panics(func() {
+				adb.Grant([]PrivilegeKind{PrivilegeKind_Execute}, []QName{cmdName}, []FieldName{"field1"}, readerRoleName)
+			}, "should be panic if use fields is not applicable for privilege")
 		})
 	})
 }
