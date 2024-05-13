@@ -12,12 +12,11 @@ import (
 )
 
 type appPartitionsController struct {
-	parts       appparts.IAppPartitions
-	builtInApps []appparts.BuiltInApp
+	parts appparts.IAppPartitions
 }
 
-func newAppPartitionsController(parts appparts.IAppPartitions, apps []appparts.BuiltInApp) (ctl IAppPartitionsController, cleanup func(), err error) {
-	apc := appPartitionsController{parts: parts, builtInApps: apps}
+func newAppPartitionsController(parts appparts.IAppPartitions) (ctl IAppPartitionsController, cleanup func(), err error) {
+	apc := appPartitionsController{parts: parts}
 
 	return &apc, func() {}, err
 }
