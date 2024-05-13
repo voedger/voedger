@@ -57,7 +57,10 @@ func (s *resultStorage) ApplyBatch([]ApplyBatchItem) (err error) {
 
 func (s *resultStorage) ProvideValueBuilder(istructs.IStateKeyBuilder, istructs.IStateValueBuilder) (istructs.IStateValueBuilder, error) {
 	if s.qryCallback != nil { // query processor
-		s.sendPrevQueryObject()
+		err := s.sendPrevQueryObject()
+		if err != nil {
+			return nil, err
+		}
 		s.qryValueBuilder = &resultValueBuilder{resultBuilder: s.resultBuilderFunc()}
 		return s.qryValueBuilder, nil
 	}

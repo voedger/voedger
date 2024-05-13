@@ -77,6 +77,6 @@ func TestResultStorage_QueryProcessor(t *testing.T) {
 	require.NotNil(t, intent)
 
 	require.NoError(t, s.ApplyIntents())
-	require.Equal(t, 2, len(sentObjects))
+	require.Len(t, sentObjects, 2)
 
 }
