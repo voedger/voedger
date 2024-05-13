@@ -5,16 +5,13 @@
 package sys_it
 
 import (
-	"bufio"
-	"fmt"
-	"log"
-	"net/url"
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
-	coreutils "github.com/voedger/voedger/pkg/utils"
+	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/in10n"
+	"github.com/voedger/voedger/pkg/istructs"
 	it "github.com/voedger/voedger/pkg/vit"
 )
 
@@ -26,93 +23,29 @@ func TestBasicUsage_n10n(t *testing.T) {
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
-	// создадим канал и подпишемся на изменения проекции
-	query := `
-		{
-			"SubjectLogin": "paa",
-			"ProjectionKey": [
-				{
-					"App":"untill/Application",
-					"Projection":"paa.price",
-					"WS":1
-				},
-				{
-					"App":"untill/Application",
-					"Projection":"paa.wine_price",
-					"WS":1
-				}
-			]
-		}`
-	params := url.Values{}
-	params.Add("payload", query)
-	resp := vit.Get(fmt.Sprintf("n10n/channel?%s", params.Encode()), coreutils.WithLongPolling())
+	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+	testProjectionKey := in10n.ProjectionKey{
+		App:        istructs.AppQName_test1_app1,
+		Projection: appdef.NewQName("paa", "price"),
+		WS:         ws.WSID,
+	}
+
+	offsetsChan, unsubscribe, err := vit.N10NSubscribe(testProjectionKey)
+	require.NoError(err)
 
 	done := make(chan interface{})
-	subscribed := make(chan interface{})
-	channelID := ""
 	go func() {
-		defer close(done) // отсигналим, что прочитали
-		scanner := bufio.NewScanner(resp.HTTPResp.Body)
-		scanner.Split(it.ScanSSE) // разбиваем на кадры sse, разделитель - два new line: "\n\n"
-		for scanner.Scan() {
-			if resp.HTTPResp.Request.Context().Err() != nil {
-				return
-			}
-			messages := strings.Split(scanner.Text(), "\n") // делим кадр на событие и данные
-			var event, data string
-			for _, str := range messages { // вычитываем
-				if strings.HasPrefix(str, "event: ") {
-					event = strings.TrimPrefix(str, "event: ")
-				}
-				if strings.HasPrefix(str, "data: ") {
-					data = strings.TrimPrefix(str, "data: ")
-				}
-
-			}
-			log.Printf("Receive event: %s, data: %s\n", event, data)
-			switch event {
-			case "channelId":
-				channelID = data
-				close(subscribed)
-			case `{"App":"untill/Application","Projection":"paa.price","WS":1}`:
-				require.Equal("13", data)
-				done <- nil
-			}
+		defer close(done)
+		for offset := range offsetsChan {
+			require.Equal(istructs.Offset(13), offset)
 		}
-		log.Println("done")
 	}()
 
-	<-subscribed
-
 	// вызовем тестовый метод update для обновления проекции
-	body := `
- 		{
- 			"App": "untill/Application",
- 			"Projection": "paa.price",
- 			"WS": 1
- 		}`
-	vit.Post("n10n/update/13", body)
+	vit.N10NUpdate(testProjectionKey, 13)
 
-	<-done // подождем чтения
+	// отпишемся, чтобы закрылся канал offsetsChan
+	unsubscribe()
 
-	// отпишемся
-	query = fmt.Sprintf(`
-		{
-			"Channel": "%s",
-			"ProjectionKey":[
-				{
-					"App": "untill/Application",
-					"Projection":"paa.price",
-					"WS":1
-				}
-			]
-		}
-	`, channelID)
-	params = url.Values{}
-	params.Add("payload", query)
-	vit.Get(fmt.Sprintf("n10n/unsubscribe?%s", params.Encode()))
-
-	// закроем запрос, т.к. при unsubscribe завершения связи со стороны сервера не происходит
-	resp.HTTPResp.Body.Close()
-	<-done // подождем завершения
+	<-done // подождем чтения события и закрытия каналс offsestChan
 }

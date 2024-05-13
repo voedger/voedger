@@ -80,11 +80,6 @@ type route struct {
 	fromDomain string
 }
 
-type createChannelParamsType struct {
-	SubjectLogin  istructs.SubjectLogin
-	ProjectionKey []in10n.ProjectionKey
-}
-
 type subscriberParamsType struct {
 	Channel       in10n.ChannelID
 	ProjectionKey []in10n.ProjectionKey

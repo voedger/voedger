@@ -31,7 +31,7 @@ func implProvideQueryProcessorState(ctx context.Context, appStructsFunc AppStruc
 		optFunc(opts)
 	}
 
-	bs := newHostState("QueryProcessor", 0, appStructsFunc)
+	bs := newHostState("QueryProcessor", queryProcessorStateMaxIntents, appStructsFunc)
 
 	bs.addStorage(View, newViewRecordsStorage(ctx, appStructsFunc, wsidFunc, nil), S_GET|S_GET_BATCH|S_READ)
 	bs.addStorage(Record, newRecordsStorage(appStructsFunc, wsidFunc, nil), S_GET|S_GET_BATCH)
@@ -57,6 +57,8 @@ func implProvideQueryProcessorState(ctx context.Context, appStructsFunc AppStruc
 		argFunc:  argFunc,
 		wsidFunc: wsidFunc,
 	}, S_GET)
+
+	bs.addStorage(Response, &cmdResponseStorage{}, S_INSERT)
 
 	return bs
 }

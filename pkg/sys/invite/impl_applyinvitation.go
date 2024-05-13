@@ -17,9 +17,10 @@ import (
 	"github.com/voedger/voedger/pkg/sys/authnz"
 	"github.com/voedger/voedger/pkg/sys/smtp"
 	coreutils "github.com/voedger/voedger/pkg/utils"
+	"github.com/voedger/voedger/pkg/utils/federation"
 )
 
-func asyncProjectorApplyInvitation(timeFunc coreutils.TimeFunc, federation coreutils.IFederation, tokens itokens.ITokens, smtpCfg smtp.Cfg) istructs.Projector {
+func asyncProjectorApplyInvitation(timeFunc coreutils.TimeFunc, federation federation.IFederation, tokens itokens.ITokens, smtpCfg smtp.Cfg) istructs.Projector {
 	return istructs.Projector{
 		Name: qNameAPApplyInvitation,
 		Func: applyInvitationProjector(timeFunc, federation, tokens, smtpCfg),
@@ -27,7 +28,7 @@ func asyncProjectorApplyInvitation(timeFunc coreutils.TimeFunc, federation coreu
 }
 
 // AFTER EXECUTE ON (InitiateInvitationByEMail)
-func applyInvitationProjector(timeFunc coreutils.TimeFunc, federation coreutils.IFederation, tokens itokens.ITokens, smtpCfg smtp.Cfg) func(event istructs.IPLogEvent, state istructs.IState, intents istructs.IIntents) (err error) {
+func applyInvitationProjector(timeFunc coreutils.TimeFunc, federation federation.IFederation, tokens itokens.ITokens, smtpCfg smtp.Cfg) func(event istructs.IPLogEvent, state istructs.IState, intents istructs.IIntents) (err error) {
 	return func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
 		skbViewInviteIndex, err := s.KeyBuilder(state.View, qNameViewInviteIndex)
 		if err != nil {

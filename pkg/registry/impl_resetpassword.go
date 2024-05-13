@@ -16,9 +16,10 @@ import (
 	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys/authnz"
 	coreutils "github.com/voedger/voedger/pkg/utils"
+	"github.com/voedger/voedger/pkg/utils/federation"
 )
 
-func provideResetPassword(cfgRegistry *istructsmem.AppConfigType, itokens itokens.ITokens, federation coreutils.IFederation) {
+func provideResetPassword(cfgRegistry *istructsmem.AppConfigType, itokens itokens.ITokens, federation federation.IFederation) {
 
 	// sys/registry/pseudoProfileWSID/q.sys.InitiateResetPasswordByEmail
 	// null auth
@@ -42,7 +43,7 @@ func provideResetPassword(cfgRegistry *istructsmem.AppConfigType, itokens itoken
 
 // sys/registry/pseudoWSID
 // null auth
-func provideQryInitiateResetPasswordByEmailExec(itokens itokens.ITokens, federation coreutils.IFederation) istructsmem.ExecQueryClosure {
+func provideQryInitiateResetPasswordByEmailExec(itokens itokens.ITokens, federation federation.IFederation) istructsmem.ExecQueryClosure {
 	return func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 		loginAppStr := args.ArgumentObject.AsString(authnz.Field_AppName)
 		email := args.ArgumentObject.AsString(field_Email)
@@ -95,7 +96,7 @@ func provideQryInitiateResetPasswordByEmailExec(itokens itokens.ITokens, federat
 
 // sys/registry/pseudoWSID
 // null auth
-func provideIssueVerifiedValueTokenForResetPasswordExec(itokens itokens.ITokens, federation coreutils.IFederation) istructsmem.ExecQueryClosure {
+func provideIssueVerifiedValueTokenForResetPasswordExec(itokens itokens.ITokens, federation federation.IFederation) istructsmem.ExecQueryClosure {
 	return func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 		token := args.ArgumentObject.AsString(field_VerificationToken)
 		code := args.ArgumentObject.AsString(field_VerificationCode)

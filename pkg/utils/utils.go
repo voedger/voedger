@@ -6,6 +6,7 @@
 package coreutils
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"os"
@@ -84,3 +85,16 @@ func AppPartitionID(wsid istructs.WSID, numAppPartitions istructs.NumAppPartitio
 }
 
 func NilAdminPortGetter() int { panic("to be tested") }
+
+func ScanSSE(data []byte, atEOF bool) (advance int, token []byte, err error) {
+	if atEOF && len(data) == 0 {
+		return 0, nil, nil
+	}
+	if i := bytes.Index(data, []byte("\n\n")); i >= 0 {
+		return i + 2, data[0:i], nil
+	}
+	if atEOF {
+		return len(data), data, nil
+	}
+	return 0, nil, nil
+}

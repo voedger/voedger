@@ -14,16 +14,17 @@ import (
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	"github.com/voedger/voedger/pkg/state"
 	coreutils "github.com/voedger/voedger/pkg/utils"
+	"github.com/voedger/voedger/pkg/utils/federation"
 )
 
-func asyncProjectorApplyLeaveWorkspace(timeFunc coreutils.TimeFunc, federation coreutils.IFederation, tokens itokens.ITokens) istructs.Projector {
+func asyncProjectorApplyLeaveWorkspace(timeFunc coreutils.TimeFunc, federation federation.IFederation, tokens itokens.ITokens) istructs.Projector {
 	return istructs.Projector{
 		Name: qNameAPApplyLeaveWorkspace,
 		Func: applyLeaveWorkspace(timeFunc, federation, tokens),
 	}
 }
 
-func applyLeaveWorkspace(timeFunc coreutils.TimeFunc, federation coreutils.IFederation, tokens itokens.ITokens) func(event istructs.IPLogEvent, state istructs.IState, intents istructs.IIntents) (err error) {
+func applyLeaveWorkspace(timeFunc coreutils.TimeFunc, federation federation.IFederation, tokens itokens.ITokens) func(event istructs.IPLogEvent, state istructs.IState, intents istructs.IIntents) (err error) {
 	return func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
 		return iterate.ForEachError(event.CUDs, func(rec istructs.ICUDRow) error {
 			//TODO additional check that CUD only once?

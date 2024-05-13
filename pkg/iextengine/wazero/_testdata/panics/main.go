@@ -144,5 +144,10 @@ func undefinedPackage() {
 	ext.MustGetValue(key)
 }
 
+//export TestPanic
+func TestPanic() {
+	panic("goodbye, world")
+}
+
 func main() {
 }

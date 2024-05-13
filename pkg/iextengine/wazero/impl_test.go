@@ -33,7 +33,8 @@ import (
 )
 
 var extIO = &mockIo{}
-var offset istructs.Offset
+var plogOffset istructs.Offset
+var wlogOffset istructs.Offset
 var newWorkspaceCmd = appdef.NewQName("sys", "NewWorkspace")
 var testView = appdef.NewQName(testPkg, "TestView")
 var dummyCommand = appdef.NewQName(testPkg, "Dummy")
@@ -93,8 +94,9 @@ func Test_BasicUsage(t *testing.T) {
 		GenericRawEventBuilderParams: istructs.GenericRawEventBuilderParams{
 			Workspace:         ws,
 			HandlingPartition: partition,
-			PLogOffset:        offset + 1,
+			PLogOffset:        plogOffset + 1,
 			QName:             newOrderCmd,
+			WLogOffset:        wlogOffset + 1,
 		},
 	})
 	orderBuilder := reb.ArgumentObjectBuilder()
@@ -124,10 +126,11 @@ func Test_BasicUsage(t *testing.T) {
 	argFunc := func() istructs.IObject { return event.ArgumentObject() }
 	unloggedArgFunc := func() istructs.IObject { return nil }
 	appFunc := func() istructs.IAppStructs { return app }
+	wlogOffsetFunc := func() istructs.Offset { return event.WLogOffset() }
 
 	// Create states for Command processor and Actualizer
 	actualizerState := state.ProvideAsyncActualizerStateFactory()(context.Background(), appFunc, nil, state.SimpleWSIDFunc(ws), nil, nil, eventFunc, intentsLimit, bundlesLimit)
-	cmdProcState := state.ProvideCommandProcessorStateFactory()(context.Background(), appFunc, nil, state.SimpleWSIDFunc(ws), nil, cudFunc, nil, nil, intentsLimit, nil, argFunc, unloggedArgFunc)
+	cmdProcState := state.ProvideCommandProcessorStateFactory()(context.Background(), appFunc, nil, state.SimpleWSIDFunc(ws), nil, cudFunc, nil, nil, intentsLimit, nil, argFunc, unloggedArgFunc, wlogOffsetFunc)
 
 	// Create extension package from WASM
 	ctx := context.Background()
@@ -357,7 +360,7 @@ func Test_NoGc_MemoryOverflow(t *testing.T) {
 		}
 		calculatedHeapInUse += 32
 	}
-	require.ErrorContains(err, "alloc")
+	require.EqualError(err, "panic: runtime error: out of memory")
 }
 
 func Test_SetLimitsExecutionInterval(t *testing.T) {
@@ -410,7 +413,7 @@ func Test_HandlePanics(t *testing.T) {
 		{"queryError", errTestIOError.Error()},
 		{"newValueError", errTestIOError.Error()},
 		{"updateValueError", errTestIOError.Error()},
-		{"asStringMemoryOverflow", "alloc"},
+		{"asStringMemoryOverflow", "runtime error: out of memory"},
 	}
 
 	extNames := make([]string, 0, len(tests))
@@ -563,6 +566,7 @@ func Test_AsBytes(t *testing.T) {
 }
 
 func Test_AsBytesOverflow(t *testing.T) {
+	WasmPreallocatedBufferSize = 1000000
 	const asBytes = "asBytes"
 	require := require.New(t)
 	ctx := context.Background()
@@ -573,7 +577,7 @@ func Test_AsBytesOverflow(t *testing.T) {
 	wasmEngine := extEngine.(*wazeroExtEngine)
 	requireMemStatEx(t, wasmEngine, 1, 0, WasmPreallocatedBufferSize, WasmPreallocatedBufferSize)
 	err = extEngine.Invoke(context.Background(), appdef.NewFullQName(testPkg, asBytes), extIO)
-	require.ErrorContains(err, "alloc")
+	require.EqualError(err, "panic: runtime error: out of memory")
 }
 
 func Test_KeyPutQName(t *testing.T) {
@@ -773,7 +777,8 @@ type (
 var sfs embed.FS
 
 func appStructsFromSQL(packagePath string, appdefSql string, prepareAppCfg appCfgCallback) istructs.IAppStructs {
-	offset = istructs.Offset(123)
+	plogOffset = istructs.Offset(123)
+	wlogOffset = istructs.Offset(42)
 	appDef := appdef.New()
 
 	fs, err := parser.ParseFile("file1.vsql", appdefSql)
@@ -811,8 +816,9 @@ func appStructsFromSQL(packagePath string, appdefSql string, prepareAppCfg appCf
 		GenericRawEventBuilderParams: istructs.GenericRawEventBuilderParams{
 			Workspace:         ws,
 			HandlingPartition: partition,
-			PLogOffset:        offset,
+			PLogOffset:        plogOffset,
 			QName:             newWorkspaceCmd,
+			WLogOffset:        wlogOffset,
 		},
 	})
 	cud := rebWs.CUDBuilder().Create(authnz.QNameCDocWorkspaceDescriptor)
@@ -830,4 +836,19 @@ func appStructsFromSQL(packagePath string, appdefSql string, prepareAppCfg appCf
 
 	return app
 
+}
+
+func Test_Panic(t *testing.T) {
+	const arrAppend = "TestPanic"
+
+	require := require.New(t)
+	ctx := context.Background()
+	WasmPreallocatedBufferSize = 1000000
+	moduleUrl := testModuleURL("./_testdata/panics/pkg.wasm")
+	extEngine, err := testFactoryHelper(ctx, moduleUrl, []string{arrAppend}, iextengine.ExtEngineConfig{}, false)
+	require.NoError(err)
+	defer extEngine.Close(ctx)
+
+	err = extEngine.Invoke(context.Background(), appdef.NewFullQName(testPkg, arrAppend), extIO)
+	require.EqualError(err, "panic: goodbye, world")
 }
