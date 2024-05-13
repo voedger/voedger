@@ -216,11 +216,11 @@ func TestCompileErrors(t *testing.T) {
 }
 
 func TestPkgRegistryCompile(t *testing.T) {
-	t.Skip("This test is skipped because registry package doesn't have subdirectory 'pkg' with code inside it.")
+	t.Skip("This test is skipped because registry package doesn't have subdirectory 'wasm' with code inside it.")
 	require := require.New(t)
 
 	wd, err := os.Getwd()
-	pkgDirLocalPath := wd[:strings.LastIndex(wd, filepath.FromSlash("/cmd/vpm"))] + filepath.FromSlash("/pkg")
+	pkgDirLocalPath := wd[:strings.LastIndex(wd, filepath.FromSlash("/cmd/vpm"))] + filepath.FromSlash("/wasm")
 
 	require.NoError(err)
 	defer func() {
