@@ -110,9 +110,8 @@ func buildDir(pkgFiles packageFiles, buildDirPath string) error {
 			// copy vsql files
 			base := filepath.Base(file)
 			fileNameExtensionless := base[:len(base)-len(filepath.Ext(base))]
-			filePath := filepath.Join(pkgBuildDir, fileNameExtensionless+parser.VSqlExt)
 
-			if err := coreutils.CopyFile(file, filePath); err != nil {
+			if err := coreutils.CopyFile(file, pkgBuildDir, coreutils.WithNewName(fileNameExtensionless+parser.VSqlExt)); err != nil {
 				return fmt.Errorf(errFmtCopyFile, file, err)
 			}
 
@@ -129,7 +128,7 @@ func buildDir(pkgFiles packageFiles, buildDirPath string) error {
 				if err != nil {
 					return err
 				}
-				if err := coreutils.CopyFile(wasmFilePath, filepath.Join(pkgBuildDir, filepath.Base(wasmFilePath))); err != nil {
+				if err := coreutils.CopyFile(wasmFilePath, pkgBuildDir); err != nil {
 					return fmt.Errorf(errFmtCopyFile, wasmFilePath, err)
 				}
 				// remove the wasm file after copying it to the build directory

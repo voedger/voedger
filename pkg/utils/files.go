@@ -25,17 +25,21 @@ func CopyDirFS(srcFS IReadFS, src, dst string, optFuncs ...CopyOpt) error {
 	return copyDirFSOpts(srcFS, src, dst, opts)
 }
 
-// copies the specified file from the provided FS to disk to path specified by dst
-func CopyFileFS(srcFS fs.FS, src, dst string, optFuncs ...CopyOpt) error {
+// copies the specified file from the provided FS to disk to path specified by dstDir
+func CopyFileFS(srcFS fs.FS, srcFileName, dstDir string, optFuncs ...CopyOpt) error {
 	opts := &copyOpts{}
 	for _, optFunc := range optFuncs {
 		optFunc(opts)
 	}
-	return copyFileFSOpts(srcFS, src, dst, opts)
+	return copyFileFSOpts(srcFS, srcFileName, dstDir, opts)
 }
 
-func CopyFile(src, dst string, optFuncs ...CopyOpt) error {
-	return CopyFileFS(os.DirFS(filepath.Clean(src)), src, dst, optFuncs...)
+func CopyFile(src, dstDir string, optFuncs ...CopyOpt) error {
+	dir, file := filepath.Split(filepath.Clean(src))
+	if len(dir) == 0 {
+		dir = "."
+	}
+	return CopyFileFS(os.DirFS(dir), file, dstDir, optFuncs...)
 }
 
 func CopyDir(src, dst string, optFuncs ...CopyOpt) error {
@@ -64,11 +68,11 @@ func copyDirFSOpts(srcFS IReadFS, src, dst string, opts *copyOpts) error {
 
 	for _, dirEntry := range dirEntries {
 		srcFilePath := path.Join(src, dirEntry.Name()) // '/' separator must be used for fs.FS,
-		dstFilePath := filepath.Join(dst, dirEntry.Name())
 		if dirEntry.IsDir() {
+			dstFilePath := filepath.Join(dst, dirEntry.Name())
 			err = copyDirFSOpts(srcFS, srcFilePath, dstFilePath, opts)
 		} else {
-			err = copyFileFSOpts(srcFS, srcFilePath, dstFilePath, opts)
+			err = copyFileFSOpts(srcFS, srcFilePath, dst, opts)
 		}
 		if err != nil {
 			return err
@@ -77,29 +81,45 @@ func copyDirFSOpts(srcFS IReadFS, src, dst string, opts *copyOpts) error {
 	return nil
 }
 
-func copyFileFSOpts(srcFS fs.FS, src, dst string, opts *copyOpts) error {
-	if len(opts.files) > 0 && !slices.Contains(opts.files, src) {
+func copyFileFSOpts(srcFS fs.FS, srcFileName, dstDir string, opts *copyOpts) error {
+	if len(opts.files) > 0 && !slices.Contains(opts.files, srcFileName) {
 		return nil
 	}
-	srcF, err := srcFS.Open(src)
+	srcF, err := srcFS.Open(srcFileName)
 	if err != nil {
 		return err
 	}
 	defer srcF.Close()
 
-	exists, err := Exists(dst)
+	targetFileName := filepath.Base(srcFileName)
+	if len(opts.targetFileName) > 0 {
+		targetFileName = opts.targetFileName
+	}
+	dstFileNameWithPath := filepath.Join(dstDir, targetFileName)
+	existsDstFile, err := Exists(dstFileNameWithPath)
 	if err != nil {
 		// notest
 		return err
 	}
-	if exists {
+	if existsDstFile {
 		if opts.skipExisting {
 			return nil
 		}
-		return fmt.Errorf("file %s already exists: %w", dst, os.ErrExist)
+		return fmt.Errorf("file %s already exists: %w", dstDir, os.ErrExist)
 	}
 
-	dstF, err := os.Create(dst)
+	existsDstDir, err := Exists(dstDir)
+	if err != nil {
+		// notest
+		return err
+	}
+	if !existsDstDir {
+		if err := os.MkdirAll(dstDir, FileMode_rwxrwxrwx); err != nil {
+			// notest
+			return err
+		}
+	}
+	dstF, err := os.Create(dstFileNameWithPath)
 	if err != nil {
 		return err
 	}
@@ -116,16 +136,16 @@ func copyFileFSOpts(srcFS fs.FS, src, dst string, opts *copyOpts) error {
 	}
 
 	if opts.fm > 0 {
-		return os.Chmod(dst, opts.fm)
+		return os.Chmod(dstDir, opts.fm)
 	}
 
-	srcinfo, err := fs.Stat(srcFS, src)
+	srcinfo, err := fs.Stat(srcFS, srcFileName)
 	if err != nil {
 		// notest
 		return err
 	}
 
-	return os.Chmod(dst, srcinfo.Mode())
+	return os.Chmod(dstFileNameWithPath, srcinfo.Mode())
 }
 
 func Exists(filePath string) (exists bool, err error) {
@@ -139,9 +159,10 @@ func Exists(filePath string) (exists bool, err error) {
 }
 
 type copyOpts struct {
-	fm           fs.FileMode
-	skipExisting bool
-	files        []string
+	fm             fs.FileMode
+	skipExisting   bool
+	files          []string
+	targetFileName string
 }
 
 type CopyOpt func(co *copyOpts)
@@ -155,6 +176,12 @@ func WithFileMode(fm fs.FileMode) CopyOpt {
 func WithSkipExisting() CopyOpt {
 	return func(co *copyOpts) {
 		co.skipExisting = true
+	}
+}
+
+func WithNewName(fileName string) CopyOpt {
+	return func(co *copyOpts) {
+		co.targetFileName = fileName
 	}
 }
 

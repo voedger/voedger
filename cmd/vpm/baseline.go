@@ -94,13 +94,12 @@ func saveBaselineSchemas(pkgFiles packageFiles, baselineDir string) error {
 		for _, file := range files {
 			base := filepath.Base(file)
 			fileNameExtensionless := base[:len(base)-len(filepath.Ext(base))]
-			filePath := filepath.Join(packageDir, fileNameExtensionless+parser.VSqlExt)
-
-			if err := coreutils.CopyFile(file, filePath); err != nil {
+			if err := coreutils.CopyFile(file, packageDir, coreutils.WithNewName(fileNameExtensionless+parser.VSqlExt)); err != nil {
 				return fmt.Errorf(errFmtCopyFile, file, err)
 			}
 			if logger.IsVerbose() {
-				logger.Verbose("create baseline file: %s", filePath)
+				filePath := filepath.Join(packageDir, fileNameExtensionless+parser.VSqlExt)
+				logger.Verbose("baseline file created: %s", filePath)
 			}
 		}
 	}
