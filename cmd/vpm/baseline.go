@@ -96,7 +96,7 @@ func saveBaselineSchemas(pkgFiles packageFiles, baselineDir string) error {
 			fileNameExtensionless := base[:len(base)-len(filepath.Ext(base))]
 			filePath := filepath.Join(packageDir, fileNameExtensionless+parser.VSqlExt)
 
-			if err := copyFile(file, filePath); err != nil {
+			if err := coreutils.CopyFile(file, filePath); err != nil {
 				return fmt.Errorf(errFmtCopyFile, file, err)
 			}
 			if logger.IsVerbose() {

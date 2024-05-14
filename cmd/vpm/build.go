@@ -8,11 +8,12 @@ package main
 import (
 	"errors"
 	"fmt"
-	"github.com/google/uuid"
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/google/uuid"
 
 	"github.com/spf13/cobra"
 	"github.com/voedger/voedger/pkg/compile"
@@ -120,7 +121,7 @@ func buildDir(pkgFiles packageFiles, buildDirPath string) error {
 				return err
 			}
 
-			if err := copyFile(file, filePath); err != nil {
+			if err := coreutils.CopyFile(file, filePath); err != nil {
 				return fmt.Errorf(errFmtCopyFile, file, err)
 			}
 
@@ -139,7 +140,7 @@ func buildDir(pkgFiles packageFiles, buildDirPath string) error {
 				if err != nil {
 					return err
 				}
-				if err := copyFile(wasmFilePath, filepath.Join(pkgBuildDir, filepath.Base(wasmFilePath))); err != nil {
+				if err := coreutils.CopyFile(wasmFilePath, filepath.Join(pkgBuildDir, filepath.Base(wasmFilePath))); err != nil {
 					return fmt.Errorf(errFmtCopyFile, wasmFilePath, err)
 				}
 				// remove the wasm file after copying it to the build directory

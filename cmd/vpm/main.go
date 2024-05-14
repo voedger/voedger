@@ -8,7 +8,6 @@ package main
 import (
 	_ "embed"
 	"fmt"
-	coreutils "github.com/voedger/voedger/pkg/utils"
 	"os"
 	"strconv"
 	"strings"
@@ -117,12 +116,4 @@ func exactArgs(n int) cobra.PositionalArgs {
 		}
 		return nil
 	}
-}
-
-func copyFile(src, dst string) error {
-	fileContent, err := os.ReadFile(src)
-	if err != nil {
-		return err
-	}
-	return os.WriteFile(dst, fileContent, coreutils.FileMode_rw_rw_rw_)
 }
