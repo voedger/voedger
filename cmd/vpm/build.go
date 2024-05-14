@@ -8,6 +8,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"github.com/voedger/voedger/pkg/parser"
 	"io"
 	"os"
 	"path/filepath"
@@ -106,7 +107,11 @@ func buildDir(pkgFiles packageFiles, buildDirPath string) error {
 
 		for _, file := range files {
 			// copy vsql files
-			if err := coreutils.CopyFile(file, pkgBuildDir); err != nil {
+			base := filepath.Base(file)
+			fileNameExtensionless := base[:len(base)-len(filepath.Ext(base))]
+			filePath := filepath.Join(pkgBuildDir, fileNameExtensionless+parser.VSqlExt)
+
+			if err := coreutils.CopyFile(file, filePath); err != nil {
 				return fmt.Errorf(errFmtCopyFile, file, err)
 			}
 
@@ -123,7 +128,7 @@ func buildDir(pkgFiles packageFiles, buildDirPath string) error {
 				if err != nil {
 					return err
 				}
-				if err := coreutils.CopyFile(wasmFilePath, pkgBuildDir); err != nil {
+				if err := coreutils.CopyFile(wasmFilePath, filepath.Join(pkgBuildDir, filepath.Base(wasmFilePath))); err != nil {
 					return fmt.Errorf(errFmtCopyFile, wasmFilePath, err)
 				}
 				// remove the wasm file after copying it to the build directory
