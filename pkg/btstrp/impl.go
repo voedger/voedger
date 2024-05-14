@@ -11,40 +11,51 @@ import (
 	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/apps/sys/clusterapp"
 	"github.com/voedger/voedger/pkg/cluster"
+	"github.com/voedger/voedger/pkg/iblobstoragestg"
+	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/itokens"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 	"github.com/voedger/voedger/pkg/utils/federation"
+	dbcertcache "github.com/voedger/voedger/pkg/vvm/db_cert_cache"
 )
 
 // is a SyncOp within VVM trunk
 func Bootstrap(federation federation.IFederation, asp istructs.IAppStructsProvider, timeFunc coreutils.TimeFunc, appparts appparts.IAppPartitions,
-	clusterApp ClusterBuiltInApp, otherApps []appparts.BuiltInApp, itokens itokens.ITokens) error {
+	clusterApp ClusterBuiltInApp, otherApps []appparts.BuiltInApp, itokens itokens.ITokens, storageProvider istorage.IAppStorageProvider,
+	blobberAppStoragePtr iblobstoragestg.BlobAppStoragePtr, routerAppStoragePtr dbcertcache.RouterAppStoragePtr) (err error) {
 	// initialize cluster app workspace, use app ws amount 0
 	if err := initClusterAppWS(asp, timeFunc); err != nil {
 		return err
 	}
 
-	// deploy single clusterApp partition 0
+	// Initialize AppStorageBlobber (* IAppStorage), AppStorageRouter (* IAppStorage)
+	if *blobberAppStoragePtr, err = storageProvider.AppStorage(istructs.AppQName_sys_blobber); err != nil {
+		// notest
+		return err
+	}
+	if *routerAppStoragePtr, err = storageProvider.AppStorage(istructs.AppQName_sys_router); err != nil {
+		// notest
+		return err
+	}
+
+	// appparts: deploy single clusterApp partition
 	appparts.DeployApp(istructs.AppQName_sys_cluster, clusterApp.Def, clusterapp.ClusterAppNumPartitions, clusterapp.ClusterAppNumEngines)
 	appparts.DeployAppPartitions(istructs.AppQName_sys_cluster, []istructs.PartitionID{clusterapp.ClusterAppWSIDPartitionID})
-
-	// note: *IBlobberAppStorage and *IRouterAppStorage are initialized in bootstrap sync operator, see vvm/provide.go:provideBootstrapOperator()
 
 	sysToken, err := payloads.GetSystemPrincipalToken(itokens, istructs.AppQName_sys_cluster)
 	if err != nil {
 		return err
 	}
 
-	// check apps compatibility by calling c.cluster.DeployApp
+	// For each app in otherApps: check apps compatibility by calling c.cluster.DeployApp
 	for _, app := range otherApps {
+		// Use Admin Endpoint to send requests
 		body := fmt.Sprintf(`{"args":{"AppQName":"%s","NumPartitions":%d,"NumAppWorkspaces":%d}}`, app.Name, app.NumParts, app.NumAppWorkspaces)
 		_, err := federation.AdminFunc(fmt.Sprintf("api/%s/%d/c.cluster.DeployApp", istructs.AppQName_sys_cluster, clusterapp.ClusterAppPseudoWSID), body,
 			coreutils.WithDiscardResponse(),
 			coreutils.WithAuthorizeBy(sysToken),
-			// тут спросить: если будет открыт порт 55555, то балансер поймет это сразу?
-			// надо ли убрать ожидание тут? наверное, нет, т.к. балансер таки может не сразу это понять
 			coreutils.WithRetryOnAnyError(retryOnHTTPErrorTimeout, retryOnHTTPErrorDelay),
 		)
 		if err != nil {
@@ -52,7 +63,9 @@ func Bootstrap(federation federation.IFederation, asp istructs.IAppStructsProvid
 		}
 	}
 
-	// appparts: deploy app and its partitions
+	тут вызывать IAppStorageProvider.AppStorage в холостую, а то и IAppStructsProvider.AppStructs
+
+	// For each app builtInApps: deploy a builtin app
 	for _, app := range otherApps {
 		appparts.DeployApp(app.Name, app.Def, app.NumParts, app.EnginePoolSize)
 		partitionIDs := make([]istructs.PartitionID, app.NumParts)

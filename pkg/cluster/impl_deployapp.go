@@ -61,6 +61,7 @@ func provideExecDeployApp(asp istructs.IAppStructsProvider, timeFunc coreutils.T
 			}
 			numPartitionsDeployed := istructs.NumAppPartitions(appRec.AsInt32(Field_NumPartitions))
 			numAppWorkspacesDeployed := istructs.NumAppWorkspaces(appRec.AsInt32(Field_NumAppWorkspaces))
+			// Check application compatibility (409)
 			if numPartitionsDeployed != numAppPartitionsToDeploy {
 				return coreutils.NewHTTPErrorf(http.StatusConflict, fmt.Sprintf("%s: app %s declaring NumPartitions=%d but was previously deployed with NumPartitions=%d", ErrNumPartitionsChanged.Error(),
 					appQName, numAppPartitionsToDeploy, numPartitionsDeployed))
@@ -89,7 +90,7 @@ func provideExecDeployApp(asp istructs.IAppStructsProvider, timeFunc coreutils.T
 		vb.PutInt32(Field_NumAppWorkspaces, int32(numAppWorkspacesToDeploy))
 		vb.PutInt32(Field_NumPartitions, int32(numAppPartitionsToDeploy))
 
-		// deploy app workspaces
+		// Initialize app workspaces
 		as, err := asp.AppStructs(appQName)
 		if err != nil {
 			// notest

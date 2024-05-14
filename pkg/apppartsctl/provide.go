@@ -10,6 +10,6 @@ import (
 )
 
 // Returns a new instance of IAppPartitionsController.
-func New(parts appparts.IAppPartitions, apps []appparts.BuiltInApp) (ctl IAppPartitionsController, cleanup func(), err error) {
-	return newAppPartitionsController(parts, apps)
+func New(parts appparts.IAppPartitions) (ctl IAppPartitionsController, cleanup func(), err error) {
+	return newAppPartitionsController(parts)
 }

@@ -13,7 +13,8 @@ ALTER WORKSPACE AppWorkspaceWS (
 	TYPE AppDeploymentDescriptor (
 		AppQName varchar NOT NULL,
 		NumPartitions int32 NOT NULL,
-		NumAppWorkspaces int32 NOT NULL
+		NumAppWorkspaces int32 NOT NULL,
+		AppImage blob
 	);
 
 	EXTENSION ENGINE BUILTIN (
