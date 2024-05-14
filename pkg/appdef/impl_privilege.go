@@ -43,6 +43,9 @@ func newPrivilege(kind []PrivilegeKind, granted bool, on []QName, fields []Field
 		if !pk.ContainsAny(PrivilegeKind_Select, PrivilegeKind_Update) {
 			panic(ErrIncompatible("fields are not applicable for privilege «%s»", pk))
 		}
+		if err := validatePrivilegeOnFieldNames(role.app, on, fields); err != nil {
+			panic(err)
+		}
 	}
 
 	g := &privilege{
