@@ -19,8 +19,6 @@ import (
 	"github.com/voedger/voedger/pkg/compile"
 	"github.com/voedger/voedger/pkg/goutils/exec"
 	"github.com/voedger/voedger/pkg/goutils/logger"
-	"github.com/voedger/voedger/pkg/parser"
-
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
@@ -109,8 +107,7 @@ func buildDir(pkgFiles packageFiles, buildDirPath string) error {
 		for _, file := range files {
 			// copy vsql files
 			base := filepath.Base(file)
-			fileNameExtensionless := base[:len(base)-len(filepath.Ext(base))]
-			filePath := filepath.Join(pkgBuildDir, fileNameExtensionless+parser.VSqlExt)
+			filePath := filepath.Join(pkgBuildDir, base)
 
 			if err := coreutils.CopyFile(file, filePath); err != nil {
 				return fmt.Errorf(errFmtCopyFile, file, err)
