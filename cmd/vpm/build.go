@@ -106,9 +106,6 @@ func buildDir(pkgFiles packageFiles, buildDirPath string) error {
 
 		for _, file := range files {
 			// copy vsql files
-			base := filepath.Base(file)
-			fileNameExtensionless := base[:len(base)-len(filepath.Ext(base))]
-
 			if err := coreutils.CopyFile(file, pkgBuildDir); err != nil {
 				return fmt.Errorf(errFmtCopyFile, file, err)
 			}
