@@ -6,6 +6,7 @@
 package appdef
 
 import (
+	"errors"
 	"strings"
 
 	"github.com/voedger/voedger/pkg/goutils/set"
@@ -59,6 +60,43 @@ func allPrivilegesOnType(t IType) (pk set.Set[PrivilegeKind]) {
 func (k PrivilegeKind) TrimString() string {
 	const pref = "PrivilegeKind_"
 	return strings.TrimPrefix(k.String(), pref)
+}
+
+// Validates privilege on field names. Returns error if any field is not found.
+//
+// If on contains any substitution then all fields are allowed.
+func validatePrivilegeOnFieldNames(tt IWithTypes, on []QName, fields []FieldName) (err error) {
+	names := QNamesFrom(on...)
+
+	allFields := map[FieldName]struct{}{}
+
+	for _, n := range names {
+		t := tt.Type(n)
+		switch t.Kind() {
+		case TypeKind_Any:
+			// any subst allow to use any fields
+			return nil
+		case TypeKind_GRecord, TypeKind_GDoc,
+			TypeKind_CRecord, TypeKind_CDoc,
+			TypeKind_WRecord, TypeKind_WDoc,
+			TypeKind_ORecord, TypeKind_ODoc,
+			TypeKind_Object,
+			TypeKind_ViewRecord:
+			if ff, ok := t.(IFields); ok {
+				for _, f := range ff.Fields() {
+					allFields[f.Name()] = struct{}{}
+				}
+			}
+		}
+	}
+
+	for _, f := range fields {
+		if _, ok := allFields[f]; !ok {
+			err = errors.Join(err, ErrFieldNotFound(f))
+		}
+	}
+
+	return err
 }
 
 // Validates names for privilege on. Returns sorted names without duplicates.
