@@ -17,6 +17,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/voedger/voedger/pkg/goutils/exec"
 	"github.com/voedger/voedger/pkg/goutils/logger"
+	"github.com/voedger/voedger/pkg/sys"
 	"golang.org/x/mod/semver"
 
 	"github.com/voedger/voedger/pkg/compile"
@@ -45,7 +46,10 @@ func initPackage(dir, packagePath string) error {
 	if err := createGoMod(dir, packagePath); err != nil {
 		return err
 	}
-	if err := createPackagesGen(nil, dir, false); err != nil {
+	if err := createPackagesGen(nil, dir, packagePath, false); err != nil {
+		return err
+	}
+	if err := createWasmDir(dir); err != nil {
 		return err
 	}
 	return execGoModTidy(dir)
@@ -57,6 +61,19 @@ func execGoModTidy(dir string) error {
 		stdout = os.Stdout
 	}
 	return new(exec.PipedExec).Command("go", "mod", "tidy").WorkingDir(dir).Run(stdout, os.Stderr)
+}
+
+func createWasmDir(dir string) error {
+	exists, err := coreutils.Exists(filepath.Join(dir, wasmDirName))
+	if err != nil {
+		return err
+	}
+	if !exists {
+		if err := os.Mkdir(filepath.Join(dir, wasmDirName), coreutils.FileMode_rwxrwxrwx); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func createGoMod(dir, packagePath string) error {
@@ -90,10 +107,16 @@ func checkGoVersion(goVersionNumber string) bool {
 	return semver.Compare("v"+goVersionNumber, "v"+minimalRequiredGoVersionValue) >= 0
 }
 
-func createPackagesGen(imports []string, dir string, recreate bool) error {
+func checkPackageGenFileExists(dir string) (bool, error) {
+	packagesGenFilePath := filepath.Join(dir, packagesGenFileName)
+	return coreutils.Exists(packagesGenFilePath)
+}
+
+func createPackagesGen(imports []string, dir, packagePath string, recreate bool) error {
+	// pkg subfolder for packages
 	packagesGenFilePath := filepath.Join(dir, packagesGenFileName)
 	if !recreate {
-		exists, err := coreutils.Exists(packagesGenFilePath)
+		exists, err := checkPackageGenFileExists(dir)
 		if err != nil {
 			// notest
 			return err
@@ -105,10 +128,13 @@ func createPackagesGen(imports []string, dir string, recreate bool) error {
 
 	strBuffer := &strings.Builder{}
 	for _, imp := range imports {
+		if imp == sys.PackagePath {
+			continue
+		}
 		strBuffer.WriteString(fmt.Sprintf("_ %q\n", imp))
 	}
 
-	packagesGenContent := fmt.Sprintf(packagesGenContentTemplate, strBuffer.String())
+	packagesGenContent := fmt.Sprintf(packagesGenContentTemplate, filepath.Base(packagePath), strBuffer.String())
 	packagesGenContentFormatted, err := format.Source([]byte(packagesGenContent))
 	if err != nil {
 		return err
@@ -125,5 +151,5 @@ func execGoGet(goModDir, dependencyToGet string) error {
 	if logger.IsVerbose() {
 		stdout = os.Stdout
 	}
-	return new(exec.PipedExec).Command("go", "get", fmt.Sprintf("%s@main", dependencyToGet)).WorkingDir(goModDir).Run(stdout, os.Stderr)
+	return new(exec.PipedExec).Command("go", "get", dependencyToGet+"@latest").WorkingDir(goModDir).Run(stdout, os.Stderr)
 }

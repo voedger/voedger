@@ -8,11 +8,10 @@ package compile
 import (
 	"errors"
 	"fmt"
-	"path/filepath"
-
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"golang.org/x/exp/maps"
 	"golang.org/x/tools/go/packages"
+	"path/filepath"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/parser"
@@ -20,7 +19,7 @@ import (
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-func compile(dir string) (*Result, error) {
+func compile(dir string, checkAppSchema bool) (*Result, error) {
 	var errs []error
 	notFoundDeps := make(map[string]struct{})
 
@@ -45,7 +44,11 @@ func compile(dir string) (*Result, error) {
 		errs = append(errs, compileDirErrs...)
 	}
 	// add dummy app schema if no app schema found
-	if !hasAppSchema(pkgs) {
+	appSchemaExists := hasAppSchema(pkgs)
+	if checkAppSchema && !appSchemaExists {
+		return nil, ErrAppSchemaNotFound
+	}
+	if !appSchemaExists {
 		appPackageAst, err := getDummyAppPackageAst(maps.Values(importedStmts))
 		if err != nil {
 			errs = append(errs, err)
@@ -197,7 +200,7 @@ func compileDir(loadedPkgs *loadedPackages, dir, packagePath string, alias *pars
 		return
 	}
 	if logger.IsVerbose() {
-		logger.Verbose(fmt.Sprintf("compiling %s", dir))
+		logger.Verbose("compiling " + dir)
 	}
 
 	packageAst, fileNames, err := parser.ParsePackageDirCollectingFiles(packagePath, coreutils.NewPathReader(dir), "")
@@ -259,7 +262,6 @@ func loadPackages(dir string, notFoundDeps map[string]struct{}) (*loadedPackages
 	}
 
 	importedPkgs := allImportedPackages(rootPkgs)
-
 	if len(rootPkgs) > 0 && rootPkgs[0].Module != nil {
 		return &loadedPackages{
 			importedPkgs: importedPkgs,
@@ -300,7 +302,6 @@ func allImportedPackages(initialPkgs []*packages.Package) (importedPkgs map[stri
 	}
 
 	return importedPkgs
-
 }
 
 // localPath returns local path of the dependency
@@ -309,20 +310,27 @@ func localPath(loadedPkgs *loadedPackages, depURL string, notFoundDeps map[strin
 	if logger.IsVerbose() {
 		logger.Verbose(fmt.Sprintf("resolving dependency %s ...", depURL))
 	}
-	for _, pkg := range loadedPkgs.rootPkgs {
-		if pkg.PkgPath == depURL {
-			if len(pkg.GoFiles) > 0 {
-				return filepath.Dir(pkg.GoFiles[0]), nil
-			}
-		}
+	// find in root packages
+	path := getLocalPathOfTheDep(loadedPkgs.rootPkgs, depURL)
+	if path != "" {
+		return path, nil
 	}
-	for pkgPath, pkg := range loadedPkgs.importedPkgs {
-		if pkgPath == depURL {
-			if len(pkg.GoFiles) > 0 {
-				return filepath.Dir(pkg.GoFiles[0]), nil
-			}
-		}
+	// find in imported packages
+	path = getLocalPathOfTheDep(maps.Values(loadedPkgs.importedPkgs), depURL)
+	if path != "" {
+		return path, nil
 	}
 	notFoundDeps[depURL] = struct{}{}
 	return "", fmt.Errorf("cannot find module for path %s", depURL)
+}
+
+func getLocalPathOfTheDep(pkgs []*packages.Package, depURL string) string {
+	for _, pkg := range pkgs {
+		if pkg.PkgPath == depURL {
+			if len(pkg.GoFiles) > 0 {
+				return filepath.Dir(pkg.GoFiles[0])
+			}
+		}
+	}
+	return ""
 }
