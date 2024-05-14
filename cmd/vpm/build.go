@@ -109,24 +109,13 @@ func buildDir(pkgFiles packageFiles, buildDirPath string) error {
 			// copy vsql files
 			base := filepath.Base(file)
 			fileNameExtensionless := base[:len(base)-len(filepath.Ext(base))]
-
 			filePath := filepath.Join(pkgBuildDir, fileNameExtensionless+parser.VSqlExt)
-
-			fileContent, err := os.ReadFile(file)
-			if err != nil {
-				return err
-			}
-			if err := os.WriteFile(filePath, fileContent, coreutils.FileMode_rw_rw_rw_); err != nil {
-				return err
-			}
 
 			if err := copyFile(file, filePath); err != nil {
 				return fmt.Errorf(errFmtCopyFile, file, err)
 			}
 
-			// build wasm files
-
-			// if wasm directory exists, build wasm file and copy it to the temp build directory
+			// building wasm files: if wasm directory exists, build wasm file and copy it to the temp build directory
 			fileDir := filepath.Dir(file)
 			wasmDirPath := filepath.Join(fileDir, wasmDirName)
 			exists, err := coreutils.Exists(wasmDirPath)
