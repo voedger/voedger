@@ -37,9 +37,9 @@ func InitiateEmailVerificationFunc(vit *it.VIT, f func() *coreutils.FuncResponse
 	return
 }
 
-func WaitForIndexOffset(vit *it.VIT, ws *it.AppWorkspace, index appdef.QName, offset int64) {
+func WaitForIndexOffset(vit *it.VIT, ws *it.AppWorkspace, index appdef.QName, offset istructs.Offset) {
 	type entity struct {
-		Last int64 `json:"Last"`
+		Last istructs.Offset `json:"Last"`
 	}
 
 	body := fmt.Sprintf(`

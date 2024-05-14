@@ -13,9 +13,10 @@ import (
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	"github.com/voedger/voedger/pkg/state"
 	coreutils "github.com/voedger/voedger/pkg/utils"
+	"github.com/voedger/voedger/pkg/utils/federation"
 )
 
-func asyncProjectorApplyCancelAcceptedInvite(timeFunc coreutils.TimeFunc, federation coreutils.IFederation, tokens itokens.ITokens) istructs.Projector {
+func asyncProjectorApplyCancelAcceptedInvite(timeFunc coreutils.TimeFunc, federation federation.IFederation, tokens itokens.ITokens) istructs.Projector {
 	return istructs.Projector{
 		Name: qNameAPApplyCancelAcceptedInvite,
 		Func: applyCancelAcceptedInvite(timeFunc, federation, tokens),
@@ -23,7 +24,7 @@ func asyncProjectorApplyCancelAcceptedInvite(timeFunc coreutils.TimeFunc, federa
 }
 
 // AFTER EXEC c.sys.InitiateCancelAcceptedInvite
-func applyCancelAcceptedInvite(timeFunc coreutils.TimeFunc, federation coreutils.IFederation, tokens itokens.ITokens) func(event istructs.IPLogEvent, state istructs.IState, intents istructs.IIntents) (err error) {
+func applyCancelAcceptedInvite(timeFunc coreutils.TimeFunc, federation federation.IFederation, tokens itokens.ITokens) func(event istructs.IPLogEvent, state istructs.IState, intents istructs.IIntents) (err error) {
 	return func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
 		skbCDocInvite, err := s.KeyBuilder(state.Record, qNameCDocInvite)
 		if err != nil {

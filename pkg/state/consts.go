@@ -22,6 +22,7 @@ var (
 	Event             = appdef.NewQName(appdef.SysPackage, "Event")
 	CommandContext    = appdef.NewQName(appdef.SysPackage, "CommandContext")
 	QueryContext      = appdef.NewQName(appdef.SysPackage, "QueryContext")
+	Response          = appdef.NewQName(appdef.SysPackage, "Response")
 	FederationCommand = appdef.NewQName(appdef.SysPackage, "FederationCommand")
 )
 
@@ -81,6 +82,7 @@ const (
 	Field_ExpectedCodes                 = "ExpectedCodes"
 	Field_NewIDs                        = "NewIDs"
 	Field_Result                        = "Result"
+	Field_ErrorMessage                  = "ErrorMessage"
 )
 
 const (
@@ -88,6 +90,7 @@ const (
 	defaultHTTPClientTimeout              = 20_000 * time.Millisecond
 	httpStorageKeyBuilderStringerSliceCap = 3
 	wsidTypeValidatorCacheSize            = 100
+	queryProcessorStateMaxIntents         = 2 // 1 for Result, 1 for Response
 )
 
 var (

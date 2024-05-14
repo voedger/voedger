@@ -27,7 +27,7 @@ curl -G --data-urlencode "payload={\"SubjectLogin\": \"paa\", \"ProjectionKey\":
 func (s *httpService) subscribeAndWatchHandler() http.HandlerFunc {
 	return func(rw http.ResponseWriter, req *http.Request) {
 		var (
-			urlParams createChannelParamsType
+			urlParams in10nmem.CreateChannelParamsType
 			channel   in10n.ChannelID
 			flusher   http.Flusher
 			err       error

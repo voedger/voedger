@@ -5,7 +5,6 @@
 package vit
 
 import (
-	"bytes"
 	_ "embed"
 	"encoding/json"
 	"fmt"
@@ -30,6 +29,7 @@ import (
 	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/state/smtptest"
 	"github.com/voedger/voedger/pkg/sys/authnz"
+	"github.com/voedger/voedger/pkg/sys/blobber"
 	"github.com/voedger/voedger/pkg/sys/verifier"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 	"github.com/voedger/voedger/pkg/vvm"
@@ -129,8 +129,11 @@ func newVit(t testing.TB, vitCfg *VITConfig, useCas bool) *VIT {
 		configCleanupsAmount: len(vitPreConfig.cleanups),
 		emailCaptor:          emailMessagesChan,
 	}
+	httpClient, httpClientCleanup := coreutils.NewIHTTPClient()
+	vit.httpClient = httpClient
 
 	vit.cleanups = append(vit.cleanups, vitPreConfig.cleanups...)
+	vit.cleanups = append(vit.cleanups, func(vit *VIT) { httpClientCleanup() })
 
 	// запустим сервер
 	require.NoError(t, vit.Launch())
@@ -229,7 +232,7 @@ func handleWSParam(vit *VIT, appWS *AppWorkspace, appWorkspaces map[string]*AppW
 			roles += role.String()
 		}
 		body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"sys.Subject","Login":"%s","Roles":"%s","SubjectKind":%d,"ProfileWSID":%d}}]}`,
-			subject.login, roles, subject.subjectKind, vit.principals[appWS.GetAppQName()][subject.login].ProfileWSID)
+			subject.login, roles, subject.subjectKind, vit.principals[appWS.AppQName()][subject.login].ProfileWSID)
 		vit.PostWS(appWS, "c.sys.CUD", body, coreutils.WithAuthorizeBy(token))
 	}
 
@@ -241,7 +244,7 @@ func handleWSParam(vit *VIT, appWS *AppWorkspace, appWorkspaces map[string]*AppW
 		childAppWS.subjects = childWSParams.subjects
 		childAppWS.docs = childWSParams.docs
 		childAppWS.ownerLoginName = childWSParams.ownerLoginName
-		childAppWS.Owner = vit.GetPrincipal(appWS.GetAppQName(), childWSParams.ownerLoginName)
+		childAppWS.Owner = vit.GetPrincipal(appWS.AppQName(), childWSParams.ownerLoginName)
 		appWorkspaces[childWSParams.Name] = childAppWS
 		handleWSParam(vit, childAppWS, appWorkspaces, verifiedValues, token)
 	}
@@ -352,9 +355,40 @@ func (vit *VIT) PostWSSys(ws *AppWorkspace, funcName string, body string, opts .
 	return vit.PostApp(ws.Owner.AppQName, ws.WSID, funcName, body, opts...)
 }
 
-func (vit *VIT) Post(url string, body string, opts ...coreutils.ReqOptFunc) *coreutils.HTTPResponse {
+func (vit *VIT) UploadBLOBs(appQName istructs.AppQName, wsid istructs.WSID, blobs []blobber.BLOB, opts ...coreutils.ReqOptFunc) (blobIDs []istructs.RecordID) {
 	vit.T.Helper()
-	res, err := vit.POST(url, body, opts...)
+	blobIDs, err := vit.IFederation.UploadBLOBs(appQName, wsid, blobs, opts...)
+	require.NoError(vit.T, err)
+	return blobIDs
+}
+
+func (vit *VIT) UploadBLOB(appQName istructs.AppQName, wsid istructs.WSID, blobName string, blobMimeType string, blobContent []byte,
+	opts ...coreutils.ReqOptFunc) (blobID istructs.RecordID) {
+	vit.T.Helper()
+	blobID, err := vit.IFederation.UploadBLOB(appQName, wsid, blobName, blobMimeType, blobContent, opts...)
+	require.NoError(vit.T, err)
+	return blobID
+}
+
+func (vit *VIT) Func(url string, body string, opts ...coreutils.ReqOptFunc) *coreutils.FuncResponse {
+	vit.T.Helper()
+	res, err := vit.IFederation.Func(url, body, opts...)
+	require.NoError(vit.T, err)
+	return res
+}
+
+func (vit *VIT) ReadBLOB(appQName istructs.AppQName, wsid istructs.WSID, blobID istructs.RecordID, optFuncs ...coreutils.ReqOptFunc) *coreutils.HTTPResponse {
+	vit.T.Helper()
+	resp, err := vit.IFederation.ReadBLOB(appQName, wsid, blobID, optFuncs...)
+	require.NoError(vit.T, err)
+	return resp
+}
+
+func (vit *VIT) POST(relativeURL string, body string, opts ...coreutils.ReqOptFunc) *coreutils.HTTPResponse {
+	vit.T.Helper()
+	opts = append(opts, coreutils.WithMethod(http.MethodPost))
+	url := vit.IFederation.URLStr() + "/" + relativeURL
+	res, err := vit.httpClient.Req(url, body, opts...)
 	require.NoError(vit.T, err)
 	return res
 }
@@ -362,14 +396,7 @@ func (vit *VIT) Post(url string, body string, opts ...coreutils.ReqOptFunc) *cor
 func (vit *VIT) PostApp(appQName istructs.AppQName, wsid istructs.WSID, funcName string, body string, opts ...coreutils.ReqOptFunc) *coreutils.FuncResponse {
 	vit.T.Helper()
 	url := fmt.Sprintf("api/%s/%d/%s", appQName, wsid, funcName)
-	res, err := vit.Func(url, body, opts...)
-	require.NoError(vit.T, err)
-	return res
-}
-
-func (vit *VIT) Get(url string, opts ...coreutils.ReqOptFunc) *coreutils.HTTPResponse {
-	vit.T.Helper()
-	res, err := vit.GET(url, "", opts...)
+	res, err := vit.IFederation.Func(url, body, opts...)
 	require.NoError(vit.T, err)
 	return res
 }
@@ -524,19 +551,6 @@ func (ts *timeService) setCurrentInstant(now time.Time) {
 	ts.m.Lock()
 	ts.currentInstant = now
 	ts.m.Unlock()
-}
-
-func ScanSSE(data []byte, atEOF bool) (advance int, token []byte, err error) {
-	if atEOF && len(data) == 0 {
-		return 0, nil, nil
-	}
-	if i := bytes.Index(data, []byte("\n\n")); i >= 0 {
-		return i + 2, data[0:i], nil
-	}
-	if atEOF {
-		return len(data), data, nil
-	}
-	return 0, nil, nil
 }
 
 func (ec emailCaptor) checkEmpty(t testing.TB) {

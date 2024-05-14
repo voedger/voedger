@@ -79,7 +79,16 @@ EXTENSION ENGINE BUILTIN (
 	);
 
 	STORAGE Result(
-		INSERT SCOPE(COMMANDS)
+		INSERT SCOPE(COMMANDS, QUERIES)
+	);
+
+	STORAGE Response(
+		/*
+		ValueBuilder:
+			StatusCode int32
+			ErrorMessage text
+		*/
+		INSERT SCOPE(COMMANDS, QUERIES)
 	);
 
 	STORAGE Event(
