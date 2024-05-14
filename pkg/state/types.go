@@ -28,16 +28,18 @@ type WSIDFunc func() istructs.WSID
 type N10nFunc func(view appdef.QName, wsid istructs.WSID, offset istructs.Offset)
 type AppStructsFunc func() istructs.IAppStructs
 type CUDFunc func() istructs.ICUD
-type CmdResultBuilderFunc func() istructs.IObjectBuilder
+type ObjectBuilderFunc func() istructs.IObjectBuilder
 type PrincipalsFunc func() []iauthnz.Principal
 type TokenFunc func() string
 type PLogEventFunc func() istructs.IPLogEvent
 type ArgFunc func() istructs.IObject
 type UnloggedArgFunc func() istructs.IObject
 type WLogOffsetFunc func() istructs.Offset
-type CommandProcessorStateFactory func(ctx context.Context, appStructsFunc AppStructsFunc, partitionIDFunc PartitionIDFunc, wsidFunc WSIDFunc, secretReader isecrets.ISecretReader, cudFunc CUDFunc, principalPayloadFunc PrincipalsFunc, tokenFunc TokenFunc, intentsLimit int, cmdResultBuilderFunc CmdResultBuilderFunc, argFunc ArgFunc, unloggedArgFunc UnloggedArgFunc, wlogOffsetFunc WLogOffsetFunc) IHostState
+type QNameFunc func() appdef.QName
+type ExecQueryCallbackFunc func() istructs.ExecQueryCallback
+type CommandProcessorStateFactory func(ctx context.Context, appStructsFunc AppStructsFunc, partitionIDFunc PartitionIDFunc, wsidFunc WSIDFunc, secretReader isecrets.ISecretReader, cudFunc CUDFunc, principalPayloadFunc PrincipalsFunc, tokenFunc TokenFunc, intentsLimit int, cmdResultBuilderFunc ObjectBuilderFunc, argFunc ArgFunc, unloggedArgFunc UnloggedArgFunc, wlogOffsetFunc WLogOffsetFunc) IHostState
 type SyncActualizerStateFactory func(ctx context.Context, appStructsFunc AppStructsFunc, partitionIDFunc PartitionIDFunc, wsidFunc WSIDFunc, n10nFunc N10nFunc, secretReader isecrets.ISecretReader, eventFunc PLogEventFunc, intentsLimit int) IHostState
-type QueryProcessorStateFactory func(ctx context.Context, appStructsFunc AppStructsFunc, partitionIDFunc PartitionIDFunc, wsidFunc WSIDFunc, secretReader isecrets.ISecretReader, principalPayloadFunc PrincipalsFunc, tokenFunc TokenFunc, argFunc ArgFunc, opts ...QPStateOptFunc) IHostState
+type QueryProcessorStateFactory func(ctx context.Context, appStructsFunc AppStructsFunc, partitionIDFunc PartitionIDFunc, wsidFunc WSIDFunc, secretReader isecrets.ISecretReader, principalPayloadFunc PrincipalsFunc, tokenFunc TokenFunc, argFunc ArgFunc, resultBuilderFunc ObjectBuilderFunc, queryCallbackFunc ExecQueryCallbackFunc, opts ...QPStateOptFunc) IHostState
 type AsyncActualizerStateFactory func(ctx context.Context, appStructsFunc AppStructsFunc, partitionIDFunc PartitionIDFunc, wsidFunc WSIDFunc, n10nFunc N10nFunc, secretReader isecrets.ISecretReader, eventFunc PLogEventFunc, intentsLimit, bundlesLimit int,
 	opts ...ActualizerStateOptFunc) IBundledHostState
 

@@ -105,6 +105,7 @@ type IPrivilegesBuilder interface {
 	//	 - if objects contains unknown names,
 	//	 - if objects are mixed, e.g. records and commands,
 	//	 - if kinds are not compatible with objects,
+	//	 - if fields are not applicable for privilege,
 	//	 - if fields contains unknown names,
 	//   - if role is unknown.
 	Grant(kinds []PrivilegeKind, on []QName, fields []FieldName, toRole QName, comment ...string) IPrivilegesBuilder
