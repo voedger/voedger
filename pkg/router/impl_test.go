@@ -286,11 +286,17 @@ func Test404(t *testing.T) {
 
 func TestFailedToWriteResponse(t *testing.T) {
 	ch := make(chan struct{})
+	var outerRequextCtx context.Context
 	setUp(t, func(requestCtx context.Context, sender ibus.ISender, request ibus.Request) {
 		go func() {
+			// handler, on server side
 			rs := sender.SendParallelResponse()
 			rs.StartMapSection("secMap", []string{"2"})
 			require.NoError(t, rs.SendElement("id1", elem1))
+
+			// save the current requext ctx to take the moment when when it is closed for sure
+			// it is not closed immediately on resp.Body.Close
+			outerRequextCtx = requestCtx
 
 			// now let's wait for client disconnect
 			<-ch
@@ -308,6 +314,7 @@ func TestFailedToWriteResponse(t *testing.T) {
 	}, 2*time.Second)
 	defer tearDown()
 
+	// client side
 	body := []byte("")
 	bodyReader := bytes.NewReader(body)
 	resp, err := http.Post(fmt.Sprintf("http://127.0.0.1:%d/api/%s/%s/%d/somefunc", router.port(), AppOwner, AppName, testWSID), "application/json", bodyReader)
@@ -329,12 +336,8 @@ func TestFailedToWriteResponse(t *testing.T) {
 		// disconnect the client
 		resp.Body.Close()
 
-		// wait for the write to the closed socket error. Sometimes does not appear on first write after socket close
-		for {
-			_, err := w.Write([]byte{0})
-			if err != nil {
-				break
-			}
+		// requestCtx is not immediately closed after resp.Body.Close(). So let's wait for ctx close
+		for outerRequextCtx.Err() == nil {
 		}
 	}
 
