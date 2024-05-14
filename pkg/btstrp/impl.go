@@ -63,8 +63,6 @@ func Bootstrap(federation federation.IFederation, asp istructs.IAppStructsProvid
 		}
 	}
 
-	тут вызывать IAppStorageProvider.AppStorage в холостую, а то и IAppStructsProvider.AppStructs
-
 	// For each app builtInApps: deploy a builtin app
 	for _, app := range otherApps {
 		appparts.DeployApp(app.Name, app.Def, app.NumParts, app.EnginePoolSize)
