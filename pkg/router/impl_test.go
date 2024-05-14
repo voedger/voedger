@@ -228,7 +228,7 @@ func TestClientDisconnectDuringSections(t *testing.T) {
 			// So let's wait for successful SendElelemnt(), then close the request
 			ch <- struct{}{}
 			<-ch
-			// requestCtx closes not immediately after request.Body.Close(). So let's wait for ctx close
+			// requestCtx closes not immediately after resp.Body.Close(). So let's wait for ctx close
 			for requestCtx.Err() == nil {
 			}
 			err := rs.ObjectSection("objSec", []string{"3"}, 42)
@@ -295,11 +295,15 @@ func TestFailedToWriteResponse(t *testing.T) {
 			// now let's wait for client disconnect
 			<-ch
 
+			defer func() {
+				// not a context.Canceled error below -> avoid test hang
+				rs.Close(nil)
+				ch <- struct{}{}
+			}()
+
 			// next section should be failed because the client is disconnected
 			err := rs.ObjectSection("objSec", []string{"3"}, 42)
 			require.ErrorIs(t, err, context.Canceled)
-			rs.Close(nil)
-			ch <- struct{}{}
 		}()
 	}, 2*time.Second)
 	defer tearDown()
