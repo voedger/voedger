@@ -34,22 +34,27 @@ import (
 type testState struct {
 	state.IState
 
-	ctx          context.Context
-	appStructs   istructs.IAppStructs
-	appDef       appdef.IAppDef
-	cud          istructs.ICUD
-	event        istructs.IPLogEvent
-	plogGen      istructs.IIDGenerator
-	wsOffsets    map[istructs.WSID]istructs.Offset
-	secretReader isecrets.ISecretReader
-	httpHandler  HttpHandlerFunc
-	principals   []iauthnz.Principal
-	token        string
+	ctx           context.Context
+	appStructs    istructs.IAppStructs
+	appDef        appdef.IAppDef
+	cud           istructs.ICUD
+	event         istructs.IPLogEvent
+	plogGen       istructs.IIDGenerator
+	wsOffsets     map[istructs.WSID]istructs.Offset
+	secretReader  isecrets.ISecretReader
+	httpHandler   HttpHandlerFunc
+	principals    []iauthnz.Principal
+	token         string
+	queryWsid     istructs.WSID
+	queryName     appdef.FullQName
+	processorKind int
+	readObjects   []istructs.IObject
 }
 
 func NewTestState(processorKind int, packagePath string, createWorkspaces ...TestWorkspace) ITestState {
 	ts := &testState{}
 	ts.ctx = context.Background()
+	ts.processorKind = processorKind
 	ts.secretReader = &secretReader{secrets: make(map[string][]byte)}
 	ts.buildAppDef(packagePath, ".", createWorkspaces...)
 	ts.buildState(processorKind)
@@ -68,7 +73,10 @@ func (s *secretReader) ReadSecret(name string) (bb []byte, err error) {
 }
 
 func (ctx *testState) WSID() istructs.WSID {
-	return ctx.event.Workspace() // TODO: For QP must be different
+	if ctx.processorKind == ProcKind_QueryProcessor {
+		return ctx.queryWsid
+	}
+	return ctx.event.Workspace()
 }
 
 func (ctx *testState) Arg() istructs.IObject {
@@ -105,6 +113,11 @@ func (ctx *testState) Request(timeout time.Duration, method, url string, body io
 	return resp.Status, resp.Body, resp.Headers, nil
 }
 
+func (ctx *testState) PutQuery(wsid istructs.WSID, name appdef.FullQName) {
+	ctx.queryWsid = wsid
+	ctx.queryName = name
+}
+
 func (ctx *testState) PutRequestSubject(principals []iauthnz.Principal, token string) {
 	ctx.principals = principals
 	ctx.token = token
@@ -131,6 +144,20 @@ func (ctx *testState) buildState(processorKind int) {
 	tokenFunc := func() string {
 		return ctx.token
 	}
+	qryResultBuilderFunc := func() istructs.IObjectBuilder {
+		localPkgName := ctx.appDef.PackageLocalName(ctx.queryName.PkgPath())
+		query := ctx.appDef.Query(appdef.NewQName(localPkgName, ctx.queryName.Entity()))
+		if query == nil {
+			panic(fmt.Sprintf("query not found: %v", ctx.queryName))
+		}
+		return ctx.appStructs.ObjectBuilder(query.Result().QName())
+	}
+	execQueryCallback := func() istructs.ExecQueryCallback {
+		return func(o istructs.IObject) error {
+			ctx.readObjects = append(ctx.readObjects, o)
+			return nil
+		}
+	}
 
 	switch processorKind {
 	case ProcKind_Actualizer:
@@ -138,7 +165,7 @@ func (ctx *testState) buildState(processorKind int) {
 	case ProcKind_CommandProcessor:
 		ctx.IState = state.ProvideCommandProcessorStateFactory()(ctx.ctx, appFunc, partitionIDFunc, wsidFunc, ctx.secretReader, cudFunc, principalsFunc, tokenFunc, IntentsLimit, resultBuilderFunc, argFunc, unloggedArgFunc, wlogOffsetFunc)
 	case ProcKind_QueryProcessor:
-		ctx.IState = state.ProvideQueryProcessorStateFactory()(ctx.ctx, appFunc, partitionIDFunc, wsidFunc, ctx.secretReader, principalsFunc, tokenFunc, argFunc, state.QPWithCustomHttpClient(ctx))
+		ctx.IState = state.ProvideQueryProcessorStateFactory()(ctx.ctx, appFunc, partitionIDFunc, wsidFunc, ctx.secretReader, principalsFunc, tokenFunc, argFunc, qryResultBuilderFunc, execQueryCallback, state.QPWithCustomHttpClient(ctx))
 	}
 }
 

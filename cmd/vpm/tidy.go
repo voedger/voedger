@@ -6,6 +6,8 @@
 package main
 
 import (
+	"errors"
+	"path/filepath"
 	"slices"
 	"strings"
 
@@ -21,11 +23,21 @@ func newTidyCmd(params *vpmParams) *cobra.Command {
 		Use:   "tidy",
 		Short: "add missing and remove unused modules",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			// packages_gen.go should be created before compiling
+			dirName := filepath.Base(params.Dir)
+			if err := createPackagesGen(nil, params.Dir, dirName, true); err != nil {
+				return err
+			}
+
 			compileRes, err := compile.Compile(params.Dir)
 			if err != nil {
 				logger.Error(err)
 				logger.Error("failed to compile, will try to exec 'go mod tidy' anyway")
 			}
+			if compileRes == nil {
+				return errors.New("failed to compile, check schemas")
+			}
+
 			return tidy(compileRes.NotFoundDeps, compileRes.AppDef, compileRes.ModulePath, params.Dir)
 		},
 	}
@@ -39,7 +51,7 @@ func tidy(notFoundDeps []string, appDef appdef.IAppDef, packagePath string, dir 
 	if err := getDependencies(dir, imports); err != nil {
 		return err
 	}
-	if err := createPackagesGen(imports, dir, true); err != nil {
+	if err := createPackagesGen(imports, dir, packagePath, true); err != nil {
 		return err
 	}
 	return execGoModTidy(dir)

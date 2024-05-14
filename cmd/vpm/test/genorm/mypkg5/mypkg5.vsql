@@ -2,7 +2,7 @@
 -- @author Alisher Nurmanov
 
 IMPORT SCHEMA 'mypkg1';
-IMPORT SCHEMA 'github.com/untillpro/airs-bp3/packages/air';
+IMPORT SCHEMA 'github.com/untillpro/airs-bp3' AS bp3;
 
 WORKSPACE MyWorkspace2 INHERITS mypkg1.MyWorkspace1(
     TABLE MyTable2 INHERITS CDoc(
