@@ -145,6 +145,9 @@ func buildDir(pkgFiles packageFiles, buildDirPath string) error {
 // execTinyGoBuild builds the project using tinygo and returns the path to the resulting wasm file
 func execTinyGoBuild(dir, appName string) (wasmFilePath string, err error) {
 	var stdout io.Writer
+	if logger.IsVerbose() {
+		stdout = os.Stdout
+	}
 
 	wasmFileName := appName + ".wasm"
 	if err := new(exec.PipedExec).Command("tinygo", "build", "--no-debug", "-o", wasmFileName, "-scheduler=none", "-opt=2", "-gc=leaking", "-target=wasi", ".").WorkingDir(dir).Run(stdout, os.Stderr); err != nil {
