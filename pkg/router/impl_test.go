@@ -286,17 +286,13 @@ func Test404(t *testing.T) {
 
 func TestFailedToWriteResponse(t *testing.T) {
 	ch := make(chan struct{})
-	var outerRequextCtx context.Context
+	var disconnectClientFromServer func(ctx context.Context)
 	setUp(t, func(requestCtx context.Context, sender ibus.ISender, request ibus.Request) {
 		go func() {
 			// handler, on server side
 			rs := sender.SendParallelResponse()
 			rs.StartMapSection("secMap", []string{"2"})
 			require.NoError(t, rs.SendElement("id1", elem1))
-
-			// save the current requext ctx to take the moment when when it is closed for sure
-			// it is not closed immediately on resp.Body.Close
-			outerRequextCtx = requestCtx
 
 			// now let's wait for client disconnect
 			<-ch
@@ -308,6 +304,7 @@ func TestFailedToWriteResponse(t *testing.T) {
 			}()
 
 			// next section should be failed because the client is disconnected
+			disconnectClientFromServer(requestCtx)
 			err := rs.ObjectSection("objSec", []string{"3"}, 42)
 			require.ErrorIs(t, err, context.Canceled)
 		}()
@@ -332,14 +329,23 @@ func TestFailedToWriteResponse(t *testing.T) {
 
 	// server waits for us to send the next section
 	// let's set a hook that will close the connection right before sending a response
-	onBeforeWriteResponse = func(w http.ResponseWriter) {
-		// disconnect the client
+	disconnectClientFromServer = func(requestCtx context.Context) {
 		resp.Body.Close()
 
 		// requestCtx is not immediately closed after resp.Body.Close(). So let's wait for ctx close
-		for outerRequextCtx.Err() == nil {
+		for requestCtx.Err() == nil {
 		}
 	}
+	// onBeforeWriteResponse = func(w http.ResponseWriter) {
+	// 	// disconnect the client from the server right before send 2nd ObjectSection
+	// 	start := time.Now()
+	// 	resp.Body.Close()
+
+	// 	// requestCtx is not immediately closed after resp.Body.Close(). So let's wait for ctx close
+	// 	for outerRequextCtx.Err() == nil {
+	// 	}
+	// 	logger.Info("ctx closed during", time.Since(start))
+	// }
 
 	// signal to the server to send the next section
 	ch <- struct{}{}
@@ -466,7 +472,6 @@ func tearDown() {
 		router = nil
 		isRouterStopTested = true
 	}
-	onBeforeWriteResponse = nil
 }
 
 func (t testRouter) port() int {
