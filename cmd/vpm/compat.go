@@ -110,7 +110,7 @@ func appDefFromBaselineDir(baselineDir string) (appdef.IAppDef, error) {
 		if err != nil {
 			return err
 		}
-		if !info.IsDir() && filepath.Ext(path) == ".vsql" {
+		if !info.IsDir() && filepath.Ext(path) == parser.VSqlExt {
 			schemaFiles = append(schemaFiles, path)
 		}
 		return nil

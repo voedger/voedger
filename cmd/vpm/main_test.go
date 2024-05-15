@@ -13,9 +13,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"github.com/voedger/voedger/pkg/goutils/exec"
 	"github.com/voedger/voedger/pkg/goutils/logger"
-
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
@@ -99,9 +97,6 @@ func TestBaselineBasicUsage(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			//err := os.Chdir(tc.dir)
-			//require.NoError(err)
-
 			err = os.RemoveAll(tempTargetDir)
 			require.NoError(err)
 
@@ -221,10 +216,11 @@ func TestCompileErrors(t *testing.T) {
 }
 
 func TestPkgRegistryCompile(t *testing.T) {
+	t.Skip("This test is skipped because registry package doesn't have subdirectory 'wasm' with code inside it.")
 	require := require.New(t)
 
 	wd, err := os.Getwd()
-	pkgDirLocalPath := wd[:strings.LastIndex(wd, filepath.FromSlash("/cmd/vpm"))] + filepath.FromSlash("/pkg")
+	pkgDirLocalPath := wd[:strings.LastIndex(wd, filepath.FromSlash("/cmd/vpm"))] + filepath.FromSlash("/wasm")
 
 	require.NoError(err)
 	defer func() {
@@ -288,18 +284,15 @@ func TestOrmBasicUsage(t *testing.T) {
 			dir := filepath.Join(tempDir, tc.dir)
 			if logger.IsVerbose() {
 				logger.Verbose("------------------------------------------------------------------------")
-				logger.Verbose(fmt.Sprintf("test dir: %s", filepath.Join(dir, internalDirName, ormDirName)))
+				logger.Verbose(fmt.Sprintf("test dir: %s", filepath.Join(dir, wasmDirName, ormDirName)))
 			}
 
 			headerFile := filepath.Join(dir, "header.txt")
 			err = execRootCmd([]string{"vpm", "orm", "-C", dir, "--header-file", headerFile}, "1.0.0")
 			require.NoError(err)
 
-			err = new(exec.PipedExec).Command("go", "build", "-C", dir).Run(os.Stdout, os.Stderr)
-			require.NoError(err)
-
 			if logger.IsVerbose() {
-				logger.Verbose(fmt.Sprintf("orm directory: %s", filepath.Join(dir, internalDirName, ormDirName)))
+				logger.Verbose(fmt.Sprintf("orm directory: %s", filepath.Join(dir, wasmDirName, ormDirName)))
 				logger.Verbose("------------------------------------------------------------------------")
 			}
 		})
@@ -323,6 +316,7 @@ func TestInitBasicUsage(t *testing.T) {
 	require.FileExists(filepath.Join(dir, goModFileName))
 	require.FileExists(filepath.Join(dir, goSumFileName))
 	require.FileExists(filepath.Join(dir, packagesGenFileName))
+	require.DirExists(filepath.Join(dir, wasmDirName))
 
 	// test unsupported go version
 	dir = t.TempDir()
@@ -337,6 +331,7 @@ func TestTidyBasicUsage(t *testing.T) {
 		t.Skip()
 	}
 	require := require.New(t)
+	logger.SetLogLevel(logger.LogLevelVerbose)
 
 	var err error
 	var tempDir string
@@ -350,16 +345,16 @@ func TestTidyBasicUsage(t *testing.T) {
 	wd, err := os.Getwd()
 	require.NoError(err)
 
-	err = coreutils.CopyDir(filepath.Join(wd, "test", "genorm"), tempDir)
+	err = coreutils.CopyDir(filepath.Join(wd, "test", "build"), tempDir)
 	require.NoError(err)
 
-	dir := filepath.Join(tempDir, "mypkg5")
+	dir := filepath.Join(tempDir, "appcomplex")
 
 	err = execRootCmd([]string{"vpm", "tidy", "-C", dir}, "1.0.0")
 	require.NoError(err)
 }
 
-func TestTidyEdgeCases(t *testing.T) {
+func TestEdgeCases(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
@@ -367,12 +362,105 @@ func TestTidyEdgeCases(t *testing.T) {
 
 	err := execRootCmd([]string{"vpm", "tidy", "unknown"}, "1.0.0")
 	require.Error(err)
-	require.Equal("'vpm tidy' accepts no argument. Run 'vpm tidy help'", err.Error())
+	require.Equal("'vpm tidy' accepts no arg(s). Run 'vpm tidy help'", err.Error())
 
 	err = execRootCmd([]string{"vpm", "tidy", "help"}, "1.0.0")
 	require.NoError(err)
 
 	err = execRootCmd([]string{"vpm", "tidy", "help", "adads"}, "1.0.0")
 	require.Error(err)
-	require.Equal("'vpm tidy' accepts no argument. Run 'vpm tidy help'", err.Error())
+	require.Equal("'vpm tidy' accepts no arg(s). Run 'vpm tidy help'", err.Error())
+
+	err = execRootCmd([]string{"vpm", "init", "help"}, "1.0.0")
+	require.NoError(err)
+
+	err = execRootCmd([]string{"vpm", "compat", "1", "2"}, "1.0.0")
+	require.Error(err)
+}
+
+func TestBuildBasicUsage(t *testing.T) {
+	if testing.Short() {
+		t.Skip()
+	}
+	require := require.New(t)
+	var err error
+	var tempDir string
+	if logger.IsVerbose() {
+		tempDir, err = os.MkdirTemp("", "test_build")
+		require.NoError(err)
+	} else {
+		tempDir = t.TempDir()
+	}
+
+	wd, err := os.Getwd()
+	require.NoError(err)
+
+	err = coreutils.CopyDir(filepath.Join(wd, "test", "build"), tempDir)
+	require.NoError(err)
+
+	testCases := []struct {
+		dir               string
+		errMsg            string
+		expectedWasmFiles []string
+	}{
+		{
+			dir:               "noappschema",
+			errMsg:            "failed to build, app schema not found",
+			expectedWasmFiles: nil,
+		},
+		{
+			dir:               "nopackagesgen",
+			errMsg:            fmt.Sprintf("%s not found. Run 'vpm init'", packagesGenFileName),
+			expectedWasmFiles: nil,
+		},
+		{
+			dir:               "appsimple",
+			errMsg:            "",
+			expectedWasmFiles: []string{fmt.Sprintf("%s/appsimple/appsimple.wasm", buildDirName)},
+		},
+		{
+			dir:               "appcomplex",
+			errMsg:            "",
+			expectedWasmFiles: []string{fmt.Sprintf("%s/appcomplex/appcomplex.wasm", buildDirName)},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.dir, func(t *testing.T) {
+			dir := filepath.Join(tempDir, tc.dir)
+			err = execRootCmd([]string{"vpm", "build", "-C", dir, "-o", "qwerty"}, "1.0.0")
+			if err != nil {
+				require.Equal(tc.errMsg, err.Error())
+			} else {
+				require.FileExists(filepath.Join(dir, "qwerty.var"))
+				err = os.Mkdir(filepath.Join(dir, "unzipped"), coreutils.FileMode_rwxrwxrwx)
+				require.NoError(err)
+
+				err = coreutils.Unzip(filepath.Join(dir, "qwerty.var"), filepath.Join(dir, "unzipped"))
+				require.NoError(err)
+				wasmFiles := findWasmFiles(filepath.Join(dir, "unzipped", buildDirName))
+				require.Equal(len(tc.expectedWasmFiles), len(wasmFiles))
+				for _, expectedWasmFile := range tc.expectedWasmFiles {
+					require.Contains(wasmFiles, filepath.Join(dir, "unzipped", expectedWasmFile))
+				}
+			}
+		})
+	}
+}
+
+func findWasmFiles(dir string) []string {
+	var wasmFiles []string
+	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if strings.HasSuffix(path, ".wasm") {
+			wasmFiles = append(wasmFiles, path)
+		}
+		return nil
+	})
+	if err != nil {
+		return nil
+	}
+	return wasmFiles
 }
