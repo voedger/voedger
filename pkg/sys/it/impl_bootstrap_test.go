@@ -77,7 +77,7 @@ func TestBoostrap_BasicUsage(t *testing.T) {
 		}()
 		blobStorage := iblobstoragestg.BlobAppStoragePtr(new(istorage.IAppStorage))
 		routerStorage := dbcertcache.RouterAppStoragePtr(new(istorage.IAppStorage))
-		require.PanicsWithValue(fmt.Sprintf("failed to deploy app: status 409: num partitions changed: app %s declaring NumPartitions=43 but was previously deployed with NumPartitions=42", otherApps[0].Name), func() {
+		require.PanicsWithValue(fmt.Sprintf("failed to deploy app %[1]s: status 409: num partitions changed: app %[1]s declaring NumPartitions=43 but was previously deployed with NumPartitions=42", otherApps[0].Name), func() {
 			btstrp.Bootstrap(vit.IFederation, vit.IAppStructsProvider, vit.TimeFunc, appParts, clusterApp, otherApps, vit.ITokens, vit.IAppStorageProvider,
 				blobStorage, routerStorage)
 		})
@@ -92,7 +92,7 @@ func TestBoostrap_BasicUsage(t *testing.T) {
 			otherApps[0].AppDeploymentDescriptor.NumAppWorkspaces--
 		}()
 
-		require.PanicsWithValue(fmt.Sprintf("failed to deploy app: status 409: num application workspaces changed: app %s declaring NumAppWorkspaces=44 but was previously deployed with NumAppWorksaces=43", otherApps[0].Name), func() {
+		require.PanicsWithValue(fmt.Sprintf("failed to deploy app %[1]s: status 409: num application workspaces changed: app %[1]s declaring NumAppWorkspaces=44 but was previously deployed with NumAppWorksaces=43", otherApps[0].Name), func() {
 			blobStorage := iblobstoragestg.BlobAppStoragePtr(new(istorage.IAppStorage))
 			routerStorage := dbcertcache.RouterAppStoragePtr(new(istorage.IAppStorage))
 			btstrp.Bootstrap(vit.IFederation, vit.IAppStructsProvider, vit.TimeFunc, appParts, clusterApp, otherApps, vit.ITokens,

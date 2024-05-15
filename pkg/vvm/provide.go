@@ -99,7 +99,7 @@ func ProvideVVM(vvmCfg *VVMConfig, vvmIdx VVMIdxType) (voedgerVM *VoedgerVM, err
 }
 
 func (vvm *VoedgerVM) Shutdown() {
-	vvm.vvmCtxCancel()
+	vvm.vvmCtxCancel() // VVM services are stopped here
 	vvm.ServicePipeline.Close()
 	vvm.vvmCleanup()
 }

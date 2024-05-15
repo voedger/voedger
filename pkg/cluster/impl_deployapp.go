@@ -61,6 +61,7 @@ func provideExecDeployApp(asp istructs.IAppStructsProvider, timeFunc coreutils.T
 			}
 			numPartitionsDeployed := istructs.NumAppPartitions(appRec.AsInt32(Field_NumPartitions))
 			numAppWorkspacesDeployed := istructs.NumAppWorkspaces(appRec.AsInt32(Field_NumAppWorkspaces))
+
 			// Check application compatibility (409)
 			if numPartitionsDeployed != numAppPartitionsToDeploy {
 				return coreutils.NewHTTPErrorf(http.StatusConflict, fmt.Sprintf("%s: app %s declaring NumPartitions=%d but was previously deployed with NumPartitions=%d", ErrNumPartitionsChanged.Error(),
@@ -70,7 +71,8 @@ func provideExecDeployApp(asp istructs.IAppStructsProvider, timeFunc coreutils.T
 				return coreutils.NewHTTPErrorf(http.StatusConflict, fmt.Sprintf("%s: app %s declaring NumAppWorkspaces=%d but was previously deployed with NumAppWorksaces=%d", ErrNumAppWorkspacesChanged.Error(),
 					appQName, numAppWorkspacesToDeploy, numAppWorkspacesDeployed))
 			}
-			// idempotency
+
+			// idempotency: was deployed already and nothing changed -> do not initiaize app workspaces
 			return nil
 		}
 
@@ -93,16 +95,14 @@ func provideExecDeployApp(asp istructs.IAppStructsProvider, timeFunc coreutils.T
 		// Create storage if not exists
 		// Initialize appstructs data
 		// note: for builtin apps that does nothing because IAppStructs is already initialized (including storage initialization) on VVM wiring
-		if _, err := asp.AppStructs(appQName); err != nil {
+		// note: it is good that it is done here, not before return if nothing changed because we're want to initialize (i.e. create) keyspace here - that must be done once
+		as, err := asp.AppStructs(appQName)
+		if err != nil {
+			// notest
 			return fmt.Errorf("failed to get IAppStructs for %s", appQName)
 		}
 
 		// Initialize app workspaces
-		as, err := asp.AppStructs(appQName)
-		if err != nil {
-			// notest
-			return err
-		}
 		if _, err = InitAppWSes(as, numAppWorkspacesToDeploy, numAppPartitionsToDeploy, istructs.UnixMilli(timeFunc().UnixMilli())); err != nil {
 			// notest
 			return fmt.Errorf("failed to deploy %s: %w", appQName, err)

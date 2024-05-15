@@ -24,6 +24,7 @@ import (
 func Bootstrap(federation federation.IFederation, asp istructs.IAppStructsProvider, timeFunc coreutils.TimeFunc, appparts appparts.IAppPartitions,
 	clusterApp ClusterBuiltInApp, otherApps []appparts.BuiltInApp, itokens itokens.ITokens, storageProvider istorage.IAppStorageProvider,
 	blobberAppStoragePtr iblobstoragestg.BlobAppStoragePtr, routerAppStoragePtr dbcertcache.RouterAppStoragePtr) (err error) {
+
 	// initialize cluster app workspace, use app ws amount 0
 	if err := initClusterAppWS(asp, timeFunc); err != nil {
 		return err
@@ -55,10 +56,12 @@ func Bootstrap(federation federation.IFederation, asp istructs.IAppStructsProvid
 		_, err := federation.AdminFunc(fmt.Sprintf("api/%s/%d/c.cluster.DeployApp", istructs.AppQName_sys_cluster, clusterapp.ClusterAppPseudoWSID), body,
 			coreutils.WithDiscardResponse(),
 			coreutils.WithAuthorizeBy(sysToken),
+
+			// here we expecting that the network could be not available on the VVM launch (e.g. balancer thinks the node is not up yet)
 			coreutils.WithRetryOnAnyError(retryOnHTTPErrorTimeout, retryOnHTTPErrorDelay),
 		)
 		if err != nil {
-			panic(fmt.Sprintf("failed to deploy app: %s", err.Error()))
+			panic(fmt.Sprintf("failed to deploy app %s: %s", app.Name, err.Error()))
 		}
 	}
 
