@@ -18,6 +18,8 @@ import (
 func mockedStructs2(t *testing.T, addWsDescriptor bool) (*mockAppStructs, *mockViewRecords) {
 	appDef := appdef.New()
 
+	appDef.AddPackage("test", "test.com/test")
+
 	view := appDef.AddView(testViewRecordQName1)
 	view.Key().PartKey().AddField("pkk", appdef.DataKind_int64)
 	view.Key().ClustCols().AddField("cck", appdef.DataKind_string)
@@ -233,6 +235,25 @@ func TestViewRecordsStorage_ValidateInWorkspaces(t *testing.T) {
 		app := s.App()
 		require.NotNil(app)
 		require.Equal(testAppQName, app)
+	})
+
+	t.Run("State should supports istructs.IWithAppStructs interface", func(t *testing.T) {
+		t.Run("SetAppStructsGetter() should assign and AppStructs() should return value", func(t *testing.T) {
+			s.SetAppStructsGetter(appStructsFunc(nil))
+			require.Nil(s.AppStructs())
+
+			s.SetAppStructsGetter(appStructsFunc(mockedStructs))
+			require.Equal(mockedStructs, s.AppStructs())
+		})
+	})
+
+	t.Run("State should supports istructs.IPkgNameResolver interface", func(t *testing.T) {
+		const (
+			pkgName = "test"
+			pkgPath = "test.com/test"
+		)
+		require.Equal(pkgName, s.PackageLocalName(pkgPath))
+		require.Equal(pkgPath, s.PackageFullPath(pkgName))
 	})
 
 	t.Run("NewValue should validate for unavailable views", func(t *testing.T) {

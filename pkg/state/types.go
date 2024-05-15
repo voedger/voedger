@@ -26,7 +26,7 @@ import (
 type PartitionIDFunc func() istructs.PartitionID
 type WSIDFunc func() istructs.WSID
 type N10nFunc func(view appdef.QName, wsid istructs.WSID, offset istructs.Offset)
-type AppStructsFunc func() istructs.IAppStructs
+type AppStructsFunc = istructs.AppStructsFunc
 type CUDFunc func() istructs.ICUD
 type ObjectBuilderFunc func() istructs.IObjectBuilder
 type PrincipalsFunc func() []iauthnz.Principal

@@ -57,6 +57,7 @@ type IState interface {
 
 type IHostState interface {
 	IState
+	istructs.IWithAppStructs
 
 	// ValidateIntents validates intents
 	ValidateIntents() (err error)
@@ -70,6 +71,7 @@ type IHostState interface {
 // Further Read- and *Exist operations see these changes.
 type IBundledHostState interface {
 	IState
+	istructs.IWithAppStructs
 
 	// ApplyIntents validates and stores intents to bundles
 	ApplyIntents() (readyToFlushBundle bool, err error)

@@ -26,14 +26,6 @@ type hostState struct {
 	intentsLimit   int
 }
 
-func (s *hostState) PLogEvent() istructs.IPLogEvent {
-	panic("PLogEvent only available in actualizers")
-}
-
-func (s *hostState) App() istructs.AppQName {
-	return s.appStructsFunc().AppQName()
-}
-
 func newHostState(name string, intentsLimit int, appStructsFunc AppStructsFunc) *hostState {
 	return &hostState{
 		name:           name,
@@ -54,12 +46,28 @@ func supports(ops int, op int) bool {
 	return ops&op == op
 }
 
-func (s *hostState) PackageFullPath(localName string) string {
-	return s.appStructsFunc().AppDef().PackageFullPath(localName)
+func (s hostState) App() istructs.AppQName {
+	return s.AppStructs().AppQName()
 }
 
-func (s *hostState) PackageLocalName(fullPath string) string {
-	return s.appStructsFunc().AppDef().PackageLocalName(fullPath)
+func (s hostState) AppStructs() istructs.IAppStructs {
+	return s.appStructsFunc()
+}
+
+func (s hostState) PackageFullPath(localName string) string {
+	return s.AppStructs().AppDef().PackageFullPath(localName)
+}
+
+func (s hostState) PackageLocalName(fullPath string) string {
+	return s.AppStructs().AppDef().PackageLocalName(fullPath)
+}
+
+func (s hostState) PLogEvent() istructs.IPLogEvent {
+	panic("PLogEvent only available in actualizers")
+}
+
+func (s *hostState) SetAppStructsGetter(getter AppStructsFunc) {
+	s.appStructsFunc = getter
 }
 
 func (s *hostState) addStorage(storageName appdef.QName, storage IStateStorage, ops int) {
