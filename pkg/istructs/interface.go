@@ -73,8 +73,6 @@ type IAppStructs interface {
 	AppTokens() IAppTokens
 }
 
-type AppStructsFunc func() IAppStructs
-
 type IEvents interface {
 	GetSyncRawEventBuilder(params SyncRawEventBuilderParams) IRawEventBuilder
 	GetNewRawEventBuilder(params NewRawEventBuilderParams) IRawEventBuilder

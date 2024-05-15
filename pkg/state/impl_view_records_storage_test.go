@@ -237,16 +237,6 @@ func TestViewRecordsStorage_ValidateInWorkspaces(t *testing.T) {
 		require.Equal(testAppQName, app)
 	})
 
-	t.Run("State should supports istructs.IWithAppStructs interface", func(t *testing.T) {
-		t.Run("SetAppStructsGetter() should assign and AppStructs() should return value", func(t *testing.T) {
-			s.SetAppStructsGetter(appStructsFunc(nil))
-			require.Nil(s.AppStructs())
-
-			s.SetAppStructsGetter(appStructsFunc(mockedStructs))
-			require.Equal(mockedStructs, s.AppStructs())
-		})
-	})
-
 	t.Run("State should supports istructs.IPkgNameResolver interface", func(t *testing.T) {
 		const (
 			pkgName = "test"

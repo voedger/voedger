@@ -96,10 +96,7 @@ type IState interface {
 
 	App() AppQName
 }
-type IWithAppStructs interface {
-	AppStructs() IAppStructs
-	SetAppStructsGetter(AppStructsFunc)
-}
+
 type IIntents interface {
 	// NewValue returns a new value builder for given get
 	// If a value with the same get already exists in storage, it will be replaced
