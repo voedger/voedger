@@ -55,7 +55,6 @@ type asyncActualizer struct {
 	conf         AsyncActualizerConf
 	projector    istructs.Projector
 	pipeline     pipeline.IAsyncPipeline
-	structs      istructs.IAppStructs
 	offset       istructs.Offset
 	name         string
 	readCtx      *asyncActualizerContextState
@@ -140,12 +139,15 @@ func (a *asyncActualizer) waitForAppDeploy(ctx context.Context) error {
 func (a *asyncActualizer) init(ctx context.Context) (err error) {
 	a.plogBatch = make(plogBatch, 0, plogReadBatchSize)
 
-	a.structs = a.conf.AppStructs() // TODO: must be borrowed and finally released
 	a.readCtx = &asyncActualizerContextState{}
 
 	a.readCtx.ctx, a.readCtx.cancel = context.WithCancel(ctx)
 
-	prjType := a.structs.AppDef().Projector(a.projector.Name)
+	appDef, err := a.conf.AppPartitions.AppDef(a.conf.AppQName)
+	if err != nil {
+		return err
+	}
+	prjType := appDef.Projector(a.projector.Name)
 	if prjType == nil {
 		return fmt.Errorf("async projector %s is not defined in AppDef", a.projector.Name)
 	}
@@ -188,7 +190,7 @@ func (a *asyncActualizer) init(ctx context.Context) (err error) {
 
 	p.state = state.ProvideAsyncActualizerStateFactory()(
 		ctx,
-		func() istructs.IAppStructs { return a.structs },
+		p.borrowedAppStructs,
 		state.SimplePartitionIDFunc(a.conf.Partition),
 		p.WSIDProvider,
 		func(view appdef.QName, wsid istructs.WSID, offset istructs.Offset) {
@@ -361,9 +363,16 @@ func (a *asyncActualizer) readPlogToOffset(ctx context.Context, tillOffset istru
 	})
 }
 
-func (a *asyncActualizer) readOffset(projectorName appdef.QName) (err error) {
-	a.offset, err = ActualizerOffset(a.structs, a.conf.Partition, projectorName)
-	return
+func (a *asyncActualizer) readOffset(projectorName appdef.QName) error {
+	ap, err := a.borrowAppPart(a.readCtx.ctx)
+	if err != nil {
+		return err
+	}
+
+	defer ap.Release()
+
+	a.offset, err = ActualizerOffset(ap.AppStructs(), a.conf.Partition, projectorName)
+	return err
 }
 
 type asyncProjector struct {
@@ -385,9 +394,10 @@ type asyncProjector struct {
 	iProjector            appdef.IProjector
 	nonBuffered           bool
 	appParts              appparts.IAppPartitions
+	borrowedPartition     appparts.IAppPartition
 }
 
-func (p *asyncProjector) DoAsync(ctx context.Context, work pipeline.IWorkpiece) (outWork pipeline.IWorkpiece, err error) {
+func (p *asyncProjector) DoAsync(ctx context.Context, work pipeline.IWorkpiece) (pipeline.IWorkpiece, error) {
 	defer work.Release()
 	w := work.(*workpiece)
 
@@ -397,45 +407,77 @@ func (p *asyncProjector) DoAsync(ctx context.Context, work pipeline.IWorkpiece) 
 		p.aametrics.Set(aaCurrentOffset, p.partition, p.projector.Name, float64(w.pLogOffset))
 	}
 
-	triggeringQNames := p.iProjector.Events().Map()
-	if isAcceptable(w.event, p.iProjector.WantErrors(), triggeringQNames, p.iProjector.App()) {
-		ap, err := p.borrowAppPart(ctx)
-		if err != nil {
-			return nil, fmt.Errorf("wsid[%d] offset[%d]: %w", w.event.Workspace(), w.event.WLogOffset(), err)
-		}
+	if !isAcceptable(w.event, p.iProjector.WantErrors(), p.iProjector.Events().Map(), p.iProjector.App()) {
+		return nil, nil
+	}
 
-		err = ap.Invoke(ctx, p.projector.Name, p.state, p.state)
-		//err = p.projector.Func(w.event, p.state, p.state)
+	wrapErr := func(err error) error {
+		return fmt.Errorf("wsid[%d] offset[%d]: %w", w.event.Workspace(), w.event.WLogOffset(), err)
+	}
 
-		ap.Release()
+	if err := p.borrowAppPart(ctx); err != nil {
+		return nil, wrapErr(err)
+	}
 
-		if err != nil {
-			return nil, fmt.Errorf("wsid[%d] offset[%d]: %w", w.event.Workspace(), w.event.WLogOffset(), err)
-		}
-		if logger.IsVerbose() {
-			logger.Verbose(fmt.Sprintf("%s: handled %d", p.projector.Name, p.pLogOffset))
-		}
+	defer p.releaseAppPart()
 
-		p.acceptedSinceSave = true
+	//err = p.projector.Func(w.event, p.state, p.state)
 
-		readyToFlushBundle, err := p.state.ApplyIntents()
-		if err != nil {
-			return nil, err
-		}
+	if err := p.borrowedPartition.Invoke(ctx, p.projector.Name, p.state, p.state); err != nil {
+		return nil, wrapErr(err)
+	}
+	if logger.IsVerbose() {
+		logger.Verbose(fmt.Sprintf("%s: handled %d", p.projector.Name, p.pLogOffset))
+	}
 
-		if readyToFlushBundle || p.nonBuffered {
-			return nil, p.flush()
+	p.acceptedSinceSave = true
+
+	readyToFlushBundle, err := p.state.ApplyIntents()
+	if err != nil {
+		return nil, wrapErr(err)
+	}
+
+	if readyToFlushBundle || p.nonBuffered {
+		if err := p.flush(); err != nil {
+			return nil, wrapErr(err)
 		}
 	}
 
-	return nil, err
+	return nil, nil
 }
-func (p *asyncProjector) Flush(_ pipeline.OpFuncFlush) (err error) { return p.flush() }
-func (p *asyncProjector) WSIDProvider() istructs.WSID              { return p.event.Workspace() }
-func (p *asyncProjector) EventProvider() istructs.IPLogEvent       { return p.event }
 
-func (p *asyncProjector) borrowAppPart(ctx context.Context) (ap appparts.IAppPartition, err error) {
-	return p.appParts.WaitForBorrow(ctx, p.appQName, p.partition, appparts.ProcessorKind_Actualizer)
+func (p *asyncProjector) Flush(pipeline.OpFuncFlush) error {
+	if err := p.borrowAppPart(context.Background()); err != nil {
+		return err
+	}
+
+	defer p.releaseAppPart()
+
+	return p.flush()
+}
+
+func (p *asyncProjector) WSIDProvider() istructs.WSID        { return p.event.Workspace() }
+func (p *asyncProjector) EventProvider() istructs.IPLogEvent { return p.event }
+
+func (p *asyncProjector) borrowAppPart(ctx context.Context) (err error) {
+	if p.borrowedPartition, err = p.appParts.WaitForBorrow(ctx, p.appQName, p.partition, appparts.ProcessorKind_Actualizer); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (p *asyncProjector) borrowedAppStructs() istructs.IAppStructs {
+	if ap := p.borrowedPartition; ap != nil {
+		return p.borrowedPartition.AppStructs()
+	}
+	panic("unexpected call borrowedAppStructs() after release borrowed partition")
+}
+
+func (p *asyncProjector) releaseAppPart() {
+	if ap := p.borrowedPartition; ap != nil {
+		p.borrowedPartition = nil
+		ap.Release()
+	}
 }
 
 func (p *asyncProjector) savePosition() error {
