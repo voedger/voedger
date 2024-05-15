@@ -474,7 +474,7 @@ func parseWSTemplateBLOBs(fsEntries []fs.DirEntry, blobIDs map[int64]map[string]
 				return nil, fmt.Errorf("failed to read blob %s content: %w", ent.Name(), err)
 			}
 			blobs = append(blobs, blobber.StoredBLOB{
-				BLOB: blobber.BLOB{
+				BLOB: coreutils.BLOB{
 					FieldName: fieldName,
 					Content:   blobContent,
 					Name:      ent.Name(),
