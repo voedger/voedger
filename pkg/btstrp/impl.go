@@ -21,7 +21,6 @@ import (
 	dbcertcache "github.com/voedger/voedger/pkg/vvm/db_cert_cache"
 )
 
-// is a SyncOp within VVM trunk
 func Bootstrap(federation federation.IFederation, asp istructs.IAppStructsProvider, timeFunc coreutils.TimeFunc, appparts appparts.IAppPartitions,
 	clusterApp ClusterBuiltInApp, otherApps []appparts.BuiltInApp, itokens itokens.ITokens, storageProvider istorage.IAppStorageProvider,
 	blobberAppStoragePtr iblobstoragestg.BlobAppStoragePtr, routerAppStoragePtr dbcertcache.RouterAppStoragePtr) (err error) {
@@ -62,8 +61,6 @@ func Bootstrap(federation federation.IFederation, asp istructs.IAppStructsProvid
 			panic(fmt.Sprintf("failed to deploy app: %s", err.Error()))
 		}
 	}
-
-	тут вызывать IAppStorageProvider.AppStorage в холостую, а то и IAppStructsProvider.AppStructs
 
 	// For each app builtInApps: deploy a builtin app
 	for _, app := range otherApps {

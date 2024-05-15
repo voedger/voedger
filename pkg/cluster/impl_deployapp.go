@@ -90,6 +90,13 @@ func provideExecDeployApp(asp istructs.IAppStructsProvider, timeFunc coreutils.T
 		vb.PutInt32(Field_NumAppWorkspaces, int32(numAppWorkspacesToDeploy))
 		vb.PutInt32(Field_NumPartitions, int32(numAppPartitionsToDeploy))
 
+		// Create storage if not exists
+		// Initialize appstructs data
+		// note: for builtin apps that does nothing because IAppStructs is already initialized (including storage initialization) on VVM wiring
+		if _, err := asp.AppStructs(appQName); err != nil {
+			return fmt.Errorf("failed to get IAppStructs for %s", appQName)
+		}
+
 		// Initialize app workspaces
 		as, err := asp.AppStructs(appQName)
 		if err != nil {
