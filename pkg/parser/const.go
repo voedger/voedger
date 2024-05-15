@@ -30,6 +30,8 @@ const ExportedPkgFolder = "pkg"
 
 const maxNestedTableContainerOccurrences = 100 // FIXME: 100 container occurrences
 const parserLookahead = 10
+const VSqlExt = ".vsql"
+const SqlExt = ".sql"
 
 var canNotReferenceTo = map[appdef.TypeKind][]appdef.TypeKind{
 	appdef.TypeKind_ODoc:       {},

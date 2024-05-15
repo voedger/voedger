@@ -216,6 +216,9 @@ func Test_AppDef_GrantAndRevokeErrors(t *testing.T) {
 		wsName := NewQName("test", "ws")
 		docName := NewQName("test", "doc")
 
+		cmdName := NewQName("test", "cmd")
+		_ = adb.AddCommand(cmdName)
+
 		readerRoleName := NewQName("test", "readerRole")
 
 		_ = adb.AddWorkspace(wsName)
@@ -277,5 +280,75 @@ func Test_AppDef_GrantAndRevokeErrors(t *testing.T) {
 				adb.Grant([]PrivilegeKind{PrivilegeKind_Execute}, []QName{docName}, nil, readerRoleName)
 			}, "should be panic if privileges kinds are incompatible with objects")
 		})
+
+		t.Run("should be panic if privileges on invalid fields", func(t *testing.T) {
+			require.Panics(func() {
+				adb.Grant([]PrivilegeKind{PrivilegeKind_Execute}, []QName{cmdName}, []FieldName{"field1"}, readerRoleName)
+			}, "should be panic if use fields is not applicable for privilege")
+			require.Panics(func() {
+				adb.Grant([]PrivilegeKind{PrivilegeKind_Select}, []QName{docName}, []FieldName{"unknown"}, readerRoleName)
+			}, "should be panic if unknown field is used")
+		})
+	})
+}
+
+func Test_AppDef_GrantWithFields(t *testing.T) {
+	require := require.New(t)
+
+	var app IAppDef
+
+	docName := NewQName("test", "doc")
+
+	readerRoleName := NewQName("test", "readerRole")
+
+	t.Run("should be ok to build application with roles and privileges", func(t *testing.T) {
+		adb := New()
+		adb.AddPackage("test", "test.com/test")
+
+		doc := adb.AddCDoc(docName)
+		doc.AddField("field1", DataKind_int32, true)
+
+		_ = adb.AddRole(readerRoleName)
+		adb.Grant([]PrivilegeKind{PrivilegeKind_Select}, []QName{docName}, nil, readerRoleName, "grant select any field from doc to reader")
+		adb.Grant([]PrivilegeKind{PrivilegeKind_Select}, []QName{QNameAnyStructure}, []FieldName{"field1"}, readerRoleName, "grant select field1 from any to reader")
+
+		var err error
+		app, err = adb.Build()
+		require.NoError(err)
+		require.NotNil(app)
+	})
+
+	t.Run("should be ok to check roles and privileges", func(t *testing.T) {
+
+		checkPrivilege := func(p IPrivilege, granted bool, kinds []PrivilegeKind, on []QName, fields []FieldName, to QName) {
+			require.NotNil(p)
+			require.Equal(granted, p.IsGranted())
+			require.Equal(!granted, p.IsRevoked())
+			require.Equal(kinds, p.Kinds())
+			require.EqualValues(on, p.On())
+			require.Equal(fields, p.Fields())
+			require.Equal(to, p.To().QName())
+		}
+
+		cnt := 0
+		app.Privileges(func(p IPrivilege) {
+			cnt++
+			switch cnt {
+			case 1:
+				checkPrivilege(p, true,
+					[]PrivilegeKind{PrivilegeKind_Select},
+					[]QName{docName}, nil,
+					readerRoleName)
+			case 2:
+				checkPrivilege(p, true,
+					[]PrivilegeKind{PrivilegeKind_Select},
+					[]QName{QNameAnyStructure}, []FieldName{"field1"},
+					readerRoleName)
+			default:
+				require.Fail("unexpected privilege", "privilege: %v", p)
+			}
+		})
+
+		require.Equal(2, cnt)
 	})
 }

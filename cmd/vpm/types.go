@@ -11,6 +11,7 @@ type vpmParams struct {
 	IgnoreFile  string
 	HeaderFile  string
 	PackagePath string
+	Output     string
 }
 
 // packageFiles is a map of package name to a list of files that belong to the package
