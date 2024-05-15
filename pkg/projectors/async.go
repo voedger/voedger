@@ -55,7 +55,6 @@ type asyncActualizer struct {
 	conf         AsyncActualizerConf
 	projector    istructs.Projector
 	pipeline     pipeline.IAsyncPipeline
-	structs      istructs.IAppStructs
 	offset       istructs.Offset
 	name         string
 	readCtx      *asyncActualizerContextState
@@ -140,12 +139,15 @@ func (a *asyncActualizer) waitForAppDeploy(ctx context.Context) error {
 func (a *asyncActualizer) init(ctx context.Context) (err error) {
 	a.plogBatch = make(plogBatch, 0, plogReadBatchSize)
 
-	a.structs = a.conf.AppStructs() // TODO: must be borrowed and finally released
 	a.readCtx = &asyncActualizerContextState{}
 
 	a.readCtx.ctx, a.readCtx.cancel = context.WithCancel(ctx)
 
-	prjType := a.structs.AppDef().Projector(a.projector.Name)
+	appDef, err := a.conf.AppPartitions.AppDef(a.conf.AppQName)
+	if err != nil {
+		return err
+	}
+	prjType := appDef.Projector(a.projector.Name)
 	if prjType == nil {
 		return fmt.Errorf("async projector %s is not defined in AppDef", a.projector.Name)
 	}
@@ -361,9 +363,16 @@ func (a *asyncActualizer) readPlogToOffset(ctx context.Context, tillOffset istru
 	})
 }
 
-func (a *asyncActualizer) readOffset(projectorName appdef.QName) (err error) {
-	a.offset, err = ActualizerOffset(a.structs, a.conf.Partition, projectorName)
-	return
+func (a *asyncActualizer) readOffset(projectorName appdef.QName) error {
+	ap, err := a.borrowAppPart(a.readCtx.ctx)
+	if err != nil {
+		return err
+	}
+
+	defer ap.Release()
+
+	a.offset, err = ActualizerOffset(ap.AppStructs(), a.conf.Partition, projectorName)
+	return err
 }
 
 type asyncProjector struct {
