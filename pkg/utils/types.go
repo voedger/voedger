@@ -97,3 +97,11 @@ type IReadFS interface {
 	fs.ReadDirFS
 	fs.ReadFileFS
 }
+
+// moved here to avoid import cycle: state -> federation (for cmd storage) -> blobber (IFederation.UploadBLOBs([]blobber.BLOB)) -> state
+type BLOB struct {
+	FieldName string
+	Content   []byte
+	Name      string
+	MimeType  string
+}
