@@ -328,7 +328,7 @@ func TestFailedToWriteResponse(t *testing.T) {
 	}
 
 	// server waits for us to send the next section
-	// let's set a hook that will close the connection right before sending a response
+	// let's set a hook that will close the connection right before sending a next section
 	disconnectClientFromServer = func(requestCtx context.Context) {
 		resp.Body.Close()
 
@@ -336,16 +336,6 @@ func TestFailedToWriteResponse(t *testing.T) {
 		for requestCtx.Err() == nil {
 		}
 	}
-	// onBeforeWriteResponse = func(w http.ResponseWriter) {
-	// 	// disconnect the client from the server right before send 2nd ObjectSection
-	// 	start := time.Now()
-	// 	resp.Body.Close()
-
-	// 	// requestCtx is not immediately closed after resp.Body.Close(). So let's wait for ctx close
-	// 	for outerRequextCtx.Err() == nil {
-	// 	}
-	// 	logger.Info("ctx closed during", time.Since(start))
-	// }
 
 	// signal to the server to send the next section
 	ch <- struct{}{}
