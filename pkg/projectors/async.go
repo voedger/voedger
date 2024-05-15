@@ -429,7 +429,7 @@ func (p *asyncProjector) DoAsync(ctx context.Context, work pipeline.IWorkpiece) 
 	}
 
 	if readyToFlushBundle || p.nonBuffered {
-		if err := p.flush(); err != nil { //nnv: Inside `p.flush ()` will once again be called `p.state.ApplyIntens()`. It seems suspicious to me. Well, this does not allow to release the borrowed partition before
+		if err := p.flush(); err != nil {
 			return nil, wrapErr(err)
 		}
 	}
