@@ -18,7 +18,6 @@ import (
 func TestCopy_BasicUsage(t *testing.T) {
 	require := require.New(t)
 	tempDirSrc := t.TempDir()
-	tempDirDst := t.TempDir()
 	dir1 := filepath.Join(tempDirSrc, "dir1")
 	dir2 := filepath.Join(tempDirSrc, "dir2")
 	dir1dir3 := filepath.Join(dir1, "dir3")
@@ -35,25 +34,68 @@ func TestCopy_BasicUsage(t *testing.T) {
 	require.NoError(os.WriteFile(file2, []byte("file2 content"), FileMode_rw_rw_rw_))
 	require.NoError(os.WriteFile(file3, []byte("file3 content"), FileMode_rw_rw_rw_))
 
-	require.NoError(CopyDir(tempDirSrc, tempDirDst))
-	file0 = strings.ReplaceAll(file0, tempDirSrc, tempDirDst)
-	file1 = strings.ReplaceAll(file1, tempDirSrc, tempDirDst)
-	file2 = strings.ReplaceAll(file2, tempDirSrc, tempDirDst)
-	file3 = strings.ReplaceAll(file3, tempDirSrc, tempDirDst)
+	t.Run("CopyDir", func(t *testing.T) {
+		tempDirDst := t.TempDir()
 
-	file0ActualContent, err := os.ReadFile(file0)
-	require.NoError(err)
-	file1ActualContent, err := os.ReadFile(file1)
-	require.NoError(err)
-	file2ActualContent, err := os.ReadFile(file2)
-	require.NoError(err)
-	file3ActualContent, err := os.ReadFile(file3)
-	require.NoError(err)
+		require.NoError(CopyDir(tempDirSrc, tempDirDst))
 
-	require.Equal("file0 content", string(file0ActualContent))
-	require.Equal("file1 content", string(file1ActualContent))
-	require.Equal("file2 content", string(file2ActualContent))
-	require.Equal("file3 content", string(file3ActualContent))
+		file0Dst := strings.ReplaceAll(file0, tempDirSrc, tempDirDst)
+		file1Dst := strings.ReplaceAll(file1, tempDirSrc, tempDirDst)
+		file2Dst := strings.ReplaceAll(file2, tempDirSrc, tempDirDst)
+		file3Dst := strings.ReplaceAll(file3, tempDirSrc, tempDirDst)
+
+		file0ActualContent, err := os.ReadFile(file0Dst)
+		require.NoError(err)
+		file1ActualContent, err := os.ReadFile(file1Dst)
+		require.NoError(err)
+		file2ActualContent, err := os.ReadFile(file2Dst)
+		require.NoError(err)
+		file3ActualContent, err := os.ReadFile(file3Dst)
+		require.NoError(err)
+
+		require.Equal("file0 content", string(file0ActualContent))
+		require.Equal("file1 content", string(file1ActualContent))
+		require.Equal("file2 content", string(file2ActualContent))
+		require.Equal("file3 content", string(file3ActualContent))
+	})
+
+	t.Run("CopyFile", func(t *testing.T) {
+		tempDirDst := t.TempDir()
+		require.NoError(CopyFile(file1, tempDirDst))
+		file1Dst := filepath.Join(tempDirDst, filepath.Base(file1))
+		file1ActualContent, err := os.ReadFile(file1Dst)
+		require.NoError(err)
+		require.Equal("file1 content", string(file1ActualContent))
+	})
+
+	t.Run("CopyFile to unexisting dir -> create target dir", func(t *testing.T) {
+		tempDirDst := t.TempDir()
+		require.NoError(os.RemoveAll(tempDirDst))
+		require.NoError(CopyFile(file1, tempDirDst))
+		file1Dst := filepath.Join(tempDirDst, filepath.Base(file1))
+		file1ActualContent, err := os.ReadFile(file1Dst)
+		require.NoError(err)
+		require.Equal("file1 content", string(file1ActualContent))
+	})
+
+	t.Run("CopyFile src file without path", func(t *testing.T) {
+		tempDirDst := t.TempDir()
+		initialWD, err := os.Getwd()
+		require.NoError(err)
+		file1SrcPath, file1SrcName := filepath.Split(file1)
+		require.NoError(os.Chdir(file1SrcPath))
+		defer func() {
+			require.NoError(os.Chdir(initialWD))
+		}()
+
+		require.NoError(CopyFile(file1SrcName, tempDirDst))
+		file1Dst := filepath.Join(tempDirDst, file1SrcName)
+		file1ActualContent, err := os.ReadFile(file1Dst)
+		require.NoError(err)
+		require.Equal("file1 content", string(file1ActualContent))
+	})
+
+	//TODO: test copy to the dir that is not exists yet, test specifying the src file without path
 }
 
 func TestCopyErrors(t *testing.T) {
