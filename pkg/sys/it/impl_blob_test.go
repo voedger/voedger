@@ -13,7 +13,6 @@ import (
 
 	"github.com/voedger/voedger/pkg/istructs"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
-	"github.com/voedger/voedger/pkg/sys/blobber"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 	it "github.com/voedger/voedger/pkg/vit"
 )
@@ -148,7 +147,7 @@ func TestBlobMultipartUpload(t *testing.T) {
 
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
 
-	blobs := []blobber.BLOB{
+	blobs := []coreutils.BLOB{
 		{
 			Content: []byte{1, 2, 3, 4, 5},
 			Name:    "blob1",

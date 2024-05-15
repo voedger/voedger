@@ -5,16 +5,12 @@
 
 package blobber
 
-import "github.com/voedger/voedger/pkg/istructs"
-
-type BLOB struct {
-	FieldName string
-	Content   []byte
-	Name      string
-	MimeType  string
-}
+import (
+	"github.com/voedger/voedger/pkg/istructs"
+	coreutils "github.com/voedger/voedger/pkg/utils"
+)
 
 type StoredBLOB struct {
-	BLOB
+	coreutils.BLOB
 	RecordID istructs.RecordID
 }

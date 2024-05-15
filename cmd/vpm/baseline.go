@@ -16,6 +16,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/voedger/voedger/pkg/goutils/exec"
 	"github.com/voedger/voedger/pkg/goutils/logger"
+	"github.com/voedger/voedger/pkg/parser"
 
 	"github.com/voedger/voedger/pkg/compile"
 	coreutils "github.com/voedger/voedger/pkg/utils"
@@ -54,7 +55,9 @@ func baseline(compileRes *compile.Result, dir, targetDir string) error {
 	return nil
 }
 
-func saveBaselineInfo(compileRes *compile.Result, dir, baselineDir string) error {
+// saveBaselineInfo saves baseline info into target dir
+// baseline info includes baseline package url, timestamp and git commit hash
+func saveBaselineInfo(compileRes *compile.Result, dir, targetDir string) error {
 	var gitCommitHash string
 	sb := new(strings.Builder)
 	if err := new(exec.PipedExec).Command("git", "rev-parse", "HEAD").WorkingDir(dir).Run(sb, os.Stderr); err == nil {
@@ -72,7 +75,7 @@ func saveBaselineInfo(compileRes *compile.Result, dir, baselineDir string) error
 		return err
 	}
 
-	baselineInfoFilePath := filepath.Join(baselineDir, baselineInfoFileName)
+	baselineInfoFilePath := filepath.Join(targetDir, baselineInfoFileName)
 	if err := os.WriteFile(baselineInfoFilePath, content, coreutils.FileMode_rw_rw_rw_); err != nil {
 		return err
 	}
@@ -91,17 +94,12 @@ func saveBaselineSchemas(pkgFiles packageFiles, baselineDir string) error {
 		for _, file := range files {
 			base := filepath.Base(file)
 			fileNameExtensionless := base[:len(base)-len(filepath.Ext(base))]
-			filePath := filepath.Join(packageDir, fileNameExtensionless+".vsql")
-
-			fileContent, err := os.ReadFile(file)
-			if err != nil {
-				return err
-			}
-			if err := os.WriteFile(filePath, fileContent, coreutils.FileMode_rw_rw_rw_); err != nil {
-				return err
+			if err := coreutils.CopyFile(file, packageDir, coreutils.WithNewName(fileNameExtensionless+parser.VSqlExt)); err != nil {
+				return fmt.Errorf(errFmtCopyFile, file, err)
 			}
 			if logger.IsVerbose() {
-				logger.Verbose("create baseline file: %s", filePath)
+				filePath := filepath.Join(packageDir, fileNameExtensionless+parser.VSqlExt)
+				logger.Verbose("baseline file created: %s", filePath)
 			}
 		}
 	}

@@ -3,6 +3,10 @@
 
 IMPORT SCHEMA 'github.com/untillpro/airs-scheme/bp3' AS untill;
 
+APPLICATION app(
+    USE untill;
+);
+
 WORKSPACE RestaurantWS (
 
 	TABLE ProformaPrinted INHERITS ODoc (
@@ -20,6 +24,8 @@ WORKSPACE RestaurantWS (
 		PRIMARY KEY ((Year), DayOfYear)
 	) AS RESULT OF FillPbillDates;
 
-	COMMAND Orders(untill.orders);
-	COMMAND Pbill(untill.pbill) RETURNS CmdPBillResult;
+	EXTENSION ENGINE BUILTIN (
+	    COMMAND Orders(untill.orders);
+	    COMMAND Pbill(untill.pbill) RETURNS CmdPBillResult;
+	);
 )
