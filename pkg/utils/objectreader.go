@@ -9,11 +9,18 @@ import (
 	"fmt"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
 // panics on an unsupported kind guessing that pair <name, kind> could be taken from IDef.Fields() callback only
 func ReadByKind(name appdef.FieldName, kind appdef.DataKind, rr istructs.IRowReader) interface{} {
+	defer func() {
+		if r := recover(); r != nil {
+			logger.Error(fmt.Sprintf("ReadByKind() failed: name %s, kind %s, source QName %s: %v", name, kind.String(), rr.AsQName(appdef.SystemField_QName), r))
+			panic(r)
+		}
+	}()
 	switch kind {
 	case appdef.DataKind_int32:
 		return rr.AsInt32(name)

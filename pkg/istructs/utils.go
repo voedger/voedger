@@ -10,6 +10,7 @@ package istructs
 import (
 	"encoding/json"
 	"strconv"
+	"time"
 
 	"github.com/voedger/voedger/pkg/appdef"
 )
@@ -197,4 +198,8 @@ func (k RateLimitKind) MarshalText() ([]byte, error) {
 		s = strconv.FormatUint(uint64(k), base)
 	}
 	return []byte(s), nil
+}
+
+func (um UnixMilli) String() string {
+	return time.Unix(0, int64(um)*int64(time.Millisecond)).Format("2006-01-02 15:04:05 MST")
 }
