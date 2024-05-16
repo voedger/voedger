@@ -69,8 +69,11 @@ func verbose() bool {
 	if dryRun {
 		return true
 	}
-	b, err := rootCmd.Flags().GetBool("verbose")
-	return err == nil && b
+	if rootCmd != nil {
+		b, err := rootCmd.Flags().GetBool("verbose")
+		return err == nil && b
+	}
+	return false
 }
 
 func (se *scriptExecuterType) run(scriptName string, args ...string) error {
