@@ -468,9 +468,9 @@ func (p *asyncProjector) borrowAppPart(ctx context.Context) (err error) {
 
 func (p *asyncProjector) borrowedAppStructs() istructs.IAppStructs {
 	if ap := p.borrowedPartition; ap != nil {
-		return p.borrowedPartition.AppStructs()
+		return ap.AppStructs()
 	}
-	panic("unexpected call borrowedAppStructs() after release borrowed partition")
+	panic(errNoBorrowedPartition)
 }
 
 func (p *asyncProjector) releaseAppPart() {
