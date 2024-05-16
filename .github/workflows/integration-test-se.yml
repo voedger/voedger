@@ -13,7 +13,7 @@
 #    -  and any other sensitive information.
 # To use the secrets in your GitHub Actions workflow, you can reference them using the syntax ${{ secrets.SECRET_NAME }}.
 
-name: ctool integration test
+name: ctool se integration test
 
 on:
   issues:
@@ -23,7 +23,7 @@ jobs:
 
 
   deploy:
-    if: ${{ contains(github.event.issue.title, 'ctoolintegrationtest') }}
+    if: ${{ contains(github.event.issue.title, 'ctoolintegrationtest se') }}
     runs-on: ubuntu-latest
     env:
       SSH_PORT: 2214
@@ -49,7 +49,7 @@ jobs:
           if [[ $ORG_MEMBERSHIP -eq 204 ]]; then
             echo "The user $USER_NAME is a member of the organization $ORG_NAME."
           else
-            echo "The user $USER_NAME is not a member of the organization $ORG_NAME."
+           echo "The user $USER_NAME is not a member of the organization $ORG_NAME."
             exit 1
           fi
       
@@ -88,6 +88,8 @@ jobs:
         run: |
           echo "PUBLIC_IP=$(terraform -chdir=cmd/ctool/scripts/terraform/ output -raw public_ip_node_03)" >> $GITHUB_ENV
           echo "CTOOL_IP=$(terraform -chdir=cmd/ctool/scripts/terraform/ output -raw public_ip_node_00)" >> $GITHUB_ENV
+          echo "MON_PASSWORD=test_voedger_pass" >> $GITHUB_ENV
+          echo "MON_USER=voedger" >> $GITHUB_ENV
           echo "SSH_PORT=2214" >> $GITHUB_ENV
           if [ -n "${SSH_PORT:-}" ]; then
               SSH_OPTIONS+=" -p $SSH_PORT"
@@ -164,6 +166,8 @@ jobs:
         run: |
           echo "PUBLIC_IP=$(terraform -chdir=cmd/ctool/scripts/terraform/ output -raw public_ip_node_03)" >> $GITHUB_ENV
           echo "CTOOL_IP=$(terraform -chdir=cmd/ctool/scripts/terraform/ output -raw public_ip_node_00)" >> $GITHUB_ENV
+          echo "MON_PASSWORD=test_voedger_pass" >> $GITHUB_ENV
+          echo "MON_USER=voedger" >> $GITHUB_ENV
           echo "SSH_PORT=2214" >> $GITHUB_ENV
           if [ -n "${SSH_PORT:-}" ]; then
               SSH_OPTIONS+=" -p $SSH_PORT"
