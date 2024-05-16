@@ -1537,7 +1537,7 @@
     ]
   },
   "timezone": "UTC",
-  "title": "Docker Swarm Services",
+  "title": "Docker swarm services",
   "uid": "zr_baSRmk",
   "version": 1,
   "weekStart": ""
