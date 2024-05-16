@@ -57,13 +57,19 @@ runs:
         done
         ssh ${{ env.SSH_OPTIONS }} ubuntu@${{ env.PUBLIC_IP }} docker node update --label-add  AppNode=true app-node-2
       shell: bash
-      
+
+    - name: Set password for Mon Stack
+      run: bash .github/scripts/mon_password_set.sh ${{ env.MON_PASSWORD }}
+      shell: bash
+
     - name: Check Prometheus and Alertmanager
       run: |
         NODES=("10.0.0.11" "10.0.0.12")
 
         for node in "${NODES[@]}"; do
-          PROMETHEUS_RESPONSE=$(ssh ${{ env.SSH_OPTIONS }} ubuntu@${{ env.PUBLIC_IP }} "curl -sL -w '%{http_code}' -o /dev/null http://${node}:9090/-/healthy")
+          PROMETHEUS_RESPONSE=$(ssh ${{ env.SSH_OPTIONS }} ubuntu@${{ env.PUBLIC_IP }} "\
+            curl -sL -w '%{http_code}' -u ${{ env.MON_USER }}:${{ env.MON_PASSWORD }} \
+            -o /dev/null http://${node}:9090/-/healthy")
           if [[ "${PROMETHEUS_RESPONSE}" == "200" ]]; then
             echo "Prometheus is up and running on node ${node}."
           else
@@ -71,7 +77,9 @@ runs:
             exit 1
           fi
 
-          ALERTMANAGER_RESPONSE=$(ssh ${{ env.SSH_OPTIONS }} ubuntu@${{ env.PUBLIC_IP }} "curl -sL -w '%{http_code}' -o /dev/null http://${node}:9093/-/healthy")
+          ALERTMANAGER_RESPONSE=$(ssh ${{ env.SSH_OPTIONS }} ubuntu@${{ env.PUBLIC_IP }} "\
+             curl -sL -w '%{http_code}' -u ${{ env.MON_USER }}:${{ env.MON_PASSWORD }} \
+             -o /dev/null http://${node}:9093/-/healthy")
           if [[ "${ALERTMANAGER_RESPONSE}" == "200" ]]; then
             echo "Alertmanager is up and running on node ${node}."
           else
@@ -142,6 +150,10 @@ runs:
         fi
       shell: bash
 
+    - name: Set password for Mon Stack after replace node
+      run: bash .github/scripts/mon_password_set.sh ${{ env.MON_PASSWORD }}
+      shell: bash
+
     - name: Smoke test - check Prometheus and Alertmanager is up after replace node
       run: |
         IP_ADDRESS="10.0.0.17"
@@ -150,7 +162,15 @@ runs:
           success=true
 
 
-          PROMETHEUS_RESPONSE=$(ssh ${{ env.SSH_OPTIONS }} ubuntu@${{ env.PUBLIC_IP }} "curl -sL -w '%{http_code}' -o /dev/null http://${IP_ADDRESS}:9090/-/healthy >/dev/null 2>&1; RETVAL=\$?; if [ \$RETVAL -eq 0 ]; then curl -sL -w '%{http_code}' -o /dev/null http://${IP_ADDRESS}:9090/-/healthy; else echo '000'; fi" 2>/dev/null)
+          PROMETHEUS_RESPONSE=$(ssh ${{ env.SSH_OPTIONS }} ubuntu@${{ env.PUBLIC_IP }} "\
+            curl -sL -w '%{http_code}' -u ${{ env.MON_USER }}:${{ env.MON_PASSWORD }} \
+            -o /dev/null http://${IP_ADDRESS}:9090/-/healthy >/dev/null 2>&1; RETVAL=\$?; \
+            if [ \$RETVAL -eq 0 ]; then curl -sL -w '%{http_code}' \
+              -u ${{ env.MON_USER }}:${{ env.MON_PASSWORD }} \
+              -o /dev/null http://${IP_ADDRESS}:9090/-/healthy; \
+            else \
+              echo '000'; \
+            fi" 2>/dev/null)
         
           if [[ "$PROMETHEUS_RESPONSE" == "200" ]]; then
             echo "Prometheus is up and running on IP address ${IP_ADDRESS}."
@@ -162,7 +182,15 @@ runs:
              success=false
           fi
         
-          ALERTMANAGER_RESPONSE=$(ssh ${{ env.SSH_OPTIONS }} ubuntu@${{ env.PUBLIC_IP }} "curl -sL -w '%{http_code}' -o /dev/null http://${IP_ADDRESS}:9093/-/healthy >/dev/null 2>&1; RETVAL=\$?; if [ \$RETVAL -eq 0 ]; then curl -sL -w '%{http_code}' -o /dev/null http://${IP_ADDRESS}:9093/-/healthy; else echo '000'; fi" 2>/dev/null)
+          ALERTMANAGER_RESPONSE=$(ssh ${{ env.SSH_OPTIONS }} ubuntu@${{ env.PUBLIC_IP }} "\
+            curl -sL -w '%{http_code}' -u ${{ env.MON_USER }}:${{ env.MON_PASSWORD }} \
+            -o /dev/null http://${IP_ADDRESS}:9093/-/healthy >/dev/null 2>&1; RETVAL=\$?; \
+            if [ \$RETVAL -eq 0 ]; then curl -sL -w '%{http_code}' \
+              -u ${{ env.MON_USER }}:${{ env.MON_PASSWORD }} \
+              -o /dev/null http://${IP_ADDRESS}:9093/-/healthy; \
+            else \
+              echo '000'; \
+            fi" 2>/dev/null)
         
           if [[ "$ALERTMANAGER_RESPONSE" == "200" ]]; then
             echo "Alertmanager is up and running on IP address ${IP_ADDRESS}."
