@@ -106,6 +106,10 @@ func (ev *eventType) argumentNames() (arg, argUnl appdef.QName, err error) {
 		return arg, argUnl, nil // #17664 — «sys.CUD» command has no arguments objects, only CUDs
 	}
 
+	if ev.name == istructs.QNameForCorruptedData {
+		return arg, argUnl, nil // #1811 — «sys.Corrupted» command has no arguments objects
+	}
+
 	cmd := ev.appCfg.AppDef.Command(ev.name)
 	if cmd != nil {
 		if cmd.Param() != nil {

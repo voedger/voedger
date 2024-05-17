@@ -21,7 +21,6 @@ func (asp *implIAppStorageProvider) AppStorage(appQName istructs.AppQName) (stor
 	if storage, ok := asp.cache[appQName]; ok {
 		return storage, nil
 	}
-
 	if asp.metaStorage == nil {
 		if asp.metaStorage, err = asp.getMetaStorage(); err != nil {
 			return nil, err
@@ -52,7 +51,8 @@ func (asp *implIAppStorageProvider) AppStorage(appQName istructs.AppQName) (stor
 	if len(appStorageDesc.Error) > 0 {
 		return nil, fmt.Errorf("%s: %w: %s", appStorageDesc.SafeName.String(), ErrStorageInitError, appStorageDesc.Error)
 	}
-	if storage, err = asp.asf.AppStorage(asp.clarifyKeyspaceName(appStorageDesc.SafeName)); err == nil {
+	storage, err = asp.asf.AppStorage(asp.clarifyKeyspaceName(appStorageDesc.SafeName))
+	if err == nil {
 		asp.cache[appQName] = storage
 	}
 	return storage, err
