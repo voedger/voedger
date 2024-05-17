@@ -20,6 +20,7 @@ import (
 	"github.com/voedger/voedger/pkg/iratesce"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/singletons"
+	"github.com/voedger/voedger/pkg/istructsmem/internal/utils"
 )
 
 func TestEventBuilder(t *testing.T) {
@@ -966,11 +967,33 @@ func Test_UpdateCorrupted(t *testing.T) {
 		pLogEvent.Release()
 	})
 
+	var origEventBytes []byte = nil
+
+	t.Run("should ok to read PLog event", func(t *testing.T) {
+		var pLogEvent istructs.IPLogEvent
+		err := app.Events().ReadPLog(context.Background(), 1, istructs.Offset(100500), 1, func(plogOffset istructs.Offset, event istructs.IPLogEvent) (err error) {
+			require.EqualValues(100500, plogOffset)
+			pLogEvent = event
+			return nil
+		})
+		require.NoError(err)
+		require.NotNil(pLogEvent)
+		require.True(pLogEvent.Error().ValidEvent())
+		require.Equal(pLogEvent.QName(), istructs.QNameCommandCUD)
+
+		origEventBytes = utils.CopyBytes(pLogEvent.Bytes())
+		require.NotEmpty(origEventBytes)
+
+		pLogEvent.Release()
+	})
+
+	require.NotNil(origEventBytes)
+
 	t.Run("should be ok to update corrupted event", func(t *testing.T) {
 		bld := app.Events().GetSyncRawEventBuilder(
 			istructs.SyncRawEventBuilderParams{
 				GenericRawEventBuilderParams: istructs.GenericRawEventBuilderParams{
-					EventBytes:        []byte{1, 2, 3, 4, 5}, // TODO: original event bytes should be here
+					EventBytes:        utils.CopyBytes(origEventBytes),
 					HandlingPartition: 1,
 					PLogOffset:        100500,
 					Workspace:         1,
@@ -989,23 +1012,27 @@ func Test_UpdateCorrupted(t *testing.T) {
 		}))
 		require.NotNil(pLogEvent)
 		require.NoError(saveErr)
-		require.True(pLogEvent.Error().ValidEvent())
+
 		require.Equal(pLogEvent.QName(), istructs.QNameForCorruptedData)
+		require.False(pLogEvent.Error().ValidEvent())
+		require.EqualValues(pLogEvent.Error().OriginalEventBytes(), origEventBytes)
 
 		pLogEvent.Release()
 	})
 
-	t.Run("must ok to reread PLog event", func(t *testing.T) {
+	t.Run("should be ok to reread corrupted PLog event", func(t *testing.T) {
 		var pLogEvent istructs.IPLogEvent
 		err := app.Events().ReadPLog(context.Background(), 1, istructs.Offset(100500), 1, func(plogOffset istructs.Offset, event istructs.IPLogEvent) (err error) {
 			require.EqualValues(100500, plogOffset)
 			pLogEvent = event
 			return nil
 		})
-		require.NoError(err)
 		require.NotNil(pLogEvent)
-		require.True(pLogEvent.Error().ValidEvent())
+		require.NoError(err)
+
 		require.Equal(pLogEvent.QName(), istructs.QNameForCorruptedData)
+		require.False(pLogEvent.Error().ValidEvent())
+		require.EqualValues(pLogEvent.Error().OriginalEventBytes(), origEventBytes)
 
 		pLogEvent.Release()
 	})
