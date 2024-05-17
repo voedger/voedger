@@ -272,7 +272,9 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 				func() []iauthnz.Principal { return qw.principals },
 				func() string { return qw.msg.Token() },
 				nil, // TODO: provide ArgFunc
-				nil, // TODO: provide QueryResultFunc
+				nil, // TODO: provide BuilderFunc for result
+				nil, // TODO: provide TokensFunc
+				nil, // TODO: provide FederationFunc
 				nil) // TODO: provide ExecQueryCallbackFunc
 			qw.execQueryArgs.State = qw.state
 			return

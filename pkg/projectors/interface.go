@@ -15,9 +15,11 @@ import (
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/isecrets"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/itokens"
 	imetrics "github.com/voedger/voedger/pkg/metrics"
 	"github.com/voedger/voedger/pkg/pipeline"
 	"github.com/voedger/voedger/pkg/state"
+	"github.com/voedger/voedger/pkg/utils/federation"
 )
 
 type TimeAfterFunc func(d time.Duration) <-chan time.Time
@@ -25,12 +27,14 @@ type TimeAfterFunc func(d time.Duration) <-chan time.Time
 type LogErrorFunc func(args ...interface{})
 
 type AsyncActualizerConf struct {
-	Ctx           context.Context
-	AppQName      istructs.AppQName
-	AppPartitions appparts.IAppPartitions
-	AppStructs    state.AppStructsFunc
-	SecretReader  isecrets.ISecretReader
-	Partition     istructs.PartitionID
+	Ctx            context.Context
+	AppQName       istructs.AppQName
+	AppPartitions  appparts.IAppPartitions
+	AppStructs     state.AppStructsFunc
+	SecretReader   isecrets.ISecretReader
+	TokensFunc     itokens.ITokens
+	FederationFunc federation.IFederation
+	Partition      istructs.PartitionID
 	// Optional. Default value: `time.After`
 	AfterError TimeAfterFunc
 	// Optional. Default value: `core-logger.Error`

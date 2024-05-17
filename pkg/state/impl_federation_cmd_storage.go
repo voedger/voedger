@@ -5,33 +5,31 @@
 package state
 
 import (
-	"bytes"
-	"context"
 	"encoding/json"
 	"fmt"
-	"io"
-	"net/http"
+	"strconv"
 	"strings"
-	"time"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/itokens"
+	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
+	coreutils "github.com/voedger/voedger/pkg/utils"
+	"github.com/voedger/voedger/pkg/utils/federation"
 )
 
 const (
-	Authorization   = "Authorization"
-	ContentType     = "Content-Type"
-	ApplicationJSON = "application/json"
-	BearerPrefix    = "Bearer "
-	commandTimeout  = 10 * time.Second
+	ContentType = "Content-Type"
 )
 
+type FederationCommandHandler = func(owner, appname string, wsid istructs.WSID, command appdef.QName, body string) (statusCode int, newIDs map[string]int64, result string, err error)
+
 type federationCommandStorage struct {
-	customClient           IHttpClient
-	federationUrl          FederationURL
-	appStructs             AppStructsFunc
-	wsid                   WSIDFunc
-	defaultFederationToken TokenFunc
+	appStructs AppStructsFunc
+	wsid       WSIDFunc
+	federation federation.IFederation
+	tokensAPI  itokens.ITokens
+	emulation  FederationCommandHandler
 }
 
 func (s *federationCommandStorage) NewKeyBuilder(appdef.QName, istructs.IStateKeyBuilder) istructs.IStateKeyBuilder {
@@ -44,20 +42,18 @@ func (s *federationCommandStorage) Get(key istructs.IStateKeyBuilder) (istructs.
 	var wsid istructs.WSID
 	var command appdef.QName
 	var body string
-	var headers map[string]string = make(map[string]string)
+	opts := make([]coreutils.ReqOptFunc, 0)
+
 	kb := key.(*keyBuilder)
 
-	isExpectedCode := func(code int) bool {
-		if v, ok := kb.data[Field_ExpectedCodes]; ok {
-			expectedCodes := strings.Split(v.(string), ",")
-			for _, ec := range expectedCodes {
-				if ec == fmt.Sprint(code) {
-					return true
-				}
+	if v, ok := kb.data[Field_ExpectedCodes]; ok {
+		for _, ec := range strings.Split(v.(string), ",") {
+			code, err := strconv.Atoi(ec)
+			if err != nil {
+				return nil, err
 			}
-			return false
+			opts = append(opts, coreutils.WithExpectedCode(code))
 		}
-		return code == http.StatusOK
 	}
 
 	if v, ok := kb.data[Field_Owner]; ok {
@@ -87,63 +83,51 @@ func (s *federationCommandStorage) Get(key istructs.IStateKeyBuilder) (istructs.
 	if v, ok := kb.data[Field_Body]; ok {
 		body = v.(string)
 	}
-	bodyReader := bytes.NewReader([]byte(body))
+	if v, ok := kb.data[Field_Token]; ok {
+		opts = append(opts, coreutils.WithAuthorizeBy(v.(string)))
+	} else {
+		appQName := istructs.NewAppQName(owner, appname)
+		systemPrincipalToken, err := payloads.GetSystemPrincipalToken(s.tokensAPI, appQName)
+		if err != nil {
+			return nil, err
+		}
+		opts = append(opts, coreutils.WithAuthorizeBy(systemPrincipalToken))
+	}
 
 	appOwnerAndName := owner + istructs.AppQNameQualifierChar + appname
 
-	url := fmt.Sprintf("%s/api/%s/%d/%s", s.federationUrl(), appOwnerAndName, wsid, command)
-
-	headers[Authorization] = BearerPrefix + s.defaultFederationToken()
+	relativeUrl := fmt.Sprintf("api/%s/%d/%s", appOwnerAndName, wsid, command)
 
 	var resStatus int
-	var resBody []byte
+	var resBody string
+	var newIDs map[string]int64
 	var err error
 
-	if s.customClient != nil {
-		resStatus, resBody, _, err = s.customClient.Request(commandTimeout, http.MethodPost, url, bodyReader, headers)
+	if s.emulation != nil {
+		resStatus, newIDs, resBody, err = s.emulation(owner, appname, wsid, command, body)
 		if err != nil {
 			return nil, err
 		}
 	} else {
-		ctx, cancel := context.WithTimeout(context.Background(), commandTimeout)
-		defer cancel()
-
-		req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bodyReader)
+		resp, err := s.federation.Func(relativeUrl, body, opts...)
 		if err != nil {
 			return nil, err
 		}
-
-		for k, v := range headers {
-			req.Header.Add(k, v)
-		}
-
-		res, err := http.DefaultClient.Do(req)
-		if err != nil {
-			return nil, err
-		}
-		defer res.Body.Close()
-
-		resBody, err = io.ReadAll(res.Body)
-		if err != nil {
-			return nil, err
-		}
-
-		resStatus = res.StatusCode
+		resBody = resp.Body
+		newIDs = resp.NewIDs
+		resStatus = resp.HTTPResp.StatusCode
 	}
 
-	if !isExpectedCode(resStatus) {
-		return nil, fmt.Errorf("unexpected status code %d", resStatus)
-	}
-	respData := map[string]interface{}{}
-	err = json.Unmarshal(resBody, &respData)
+	result := map[string]interface{}{}
+	err = json.Unmarshal([]byte(resBody), &result)
 	if err != nil {
 		return nil, err
 	}
 
 	return &fcCmdValue{
 		statusCode: resStatus,
-		newIds:     &fcCmdNewIds{newIds: respData["NewIDs"].(map[string]interface{})},
-		result:     &jsonValue{json: respData["Result"].(map[string]interface{})},
+		newIds:     &fcCmdNewIds{newIds: newIDs},
+		result:     &jsonValue{json: result},
 	}, nil
 }
 func (s *federationCommandStorage) Read(key istructs.IStateKeyBuilder, callback istructs.ValueCallback) (err error) {
@@ -177,12 +161,12 @@ func (v *fcCmdValue) AsValue(name string) istructs.IStateValue {
 
 type fcCmdNewIds struct {
 	baseStateValue
-	newIds map[string]interface{}
+	newIds map[string]int64
 }
 
 func (v *fcCmdNewIds) AsInt64(name string) int64 {
 	if id, ok := v.newIds[name]; ok {
-		return int64(id.(float64))
+		return id
 	}
 	panic(errUndefined(name))
 }

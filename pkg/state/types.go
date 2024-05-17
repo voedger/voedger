@@ -12,7 +12,6 @@ import (
 	"io"
 	"maps"
 	"net/http"
-	"net/url"
 	"reflect"
 	"slices"
 	"strings"
@@ -22,6 +21,8 @@ import (
 	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/isecrets"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/itokens"
+	"github.com/voedger/voedger/pkg/utils/federation"
 )
 
 type PartitionIDFunc func() istructs.PartitionID
@@ -36,14 +37,14 @@ type PLogEventFunc func() istructs.IPLogEvent
 type ArgFunc func() istructs.IObject
 type UnloggedArgFunc func() istructs.IObject
 type WLogOffsetFunc func() istructs.Offset
-type FederationURL func() *url.URL
+type FederationFunc func() federation.IFederation
 type QNameFunc func() appdef.QName
+type TokensFunc func() itokens.ITokens
 type ExecQueryCallbackFunc func() istructs.ExecQueryCallback
 type CommandProcessorStateFactory func(ctx context.Context, appStructsFunc AppStructsFunc, partitionIDFunc PartitionIDFunc, wsidFunc WSIDFunc, secretReader isecrets.ISecretReader, cudFunc CUDFunc, principalPayloadFunc PrincipalsFunc, tokenFunc TokenFunc, intentsLimit int, cmdResultBuilderFunc ObjectBuilderFunc, argFunc ArgFunc, unloggedArgFunc UnloggedArgFunc, wlogOffsetFunc WLogOffsetFunc) IHostState
 type SyncActualizerStateFactory func(ctx context.Context, appStructsFunc AppStructsFunc, partitionIDFunc PartitionIDFunc, wsidFunc WSIDFunc, n10nFunc N10nFunc, secretReader isecrets.ISecretReader, eventFunc PLogEventFunc, intentsLimit int) IHostState
-type QueryProcessorStateFactory func(ctx context.Context, appStructsFunc AppStructsFunc, partitionIDFunc PartitionIDFunc, wsidFunc WSIDFunc, secretReader isecrets.ISecretReader, principalPayloadFunc PrincipalsFunc, tokenFunc TokenFunc, argFunc ArgFunc, resultBuilderFunc ObjectBuilderFunc, queryCallbackFunc ExecQueryCallbackFunc, opts ...QPStateOptFunc) IHostState
-type AsyncActualizerStateFactory func(ctx context.Context, appStructsFunc AppStructsFunc, partitionIDFunc PartitionIDFunc, wsidFunc WSIDFunc, n10nFunc N10nFunc, secretReader isecrets.ISecretReader, eventFunc PLogEventFunc, intentsLimit, bundlesLimit int,
-	opts ...ActualizerStateOptFunc) IBundledHostState
+type QueryProcessorStateFactory func(ctx context.Context, appStructsFunc AppStructsFunc, partitionIDFunc PartitionIDFunc, wsidFunc WSIDFunc, secretReader isecrets.ISecretReader, principalPayloadFunc PrincipalsFunc, tokenFunc TokenFunc, argFunc ArgFunc, resultBuilderFunc ObjectBuilderFunc, tokensFunc itokens.ITokens, federationFunc federation.IFederation, queryCallbackFunc ExecQueryCallbackFunc, opts ...QPStateOptFunc) IHostState
+type AsyncActualizerStateFactory func(ctx context.Context, appStructsFunc AppStructsFunc, partitionIDFunc PartitionIDFunc, wsidFunc WSIDFunc, n10nFunc N10nFunc, secretReader isecrets.ISecretReader, eventFunc PLogEventFunc, tokensFunc itokens.ITokens, federationFunc federation.IFederation, intentsLimit, bundlesLimit int, opts ...ActualizerStateOptFunc) IBundledHostState
 
 type eventsFunc func() istructs.IEvents
 type recordsFunc func() istructs.IRecords

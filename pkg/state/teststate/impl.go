@@ -34,21 +34,22 @@ import (
 type testState struct {
 	state.IState
 
-	ctx           context.Context
-	appStructs    istructs.IAppStructs
-	appDef        appdef.IAppDef
-	cud           istructs.ICUD
-	event         istructs.IPLogEvent
-	plogGen       istructs.IIDGenerator
-	wsOffsets     map[istructs.WSID]istructs.Offset
-	secretReader  isecrets.ISecretReader
-	httpHandler   HttpHandlerFunc
-	principals    []iauthnz.Principal
-	token         string
-	queryWsid     istructs.WSID
-	queryName     appdef.FullQName
-	processorKind int
-	readObjects   []istructs.IObject
+	ctx                  context.Context
+	appStructs           istructs.IAppStructs
+	appDef               appdef.IAppDef
+	cud                  istructs.ICUD
+	event                istructs.IPLogEvent
+	plogGen              istructs.IIDGenerator
+	wsOffsets            map[istructs.WSID]istructs.Offset
+	secretReader         isecrets.ISecretReader
+	httpHandler          HttpHandlerFunc
+	federationCmdHandler state.FederationCommandHandler
+	principals           []iauthnz.Principal
+	token                string
+	queryWsid            istructs.WSID
+	queryName            appdef.FullQName
+	processorKind        int
+	readObjects          []istructs.IObject
 }
 
 func NewTestState(processorKind int, packagePath string, createWorkspaces ...TestWorkspace) ITestState {
@@ -123,6 +124,17 @@ func (ctx *testState) PutRequestSubject(principals []iauthnz.Principal, token st
 	ctx.token = token
 }
 
+func (ctx *testState) PutFederationCmdHandler(emu state.FederationCommandHandler) {
+	ctx.federationCmdHandler = emu
+}
+
+func (ctx *testState) emulateFederationCmd(owner, appname string, wsid istructs.WSID, command appdef.QName, body string) (statusCode int, newIDs map[string]int64, result string, err error) {
+	if ctx.federationCmdHandler == nil {
+		panic("federation command handler not set")
+	}
+	return ctx.federationCmdHandler(owner, appname, wsid, command, body)
+}
+
 func (ctx *testState) buildState(processorKind int) {
 
 	appFunc := func() istructs.IAppStructs { return ctx.appStructs }
@@ -161,11 +173,14 @@ func (ctx *testState) buildState(processorKind int) {
 
 	switch processorKind {
 	case ProcKind_Actualizer:
-		ctx.IState = state.ProvideAsyncActualizerStateFactory()(ctx.ctx, appFunc, partitionIDFunc, wsidFunc, nil, ctx.secretReader, eventFunc, IntentsLimit, BundlesLimit, state.WithCustomHttpClient(ctx))
+		ctx.IState = state.ProvideAsyncActualizerStateFactory()(ctx.ctx, appFunc, partitionIDFunc, wsidFunc, nil, ctx.secretReader, eventFunc, nil, nil,
+			IntentsLimit, BundlesLimit, state.WithCustomHttpClient(ctx), state.WithFedearationCommandHandler(ctx.emulateFederationCmd))
 	case ProcKind_CommandProcessor:
-		ctx.IState = state.ProvideCommandProcessorStateFactory()(ctx.ctx, appFunc, partitionIDFunc, wsidFunc, ctx.secretReader, cudFunc, principalsFunc, tokenFunc, IntentsLimit, resultBuilderFunc, argFunc, unloggedArgFunc, wlogOffsetFunc)
+		ctx.IState = state.ProvideCommandProcessorStateFactory()(ctx.ctx, appFunc, partitionIDFunc, wsidFunc, ctx.secretReader, cudFunc, principalsFunc, tokenFunc,
+			IntentsLimit, resultBuilderFunc, argFunc, unloggedArgFunc, wlogOffsetFunc)
 	case ProcKind_QueryProcessor:
-		ctx.IState = state.ProvideQueryProcessorStateFactory()(ctx.ctx, appFunc, partitionIDFunc, wsidFunc, ctx.secretReader, principalsFunc, tokenFunc, argFunc, qryResultBuilderFunc, execQueryCallback, state.QPWithCustomHttpClient(ctx))
+		ctx.IState = state.ProvideQueryProcessorStateFactory()(ctx.ctx, appFunc, partitionIDFunc, wsidFunc, ctx.secretReader, principalsFunc, tokenFunc, argFunc,
+			qryResultBuilderFunc, nil, nil, execQueryCallback, state.QPWithCustomHttpClient(ctx), state.QPWithFedearationCommandHandler(ctx.emulateFederationCmd))
 	}
 }
 

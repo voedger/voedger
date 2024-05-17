@@ -607,6 +607,8 @@ func provideAsyncActualizersFactory(appParts appparts.IAppPartitions, appStructs
 			IntentsLimit:  projectors.DefaultIntentsLimit,
 			FlushInterval: actualizerFlushInterval,
 			Metrics:       metrics2,
+			TokensFunc: 	nil, // TODO: provide
+			FederationFunc: nil, // TODO: provide
 		}
 
 		forkOps := make([]pipeline.ForkOperatorOptionFunc, 0, len(asyncProjectors))
