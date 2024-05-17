@@ -528,3 +528,12 @@ func TestReadFromAnotherAppAnotherWSID(t *testing.T) {
 	resStr := resp.SectionRow(len(resp.Sections[0].Elements) - 1)[0].(string)
 	require.Contains(t, resStr, fmt.Sprintf(`"name":"%s"`, categoryName))
 }
+
+func TestVSqlUpdate(t *testing.T) {
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
+
+	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+
+	
+}

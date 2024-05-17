@@ -96,8 +96,6 @@ type IDbEvent interface {
 	// originalQName is a string which potentially contains QName representation
 	// May be in a form which is not possible to convert to QName
 	Error() IEventError
-
-	Bytes() []byte
 }
 
 type IEventError interface {

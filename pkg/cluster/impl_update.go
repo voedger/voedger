@@ -43,12 +43,12 @@ func provideExecCmdVSqlUpdate(timeFunc coreutils.TimeFunc) istructsmem.ExecComma
 			if err != nil {
 				return err
 			}
-			err = updateCorrupted(appQName, wsid, logViewQName, offset, istructs.NullOffset, partitionID, istructs.UnixMilli(timeFunc().UnixMilli()))
+			return updateCorrupted(appQName, wsid, logViewQName, offset, istructs.NullOffset, partitionID, istructs.UnixMilli(timeFunc().UnixMilli()))
 		case updateKind_Simple:
-			err = updateSimple(appQName, wsid, cleanSql)
+			return updateSimple(appQName, wsid, cleanSql)
 		}
 
-		return err
+		return nil
 	}
 }
 
@@ -59,11 +59,11 @@ func updateCorrupted(appQName istructs.AppQName, wsid istructs.WSID, logViewQNam
 	// here we need to read just 1 event - so let's do not consider context of the request
 	var currentEventBytes []byte
 	as.Events().ReadPLog(context.Background(), partitionID, plogOffset, 1, func(plogOffset istructs.Offset, event istructs.IPLogEvent) (err error) {
-		currentEventBytes = event.Bytes()
+		// currentEventBytes = event.Bytes()
 		return nil
 	})
 	err := as.Events().ReadWLog(context.Background(), wsid, wlogOffset, 1, func(wlogOffset istructs.Offset, event istructs.IWLogEvent) (err error) {
-		currentEventBytes = event.Bytes()
+		// currentEventBytes = event.Bytes()
 		return nil
 	})
 	if err != nil {
@@ -76,7 +76,7 @@ func updateCorrupted(appQName istructs.AppQName, wsid istructs.WSID, logViewQNam
 			PLogOffset:        plogOffset,
 			Workspace:         wsid,
 			WLogOffset:        wlogOffset,
-			QName:             appdef.NewQName(appdef.SysPackage, "Corrupted"),
+			QName:             istructs.QNameForCorruptedData,
 			RegisteredAt:      currentMillis,
 		},
 		SyncedAt: currentMillis,
