@@ -30,6 +30,7 @@ type plogEventMock struct {
 var testQName = appdef.NewQName(appdef.SysPackage, "abc")
 
 func (e *plogEventMock) ArgumentObject() istructs.IObject     { return istructs.NewNullObject() }
+func (e *plogEventMock) Bytes() []byte                        { return nil }
 func (e *plogEventMock) Command() istructs.IObject            { return nil }
 func (e *plogEventMock) Workspace() istructs.WSID             { return e.wsid }
 func (e *plogEventMock) WLogOffset() istructs.Offset          { return e.wlogOffset }

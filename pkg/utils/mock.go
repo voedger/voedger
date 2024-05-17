@@ -49,6 +49,7 @@ type MockPLogEvent struct {
 func (m *MockPLogEvent) ArgumentObject() istructs.IObject {
 	return m.Called().Get(0).(istructs.IObject)
 }
+func (m *MockPLogEvent) Bytes() []byte { return m.Called().Get(0).([]byte) }
 func (m *MockPLogEvent) CUDs(cb func(rec istructs.ICUDRow)) {
 	m.Called(cb)
 }
