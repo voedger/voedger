@@ -263,9 +263,8 @@ func (e *appEventsType) PutPlog(ev istructs.IRawEvent, buildErr error, generator
 
 	if err = e.app.config.storage.Put(pKey, cCols, evData); err == nil {
 		event = dbEvent
+		e.plogCache.Put(p, o, event)
 	}
-
-	e.plogCache.Put(p, o, event)
 
 	return event, err
 }
