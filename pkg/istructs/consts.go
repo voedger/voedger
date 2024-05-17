@@ -26,6 +26,9 @@ var (
 	// QNameForError is a marker of error in log
 	QNameForError = appdef.NewQName(appdef.SysPackage, "Error")
 
+	// QNameForCorruptedData is marker of corrupted event records in log
+	QNameForCorruptedData = appdef.NewQName(appdef.SysPackage, "Corrupted")
+
 	// QNameCommand is used in core-irates
 	QNameCommand = appdef.NewQName(appdef.SysPackage, "Command")
 

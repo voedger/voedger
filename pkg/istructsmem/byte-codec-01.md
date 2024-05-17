@@ -194,7 +194,7 @@ The internal structure of the buffer is determined by the [dynoBuffer](https://g
 
 #### Build Error
 
-Данные об ошибке сборки события *buildError* содержат информацию об ошибке, произошедшей во время сборки события.
+Данные об ошибке сборки события *buildError* содержат информацию об ошибке, произошедшей во время сборки события, либо сведения о факте повреждения данных, если событие отмечено, как событие с поврежденными данными (QName = "sys.Corrupted")
 
 `buildError = valid [ ( messageLength [ messageBytes ] ) ( qNameLength [ qNameChars ] ) ( [ rawDataLength [ rawDataBytes ] ] ) ] .`
 

@@ -1,0 +1,13 @@
+name: CI .workflow PR
+
+on:
+  pull_request_target:
+    paths:
+      - '.github/.workflows/**'
+
+jobs:
+  auto-merge-pr:
+    uses: voedger/voedger/.github/workflows/merge.yml@main
+    secrets:
+      personaltoken: ${{ secrets.REPOREADING_TOKEN }}
+
