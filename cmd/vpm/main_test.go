@@ -467,7 +467,7 @@ func findWasmFiles(dir string) []string {
 }
 
 func TestCommandMessaging(t *testing.T) {
-	if testing.Short() {
+	if logger.IsVerbose() {
 		t.Skip()
 	}
 
