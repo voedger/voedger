@@ -97,22 +97,34 @@ type IDbEvent interface {
 	// when the event was saved, or read from storage when the event was loaded
 	Bytes() []byte
 
-	// originalQName is a string which potentially contains QName representation
-	// May be in a form which is not possible to convert to QName
+	// Error that occurred during event building or
+	// error that describe that event is corrupted.
 	Error() IEventError
 }
 
 type IEventError interface {
+	// Error string or empty string if ValidEvent() == true.
+	//
+	// sys.Corrupted event contains error message "corrupted data".
 	ErrStr() string
+
+	// Original QName from params.
+	//
+	// Potentially can be invalid QName representation.
 	QNameFromParams() appdef.QName
 
-	// If true event data can be taken from I*Event fields
+	// Returns is the event valid.
+	//
+	// sys.Corrupted event always invalid.
 	ValidEvent() bool
 
-	// Original bytes the event was deserialized from
-	// nil if ValidEvent == true
-	// Function with unlogged params can have ValidEvent == false and EventBytes == nil
-	// DO NOT CHANGE
+	// Original bytes the event was deserialized from.
+	//
+	// nil if ValidEvent() == true.
+	//
+	// Function with unlogged params can have ValidEvent() == false and EventBytes() == nil.
+	//
+	// sys.Corrupted event contains bytes of corrupted event.
 	OriginalEventBytes() []byte
 }
 
