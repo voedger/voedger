@@ -25,7 +25,7 @@
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
   "id": 8,
-  "iteration": 1715068433696,
+  "iteration": 1715790575125,
   "links": [],
   "liveNow": false,
   "panels": [
@@ -38,7 +38,7 @@
       },
       "id": 104,
       "options": {
-        "content": "<div style=\"text-align:center; font-size:200%\">\r\nCommand processor\r\n<div>",
+        "content": "<div style=\"text-align:center; font-size:200%\">\r\nCommand processors\r\n<div>",
         "mode": "html"
       },
       "pluginVersion": "8.3.4",
@@ -54,7 +54,7 @@
       },
       "id": 105,
       "options": {
-        "content": "<div style=\"text-align:center; font-size:200%\">\r\nQuery processor\r\n<div>",
+        "content": "<div style=\"text-align:center; font-size:200%\">\r\nQuery processors\r\n<div>",
         "mode": "html"
       },
       "pluginVersion": "8.3.4",
@@ -70,7 +70,7 @@
       },
       "id": 106,
       "options": {
-        "content": "<div style=\"text-align:center; font-size:200%\">\r\nProjectors\r\n<div>",
+        "content": "<div style=\"text-align:center; font-size:200%\">\r\nActualizers\r\n<div>",
         "mode": "html"
       },
       "pluginVersion": "8.3.4",
@@ -156,7 +156,7 @@
           "datasource": "Prometheus",
           "editorMode": "code",
           "exemplar": true,
-          "expr": " irate(voedger_cp_commands_total{app=~\"$app\"}[5m]) ",
+          "expr": " increase(voedger_cp_commands_total{app=~\"$app\"}[$aggregation_interval]) ",
           "instant": false,
           "interval": "",
           "legendFormat": "{{app}}",
@@ -164,7 +164,7 @@
           "refId": "A"
         }
       ],
-      "title": "RPS",
+      "title": "Commands, per $aggregation_interval",
       "type": "timeseries"
     },
     {
@@ -242,271 +242,20 @@
       "pluginVersion": "9.5.2",
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
           "editorMode": "code",
-          "expr": "irate(voedger_qp_queries_total{app=~\"$app\"}[5m])",
+          "exemplar": true,
+          "expr": "increase(voedger_qp_queries_total{app=~\"$app\"}[$aggregation_interval])",
+          "interval": "",
           "legendFormat": "{{app}}",
           "range": true,
           "refId": "A"
         }
       ],
-      "title": "RPS",
-      "type": "timeseries"
-    },
-    {
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 0,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "never",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 6,
-        "w": 8,
-        "x": 16,
-        "y": 2
-      },
-      "id": 67,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom"
-        },
-        "tooltip": {
-          "mode": "single"
-        }
-      },
-      "targets": [
-        {
-          "datasource": "Prometheus",
-          "exemplar": true,
-          "expr": "sum by (app) (voedger_projectors_in_error{app=~\"$app\"})",
-          "interval": "",
-          "legendFormat": "{{app}}",
-          "refId": "A"
-        }
-      ],
-      "title": "Projectors in errors",
-      "type": "timeseries"
-    },
-    {
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 15,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "never",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "normal"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "links": [],
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
-          "unit": "s"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 6,
-        "w": 8,
-        "x": 0,
-        "y": 8
-      },
-      "id": 71,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": false
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "none"
-        }
-      },
-      "pluginVersion": "9.5.2",
-      "targets": [
-        {
-          "datasource": "Prometheus",
-          "editorMode": "code",
-          "exemplar": true,
-          "expr": "irate(voedger_cp_commands_seconds{app=~\"$app\"}[5m])/irate(voedger_cp_commands_total{app=~\"$app\"}[5m])",
-          "interval": "",
-          "legendFormat": "{{app}}",
-          "range": true,
-          "refId": "C"
-        }
-      ],
-      "title": "Latency",
-      "type": "timeseries"
-    },
-    {
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 15,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "never",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "normal"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "links": [],
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
-          "unit": "s"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 6,
-        "w": 8,
-        "x": 8,
-        "y": 8
-      },
-      "id": 70,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": false
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "none"
-        }
-      },
-      "pluginVersion": "9.5.2",
-      "targets": [
-        {
-          "datasource": "Prometheus",
-          "editorMode": "code",
-          "exemplar": true,
-          "expr": "irate(voedger_qp_queries_seconds{app=~\"$app\"}[5m])/irate(voedger_qp_queries_total{app=~\"$app\"}[5m]) > 0 or on() irate(voedger_qp_queries_total{app=~\"$app\"}[5m])",
-          "interval": "",
-          "legendFormat": "{{app}}",
-          "range": true,
-          "refId": "C"
-        }
-      ],
-      "title": "Latency",
+      "title": "Queries, per $aggregation_interval",
       "type": "timeseries"
     },
     {
@@ -606,7 +355,7 @@
         "h": 6,
         "w": 8,
         "x": 16,
-        "y": 8
+        "y": 2
       },
       "id": 65,
       "options": {
@@ -636,8 +385,265 @@
           "refId": "A"
         }
       ],
-      "title": "Projectors in errors",
+      "title": "Projectors in error state (now)",
       "type": "table"
+    },
+    {
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 15,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "normal"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "links": [],
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 0,
+        "y": 8
+      },
+      "id": 71,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": false
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "9.5.2",
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "editorMode": "code",
+          "exemplar": true,
+          "expr": "increase(voedger_cp_commands_seconds{app=~\"$app\"}[$aggregation_interval])/increase(voedger_cp_commands_total{app=~\"$app\"}[$aggregation_interval])",
+          "interval": "",
+          "legendFormat": "{{app}}",
+          "range": true,
+          "refId": "C"
+        }
+      ],
+      "title": "Latency, avg per $aggregation_interval",
+      "type": "timeseries"
+    },
+    {
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 15,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "normal"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "links": [],
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 8,
+        "y": 8
+      },
+      "id": 70,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": false
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "9.5.2",
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "editorMode": "code",
+          "exemplar": true,
+          "expr": "increase(voedger_qp_queries_seconds{app=~\"$app\"}[$aggregation_interval])/increase(voedger_qp_queries_total{app=~\"$app\"}[$aggregation_interval]) > 0 or on() increase(voedger_qp_queries_total{app=~\"$app\"}[$aggregation_interval])",
+          "interval": "",
+          "legendFormat": "{{app}}",
+          "range": true,
+          "refId": "C"
+        }
+      ],
+      "title": "Latency, avg per $aggregation_interval",
+      "type": "timeseries"
+    },
+    {
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 16,
+        "y": 8
+      },
+      "id": 67,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single"
+        }
+      },
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "exemplar": true,
+          "expr": "sum by (app) (voedger_projectors_in_error{app=~\"$app\"})",
+          "interval": "",
+          "legendFormat": "{{app}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Projectors in error state (history)",
+      "type": "timeseries"
     },
     {
       "fieldConfig": {
@@ -711,13 +717,13 @@
         {
           "datasource": "Prometheus",
           "exemplar": true,
-          "expr": "sum by (app) (increase(voedger_cp_errors_total{app=~\"$app\"}[1m]))",
+          "expr": "sum by (app) (increase(voedger_cp_errors_total{app=~\"$app\"}[$aggregation_interval]))",
           "interval": "",
           "legendFormat": "{{app}}",
           "refId": "A"
         }
       ],
-      "title": "Errors per minute",
+      "title": "Errors, per $aggregation_interval",
       "type": "timeseries"
     },
     {
@@ -794,13 +800,13 @@
         {
           "datasource": "Prometheus",
           "exemplar": true,
-          "expr": "increase(voedger_qp_errors_total{app=~\"$app\"}[1m])",
+          "expr": "increase(voedger_qp_errors_total{app=~\"$app\"}[$aggregation_interval])",
           "interval": "",
           "legendFormat": "{{app}}",
           "refId": "A"
         }
       ],
-      "title": "Errors per minute",
+      "title": "Errors, per $aggregation_interval",
       "type": "timeseries"
     },
     {
@@ -821,7 +827,8 @@
               "options": {
                 "match": "null",
                 "result": {
-                  "text": "N/A"
+                  "index": 0,
+                  "text": "0"
                 }
               },
               "type": "special"
@@ -884,44 +891,6 @@
               {
                 "id": "unit",
                 "value": "s"
-              },
-              {
-                "id": "thresholds",
-                "value": {
-                  "mode": "absolute",
-                  "steps": [
-                    {
-                      "color": "green",
-                      "value": null
-                    },
-                    {
-                      "color": "semi-dark-blue",
-                      "value": 0
-                    },
-                    {
-                      "color": "green",
-                      "value": 0.000001
-                    },
-                    {
-                      "color": "#EAB839",
-                      "value": 0.05
-                    },
-                    {
-                      "color": "dark-red",
-                      "value": 0.1
-                    }
-                  ]
-                }
-              },
-              {
-                "id": "color",
-                "value": {
-                  "mode": "thresholds"
-                }
-              },
-              {
-                "id": "custom.displayMode",
-                "value": "color-text"
               }
             ]
           },
@@ -941,16 +910,12 @@
                   "mode": "absolute",
                   "steps": [
                     {
-                      "color": "green",
+                      "color": "text",
                       "value": null
                     },
                     {
-                      "color": "#EAB839",
-                      "value": 1
-                    },
-                    {
                       "color": "red",
-                      "value": 100
+                      "value": 1
                     }
                   ]
                 }
@@ -1093,7 +1058,8 @@
               "options": {
                 "match": "null",
                 "result": {
-                  "text": "N/A"
+                  "index": 0,
+                  "text": "0"
                 }
               },
               "type": "special"
@@ -1156,41 +1122,6 @@
               {
                 "id": "unit",
                 "value": "s"
-              },
-              {
-                "id": "thresholds",
-                "value": {
-                  "mode": "absolute",
-                  "steps": [
-                    {
-                      "color": "green",
-                      "value": null
-                    },
-                    {
-                      "color": "dark-blue",
-                      "value": 0
-                    },
-                    {
-                      "color": "green",
-                      "value": 0.000001
-                    },
-                    {
-                      "color": "#EAB839",
-                      "value": 0.05
-                    },
-                    {
-                      "color": "dark-red",
-                      "value": 0.1
-                    }
-                  ]
-                }
-              },
-              {
-                "id": "color"
-              },
-              {
-                "id": "custom.displayMode",
-                "value": "color-text"
               }
             ]
           },
@@ -1210,16 +1141,12 @@
                   "mode": "absolute",
                   "steps": [
                     {
-                      "color": "green",
+                      "color": "text",
                       "value": null
                     },
                     {
-                      "color": "#EAB839",
-                      "value": 1
-                    },
-                    {
                       "color": "red",
-                      "value": 100
+                      "value": 1
                     }
                   ]
                 }
@@ -1432,7 +1359,7 @@
               "datasource": "Prometheus",
               "editorMode": "code",
               "exemplar": true,
-              "expr": "sum(irate(voedger_cp_exec_seconds{app=~\"$app\"}[5m]))*1000",
+              "expr": "sum(increase(voedger_cp_exec_seconds{app=~\"$filtered_app\"}[$aggregation_interval]))*1000/voedger_cp_commands_total{app=~\"$filtered_app\"}/sum(increase(voedger_cp_commands_total{app=~\"$filtered_app\"}[$aggregation_interval]))",
               "interval": "",
               "legendFormat": "Exec",
               "range": true,
@@ -1442,7 +1369,7 @@
               "datasource": "Prometheus",
               "editorMode": "code",
               "exemplar": true,
-              "expr": "sum(irate(voedger_cp_projectors_seconds{app=~\"$app\"}[5m]))*1000",
+              "expr": "sum(increase(voedger_cp_projectors_seconds{app=~\"$filtered_app\"}[$aggregation_interval]))*1000/sum(increase(voedger_cp_commands_total{app=~\"$filtered_app\"}[$aggregation_interval]))",
               "interval": "",
               "legendFormat": "Projectors",
               "range": true,
@@ -1452,7 +1379,7 @@
               "datasource": "Prometheus",
               "editorMode": "code",
               "exemplar": true,
-              "expr": "((sum(irate(voedger_cp_commands_seconds{app=~\"$app\"}[5m])) - sum(irate(voedger_cp_projectors_seconds{app=~\"$app\"}[5m])) - sum(irate(voedger_cp_exec_seconds{app=~\"$app\"}[5m]))))*1000",
+              "expr": "((sum(increase(voedger_cp_commands_seconds{app=~\"$filtered_app\"}[$aggregation_interval])) - sum(increase(voedger_cp_projectors_seconds{app=~\"$filtered_app\"}[$aggregation_interval])) - sum(increase(voedger_cp_exec_seconds{app=~\"$filtered_app\"}[$aggregation_interval]))))*1000/sum(increase(voedger_cp_commands_total{app=~\"$filtered_app\"}[$aggregation_interval]))",
               "hide": false,
               "interval": "",
               "legendFormat": "Rest",
@@ -1460,7 +1387,7 @@
               "refId": "A"
             }
           ],
-          "title": "CP stack time: $app",
+          "title": "CP latency stack, avg per $aggregation_interval",
           "type": "timeseries"
         },
         {
@@ -1512,7 +1439,7 @@
                   }
                 ]
               },
-              "unit": "s"
+              "unit": "ms"
             },
             "overrides": []
           },
@@ -1541,7 +1468,7 @@
               "datasource": "Prometheus",
               "editorMode": "code",
               "exemplar": true,
-              "expr": "sum(irate(voedger_qp_exec_seconds{app=~\"$app\"}[5m]) or vector(0))/sum(irate(voedger_qp_queries_total{app=~\"$app\"}[5m])  > 0 or on() irate(voedger_qp_queries_total{app=~\"$app\"}[5m]))",
+              "expr": "sum(increase(voedger_qp_exec_seconds{app=~\"$filtered_app\"}[$aggregation_interval]) or vector(0))/sum(increase(voedger_qp_queries_total{app=~\"$filtered_app\"}[$aggregation_interval])  > 0 or on() increase(voedger_qp_queries_total{app=~\"$filtered_app\"}[$aggregation_interval]))",
               "interval": "",
               "legendFormat": "Exec",
               "range": true,
@@ -1551,14 +1478,14 @@
               "datasource": "Prometheus",
               "editorMode": "code",
               "exemplar": true,
-              "expr": "(sum(irate(voedger_qp_exec_fields_seconds{app=~\"$app\"}[5m]) or vector(0)) + sum(irate(voedger_qp_exec_enrich_seconds{app=~\"$app\"}[5m]) or vector(0)) + sum(irate(voedger_qp_exec_filter_seconds{app=~\"$app\"}[5m]) or vector(0)) + sum(irate(voedger_qp_exec_order_seconds{app=~\"$app\"}[5m]) or vector(0)) + sum(irate(voedger_qp_exec_count_seconds{app=~\"$app\"}[5m]) or vector(0)) + sum(irate(voedger_qp_exec_send_seconds{app=~\"$app\"}[5m]) or vector(0)))/sum(irate(voedger_qp_queries_total{app=~\"$app\"}[5m]) > 0 or on() irate(voedger_qp_queries_total{app=~\"$app\"}[5m]))",
+              "expr": "(sum(increase(voedger_qp_exec_fields_seconds{app=~\"$filtered_app\"}[$aggregation_interval]) or vector(0)) + sum(increase(voedger_qp_exec_enrich_seconds{app=~\"$filtered_app\"}[$aggregation_interval]) or vector(0)) + sum(increase(voedger_qp_exec_filter_seconds{app=~\"$filtered_app\"}[$aggregation_interval]) or vector(0)) + sum(increase(voedger_qp_exec_order_seconds{app=~\"$filtered_app\"}[$aggregation_interval]) or vector(0)) + sum(increase(voedger_qp_exec_count_seconds{app=~\"$filtered_app\"}[$aggregation_interval]) or vector(0)) + sum(increase(voedger_qp_exec_send_seconds{app=~\"$filtered_app\"}[$aggregation_interval]) or vector(0)))/sum(increase(voedger_qp_queries_total{app=~\"$filtered_app\"}[$aggregation_interval]) > 0 or on() increase(voedger_qp_queries_total{app=~\"$filtered_app\"}[$aggregation_interval]))",
               "interval": "",
-              "legendFormat": "Rows Processing",
+              "legendFormat": "Rows processing",
               "range": true,
               "refId": "D"
             }
           ],
-          "title": "QP stack time: $app",
+          "title": "QP latency stack, avg per $aggregation_interval",
           "type": "timeseries"
         },
         {
@@ -1639,7 +1566,7 @@
               "datasource": "Prometheus",
               "editorMode": "code",
               "exemplar": true,
-              "expr": "sum(irate(voedger_qp_exec_fields_seconds{app=~\"$app\"}[5m]) or vector(0))*1000",
+              "expr": "sum(increase(voedger_qp_exec_fields_seconds{app=~\"$filtered_app\"}[$aggregation_interval]) or vector(0))*1000/sum(increase(voedger_qp_queries_total{app=~\"$filtered_app\"}[$aggregation_interval])  > 0 or on() increase(voedger_qp_queries_total{app=~\"$filtered_app\"}[$aggregation_interval]))",
               "interval": "",
               "legendFormat": "Exec: Fields",
               "range": true,
@@ -1649,7 +1576,7 @@
               "datasource": "Prometheus",
               "editorMode": "code",
               "exemplar": true,
-              "expr": "sum(irate(voedger_qp_exec_enrich_seconds{app=~\"$app\"}[5m]) or vector(0))*1000",
+              "expr": "sum(increase(voedger_qp_exec_enrich_seconds{app=~\"$filtered_app\"}[$aggregation_interval]) or vector(0))*1000/sum(increase(voedger_qp_queries_total{app=~\"$filtered_app\"}[$aggregation_interval])  > 0 or on() increase(voedger_qp_queries_total{app=~\"$filtered_app\"}[$aggregation_interval]))",
               "interval": "",
               "legendFormat": "Exec: Enrich",
               "range": true,
@@ -1658,7 +1585,7 @@
             {
               "datasource": "Prometheus",
               "exemplar": true,
-              "expr": "sum(irate(voedger_qp_exec_filter_seconds{app=~\"$app\"}[5m]) or vector(0))*1000",
+              "expr": "sum(increase(voedger_qp_exec_filter_seconds{app=~\"$filtered_app\"}[$aggregation_interval]) or vector(0))*1000/sum(increase(voedger_qp_queries_total{app=~\"$filtered_app\"}[$aggregation_interval])  > 0 or on() increase(voedger_qp_queries_total{app=~\"$filtered_app\"}[$aggregation_interval]))",
               "hide": false,
               "interval": "",
               "legendFormat": "Exec: Filter",
@@ -1667,7 +1594,7 @@
             {
               "datasource": "Prometheus",
               "exemplar": true,
-              "expr": "sum(irate(voedger_qp_exec_order_seconds{app=~\"$app\"}[5m]) or vector(0))*1000",
+              "expr": "sum(increase(voedger_qp_exec_order_seconds{app=~\"$filtered_app\"}[$aggregation_interval]) or vector(0))*1000/sum(increase(voedger_qp_queries_total{app=~\"$filtered_app\"}[$aggregation_interval])  > 0 or on() increase(voedger_qp_queries_total{app=~\"$filtered_app\"}[$aggregation_interval]))",
               "hide": false,
               "interval": "",
               "legendFormat": "Exec: Order",
@@ -1676,7 +1603,7 @@
             {
               "datasource": "Prometheus",
               "exemplar": true,
-              "expr": "sum(irate(voedger_qp_exec_count_seconds{app=~\"$app\"}[5m]) or vector(0))*1000",
+              "expr": "sum(increase(voedger_qp_exec_count_seconds{app=~\"$filtered_app\"}[$aggregation_interval]) or vector(0))*1000/sum(increase(voedger_qp_queries_total{app=~\"$filtered_app\"}[$aggregation_interval])  > 0 or on() increase(voedger_qp_queries_total{app=~\"$filtered_app\"}[$aggregation_interval]))",
               "hide": false,
               "interval": "",
               "legendFormat": "Exec: Count",
@@ -1685,19 +1612,19 @@
             {
               "datasource": "Prometheus",
               "exemplar": true,
-              "expr": "sum(irate(voedger_qp_exec_send_seconds{app=~\"$app\"}[5m]) or vector(0))*1000",
+              "expr": "sum(increase(voedger_qp_exec_send_seconds{app=~\"$filtered_app\"}[$aggregation_interval]) or vector(0))*1000/sum(increase(voedger_qp_queries_total{app=~\"$filtered_app\"}[$aggregation_interval])  > 0 or on() increase(voedger_qp_queries_total{app=~\"$filtered_app\"}[$aggregation_interval]))",
               "hide": false,
               "interval": "",
               "legendFormat": "Exec: Send",
               "refId": "F"
             }
           ],
-          "title": "QP rows processing stack time: $app",
+          "title": "QP rows processing latency stack, avg per $aggregation_interval",
           "type": "timeseries"
         }
       ],
-      "repeat": "app",
-      "title": "Latency stack: $app",
+      "repeat": "filtered_app",
+      "title": "Latency stacks: $filtered_app",
       "type": "row"
     }
   ],
@@ -1726,7 +1653,7 @@
         "options": [],
         "query": {
           "query": "label_values(app)",
-          "refId": "Prometheus-app-Variable-Query"
+          "refId": "StandardVariableQuery"
         },
         "refresh": 1,
         "regex": "",
@@ -1736,6 +1663,72 @@
         "tagsQuery": "",
         "type": "query",
         "useTags": false
+      },
+      {
+        "current": {
+          "selected": false,
+          "text": "1h",
+          "value": "1h"
+        },
+        "hide": 0,
+        "includeAll": false,
+        "label": "Aggregation interval",
+        "multi": false,
+        "name": "aggregation_interval",
+        "options": [
+          {
+            "selected": true,
+            "text": "1h",
+            "value": "1h"
+          },
+          {
+            "selected": false,
+            "text": "1m",
+            "value": "1m"
+          },
+          {
+            "selected": false,
+            "text": "5m",
+            "value": "5m"
+          },
+          {
+            "selected": false,
+            "text": "30m",
+            "value": "30m"
+          },
+          {
+            "selected": false,
+            "text": "1d",
+            "value": "1d"
+          }
+        ],
+        "query": "1h,1m,5m,30m,1d",
+        "queryValue": "",
+        "skipUrlSync": false,
+        "type": "custom"
+      },
+      {
+        "current": {
+          "selected": false,
+          "text": "All",
+          "value": "$__all"
+        },
+        "definition": "label_values(app)",
+        "hide": 2,
+        "includeAll": true,
+        "label": "filtered_app",
+        "multi": false,
+        "name": "filtered_app",
+        "options": [],
+        "query": {
+          "query": "label_values(app)",
+          "refId": "StandardVariableQuery"
+        },
+        "refresh": 1,
+        "regex": "/^(?!sys\\/blobber$|sys\\/router$).*$/",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
       }
     ]
   },
@@ -1758,8 +1751,8 @@
     ]
   },
   "timezone": "UTC",
-  "title": "App Processors",
+  "title": "App processors",
   "uid": "DMxOsLJSk2",
-  "version": 16,
+  "version": 114,
   "weekStart": ""
 }

@@ -29,7 +29,7 @@ func readWlog(ctx context.Context, wsid istructs.WSID, offset istructs.Offset, c
 			data["WlogOffset"] = wlogOffset
 		}
 
-		renderDbEvent(data, f, event, appDef)
+		renderDbEvent(data, f, event, appDef, offset)
 
 		bb, err := json.Marshal(data)
 		if err != nil {

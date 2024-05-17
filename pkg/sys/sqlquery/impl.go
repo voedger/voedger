@@ -14,6 +14,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appparts"
+	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/processors"
 	"github.com/voedger/voedger/pkg/sys/authnz"
@@ -192,7 +193,17 @@ func getFilter(f func(string) bool) coreutils.MapperOpt {
 	})
 }
 
-func renderDbEvent(data map[string]interface{}, f *filter, event istructs.IDbEvent, appDef appdef.IAppDef) {
+func renderDbEvent(data map[string]interface{}, f *filter, event istructs.IDbEvent, appDef appdef.IAppDef, offset istructs.Offset) {
+	defer func() {
+		if r := recover(); r != nil {
+			eventKind := "plog"
+			if _, ok := event.(istructs.IWLogEvent); ok {
+				eventKind = "wlog"
+			}
+			logger.Error(fmt.Sprintf("failed to render %s event %s offset %d registered at %s: %v", eventKind, event.QName(), offset, event.RegisteredAt().String(), r))
+			panic(r)
+		}
+	}()
 	if f.filter("QName") {
 		data["QName"] = event.QName().String()
 	}

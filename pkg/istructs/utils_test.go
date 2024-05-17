@@ -13,8 +13,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"math"
 	"strconv"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 
@@ -482,5 +484,16 @@ func TestAppQName_IsSys(t *testing.T) {
 				t.Errorf("AppQName.IsSys() = %v, want %v", got, tt.want)
 			}
 		})
+	}
+}
+
+func TestUnixMilli(t *testing.T) {
+	cases := []struct {
+		u UnixMilli
+	}{
+		{u: 0}, {u: UnixMilli(time.Now().UnixMilli())}, {u: math.MaxInt64},
+	}
+	for _, c := range cases {
+		log.Println(c.u.String())
 	}
 }

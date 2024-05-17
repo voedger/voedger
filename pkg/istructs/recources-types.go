@@ -96,6 +96,7 @@ type IState interface {
 
 	App() AppQName
 }
+
 type IIntents interface {
 	// NewValue returns a new value builder for given get
 	// If a value with the same get already exists in storage, it will be replaced

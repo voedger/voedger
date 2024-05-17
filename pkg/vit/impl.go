@@ -29,7 +29,6 @@ import (
 	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/state/smtptest"
 	"github.com/voedger/voedger/pkg/sys/authnz"
-	"github.com/voedger/voedger/pkg/sys/blobber"
 	"github.com/voedger/voedger/pkg/sys/verifier"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 	"github.com/voedger/voedger/pkg/vvm"
@@ -355,7 +354,7 @@ func (vit *VIT) PostWSSys(ws *AppWorkspace, funcName string, body string, opts .
 	return vit.PostApp(ws.Owner.AppQName, ws.WSID, funcName, body, opts...)
 }
 
-func (vit *VIT) UploadBLOBs(appQName istructs.AppQName, wsid istructs.WSID, blobs []blobber.BLOB, opts ...coreutils.ReqOptFunc) (blobIDs []istructs.RecordID) {
+func (vit *VIT) UploadBLOBs(appQName istructs.AppQName, wsid istructs.WSID, blobs []coreutils.BLOB, opts ...coreutils.ReqOptFunc) (blobIDs []istructs.RecordID) {
 	vit.T.Helper()
 	blobIDs, err := vit.IFederation.UploadBLOBs(appQName, wsid, blobs, opts...)
 	require.NoError(vit.T, err)
