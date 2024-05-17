@@ -156,6 +156,9 @@ func (v *fcCmdValue) AsValue(name string) istructs.IStateValue {
 	if name == Field_NewIDs {
 		return v.newIds
 	}
+	if name == Field_Result {
+		return v.result
+	}
 	panic(errUndefined(name))
 }
 
