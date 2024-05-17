@@ -1710,7 +1710,7 @@
     ]
   },
   "timezone": "UTC",
-  "title": "Docker Swarm Nodes",
+  "title": "Docker swarm nodes",
   "uid": "BPlb-Sgik",
   "version": 3,
   "weekStart": ""

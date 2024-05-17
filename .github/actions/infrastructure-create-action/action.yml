@@ -5,6 +5,11 @@
 name: 'Voedger Cluster Create Infrastructure Action'
 description: 'Voedger Cluster Create Infrastructure Action'
 
+inputs:
+  terraform_config_path:
+    description: 'path to terraform config'
+    required: true
+
 runs:
   using: 'composite'
 
@@ -15,14 +20,14 @@ runs:
         terraform_wrapper: false
 
     - name: Terraform Init
-      run: terraform -chdir=cmd/ctool/scripts/terraform/ init
+      run: terraform -chdir=${{ inputs.terraform_config_path }} init
       shell: bash
 
     - name: Terraform plan
-      run: terraform -chdir=cmd/ctool/scripts/terraform/ plan -out=terraform.tfplan
+      run: terraform -chdir=${{ inputs.terraform_config_path }} plan -out=terraform.tfplan
       shell: bash
 
     - name: Terraform apply
-      run: terraform -chdir=cmd/ctool/scripts/terraform/ apply -auto-approve
+      run: terraform -chdir=${{ inputs.terraform_config_path }} apply -auto-approve
       shell: bash
 

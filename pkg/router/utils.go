@@ -20,10 +20,6 @@ func WriteTextResponse(w http.ResponseWriter, msg string, code int) {
 }
 
 func writeResponse(w http.ResponseWriter, data string) bool {
-	if onBeforeWriteResponse != nil {
-		// happens in tests only
-		onBeforeWriteResponse(w)
-	}
 	if _, err := w.Write([]byte(data)); err != nil {
 		stack := debug.Stack()
 		log.Println("failed to write response:", err, "\n", string(stack))

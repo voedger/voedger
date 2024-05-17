@@ -21,7 +21,6 @@ import (
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/istructs"
-	"github.com/voedger/voedger/pkg/sys/blobber"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
@@ -42,7 +41,7 @@ func (f *implIFederation) req(relativeURL string, body string, optFuncs ...coreu
 	return f.httpClient.Req(url, body, optFuncs...)
 }
 
-func (f *implIFederation) UploadBLOBs(appQName istructs.AppQName, wsid istructs.WSID, blobs []blobber.BLOB, optFuncs ...coreutils.ReqOptFunc) (blobIDs []istructs.RecordID, err error) {
+func (f *implIFederation) UploadBLOBs(appQName istructs.AppQName, wsid istructs.WSID, blobs []coreutils.BLOB, optFuncs ...coreutils.ReqOptFunc) (blobIDs []istructs.RecordID, err error) {
 	body := bytes.NewBuffer(nil)
 	w := multipart.NewWriter(body)
 
