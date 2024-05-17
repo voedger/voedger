@@ -14,6 +14,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/goutils/logger"
+	"github.com/voedger/voedger/pkg/goutils/testingu"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
@@ -463,4 +464,53 @@ func findWasmFiles(dir string) []string {
 		return nil
 	}
 	return wasmFiles
+}
+
+func TestCommandMessaging(t *testing.T) {
+	if testing.Short() {
+		t.Skip()
+	}
+
+	dir := t.TempDir()
+
+	testCases := []testingu.CmdTestCase{
+		{
+			Name:               "init: wrong number of arguments",
+			Args:               []string{"vpm", "init", "-C", dir, "package_path", "sfs"},
+			ExpectedErrPattern: "1 arg(s)",
+		},
+		{
+			Name:               "init: unknown flag",
+			Args:               []string{"vpm", "init", "-C", dir, "--unknown_flag", "package_path"},
+			ExpectedErrPattern: "unknown flag",
+		},
+		{
+			Name:        "tidy: before init",
+			Args:        []string{"vpm", "tidy", "-C", dir},
+			ExpectedErr: errGoModFileNotFound,
+		},
+		{
+			Name:           "init: new package",
+			Args:           []string{"vpm", "init", "-C", dir, "package_path"},
+			ExpectedStderr: "go: added github.com/voedger/voedger",
+		},
+		{
+			Name:           "tidy: after init",
+			Args:           []string{"vpm", "tidy", "-C", dir},
+			ExpectedStdout: "failed to compile, will try to exec 'go mod tidy",
+		},
+		{
+			Name:           "help",
+			Args:           []string{"vpm", "help"},
+			ExpectedStdout: "vpm [command]",
+		},
+		{
+			Name:               "unknown command",
+			Args:               []string{"vpm", "unknown_command"},
+			ExpectedErrPattern: "",
+			ExpectedStdout:     "vpm [command]",
+		},
+	}
+
+	testingu.RunCmdTestCases(t, execRootCmd, testCases)
 }

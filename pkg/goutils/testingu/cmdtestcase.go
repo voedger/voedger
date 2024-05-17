@@ -9,21 +9,24 @@ import (
 	"bytes"
 	"errors"
 	"io"
+	"log"
 	"os"
 	"strings"
 	"sync"
 	"testing"
 )
 
-type RootTestCase struct {
+type CmdTestCase struct {
 	Name               string
 	Args               []string
 	Version            string
 	ExpectedErr        error
 	ExpectedErrPattern string
+	ExpectedStdout     string
+	ExpectedStderr     string
 }
 
-func RunRootTestCases(t *testing.T, execute func(args []string, version string) error, testCases []RootTestCase) {
+func RunCmdTestCases(t *testing.T, execute func(args []string, version string) error, testCases []CmdTestCase) {
 	// notestdept
 	t.Helper()
 	for _, tc := range testCases {
@@ -33,7 +36,12 @@ func RunRootTestCases(t *testing.T, execute func(args []string, version string) 
 				return execute(tc.Args, tc.Version)
 			}
 
-			_, _, err := CaptureStdoutStderr(f)
+			stdout, stderr, err := CaptureStdoutStderr(f)
+			log.Println("stdout:", stdout)
+			log.Println("stderr:", stderr)
+
+			checkOutput(t, tc.ExpectedStdout, stdout, "stdout")
+			checkOutput(t, tc.ExpectedStderr, stderr, "stderr")
 
 			checkError(t, tc.ExpectedErr, tc.ExpectedErrPattern, err)
 		})
@@ -58,6 +66,18 @@ func checkError(t *testing.T, expectedErr error, expectedErrPattern string, actu
 		}
 	} else if actualErr != nil {
 		t.Errorf("unexpected error was returned: %v", actualErr)
+	}
+}
+
+func checkOutput(t *testing.T, expected, actual, outputTitle string) {
+	t.Helper()
+	switch {
+	case len(actual) == 0 && len(expected) > 0:
+		t.Errorf("%s: expected pattern `%v`, actual is nothing", outputTitle, expected)
+	case !strings.Contains(actual, expected) && len(expected) > 0:
+		t.Errorf("%s: expected pattern `%v`, actual `%v`", outputTitle, expected, actual)
+	case len(actual) > 0 && len(expected) == 0:
+		t.Errorf("%s: expected nothing, got `%v`", outputTitle, actual)
 	}
 }
 

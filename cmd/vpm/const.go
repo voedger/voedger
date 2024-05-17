@@ -5,6 +5,10 @@
 
 package main
 
+import (
+	"errors"
+)
+
 const (
 	wasmDirName          = "wasm"
 	buildDirName         = "build"
@@ -56,13 +60,13 @@ func CommandContext() Value_CommandContext {
 )
 
 const (
-	goModFileName                       = "go.mod"
-	goSumFileName                       = "go.sum"
-	packagesGenFileName                 = "packages_gen.go"
-	packagePathIsNotDeterminedErrFormat = "vpm: cannot determine module path for source directory %s"
-	minimalRequiredGoVersion            = "1.18"
-	unsupportedGoVersionErrFormat       = "vpm: unsupported go version %s, minimal required go version is " + minimalRequiredGoVersion
-	goModContentTemplate                = `module %s
+	goModFileName                      = "go.mod"
+	goSumFileName                      = "go.sum"
+	packagesGenFileName                = "packages_gen.go"
+	modulePathIsNotDeterminedErrFormat = "vpm: cannot determine module path for source directory %s"
+	minimalRequiredGoVersion           = "1.18"
+	unsupportedGoVersionErrFormat      = "vpm: unsupported go version %s, minimal required go version is " + minimalRequiredGoVersion
+	goModContentTemplate               = `module %s
 
 go %s
 `
@@ -79,4 +83,8 @@ func init() {
 	return
 }
 `
+)
+
+var (
+	errGoModFileNotFound = errors.New("go.mod file not found")
 )
