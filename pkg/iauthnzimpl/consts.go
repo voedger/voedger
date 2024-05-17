@@ -97,6 +97,7 @@ var (
 	qNameQrySendReceiptByEmail                      = appdef.NewQName(airPackage, "SendReceiptByEmail")
 	qNameQryUpdateShopperStatement                  = appdef.NewQName(airPackage, "UpdateShopperStatement")
 	qNameWDocLastNumbers                            = appdef.NewQName(airPackage, "LastNumbers")
+	qNameCmdVSqlUpdate                              = appdef.NewQName(clusterPackage, "VSqlUpdate")
 
 	// Air roles
 	qNameRoleResellersAdmin         = appdef.NewQName(airPackage, "ResellersAdmin")
@@ -116,6 +117,7 @@ const (
 	airPackage                  = "air"
 	untillPackage               = "untill"
 	untillChargebeeAgentLogin   = "untillchargebeeagent"
+	clusterPackage              = "cluster"
 
 	// avoiding import cycle: collection->iauthnzimpl->registry->workspace->collection
 	registryPackage = "registry"

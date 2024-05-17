@@ -14,6 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/apps/sys/clusterapp"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/processors"
 	"github.com/voedger/voedger/pkg/sys/sqlquery"
@@ -539,6 +540,9 @@ func TestVSqlUpdate(t *testing.T) {
 	body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.category","name":"%s"}}]}`, categoryName)
 	categoryID := vit.PostWS(ws, "c.sys.CUD", body).NewID()
 
-	fmt.Sprintf()
+	sysPrn := vit.GetSystemPrincipal(istructs.AppQName_sys_cluster)
+
+	body = fmt.Sprintf(`{"args": {"Query":"update test1.app1.%d.app1pkg.category set name = 'name 2' where id = %d"}}`, ws.WSID, categoryID)
+	vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppWSID, "c.cluster.VSqlUpdate", body, coreutils.WithAuthorizeBy(sysPrn.Token)).Println()
 
 }

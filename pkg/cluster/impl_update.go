@@ -23,7 +23,7 @@ import (
 func provideExecCmdVSqlUpdate(timeFunc coreutils.TimeFunc) istructsmem.ExecCommandClosure {
 	return func(args istructs.ExecCommandArgs) (err error) {
 		query := args.ArgumentObject.AsString(field_Query)
-		appQName, wsid, logViewQName, offset, updateKind, cleanSql, err := parseUpdateQuery(query)
+		appQName, wsid, qNameToUpdate, offset, updateKind, cleanSql, err := parseUpdateQuery(query)
 		if err != nil {
 			return err
 		}
@@ -43,7 +43,7 @@ func provideExecCmdVSqlUpdate(timeFunc coreutils.TimeFunc) istructsmem.ExecComma
 			if err != nil {
 				return err
 			}
-			return updateCorrupted(appQName, wsid, logViewQName, offset, istructs.NullOffset, partitionID, istructs.UnixMilli(timeFunc().UnixMilli()))
+			return updateCorrupted(appQName, wsid, qNameToUpdate, offset, istructs.NullOffset, partitionID, istructs.UnixMilli(timeFunc().UnixMilli()))
 		case updateKind_Simple:
 			return updateSimple(appQName, wsid, cleanSql)
 		}
@@ -110,15 +110,16 @@ func updateSimple(appQName istructs.AppQName, wsid istructs.WSID, query string) 
 	return nil
 }
 
-func parseUpdateQuery(query string) (appQName istructs.AppQName, wsid istructs.WSID, logViewQName appdef.QName, offset istructs.Offset,
+func parseUpdateQuery(query string) (appQName istructs.AppQName, wsid istructs.WSID, qNameToUpdate appdef.QName, offset istructs.Offset,
 	updateKind updateKind, cleanSql string, err error) {
 	const (
 		// 0 is original query
 
-		updateKindIdx int = 1 + iota
+		firstWordIds int = 1 + iota
+		updateKindIdx
 		appIdx
 		wsidIdx
-		logViewQNameIdx
+		qNameToUpdateIdx
 		offsetIdx
 		parsIdx
 
@@ -148,33 +149,28 @@ func parseUpdateQuery(query string) (appQName istructs.AppQName, wsid istructs.W
 		}
 	}
 
-	logViewQNameStr := parts[logViewQNameIdx]
-	logViewQName, err = appdef.ParseQName(logViewQNameStr)
+	logViewQNameStr := parts[qNameToUpdateIdx]
+	qNameToUpdate, err = appdef.ParseQName(logViewQNameStr)
 	if err != nil {
 		return istructs.NullAppQName, 0, appdef.NullQName, 0, updateKind_Null, "", fmt.Errorf("invalid log view QName %s: %w", logViewQNameStr, err)
 	}
-	if logViewQName != wlog || logViewQName != plog {
-		return istructs.NullAppQName, 0, appdef.NullQName, 0, updateKind_Null, "", fmt.Errorf("invalid log view %s, sys.plog or sys.wlog are only allowed", logViewQName)
-	}
 
-	offsetStr := parts[offsetIdx]
-	offsetInt, err := strconv.Atoi(offsetStr)
-	if err != nil {
-		return istructs.NullAppQName, 0, appdef.NullQName, 0, updateKind_Null, "", fmt.Errorf("invalid offset %s: %w", offsetStr, err)
-	}
-	offset = istructs.Offset(offsetInt)
-	if offset <= 0 {
-		return istructs.NullAppQName, 0, appdef.NullQName, 0, updateKind_Null, "", fmt.Errorf("invalid offset %d: must be >0", offset)
+	if offsetStr := parts[offsetIdx]; len(offsetStr) > 0 {
+		offsetInt, err := strconv.Atoi(offsetStr)
+		if err != nil {
+			return istructs.NullAppQName, 0, appdef.NullQName, 0, updateKind_Null, "", fmt.Errorf("invalid offset %s: %w", offsetStr, err)
+		}
+		offset = istructs.Offset(offsetInt)
 	}
 	cleanSql = strings.TrimSpace(parts[parsIdx])
-	updateKindStr := parts[updateKindIdx]
+	updateKindStr := parts[firstWordIds] + parts[updateKindIdx]
 	switch strings.TrimSpace(strings.ToLower(updateKindStr)) {
 	case "update":
 		updateKind = updateKind_Simple
 		if len(cleanSql) == 0 {
 			return istructs.NullAppQName, 0, appdef.NullQName, 0, updateKind_Null, "", fmt.Errorf("nothing to update: %s", query)
 		}
-		cleanSql = fmt.Sprintf("update %s %s", logViewQName, cleanSql)
+		cleanSql = fmt.Sprintf("update %s %s", qNameToUpdate, cleanSql)
 	case "direct update":
 		updateKind = updateKind_Direct
 	case "update corrupted":
@@ -182,9 +178,15 @@ func parseUpdateQuery(query string) (appQName istructs.AppQName, wsid istructs.W
 		if len(cleanSql) > 0 {
 			return istructs.NullAppQName, 0, appdef.NullQName, 0, updateKind_Null, "", fmt.Errorf("any params of update corrupted are not allowed: %s", query)
 		}
+		if qNameToUpdate != wlog || qNameToUpdate != plog {
+			return istructs.NullAppQName, 0, appdef.NullQName, 0, updateKind_Null, "", fmt.Errorf("invalid log view %s, sys.plog or sys.wlog are only allowed", qNameToUpdate)
+		}
+		if offset <= 0 {
+			return istructs.NullAppQName, 0, appdef.NullQName, 0, updateKind_Null, "", fmt.Errorf("invalid offset %d: must be >0", offset)
+		}
 	default:
 		return istructs.NullAppQName, 0, appdef.NullQName, 0, updateKind_Null, "", fmt.Errorf("wrong update kind %s", updateKindStr)
 	}
 
-	return appQName, wsid, logViewQName, offset, updateKind, cleanSql, nil
+	return appQName, wsid, qNameToUpdate, offset, updateKind, cleanSql, nil
 }
