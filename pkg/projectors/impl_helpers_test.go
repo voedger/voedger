@@ -14,7 +14,6 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appparts"
-	"github.com/voedger/voedger/pkg/cluster"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
 )
@@ -31,6 +30,7 @@ type plogEventMock struct {
 var testQName = appdef.NewQName(appdef.SysPackage, "abc")
 
 func (e *plogEventMock) ArgumentObject() istructs.IObject     { return istructs.NewNullObject() }
+func (e *plogEventMock) Bytes() []byte                        { return nil }
 func (e *plogEventMock) Command() istructs.IObject            { return nil }
 func (e *plogEventMock) Workspace() istructs.WSID             { return e.wsid }
 func (e *plogEventMock) WLogOffset() istructs.Offset          { return e.wlogOffset }
@@ -58,7 +58,7 @@ type cmdProcMock struct {
 }
 
 func (p cmdProcMock) TestEvent(wsid istructs.WSID) error {
-	appPart, err := p.appParts.Borrow(istructs.AppQName_test1_app1, istructs.PartitionID(1), cluster.ProcessorKind_Command)
+	appPart, err := p.appParts.Borrow(istructs.AppQName_test1_app1, istructs.PartitionID(1), appparts.ProcessorKind_Command)
 	if err != nil {
 		return err
 	}

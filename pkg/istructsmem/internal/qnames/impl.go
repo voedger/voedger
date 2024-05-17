@@ -71,7 +71,8 @@ func (names *QNames) collectAll(appDef appdef.IAppDef, r istructs.IResources) (e
 	names.
 		collectSys(appdef.NullQName, NullQNameID).
 		collectSys(istructs.QNameForError, QNameIDForError).
-		collectSys(istructs.QNameCommandCUD, QNameIDCommandCUD)
+		collectSys(istructs.QNameCommandCUD, QNameIDCommandCUD).
+		collectSys(istructs.QNameForCorruptedData, QNameIDForCorruptedData)
 
 	if appDef != nil {
 		appDef.Types(

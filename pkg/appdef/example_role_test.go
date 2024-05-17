@@ -35,7 +35,7 @@ func ExampleIAppDefBuilder_AddRole() {
 		ws.AddType(docName)
 
 		reader := adb.AddRole(readerRoleName)
-		reader.Grant(appdef.PrivilegeKinds{appdef.PrivilegeKind_Select}, []appdef.QName{docName}, []appdef.FieldName{"field1"}, "grant select on doc.field1")
+		reader.Grant([]appdef.PrivilegeKind{appdef.PrivilegeKind_Select}, []appdef.QName{docName}, []appdef.FieldName{"field1"}, "grant select on doc.field1")
 
 		writer := adb.AddRole(writerRoleName)
 		writer.GrantAll([]appdef.QName{wsName}, "grant all on test.ws")

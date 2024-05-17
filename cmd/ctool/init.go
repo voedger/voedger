@@ -8,7 +8,6 @@ package main
 import (
 	"errors"
 	"net"
-	"os"
 
 	"github.com/spf13/cobra"
 )
@@ -38,20 +37,15 @@ func newInitCmd() *cobra.Command {
 		RunE: initSE,
 	}
 
+	if !addSshKeyFlag(initSECmd) {
+		return nil
+	}
+
 	initSECmd.Flags().StringSliceVar(&skipStacks, "skip-stack", []string{}, "Specify docker compose stacks to skip")
 
 	initCmd := &cobra.Command{
 		Use:   "init",
 		Short: "Creates the file cluster.json for cluster",
-	}
-	initCmd.PersistentFlags().StringVar(&sshKey, "ssh-key", "", "Path to SSH key")
-
-	value, exists := os.LookupEnv(envVoedgerSshKey)
-	if !exists || value == "" {
-		if err := initCmd.MarkPersistentFlagRequired("ssh-key"); err != nil {
-			loggerError(err.Error())
-			return nil
-		}
 	}
 
 	initCmd.PersistentFlags().StringVar(&acmeDomains, "acme-domain", "", "ACME domains <comma separated list>")
@@ -131,13 +125,10 @@ func initCE(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	err = cluster.validate()
-	if err != nil {
-		loggerError(err.Error())
+	if err = cluster.Cmd.apply(cluster); err != nil {
+		loggerError(err)
 		return err
 	}
-
-	loggerInfo("Cluster configuration is ok")
 
 	return err
 }

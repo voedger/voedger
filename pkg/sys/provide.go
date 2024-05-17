@@ -30,13 +30,14 @@ import (
 	"github.com/voedger/voedger/pkg/sys/verifier"
 	"github.com/voedger/voedger/pkg/sys/workspace"
 	coreutils "github.com/voedger/voedger/pkg/utils"
+	"github.com/voedger/voedger/pkg/utils/federation"
 )
 
 //go:embed *.vsql
 var SysFS embed.FS
 
 func Provide(cfg *istructsmem.AppConfigType, smtpCfg smtp.Cfg,
-	ep extensionpoints.IExtensionPoint, wsPostInitFunc workspace.WSPostInitFunc, timeFunc coreutils.TimeFunc, itokens itokens.ITokens, federation coreutils.IFederation,
+	ep extensionpoints.IExtensionPoint, wsPostInitFunc workspace.WSPostInitFunc, timeFunc coreutils.TimeFunc, itokens itokens.ITokens, federation federation.IFederation,
 	asp istructs.IAppStructsProvider, atf payloads.IAppTokensFactory, buildInfo *debug.BuildInfo,
 	storageProvider istorage.IAppStorageProvider) parser.PackageFS {
 	blobber.ProvideBlobberCmds(cfg)

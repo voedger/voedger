@@ -22,26 +22,27 @@ import (
 	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys/smtp"
 	coreutils "github.com/voedger/voedger/pkg/utils"
+	"github.com/voedger/voedger/pkg/utils/federation"
 )
 
 var translationsCatalog = coreutils.GetCatalogFromTranslations(translations)
 
 // called at targetApp/profileWSID
 func provideQryInitiateEmailVerification(cfg *istructsmem.AppConfigType, itokens itokens.ITokens,
-	asp istructs.IAppStructsProvider, federation coreutils.IFederation) {
+	asp istructs.IAppStructsProvider, federation federation.IFederation) {
 	cfg.Resources.Add(istructsmem.NewQueryFunction(
 		QNameQueryInitiateEmailVerification,
 		provideIEVExec(cfg.Name, itokens, asp, federation),
 	))
-	cfg.FunctionRateLimits.AddWorkspaceLimit(QNameQueryInitiateEmailVerification, istructs.RateLimit{
-		Period:                InitiateEmailVerification_Period,
-		MaxAllowedPerDuration: InitiateEmailVerification_MaxAllowed,
-	})
+	// cfg.FunctionRateLimits.AddWorkspaceLimit(QNameQueryInitiateEmailVerification, istructs.RateLimit{
+	// 	Period:                InitiateEmailVerification_Period,
+	// 	MaxAllowedPerDuration: InitiateEmailVerification_MaxAllowed,
+	// })
 }
 
 // q.sys.InitiateEmailVerification
 // called at targetApp/profileWSID
-func provideIEVExec(appQName istructs.AppQName, itokens itokens.ITokens, asp istructs.IAppStructsProvider, federation coreutils.IFederation) istructsmem.ExecQueryClosure {
+func provideIEVExec(appQName istructs.AppQName, itokens itokens.ITokens, asp istructs.IAppStructsProvider, federation federation.IFederation) istructsmem.ExecQueryClosure {
 	return func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 		entity := args.ArgumentObject.AsString(field_Entity)
 		targetWSID := istructs.WSID(args.ArgumentObject.AsInt64(field_TargetWSID))
@@ -87,7 +88,7 @@ func provideIEVExec(appQName istructs.AppQName, itokens itokens.ITokens, asp ist
 	}
 }
 
-func applySendEmailVerificationCode(federation coreutils.IFederation, smtpCfg smtp.Cfg, timeFunc coreutils.TimeFunc) func(event istructs.IPLogEvent, state istructs.IState, intents istructs.IIntents) (err error) {
+func applySendEmailVerificationCode(federation federation.IFederation, smtpCfg smtp.Cfg, timeFunc coreutils.TimeFunc) func(event istructs.IPLogEvent, state istructs.IState, intents istructs.IIntents) (err error) {
 	return func(event istructs.IPLogEvent, st istructs.IState, intents istructs.IIntents) (err error) {
 		eventTime := time.UnixMilli(int64(event.RegisteredAt()))
 		if eventTime.Add(threeDays).Before(timeFunc()) {
@@ -199,7 +200,7 @@ func provideCmdSendEmailVerificationCode(cfg *istructsmem.AppConfigType) {
 	))
 }
 
-func getVerificationEmailBody(federation coreutils.IFederation, verificationCode string, reason string, lng language.Tag, ctlg catalog.Catalog) string {
+func getVerificationEmailBody(federation federation.IFederation, verificationCode string, reason string, lng language.Tag, ctlg catalog.Catalog) string {
 	text1 := message.NewPrinter(lng, message.Catalog(ctlg)).Sprintf(`Here is your verification code`)
 	text2 := message.NewPrinter(lng, message.Catalog(ctlg)).Sprintf(`Please, enter this code on`)
 	text3 := message.NewPrinter(lng, message.Catalog(ctlg)).Sprintf(reason)

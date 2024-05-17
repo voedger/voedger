@@ -9,6 +9,7 @@ import (
 	_ "embed"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -39,6 +40,7 @@ func execRootCmd(args []string, ver string) error {
 		newOrmCmd(params),
 		newInitCmd(params),
 		newTidyCmd(params),
+		newBuildCmd(params),
 	)
 	rootCmd.InitDefaultHelpCmd()
 	rootCmd.InitDefaultCompletionCmd()
@@ -105,11 +107,12 @@ func exactArgs(n int) cobra.PositionalArgs {
 		case len(args) == 1 && args[0] == "help":
 			cmd.RunE = runHelpFuncInstead
 			return nil
-		case n == 0 && len(args) > 0:
-			return fmt.Errorf("'%s' accepts no argument. Run '%s help'", cmd.CommandPath(), cmd.CommandPath())
 		case len(args) != n:
-			cmd.RunE = runHelpFuncInstead
-			return nil
+			strCountOfArgs := strconv.Itoa(n)
+			if n == 0 {
+				strCountOfArgs = "no"
+			}
+			return fmt.Errorf("'%s' accepts %s arg(s). Run '%s help'", cmd.CommandPath(), strCountOfArgs, cmd.CommandPath())
 		}
 		return nil
 	}

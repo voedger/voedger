@@ -51,3 +51,9 @@ scrape_configs:
       # Monitor swarm nodes and services
       - targets: 
         - ${VOEDGER_CE_NODE}:8080
+
+  - job_name: 'voedger'
+    scrape_interval: 10s
+    static_configs:
+      - targets: 
+        - ${VOEDGER_CE_NODE}:8000

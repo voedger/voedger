@@ -298,12 +298,12 @@ func (q DefQName) String() string {
 
 type TypeVarchar struct {
 	Pos    lexer.Position
-	MaxLen *uint64 `parser:"('varchar' | 'text') ( '(' @Int ')' )?"`
+	MaxLen *uint64 `parser:"(('character' 'varying') | 'varchar' | 'text') ( '(' @Int ')' )?"`
 }
 
 type TypeBytes struct {
 	Pos    lexer.Position
-	MaxLen *uint64 `parser:"'bytes' ( '(' @Int ')' )?"`
+	MaxLen *uint64 `parser:"(('binary' 'varying') | 'varbinary' | 'bytes') ( '(' @Int ')' )?"`
 }
 
 type VoidOrDataType struct {
@@ -319,16 +319,16 @@ type VoidOrDef struct {
 type DataType struct {
 	Varchar   *TypeVarchar `parser:"( @@"`
 	Bytes     *TypeBytes   `parser:"| @@"`
-	Int32     bool         `parser:"| @('int' | 'int32')"`
-	Int64     bool         `parser:"| @'int64'"`
-	Float32   bool         `parser:"| @('float' | 'float32')"`
-	Float64   bool         `parser:"| @'float64'"`
-	QName     bool         `parser:"| @'qname'"`
-	Bool      bool         `parser:"| @'bool'"`
-	Blob      bool         `parser:"| @'blob'"`
+	Int32     bool         `parser:"| @('integer' | 'int' | 'int32')"`
+	Int64     bool         `parser:"| @('bigint' | 'int64')"`
+	Float32   bool         `parser:"| @('real' | 'float' | 'float32')"`
+	Float64   bool         `parser:"| @(('double' 'precision') | 'float64')"`
 	Timestamp bool         `parser:"| @'timestamp'"`
-	Record    bool         `parser:"| @'record'"`
-	Currency  bool         `parser:"| @'currency' )"`
+	Currency  bool         `parser:"| @('money' | 'currency')"`
+	Bool      bool         `parser:"| @('boolean' | 'bool')"`
+	Blob      bool         `parser:"| @(('binary' 'large' 'object') | 'blob')"`
+	QName     bool         `parser:"| @(('qualified' 'name') | 'qname')"`
+	Record    bool         `parser:"| @'record' )"`
 }
 
 func (q DataType) String() (s string) {

@@ -15,7 +15,7 @@ import (
 type appDef struct {
 	comment
 	packages     *packages
-	privileges   []*privilege
+	privileges   []*privilege // adding order should be saved
 	types        map[QName]interface{}
 	typesOrdered []interface{}
 	wsDesc       map[QName]IWorkspace
@@ -159,6 +159,21 @@ func (app *appDef) GRecords(cb func(IGRecord)) {
 	})
 }
 
+func (app *appDef) Limit(name QName) ILimit {
+	if t := app.typeByKind(name, TypeKind_Limit); t != nil {
+		return t.(ILimit)
+	}
+	return nil
+}
+
+func (app *appDef) Limits(cb func(ILimit)) {
+	app.Types(func(t IType) {
+		if l, ok := t.(ILimit); ok {
+			cb(l)
+		}
+	})
+}
+
 func (app appDef) LocalQName(name FullQName) QName { return app.packages.localQName(name) }
 
 func (app *appDef) Object(name QName) IObject {
@@ -231,7 +246,7 @@ func (app appDef) Privileges(cb func(IPrivilege)) {
 func (app appDef) PrivilegesOn(n []QName, k ...PrivilegeKind) []IPrivilege {
 	pp := make([]IPrivilege, 0)
 	for _, p := range app.privileges {
-		if p.On().ContainsAny(n...) && p.Kinds().ContainsAny(k...) {
+		if p.On().ContainsAny(n...) && p.kinds.ContainsAny(k...) {
 			pp = append(pp, p)
 		}
 	}
@@ -266,6 +281,21 @@ func (app *appDef) Query(name QName) IQuery {
 		return t.(IQuery)
 	}
 	return nil
+}
+
+func (app appDef) Rate(name QName) IRate {
+	if t := app.typeByKind(name, TypeKind_Rate); t != nil {
+		return t.(IRate)
+	}
+	return nil
+}
+
+func (app appDef) Rates(cb func(IRate)) {
+	app.Types(func(t IType) {
+		if r, ok := t.(IRate); ok {
+			cb(r)
+		}
+	})
 }
 
 func (app *appDef) Record(name QName) IRecord {
@@ -352,12 +382,14 @@ func (app *appDef) TypeByName(name QName) IType {
 	switch name {
 	case NullQName:
 		return NullType
-	case QNameANY:
-		return AnyType
-	default:
-		if t, ok := app.types[name]; ok {
-			return t.(IType)
-		}
+	}
+
+	if t, ok := anyTypes[name]; ok {
+		return t
+	}
+
+	if t, ok := app.types[name]; ok {
+		return t.(IType)
 	}
 	return nil
 }
@@ -473,6 +505,10 @@ func (app *appDef) addGRecord(name QName) IGRecordBuilder {
 	return newGRecordBuilder(gRec)
 }
 
+func (app *appDef) addLimit(name QName, on []QName, rate QName, comment ...string) {
+	_ = newLimit(app, name, on, rate, comment...)
+}
+
 func (app *appDef) addObject(name QName) IObjectBuilder {
 	obj := newObject(app, name)
 	return newObjectBuilder(obj)
@@ -500,6 +536,10 @@ func (app *appDef) addProjector(name QName) IProjectorBuilder {
 func (app *appDef) addQuery(name QName) IQueryBuilder {
 	q := newQuery(app, name)
 	return newQueryBuilder(q)
+}
+
+func (app *appDef) addRate(name QName, count RateCount, period RatePeriod, scopes []RateScope, comment ...string) {
+	_ = newRate(app, name, count, period, scopes, comment...)
 }
 
 func (app *appDef) addRole(name QName) IRoleBuilder {
@@ -552,7 +592,7 @@ func (app *appDef) build() (err error) {
 	return err
 }
 
-func (app *appDef) grant(kinds PrivilegeKinds, on []QName, fields []FieldName, toRole QName, comment ...string) {
+func (app *appDef) grant(kinds []PrivilegeKind, on []QName, fields []FieldName, toRole QName, comment ...string) {
 	r := app.Role(toRole)
 	if r == nil {
 		panic(ErrRoleNotFound(toRole))
@@ -583,7 +623,7 @@ func (app *appDef) makeSysDataTypes() {
 	}
 }
 
-func (app *appDef) revoke(kinds PrivilegeKinds, on []QName, fromRole QName, comment ...string) {
+func (app *appDef) revoke(kinds []PrivilegeKind, on []QName, fromRole QName, comment ...string) {
 	r := app.Role(fromRole)
 	if r == nil {
 		panic(ErrRoleNotFound(fromRole))
@@ -637,6 +677,10 @@ func (ab *appDefBuilder) AddGDoc(name QName) IGDocBuilder { return ab.app.addGDo
 
 func (ab *appDefBuilder) AddGRecord(name QName) IGRecordBuilder { return ab.app.addGRecord(name) }
 
+func (ab *appDefBuilder) AddLimit(name QName, on []QName, rate QName, comment ...string) {
+	ab.app.addLimit(name, on, rate, comment...)
+}
+
 func (ab *appDefBuilder) AddObject(name QName) IObjectBuilder { return ab.app.addObject(name) }
 
 func (ab *appDefBuilder) AddODoc(name QName) IODocBuilder { return ab.app.addODoc(name) }
@@ -651,6 +695,10 @@ func (ab *appDefBuilder) AddPackage(localName, path string) IAppDefBuilder {
 func (ab *appDefBuilder) AddProjector(name QName) IProjectorBuilder { return ab.app.addProjector(name) }
 
 func (ab *appDefBuilder) AddQuery(name QName) IQueryBuilder { return ab.app.addQuery(name) }
+
+func (ab *appDefBuilder) AddRate(name QName, count RateCount, period RatePeriod, scopes []RateScope, comment ...string) {
+	ab.app.addRate(name, count, period, scopes, comment...)
+}
 
 func (ab *appDefBuilder) AddRole(name QName) IRoleBuilder { return ab.app.addRole(name) }
 

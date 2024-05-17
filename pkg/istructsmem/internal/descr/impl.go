@@ -71,6 +71,13 @@ func (a *Application) read(app istructs.IAppStructs, rateLimits map[appdef.QName
 			pkg.Extensions.read(ext)
 			return
 		}
+
+		if role, ok := typ.(appdef.IRole); ok {
+			r := newRole()
+			r.read(role)
+			pkg.Roles[name.String()] = r
+			return
+		}
 	})
 
 	for qName, qNameRateLimit := range rateLimits {
@@ -101,6 +108,7 @@ func newPackage() *Package {
 		DataTypes:  make(map[string]*Data),
 		Structures: make(map[string]*Structure),
 		Views:      make(map[string]*View),
+		Roles:      make(map[string]*Role),
 		Resources:  make(map[string]*Resource),
 		RateLimits: make(map[string][]*RateLimit),
 	}

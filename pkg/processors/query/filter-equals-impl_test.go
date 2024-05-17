@@ -175,4 +175,54 @@ func TestEqualsFilter_IsMatch(t *testing.T) {
 			require.False(t, match(ageFilter(45).IsMatch(fk, row(42))))
 		})
 	})
+	t.Run("Compare appdef.QName", func(t *testing.T) {
+		row := func(name string) IOutputRow {
+			r := &testOutputRow{fields: []string{"sys.QName"}}
+			r.Set("sys.QName", name)
+			return r
+		}
+		fk := FieldsKinds{"sys.QName": appdef.DataKind_QName}
+		nameFilter := func(name string) IFilter {
+			return &EqualsFilter{
+				field: "sys.QName",
+				value: name,
+			}
+		}
+		tests := []struct {
+			name     string
+			qNameOne string
+			qNameTwo string
+			want     bool
+		}{
+			{
+				name:     "Should match",
+				qNameOne: "pkg.Entity",
+				qNameTwo: "pkg.Entity",
+				want:     true,
+			},
+			{
+				name:     "Should not match",
+				qNameOne: "pkg.Entity",
+				qNameTwo: "pkg1.Entity",
+				want:     false,
+			},
+			{
+				name:     "Should not match",
+				qNameOne: "pkg.Entity",
+				qNameTwo: "pkg.Entity1",
+				want:     false,
+			},
+			{
+				name:     "Should not match",
+				qNameOne: "pkg.Entity",
+				qNameTwo: "pkg1.Entity1",
+				want:     false,
+			},
+		}
+		for _, test := range tests {
+			t.Run(test.name, func(t *testing.T) {
+				require.Equal(t, test.want, match(nameFilter(test.qNameOne).IsMatch(fk, row(test.qNameTwo))))
+			})
+		}
+	})
 }

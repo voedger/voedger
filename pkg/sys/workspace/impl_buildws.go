@@ -6,17 +6,18 @@ package workspace
 
 import (
 	"fmt"
-	"strconv"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/sys/blobber"
 	coreutils "github.com/voedger/voedger/pkg/utils"
+	"github.com/voedger/voedger/pkg/utils/federation"
 )
 
 // everything is validated already
-func buildWorkspace(templateName string, ep extensionpoints.IExtensionPoint, wsKind appdef.QName, federation coreutils.IFederation, newWSID int64,
+func buildWorkspace(templateName string, ep extensionpoints.IExtensionPoint, wsKind appdef.QName, federation federation.IFederation, newWSID int64,
 	targetAppQName istructs.AppQName, wsName string, systemPrincipalToken string) (err error) {
 	wsTemplateBLOBs, wsTemplateData, err := ValidateTemplate(templateName, ep, wsKind)
 	if err != nil {
@@ -57,19 +58,13 @@ func updateBLOBsIDsMap(wsData []map[string]interface{}, blobsMap map[int64]map[s
 	}
 }
 
-func uploadBLOBs(blobs []BLOB, federation coreutils.IFederation, appQName istructs.AppQName, wsid int64, principalToken string) (blobsMap, error) {
+func uploadBLOBs(blobs []blobber.StoredBLOB, federation federation.IFederation, appQName istructs.AppQName, wsid int64, principalToken string) (blobsMap, error) {
 	res := blobsMap{}
 	for _, blob := range blobs {
-		uploadBLOBURL := fmt.Sprintf("blob/%s/%d?name=%s&mimeType=%s", appQName.String(), wsid, blob.Name, blob.MimeType)
-		logger.Info("workspace build: uploading blob", blob.Name, "url:", uploadBLOBURL)
-
-		resp, err := federation.POST(uploadBLOBURL, string(blob.Content), coreutils.WithAuthorizeBy(principalToken))
+		logger.Info("workspace build: uploading blob", blob.Name)
+		newBLOBID, err := federation.UploadBLOB(appQName, istructs.WSID(wsid), blob.Name, blob.MimeType, blob.Content, coreutils.WithAuthorizeBy(principalToken))
 		if err != nil {
 			return nil, fmt.Errorf("blob %s: %w", blob.Name, err)
-		}
-		newBLOBID, err := strconv.Atoi(resp.Body)
-		if err != nil {
-			return nil, fmt.Errorf("blob %s: failed to parse the received blobID string: %w", blob.Name, err)
 		}
 
 		fieldBlobID, ok := res[int64(blob.RecordID)]

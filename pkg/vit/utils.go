@@ -5,19 +5,21 @@
 package vit
 
 import (
-	"bufio"
 	"bytes"
 	"encoding/json"
 	"fmt"
 	"math"
 	"mime"
-	"net/url"
-	"strconv"
-	"strings"
+	"testing"
 	"time"
 
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/goutils/logger"
+	"github.com/voedger/voedger/pkg/in10n"
+	"github.com/voedger/voedger/pkg/istorage"
+	"github.com/voedger/voedger/pkg/istorage/mem"
+	"github.com/voedger/voedger/pkg/utils/federation"
+	"github.com/voedger/voedger/pkg/vvm"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -26,11 +28,11 @@ import (
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-func (vit *VIT) GetBLOB(appQName istructs.AppQName, wsid istructs.WSID, blobID int64, token string) *BLOB {
+func (vit *VIT) GetBLOB(appQName istructs.AppQName, wsid istructs.WSID, blobID istructs.RecordID, token string) *BLOB {
 	vit.T.Helper()
-	resp, err := vit.GET(fmt.Sprintf(`blob/%s/%d/%d`, appQName.String(), wsid, blobID), "", coreutils.WithAuthorizeBy(token))
+	resp, err := vit.IFederation.ReadBLOB(appQName, wsid, blobID, coreutils.WithAuthorizeBy(token))
 	require.NoError(vit.T, err)
-	contentDisposition := resp.HTTPResp.Header.Get("Content-Disposition")
+	contentDisposition := resp.HTTPResp.Header.Get(coreutils.ContentDisposition)
 	_, params, err := mime.ParseMediaType(contentDisposition)
 	require.NoError(vit.T, err)
 	return &BLOB{
@@ -258,7 +260,7 @@ func (vit *VIT) SignIn(login Login, optFuncs ...signInOptFunc) (prn *Principal) 
 }
 
 // owner could be *vit.Principal or *vit.AppWorkspace
-func (vit *VIT) InitChildWorkspace(wsd WSParams, ownerIntf interface{}) {
+func (vit *VIT) InitChildWorkspace(wsd WSParams, ownerIntf interface{}, opts ...coreutils.ReqOptFunc) {
 	vit.T.Helper()
 	body := fmt.Sprintf(`{
 		"args": {
@@ -273,9 +275,9 @@ func (vit *VIT) InitChildWorkspace(wsd WSParams, ownerIntf interface{}) {
 
 	switch owner := ownerIntf.(type) {
 	case *Principal:
-		vit.PostProfile(owner, "c.sys.InitChildWorkspace", body)
+		vit.PostProfile(owner, "c.sys.InitChildWorkspace", body, opts...)
 	case *AppWorkspace:
-		vit.PostWS(owner, "c.sys.InitChildWorkspace", body)
+		vit.PostWS(owner, "c.sys.InitChildWorkspace", body, opts...)
 	default:
 		panic("ownerIntf could be vit.*Principal or vit.*AppWorkspace only")
 	}
@@ -290,86 +292,39 @@ func SimpleWSParams(wsName string) WSParams {
 	}
 }
 
-func (vit *VIT) CreateWorkspace(wsp WSParams, owner *Principal) *AppWorkspace {
-	vit.InitChildWorkspace(wsp, owner)
+func (vit *VIT) CreateWorkspace(wsp WSParams, owner *Principal, opts ...coreutils.ReqOptFunc) *AppWorkspace {
+	vit.InitChildWorkspace(wsp, owner, opts...)
 	ws := vit.WaitForWorkspace(wsp.Name, owner)
 	require.Empty(vit.T, ws.WSError)
 	return ws
 }
 
-func (vit *VIT) SubscribeForN10nCleanup(p SubscriptionParameters, viewQName appdef.QName) (n10n chan int64, unsubscribe func()) {
-	n10n = make(chan int64)
-	params := url.Values{}
-	query := fmt.Sprintf(`{"SubjectLogin":"test_%d","ProjectionKey":[{"App":"%s","Projection":"%s","WS":%d}]}`,
-		p.GetWSID(), p.GetAppQName(), viewQName, p.GetWSID())
-	params.Add("payload", query)
-	httpResp, err := vit.GET(fmt.Sprintf("n10n/channel?%s", params.Encode()), "",
-		coreutils.WithLongPolling())
-	require.NoError(vit.T, err)
-
-	scanner := bufio.NewScanner(httpResp.HTTPResp.Body)
-	scanner.Split(ScanSSE)
-
-	// lets's wait for channelID
-	if !scanner.Scan() {
-		if !vit.T.Failed() {
-			vit.T.Fatal("failed to get channelID on n10n subscription")
-		}
-	}
-	messages := strings.Split(scanner.Text(), "\n")
-	require.Equal(vit.T, "event: channelId", messages[0])
-	require.True(vit.T, strings.HasPrefix(messages[1], "data: "))
-	channelIDStr := strings.TrimPrefix(messages[1], "data: ")
-
-	go func() {
-		defer close(n10n)
-		for scanner.Scan() {
-			if httpResp.HTTPResp.Request.Context().Err() != nil {
-				return
-			}
-			messages := strings.Split(scanner.Text(), "\n")
-			if strings.TrimPrefix(messages[0], "event: ") == "channelId" {
-				continue
-			}
-			offset, err := strconv.Atoi(strings.TrimPrefix(messages[1], "data: "))
-			if err != nil {
-				panic(err)
-			}
-			n10n <- int64(offset)
-		}
-	}()
-	unsubscribe = func() {
-		body := fmt.Sprintf(`
-			{
-				"Channel": "%s",
-				"ProjectionKey":[
-					{
-						"App": "%s",
-						"Projection":"%s",
-						"WS":%d
-					}
-				]
-			}
-		`, channelIDStr, p.GetAppQName(), viewQName, p.GetWSID())
-		params := url.Values{}
-		params.Add("payload", body)
-		vit.Get(fmt.Sprintf("n10n/unsubscribe?%s", params.Encode()))
-		httpResp.HTTPResp.Body.Close()
-		for range n10n {
-		}
-	}
-	return n10n, unsubscribe
+func (vit *VIT) SubscribeForN10n(ws *AppWorkspace, projectionQName appdef.QName) federation.OffsetsChan {
+	vit.T.Helper()
+	return vit.SubscribeForN10nProjectionKey(in10n.ProjectionKey{
+		App:        ws.AppQName(),
+		Projection: projectionQName,
+		WS:         ws.WSID,
+	})
 }
 
-// will be finalized automatically on vit.TearDown()
-func (vit *VIT) SubscribeForN10n(p SubscriptionParameters, viewQName appdef.QName) chan int64 {
-	n10nChan, unsubscribe := vit.SubscribeForN10nCleanup(p, viewQName)
+// will be unsubscribed automatically on vit.TearDown()
+func (vit *VIT) SubscribeForN10nProjectionKey(pk in10n.ProjectionKey) federation.OffsetsChan {
+	vit.T.Helper()
+	offsetsChan, unsubscribe := vit.SubscribeForN10nUnsubscribe(pk)
 	vit.lock.Lock() // need to lock because the vit instance is used in different goroutines in e.g. Test_Race_RestaurantIntenseUsage()
 	vit.cleanups = append(vit.cleanups, func(vit *VIT) {
 		unsubscribe()
 	})
 	vit.lock.Unlock()
-	return n10nChan
+	return offsetsChan
+}
+
+func (vit *VIT) SubscribeForN10nUnsubscribe(pk in10n.ProjectionKey) (offsetsChan federation.OffsetsChan, unsubscribe func()) {
+	vit.T.Helper()
+	offsetsChan, unsubscribe, err := vit.IFederation.N10NSubscribe(pk)
+	require.NoError(vit.T, err)
+	return offsetsChan, unsubscribe
 }
 
 func (vit *VIT) MetricsRequest(client coreutils.IHTTPClient, opts ...coreutils.ReqOptFunc) (resp string) {
@@ -424,4 +379,25 @@ func DummyWS(wsKind appdef.QName, wsid istructs.WSID, ownerPrn *Principal) *AppW
 		},
 		Owner: ownerPrn,
 	}
+}
+
+// calls testBeforeRestart() then stops then VIT, then launches new VIT on the same config but with storage from previous VIT
+// then calls testAfterRestart() with the new VIT
+// cfg must be owned
+func TestRestartPreservingStorage(t *testing.T, cfg *VITConfig, testBeforeRestart, testAfterRestart func(t *testing.T, vit *VIT)) {
+	memStorage := mem.Provide()
+	cfg.opts = append(cfg.opts, WithVVMConfig(func(cfg *vvm.VVMConfig) {
+		cfg.StorageFactory = func() (provider istorage.IAppStorageFactory, err error) {
+			return memStorage, nil
+		}
+		cfg.KeyspaceNameSuffix = t.Name()
+	}))
+	func() {
+		vit := NewVIT(t, cfg)
+		defer vit.TearDown()
+		testBeforeRestart(t, vit)
+	}()
+	vit := NewVIT(t, cfg)
+	defer vit.TearDown()
+	testAfterRestart(t, vit)
 }

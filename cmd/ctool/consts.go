@@ -72,6 +72,8 @@ const (
 	envVoedgerNodeSshPort = "VOEDGER_NODE_SSH_PORT"
 	envVoedgerAcmeDomains = "VOEDGER_ACME_DOMAINS"
 	envVoedgerSshKey      = "VOEDGER_SSH_KEY"
+	envVoedgerCeNode      = "VOEDGER_CE_NODE"
+	envVoedgerHttpPort    = "VOEDGER_HTTP_PORT"
 
 	minMonPasswordLength = 5
 	monUserName          = "voedger"
@@ -81,6 +83,9 @@ const (
 	logFolder = "log"
 
 	alertManagerConfigFile = "~/alertmanager/config.yml"
+	alertmanager           = "alertmanager"
+
+	ceVoedgerHttpPort = "80"
 )
 
 const comma = ","
@@ -93,3 +98,5 @@ const (
 	alertLabelInstance = "instance"
 	alertLabelSeverity = "severity"
 )
+
+const emptyDiscordWebhookUrl = "http://discord_webhook_url"

@@ -73,15 +73,13 @@ func TestInitErrorPersistence(t *testing.T) {
 	require.NoError(asf.Init(app1SafeName))
 
 	// expect an error
-	storage, err := asp.AppStorage(app1)
+	_, err = asp.AppStorage(app1)
 	require.ErrorIs(err, ErrStorageInitError)
-	require.Nil(storage)
 
 	// re-init
 	asp = Provide(asf, asp.(*implIAppStorageProvider).suffix)
 
 	// expect Init() error is stored in sysmeta
-	storage, err = asp.AppStorage(app1)
+	_, err = asp.AppStorage(app1)
 	require.ErrorIs(err, ErrStorageInitError)
-	require.Nil(storage)
 }

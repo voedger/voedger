@@ -36,11 +36,11 @@ func (s *httpsService) Prepare(work interface{}) error {
 }
 
 func (s *httpsService) Run(ctx context.Context) {
-	log.Printf("Starting HTTPS server on %s\n", s.server.Addr)
-	logger.Info("HTTPS server Write Timeout: ", s.server.WriteTimeout)
-	logger.Info("HTTPS server Read Timeout: ", s.server.ReadTimeout)
+	s.log("starting on %s", s.server.Addr)
+	s.log("write timeout: %d", s.server.WriteTimeout)
+	s.log("read timeout: %d", s.server.ReadTimeout)
 	if err := s.server.ServeTLS(s.listener, "", ""); err != http.ErrServerClosed {
-		log.Fatalf("Service.ServeTLS() failure: %s", err)
+		s.log("ServeTLS() error: %s", err.Error())
 	}
 }
 
@@ -55,7 +55,7 @@ func (s *httpService) Prepare(work interface{}) (err error) {
 		return err
 	}
 
-	if s.listener, err = net.Listen("tcp", coreutils.ServerAddress(s.RouterParams.Port)); err != nil {
+	if s.listener, err = net.Listen("tcp", s.listenAddress); err != nil {
 		return err
 	}
 
@@ -64,7 +64,7 @@ func (s *httpService) Prepare(work interface{}) (err error) {
 	}
 
 	s.server = &http.Server{
-		Addr:         coreutils.ServerAddress(s.RouterParams.Port),
+		Addr:         s.listenAddress,
 		Handler:      s.router,
 		ReadTimeout:  time.Duration(s.RouterParams.ReadTimeout) * time.Second,
 		WriteTimeout: time.Duration(s.RouterParams.WriteTimeout) * time.Second,
@@ -78,10 +78,14 @@ func (s *httpService) Run(ctx context.Context) {
 	s.server.BaseContext = func(l net.Listener) context.Context {
 		return ctx // need to track both client disconnect and app finalize
 	}
-	logger.Info("Starting HTTP server on", s.listener.Addr().(*net.TCPAddr).String())
+	s.log("starting on %s", s.listener.Addr().(*net.TCPAddr).String())
 	if err := s.server.Serve(s.listener); err != http.ErrServerClosed {
-		log.Println("main HTTP server failure: " + err.Error())
+		s.log("Serve() error: %s", err.Error())
 	}
+}
+
+func (s *httpService) log(format string, args ...interface{}) {
+	logger.Info(fmt.Sprintf("%s: %s", s.name, fmt.Sprintf(format, args...)))
 }
 
 // pipeline.IService
@@ -89,7 +93,7 @@ func (s *httpService) Stop() {
 	// ctx here is used to avoid eternal waiting for close idle connections and listeners
 	// all connections and listeners are closed in the explicit way (they're tracks ctx.Done()) so it is not necessary to track ctx here
 	if err := s.server.Shutdown(context.Background()); err != nil {
-		log.Println("http server Shutdown() failed: " + err.Error())
+		s.log("Shutdown() failed: %s", err.Error())
 		s.listener.Close()
 		s.server.Close()
 	}
@@ -102,6 +106,9 @@ func (s *httpService) Stop() {
 }
 
 func (s *httpService) GetPort() int {
+	if s.listener == nil {
+		panic("listener is not listening. Need to call http funcs before public service is sarted -> use IFederation.AdminFunc()")
+	}
 	return s.listener.Addr().(*net.TCPAddr).Port
 }
 

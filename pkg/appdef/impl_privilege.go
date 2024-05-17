@@ -7,13 +7,15 @@ package appdef
 
 import (
 	"fmt"
+
+	"github.com/voedger/voedger/pkg/goutils/set"
 )
 
 // # Implements:
 //   - IPrivilege
 type privilege struct {
 	comment
-	kinds   PrivilegeKinds
+	kinds   set.Set[PrivilegeKind]
 	granted bool
 	on      QNames
 	fields  []FieldName
@@ -21,8 +23,8 @@ type privilege struct {
 }
 
 func newPrivilege(kind []PrivilegeKind, granted bool, on []QName, fields []FieldName, role *role, comment ...string) *privilege {
-	pk := PrivilegeKindsFrom(kind...)
-	if len(pk) == 0 {
+	pk := set.From(kind...)
+	if pk.Len() == 0 {
 		panic(ErrMissed("privilege kinds"))
 	}
 
@@ -32,10 +34,17 @@ func newPrivilege(kind []PrivilegeKind, granted bool, on []QName, fields []Field
 	}
 
 	o := role.app.Type(names[0])
-	allPk := AllPrivilegesOnType(o.Kind())
-	for _, k := range pk {
-		if !allPk.Contains(k) {
-			panic(ErrIncompatible("privilege «%s» with %v", k, o))
+	allPk := allPrivilegesOnType(o)
+	if !allPk.ContainsAll(pk.AsArray()...) {
+		panic(ErrIncompatible("privilege «%s» with %v", pk, o))
+	}
+
+	if len(fields) > 0 {
+		if !pk.ContainsAny(PrivilegeKind_Select, PrivilegeKind_Update) {
+			panic(ErrIncompatible("fields are not applicable for privilege «%s»", pk))
+		}
+		if err := validatePrivilegeOnFieldNames(role.app, on, fields); err != nil {
+			panic(err)
 		}
 	}
 
@@ -64,9 +73,9 @@ func newPrivilegeAll(granted bool, on []QName, role *role, comment ...string) *p
 		panic(err)
 	}
 
-	pk := AllPrivilegesOnType(role.app.Type(names[0]).Kind())
+	pk := allPrivilegesOnType(role.app.Type(names[0]))
 
-	return newPrivilege(pk, granted, names, nil, role, comment...)
+	return newPrivilege(pk.AsArray(), granted, names, nil, role, comment...)
 }
 
 func newGrantAll(on []QName, role *role, comment ...string) *privilege {
@@ -83,7 +92,7 @@ func (g privilege) IsGranted() bool { return g.granted }
 
 func (g privilege) IsRevoked() bool { return !g.granted }
 
-func (g privilege) Kinds() PrivilegeKinds { return g.kinds }
+func (g privilege) Kinds() []PrivilegeKind { return g.kinds.AsArray() }
 
 func (g privilege) On() QNames { return g.on }
 

@@ -17,6 +17,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/goutils/iterate"
 	"github.com/voedger/voedger/pkg/goutils/logger"
+	"github.com/voedger/voedger/pkg/utils/federation"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/extensionpoints"
@@ -26,13 +27,14 @@ import (
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys/authnz"
+	"github.com/voedger/voedger/pkg/sys/blobber"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 // Projector<A, InvokeCreateWorkspaceID>
 // triggered by CDoc<ChildWorkspace> (not a singleton)
 // targetApp/userProfileWSID
-func invokeCreateWorkspaceIDProjector(federation coreutils.IFederation, tokensAPI itokens.ITokens) func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
+func invokeCreateWorkspaceIDProjector(federation federation.IFederation, tokensAPI itokens.ITokens) func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
 	return func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
 		return iterate.ForEachError(event.CUDs, func(rec istructs.ICUDRow) error {
 			if rec.QName() != authnz.QNameCDocChildWorkspace || !rec.IsNew() {
@@ -56,7 +58,7 @@ func invokeCreateWorkspaceIDProjector(federation coreutils.IFederation, tokensAP
 // triggered by cdoc.registry.Login or by cdoc.sys.ChildWorkspace
 // wsid - pseudoProfile: crc32(wsName) or crc32(login)
 // sys/registry app
-func ApplyInvokeCreateWorkspaceID(federation coreutils.IFederation, appQName istructs.AppQName, tokensAPI itokens.ITokens,
+func ApplyInvokeCreateWorkspaceID(federation federation.IFederation, appQName istructs.AppQName, tokensAPI itokens.ITokens,
 	wsName string, wsKind appdef.QName, wsidToCallCreateWSIDAt istructs.WSID, targetApp string, templateName string, templateParams string,
 	ownerDoc istructs.ICUDRow, ownerWSID istructs.WSID) error {
 	// Call WS[$PseudoWSID].c.CreateWorkspaceID()
@@ -182,7 +184,7 @@ func workspaceIDIdxProjector(event istructs.IPLogEvent, s istructs.IState, inten
 // Projector<A, InvokeCreateWorkspace>
 // triggered by CDoc<WorkspaceID>
 // targetApp/appWS
-func invokeCreateWorkspaceProjector(federation coreutils.IFederation, tokensAPI itokens.ITokens) func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
+func invokeCreateWorkspaceProjector(federation federation.IFederation, tokensAPI itokens.ITokens) func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
 	return func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
 		return iterate.ForEachError(event.CUDs, func(rec istructs.ICUDRow) error {
 			if rec.QName() != QNameCDocWorkspaceID || !rec.IsNew() { // skip on update cdoc.sys.WorkspaceID on e.g. deactivate workspace
@@ -294,7 +296,7 @@ func execCmdCreateWorkspace(now coreutils.TimeFunc, asp istructs.IAppStructsProv
 
 // Projector<A, InitializeWorkspace>
 // triggered by CDoc<WorkspaceDescriptor>
-func initializeWorkspaceProjector(nowFunc coreutils.TimeFunc, federation coreutils.IFederation, ep extensionpoints.IExtensionPoint,
+func initializeWorkspaceProjector(nowFunc coreutils.TimeFunc, federation federation.IFederation, ep extensionpoints.IExtensionPoint,
 	tokensAPI itokens.ITokens, wsPostInitFunc WSPostInitFunc) func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
 	return func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
 		return iterate.ForEachError(event.CUDs, func(rec istructs.ICUDRow) error {
@@ -419,7 +421,7 @@ func initializeWorkspaceProjector(nowFunc coreutils.TimeFunc, federation coreuti
 	}
 }
 
-func updateOwner(rec istructs.ICUDRow, ownerApp string, newWSID int64, err error, principalToken string, federation coreutils.IFederation,
+func updateOwner(rec istructs.ICUDRow, ownerApp string, newWSID int64, err error, principalToken string, federation federation.IFederation,
 	infoLogger func(args ...interface{}), errorLogger func(args ...interface{})) (ok bool) {
 	ownerWSID := rec.AsInt64(Field_OwnerWSID)
 	ownerID := rec.AsInt64(Field_OwnerID)
@@ -440,7 +442,7 @@ func updateOwner(rec istructs.ICUDRow, ownerApp string, newWSID int64, err error
 	return err == nil
 }
 
-func parseWSTemplateBLOBs(fsEntries []fs.DirEntry, blobIDs map[int64]map[string]struct{}, wsTemplateFS coreutils.EmbedFS) (blobs []BLOB, err error) {
+func parseWSTemplateBLOBs(fsEntries []fs.DirEntry, blobIDs map[int64]map[string]struct{}, wsTemplateFS coreutils.EmbedFS) (blobs []blobber.StoredBLOB, err error) {
 	for _, ent := range fsEntries {
 		switch ent.Name() {
 		case "data.json", "provide.go":
@@ -471,12 +473,14 @@ func parseWSTemplateBLOBs(fsEntries []fs.DirEntry, blobIDs map[int64]map[string]
 			if err != nil {
 				return nil, fmt.Errorf("failed to read blob %s content: %w", ent.Name(), err)
 			}
-			blobs = append(blobs, BLOB{
-				RecordID:  istructs.RecordID(recordID),
-				FieldName: fieldName,
-				Content:   blobContent,
-				Name:      ent.Name(),
-				MimeType:  filepath.Ext(ent.Name())[1:], // excluding dot
+			blobs = append(blobs, blobber.StoredBLOB{
+				BLOB: coreutils.BLOB{
+					FieldName: fieldName,
+					Content:   blobContent,
+					Name:      ent.Name(),
+					MimeType:  filepath.Ext(ent.Name())[1:], // excluding dot
+				},
+				RecordID: istructs.RecordID(recordID),
 			})
 		}
 	}
@@ -513,7 +517,7 @@ func checkOrphanedBLOBs(blobIDs map[int64]map[string]struct{}, workspaceData []m
 	return nil
 }
 
-func ValidateTemplate(wsTemplateName string, ep extensionpoints.IExtensionPoint, wsKind appdef.QName) (wsBLOBs []BLOB, wsData []map[string]interface{}, err error) {
+func ValidateTemplate(wsTemplateName string, ep extensionpoints.IExtensionPoint, wsKind appdef.QName) (wsBLOBs []blobber.StoredBLOB, wsData []map[string]interface{}, err error) {
 	if len(wsTemplateName) == 0 {
 		return nil, nil, nil
 	}

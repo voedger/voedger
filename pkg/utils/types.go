@@ -11,6 +11,8 @@ import (
 	"os"
 	"path/filepath"
 	"time"
+
+	"github.com/voedger/voedger/pkg/istructs"
 )
 
 type EmbedFS interface {
@@ -34,7 +36,7 @@ type FuncResponse struct {
 		Elements [][][][]interface{} `json:"elements"`
 	} `json:"sections"`
 	NewIDs            map[string]int64
-	CurrentWLogOffset int64
+	CurrentWLogOffset istructs.Offset
 	SysError          SysError               `json:"sys.Error"`
 	CmdResult         map[string]interface{} `json:"Result"`
 }
@@ -44,17 +46,15 @@ type FuncError struct {
 	ExpectedHTTPCodes []int
 }
 
-type IFederation interface {
-	POST(relativeURL string, body string, optFuncs ...ReqOptFunc) (*HTTPResponse, error)
-	GET(relativeURL string, body string, optFuncs ...ReqOptFunc) (*HTTPResponse, error)
-	Func(relativeURL string, body string, optFuncs ...ReqOptFunc) (*FuncResponse, error)
-	URLStr() string
-	Port() int
-}
-
 type IHTTPClient interface {
 	Req(urlStr string, body string, optFuncs ...ReqOptFunc) (*HTTPResponse, error)
 	CloseIdleConnections()
+}
+
+type retrier struct {
+	macther func(err error) bool
+	timeout time.Duration
+	delay   time.Duration
 }
 
 type TimeFunc func() time.Time
@@ -96,4 +96,12 @@ type CUDs struct {
 type IReadFS interface {
 	fs.ReadDirFS
 	fs.ReadFileFS
+}
+
+// moved here to avoid import cycle: state -> federation (for cmd storage) -> blobber (IFederation.UploadBLOBs([]blobber.BLOB)) -> state
+type BLOB struct {
+	FieldName string
+	Content   []byte
+	Name      string
+	MimeType  string
 }

@@ -7,10 +7,6 @@
 
 package internal
 
-func HostPanic(msgPtr, msgSize uint32) {
-
-}
-
 func hostRowWriterPutString(id uint64, typ uint32, namePtr, nameSize, valuePtr, valueSize uint32) {
 }
 

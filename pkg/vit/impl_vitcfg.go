@@ -178,13 +178,6 @@ func WithApp(appQName istructs.AppQName, updater apps.AppBuilder, appOpts ...App
 		for _, appOpt := range appOpts {
 			appOpt(app, vpc.vvmCfg)
 		}
-		// to append tests templates to already declared templates
-		// for _, wsTempalateFunc := range app.wsTemplateFuncs {
-		// 	vpc.vvmCfg.VVMAppsBuilder.Add(appQName, func(appAPI apps.APIs, cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) (appPackages apps.AppPackages) {
-		// 		wsTempalateFunc(ep)
-		// 		return
-		// 	})
-		// }
 	}
 }
 

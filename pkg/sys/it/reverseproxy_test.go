@@ -51,7 +51,7 @@ func TestBasicUsage_ReverseProxy(t *testing.T) {
 		targetHandler.setExpectedURLPath(expectedURLPath)
 
 		// resp := vit.PostFree(fmt.Sprintf("http://127.0.0.1:%s/%s", vit.IFederation.URL().Port(), srcURL), body)
-		resp := vit.Post(srcURL, body)
+		resp := vit.POST(srcURL, body)
 		require.Equal(`hello world`, resp.Body) // guarantees that expectedURLPath is checked by the handler
 	}
 
@@ -59,7 +59,7 @@ func TestBasicUsage_ReverseProxy(t *testing.T) {
 		targetHandler.setExpectedURLPath("/grafana/foo/")
 		targetHandler.setExpectedHost("127.0.0.1")
 		// resp := vit.PostFree(fmt.Sprintf("http://localhost:%s/grafana/foo/?Datadfsdfsdfsdfdf", vit.IFederation.URL().Port()), body)
-		resp := vit.Post("grafana/foo/?Datadfsdfsdfsdfdf", body)
+		resp := vit.POST("grafana/foo/?Datadfsdfsdfsdfdf", body)
 		require.Equal(`hello world`, resp.Body)
 	})
 

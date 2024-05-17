@@ -245,7 +245,10 @@ func (e *appEventsType) GetNewRawEventBuilder(params istructs.NewRawEventBuilder
 func (e *appEventsType) PutPlog(ev istructs.IRawEvent, buildErr error, generator istructs.IIDGenerator) (event istructs.IPLogEvent, err error) {
 	dbEvent := ev.(*eventType)
 
-	dbEvent.setBuildError(buildErr)
+	if buildErr != nil {
+		dbEvent.setBuildError(buildErr)
+	}
+
 	if dbEvent.valid() {
 		if err := dbEvent.regenerateIDs(generator); err != nil {
 			dbEvent.setBuildError(err)
@@ -263,9 +266,8 @@ func (e *appEventsType) PutPlog(ev istructs.IRawEvent, buildErr error, generator
 
 	if err = e.app.config.storage.Put(pKey, cCols, evData); err == nil {
 		event = dbEvent
+		e.plogCache.Put(p, o, event)
 	}
-
-	e.plogCache.Put(p, o, event)
 
 	return event, err
 }

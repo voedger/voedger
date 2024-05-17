@@ -86,6 +86,17 @@ dev_mode_conf=""
 
 cat ./scylla.yaml | utils_ssh "$SSH_USER@$1" 'cat > ~/scylla/scylla.yaml'
 
+utils_ssh "$SSH_USER@$1" "mkdir -p ~/scylla-node-exporter"
+echo "SCYLLA_NODE_EXPORTER_ARGS=\"--collector.interrupts --collector.textfile.directory=/etc/node-exporter/\"" | utils_ssh "$SSH_USER@$1" "cat > ~/scylla-node-exporter/scylla-node-exporter"
+utils_ssh "$SSH_USER@$1" "sudo mkdir -p /etc/node-exporter && sudo chown -R 65534:65534 /etc/node-exporter"
+
+NODE_ID=$(utils_ssh "$SSH_USER@$1" "docker info --format '{{.Swarm.NodeID}}'")
+NODE_NAME=$(utils_ssh "$SSH_USER@$1" "docker node inspect --format '{{.Description.Hostname}}' $NODE_ID")
+
+echo "node_meta{node_id=\"$NODE_ID\", container_label_com_docker_swarm_node_id=\"$NODE_ID\", node_name=\"$NODE_NAME\"} 1" | \
+utils_ssh "$SSH_USER@$1" "sudo sh -c 'cat > /etc/node-exporter/node-meta.prom'"
+utils_ssh "$SSH_USER@$1" "sudo chown -R 65534:65534 /etc/node-exporter/node-meta.prom"
+
 echo "$io_properties" | utils_ssh "$SSH_USER@$1" 'test -e ~/scylla.d/io_properties.yaml || cat > ~/scylla.d/io_properties.yaml'
 echo "$io_conf" | utils_ssh "$SSH_USER@$1" 'test -e ~/scylla.d/io.conf || cat > ~/scylla.d/io.conf'
 echo "$cpuset_conf" | utils_ssh "$SSH_USER@$1" 'test -e ~/scylla.d/cpuset.conf || cat > ~/scylla.d/cpuset.conf'

@@ -6,7 +6,7 @@ package vvm
 
 import (
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/apppartsctl"
+	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/apps"
 	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -50,17 +50,17 @@ func (ab VVMAppsBuilder) BuildAppsArtefacts(apis apps.APIs, emptyCfgs AppConfigs
 		if err := buildAppFromPackagesFS(builtInAppDef.Packages, adb); err != nil {
 			return appsArtefacts, err
 		}
-		// query IAppStructs to build IAppDef only once - on AppConfigType.preapre()
-		_, err = apis.IAppStructsProvider.AppStructs(appQName)
-		if err != nil {
+		// query IAppStructs to build IAppDef only once - on AppConfigType.prepare()
+		// это надо чтобы отловить ошибки IAppDefBuilder и проч
+		// также там нуже уже готовый IAppStorage чтобы вычитать QName->QNameID
+		if _, err = apis.IAppStructsProvider.AppStructs(appQName); err != nil {
 			return appsArtefacts, err
 		}
 		builtInAppPackages := BuiltInAppPackages{
-			BuiltInApp: apppartsctl.BuiltInApp{
-				Name:           appQName,
-				NumParts:       builtInAppDef.NumParts,
-				EnginePoolSize: builtInAppDef.EnginePoolSize,
-				Def:            cfg.AppDef,
+			BuiltInApp: appparts.BuiltInApp{
+				Name:                    appQName,
+				Def:                     cfg.AppDef,
+				AppDeploymentDescriptor: builtInAppDef.AppDeploymentDescriptor,
 			},
 			Packages: builtInAppDef.Packages,
 		}

@@ -15,36 +15,9 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/state"
-	"github.com/voedger/voedger/pkg/sys/authnz"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 	it "github.com/voedger/voedger/pkg/vit"
-	"github.com/voedger/voedger/pkg/vvm"
 )
-
-func TestAppWSAutoInitialization(t *testing.T) {
-	require := require.New(t)
-	vit := it.NewVIT(t, &it.SharedConfig_App1)
-	defer vit.TearDown()
-
-	checkCDocsWSDesc(vit.VVMConfig, vit.VVM, require)
-
-	// further calls -> nothing happens, expect no errors
-	require.NoError(vvm.BuildAppWorkspaces(vit.VVM, vit.VVMConfig))
-	checkCDocsWSDesc(vit.VVMConfig, vit.VVM, require)
-}
-
-func checkCDocsWSDesc(vvmCfg *vvm.VVMConfig, vvm *vvm.VVM, require *require.Assertions) {
-	for appQName := range vvmCfg.VVMAppsBuilder {
-		as, err := vvm.AppStructs(appQName)
-		require.NoError(err)
-		for wsNum := 0; istructs.NumAppWorkspaces(wsNum) < as.NumAppWorkspaces(); wsNum++ {
-			appWSID := istructs.NewWSID(istructs.MainClusterID, istructs.WSID(wsNum+int(istructs.FirstBaseAppWSID)))
-			existingCDocWSDesc, err := as.Records().GetSingleton(appWSID, authnz.QNameCDocWorkspaceDescriptor)
-			require.NoError(err)
-			require.Equal(authnz.QNameCDocWorkspaceDescriptor, existingCDocWSDesc.QName())
-		}
-	}
-}
 
 func TestAuthorization(t *testing.T) {
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
@@ -315,4 +288,36 @@ func TestTakeQNamesFromWorkspace(t *testing.T) {
 			vit.PostWS(ws, "c.app1pkg.MockCmd", body, coreutils.WithExpectedCode(500, "app1pkg.docInAnotherWS is not available in workspace with descriptor app1pkg.test_ws"))
 		})
 	})
+}
+
+func TestVITResetPreservingStorage(t *testing.T) {
+	cfg := it.NewOwnVITConfig(
+		it.WithApp(istructs.AppQName_test1_app1, it.ProvideApp1,
+			it.WithUserLogin("login", "1"),
+			it.WithChildWorkspace(it.QNameApp1_TestWSKind, "test_ws", "", "", "login", map[string]interface{}{"IntFld": 42}),
+		),
+	)
+	categoryID := int64(0)
+	it.TestRestartPreservingStorage(t, &cfg, func(t *testing.T, vit *it.VIT) {
+		ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+		body := `{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.category","name":"Awesome food"}}]}`
+		categoryID = vit.PostWS(ws, "c.sys.CUD", body).NewID()
+	}, func(t *testing.T, vit *it.VIT) {
+		ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+		body := fmt.Sprintf(`{"args":{"Query":"select * from app1pkg.category where id = %d"},"elements":[{"fields":["Result"]}]}`, categoryID)
+		resp := vit.PostWS(ws, "q.sys.SqlQuery", body)
+		require.Contains(t, resp.SectionRow()[0].(string), `"name":"Awesome food"`)
+		resp.Println()
+	})
+}
+
+func TestAdminEndpoint(t *testing.T) {
+	require := require.New(t)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
+	body := `{"args": {"Text": "world"},"elements":[{"fields":["Res"]}]}`
+	resp, err := vit.IFederation.AdminFunc(fmt.Sprintf("api/%s/1/q.sys.Echo", istructs.AppQName_test1_app1), body)
+	require.NoError(err)
+	require.Equal("world", resp.SectionRow()[0].(string))
+	resp.Println()
 }

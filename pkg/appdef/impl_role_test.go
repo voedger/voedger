@@ -53,8 +53,8 @@ func Test_AppDef_AddRole(t *testing.T) {
 		ws.AddType(queryName)
 
 		reader := adb.AddRole(readerRoleName)
-		reader.Grant(PrivilegeKinds{PrivilegeKind_Select}, []QName{docName, viewName}, []FieldName{"field1"}, "grant select from doc & view to reader")
-		reader.Grant(PrivilegeKinds{PrivilegeKind_Execute}, []QName{queryName}, nil, "grant execute query to reader")
+		reader.Grant([]PrivilegeKind{PrivilegeKind_Select}, []QName{docName, viewName}, []FieldName{"field1"}, "grant select from doc & view to reader")
+		reader.Grant([]PrivilegeKind{PrivilegeKind_Execute}, []QName{queryName}, nil, "grant execute query to reader")
 
 		writer := adb.AddRole(writerRoleName)
 		writer.GrantAll([]QName{docName, viewName}, "grant all on doc & view to writer")
@@ -68,7 +68,7 @@ func Test_AppDef_AddRole(t *testing.T) {
 
 		adm := adb.AddRole(admRoleName)
 		adm.GrantAll([]QName{wsName}, "grant all workspace privileges to admin")
-		adm.Revoke(PrivilegeKinds{PrivilegeKind_Execute}, []QName{wsName}, "revoke execute on workspace from admin")
+		adm.Revoke([]PrivilegeKind{PrivilegeKind_Execute}, []QName{wsName}, "revoke execute on workspace from admin")
 
 		intruder := adb.AddRole(intruderRoleName)
 		intruder.RevokeAll([]QName{wsName}, "revoke all workspace privileges from intruder")
@@ -81,12 +81,12 @@ func Test_AppDef_AddRole(t *testing.T) {
 
 	t.Run("should be ok to check roles and privileges", func(t *testing.T) {
 
-		checkPrivilege := func(p IPrivilege, granted bool, kinds PrivilegeKinds, on QNames, fields []FieldName, to QName) {
+		checkPrivilege := func(p IPrivilege, granted bool, kinds []PrivilegeKind, on []QName, fields []FieldName, to QName) {
 			require.NotNil(p)
 			require.Equal(granted, p.IsGranted())
 			require.Equal(!granted, p.IsRevoked())
 			require.Equal(kinds, p.Kinds())
-			require.Equal(on, p.On())
+			require.EqualValues(on, p.On())
 			require.Equal(fields, p.Fields())
 			require.Equal(to, p.To().QName())
 		}
@@ -104,13 +104,13 @@ func Test_AppDef_AddRole(t *testing.T) {
 						switch privilegesCount {
 						case 1:
 							checkPrivilege(p, true,
-								PrivilegeKinds{PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select, PrivilegeKind_Execute},
-								QNames{wsName}, nil,
+								[]PrivilegeKind{PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select, PrivilegeKind_Execute},
+								[]QName{wsName}, nil,
 								admRoleName)
 						case 2:
 							checkPrivilege(p, false,
-								PrivilegeKinds{PrivilegeKind_Execute},
-								QNames{wsName}, nil,
+								[]PrivilegeKind{PrivilegeKind_Execute},
+								[]QName{wsName}, nil,
 								admRoleName)
 						default:
 							require.Fail("unexpected privilege", "privilege: %v", p)
@@ -125,8 +125,8 @@ func Test_AppDef_AddRole(t *testing.T) {
 						switch privilegesCount {
 						case 1:
 							checkPrivilege(p, false,
-								PrivilegeKinds{PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select, PrivilegeKind_Execute},
-								QNames{wsName}, nil,
+								[]PrivilegeKind{PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select, PrivilegeKind_Execute},
+								[]QName{wsName}, nil,
 								intruderRoleName)
 						default:
 							require.Fail("unexpected privilege", "privilege: %v", p)
@@ -141,8 +141,8 @@ func Test_AppDef_AddRole(t *testing.T) {
 						switch privilegesCount {
 						case 1:
 							checkPrivilege(p, true,
-								PrivilegeKinds{PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select, PrivilegeKind_Execute},
-								QNames{wsName}, nil,
+								[]PrivilegeKind{PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select, PrivilegeKind_Execute},
+								[]QName{wsName}, nil,
 								ownerRoleName)
 						default:
 							require.Fail("unexpected privilege", "privilege: %v", p)
@@ -157,13 +157,13 @@ func Test_AppDef_AddRole(t *testing.T) {
 						switch privilegesCount {
 						case 1:
 							checkPrivilege(p, true,
-								PrivilegeKinds{PrivilegeKind_Select},
-								QNames{docName, viewName}, []FieldName{"field1"},
+								[]PrivilegeKind{PrivilegeKind_Select},
+								[]QName{docName, viewName}, []FieldName{"field1"},
 								readerRoleName)
 						case 2:
 							checkPrivilege(p, true,
-								PrivilegeKinds{PrivilegeKind_Execute},
-								QNames{queryName}, nil,
+								[]PrivilegeKind{PrivilegeKind_Execute},
+								[]QName{queryName}, nil,
 								readerRoleName)
 						default:
 							require.Fail("unexpected privilege", "privilege: %v", p)
@@ -178,8 +178,8 @@ func Test_AppDef_AddRole(t *testing.T) {
 						switch privilegesCount {
 						case 1:
 							checkPrivilege(p, true,
-								PrivilegeKinds{PrivilegeKind_Inherits},
-								QNames{readerRoleName, writerRoleName}, nil,
+								[]PrivilegeKind{PrivilegeKind_Inherits},
+								[]QName{readerRoleName, writerRoleName}, nil,
 								workerRoleName)
 						default:
 							require.Fail("unexpected privilege", "privilege: %v", p)
@@ -194,13 +194,13 @@ func Test_AppDef_AddRole(t *testing.T) {
 						switch privilegesCount {
 						case 1:
 							checkPrivilege(p, true,
-								PrivilegeKinds{PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select},
-								QNames{docName, viewName}, nil,
+								[]PrivilegeKind{PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select},
+								[]QName{docName, viewName}, nil,
 								writerRoleName)
 						case 2:
 							checkPrivilege(p, true,
-								PrivilegeKinds{PrivilegeKind_Execute},
-								QNames{cmdName, queryName}, nil,
+								[]PrivilegeKind{PrivilegeKind_Execute},
+								[]QName{cmdName, queryName}, nil,
 								writerRoleName)
 						default:
 							require.Fail("unexpected privilege", "privilege: %v", p)
@@ -217,12 +217,12 @@ func Test_AppDef_AddRole(t *testing.T) {
 			require.Len(pp, 2)
 
 			checkPrivilege(pp[0], true,
-				PrivilegeKinds{PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select, PrivilegeKind_Execute},
-				QNames{wsName}, nil,
+				[]PrivilegeKind{PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select, PrivilegeKind_Execute},
+				[]QName{wsName}, nil,
 				admRoleName)
 			checkPrivilege(pp[1], false,
-				PrivilegeKinds{PrivilegeKind_Execute},
-				QNames{wsName}, nil,
+				[]PrivilegeKind{PrivilegeKind_Execute},
+				[]QName{wsName}, nil,
 				admRoleName)
 		})
 	})

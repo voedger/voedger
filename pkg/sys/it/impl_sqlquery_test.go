@@ -13,6 +13,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/processors"
 	"github.com/voedger/voedger/pkg/sys/sqlquery"
@@ -28,11 +29,11 @@ func TestBasicUsage_SqlQuery(t *testing.T) {
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
 	idUntillUsers := vit.GetAny("app1pkg.untill_users", ws)
 
-	findPLogOffsetByWLogOffset := func(wLogOffset int64) int64 {
+	findPLogOffsetByWLogOffset := func(wLogOffset istructs.Offset) istructs.Offset {
 		type row struct {
 			Workspace  istructs.WSID
-			PlogOffset int64
-			WLogOffset int64
+			PlogOffset istructs.Offset
+			WLogOffset istructs.Offset
 		}
 		body := `{"args":{"Query":"select Workspace, PlogOffset, WLogOffset from sys.plog limit -1"},"elements":[{"fields":["Result"]}]}`
 		resp := vit.PostWS(ws, "q.sys.SqlQuery", body)
@@ -194,7 +195,7 @@ func TestSqlQuery_wlog(t *testing.T) {
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
 	idUntillUsers := vit.GetAny("app1pkg.untill_users", ws)
 
-	var lastWLogOffset int64
+	var lastWLogOffset istructs.Offset
 	for i := 1; i <= 101; i++ {
 		tableno := vit.NextNumber()
 		body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":%d,"sys.QName":"app1pkg.bill","tableno":%d,"id_untill_users":%d,"table_part":"a","proforma":0,"working_day":"20230227"}}]}`, i, tableno, idUntillUsers)
@@ -470,14 +471,14 @@ func TestSqlQuery(t *testing.T) {
 		resp.RequireError(t, "unsupported source: git.hub")
 	})
 	t.Run("Should read sys.wlog from other workspace", func(t *testing.T) {
-		wsOne := vit.PostWS(ws, "q.sys.SqlQuery", fmt.Sprintf(`{"args":{"Query":"select * from sys.wlog --wsid=%d"}}`, ws.Owner.ProfileWSID))
+		wsOne := vit.PostWS(ws, "q.sys.SqlQuery", fmt.Sprintf(`{"args":{"Query":"select * from %d.sys.wlog"}}`, ws.Owner.ProfileWSID))
 		wsTwo := vit.PostWS(ws, "q.sys.SqlQuery", `{"args":{"Query":"select * from sys.wlog"}}`)
 
 		require.NotEqual(t, len(wsOne.Sections[0].Elements), len(wsTwo.Sections[0].Elements))
 	})
 
 	t.Run("400 bad request on read from non-inited workspace", func(t *testing.T) {
-		vit.PostWS(ws, "q.sys.SqlQuery", `{"args":{"Query":"select * from sys.wlog --wsid=0"}}`, coreutils.Expect400(processors.ErrWSNotInited.Message))
+		vit.PostWS(ws, "q.sys.SqlQuery", `{"args":{"Query":"select * from 555.sys.wlog"}}`, coreutils.Expect400(processors.ErrWSNotInited.Message))
 	})
 }
 
@@ -497,5 +498,33 @@ func TestReadFromWLogWithSysRawArg(t *testing.T) {
 	require.NoError(json.Unmarshal([]byte(res), &m))
 	rawArg := m["ArgumentObject"].(map[string]interface{})["Body"].(string)
 	require.Equal("hello world", rawArg)
+}
 
+func TestReadFromAnotherAppAnotherWSID(t *testing.T) {
+	//t.Skip("waiting for https://github.com/voedger/voedger/issues/1811")
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
+
+	oneAppWS := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+
+	// create a record in one workspace of one app
+	categoryName := vit.NextName()
+	body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.category","name":"%s"}}]}`, categoryName)
+	categoryID := vit.PostWS(oneAppWS, "c.sys.CUD", body).NewID()
+
+	// create a workspace in another app
+	anotherAppWSOwner := vit.GetPrincipal(istructs.AppQName_test1_app2, "login")
+	qNameApp2_TestWSKind := appdef.NewQName("app2pkg", "test_ws")
+	anotherAppWS := vit.CreateWorkspace(it.WSParams{
+		Name:         "anotherAppWS",
+		Kind:         qNameApp2_TestWSKind,
+		ClusterID:    istructs.MainClusterID,
+		InitDataJSON: `{"IntFld":42}`,
+	}, anotherAppWSOwner)
+
+	// in the another app use sql to query the record from the first app
+	body = fmt.Sprintf(`{"args":{"Query":"select * from test1.app1.%d.app1pkg.category where id = %d"},"elements":[{"fields":["Result"]}]}`, oneAppWS.WSID, categoryID)
+	resp := vit.PostWS(anotherAppWS, "q.sys.SqlQuery", body)
+	resStr := resp.SectionRow(len(resp.Sections[0].Elements) - 1)[0].(string)
+	require.Contains(t, resStr, fmt.Sprintf(`"name":"%s"`, categoryName))
 }

@@ -24,14 +24,14 @@ func QPWithCustomHttpClient(client IHttpClient) QPStateOptFunc {
 }
 
 func implProvideQueryProcessorState(ctx context.Context, appStructsFunc AppStructsFunc, partitionIDFunc PartitionIDFunc, wsidFunc WSIDFunc,
-	secretReader isecrets.ISecretReader, principalsFunc PrincipalsFunc, tokenFunc TokenFunc, argFunc ArgFunc, options ...QPStateOptFunc) IHostState {
+	secretReader isecrets.ISecretReader, principalsFunc PrincipalsFunc, tokenFunc TokenFunc, argFunc ArgFunc, resultBuilderFunc ObjectBuilderFunc, queryCallbackFunc ExecQueryCallbackFunc, options ...QPStateOptFunc) IHostState {
 
 	opts := &qpStateOpts{}
 	for _, optFunc := range options {
 		optFunc(opts)
 	}
 
-	bs := newHostState("QueryProcessor", 0, appStructsFunc)
+	bs := newHostState("QueryProcessor", queryProcessorStateMaxIntents, appStructsFunc)
 
 	bs.addStorage(View, newViewRecordsStorage(ctx, appStructsFunc, wsidFunc, nil), S_GET|S_GET_BATCH|S_READ)
 	bs.addStorage(Record, newRecordsStorage(appStructsFunc, wsidFunc, nil), S_GET|S_GET_BATCH)
@@ -52,6 +52,15 @@ func implProvideQueryProcessorState(ctx context.Context, appStructsFunc AppStruc
 		principalsFunc: principalsFunc,
 		tokenFunc:      tokenFunc,
 	}, S_GET)
+
+	bs.addStorage(QueryContext, &queryContextStorage{
+		argFunc:  argFunc,
+		wsidFunc: wsidFunc,
+	}, S_GET)
+
+	bs.addStorage(Response, &cmdResponseStorage{}, S_INSERT)
+
+	bs.addStorage(Result, newQueryResultStorage(appStructsFunc, resultBuilderFunc, queryCallbackFunc), S_INSERT)
 
 	return bs
 }

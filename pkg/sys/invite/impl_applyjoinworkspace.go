@@ -15,16 +15,17 @@ import (
 	"github.com/voedger/voedger/pkg/sys/authnz"
 	"github.com/voedger/voedger/pkg/sys/collection"
 	coreutils "github.com/voedger/voedger/pkg/utils"
+	"github.com/voedger/voedger/pkg/utils/federation"
 )
 
-func asyncProjectorApplyJoinWorkspace(timeFunc coreutils.TimeFunc, federation coreutils.IFederation, tokens itokens.ITokens) istructs.Projector {
+func asyncProjectorApplyJoinWorkspace(timeFunc coreutils.TimeFunc, federation federation.IFederation, tokens itokens.ITokens) istructs.Projector {
 	return istructs.Projector{
 		Name: qNameAPApplyJoinWorkspace,
 		Func: applyJoinWorkspace(timeFunc, federation, tokens),
 	}
 }
 
-func applyJoinWorkspace(timeFunc coreutils.TimeFunc, federation coreutils.IFederation, tokens itokens.ITokens) func(event istructs.IPLogEvent, state istructs.IState, intents istructs.IIntents) (err error) {
+func applyJoinWorkspace(timeFunc coreutils.TimeFunc, federation federation.IFederation, tokens itokens.ITokens) func(event istructs.IPLogEvent, state istructs.IState, intents istructs.IIntents) (err error) {
 	return func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
 		// it is AFTER EXECUTE ON (InitiateJoinWorkspace) so no doc checking here
 		skbCDocInvite, err := s.KeyBuilder(state.Record, qNameCDocInvite)

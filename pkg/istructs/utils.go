@@ -10,6 +10,7 @@ package istructs
 import (
 	"encoding/json"
 	"strconv"
+	"time"
 
 	"github.com/voedger/voedger/pkg/appdef"
 )
@@ -31,6 +32,14 @@ func (aqn AppQName) IsSys() bool    { return aqn.owner == SysOwner }
 func ParseAppQName(val string) (res AppQName, err error) {
 	s1, s2, err := appdef.ParseQualifiedName(val, AppQNameQualifierChar)
 	return NewAppQName(s1, s2), err
+}
+
+func MustParseAppQName(val string) AppQName {
+	n, err := ParseAppQName(val)
+	if err != nil {
+		panic(err)
+	}
+	return n
 }
 
 func (aqn *AppQName) MarshalJSON() ([]byte, error) {
@@ -189,4 +198,8 @@ func (k RateLimitKind) MarshalText() ([]byte, error) {
 		s = strconv.FormatUint(uint64(k), base)
 	}
 	return []byte(s), nil
+}
+
+func (um UnixMilli) String() string {
+	return time.Unix(0, int64(um)*int64(time.Millisecond)).Format("2006-01-02 15:04:05 MST")
 }

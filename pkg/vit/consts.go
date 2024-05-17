@@ -8,7 +8,7 @@ import (
 	"embed"
 	"time"
 
-	"github.com/voedger/voedger/pkg/cluster"
+	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
@@ -33,7 +33,7 @@ var (
 	//go:embed schemaTestApp2.vsql
 	SchemaTestApp2FS embed.FS
 
-	DefaultTestAppEnginesPool = cluster.PoolSize(10, 10, 20)
+	DefaultTestAppEnginesPool = appparts.PoolSize(10, 10, 20)
 	maxRateLimit2PerMinute    = istructs.RateLimit{
 		Period:                time.Minute,
 		MaxAllowedPerDuration: 2,
@@ -42,7 +42,7 @@ var (
 		Period:                time.Hour,
 		MaxAllowedPerDuration: 4,
 	}
-	TestAppDeploymentDescriptor = cluster.AppDeploymentDescriptor{
+	TestAppDeploymentDescriptor = appparts.AppDeploymentDescriptor{
 		NumParts:         10,
 		EnginePoolSize:   DefaultTestAppEnginesPool,
 		NumAppWorkspaces: istructs.DefaultNumAppWorkspaces,

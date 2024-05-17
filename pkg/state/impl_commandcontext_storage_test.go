@@ -24,8 +24,10 @@ func TestCommandContextStorage(t *testing.T) {
 	wsidFunc := SimpleWSIDFunc(wsid)
 	argFunc := func() istructs.IObject { return arg }
 	unloggedArgFunc := func() istructs.IObject { return unloggedArg }
+	wlogOffsetFunc := func() istructs.Offset { return 42 }
 
-	s := ProvideCommandProcessorStateFactory()(context.Background(), nil, nil, wsidFunc, nil, nil, nil, nil, 1, func() istructs.IObjectBuilder { return cmdResBuilder }, argFunc, unloggedArgFunc)
+	s := ProvideCommandProcessorStateFactory()(context.Background(), nil, nil, wsidFunc, nil, nil, nil, nil, 1,
+		func() istructs.IObjectBuilder { return cmdResBuilder }, argFunc, unloggedArgFunc, wlogOffsetFunc)
 
 	kb, err := s.KeyBuilder(CommandContext, appdef.NullQName)
 	require.NoError(t, err)
@@ -35,5 +37,6 @@ func TestCommandContextStorage(t *testing.T) {
 	require.Equal(t, int64(wsid), v.AsInt64(Field_Workspace))
 	require.NotNil(t, v.AsValue(Field_ArgumentObject))
 	require.NotNil(t, v.AsValue(Field_ArgumentUnloggedObject))
+	require.Equal(t, int64(42), v.AsInt64(Field_WLogOffset))
 
 }

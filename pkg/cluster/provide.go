@@ -5,9 +5,16 @@
 
 package cluster
 
-import "github.com/voedger/voedger/pkg/parser"
+import (
+	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/istructsmem"
+	"github.com/voedger/voedger/pkg/parser"
+	coreutils "github.com/voedger/voedger/pkg/utils"
+)
 
-func Provide() parser.PackageFS {
+func Provide(cfg *istructsmem.AppConfigType, asp istructs.IAppStructsProvider, timeFunc coreutils.TimeFunc) parser.PackageFS {
+	cfg.Resources.Add(istructsmem.NewCommandFunction(appdef.NewQName(ClusterPackage, "DeployApp"), provideExecDeployApp(asp, timeFunc)))
 	return parser.PackageFS{
 		Path: ClusterPackageFQN,
 		FS:   schemaFS,

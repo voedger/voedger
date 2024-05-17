@@ -49,6 +49,8 @@ var defaultACL = ACL{
 				qNameQryModules,
 				// https://dev.untill.com/projects/#!688808
 				qNameQryGetDigitalReceipt,
+				// https://dev.untill.com/projects/#!688808
+				qNameQrySendReceiptByEmail,
 			},
 		},
 		policy: ACPolicy_Allow,
@@ -78,6 +80,14 @@ var defaultACL = ACL{
 				qNameQryDescribePackage,
 				qNameQryDescribePackageNames,
 			},
+		},
+		policy: ACPolicy_Deny,
+	},
+	{
+		desc: "revoke insert or update on wdoc.air.LastNumbers from all",
+		pattern: PatternType{
+			opKindsPattern: []iauthnz.OperationKindType{iauthnz.OperationKind_INSERT, iauthnz.OperationKind_UPDATE},
+			qNamesPattern:  []appdef.QName{qNameWDocLastNumbers},
 		},
 		policy: ACPolicy_Deny,
 	},
@@ -334,6 +344,8 @@ var defaultACL = ACL{
 				qNameCmdRetryTransferUPPayout,
 				// https://dev.untill.com/projects/#!685617
 				qNameQryGetUPLocationRates,
+				// https://dev.untill.com/projects/#!685179
+				qNameQryUpdateShopperStatement,
 			},
 			principalsPattern: [][]iauthnz.Principal{
 				{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleUntillPaymentsReseller}},

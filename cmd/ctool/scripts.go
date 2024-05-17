@@ -5,13 +5,14 @@
 package main
 
 import (
+	"bytes"
 	"embed"
 	"fmt"
+	"html/template"
 	"io"
 	"math/rand"
 	"os"
 	"path/filepath"
-	"text/template"
 	"time"
 
 	"github.com/voedger/voedger/pkg/goutils/exec"
@@ -68,16 +69,22 @@ func verbose() bool {
 	if dryRun {
 		return true
 	}
-	b, err := rootCmd.Flags().GetBool("verbose")
-	return err == nil && b
+	if rootCmd != nil {
+		b, err := rootCmd.Flags().GetBool("verbose")
+		return err == nil && b
+	}
+	return false
 }
 
 func (se *scriptExecuterType) run(scriptName string, args ...string) error {
 
 	var pExec *exec.PipedExec
 
+	scriptDir := filepath.Dir(scriptName)
+	scriptName = filepath.Base(scriptName)
+
 	// nolint
-	os.Chdir(scriptsTempDir)
+	os.Chdir(filepath.Join(scriptsTempDir, scriptDir))
 
 	args = append([]string{scriptName}, args...)
 	pExec = new(exec.PipedExec).Command("bash", args...)
@@ -133,6 +140,17 @@ func getEnvValue1(key string) string {
 	return value
 }
 
+func updateTemplateScripts(c *clusterType) error {
+
+	fName := filepath.Join("alertmanager", "config.yml")
+	cluster := newCluster()
+	if err := cluster.updateTemplateFile(fName); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func prepareScripts(scriptFileNames ...string) error {
 
 	// nolint
@@ -144,12 +162,18 @@ func prepareScripts(scriptFileNames ...string) error {
 	}
 
 	// If scriptfilenames is empty, then we will copy all scripts from scriptsfs
-	err = coreutils.CopyDirFS(scriptsFS, "scripts/drafts", scriptsTempDir, coreutils.WithFilterFilesWithRelativePaths(scriptFileNames),
-		coreutils.WithSkipExisting())
+	err = coreutils.CopyDirFS(scriptsFS, filepath.Join("scripts", "drafts"), scriptsTempDir, coreutils.WithFilterFilesWithRelativePaths(scriptFileNames),
+		coreutils.WithSkipExisting(), coreutils.WithFileMode(coreutils.FileMode_rwxrwxrwx))
 	if err != nil {
 		loggerError(err.Error())
 		return err
 	}
+
+	cluster := newCluster()
+	if err = updateTemplateScripts(cluster); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -172,12 +196,26 @@ func prepareScriptFromTemplate(scriptFileName string, data interface{}) error {
 		return err
 	}
 
-	tmpl, err := template.ParseFS(scriptsFS, filepath.Join(embedScriptsDir, scriptFileName))
+	fName := filepath.Join(embedScriptsDir, "drafts", scriptFileName)
+
+	content, err := scriptsFS.ReadFile(fName)
+	if err != nil {
+		return err
+	}
+
+	tmpl, err := template.New(scriptFileName).Delims("[[", "]]").Parse(string(content))
 	if err != nil {
 		return err
 	}
 
 	destFilename := filepath.Join(scriptsTempDir, scriptFileName)
+
+	if _, err := os.Stat(destFilename); err == nil {
+		if err := os.Remove(destFilename); err != nil {
+			return err
+		}
+	}
+
 	destFile, err := os.Create(destFilename)
 	if err != nil {
 		return err
@@ -189,8 +227,12 @@ func prepareScriptFromTemplate(scriptFileName string, data interface{}) error {
 		return err
 	}
 
-	err = tmpl.Execute(destFile, data)
-	if err != nil {
+	var output bytes.Buffer
+	if err := tmpl.Execute(&output, data); err != nil {
+		return err
+	}
+
+	if err = os.WriteFile(destFilename, output.Bytes(), coreutils.FileMode_rw_rw_rw_); err != nil {
 		return err
 	}
 

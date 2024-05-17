@@ -72,14 +72,20 @@ func newEvent(appCfg *AppConfigType) *eventType {
 // Returns new empty raw event with specified params
 func newRawEventBuilder(appCfg *AppConfigType, params istructs.GenericRawEventBuilderParams) *eventType {
 	ev := newEvent(appCfg)
-	ev.rawBytes = make([]byte, len(params.EventBytes))
-	copy(ev.rawBytes, params.EventBytes)
+
+	ev.rawBytes = utils.CopyBytes(params.EventBytes)
+
 	ev.partition = params.HandlingPartition
 	ev.pLogOffs = params.PLogOffset
 	ev.ws = params.Workspace
 	ev.wLogOffs = params.WLogOffset
 	ev.setName(params.QName)
 	ev.regTime = params.RegisteredAt
+
+	if ev.name == istructs.QNameForCorruptedData {
+		ev.buildErr.setError(ev, ErrCorruptedData)
+	}
+
 	return ev
 }
 
@@ -104,6 +110,10 @@ func (ev *eventType) argumentNames() (arg, argUnl appdef.QName, err error) {
 
 	if ev.name == istructs.QNameCommandCUD {
 		return arg, argUnl, nil // #17664 — «sys.CUD» command has no arguments objects, only CUDs
+	}
+
+	if ev.name == istructs.QNameForCorruptedData {
+		return arg, argUnl, nil // #1811 — «sys.Corrupted» command has no arguments objects
 	}
 
 	cmd := ev.appCfg.AppDef.Command(ev.name)
@@ -165,12 +175,11 @@ func (ev *eventType) loadFromBytes(in []byte) (err error) {
 }
 
 // Retrieves ID for event command name
-func (ev *eventType) qNameID() qnames.QNameID {
-	if ev.valid() {
-		if id, err := ev.appCfg.qNames.ID(ev.QName()); err == nil {
-			return id
-		}
+func (ev *eventType) qNameID() (id qnames.QNameID) {
+	if id, err := ev.appCfg.qNames.ID(ev.QName()); err == nil {
+		return id
 	}
+	// no test
 	return qnames.QNameIDForError
 }
 
@@ -220,8 +229,13 @@ func (ev *eventType) storeToBytes() []byte {
 	return ev.buffer.B
 }
 
-// Returns is event valid
+// Returns is event valid.
+//
+// sys.Corrupted event is always invalid
 func (ev *eventType) valid() bool {
+	if ev.name == istructs.QNameForCorruptedData {
+		return false
+	}
 	return ev.buildErr.validEvent
 }
 
@@ -233,6 +247,14 @@ func (ev *eventType) ArgumentObjectBuilder() istructs.IObjectBuilder {
 // istructs.IRawEventBuilder.UnloggedArgumentObjectBuilder() IObjectBuilder
 func (ev *eventType) ArgumentUnloggedObjectBuilder() istructs.IObjectBuilder {
 	return &ev.argUnlObj
+}
+
+// istructs.IDBEvent.Bytes
+func (ev *eventType) Bytes() []byte {
+	if ev.buffer != nil {
+		return ev.buffer.B
+	}
+	return nil
 }
 
 // istructs.IRawEventBuilder.CUDBuilder
@@ -285,11 +307,15 @@ func (ev *eventType) Free() {
 
 // istructs.IDbEvent.QName
 func (ev *eventType) QName() appdef.QName {
-	qName := istructs.QNameForError
-	if ev.valid() {
-		qName = ev.name
+	if ev.name == istructs.QNameForCorruptedData {
+		return istructs.QNameForCorruptedData
 	}
-	return qName
+
+	if ev.valid() {
+		return ev.name
+	}
+
+	return istructs.QNameForError
 }
 
 // istructs.IAbstractEvent.RegisteredAt

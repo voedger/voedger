@@ -6,6 +6,7 @@ package journal
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -75,7 +76,6 @@ func qryJournalExec(ep extensionpoints.IExtensionPoint, appDef appdef.IAppDef) i
 		return args.State.Read(kb, cb)
 	}
 }
-
 func handleTimestamps(args istructs.IObject, epJornalIndices extensionpoints.IExtensionPoint, state istructs.IState) (fo, lo int64, err error) {
 	resetTime := func(milli int64) time.Time {
 		y, m, d := time.UnixMilli(milli).UTC().Date()
@@ -93,19 +93,19 @@ func handleTimestamps(args istructs.IObject, epJornalIndices extensionpoints.IEx
 
 	return FindOffsetsByTimeRange(from, till, idx, state)
 }
-
-// TODO use errors.Join after migration to go 1.20
 func handleOffsets(args istructs.IObject) (fo, lo int64, err error) {
 	fo = args.AsInt64(field_From)
 	lo = args.AsInt64(field_Till)
+	errs := make([]error, 0)
 	if fo <= 0 {
-		err = fmt.Errorf("<<from>> %w", errOffsetMustBePositive)
+		errs = append(errs, fmt.Errorf("'from' %w", errOffsetMustBePositive))
 	}
 	if lo <= 0 {
-		err = fmt.Errorf("<<till>> %w", errOffsetMustBePositive)
+		errs = append(errs, fmt.Errorf("'till' %w", errOffsetMustBePositive))
 	}
 	if fo > lo {
-		err = errFromOffsetMustBeLowerOrEqualToTillOffset
+		errs = append(errs, errFromOffsetMustBeLowerOrEqualToTillOffset)
 	}
+	err = errors.Join(errs...)
 	return
 }
