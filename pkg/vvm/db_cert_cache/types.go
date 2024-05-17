@@ -6,8 +6,8 @@ package dbcertcache
 
 import istorage "github.com/voedger/voedger/pkg/istorage"
 
-type RouterAppStorage istorage.IAppStorage
+type RouterAppStoragePtr *istorage.IAppStorage
 
 type autoCertDbCache struct {
-	appStorage istorage.IAppStorage
+	appStorage *istorage.IAppStorage
 }

@@ -1009,7 +1009,8 @@ func Test_LoadStoreViewRecord_Bytes(t *testing.T) {
 		cfg := cfgs.AddConfig(istructs.AppQName_test1_app2, adb)
 		cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 
-		storage, err := simpleStorageProvider().AppStorage(istructs.AppQName_test1_app1)
+		asp := simpleStorageProvider()
+		storage, err := asp.AppStorage(istructs.AppQName_test1_app1)
 		require.NoError(err)
 		err = cfg.prepare(nil, storage)
 		if err != nil {
@@ -1477,7 +1478,8 @@ func Test_ViewRecordStructure(t *testing.T) {
 		cfg := cfgs.AddConfig(istructs.AppQName_test1_app2, adb)
 		cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 
-		storage, err := simpleStorageProvider().AppStorage(istructs.AppQName_test1_app1)
+		asp := simpleStorageProvider()
+		storage, err := asp.AppStorage(istructs.AppQName_test1_app1)
 		require.NoError(err)
 		err = cfg.prepare(nil, storage)
 		if err != nil {

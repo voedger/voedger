@@ -17,6 +17,7 @@ import (
 	"github.com/voedger/voedger/pkg/btstrp"
 	"github.com/voedger/voedger/pkg/cluster"
 	"github.com/voedger/voedger/pkg/extensionpoints"
+	"github.com/voedger/voedger/pkg/iblobstoragestg"
 	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istorage/mem"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -29,9 +30,10 @@ import (
 	coreutils "github.com/voedger/voedger/pkg/utils"
 	it "github.com/voedger/voedger/pkg/vit"
 	"github.com/voedger/voedger/pkg/vvm"
+	dbcertcache "github.com/voedger/voedger/pkg/vvm/db_cert_cache"
 )
 
-func TestAppsDeploymentDescriptorProtection(t *testing.T) {
+func TestBoostrap_BasicUsage(t *testing.T) {
 	require := require.New(t)
 	memStorage := mem.Provide()
 	keyspacePrefix := t.Name()
@@ -42,7 +44,6 @@ func TestAppsDeploymentDescriptorProtection(t *testing.T) {
 	cfg := getTestCfg(numParts, numAppWS, memStorage, keyspacePrefix)
 	vit := it.NewVIT(t, &cfg)
 
-	// try to launch the VVM with the app with NumParts that differs from the previously deployed one
 	var clusterApp btstrp.ClusterBuiltInApp
 	otherApps := []appparts.BuiltInApp{}
 	for _, app := range vit.BuiltInAppsPackages {
@@ -53,7 +54,20 @@ func TestAppsDeploymentDescriptorProtection(t *testing.T) {
 		}
 	}
 
-	t.Run("fail on NumPartitions change", func(t *testing.T) {
+	t.Run("basic usage", func(t *testing.T) {
+		appParts, cleanup, err := appparts.New(vit.IAppStructsProvider)
+		require.NoError(err)
+		defer cleanup()
+		blobStorage := iblobstoragestg.BlobAppStoragePtr(new(istorage.IAppStorage))
+		routerStorage := dbcertcache.RouterAppStoragePtr(new(istorage.IAppStorage))
+		err = btstrp.Bootstrap(vit.IFederation, vit.IAppStructsProvider, vit.TimeFunc, appParts, clusterApp, otherApps, vit.ITokens, vit.IAppStorageProvider,
+			blobStorage, routerStorage)
+		require.NoError(err)
+		require.NotNil(*blobStorage)
+		require.NotNil(*routerStorage)
+	})
+
+	t.Run("panic on NumPartitions change", func(t *testing.T) {
 		appParts, cleanup, err := appparts.New(vit.IAppStructsProvider)
 		require.NoError(err)
 		defer cleanup()
@@ -61,11 +75,15 @@ func TestAppsDeploymentDescriptorProtection(t *testing.T) {
 		defer func() {
 			otherApps[0].AppDeploymentDescriptor.NumParts--
 		}()
-		err = btstrp.Bootstrap(vit.IFederation, vit.IAppStructsProvider, vit.TimeFunc, appParts, clusterApp, otherApps, vit.ITokens)
-		require.ErrorIs(err, btstrp.ErrNumPartitionsChanged)
+		blobStorage := iblobstoragestg.BlobAppStoragePtr(new(istorage.IAppStorage))
+		routerStorage := dbcertcache.RouterAppStoragePtr(new(istorage.IAppStorage))
+		require.PanicsWithValue(fmt.Sprintf("failed to deploy app %[1]s: status 409: num partitions changed: app %[1]s declaring NumPartitions=43 but was previously deployed with NumPartitions=42", otherApps[0].Name), func() {
+			btstrp.Bootstrap(vit.IFederation, vit.IAppStructsProvider, vit.TimeFunc, appParts, clusterApp, otherApps, vit.ITokens, vit.IAppStorageProvider,
+				blobStorage, routerStorage)
+		})
 	})
 
-	t.Run("fail on NumAppPartitions change", func(t *testing.T) {
+	t.Run("panic on NumAppPartitions change", func(t *testing.T) {
 		appParts, cleanup, err := appparts.New(vit.IAppStructsProvider)
 		require.NoError(err)
 		defer cleanup()
@@ -73,8 +91,13 @@ func TestAppsDeploymentDescriptorProtection(t *testing.T) {
 		defer func() {
 			otherApps[0].AppDeploymentDescriptor.NumAppWorkspaces--
 		}()
-		err = btstrp.Bootstrap(vit.IFederation, vit.IAppStructsProvider, vit.TimeFunc, appParts, clusterApp, otherApps, vit.ITokens)
-		require.ErrorIs(err, btstrp.ErrNumAppWorkspacesChanged)
+
+		require.PanicsWithValue(fmt.Sprintf("failed to deploy app %[1]s: status 409: num application workspaces changed: app %[1]s declaring NumAppWorkspaces=44 but was previously deployed with NumAppWorksaces=43", otherApps[0].Name), func() {
+			blobStorage := iblobstoragestg.BlobAppStoragePtr(new(istorage.IAppStorage))
+			routerStorage := dbcertcache.RouterAppStoragePtr(new(istorage.IAppStorage))
+			btstrp.Bootstrap(vit.IFederation, vit.IAppStructsProvider, vit.TimeFunc, appParts, clusterApp, otherApps, vit.ITokens,
+				vit.IAppStorageProvider, blobStorage, routerStorage)
+		})
 	})
 }
 
@@ -126,14 +149,44 @@ func TestDeployAppErrors(t *testing.T) {
 			coreutils.WithAuthorizeBy(sysToken), coreutils.Expect400()).Println()
 	})
 
-	t.Run("409 conflict on deploy already deployed", func(t *testing.T) {
-		body := fmt.Sprintf(`{"args":{"AppQName":"%s","NumPartitions":1,"NumAppWorkspaces":1}}`, istructs.AppQName_test1_app1)
-		resp := vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppPseudoWSID, "c.cluster.DeployApp", body,
-			coreutils.WithAuthorizeBy(sysToken))
+	var test1App1DeploymentDescriptor appparts.AppDeploymentDescriptor
+	for _, app := range vit.BuiltInAppsPackages {
+		if app.Name == istructs.AppQName_test1_app1 {
+			test1App1DeploymentDescriptor = app.AppDeploymentDescriptor
+			break
+		}
+	}
 
-		// check nothing is made
+	t.Run("409 conflict on try to deploy with different NumPartitions", func(t *testing.T) {
+		body := fmt.Sprintf(`{"args":{"AppQName":"%s","NumPartitions":%d,"NumAppWorkspaces":%d}}`,
+			istructs.AppQName_test1_app1,
+			test1App1DeploymentDescriptor.NumParts+1, test1App1DeploymentDescriptor.NumAppWorkspaces)
+		resp := vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppPseudoWSID, "c.cluster.DeployApp", body,
+			coreutils.WithAuthorizeBy(sysToken),
+			coreutils.Expect409(),
+		)
+		resp.Println()
 		require.Empty(resp.NewIDs)
-		checkCDocsWSDesc(vit.VVMConfig, vit.VVM, require)
+	})
+
+	t.Run("409 conflict on try to deploy with different NumAppPartitions", func(t *testing.T) {
+		body := fmt.Sprintf(`{"args":{"AppQName":"%s","NumPartitions":%d,"NumAppWorkspaces":%d}}`,
+			istructs.AppQName_test1_app1,
+			test1App1DeploymentDescriptor.NumParts, test1App1DeploymentDescriptor.NumAppWorkspaces+1)
+		resp := vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppPseudoWSID, "c.cluster.DeployApp", body,
+			coreutils.WithAuthorizeBy(sysToken),
+			coreutils.Expect409(),
+		)
+		resp.Println()
+		require.Empty(resp.NewIDs)
+	})
+
+	t.Run("400 bad request on wrong appQName", func(t *testing.T) {
+		body := `{"args":{"AppQName":"wrong","NumPartitions":1,"NumAppWorkspaces":1}}`
+		vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppPseudoWSID, "c.cluster.DeployApp", body,
+			coreutils.WithAuthorizeBy(sysToken),
+			coreutils.Expect400(),
+		).Println()
 	})
 }
 
@@ -144,6 +197,7 @@ func TestAppWSInitIndempotency(t *testing.T) {
 
 	checkCDocsWSDesc(vit.VVMConfig, vit.VVM, require)
 
+	// init app ws again (first is done on NewVIT()) -> expect no errors + assume next tests will work as well
 	for _, app := range vit.BuiltInAppsPackages {
 		as, err := vit.AppStructs(app.Name)
 		require.NoError(err)
