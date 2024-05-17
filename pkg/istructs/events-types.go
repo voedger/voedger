@@ -93,6 +93,10 @@ type IRawEvent interface {
 type IDbEvent interface {
 	IAbstractEvent
 
+	// Returns the event in the form of bytes that were written to storage
+	// when the event was saved, or read from storage when the event was loaded
+	Bytes() []byte
+
 	// originalQName is a string which potentially contains QName representation
 	// May be in a form which is not possible to convert to QName
 	Error() IEventError

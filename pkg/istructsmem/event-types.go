@@ -235,6 +235,14 @@ func (ev *eventType) ArgumentUnloggedObjectBuilder() istructs.IObjectBuilder {
 	return &ev.argUnlObj
 }
 
+// istructs.IDBEvent.Bytes
+func (ev *eventType) Bytes() []byte {
+	if ev.buffer != nil {
+		return ev.buffer.B
+	}
+	return nil
+}
+
 // istructs.IRawEventBuilder.CUDBuilder
 func (ev *eventType) CUDBuilder() istructs.ICUD {
 	return &ev.cud
