@@ -65,6 +65,11 @@ func (c *cmdWorkpiece) AppPartition() appparts.IAppPartition {
 	return c.appPart
 }
 
+// used in c.cluster.VSqlUpdate to determinate partitionID by WSID
+func (c *cmdWorkpiece) AppPartitions() appparts.IAppPartitions {
+	return c.appParts
+}
+
 // need for sync projectors which are using wsid.GetNextWSID()
 func (c *cmdWorkpiece) Context() context.Context {
 	return c.cmdMes.RequestCtx()

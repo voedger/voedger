@@ -7,6 +7,7 @@ package cluster
 
 import (
 	"embed"
+	"regexp"
 
 	"github.com/voedger/voedger/pkg/appdef"
 )
@@ -21,9 +22,30 @@ const (
 	Field_AppQName         = "AppQName"
 	Field_NumPartitions    = "NumPartitions"
 	Field_NumAppWorkspaces = "NumAppWorkspaces"
+	field_Query            = "Query"
+	updateQueryExpression  = `^` +
+		`(?P<updateKind>\s+.*\s+)` + // something before the view
+		`(?P<app>\w+\.\w+\.)?` + // appOwner.appName (+ trailing dot)
+		`(?P<ws>\d+\.)?` + // wsid (+ trailing dot)
+		`(?P<table>\w+\.\w+)` + // table qualified name (clean)
+		`(?P<offset>\.\d+)` + // offset
+		`(?P<pars>\s+)?` + // (leading spaces +) params
+		`$`
 )
 
 var (
 	QNameViewDeployedApps = appdef.NewQName(ClusterPackage, "DeployedApps")
 	qNameWDocApp          = appdef.NewQName(ClusterPackage, "App")
+	updateQueryExp        = regexp.MustCompile(updateQueryExpression)
+	plog                  = appdef.NewQName(appdef.SysPackage, "plog")
+	wlog                  = appdef.NewQName(appdef.SysPackage, "wlog")
+)
+
+type updateKind int
+
+const (
+	updateKind_Null updateKind = iota
+	updateKind_Corrupted
+	updateKind_Direct
+	updateKind_Simple
 )

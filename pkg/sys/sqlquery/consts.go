@@ -19,15 +19,6 @@ const (
 	field_Query   = "Query"
 )
 
-type updateKind int
-
-const (
-	updateKind_Null updateKind = iota
-	updateKind_Corrupted
-	updateKind_Direct
-	updateKind_Simple
-)
-
 var (
 	plog    = appdef.NewQName(appdef.SysPackage, "plog")
 	plogDef = map[string]bool{
@@ -65,17 +56,8 @@ const (
 		`(?P<table>\w+\.\w+)` + // table qualified name (clean)
 		`(?P<pars>\s+.*)?` + // (leading spaces +) params
 		`$`
-	updateQueryExpression = `^` +
-		`(?P<updateKind>\s+.*\s+)` + // something before the view
-		`(?P<app>\w+\.\w+\.)?` + // appOwner.appName (+ trailing dot)
-		`(?P<ws>\d+\.)?` + // wsid (+ trailing dot)
-		`(?P<table>\w+\.\w+)` + // table qualified name (clean)
-		`(?P<offset>\.\d+)` + // offset
-		`(?P<pars>\s+)?` + // (leading spaces +) params
-		`$`
 )
 
 var (
 	selectQueryExp = regexp.MustCompile(selectQueryExpression)
-	updateQueryExp = regexp.MustCompile(updateQueryExpression)
 )
