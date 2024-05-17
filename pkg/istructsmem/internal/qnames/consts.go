@@ -12,6 +12,7 @@ const (
 	NullQNameID QNameID = 0 + iota
 	QNameIDForError
 	QNameIDCommandCUD
+	QNameIDForCorruptedData
 
 	QNameIDSysLast QNameID = 0xFF
 )

@@ -906,6 +906,111 @@ func Test_EventUpdateRawCud(t *testing.T) {
 	}
 }
 
+func Test_UpdateCorrupted(t *testing.T) {
+	require := require.New(t)
+
+	docName := appdef.NewQName("test", "doc")
+
+	adb := appdef.New()
+	adb.AddPackage("test", "test.com/test")
+
+	t.Run("should be ok to build AppDef", func(t *testing.T) {
+		doc := adb.AddCDoc(docName)
+		doc.SetSingleton()
+		doc.AddField("option", appdef.DataKind_int64, true)
+
+		_ = adb.MustBuild()
+	})
+
+	cfgs := func() AppConfigsType {
+		cfgs := make(AppConfigsType, 1)
+		cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, adb)
+		cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
+		return cfgs
+	}()
+
+	provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider())
+
+	app, err := provider.AppStructs(istructs.AppQName_test1_app1)
+	require.NoError(err)
+
+	t.Run("should be ok to put new sys.CUD event", func(t *testing.T) {
+		bld := app.Events().GetNewRawEventBuilder(
+			istructs.NewRawEventBuilderParams{
+				GenericRawEventBuilderParams: istructs.GenericRawEventBuilderParams{
+					HandlingPartition: 1,
+					PLogOffset:        100500,
+					Workspace:         1,
+					WLogOffset:        100500,
+					QName:             istructs.QNameCommandCUD, // sys.CUD
+					RegisteredAt:      1,
+				},
+			})
+
+		cud := bld.CUDBuilder().Create(docName)
+		cud.PutRecordID(appdef.SystemField_ID, 1)
+		cud.PutInt64("option", 8)
+
+		rawEvent, err := bld.BuildRawEvent()
+		require.NoError(err)
+		require.NotNil(rawEvent)
+
+		pLogEvent, saveErr := app.Events().PutPlog(rawEvent, err, NewIDGeneratorWithHook(func(rawID, storageID istructs.RecordID, t appdef.IType) error {
+			return errors.New("unexpected call ID generator from singleton CDoc creation")
+		}))
+		require.NotNil(pLogEvent)
+		require.NoError(saveErr)
+		require.True(pLogEvent.Error().ValidEvent())
+		require.Equal(pLogEvent.QName(), istructs.QNameCommandCUD)
+
+		pLogEvent.Release()
+	})
+
+	t.Run("should be ok to update corrupted event", func(t *testing.T) {
+		bld := app.Events().GetSyncRawEventBuilder(
+			istructs.SyncRawEventBuilderParams{
+				GenericRawEventBuilderParams: istructs.GenericRawEventBuilderParams{
+					EventBytes:        []byte{1, 2, 3, 4, 5}, // TODO: original event bytes should be here
+					HandlingPartition: 1,
+					PLogOffset:        100500,
+					Workspace:         1,
+					WLogOffset:        100500,
+					QName:             istructs.QNameForCorruptedData, // sys.Corrupted
+					RegisteredAt:      1,
+				},
+			})
+
+		rawEvent, err := bld.BuildRawEvent()
+		require.NoError(err)
+		require.NotNil(rawEvent)
+
+		pLogEvent, saveErr := app.Events().PutPlog(rawEvent, err, NewIDGeneratorWithHook(func(rawID, storageID istructs.RecordID, t appdef.IType) error {
+			return errors.New("unexpected call ID generator from update corrupted event")
+		}))
+		require.NotNil(pLogEvent)
+		require.NoError(saveErr)
+		require.True(pLogEvent.Error().ValidEvent())
+		require.Equal(pLogEvent.QName(), istructs.QNameForCorruptedData)
+
+		pLogEvent.Release()
+	})
+
+	t.Run("must ok to reread PLog event", func(t *testing.T) {
+		var pLogEvent istructs.IPLogEvent
+		err := app.Events().ReadPLog(context.Background(), 1, istructs.Offset(100500), 1, func(plogOffset istructs.Offset, event istructs.IPLogEvent) (err error) {
+			require.EqualValues(100500, plogOffset)
+			pLogEvent = event
+			return nil
+		})
+		require.NoError(err)
+		require.NotNil(pLogEvent)
+		require.True(pLogEvent.Error().ValidEvent())
+		require.Equal(pLogEvent.QName(), istructs.QNameForCorruptedData)
+
+		pLogEvent.Release()
+	})
+}
+
 func Test_SingletonCDocEvent(t *testing.T) {
 	require := require.New(t)
 
