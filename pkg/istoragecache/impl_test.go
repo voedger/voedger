@@ -402,6 +402,10 @@ func (sp *testStorageProvider) AppStorage(istructs.AppQName) (istorage.IAppStora
 	return sp.storage, nil
 }
 
+func (sp *testStorageProvider) Init(appQName istructs.AppQName) error {
+	return nil
+}
+
 type testStorage struct {
 	put      func(pKey []byte, cCols []byte, value []byte) (err error)
 	putBatch func(items []istorage.BatchItem) (err error)

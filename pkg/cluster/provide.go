@@ -14,7 +14,6 @@ import (
 )
 
 func Provide(cfg *istructsmem.AppConfigType, asp istructs.IAppStructsProvider, timeFunc coreutils.TimeFunc) parser.PackageFS {
-	cfg.Resources.Add(istructsmem.NewQueryFunction(appdef.NewQName(ClusterPackage, "QueryApp"), provideExecQueryApp(asp)))
 	cfg.Resources.Add(istructsmem.NewCommandFunction(appdef.NewQName(ClusterPackage, "DeployApp"), provideExecDeployApp(asp, timeFunc)))
 	return parser.PackageFS{
 		Path: ClusterPackageFQN,
