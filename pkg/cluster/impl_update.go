@@ -55,15 +55,17 @@ func provideExecCmdVSqlUpdate(timeFunc coreutils.TimeFunc) istructsmem.ExecComma
 func updateCorrupted(appQName istructs.AppQName, wsid istructs.WSID, logViewQName appdef.QName, wlogOffset istructs.Offset, plogOffset istructs.Offset, partitionID istructs.PartitionID,
 	currentMillis istructs.UnixMilli) error {
 	// read bytes of the existing event
-	var as istructs.IAppStructs
+	var as istructs.IAppStructs // take from the workpiece
 	// here we need to read just 1 event - so let's do not consider context of the request
 	var currentEventBytes []byte
 	as.Events().ReadPLog(context.Background(), partitionID, plogOffset, 1, func(plogOffset istructs.Offset, event istructs.IPLogEvent) (err error) {
 		// currentEventBytes = event.Bytes()
+		// тут есть wlogOffset
 		return nil
 	})
 	err := as.Events().ReadWLog(context.Background(), wsid, wlogOffset, 1, func(wlogOffset istructs.Offset, event istructs.IWLogEvent) (err error) {
 		// currentEventBytes = event.Bytes()
+		// тут нету plogOffset
 		return nil
 	})
 	if err != nil {
@@ -73,7 +75,7 @@ func updateCorrupted(appQName istructs.AppQName, wsid istructs.WSID, logViewQNam
 		GenericRawEventBuilderParams: istructs.GenericRawEventBuilderParams{
 			EventBytes:        currentEventBytes,
 			HandlingPartition: partitionID,
-			PLogOffset:        plogOffset,
+			PLogOffset:        plogOffset, // ok to set NullOffset on update WLog because we do not have way to know how it was stored, no IWLogEvent.PLogOffset() method
 			Workspace:         wsid,
 			WLogOffset:        wlogOffset,
 			QName:             istructs.QNameForCorruptedData,

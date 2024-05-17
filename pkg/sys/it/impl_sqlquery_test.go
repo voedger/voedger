@@ -535,5 +535,10 @@ func TestVSqlUpdate(t *testing.T) {
 
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
 
-	
+	categoryName := vit.NextName()
+	body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.category","name":"%s"}}]}`, categoryName)
+	categoryID := vit.PostWS(ws, "c.sys.CUD", body).NewID()
+
+	fmt.Sprintf()
+
 }
