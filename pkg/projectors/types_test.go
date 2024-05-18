@@ -73,6 +73,12 @@ func TestProjector_isAcceptable(t *testing.T) {
 			want:       false,
 		},
 		{
+			name:       "Should not accept sys.Corrupted",
+			wantErrors: false,
+			events:     []istructs.IPLogEvent{newEvent(istructs.QNameForCorruptedData, appdef.NullQName, nil)},
+			want:       false,
+		},
+		{
 			name:   "Should accept event",
 			events: []istructs.IPLogEvent{newEvent(istructs.QNameCommand, appdef.NullQName, nil)},
 			triggeringQNames: map[appdef.QName][]appdef.ProjectorEventKind{
