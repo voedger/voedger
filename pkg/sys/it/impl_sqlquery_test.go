@@ -542,7 +542,8 @@ func TestVSqlUpdate(t *testing.T) {
 
 	sysPrn := vit.GetSystemPrincipal(istructs.AppQName_sys_cluster)
 
-	body = fmt.Sprintf(`{"args": {"Query":"update test1.app1.%d.app1pkg.category set name = 'name 2' where id = %d"}}`, ws.WSID, categoryID)
-	vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppWSID, "c.cluster.VSqlUpdate", body, coreutils.WithAuthorizeBy(sysPrn.Token)).Println()
+	body = fmt.Sprintf(`{"args": {"Query":"update test1.app1.%d.app1pkg.category set name = 'name 2', trans = 42 where id = %d"}}`, ws.WSID, categoryID)
+	vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppWSID, "c.cluster.VSqlUpdate", body,
+		coreutils.WithAuthorizeBy(sysPrn.Token)).Println()
 
 }

@@ -45,7 +45,7 @@ func provideExecCmdVSqlUpdate(timeFunc coreutils.TimeFunc) istructsmem.ExecComma
 			}
 			return updateCorrupted(appQName, wsid, qNameToUpdate, offset, istructs.NullOffset, partitionID, istructs.UnixMilli(timeFunc().UnixMilli()))
 		case updateKind_Simple:
-			return updateSimple(appQName, wsid, cleanSql)
+			return updateSimple(appQName, wsid, cleanSql, qNameToUpdate)
 		}
 
 		return nil
@@ -97,7 +97,7 @@ func updateCorrupted(appQName istructs.AppQName, wsid istructs.WSID, logViewQNam
 	return as.Events().PutWlog(plogEvent)
 }
 
-func updateSimple(appQName istructs.AppQName, wsid istructs.WSID, query string) error {
+func updateSimple(appQName istructs.AppQName, wsid istructs.WSID, query string, qNameToUpdate appdef.QName) error {
 	stmt, err := sqlparser.Parse(query)
 	if err != nil {
 		return err
@@ -106,6 +106,18 @@ func updateSimple(appQName istructs.AppQName, wsid istructs.WSID, query string) 
 
 	tableName := u.TableExprs[0].(*sqlparser.AliasedTableExpr)
 	log.Println(tableName)
+	fieldToUpdate := map[string]interface{}{}
+	for _, expr := range u.Exprs {
+		var val interface{}
+		sqlVal := expr.Expr.(*sqlparser.SQLVal)
+		switch sqlVal.Type {
+		case sqlparser.StrVal:
+			val = string(sqlVal.Val)
+		case sqlparser.IntVal, sqlparser.FloatVal:
+			val, err = strconv.ParseFloat(string(sqlVal.Val), bitSize64)
+		}
+		fieldToUpdate[expr.Name.Name.String()] = expr.Expr.(*sqlparser.SQLVal).Val
+	}
 	log.Println(u.Exprs)
 	return nil
 }

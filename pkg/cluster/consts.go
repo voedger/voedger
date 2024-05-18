@@ -31,6 +31,7 @@ const (
 		`(?P<offset>\.\d+)?` + // offset
 		`(?P<pars>\s+.*)?` + // (leading spaces +) params
 		`$`
+	bitSize64 = 64
 )
 
 var (
