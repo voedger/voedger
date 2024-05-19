@@ -122,6 +122,27 @@ EXTENSION ENGINE BUILTIN (
 		READ SCOPE(QUERIES, PROJECTORS)
 	);
 
+	STORAGE FederationCommand(
+		/*
+		Key:
+			Owner text (optional, default is current app owner)
+			AppName text (optional, default is current app name)
+			WSID int64 (optional, default is current workspace)
+			Token text (optional, default is system token)
+			Command qname
+			Body text
+		Value:
+			StatusCode int32
+			NewIDs value {
+				rawID1: int64
+				rawID2: int64
+				...
+			}
+			Result: value // command result
+		*/		
+		GET SCOPE(QUERIES, PROJECTORS)
+	);
+
 	STORAGE SendMail(
 		/*
 		Key:
