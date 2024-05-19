@@ -10,4 +10,5 @@ import "errors"
 var (
 	ErrNumPartitionsChanged    = errors.New("num partitions changed")
 	ErrNumAppWorkspacesChanged = errors.New("num application workspaces changed")
+	errWrongWhere              = errors.New("'where sys.ID = <id>' only is supported")
 )

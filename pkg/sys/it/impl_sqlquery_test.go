@@ -530,7 +530,7 @@ func TestReadFromAnotherAppAnotherWSID(t *testing.T) {
 	require.Contains(t, resStr, fmt.Sprintf(`"name":"%s"`, categoryName))
 }
 
-func TestVSqlUpdate(t *testing.T) {
+func TestVSqlUpdate_BasicUsage_Simple(t *testing.T) {
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
@@ -542,8 +542,40 @@ func TestVSqlUpdate(t *testing.T) {
 
 	sysPrn := vit.GetSystemPrincipal(istructs.AppQName_sys_cluster)
 
-	body = fmt.Sprintf(`{"args": {"Query":"update test1.app1.%d.app1pkg.category set name = 'name 2', trans = 42 where id = %d"}}`, ws.WSID, categoryID)
+	newName := vit.NextName()
+	body = fmt.Sprintf(`{"args": {"Query":"update test1.app1.%d.app1pkg.category set name = '%s' where id = %d"}}`, ws.WSID, newName, categoryID)
 	vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppWSID, "c.cluster.VSqlUpdate", body,
 		coreutils.WithAuthorizeBy(sysPrn.Token)).Println()
 
+	// check the value is update in another app and another wsid
+	body = fmt.Sprintf(`{"args":{"Query":"select * from app1pkg.category where id = %d"},"elements":[{"fields":["Result"]}]}`, categoryID)
+	resp := vit.PostWS(ws, "q.sys.SqlQuery", body)
+	resStr := resp.SectionRow(len(resp.Sections[0].Elements) - 1)[0].(string)
+	require.Contains(t, resStr, fmt.Sprintf(`"name":"%s"`, newName))
+}
+
+func TestVSqlUpdateErrors(t *testing.T) {
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
+
+	cases := []string{
+		"",
+		" ",
+		"update",
+		"update s s s",
+		"update test1.app1.42.wongQName set name = 42",
+		"update 42.42.42.wongQName set name = 42",
+		"update test1.app1.42.app1pkg.category set name = 42 where id = 1 and x = 1",
+		"update test1.app1.42.app1pkg.category set name = 42 where x = 1",
+		"update test1.app1.42.app1pkg.category set name = 42 where sys.ID = 1", // `id` according to the task
+		`update test1.app1.42.app1pkg.category set name = 42 where id = \"sds\"`,
+	}
+	sysPrn := vit.GetSystemPrincipal(istructs.AppQName_sys_cluster)
+	for _, c := range cases {
+		body := fmt.Sprintf(`{"args": {"Query":"%s"}}`, c)
+		vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppWSID, "c.cluster.VSqlUpdate", body,
+			coreutils.WithAuthorizeBy(sysPrn.Token),
+			coreutils.Expect400(),
+		).Println()
+	}
 }

@@ -9,13 +9,17 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
+	"github.com/voedger/voedger/pkg/itokens"
 	"github.com/voedger/voedger/pkg/parser"
 	coreutils "github.com/voedger/voedger/pkg/utils"
+	"github.com/voedger/voedger/pkg/utils/federation"
 )
 
-func Provide(cfg *istructsmem.AppConfigType, asp istructs.IAppStructsProvider, timeFunc coreutils.TimeFunc) parser.PackageFS {
+func Provide(cfg *istructsmem.AppConfigType, asp istructs.IAppStructsProvider, timeFunc coreutils.TimeFunc,
+	federation federation.IFederation, itokens itokens.ITokens) parser.PackageFS {
 	cfg.Resources.Add(istructsmem.NewCommandFunction(appdef.NewQName(ClusterPackage, "DeployApp"), provideExecDeployApp(asp, timeFunc)))
-	cfg.Resources.Add(istructsmem.NewCommandFunction(appdef.NewQName(ClusterPackage, "VSqlUpdate"), provideExecCmdVSqlUpdate(timeFunc)))
+	cfg.Resources.Add(istructsmem.NewCommandFunction(appdef.NewQName(ClusterPackage, "VSqlUpdate"),
+		provideExecCmdVSqlUpdate(federation, itokens, timeFunc)))
 	return parser.PackageFS{
 		Path: ClusterPackageFQN,
 		FS:   schemaFS,

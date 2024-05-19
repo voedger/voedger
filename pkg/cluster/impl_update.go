@@ -7,8 +7,9 @@ package cluster
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
-	"log"
+	"net/http"
 	"strconv"
 	"strings"
 
@@ -17,15 +18,18 @@ import (
 	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
+	"github.com/voedger/voedger/pkg/itokens"
+	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	coreutils "github.com/voedger/voedger/pkg/utils"
+	"github.com/voedger/voedger/pkg/utils/federation"
 )
 
-func provideExecCmdVSqlUpdate(timeFunc coreutils.TimeFunc) istructsmem.ExecCommandClosure {
+func provideExecCmdVSqlUpdate(federation federation.IFederation, itokens itokens.ITokens, timeFunc coreutils.TimeFunc) istructsmem.ExecCommandClosure {
 	return func(args istructs.ExecCommandArgs) (err error) {
 		query := args.ArgumentObject.AsString(field_Query)
 		appQName, wsid, qNameToUpdate, offset, updateKind, cleanSql, err := parseUpdateQuery(query)
 		if err != nil {
-			return err
+			return coreutils.NewHTTPError(http.StatusBadRequest, err)
 		}
 		if appQName == istructs.NullAppQName {
 			appQName = args.State.App()
@@ -45,7 +49,9 @@ func provideExecCmdVSqlUpdate(timeFunc coreutils.TimeFunc) istructsmem.ExecComma
 			}
 			return updateCorrupted(appQName, wsid, qNameToUpdate, offset, istructs.NullOffset, partitionID, istructs.UnixMilli(timeFunc().UnixMilli()))
 		case updateKind_Simple:
-			return updateSimple(appQName, wsid, cleanSql, qNameToUpdate)
+			if err = updateSimple(federation, itokens, appQName, wsid, cleanSql, qNameToUpdate); err != nil {
+				return coreutils.NewHTTPError(http.StatusBadRequest, err)
+			}
 		}
 
 		return nil
@@ -97,16 +103,14 @@ func updateCorrupted(appQName istructs.AppQName, wsid istructs.WSID, logViewQNam
 	return as.Events().PutWlog(plogEvent)
 }
 
-func updateSimple(appQName istructs.AppQName, wsid istructs.WSID, query string, qNameToUpdate appdef.QName) error {
+func updateSimple(federation federation.IFederation, itokens itokens.ITokens, appQName istructs.AppQName, wsid istructs.WSID, query string, qNameToUpdate appdef.QName) error {
 	stmt, err := sqlparser.Parse(query)
 	if err != nil {
 		return err
 	}
 	u := stmt.(*sqlparser.Update)
 
-	tableName := u.TableExprs[0].(*sqlparser.AliasedTableExpr)
-	log.Println(tableName)
-	fieldToUpdate := map[string]interface{}{}
+	fieldsToUpdate := map[string]interface{}{}
 	for _, expr := range u.Exprs {
 		var val interface{}
 		sqlVal := expr.Expr.(*sqlparser.SQLVal)
@@ -114,12 +118,51 @@ func updateSimple(appQName istructs.AppQName, wsid istructs.WSID, query string, 
 		case sqlparser.StrVal:
 			val = string(sqlVal.Val)
 		case sqlparser.IntVal, sqlparser.FloatVal:
-			val, err = strconv.ParseFloat(string(sqlVal.Val), bitSize64)
+			if val, err = strconv.ParseFloat(string(sqlVal.Val), bitSize64); err != nil {
+				// notest
+				return err
+			}
+		case sqlparser.HexNum:
+			val = sqlVal.Val
 		}
-		fieldToUpdate[expr.Name.Name.String()] = expr.Expr.(*sqlparser.SQLVal).Val
+		fieldsToUpdate[expr.Name.Name.String()] = val
 	}
-	log.Println(u.Exprs)
-	return nil
+	compExpr, ok := u.Where.Expr.(*sqlparser.ComparisonExpr)
+	if !ok {
+		return errWrongWhere
+	}
+	if len(compExpr.Left.(*sqlparser.ColName).Qualifier.Name.String()) > 0 {
+		return errWrongWhere
+	}
+	if compExpr.Left.(*sqlparser.ColName).Name.String() != appdef.SystemField_ID {
+		return errWrongWhere
+	}
+	idVal := compExpr.Right.(*sqlparser.SQLVal)
+	if idVal.Type != sqlparser.IntVal {
+		return errWrongWhere
+	}
+	id, err := strconv.ParseInt(string(idVal.Val), base10, bitSize64)
+	if err != nil {
+		// notest: checked already by Type == sqlparserIntVal
+		return err
+	}
+
+	jsonFields, err := json.Marshal(fieldsToUpdate)
+	if err != nil {
+		// notest
+		return err
+	}
+	cudBody := fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":%s}]}`, id, jsonFields)
+	sysToken, err := payloads.GetSystemPrincipalToken(itokens, appQName)
+	if err != nil {
+		// notest
+		return err
+	}
+	_, err = federation.Func(fmt.Sprintf("api/%s/%d/c.sys.CUD", appQName, wsid), cudBody,
+		coreutils.WithAuthorizeBy(sysToken),
+		coreutils.WithDiscardResponse(),
+	)
+	return err
 }
 
 func parseUpdateQuery(query string) (appQName istructs.AppQName, wsid istructs.WSID, qNameToUpdate appdef.QName, offset istructs.Offset,
@@ -145,20 +188,22 @@ func parseUpdateQuery(query string) (appQName istructs.AppQName, wsid istructs.W
 
 	if appName := parts[appIdx]; appName != "" {
 		appName = appName[:len(parts[appIdx])-1]
-		own, n, err := appdef.ParseQualifiedName(appName, `.`)
+		owner, app, err := appdef.ParseQualifiedName(appName, `.`)
 		if err != nil {
+			// notest: avoided already by regexp
 			return istructs.NullAppQName, 0, appdef.NullQName, 0, updateKind_Null, "", err
 		}
-		appQName = istructs.NewAppQName(own, n)
+		appQName = istructs.NewAppQName(owner, app)
 	}
 
 	if wsID := parts[wsidIdx]; wsID != "" {
 		wsID = wsID[:len(parts[wsidIdx])-1]
-		if id, err := strconv.ParseUint(wsID, 0, 0); err == nil {
-			wsid = istructs.WSID(id)
-		} else {
+		id, err := strconv.ParseUint(wsID, 0, 0)
+		if err != nil {
+			// notest: avoided already by regexp
 			return istructs.NullAppQName, 0, appdef.NullQName, 0, updateKind_Null, "", err
 		}
+		wsid = istructs.WSID(id)
 	}
 
 	logViewQNameStr := parts[qNameToUpdateIdx]

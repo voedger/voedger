@@ -25,13 +25,14 @@ const (
 	field_Query            = "Query"
 	updateQueryExpression  = `^` +
 		`(?P<updateKind>\s*update\s+(\w+\s+)?)` + // update [something] before the view
-		`(?P<app>\w+\.\w+\.)?` + // appOwner.appName (+ trailing dot)
-		`(?P<ws>\d+\.)?` + // wsid (+ trailing dot)
+		`(?P<app>\w+\.\w+\.)?` + // appOwner.appName.
+		`(?P<ws>\d+\.)?` + // wsid.
 		`(?P<table>\w+\.\w+)` + // table qualified name (clean)
 		`(?P<offset>\.\d+)?` + // offset
 		`(?P<pars>\s+.*)?` + // (leading spaces +) params
 		`$`
 	bitSize64 = 64
+	base10    = 10
 )
 
 var (
