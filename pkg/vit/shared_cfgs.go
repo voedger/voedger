@@ -11,6 +11,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/apps"
 	"github.com/voedger/voedger/pkg/extensionpoints"
+	"github.com/voedger/voedger/pkg/goutils/iterate"
 	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/parser"
 	"github.com/voedger/voedger/pkg/state"
@@ -197,6 +198,33 @@ func ProvideApp1(apis apps.APIs, cfg *istructsmem.AppConfigType, ep extensionpoi
 		istructs.Projector{
 			Name: appdef.NewQName(app1PkgName, "ProjDummy"),
 			Func: func(istructs.IPLogEvent, istructs.IState, istructs.IIntents) (err error) { return nil },
+		},
+	)
+
+	qNameViewCategoryIdx := appdef.NewQName(app1PkgName, "CategoryIdx")
+	cfg.AddSyncProjectors(
+		istructs.Projector{
+			Name: appdef.NewQName(app1PkgName, "ApplyCategoryIdx"),
+			Func: func(event istructs.IPLogEvent, st istructs.IState, intents istructs.IIntents) (err error) {
+				return iterate.ForEachError(event.CUDs, func(cud istructs.ICUDRow) error {
+					if cud.QName() != QNameApp1_CDocCategory {
+						return nil
+					}
+					kb, err := st.KeyBuilder(state.View, qNameViewCategoryIdx)
+					if err != nil {
+						return err
+					}
+					kb.PutInt32("IntFld", 43)
+					kb.PutInt32("Dummy", 1)
+					b, err := intents.NewValue(kb)
+					if err != nil {
+						return err
+					}
+					b.PutInt32("Val", 42)
+					b.PutString("Name", cud.AsString("name"))
+					return nil
+				})
+			},
 		},
 	)
 

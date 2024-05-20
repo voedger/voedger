@@ -589,6 +589,39 @@ func TestVSqlUpdate_BasicUsage_Corrupted(t *testing.T) {
 	require.NotEmpty(errEvent["OriginalEventBytes"].(string)) // base64 here
 	require.Equal(istructs.QNameForCorruptedData.String(), errEvent["QNameFromParams"].(string))
 	require.False(errEvent["ValidEvent"].(bool))
+
+	// TODO: test record not found, wrong field to set etc
+}
+
+func TestVSqlUpdate_BasicUsage_Direct(t *testing.T) {
+	require := require.New(t)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
+
+	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+
+	// insert a cdoc.
+	// p.ap1pkg.ApplyCategoryIdx will insert the single hardcoded record view.CategoryIdx(Name = category.Name, IntFld = 43, Dummy = 1, Val = 42) (see shared_cfgs.go)
+	categoryName := vit.NextName()
+	body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.category","name":"%s"}}]}`, categoryName)
+	vit.PostWS(ws, "c.sys.CUD", body)
+
+	// check view values
+	body = `{"args":{"Query":"select * from app1pkg.CategoryIdx where IntFld = 43 and Dummy = 1"}, "elements":[{"fields":["Result"]}]}`
+	resp := vit.PostWS(ws, "q.sys.SqlQuery", body)
+	res := resp.SectionRow()[0].(string)
+	m := map[string]interface{}{}
+	require.NoError(json.Unmarshal([]byte(res), &m))
+	require.Equal(categoryName, m["Name"].(string))
+	require.EqualValues(42, m["Val"].(float64))
+
+	// direct update the values
+	newName := vit.NextName()
+	sysPrn := vit.GetSystemPrincipal(istructs.AppQName_sys_cluster)
+	body = fmt.Sprintf(`{"args": {"Query":"direct update test1.app1.%d.app1pkg.CategoryIdx set Val = 44, Name = '%s' where IntFld = 42 and Dummy = 1"}}`, ws.WSID, newName)
+	resp = vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppWSID, "c.cluster.VSqlUpdate", body,
+		coreutils.WithAuthorizeBy(sysPrn.Token))
+	resp.Println()
 }
 
 func TestVSqlUpdateErrors(t *testing.T) {
@@ -607,7 +640,7 @@ func TestVSqlUpdateErrors(t *testing.T) {
 			"update 42.42.42.wongQName set name = 42",
 			"update test1.app1.42.app1pkg.category set name = 42 where id = 1 and x = 1",
 			"update test1.app1.42.app1pkg.category set name = 42 where x = 1",
-			"update test1.app1.42.app1pkg.category set name = 42 where sys.ID = 1",
+			"wrong op kind test1.app1.42.app1pkg.category set name = 42 where sys.ID = 1",
 			`update test1.app1.42.app1pkg.category set name = 42 where sys.ID = 'sds'`,
 		}
 		sysPrn := vit.GetSystemPrincipal(istructs.AppQName_sys_cluster)
@@ -625,8 +658,7 @@ func TestVSqlUpdateErrors(t *testing.T) {
 			"update corrupted":       "no query",
 			"update corrupted s s s": "not a query",
 			"update corrupted test1.app1.42.sys.PLog set name = 42": "set, where etc are not allowed",
-			"update corrupted test1.app1.sys.PLog.43":               "no wsid",
-			"update corrupted test1.app1.sys.WLog.44":               "no wsid",
+			"update corrupted test1.app1.0.sys.WLog.44":             "zero wsid",
 			"update corrupted test1.app1.42.sys.WLog":               "no offset",
 			"update corrupted test1.app1.1000.sys.PLog.44":          "partitionID is out of range",
 			"update corrupted test1.app1.1.sys.PLog.-44":            "negative offset",
@@ -639,8 +671,8 @@ func TestVSqlUpdateErrors(t *testing.T) {
 			t.Run(name, func(t *testing.T) {
 				body := fmt.Sprintf(`{"args": {"Query":"%s"}}`, sql)
 				vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppWSID, "c.cluster.VSqlUpdate", body,
-				coreutils.WithAuthorizeBy(sysPrn.Token),
-				coreutils.Expect400(),
+					coreutils.WithAuthorizeBy(sysPrn.Token),
+					coreutils.Expect400(),
 				).Println()
 			})
 		}

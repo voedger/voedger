@@ -24,9 +24,9 @@ const (
 	Field_NumAppWorkspaces = "NumAppWorkspaces"
 	field_Query            = "Query"
 	updateQueryExpression  = `^` +
-		`(?P<updateKind>\s*update\s+(?P<updateAdd>\w+\s+)?)` + // update [something] before the view
-		`(?P<app>\w+\.\w+\.)?` + // appOwner.appName.
-		`(?P<ws>\d+\.)?` + // wsid.
+		`(?P<operation>\s*.+\s+)` + // operation: update, direct update etc
+		`(?P<app>\w+\.\w+\.)` + // appOwner.appName.
+		`(?P<ws>\d+\.)` + // wsid.
 		`(?P<table>\w+\.\w+)` + // table qualified name (clean)
 		`(?P<offset>\.\d+)?` + // offset
 		`(?P<pars>\s+.*)?` + // (leading spaces +) params
