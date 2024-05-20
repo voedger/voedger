@@ -16,6 +16,7 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/apps/sys/clusterapp"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/processors"
 	"github.com/voedger/voedger/pkg/sys/sqlquery"
 	coreutils "github.com/voedger/voedger/pkg/utils"
@@ -554,28 +555,94 @@ func TestVSqlUpdate_BasicUsage_Simple(t *testing.T) {
 	require.Contains(t, resStr, fmt.Sprintf(`"name":"%s"`, newName))
 }
 
+func TestVSqlUpdate_BasicUsage_Corrupted(t *testing.T) {
+	require := require.New(t)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
+
+	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+
+	categoryName := vit.NextName()
+	body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.category","name":"%s"}}]}`, categoryName)
+	resp := vit.PostWS(ws, "c.sys.CUD", body)
+	wlogOffset := resp.CurrentWLogOffset
+	vit.PostWS(ws, "c.sys.CUD", body)
+
+	sysPrn := vit.GetSystemPrincipal(istructs.AppQName_sys_cluster)
+
+	body = fmt.Sprintf(`{"args": {"Query":"update corrupted test1.app1.%d.sys.WLog.%d"}}`, ws.WSID, wlogOffset)
+	resp = vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppWSID, "c.cluster.VSqlUpdate", body,
+		coreutils.WithAuthorizeBy(sysPrn.Token))
+	resp.Println()
+
+	body = fmt.Sprintf(`{"args":{"Query":"select * from sys.wlog where Offset = %d"},"elements":[{"fields":["Result"]}]}`, wlogOffset)
+	resp = vit.PostWS(ws, "q.sys.SqlQuery", body)
+	resp.Println()
+	res := resp.SectionRow()[0].(string)
+	m := map[string]interface{}{}
+	require.NoError(json.Unmarshal([]byte(res), &m))
+	require.Empty(m["ArgumentObject"].(map[string]interface{}))
+	require.Empty(m["CUDs"].([]interface{}))
+	require.Zero(m["DeviceID"].(float64))
+	errEvent := m["Error"].(map[string]interface{})
+	require.Equal(istructsmem.ErrCorruptedData.Error(), errEvent["ErrStr"].(string))
+	require.NotEmpty(errEvent["OriginalEventBytes"].(string)) // base64 here
+	require.Equal(istructs.QNameForCorruptedData.String(), errEvent["QNameFromParams"].(string))
+	require.False(errEvent["ValidEvent"].(bool))
+}
+
 func TestVSqlUpdateErrors(t *testing.T) {
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
-	cases := []string{
-		"",
-		" ",
-		"update",
-		"update s s s",
-		"update test1.app1.42.wongQName set name = 42",
-		"update 42.42.42.wongQName set name = 42",
-		"update test1.app1.42.app1pkg.category set name = 42 where id = 1 and x = 1",
-		"update test1.app1.42.app1pkg.category set name = 42 where x = 1",
-		"update test1.app1.42.app1pkg.category set name = 42 where sys.ID = 1", // `id` according to the task
-		`update test1.app1.42.app1pkg.category set name = 42 where id = \"sds\"`,
-	}
-	sysPrn := vit.GetSystemPrincipal(istructs.AppQName_sys_cluster)
-	for _, c := range cases {
-		body := fmt.Sprintf(`{"args": {"Query":"%s"}}`, c)
-		vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppWSID, "c.cluster.VSqlUpdate", body,
-			coreutils.WithAuthorizeBy(sysPrn.Token),
-			coreutils.Expect400(),
-		).Println()
-	}
+	t.Run("simple", func(t *testing.T) {
+
+		cases := []string{
+			"",
+			" ",
+			"update",
+			"update s s s",
+			"update test1.app1.42.app1.category",
+			"update test1.app1.42.wongQName set name = 42",
+			"update 42.42.42.wongQName set name = 42",
+			"update test1.app1.42.app1pkg.category set name = 42 where id = 1 and x = 1",
+			"update test1.app1.42.app1pkg.category set name = 42 where x = 1",
+			"update test1.app1.42.app1pkg.category set name = 42 where sys.ID = 1",
+			`update test1.app1.42.app1pkg.category set name = 42 where sys.ID = 'sds'`,
+		}
+		sysPrn := vit.GetSystemPrincipal(istructs.AppQName_sys_cluster)
+		for _, c := range cases {
+			body := fmt.Sprintf(`{"args": {"Query":"%s"}}`, c)
+			vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppWSID, "c.cluster.VSqlUpdate", body,
+				coreutils.WithAuthorizeBy(sysPrn.Token),
+				coreutils.Expect400(),
+			).Println()
+		}
+	})
+
+	t.Run("corrupted", func(t *testing.T) {
+		cases := map[string]string{
+			"update corrupted":       "no query",
+			"update corrupted s s s": "not a query",
+			"update corrupted test1.app1.42.sys.PLog set name = 42": "set, where etc are not allowed",
+			"update corrupted test1.app1.sys.PLog.43":               "no wsid",
+			"update corrupted test1.app1.sys.WLog.44":               "no wsid",
+			"update corrupted test1.app1.42.sys.WLog":               "no offset",
+			"update corrupted test1.app1.1000.sys.PLog.44":          "partitionID is out of range",
+			"update corrupted test1.app1.1.sys.PLog.-44":            "negative offset",
+			"update corrupted test1.app1.1.sys.PLog.0":              "zero offset",
+			"update corrupted test1.app1.1.app1pkg.category.44":     "not a log",
+			"update corrupted unknown.app.1.sys.PLog.44":            "unknown app",
+		}
+		sysPrn := vit.GetSystemPrincipal(istructs.AppQName_sys_cluster)
+		for sql, name := range cases {
+			t.Run(name, func(t *testing.T) {
+				body := fmt.Sprintf(`{"args": {"Query":"%s"}}`, sql)
+				vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppWSID, "c.cluster.VSqlUpdate", body,
+				coreutils.WithAuthorizeBy(sysPrn.Token),
+				coreutils.Expect400(),
+				).Println()
+			})
+		}
+	})
 }

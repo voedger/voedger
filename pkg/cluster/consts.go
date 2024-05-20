@@ -24,7 +24,7 @@ const (
 	Field_NumAppWorkspaces = "NumAppWorkspaces"
 	field_Query            = "Query"
 	updateQueryExpression  = `^` +
-		`(?P<updateKind>\s*update\s+(\w+\s+)?)` + // update [something] before the view
+		`(?P<updateKind>\s*update\s+(?P<updateAdd>\w+\s+)?)` + // update [something] before the view
 		`(?P<app>\w+\.\w+\.)?` + // appOwner.appName.
 		`(?P<ws>\d+\.)?` + // wsid.
 		`(?P<table>\w+\.\w+)` + // table qualified name (clean)
@@ -39,8 +39,8 @@ var (
 	QNameViewDeployedApps = appdef.NewQName(ClusterPackage, "DeployedApps")
 	qNameWDocApp          = appdef.NewQName(ClusterPackage, "App")
 	updateQueryExp        = regexp.MustCompile(updateQueryExpression)
-	plog                  = appdef.NewQName(appdef.SysPackage, "plog")
-	wlog                  = appdef.NewQName(appdef.SysPackage, "wlog")
+	plog                  = appdef.NewQName(appdef.SysPackage, "PLog")
+	wlog                  = appdef.NewQName(appdef.SysPackage, "WLog")
 )
 
 type updateKind int

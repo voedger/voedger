@@ -8,6 +8,7 @@ package cluster
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -24,32 +25,31 @@ import (
 	"github.com/voedger/voedger/pkg/utils/federation"
 )
 
-func provideExecCmdVSqlUpdate(federation federation.IFederation, itokens itokens.ITokens, timeFunc coreutils.TimeFunc) istructsmem.ExecCommandClosure {
+func provideExecCmdVSqlUpdate(federation federation.IFederation, itokens itokens.ITokens, timeFunc coreutils.TimeFunc, asp istructs.IAppStructsProvider) istructsmem.ExecCommandClosure {
 	return func(args istructs.ExecCommandArgs) (err error) {
 		query := args.ArgumentObject.AsString(field_Query)
-		appQName, wsid, qNameToUpdate, offset, updateKind, cleanSql, err := parseUpdateQuery(query)
+		appQName, wsidOrPartitionID, qNameToUpdate, offset, updateKind, cleanSql, err := parseUpdateQuery(query)
 		if err != nil {
 			return coreutils.NewHTTPError(http.StatusBadRequest, err)
 		}
 		if appQName == istructs.NullAppQName {
 			appQName = args.State.App()
 		}
-		if wsid == istructs.NullWSID {
-			wsid = args.WSID
+		appParts := args.Workpiece.(interface {
+			AppPartitions() appparts.IAppPartitions
+		}).AppPartitions()
+		if err = validateQuery(appQName, appParts, updateKind, cleanSql, qNameToUpdate, int64(wsidOrPartitionID), offset); err != nil {
+			return coreutils.NewHTTPError(http.StatusBadRequest, err)
 		}
 
 		switch updateKind {
 		case updateKind_Corrupted:
-			appParts := args.Workpiece.(interface {
-				AppPartitions() appparts.IAppPartitions
-			}).AppPartitions()
-			partitionID, err := appParts.AppWorkspacePartitionID(appQName, wsid)
-			if err != nil {
-				return err
-			}
-			return updateCorrupted(appQName, wsid, qNameToUpdate, offset, istructs.NullOffset, partitionID, istructs.UnixMilli(timeFunc().UnixMilli()))
+			return updateCorrupted(asp, appParts, appQName, wsidOrPartitionID, qNameToUpdate, offset, istructs.UnixMilli(timeFunc().UnixMilli()))
 		case updateKind_Simple:
-			if err = updateSimple(federation, itokens, appQName, wsid, cleanSql, qNameToUpdate); err != nil {
+			if wsidOrPartitionID == 0 {
+				wsidOrPartitionID = uint64(args.WSID)
+			}
+			if err = updateSimple(federation, itokens, appQName, istructs.WSID(wsidOrPartitionID), cleanSql, qNameToUpdate); err != nil {
 				return coreutils.NewHTTPError(http.StatusBadRequest, err)
 			}
 		}
@@ -58,30 +58,50 @@ func provideExecCmdVSqlUpdate(federation federation.IFederation, itokens itokens
 	}
 }
 
-func updateCorrupted(appQName istructs.AppQName, wsid istructs.WSID, logViewQName appdef.QName, wlogOffset istructs.Offset, plogOffset istructs.Offset, partitionID istructs.PartitionID,
-	currentMillis istructs.UnixMilli) error {
+func updateCorrupted(asp istructs.IAppStructsProvider, appParts appparts.IAppPartitions, appQName istructs.AppQName, wsidOrPartitionID uint64, logViewQName appdef.QName, offset istructs.Offset, currentMillis istructs.UnixMilli) (err error) {
 	// read bytes of the existing event
-	var as istructs.IAppStructs // take from the workpiece
 	// here we need to read just 1 event - so let's do not consider context of the request
-	var currentEventBytes []byte
-	as.Events().ReadPLog(context.Background(), partitionID, plogOffset, 1, func(plogOffset istructs.Offset, event istructs.IPLogEvent) (err error) {
-		// currentEventBytes = event.Bytes()
-		// тут есть wlogOffset
-		return nil
-	})
-	err := as.Events().ReadWLog(context.Background(), wsid, wlogOffset, 1, func(wlogOffset istructs.Offset, event istructs.IWLogEvent) (err error) {
-		// currentEventBytes = event.Bytes()
-		// тут нету plogOffset
-		return nil
-	})
+	targetAppStructs, err := asp.AppStructs(appQName)
 	if err != nil {
+		// test here
 		return err
 	}
-	syncRawEventBuilder := as.Events().GetSyncRawEventBuilder(istructs.SyncRawEventBuilderParams{
+	var currentEventBytes []byte
+	var wlogOffset istructs.Offset
+	var plogOffset istructs.Offset
+	var partitionID istructs.PartitionID
+	var wsid istructs.WSID
+	if logViewQName == plog {
+		partitionID = istructs.PartitionID(wsidOrPartitionID)
+		plogOffset = offset
+		err = targetAppStructs.Events().ReadPLog(context.Background(), partitionID, plogOffset, 1, func(plogOffset istructs.Offset, event istructs.IPLogEvent) (err error) {
+			currentEventBytes = event.Bytes()
+			wlogOffset = event.WLogOffset()
+			wsid = event.Workspace()
+			return nil
+		})
+	} else {
+		// wlog
+		wsid = istructs.WSID(wsidOrPartitionID)
+		wlogOffset = offset
+		plogOffset = istructs.NullOffset // ok to set NullOffset on update WLog because we do not have way to know how it was stored, no IWLogEvent.PLogOffset() method
+		if partitionID, err = appParts.AppWorkspacePartitionID(appQName, wsid); err != nil {
+			return err
+		}
+		err = targetAppStructs.Events().ReadWLog(context.Background(), wsid, wlogOffset, 1, func(wlogOffset istructs.Offset, event istructs.IWLogEvent) (err error) {
+			currentEventBytes = event.Bytes()
+			return nil
+		})
+	}
+	if err != nil {
+		// notest
+		return err
+	}
+	syncRawEventBuilder := targetAppStructs.Events().GetSyncRawEventBuilder(istructs.SyncRawEventBuilderParams{
 		GenericRawEventBuilderParams: istructs.GenericRawEventBuilderParams{
 			EventBytes:        currentEventBytes,
 			HandlingPartition: partitionID,
-			PLogOffset:        plogOffset, // ok to set NullOffset on update WLog because we do not have way to know how it was stored, no IWLogEvent.PLogOffset() method
+			PLogOffset:        plogOffset,
 			Workspace:         wsid,
 			WLogOffset:        wlogOffset,
 			QName:             istructs.QNameForCorruptedData,
@@ -92,15 +112,58 @@ func updateCorrupted(appQName istructs.AppQName, wsid istructs.WSID, logViewQNam
 
 	syncRawEvent, err := syncRawEventBuilder.BuildRawEvent()
 	if err != nil {
+		// notest
 		return err
 	}
-	plogEvent, err := as.Events().PutPlog(syncRawEvent, nil, istructsmem.NewIDGeneratorWithHook(func(rawID, storageID istructs.RecordID, t appdef.IType) error {
+	plogEvent, err := targetAppStructs.Events().PutPlog(syncRawEvent, nil, istructsmem.NewIDGeneratorWithHook(func(rawID, storageID istructs.RecordID, t appdef.IType) error {
+		// notest
 		panic("must not use ID generator on corrupted event create")
 	}))
 	if err != nil {
+		// notest
 		return err
 	}
-	return as.Events().PutWlog(plogEvent)
+	return targetAppStructs.Events().PutWlog(plogEvent)
+}
+
+func validateQuery(appQName istructs.AppQName, appparts appparts.IAppPartitions, kind updateKind, sql string, qNameToUpdate appdef.QName, wsidOrPartitionID int64, offset istructs.Offset) error {
+	switch kind {
+	case updateKind_Simple:
+		if len(sql) == 0 {
+			return errors.New("empty query")
+		}
+	case updateKind_Corrupted:
+		if len(sql) > 0 {
+			return fmt.Errorf("any params of update corrupted are not allowed: %s", sql)
+		}
+		if appQName == istructs.NullAppQName {
+			return errors.New("appQName must be provided for UPDATE CORRUPTED")
+		}
+		if offset == istructs.NullOffset {
+			return errors.New("offset >0 must be provided for UPDATE CORRUPTED")
+		}
+		switch qNameToUpdate {
+		case wlog:
+			if wsidOrPartitionID == 0 {
+				return errors.New("wsid must be provided for UPDATE CORRUPTED wlog")
+			}
+		case plog:
+			if wsidOrPartitionID == 0 {
+				return errors.New("partno must be provided for UPDATE CORRUPTED plog")
+			}
+			partno := istructs.NumAppPartitions(wsidOrPartitionID)
+			partsCount, err := appparts.AppPartsCount(appQName)
+			if err != nil {
+				return err
+			}
+			if partno >= partsCount {
+				return fmt.Errorf("provided partno %d is out of %d declared by app %s", partno, partsCount, appQName)
+			}
+		default:
+			return fmt.Errorf("invalid log view %s, sys.plog or sys.wlog are only allowed", qNameToUpdate)
+		}
+	}
+	return nil
 }
 
 func updateSimple(federation federation.IFederation, itokens itokens.ITokens, appQName istructs.AppQName, wsid istructs.WSID, query string, qNameToUpdate appdef.QName) error {
@@ -131,10 +194,7 @@ func updateSimple(federation federation.IFederation, itokens itokens.ITokens, ap
 	if !ok {
 		return errWrongWhere
 	}
-	if len(compExpr.Left.(*sqlparser.ColName).Qualifier.Name.String()) > 0 {
-		return errWrongWhere
-	}
-	if compExpr.Left.(*sqlparser.ColName).Name.String() != appdef.SystemField_ID {
+	if compExpr.Left.(*sqlparser.ColName).Qualifier.Name.String()+appdef.QNameQualifierChar+compExpr.Left.(*sqlparser.ColName).Name.String() != appdef.SystemField_ID {
 		return errWrongWhere
 	}
 	idVal := compExpr.Right.(*sqlparser.SQLVal)
@@ -165,13 +225,13 @@ func updateSimple(federation federation.IFederation, itokens itokens.ITokens, ap
 	return err
 }
 
-func parseUpdateQuery(query string) (appQName istructs.AppQName, wsid istructs.WSID, qNameToUpdate appdef.QName, offset istructs.Offset,
+func parseUpdateQuery(query string) (appQName istructs.AppQName, wsidOrPartitionID uint64, qNameToUpdate appdef.QName, offset istructs.Offset,
 	updateKind updateKind, cleanSql string, err error) {
 	const (
 		// 0 is original query
 
-		firstWordIds int = 1 + iota
-		updateKindIdx
+		updateId int = 1 + iota
+		updateAddId
 		appIdx
 		wsidIdx
 		qNameToUpdateIdx
@@ -198,12 +258,11 @@ func parseUpdateQuery(query string) (appQName istructs.AppQName, wsid istructs.W
 
 	if wsID := parts[wsidIdx]; wsID != "" {
 		wsID = wsID[:len(parts[wsidIdx])-1]
-		id, err := strconv.ParseUint(wsID, 0, 0)
+		wsidOrPartitionID, err = strconv.ParseUint(wsID, 0, 0)
 		if err != nil {
 			// notest: avoided already by regexp
 			return istructs.NullAppQName, 0, appdef.NullQName, 0, updateKind_Null, "", err
 		}
-		wsid = istructs.WSID(id)
 	}
 
 	logViewQNameStr := parts[qNameToUpdateIdx]
@@ -213,6 +272,7 @@ func parseUpdateQuery(query string) (appQName istructs.AppQName, wsid istructs.W
 	}
 
 	if offsetStr := parts[offsetIdx]; len(offsetStr) > 0 {
+		offsetStr = offsetStr[1:]
 		offsetInt, err := strconv.Atoi(offsetStr)
 		if err != nil {
 			return istructs.NullAppQName, 0, appdef.NullQName, 0, updateKind_Null, "", fmt.Errorf("invalid offset %s: %w", offsetStr, err)
@@ -220,30 +280,18 @@ func parseUpdateQuery(query string) (appQName istructs.AppQName, wsid istructs.W
 		offset = istructs.Offset(offsetInt)
 	}
 	cleanSql = strings.TrimSpace(parts[parsIdx])
-	updateKindStr := parts[firstWordIds] + parts[updateKindIdx]
+	updateKindStr := strings.TrimSpace(parts[updateId])
 	switch strings.TrimSpace(strings.ToLower(updateKindStr)) {
 	case "update":
 		updateKind = updateKind_Simple
-		if len(cleanSql) == 0 {
-			return istructs.NullAppQName, 0, appdef.NullQName, 0, updateKind_Null, "", fmt.Errorf("nothing to update: %s", query)
-		}
 		cleanSql = fmt.Sprintf("update %s %s", qNameToUpdate, cleanSql)
 	case "direct update":
 		updateKind = updateKind_Direct
 	case "update corrupted":
 		updateKind = updateKind_Corrupted
-		if len(cleanSql) > 0 {
-			return istructs.NullAppQName, 0, appdef.NullQName, 0, updateKind_Null, "", fmt.Errorf("any params of update corrupted are not allowed: %s", query)
-		}
-		if qNameToUpdate != wlog || qNameToUpdate != plog {
-			return istructs.NullAppQName, 0, appdef.NullQName, 0, updateKind_Null, "", fmt.Errorf("invalid log view %s, sys.plog or sys.wlog are only allowed", qNameToUpdate)
-		}
-		if offset <= 0 {
-			return istructs.NullAppQName, 0, appdef.NullQName, 0, updateKind_Null, "", fmt.Errorf("invalid offset %d: must be >0", offset)
-		}
 	default:
 		return istructs.NullAppQName, 0, appdef.NullQName, 0, updateKind_Null, "", fmt.Errorf("wrong update kind %s", updateKindStr)
 	}
 
-	return appQName, wsid, qNameToUpdate, offset, updateKind, cleanSql, nil
+	return appQName, wsidOrPartitionID, qNameToUpdate, offset, updateKind, cleanSql, nil
 }

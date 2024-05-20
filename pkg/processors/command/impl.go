@@ -80,6 +80,11 @@ func (c *cmdWorkpiece) Event() istructs.IPLogEvent {
 	return c.pLogEvent
 }
 
+// need for update corrupted in c.cluster.VSqlUpdate
+func (c *cmdWorkpiece) GetAppStructs() istructs.IAppStructs {
+	return c.appStructs
+}
+
 // borrows app partition for command
 func (c *cmdWorkpiece) borrow() (err error) {
 	if c.appPart, err = c.appParts.Borrow(c.cmdMes.AppQName(), c.cmdMes.PartitionID(), appparts.ProcessorKind_Command); err != nil {
