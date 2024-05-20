@@ -11,18 +11,19 @@ import (
 )
 
 var (
-	View           = appdef.NewQName(appdef.SysPackage, "View")
-	Record         = appdef.NewQName(appdef.SysPackage, "Record")
-	WLog           = appdef.NewQName(appdef.SysPackage, "WLog")
-	Http           = appdef.NewQName(appdef.SysPackage, "Http")
-	SendMail       = appdef.NewQName(appdef.SysPackage, "SendMail")
-	AppSecret      = appdef.NewQName(appdef.SysPackage, "AppSecret")
-	RequestSubject = appdef.NewQName(appdef.SysPackage, "RequestSubject")
-	Result         = appdef.NewQName(appdef.SysPackage, "Result")
-	Event          = appdef.NewQName(appdef.SysPackage, "Event")
-	CommandContext = appdef.NewQName(appdef.SysPackage, "CommandContext")
-	QueryContext   = appdef.NewQName(appdef.SysPackage, "QueryContext")
-	Response       = appdef.NewQName(appdef.SysPackage, "Response")
+	View              = appdef.NewQName(appdef.SysPackage, "View")
+	Record            = appdef.NewQName(appdef.SysPackage, "Record")
+	WLog              = appdef.NewQName(appdef.SysPackage, "WLog")
+	Http              = appdef.NewQName(appdef.SysPackage, "Http")
+	SendMail          = appdef.NewQName(appdef.SysPackage, "SendMail")
+	AppSecret         = appdef.NewQName(appdef.SysPackage, "AppSecret")
+	RequestSubject    = appdef.NewQName(appdef.SysPackage, "RequestSubject")
+	Result            = appdef.NewQName(appdef.SysPackage, "Result")
+	Event             = appdef.NewQName(appdef.SysPackage, "Event")
+	CommandContext    = appdef.NewQName(appdef.SysPackage, "CommandContext")
+	QueryContext      = appdef.NewQName(appdef.SysPackage, "QueryContext")
+	Response          = appdef.NewQName(appdef.SysPackage, "Response")
+	FederationCommand = appdef.NewQName(appdef.SysPackage, "FederationCommand")
 )
 
 const (
@@ -75,6 +76,12 @@ const (
 	Field_IsNew                         = "IsNew"
 	Field_Name                          = "Name"
 	Field_Token                         = "Token"
+	Field_Owner                         = "Owner"
+	Field_AppName                       = "AppName"
+	Field_Command                       = "Command"
+	Field_ExpectedCodes                 = "ExpectedCodes"
+	Field_NewIDs                        = "NewIDs"
+	Field_Result                        = "Result"
 	Field_ErrorMessage                  = "ErrorMessage"
 )
 

@@ -202,6 +202,8 @@ func (a *asyncActualizer) init(ctx context.Context) (err error) {
 		},
 		a.conf.SecretReader,
 		p.EventProvider,
+		a.conf.TokensFunc,
+		a.conf.FederationFunc,
 		a.conf.IntentsLimit,
 		a.conf.BundlesLimit,
 		a.conf.Opts...)

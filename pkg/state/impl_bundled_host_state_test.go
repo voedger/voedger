@@ -20,7 +20,7 @@ func TestBundledHostState_BasicUsage(t *testing.T) {
 	n10nFn := func(view appdef.QName, wsid istructs.WSID, offset istructs.Offset) {}
 
 	// Create instance of async actualizer state
-	aaState := factory(context.Background(), mockedAppStructs, nil, SimpleWSIDFunc(istructs.WSID(1)), n10nFn, nil, nil, 2, 1)
+	aaState := factory(context.Background(), mockedAppStructs, nil, SimpleWSIDFunc(istructs.WSID(1)), n10nFn, nil, nil, nil, nil, 2, 1)
 
 	// Declare simple extension
 	extension := func(state istructs.IState, intents istructs.IIntents) {
@@ -395,7 +395,7 @@ func TestAsyncActualizerState_Read(t *testing.T) {
 				_ = args.Get(3).(istructs.ValuesCallback)(&nilKey{}, &nilValue{})
 			})
 
-		s := ProvideAsyncActualizerStateFactory()(context.Background(), func() istructs.IAppStructs { return mockedStructs }, nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil, 10, 10)
+		s := ProvideAsyncActualizerStateFactory()(context.Background(), func() istructs.IAppStructs { return mockedStructs }, nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil, nil, nil, 10, 10)
 		kb1, err := s.KeyBuilder(View, testViewRecordQName1)
 		require.NoError(err)
 		kb2, err := s.KeyBuilder(View, testViewRecordQName2)
@@ -425,7 +425,7 @@ func TestAsyncActualizerState_Read(t *testing.T) {
 			On("NewValueBuilder", testViewRecordQName1).Return(&nilValueBuilder{}).
 			On("NewValueBuilder", testViewRecordQName2).Return(&nilValueBuilder{}).
 			On("PutBatch", istructs.WSID(1), mock.AnythingOfType("[]istructs.ViewKV")).Return(errTest)
-		s := ProvideAsyncActualizerStateFactory()(context.Background(), func() istructs.IAppStructs { return mockedStructs }, nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil, 10, 10)
+		s := ProvideAsyncActualizerStateFactory()(context.Background(), func() istructs.IAppStructs { return mockedStructs }, nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil, nil, nil, 10, 10)
 		kb1, err := s.KeyBuilder(View, testViewRecordQName1)
 		require.NoError(err)
 		kb2, err := s.KeyBuilder(View, testViewRecordQName2)
@@ -448,7 +448,7 @@ func TestAsyncActualizerState_Read(t *testing.T) {
 	})
 }
 func asyncActualizerStateWithTestStateStorage(s *mockStorage) istructs.IState {
-	as := ProvideAsyncActualizerStateFactory()(context.Background(), nilAppStructsFunc, nil, nil, nil, nil, nil, 10, 10)
+	as := ProvideAsyncActualizerStateFactory()(context.Background(), nilAppStructsFunc, nil, nil, nil, nil, nil, nil, nil, 10, 10)
 	as.(*asyncActualizerState).addStorage(testStorage, s, S_GET_BATCH|S_READ)
 	return as
 }

@@ -9,12 +9,15 @@ import (
 
 	"github.com/voedger/voedger/pkg/isecrets"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/itokens"
+	"github.com/voedger/voedger/pkg/utils/federation"
 )
 
 type QPStateOptFunc func(opts *qpStateOpts)
 
 type qpStateOpts struct {
-	customHttpClient IHttpClient
+	customHttpClient         IHttpClient
+	federationCommandHandler FederationCommandHandler
 }
 
 func QPWithCustomHttpClient(client IHttpClient) QPStateOptFunc {
@@ -23,8 +26,15 @@ func QPWithCustomHttpClient(client IHttpClient) QPStateOptFunc {
 	}
 }
 
+func QPWithFedearationCommandHandler(handler FederationCommandHandler) QPStateOptFunc {
+	return func(opts *qpStateOpts) {
+		opts.federationCommandHandler = handler
+	}
+}
+
 func implProvideQueryProcessorState(ctx context.Context, appStructsFunc AppStructsFunc, partitionIDFunc PartitionIDFunc, wsidFunc WSIDFunc,
-	secretReader isecrets.ISecretReader, principalsFunc PrincipalsFunc, tokenFunc TokenFunc, argFunc ArgFunc, resultBuilderFunc ObjectBuilderFunc, queryCallbackFunc ExecQueryCallbackFunc, options ...QPStateOptFunc) IHostState {
+	secretReader isecrets.ISecretReader, principalsFunc PrincipalsFunc, tokenFunc TokenFunc, argFunc ArgFunc, resultBuilderFunc ObjectBuilderFunc,
+	tokensFunc itokens.ITokens, federationFunc federation.IFederation, queryCallbackFunc ExecQueryCallbackFunc, options ...QPStateOptFunc) IHostState {
 
 	opts := &qpStateOpts{}
 	for _, optFunc := range options {
@@ -45,6 +55,14 @@ func implProvideQueryProcessorState(ctx context.Context, appStructsFunc AppStruc
 	bs.addStorage(Http, &httpStorage{
 		customClient: opts.customHttpClient,
 	}, S_READ)
+
+	bs.addStorage(FederationCommand, &federationCommandStorage{
+		appStructs: appStructsFunc,
+		wsid:       wsidFunc,
+		emulation:  opts.federationCommandHandler,
+		federation: federationFunc,
+		tokensAPI:  tokensFunc,
+	}, S_GET)
 
 	bs.addStorage(AppSecret, &appSecretsStorage{secretReader: secretReader}, S_GET)
 
