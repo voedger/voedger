@@ -56,9 +56,6 @@ func Bootstrap(federation federation.IFederation, asp istructs.IAppStructsProvid
 		_, err := federation.AdminFunc(fmt.Sprintf("api/%s/%d/c.cluster.DeployApp", istructs.AppQName_sys_cluster, clusterapp.ClusterAppPseudoWSID), body,
 			coreutils.WithDiscardResponse(),
 			coreutils.WithAuthorizeBy(sysToken),
-
-			// here we expecting that the network could be not available on the VVM launch (e.g. balancer thinks the node is not up yet)
-			coreutils.WithRetryOnAnyError(retryOnHTTPErrorTimeout, retryOnHTTPErrorDelay),
 		)
 		if err != nil {
 			panic(fmt.Sprintf("failed to deploy app %s: %s", app.Name, err.Error()))
