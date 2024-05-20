@@ -475,14 +475,14 @@ func TestCommandMessaging(t *testing.T) {
 
 	testCases := []testingu.CmdTestCase{
 		{
-			Name:               "init: wrong number of arguments",
-			Args:               []string{"vpm", "init", "-C", dir, "package_path", "sfs"},
-			ExpectedErrPattern: "1 arg(s)",
+			Name:                "init: wrong number of arguments",
+			Args:                []string{"vpm", "init", "-C", dir, "package_path", "sfs"},
+			ExpectedErrPatterns: []string{"1 arg(s)"},
 		},
 		{
-			Name:               "init: unknown flag",
-			Args:               []string{"vpm", "init", "-C", dir, "--unknown_flag", "package_path"},
-			ExpectedErrPattern: "unknown flag",
+			Name:                "init: unknown flag",
+			Args:                []string{"vpm", "init", "-C", dir, "--unknown_flag", "package_path"},
+			ExpectedErrPatterns: []string{"unknown flag"},
 		},
 		{
 			Name:        "tidy: before init",
@@ -490,27 +490,26 @@ func TestCommandMessaging(t *testing.T) {
 			ExpectedErr: errGoModFileNotFound,
 		},
 		{
-			Name:           "init: new package",
-			Args:           []string{"vpm", "init", "-C", dir, "package_path"},
-			ExpectedStderr: "go: added github.com/voedger/voedger",
+			Name:                   "init: new package",
+			Args:                   []string{"vpm", "init", "-C", dir, "package_path"},
+			ExpectedStderrPatterns: []string{"go: added github.com/voedger/voedger"},
 		},
 		{
-			Name:           "tidy: after init",
-			Args:           []string{"vpm", "tidy", "-C", dir},
-			ExpectedStdout: "failed to compile, will try to exec 'go mod tidy",
+			Name:                   "tidy: after init",
+			Args:                   []string{"vpm", "tidy", "-C", dir},
+			ExpectedStdoutPatterns: []string{"failed to compile, will try to exec 'go mod tidy"},
 		},
 		{
-			Name:           "help",
-			Args:           []string{"vpm", "help"},
-			ExpectedStdout: "vpm [command]",
+			Name:                   "help",
+			Args:                   []string{"vpm", "help"},
+			ExpectedStdoutPatterns: []string{"vpm [command]"},
 		},
 		{
-			Name:               "unknown command",
-			Args:               []string{"vpm", "unknown_command"},
-			ExpectedErrPattern: "",
-			ExpectedStdout:     "vpm [command]",
+			Name:                   "unknown command",
+			Args:                   []string{"vpm", "unknown_command"},
+			ExpectedStdoutPatterns: []string{"vpm [command]"},
 		},
 	}
 
-	testingu.RunCmdTestCases(t, execRootCmd, testCases)
+	testingu.RunCmdTestCases(t, execRootCmd, testCases, version)
 }

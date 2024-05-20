@@ -15,11 +15,10 @@ Below are the steps to use the testingu package to test your CLI applications.
 Create a slice of CmdTestCase structs, each representing a test case. Each test case includes: 
 - Name: The name of the test case.
 - Args: The arguments to pass to the CLI tool.
-- Version: The version string to pass.
 - ExpectedErr: The expected error (if any).
-- ExpectedErrPattern: A substring to find in the error message.
-- ExpectedStdout: The expected substring to find in stdout.
-- ExpectedStderr: The expected substring to find in stderr.
+- ExpectedErrPatterns: A list of expected substrings to find in the error message.
+- ExpectedStdoutPatterns: A list of the expected substrings to find in stdout.
+- ExpectedStderrPatterns: A list of the expected substrings to find in stderr.
 
 ```go
 testCases := []testingu.CmdTestCase{
@@ -115,11 +114,10 @@ A struct representing a test case for a CLI command.
 #### Fields:
 - Name string: The name of the test case.
 - Args []string: The arguments to pass to the CLI command.
-- Version string: The version string to pass to the CLI command.
 - ExpectedErr error: The expected error (if any).
-- ExpectedErrPattern string: A substring to find in the error message.
-- ExpectedStdout string: The expected substring to find in stdout.
-- ExpectedStderr string: The expected substring to find in stderr.
+- ExpectedErrPatterns []string: A list of expected substrings to find in the error message.
+- ExpectedStdoutPatterns []string: A list of the expected substrings to find in stdout.
+- ExpectedStderrPatterns []string: A list of the expected substrings to find in stderr.
 
 ## Functions
 
@@ -130,6 +128,7 @@ Runs a series of command-line test cases.
 - t *testing.T: The testing object.
 - execute func(args []string, version string) error: The function to execute the CLI command.
 - testCases []CmdTestCase: The test cases to run.
+- version string: The version of the CLI command.
 
 #### Returns:
 No return value.

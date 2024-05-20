@@ -17,67 +17,71 @@ import (
 )
 
 type CmdTestCase struct {
-	Name               string
-	Args               []string
-	Version            string
-	ExpectedErr        error
-	ExpectedErrPattern string
-	ExpectedStdout     string
-	ExpectedStderr     string
+	Name                   string
+	Args                   []string
+	Version                string
+	ExpectedErr            error
+	ExpectedErrPatterns    []string
+	ExpectedStdoutPatterns []string
+	ExpectedStderrPatterns []string
 }
 
-func RunCmdTestCases(t *testing.T, execute func(args []string, version string) error, testCases []CmdTestCase) {
+func RunCmdTestCases(t *testing.T, execute func(args []string, version string) error, testCases []CmdTestCase, version string) {
 	// notestdept
 	t.Helper()
 	for _, tc := range testCases {
 		t.Run(tc.Name, func(t *testing.T) {
 			t.Helper()
 			f := func() error {
-				return execute(tc.Args, tc.Version)
+				return execute(tc.Args, version)
 			}
 
 			stdout, stderr, err := CaptureStdoutStderr(f)
 			log.Println("stdout:", stdout)
 			log.Println("stderr:", stderr)
 
-			checkOutput(t, tc.ExpectedStdout, stdout, "stdout")
-			checkOutput(t, tc.ExpectedStderr, stderr, "stderr")
+			checkOutput(t, tc.ExpectedStdoutPatterns, stdout, "stdout")
+			checkOutput(t, tc.ExpectedStderrPatterns, stderr, "stderr")
 
-			checkError(t, tc.ExpectedErr, tc.ExpectedErrPattern, err)
+			checkError(t, tc.ExpectedErr, tc.ExpectedErrPatterns, err)
 		})
 	}
 }
 
-func checkError(t *testing.T, expectedErr error, expectedErrPattern string, actualErr error) {
+func checkError(t *testing.T, expectedErr error, expectedErrPatterns []string, actualErr error) {
 	// notestdept
 	t.Helper()
-	if expectedErr != nil || len(expectedErrPattern) > 0 {
-		if actualErr == nil {
-			t.Errorf("error was not returned as expected")
-			return
-		}
-		if expectedErr != nil && !errors.Is(actualErr, expectedErr) {
-			t.Errorf("wrong error was returned: expected `%v`, got `%v`", expectedErr, actualErr)
-			return
-		}
-		if len(expectedErrPattern) > 0 && !strings.Contains(actualErr.Error(), expectedErrPattern) {
-			t.Errorf("wrong error was returned: expected pattern `%v`, got `%v`", expectedErrPattern, actualErr.Error())
-			return
+	if expectedErr != nil || len(expectedErrPatterns) > 0 {
+		for _, expectedErrPattern := range expectedErrPatterns {
+			if actualErr == nil {
+				t.Errorf("error was not returned as expected")
+				return
+			}
+			if expectedErr != nil && !errors.Is(actualErr, expectedErr) {
+				t.Errorf("wrong error was returned: expected `%v`, got `%v`", expectedErr, actualErr)
+				return
+			}
+			if len(expectedErrPattern) > 0 && !strings.Contains(actualErr.Error(), expectedErrPattern) {
+				t.Errorf("wrong error was returned: expected pattern `%v`, got `%v`", expectedErrPattern, actualErr.Error())
+				return
+			}
 		}
 	} else if actualErr != nil {
 		t.Errorf("unexpected error was returned: %v", actualErr)
 	}
 }
 
-func checkOutput(t *testing.T, expected, actual, outputTitle string) {
+func checkOutput(t *testing.T, expectedPatterns []string, actual, outputTitle string) {
 	t.Helper()
-	switch {
-	case len(actual) == 0 && len(expected) > 0:
-		t.Errorf("%s: expected pattern `%v`, actual is nothing", outputTitle, expected)
-	case !strings.Contains(actual, expected) && len(expected) > 0:
-		t.Errorf("%s: expected pattern `%v`, actual `%v`", outputTitle, expected, actual)
-	case len(actual) > 0 && len(expected) == 0:
-		t.Errorf("%s: expected nothing, got `%v`", outputTitle, actual)
+	for _, expectedPattern := range expectedPatterns {
+		switch {
+		case len(actual) == 0 && len(expectedPattern) > 0:
+			t.Errorf("%s: expected pattern `%v`, actual is nothing", outputTitle, expectedPattern)
+		case !strings.Contains(actual, expectedPattern) && len(expectedPattern) > 0:
+			t.Errorf("%s: expected pattern `%v`, actual `%v`", outputTitle, expectedPattern, actual)
+		case len(actual) > 0 && len(expectedPattern) == 0:
+			t.Errorf("%s: expected nothing, got `%v`", outputTitle, actual)
+		}
 	}
 }
 
