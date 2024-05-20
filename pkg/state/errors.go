@@ -29,6 +29,11 @@ var errNotImplemented = errors.New("not implemented")
 var errEntityRequiredForValueBuilder = errors.New("entity required for ValueBuilder")
 var errWorkspaceDescriptorNotFound = errors.New("WorkspaceDescriptor not found in workspace")
 var errDescriptorForUndefinedWorkspace = errors.New("workspace descriptor for undefined workspace")
+var errCommandNotSpecified = errors.New("command not specified")
+
+func errUnexpectedType(actual interface{}) error {
+	return fmt.Errorf("unexpected type: %v", actual)
+}
 
 func errUndefined(name string) error {
 	return errors.New(name + " undefined")

@@ -24,12 +24,14 @@ import (
 	"github.com/voedger/voedger/pkg/isecrets"
 	"github.com/voedger/voedger/pkg/isecretsimpl"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/itokens"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	imetrics "github.com/voedger/voedger/pkg/metrics"
 	"github.com/voedger/voedger/pkg/pipeline"
 	"github.com/voedger/voedger/pkg/processors"
 	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys/authnz"
+	"github.com/voedger/voedger/pkg/utils/federation"
 	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
 
 	coreutils "github.com/voedger/voedger/pkg/utils"
@@ -89,7 +91,7 @@ func implRowsProcessorFactory(ctx context.Context, appDef appdef.IAppDef, state 
 
 func implServiceFactory(serviceChannel iprocbus.ServiceChannel, resultSenderClosableFactory ResultSenderClosableFactory,
 	appParts appparts.IAppPartitions, maxPrepareQueries int, metrics imetrics.IMetrics, vvm string,
-	authn iauthnz.IAuthenticator, authz iauthnz.IAuthorizer) pipeline.IService {
+	authn iauthnz.IAuthenticator, authz iauthnz.IAuthorizer, itokens itokens.ITokens, federation federation.IFederation) pipeline.IService {
 	secretReader := isecretsimpl.ProvideSecretReader()
 	return pipeline.NewService(func(ctx context.Context) {
 		var p pipeline.ISyncPipeline
@@ -107,7 +109,7 @@ func implServiceFactory(serviceChannel iprocbus.ServiceChannel, resultSenderClos
 				rs := resultSenderClosableFactory(msg.RequestCtx(), msg.Sender())
 				qwork := newQueryWork(msg, rs, appParts, maxPrepareQueries, qpm, secretReader)
 				if p == nil {
-					p = newQueryProcessorPipeline(ctx, authn, authz)
+					p = newQueryProcessorPipeline(ctx, authn, authz, itokens, federation)
 				}
 				err := p.SendSync(qwork)
 				if err != nil {
@@ -143,27 +145,11 @@ func execAndSendResponse(ctx context.Context, qw *queryWork) (err error) {
 		}
 		qw.metrics.Increase(execSeconds, time.Since(now).Seconds())
 	}()
-	return qw.queryExec(ctx, qw.execQueryArgs, func(object istructs.IObject) error {
-		pathToIdx := make(map[string]int)
-		if qw.resultType.QName() == istructs.QNameRaw {
-			pathToIdx[processors.Field_RawObject_Body] = 0
-		} else {
-			for i, element := range qw.queryParams.Elements() {
-				pathToIdx[element.Path().Name()] = i
-			}
-		}
-		return qw.rowsProcessor.SendAsync(rowsWorkpiece{
-			object: object,
-			outputRow: &outputRow{
-				keyToIdx: pathToIdx,
-				values:   make([]interface{}, len(pathToIdx)),
-			},
-			enrichedRootFieldsKinds: make(map[string]appdef.DataKind),
-		})
-	})
+	return qw.queryExec(ctx, qw.execQueryArgs, qw.callbackFunc)
 }
 
-func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthenticator, authz iauthnz.IAuthorizer) pipeline.ISyncPipeline {
+func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthenticator, authz iauthnz.IAuthorizer,
+	itokens itokens.ITokens, federation federation.IFederation) pipeline.ISyncPipeline {
 	ops := []*pipeline.WiredOperator{
 		operator("borrowAppPart", borrowAppPart),
 		operator("check function call rate", func(ctx context.Context, qw *queryWork) (err error) {
@@ -262,6 +248,27 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 			qw.execQueryArgs, err = newExecQueryArgs(qw.requestData, qw.msg.WSID(), qw)
 			return coreutils.WrapSysError(err, http.StatusBadRequest)
 		}),
+		operator("create callback func", func(ctx context.Context, qw *queryWork) (err error) {
+			qw.callbackFunc = func(object istructs.IObject) error {
+				pathToIdx := make(map[string]int)
+				if qw.resultType.QName() == istructs.QNameRaw {
+					pathToIdx[processors.Field_RawObject_Body] = 0
+				} else {
+					for i, element := range qw.queryParams.Elements() {
+						pathToIdx[element.Path().Name()] = i
+					}
+				}
+				return qw.rowsProcessor.SendAsync(rowsWorkpiece{
+					object: object,
+					outputRow: &outputRow{
+						keyToIdx: pathToIdx,
+						values:   make([]interface{}, len(pathToIdx)),
+					},
+					enrichedRootFieldsKinds: make(map[string]appdef.DataKind),
+				})
+			}
+			return nil
+		}),
 		operator("create state", func(ctx context.Context, qw *queryWork) (err error) {
 			qw.state = state.ProvideQueryProcessorStateFactory()(
 				qw.msg.RequestCtx(),
@@ -271,9 +278,16 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 				qw.secretReader,
 				func() []iauthnz.Principal { return qw.principals },
 				func() string { return qw.msg.Token() },
-				nil, // TODO: provide ArgFunc
-				nil, // TODO: provide QueryResultFunc
-				nil) // TODO: provide ExecQueryCallbackFunc
+				itokens,
+				func() istructs.IObject { return qw.execQueryArgs.ArgumentObject },
+				func() istructs.IObjectBuilder {
+					return qw.appStructs.ObjectBuilder(qw.resultType.QName())
+				},
+				federation,
+				func() istructs.ExecQueryCallback {
+					return qw.callbackFunc
+				},
+			)
 			qw.execQueryArgs.State = qw.state
 			return
 		}),
@@ -364,6 +378,7 @@ type queryWork struct {
 	iQuery            appdef.IQuery
 	wsDesc            istructs.IRecord
 	queryExec         func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) error
+	callbackFunc      istructs.ExecQueryCallback
 }
 
 func newQueryWork(msg IQueryMessage, rs IResultSenderClosable, appParts appparts.IAppPartitions,
