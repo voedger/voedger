@@ -1,5 +1,5 @@
 ---
-name: DevOps
+name: Quality
 about: Improme system quality
 title: ''
 labels: kind/quality, todo/triage
