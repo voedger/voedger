@@ -299,6 +299,8 @@ var defaultACL = ACL{
 				qNameCmdVoidUntillPayment,
 				// https://dev.untill.com/projects/#!683625
 				qNameQryCreateTap2PaySession,
+				// https://dev.untill.com/projects/#!693712
+				qNameCmdSaveTap2PayPayment,
 			},
 			principalsPattern: [][]iauthnz.Principal{
 				{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleUntillPaymentsUser}},
