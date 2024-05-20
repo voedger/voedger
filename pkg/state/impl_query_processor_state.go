@@ -33,8 +33,8 @@ func QPWithFedearationCommandHandler(handler FederationCommandHandler) QPStateOp
 }
 
 func implProvideQueryProcessorState(ctx context.Context, appStructsFunc AppStructsFunc, partitionIDFunc PartitionIDFunc, wsidFunc WSIDFunc,
-	secretReader isecrets.ISecretReader, principalsFunc PrincipalsFunc, tokenFunc TokenFunc, argFunc ArgFunc, resultBuilderFunc ObjectBuilderFunc,
-	tokensFunc itokens.ITokens, federationFunc federation.IFederation, queryCallbackFunc ExecQueryCallbackFunc, options ...QPStateOptFunc) IHostState {
+	secretReader isecrets.ISecretReader, principalsFunc PrincipalsFunc, tokenFunc TokenFunc, itokens itokens.ITokens, argFunc ArgFunc, resultBuilderFunc ObjectBuilderFunc,
+	federation federation.IFederation, queryCallbackFunc ExecQueryCallbackFunc, options ...QPStateOptFunc) IHostState {
 
 	opts := &qpStateOpts{}
 	for _, optFunc := range options {
@@ -60,8 +60,8 @@ func implProvideQueryProcessorState(ctx context.Context, appStructsFunc AppStruc
 		appStructs: appStructsFunc,
 		wsid:       wsidFunc,
 		emulation:  opts.federationCommandHandler,
-		federation: federationFunc,
-		tokensAPI:  tokensFunc,
+		federation: federation,
+		tokens:     itokens,
 	}, S_GET)
 
 	bs.addStorage(AppSecret, &appSecretsStorage{secretReader: secretReader}, S_GET)

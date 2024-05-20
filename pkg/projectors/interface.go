@@ -27,14 +27,14 @@ type TimeAfterFunc func(d time.Duration) <-chan time.Time
 type LogErrorFunc func(args ...interface{})
 
 type AsyncActualizerConf struct {
-	Ctx            context.Context
-	AppQName       istructs.AppQName
-	AppPartitions  appparts.IAppPartitions
-	AppStructs     state.AppStructsFunc
-	SecretReader   isecrets.ISecretReader
-	TokensFunc     itokens.ITokens
-	FederationFunc federation.IFederation
-	Partition      istructs.PartitionID
+	Ctx           context.Context
+	AppQName      istructs.AppQName
+	AppPartitions appparts.IAppPartitions
+	AppStructs    state.AppStructsFunc
+	SecretReader  isecrets.ISecretReader
+	Tokens        itokens.ITokens
+	Federation    federation.IFederation
+	Partition     istructs.PartitionID
 	// Optional. Default value: `time.After`
 	AfterError TimeAfterFunc
 	// Optional. Default value: `core-logger.Error`
