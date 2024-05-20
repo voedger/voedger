@@ -322,6 +322,9 @@ func TestInitBasicUsage(t *testing.T) {
 	// test unsupported go version
 	dir = t.TempDir()
 	minimalRequiredGoVersionValue = "9.99.999"
+	defer func() {
+		minimalRequiredGoVersionValue = minimalRequiredGoVersion
+	}()
 	err = execRootCmd([]string{"vpm", "init", "-C", dir, packagePath}, "1.0.0")
 	require.Error(err)
 	require.Contains(err.Error(), "unsupported go version")
