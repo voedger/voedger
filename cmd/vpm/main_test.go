@@ -467,7 +467,7 @@ func findWasmFiles(dir string) []string {
 }
 
 func TestCommandMessaging(t *testing.T) {
-	if logger.IsVerbose() {
+	if testing.Short() {
 		t.Skip("Manual run only because of long time execution (e.g. go get github.com/voedger/voedger run is involved)")
 	}
 

@@ -41,7 +41,7 @@ func newInitCmd(params *vpmParams) *cobra.Command {
 
 func initPackage(dir, modulePath string) error {
 	if modulePath == "" {
-		return fmt.Errorf(modulePathIsNotDeterminedErrFormat, dir)
+		return fmt.Errorf("vpm: cannot determine module path for source directory %s", dir)
 	}
 	if err := createGoMod(dir, modulePath); err != nil {
 		return err
