@@ -21,7 +21,7 @@ func TestQueryContextStorage(t *testing.T) {
 	wsidFunc := SimpleWSIDFunc(wsid)
 	argFunc := func() istructs.IObject { return arg }
 
-	s := ProvideQueryProcessorStateFactory()(context.Background(), nil, nil, wsidFunc, nil, nil, nil, argFunc, nil, nil, nil, nil)
+	s := ProvideQueryProcessorStateFactory()(context.Background(), nil, nil, wsidFunc, nil, nil, nil, nil, argFunc, nil, nil, nil)
 
 	kb, err := s.KeyBuilder(QueryContext, appdef.NullQName)
 	require.NoError(t, err)

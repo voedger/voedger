@@ -90,7 +90,7 @@ func implProvideAsyncActualizerState(ctx context.Context, appStructsFunc AppStru
 		wsid:       wsidFunc,
 		emulation:  opts.federationCommandHandler,
 		federation: federationFunc,
-		tokensAPI:  tokensFunc,
+		tokens:     tokensFunc,
 	}, S_GET)
 
 	state.addStorage(AppSecret, &appSecretsStorage{secretReader: secretReader}, S_GET)
