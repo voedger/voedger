@@ -836,11 +836,19 @@ func analyseWorkspace(v *WorkspaceStmt, c *iterateCtx) {
 		}
 	}
 	if v.Descriptor != nil {
+		wc := &iterateCtx{
+			basicContext: c.basicContext,
+			collection:   v,
+			pkg:          c.pkg,
+			parent:       c,
+			wsCtxs:       c.wsCtxs,
+		}
 		if v.Abstract {
 			c.stmtErr(&v.Descriptor.Pos, ErrAbstractWorkspaceDescriptor)
 		}
-		analyseNestedTables(v.Descriptor.Items, appdef.TypeKind_CDoc, c)
-		analyseFieldSets(v.Descriptor.Items, c)
+		analyseNestedTables(v.Descriptor.Items, appdef.TypeKind_CDoc, wc)
+		analyseFields(v.Descriptor.Items, wc, true)
+		analyseFieldSets(v.Descriptor.Items, wc)
 	}
 
 	// find all included QNames
