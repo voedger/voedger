@@ -981,7 +981,7 @@ func analyseFieldSets(items []TableItemExpr, c *iterateCtx) {
 	}
 }
 
-func lookupField(items []TableItemExpr, name Ident) bool {
+func lookupField(items []TableItemExpr, name Ident, c *iterateCtx) (found bool) {
 	for i := range items {
 		item := items[i]
 		if item.Field != nil {
@@ -989,8 +989,17 @@ func lookupField(items []TableItemExpr, name Ident) bool {
 				return true
 			}
 		}
+		if item.FieldSet != nil {
+			if err := resolveInCtx(item.FieldSet.Type, c, func(t *TypeStmt, schema *PackageSchemaAST) error {
+				found = lookupField(t.Items, name, c)
+				return nil
+			}); err != nil {
+				c.stmtErr(&item.FieldSet.Pos, err)
+				return false
+			}
+		}
 	}
-	return false
+	return found
 }
 
 func analyseFields(items []TableItemExpr, c *iterateCtx, isTable bool) {
@@ -1071,7 +1080,7 @@ func analyseFields(items []TableItemExpr, c *iterateCtx, isTable bool) {
 				constraintNames[cname] = true
 			}
 			if item.Constraint.UniqueField != nil {
-				if ok := lookupField(items, item.Constraint.UniqueField.Field); !ok {
+				if ok := lookupField(items, item.Constraint.UniqueField.Field, c); !ok {
 					c.stmtErr(&item.Constraint.Pos, ErrUndefinedField(string(item.Constraint.UniqueField.Field)))
 					continue
 				}
@@ -1083,7 +1092,7 @@ func analyseFields(items []TableItemExpr, c *iterateCtx, isTable bool) {
 							continue
 						}
 					}
-					if ok := lookupField(items, field); !ok {
+					if ok := lookupField(items, field, c); !ok {
 						c.stmtErr(&item.Constraint.Pos, ErrUndefinedField(string(field)))
 						continue
 					}
