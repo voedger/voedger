@@ -179,8 +179,8 @@ func (ctx *testState) buildState(processorKind int) {
 		ctx.IState = state.ProvideCommandProcessorStateFactory()(ctx.ctx, appFunc, partitionIDFunc, wsidFunc, ctx.secretReader, cudFunc, principalsFunc, tokenFunc,
 			IntentsLimit, resultBuilderFunc, argFunc, unloggedArgFunc, wlogOffsetFunc)
 	case ProcKind_QueryProcessor:
-		ctx.IState = state.ProvideQueryProcessorStateFactory()(ctx.ctx, appFunc, partitionIDFunc, wsidFunc, ctx.secretReader, principalsFunc, tokenFunc, argFunc,
-			qryResultBuilderFunc, nil, nil, execQueryCallback, state.QPWithCustomHttpClient(ctx), state.QPWithFedearationCommandHandler(ctx.emulateFederationCmd))
+		ctx.IState = state.ProvideQueryProcessorStateFactory()(ctx.ctx, appFunc, partitionIDFunc, wsidFunc, ctx.secretReader, principalsFunc, tokenFunc, nil, argFunc,
+			qryResultBuilderFunc, nil, execQueryCallback, state.QPWithCustomHttpClient(ctx), state.QPWithFedearationCommandHandler(ctx.emulateFederationCmd))
 	}
 }
 
