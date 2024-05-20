@@ -2475,3 +2475,19 @@ func Test_UniquesFromFieldsets(t *testing.T) {
 	require.NoError(err)
 	require.NoError(BuildAppDefs(schema, appdef.New()))
 }
+
+func Test_CRecordInDescriptor(t *testing.T) {
+	require := assertions(t)
+	schema, err := require.AppSchema(`APPLICATION test();
+	WORKSPACE w (
+		DESCRIPTOR wd(
+			items x
+		);
+		TABLE x INHERITS CRecord(
+			f1 int32
+		);
+	);
+`)
+	require.NoError(err)
+	require.NoError(BuildAppDefs(schema, appdef.New()))
+}
