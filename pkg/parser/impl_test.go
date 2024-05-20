@@ -2459,3 +2459,19 @@ ALTER WORKSPACE sys.AppWorkspaceWS (
 	);
 );`)
 }
+
+func Test_UniquesFromFieldsets(t *testing.T) {
+	require := assertions(t)
+	schema, err := require.AppSchema(`APPLICATION test();
+	TYPE fieldset (
+		f1 int32
+	);
+	TABLE t1 INHERITS WDoc(
+		fieldset,
+		f2 int32,
+		UNIQUE(f1)
+	);
+`)
+	require.NoError(err)
+	require.NoError(BuildAppDefs(schema, appdef.New()))
+}
