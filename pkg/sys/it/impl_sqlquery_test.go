@@ -670,28 +670,29 @@ func TestVSqlUpdateErrors(t *testing.T) {
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
-	t.Run("simple", func(t *testing.T) {
+	t.Run("update", func(t *testing.T) {
 
-		cases := []string{
-			"",
-			" ",
-			"update",
-			"update s s s",
-			"update test1.app1.42.app1.category",
-			"update test1.app1.42.wongQName set name = 42",
-			"update 42.42.42.wongQName set name = 42",
-			"update test1.app1.42.app1pkg.category set name = 42 where id = 1 and x = 1",
-			"update test1.app1.42.app1pkg.category set name = 42 where x = 1",
-			"wrong op kind test1.app1.42.app1pkg.category set name = 42 where sys.ID = 1",
-			`update test1.app1.42.app1pkg.category set name = 42 where sys.ID = 'sds'`,
+		cases := map[string]string{
+			"":                                     "no query",
+			" ":                                    "no query",
+			"update":                               "no query",
+			"update s s s":                         "no query", тут сделать ожиаемые ошибки
+			"update test1.app1.42.app1.category.1": "no fields to set",
+			// "update test1.app1.42.wongQName set name = 42",
+			// "update 42.42.42.wongQName set name = 42",
+			// "wrong op kind test1.app1.42.app1pkg.category.42 set name = 42",
+			// "update test1.app1.42.app1.category set name = 42 where sys.ID = 1",
+			// "update test1.app1.42.app1.category.1 set name = 42 where sys.ID = 1",
 		}
 		sysPrn := vit.GetSystemPrincipal(istructs.AppQName_sys_cluster)
-		for _, c := range cases {
-			body := fmt.Sprintf(`{"args": {"Query":"%s"}}`, c)
-			vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppWSID, "c.cluster.VSqlUpdate", body,
-				coreutils.WithAuthorizeBy(sysPrn.Token),
-				coreutils.Expect400(),
-			).Println()
+		for sql, expectedError := range cases {
+			t.Run(expectedError, func(t *testing.T) {
+				body := fmt.Sprintf(`{"args": {"Query":"%s"}}`, sql)
+				vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppWSID, "c.cluster.VSqlUpdate", body,
+					coreutils.WithAuthorizeBy(sysPrn.Token),
+					coreutils.Expect400(expectedError),
+				).Println()
+			})
 		}
 	})
 

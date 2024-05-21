@@ -50,10 +50,11 @@ func provideExecCmdVSqlUpdate(federation federation.IFederation, itokens itokens
 				wsidOrPartitionID = istructs.IDType(args.WSID)
 			}
 			if err = updateSimple(federation, itokens, appQName, istructs.WSID(wsidOrPartitionID), cleanSql, istructs.RecordID(offsetOrID)); err != nil {
-				return coreutils.NewHTTPError(http.StatusBadRequest, err)
+				return coreutils.WrapSysError(err, http.StatusBadRequest)
 			}
 		case updateKind_Direct:
-			return updateDirect(asp, appQName, istructs.WSID(wsidOrPartitionID), qNameToUpdate, appDef, cleanSql, istructs.RecordID(offsetOrID))
+			return coreutils.WrapSysError(updateDirect(asp, appQName, istructs.WSID(wsidOrPartitionID), qNameToUpdate, appDef, cleanSql, istructs.RecordID(offsetOrID)),
+				http.StatusBadRequest)
 		}
 
 		return nil
