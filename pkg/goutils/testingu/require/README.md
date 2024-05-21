@@ -1,6 +1,6 @@
 # [require](https://pkg.go.dev/github.com/voedger/voedger/pkg/goutils/testingu/require) package
 
-The package `require` in addition to the [require](https://pkg.go.dev/github.com/stretchr/testify/require) package provides a set of functions for checking panic and errors.
+The package `require` in addition to the Testify [require](https://pkg.go.dev/github.com/stretchr/testify/require) package provides a set of functions for checking panic and errors.
 
 ## Check panic
 
