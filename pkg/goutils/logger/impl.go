@@ -13,6 +13,7 @@ import (
 	"runtime"
 	"strings"
 	"sync/atomic"
+	"time"
 )
 
 const (
@@ -52,7 +53,7 @@ func (p *logPrinter) getFuncName(skipCount int) (funcName string, line int) {
 }
 
 func (p *logPrinter) getFormattedMsg(msgType string, funcName string, line int, args ...interface{}) string {
-	out := "01/02 15:04:05.000"
+	out := time.Now().Format("01/02 15:04:05.000")
 	out += ": " + msgType
 	out += fmt.Sprintf(": [%v:%v]:", funcName, line)
 	if len(args) > 0 {

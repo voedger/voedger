@@ -14,6 +14,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/goutils/logger"
+	"github.com/voedger/voedger/pkg/goutils/testingu"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
@@ -68,6 +69,8 @@ func TestBaselineBasicUsage(t *testing.T) {
 			dir:  filepath.Join(wd, "test", "myapp", "mypkg1"),
 			expectedBaselineFiles: []string{
 				filepath.Join(tempTargetDir, baselineDirName, pkgDirName, "sys", "sys.vsql"),
+				filepath.Join(tempTargetDir, baselineDirName, pkgDirName, "sys", "userprofile.vsql"),
+				filepath.Join(tempTargetDir, baselineDirName, pkgDirName, "sys", "workspace.vsql"),
 				filepath.Join(tempTargetDir, baselineDirName, pkgDirName, "mypkg1", "schema1.vsql"),
 				filepath.Join(tempTargetDir, baselineDirName, baselineInfoFileName),
 			},
@@ -77,6 +80,8 @@ func TestBaselineBasicUsage(t *testing.T) {
 			dir:  filepath.Join(wd, "test", "myapp", "mypkg2"),
 			expectedBaselineFiles: []string{
 				filepath.Join(tempTargetDir, baselineDirName, pkgDirName, "sys", "sys.vsql"),
+				filepath.Join(tempTargetDir, baselineDirName, pkgDirName, "sys", "userprofile.vsql"),
+				filepath.Join(tempTargetDir, baselineDirName, pkgDirName, "sys", "workspace.vsql"),
 				filepath.Join(tempTargetDir, baselineDirName, pkgDirName, "mypkg1", "schema1.vsql"),
 				filepath.Join(tempTargetDir, baselineDirName, pkgDirName, "mypkg2", "schema2.vsql"),
 				filepath.Join(tempTargetDir, baselineDirName, baselineInfoFileName),
@@ -87,6 +92,8 @@ func TestBaselineBasicUsage(t *testing.T) {
 			dir:  filepath.Join(wd, "test", "myapp", "app"),
 			expectedBaselineFiles: []string{
 				filepath.Join(tempTargetDir, baselineDirName, pkgDirName, "sys", "sys.vsql"),
+				filepath.Join(tempTargetDir, baselineDirName, pkgDirName, "sys", "userprofile.vsql"),
+				filepath.Join(tempTargetDir, baselineDirName, pkgDirName, "sys", "workspace.vsql"),
 				filepath.Join(tempTargetDir, baselineDirName, pkgDirName, "mypkg1", "schema1.vsql"),
 				filepath.Join(tempTargetDir, baselineDirName, pkgDirName, "mypkg2", "schema2.vsql"),
 				filepath.Join(tempTargetDir, baselineDirName, pkgDirName, "app", "app.vsql"),
@@ -321,6 +328,9 @@ func TestInitBasicUsage(t *testing.T) {
 	// test unsupported go version
 	dir = t.TempDir()
 	minimalRequiredGoVersionValue = "9.99.999"
+	defer func() {
+		minimalRequiredGoVersionValue = minimalRequiredGoVersion
+	}()
 	err = execRootCmd([]string{"vpm", "init", "-C", dir, packagePath}, "1.0.0")
 	require.Error(err)
 	require.Contains(err.Error(), "unsupported go version")
@@ -463,4 +473,52 @@ func findWasmFiles(dir string) []string {
 		return nil
 	}
 	return wasmFiles
+}
+
+func TestCommandMessaging(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Manual run only because of long time execution (e.g. go get github.com/voedger/voedger run is involved)")
+	}
+
+	dir := t.TempDir()
+
+	testCases := []testingu.CmdTestCase{
+		{
+			Name:                "init: wrong number of arguments",
+			Args:                []string{"vpm", "init", "-C", dir, "package_path", "sfs"},
+			ExpectedErrPatterns: []string{"1 arg(s)"},
+		},
+		{
+			Name:                "init: unknown flag",
+			Args:                []string{"vpm", "init", "-C", dir, "--unknown_flag", "package_path"},
+			ExpectedErrPatterns: []string{"unknown flag"},
+		},
+		{
+			Name:        "tidy: before init",
+			Args:        []string{"vpm", "tidy", "-C", dir},
+			ExpectedErr: errGoModFileNotFound,
+		},
+		{
+			Name:                   "init: new package",
+			Args:                   []string{"vpm", "init", "-C", dir, "package_path"},
+			ExpectedStderrPatterns: []string{"go: added github.com/voedger/voedger"},
+		},
+		{
+			Name:                   "tidy: after init",
+			Args:                   []string{"vpm", "tidy", "-C", dir},
+			ExpectedStdoutPatterns: []string{"failed to compile, will try to exec 'go mod tidy"},
+		},
+		{
+			Name:                   "help",
+			Args:                   []string{"vpm", "help"},
+			ExpectedStdoutPatterns: []string{"vpm [command]"},
+		},
+		{
+			Name:                   "unknown command",
+			Args:                   []string{"vpm", "unknown_command"},
+			ExpectedStdoutPatterns: []string{"vpm [command]"},
+		},
+	}
+
+	testingu.RunCmdTestCases(t, execRootCmd, testCases, version)
 }
