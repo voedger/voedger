@@ -46,7 +46,6 @@ func TestPanics(t *testing.T) {
 
 This example demonstrates how to test that the error is expected target error and contains the expected substrings.
 
-
 ```go
 package yours_test
 
