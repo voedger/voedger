@@ -10,14 +10,28 @@ ABSTRACT TABLE ODoc INHERITS ORecord();
 ABSTRACT TABLE WDoc INHERITS WRecord();
 ABSTRACT TABLE CSingleton INHERITS CDoc();
 ABSTRACT WORKSPACE Workspace(
-	EXTENSION ENGINE WASM(
-        COMMAND NewWorkspace();
-    );
 );
 ALTERABLE WORKSPACE Profile();
 
 TABLE WorkspaceDescriptor INHERITS CSingleton (
-	WSKind qname NOT NULL
+		-- owner* fields made non-required for app workspaces
+		OwnerWSID int64,
+		OwnerQName qname, -- Deprecated: use OwnerQName2
+		OwnerID int64,
+		OwnerApp varchar, -- QName -> each target app must know the owner QName -> string
+		WSName varchar NOT NULL,
+		WSKind qname NOT NULL,
+		WSKindInitializationData varchar(1024),
+		TemplateName varchar,
+		TemplateParams varchar(1024),
+		WSID int64,
+		CreateError varchar(1024),
+		CreatedAtMs int64 NOT NULL,
+		InitStartedAtMs int64,
+		InitError varchar(1024),
+		InitCompletedAtMs int64,
+		Status int32,
+		OwnerQName2 text
 );
 
 TYPE Raw(
