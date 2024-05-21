@@ -121,11 +121,11 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 	queryChannel := provideQueryChannel(serviceChannelFactory)
 	queryprocessorServiceFactory := queryprocessor.ProvideServiceFactory()
 	maxPrepareQueriesType := vvmConfig.MaxPrepareQueries
-	operatorQueryProcessors := provideQueryProcessors(numQueryProcessors, queryChannel, iAppPartitions, queryprocessorServiceFactory, iMetrics, vvmName, maxPrepareQueriesType, iAuthenticator, iAuthorizer)
+	operatorQueryProcessors := provideQueryProcessors(numQueryProcessors, queryChannel, iAppPartitions, queryprocessorServiceFactory, iMetrics, vvmName, maxPrepareQueriesType, iAuthenticator, iAuthorizer, iTokens, iFederation)
 	asyncActualizerFactory := projectors.ProvideAsyncActualizerFactory()
 	asyncActualizersFactory := provideAsyncActualizersFactory(iAppPartitions, iAppStructsProvider, in10nBroker, asyncActualizerFactory, iSecretReader, iMetrics)
 	v4 := vvmConfig.ActualizerStateOpts
-	appPartitionFactory := provideAppPartitionFactory(asyncActualizersFactory, v4)
+	appPartitionFactory := provideAppPartitionFactory(asyncActualizersFactory, v4, iTokens, iFederation)
 	appServiceFactory := provideAppServiceFactory(appPartitionFactory)
 	operatorAppServicesFactory := provideOperatorAppServices(appServiceFactory, appsArtefacts, iAppStructsProvider)
 	iAppPartitionsController, cleanup4, err := apppartsctl.New(iAppPartitions)
@@ -557,7 +557,8 @@ func provideCommandChannelFactory(sch ServiceChannelFactory) CommandChannelFacto
 }
 
 func provideQueryProcessors(qpCount istructs.NumQueryProcessors, qc QueryChannel, appParts appparts.IAppPartitions, qpFactory queryprocessor.ServiceFactory, imetrics2 imetrics.IMetrics,
-	vvm commandprocessor.VVMName, mpq MaxPrepareQueriesType, authn iauthnz.IAuthenticator, authz iauthnz.IAuthorizer) OperatorQueryProcessors {
+	vvm commandprocessor.VVMName, mpq MaxPrepareQueriesType, authn iauthnz.IAuthenticator, authz iauthnz.IAuthorizer,
+	tokens itokens.ITokens, federation2 federation.IFederation) OperatorQueryProcessors {
 	forks := make([]pipeline.ForkOperatorOptionFunc, qpCount)
 	resultSenderFactory := func(ctx context.Context, sender ibus.ISender) queryprocessor.IResultSenderClosable {
 		return &resultSenderErrorFirst{
@@ -566,7 +567,7 @@ func provideQueryProcessors(qpCount istructs.NumQueryProcessors, qc QueryChannel
 		}
 	}
 	for i := 0; i < int(qpCount); i++ {
-		forks[i] = pipeline.ForkBranch(pipeline.ServiceOperator(qpFactory(iprocbus.ServiceChannel(qc), resultSenderFactory, appParts, int(mpq), imetrics2, string(vvm), authn, authz)))
+		forks[i] = pipeline.ForkBranch(pipeline.ServiceOperator(qpFactory(iprocbus.ServiceChannel(qc), resultSenderFactory, appParts, int(mpq), imetrics2, string(vvm), authn, authz, tokens, federation2)))
 	}
 	return pipeline.ForkOperator(pipeline.ForkSame, forks[0], forks[1:]...)
 }
@@ -580,7 +581,8 @@ func provideCommandProcessors(cpCount istructs.NumCommandProcessors, ccf Command
 }
 
 func provideAsyncActualizersFactory(appParts appparts.IAppPartitions, appStructsProvider istructs.IAppStructsProvider, n10nBroker in10n.IN10nBroker, asyncActualizerFactory projectors.AsyncActualizerFactory, secretReader isecrets.ISecretReader, metrics2 imetrics.IMetrics) AsyncActualizersFactory {
-	return func(vvmCtx context.Context, appQName istructs.AppQName, asyncProjectors istructs.Projectors, partitionID istructs.PartitionID, opts []state.ActualizerStateOptFunc) pipeline.ISyncOperator {
+	return func(vvmCtx context.Context, appQName istructs.AppQName, asyncProjectors istructs.Projectors, partitionID istructs.PartitionID,
+		tokens itokens.ITokens, federation2 federation.IFederation, opts []state.ActualizerStateOptFunc) pipeline.ISyncOperator {
 		appStructs, err := appStructsProvider.AppStructs(appQName)
 		if err != nil {
 			panic(err)
@@ -598,6 +600,8 @@ func provideAsyncActualizersFactory(appParts appparts.IAppPartitions, appStructs
 			IntentsLimit:  projectors.DefaultIntentsLimit,
 			FlushInterval: actualizerFlushInterval,
 			Metrics:       metrics2,
+			Tokens:        tokens,
+			Federation:    federation2,
 		}
 
 		forkOps := make([]pipeline.ForkOperatorOptionFunc, 0, len(asyncProjectors))
@@ -613,9 +617,9 @@ func provideAsyncActualizersFactory(appParts appparts.IAppPartitions, appStructs
 	}
 }
 
-func provideAppPartitionFactory(aaf AsyncActualizersFactory, opts []state.ActualizerStateOptFunc) AppPartitionFactory {
+func provideAppPartitionFactory(aaf AsyncActualizersFactory, opts []state.ActualizerStateOptFunc, tokens itokens.ITokens, federation2 federation.IFederation) AppPartitionFactory {
 	return func(vvmCtx context.Context, appQName istructs.AppQName, asyncProjectors istructs.Projectors, partitionID istructs.PartitionID) pipeline.ISyncOperator {
-		return aaf(vvmCtx, appQName, asyncProjectors, partitionID, opts)
+		return aaf(vvmCtx, appQName, asyncProjectors, partitionID, tokens, federation2, opts)
 	}
 }
 

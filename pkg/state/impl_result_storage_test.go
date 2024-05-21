@@ -63,7 +63,7 @@ func TestResultStorage_QueryProcessor(t *testing.T) {
 		}
 	}
 	s := ProvideQueryProcessorStateFactory()(context.Background(), nil, nil, SimpleWSIDFunc(istructs.NullWSID),
-		nil, nil, nil, nil, func() istructs.IObjectBuilder { return cmdResBuilder }, execQueryCallback)
+		nil, nil, nil, nil, nil, func() istructs.IObjectBuilder { return cmdResBuilder }, nil, execQueryCallback)
 
 	kb, err := s.KeyBuilder(Result, appdef.NullQName)
 	require.NoError(t, err)

@@ -81,7 +81,7 @@ func TestEventStorage_Get(t *testing.T) {
 		return event
 	}
 
-	s := ProvideAsyncActualizerStateFactory()(context.Background(), appStructsFunc(app), nil, nil, nil, nil, eventFunc, 0, 0)
+	s := ProvideAsyncActualizerStateFactory()(context.Background(), appStructsFunc(app), nil, nil, nil, nil, eventFunc, nil, nil, 0, 0)
 
 	require.Equal(event, s.PLogEvent())
 

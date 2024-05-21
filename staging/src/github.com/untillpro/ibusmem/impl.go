@@ -23,16 +23,6 @@ import (
 func (b *bus) SendRequest2(clientCtx context.Context, request ibus.Request, timeout time.Duration) (res ibus.Response, sections <-chan ibus.ISection, secError *error, err error) {
 	wg := sync.WaitGroup{}
 	handlerPanic := make(chan interface{}, 1)
-	defer func() {
-		if r := recover(); r != nil {
-			logger.Error("handler panic:", fmt.Sprint(r), "\n", string(debug.Stack()))
-			// will process panic in the goroutine instead of update err here to avoid data race
-			// https://dev.untill.com/projects/#!607751
-			handlerPanic <- r
-		}
-		wg.Wait()
-		close(handlerPanic)
-	}()
 	s := &channelSender{
 		c:         make(chan interface{}, 1),
 		timeout:   timeout,
@@ -51,28 +41,54 @@ func (b *bus) SendRequest2(clientCtx context.Context, request ibus.Request, time
 				sections = rsender.sections
 				secError = rsender.err
 			}
-			err = clientCtx.Err() // to make ctx.Done() have priority
-			return
+			err = clientCtx.Err() // to make ctx.Done() take priority
 		case <-clientCtx.Done():
-			err = clientCtx.Err()
-			return
-		case <-b.timerResponse(timeout):
-			err = ibus.ErrTimeoutExpired
-			return
-		case rIntf := <-handlerPanic:
-			switch r := rIntf.(type) {
-			case string:
-				err = errors.New(r)
-			case error:
-				err = r
+			if err = checkPanic(handlerPanic); err == nil {
+				err = clientCtx.Err()
 			}
-			return
+		case <-b.timerResponse(timeout):
+			if err = checkPanic(handlerPanic); err == nil {
+				err = ibus.ErrTimeoutExpired
+			}
+		case rIntf := <-handlerPanic:
+			err = handlePanic(rIntf)
 		}
 	}()
 	sender := NewISender(b, s)
-	b.requestHandler(clientCtx, sender, request)
+	func() {
+		defer func() {
+			if r := recover(); r != nil {
+				logger.Error("handler panic:", fmt.Sprint(r), "\n", string(debug.Stack()))
+				// will process panic in the goroutine instead of update err here to avoid data race
+				// https://dev.untill.com/projects/#!607751
+				handlerPanic <- r
+			}
+		}()
+		b.requestHandler(clientCtx, sender, request)
+	}()
 	wg.Wait()
 	return res, sections, secError, err
+}
+
+func handlePanic(r interface{}) error {
+	switch rTyped := r.(type) {
+	case string:
+		return errors.New(rTyped)
+	case error:
+		return rTyped
+	default:
+		// notest
+		return fmt.Errorf("%#v", r)
+	}
+}
+
+func checkPanic(ch <-chan interface{}) error {
+	select {
+	case r := <-ch:
+		return handlePanic(r)
+	default:
+		return nil
+	}
 }
 
 func (b *bus) SendResponse(sender interface{}, response ibus.Response) {

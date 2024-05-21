@@ -25,6 +25,7 @@ type ITestAPI interface {
 	PutView(testWSID istructs.WSID, entity appdef.FullQName, callback ViewValueCallback)
 	PutSecret(name string, secret []byte)
 	PutHttpHandler(HttpHandlerFunc)
+	PutFederationCmdHandler(state.FederationCommandHandler)
 	PutRequestSubject(principals []iauthnz.Principal, token string)
 	PutQuery(wsid istructs.WSID, name appdef.FullQName)
 

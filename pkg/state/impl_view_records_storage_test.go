@@ -77,7 +77,7 @@ func TestViewRecordsStorage_GetBatch(t *testing.T) {
 		mockedViews.
 			On("Get", istructs.WSID(1), mock.Anything).Return(valueOnGet, nil)
 
-		s := ProvideQueryProcessorStateFactory()(context.Background(), appStructsFunc(mockedStructs), nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil, nil, nil, nil)
+		s := ProvideQueryProcessorStateFactory()(context.Background(), appStructsFunc(mockedStructs), nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil, nil, nil, nil, nil, nil)
 		k, e := s.KeyBuilder(View, testViewRecordQName1)
 		require.NoError(e)
 		k.PutInt64("pkk", 64)
@@ -95,7 +95,7 @@ func TestViewRecordsStorage_GetBatch(t *testing.T) {
 		mockedViews.
 			On("Get", istructs.WSID(1), mock.Anything).Return(nil, errTest)
 
-		s := ProvideQueryProcessorStateFactory()(context.Background(), appStructsFunc(mockedStructs), nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil, nil, nil, nil)
+		s := ProvideQueryProcessorStateFactory()(context.Background(), appStructsFunc(mockedStructs), nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil, nil, nil, nil, nil, nil)
 		k, err := s.KeyBuilder(View, testViewRecordQName1)
 		require.NoError(err)
 		k.PutInt64("pkk", 64)
@@ -118,7 +118,7 @@ func TestViewRecordsStorage_Read(t *testing.T) {
 				require.NotNil(args.Get(2))
 				require.NoError(args.Get(3).(istructs.ValuesCallback)(nil, nil))
 			})
-		s := ProvideQueryProcessorStateFactory()(context.Background(), appStructsFunc(mockedStructs), nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil, nil, nil, nil)
+		s := ProvideQueryProcessorStateFactory()(context.Background(), appStructsFunc(mockedStructs), nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil, nil, nil, nil, nil, nil)
 		k, err := s.KeyBuilder(View, testViewRecordQName1)
 		require.NoError(err)
 		err = s.Read(k, func(istructs.IKey, istructs.IStateValue) error {
@@ -135,7 +135,7 @@ func TestViewRecordsStorage_Read(t *testing.T) {
 			On("KeyBuilder", testViewRecordQName1).Return(newKeyBuilder(View, testViewRecordQName1)).
 			On("Read", context.Background(), istructs.WSID(1), mock.Anything, mock.Anything).
 			Return(errTest)
-		s := ProvideQueryProcessorStateFactory()(context.Background(), appStructsFunc(mockedStructs), nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil, nil, nil, nil)
+		s := ProvideQueryProcessorStateFactory()(context.Background(), appStructsFunc(mockedStructs), nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil, nil, nil, nil, nil, nil)
 		k, err := s.KeyBuilder(View, testViewRecordQName1)
 		require.NoError(err)
 		err = s.Read(k, func(istructs.IKey, istructs.IStateValue) error { return nil })
@@ -149,7 +149,7 @@ func TestViewRecordsStorage_ApplyBatch_should_return_error_on_put_batch(t *testi
 		On("KeyBuilder", testViewRecordQName1).Return(&nilKeyBuilder{}).
 		On("NewValueBuilder", testViewRecordQName1).Return(&nilValueBuilder{}).
 		On("PutBatch", istructs.WSID(1), mock.Anything).Return(errTest)
-	s := ProvideAsyncActualizerStateFactory()(context.Background(), appStructsFunc(mockedStructs), nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil, 10, 10)
+	s := ProvideAsyncActualizerStateFactory()(context.Background(), appStructsFunc(mockedStructs), nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil, nil, nil, 10, 10)
 	kb, err := s.KeyBuilder(View, testViewRecordQName1)
 	require.NoError(err)
 	_, err = s.NewValue(kb)
@@ -198,7 +198,7 @@ func TestViewRecordsStorage_ApplyBatch_NullWSIDGoesLast(t *testing.T) {
 		require.NoError(err)
 	}
 
-	s := ProvideAsyncActualizerStateFactory()(context.Background(), appStructsFunc(mockedStructs), nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil, 10, 10)
+	s := ProvideAsyncActualizerStateFactory()(context.Background(), appStructsFunc(mockedStructs), nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil, nil, nil, 10, 10)
 	putViewRec(s)
 	putViewRec(s)
 	putOffset(s)
@@ -224,7 +224,7 @@ func TestViewRecordsStorage_ValidateInWorkspaces(t *testing.T) {
 		On("NewValueBuilder", mock.Anything).Return(&nilValueBuilder{}).
 		On("Get", istructs.WSID(1), mock.Anything).Return(&nilValue{}, nil).
 		On("PutBatch", mock.Anything, mock.Anything).Return(nil)
-	s := ProvideAsyncActualizerStateFactory()(context.Background(), appStructsFunc(mockedStructs), nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil, 10, 10)
+	s := ProvideAsyncActualizerStateFactory()(context.Background(), appStructsFunc(mockedStructs), nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil, nil, nil, 10, 10)
 
 	wrongQName := appdef.NewQName("test", "viewRecordX")
 	wrongKb, err := s.KeyBuilder(View, wrongQName)

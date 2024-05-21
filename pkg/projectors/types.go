@@ -38,8 +38,11 @@ func (s *asyncActualizerContextState) error() error {
 }
 
 func isAcceptable(event istructs.IPLogEvent, wantErrors bool, triggeringQNames map[appdef.QName][]appdef.ProjectorEventKind, appDef appdef.IAppDef) bool {
-	if event.QName() == istructs.QNameForError {
+	switch event.QName() {
+	case istructs.QNameForError:
 		return wantErrors
+	case istructs.QNameForCorruptedData:
+		return false
 	}
 
 	if len(triggeringQNames) == 0 {
