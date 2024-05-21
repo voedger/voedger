@@ -144,10 +144,11 @@ func (b *wLogKeyBuilder) PutInt64(name string, value int64) {
 
 type recordsKeyBuilder struct {
 	istructs.IStateKeyBuilder
-	id        istructs.RecordID
-	singleton appdef.QName
-	wsid      istructs.WSID
-	entity    appdef.QName
+	id          istructs.RecordID
+	singleton   appdef.QName
+	isSingleton bool
+	wsid        istructs.WSID
+	entity      appdef.QName
 }
 
 func (b *recordsKeyBuilder) Equals(src istructs.IKeyBuilder) bool {
@@ -159,6 +160,9 @@ func (b *recordsKeyBuilder) Equals(src istructs.IKeyBuilder) bool {
 		return false
 	}
 	if b.singleton != kb.singleton {
+		return false
+	}
+	if b.isSingleton != kb.isSingleton {
 		return false
 	}
 	if b.wsid != kb.wsid {
@@ -180,6 +184,9 @@ func (b *recordsKeyBuilder) String() string {
 	if b.singleton != appdef.NullQName {
 		_, _ = sb.WriteString(fmt.Sprintf(", singleton - %s", b.singleton))
 	}
+	if b.isSingleton {
+		_, _ = sb.WriteString(", singleton")
+	}
 	_, _ = sb.WriteString(fmt.Sprintf(", WSID - %d", b.wsid))
 	return sb.String()
 }
@@ -193,8 +200,7 @@ func (b *recordsKeyBuilder) PutInt64(name string, value int64) {
 		b.id = istructs.RecordID(value)
 		return
 	}
-	// TODO ???
-	panic(name)
+	panic(errUndefined(name))
 }
 
 func (b *recordsKeyBuilder) PutRecordID(name string, value istructs.RecordID) {
@@ -202,8 +208,18 @@ func (b *recordsKeyBuilder) PutRecordID(name string, value istructs.RecordID) {
 		b.id = value
 		return
 	}
-	// TODO ???
-	panic(name)
+	panic(errUndefined(name))
+}
+
+func (b *recordsKeyBuilder) PutBool(name string, value bool) {
+	if name == Field_IsSingleton {
+		if b.entity == appdef.NullQName {
+			panic("entity undefined")
+		}
+		b.isSingleton = value
+		return
+	}
+	panic(errUndefined(name))
 }
 
 func (b *recordsKeyBuilder) PutQName(name string, value appdef.QName) {
@@ -211,8 +227,7 @@ func (b *recordsKeyBuilder) PutQName(name string, value appdef.QName) {
 		b.singleton = value
 		return
 	}
-	// TODO ???
-	panic(name)
+	panic(errUndefined(name))
 }
 
 type recordsValueBuilder struct {
