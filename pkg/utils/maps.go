@@ -49,3 +49,11 @@ func MapToObject(data map[string]interface{}, rw istructs.IRowWriter) (err error
 	}
 	return nil
 }
+
+func MergeMaps(target map[string]interface{}, toMergeMaps ...map[string]interface{}) {
+	for _, toMergeMap := range toMergeMaps {
+		for k, v := range toMergeMap {
+			target[k] = v
+		}
+	}
+}

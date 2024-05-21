@@ -7,10 +7,10 @@ package cluster
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/blastrain/vitess-sqlparser/sqlparser"
-	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/itokens"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
@@ -18,7 +18,7 @@ import (
 	"github.com/voedger/voedger/pkg/utils/federation"
 )
 
-func updateSimple(federation federation.IFederation, itokens itokens.ITokens, appQName istructs.AppQName, wsid istructs.WSID, query string, qNameToUpdate appdef.QName) error {
+func updateSimple(federation federation.IFederation, itokens itokens.ITokens, appQName istructs.AppQName, wsid istructs.WSID, query string, idToUpdate istructs.RecordID) error {
 	stmt, err := sqlparser.Parse(query)
 	if err != nil {
 		return err
@@ -30,29 +30,18 @@ func updateSimple(federation federation.IFederation, itokens itokens.ITokens, ap
 		// notest
 		return err
 	}
-	conditionFields := map[string]interface{}{}
-	if err := getConditionFields(u.Where.Expr, conditionFields); err != nil {
+	if err := checkFieldsUpdateAllowed(fieldsToUpdate); err != nil {
 		return err
 	}
-	if len(conditionFields) != 1 {
-		return errWrongWhere
+	if u.Where != nil {
+		return errors.New("where clause is not allowed for update")
 	}
-	idIntf, ok := conditionFields[appdef.SystemField_ID]
-	if !ok {
-		return errWrongWhere
-	}
-	id, ok := idIntf.(int64)
-	if !ok {
-		// notest: checked already by Type == sqlparserIntVal
-		return errWrongWhere
-	}
-
 	jsonFields, err := json.Marshal(fieldsToUpdate)
 	if err != nil {
 		// notest
 		return err
 	}
-	cudBody := fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":%s}]}`, id, jsonFields)
+	cudBody := fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":%s}]}`, idToUpdate, jsonFields)
 	sysToken, err := payloads.GetSystemPrincipalToken(itokens, appQName)
 	if err != nil {
 		// notest
@@ -75,7 +64,18 @@ func getFieldsToUpdate(exprs sqlparser.UpdateExprs) (map[string]interface{}, err
 			// notest
 			return nil, err
 		}
-		res[expr.Name.Name.String()] = val
+		name := expr.Name.Name.String()
+		if _, ok := res[name]; ok {
+			return nil, fmt.Errorf("field %s specified twice", name)
+		}
+		res[name] = val
 	}
 	return res, nil
+}
+
+func validateQuery_Simple(sql string) error {
+	if len(sql) == 0 {
+		return errors.New("empty query")
+	}
+	return nil
 }

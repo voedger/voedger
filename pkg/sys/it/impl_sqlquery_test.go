@@ -544,9 +544,7 @@ func TestVSqlUpdate_BasicUsage_Simple(t *testing.T) {
 	sysPrn := vit.GetSystemPrincipal(istructs.AppQName_sys_cluster)
 
 	newName := vit.NextName()
-	// TODO: sys.ID
-	// TODO: make app1pkg.category.ID, eliminate where
-	body = fmt.Sprintf(`{"args": {"Query":"update test1.app1.%d.app1pkg.category set name = '%s' where id = %d"}}`, ws.WSID, newName, categoryID)
+	body = fmt.Sprintf(`{"args": {"Query":"update test1.app1.%d.app1pkg.category.%d set name = '%s'"}}`, ws.WSID, categoryID, newName)
 	vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppWSID, "c.cluster.VSqlUpdate", body,
 		coreutils.WithAuthorizeBy(sysPrn.Token)).Println()
 
@@ -595,7 +593,7 @@ func TestVSqlUpdate_BasicUsage_Corrupted(t *testing.T) {
 	// TODO: test record not found, wrong field to set etc
 }
 
-func TestVSqlUpdate_BasicUsage_Direct(t *testing.T) {
+func TestVSqlUpdate_BasicUsage_Direct_View(t *testing.T) {
 	require := require.New(t)
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
@@ -617,10 +615,10 @@ func TestVSqlUpdate_BasicUsage_Direct(t *testing.T) {
 	require.Equal(categoryName, m["Name"].(string))
 	require.EqualValues(42, m["Val"].(float64))
 
-	// direct update the values
+	// direct update
 	newName := vit.NextName()
 	sysPrn := vit.GetSystemPrincipal(istructs.AppQName_sys_cluster)
-	body = fmt.Sprintf(`{"args": {"Query":"direct update test1.app1.%d.app1pkg.CategoryIdx set Val = 44, Name = '%s' where IntFld = 43 and Dummy = 1 and IntFld = 44"}}`, ws.WSID, newName)
+	body = fmt.Sprintf(`{"args": {"Query":"direct update test1.app1.%d.app1pkg.CategoryIdx set Val = 44, Name = '%s' where IntFld = 43 and Dummy = 1"}}`, ws.WSID, newName)
 	vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppWSID, "c.cluster.VSqlUpdate", body, coreutils.WithAuthorizeBy(sysPrn.Token))
 
 	// check values are updated
@@ -631,6 +629,41 @@ func TestVSqlUpdate_BasicUsage_Direct(t *testing.T) {
 	require.NoError(json.Unmarshal([]byte(res), &m))
 	require.Equal(newName, m["Name"].(string))  // <---- new value here
 	require.EqualValues(44, m["Val"].(float64)) // <---- new value here
+}
+
+func TestVSqlUpdate_Direct_Record(t *testing.T) {
+	require := require.New(t)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
+
+	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+
+	// insert a doc
+	categoryName := vit.NextName()
+	body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.category","name":"%s", "hq_id":"hq value"}}]}`, categoryName)
+	categoryID := vit.PostWS(ws, "c.sys.CUD", body).NewID()
+
+	// direct update
+	newName := vit.NextName()
+	sysPrn := vit.GetSystemPrincipal(istructs.AppQName_sys_cluster)
+	body = fmt.Sprintf(`{"args": {"Query":"direct update test1.app1.%d.app1pkg.category.%d set name = '%s', cat_external_id = 'cat value'"}}`, ws.WSID, categoryID, newName)
+	vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppWSID, "c.cluster.VSqlUpdate", body, coreutils.WithAuthorizeBy(sysPrn.Token))
+
+	// check new state
+	body = fmt.Sprintf(`{"args":{"Query":"select * from app1pkg.category where sys.ID = %d"}, "elements":[{"fields":["Result"]}]}`, categoryID)
+	resp := vit.PostWS(ws, "q.sys.SqlQuery", body)
+	res := resp.SectionRow()[0].(string)
+	m := map[string]interface{}{}
+	require.NoError(json.Unmarshal([]byte(res), &m))
+	require.Equal(map[string]interface{}{
+		"name":                      newName,     // new value
+		"cat_external_id":           "cat value", // new value
+		"hq_id":                     "hq value",  // old value
+		"ml_name":                   nil,         // old value (was not set)
+		appdef.SystemField_QName:    "app1pkg.category",
+		appdef.SystemField_ID:       float64(categoryID),
+		appdef.SystemField_IsActive: true,
+	}, m)
 }
 
 func TestVSqlUpdateErrors(t *testing.T) {

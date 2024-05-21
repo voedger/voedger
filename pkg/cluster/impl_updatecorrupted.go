@@ -7,6 +7,8 @@ package cluster
 
 import (
 	"context"
+	"errors"
+	"fmt"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appparts"
@@ -14,7 +16,7 @@ import (
 	"github.com/voedger/voedger/pkg/istructsmem"
 )
 
-func updateCorrupted(asp istructs.IAppStructsProvider, appParts appparts.IAppPartitions, appQName istructs.AppQName, wsidOrPartitionID uint64, logViewQName appdef.QName, offset istructs.Offset, currentMillis istructs.UnixMilli) (err error) {
+func updateCorrupted(asp istructs.IAppStructsProvider, appParts appparts.IAppPartitions, appQName istructs.AppQName, wsidOrPartitionID istructs.IDType, logViewQName appdef.QName, offset istructs.Offset, currentMillis istructs.UnixMilli) (err error) {
 	targetAppStructs, err := asp.AppStructs(appQName)
 	if err != nil {
 		// test here
@@ -78,4 +80,37 @@ func updateCorrupted(asp istructs.IAppStructsProvider, appParts appparts.IAppPar
 		return err
 	}
 	return targetAppStructs.Events().PutWlog(plogEvent)
+}
+
+func validateQuery_Corrupted(appQName istructs.AppQName, sql string, qNameToUpdate appdef.QName, wsidOrPartitionID istructs.IDType, offsetOrID istructs.IDType, appparts appparts.IAppPartitions) error {
+	if len(sql) > 0 {
+		return fmt.Errorf("any params of update corrupted are not allowed: %s", sql)
+	}
+	if appQName == istructs.NullAppQName {
+		return errors.New("appQName must be provided for UPDATE CORRUPTED")
+	}
+	if offsetOrID == 0 {
+		return errors.New("offset >0 must be provided for UPDATE CORRUPTED")
+	}
+	switch qNameToUpdate {
+	case wlog:
+		if wsidOrPartitionID == 0 {
+			return errors.New("wsid must be provided for UPDATE CORRUPTED wlog")
+		}
+	case plog:
+		if wsidOrPartitionID == 0 {
+			return errors.New("partno must be provided for UPDATE CORRUPTED plog")
+		}
+		partno := istructs.NumAppPartitions(wsidOrPartitionID)
+		partsCount, err := appparts.AppPartsCount(appQName)
+		if err != nil {
+			return err
+		}
+		if partno >= partsCount {
+			return fmt.Errorf("provided partno %d is out of %d declared by app %s", partno, partsCount, appQName)
+		}
+	default:
+		return fmt.Errorf("invalid log view %s, sys.plog or sys.wlog are only allowed", qNameToUpdate)
+	}
+	return nil
 }

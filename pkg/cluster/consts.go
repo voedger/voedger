@@ -24,12 +24,12 @@ const (
 	Field_NumAppWorkspaces = "NumAppWorkspaces"
 	field_Query            = "Query"
 	updateQueryExpression  = `^` +
-		`(?P<operation>\s*.+\s+)` + // operation: update, direct update etc
-		`(?P<app>\w+\.\w+\.)` + // appOwner.appName.
-		`(?P<ws>\d+\.)` + // wsid.
-		`(?P<table>\w+\.\w+)` + // table qualified name (clean)
-		`(?P<offset>\.\d+)?` + // offset
-		`(?P<pars>\s+.*)?` + // (leading spaces +) params
+		`(?P<operation>\s*.+\s+)` + // update, direct update etc
+		`(?P<appOwnerAppName>\w+\.\w+\.)` +
+		`(?P<wsidOrPartno>\d+\.)` +
+		`(?P<qNameToUpdate>\w+\.\w+)` +
+		`(?P<idOrOffset>\.\d+)?` +
+		`(?P<pars>\s+.*)?` +
 		`$`
 	bitSize64 = 64
 	base10    = 10
@@ -41,6 +41,10 @@ var (
 	updateQueryExp        = regexp.MustCompile(updateQueryExpression)
 	plog                  = appdef.NewQName(appdef.SysPackage, "PLog")
 	wlog                  = appdef.NewQName(appdef.SysPackage, "WLog")
+	updateDeniedFields    = map[string]bool{
+		appdef.SystemField_ID:    true,
+		appdef.SystemField_QName: true,
+	}
 )
 
 type updateKind int
