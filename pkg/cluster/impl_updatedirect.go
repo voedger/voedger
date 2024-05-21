@@ -30,6 +30,9 @@ func updateDirect(asp istructs.IAppStructsProvider, appQName istructs.AppQName, 
 	}
 	u := stmt.(*sqlparser.Update)
 	if tp.Kind() == appdef.TypeKind_ViewRecord {
+		if u.Where == nil {
+			return errors.New("key condition must be provided for direct update view")
+		}
 		return updateDirect_View(targetAppStructs, qNameToUpdate, wsid, u)
 	}
 	return updateDirect_Record(targetAppStructs, appDef, idToUpdate, wsid, u)
@@ -41,11 +44,11 @@ func updateDirect_Record(targetAppStructs istructs.IAppStructs, appDef appdef.IA
 		// including "not found" error
 		return err
 	}
-	existingFields := coreutils.FieldsToMap(existingRec, appDef, coreutils.WithNonNilsOnly())
 	newFields, err := getFieldsToUpdate(u.Exprs)
 	if err != nil {
 		return err
 	}
+	existingFields := coreutils.FieldsToMap(existingRec, appDef, coreutils.WithNonNilsOnly())
 	if err := checkFieldsUpdateAllowed(newFields); err != nil {
 		return err
 	}
@@ -61,6 +64,12 @@ func updateDirect_View(targetAppStructs istructs.IAppStructs, qNameToUpdate appd
 		return err
 	}
 
+	fieldsToUpdate, err := getFieldsToUpdate(u.Exprs)
+	if err != nil {
+		// notest
+		return err
+	}
+
 	kb := targetAppStructs.ViewRecords().KeyBuilder(qNameToUpdate)
 	if err := coreutils.MapToObject(viewKeyFields, kb); err != nil {
 		return err
@@ -72,19 +81,13 @@ func updateDirect_View(targetAppStructs istructs.IAppStructs, qNameToUpdate appd
 		return err
 	}
 
-	viewJSON, err := getFieldsToUpdate(u.Exprs)
-	if err != nil {
-		// notest
+	if err := checkFieldsUpdateAllowed(fieldsToUpdate); err != nil {
 		return err
 	}
-	if err := checkFieldsUpdateAllowed(viewJSON); err != nil {
-		return err
-	}
-	for k, v := range viewKeyFields {
-		viewJSON[k] = v
-	}
-	viewJSON[appdef.SystemField_QName] = qNameToUpdate.String()
-	return targetAppStructs.ViewRecords().PutJSON(wsid, viewJSON)
+	mergedFields := map[string]interface{}{}
+	fieldsToUpdate[appdef.SystemField_QName] = qNameToUpdate.String()
+	coreutils.MergeMaps(mergedFields, viewKeyFields, fieldsToUpdate)
+	return targetAppStructs.ViewRecords().PutJSON(wsid, mergedFields)
 }
 
 func checkFieldsUpdateAllowed(fieldsToUpdate map[string]interface{}) error {

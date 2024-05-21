@@ -65,6 +65,9 @@ func getFieldsToUpdate(exprs sqlparser.UpdateExprs) (map[string]interface{}, err
 			return nil, err
 		}
 		name := expr.Name.Name.String()
+		if len(expr.Name.Qualifier.Name.String()) > 0 {
+			name = expr.Name.Qualifier.Name.String() + "." + name
+		}
 		if _, ok := res[name]; ok {
 			return nil, fmt.Errorf("field %s specified twice", name)
 		}

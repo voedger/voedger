@@ -671,18 +671,19 @@ func TestVSqlUpdateErrors(t *testing.T) {
 	defer vit.TearDown()
 
 	t.Run("update", func(t *testing.T) {
-
 		cases := map[string]string{
-			"":                                     "no query",
-			" ":                                    "no query",
-			"update":                               "no query",
-			"update s s s":                         "no query", тут сделать ожиаемые ошибки
-			"update test1.app1.42.app1.category.1": "no fields to set",
-			// "update test1.app1.42.wongQName set name = 42",
-			// "update 42.42.42.wongQName set name = 42",
-			// "wrong op kind test1.app1.42.app1pkg.category.42 set name = 42",
-			// "update test1.app1.42.app1.category set name = 42 where sys.ID = 1",
-			// "update test1.app1.42.app1.category.1 set name = 42 where sys.ID = 1",
+			"":                                     "misses required field",
+			" ":                                    "invalid query forma",
+			"update":                               "invalid query format",
+			"update s s s":                         "invalid query format",
+			"update test1.app1.42.app1.category.1": "syntax error",
+			"update 42.42.42.wongQName set name = 42":                             "invalid query format",
+			"wrong op kind test1.app1.42.app1pkg.category.42 set name = 42":       "wrong update kind",
+			"update test1.app1.42.app1.category set name = 42 where sys.ID = 1":   "where clause is not allowed",
+			"update test1.app1.42.app1.category.1 set name = 42 where sys.ID = 1": "where clause is not allowed",
+			"update test1.app1.42.app1.category.1 set sys.ID = 1":                 "field sys.ID can not be updated",
+			"update test1.app1.42.app1.category.1 set sys.QName = 'sdsd.sds'":     "field sys.QName can not be updated",
+			"update test1.app1.42.app1.category.1 set x = 1, x = 2":               "field x specified twice",
 		}
 		sysPrn := vit.GetSystemPrincipal(istructs.AppQName_sys_cluster)
 		for sql, expectedError := range cases {
@@ -698,16 +699,16 @@ func TestVSqlUpdateErrors(t *testing.T) {
 
 	t.Run("corrupted", func(t *testing.T) {
 		cases := map[string]string{
-			"update corrupted":       "no query",
-			"update corrupted s s s": "not a query",
-			"update corrupted test1.app1.42.sys.PLog set name = 42": "set, where etc are not allowed",
-			"update corrupted test1.app1.0.sys.WLog.44":             "zero wsid",
-			"update corrupted test1.app1.42.sys.WLog":               "no offset",
-			"update corrupted test1.app1.1000.sys.PLog.44":          "partitionID is out of range",
-			"update corrupted test1.app1.1.sys.PLog.-44":            "negative offset",
-			"update corrupted test1.app1.1.sys.PLog.0":              "zero offset",
-			"update corrupted test1.app1.1.app1pkg.category.44":     "not a log",
-			"update corrupted unknown.app.1.sys.PLog.44":            "unknown app",
+			"update corrupted":       "invalid query format",
+			"update corrupted s s s": "invalid query format",
+			"update corrupted test1.app1.42.sys.PLog set name = 42": "any params of update corrupted are not allowed",
+			"update corrupted test1.app1.0.sys.WLog.44":             "wsid must be provided",
+			"update corrupted test1.app1.42.sys.WLog":               "offset >0 must be provided",
+			"update corrupted test1.app1.1000.sys.PLog.44":          "provided partno 1000 is out of 10 declared by app test1/app1",
+			"update corrupted test1.app1.1.sys.PLog.-44":            "invalid query format",
+			"update corrupted test1.app1.1.sys.PLog.0":              "offset >0 must be provided",
+			"update corrupted test1.app1.1.app1pkg.category.44":     "sys.plog or sys.wlog are only allowed",
+			"update corrupted unknown.app.1.sys.PLog.44":            "unknown/app not found",
 		}
 		sysPrn := vit.GetSystemPrincipal(istructs.AppQName_sys_cluster)
 		for sql, name := range cases {
@@ -715,7 +716,27 @@ func TestVSqlUpdateErrors(t *testing.T) {
 				body := fmt.Sprintf(`{"args": {"Query":"%s"}}`, sql)
 				vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppWSID, "c.cluster.VSqlUpdate", body,
 					coreutils.WithAuthorizeBy(sysPrn.Token),
-					coreutils.Expect400(),
+					coreutils.Expect400(name),
+				).Println()
+			})
+		}
+	})
+
+	t.Run("direct", func(t *testing.T) {
+		cases := map[string]string{
+			"direct update test1.app1.1.app1pkg.CategoryIdx set Val = 44, Name = 'x'":       "key condition must be provided",
+			"direct update test1.app1.1.app1pkg.CategoryIdx where x = 1":                    "syntax error",
+			"direct update test1.app1.1.app1pkg.CategoryIdx.42 set a = 2 where x = 1":       "record ID must not be provided",
+			"direct update test1.app1.1.app1pkg.CategoryIdx set a = 2 where x = 1 or y = 1": "'where viewField1 = val1 [and viewField2 = val2 ...]' condition is only supported",
+			"direct update test1.app1.1.app1pkg.CategoryIdx set a = 2 where x > 1":          "'where viewField1 = val1 [and viewField2 = val2 ...]' condition is only supported",
+		}
+		sysPrn := vit.GetSystemPrincipal(istructs.AppQName_sys_cluster)
+		for sql, name := range cases {
+			t.Run(name, func(t *testing.T) {
+				body := fmt.Sprintf(`{"args": {"Query":"%s"}}`, sql)
+				vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppWSID, "c.cluster.VSqlUpdate", body,
+					coreutils.WithAuthorizeBy(sysPrn.Token),
+					coreutils.Expect400(name),
 				).Println()
 			})
 		}
