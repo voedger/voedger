@@ -544,6 +544,8 @@ func TestVSqlUpdate_BasicUsage_Simple(t *testing.T) {
 	sysPrn := vit.GetSystemPrincipal(istructs.AppQName_sys_cluster)
 
 	newName := vit.NextName()
+	// TODO: sys.ID
+	// TODO: make app1pkg.category.ID, eliminate where
 	body = fmt.Sprintf(`{"args": {"Query":"update test1.app1.%d.app1pkg.category set name = '%s' where id = %d"}}`, ws.WSID, newName, categoryID)
 	vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppWSID, "c.cluster.VSqlUpdate", body,
 		coreutils.WithAuthorizeBy(sysPrn.Token)).Println()
@@ -600,7 +602,7 @@ func TestVSqlUpdate_BasicUsage_Direct(t *testing.T) {
 
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
 
-	// insert a cdoc.
+	// insert a cdoc
 	// p.ap1pkg.ApplyCategoryIdx will insert the single hardcoded record view.CategoryIdx(Name = category.Name, IntFld = 43, Dummy = 1, Val = 42) (see shared_cfgs.go)
 	categoryName := vit.NextName()
 	body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.category","name":"%s"}}]}`, categoryName)
@@ -618,10 +620,17 @@ func TestVSqlUpdate_BasicUsage_Direct(t *testing.T) {
 	// direct update the values
 	newName := vit.NextName()
 	sysPrn := vit.GetSystemPrincipal(istructs.AppQName_sys_cluster)
-	body = fmt.Sprintf(`{"args": {"Query":"direct update test1.app1.%d.app1pkg.CategoryIdx set Val = 44, Name = '%s' where IntFld = 42 and Dummy = 1"}}`, ws.WSID, newName)
-	resp = vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppWSID, "c.cluster.VSqlUpdate", body,
-		coreutils.WithAuthorizeBy(sysPrn.Token))
-	resp.Println()
+	body = fmt.Sprintf(`{"args": {"Query":"direct update test1.app1.%d.app1pkg.CategoryIdx set Val = 44, Name = '%s' where IntFld = 43 and Dummy = 1 and IntFld = 44"}}`, ws.WSID, newName)
+	vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppWSID, "c.cluster.VSqlUpdate", body, coreutils.WithAuthorizeBy(sysPrn.Token))
+
+	// check values are updated
+	body = `{"args":{"Query":"select * from app1pkg.CategoryIdx where IntFld = 43 and Dummy = 1"}, "elements":[{"fields":["Result"]}]}`
+	resp = vit.PostWS(ws, "q.sys.SqlQuery", body)
+	res = resp.SectionRow()[0].(string)
+	m = map[string]interface{}{}
+	require.NoError(json.Unmarshal([]byte(res), &m))
+	require.Equal(newName, m["Name"].(string))  // <---- new value here
+	require.EqualValues(44, m["Val"].(float64)) // <---- new value here
 }
 
 func TestVSqlUpdateErrors(t *testing.T) {

@@ -8,7 +8,6 @@ package cluster
 import (
 	"encoding/json"
 	"fmt"
-	"strconv"
 
 	"github.com/blastrain/vitess-sqlparser/sqlparser"
 	"github.com/voedger/voedger/pkg/appdef"
@@ -26,38 +25,26 @@ func updateSimple(federation federation.IFederation, itokens itokens.ITokens, ap
 	}
 	u := stmt.(*sqlparser.Update)
 
-	fieldsToUpdate := map[string]interface{}{}
-	for _, expr := range u.Exprs {
-		var val interface{}
-		sqlVal := expr.Expr.(*sqlparser.SQLVal)
-		switch sqlVal.Type {
-		case sqlparser.StrVal:
-			val = string(sqlVal.Val)
-		case sqlparser.IntVal, sqlparser.FloatVal:
-			if val, err = strconv.ParseFloat(string(sqlVal.Val), bitSize64); err != nil {
-				// notest
-				return err
-			}
-		case sqlparser.HexNum:
-			val = sqlVal.Val
-		}
-		fieldsToUpdate[expr.Name.Name.String()] = val
+	fieldsToUpdate, err := getFieldsToUpdate(u.Exprs)
+	if err != nil {
+		// notest
+		return err
 	}
-	compExpr, ok := u.Where.Expr.(*sqlparser.ComparisonExpr)
+	conditionFields := map[string]interface{}{}
+	if err := getConditionFields(u.Where.Expr, conditionFields); err != nil {
+		return err
+	}
+	if len(conditionFields) != 1 {
+		return errWrongWhere
+	}
+	idIntf, ok := conditionFields[appdef.SystemField_ID]
 	if !ok {
 		return errWrongWhere
 	}
-	if compExpr.Left.(*sqlparser.ColName).Qualifier.Name.String()+appdef.QNameQualifierChar+compExpr.Left.(*sqlparser.ColName).Name.String() != appdef.SystemField_ID {
-		return errWrongWhere
-	}
-	idVal := compExpr.Right.(*sqlparser.SQLVal)
-	if idVal.Type != sqlparser.IntVal {
-		return errWrongWhere
-	}
-	id, err := strconv.ParseInt(string(idVal.Val), base10, bitSize64)
-	if err != nil {
+	id, ok := idIntf.(int64)
+	if !ok {
 		// notest: checked already by Type == sqlparserIntVal
-		return err
+		return errWrongWhere
 	}
 
 	jsonFields, err := json.Marshal(fieldsToUpdate)
@@ -76,4 +63,19 @@ func updateSimple(federation federation.IFederation, itokens itokens.ITokens, ap
 		coreutils.WithDiscardResponse(),
 	)
 	return err
+}
+
+func getFieldsToUpdate(exprs sqlparser.UpdateExprs) (map[string]interface{}, error) {
+	res := map[string]interface{}{}
+	for _, expr := range exprs {
+		var val interface{}
+		sqlVal := expr.Expr.(*sqlparser.SQLVal)
+		val, err := sqlValToInterface(sqlVal)
+		if err != nil {
+			// notest
+			return nil, err
+		}
+		res[expr.Name.Name.String()] = val
+	}
+	return res, nil
 }

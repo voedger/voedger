@@ -22,7 +22,7 @@ import (
 )
 
 func provideExecCmdVSqlUpdate(federation federation.IFederation, itokens itokens.ITokens, timeFunc coreutils.TimeFunc,
-	asp istructs.IAppStructsProvider, appDef appdef.IAppDef) istructsmem.ExecCommandClosure {
+	asp istructs.IAppStructsProvider) istructsmem.ExecCommandClosure {
 	return func(args istructs.ExecCommandArgs) (err error) {
 		query := args.ArgumentObject.AsString(field_Query)
 		appQName, wsidOrPartitionID, qNameToUpdate, offset, updateKind, cleanSql, err := parseUpdateQuery(query)
@@ -35,6 +35,10 @@ func provideExecCmdVSqlUpdate(federation federation.IFederation, itokens itokens
 		appParts := args.Workpiece.(interface {
 			AppPartitions() appparts.IAppPartitions
 		}).AppPartitions()
+		appDef, err := appParts.AppDef(appQName)
+		if err != nil {
+			return coreutils.NewHTTPError(http.StatusBadRequest, err)
+		}
 		if err = validateQuery(appQName, appParts, updateKind, cleanSql, qNameToUpdate, int64(wsidOrPartitionID), offset, appDef); err != nil {
 			return coreutils.NewHTTPError(http.StatusBadRequest, err)
 		}
@@ -50,7 +54,7 @@ func provideExecCmdVSqlUpdate(federation federation.IFederation, itokens itokens
 				return coreutils.NewHTTPError(http.StatusBadRequest, err)
 			}
 		case updateKind_Direct:
-			return updateDirect(asp, appQName, istructs.WSID(wsidOrPartitionID), qNameToUpdate, appDef)
+			return updateDirect(asp, appQName, istructs.WSID(wsidOrPartitionID), qNameToUpdate, appDef, cleanSql)
 		}
 
 		return nil
@@ -100,7 +104,7 @@ func validateQuery(appQName istructs.AppQName, appparts appparts.IAppPartitions,
 			return fmt.Errorf("qname %s is not found", qNameToUpdate)
 		}
 		if tp.Kind() != appdef.TypeKind_ViewRecord && tp.Kind() != appdef.TypeKind_CDoc && tp.Kind() != appdef.TypeKind_WDoc {
-			return fmt.Errorf("provided qname %s is %s but must be View Record, CDoc or WDoc", qNameToUpdate, tp.Kind().String())
+			return fmt.Errorf("provided qname %s is %s but must be View, CDoc or WDoc", qNameToUpdate, tp.Kind().String())
 		}
 	}
 
