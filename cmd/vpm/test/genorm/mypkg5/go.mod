@@ -4,7 +4,7 @@ go 1.21.4
 
 require (
 	github.com/untillpro/airs-bp3 v1.202111031437.1
-	github.com/voedger/voedger v0.0.0-20240412095044-4376c0e5c94c
+	github.com/voedger/voedger v0.0.0-20240508122917-697cf6bf2b7a
 )
 
 require (
@@ -41,14 +41,13 @@ require (
 	github.com/untillpro/gochips v1.12.1-0.20191205115612-9cd10d0ac2b3 // indirect
 	github.com/untillpro/godif v0.18.0 // indirect
 	github.com/untillpro/gojay v1.2.17-0.20201109133446-b1069e05b56c // indirect
-	github.com/untillpro/goutils v0.0.0-20231201170327-3c33c6010100 // indirect
 	github.com/untillpro/ibusmem v0.0.0-20211023095304-94a96e40d864 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/wneessen/go-mail v0.4.1 // indirect
 	golang.org/x/crypto v0.21.0 // indirect
 	golang.org/x/exp v0.0.0-20240314144324-c7f7c6466f7f // indirect
 	golang.org/x/net v0.23.0 // indirect
-	golang.org/x/sys v0.18.0 // indirect
+	golang.org/x/sys v0.19.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
 	golang.org/x/time v0.0.0-20210723032227-1f47c861a9ac // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect

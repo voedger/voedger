@@ -32,21 +32,21 @@ func newInitCmd(params *vpmParams) *cobra.Command {
 		Short: "initialize a new package",
 		Args:  exactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
-			return initPackage(params.Dir, params.PackagePath)
+			return initPackage(params.Dir, params.ModulePath)
 		},
 	}
 	return cmd
 
 }
 
-func initPackage(dir, packagePath string) error {
-	if packagePath == "" {
-		return fmt.Errorf(packagePathIsNotDeterminedErrFormat, dir)
+func initPackage(dir, modulePath string) error {
+	if modulePath == "" {
+		return fmt.Errorf("vpm: cannot determine module path for source directory %s", dir)
 	}
-	if err := createGoMod(dir, packagePath); err != nil {
+	if err := createGoMod(dir, modulePath); err != nil {
 		return err
 	}
-	if err := createPackagesGen(nil, dir, packagePath, false); err != nil {
+	if err := createPackagesGen(nil, dir, modulePath, false); err != nil {
 		return err
 	}
 	if err := createWasmDir(dir); err != nil {
@@ -63,6 +63,18 @@ func execGoModTidy(dir string) error {
 	return new(exec.PipedExec).Command("go", "mod", "tidy").WorkingDir(dir).Run(stdout, os.Stderr)
 }
 
+func checkGoModFileExists(dir string) error {
+	goModFilePath := filepath.Join(dir, goModFileName)
+	exists, err := coreutils.Exists(goModFilePath)
+	if err != nil {
+		return err
+	}
+	if !exists {
+		return fmt.Errorf("%s: not found", goModFilePath)
+	}
+	return nil
+}
+
 func createWasmDir(dir string) error {
 	exists, err := coreutils.Exists(filepath.Join(dir, wasmDirName))
 	if err != nil {
@@ -76,7 +88,7 @@ func createWasmDir(dir string) error {
 	return nil
 }
 
-func createGoMod(dir, packagePath string) error {
+func createGoMod(dir, modulePath string) error {
 	filePath := filepath.Join(dir, goModFileName)
 
 	exists, err := coreutils.Exists(filePath)
@@ -93,7 +105,7 @@ func createGoMod(dir, packagePath string) error {
 		return fmt.Errorf(unsupportedGoVersionErrFormat, goVersionNumber)
 	}
 
-	goModContent := fmt.Sprintf(goModContentTemplate, packagePath, goVersionNumber)
+	goModContent := fmt.Sprintf(goModContentTemplate, modulePath, goVersionNumber)
 	if err := os.WriteFile(filePath, []byte(goModContent), coreutils.FileMode_rw_rw_rw_); err != nil {
 		return err
 	}
@@ -112,7 +124,7 @@ func checkPackageGenFileExists(dir string) (bool, error) {
 	return coreutils.Exists(packagesGenFilePath)
 }
 
-func createPackagesGen(imports []string, dir, packagePath string, recreate bool) error {
+func createPackagesGen(imports []string, dir, modulePath string, recreate bool) error {
 	// pkg subfolder for packages
 	packagesGenFilePath := filepath.Join(dir, packagesGenFileName)
 	if !recreate {
@@ -134,7 +146,7 @@ func createPackagesGen(imports []string, dir, packagePath string, recreate bool)
 		strBuffer.WriteString(fmt.Sprintf("_ %q\n", imp))
 	}
 
-	packagesGenContent := fmt.Sprintf(packagesGenContentTemplate, filepath.Base(packagePath), strBuffer.String())
+	packagesGenContent := fmt.Sprintf(packagesGenContentTemplate, filepath.Base(modulePath), strBuffer.String())
 	packagesGenContentFormatted, err := format.Source([]byte(packagesGenContent))
 	if err != nil {
 		return err
