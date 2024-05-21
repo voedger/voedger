@@ -9,7 +9,9 @@ The package `require` in addition to the [require](https://pkg.go.dev/github.com
 - Check that the object recovered from panic contains the specified line
 - Check that the error recovered from panic (or err's chain) is the target error
 
-### Example
+### Example 1
+
+This example demonstrates how to test that the function causes panic with the expected error and a message containing the expected substrings.
 
 ```go
 package yours_test
@@ -42,7 +44,10 @@ func TestPanics(t *testing.T) {
 - Check that the error contains the specified substring
 - Check that an error (or err's chain) is the target error
 
-### Example
+### Example 2
+
+This example demonstrates how to test that the error is expected target error and contains the expected substrings.
+
 
 ```go
 package yours_test
