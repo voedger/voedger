@@ -47,9 +47,10 @@ func Is(target error, msgAndArgs ...interface{}) Constraint {
 // PanicsWith asserts that the code inside the specified function panics,
 // and that the recovered panic value is satisfies the given constraints.
 //
-//	testingu.PanicsWith(t,
+//	require.PanicsWith(t,
 //		func(){ GoCrazy() },
-//		testingu.Contains("crazy"), testingu.Contains("error))
+//		require.Contains("crazy"),
+//		require.Contains("error))
 func PanicsWith(t *testing.T, f func(), c ...Constraint) bool {
 	didPanic := func() (wasPanic bool, recovered any) {
 		defer func() {
@@ -80,9 +81,10 @@ func PanicsWith(t *testing.T, f func(), c ...Constraint) bool {
 
 // ErrorWith asserts that the given error is not nil and satisfies the given constraints.
 //
-//	testingu.ErrorWith(t,
+//	require.ErrorWith(t,
 //		err,
-//		testingu.Is(MyError), testingu.Contains("my message"))
+//		require.Is(MyError),
+//		require.Contains("my message"))
 func ErrorWith(t *testing.T, e error, c ...Constraint) bool {
 	if e == nil {
 		return assert.Fail(t, "error expected")

@@ -37,6 +37,7 @@ func (r *Require) Is(targer error, msgAndArgs ...interface{}) Constraint {
 // PanicsWith asserts that the code inside the specified function panics,
 // and that the recovered panic value is satisfies the given constraints.
 //
+//	require := require.New(t)
 //	require.PanicsWith(
 //		func(){ GoCrazy() },
 //		require.Contains("crazy"),
@@ -49,6 +50,7 @@ func (r *Require) PanicsWith(f func(), c ...Constraint) {
 
 // ErrorWith asserts that the given error is not nil and satisfies the given constraints.
 //
+//	require := require.New(t)
 //	require.ErrorWith(
 //		err,
 //		require.Is(MyError),
