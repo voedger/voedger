@@ -28,7 +28,7 @@ type federationCommandStorage struct {
 	appStructs AppStructsFunc
 	wsid       WSIDFunc
 	federation federation.IFederation
-	tokensAPI  itokens.ITokens
+	tokens     itokens.ITokens
 	emulation  FederationCommandHandler
 }
 
@@ -87,7 +87,7 @@ func (s *federationCommandStorage) Get(key istructs.IStateKeyBuilder) (istructs.
 		opts = append(opts, coreutils.WithAuthorizeBy(v.(string)))
 	} else {
 		appQName := istructs.NewAppQName(owner, appname)
-		systemPrincipalToken, err := payloads.GetSystemPrincipalToken(s.tokensAPI, appQName)
+		systemPrincipalToken, err := payloads.GetSystemPrincipalToken(s.tokens, appQName)
 		if err != nil {
 			return nil, err
 		}
