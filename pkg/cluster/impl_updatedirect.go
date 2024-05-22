@@ -47,8 +47,10 @@ func updateDirect(asp istructs.IAppStructsProvider, appQName istructs.AppQName, 
 func updateDirect_Record(targetAppStructs istructs.IAppStructs, appDef appdef.IAppDef, idToUpdate istructs.RecordID, wsid istructs.WSID, u *sqlparser.Update) error {
 	existingRec, err := targetAppStructs.Records().Get(wsid, true, idToUpdate)
 	if err != nil {
-		// including "not found" error
 		return err
+	}
+	if existingRec.QName() == appdef.NullQName {
+		return fmt.Errorf("record ID %d does not exist", idToUpdate)
 	}
 	newFields, err := getFieldsToUpdate(u.Exprs)
 	if err != nil {

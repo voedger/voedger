@@ -599,6 +599,7 @@ func TestVSqlUpdate_BasicUsage_Direct_View(t *testing.T) {
 	defer vit.TearDown()
 
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+	sysPrn := vit.GetSystemPrincipal(istructs.AppQName_sys_cluster)
 
 	// insert a cdoc
 	// p.ap1pkg.ApplyCategoryIdx will insert the single hardcoded record view.CategoryIdx(Name = category.Name, IntFld = 43, Dummy = 1, Val = 42) (see shared_cfgs.go)
@@ -615,25 +616,50 @@ func TestVSqlUpdate_BasicUsage_Direct_View(t *testing.T) {
 	require.Equal(categoryName, m["Name"].(string))
 	require.EqualValues(42, m["Val"].(float64))
 
-	// direct update
-	newName := vit.NextName()
-	sysPrn := vit.GetSystemPrincipal(istructs.AppQName_sys_cluster)
-	body = fmt.Sprintf(`{"args": {"Query":"direct update test1.app1.%d.app1pkg.CategoryIdx set Name = '%s' where IntFld = 43 and Dummy = 1"}}`, ws.WSID, newName)
-	vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppWSID, "c.cluster.VSqlUpdate", body, coreutils.WithAuthorizeBy(sysPrn.Token))
+	t.Run("basic", func(t *testing.T) {
+		// direct update
+		newName := vit.NextName()
+		body = fmt.Sprintf(`{"args": {"Query":"direct update test1.app1.%d.app1pkg.CategoryIdx set Name = '%s' where IntFld = 43 and Dummy = 1"}}`, ws.WSID, newName)
+		vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppWSID, "c.cluster.VSqlUpdate", body, coreutils.WithAuthorizeBy(sysPrn.Token))
 
-	// check values are updated
-	body = `{"args":{"Query":"select * from app1pkg.CategoryIdx where IntFld = 43 and Dummy = 1"}, "elements":[{"fields":["Result"]}]}`
-	resp = vit.PostWS(ws, "q.sys.SqlQuery", body)
-	res = resp.SectionRow()[0].(string)
-	m = map[string]interface{}{}
-	require.NoError(json.Unmarshal([]byte(res), &m))
-	require.Equal(map[string]interface{}{
-		"Dummy":     float64(1),  // key
-		"IntFld":    float64(43), // key
-		"Name":      newName,     // new value
-		"Val":       float64(42), // old value (hr\ardcoded by the projector)
-		"sys.QName": "app1pkg.CategoryIdx",
-	}, m)
+		// check values are updated
+		body = `{"args":{"Query":"select * from app1pkg.CategoryIdx where IntFld = 43 and Dummy = 1"}, "elements":[{"fields":["Result"]}]}`
+		resp = vit.PostWS(ws, "q.sys.SqlQuery", body)
+		res = resp.SectionRow()[0].(string)
+		m = map[string]interface{}{}
+		require.NoError(json.Unmarshal([]byte(res), &m))
+		require.Equal(map[string]interface{}{
+			"Dummy":     float64(1),  // key
+			"IntFld":    float64(43), // key
+			"Name":      newName,     // new value
+			"Val":       float64(42), // old value (hardcoded by the projector)
+			"sys.QName": "app1pkg.CategoryIdx",
+		}, m)
+	})
+
+	t.Run("not full key provided -> error 400", func(t *testing.T) {
+		body = fmt.Sprintf(`{"args": {"Query":"direct update test1.app1.%d.app1pkg.CategoryIdx set Name = 'any' where IntFld = 43"}}`, ws.WSID)
+		vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppWSID, "c.cluster.VSqlUpdate", body,
+			coreutils.WithAuthorizeBy(sysPrn.Token),
+			coreutils.Expect400("Dummy", "is empty"),
+		)
+	})
+
+	t.Run("update missing record -> error 400", func(t *testing.T) {
+		body = fmt.Sprintf(`{"args": {"Query":"direct update test1.app1.%d.app1pkg.CategoryIdx set Name = 'any' where IntFld = 1 and Dummy = 1"}}`, ws.WSID)
+		vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppWSID, "c.cluster.VSqlUpdate", body,
+			coreutils.WithAuthorizeBy(sysPrn.Token),
+			coreutils.Expect400("record cannot be found"),
+		)
+	})
+
+	t.Run("update unexisting field -> error 400", func(t *testing.T) {
+		body = fmt.Sprintf(`{"args": {"Query":"direct update test1.app1.%d.app1pkg.CategoryIdx set unexistingField = 'any' where IntFld = 43 and Dummy = 1"}}`, ws.WSID)
+		vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppWSID, "c.cluster.VSqlUpdate", body,
+			coreutils.WithAuthorizeBy(sysPrn.Token),
+			coreutils.Expect400("unexistingField", "is not found"),
+		)
+	})
 }
 
 func TestVSqlUpdate_Direct_Record(t *testing.T) {
@@ -647,31 +673,48 @@ func TestVSqlUpdate_Direct_Record(t *testing.T) {
 	categoryName := vit.NextName()
 	body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.category","name":"%s", "hq_id":"hq value","int_fld1":42,"int_fld2":43}}]}`, categoryName)
 	categoryID := vit.PostWS(ws, "c.sys.CUD", body).NewID()
-
-	// direct update
-	newName := vit.NextName()
 	sysPrn := vit.GetSystemPrincipal(istructs.AppQName_sys_cluster)
-	body = fmt.Sprintf(`{"args": {"Query":"direct update test1.app1.%d.app1pkg.category.%d set name = '%s', cat_external_id = 'cat value', int_fld1 = 44"}}`, ws.WSID, categoryID, newName)
-	vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppWSID, "c.cluster.VSqlUpdate", body, coreutils.WithAuthorizeBy(sysPrn.Token))
 
-	// check new state
-	body = fmt.Sprintf(`{"args":{"Query":"select * from app1pkg.category where sys.ID = %d"}, "elements":[{"fields":["Result"]}]}`, categoryID)
-	resp := vit.PostWS(ws, "q.sys.SqlQuery", body)
-	res := resp.SectionRow()[0].(string)
-	m := map[string]interface{}{}
-	require.NoError(json.Unmarshal([]byte(res), &m))
-	require.Equal(map[string]interface{}{
-		"name":            newName,     // new value
-		"cat_external_id": "cat value", // new value
-		"int_fld1":        float64(44), // new value
-		"int_fld2":        float64(43), // old value
-		"hq_id":           "hq value",  // old value
-		"ml_name":         nil,         // old value (was not set)
+	t.Run("basic", func(t *testing.T) {
+		// direct update
+		newName := vit.NextName()
+		body = fmt.Sprintf(`{"args": {"Query":"direct update test1.app1.%d.app1pkg.category.%d set name = '%s', cat_external_id = 'cat value', int_fld1 = 44"}}`, ws.WSID, categoryID, newName)
+		vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppWSID, "c.cluster.VSqlUpdate", body, coreutils.WithAuthorizeBy(sysPrn.Token))
 
-		appdef.SystemField_QName:    "app1pkg.category",
-		appdef.SystemField_ID:       float64(categoryID),
-		appdef.SystemField_IsActive: true,
-	}, m)
+		// check new state
+		body = fmt.Sprintf(`{"args":{"Query":"select * from app1pkg.category where sys.ID = %d"}, "elements":[{"fields":["Result"]}]}`, categoryID)
+		resp := vit.PostWS(ws, "q.sys.SqlQuery", body)
+		res := resp.SectionRow()[0].(string)
+		m := map[string]interface{}{}
+		require.NoError(json.Unmarshal([]byte(res), &m))
+		require.Equal(map[string]interface{}{
+			"name":                      newName,     // new value
+			"cat_external_id":           "cat value", // new value
+			"int_fld1":                  float64(44), // new value
+			"int_fld2":                  float64(43), // old value
+			"hq_id":                     "hq value",  // old value
+			"ml_name":                   nil,         // old value (was not set)
+			appdef.SystemField_QName:    "app1pkg.category",
+			appdef.SystemField_ID:       float64(categoryID),
+			appdef.SystemField_IsActive: true,
+		}, m)
+	})
+
+	t.Run("direct update unexisting record -> error 400", func(t *testing.T) {
+		body = fmt.Sprintf(`{"args": {"Query":"direct update test1.app1.%d.app1pkg.category.%d set int_fld1 = 44"}}`, ws.WSID, istructs.NonExistingRecordID)
+		vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppWSID, "c.cluster.VSqlUpdate", body,
+			coreutils.WithAuthorizeBy(sysPrn.Token),
+			coreutils.Expect400(fmt.Sprintf("record ID %d does not exist", istructs.NonExistingRecordID)),
+		)
+	})
+
+	t.Run("direct update unexisting field -> error 400", func(t *testing.T) {
+		body = fmt.Sprintf(`{"args": {"Query":"direct update test1.app1.%d.app1pkg.category.%d set unknownField = 44"}}`, ws.WSID, categoryID)
+		vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppWSID, "c.cluster.VSqlUpdate", body,
+			coreutils.WithAuthorizeBy(sysPrn.Token),
+			coreutils.Expect400("unknownField", "is not found"),
+		)
+	})
 }
 
 func TestVSqlUpdateErrors(t *testing.T) {
