@@ -19,12 +19,7 @@ type Constraint func(*testing.T, interface{}) bool
 func Has(substr string, msgAndArgs ...interface{}) Constraint {
 	return func(t *testing.T, recovered interface{}) bool {
 		m := fmt.Sprint(recovered)
-
-		if !assert.Contains(t, m, substr) {
-			return assert.Fail(t, fmt.Sprintf("«%s» does not contain «%s»", m, substr), msgAndArgs...)
-		}
-
-		return true
+		return assert.Contains(t, m, substr, msgAndArgs...)
 	}
 }
 
@@ -36,12 +31,7 @@ func Is(target error, msgAndArgs ...interface{}) Constraint {
 		if !ok {
 			return assert.Fail(t, fmt.Sprintf("«%#v» is not an error", err), msgAndArgs...)
 		}
-		//nolint: ignore testifylint, because the use of require inside require is inappropriate
-		if !assert.ErrorIs(t, e, target) {
-			return assert.Fail(t, fmt.Sprintf("«%v» is not «%v»", err, target), msgAndArgs...)
-		}
-
-		return true
+		return assert.ErrorIs(t, e, target, msgAndArgs...) //nolint:testifylint Use of require inside require is inappropriate
 	}
 }
 
