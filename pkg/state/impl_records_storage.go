@@ -29,21 +29,28 @@ func newRecordsStorage(appStructsFunc AppStructsFunc, wsidFunc WSIDFunc, cudFunc
 
 func (s *recordsStorage) NewKeyBuilder(entity appdef.QName, _ istructs.IStateKeyBuilder) istructs.IStateKeyBuilder {
 	return &recordsKeyBuilder{
-		id:        istructs.NullRecordID,
-		singleton: appdef.NullQName,
-		wsid:      s.wsidFunc(),
-		entity:    entity,
+		id:          istructs.NullRecordID,
+		singleton:   appdef.NullQName, // Deprecated, use isSingleton instead
+		isSingleton: false,
+		wsid:        s.wsidFunc(),
+		entity:      entity,
 	}
 }
 
 func (s *recordsStorage) Get(key istructs.IStateKeyBuilder) (value istructs.IStateValue, err error) {
 	k := key.(*recordsKeyBuilder)
-	if k.singleton != appdef.NullQName {
-		err = s.wsTypeVailidator.validate(k.wsid, k.singleton)
+	if k.isSingleton || k.singleton != appdef.NullQName {
+
+		qname := k.singleton // for compatibility
+		if k.isSingleton {
+			qname = k.entity
+		}
+
+		err = s.wsTypeVailidator.validate(k.wsid, qname)
 		if err != nil {
 			return nil, err
 		}
-		singleton, e := s.recordsFunc().GetSingleton(k.wsid, k.singleton)
+		singleton, e := s.recordsFunc().GetSingleton(k.wsid, qname)
 		if e != nil {
 			return nil, e
 		}
@@ -77,14 +84,18 @@ func (s *recordsStorage) GetBatch(items []GetBatchItem) (err error) {
 	gg := make([]getSingletonParams, 0)
 	for itemIdx, item := range items {
 		k := item.key.(*recordsKeyBuilder)
-		if k.singleton != appdef.NullQName {
-			err = s.wsTypeVailidator.validate(k.wsid, k.singleton)
+		if k.isSingleton || k.singleton != appdef.NullQName {
+			qname := k.singleton // for compatibility
+			if k.isSingleton {
+				qname = k.entity
+			}
+			err = s.wsTypeVailidator.validate(k.wsid, qname)
 			if err != nil {
 				return err
 			}
 			gg = append(gg, getSingletonParams{
 				wsid:    k.wsid,
-				qname:   k.singleton,
+				qname:   qname,
 				itemIdx: itemIdx,
 			})
 			continue
