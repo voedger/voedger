@@ -13,3 +13,7 @@ import (
 var CrazyError = fmt.Errorf("🤪 error: %w", errors.ErrUnsupported)
 
 func GoCrazy() { panic(CrazyError) }
+
+func main() {
+	GoCrazy()
+}
