@@ -43,7 +43,11 @@ func TestVSqlUpdate_BasicUsage_Simple(t *testing.T) {
 	require.Contains(t, resStr, fmt.Sprintf(`"name":"%s"`, newName))
 }
 
-func TestVSqlUpdate_BasicUsage_Corrupted(t *testing.T) {
+func TestVSqlUpdate_BasicUsage_Corrupted_PLog(t *testing.T) {
+
+}
+
+func TestVSqlUpdate_BasicUsage_Corrupted_WLog(t *testing.T) {
 	require := require.New(t)
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
@@ -58,14 +62,45 @@ func TestVSqlUpdate_BasicUsage_Corrupted(t *testing.T) {
 
 	sysPrn := vit.GetSystemPrincipal(istructs.AppQName_sys_cluster)
 
-	body = fmt.Sprintf(`{"args": {"Query":"update corrupted test1.app1.%d.sys.WLog.%d"}}`, ws.WSID, wlogOffset)
-	resp = vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppWSID, "c.cluster.VSqlUpdate", body,
-		coreutils.WithAuthorizeBy(sysPrn.Token))
-	resp.Println()
+	t.Run("wlog", func(t *testing.T) {
+		body = fmt.Sprintf(`{"args": {"Query":"update corrupted test1.app1.%d.sys.WLog.%d"}}`, ws.WSID, wlogOffset)
+		vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppWSID, "c.cluster.VSqlUpdate", body,
+			coreutils.WithAuthorizeBy(sysPrn.Token))
 
-	body = fmt.Sprintf(`{"args":{"Query":"select * from sys.wlog where Offset = %d"},"elements":[{"fields":["Result"]}]}`, wlogOffset)
-	resp = vit.PostWS(ws, "q.sys.SqlQuery", body)
-	resp.Println()
+		body = fmt.Sprintf(`{"args":{"Query":"select * from sys.wlog where Offset = %d"},"elements":[{"fields":["Result"]}]}`, wlogOffset)
+		resp = vit.PostWS(ws, "q.sys.SqlQuery", body)
+		resp.Println()
+		checkCorruptedEvent(require, resp)
+	})
+
+	t.Run("plog", func(t *testing.T) {
+
+		// determine the last PLogOffset in the target workspace
+		body := `{"args":{"Query":"select * from sys.plog limit -1"},"elements":[{"fields":["Result"]}]}`
+		resp := vit.PostWS(ws, "q.sys.SqlQuery", body)
+
+		m := map[string]interface{}{}
+		require.NoError(json.Unmarshal([]byte(resp.SectionRow(len(resp.Sections[0].Elements) - 1)[0].(string)), &m))
+		lastPLogOffset := int(m["PlogOffset"].(float64))
+
+		// determine the partitionID of the last event in the target workspace
+		partitionID, err := vit.IAppPartitions.AppWorkspacePartitionID(istructs.AppQName_test1_app1, ws.WSID)
+		require.NoError(err)
+
+		// update corrupted plog
+		body = fmt.Sprintf(`{"args": {"Query":"update corrupted test1.app1.%d.sys.PLog.%d"}}`, partitionID, lastPLogOffset)
+		vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppWSID, "c.cluster.VSqlUpdate", body,
+			coreutils.WithAuthorizeBy(sysPrn.Token))
+
+		// check the corrupted event
+		body = fmt.Sprintf(`{"args":{"Query":"select * from sys.plog where Offset = %d"},"elements":[{"fields":["Result"]}]}`, lastPLogOffset)
+		resp = vit.PostWS(ws, "q.sys.SqlQuery", body)
+		resp.Println()
+		checkCorruptedEvent(require, resp)
+	})
+}
+
+func checkCorruptedEvent(require *require.Assertions, resp *coreutils.FuncResponse) {
 	res := resp.SectionRow()[0].(string)
 	m := map[string]interface{}{}
 	require.NoError(json.Unmarshal([]byte(res), &m))
@@ -77,8 +112,6 @@ func TestVSqlUpdate_BasicUsage_Corrupted(t *testing.T) {
 	require.NotEmpty(errEvent["OriginalEventBytes"].(string)) // base64 here
 	require.Equal(istructs.QNameForCorruptedData.String(), errEvent["QNameFromParams"].(string))
 	require.False(errEvent["ValidEvent"].(bool))
-
-	// TODO: test record not found, wrong field to set etc
 }
 
 func TestVSqlUpdate_BasicUsage_DirectUpdate_View(t *testing.T) {
