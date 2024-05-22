@@ -4,7 +4,7 @@ The package `require` in addition to the Testify [require](https://pkg.go.dev/gi
 
 ## Check panic
 
-- Check that the object recovered from panic contains the specified line
+- Check that the object recovered from panic contains the specified substrings
 - Check that the error recovered from panic (or err's chain) is the target error
 
 ### Example 1
