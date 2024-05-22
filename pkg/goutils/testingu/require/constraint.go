@@ -36,6 +36,7 @@ func Is(target error, msgAndArgs ...interface{}) Constraint {
 		if !ok {
 			return assert.Fail(t, fmt.Sprintf("«%#v» is not an error", err), msgAndArgs...)
 		}
+		//nolint: ignore testifylint, because the use of require inside require is inappropriate
 		if !assert.ErrorIs(t, e, target) {
 			return assert.Fail(t, fmt.Sprintf("«%v» is not «%v»", err, target), msgAndArgs...)
 		}

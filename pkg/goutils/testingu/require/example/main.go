@@ -10,9 +10,9 @@ import (
 	"fmt"
 )
 
-var CrazyError = fmt.Errorf("🤪 error: %w", errors.ErrUnsupported)
+var ErrCrazyError = fmt.Errorf("🤪 error: %w", errors.ErrUnsupported)
 
-func GoCrazy() { panic(CrazyError) }
+func GoCrazy() { panic(ErrCrazyError) }
 
 func main() {
 	GoCrazy()
