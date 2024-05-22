@@ -361,20 +361,6 @@ func (cmdProc *cmdProc) authorizeRequest(_ context.Context, work interface{}) (e
 	return nil
 }
 
-func getResources(_ context.Context, work interface{}) (err error) {
-	cmd := work.(*cmdWorkpiece)
-	cmd.resources = cmd.appStructs.Resources()
-	return nil
-}
-
-func getExec(_ context.Context, work interface{}) (err error) {
-	cmd := work.(*cmdWorkpiece)
-	iResource := cmd.resources.QueryResource(cmd.cmdMes.QName())
-	iCommandFunc := iResource.(istructs.ICommandFunction)
-	cmd.cmdExec = iCommandFunc.Exec
-	return nil
-}
-
 func unmarshalRequestBody(_ context.Context, work interface{}) (err error) {
 	cmd := work.(*cmdWorkpiece)
 	if cmd.iCommand.Param() != nil && cmd.iCommand.Param().QName() == istructs.QNameRaw {
@@ -468,11 +454,13 @@ func (xp xPath) Error(err error) error {
 	return xp.Errorf("%w", err)
 }
 
-func execCommand(_ context.Context, work interface{}) (err error) {
+func execCommand(ctx context.Context, work interface{}) (err error) {
 	cmd := work.(*cmdWorkpiece)
 	begin := time.Now()
-	err = cmd.cmdExec(cmd.eca)
-	work.(*cmdWorkpiece).metrics.increase(ExecSeconds, time.Since(begin).Seconds())
+
+	err = cmd.appPart.Invoke(ctx, cmd.cmdMes.QName(), cmd.eca.State, cmd.eca.Intents)
+
+	cmd.metrics.increase(ExecSeconds, time.Since(begin).Seconds())
 	return err
 }
 
