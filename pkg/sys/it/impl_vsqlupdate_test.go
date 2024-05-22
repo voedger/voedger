@@ -43,11 +43,7 @@ func TestVSqlUpdate_BasicUsage_Table(t *testing.T) {
 	require.Contains(t, resStr, fmt.Sprintf(`"name":"%s"`, newName))
 }
 
-func TestVSqlUpdate_BasicUsage_Corrupted_PLog(t *testing.T) {
-
-}
-
-func TestVSqlUpdate_BasicUsage_Corrupted_WLog(t *testing.T) {
+func TestVSqlUpdate_BasicUsage_Corrupted(t *testing.T) {
 	require := require.New(t)
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()

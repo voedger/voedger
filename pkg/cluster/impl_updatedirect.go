@@ -53,6 +53,7 @@ func updateDirect_View(update update) (err error) {
 			return coreutils.NewHTTPErrorf(http.StatusConflict, "view record already exists")
 		}
 		if !errors.Is(err, istructsmem.ErrRecordNotFound) {
+			// notest
 			return err
 		}
 	} else if err != nil {
