@@ -25,6 +25,7 @@ func updateDirect(update update) error {
 func updateDirect_Record(update update) error {
 	existingRec, err := update.appStructs.Records().Get(update.wsid, true, update.id)
 	if err != nil {
+		// notest
 		return err
 	}
 	if existingRec.QName() == appdef.NullQName {
@@ -39,7 +40,6 @@ func updateDirect_View(update update) (err error) {
 	kb := update.appStructs.ViewRecords().KeyBuilder(update.qName)
 	if update.kind == updateKind_DirectInsert {
 		kb.PutFromJSON(update.setFields)
-		// err = coreutils.MapToObject(update.setFields, kb)
 	} else {
 		err = coreutils.MapToObject(update.key, kb)
 	}
@@ -86,7 +86,7 @@ func validateQuery_Direct(update update) error {
 		}
 		if update.kind == updateKind_DirectInsert {
 			if len(update.key) > 0 {
-				return errors.New("`where` clause is not allowed on view direct insert")
+				return errors.New("'where clause is not allowed on view direct insert")
 			}
 		} else {
 			if len(update.key) == 0 {

@@ -296,7 +296,7 @@ func TestVSqlUpdate_BasicUsage_DirectInsert(t *testing.T) {
 	})
 }
 
-func TestVSqlUpdateErrors(t *testing.T) {
+func TestVSqlUpdateValidateErrors(t *testing.T) {
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
@@ -329,12 +329,18 @@ func TestVSqlUpdateErrors(t *testing.T) {
 		"update corrupted test1.app1.1.app1pkg.category.44":                  "sys.plog or sys.wlog are only allowed",
 		"update corrupted unknown.app.1.sys.PLog.44":                         "application not found: unknown/app",
 
-		// update direct
+		// direct update
 		"direct update test1.app1.1.app1pkg.CategoryIdx set Val = 44, Name = 'x'":       "full key must be provided on view direct update",
 		"direct update test1.app1.1.app1pkg.CategoryIdx where x = 1":                    "syntax error",
 		"direct update test1.app1.1.app1pkg.CategoryIdx.42 set a = 2 where x = 1":       "record ID must not be provided on view direct update",
 		"direct update test1.app1.1.app1pkg.CategoryIdx set a = 2 where x = 1 or y = 1": "'where viewField1 = val1 [and viewField2 = val2 ...]' condition is only supported",
 		"direct update test1.app1.1.app1pkg.CategoryIdx set a = 2 where x > 1":          "'where viewField1 = val1 [and viewField2 = val2 ...]' condition is only supported",
+		"direct update test1.app1.1.app1pkg.category set a = 2":                         "record ID must be provided on record direct update",
+		"direct update test1.app1.1.app1pkg.category.1 set a = 2 where b = 3":           "'where' clause is not allowed on record direct update",
+
+		// direct insert
+		"direct insert test1.app1.1.app1pkg.CategoryIdx set Val = 44, Name = 'x' where a = 1": "'where clause is not allowed on view direct insert",
+		"direct insert test1.app1.1.app1pkg.category set Val = 44, Name = 'x'":                "direct insert is not allowed for records",
 	}
 	sysPrn := vit.GetSystemPrincipal(istructs.AppQName_sys_cluster)
 	for sql, expectedError := range cases {
