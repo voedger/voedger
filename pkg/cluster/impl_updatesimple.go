@@ -16,7 +16,7 @@ import (
 	"github.com/voedger/voedger/pkg/utils/federation"
 )
 
-func updateSimple(update update, federation federation.IFederation, itokens itokens.ITokens) error {
+func updateTable(update update, federation federation.IFederation, itokens itokens.ITokens) error {
 	jsonFields, err := json.Marshal(update.setFields)
 	if err != nil {
 		// notest
@@ -35,7 +35,7 @@ func updateSimple(update update, federation federation.IFederation, itokens itok
 	return err
 }
 
-func validateQuery_Simple(update update) error {
+func validateQuery_Table(update update) error {
 	if update.id == 0 {
 		return errors.New("record ID is not provided")
 	}

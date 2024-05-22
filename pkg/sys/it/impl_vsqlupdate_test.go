@@ -19,7 +19,7 @@ import (
 	it "github.com/voedger/voedger/pkg/vit"
 )
 
-func TestVSqlUpdate_BasicUsage_Simple(t *testing.T) {
+func TestVSqlUpdate_BasicUsage_Table(t *testing.T) {
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 

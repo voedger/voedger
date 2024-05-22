@@ -32,8 +32,8 @@ func provideExecCmdVSqlUpdate(federation federation.IFederation, itokens itokens
 		}
 
 		switch update.kind {
-		case updateKind_Simple:
-			err = updateSimple(update, federation, itokens)
+		case updateKind_Table:
+			err = updateTable(update, federation, itokens)
 		case updateKind_Corrupted:
 			err = updateCorrupted(update, istructs.UnixMilli(timeFunc().UnixMilli()))
 		case updateKind_DirectUpdate, updateKind_DirectInsert:
@@ -45,15 +45,12 @@ func provideExecCmdVSqlUpdate(federation federation.IFederation, itokens itokens
 
 func parseAndValidateQuery(args istructs.ExecCommandArgs, query string, asp istructs.IAppStructsProvider) (update update, err error) {
 	appQName, wsidOrPartitionID, qNameToUpdate, offsetOrID, updateKind, cleanSql, err := parseQuery(query)
-	update.kind = updateKind
-	update.appQName = appQName
-	update.qName = qNameToUpdate
 	if err != nil {
 		return update, err
 	}
-	if appQName == istructs.NullAppQName {
-		return update, errors.New("appQName must be provided")
-	}
+	update.kind = updateKind
+	update.appQName = appQName
+	update.qName = qNameToUpdate
 
 	update.appParts = args.Workpiece.(interface {
 		AppPartitions() appparts.IAppPartitions
@@ -101,7 +98,7 @@ func parseAndValidateQuery(args istructs.ExecCommandArgs, query string, asp istr
 	}
 
 	switch update.kind {
-	case updateKind_Simple, updateKind_DirectUpdate, updateKind_DirectInsert:
+	case updateKind_Table, updateKind_DirectUpdate, updateKind_DirectInsert:
 		update.wsid = istructs.WSID(wsidOrPartitionID)
 		update.id = istructs.RecordID(offsetOrID)
 	case updateKind_Corrupted:
@@ -119,8 +116,8 @@ func parseAndValidateQuery(args istructs.ExecCommandArgs, query string, asp istr
 
 func validateQuery(update update) error {
 	switch update.kind {
-	case updateKind_Simple:
-		return validateQuery_Simple(update)
+	case updateKind_Table:
+		return validateQuery_Table(update)
 	case updateKind_Corrupted:
 		return validateQuery_Corrupted(update)
 	case updateKind_DirectUpdate, updateKind_DirectInsert:
@@ -193,7 +190,7 @@ func parseQuery(query string) (appQName istructs.AppQName, wsidOrPartitionID ist
 	}
 	switch strings.TrimSpace(strings.ToLower(updateKindStr)) {
 	case "update":
-		updateKind = updateKind_Simple
+		updateKind = updateKind_Table
 	case "direct update":
 		updateKind = updateKind_DirectUpdate
 	case "update corrupted":

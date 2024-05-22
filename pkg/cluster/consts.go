@@ -51,6 +51,6 @@ const (
 	updateKind_Null updateKind = iota
 	updateKind_Corrupted
 	updateKind_DirectUpdate
-	updateKind_Simple
+	updateKind_Table
 	updateKind_DirectInsert
 )
