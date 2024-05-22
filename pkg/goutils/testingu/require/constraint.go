@@ -31,7 +31,7 @@ func Is(target error, msgAndArgs ...interface{}) Constraint {
 		if !ok {
 			return assert.Fail(t, fmt.Sprintf("«%#v» is not an error", err), msgAndArgs...)
 		}
-		return assert.ErrorIs(t, e, target, msgAndArgs...) //nolint:testifylint Use of require inside require is inappropriate
+		return assert.ErrorIs(t, e, target, msgAndArgs...) //nolint:testifylint // Use of require inside require is inappropriate
 	}
 }
 
