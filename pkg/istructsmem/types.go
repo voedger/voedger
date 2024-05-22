@@ -789,6 +789,8 @@ func (row *rowType) PutFromJSON(j map[appdef.FieldName]any) {
 			row.PutChars(n, fv)
 		case bool:
 			row.PutBool(n, fv)
+		default:
+			panic(fmt.Sprintf("unsupported type %#v", v))
 		}
 	}
 }

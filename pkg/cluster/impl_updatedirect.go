@@ -28,12 +28,18 @@ func updateDirect(asp istructs.IAppStructsProvider, appQName istructs.AppQName, 
 	if err != nil {
 		return err
 	}
+	if containers, ok := tp.(appdef.IContainers); ok {
+		if containers.ContainerCount() > 0 {
+			// TODO: no design?
+			return errors.New("impossible to update a record that has containers")
+		}
+	}
 	u := stmt.(*sqlparser.Update)
 	if tp.Kind() == appdef.TypeKind_ViewRecord {
 		if u.Where == nil {
 			return errors.New("key condition must be provided for direct update view")
 		}
-		return updateDirect_View(targetAppStructs, qNameToUpdate, wsid, u)
+		return updateDirect_View(targetAppStructs, qNameToUpdate, wsid, u, appDef)
 	}
 	return updateDirect_Record(targetAppStructs, appDef, idToUpdate, wsid, u)
 }
@@ -52,15 +58,13 @@ func updateDirect_Record(targetAppStructs istructs.IAppStructs, appDef appdef.IA
 	if err := checkFieldsUpdateAllowed(newFields); err != nil {
 		return err
 	}
-	mergedFields := map[string]interface{}{}
-	coreutils.MergeMaps(mergedFields, existingFields, newFields)
-	mergedFields[appdef.SystemField_ID] = float64(mergedFields[appdef.SystemField_ID].(istructs.RecordID)) // PutJSON expects sys.ID to be float64
+	mergedFields := coreutils.MergeMapsMakeFloats64(existingFields, newFields)
 	return targetAppStructs.Records().PutJSON(wsid, mergedFields)
 }
 
-func updateDirect_View(targetAppStructs istructs.IAppStructs, qNameToUpdate appdef.QName, wsid istructs.WSID, u *sqlparser.Update) error {
-	viewKeyFields := map[string]interface{}{}
-	if err := getConditionFields(u.Where.Expr, viewKeyFields); err != nil {
+func updateDirect_View(targetAppStructs istructs.IAppStructs, qNameToUpdate appdef.QName, wsid istructs.WSID, u *sqlparser.Update, appDef appdef.IAppDef) error {
+	keyFields := map[string]interface{}{}
+	if err := fillConditionFields(u.Where.Expr, keyFields); err != nil {
 		return err
 	}
 
@@ -70,23 +74,24 @@ func updateDirect_View(targetAppStructs istructs.IAppStructs, qNameToUpdate appd
 		return err
 	}
 
-	kb := targetAppStructs.ViewRecords().KeyBuilder(qNameToUpdate)
-	if err := coreutils.MapToObject(viewKeyFields, kb); err != nil {
+	if err := checkFieldsUpdateAllowed(fieldsToUpdate); err != nil {
 		return err
 	}
 
-	// just to check if all key fields are filled
-	if _, err := targetAppStructs.ViewRecords().Get(wsid, kb); err != nil {
+	kb := targetAppStructs.ViewRecords().KeyBuilder(qNameToUpdate)
+	if err := coreutils.MapToObject(keyFields, kb); err != nil {
+		return err
+	}
+
+	existingViewRec, err := targetAppStructs.ViewRecords().Get(wsid, kb)
+	if err != nil {
 		// including "not found" error
 		return err
 	}
 
-	if err := checkFieldsUpdateAllowed(fieldsToUpdate); err != nil {
-		return err
-	}
-	mergedFields := map[string]interface{}{}
-	fieldsToUpdate[appdef.SystemField_QName] = qNameToUpdate.String()
-	coreutils.MergeMaps(mergedFields, viewKeyFields, fieldsToUpdate)
+	existingFields := coreutils.FieldsToMap(existingViewRec, appDef, coreutils.WithNonNilsOnly())
+
+	mergedFields := coreutils.MergeMapsMakeFloats64(existingFields, fieldsToUpdate, keyFields)
 	return targetAppStructs.ViewRecords().PutJSON(wsid, mergedFields)
 }
 
@@ -99,13 +104,13 @@ func checkFieldsUpdateAllowed(fieldsToUpdate map[string]interface{}) error {
 	return nil
 }
 
-func getConditionFields(expr sqlparser.Expr, fields map[string]interface{}) error {
+func fillConditionFields(expr sqlparser.Expr, fields map[string]interface{}) error {
 	switch cond := expr.(type) {
 	case *sqlparser.AndExpr:
-		if err := getConditionFields(cond.Left, fields); err != nil {
+		if err := fillConditionFields(cond.Left, fields); err != nil {
 			return err
 		}
-		return getConditionFields(cond.Right, fields)
+		return fillConditionFields(cond.Right, fields)
 	case *sqlparser.ComparisonExpr:
 		if cond.Operator != sqlparser.EqualStr {
 			return errWrongWhereForView

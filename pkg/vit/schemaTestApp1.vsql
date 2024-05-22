@@ -395,7 +395,9 @@ ALTERABLE WORKSPACE test_wsWS (
 		name varchar,
 		hq_id varchar,
 		ml_name bytes,
-		cat_external_id varchar
+		cat_external_id varchar,
+		int_fld1 int32,
+		int_fld2 int32
 	);
 
 	TABLE Doc INHERITS CDoc (
