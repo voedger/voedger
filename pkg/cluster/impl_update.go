@@ -6,11 +6,13 @@
 package cluster
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
 
+	"github.com/blastrain/vitess-sqlparser/sqlparser"
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -24,55 +26,108 @@ func provideExecCmdVSqlUpdate(federation federation.IFederation, itokens itokens
 	asp istructs.IAppStructsProvider) istructsmem.ExecCommandClosure {
 	return func(args istructs.ExecCommandArgs) (err error) {
 		query := args.ArgumentObject.AsString(field_Query)
-		appQName, wsidOrPartitionID, qNameToUpdate, offsetOrID, updateKind, cleanSql, err := parseUpdateQuery(query)
+		update, err := parseAndValidateUpdate(args, query, asp)
 		if err != nil {
-			return coreutils.NewHTTPError(http.StatusBadRequest, err)
-		}
-		if appQName == istructs.NullAppQName {
-			appQName = args.State.App()
-		}
-		appParts := args.Workpiece.(interface {
-			AppPartitions() appparts.IAppPartitions
-		}).AppPartitions()
-		appDef, err := appParts.AppDef(appQName)
-		if err != nil {
-			return coreutils.NewHTTPError(http.StatusBadRequest, err)
-		}
-		if err = validateQuery(appQName, appParts, updateKind, cleanSql, qNameToUpdate, wsidOrPartitionID, offsetOrID, appDef); err != nil {
 			return coreutils.NewHTTPError(http.StatusBadRequest, err)
 		}
 
-		switch updateKind {
-		case updateKind_Corrupted:
-			return updateCorrupted(asp, appParts, appQName, wsidOrPartitionID, qNameToUpdate, istructs.Offset(offsetOrID), istructs.UnixMilli(timeFunc().UnixMilli()))
+		switch update.kind {
 		case updateKind_Simple:
-			if wsidOrPartitionID == 0 {
-				wsidOrPartitionID = istructs.IDType(args.WSID)
-			}
-			if err = updateSimple(federation, itokens, appQName, istructs.WSID(wsidOrPartitionID), cleanSql, istructs.RecordID(offsetOrID)); err != nil {
-				return coreutils.WrapSysError(err, http.StatusBadRequest)
-			}
+			err = updateSimple(update, federation, itokens)
+		case updateKind_Corrupted:
+			err = updateCorrupted(update, istructs.UnixMilli(timeFunc().UnixMilli()))
 		case updateKind_Direct:
-			return coreutils.WrapSysError(updateDirect(asp, appQName, istructs.WSID(wsidOrPartitionID), qNameToUpdate, appDef, cleanSql, istructs.RecordID(offsetOrID)),
-				http.StatusBadRequest)
+			err = updateDirect(update)
 		}
-
-		return nil
+		return coreutils.WrapSysError(err, http.StatusBadRequest)
 	}
 }
 
-func validateQuery(appQName istructs.AppQName, appparts appparts.IAppPartitions, kind updateKind, sql string, qNameToUpdate appdef.QName,
-	wsidOrPartitionID istructs.IDType, offsetOrID istructs.IDType, appDef appdef.IAppDef) error {
-	switch kind {
-	case updateKind_Simple:
-		return validateQuery_Simple(sql)
+func parseAndValidateUpdate(args istructs.ExecCommandArgs, query string, asp istructs.IAppStructsProvider) (update update, err error) {
+	appQName, wsidOrPartitionID, qNameToUpdate, offsetOrID, updateKind, cleanSql, err := parseUpdateQuery(query)
+	update.kind = updateKind
+	update.appQName = appQName
+	update.qName = qNameToUpdate
+	if err != nil {
+		return update, err
+	}
+	if appQName == istructs.NullAppQName {
+		return update, errors.New("appQName must be provided")
+	}
+
+	update.appParts = args.Workpiece.(interface {
+		AppPartitions() appparts.IAppPartitions
+	}).AppPartitions()
+
+	update.appStructs, err = asp.AppStructs(appQName)
+	if err != nil {
+		// test here
+		return update, err
+	}
+
+	if updateKind != updateKind_Corrupted {
+		tp := update.appStructs.AppDef().Type(update.qName)
+		if tp.Kind() == appdef.TypeKind_null {
+			return update, fmt.Errorf("qname %s is not found", update.qName)
+		}
+		update.qNameTypeKind = tp.Kind()
+	}
+
+	if len(cleanSql) > 0 {
+		stmt, err := sqlparser.Parse(cleanSql)
+		if err != nil {
+			return update, err
+		}
+		u := stmt.(*sqlparser.Update)
+
+		if u.Exprs != nil {
+			if update.setFields, err = getSets(u.Exprs); err != nil {
+				return update, err
+			}
+		} else {
+			return update, errors.New("no fields to update")
+		}
+
+		if u.Where != nil {
+			update.key = map[string]interface{}{}
+			if err := fillWhere(u.Where.Expr, update.key); err != nil {
+				return update, err
+			}
+		}
+	}
+
+	if err := checkFieldsUpdateAllowed(update.setFields); err != nil {
+		return update, err
+	}
+
+	switch update.kind {
+	case updateKind_Simple, updateKind_Direct:
+		update.wsid = istructs.WSID(wsidOrPartitionID)
+		update.id = istructs.RecordID(offsetOrID)
 	case updateKind_Corrupted:
-		return validateQuery_Corrupted(appQName, sql, qNameToUpdate, wsidOrPartitionID, offsetOrID, appparts)
+		update.offset = istructs.Offset(offsetOrID)
+		switch update.qName {
+		case plog:
+			update.partitionID = istructs.PartitionID(wsidOrPartitionID)
+		case wlog:
+			update.wsid = istructs.WSID(wsidOrPartitionID)
+		}
+	}
+
+	return update, validateQuery(update)
+}
+
+func validateQuery(update update) error {
+	switch update.kind {
+	case updateKind_Simple:
+		return validateQuery_Simple(update)
+	case updateKind_Corrupted:
+		return validateQuery_Corrupted(update)
 	case updateKind_Direct:
-		return validateQuery_Direct(appDef, qNameToUpdate, offsetOrID)
+		return validateQuery_Direct(update)
 	default:
 		// notest: checked already on sql parse
-		panic("unknown operation kind" + fmt.Sprint(kind))
+		panic("unknown operation kind" + fmt.Sprint(update.kind))
 	}
 }
 
@@ -132,13 +187,14 @@ func parseUpdateQuery(query string) (appQName istructs.AppQName, wsidOrPartition
 	}
 	cleanSql = strings.TrimSpace(parts[parsIdx])
 	updateKindStr := strings.TrimSpace(parts[operationIdx])
+	if len(cleanSql) > 0 {
+		cleanSql = fmt.Sprintf("update %s %s", qNameToUpdate, cleanSql)
+	}
 	switch strings.TrimSpace(strings.ToLower(updateKindStr)) {
 	case "update":
 		updateKind = updateKind_Simple
-		cleanSql = fmt.Sprintf("update %s %s", qNameToUpdate, cleanSql)
 	case "direct update":
 		updateKind = updateKind_Direct
-		cleanSql = fmt.Sprintf("update %s %s", qNameToUpdate, cleanSql)
 	case "update corrupted":
 		updateKind = updateKind_Corrupted
 	default:
@@ -146,4 +202,89 @@ func parseUpdateQuery(query string) (appQName istructs.AppQName, wsidOrPartition
 	}
 
 	return appQName, wsidOrPartitionID, qNameToUpdate, offsetOrID, updateKind, cleanSql, nil
+}
+
+func sqlValToInterface(sqlVal *sqlparser.SQLVal) (val interface{}, err error) {
+	switch sqlVal.Type {
+	case sqlparser.StrVal:
+		return string(sqlVal.Val), nil
+	case sqlparser.IntVal, sqlparser.FloatVal:
+		if val, err = strconv.ParseFloat(string(sqlVal.Val), bitSize64); err != nil {
+			// notest
+			return nil, err
+		}
+		return val, nil
+	case sqlparser.HexNum:
+		return sqlVal.Val, nil
+	default:
+		buf := sqlparser.NewTrackedBuffer(nil)
+		sqlVal.Format(buf)
+		return nil, fmt.Errorf("unsupported sql value: %s, type %d", buf.String(), sqlVal.Type)
+	}
+}
+
+func checkFieldsUpdateAllowed(fieldsToUpdate map[string]interface{}) error {
+	for name := range fieldsToUpdate {
+		if updateDeniedFields[name] {
+			return fmt.Errorf("field %s can not be updated", name)
+		}
+	}
+	return nil
+}
+
+func fillWhere(expr sqlparser.Expr, fields map[string]interface{}) error {
+	switch cond := expr.(type) {
+	case *sqlparser.AndExpr:
+		if err := fillWhere(cond.Left, fields); err != nil {
+			return err
+		}
+		return fillWhere(cond.Right, fields)
+	case *sqlparser.ComparisonExpr:
+		if cond.Operator != sqlparser.EqualStr {
+			return errWrongWhereForView
+		}
+		viewKeyColName, ok := cond.Left.(*sqlparser.ColName)
+		if !ok {
+			return errWrongWhereForView
+		}
+		fieldName := viewKeyColName.Name.String()
+		viewKeySQLVal, ok := cond.Right.(*sqlparser.SQLVal)
+		if !ok {
+			return errWrongWhereForView
+		}
+		fieldValue, err := sqlValToInterface(viewKeySQLVal)
+		if err != nil {
+			// notest
+			return err
+		}
+		if _, ok := fields[fieldName]; ok {
+			return fmt.Errorf("key field %s is specified twice", fieldName)
+		}
+		fields[fieldName] = fieldValue
+		return nil
+	default:
+		return errWrongWhereForView
+	}
+}
+
+func getSets(exprs sqlparser.UpdateExprs) (map[string]interface{}, error) {
+	res := map[string]interface{}{}
+	for _, expr := range exprs {
+		var val interface{}
+		sqlVal := expr.Expr.(*sqlparser.SQLVal)
+		val, err := sqlValToInterface(sqlVal)
+		if err != nil {
+			// notest
+			return nil, err
+		}
+		name := expr.Name.Name.String()
+		if len(expr.Name.Qualifier.Name.String()) > 0 {
+			name = expr.Name.Qualifier.Name.String() + "." + name
+		}
+		if _, ok := res[name]; ok {
+			return nil, fmt.Errorf("field %s specified twice", name)
+		}
+		res[name] = val
+	}
+	return res, nil
 }

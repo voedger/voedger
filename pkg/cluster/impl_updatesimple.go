@@ -10,75 +10,40 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/blastrain/vitess-sqlparser/sqlparser"
-	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/itokens"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 	"github.com/voedger/voedger/pkg/utils/federation"
 )
 
-func updateSimple(federation federation.IFederation, itokens itokens.ITokens, appQName istructs.AppQName, wsid istructs.WSID, query string, idToUpdate istructs.RecordID) error {
-	stmt, err := sqlparser.Parse(query)
-	if err != nil {
-		return err
-	}
-	u := stmt.(*sqlparser.Update)
-
-	fieldsToUpdate, err := getFieldsToUpdate(u.Exprs)
+func updateSimple(update update, federation federation.IFederation, itokens itokens.ITokens) error {
+	jsonFields, err := json.Marshal(update.setFields)
 	if err != nil {
 		// notest
 		return err
 	}
-	if err := checkFieldsUpdateAllowed(fieldsToUpdate); err != nil {
-		return err
-	}
-	if u.Where != nil {
-		return errors.New("where clause is not allowed for update")
-	}
-	jsonFields, err := json.Marshal(fieldsToUpdate)
+	cudBody := fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":%s}]}`, update.id, jsonFields)
+	sysToken, err := payloads.GetSystemPrincipalToken(itokens, update.appQName)
 	if err != nil {
 		// notest
 		return err
 	}
-	cudBody := fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":%s}]}`, idToUpdate, jsonFields)
-	sysToken, err := payloads.GetSystemPrincipalToken(itokens, appQName)
-	if err != nil {
-		// notest
-		return err
-	}
-	_, err = federation.Func(fmt.Sprintf("api/%s/%d/c.sys.CUD", appQName, wsid), cudBody,
+	_, err = federation.Func(fmt.Sprintf("api/%s/%d/c.sys.CUD", update.appQName, update.wsid), cudBody,
 		coreutils.WithAuthorizeBy(sysToken),
 		coreutils.WithDiscardResponse(),
 	)
 	return err
 }
 
-func getFieldsToUpdate(exprs sqlparser.UpdateExprs) (map[string]interface{}, error) {
-	res := map[string]interface{}{}
-	for _, expr := range exprs {
-		var val interface{}
-		sqlVal := expr.Expr.(*sqlparser.SQLVal)
-		val, err := sqlValToInterface(sqlVal)
-		if err != nil {
-			// notest
-			return nil, err
-		}
-		name := expr.Name.Name.String()
-		if len(expr.Name.Qualifier.Name.String()) > 0 {
-			name = expr.Name.Qualifier.Name.String() + "." + name
-		}
-		if _, ok := res[name]; ok {
-			return nil, fmt.Errorf("field %s specified twice", name)
-		}
-		res[name] = val
+func validateQuery_Simple(update update) error {
+	if update.id == 0 {
+		return errors.New("record ID is not provided")
 	}
-	return res, nil
-}
-
-func validateQuery_Simple(sql string) error {
-	if len(sql) == 0 {
-		return errors.New("empty query")
+	if len(update.key) > 0 {
+		return errors.New("conditions are not allowed on update")
+	}
+	if len(update.setFields) == 0 {
+		return errors.New("no fields to update")
 	}
 	return nil
 }
