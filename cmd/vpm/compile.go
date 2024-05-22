@@ -53,7 +53,7 @@ func prepareParams(cmd *cobra.Command, params *vpmParams, args []string) (err er
 	if len(args) > 0 {
 		switch {
 		case strings.Contains(cmd.Use, "init"):
-			params.PackagePath = args[0]
+			params.ModulePath = args[0]
 		case strings.Contains(cmd.Use, "baseline") || strings.Contains(cmd.Use, "compat"):
 			params.TargetDir = filepath.Clean(args[0])
 		}

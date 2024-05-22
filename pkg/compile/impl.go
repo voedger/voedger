@@ -272,7 +272,7 @@ func loadPackages(dir string, notFoundDeps map[string]struct{}) (*loadedPackages
 		}, nil
 	}
 	notFoundDeps[dir] = struct{}{}
-	return nil, fmt.Errorf("cannot find module path for %s", dir)
+	return nil, fmt.Errorf("%s: cannot find module path", dir)
 }
 
 func allImportedPackages(initialPkgs []*packages.Package) (importedPkgs map[string]*packages.Package) {
@@ -321,7 +321,7 @@ func localPath(loadedPkgs *loadedPackages, depURL string, notFoundDeps map[strin
 		return path, nil
 	}
 	notFoundDeps[depURL] = struct{}{}
-	return "", fmt.Errorf("cannot find module for path %s", depURL)
+	return "", fmt.Errorf("%s: cannot find dependency", depURL)
 }
 
 func getLocalPathOfTheDep(pkgs []*packages.Package, depURL string) string {

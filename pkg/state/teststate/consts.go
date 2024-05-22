@@ -5,7 +5,6 @@
 package teststate
 
 import (
-	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
@@ -23,4 +22,3 @@ const (
 var IntentsLimit = 10
 var BundlesLimit = 10
 var AppQName_test = istructs.NewAppQName("test", "app")
-var newWorkspaceCmd = appdef.NewQName("sys", "NewWorkspace")
