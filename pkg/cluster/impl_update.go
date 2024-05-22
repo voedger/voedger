@@ -26,7 +26,7 @@ func provideExecCmdVSqlUpdate(federation federation.IFederation, itokens itokens
 	asp istructs.IAppStructsProvider) istructsmem.ExecCommandClosure {
 	return func(args istructs.ExecCommandArgs) (err error) {
 		query := args.ArgumentObject.AsString(field_Query)
-		update, err := parseAndValidateUpdate(args, query, asp)
+		update, err := parseAndValidateQuery(args, query, asp)
 		if err != nil {
 			return coreutils.NewHTTPError(http.StatusBadRequest, err)
 		}
@@ -36,15 +36,15 @@ func provideExecCmdVSqlUpdate(federation federation.IFederation, itokens itokens
 			err = updateSimple(update, federation, itokens)
 		case updateKind_Corrupted:
 			err = updateCorrupted(update, istructs.UnixMilli(timeFunc().UnixMilli()))
-		case updateKind_Direct:
+		case updateKind_DirectUpdate, updateKind_DirectInsert:
 			err = updateDirect(update)
 		}
 		return coreutils.WrapSysError(err, http.StatusBadRequest)
 	}
 }
 
-func parseAndValidateUpdate(args istructs.ExecCommandArgs, query string, asp istructs.IAppStructsProvider) (update update, err error) {
-	appQName, wsidOrPartitionID, qNameToUpdate, offsetOrID, updateKind, cleanSql, err := parseUpdateQuery(query)
+func parseAndValidateQuery(args istructs.ExecCommandArgs, query string, asp istructs.IAppStructsProvider) (update update, err error) {
+	appQName, wsidOrPartitionID, qNameToUpdate, offsetOrID, updateKind, cleanSql, err := parseQuery(query)
 	update.kind = updateKind
 	update.appQName = appQName
 	update.qName = qNameToUpdate
@@ -101,7 +101,7 @@ func parseAndValidateUpdate(args istructs.ExecCommandArgs, query string, asp ist
 	}
 
 	switch update.kind {
-	case updateKind_Simple, updateKind_Direct:
+	case updateKind_Simple, updateKind_DirectUpdate, updateKind_DirectInsert:
 		update.wsid = istructs.WSID(wsidOrPartitionID)
 		update.id = istructs.RecordID(offsetOrID)
 	case updateKind_Corrupted:
@@ -123,7 +123,7 @@ func validateQuery(update update) error {
 		return validateQuery_Simple(update)
 	case updateKind_Corrupted:
 		return validateQuery_Corrupted(update)
-	case updateKind_Direct:
+	case updateKind_DirectUpdate, updateKind_DirectInsert:
 		return validateQuery_Direct(update)
 	default:
 		// notest: checked already on sql parse
@@ -131,7 +131,7 @@ func validateQuery(update update) error {
 	}
 }
 
-func parseUpdateQuery(query string) (appQName istructs.AppQName, wsidOrPartitionID istructs.IDType, qNameToUpdate appdef.QName, offsetOrID istructs.IDType,
+func parseQuery(query string) (appQName istructs.AppQName, wsidOrPartitionID istructs.IDType, qNameToUpdate appdef.QName, offsetOrID istructs.IDType,
 	updateKind updateKind, cleanSql string, err error) {
 	const (
 		// 0 is original query
@@ -171,10 +171,11 @@ func parseUpdateQuery(query string) (appQName istructs.AppQName, wsidOrPartition
 		wsidOrPartitionID = istructs.IDType(wsID)
 	}
 
-	logViewQNameStr := parts[qNameToUpdateIdx]
-	qNameToUpdate, err = appdef.ParseQName(logViewQNameStr)
+	qNameToUpdateStr := parts[qNameToUpdateIdx]
+	qNameToUpdate, err = appdef.ParseQName(qNameToUpdateStr)
 	if err != nil {
-		return istructs.NullAppQName, 0, appdef.NullQName, 0, updateKind_Null, "", fmt.Errorf("invalid log view QName %s: %w", logViewQNameStr, err)
+		// notest: avoided already by regexp
+		return istructs.NullAppQName, 0, appdef.NullQName, 0, updateKind_Null, "", fmt.Errorf("invalid QName %s: %w", qNameToUpdateStr, err)
 	}
 
 	if offsetStr := parts[offsetOrIDIdx]; len(offsetStr) > 0 {
@@ -194,9 +195,11 @@ func parseUpdateQuery(query string) (appQName istructs.AppQName, wsidOrPartition
 	case "update":
 		updateKind = updateKind_Simple
 	case "direct update":
-		updateKind = updateKind_Direct
+		updateKind = updateKind_DirectUpdate
 	case "update corrupted":
 		updateKind = updateKind_Corrupted
+	case "direct insert":
+		updateKind = updateKind_DirectInsert
 	default:
 		return istructs.NullAppQName, 0, appdef.NullQName, 0, updateKind_Null, "", fmt.Errorf("wrong update kind %s", updateKindStr)
 	}

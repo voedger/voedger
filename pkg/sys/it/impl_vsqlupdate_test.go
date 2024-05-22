@@ -81,7 +81,7 @@ func TestVSqlUpdate_BasicUsage_Corrupted(t *testing.T) {
 	// TODO: test record not found, wrong field to set etc
 }
 
-func TestVSqlUpdate_BasicUsage_Direct_View(t *testing.T) {
+func TestVSqlUpdate_BasicUsage_DirectUpdate_View(t *testing.T) {
 	require := require.New(t)
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
@@ -117,8 +117,8 @@ func TestVSqlUpdate_BasicUsage_Direct_View(t *testing.T) {
 		m = map[string]interface{}{}
 		require.NoError(json.Unmarshal([]byte(res), &m))
 		require.Equal(map[string]interface{}{
-			"Dummy":     float64(1),  // key
-			"IntFld":    float64(43), // key
+			"Dummy":     float64(1),  // key (hardcoded by the projector)
+			"IntFld":    float64(43), // key (hardcoded by the projector)
 			"Name":      newName,     // new value
 			"Val":       float64(42), // old value (hardcoded by the projector)
 			"sys.QName": "app1pkg.CategoryIdx",
@@ -150,7 +150,7 @@ func TestVSqlUpdate_BasicUsage_Direct_View(t *testing.T) {
 	})
 }
 
-func TestVSqlUpdate_Direct_Record(t *testing.T) {
+func TestVSqlUpdate_BasicUsage_DirectUpdate_Record(t *testing.T) {
 	require := require.New(t)
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
@@ -201,6 +201,64 @@ func TestVSqlUpdate_Direct_Record(t *testing.T) {
 		vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppWSID, "c.cluster.VSqlUpdate", body,
 			coreutils.WithAuthorizeBy(sysPrn.Token),
 			coreutils.Expect400("unknownField", "is not found"),
+		)
+	})
+}
+
+func TestVSqlUpdate_BasicUsage_DirectInsert(t *testing.T) {
+	require := require.New(t)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
+
+	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+	sysPrn := vit.GetSystemPrincipal(istructs.AppQName_sys_cluster)
+
+	t.Run("basic", func(t *testing.T) {
+		intFld := 43 + vit.NextNumber()
+
+		// check if there is not view record
+		body := fmt.Sprintf(`{"args":{"Query":"select * from app1pkg.CategoryIdx where IntFld = %d and Dummy = 1"}, "elements":[{"fields":["Result"]}]}`, intFld)
+		resp := vit.PostWS(ws, "q.sys.SqlQuery", body)
+		require.True(resp.IsEmpty())
+
+		// direct insert a view record
+		newName := vit.NextName()
+		body = fmt.Sprintf(`{"args": {"Query":"direct insert test1.app1.%d.app1pkg.CategoryIdx set Name = '%s', Val = 123, IntFld = %d, Dummy = 1"}}`, ws.WSID, newName, intFld)
+		vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppWSID, "c.cluster.VSqlUpdate", body, coreutils.WithAuthorizeBy(sysPrn.Token))
+
+		// check view values
+		body = fmt.Sprintf(`{"args":{"Query":"select * from app1pkg.CategoryIdx where IntFld = %d and Dummy = 1"}, "elements":[{"fields":["Result"]}]}`, intFld)
+		resp = vit.PostWS(ws, "q.sys.SqlQuery", body)
+		res := resp.SectionRow()[0].(string)
+		m := map[string]interface{}{}
+		require.NoError(json.Unmarshal([]byte(res), &m))
+		require.Equal(map[string]interface{}{
+			"Dummy":     float64(1),
+			"IntFld":    float64(intFld),
+			"Name":      newName,
+			"Val":       float64(123),
+			"sys.QName": "app1pkg.CategoryIdx",
+		}, m)
+	})
+
+	t.Run("not full key proivded -> error", func(t *testing.T) {
+		body := fmt.Sprintf(`{"args": {"Query":"direct insert test1.app1.%d.app1pkg.CategoryIdx set Name = 'abc', Val = 123, IntFld = 1"}}`, ws.WSID)
+		vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppWSID, "c.cluster.VSqlUpdate", body,
+			coreutils.WithAuthorizeBy(sysPrn.Token),
+			coreutils.Expect400("Dummy", "is empty"),
+		)
+	})
+
+	t.Run("exist already by the key -> error 409 conflict", func(t *testing.T) {
+		// insert new
+		intFld := 43 + vit.NextNumber()
+		body := fmt.Sprintf(`{"args": {"Query":"direct insert test1.app1.%d.app1pkg.CategoryIdx set Name = 'abc', Val = 123, IntFld = %d, Dummy = 1"}}`, ws.WSID, intFld)
+		vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppWSID, "c.cluster.VSqlUpdate", body, coreutils.WithAuthorizeBy(sysPrn.Token))
+
+		// insert the same again -> 409 conflict
+		vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppWSID, "c.cluster.VSqlUpdate", body,
+			coreutils.WithAuthorizeBy(sysPrn.Token),
+			coreutils.Expect409("view record already exists"),
 		)
 	})
 }

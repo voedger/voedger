@@ -47,11 +47,10 @@ var (
 	}
 )
 
-type updateKind int
-
 const (
 	updateKind_Null updateKind = iota
 	updateKind_Corrupted
-	updateKind_Direct
+	updateKind_DirectUpdate
 	updateKind_Simple
+	updateKind_DirectInsert
 )

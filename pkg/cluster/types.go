@@ -26,3 +26,5 @@ type update struct {
 	appParts      appparts.IAppPartitions
 	qNameTypeKind appdef.TypeKind
 }
+
+type updateKind int
