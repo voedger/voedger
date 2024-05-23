@@ -4,7 +4,7 @@
 
 set -euo pipefail
 
-set +x
+set -x
 
 readonly signalFilePath="$HOME/ctool/.voedgerbackup"
 
