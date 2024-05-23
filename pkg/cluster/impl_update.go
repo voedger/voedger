@@ -44,7 +44,7 @@ func provideExecCmdVSqlUpdate(federation federation.IFederation, itokens itokens
 }
 
 func parseAndValidateQuery(args istructs.ExecCommandArgs, query string, asp istructs.IAppStructsProvider) (update update, err error) {
-	appQName, wsidOrPartitionID, qNameToUpdate, offsetOrID, updateKind, cleanSql, err := parseQuery(query)
+	appQName, location, qNameToUpdate, offsetOrID, updateKind, cleanSql, err := parseQuery(query)
 	if err != nil {
 		return update, err
 	}
@@ -56,10 +56,22 @@ func parseAndValidateQuery(args istructs.ExecCommandArgs, query string, asp istr
 		AppPartitions() appparts.IAppPartitions
 	}).AppPartitions()
 
-	update.appStructs, err = asp.AppStructs(appQName)
-	if err != nil {
-		// test here
+	if update.appStructs, err = asp.AppStructs(appQName); err != nil {
+		// notest
 		return update, err
+	}
+
+	var wsidOrPartitionID istructs.IDType
+	switch {
+	case location.number > 0:
+		wsidOrPartitionID = istructs.IDType(location.number)
+	case location.appWSNum > 0:
+		wsidOrPartitionID = istructs.IDType(istructs.NewWSID(istructs.MainClusterID, istructs.FirstBaseAppWSID+istructs.WSID(location.appWSNum)))
+	case len(location.login) > 0:
+		pseudoWSID := coreutils.GetPseudoWSID(istructs.NullWSID, location.login, istructs.MainClusterID)
+		wsidOrPartitionID = istructs.IDType(coreutils.GetAppWSID(pseudoWSID, update.appStructs.NumAppWorkspaces()))
+	default:
+		// TODO: not update -> error, but allow for select
 	}
 
 	if updateKind != updateKind_Corrupted {
@@ -126,14 +138,26 @@ func validateQuery(update update) error {
 	}
 }
 
-func parseQuery(query string) (appQName istructs.AppQName, wsidOrPartitionID istructs.IDType, qNameToUpdate appdef.QName, offsetOrID istructs.IDType,
+// `123` or `a1` or `login`
+// only one of the fields is not zero-value
+type location struct {
+	number   uint64
+	appWSNum uint64
+	login    string
+}
+
+// appStructs could be nil
+func parseQuery(query string) (appQName istructs.AppQName, location location, qNameToUpdate appdef.QName, offsetOrID istructs.IDType,
 	updateKind updateKind, cleanSql string, err error) {
 	const (
 		// 0 is original query
 
 		operationIdx int = 1 + iota
 		appIdx
-		wsidOrPartnoIdx
+		locationIdx
+		wsidOrPartitionIDIdx
+		appWSNumIdx
+		loginIdx
 		qNameToUpdateIdx
 		offsetOrIDIdx
 		parsIdx
@@ -143,7 +167,7 @@ func parseQuery(query string) (appQName istructs.AppQName, wsidOrPartitionID ist
 
 	parts := updateQueryExp.FindStringSubmatch(query)
 	if len(parts) != groupsCount {
-		return istructs.NullAppQName, 0, appdef.NullQName, 0, updateKind_Null, "", fmt.Errorf("invalid query format: %s", query)
+		return istructs.NullAppQName, location, appdef.NullQName, 0, updateKind_Null, "", fmt.Errorf("invalid query format: %s", query)
 	}
 
 	if appName := parts[appIdx]; appName != "" {
@@ -151,33 +175,32 @@ func parseQuery(query string) (appQName istructs.AppQName, wsidOrPartitionID ist
 		owner, app, err := appdef.ParseQualifiedName(appName, `.`)
 		if err != nil {
 			// notest: avoided already by regexp
-			return istructs.NullAppQName, 0, appdef.NullQName, 0, updateKind_Null, "", err
+			return istructs.NullAppQName, location, appdef.NullQName, 0, updateKind_Null, "", err
 		}
 		appQName = istructs.NewAppQName(owner, app)
 	}
 
-	if wsIDStr := parts[wsidOrPartnoIdx]; wsIDStr != "" {
-		wsIDStr = wsIDStr[:len(parts[wsidOrPartnoIdx])-1]
-		wsID, err := strconv.ParseUint(wsIDStr, 0, 0)
+	if locationStr := parts[locationIdx]; locationStr != "" {
+		locationStr = locationStr[:len(parts[locationIdx])-1]
+		location, err = parseLocation(locationStr)
 		if err != nil {
 			// notest: avoided already by regexp
-			return istructs.NullAppQName, 0, appdef.NullQName, 0, updateKind_Null, "", err
+			return istructs.NullAppQName, location, appdef.NullQName, 0, updateKind_Null, "", err
 		}
-		wsidOrPartitionID = istructs.IDType(wsID)
 	}
 
 	qNameToUpdateStr := parts[qNameToUpdateIdx]
 	qNameToUpdate, err = appdef.ParseQName(qNameToUpdateStr)
 	if err != nil {
 		// notest: avoided already by regexp
-		return istructs.NullAppQName, 0, appdef.NullQName, 0, updateKind_Null, "", fmt.Errorf("invalid QName %s: %w", qNameToUpdateStr, err)
+		return istructs.NullAppQName, location, appdef.NullQName, 0, updateKind_Null, "", fmt.Errorf("invalid QName %s: %w", qNameToUpdateStr, err)
 	}
 
 	if offsetStr := parts[offsetOrIDIdx]; len(offsetStr) > 0 {
 		offsetStr = offsetStr[1:]
 		offsetInt, err := strconv.Atoi(offsetStr)
 		if err != nil {
-			return istructs.NullAppQName, 0, appdef.NullQName, 0, updateKind_Null, "", err
+			return istructs.NullAppQName, location, appdef.NullQName, 0, updateKind_Null, "", err
 		}
 		offsetOrID = istructs.IDType(offsetInt)
 	}
@@ -196,10 +219,23 @@ func parseQuery(query string) (appQName istructs.AppQName, wsidOrPartitionID ist
 	case "direct insert":
 		updateKind = updateKind_DirectInsert
 	default:
-		return istructs.NullAppQName, 0, appdef.NullQName, 0, updateKind_Null, "", fmt.Errorf("wrong update kind %s", updateKindStr)
+		return istructs.NullAppQName, location, appdef.NullQName, 0, updateKind_Null, "", fmt.Errorf("wrong update kind %s", updateKindStr)
 	}
 
-	return appQName, wsidOrPartitionID, qNameToUpdate, offsetOrID, updateKind, cleanSql, nil
+	return appQName, location, qNameToUpdate, offsetOrID, updateKind, cleanSql, nil
+}
+
+func parseLocation(locationStr string) (location location, err error) {
+	switch locationStr[:1] {
+	case "a":
+		appWSNumStr := locationStr[1:]
+		location.appWSNum, err = strconv.ParseUint(appWSNumStr, 0, 0)
+	case `"`:
+		location.login = locationStr[1 : len(locationStr)-1]
+	default:
+		location.number, err = strconv.ParseUint(locationStr, 0, 0)
+	}
+	return location, err
 }
 
 func sqlValToInterface(sqlVal *sqlparser.SQLVal) (val interface{}, err error) {

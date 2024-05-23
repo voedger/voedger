@@ -246,18 +246,17 @@ func TestVSqlUpdate_BasicUsage_DirectInsert(t *testing.T) {
 		intFld := 43 + vit.NextNumber()
 
 		// check if there is not view record
-		body := fmt.Sprintf(`{"args":{"Query":"select * from app1pkg.CategoryIdx where IntFld = %d and Dummy = 1"}, "elements":[{"fields":["Result"]}]}`, intFld)
-		resp := vit.PostWS(ws, "q.sys.SqlQuery", body)
+		bodySelect := fmt.Sprintf(`{"args":{"Query":"select * from app1pkg.CategoryIdx where IntFld = %d and Dummy = 1"}, "elements":[{"fields":["Result"]}]}`, intFld)
+		resp := vit.PostWS(ws, "q.sys.SqlQuery", bodySelect)
 		require.True(resp.IsEmpty())
 
 		// direct insert a view record
 		newName := vit.NextName()
-		body = fmt.Sprintf(`{"args": {"Query":"direct insert test1.app1.%d.app1pkg.CategoryIdx set Name = '%s', Val = 123, IntFld = %d, Dummy = 1"}}`, ws.WSID, newName, intFld)
+		body := fmt.Sprintf(`{"args": {"Query":"direct insert test1.app1.%d.app1pkg.CategoryIdx set Name = '%s', Val = 123, IntFld = %d, Dummy = 1"}}`, ws.WSID, newName, intFld)
 		vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppWSID, "c.cluster.VSqlUpdate", body, coreutils.WithAuthorizeBy(sysPrn.Token))
 
 		// check view values
-		body = fmt.Sprintf(`{"args":{"Query":"select * from app1pkg.CategoryIdx where IntFld = %d and Dummy = 1"}, "elements":[{"fields":["Result"]}]}`, intFld)
-		resp = vit.PostWS(ws, "q.sys.SqlQuery", body)
+		resp = vit.PostWS(ws, "q.sys.SqlQuery", bodySelect)
 		res := resp.SectionRow()[0].(string)
 		m := map[string]interface{}{}
 		require.NoError(json.Unmarshal([]byte(res), &m))
@@ -335,7 +334,7 @@ func TestVSqlUpdateValidateErrors(t *testing.T) {
 		"direct update test1.app1.1.app1pkg.category.1 set a = 2 where b = 3":           "'where' clause is not allowed on record direct update",
 
 		// direct insert
-		"direct insert test1.app1.1.app1pkg.CategoryIdx set Val = 44, Name = 'x' where a = 1": "'where clause is not allowed on view direct insert",
+		"direct insert test1.app1.1.app1pkg.CategoryIdx set Val = 44, Name = 'x' where a = 1": "'where' clause is not allowed on view direct insert",
 		"direct insert test1.app1.1.app1pkg.category set Val = 44, Name = 'x'":                "direct insert is not allowed for records",
 	}
 	sysPrn := vit.GetSystemPrincipal(istructs.AppQName_sys_cluster)

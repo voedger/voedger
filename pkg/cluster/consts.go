@@ -26,7 +26,7 @@ const (
 	updateQueryExpression  = `^` +
 		`(?P<operation>\s*.+\s+)` + // update, direct update etc
 		`(?P<appOwnerAppName>\w+\.\w+\.)` +
-		`(?P<wsidOrPartno>\d+\.)` +
+		`((?P<wsidOrPartno>\d+\.)|(?P<appWSNum>a\d+.)|(?P<login>".+"\.))` +
 		`(?P<qNameToUpdate>\w+\.\w+)` +
 		`(?P<idOrOffset>\.\d+)?` +
 		`(?P<pars>\s+.*)?` +
@@ -36,12 +36,11 @@ const (
 )
 
 var (
-	QNameViewDeployedApps = appdef.NewQName(ClusterPackage, "DeployedApps")
-	qNameWDocApp          = appdef.NewQName(ClusterPackage, "App")
-	updateQueryExp        = regexp.MustCompile(updateQueryExpression)
-	plog                  = appdef.NewQName(appdef.SysPackage, "PLog")
-	wlog                  = appdef.NewQName(appdef.SysPackage, "WLog")
-	updateDeniedFields    = map[string]bool{
+	qNameWDocApp       = appdef.NewQName(ClusterPackage, "App")
+	updateQueryExp     = regexp.MustCompile(updateQueryExpression)
+	plog               = appdef.NewQName(appdef.SysPackage, "PLog")
+	wlog               = appdef.NewQName(appdef.SysPackage, "WLog")
+	updateDeniedFields = map[string]bool{
 		appdef.SystemField_ID:    true,
 		appdef.SystemField_QName: true,
 	}
