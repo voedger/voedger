@@ -22,29 +22,14 @@ func updateDirect(update update) error {
 	return updateDirect_Record(update)
 }
 
-func updateDirect_Record(update update) error {
-	existingRec, err := update.appStructs.Records().Get(update.wsid, true, update.id)
-	if err != nil {
-		// notest
-		return err
-	}
-	if existingRec.QName() == appdef.NullQName {
-		return fmt.Errorf("record ID %d does not exist", update.id)
-	}
-	existingFields := coreutils.FieldsToMap(existingRec, update.appStructs.AppDef(), coreutils.WithNonNilsOnly())
-	mergedFields := coreutils.MergeMapsMakeFloats64(existingFields, update.setFields)
-	return update.appStructs.Records().PutJSON(update.wsid, mergedFields)
-}
-
 func updateDirect_View(update update) (err error) {
 	kb := update.appStructs.ViewRecords().KeyBuilder(update.qName)
 	if update.kind == updateKind_DirectInsert {
 		kb.PutFromJSON(update.setFields)
 	} else {
-		err = coreutils.MapToObject(update.key, kb)
-	}
-	if err != nil {
-		return err
+		if err = coreutils.MapToObject(update.key, kb); err != nil {
+			return err
+		}
 	}
 
 	existingViewRec, err := update.appStructs.ViewRecords().Get(update.wsid, kb)
@@ -68,6 +53,20 @@ func updateDirect_View(update update) (err error) {
 	return update.appStructs.ViewRecords().PutJSON(update.wsid, mergedFields)
 }
 
+func updateDirect_Record(update update) error {
+	existingRec, err := update.appStructs.Records().Get(update.wsid, true, update.id)
+	if err != nil {
+		// notest
+		return err
+	}
+	if existingRec.QName() == appdef.NullQName {
+		return fmt.Errorf("record ID %d does not exist", update.id)
+	}
+	existingFields := coreutils.FieldsToMap(existingRec, update.appStructs.AppDef(), coreutils.WithNonNilsOnly())
+	mergedFields := coreutils.MergeMapsMakeFloats64(existingFields, update.setFields)
+	return update.appStructs.Records().PutJSON(update.wsid, mergedFields)
+}
+
 func validateQuery_Direct(update update) error {
 	op := "update"
 	if update.kind == updateKind_DirectInsert {
@@ -87,7 +86,7 @@ func validateQuery_Direct(update update) error {
 		}
 		if update.kind == updateKind_DirectInsert {
 			if len(update.key) > 0 {
-				return errors.New("'where clause is not allowed on view direct insert")
+				return errors.New("'where' clause is not allowed on view direct insert")
 			}
 		} else {
 			if len(update.key) == 0 {

@@ -81,8 +81,6 @@ func parseAndValidateQuery(args istructs.ExecCommandArgs, query string, asp istr
 			if update.setFields, err = getSets(u.Exprs); err != nil {
 				return update, err
 			}
-		} else {
-			return update, errors.New("no fields to update")
 		}
 
 		if u.Where != nil {
@@ -247,7 +245,7 @@ func fillWhere(expr sqlparser.Expr, fields map[string]interface{}) error {
 		if !ok {
 			return errWrongWhereForView
 		}
-		fieldName := viewKeyColName.Name.String()
+		fieldName := colNameToQualifiedName(viewKeyColName)
 		viewKeySQLVal, ok := cond.Right.(*sqlparser.SQLVal)
 		if !ok {
 			return errWrongWhereForView
@@ -267,20 +265,27 @@ func fillWhere(expr sqlparser.Expr, fields map[string]interface{}) error {
 	}
 }
 
+func colNameToQualifiedName(colName *sqlparser.ColName) string {
+	if len(colName.Qualifier.Name.String()) > 0 {
+		return colName.Qualifier.Name.String() + "." + colName.Name.String()
+	}
+	return colName.Name.String()
+}
+
 func getSets(exprs sqlparser.UpdateExprs) (map[string]interface{}, error) {
 	res := map[string]interface{}{}
 	for _, expr := range exprs {
 		var val interface{}
-		sqlVal := expr.Expr.(*sqlparser.SQLVal)
+		sqlVal, ok := expr.Expr.(*sqlparser.SQLVal)
+		if !ok {
+			return nil, errors.New("scalar values are only supported")
+		}
 		val, err := sqlValToInterface(sqlVal)
 		if err != nil {
 			// notest
 			return nil, err
 		}
-		name := expr.Name.Name.String()
-		if len(expr.Name.Qualifier.Name.String()) > 0 {
-			name = expr.Name.Qualifier.Name.String() + "." + name
-		}
+		name := colNameToQualifiedName(expr.Name)
 		if _, ok := res[name]; ok {
 			return nil, fmt.Errorf("field %s specified twice", name)
 		}
