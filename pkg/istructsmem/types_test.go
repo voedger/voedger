@@ -9,11 +9,11 @@ import (
 	"bytes"
 	"encoding/base64"
 	"encoding/binary"
+	"errors"
 	"testing"
 
-	"github.com/stretchr/testify/require"
-
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/goutils/testingu/require"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/qnames"
 )
@@ -886,5 +886,46 @@ func Test_rowType_String(t *testing.T) {
 		s := r.String()
 		require.Contains(s, "CDoc")
 		require.Contains(s, "«test.CDoc»")
+	})
+}
+
+func Test_BuildRow(t *testing.T) {
+
+	require := require.New(t)
+
+	t.Run("Should be ok to BuildRow implemented by local rowType", func(t *testing.T) {
+		w := newTestRow()
+
+		r, err := istructs.BuildRow(w)
+		require.NoError(err)
+
+		testTestRow(t, r)
+	})
+
+	t.Run("Should be error to BuildRow with errors", func(t *testing.T) {
+		w := newEmptyTestRow()
+		w.PutBool("unknownField", true)
+
+		r, err := istructs.BuildRow(w)
+		require.ErrorWith(err,
+			require.Is(ErrNameNotFound),
+			require.Has("unknownField"),
+		)
+		require.Nil(r)
+	})
+
+	t.Run("Should be error to BuildRow implemented by unknown", func(t *testing.T) {
+		type unknown struct {
+			istructs.IRowWriter
+		}
+
+		w := &unknown{}
+
+		r, err := istructs.BuildRow(w)
+		require.ErrorWith(err,
+			require.Is(errors.ErrUnsupported),
+			require.Has("istructsmem.unknown"),
+		)
+		require.Nil(r)
 	})
 }
