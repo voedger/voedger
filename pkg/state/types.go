@@ -429,7 +429,7 @@ type jsonValue struct {
 
 func (v *jsonValue) AsInt32(name string) int32 {
 	if v, ok := v.json[name]; ok {
-		return v.(int32)
+		return int32(v.(float64))
 	}
 	panic(errUndefined(name))
 }
