@@ -117,12 +117,35 @@ type NumAppPartitions int
 type NumCommandProcessors int
 type NumQueryProcessors int
 
-// BuildRow obtains a row reader from row writer.
+// RowBuilder is a type for function that creates a row reader from a row writer.
+//
+// Should return errors.ErrUnsupported if the writer is not supported,
+// overwise should build the reader and return it or error.
+type RowBuilder func(IRowWriter) (IRowReader, error)
+
+// BuildRow builds a row reader from row writer.
 //
 // After calling the BuildRow, the writer should not be used,
 // as it can lead to changes in the returned reader.
 //
-// Returns errors.ErrUnsupported if the writer has unknown implementation.
-var BuildRow func(IRowWriter) (IRowReader, error) = func(w IRowWriter) (IRowReader, error) {
+// Returns errors.ErrUnsupported if the writer is not supported by known builders.
+func BuildRow(w IRowWriter) (IRowReader, error) {
+	for _, b := range builders {
+		r, err := b(w)
+		if err == nil {
+			return r, nil
+		}
+		if !errors.Is(err, errors.ErrUnsupported) {
+			return nil, err
+		}
+	}
 	return nil, fmt.Errorf("%w: unknown implementation %#v", errors.ErrUnsupported, w)
 }
+
+// CollectRowBuilder collects all row builders.
+func CollectRowBuilder(b RowBuilder) bool {
+	builders = append(builders, b)
+	return true
+}
+
+var builders []RowBuilder

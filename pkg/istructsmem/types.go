@@ -965,8 +965,6 @@ func (row *rowType) String() string {
 	return fmt.Sprint(row.typ)
 }
 
-var oldBuildRow func(istructs.IRowWriter) (istructs.IRowReader, error) = nil
-
 func buildRow(w istructs.IRowWriter) (istructs.IRowReader, error) {
 	if r, ok := w.(*rowType); ok {
 		err := r.build()
@@ -976,11 +974,7 @@ func buildRow(w istructs.IRowWriter) (istructs.IRowReader, error) {
 		return r, nil
 	}
 
-	return oldBuildRow(w)
+	return nil, errors.ErrUnsupported
 }
 
-//nolint:gochecknoinits // required to avoid cyclic dependencies on istructsmem
-func init() {
-	oldBuildRow = istructs.BuildRow
-	istructs.BuildRow = buildRow
-}
+var _ = istructs.CollectRowBuilder(buildRow)
