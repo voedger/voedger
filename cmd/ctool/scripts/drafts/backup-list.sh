@@ -37,7 +37,7 @@ if [ "${BACKUP_NAMES}" == "" ]; then
     {
       echo "No backups found"
     } > backups.lst
-    exit 1
+    exit 0
 fi
 
 if [ "${OUTPUT_FORMAT}" == "json" ]; then
