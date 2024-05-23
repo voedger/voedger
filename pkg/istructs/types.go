@@ -5,6 +5,9 @@
 package istructs
 
 import (
+	"errors"
+	"fmt"
+
 	"github.com/voedger/voedger/pkg/appdef"
 )
 
@@ -113,3 +116,13 @@ type NumAppWorkspaces int
 type NumAppPartitions int
 type NumCommandProcessors int
 type NumQueryProcessors int
+
+// BuildRow obtains a row reader from row writer.
+//
+// After calling the BuildRow, the writer should not be used,
+// as it can lead to changes in the returned reader.
+//
+// Returns errors.ErrUnsupported if the writer has unknown implementation.
+var BuildRow func(IRowWriter) (IRowReader, error) = func(w IRowWriter) (IRowReader, error) {
+	return nil, fmt.Errorf("%w: unknown implementation %#v", errors.ErrUnsupported, w)
+}
