@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 
 	"github.com/spf13/cobra"
+	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 // nolint
@@ -27,7 +28,7 @@ func newRestoreCmd() *cobra.Command {
 		RunE: restore,
 	}
 
-	if !addSshKeyFlag(restoreCmd) {
+	if newCluster().Edition != clusterEditionCE && !addSshKeyFlag(restoreCmd) {
 		return nil
 	}
 
@@ -53,8 +54,16 @@ func restore(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	if err = restoreDbNodes(cluster, backupName); err != nil {
-		return err
+	if cluster.Edition == clusterEditionCE {
+		if err = resoreCeNode(backupName); err != nil {
+			return err
+		}
+		loggerInfoGreen("CENode restored successfully")
+	} else {
+		if err = restoreDbNodes(cluster, backupName); err != nil {
+			return err
+		}
+		loggerInfoGreen("DB nodes restored successfully")
 	}
 
 	return nil
@@ -72,10 +81,30 @@ func restoreDbNodes(cluster *clusterType, backupName string) error {
 	return nil
 }
 
+func resoreCeNode(backupName string) error {
+
+	if err := newScriptExecuter("", "").
+		run("ce/ce-restore-node.sh", backupName); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func backupExists(cluster *clusterType, backupPath string) error {
 
-	var err error
+	if cluster.Edition == clusterEditionCE {
+		exists, err := coreutils.Exists(backupPath)
+		if err != nil {
+			return err
+		}
+		if !exists {
+			return fmt.Errorf(errBackupNotExistOnHost, backupPath, "CENode", ErrBackupNotExist)
+		}
+		return nil
+	}
 
+	var err error
 	for _, node := range cluster.Nodes {
 		if node.NodeRole != nrDBNode {
 			continue

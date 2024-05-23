@@ -190,7 +190,7 @@ func (n *nodeType) nodeName() string {
 			return "node"
 		}
 	} else if n.cluster.Edition == clusterEditionCE {
-		return "CENode"
+		return "ce-node"
 	} else {
 		return "node"
 	}
@@ -229,8 +229,10 @@ func (n *nodeType) nodeControllerFunction() error {
 }
 
 func (n *nodeType) success() {
-	n.ActualNodeState = newNodeState(n.DesiredNodeState.Address, n.desiredNodeVersion(n.cluster))
-	n.DesiredNodeState.clear()
+	if n.DesiredNodeState != nil {
+		n.ActualNodeState = newNodeState(n.DesiredNodeState.Address, n.desiredNodeVersion(n.cluster))
+		n.DesiredNodeState.clear()
+	}
 	n.Error = ""
 }
 
@@ -845,8 +847,16 @@ func (c *clusterType) setEnv() error {
 	}
 
 	if c.Edition == clusterEditionCE && len(c.Nodes) == 1 {
-		logger.Verbose(fmt.Sprintf(setEnv, envVoedgerHttpPort, ceVoedgerHttpPort))
-		if err := os.Setenv(envVoedgerHttpPort, "80"); err != nil {
+		var port string
+
+		if c.Acme != nil && c.Acme.domains() != "" {
+			port = httpsPort
+		} else {
+			port = httpPort
+		}
+
+		logger.Verbose(fmt.Sprintf(setEnv, envVoedgerHttpPort, port))
+		if err := os.Setenv(envVoedgerHttpPort, port); err != nil {
 			return err
 		}
 
