@@ -16,7 +16,7 @@ func newRepeatCmd() *cobra.Command {
 		RunE:  repeat,
 	}
 
-	if !addSshKeyFlag(repeatCmd) {
+	if newCluster().Edition != clusterEditionCE && !addSshKeyFlag(repeatCmd) {
 		return nil
 	}
 

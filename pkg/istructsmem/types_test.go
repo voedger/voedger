@@ -11,9 +11,8 @@ import (
 	"encoding/binary"
 	"testing"
 
-	"github.com/stretchr/testify/require"
-
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/goutils/testingu/require"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/qnames"
 )

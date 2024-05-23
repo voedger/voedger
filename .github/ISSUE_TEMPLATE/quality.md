@@ -1,6 +1,6 @@
 ---
 name: Quality
-about: Improme system quality
+about: Improve system quality
 title: ''
 labels: kind/quality, todo/triage
 assignees: ''
