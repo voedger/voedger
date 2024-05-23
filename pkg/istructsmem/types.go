@@ -965,7 +965,7 @@ func (row *rowType) String() string {
 	return fmt.Sprint(row.typ)
 }
 
-var oldBuildRow func(w istructs.IRowWriter) (istructs.IRowReader, error) = nil
+var oldBuildRow func(istructs.IRowWriter) (istructs.IRowReader, error) = nil
 
 func buildRow(w istructs.IRowWriter) (istructs.IRowReader, error) {
 	if r, ok := w.(*rowType); ok {
