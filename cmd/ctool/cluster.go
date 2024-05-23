@@ -190,7 +190,7 @@ func (n *nodeType) nodeName() string {
 			return "node"
 		}
 	} else if n.cluster.Edition == clusterEditionCE {
-		return "CENode"
+		return "ce-node"
 	} else {
 		return "node"
 	}

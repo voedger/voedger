@@ -319,16 +319,18 @@ func backupNow(cmd *cobra.Command, args []string) error {
 
 	folder := newBackupFolderName()
 
+	sBackupNode := "BackupNode"
+
 	for _, n := range cluster.Nodes {
 		if n.NodeRole == nrDBNode {
-			loggerInfo("Backup node", n.nodeName(), n.address())
+			loggerInfo(sBackupNode, n.nodeName(), n.address())
 			if err = newScriptExecuter(cluster.sshKey, "").
 				run("backup-node.sh", n.address(), folder); err != nil {
 				return err
 			}
 		}
 		if n.NodeRole == nrCENode {
-			loggerInfo("Backup node", n.nodeName(), n.address())
+			loggerInfo(sBackupNode, n.nodeName(), n.address())
 			if err = newScriptExecuter("", "").
 				run("ce/backup-node.sh", folder); err != nil {
 				return err

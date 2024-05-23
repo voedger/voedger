@@ -74,7 +74,9 @@ func copyCtoolToCeNode(node *nodeType) error {
 	}
 
 	if !ok {
-		node.cluster.saveToJSON()
+		if e := node.cluster.saveToJSON(); err != nil {
+			return e
+		}
 	}
 
 	if err != nil {
