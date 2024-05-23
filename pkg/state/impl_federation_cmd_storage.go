@@ -96,7 +96,7 @@ func (s *federationCommandStorage) Get(key istructs.IStateKeyBuilder) (istructs.
 
 	appOwnerAndName := owner + istructs.AppQNameQualifierChar + appname
 
-	relativeUrl := fmt.Sprintf("api/%s/%d/%s", appOwnerAndName, wsid, command)
+	relativeUrl := fmt.Sprintf("api/%s/%d/c.%s", appOwnerAndName, wsid, command)
 
 	var resStatus int
 	var resBody string
@@ -118,11 +118,13 @@ func (s *federationCommandStorage) Get(key istructs.IStateKeyBuilder) (istructs.
 		resStatus = resp.HTTPResp.StatusCode
 	}
 
-	result := map[string]interface{}{}
-	err = json.Unmarshal([]byte(resBody), &result)
+	res := map[string]interface{}{}
+	err = json.Unmarshal([]byte(resBody), &res)
 	if err != nil {
 		return nil, err
 	}
+
+	result := res["Result"].(map[string]interface{})
 
 	return &fcCmdValue{
 		statusCode: resStatus,

@@ -32,7 +32,7 @@ func TestBasicUsage_FederationCommand(t *testing.T) {
 		kb.PutQName(state.Field_Command, appdef.NewQName("app1pkg", "TestCmd"))
 		kb.PutString(state.Field_Body, `{
 			"args": {
-				"Arg1": 2,
+				"Arg1": 2
 			}
 		}`)
 		v, err := args.State.MustExist(kb)
@@ -40,8 +40,9 @@ func TestBasicUsage_FederationCommand(t *testing.T) {
 			return err
 		}
 
-		result := v.AsInt32("Int")
-		if result != 42 {
+		result := v.AsValue("Result")
+
+		if result.AsInt32("Int") != 42 {
 			return fmt.Errorf("unexpected result: %d", result)
 		}
 		return nil
