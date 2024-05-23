@@ -7,6 +7,7 @@ package teststate
 import (
 	"testing"
 
+	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -18,6 +19,7 @@ type NewRecordsCallback func(cudBuilder istructs.ICUD)
 type ViewValueCallback func(key istructs.IKeyBuilder, value istructs.IValueBuilder)
 type KeyBuilderCallback func(key istructs.IStateKeyBuilder)
 type ValueBuilderCallback func(value istructs.IStateValueBuilder)
+type IntentAssertionsCallback func(require *require.Assertions, value istructs.IStateValue)
 type HttpHandlerFunc func(req HttpRequest) (resp HttpResponse, err error)
 
 type ITestAPI interface {
@@ -43,4 +45,5 @@ type ITestState interface {
 type IIntentAssertions interface {
 	Exists()
 	Equal(vb ValueBuilderCallback)
+	Assert(cb IntentAssertionsCallback)
 }
