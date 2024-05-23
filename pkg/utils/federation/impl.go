@@ -21,7 +21,6 @@ import (
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/istructs"
-	"github.com/voedger/voedger/pkg/sys/blobber"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
@@ -42,10 +41,10 @@ func (f *implIFederation) req(relativeURL string, body string, optFuncs ...coreu
 	return f.httpClient.Req(url, body, optFuncs...)
 }
 
-func (f *implIFederation) UploadBLOBs(appQName istructs.AppQName, wsid istructs.WSID, blobs []blobber.BLOB, optFuncs ...coreutils.ReqOptFunc) (blobIDs []istructs.RecordID, err error) {
+func (f *implIFederation) UploadBLOBs(appQName istructs.AppQName, wsid istructs.WSID, blobs []coreutils.BLOB, optFuncs ...coreutils.ReqOptFunc) (blobIDs []istructs.RecordID, err error) {
 	body := bytes.NewBuffer(nil)
 	w := multipart.NewWriter(body)
-	boundary := "----------------"
+
 	if err := w.SetBoundary(boundary); err != nil {
 		// notest
 		return nil, err
@@ -68,7 +67,7 @@ func (f *implIFederation) UploadBLOBs(appQName istructs.AppQName, wsid istructs.
 	}
 	url := fmt.Sprintf("blob/%s/%d", appQName, wsid)
 	optFuncs = append(optFuncs, coreutils.WithHeaders(coreutils.ContentType,
-		fmt.Sprintf("multipart/form-data; boundary=%s", boundary)))
+		"multipart/form-data; boundary="+boundary))
 	resp, err := f.post(url, body.String(), optFuncs...)
 	if err != nil {
 		return nil, err
@@ -127,7 +126,7 @@ func (f *implIFederation) Func(relativeURL string, body string, optFuncs ...core
 
 func (f *implIFederation) AdminFunc(relativeURL string, body string, optFuncs ...coreutils.ReqOptFunc) (*coreutils.FuncResponse, error) {
 	optFuncs = append(optFuncs, coreutils.WithMethod(http.MethodPost))
-	url := fmt.Sprintf("http://127.0.0.1:%d/api/%s", f.adminPortGetter(), relativeURL)
+	url := fmt.Sprintf("http://127.0.0.1:%d/%s", f.adminPortGetter(), relativeURL)
 	httpResp, err := f.httpClient.Req(url, body, optFuncs...)
 	return f.httpRespToFuncResp(httpResp, err)
 }
@@ -207,7 +206,7 @@ func (f *implIFederation) N10NSubscribe(projectionKey in10n.ProjectionKey) (offs
 		}`, projectionKey.WS, projectionKey.App, projectionKey.Projection, projectionKey.WS)
 	params := url.Values{}
 	params.Add("payload", query)
-	resp, err := f.get(fmt.Sprintf("n10n/channel?%s", params.Encode()), coreutils.WithLongPolling())
+	resp, err := f.get("n10n/channel?"+params.Encode(), coreutils.WithLongPolling())
 	if err != nil {
 		return nil, nil, err
 	}
@@ -265,7 +264,7 @@ func (f *implIFederation) N10NSubscribe(projectionKey in10n.ProjectionKey) (offs
 		`, channelID, projectionKey.App, projectionKey.Projection, projectionKey.WS)
 		params := url.Values{}
 		params.Add("payload", body)
-		_, err := f.get(fmt.Sprintf("n10n/unsubscribe?%s", params.Encode()), coreutils.WithDiscardResponse())
+		_, err := f.get("n10n/unsubscribe?"+params.Encode(), coreutils.WithDiscardResponse())
 		if err != nil {
 			logger.Error("unsubscribe failed", err.Error())
 		}

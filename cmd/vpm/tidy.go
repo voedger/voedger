@@ -6,6 +6,8 @@
 package main
 
 import (
+	"errors"
+	"fmt"
 	"slices"
 	"strings"
 
@@ -21,11 +23,19 @@ func newTidyCmd(params *vpmParams) *cobra.Command {
 		Use:   "tidy",
 		Short: "add missing and remove unused modules",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := checkBeforeCompile(params.Dir); err != nil {
+				return err
+			}
+
 			compileRes, err := compile.Compile(params.Dir)
 			if err != nil {
-				logger.Error(err)
-				logger.Error("failed to compile, will try to exec 'go mod tidy' anyway")
+				logger.Verbose(err)
+				fmt.Println("failed to compile, will try to exec 'go mod tidy' anyway")
 			}
+			if compileRes == nil {
+				return errors.New("failed to compile, check schemas")
+			}
+
 			return tidy(compileRes.NotFoundDeps, compileRes.AppDef, compileRes.ModulePath, params.Dir)
 		},
 	}
@@ -33,13 +43,13 @@ func newTidyCmd(params *vpmParams) *cobra.Command {
 
 }
 
-func tidy(notFoundDeps []string, appDef appdef.IAppDef, packagePath string, dir string) error {
+func tidy(notFoundDeps []string, appDef appdef.IAppDef, modulePath string, dir string) error {
 	// get imports and not found dependencies and try to get them via 'go get'
-	imports := append(getImports(appDef, packagePath), notFoundDeps...)
+	imports := append(getImports(appDef, modulePath), notFoundDeps...)
 	if err := getDependencies(dir, imports); err != nil {
 		return err
 	}
-	if err := createPackagesGen(imports, dir, true); err != nil {
+	if err := createPackagesGen(imports, dir, modulePath, true); err != nil {
 		return err
 	}
 	return execGoModTidy(dir)
@@ -65,6 +75,21 @@ func getDependencies(dir string, imports []string) error {
 				return err
 			}
 		}
+	}
+	return nil
+}
+
+func checkBeforeCompile(dir string) error {
+	if err := checkGoModFileExists(dir); err != nil {
+		return errGoModFileNotFound
+	}
+	// packages_gen.go should be created before compiling
+	exists, err := checkPackageGenFileExists(dir)
+	if err != nil {
+		return err
+	}
+	if !exists {
+		return errors.New("packages_gen.go not found. Run 'vpm init'")
 	}
 	return nil
 }

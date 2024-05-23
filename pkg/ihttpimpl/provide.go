@@ -10,6 +10,7 @@ import (
 	"sync"
 
 	"github.com/voedger/voedger/pkg/ihttp"
+	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istructs"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 	dbcertcache "github.com/voedger/voedger/pkg/vvm/db_cert_cache"
@@ -18,10 +19,11 @@ import (
 
 func NewProcessor(params ihttp.CLIParams, routerStorage ihttp.IRouterStorage) (server ihttp.IHTTPProcessor, cleanup func()) {
 	r := newRouter()
+	routerAppStorage := istorage.IAppStorage(routerStorage)
 	httpProcessor := &httpProcessor{
 		params:      params,
 		router:      r,
-		certCache:   dbcertcache.ProvideDbCache(routerStorage),
+		certCache:   dbcertcache.ProvideDbCache(&routerAppStorage),
 		acmeDomains: &sync.Map{},
 		server: &http.Server{
 			Addr:              coreutils.ServerAddress(params.Port),

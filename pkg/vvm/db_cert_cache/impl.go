@@ -22,7 +22,7 @@ func (ac *autoCertDbCache) Get(ctx context.Context, key string) (data []byte, er
 	if err != nil {
 		return nil, err
 	}
-	ok, err := ac.appStorage.Get(domainKey.Bytes(), nil, &data)
+	ok, err := (*(ac.appStorage)).Get(domainKey.Bytes(), nil, &data)
 	if err != nil {
 		return nil, err
 	}
@@ -38,7 +38,7 @@ func (ac *autoCertDbCache) Put(ctx context.Context, key string, data []byte) (er
 	if err != nil {
 		return err
 	}
-	return ac.appStorage.Put(domainKey.Bytes(), nil, data)
+	return (*(ac.appStorage)).Put(domainKey.Bytes(), nil, data)
 }
 
 // Delete IAppStorage does not have Delete method, therefore set value to nil and in Get method check value for length
@@ -47,7 +47,7 @@ func (ac *autoCertDbCache) Delete(ctx context.Context, key string) (err error) {
 	if err != nil {
 		return err
 	}
-	return ac.appStorage.Put(domainKey.Bytes(), nil, nil)
+	return (*(ac.appStorage)).Put(domainKey.Bytes(), nil, nil)
 }
 
 func createKey(columns ...interface{}) (buf *bytes.Buffer, err error) {

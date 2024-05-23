@@ -46,7 +46,7 @@ func TestBasicUsage(t *testing.T) {
 	asp := istorageimpl.Provide(asf)
 	storage, err := asp.AppStorage(istructs.AppQName_test1_app1)
 	require.NoError(err)
-	blobber := Provide(storage, time.Now)
+	blobber := Provide(&storage, time.Now)
 	ctx := context.TODO()
 	reader := provideTestData()
 
@@ -120,7 +120,7 @@ func TestQuotaExceed(t *testing.T) {
 	asp := istorageimpl.Provide(asf)
 	storage, err := asp.AppStorage(istructs.AppQName_test1_app1)
 	require.NoError(err)
-	blobber := Provide(storage, time.Now)
+	blobber := Provide(&storage, time.Now)
 	reader := provideTestData()
 	ctx := context.Background()
 	// Quota (maxSize -1 = 19265) assigned to reader less then filesize logo.png (maxSize)

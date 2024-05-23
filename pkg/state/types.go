@@ -21,6 +21,8 @@ import (
 	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/isecrets"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/itokens"
+	"github.com/voedger/voedger/pkg/utils/federation"
 )
 
 type PartitionIDFunc func() istructs.PartitionID
@@ -35,13 +37,14 @@ type PLogEventFunc func() istructs.IPLogEvent
 type ArgFunc func() istructs.IObject
 type UnloggedArgFunc func() istructs.IObject
 type WLogOffsetFunc func() istructs.Offset
+type FederationFunc func() federation.IFederation
 type QNameFunc func() appdef.QName
+type TokensFunc func() itokens.ITokens
 type ExecQueryCallbackFunc func() istructs.ExecQueryCallback
 type CommandProcessorStateFactory func(ctx context.Context, appStructsFunc AppStructsFunc, partitionIDFunc PartitionIDFunc, wsidFunc WSIDFunc, secretReader isecrets.ISecretReader, cudFunc CUDFunc, principalPayloadFunc PrincipalsFunc, tokenFunc TokenFunc, intentsLimit int, cmdResultBuilderFunc ObjectBuilderFunc, argFunc ArgFunc, unloggedArgFunc UnloggedArgFunc, wlogOffsetFunc WLogOffsetFunc) IHostState
 type SyncActualizerStateFactory func(ctx context.Context, appStructsFunc AppStructsFunc, partitionIDFunc PartitionIDFunc, wsidFunc WSIDFunc, n10nFunc N10nFunc, secretReader isecrets.ISecretReader, eventFunc PLogEventFunc, intentsLimit int) IHostState
-type QueryProcessorStateFactory func(ctx context.Context, appStructsFunc AppStructsFunc, partitionIDFunc PartitionIDFunc, wsidFunc WSIDFunc, secretReader isecrets.ISecretReader, principalPayloadFunc PrincipalsFunc, tokenFunc TokenFunc, argFunc ArgFunc, resultBuilderFunc ObjectBuilderFunc, queryCallbackFunc ExecQueryCallbackFunc, opts ...QPStateOptFunc) IHostState
-type AsyncActualizerStateFactory func(ctx context.Context, appStructsFunc AppStructsFunc, partitionIDFunc PartitionIDFunc, wsidFunc WSIDFunc, n10nFunc N10nFunc, secretReader isecrets.ISecretReader, eventFunc PLogEventFunc, intentsLimit, bundlesLimit int,
-	opts ...ActualizerStateOptFunc) IBundledHostState
+type QueryProcessorStateFactory func(ctx context.Context, appStructsFunc AppStructsFunc, partitionIDFunc PartitionIDFunc, wsidFunc WSIDFunc, secretReader isecrets.ISecretReader, principalPayloadFunc PrincipalsFunc, tokenFunc TokenFunc, itokens itokens.ITokens, argFunc ArgFunc, resultBuilderFunc ObjectBuilderFunc, federation federation.IFederation, queryCallbackFunc ExecQueryCallbackFunc, opts ...QPStateOptFunc) IHostState
+type AsyncActualizerStateFactory func(ctx context.Context, appStructsFunc AppStructsFunc, partitionIDFunc PartitionIDFunc, wsidFunc WSIDFunc, n10nFunc N10nFunc, secretReader isecrets.ISecretReader, eventFunc PLogEventFunc, tokensFunc itokens.ITokens, federationFunc federation.IFederation, intentsLimit, bundlesLimit int, opts ...ActualizerStateOptFunc) IBundledHostState
 
 type eventsFunc func() istructs.IEvents
 type recordsFunc func() istructs.IRecords
@@ -141,10 +144,11 @@ func (b *wLogKeyBuilder) PutInt64(name string, value int64) {
 
 type recordsKeyBuilder struct {
 	istructs.IStateKeyBuilder
-	id        istructs.RecordID
-	singleton appdef.QName
-	wsid      istructs.WSID
-	entity    appdef.QName
+	id          istructs.RecordID
+	singleton   appdef.QName
+	isSingleton bool
+	wsid        istructs.WSID
+	entity      appdef.QName
 }
 
 func (b *recordsKeyBuilder) Equals(src istructs.IKeyBuilder) bool {
@@ -156,6 +160,9 @@ func (b *recordsKeyBuilder) Equals(src istructs.IKeyBuilder) bool {
 		return false
 	}
 	if b.singleton != kb.singleton {
+		return false
+	}
+	if b.isSingleton != kb.isSingleton {
 		return false
 	}
 	if b.wsid != kb.wsid {
@@ -177,6 +184,9 @@ func (b *recordsKeyBuilder) String() string {
 	if b.singleton != appdef.NullQName {
 		_, _ = sb.WriteString(fmt.Sprintf(", singleton - %s", b.singleton))
 	}
+	if b.isSingleton {
+		_, _ = sb.WriteString(", singleton")
+	}
 	_, _ = sb.WriteString(fmt.Sprintf(", WSID - %d", b.wsid))
 	return sb.String()
 }
@@ -190,8 +200,7 @@ func (b *recordsKeyBuilder) PutInt64(name string, value int64) {
 		b.id = istructs.RecordID(value)
 		return
 	}
-	// TODO ???
-	panic(name)
+	panic(errUndefined(name))
 }
 
 func (b *recordsKeyBuilder) PutRecordID(name string, value istructs.RecordID) {
@@ -199,8 +208,18 @@ func (b *recordsKeyBuilder) PutRecordID(name string, value istructs.RecordID) {
 		b.id = value
 		return
 	}
-	// TODO ???
-	panic(name)
+	panic(errUndefined(name))
+}
+
+func (b *recordsKeyBuilder) PutBool(name string, value bool) {
+	if name == Field_IsSingleton {
+		if b.entity == appdef.NullQName {
+			panic("entity undefined")
+		}
+		b.isSingleton = value
+		return
+	}
+	panic(errUndefined(name))
 }
 
 func (b *recordsKeyBuilder) PutQName(name string, value appdef.QName) {
@@ -208,8 +227,7 @@ func (b *recordsKeyBuilder) PutQName(name string, value appdef.QName) {
 		b.singleton = value
 		return
 	}
-	// TODO ???
-	panic(name)
+	panic(errUndefined(name))
 }
 
 type recordsValueBuilder struct {
@@ -375,6 +393,112 @@ func (v *objectArrayContainerValue) Length() int {
 		result++
 	})
 	return result
+}
+
+type jsonArrayValue struct {
+	baseStateValue
+	array []interface{}
+}
+
+func (v *jsonArrayValue) GetAsString(i int) string      { return v.array[i].(string) }
+func (v *jsonArrayValue) GetAsBytes(i int) []byte       { return v.array[i].([]byte) }
+func (v *jsonArrayValue) GetAsInt32(i int) int32        { return v.array[i].(int32) }
+func (v *jsonArrayValue) GetAsInt64(i int) int64        { return v.array[i].(int64) }
+func (v *jsonArrayValue) GetAsFloat32(i int) float32    { return v.array[i].(float32) }
+func (v *jsonArrayValue) GetAsFloat64(i int) float64    { return v.array[i].(float64) }
+func (v *jsonArrayValue) GetAsQName(i int) appdef.QName { return v.array[i].(appdef.QName) }
+func (v *jsonArrayValue) GetAsBool(i int) bool          { return v.array[i].(bool) }
+func (v *jsonArrayValue) GetAsValue(i int) (result istructs.IStateValue) {
+	switch v := v.array[i].(type) {
+	case map[string]interface{}:
+		return &jsonValue{json: v}
+	case []interface{}:
+		return &jsonArrayValue{array: v}
+	default:
+		panic(errUnexpectedType(v))
+	}
+}
+func (v *jsonArrayValue) Length() int {
+	return len(v.array)
+}
+
+type jsonValue struct {
+	baseStateValue
+	json map[string]interface{}
+}
+
+func (v *jsonValue) AsInt32(name string) int32 {
+	if v, ok := v.json[name]; ok {
+		return v.(int32)
+	}
+	panic(errUndefined(name))
+}
+func (v *jsonValue) AsInt64(name string) int64 {
+	if v, ok := v.json[name]; ok {
+		return v.(int64)
+	}
+	panic(errUndefined(name))
+}
+func (v *jsonValue) AsFloat32(name string) float32 {
+	if v, ok := v.json[name]; ok {
+		return v.(float32)
+	}
+	panic(errUndefined(name))
+}
+func (v *jsonValue) AsFloat64(name string) float64 {
+	if v, ok := v.json[name]; ok {
+		return v.(float64)
+	}
+	panic(errUndefined(name))
+}
+func (v *jsonValue) AsBytes(name string) []byte {
+	if v, ok := v.json[name]; ok {
+		return v.([]byte)
+	}
+	panic(errUndefined(name))
+}
+func (v *jsonValue) AsString(name string) string {
+	if v, ok := v.json[name]; ok {
+		return v.(string)
+	}
+	panic(errUndefined(name))
+}
+func (v *jsonValue) AsQName(name string) appdef.QName {
+	if v, ok := v.json[name]; ok {
+		return v.(appdef.QName)
+	}
+	panic(errUndefined(name))
+}
+func (v *jsonValue) AsBool(name string) bool {
+	if v, ok := v.json[name]; ok {
+		return v.(bool)
+	}
+	panic(errUndefined(name))
+}
+func (v *jsonValue) AsRecordID(name string) istructs.RecordID {
+	if v, ok := v.json[name]; ok {
+		return v.(istructs.RecordID)
+	}
+	panic(errUndefined(name))
+}
+func (v *jsonValue) RecordIDsß(includeNulls bool, cb func(string, istructs.RecordID)) {}
+func (v *jsonValue) FieldNames(cb func(string)) {
+	for name := range v.json {
+		cb(name)
+	}
+}
+func (v *jsonValue) AsValue(name string) (result istructs.IStateValue) {
+	if v, ok := v.json[name]; ok {
+		switch v := v.(type) {
+		case map[string]interface{}:
+			return &jsonValue{json: v}
+		case []interface{}:
+			return &jsonArrayValue{array: v}
+		default:
+			panic(errUnexpectedType(v))
+		}
+	}
+	panic(errUndefined(name))
 }
 
 type objectValue struct {

@@ -58,9 +58,9 @@ import (
 	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys/invite"
 	coreutils "github.com/voedger/voedger/pkg/utils"
+	"github.com/voedger/voedger/pkg/utils/federation"
 	dbcertcache "github.com/voedger/voedger/pkg/vvm/db_cert_cache"
 	"github.com/voedger/voedger/pkg/vvm/metrics"
-	"github.com/voedger/voedger/pkg/utils/federation"
 )
 
 func ProvideVVM(vvmCfg *VVMConfig, vvmIdx VVMIdxType) (voedgerVM *VoedgerVM, err error) {
@@ -99,7 +99,7 @@ func ProvideVVM(vvmCfg *VVMConfig, vvmIdx VVMIdxType) (voedgerVM *VoedgerVM, err
 }
 
 func (vvm *VoedgerVM) Shutdown() {
-	vvm.vvmCtxCancel()
+	vvm.vvmCtxCancel() // VVM services are stopped here
 	vvm.ServicePipeline.Close()
 	vvm.vvmCleanup()
 }
@@ -125,9 +125,8 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 		provideAppServiceFactory,
 		provideAppPartitionFactory,
 		provideAsyncActualizersFactory,
-		provideRouterServiceFactory,
 		provideOperatorAppServices,
-		provideBlobAppStorage,
+		provideBlobAppStoragePtr,
 		provideVVMApps,
 		provideBuiltInAppsArtefacts,
 		provideServiceChannelFactory,
@@ -139,7 +138,7 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 		provideCommandChannelFactory,
 		provideIBus,
 		provideRouterParams,
-		provideRouterAppStorage,
+		provideRouterAppStoragePtr,
 		provideIFederation,
 		provideCachingAppStorageProvider,  // IAppStorageProvider
 		itokensjwt.ProvideITokens,         // ITokens
@@ -177,6 +176,8 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 		provideBuiltInAppPackages,
 		provideExtensionPoints,
 		provideBootstrapOperator,
+		provideAdminEndpointServiceOperator,
+		providePublicEndpointServiceOperator,
 		// wire.Value(vvmConfig.NumCommandProcessors) -> (wire bug?) value github.com/untillpro/airs-bp3/vvm.CommandProcessorsCount can't be used: vvmConfig is not declared in package scope
 		wire.FieldsOf(&vvmConfig,
 			"NumCommandProcessors",
@@ -198,7 +199,8 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 }
 
 func provideBootstrapOperator(federation federation.IFederation, asp istructs.IAppStructsProvider, timeFunc coreutils.TimeFunc, apppar appparts.IAppPartitions,
-	builtinApps []appparts.BuiltInApp, itokens itokens.ITokens) (BootstrapOperator, error) {
+	builtinApps []appparts.BuiltInApp, itokens itokens.ITokens, storageProvider istorage.IAppStorageProvider, blobberAppStoragePtr iblobstoragestg.BlobAppStoragePtr,
+	routerAppStoragePtr dbcertcache.RouterAppStoragePtr) (BootstrapOperator, error) {
 	var clusterBuiltinApp btstrp.ClusterBuiltInApp
 	otherApps := make([]appparts.BuiltInApp, 0, len(builtinApps)-1)
 	for _, app := range builtinApps {
@@ -212,7 +214,7 @@ func provideBootstrapOperator(federation federation.IFederation, asp istructs.IA
 		return nil, fmt.Errorf("%s app should be added to VVM builtin apps", istructs.AppQName_sys_cluster)
 	}
 	return pipeline.NewSyncOp(func(ctx context.Context, work interface{}) (err error) {
-		return btstrp.Bootstrap(federation, asp, timeFunc, apppar, clusterBuiltinApp, otherApps, itokens)
+		return btstrp.Bootstrap(federation, asp, timeFunc, apppar, clusterBuiltinApp, otherApps, itokens, storageProvider, blobberAppStoragePtr, routerAppStoragePtr)
 	}), nil
 }
 
@@ -441,11 +443,10 @@ func provideChannelGroups(cfg *VVMConfig) (res []iprocbusmem.ChannelGroup) {
 	return
 }
 
-func provideCachingAppStorageProvider(vvmCfg *VVMConfig, storageCacheSize StorageCacheSizeType, metrics imetrics.IMetrics,
-	vvmName commandprocessor.VVMName, uncachingProvider IAppStorageUncachingProviderFactory) (istorage.IAppStorageProvider, error) {
+func provideCachingAppStorageProvider(storageCacheSize StorageCacheSizeType, metrics imetrics.IMetrics,
+	vvmName commandprocessor.VVMName, uncachingProvider IAppStorageUncachingProviderFactory) istorage.IAppStorageProvider {
 	aspNonCaching := uncachingProvider()
-	res := istoragecache.Provide(int(storageCacheSize), aspNonCaching, metrics, string(vvmName))
-	return res, nil
+	return istoragecache.Provide(int(storageCacheSize), aspNonCaching, metrics, string(vvmName))
 }
 
 // синхронный актуализатор один на приложение из-за storages, которые у каждого приложения свои
@@ -457,22 +458,22 @@ func (s *switchByAppName) Switch(work interface{}) (branchName string, err error
 	return work.(interface{ AppQName() istructs.AppQName }).AppQName().String(), nil
 }
 
-func provideBlobAppStorage(astp istorage.IAppStorageProvider) (BlobAppStorage, error) {
-	return astp.AppStorage(istructs.AppQName_sys_blobber)
+func provideBlobAppStoragePtr(astp istorage.IAppStorageProvider) iblobstoragestg.BlobAppStoragePtr {
+	return new(istorage.IAppStorage)
 }
 
-func provideBlobStorage(bas BlobAppStorage, nowFunc coreutils.TimeFunc) BlobStorage {
+func provideBlobStorage(bas iblobstoragestg.BlobAppStoragePtr, nowFunc coreutils.TimeFunc) BlobStorage {
 	return iblobstoragestg.Provide(bas, nowFunc)
 }
 
-func provideRouterAppStorage(astp istorage.IAppStorageProvider) (dbcertcache.RouterAppStorage, error) {
-	return astp.AppStorage(istructs.AppQName_sys_router)
+func provideRouterAppStoragePtr(astp istorage.IAppStorageProvider) dbcertcache.RouterAppStoragePtr {
+	return new(istorage.IAppStorage)
 }
 
 // port 80 -> [0] is http server, port 443 -> [0] is https server, [1] is acme server
 func provideRouterServices(vvmCtx context.Context, rp router.RouterParams, busTimeout BusTimeout, broker in10n.IN10nBroker, quotas in10n.Quotas,
 	nowFunc coreutils.TimeFunc, bsc router.BlobberServiceChannels, bms router.BLOBMaxSizeType, blobStorage BlobStorage,
-	routerAppStorage dbcertcache.RouterAppStorage, autocertCache autocert.Cache, bus ibus.IBus, vvmPortSource *VVMPortSource, numsAppsWorkspaces map[istructs.AppQName]istructs.NumAppWorkspaces) RouterServices {
+	autocertCache autocert.Cache, bus ibus.IBus, vvmPortSource *VVMPortSource, numsAppsWorkspaces map[istructs.AppQName]istructs.NumAppWorkspaces) RouterServices {
 	bp := &router.BlobberParams{
 		ServiceChannels:        bsc,
 		BLOBStorage:            blobStorage,
@@ -492,10 +493,14 @@ func provideRouterServices(vvmCtx context.Context, rp router.RouterParams, busTi
 	}
 }
 
-func provideRouterServiceFactory(rs RouterServices) RouterServiceOperator {
+func provideAdminEndpointServiceOperator(rs RouterServices) AdminEndpointServiceOperator {
+	return pipeline.ServiceOperator(rs.IAdminService)
+}
+
+func providePublicEndpointServiceOperator(rs RouterServices, metricsServiceOp MetricsServiceOperator) PublicEndpointServiceOperator {
 	funcs := make([]pipeline.ForkOperatorOptionFunc, 2, 3)
 	funcs[0] = pipeline.ForkBranch(pipeline.ServiceOperator(rs.IHTTPService))
-	funcs[1] = pipeline.ForkBranch(pipeline.ServiceOperator(rs.IAdminService))
+	funcs[1] = pipeline.ForkBranch(metricsServiceOp)
 	if rs.IACMEService != nil {
 		funcs = append(funcs, pipeline.ForkBranch(pipeline.ServiceOperator(rs.IACMEService)))
 	}
@@ -513,7 +518,8 @@ func provideCommandChannelFactory(sch ServiceChannelFactory) CommandChannelFacto
 }
 
 func provideQueryProcessors(qpCount istructs.NumQueryProcessors, qc QueryChannel, appParts appparts.IAppPartitions, qpFactory queryprocessor.ServiceFactory,
-	imetrics imetrics.IMetrics, vvm commandprocessor.VVMName, mpq MaxPrepareQueriesType, authn iauthnz.IAuthenticator, authz iauthnz.IAuthorizer) OperatorQueryProcessors {
+	imetrics imetrics.IMetrics, vvm commandprocessor.VVMName, mpq MaxPrepareQueriesType, authn iauthnz.IAuthenticator, authz iauthnz.IAuthorizer,
+	tokens itokens.ITokens, federation federation.IFederation) OperatorQueryProcessors {
 	forks := make([]pipeline.ForkOperatorOptionFunc, qpCount)
 	resultSenderFactory := func(ctx context.Context, sender ibus.ISender) queryprocessor.IResultSenderClosable {
 		return &resultSenderErrorFirst{
@@ -523,7 +529,7 @@ func provideQueryProcessors(qpCount istructs.NumQueryProcessors, qc QueryChannel
 	}
 	for i := 0; i < int(qpCount); i++ {
 		forks[i] = pipeline.ForkBranch(pipeline.ServiceOperator(qpFactory(iprocbus.ServiceChannel(qc), resultSenderFactory, appParts, int(mpq), imetrics,
-			string(vvm), authn, authz)))
+			string(vvm), authn, authz, tokens, federation)))
 	}
 	return pipeline.ForkOperator(pipeline.ForkSame, forks[0], forks[1:]...)
 }
@@ -537,7 +543,8 @@ func provideCommandProcessors(cpCount istructs.NumCommandProcessors, ccf Command
 }
 
 func provideAsyncActualizersFactory(appParts appparts.IAppPartitions, appStructsProvider istructs.IAppStructsProvider, n10nBroker in10n.IN10nBroker, asyncActualizerFactory projectors.AsyncActualizerFactory, secretReader isecrets.ISecretReader, metrics imetrics.IMetrics) AsyncActualizersFactory {
-	return func(vvmCtx context.Context, appQName istructs.AppQName, asyncProjectors istructs.Projectors, partitionID istructs.PartitionID, opts []state.ActualizerStateOptFunc) pipeline.ISyncOperator {
+	return func(vvmCtx context.Context, appQName istructs.AppQName, asyncProjectors istructs.Projectors, partitionID istructs.PartitionID,
+		tokens itokens.ITokens, federation federation.IFederation, opts []state.ActualizerStateOptFunc) pipeline.ISyncOperator {
 		appStructs, err := appStructsProvider.AppStructs(appQName)
 		if err != nil {
 			panic(err)
@@ -555,6 +562,8 @@ func provideAsyncActualizersFactory(appParts appparts.IAppPartitions, appStructs
 			IntentsLimit:  projectors.DefaultIntentsLimit,
 			FlushInterval: actualizerFlushInterval,
 			Metrics:       metrics,
+			Tokens:        tokens,
+			Federation:    federation,
 		}
 
 		forkOps := make([]pipeline.ForkOperatorOptionFunc, 0, len(asyncProjectors))
@@ -570,9 +579,9 @@ func provideAsyncActualizersFactory(appParts appparts.IAppPartitions, appStructs
 	}
 }
 
-func provideAppPartitionFactory(aaf AsyncActualizersFactory, opts []state.ActualizerStateOptFunc) AppPartitionFactory {
+func provideAppPartitionFactory(aaf AsyncActualizersFactory, opts []state.ActualizerStateOptFunc, tokens itokens.ITokens, federation federation.IFederation) AppPartitionFactory {
 	return func(vvmCtx context.Context, appQName istructs.AppQName, asyncProjectors istructs.Projectors, partitionID istructs.PartitionID) pipeline.ISyncOperator {
-		return aaf(vvmCtx, appQName, asyncProjectors, partitionID, opts)
+		return aaf(vvmCtx, appQName, asyncProjectors, partitionID, tokens, federation, opts)
 	}
 }
 
@@ -610,26 +619,18 @@ func provideOperatorAppServices(apf AppServiceFactory, appsArtefacts AppsArtefac
 	}
 }
 
-func provideServicePipeline(vvmCtx context.Context, opCommandProcessors OperatorCommandProcessors, opQueryProcessors OperatorQueryProcessors, opAppServices OperatorAppServicesFactory,
-	routerServiceOp RouterServiceOperator, metricsServiceOp MetricsServiceOperator, appPartsCtl IAppPartsCtlPipelineService, bootstrapOp BootstrapOperator) ServicePipeline {
+func provideServicePipeline(vvmCtx context.Context, opCommandProcessors OperatorCommandProcessors, opQueryProcessors OperatorQueryProcessors,
+	opAppServices OperatorAppServicesFactory, appPartsCtl IAppPartsCtlPipelineService, bootstrapSyncOp BootstrapOperator,
+	adminEndpoint AdminEndpointServiceOperator, publicEndpoint PublicEndpointServiceOperator) ServicePipeline {
 	return pipeline.NewSyncPipeline(vvmCtx, "ServicePipeline",
-		pipeline.WireSyncOperator("services", pipeline.ForkOperator(pipeline.ForkSame,
-
-			// VVM
-			pipeline.ForkBranch(pipeline.ForkOperator(pipeline.ForkSame,
-				pipeline.ForkBranch(opQueryProcessors),
-				pipeline.ForkBranch(opCommandProcessors),
-				pipeline.ForkBranch(opAppServices(vvmCtx)), // vvmCtx here is for AsyncActualizerConf at AsyncActualizerFactory only
-				pipeline.ForkBranch(pipeline.ServiceOperator(appPartsCtl)),
-			)),
-
-			// Router
-			// vvmCtx here is for blobber service to stop reading from ServiceChannel on VVM shutdown
-			pipeline.ForkBranch(routerServiceOp),
-
-			// Metrics http service
-			pipeline.ForkBranch(metricsServiceOp),
+		pipeline.WireSyncOperator("internal services", pipeline.ForkOperator(pipeline.ForkSame,
+			pipeline.ForkBranch(opQueryProcessors),
+			pipeline.ForkBranch(opCommandProcessors),
+			pipeline.ForkBranch(pipeline.ServiceOperator(appPartsCtl)),
 		)),
-		pipeline.WireSyncOperator("bootstrap", bootstrapOp),
+		pipeline.WireSyncOperator("admin endpoint", adminEndpoint),
+		pipeline.WireSyncOperator("bootstrap", bootstrapSyncOp),
+		pipeline.WireSyncOperator("public endpoint", publicEndpoint),
+		pipeline.WireSyncOperator("async actualizers", opAppServices(vvmCtx)),
 	)
 }

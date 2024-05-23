@@ -19,6 +19,7 @@ import (
 	"github.com/voedger/voedger/pkg/iratesce"
 	"github.com/voedger/voedger/pkg/isecrets"
 	"github.com/voedger/voedger/pkg/istorage/mem"
+	wsdescutil "github.com/voedger/voedger/pkg/utils/testwsdesc"
 
 	istorageimpl "github.com/voedger/voedger/pkg/istorage/provider"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -27,28 +28,29 @@ import (
 	"github.com/voedger/voedger/pkg/itokensjwt"
 	"github.com/voedger/voedger/pkg/parser"
 	"github.com/voedger/voedger/pkg/state"
-	"github.com/voedger/voedger/pkg/sys/authnz"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 type testState struct {
 	state.IState
 
-	ctx           context.Context
-	appStructs    istructs.IAppStructs
-	appDef        appdef.IAppDef
-	cud           istructs.ICUD
-	event         istructs.IPLogEvent
-	plogGen       istructs.IIDGenerator
-	wsOffsets     map[istructs.WSID]istructs.Offset
-	secretReader  isecrets.ISecretReader
-	httpHandler   HttpHandlerFunc
-	principals    []iauthnz.Principal
-	token         string
-	queryWsid     istructs.WSID
-	queryName     appdef.FullQName
-	processorKind int
-	readObjects   []istructs.IObject
+	ctx                  context.Context
+	appStructs           istructs.IAppStructs
+	appDef               appdef.IAppDef
+	cud                  istructs.ICUD
+	event                istructs.IPLogEvent
+	plogGen              istructs.IIDGenerator
+	wsOffsets            map[istructs.WSID]istructs.Offset
+	plogOffset           istructs.Offset
+	secretReader         isecrets.ISecretReader
+	httpHandler          HttpHandlerFunc
+	federationCmdHandler state.FederationCommandHandler
+	principals           []iauthnz.Principal
+	token                string
+	queryWsid            istructs.WSID
+	queryName            appdef.FullQName
+	processorKind        int
+	readObjects          []istructs.IObject
 }
 
 func NewTestState(processorKind int, packagePath string, createWorkspaces ...TestWorkspace) ITestState {
@@ -123,6 +125,17 @@ func (ctx *testState) PutRequestSubject(principals []iauthnz.Principal, token st
 	ctx.token = token
 }
 
+func (ctx *testState) PutFederationCmdHandler(emu state.FederationCommandHandler) {
+	ctx.federationCmdHandler = emu
+}
+
+func (ctx *testState) emulateFederationCmd(owner, appname string, wsid istructs.WSID, command appdef.QName, body string) (statusCode int, newIDs map[string]int64, result string, err error) {
+	if ctx.federationCmdHandler == nil {
+		panic("federation command handler not set")
+	}
+	return ctx.federationCmdHandler(owner, appname, wsid, command, body)
+}
+
 func (ctx *testState) buildState(processorKind int) {
 
 	appFunc := func() istructs.IAppStructs { return ctx.appStructs }
@@ -161,11 +174,14 @@ func (ctx *testState) buildState(processorKind int) {
 
 	switch processorKind {
 	case ProcKind_Actualizer:
-		ctx.IState = state.ProvideAsyncActualizerStateFactory()(ctx.ctx, appFunc, partitionIDFunc, wsidFunc, nil, ctx.secretReader, eventFunc, IntentsLimit, BundlesLimit, state.WithCustomHttpClient(ctx))
+		ctx.IState = state.ProvideAsyncActualizerStateFactory()(ctx.ctx, appFunc, partitionIDFunc, wsidFunc, nil, ctx.secretReader, eventFunc, nil, nil,
+			IntentsLimit, BundlesLimit, state.WithCustomHttpClient(ctx), state.WithFedearationCommandHandler(ctx.emulateFederationCmd))
 	case ProcKind_CommandProcessor:
-		ctx.IState = state.ProvideCommandProcessorStateFactory()(ctx.ctx, appFunc, partitionIDFunc, wsidFunc, ctx.secretReader, cudFunc, principalsFunc, tokenFunc, IntentsLimit, resultBuilderFunc, argFunc, unloggedArgFunc, wlogOffsetFunc)
+		ctx.IState = state.ProvideCommandProcessorStateFactory()(ctx.ctx, appFunc, partitionIDFunc, wsidFunc, ctx.secretReader, cudFunc, principalsFunc, tokenFunc,
+			IntentsLimit, resultBuilderFunc, argFunc, unloggedArgFunc, wlogOffsetFunc)
 	case ProcKind_QueryProcessor:
-		ctx.IState = state.ProvideQueryProcessorStateFactory()(ctx.ctx, appFunc, partitionIDFunc, wsidFunc, ctx.secretReader, principalsFunc, tokenFunc, argFunc, qryResultBuilderFunc, execQueryCallback, state.QPWithCustomHttpClient(ctx))
+		ctx.IState = state.ProvideQueryProcessorStateFactory()(ctx.ctx, appFunc, partitionIDFunc, wsidFunc, ctx.secretReader, principalsFunc, tokenFunc, nil, argFunc,
+			qryResultBuilderFunc, nil, execQueryCallback, state.QPWithCustomHttpClient(ctx), state.QPWithFedearationCommandHandler(ctx.emulateFederationCmd))
 	}
 }
 
@@ -223,7 +239,7 @@ func (ctx *testState) buildAppDef(packagePath string, packageDir string, createW
 
 	cfgs := make(istructsmem.AppConfigsType, 1)
 	cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, adb)
-	cfg.Resources.Add(istructsmem.NewCommandFunction(newWorkspaceCmd, istructsmem.NullCommandExec))
+	cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 	ctx.appDef.Extensions(func(i appdef.IExtension) {
 		if i.QName().Pkg() == TestPkgAlias {
 			if proj, ok := i.(appdef.IProjector); ok {
@@ -256,30 +272,16 @@ func (ctx *testState) buildAppDef(packagePath string, packageDir string, createW
 	ctx.wsOffsets = make(map[istructs.WSID]istructs.Offset)
 
 	for _, ws := range createWorkspaces {
-		rebWs := ctx.appStructs.Events().GetNewRawEventBuilder(istructs.NewRawEventBuilderParams{
-			GenericRawEventBuilderParams: istructs.GenericRawEventBuilderParams{
-				Workspace:         ws.WSID,
-				HandlingPartition: TestPartition,
-				QName:             newWorkspaceCmd,
-			},
-		})
-		cud := rebWs.CUDBuilder().Create(authnz.QNameCDocWorkspaceDescriptor)
-		cud.PutRecordID(appdef.SystemField_ID, istructs.RecordID(1))
-		cud.PutQName("WSKind", appdef.NewQName(TestPkgAlias, ws.WorkspaceDescriptor))
-		rawWsEvent, err := rebWs.BuildRawEvent()
-		if err != nil {
-			panic(err)
-		}
-		wsEvent, err := ctx.appStructs.Events().PutPlog(rawWsEvent, nil, ctx.plogGen)
-		if err != nil {
-			panic(err)
-		}
-		err = ctx.appStructs.Records().Apply(wsEvent)
+		err = wsdescutil.CreateCDocWorkspaceDescriptorStub(ctx.appStructs, TestPartition, ws.WSID, appdef.NewQName(TestPkgAlias, ws.WorkspaceDescriptor), ctx.nextPLogOffs(), ctx.nextWSOffs(ws.WSID))
 		if err != nil {
 			panic(err)
 		}
 	}
+}
 
+func (ctx *testState) nextPLogOffs() istructs.Offset {
+	ctx.plogOffset += 1
+	return ctx.plogOffset
 }
 
 func (ctx *testState) nextWSOffs(ws istructs.WSID) istructs.Offset {
@@ -294,10 +296,22 @@ func (ctx *testState) nextWSOffs(ws istructs.WSID) istructs.Offset {
 
 func (ctx *testState) PutHttpHandler(handler HttpHandlerFunc) {
 	ctx.httpHandler = handler
+
+}
+
+func (ctx *testState) PutRecords(wsid istructs.WSID, cb NewRecordsCallback) (wLogOffs istructs.Offset, newRecordIds []istructs.RecordID) {
+	return ctx.PutEvent(wsid, appdef.NewFullQName(istructs.QNameCommandCUD.Pkg(), istructs.QNameCommandCUD.Entity()), func(argBuilder istructs.IObjectBuilder, cudBuilder istructs.ICUD) {
+		cb(cudBuilder)
+	})
 }
 
 func (ctx *testState) PutEvent(wsid istructs.WSID, name appdef.FullQName, cb NewEventCallback) (wLogOffs istructs.Offset, newRecordIds []istructs.RecordID) {
-	localPkgName := ctx.appDef.PackageLocalName(name.PkgPath())
+	var localPkgName string
+	if name.PkgPath() == appdef.SysPackage {
+		localPkgName = name.PkgPath()
+	} else {
+		localPkgName = ctx.appDef.PackageLocalName(name.PkgPath())
+	}
 	wLogOffs = ctx.nextWSOffs(wsid)
 	reb := ctx.appStructs.Events().GetNewRawEventBuilder(istructs.NewRawEventBuilderParams{
 		GenericRawEventBuilderParams: istructs.GenericRawEventBuilderParams{
@@ -305,6 +319,7 @@ func (ctx *testState) PutEvent(wsid istructs.WSID, name appdef.FullQName, cb New
 			HandlingPartition: TestPartition,
 			QName:             appdef.NewQName(localPkgName, name.Entity()),
 			WLogOffset:        wLogOffs,
+			PLogOffset:        ctx.nextPLogOffs(),
 		},
 	})
 	if cb != nil {

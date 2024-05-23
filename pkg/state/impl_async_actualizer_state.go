@@ -10,7 +10,9 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/isecrets"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/itokens"
 	"github.com/voedger/voedger/pkg/state/smtptest"
+	"github.com/voedger/voedger/pkg/utils/federation"
 )
 
 type ActualizerStateOptFunc func(opts *actualizerStateOpts)
@@ -27,9 +29,16 @@ func WithCustomHttpClient(client IHttpClient) ActualizerStateOptFunc {
 	}
 }
 
+func WithFedearationCommandHandler(handler FederationCommandHandler) ActualizerStateOptFunc {
+	return func(opts *actualizerStateOpts) {
+		opts.federationCommandHandler = handler
+	}
+}
+
 type actualizerStateOpts struct {
-	messages         chan smtptest.Message
-	customHttpClient IHttpClient
+	messages                 chan smtptest.Message
+	federationCommandHandler FederationCommandHandler
+	customHttpClient         IHttpClient
 }
 
 type asyncActualizerState struct {
@@ -41,8 +50,9 @@ func (s *asyncActualizerState) PLogEvent() istructs.IPLogEvent {
 	return s.eventFunc()
 }
 
-func implProvideAsyncActualizerState(ctx context.Context, appStructsFunc AppStructsFunc, partitionIDFunc PartitionIDFunc, wsidFunc WSIDFunc, n10nFunc N10nFunc, secretReader isecrets.ISecretReader, eventFunc PLogEventFunc, intentsLimit, bundlesLimit int,
-	optFuncs ...ActualizerStateOptFunc) IBundledHostState {
+func implProvideAsyncActualizerState(ctx context.Context, appStructsFunc AppStructsFunc, partitionIDFunc PartitionIDFunc, wsidFunc WSIDFunc, n10nFunc N10nFunc,
+	secretReader isecrets.ISecretReader, eventFunc PLogEventFunc, tokensFunc itokens.ITokens, federationFunc federation.IFederation,
+	intentsLimit, bundlesLimit int, optFuncs ...ActualizerStateOptFunc) IBundledHostState {
 
 	opts := &actualizerStateOpts{}
 	for _, optFunc := range optFuncs {
@@ -74,6 +84,14 @@ func implProvideAsyncActualizerState(ctx context.Context, appStructsFunc AppStru
 	state.addStorage(Http, &httpStorage{
 		customClient: opts.customHttpClient,
 	}, S_READ)
+
+	state.addStorage(FederationCommand, &federationCommandStorage{
+		appStructs: appStructsFunc,
+		wsid:       wsidFunc,
+		emulation:  opts.federationCommandHandler,
+		federation: federationFunc,
+		tokens:     tokensFunc,
+	}, S_GET)
 
 	state.addStorage(AppSecret, &appSecretsStorage{secretReader: secretReader}, S_GET)
 

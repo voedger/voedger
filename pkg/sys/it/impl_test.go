@@ -316,7 +316,7 @@ func TestAdminEndpoint(t *testing.T) {
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 	body := `{"args": {"Text": "world"},"elements":[{"fields":["Res"]}]}`
-	resp, err := vit.IFederation.AdminFunc(fmt.Sprintf("%s/1/q.sys.Echo", istructs.AppQName_test1_app1), body)
+	resp, err := vit.IFederation.AdminFunc(fmt.Sprintf("api/%s/1/q.sys.Echo", istructs.AppQName_test1_app1), body)
 	require.NoError(err)
 	require.Equal("world", resp.SectionRow()[0].(string))
 	resp.Println()

@@ -129,7 +129,7 @@ func Test_BasicUsage(t *testing.T) {
 	wlogOffsetFunc := func() istructs.Offset { return event.WLogOffset() }
 
 	// Create states for Command processor and Actualizer
-	actualizerState := state.ProvideAsyncActualizerStateFactory()(context.Background(), appFunc, nil, state.SimpleWSIDFunc(ws), nil, nil, eventFunc, intentsLimit, bundlesLimit)
+	actualizerState := state.ProvideAsyncActualizerStateFactory()(context.Background(), appFunc, nil, state.SimpleWSIDFunc(ws), nil, nil, eventFunc, nil, nil, intentsLimit, bundlesLimit)
 	cmdProcState := state.ProvideCommandProcessorStateFactory()(context.Background(), appFunc, nil, state.SimpleWSIDFunc(ws), nil, cudFunc, nil, nil, intentsLimit, nil, argFunc, unloggedArgFunc, wlogOffsetFunc)
 
 	// Create extension package from WASM
@@ -661,7 +661,7 @@ func Test_WithState(t *testing.T) {
 
 	// build app
 	appFunc := func() istructs.IAppStructs { return app }
-	state := state.ProvideAsyncActualizerStateFactory()(context.Background(), appFunc, nil, state.SimpleWSIDFunc(ws), nil, nil, nil, intentsLimit, bundlesLimit)
+	state := state.ProvideAsyncActualizerStateFactory()(context.Background(), appFunc, nil, state.SimpleWSIDFunc(ws), nil, nil, nil, nil, nil, intentsLimit, bundlesLimit)
 
 	// build packages
 	moduleUrl := testModuleURL("./_testdata/basicusage/pkg.wasm")
@@ -733,7 +733,7 @@ func Test_StatePanic(t *testing.T) {
 			cfg.AddAsyncProjectors(istructs.Projector{Name: dummyProj})
 		})
 	appFunc := func() istructs.IAppStructs { return app }
-	state := state.ProvideAsyncActualizerStateFactory()(context.Background(), appFunc, nil, state.SimpleWSIDFunc(ws), nil, nil, nil, intentsLimit, bundlesLimit)
+	state := state.ProvideAsyncActualizerStateFactory()(context.Background(), appFunc, nil, state.SimpleWSIDFunc(ws), nil, nil, nil, nil, nil, intentsLimit, bundlesLimit)
 
 	const extname = "wrongFieldName"
 	const undefinedPackage = "undefinedPackage"
