@@ -914,15 +914,18 @@ func Test_BuildRow(t *testing.T) {
 		require.Nil(r)
 	})
 
-	t.Run("Should be error to BuildRow implemented by other type", func(t *testing.T) {
-		type otherRow struct {
+	t.Run("Should be error to BuildRow implemented by unknown", func(t *testing.T) {
+		type unknown struct {
 			istructs.IRowWriter
 		}
 
-		w := &otherRow{}
+		w := &unknown{}
 
 		r, err := istructs.BuildRow(w)
-		require.ErrorIs(err, errors.ErrUnsupported)
+		require.ErrorWith(err,
+			require.Is(errors.ErrUnsupported),
+			require.Has("istructsmem.unknown"),
+		)
 		require.Nil(r)
 	})
 }

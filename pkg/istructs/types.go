@@ -6,6 +6,7 @@ package istructs
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/voedger/voedger/pkg/appdef"
 )
@@ -122,6 +123,6 @@ type NumQueryProcessors int
 // as it can lead to changes in the returned reader.
 //
 // The function return errors.ErrUnsupported if the writer has unknown implementation.
-var BuildRow func(IRowWriter) (IRowReader, error) = func(IRowWriter) (IRowReader, error) {
-	return nil, errors.ErrUnsupported
+var BuildRow func(IRowWriter) (IRowReader, error) = func(w IRowWriter) (IRowReader, error) {
+	return nil, fmt.Errorf("%w: unknown implementation %#v", errors.ErrUnsupported, w)
 }
