@@ -979,6 +979,7 @@ func buildRow(w istructs.IRowWriter) (istructs.IRowReader, error) {
 	return oldBuildRow(w)
 }
 
+//nolint:gochecknoinits // required for istructs package
 func init() {
 	oldBuildRow = istructs.BuildRow
 	istructs.BuildRow = buildRow
