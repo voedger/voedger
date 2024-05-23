@@ -964,3 +964,22 @@ func (row *rowType) String() string {
 	// short form, such as "CDoc «sales.BillDocument»"
 	return fmt.Sprint(row.typ)
 }
+
+var oldBuildRow func(w istructs.IRowWriter) (istructs.IRowReader, error) = nil
+
+func buildRow(w istructs.IRowWriter) (istructs.IRowReader, error) {
+	if r, ok := w.(*rowType); ok {
+		err := r.build()
+		if err != nil {
+			return nil, err
+		}
+		return r, nil
+	}
+
+	return oldBuildRow(w)
+}
+
+func init() {
+	oldBuildRow = istructs.BuildRow
+	istructs.BuildRow = buildRow
+}
