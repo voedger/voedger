@@ -14,6 +14,7 @@ import (
 )
 
 type NewEventCallback func(argBuilder istructs.IObjectBuilder, cudBuilder istructs.ICUD)
+type NewRecordsCallback func(cudBuilder istructs.ICUD)
 type ViewValueCallback func(key istructs.IKeyBuilder, value istructs.IValueBuilder)
 type KeyBuilderCallback func(key istructs.IStateKeyBuilder)
 type ValueBuilderCallback func(value istructs.IStateValueBuilder)
@@ -22,6 +23,7 @@ type HttpHandlerFunc func(req HttpRequest) (resp HttpResponse, err error)
 type ITestAPI interface {
 	// State
 	PutEvent(wsid istructs.WSID, name appdef.FullQName, cb NewEventCallback) (wLogOffs istructs.Offset, newRecordIds []istructs.RecordID)
+	PutRecords(wsid istructs.WSID, cb NewRecordsCallback) (wLogOffs istructs.Offset, newRecordIds []istructs.RecordID)
 	PutView(testWSID istructs.WSID, entity appdef.FullQName, callback ViewValueCallback)
 	PutSecret(name string, secret []byte)
 	PutHttpHandler(HttpHandlerFunc)
