@@ -135,7 +135,9 @@ type IStateValue interface {
 }
 type IStateValueBuilder interface {
 	IValueBuilder
-	BuildValue() IStateValue
+
+	BuildValue() IStateValue // Currently used in TestState and for the intents in the bundled storage. Must return nil of not supported by storage.
+
 	Equal(to IStateValueBuilder) bool // used in TestState
 }
 type IStateKeyBuilder interface {
