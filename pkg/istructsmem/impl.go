@@ -231,6 +231,21 @@ func newEvents(app *appStructsType) appEventsType {
 	}
 }
 
+// istructs.IEvents.BuildPLogEvent
+func (e *appEventsType) BuildPLogEvent(ev istructs.IRawEvent) istructs.IPLogEvent {
+	dbEvent := ev.(*eventType)
+
+	if n := dbEvent.QName(); n != istructs.QNameForCorruptedData {
+		panic(fmt.Errorf("%w: QName() is «%v», expected «%v»", ErrorEventNotValid, n, istructs.QNameForCorruptedData))
+	}
+
+	if o := dbEvent.PLogOffset(); o != istructs.NullOffset {
+		panic(fmt.Errorf("%w: PLogOffset() is «%v», expected «%v»", ErrorEventNotValid, o, istructs.NullOffset))
+	}
+
+	return dbEvent
+}
+
 // istructs.IEvents.GetSyncRawEventBuilder
 func (e *appEventsType) GetSyncRawEventBuilder(params istructs.SyncRawEventBuilderParams) istructs.IRawEventBuilder {
 	return newSyncEventBuilder(e.app.config, params)
