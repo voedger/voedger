@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"container/list"
 	"context"
+	"encoding/base64"
 	"fmt"
 	"io"
 	"maps"
@@ -441,7 +442,7 @@ type jsonValue struct {
 
 func (v *jsonValue) AsInt32(name string) int32 {
 	if v, ok := v.json[name]; ok {
-		return v.(int32)
+		return int32(v.(float64))
 	}
 	panic(errUndefined(name))
 }
@@ -465,7 +466,11 @@ func (v *jsonValue) AsFloat64(name string) float64 {
 }
 func (v *jsonValue) AsBytes(name string) []byte {
 	if v, ok := v.json[name]; ok {
-		return v.([]byte)
+		data, err := base64.StdEncoding.DecodeString(v.(string))
+		if err != nil {
+			panic(err)
+		}
+		return data
 	}
 	panic(errUndefined(name))
 }
@@ -477,23 +482,23 @@ func (v *jsonValue) AsString(name string) string {
 }
 func (v *jsonValue) AsQName(name string) appdef.QName {
 	if v, ok := v.json[name]; ok {
-		return v.(appdef.QName)
+		return appdef.MustParseQName(v.(string))
 	}
 	panic(errUndefined(name))
 }
 func (v *jsonValue) AsBool(name string) bool {
 	if v, ok := v.json[name]; ok {
-		return v.(bool)
+		return v.(string) == "true"
 	}
 	panic(errUndefined(name))
 }
 func (v *jsonValue) AsRecordID(name string) istructs.RecordID {
 	if v, ok := v.json[name]; ok {
-		return v.(istructs.RecordID)
+		return istructs.RecordID(v.(float64))
 	}
 	panic(errUndefined(name))
 }
-func (v *jsonValue) RecordIDsß(includeNulls bool, cb func(string, istructs.RecordID)) {}
+func (v *jsonValue) RecordIDs(includeNulls bool, cb func(string, istructs.RecordID)) {}
 func (v *jsonValue) FieldNames(cb func(string)) {
 	for name := range v.json {
 		cb(name)
