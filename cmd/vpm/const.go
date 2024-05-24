@@ -87,3 +87,5 @@ func init() {
 var (
 	errGoModFileNotFound = errors.New("go.mod file not found")
 )
+
+var sysFields = []string{"sys.ID", "sys.IsActive"}

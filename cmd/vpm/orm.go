@@ -238,6 +238,10 @@ func processITypeObj(localName string, pkgInfos map[string]ormPackageInfo, pkgDa
 		}
 		// fetching fields
 		for _, field := range t.(appdef.IFields).Fields() {
+			// skip sys fields
+			if slices.Contains(sysFields, field.Name()) {
+				continue
+			}
 			fieldItem := newFieldItem(tableData, field)
 			if fieldItem.Type == unknownType {
 				continue
