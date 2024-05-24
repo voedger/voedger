@@ -77,6 +77,15 @@ type IEvents interface {
 	GetSyncRawEventBuilder(params SyncRawEventBuilderParams) IRawEventBuilder
 	GetNewRawEventBuilder(params NewRawEventBuilderParams) IRawEventBuilder
 
+	// BuildPLogEvent builds PLogEvent from IRawEvent, but do not puts result PLogEvent into PLog.
+	//
+	// Should be used to obtain `sys.Corrupted` events only.
+	//
+	// # Panics
+	//	- if raw event is not `sys.Corrupted`
+	//	- if raw event PLogOffset is not null
+	BuildPLogEvent(IRawEvent) IPLogEvent
+
 	// @ConcurrentAccess RW
 	// buildOrValidationErr taken either BuildRawEvent() or from extra validation
 	//
