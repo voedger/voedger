@@ -85,7 +85,7 @@ func TestWLogStorage_GetBatch(t *testing.T) {
 		appStructs.On("Records").Return(&nilRecords{})
 		appStructs.On("ViewRecords").Return(&nilViewRecords{})
 		s := ProvideCommandProcessorStateFactory()(context.Background(), func() istructs.IAppStructs { return appStructs },
-			nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil, nil, 0, nil, nil, nil, nil)
+			nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil, nil, 0, nil, nil, nil, nil, nil)
 		kb, err := s.KeyBuilder(WLog, appdef.NullQName)
 		require.NoError(err)
 		kb.PutInt64(Field_Offset, 1)
@@ -124,7 +124,7 @@ func TestWLogStorage_GetBatch(t *testing.T) {
 		appStructs.On("Records").Return(&nilRecords{})
 		appStructs.On("ViewRecords").Return(&nilViewRecords{})
 		s := ProvideCommandProcessorStateFactory()(context.Background(), func() istructs.IAppStructs { return appStructs },
-			nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil, nil, 0, nil, nil, nil, nil)
+			nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil, nil, 0, nil, nil, nil, nil, nil)
 		kb1, err := s.KeyBuilder(WLog, appdef.NullQName)
 		require.NoError(err)
 		kb1.PutInt64(Field_Offset, 1)

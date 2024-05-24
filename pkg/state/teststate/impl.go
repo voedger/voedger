@@ -142,6 +142,17 @@ func (ctx *testState) buildState(processorKind int) {
 	eventFunc := func() istructs.IPLogEvent { return ctx.event }
 	partitionIDFunc := func() istructs.PartitionID { return TestPartition }
 	cudFunc := func() istructs.ICUD { return ctx.cud }
+	commandPrepareArgs := func() istructs.CommandPrepareArgs {
+		return istructs.CommandPrepareArgs{
+			PrepareArgs: istructs.PrepareArgs{
+				Workpiece:      nil,
+				ArgumentObject: ctx.Arg(),
+				WSID:           ctx.WSID(),
+				Workspace:      nil,
+			},
+			ArgumentUnloggedObject: nil,
+		}
+	}
 	argFunc := func() istructs.IObject { return ctx.Arg() }
 	unloggedArgFunc := func() istructs.IObject { return nil }
 	wlogOffsetFunc := func() istructs.Offset { return ctx.event.WLogOffset() }
@@ -178,7 +189,7 @@ func (ctx *testState) buildState(processorKind int) {
 			IntentsLimit, BundlesLimit, state.WithCustomHttpClient(ctx), state.WithFedearationCommandHandler(ctx.emulateFederationCmd))
 	case ProcKind_CommandProcessor:
 		ctx.IState = state.ProvideCommandProcessorStateFactory()(ctx.ctx, appFunc, partitionIDFunc, wsidFunc, ctx.secretReader, cudFunc, principalsFunc, tokenFunc,
-			IntentsLimit, resultBuilderFunc, argFunc, unloggedArgFunc, wlogOffsetFunc)
+			IntentsLimit, resultBuilderFunc, commandPrepareArgs, argFunc, unloggedArgFunc, wlogOffsetFunc)
 	case ProcKind_QueryProcessor:
 		ctx.IState = state.ProvideQueryProcessorStateFactory()(ctx.ctx, appFunc, partitionIDFunc, wsidFunc, ctx.secretReader, principalsFunc, tokenFunc, nil, argFunc,
 			qryResultBuilderFunc, nil, execQueryCallback, state.QPWithCustomHttpClient(ctx), state.QPWithFedearationCommandHandler(ctx.emulateFederationCmd))

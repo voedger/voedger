@@ -170,22 +170,24 @@ func (cmdProc *cmdProc) getCmdResultBuilder(_ context.Context, work interface{})
 
 func (cmdProc *cmdProc) buildCommandArgs(_ context.Context, work interface{}) (err error) {
 	cmd := work.(*cmdWorkpiece)
-	hs := cmd.hostStateProvider.get(cmd.appStructs, cmd.cmdMes.WSID(), cmd.reb.CUDBuilder(),
-		cmd.principals, cmd.cmdMes.Token(), cmd.cmdResultBuilder, cmd.workspace.NextWLogOffset)
-	hs.ClearIntents()
-	cmd.eca = istructs.ExecCommandArgs{
-		CommandPrepareArgs: istructs.CommandPrepareArgs{
-			PrepareArgs: istructs.PrepareArgs{
-				ArgumentObject: cmd.argsObject,
-				WSID:           cmd.cmdMes.WSID(),
-				Workpiece:      work,
-				Workspace:      cmd.iWorkspace,
-			},
-			ArgumentUnloggedObject: cmd.unloggedArgsObject,
+
+	cmd.eca.CommandPrepareArgs = istructs.CommandPrepareArgs{
+		PrepareArgs: istructs.PrepareArgs{
+			ArgumentObject: cmd.argsObject,
+			WSID:           cmd.cmdMes.WSID(),
+			Workpiece:      work,
+			Workspace:      cmd.iWorkspace,
 		},
-		State:   hs,
-		Intents: hs,
+		ArgumentUnloggedObject: cmd.unloggedArgsObject,
 	}
+
+	hs := cmd.hostStateProvider.get(cmd.appStructs, cmd.cmdMes.WSID(), cmd.reb.CUDBuilder(),
+		cmd.principals, cmd.cmdMes.Token(), cmd.cmdResultBuilder, cmd.eca.CommandPrepareArgs, cmd.workspace.NextWLogOffset)
+	hs.ClearIntents()
+
+	cmd.eca.State = hs
+	cmd.eca.Intents = hs
+
 	return
 }
 
