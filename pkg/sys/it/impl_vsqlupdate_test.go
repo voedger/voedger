@@ -50,36 +50,48 @@ func TestVSqlUpdate_BasicUsage_Corrupted(t *testing.T) {
 
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
 
-	categoryName := vit.NextName()
-	body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.category","name":"%s"}}]}`, categoryName)
-	resp := vit.PostWS(ws, "c.sys.CUD", body)
-	wlogOffset := resp.CurrentWLogOffset
-	vit.PostWS(ws, "c.sys.CUD", body)
-
 	sysPrn := vit.GetSystemPrincipal(istructs.AppQName_sys_cluster)
 
 	t.Run("wlog", func(t *testing.T) {
+		// make an event
+		categoryName := vit.NextName()
+		body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.category","name":"%s"}}]}`, categoryName)
+		resp := vit.PostWS(ws, "c.sys.CUD", body)
+		wlogOffset := resp.CurrentWLogOffset
+
+		// read the current plog event
+		_, expectedPLogEvent := getLastPLogEvent(vit, ws)
+
+		// make wlog event corrupted
 		body = fmt.Sprintf(`{"args": {"Query":"update corrupted test1.app1.%d.sys.WLog.%d"}}`, ws.WSID, wlogOffset)
 		vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppWSID, "c.cluster.VSqlUpdate", body,
 			coreutils.WithAuthorizeBy(sysPrn.Token))
 
+		// check the wlog event is corrupted indeed
 		body = fmt.Sprintf(`{"args":{"Query":"select * from sys.wlog where Offset = %d"},"elements":[{"fields":["Result"]}]}`, wlogOffset)
 		resp = vit.PostWS(ws, "q.sys.SqlQuery", body)
 		resp.Println()
 		checkCorruptedEvent(require, resp)
+
+		// check the according plog event is not touched
+		_, actualPLogEvent := getLastPLogEvent(vit, ws)
+		require.Equal(expectedPLogEvent, actualPLogEvent)
 	})
 
 	t.Run("plog", func(t *testing.T) {
+		// make an event
+		categoryName := vit.NextName()
+		body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.category","name":"%s"}}]}`, categoryName)
+		resp := vit.PostWS(ws, "c.sys.CUD", body)
+		wlogOffset := resp.CurrentWLogOffset
 
-		// determine the last PLogOffset in the target workspace
-		body := `{"args":{"Query":"select * from sys.plog limit -1"},"elements":[{"fields":["Result"]}]}`
-		resp := vit.PostWS(ws, "q.sys.SqlQuery", body)
+		// determine the last plog offset
+		lastPLogOffset, _ := getLastPLogEvent(vit, ws)
 
-		m := map[string]interface{}{}
-		require.NoError(json.Unmarshal([]byte(resp.SectionRow(len(resp.Sections[0].Elements) - 1)[0].(string)), &m))
-		lastPLogOffset := int(m["PlogOffset"].(float64))
+		// get the initial wlog event
+		expectedWLogEvent := getWLogEvent(vit, ws, wlogOffset)
 
-		// determine the partitionID of the last event in the target workspace
+		// determine the partitionID of the last plog event in the target workspace
 		partitionID, err := vit.IAppPartitions.AppWorkspacePartitionID(istructs.AppQName_test1_app1, ws.WSID)
 		require.NoError(err)
 
@@ -88,12 +100,37 @@ func TestVSqlUpdate_BasicUsage_Corrupted(t *testing.T) {
 		vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppWSID, "c.cluster.VSqlUpdate", body,
 			coreutils.WithAuthorizeBy(sysPrn.Token))
 
-		// check the corrupted event
+		// check the corrupted plog event
 		body = fmt.Sprintf(`{"args":{"Query":"select * from sys.plog where Offset = %d"},"elements":[{"fields":["Result"]}]}`, lastPLogOffset)
 		resp = vit.PostWS(ws, "q.sys.SqlQuery", body)
 		resp.Println()
 		checkCorruptedEvent(require, resp)
+
+		// check the according wlog event is not touched
+		actualWLogEvent := getWLogEvent(vit, ws, wlogOffset)
+		require.Equal(expectedWLogEvent, actualWLogEvent)
 	})
+}
+
+func getWLogEvent(vit *it.VIT, ws *it.AppWorkspace, wlogOffset istructs.Offset) map[string]interface{} {
+	vit.T.Helper()
+	// determine the last PLogOffset in the target workspace
+	body := fmt.Sprintf(`{"args":{"Query":"select * from sys.wlog where Offset = %d"},"elements":[{"fields":["Result"]}]}`, wlogOffset)
+	resp := vit.PostWS(ws, "q.sys.SqlQuery", body)
+	m := map[string]interface{}{}
+	require.NoError(vit.T, json.Unmarshal([]byte(resp.SectionRow()[0].(string)), &m))
+	return m
+}
+
+func getLastPLogEvent(vit *it.VIT, ws *it.AppWorkspace) (plogOffset istructs.Offset, event map[string]interface{}) {
+	vit.T.Helper()
+	// determine the last PLogOffset in the target workspace
+	body := `{"args":{"Query":"select * from sys.plog limit -1"},"elements":[{"fields":["Result"]}]}`
+	resp := vit.PostWS(ws, "q.sys.SqlQuery", body)
+
+	m := map[string]interface{}{}
+	require.NoError(vit.T, json.Unmarshal([]byte(resp.SectionRow(len(resp.Sections[0].Elements) - 1)[0].(string)), &m))
+	return istructs.Offset(m["PlogOffset"].(float64)), m
 }
 
 func checkCorruptedEvent(require *require.Assertions, resp *coreutils.FuncResponse) {
