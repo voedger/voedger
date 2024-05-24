@@ -305,6 +305,15 @@ func (ctx *testState) PutRecords(wsid istructs.WSID, cb NewRecordsCallback) (wLo
 	})
 }
 
+func (ctx *testState) GetRecord(wsid istructs.WSID, id istructs.RecordID) istructs.IRecord {
+	var rec istructs.IRecord
+	rec, err := ctx.appStructs.Records().Get(wsid, false, id)
+	if err != nil {
+		panic(err)
+	}
+	return rec
+}
+
 func (ctx *testState) PutEvent(wsid istructs.WSID, name appdef.FullQName, cb NewEventCallback) (wLogOffs istructs.Offset, newRecordIds []istructs.RecordID) {
 	var localPkgName string
 	if name.PkgPath() == appdef.SysPackage {

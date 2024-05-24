@@ -33,6 +33,8 @@ type ITestAPI interface {
 	PutRequestSubject(principals []iauthnz.Principal, token string)
 	PutQuery(wsid istructs.WSID, name appdef.FullQName)
 
+	GetRecord(wsid istructs.WSID, id istructs.RecordID) istructs.IRecord
+
 	// Intent
 	RequireIntent(t *testing.T, storage appdef.QName, entity appdef.FullQName, kb KeyBuilderCallback) IIntentAssertions
 }
