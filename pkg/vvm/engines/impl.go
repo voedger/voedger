@@ -13,7 +13,6 @@ import (
 	"github.com/voedger/voedger/pkg/iextengine"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
-	"github.com/voedger/voedger/pkg/state"
 )
 
 // provides all built-in extension functions for specified application config
@@ -39,19 +38,6 @@ func provideAppsBuiltInExtFuncs(cfgs istructsmem.AppConfigsType) iextengine.Buil
 				case appdef.TypeKind_Command:
 					if cmd, ok := cfg.Resources.QueryResource(name).(istructs.ICommandFunction); ok {
 						fn = func(_ context.Context, io iextengine.IExtensionIO) error {
-							kb, err := io.KeyBuilder(state.CommandContext, appdef.NullQName)
-							if err != nil {
-								return err
-							}
-							cmdCtx, err := io.MustExist(kb)
-							if err != nil {
-								return err
-							}
-
-							if cmdCtx == nil {
-								return fmt.Errorf("command context not found")
-							}
-
 							execArgs := istructs.ExecCommandArgs{
 								CommandPrepareArgs: io.CommandPrepareArgs(),
 								State:              io,
