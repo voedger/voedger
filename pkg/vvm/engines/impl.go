@@ -53,17 +53,9 @@ func provideAppsBuiltInExtFuncs(cfgs istructsmem.AppConfigsType) iextengine.Buil
 							}
 
 							execArgs := istructs.ExecCommandArgs{
-								CommandPrepareArgs: istructs.CommandPrepareArgs{
-									PrepareArgs: istructs.PrepareArgs{
-										//Workpiece:      nil,
-										//ArgumentObject: cmdCtx.AsObject(Field_ArgumentObject),
-										//WSID:           cmdCtx.AsInt64(Field_Workspace),
-										//Workspace:      nil,
-									},
-									//ArgumentUnloggedObject: cmdCtx.AsObject(Field_ArgumentUnloggedObject),
-								},
-								State:   io,
-								Intents: io,
+								CommandPrepareArgs: io.CommandPrepareArgs(),
+								State:              io,
+								Intents:            io,
 							}
 							return cmd.Exec(execArgs)
 						}
