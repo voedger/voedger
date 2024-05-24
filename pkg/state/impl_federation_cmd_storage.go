@@ -92,11 +92,19 @@ func (s *federationCommandStorage) Get(key istructs.IStateKeyBuilder) (istructs.
 	var resBody string
 	var newIDs map[string]int64
 	var err error
+	var result map[string]interface{}
 
 	if s.emulation != nil {
 		resStatus, newIDs, resBody, err = s.emulation(owner, appname, wsid, command, body)
 		if err != nil {
 			return nil, err
+		}
+		result = map[string]interface{}{}
+		if resBody != "" {
+			err = json.Unmarshal([]byte(resBody), &result)
+			if err != nil {
+				return nil, err
+			}
 		}
 	} else {
 
@@ -115,18 +123,18 @@ func (s *federationCommandStorage) Get(key istructs.IStateKeyBuilder) (istructs.
 		if err != nil {
 			return nil, err
 		}
-		resBody = resp.Body
+
 		newIDs = resp.NewIDs
 		resStatus = resp.HTTPResp.StatusCode
-	}
 
-	res := map[string]interface{}{}
-	err = json.Unmarshal([]byte(resBody), &res)
-	if err != nil {
-		return nil, err
-	}
+		res := map[string]interface{}{}
+		err = json.Unmarshal([]byte(resp.Body), &res)
+		if err != nil {
+			return nil, err
+		}
+		result = res["Result"].(map[string]interface{})
 
-	result := res["Result"].(map[string]interface{})
+	}
 
 	return &fcCmdValue{
 		statusCode: resStatus,
