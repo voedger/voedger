@@ -102,10 +102,6 @@ func getPkgAppDefObjs(packagePath string, appDef appdef.IAppDef, headerContent s
 			}
 		}
 		qName := iTypeObj.QName()
-		// skip types from other packages
-		if qName.Pkg() != currentPkgLocalName {
-			return
-		}
 		if !slices.Contains(uniqueObjects, qName.String()) {
 			iTypeObjs = append(iTypeObjs, iTypeObj)
 			uniqueObjects = append(uniqueObjects, qName.String())
@@ -208,8 +204,8 @@ func newFieldItem(tableData ormTableItem, field appdef.IField) ormField {
 		Table:         tableData,
 		Type:          getFieldType(field),
 		Name:          normalizeName(field.Name()),
-		GetMethodName: fmt.Sprintf("Get_%s", strings.ToLower(name)),
-		SetMethodName: fmt.Sprintf("Set_%s", strings.ToLower(name)),
+		GetMethodName: fmt.Sprintf("Get_%s", name),
+		SetMethodName: fmt.Sprintf("Set_%s", name),
 	}
 }
 

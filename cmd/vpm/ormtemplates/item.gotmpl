@@ -11,6 +11,17 @@ type Value_{{.Type}}_{{.Package.Name}}_{{.Name}} struct{
 }
 {{end}}
 
+{{if (eq .Type "ODoc")}}
+type ORecord_{{.Package.Name}}_{{.Name}} struct{
+    Type
+}
+
+type Container_ORecord_{{.Package.Name}}_{{.Name}} struct {
+    tv  exttinygo.TValue
+    len int
+}
+{{end}}
+
 {{if and (ne .Type "Command") (ne .Type "Query")}}
 type Intent_{{.Type}}_{{.Package.Name}}_{{.Name}} struct{
 	intent exttinygo.TIntent

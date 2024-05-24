@@ -68,6 +68,29 @@ func (v {{.Type}}_{{.Package.Name}}_{{.Name}}) Get(id ID) (Value_{{.Type}}_{{.Pa
 }
 {{end}}
 
+{{if (eq .Type "ODoc")}}
+func (v {{.Type}}_{{.Package.Name}}_{{.Name}}) NewIntent(id ID) Intent_{{.Type}}_{{.Package.Name}}_{{.Name}} {
+	kb := exttinygo.KeyBuilder(exttinygo.StorageRecord, v.qname)
+	kb.PutInt64(FieldNameSysID, int64(id))
+	return Intent_{{.Type}}_{{.Package.Name}}_{{.Name}}{intent: exttinygo.NewValue(kb)}
+}
+
+func (v Value_{{.Type}}_{{.Package.Name}}_{{.Name}}) Get_{{.Name}}_item() (res Container_ORecord_{{.Package.Name}}_{{.Name}}) {
+	return Container_ORecord_{{.Package.Name}}_{{.Name}}{tv: v.tv.AsValue("{{.Name}}_item")}
+}
+
+func (v *Container_ORecord_{{.Package.Name}}_{{.Name}}) Len() int {
+	if v.len == 0 {
+		v.len = v.tv.Len() + 1
+	}
+	return v.len - 1
+}
+
+func (v *Container_ORecord_{{.Package.Name}}_{{.Name}}) Get(i int) Value_{{.Type}}_{{.Package.Name}}_{{.Name}} {
+	return Value_{{.Type}}_{{.Package.Name}}_{{.Name}}{tv: v.tv.GetAsValue(i)}
+}
+{{end}}
+
 {{if (eq .Type "View")}}
 func (v {{.Type}}_{{.Package.Name}}_{{.Name}}) NewIntent({{range .Keys}}{{lower .Name}} {{.Type}}, {{end}}) Intent_{{.Type}}_{{.Package.Name}}_{{.Name}} {
 	kb := exttinygo.KeyBuilder(exttinygo.StorageRecord, v.qname){{range .Keys}}
