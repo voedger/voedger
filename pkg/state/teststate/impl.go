@@ -381,8 +381,21 @@ type intentAssertions struct {
 
 func (ia *intentAssertions) Exists() {
 	if ia.vb == nil {
-		require.Fail(ia.t, "Expected intent to exist")
+		require.Fail(ia.t, "expected intent to exist")
 	}
+}
+
+func (ia *intentAssertions) Assert(cb IntentAssertionsCallback) {
+	if ia.vb == nil {
+		require.Fail(ia.t, "expected intent to exist")
+		return
+	}
+	value := ia.vb.BuildValue()
+	if value == nil {
+		require.Fail(ia.t, "value builder does not support Assert operation")
+		return
+	}
+	cb(require.New(ia.t), value)
 }
 
 func (ia *intentAssertions) Equal(vbc ValueBuilderCallback) {

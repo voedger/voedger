@@ -235,6 +235,17 @@ type recordsValueBuilder struct {
 	rw istructs.IRowWriter
 }
 
+func (b *recordsValueBuilder) BuildValue() istructs.IStateValue {
+	rr, err := istructs.BuildRow(b.rw)
+	if err != nil {
+		panic(err)
+	}
+	if rec, ok := rr.(istructs.IRecord); ok {
+		return &recordsValue{record: rec}
+	}
+	return nil
+}
+
 func (b *recordsValueBuilder) Equal(src istructs.IStateValueBuilder) bool {
 	vb, ok := src.(*recordsValueBuilder)
 	if !ok {
