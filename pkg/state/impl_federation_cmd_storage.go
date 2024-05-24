@@ -83,45 +83,57 @@ func (s *federationCommandStorage) Get(key istructs.IStateKeyBuilder) (istructs.
 	if v, ok := kb.data[Field_Body]; ok {
 		body = v.(string)
 	}
-	if v, ok := kb.data[Field_Token]; ok {
-		opts = append(opts, coreutils.WithAuthorizeBy(v.(string)))
-	} else {
-		appQName := istructs.NewAppQName(owner, appname)
-		systemPrincipalToken, err := payloads.GetSystemPrincipalToken(s.tokens, appQName)
-		if err != nil {
-			return nil, err
-		}
-		opts = append(opts, coreutils.WithAuthorizeBy(systemPrincipalToken))
-	}
 
 	appOwnerAndName := owner + istructs.AppQNameQualifierChar + appname
 
-	relativeUrl := fmt.Sprintf("api/%s/%d/%s", appOwnerAndName, wsid, command)
+	relativeUrl := fmt.Sprintf("api/%s/%d/c.%s", appOwnerAndName, wsid, command)
 
 	var resStatus int
 	var resBody string
 	var newIDs map[string]int64
 	var err error
+	var result map[string]interface{}
 
 	if s.emulation != nil {
 		resStatus, newIDs, resBody, err = s.emulation(owner, appname, wsid, command, body)
 		if err != nil {
 			return nil, err
 		}
+		result = map[string]interface{}{}
+		if resBody != "" {
+			err = json.Unmarshal([]byte(resBody), &result)
+			if err != nil {
+				return nil, err
+			}
+		}
 	} else {
+
+		if v, ok := kb.data[Field_Token]; ok {
+			opts = append(opts, coreutils.WithAuthorizeBy(v.(string)))
+		} else {
+			appQName := istructs.NewAppQName(owner, appname)
+			systemPrincipalToken, err := payloads.GetSystemPrincipalToken(s.tokens, appQName)
+			if err != nil {
+				return nil, err
+			}
+			opts = append(opts, coreutils.WithAuthorizeBy(systemPrincipalToken))
+		}
+
 		resp, err := s.federation.Func(relativeUrl, body, opts...)
 		if err != nil {
 			return nil, err
 		}
-		resBody = resp.Body
+
 		newIDs = resp.NewIDs
 		resStatus = resp.HTTPResp.StatusCode
-	}
 
-	result := map[string]interface{}{}
-	err = json.Unmarshal([]byte(resBody), &result)
-	if err != nil {
-		return nil, err
+		res := map[string]interface{}{}
+		err = json.Unmarshal([]byte(resp.Body), &res)
+		if err != nil {
+			return nil, err
+		}
+		result = res["Result"].(map[string]interface{})
+
 	}
 
 	return &fcCmdValue{

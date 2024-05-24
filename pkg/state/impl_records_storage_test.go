@@ -274,7 +274,7 @@ func TestRecordsStorage_Insert(t *testing.T) {
 	cud := &mockCUD{}
 	cud.On("Create").Return(rw)
 	s := ProvideCommandProcessorStateFactory()(context.Background(), nil, nil, SimpleWSIDFunc(istructs.NullWSID), nil,
-		func() istructs.ICUD { return cud }, nil, nil, 1, nil, nil, nil, nil)
+		func() istructs.ICUD { return cud }, nil, nil, 1, nil, nil, nil, nil, nil)
 	kb, err := s.KeyBuilder(Record, testRecordQName1)
 	require.NoError(err)
 
@@ -297,7 +297,7 @@ func TestRecordsStorage_Update(t *testing.T) {
 	cud := &mockCUD{}
 	cud.On("Update", mock.Anything).Return(rw)
 	s := ProvideCommandProcessorStateFactory()(context.Background(), nil, nil, SimpleWSIDFunc(istructs.NullWSID), nil,
-		func() istructs.ICUD { return cud }, nil, nil, 1, nil, nil, nil, nil)
+		func() istructs.ICUD { return cud }, nil, nil, 1, nil, nil, nil, nil, nil)
 	kb, err := s.KeyBuilder(Record, testRecordQName1)
 	require.NoError(err)
 
@@ -373,7 +373,7 @@ func TestRecordsStorage_ValidateInWorkspaces_Writes(t *testing.T) {
 		On("PutBatch", mock.Anything, mock.Anything).Return(nil)
 
 	s := ProvideCommandProcessorStateFactory()(context.Background(), appStructsFunc(mockedStructs), nil,
-		SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil, nil, 10, nil, nil, nil, nil)
+		SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil, nil, 10, nil, nil, nil, nil, nil)
 
 	wrongSingleton := appdef.NewQName("test", "RecordX")
 	wrongKb, err := s.KeyBuilder(Record, wrongSingleton)

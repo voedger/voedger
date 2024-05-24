@@ -123,6 +123,17 @@ func Test_BasicUsage(t *testing.T) {
 
 	eventFunc := func() istructs.IPLogEvent { return event }
 	cudFunc := func() istructs.ICUD { return reb.CUDBuilder() }
+	cmdPrepareArgsFunc := func() istructs.CommandPrepareArgs {
+		return istructs.CommandPrepareArgs{
+			PrepareArgs: istructs.PrepareArgs{
+				Workpiece:      nil,
+				ArgumentObject: event.ArgumentObject(),
+				WSID:           ws,
+				Workspace:      nil,
+			},
+			ArgumentUnloggedObject: nil,
+		}
+	}
 	argFunc := func() istructs.IObject { return event.ArgumentObject() }
 	unloggedArgFunc := func() istructs.IObject { return nil }
 	appFunc := func() istructs.IAppStructs { return app }
@@ -130,7 +141,7 @@ func Test_BasicUsage(t *testing.T) {
 
 	// Create states for Command processor and Actualizer
 	actualizerState := state.ProvideAsyncActualizerStateFactory()(context.Background(), appFunc, nil, state.SimpleWSIDFunc(ws), nil, nil, eventFunc, nil, nil, intentsLimit, bundlesLimit)
-	cmdProcState := state.ProvideCommandProcessorStateFactory()(context.Background(), appFunc, nil, state.SimpleWSIDFunc(ws), nil, cudFunc, nil, nil, intentsLimit, nil, argFunc, unloggedArgFunc, wlogOffsetFunc)
+	cmdProcState := state.ProvideCommandProcessorStateFactory()(context.Background(), appFunc, nil, state.SimpleWSIDFunc(ws), nil, cudFunc, nil, nil, intentsLimit, nil, cmdPrepareArgsFunc, argFunc, unloggedArgFunc, wlogOffsetFunc)
 
 	// Create extension package from WASM
 	ctx := context.Background()

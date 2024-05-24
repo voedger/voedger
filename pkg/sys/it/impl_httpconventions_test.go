@@ -18,7 +18,7 @@ import (
 
 func TestBasicUsage_HTTPConventions(t *testing.T) {
 	require := require.New(t)
-	vit.MockQryExec = func(input string, callback istructs.ExecQueryCallback) error {
+	vit.MockQryExec = func(input string, _ istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) error {
 		rr := &rr{res: input}
 		require.NoError(callback(rr))
 		return errors.New("test error")
