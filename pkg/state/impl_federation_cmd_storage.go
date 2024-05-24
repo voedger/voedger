@@ -83,16 +83,6 @@ func (s *federationCommandStorage) Get(key istructs.IStateKeyBuilder) (istructs.
 	if v, ok := kb.data[Field_Body]; ok {
 		body = v.(string)
 	}
-	if v, ok := kb.data[Field_Token]; ok {
-		opts = append(opts, coreutils.WithAuthorizeBy(v.(string)))
-	} else {
-		appQName := istructs.NewAppQName(owner, appname)
-		systemPrincipalToken, err := payloads.GetSystemPrincipalToken(s.tokens, appQName)
-		if err != nil {
-			return nil, err
-		}
-		opts = append(opts, coreutils.WithAuthorizeBy(systemPrincipalToken))
-	}
 
 	appOwnerAndName := owner + istructs.AppQNameQualifierChar + appname
 
@@ -109,6 +99,18 @@ func (s *federationCommandStorage) Get(key istructs.IStateKeyBuilder) (istructs.
 			return nil, err
 		}
 	} else {
+
+		if v, ok := kb.data[Field_Token]; ok {
+			opts = append(opts, coreutils.WithAuthorizeBy(v.(string)))
+		} else {
+			appQName := istructs.NewAppQName(owner, appname)
+			systemPrincipalToken, err := payloads.GetSystemPrincipalToken(s.tokens, appQName)
+			if err != nil {
+				return nil, err
+			}
+			opts = append(opts, coreutils.WithAuthorizeBy(systemPrincipalToken))
+		}
+
 		resp, err := s.federation.Func(relativeUrl, body, opts...)
 		if err != nil {
 			return nil, err

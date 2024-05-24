@@ -24,7 +24,9 @@ func (s *bundledHostState) CanExist(key istructs.IStateKeyBuilder) (stateValue i
 		if value, ok := bundledStorage.get(key); ok {
 			// TODO later: For the optimization purposes, maybe would be wise to use e.g. AsValue()
 			// instead of BuildValue()
-			return value.value.BuildValue(), true, nil
+			if stateValue = value.value.BuildValue(); stateValue != nil {
+				return stateValue, true, nil
+			}
 		}
 	}
 
