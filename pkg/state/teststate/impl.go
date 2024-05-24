@@ -305,6 +305,15 @@ func (ctx *testState) PutRecords(wsid istructs.WSID, cb NewRecordsCallback) (wLo
 	})
 }
 
+func (ctx *testState) GetRecord(wsid istructs.WSID, id istructs.RecordID) istructs.IRecord {
+	var rec istructs.IRecord
+	rec, err := ctx.appStructs.Records().Get(wsid, false, id)
+	if err != nil {
+		panic(err)
+	}
+	return rec
+}
+
 func (ctx *testState) PutEvent(wsid istructs.WSID, name appdef.FullQName, cb NewEventCallback) (wLogOffs istructs.Offset, newRecordIds []istructs.RecordID) {
 	var localPkgName string
 	if name.PkgPath() == appdef.SysPackage {
@@ -381,8 +390,21 @@ type intentAssertions struct {
 
 func (ia *intentAssertions) Exists() {
 	if ia.vb == nil {
-		require.Fail(ia.t, "Expected intent to exist")
+		require.Fail(ia.t, "expected intent to exist")
 	}
+}
+
+func (ia *intentAssertions) Assert(cb IntentAssertionsCallback) {
+	if ia.vb == nil {
+		require.Fail(ia.t, "expected intent to exist")
+		return
+	}
+	value := ia.vb.BuildValue()
+	if value == nil {
+		require.Fail(ia.t, "value builder does not support Assert operation")
+		return
+	}
+	cb(require.New(ia.t), value)
 }
 
 func (ia *intentAssertions) Equal(vbc ValueBuilderCallback) {

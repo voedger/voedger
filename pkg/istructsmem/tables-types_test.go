@@ -124,16 +124,17 @@ func Test_newRecord(t *testing.T) {
 		})
 
 		t.Run("newTestCRec must return non empty, full filled and valid «test.Record»", func(t *testing.T) {
-			rec := newTestCRecord(100501)
+			const recID istructs.RecordID = 100501
+			rec := newTestCRecord(recID)
 			require.False(rec.empty())
 			require.Equal(test.testCRec, rec.QName())
-			require.Equal(istructs.RecordID(100501), rec.ID())
-			require.Equal(istructs.RecordID(100501), rec.AsRecordID(appdef.SystemField_ID))
+			require.Equal(recID, rec.ID())
+			require.Equal(recID, rec.AsRecordID(appdef.SystemField_ID))
 			require.Equal(istructs.NullRecordID, rec.Parent())
 			require.Equal("", rec.Container())
 			require.True(rec.IsActive())
 
-			testTestCRec(t, rec, 100501)
+			testTestCRec(t, rec, recID)
 
 			rec.PutRecordID(appdef.SystemField_ParentID, doc.ID())
 			require.Equal(doc.ID(), rec.Parent())
@@ -142,6 +143,13 @@ func Test_newRecord(t *testing.T) {
 			rec.PutString(appdef.SystemField_Container, "record")
 			require.Equal("record", rec.Container())
 			require.Equal("record", rec.AsString(appdef.SystemField_Container))
+
+			t.Run("Should be ok to get sys.ID and sys.ParentID through AsInt64() and AsFloat64()", func(t *testing.T) {
+				require.Equal(float64(recID), rec.AsFloat64(appdef.SystemField_ID))
+				require.Equal(float64(doc.ID()), rec.AsFloat64(appdef.SystemField_ParentID))
+				require.Equal(int64(recID), rec.AsInt64(appdef.SystemField_ID))
+				require.Equal(int64(doc.ID()), rec.AsInt64(appdef.SystemField_ParentID))
+			})
 
 			t.Run("system field counters for test CRecord", func(t *testing.T) {
 				sysCnt := 0
