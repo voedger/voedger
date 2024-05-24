@@ -138,6 +138,10 @@ func (m *MockState) PLogEvent() istructs.IPLogEvent {
 	args := m.Called()
 	return args.Get(0).(istructs.IPLogEvent)
 }
+func (m *MockState) CommandPrepareArgs() istructs.CommandPrepareArgs {
+	args := m.Called()
+	return args.Get(0).(istructs.CommandPrepareArgs)
+}
 func (m *MockState) App() istructs.AppQName {
 	args := m.Called()
 	return args.Get(0).(istructs.AppQName)

@@ -79,8 +79,6 @@ type cmdWorkpiece struct {
 	wsInitialized                bool
 	cmdResultBuilder             istructs.IObjectBuilder
 	cmdResult                    istructs.IObject
-	resources                    istructs.IResources
-	cmdExec                      func(args istructs.ExecCommandArgs) error
 	iCommand                     appdef.ICommand
 	iWorkspace                   appdef.IWorkspace
 	appPartitionRestartScheduled bool
@@ -124,6 +122,7 @@ type hostStateProvider struct {
 	state            state.IHostState
 	token            string
 	cmdResultBuilder istructs.IObjectBuilder
+	cmdPrepareArgs   istructs.CommandPrepareArgs
 	wlogOffset       istructs.Offset
 }
 
@@ -132,7 +131,7 @@ func newHostStateProvider(ctx context.Context, pid istructs.PartitionID, secretR
 	// TODO: provide ArgFunc & UnloggedArgFunc
 	p.state = state.ProvideCommandProcessorStateFactory()(ctx, p.getAppStructs, state.SimplePartitionIDFunc(pid),
 		p.getWSID, secretReader, p.getCUD, p.getPrincipals, p.getToken, projectors.DefaultIntentsLimit,
-		p.getCmdResultBuilder, nil, nil, p.getWLogOffset)
+		p.getCmdResultBuilder, p.getCmdPrepareArgs, nil, nil, p.getWLogOffset)
 	return p
 }
 
@@ -142,17 +141,19 @@ func (p *hostStateProvider) getCUD() istructs.ICUD               { return p.cud 
 func (p *hostStateProvider) getPrincipals() []iauthnz.Principal {
 	return p.principals
 }
-func (p *hostStateProvider) getToken() string                             { return p.token }
-func (p *hostStateProvider) getCmdResultBuilder() istructs.IObjectBuilder { return p.cmdResultBuilder }
-func (p *hostStateProvider) getWLogOffset() istructs.Offset               { return p.wlogOffset }
+func (p *hostStateProvider) getToken() string                               { return p.token }
+func (p *hostStateProvider) getCmdResultBuilder() istructs.IObjectBuilder   { return p.cmdResultBuilder }
+func (p *hostStateProvider) getCmdPrepareArgs() istructs.CommandPrepareArgs { return p.cmdPrepareArgs }
+func (p *hostStateProvider) getWLogOffset() istructs.Offset                 { return p.wlogOffset }
 func (p *hostStateProvider) get(appStructs istructs.IAppStructs, wsid istructs.WSID, cud istructs.ICUD, principals []iauthnz.Principal, token string,
-	cmdResultBuilder istructs.IObjectBuilder, wlogOffset istructs.Offset) state.IHostState {
+	cmdResultBuilder istructs.IObjectBuilder, cmdPrepareArgs istructs.CommandPrepareArgs, wlogOffset istructs.Offset) state.IHostState {
 	p.as = appStructs
 	p.wsid = wsid
 	p.cud = cud
 	p.principals = principals
 	p.token = token
 	p.cmdResultBuilder = cmdResultBuilder
+	p.cmdPrepareArgs = cmdPrepareArgs
 	p.wlogOffset = wlogOffset
 	return p.state
 }
