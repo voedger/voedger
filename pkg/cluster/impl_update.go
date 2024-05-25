@@ -45,13 +45,12 @@ func provideExecCmdVSqlUpdate(federation federation.IFederation, itokens itokens
 
 func parseAndValidateQuery(args istructs.ExecCommandArgs, query string, asp istructs.IAppStructsProvider) (update update, err error) {
 	update.DML, err = coreutils.ParseQuery(query)
-	// appQName, location, qNameToUpdate, offsetOrID, updateKind, cleanSql, err := parseQuery(query)
 	if err != nil {
 		return update, err
 	}
 
 	if !allowedDMLKinds[update.Kind] {
-		return update, errors.New("'update' clause expected")
+		return update, errors.New("'update' or 'insert' clause expected")
 	}
 
 	update.appParts = args.Workpiece.(interface {
@@ -72,7 +71,7 @@ func parseAndValidateQuery(args istructs.ExecCommandArgs, query string, asp istr
 	case coreutils.LocationKind_AppWSNum:
 		locationID = istructs.IDType(istructs.NewWSID(istructs.MainClusterID, istructs.FirstBaseAppWSID+istructs.WSID(update.Location.ID)))
 	default:
-		return update, fmt.Errorf("location must be specified")
+		return update, errors.New("location must be specified")
 	}
 
 	if update.Kind != coreutils.DMLKind_UpdateCorrupted {
@@ -137,107 +136,6 @@ func validateQuery(update update) error {
 		// notest: checked already on sql parse
 		panic("unknown operation kind" + fmt.Sprint(update.Kind))
 	}
-}
-
-// `123` or `a1` or `login`
-// only one of the fields is not zero-value
-type location struct {
-	number   uint64
-	appWSNum uint64
-	login    string
-}
-
-// // appStructs could be nil
-// func parseQuery(query string) (appQName istructs.AppQName, location location, qNameToUpdate appdef.QName, offsetOrID istructs.IDType,
-// 	updateKind updateKind, cleanSql string, err error) {
-// 	const (
-// 		// 0 is original query
-
-// 		operationIdx int = 1 + iota
-// 		appIdx
-// 		locationIdx
-// 		wsidOrPartitionIDIdx
-// 		appWSNumIdx
-// 		loginIdx
-// 		qNameToUpdateIdx
-// 		offsetOrIDIdx
-// 		parsIdx
-
-// 		groupsCount
-// 	)
-
-// 	parts := updateQueryExp.FindStringSubmatch(query)
-// 	if len(parts) != groupsCount {
-// 		return istructs.NullAppQName, location, appdef.NullQName, 0, updateKind_Null, "", fmt.Errorf("invalid query format: %s", query)
-// 	}
-
-// 	if appName := parts[appIdx]; appName != "" {
-// 		appName = appName[:len(parts[appIdx])-1]
-// 		owner, app, err := appdef.ParseQualifiedName(appName, `.`)
-// 		if err != nil {
-// 			// notest: avoided already by regexp
-// 			return istructs.NullAppQName, location, appdef.NullQName, 0, updateKind_Null, "", err
-// 		}
-// 		appQName = istructs.NewAppQName(owner, app)
-// 	}
-
-// 	if locationStr := parts[locationIdx]; locationStr != "" {
-// 		locationStr = locationStr[:len(parts[locationIdx])-1]
-// 		location, err = parseLocation(locationStr)
-// 		if err != nil {
-// 			// notest: avoided already by regexp
-// 			return istructs.NullAppQName, location, appdef.NullQName, 0, updateKind_Null, "", err
-// 		}
-// 	}
-
-// 	qNameToUpdateStr := parts[qNameToUpdateIdx]
-// 	qNameToUpdate, err = appdef.ParseQName(qNameToUpdateStr)
-// 	if err != nil {
-// 		// notest: avoided already by regexp
-// 		return istructs.NullAppQName, location, appdef.NullQName, 0, updateKind_Null, "", fmt.Errorf("invalid QName %s: %w", qNameToUpdateStr, err)
-// 	}
-
-// 	if offsetStr := parts[offsetOrIDIdx]; len(offsetStr) > 0 {
-// 		offsetStr = offsetStr[1:]
-// 		offsetInt, err := strconv.Atoi(offsetStr)
-// 		if err != nil {
-// 			// notest: avoided already by regexp
-// 			return istructs.NullAppQName, location, appdef.NullQName, 0, updateKind_Null, "", err
-// 		}
-// 		offsetOrID = istructs.IDType(offsetInt)
-// 	}
-// 	cleanSql = strings.TrimSpace(parts[parsIdx])
-// 	updateKindStr := strings.TrimSpace(parts[operationIdx])
-// 	if len(cleanSql) > 0 {
-// 		cleanSql = fmt.Sprintf("update %s %s", qNameToUpdate, cleanSql)
-// 	}
-// 	switch strings.TrimSpace(strings.ToLower(updateKindStr)) {
-// 	case "update":
-// 		updateKind = coreutils.DMLKind_UpdateTable
-// 	case "direct update":
-// 		updateKind = coreutils.DMLKind_DirectUpdate
-// 	case "update corrupted":
-// 		updateKind = coreutils.DMLKind_UpdateCorrupted
-// 	case "direct insert":
-// 		updateKind = coreutils.DMLKind_DirectInsert
-// 	default:
-// 		return istructs.NullAppQName, location, appdef.NullQName, 0, updateKind_Null, "", fmt.Errorf("wrong update kind %s", updateKindStr)
-// 	}
-
-// 	return appQName, location, qNameToUpdate, offsetOrID, updateKind, cleanSql, nil
-// }
-
-func parseLocation(locationStr string) (location location, err error) {
-	switch locationStr[:1] {
-	case "a":
-		appWSNumStr := locationStr[1:]
-		location.appWSNum, err = strconv.ParseUint(appWSNumStr, 0, 0)
-	case `"`:
-		location.login = locationStr[1 : len(locationStr)-1]
-	default:
-		location.number, err = strconv.ParseUint(locationStr, 0, 0)
-	}
-	return location, err
 }
 
 func exprToInterface(expr sqlparser.Expr) (val interface{}, err error) {

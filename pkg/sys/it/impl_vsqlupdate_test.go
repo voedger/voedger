@@ -391,11 +391,13 @@ func TestVSqlUpdateValidateErrors(t *testing.T) {
 
 	cases := map[string]string{
 		// update
-		"":             "misses required field",
-		" ":            "invalid query forma",
-		"update":       "invalid query format",
-		"update s s s": "invalid query format",
+		"":                       "misses required field",
+		" ":                      "invalid query format",
+		"update":                 "invalid query format",
+		"update s s s":           "invalid query format",
+		"select * from sys.plog": "'update' or 'insert' clause expected",
 		"update test1.app1.42.app1pkg.category.1":                                "no fields to update",
+		"update test1.app1.app1pkg.category.1 set name = 's'":                    "location must be specified",
 		"update 42.42.42.wongQName set name = 42":                                "invalid query format",
 		"wrong op kind test1.app1.42.app1pkg.category.42 set name = 42":          `invalid query format`,
 		"update test1.app1.42.app1pkg.category set name = 42":                    "record ID is not provided",

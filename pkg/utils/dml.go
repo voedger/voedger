@@ -17,10 +17,10 @@ import (
 
 const (
 	dmlRegexpStr = `^` +
-		`\s*(?P<operation>(\w*\s*update\s*\w*)|(\w*\s*insert)|(select\s+[^\s]+\s+from))\s+` +
-		`(?P<appQName>[^\d][a-zA-Z0-9]+\.[^\d][a-zA-Z0-9]+\.)?` +
+		`\s*(?P<operation>(\w*\s*update\s*\w*)|(\w*\s*insert)|(select\s+.+\s+from))\s+` +
+		`(?P<appQName>[^\d][a-zA-Z0-9_]+\.[^\d][a-zA-Z0-9_]+\.)?` +
 		`((?P<wsidOrPartno>\d+\.)|(?P<appWSNum>a\d+.)|(?P<login>".+"\.))?` +
-		`(?P<qName>[^\d][a-zA-Z0-9]+\.[^\d][a-zA-Z0-9]+)` +
+		`(?P<qName>[^\d][a-zA-Z0-9_]+\.[^\d][a-zA-Z0-9_]+)` +
 		`(?P<idOrOffset>\.\d+)?` +
 		`(?P<pars>\s+.*)?$`
 	bitSize64 = 64
@@ -146,7 +146,7 @@ func ParseQuery(query string) (dml DML, err error) {
 			return dml, fmt.Errorf(`wrong dml operation kind "%s"`, operationStr)
 		}
 	}
-	if len(pars) > 0 {
+	if len(pars) > 0 || dml.Kind == DMLKind_Select {
 		dml.CleanSQL = strings.TrimSpace(fmt.Sprintf("%s %s %s", opSQL, qNameStr, pars))
 	}
 	return dml, nil
