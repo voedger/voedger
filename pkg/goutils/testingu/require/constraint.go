@@ -7,66 +7,65 @@ package require
 
 import (
 	"fmt"
-	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
 
 // Constraint is a common function prototype when validating given value.
-type Constraint func(*testing.T, interface{}) bool
+type Constraint assert.ValueAssertionFunc
 
 // Returns a constraint that checks that value (panic or error) contains
 // the given substring.
 func Has(substr string, msgAndArgs ...interface{}) Constraint {
-	return func(t *testing.T, recovered interface{}) bool {
-		return assert.Contains(t, fmt.Sprint(recovered), substr, msgAndArgs...)
+	return func(t assert.TestingT, v interface{}, _ ...interface{}) bool {
+		return assert.Contains(t, fmt.Sprint(v), substr, msgAndArgs...)
 	}
 }
 
 // Returns a constraint that checks that value (panic or error) does not contain
 // the given substring.
 func NotHas(substr string, msgAndArgs ...interface{}) Constraint {
-	return func(t *testing.T, recovered interface{}) bool {
-		return assert.NotContains(t, fmt.Sprint(recovered), substr, msgAndArgs...)
+	return func(t assert.TestingT, v interface{}, _ ...interface{}) bool {
+		return assert.NotContains(t, fmt.Sprint(v), substr, msgAndArgs...)
 	}
 }
 
 // Return constraint that checks if specified regexp matches value (panic or error).
 func Rx(rx interface{}, msgAndArgs ...interface{}) Constraint {
-	return func(t *testing.T, recovered interface{}) bool {
-		return assert.Regexp(t, rx, recovered, msgAndArgs...)
+	return func(t assert.TestingT, v interface{}, _ ...interface{}) bool {
+		return assert.Regexp(t, rx, v, msgAndArgs...)
 	}
 }
 
 // Returns a constraint that checks that value (panic or error) does not match
 // specified regexp.
 func NotRx(rx interface{}, msgAndArgs ...interface{}) Constraint {
-	return func(t *testing.T, recovered interface{}) bool {
-		return assert.NotRegexp(t, rx, recovered, msgAndArgs...)
+	return func(t assert.TestingT, v interface{}, _ ...interface{}) bool {
+		return assert.NotRegexp(t, rx, v, msgAndArgs...)
 	}
 }
 
 // Returns a constraint that checks that error (or one of the errors in the error chain)
 // matches the target.
 func Is(target error, msgAndArgs ...interface{}) Constraint {
-	return func(t *testing.T, err interface{}) bool {
-		e, ok := err.(error)
+	return func(t assert.TestingT, v interface{}, _ ...interface{}) bool {
+		err, ok := v.(error)
 		if !ok {
-			return assert.Fail(t, fmt.Sprintf("«%#v» is not an error", err), msgAndArgs...)
+			return assert.Fail(t, fmt.Sprintf("«%#v» is not an error", v), msgAndArgs...)
 		}
-		return assert.ErrorIs(t, e, target, msgAndArgs...) //nolint:testifylint // Use of require inside require is inappropriate
+		return assert.ErrorIs(t, err, target, msgAndArgs...) //nolint:testifylint // Use of require inside require is inappropriate
 	}
 }
 
 // Returns a constraint that checks that none of the errors in the error chain
 // match the target.
 func NotIs(target error, msgAndArgs ...interface{}) Constraint {
-	return func(t *testing.T, err interface{}) bool {
-		e, ok := err.(error)
+	return func(t assert.TestingT, v interface{}, _ ...interface{}) bool {
+		err, ok := v.(error)
 		if !ok {
 			return true
 		}
-		return assert.NotErrorIs(t, e, target, msgAndArgs...) //nolint:testifylint // Use of require inside require is inappropriate
+		return assert.NotErrorIs(t, err, target, msgAndArgs...) //nolint:testifylint // Use of require inside require is inappropriate
 	}
 }
 
@@ -77,7 +76,7 @@ func NotIs(target error, msgAndArgs ...interface{}) Constraint {
 //		func(){ GoCrazy() },
 //		require.Has("crazy"),
 //		require.Rx("^.*\s+error$"))
-func PanicsWith(t *testing.T, f func(), c ...Constraint) bool {
+func PanicsWith(t assert.TestingT, f func(), c ...Constraint) bool {
 	didPanic := func() (wasPanic bool, recovered any) {
 		defer func() {
 			if recovered = recover(); recovered != nil {
@@ -111,7 +110,7 @@ func PanicsWith(t *testing.T, f func(), c ...Constraint) bool {
 //		err,
 //		require.Is(MyError),
 //		require.Has("my message"))
-func ErrorWith(t *testing.T, e error, c ...Constraint) bool {
+func ErrorWith(t assert.TestingT, e error, c ...Constraint) bool {
 	if e == nil {
 		return assert.Fail(t, "error expected")
 	}

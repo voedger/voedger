@@ -6,17 +6,15 @@
 package require
 
 import (
-	"testing"
-
 	"github.com/stretchr/testify/require"
 )
 
 type Require struct {
 	*require.Assertions
-	t *testing.T
+	t require.TestingT
 }
 
-func New(t *testing.T) *Require {
+func New(t require.TestingT) *Require {
 	return &Require{
 		Assertions: require.New(t),
 		t:          t,
