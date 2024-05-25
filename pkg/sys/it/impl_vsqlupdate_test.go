@@ -397,7 +397,7 @@ func TestVSqlUpdateValidateErrors(t *testing.T) {
 		"update s s s": "invalid query format",
 		"update test1.app1.42.app1pkg.category.1":                                "no fields to update",
 		"update 42.42.42.wongQName set name = 42":                                "invalid query format",
-		"wrong op kind test1.app1.42.app1pkg.category.42 set name = 42":          "wrong update kind",
+		"wrong op kind test1.app1.42.app1pkg.category.42 set name = 42":          `invalid query format`,
 		"update test1.app1.42.app1pkg.category set name = 42":                    "record ID is not provided",
 		"update test1.app1.42.app1pkg.category.1 set name = 42 where sys.ID = 1": "conditions are not allowed on update",
 		"update test1.app1.42.app1pkg.category.1 set sys.ID = 1":                 "field sys.ID can not be updated",

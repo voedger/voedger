@@ -17,13 +17,12 @@ import (
 
 const (
 	dmlRegexpStr = `^` +
-		`(?P<operation>\s*.+\s+)` +
-		`(?P<appQName>\w+\.\w+\.)?` +
+		`\s*(?P<operation>(\w*\s*update\s*\w*)|(\w*\s*insert)|(select\s+[^\s]+\s+from))\s+` +
+		`(?P<appQName>[^\d][a-zA-Z0-9]+\.[^\d][a-zA-Z0-9]+\.)?` +
 		`((?P<wsidOrPartno>\d+\.)|(?P<appWSNum>a\d+.)|(?P<login>".+"\.))?` +
-		`(?P<qName>\w+\.\w+)` +
+		`(?P<qName>[^\d][a-zA-Z0-9]+\.[^\d][a-zA-Z0-9]+)` +
 		`(?P<idOrOffset>\.\d+)?` +
-		`(?P<pars>\s+.*)?` +
-		`$`
+		`(?P<pars>\s+.*)?$`
 	bitSize64 = 64
 	base10    = 10
 )
@@ -69,11 +68,14 @@ func ParseQuery(query string) (dml DML, err error) {
 		// 0 is original query
 
 		operationIdx int = 1 + iota
+		operationUpdateIdx
+		operationInsertIdx
+		operationSelectIdx
 		appIdx
 		locationIdx
-		wsidOrPartitionIDIdx
-		appWSNumIdx
-		loginIdx
+		locationwsidOrPartitionIDIdx
+		locationAppWSNumIdx
+		locationLloginIdx
 		qNameIdx
 		offsetOrIDIdx
 		parsIdx
@@ -125,7 +127,7 @@ func ParseQuery(query string) (dml DML, err error) {
 
 	operationStr := strings.TrimSpace(parts[operationIdx])
 	operationStrLowered := strings.ToLower(operationStr)
-	op := "update"
+	opSQL := "update"
 	switch operationStrLowered {
 	case "update":
 		dml.Kind = DMLKind_UpdateTable
@@ -137,14 +139,15 @@ func ParseQuery(query string) (dml DML, err error) {
 		dml.Kind = DMLKind_DirectInsert
 	default:
 		if strings.HasPrefix(operationStrLowered, "select") {
-			op = operationStr
+			opSQL = operationStr
 			dml.Kind = DMLKind_Select
 		} else {
-			return dml, fmt.Errorf("wrong update kind %s", operationStr)
+			// notest: avoided already by regexp
+			return dml, fmt.Errorf(`wrong dml operation kind "%s"`, operationStr)
 		}
 	}
-	if dml.Kind != DMLKind_UpdateCorrupted {
-		dml.CleanSQL = strings.TrimSpace(fmt.Sprintf("%s %s %s", op, qNameStr, pars))
+	if len(pars) > 0 {
+		dml.CleanSQL = strings.TrimSpace(fmt.Sprintf("%s %s %s", opSQL, qNameStr, pars))
 	}
 	return dml, nil
 }
