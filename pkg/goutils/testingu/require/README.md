@@ -4,9 +4,14 @@ The package `require` in addition to the Testify [require](https://pkg.go.dev/gi
 
 ## Check panic
 
-- Check that the object recovered from panic contains (or does not contains) the specified substrings
-- Check that the object recovered from panic matches (or does not matches) by the specified regular expression
-- Check that the error recovered from panic (or err's chain) is the target error
+Check that the object recovered from panic:
+
+- contains the specified substring
+- does not contain the specified substring
+- matches by the specified regular expression
+- does not matches by the specified regular expression
+- is a error (or err's chain) that match the target error
+- not an error or (or err's chain) that match the target error
 
 ### Example 1
 
@@ -40,9 +45,12 @@ func TestPanics(t *testing.T) {
 
 ## Check error
 
-- Check that the error contains (or does not contains) the specified substring
-- Check that the error matches (or does not matches) by the specified regular expression
-- Check that an error (or err's chain) is the target error
+- Check that the error contains the specified substring
+- Check that the error does not contain the specified substring
+- Check that the error matches by the specified regular expression
+- Check that the error does not matches by the specified regular expression
+- Check that the error (or err's chain) is the target error
+- Check that none of the errors in the error chain match the target error.
 
 ### Example 2
 
