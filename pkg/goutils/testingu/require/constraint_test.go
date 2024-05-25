@@ -13,7 +13,7 @@ import (
 )
 
 func TestPanicsWith(t *testing.T) {
-	testError := errors.New("my test error")
+	testError := fmt.Errorf("my test error: %w", errors.ErrUnsupported)
 	tests := []struct {
 		name string
 		f    func()
@@ -38,11 +38,11 @@ func TestPanicsWith(t *testing.T) {
 			func() { panic("deprecated error") }, NotHas("deprecated"), false},
 		// Rx ————————————————————————————————————————
 		{"Should be ok if regexp (string) mathes panic",
-			func() { panic(testError) }, Rx("^my test error$"), true},
+			func() { panic(testError) }, Rx("^my test error"), true},
 		{"Should be ok if regexp (compiled) mathes panic",
-			func() { panic(testError) }, Rx(regexp.MustCompile("^my test error$")), true},
+			func() { panic(testError) }, Rx(regexp.MustCompile("^my test error")), true},
 		{"Should fail if regexp does not mathes panic",
-			func() { panic(errors.New("other error")) }, Rx("^my test error$"), false},
+			func() { panic(errors.New("other error")) }, Rx("^my test error"), false},
 		// NotRx ————————————————————————————————————————
 		{"Should be ok if regexp (string) does not mathes panic",
 			func() { panic(testError) }, NotRx("deprecated"), true},
@@ -54,11 +54,18 @@ func TestPanicsWith(t *testing.T) {
 		{"Should be ok if panic occurs with expected error",
 			func() { panic(testError) }, Is(testError), true},
 		{"Should be ok if panic occurs with expected error in chain",
-			func() { panic(fmt.Errorf("%w: test", testError)) }, Is(testError), true},
+			func() { panic(fmt.Errorf("%w: test", testError)) }, Is(errors.ErrUnsupported), true},
 		{"Should fail if panic without error",
 			func() { panic("panic message") }, Is(testError), false},
 		{"Should fail if panic with other error",
 			func() { panic(errors.New("other error")) }, Is(testError), false},
+		// NotIs ————————————————————————————————————————
+		{"Should be ok if panic occurs with other error",
+			func() { panic(errors.New("other error")) }, NotIs(testError), true},
+		{"Should be ok if panic without error",
+			func() { panic("panic") }, NotIs(testError), true},
+		{"Should fail if panic with expected error",
+			func() { panic(testError) }, NotIs(testError), false},
 	}
 
 	for _, tt := range tests {
@@ -73,7 +80,7 @@ func TestPanicsWith(t *testing.T) {
 }
 
 func TestErrorWith(t *testing.T) {
-	testError := errors.New("my test error")
+	testError := fmt.Errorf("my test error: %w", errors.ErrUnsupported)
 	tests := []struct {
 		name string
 		e    error
@@ -98,11 +105,11 @@ func TestErrorWith(t *testing.T) {
 			fmt.Errorf("deprecated: %w", testError), NotHas("deprecated"), false},
 		// Rx ————————————————————————————————————————
 		{"Should be ok if regexp (string) mathes error",
-			testError, Rx("^my test error$"), true},
+			testError, Rx("unsupported operation$"), true},
 		{"Should be ok if regexp (compiled) mathes error",
-			testError, Rx(regexp.MustCompile("^my test error$")), true},
+			testError, Rx(regexp.MustCompile("^my test error")), true},
 		{"Should fail if regexp does not mathes error",
-			errors.New("other error"), Rx("^my test error$"), false},
+			errors.New("other error"), Rx("my"), false},
 		// NotRx ————————————————————————————————————————
 		{"Should be ok if regexp (string) does not mathes error",
 			testError, NotRx("deprecated"), true},
@@ -114,9 +121,14 @@ func TestErrorWith(t *testing.T) {
 		{"Should be ok if error occurs with expected error",
 			testError, Is(testError), true},
 		{"Should be ok if error occurs with expected error in chain",
-			fmt.Errorf("%w: test", testError), Is(testError), true},
+			fmt.Errorf("%w: test", testError), Is(errors.ErrUnsupported), true},
 		{"Should fail if error with other error",
 			errors.New("other error"), Is(testError), false},
+		// NotIs ————————————————————————————————————————
+		{"Should be ok if error occurs with other error",
+			errors.New("other error"), NotIs(testError), true},
+		{"Should fail if error with expected error",
+			testError, NotIs(errors.ErrUnsupported), false},
 	}
 
 	for _, tt := range tests {

@@ -23,30 +23,40 @@ func New(t *testing.T) *Require {
 	}
 }
 
-// Return requirement that checks if value (panic or error) contains given substring.
+// Returns a constraint that checks that value (panic or error) contains
+// the given substring.
 func (r *Require) Has(substr string, msgAndArgs ...interface{}) Constraint {
 	return Has(substr, msgAndArgs...)
 }
 
-// Return requirement that checks if value (panic or error) does not contains given substring.
+// Returns a constraint that checks that value (panic or error) does not contain
+// the given substring.
 func (r *Require) NotHas(substr string, msgAndArgs ...interface{}) Constraint {
 	return NotHas(substr, msgAndArgs...)
 }
 
-// Return requirement that checks if specified regexp matches value (panic or error).
+// Returns a constraint that checks that value (panic or error) matches
+// specified regexp.
 func (r *Require) Rx(rx interface{}, msgAndArgs ...interface{}) Constraint {
 	return Rx(rx, msgAndArgs...)
 }
 
-// Return requirement that checks if specified regexp does not matches value (panic or error).
+// Returns a constraint that checks that value (panic or error) does not match
+// specified regexp.
 func (r *Require) NotRx(rx interface{}, msgAndArgs ...interface{}) Constraint {
 	return NotRx(rx, msgAndArgs...)
 }
 
-// Return constraint that checks if value is error (or errors chain) and at least one of the errors
-// in err's chain matches target.
+// Returns a constraint that checks that error (or one of the errors in the error chain)
+// matches the target.
 func (r *Require) Is(targer error, msgAndArgs ...interface{}) Constraint {
 	return Is(targer, msgAndArgs...)
+}
+
+// Returns a constraint that checks that none of the errors in the error chain
+// match the target.
+func (r *Require) NotIs(targer error, msgAndArgs ...interface{}) Constraint {
+	return NotIs(targer, msgAndArgs...)
 }
 
 // PanicsWith asserts that the code inside the specified function panics,

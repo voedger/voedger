@@ -15,14 +15,16 @@ import (
 // Constraint is a common function prototype when validating given value.
 type Constraint func(*testing.T, interface{}) bool
 
-// Return constraint that checks if value (panic or error) contains given substring.
+// Returns a constraint that checks that value (panic or error) contains
+// the given substring.
 func Has(substr string, msgAndArgs ...interface{}) Constraint {
 	return func(t *testing.T, recovered interface{}) bool {
 		return assert.Contains(t, fmt.Sprint(recovered), substr, msgAndArgs...)
 	}
 }
 
-// Return constraint that checks if value (panic or error) does not contains given substring.
+// Returns a constraint that checks that value (panic or error) does not contain
+// the given substring.
 func NotHas(substr string, msgAndArgs ...interface{}) Constraint {
 	return func(t *testing.T, recovered interface{}) bool {
 		return assert.NotContains(t, fmt.Sprint(recovered), substr, msgAndArgs...)
@@ -36,15 +38,16 @@ func Rx(rx interface{}, msgAndArgs ...interface{}) Constraint {
 	}
 }
 
-// Return constraint that checks if specified regexp does not matches value (panic or error).
+// Returns a constraint that checks that value (panic or error) does not match
+// specified regexp.
 func NotRx(rx interface{}, msgAndArgs ...interface{}) Constraint {
 	return func(t *testing.T, recovered interface{}) bool {
 		return assert.NotRegexp(t, rx, recovered, msgAndArgs...)
 	}
 }
 
-// Return constraint that checks if value is error (or errors chain) and at least one of the errors
-// in err's chain matches target.
+// Returns a constraint that checks that error (or one of the errors in the error chain)
+// matches the target.
 func Is(target error, msgAndArgs ...interface{}) Constraint {
 	return func(t *testing.T, err interface{}) bool {
 		e, ok := err.(error)
@@ -52,6 +55,18 @@ func Is(target error, msgAndArgs ...interface{}) Constraint {
 			return assert.Fail(t, fmt.Sprintf("«%#v» is not an error", err), msgAndArgs...)
 		}
 		return assert.ErrorIs(t, e, target, msgAndArgs...) //nolint:testifylint // Use of require inside require is inappropriate
+	}
+}
+
+// Returns a constraint that checks that none of the errors in the error chain
+// match the target.
+func NotIs(target error, msgAndArgs ...interface{}) Constraint {
+	return func(t *testing.T, err interface{}) bool {
+		e, ok := err.(error)
+		if !ok {
+			return true
+		}
+		return assert.NotErrorIs(t, e, target, msgAndArgs...) //nolint:testifylint // Use of require inside require is inappropriate
 	}
 }
 
