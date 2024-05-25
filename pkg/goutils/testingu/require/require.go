@@ -28,6 +28,21 @@ func (r *Require) Has(substr string, msgAndArgs ...interface{}) Constraint {
 	return Has(substr, msgAndArgs...)
 }
 
+// Return requirement that checks if value (panic or error) does not contains given substring.
+func (r *Require) NotHas(substr string, msgAndArgs ...interface{}) Constraint {
+	return NotHas(substr, msgAndArgs...)
+}
+
+// Return requirement that checks if specified regexp matches value (panic or error).
+func (r *Require) Rx(rx interface{}, msgAndArgs ...interface{}) Constraint {
+	return Rx(rx, msgAndArgs...)
+}
+
+// Return requirement that checks if specified regexp does not matches value (panic or error).
+func (r *Require) NotRx(rx interface{}, msgAndArgs ...interface{}) Constraint {
+	return NotRx(rx, msgAndArgs...)
+}
+
 // Return constraint that checks if value is error (or errors chain) and at least one of the errors
 // in err's chain matches target.
 func (r *Require) Is(targer error, msgAndArgs ...interface{}) Constraint {
@@ -40,8 +55,9 @@ func (r *Require) Is(targer error, msgAndArgs ...interface{}) Constraint {
 //	require := require.New(t)
 //	require.PanicsWith(
 //		func(){ GoCrazy() },
-//		require.Contains("crazy"),
-//		require.Contains("error))
+//		require.Has("crazy"),
+//		require.NotHas("smile"),
+//		require.Rx("^.*\s+error$"))
 func (r *Require) PanicsWith(f func(), c ...Constraint) {
 	if !PanicsWith(r.t, f, c...) {
 		r.t.FailNow()
@@ -54,7 +70,7 @@ func (r *Require) PanicsWith(f func(), c ...Constraint) {
 //	require.ErrorWith(
 //		err,
 //		require.Is(MyError),
-//		require.Contains("my message"))
+//		require.Has("my message"))
 func (r *Require) ErrorWith(e error, c ...Constraint) {
 	if !ErrorWith(r.t, e, c...) {
 		r.t.FailNow()

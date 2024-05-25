@@ -18,8 +18,28 @@ type Constraint func(*testing.T, interface{}) bool
 // Return constraint that checks if value (panic or error) contains given substring.
 func Has(substr string, msgAndArgs ...interface{}) Constraint {
 	return func(t *testing.T, recovered interface{}) bool {
-		m := fmt.Sprint(recovered)
-		return assert.Contains(t, m, substr, msgAndArgs...)
+		return assert.Contains(t, fmt.Sprint(recovered), substr, msgAndArgs...)
+	}
+}
+
+// Return constraint that checks if value (panic or error) does not contains given substring.
+func NotHas(substr string, msgAndArgs ...interface{}) Constraint {
+	return func(t *testing.T, recovered interface{}) bool {
+		return assert.NotContains(t, fmt.Sprint(recovered), substr, msgAndArgs...)
+	}
+}
+
+// Return constraint that checks if specified regexp matches value (panic or error).
+func Rx(rx interface{}, msgAndArgs ...interface{}) Constraint {
+	return func(t *testing.T, recovered interface{}) bool {
+		return assert.Regexp(t, rx, recovered, msgAndArgs...)
+	}
+}
+
+// Return constraint that checks if specified regexp does not matches value (panic or error).
+func NotRx(rx interface{}, msgAndArgs ...interface{}) Constraint {
+	return func(t *testing.T, recovered interface{}) bool {
+		return assert.NotRegexp(t, rx, recovered, msgAndArgs...)
 	}
 }
 
@@ -40,8 +60,8 @@ func Is(target error, msgAndArgs ...interface{}) Constraint {
 //
 //	require.PanicsWith(t,
 //		func(){ GoCrazy() },
-//		require.Contains("crazy"),
-//		require.Contains("error))
+//		require.Has("crazy"),
+//		require.Rx("^.*\s+error$"))
 func PanicsWith(t *testing.T, f func(), c ...Constraint) bool {
 	didPanic := func() (wasPanic bool, recovered any) {
 		defer func() {
@@ -75,7 +95,7 @@ func PanicsWith(t *testing.T, f func(), c ...Constraint) bool {
 //	require.ErrorWith(t,
 //		err,
 //		require.Is(MyError),
-//		require.Contains("my message"))
+//		require.Has("my message"))
 func ErrorWith(t *testing.T, e error, c ...Constraint) bool {
 	if e == nil {
 		return assert.Fail(t, "error expected")

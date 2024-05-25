@@ -4,7 +4,8 @@ The package `require` in addition to the Testify [require](https://pkg.go.dev/gi
 
 ## Check panic
 
-- Check that the object recovered from panic contains the specified substrings
+- Check that the object recovered from panic contains (or does not contains) the specified substrings
+- Check that the object recovered from panic matches (or does not matches) by the specified regular expression
 - Check that the error recovered from panic (or err's chain) is the target error
 
 ### Example 1
@@ -39,12 +40,13 @@ func TestPanics(t *testing.T) {
 
 ## Check error
 
-- Check that the error contains the specified substring
+- Check that the error contains (or does not contains) the specified substring
+- Check that the error matches (or does not matches) by the specified regular expression
 - Check that an error (or err's chain) is the target error
 
 ### Example 2
 
-This example demonstrates how to test that the error is expected target error and contains the expected substrings.
+This example demonstrates how to test that the error is expected target error, contains the expected substrings and matches by the regular expression.
 
 ```go
 package yours_test
@@ -69,6 +71,7 @@ func TestErrors(t *testing.T) {
     require.Has("boom"),
     require.Has("my"),
     require.Has("unsupported"),
+    require.Rx(".*:.*:.*", "error should contains two `:`", ".*:.*:.*"),
   )
 }
 ```
