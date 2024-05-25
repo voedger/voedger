@@ -114,7 +114,8 @@ func execQrySqlQuery(asp istructs.IAppStructsProvider, appQName istructs.AppQNam
 		table := s.From[0].(*sqlparser.AliasedTableExpr).Expr.(sqlparser.TableName)
 		source := appdef.NewQName(table.Qualifier.String(), table.Name.String())
 
-		switch appStructs.AppDef().Type(source).Kind() {
+		kind := appStructs.AppDef().Type(source).Kind()
+		switch kind {
 		case appdef.TypeKind_ViewRecord:
 			if dml.EntityID > 0 {
 				return errors.New("ID must not be specified on select from view")

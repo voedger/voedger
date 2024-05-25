@@ -385,6 +385,42 @@ func TestDirectUpdateManyTypes(t *testing.T) {
 	}, m)
 }
 
+func TestUpdateDifferentLocations(t *testing.T) {
+	require := require.New(t)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
+
+	prn := vit.GetPrincipal(istructs.AppQName_test1_app1, "login") // from VIT shared config
+	loginID := vit.GetCDocLoginID(prn.Login)
+
+	// read and store current cdoc.Login.WSKindInitializationData
+	sysPrn_Test1App1 := vit.GetSystemPrincipal(istructs.AppQName_sys_registry)
+	pseudoWSID := coreutils.GetPseudoWSID(istructs.NullWSID, prn.Name, istructs.MainClusterID)
+	queryCDocLoginBody := fmt.Sprintf(`{"args":{"Query":"select * from registry.Login.%d"},"elements":[{"fields":["Result"]}]}`, loginID)
+	resp := vit.PostApp(istructs.AppQName_sys_registry, pseudoWSID, "q.sys.SqlQuery", queryCDocLoginBody, coreutils.WithAuthorizeBy(sysPrn_Test1App1.Token))
+	m := map[string]interface{}{}
+	require.NoError(json.Unmarshal([]byte(resp.SectionRow()[0].(string)), &m))
+	curentWSKID := m["WSKindInitializationData"].(string)
+	sysPrn_ClusterApp := vit.GetSystemPrincipal(istructs.AppQName_sys_cluster)
+	defer func() {
+		// rollback changes to keep the shared config predictable
+		curentWSKIDEscaped := fmt.Sprintf("%q", curentWSKID)
+		curentWSKIDEscaped = curentWSKIDEscaped[1 : len(curentWSKIDEscaped)-1]
+		body := fmt.Sprintf(`{"args": {"Query":"direct update sys.registry.\"login\".registry.Login.%d set WSKindInitializationData = '%s'"}}`, loginID, curentWSKIDEscaped)
+		vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppWSID, "c.cluster.VSqlUpdate", body, coreutils.WithAuthorizeBy(sysPrn_ClusterApp.Token))
+	}()
+
+	// direct update by login hash
+	body := fmt.Sprintf(`{"args": {"Query":"direct update sys.registry.\"login\".registry.Login.%d set WSKindInitializationData = 'abc'"}}`, loginID)
+	vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppWSID, "c.cluster.VSqlUpdate", body, coreutils.WithAuthorizeBy(sysPrn_ClusterApp.Token))
+
+	// check the result
+	resp = vit.PostApp(istructs.AppQName_sys_registry, pseudoWSID, "q.sys.SqlQuery", queryCDocLoginBody, coreutils.WithAuthorizeBy(sysPrn_Test1App1.Token))
+	m = map[string]interface{}{}
+	require.NoError(json.Unmarshal([]byte(resp.SectionRow()[0].(string)), &m))
+	require.Equal("abc", m["WSKindInitializationData"].(string))
+}
+
 func TestVSqlUpdateValidateErrors(t *testing.T) {
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()

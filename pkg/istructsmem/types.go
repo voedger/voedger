@@ -809,6 +809,9 @@ func (row *rowType) PutFromJSON(j map[appdef.FieldName]any) {
 			row.PutChars(n, fv)
 		case bool:
 			row.PutBool(n, fv)
+		case []byte:
+			// happens e.g. on IRowWriter.PutJSON() after read from the storage
+			row.PutBytes(n, fv)
 		default:
 			panic(fmt.Sprintf("unsupported type %#v", v))
 		}
