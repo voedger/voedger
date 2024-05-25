@@ -108,8 +108,6 @@ func ProvideServiceFactory(appParts appparts.IAppPartitions, now coreutils.TimeF
 				pipeline.WireFunc("getIWorkspace", getIWorkspace),
 				pipeline.WireFunc("getAppPartition", cmdProc.getAppPartition),
 				pipeline.WireFunc("getICommand", getICommand),
-				pipeline.WireFunc("getResources", getResources),
-				pipeline.WireFunc("getExec", getExec),
 				pipeline.WireFunc("authorizeRequest", cmdProc.authorizeRequest),
 				pipeline.WireFunc("unmarshalRequestBody", unmarshalRequestBody),
 				pipeline.WireFunc("getWorkspace", cmdProc.getWorkspace),

@@ -180,22 +180,24 @@ func (cmdProc *cmdProc) getCmdResultBuilder(_ context.Context, work interface{})
 
 func (cmdProc *cmdProc) buildCommandArgs(_ context.Context, work interface{}) (err error) {
 	cmd := work.(*cmdWorkpiece)
-	hs := cmd.hostStateProvider.get(cmd.appStructs, cmd.cmdMes.WSID(), cmd.reb.CUDBuilder(),
-		cmd.principals, cmd.cmdMes.Token(), cmd.cmdResultBuilder, cmd.workspace.NextWLogOffset)
-	hs.ClearIntents()
-	cmd.eca = istructs.ExecCommandArgs{
-		CommandPrepareArgs: istructs.CommandPrepareArgs{
-			PrepareArgs: istructs.PrepareArgs{
-				ArgumentObject: cmd.argsObject,
-				WSID:           cmd.cmdMes.WSID(),
-				Workpiece:      work,
-				Workspace:      cmd.iWorkspace,
-			},
-			ArgumentUnloggedObject: cmd.unloggedArgsObject,
+
+	cmd.eca.CommandPrepareArgs = istructs.CommandPrepareArgs{
+		PrepareArgs: istructs.PrepareArgs{
+			ArgumentObject: cmd.argsObject,
+			WSID:           cmd.cmdMes.WSID(),
+			Workpiece:      work,
+			Workspace:      cmd.iWorkspace,
 		},
-		State:   hs,
-		Intents: hs,
+		ArgumentUnloggedObject: cmd.unloggedArgsObject,
 	}
+
+	hs := cmd.hostStateProvider.get(cmd.appStructs, cmd.cmdMes.WSID(), cmd.reb.CUDBuilder(),
+		cmd.principals, cmd.cmdMes.Token(), cmd.cmdResultBuilder, cmd.eca.CommandPrepareArgs, cmd.workspace.NextWLogOffset)
+	hs.ClearIntents()
+
+	cmd.eca.State = hs
+	cmd.eca.Intents = hs
+
 	return
 }
 
@@ -371,20 +373,6 @@ func (cmdProc *cmdProc) authorizeRequest(_ context.Context, work interface{}) (e
 	return nil
 }
 
-func getResources(_ context.Context, work interface{}) (err error) {
-	cmd := work.(*cmdWorkpiece)
-	cmd.resources = cmd.appStructs.Resources()
-	return nil
-}
-
-func getExec(_ context.Context, work interface{}) (err error) {
-	cmd := work.(*cmdWorkpiece)
-	iResource := cmd.resources.QueryResource(cmd.cmdMes.QName())
-	iCommandFunc := iResource.(istructs.ICommandFunction)
-	cmd.cmdExec = iCommandFunc.Exec
-	return nil
-}
-
 func unmarshalRequestBody(_ context.Context, work interface{}) (err error) {
 	cmd := work.(*cmdWorkpiece)
 	if cmd.iCommand.Param() != nil && cmd.iCommand.Param().QName() == istructs.QNameRaw {
@@ -478,11 +466,13 @@ func (xp xPath) Error(err error) error {
 	return xp.Errorf("%w", err)
 }
 
-func execCommand(_ context.Context, work interface{}) (err error) {
+func execCommand(ctx context.Context, work interface{}) (err error) {
 	cmd := work.(*cmdWorkpiece)
 	begin := time.Now()
-	err = cmd.cmdExec(cmd.eca)
-	work.(*cmdWorkpiece).metrics.increase(ExecSeconds, time.Since(begin).Seconds())
+
+	err = cmd.appPart.Invoke(ctx, cmd.cmdMes.QName(), cmd.eca.State, cmd.eca.Intents)
+
+	cmd.metrics.increase(ExecSeconds, time.Since(begin).Seconds())
 	return err
 }
 

@@ -94,6 +94,9 @@ type IState interface {
 	// For projectors
 	PLogEvent() IPLogEvent
 
+	// For commands
+	CommandPrepareArgs() CommandPrepareArgs
+
 	App() AppQName
 }
 

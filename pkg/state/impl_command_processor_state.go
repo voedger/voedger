@@ -11,38 +11,62 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
-func implProvideCommandProcessorState(ctx context.Context, appStructsFunc AppStructsFunc, partitionIDFunc PartitionIDFunc,
-	wsidFunc WSIDFunc, secretReader isecrets.ISecretReader, cudFunc CUDFunc, principalsFunc PrincipalsFunc,
-	tokenFunc TokenFunc, intentsLimit int, cmdResultBuilderFunc ObjectBuilderFunc, argFunc ArgFunc, unloggedArgFunc UnloggedArgFunc,
+type commandProcessorState struct {
+	*hostState
+	commandPrepareArgs CommandPrepareArgsFunc
+}
+
+func (s commandProcessorState) CommandPrepareArgs() istructs.CommandPrepareArgs {
+	return s.commandPrepareArgs()
+}
+
+func implProvideCommandProcessorState(
+	ctx context.Context,
+	appStructsFunc AppStructsFunc,
+	partitionIDFunc PartitionIDFunc,
+	wsidFunc WSIDFunc,
+	secretReader isecrets.ISecretReader,
+	cudFunc CUDFunc,
+	principalsFunc PrincipalsFunc,
+	tokenFunc TokenFunc,
+	intentsLimit int,
+	cmdResultBuilderFunc ObjectBuilderFunc,
+	execCmdArgsFunc CommandPrepareArgsFunc,
+	argFunc ArgFunc,
+	unloggedArgFunc UnloggedArgFunc,
 	wlogOffsetFunc WLogOffsetFunc) IHostState {
-	bs := newHostState("CommandProcessor", intentsLimit, appStructsFunc)
 
-	bs.addStorage(View, newViewRecordsStorage(ctx, appStructsFunc, wsidFunc, nil), S_GET|S_GET_BATCH)
-	bs.addStorage(Record, newRecordsStorage(appStructsFunc, wsidFunc, cudFunc), S_GET|S_GET_BATCH|S_INSERT|S_UPDATE)
+	state := commandProcessorState{
+		hostState:          newHostState("CommandProcessor", intentsLimit, appStructsFunc),
+		commandPrepareArgs: execCmdArgsFunc,
+	}
 
-	bs.addStorage(WLog, &wLogStorage{
+	state.addStorage(View, newViewRecordsStorage(ctx, appStructsFunc, wsidFunc, nil), S_GET|S_GET_BATCH)
+	state.addStorage(Record, newRecordsStorage(appStructsFunc, wsidFunc, cudFunc), S_GET|S_GET_BATCH|S_INSERT|S_UPDATE)
+
+	state.addStorage(WLog, &wLogStorage{
 		ctx:        ctx,
 		eventsFunc: func() istructs.IEvents { return appStructsFunc().Events() },
 		wsidFunc:   wsidFunc,
 	}, S_GET)
 
-	bs.addStorage(AppSecret, &appSecretsStorage{secretReader: secretReader}, S_GET)
+	state.addStorage(AppSecret, &appSecretsStorage{secretReader: secretReader}, S_GET)
 
-	bs.addStorage(RequestSubject, &subjectStorage{
+	state.addStorage(RequestSubject, &subjectStorage{
 		principalsFunc: principalsFunc,
 		tokenFunc:      tokenFunc,
 	}, S_GET)
 
-	bs.addStorage(Result, newCmdResultStorage(cmdResultBuilderFunc), S_INSERT)
+	state.addStorage(Result, newCmdResultStorage(cmdResultBuilderFunc), S_INSERT)
 
-	bs.addStorage(Response, &cmdResponseStorage{}, S_INSERT)
+	state.addStorage(Response, &cmdResponseStorage{}, S_INSERT)
 
-	bs.addStorage(CommandContext, &commandContextStorage{
+	state.addStorage(CommandContext, &commandContextStorage{
 		argFunc:         argFunc,
 		unloggedArgFunc: unloggedArgFunc,
 		wsidFunc:        wsidFunc,
 		wlogOffsetFunc:  wlogOffsetFunc,
 	}, S_GET)
 
-	return bs
+	return state
 }

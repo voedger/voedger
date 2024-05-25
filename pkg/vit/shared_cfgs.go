@@ -80,10 +80,10 @@ var (
 		}),
 		WithCleanup(func(_ *VIT) {
 			MockCmdExec = func(input string, args istructs.ExecCommandArgs) error { panic("") }
-			MockQryExec = func(input string, callback istructs.ExecQueryCallback) error { panic("") }
+			MockQryExec = func(input string, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) error { panic("") }
 		}),
 	)
-	MockQryExec func(input string, callback istructs.ExecQueryCallback) error
+	MockQryExec func(input string, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) error
 	MockCmdExec func(input string, args istructs.ExecCommandArgs) error
 )
 
@@ -142,7 +142,7 @@ func ProvideApp1(apis apps.APIs, cfg *istructsmem.AppConfigType, ep extensionpoi
 		appdef.NewQName(app1PkgName, "MockQry"),
 		func(_ context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 			input := args.ArgumentObject.AsString(field_Input)
-			return MockQryExec(input, callback)
+			return MockQryExec(input, args, callback)
 		},
 	))
 

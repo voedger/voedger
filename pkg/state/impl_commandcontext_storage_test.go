@@ -22,12 +22,23 @@ func TestCommandContextStorage(t *testing.T) {
 	unloggedArg := istructs.NewNullObject()
 
 	wsidFunc := SimpleWSIDFunc(wsid)
+	commandPrepareArgs := func() istructs.CommandPrepareArgs {
+		return istructs.CommandPrepareArgs{
+			PrepareArgs: istructs.PrepareArgs{
+				Workpiece:      nil,
+				ArgumentObject: arg,
+				WSID:           wsid,
+				Workspace:      nil,
+			},
+			ArgumentUnloggedObject: unloggedArg,
+		}
+	}
 	argFunc := func() istructs.IObject { return arg }
 	unloggedArgFunc := func() istructs.IObject { return unloggedArg }
 	wlogOffsetFunc := func() istructs.Offset { return 42 }
 
 	s := ProvideCommandProcessorStateFactory()(context.Background(), nil, nil, wsidFunc, nil, nil, nil, nil, 1,
-		func() istructs.IObjectBuilder { return cmdResBuilder }, argFunc, unloggedArgFunc, wlogOffsetFunc)
+		func() istructs.IObjectBuilder { return cmdResBuilder }, commandPrepareArgs, argFunc, unloggedArgFunc, wlogOffsetFunc)
 
 	kb, err := s.KeyBuilder(CommandContext, appdef.NullQName)
 	require.NoError(t, err)

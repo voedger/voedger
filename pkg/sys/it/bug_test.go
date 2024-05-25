@@ -35,7 +35,7 @@ func TestBug_QueryProcessorMustStopOnClientDisconnect(t *testing.T) {
 	}
 	require := require.New(t)
 	goOn := make(chan interface{})
-	it.MockQryExec = func(input string, callback istructs.ExecQueryCallback) (err error) {
+	it.MockQryExec = func(input string, _ istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 		rr := &rr{res: input}
 		require.NoError(callback(rr))
 		<-goOn // ждем, пока http клиент примет первый элемент и отключится
