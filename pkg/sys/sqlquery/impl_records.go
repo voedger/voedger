@@ -17,60 +17,62 @@ import (
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-func readRecords(wsid istructs.WSID, qName appdef.QName, expr sqlparser.Expr, appStructs istructs.IAppStructs, f *filter, callback istructs.ExecQueryCallback) error {
+func readRecords(wsid istructs.WSID, qName appdef.QName, expr sqlparser.Expr, appStructs istructs.IAppStructs, f *filter,
+	callback istructs.ExecQueryCallback, recordID istructs.RecordID) error {
 	rr := make([]istructs.RecordGetBatchItem, 0)
 
-	findIDs := func(expr sqlparser.Expr) error {
-		switch r := expr.(type) {
-		case *sqlparser.ComparisonExpr:
+	switch r := expr.(type) {
+	case *sqlparser.ComparisonExpr:
+		if r.Left.(*sqlparser.ColName).Name.Lowered() != "id" {
+			return fmt.Errorf("unsupported column name: %s", r.Left.(*sqlparser.ColName).Name.String())
+		}
+		switch r.Operator {
+		case sqlparser.EqualStr:
+			id, err := parseInt64(r.Right.(*sqlparser.SQLVal).Val)
+			if err != nil {
+				return err
+			}
+			rr = append(rr, istructs.RecordGetBatchItem{ID: istructs.RecordID(id)})
+		case sqlparser.InStr:
 			if r.Left.(*sqlparser.ColName).Name.Lowered() != "id" {
 				return fmt.Errorf("unsupported column name: %s", r.Left.(*sqlparser.ColName).Name.String())
 			}
-			switch r.Operator {
-			case sqlparser.EqualStr:
-				id, err := parseInt64(r.Right.(*sqlparser.SQLVal).Val)
+			for _, v := range r.Right.(sqlparser.ValTuple) {
+				id, err := parseInt64(v.(*sqlparser.SQLVal).Val)
 				if err != nil {
 					return err
 				}
 				rr = append(rr, istructs.RecordGetBatchItem{ID: istructs.RecordID(id)})
-			case sqlparser.InStr:
-				for _, v := range r.Right.(sqlparser.ValTuple) {
-					id, err := parseInt64(v.(*sqlparser.SQLVal).Val)
-					if err != nil {
-						return err
-					}
-					rr = append(rr, istructs.RecordGetBatchItem{ID: istructs.RecordID(id)})
-				}
-			default:
-				return fmt.Errorf("unsupported operation: %s", r.Operator)
 			}
-		case nil:
 		default:
-			return fmt.Errorf("unsupported expression: %T", r)
+			return fmt.Errorf("unsupported operation: %s", r.Operator)
 		}
-		return nil
-	}
-	err := findIDs(expr)
-	if err != nil {
-		return err
-	}
-
-	if expr == nil {
-		r, e := appStructs.Records().GetSingleton(wsid, qName)
+	case nil:
+		singletonRec, e := appStructs.Records().GetSingleton(wsid, qName)
 		if e != nil {
 			if errors.Is(e, istructsmem.ErrNameNotFound) {
 				return fmt.Errorf("'%s' is not a singleton. Please specify at least one record ID", qName)
 			}
 			return e
 		}
-		rr = append(rr, istructs.RecordGetBatchItem{ID: r.ID()})
+		rr = append(rr, istructs.RecordGetBatchItem{ID: singletonRec.ID()})
+	default:
+		return fmt.Errorf("unsupported expression: %T", r)
 	}
 
-	if len(rr) == 0 {
-		return errors.New("you have to provide at least one record ID")
+	if recordID == 0 && len(rr) == 0 {
+		return errors.New("at least one record ID must be provided")
 	}
 
-	err = appStructs.Records().GetBatch(wsid, true, rr)
+	if recordID > 0 && len(rr) > 0 {
+		return errors.New("both ID and 'where id ...' clause can not be provided in one query")
+	}
+
+	if recordID > 0 && len(rr) == 0 {
+		rr = append(rr, istructs.RecordGetBatchItem{ID: recordID})
+	}
+
+	err := appStructs.Records().GetBatch(wsid, true, rr)
 	if err != nil {
 		return err
 	}

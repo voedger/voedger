@@ -23,8 +23,8 @@ func updateDirect(update update) error {
 }
 
 func updateDirect_View(update update) (err error) {
-	kb := update.appStructs.ViewRecords().KeyBuilder(update.qName)
-	if update.kind == updateKind_DirectInsert {
+	kb := update.appStructs.ViewRecords().KeyBuilder(update.QName)
+	if update.Kind == coreutils.DMLKind_DirectInsert {
 		kb.PutFromJSON(update.setFields)
 	} else {
 		if err = coreutils.MapToObject(update.key, kb); err != nil {
@@ -33,7 +33,7 @@ func updateDirect_View(update update) (err error) {
 	}
 
 	existingViewRec, err := update.appStructs.ViewRecords().Get(update.wsid, kb)
-	if update.kind == updateKind_DirectInsert {
+	if update.Kind == coreutils.DMLKind_DirectInsert {
 		if err == nil {
 			return coreutils.NewHTTPErrorf(http.StatusConflict, "view record already exists")
 		}
@@ -49,7 +49,7 @@ func updateDirect_View(update update) (err error) {
 	existingFields := coreutils.FieldsToMap(existingViewRec, update.appStructs.AppDef(), coreutils.WithNonNilsOnly())
 
 	mergedFields := coreutils.MergeMapsMakeFloats64(existingFields, update.setFields, update.key)
-	mergedFields[appdef.SystemField_QName] = update.qName.String() // missing on direct insert
+	mergedFields[appdef.SystemField_QName] = update.QName.String() // missing on direct insert
 	return update.appStructs.ViewRecords().PutJSON(update.wsid, mergedFields)
 }
 
@@ -69,10 +69,10 @@ func updateDirect_Record(update update) error {
 
 func validateQuery_Direct(update update) error {
 	op := "update"
-	if update.kind == updateKind_DirectInsert {
+	if update.Kind == coreutils.DMLKind_DirectInsert {
 		op = "insert"
 	}
-	tp := update.appStructs.AppDef().Type(update.qName)
+	tp := update.appStructs.AppDef().Type(update.QName)
 	if containers, ok := tp.(appdef.IContainers); ok {
 		if containers.ContainerCount() > 0 {
 			// TODO: no design?
@@ -84,7 +84,7 @@ func validateQuery_Direct(update update) error {
 		if update.id > 0 {
 			return fmt.Errorf("record ID must not be provided on view direct %s", op)
 		}
-		if update.kind == updateKind_DirectInsert {
+		if update.Kind == coreutils.DMLKind_DirectInsert {
 			if len(update.key) > 0 {
 				return errors.New("'where' clause is not allowed on view direct insert")
 			}
@@ -94,7 +94,7 @@ func validateQuery_Direct(update update) error {
 			}
 		}
 	} else {
-		if update.kind == updateKind_DirectInsert {
+		if update.Kind == coreutils.DMLKind_DirectInsert {
 			return errors.New("direct insert is not allowed for records")
 		}
 		if update.id == 0 {

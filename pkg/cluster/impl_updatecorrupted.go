@@ -21,7 +21,7 @@ func updateCorrupted(update update, currentMillis istructs.UnixMilli) (err error
 	var wsid istructs.WSID
 	var plogOffset istructs.Offset
 	var partitionID istructs.PartitionID
-	if update.qName == plog {
+	if update.QName == plog {
 		plogOffset = update.offset
 		partitionID = update.partitionID
 		err = update.appStructs.Events().ReadPLog(context.Background(), update.partitionID, update.offset, 1, func(plogOffset istructs.Offset, event istructs.IPLogEvent) (err error) {
@@ -35,7 +35,7 @@ func updateCorrupted(update update, currentMillis istructs.UnixMilli) (err error
 		wsid = update.wsid
 		wlogOffset = update.offset
 		plogOffset = istructs.NullOffset // ok to set NullOffset on update WLog because we do not have way to know how it was stored, no IWLogEvent.PLogOffset() method
-		if partitionID, err = update.appParts.AppWorkspacePartitionID(update.appQName, wsid); err != nil {
+		if partitionID, err = update.appParts.AppWorkspacePartitionID(update.AppQName, wsid); err != nil {
 			// notest
 			return err
 		}
@@ -66,7 +66,7 @@ func updateCorrupted(update update, currentMillis istructs.UnixMilli) (err error
 		// notest
 		return err
 	}
-	if update.qName == plog {
+	if update.QName == plog {
 		_, err = update.appStructs.Events().PutPlog(syncRawEvent, nil, istructsmem.NewIDGeneratorWithHook(func(rawID, storageID istructs.RecordID, t appdef.IType) error {
 			// notest
 			panic("must not use ID generator on corrupted event create")
@@ -79,28 +79,28 @@ func updateCorrupted(update update, currentMillis istructs.UnixMilli) (err error
 
 func validateQuery_Corrupted(update update) error {
 	if len(update.key) > 0 || len(update.setFields) > 0 {
-		return fmt.Errorf("any params of update corrupted are not allowed: %s", update.sql)
+		return fmt.Errorf("any params of update corrupted are not allowed: %s", update.CleanSQL)
 	}
 	if update.offset == 0 {
 		return errors.New("offset must be provided")
 	}
-	switch update.qName {
+	switch update.QName {
 	case wlog:
 		if update.wsid == 0 {
 			return errors.New("wsid must be provided for update corrupted wlog")
 		}
 	case plog:
 		partno := istructs.NumAppPartitions(update.partitionID)
-		partsCount, err := update.appParts.AppPartsCount(update.appQName)
+		partsCount, err := update.appParts.AppPartsCount(update.AppQName)
 		if err != nil {
 			// notest
 			return err
 		}
 		if partno >= partsCount {
-			return fmt.Errorf("provided partno %d is out of %d declared by app %s", partno, partsCount, update.appQName)
+			return fmt.Errorf("provided partno %d is out of %d declared by app %s", partno, partsCount, update.AppQName)
 		}
 	default:
-		return fmt.Errorf("invalid log view %s, sys.plog or sys.wlog are only allowed", update.qName)
+		return fmt.Errorf("invalid log view %s, sys.plog or sys.wlog are only allowed", update.QName)
 	}
 	return nil
 }

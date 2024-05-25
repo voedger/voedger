@@ -119,7 +119,7 @@ func TestSqlQuery_plog(t *testing.T) {
 
 		m := map[string]interface{}{}
 		require.NoError(json.Unmarshal([]byte(resp.SectionRow()[0].(string)), &m))
-		require.Equal(sqlquery.DefaultOffset, istructs.Offset(m["PlogOffset"].(float64)))
+		require.Equal(istructs.FirstOffset, istructs.Offset(m["PlogOffset"].(float64)))
 		require.Len(resp.Sections[0].Elements, sqlquery.DefaultLimit)
 	})
 
@@ -132,7 +132,7 @@ func TestSqlQuery_plog(t *testing.T) {
 
 		m := map[string]interface{}{}
 		require.NoError(json.Unmarshal([]byte(resp.SectionRow()[0].(string)), &m))
-		require.Equal(sqlquery.DefaultOffset, istructs.Offset(m["PlogOffset"].(float64)))
+		require.Equal(istructs.FirstOffset, istructs.Offset(m["PlogOffset"].(float64)))
 		require.GreaterOrEqual(len(resp.Sections[0].Elements), pLogSize)
 
 		m = map[string]interface{}{}
@@ -460,9 +460,7 @@ func TestSqlQuery(t *testing.T) {
 
 	t.Run("Should return error when script invalid", func(t *testing.T) {
 		body := `{"args":{"Query":" "}}`
-		resp := vit.PostWS(ws, "q.sys.SqlQuery", body, coreutils.Expect500())
-
-		resp.RequireContainsError(t, "syntax error")
+		vit.PostWS(ws, "q.sys.SqlQuery", body, coreutils.Expect400("invalid query format"))
 	})
 	t.Run("Should return error when source of data unsupported", func(t *testing.T) {
 		body := `{"args":{"Query":"select * from git.hub"}}`
