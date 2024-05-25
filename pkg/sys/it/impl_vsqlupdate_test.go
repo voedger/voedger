@@ -6,6 +6,9 @@
 package sys_it
 
 import (
+	"bytes"
+	"encoding/base64"
+	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"testing"
@@ -282,7 +285,7 @@ func TestVSqlUpdate_BasicUsage_DirectInsert(t *testing.T) {
 	t.Run("basic", func(t *testing.T) {
 		intFld := 43 + vit.NextNumber()
 
-		// check if there is not view record
+		// check if there is no such view record
 		bodySelect := fmt.Sprintf(`{"args":{"Query":"select * from app1pkg.CategoryIdx where IntFld = %d and Dummy = 1"}, "elements":[{"fields":["Result"]}]}`, intFld)
 		resp := vit.PostWS(ws, "q.sys.SqlQuery", bodySelect)
 		require.True(resp.IsEmpty())
@@ -326,6 +329,60 @@ func TestVSqlUpdate_BasicUsage_DirectInsert(t *testing.T) {
 			coreutils.Expect409("view record already exists"),
 		)
 	})
+
+	t.Run("set unexisting field -> error 400", func(t *testing.T) {
+		newName := vit.NextName()
+		intFld := 43 + vit.NextNumber()
+		body := fmt.Sprintf(`{"args": {"Query":"direct insert test1.app1.%d.app1pkg.CategoryIdx set Name = '%s', Val = 123, IntFld = %d, Dummy = 1, Unexisting = 42"}}`, ws.WSID, newName, intFld)
+		vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppWSID, "c.cluster.VSqlUpdate", body,
+			coreutils.WithAuthorizeBy(sysPrn.Token),
+			coreutils.Expect400("Unexisting", "is not found"),
+		)
+	})
+}
+
+func TestDirectUpdateManyTypes(t *testing.T) {
+	require := require.New(t)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
+
+	// create a record with fields of different types
+	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+	_, bts := getUniqueNumber(vit)
+	body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.DocManyTypes","Int":1,"Int64":2,"Float32":3.4,"Float64":5.6,"Str":"str","Bool":true,"Bytes":"%s"}}]}`, bts)
+	id := vit.PostWS(ws, "c.sys.CUD", body).NewID()
+
+	sysPrn := vit.GetSystemPrincipal(istructs.AppQName_sys_cluster)
+	num := vit.NextNumber()
+	buf := bytes.NewBuffer(nil)
+	require.NoError(binary.Write(buf, binary.BigEndian, uint32(num)))
+	newBytes := buf.Bytes()
+	expectedBytesBase64 := base64.StdEncoding.EncodeToString(newBytes)
+
+	// update the record
+	// note: byte field value should be in form 0x<hex>
+	body = fmt.Sprintf(`{"args": {"Query":"update test1.app1.%d.app1pkg.DocManyTypes.%d `+
+		`set Int = 7, Int64 = 8, Float32 = 9.1, Float64 = 10.2, Str = 'str1', Bool = false, Bytes = 0x%x"}}`, ws.WSID, id, newBytes)
+	vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppWSID, "c.cluster.VSqlUpdate", body,
+		coreutils.WithAuthorizeBy(sysPrn.Token)).Println()
+
+	// check the updated record
+	body = fmt.Sprintf(`{"args":{"Query":"select * from app1pkg.DocManyTypes where id = %d"},"elements":[{"fields":["Result"]}]}`, id)
+	resp := vit.PostWS(ws, "q.sys.SqlQuery", body)
+	m := map[string]interface{}{}
+	require.NoError(json.Unmarshal([]byte(resp.SectionRow()[0].(string)), &m))
+	require.Equal(map[string]interface{}{
+		"Bool":         false,
+		"Float32":      float64(9.1),
+		"Bytes":        expectedBytesBase64,
+		"Float64":      float64(10.2),
+		"Int":          float64(7),
+		"Int64":        float64(8),
+		"Str":          "str1",
+		"sys.ID":       float64(id),
+		"sys.IsActive": true,
+		"sys.QName":    "app1pkg.DocManyTypes",
+	}, m)
 }
 
 func TestVSqlUpdateValidateErrors(t *testing.T) {
@@ -346,6 +403,9 @@ func TestVSqlUpdateValidateErrors(t *testing.T) {
 		"update test1.app1.42.app1pkg.category.1 set sys.ID = 1":                 "field sys.ID can not be updated",
 		"update test1.app1.42.app1pkg.category.1 set sys.QName = 'sdsd.sds'":     "field sys.QName can not be updated",
 		"update test1.app1.42.app1pkg.category.1 set x = 1, x = 2":               "field x specified twice",
+		"update test1.app1.42.unknown.table.1 set x = 1, x = 2":                  "qname unknown.table is not found",
+		"update test1.app1.42.app1pkg.DocManyTypes.1 set Bytes = 0x1":            "hex: odd length hex string",
+		"update test1.app1.42.app1pkg.DocManyTypes.1 set Bytes = sin(42)":        "unsupported value type",
 
 		// update corrupted
 		"update corrupted":       "invalid query format",
@@ -362,13 +422,17 @@ func TestVSqlUpdateValidateErrors(t *testing.T) {
 		"update corrupted unknown.app.1.sys.PLog.44":                         "application not found: unknown/app",
 
 		// direct update
-		"direct update test1.app1.1.app1pkg.CategoryIdx set Val = 44, Name = 'x'":       "full key must be provided on view direct update",
-		"direct update test1.app1.1.app1pkg.CategoryIdx where x = 1":                    "syntax error",
-		"direct update test1.app1.1.app1pkg.CategoryIdx.42 set a = 2 where x = 1":       "record ID must not be provided on view direct update",
-		"direct update test1.app1.1.app1pkg.CategoryIdx set a = 2 where x = 1 or y = 1": "'where viewField1 = val1 [and viewField2 = val2 ...]' condition is only supported",
-		"direct update test1.app1.1.app1pkg.CategoryIdx set a = 2 where x > 1":          "'where viewField1 = val1 [and viewField2 = val2 ...]' condition is only supported",
-		"direct update test1.app1.1.app1pkg.category set a = 2":                         "record ID must be provided on record direct update",
-		"direct update test1.app1.1.app1pkg.category.1 set a = 2 where b = 3":           "'where' clause is not allowed on record direct update",
+		"direct update test1.app1.1.app1pkg.CategoryIdx set Val = 44, Name = 'x'":        "full key must be provided on view direct update",
+		"direct update test1.app1.1.app1pkg.CategoryIdx where x = 1":                     "syntax error",
+		"direct update test1.app1.1.app1pkg.CategoryIdx.42 set a = 2 where x = 1":        "record ID must not be provided on view direct update",
+		"direct update test1.app1.1.app1pkg.CategoryIdx set a = 2 where x = 1 and x = 1": "key field x is specified twice",
+		"direct update test1.app1.1.app1pkg.CategoryIdx set a = 2 where x = 1 or y = 1":  "'where viewField1 = val1 [and viewField2 = val2 ...]' condition is only supported",
+		"direct update test1.app1.1.app1pkg.CategoryIdx set a = 2 where x > 1":           "'where viewField1 = val1 [and viewField2 = val2 ...]' condition is only supported",
+		"direct update test1.app1.1.app1pkg.category.1 set a = 2 where b = sin(x)":       "'where viewField1 = val1 [and viewField2 = val2 ...]' condition is only supported",
+		"direct update test1.app1.1.app1pkg.category.1 set a = 2 where 1 = 1":            "'where viewField1 = val1 [and viewField2 = val2 ...]' condition is only supported",
+		"direct update test1.app1.1.app1pkg.category.1 set a = 2 where 1 = 1 and 1 = 1":  "'where viewField1 = val1 [and viewField2 = val2 ...]' condition is only supported",
+		"direct update test1.app1.1.app1pkg.category set a = 2":                          "record ID must be provided on record direct update",
+		"direct update test1.app1.1.app1pkg.category.1 set a = 2 where b = 3":            "'where' clause is not allowed on record direct update",
 
 		// direct insert
 		"direct insert test1.app1.1.app1pkg.CategoryIdx set Val = 44, Name = 'x' where a = 1": "'where' clause is not allowed on view direct insert",

@@ -6,7 +6,7 @@
 package cluster
 
 import (
-	"errors"
+	"encoding/hex"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -200,6 +200,7 @@ func parseQuery(query string) (appQName istructs.AppQName, location location, qN
 		offsetStr = offsetStr[1:]
 		offsetInt, err := strconv.Atoi(offsetStr)
 		if err != nil {
+			// notest: avoided already by regexp
 			return istructs.NullAppQName, location, appdef.NullQName, 0, updateKind_Null, "", err
 		}
 		offsetOrID = istructs.IDType(offsetInt)
@@ -238,23 +239,33 @@ func parseLocation(locationStr string) (location location, err error) {
 	return location, err
 }
 
-func sqlValToInterface(sqlVal *sqlparser.SQLVal) (val interface{}, err error) {
-	switch sqlVal.Type {
-	case sqlparser.StrVal:
-		return string(sqlVal.Val), nil
-	case sqlparser.IntVal, sqlparser.FloatVal:
-		if val, err = strconv.ParseFloat(string(sqlVal.Val), bitSize64); err != nil {
-			// notest
-			return nil, err
+func exprToInterface(expr sqlparser.Expr) (val interface{}, err error) {
+	switch typed := expr.(type) {
+	case *sqlparser.SQLVal:
+		switch typed.Type {
+		case sqlparser.StrVal:
+			return string(typed.Val), nil
+		case sqlparser.IntVal, sqlparser.FloatVal:
+			if val, err = strconv.ParseFloat(string(typed.Val), bitSize64); err != nil {
+				// notest: avoided already by sql parser
+				return nil, err
+			}
+			return val, nil
+		case sqlparser.HexNum:
+			hexBytes := typed.Val[2:] // cut `0x` prefix
+			val := make([]byte, len(hexBytes)/2)
+			bytesLen, err := hex.Decode(val, hexBytes)
+			if err != nil {
+				return nil, err
+			}
+			return val[:bytesLen], nil
 		}
-		return val, nil
-	case sqlparser.HexNum:
-		return sqlVal.Val, nil
-	default:
-		buf := sqlparser.NewTrackedBuffer(nil)
-		sqlVal.Format(buf)
-		return nil, fmt.Errorf("unsupported sql value: %s, type %d", buf.String(), sqlVal.Type)
+	case sqlparser.BoolVal:
+		return typed, nil
 	}
+	buf := sqlparser.NewTrackedBuffer(nil)
+	expr.Format(buf)
+	return nil, fmt.Errorf("unsupported value type: %s, type %T", buf.String(), expr)
 }
 
 func checkFieldsUpdateAllowed(fieldsToUpdate map[string]interface{}) error {
@@ -286,7 +297,7 @@ func fillWhere(expr sqlparser.Expr, fields map[string]interface{}) error {
 		if !ok {
 			return errWrongWhereForView
 		}
-		fieldValue, err := sqlValToInterface(viewKeySQLVal)
+		fieldValue, err := exprToInterface(viewKeySQLVal)
 		if err != nil {
 			// notest
 			return err
@@ -302,21 +313,25 @@ func fillWhere(expr sqlparser.Expr, fields map[string]interface{}) error {
 }
 
 func colNameToQualifiedName(colName *sqlparser.ColName) string {
-	if len(colName.Qualifier.Name.String()) > 0 {
-		return colName.Qualifier.Name.String() + "." + colName.Name.String()
+	q := colName.Qualifier.Name.String()
+	if unlowered, ok := sqlFieldNamesUnlowered[q]; ok {
+		q = unlowered
 	}
-	return colName.Name.String()
+	n := colName.Name.String()
+	if unlowered, ok := sqlFieldNamesUnlowered[n]; ok {
+		n = unlowered
+	}
+	if len(q) > 0 {
+		return q + "." + n
+	}
+	return n
 }
 
 func getSets(exprs sqlparser.UpdateExprs) (map[string]interface{}, error) {
 	res := map[string]interface{}{}
 	for _, expr := range exprs {
 		var val interface{}
-		sqlVal, ok := expr.Expr.(*sqlparser.SQLVal)
-		if !ok {
-			return nil, errors.New("scalar values are only supported")
-		}
-		val, err := sqlValToInterface(sqlVal)
+		val, err := exprToInterface(expr.Expr)
 		if err != nil {
 			// notest
 			return nil, err

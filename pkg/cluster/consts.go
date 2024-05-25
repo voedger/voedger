@@ -44,6 +44,13 @@ var (
 		appdef.SystemField_ID:    true,
 		appdef.SystemField_QName: true,
 	}
+
+	// if the name is like a sql identifier e.g. `Int` then the parser makes it lowered
+	sqlFieldNamesUnlowered = map[string]string{
+		"int":   "Int",
+		"bool":  "Bool",
+		"bytes": "Bytes",
+	}
 )
 
 const (

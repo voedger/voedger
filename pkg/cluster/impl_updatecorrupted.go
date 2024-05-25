@@ -75,15 +75,6 @@ func updateCorrupted(update update, currentMillis istructs.UnixMilli) (err error
 	}
 	nonStoredPLogEvent := update.appStructs.Events().BuildPLogEvent(syncRawEvent)
 	return update.appStructs.Events().PutWlog(nonStoredPLogEvent)
-	// plogEvent, err := update.appStructs.Events().PutPlog(syncRawEvent, nil, istructsmem.NewIDGeneratorWithHook(func(rawID, storageID istructs.RecordID, t appdef.IType) error {
-	// 	// notest
-	// 	panic("must not use ID generator on corrupted event create")
-	// }))
-	// if err != nil {
-	// 	// notest
-	// 	return err
-	// }
-	// return update.appStructs.Events().PutWlog(plogEvent)
 }
 
 func validateQuery_Corrupted(update update) error {
@@ -102,6 +93,7 @@ func validateQuery_Corrupted(update update) error {
 		partno := istructs.NumAppPartitions(update.partitionID)
 		partsCount, err := update.appParts.AppPartsCount(update.appQName)
 		if err != nil {
+			// notest
 			return err
 		}
 		if partno >= partsCount {

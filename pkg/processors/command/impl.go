@@ -392,7 +392,7 @@ func unmarshalRequestBody(_ context.Context, work interface{}) (err error) {
 			processors.Field_RawObject_Body: string(cmd.cmdMes.Body()),
 		}
 	} else if err = json.Unmarshal(cmd.cmdMes.Body(), &cmd.requestData); err != nil {
-		err = fmt.Errorf("failed to unmarshal request body: %w", err)
+		err = fmt.Errorf("failed to unmarshal request body: %w\n%s", err, cmd.cmdMes.Body())
 	}
 	return
 }

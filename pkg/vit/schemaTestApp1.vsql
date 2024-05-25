@@ -421,6 +421,16 @@ ALTERABLE WORKSPACE test_wsWS (
 		UNIQUE ("Str")
 	);
 
+	TABLE DocManyTypes INHERITS CDoc (
+		Int int32,
+		Int64 int64,
+		Float32 float32,
+		Float64 float64,
+		Str varchar,
+		Bytes bytes,
+		Bool bool
+	);
+
 	TABLE DocConstraintsFewUniques INHERITS CDoc (
 		Int1 int32,
 		Str1 varchar,
