@@ -49,3 +49,26 @@ func MapToObject(data map[string]interface{}, rw istructs.IRowWriter) (err error
 	}
 	return nil
 }
+
+func MergeMapsMakeFloats64(toMergeMaps ...map[string]interface{}) (res map[string]interface{}) {
+	res = map[string]interface{}{}
+	for _, toMergeMap := range toMergeMaps {
+		for k, v := range toMergeMap {
+			switch val := v.(type) {
+			case int:
+				res[k] = float64(val)
+			case int32:
+				res[k] = float64(val)
+			case int64:
+				res[k] = float64(val)
+			case float32:
+				res[k] = float64(val)
+			case istructs.RecordID:
+				res[k] = float64(val)
+			default:
+				res[k] = v
+			}
+		}
+	}
+	return res
+}

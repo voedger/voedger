@@ -7,6 +7,7 @@ package cluster
 
 import (
 	"embed"
+	"regexp"
 
 	"github.com/voedger/voedger/pkg/appdef"
 )
@@ -21,9 +22,41 @@ const (
 	Field_AppQName         = "AppQName"
 	Field_NumPartitions    = "NumPartitions"
 	Field_NumAppWorkspaces = "NumAppWorkspaces"
+	field_Query            = "Query"
+	updateQueryExpression  = `^` +
+		`(?P<operation>\s*.+\s+)` + // update, direct update etc
+		`(?P<appOwnerAppName>\w+\.\w+\.)` +
+		`((?P<wsidOrPartno>\d+\.)|(?P<appWSNum>a\d+.)|(?P<login>".+"\.))` +
+		`(?P<qNameToUpdate>\w+\.\w+)` +
+		`(?P<idOrOffset>\.\d+)?` +
+		`(?P<pars>\s+.*)?` +
+		`$`
+	bitSize64 = 64
+	base10    = 10
 )
 
 var (
-	QNameViewDeployedApps = appdef.NewQName(ClusterPackage, "DeployedApps")
-	qNameWDocApp          = appdef.NewQName(ClusterPackage, "App")
+	qNameWDocApp       = appdef.NewQName(ClusterPackage, "App")
+	updateQueryExp     = regexp.MustCompile(updateQueryExpression)
+	plog               = appdef.NewQName(appdef.SysPackage, "PLog")
+	wlog               = appdef.NewQName(appdef.SysPackage, "WLog")
+	updateDeniedFields = map[string]bool{
+		appdef.SystemField_ID:    true,
+		appdef.SystemField_QName: true,
+	}
+
+	// if the name is like a sql identifier e.g. `Int` then the parser makes it lowered
+	sqlFieldNamesUnlowered = map[string]string{
+		"int":   "Int",
+		"bool":  "Bool",
+		"bytes": "Bytes",
+	}
+)
+
+const (
+	updateKind_Null updateKind = iota
+	updateKind_Corrupted
+	updateKind_DirectUpdate
+	updateKind_Table
+	updateKind_DirectInsert
 )
