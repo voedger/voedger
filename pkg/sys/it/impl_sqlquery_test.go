@@ -521,7 +521,7 @@ func TestReadFromAnDifferentLocations(t *testing.T) {
 	})
 
 	t.Run("login hash", func(t *testing.T) {
-		// for example read cdoc.registry.Login.LoginHash from the workspace determined by the login name
+		// for example read cdoc.registry.Login.LoginHash from the app workspace determined by the login name
 		prn := vit.GetPrincipal(istructs.AppQName_test1_app1, "login") // from VIT shared config
 		loginID := vit.GetCDocLoginID(prn.Login)
 		body := fmt.Sprintf(`{"args":{"Query":"select * from sys.registry.\"login\".registry.Login where id = %d"},"elements":[{"fields":["Result"]}]}`, loginID)

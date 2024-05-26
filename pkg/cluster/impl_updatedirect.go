@@ -26,10 +26,8 @@ func updateDirect_View(update update) (err error) {
 	kb := update.appStructs.ViewRecords().KeyBuilder(update.QName)
 	if update.Kind == coreutils.DMLKind_DirectInsert {
 		kb.PutFromJSON(update.setFields)
-	} else {
-		if err = coreutils.MapToObject(update.key, kb); err != nil {
-			return err
-		}
+	} else if err = coreutils.MapToObject(update.key, kb); err != nil {
+		return err
 	}
 
 	existingViewRec, err := update.appStructs.ViewRecords().Get(update.wsid, kb)

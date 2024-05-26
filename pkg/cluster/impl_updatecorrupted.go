@@ -35,14 +35,12 @@ func updateCorrupted(update update, currentMillis istructs.UnixMilli) (err error
 		wsid = update.wsid
 		wlogOffset = update.offset
 		plogOffset = istructs.NullOffset // ok to set NullOffset on update WLog because we do not have way to know how it was stored, no IWLogEvent.PLogOffset() method
-		if partitionID, err = update.appParts.AppWorkspacePartitionID(update.AppQName, wsid); err != nil {
-			// notest
-			return err
+		if partitionID, err = update.appParts.AppWorkspacePartitionID(update.AppQName, wsid); err == nil {
+			err = update.appStructs.Events().ReadWLog(context.Background(), wsid, wlogOffset, 1, func(wlogOffset istructs.Offset, event istructs.IWLogEvent) (err error) {
+				currentEventBytes = event.Bytes()
+				return nil
+			})
 		}
-		err = update.appStructs.Events().ReadWLog(context.Background(), wsid, wlogOffset, 1, func(wlogOffset istructs.Offset, event istructs.IWLogEvent) (err error) {
-			currentEventBytes = event.Bytes()
-			return nil
-		})
 	}
 	if err != nil {
 		// notest
