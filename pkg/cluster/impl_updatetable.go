@@ -23,12 +23,12 @@ func updateTable(update update, federation federation.IFederation, itokens itoke
 		return err
 	}
 	cudBody := fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":%s}]}`, update.id, jsonFields)
-	sysToken, err := payloads.GetSystemPrincipalToken(itokens, update.appQName)
+	sysToken, err := payloads.GetSystemPrincipalToken(itokens, update.AppQName)
 	if err != nil {
 		// notest
 		return err
 	}
-	_, err = federation.Func(fmt.Sprintf("api/%s/%d/c.sys.CUD", update.appQName, update.wsid), cudBody,
+	_, err = federation.Func(fmt.Sprintf("api/%s/%d/c.sys.CUD", update.AppQName, update.wsid), cudBody,
 		coreutils.WithAuthorizeBy(sysToken),
 		coreutils.WithDiscardResponse(),
 	)

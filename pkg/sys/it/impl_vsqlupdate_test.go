@@ -385,19 +385,81 @@ func TestDirectUpdateManyTypes(t *testing.T) {
 	}, m)
 }
 
+func TestUpdateDifferentLocations(t *testing.T) {
+	require := require.New(t)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
+
+	prn := vit.GetPrincipal(istructs.AppQName_test1_app1, "login") // from VIT shared config
+	loginID := vit.GetCDocLoginID(prn.Login)
+
+	// read and store current cdoc.Login.WSKindInitializationData
+	sysPrn_Test1App1 := vit.GetSystemPrincipal(istructs.AppQName_sys_registry)
+	pseudoWSID := coreutils.GetPseudoWSID(istructs.NullWSID, prn.Name, istructs.MainClusterID)
+	queryCDocLoginBody := fmt.Sprintf(`{"args":{"Query":"select * from registry.Login.%d"},"elements":[{"fields":["Result"]}]}`, loginID)
+	resp := vit.PostApp(istructs.AppQName_sys_registry, pseudoWSID, "q.sys.SqlQuery", queryCDocLoginBody, coreutils.WithAuthorizeBy(sysPrn_Test1App1.Token))
+	m := map[string]interface{}{}
+	require.NoError(json.Unmarshal([]byte(resp.SectionRow()[0].(string)), &m))
+	curentWSKID := m["WSKindInitializationData"].(string)
+	sysPrn_ClusterApp := vit.GetSystemPrincipal(istructs.AppQName_sys_cluster)
+	
+	rollback := func() {
+		// rollback changes to keep the shared config predictable
+		curentWSKIDEscaped := fmt.Sprintf("%q", curentWSKID)
+		curentWSKIDEscaped = curentWSKIDEscaped[1 : len(curentWSKIDEscaped)-1] // eliminate leading and trailing double quote because the value will be specified in single qoutes
+		body := fmt.Sprintf(`{"args": {"Query":"direct update sys.registry.\"login\".registry.Login.%d set WSKindInitializationData = '%s'"}}`, loginID, curentWSKIDEscaped)
+		vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppWSID, "c.cluster.VSqlUpdate", body, coreutils.WithAuthorizeBy(sysPrn_ClusterApp.Token))
+	}
+
+	t.Run("hash", func(t *testing.T) {
+		defer rollback()
+
+		// direct update by login hash
+		body := fmt.Sprintf(`{"args": {"Query":"direct update sys.registry.\"login\".registry.Login.%d set WSKindInitializationData = 'abc'"}}`, loginID)
+		vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppWSID, "c.cluster.VSqlUpdate", body, coreutils.WithAuthorizeBy(sysPrn_ClusterApp.Token))
+
+		// check the result
+		resp = vit.PostApp(istructs.AppQName_sys_registry, pseudoWSID, "q.sys.SqlQuery", queryCDocLoginBody, coreutils.WithAuthorizeBy(sysPrn_Test1App1.Token))
+		m = map[string]interface{}{}
+		require.NoError(json.Unmarshal([]byte(resp.SectionRow()[0].(string)), &m))
+		require.Equal("abc", m["WSKindInitializationData"].(string))
+	})
+
+	t.Run("app workspace number", func(t *testing.T) {
+		defer rollback()
+
+		// determine the number of the app workspace that stores cdoc.Login "login"
+		registryAppStructs, err := vit.IAppStructsProvider.AppStructs(istructs.AppQName_sys_registry)
+		require.NoError(err)
+		appWSNumber := pseudoWSID.BaseWSID() % istructs.WSID(registryAppStructs.NumAppWorkspaces())
+
+		// direct update by app workspace number
+		body := fmt.Sprintf(`{"args": {"Query":"direct update sys.registry.a%d.registry.Login.%d set WSKindInitializationData = 'def'"}}`, appWSNumber, loginID)
+		vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppWSID, "c.cluster.VSqlUpdate", body, coreutils.WithAuthorizeBy(sysPrn_ClusterApp.Token))
+
+		// check the result
+		resp = vit.PostApp(istructs.AppQName_sys_registry, pseudoWSID, "q.sys.SqlQuery", queryCDocLoginBody, coreutils.WithAuthorizeBy(sysPrn_Test1App1.Token))
+		m = map[string]interface{}{}
+		require.NoError(json.Unmarshal([]byte(resp.SectionRow()[0].(string)), &m))
+		require.Equal("def", m["WSKindInitializationData"].(string))
+	})
+}
+
 func TestVSqlUpdateValidateErrors(t *testing.T) {
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
 	cases := map[string]string{
 		// update
-		"":             "misses required field",
-		" ":            "invalid query forma",
-		"update":       "invalid query format",
-		"update s s s": "invalid query format",
+		"":                       "misses required field",
+		" ":                      "invalid query format",
+		"update":                 "invalid query format",
+		"update s s s":           "invalid query format",
+		"select * from sys.plog": "'update' or 'insert' clause expected",
 		"update test1.app1.42.app1pkg.category.1":                                "no fields to update",
+		"update test1.app1.app1pkg.category.1 set name = 's'":                    "location must be specified",
 		"update 42.42.42.wongQName set name = 42":                                "invalid query format",
-		"wrong op kind test1.app1.42.app1pkg.category.42 set name = 42":          "wrong update kind",
+		"wrong op kind test1.app1.42.app1pkg.category.42 set name = 42":          `invalid query format`,
 		"update test1.app1.42.app1pkg.category set name = 42":                    "record ID is not provided",
 		"update test1.app1.42.app1pkg.category.1 set name = 42 where sys.ID = 1": "conditions are not allowed on update",
 		"update test1.app1.42.app1pkg.category.1 set sys.ID = 1":                 "field sys.ID can not be updated",

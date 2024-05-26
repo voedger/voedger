@@ -6,6 +6,7 @@ package sqlquery
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -25,22 +26,36 @@ func execQrySqlQuery(asp istructs.IAppStructsProvider, appQName istructs.AppQNam
 	return func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 
 		query := args.ArgumentObject.AsString(field_Query)
-		app := appQName
-		wsID := args.WSID
 
-		if a, w, c, err := parseQueryAppWs(query); err == nil {
-			if a != istructs.NullAppQName {
-				app = a
-			}
-			if w != 0 {
-				wsID = w
-			}
-			query = c
+		dml, err := coreutils.ParseQuery(query)
+		if err != nil {
+			return coreutils.NewHTTPError(http.StatusBadRequest, err)
+		}
+
+		if dml.Kind != coreutils.DMLKind_Select {
+			return coreutils.NewHTTPErrorf(http.StatusBadRequest, "'select' operation is expected")
+		}
+
+		app := appQName
+		if dml.AppQName != istructs.NullAppQName {
+			app = dml.AppQName
 		}
 
 		appStructs, err := asp.AppStructs(app)
 		if err != nil {
 			return err
+		}
+
+		var wsID istructs.WSID
+		switch dml.Location.Kind {
+		case coreutils.LocationKind_AppWSNum:
+			wsID = istructs.NewWSID(istructs.MainClusterID, istructs.FirstBaseAppWSID+istructs.WSID(dml.Location.ID))
+		case coreutils.LocationKind_WSID:
+			wsID = istructs.WSID(dml.Location.ID)
+		case coreutils.LocationKind_PseudoWSID:
+			wsID = coreutils.GetAppWSID(istructs.WSID(dml.Location.ID), appStructs.NumAppWorkspaces())
+		default:
+			wsID = args.WSID
 		}
 
 		if wsID != args.WSID {
@@ -57,7 +72,7 @@ func execQrySqlQuery(asp istructs.IAppStructsProvider, appQName istructs.AppQNam
 			}
 		}
 
-		stmt, err := sqlparser.Parse(query)
+		stmt, err := sqlparser.Parse(dml.CleanSQL)
 		if err != nil {
 			return err
 		}
@@ -88,20 +103,25 @@ func execQrySqlQuery(asp istructs.IAppStructsProvider, appQName istructs.AppQNam
 		table := s.From[0].(*sqlparser.AliasedTableExpr).Expr.(sqlparser.TableName)
 		source := appdef.NewQName(table.Qualifier.String(), table.Name.String())
 
-		switch appStructs.AppDef().Type(source).Kind() {
+		kind := appStructs.AppDef().Type(source).Kind()
+		switch kind {
 		case appdef.TypeKind_ViewRecord:
+			if dml.EntityID > 0 {
+				return errors.New("ID must not be specified on select from view")
+			}
 			return readViewRecords(ctx, wsID, appdef.NewQName(table.Qualifier.String(), table.Name.String()), whereExpr, appStructs, f, callback)
 		case appdef.TypeKind_CDoc:
 			fallthrough
 		case appdef.TypeKind_CRecord:
 			fallthrough
 		case appdef.TypeKind_WDoc:
-			return readRecords(wsID, source, whereExpr, appStructs, f, callback)
+			return coreutils.WrapSysError(readRecords(wsID, source, whereExpr, appStructs, f, callback, istructs.RecordID(dml.EntityID)),
+				http.StatusBadRequest)
 		default:
 			if source != plog && source != wlog {
 				break
 			}
-			limit, offset, e := params(whereExpr, s.Limit)
+			limit, offset, e := params(whereExpr, s.Limit, istructs.Offset(dml.EntityID))
 			if e != nil {
 				return e
 			}
@@ -118,12 +138,12 @@ func execQrySqlQuery(asp istructs.IAppStructsProvider, appQName istructs.AppQNam
 	}
 }
 
-func params(expr sqlparser.Expr, limit *sqlparser.Limit) (int, istructs.Offset, error) {
+func params(expr sqlparser.Expr, limit *sqlparser.Limit, simpleOffset istructs.Offset) (int, istructs.Offset, error) {
 	l, err := lim(limit)
 	if err != nil {
 		return 0, 0, err
 	}
-	o, eq, err := offs(expr)
+	o, eq, err := offs(expr, simpleOffset)
 	if err != nil {
 		return 0, 0, err
 	}
@@ -142,7 +162,7 @@ func lim(limit *sqlparser.Limit) (int, error) {
 		return 0, err
 	}
 	if v < -1 {
-		return 0, fmt.Errorf("limit must be greater than -2")
+		return 0, errors.New("limit must be greater than -2")
 	}
 	if v == -1 {
 		return istructs.ReadToTheEnd, nil
@@ -150,13 +170,16 @@ func lim(limit *sqlparser.Limit) (int, error) {
 	return int(v), err
 }
 
-func offs(expr sqlparser.Expr) (istructs.Offset, bool, error) {
-	o := DefaultOffset
+func offs(expr sqlparser.Expr, simpleOffset istructs.Offset) (istructs.Offset, bool, error) {
+	o := istructs.FirstOffset
 	eq := false
 	switch r := expr.(type) {
 	case *sqlparser.ComparisonExpr:
 		if r.Left.(*sqlparser.ColName).Name.String() != "offset" {
 			return 0, false, fmt.Errorf("unsupported column name: %s", r.Left.(*sqlparser.ColName).Name.String())
+		}
+		if simpleOffset > 0 {
+			return 0, false, errors.New("both .Offset and 'where offset ...' clause can not be provided in one query")
 		}
 		v, e := parseInt64(r.Right.(*sqlparser.SQLVal).Val)
 		if e != nil {
@@ -177,6 +200,9 @@ func offs(expr sqlparser.Expr) (istructs.Offset, bool, error) {
 			return 0, false, fmt.Errorf("offset must be greater than zero")
 		}
 	case nil:
+		if simpleOffset != istructs.NullOffset {
+			o = simpleOffset
+		}
 	default:
 		return 0, false, fmt.Errorf("unsupported expression: %T", r)
 	}
