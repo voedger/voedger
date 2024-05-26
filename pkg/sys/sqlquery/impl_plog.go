@@ -43,6 +43,7 @@ func readPlog(ctx context.Context, wsid istructs.WSID, offset istructs.Offset, c
 
 		bb, err := json.Marshal(data)
 		if err != nil {
+			// notest
 			return err
 		}
 

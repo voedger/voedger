@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"runtime/debug"
 	"strconv"
 
 	"github.com/blastrain/vitess-sqlparser/sqlparser"
@@ -197,7 +198,7 @@ func offs(expr sqlparser.Expr, simpleOffset istructs.Offset) (istructs.Offset, b
 			return 0, false, fmt.Errorf("unsupported operation: %s", r.Operator)
 		}
 		if o <= 0 {
-			return 0, false, fmt.Errorf("offset must be greater than zero")
+			return 0, false, errors.New("offset must be greater than zero")
 		}
 	case nil:
 		if simpleOffset != istructs.NullOffset {
@@ -226,8 +227,10 @@ func renderDbEvent(data map[string]interface{}, f *filter, event istructs.IDbEve
 			if _, ok := event.(istructs.IWLogEvent); ok {
 				eventKind = "wlog"
 			}
-			logger.Error(fmt.Sprintf("failed to render %s event %s offset %d registered at %s: %v", eventKind, event.QName(), offset, event.RegisteredAt().String(), r))
-			panic(r)
+			stackTrace := string(debug.Stack())
+			errMes := fmt.Sprintf("failed to render %s event %s offset %d registered at %s: %v\n%s", eventKind, event.QName(), offset, event.RegisteredAt().String(), r, stackTrace)
+			logger.Error(errMes)
+			data["!!!Panic"] = errMes
 		}
 	}()
 	if f.filter("QName") {
@@ -251,14 +254,12 @@ func renderDbEvent(data map[string]interface{}, f *filter, event istructs.IDbEve
 	if f.filter("SyncedAt") {
 		data["SyncedAt"] = event.SyncedAt()
 	}
-	if f.filter("Error") {
-		if event.Error() != nil {
-			errorData := make(map[string]interface{})
-			errorData["ErrStr"] = event.Error().ErrStr()
-			errorData["QNameFromParams"] = event.Error().QNameFromParams().String()
-			errorData["ValidEvent"] = event.Error().ValidEvent()
-			errorData["OriginalEventBytes"] = event.Error().OriginalEventBytes()
-			data["Error"] = errorData
-		}
+	if f.filter("Error") && event.Error() != nil {
+		errorData := make(map[string]interface{})
+		errorData["ErrStr"] = event.Error().ErrStr()
+		errorData["QNameFromParams"] = event.Error().QNameFromParams().String()
+		errorData["ValidEvent"] = event.Error().ValidEvent()
+		errorData["OriginalEventBytes"] = event.Error().OriginalEventBytes()
+		data["Error"] = errorData
 	}
 }
