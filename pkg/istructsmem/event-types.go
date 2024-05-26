@@ -896,7 +896,10 @@ func (o *objectType) FillFromJSON(data map[string]any) {
 				c := o.ChildBuilder(n)
 				c.FillFromJSON(childData)
 			}
+		default:
+			panic(fmt.Sprintf("unsupported type %#v", v))
 		}
+
 	}
 }
 

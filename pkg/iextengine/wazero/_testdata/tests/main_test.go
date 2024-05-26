@@ -31,8 +31,8 @@ func Test_ActualizerStorages(t *testing.T) {
 
 	offs1, _ := test.PutEvent(testWSID, appdef.NewFullQName(testPkg, "dummyCmd"), func(_ istructs.IObjectBuilder, _ istructs.ICUD) {})
 	offs2, _ := test.PutEvent(testWSID, appdef.NewFullQName(testPkg, "dummyCmd"), func(_ istructs.IObjectBuilder, _ istructs.ICUD) {})
-	require.Equal(t, istructs.Offset(1), offs1)
-	require.Equal(t, istructs.Offset(2), offs2)
+	require.Equal(t, istructs.Offset(2), offs1)
+	require.Equal(t, istructs.Offset(3), offs2)
 
 	test.PutEvent(testWSID, appdef.NewFullQName(testPkg, "CmdToTestWlogStorage"), func(arg istructs.IObjectBuilder, _ istructs.ICUD) {
 		arg.PutInt64("Offset", int64(offs1))

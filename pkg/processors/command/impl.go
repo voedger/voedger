@@ -65,6 +65,11 @@ func (c *cmdWorkpiece) AppPartition() appparts.IAppPartition {
 	return c.appPart
 }
 
+// used in c.cluster.VSqlUpdate to determinate partitionID by WSID
+func (c *cmdWorkpiece) AppPartitions() appparts.IAppPartitions {
+	return c.appParts
+}
+
 // need for sync projectors which are using wsid.GetNextWSID()
 func (c *cmdWorkpiece) Context() context.Context {
 	return c.cmdMes.RequestCtx()
@@ -73,6 +78,11 @@ func (c *cmdWorkpiece) Context() context.Context {
 // used in projectors.NewSyncActualizerFactoryFactory
 func (c *cmdWorkpiece) Event() istructs.IPLogEvent {
 	return c.pLogEvent
+}
+
+// need for update corrupted in c.cluster.VSqlUpdate
+func (c *cmdWorkpiece) GetAppStructs() istructs.IAppStructs {
+	return c.appStructs
 }
 
 // borrows app partition for command
@@ -370,7 +380,7 @@ func unmarshalRequestBody(_ context.Context, work interface{}) (err error) {
 			processors.Field_RawObject_Body: string(cmd.cmdMes.Body()),
 		}
 	} else if err = json.Unmarshal(cmd.cmdMes.Body(), &cmd.requestData); err != nil {
-		err = fmt.Errorf("failed to unmarshal request body: %w", err)
+		err = fmt.Errorf("failed to unmarshal request body: %w\n%s", err, cmd.cmdMes.Body())
 	}
 	return
 }

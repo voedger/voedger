@@ -48,12 +48,16 @@ var (
 	}
 )
 
-const selectQueryExpression = `^` +
-	`(?P<select>.*\s+from\s+)` + // select * from (+ trailing spaces)
-	`(?P<app>\w+\.\w+\.)?` + // appOwner.appName (+ trailing dot)
-	`(?P<ws>\d+\.)?` + // wsid (+ trailing dot)
-	`(?P<table>\w+\.\w+)` + // table qualified name (clean)
-	`(?P<pars>\s+.*)?` + // (leading spaces +) params
-	`$`
+const (
+	selectQueryExpression = `^` +
+		`(?P<select>.*\s+from\s+)` + // select * from (+ trailing spaces)
+		`(?P<app>\w+\.\w+\.)?` + // appOwner.appName (+ trailing dot)
+		`(?P<ws>\d+\.)?` + // wsid (+ trailing dot)
+		`(?P<table>\w+\.\w+)` + // table qualified name (clean)
+		`(?P<pars>\s+.*)?` + // (leading spaces +) params
+		`$`
+)
 
-var selectQueryExp = regexp.MustCompile(selectQueryExpression)
+var (
+	selectQueryExp = regexp.MustCompile(selectQueryExpression)
+)

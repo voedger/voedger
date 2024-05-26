@@ -79,6 +79,8 @@ var defaultACL = ACL{
 
 				qNameQryDescribePackage,
 				qNameQryDescribePackageNames,
+
+				qNameCmdVSqlUpdate,
 			},
 		},
 		policy: ACPolicy_Deny,
