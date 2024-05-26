@@ -21,6 +21,9 @@ func TestGoCrazy(t *testing.T) {
 		require.Is(errors.ErrUnsupported),
 		require.Has("🤪", "panic should contains crazy smile %q", "🤪"),
 		require.Has("unsupported"),
+		require.NotHas("toxic"),
+		require.Rx(`^.*\s+error`, "panic should contain `error` word"),
+		require.NotRx(`^Santa`, "panic should starts from `Santa` word"),
 	)
 }
 
