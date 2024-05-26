@@ -26,10 +26,6 @@ func readRecords(wsid istructs.WSID, qName appdef.QName, expr sqlparser.Expr, ap
 		isSingleton = iSingleton.Singleton()
 	}
 
-	// recordID
-	// singleton -> recordID == 0 && expr == nil
-	// not a singleton -> recordID > 0 -> expr == nil
-	//                   recordID == 0 -> expr could be not nil
 	whereIDs := []int64{}
 	switch compExpr := expr.(type) {
 	case nil:

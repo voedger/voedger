@@ -187,6 +187,11 @@ func TestSqlQuery_plog(t *testing.T) {
 
 		resp.RequireError(t, "field 'abracadabra' not found in def")
 	})
+
+	t.Run("select operation is allowed only", func(t *testing.T) {
+		body := `{"args":{"Query":"update sys.plog set a = 1"}}`
+		vit.PostWS(ws, "q.sys.SqlQuery", body, coreutils.Expect400("'select' operation is expected"))
+	})
 }
 
 func TestSqlQuery_wlog(t *testing.T) {
