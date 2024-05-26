@@ -402,23 +402,47 @@ func TestUpdateDifferentLocations(t *testing.T) {
 	require.NoError(json.Unmarshal([]byte(resp.SectionRow()[0].(string)), &m))
 	curentWSKID := m["WSKindInitializationData"].(string)
 	sysPrn_ClusterApp := vit.GetSystemPrincipal(istructs.AppQName_sys_cluster)
-	defer func() {
+	
+	rollback := func() {
 		// rollback changes to keep the shared config predictable
 		curentWSKIDEscaped := fmt.Sprintf("%q", curentWSKID)
-		curentWSKIDEscaped = curentWSKIDEscaped[1 : len(curentWSKIDEscaped)-1]
+		curentWSKIDEscaped = curentWSKIDEscaped[1 : len(curentWSKIDEscaped)-1] // eliminate leading and trailing double quote because the value will be specified in single qoutes
 		body := fmt.Sprintf(`{"args": {"Query":"direct update sys.registry.\"login\".registry.Login.%d set WSKindInitializationData = '%s'"}}`, loginID, curentWSKIDEscaped)
 		vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppWSID, "c.cluster.VSqlUpdate", body, coreutils.WithAuthorizeBy(sysPrn_ClusterApp.Token))
-	}()
+	}
 
-	// direct update by login hash
-	body := fmt.Sprintf(`{"args": {"Query":"direct update sys.registry.\"login\".registry.Login.%d set WSKindInitializationData = 'abc'"}}`, loginID)
-	vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppWSID, "c.cluster.VSqlUpdate", body, coreutils.WithAuthorizeBy(sysPrn_ClusterApp.Token))
+	t.Run("hash", func(t *testing.T) {
+		defer rollback()
 
-	// check the result
-	resp = vit.PostApp(istructs.AppQName_sys_registry, pseudoWSID, "q.sys.SqlQuery", queryCDocLoginBody, coreutils.WithAuthorizeBy(sysPrn_Test1App1.Token))
-	m = map[string]interface{}{}
-	require.NoError(json.Unmarshal([]byte(resp.SectionRow()[0].(string)), &m))
-	require.Equal("abc", m["WSKindInitializationData"].(string))
+		// direct update by login hash
+		body := fmt.Sprintf(`{"args": {"Query":"direct update sys.registry.\"login\".registry.Login.%d set WSKindInitializationData = 'abc'"}}`, loginID)
+		vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppWSID, "c.cluster.VSqlUpdate", body, coreutils.WithAuthorizeBy(sysPrn_ClusterApp.Token))
+
+		// check the result
+		resp = vit.PostApp(istructs.AppQName_sys_registry, pseudoWSID, "q.sys.SqlQuery", queryCDocLoginBody, coreutils.WithAuthorizeBy(sysPrn_Test1App1.Token))
+		m = map[string]interface{}{}
+		require.NoError(json.Unmarshal([]byte(resp.SectionRow()[0].(string)), &m))
+		require.Equal("abc", m["WSKindInitializationData"].(string))
+	})
+
+	t.Run("app workspace number", func(t *testing.T) {
+		defer rollback()
+
+		// determine the number of the app workspace that stores cdoc.Login "login"
+		registryAppStructs, err := vit.IAppStructsProvider.AppStructs(istructs.AppQName_sys_registry)
+		require.NoError(err)
+		appWSNumber := pseudoWSID.BaseWSID() % istructs.WSID(registryAppStructs.NumAppWorkspaces())
+
+		// direct update by app workspace number
+		body := fmt.Sprintf(`{"args": {"Query":"direct update sys.registry.a%d.registry.Login.%d set WSKindInitializationData = 'def'"}}`, appWSNumber, loginID)
+		vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppWSID, "c.cluster.VSqlUpdate", body, coreutils.WithAuthorizeBy(sysPrn_ClusterApp.Token))
+
+		// check the result
+		resp = vit.PostApp(istructs.AppQName_sys_registry, pseudoWSID, "q.sys.SqlQuery", queryCDocLoginBody, coreutils.WithAuthorizeBy(sysPrn_Test1App1.Token))
+		m = map[string]interface{}{}
+		require.NoError(json.Unmarshal([]byte(resp.SectionRow()[0].(string)), &m))
+		require.Equal("def", m["WSKindInitializationData"].(string))
+	})
 }
 
 func TestVSqlUpdateValidateErrors(t *testing.T) {

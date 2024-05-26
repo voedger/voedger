@@ -16,6 +16,7 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/processors"
+	"github.com/voedger/voedger/pkg/registry"
 	"github.com/voedger/voedger/pkg/sys/sqlquery"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 	it "github.com/voedger/voedger/pkg/vit"
@@ -337,60 +338,30 @@ func TestSqlQuery_records(t *testing.T) {
 		require.Equal(`{"name":"EFT","sys.IsActive":true}`, resp.SectionRow()[0])
 		require.Equal(`{"name":"Cash","sys.IsActive":true}`, resp.SectionRow(1)[0])
 	})
-	t.Run("Should return error when column name not supported", func(t *testing.T) {
-		body = `{"args":{"Query":"select * from app1pkg.payments where something = 1"}}`
-		resp := vit.PostWS(ws, "q.sys.SqlQuery", body, coreutils.Expect500())
 
-		resp.RequireError(t, "unsupported column name: something")
-	})
-	t.Run("Should return error when ID not parsable", func(t *testing.T) {
-		body = `{"args":{"Query":"select * from app1pkg.payments where id = 2.3"}}`
-		resp := vit.PostWS(ws, "q.sys.SqlQuery", body, coreutils.Expect500())
+	t.Run("errors", func(t *testing.T) {
+		cases := map[string]string{
+			`{"args":{"Query":"select * from app1pkg.payments where something = 1"}}`:                                      "unsupported column name: something",
+			`{"args":{"Query":"select * from app1pkg.payments where id = 2.3"}}`:                                           `parsing "2.3": invalid syntax`,
+			`{"args":{"Query":"select * from app1pkg.payments where id in (1.3)"}}`:                                        `parsing "1.3": invalid syntax`,
+			`{"args":{"Query":"select * from app1pkg.payments where id >= 2"}}`:                                            "unsupported operation: >=",
+			`{"args":{"Query":"select * from app1pkg.payments where id = 2 and something = 2"}}`:                           "unsupported expression: *sqlparser.AndExpr",
+			`{"args":{"Query":"select * from app1pkg.payments"}}`:                                                          "'app1pkg.payments' is not a singleton. At least one record ID must be provided",
+			fmt.Sprintf(`{"args":{"Query":"select * from app1pkg.payments where id = %d"}}`, emailId):                      fmt.Sprintf("record with ID '%d' has mismatching QName 'app1pkg.pos_emails'", emailId),
+			fmt.Sprintf(`{"args":{"Query":"select * from app1pkg.payments where id = %d"}}`, istructs.NonExistingRecordID): fmt.Sprintf("record with ID '%d' not found", istructs.NonExistingRecordID),
+			fmt.Sprintf(`{"args":{"Query":"select abracadabra from app1pkg.pos_emails where id = %d"}}`, emailId):          "field 'abracadabra' not found in def",
+			`{"args":{"Query":"select * from app1pkg.payments.2 where id = 2"}}`:                                           "record ID and 'where id ...' clause can not be used in one query",
+			`{"args":{"Query":"select sys.QName from app1pkg.test_ws.1"}}`:                                                 "conditions are not allowed to query a singleton",
+			`{"args":{"Query":"select sys.QName from app1pkg.test_ws where id = 1"}}`:                                      "conditions are not allowed to query a singleton",
+		}
 
-		resp.RequireError(t, `strconv.ParseInt: parsing "2.3": invalid syntax`)
+		for query, expectedError := range cases {
+			t.Run(expectedError, func(t *testing.T) {
+				vit.PostWS(ws, "q.sys.SqlQuery", query, coreutils.Expect400(expectedError))
+			})
+		}
 	})
-	t.Run("Should return error when ID from IN clause not parsable", func(t *testing.T) {
-		body = `{"args":{"Query":"select * from app1pkg.payments where id in (1.3)"}}`
-		resp := vit.PostWS(ws, "q.sys.SqlQuery", body, coreutils.Expect500())
 
-		resp.RequireError(t, `strconv.ParseInt: parsing "1.3": invalid syntax`)
-	})
-	t.Run("Should return error when ID operation not supported", func(t *testing.T) {
-		body = `{"args":{"Query":"select * from app1pkg.payments where id >= 2"}}`
-		resp := vit.PostWS(ws, "q.sys.SqlQuery", body, coreutils.Expect500())
-
-		resp.RequireError(t, "unsupported operation: >=")
-	})
-	t.Run("Should return error when expression not supported", func(t *testing.T) {
-		body = `{"args":{"Query":"select * from app1pkg.payments where id = 2 and something = 2"}}`
-		resp := vit.PostWS(ws, "q.sys.SqlQuery", body, coreutils.Expect500())
-
-		resp.RequireError(t, "unsupported expression: *sqlparser.AndExpr")
-	})
-	t.Run("Should return error when ID not present", func(t *testing.T) {
-		body = `{"args":{"Query":"select * from app1pkg.payments"}}`
-		resp := vit.PostWS(ws, "q.sys.SqlQuery", body, coreutils.Expect500())
-
-		resp.RequireError(t, "unable to find singleton ID for type «app1pkg.payments»: name not found")
-	})
-	t.Run("Should return error when requested record has mismatching QName", func(t *testing.T) {
-		body = fmt.Sprintf(`{"args":{"Query":"select * from app1pkg.payments where id = %d"}}`, emailId)
-		resp := vit.PostWS(ws, "q.sys.SqlQuery", body, coreutils.Expect500())
-
-		resp.RequireError(t, fmt.Sprintf("record with ID '%d' has mismatching QName 'app1pkg.pos_emails'", emailId))
-	})
-	t.Run("Should return error when record not found", func(t *testing.T) {
-		body = fmt.Sprintf(`{"args":{"Query":"select * from app1pkg.payments where id = %d"}}`, istructs.NonExistingRecordID)
-		resp := vit.PostWS(ws, "q.sys.SqlQuery", body, coreutils.Expect500())
-
-		resp.RequireError(t, fmt.Sprintf("record with ID '%d' not found", istructs.NonExistingRecordID))
-	})
-	t.Run("Should return error when field not found in def", func(t *testing.T) {
-		body = fmt.Sprintf(`{"args":{"Query":"select abracadabra from app1pkg.pos_emails where id = %d"}}`, emailId)
-		resp := vit.PostWS(ws, "q.sys.SqlQuery", body, coreutils.Expect500())
-
-		resp.RequireError(t, "field 'abracadabra' not found in def")
-	})
 	t.Run("Should read singleton", func(t *testing.T) {
 		require := require.New(t)
 		body = `{"args":{"Query":"select sys.QName from app1pkg.test_ws"},"elements":[{"fields":["Result"]}]}`
@@ -498,31 +469,59 @@ func TestReadFromWLogWithSysRawArg(t *testing.T) {
 	require.Equal("hello world", rawArg)
 }
 
-func TestReadFromAnotherAppAnotherWSID(t *testing.T) {
-	//t.Skip("waiting for https://github.com/voedger/voedger/issues/1811")
+func TestReadFromAnDifferentLocations(t *testing.T) {
+	require := require.New(t)
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
 	oneAppWS := vit.WS(istructs.AppQName_test1_app1, "test_ws")
 
-	// create a record in one workspace of one app
-	categoryName := vit.NextName()
-	body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.category","name":"%s"}}]}`, categoryName)
-	categoryID := vit.PostWS(oneAppWS, "c.sys.CUD", body).NewID()
+	t.Run("wsid", func(t *testing.T) {
+		// create a record in one workspace of one app
+		categoryName := vit.NextName()
+		body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.category","name":"%s"}}]}`, categoryName)
+		categoryID := vit.PostWS(oneAppWS, "c.sys.CUD", body).NewID()
 
-	// create a workspace in another app
-	anotherAppWSOwner := vit.GetPrincipal(istructs.AppQName_test1_app2, "login")
-	qNameApp2_TestWSKind := appdef.NewQName("app2pkg", "test_ws")
-	anotherAppWS := vit.CreateWorkspace(it.WSParams{
-		Name:         "anotherAppWS",
-		Kind:         qNameApp2_TestWSKind,
-		ClusterID:    istructs.MainClusterID,
-		InitDataJSON: `{"IntFld":42}`,
-	}, anotherAppWSOwner)
+		// create a workspace in another app
+		anotherAppWSOwner := vit.GetPrincipal(istructs.AppQName_test1_app2, "login")
+		qNameApp2_TestWSKind := appdef.NewQName("app2pkg", "test_ws")
+		anotherAppWS := vit.CreateWorkspace(it.WSParams{
+			Name:         "anotherAppWS",
+			Kind:         qNameApp2_TestWSKind,
+			ClusterID:    istructs.MainClusterID,
+			InitDataJSON: `{"IntFld":42}`,
+		}, anotherAppWSOwner)
 
-	// in the another app use sql to query the record from the first app
-	body = fmt.Sprintf(`{"args":{"Query":"select * from test1.app1.%d.app1pkg.category where id = %d"},"elements":[{"fields":["Result"]}]}`, oneAppWS.WSID, categoryID)
-	resp := vit.PostWS(anotherAppWS, "q.sys.SqlQuery", body)
-	resStr := resp.SectionRow(len(resp.Sections[0].Elements) - 1)[0].(string)
-	require.Contains(t, resStr, fmt.Sprintf(`"name":"%s"`, categoryName))
+		// in the another app use sql to query the record from the first app
+		body = fmt.Sprintf(`{"args":{"Query":"select * from test1.app1.%d.app1pkg.category where id = %d"},"elements":[{"fields":["Result"]}]}`, oneAppWS.WSID, categoryID)
+		resp := vit.PostWS(anotherAppWS, "q.sys.SqlQuery", body)
+		resStr := resp.SectionRow(len(resp.Sections[0].Elements) - 1)[0].(string)
+		require.Contains(resStr, fmt.Sprintf(`"name":"%s"`, categoryName))
+	})
+
+	t.Run("app workspace number", func(t *testing.T) {
+		// determine the number of the app workspace that stores cdoc.Login "login"
+		registryAppStructs, err := vit.IAppStructsProvider.AppStructs(istructs.AppQName_sys_registry)
+		require.NoError(err)
+		prn := vit.GetPrincipal(istructs.AppQName_test1_app1, "login") // from VIT shared config
+		pseudoWSID := coreutils.GetPseudoWSID(istructs.NullWSID, prn.Name, istructs.MainClusterID)
+		appWSNumber := pseudoWSID.BaseWSID() % istructs.WSID(registryAppStructs.NumAppWorkspaces())
+
+		// for example read cdoc.registry.Login.LoginHash from the app workspace
+		loginID := vit.GetCDocLoginID(prn.Login)
+		body := fmt.Sprintf(`{"args":{"Query":"select * from sys.registry.a%d.registry.Login where id = %d"},"elements":[{"fields":["Result"]}]}`, appWSNumber, loginID)
+		resp := vit.PostWS(oneAppWS, "q.sys.SqlQuery", body)
+		loginHash := registry.GetLoginHash(prn.Login.Name)
+		require.Contains(resp.SectionRow()[0].(string), fmt.Sprintf(`"LoginHash":"%s"`, loginHash))
+	})
+
+	t.Run("login hash", func(t *testing.T) {
+		// for example read cdoc.registry.Login.LoginHash from the workspace determined by the login name
+		prn := vit.GetPrincipal(istructs.AppQName_test1_app1, "login") // from VIT shared config
+		loginID := vit.GetCDocLoginID(prn.Login)
+		body := fmt.Sprintf(`{"args":{"Query":"select * from sys.registry.\"login\".registry.Login where id = %d"},"elements":[{"fields":["Result"]}]}`, loginID)
+		resp := vit.PostWS(oneAppWS, "q.sys.SqlQuery", body)
+		loginHash := registry.GetLoginHash(prn.Login.Name)
+		require.Contains(resp.SectionRow()[0].(string), fmt.Sprintf(`"LoginHash":"%s"`, loginHash))
+	})
 }

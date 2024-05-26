@@ -27,7 +27,6 @@ func execQrySqlQuery(asp istructs.IAppStructsProvider, appQName istructs.AppQNam
 
 		query := args.ArgumentObject.AsString(field_Query)
 
-
 		dml, err := coreutils.ParseQuery(query)
 		if err != nil {
 			return coreutils.NewHTTPError(http.StatusBadRequest, err)
@@ -58,16 +57,6 @@ func execQrySqlQuery(asp istructs.IAppStructsProvider, appQName istructs.AppQNam
 		default:
 			wsID = args.WSID
 		}
-
-		// if a, w, c, err := parseQueryAppWs(query); err == nil {
-		// 	if a != istructs.NullAppQName {
-		// 		app = a
-		// 	}
-		// 	if w != 0 {
-		// 		wsID = w
-		// 	}
-		// 	query = c
-		// }
 
 		if wsID != args.WSID {
 			wsDesc, err := appStructs.Records().GetSingleton(wsID, authnz.QNameCDocWorkspaceDescriptor)
@@ -126,7 +115,8 @@ func execQrySqlQuery(asp istructs.IAppStructsProvider, appQName istructs.AppQNam
 		case appdef.TypeKind_CRecord:
 			fallthrough
 		case appdef.TypeKind_WDoc:
-			return readRecords(wsID, source, whereExpr, appStructs, f, callback, istructs.RecordID(dml.EntityID))
+			return coreutils.WrapSysError(readRecords(wsID, source, whereExpr, appStructs, f, callback, istructs.RecordID(dml.EntityID)),
+				http.StatusBadRequest)
 		default:
 			if source != plog && source != wlog {
 				break
