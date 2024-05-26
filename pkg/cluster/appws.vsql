@@ -17,7 +17,12 @@ ALTER WORKSPACE AppWorkspaceWS (
 		AppImage blob
 	);
 
+	TYPE VSqlUpdateParams (
+		Query varchar NOT NULL
+	);
+
 	EXTENSION ENGINE BUILTIN (
 		COMMAND DeployApp(AppDeploymentDescriptor);
+		COMMAND VSqlUpdate(VSqlUpdateParams);
 	);
 );
