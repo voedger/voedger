@@ -18,13 +18,11 @@ import (
 const (
 	dmlRegexpStr = `^` +
 		`\s*(?P<operation>(\w*\s*update\s*\w*)|(\w*\s*insert)|(select\s+.+\s+from))\s+` +
-		`(?P<appQName>[^\d][a-zA-Z0-9_]+\.[^\d][a-zA-Z0-9_]+\.)?` +
+		`(?P<appQName>[^\d][a-zA-Z0-9_-]+\.[^\d][a-zA-Z0-9_-]+\.)?` +
 		`((?P<wsidOrPartno>\d+\.)|(?P<appWSNum>a\d+.)|(?P<login>".+"\.))?` +
-		`(?P<qName>[^\d][a-zA-Z0-9_]+\.[^\d][a-zA-Z0-9_]+)` +
+		`(?P<qName>[^\d][a-zA-Z0-9_-]+\.[^\d][a-zA-Z0-9_-]+)` +
 		`(?P<idOrOffset>\.\d+)?` +
 		`(?P<pars>\s+.*)?$`
-	bitSize64 = 64
-	base10    = 10
 )
 
 type DMLKind int
