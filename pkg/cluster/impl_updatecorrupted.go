@@ -21,6 +21,7 @@ func updateCorrupted(update update, currentMillis istructs.UnixMilli) (err error
 	var wsid istructs.WSID
 	var plogOffset istructs.Offset
 	var partitionID istructs.PartitionID
+	eventExists := false
 	if update.QName == plog {
 		plogOffset = update.offset
 		partitionID = update.partitionID
@@ -28,8 +29,16 @@ func updateCorrupted(update update, currentMillis istructs.UnixMilli) (err error
 			currentEventBytes = event.Bytes()
 			wlogOffset = event.WLogOffset()
 			wsid = event.Workspace()
+			eventExists = true
 			return nil
 		})
+		if err != nil {
+			// notest
+			return err
+		}
+		if !eventExists {
+			return fmt.Errorf("plog event partition %d plogoffset %d does not exist", partitionID, plogOffset)
+		}
 	} else {
 		// wlog
 		wsid = update.wsid
@@ -38,13 +47,17 @@ func updateCorrupted(update update, currentMillis istructs.UnixMilli) (err error
 		if partitionID, err = update.appParts.AppWorkspacePartitionID(update.AppQName, wsid); err == nil {
 			err = update.appStructs.Events().ReadWLog(context.Background(), wsid, wlogOffset, 1, func(wlogOffset istructs.Offset, event istructs.IWLogEvent) (err error) {
 				currentEventBytes = event.Bytes()
+				eventExists = true
 				return nil
 			})
 		}
-	}
-	if err != nil {
-		// notest
-		return err
+		if err != nil {
+			// notest
+			return err
+		}
+		if !eventExists {
+			return fmt.Errorf("wlog event partition %d wlogoffset %d wsid %d does not exist", partitionID, wlogOffset, wsid)
+		}
 	}
 	syncRawEventBuilder := update.appStructs.Events().GetSyncRawEventBuilder(istructs.SyncRawEventBuilderParams{
 		GenericRawEventBuilderParams: istructs.GenericRawEventBuilderParams{
@@ -58,14 +71,13 @@ func updateCorrupted(update update, currentMillis istructs.UnixMilli) (err error
 		},
 		SyncedAt: currentMillis,
 	})
-
 	syncRawEvent, err := syncRawEventBuilder.BuildRawEvent()
 	if err != nil {
 		// notest
 		return err
 	}
 	if update.QName == plog {
-		_, err = update.appStructs.Events().PutPlog(syncRawEvent, nil, istructsmem.NewIDGeneratorWithHook(func(rawID, storageID istructs.RecordID, t appdef.IType) error {
+		_, err = update.appStructs.Events().PutPlog(syncRawEvent, nil, istructsmem.NewIDGeneratorWithHook(func(istructs.RecordID, istructs.RecordID, appdef.IType) error {
 			// notest
 			panic("must not use ID generator on corrupted event create")
 		}))
