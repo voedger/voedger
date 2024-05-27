@@ -23,8 +23,6 @@ const (
 		`(?P<qName>[^\d][a-zA-Z0-9_-]+\.[^\d][a-zA-Z0-9_-]+)` +
 		`(?P<idOrOffset>\.\d+)?` +
 		`(?P<pars>\s+.*)?$`
-	bitSize64 = 64
-	base10    = 10
 )
 
 type DMLKind int
