@@ -9,7 +9,7 @@ import (
 	"embed"
 
 	"github.com/voedger/voedger/pkg/appdef"
-	coreutils "github.com/voedger/voedger/pkg/utils"
+	"github.com/voedger/voedger/pkg/dml"
 )
 
 //go:embed appws.vsql
@@ -35,11 +35,11 @@ var (
 		appdef.SystemField_ID:    true,
 		appdef.SystemField_QName: true,
 	}
-	allowedDMLKinds = map[coreutils.DMLKind]bool{
-		coreutils.DMLKind_DirectInsert:    true,
-		coreutils.DMLKind_DirectUpdate:    true,
-		coreutils.DMLKind_UpdateCorrupted: true,
-		coreutils.DMLKind_UpdateTable:     true,
+	allowedDMLKinds = map[dml.OpKind]bool{
+		dml.OpKind_DirectInsert:    true,
+		dml.OpKind_DirectUpdate:    true,
+		dml.OpKind_UpdateCorrupted: true,
+		dml.OpKind_UpdateTable:     true,
 	}
 
 	// if the name is like a sql identifier e.g. `Int` then the parser makes it lowered
