@@ -33,8 +33,8 @@ func provideExecCmdVSqlUpdate(federation federation.IFederation, itokens itokens
 		}
 
 		switch update.Kind {
-		case dml.OpKind_UpdateTable:
-			err = updateTable(update, federation, itokens)
+		case dml.OpKind_UpdateTable, dml.OpKind_InsertTable:
+			err = updateOrInsertTable(update, federation, itokens)
 		case dml.OpKind_UpdateCorrupted:
 			err = updateCorrupted(update, istructs.UnixMilli(timeFunc().UnixMilli()))
 		case dml.OpKind_DirectUpdate, dml.OpKind_DirectInsert:
@@ -127,7 +127,7 @@ func parseAndValidateQuery(args istructs.ExecCommandArgs, query string, asp istr
 
 func validateQuery(update update) error {
 	switch update.Kind {
-	case dml.OpKind_UpdateTable:
+	case dml.OpKind_UpdateTable, dml.OpKind_InsertTable:
 		return validateQuery_Table(update)
 	case dml.OpKind_UpdateCorrupted:
 		return validateQuery_Corrupted(update)

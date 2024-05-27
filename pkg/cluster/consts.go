@@ -40,6 +40,7 @@ var (
 		dml.OpKind_DirectUpdate:    true,
 		dml.OpKind_UpdateCorrupted: true,
 		dml.OpKind_UpdateTable:     true,
+		dml.OpKind_InsertTable:     true,
 	}
 
 	// if the name is like a sql identifier e.g. `Int` then the parser makes it lowered

@@ -23,7 +23,7 @@ import (
 	it "github.com/voedger/voedger/pkg/vit"
 )
 
-func TestVSqlUpdate_BasicUsage_Table(t *testing.T) {
+func TestVSqlUpdate_BasicUsage_UpdateTable(t *testing.T) {
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
@@ -45,6 +45,21 @@ func TestVSqlUpdate_BasicUsage_Table(t *testing.T) {
 	resp := vit.PostWS(ws, "q.sys.SqlQuery", body)
 	resStr := resp.SectionRow(len(resp.Sections[0].Elements) - 1)[0].(string)
 	require.Contains(t, resStr, fmt.Sprintf(`"name":"%s"`, newName))
+}
+
+func TestVSqlUpdate_BasicUsage_InsertTable(t *testing.T) {
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
+
+	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+	sysPrn := vit.GetSystemPrincipal(istructs.AppQName_sys_cluster)
+
+	categoryName := vit.NextName()
+	body := fmt.Sprintf(`{"args": {"Query":"insert test1.app1.%d.app1pkg.category set name = '%s'"}}`, ws.WSID, categoryName)
+	vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppWSID, "c.cluster.VSqlUpdate", body,
+		coreutils.WithAuthorizeBy(sysPrn.Token)).Println()
+
+	
 }
 
 func TestVSqlUpdate_BasicUsage_Corrupted(t *testing.T) {
