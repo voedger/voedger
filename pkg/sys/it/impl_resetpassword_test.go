@@ -98,7 +98,6 @@ func TestIssueResetPasswordTokenErrors(t *testing.T) {
 }
 
 func TestResetPasswordLimits(t *testing.T) {
-	t.Skip("wait for https://github.com/voedger/voedger/issues/2090")
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 	prn := vit.GetPrincipal(istructs.AppQName_test1_app1, it.TestEmail)
