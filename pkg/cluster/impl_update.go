@@ -15,6 +15,7 @@ import (
 	"github.com/blastrain/vitess-sqlparser/sqlparser"
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appparts"
+	"github.com/voedger/voedger/pkg/dml"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/itokens"
@@ -32,11 +33,11 @@ func provideExecCmdVSqlUpdate(federation federation.IFederation, itokens itokens
 		}
 
 		switch update.Kind {
-		case coreutils.DMLKind_UpdateTable:
+		case dml.OpKind_UpdateTable:
 			err = updateTable(update, federation, itokens)
-		case coreutils.DMLKind_UpdateCorrupted:
+		case dml.OpKind_UpdateCorrupted:
 			err = updateCorrupted(update, istructs.UnixMilli(timeFunc().UnixMilli()))
-		case coreutils.DMLKind_DirectUpdate, coreutils.DMLKind_DirectInsert:
+		case dml.OpKind_DirectUpdate, dml.OpKind_DirectInsert:
 			err = updateDirect(update)
 		}
 		return coreutils.WrapSysError(err, http.StatusBadRequest)
@@ -44,7 +45,7 @@ func provideExecCmdVSqlUpdate(federation federation.IFederation, itokens itokens
 }
 
 func parseAndValidateQuery(args istructs.ExecCommandArgs, query string, asp istructs.IAppStructsProvider) (update update, err error) {
-	update.DML, err = coreutils.ParseQuery(query)
+	update.Op, err = dml.ParseQuery(query)
 	if err != nil {
 		return update, err
 	}
@@ -63,18 +64,18 @@ func parseAndValidateQuery(args istructs.ExecCommandArgs, query string, asp istr
 	}
 
 	var locationID istructs.IDType
-	switch update.Location.Kind {
-	case coreutils.LocationKind_WSID:
-		locationID = istructs.IDType(update.Location.ID)
-	case coreutils.LocationKind_PseudoWSID:
-		locationID = istructs.IDType(coreutils.GetAppWSID(istructs.WSID(update.Location.ID), update.appStructs.NumAppWorkspaces()))
-	case coreutils.LocationKind_AppWSNum:
-		locationID = istructs.IDType(istructs.NewWSID(istructs.MainClusterID, istructs.FirstBaseAppWSID+istructs.WSID(update.Location.ID)))
+	switch update.Workspace.Kind {
+	case dml.WorkspaceKind_WSID:
+		locationID = istructs.IDType(update.Workspace.ID)
+	case dml.WorkspaceKind_PseudoWSID:
+		locationID = istructs.IDType(coreutils.GetAppWSID(istructs.WSID(update.Workspace.ID), update.appStructs.NumAppWorkspaces()))
+	case dml.WorkspaceKind_AppWSNum:
+		locationID = istructs.IDType(istructs.NewWSID(istructs.MainClusterID, istructs.FirstBaseAppWSID+istructs.WSID(update.Workspace.ID)))
 	default:
 		return update, errors.New("location must be specified")
 	}
 
-	if update.Kind != coreutils.DMLKind_UpdateCorrupted {
+	if update.Kind != dml.OpKind_UpdateCorrupted {
 		tp := update.appStructs.AppDef().Type(update.QName)
 		if tp.Kind() == appdef.TypeKind_null {
 			return update, fmt.Errorf("qname %s is not found", update.QName)
@@ -108,10 +109,10 @@ func parseAndValidateQuery(args istructs.ExecCommandArgs, query string, asp istr
 	}
 
 	switch update.Kind {
-	case coreutils.DMLKind_UpdateTable, coreutils.DMLKind_DirectUpdate, coreutils.DMLKind_DirectInsert:
+	case dml.OpKind_UpdateTable, dml.OpKind_DirectUpdate, dml.OpKind_DirectInsert:
 		update.wsid = istructs.WSID(locationID)
 		update.id = istructs.RecordID(update.EntityID)
-	case coreutils.DMLKind_UpdateCorrupted:
+	case dml.OpKind_UpdateCorrupted:
 		update.offset = istructs.Offset(update.EntityID)
 		switch update.QName {
 		case plog:
@@ -126,11 +127,11 @@ func parseAndValidateQuery(args istructs.ExecCommandArgs, query string, asp istr
 
 func validateQuery(update update) error {
 	switch update.Kind {
-	case coreutils.DMLKind_UpdateTable:
+	case dml.OpKind_UpdateTable:
 		return validateQuery_Table(update)
-	case coreutils.DMLKind_UpdateCorrupted:
+	case dml.OpKind_UpdateCorrupted:
 		return validateQuery_Corrupted(update)
-	case coreutils.DMLKind_DirectUpdate, coreutils.DMLKind_DirectInsert:
+	case dml.OpKind_DirectUpdate, dml.OpKind_DirectInsert:
 		return validateQuery_Direct(update)
 	default:
 		// notest: checked already on sql parse
