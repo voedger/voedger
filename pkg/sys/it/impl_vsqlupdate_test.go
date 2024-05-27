@@ -11,6 +11,7 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	"math"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -402,7 +403,7 @@ func TestUpdateDifferentLocations(t *testing.T) {
 	require.NoError(json.Unmarshal([]byte(resp.SectionRow()[0].(string)), &m))
 	curentWSKID := m["WSKindInitializationData"].(string)
 	sysPrn_ClusterApp := vit.GetSystemPrincipal(istructs.AppQName_sys_cluster)
-	
+
 	rollback := func() {
 		// rollback changes to keep the shared config predictable
 		curentWSKIDEscaped := fmt.Sprintf("%q", curentWSKID)
@@ -472,16 +473,18 @@ func TestVSqlUpdateValidateErrors(t *testing.T) {
 		// update corrupted
 		"update corrupted":       "invalid query format",
 		"update corrupted s s s": "invalid query format",
-		"update corrupted test1.app1.1.sys.PLog.1 set name = 42":             "any params of update corrupted are not allowed",
-		"update corrupted test1.app1.1.sys.PLog.1 set name = 42 where x = 1": "any params of update corrupted are not allowed",
-		"update corrupted test1.app1.1.sys.PLog.1 where x = 1":               "syntax error",
-		"update corrupted test1.app1.0.sys.WLog.44":                          "wsid must be provided",
-		"update corrupted test1.app1.1000.sys.PLog.44":                       "provided partno 1000 is out of 10 declared by app test1/app1",
-		"update corrupted test1.app1.1.sys.PLog.-44":                         "invalid query format",
-		"update corrupted test1.app1.1.sys.PLog.0":                           "offset must be provided",
-		"update corrupted test1.app1.1.sys.PLog":                             "offset must be provided",
-		"update corrupted test1.app1.1.app1pkg.category.44":                  "sys.plog or sys.wlog are only allowed",
-		"update corrupted unknown.app.1.sys.PLog.44":                         "application not found: unknown/app",
+		"update corrupted test1.app1.1.sys.PLog.1 set name = 42":              "any params of update corrupted are not allowed",
+		"update corrupted test1.app1.1.sys.PLog.1 set name = 42 where x = 1":  "any params of update corrupted are not allowed",
+		"update corrupted test1.app1.1.sys.PLog.1 where x = 1":                "syntax error",
+		"update corrupted test1.app1.0.sys.WLog.44":                           "wsid must be provided",
+		"update corrupted test1.app1.1000.sys.PLog.44":                        "provided partno 1000 is out of 10 declared by app test1/app1",
+		"update corrupted test1.app1.1.sys.PLog.-44":                          "invalid query format",
+		"update corrupted test1.app1.1.sys.PLog.0":                            "offset must be provided",
+		"update corrupted test1.app1.1.sys.PLog":                              "offset must be provided",
+		"update corrupted test1.app1.1.app1pkg.category.44":                   "sys.plog or sys.wlog are only allowed",
+		"update corrupted unknown.app.1.sys.PLog.44":                          "application not found: unknown/app",
+		fmt.Sprintf("update corrupted test1.app1.1.sys.PLog.%d", math.MaxInt): fmt.Sprintf("plog event partition 1 plogoffset %d does not exist", math.MaxInt),
+		fmt.Sprintf("update corrupted test1.app1.1.sys.WLog.%d", math.MaxInt): fmt.Sprintf("wlog event partition 1 wlogoffset %d wsid 1 does not exist", math.MaxInt),
 
 		// direct update
 		"direct update test1.app1.1.app1pkg.CategoryIdx set Val = 44, Name = 'x'":        "full key must be provided on view direct update",

@@ -64,12 +64,35 @@ func updateCorrupted(update update, currentMillis istructs.UnixMilli) (err error
 		// notest
 		return err
 	}
+	exists := false
 	if update.QName == plog {
-		_, err = update.appStructs.Events().PutPlog(syncRawEvent, nil, istructsmem.NewIDGeneratorWithHook(func(rawID, storageID istructs.RecordID, t appdef.IType) error {
+		err = update.appStructs.Events().ReadPLog(context.Background(), partitionID, plogOffset, 1, func(istructs.Offset, istructs.IPLogEvent) (err error) {
+			exists = true
+			return nil
+		})
+		if err != nil {
+			// notest
+			return err
+		}
+		if !exists {
+			return fmt.Errorf("plog event partition %d plogoffset %d does not exist", partitionID, plogOffset)
+		}
+		_, err = update.appStructs.Events().PutPlog(syncRawEvent, nil, istructsmem.NewIDGeneratorWithHook(func(istructs.RecordID, istructs.RecordID, appdef.IType) error {
 			// notest
 			panic("must not use ID generator on corrupted event create")
 		}))
 		return err
+	}
+	err = update.appStructs.Events().ReadWLog(context.Background(), wsid, wlogOffset, 1, func(istructs.Offset, istructs.IWLogEvent) (err error) {
+		exists = true
+		return nil
+	})
+	if err != nil {
+		// notest
+		return err
+	}
+	if !exists {
+		return fmt.Errorf("wlog event partition %d wlogoffset %d wsid %d does not exist", partitionID, wlogOffset, wsid)
 	}
 	nonStoredPLogEvent := update.appStructs.Events().BuildPLogEvent(syncRawEvent)
 	return update.appStructs.Events().PutWlog(nonStoredPLogEvent)
