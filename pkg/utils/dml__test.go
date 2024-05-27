@@ -99,12 +99,12 @@ func TestCases(t *testing.T) {
 			},
 		},
 		{
-			`select * from test1.app1."login".sys.Table.456 where x = 1`,
+			`select * from te-st_1.ap-p1_."login".sy_-s.Ta-b_le.456 where x = 1`,
 			DML{
-				AppQName: test1App1,
+				AppQName: istructs.NewAppQName("te-st_1", "ap-p1_"),
 				Kind:     DMLKind_Select,
-				QName:    sysTable,
-				CleanSQL: "select * from sys.Table where x = 1",
+				QName:    appdef.NewQName("sy_-s", "Ta-b_le"),
+				CleanSQL: "select * from sy_-s.Ta-b_le where x = 1",
 				Location: Location{
 					ID:   140737488407312,
 					Kind: LocationKind_PseudoWSID,
