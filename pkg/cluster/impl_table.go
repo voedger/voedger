@@ -28,8 +28,8 @@ func updateOrInsertTable(update update, federation federation.IFederation, itoke
 		return err
 	}
 	cudBody := ""
-	if update.Kind == dml.OpKind_DirectInsert {
-		cudBody = fmt.Sprintf(`{"cuds":[{"fields":%s}]}`, update.id, jsonFields)
+	if update.Kind == dml.OpKind_InsertTable {
+		cudBody = fmt.Sprintf(`{"cuds":[{"fields":%s}]}`, jsonFields)
 	} else {
 		cudBody = fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":%s}]}`, update.id, jsonFields)
 	}

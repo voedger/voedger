@@ -63,14 +63,14 @@ func parseAndValidateQuery(args istructs.ExecCommandArgs, query string, asp istr
 		return update, err
 	}
 
-	var locationID istructs.IDType
+	var wsid istructs.IDType
 	switch update.Workspace.Kind {
 	case dml.WorkspaceKind_WSID:
-		locationID = istructs.IDType(update.Workspace.ID)
+		wsid = istructs.IDType(update.Workspace.ID)
 	case dml.WorkspaceKind_PseudoWSID:
-		locationID = istructs.IDType(coreutils.GetAppWSID(istructs.WSID(update.Workspace.ID), update.appStructs.NumAppWorkspaces()))
+		wsid = istructs.IDType(coreutils.GetAppWSID(istructs.WSID(update.Workspace.ID), update.appStructs.NumAppWorkspaces()))
 	case dml.WorkspaceKind_AppWSNum:
-		locationID = istructs.IDType(istructs.NewWSID(istructs.MainClusterID, istructs.FirstBaseAppWSID+istructs.WSID(update.Workspace.ID)))
+		wsid = istructs.IDType(istructs.NewWSID(istructs.MainClusterID, istructs.FirstBaseAppWSID+istructs.WSID(update.Workspace.ID)))
 	default:
 		return update, errors.New("location must be specified")
 	}
@@ -109,16 +109,16 @@ func parseAndValidateQuery(args istructs.ExecCommandArgs, query string, asp istr
 	}
 
 	switch update.Kind {
-	case dml.OpKind_UpdateTable, dml.OpKind_DirectUpdate, dml.OpKind_DirectInsert:
-		update.wsid = istructs.WSID(locationID)
+	case dml.OpKind_UpdateTable, dml.OpKind_DirectUpdate, dml.OpKind_DirectInsert, dml.OpKind_InsertTable:
+		update.wsid = istructs.WSID(wsid)
 		update.id = istructs.RecordID(update.EntityID)
 	case dml.OpKind_UpdateCorrupted:
 		update.offset = istructs.Offset(update.EntityID)
 		switch update.QName {
 		case plog:
-			update.partitionID = istructs.PartitionID(locationID)
+			update.partitionID = istructs.PartitionID(wsid)
 		case wlog:
-			update.wsid = istructs.WSID(locationID)
+			update.wsid = istructs.WSID(wsid)
 		}
 	}
 
