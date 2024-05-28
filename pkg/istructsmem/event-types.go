@@ -898,7 +898,7 @@ func (o *objectType) FillFromJSON(data map[string]any) {
 				c.FillFromJSON(childData)
 			}
 		default:
-			panic(fmt.Sprintf("unsupported type %#T", v))
+			o.collectErrorf("%w: %#T", ErrWrongType, v)
 		}
 	}
 }
