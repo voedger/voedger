@@ -142,9 +142,12 @@ func getEnvValue1(key string) string {
 
 func updateTemplateScripts(c *clusterType) error {
 
-	fName := filepath.Join("alertmanager", "config.yml")
 	cluster := newCluster()
-	if err := cluster.updateTemplateFile(fName); err != nil {
+	if err := cluster.updateTemplateFile(filepath.Join("alertmanager", "config.yml")); err != nil {
+		return err
+	}
+
+	if err := cluster.updateTemplateFile(filepath.Join("ce", "alertmanager", "config.yml")); err != nil {
 		return err
 	}
 
