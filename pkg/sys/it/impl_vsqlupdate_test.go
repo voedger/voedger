@@ -23,7 +23,7 @@ import (
 	it "github.com/voedger/voedger/pkg/vit"
 )
 
-func TestVSqlUpdate_BasicUsage_Table(t *testing.T) {
+func TestVSqlUpdate_BasicUsage_UpdateTable(t *testing.T) {
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
@@ -45,6 +45,37 @@ func TestVSqlUpdate_BasicUsage_Table(t *testing.T) {
 	resp := vit.PostWS(ws, "q.sys.SqlQuery", body)
 	resStr := resp.SectionRow(len(resp.Sections[0].Elements) - 1)[0].(string)
 	require.Contains(t, resStr, fmt.Sprintf(`"name":"%s"`, newName))
+}
+
+func TestVSqlUpdate_BasicUsage_InsertTable(t *testing.T) {
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
+
+	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+	sysPrn := vit.GetSystemPrincipal(istructs.AppQName_sys_cluster)
+
+	categoryName := vit.NextName()
+	body := fmt.Sprintf(`{"args": {"Query":"insert test1.app1.%d.app1pkg.category set name = '%s'"}}`, ws.WSID, categoryName)
+	resp := vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppWSID, "c.cluster.VSqlUpdate", body,
+		coreutils.WithAuthorizeBy(sysPrn.Token))
+
+	newID := int64(resp.CmdResult["NewID"].(float64))
+	body = fmt.Sprintf(`{"args":{"Query":"select * from app1pkg.category where id = %d"},"elements":[{"fields":["Result"]}]}`, newID)
+	resp = vit.PostWS(ws, "q.sys.SqlQuery", body)
+	m := map[string]interface{}{}
+	require.NoError(vit.T, json.Unmarshal([]byte(resp.SectionRow()[0].(string)), &m))
+
+	require.Equal(t, map[string]interface{}{
+		"cat_external_id":           "",
+		"hq_id":                     "",
+		"int_fld1":                  float64(0),
+		"int_fld2":                  float64(0),
+		"ml_name":                   nil,
+		"name":                      categoryName,
+		appdef.SystemField_ID:       float64(newID),
+		appdef.SystemField_IsActive: true,
+		appdef.SystemField_QName:    "app1pkg.category",
+	}, m)
 }
 
 func TestVSqlUpdate_BasicUsage_Corrupted(t *testing.T) {
@@ -451,16 +482,16 @@ func TestVSqlUpdateValidateErrors(t *testing.T) {
 	defer vit.TearDown()
 
 	cases := map[string]string{
-		// update
+		// common, update table
 		"":                       "misses required field",
 		" ":                      "invalid query format",
 		"update":                 "invalid query format",
 		"update s s s":           "invalid query format",
 		"select * from sys.plog": "'update' or 'insert' clause expected",
+		"wrong op kind test1.app1.42.app1pkg.category.42 set name = 42":          `invalid query format`,
 		"update test1.app1.42.app1pkg.category.1":                                "no fields to update",
 		"update test1.app1.app1pkg.category.1 set name = 's'":                    "location must be specified",
 		"update 42.42.42.wongQName set name = 42":                                "invalid query format",
-		"wrong op kind test1.app1.42.app1pkg.category.42 set name = 42":          `invalid query format`,
 		"update test1.app1.42.app1pkg.category set name = 42":                    "record ID is not provided",
 		"update test1.app1.42.app1pkg.category.1 set name = 42 where sys.ID = 1": "conditions are not allowed on update",
 		"update test1.app1.42.app1pkg.category.1 set sys.ID = 1":                 "field sys.ID can not be updated",
@@ -469,7 +500,16 @@ func TestVSqlUpdateValidateErrors(t *testing.T) {
 		"update test1.app1.42.unknown.table.1 set x = 1, x = 2":                  "qname unknown.table is not found",
 		"update test1.app1.42.app1pkg.DocManyTypes.1 set Bytes = 0x1":            "hex: odd length hex string",
 		"update test1.app1.42.app1pkg.DocManyTypes.1 set Bytes = sin(42)":        "unsupported value type",
+		"update test1.app1.42.app1pkg.MockCmd set Bytes = 0x00":                  "CDoc or WDoc only expected",
 		"update test1.app1.42.app1pkg.DocManyTypes.1 set Bytes = null":           "null value is not supported",
+
+		// insert table
+		"insert test1.app1.42.app1pkg.CategoryIdx set Val = 42":        "CDoc or WDoc only expected",
+		"insert test1.app1.1.app1pkg.MockCmd set Val = 44, Name = 'x'": "CDoc or WDoc only expected",
+		"insert test1.app1.42.app1pkg.category":                        "no fields to set",
+		"insert test1.app1.42.app1pkg.category set a = 1 where x = 1":  "conditions are not allowed on insert table",
+		"insert test1.app1.42.app1pkg.category.1 set a = 1":            "record ID must not be provided on insert table",
+		"insert test1.app1.42.app1pkg.category set a = null":           "null value is not supported",
 
 		// update corrupted
 		"update corrupted":       "invalid query format",
@@ -502,10 +542,12 @@ func TestVSqlUpdateValidateErrors(t *testing.T) {
 		"direct update test1.app1.1.app1pkg.category.1 set a = 2 where 1 = 1 and 1 = 1":                   "'where viewField1 = val1 [and viewField2 = val2 ...]' condition is only supported",
 		"direct update test1.app1.1.app1pkg.category set a = 2":                                           "record ID must be provided on record direct update",
 		"direct update test1.app1.1.app1pkg.category.1 set a = 2 where b = 3":                             "'where' clause is not allowed on record direct update",
+		"direct update test1.app1.1.app1pkg.MockCmd set Val = 44, Name = 'x'":                             "view, CDoc or WDoc only expected",
 
 		// direct insert
 		"direct insert test1.app1.1.app1pkg.CategoryIdx set Val = 44, Name = 'x' where a = 1": "'where' clause is not allowed on view direct insert",
 		"direct insert test1.app1.1.app1pkg.category set Val = 44, Name = 'x'":                "direct insert is not allowed for records",
+		"direct insert test1.app1.1.app1pkg.MockCmd set Val = 44, Name = 'x'":                 "view, CDoc or WDoc only expected",
 		"direct insert test1.app1.1.app1pkg.CategoryIdx set Val = null":                       "null value is not supported",
 	}
 	sysPrn := vit.GetSystemPrincipal(istructs.AppQName_sys_cluster)
