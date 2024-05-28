@@ -24,6 +24,7 @@ var (
 	QueryContext      = appdef.NewQName(appdef.SysPackage, "QueryContext")
 	Response          = appdef.NewQName(appdef.SysPackage, "Response")
 	FederationCommand = appdef.NewQName(appdef.SysPackage, "FederationCommand")
+	Uniques           = appdef.NewQName(appdef.SysPackage, "Uniques")
 )
 
 const (
