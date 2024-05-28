@@ -716,13 +716,21 @@ func setCronBackup(cluster *clusterType, backupTime string) error {
 	loggerInfo("Setting a cron schedule for database backup ", backupTime)
 
 	if cluster.Edition == clusterEditionCE {
+		args := []string{backupTime}
+		if cluster.Cron.ExpireTime != "" {
+			args = append(args, cluster.Cron.ExpireTime)
+		}
 		if err := newScriptExecuter("", "").
-			run("ce/set-cron-backup.sh", backupTime, cluster.Cron.ExpireTime); err != nil {
+			run("ce/set-cron-backup.sh", args...); err != nil {
 			return err
 		}
 	} else {
+		args := []string{backupTime, cluster.SshPort}
+		if cluster.Cron.ExpireTime != "" {
+			args = append(args, cluster.Cron.ExpireTime)
+		}
 		if err := newScriptExecuter(cluster.sshKey, "").
-			run("set-cron-backup-ssh.sh", backupTime, cluster.SshPort, cluster.Cron.ExpireTime); err != nil {
+			run("set-cron-backup-ssh.sh", args...); err != nil {
 			return err
 		}
 	}

@@ -4,7 +4,7 @@
 
 set -euo pipefail
 
-set +x
+set -x
 
 utils_SSH_PORT() {
     port="${VOEDGER_NODE_SSH_PORT:-22}"

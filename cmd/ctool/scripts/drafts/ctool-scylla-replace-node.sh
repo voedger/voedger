@@ -131,7 +131,7 @@ wait_for_scylla() {
   fi
 }
 
-./docker-install.sh "$2"
+#./docker-install.sh "$2"
 ./swarm-add-node.sh "$MANAGER" "$2"
 ./swarm-rm-node.sh "$MANAGER" "$1"
 ./db-node-prepare.sh "$2" "$DC"
