@@ -2014,6 +2014,13 @@ func Test_objectType_FillFromJSON(t *testing.T) {
 				require.Equal(test.testObj, o.QName())
 				require.EqualValues(0, o.AsInt32("int32"))
 			}},
+		{"must be ok to fill from JSON with nil values even for unknown fields",
+			`{"int32": nil, "unknown": nil}`,
+			func(o istructs.IObject, err error) {
+				require.NoError(err)
+				require.Equal(test.testObj, o.QName())
+				require.EqualValues(0, o.AsInt32("int32"))
+			}},
 		{"must be ok to fill fields from JSON",
 			`{"int32": 1, "int64": 2, "float32": 3.3, "float64": 4.4, "bool": true, "string": "test", "bytes": "AQID"}`,
 			func(o istructs.IObject, err error) {
@@ -2098,12 +2105,15 @@ func Test_objectType_FillFromJSON(t *testing.T) {
 		})
 	}
 
-	t.Run("must panic on provide a value of an unsupported type", func(t *testing.T) {
+	t.Run("must be error on provide a value of a wrong type", func(t *testing.T) {
 		b := test.AppStructs.ObjectBuilder(test.testObj)
 		require.NotNil(b)
 		j := map[string]any{
 			"int32": int(42),
 		}
-		require.PanicsWithValue("unsupported type int", func() { b.FillFromJSON(j) })
+		b.FillFromJSON(j)
+
+		_, err := b.Build()
+		require.ErrorIs(err, ErrWrongType)
 	})
 }
