@@ -509,6 +509,7 @@ func TestVSqlUpdateValidateErrors(t *testing.T) {
 		"insert test1.app1.42.app1pkg.category":                        "no fields to set",
 		"insert test1.app1.42.app1pkg.category set a = 1 where x = 1":  "conditions are not allowed on insert table",
 		"insert test1.app1.42.app1pkg.category.1 set a = 1":            "record ID must not be provided on insert table",
+		"insert test1.app1.42.app1pkg.category set a = null":           "null value is not supported",
 
 		// update corrupted
 		"update corrupted":       "invalid query format",
@@ -541,7 +542,7 @@ func TestVSqlUpdateValidateErrors(t *testing.T) {
 		"direct update test1.app1.1.app1pkg.category.1 set a = 2 where 1 = 1 and 1 = 1":                   "'where viewField1 = val1 [and viewField2 = val2 ...]' condition is only supported",
 		"direct update test1.app1.1.app1pkg.category set a = 2":                                           "record ID must be provided on record direct update",
 		"direct update test1.app1.1.app1pkg.category.1 set a = 2 where b = 3":                             "'where' clause is not allowed on record direct update",
-		"direct update test1.app1.1.app1pkg.MockCmd set Val = 44, Name = 'x'":            "view, CDoc or WDoc only expected",
+		"direct update test1.app1.1.app1pkg.MockCmd set Val = 44, Name = 'x'":                             "view, CDoc or WDoc only expected",
 
 		// direct insert
 		"direct insert test1.app1.1.app1pkg.CategoryIdx set Val = 44, Name = 'x' where a = 1": "'where' clause is not allowed on view direct insert",
