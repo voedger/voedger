@@ -33,8 +33,10 @@ func provideExecCmdVSqlUpdate(federation federation.IFederation, itokens itokens
 		}
 
 		switch update.Kind {
-		case dml.OpKind_UpdateTable, dml.OpKind_InsertTable:
-			err = updateOrInsertTable(update, federation, itokens)
+		case dml.OpKind_UpdateTable:
+			err = updateTable(update, federation, itokens)
+		case dml.OpKind_InsertTable:
+			err = insertTable(update, federation, itokens, args.State, args.Intents)
 		case dml.OpKind_UpdateCorrupted:
 			err = updateCorrupted(update, istructs.UnixMilli(timeFunc().UnixMilli()))
 		case dml.OpKind_DirectUpdate, dml.OpKind_DirectInsert:
@@ -50,7 +52,7 @@ func parseAndValidateQuery(args istructs.ExecCommandArgs, query string, asp istr
 		return update, err
 	}
 
-	if !allowedDMLKinds[update.Kind] {
+	if !allowedOpKinds[update.Kind] {
 		return update, errors.New("'update' or 'insert' clause expected")
 	}
 
@@ -127,8 +129,10 @@ func parseAndValidateQuery(args istructs.ExecCommandArgs, query string, asp istr
 
 func validateQuery(update update) error {
 	switch update.Kind {
-	case dml.OpKind_UpdateTable, dml.OpKind_InsertTable:
-		return validateQuery_Table(update)
+	case dml.OpKind_UpdateTable:
+		return validateQuery_UpdateTable(update)
+	case dml.OpKind_InsertTable:
+		return validateQuery_InsertTable(update)
 	case dml.OpKind_UpdateCorrupted:
 		return validateQuery_Corrupted(update)
 	case dml.OpKind_DirectUpdate, dml.OpKind_DirectInsert:
