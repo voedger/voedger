@@ -145,14 +145,17 @@ func setDiscordWebhookCe(cluster *clusterType, webhook string) error {
 		return err
 	}
 
+	alertmanager := "alertmanager"
+	configFileName := "config.yml"
+
 	cluster.Alert.DiscordWebhook = webhook
-	localConfigFile := filepath.Join("ce", "alertmanager", "config.yml")
+	localConfigFile := filepath.Join("ce", alertmanager, configFileName)
 	if err = cluster.updateTemplateFile(localConfigFile); err != nil {
 		return err
 	}
 
-	remoteDir := filepath.Join(homeDir, "alertmanager")
-	remoteFile := filepath.Join(remoteDir, "config.yml")
+	remoteDir := filepath.Join(homeDir, alertmanager)
+	remoteFile := filepath.Join(remoteDir, configFileName)
 	host := "ce-node"
 
 	if webhook == emptyDiscordWebhookUrl {
