@@ -108,24 +108,28 @@ func implServiceFactory(serviceChannel iprocbus.ServiceChannel, resultSenderClos
 				qpm.Increase(queriesTotal, 1.0)
 				rs := resultSenderClosableFactory(msg.RequestCtx(), msg.Sender())
 				qwork := newQueryWork(msg, rs, appParts, maxPrepareQueries, qpm, secretReader)
-				if p == nil {
-					p = newQueryProcessorPipeline(ctx, authn, authz, itokens, federation)
-				}
-				err := p.SendSync(qwork)
-				if err != nil {
-					qpm.Increase(errorsTotal, 1.0)
-					p.Close()
-					p = nil
-				} else {
-					err = execAndSendResponse(ctx, qwork)
-				}
-				if qwork.rowsProcessor != nil {
-					// wait until all rows are sent
-					qwork.rowsProcessor.Close()
-				}
-				err = coreutils.WrapSysError(err, http.StatusInternalServerError)
-				rs.Close(err)
-				qwork.release()
+				func() { // borrowed app partition release should be deferred
+					defer func() {
+						qwork.release()
+					}()
+					if p == nil {
+						p = newQueryProcessorPipeline(ctx, authn, authz, itokens, federation)
+					}
+					err := p.SendSync(qwork)
+					if err != nil {
+						qpm.Increase(errorsTotal, 1.0)
+						p.Close()
+						p = nil
+					} else {
+						err = execAndSendResponse(ctx, qwork)
+					}
+					if qwork.rowsProcessor != nil {
+						// wait until all rows are sent
+						qwork.rowsProcessor.Close()
+					}
+					err = coreutils.WrapSysError(err, http.StatusInternalServerError)
+					rs.Close(err)
+				}()
 				metrics.IncreaseApp(queriesSeconds, vvm, msg.AppQName(), time.Since(now).Seconds())
 			case <-ctx.Done():
 			}
