@@ -166,6 +166,8 @@ func exprToInterface(expr sqlparser.Expr) (val interface{}, err error) {
 		}
 	case sqlparser.BoolVal:
 		return typed, nil
+	case *sqlparser.NullVal:
+		return nil, errNullValueNoSupported
 	}
 	buf := sqlparser.NewTrackedBuffer(nil)
 	expr.Format(buf)
@@ -197,8 +199,13 @@ func fillWhere(expr sqlparser.Expr, fields map[string]interface{}) error {
 			return errWrongWhereForView
 		}
 		fieldName := colNameToQualifiedName(viewKeyColName)
-		viewKeySQLVal, ok := cond.Right.(*sqlparser.SQLVal)
-		if !ok {
+		var viewKeySQLVal *sqlparser.SQLVal
+		switch typed := cond.Right.(type) {
+		case *sqlparser.SQLVal:
+			viewKeySQLVal = typed
+		case *sqlparser.NullVal:
+			return errNullValueNoSupported
+		default:
 			return errWrongWhereForView
 		}
 		fieldValue, err := exprToInterface(viewKeySQLVal)
