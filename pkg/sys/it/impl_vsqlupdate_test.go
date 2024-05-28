@@ -469,6 +469,7 @@ func TestVSqlUpdateValidateErrors(t *testing.T) {
 		"update test1.app1.42.unknown.table.1 set x = 1, x = 2":                  "qname unknown.table is not found",
 		"update test1.app1.42.app1pkg.DocManyTypes.1 set Bytes = 0x1":            "hex: odd length hex string",
 		"update test1.app1.42.app1pkg.DocManyTypes.1 set Bytes = sin(42)":        "unsupported value type",
+		"update test1.app1.42.app1pkg.DocManyTypes.1 set Bytes = null":           "null value is not supported",
 
 		// update corrupted
 		"update corrupted":       "invalid query format",
@@ -487,21 +488,25 @@ func TestVSqlUpdateValidateErrors(t *testing.T) {
 		fmt.Sprintf("update corrupted test1.app1.1.sys.WLog.%d", math.MaxInt): fmt.Sprintf("wlog event partition 1 wlogoffset %d wsid 1 does not exist", math.MaxInt),
 
 		// direct update
-		"direct update test1.app1.1.app1pkg.CategoryIdx set Val = 44, Name = 'x'":        "full key must be provided on view direct update",
-		"direct update test1.app1.1.app1pkg.CategoryIdx where x = 1":                     "syntax error",
-		"direct update test1.app1.1.app1pkg.CategoryIdx.42 set a = 2 where x = 1":        "record ID must not be provided on view direct update",
-		"direct update test1.app1.1.app1pkg.CategoryIdx set a = 2 where x = 1 and x = 1": "key field x is specified twice",
-		"direct update test1.app1.1.app1pkg.CategoryIdx set a = 2 where x = 1 or y = 1":  "'where viewField1 = val1 [and viewField2 = val2 ...]' condition is only supported",
-		"direct update test1.app1.1.app1pkg.CategoryIdx set a = 2 where x > 1":           "'where viewField1 = val1 [and viewField2 = val2 ...]' condition is only supported",
-		"direct update test1.app1.1.app1pkg.category.1 set a = 2 where b = sin(x)":       "'where viewField1 = val1 [and viewField2 = val2 ...]' condition is only supported",
-		"direct update test1.app1.1.app1pkg.category.1 set a = 2 where 1 = 1":            "'where viewField1 = val1 [and viewField2 = val2 ...]' condition is only supported",
-		"direct update test1.app1.1.app1pkg.category.1 set a = 2 where 1 = 1 and 1 = 1":  "'where viewField1 = val1 [and viewField2 = val2 ...]' condition is only supported",
-		"direct update test1.app1.1.app1pkg.category set a = 2":                          "record ID must be provided on record direct update",
-		"direct update test1.app1.1.app1pkg.category.1 set a = 2 where b = 3":            "'where' clause is not allowed on record direct update",
+		"direct update test1.app1.1.app1pkg.CategoryIdx set Val = null where IntFld = 43 and Dummy = 1":   "null value is not supported",
+		"direct update test1.app1.1.app1pkg.CategoryIdx set Val = 44 where IntFld = 43 and Dummy = null":  "null value is not supported",
+		"direct update test1.app1.1.app1pkg.CategoryIdx set Val = 44, Name = 'x'":                         "full key must be provided on view direct update",
+		"direct update test1.app1.1.app1pkg.CategoryIdx where x = 1":                                      "syntax error",
+		"direct update test1.app1.1.app1pkg.CategoryIdx.42 set a = 2 where x = 1":                         "record ID must not be provided on view direct update",
+		"direct update test1.app1.1.app1pkg.CategoryIdx set a = 2 where x = 1 and x = 1":                  "key field x is specified twice",
+		"direct update test1.app1.1.app1pkg.CategoryIdx set Val = 44 where IntFld = 43 and Dummy is null": "'where viewField1 = val1 [and viewField2 = val2 ...]' condition is only supported",
+		"direct update test1.app1.1.app1pkg.CategoryIdx set a = 2 where x = 1 or y = 1":                   "'where viewField1 = val1 [and viewField2 = val2 ...]' condition is only supported",
+		"direct update test1.app1.1.app1pkg.CategoryIdx set a = 2 where x > 1":                            "'where viewField1 = val1 [and viewField2 = val2 ...]' condition is only supported",
+		"direct update test1.app1.1.app1pkg.category.1 set a = 2 where b = sin(x)":                        "'where viewField1 = val1 [and viewField2 = val2 ...]' condition is only supported",
+		"direct update test1.app1.1.app1pkg.category.1 set a = 2 where 1 = 1":                             "'where viewField1 = val1 [and viewField2 = val2 ...]' condition is only supported",
+		"direct update test1.app1.1.app1pkg.category.1 set a = 2 where 1 = 1 and 1 = 1":                   "'where viewField1 = val1 [and viewField2 = val2 ...]' condition is only supported",
+		"direct update test1.app1.1.app1pkg.category set a = 2":                                           "record ID must be provided on record direct update",
+		"direct update test1.app1.1.app1pkg.category.1 set a = 2 where b = 3":                             "'where' clause is not allowed on record direct update",
 
 		// direct insert
 		"direct insert test1.app1.1.app1pkg.CategoryIdx set Val = 44, Name = 'x' where a = 1": "'where' clause is not allowed on view direct insert",
 		"direct insert test1.app1.1.app1pkg.category set Val = 44, Name = 'x'":                "direct insert is not allowed for records",
+		"direct insert test1.app1.1.app1pkg.CategoryIdx set Val = null":                       "null value is not supported",
 	}
 	sysPrn := vit.GetSystemPrincipal(istructs.AppQName_sys_cluster)
 	for sql, expectedError := range cases {
