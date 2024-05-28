@@ -108,10 +108,8 @@ func implServiceFactory(serviceChannel iprocbus.ServiceChannel, resultSenderClos
 				qpm.Increase(queriesTotal, 1.0)
 				rs := resultSenderClosableFactory(msg.RequestCtx(), msg.Sender())
 				qwork := newQueryWork(msg, rs, appParts, maxPrepareQueries, qpm, secretReader)
-				func() { // borrowed app partition release should be deferred
-					defer func() {
-						qwork.release()
-					}()
+				func() { // borrowed application partition should be guaranteed to be freed
+					defer qwork.release()
 					if p == nil {
 						p = newQueryProcessorPipeline(ctx, authn, authz, itokens, federation)
 					}
