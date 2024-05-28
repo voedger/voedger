@@ -7,9 +7,9 @@ package cluster
 
 import (
 	"embed"
-	"regexp"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/dml"
 )
 
 //go:embed appws.vsql
@@ -23,26 +23,23 @@ const (
 	Field_NumPartitions    = "NumPartitions"
 	Field_NumAppWorkspaces = "NumAppWorkspaces"
 	field_Query            = "Query"
-	updateQueryExpression  = `^` +
-		`(?P<operation>\s*.+\s+)` + // update, direct update etc
-		`(?P<appOwnerAppName>\w+\.\w+\.)` +
-		`((?P<wsidOrPartno>\d+\.)|(?P<appWSNum>a\d+.)|(?P<login>".+"\.))` +
-		`(?P<qNameToUpdate>\w+\.\w+)` +
-		`(?P<idOrOffset>\.\d+)?` +
-		`(?P<pars>\s+.*)?` +
-		`$`
-	bitSize64 = 64
-	base10    = 10
+	bitSize64              = 64
+	base10                 = 10
 )
 
 var (
 	qNameWDocApp       = appdef.NewQName(ClusterPackage, "App")
-	updateQueryExp     = regexp.MustCompile(updateQueryExpression)
 	plog               = appdef.NewQName(appdef.SysPackage, "PLog")
 	wlog               = appdef.NewQName(appdef.SysPackage, "WLog")
 	updateDeniedFields = map[string]bool{
 		appdef.SystemField_ID:    true,
 		appdef.SystemField_QName: true,
+	}
+	allowedDMLKinds = map[dml.OpKind]bool{
+		dml.OpKind_DirectInsert:    true,
+		dml.OpKind_DirectUpdate:    true,
+		dml.OpKind_UpdateCorrupted: true,
+		dml.OpKind_UpdateTable:     true,
 	}
 
 	// if the name is like a sql identifier e.g. `Int` then the parser makes it lowered
@@ -51,12 +48,4 @@ var (
 		"bool":  "Bool",
 		"bytes": "Bytes",
 	}
-)
-
-const (
-	updateKind_Null updateKind = iota
-	updateKind_Corrupted
-	updateKind_DirectUpdate
-	updateKind_Table
-	updateKind_DirectInsert
 )

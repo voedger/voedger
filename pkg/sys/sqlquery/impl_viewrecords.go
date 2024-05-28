@@ -96,6 +96,7 @@ func readViewRecords(ctx context.Context, wsid istructs.WSID, viewRecordQName ap
 		case appdef.DataKind_RecordID:
 			v, e := strconv.ParseFloat(string(k.value), bitSize64)
 			if e != nil {
+				// notest: avoided already by sqlparser
 				return e
 			}
 			kb.PutNumber(k.name, v)

@@ -13,73 +13,88 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
-	"github.com/voedger/voedger/pkg/istructsmem"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-func readRecords(wsid istructs.WSID, qName appdef.QName, expr sqlparser.Expr, appStructs istructs.IAppStructs, f *filter, callback istructs.ExecQueryCallback) error {
+func readRecords(wsid istructs.WSID, qName appdef.QName, expr sqlparser.Expr, appStructs istructs.IAppStructs, f *filter,
+	callback istructs.ExecQueryCallback, recordID istructs.RecordID) error {
 	rr := make([]istructs.RecordGetBatchItem, 0)
 
-	findIDs := func(expr sqlparser.Expr) error {
-		switch r := expr.(type) {
-		case *sqlparser.ComparisonExpr:
-			if r.Left.(*sqlparser.ColName).Name.Lowered() != "id" {
-				return fmt.Errorf("unsupported column name: %s", r.Left.(*sqlparser.ColName).Name.String())
+	qNameType := appStructs.AppDef().Type(qName)
+	isSingleton := false
+	if iSingleton, ok := qNameType.(appdef.ISingleton); ok {
+		isSingleton = iSingleton.Singleton()
+	}
+
+	whereIDs := []int64{}
+	switch compExpr := expr.(type) {
+	case nil:
+	default:
+		return fmt.Errorf("unsupported expression: %T", compExpr)
+	case *sqlparser.ComparisonExpr:
+		if compExpr.Left.(*sqlparser.ColName).Name.Lowered() != "id" {
+			return fmt.Errorf("unsupported column name: %s", compExpr.Left.(*sqlparser.ColName).Name.String())
+		}
+		switch compExpr.Operator {
+		case sqlparser.EqualStr:
+			id, err := parseInt64(compExpr.Right.(*sqlparser.SQLVal).Val)
+			if err != nil {
+				return err
 			}
-			switch r.Operator {
-			case sqlparser.EqualStr:
-				id, err := parseInt64(r.Right.(*sqlparser.SQLVal).Val)
+			whereIDs = append(whereIDs, id)
+		case sqlparser.InStr:
+			for _, v := range compExpr.Right.(sqlparser.ValTuple) {
+				id, err := parseInt64(v.(*sqlparser.SQLVal).Val)
 				if err != nil {
 					return err
 				}
-				rr = append(rr, istructs.RecordGetBatchItem{ID: istructs.RecordID(id)})
-			case sqlparser.InStr:
-				for _, v := range r.Right.(sqlparser.ValTuple) {
-					id, err := parseInt64(v.(*sqlparser.SQLVal).Val)
-					if err != nil {
-						return err
-					}
-					rr = append(rr, istructs.RecordGetBatchItem{ID: istructs.RecordID(id)})
-				}
-			default:
-				return fmt.Errorf("unsupported operation: %s", r.Operator)
+				whereIDs = append(whereIDs, id)
 			}
-		case nil:
 		default:
-			return fmt.Errorf("unsupported expression: %T", r)
+			return fmt.Errorf("unsupported operation: %s", compExpr.Operator)
 		}
-		return nil
 	}
-	err := findIDs(expr)
+
+	whereIDProvided := len(whereIDs) > 0
+	switch {
+	case isSingleton && (recordID > 0 || whereIDProvided):
+		return errors.New("conditions are not allowed to query a singleton")
+	case !isSingleton && recordID > 0 && whereIDProvided:
+		return errors.New("record ID and 'where id ...' clause can not be used in one query")
+	case !isSingleton && recordID == 0 && !whereIDProvided:
+		return fmt.Errorf("'%s' is not a singleton. At least one record ID must be provided", qName)
+	}
+
+	if isSingleton {
+		singletonRec, err := appStructs.Records().GetSingleton(wsid, qName)
+		if err != nil {
+			// notest
+			return err
+		}
+		if singletonRec.QName() == appdef.NullQName {
+			// singleton queried and it does not exists yet -> return immediately
+			return nil
+		}
+		rr = append(rr, istructs.RecordGetBatchItem{ID: singletonRec.ID()})
+	}
+
+	if recordID > 0 {
+		rr = append(rr, istructs.RecordGetBatchItem{ID: recordID})
+	}
+
+	for _, whereID := range whereIDs {
+		rr = append(rr, istructs.RecordGetBatchItem{ID: istructs.RecordID(whereID)})
+	}
+
+	err := appStructs.Records().GetBatch(wsid, true, rr)
 	if err != nil {
+		// notest
 		return err
 	}
-
-	if expr == nil {
-		r, e := appStructs.Records().GetSingleton(wsid, qName)
-		if e != nil {
-			if errors.Is(e, istructsmem.ErrNameNotFound) {
-				return fmt.Errorf("'%s' is not a singleton. Please specify at least one record ID", qName)
-			}
-			return e
-		}
-		rr = append(rr, istructs.RecordGetBatchItem{ID: r.ID()})
-	}
-
-	if len(rr) == 0 {
-		return errors.New("you have to provide at least one record ID")
-	}
-
-	err = appStructs.Records().GetBatch(wsid, true, rr)
-	if err != nil {
-		return err
-	}
-
-	t := appStructs.AppDef().Type(qName)
 
 	if !f.acceptAll {
 		for field := range f.fields {
-			if t.(appdef.IFields).Field(field) == nil {
+			if qNameType.(appdef.IFields).Field(field) == nil {
 				return fmt.Errorf("field '%s' not found in def", field)
 			}
 		}
@@ -96,6 +111,7 @@ func readRecords(wsid istructs.WSID, qName appdef.QName, expr sqlparser.Expr, ap
 		data := coreutils.FieldsToMap(r.Record, appStructs.AppDef(), getFilter(f.filter))
 		bb, e := json.Marshal(data)
 		if e != nil {
+			// notest
 			return e
 		}
 
