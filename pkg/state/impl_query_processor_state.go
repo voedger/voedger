@@ -13,30 +13,11 @@ import (
 	"github.com/voedger/voedger/pkg/utils/federation"
 )
 
-type QPStateOptFunc func(opts *qpStateOpts)
-
-type qpStateOpts struct {
-	customHttpClient         IHttpClient
-	federationCommandHandler FederationCommandHandler
-}
-
-func QPWithCustomHttpClient(client IHttpClient) QPStateOptFunc {
-	return func(opts *qpStateOpts) {
-		opts.customHttpClient = client
-	}
-}
-
-func QPWithFedearationCommandHandler(handler FederationCommandHandler) QPStateOptFunc {
-	return func(opts *qpStateOpts) {
-		opts.federationCommandHandler = handler
-	}
-}
-
 func implProvideQueryProcessorState(ctx context.Context, appStructsFunc AppStructsFunc, partitionIDFunc PartitionIDFunc, wsidFunc WSIDFunc,
 	secretReader isecrets.ISecretReader, principalsFunc PrincipalsFunc, tokenFunc TokenFunc, itokens itokens.ITokens, argFunc ArgFunc, resultBuilderFunc ObjectBuilderFunc,
-	federation federation.IFederation, queryCallbackFunc ExecQueryCallbackFunc, options ...QPStateOptFunc) IHostState {
+	federation federation.IFederation, queryCallbackFunc ExecQueryCallbackFunc, options ...StateOptFunc) IHostState {
 
-	opts := &qpStateOpts{}
+	opts := &stateOpts{}
 	for _, optFunc := range options {
 		optFunc(opts)
 	}
@@ -79,6 +60,8 @@ func implProvideQueryProcessorState(ctx context.Context, appStructsFunc AppStruc
 	bs.addStorage(Response, &cmdResponseStorage{}, S_INSERT)
 
 	bs.addStorage(Result, newQueryResultStorage(appStructsFunc, resultBuilderFunc, queryCallbackFunc), S_INSERT)
+
+	bs.addStorage(Uniques, newUniquesStorage(appStructsFunc, wsidFunc, opts.uniquesHandler), S_GET)
 
 	return bs
 }

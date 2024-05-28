@@ -10,7 +10,10 @@ import (
 	"github.com/voedger/voedger/pkg/sys/uniques"
 )
 
+type UniquesHandler = func(entity appdef.QName, wsid istructs.WSID, data map[string]interface{}) (istructs.RecordID, error)
+
 type uniquesStorage struct {
+	uniqiesHandler UniquesHandler
 	appStructsFunc AppStructsFunc
 	wsidFunc       WSIDFunc
 }
@@ -27,10 +30,11 @@ func (v *uniquesValue) AsInt64(name string) int64 {
 	panic(errUndefined(name))
 }
 
-func newUniquesStorage(appStructsFunc AppStructsFunc, wsidFunc WSIDFunc) *uniquesStorage {
+func newUniquesStorage(appStructsFunc AppStructsFunc, wsidFunc WSIDFunc, customHandler UniquesHandler) *uniquesStorage {
 	return &uniquesStorage{
 		appStructsFunc: appStructsFunc,
 		wsidFunc:       wsidFunc,
+		uniqiesHandler: customHandler,
 	}
 }
 
@@ -40,6 +44,10 @@ func (s *uniquesStorage) NewKeyBuilder(entity appdef.QName, _ istructs.IStateKey
 
 func (s *uniquesStorage) Get(key istructs.IStateKeyBuilder) (value istructs.IStateValue, err error) {
 	k := key.(*keyBuilder)
+	if s.uniqiesHandler != nil {
+		id, err := s.uniqiesHandler(k.entity, s.wsidFunc(), k.data)
+		return &uniquesValue{id: id}, err
+	}
 	id, err := uniques.GetRecordIDByUniqueCombination(s.wsidFunc(), k.entity, s.appStructsFunc(), k.data)
 	if err != nil {
 		return nil, err

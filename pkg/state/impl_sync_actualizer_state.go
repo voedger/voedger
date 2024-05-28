@@ -21,7 +21,11 @@ func (s *syncActualizerState) PLogEvent() istructs.IPLogEvent {
 }
 
 func implProvideSyncActualizerState(ctx context.Context, appStructsFunc AppStructsFunc, partitionIDFunc PartitionIDFunc,
-	wsidFunc WSIDFunc, n10nFunc N10nFunc, secretReader isecrets.ISecretReader, eventFunc PLogEventFunc, intentsLimit int) IHostState {
+	wsidFunc WSIDFunc, n10nFunc N10nFunc, secretReader isecrets.ISecretReader, eventFunc PLogEventFunc, intentsLimit int, options ...StateOptFunc) IHostState {
+	opts := &stateOpts{}
+	for _, optFunc := range options {
+		optFunc(opts)
+	}
 	hs := &syncActualizerState{
 		hostState: newHostState("SyncActualizer", intentsLimit, appStructsFunc),
 		eventFunc: eventFunc,
@@ -34,5 +38,6 @@ func implProvideSyncActualizerState(ctx context.Context, appStructsFunc AppStruc
 		wsidFunc:   wsidFunc,
 	}, S_GET)
 	hs.addStorage(AppSecret, &appSecretsStorage{secretReader: secretReader}, S_GET)
+	hs.addStorage(Uniques, newUniquesStorage(appStructsFunc, wsidFunc, opts.uniquesHandler), S_GET)
 	return hs
 }

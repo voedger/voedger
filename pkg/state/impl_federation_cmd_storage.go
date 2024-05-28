@@ -23,7 +23,6 @@ const (
 )
 
 type FederationCommandHandler = func(owner, appname string, wsid istructs.WSID, command appdef.QName, body string) (statusCode int, newIDs map[string]int64, result string, err error)
-
 type federationCommandStorage struct {
 	appStructs AppStructsFunc
 	wsid       WSIDFunc
