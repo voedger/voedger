@@ -139,7 +139,7 @@ func Test400BadRequests(t *testing.T) {
 func Test503OnNoQueryProcessorsAvailable(t *testing.T) {
 	funcStarted := make(chan interface{})
 	okToFinish := make(chan interface{})
-	it.MockQryExec = func(input string, callback istructs.ExecQueryCallback) error {
+	it.MockQryExec = func(input string, _ istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) error {
 		funcStarted <- nil
 		<-okToFinish
 		return nil

@@ -874,6 +874,7 @@ func (o *objectType) Containers(cb func(container string)) {
 func (o *objectType) FillFromJSON(data map[string]any) {
 	for n, v := range data {
 		switch fv := v.(type) {
+		case nil:
 		case float64:
 			o.PutNumber(n, fv)
 		case string:
@@ -896,6 +897,8 @@ func (o *objectType) FillFromJSON(data map[string]any) {
 				c := o.ChildBuilder(n)
 				c.FillFromJSON(childData)
 			}
+		default:
+			panic(fmt.Sprintf("unsupported type %#T", v))
 		}
 	}
 }

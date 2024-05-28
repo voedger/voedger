@@ -13,8 +13,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/stretchr/testify/require"
 	log "github.com/voedger/voedger/pkg/goutils/logger"
+	"github.com/voedger/voedger/pkg/goutils/testingu/require"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/iratesce"
@@ -1038,6 +1038,201 @@ func Test_UpdateCorrupted(t *testing.T) {
 	})
 }
 
+func Test_BuildPLogEvent(t *testing.T) {
+	require := require.New(t)
+
+	docName := appdef.NewQName("test", "doc")
+
+	adb := appdef.New()
+	adb.AddPackage("test", "test.com/test")
+
+	t.Run("should be ok to build AppDef", func(t *testing.T) {
+		doc := adb.AddCDoc(docName)
+		doc.SetSingleton()
+		doc.AddField("option", appdef.DataKind_int64, true)
+
+		_ = adb.MustBuild()
+	})
+
+	cfgs := func() AppConfigsType {
+		cfgs := make(AppConfigsType, 1)
+		cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, adb)
+		cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
+		return cfgs
+	}()
+
+	provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider())
+
+	app, err := provider.AppStructs(istructs.AppQName_test1_app1)
+	require.NoError(err)
+
+	t.Run("should be ok to put new sys.CUD event", func(t *testing.T) {
+		bld := app.Events().GetNewRawEventBuilder(
+			istructs.NewRawEventBuilderParams{
+				GenericRawEventBuilderParams: istructs.GenericRawEventBuilderParams{
+					HandlingPartition: 1,
+					PLogOffset:        100500,
+					Workspace:         1,
+					WLogOffset:        100500,
+					QName:             istructs.QNameCommandCUD, // sys.CUD
+					RegisteredAt:      1,
+				},
+			})
+
+		cud := bld.CUDBuilder().Create(docName)
+		cud.PutRecordID(appdef.SystemField_ID, 1)
+		cud.PutInt64("option", 8)
+
+		rawEvent, err := bld.BuildRawEvent()
+		require.NoError(err)
+		require.NotNil(rawEvent)
+
+		pLogEvent, saveErr := app.Events().PutPlog(rawEvent, err, NewIDGeneratorWithHook(func(rawID, storageID istructs.RecordID, t appdef.IType) error {
+			return errors.New("unexpected call ID generator from singleton CDoc creation")
+		}))
+		require.NotNil(pLogEvent)
+		require.NoError(saveErr)
+		require.True(pLogEvent.Error().ValidEvent())
+		require.Equal(pLogEvent.QName(), istructs.QNameCommandCUD)
+
+		pLogEvent.Release()
+	})
+
+	var origEventBytes []byte = nil
+
+	t.Run("should ok to read PLog event", func(t *testing.T) {
+		var pLogEvent istructs.IPLogEvent
+		err := app.Events().ReadPLog(context.Background(), 1, istructs.Offset(100500), 1, func(plogOffset istructs.Offset, event istructs.IPLogEvent) (err error) {
+			require.EqualValues(100500, plogOffset)
+			pLogEvent = event
+			return nil
+		})
+		require.NoError(err)
+		require.NotNil(pLogEvent)
+		require.True(pLogEvent.Error().ValidEvent())
+		require.Equal(pLogEvent.QName(), istructs.QNameCommandCUD)
+
+		origEventBytes = utils.CopyBytes(pLogEvent.Bytes())
+		require.NotEmpty(origEventBytes)
+
+		pLogEvent.Release()
+	})
+
+	require.NotNil(origEventBytes)
+
+	t.Run("should be ok to build PLog corrupted event", func(t *testing.T) {
+		bld := app.Events().GetSyncRawEventBuilder(
+			istructs.SyncRawEventBuilderParams{
+				GenericRawEventBuilderParams: istructs.GenericRawEventBuilderParams{
+					EventBytes:        utils.CopyBytes(origEventBytes),
+					HandlingPartition: 1,
+					PLogOffset:        istructs.NullOffset,
+					Workspace:         1,
+					WLogOffset:        100500,
+					QName:             istructs.QNameForCorruptedData, // sys.Corrupted
+					RegisteredAt:      1,
+				},
+			})
+
+		rawEvent, err := bld.BuildRawEvent()
+		require.NoError(err)
+		require.NotNil(rawEvent)
+
+		pLogEvent := app.Events().BuildPLogEvent(rawEvent)
+		require.NotNil(pLogEvent)
+
+		pLogEvent.Release()
+
+		require.Equal(pLogEvent.QName(), istructs.QNameForCorruptedData)
+		require.False(pLogEvent.Error().ValidEvent())
+		require.EqualValues(pLogEvent.Error().OriginalEventBytes(), origEventBytes)
+		require.EqualValues(100500, pLogEvent.WLogOffset())
+
+		t.Run("should be ok to put PLog event into WLog", func(t *testing.T) {
+			err := app.Events().PutWlog(pLogEvent)
+			require.NoError(err)
+		})
+	})
+
+	t.Run("should be ok to reread corrupted WLog event", func(t *testing.T) {
+		var wLogEvent istructs.IWLogEvent
+		err := app.Events().ReadWLog(context.Background(), 1, istructs.Offset(100500), 1, func(wlogOffset istructs.Offset, event istructs.IWLogEvent) error {
+			require.EqualValues(100500, wlogOffset)
+			wLogEvent = event
+			return nil
+		})
+		require.NotNil(wLogEvent)
+		require.NoError(err)
+
+		require.Equal(wLogEvent.QName(), istructs.QNameForCorruptedData)
+		require.False(wLogEvent.Error().ValidEvent())
+		require.EqualValues(wLogEvent.Error().OriginalEventBytes(), origEventBytes)
+
+		wLogEvent.Release()
+	})
+
+	t.Run("test panics while build PLog corrupted event", func(t *testing.T) {
+
+		t.Run("should panic if not sys.Corrupted raw event", func(t *testing.T) {
+			bld := app.Events().GetSyncRawEventBuilder(
+				istructs.SyncRawEventBuilderParams{
+					GenericRawEventBuilderParams: istructs.GenericRawEventBuilderParams{
+						EventBytes:        utils.CopyBytes(origEventBytes),
+						HandlingPartition: 1,
+						PLogOffset:        istructs.NullOffset,
+						Workspace:         1,
+						WLogOffset:        100500,
+						QName:             istructs.QNameCommandCUD, // <- error here
+						RegisteredAt:      1,
+					},
+				})
+
+			cud := bld.CUDBuilder().Create(docName)
+			cud.PutRecordID(appdef.SystemField_ID, 1)
+			cud.PutInt64("option", 8)
+
+			rawEvent, err := bld.BuildRawEvent()
+			require.NoError(err)
+			require.NotNil(rawEvent)
+
+			require.PanicsWith(
+				func() { app.Events().BuildPLogEvent(rawEvent) },
+				require.Is(ErrorEventNotValid),
+				require.Has(istructs.QNameCommandCUD.String()),
+			)
+		})
+
+		t.Run("should panic if not null PLog offset", func(t *testing.T) {
+			bld := app.Events().GetSyncRawEventBuilder(
+				istructs.SyncRawEventBuilderParams{
+					GenericRawEventBuilderParams: istructs.GenericRawEventBuilderParams{
+						EventBytes:        utils.CopyBytes(origEventBytes),
+						HandlingPartition: 1,
+						PLogOffset:        100501, // <- error here
+						Workspace:         1,
+						WLogOffset:        100500,
+						QName:             istructs.QNameForCorruptedData,
+						RegisteredAt:      1,
+					},
+				})
+
+			cud := bld.CUDBuilder().Create(docName)
+			cud.PutRecordID(appdef.SystemField_ID, 1)
+			cud.PutInt64("option", 8)
+
+			rawEvent, err := bld.BuildRawEvent()
+			require.NoError(err)
+			require.NotNil(rawEvent)
+
+			require.PanicsWith(
+				func() { app.Events().BuildPLogEvent(rawEvent) },
+				require.Is(ErrorEventNotValid),
+				require.Has("100501"),
+			)
+		})
+	})
+}
+
 func Test_SingletonCDocEvent(t *testing.T) {
 	require := require.New(t)
 
@@ -1847,6 +2042,16 @@ func Test_objectType_FillFromJSON(t *testing.T) {
 					return cnt
 				}())
 			}},
+		{"must ok to fill with nil values",
+			`{"int32": null, "bool": null, "string": null, "bytes": null}`,
+			func(o istructs.IObject, err error) {
+				require.NoError(err)
+				require.Equal(test.testObj, o.QName())
+				require.Zero(o.AsInt32("int32"))
+				require.Zero(o.AsBool("bool"))
+				require.Zero(o.AsString("string"))
+				require.Zero(o.AsBytes("bytes"))
+			}},
 		{"must be error if unknown field in JSON",
 			`{"unknown": 1}`,
 			func(o istructs.IObject, err error) {
@@ -1872,6 +2077,13 @@ func Test_objectType_FillFromJSON(t *testing.T) {
 				require.ErrorContains(err, "invalid type «string»")
 				require.ErrorContains(err, "child «child[0]»")
 			}},
+		{"must be error if invalid data type in JSON container",
+			`{"child": ["a","b"]}`,
+			func(o istructs.IObject, err error) {
+				require.ErrorIs(err, ErrWrongType)
+				require.ErrorContains(err, "invalid type «string»")
+				require.ErrorContains(err, "child «child[0]»")
+			}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -1885,4 +2097,13 @@ func Test_objectType_FillFromJSON(t *testing.T) {
 			tt.check(b.Build())
 		})
 	}
+
+	t.Run("must panic on provide a value of an unsupported type", func(t *testing.T) {
+		b := test.AppStructs.ObjectBuilder(test.testObj)
+		require.NotNil(b)
+		j := map[string]any{
+			"int32": int(42),
+		}
+		require.PanicsWithValue("unsupported type int", func() { b.FillFromJSON(j) })
+	})
 }

@@ -5,18 +5,14 @@
 package sqlquery
 
 import (
-	"regexp"
-
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/istructs"
 )
 
 const (
-	base          = 10
-	bitSize64     = 64
-	DefaultLimit  = 100
-	DefaultOffset = istructs.FirstOffset
-	field_Query   = "Query"
+	base         = 10
+	bitSize64    = 64
+	DefaultLimit = 100
+	field_Query  = "Query"
 )
 
 var (
@@ -47,13 +43,3 @@ var (
 		"Error":          true,
 	}
 )
-
-const selectQueryExpression = `^` +
-	`(?P<select>.*\s+from\s+)` + // select * from (+ trailing spaces)
-	`(?P<app>\w+\.\w+\.)?` + // appOwner.appName (+ trailing dot)
-	`(?P<ws>\d+\.)?` + // wsid (+ trailing dot)
-	`(?P<table>\w+\.\w+)` + // table qualified name (clean)
-	`(?P<pars>\s+.*)?` + // (leading spaces +) params
-	`$`
-
-var selectQueryExp = regexp.MustCompile(selectQueryExpression)

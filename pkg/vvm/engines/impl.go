@@ -38,7 +38,12 @@ func provideAppsBuiltInExtFuncs(cfgs istructsmem.AppConfigsType) iextengine.Buil
 				case appdef.TypeKind_Command:
 					if cmd, ok := cfg.Resources.QueryResource(name).(istructs.ICommandFunction); ok {
 						fn = func(_ context.Context, io iextengine.IExtensionIO) error {
-							return cmd.Exec(istructs.ExecCommandArgs{State: io, Intents: io})
+							execArgs := istructs.ExecCommandArgs{
+								CommandPrepareArgs: io.CommandPrepareArgs(),
+								State:              io,
+								Intents:            io,
+							}
+							return cmd.Exec(execArgs)
 						}
 					}
 				case appdef.TypeKind_Query:

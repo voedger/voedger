@@ -518,7 +518,17 @@ func (row *rowType) AsInt32(name appdef.FieldName) (value int32) {
 
 // istructs.IRowReader.AsInt64
 func (row *rowType) AsInt64(name appdef.FieldName) (value int64) {
-	_ = row.fieldMustExists(name, appdef.DataKind_int64, appdef.DataKind_RecordID)
+	fld := row.fieldMustExists(name, appdef.DataKind_int64, appdef.DataKind_RecordID)
+
+	if fld.DataKind() == appdef.DataKind_RecordID {
+		switch name {
+		case appdef.SystemField_ID:
+			return int64(row.id)
+		case appdef.SystemField_ParentID:
+			return int64(row.parentID)
+		}
+	}
+
 	if value, ok := row.dyB.GetInt64(name); ok {
 		return value
 	}
@@ -543,7 +553,17 @@ func (row *rowType) AsFloat64(name appdef.FieldName) (value float64) {
 		if value, ok := row.dyB.GetInt32(name); ok {
 			return float64(value)
 		}
-	case appdef.DataKind_int64, appdef.DataKind_RecordID:
+	case appdef.DataKind_int64:
+		if value, ok := row.dyB.GetInt64(name); ok {
+			return float64(value)
+		}
+	case appdef.DataKind_RecordID:
+		switch name {
+		case appdef.SystemField_ID:
+			return float64(row.id)
+		case appdef.SystemField_ParentID:
+			return float64(row.parentID)
+		}
 		if value, ok := row.dyB.GetInt64(name); ok {
 			return float64(value)
 		}
@@ -789,6 +809,11 @@ func (row *rowType) PutFromJSON(j map[appdef.FieldName]any) {
 			row.PutChars(n, fv)
 		case bool:
 			row.PutBool(n, fv)
+		case []byte:
+			// happens e.g. on IRowWriter.PutJSON() after read from the storage
+			row.PutBytes(n, fv)
+		default:
+			panic(fmt.Sprintf("unsupported type %#v", v))
 		}
 	}
 }

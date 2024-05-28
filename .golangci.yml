@@ -11,7 +11,7 @@ linters:
     - stylecheck
     - misspell
     - errcheck
-    - bidichk 
+    - bidichk
 
 # First stage linters
     - asciicheck      # Checks that all code identifiers does not have non-ASCII symbols in the name
@@ -42,12 +42,12 @@ linters:
 #------------------------------------
 #    - testpackage
 #    - nonamedreturns
-#    - noctx 
+#    - noctx
 #?    - nestif
 #    - musttag
 #    - makezero
 #    - inamedparam
-#    - goerr113      
+#    - goerr113
 #    - godox       #- searches FixMe,TODO in code
 #    - forbidigo
 #    - exhaustruct
@@ -61,9 +61,9 @@ linters-settings:
       - G601
       - G602
   staticcheck:
-    checks: [ "all", "-SA1019"]    
+    checks: [ "all", "-SA1019"]
   stylecheck:
-    checks: [ "all", "-ST1003", "-ST1023" ]    
+    checks: [ "all", "-ST1003", "-ST1023" ]
   unparam:
     check-exported: true
   misspell:
@@ -75,7 +75,7 @@ linters-settings:
     severity: warning
     rules:
       - name: indent-error-flow
-        severity: warning	
+        severity: warning
       - name: add-constant
         severity: warning
         arguments:
@@ -96,6 +96,7 @@ linters-settings:
       - "10"
       - "32"
       - "42"
+      - "43"
       - "100"
   testifylint:
     disable-all: true

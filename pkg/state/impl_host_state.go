@@ -50,6 +50,10 @@ func (s hostState) App() istructs.AppQName {
 	return s.appStructsFunc().AppQName()
 }
 
+func (s hostState) CommandPrepareArgs() istructs.CommandPrepareArgs {
+	panic(errCommandPrepareArgsNotSupportedByState)
+}
+
 func (s hostState) PackageFullPath(localName string) string {
 	return s.appStructsFunc().AppDef().PackageFullPath(localName)
 }
