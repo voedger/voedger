@@ -19,6 +19,7 @@ const (
 	StorageQueryContext      = "sys.QueryContext"
 	StorageResponse          = "sys.Response"
 	StorageFederationCommand = "sys.FederationCommand"
+	StorageUniq              = "sys.Uniq"
 
 	NullEntity = ""
 )

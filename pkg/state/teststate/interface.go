@@ -21,6 +21,7 @@ type KeyBuilderCallback func(key istructs.IStateKeyBuilder)
 type ValueBuilderCallback func(value istructs.IStateValueBuilder)
 type IntentAssertionsCallback func(require *require.Assertions, value istructs.IStateValue)
 type HttpHandlerFunc func(req HttpRequest) (resp HttpResponse, err error)
+type QueryArgBuilderCallback func(arg istructs.IObjectBuilder)
 
 type ITestAPI interface {
 	// State
@@ -30,10 +31,12 @@ type ITestAPI interface {
 	PutSecret(name string, secret []byte)
 	PutHttpHandler(HttpHandlerFunc)
 	PutFederationCmdHandler(state.FederationCommandHandler)
+	PutUniquesHandler(state.UniquesHandler)
 	PutRequestSubject(principals []iauthnz.Principal, token string)
-	PutQuery(wsid istructs.WSID, name appdef.FullQName)
+	PutQuery(wsid istructs.WSID, name appdef.FullQName, argb QueryArgBuilderCallback)
 
 	GetRecord(wsid istructs.WSID, id istructs.RecordID) istructs.IRecord
+	GetReadObjects() []istructs.IObject
 
 	// Intent
 	RequireIntent(t *testing.T, storage appdef.QName, entity appdef.FullQName, kb KeyBuilderCallback) IIntentAssertions

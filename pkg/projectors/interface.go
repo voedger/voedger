@@ -55,7 +55,7 @@ type AsyncActualizerConf struct {
 
 	Broker  in10n.IN10nBroker
 	channel in10n.ChannelID
-	Opts    []state.ActualizerStateOptFunc
+	Opts    []state.StateOptFunc
 }
 
 type AsyncActualizerMetrics interface {
