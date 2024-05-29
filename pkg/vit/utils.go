@@ -154,7 +154,7 @@ func (vit *VIT) waitForWorkspace(wsName string, owner *Principal, respGetter fun
 		body := fmt.Sprintf(`
 			{
 				"args": {
-					"WSName": "%s"
+					"WSName": %q
 				},
 				"elements":[
 					{
@@ -264,7 +264,7 @@ func (vit *VIT) InitChildWorkspace(wsd WSParams, ownerIntf interface{}, opts ...
 	vit.T.Helper()
 	body := fmt.Sprintf(`{
 		"args": {
-			"WSName": "%s",
+			"WSName": %q,
 			"WSKind": "%s",
 			"WSKindInitializationData": %q,
 			"TemplateName": "%s",
