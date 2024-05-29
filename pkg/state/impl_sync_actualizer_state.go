@@ -38,6 +38,6 @@ func implProvideSyncActualizerState(ctx context.Context, appStructsFunc AppStruc
 		wsidFunc:   wsidFunc,
 	}, S_GET)
 	hs.addStorage(AppSecret, &appSecretsStorage{secretReader: secretReader}, S_GET)
-	hs.addStorage(Uniques, newUniquesStorage(appStructsFunc, wsidFunc, opts.uniquesHandler), S_GET)
+	hs.addStorage(Uniq, newUniquesStorage(appStructsFunc, wsidFunc, opts.uniquesHandler), S_GET)
 	return hs
 }

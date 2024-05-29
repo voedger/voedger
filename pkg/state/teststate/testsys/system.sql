@@ -71,7 +71,7 @@ EXTENSION ENGINE BUILTIN (
 		UPDATE SCOPE(PROJECTORS)
 	) ENTITY VIEW;
 
-	STORAGE Uniques(
+	STORAGE Uniq(
 		/*
 		Key:
 			One or more unique fields

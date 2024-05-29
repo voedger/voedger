@@ -65,7 +65,7 @@ func implProvideCommandProcessorState(
 
 	state.addStorage(Result, newCmdResultStorage(cmdResultBuilderFunc), S_INSERT)
 
-	state.addStorage(Uniques, newUniquesStorage(appStructsFunc, wsidFunc, opts.uniquesHandler), S_GET)
+	state.addStorage(Uniq, newUniquesStorage(appStructsFunc, wsidFunc, opts.uniquesHandler), S_GET)
 
 	state.addStorage(Response, &cmdResponseStorage{}, S_INSERT)
 

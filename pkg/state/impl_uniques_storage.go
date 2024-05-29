@@ -39,7 +39,7 @@ func newUniquesStorage(appStructsFunc AppStructsFunc, wsidFunc WSIDFunc, customH
 }
 
 func (s *uniquesStorage) NewKeyBuilder(entity appdef.QName, _ istructs.IStateKeyBuilder) istructs.IStateKeyBuilder {
-	return newKeyBuilder(Uniques, entity)
+	return newKeyBuilder(Uniq, entity)
 }
 
 func (s *uniquesStorage) Get(key istructs.IStateKeyBuilder) (value istructs.IStateValue, err error) {

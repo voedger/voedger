@@ -61,7 +61,7 @@ func implProvideQueryProcessorState(ctx context.Context, appStructsFunc AppStruc
 
 	bs.addStorage(Result, newQueryResultStorage(appStructsFunc, resultBuilderFunc, queryCallbackFunc), S_INSERT)
 
-	bs.addStorage(Uniques, newUniquesStorage(appStructsFunc, wsidFunc, opts.uniquesHandler), S_GET)
+	bs.addStorage(Uniq, newUniquesStorage(appStructsFunc, wsidFunc, opts.uniquesHandler), S_GET)
 
 	return bs
 }

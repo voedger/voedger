@@ -70,7 +70,7 @@ func implProvideAsyncActualizerState(ctx context.Context, appStructsFunc AppStru
 
 	state.addStorage(Event, &eventStorage{eventFunc: eventFunc}, S_GET)
 
-	state.addStorage(Uniques, newUniquesStorage(appStructsFunc, wsidFunc, opts.uniquesHandler), S_GET)
+	state.addStorage(Uniq, newUniquesStorage(appStructsFunc, wsidFunc, opts.uniquesHandler), S_GET)
 
 	return state
 }
