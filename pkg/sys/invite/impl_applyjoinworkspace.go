@@ -74,7 +74,7 @@ func applyJoinWorkspace(timeFunc coreutils.TimeFunc, federation federation.IFede
 		}
 		_, err = federation.Func(
 			fmt.Sprintf("api/%s/%d/c.sys.CreateJoinedWorkspace", appQName, svCDocInvite.AsInt64(field_InviteeProfileWSID)),
-			fmt.Sprintf(`{"args":{"Roles":"%s","InvitingWorkspaceWSID":%d,"WSName":"%s"}}`,
+			fmt.Sprintf(`{"args":{"Roles":"%s","InvitingWorkspaceWSID":%d,"WSName":%q}}`,
 				svCDocInvite.AsString(Field_Roles), event.Workspace(), svCDocWorkspaceDescriptor.AsString(authnz.Field_WSName)),
 			coreutils.WithAuthorizeBy(token),
 			coreutils.WithDiscardResponse(),
