@@ -166,6 +166,19 @@ func TestCases(t *testing.T) {
 				},
 			},
 		},
+		{
+			"insert test1.app1.a123.sys.Table set a = b",
+			Op{
+				AppQName: test1App1,
+				Kind:     OpKind_InsertTable,
+				QName:    sysTable,
+				CleanSQL: "update sys.Table set a = b",
+				Workspace: Workspace{
+					ID:   123,
+					Kind: WorkspaceKind_AppWSNum,
+				},
+			},
+		},
 	}
 	for _, c := range cases {
 		op, err := ParseQuery(c.query)

@@ -23,23 +23,25 @@ const (
 	Field_NumPartitions    = "NumPartitions"
 	Field_NumAppWorkspaces = "NumAppWorkspaces"
 	field_Query            = "Query"
+	field_NewID            = "NewID"
 	bitSize64              = 64
-	base10                 = 10
 )
 
 var (
-	qNameWDocApp       = appdef.NewQName(ClusterPackage, "App")
-	plog               = appdef.NewQName(appdef.SysPackage, "PLog")
-	wlog               = appdef.NewQName(appdef.SysPackage, "WLog")
-	updateDeniedFields = map[string]bool{
+	qNameWDocApp          = appdef.NewQName(ClusterPackage, "App")
+	plog                  = appdef.NewQName(appdef.SysPackage, "PLog")
+	wlog                  = appdef.NewQName(appdef.SysPackage, "WLog")
+	qNameVSqlUpdateResult = appdef.NewQName(ClusterPackage, "VSqlUpdateResult")
+	updateDeniedFields    = map[string]bool{
 		appdef.SystemField_ID:    true,
 		appdef.SystemField_QName: true,
 	}
-	allowedDMLKinds = map[dml.OpKind]bool{
+	allowedOpKinds = map[dml.OpKind]bool{
 		dml.OpKind_DirectInsert:    true,
 		dml.OpKind_DirectUpdate:    true,
 		dml.OpKind_UpdateCorrupted: true,
 		dml.OpKind_UpdateTable:     true,
+		dml.OpKind_InsertTable:     true,
 	}
 
 	// if the name is like a sql identifier e.g. `Int` then the parser makes it lowered
@@ -47,5 +49,10 @@ var (
 		"int":   "Int",
 		"bool":  "Bool",
 		"bytes": "Bytes",
+	}
+
+	allowedDocsTypeKinds = map[appdef.TypeKind]bool{
+		appdef.TypeKind_CDoc: true,
+		appdef.TypeKind_WDoc: true,
 	}
 )

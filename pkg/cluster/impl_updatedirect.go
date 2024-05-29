@@ -72,14 +72,8 @@ func validateQuery_Direct(update update) error {
 		op = "insert"
 	}
 	tp := update.appStructs.AppDef().Type(update.QName)
-	if containers, ok := tp.(appdef.IContainers); ok {
-		if containers.ContainerCount() > 0 {
-			// TODO: no design?
-			return fmt.Errorf("impossible to %s a record that has containers", op)
-		}
-	}
-	typeKindToUpdate := tp.Kind()
-	if typeKindToUpdate == appdef.TypeKind_ViewRecord {
+	switch {
+	case tp.Kind() == appdef.TypeKind_ViewRecord:
 		if update.id > 0 {
 			return fmt.Errorf("record ID must not be provided on view direct %s", op)
 		}
@@ -92,7 +86,13 @@ func validateQuery_Direct(update update) error {
 				return errors.New("full key must be provided on view direct update")
 			}
 		}
-	} else {
+	case allowedDocsTypeKinds[tp.Kind()]:
+		if containers, ok := tp.(appdef.IContainers); ok {
+			if containers.ContainerCount() > 0 {
+				// TODO: no design?
+				return fmt.Errorf("impossible to %s a record that has containers", op)
+			}
+		}
 		if update.Kind == dml.OpKind_DirectInsert {
 			return errors.New("direct insert is not allowed for records")
 		}
@@ -102,6 +102,8 @@ func validateQuery_Direct(update update) error {
 		if len(update.key) > 0 {
 			return errors.New("'where' clause is not allowed on record direct update")
 		}
+	default:
+		return errors.New("view, CDoc or WDoc only expected")
 	}
 	return nil
 }

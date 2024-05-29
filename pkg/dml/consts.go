@@ -23,6 +23,7 @@ const (
 	OpKind_Null OpKind = iota
 	OpKind_Select
 	OpKind_UpdateTable
+	OpKind_InsertTable
 	OpKind_DirectUpdate
 	OpKind_DirectInsert
 	OpKind_UpdateCorrupted

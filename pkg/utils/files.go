@@ -136,7 +136,7 @@ func copyFileFSOpts(srcFS fs.FS, srcFileName, dstDir string, opts *copyOpts) err
 	}
 
 	if opts.fm > 0 {
-		return os.Chmod(dstDir, opts.fm)
+		return os.Chmod(dstFileNameWithPath, opts.fm)
 	}
 
 	srcinfo, err := fs.Stat(srcFS, srcFileName)

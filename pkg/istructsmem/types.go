@@ -813,7 +813,7 @@ func (row *rowType) PutFromJSON(j map[appdef.FieldName]any) {
 			// happens e.g. on IRowWriter.PutJSON() after read from the storage
 			row.PutBytes(n, fv)
 		default:
-			panic(fmt.Sprintf("unsupported type %#v", v))
+			row.collectErrorf("%w: %#T", ErrWrongType, v)
 		}
 	}
 }

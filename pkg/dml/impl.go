@@ -84,6 +84,8 @@ func ParseQuery(query string) (op Op, err error) {
 		op.Kind = OpKind_UpdateCorrupted
 	case "direct insert":
 		op.Kind = OpKind_DirectInsert
+	case "insert":
+		op.Kind = OpKind_InsertTable
 	default:
 		if strings.HasPrefix(operationStrLowered, "select") {
 			opSQL = operationStr

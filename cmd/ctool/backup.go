@@ -209,7 +209,7 @@ func newBackupErrorEvent(host string, err error) *eventType {
 			alertLabelInstance: host,
 			alertLabelSeverity: "error",
 		},
-		GeneratorURL: "http://app-node-1:9093"}
+		GeneratorURL: fmt.Sprintf("http://%s:9093", host)}
 }
 
 func backupCENode(cmd *cobra.Command, args []string) error {
