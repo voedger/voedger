@@ -629,7 +629,7 @@ func hostStateForTest(s IStateStorage) IHostState {
 	return hs
 }
 func emptyHostStateForTest(s IStateStorage) (istructs.IState, istructs.IIntents) {
-	bs := ProvideQueryProcessorStateFactory()(context.Background(), nilAppStructsFunc, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil).(*hostState)
+	bs := ProvideQueryProcessorStateFactory()(context.Background(), nilAppStructsFunc, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil).(*queryProcessorState)
 	bs.addStorage(testStorage, s, math.MinInt)
 	return bs, bs
 }

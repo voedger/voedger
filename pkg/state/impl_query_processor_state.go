@@ -67,9 +67,9 @@ func implProvideQueryProcessorState(
 		optFunc(opts)
 	}
 
-	state := queryProcessorState{
+	state := &queryProcessorState{
 		hostState:     newHostState("QueryProcessor", queryProcessorStateMaxIntents, appStructsFunc),
-		queryArgs:     nil,
+		queryArgs:     execQueryArgsFunc,
 		queryCallback: queryCallbackFunc,
 	}
 

@@ -36,7 +36,7 @@ func implProvideCommandProcessorState(
 	unloggedArgFunc UnloggedArgFunc,
 	wlogOffsetFunc WLogOffsetFunc) IHostState {
 
-	state := commandProcessorState{
+	state := &commandProcessorState{
 		hostState:          newHostState("CommandProcessor", intentsLimit, appStructsFunc),
 		commandPrepareArgs: execCmdArgsFunc,
 	}
