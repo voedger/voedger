@@ -582,7 +582,7 @@ func provideCommandProcessors(cpCount istructs.NumCommandProcessors, ccf Command
 
 func provideAsyncActualizersFactory(appParts appparts.IAppPartitions, appStructsProvider istructs.IAppStructsProvider, n10nBroker in10n.IN10nBroker, asyncActualizerFactory projectors.AsyncActualizerFactory, secretReader isecrets.ISecretReader, metrics2 imetrics.IMetrics) AsyncActualizersFactory {
 	return func(vvmCtx context.Context, appQName istructs.AppQName, asyncProjectors istructs.Projectors, partitionID istructs.PartitionID,
-		tokens itokens.ITokens, federation2 federation.IFederation, opts []state.ActualizerStateOptFunc) pipeline.ISyncOperator {
+		tokens itokens.ITokens, federation2 federation.IFederation, opts []state.StateOptFunc) pipeline.ISyncOperator {
 		appStructs, err := appStructsProvider.AppStructs(appQName)
 		if err != nil {
 			panic(err)
@@ -617,7 +617,7 @@ func provideAsyncActualizersFactory(appParts appparts.IAppPartitions, appStructs
 	}
 }
 
-func provideAppPartitionFactory(aaf AsyncActualizersFactory, opts []state.ActualizerStateOptFunc, tokens itokens.ITokens, federation2 federation.IFederation) AppPartitionFactory {
+func provideAppPartitionFactory(aaf AsyncActualizersFactory, opts []state.StateOptFunc, tokens itokens.ITokens, federation2 federation.IFederation) AppPartitionFactory {
 	return func(vvmCtx context.Context, appQName istructs.AppQName, asyncProjectors istructs.Projectors, partitionID istructs.PartitionID) pipeline.ISyncOperator {
 		return aaf(vvmCtx, appQName, asyncProjectors, partitionID, tokens, federation2, opts)
 	}
