@@ -283,6 +283,7 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 				func() []iauthnz.Principal { return qw.principals },
 				func() string { return qw.msg.Token() },
 				itokens,
+				func() istructs.PrepareArgs { return qw.execQueryArgs.PrepareArgs },
 				func() istructs.IObject { return qw.execQueryArgs.ArgumentObject },
 				func() istructs.IObjectBuilder {
 					return qw.appStructs.ObjectBuilder(qw.resultType.QName())

@@ -168,6 +168,14 @@ func (ctx *testState) buildState(processorKind int) {
 	tokenFunc := func() string {
 		return ctx.token
 	}
+	execQueryArgsFunc := func() istructs.PrepareArgs {
+		return istructs.PrepareArgs{
+			Workpiece:      nil,
+			ArgumentObject: ctx.Arg(),
+			WSID:           ctx.WSID(),
+			Workspace:      nil,
+		}
+	}
 	qryResultBuilderFunc := func() istructs.IObjectBuilder {
 		localPkgName := ctx.appDef.PackageLocalName(ctx.queryName.PkgPath())
 		query := ctx.appDef.Query(appdef.NewQName(localPkgName, ctx.queryName.Entity()))
@@ -191,8 +199,9 @@ func (ctx *testState) buildState(processorKind int) {
 		ctx.IState = state.ProvideCommandProcessorStateFactory()(ctx.ctx, appFunc, partitionIDFunc, wsidFunc, ctx.secretReader, cudFunc, principalsFunc, tokenFunc,
 			IntentsLimit, resultBuilderFunc, commandPrepareArgs, argFunc, unloggedArgFunc, wlogOffsetFunc)
 	case ProcKind_QueryProcessor:
-		ctx.IState = state.ProvideQueryProcessorStateFactory()(ctx.ctx, appFunc, partitionIDFunc, wsidFunc, ctx.secretReader, principalsFunc, tokenFunc, nil, argFunc,
-			qryResultBuilderFunc, nil, execQueryCallback, state.QPWithCustomHttpClient(ctx), state.QPWithFedearationCommandHandler(ctx.emulateFederationCmd))
+		ctx.IState = state.ProvideQueryProcessorStateFactory()(ctx.ctx, appFunc, partitionIDFunc, wsidFunc, ctx.secretReader, principalsFunc, tokenFunc, nil,
+			execQueryArgsFunc, argFunc, qryResultBuilderFunc, nil, execQueryCallback,
+			state.QPWithCustomHttpClient(ctx), state.QPWithFedearationCommandHandler(ctx.emulateFederationCmd))
 	}
 }
 
