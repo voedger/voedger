@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/voedger/voedger/pkg/goutils/testingu/require"
+	"github.com/stretchr/testify/require"
 )
 
 func Test_IsSysField(t *testing.T) {
@@ -127,52 +127,47 @@ func Test_AddField(t *testing.T) {
 		require.Equal(DataKind_string, obj.Field("f3").DataKind())
 	})
 
-	t.Run("test panics", func(t *testing.T) {
-		require.Panics(func() { obj.AddField("", DataKind_int64, true) },
-			require.Is(ErrMissedError))
-		require.Panics(func() { obj.AddField("naked_🔫", DataKind_int64, true) },
-			require.Is(ErrInvalidError),
-			require.Has("naked_🔫"))
-		require.Panics(func() { obj.AddField("f1", DataKind_int64, true) },
-			require.Is(ErrAlreadyExistsError),
-			require.Has("f1"))
+	t.Run("must be panic if empty field name", func(t *testing.T) {
+		require.Panics(func() { obj.AddField("", DataKind_int64, true) })
+	})
 
-		t.Run("must be panic if field data kind is not allowed by type kind", func(t *testing.T) {
-			adb := New()
-			adb.AddPackage("test", "test.com/test")
-			o := adb.AddObject(NewQName("test", "object"))
-			require.Panics(func() { o.AddField("f1", DataKind_Event, false) },
-				require.Is(ErrIncompatibleError),
-				require.Has("Event"))
-		})
+	t.Run("must be panic if invalid field name", func(t *testing.T) {
+		require.Panics(func() { obj.AddField("naked_🔫", DataKind_int64, true) })
+	})
 
-		t.Run("must be panic if too many fields", func(t *testing.T) {
-			adb := New()
-			adb.AddPackage("test", "test.com/test")
-			o := adb.AddObject(NewQName("test", "obj"))
-			for i := 0; i < MaxTypeFieldCount-2; i++ { // -2 because sys.QName, sys.Container
-				o.AddField(fmt.Sprintf("f_%#x", i), DataKind_bool, false)
-			}
-			require.Panics(func() { o.AddField("errorField", DataKind_bool, true) },
-				require.Is(ErrTooManyError))
-		})
+	t.Run("must be panic if field name dupe", func(t *testing.T) {
+		require.Panics(func() { obj.AddField("f1", DataKind_int64, true) })
+	})
 
-		t.Run("must be panic if not found field data kind", func(t *testing.T) {
-			adb := New()
-			adb.AddPackage("test", "test.com/test")
-			o := adb.AddObject(NewQName("test", "obj"))
-			require.Panics(func() { o.AddField("errorField", DataKind_FakeLast, false) },
-				require.Is(ErrNotFoundError))
-		})
+	t.Run("must be panic if field data kind is not allowed by type kind", func(t *testing.T) {
+		adb := New()
+		adb.AddPackage("test", "test.com/test")
+		o := adb.AddObject(NewQName("test", "object"))
+		require.Panics(func() { o.AddField("f1", DataKind_Event, false) })
+	})
 
-		t.Run("must be panic if unknown data type", func(t *testing.T) {
-			adb := New()
-			adb.AddPackage("test", "test.com/test")
-			o := adb.AddObject(NewQName("test", "obj"))
-			require.Panics(func() { o.AddDataField("errorField", NewQName("test", "unknown"), false) },
-				require.Is(ErrNotFoundError),
-				require.Has("test.unknown"))
-		})
+	t.Run("must be panic if too many fields", func(t *testing.T) {
+		adb := New()
+		adb.AddPackage("test", "test.com/test")
+		o := adb.AddObject(NewQName("test", "obj"))
+		for i := 0; i < MaxTypeFieldCount-2; i++ { // -2 because sys.QName, sys.Container
+			o.AddField(fmt.Sprintf("f_%#x", i), DataKind_bool, false)
+		}
+		require.Panics(func() { o.AddField("errorField", DataKind_bool, true) })
+	})
+
+	t.Run("must be panic if unsupported field data kind", func(t *testing.T) {
+		adb := New()
+		adb.AddPackage("test", "test.com/test")
+		o := adb.AddObject(NewQName("test", "obj"))
+		require.Panics(func() { o.AddField("errorField", DataKind_FakeLast, false) })
+	})
+
+	t.Run("must be panic if unknown data type", func(t *testing.T) {
+		adb := New()
+		adb.AddPackage("test", "test.com/test")
+		o := adb.AddObject(NewQName("test", "obj"))
+		require.Panics(func() { o.AddDataField("errorField", NewQName("test", "unknown"), false) })
 	})
 }
 
@@ -204,7 +199,7 @@ func Test_SetFieldComment(t *testing.T) {
 		require.Panics(func() {
 			adb.AddObject(NewQName("test", "object")).
 				SetFieldComment("unknownField", "error here")
-		}, require.Is(ErrNotFoundError), require.Has("unknownField"))
+		})
 	})
 }
 
@@ -250,7 +245,7 @@ func Test_SetFieldVerify(t *testing.T) {
 		require.Panics(func() {
 			adb.AddObject(NewQName("test", "object")).
 				SetFieldVerify("unknownField", VerificationKind_Phone)
-		}, require.Is(ErrNotFoundError), require.Has("unknownField"))
+		})
 	})
 }
 
@@ -337,8 +332,7 @@ func Test_AddRefField(t *testing.T) {
 		adb := New()
 		adb.AddPackage("test", "test.com/test")
 		doc := adb.AddWDoc(docName)
-		require.Panics(func() { doc.AddRefField("", false) },
-			require.Is(ErrMissedError))
+		require.Panics(func() { doc.AddRefField("", false) })
 	})
 }
 

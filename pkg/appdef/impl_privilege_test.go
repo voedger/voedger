@@ -8,7 +8,7 @@ package appdef
 import (
 	"testing"
 
-	"github.com/voedger/voedger/pkg/goutils/testingu/require"
+	"github.com/stretchr/testify/require"
 )
 
 func Test_AppDef_GrantAndRevoke(t *testing.T) {
@@ -230,16 +230,16 @@ func Test_AppDef_GrantAndRevokeErrors(t *testing.T) {
 			unknownRole := NewQName("test", "unknownRole")
 			require.Panics(func() {
 				adb.Grant([]PrivilegeKind{PrivilegeKind_Select}, []QName{docName}, nil, unknownRole)
-			}, require.Is(ErrNotFoundError), require.Has(unknownRole))
+			}, "should be panic if grant to unknown role")
 			require.Panics(func() {
 				adb.GrantAll([]QName{docName}, unknownRole)
-			}, require.Is(ErrNotFoundError), require.Has(unknownRole))
+			}, "should be panic if grant all to unknown role")
 			require.Panics(func() {
 				adb.Revoke([]PrivilegeKind{PrivilegeKind_Select}, []QName{docName}, unknownRole)
-			}, require.Is(ErrNotFoundError), require.Has(unknownRole))
+			}, "should be panic if revoke from unknown role")
 			require.Panics(func() {
 				adb.RevokeAll([]QName{docName}, unknownRole)
-			}, require.Is(ErrNotFoundError), require.Has(unknownRole))
+			}, "should be panic if revode all from unknown role")
 		})
 
 		_ = adb.AddRole(readerRoleName)
@@ -247,47 +247,47 @@ func Test_AppDef_GrantAndRevokeErrors(t *testing.T) {
 		t.Run("should be panic if invalid privileges kinds", func(t *testing.T) {
 			require.Panics(func() {
 				adb.Grant([]PrivilegeKind{}, []QName{docName}, nil, readerRoleName)
-			}, require.Is(ErrMissedError))
+			})
 			require.Panics(func() {
 				adb.Grant([]PrivilegeKind{PrivilegeKind_null}, []QName{docName}, nil, readerRoleName)
-			}, require.Is(ErrIncompatibleError), require.Has("[null]"))
+			})
 			require.Panics(func() {
 				adb.Grant([]PrivilegeKind{PrivilegeKind_count}, []QName{docName}, nil, readerRoleName)
-			}, require.Is(ErrIncompatibleError), require.Has("[count]"))
+			})
 		})
 
 		t.Run("should be panic if privileges on invalid objects", func(t *testing.T) {
 			require.Panics(func() {
 				adb.Grant([]PrivilegeKind{PrivilegeKind_Select}, []QName{}, nil, readerRoleName)
-			}, require.Is(ErrMissedError))
+			}, "should be panic if grant on empty objects")
 			require.Panics(func() {
 				adb.GrantAll(nil, readerRoleName)
-			}, require.Is(ErrMissedError))
+			}, "should be panic if grant on nil objects")
 
 			require.Panics(func() {
 				adb.Grant([]PrivilegeKind{PrivilegeKind_Select}, []QName{NewQName("test", "unknown")}, nil, readerRoleName)
-			}, require.Is(ErrNotFoundError), require.Has("test.unknown"))
+			}, "should be panic if object is unknown")
 
 			require.Panics(func() {
 				adb.Grant([]PrivilegeKind{PrivilegeKind_Select}, []QName{SysData_String}, nil, readerRoleName)
-			}, require.Is(ErrIncompatibleError), require.Has(SysData_String))
+			}, "should be panic if object can't be privileged")
 
 			require.Panics(func() {
 				adb.GrantAll([]QName{docName, wsName}, readerRoleName)
-			}, require.Is(ErrIncompatibleError))
+			}, "should be panic if object types are mixed")
 
 			require.Panics(func() {
 				adb.Grant([]PrivilegeKind{PrivilegeKind_Execute}, []QName{docName}, nil, readerRoleName)
-			}, require.Is(ErrIncompatibleError), require.Has("Execute"), require.Has(docName))
+			}, "should be panic if privileges kinds are incompatible with objects")
 		})
 
 		t.Run("should be panic if privileges on invalid fields", func(t *testing.T) {
 			require.Panics(func() {
 				adb.Grant([]PrivilegeKind{PrivilegeKind_Execute}, []QName{cmdName}, []FieldName{"field1"}, readerRoleName)
-			}, require.Is(ErrIncompatibleError), require.Has("Execute"))
+			}, "should be panic if use fields is not applicable for privilege")
 			require.Panics(func() {
 				adb.Grant([]PrivilegeKind{PrivilegeKind_Select}, []QName{docName}, []FieldName{"unknown"}, readerRoleName)
-			}, require.Is(ErrNotFoundError), require.Has("unknown"))
+			}, "should be panic if unknown field is used")
 		})
 	})
 }

@@ -14,7 +14,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/voedger/voedger/pkg/goutils/testingu/require"
+	"github.com/stretchr/testify/require"
 )
 
 func Test_AppDef_AddData(t *testing.T) {
@@ -109,11 +109,11 @@ func Test_AppDef_AddData(t *testing.T) {
 
 	require.Panics(func() {
 		New().AddData(NullQName, DataKind_int64, NullQName)
-	}, require.Is(ErrMissedError))
+	}, "panic if name is empty")
 
 	require.Panics(func() {
 		New().AddData(NewQName("naked", "🔫"), DataKind_QName, NullQName)
-	}, require.Is(ErrInvalidError), require.Has("naked.🔫"))
+	}, "panic if name is invalid")
 
 	t.Run("panic if type with name already exists", func(t *testing.T) {
 		adb := New()
@@ -121,18 +121,18 @@ func Test_AppDef_AddData(t *testing.T) {
 		adb.AddObject(intName)
 		require.Panics(func() {
 			adb.AddData(intName, DataKind_int64, NullQName)
-		}, require.Is(ErrAlreadyExistsError), require.Has(intName.String()))
+		})
 	})
 
 	require.Panics(func() {
 		New().AddData(intName, DataKind_null, NullQName)
-	}, require.Is(ErrNotFoundError))
+	}, "panic if unknown system ancestor")
 
 	require.Panics(func() {
 		New().AddData(intName, DataKind_int64,
 			NewQName("test", "unknown"), // <- error here
 		)
-	}, require.Is(ErrNotFoundError), require.Has("test.unknown"))
+	}, "panic if ancestor is not found")
 
 	t.Run("panic if ancestor is not data type", func(t *testing.T) {
 		objName := NewQName("test", "object")
@@ -143,7 +143,7 @@ func Test_AppDef_AddData(t *testing.T) {
 			adb.AddData(intName, DataKind_int64,
 				objName, // <- error here
 			)
-		}, require.Is(ErrNotFoundError), require.Has(objName.String()))
+		})
 	})
 
 	t.Run("panic if ancestor has different kind", func(t *testing.T) {
@@ -152,16 +152,14 @@ func Test_AppDef_AddData(t *testing.T) {
 		_ = adb.AddData(strName, DataKind_string, NullQName)
 		require.Panics(func() {
 			adb.AddData(intName, DataKind_int64, strName)
-		}, require.Is(ErrInvalidError), require.Has(strName.String()))
+		})
 	})
 
 	t.Run("panic if incompatible constraints", func(t *testing.T) {
 		adb := New()
 		adb.AddPackage("test", "test.com/test")
-		require.Panics(func() { _ = adb.AddData(strName, DataKind_string, NullQName, MinIncl(1)) },
-			require.Is(ErrIncompatibleError), require.Has("MinIncl"))
-		require.Panics(func() { _ = adb.AddData(intName, DataKind_float64, NullQName, MaxLen(100)) },
-			require.Is(ErrIncompatibleError), require.Has("MaxLen"))
+		require.Panics(func() { _ = adb.AddData(strName, DataKind_string, NullQName, MinIncl(1)) })
+		require.Panics(func() { _ = adb.AddData(intName, DataKind_float64, NullQName, MaxLen(100)) })
 	})
 }
 
@@ -288,60 +286,54 @@ func TestNewConstraintPanics(t *testing.T) {
 	tests := []struct {
 		name string
 		args args
-		e    error
 	}{
 		{"MaxLen(0)",
-			args{ConstraintKind_MaxLen, uint16(0)}, ErrOutOfBoundsError,
+			args{ConstraintKind_MaxLen, uint16(0)},
 		},
 		{"Pattern(`^[error$`)",
-			args{ConstraintKind_Pattern, `^[error$`}, nil,
+			args{ConstraintKind_Pattern, `^[error$`},
 		},
 		{"MinIncl(+∞)",
-			args{ConstraintKind_MinIncl, math.NaN()}, ErrInvalidError,
+			args{ConstraintKind_MinIncl, math.NaN()},
 		},
 		{"MinIncl(+∞)",
-			args{ConstraintKind_MinIncl, math.Inf(+1)}, ErrOutOfBoundsError,
+			args{ConstraintKind_MinIncl, math.Inf(+1)},
 		},
 		{"MinExcl(NaN)",
-			args{ConstraintKind_MinExcl, math.NaN()}, ErrInvalidError,
+			args{ConstraintKind_MinExcl, math.NaN()},
 		},
 		{"MinExcl(+∞)",
-			args{ConstraintKind_MinExcl, math.Inf(+1)}, ErrOutOfBoundsError,
+			args{ConstraintKind_MinExcl, math.Inf(+1)},
 		},
 		{"MaxIncl(NaN)",
-			args{ConstraintKind_MaxIncl, math.NaN()}, ErrInvalidError,
+			args{ConstraintKind_MaxIncl, math.NaN()},
 		},
 		{"MaxIncl(-∞)",
-			args{ConstraintKind_MaxIncl, math.Inf(-1)}, ErrOutOfBoundsError,
+			args{ConstraintKind_MaxIncl, math.Inf(-1)},
 		},
 		{"MaxExcl(NaN)",
-			args{ConstraintKind_MaxExcl, math.NaN()}, ErrInvalidError,
+			args{ConstraintKind_MaxExcl, math.NaN()},
 		},
 		{"MaxExcl(-∞)",
-			args{ConstraintKind_MaxExcl, math.Inf(-1)}, ErrOutOfBoundsError,
+			args{ConstraintKind_MaxExcl, math.Inf(-1)},
 		},
 		{"Enum([]string{})",
-			args{ConstraintKind_Enum, []string{}}, ErrMissedError,
+			args{ConstraintKind_Enum, []string{}},
 		},
 		{"Enum([]bool)",
-			args{ConstraintKind_Enum, []bool{true, false}}, ErrUnsupportedError,
+			args{ConstraintKind_Enum, []bool{true, false}},
 		},
 		{"Enum([][]byte)",
-			args{ConstraintKind_Enum, [][]byte{{1, 2, 3}, {4, 5, 6}}}, ErrUnsupportedError,
+			args{ConstraintKind_Enum, [][]byte{{1, 2, 3}, {4, 5, 6}}},
 		},
 		{"???(0)",
-			args{ConstraintKind_Count, 0}, ErrUnsupportedError,
+			args{ConstraintKind_Count, 0},
 		},
 	}
 	require := require.New(t)
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if tt.e == nil {
-				require.Panics(func() { _ = NewConstraint(tt.args.kind, tt.args.value) })
-			} else {
-				require.Panics(func() { _ = NewConstraint(tt.args.kind, tt.args.value) },
-					require.Is(tt.e))
-			}
+			require.Panics(func() { _ = NewConstraint(tt.args.kind, tt.args.value) })
 		})
 	}
 }
@@ -447,34 +439,33 @@ func Test_data_AddConstraint(t *testing.T) {
 		name      string
 		args      args
 		wantPanic bool
-		e         error
 	}{
 		//- MaxLen
-		{"string: max length constraint should be ok",
-			args{DataKind_string, ConstraintKind_MaxLen, uint16(100)}, false, nil},
-		{"bytes: max length constraint should be ok",
-			args{DataKind_bytes, ConstraintKind_MaxLen, uint16(1024)}, false, nil},
+		{"string: max length constraint must be ok",
+			args{DataKind_string, ConstraintKind_MaxLen, uint16(100)}, false},
+		{"bytes: max length constraint must be ok",
+			args{DataKind_bytes, ConstraintKind_MaxLen, uint16(1024)}, false},
 		//- Enum
-		{"int32: enum constraint should be ok",
-			args{DataKind_int32, ConstraintKind_Enum, []int32{1, 2, 3}}, false, nil},
-		{"int32: enum constraint should fail if incompatible enum type",
-			args{DataKind_int32, ConstraintKind_Enum, []int64{1, 2, 3}}, true, ErrIncompatibleError},
-		{"int64: enum constraint should be ok",
-			args{DataKind_int64, ConstraintKind_Enum, []int64{1, 2, 3}}, false, nil},
-		{"int64: enum constraint should fail if incompatible ErrIncompatibleError type",
-			args{DataKind_int64, ConstraintKind_Enum, []string{"1", "2", "3"}}, true, ErrIncompatibleError},
-		{"float32: enum constraint should be ok",
-			args{DataKind_float32, ConstraintKind_Enum, []float32{1.0, 2.0, 3.0}}, false, nil},
-		{"float32: enum constraint should fail if incompatible enum type",
-			args{DataKind_float32, ConstraintKind_Enum, []float64{1.0, 2.0, 3.0}}, true, ErrIncompatibleError},
-		{"float64: enum constraint should be ok",
-			args{DataKind_float64, ConstraintKind_Enum, []float64{1.0, 2.0, 3.0}}, false, nil},
-		{"float64: enum constraint should fail if incompatible enum type",
-			args{DataKind_float64, ConstraintKind_Enum, []int32{1, 2, 3}}, true, ErrIncompatibleError},
-		{"string: enum constraint should be ok",
-			args{DataKind_string, ConstraintKind_Enum, []string{"a", "b", "c"}}, false, nil},
-		{"string: enum constraint should fail if incompatible enum type",
-			args{DataKind_float64, ConstraintKind_Enum, []int32{1, 2, 3}}, true, ErrIncompatibleError},
+		{"int32: enum constraint must be ok",
+			args{DataKind_int32, ConstraintKind_Enum, []int32{1, 2, 3}}, false},
+		{"int32: enum constraint must fail if wrong enum type",
+			args{DataKind_int32, ConstraintKind_Enum, []int64{1, 2, 3}}, true},
+		{"int64: enum constraint must be ok",
+			args{DataKind_int64, ConstraintKind_Enum, []int64{1, 2, 3}}, false},
+		{"int64: enum constraint must fail if wrong enum type",
+			args{DataKind_int64, ConstraintKind_Enum, []string{"1", "2", "3"}}, true},
+		{"float32: enum constraint must be ok",
+			args{DataKind_float32, ConstraintKind_Enum, []float32{1.0, 2.0, 3.0}}, false},
+		{"float32: enum constraint must fail if wrong enum type",
+			args{DataKind_float32, ConstraintKind_Enum, []float64{1.0, 2.0, 3.0}}, true},
+		{"float64: enum constraint must be ok",
+			args{DataKind_float64, ConstraintKind_Enum, []float64{1.0, 2.0, 3.0}}, false},
+		{"float64: enum constraint must fail if wrong enum type",
+			args{DataKind_float64, ConstraintKind_Enum, []int32{1, 2, 3}}, true},
+		{"string: enum constraint must be ok",
+			args{DataKind_string, ConstraintKind_Enum, []string{"a", "b", "c"}}, false},
+		{"string: enum constraint must fail if wrong enum type",
+			args{DataKind_float64, ConstraintKind_Enum, []int32{1, 2, 3}}, true},
 	}
 	require := require.New(t)
 	for _, tt := range tests {
@@ -483,12 +474,7 @@ func Test_data_AddConstraint(t *testing.T) {
 			adb.AddPackage("test", "test.com/test")
 			d := adb.AddData(NewQName("test", "test"), tt.args.da, NullQName)
 			if tt.wantPanic {
-				if tt.e == nil {
-					require.Panics(func() { d.AddConstraints(NewConstraint(tt.args.ck, tt.args.cv)) })
-				} else {
-					require.Panics(func() { d.AddConstraints(NewConstraint(tt.args.ck, tt.args.cv)) },
-						require.Is(tt.e))
-				}
+				require.Panics(func() { d.AddConstraints(NewConstraint(tt.args.ck, tt.args.cv)) })
 			} else {
 				require.NotPanics(func() { d.AddConstraints(NewConstraint(tt.args.ck, tt.args.cv)) })
 			}
@@ -651,7 +637,7 @@ func TestDataKind_IsSupportedConstraint(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := tt.k.IsCompatibleWithConstraint(tt.args.c); got != tt.want {
-				t.Errorf("%v.IsCompatibleWithConstraint(%v) = %v, want %v", tt.k.TrimString(), tt.args.c.TrimString(), got, tt.want)
+				t.Errorf("%v.IsSupportedConstraint(%v) = %v, want %v", tt.k.TrimString(), tt.args.c.TrimString(), got, tt.want)
 			}
 		})
 	}

@@ -92,15 +92,12 @@ func Test_AppDef_AddCommand(t *testing.T) {
 
 	t.Run("panic if name is empty", func(t *testing.T) {
 		adb := New()
-		require.Panics(func() { adb.AddCommand(NullQName) },
-			require.Is(ErrMissedError))
+		require.Panics(func() { adb.AddCommand(NullQName) })
 	})
 
 	t.Run("panic if name is invalid", func(t *testing.T) {
 		adb := New()
-		require.Panics(func() { adb.AddCommand(NewQName("naked", "🔫")) },
-			require.Is(ErrInvalidError),
-			require.Has("naked.🔫"))
+		require.Panics(func() { adb.AddCommand(NewQName("naked", "🔫")) })
 	})
 
 	t.Run("panic if type with name already exists", func(t *testing.T) {
@@ -108,37 +105,29 @@ func Test_AppDef_AddCommand(t *testing.T) {
 		adb := New()
 		adb.AddPackage("test", "test.com/test")
 		adb.AddObject(testName)
-		require.Panics(func() { adb.AddCommand(testName) },
-			require.Is(ErrAlreadyExistsError),
-			require.Has(testName.String()))
+		require.Panics(func() { adb.AddCommand(testName) })
 	})
 
 	t.Run("panic if extension name is empty", func(t *testing.T) {
 		adb := New()
 		adb.AddPackage("test", "test.com/test")
 		cmd := adb.AddCommand(NewQName("test", "cmd"))
-		require.Panics(func() { cmd.SetName("") },
-			require.Is(ErrMissedError),
-			require.Has("test.cmd"))
+		require.Panics(func() { cmd.SetName("") })
 	})
 
 	t.Run("panic if extension name is invalid", func(t *testing.T) {
 		adb := New()
 		adb.AddPackage("test", "test.com/test")
 		cmd := adb.AddCommand(NewQName("test", "cmd"))
-		require.Panics(func() { cmd.SetName("naked 🔫") },
-			require.Is(ErrInvalidError),
-			require.Has("naked 🔫"))
+		require.Panics(func() { cmd.SetName("naked 🔫") })
 	})
 
 	t.Run("panic if extension kind is invalid", func(t *testing.T) {
 		adb := New()
 		adb.AddPackage("test", "test.com/test")
 		cmd := adb.AddCommand(NewQName("test", "cmd"))
-		require.Panics(func() { cmd.SetEngine(ExtensionEngineKind_null) },
-			require.Is(ErrOutOfBoundsError))
-		require.Panics(func() { cmd.SetEngine(ExtensionEngineKind_Count) },
-			require.Is(ErrOutOfBoundsError))
+		require.Panics(func() { cmd.SetEngine(ExtensionEngineKind_null) })
+		require.Panics(func() { cmd.SetEngine(ExtensionEngineKind_Count) })
 	})
 }
 

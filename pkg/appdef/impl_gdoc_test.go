@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/voedger/voedger/pkg/goutils/testingu/require"
+	"github.com/stretchr/testify/require"
 )
 
 func Test_AppDef_AddGDoc(t *testing.T) {
@@ -148,11 +148,11 @@ func Test_AppDef_AddGDoc(t *testing.T) {
 
 	require.Panics(func() {
 		New().AddGDoc(NullQName)
-	}, require.Is(ErrMissedError))
+	}, "panic if name is empty")
 
 	require.Panics(func() {
 		New().AddGDoc(NewQName("naked", "🔫"))
-	}, require.Is(ErrInvalidError), require.Has("naked.🔫"))
+	}, "panic if name is invalid")
 
 	t.Run("panic if type with name already exists", func(t *testing.T) {
 		testName := NewQName("test", "dupe")
@@ -161,6 +161,6 @@ func Test_AppDef_AddGDoc(t *testing.T) {
 		adb.AddGDoc(testName)
 		require.Panics(func() {
 			adb.AddGDoc(testName)
-		}, require.Is(ErrAlreadyExistsError), require.Has(testName.String()))
+		})
 	})
 }

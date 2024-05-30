@@ -16,9 +16,9 @@ type Constraint assert.ValueAssertionFunc
 
 // Returns a constraint that checks that value (panic or error) contains
 // the given substring.
-func Has(substr interface{}, msgAndArgs ...interface{}) Constraint {
+func Has(substr string, msgAndArgs ...interface{}) Constraint {
 	return func(t assert.TestingT, v interface{}, _ ...interface{}) bool {
-		return assert.Contains(t, fmt.Sprint(v), fmt.Sprint(substr), msgAndArgs...)
+		return assert.Contains(t, fmt.Sprint(v), substr, msgAndArgs...)
 	}
 }
 
