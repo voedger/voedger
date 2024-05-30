@@ -108,24 +108,26 @@ func implServiceFactory(serviceChannel iprocbus.ServiceChannel, resultSenderClos
 				qpm.Increase(queriesTotal, 1.0)
 				rs := resultSenderClosableFactory(msg.RequestCtx(), msg.Sender())
 				qwork := newQueryWork(msg, rs, appParts, maxPrepareQueries, qpm, secretReader)
-				if p == nil {
-					p = newQueryProcessorPipeline(ctx, authn, authz, itokens, federation)
-				}
-				err := p.SendSync(qwork)
-				if err != nil {
-					qpm.Increase(errorsTotal, 1.0)
-					p.Close()
-					p = nil
-				} else {
-					err = execAndSendResponse(ctx, qwork)
-				}
-				if qwork.rowsProcessor != nil {
-					// wait until all rows are sent
-					qwork.rowsProcessor.Close()
-				}
-				err = coreutils.WrapSysError(err, http.StatusInternalServerError)
-				rs.Close(err)
-				qwork.release()
+				func() { // borrowed application partition should be guaranteed to be freed
+					defer qwork.release()
+					if p == nil {
+						p = newQueryProcessorPipeline(ctx, authn, authz, itokens, federation)
+					}
+					err := p.SendSync(qwork)
+					if err != nil {
+						qpm.Increase(errorsTotal, 1.0)
+						p.Close()
+						p = nil
+					} else {
+						err = execAndSendResponse(ctx, qwork)
+					}
+					if qwork.rowsProcessor != nil {
+						// wait until all rows are sent
+						qwork.rowsProcessor.Close()
+					}
+					err = coreutils.WrapSysError(err, http.StatusInternalServerError)
+					rs.Close(err)
+				}()
 				metrics.IncreaseApp(queriesSeconds, vvm, msg.AppQName(), time.Since(now).Seconds())
 			case <-ctx.Done():
 			}
@@ -145,7 +147,9 @@ func execAndSendResponse(ctx context.Context, qw *queryWork) (err error) {
 		}
 		qw.metrics.Increase(execSeconds, time.Since(now).Seconds())
 	}()
-	return qw.queryExec(ctx, qw.execQueryArgs, qw.callbackFunc)
+
+	return qw.appPart.Invoke(ctx, qw.queryFunc.QName(), qw.state, nil)
+	//return qw.queryExec(ctx, qw.execQueryArgs, qw.callbackFunc)
 }
 
 func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthenticator, authz iauthnz.IAuthorizer,
@@ -279,6 +283,7 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 				func() []iauthnz.Principal { return qw.principals },
 				func() string { return qw.msg.Token() },
 				itokens,
+				func() istructs.PrepareArgs { return qw.execQueryArgs.PrepareArgs },
 				func() istructs.IObject { return qw.execQueryArgs.ArgumentObject },
 				func() istructs.IObjectBuilder {
 					return qw.appStructs.ObjectBuilder(qw.resultType.QName())

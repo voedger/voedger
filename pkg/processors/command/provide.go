@@ -151,17 +151,20 @@ func ProvideServiceFactory(appParts appparts.IAppPartitions, now coreutils.TimeF
 							metrics: metrics,
 						},
 					}
-					cmd.metrics.increase(CommandsTotal, 1.0)
-					cmdHandlingErr := cmdPipeline.SendSync(cmd)
-					if cmdHandlingErr != nil {
-						logger.Error(cmdHandlingErr)
-					}
-					sendResponse(cmd, cmdHandlingErr)
-					if cmd.appPartitionRestartScheduled {
-						logger.Info(fmt.Sprintf("partition %d will be restarted due of an error on writing to Log: %s", cmd.cmdMes.PartitionID(), cmdHandlingErr))
-						delete(cmdProc.appPartitions, cmd.cmdMes.AppQName())
-					}
-					cmd.release()
+					func() { // borrowed application partition should be guaranteed to be freed
+						defer cmd.release()
+						cmd.metrics.increase(CommandsTotal, 1.0)
+						cmdHandlingErr := cmdPipeline.SendSync(cmd)
+						if cmdHandlingErr != nil {
+							logger.Error(cmdHandlingErr)
+						}
+						sendResponse(cmd, cmdHandlingErr)
+						if cmd.appPartitionRestartScheduled {
+							logger.Info(fmt.Sprintf("partition %d will be restarted due of an error on writing to Log: %s", cmd.cmdMes.PartitionID(), cmdHandlingErr))
+							delete(cmdProc.appPartitions, cmd.cmdMes.AppQName())
+						}
+						cmd.release()
+					}()
 					metrics.IncreaseApp(CommandsSeconds, string(vvm), cmdMes.AppQName(), time.Since(start).Seconds())
 				case <-vvmCtx.Done():
 					cmdProc.appPartitions = map[istructs.AppQName]*appPartition{} // clear appPartitions to test recovery

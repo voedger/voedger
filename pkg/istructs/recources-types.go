@@ -97,6 +97,10 @@ type IState interface {
 	// For commands
 	CommandPrepareArgs() CommandPrepareArgs
 
+	// For queries
+	QueryPrepareArgs() PrepareArgs
+	QueryCallback() ExecQueryCallback
+
 	App() AppQName
 }
 
