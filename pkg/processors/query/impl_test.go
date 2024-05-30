@@ -33,6 +33,7 @@ import (
 	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys/authnz"
 	coreutils "github.com/voedger/voedger/pkg/utils"
+	"github.com/voedger/voedger/pkg/vvm/engines"
 	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
 )
 
@@ -47,6 +48,8 @@ var (
 	partID     istructs.PartitionID      = 5
 	wsID       istructs.WSID             = 15
 
+	pkgBo                 = "bo"
+	pkgBoPath             = "test1_app1/bo"
 	qNameFunction         = appdef.NewQName("bo", "FindArticlesByModificationTimeStampRange")
 	qNameQryDenied        = appdef.NewQName(appdef.SysPackage, "TestDeniedQry") // same as in ACL
 	qNameTestWSDescriptor = appdef.NewQName(appdef.SysPackage, "test_ws")
@@ -156,7 +159,10 @@ func TestBasicUsage_RowsProcessorFactory(t *testing.T) {
 	require.Equal(`[[[3,"White wine","Alcohol drinks"]]]`, result)
 }
 
-func getTestCfg(require *require.Assertions, prepareAppDef func(adb appdef.IAppDefBuilder, wsb appdef.IWorkspaceBuilder), cfgFunc ...func(cfg *istructsmem.AppConfigType)) (appDef appdef.IAppDef, asp istructs.IAppStructsProvider, appTokens istructs.IAppTokens) {
+func deployTestAppWithSecretToken(require *require.Assertions,
+	prepareAppDef func(adb appdef.IAppDefBuilder, wsb appdef.IWorkspaceBuilder),
+	cfgFunc ...func(cfg *istructsmem.AppConfigType)) (
+	appParts appparts.IAppPartitions, cleanup func(), appTokens istructs.IAppTokens) {
 	cfgs := make(istructsmem.AppConfigsType)
 	asf := mem.Provide()
 	storageProvider := istorageimpl.Provide(asf)
@@ -167,6 +173,8 @@ func getTestCfg(require *require.Assertions, prepareAppDef func(adb appdef.IAppD
 	qNameArticle := appdef.NewQName("bo", "Article")
 
 	adb := appdef.New()
+	adb.AddPackage(pkgBo, pkgBoPath)
+
 	wsb := adb.AddWorkspace(qNameTestWS)
 	adb.AddCDoc(qNameTestWSDescriptor)
 	wsb.SetDescriptor(qNameTestWSDescriptor)
@@ -206,7 +214,7 @@ func getTestCfg(require *require.Assertions, prepareAppDef func(adb appdef.IAppD
 	cfg := cfgs.AddConfig(appName, adb)
 	cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 
-	asp = istructsmem.Provide(cfgs, iratesce.TestBucketsFactory, payloads.TestAppTokensFactory(tokens), storageProvider)
+	asp := istructsmem.Provide(cfgs, iratesce.TestBucketsFactory, payloads.TestAppTokensFactory(tokens), storageProvider)
 
 	article := func(id, idDepartment istructs.RecordID, name string) istructs.IObject {
 		return &coreutils.TestObject{
@@ -244,7 +252,7 @@ func getTestCfg(require *require.Assertions, prepareAppDef func(adb appdef.IAppD
 	as, err := asp.AppStructs(appName)
 	require.NoError(err)
 
-	appDef = as.AppDef()
+	appDef := as.AppDef()
 
 	plogOffset := istructs.FirstOffset
 	wlogOffset := istructs.FirstOffset
@@ -313,7 +321,18 @@ func getTestCfg(require *require.Assertions, prepareAppDef func(adb appdef.IAppD
 	require.NoError(as.Records().Apply(pLogEvent))
 	require.NoError(as.Events().PutWlog(pLogEvent))
 
-	return appDef, asp, appTokens
+	appParts, cleanup, err = appparts.NewWithActualizerWithExtEnginesFactories(asp,
+		func(istructs.IAppStructs, istructs.PartitionID) pipeline.ISyncOperator { return &pipeline.NOOP{} }, // no projectors
+		engines.ProvideExtEngineFactories(
+			engines.ExtEngineFactoriesConfig{
+				AppConfigs:  cfgs,
+				WASMCompile: false,
+			}))
+	require.NoError(err)
+	appParts.DeployApp(appName, appDef, partCount, appEngines)
+	appParts.DeployAppPartitions(appName, []istructs.PartitionID{partID})
+
+	return appParts, cleanup, appTokens
 }
 
 func TestBasicUsage_ServiceFactory(t *testing.T) {
@@ -351,13 +370,8 @@ func TestBasicUsage_ServiceFactory(t *testing.T) {
 	metrics := imetrics.Provide()
 	metricNames := make([]string, 0)
 
-	appDef, appStructsProvider, appTokens := getTestCfg(require, nil)
-
-	appParts, cleanAppParts, err := appparts.New(appStructsProvider)
-	require.NoError(err)
+	appParts, cleanAppParts, appTokens := deployTestAppWithSecretToken(require, nil)
 	defer cleanAppParts()
-	appParts.DeployApp(appName, appDef, partCount, appEngines)
-	appParts.DeployAppPartitions(appName, []istructs.PartitionID{partID})
 
 	authn := iauthnzimpl.NewDefaultAuthenticator(iauthnzimpl.TestSubjectRolesGetter, iauthnzimpl.TestIsDeviceAllowedFuncs)
 	authz := iauthnzimpl.NewDefaultAuthorizer()
@@ -1094,7 +1108,7 @@ func TestRateLimiter(t *testing.T) {
 	qNameMyFuncParams := appdef.NewQName(appdef.SysPackage, "myFuncParams")
 	qNameMyFuncResults := appdef.NewQName(appdef.SysPackage, "results")
 	qName := appdef.NewQName(appdef.SysPackage, "myFunc")
-	appDef, appStructsProvider, appTokens := getTestCfg(require,
+	appParts, cleanAppParts, appTokens := deployTestAppWithSecretToken(require,
 		func(appDef appdef.IAppDefBuilder, wsb appdef.IWorkspaceBuilder) {
 			appDef.AddObject(qNameMyFuncParams)
 			appDef.AddObject(qNameMyFuncResults).
@@ -1116,11 +1130,7 @@ func TestRateLimiter(t *testing.T) {
 			})
 		})
 
-	appParts, cleanAppParts, err := appparts.New(appStructsProvider)
-	require.NoError(err)
 	defer cleanAppParts()
-	appParts.DeployApp(appName, appDef, partCount, appEngines)
-	appParts.DeployAppPartitions(appName, []istructs.PartitionID{partID})
 
 	// create aquery processor
 	metrics := imetrics.Provide()
@@ -1170,14 +1180,8 @@ func TestAuthnz(t *testing.T) {
 
 	metrics := imetrics.Provide()
 
-	appDef, appStructsProvider, appTokens := getTestCfg(require, nil)
-
-	appParts, cleanAppParts, err := appparts.New(appStructsProvider)
-	require.NoError(err)
+	appParts, cleanAppParts, appTokens := deployTestAppWithSecretToken(require, nil)
 	defer cleanAppParts()
-
-	appParts.DeployApp(appName, appDef, partCount, appEngines)
-	appParts.DeployAppPartitions(appName, []istructs.PartitionID{partID})
 
 	authn := iauthnzimpl.NewDefaultAuthenticator(iauthnzimpl.TestSubjectRolesGetter, iauthnzimpl.TestIsDeviceAllowedFuncs)
 	authz := iauthnzimpl.NewDefaultAuthorizer()
