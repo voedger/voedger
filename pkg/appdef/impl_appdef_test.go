@@ -8,7 +8,7 @@ package appdef
 import (
 	"testing"
 
-	"github.com/stretchr/testify/require"
+	"github.com/voedger/voedger/pkg/goutils/testingu/require"
 )
 
 func TestNew(t *testing.T) {
@@ -82,6 +82,9 @@ func Test_appDefBuilder_MustBuild(t *testing.T) {
 		adb := New()
 		adb.AddView(NewQName("test", "emptyView"))
 
-		require.Panics(func() { _ = adb.MustBuild() })
+		require.Panics(func() { _ = adb.MustBuild() },
+			require.Is(ErrMissedError),
+			require.Has("emptyView"),
+		)
 	})
 }

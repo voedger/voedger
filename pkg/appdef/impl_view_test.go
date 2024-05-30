@@ -9,7 +9,7 @@ import (
 	"regexp"
 	"testing"
 
-	"github.com/stretchr/testify/require"
+	"github.com/voedger/voedger/pkg/goutils/testingu/require"
 )
 
 func TestAddView(t *testing.T) {
@@ -44,22 +44,22 @@ func TestAddView(t *testing.T) {
 			t.Run("panic if field already exists in view", func(t *testing.T) {
 				require.Panics(func() {
 					vb.Key().PartKey().AddField("pkF1", DataKind_int64)
-				})
+				}, require.Is(ErrAlreadyExistsError), require.Has("pkF1"))
 			})
 
 			t.Run("panic if variable length field added to pk", func(t *testing.T) {
 				require.Panics(func() {
 					vb.Key().PartKey().AddField("pkF3", DataKind_string)
-				})
+				}, require.Is(ErrUnsupportedError), require.Has("pkF3"))
 				require.Panics(func() {
 					vb.Key().PartKey().AddDataField("pkF3", digsData)
-				})
+				}, require.Is(ErrUnsupportedError), require.Has("pkF3"))
 			})
 
 			t.Run("panic if unknown data type field added to pk", func(t *testing.T) {
 				require.Panics(func() {
 					vb.Key().PartKey().AddDataField("pkF3", NewQName("test", "unknown"))
-				})
+				}, require.Is(ErrNotFoundError), require.Has("test.unknown"))
 			})
 		})
 
@@ -70,13 +70,13 @@ func TestAddView(t *testing.T) {
 			t.Run("panic if field already exists in view", func(t *testing.T) {
 				require.Panics(func() {
 					vb.Key().ClustCols().AddField("ccF1", DataKind_int64)
-				})
+				}, require.Is(ErrAlreadyExistsError), require.Has("ccF1"))
 			})
 
 			t.Run("panic if unknown data type field added to cc", func(t *testing.T) {
 				require.Panics(func() {
 					vb.Key().ClustCols().AddDataField("ccF3", NewQName("test", "unknown"))
-				})
+				}, require.Is(ErrNotFoundError), require.Has("test.unknown"))
 			})
 		})
 
@@ -274,10 +274,10 @@ func TestAddView(t *testing.T) {
 		t.Run("panic if add second variable length field", func(t *testing.T) {
 			require.Panics(func() {
 				vb.Key().ClustCols().AddField("ccF3_1", DataKind_bytes)
-			})
+			}, require.Is(ErrUnsupportedError), require.Has("ccF3"))
 			require.Panics(func() {
 				vb.Key().ClustCols().AddDataField("ccF3_1", kbName)
-			})
+			}, require.Is(ErrUnsupportedError), require.Has("ccF3"))
 		})
 
 		vb.Value().
