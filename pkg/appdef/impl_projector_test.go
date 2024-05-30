@@ -280,8 +280,7 @@ func Test_AppDef_AddProjector(t *testing.T) {
 
 			prj := adb.AddProjector(prjName)
 			_, err := adb.Build()
-			require.ErrorIs(err, ErrMissedError)
-			require.Contains(err.Error(), fmt.Sprint(prj))
+			require.Error(err, require.Is(ErrMissedError), require.Has(prj))
 		})
 
 		t.Run("should be error if unknown names in states", func(t *testing.T) {
@@ -296,8 +295,7 @@ func Test_AppDef_AddProjector(t *testing.T) {
 			prj.States().
 				Add(NewQName("sys", "records"), recName, NewQName("test", "unknown"))
 			_, err := adb.Build()
-			require.ErrorIs(err, ErrNotFoundError)
-			require.Contains(err.Error(), "test.unknown")
+			require.Error(err, require.Is(ErrNotFoundError), require.Has("test.unknown"))
 		})
 	})
 
@@ -447,9 +445,7 @@ func Test_AppDef_AddScheduledProjector(t *testing.T) {
 			prj := adb.AddProjector(prjName)
 			prj.SetCronSchedule("naked 🔫")
 			_, err := adb.Build()
-			require.Error(err)
-			require.Contains(err.Error(), fmt.Sprint(prj))
-			require.Contains(err.Error(), "naked 🔫")
+			require.Error(err, require.Has(prj), require.Has("naked 🔫"))
 		})
 
 		t.Run("should be error if with intents", func(t *testing.T) {
@@ -468,8 +464,7 @@ func Test_AppDef_AddScheduledProjector(t *testing.T) {
 				Add(sysViews, viewName).SetComment(sysViews, "error here: scheduled projector shall not have intents")
 
 			_, err := adb.Build()
-			require.ErrorIs(err, ErrUnsupportedError)
-			require.Contains(err.Error(), fmt.Sprint(prj))
+			require.Error(err, require.Is(ErrUnsupportedError), require.Has(prj))
 		})
 	})
 }
