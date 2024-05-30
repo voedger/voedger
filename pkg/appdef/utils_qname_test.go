@@ -15,7 +15,7 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/stretchr/testify/require"
+	"github.com/voedger/voedger/pkg/goutils/testingu/require"
 )
 
 func TestBasicUsage_QName(t *testing.T) {
@@ -201,8 +201,7 @@ func TestQName_UnmarshalInvalidString(t *testing.T) {
 		q := NewQName("a", "b")
 
 		err = q.UnmarshalJSON([]byte("\"bcd\""))
-		require.ErrorIs(err, ErrConvertError)
-		require.ErrorContains(err, "bcd")
+		require.Error(err, require.Is(ErrConvertError), require.Has("bcd"))
 		require.Equal(NullQName, q)
 	})
 
@@ -210,15 +209,14 @@ func TestQName_UnmarshalInvalidString(t *testing.T) {
 		q := NewQName("a", "b")
 
 		err = q.UnmarshalJSON([]byte("\"c..d\""))
-		require.ErrorIs(err, ErrConvertError)
-		require.ErrorContains(err, "c..d")
+		require.Error(err, require.Is(ErrConvertError), require.Has("c..d"))
 		require.Equal(NullQName, q)
 	})
 
 	t.Run("json unquoted", func(t *testing.T) {
 		q := NewQName("a", "b")
 		err = q.UnmarshalJSON([]byte("c.d"))
-		require.ErrorIs(err, strconv.ErrSyntax)
+		require.Error(err, require.Is(strconv.ErrSyntax))
 		require.Equal(NullQName, q)
 	})
 }
@@ -304,10 +302,9 @@ func TestMustParseQName(t *testing.T) {
 		})
 	}
 
+	require := require.New(t)
 	t.Run("panic if invalid QName", func(t *testing.T) {
-		require.Panics(t, func() {
-			MustParseQName("🔫")
-		})
+		require.Panics(func() { MustParseQName("🔫") }, require.Is(ErrConvertError), require.Has("🔫"))
 	})
 }
 
@@ -587,8 +584,7 @@ func TestFullQName_UnmarshalInvalidString(t *testing.T) {
 		fqn := NewFullQName("a.a/a", "b")
 
 		err = fqn.UnmarshalJSON([]byte("\"bcd\""))
-		require.ErrorIs(err, ErrConvertError)
-		require.ErrorContains(err, "bcd")
+		require.Error(err, require.Is(ErrConvertError), require.Has("bcd"))
 		require.Equal(NullFullQName, fqn)
 	})
 
@@ -675,9 +671,8 @@ func TestMustParseFullQName(t *testing.T) {
 		})
 	}
 
+	require := require.New(t)
 	t.Run("panic if invalid FullQName", func(t *testing.T) {
-		require.Panics(t, func() {
-			MustParseFullQName("🔫")
-		})
+		require.Panics(func() { MustParseFullQName("🔫") }, require.Is(ErrConvertError), require.Has("🔫"))
 	})
 }

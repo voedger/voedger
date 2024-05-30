@@ -52,6 +52,9 @@ type limit struct {
 }
 
 func newLimit(app *appDef, name QName, on []QName, rate QName, comment ...string) *limit {
+	if rate == NullQName {
+		panic(ErrMissed("rate name"))
+	}
 	l := &limit{
 		typ:  makeType(app, name, TypeKind_Limit),
 		on:   on,

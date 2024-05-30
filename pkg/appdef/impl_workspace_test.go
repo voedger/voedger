@@ -8,7 +8,7 @@ package appdef
 import (
 	"testing"
 
-	"github.com/stretchr/testify/require"
+	"github.com/voedger/voedger/pkg/goutils/testingu/require"
 )
 
 func Test_AppDef_AddWorkspace(t *testing.T) {
@@ -88,14 +88,16 @@ func Test_AppDef_AddWorkspace(t *testing.T) {
 		adb := New()
 		adb.AddPackage("test", "test.com/test")
 		ws := adb.AddWorkspace(wsName)
-		require.Panics(func() { ws.SetDescriptor(NewQName("unknown", "type")) })
+		require.Panics(func() { ws.SetDescriptor(NewQName("unknown", "type")) },
+			require.Is(ErrNotFoundError), require.Has("unknown.type"))
 	})
 
 	t.Run("must be panic if add unknown type to workspace", func(t *testing.T) {
 		adb := New()
 		adb.AddPackage("test", "test.com/test")
 		ws := adb.AddWorkspace(wsName)
-		require.Panics(func() { ws.AddType(NewQName("unknown", "type")) })
+		require.Panics(func() { ws.AddType(NewQName("unknown", "type")) },
+			require.Is(ErrNotFoundError), require.Has("unknown.type"))
 	})
 }
 

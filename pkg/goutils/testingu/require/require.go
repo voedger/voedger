@@ -23,7 +23,7 @@ func New(t require.TestingT) *Require {
 
 // Returns a constraint that checks that value (panic or error) contains
 // the given substring.
-func (r *Require) Has(substr string, msgAndArgs ...interface{}) Constraint {
+func (r *Require) Has(substr interface{}, msgAndArgs ...interface{}) Constraint {
 	return Has(substr, msgAndArgs...)
 }
 
@@ -57,6 +57,29 @@ func (r *Require) NotIs(targer error, msgAndArgs ...interface{}) Constraint {
 	return NotIs(targer, msgAndArgs...)
 }
 
+// Panics asserts that the code inside the specified PanicTestFunc panics.
+// If constaintsAndMsgAndArgs contains constraints, then PanicsWith will be
+// called with these constraints, else Panics will be called from testify/assert.
+//
+//	require := require.New(t)
+//	require.Panics(
+//		func(){ GoCrazy() },
+//		require.Has("crazy", "panic should contains crazy string %q", "crazy"),
+//		"crazy panic expected")
+func (r *Require) Panics(f func(), constaintsOrMsgAndArgs ...interface{}) {
+	cc := make([]Constraint, 0)
+	for _, v := range constaintsOrMsgAndArgs {
+		if c, ok := v.(Constraint); ok {
+			cc = append(cc, c)
+		}
+	}
+	if len(cc) > 0 {
+		PanicsWith(r.t, f, cc...)
+	} else {
+		r.Assertions.Panics(f, constaintsOrMsgAndArgs...)
+	}
+}
+
 // PanicsWith asserts that the code inside the specified function panics,
 // and that the recovered panic value is satisfies the given constraints.
 //
@@ -72,11 +95,34 @@ func (r *Require) PanicsWith(f func(), c ...Constraint) {
 	}
 }
 
+// Error asserts that a function returned an error (i.e. not `nil`).
+//
+// If constaintsAndMsgAndArgs contains constraints, then ErrorWith will be
+// called with these constraints, else Error will be called from testify/assert.
+//
+//	require := require.New(t)
+//	result, err := SomeFunction()
+//	require.Error(err,
+//		require.Is(MyError),
+//		require.Has("my message"))
+func (r *Require) Error(err error, constaintsOrMsgAndArgs ...interface{}) {
+	cc := make([]Constraint, 0)
+	for _, v := range constaintsOrMsgAndArgs {
+		if c, ok := v.(Constraint); ok {
+			cc = append(cc, c)
+		}
+	}
+	if len(cc) > 0 {
+		ErrorWith(r.t, err, cc...)
+	} else {
+		r.Assertions.Error(err, constaintsOrMsgAndArgs...)
+	}
+}
+
 // ErrorWith asserts that the given error is not nil and satisfies the given constraints.
 //
 //	require := require.New(t)
-//	require.ErrorWith(
-//		err,
+//	require.ErrorWith(err,
 //		require.Is(MyError),
 //		require.Has("my message"))
 func (r *Require) ErrorWith(e error, c ...Constraint) {
