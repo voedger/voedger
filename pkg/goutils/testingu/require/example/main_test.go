@@ -15,7 +15,7 @@ import (
 func TestGoCrazy(t *testing.T) {
 	require := require.New(t)
 
-	require.PanicsWith(
+	require.Panics(
 		GoCrazy,
 		require.Is(ErrCrazyError, "panic error should be %v", ErrCrazyError),
 		require.Is(errors.ErrUnsupported),
@@ -30,9 +30,9 @@ func TestGoCrazy(t *testing.T) {
 func TestCrazyError(t *testing.T) {
 	require := require.New(t)
 
-	require.ErrorWith(
+	require.Error(
 		ErrCrazyError,
-		require.Is(errors.ErrUnsupported),
+		require.Is(errors.ErrUnsupported, "error should be %v", errors.ErrUnsupported),
 		require.Has("🤪"),
 	)
 }
