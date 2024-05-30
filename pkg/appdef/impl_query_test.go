@@ -131,8 +131,7 @@ func Test_QueryValidate(t *testing.T) {
 		par := NewQName("test", "param")
 		query.SetParam(par)
 		_, err := adb.Build()
-		require.ErrorIs(err, ErrNotFoundError)
-		require.ErrorContains(err, par.String())
+		require.Error(err, require.Is(ErrNotFoundError), require.Has(par))
 
 		_ = adb.AddObject(par)
 	})
@@ -141,8 +140,7 @@ func Test_QueryValidate(t *testing.T) {
 		res := NewQName("test", "res")
 		query.SetResult(res)
 		_, err := adb.Build()
-		require.ErrorIs(err, ErrNotFoundError)
-		require.ErrorContains(err, res.String())
+		require.Error(err, require.Is(ErrNotFoundError), require.Has(res))
 
 		_ = adb.AddObject(res)
 	})

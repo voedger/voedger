@@ -133,7 +133,6 @@ func Test_AppDefAddRateLimitErrors(t *testing.T) {
 
 		_, err := adb.Build()
 
-		require.ErrorIs(err, ErrNotFoundError)
-		require.ErrorContains(err, "test.unknown")
+		require.Error(err, require.Is(ErrNotFoundError), require.Has("test.unknown"))
 	})
 }

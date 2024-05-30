@@ -412,15 +412,13 @@ func TestValidateRefFields(t *testing.T) {
 	t.Run("must be error if reference field ref is not found", func(t *testing.T) {
 		rec.AddRefField("f2", true, NewQName("test", "obj"))
 		_, err := adb.Build()
-		require.ErrorIs(err, ErrNotFoundError)
-		require.ErrorContains(err, "test.obj")
+		require.Error(err, require.Is(ErrNotFoundError), require.Has("test.obj"))
 	})
 
 	t.Run("must be error if reference field refs to non referable type", func(t *testing.T) {
 		adb.AddObject(NewQName("test", "obj"))
 		_, err := adb.Build()
-		require.ErrorIs(err, ErrInvalidError)
-		require.ErrorContains(err, "«test.obj»")
+		require.Error(err, require.Is(ErrInvalidError), require.Has("test.obj"))
 	})
 }
 
