@@ -160,13 +160,11 @@ func TestBasicUsage_RowsProcessorFactory(t *testing.T) {
 }
 
 func deployTestAppWithSecretToken(require *require.Assertions,
-	prepareAppDef func(adb appdef.IAppDefBuilder, wsb appdef.IWorkspaceBuilder),
-	cfgFunc ...func(cfg *istructsmem.AppConfigType)) (
-	appParts appparts.IAppPartitions, cleanup func(), appTokens istructs.IAppTokens) {
+	prepareAppDef func(appdef.IAppDefBuilder, appdef.IWorkspaceBuilder),
+	cfgFunc ...func(*istructsmem.AppConfigType)) (appParts appparts.IAppPartitions, cleanup func(), appTokens istructs.IAppTokens) {
 	cfgs := make(istructsmem.AppConfigsType)
 	asf := mem.Provide()
 	storageProvider := istorageimpl.Provide(asf)
-	tokens := itokensjwt.ProvideITokens(itokensjwt.SecretKeyExample, timeFunc)
 
 	qNameFindArticlesByModificationTimeStampRangeParams := appdef.NewQName("bo", "FindArticlesByModificationTimeStampRangeParamsDef")
 	qNameDepartment := appdef.NewQName("bo", "Department")
@@ -214,7 +212,8 @@ func deployTestAppWithSecretToken(require *require.Assertions,
 	cfg := cfgs.AddConfig(appName, adb)
 	cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 
-	asp := istructsmem.Provide(cfgs, iratesce.TestBucketsFactory, payloads.TestAppTokensFactory(tokens), storageProvider)
+	atf := payloads.TestAppTokensFactory(itokensjwt.ProvideITokens(itokensjwt.SecretKeyExample, timeFunc))
+	asp := istructsmem.Provide(cfgs, iratesce.TestBucketsFactory, atf, storageProvider)
 
 	article := func(id, idDepartment istructs.RecordID, name string) istructs.IObject {
 		return &coreutils.TestObject{
@@ -290,8 +289,6 @@ func deployTestAppWithSecretToken(require *require.Assertions,
 	plogOffset++
 	wlogOffset++
 
-	appTokens = payloads.TestAppTokensFactory(tokens).New(appName)
-
 	// create stub for cdoc.sys.WorkspaceDescriptor to make query processor work
 	require.NoError(err)
 	now := time.Now()
@@ -331,6 +328,8 @@ func deployTestAppWithSecretToken(require *require.Assertions,
 	require.NoError(err)
 	appParts.DeployApp(appName, appDef, partCount, appEngines)
 	appParts.DeployAppPartitions(appName, []istructs.PartitionID{partID})
+
+	appTokens = atf.New(appName)
 
 	return appParts, cleanup, appTokens
 }
