@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/stretchr/testify/require"
+	"github.com/voedger/voedger/pkg/goutils/testingu/require"
 )
 
 func Test_type_AddContainer(t *testing.T) {
@@ -64,30 +64,40 @@ func Test_type_AddContainer(t *testing.T) {
 	})
 
 	t.Run("must be panic if empty container name", func(t *testing.T) {
-		require.Panics(func() { root.AddContainer("", childName, 1, Occurs_Unbounded) })
+		require.Panics(func() { root.AddContainer("", childName, 1, Occurs_Unbounded) },
+			require.Is(ErrMissedError))
 	})
 
 	t.Run("must be panic if invalid container name", func(t *testing.T) {
-		require.Panics(func() { root.AddContainer("naked_🔫", childName, 1, Occurs_Unbounded) })
+		require.Panics(func() { root.AddContainer("naked_🔫", childName, 1, Occurs_Unbounded) },
+			require.Is(ErrInvalidError))
 	})
 
 	t.Run("must be panic if container name dupe", func(t *testing.T) {
-		require.Panics(func() { root.AddContainer("c1", childName, 1, Occurs_Unbounded) })
+		require.Panics(func() { root.AddContainer("c1", childName, 1, Occurs_Unbounded) },
+			require.Is(ErrAlreadyExistsError),
+			require.Has("c1"))
 	})
 
 	t.Run("must be panic if container type name missed", func(t *testing.T) {
-		require.Panics(func() { root.AddContainer("c2", NullQName, 1, Occurs_Unbounded) })
+		require.Panics(func() { root.AddContainer("c2", NullQName, 1, Occurs_Unbounded) },
+			require.Is(ErrMissedError),
+			require.Has("c2"))
 	})
 
 	t.Run("must be panic if invalid occurrences", func(t *testing.T) {
-		require.Panics(func() { root.AddContainer("c2", childName, 1, 0) })
-		require.Panics(func() { root.AddContainer("c3", childName, 2, 1) })
+		require.Panics(func() { root.AddContainer("c2", childName, 1, 0) },
+			require.Is(ErrOutOfBoundsError))
+		require.Panics(func() { root.AddContainer("c3", childName, 2, 1) },
+			require.Is(ErrOutOfBoundsError))
 	})
 
 	t.Run("must be panic if container type is incompatible", func(t *testing.T) {
 		docName := NewQName("test", "doc")
 		_ = adb.AddCDoc(docName)
-		require.Panics(func() { root.AddContainer("c2", docName, 1, 1) })
+		require.Panics(func() { root.AddContainer("c2", docName, 1, 1) },
+			require.Is(ErrInvalidError),
+			require.Has(docName.String()))
 	})
 
 	t.Run("must be panic if too many containers", func(t *testing.T) {
@@ -95,7 +105,8 @@ func Test_type_AddContainer(t *testing.T) {
 		for i := 0; i < MaxTypeContainerCount; i++ {
 			el.AddContainer(fmt.Sprintf("c_%#x", i), childName, 0, Occurs_Unbounded)
 		}
-		require.Panics(func() { el.AddContainer("errorContainer", childName, 0, Occurs_Unbounded) })
+		require.Panics(func() { el.AddContainer("errorContainer", childName, 0, Occurs_Unbounded) },
+			require.Is(ErrTooManyError))
 	})
 }
 

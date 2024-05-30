@@ -8,7 +8,7 @@ package appdef
 import (
 	"testing"
 
-	"github.com/stretchr/testify/require"
+	"github.com/voedger/voedger/pkg/goutils/testingu/require"
 )
 
 func Test_AppDef_AddQuery(t *testing.T) {
@@ -84,11 +84,11 @@ func Test_AppDef_AddQuery(t *testing.T) {
 
 	require.Panics(func() {
 		New().AddQuery(NullQName)
-	}, "panic if name is empty")
+	}, require.Is(ErrMissedError))
 
 	require.Panics(func() {
 		New().AddQuery(NewQName("naked", "🔫"))
-	}, "panic if name is invalid")
+	}, require.Is(ErrInvalidError), require.Has("naked.🔫"))
 
 	t.Run("panic if type with name already exists", func(t *testing.T) {
 		testName := NewQName("test", "dupe")
@@ -97,7 +97,7 @@ func Test_AppDef_AddQuery(t *testing.T) {
 		adb.AddObject(testName)
 		require.Panics(func() {
 			adb.AddQuery(testName)
-		})
+		}, require.Is(ErrAlreadyExistsError), require.Has(testName))
 	})
 
 	t.Run("panic if extension name is empty", func(t *testing.T) {
@@ -106,7 +106,7 @@ func Test_AppDef_AddQuery(t *testing.T) {
 		query := adb.AddQuery(NewQName("test", "query"))
 		require.Panics(func() {
 			query.SetName("")
-		})
+		}, require.Is(ErrMissedError))
 	})
 
 	t.Run("panic if extension name is invalid", func(t *testing.T) {
@@ -115,7 +115,7 @@ func Test_AppDef_AddQuery(t *testing.T) {
 		query := adb.AddQuery(NewQName("test", "query"))
 		require.Panics(func() {
 			query.SetName("naked 🔫")
-		})
+		}, require.Is(ErrInvalidError), require.Has("🔫"))
 	})
 }
 
