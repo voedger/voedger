@@ -159,15 +159,13 @@ func Test_CommandValidate(t *testing.T) {
 		t.Run("must error if parameter name is unknown", func(t *testing.T) {
 			cmd.SetParam(unknown)
 			_, err := adb.Build()
-			require.ErrorIs(err, ErrNotFoundError)
-			require.ErrorContains(err, unknown.String())
+			require.Error(err, require.Is(ErrNotFoundError), require.Has(unknown))
 		})
 
 		t.Run("must error if deprecated parameter type", func(t *testing.T) {
 			cmd.SetParam(bad)
 			_, err := adb.Build()
-			require.ErrorIs(err, ErrInvalidError)
-			require.ErrorContains(err, bad.String())
+			require.Error(err, require.Is(ErrInvalidError), require.Has(bad))
 		})
 
 		cmd.SetParam(obj)
@@ -177,15 +175,13 @@ func Test_CommandValidate(t *testing.T) {
 		t.Run("must error if unlogged parameter name is unknown", func(t *testing.T) {
 			cmd.SetUnloggedParam(unknown)
 			_, err := adb.Build()
-			require.ErrorIs(err, ErrNotFoundError)
-			require.ErrorContains(err, unknown.String())
+			require.Error(err, require.Is(ErrNotFoundError), require.Has(unknown))
 		})
 
 		t.Run("must error if deprecated unlogged parameter type", func(t *testing.T) {
 			cmd.SetUnloggedParam(bad)
 			_, err := adb.Build()
-			require.ErrorIs(err, ErrInvalidError)
-			require.ErrorContains(err, bad.String())
+			require.Error(err, require.Is(ErrInvalidError), require.Has(bad))
 		})
 
 		cmd.SetUnloggedParam(obj)
@@ -195,15 +191,13 @@ func Test_CommandValidate(t *testing.T) {
 		t.Run("must error if result object name is unknown", func(t *testing.T) {
 			cmd.SetResult(unknown)
 			_, err := adb.Build()
-			require.ErrorIs(err, ErrNotFoundError)
-			require.ErrorContains(err, unknown.String())
+			require.Error(err, require.Is(ErrNotFoundError), require.Has(unknown))
 		})
 
 		t.Run("must error if deprecated unlogged parameter type", func(t *testing.T) {
 			cmd.SetResult(bad)
 			_, err := adb.Build()
-			require.ErrorIs(err, ErrInvalidError)
-			require.ErrorContains(err, bad.String())
+			require.Error(err, require.Is(ErrInvalidError), require.Has(bad))
 		})
 
 		cmd.SetResult(obj)
