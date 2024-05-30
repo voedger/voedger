@@ -70,7 +70,7 @@ func (uu *uniques) setUniqueField(name FieldName) {
 		return
 	}
 	if ok, err := ValidFieldName(name); !ok {
-		panic((fmt.Errorf("unique field name «%v» is invalid: %w", name, err)))
+		panic(fmt.Errorf("unique field name «%v» is invalid: %w", name, err))
 	}
 
 	fld := uu.fields.Field(name)

@@ -15,7 +15,7 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/stretchr/testify/require"
+	"github.com/voedger/voedger/pkg/goutils/testingu/require"
 )
 
 func TestBasicUsage_QName(t *testing.T) {
@@ -304,10 +304,9 @@ func TestMustParseQName(t *testing.T) {
 		})
 	}
 
+	require := require.New(t)
 	t.Run("panic if invalid QName", func(t *testing.T) {
-		require.Panics(t, func() {
-			MustParseQName("🔫")
-		})
+		require.Panics(func() { MustParseQName("🔫") }, require.Is(ErrConvertError), require.Has("🔫"))
 	})
 }
 
@@ -675,9 +674,8 @@ func TestMustParseFullQName(t *testing.T) {
 		})
 	}
 
+	require := require.New(t)
 	t.Run("panic if invalid FullQName", func(t *testing.T) {
-		require.Panics(t, func() {
-			MustParseFullQName("🔫")
-		})
+		require.Panics(func() { MustParseFullQName("🔫") }, require.Is(ErrConvertError), require.Has("🔫"))
 	})
 }

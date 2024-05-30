@@ -82,7 +82,7 @@ func Test_appDefBuilder_MustBuild(t *testing.T) {
 		adb := New()
 		adb.AddView(NewQName("test", "emptyView"))
 
-		require.PanicsWith(func() { _ = adb.MustBuild() },
+		require.Panics(func() { _ = adb.MustBuild() },
 			require.Is(ErrMissedError),
 			require.Has("emptyView"),
 		)
