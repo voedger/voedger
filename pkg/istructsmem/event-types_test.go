@@ -2014,6 +2014,13 @@ func Test_objectType_FillFromJSON(t *testing.T) {
 				require.Equal(test.testObj, o.QName())
 				require.EqualValues(0, o.AsInt32("int32"))
 			}},
+		{"must be ok to fill from JSON with nil values even for unknown fields",
+			`{"int32": nil, "unknown": nil}`,
+			func(o istructs.IObject, err error) {
+				require.NoError(err)
+				require.Equal(test.testObj, o.QName())
+				require.EqualValues(0, o.AsInt32("int32"))
+			}},
 		{"must be ok to fill fields from JSON",
 			`{"int32": 1, "int64": 2, "float32": 3.3, "float64": 4.4, "bool": true, "string": "test", "bytes": "AQID"}`,
 			func(o istructs.IObject, err error) {
@@ -2042,6 +2049,16 @@ func Test_objectType_FillFromJSON(t *testing.T) {
 					return cnt
 				}())
 			}},
+		{"must ok to fill with nil values",
+			`{"int32": null, "bool": null, "string": null, "bytes": null}`,
+			func(o istructs.IObject, err error) {
+				require.NoError(err)
+				require.Equal(test.testObj, o.QName())
+				require.Zero(o.AsInt32("int32"))
+				require.Zero(o.AsBool("bool"))
+				require.Zero(o.AsString("string"))
+				require.Zero(o.AsBytes("bytes"))
+			}},
 		{"must be error if unknown field in JSON",
 			`{"unknown": 1}`,
 			func(o istructs.IObject, err error) {
@@ -2067,6 +2084,13 @@ func Test_objectType_FillFromJSON(t *testing.T) {
 				require.ErrorContains(err, "invalid type «string»")
 				require.ErrorContains(err, "child «child[0]»")
 			}},
+		{"must be error if invalid data type in JSON container",
+			`{"child": ["a","b"]}`,
+			func(o istructs.IObject, err error) {
+				require.ErrorIs(err, ErrWrongType)
+				require.ErrorContains(err, "invalid type «string»")
+				require.ErrorContains(err, "child «child[0]»")
+			}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -2080,4 +2104,16 @@ func Test_objectType_FillFromJSON(t *testing.T) {
 			tt.check(b.Build())
 		})
 	}
+
+	t.Run("must be error on provide a value of a wrong type", func(t *testing.T) {
+		b := test.AppStructs.ObjectBuilder(test.testObj)
+		require.NotNil(b)
+		j := map[string]any{
+			"int32": int(42),
+		}
+		b.FillFromJSON(j)
+
+		_, err := b.Build()
+		require.ErrorIs(err, ErrWrongType)
+	})
 }

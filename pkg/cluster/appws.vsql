@@ -21,8 +21,12 @@ ALTER WORKSPACE AppWorkspaceWS (
 		Query varchar NOT NULL
 	);
 
+	TYPE VSqlUpdateResult (
+		NewID ref -- filled on `insert table` only
+	);
+
 	EXTENSION ENGINE BUILTIN (
 		COMMAND DeployApp(AppDeploymentDescriptor);
-		COMMAND VSqlUpdate(VSqlUpdateParams);
+		COMMAND VSqlUpdate(VSqlUpdateParams) RETURNS VSqlUpdateResult;
 	);
 );

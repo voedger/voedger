@@ -13,50 +13,61 @@ import (
 	"github.com/voedger/voedger/pkg/utils/federation"
 )
 
-type QPStateOptFunc func(opts *qpStateOpts)
-
-type qpStateOpts struct {
-	customHttpClient         IHttpClient
-	federationCommandHandler FederationCommandHandler
+type queryProcessorState struct {
+	*hostState
+	queryArgs     PrepareArgsFunc
+	queryCallback ExecQueryCallbackFunc
 }
 
-func QPWithCustomHttpClient(client IHttpClient) QPStateOptFunc {
-	return func(opts *qpStateOpts) {
-		opts.customHttpClient = client
-	}
+func (s queryProcessorState) QueryPrepareArgs() istructs.PrepareArgs {
+	return s.queryArgs()
 }
 
-func QPWithFedearationCommandHandler(handler FederationCommandHandler) QPStateOptFunc {
-	return func(opts *qpStateOpts) {
-		opts.federationCommandHandler = handler
-	}
+func (s queryProcessorState) QueryCallback() istructs.ExecQueryCallback {
+	return s.queryCallback()
 }
 
-func implProvideQueryProcessorState(ctx context.Context, appStructsFunc AppStructsFunc, partitionIDFunc PartitionIDFunc, wsidFunc WSIDFunc,
-	secretReader isecrets.ISecretReader, principalsFunc PrincipalsFunc, tokenFunc TokenFunc, itokens itokens.ITokens, argFunc ArgFunc, resultBuilderFunc ObjectBuilderFunc,
-	federation federation.IFederation, queryCallbackFunc ExecQueryCallbackFunc, options ...QPStateOptFunc) IHostState {
+func implProvideQueryProcessorState(
+	ctx context.Context,
+	appStructsFunc AppStructsFunc,
+	partitionIDFunc PartitionIDFunc,
+	wsidFunc WSIDFunc,
+	secretReader isecrets.ISecretReader,
+	principalsFunc PrincipalsFunc,
+	tokenFunc TokenFunc,
+	itokens itokens.ITokens,
+	execQueryArgsFunc PrepareArgsFunc,
+	argFunc ArgFunc,
+	resultBuilderFunc ObjectBuilderFunc,
+	federation federation.IFederation,
+	queryCallbackFunc ExecQueryCallbackFunc,
+	options ...StateOptFunc) IHostState {
 
-	opts := &qpStateOpts{}
+	opts := &stateOpts{}
 	for _, optFunc := range options {
 		optFunc(opts)
 	}
 
-	bs := newHostState("QueryProcessor", queryProcessorStateMaxIntents, appStructsFunc)
+	state := &queryProcessorState{
+		hostState:     newHostState("QueryProcessor", queryProcessorStateMaxIntents, appStructsFunc),
+		queryArgs:     execQueryArgsFunc,
+		queryCallback: queryCallbackFunc,
+	}
 
-	bs.addStorage(View, newViewRecordsStorage(ctx, appStructsFunc, wsidFunc, nil), S_GET|S_GET_BATCH|S_READ)
-	bs.addStorage(Record, newRecordsStorage(appStructsFunc, wsidFunc, nil), S_GET|S_GET_BATCH)
+	state.addStorage(View, newViewRecordsStorage(ctx, appStructsFunc, wsidFunc, nil), S_GET|S_GET_BATCH|S_READ)
+	state.addStorage(Record, newRecordsStorage(appStructsFunc, wsidFunc, nil), S_GET|S_GET_BATCH)
 
-	bs.addStorage(WLog, &wLogStorage{
+	state.addStorage(WLog, &wLogStorage{
 		ctx:        ctx,
 		eventsFunc: func() istructs.IEvents { return appStructsFunc().Events() },
 		wsidFunc:   wsidFunc,
 	}, S_GET|S_READ)
 
-	bs.addStorage(Http, &httpStorage{
+	state.addStorage(Http, &httpStorage{
 		customClient: opts.customHttpClient,
 	}, S_READ)
 
-	bs.addStorage(FederationCommand, &federationCommandStorage{
+	state.addStorage(FederationCommand, &federationCommandStorage{
 		appStructs: appStructsFunc,
 		wsid:       wsidFunc,
 		emulation:  opts.federationCommandHandler,
@@ -64,21 +75,23 @@ func implProvideQueryProcessorState(ctx context.Context, appStructsFunc AppStruc
 		tokens:     itokens,
 	}, S_GET)
 
-	bs.addStorage(AppSecret, &appSecretsStorage{secretReader: secretReader}, S_GET)
+	state.addStorage(AppSecret, &appSecretsStorage{secretReader: secretReader}, S_GET)
 
-	bs.addStorage(RequestSubject, &subjectStorage{
+	state.addStorage(RequestSubject, &subjectStorage{
 		principalsFunc: principalsFunc,
 		tokenFunc:      tokenFunc,
 	}, S_GET)
 
-	bs.addStorage(QueryContext, &queryContextStorage{
+	state.addStorage(QueryContext, &queryContextStorage{
 		argFunc:  argFunc,
 		wsidFunc: wsidFunc,
 	}, S_GET)
 
-	bs.addStorage(Response, &cmdResponseStorage{}, S_INSERT)
+	state.addStorage(Response, &cmdResponseStorage{}, S_INSERT)
 
-	bs.addStorage(Result, newQueryResultStorage(appStructsFunc, resultBuilderFunc, queryCallbackFunc), S_INSERT)
+	state.addStorage(Result, newQueryResultStorage(appStructsFunc, resultBuilderFunc, queryCallbackFunc), S_INSERT)
 
-	return bs
+	state.addStorage(Uniq, newUniquesStorage(appStructsFunc, wsidFunc, opts.uniquesHandler), S_GET)
+
+	return state
 }

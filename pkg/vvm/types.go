@@ -43,7 +43,7 @@ type OperatorQueryProcessor pipeline.ISyncOperator
 type AppServiceFactory func(ctx context.Context, appQName istructs.AppQName, asyncProjectors istructs.Projectors, appPartsCount istructs.NumAppPartitions) pipeline.ISyncOperator
 type AppPartitionFactory func(ctx context.Context, appQName istructs.AppQName, asyncProjectors istructs.Projectors, partitionID istructs.PartitionID) pipeline.ISyncOperator
 type AsyncActualizersFactory func(ctx context.Context, appQName istructs.AppQName, asyncProjectors istructs.Projectors, partitionID istructs.PartitionID,
-	tokens itokens.ITokens, federation federation.IFederation, opts []state.ActualizerStateOptFunc) pipeline.ISyncOperator
+	tokens itokens.ITokens, federation federation.IFederation, opts []state.StateOptFunc) pipeline.ISyncOperator
 type OperatorAppServicesFactory func(ctx context.Context) pipeline.ISyncOperator
 type CommandChannelFactory func(channelIdx int) commandprocessor.CommandChannel
 type QueryChannel iprocbus.ServiceChannel
@@ -151,7 +151,7 @@ type VVMConfig struct {
 	MetricsServicePort MetricsServicePortInitial
 	// test and FederationURL contains port -> the port will be relaced with the actual VVMPort
 	FederationURL       *url.URL
-	ActualizerStateOpts []state.ActualizerStateOptFunc
+	ActualizerStateOpts []state.StateOptFunc
 	SecretsReader       isecrets.ISecretReader
 	// used in tests only
 	KeyspaceNameSuffix string

@@ -66,6 +66,14 @@ func (s hostState) PLogEvent() istructs.IPLogEvent {
 	panic("PLogEvent only available in actualizers")
 }
 
+func (s hostState) QueryPrepareArgs() istructs.PrepareArgs {
+	panic(errQueryPrepareArgsNotSupportedByState)
+}
+
+func (s hostState) QueryCallback() istructs.ExecQueryCallback {
+	panic(errQueryCallbackNotSupportedByState)
+}
+
 func (s *hostState) addStorage(storageName appdef.QName, storage IStateStorage, ops int) {
 	s.storages[storageName] = storage
 	if supports(ops, S_GET) {

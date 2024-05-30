@@ -56,6 +56,7 @@ func TestResultStorage_QueryProcessor(t *testing.T) {
 	sentObjects := make([]istructs.IObject, 0)
 
 	cmdResBuilder := istructs.NewNullObjectBuilder()
+
 	execQueryCallback := func() istructs.ExecQueryCallback {
 		return func(object istructs.IObject) error {
 			sentObjects = append(sentObjects, object)
@@ -63,7 +64,7 @@ func TestResultStorage_QueryProcessor(t *testing.T) {
 		}
 	}
 	s := ProvideQueryProcessorStateFactory()(context.Background(), nil, nil, SimpleWSIDFunc(istructs.NullWSID),
-		nil, nil, nil, nil, nil, func() istructs.IObjectBuilder { return cmdResBuilder }, nil, execQueryCallback)
+		nil, nil, nil, nil, nil, nil, func() istructs.IObjectBuilder { return cmdResBuilder }, nil, execQueryCallback)
 
 	kb, err := s.KeyBuilder(Result, appdef.NullQName)
 	require.NoError(t, err)

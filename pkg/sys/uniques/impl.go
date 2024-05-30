@@ -18,7 +18,7 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
-	"github.com/voedger/voedger/pkg/state"
+
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
@@ -60,11 +60,11 @@ func update(st istructs.IState, rec istructs.ICUDRow, intents istructs.IIntents,
 	// so came here -> we're updating anything but unique fields
 	// let's check activation\deactivation
 
-	kb, err := st.KeyBuilder(state.Record, rec.QName())
+	kb, err := st.KeyBuilder(qnameRecordStorage, rec.QName())
 	if err != nil {
 		return err
 	}
-	kb.PutRecordID(state.Field_ID, rec.ID())
+	kb.PutRecordID(field_RecordID, rec.ID())
 	currentRecord, err := st.MustExist(kb)
 	if err != nil {
 		return err
@@ -133,7 +133,7 @@ func getUniqueViewRecord(st istructs.IState, rec istructs.IRowReader, uniqueFiel
 	if err != nil {
 		return nil, nil, false, err
 	}
-	uniqueViewRecordBuilder, err := st.KeyBuilder(state.View, qNameViewUniques)
+	uniqueViewRecordBuilder, err := st.KeyBuilder(qnameViewStorage, qNameViewUniques)
 	if err != nil {
 		// notest
 		return nil, nil, false, err

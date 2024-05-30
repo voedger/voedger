@@ -232,7 +232,7 @@ func projectorApplyDeactivateWorkspace(federation federation.IFederation, tokens
 
 		// currentApp/ApplicationWS/c.sys.OnWorkspaceDeactivated(OnwerWSID, WSName)
 		wsName := wsDesc.AsString(authnz.Field_WSName)
-		body := fmt.Sprintf(`{"args":{"OwnerWSID":%d, "WSName":"%s"}}`, ownerWSID, wsName)
+		body := fmt.Sprintf(`{"args":{"OwnerWSID":%d, "WSName":%q}}`, ownerWSID, wsName)
 		cdocWorkspaceIDWSID := coreutils.GetPseudoWSID(istructs.WSID(ownerWSID), wsName, event.Workspace().ClusterID())
 		if _, err := federation.Func(fmt.Sprintf("api/%s/%d/c.sys.OnWorkspaceDeactivated", ownerApp, cdocWorkspaceIDWSID), body,
 			coreutils.WithDiscardResponse(), coreutils.WithAuthorizeBy(sysToken)); err != nil {
