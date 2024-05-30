@@ -150,7 +150,7 @@ func (rt *partitionRT) Invoke(ctx context.Context, name appdef.QName, state istr
 
 	extName := rt.appDef.FullQName(name)
 	if extName == appdef.NullFullQName {
-		return errUndefinedExtension(name)
+		return errCantObtainFullQName(name)
 	}
 	io := iextengine.NewExtensionIO(rt.appDef, state, intents)
 

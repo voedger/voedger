@@ -16,7 +16,7 @@ import (
 var ErrNotFound = errors.New("not found")
 
 var (
-	ErrNotAvailableEngines                                    = errors.New("no available engines")
+	ErrNotAvailableEngines                            = errors.New("no available engines")
 	errNotAvailableEngines [ProcessorKind_Count]error = [ProcessorKind_Count]error{
 		fmt.Errorf("%w %s", ErrNotAvailableEngines, ProcessorKind_Command.TrimString()),
 		fmt.Errorf("%w %s", ErrNotAvailableEngines, ProcessorKind_Query.TrimString()),
@@ -38,4 +38,8 @@ func errPartitionNotFound(name istructs.AppQName, partID istructs.PartitionID) e
 
 func errUndefinedExtension(n appdef.QName) error {
 	return fmt.Errorf("undefined extension %v: %w", n, ErrNotFound)
+}
+
+func errCantObtainFullQName(n appdef.QName) error {
+	return fmt.Errorf("can't obtain full qualified name for «%v»: %w", n, ErrNotFound)
 }

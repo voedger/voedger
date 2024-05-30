@@ -7,6 +7,7 @@ package iextengine
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/juju/errors"
 	"github.com/voedger/voedger/pkg/appdef"
@@ -21,8 +22,8 @@ type nullExtensionEngine struct{}
 
 func (nullExtensionEngine) SetLimits(limits ExtensionLimits) {}
 
-func (nullExtensionEngine) Invoke(context.Context, appdef.FullQName, IExtensionIO) error {
-	return errors.NotSupported
+func (nullExtensionEngine) Invoke(_ context.Context, n appdef.FullQName, _ IExtensionIO) error {
+	return fmt.Errorf("unable nullExtensionEngine.Invoke(%v): %w", n, errors.NotSupported)
 }
 
 func (nullExtensionEngine) Close(context.Context) {}
