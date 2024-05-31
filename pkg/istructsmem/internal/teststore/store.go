@@ -9,6 +9,7 @@ import (
 	"bytes"
 	"context"
 
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istorage/mem"
 	"github.com/voedger/voedger/pkg/istorage/provider"
@@ -39,7 +40,7 @@ type (
 	}
 )
 
-func (tsp *testStorageProvider) AppStorage(appName istructs.AppQName) (structs istorage.IAppStorage, err error) {
+func (tsp *testStorageProvider) AppStorage(appName appdef.AppQName) (structs istorage.IAppStorage, err error) {
 	return tsp.testStorage, nil
 }
 

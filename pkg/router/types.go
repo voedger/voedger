@@ -17,6 +17,7 @@ import (
 
 	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
 
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/iblobstorage"
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/iprocbus"
@@ -48,7 +49,7 @@ type httpService struct {
 	blobWG             sync.WaitGroup
 	bus                ibus.IBus
 	busTimeout         time.Duration
-	numsAppsWorkspaces map[istructs.AppQName]istructs.NumAppWorkspaces
+	numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces
 	name               string
 }
 

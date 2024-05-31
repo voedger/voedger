@@ -121,8 +121,8 @@ func newVit(t testing.TB, vitCfg *VITConfig, useCas bool) *VIT {
 		VoedgerVM:            vvm,
 		VVMConfig:            &cfg,
 		T:                    t,
-		appWorkspaces:        map[istructs.AppQName]map[string]*AppWorkspace{},
-		principals:           map[istructs.AppQName]map[string]*Principal{},
+		appWorkspaces:        map[appdef.AppQName]map[string]*AppWorkspace{},
+		principals:           map[appdef.AppQName]map[string]*Principal{},
 		lock:                 sync.Mutex{},
 		isOnSharedConfig:     vitCfg.isShared,
 		configCleanupsAmount: len(vitPreConfig.cleanups),
@@ -258,7 +258,7 @@ func NewVITLocalCassandra(tb testing.TB, vitCfg *VITConfig, opts ...vitOptFunc) 
 	return vit
 }
 
-func (vit *VIT) WS(appQName istructs.AppQName, wsName string) *AppWorkspace {
+func (vit *VIT) WS(appQName appdef.AppQName, wsName string) *AppWorkspace {
 	appWorkspaces, ok := vit.appWorkspaces[appQName]
 	if !ok {
 		panic("unknown app " + appQName.String())
@@ -292,7 +292,7 @@ func (vit *VIT) MetricsServicePort() int {
 	return int(vit.VoedgerVM.MetricsServicePort())
 }
 
-func (vit *VIT) GetSystemPrincipal(appQName istructs.AppQName) *Principal {
+func (vit *VIT) GetSystemPrincipal(appQName appdef.AppQName) *Principal {
 	vit.T.Helper()
 	vit.lock.Lock()
 	defer vit.lock.Unlock()
@@ -321,7 +321,7 @@ func (vit *VIT) GetSystemPrincipal(appQName istructs.AppQName) *Principal {
 	return prn
 }
 
-func (vit *VIT) GetPrincipal(appQName istructs.AppQName, login string) *Principal {
+func (vit *VIT) GetPrincipal(appQName appdef.AppQName, login string) *Principal {
 	vit.T.Helper()
 	appPrincipals, ok := vit.principals[appQName]
 	if !ok {
@@ -354,14 +354,14 @@ func (vit *VIT) PostWSSys(ws *AppWorkspace, funcName string, body string, opts .
 	return vit.PostApp(ws.Owner.AppQName, ws.WSID, funcName, body, opts...)
 }
 
-func (vit *VIT) UploadBLOBs(appQName istructs.AppQName, wsid istructs.WSID, blobs []coreutils.BLOB, opts ...coreutils.ReqOptFunc) (blobIDs []istructs.RecordID) {
+func (vit *VIT) UploadBLOBs(appQName appdef.AppQName, wsid istructs.WSID, blobs []coreutils.BLOB, opts ...coreutils.ReqOptFunc) (blobIDs []istructs.RecordID) {
 	vit.T.Helper()
 	blobIDs, err := vit.IFederation.UploadBLOBs(appQName, wsid, blobs, opts...)
 	require.NoError(vit.T, err)
 	return blobIDs
 }
 
-func (vit *VIT) UploadBLOB(appQName istructs.AppQName, wsid istructs.WSID, blobName string, blobMimeType string, blobContent []byte,
+func (vit *VIT) UploadBLOB(appQName appdef.AppQName, wsid istructs.WSID, blobName string, blobMimeType string, blobContent []byte,
 	opts ...coreutils.ReqOptFunc) (blobID istructs.RecordID) {
 	vit.T.Helper()
 	blobID, err := vit.IFederation.UploadBLOB(appQName, wsid, blobName, blobMimeType, blobContent, opts...)
@@ -376,7 +376,7 @@ func (vit *VIT) Func(url string, body string, opts ...coreutils.ReqOptFunc) *cor
 	return res
 }
 
-func (vit *VIT) ReadBLOB(appQName istructs.AppQName, wsid istructs.WSID, blobID istructs.RecordID, optFuncs ...coreutils.ReqOptFunc) *coreutils.HTTPResponse {
+func (vit *VIT) ReadBLOB(appQName appdef.AppQName, wsid istructs.WSID, blobID istructs.RecordID, optFuncs ...coreutils.ReqOptFunc) *coreutils.HTTPResponse {
 	vit.T.Helper()
 	resp, err := vit.IFederation.ReadBLOB(appQName, wsid, blobID, optFuncs...)
 	require.NoError(vit.T, err)
@@ -392,7 +392,7 @@ func (vit *VIT) POST(relativeURL string, body string, opts ...coreutils.ReqOptFu
 	return res
 }
 
-func (vit *VIT) PostApp(appQName istructs.AppQName, wsid istructs.WSID, funcName string, body string, opts ...coreutils.ReqOptFunc) *coreutils.FuncResponse {
+func (vit *VIT) PostApp(appQName appdef.AppQName, wsid istructs.WSID, funcName string, body string, opts ...coreutils.ReqOptFunc) *coreutils.FuncResponse {
 	vit.T.Helper()
 	url := fmt.Sprintf("api/%s/%d/%s", appQName, wsid, funcName)
 	res, err := vit.IFederation.Func(url, body, opts...)
@@ -462,7 +462,7 @@ func (vit *VIT) NextName() string {
 
 // sets `bs` as state of Buckets for `rateLimitName` in `appQName`
 // will be automatically restored on vit.TearDown() to the state the Bucket was before MockBuckets() call
-func (vit *VIT) MockBuckets(appQName istructs.AppQName, rateLimitName string, bs irates.BucketState) {
+func (vit *VIT) MockBuckets(appQName appdef.AppQName, rateLimitName string, bs irates.BucketState) {
 	vit.T.Helper()
 	as, err := vit.IAppStructsProvider.AppStructs(appQName)
 	require.NoError(vit.T, err)

@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
@@ -60,7 +61,7 @@ func TestMetrics_List(t *testing.T) {
 func TestToPrometheus(t *testing.T) {
 	tests := []struct {
 		name  string
-		app   istructs.AppQName
+		app   appdef.AppQName
 		vvm   string
 		value float64
 		want  string
@@ -74,7 +75,7 @@ func TestToPrometheus(t *testing.T) {
 		},
 		{
 			name:  "Without app",
-			app:   istructs.NullAppQName,
+			app:   appdef.NullAppQName,
 			vvm:   "host",
 			value: 164759,
 			want:  "something_total{vvm=\"host\"} 164759\n",

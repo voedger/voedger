@@ -23,7 +23,7 @@ import (
 
 type (
 	testDataType struct {
-		appName istructs.AppQName
+		appName appdef.AppQName
 		pkgName string
 
 		AppConfigs AppConfigsType

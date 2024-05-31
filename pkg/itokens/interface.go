@@ -9,6 +9,7 @@ package itokens
 import (
 	"time"
 
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
@@ -17,7 +18,7 @@ type ITokens interface {
 	// Payload must be sent by reference
 	// All payload fields go to token payload
 	// Audience = payload.Type.package + payload.Type.Name
-	IssueToken(app istructs.AppQName, duration time.Duration, pointerToPayload interface{}) (token string, err error)
+	IssueToken(app appdef.AppQName, duration time.Duration, pointerToPayload interface{}) (token string, err error)
 
 	// Payload must be sent by reference
 	// payload MUST be a pointer to the struct of the type used in IssueToken (checked using Audience)

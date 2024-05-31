@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/itokens"
@@ -50,7 +51,7 @@ func provideQryInitiateResetPasswordByEmailExec(itokens itokens.ITokens, federat
 		language := args.ArgumentObject.AsString(field_Language)
 		login := email // TODO: considering login is email
 
-		loginAppQName, err := istructs.ParseAppQName(loginAppStr)
+		loginAppQName, err := appdef.ParseAppQName(loginAppStr)
 		if err != nil {
 			return coreutils.NewHTTPError(http.StatusBadRequest, err)
 		}
@@ -103,7 +104,7 @@ func provideIssueVerifiedValueTokenForResetPasswordExec(itokens itokens.ITokens,
 		profileWSID := args.ArgumentObject.AsInt64(field_ProfileWSID)
 		loginAppStr := args.ArgumentObject.AsString(authnz.Field_AppName)
 
-		loginAppQName, err := istructs.ParseAppQName(loginAppStr)
+		loginAppQName, err := appdef.ParseAppQName(loginAppStr)
 		if err != nil {
 			return coreutils.NewHTTPError(http.StatusBadRequest, err)
 		}

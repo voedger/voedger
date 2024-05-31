@@ -26,8 +26,8 @@ type VIT struct {
 	cleanups             []func(vit *VIT)
 	isFinalized          bool
 	nextNumber           int
-	appWorkspaces        map[istructs.AppQName]map[string]*AppWorkspace
-	principals           map[istructs.AppQName]map[string]*Principal // потому что принципалы обновляются
+	appWorkspaces        map[appdef.AppQName]map[string]*AppWorkspace
+	principals           map[appdef.AppQName]map[string]*Principal // потому что принципалы обновляются
 	isOnSharedConfig     bool
 	initialGoroutinesNum int
 	configCleanupsAmount int
@@ -45,7 +45,7 @@ type VITConfig struct {
 	isShared bool
 }
 
-type vitApps map[istructs.AppQName]*app // указатель потому, что к app потом будут опции применяться ([]logins, например)
+type vitApps map[appdef.AppQName]*app // указатель потому, что к app потом будут опции применяться ([]logins, например)
 
 type vitPreConfig struct {
 	vvmCfg       *vvm.VVMConfig
@@ -65,7 +65,7 @@ type PostConstructFunc func(intf interface{})
 type Login struct {
 	Name, Pwd         string
 	PseudoProfileWSID istructs.WSID
-	AppQName          istructs.AppQName
+	AppQName          appdef.AppQName
 	subjectKind       istructs.SubjectKindType
 	clusterID         istructs.ClusterID
 	docs              map[appdef.QName]func(verifiedValues map[string]string) map[string]interface{}
@@ -101,7 +101,7 @@ type AppWorkspace struct {
 	Owner *Principal // потому что токены принципала обновляются, когда меняется время
 }
 
-func (a *AppWorkspace) AppQName() istructs.AppQName { return a.Owner.AppQName }
+func (a *AppWorkspace) AppQName() appdef.AppQName { return a.Owner.AppQName }
 
 type Principal struct {
 	Login
@@ -115,11 +115,11 @@ type verifiedValueIntent struct {
 	desiredValue string
 }
 
-func (p *Principal) GetWSID() istructs.WSID         { return p.ProfileWSID }
-func (p *Principal) GetAppQName() istructs.AppQName { return p.AppQName }
+func (p *Principal) GetWSID() istructs.WSID       { return p.ProfileWSID }
+func (p *Principal) GetAppQName() appdef.AppQName { return p.AppQName }
 
 type app struct {
-	name                  istructs.AppQName
+	name                  appdef.AppQName
 	logins                []Login
 	ws                    map[string]WSParams
 	wsTemplateFuncs       []func(extensionpoints.IExtensionPoint)

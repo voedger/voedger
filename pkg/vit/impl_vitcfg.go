@@ -162,7 +162,7 @@ func WithPostInit(postInitFunc func(vit *VIT)) vitConfigOptFunc {
 	}
 }
 
-func WithApp(appQName istructs.AppQName, updater apps.AppBuilder, appOpts ...AppOptFunc) vitConfigOptFunc {
+func WithApp(appQName appdef.AppQName, updater apps.AppBuilder, appOpts ...AppOptFunc) vitConfigOptFunc {
 	return func(vpc *vitPreConfig) {
 		_, ok := vpc.vitApps[appQName]
 		if ok {

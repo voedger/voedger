@@ -562,7 +562,7 @@ func Test_Provide(t *testing.T) {
 		p := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), nil)
 		require.NotNil(p)
 
-		_, err := p.AppStructs(istructs.NewAppQName("test1", "unknownApp"))
+		_, err := p.AppStructs(appdef.NewAppQName("test1", "unknownApp"))
 		require.ErrorIs(err, istructs.ErrAppNotFound)
 	})
 

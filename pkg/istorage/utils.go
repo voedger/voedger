@@ -12,10 +12,10 @@ import (
 	"unicode"
 
 	"github.com/google/uuid"
-	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/appdef"
 )
 
-func NewSafeAppName(appQName istructs.AppQName, uniqueFunc func(name string) (bool, error)) (san SafeAppName, err error) {
+func NewSafeAppName(appQName appdef.AppQName, uniqueFunc func(name string) (bool, error)) (san SafeAppName, err error) {
 	appName := appQName.String()
 	appName = strings.ToLower(appName)
 

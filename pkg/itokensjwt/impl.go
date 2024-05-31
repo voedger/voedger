@@ -15,6 +15,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 
 	"github.com/golang-jwt/jwt"
@@ -29,7 +30,7 @@ var (
 	onTokenArrayPartsMutate func() []string
 )
 
-func (j *JWTSigner) IssueToken(app istructs.AppQName, duration time.Duration, pointerToPayload interface{}) (token string, err error) {
+func (j *JWTSigner) IssueToken(app appdef.AppQName, duration time.Duration, pointerToPayload interface{}) (token string, err error) {
 	//	var duration float64
 	var b []byte
 	audience := reflect.TypeOf(pointerToPayload).Elem()
@@ -156,7 +157,7 @@ func buildGenericPayload(claims jwt.Claims) (gp istructs.GenericPayload, err err
 		err = fmt.Errorf("cannot marshal input payload %w", itokens.ErrInvalidPayload)
 		return gp, err
 	}
-	qname := istructs.AppQName{}
+	qname := appdef.AppQName{}
 	e = json.Unmarshal(b, &qname)
 	if e != nil {
 		err = fmt.Errorf("error unmarshal token to mapClaims %w", itokens.ErrInvalidPayload)

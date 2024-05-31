@@ -128,7 +128,7 @@ func Test400BadRequests(t *testing.T) {
 		t.Run(c.desc, func(t *testing.T) {
 			appQName := istructs.AppQName_test1_app1
 			if len(c.appName) > 0 {
-				appQName, err = istructs.ParseAppQName(c.appName)
+				appQName, err = appdef.ParseAppQName(c.appName)
 				require.NoError(t, err)
 			}
 			vit.PostApp(appQName, 1, c.funcName, "", coreutils.Expect400()).Println()

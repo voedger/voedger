@@ -6,6 +6,7 @@
 package apps
 
 import (
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/istorage"
@@ -36,6 +37,6 @@ type CLIParams struct {
 }
 type BuiltInAppDef struct {
 	appparts.AppDeploymentDescriptor
-	AppQName istructs.AppQName
+	AppQName appdef.AppQName
 	Packages []parser.PackageFS
 }

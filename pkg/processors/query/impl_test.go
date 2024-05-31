@@ -42,7 +42,7 @@ var now = time.Now()
 var timeFunc = coreutils.TimeFunc(func() time.Time { return now })
 
 var (
-	appName    istructs.AppQName         = istructs.AppQName_test1_app1
+	appName    appdef.AppQName           = istructs.AppQName_test1_app1
 	appEngines                           = appparts.PoolSize(10, 100, 10)
 	partCount  istructs.NumAppPartitions = 10
 	partID     istructs.PartitionID      = 5

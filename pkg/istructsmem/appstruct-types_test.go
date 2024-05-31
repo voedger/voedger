@@ -91,7 +91,7 @@ func TestAppConfigsType_AddConfig(t *testing.T) {
 	t.Run("must be panic to add config for unknown app", func(t *testing.T) {
 		cfgs := make(AppConfigsType)
 		require.Panics(func() {
-			cfgs.AddConfig(istructs.NewAppQName("unknown", "unknown"), appdef.New()).SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
+			cfgs.AddConfig(appdef.NewAppQName("unknown", "unknown"), appdef.New()).SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 		})
 	})
 
@@ -151,14 +151,14 @@ func TestAppConfigsType_GetConfig(t *testing.T) {
 	})
 
 	t.Run("must be error to create config for unknown app", func(t *testing.T) {
-		app := istructs.NewAppQName("unknownOwner", "unknownApplication")
+		app := appdef.NewAppQName("unknownOwner", "unknownApplication")
 		appStructs, err := appStructsProvider.AppStructs(app)
 		require.Nil(appStructs)
 		require.ErrorIs(err, istructs.ErrAppNotFound)
 	})
 
 	t.Run("must be panic to retrieve config for unknown app", func(t *testing.T) {
-		app := istructs.NewAppQName("unknownOwner", "unknownApplication")
+		app := appdef.NewAppQName("unknownOwner", "unknownApplication")
 		require.Panics(func() {
 			_ = cfgs.GetConfig(app)
 		})

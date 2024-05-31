@@ -725,7 +725,7 @@ func setUp(t *testing.T, prepare func(appDef appdef.IAppDefBuilder, cfg *istruct
 		// сымитируем работу реального приложения при приеме запроса-команды
 		cmdQName, err := appdef.ParseQName(request.Resource[2:])
 		require.NoError(err)
-		appQName, err := istructs.ParseAppQName(request.AppQName)
+		appQName, err := appdef.ParseAppQName(request.AppQName)
 		require.NoError(err)
 		tp := appDef.Type(cmdQName)
 		if tp.Kind() == appdef.TypeKind_null {

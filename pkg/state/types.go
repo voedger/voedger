@@ -1099,7 +1099,7 @@ func (c *resultValueBuilder) PutRecordID(name string, value istructs.RecordID) {
 
 type wsTypeKey struct {
 	wsid     istructs.WSID
-	appQName istructs.AppQName
+	appQName appdef.AppQName
 }
 
 type wsTypeVailidator struct {

@@ -21,7 +21,7 @@ pipeline.ISyncOperator3["pipeline.ISyncOperator"]
 state.ActualizerStateOptFunc
 
 istructs.QName
-istructs.AppQName
+appdef.AppQName
 istructs.PartitionID
 istructs.IAppStructsProvider
 istructs.ProjectorFactory(["istructs.ProjectorFactory()"])
@@ -67,7 +67,7 @@ projectors.AsyncActualizerFactory --> pipeline.ISyncOperator3
 state.ActualizerStateOptFunc -..- |"[]"| vvm.provideAppPartitionFactory
 vvm.provideAsyncActualizersFactory ----> vvm.AsyncActualizersFactory
 vvm.provideAppPartitionFactory --> vvm.AppPartitionFactory
-istructs.AppQName -.- vvm.AppPartitionFactory
+appdef.AppQName -.- vvm.AppPartitionFactory
 vvm.AsyncProjectorFactories -.- vvm.AppPartitionFactory
 
 vvm.AppPartitionFactory -.- vvm.provideAppServiceFactory
@@ -82,7 +82,7 @@ vvm.AsyncActualizersFactory -.- vvm.provideAppPartitionFactory
 
 istructs.ProjectorFactory -.- vvm.AsyncProjectorFactories
 
-istructs.AppQName -..- vvm.AsyncActualizersFactory
+appdef.AppQName -..- vvm.AsyncActualizersFactory
 vvm.AsyncProjectorFactories -.- vvm.AsyncActualizersFactory
 istructs.PartitionID -.- vvm.AsyncActualizersFactory
 
@@ -141,7 +141,7 @@ type IAppPartitions interface {
 	// Adds new application or update existing.
 	//
 	// If application with the same name exists, then its definition will be updated.
-	DeployApp(name istructs.AppQName, def appdef.IAppDef, perPartitionEngines [cluster.ProcessorKind]int, numPartitions int)
+	DeployApp(name appdef.AppQName, def appdef.IAppDef, perPartitionEngines [cluster.ProcessorKind]int, numPartitions int)
 
 ```
 - Use `IAppPartition.Invoke` in async actualizer

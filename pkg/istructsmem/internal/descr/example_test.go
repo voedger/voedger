@@ -512,8 +512,8 @@ func (s *mockedAppStructs) AppDef() appdef.IAppDef {
 	return s.Called().Get(0).(appdef.IAppDef)
 }
 
-func (s *mockedAppStructs) AppQName() istructs.AppQName {
-	return s.Called().Get(0).(istructs.AppQName)
+func (s *mockedAppStructs) AppQName() appdef.AppQName {
+	return s.Called().Get(0).(appdef.AppQName)
 }
 
 func (s *mockedAppStructs) Resources() istructs.IResources {

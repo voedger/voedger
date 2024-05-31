@@ -423,7 +423,7 @@ func (qw *queryWork) release() {
 }
 
 // need or q.sys.EnrichPrincipalToken
-func (qw *queryWork) AppQName() istructs.AppQName {
+func (qw *queryWork) AppQName() appdef.AppQName {
 	return qw.msg.AppQName()
 }
 
@@ -451,7 +451,7 @@ func operator(name string, doSync func(ctx context.Context, qw *queryWork) (err 
 
 type queryMessage struct {
 	requestCtx context.Context
-	appQName   istructs.AppQName
+	appQName   appdef.AppQName
 	wsid       istructs.WSID
 	partition  istructs.PartitionID
 	sender     ibus.ISender
@@ -461,7 +461,7 @@ type queryMessage struct {
 	token      string
 }
 
-func (m queryMessage) AppQName() istructs.AppQName     { return m.appQName }
+func (m queryMessage) AppQName() appdef.AppQName       { return m.appQName }
 func (m queryMessage) WSID() istructs.WSID             { return m.wsid }
 func (m queryMessage) Sender() ibus.ISender            { return m.sender }
 func (m queryMessage) RequestCtx() context.Context     { return m.requestCtx }
@@ -476,7 +476,7 @@ func (m queryMessage) Body() []byte {
 	return []byte("{}")
 }
 
-func NewQueryMessage(requestCtx context.Context, appQName istructs.AppQName, partID istructs.PartitionID, wsid istructs.WSID, sender ibus.ISender, body []byte,
+func NewQueryMessage(requestCtx context.Context, appQName appdef.AppQName, partID istructs.PartitionID, wsid istructs.WSID, sender ibus.ISender, body []byte,
 	qName appdef.QName, host string, token string) IQueryMessage {
 	return queryMessage{
 		appQName:   appQName,
@@ -604,7 +604,7 @@ func (c *fieldsDefs) get(name appdef.QName) FieldsKinds {
 
 type queryProcessorMetrics struct {
 	vvm     string
-	app     istructs.AppQName
+	app     appdef.AppQName
 	metrics imetrics.IMetrics
 }
 
