@@ -17,9 +17,9 @@ import (
 type IAppStructsProvider interface {
 	// ErrAppNotFound can be returned
 	// @ConcurrentAccess
-	AppStructs(aqn AppQName) (structs IAppStructs, err error)
+	AppStructs(aqn appdef.AppQName) (structs IAppStructs, err error)
 
-	AppStructsByDef(aqn AppQName, appDef appdef.IAppDef) (structs IAppStructs, err error)
+	AppStructsByDef(aqn appdef.AppQName, appDef appdef.IAppDef) (structs IAppStructs, err error)
 }
 
 type IAppStructs interface {
@@ -52,7 +52,7 @@ type IAppStructs interface {
 	AppDef() appdef.IAppDef
 
 	ClusterAppID() ClusterAppID
-	AppQName() AppQName
+	AppQName() appdef.AppQName
 
 	IsFunctionRateLimitsExceeded(funcQName appdef.QName, wsid WSID) bool
 
@@ -211,7 +211,7 @@ type IAppTokens interface {
 
 // All payloads must inherit this payload
 type GenericPayload struct {
-	AppQName AppQName
+	AppQName appdef.AppQName
 	Duration time.Duration
 	IssuedAt time.Time
 }

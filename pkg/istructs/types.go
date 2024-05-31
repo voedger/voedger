@@ -11,19 +11,6 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 )
 
-// AppQName is unique in cluster federation
-// <owner>/<name>
-// sys/registry
-// unTill/airs-bp
-// test1/app1
-// test1/app2
-// test2/app1
-// test2/app2
-// Ref. utils.go for methods
-type AppQName struct {
-	owner, name string
-}
-
 type SubjectLogin string
 
 // time.Now().UnixMilli()
