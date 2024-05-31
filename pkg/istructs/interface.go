@@ -19,7 +19,7 @@ type IAppStructsProvider interface {
 	// @ConcurrentAccess
 	AppStructs(aqn appdef.AppQName) (structs IAppStructs, err error)
 
-	AppStructsByDef(aqn appdef.AppQName, appDef appdef.IAppDef) (structs IAppStructs, err error)
+	AppStructsByDef(appdef.IAppDef) (IAppStructs, error)
 }
 
 type IAppStructs interface {
