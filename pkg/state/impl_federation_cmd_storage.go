@@ -83,7 +83,7 @@ func (s *federationCommandStorage) Get(key istructs.IStateKeyBuilder) (istructs.
 		body = v.(string)
 	}
 
-	appOwnerAndName := appdef.NewAppQName(owner, appname).String()
+	appOwnerAndName := owner + appdef.AppQNameQualifierChar + appname
 
 	relativeUrl := fmt.Sprintf("api/%s/%d/c.%s", appOwnerAndName, wsid, command)
 

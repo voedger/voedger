@@ -33,7 +33,7 @@ func createRequest(reqMethod string, req *http.Request, rw http.ResponseWriter, 
 		// notest
 		panic(err)
 	}
-	appQNameStr := appdef.NewQName(vars[AppOwner], vars[AppName]).String()
+	appQNameStr := vars[AppOwner] + appdef.AppQNameQualifierChar + vars[AppName]
 	wsid := istructs.WSID(wsidInt)
 	if appQName, err := appdef.ParseAppQName(appQNameStr); err == nil {
 		if numAppWorkspaces, ok := numsAppsWorkspaces[appQName]; ok {
