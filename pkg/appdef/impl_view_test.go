@@ -15,7 +15,7 @@ import (
 func TestAddView(t *testing.T) {
 	require := require.New(t)
 
-	adb := New()
+	adb := New(NewAppQName("test", "app"))
 	adb.AddPackage("test", "test.com/test")
 
 	numName := NewQName("test", "natural")
@@ -352,7 +352,7 @@ func TestViewValidate(t *testing.T) {
 
 	viewName := NewQName("test", "view")
 
-	adb := New()
+	adb := New(NewAppQName("test", "app"))
 	adb.AddPackage("test", "test.com/test")
 
 	v := adb.AddView(viewName)

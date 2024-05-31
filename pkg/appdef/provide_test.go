@@ -12,7 +12,7 @@ import (
 )
 
 func TestBasicUsage(t *testing.T) {
-	adb := New()
+	adb := New(NewAppQName("test", "app"))
 	adb.AddPackage("test", "test.com/test")
 
 	saleParamsDoc := adb.AddODoc(NewQName("test", "Sale"))

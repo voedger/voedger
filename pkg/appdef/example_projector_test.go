@@ -24,7 +24,7 @@ func ExampleIAppDefBuilder_AddProjector() {
 
 	// how to build AppDef with projectors
 	{
-		adb := appdef.New()
+		adb := appdef.New(appdef.NewAppQName("test", "app"))
 		adb.AddPackage("test", "test.com/test")
 
 		adb.AddCRecord(recName).SetComment("record is trigger for projector")
