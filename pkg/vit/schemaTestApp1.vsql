@@ -526,9 +526,14 @@ ALTERABLE WORKSPACE test_wsWS (
 		PRIMARY KEY ((IntFld), Dummy)
 	) AS RESULT OF ApplyCategoryIdx;
 
+	TYPE QryIntentsResult (
+		Fld1 varchar
+	);
+
 	EXTENSION ENGINE BUILTIN (
 		QUERY RatedQry(RatedQryParams) RETURNS RatedQryResult;
 		QUERY MockQry(MockQryParams) RETURNS MockQryResult;
+		QUERY QryIntents() RETURNS QryIntentsResult;
 
 		COMMAND RatedCmd(RatedCmdParams);
 		COMMAND MockCmd(MockCmdParams);

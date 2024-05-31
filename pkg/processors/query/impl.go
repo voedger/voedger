@@ -148,7 +148,11 @@ func execAndSendResponse(ctx context.Context, qw *queryWork) (err error) {
 		qw.metrics.Increase(execSeconds, time.Since(now).Seconds())
 	}()
 
-	return qw.appPart.Invoke(ctx, qw.queryFunc.QName(), qw.state, nil)
+	if err =  qw.appPart.Invoke(ctx, qw.queryFunc.QName(), qw.state, qw.state); err != nil {
+		return err
+	}
+
+	return qw.state.ApplyIntents()
 	//return qw.queryExec(ctx, qw.execQueryArgs, qw.callbackFunc)
 }
 
@@ -366,7 +370,7 @@ type queryWork struct {
 	appParts appparts.IAppPartitions
 	// work
 	requestData       map[string]interface{}
-	state             istructs.IState
+	state             state.IHostState
 	queryParams       IQueryParams
 	appPart           appparts.IAppPartition
 	appStructs        istructs.IAppStructs
