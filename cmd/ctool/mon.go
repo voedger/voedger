@@ -251,6 +251,7 @@ func addGrafanUser(node *nodeType, password string) error {
 		return err
 	}
 
+	// nolint
 	if err = newScriptExecuter(node.cluster.sshKey, "").
 		run("g-user-password-set.sh", node.address(), admin, admin, password); err != nil {
 		return err
