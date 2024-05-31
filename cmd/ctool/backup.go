@@ -217,7 +217,7 @@ func backupCENode(cmd *cobra.Command, args []string) error {
 
 	var err error
 
-	host := "CENode"
+	host := "ce-node"
 
 	if err = mkCommandDirAndLogFile(cmd, cluster); err != nil {
 		if e := newBackupErrorEvent(host, err).postAlert(cluster); e != nil {
@@ -489,7 +489,7 @@ func deleteExpireBacupsCE(cluster *clusterType) error {
 		return nil
 	}
 
-	loggerInfo("Search and delete expire backups on CENode")
+	loggerInfo("Search and delete expire backups on ce-node")
 	if err := newScriptExecuter("", "").
 		run("ce/delete-expire-backups.sh", backupFolder, cluster.Cron.ExpireTime); err != nil {
 		return err

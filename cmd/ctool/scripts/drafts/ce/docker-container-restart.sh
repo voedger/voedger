@@ -24,7 +24,7 @@ if [ -z "$NAME_FRAGMENT" ]; then
 fi
 
 # Получаем список всех контейнеров, содержащих фрагмент имени
-CONTAINERS=$(docker ps -a --format '{{.Names}}' | grep "$NAME_FRAGMENT")
+CONTAINERS=$(sudo docker ps -a --format '{{.Names}}' | grep "$NAME_FRAGMENT")
 
 # Проверяем, найден ли хотя бы один контейнер
 if [ -z "$CONTAINERS" ]; then
@@ -35,7 +35,7 @@ fi
 # Рестартуем все найденные контейнеры
 for CONTAINER in $CONTAINERS; do
   echo "Restarting container: $CONTAINER"
-  docker restart "$CONTAINER"
+  sudo docker restart "$CONTAINER"
 done
 
 set +x
