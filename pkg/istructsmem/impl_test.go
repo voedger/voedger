@@ -42,9 +42,11 @@ import (
 func TestBasicUsage(t *testing.T) {
 	require := require.New(t)
 
+	appName := istructs.AppQName_test1_app1
+
 	// create app configuration
 	appConfigs := func() AppConfigsType {
-		adb := appdef.New()
+		adb := appdef.New(appName)
 		adb.AddPackage("test", "test.com/test")
 
 		saleParamsName := appdef.NewQName("test", "SaleParams")
@@ -87,7 +89,7 @@ func TestBasicUsage(t *testing.T) {
 			SetParam(saleParamsName)
 
 		cfgs := make(AppConfigsType, 1)
-		cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, adb)
+		cfg := cfgs.AddConfig(appName, adb)
 		cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 		cfg.Resources.Add(NewCommandFunction(qNameCmdTestSale, NullCommandExec))
 
@@ -97,7 +99,7 @@ func TestBasicUsage(t *testing.T) {
 	// gets AppStructProvider and AppStructs
 	provider := Provide(appConfigs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider())
 
-	app, err := provider.AppStructs(istructs.AppQName_test1_app1)
+	app, err := provider.AppStructs(appName)
 	require.NoError(err)
 
 	// Build raw event demo
@@ -197,8 +199,10 @@ func TestBasicUsage(t *testing.T) {
 func TestBasicUsage_ViewRecords(t *testing.T) {
 	require := require.New(t)
 
+	appName := istructs.AppQName_test1_app1
+
 	appConfigs := func() AppConfigsType {
-		adb := appdef.New()
+		adb := appdef.New(appName)
 		adb.AddPackage("test", "test.com/test")
 		view := adb.AddView(appdef.NewQName("test", "viewDrinks"))
 		view.Key().PartKey().AddField("partitionKey1", appdef.DataKind_int64)
@@ -212,14 +216,14 @@ func TestBasicUsage_ViewRecords(t *testing.T) {
 			AddField("active", appdef.DataKind_bool, true)
 
 		cfgs := make(AppConfigsType, 1)
-		cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, adb)
+		cfg := cfgs.AddConfig(appName, adb)
 		cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 
 		return cfgs
 	}
 
 	p := Provide(appConfigs(), iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider())
-	as, err := p.AppStructs(istructs.AppQName_test1_app1)
+	as, err := p.AppStructs(appName)
 	require.NoError(err)
 	viewRecords := as.ViewRecords()
 	entries := []entryType{
@@ -294,21 +298,23 @@ func TestBasicUsage_ViewRecords(t *testing.T) {
 func Test_appStructsType_ObjectBuilder(t *testing.T) {
 	require := require.New(t)
 
+	appName := istructs.AppQName_test1_app1
+
 	objName := appdef.NewQName("test", "object")
 
 	appStructs := func() istructs.IAppStructs {
-		adb := appdef.New()
+		adb := appdef.New(appName)
 		adb.AddPackage("test", "test.com/test")
 		obj := adb.AddObject(objName)
 		obj.AddField("int", appdef.DataKind_int64, true)
 		obj.AddContainer("child", objName, 0, appdef.Occurs_Unbounded)
 
 		cfgs := make(AppConfigsType)
-		cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, adb)
+		cfg := cfgs.AddConfig(appName, adb)
 		cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 
 		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider())
-		app, err := provider.AppStructs(istructs.AppQName_test1_app1)
+		app, err := provider.AppStructs(appName)
 		require.NoError(err)
 
 		return app
@@ -473,8 +479,10 @@ func Test_BasicUsageDescribePackages(t *testing.T) {
 
 	require := require.New(t)
 
+	appName := istructs.AppQName_test1_app1
+
 	app := func() istructs.IAppStructs {
-		adb := appdef.New()
+		adb := appdef.New(appName)
 		adb.AddPackage("structs", "test.com/structs")
 		adb.AddPackage("functions", "test.com/functions")
 
@@ -513,7 +521,7 @@ func Test_BasicUsageDescribePackages(t *testing.T) {
 			SetResult(appdef.QNameANY)
 
 		cfgs := make(AppConfigsType)
-		cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, adb)
+		cfg := cfgs.AddConfig(appName, adb)
 		cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 
 		cfg.Resources.Add(NewCommandFunction(cmdQName, NullCommandExec))
@@ -529,7 +537,7 @@ func Test_BasicUsageDescribePackages(t *testing.T) {
 		})
 
 		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider())
-		app, err := provider.AppStructs(istructs.AppQName_test1_app1)
+		app, err := provider.AppStructs(appName)
 		require.NoError(err)
 
 		return app
@@ -557,13 +565,14 @@ func Test_Provide(t *testing.T) {
 
 	t.Run("AppStructs() must error if unknown app name", func(t *testing.T) {
 		cfgs := make(AppConfigsType)
-		cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, appdef.New())
+		cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, appdef.New(istructs.AppQName_test1_app1))
 		cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 		p := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), nil)
 		require.NotNil(p)
 
 		_, err := p.AppStructs(appdef.NewAppQName("test1", "unknownApp"))
 		require.ErrorIs(err, istructs.ErrAppNotFound)
+		require.ErrorContains(err, "test1/unknownApp")
 	})
 
 	t.Run("check application ClusterAppID() and AppQName()", func(t *testing.T) {

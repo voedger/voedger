@@ -23,8 +23,8 @@ import (
 
 type (
 	testDataType struct {
-		appName appdef.AppQName
-		pkgName string
+		appName          appdef.AppQName
+		pkgName, pkgPath string
 
 		AppConfigs AppConfigsType
 		AppCfg     *AppConfigType
@@ -144,6 +144,7 @@ type (
 var testData = testDataType{
 	appName: istructs.AppQName_test1_app1,
 	pkgName: "test",
+	pkgPath: "test.com/test",
 
 	eventRawBytes:      []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0},
 	partition:          55,
@@ -236,8 +237,8 @@ var testData = testDataType{
 func test() *testDataType {
 
 	prepareAppDef := func() appdef.IAppDefBuilder {
-		adb := appdef.New()
-		adb.AddPackage("test", "test.com/test")
+		adb := appdef.New(testData.appName)
+		adb.AddPackage(testData.pkgName, testData.pkgPath)
 
 		{
 			identData := adb.AddData(testData.dataIdent, appdef.DataKind_string, appdef.NullQName)

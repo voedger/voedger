@@ -368,7 +368,7 @@ func Test_LoadStoreRecord_Bytes(t *testing.T) {
 		newFieldName := func(oldValue string) string { return oldValue + "_1" }
 		oldFieldName := func(newValue string) string { return newValue[:len(newValue)-2] }
 
-		adb := appdef.New()
+		adb := appdef.New(test.appName)
 		adb.AddPackage("test", "test.com/test")
 
 		t.Run("must be ok to build application", func(t *testing.T) {

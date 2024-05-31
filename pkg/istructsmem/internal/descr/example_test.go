@@ -16,8 +16,11 @@ import (
 )
 
 func Example() {
+
+	appName := istructs.AppQName_test1_app1
+
 	appDef := func() appdef.IAppDef {
-		adb := appdef.New()
+		adb := appdef.New(appName)
 		adb.AddPackage("test", "test/path")
 
 		numName := appdef.NewQName("test", "number")
@@ -129,7 +132,7 @@ func Example() {
 
 	appStr := &mockedAppStructs{}
 	appStr.
-		On("AppQName").Return(istructs.AppQName_test1_app1).
+		On("AppQName").Return(appName).
 		On("AppDef").Return(appDef).
 		On("Resources").Return(res)
 
