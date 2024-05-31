@@ -977,7 +977,7 @@ func BenchmarkBasic(b *testing.B) {
 	}
 }
 
-func AppStructsWithTestStorage(appQName istructs.AppQName, data map[istructs.WSID]map[appdef.QName]map[istructs.RecordID]map[string]interface{}) istructs.IAppStructs {
+func AppStructsWithTestStorage(appQName appdef.AppQName, data map[istructs.WSID]map[appdef.QName]map[istructs.RecordID]map[string]interface{}) istructs.IAppStructs {
 	recs := &implIRecords{data: data}
 	return &implIAppStructs{records: recs, views: &implIViewRecords{records: recs}, appQName: appQName}
 }
@@ -985,7 +985,7 @@ func AppStructsWithTestStorage(appQName istructs.AppQName, data map[istructs.WSI
 type implIAppStructs struct {
 	records  *implIRecords
 	views    *implIViewRecords
-	appQName istructs.AppQName
+	appQName appdef.AppQName
 }
 
 func (as *implIAppStructs) AppDef() appdef.IAppDef                             { panic("") }
@@ -995,7 +995,7 @@ func (as *implIAppStructs) ViewRecords() istructs.IViewRecords                 {
 func (as *implIAppStructs) ObjectBuilder(appdef.QName) istructs.IObjectBuilder { panic("") }
 func (as *implIAppStructs) Resources() istructs.IResources                     { panic("") }
 func (as *implIAppStructs) ClusterAppID() istructs.ClusterAppID                { panic("") }
-func (as *implIAppStructs) AppQName() istructs.AppQName                        { return as.appQName }
+func (as *implIAppStructs) AppQName() appdef.AppQName                          { return as.appQName }
 func (as *implIAppStructs) IsFunctionRateLimitsExceeded(appdef.QName, istructs.WSID) bool {
 	panic("")
 }

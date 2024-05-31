@@ -72,7 +72,7 @@ func Test_validatePrivilegeOnNames(t *testing.T) {
 	ws := NewQName("test", "ws")
 
 	app := func() IAppDef {
-		adb := New()
+		adb := New(NewAppQName("test", "app"))
 
 		_ = adb.AddCDoc(cdoc)
 		_ = adb.AddGDoc(gdoc)

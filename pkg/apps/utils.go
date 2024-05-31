@@ -14,7 +14,7 @@ import (
 
 // includes sys
 // all sql files should be in the root of the fs
-func BuildAppDefFromFS(path string, fs coreutils.IReadFS, subDir string, additionalPackagesFS ...parser.PackageFS) (appdef.IAppDef, error) {
+func BuildAppDefFromFS(app appdef.AppQName, path string, fs coreutils.IReadFS, subDir string, additionalPackagesFS ...parser.PackageFS) (appdef.IAppDef, error) {
 	appPackageAst, err := parser.ParsePackageDir(path, fs, subDir)
 	if err != nil {
 		return nil, err
@@ -36,7 +36,7 @@ func BuildAppDefFromFS(path string, fs coreutils.IReadFS, subDir string, additio
 		return nil, err
 	}
 
-	adb := appdef.New()
+	adb := appdef.New(app)
 	err = parser.BuildAppDefs(appSchema, adb)
 	if err != nil {
 		return nil, err

@@ -9,13 +9,13 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/stretchr/testify/require"
+	"github.com/voedger/voedger/pkg/goutils/testingu/require"
 )
 
 func Test_type_AddContainer(t *testing.T) {
 	require := require.New(t)
 
-	adb := New()
+	adb := New(NewAppQName("test", "app"))
 	adb.AddPackage("test", "test.com/test")
 
 	rootName := NewQName("test", "root")
@@ -43,7 +43,7 @@ func Test_type_AddContainer(t *testing.T) {
 	})
 
 	t.Run("chain notation is ok to add containers", func(t *testing.T) {
-		adb := New()
+		adb := New(NewAppQName("test", "app"))
 		adb.AddPackage("test", "test.com/test")
 		_ = adb.AddObject(childName)
 		_ = adb.AddObject(rootName).
@@ -64,53 +64,63 @@ func Test_type_AddContainer(t *testing.T) {
 	})
 
 	t.Run("must be panic if empty container name", func(t *testing.T) {
-		require.Panics(func() { root.AddContainer("", childName, 1, Occurs_Unbounded) })
+		require.Panics(func() { root.AddContainer("", childName, 1, Occurs_Unbounded) },
+			require.Is(ErrMissedError))
 	})
 
 	t.Run("must be panic if invalid container name", func(t *testing.T) {
-		require.Panics(func() { root.AddContainer("naked_🔫", childName, 1, Occurs_Unbounded) })
+		require.Panics(func() { root.AddContainer("naked_🔫", childName, 1, Occurs_Unbounded) },
+			require.Is(ErrInvalidError))
 	})
 
 	t.Run("must be panic if container name dupe", func(t *testing.T) {
-		require.Panics(func() { root.AddContainer("c1", childName, 1, Occurs_Unbounded) })
+		require.Panics(func() { root.AddContainer("c1", childName, 1, Occurs_Unbounded) },
+			require.Is(ErrAlreadyExistsError),
+			require.Has("c1"))
 	})
 
 	t.Run("must be panic if container type name missed", func(t *testing.T) {
-		require.Panics(func() { root.AddContainer("c2", NullQName, 1, Occurs_Unbounded) })
+		require.Panics(func() { root.AddContainer("c2", NullQName, 1, Occurs_Unbounded) },
+			require.Is(ErrMissedError),
+			require.Has("c2"))
 	})
 
 	t.Run("must be panic if invalid occurrences", func(t *testing.T) {
-		require.Panics(func() { root.AddContainer("c2", childName, 1, 0) })
-		require.Panics(func() { root.AddContainer("c3", childName, 2, 1) })
+		require.Panics(func() { root.AddContainer("c2", childName, 1, 0) },
+			require.Is(ErrOutOfBoundsError))
+		require.Panics(func() { root.AddContainer("c3", childName, 2, 1) },
+			require.Is(ErrOutOfBoundsError))
 	})
 
 	t.Run("must be panic if container type is incompatible", func(t *testing.T) {
 		docName := NewQName("test", "doc")
 		_ = adb.AddCDoc(docName)
-		require.Panics(func() { root.AddContainer("c2", docName, 1, 1) })
+		require.Panics(func() { root.AddContainer("c2", docName, 1, 1) },
+			require.Is(ErrInvalidError),
+			require.Has(docName.String()))
 	})
 
 	t.Run("must be panic if too many containers", func(t *testing.T) {
-		el := New().AddObject(childName)
+		el := New(NewAppQName("test", "app")).AddObject(childName)
 		for i := 0; i < MaxTypeContainerCount; i++ {
 			el.AddContainer(fmt.Sprintf("c_%#x", i), childName, 0, Occurs_Unbounded)
 		}
-		require.Panics(func() { el.AddContainer("errorContainer", childName, 0, Occurs_Unbounded) })
+		require.Panics(func() { el.AddContainer("errorContainer", childName, 0, Occurs_Unbounded) },
+			require.Is(ErrTooManyError))
 	})
 }
 
 func TestValidateContainer(t *testing.T) {
 	require := require.New(t)
 
-	app := New()
+	app := New(NewAppQName("test", "app"))
 	app.AddPackage("test", "test.com/test")
 	doc := app.AddCDoc(NewQName("test", "doc"))
 	doc.AddContainer("rec", NewQName("test", "rec"), 0, Occurs_Unbounded)
 
 	t.Run("must be error if container type not found", func(t *testing.T) {
 		_, err := app.Build()
-		require.ErrorIs(err, ErrNotFoundError)
-		require.ErrorContains(err, "test.rec")
+		require.Error(err, require.Is(ErrNotFoundError), require.Has("test.rec"))
 	})
 
 	rec := app.AddCRecord(NewQName("test", "rec"))
@@ -135,8 +145,7 @@ func TestValidateContainer(t *testing.T) {
 		doc.AddContainer("obj", NewQName("test", "obj"), 0, 1)
 		_ = app.AddObject(NewQName("test", "obj"))
 		_, err := app.Build()
-		require.ErrorIs(err, ErrInvalidError)
-		require.ErrorContains(err, "test.obj")
+		require.Error(err, require.Is(ErrInvalidError), require.Has("test.obj"))
 	})
 }
 

@@ -7,6 +7,7 @@ package vvm
 import (
 	"os"
 
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 
 	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
@@ -16,7 +17,6 @@ import (
 	"github.com/voedger/voedger/pkg/isecretsimpl"
 	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istorage/mem"
-	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/itokensjwt"
 	commandprocessor "github.com/voedger/voedger/pkg/processors/command"
 	"github.com/voedger/voedger/pkg/router"
@@ -83,7 +83,7 @@ func (cfg *VVMConfig) ProvideServiceChannelFactory(procbus iprocbus.IProcBus) Se
 	}
 }
 
-func (ha *VVMApps) Exists(name istructs.AppQName) bool {
+func (ha *VVMApps) Exists(name appdef.AppQName) bool {
 	for _, appQName := range *ha {
 		if appQName == name {
 			return true

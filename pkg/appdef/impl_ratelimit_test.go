@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/require"
+	"github.com/voedger/voedger/pkg/goutils/testingu/require"
 )
 
 func Test_AppDefAddRateLimit(t *testing.T) {
@@ -21,7 +21,7 @@ func Test_AppDefAddRateLimit(t *testing.T) {
 	limitName := NewQName("test", "limit")
 
 	t.Run("should be ok to build application with rates and limits", func(t *testing.T) {
-		adb := New()
+		adb := New(NewAppQName("test", "app"))
 		adb.AddPackage("test", "test.com/test")
 
 		adb.AddRate(rateName, 10, time.Hour, []RateScope{RateScope_AppPartition, RateScope_IP}, "10 times per hour per partition per IP")
@@ -81,7 +81,7 @@ func Test_AppDefAddRateLimit(t *testing.T) {
 	t.Run("should be ok to add rate with default scope", func(t *testing.T) {
 		app := func() IAppDef {
 			rateName := NewQName("test", "rate")
-			adb := New()
+			adb := New(NewAppQName("test", "app"))
 			adb.AddPackage("test", "test.com/test")
 
 			adb.AddRate(rateName, 10, time.Hour, nil, "10 times per hour")
@@ -105,24 +105,27 @@ func Test_AppDefAddRateLimitErrors(t *testing.T) {
 	limitName := NewQName("test", "limit")
 
 	t.Run("should panic if missed objects", func(t *testing.T) {
-		adb := New()
+		adb := New(NewAppQName("test", "app"))
 		adb.AddPackage("test", "test.com/test")
 
 		adb.AddRate(rateName, 10, time.Hour, nil, "10 times per hour")
 
-		require.Panics(func() { adb.AddLimit(limitName, nil, rateName) })
+		require.Panics(func() { adb.AddLimit(limitName, nil, rateName) },
+			require.Is(ErrMissedError))
 	})
 
 	t.Run("should panic if missed or unknown rate", func(t *testing.T) {
-		adb := New()
+		adb := New(NewAppQName("test", "app"))
 		adb.AddPackage("test", "test.com/test")
 
-		require.Panics(func() { adb.AddLimit(limitName, []QName{QNameAnyCommand}, NullQName) }, "should panic if missed rate")
-		require.Panics(func() { adb.AddLimit(limitName, []QName{QNameAnyCommand}, NewQName("test", "unknown")) }, "should panic if unknown rate")
+		require.Panics(func() { adb.AddLimit(limitName, []QName{QNameAnyCommand}, NullQName) },
+			require.Is(ErrMissedError))
+		require.Panics(func() { adb.AddLimit(limitName, []QName{QNameAnyCommand}, NewQName("test", "unknown")) },
+			require.Is(ErrNotFoundError), require.Has("test.unknown"))
 	})
 
 	t.Run("test validate errors", func(t *testing.T) {
-		adb := New()
+		adb := New(NewAppQName("test", "app"))
 		adb.AddPackage("test", "test.com/test")
 
 		adb.AddRate(rateName, 10, time.Hour, nil, "10 times per hour")
@@ -130,7 +133,6 @@ func Test_AppDefAddRateLimitErrors(t *testing.T) {
 
 		_, err := adb.Build()
 
-		require.ErrorIs(err, ErrNotFoundError)
-		require.ErrorContains(err, "test.unknown")
+		require.Error(err, require.Is(ErrNotFoundError), require.Has("test.unknown"))
 	})
 }

@@ -23,7 +23,6 @@ const (
 )
 
 type FederationCommandHandler = func(owner, appname string, wsid istructs.WSID, command appdef.QName, body string) (statusCode int, newIDs map[string]int64, result string, err error)
-
 type federationCommandStorage struct {
 	appStructs AppStructsFunc
 	wsid       WSIDFunc
@@ -69,7 +68,7 @@ func (s *federationCommandStorage) Get(key istructs.IStateKeyBuilder) (istructs.
 	}
 
 	if v, ok := kb.data[Field_WSID]; ok {
-		wsid = v.(istructs.WSID)
+		wsid = istructs.WSID(v.(int64))
 	} else {
 		wsid = s.wsid()
 	}
@@ -84,7 +83,7 @@ func (s *federationCommandStorage) Get(key istructs.IStateKeyBuilder) (istructs.
 		body = v.(string)
 	}
 
-	appOwnerAndName := owner + istructs.AppQNameQualifierChar + appname
+	appOwnerAndName := owner + appdef.AppQNameQualifierChar + appname
 
 	relativeUrl := fmt.Sprintf("api/%s/%d/c.%s", appOwnerAndName, wsid, command)
 
@@ -111,7 +110,7 @@ func (s *federationCommandStorage) Get(key istructs.IStateKeyBuilder) (istructs.
 		if v, ok := kb.data[Field_Token]; ok {
 			opts = append(opts, coreutils.WithAuthorizeBy(v.(string)))
 		} else {
-			appQName := istructs.NewAppQName(owner, appname)
+			appQName := appdef.NewAppQName(owner, appname)
 			systemPrincipalToken, err := payloads.GetSystemPrincipalToken(s.tokens, appQName)
 			if err != nil {
 				return nil, err

@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/voedger/voedger/pkg/appdef"
 )
 
 func TestClusterApps(t *testing.T) {
@@ -20,7 +21,7 @@ func TestClusterApps(t *testing.T) {
 	})
 
 	t.Run("All IDs are unique", func(t *testing.T) {
-		vals := map[ClusterAppID]AppQName{}
+		vals := map[ClusterAppID]appdef.AppQName{}
 		for k, v := range ClusterApps {
 			vals[v] = k
 		}

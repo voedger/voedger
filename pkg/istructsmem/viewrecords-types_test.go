@@ -22,12 +22,14 @@ import (
 func Test_KeyType(t *testing.T) {
 	require := require.New(t)
 
+	appName := istructs.AppQName_test1_app1
+
 	viewName := appdef.NewQName("test", "view")
 
 	appConfigs := func() AppConfigsType {
 		cfgs := make(AppConfigsType, 1)
 
-		adb := appdef.New()
+		adb := appdef.New(appName)
 		adb.AddPackage("test", "test.com/test")
 
 		t.Run("must be ok to build view", func(t *testing.T) {
@@ -55,17 +57,17 @@ func Test_KeyType(t *testing.T) {
 				AddField("val_string", appdef.DataKind_string, false, appdef.MaxLen(1024))
 		})
 
-		cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, adb)
+		cfg := cfgs.AddConfig(appName, adb)
 		cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 
 		return cfgs
 	}
 
 	appCfgs := appConfigs()
-	appCfg := appCfgs.GetConfig(istructs.AppQName_test1_app1)
+	appCfg := appCfgs.GetConfig(appName)
 
-	appProvider := Provide(appCfgs, iratesce.TestBucketsFactory, testTokensFactory(), teststore.NewStorageProvider(teststore.NewStorage()))
-	app, err := appProvider.AppStructs(istructs.AppQName_test1_app1)
+	appProvider := Provide(appCfgs, iratesce.TestBucketsFactory, testTokensFactory(), teststore.NewStorageProvider(teststore.NewStorage(appName)))
+	app, err := appProvider.AppStructs(appName)
 	require.NoError(err)
 	require.NotNil(app)
 
@@ -187,13 +189,15 @@ func Test_KeyType(t *testing.T) {
 func TestCore_ViewRecords(t *testing.T) {
 	require := require.New(t)
 
-	storage := teststore.NewStorage()
+	appName := istructs.AppQName_test1_app1
+
+	storage := teststore.NewStorage(appName)
 	storageProvider := teststore.NewStorageProvider(storage)
 
 	appConfigs := func() AppConfigsType {
 		cfgs := make(AppConfigsType, 1)
 
-		adb := appdef.New()
+		adb := appdef.New(appName)
 		adb.AddPackage("test", "test.com/test")
 		t.Run("must be ok to build application", func(t *testing.T) {
 			view := adb.AddView(appdef.NewQName("test", "viewDrinks"))
@@ -833,15 +837,17 @@ func newEntry(viewRecords istructs.IViewRecords, wsid istructs.WSID, idDepartmen
 func Test_ViewRecordsPutJSON(t *testing.T) {
 	require := require.New(t)
 
+	appName := istructs.AppQName_test1_app1
+
 	const viewName = `test.view`
 
-	storage := teststore.NewStorage()
+	storage := teststore.NewStorage(appName)
 	storageProvider := teststore.NewStorageProvider(storage)
 
 	appCfgs := func() AppConfigsType {
 		cfgs := make(AppConfigsType, 1)
 
-		adb := appdef.New()
+		adb := appdef.New(appName)
 		adb.AddPackage("test", "test.com/test")
 		t.Run("must be ok to build application", func(t *testing.T) {
 			view := adb.AddView(appdef.MustParseQName(viewName))
@@ -854,12 +860,12 @@ func Test_ViewRecordsPutJSON(t *testing.T) {
 				AddField("v1", appdef.DataKind_float32, true).
 				AddField("v2", appdef.DataKind_string, true)
 		})
-		cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, adb)
+		cfg := cfgs.AddConfig(appName, adb)
 		cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 		return cfgs
 	}()
 
-	app, err := Provide(appCfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider).AppStructs(istructs.AppQName_test1_app1)
+	app, err := Provide(appCfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider).AppStructs(appName)
 	require.NoError(err)
 
 	t.Run("should be ok to put view record via PutJSON", func(t *testing.T) {
@@ -967,9 +973,11 @@ func Test_ViewRecordsPutJSON(t *testing.T) {
 func Test_LoadStoreViewRecord_Bytes(t *testing.T) {
 	require := require.New(t)
 
+	appName := istructs.AppQName_test1_app1
+
 	viewName := appdef.NewQName("test", "view")
 
-	adb := appdef.New()
+	adb := appdef.New(appName)
 	adb.AddPackage("test", "test.com/test")
 	t.Run("must be ok to build application", func(t *testing.T) {
 		v := adb.AddView(viewName)
@@ -1010,7 +1018,7 @@ func Test_LoadStoreViewRecord_Bytes(t *testing.T) {
 		cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 
 		asp := simpleStorageProvider()
-		storage, err := asp.AppStorage(istructs.AppQName_test1_app1)
+		storage, err := asp.AppStorage(appName)
 		require.NoError(err)
 		err = cfg.prepare(nil, storage)
 		if err != nil {
@@ -1100,13 +1108,16 @@ func Test_LoadStoreViewRecord_Bytes(t *testing.T) {
 // Test_ViewRecords_ClustColumnsQName: see https://dev.heeus.io/launchpad/#!16377 problem
 func Test_ViewRecords_ClustColumnsQName(t *testing.T) {
 	require := require.New(t)
+
+	appName := istructs.AppQName_test1_app1
+
 	ws := istructs.WSID(1234)
 
 	// Application, same as previous but with RecordID field in the clustering key
 	//
 	appConfigs := func() AppConfigsType {
 
-		adb := appdef.New()
+		adb := appdef.New(appName)
 		adb.AddPackage("test", "test.com/test")
 		t.Run("must be ok to build application", func(t *testing.T) {
 			v := adb.AddView(appdef.NewQName("test", "viewDrinks"))
@@ -1124,14 +1135,14 @@ func Test_ViewRecords_ClustColumnsQName(t *testing.T) {
 		})
 
 		cfgs := make(AppConfigsType, 1)
-		cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, adb)
+		cfg := cfgs.AddConfig(appName, adb)
 		cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 
 		return cfgs
 	}
 
 	p := Provide(appConfigs(), iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider())
-	as, err := p.AppStructs(istructs.AppQName_test1_app1)
+	as, err := p.AppStructs(appName)
 	require.NoError(err)
 	viewRecords := as.ViewRecords()
 
@@ -1179,10 +1190,12 @@ func Test_ViewRecords_ClustColumnsQName(t *testing.T) {
 func Test_ViewRecord_GetBatch(t *testing.T) {
 	require := require.New(t)
 
+	appName := istructs.AppQName_test1_app1
+
 	championshipsView := appdef.NewQName("test", "championships")
 	championsView := appdef.NewQName("test", "champions")
 
-	adb := appdef.New()
+	adb := appdef.New(appName)
 	adb.AddPackage("test", "test.com/test")
 	t.Run("must be ok to build application", func(t *testing.T) {
 		v := adb.AddView(championshipsView)
@@ -1203,15 +1216,15 @@ func Test_ViewRecord_GetBatch(t *testing.T) {
 			AddField("Winner", appdef.DataKind_string, true)
 	})
 
-	storage := teststore.NewStorage()
+	storage := teststore.NewStorage(appName)
 	storageProvider := teststore.NewStorageProvider(storage)
 
 	cfgs := make(AppConfigsType, 1)
-	cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, adb)
+	cfg := cfgs.AddConfig(appName, adb)
 	cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 	provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
 
-	app, err := provider.AppStructs(istructs.AppQName_test1_app1)
+	app, err := provider.AppStructs(appName)
 	require.NoError(err)
 
 	type championship struct {
@@ -1455,9 +1468,11 @@ func Test_ViewRecord_GetBatch(t *testing.T) {
 func Test_ViewRecordStructure(t *testing.T) {
 	require := require.New(t)
 
+	appName := istructs.AppQName_test1_app1
+
 	viewName := appdef.NewQName("test", "view")
 
-	adb := appdef.New()
+	adb := appdef.New(appName)
 	adb.AddPackage("test", "test.com/test")
 	t.Run("must be ok to build application", func(t *testing.T) {
 		v := adb.AddView(viewName)
@@ -1479,7 +1494,7 @@ func Test_ViewRecordStructure(t *testing.T) {
 		cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 
 		asp := simpleStorageProvider()
-		storage, err := asp.AppStorage(istructs.AppQName_test1_app1)
+		storage, err := asp.AppStorage(appName)
 		require.NoError(err)
 		err = cfg.prepare(nil, storage)
 		if err != nil {

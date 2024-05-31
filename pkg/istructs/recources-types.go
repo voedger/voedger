@@ -69,7 +69,8 @@ type ExecQueryCallback func(object IObject) error
 
 type ExecQueryArgs struct {
 	PrepareArgs
-	State IState
+	State   IState
+	Intents IIntents
 }
 
 type IState interface {
@@ -97,7 +98,11 @@ type IState interface {
 	// For commands
 	CommandPrepareArgs() CommandPrepareArgs
 
-	App() AppQName
+	// For queries
+	QueryPrepareArgs() PrepareArgs
+	QueryCallback() ExecQueryCallback
+
+	App() appdef.AppQName
 }
 
 type IIntents interface {

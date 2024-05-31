@@ -20,7 +20,7 @@ func ExampleIFieldsBuilder_AddField() {
 
 	// how to build doc with string field
 	{
-		adb := appdef.New()
+		adb := appdef.New(appdef.NewAppQName("test", "app"))
 		adb.AddPackage("test", "test.com/test")
 
 		doc := adb.AddODoc(docName)
@@ -80,7 +80,7 @@ func ExampleIFieldsBuilder_AddDataField() {
 	// how to build doc with string field
 	{
 
-		adb := appdef.New()
+		adb := appdef.New(appdef.NewAppQName("test", "app"))
 		adb.AddPackage("test", "test.com/test")
 
 		str10name := appdef.NewQName("test", "str10")
@@ -150,7 +150,7 @@ func ExampleIFieldsBuilder_SetFieldVerify() {
 
 	// how to build doc with verified field
 	{
-		adb := appdef.New()
+		adb := appdef.New(appdef.NewAppQName("test", "app"))
 		adb.AddPackage("test", "test.com/test")
 
 		doc := adb.AddCDoc(docName)

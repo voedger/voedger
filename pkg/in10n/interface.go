@@ -63,7 +63,7 @@ type ChannelID string
 type SubscriptionID string
 
 type ProjectionKey struct {
-	App        istructs.AppQName
+	App        appdef.AppQName
 	Projection appdef.QName
 	WS         istructs.WSID
 }

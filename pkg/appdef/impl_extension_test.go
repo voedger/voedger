@@ -28,7 +28,7 @@ func Test_AppDefExtensions(t *testing.T) {
 	viewName := NewQName("test", "view")
 
 	t.Run("Should be ok to build application with extensions", func(t *testing.T) {
-		adb := New()
+		adb := New(NewAppQName("test", "app"))
 		adb.AddPackage("test", "test.com/test")
 
 		cmd := adb.AddCommand(cmdName)

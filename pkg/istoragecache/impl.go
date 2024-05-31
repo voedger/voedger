@@ -10,8 +10,8 @@ import (
 
 	"github.com/VictoriaMetrics/fastcache"
 
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istorage"
-	"github.com/voedger/voedger/pkg/istructs"
 	imetrics "github.com/voedger/voedger/pkg/metrics"
 )
 
@@ -19,7 +19,7 @@ type cachedAppStorage struct {
 	cache    *fastcache.Cache
 	storage  istorage.IAppStorage
 	vvm      string
-	appQName istructs.AppQName
+	appQName appdef.AppQName
 
 	/* metrics */
 	mGetSeconds          *imetrics.MetricValue
@@ -44,7 +44,7 @@ type implCachingAppStorageProvider struct {
 	vvmName         string
 }
 
-func (asp *implCachingAppStorageProvider) AppStorage(appQName istructs.AppQName) (istorage.IAppStorage, error) {
+func (asp *implCachingAppStorageProvider) AppStorage(appQName appdef.AppQName) (istorage.IAppStorage, error) {
 	nonCachingAppStorage, err := asp.storageProvider.AppStorage(appQName)
 	if err != nil {
 		return nil, err
@@ -52,7 +52,7 @@ func (asp *implCachingAppStorageProvider) AppStorage(appQName istructs.AppQName)
 	return newCachingAppStorage(asp.maxBytes, nonCachingAppStorage, asp.metrics, asp.vvmName, appQName), nil
 }
 
-func newCachingAppStorage(maxBytes int, nonCachingAppStorage istorage.IAppStorage, metrics imetrics.IMetrics, vvm string, appQName istructs.AppQName) istorage.IAppStorage {
+func newCachingAppStorage(maxBytes int, nonCachingAppStorage istorage.IAppStorage, metrics imetrics.IMetrics, vvm string, appQName appdef.AppQName) istorage.IAppStorage {
 	return &cachedAppStorage{
 		cache:                fastcache.New(maxBytes),
 		storage:              nonCachingAppStorage,

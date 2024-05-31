@@ -51,9 +51,12 @@ func provideAppsBuiltInExtFuncs(cfgs istructsmem.AppConfigsType) iextengine.Buil
 						fn = func(ctx context.Context, io iextengine.IExtensionIO) error {
 							return query.Exec(
 								ctx,
-								istructs.ExecQueryArgs{State: io},
-								// TODO: add query result handler
-								func(istructs.IObject) error { return nil },
+								istructs.ExecQueryArgs{
+									PrepareArgs: io.QueryPrepareArgs(),
+									State:       io,
+									Intents:     io,
+								},
+								io.QueryCallback(),
 							)
 						}
 					}

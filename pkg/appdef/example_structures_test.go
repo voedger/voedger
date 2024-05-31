@@ -19,7 +19,7 @@ func ExampleIAppDef_Structures() {
 
 	// how to build AppDef with structures
 	{
-		adb := appdef.New()
+		adb := appdef.New(appdef.NewAppQName("test", "app"))
 		adb.AddPackage("test", "test.com/test")
 
 		doc := adb.AddCDoc(docName)

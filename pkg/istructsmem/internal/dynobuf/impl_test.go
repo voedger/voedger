@@ -19,7 +19,7 @@ func TestDynoBufSchemes(t *testing.T) {
 	var appDef appdef.IAppDef
 
 	t.Run("must ok to build application", func(t *testing.T) {
-		adb := appdef.New()
+		adb := appdef.New(appdef.NewAppQName("test", "app"))
 		adb.AddPackage("test", "test.com/test")
 
 		root := adb.AddObject(appdef.NewQName("test", "root"))

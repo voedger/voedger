@@ -37,7 +37,7 @@ func Test_Race_n10nCHS(t *testing.T) {
 		go func(wsid istructs.WSID) {
 			defer wg.Done()
 			offsetsChan, unsubscribe, err := vit.N10NSubscribe(in10n.ProjectionKey{
-				App:        istructs.NewAppQName("untill", "Application"),
+				App:        appdef.NewAppQName("untill", "Application"),
 				Projection: appdef.NewQName("paa", "price"),
 				WS:         wsid,
 			})

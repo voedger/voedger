@@ -128,7 +128,7 @@ func Test400BadRequests(t *testing.T) {
 		t.Run(c.desc, func(t *testing.T) {
 			appQName := istructs.AppQName_test1_app1
 			if len(c.appName) > 0 {
-				appQName, err = istructs.ParseAppQName(c.appName)
+				appQName, err = appdef.ParseAppQName(c.appName)
 				require.NoError(t, err)
 			}
 			vit.PostApp(appQName, 1, c.funcName, "", coreutils.Expect400()).Println()
@@ -320,4 +320,14 @@ func TestAdminEndpoint(t *testing.T) {
 	require.NoError(err)
 	require.Equal("world", resp.SectionRow()[0].(string))
 	resp.Println()
+}
+
+func TestQueryIntents(t *testing.T) {
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
+
+	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+	body := `{"args":{},"elements":[{"fields":["Fld1"]}]}`
+	resp := vit.PostWS(ws, "q.app1pkg.QryIntents", body)
+	require.Equal(t, "hello", resp.SectionRow()[0].(string))
 }

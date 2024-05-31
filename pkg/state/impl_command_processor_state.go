@@ -34,9 +34,15 @@ func implProvideCommandProcessorState(
 	execCmdArgsFunc CommandPrepareArgsFunc,
 	argFunc ArgFunc,
 	unloggedArgFunc UnloggedArgFunc,
-	wlogOffsetFunc WLogOffsetFunc) IHostState {
+	wlogOffsetFunc WLogOffsetFunc,
+	options ...StateOptFunc) IHostState {
 
-	state := commandProcessorState{
+	opts := &stateOpts{}
+	for _, optFunc := range options {
+		optFunc(opts)
+	}
+
+	state := &commandProcessorState{
 		hostState:          newHostState("CommandProcessor", intentsLimit, appStructsFunc),
 		commandPrepareArgs: execCmdArgsFunc,
 	}
@@ -58,6 +64,8 @@ func implProvideCommandProcessorState(
 	}, S_GET)
 
 	state.addStorage(Result, newCmdResultStorage(cmdResultBuilderFunc), S_INSERT)
+
+	state.addStorage(Uniq, newUniquesStorage(appStructsFunc, wsidFunc, opts.uniquesHandler), S_GET)
 
 	state.addStorage(Response, &cmdResponseStorage{}, S_INSERT)
 

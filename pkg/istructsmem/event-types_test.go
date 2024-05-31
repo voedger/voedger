@@ -727,10 +727,12 @@ func Test_EventUpdateRawCud(t *testing.T) {
 	// this test for https://dev.heeus.io/launchpad/#!25853
 	require := require.New(t)
 
+	appName := istructs.AppQName_test1_app1
+
 	docName := appdef.NewQName("test", "cDoc")
 	recName := appdef.NewQName("test", "cRec")
 
-	adb := appdef.New()
+	adb := appdef.New(appName)
 	adb.AddPackage("test", "test.com/test")
 
 	t.Run("must ok to construct application", func(t *testing.T) {
@@ -746,7 +748,7 @@ func Test_EventUpdateRawCud(t *testing.T) {
 
 	cfgs := func() AppConfigsType {
 		cfgs := make(AppConfigsType, 1)
-		cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, adb)
+		cfg := cfgs.AddConfig(appName, adb)
 		cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 		return cfgs
 	}()
@@ -771,7 +773,7 @@ func Test_EventUpdateRawCud(t *testing.T) {
 
 	for test := simpleTest; test < testCount*2; test += 2 { // test - docID, test+1 - recID
 
-		app, err := provider.AppStructs(istructs.AppQName_test1_app1)
+		app, err := provider.AppStructs(appName)
 		require.NoError(err)
 
 		docID := istructs.NewCDocCRecordID(istructs.FirstBaseRecordID + istructs.RecordID(test))
@@ -910,9 +912,11 @@ func Test_EventUpdateRawCud(t *testing.T) {
 func Test_UpdateCorrupted(t *testing.T) {
 	require := require.New(t)
 
+	appName := istructs.AppQName_test1_app1
+
 	docName := appdef.NewQName("test", "doc")
 
-	adb := appdef.New()
+	adb := appdef.New(appName)
 	adb.AddPackage("test", "test.com/test")
 
 	t.Run("should be ok to build AppDef", func(t *testing.T) {
@@ -925,14 +929,14 @@ func Test_UpdateCorrupted(t *testing.T) {
 
 	cfgs := func() AppConfigsType {
 		cfgs := make(AppConfigsType, 1)
-		cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, adb)
+		cfg := cfgs.AddConfig(appName, adb)
 		cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 		return cfgs
 	}()
 
 	provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider())
 
-	app, err := provider.AppStructs(istructs.AppQName_test1_app1)
+	app, err := provider.AppStructs(appName)
 	require.NoError(err)
 
 	t.Run("should be ok to put new sys.CUD event", func(t *testing.T) {
@@ -1041,9 +1045,11 @@ func Test_UpdateCorrupted(t *testing.T) {
 func Test_BuildPLogEvent(t *testing.T) {
 	require := require.New(t)
 
+	appName := istructs.AppQName_test1_app1
+
 	docName := appdef.NewQName("test", "doc")
 
-	adb := appdef.New()
+	adb := appdef.New(appName)
 	adb.AddPackage("test", "test.com/test")
 
 	t.Run("should be ok to build AppDef", func(t *testing.T) {
@@ -1056,14 +1062,14 @@ func Test_BuildPLogEvent(t *testing.T) {
 
 	cfgs := func() AppConfigsType {
 		cfgs := make(AppConfigsType, 1)
-		cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, adb)
+		cfg := cfgs.AddConfig(appName, adb)
 		cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 		return cfgs
 	}()
 
 	provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider())
 
-	app, err := provider.AppStructs(istructs.AppQName_test1_app1)
+	app, err := provider.AppStructs(appName)
 	require.NoError(err)
 
 	t.Run("should be ok to put new sys.CUD event", func(t *testing.T) {
@@ -1236,10 +1242,12 @@ func Test_BuildPLogEvent(t *testing.T) {
 func Test_SingletonCDocEvent(t *testing.T) {
 	require := require.New(t)
 
+	appName := istructs.AppQName_test1_app1
+
 	docName, doc2Name := appdef.NewQName("test", "cDoc"), appdef.NewQName("test", "cDoc2")
 	docID := istructs.NullRecordID
 
-	adb := appdef.New()
+	adb := appdef.New(appName)
 	adb.AddPackage("test", "test.com/test")
 
 	t.Run("must ok to construct singleton CDoc", func(t *testing.T) {
@@ -1254,17 +1262,17 @@ func Test_SingletonCDocEvent(t *testing.T) {
 
 	cfgs := func() AppConfigsType {
 		cfgs := make(AppConfigsType, 1)
-		cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, adb)
+		cfg := cfgs.AddConfig(appName, adb)
 		cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 		return cfgs
 	}()
 
 	provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider())
 
-	app, err := provider.AppStructs(istructs.AppQName_test1_app1)
+	app, err := provider.AppStructs(appName)
 	require.NoError(err)
 
-	docID, err = cfgs.GetConfig(istructs.AppQName_test1_app1).singletons.ID(docName)
+	docID, err = cfgs.GetConfig(appName).singletons.ID(docName)
 	require.NoError(err)
 
 	t.Run("must ok to read not created singleton CDoc by QName", func(t *testing.T) {

@@ -99,9 +99,9 @@ type MockState struct {
 	mock.Mock
 }
 
-func (m *MockState) KeyBuilder(storage, entity appdef.QName) (builder istructs.IStateKeyBuilder, err error) {
-	args := m.Called(storage, entity)
-	return args.Get(0).(istructs.IStateKeyBuilder), args.Error(1)
+func (m *MockState) App() appdef.AppQName {
+	args := m.Called()
+	return args.Get(0).(appdef.AppQName)
 }
 func (m *MockState) CanExist(key istructs.IStateKeyBuilder) (value istructs.IStateValue, ok bool, err error) {
 	args := m.Called(key)
@@ -113,6 +113,14 @@ func (m *MockState) CanExist(key istructs.IStateKeyBuilder) (value istructs.ISta
 func (m *MockState) CanExistAll(keys []istructs.IStateKeyBuilder, callback istructs.StateValueCallback) (err error) {
 	args := m.Called(keys, callback)
 	return args.Error(0)
+}
+func (m *MockState) CommandPrepareArgs() istructs.CommandPrepareArgs {
+	args := m.Called()
+	return args.Get(0).(istructs.CommandPrepareArgs)
+}
+func (m *MockState) KeyBuilder(storage, entity appdef.QName) (builder istructs.IStateKeyBuilder, err error) {
+	args := m.Called(storage, entity)
+	return args.Get(0).(istructs.IStateKeyBuilder), args.Error(1)
 }
 func (m *MockState) MustExist(key istructs.IStateKeyBuilder) (value istructs.IStateValue, err error) {
 	args := m.Called(key)
@@ -130,21 +138,21 @@ func (m *MockState) MustNotExistAll(keys []istructs.IStateKeyBuilder) (err error
 	args := m.Called(keys)
 	return args.Error(0)
 }
-func (m *MockState) Read(key istructs.IStateKeyBuilder, callback istructs.ValueCallback) (err error) {
-	args := m.Called(key, callback)
-	return args.Error(0)
-}
 func (m *MockState) PLogEvent() istructs.IPLogEvent {
 	args := m.Called()
 	return args.Get(0).(istructs.IPLogEvent)
 }
-func (m *MockState) CommandPrepareArgs() istructs.CommandPrepareArgs {
+func (m *MockState) QueryPrepareArgs() istructs.PrepareArgs {
 	args := m.Called()
-	return args.Get(0).(istructs.CommandPrepareArgs)
+	return args.Get(0).(istructs.PrepareArgs)
 }
-func (m *MockState) App() istructs.AppQName {
+func (m *MockState) QueryCallback() istructs.ExecQueryCallback {
 	args := m.Called()
-	return args.Get(0).(istructs.AppQName)
+	return args.Get(0).(istructs.ExecQueryCallback)
+}
+func (m *MockState) Read(key istructs.IStateKeyBuilder, callback istructs.ValueCallback) (err error) {
+	args := m.Called(key, callback)
+	return args.Error(0)
 }
 
 type MockStateKeyBuilder struct {

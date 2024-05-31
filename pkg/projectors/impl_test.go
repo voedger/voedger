@@ -175,7 +175,7 @@ type (
 )
 
 func deployTestApp(
-	appName istructs.AppQName,
+	appName appdef.AppQName,
 	appPartsCount istructs.NumAppPartitions,
 	partID []istructs.PartitionID,
 	cachedStorage bool,
@@ -187,7 +187,7 @@ func deployTestApp(
 	metrics imetrics.IMetrics,
 	appStructs istructs.IAppStructs,
 ) {
-	appDefBuilder := appdef.New()
+	appDefBuilder := appdef.New(appName)
 	if prepareAppDef != nil {
 		prepareAppDef(appDefBuilder)
 	}

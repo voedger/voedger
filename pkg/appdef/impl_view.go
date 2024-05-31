@@ -148,7 +148,7 @@ func (pk *viewPartKey) addDataField(name FieldName, dataType QName, constraints 
 		panic(ErrNotFound("%v partition key field «%s» data type «%v»", pk.view.QName(), name, dataType))
 	}
 	if k := d.DataKind(); !k.IsFixed() {
-		panic(ErrIncompatible("various length %s-field «%s» with partition key of %v", k.TrimString(), name, pk.view))
+		panic(ErrUnsupported("various length %s-field «%s» with partition key of %v", k.TrimString(), name, pk.view))
 	}
 
 	pk.view.addDataField(name, dataType, true, constraints...)
@@ -158,7 +158,7 @@ func (pk *viewPartKey) addDataField(name FieldName, dataType QName, constraints 
 
 func (pk *viewPartKey) addField(name FieldName, kind DataKind, constraints ...IConstraint) {
 	if !kind.IsFixed() {
-		panic(ErrIncompatible("various length %s-field «%s» with partition key of %v", kind.TrimString(), name, pk.view))
+		panic(ErrUnsupported("various length %s-field «%s» with partition key of %v", kind.TrimString(), name, pk.view))
 	}
 
 	pk.view.addField(name, kind, true, constraints...)

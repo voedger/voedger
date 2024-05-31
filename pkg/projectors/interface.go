@@ -28,7 +28,7 @@ type LogErrorFunc func(args ...interface{})
 
 type AsyncActualizerConf struct {
 	Ctx           context.Context
-	AppQName      istructs.AppQName
+	AppQName      appdef.AppQName
 	AppPartitions appparts.IAppPartitions
 	AppStructs    state.AppStructsFunc
 	SecretReader  isecrets.ISecretReader
@@ -55,7 +55,7 @@ type AsyncActualizerConf struct {
 
 	Broker  in10n.IN10nBroker
 	channel in10n.ChannelID
-	Opts    []state.ActualizerStateOptFunc
+	Opts    []state.StateOptFunc
 }
 
 type AsyncActualizerMetrics interface {

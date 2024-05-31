@@ -13,4 +13,4 @@ import (
 // template recordID -> template fieldName -> uploaded blobID to set to fieldName
 type blobsMap map[int64]map[string]int64
 
-type WSPostInitFunc func(targetAppQName istructs.AppQName, wsKind appdef.QName, newWSID istructs.WSID, federation federation.IFederation, authToken string) (err error)
+type WSPostInitFunc func(targetAppQName appdef.AppQName, wsKind appdef.QName, newWSID istructs.WSID, federation federation.IFederation, authToken string) (err error)

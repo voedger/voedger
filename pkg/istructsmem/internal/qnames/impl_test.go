@@ -26,8 +26,10 @@ import (
 func TestQNames(t *testing.T) {
 	require := require.New(t)
 
+	appName := istructs.AppQName_test1_app1
+
 	sp := istorageimpl.Provide(mem.Provide())
-	storage, err := sp.AppStorage(istructs.AppQName_test1_app1)
+	storage, err := sp.AppStorage(appName)
 	require.NoError(err)
 
 	versions := vers.New()
@@ -48,7 +50,7 @@ func TestQNames(t *testing.T) {
 	names := New()
 	if err := names.Prepare(storage, versions,
 		func() appdef.IAppDef {
-			adb := appdef.New()
+			adb := appdef.New(appName)
 			adb.AddPackage("test", "test.com/test")
 			adb.AddCDoc(defName)
 			appDef, err := adb.Build()
@@ -100,7 +102,7 @@ func TestQNames(t *testing.T) {
 			names2 := New()
 			if err := names2.Prepare(storage, versions,
 				func() appdef.IAppDef {
-					adb := appdef.New()
+					adb := appdef.New(appName)
 					adb.AddPackage("test", "test.com/test")
 					adb.AddCDoc(defName)
 					appDef, err := adb.Build()
@@ -132,9 +134,11 @@ func TestQNames(t *testing.T) {
 func TestQNamesPrepareErrors(t *testing.T) {
 	require := require.New(t)
 
+	appName := istructs.AppQName_test1_app1
+
 	t.Run("must be error if unknown system view version", func(t *testing.T) {
 		sp := istorageimpl.Provide(mem.Provide())
-		storage, _ := sp.AppStorage(istructs.AppQName_test1_app1)
+		storage, _ := sp.AppStorage(appName)
 
 		versions := vers.New()
 		if err := versions.Prepare(storage); err != nil {
@@ -150,7 +154,7 @@ func TestQNamesPrepareErrors(t *testing.T) {
 
 	t.Run("must be error if invalid QName loaded from system view ", func(t *testing.T) {
 		sp := istorageimpl.Provide(mem.Provide())
-		storage, _ := sp.AppStorage(istructs.AppQName_test1_app1)
+		storage, _ := sp.AppStorage(appName)
 
 		versions := vers.New()
 		if err := versions.Prepare(storage); err != nil {
@@ -169,7 +173,7 @@ func TestQNamesPrepareErrors(t *testing.T) {
 
 	t.Run("must be ok if deleted QName loaded from system view ", func(t *testing.T) {
 		sp := istorageimpl.Provide(mem.Provide())
-		storage, _ := sp.AppStorage(istructs.AppQName_test1_app1)
+		storage, _ := sp.AppStorage(appName)
 
 		versions := vers.New()
 		if err := versions.Prepare(storage); err != nil {
@@ -186,7 +190,7 @@ func TestQNamesPrepareErrors(t *testing.T) {
 
 	t.Run("must be error if invalid (small) QNameID loaded from system view ", func(t *testing.T) {
 		sp := istorageimpl.Provide(mem.Provide())
-		storage, _ := sp.AppStorage(istructs.AppQName_test1_app1)
+		storage, _ := sp.AppStorage(appName)
 
 		versions := vers.New()
 		if err := versions.Prepare(storage); err != nil {
@@ -204,7 +208,7 @@ func TestQNamesPrepareErrors(t *testing.T) {
 
 	t.Run("must be error if too many QNames", func(t *testing.T) {
 		sp := istorageimpl.Provide(mem.Provide())
-		storage, _ := sp.AppStorage(istructs.AppQName_test1_app1)
+		storage, _ := sp.AppStorage(appName)
 
 		versions := vers.New()
 		if err := versions.Prepare(storage); err != nil {
@@ -214,7 +218,7 @@ func TestQNamesPrepareErrors(t *testing.T) {
 		names := New()
 		err := names.Prepare(storage, versions,
 			func() appdef.IAppDef {
-				adb := appdef.New()
+				adb := appdef.New(appName)
 				adb.AddPackage("test", "test.com/test")
 				for i := 0; i <= MaxAvailableQNameID; i++ {
 					adb.AddObject(appdef.NewQName("test", fmt.Sprintf("name_%d", i)))
@@ -232,7 +236,7 @@ func TestQNamesPrepareErrors(t *testing.T) {
 		writeError := errors.New("storage write error")
 
 		t.Run("must be error if write some name failed", func(t *testing.T) {
-			storage := teststore.NewStorage()
+			storage := teststore.NewStorage(appName)
 
 			versions := vers.New()
 			if err := versions.Prepare(storage); err != nil {
@@ -244,7 +248,7 @@ func TestQNamesPrepareErrors(t *testing.T) {
 			names := New()
 			err := names.Prepare(storage, versions,
 				func() appdef.IAppDef {
-					adb := appdef.New()
+					adb := appdef.New(appName)
 					adb.AddPackage("test", "test.com/test")
 					adb.AddObject(qName)
 					appDef, err := adb.Build()
@@ -256,7 +260,7 @@ func TestQNamesPrepareErrors(t *testing.T) {
 		})
 
 		t.Run("must be error if write system view version failed", func(t *testing.T) {
-			storage := teststore.NewStorage()
+			storage := teststore.NewStorage(appName)
 
 			versions := vers.New()
 			if err := versions.Prepare(storage); err != nil {
@@ -268,7 +272,7 @@ func TestQNamesPrepareErrors(t *testing.T) {
 			names := New()
 			err := names.Prepare(storage, versions,
 				func() appdef.IAppDef {
-					adb := appdef.New()
+					adb := appdef.New(appName)
 					adb.AddPackage("test", "test.com/test")
 					adb.AddObject(qName)
 					appDef, err := adb.Build()

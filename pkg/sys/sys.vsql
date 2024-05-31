@@ -62,6 +62,16 @@ EXTENSION ENGINE BUILTIN (
 		UPDATE SCOPE(PROJECTORS)
 	) ENTITY VIEW;
 
+	STORAGE Uniq(
+		/*
+		Key:
+			One or more unique fields
+		Value:
+			ID int64 (record ID)
+		*/
+		GET SCOPE(COMMANDS, QUERIES, PROJECTORS)
+	) ENTITY RECORD;
+
 	STORAGE WLog(
 		/*
 		Key:

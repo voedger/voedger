@@ -8,7 +8,7 @@ package appdef
 import (
 	"testing"
 
-	"github.com/stretchr/testify/require"
+	"github.com/voedger/voedger/pkg/goutils/testingu/require"
 )
 
 func Test_AppDef_AddQuery(t *testing.T) {
@@ -18,7 +18,7 @@ func Test_AppDef_AddQuery(t *testing.T) {
 	queryName, parName, resName := NewQName("test", "query"), NewQName("test", "param"), NewQName("test", "res")
 
 	t.Run("must be ok to add query", func(t *testing.T) {
-		adb := New()
+		adb := New(NewAppQName("test", "app"))
 		adb.AddPackage("test", "test.com/test")
 
 		_ = adb.AddObject(parName)
@@ -83,46 +83,46 @@ func Test_AppDef_AddQuery(t *testing.T) {
 	require.Nil(app.Query(NewQName("test", "unknown")), "check nil returns")
 
 	require.Panics(func() {
-		New().AddQuery(NullQName)
-	}, "panic if name is empty")
+		New(NewAppQName("test", "app")).AddQuery(NullQName)
+	}, require.Is(ErrMissedError))
 
 	require.Panics(func() {
-		New().AddQuery(NewQName("naked", "🔫"))
-	}, "panic if name is invalid")
+		New(NewAppQName("test", "app")).AddQuery(NewQName("naked", "🔫"))
+	}, require.Is(ErrInvalidError), require.Has("naked.🔫"))
 
 	t.Run("panic if type with name already exists", func(t *testing.T) {
 		testName := NewQName("test", "dupe")
-		adb := New()
+		adb := New(NewAppQName("test", "app"))
 		adb.AddPackage("test", "test.com/test")
 		adb.AddObject(testName)
 		require.Panics(func() {
 			adb.AddQuery(testName)
-		})
+		}, require.Is(ErrAlreadyExistsError), require.Has(testName))
 	})
 
 	t.Run("panic if extension name is empty", func(t *testing.T) {
-		adb := New()
+		adb := New(NewAppQName("test", "app"))
 		adb.AddPackage("test", "test.com/test")
 		query := adb.AddQuery(NewQName("test", "query"))
 		require.Panics(func() {
 			query.SetName("")
-		})
+		}, require.Is(ErrMissedError))
 	})
 
 	t.Run("panic if extension name is invalid", func(t *testing.T) {
-		adb := New()
+		adb := New(NewAppQName("test", "app"))
 		adb.AddPackage("test", "test.com/test")
 		query := adb.AddQuery(NewQName("test", "query"))
 		require.Panics(func() {
 			query.SetName("naked 🔫")
-		})
+		}, require.Is(ErrInvalidError), require.Has("🔫"))
 	})
 }
 
 func Test_QueryValidate(t *testing.T) {
 	require := require.New(t)
 
-	adb := New()
+	adb := New(NewAppQName("test", "app"))
 	adb.AddPackage("test", "test.com/test")
 
 	query := adb.AddQuery(NewQName("test", "query"))
@@ -131,8 +131,7 @@ func Test_QueryValidate(t *testing.T) {
 		par := NewQName("test", "param")
 		query.SetParam(par)
 		_, err := adb.Build()
-		require.ErrorIs(err, ErrNotFoundError)
-		require.ErrorContains(err, par.String())
+		require.Error(err, require.Is(ErrNotFoundError), require.Has(par))
 
 		_ = adb.AddObject(par)
 	})
@@ -141,8 +140,7 @@ func Test_QueryValidate(t *testing.T) {
 		res := NewQName("test", "res")
 		query.SetResult(res)
 		_, err := adb.Build()
-		require.ErrorIs(err, ErrNotFoundError)
-		require.ErrorContains(err, res.String())
+		require.Error(err, require.Is(ErrNotFoundError), require.Has(res))
 
 		_ = adb.AddObject(res)
 	})
@@ -158,7 +156,7 @@ func Test_AppDef_AddQueryWithAnyResult(t *testing.T) {
 	queryName := NewQName("test", "query")
 
 	t.Run("must be ok to add query with any result", func(t *testing.T) {
-		adb := New()
+		adb := New(NewAppQName("test", "app"))
 		adb.AddPackage("test", "test.com/test")
 
 		query := adb.AddQuery(queryName)

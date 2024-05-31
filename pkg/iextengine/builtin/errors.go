@@ -7,9 +7,9 @@ package iextenginebuiltin
 import (
 	"fmt"
 
-	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/appdef"
 )
 
-func undefinedExtension(app istructs.AppQName, ext string) error {
+func undefinedExtension(app appdef.AppQName, ext string) error {
 	return fmt.Errorf("app %v: undefined extension: %v", app, ext)
 }

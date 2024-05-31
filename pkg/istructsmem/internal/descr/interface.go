@@ -5,10 +5,10 @@
 
 package descr
 
-import "github.com/voedger/voedger/pkg/istructs"
+import "github.com/voedger/voedger/pkg/appdef"
 
 type Application struct {
-	Name     istructs.AppQName
+	Name     appdef.AppQName
 	Packages map[string]*Package `json:",omitempty"`
 }
 
