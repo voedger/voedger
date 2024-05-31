@@ -68,7 +68,7 @@ func (s *federationCommandStorage) Get(key istructs.IStateKeyBuilder) (istructs.
 	}
 
 	if v, ok := kb.data[Field_WSID]; ok {
-		wsid = v.(istructs.WSID)
+		wsid = istructs.WSID(v.(int64))
 	} else {
 		wsid = s.wsid()
 	}
