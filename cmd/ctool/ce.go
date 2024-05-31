@@ -31,7 +31,7 @@ func ceClusterControllerFunction(c *clusterType) error {
 		}
 
 		loggerInfo("Adding user voedger to Grafana on ce-node")
-		if err = addGrafanUser(c.nodeByHost("ce-node"), voedger); err != nil {
+		if err = addGrafanUser(c.nodeByHost(ceNodeName), voedger); err != nil {
 			return err
 		}
 

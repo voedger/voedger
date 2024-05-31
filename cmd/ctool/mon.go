@@ -88,20 +88,21 @@ func setMonPassword(cluster *clusterType, password string) error {
 		return err
 	}
 
+	scriptName := "g-ds-update.sh"
 	if cluster.Edition == clusterEditionCE {
 
 		if err = newScriptExecuter("", "").
-			run("g-ds-update.sh", cluster.nodeByHost("ce-node").address(), admin, admin, password); err != nil {
+			run(scriptName, cluster.nodeByHost(ceNodeName).address(), admin, admin, password); err != nil {
 			return err
 		}
 	} else {
 		if err = newScriptExecuter(cluster.sshKey, "").
-			run("g-ds-update.sh", cluster.nodeByHost("app-node-1").address(), admin, admin, password); err != nil {
+			run(scriptName, cluster.nodeByHost("app-node-1").address(), admin, admin, password); err != nil {
 			return err
 		}
 
 		if err = newScriptExecuter(cluster.sshKey, "").
-			run("g-ds-update.sh", cluster.nodeByHost("app-node-2").address(), admin, admin, password); err != nil {
+			run(scriptName, cluster.nodeByHost("app-node-2").address(), admin, admin, password); err != nil {
 			return err
 		}
 	}
@@ -135,7 +136,7 @@ func setGrafanaPassword(cluster *clusterType, password string) error {
 
 	if cluster.Edition == clusterEditionCE {
 		if err = newScriptExecuter("", "").
-			run("g-user-password-set.sh", cluster.nodeByHost("ce-node").address(), admin, admin, password); err != nil {
+			run("g-user-password-set.sh", cluster.nodeByHost(ceNodeName).address(), admin, admin, password); err != nil {
 			return err
 		}
 
