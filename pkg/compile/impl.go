@@ -8,10 +8,11 @@ package compile
 import (
 	"errors"
 	"fmt"
+	"path/filepath"
+
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"golang.org/x/exp/maps"
 	"golang.org/x/tools/go/packages"
-	"path/filepath"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/parser"
@@ -77,7 +78,13 @@ func compile(dir string, checkAppSchema bool) (*Result, error) {
 	}
 	// build app defs from app schema
 	if appAst != nil {
-		builder := appdef.New()
+		appName, err := appdef.ParseAppQName(appAst.Name)
+		if err != nil {
+			errs = append(errs, err)
+			// TODO: handle this error
+			appName = appdef.NullAppQName
+		}
+		builder := appdef.New(appName)
 		if err := parser.BuildAppDefs(appAst, builder); err != nil {
 			errs = append(errs, err)
 		}
