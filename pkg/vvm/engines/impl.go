@@ -54,6 +54,7 @@ func provideAppsBuiltInExtFuncs(cfgs istructsmem.AppConfigsType) iextengine.Buil
 								istructs.ExecQueryArgs{
 									PrepareArgs: io.QueryPrepareArgs(),
 									State:       io,
+									Intents:     io,
 								},
 								io.QueryCallback(),
 							)

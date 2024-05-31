@@ -231,6 +231,19 @@ func ProvideApp1(apis apps.APIs, cfg *istructsmem.AppConfigType, ep extensionpoi
 	cfg.Resources.Add(istructsmem.NewCommandFunction(appdef.NewQName(app1PkgName, "testCmd"), istructsmem.NullCommandExec))
 	cfg.Resources.Add(istructsmem.NewCommandFunction(appdef.NewQName(app1PkgName, "TestCmdRawArg"), istructsmem.NullCommandExec))
 
+	cfg.Resources.Add(istructsmem.NewQueryFunction(appdef.NewQName(app1PkgName, "QryIntents"), func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
+		kb, err := args.State.KeyBuilder(state.Result, appdef.NewQName(app1PkgName, "QryIntentsResult"))
+		if err != nil {
+			return err
+		}
+		vb, err := args.Intents.NewValue(kb)
+		if err != nil {
+			return err
+		}
+		vb.PutString("Fld1", "hello")
+		return nil
+	}))
+
 	app1PackageFS := parser.PackageFS{
 		Path: App1PkgPath,
 		FS:   SchemaTestApp1FS,
