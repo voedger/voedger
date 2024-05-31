@@ -7,6 +7,7 @@ package payloads
 import (
 	"time"
 
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
@@ -24,7 +25,7 @@ func (at *implIAppTokens) ValidateToken(token string, pointerToPayload interface
 	return
 }
 
-func (atf *implIAppTokensFactory) New(app istructs.AppQName) istructs.IAppTokens {
+func (atf *implIAppTokensFactory) New(app appdef.AppQName) istructs.IAppTokens {
 	return &implIAppTokens{
 		itokens:  atf.tokens,
 		appQName: app,

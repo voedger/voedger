@@ -20,7 +20,6 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/iextengine"
-	"github.com/voedger/voedger/pkg/istructs"
 	safe "github.com/voedger/voedger/pkg/state/isafestateapi"
 	"github.com/voedger/voedger/pkg/state/safestate"
 )
@@ -55,7 +54,7 @@ type wazeroExtPkg struct {
 }
 
 type wazeroExtEngine struct {
-	app istructs.AppQName
+	app appdef.AppQName
 
 	compile bool
 	config  *iextengine.ExtEngineConfig
@@ -97,7 +96,7 @@ func (w *limitedWriter) Write(p []byte) (n int, err error) {
 	return len(p), nil
 }
 
-func (f extensionEngineFactory) New(ctx context.Context, app istructs.AppQName, packages []iextengine.ExtensionPackage, config *iextengine.ExtEngineConfig, numEngines int) (engines []iextengine.IExtensionEngine, err error) {
+func (f extensionEngineFactory) New(ctx context.Context, app appdef.AppQName, packages []iextengine.ExtensionPackage, config *iextengine.ExtEngineConfig, numEngines int) (engines []iextengine.IExtensionEngine, err error) {
 	for i := 0; i < numEngines; i++ {
 		engine := &wazeroExtEngine{
 			app:         app,

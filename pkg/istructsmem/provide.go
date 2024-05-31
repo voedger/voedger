@@ -7,6 +7,7 @@ package istructsmem
 import (
 	"sync"
 
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/irates"
 	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -19,7 +20,7 @@ func Provide(appConfigs AppConfigsType, bucketsFactory irates.BucketsFactoryType
 	return &appStructsProviderType{
 		locker:           sync.RWMutex{},
 		configs:          appConfigs,
-		structures:       make(map[istructs.AppQName]*appStructsType),
+		structures:       make(map[appdef.AppQName]*appStructsType),
 		bucketsFactory:   bucketsFactory,
 		appTokensFactory: appTokensFactory,
 		storageProvider:  storageProvider,

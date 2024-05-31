@@ -125,8 +125,6 @@ type (
 var sfs embed.FS
 
 func appStructs(appdefSql string, prepareAppCfg appCfgCallback) istructs.IAppStructs {
-	appDef := appdef.New()
-
 	fs, err := parser.ParseFile("file1.vsql", appdefSql)
 	if err != nil {
 		panic(err)
@@ -150,13 +148,21 @@ func appStructs(appdefSql string, prepareAppCfg appCfgCallback) istructs.IAppStr
 		panic(err)
 	}
 
+	// TODO: obtain app name from packages
+	// appName := packages.AppQName()
+	// require.Equal(t, istructs.AppQName_test1_app1, packages.AppQName())
+
+	appName := istructs.AppQName_test1_app1
+
+	appDef := appdef.New(appName)
+
 	err = parser.BuildAppDefs(packages, appDef)
 	if err != nil {
 		panic(err)
 	}
 
 	cfgs := make(istructsmem.AppConfigsType, 1)
-	cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, appDef)
+	cfg := cfgs.AddConfig(appName, appDef)
 	cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 	if prepareAppCfg != nil {
 		prepareAppCfg(cfg)
@@ -169,7 +175,7 @@ func appStructs(appdefSql string, prepareAppCfg appCfgCallback) istructs.IAppStr
 		iratesce.TestBucketsFactory,
 		payloads.ProvideIAppTokensFactory(itokensjwt.TestTokensJWT()),
 		storageProvider)
-	structs, err := prov.AppStructs(istructs.AppQName_test1_app1)
+	structs, err := prov.AppStructs(appName)
 	if err != nil {
 		panic(err)
 	}

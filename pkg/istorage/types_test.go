@@ -13,56 +13,57 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
 func TestGetAppStorgaDesc(t *testing.T) {
 	require := require.New(t)
 	type n struct {
-		name     istructs.AppQName
+		name     appdef.AppQName
 		expected string
 	}
 	cases := [][]n{
 		{
 			// basic
-			{istructs.NewAppQName("", ""), "{uuid}"},
-			{istructs.NewAppQName("sys", "ok"), "sysok"},
-			{istructs.NewAppQName("sys", "12ok "), "sys12ok"},
-			{istructs.NewAppQName("sys", "12OK "), "sys12ok{uuid}"},
-			{istructs.NewAppQName("sys", "12OK_"), "sys12ok{uuid}"},
-			{istructs.NewAppQName("sys", "_"), "sys"},
-			{istructs.NewAppQName("sys", "a"), "sysa"},
-			{istructs.NewAppQName("sys", "!"), "sys{uuid}"},
+			{appdef.NewAppQName("", ""), "{uuid}"},
+			{appdef.NewAppQName("sys", "ok"), "sysok"},
+			{appdef.NewAppQName("sys", "12ok "), "sys12ok"},
+			{appdef.NewAppQName("sys", "12OK "), "sys12ok{uuid}"},
+			{appdef.NewAppQName("sys", "12OK_"), "sys12ok{uuid}"},
+			{appdef.NewAppQName("sys", "_"), "sys"},
+			{appdef.NewAppQName("sys", "a"), "sysa"},
+			{appdef.NewAppQName("sys", "!"), "sys{uuid}"},
 		},
 		{
 			// first char must not be a digit
-			{istructs.NewAppQName("1sys", "_"), "asys"},
-			{istructs.NewAppQName("2sys", "_"), "asys{uuid}"},
-			{istructs.NewAppQName("1sys", "6_"), "asys6"},
-			{istructs.NewAppQName("1sys", "ok"), "asysok"},
-			{istructs.NewAppQName("11sys", "ok"), "a1sysok"},
-			{istructs.NewAppQName("21sys", "ok"), "a1sysok{uuid}"},
+			{appdef.NewAppQName("1sys", "_"), "asys"},
+			{appdef.NewAppQName("2sys", "_"), "asys{uuid}"},
+			{appdef.NewAppQName("1sys", "6_"), "asys6"},
+			{appdef.NewAppQName("1sys", "ok"), "asysok"},
+			{appdef.NewAppQName("11sys", "ok"), "a1sysok"},
+			{appdef.NewAppQName("21sys", "ok"), "a1sysok{uuid}"},
 		},
 		{
 			// matches caused by triming differences
 			// no trim                                                      43 chars                                             43 chars
-			{istructs.NewAppQName("sys", "aaaaaaaaAaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"), "sysaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"},
+			{appdef.NewAppQName("sys", "aaaaaaaaAaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"), "sysaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"},
 
 			// +1 symbol -> trim, last symbol replaced                      44 chars                 43 chars
-			{istructs.NewAppQName("sys", "aaaaaaaaaaaaaaaaaaaaaaAaaaaaaaaaaaaaaaaaa"), "sysaaaaaaa{uuid}"},
-			{istructs.NewAppQName("sys", "aaaaaaaaaaaaaaAaaaaaaaaaaaaaaaaaaaaaaaaab"), "sysaaaaaaa{uuid}"},
+			{appdef.NewAppQName("sys", "aaaaaaaaaaaaaaaaaaaaaaAaaaaaaaaaaaaaaaaaa"), "sysaaaaaaa{uuid}"},
+			{appdef.NewAppQName("sys", "aaaaaaaaaaaaaaAaaaaaaaaaaaaaaaaaaaaaaaaab"), "sysaaaaaaa{uuid}"},
 
 			// +1 symbol -> trim, last symbol replaced + match with previous *b
-			{istructs.NewAppQName("sys", "aaaaaaaaaaaaaaaAaaaaaaaaaaaaaaaaaaaaaaaaaaaaba"), "sysaaaaaaaaaaaaa{uuid}"},
+			{appdef.NewAppQName("sys", "aaaaaaaaaaaaaaaAaaaaaaaaaaaaaaaaaaaaaaaaaaaaba"), "sysaaaaaaaaaaaaa{uuid}"},
 
 			// all wrong chars are replaced with good ones, already have a match
-			{istructs.NewAppQName("sys", `bcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRS`), "sysbcdefghijklmnopqrstuvwxyzabcdefghijklmno"},
-			{istructs.NewAppQName("sys", `_____________________________________________`), "sys"},
+			{appdef.NewAppQName("sys", `bcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRS`), "sysbcdefghijklmnopqrstuvwxyzabcdefghijklmno"},
+			{appdef.NewAppQName("sys", `_____________________________________________`), "sys"},
 		},
 		{
 			// non-latin chars
-			{istructs.NewAppQName("sys", `Карлосон 哇"呀呀`), "sys"},
-			{istructs.NewAppQName("sys", `aaaaaaaaaaaaa`), "sysaaaaaaaaaaaaa"},
+			{appdef.NewAppQName("sys", `Карлосон 哇"呀呀`), "sys"},
+			{appdef.NewAppQName("sys", `aaaaaaaaaaaaa`), "sysaaaaaaaaaaaaa"},
 		},
 	}
 	uuidRegex := regexp.MustCompile(`^[0-9a-fA-F]{27}$`)

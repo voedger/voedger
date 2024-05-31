@@ -15,7 +15,7 @@ import (
 func Test_type_AddContainer(t *testing.T) {
 	require := require.New(t)
 
-	adb := New()
+	adb := New(NewAppQName("test", "app"))
 	adb.AddPackage("test", "test.com/test")
 
 	rootName := NewQName("test", "root")
@@ -43,7 +43,7 @@ func Test_type_AddContainer(t *testing.T) {
 	})
 
 	t.Run("chain notation is ok to add containers", func(t *testing.T) {
-		adb := New()
+		adb := New(NewAppQName("test", "app"))
 		adb.AddPackage("test", "test.com/test")
 		_ = adb.AddObject(childName)
 		_ = adb.AddObject(rootName).
@@ -101,7 +101,7 @@ func Test_type_AddContainer(t *testing.T) {
 	})
 
 	t.Run("must be panic if too many containers", func(t *testing.T) {
-		el := New().AddObject(childName)
+		el := New(NewAppQName("test", "app")).AddObject(childName)
 		for i := 0; i < MaxTypeContainerCount; i++ {
 			el.AddContainer(fmt.Sprintf("c_%#x", i), childName, 0, Occurs_Unbounded)
 		}
@@ -113,7 +113,7 @@ func Test_type_AddContainer(t *testing.T) {
 func TestValidateContainer(t *testing.T) {
 	require := require.New(t)
 
-	app := New()
+	app := New(NewAppQName("test", "app"))
 	app.AddPackage("test", "test.com/test")
 	doc := app.AddCDoc(NewQName("test", "doc"))
 	doc.AddContainer("rec", NewQName("test", "rec"), 0, Occurs_Unbounded)

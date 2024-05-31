@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/itokens"
@@ -36,7 +37,7 @@ func provideIssuePrincipalTokenExec(itokens itokens.ITokens) istructsmem.ExecQue
 		login := args.ArgumentObject.AsString(authnz.Field_Login)
 		appName := args.ArgumentObject.AsString(authnz.Field_AppName)
 
-		appQName, err := istructs.ParseAppQName(appName)
+		appQName, err := appdef.ParseAppQName(appName)
 		if err != nil {
 			// notest
 			// validated already on c.registry.CreateLogin

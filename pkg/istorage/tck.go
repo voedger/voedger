@@ -12,12 +12,12 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 
-	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/appdef"
 )
 
 // TechnologyCompatibilityKit test suit
 func TechnologyCompatibilityKit(t *testing.T, storageFactory IAppStorageFactory) {
-	testAppQName := istructs.NewAppQName("tcktest", uuid.NewString())
+	testAppQName := appdef.NewAppQName("tcktest", uuid.NewString())
 	storage := testAppStorageFactory(t, storageFactory, testAppQName)
 	TechnologyCompatibilityKit_Storage(t, storage)
 }
@@ -29,7 +29,7 @@ func TechnologyCompatibilityKit_Storage(t *testing.T, storage IAppStorage) {
 	t.Run("TestAppStorage_GetBatch", func(t *testing.T) { testAppStorage_GetBatch(t, storage) })
 }
 
-func testAppStorageFactory(t *testing.T, sf IAppStorageFactory, testAppQName istructs.AppQName) IAppStorage {
+func testAppStorageFactory(t *testing.T, sf IAppStorageFactory, testAppQName appdef.AppQName) IAppStorage {
 	require := require.New(t)
 
 	san, err := NewSafeAppName(testAppQName, func(name string) (bool, error) { return true, nil })

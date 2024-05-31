@@ -31,7 +31,7 @@ func Test_AppDef_AddRole(t *testing.T) {
 	intruderRoleName := NewQName("test", "intruderRole")
 
 	t.Run("should be ok to build application with roles and privileges", func(t *testing.T) {
-		adb := New()
+		adb := New(NewAppQName("test", "app"))
 		adb.AddPackage("test", "test.com/test")
 
 		ws := adb.AddWorkspace(wsName)

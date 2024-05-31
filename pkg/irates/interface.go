@@ -44,7 +44,7 @@ type IBuckets interface {
 type BucketKey struct {
 	RateLimitName string
 	RemoteAddr    string
-	App           istructs.AppQName
+	App           appdef.AppQName
 	Workspace     istructs.WSID
 	QName         appdef.QName
 	ID            istructs.RecordID

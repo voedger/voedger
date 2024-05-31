@@ -80,7 +80,7 @@ func mockedAppStructs() istructs.IAppStructs {
 	mockedRecords := &mockRecords{}
 	mockedRecords.On("GetSingleton", istructs.WSID(1), mock.Anything).Return(mockWorkspaceRecord, nil)
 
-	appDefBuilder := appdef.New()
+	appDefBuilder := appdef.New(testAppQName)
 	wsDesc := appDefBuilder.AddCDoc(testWSDescriptorQName)
 	wsDesc.AddField(field_WSKind, appdef.DataKind_bytes, false)
 	view := appDefBuilder.AddView(testViewRecordQName1)

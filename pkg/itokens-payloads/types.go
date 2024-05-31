@@ -55,5 +55,5 @@ type implIAppTokensFactory struct {
 
 type implIAppTokens struct {
 	itokens  itokens.ITokens
-	appQName istructs.AppQName
+	appQName appdef.AppQName
 }

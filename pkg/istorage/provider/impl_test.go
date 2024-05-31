@@ -9,9 +9,9 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istorage/mem"
-	"github.com/voedger/voedger/pkg/istructs"
 )
 
 func TestBasicUsage(t *testing.T) {
@@ -19,8 +19,8 @@ func TestBasicUsage(t *testing.T) {
 	asf := mem.Provide()
 	asp := Provide(asf)
 
-	app1 := istructs.NewAppQName("sys", "_") // SafeAppName is "sys"
-	app2 := istructs.NewAppQName("sys", "/") // SafeAppName is "sys{uuid}"
+	app1 := appdef.NewAppQName("sys", "_") // SafeAppName is "sys"
+	app2 := appdef.NewAppQName("sys", "/") // SafeAppName is "sys{uuid}"
 
 	// basic IAppStorage obtain
 	storage, err := asp.AppStorage(app1)
@@ -64,7 +64,7 @@ func TestInitErrorPersistence(t *testing.T) {
 	asf := mem.Provide()
 	asp := Provide(asf)
 
-	app1 := istructs.NewAppQName("sys", "_")
+	app1 := appdef.NewAppQName("sys", "_")
 	app1SafeName, err := istorage.NewSafeAppName(app1, func(name string) (bool, error) { return true, nil })
 	require.NoError(err)
 

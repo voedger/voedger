@@ -10,7 +10,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/istructs"
 )
 
 func TestBasicUsage(t *testing.T) {
@@ -19,7 +18,7 @@ func TestBasicUsage(t *testing.T) {
 	op, err := ParseQuery(query)
 	require.NoError(err)
 	expectedDML := Op{
-		AppQName: istructs.NewAppQName("test1", "app1"),
+		AppQName: appdef.NewAppQName("test1", "app1"),
 		QName:    appdef.NewQName("sys", "Table"),
 		Kind:     OpKind_Select,
 		Workspace: Workspace{
@@ -34,7 +33,7 @@ func TestBasicUsage(t *testing.T) {
 
 func TestCases(t *testing.T) {
 	require := require.New(t)
-	test1App1 := istructs.NewAppQName("test1", "app1")
+	test1App1 := appdef.NewAppQName("test1", "app1")
 	sysTable := appdef.NewQName("sys", "Table")
 	cases := []struct {
 		query string
@@ -101,7 +100,7 @@ func TestCases(t *testing.T) {
 		{
 			`select * from te-st_1.ap-p1_."login".sy_-s.Ta-b_le.456 where x = 1`,
 			Op{
-				AppQName: istructs.NewAppQName("te-st_1", "ap-p1_"),
+				AppQName: appdef.NewAppQName("te-st_1", "ap-p1_"),
 				Kind:     OpKind_Select,
 				QName:    appdef.NewQName("sy_-s", "Ta-b_le"),
 				CleanSQL: "select * from sy_-s.Ta-b_le where x = 1",

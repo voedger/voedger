@@ -1,84 +1,17 @@
 /*
  * Copyright (c) 2021-present Sigma-Soft, Ltd.
  * @author: Nikolay Nikitin
- * @author: Maxim Geraskin AppQName
- * @author: Maxim Geraskin qname_
+ * @author: Maxim Geraskin
  */
 
 package istructs
 
 import (
-	"encoding/json"
 	"strconv"
 	"time"
 
 	"github.com/voedger/voedger/pkg/appdef"
 )
-
-// *********************************************************************************************************
-//
-//				AppQName
-//
-
-func NewAppQName(owner, name string) AppQName {
-	return AppQName{owner: owner, name: name}
-}
-
-func (aqn *AppQName) Owner() string { return aqn.owner }
-func (aqn *AppQName) Name() string  { return aqn.name }
-func (aqn AppQName) String() string { return aqn.owner + AppQNameQualifierChar + aqn.name }
-func (aqn AppQName) IsSys() bool    { return aqn.owner == SysOwner }
-
-func ParseAppQName(val string) (res AppQName, err error) {
-	s1, s2, err := appdef.ParseQualifiedName(val, AppQNameQualifierChar)
-	return NewAppQName(s1, s2), err
-}
-
-func MustParseAppQName(val string) AppQName {
-	n, err := ParseAppQName(val)
-	if err != nil {
-		panic(err)
-	}
-	return n
-}
-
-func (aqn *AppQName) MarshalJSON() ([]byte, error) {
-	return json.Marshal(aqn.owner + AppQNameQualifierChar + aqn.name)
-}
-
-// need to marshal map[AppQName]any
-func (aqn AppQName) MarshalText() (text []byte, err error) {
-	js, err := json.Marshal(aqn.owner + AppQNameQualifierChar + aqn.name)
-	if err != nil {
-		// notest
-		return nil, err
-	}
-	res, err := strconv.Unquote(string(js))
-	if err != nil {
-		// notest
-		return nil, err
-	}
-	return []byte(res), nil
-}
-
-func (aqn *AppQName) UnmarshalJSON(text []byte) (err error) {
-	*aqn = AppQName{}
-	str, err := strconv.Unquote(string(text))
-	if err != nil {
-		return err
-	}
-	aqn.owner, aqn.name, err = appdef.ParseQualifiedName(str, AppQNameQualifierChar)
-	return err
-}
-
-// need to unmarshal map[AppQName]any
-// golang json looks on UnmarshalText presence only on unmarshal map[QName]any. UnmarshalJSON() will be used anyway
-// but no UnmarshalText -> fail to unmarshal map[AppQName]any
-// see https://github.com/golang/go/issues/29732
-func (aqn *AppQName) UnmarshalText(text []byte) (err error) {
-	// notest
-	return nil
-}
 
 // *********************************************************************************************************
 //

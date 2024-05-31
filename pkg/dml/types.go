@@ -20,7 +20,7 @@ type Workspace struct {
 type WorkspaceKind int
 
 type Op struct {
-	AppQName  istructs.AppQName
+	AppQName  appdef.AppQName
 	QName     appdef.QName
 	Kind      OpKind
 	Workspace Workspace

@@ -101,7 +101,7 @@ type IState interface {
 	QueryPrepareArgs() PrepareArgs
 	QueryCallback() ExecQueryCallback
 
-	App() AppQName
+	App() appdef.AppQName
 }
 
 type IIntents interface {
