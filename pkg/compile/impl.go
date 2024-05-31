@@ -78,12 +78,11 @@ func compile(dir string, checkAppSchema bool) (*Result, error) {
 	}
 	// build app defs from app schema
 	if appAst != nil {
-		appName, err := appdef.ParseAppQName(appAst.Name)
-		if err != nil {
-			errs = append(errs, err)
-			// TODO: handle this error
-			appName = appdef.NullAppQName
-		}
+		appName := appAst.AppQName()
+		// TODO: handle if app name is null
+		// if appName == appdef.NullAppQName {
+		// 	errs = append(errs, fmt.Errorf("app name is null"))
+		// }
 		builder := appdef.New(appName)
 		if err := parser.BuildAppDefs(appAst, builder); err != nil {
 			errs = append(errs, err)
