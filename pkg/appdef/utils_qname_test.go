@@ -754,6 +754,24 @@ func TestBasicUsage_AppQName_JSon(t *testing.T) {
 	})
 }
 
+func TestAppQName_IsSys(t *testing.T) {
+	tests := []struct {
+		aqn  AppQName
+		want bool
+	}{
+		{NullAppQName, false},
+		{MustParseAppQName("sys/registry"), true},
+		{MustParseAppQName("owner/my"), false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.aqn.String(), func(t *testing.T) {
+			if got := tt.aqn.IsSys(); got != tt.want {
+				t.Errorf("AppQName.IsSys() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestMustParseAppQName(t *testing.T) {
 	tests := []struct {
 		name string
@@ -775,6 +793,40 @@ func TestMustParseAppQName(t *testing.T) {
 	require := require.New(t)
 	t.Run("panic if invalid AppQName", func(t *testing.T) {
 		require.Panics(func() { MustParseAppQName("🔫") }, require.Is(ErrConvertError), require.Has("🔫"))
+	})
+}
+
+func TestAppQName_Compare(t *testing.T) {
+	require := require.New(t)
+
+	q1_1 := NewAppQName("sys", "registry")
+	q1_2 := NewAppQName("sys", "registry")
+	require.Equal(q1_1, q1_2)
+
+	q2 := NewQName("sys", "registry2")
+	require.NotEqual(q1_1, q2)
+}
+
+func TestAppQName_Json_NullAppQName(t *testing.T) {
+
+	require := require.New(t)
+	t.Run("Marshal/Unmarshal NullAppQName", func(t *testing.T) {
+
+		aqn := NullAppQName
+
+		// Marshal
+
+		j, err := json.Marshal(&aqn)
+		require.NoError(err)
+
+		// Unmarshal
+
+		aqn2 := NewAppQName("sys", "registry")
+		err = json.Unmarshal(j, &aqn2)
+		require.NoError(err)
+
+		// Compare
+		require.Equal(aqn, aqn2)
 	})
 }
 
