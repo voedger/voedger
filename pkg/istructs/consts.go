@@ -150,7 +150,6 @@ const NullClusterAppID = ClusterAppID_null
 const FirstGeneratedAppID = ClusterAppID(0x100)
 
 // Cluster application qnames
-
 const SysOwner = "sys"
 
 var AppQName_null = NullAppQName

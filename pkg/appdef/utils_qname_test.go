@@ -59,7 +59,7 @@ func TestBasicUsage_QName_JSon(t *testing.T) {
 
 	require := require.New(t)
 
-	t.Run("Marshall/Unmarshal QName", func(t *testing.T) {
+	t.Run("Marshal/Unmarshal QName", func(t *testing.T) {
 
 		qname := NewQName("airs-bp", `Карлсон 哇"呀呀`)
 
@@ -83,7 +83,7 @@ func TestBasicUsage_QName_JSon(t *testing.T) {
 		})
 	})
 
-	t.Run("Marshall/Unmarshal QName as a part of the structure", func(t *testing.T) {
+	t.Run("Marshal/Unmarshal QName as a part of the structure", func(t *testing.T) {
 
 		type myStruct struct {
 			QName       QName
@@ -130,7 +130,7 @@ func TestBasicUsage_QName_JSon(t *testing.T) {
 func TestQName_Json_NullQName(t *testing.T) {
 
 	require := require.New(t)
-	t.Run("Marshall/Unmarshal NullQName", func(t *testing.T) {
+	t.Run("Marshal/Unmarshal NullQName", func(t *testing.T) {
 
 		qname := NullQName
 
@@ -178,47 +178,31 @@ func Test_NullQName(t *testing.T) {
 }
 
 func TestQName_UnmarshalInvalidString(t *testing.T) {
+	tests := []struct {
+		name        string
+		value       []byte
+		err         error
+		errContains string
+	}{
+		{"Nill slice", nil, strconv.ErrSyntax, ""},
+		{"Two quotes string", []byte(`""`), ErrConvertError, ""},
+		{"No qualifier char `.`", []byte(`"bcd"`), ErrConvertError, "bcd"},
+		{"Two `.`", []byte(`"c..d"`), ErrConvertError, "c..d"},
+		{"json unquoted", []byte(`c.d`), strconv.ErrSyntax, ""},
+	}
+
 	require := require.New(t)
-
-	var err error
-	t.Run("Nill slice", func(t *testing.T) {
-		q := NewQName("a", "b")
-
-		err = q.UnmarshalJSON(nil)
-		require.ErrorIs(err, strconv.ErrSyntax)
-		require.Equal(NullQName, q)
-	})
-
-	t.Run("Two-bytes string", func(t *testing.T) {
-		q := NewQName("a", "b")
-
-		err = q.UnmarshalJSON([]byte("\"\""))
-		require.ErrorIs(err, ErrConvertError)
-		require.Equal(NullQName, q)
-	})
-
-	t.Run("No dot", func(t *testing.T) {
-		q := NewQName("a", "b")
-
-		err = q.UnmarshalJSON([]byte("\"bcd\""))
-		require.Error(err, require.Is(ErrConvertError), require.Has("bcd"))
-		require.Equal(NullQName, q)
-	})
-
-	t.Run("Two dots", func(t *testing.T) {
-		q := NewQName("a", "b")
-
-		err = q.UnmarshalJSON([]byte("\"c..d\""))
-		require.Error(err, require.Is(ErrConvertError), require.Has("c..d"))
-		require.Equal(NullQName, q)
-	})
-
-	t.Run("json unquoted", func(t *testing.T) {
-		q := NewQName("a", "b")
-		err = q.UnmarshalJSON([]byte("c.d"))
-		require.Error(err, require.Is(strconv.ErrSyntax))
-		require.Equal(NullQName, q)
-	})
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			n := NewQName("a", "b")
+			err := n.UnmarshalJSON(tt.value)
+			require.Equal(NullQName, n)
+			require.ErrorIs(err, tt.err)
+			if tt.errContains != "" {
+				require.ErrorContains(err, tt.errContains)
+			}
+		})
+	}
 }
 
 func TestValidQName(t *testing.T) {
@@ -442,7 +426,7 @@ func TestBasicUsage_FullQName_JSon(t *testing.T) {
 
 	require := require.New(t)
 
-	t.Run("Marshall/Unmarshal FullQName", func(t *testing.T) {
+	t.Run("Marshal/Unmarshal FullQName", func(t *testing.T) {
 
 		fqn := NewFullQName("untill.pro/airs-bp", `Карлсон 哇"呀呀`)
 
@@ -466,7 +450,7 @@ func TestBasicUsage_FullQName_JSon(t *testing.T) {
 		})
 	})
 
-	t.Run("Marshall/Unmarshal as a part of the structure", func(t *testing.T) {
+	t.Run("Marshal/Unmarshal as a part of the structure", func(t *testing.T) {
 
 		type myStruct struct {
 			FullQName   FullQName
@@ -513,7 +497,7 @@ func TestBasicUsage_FullQName_JSon(t *testing.T) {
 func TestFullQName_Json_NullFullQName(t *testing.T) {
 
 	require := require.New(t)
-	t.Run("Marshall/Unmarshal NullFullQName", func(t *testing.T) {
+	t.Run("Marshal/Unmarshal NullFullQName", func(t *testing.T) {
 
 		fqn := NullFullQName
 
@@ -561,39 +545,30 @@ func Test_NullFullQName(t *testing.T) {
 }
 
 func TestFullQName_UnmarshalInvalidString(t *testing.T) {
+	tests := []struct {
+		name        string
+		value       []byte
+		err         error
+		errContains string
+	}{
+		{"Nill slice", nil, strconv.ErrSyntax, ""},
+		{"Two quotes string", []byte(`""`), ErrConvertError, ""},
+		{"No qualifier char `.`", []byte(`"test/test"`), ErrConvertError, "test/test"},
+		{"json unquoted", []byte(`test/test.name`), strconv.ErrSyntax, ""},
+	}
+
 	require := require.New(t)
-
-	var err error
-	t.Run("Nill slice", func(t *testing.T) {
-		fqn := NewFullQName("a.a/a", "b")
-
-		err = fqn.UnmarshalJSON(nil)
-		require.ErrorIs(err, strconv.ErrSyntax)
-		require.Equal(NullFullQName, fqn)
-	})
-
-	t.Run("Two-bytes string", func(t *testing.T) {
-		fqn := NewFullQName("a.a/a", "b")
-
-		err = fqn.UnmarshalJSON([]byte("\"\""))
-		require.ErrorIs(err, ErrConvertError)
-		require.Equal(NullFullQName, fqn)
-	})
-
-	t.Run("No dot", func(t *testing.T) {
-		fqn := NewFullQName("a.a/a", "b")
-
-		err = fqn.UnmarshalJSON([]byte("\"bcd\""))
-		require.Error(err, require.Is(ErrConvertError), require.Has("bcd"))
-		require.Equal(NullFullQName, fqn)
-	})
-
-	t.Run("json unquoted", func(t *testing.T) {
-		fqn := NewFullQName("a.a/a", "b")
-		err = fqn.UnmarshalJSON([]byte("c.c/c.d"))
-		require.ErrorIs(err, strconv.ErrSyntax)
-		require.Equal(NullFullQName, fqn)
-	})
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			n := NewFullQName("a", "b")
+			err := n.UnmarshalJSON(tt.value)
+			require.Equal(NullFullQName, n)
+			require.ErrorIs(err, tt.err)
+			if tt.errContains != "" {
+				require.ErrorContains(err, tt.errContains)
+			}
+		})
+	}
 }
 
 func TestValidFullQName(t *testing.T) {
@@ -675,4 +650,158 @@ func TestMustParseFullQName(t *testing.T) {
 	t.Run("panic if invalid FullQName", func(t *testing.T) {
 		require.Panics(func() { MustParseFullQName("🔫") }, require.Is(ErrConvertError), require.Has("🔫"))
 	})
+}
+
+func TestBasicUsage_AppQName(t *testing.T) {
+
+	require := require.New(t)
+
+	// Create from onwer + name
+
+	aqn := NewAppQName("sys", "registry")
+	require.Equal(NewAppQName("sys", "registry"), aqn)
+	require.Equal("sys", aqn.Owner())
+	require.Equal("registry", aqn.Name())
+	require.True(aqn.IsSys())
+
+	require.Equal("sys/registry", fmt.Sprint(aqn))
+
+	// Parse string
+
+	aqn2, err := ParseAppQName("sys/registry")
+	require.NoError(err)
+	require.Equal(aqn, aqn2)
+
+	// Errors. Only one slash allowed
+	n, err := ParseAppQName("sys")
+	require.Equal(NullAppQName, n)
+	require.ErrorIs(err, ErrConvertError)
+
+	n, err = ParseAppQName("sys/registry/")
+	require.Equal(NullAppQName, n)
+	require.ErrorIs(err, ErrConvertError)
+}
+
+func TestBasicUsage_AppQName_JSon(t *testing.T) {
+	require := require.New(t)
+
+	t.Run("Marshal/Unmarshal QName", func(t *testing.T) {
+
+		aqn := NewAppQName("sys", `Карлосон 哇"呀呀`)
+
+		// Marshal
+
+		j, err := json.Marshal(&aqn)
+		require.NoError(err)
+
+		// Unmarshal
+
+		var aqn2 = AppQName{}
+		err = json.Unmarshal(j, &aqn2)
+		require.NoError(err)
+
+		// Compare
+		require.Equal(aqn, aqn2)
+
+		t.Run("UnmarshalText must do nothing", func(t *testing.T) {
+			aqn := NewAppQName("test", "name")
+			require.NoError(aqn.UnmarshalText([]byte(aqn.String())))
+		})
+	})
+
+	t.Run("Marshal/Unmarshal AppQName as a part of the structure", func(t *testing.T) {
+
+		type myStruct struct {
+			AQN         AppQName
+			StringValue string
+			IntValue    int
+		}
+
+		ms := myStruct{
+			AQN:         NewAppQName("p", `Карлосон 哇"呀呀`),
+			StringValue: "sv",
+			IntValue:    56,
+		}
+
+		// Marshal
+
+		j, err := json.Marshal(&ms)
+		require.NoError(err)
+
+		// Unmarshal
+
+		var ms2 = myStruct{}
+		err = json.Unmarshal(j, &ms2)
+		require.NoError(err)
+
+		// Compare
+		require.Equal(ms, ms2)
+	})
+
+	t.Run("key of a map", func(t *testing.T) {
+		expected := map[AppQName]bool{
+			NewAppQName("sys", "my"):            true,
+			NewAppQName("sys", `Карлосон 哇"呀呀`): true,
+		}
+
+		b, err := json.Marshal(&expected)
+		require.NoError(err)
+
+		actual := map[AppQName]bool{}
+		//log.Println(string(b))
+		require.NoError(json.Unmarshal(b, &actual))
+		require.Equal(expected, actual)
+	})
+}
+
+func TestMustParseAppQName(t *testing.T) {
+	tests := []struct {
+		name string
+		s    string
+		want AppQName
+	}{
+		{"/", "/", NullAppQName},
+		{"sys/router", "sys/router", NewAppQName("sys", "router")},
+		{"own/app", "own/app", NewAppQName("own", "app")},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := MustParseAppQName(tt.s); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("MustParseAppQName(%q) = %v, want %v", tt.s, got, tt.want)
+			}
+		})
+	}
+
+	require := require.New(t)
+	t.Run("panic if invalid AppQName", func(t *testing.T) {
+		require.Panics(func() { MustParseAppQName("🔫") }, require.Is(ErrConvertError), require.Has("🔫"))
+	})
+}
+
+func TestAppQName_UnmarshalInvalidString(t *testing.T) {
+	tests := []struct {
+		name        string
+		value       []byte
+		err         error
+		errContains string
+	}{
+		{"Nill slice", nil, strconv.ErrSyntax, ""},
+		{"Two quotes string", []byte(`""`), ErrConvertError, ""},
+		{"No qualifier char `/`", []byte(`"bcd"`), ErrConvertError, "bcd"},
+		{"Two `/`", []byte(`"c//d"`), ErrConvertError, "c//d"},
+		{"json unquoted", []byte(`c/d`), strconv.ErrSyntax, ""},
+	}
+
+	require := require.New(t)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			n := NewAppQName("a", "b")
+			err := n.UnmarshalJSON(tt.value)
+			require.Equal(NullAppQName, n)
+			require.ErrorIs(err, tt.err)
+			if tt.errContains != "" {
+				require.ErrorContains(err, tt.errContains)
+			}
+		})
+	}
 }

@@ -53,7 +53,7 @@ func ParseQName(val string) (res QName, err error) {
 func ParseQualifiedName(val, delimiter string) (part1, part2 string, err error) {
 	s := strings.Split(val, delimiter)
 	if len(s) != 2 {
-		return NullName, NullName, ErrConvert("string «%s» to QName", val)
+		return NullName, NullName, ErrConvert("string «%s» to qualified name", val)
 	}
 	return s[0], s[1], nil
 }
@@ -298,5 +298,79 @@ func (fqn *FullQName) UnmarshalJSON(text []byte) error {
 // but no UnmarshalText -> fail to unmarshal map[FullQName]any
 // see https://github.com/golang/go/issues/29732
 func (fqn *FullQName) UnmarshalText([]byte) error {
+	return nil
+}
+
+//—————————————————————————————
+//— AppQName ——————————————————
+//—————————————————————————————
+
+// Builds a qualified application name from two parts (from owner name and from local application name)
+func NewAppQName(owner, name string) AppQName {
+	return AppQName{owner: owner, name: name}
+}
+
+// Parse application qualified name from string. Result is AppQName.
+//
+// # Panics
+//   - if string is not a valid application qualified name
+func MustParseAppQName(val string) AppQName {
+	n, err := ParseAppQName(val)
+	if err != nil {
+		panic(err)
+	}
+	return n
+}
+
+// Parse application qualified name from string. Result is AppQName or error
+func ParseAppQName(val string) (AppQName, error) {
+	o, n, err := ParseQualifiedName(val, AppQNameQualifierChar)
+	return NewAppQName(o, n), err
+}
+
+// Returns owner name
+func (aqn AppQName) Owner() string { return aqn.owner }
+
+// Returns application local name
+func (aqn AppQName) Name() string { return aqn.name }
+
+// Returns AppQName as string
+func (aqn AppQName) String() string { return aqn.owner + AppQNameQualifierChar + aqn.name }
+
+// Returns true if application is owned by system
+func (aqn AppQName) IsSys() bool { return aqn.owner == SysOwner }
+
+func (aqn AppQName) MarshalJSON() ([]byte, error) {
+	return json.Marshal(aqn.owner + AppQNameQualifierChar + aqn.name)
+}
+
+// need to marshal map[AppQName]any
+func (aqn AppQName) MarshalText() (text []byte, err error) {
+	var js []byte
+	if js, err = json.Marshal(aqn.owner + AppQNameQualifierChar + aqn.name); err == nil {
+		var res string
+		if res, err = strconv.Unquote(string(js)); err == nil {
+			text = []byte(res)
+		}
+	}
+	return text, err
+}
+
+func (aqn *AppQName) UnmarshalJSON(text []byte) (err error) {
+	*aqn = AppQName{}
+	str, err := strconv.Unquote(string(text))
+	if err != nil {
+		return err
+	}
+	aqn.owner, aqn.name, err = ParseQualifiedName(str, AppQNameQualifierChar)
+	return err
+}
+
+// need to unmarshal map[AppQName]any
+// golang json looks on UnmarshalText presence only on unmarshal map[QName]any. UnmarshalJSON() will be used anyway
+// but no UnmarshalText -> fail to unmarshal map[AppQName]any
+// see https://github.com/golang/go/issues/29732
+func (aqn *AppQName) UnmarshalText(text []byte) (err error) {
+	// notest
 	return nil
 }

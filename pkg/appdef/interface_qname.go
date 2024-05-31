@@ -1,6 +1,7 @@
 /*
  * Copyright (c) 2024-present Sigma-Soft, Ltd.
  * @author: Nikolay Nikitin
+ * @author: Maxim Geraskin
  */
 
 package appdef
@@ -32,4 +33,16 @@ type QNames []QName
 type FullQName struct {
 	pkgPath string
 	entity  string
+}
+
+// AppQName is unique in cluster federation
+// <owner>/<name>
+// sys/registry
+// unTill/airs-bp
+// test1/app1
+// test1/app2
+// test2/app1
+// test2/app2
+type AppQName struct {
+	owner, name string
 }
