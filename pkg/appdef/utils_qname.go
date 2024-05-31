@@ -14,6 +14,10 @@ import (
 	"strings"
 )
 
+//—————————————————————————————
+//— QName —————————————————————
+//—————————————————————————————
+
 // Compare two qualified names
 func CompareQName(a, b QName) int {
 	if a.pkg != b.pkg {
@@ -52,6 +56,20 @@ func ParseQualifiedName(val, delimiter string) (part1, part2 string, err error) 
 		return NullName, NullName, ErrConvert("string «%s» to QName", val)
 	}
 	return s[0], s[1], nil
+}
+
+// Returns has qName valid package and entity identifiers and error if not
+func ValidQName(qName QName) (bool, error) {
+	if qName == NullQName {
+		return true, nil
+	}
+	if ok, err := ValidIdent(qName.Pkg()); !ok {
+		return false, err
+	}
+	if ok, err := ValidIdent(qName.Entity()); !ok {
+		return false, err
+	}
+	return true, nil
 }
 
 // Returns package name
@@ -100,28 +118,9 @@ func (qn *QName) UnmarshalText(text []byte) (err error) {
 	return nil
 }
 
-// Returns has qName valid package and entity identifiers and error if not
-func ValidQName(qName QName) (bool, error) {
-	if qName == NullQName {
-		return true, nil
-	}
-	if ok, err := ValidIdent(qName.Pkg()); !ok {
-		return false, err
-	}
-	if ok, err := ValidIdent(qName.Entity()); !ok {
-		return false, err
-	}
-	return true, nil
-}
-
-// Slice of QNames.
-//
-// Slice is sorted and has no duplicates.
-//
-// Use QNamesFrom() to create QNames slice from variadic arguments.
-// Use Add() to add QNames to slice.
-// Use Contains() and Find() to search for QName in slice.
-type QNames []QName
+//—————————————————————————————
+//—  QNames ———————————————————
+//—————————————————————————————
 
 // Returns slice of QNames from variadic arguments.
 //
@@ -141,6 +140,16 @@ func QNamesFromMap[V any, M ~map[QName]V](m M) QNames {
 		qq.Add(k)
 	}
 	return qq
+}
+
+// Returns is slice with valid qNames and error if not
+func ValidQNames(qName ...QName) (ok bool, err error) {
+	for _, q := range qName {
+		if ok, e := ValidQName(q); !ok {
+			err = errors.Join(err, e)
+		}
+	}
+	return err == nil, err
 }
 
 // Adds QNames to slice. Duplicate values are ignored. Result slice is sorted.
@@ -187,15 +196,9 @@ func (qns QNames) Find(n QName) (int, bool) {
 	return slices.BinarySearchFunc(qns, n, CompareQName)
 }
 
-// Returns is slice with valid qNames and error if not
-func ValidQNames(qName ...QName) (ok bool, err error) {
-	for _, q := range qName {
-		if ok, e := ValidQName(q); !ok {
-			err = errors.Join(err, e)
-		}
-	}
-	return err == nil, err
-}
+//—————————————————————————————
+//— FullQName —————————————————
+//—————————————————————————————
 
 // Compare two full qualified names
 func CompareFullQName(a, b FullQName) int {
@@ -203,11 +206,6 @@ func CompareFullQName(a, b FullQName) int {
 		return strings.Compare(a.pkgPath, b.pkgPath)
 	}
 	return strings.Compare(a.entity, b.entity)
-}
-
-// Builds a full qualified name from from package path and entity name
-func NewFullQName(pkgPath, entityName string) FullQName {
-	return FullQName{pkgPath: pkgPath, entity: entityName}
 }
 
 // Parse a full qualified name from string.
@@ -222,25 +220,45 @@ func MustParseFullQName(val string) FullQName {
 	return fqn
 }
 
-// Parse a qualified name from string
+// Builds a full qualified name from from package path and entity name
+func NewFullQName(pkgPath, entityName string) FullQName {
+	return FullQName{pkgPath: pkgPath, entity: entityName}
+}
+
+// Parse a qualified name from string. Result is FullQName or error
 func ParseFullQName(val string) (FullQName, error) {
 	s1, s2, err := ParseFullQualifiedName(val)
 	return NewFullQName(s1, s2), err
 }
 
-func ParseFullQualifiedName(val string) (s1, s2 string, err error) {
-	p := strings.LastIndex(val, QNameQualifierChar)
-	if p < 0 {
+// Parse a qualified name from string. Result is package path and local name or error
+func ParseFullQualifiedName(val string) (p, n string, err error) {
+	i := strings.LastIndex(val, QNameQualifierChar)
+	if i < 0 {
 		return NullName, NullName, ErrConvert("string «%s» to QName", val)
 	}
 
-	return val[:p], val[p+1:], nil
+	return val[:i], val[i+1:], nil
+}
+
+// Returns has FullQName valid package path and entity identifier and error if not
+func ValidFullQName(fqn FullQName) (bool, error) {
+	if fqn == NullFullQName {
+		return true, nil
+	}
+	if ok, err := ValidPackagePath(fqn.PkgPath()); !ok {
+		return false, err
+	}
+	if ok, err := ValidIdent(fqn.Entity()); !ok {
+		return false, err
+	}
+	return true, nil
 }
 
 // Returns package path
 func (fqn FullQName) PkgPath() string { return fqn.pkgPath }
 
-// Returns entity name
+// Returns entity local name
 func (fqn FullQName) Entity() string { return fqn.entity }
 
 // Returns FullQName as string
@@ -281,18 +299,4 @@ func (fqn *FullQName) UnmarshalJSON(text []byte) error {
 // see https://github.com/golang/go/issues/29732
 func (fqn *FullQName) UnmarshalText([]byte) error {
 	return nil
-}
-
-// Returns has FullQName valid package path and entity identifier and error if not
-func ValidFullQName(fqn FullQName) (bool, error) {
-	if fqn == NullFullQName {
-		return true, nil
-	}
-	if ok, err := ValidPackagePath(fqn.PkgPath()); !ok {
-		return false, err
-	}
-	if ok, err := ValidIdent(fqn.Entity()); !ok {
-		return false, err
-	}
-	return true, nil
 }
