@@ -57,13 +57,12 @@ func Test_Basic(t *testing.T) {
 	newPackages, err := parser.BuildAppSchema([]*parser.PackageSchemaAST{newSysPkgAST, newPkg1AST, newpkg2AST})
 	require.NoError(t, err)
 
-	// TODO: extract application  name from vsql
-	appName := appdef.NewAppQName("test", "test")
+	require.Equal(t, oldPackages.Name, newPackages.Name)
 
-	oldBuilder := appdef.New(appName)
+	oldBuilder := appdef.New(oldPackages.AppQName())
 	require.NoError(t, parser.BuildAppDefs(oldPackages, oldBuilder))
 
-	newBuilder := appdef.New(appName)
+	newBuilder := appdef.New(newPackages.AppQName())
 	require.NoError(t, parser.BuildAppDefs(newPackages, newBuilder))
 
 	oldAppDef, err := oldBuilder.Build()
