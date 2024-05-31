@@ -19,16 +19,27 @@ func ceClusterControllerFunction(c *clusterType) error {
 	switch c.Cmd.Kind {
 	case ckInit, ckUpgrade, ckAcme:
 		loggerInfo("Deploying monitoring stack...")
-		if err = newScriptExecuter(c.sshKey, "").
+		if err = newScriptExecuter("", "").
 			run("ce/mon-prepare.sh"); err != nil {
 			return err
 		}
 
 		loggerInfo("Deploying voedger CE...")
-		if err = newScriptExecuter(c.sshKey, "").
+		if err = newScriptExecuter("", "").
 			run("ce/ce-start.sh"); err != nil {
 			return err
 		}
+
+		loggerInfo("Adding user voedger to Grafana on ce-node")
+		if err = addGrafanUser(c.nodeByHost(ceNodeName), voedger); err != nil {
+			return err
+		}
+
+		loggerInfo("Voedger's password resetting to monitoring stack")
+		if err = setMonPassword(c, voedger); err != nil {
+			return err
+		}
+
 	default:
 		err = ErrUnknownCommand
 	}
