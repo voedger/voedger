@@ -17,7 +17,7 @@ func Test_AppDef_AddPackage(t *testing.T) {
 	var app IAppDef
 
 	t.Run("should be ok to add package", func(t *testing.T) {
-		adb := New()
+		adb := New(NewAppQName("test", "app"))
 
 		adb.AddPackage("test", "test.com/path")
 		adb.AddPackage("example", "example.com/path")
@@ -76,7 +76,7 @@ func Test_AppDef_AddPackage(t *testing.T) {
 	})
 
 	t.Run("test panics", func(t *testing.T) {
-		adb := New()
+		adb := New(NewAppQName("test", "app"))
 
 		require.Panics(func() { adb.AddPackage("", "test.com/path") },
 			require.Is(ErrMissedError))

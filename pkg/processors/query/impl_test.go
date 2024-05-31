@@ -42,7 +42,7 @@ var now = time.Now()
 var timeFunc = coreutils.TimeFunc(func() time.Time { return now })
 
 var (
-	appName    istructs.AppQName         = istructs.AppQName_test1_app1
+	appName    appdef.AppQName           = istructs.AppQName_test1_app1
 	appEngines                           = appparts.PoolSize(10, 100, 10)
 	partCount  istructs.NumAppPartitions = 10
 	partID     istructs.PartitionID      = 5
@@ -82,7 +82,7 @@ func TestBasicUsage_RowsProcessorFactory(t *testing.T) {
 		resultMeta appdef.IObject
 	)
 	t.Run(" should be ok to build appDef and resultMeta", func(t *testing.T) {
-		adb := appdef.New()
+		adb := appdef.New(appName)
 		adb.AddObject(qNamePosDepartment).
 			AddField("name", appdef.DataKind_string, false)
 		resBld := adb.AddObject(qNamePosDepartmentResult)
@@ -170,7 +170,7 @@ func deployTestAppWithSecretToken(require *require.Assertions,
 	qNameDepartment := appdef.NewQName("bo", "Department")
 	qNameArticle := appdef.NewQName("bo", "Article")
 
-	adb := appdef.New()
+	adb := appdef.New(appName)
 	adb.AddPackage(pkgBo, pkgBoPath)
 
 	wsb := adb.AddWorkspace(qNameTestWS)
@@ -419,7 +419,7 @@ func TestRawMode(t *testing.T) {
 		resultMeta appdef.IObject
 	)
 	t.Run(" should be ok to build appDef and resultMeta", func(t *testing.T) {
-		adb := appdef.New()
+		adb := appdef.New(appName)
 		adb.AddObject(istructs.QNameRaw)
 		app, err := adb.Build()
 		require.NoError(err)

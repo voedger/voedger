@@ -24,15 +24,15 @@ var (
 	}
 )
 
-func errAppCannotBeRedeployed(name istructs.AppQName) error {
+func errAppCannotBeRedeployed(name appdef.AppQName) error {
 	return fmt.Errorf("application %v can not be redeployed: %w", name, errors.ErrUnsupported)
 }
 
-func errAppNotFound(name istructs.AppQName) error {
+func errAppNotFound(name appdef.AppQName) error {
 	return fmt.Errorf("application %v not found: %w", name, ErrNotFound)
 }
 
-func errPartitionNotFound(name istructs.AppQName, partID istructs.PartitionID) error {
+func errPartitionNotFound(name appdef.AppQName, partID istructs.PartitionID) error {
 	return fmt.Errorf("application %v partition %v not found: %w", name, partID, ErrNotFound)
 }
 

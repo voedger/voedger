@@ -15,6 +15,9 @@ var (
 	NullFullQName = NewFullQName(NullName, NullName)
 )
 
+// NullAppQName is undefined (or empty) application name
+var NullAppQName = NewAppQName(NullName, NullName)
+
 // NullType is used for return then type is not founded
 var NullType = new(nullType)
 
@@ -22,4 +25,4 @@ var NullType = new(nullType)
 var NullFields = new(nullFields)
 
 // NullAppDef is IAppDef without any user definitions
-var NullAppDef = New().MustBuild()
+var NullAppDef = New(NullAppQName).MustBuild()

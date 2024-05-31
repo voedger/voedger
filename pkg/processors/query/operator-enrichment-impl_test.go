@@ -23,7 +23,7 @@ func TestEnrichmentOperator_DoSync(t *testing.T) {
 		require := require.New(t)
 
 		appDef := func() appdef.IAppDef {
-			adb := appdef.New()
+			adb := appdef.New(appName)
 
 			addObject := func(n appdef.QName) {
 				adb.AddObject(n).

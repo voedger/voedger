@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"sync"
 
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/ihttp"
 	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -30,8 +31,8 @@ func NewProcessor(params ihttp.CLIParams, routerStorage ihttp.IRouterStorage) (s
 			Handler:           r,
 			ReadHeaderTimeout: defaultReadHeaderTimeout,
 		},
-		apps:               make(map[istructs.AppQName]*appInfo),
-		numsAppsWorkspaces: make(map[istructs.AppQName]istructs.NumAppWorkspaces),
+		apps:               make(map[appdef.AppQName]*appInfo),
+		numsAppsWorkspaces: make(map[appdef.AppQName]istructs.NumAppWorkspaces),
 	}
 	httpProcessor.bus = ibusmem.Provide(httpProcessor.requestHandler)
 	if len(params.AcmeDomains) > 0 {

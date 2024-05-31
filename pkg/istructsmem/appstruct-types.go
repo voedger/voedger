@@ -21,10 +21,10 @@ import (
 )
 
 // AppConfigsType: map of applications configurators
-type AppConfigsType map[istructs.AppQName]*AppConfigType
+type AppConfigsType map[appdef.AppQName]*AppConfigType
 
 // AddConfig: adds new config for specified application or replaces if exists
-func (cfgs *AppConfigsType) AddConfig(appName istructs.AppQName, appDef appdef.IAppDefBuilder) *AppConfigType {
+func (cfgs *AppConfigsType) AddConfig(appName appdef.AppQName, appDef appdef.IAppDefBuilder) *AppConfigType {
 	c := newAppConfig(appName, appDef)
 
 	(*cfgs)[appName] = c
@@ -32,7 +32,7 @@ func (cfgs *AppConfigsType) AddConfig(appName istructs.AppQName, appDef appdef.I
 }
 
 // GetConfig: gets config for specified application
-func (cfgs *AppConfigsType) GetConfig(appName istructs.AppQName) *AppConfigType {
+func (cfgs *AppConfigsType) GetConfig(appName appdef.AppQName) *AppConfigType {
 	c, ok := (*cfgs)[appName]
 	if !ok {
 		panic(fmt.Errorf("unable return configuration for unknown application «%v»: %w", appName, istructs.ErrAppNotFound))
@@ -42,7 +42,7 @@ func (cfgs *AppConfigsType) GetConfig(appName istructs.AppQName) *AppConfigType 
 
 // AppConfigType: configuration for application workflow
 type AppConfigType struct {
-	Name         istructs.AppQName
+	Name         appdef.AppQName
 	ClusterAppID istructs.ClusterAppID
 
 	appDefBuilder appdef.IAppDefBuilder
@@ -69,7 +69,7 @@ type AppConfigType struct {
 	numAppWorkspaces   istructs.NumAppWorkspaces
 }
 
-func newAppConfig(appName istructs.AppQName, appDef appdef.IAppDefBuilder) *AppConfigType {
+func newAppConfig(appName appdef.AppQName, appDef appdef.IAppDefBuilder) *AppConfigType {
 	cfg := AppConfigType{
 		Name:            appName,
 		Params:          makeAppConfigParams(),

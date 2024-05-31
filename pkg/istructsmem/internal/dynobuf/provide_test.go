@@ -21,7 +21,7 @@ func TestDynoBufSchemesBasicUsage(t *testing.T) {
 
 	schemes.Prepare(
 		func() appdef.IAppDef {
-			app := appdef.New()
+			app := appdef.New(appdef.NewAppQName("test", "app"))
 			app.AddODoc(docName).
 				AddField("f1", appdef.DataKind_int32, true).
 				AddField("f2", appdef.DataKind_QName, false).

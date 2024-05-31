@@ -21,7 +21,7 @@ type IAppPartitions interface {
 	// partsCount - total partitions count for the application.
 	//
 	// If application with the same name exists, then its definition will be updated.
-	DeployApp(name istructs.AppQName, def appdef.IAppDef, partsCount istructs.NumAppPartitions, numEngines [ProcessorKind_Count]int)
+	DeployApp(name appdef.AppQName, def appdef.IAppDef, partsCount istructs.NumAppPartitions, numEngines [ProcessorKind_Count]int)
 
 	// Deploys new partitions for specified application or update existing.
 	//
@@ -29,39 +29,39 @@ type IAppPartitions interface {
 	//
 	// # Panics:
 	// 	- if application not exists
-	DeployAppPartitions(appName istructs.AppQName, partIDs []istructs.PartitionID)
+	DeployAppPartitions(appName appdef.AppQName, partIDs []istructs.PartitionID)
 
 	// Returns application definition.
 	//
 	// Returns nil and error if app not exists.
-	AppDef(istructs.AppQName) (appdef.IAppDef, error)
+	AppDef(appdef.AppQName) (appdef.IAppDef, error)
 
 	// Returns _total_ application partitions count.
 	//
 	// This is a configuration value for the application, independent of how many sections are currently deployed.
 	//
 	// Returns 0 and error if app not exists.
-	AppPartsCount(istructs.AppQName) (istructs.NumAppPartitions, error)
+	AppPartsCount(appdef.AppQName) (istructs.NumAppPartitions, error)
 
 	// Returns partition ID for specified workspace
 	//
 	// Returns error if app not exists.
-	AppWorkspacePartitionID(istructs.AppQName, istructs.WSID) (istructs.PartitionID, error)
+	AppWorkspacePartitionID(appdef.AppQName, istructs.WSID) (istructs.PartitionID, error)
 
 	// Borrows and returns a partition.
 	//
 	// If partition not exist, returns error.
-	Borrow(istructs.AppQName, istructs.PartitionID, ProcessorKind) (IAppPartition, error)
+	Borrow(appdef.AppQName, istructs.PartitionID, ProcessorKind) (IAppPartition, error)
 
 	// Waits for partition to be available and borrows it.
 	//
 	// If partition not exist, returns error.
-	WaitForBorrow(context.Context, istructs.AppQName, istructs.PartitionID, ProcessorKind) (IAppPartition, error)
+	WaitForBorrow(context.Context, appdef.AppQName, istructs.PartitionID, ProcessorKind) (IAppPartition, error)
 }
 
 // Application partition.
 type IAppPartition interface {
-	App() istructs.AppQName
+	App() appdef.AppQName
 	ID() istructs.PartitionID
 
 	AppStructs() istructs.IAppStructs
@@ -77,4 +77,4 @@ type IAppPartition interface {
 
 // dependency cycle: func requires IAppPartitions, provider of IAppPartitions requires already filled AppConfigsType -> impossible to provide AppConfigsType because we're filling it now
 // TODO: eliminate this workaround
-// type BuiltInAppsDeploymentDescriptors map[istructs.AppQName]AppDeploymentDescriptor
+// type BuiltInAppsDeploymentDescriptors map[appdef.AppQName]AppDeploymentDescriptor

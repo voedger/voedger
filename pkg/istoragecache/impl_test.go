@@ -11,6 +11,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istorage/mem"
 	istorageimpl "github.com/voedger/voedger/pkg/istorage/provider"
@@ -395,14 +396,14 @@ type testStorageProvider struct {
 	appStorageGetError error
 }
 
-func (sp *testStorageProvider) AppStorage(istructs.AppQName) (istorage.IAppStorage, error) {
+func (sp *testStorageProvider) AppStorage(appdef.AppQName) (istorage.IAppStorage, error) {
 	if sp.appStorageGetError != nil {
 		return nil, sp.appStorageGetError
 	}
 	return sp.storage, nil
 }
 
-func (sp *testStorageProvider) Init(appQName istructs.AppQName) error {
+func (sp *testStorageProvider) Init(appQName appdef.AppQName) error {
 	return nil
 }
 

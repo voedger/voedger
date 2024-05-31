@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"golang.org/x/net/netutil"
 
@@ -112,7 +113,7 @@ func (s *httpService) GetPort() int {
 	return s.listener.Addr().(*net.TCPAddr).Port
 }
 
-func (s *httpService) registerHandlers(busTimeout time.Duration, numsAppsWorkspaces map[istructs.AppQName]istructs.NumAppWorkspaces) (err error) {
+func (s *httpService) registerHandlers(busTimeout time.Duration, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) (err error) {
 	redirectMatcher, err := s.getRedirectMatcher()
 	if err != nil {
 		return err
@@ -157,7 +158,7 @@ func (s *httpService) registerHandlers(busTimeout time.Duration, numsAppsWorkspa
 	return nil
 }
 
-func RequestHandler(bus ibus.IBus, busTimeout time.Duration, numsAppsWorkspaces map[istructs.AppQName]istructs.NumAppWorkspaces) http.HandlerFunc {
+func RequestHandler(bus ibus.IBus, busTimeout time.Duration, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) http.HandlerFunc {
 	return func(resp http.ResponseWriter, req *http.Request) {
 		vars := mux.Vars(req)
 		queueRequest, ok := createRequest(req.Method, req, resp, numsAppsWorkspaces)

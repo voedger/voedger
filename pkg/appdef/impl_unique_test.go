@@ -19,7 +19,7 @@ func Test_def_AddUnique(t *testing.T) {
 	un1 := UniqueQName(qName, "EMail")
 	un2 := UniqueQName(qName, "Full")
 
-	adb := New()
+	adb := New(NewAppQName("test", "app"))
 	adb.AddPackage("test", "test.com/test")
 
 	doc := adb.AddCDoc(qName)
@@ -99,7 +99,7 @@ func Test_def_AddUnique(t *testing.T) {
 		}, require.Is(ErrAlreadyExistsError), require.Has("birthday"))
 
 		t.Run("panics if too many fields", func(t *testing.T) {
-			adb := New()
+			adb := New(NewAppQName("test", "app"))
 			adb.AddPackage("test", "test.com/test")
 			rec := adb.AddCRecord(NewQName("test", "rec"))
 			fldNames := []FieldName{}
@@ -129,7 +129,7 @@ func Test_def_AddUnique(t *testing.T) {
 		}, require.Is(ErrNotFoundError), require.Has("unknown"))
 
 		t.Run("panics if too many uniques", func(t *testing.T) {
-			adb := New()
+			adb := New(NewAppQName("test", "app"))
 			adb.AddPackage("test", "test.com/test")
 			rec := adb.AddCRecord(NewQName("test", "rec"))
 			for i := 0; i < MaxTypeUniqueCount; i++ {
@@ -150,7 +150,7 @@ func Test_type_UniqueField(t *testing.T) {
 
 	qName := NewQName("test", "user")
 
-	adb := New()
+	adb := New(NewAppQName("test", "app"))
 	adb.AddPackage("test", "test.com/test")
 
 	doc := adb.AddCDoc(qName)

@@ -320,7 +320,7 @@ func Test_AsynchronousActualizer_FlushByInterval(t *testing.T) {
 	require.Equal(int32(1), getProjectionValue(require, appStructs, incProjectionView, istructs.WSID(1002)))
 }
 
-func getProjectorsInError(metrics imetrics.IMetrics, appName istructs.AppQName, vvmName string) *float64 {
+func getProjectorsInError(metrics imetrics.IMetrics, appName appdef.AppQName, vvmName string) *float64 {
 	var foundMetricValue float64
 	var projInErrors *float64 = nil
 	metrics.List(func(metric imetrics.IMetric, metricValue float64) (err error) {

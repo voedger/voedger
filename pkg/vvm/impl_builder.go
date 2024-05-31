@@ -9,12 +9,11 @@ import (
 	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/apps"
 	"github.com/voedger/voedger/pkg/extensionpoints"
-	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/parser"
 )
 
-func (ab VVMAppsBuilder) Add(appQName istructs.AppQName, builder apps.AppBuilder) {
+func (ab VVMAppsBuilder) Add(appQName appdef.AppQName, builder apps.AppBuilder) {
 	if _, ok := ab[appQName]; ok {
 		panic(appQName.String() + " builder already added")
 	}
@@ -38,12 +37,12 @@ func buildAppFromPackagesFS(fses []parser.PackageFS, adf appdef.IAppDefBuilder) 
 }
 
 func (ab VVMAppsBuilder) BuildAppsArtefacts(apis apps.APIs, emptyCfgs AppConfigsTypeEmpty) (appsArtefacts AppsArtefacts, err error) {
-	appsArtefacts.appEPs = map[istructs.AppQName]extensionpoints.IExtensionPoint{}
+	appsArtefacts.appEPs = map[appdef.AppQName]extensionpoints.IExtensionPoint{}
 	appsArtefacts.AppConfigsType = istructsmem.AppConfigsType(emptyCfgs)
 	for appQName, appBuilder := range ab {
 		appEPs := extensionpoints.NewRootExtensionPoint()
 		appsArtefacts.appEPs[appQName] = appEPs
-		adb := appdef.New()
+		adb := appdef.New(appQName)
 		cfg := appsArtefacts.AppConfigsType.AddConfig(appQName, adb)
 		builtInAppDef := appBuilder(apis, cfg, appEPs)
 		cfg.SetNumAppWorkspaces(builtInAppDef.NumAppWorkspaces)

@@ -7,10 +7,11 @@
 package payloads
 
 import (
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
 type IAppTokensFactory interface {
 	// Should be called per App partition
-	New(app istructs.AppQName) istructs.IAppTokens
+	New(app appdef.AppQName) istructs.IAppTokens
 }

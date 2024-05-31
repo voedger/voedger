@@ -36,6 +36,15 @@ type AppSchemaAST struct {
 	LocalNameToFullPath map[string]string
 }
 
+func (a AppSchemaAST) AppQName() appdef.AppQName {
+	if n, err := appdef.ParseAppQName(a.Name); err == nil {
+		return n
+	}
+
+	// TODO: handle error
+	return appdef.NullAppQName
+}
+
 type PackageFS struct {
 	Path string
 	FS   coreutils.IReadFS

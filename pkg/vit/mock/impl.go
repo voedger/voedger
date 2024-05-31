@@ -94,7 +94,7 @@ type AppStructsProvider struct {
 	mock.Mock
 }
 
-func (p *AppStructsProvider) AppStructs(aqn istructs.AppQName) (structs istructs.IAppStructs, err error) {
+func (p *AppStructsProvider) AppStructs(aqn appdef.AppQName) (structs istructs.IAppStructs, err error) {
 	args := p.Called(aqn)
 	if intf := args.Get(0); intf != nil {
 		structs = intf.(istructs.IAppStructs)

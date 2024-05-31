@@ -14,6 +14,10 @@ import (
 	"strings"
 )
 
+//—————————————————————————————
+//— QName —————————————————————
+//—————————————————————————————
+
 // Compare two qualified names
 func CompareQName(a, b QName) int {
 	if a.pkg != b.pkg {
@@ -49,9 +53,23 @@ func ParseQName(val string) (res QName, err error) {
 func ParseQualifiedName(val, delimiter string) (part1, part2 string, err error) {
 	s := strings.Split(val, delimiter)
 	if len(s) != 2 {
-		return NullName, NullName, ErrConvert("string «%s» to QName", val)
+		return NullName, NullName, ErrConvert("string «%s» to qualified name", val)
 	}
 	return s[0], s[1], nil
+}
+
+// Returns has qName valid package and entity identifiers and error if not
+func ValidQName(qName QName) (bool, error) {
+	if qName == NullQName {
+		return true, nil
+	}
+	if ok, err := ValidIdent(qName.Pkg()); !ok {
+		return false, err
+	}
+	if ok, err := ValidIdent(qName.Entity()); !ok {
+		return false, err
+	}
+	return true, nil
 }
 
 // Returns package name
@@ -100,28 +118,9 @@ func (qn *QName) UnmarshalText(text []byte) (err error) {
 	return nil
 }
 
-// Returns has qName valid package and entity identifiers and error if not
-func ValidQName(qName QName) (bool, error) {
-	if qName == NullQName {
-		return true, nil
-	}
-	if ok, err := ValidIdent(qName.Pkg()); !ok {
-		return false, err
-	}
-	if ok, err := ValidIdent(qName.Entity()); !ok {
-		return false, err
-	}
-	return true, nil
-}
-
-// Slice of QNames.
-//
-// Slice is sorted and has no duplicates.
-//
-// Use QNamesFrom() to create QNames slice from variadic arguments.
-// Use Add() to add QNames to slice.
-// Use Contains() and Find() to search for QName in slice.
-type QNames []QName
+//—————————————————————————————
+//—  QNames ———————————————————
+//—————————————————————————————
 
 // Returns slice of QNames from variadic arguments.
 //
@@ -141,6 +140,16 @@ func QNamesFromMap[V any, M ~map[QName]V](m M) QNames {
 		qq.Add(k)
 	}
 	return qq
+}
+
+// Returns is slice with valid qNames and error if not
+func ValidQNames(qName ...QName) (ok bool, err error) {
+	for _, q := range qName {
+		if ok, e := ValidQName(q); !ok {
+			err = errors.Join(err, e)
+		}
+	}
+	return err == nil, err
 }
 
 // Adds QNames to slice. Duplicate values are ignored. Result slice is sorted.
@@ -187,15 +196,9 @@ func (qns QNames) Find(n QName) (int, bool) {
 	return slices.BinarySearchFunc(qns, n, CompareQName)
 }
 
-// Returns is slice with valid qNames and error if not
-func ValidQNames(qName ...QName) (ok bool, err error) {
-	for _, q := range qName {
-		if ok, e := ValidQName(q); !ok {
-			err = errors.Join(err, e)
-		}
-	}
-	return err == nil, err
-}
+//—————————————————————————————
+//— FullQName —————————————————
+//—————————————————————————————
 
 // Compare two full qualified names
 func CompareFullQName(a, b FullQName) int {
@@ -203,11 +206,6 @@ func CompareFullQName(a, b FullQName) int {
 		return strings.Compare(a.pkgPath, b.pkgPath)
 	}
 	return strings.Compare(a.entity, b.entity)
-}
-
-// Builds a full qualified name from from package path and entity name
-func NewFullQName(pkgPath, entityName string) FullQName {
-	return FullQName{pkgPath: pkgPath, entity: entityName}
 }
 
 // Parse a full qualified name from string.
@@ -222,25 +220,45 @@ func MustParseFullQName(val string) FullQName {
 	return fqn
 }
 
-// Parse a qualified name from string
+// Builds a full qualified name from from package path and entity name
+func NewFullQName(pkgPath, entityName string) FullQName {
+	return FullQName{pkgPath: pkgPath, entity: entityName}
+}
+
+// Parse a qualified name from string. Result is FullQName or error
 func ParseFullQName(val string) (FullQName, error) {
 	s1, s2, err := ParseFullQualifiedName(val)
 	return NewFullQName(s1, s2), err
 }
 
-func ParseFullQualifiedName(val string) (s1, s2 string, err error) {
-	p := strings.LastIndex(val, QNameQualifierChar)
-	if p < 0 {
+// Parse a qualified name from string. Result is package path and local name or error
+func ParseFullQualifiedName(val string) (p, n string, err error) {
+	i := strings.LastIndex(val, QNameQualifierChar)
+	if i < 0 {
 		return NullName, NullName, ErrConvert("string «%s» to QName", val)
 	}
 
-	return val[:p], val[p+1:], nil
+	return val[:i], val[i+1:], nil
+}
+
+// Returns has FullQName valid package path and entity identifier and error if not
+func ValidFullQName(fqn FullQName) (bool, error) {
+	if fqn == NullFullQName {
+		return true, nil
+	}
+	if ok, err := ValidPackagePath(fqn.PkgPath()); !ok {
+		return false, err
+	}
+	if ok, err := ValidIdent(fqn.Entity()); !ok {
+		return false, err
+	}
+	return true, nil
 }
 
 // Returns package path
 func (fqn FullQName) PkgPath() string { return fqn.pkgPath }
 
-// Returns entity name
+// Returns entity local name
 func (fqn FullQName) Entity() string { return fqn.entity }
 
 // Returns FullQName as string
@@ -283,16 +301,76 @@ func (fqn *FullQName) UnmarshalText([]byte) error {
 	return nil
 }
 
-// Returns has FullQName valid package path and entity identifier and error if not
-func ValidFullQName(fqn FullQName) (bool, error) {
-	if fqn == NullFullQName {
-		return true, nil
+//—————————————————————————————
+//— AppQName ——————————————————
+//—————————————————————————————
+
+// Builds a qualified application name from two parts (from owner name and from local application name)
+func NewAppQName(owner, name string) AppQName {
+	return AppQName{owner: owner, name: name}
+}
+
+// Parse application qualified name from string. Result is AppQName.
+//
+// # Panics
+//   - if string is not a valid application qualified name
+func MustParseAppQName(val string) AppQName {
+	n, err := ParseAppQName(val)
+	if err != nil {
+		panic(err)
 	}
-	if ok, err := ValidPackagePath(fqn.PkgPath()); !ok {
-		return false, err
+	return n
+}
+
+// Parse application qualified name from string. Result is AppQName or error
+func ParseAppQName(val string) (AppQName, error) {
+	o, n, err := ParseQualifiedName(val, AppQNameQualifierChar)
+	return NewAppQName(o, n), err
+}
+
+// Returns owner name
+func (aqn AppQName) Owner() string { return aqn.owner }
+
+// Returns application local name
+func (aqn AppQName) Name() string { return aqn.name }
+
+// Returns AppQName as string
+func (aqn AppQName) String() string { return aqn.owner + AppQNameQualifierChar + aqn.name }
+
+// Returns true if application is owned by system
+func (aqn AppQName) IsSys() bool { return aqn.owner == SysOwner }
+
+func (aqn AppQName) MarshalJSON() ([]byte, error) {
+	return json.Marshal(aqn.owner + AppQNameQualifierChar + aqn.name)
+}
+
+// need to marshal map[AppQName]any
+func (aqn AppQName) MarshalText() (text []byte, err error) {
+	var js []byte
+	if js, err = json.Marshal(aqn.owner + AppQNameQualifierChar + aqn.name); err == nil {
+		var res string
+		if res, err = strconv.Unquote(string(js)); err == nil {
+			text = []byte(res)
+		}
 	}
-	if ok, err := ValidIdent(fqn.Entity()); !ok {
-		return false, err
+	return text, err
+}
+
+func (aqn *AppQName) UnmarshalJSON(text []byte) (err error) {
+	*aqn = AppQName{}
+	str, err := strconv.Unquote(string(text))
+	if err != nil {
+		return err
 	}
-	return true, nil
+	aqn.owner, aqn.name, err = ParseQualifiedName(str, AppQNameQualifierChar)
+	return err
+}
+
+// need to unmarshal map[AppQName]any
+// golang json looks on UnmarshalText presence only on unmarshal map[QName]any. UnmarshalJSON() will be used anyway
+// but no UnmarshalText -> fail to unmarshal map[AppQName]any
+// see https://github.com/golang/go/issues/29732
+func (aqn *AppQName) UnmarshalText(text []byte) (err error) {
+	// notest
+	return nil
 }

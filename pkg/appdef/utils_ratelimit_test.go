@@ -37,7 +37,7 @@ func Test_validateLimitNames(t *testing.T) {
 	roleName := NewQName("test", "role")
 
 	app := func() IAppDef {
-		adb := New()
+		adb := New(NewAppQName("test", "app"))
 		adb.AddPackage("test", "test.com/test")
 
 		_ = adb.AddCommand(cmdName)

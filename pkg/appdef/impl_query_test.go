@@ -18,7 +18,7 @@ func Test_AppDef_AddQuery(t *testing.T) {
 	queryName, parName, resName := NewQName("test", "query"), NewQName("test", "param"), NewQName("test", "res")
 
 	t.Run("must be ok to add query", func(t *testing.T) {
-		adb := New()
+		adb := New(NewAppQName("test", "app"))
 		adb.AddPackage("test", "test.com/test")
 
 		_ = adb.AddObject(parName)
@@ -83,16 +83,16 @@ func Test_AppDef_AddQuery(t *testing.T) {
 	require.Nil(app.Query(NewQName("test", "unknown")), "check nil returns")
 
 	require.Panics(func() {
-		New().AddQuery(NullQName)
+		New(NewAppQName("test", "app")).AddQuery(NullQName)
 	}, require.Is(ErrMissedError))
 
 	require.Panics(func() {
-		New().AddQuery(NewQName("naked", "🔫"))
+		New(NewAppQName("test", "app")).AddQuery(NewQName("naked", "🔫"))
 	}, require.Is(ErrInvalidError), require.Has("naked.🔫"))
 
 	t.Run("panic if type with name already exists", func(t *testing.T) {
 		testName := NewQName("test", "dupe")
-		adb := New()
+		adb := New(NewAppQName("test", "app"))
 		adb.AddPackage("test", "test.com/test")
 		adb.AddObject(testName)
 		require.Panics(func() {
@@ -101,7 +101,7 @@ func Test_AppDef_AddQuery(t *testing.T) {
 	})
 
 	t.Run("panic if extension name is empty", func(t *testing.T) {
-		adb := New()
+		adb := New(NewAppQName("test", "app"))
 		adb.AddPackage("test", "test.com/test")
 		query := adb.AddQuery(NewQName("test", "query"))
 		require.Panics(func() {
@@ -110,7 +110,7 @@ func Test_AppDef_AddQuery(t *testing.T) {
 	})
 
 	t.Run("panic if extension name is invalid", func(t *testing.T) {
-		adb := New()
+		adb := New(NewAppQName("test", "app"))
 		adb.AddPackage("test", "test.com/test")
 		query := adb.AddQuery(NewQName("test", "query"))
 		require.Panics(func() {
@@ -122,7 +122,7 @@ func Test_AppDef_AddQuery(t *testing.T) {
 func Test_QueryValidate(t *testing.T) {
 	require := require.New(t)
 
-	adb := New()
+	adb := New(NewAppQName("test", "app"))
 	adb.AddPackage("test", "test.com/test")
 
 	query := adb.AddQuery(NewQName("test", "query"))
@@ -156,7 +156,7 @@ func Test_AppDef_AddQueryWithAnyResult(t *testing.T) {
 	queryName := NewQName("test", "query")
 
 	t.Run("must be ok to add query with any result", func(t *testing.T) {
-		adb := New()
+		adb := New(NewAppQName("test", "app"))
 		adb.AddPackage("test", "test.com/test")
 
 		query := adb.AddQuery(queryName)

@@ -1,16 +1,12 @@
 /*
  * Copyright (c) 2021-present Sigma-Soft, Ltd.
  * @author: Nikolay Nikitin
- * @author: Maxim Geraskin (I*Function implementation tests)
- * @author: Maxim Geraskin (QName refactoring)
- * @author: Maxim Geraskin Null* objects implementation
- * @author: Maxim Geraskin AppQName
+ * @author: Maxim Geraskin
  */
 
 package istructs
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
 	"math"
@@ -22,99 +18,6 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 )
-
-func TestBasicUsage_AppQName(t *testing.T) {
-
-	require := require.New(t)
-
-	// Create from onwer + name
-
-	appqname := NewAppQName("sys", "registry")
-	require.Equal(NewAppQName("sys", "registry"), appqname)
-	require.Equal("sys", appqname.Owner())
-	require.Equal("registry", appqname.Name())
-
-	require.Equal("sys/registry", fmt.Sprint(appqname))
-
-	// Parse string
-
-	appqname2, err := ParseAppQName("sys/registry")
-	require.NoError(err)
-	require.Equal(appqname, appqname2)
-
-	// Errors. Only one slash allowed
-
-	require.NotNil(ParseAppQName("sys"))
-	log.Println(ParseAppQName("sys"))
-	require.NotNil(ParseAppQName("sys/registry/"))
-}
-
-func TestBasicUsage_AppQName_JSon(t *testing.T) {
-	require := require.New(t)
-
-	t.Run("Marshall/unmarshall QName", func(t *testing.T) {
-
-		appqname := NewAppQName("sys", `Карлосон 哇"呀呀`)
-
-		// Marshal
-
-		j, err := json.Marshal(&appqname)
-		require.NoError(err)
-
-		// Unmarshal
-
-		var appqname2 = AppQName{}
-		err = json.Unmarshal(j, &appqname2)
-		require.NoError(err)
-
-		// Compare
-		require.Equal(appqname, appqname2)
-	})
-
-	t.Run("Marshall/unmarshall AppQName as a part of the structure", func(t *testing.T) {
-
-		type myStruct struct {
-			AQN         AppQName
-			StringValue string
-			IntValue    int
-		}
-
-		ms := myStruct{
-			AQN:         NewAppQName("p", `Карлосон 哇"呀呀`),
-			StringValue: "sv",
-			IntValue:    56,
-		}
-
-		// Marshal
-
-		j, err := json.Marshal(&ms)
-		require.NoError(err)
-
-		// Unmarshal
-
-		var ms2 = myStruct{}
-		err = json.Unmarshal(j, &ms2)
-		require.NoError(err)
-
-		// Compare
-		require.Equal(ms, ms2)
-	})
-
-	t.Run("key of a map", func(t *testing.T) {
-		expected := map[AppQName]bool{
-			NewAppQName("sys", "my"):            true,
-			NewAppQName("sys", `Карлосон 哇"呀呀`): true,
-		}
-
-		b, err := json.Marshal(&expected)
-		require.NoError(err)
-
-		actual := map[AppQName]bool{}
-		log.Println(string(b))
-		require.NoError(json.Unmarshal(b, &actual))
-		require.Equal(expected, actual)
-	})
-}
 
 func TestBasicUsage_RecordID(t *testing.T) {
 
@@ -214,90 +117,6 @@ func regenerateID(id RecordID) RecordID {
 		return id + increment
 	}
 	return id
-}
-
-func TestAppQName_Compare(t *testing.T) {
-	require := require.New(t)
-
-	q1_1 := NewAppQName("sys", "registry")
-	q1_2 := NewAppQName("sys", "registry")
-	require.Equal(q1_1, q1_2)
-
-	q2 := appdef.NewQName("sys", "registry2")
-	require.NotEqual(q1_1, q2)
-}
-
-func TestAppQName_Json_NullQName(t *testing.T) {
-
-	require := require.New(t)
-	t.Run("Marshall/unmarshall NullQName", func(t *testing.T) {
-
-		aqn := NullAppQName
-
-		// Marshal
-
-		j, err := json.Marshal(&aqn)
-		require.NoError(err)
-
-		// Unmarshal
-
-		var aqn2 = AppQName{}
-		err = json.Unmarshal(j, &aqn2)
-		require.NoError(err)
-
-		// Compare
-		require.Equal(aqn, aqn2)
-	})
-}
-
-func TestAppQName_UnmarshalInvalidString(t *testing.T) {
-	require := require.New(t)
-
-	var err error
-	t.Run("Nill slice", func(t *testing.T) {
-		q := NewAppQName("a", "b")
-
-		err = q.UnmarshalJSON(nil)
-		require.Error(err)
-		log.Println(err)
-		require.Equal(NullAppQName, q)
-	})
-
-	t.Run("Two-bytes string", func(t *testing.T) {
-		q := NewAppQName("a", "b")
-
-		err = q.UnmarshalJSON([]byte("\"\""))
-		require.Error(err)
-		require.Equal(NullAppQName, q)
-
-		log.Println(err)
-	})
-
-	t.Run("No dot", func(t *testing.T) {
-		q := NewAppQName("a", "b")
-
-		err = q.UnmarshalJSON([]byte("\"bcd\""))
-		require.Error(err)
-		require.Equal(NullAppQName, q)
-
-		log.Println(err)
-	})
-
-	t.Run("Two dots", func(t *testing.T) {
-		q := NewAppQName("a", "b")
-
-		err = q.UnmarshalJSON([]byte("\"c..d\""))
-		require.Error(err)
-		log.Println(err)
-	})
-
-	t.Run("json unquoted", func(t *testing.T) {
-		q := NewAppQName("a", "b")
-		err = q.UnmarshalJSON([]byte("c.d"))
-		require.Error(err)
-		log.Println(err)
-	})
-
 }
 
 func TestRecordID_IsTemp(t *testing.T) {
@@ -466,24 +285,6 @@ func TestRateLimitKind_MarshalText(t *testing.T) {
 		} else {
 			require.Equal(rlk.String(), string(b))
 		}
-	}
-}
-
-func TestAppQName_IsSys(t *testing.T) {
-	tests := []struct {
-		aqn  AppQName
-		want bool
-	}{
-		{NullAppQName, false},
-		{AppQName_sys_registry, true},
-		{AppQName_untill_airs_bp, false},
-	}
-	for _, tt := range tests {
-		t.Run(tt.aqn.String(), func(t *testing.T) {
-			if got := tt.aqn.IsSys(); got != tt.want {
-				t.Errorf("AppQName.IsSys() = %v, want %v", got, tt.want)
-			}
-		})
 	}
 }
 

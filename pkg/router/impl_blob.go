@@ -22,6 +22,7 @@ import (
 
 	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
 
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/iblobstorage"
 	"github.com/voedger/voedger/pkg/iprocbus"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -46,7 +47,7 @@ type blobBaseMessage struct {
 	resp        http.ResponseWriter
 	doneChan    chan struct{}
 	wsid        istructs.WSID
-	appQName    istructs.AppQName
+	appQName    appdef.AppQName
 	header      map[string][]string
 	blobMaxSize BLOBMaxSizeType
 }
@@ -266,7 +267,7 @@ func (s *httpService) blobRequestHandler(resp http.ResponseWriter, req *http.Req
 			resp:        resp,
 			wsid:        istructs.WSID(wsid),
 			doneChan:    make(chan struct{}),
-			appQName:    istructs.NewAppQName(vars[AppOwner], vars[AppName]),
+			appQName:    appdef.NewAppQName(vars[AppOwner], vars[AppName]),
 			header:      req.Header,
 			blobMaxSize: s.BLOBMaxSize,
 		},

@@ -8,7 +8,7 @@ package istorage
 import (
 	"context"
 
-	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/appdef"
 )
 
 // Same as IAppStructsProvider, called per request or frequently inside services
@@ -17,7 +17,7 @@ type IAppStorageProvider interface {
 	// converts AppQname to string and calls internal IAppStorageFactory.AppStorage
 	// storage for a brand new app is queried and failed to create the storage for it -> storage init error is persisted and returned until admin is handle with that incident
 	// could return ErrStorageNotFound, ErrStorageExistsAlready
-	AppStorage(appName istructs.AppQName) (structs IAppStorage, err error)
+	AppStorage(appName appdef.AppQName) (structs IAppStorage, err error)
 }
 
 // implemented by a certain driver

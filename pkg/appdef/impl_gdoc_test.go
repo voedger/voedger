@@ -19,7 +19,7 @@ func Test_AppDef_AddGDoc(t *testing.T) {
 	docName, recName := NewQName("test", "doc"), NewQName("test", "rec")
 
 	t.Run("must be ok to add document", func(t *testing.T) {
-		adb := New()
+		adb := New(NewAppQName("test", "app"))
 		adb.AddPackage("test", "test.com/test")
 
 		doc := adb.AddGDoc(docName)
@@ -147,16 +147,16 @@ func Test_AppDef_AddGDoc(t *testing.T) {
 	})
 
 	require.Panics(func() {
-		New().AddGDoc(NullQName)
+		New(NewAppQName("test", "app")).AddGDoc(NullQName)
 	}, require.Is(ErrMissedError))
 
 	require.Panics(func() {
-		New().AddGDoc(NewQName("naked", "🔫"))
+		New(NewAppQName("test", "app")).AddGDoc(NewQName("naked", "🔫"))
 	}, require.Is(ErrInvalidError), require.Has("naked.🔫"))
 
 	t.Run("panic if type with name already exists", func(t *testing.T) {
 		testName := NewQName("test", "dupe")
-		adb := New()
+		adb := New(NewAppQName("test", "app"))
 		adb.AddPackage("test", "test.com/test")
 		adb.AddGDoc(testName)
 		require.Panics(func() {

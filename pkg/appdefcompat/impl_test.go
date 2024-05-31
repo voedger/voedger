@@ -57,10 +57,12 @@ func Test_Basic(t *testing.T) {
 	newPackages, err := parser.BuildAppSchema([]*parser.PackageSchemaAST{newSysPkgAST, newPkg1AST, newpkg2AST})
 	require.NoError(t, err)
 
-	oldBuilder := appdef.New()
+	require.Equal(t, oldPackages.Name, newPackages.Name)
+
+	oldBuilder := appdef.New(oldPackages.AppQName())
 	require.NoError(t, parser.BuildAppDefs(oldPackages, oldBuilder))
 
-	newBuilder := appdef.New()
+	newBuilder := appdef.New(newPackages.AppQName())
 	require.NoError(t, parser.BuildAppDefs(newPackages, newBuilder))
 
 	oldAppDef, err := oldBuilder.Build()

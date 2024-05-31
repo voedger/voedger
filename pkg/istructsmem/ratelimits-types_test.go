@@ -18,10 +18,13 @@ import (
 
 func TestRateLimits_BasicUsage(t *testing.T) {
 	require := require.New(t)
+
+	appName := istructs.AppQName_test1_app1
+
 	cfgs := make(AppConfigsType)
-	adb := appdef.New()
+	adb := appdef.New(appName)
 	adb.AddPackage("test", "test.com/test")
-	cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, adb)
+	cfg := cfgs.AddConfig(appName, adb)
 	cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 	qName1 := appdef.NewQName("test", "myFunc")
 
@@ -44,7 +47,7 @@ func TestRateLimits_BasicUsage(t *testing.T) {
 	})
 
 	// then - get AppStructs. For the first get default bucket states will be set
-	as, err := provider.AppStructs(istructs.AppQName_test1_app1)
+	as, err := provider.AppStructs(appName)
 	require.NoError(err)
 
 	for i := 0; i < 10; i++ {

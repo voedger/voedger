@@ -43,7 +43,7 @@ func PoolSize(c, q, p int) [ProcessorKind_Count]int { return [ProcessorKind_Coun
 type BuiltInApp struct {
 	AppDeploymentDescriptor
 
-	Name istructs.AppQName
+	Name appdef.AppQName
 
 	// Application definition will use to generate AppStructs
 	Def appdef.IAppDef

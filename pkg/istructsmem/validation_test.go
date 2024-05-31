@@ -22,7 +22,9 @@ import (
 func Test_ValidEventArgs(t *testing.T) {
 	require := require.New(t)
 
-	adb := appdef.New()
+	appName := istructs.AppQName_test1_app1
+
+	adb := appdef.New(appName)
 	adb.AddPackage("test", "test.com/test")
 
 	docName := appdef.NewQName("test", "document")
@@ -50,12 +52,12 @@ func Test_ValidEventArgs(t *testing.T) {
 	})
 
 	cfgs := make(AppConfigsType, 1)
-	cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, adb)
+	cfg := cfgs.AddConfig(appName, adb)
 	cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 
 	provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider())
 
-	app, err := provider.AppStructs(istructs.AppQName_test1_app1)
+	app, err := provider.AppStructs(appName)
 	require.NoError(err)
 
 	t.Run("error if event name is not a command or odoc", func(t *testing.T) {
@@ -314,7 +316,9 @@ func Test_ValidEventArgs(t *testing.T) {
 func Test_ValidSysCudEvent(t *testing.T) {
 	require := require.New(t)
 
-	adb := appdef.New()
+	appName := istructs.AppQName_test1_app1
+
+	adb := appdef.New(appName)
 	adb.AddPackage("test", "test.com/test")
 
 	docName := appdef.NewQName("test", "document")
@@ -340,12 +344,12 @@ func Test_ValidSysCudEvent(t *testing.T) {
 	})
 
 	cfgs := make(AppConfigsType, 1)
-	cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, adb)
+	cfg := cfgs.AddConfig(appName, adb)
 	cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 
 	provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider())
 
-	app, err := provider.AppStructs(istructs.AppQName_test1_app1)
+	app, err := provider.AppStructs(appName)
 	require.NoError(err)
 
 	cudRawEvent := func(sync bool) istructs.IRawEventBuilder {
@@ -541,7 +545,9 @@ func Test_ValidSysCudEvent(t *testing.T) {
 func Test_ValidCommandEvent(t *testing.T) {
 	require := require.New(t)
 
-	adb := appdef.New()
+	appName := istructs.AppQName_test1_app1
+
+	adb := appdef.New(appName)
 	adb.AddPackage("test", "test.com/test")
 
 	cmdName := appdef.NewQName("test", "command")
@@ -561,13 +567,13 @@ func Test_ValidCommandEvent(t *testing.T) {
 	})
 
 	cfgs := make(AppConfigsType, 1)
-	cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, adb)
+	cfg := cfgs.AddConfig(appName, adb)
 	cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 	cfg.Resources.Add(NewCommandFunction(cmdName, NullCommandExec))
 
 	provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider())
 
-	app, err := provider.AppStructs(istructs.AppQName_test1_app1)
+	app, err := provider.AppStructs(appName)
 	require.NoError(err)
 
 	eventBuilder := func(sync bool) istructs.IRawEventBuilder {
@@ -663,7 +669,9 @@ func Test_ValidCommandEvent(t *testing.T) {
 func Test_IObjectBuilderBuild(t *testing.T) {
 	require := require.New(t)
 
-	adb := appdef.New()
+	appName := istructs.AppQName_test1_app1
+
+	adb := appdef.New(appName)
 	adb.AddPackage("test", "test.com/test")
 
 	docName := appdef.NewQName("test", "document")
@@ -677,12 +685,12 @@ func Test_IObjectBuilderBuild(t *testing.T) {
 	})
 
 	cfgs := make(AppConfigsType, 1)
-	cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, adb)
+	cfg := cfgs.AddConfig(appName, adb)
 	cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 
 	provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider())
 
-	app, err := provider.AppStructs(istructs.AppQName_test1_app1)
+	app, err := provider.AppStructs(appName)
 	require.NoError(err)
 
 	eventBuilder := func() istructs.IRawEventBuilder {
@@ -746,7 +754,7 @@ func Test_VerifiedFields(t *testing.T) {
 
 	objName := appdef.NewQName("test", "obj")
 
-	adb := appdef.New()
+	adb := appdef.New(test.appName)
 	adb.AddPackage("test", "test.com/test")
 
 	t.Run("must be ok to build application", func(t *testing.T) {
@@ -919,7 +927,7 @@ func Test_CharsFieldRestricts(t *testing.T) {
 
 	objName := appdef.NewQName("test", "obj")
 
-	adb := appdef.New()
+	adb := appdef.New(test.appName)
 	adb.AddPackage("test", "test.com/test")
 
 	t.Run("must be ok to build application", func(t *testing.T) {
