@@ -9,12 +9,13 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 	itokens "github.com/voedger/voedger/pkg/itokens"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-func GetSystemPrincipalToken(itokens itokens.ITokens, appQName istructs.AppQName) (string, error) {
+func GetSystemPrincipalToken(itokens itokens.ITokens, appQName appdef.AppQName) (string, error) {
 	systemPrincipalToken, err := itokens.IssueToken(appQName, DefaultSystemPrincipalDuration, &systemPrincipalPayload)
 	if err != nil {
 		return "", fmt.Errorf("failed to issue system principal token: %w", err)

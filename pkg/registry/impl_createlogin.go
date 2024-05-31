@@ -31,7 +31,7 @@ func execCmdCreateLogin(asp istructs.IAppStructsProvider) istructsmem.ExecComman
 			return errors.New("wrong subject kind")
 		}
 
-		appQName, err := istructs.ParseAppQName(appName)
+		appQName, err := appdef.ParseAppQName(appName)
 		if err != nil {
 			return coreutils.NewHTTPErrorf(http.StatusBadRequest, "failed to parse app qualified name", appQName.String(), ":", err)
 		}

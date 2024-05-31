@@ -28,7 +28,7 @@ import (
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-func (vit *VIT) GetBLOB(appQName istructs.AppQName, wsid istructs.WSID, blobID istructs.RecordID, token string) *BLOB {
+func (vit *VIT) GetBLOB(appQName appdef.AppQName, wsid istructs.WSID, blobID istructs.RecordID, token string) *BLOB {
 	vit.T.Helper()
 	resp, err := vit.IFederation.ReadBLOB(appQName, wsid, blobID, coreutils.WithAuthorizeBy(token))
 	require.NoError(vit.T, err)
@@ -61,7 +61,7 @@ func WithReqOpt(reqOpt coreutils.ReqOptFunc) signUpOptFunc {
 	}
 }
 
-func (vit *VIT) SignUp(loginName, pwd string, appQName istructs.AppQName, opts ...signUpOptFunc) Login {
+func (vit *VIT) SignUp(loginName, pwd string, appQName appdef.AppQName, opts ...signUpOptFunc) Login {
 	vit.T.Helper()
 	signUpOpts := getSignUpOpts(opts)
 	login := NewLogin(loginName, pwd, appQName, istructs.SubjectKind_User, signUpOpts.profileClusterID)
@@ -79,7 +79,7 @@ func getSignUpOpts(opts []signUpOptFunc) *signUpOpts {
 	return res
 }
 
-func (vit *VIT) SignUpDevice(loginName, pwd string, appQName istructs.AppQName, opts ...signUpOptFunc) Login {
+func (vit *VIT) SignUpDevice(loginName, pwd string, appQName appdef.AppQName, opts ...signUpOptFunc) Login {
 	vit.T.Helper()
 	signUpOpts := getSignUpOpts(opts)
 	login := NewLogin(loginName, pwd, appQName, istructs.SubjectKind_Device, signUpOpts.profileClusterID)
@@ -106,7 +106,7 @@ func (vit *VIT) GetCDocWSKind(ws *AppWorkspace) (cdoc map[string]interface{}, id
 	return vit.getCDoc(ws.Owner.AppQName, ws.Kind, ws.WSID)
 }
 
-func (vit *VIT) getCDoc(appQName istructs.AppQName, qName appdef.QName, wsid istructs.WSID) (cdoc map[string]interface{}, id int64) {
+func (vit *VIT) getCDoc(appQName appdef.AppQName, qName appdef.QName, wsid istructs.WSID) (cdoc map[string]interface{}, id int64) {
 	vit.T.Helper()
 	body := bytes.NewBufferString(fmt.Sprintf(`{"args":{"Schema":"%s"},"elements":[{"fields":["sys.ID"`, qName))
 	fields := []string{}
@@ -347,7 +347,7 @@ func (vit *VIT) GetAny(entity string, ws *AppWorkspace) istructs.RecordID {
 	return istructs.RecordID(data["DocID"].(float64))
 }
 
-func NewLogin(name, pwd string, appQName istructs.AppQName, subjectKind istructs.SubjectKindType, clusterID istructs.ClusterID) Login {
+func NewLogin(name, pwd string, appQName appdef.AppQName, subjectKind istructs.SubjectKindType, clusterID istructs.ClusterID) Login {
 	pseudoWSID := coreutils.GetPseudoWSID(istructs.NullWSID, name, istructs.MainClusterID)
 	return Login{name, pwd, pseudoWSID, appQName, subjectKind, clusterID, map[appdef.QName]func(verifiedValues map[string]string) map[string]interface{}{}}
 }

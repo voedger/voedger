@@ -22,6 +22,7 @@ import (
 	"sync"
 
 	"github.com/gorilla/mux"
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"golang.org/x/crypto/acme/autocert"
 	"golang.org/x/exp/slices"
@@ -49,8 +50,8 @@ type httpProcessor struct {
 	certCache          autocert.Cache
 	certManager        *autocert.Manager
 	bus                ibus.IBus
-	apps               map[istructs.AppQName]*appInfo
-	numsAppsWorkspaces map[istructs.AppQName]istructs.NumAppWorkspaces
+	apps               map[appdef.AppQName]*appInfo
+	numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces
 	sync.RWMutex
 }
 
@@ -156,7 +157,7 @@ func (p *httpProcessor) DeployStaticContent(resource string, fs fs.FS) {
 	p.router.addStaticContent(resource, fs)
 }
 
-func (p *httpProcessor) DeployAppPartition(app istructs.AppQName, partNo istructs.PartitionID, appPartitionRequestHandler ibus.RequestHandler) error {
+func (p *httpProcessor) DeployAppPartition(app appdef.AppQName, partNo istructs.PartitionID, appPartitionRequestHandler ibus.RequestHandler) error {
 	p.Lock()
 	defer p.Unlock()
 
@@ -167,7 +168,7 @@ func (p *httpProcessor) DeployAppPartition(app istructs.AppQName, partNo istruct
 	return nil
 }
 
-func (p *httpProcessor) UndeployAppPartition(app istructs.AppQName, partNo istructs.PartitionID) error {
+func (p *httpProcessor) UndeployAppPartition(app appdef.AppQName, partNo istructs.PartitionID) error {
 	p.Lock()
 	defer p.Unlock()
 
@@ -178,7 +179,7 @@ func (p *httpProcessor) UndeployAppPartition(app istructs.AppQName, partNo istru
 	return nil
 }
 
-func (p *httpProcessor) getAppPartHandler(appQName istructs.AppQName, partNo istructs.PartitionID) (ibus.RequestHandler, error) {
+func (p *httpProcessor) getAppPartHandler(appQName appdef.AppQName, partNo istructs.PartitionID) (ibus.RequestHandler, error) {
 	app, ok := p.apps[appQName]
 	if !ok {
 		return nil, ErrAppIsNotDeployed
@@ -193,7 +194,7 @@ func (p *httpProcessor) getAppPartHandler(appQName istructs.AppQName, partNo ist
 	return handler, nil
 }
 
-func (p *httpProcessor) DeployApp(app istructs.AppQName, numPartitions uint, numAppWS uint) error {
+func (p *httpProcessor) DeployApp(app appdef.AppQName, numPartitions uint, numAppWS uint) error {
 	p.Lock()
 	defer p.Unlock()
 
@@ -208,7 +209,7 @@ func (p *httpProcessor) DeployApp(app istructs.AppQName, numPartitions uint, num
 	return nil
 }
 
-func (p *httpProcessor) UndeployApp(app istructs.AppQName) error {
+func (p *httpProcessor) UndeployApp(app appdef.AppQName) error {
 	p.Lock()
 	defer p.Unlock()
 
@@ -267,7 +268,7 @@ func (p *httpProcessor) httpHandler() http.HandlerFunc {
 }
 
 func (p *httpProcessor) requestHandler(ctx context.Context, sender ibus.ISender, request ibus.Request) {
-	appQName, err := istructs.ParseAppQName(request.AppQName)
+	appQName, err := appdef.ParseAppQName(request.AppQName)
 	if err != nil {
 		coreutils.ReplyBadRequest(sender, err.Error())
 		return

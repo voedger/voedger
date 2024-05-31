@@ -165,7 +165,7 @@ func appDefFromBaselineDir(baselineDir string) (appdef.IAppDef, error) {
 	}
 	// build app def from app AST
 	if appAST != nil {
-		builder := appdef.New()
+		builder := appdef.New(appAST.AppQName())
 		if err := parser.BuildAppDefs(appAST, builder); err != nil {
 			errs = append(errs, err)
 		}

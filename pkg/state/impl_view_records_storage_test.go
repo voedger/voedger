@@ -16,7 +16,7 @@ import (
 )
 
 func mockedStructs2(t *testing.T, addWsDescriptor bool) (*mockAppStructs, *mockViewRecords) {
-	appDef := appdef.New()
+	appDef := appdef.New(testAppQName)
 
 	appDef.AddPackage("test", "test.com/test")
 

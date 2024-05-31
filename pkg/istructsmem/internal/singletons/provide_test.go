@@ -35,7 +35,7 @@ func Test_BasicUsage(t *testing.T) {
 	testName := appdef.NewQName("test", "doc")
 
 	testAppDef := func() appdef.IAppDef {
-		adb := appdef.New()
+		adb := appdef.New(istructs.AppQName_test1_app1)
 		adb.AddPackage("test", "test.com/test")
 		doc := adb.AddCDoc(testName)
 		doc.SetSingleton()
@@ -110,7 +110,7 @@ func Test_SingletonsGetID(t *testing.T) {
 			err = versions.Prepare(storage)
 			require.NoError(err)
 
-			adb := appdef.New()
+			adb := appdef.New(istructs.AppQName_test1_app1)
 			adb.AddPackage("test", "test.com/test")
 
 			{
@@ -208,14 +208,14 @@ func Test_Singletons_Errors(t *testing.T) {
 	})
 
 	t.Run("must error if unable store version of Singletons system  view", func(t *testing.T) {
-		storage := teststore.NewStorage()
+		storage := teststore.NewStorage(istructs.AppQName_test1_app1)
 		storage.SchedulePutError(testError, utils.ToBytes(consts.SysView_Versions), utils.ToBytes(vers.SysSingletonsVersion))
 
 		versions := vers.New()
 		err := versions.Prepare(storage)
 		require.NoError(err)
 
-		adb := appdef.New()
+		adb := appdef.New(istructs.AppQName_test1_app1)
 		adb.AddPackage("test", "test.com/test")
 
 		doc := adb.AddCDoc(cDocName)
@@ -231,13 +231,13 @@ func Test_Singletons_Errors(t *testing.T) {
 	})
 
 	t.Run("must error if maximum singletons is exceeded", func(t *testing.T) {
-		storage := teststore.NewStorage()
+		storage := teststore.NewStorage(istructs.AppQName_test1_app1)
 
 		versions := vers.New()
 		err := versions.Prepare(storage)
 		require.NoError(err)
 
-		adb := appdef.New()
+		adb := appdef.New(istructs.AppQName_test1_app1)
 		adb.AddPackage("test", "test.com/test")
 
 		for id := istructs.FirstSingletonID; id <= istructs.MaxSingletonID; id++ {
@@ -256,14 +256,14 @@ func Test_Singletons_Errors(t *testing.T) {
 	t.Run("must error if store ID for some singleton doc to storage is failed", func(t *testing.T) {
 		defName := appdef.NewQName("test", "ErrorDef")
 
-		storage := teststore.NewStorage()
+		storage := teststore.NewStorage(istructs.AppQName_test1_app1)
 		storage.SchedulePutError(testError, utils.ToBytes(consts.SysView_SingletonIDs, latestVersion), []byte(defName.String()))
 
 		versions := vers.New()
 		err := versions.Prepare(storage)
 		require.NoError(err)
 
-		app := appdef.New()
+		app := appdef.New(istructs.AppQName_test1_app1)
 		doc := app.AddCDoc(defName)
 		doc.SetSingleton()
 		appDef, err := app.Build()
@@ -277,13 +277,13 @@ func Test_Singletons_Errors(t *testing.T) {
 	t.Run("must error if retrieve ID for some singleton doc from storage is failed", func(t *testing.T) {
 		defName := appdef.NewQName("test", "ErrorDef")
 
-		storage := teststore.NewStorage()
+		storage := teststore.NewStorage(istructs.AppQName_test1_app1)
 
 		versions := vers.New()
 		err := versions.Prepare(storage)
 		require.NoError(err)
 
-		app := appdef.New()
+		app := appdef.New(istructs.AppQName_test1_app1)
 		doc := app.AddCDoc(defName)
 		doc.SetSingleton()
 		appDef, err := app.Build()
@@ -300,7 +300,7 @@ func Test_Singletons_Errors(t *testing.T) {
 	})
 
 	t.Run("must error if some some singleton QName from storage is not well formed", func(t *testing.T) {
-		storage := teststore.NewStorage()
+		storage := teststore.NewStorage(istructs.AppQName_test1_app1)
 
 		versions := vers.New()
 		err := versions.Prepare(storage)

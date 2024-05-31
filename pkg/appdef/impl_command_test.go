@@ -18,7 +18,7 @@ func Test_AppDef_AddCommand(t *testing.T) {
 	cmdName, parName, unlName, resName := NewQName("test", "cmd"), NewQName("test", "par"), NewQName("test", "unl"), NewQName("test", "res")
 
 	t.Run("must be ok to add command", func(t *testing.T) {
-		adb := New()
+		adb := New(NewAppQName("test", "app"))
 		adb.AddPackage("test", "test.com/test")
 
 		_ = adb.AddObject(parName)
@@ -91,13 +91,13 @@ func Test_AppDef_AddCommand(t *testing.T) {
 	})
 
 	t.Run("panic if name is empty", func(t *testing.T) {
-		adb := New()
+		adb := New(NewAppQName("test", "app"))
 		require.Panics(func() { adb.AddCommand(NullQName) },
 			require.Is(ErrMissedError))
 	})
 
 	t.Run("panic if name is invalid", func(t *testing.T) {
-		adb := New()
+		adb := New(NewAppQName("test", "app"))
 		require.Panics(func() { adb.AddCommand(NewQName("naked", "🔫")) },
 			require.Is(ErrInvalidError),
 			require.Has("naked.🔫"))
@@ -105,7 +105,7 @@ func Test_AppDef_AddCommand(t *testing.T) {
 
 	t.Run("panic if type with name already exists", func(t *testing.T) {
 		testName := NewQName("test", "dupe")
-		adb := New()
+		adb := New(NewAppQName("test", "app"))
 		adb.AddPackage("test", "test.com/test")
 		adb.AddObject(testName)
 		require.Panics(func() { adb.AddCommand(testName) },
@@ -114,7 +114,7 @@ func Test_AppDef_AddCommand(t *testing.T) {
 	})
 
 	t.Run("panic if extension name is empty", func(t *testing.T) {
-		adb := New()
+		adb := New(NewAppQName("test", "app"))
 		adb.AddPackage("test", "test.com/test")
 		cmd := adb.AddCommand(NewQName("test", "cmd"))
 		require.Panics(func() { cmd.SetName("") },
@@ -123,7 +123,7 @@ func Test_AppDef_AddCommand(t *testing.T) {
 	})
 
 	t.Run("panic if extension name is invalid", func(t *testing.T) {
-		adb := New()
+		adb := New(NewAppQName("test", "app"))
 		adb.AddPackage("test", "test.com/test")
 		cmd := adb.AddCommand(NewQName("test", "cmd"))
 		require.Panics(func() { cmd.SetName("naked 🔫") },
@@ -132,7 +132,7 @@ func Test_AppDef_AddCommand(t *testing.T) {
 	})
 
 	t.Run("panic if extension kind is invalid", func(t *testing.T) {
-		adb := New()
+		adb := New(NewAppQName("test", "app"))
 		adb.AddPackage("test", "test.com/test")
 		cmd := adb.AddCommand(NewQName("test", "cmd"))
 		require.Panics(func() { cmd.SetEngine(ExtensionEngineKind_null) },
@@ -145,7 +145,7 @@ func Test_AppDef_AddCommand(t *testing.T) {
 func Test_CommandValidate(t *testing.T) {
 	require := require.New(t)
 
-	adb := New()
+	adb := New(NewAppQName("test", "app"))
 	adb.AddPackage("test", "test.com/test")
 	obj := NewQName("test", "obj")
 	_ = adb.AddObject(obj)

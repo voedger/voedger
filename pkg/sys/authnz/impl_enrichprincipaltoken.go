@@ -7,6 +7,7 @@ package authnz
 import (
 	"context"
 
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
@@ -29,7 +30,7 @@ func (r *enrichPrincipalTokenRR) AsString(string) string {
 // basic auth, WorkspaceOwner
 func provideExecQryEnrichPrincipalToken(atf payloads.IAppTokensFactory) istructsmem.ExecQueryClosure {
 	return func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
-		appQName := args.Workpiece.(interface{ AppQName() istructs.AppQName }).AppQName()
+		appQName := args.Workpiece.(interface{ AppQName() appdef.AppQName }).AppQName()
 		appTokens := atf.New(appQName)
 
 		principalToken, err := state.GetPrincipalTokenFromState(args.State)

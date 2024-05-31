@@ -44,7 +44,7 @@ func ParseQuery(query string) (op Op, err error) {
 			// notest: avoided already by regexp
 			return op, err
 		}
-		op.AppQName = istructs.NewAppQName(owner, app)
+		op.AppQName = appdef.NewAppQName(owner, app)
 	}
 
 	if workspaceStr := parts[workspaceIdx]; workspaceStr != "" {

@@ -99,9 +99,9 @@ type MockState struct {
 	mock.Mock
 }
 
-func (m *MockState) App() istructs.AppQName {
+func (m *MockState) App() appdef.AppQName {
 	args := m.Called()
-	return args.Get(0).(istructs.AppQName)
+	return args.Get(0).(appdef.AppQName)
 }
 func (m *MockState) CanExist(key istructs.IStateKeyBuilder) (value istructs.IStateValue, ok bool, err error) {
 	args := m.Called(key)

@@ -16,7 +16,7 @@ func ExampleIAppDefBuilder_AddPackage() {
 
 	// how to build AppDef with packages
 	{
-		adb := appdef.New()
+		adb := appdef.New(appdef.NewAppQName("test", "app"))
 
 		adb.AddPackage("test", "test.com/test")
 		adb.AddPackage("example", "example.com/example")

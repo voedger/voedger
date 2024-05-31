@@ -21,7 +21,7 @@ func Test_View(t *testing.T) {
 
 	// prepare AppDef with view
 	{
-		adb := appdef.New()
+		adb := appdef.New(appdef.NewAppQName("test", "app"))
 		adb.AddPackage("test", "test.com/test")
 
 		docName := appdef.NewQName("test", "doc")

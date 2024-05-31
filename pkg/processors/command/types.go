@@ -33,7 +33,7 @@ type ValidateFunc func(ctx context.Context, appStructs istructs.IAppStructs, cud
 
 type ICommandMessage interface {
 	Body() []byte
-	AppQName() istructs.AppQName
+	AppQName() appdef.AppQName
 	WSID() istructs.WSID // url WSID
 	Sender() ibus.ISender
 	PartitionID() istructs.PartitionID
@@ -47,7 +47,7 @@ type xPath string
 
 type commandProcessorMetrics struct {
 	vvmName string
-	app     istructs.AppQName
+	app     appdef.AppQName
 	metrics imetrics.IMetrics
 }
 
@@ -100,7 +100,7 @@ type parsedCUD struct {
 
 type implICommandMessage struct {
 	body        []byte
-	appQName    istructs.AppQName // need to determine where to send c.sys.Init request on create a new workspace
+	appQName    appdef.AppQName // need to determine where to send c.sys.Init request on create a new workspace
 	wsid        istructs.WSID
 	sender      ibus.ISender
 	partitionID istructs.PartitionID

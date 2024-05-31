@@ -46,7 +46,7 @@ func supports(ops int, op int) bool {
 	return ops&op == op
 }
 
-func (s hostState) App() istructs.AppQName {
+func (s hostState) App() appdef.AppQName {
 	return s.appStructsFunc().AppQName()
 }
 

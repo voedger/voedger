@@ -7,8 +7,8 @@ package provider
 import (
 	"github.com/google/uuid"
 
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istorage"
-	"github.com/voedger/voedger/pkg/istructs"
 )
 
 // keyspaceNameSuffix is used in tests only
@@ -16,7 +16,7 @@ import (
 func Provide(asf istorage.IAppStorageFactory, keyspaceNameSuffix ...string) istorage.IAppStorageProvider {
 	res := &implIAppStorageProvider{
 		asf:   asf,
-		cache: map[istructs.AppQName]istorage.IAppStorage{},
+		cache: map[appdef.AppQName]istorage.IAppStorage{},
 	}
 	if len(keyspaceNameSuffix) > 0 {
 		res.suffix = keyspaceNameSuffix[0]

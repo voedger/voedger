@@ -27,14 +27,11 @@ func TestQNamesBasicUsage(t *testing.T) {
 	}
 
 	testName := appdef.NewQName("test", "doc")
-	app := appdef.New()
+	app := appdef.New(istructs.AppQName_test1_app1)
 	d := app.AddCDoc(testName)
 	d.AddField("f1", appdef.DataKind_int64, false)
 	d.AddUnique(appdef.UniqueQName(testName, "f1"), []appdef.FieldName{"f1"})
-	appDef, err := app.Build()
-	if err != nil {
-		panic(err)
-	}
+	appDef := app.MustBuild()
 
 	resources := istructs.IResources(nil) //TODO: add test resources
 

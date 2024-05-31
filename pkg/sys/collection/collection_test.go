@@ -49,8 +49,8 @@ func deployTestApp(t *testing.T) (appParts appparts.IAppPartitions, appStructs i
 	cfgs := make(istructsmem.AppConfigsType, 1)
 	asp := istorageimpl.Provide(mem.Provide())
 
-	// конфиг приложения airs-bp
-	adb := appdef.New()
+	// airs-bp application config. For tests «istructs.AppQName_test1_app1» is used
+	adb := appdef.New(test.appQName)
 	cfg := cfgs.AddConfig(test.appQName, adb)
 	cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 	{

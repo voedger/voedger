@@ -27,7 +27,7 @@ func Test_BasicUsage(t *testing.T) {
 	}
 
 	testName := "test"
-	adb := appdef.New()
+	adb := appdef.New(istructs.AppQName_test1_app1)
 	adb.AddPackage("test", "test.com/test")
 
 	adb.AddObject(appdef.NewQName("test", "obj")).

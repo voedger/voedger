@@ -7,12 +7,12 @@ package provider
 import (
 	"sync"
 
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istorage"
-	"github.com/voedger/voedger/pkg/istructs"
 )
 
 type implIAppStorageProvider struct {
-	cache       map[istructs.AppQName]istorage.IAppStorage
+	cache       map[appdef.AppQName]istorage.IAppStorage
 	asf         istorage.IAppStorageFactory
 	lock        sync.Mutex
 	metaStorage istorage.IAppStorage

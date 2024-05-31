@@ -23,7 +23,7 @@ func Test_RecordsRead(t *testing.T) {
 	require := require.New(t)
 	test := test()
 
-	storage := teststore.NewStorage()
+	storage := teststore.NewStorage(test.appName)
 	storageProvider := teststore.NewStorageProvider(storage)
 
 	provider := Provide(test.AppConfigs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
@@ -143,11 +143,11 @@ func Test_RecordsRead(t *testing.T) {
 		defer storage.Reset()
 
 		cfgs := make(AppConfigsType, 1)
-		cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, appdef.New())
+		cfg := cfgs.AddConfig(test.appName, appdef.New(test.appName))
 		cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
 
-		app, err = provider.AppStructs(istructs.AppQName_test1_app1)
+		app, err = provider.AppStructs(test.appName)
 		require.NoError(err)
 
 		recs := make([]istructs.RecordGetBatchItem, 3)
@@ -167,11 +167,11 @@ func Test_RecordsRead(t *testing.T) {
 		defer storage.Reset()
 
 		cfgs := make(AppConfigsType, 1)
-		cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, appdef.New())
+		cfg := cfgs.AddConfig(test.appName, appdef.New(test.appName))
 		cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
 
-		app, err = provider.AppStructs(istructs.AppQName_test1_app1)
+		app, err = provider.AppStructs(test.appName)
 		require.NoError(err)
 
 		rec := newTestCRecord(testID)
@@ -192,7 +192,7 @@ func Test_RecordsPutJSON(t *testing.T) {
 	require := require.New(t)
 	test := test()
 
-	storage := teststore.NewStorage()
+	storage := teststore.NewStorage(test.appName)
 	storageProvider := teststore.NewStorageProvider(storage)
 
 	provider := Provide(test.AppConfigs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)

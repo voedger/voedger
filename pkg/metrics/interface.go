@@ -6,17 +6,15 @@
 
 package imetrics
 
-import (
-	"github.com/voedger/voedger/pkg/istructs"
-)
+import "github.com/voedger/voedger/pkg/appdef"
 
 type IMetric interface {
 	Name() string
 
 	Vvm() string
 
-	// App returns istructs.NullAppQName when not specified
-	App() istructs.AppQName
+	// App returns appdef.NullAppQName when not specified
+	App() appdef.AppQName
 }
 
 type IMetrics interface {
@@ -32,7 +30,7 @@ type IMetrics interface {
 	// Naming best practices: https://prometheus.io/docs/practices/naming/
 	//
 	// @ConcurrentAccess
-	IncreaseApp(metricName string, vvmName string, app istructs.AppQName, valueDelta float64)
+	IncreaseApp(metricName string, vvmName string, app appdef.AppQName, valueDelta float64)
 
 	// Returns address of metric value.
 	// Only use atomic operations with that address!
@@ -44,7 +42,7 @@ type IMetrics interface {
 	// Only use atomic operations with that address!
 	//
 	// @ConcurrentAccess
-	AppMetricAddr(metricName string, vvmName string, app istructs.AppQName) *MetricValue
+	AppMetricAddr(metricName string, vvmName string, app appdef.AppQName) *MetricValue
 
 	// GetAll lists current values of all metrics
 	//

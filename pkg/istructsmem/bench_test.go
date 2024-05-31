@@ -68,7 +68,7 @@ func bench_BuildRawEvent(b *testing.B, numOfIntFields int) {
 
 	// application
 	appDef := func() appdef.IAppDefBuilder {
-		adb := appdef.New()
+		adb := appdef.New(appName)
 		adb.AddPackage("test", "test.com/test")
 
 		doc := adb.AddODoc(oDocQName)

@@ -46,7 +46,7 @@ func provideIBus(appParts appparts.IAppPartitions, procbus iprocbus.IProcBus,
 			logger.Verbose("request body:\n", string(request.Body))
 		}
 
-		appQName, err := istructs.ParseAppQName(request.AppQName)
+		appQName, err := appdef.ParseAppQName(request.AppQName)
 		if err != nil {
 			// protected by router already
 			coreutils.ReplyBadRequest(sender, fmt.Sprintf("failed to parse app qualified name %s: %s", request.AppQName, err.Error()))
@@ -78,7 +78,7 @@ func provideIBus(appParts appparts.IAppPartitions, procbus iprocbus.IProcBus,
 	})
 }
 
-func deliverToProcessors(request ibus.Request, requestCtx context.Context, appQName istructs.AppQName, sender ibus.ISender, funcQName appdef.QName,
+func deliverToProcessors(request ibus.Request, requestCtx context.Context, appQName appdef.AppQName, sender ibus.ISender, funcQName appdef.QName,
 	procbus iprocbus.IProcBus, token string, cpchIdx CommandProcessorsChannelGroupIdxType, qpcgIdx QueryProcessorsChannelGroupIdxType,
 	cpCount istructs.NumCommandProcessors, partitionID istructs.PartitionID) {
 	switch request.Resource[:1] {

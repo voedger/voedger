@@ -40,9 +40,9 @@ type OperatorCommandProcessors pipeline.ISyncOperator
 type OperatorCommandProcessor pipeline.ISyncOperator
 type OperatorQueryProcessors pipeline.ISyncOperator
 type OperatorQueryProcessor pipeline.ISyncOperator
-type AppServiceFactory func(ctx context.Context, appQName istructs.AppQName, asyncProjectors istructs.Projectors, appPartsCount istructs.NumAppPartitions) pipeline.ISyncOperator
-type AppPartitionFactory func(ctx context.Context, appQName istructs.AppQName, asyncProjectors istructs.Projectors, partitionID istructs.PartitionID) pipeline.ISyncOperator
-type AsyncActualizersFactory func(ctx context.Context, appQName istructs.AppQName, asyncProjectors istructs.Projectors, partitionID istructs.PartitionID,
+type AppServiceFactory func(ctx context.Context, appQName appdef.AppQName, asyncProjectors istructs.Projectors, appPartsCount istructs.NumAppPartitions) pipeline.ISyncOperator
+type AppPartitionFactory func(ctx context.Context, appQName appdef.AppQName, asyncProjectors istructs.Projectors, partitionID istructs.PartitionID) pipeline.ISyncOperator
+type AsyncActualizersFactory func(ctx context.Context, appQName appdef.AppQName, asyncProjectors istructs.Projectors, partitionID istructs.PartitionID,
 	tokens itokens.ITokens, federation federation.IFederation, opts []state.StateOptFunc) pipeline.ISyncOperator
 type OperatorAppServicesFactory func(ctx context.Context) pipeline.ISyncOperator
 type CommandChannelFactory func(channelIdx int) commandprocessor.CommandChannel
@@ -56,9 +56,9 @@ type CommandProcessorsChannelGroupIdxType int
 type QueryProcessorsChannelGroupIdxType int
 type MaxPrepareQueriesType int
 type ServiceChannelFactory func(pcgt ProcessorChannelType, channelIdx int) iprocbus.ServiceChannel
-type AppStorageFactory func(appQName istructs.AppQName, appStorage istorage.IAppStorage) istorage.IAppStorage
+type AppStorageFactory func(appQName appdef.AppQName, appStorage istorage.IAppStorage) istorage.IAppStorage
 type StorageCacheSizeType int
-type VVMApps []istructs.AppQName
+type VVMApps []appdef.AppQName
 type BuiltInAppPackages struct {
 	appparts.BuiltInApp
 	Packages []parser.PackageFS // need for build baseline schemas
@@ -69,7 +69,7 @@ type BootstrapOperator pipeline.ISyncOperator
 type AppsArtefacts struct {
 	istructsmem.AppConfigsType
 	builtInAppPackages []BuiltInAppPackages
-	appEPs             map[istructs.AppQName]extensionpoints.IExtensionPoint
+	appEPs             map[appdef.AppQName]extensionpoints.IExtensionPoint
 }
 
 type BusTimeout time.Duration
@@ -110,18 +110,18 @@ type PostDocDesc struct {
 	IsSingleton bool
 }
 
-type VVMAppsBuilder map[istructs.AppQName]apps.AppBuilder
+type VVMAppsBuilder map[appdef.AppQName]apps.AppBuilder
 
 type VVM struct {
 	ServicePipeline
 	apps.APIs
 	appparts.IAppPartitions
-	AppsExtensionPoints map[istructs.AppQName]extensionpoints.IExtensionPoint
+	AppsExtensionPoints map[appdef.AppQName]extensionpoints.IExtensionPoint
 	MetricsServicePort  func() metrics.MetricsServicePort
 	BuiltInAppsPackages []BuiltInAppPackages
 }
 
-type AppsExtensionPoints map[istructs.AppQName]extensionpoints.IExtensionPoint
+type AppsExtensionPoints map[appdef.AppQName]extensionpoints.IExtensionPoint
 
 type VVMConfig struct {
 	VVMAppsBuilder             VVMAppsBuilder // is a map

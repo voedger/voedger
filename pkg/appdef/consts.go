@@ -10,6 +10,20 @@ import "math"
 // Maximum identifier length
 const MaxIdentLen = 255
 
+const (
+	// System package name
+	SysPackage = "sys"
+
+	// Used as delimiter in qualified names
+	QNameQualifierChar = "."
+
+	// Used as prefix for names of system fields and containers
+	SystemPackagePrefix = SysPackage + QNameQualifierChar
+
+	// System package path
+	SysPackagePath = "voedger.com/packages/sys"
+)
+
 // Any names
 const (
 	AnyName          = "ANY"
@@ -26,20 +40,6 @@ const (
 	AnyFunctionName  = "AnyFunction"
 	AnyCommandName   = "AnyCommand"
 	AnyQueryName     = "AnyQuery"
-)
-
-const (
-	// System package name
-	SysPackage = "sys"
-
-	// Used as delimiter in qualified names
-	QNameQualifierChar = "."
-
-	// Used as prefix for names of system fields and containers
-	SystemPackagePrefix = SysPackage + QNameQualifierChar
-
-	// System package path
-	SysPackagePath = "voedger.com/packages/sys"
 )
 
 // QNameANY is substitution denotes that a Function param or result can be any type
@@ -104,6 +104,14 @@ var (
 		QNameAnyCommand:   AnyCommandType,
 		QNameAnyQuery:     AnyQueryType,
 	}
+)
+
+const (
+	// System application owner name
+	SysOwner = "sys"
+
+	// Char to separate application owner (provider) from application name
+	AppQNameQualifierChar = "/"
 )
 
 // Maximum fields per one structured type
