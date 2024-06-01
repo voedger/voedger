@@ -1062,6 +1062,14 @@ func (c *resultValueBuilder) Equal(src istructs.IStateValueBuilder) bool {
 	return reflect.DeepEqual(o1, o2)
 }
 
+func (c *resultValueBuilder) BuildValue() istructs.IStateValue {
+	o, err := c.resultBuilder.Build()
+	if err != nil {
+		panic(err)
+	}
+	return &objectValue{object: o}
+}
+
 func (c *resultValueBuilder) PutInt32(name string, value int32) {
 	c.resultBuilder.PutInt32(name, value)
 }
