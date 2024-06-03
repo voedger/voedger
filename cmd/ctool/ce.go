@@ -12,32 +12,31 @@ import (
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
+var ceSuccessPhrases = map[string]string{
+	ckInit:    "CE cluster is deployed successfully.",
+	ckUpgrade: "CE cluster is upgraded successfully.",
+	ckAcme:    "ACME domain list successfully modified",
+}
+
 func ceClusterControllerFunction(c *clusterType) error {
 
 	var err error
 
 	switch c.Cmd.Kind {
 	case ckInit, ckUpgrade, ckAcme:
-		loggerInfo("Deploying monitoring stack...")
-		if err = newScriptExecuter("", "").
-			run("ce/mon-prepare.sh"); err != nil {
+
+		if err = deployCeMonStack(); err != nil {
 			return err
 		}
 
-		loggerInfo("Deploying voedger CE...")
-		if err = newScriptExecuter("", "").
-			run("ce/ce-start.sh"); err != nil {
+		if err = deployVoedgerCe(); err != nil {
 			return err
 		}
 
-		loggerInfo("Adding user voedger to Grafana on ce-node")
-		if err = addGrafanUser(c.nodeByHost(ceNodeName), voedger); err != nil {
-			return err
-		}
-
-		loggerInfo("Voedger's password resetting to monitoring stack")
-		if err = setMonPassword(c, voedger); err != nil {
-			return err
+		if c.Cmd.Kind == ckInit {
+			if err = addVoedgerUser(c); err != nil {
+				return err
+			}
 		}
 
 	default:
@@ -45,12 +44,44 @@ func ceClusterControllerFunction(c *clusterType) error {
 	}
 
 	if err == nil {
-		loggerInfoGreen("CE cluster is deployed successfully.")
+
+		if succesPhrase, exists := ceSuccessPhrases[c.Cmd.Kind]; exists {
+			loggerInfoGreen(succesPhrase)
+		}
 
 		c.success()
 	}
 
 	return err
+}
+
+func deployCeMonStack() error {
+
+	loggerInfo("Deploying monitoring stack...")
+	return newScriptExecuter("", "").run("ce/mon-prepare.sh")
+}
+
+func deployVoedgerCe() error {
+
+	loggerInfo("Deploying voedger CE...")
+	return newScriptExecuter("", "").run("ce/ce-start.sh")
+}
+
+func addVoedgerUser(c *clusterType) error {
+
+	var err error
+
+	loggerInfo("Adding user voedger to Grafana on ce-node")
+	if err = addGrafanUser(c.nodeByHost(ceNodeName), voedger); err != nil {
+		return err
+	}
+
+	loggerInfo("Voedger's password resetting to monitoring stack")
+	if err = setMonPassword(c, voedger); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func ceNodeControllerFunction(n *nodeType) error {
