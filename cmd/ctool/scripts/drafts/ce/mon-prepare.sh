@@ -21,7 +21,7 @@ cp ./grafana/grafana.ini ~/grafana/grafana.ini
 
 envsubst < ./prometheus/prometheus.yml > ~/prometheus/prometheus.yml
 
-cp ./prometheus/web.yml ~/prometheus/web.yml
+cp -n ./prometheus/web.yml ~/prometheus/web.yml
 cp ./prometheus/alert.rules ~/prometheus/alert.rules
 cp ./alertmanager/config.yml ~/alertmanager/config.yml
 
