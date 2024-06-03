@@ -33,8 +33,12 @@ func ceClusterControllerFunction(c *clusterType) error {
 			return err
 		}
 
+		if err = addVoedgerUser(c); err != nil {
+			return err
+		}
+
 		if c.Cmd.Kind == ckInit {
-			if err = addVoedgerUser(c); err != nil {
+			if err = resetMonPassword(c); err != nil {
 				return err
 			}
 		}
@@ -69,15 +73,18 @@ func deployVoedgerCe() error {
 
 func addVoedgerUser(c *clusterType) error {
 
-	var err error
-
 	loggerInfo("Adding user voedger to Grafana on ce-node")
-	if err = addGrafanUser(c.nodeByHost(ceNodeName), voedger); err != nil {
+	if err := addGrafanUser(c.nodeByHost(ceNodeName), voedger); err != nil {
 		return err
 	}
 
+	return nil
+}
+
+func resetMonPassword(c *clusterType) error {
+
 	loggerInfo("Voedger's password resetting to monitoring stack")
-	if err = setMonPassword(c, voedger); err != nil {
+	if err := setMonPassword(c, voedger); err != nil {
 		return err
 	}
 
