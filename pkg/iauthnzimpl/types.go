@@ -31,7 +31,7 @@ type ACL []ACElem
 
 type PatternType struct {
 	opKindsPattern    []iauthnz.OperationKindType
-	principalsPattern [][]iauthnz.Principal // first OR, second AND
+	principalsPattern [][]iauthnz.Principal // first dimension is OR, second is AND
 	qNamesPattern     []appdef.QName
 	fieldsPattern     [][]string // first OR, second AND
 }
