@@ -104,7 +104,8 @@ var (
 	qNameRoleResellersAdmin         = appdef.NewQName(airPackage, "ResellersAdmin")
 	qNameRoleUntillPaymentsReseller = appdef.NewQName(airPackage, "UntillPaymentsReseller")
 	qNameRoleUntillPaymentsUser     = appdef.NewQName(airPackage, "UntillPaymentsUser")
-	qNameRoleAirReseller            = appdef.NewQName(airPackage, "AirReseller")
+	qNameRoleAirReseller            = appdef.NewQName(airPackage, "AirReseller") // Deprecated: use role air.SubscriptionReseller instead
+	qNameRoleSubscriptionReseller   = appdef.NewQName(airPackage, "SubscriptionReseller")
 	qNameRoleUntillPaymentsTerminal = appdef.NewQName(airPackage, "UntillPaymentsTerminal")
 	qNameRoleUntillPaymentsManager  = appdef.NewQName(airPackage, "UntillPaymentsManager")
 )
