@@ -12,7 +12,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/stretchr/testify/require"
+	"github.com/voedger/voedger/pkg/goutils/testingu/require"
 )
 
 func TestSafeWriteBuf(t *testing.T) {
@@ -78,7 +78,7 @@ func TestSafeWriteBuf(t *testing.T) {
 	require.Panics(func() {
 		p := func() {}
 		SafeWriteBuf(bytes.NewBuffer(nil), p)
-	}, "must be panic if unknown data size")
+	}, require.Has("func()"))
 }
 
 func TestReadWriteShortString(t *testing.T) {
