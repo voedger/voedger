@@ -1381,7 +1381,7 @@ func Test_SingletonCDocEvent(t *testing.T) {
 			func() {
 				_ = app.Records().Apply2(pLogEvent, func(_ istructs.IRecord) {})
 			},
-			"must panic if apply invalid event")
+			require.Is(ErrorEventNotValid), require.Has(buildErr))
 	})
 
 	t.Run("must fail to repeatedly create singleton CDoc", func(t *testing.T) {
@@ -1772,7 +1772,7 @@ func TestEventBuild_Error(t *testing.T) {
 				func() {
 					_ = app.Records().Apply2(pLogEvent, func(r istructs.IRecord) {})
 				},
-				"must panic if apply invalid event")
+				require.Is(ErrorEventNotValid), require.Has(ErrWrongRecordID))
 		})
 	})
 }

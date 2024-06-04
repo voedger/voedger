@@ -10,9 +10,8 @@ import (
 	"log"
 	"testing"
 
-	"github.com/stretchr/testify/require"
-
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/goutils/testingu/require"
 	"github.com/voedger/voedger/pkg/iratesce"
 	"github.com/voedger/voedger/pkg/istorage/mem"
 	istorageimpl "github.com/voedger/voedger/pkg/istorage/provider"
@@ -94,7 +93,7 @@ func TestAppConfigsType_AddConfig(t *testing.T) {
 		appName := appdef.NewAppQName("unknown", "unknown")
 		require.Panics(func() {
 			cfgs.AddConfig(appName, appdef.New(appName)).SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
-		})
+		}, require.Is(istructs.ErrAppNotFound), require.Has(appName))
 	})
 
 	t.Run("must be panic to add config with invalid appDef", func(t *testing.T) {
@@ -109,7 +108,7 @@ func TestAppConfigsType_AddConfig(t *testing.T) {
 						AddContainer("unknown", appdef.NewQName("test", "unknown"), 0, 1) // <- error here: reference to unknown element type
 					return adb
 				}())
-		})
+		}, require.Is(appdef.ErrNotFoundError), require.Has(appName), require.Has("test.unknown"))
 	})
 }
 
@@ -163,7 +162,7 @@ func TestAppConfigsType_GetConfig(t *testing.T) {
 		app := appdef.NewAppQName("unknownOwner", "unknownApplication")
 		require.Panics(func() {
 			_ = cfgs.GetConfig(app)
-		})
+		}, require.Is(istructs.ErrAppNotFound), require.Has(app))
 	})
 
 }
