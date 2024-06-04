@@ -1,0 +1,65 @@
+# Copyright (c) 2023 Sigma-Soft, Ltd.
+# @author Aleksei Ponomarev
+# @date 2023-12-25
+
+name: 'Test Voedger Cluster Action'
+description: 'Test Voedger Cluster Action'
+
+runs:
+  using: 'composite'
+
+  steps:
+    - name: Smoke test - wait for db cluster building
+      run: |
+        echo "Work with ${{ env.PUBLIC_IP }}"
+        count=0
+        while [ $count -lt 60 ]; do
+           if [ $(ssh ${{ env.SSH_OPTIONS }} ubuntu@${{ env.PUBLIC_IP }} docker exec '$(docker ps -qf name=scylla)' nodetool status | grep -c "^UN\s") -eq 1 ]; then
+               echo "Scylla initialization success, wait for listen on port 9042 ..."
+               if ssh ${{ env.SSH_OPTIONS }} ubuntu@${{ env.PUBLIC_IP }} "nc -zvw3 db-node-1 9042"; then
+                   echo "Scylla listen and ready to serve on port 9042"
+                   break
+               fi  
+           fi
+           echo "Still wait for scylla initialization.."
+           sleep 5
+           count=$((count+1))
+        done
+        if [ $count -eq 60 ]; then
+           echo "Scylla initialization timed out."
+           exit 1
+        fi
+      shell: bash
+
+    - name: Smoke test - backup and restore
+      uses: ./.github/actions/cluster-backup-action
+
+    - name: Check voedger CE stack status
+      run: bash .github/scripts/voedger_ce_status.sh "http://${{ github.event.issue.number }}.cdci.voedger.io/static/sys/monitor/site/hello"
+      shell: bash
+
+    - name: Set password for Mon Stack
+      env:
+         ISSUE_TITLE: "${{ github.event.issue.title }}"
+      run: bash .github/scripts/mon_password_set.sh ${{ env.MON_PASSWORD }}
+      shell: bash
+
+    - name: Check Prometheus and Alertmanager
+      run: bash .github/scripts/mon_ce_status.sh "http://${{ github.event.issue.number }}.cdci.voedger.io"
+      shell: bash
+
+    - name: Add ACME domain
+      run: |
+          ssh ${{ env.SSH_OPTIONS }} ubuntu@${{ env.PUBLIC_IP }} <<EOF 
+          cd /home/ubuntu/voedger/cmd/ctool
+          ./ctool acme add ${{ github.event.issue.number }}.cdci.voedger.io -v
+          EOF
+      shell: bash
+
+    - name: Check voedger CE stack status availability over HTTPS
+      run: bash .github/scripts/voedger_ce_status.sh "https://${{ github.event.issue.number }}.cdci.voedger.io/static/sys/monitor/site/hello"
+      shell: bash
+
+    - name: Check mon CE stack status availability over HTTPS
+      run: bash .github/scripts/mon_ce_status.sh "https://${{ github.event.issue.number }}.cdci.voedger.io"
+      shell: bash
