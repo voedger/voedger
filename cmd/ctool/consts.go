@@ -101,3 +101,5 @@ const (
 )
 
 const emptyDiscordWebhookUrl = "http://discord_webhook_url"
+
+const ceNodeName = "ce-node"

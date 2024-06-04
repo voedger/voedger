@@ -666,14 +666,21 @@ func (v *wLogValue) AsRecord(_ string) (record istructs.IRecord) {
 	return v.event.ArgumentObject().AsRecord()
 }
 func (v *wLogValue) AsValue(name string) istructs.IStateValue {
-	if name != Field_CUDs {
-		panic(ErrNotSupported)
+	if name == Field_CUDs {
+		sv := &cudsValue{}
+		v.event.CUDs(func(rec istructs.ICUDRow) {
+			sv.cuds = append(sv.cuds, rec)
+		})
+		return sv
 	}
-	sv := &cudsValue{}
-	v.event.CUDs(func(rec istructs.ICUDRow) {
-		sv.cuds = append(sv.cuds, rec)
-	})
-	return sv
+	if name == Field_ArgumentObject {
+		arg := v.event.ArgumentObject()
+		if arg == nil {
+			return nil
+		}
+		return &objectValue{object: arg}
+	}
+	panic(errUndefined(name))
 }
 
 type sendMailKeyBuilder struct {
@@ -1060,6 +1067,14 @@ func (c *resultValueBuilder) Equal(src istructs.IStateValueBuilder) bool {
 		panic(err)
 	}
 	return reflect.DeepEqual(o1, o2)
+}
+
+func (c *resultValueBuilder) BuildValue() istructs.IStateValue {
+	o, err := c.resultBuilder.Build()
+	if err != nil {
+		panic(err)
+	}
+	return &objectValue{object: o}
 }
 
 func (c *resultValueBuilder) PutInt32(name string, value int32) {

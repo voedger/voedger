@@ -156,7 +156,7 @@ func setDiscordWebhookCe(cluster *clusterType, webhook string) error {
 
 	remoteDir := filepath.Join(homeDir, alertmanager)
 	remoteFile := filepath.Join(remoteDir, configFileName)
-	host := "ce-node"
+	host := ceNodeName
 
 	if webhook == emptyDiscordWebhookUrl {
 		loggerInfo(fmt.Sprintf("Removing Discord webhook from %s", host))
