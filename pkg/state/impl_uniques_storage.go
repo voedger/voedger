@@ -44,11 +44,12 @@ func (s *uniquesStorage) NewKeyBuilder(entity appdef.QName, _ istructs.IStateKey
 
 func (s *uniquesStorage) Get(key istructs.IStateKeyBuilder) (value istructs.IStateValue, err error) {
 	k := key.(*keyBuilder)
+	var id istructs.RecordID
 	if s.uniqiesHandler != nil {
-		id, err := s.uniqiesHandler(k.entity, s.wsidFunc(), k.data)
-		return &uniquesValue{id: id}, err
+		id, err = s.uniqiesHandler(k.entity, s.wsidFunc(), k.data)
+	} else {
+		id, err = uniques.GetRecordIDByUniqueCombination(s.wsidFunc(), k.entity, s.appStructsFunc(), k.data)
 	}
-	id, err := uniques.GetRecordIDByUniqueCombination(s.wsidFunc(), k.entity, s.appStructsFunc(), k.data)
 	if err != nil {
 		return nil, err
 	}
