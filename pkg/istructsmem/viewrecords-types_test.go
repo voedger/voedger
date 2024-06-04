@@ -11,7 +11,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/stretchr/testify/require"
+	"github.com/voedger/voedger/pkg/goutils/testingu/require"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/iratesce"
@@ -452,18 +452,16 @@ func TestCore_ViewRecords(t *testing.T) {
 
 	t.Run("Invalid key building test", func(t *testing.T) {
 
-		t.Run("Must have panic if key type missed", func(t *testing.T) {
-			require.Panics(func() { _ = viewRecords.KeyBuilder(appdef.NullQName) })
-		})
+		require.Panics(func() { _ = viewRecords.KeyBuilder(appdef.NullQName) },
+			require.Is(ErrNameMissed, "Should panics if key type missed"))
 
-		t.Run("Must have panic if invalid key type name", func(t *testing.T) {
-			require.Panics(func() { _ = viewRecords.KeyBuilder(istructs.QNameForError) })
-			require.Panics(func() { _ = viewRecords.KeyBuilder(appdef.NewQName("test", "unknownDrinks")) })
-		})
+		require.Panics(func() { _ = viewRecords.KeyBuilder(istructs.QNameForError) },
+			require.Is(ErrNameNotFound), require.Has(istructs.QNameForError))
+		require.Panics(func() { _ = viewRecords.KeyBuilder(appdef.NewQName("test", "unknownDrinks")) },
+			require.Is(ErrNameNotFound), require.Has("test.unknownDrinks"))
 
-		t.Run("Must have panic if invalid key type kind", func(t *testing.T) {
-			require.Panics(func() { _ = viewRecords.KeyBuilder(appdef.NewQName("test", "viewDrinks_Value")) })
-		})
+		require.Panics(func() { _ = viewRecords.KeyBuilder(appdef.NewQName("test", "viewDrinks_Value")) },
+			require.Is(ErrNameNotFound), require.Has("test.viewDrinks_Value"))
 
 		t.Run("Must have error if wrong partition key type", func(t *testing.T) {
 			kb := viewRecords.KeyBuilder(appdef.NewQName("test", "viewDrinks"))
@@ -609,23 +607,20 @@ func TestCore_ViewRecords(t *testing.T) {
 
 	t.Run("Invalid value building test", func(t *testing.T) {
 
-		t.Run("Must have panic if value type missed", func(t *testing.T) {
-			require.Panics(func() { _ = viewRecords.NewValueBuilder(appdef.NullQName) })
-		})
+		require.Panics(func() { _ = viewRecords.NewValueBuilder(appdef.NullQName) },
+			require.Is(ErrNameMissed, "Should panics if value type missed"))
 
-		t.Run("Must have panic if unknown value type specified", func(t *testing.T) {
-			require.Panics(func() { _ = viewRecords.NewValueBuilder(appdef.NewQName("test", "unknownDrinks")) })
-		})
+		require.Panics(func() { _ = viewRecords.NewValueBuilder(appdef.NewQName("test", "unknownDrinks")) },
+			require.Is(ErrNameNotFound), require.Has("test.unknownDrinks"))
 
-		t.Run("Must have panic if wrong value type specified", func(t *testing.T) {
-			require.Panics(func() { _ = viewRecords.NewValueBuilder(appdef.NewQName("test", "viewDrinks_PartitionKey")) })
-		})
+		require.Panics(func() { _ = viewRecords.NewValueBuilder(appdef.NewQName("test", "viewDrinks_PartitionKey")) },
+			require.Is(ErrNameNotFound), require.Has("test.viewDrinks_PartitionKey"))
 
 		t.Run("Must have panic if wrong existing value type specified", func(t *testing.T) {
 			exists := newValue(appCfg, appdef.NewQName("test", "otherView"))
 			require.Panics(func() {
 				_ = viewRecords.UpdateValueBuilder(appdef.NewQName("test", "viewDrinks"), exists)
-			})
+			}, require.Is(ErrWrongType), require.Has("test.otherView"))
 		})
 
 		t.Run("Must have error for put if empty value", func(t *testing.T) {
@@ -807,7 +802,7 @@ func TestCore_ViewRecords(t *testing.T) {
 		vb := viewRecords.NewValueBuilder(appdef.NewQName("test", "viewDrinks"))
 		vb.PutInt32("id", 42)
 
-		require.Panics(func() { _ = vb.Build() })
+		require.Panics(func() { _ = vb.Build() }, require.Is(ErrWrongFieldType), require.Has("id"))
 	})
 }
 
