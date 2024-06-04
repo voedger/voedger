@@ -59,6 +59,8 @@ runs:
       shell: bash
 
     - name: Set password for Mon Stack
+      env:
+        ISSUE_TITLE: "${{ github.event.issue.title }}"
       run: bash .github/scripts/mon_password_set.sh ${{ env.MON_PASSWORD }}
       shell: bash
 
