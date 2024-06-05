@@ -8,6 +8,13 @@ set -x
 
 MON_PASSWORD=$1
 
+ctool_cmd="cd /home/ubuntu/voedger/cmd/ctool && ./ctool mon password -v "
+
+if [ "$ISSUE_TITLE" == "ctoolintegrationtest se" ]; then
+    ctool_cmd+="--ssh-key /tmp/amazonKey.pem "
+fi
+ctool_cmd+="$MON_PASSWORD"
+
 IFS=' ' read -r -a ssh_options_args <<< "$SSH_OPTIONS"
 
-ssh "${ssh_options_args[@]}" ubuntu@"$CTOOL_IP" "cd /home/ubuntu/voedger/cmd/ctool && ./ctool mon password -v --ssh-key /tmp/amazonKey.pem $MON_PASSWORD"
+ssh "${ssh_options_args[@]}" ubuntu@"$CTOOL_IP" "$ctool_cmd"

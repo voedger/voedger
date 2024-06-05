@@ -11,31 +11,45 @@ runs:
   steps:
     - name: Smoke test - create keyspace, table and fill with test data
       run: |
-        set -x 
-        ssh ${{ env.SSH_OPTIONS }} ubuntu@${{ env.PUBLIC_IP }} 'docker exec $(docker ps -qf name=scylla) bash -c "
-        function create_keyspace() {
-            cqlsh db-node-1 9042 -e \"CREATE KEYSPACE IF NOT EXISTS v_keyspace WITH replication = {'\''class'\'': '\''NetworkTopologyStrategy'\'', '\''dc1'\'': 2, '\''dc2'\'': 1}  AND durable_writes = true;\"
-        }
+        set -x
+        ISSUE_TITLE="${{ github.event.issue.title }}"
         
+        if [ "$ISSUE_TITLE" == "ctoolintegrationtest ce" ]; then
+            REPLICATION_STRATEGY="'class': 'SimpleStrategy', 'replication_factor': 1"
+        elif [ "$ISSUE_TITLE" == "ctoolintegrationtest se" ]; then
+            REPLICATION_STRATEGY="'class': 'NetworkTopologyStrategy', 'dc1': 2, 'dc2': 1"
+        else
+            echo "Unknown issue title: $ISSUE_TITLE"
+            exit 1
+        fi
+        
+        ssh ${{ env.SSH_OPTIONS }} ubuntu@${{ env.PUBLIC_IP }} bash -s <<EOF
+        docker exec \$(docker ps -qf name=scylla) bash -c "
+        function create_keyspace() {
+            cqlsh db-node-1 9042 -e \"CREATE KEYSPACE IF NOT EXISTS v_keyspace WITH replication = {${REPLICATION_STRATEGY}} AND durable_writes = true;\"
+        }
+
         function create_table() {
             cqlsh db-node-1 9042 -k v_keyspace -e \"CREATE TABLE IF NOT EXISTS values (id INT PRIMARY KEY, value TEXT);\"
         }
-        
+
         function add_records() {
             for ((i=1; i<=10; i++)); do
-                cqlsh db-node-1 9042 -k v_keyspace -e \"INSERT INTO values (id, value) VALUES (\$i, '\''Inserted_value'\'');\"
+                cqlsh db-node-1 9042 -k v_keyspace -e \"INSERT INTO values (id, value) VALUES (\\\$i, 'Inserted_value');\"
             done
         }
-        
+
         function flush_records() {
             nodetool flush v_keyspace values
         }
-        
+
         create_keyspace
         create_table
         add_records
         flush_records
-        "'
+        "
+        EOF
+        
       shell: bash
 
     - name: Check inserted data
@@ -52,12 +66,41 @@ runs:
     - name: Backup scylla node
       run: |
         set -x
-        for ((i=1; i<=3; i++)); do
-            if ssh ${{ env.SSH_OPTIONS }} ubuntu@${{ env.CTOOL_IP }} "cd /home/ubuntu/voedger/cmd/ctool && ./ctool backup node db-node-$i /home/ubuntu/backup --ssh-key /tmp/amazonKey.pem -v -p ${{ env.SSH_PORT }}"; then
+        ISSUE_TITLE="${{ github.event.issue.title }}"
+        
+        function get_node_arg() {
+            local version_type=$1
+            local node_num=$2
+            if [ "$version_type" -eq 1 ]; then
+                echo ""
+            elif [ "$version_type" -eq 3 ]; then
+                echo "db-node-$node_num"
+            else
+                echo "Unsupported value: $version_type"
+                return 1
+            fi
+        }
+        
+        if [ "$ISSUE_TITLE" == "ctoolintegrationtest ce" ]; then
+            CYCLE_END=1
+            SSH_KEY_OPTION=""
+            SSH_PORT_OPTION="" 
+        elif [ "$ISSUE_TITLE" == "ctoolintegrationtest se" ]; then
+            CYCLE_END=3
+            SSH_KEY_OPTION="--ssh-key /tmp/amazonKey.pem"
+            SSH_PORT_OPTION="-p ${{ env.SSH_PORT }}"
+        else
+          echo "Unknown issue title: $ISSUE_TITLE"
+          exit 1
+        fi
+        
+        for ((i=1; i<=CYCLE_END; i++)); do
+            NODE_OPTION=$(get_node_arg $CYCLE_END $i)
+            if ssh ${{ env.SSH_OPTIONS }} ubuntu@${{ env.CTOOL_IP }} "cd /home/ubuntu/voedger/cmd/ctool && ./ctool backup node $NODE_OPTION /home/ubuntu/backup $SSH_KEY_OPTION -v $SSH_PORT_OPTION"; then
                 echo "Backup success"
             else 
-                echo "Failed to backup scylla db-node-$i in cluster"
-            exit 1
+                echo "Failed to backup scylla node"
+                exit 1
             fi
         done
       shell: bash
@@ -75,7 +118,18 @@ runs:
       run: |
         set -euo pipefail
         set -x
-        ssh ${{ env.SSH_OPTIONS }} ubuntu@${{ env.CTOOL_IP }} "cd /home/ubuntu/voedger/cmd/ctool && ./ctool restore /home/ubuntu/backup --ssh-key /tmp/amazonKey.pem -v"
+        ISSUE_TITLE="${{ github.event.issue.title }}"
+        
+        if [ "$ISSUE_TITLE" == "ctoolintegrationtest ce" ]; then
+            SSH_KEY_OPTION=""
+        elif [ "$ISSUE_TITLE" == "ctoolintegrationtest se" ]; then
+            SSH_KEY_OPTION="--ssh-key /tmp/amazonKey.pem"
+        else
+          echo "Unknown issue title: $ISSUE_TITLE"
+          exit 1
+        fi
+        
+        ssh ${{ env.SSH_OPTIONS }} ubuntu@${{ env.CTOOL_IP }} "cd /home/ubuntu/voedger/cmd/ctool && ./ctool restore /home/ubuntu/backup $SSH_KEY_OPTION -v"
       shell: bash
 
     - name: Check inserted data after restore

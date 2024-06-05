@@ -1,6 +1,7 @@
 # Copyright (c) 2023 Sigma-Soft, Ltd.
 # @author Aleksei Ponomarev
 # @date 2023-12-25
+#
 
 name: 'Test Voedger Cluster Action'
 description: 'Test Voedger Cluster Action'
@@ -59,6 +60,8 @@ runs:
       shell: bash
 
     - name: Set password for Mon Stack
+      env:
+        ISSUE_TITLE: "${{ github.event.issue.title }}"
       run: bash .github/scripts/mon_password_set.sh ${{ env.MON_PASSWORD }}
       shell: bash
 
@@ -151,6 +154,8 @@ runs:
       shell: bash
 
     - name: Set password for Mon Stack after replace node
+      env:
+        ISSUE_TITLE: "${{ github.event.issue.title }}"
       run: bash .github/scripts/mon_password_set.sh ${{ env.MON_PASSWORD }}
       shell: bash
 
