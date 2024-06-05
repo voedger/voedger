@@ -38,10 +38,10 @@ type rowType struct {
 	parentID         istructs.RecordID
 	container        string
 	isActive         bool
+	isActiveModified bool
 	dyB              *dynobuffers.Buffer
 	nils             []appdef.FieldName // nilled string and []bytes, which not stored in dynobuffer
 	err              error
-	isActiveModified bool
 }
 
 // Makes new empty row (QName is appdef.NullQName)
@@ -127,6 +127,7 @@ func (row *rowType) clear() {
 	row.parentID = istructs.NullRecordID
 	row.container = ""
 	row.isActive = true
+	row.isActiveModified = false
 	row.release()
 	row.nils = nil
 	row.err = nil

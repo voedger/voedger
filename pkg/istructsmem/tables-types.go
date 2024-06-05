@@ -57,11 +57,11 @@ func NewNullRecord(id istructs.RecordID) istructs.IRecord {
 
 // istructs.ICUDRow.ModifiedFields
 func (row *rowType) ModifiedFields(cb func(fieldName appdef.FieldName, newValue interface{})) {
+	if row.isActiveModified {
+		cb(appdef.SystemField_IsActive, row.isActive)
+	}
 	row.dyB.IterateFields(nil, func(name string, value interface{}) bool {
 		cb(name, value)
 		return true
 	})
-	if row.isActiveModified {
-		cb(appdef.SystemField_IsActive, row.isActive)
-	}
 }
