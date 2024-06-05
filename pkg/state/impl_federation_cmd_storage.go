@@ -125,13 +125,7 @@ func (s *federationCommandStorage) Get(key istructs.IStateKeyBuilder) (istructs.
 
 		newIDs = resp.NewIDs
 		resStatus = resp.HTTPResp.StatusCode
-
-		res := map[string]interface{}{}
-		err = json.Unmarshal([]byte(resp.Body), &res)
-		if err != nil {
-			return nil, err
-		}
-		result = res["Result"].(map[string]interface{})
+		result = resp.CmdResult
 
 	}
 
@@ -139,6 +133,7 @@ func (s *federationCommandStorage) Get(key istructs.IStateKeyBuilder) (istructs.
 		statusCode: resStatus,
 		newIds:     &fcCmdNewIds{newIds: newIDs},
 		result:     &jsonValue{json: result},
+		body:       resBody,
 	}, nil
 }
 func (s *federationCommandStorage) Read(key istructs.IStateKeyBuilder, callback istructs.ValueCallback) (err error) {
@@ -154,6 +149,7 @@ type fcCmdValue struct {
 	statusCode int
 	newIds     istructs.IStateValue
 	result     istructs.IStateValue
+	body       string
 }
 
 func (v *fcCmdValue) AsInt32(name string) int32 {
