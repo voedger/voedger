@@ -3,7 +3,7 @@ name: CI .workflow PR
 on:
   pull_request_target:
     paths:
-      - '.github/.workflows/**'
+      - '.github/workflows/**'
 
 jobs:
   auto-merge-pr:
