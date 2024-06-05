@@ -153,6 +153,8 @@ runs:
       shell: bash
 
     - name: Set password for Mon Stack after replace node
+      env:
+        ISSUE_TITLE: "${{ github.event.issue.title }}"
       run: bash .github/scripts/mon_password_set.sh ${{ env.MON_PASSWORD }}
       shell: bash
 
