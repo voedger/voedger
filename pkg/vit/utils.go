@@ -13,11 +13,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/istorage"
-	"github.com/voedger/voedger/pkg/istorage/mem"
 	"github.com/voedger/voedger/pkg/utils/federation"
 	"github.com/voedger/voedger/pkg/vvm"
 
@@ -385,19 +385,26 @@ func DummyWS(wsKind appdef.QName, wsid istructs.WSID, ownerPrn *Principal) *AppW
 // then calls testAfterRestart() with the new VIT
 // cfg must be owned
 func TestRestartPreservingStorage(t *testing.T, cfg *VITConfig, testBeforeRestart, testAfterRestart func(t *testing.T, vit *VIT)) {
-	memStorage := mem.Provide()
+	require.False(t, cfg.isShared, "storage restart could be done on Own VIT Config only")
+	var sharedStorageFactory istorage.IAppStorageFactory
+	suffix := t.Name() + uuid.NewString()
 	cfg.opts = append(cfg.opts, WithVVMConfig(func(cfg *vvm.VVMConfig) {
-		cfg.StorageFactory = func() (provider istorage.IAppStorageFactory, err error) {
-			return memStorage, nil
+		if sharedStorageFactory == nil {
+			var err error
+			sharedStorageFactory, err = cfg.StorageFactory()
+			require.NoError(t, err)
 		}
-		cfg.KeyspaceNameSuffix = t.Name()
+		cfg.KeyspaceNameSuffix = suffix
+		cfg.StorageFactory = func() (istorage.IAppStorageFactory, error) {
+			return sharedStorageFactory, nil
+		}
 	}))
 	func() {
-		vit := NewVIT(t, cfg)
+		vit := NewVITLocalCassandra(t, cfg)
 		defer vit.TearDown()
 		testBeforeRestart(t, vit)
 	}()
-	vit := NewVIT(t, cfg)
+	vit := NewVITLocalCassandra(t, cfg)
 	defer vit.TearDown()
 	testAfterRestart(t, vit)
 }
