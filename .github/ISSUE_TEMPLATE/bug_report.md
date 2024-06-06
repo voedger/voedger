@@ -6,9 +6,8 @@ labels: kind/bug, todo/triage
 assignees: ''
 ---
 
-## To Reproduce
+## Steps to reproduce the behavior
 
-Steps to reproduce the behavior:
 1. Go to '...'
 2. Click on '....'
 3. Scroll down to '....'
@@ -21,3 +20,4 @@ What you expected to happen.
 ## Additional context
 
 Add any other context about the problem here.
+
