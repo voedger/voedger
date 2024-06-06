@@ -73,7 +73,7 @@ func (asp *implIAppStorageProvider) clarifyKeyspaceName(sn istorage.SafeAppName)
 		// - integration tests for different packages are run in simultaneously in separate processes
 		// - 2 processes using the same shared VIT config -> 2 VITs are initialized on the same keyspaces names -> conflict when e.g. creating the same logins
 		// see also getNewAppStorageDesc() below
-		newName := sn.String() + asp.suffix
+		newName := sn.String() + strings.ToLower(asp.suffix)
 		newName = strings.ReplaceAll(newName, "-", "")
 		if len(newName) > istorage.MaxSafeNameLength {
 			newName = newName[:istorage.MaxSafeNameLength]

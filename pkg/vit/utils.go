@@ -400,11 +400,11 @@ func TestRestartPreservingStorage(t *testing.T, cfg *VITConfig, testBeforeRestar
 		}
 	}))
 	func() {
-		vit := NewVITLocalCassandra(t, cfg)
+		vit := NewVIT(t, cfg)
 		defer vit.TearDown()
 		testBeforeRestart(t, vit)
 	}()
-	vit := NewVITLocalCassandra(t, cfg)
+	vit := NewVIT(t, cfg)
 	defer vit.TearDown()
 	testAfterRestart(t, vit)
 }
