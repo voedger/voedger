@@ -97,13 +97,15 @@ var (
 	qNameQrySendReceiptByEmail                      = appdef.NewQName(airPackage, "SendReceiptByEmail")
 	qNameQryUpdateShopperStatement                  = appdef.NewQName(airPackage, "UpdateShopperStatement")
 	qNameWDocLastNumbers                            = appdef.NewQName(airPackage, "LastNumbers")
+	qNameCmdVSqlUpdate                              = appdef.NewQName(clusterPackage, "VSqlUpdate")
 	qNameCmdSaveTap2PayPayment                      = appdef.NewQName(airPackage, "SaveTap2PayPayment")
 
 	// Air roles
 	qNameRoleResellersAdmin         = appdef.NewQName(airPackage, "ResellersAdmin")
 	qNameRoleUntillPaymentsReseller = appdef.NewQName(airPackage, "UntillPaymentsReseller")
 	qNameRoleUntillPaymentsUser     = appdef.NewQName(airPackage, "UntillPaymentsUser")
-	qNameRoleAirReseller            = appdef.NewQName(airPackage, "AirReseller")
+	qNameRoleAirReseller            = appdef.NewQName(airPackage, "AirReseller") // Deprecated: use role air.SubscriptionReseller instead
+	qNameRoleSubscriptionReseller   = appdef.NewQName(airPackage, "SubscriptionReseller")
 	qNameRoleUntillPaymentsTerminal = appdef.NewQName(airPackage, "UntillPaymentsTerminal")
 	qNameRoleUntillPaymentsManager  = appdef.NewQName(airPackage, "UntillPaymentsManager")
 )
@@ -117,6 +119,7 @@ const (
 	airPackage                  = "air"
 	untillPackage               = "untill"
 	untillChargebeeAgentLogin   = "untillchargebeeagent"
+	clusterPackage              = "cluster"
 
 	// avoiding import cycle: collection->iauthnzimpl->registry->workspace->collection
 	registryPackage = "registry"

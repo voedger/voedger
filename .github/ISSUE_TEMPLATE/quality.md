@@ -9,19 +9,7 @@ assignees: ''
 
 ## Motivation
 
-I have a nice idea how to improve the quality of the system. 
-
-Quality related issues improve: (according to [ISO 25010](https://iso25000.com/index.php/en/iso-25000-standards/iso-25010)):
-- Functional Suitability
-- Performance Efficiency
-- Compatibility
-- Interaction Capability
-- Reliability
-- Security
-- Maintainability
-- Flexibility
-- Safety
-
+I have a nice idea how to improve the [quality](https://iso25000.com/index.php/en/iso-25000-standards/iso-25010) of the system. 
 
 **Now, in current architecture**
 A clear and concise description of what the problem is.

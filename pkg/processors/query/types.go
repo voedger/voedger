@@ -90,7 +90,7 @@ type IOutputRow interface {
 }
 
 type IQueryMessage interface {
-	AppQName() istructs.AppQName
+	AppQName() appdef.AppQName
 	WSID() istructs.WSID
 	Sender() ibus.ISender
 	Body() []byte

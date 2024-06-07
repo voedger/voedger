@@ -27,12 +27,12 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/apps"
 	"github.com/voedger/voedger/pkg/ihttp"
 	"github.com/voedger/voedger/pkg/ihttpctl"
 	"github.com/voedger/voedger/pkg/istorage/mem"
 	istorageimpl "github.com/voedger/voedger/pkg/istorage/provider"
-	"github.com/voedger/voedger/pkg/istructs"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
@@ -92,7 +92,7 @@ func TestBasicUsage_HTTPProcessor(t *testing.T) {
 	t.Run("c.EchoCommand", func(t *testing.T) {
 		appOwner := "test"
 		appName := uuid.New().String()
-		testAppQName := istructs.NewAppQName(appOwner, appName)
+		testAppQName := appdef.NewAppQName(appOwner, appName)
 		err := testApp.processor.DeployApp(testAppQName, 10, 1)
 		require.NoError(err)
 
@@ -126,7 +126,7 @@ func TestBasicUsage_HTTPProcessor(t *testing.T) {
 	t.Run("q.EchoQuery", func(t *testing.T) {
 		appOwner := "test"
 		appName := uuid.New().String()
-		testAppQName := istructs.NewAppQName(appOwner, appName)
+		testAppQName := appdef.NewAppQName(appOwner, appName)
 		err := testApp.processor.DeployApp(testAppQName, 10, 1)
 		require.NoError(err)
 
@@ -166,7 +166,7 @@ func TestBasicUsage_HTTPProcessor(t *testing.T) {
 	t.Run("deploy the same app twice", func(t *testing.T) {
 		appOwner := "test"
 		appName := uuid.New().String()
-		testAppQName := istructs.NewAppQName(appOwner, appName)
+		testAppQName := appdef.NewAppQName(appOwner, appName)
 		err := testApp.processor.DeployApp(testAppQName, 10, 1)
 		require.NoError(err)
 
@@ -182,7 +182,7 @@ func TestBasicUsage_HTTPProcessor(t *testing.T) {
 	t.Run("undeploy not deployed yet app", func(t *testing.T) {
 		appOwner := "test"
 		appName := uuid.New().String()
-		testAppQName := istructs.NewAppQName(appOwner, appName)
+		testAppQName := appdef.NewAppQName(appOwner, appName)
 		err := testApp.processor.DeployApp(testAppQName, 10, 1)
 		require.NoError(err)
 
@@ -191,7 +191,7 @@ func TestBasicUsage_HTTPProcessor(t *testing.T) {
 		}()
 
 		unknownAppName := uuid.New().String()
-		err = testApp.processor.UndeployApp(istructs.NewAppQName(appOwner, unknownAppName))
+		err = testApp.processor.UndeployApp(appdef.NewAppQName(appOwner, unknownAppName))
 		require.ErrorIs(err, ErrAppIsNotDeployed)
 
 	})
@@ -199,7 +199,7 @@ func TestBasicUsage_HTTPProcessor(t *testing.T) {
 	t.Run("undeploy app part which is not deployed yet", func(t *testing.T) {
 		appOwner := "test"
 		appName := uuid.New().String()
-		testAppQName := istructs.NewAppQName(appOwner, appName)
+		testAppQName := appdef.NewAppQName(appOwner, appName)
 		err := testApp.processor.DeployApp(testAppQName, 10, 1)
 		require.NoError(err)
 
@@ -215,7 +215,7 @@ func TestBasicUsage_HTTPProcessor(t *testing.T) {
 	t.Run("undeploy wrong app part no", func(t *testing.T) {
 		appOwner := "test"
 		appName := uuid.New().String()
-		testAppQName := istructs.NewAppQName(appOwner, appName)
+		testAppQName := appdef.NewAppQName(appOwner, appName)
 		err := testApp.processor.DeployApp(testAppQName, 10, 1)
 		require.NoError(err)
 
@@ -234,7 +234,7 @@ func TestBasicUsage_HTTPProcessor(t *testing.T) {
 	t.Run("app part no is out of range", func(t *testing.T) {
 		appOwner := "test"
 		appName := uuid.New().String()
-		testAppQName := istructs.NewAppQName(appOwner, appName)
+		testAppQName := appdef.NewAppQName(appOwner, appName)
 		err := testApp.processor.DeployApp(testAppQName, 2, 1)
 		require.NoError(err)
 
@@ -249,7 +249,7 @@ func TestBasicUsage_HTTPProcessor(t *testing.T) {
 	t.Run("undeploy active app part", func(t *testing.T) {
 		appOwner := "test"
 		appName := uuid.New().String()
-		testAppQName := istructs.NewAppQName(appOwner, appName)
+		testAppQName := appdef.NewAppQName(appOwner, appName)
 		err := testApp.processor.DeployApp(testAppQName, 2, 1)
 		require.NoError(err)
 

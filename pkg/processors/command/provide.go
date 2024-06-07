@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 
 	"github.com/voedger/voedger/pkg/appparts"
@@ -29,7 +30,7 @@ type workspace struct {
 type cmdProc struct {
 	pNumber       istructs.PartitionID
 	appPartition  *appPartition
-	appPartitions map[istructs.AppQName]*appPartition
+	appPartitions map[appdef.AppQName]*appPartition
 	n10nBroker    in10n.IN10nBroker
 	now           coreutils.TimeFunc
 	authenticator iauthnz.IAuthenticator
@@ -49,7 +50,7 @@ func ProvideServiceFactory(appParts appparts.IAppPartitions, now coreutils.TimeF
 	return func(commandsChannel CommandChannel, partitionID istructs.PartitionID) pipeline.IService {
 		cmdProc := &cmdProc{
 			pNumber:       partitionID,
-			appPartitions: map[istructs.AppQName]*appPartition{},
+			appPartitions: map[appdef.AppQName]*appPartition{},
 			n10nBroker:    n10nBroker,
 			now:           now,
 			authenticator: authenticator,
@@ -108,8 +109,6 @@ func ProvideServiceFactory(appParts appparts.IAppPartitions, now coreutils.TimeF
 				pipeline.WireFunc("getIWorkspace", getIWorkspace),
 				pipeline.WireFunc("getAppPartition", cmdProc.getAppPartition),
 				pipeline.WireFunc("getICommand", getICommand),
-				pipeline.WireFunc("getResources", getResources),
-				pipeline.WireFunc("getExec", getExec),
 				pipeline.WireFunc("authorizeRequest", cmdProc.authorizeRequest),
 				pipeline.WireFunc("unmarshalRequestBody", unmarshalRequestBody),
 				pipeline.WireFunc("getWorkspace", cmdProc.getWorkspace),
@@ -153,20 +152,23 @@ func ProvideServiceFactory(appParts appparts.IAppPartitions, now coreutils.TimeF
 							metrics: metrics,
 						},
 					}
-					cmd.metrics.increase(CommandsTotal, 1.0)
-					cmdHandlingErr := cmdPipeline.SendSync(cmd)
-					if cmdHandlingErr != nil {
-						logger.Error(cmdHandlingErr)
-					}
-					sendResponse(cmd, cmdHandlingErr)
-					if cmd.appPartitionRestartScheduled {
-						logger.Info(fmt.Sprintf("partition %d will be restarted due of an error on writing to Log: %s", cmd.cmdMes.PartitionID(), cmdHandlingErr))
-						delete(cmdProc.appPartitions, cmd.cmdMes.AppQName())
-					}
-					cmd.release()
+					func() { // borrowed application partition should be guaranteed to be freed
+						defer cmd.release()
+						cmd.metrics.increase(CommandsTotal, 1.0)
+						cmdHandlingErr := cmdPipeline.SendSync(cmd)
+						if cmdHandlingErr != nil {
+							logger.Error(cmdHandlingErr)
+						}
+						sendResponse(cmd, cmdHandlingErr)
+						if cmd.appPartitionRestartScheduled {
+							logger.Info(fmt.Sprintf("partition %d will be restarted due of an error on writing to Log: %s", cmd.cmdMes.PartitionID(), cmdHandlingErr))
+							delete(cmdProc.appPartitions, cmd.cmdMes.AppQName())
+						}
+						cmd.release()
+					}()
 					metrics.IncreaseApp(CommandsSeconds, string(vvm), cmdMes.AppQName(), time.Since(start).Seconds())
 				case <-vvmCtx.Done():
-					cmdProc.appPartitions = map[istructs.AppQName]*appPartition{} // clear appPartitions to test recovery
+					cmdProc.appPartitions = map[appdef.AppQName]*appPartition{} // clear appPartitions to test recovery
 					return
 				}
 			}

@@ -17,7 +17,16 @@ ALTER WORKSPACE AppWorkspaceWS (
 		AppImage blob
 	);
 
+	TYPE VSqlUpdateParams (
+		Query varchar NOT NULL
+	);
+
+	TYPE VSqlUpdateResult (
+		NewID ref -- filled on `insert table` only
+	);
+
 	EXTENSION ENGINE BUILTIN (
 		COMMAND DeployApp(AppDeploymentDescriptor);
+		COMMAND VSqlUpdate(VSqlUpdateParams) RETURNS VSqlUpdateResult;
 	);
 );

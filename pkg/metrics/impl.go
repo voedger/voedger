@@ -13,12 +13,13 @@ import (
 	"sync/atomic"
 	"unsafe"
 
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
 type metric struct {
 	name string
-	app  istructs.AppQName
+	app  appdef.AppQName
 	vvm  string
 }
 
@@ -30,7 +31,7 @@ func (m *metric) Vvm() string {
 	return m.vvm
 }
 
-func (m *metric) App() istructs.AppQName {
+func (m *metric) App() appdef.AppQName {
 	return m.app
 }
 
@@ -45,7 +46,7 @@ func newMetrics() IMetrics {
 	}
 }
 
-func (m *mapMetrics) AppMetricAddr(metricName string, vvm string, app istructs.AppQName) *MetricValue {
+func (m *mapMetrics) AppMetricAddr(metricName string, vvm string, app appdef.AppQName) *MetricValue {
 	return m.get(metric{
 		name: metricName,
 		app:  app,
@@ -65,7 +66,7 @@ func (m *mapMetrics) Increase(metricName string, vvm string, valueDelta float64)
 	m.MetricAddr(metricName, vvm).Increase(valueDelta)
 }
 
-func (m *mapMetrics) IncreaseApp(metricName string, vvm string, app istructs.AppQName, valueDelta float64) {
+func (m *mapMetrics) IncreaseApp(metricName string, vvm string, app appdef.AppQName, valueDelta float64) {
 	m.AppMetricAddr(metricName, vvm, app).Increase(valueDelta)
 }
 
@@ -96,15 +97,15 @@ func (m *mapMetrics) List(cb func(metric IMetric, metricValue float64) (err erro
 func ToPrometheus(metric IMetric, metricValue float64) []byte {
 	bb := bytes.Buffer{}
 	bb.WriteString(metric.Name())
-	if metric.App() != istructs.NullAppQName || metric.Vvm() != "" {
+	if metric.App() != appdef.NullAppQName || metric.Vvm() != "" {
 		bb.WriteRune('{')
-		if metric.App() != istructs.NullAppQName {
+		if metric.App() != appdef.NullAppQName {
 			bb.WriteString(`app="`)
 			bb.WriteString(metric.App().String())
 			bb.WriteRune('"')
 		}
 		if metric.Vvm() != "" {
-			if metric.App() != istructs.NullAppQName {
+			if metric.App() != appdef.NullAppQName {
 				bb.WriteRune(',')
 			}
 			bb.WriteString(`vvm="`)

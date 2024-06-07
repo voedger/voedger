@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/stretchr/testify/require"
+	"github.com/voedger/voedger/pkg/goutils/testingu/require"
 )
 
 func TestProjectorEventKind_MarshalText(t *testing.T) {
@@ -133,9 +133,7 @@ func Test_projectorEventCompatableWith(t *testing.T) {
 			if got, err := projectorEventCompatableWith(tt.event, typ); got != tt.want {
 				t.Errorf("projectorEventCompatableWith(%v, {%v «%v»}) = %v, want %v", tt.event, tt.typ.kind.TrimString(), tt.typ.name, got, tt.want)
 				if !tt.want {
-					require.ErrorIs(err, ErrIncompatibleError)
-					require.ErrorContains(err, tt.event.String())
-					require.ErrorContains(err, tt.typ.name.String())
+					require.Error(err, require.Is(ErrIncompatibleError), require.Has(tt.event), require.Has(tt.typ.name))
 				}
 			}
 		})

@@ -31,7 +31,7 @@ type ACL []ACElem
 
 type PatternType struct {
 	opKindsPattern    []iauthnz.OperationKindType
-	principalsPattern [][]iauthnz.Principal // first OR, second AND
+	principalsPattern [][]iauthnz.Principal // first dimension is OR, second is AND
 	qNamesPattern     []appdef.QName
 	fieldsPattern     [][]string // first OR, second AND
 }
@@ -41,4 +41,4 @@ type ACPolicyType int
 type SubjectGetterFunc = func(requestContext context.Context, name string, as istructs.IAppStructs, wsid istructs.WSID) ([]appdef.QName, error)
 
 type IsDeviceAllowedFunc = func(as istructs.IAppStructs, requestWSID istructs.WSID, deviceProfileWSID istructs.WSID) (ok bool, err error)
-type IsDeviceAllowedFuncs map[istructs.AppQName]IsDeviceAllowedFunc
+type IsDeviceAllowedFuncs map[appdef.AppQName]IsDeviceAllowedFunc

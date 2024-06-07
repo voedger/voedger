@@ -50,48 +50,50 @@ func newAlertCmd() *cobra.Command {
 
 	alertRemoveCmd.AddCommand(alertRemoveDiscordCmd)
 
-	alertConfigsCmd := &cobra.Command{
-		Use:   "configs",
-		Short: "Management of the alert's configuration",
-		Args:  cobra.ExactArgs(0),
-	}
-
-	alertConfigsDownloadCmd := &cobra.Command{
-		Use:   "download",
-		Short: "Download alert's configuration",
-		Args: func(cmd *cobra.Command, args []string) error {
-			if len(args) != 0 {
-				return ErrInvalidNumberOfArguments
-			}
-			return nil
-		},
-		RunE: alertConfigsDownload,
-	}
-
-	alertConfigsUploadCmd := &cobra.Command{
-		Use:   "upload",
-		Short: "Upload alert's configuration",
-		Args: func(cmd *cobra.Command, args []string) error {
-			if len(args) != 0 {
-				return ErrInvalidNumberOfArguments
-			}
-			return nil
-		},
-		RunE: alertConfigsUpload,
-	}
-
-	alertConfigsCmd.AddCommand(alertConfigsDownloadCmd, alertConfigsUploadCmd)
-
 	alertCmd := &cobra.Command{
 		Use:   "alert",
 		Short: "Management of the alert",
 	}
 
-	if !addSshKeyFlag(alertRemoveDiscordCmd, alertAddDiscordCmd, alertConfigsDownloadCmd, alertConfigsUploadCmd) {
-		return nil
+	if newCluster().Edition != clusterEditionCE {
+		alertConfigsCmd := &cobra.Command{
+			Use:   "configs",
+			Short: "Management of the alert's configuration",
+			Args:  cobra.ExactArgs(0),
+		}
+
+		alertConfigsDownloadCmd := &cobra.Command{
+			Use:   "download",
+			Short: "Download alert's configuration",
+			Args: func(cmd *cobra.Command, args []string) error {
+				if len(args) != 0 {
+					return ErrInvalidNumberOfArguments
+				}
+				return nil
+			},
+			RunE: alertConfigsDownload,
+		}
+
+		alertConfigsUploadCmd := &cobra.Command{
+			Use:   "upload",
+			Short: "Upload alert's configuration",
+			Args: func(cmd *cobra.Command, args []string) error {
+				if len(args) != 0 {
+					return ErrInvalidNumberOfArguments
+				}
+				return nil
+			},
+			RunE: alertConfigsUpload,
+		}
+
+		alertConfigsCmd.AddCommand(alertConfigsDownloadCmd, alertConfigsUploadCmd)
+		if !addSshKeyFlag(alertConfigsDownloadCmd, alertConfigsUploadCmd, alertRemoveDiscordCmd, alertAddDiscordCmd) {
+			return nil
+		}
+		alertCmd.AddCommand(alertConfigsCmd)
 	}
 
-	alertCmd.AddCommand(alertConfigsCmd, alertAddCmd, alertRemoveCmd)
+	alertCmd.AddCommand(alertAddCmd, alertRemoveCmd)
 
 	return alertCmd
 
@@ -136,6 +138,60 @@ func setDiscordWebhook(cluster *clusterType, webhook string) error {
 
 }
 
+func setDiscordWebhookCe(cluster *clusterType, webhook string) error {
+
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return err
+	}
+
+	alertmanager := "alertmanager"
+	configFileName := "config.yml"
+
+	cluster.Alert.DiscordWebhook = webhook
+	localConfigFile := filepath.Join("ce", alertmanager, configFileName)
+	if err = cluster.updateTemplateFile(localConfigFile); err != nil {
+		return err
+	}
+
+	remoteDir := filepath.Join(homeDir, alertmanager)
+	remoteFile := filepath.Join(remoteDir, configFileName)
+	host := ceNodeName
+
+	if webhook == emptyDiscordWebhookUrl {
+		loggerInfo(fmt.Sprintf("Removing Discord webhook from %s", host))
+	} else {
+		loggerInfo(fmt.Sprintf("Adding Discord webhook %s to %s", webhook, host))
+	}
+
+	exists, e := coreutils.Exists(remoteFile)
+	if e != nil {
+		return e
+	}
+	if exists {
+		if err = os.Remove(remoteFile); err != nil {
+			return err
+		}
+	}
+
+	if err = coreutils.CopyFile(filepath.Join(scriptsTempDir, localConfigFile), remoteDir); err != nil {
+		return err
+	}
+
+	loggerInfo(fmt.Sprintf("Restarting alertmanager on %s", host))
+	if err = newScriptExecuter(cluster.sshKey, "").
+		run("ce/docker-container-restart.sh", alertmanager); err != nil {
+		return err
+	}
+
+	if err = cluster.saveToJSON(); err != nil {
+		return err
+	}
+
+	return nil
+
+}
+
 // Checks whether the line is a valid URL
 func checkURL(s string) error {
 	u, err := url.Parse(s)
@@ -164,8 +220,14 @@ func alertAddDiscord(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	if err = setDiscordWebhook(cluster, args[0]); err != nil {
-		return err
+	if cluster.Edition == clusterEditionCE {
+		if err = setDiscordWebhookCe(cluster, args[0]); err != nil {
+			return err
+		}
+	} else {
+		if err = setDiscordWebhook(cluster, args[0]); err != nil {
+			return err
+		}
 	}
 
 	loggerInfoGreen("Discord webhook added successfully")
@@ -187,8 +249,14 @@ func alertRemoveDiscord(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	if err = setDiscordWebhook(cluster, emptyDiscordWebhookUrl); err != nil {
-		return err
+	if cluster.Edition != clusterEditionCE {
+		if err = setDiscordWebhook(cluster, emptyDiscordWebhookUrl); err != nil {
+			return err
+		}
+	} else {
+		if err = setDiscordWebhookCe(cluster, emptyDiscordWebhookUrl); err != nil {
+			return err
+		}
 	}
 
 	loggerInfoGreen("Discord webhook removed successfully")
@@ -297,14 +365,21 @@ func (e *eventType) postAlert(cluster *clusterType) error {
 		return err
 	}
 
-	fName := filepath.Join(scriptsTempDir, "post-alert.json")
+	script := "post-alert.sh"
+	dir := scriptsTempDir
+	if cluster.Edition == clusterEditionCE {
+		dir = filepath.Join(dir, "ce")
+		script = filepath.Join("ce", "post-alert.sh")
+	}
+
+	fName := filepath.Join(dir, "post-alert.json")
 
 	if err = os.WriteFile(fName, eventJson, coreutils.FileMode_rwxrwxrwx); err != nil {
 		return err
 	}
 
 	if err = newScriptExecuter(cluster.sshKey, "").
-		run("post-alert.sh", "post-alert.json"); err != nil {
+		run(script, "post-alert.json"); err != nil {
 		return err
 	}
 

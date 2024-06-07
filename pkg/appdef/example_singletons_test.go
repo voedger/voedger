@@ -19,7 +19,7 @@ func ExampleIAppDef_Singletons() {
 
 	// how to build AppDef with singletons
 	{
-		adb := appdef.New()
+		adb := appdef.New(appdef.NewAppQName("test", "app"))
 		adb.AddPackage("test", "test.com/test")
 
 		cDoc := adb.AddCDoc(cDocName)

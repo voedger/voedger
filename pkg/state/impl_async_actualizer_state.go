@@ -11,35 +11,8 @@ import (
 	"github.com/voedger/voedger/pkg/isecrets"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/itokens"
-	"github.com/voedger/voedger/pkg/state/smtptest"
 	"github.com/voedger/voedger/pkg/utils/federation"
 )
-
-type ActualizerStateOptFunc func(opts *actualizerStateOpts)
-
-func WithEmailMessagesChan(messages chan smtptest.Message) ActualizerStateOptFunc {
-	return func(opts *actualizerStateOpts) {
-		opts.messages = messages
-	}
-}
-
-func WithCustomHttpClient(client IHttpClient) ActualizerStateOptFunc {
-	return func(opts *actualizerStateOpts) {
-		opts.customHttpClient = client
-	}
-}
-
-func WithFedearationCommandHandler(handler FederationCommandHandler) ActualizerStateOptFunc {
-	return func(opts *actualizerStateOpts) {
-		opts.federationCommandHandler = handler
-	}
-}
-
-type actualizerStateOpts struct {
-	messages                 chan smtptest.Message
-	federationCommandHandler FederationCommandHandler
-	customHttpClient         IHttpClient
-}
 
 type asyncActualizerState struct {
 	*bundledHostState
@@ -52,9 +25,9 @@ func (s *asyncActualizerState) PLogEvent() istructs.IPLogEvent {
 
 func implProvideAsyncActualizerState(ctx context.Context, appStructsFunc AppStructsFunc, partitionIDFunc PartitionIDFunc, wsidFunc WSIDFunc, n10nFunc N10nFunc,
 	secretReader isecrets.ISecretReader, eventFunc PLogEventFunc, tokensFunc itokens.ITokens, federationFunc federation.IFederation,
-	intentsLimit, bundlesLimit int, optFuncs ...ActualizerStateOptFunc) IBundledHostState {
+	intentsLimit, bundlesLimit int, optFuncs ...StateOptFunc) IBundledHostState {
 
-	opts := &actualizerStateOpts{}
+	opts := &stateOpts{}
 	for _, optFunc := range optFuncs {
 		optFunc(opts)
 	}
@@ -96,6 +69,8 @@ func implProvideAsyncActualizerState(ctx context.Context, appStructsFunc AppStru
 	state.addStorage(AppSecret, &appSecretsStorage{secretReader: secretReader}, S_GET)
 
 	state.addStorage(Event, &eventStorage{eventFunc: eventFunc}, S_GET)
+
+	state.addStorage(Uniq, newUniquesStorage(appStructsFunc, wsidFunc, opts.uniquesHandler), S_GET)
 
 	return state
 }

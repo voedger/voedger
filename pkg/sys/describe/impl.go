@@ -9,10 +9,11 @@ import (
 	"encoding/json"
 	"strings"
 
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
-func provideQryDescribePackageNames(asp istructs.IAppStructsProvider, appQName istructs.AppQName) func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
+func provideQryDescribePackageNames(asp istructs.IAppStructsProvider, appQName appdef.AppQName) func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 	return func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 		as, err := asp.AppStructs(appQName)
 		if err != nil {
@@ -24,7 +25,7 @@ func provideQryDescribePackageNames(asp istructs.IAppStructsProvider, appQName i
 	}
 }
 
-func provideQryDescribePackage(asp istructs.IAppStructsProvider, appQName istructs.AppQName) func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
+func provideQryDescribePackage(asp istructs.IAppStructsProvider, appQName appdef.AppQName) func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 	return func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 		as, err := asp.AppStructs(appQName)
 		if err != nil {

@@ -13,11 +13,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/istorage"
-	"github.com/voedger/voedger/pkg/istorage/mem"
 	"github.com/voedger/voedger/pkg/utils/federation"
 	"github.com/voedger/voedger/pkg/vvm"
 
@@ -28,7 +28,7 @@ import (
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-func (vit *VIT) GetBLOB(appQName istructs.AppQName, wsid istructs.WSID, blobID istructs.RecordID, token string) *BLOB {
+func (vit *VIT) GetBLOB(appQName appdef.AppQName, wsid istructs.WSID, blobID istructs.RecordID, token string) *BLOB {
 	vit.T.Helper()
 	resp, err := vit.IFederation.ReadBLOB(appQName, wsid, blobID, coreutils.WithAuthorizeBy(token))
 	require.NoError(vit.T, err)
@@ -61,7 +61,7 @@ func WithReqOpt(reqOpt coreutils.ReqOptFunc) signUpOptFunc {
 	}
 }
 
-func (vit *VIT) SignUp(loginName, pwd string, appQName istructs.AppQName, opts ...signUpOptFunc) Login {
+func (vit *VIT) SignUp(loginName, pwd string, appQName appdef.AppQName, opts ...signUpOptFunc) Login {
 	vit.T.Helper()
 	signUpOpts := getSignUpOpts(opts)
 	login := NewLogin(loginName, pwd, appQName, istructs.SubjectKind_User, signUpOpts.profileClusterID)
@@ -79,7 +79,7 @@ func getSignUpOpts(opts []signUpOptFunc) *signUpOpts {
 	return res
 }
 
-func (vit *VIT) SignUpDevice(loginName, pwd string, appQName istructs.AppQName, opts ...signUpOptFunc) Login {
+func (vit *VIT) SignUpDevice(loginName, pwd string, appQName appdef.AppQName, opts ...signUpOptFunc) Login {
 	vit.T.Helper()
 	signUpOpts := getSignUpOpts(opts)
 	login := NewLogin(loginName, pwd, appQName, istructs.SubjectKind_Device, signUpOpts.profileClusterID)
@@ -92,7 +92,7 @@ func (vit *VIT) GetCDocLoginID(login Login) int64 {
 	as, err := vit.IAppStructsProvider.AppStructs(istructs.AppQName_sys_registry)
 	require.NoError(vit.T, err) // notest
 	appWSID := coreutils.GetAppWSID(login.PseudoProfileWSID, as.NumAppWorkspaces())
-	body := fmt.Sprintf(`{"args":{"query":"select CDocLoginID from registry.LoginIdx where AppWSID = %d and AppIDLoginHash = '%s/%s'"}, "elements":[{"fields":["Result"]}]}`,
+	body := fmt.Sprintf(`{"args":{"Query":"select CDocLoginID from registry.LoginIdx where AppWSID = %d and AppIDLoginHash = '%s/%s'"}, "elements":[{"fields":["Result"]}]}`,
 		appWSID, login.AppQName, registry.GetLoginHash(login.Name))
 	sys := vit.GetSystemPrincipal(istructs.AppQName_sys_registry)
 	resp := vit.PostApp(istructs.AppQName_sys_registry, login.PseudoProfileWSID, "q.sys.SqlQuery", body, coreutils.WithAuthorizeBy(sys.Token))
@@ -106,7 +106,7 @@ func (vit *VIT) GetCDocWSKind(ws *AppWorkspace) (cdoc map[string]interface{}, id
 	return vit.getCDoc(ws.Owner.AppQName, ws.Kind, ws.WSID)
 }
 
-func (vit *VIT) getCDoc(appQName istructs.AppQName, qName appdef.QName, wsid istructs.WSID) (cdoc map[string]interface{}, id int64) {
+func (vit *VIT) getCDoc(appQName appdef.AppQName, qName appdef.QName, wsid istructs.WSID) (cdoc map[string]interface{}, id int64) {
 	vit.T.Helper()
 	body := bytes.NewBufferString(fmt.Sprintf(`{"args":{"Schema":"%s"},"elements":[{"fields":["sys.ID"`, qName))
 	fields := []string{}
@@ -154,7 +154,7 @@ func (vit *VIT) waitForWorkspace(wsName string, owner *Principal, respGetter fun
 		body := fmt.Sprintf(`
 			{
 				"args": {
-					"WSName": "%s"
+					"WSName": %q
 				},
 				"elements":[
 					{
@@ -264,7 +264,7 @@ func (vit *VIT) InitChildWorkspace(wsd WSParams, ownerIntf interface{}, opts ...
 	vit.T.Helper()
 	body := fmt.Sprintf(`{
 		"args": {
-			"WSName": "%s",
+			"WSName": %q,
 			"WSKind": "%s",
 			"WSKindInitializationData": %q,
 			"TemplateName": "%s",
@@ -347,7 +347,7 @@ func (vit *VIT) GetAny(entity string, ws *AppWorkspace) istructs.RecordID {
 	return istructs.RecordID(data["DocID"].(float64))
 }
 
-func NewLogin(name, pwd string, appQName istructs.AppQName, subjectKind istructs.SubjectKindType, clusterID istructs.ClusterID) Login {
+func NewLogin(name, pwd string, appQName appdef.AppQName, subjectKind istructs.SubjectKindType, clusterID istructs.ClusterID) Login {
 	pseudoWSID := coreutils.GetPseudoWSID(istructs.NullWSID, name, istructs.MainClusterID)
 	return Login{name, pwd, pseudoWSID, appQName, subjectKind, clusterID, map[appdef.QName]func(verifiedValues map[string]string) map[string]interface{}{}}
 }
@@ -385,12 +385,19 @@ func DummyWS(wsKind appdef.QName, wsid istructs.WSID, ownerPrn *Principal) *AppW
 // then calls testAfterRestart() with the new VIT
 // cfg must be owned
 func TestRestartPreservingStorage(t *testing.T, cfg *VITConfig, testBeforeRestart, testAfterRestart func(t *testing.T, vit *VIT)) {
-	memStorage := mem.Provide()
+	require.False(t, cfg.isShared, "storage restart could be done on Own VIT Config only")
+	var sharedStorageFactory istorage.IAppStorageFactory
+	suffix := t.Name() + uuid.NewString()
 	cfg.opts = append(cfg.opts, WithVVMConfig(func(cfg *vvm.VVMConfig) {
-		cfg.StorageFactory = func() (provider istorage.IAppStorageFactory, err error) {
-			return memStorage, nil
+		if sharedStorageFactory == nil {
+			var err error
+			sharedStorageFactory, err = cfg.StorageFactory()
+			require.NoError(t, err)
 		}
-		cfg.KeyspaceNameSuffix = t.Name()
+		cfg.KeyspaceNameSuffix = suffix
+		cfg.StorageFactory = func() (istorage.IAppStorageFactory, error) {
+			return sharedStorageFactory, nil
+		}
 	}))
 	func() {
 		vit := NewVIT(t, cfg)

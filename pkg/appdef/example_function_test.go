@@ -22,7 +22,7 @@ func ExampleIAppDef_Functions() {
 
 	// how to build AppDef with functions
 	{
-		adb := appdef.New()
+		adb := appdef.New(appdef.NewAppQName("test", "app"))
 		adb.AddPackage("test", "test.com/test")
 
 		cmd := adb.AddCommand(cmdName)

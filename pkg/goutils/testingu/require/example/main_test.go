@@ -15,21 +15,24 @@ import (
 func TestGoCrazy(t *testing.T) {
 	require := require.New(t)
 
-	require.PanicsWith(
+	require.Panics(
 		GoCrazy,
 		require.Is(ErrCrazyError, "panic error should be %v", ErrCrazyError),
 		require.Is(errors.ErrUnsupported),
 		require.Has("🤪", "panic should contains crazy smile %q", "🤪"),
 		require.Has("unsupported"),
+		require.NotHas("toxic"),
+		require.Rx(`^.*\s+error`, "panic should contain `error` word"),
+		require.NotRx(`^Santa`, "panic should starts from `Santa` word"),
 	)
 }
 
 func TestCrazyError(t *testing.T) {
 	require := require.New(t)
 
-	require.ErrorWith(
+	require.Error(
 		ErrCrazyError,
-		require.Is(errors.ErrUnsupported),
+		require.Is(errors.ErrUnsupported, "error should be %v", errors.ErrUnsupported),
 		require.Has("🤪"),
 	)
 }

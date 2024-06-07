@@ -123,6 +123,17 @@ func Test_BasicUsage(t *testing.T) {
 
 	eventFunc := func() istructs.IPLogEvent { return event }
 	cudFunc := func() istructs.ICUD { return reb.CUDBuilder() }
+	cmdPrepareArgsFunc := func() istructs.CommandPrepareArgs {
+		return istructs.CommandPrepareArgs{
+			PrepareArgs: istructs.PrepareArgs{
+				Workpiece:      nil,
+				ArgumentObject: event.ArgumentObject(),
+				WSID:           ws,
+				Workspace:      nil,
+			},
+			ArgumentUnloggedObject: nil,
+		}
+	}
 	argFunc := func() istructs.IObject { return event.ArgumentObject() }
 	unloggedArgFunc := func() istructs.IObject { return nil }
 	appFunc := func() istructs.IAppStructs { return app }
@@ -130,7 +141,7 @@ func Test_BasicUsage(t *testing.T) {
 
 	// Create states for Command processor and Actualizer
 	actualizerState := state.ProvideAsyncActualizerStateFactory()(context.Background(), appFunc, nil, state.SimpleWSIDFunc(ws), nil, nil, eventFunc, nil, nil, intentsLimit, bundlesLimit)
-	cmdProcState := state.ProvideCommandProcessorStateFactory()(context.Background(), appFunc, nil, state.SimpleWSIDFunc(ws), nil, cudFunc, nil, nil, intentsLimit, nil, argFunc, unloggedArgFunc, wlogOffsetFunc)
+	cmdProcState := state.ProvideCommandProcessorStateFactory()(context.Background(), appFunc, nil, state.SimpleWSIDFunc(ws), nil, cudFunc, nil, nil, intentsLimit, nil, cmdPrepareArgsFunc, argFunc, unloggedArgFunc, wlogOffsetFunc)
 
 	// Create extension package from WASM
 	ctx := context.Background()
@@ -392,8 +403,8 @@ func Test_HandlePanics(t *testing.T) {
 
 	WasmPreallocatedBufferSize = 1000000
 	tests := []panicsUnit{
-		{"incorrectStorageQname", "convert error: string «foo» to QName"},
-		{"incorrectEntityQname", "convert error: string «abc» to QName"},
+		{"incorrectStorageQname", "convert error: string «foo»"},
+		{"incorrectEntityQname", "convert error: string «abc»"},
 		{"unsupportedStorage", "unsupported storage"},
 		{"incorrectKeyBuilder", safestate.PanicIncorrectKeyBuilder},
 		{"canExistIncorrectKey", safestate.PanicIncorrectKeyBuilder},
@@ -779,7 +790,7 @@ var sfs embed.FS
 func appStructsFromSQL(packagePath string, appdefSql string, prepareAppCfg appCfgCallback) istructs.IAppStructs {
 	plogOffset = istructs.Offset(123)
 	wlogOffset = istructs.Offset(42)
-	appDef := appdef.New()
+	appDef := appdef.New(testApp)
 
 	fs, err := parser.ParseFile("file1.vsql", appdefSql)
 	if err != nil {

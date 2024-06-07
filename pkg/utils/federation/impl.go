@@ -18,6 +18,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -41,7 +42,7 @@ func (f *implIFederation) req(relativeURL string, body string, optFuncs ...coreu
 	return f.httpClient.Req(url, body, optFuncs...)
 }
 
-func (f *implIFederation) UploadBLOBs(appQName istructs.AppQName, wsid istructs.WSID, blobs []coreutils.BLOB, optFuncs ...coreutils.ReqOptFunc) (blobIDs []istructs.RecordID, err error) {
+func (f *implIFederation) UploadBLOBs(appQName appdef.AppQName, wsid istructs.WSID, blobs []coreutils.BLOB, optFuncs ...coreutils.ReqOptFunc) (blobIDs []istructs.RecordID, err error) {
 	body := bytes.NewBuffer(nil)
 	w := multipart.NewWriter(body)
 
@@ -84,7 +85,7 @@ func (f *implIFederation) UploadBLOBs(appQName istructs.AppQName, wsid istructs.
 	return blobIDs, nil
 }
 
-func (f *implIFederation) UploadBLOB(appQName istructs.AppQName, wsid istructs.WSID, blobName string, blobMimeType string,
+func (f *implIFederation) UploadBLOB(appQName appdef.AppQName, wsid istructs.WSID, blobName string, blobMimeType string,
 	blobContent []byte, optFuncs ...coreutils.ReqOptFunc) (blobID istructs.RecordID, err error) {
 	uploadBLOBURL := fmt.Sprintf("blob/%s/%d?name=%s&mimeType=%s", appQName.String(), wsid, blobName, blobMimeType)
 	resp, err := f.post(uploadBLOBURL, string(blobContent), optFuncs...)
@@ -101,7 +102,7 @@ func (f *implIFederation) UploadBLOB(appQName istructs.AppQName, wsid istructs.W
 	return istructs.NullRecordID, nil
 }
 
-func (f *implIFederation) ReadBLOB(appQName istructs.AppQName, wsid istructs.WSID, blobID istructs.RecordID, optFuncs ...coreutils.ReqOptFunc) (*coreutils.HTTPResponse, error) {
+func (f *implIFederation) ReadBLOB(appQName appdef.AppQName, wsid istructs.WSID, blobID istructs.RecordID, optFuncs ...coreutils.ReqOptFunc) (*coreutils.HTTPResponse, error) {
 	url := fmt.Sprintf(`blob/%s/%d/%d`, appQName, wsid, blobID)
 	return f.post(url, "", optFuncs...)
 }

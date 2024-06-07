@@ -6,7 +6,6 @@
 package appdef
 
 import (
-	"fmt"
 	"math"
 	"regexp"
 	"slices"
@@ -83,7 +82,7 @@ func MaxIncl(v float64, c ...string) IConstraint {
 		panic(ErrInvalid("maximum inclusive value is NaN"))
 	}
 	if math.IsInf(v, -1) {
-		panic(ErrInvalid("maximum inclusive value is negative infinity"))
+		panic(ErrOutOfBounds("maximum inclusive value is negative infinity"))
 	}
 	return newDataConstraint(ConstraintKind_MaxIncl, v, c...)
 }
@@ -171,7 +170,7 @@ func NewConstraint(kind ConstraintKind, value any, c ...string) IConstraint {
 		case []float64:
 			enum = Enum(v...)
 		default:
-			panic(fmt.Errorf("unsupported enumeration type: %T", value))
+			panic(ErrUnsupported("enumeration type: %T", value))
 		}
 		if len(c) > 0 {
 			if enum, ok := enum.(*dataConstraint); ok {
@@ -180,5 +179,5 @@ func NewConstraint(kind ConstraintKind, value any, c ...string) IConstraint {
 		}
 		return enum
 	}
-	panic(fmt.Errorf("unknown constraint kind: %v", kind))
+	panic(ErrUnsupported("constraint kind: %v", kind))
 }

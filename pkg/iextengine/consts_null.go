@@ -7,10 +7,10 @@ package iextengine
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/juju/errors"
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/istructs"
 )
 
 var NullExtensionEngine IExtensionEngine = nullExtensionEngine{}
@@ -21,15 +21,15 @@ type nullExtensionEngine struct{}
 
 func (nullExtensionEngine) SetLimits(limits ExtensionLimits) {}
 
-func (nullExtensionEngine) Invoke(context.Context, appdef.FullQName, IExtensionIO) error {
-	return errors.NotSupported
+func (nullExtensionEngine) Invoke(_ context.Context, n appdef.FullQName, _ IExtensionIO) error {
+	return fmt.Errorf("unable nullExtensionEngine.Invoke(%v): %w", n, errors.NotSupported)
 }
 
 func (nullExtensionEngine) Close(context.Context) {}
 
 type nullExtensionEngineFactory struct{}
 
-func (nullExtensionEngineFactory) New(_ context.Context, _ istructs.AppQName, _ []ExtensionPackage, _ *ExtEngineConfig, numEngines int) ([]IExtensionEngine, error) {
+func (nullExtensionEngineFactory) New(_ context.Context, _ appdef.AppQName, _ []ExtensionPackage, _ *ExtEngineConfig, numEngines int) ([]IExtensionEngine, error) {
 	ee := make([]IExtensionEngine, numEngines)
 	for i := 0; i < numEngines; i++ {
 		ee[i] = NullExtensionEngine

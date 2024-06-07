@@ -31,7 +31,7 @@ func TestBasicUsage_ChildWorkspaces(t *testing.T) {
 		body := fmt.Sprintf(`
 			{
 				"args": {
-					"WSName": "%s"
+					"WSName": %q
 				},
 				"elements":[
 					{
@@ -51,7 +51,7 @@ func TestBasicUsage_ChildWorkspaces(t *testing.T) {
 		body := fmt.Sprintf(`
 			{
 				"args": {
-					"WSName": "%s",
+					"WSName": %q,
 					"WSKind": "app1pkg.test_ws",
 					"WSKindInitializationData": "{\"IntFld\": 10}",
 					"TemplateName": "test_template",
@@ -70,7 +70,7 @@ func TestBasicUsage_ChildWorkspaces(t *testing.T) {
 		require.Equal(istructs.ClusterID(1), childWS.WSID.ClusterID())
 
 		t.Run("create a new workspace with an existing name -> 409 conflict", func(t *testing.T) {
-			body := fmt.Sprintf(`{"args": {"WSName": "%s","WSKind": "app1pkg.test_ws","WSKindInitializationData": "{\"WorkStartTime\": \"10\"}","TemplateName": "test","WSClusterID": 1}}`, wsName)
+			body := fmt.Sprintf(`{"args": {"WSName": %q,"WSKind": "app1pkg.test_ws","WSKindInitializationData": "{\"WorkStartTime\": \"10\"}","TemplateName": "test","WSClusterID": 1}}`, wsName)
 			resp := vit.PostWS(parentWS, "c.sys.InitChildWorkspace", body, coreutils.Expect409())
 			resp.Println()
 		})
@@ -99,7 +99,7 @@ func TestForeignAuthorization(t *testing.T) {
 	wsName := vit.NextName()
 
 	// init child workspace
-	body := fmt.Sprintf(`{"args": {"WSName": "%s","WSKind": "app1pkg.test_ws","WSKindInitializationData": "{\"IntFld\": 10}","TemplateName": "test_template","WSClusterID": 42}}`, wsName)
+	body := fmt.Sprintf(`{"args": {"WSName": %q,"WSKind": "app1pkg.test_ws","WSKindInitializationData": "{\"IntFld\": 10}","TemplateName": "test_template","WSClusterID": 42}}`, wsName)
 	vit.PostWS(parentWS, "c.sys.InitChildWorkspace", body)
 
 	// wait for finish
@@ -149,14 +149,14 @@ func TestForeignAuthorization(t *testing.T) {
 		// issue an API token
 		as, err := vit.IAppStructsProvider.AppStructs(istructs.AppQName_test1_app1)
 		require.NoError(err)
-		apiToken, err := iauthnzimpl.IssueAPIToken(as.AppTokens(), time.Hour, []appdef.QName{appdef.NewQName("air", "AirReseller")}, childWS.WSID, payloads.PrincipalPayload{
+		apiToken, err := iauthnzimpl.IssueAPIToken(as.AppTokens(), time.Hour, []appdef.QName{appdef.NewQName("air", "SubscriptionReseller")}, childWS.WSID, payloads.PrincipalPayload{
 			Login:       parentWS.Owner.Name,
 			SubjectKind: istructs.SubjectKind_User,
 			ProfileWSID: parentWS.Owner.ProfileWSID,
 		})
 		require.NoError(err)
 
-		// API token has role.air.AirReseller, q.sys.Collection is allowed for that role according to the current ACL -> the request should be successful
+		// API token has role.air.SubscriptionReseller, q.sys.Collection is allowed for that role according to the current ACL -> the request should be successful
 		vit.PostWS(childWS, "q.sys.Collection", body, coreutils.WithAuthorizeBy(apiToken))
 	})
 }

@@ -20,17 +20,19 @@ func TestRenameQName(t *testing.T) {
 
 	require := require.New(t)
 
+	appName := appdef.NewAppQName("test", "app")
+
 	oldQName := appdef.NewQName("test", "old")
 	newQName := appdef.NewQName("test", "new")
 
-	storage := teststore.NewStorage()
+	storage := teststore.NewStorage(appName)
 
 	t.Run("prepare storage with old QName", func(t *testing.T) {
 		versions := vers.New()
 		err := versions.Prepare(storage)
 		require.NoError(err)
 
-		adb := appdef.New()
+		adb := appdef.New(appName)
 		adb.AddPackage("test", "test.com/test")
 
 		_ = adb.AddObject(oldQName)

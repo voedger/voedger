@@ -42,10 +42,10 @@ func TestResponseStorage(t *testing.T) {
 	}
 
 	s = ProvideCommandProcessorStateFactory()(context.Background(), nil, nil, SimpleWSIDFunc(istructs.NullWSID),
-		nil, nil, nil, nil, 1, nil, nil, nil, nil)
+		nil, nil, nil, nil, 1, nil, nil, nil, nil, nil)
 	t.Run("CommandProcessor", test)
 	s = ProvideQueryProcessorStateFactory()(context.Background(), nil, nil, SimpleWSIDFunc(istructs.NullWSID),
-		nil, nil, nil, nil, nil, nil, nil, nil)
+		nil, nil, nil, nil, nil, nil, nil, nil, nil)
 	t.Run("QueryProcessor", test)
 
 }

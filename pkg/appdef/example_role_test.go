@@ -25,7 +25,7 @@ func ExampleIAppDefBuilder_AddRole() {
 
 	// how to build AppDef with roles
 	{
-		adb := appdef.New()
+		adb := appdef.New(appdef.NewAppQName("test", "app"))
 		adb.AddPackage("test", "test.com/test")
 
 		doc := adb.AddCDoc(docName)

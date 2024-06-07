@@ -19,7 +19,7 @@ func TestHostState_BasicUsage(t *testing.T) {
 	require := require.New(t)
 
 	factory := ProvideQueryProcessorStateFactory()
-	hostState := factory(context.Background(), mockedHostStateStructs, nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil, nil, nil, nil, nil, nil)
+	hostState := factory(context.Background(), mockedHostStateStructs, nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil, nil, nil, nil, nil, nil, nil)
 
 	// Declare simple extension
 	extension := func(state istructs.IState) {
@@ -73,7 +73,7 @@ func mockedHostStateStructs() istructs.IAppStructs {
 		On("Get", istructs.WSID(1), mock.Anything).Return(nil, nil).
 		On("PutBatch", istructs.WSID(1), mock.AnythingOfType("[]istructs.ViewKV")).Return(nil)
 
-	appDef := appdef.New()
+	appDef := appdef.New(testAppQName)
 
 	view := appDef.AddView(testViewRecordQName1)
 	view.Key().PartKey().AddField("pkFld", appdef.DataKind_int64)
@@ -629,7 +629,7 @@ func hostStateForTest(s IStateStorage) IHostState {
 	return hs
 }
 func emptyHostStateForTest(s IStateStorage) (istructs.IState, istructs.IIntents) {
-	bs := ProvideQueryProcessorStateFactory()(context.Background(), nilAppStructsFunc, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil).(*hostState)
+	bs := ProvideQueryProcessorStateFactory()(context.Background(), nilAppStructsFunc, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil).(*queryProcessorState)
 	bs.addStorage(testStorage, s, math.MinInt)
 	return bs, bs
 }

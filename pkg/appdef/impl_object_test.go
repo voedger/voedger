@@ -19,7 +19,7 @@ func Test_AppDef_AddObject(t *testing.T) {
 	var app IAppDef
 
 	t.Run("must be ok to add objects", func(t *testing.T) {
-		adb := New()
+		adb := New(NewAppQName("test", "app"))
 		adb.AddPackage("test", "test.com/test")
 
 		root := adb.AddObject(rootName)

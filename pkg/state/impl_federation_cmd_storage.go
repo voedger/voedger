@@ -23,7 +23,6 @@ const (
 )
 
 type FederationCommandHandler = func(owner, appname string, wsid istructs.WSID, command appdef.QName, body string) (statusCode int, newIDs map[string]int64, result string, err error)
-
 type federationCommandStorage struct {
 	appStructs AppStructsFunc
 	wsid       WSIDFunc
@@ -69,7 +68,7 @@ func (s *federationCommandStorage) Get(key istructs.IStateKeyBuilder) (istructs.
 	}
 
 	if v, ok := kb.data[Field_WSID]; ok {
-		wsid = v.(istructs.WSID)
+		wsid = istructs.WSID(v.(int64))
 	} else {
 		wsid = s.wsid()
 	}
@@ -83,51 +82,58 @@ func (s *federationCommandStorage) Get(key istructs.IStateKeyBuilder) (istructs.
 	if v, ok := kb.data[Field_Body]; ok {
 		body = v.(string)
 	}
-	if v, ok := kb.data[Field_Token]; ok {
-		opts = append(opts, coreutils.WithAuthorizeBy(v.(string)))
-	} else {
-		appQName := istructs.NewAppQName(owner, appname)
-		systemPrincipalToken, err := payloads.GetSystemPrincipalToken(s.tokens, appQName)
-		if err != nil {
-			return nil, err
-		}
-		opts = append(opts, coreutils.WithAuthorizeBy(systemPrincipalToken))
-	}
 
-	appOwnerAndName := owner + istructs.AppQNameQualifierChar + appname
+	appOwnerAndName := owner + appdef.AppQNameQualifierChar + appname
 
-	relativeUrl := fmt.Sprintf("api/%s/%d/%s", appOwnerAndName, wsid, command)
+	relativeUrl := fmt.Sprintf("api/%s/%d/c.%s", appOwnerAndName, wsid, command)
 
 	var resStatus int
 	var resBody string
 	var newIDs map[string]int64
 	var err error
+	var result map[string]interface{}
 
 	if s.emulation != nil {
 		resStatus, newIDs, resBody, err = s.emulation(owner, appname, wsid, command, body)
 		if err != nil {
 			return nil, err
 		}
+		result = map[string]interface{}{}
+		if resBody != "" {
+			err = json.Unmarshal([]byte(resBody), &result)
+			if err != nil {
+				return nil, err
+			}
+		}
 	} else {
+
+		if v, ok := kb.data[Field_Token]; ok {
+			opts = append(opts, coreutils.WithAuthorizeBy(v.(string)))
+		} else {
+			appQName := appdef.NewAppQName(owner, appname)
+			systemPrincipalToken, err := payloads.GetSystemPrincipalToken(s.tokens, appQName)
+			if err != nil {
+				return nil, err
+			}
+			opts = append(opts, coreutils.WithAuthorizeBy(systemPrincipalToken))
+		}
+
 		resp, err := s.federation.Func(relativeUrl, body, opts...)
 		if err != nil {
 			return nil, err
 		}
-		resBody = resp.Body
+
 		newIDs = resp.NewIDs
 		resStatus = resp.HTTPResp.StatusCode
-	}
+		result = resp.CmdResult
 
-	result := map[string]interface{}{}
-	err = json.Unmarshal([]byte(resBody), &result)
-	if err != nil {
-		return nil, err
 	}
 
 	return &fcCmdValue{
 		statusCode: resStatus,
 		newIds:     &fcCmdNewIds{newIds: newIDs},
 		result:     &jsonValue{json: result},
+		body:       resBody,
 	}, nil
 }
 func (s *federationCommandStorage) Read(key istructs.IStateKeyBuilder, callback istructs.ValueCallback) (err error) {
@@ -143,6 +149,7 @@ type fcCmdValue struct {
 	statusCode int
 	newIds     istructs.IStateValue
 	result     istructs.IStateValue
+	body       string
 }
 
 func (v *fcCmdValue) AsInt32(name string) int32 {

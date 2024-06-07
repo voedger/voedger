@@ -392,7 +392,7 @@ type asyncProjector struct {
 	lastSave              time.Time
 	projErrState          *int32
 	vvmName               string
-	appQName              istructs.AppQName
+	appQName              appdef.AppQName
 	iProjector            appdef.IProjector
 	nonBuffered           bool
 	appParts              appparts.IAppPartitions
@@ -539,7 +539,7 @@ type asyncErrorHandler struct {
 	readCtx      *asyncActualizerContextState
 	metrics      imetrics.IMetrics
 	vvmName      string
-	appQName     istructs.AppQName
+	appQName     appdef.AppQName
 	projErrState *int32
 }
 

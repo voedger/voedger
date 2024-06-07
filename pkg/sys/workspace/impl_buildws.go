@@ -18,7 +18,7 @@ import (
 
 // everything is validated already
 func buildWorkspace(templateName string, ep extensionpoints.IExtensionPoint, wsKind appdef.QName, federation federation.IFederation, newWSID int64,
-	targetAppQName istructs.AppQName, wsName string, systemPrincipalToken string) (err error) {
+	targetAppQName appdef.AppQName, wsName string, systemPrincipalToken string) (err error) {
 	wsTemplateBLOBs, wsTemplateData, err := ValidateTemplate(templateName, ep, wsKind)
 	if err != nil {
 		return fmt.Errorf("template validation failed: %w", err)
@@ -58,7 +58,7 @@ func updateBLOBsIDsMap(wsData []map[string]interface{}, blobsMap map[int64]map[s
 	}
 }
 
-func uploadBLOBs(blobs []blobber.StoredBLOB, federation federation.IFederation, appQName istructs.AppQName, wsid int64, principalToken string) (blobsMap, error) {
+func uploadBLOBs(blobs []blobber.StoredBLOB, federation federation.IFederation, appQName appdef.AppQName, wsid int64, principalToken string) (blobsMap, error) {
 	res := blobsMap{}
 	for _, blob := range blobs {
 		logger.Info("workspace build: uploading blob", blob.Name)

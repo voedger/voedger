@@ -8,13 +8,13 @@ package appdef
 import (
 	"testing"
 
-	"github.com/stretchr/testify/require"
+	"github.com/voedger/voedger/pkg/goutils/testingu/require"
 )
 
 func TestNew(t *testing.T) {
 	require := require.New(t)
 
-	adb := New()
+	adb := New(NewAppQName("test", "app"))
 	require.NotNil(adb)
 
 	require.NotNil(adb.AppDef(), "should be ok get AppDef before build")
@@ -76,12 +76,15 @@ func Test_NullAppDef(t *testing.T) {
 func Test_appDefBuilder_MustBuild(t *testing.T) {
 	require := require.New(t)
 
-	require.NotNil(New().MustBuild(), "Should be ok if no errors in builder")
+	require.NotNil(New(NewAppQName("test", "app")).MustBuild(), "Should be ok if no errors in builder")
 
 	t.Run("should panic if errors in builder", func(t *testing.T) {
-		adb := New()
+		adb := New(NewAppQName("test", "app"))
 		adb.AddView(NewQName("test", "emptyView"))
 
-		require.Panics(func() { _ = adb.MustBuild() })
+		require.Panics(func() { _ = adb.MustBuild() },
+			require.Is(ErrMissedError),
+			require.Has("emptyView"),
+		)
 	})
 }

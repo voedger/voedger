@@ -210,7 +210,7 @@ func provideBootstrapOperator(federation federation.IFederation, asp istructs.IA
 			otherApps = append(otherApps, app)
 		}
 	}
-	if clusterBuiltinApp.Name == istructs.NullAppQName {
+	if clusterBuiltinApp.Name == appdef.NullAppQName {
 		return nil, fmt.Errorf("%s app should be added to VVM builtin apps", istructs.AppQName_sys_cluster)
 	}
 	return pipeline.NewSyncOp(func(ctx context.Context, work interface{}) (err error) {
@@ -218,7 +218,7 @@ func provideBootstrapOperator(federation federation.IFederation, asp istructs.IA
 	}), nil
 }
 
-func provideExtensionPoints(appsArtefacts AppsArtefacts) map[istructs.AppQName]extensionpoints.IExtensionPoint {
+func provideExtensionPoints(appsArtefacts AppsArtefacts) map[appdef.AppQName]extensionpoints.IExtensionPoint {
 	return appsArtefacts.appEPs
 }
 
@@ -334,8 +334,8 @@ func provideSecretKeyJWT(sr isecrets.ISecretReader) (itokensjwt.SecretKeyType, e
 	return sr.ReadSecret(itokensjwt.SecretKeyJWTName)
 }
 
-func provideNumsAppsWorkspaces(vvmApps VVMApps, asp istructs.IAppStructsProvider) (map[istructs.AppQName]istructs.NumAppWorkspaces, error) {
-	res := map[istructs.AppQName]istructs.NumAppWorkspaces{}
+func provideNumsAppsWorkspaces(vvmApps VVMApps, asp istructs.IAppStructsProvider) (map[appdef.AppQName]istructs.NumAppWorkspaces, error) {
+	res := map[appdef.AppQName]istructs.NumAppWorkspaces{}
 	for _, appQName := range vvmApps {
 		as, err := asp.AppStructs(appQName)
 		if err != nil {
@@ -455,7 +455,7 @@ type switchByAppName struct {
 }
 
 func (s *switchByAppName) Switch(work interface{}) (branchName string, err error) {
-	return work.(interface{ AppQName() istructs.AppQName }).AppQName().String(), nil
+	return work.(interface{ AppQName() appdef.AppQName }).AppQName().String(), nil
 }
 
 func provideBlobAppStoragePtr(astp istorage.IAppStorageProvider) iblobstoragestg.BlobAppStoragePtr {
@@ -473,7 +473,7 @@ func provideRouterAppStoragePtr(astp istorage.IAppStorageProvider) dbcertcache.R
 // port 80 -> [0] is http server, port 443 -> [0] is https server, [1] is acme server
 func provideRouterServices(vvmCtx context.Context, rp router.RouterParams, busTimeout BusTimeout, broker in10n.IN10nBroker, quotas in10n.Quotas,
 	nowFunc coreutils.TimeFunc, bsc router.BlobberServiceChannels, bms router.BLOBMaxSizeType, blobStorage BlobStorage,
-	autocertCache autocert.Cache, bus ibus.IBus, vvmPortSource *VVMPortSource, numsAppsWorkspaces map[istructs.AppQName]istructs.NumAppWorkspaces) RouterServices {
+	autocertCache autocert.Cache, bus ibus.IBus, vvmPortSource *VVMPortSource, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) RouterServices {
 	bp := &router.BlobberParams{
 		ServiceChannels:        bsc,
 		BLOBStorage:            blobStorage,
@@ -543,8 +543,8 @@ func provideCommandProcessors(cpCount istructs.NumCommandProcessors, ccf Command
 }
 
 func provideAsyncActualizersFactory(appParts appparts.IAppPartitions, appStructsProvider istructs.IAppStructsProvider, n10nBroker in10n.IN10nBroker, asyncActualizerFactory projectors.AsyncActualizerFactory, secretReader isecrets.ISecretReader, metrics imetrics.IMetrics) AsyncActualizersFactory {
-	return func(vvmCtx context.Context, appQName istructs.AppQName, asyncProjectors istructs.Projectors, partitionID istructs.PartitionID,
-		tokens itokens.ITokens, federation federation.IFederation, opts []state.ActualizerStateOptFunc) pipeline.ISyncOperator {
+	return func(vvmCtx context.Context, appQName appdef.AppQName, asyncProjectors istructs.Projectors, partitionID istructs.PartitionID,
+		tokens itokens.ITokens, federation federation.IFederation, opts []state.StateOptFunc) pipeline.ISyncOperator {
 		appStructs, err := appStructsProvider.AppStructs(appQName)
 		if err != nil {
 			panic(err)
@@ -579,15 +579,15 @@ func provideAsyncActualizersFactory(appParts appparts.IAppPartitions, appStructs
 	}
 }
 
-func provideAppPartitionFactory(aaf AsyncActualizersFactory, opts []state.ActualizerStateOptFunc, tokens itokens.ITokens, federation federation.IFederation) AppPartitionFactory {
-	return func(vvmCtx context.Context, appQName istructs.AppQName, asyncProjectors istructs.Projectors, partitionID istructs.PartitionID) pipeline.ISyncOperator {
+func provideAppPartitionFactory(aaf AsyncActualizersFactory, opts []state.StateOptFunc, tokens itokens.ITokens, federation federation.IFederation) AppPartitionFactory {
+	return func(vvmCtx context.Context, appQName appdef.AppQName, asyncProjectors istructs.Projectors, partitionID istructs.PartitionID) pipeline.ISyncOperator {
 		return aaf(vvmCtx, appQName, asyncProjectors, partitionID, tokens, federation, opts)
 	}
 }
 
 // forks appPartition(just async actualizers for now) of one app by amount of partitions of the app
 func provideAppServiceFactory(apf AppPartitionFactory) AppServiceFactory {
-	return func(vvmCtx context.Context, appQName istructs.AppQName, asyncProjectors istructs.Projectors, appPartsCount istructs.NumAppPartitions) pipeline.ISyncOperator {
+	return func(vvmCtx context.Context, appQName appdef.AppQName, asyncProjectors istructs.Projectors, appPartsCount istructs.NumAppPartitions) pipeline.ISyncOperator {
 		forks := make([]pipeline.ForkOperatorOptionFunc, appPartsCount)
 		for i := 0; i < int(appPartsCount); i++ {
 			forks[i] = pipeline.ForkBranch(apf(vvmCtx, appQName, asyncProjectors, istructs.PartitionID(i)))

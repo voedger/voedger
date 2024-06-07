@@ -33,14 +33,14 @@ import (
 type appStructsProviderType struct {
 	locker           sync.RWMutex
 	configs          AppConfigsType
-	structures       map[istructs.AppQName]*appStructsType
+	structures       map[appdef.AppQName]*appStructsType
 	bucketsFactory   irates.BucketsFactoryType
 	appTokensFactory payloads.IAppTokensFactory
 	storageProvider  istorage.IAppStorageProvider
 }
 
 // istructs.IAppStructsProvider.AppStructs
-func (provider *appStructsProviderType) AppStructs(appName istructs.AppQName) (structs istructs.IAppStructs, err error) {
+func (provider *appStructsProviderType) AppStructs(appName appdef.AppQName) (structs istructs.IAppStructs, err error) {
 
 	appCfg, ok := provider.configs[appName]
 	if !ok {
@@ -68,8 +68,8 @@ func (provider *appStructsProviderType) AppStructs(appName istructs.AppQName) (s
 }
 
 // istructs.IAppStructsProvider.AppStructsByDef
-func (provider *appStructsProviderType) AppStructsByDef(aqn istructs.AppQName, appDef appdef.IAppDef) (structs istructs.IAppStructs, err error) {
-	return provider.AppStructs(aqn)
+func (provider *appStructsProviderType) AppStructsByDef(appDef appdef.IAppDef) (structs istructs.IAppStructs, err error) {
+	return provider.AppStructs(appDef.Name())
 }
 
 // appStructsType implements IAppStructs interface
@@ -134,7 +134,7 @@ func (app *appStructsType) ClusterAppID() istructs.ClusterAppID {
 }
 
 // istructs.IAppStructs.AppQName
-func (app *appStructsType) AppQName() istructs.AppQName {
+func (app *appStructsType) AppQName() appdef.AppQName {
 	return app.config.Name
 }
 
@@ -229,6 +229,21 @@ func newEvents(app *appStructsType) appEventsType {
 		app:       app,
 		plogCache: plogcache.New(app.config.Params.PLogEventCacheSize),
 	}
+}
+
+// istructs.IEvents.BuildPLogEvent
+func (e *appEventsType) BuildPLogEvent(ev istructs.IRawEvent) istructs.IPLogEvent {
+	dbEvent := ev.(*eventType)
+
+	if n := dbEvent.QName(); n != istructs.QNameForCorruptedData {
+		panic(fmt.Errorf("%w: QName() is «%v», expected «%v»", ErrorEventNotValid, n, istructs.QNameForCorruptedData))
+	}
+
+	if o := dbEvent.PLogOffset(); o != istructs.NullOffset {
+		panic(fmt.Errorf("%w: PLogOffset() is «%v», expected «%v»", ErrorEventNotValid, o, istructs.NullOffset))
+	}
+
+	return dbEvent
 }
 
 // istructs.IEvents.GetSyncRawEventBuilder

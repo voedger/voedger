@@ -19,9 +19,18 @@ func TestQueryContextStorage(t *testing.T) {
 	arg := istructs.NewNullObject()
 
 	wsidFunc := SimpleWSIDFunc(wsid)
+
+	execQueryArgsFunc := func() istructs.PrepareArgs {
+		return istructs.PrepareArgs{
+			Workpiece:      nil,
+			ArgumentObject: arg,
+			WSID:           wsid,
+			Workspace:      nil,
+		}
+	}
 	argFunc := func() istructs.IObject { return arg }
 
-	s := ProvideQueryProcessorStateFactory()(context.Background(), nil, nil, wsidFunc, nil, nil, nil, nil, argFunc, nil, nil, nil)
+	s := ProvideQueryProcessorStateFactory()(context.Background(), nil, nil, wsidFunc, nil, nil, nil, nil, execQueryArgsFunc, argFunc, nil, nil, nil)
 
 	kb, err := s.KeyBuilder(QueryContext, appdef.NullQName)
 	require.NoError(t, err)

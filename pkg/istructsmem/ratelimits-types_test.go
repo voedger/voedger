@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/require"
+	"github.com/voedger/voedger/pkg/goutils/testingu/require"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/iratesce"
@@ -18,10 +18,13 @@ import (
 
 func TestRateLimits_BasicUsage(t *testing.T) {
 	require := require.New(t)
+
+	appName := istructs.AppQName_test1_app1
+
 	cfgs := make(AppConfigsType)
-	adb := appdef.New()
+	adb := appdef.New(appName)
 	adb.AddPackage("test", "test.com/test")
-	cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, adb)
+	cfg := cfgs.AddConfig(appName, adb)
 	cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 	qName1 := appdef.NewQName("test", "myFunc")
 
@@ -44,7 +47,7 @@ func TestRateLimits_BasicUsage(t *testing.T) {
 	})
 
 	// then - get AppStructs. For the first get default bucket states will be set
-	as, err := provider.AppStructs(istructs.AppQName_test1_app1)
+	as, err := provider.AppStructs(appName)
 	require.NoError(err)
 
 	for i := 0; i < 10; i++ {
@@ -75,6 +78,7 @@ func TestRateLimits_BasicUsage(t *testing.T) {
 }
 
 func TestRateLimitsErrors(t *testing.T) {
+	require := require.New(t)
 	unsupportedRateLimitKind := istructs.RateLimitKind_FakeLast
 	rls := functionRateLimits{
 		limits: map[appdef.QName]map[istructs.RateLimitKind]istructs.RateLimit{
@@ -84,7 +88,8 @@ func TestRateLimitsErrors(t *testing.T) {
 		},
 	}
 
-	require.Panics(t, func() { rls.prepare(iratesce.Provide(time.Now)) })
+	require.Panics(func() { rls.prepare(iratesce.Provide(time.Now)) },
+		require.Has(unsupportedRateLimitKind))
 }
 
 func TestGetFunctionRateLimitName(t *testing.T) {
@@ -121,8 +126,9 @@ func TestGetFunctionRateLimitName(t *testing.T) {
 	}
 
 	t.Run("panic if kind is out of range", func(t *testing.T) {
-		require.Panics(t, func() {
+		require := require.New(t)
+		require.Panics(func() {
 			_ = GetFunctionRateLimitName(testFn, istructs.RateLimitKind_FakeLast)
-		})
+		}, require.Has(istructs.RateLimitKind_FakeLast))
 	})
 }

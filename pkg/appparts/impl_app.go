@@ -35,7 +35,7 @@ func (e *engines) release() {
 
 type app struct {
 	apps       *apps
-	name       istructs.AppQName
+	name       appdef.AppQName
 	partsCount istructs.NumAppPartitions
 	def        appdef.IAppDef
 	structs    istructs.IAppStructs
@@ -44,7 +44,7 @@ type app struct {
 	parts map[istructs.PartitionID]*partition
 }
 
-func newApplication(apps *apps, name istructs.AppQName, partsCount istructs.NumAppPartitions) *app {
+func newApplication(apps *apps, name appdef.AppQName, partsCount istructs.NumAppPartitions) *app {
 	return &app{
 		apps:       apps,
 		name:       name,
@@ -132,7 +132,7 @@ func newPartitionRT(part *partition) *partitionRT {
 	return rt
 }
 
-func (rt *partitionRT) App() istructs.AppQName { return rt.part.app.name }
+func (rt *partitionRT) App() appdef.AppQName { return rt.part.app.name }
 
 func (rt *partitionRT) AppStructs() istructs.IAppStructs { return rt.appStructs }
 
@@ -150,7 +150,7 @@ func (rt *partitionRT) Invoke(ctx context.Context, name appdef.QName, state istr
 
 	extName := rt.appDef.FullQName(name)
 	if extName == appdef.NullFullQName {
-		return errUndefinedExtension(name)
+		return errCantObtainFullQName(name)
 	}
 	io := iextengine.NewExtensionIO(rt.appDef, state, intents)
 

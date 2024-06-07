@@ -108,24 +108,26 @@ func implServiceFactory(serviceChannel iprocbus.ServiceChannel, resultSenderClos
 				qpm.Increase(queriesTotal, 1.0)
 				rs := resultSenderClosableFactory(msg.RequestCtx(), msg.Sender())
 				qwork := newQueryWork(msg, rs, appParts, maxPrepareQueries, qpm, secretReader)
-				if p == nil {
-					p = newQueryProcessorPipeline(ctx, authn, authz, itokens, federation)
-				}
-				err := p.SendSync(qwork)
-				if err != nil {
-					qpm.Increase(errorsTotal, 1.0)
-					p.Close()
-					p = nil
-				} else {
-					err = execAndSendResponse(ctx, qwork)
-				}
-				if qwork.rowsProcessor != nil {
-					// wait until all rows are sent
-					qwork.rowsProcessor.Close()
-				}
-				err = coreutils.WrapSysError(err, http.StatusInternalServerError)
-				rs.Close(err)
-				qwork.release()
+				func() { // borrowed application partition should be guaranteed to be freed
+					defer qwork.release()
+					if p == nil {
+						p = newQueryProcessorPipeline(ctx, authn, authz, itokens, federation)
+					}
+					err := p.SendSync(qwork)
+					if err != nil {
+						qpm.Increase(errorsTotal, 1.0)
+						p.Close()
+						p = nil
+					} else {
+						err = execAndSendResponse(ctx, qwork)
+					}
+					if qwork.rowsProcessor != nil {
+						// wait until all rows are sent
+						qwork.rowsProcessor.Close()
+					}
+					err = coreutils.WrapSysError(err, http.StatusInternalServerError)
+					rs.Close(err)
+				}()
 				metrics.IncreaseApp(queriesSeconds, vvm, msg.AppQName(), time.Since(now).Seconds())
 			case <-ctx.Done():
 			}
@@ -145,7 +147,13 @@ func execAndSendResponse(ctx context.Context, qw *queryWork) (err error) {
 		}
 		qw.metrics.Increase(execSeconds, time.Since(now).Seconds())
 	}()
-	return qw.queryExec(ctx, qw.execQueryArgs, qw.callbackFunc)
+
+	if err =  qw.appPart.Invoke(ctx, qw.queryFunc.QName(), qw.state, qw.state); err != nil {
+		return err
+	}
+
+	return qw.state.ApplyIntents()
+	//return qw.queryExec(ctx, qw.execQueryArgs, qw.callbackFunc)
 }
 
 func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthenticator, authz iauthnz.IAuthorizer,
@@ -279,6 +287,7 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 				func() []iauthnz.Principal { return qw.principals },
 				func() string { return qw.msg.Token() },
 				itokens,
+				func() istructs.PrepareArgs { return qw.execQueryArgs.PrepareArgs },
 				func() istructs.IObject { return qw.execQueryArgs.ArgumentObject },
 				func() istructs.IObjectBuilder {
 					return qw.appStructs.ObjectBuilder(qw.resultType.QName())
@@ -361,7 +370,7 @@ type queryWork struct {
 	appParts appparts.IAppPartitions
 	// work
 	requestData       map[string]interface{}
-	state             istructs.IState
+	state             state.IHostState
 	queryParams       IQueryParams
 	appPart           appparts.IAppPartition
 	appStructs        istructs.IAppStructs
@@ -418,7 +427,7 @@ func (qw *queryWork) release() {
 }
 
 // need or q.sys.EnrichPrincipalToken
-func (qw *queryWork) AppQName() istructs.AppQName {
+func (qw *queryWork) AppQName() appdef.AppQName {
 	return qw.msg.AppQName()
 }
 
@@ -446,7 +455,7 @@ func operator(name string, doSync func(ctx context.Context, qw *queryWork) (err 
 
 type queryMessage struct {
 	requestCtx context.Context
-	appQName   istructs.AppQName
+	appQName   appdef.AppQName
 	wsid       istructs.WSID
 	partition  istructs.PartitionID
 	sender     ibus.ISender
@@ -456,7 +465,7 @@ type queryMessage struct {
 	token      string
 }
 
-func (m queryMessage) AppQName() istructs.AppQName     { return m.appQName }
+func (m queryMessage) AppQName() appdef.AppQName       { return m.appQName }
 func (m queryMessage) WSID() istructs.WSID             { return m.wsid }
 func (m queryMessage) Sender() ibus.ISender            { return m.sender }
 func (m queryMessage) RequestCtx() context.Context     { return m.requestCtx }
@@ -471,7 +480,7 @@ func (m queryMessage) Body() []byte {
 	return []byte("{}")
 }
 
-func NewQueryMessage(requestCtx context.Context, appQName istructs.AppQName, partID istructs.PartitionID, wsid istructs.WSID, sender ibus.ISender, body []byte,
+func NewQueryMessage(requestCtx context.Context, appQName appdef.AppQName, partID istructs.PartitionID, wsid istructs.WSID, sender ibus.ISender, body []byte,
 	qName appdef.QName, host string, token string) IQueryMessage {
 	return queryMessage{
 		appQName:   appQName,
@@ -599,7 +608,7 @@ func (c *fieldsDefs) get(name appdef.QName) FieldsKinds {
 
 type queryProcessorMetrics struct {
 	vvm     string
-	app     istructs.AppQName
+	app     appdef.AppQName
 	metrics imetrics.IMetrics
 }
 

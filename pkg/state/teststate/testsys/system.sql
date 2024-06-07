@@ -10,6 +10,16 @@ ABSTRACT TABLE ODoc INHERITS ORecord();
 ABSTRACT TABLE WDoc INHERITS WRecord();
 ABSTRACT TABLE CSingleton INHERITS CDoc();
 ABSTRACT WORKSPACE Workspace(
+	TABLE ChildWorkspace INHERITS CDoc (
+		WSName varchar NOT NULL,
+		WSKind qname NOT NULL,
+		WSKindInitializationData varchar(1024),
+		TemplateName varchar,
+		TemplateParams varchar(1024),
+		WSClusterID int32 NOT NULL,
+		WSID int64,           -- to be updated afterwards
+		WSError varchar(1024) -- to be updated afterwards
+	);
 );
 ALTERABLE WORKSPACE Profile();
 
@@ -60,6 +70,16 @@ EXTENSION ENGINE BUILTIN (
 		INSERT SCOPE(PROJECTORS),
 		UPDATE SCOPE(PROJECTORS)
 	) ENTITY VIEW;
+
+	STORAGE Uniq(
+		/*
+		Key:
+			One or more unique fields
+		Value:
+			ID int64 (record ID)
+		*/
+		GET SCOPE(COMMANDS, QUERIES, PROJECTORS)
+	) ENTITY RECORD;
 
 	STORAGE WLog(
 		/*

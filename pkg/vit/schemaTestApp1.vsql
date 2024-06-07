@@ -395,7 +395,9 @@ ALTERABLE WORKSPACE test_wsWS (
 		name varchar,
 		hq_id varchar,
 		ml_name bytes,
-		cat_external_id varchar
+		cat_external_id varchar,
+		int_fld1 int32,
+		int_fld2 int32
 	);
 
 	TABLE Doc INHERITS CDoc (
@@ -417,6 +419,16 @@ ALTERABLE WORKSPACE test_wsWS (
 		Str varchar,
 		Int int32,
 		UNIQUE ("Str")
+	);
+
+	TABLE DocManyTypes INHERITS CDoc (
+		Int int32,
+		Int64 int64,
+		Float32 float32,
+		Float64 float64,
+		Str varchar,
+		Bytes bytes,
+		Bool bool
 	);
 
 	TABLE DocConstraintsFewUniques INHERITS CDoc (
@@ -506,9 +518,22 @@ ALTERABLE WORKSPACE test_wsWS (
 		PRIMARY KEY ((ViewIntFld), ViewStrFld)
 	) AS RESULT OF ProjDummy;
 
+	VIEW CategoryIdx (
+		Name varchar,
+		Dummy int32,
+		IntFld int32,
+		Val int32,
+		PRIMARY KEY ((IntFld), Dummy)
+	) AS RESULT OF ApplyCategoryIdx;
+
+	TYPE QryIntentsResult (
+		Fld1 varchar
+	);
+
 	EXTENSION ENGINE BUILTIN (
 		QUERY RatedQry(RatedQryParams) RETURNS RatedQryResult;
 		QUERY MockQry(MockQryParams) RETURNS MockQryResult;
+		QUERY QryIntents() RETURNS QryIntentsResult;
 
 		COMMAND RatedCmd(RatedCmdParams);
 		COMMAND MockCmd(MockCmdParams);
@@ -519,5 +544,6 @@ ALTERABLE WORKSPACE test_wsWS (
 
 		COMMAND TestCmdRawArg(sys.Raw);
 		PROJECTOR ProjDummy AFTER INSERT ON (CRecord) INTENTS(View(View)); -- does nothing, only to define view.app1pkg.View
+		SYNC PROJECTOR ApplyCategoryIdx AFTER INSERT ON (category) INTENTS(View(CategoryIdx));
 	);
 );

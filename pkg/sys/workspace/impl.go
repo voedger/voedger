@@ -58,7 +58,7 @@ func invokeCreateWorkspaceIDProjector(federation federation.IFederation, tokensA
 // triggered by cdoc.registry.Login or by cdoc.sys.ChildWorkspace
 // wsid - pseudoProfile: crc32(wsName) or crc32(login)
 // sys/registry app
-func ApplyInvokeCreateWorkspaceID(federation federation.IFederation, appQName istructs.AppQName, tokensAPI itokens.ITokens,
+func ApplyInvokeCreateWorkspaceID(federation federation.IFederation, appQName appdef.AppQName, tokensAPI itokens.ITokens,
 	wsName string, wsKind appdef.QName, wsidToCallCreateWSIDAt istructs.WSID, targetApp string, templateName string, templateParams string,
 	ownerDoc istructs.ICUDRow, ownerWSID istructs.WSID) error {
 	// Call WS[$PseudoWSID].c.CreateWorkspaceID()
@@ -68,9 +68,9 @@ func ApplyInvokeCreateWorkspaceID(federation federation.IFederation, appQName is
 	wsKindInitializationData := ownerDoc.AsString(authnz.Field_WSKindInitializationData)
 	createWSIDCmdURL := fmt.Sprintf("api/%s/%d/c.sys.CreateWorkspaceID", targetApp, wsidToCallCreateWSIDAt)
 	logger.Info("aproj.sys.InvokeCreateWorkspaceID: request to " + createWSIDCmdURL)
-	body := fmt.Sprintf(`{"args":{"OwnerWSID":%d,"OwnerQName2":"%s","OwnerID":%d,"OwnerApp":"%s","WSName":"%s","WSKind":"%s","WSKindInitializationData":%q,"TemplateName":"%s","TemplateParams":%q}}`,
+	body := fmt.Sprintf(`{"args":{"OwnerWSID":%d,"OwnerQName2":"%s","OwnerID":%d,"OwnerApp":"%s","WSName":%q,"WSKind":"%s","WSKindInitializationData":%q,"TemplateName":"%s","TemplateParams":%q}}`,
 		ownerWSID, ownerQName.String(), ownerID, ownerApp, wsName, wsKind.String(), wsKindInitializationData, templateName, templateParams)
-	targetAppQName, err := istructs.ParseAppQName(targetApp)
+	targetAppQName, err := appdef.ParseAppQName(targetApp)
 	if err != nil {
 		// parsed already by c.registry.CreateLogin
 		// notest
@@ -96,7 +96,7 @@ func ApplyInvokeCreateWorkspaceID(federation federation.IFederation, appQName is
 // ChildWorkspace -> pseudoWSID(profileWSID+"/"+wsName, targetCluster) translated to AppWSID
 // Login -> ((PseudoWSID->AppWSID).Base, targetCluster)
 // targetApp
-func execCmdCreateWorkspaceID(asp istructs.IAppStructsProvider, appQName istructs.AppQName) istructsmem.ExecCommandClosure {
+func execCmdCreateWorkspaceID(asp istructs.IAppStructsProvider, appQName appdef.AppQName) istructsmem.ExecCommandClosure {
 	return func(args istructs.ExecCommandArgs) (err error) {
 		// TODO: AuthZ: System,SystemToken in header
 		ownerWSID := args.ArgumentObject.AsInt64(Field_OwnerWSID)
@@ -201,7 +201,7 @@ func invokeCreateWorkspaceProjector(federation federation.IFederation, tokensAPI
 			ownerID := rec.AsInt64(Field_OwnerID)
 			ownerApp := rec.AsString(Field_OwnerApp)
 			templateParams := rec.AsString(Field_TemplateParams)
-			body := fmt.Sprintf(`{"args":{"OwnerWSID":%d,"OwnerQName2":"%s","OwnerID":%d,"OwnerApp":"%s","WSName":"%s","WSKind":"%s","WSKindInitializationData":%q,"TemplateName":"%s","TemplateParams":%q}}`,
+			body := fmt.Sprintf(`{"args":{"OwnerWSID":%d,"OwnerQName2":"%s","OwnerID":%d,"OwnerApp":"%s","WSName":%q,"WSKind":"%s","WSKindInitializationData":%q,"TemplateName":"%s","TemplateParams":%q}}`,
 				ownerWSID, ownerQName, ownerID, ownerApp, wsName, wsKind.String(), wsKindInitializationData, templateName, templateParams)
 			appQName := s.App()
 			createWSCmdURL := fmt.Sprintf("api/%s/%d/c.sys.CreateWorkspace", appQName.String(), newWSID)
@@ -220,7 +220,7 @@ func invokeCreateWorkspaceProjector(federation federation.IFederation, tokensAPI
 
 // c.sys.CreateWorkspace
 // должно быть вызвано в целевом приложении, т.к. профиль пользователя находится в целевом приложении на схеме!!!
-func execCmdCreateWorkspace(now coreutils.TimeFunc, asp istructs.IAppStructsProvider, appQName istructs.AppQName) istructsmem.ExecCommandClosure {
+func execCmdCreateWorkspace(now coreutils.TimeFunc, asp istructs.IAppStructsProvider, appQName appdef.AppQName) istructsmem.ExecCommandClosure {
 	return func(args istructs.ExecCommandArgs) error {
 		// TODO: AuthZ: System, SystemToken in header
 		// Check that CDoc<sys.WorkspaceDescriptor> does not exist yet (IRecords.GetSingleton())
@@ -345,7 +345,7 @@ func initializeWorkspaceProjector(nowFunc coreutils.TimeFunc, federation federat
 			if err != nil {
 				return fmt.Errorf("%s: %w", logPrefix, err)
 			}
-			ownerAppQName, err := istructs.ParseAppQName(ownerApp)
+			ownerAppQName, err := appdef.ParseAppQName(ownerApp)
 			if err != nil {
 				// parsed already by c.registry.CreateLogin and InitChildWorkspace ?????????
 				// notest

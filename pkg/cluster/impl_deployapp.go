@@ -24,7 +24,7 @@ import (
 func provideExecDeployApp(asp istructs.IAppStructsProvider, timeFunc coreutils.TimeFunc) istructsmem.ExecCommandClosure {
 	return func(args istructs.ExecCommandArgs) (err error) {
 		appQNameStr := args.ArgumentObject.AsString(Field_AppQName)
-		appQName, err := istructs.ParseAppQName(appQNameStr)
+		appQName, err := appdef.ParseAppQName(appQNameStr)
 		if err != nil {
 			return coreutils.NewHTTPErrorf(http.StatusBadRequest, fmt.Sprintf("failed to parse AppQName %s: %s", appQNameStr, err.Error()))
 		}

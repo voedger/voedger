@@ -11,6 +11,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/apps"
 	"github.com/voedger/voedger/pkg/extensionpoints"
+	"github.com/voedger/voedger/pkg/goutils/iterate"
 	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/parser"
 	"github.com/voedger/voedger/pkg/state"
@@ -79,10 +80,10 @@ var (
 		}),
 		WithCleanup(func(_ *VIT) {
 			MockCmdExec = func(input string, args istructs.ExecCommandArgs) error { panic("") }
-			MockQryExec = func(input string, callback istructs.ExecQueryCallback) error { panic("") }
+			MockQryExec = func(input string, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) error { panic("") }
 		}),
 	)
-	MockQryExec func(input string, callback istructs.ExecQueryCallback) error
+	MockQryExec func(input string, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) error
 	MockCmdExec func(input string, args istructs.ExecCommandArgs) error
 )
 
@@ -141,7 +142,7 @@ func ProvideApp1(apis apps.APIs, cfg *istructsmem.AppConfigType, ep extensionpoi
 		appdef.NewQName(app1PkgName, "MockQry"),
 		func(_ context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 			input := args.ArgumentObject.AsString(field_Input)
-			return MockQryExec(input, callback)
+			return MockQryExec(input, args, callback)
 		},
 	))
 
@@ -200,8 +201,48 @@ func ProvideApp1(apis apps.APIs, cfg *istructsmem.AppConfigType, ep extensionpoi
 		},
 	)
 
+	qNameViewCategoryIdx := appdef.NewQName(app1PkgName, "CategoryIdx")
+	cfg.AddSyncProjectors(
+		istructs.Projector{
+			Name: appdef.NewQName(app1PkgName, "ApplyCategoryIdx"),
+			Func: func(event istructs.IPLogEvent, st istructs.IState, intents istructs.IIntents) (err error) {
+				return iterate.ForEachError(event.CUDs, func(cud istructs.ICUDRow) error {
+					if cud.QName() != QNameApp1_CDocCategory {
+						return nil
+					}
+					kb, err := st.KeyBuilder(state.View, qNameViewCategoryIdx)
+					if err != nil {
+						return err
+					}
+					kb.PutInt32("IntFld", 43)
+					kb.PutInt32("Dummy", 1)
+					b, err := intents.NewValue(kb)
+					if err != nil {
+						return err
+					}
+					b.PutInt32("Val", 42)
+					b.PutString("Name", cud.AsString("name"))
+					return nil
+				})
+			},
+		},
+	)
+
 	cfg.Resources.Add(istructsmem.NewCommandFunction(appdef.NewQName(app1PkgName, "testCmd"), istructsmem.NullCommandExec))
 	cfg.Resources.Add(istructsmem.NewCommandFunction(appdef.NewQName(app1PkgName, "TestCmdRawArg"), istructsmem.NullCommandExec))
+
+	cfg.Resources.Add(istructsmem.NewQueryFunction(appdef.NewQName(app1PkgName, "QryIntents"), func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
+		kb, err := args.State.KeyBuilder(state.Result, appdef.NewQName(app1PkgName, "QryIntentsResult"))
+		if err != nil {
+			return err
+		}
+		vb, err := args.Intents.NewValue(kb)
+		if err != nil {
+			return err
+		}
+		vb.PutString("Fld1", "hello")
+		return nil
+	}))
 
 	app1PackageFS := parser.PackageFS{
 		Path: App1PkgPath,

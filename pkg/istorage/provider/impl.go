@@ -10,12 +10,12 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istorage"
-	"github.com/voedger/voedger/pkg/istructs"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-func (asp *implIAppStorageProvider) AppStorage(appQName istructs.AppQName) (storage istorage.IAppStorage, err error) {
+func (asp *implIAppStorageProvider) AppStorage(appQName appdef.AppQName) (storage istorage.IAppStorage, err error) {
 	asp.lock.Lock()
 	defer asp.lock.Unlock()
 	if storage, ok := asp.cache[appQName]; ok {
@@ -73,7 +73,7 @@ func (asp *implIAppStorageProvider) clarifyKeyspaceName(sn istorage.SafeAppName)
 		// - integration tests for different packages are run in simultaneously in separate processes
 		// - 2 processes using the same shared VIT config -> 2 VITs are initialized on the same keyspaces names -> conflict when e.g. creating the same logins
 		// see also getNewAppStorageDesc() below
-		newName := sn.String() + asp.suffix
+		newName := sn.String() + strings.ToLower(asp.suffix)
 		newName = strings.ReplaceAll(newName, "-", "")
 		if len(newName) > istorage.MaxSafeNameLength {
 			newName = newName[:istorage.MaxSafeNameLength]
@@ -83,7 +83,7 @@ func (asp *implIAppStorageProvider) clarifyKeyspaceName(sn istorage.SafeAppName)
 	return sn
 }
 
-func storeAppDesc(appQName istructs.AppQName, appDesc istorage.AppStorageDesc, metaStorage istorage.IAppStorage) error {
+func storeAppDesc(appQName appdef.AppQName, appDesc istorage.AppStorageDesc, metaStorage istorage.IAppStorage) error {
 	pkBytes := []byte(appQName.String())
 	cColsBytes := cCols_AppStorageDesc
 	appDescJSON, err := json.Marshal(&appDesc)
@@ -94,7 +94,7 @@ func storeAppDesc(appQName istructs.AppQName, appDesc istorage.AppStorageDesc, m
 	return metaStorage.Put(pkBytes, cColsBytes, appDescJSON)
 }
 
-func getNewAppStorageDesc(appQName istructs.AppQName, metaStorage istorage.IAppStorage) (res istorage.AppStorageDesc, err error) {
+func getNewAppStorageDesc(appQName appdef.AppQName, metaStorage istorage.IAppStorage) (res istorage.AppStorageDesc, err error) {
 	san, err := istorage.NewSafeAppName(appQName, func(name string) (bool, error) {
 		pkBytes := []byte(name)
 		exists, err := metaStorage.Get(pkBytes, cCols_SafeAppName, &value_SafeAppName)
@@ -117,7 +117,7 @@ func getNewAppStorageDesc(appQName istructs.AppQName, metaStorage istorage.IAppS
 	}, nil
 }
 
-func readAppStorageDesc(appQName istructs.AppQName, metaStorage istorage.IAppStorage) (ok bool, appStorageDesc istorage.AppStorageDesc, err error) {
+func readAppStorageDesc(appQName appdef.AppQName, metaStorage istorage.IAppStorage) (ok bool, appStorageDesc istorage.AppStorageDesc, err error) {
 	pkBytes := []byte(appQName.String())
 	appDescJSON := []byte{}
 	if ok, err = metaStorage.Get(pkBytes, cCols_AppStorageDesc, &appDescJSON); err != nil {

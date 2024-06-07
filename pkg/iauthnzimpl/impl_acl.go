@@ -79,6 +79,8 @@ var defaultACL = ACL{
 
 				qNameQryDescribePackage,
 				qNameQryDescribePackageNames,
+
+				qNameCmdVSqlUpdate,
 			},
 		},
 		policy: ACPolicy_Deny,
@@ -196,17 +198,22 @@ var defaultACL = ACL{
 	},
 	{
 		// ACL for portals https://dev.untill.com/projects/#!637208
-		desc: "allow SELECT cdoc.air.ResellerSubscriptionsProfile to air.AirReseller",
+		desc: "allow SELECT cdoc.air.ResellerSubscriptionsProfile to air.SubscriptionReseller",
 		pattern: PatternType{
-			opKindsPattern:    []iauthnz.OperationKindType{iauthnz.OperationKind_SELECT},
-			qNamesPattern:     []appdef.QName{qNameCDocResellerSubscriptionsProfile},
-			principalsPattern: [][]iauthnz.Principal{{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleAirReseller}}},
+			opKindsPattern: []iauthnz.OperationKindType{iauthnz.OperationKind_SELECT},
+			qNamesPattern:  []appdef.QName{qNameCDocResellerSubscriptionsProfile},
+			principalsPattern: [][]iauthnz.Principal{
+				{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleAirReseller}}, // deprecated
+				// OR
+				// https://dev.untill.com/projects/#!694587
+				{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleSubscriptionReseller}},
+			},
 		},
 		policy: ACPolicy_Allow,
 	},
 	{
 		// ACL for portals https://dev.untill.com/projects/#!637208
-		desc: "allow exec few portals-related funcs to air.AirReseller",
+		desc: "allow exec few portals-related funcs to air.SubscriptionReseller",
 		pattern: PatternType{
 			qNamesPattern: []appdef.QName{
 				qNameCmdStoreResellerSubscriptionsProfile,
@@ -225,13 +232,18 @@ var defaultACL = ACL{
 				// https://dev.untill.com/projects/#!675263
 				qNameQryPaidSubscriptionInvoicesReport,
 			},
-			principalsPattern: [][]iauthnz.Principal{{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleAirReseller}}},
+			principalsPattern: [][]iauthnz.Principal{
+				{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleAirReseller}}, // deprecated
+				// OR
+				// https://dev.untill.com/projects/#!694587
+				{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleSubscriptionReseller}},
+			},
 		},
 		policy: ACPolicy_Allow,
 	},
 	{
 		// ACL for portals https://dev.untill.com/projects/#!637208
-		desc: "allow SELECT cdoc.air.UPProfile to air.UntillPaymentsReseller and air.AirReseller",
+		desc: "allow SELECT cdoc.air.UPProfile to air.UntillPaymentsReseller and air.UntillPaymentsUser",
 		pattern: PatternType{
 			opKindsPattern: []iauthnz.OperationKindType{iauthnz.OperationKind_SELECT},
 			qNamesPattern:  []appdef.QName{qNameCDocUPProfile},

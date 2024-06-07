@@ -8,7 +8,7 @@ package appdef
 import (
 	"testing"
 
-	"github.com/stretchr/testify/require"
+	"github.com/voedger/voedger/pkg/goutils/testingu/require"
 )
 
 func Test_AppDef_AddPackage(t *testing.T) {
@@ -17,7 +17,7 @@ func Test_AppDef_AddPackage(t *testing.T) {
 	var app IAppDef
 
 	t.Run("should be ok to add package", func(t *testing.T) {
-		adb := New()
+		adb := New(NewAppQName("test", "app"))
 
 		adb.AddPackage("test", "test.com/path")
 		adb.AddPackage("example", "example.com/path")
@@ -76,27 +76,30 @@ func Test_AppDef_AddPackage(t *testing.T) {
 	})
 
 	t.Run("test panics", func(t *testing.T) {
-		adb := New()
+		adb := New(NewAppQName("test", "app"))
 
-		require.Panics(func() { adb.AddPackage("", "test.com/path") }, "should be panic if empty name")
-		require.Panics(func() { adb.AddPackage("naked 🔫", "test.com/path") }, "should be panic if invalid name")
-		require.Panics(func() { adb.AddPackage("test", "") }, "should be panic if empty path")
+		require.Panics(func() { adb.AddPackage("", "test.com/path") },
+			require.Is(ErrMissedError))
+		require.Panics(func() { adb.AddPackage("naked 🔫", "test.com/path") },
+			require.Is(ErrInvalidError), require.Has("naked 🔫"))
+		require.Panics(func() { adb.AddPackage("test", "") },
+			require.Is(ErrMissedError))
 
 		require.Panics(
 			func() {
 				adb.AddPackage("test", "test1.com/path")
 				adb.AddPackage("test", "test2.com/path")
-			}, "should be panic if reuse local name")
+			}, require.Is(ErrAlreadyExistsError), require.Has("test"))
 
 		require.Panics(
 			func() {
 				adb.AddPackage("test1", "test.com/path")
 				adb.AddPackage("test2", "test.com/path")
-			}, "should be panic if reuse path")
+			}, require.Is(ErrAlreadyExistsError), require.Has("test.com/path"))
 
 		require.Panics(
 			func() {
 				adb.AddPackage(SysPackage, "test.com/sys")
-			}, "should be panic if attempt to redefine sys package")
+			}, require.Is(ErrAlreadyExistsError), require.Has(SysPackage))
 	})
 }

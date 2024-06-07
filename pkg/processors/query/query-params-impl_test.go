@@ -9,10 +9,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/iauthnzimpl"
 	"github.com/voedger/voedger/pkg/iprocbus"
-	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/itokensjwt"
 	imetrics "github.com/voedger/voedger/pkg/metrics"
 	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
@@ -35,13 +33,9 @@ func TestWrongTypes(t *testing.T) {
 	authn := iauthnzimpl.NewDefaultAuthenticator(iauthnzimpl.TestSubjectRolesGetter, iauthnzimpl.TestIsDeviceAllowedFuncs)
 	authz := iauthnzimpl.NewDefaultAuthorizer()
 
-	appDef, appStructsProvider, appTokens := getTestCfg(require, nil)
+	appParts, cleanAppParts, appTokens := deployTestAppWithSecretToken(require, nil)
 
-	appParts, cleanAppParts, err := appparts.New(appStructsProvider)
-	require.NoError(err)
 	defer cleanAppParts()
-	appParts.DeployApp(appName, appDef, partCount, appEngines)
-	appParts.DeployAppPartitions(appName, []istructs.PartitionID{partID})
 
 	queryProcessor := ProvideServiceFactory()(
 		serviceChannel,

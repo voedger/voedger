@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"container/list"
 	"context"
+	"encoding/base64"
 	"fmt"
 	"io"
 	"maps"
@@ -22,6 +23,7 @@ import (
 	"github.com/voedger/voedger/pkg/isecrets"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/itokens"
+	"github.com/voedger/voedger/pkg/state/smtptest"
 	"github.com/voedger/voedger/pkg/utils/federation"
 )
 
@@ -34,17 +36,19 @@ type ObjectBuilderFunc func() istructs.IObjectBuilder
 type PrincipalsFunc func() []iauthnz.Principal
 type TokenFunc func() string
 type PLogEventFunc func() istructs.IPLogEvent
+type CommandPrepareArgsFunc func() istructs.CommandPrepareArgs
 type ArgFunc func() istructs.IObject
 type UnloggedArgFunc func() istructs.IObject
 type WLogOffsetFunc func() istructs.Offset
 type FederationFunc func() federation.IFederation
 type QNameFunc func() appdef.QName
 type TokensFunc func() itokens.ITokens
+type PrepareArgsFunc func() istructs.PrepareArgs
 type ExecQueryCallbackFunc func() istructs.ExecQueryCallback
-type CommandProcessorStateFactory func(ctx context.Context, appStructsFunc AppStructsFunc, partitionIDFunc PartitionIDFunc, wsidFunc WSIDFunc, secretReader isecrets.ISecretReader, cudFunc CUDFunc, principalPayloadFunc PrincipalsFunc, tokenFunc TokenFunc, intentsLimit int, cmdResultBuilderFunc ObjectBuilderFunc, argFunc ArgFunc, unloggedArgFunc UnloggedArgFunc, wlogOffsetFunc WLogOffsetFunc) IHostState
-type SyncActualizerStateFactory func(ctx context.Context, appStructsFunc AppStructsFunc, partitionIDFunc PartitionIDFunc, wsidFunc WSIDFunc, n10nFunc N10nFunc, secretReader isecrets.ISecretReader, eventFunc PLogEventFunc, intentsLimit int) IHostState
-type QueryProcessorStateFactory func(ctx context.Context, appStructsFunc AppStructsFunc, partitionIDFunc PartitionIDFunc, wsidFunc WSIDFunc, secretReader isecrets.ISecretReader, principalPayloadFunc PrincipalsFunc, tokenFunc TokenFunc, itokens itokens.ITokens, argFunc ArgFunc, resultBuilderFunc ObjectBuilderFunc, federation federation.IFederation, queryCallbackFunc ExecQueryCallbackFunc, opts ...QPStateOptFunc) IHostState
-type AsyncActualizerStateFactory func(ctx context.Context, appStructsFunc AppStructsFunc, partitionIDFunc PartitionIDFunc, wsidFunc WSIDFunc, n10nFunc N10nFunc, secretReader isecrets.ISecretReader, eventFunc PLogEventFunc, tokensFunc itokens.ITokens, federationFunc federation.IFederation, intentsLimit, bundlesLimit int, opts ...ActualizerStateOptFunc) IBundledHostState
+type CommandProcessorStateFactory func(ctx context.Context, appStructsFunc AppStructsFunc, partitionIDFunc PartitionIDFunc, wsidFunc WSIDFunc, secretReader isecrets.ISecretReader, cudFunc CUDFunc, principalPayloadFunc PrincipalsFunc, tokenFunc TokenFunc, intentsLimit int, cmdResultBuilderFunc ObjectBuilderFunc, execCmdArgsFunc CommandPrepareArgsFunc, argFunc ArgFunc, unloggedArgFunc UnloggedArgFunc, wlogOffsetFunc WLogOffsetFunc, opts ...StateOptFunc) IHostState
+type SyncActualizerStateFactory func(ctx context.Context, appStructsFunc AppStructsFunc, partitionIDFunc PartitionIDFunc, wsidFunc WSIDFunc, n10nFunc N10nFunc, secretReader isecrets.ISecretReader, eventFunc PLogEventFunc, intentsLimit int, opts ...StateOptFunc) IHostState
+type QueryProcessorStateFactory func(ctx context.Context, appStructsFunc AppStructsFunc, partitionIDFunc PartitionIDFunc, wsidFunc WSIDFunc, secretReader isecrets.ISecretReader, principalPayloadFunc PrincipalsFunc, tokenFunc TokenFunc, itokens itokens.ITokens, execQueryArgsFunc PrepareArgsFunc, argFunc ArgFunc, resultBuilderFunc ObjectBuilderFunc, federation federation.IFederation, queryCallbackFunc ExecQueryCallbackFunc, opts ...StateOptFunc) IHostState
+type AsyncActualizerStateFactory func(ctx context.Context, appStructsFunc AppStructsFunc, partitionIDFunc PartitionIDFunc, wsidFunc WSIDFunc, n10nFunc N10nFunc, secretReader isecrets.ISecretReader, eventFunc PLogEventFunc, tokensFunc itokens.ITokens, federationFunc federation.IFederation, intentsLimit, bundlesLimit int, opts ...StateOptFunc) IBundledHostState
 
 type eventsFunc func() istructs.IEvents
 type recordsFunc func() istructs.IRecords
@@ -57,6 +61,32 @@ type ApplyBatchItem struct {
 type GetBatchItem struct {
 	key   istructs.IStateKeyBuilder
 	value istructs.IStateValue
+}
+
+type StateOptFunc func(opts *stateOpts)
+
+func WithEmailMessagesChan(messages chan smtptest.Message) StateOptFunc {
+	return func(opts *stateOpts) {
+		opts.messages = messages
+	}
+}
+
+func WithCustomHttpClient(client IHttpClient) StateOptFunc {
+	return func(opts *stateOpts) {
+		opts.customHttpClient = client
+	}
+}
+
+func WithFedearationCommandHandler(handler FederationCommandHandler) StateOptFunc {
+	return func(opts *stateOpts) {
+		opts.federationCommandHandler = handler
+	}
+}
+
+func WithUniquesHandler(handler UniquesHandler) StateOptFunc {
+	return func(opts *stateOpts) {
+		opts.uniquesHandler = handler
+	}
 }
 
 type keyBuilder struct {
@@ -440,7 +470,7 @@ type jsonValue struct {
 
 func (v *jsonValue) AsInt32(name string) int32 {
 	if v, ok := v.json[name]; ok {
-		return v.(int32)
+		return int32(v.(float64))
 	}
 	panic(errUndefined(name))
 }
@@ -464,7 +494,11 @@ func (v *jsonValue) AsFloat64(name string) float64 {
 }
 func (v *jsonValue) AsBytes(name string) []byte {
 	if v, ok := v.json[name]; ok {
-		return v.([]byte)
+		data, err := base64.StdEncoding.DecodeString(v.(string))
+		if err != nil {
+			panic(err)
+		}
+		return data
 	}
 	panic(errUndefined(name))
 }
@@ -476,23 +510,23 @@ func (v *jsonValue) AsString(name string) string {
 }
 func (v *jsonValue) AsQName(name string) appdef.QName {
 	if v, ok := v.json[name]; ok {
-		return v.(appdef.QName)
+		return appdef.MustParseQName(v.(string))
 	}
 	panic(errUndefined(name))
 }
 func (v *jsonValue) AsBool(name string) bool {
 	if v, ok := v.json[name]; ok {
-		return v.(bool)
+		return v.(string) == "true"
 	}
 	panic(errUndefined(name))
 }
 func (v *jsonValue) AsRecordID(name string) istructs.RecordID {
 	if v, ok := v.json[name]; ok {
-		return v.(istructs.RecordID)
+		return istructs.RecordID(v.(float64))
 	}
 	panic(errUndefined(name))
 }
-func (v *jsonValue) RecordIDsß(includeNulls bool, cb func(string, istructs.RecordID)) {}
+func (v *jsonValue) RecordIDs(includeNulls bool, cb func(string, istructs.RecordID)) {}
 func (v *jsonValue) FieldNames(cb func(string)) {
 	for name := range v.json {
 		cb(name)
@@ -632,14 +666,21 @@ func (v *wLogValue) AsRecord(_ string) (record istructs.IRecord) {
 	return v.event.ArgumentObject().AsRecord()
 }
 func (v *wLogValue) AsValue(name string) istructs.IStateValue {
-	if name != Field_CUDs {
-		panic(ErrNotSupported)
+	if name == Field_CUDs {
+		sv := &cudsValue{}
+		v.event.CUDs(func(rec istructs.ICUDRow) {
+			sv.cuds = append(sv.cuds, rec)
+		})
+		return sv
 	}
-	sv := &cudsValue{}
-	v.event.CUDs(func(rec istructs.ICUDRow) {
-		sv.cuds = append(sv.cuds, rec)
-	})
-	return sv
+	if name == Field_ArgumentObject {
+		arg := v.event.ArgumentObject()
+		if arg == nil {
+			return nil
+		}
+		return &objectValue{object: arg}
+	}
+	panic(errUndefined(name))
 }
 
 type sendMailKeyBuilder struct {
@@ -1028,6 +1069,14 @@ func (c *resultValueBuilder) Equal(src istructs.IStateValueBuilder) bool {
 	return reflect.DeepEqual(o1, o2)
 }
 
+func (c *resultValueBuilder) BuildValue() istructs.IStateValue {
+	o, err := c.resultBuilder.Build()
+	if err != nil {
+		panic(err)
+	}
+	return &objectValue{object: o}
+}
+
 func (c *resultValueBuilder) PutInt32(name string, value int32) {
 	c.resultBuilder.PutInt32(name, value)
 }
@@ -1065,7 +1114,7 @@ func (c *resultValueBuilder) PutRecordID(name string, value istructs.RecordID) {
 
 type wsTypeKey struct {
 	wsid     istructs.WSID
-	appQName istructs.AppQName
+	appQName appdef.AppQName
 }
 
 type wsTypeVailidator struct {

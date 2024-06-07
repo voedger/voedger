@@ -6,14 +6,17 @@ package sqlquery
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
+	"runtime/debug"
 	"strconv"
 
 	"github.com/blastrain/vitess-sqlparser/sqlparser"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appparts"
+	"github.com/voedger/voedger/pkg/dml"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/processors"
@@ -21,26 +24,40 @@ import (
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-func execQrySqlQuery(asp istructs.IAppStructsProvider, appQName istructs.AppQName) func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
+func execQrySqlQuery(asp istructs.IAppStructsProvider, appQName appdef.AppQName) func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 	return func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 
 		query := args.ArgumentObject.AsString(field_Query)
-		app := appQName
-		wsID := args.WSID
 
-		if a, w, c, err := parseQueryAppWs(query); err == nil {
-			if a != istructs.NullAppQName {
-				app = a
-			}
-			if w != 0 {
-				wsID = w
-			}
-			query = c
+		op, err := dml.ParseQuery(query)
+		if err != nil {
+			return coreutils.NewHTTPError(http.StatusBadRequest, err)
+		}
+
+		if op.Kind != dml.OpKind_Select {
+			return coreutils.NewHTTPErrorf(http.StatusBadRequest, "'select' operation is expected")
+		}
+
+		app := appQName
+		if op.AppQName != appdef.NullAppQName {
+			app = op.AppQName
 		}
 
 		appStructs, err := asp.AppStructs(app)
 		if err != nil {
 			return err
+		}
+
+		var wsID istructs.WSID
+		switch op.Workspace.Kind {
+		case dml.WorkspaceKind_AppWSNum:
+			wsID = istructs.NewWSID(istructs.MainClusterID, istructs.FirstBaseAppWSID+istructs.WSID(op.Workspace.ID))
+		case dml.WorkspaceKind_WSID:
+			wsID = istructs.WSID(op.Workspace.ID)
+		case dml.WorkspaceKind_PseudoWSID:
+			wsID = coreutils.GetAppWSID(istructs.WSID(op.Workspace.ID), appStructs.NumAppWorkspaces())
+		default:
+			wsID = args.WSID
 		}
 
 		if wsID != args.WSID {
@@ -57,7 +74,7 @@ func execQrySqlQuery(asp istructs.IAppStructsProvider, appQName istructs.AppQNam
 			}
 		}
 
-		stmt, err := sqlparser.Parse(query)
+		stmt, err := sqlparser.Parse(op.CleanSQL)
 		if err != nil {
 			return err
 		}
@@ -88,20 +105,25 @@ func execQrySqlQuery(asp istructs.IAppStructsProvider, appQName istructs.AppQNam
 		table := s.From[0].(*sqlparser.AliasedTableExpr).Expr.(sqlparser.TableName)
 		source := appdef.NewQName(table.Qualifier.String(), table.Name.String())
 
-		switch appStructs.AppDef().Type(source).Kind() {
+		kind := appStructs.AppDef().Type(source).Kind()
+		switch kind {
 		case appdef.TypeKind_ViewRecord:
+			if op.EntityID > 0 {
+				return errors.New("ID must not be specified on select from view")
+			}
 			return readViewRecords(ctx, wsID, appdef.NewQName(table.Qualifier.String(), table.Name.String()), whereExpr, appStructs, f, callback)
 		case appdef.TypeKind_CDoc:
 			fallthrough
 		case appdef.TypeKind_CRecord:
 			fallthrough
 		case appdef.TypeKind_WDoc:
-			return readRecords(wsID, source, whereExpr, appStructs, f, callback)
+			return coreutils.WrapSysError(readRecords(wsID, source, whereExpr, appStructs, f, callback, istructs.RecordID(op.EntityID)),
+				http.StatusBadRequest)
 		default:
 			if source != plog && source != wlog {
 				break
 			}
-			limit, offset, e := params(whereExpr, s.Limit)
+			limit, offset, e := params(whereExpr, s.Limit, istructs.Offset(op.EntityID))
 			if e != nil {
 				return e
 			}
@@ -118,12 +140,12 @@ func execQrySqlQuery(asp istructs.IAppStructsProvider, appQName istructs.AppQNam
 	}
 }
 
-func params(expr sqlparser.Expr, limit *sqlparser.Limit) (int, istructs.Offset, error) {
+func params(expr sqlparser.Expr, limit *sqlparser.Limit, simpleOffset istructs.Offset) (int, istructs.Offset, error) {
 	l, err := lim(limit)
 	if err != nil {
 		return 0, 0, err
 	}
-	o, eq, err := offs(expr)
+	o, eq, err := offs(expr, simpleOffset)
 	if err != nil {
 		return 0, 0, err
 	}
@@ -142,7 +164,7 @@ func lim(limit *sqlparser.Limit) (int, error) {
 		return 0, err
 	}
 	if v < -1 {
-		return 0, fmt.Errorf("limit must be greater than -2")
+		return 0, errors.New("limit must be greater than -2")
 	}
 	if v == -1 {
 		return istructs.ReadToTheEnd, nil
@@ -150,13 +172,16 @@ func lim(limit *sqlparser.Limit) (int, error) {
 	return int(v), err
 }
 
-func offs(expr sqlparser.Expr) (istructs.Offset, bool, error) {
-	o := DefaultOffset
+func offs(expr sqlparser.Expr, simpleOffset istructs.Offset) (istructs.Offset, bool, error) {
+	o := istructs.FirstOffset
 	eq := false
 	switch r := expr.(type) {
 	case *sqlparser.ComparisonExpr:
 		if r.Left.(*sqlparser.ColName).Name.String() != "offset" {
 			return 0, false, fmt.Errorf("unsupported column name: %s", r.Left.(*sqlparser.ColName).Name.String())
+		}
+		if simpleOffset > 0 {
+			return 0, false, errors.New("both .Offset and 'where offset ...' clause can not be provided in one query")
 		}
 		v, e := parseInt64(r.Right.(*sqlparser.SQLVal).Val)
 		if e != nil {
@@ -174,9 +199,12 @@ func offs(expr sqlparser.Expr) (istructs.Offset, bool, error) {
 			return 0, false, fmt.Errorf("unsupported operation: %s", r.Operator)
 		}
 		if o <= 0 {
-			return 0, false, fmt.Errorf("offset must be greater than zero")
+			return 0, false, errors.New("offset must be greater than zero")
 		}
 	case nil:
+		if simpleOffset != istructs.NullOffset {
+			o = simpleOffset
+		}
 	default:
 		return 0, false, fmt.Errorf("unsupported expression: %T", r)
 	}
@@ -200,8 +228,10 @@ func renderDbEvent(data map[string]interface{}, f *filter, event istructs.IDbEve
 			if _, ok := event.(istructs.IWLogEvent); ok {
 				eventKind = "wlog"
 			}
-			logger.Error(fmt.Sprintf("failed to render %s event %s offset %d registered at %s: %v", eventKind, event.QName(), offset, event.RegisteredAt().String(), r))
-			panic(r)
+			stackTrace := string(debug.Stack())
+			errMes := fmt.Sprintf("failed to render %s event %s offset %d registered at %s: %v\n%s", eventKind, event.QName(), offset, event.RegisteredAt().String(), r, stackTrace)
+			logger.Error(errMes)
+			data["!!!Panic"] = errMes
 		}
 	}()
 	if f.filter("QName") {
@@ -225,14 +255,12 @@ func renderDbEvent(data map[string]interface{}, f *filter, event istructs.IDbEve
 	if f.filter("SyncedAt") {
 		data["SyncedAt"] = event.SyncedAt()
 	}
-	if f.filter("Error") {
-		if event.Error() != nil {
-			errorData := make(map[string]interface{})
-			errorData["ErrStr"] = event.Error().ErrStr()
-			errorData["QNameFromParams"] = event.Error().QNameFromParams().String()
-			errorData["ValidEvent"] = event.Error().ValidEvent()
-			errorData["OriginalEventBytes"] = event.Error().OriginalEventBytes()
-			data["Error"] = errorData
-		}
+	if f.filter("Error") && event.Error() != nil {
+		errorData := make(map[string]interface{})
+		errorData["ErrStr"] = event.Error().ErrStr()
+		errorData["QNameFromParams"] = event.Error().QNameFromParams().String()
+		errorData["ValidEvent"] = event.Error().ValidEvent()
+		errorData["OriginalEventBytes"] = event.Error().OriginalEventBytes()
+		data["Error"] = errorData
 	}
 }
