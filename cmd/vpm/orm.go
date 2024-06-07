@@ -118,7 +118,7 @@ func getPkgAppDefObjs(packagePath string, appDef appdef.IAppDef, headerContent s
 }
 
 func generateOrmFiles(pkgData map[ormPackageInfo][]interface{}, dir string) error {
-	ormFiles := make([]string, 0, len(pkgData)+1)
+	ormFiles := make([]string, 0, len(pkgData)+1) // extra 1 for sys.go file
 	for pkgInfo, pkgItems := range pkgData {
 		ormPkgData := ormPackage{
 			ormPackageInfo: pkgInfo,
@@ -131,10 +131,17 @@ func generateOrmFiles(pkgData map[ormPackageInfo][]interface{}, dir string) erro
 		ormFiles = append(ormFiles, ormFilePath)
 	}
 
-	sysFilePath := filepath.Join(dir, "types.go")
+	// generate sys.go file
+	sysFilePath := filepath.Join(dir, "sys.go")
 	ormFiles = append(ormFiles, sysFilePath)
 	if err := os.WriteFile(sysFilePath, []byte(sysContent), coreutils.FileMode_rw_rw_rw_); err != nil {
 		return fmt.Errorf(errInGeneratingOrmFileFormat, sysFilePath, err)
+	}
+
+	// generate .gitignore file
+	gitIgnoreFilePath := filepath.Join(dir, ".gitignore")
+	if err := os.WriteFile(gitIgnoreFilePath, []byte("*"), coreutils.FileMode_rw_rw_rw_); err != nil {
+		return fmt.Errorf(errInGeneratingOrmFileFormat, gitIgnoreFilePath, err)
 	}
 
 	return formatOrmFiles(ormFiles)
@@ -190,11 +197,11 @@ func newPackageItem(defaultLocalName string, pkgInfos map[string]ormPackageInfo,
 	}
 	pkgInfo := pkgInfos[localName]
 	return ormPackageItem{
-		Package:   pkgInfo,
-		QName:     qName.String(),
-		TypeQName: fmt.Sprintf("%s.%s", pkgInfo.FullPath, name),
-		Name:      name,
-		Type:      getObjType(obj),
+		Package: pkgInfo,
+		PkgPath: pkgInfo.FullPath,
+		QName:   qName.String(),
+		Name:    name,
+		Type:    getObjType(obj),
 	}
 }
 

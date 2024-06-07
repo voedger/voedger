@@ -33,9 +33,11 @@ type ID int64
 type Bytes []byte
 
 const (
-	FieldNameEventUnloggedArgumentObject = "UnloggedArgumentObject"
-	FieldNameEventArgumentObject = "ArgumentObject"
-	FieldNameSysID               = "sys.ID"
+	FieldNameEventUnloggedArgumentObject 	= "UnloggedArgumentObject"
+	FieldNameEventArgumentObject 			= "ArgumentObject"
+	FieldNameSysID               			= "sys.ID"
+	FieldName_IsSingleton					= "IsSingleton"
+	FieldName_ID                            = "ID"
 )
 
 type Type struct {

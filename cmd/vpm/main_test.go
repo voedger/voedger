@@ -313,7 +313,7 @@ func TestOrmExample2(t *testing.T) {
 	}
 	require := require.New(t)
 
-	err := execRootCmd([]string{"vpm", "orm", "-C", "../../examples/airsbp2"}, "1.0.0")
+	err := execRootCmd([]string{"vpm", "orm", "-C", "../../examples/airs-bp2/air"}, "1.0.0")
 	require.NoError(err)
 }
 
@@ -323,7 +323,7 @@ func TestBuildExample2(t *testing.T) {
 	}
 	require := require.New(t)
 
-	err := execRootCmd([]string{"vpm", "build", "-C", "../../examples/airsbp2"}, "1.0.0")
+	err := execRootCmd([]string{"vpm", "build", "-C", "../../examples/airs-bp2/air"}, "1.0.0")
 	require.NoError(err)
 }
 

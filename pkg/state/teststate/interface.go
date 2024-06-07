@@ -35,6 +35,7 @@ type ITestAPI interface {
 
 	// Intent
 	RequireIntent(t *testing.T, storage appdef.QName, entity appdef.FullQName, kb KeyBuilderCallback) IIntentAssertions
+	RequireRecordIntent(t *testing.T, storage appdef.QName, fQName appdef.IFullQName, keys, values map[string]any)
 }
 
 type ITestState interface {

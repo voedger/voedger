@@ -1,6 +1,8 @@
 -- Copyright (c) 2024-present unTill Software Development Group B. V.
 -- @author Maxim Geraskin
 
+-- TODO: use local directory untill like in the example airs-bp
+--IMPORT SCHEMA 'github.com/voedger/voedger/examples/airs-bp2/untill';
 IMPORT SCHEMA 'github.com/untillpro/airs-scheme/bp3' AS untill;
 
 APPLICATION AIR(
@@ -8,6 +10,7 @@ APPLICATION AIR(
 );
 
 WORKSPACE RestaurantWS (
+    DESCRIPTOR RestaurantDescriptor();
     USE TABLE untill.*;
 
 	TABLE ProformaPrinted INHERITS ODoc (
@@ -34,8 +37,8 @@ WORKSPACE RestaurantWS (
 	);
 
 	EXTENSION ENGINE BUILTIN (
-	    PROJECTOR FillPbillDates AFTER EXECUTE WITH PARAM ON untill.pbill INTENTS(View(PbillDates));
         COMMAND Orders(untill.orders);
         COMMAND Pbill(untill.pbill) RETURNS CmdPBillResult;
+	    PROJECTOR FillPbillDates AFTER EXECUTE ON Orders INTENTS(View(PbillDates));
 	);
 )

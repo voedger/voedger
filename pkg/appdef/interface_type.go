@@ -7,7 +7,7 @@ package appdef
 
 // # QName
 //
-// Qualified name
+// # Qualified name
 //
 // <pkg>.<entity>
 type QName struct {
@@ -17,7 +17,7 @@ type QName struct {
 
 // # FullQName
 //
-// Full qualified name
+// # Full qualified name
 //
 // <pkgPath>.<entity>
 type FullQName struct {
@@ -127,6 +127,11 @@ type IWithTypes interface {
 
 type ITypeBuilder interface {
 	ICommentsBuilder
+}
+
+type IFullQName interface {
+	PkgPath() string
+	Entity() string
 }
 
 // AnyType is used for return then type is any

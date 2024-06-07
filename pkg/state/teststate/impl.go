@@ -15,6 +15,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/compile"
 	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/iratesce"
 	"github.com/voedger/voedger/pkg/isecrets"
@@ -58,7 +59,8 @@ func NewTestState(processorKind int, packagePath string, createWorkspaces ...Tes
 	ts.ctx = context.Background()
 	ts.processorKind = processorKind
 	ts.secretReader = &secretReader{secrets: make(map[string][]byte)}
-	ts.buildAppDef(packagePath, ".", createWorkspaces...)
+	//ts.buildAppDef(packagePath, ".", createWorkspaces...)
+	ts.buildAppDef_(packagePath, createWorkspaces...)
 	ts.buildState(processorKind)
 	return ts
 }
@@ -279,6 +281,55 @@ func (ctx *testState) buildAppDef(packagePath string, packageDir string, createW
 	}
 }
 
+// buildAppDef_ alternative way of building IAppDef
+func (ctx *testState) buildAppDef_(packagePath string, createWorkspaces ...TestWorkspace) {
+	compileResult, err := compile.Compile("..")
+	if err != nil {
+		panic(err)
+	}
+
+	ctx.appDef = compileResult.AppDef
+
+	cfgs := make(istructsmem.AppConfigsType, 1)
+	cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, compileResult.AppDefBuilder)
+	cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
+	ctx.appDef.Extensions(func(i appdef.IExtension) {
+		if proj, ok := i.(appdef.IProjector); ok {
+			if proj.Sync() {
+				cfg.AddSyncProjectors(istructs.Projector{Name: i.QName()})
+			} else {
+				cfg.AddAsyncProjectors(istructs.Projector{Name: i.QName()})
+			}
+		} else if cmd, ok := i.(appdef.ICommand); ok {
+			cfg.Resources.Add(istructsmem.NewCommandFunction(cmd.QName(), istructsmem.NullCommandExec))
+		} else if q, ok := i.(appdef.IQuery); ok {
+			cfg.Resources.Add(istructsmem.NewCommandFunction(q.QName(), istructsmem.NullCommandExec))
+		}
+	})
+
+	asf := mem.Provide()
+	storageProvider := istorageimpl.Provide(asf)
+	prov := istructsmem.Provide(
+		cfgs,
+		iratesce.TestBucketsFactory,
+		payloads.ProvideIAppTokensFactory(itokensjwt.TestTokensJWT()),
+		storageProvider)
+	structs, err := prov.AppStructs(istructs.AppQName_test1_app1)
+	if err != nil {
+		panic(err)
+	}
+	ctx.appStructs = structs
+	ctx.plogGen = istructsmem.NewIDGenerator()
+	ctx.wsOffsets = make(map[istructs.WSID]istructs.Offset)
+
+	for _, ws := range createWorkspaces {
+		err = wsdescutil.CreateCDocWorkspaceDescriptorStub(ctx.appStructs, TestPartition, ws.WSID, appdef.NewQName(filepath.Base(packagePath), ws.WorkspaceDescriptor), ctx.nextPLogOffs(), ctx.nextWSOffs(ws.WSID))
+		if err != nil {
+			panic(err)
+		}
+	}
+}
+
 func (ctx *testState) nextPLogOffs() istructs.Offset {
 	ctx.plogOffset += 1
 	return ctx.plogOffset
@@ -398,6 +449,40 @@ func (ia *intentAssertions) Assert(cb IntentAssertionsCallback) {
 	cb(require.New(ia.t), value)
 }
 
+func (ia *intentAssertions) EqualValues(values map[string]any) {
+	if ia.vb == nil {
+		require.Fail(ia.t, "expected intent to exist")
+		return
+	}
+	value := ia.vb.BuildValue()
+	if value == nil {
+		require.Fail(ia.t, "value builder does not support EqualValues operation")
+		return
+	}
+	for k, v := range values {
+		switch v.(type) {
+		case int32:
+			require.Equal(ia.t, v, value.AsInt32(k))
+		case int64:
+			require.Equal(ia.t, v, value.AsInt64(k))
+		case float32:
+			require.Equal(ia.t, v, value.AsFloat32(k))
+		case float64:
+			require.Equal(ia.t, v, value.AsFloat64(k))
+		case []byte:
+			require.Equal(ia.t, v, value.AsBytes(k))
+		case string:
+			require.Equal(ia.t, v, value.AsString(k))
+		case bool:
+			require.Equal(ia.t, v, value.AsBool(k))
+		case appdef.QName:
+			require.Equal(ia.t, v, value.AsQName(k))
+		case istructs.IStateValue:
+			require.Equal(ia.t, v, value.AsValue(k))
+		}
+	}
+}
+
 func (ia *intentAssertions) Equal(vbc ValueBuilderCallback) {
 	if ia.vb == nil {
 		panic("intent not found")
@@ -428,4 +513,24 @@ func (ctx *testState) RequireIntent(t *testing.T, storage appdef.QName, entity a
 		vb:  ctx.IState.FindIntent(kb),
 		ctx: ctx,
 	}
+}
+
+func (ctx *testState) RequireRecordIntent(t *testing.T, storage appdef.QName, fQName appdef.IFullQName, keys, values map[string]any) {
+	localPkgName := ctx.appDef.PackageLocalName(fQName.PkgPath())
+	localEntity := appdef.NewQName(localPkgName, fQName.Entity())
+	kb, err := ctx.IState.KeyBuilder(storage, localEntity)
+	if err != nil {
+		panic(err)
+	}
+
+	state.PopulateKeys(kb, keys)
+
+	assertion := &intentAssertions{
+		t:   t,
+		kb:  kb,
+		vb:  ctx.IState.FindIntent(kb),
+		ctx: ctx,
+	}
+
+	assertion.EqualValues(values)
 }

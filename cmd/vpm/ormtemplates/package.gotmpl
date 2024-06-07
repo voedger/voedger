@@ -6,7 +6,10 @@
 
 package orm
 
-import "github.com/voedger/voedger/pkg/exttinygo"
+import (
+	"github.com/voedger/voedger/pkg/exttinygo"
+)
+
 
 // package variables
 var Package_{{.Name}} = struct {
@@ -14,7 +17,7 @@ var Package_{{.Name}} = struct {
 {{end}}
 }{  {{range .Items}}
     {{.Type}}_{{.Name}}: {{.Type}}_{{$.Name}}_{{.Name}}{
-        Type: Type{qname: "{{.TypeQName}}"},
+        Type: Type{qname: "{{.PkgPath}}.{{.Name}}"},
     },{{end}}
 }
 
