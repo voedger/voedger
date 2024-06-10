@@ -521,7 +521,7 @@ func (ia *intentAssertions) Assert(cb IntentAssertionsCallback) {
 	cb(require.New(ia.t), value)
 }
 
-func (ia *intentAssertions) EqualValues(values map[string]any) {
+func (ia *intentAssertions) EqualValues(expectedValues map[string]any) {
 	if ia.vb == nil {
 		require.Fail(ia.t, "expected intent to exist")
 		return
@@ -531,26 +531,26 @@ func (ia *intentAssertions) EqualValues(values map[string]any) {
 		require.Fail(ia.t, "value builder does not support EqualValues operation")
 		return
 	}
-	for k, v := range values {
-		switch v.(type) {
+	for expectedKey, expectedValue := range expectedValues {
+		switch expectedValue.(type) {
 		case int32:
-			require.Equal(ia.t, v, value.AsInt32(k))
+			require.Equal(ia.t, expectedValue, value.AsInt32(expectedKey))
 		case int64:
-			require.Equal(ia.t, v, value.AsInt64(k))
+			require.Equal(ia.t, expectedValue, value.AsInt64(expectedKey))
 		case float32:
-			require.Equal(ia.t, v, value.AsFloat32(k))
+			require.Equal(ia.t, expectedValue, value.AsFloat32(expectedKey))
 		case float64:
-			require.Equal(ia.t, v, value.AsFloat64(k))
+			require.Equal(ia.t, expectedValue, value.AsFloat64(expectedKey))
 		case []byte:
-			require.Equal(ia.t, v, value.AsBytes(k))
+			require.Equal(ia.t, expectedValue, value.AsBytes(expectedKey))
 		case string:
-			require.Equal(ia.t, v, value.AsString(k))
+			require.Equal(ia.t, expectedValue, value.AsString(expectedKey))
 		case bool:
-			require.Equal(ia.t, v, value.AsBool(k))
+			require.Equal(ia.t, expectedValue, value.AsBool(expectedKey))
 		case appdef.QName:
-			require.Equal(ia.t, v, value.AsQName(k))
+			require.Equal(ia.t, expectedValue, value.AsQName(expectedKey))
 		case istructs.IStateValue:
-			require.Equal(ia.t, v, value.AsValue(k))
+			require.Equal(ia.t, expectedValue, value.AsValue(expectedKey))
 		}
 	}
 }
@@ -587,7 +587,7 @@ func (ctx *testState) RequireIntent(t *testing.T, storage appdef.QName, entity a
 	}
 }
 
-func (ctx *testState) RequireRecordIntent(t *testing.T, storage appdef.QName, fQName appdef.IFullQName, keys, values map[string]any) {
+func (ctx *testState) RequireRecordIntent(t *testing.T, storage appdef.QName, fQName appdef.IFullQName, keys, expectedValues map[string]any) {
 	localPkgName := ctx.appDef.PackageLocalName(fQName.PkgPath())
 	localEntity := appdef.NewQName(localPkgName, fQName.Entity())
 	kb, err := ctx.IState.KeyBuilder(storage, localEntity)
@@ -604,5 +604,5 @@ func (ctx *testState) RequireRecordIntent(t *testing.T, storage appdef.QName, fQ
 		ctx: ctx,
 	}
 
-	assertion.EqualValues(values)
+	assertion.EqualValues(expectedValues)
 }
