@@ -33,6 +33,7 @@ var errEntityRequiredForValueBuilder = errors.New("entity required for ValueBuil
 var errWorkspaceDescriptorNotFound = errors.New("WorkspaceDescriptor not found in workspace")
 var errDescriptorForUndefinedWorkspace = errors.New("workspace descriptor for undefined workspace")
 var errCommandNotSpecified = errors.New("command not specified")
+var errBlobIDNotSpecified = errors.New("blob ID not specified")
 
 func errUnexpectedType(actual interface{}) error {
 	return fmt.Errorf("unexpected type: %v", actual)

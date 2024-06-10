@@ -15,6 +15,7 @@ import (
 type stateOpts struct {
 	messages                 chan smtptest.Message
 	federationCommandHandler FederationCommandHandler
+	federationBlobHandler    FederationBlobHandler
 	customHttpClient         IHttpClient
 	uniquesHandler           UniquesHandler
 }

@@ -83,6 +83,12 @@ func WithFedearationCommandHandler(handler FederationCommandHandler) StateOptFun
 	}
 }
 
+func WithFederationBlobHandler(handler FederationBlobHandler) StateOptFunc {
+	return func(opts *stateOpts) {
+		opts.federationBlobHandler = handler
+	}
+}
+
 func WithUniquesHandler(handler UniquesHandler) StateOptFunc {
 	return func(opts *stateOpts) {
 		opts.uniquesHandler = handler
