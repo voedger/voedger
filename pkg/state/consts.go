@@ -24,6 +24,7 @@ var (
 	QueryContext      = appdef.NewQName(appdef.SysPackage, "QueryContext")
 	Response          = appdef.NewQName(appdef.SysPackage, "Response")
 	FederationCommand = appdef.NewQName(appdef.SysPackage, "FederationCommand")
+	FederationBlob    = appdef.NewQName(appdef.SysPackage, "FederationBlob")
 	Uniq              = appdef.NewQName(appdef.SysPackage, "Uniq")
 )
 
@@ -83,6 +84,7 @@ const (
 	Field_Owner         = "Owner"
 	Field_AppName       = "AppName"
 	Field_Command       = "Command"
+	Field_BlobID        = "BlobID"
 	Field_ExpectedCodes = "ExpectedCodes"
 	Field_NewIDs        = "NewIDs"
 	Field_Result        = "Result"
