@@ -5,6 +5,7 @@
 package state
 
 import (
+	"errors"
 	"io"
 	"strconv"
 	"strings"
@@ -113,7 +114,7 @@ func (s *federationBlobStorage) Read(key istructs.IStateKeyBuilder, callback ist
 	var n int
 	for err == nil {
 		n, err = readCloser.Read(buffer)
-		if err != nil && err != io.EOF {
+		if err != nil && !errors.Is(err, io.EOF) {
 			break
 		}
 		if n == 0 {
