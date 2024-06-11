@@ -114,7 +114,7 @@ type BLOBWorkspaceTemplateField struct {
 }
 
 // for read and write
-// caller must close the reader after use
+// caller must read out and close the reader
 type BLOBReader struct {
 	io.ReadCloser
 	BLOBDesc
