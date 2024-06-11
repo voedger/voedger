@@ -5,6 +5,7 @@
 package state
 
 import (
+	"bytes"
 	"errors"
 	"io"
 	"strconv"
@@ -32,7 +33,8 @@ type federationBlobStorage struct {
 func (s *federationBlobStorage) NewKeyBuilder(appdef.QName, istructs.IStateKeyBuilder) istructs.IStateKeyBuilder {
 	return newKeyBuilder(FederationBlob, appdef.NullQName)
 }
-func (s *federationBlobStorage) getReadCloser(key istructs.IStateKeyBuilder) (io.ReadCloser, error) {
+
+func (s *federationBlobStorage) Read(key istructs.IStateKeyBuilder, callback istructs.ValueCallback) (err error) {
 	appqname := s.appStructs().AppQName()
 	var owner string
 	var appname string
@@ -46,7 +48,7 @@ func (s *federationBlobStorage) getReadCloser(key istructs.IStateKeyBuilder) (io
 		for _, ec := range strings.Split(v.(string), ",") {
 			code, err := strconv.Atoi(ec)
 			if err != nil {
-				return nil, err
+				return err
 			}
 			opts = append(opts, coreutils.WithExpectedCode(code))
 		}
@@ -55,7 +57,7 @@ func (s *federationBlobStorage) getReadCloser(key istructs.IStateKeyBuilder) (io
 	if v, ok := kb.data[Field_BlobID]; ok {
 		blobId = v.(int64)
 	} else {
-		return nil, errBlobIDNotSpecified
+		return errBlobIDNotSpecified
 	}
 
 	if v, ok := kb.data[Field_Owner]; ok {
@@ -76,14 +78,14 @@ func (s *federationBlobStorage) getReadCloser(key istructs.IStateKeyBuilder) (io
 		wsid = s.wsid()
 	}
 
-	var readCloser io.ReadCloser
+	var body []byte
 
 	if s.emulation != nil {
 		result, err := s.emulation(owner, appname, wsid, blobId)
 		if err != nil {
-			return nil, err
+			return err
 		}
-		readCloser = io.NopCloser(strings.NewReader(string(result)))
+		body = result
 	} else {
 		if v, ok := kb.data[Field_Token]; ok {
 			opts = append(opts, coreutils.WithAuthorizeBy(v.(string)))
@@ -91,29 +93,22 @@ func (s *federationBlobStorage) getReadCloser(key istructs.IStateKeyBuilder) (io
 			appQName := appdef.NewAppQName(owner, appname)
 			systemPrincipalToken, err := payloads.GetSystemPrincipalToken(s.tokens, appQName)
 			if err != nil {
-				return nil, err
+				return err
 			}
 			opts = append(opts, coreutils.WithAuthorizeBy(systemPrincipalToken))
 		}
 		resp, err := s.federation.ReadBLOB(appdef.NewAppQName(owner, appname), wsid, istructs.RecordID(blobId), opts...)
 		if err != nil {
-			return nil, err
+			return err
 		}
-		readCloser = resp.HTTPResp.Body
-	}
-	return readCloser, nil
-}
-func (s *federationBlobStorage) Read(key istructs.IStateKeyBuilder, callback istructs.ValueCallback) (err error) {
-	readCloser, err := s.getReadCloser(key)
-	if err != nil {
-		return err
+		body = []byte(resp.Body)
 	}
 
-	defer readCloser.Close()
+	reader := bytes.NewReader(body)
 	buffer := make([]byte, readBufferSize)
 	var n int
 	for err == nil {
-		n, err = readCloser.Read(buffer)
+		n, err = reader.Read(buffer)
 		if err != nil && !errors.Is(err, io.EOF) {
 			break
 		}
