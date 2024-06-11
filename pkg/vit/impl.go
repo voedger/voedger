@@ -86,6 +86,14 @@ func newVit(t testing.TB, vitCfg *VITConfig, useCas bool) *VIT {
 		vvmCfg:  &cfg,
 		vitApps: vitApps{},
 	}
+
+	if useCas {
+		cfg.StorageFactory = func() (provider istorage.IAppStorageFactory, err error) {
+			logger.Info("using istoragecas ", fmt.Sprint(vvm.DefaultCasParams))
+			return cas.Provide(vvm.DefaultCasParams)
+		}
+	}
+
 	for _, opt := range vitCfg.opts {
 		opt(vitPreConfig)
 	}
@@ -99,12 +107,6 @@ func newVit(t testing.TB, vitCfg *VITConfig, useCas bool) *VIT {
 	cfg.RouterWriteTimeout = int(debugTimeout)
 	cfg.BusTimeout = vvm.BusTimeout(debugTimeout)
 
-	if useCas {
-		cfg.StorageFactory = func() (provider istorage.IAppStorageFactory, err error) {
-			logger.Info("using istoragecas ", fmt.Sprint(vvm.DefaultCasParams))
-			return cas.Provide(vvm.DefaultCasParams)
-		}
-	}
 
 	vvm, err := vvm.ProvideVVM(&cfg, 0)
 	require.NoError(t, err)

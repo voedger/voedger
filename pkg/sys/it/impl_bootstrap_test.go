@@ -132,7 +132,7 @@ func getTestCfg(numParts istructs.NumAppPartitions, numAppWS istructs.NumAppWork
 			cfg.StorageFactory = func() (provider istorage.IAppStorageFactory, err error) {
 				return storage, nil
 			}
-			cfg.KeyspaceNameSuffix = testName
+			// cfg.KeyspaceNameSuffix = testName
 		}),
 	)
 }
