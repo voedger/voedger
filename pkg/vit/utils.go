@@ -8,8 +8,8 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"math"
-	"mime"
 	"testing"
 	"time"
 
@@ -30,15 +30,14 @@ import (
 
 func (vit *VIT) GetBLOB(appQName appdef.AppQName, wsid istructs.WSID, blobID istructs.RecordID, token string) *BLOB {
 	vit.T.Helper()
-	resp, err := vit.IFederation.ReadBLOB(appQName, wsid, blobID, coreutils.WithAuthorizeBy(token))
+	blobReader, err := vit.IFederation.ReadBLOB(appQName, wsid, blobID, coreutils.WithAuthorizeBy(token))
 	require.NoError(vit.T, err)
-	contentDisposition := resp.HTTPResp.Header.Get(coreutils.ContentDisposition)
-	_, params, err := mime.ParseMediaType(contentDisposition)
+	blobContent, err := io.ReadAll(blobReader)
 	require.NoError(vit.T, err)
 	return &BLOB{
-		Content:  []byte(resp.Body),
-		Name:     params["filename"],
-		MimeType: resp.HTTPResp.Header.Get(coreutils.ContentType),
+		Content:  blobContent,
+		Name:     blobReader.Name,
+		MimeType: blobReader.MimeType,
 	}
 }
 
