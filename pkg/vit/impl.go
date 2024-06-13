@@ -5,9 +5,12 @@
 package vit
 
 import (
+	"bytes"
 	_ "embed"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"runtime"
 	"strconv"
@@ -106,7 +109,6 @@ func newVit(t testing.TB, vitCfg *VITConfig, useCas bool) *VIT {
 	cfg.RouterReadTimeout = int(debugTimeout)
 	cfg.RouterWriteTimeout = int(debugTimeout)
 	cfg.BusTimeout = vvm.BusTimeout(debugTimeout)
-
 
 	vvm, err := vvm.ProvideVVM(&cfg, 0)
 	require.NoError(t, err)
@@ -356,17 +358,17 @@ func (vit *VIT) PostWSSys(ws *AppWorkspace, funcName string, body string, opts .
 	return vit.PostApp(ws.Owner.AppQName, ws.WSID, funcName, body, opts...)
 }
 
-func (vit *VIT) UploadBLOBs(appQName appdef.AppQName, wsid istructs.WSID, blobs []coreutils.BLOB, opts ...coreutils.ReqOptFunc) (blobIDs []istructs.RecordID) {
-	vit.T.Helper()
-	blobIDs, err := vit.IFederation.UploadBLOBs(appQName, wsid, blobs, opts...)
-	require.NoError(vit.T, err)
-	return blobIDs
-}
-
 func (vit *VIT) UploadBLOB(appQName appdef.AppQName, wsid istructs.WSID, blobName string, blobMimeType string, blobContent []byte,
 	opts ...coreutils.ReqOptFunc) (blobID istructs.RecordID) {
 	vit.T.Helper()
-	blobID, err := vit.IFederation.UploadBLOB(appQName, wsid, blobName, blobMimeType, blobContent, opts...)
+	blobReader := coreutils.BLOBReader{
+		BLOBDesc: coreutils.BLOBDesc{
+			Name:     blobName,
+			MimeType: blobMimeType,
+		},
+		ReadCloser: io.NopCloser(bytes.NewReader(blobContent)),
+	}
+	blobID, err := vit.IFederation.UploadBLOB(appQName, wsid, blobReader, opts...)
 	require.NoError(vit.T, err)
 	return blobID
 }
@@ -378,11 +380,27 @@ func (vit *VIT) Func(url string, body string, opts ...coreutils.ReqOptFunc) *cor
 	return res
 }
 
-func (vit *VIT) ReadBLOB(appQName appdef.AppQName, wsid istructs.WSID, blobID istructs.RecordID, optFuncs ...coreutils.ReqOptFunc) *coreutils.HTTPResponse {
+// blob ReadCloser must be read out by the test
+// will be closed by the VIT
+func (vit *VIT) ReadBLOB(appQName appdef.AppQName, wsid istructs.WSID, blobID istructs.RecordID, optFuncs ...coreutils.ReqOptFunc) coreutils.BLOBReader {
 	vit.T.Helper()
-	resp, err := vit.IFederation.ReadBLOB(appQName, wsid, blobID, optFuncs...)
+	reader, err := vit.IFederation.ReadBLOB(appQName, wsid, blobID, optFuncs...)
 	require.NoError(vit.T, err)
-	return resp
+	vit.cleanups = append(vit.cleanups, func(vit *VIT) {
+		if reader.ReadCloser != nil {
+			buf := make([]byte, 1)
+			_, err := reader.Read(buf)
+			if errors.Is(err, io.EOF) {
+				return
+			}
+			require.NoError(vit.T, err)
+			_, err = io.Copy(io.Discard, reader)
+			require.NoError(vit.T, err)
+			defer reader.Close()
+			vit.T.Fatal("BLOB reader is not read out")
+		}
+	})
+	return reader
 }
 
 func (vit *VIT) POST(relativeURL string, body string, opts ...coreutils.ReqOptFunc) *coreutils.HTTPResponse {

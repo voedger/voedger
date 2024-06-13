@@ -94,6 +94,12 @@ func WithResponseHandler(responseHandler func(httpResp *http.Response)) ReqOptFu
 	}
 }
 
+func withBodyReader(bodyReader io.Reader) ReqOptFunc {
+	return func(opts *reqOpts) {
+		opts.bodyReader = bodyReader
+	}
+}
+
 // WithLongPolling, WithResponseHandler and WithDiscardResponse are mutual exclusive
 func WithLongPolling() ReqOptFunc {
 	return func(ro *reqOpts) {
@@ -242,10 +248,16 @@ type reqOpts struct {
 	discardResp           bool
 	expectedSysErrorCode  int
 	retriersOnErrors      []retrier
+	bodyReader            io.Reader
 }
 
-func req(method, url, body string, headers, cookies map[string]string) (*http.Request, error) {
-	req, err := http.NewRequest(method, url, bytes.NewReader([]byte(body)))
+// body and bodyReader are mutual exclusive
+func req(method, url, body string, bodyReader io.Reader, headers, cookies map[string]string) (req *http.Request, err error) {
+	if bodyReader != nil {
+		req, err = http.NewRequest(method, url, bodyReader)
+	} else {
+		req, err = http.NewRequest(method, url, bytes.NewReader([]byte(body)))
+	}
 	if err != nil {
 		return nil, fmt.Errorf("NewRequest() failed: %w", err)
 	}
@@ -262,9 +274,18 @@ func req(method, url, body string, headers, cookies map[string]string) (*http.Re
 	return req, nil
 }
 
+func (c *implIHTTPClient) ReqReader(urlStr string, bodyReader io.Reader, optFuncs ...ReqOptFunc) (*HTTPResponse, error) {
+	optFuncs = append(optFuncs, withBodyReader(bodyReader))
+	return c.req(urlStr, "", optFuncs...)
+}
+
 // status code expected -> DiscardBody, ResponseHandler are used
 // status code is unexpected -> DiscardBody, ResponseHandler are ignored, body is read out, wrapped ErrUnexpectedStatusCode is returned
 func (c *implIHTTPClient) Req(urlStr string, body string, optFuncs ...ReqOptFunc) (*HTTPResponse, error) {
+	return c.req(urlStr, body, optFuncs...)
+}
+
+func (c *implIHTTPClient) req(urlStr string, body string, optFuncs ...ReqOptFunc) (*HTTPResponse, error) {
 	opts := &reqOpts{
 		headers: map[string]string{},
 		cookies: map[string]string{},
@@ -310,7 +331,7 @@ func (c *implIHTTPClient) Req(urlStr string, body string, optFuncs ...ReqOptFunc
 
 reqLoop:
 	for time.Since(startTime) < maxHTTPRequestTimeout {
-		req, err := req(opts.method, urlStr, body, opts.headers, opts.cookies)
+		req, err := req(opts.method, urlStr, body, opts.bodyReader, opts.headers, opts.cookies)
 		if err != nil {
 			return nil, err
 		}
@@ -344,21 +365,19 @@ reqLoop:
 		}
 		break
 	}
+	isCodeExpected := slices.Contains(opts.expectedHTTPCodes, resp.StatusCode)
+	if isCodeExpected && opts.discardResp {
+		err := discardRespBody(resp)
+		return nil, err
+	}
 	httpResponse := &HTTPResponse{
 		HTTPResp:             resp,
 		expectedSysErrorCode: opts.expectedSysErrorCode,
 		expectedHTTPCodes:    opts.expectedHTTPCodes,
 	}
-	isCodeExpected := slices.Contains(opts.expectedHTTPCodes, resp.StatusCode)
-	if isCodeExpected {
-		if opts.responseHandler != nil {
-			opts.responseHandler(resp)
-			return httpResponse, nil
-		}
-		if opts.discardResp {
-			err := discardRespBody(resp)
-			return nil, err
-		}
+	if isCodeExpected && opts.responseHandler != nil {
+		opts.responseHandler(resp)
+		return httpResponse, nil
 	}
 	respBody, err := readBody(resp)
 	if err != nil {

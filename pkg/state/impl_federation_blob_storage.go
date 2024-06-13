@@ -95,11 +95,11 @@ func (s *federationBlobStorage) getReadCloser(key istructs.IStateKeyBuilder) (io
 			}
 			opts = append(opts, coreutils.WithAuthorizeBy(systemPrincipalToken))
 		}
-		resp, err := s.federation.ReadBLOB(appdef.NewAppQName(owner, appname), wsid, istructs.RecordID(blobId), opts...)
+		blobReader, err := s.federation.ReadBLOB(appdef.NewAppQName(owner, appname), wsid, istructs.RecordID(blobId), opts...)
 		if err != nil {
 			return nil, err
 		}
-		readCloser = resp.HTTPResp.Body
+		readCloser = blobReader
 	}
 	return readCloser, nil
 }
