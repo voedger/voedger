@@ -68,8 +68,8 @@ func (provider *appStructsProviderType) AppStructs(appName appdef.AppQName) (str
 }
 
 // istructs.IAppStructsProvider.AppStructsByDef
-func (provider *appStructsProviderType) AppStructsByDef(appDef appdef.IAppDef) (structs istructs.IAppStructs, err error) {
-	return provider.AppStructs(appDef.Name())
+func (provider *appStructsProviderType) AppStructsByDef(appName appdef.AppQName, appDef appdef.IAppDef) (structs istructs.IAppStructs, err error) {
+	return provider.AppStructs(appName)
 }
 
 // appStructsType implements IAppStructs interface

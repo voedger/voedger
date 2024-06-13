@@ -37,11 +37,6 @@ type IAppDef interface {
 
 	IWithRates
 	IWithLimits
-
-	// Application qualified name
-	//
-	// owner (provider) and name (application) separated by slash: `owner/name`.
-	Name() AppQName
 }
 
 type IAppDefBuilder interface {

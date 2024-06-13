@@ -732,7 +732,7 @@ func Test_EventUpdateRawCud(t *testing.T) {
 	docName := appdef.NewQName("test", "cDoc")
 	recName := appdef.NewQName("test", "cRec")
 
-	adb := appdef.New(appName)
+	adb := appdef.New()
 	adb.AddPackage("test", "test.com/test")
 
 	t.Run("must ok to construct application", func(t *testing.T) {
@@ -916,7 +916,7 @@ func Test_UpdateCorrupted(t *testing.T) {
 
 	docName := appdef.NewQName("test", "doc")
 
-	adb := appdef.New(appName)
+	adb := appdef.New()
 	adb.AddPackage("test", "test.com/test")
 
 	t.Run("should be ok to build AppDef", func(t *testing.T) {
@@ -1049,7 +1049,7 @@ func Test_BuildPLogEvent(t *testing.T) {
 
 	docName := appdef.NewQName("test", "doc")
 
-	adb := appdef.New(appName)
+	adb := appdef.New()
 	adb.AddPackage("test", "test.com/test")
 
 	t.Run("should be ok to build AppDef", func(t *testing.T) {
@@ -1247,7 +1247,7 @@ func Test_SingletonCDocEvent(t *testing.T) {
 	docName, doc2Name := appdef.NewQName("test", "cDoc"), appdef.NewQName("test", "cDoc2")
 	docID := istructs.NullRecordID
 
-	adb := appdef.New(appName)
+	adb := appdef.New()
 	adb.AddPackage("test", "test.com/test")
 
 	t.Run("must ok to construct singleton CDoc", func(t *testing.T) {

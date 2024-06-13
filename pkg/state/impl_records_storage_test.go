@@ -16,7 +16,7 @@ import (
 )
 
 func createAppDef() appdef.IAppDef {
-	appDef := appdef.New(testAppQName)
+	appDef := appdef.New()
 	appDef.AddObject(testRecordQName1).
 		AddField("number", appdef.DataKind_int64, false)
 	appDef.AddObject(testRecordQName2).
@@ -70,7 +70,7 @@ func TestRecordsStorage_GetBatch(t *testing.T) {
 				items[1].Record = record2
 			})
 
-		appDef := appdef.New(testAppQName)
+		appDef := appdef.New()
 		appDef.AddObject(testRecordQName1).
 			AddField("number", appdef.DataKind_int64, false)
 		appDef.AddObject(testRecordQName2).

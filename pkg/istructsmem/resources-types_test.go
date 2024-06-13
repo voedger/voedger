@@ -26,8 +26,6 @@ func TestResourceEnumerator(t *testing.T) {
 	require := require.New(t)
 
 	var (
-		appName = istructs.AppQName_test1_app1
-
 		cfg *AppConfigType
 		app istructs.IAppStructs
 
@@ -43,7 +41,7 @@ func TestResourceEnumerator(t *testing.T) {
 
 	t.Run("builds app", func(t *testing.T) {
 
-		adb := appdef.New(appName)
+		adb := appdef.New()
 		adb.AddPackage("test", "test.com/test")
 
 		t.Run("must be ok to build application", func(t *testing.T) {

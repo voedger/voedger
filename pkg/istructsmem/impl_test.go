@@ -46,7 +46,7 @@ func TestBasicUsage(t *testing.T) {
 
 	// create app configuration
 	appConfigs := func() AppConfigsType {
-		adb := appdef.New(appName)
+		adb := appdef.New()
 		adb.AddPackage("test", "test.com/test")
 
 		saleParamsName := appdef.NewQName("test", "SaleParams")
@@ -202,7 +202,7 @@ func TestBasicUsage_ViewRecords(t *testing.T) {
 	appName := istructs.AppQName_test1_app1
 
 	appConfigs := func() AppConfigsType {
-		adb := appdef.New(appName)
+		adb := appdef.New()
 		adb.AddPackage("test", "test.com/test")
 		view := adb.AddView(appdef.NewQName("test", "viewDrinks"))
 		view.Key().PartKey().AddField("partitionKey1", appdef.DataKind_int64)
@@ -303,7 +303,7 @@ func Test_appStructsType_ObjectBuilder(t *testing.T) {
 	objName := appdef.NewQName("test", "object")
 
 	appStructs := func() istructs.IAppStructs {
-		adb := appdef.New(appName)
+		adb := appdef.New()
 		adb.AddPackage("test", "test.com/test")
 		obj := adb.AddObject(objName)
 		obj.AddField("int", appdef.DataKind_int64, true)
@@ -482,7 +482,7 @@ func Test_BasicUsageDescribePackages(t *testing.T) {
 	appName := istructs.AppQName_test1_app1
 
 	app := func() istructs.IAppStructs {
-		adb := appdef.New(appName)
+		adb := appdef.New()
 		adb.AddPackage("structs", "test.com/structs")
 		adb.AddPackage("functions", "test.com/functions")
 
@@ -565,7 +565,7 @@ func Test_Provide(t *testing.T) {
 
 	t.Run("AppStructs() must error if unknown app name", func(t *testing.T) {
 		cfgs := make(AppConfigsType)
-		cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, appdef.New(istructs.AppQName_test1_app1))
+		cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, appdef.New())
 		cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 		p := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), nil)
 		require.NotNil(p)

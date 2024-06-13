@@ -26,7 +26,7 @@ func ExampleIAppDefBuilder_AddData() {
 
 	// how to build AppDef with data types
 	{
-		adb := appdef.New(appdef.NewAppQName("test", "app"))
+		adb := appdef.New()
 		adb.AddPackage("test", "test.com/test")
 
 		adb.AddData(numName, appdef.DataKind_int64, appdef.NullQName, appdef.MinExcl(0)).SetComment("Natural number")

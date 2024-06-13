@@ -29,7 +29,7 @@ func Test_KeyType(t *testing.T) {
 	appConfigs := func() AppConfigsType {
 		cfgs := make(AppConfigsType, 1)
 
-		adb := appdef.New(appName)
+		adb := appdef.New()
 		adb.AddPackage("test", "test.com/test")
 
 		t.Run("must be ok to build view", func(t *testing.T) {
@@ -197,7 +197,7 @@ func TestCore_ViewRecords(t *testing.T) {
 	appConfigs := func() AppConfigsType {
 		cfgs := make(AppConfigsType, 1)
 
-		adb := appdef.New(appName)
+		adb := appdef.New()
 		adb.AddPackage("test", "test.com/test")
 		t.Run("must be ok to build application", func(t *testing.T) {
 			view := adb.AddView(appdef.NewQName("test", "viewDrinks"))
@@ -842,7 +842,7 @@ func Test_ViewRecordsPutJSON(t *testing.T) {
 	appCfgs := func() AppConfigsType {
 		cfgs := make(AppConfigsType, 1)
 
-		adb := appdef.New(appName)
+		adb := appdef.New()
 		adb.AddPackage("test", "test.com/test")
 		t.Run("must be ok to build application", func(t *testing.T) {
 			view := adb.AddView(appdef.MustParseQName(viewName))
@@ -972,7 +972,7 @@ func Test_LoadStoreViewRecord_Bytes(t *testing.T) {
 
 	viewName := appdef.NewQName("test", "view")
 
-	adb := appdef.New(appName)
+	adb := appdef.New()
 	adb.AddPackage("test", "test.com/test")
 	t.Run("must be ok to build application", func(t *testing.T) {
 		v := adb.AddView(viewName)
@@ -1112,7 +1112,7 @@ func Test_ViewRecords_ClustColumnsQName(t *testing.T) {
 	//
 	appConfigs := func() AppConfigsType {
 
-		adb := appdef.New(appName)
+		adb := appdef.New()
 		adb.AddPackage("test", "test.com/test")
 		t.Run("must be ok to build application", func(t *testing.T) {
 			v := adb.AddView(appdef.NewQName("test", "viewDrinks"))
@@ -1190,7 +1190,7 @@ func Test_ViewRecord_GetBatch(t *testing.T) {
 	championshipsView := appdef.NewQName("test", "championships")
 	championsView := appdef.NewQName("test", "champions")
 
-	adb := appdef.New(appName)
+	adb := appdef.New()
 	adb.AddPackage("test", "test.com/test")
 	t.Run("must be ok to build application", func(t *testing.T) {
 		v := adb.AddView(championshipsView)
@@ -1467,7 +1467,7 @@ func Test_ViewRecordStructure(t *testing.T) {
 
 	viewName := appdef.NewQName("test", "view")
 
-	adb := appdef.New(appName)
+	adb := appdef.New()
 	adb.AddPackage("test", "test.com/test")
 	t.Run("must be ok to build application", func(t *testing.T) {
 		v := adb.AddView(viewName)

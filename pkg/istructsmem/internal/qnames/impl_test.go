@@ -50,7 +50,7 @@ func TestQNames(t *testing.T) {
 	names := New()
 	if err := names.Prepare(storage, versions,
 		func() appdef.IAppDef {
-			adb := appdef.New(appName)
+			adb := appdef.New()
 			adb.AddPackage("test", "test.com/test")
 			adb.AddCDoc(defName)
 			appDef, err := adb.Build()
@@ -102,7 +102,7 @@ func TestQNames(t *testing.T) {
 			names2 := New()
 			if err := names2.Prepare(storage, versions,
 				func() appdef.IAppDef {
-					adb := appdef.New(appName)
+					adb := appdef.New()
 					adb.AddPackage("test", "test.com/test")
 					adb.AddCDoc(defName)
 					appDef, err := adb.Build()
@@ -218,7 +218,7 @@ func TestQNamesPrepareErrors(t *testing.T) {
 		names := New()
 		err := names.Prepare(storage, versions,
 			func() appdef.IAppDef {
-				adb := appdef.New(appName)
+				adb := appdef.New()
 				adb.AddPackage("test", "test.com/test")
 				for i := 0; i <= MaxAvailableQNameID; i++ {
 					adb.AddObject(appdef.NewQName("test", fmt.Sprintf("name_%d", i)))
@@ -248,7 +248,7 @@ func TestQNamesPrepareErrors(t *testing.T) {
 			names := New()
 			err := names.Prepare(storage, versions,
 				func() appdef.IAppDef {
-					adb := appdef.New(appName)
+					adb := appdef.New()
 					adb.AddPackage("test", "test.com/test")
 					adb.AddObject(qName)
 					appDef, err := adb.Build()
@@ -272,7 +272,7 @@ func TestQNamesPrepareErrors(t *testing.T) {
 			names := New()
 			err := names.Prepare(storage, versions,
 				func() appdef.IAppDef {
-					adb := appdef.New(appName)
+					adb := appdef.New()
 					adb.AddPackage("test", "test.com/test")
 					adb.AddObject(qName)
 					appDef, err := adb.Build()

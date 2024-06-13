@@ -237,7 +237,7 @@ var testData = testDataType{
 func test() *testDataType {
 
 	prepareAppDef := func() appdef.IAppDefBuilder {
-		adb := appdef.New(testData.appName)
+		adb := appdef.New()
 		adb.AddPackage(testData.pkgName, testData.pkgPath)
 
 		{
@@ -410,7 +410,7 @@ func test() *testDataType {
 		testData.StorageProvider = istorageimpl.Provide(mem.Provide())
 
 		testData.AppStructsProvider = Provide(testData.AppConfigs, iratesce.TestBucketsFactory, testTokensFactory(), testData.StorageProvider)
-		testData.AppStructs, err = testData.AppStructsProvider.AppStructsByDef(testData.AppDef)
+		testData.AppStructs, err = testData.AppStructsProvider.AppStructsByDef(testData.appName, testData.AppDef)
 		if err != nil {
 			panic(err)
 		}

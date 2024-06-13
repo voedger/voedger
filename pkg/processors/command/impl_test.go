@@ -681,7 +681,7 @@ func setUp(t *testing.T, prepare func(appDef appdef.IAppDefBuilder, cfg *istruct
 	appStorageProvider := istorageimpl.Provide(asf)
 
 	// build application
-	adb := appdef.New(testAppName)
+	adb := appdef.New()
 	adb.AddObject(istructs.QNameRaw).AddField(processors.Field_RawObject_Body, appdef.DataKind_string, true, appdef.MaxLen(appdef.MaxFieldLength))
 	wsdescutil.AddWorkspaceDescriptorStubDef(adb)
 	qNameTestWSKind := appdef.NewQName(appdef.SysPackage, "TestWSKind")

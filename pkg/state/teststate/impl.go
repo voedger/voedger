@@ -287,7 +287,7 @@ func (ctx *testState) buildAppDef(packagePath string, packageDir string, createW
 
 	appName := istructs.AppQName_test1_app1
 
-	adb := appdef.New(appName)
+	adb := appdef.New()
 	err = parser.BuildAppDefs(appSchema, adb)
 	if err != nil {
 		panic(err)

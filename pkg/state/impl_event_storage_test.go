@@ -154,7 +154,7 @@ func appStructs(appdefSql string, prepareAppCfg appCfgCallback) istructs.IAppStr
 
 	appName := istructs.AppQName_test1_app1
 
-	appDef := appdef.New(appName)
+	appDef := appdef.New()
 
 	err = parser.BuildAppDefs(packages, appDef)
 	if err != nil {

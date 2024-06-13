@@ -42,7 +42,7 @@ func (ab VVMAppsBuilder) BuildAppsArtefacts(apis apps.APIs, emptyCfgs AppConfigs
 	for appQName, appBuilder := range ab {
 		appEPs := extensionpoints.NewRootExtensionPoint()
 		appsArtefacts.appEPs[appQName] = appEPs
-		adb := appdef.New(appQName)
+		adb := appdef.New()
 		cfg := appsArtefacts.AppConfigsType.AddConfig(appQName, adb)
 		builtInAppDef := appBuilder(apis, cfg, appEPs)
 		cfg.SetNumAppWorkspaces(builtInAppDef.NumAppWorkspaces)

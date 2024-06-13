@@ -29,7 +29,7 @@ func TestAppConfigsType_AddConfig(t *testing.T) {
 
 	t.Run("must be ok to add config for known app", func(t *testing.T) {
 		cfgs := make(AppConfigsType)
-		adb := appdef.New(appName)
+		adb := appdef.New()
 		adb.AddPackage("test", "test.com/test")
 		cfg := cfgs.AddConfig(appName, adb)
 		cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
@@ -59,7 +59,7 @@ func TestAppConfigsType_AddConfig(t *testing.T) {
 
 	t.Run("misc", func(t *testing.T) {
 		cfgs := make(AppConfigsType)
-		adb := appdef.New(appName)
+		adb := appdef.New()
 		adb.AddPackage("test", "test.com/test")
 		cfg := cfgs.AddConfig(appName, adb)
 		cfg.SetNumAppWorkspaces(42)
@@ -72,7 +72,7 @@ func TestAppConfigsType_AddConfig(t *testing.T) {
 
 	t.Run("must be error to make invalid changes in appDef after add config", func(t *testing.T) {
 		cfgs := make(AppConfigsType)
-		adb := appdef.New(appName)
+		adb := appdef.New()
 		adb.AddPackage("test", "test.com/test")
 
 		cfgs.AddConfig(appName, adb).SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
@@ -92,7 +92,7 @@ func TestAppConfigsType_AddConfig(t *testing.T) {
 		cfgs := make(AppConfigsType)
 		appName := appdef.NewAppQName("unknown", "unknown")
 		require.Panics(func() {
-			cfgs.AddConfig(appName, appdef.New(appName)).SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
+			cfgs.AddConfig(appName, appdef.New()).SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 		}, require.Is(istructs.ErrAppNotFound), require.Has(appName))
 	})
 
@@ -102,7 +102,7 @@ func TestAppConfigsType_AddConfig(t *testing.T) {
 		require.Panics(func() {
 			_ = cfgs.AddConfig(appName,
 				func() appdef.IAppDefBuilder {
-					adb := appdef.New(appName)
+					adb := appdef.New()
 					adb.AddPackage("test", "test.com/test")
 					adb.AddObject(appdef.NewQName("test", "obj")).
 						AddContainer("unknown", appdef.NewQName("test", "unknown"), 0, 1) // <- error here: reference to unknown element type
@@ -120,7 +120,7 @@ func TestAppConfigsType_GetConfig(t *testing.T) {
 
 	cfgs := make(AppConfigsType)
 	for app, id := range istructs.ClusterApps {
-		cfg := cfgs.AddConfig(app, appdef.New(app))
+		cfg := cfgs.AddConfig(app, appdef.New())
 		cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 		require.NotNil(cfg)
 		require.Equal(cfg.Name, app)
@@ -175,7 +175,7 @@ func TestErrorsAppConfigsType(t *testing.T) {
 	docName, recName := appdef.NewQName("test", "doc"), appdef.NewQName("test", "rec")
 
 	appDef := func() appdef.IAppDefBuilder {
-		adb := appdef.New(appName)
+		adb := appdef.New()
 		adb.AddPackage("test", "test.com/test")
 		doc := adb.AddCDoc(docName)
 		doc.SetSingleton()
@@ -258,7 +258,7 @@ func TestErrorsAppConfigsType(t *testing.T) {
 		qName := appdef.NewQName("test", "qname")
 		t.Run("query", func(t *testing.T) {
 			t.Run("missing in cfg", func(t *testing.T) {
-				adb := appdef.New(appName)
+				adb := appdef.New()
 				adb.AddPackage("test", "test.com/test")
 				adb.AddQuery(qName)
 				cfgs := make(AppConfigsType, 1)
@@ -269,7 +269,7 @@ func TestErrorsAppConfigsType(t *testing.T) {
 				log.Println(err)
 			})
 			t.Run("missing in AppDef", func(t *testing.T) {
-				adb := appdef.New(appName)
+				adb := appdef.New()
 				cfgs := make(AppConfigsType, 1)
 				cfg := cfgs.AddConfig(appName, adb)
 				cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
@@ -282,7 +282,7 @@ func TestErrorsAppConfigsType(t *testing.T) {
 		})
 		t.Run("command", func(t *testing.T) {
 			t.Run("missing in cfg", func(t *testing.T) {
-				adb := appdef.New(appName)
+				adb := appdef.New()
 				adb.AddPackage("test", "test.com/test")
 				adb.AddCommand(qName)
 				cfgs := make(AppConfigsType, 1)
@@ -293,7 +293,7 @@ func TestErrorsAppConfigsType(t *testing.T) {
 				log.Println(err)
 			})
 			t.Run("missing in AppDef", func(t *testing.T) {
-				adb := appdef.New(appName)
+				adb := appdef.New()
 				cfgs := make(AppConfigsType, 1)
 				cfg := cfgs.AddConfig(appName, adb)
 				cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
@@ -307,7 +307,7 @@ func TestErrorsAppConfigsType(t *testing.T) {
 		t.Run("projectors", func(t *testing.T) {
 			t.Run("sync", func(t *testing.T) {
 				t.Run("missing in cfg", func(t *testing.T) {
-					adb := appdef.New(appName)
+					adb := appdef.New()
 					adb.AddPackage("test", "test.com/test")
 					qName2 := appdef.NewQName("test", "qName2")
 					adb.AddCDoc(qName2)
@@ -322,7 +322,7 @@ func TestErrorsAppConfigsType(t *testing.T) {
 					log.Println(err)
 				})
 				t.Run("missing in AppDef", func(t *testing.T) {
-					adb := appdef.New(appName)
+					adb := appdef.New()
 					cfgs := make(AppConfigsType, 1)
 					cfg := cfgs.AddConfig(appName, adb)
 					cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
@@ -333,7 +333,7 @@ func TestErrorsAppConfigsType(t *testing.T) {
 					log.Println(err)
 				})
 				t.Run("defined as async in cfg", func(t *testing.T) {
-					adb := appdef.New(appName)
+					adb := appdef.New()
 					adb.AddPackage("test", "test.com/test")
 					qName2 := appdef.NewQName("test", "qName2")
 					adb.AddCDoc(qName2)
@@ -352,7 +352,7 @@ func TestErrorsAppConfigsType(t *testing.T) {
 			})
 			t.Run("async", func(t *testing.T) {
 				t.Run("missing in cfg", func(t *testing.T) {
-					adb := appdef.New(appName)
+					adb := appdef.New()
 					adb.AddPackage("test", "test.com/test")
 					qName2 := appdef.NewQName("test", "qName2")
 					adb.AddCDoc(qName2)
@@ -367,7 +367,7 @@ func TestErrorsAppConfigsType(t *testing.T) {
 					log.Println(err)
 				})
 				t.Run("missing in AppDef", func(t *testing.T) {
-					adb := appdef.New(appName)
+					adb := appdef.New()
 					cfgs := make(AppConfigsType, 1)
 					cfg := cfgs.AddConfig(appName, adb)
 					cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
@@ -378,7 +378,7 @@ func TestErrorsAppConfigsType(t *testing.T) {
 					log.Println(err)
 				})
 				t.Run("defined as sync in cfg", func(t *testing.T) {
-					adb := appdef.New(appName)
+					adb := appdef.New()
 					adb.AddPackage("test", "test.com/test")
 					qName2 := appdef.NewQName("test", "qName2")
 					adb.AddCDoc(qName2)
@@ -395,7 +395,7 @@ func TestErrorsAppConfigsType(t *testing.T) {
 					log.Println(err)
 				})
 				t.Run("defined twice in cfg", func(t *testing.T) {
-					adb := appdef.New(appName)
+					adb := appdef.New()
 					adb.AddPackage("test", "test.com/test")
 					qName2 := appdef.NewQName("test", "qName2")
 					adb.AddCDoc(qName2)

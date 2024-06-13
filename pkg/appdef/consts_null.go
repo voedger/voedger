@@ -25,4 +25,4 @@ var NullType = new(nullType)
 var NullFields = new(nullFields)
 
 // NullAppDef is IAppDef without any user definitions
-var NullAppDef = New(NullAppQName).MustBuild()
+var NullAppDef = New().MustBuild()

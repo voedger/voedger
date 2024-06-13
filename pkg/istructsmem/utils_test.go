@@ -207,7 +207,7 @@ func TestIBucketsFromIAppStructs(t *testing.T) {
 	require := require.New(t)
 
 	cfgs := AppConfigsType{}
-	adb := appdef.New(istructs.AppQName_test1_app1)
+	adb := appdef.New()
 	adb.AddPackage("test", "test.com/test")
 	cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, adb)
 	cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)

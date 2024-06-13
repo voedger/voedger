@@ -24,7 +24,7 @@ func Test_ValidEventArgs(t *testing.T) {
 
 	appName := istructs.AppQName_test1_app1
 
-	adb := appdef.New(appName)
+	adb := appdef.New()
 	adb.AddPackage("test", "test.com/test")
 
 	docName := appdef.NewQName("test", "document")
@@ -318,7 +318,7 @@ func Test_ValidSysCudEvent(t *testing.T) {
 
 	appName := istructs.AppQName_test1_app1
 
-	adb := appdef.New(appName)
+	adb := appdef.New()
 	adb.AddPackage("test", "test.com/test")
 
 	docName := appdef.NewQName("test", "document")
@@ -547,7 +547,7 @@ func Test_ValidCommandEvent(t *testing.T) {
 
 	appName := istructs.AppQName_test1_app1
 
-	adb := appdef.New(appName)
+	adb := appdef.New()
 	adb.AddPackage("test", "test.com/test")
 
 	cmdName := appdef.NewQName("test", "command")
@@ -671,7 +671,7 @@ func Test_IObjectBuilderBuild(t *testing.T) {
 
 	appName := istructs.AppQName_test1_app1
 
-	adb := appdef.New(appName)
+	adb := appdef.New()
 	adb.AddPackage("test", "test.com/test")
 
 	docName := appdef.NewQName("test", "document")
@@ -754,7 +754,7 @@ func Test_VerifiedFields(t *testing.T) {
 
 	objName := appdef.NewQName("test", "obj")
 
-	adb := appdef.New(test.appName)
+	adb := appdef.New()
 	adb.AddPackage("test", "test.com/test")
 
 	t.Run("must be ok to build application", func(t *testing.T) {
@@ -927,7 +927,7 @@ func Test_CharsFieldRestricts(t *testing.T) {
 
 	objName := appdef.NewQName("test", "obj")
 
-	adb := appdef.New(test.appName)
+	adb := appdef.New()
 	adb.AddPackage("test", "test.com/test")
 
 	t.Run("must be ok to build application", func(t *testing.T) {

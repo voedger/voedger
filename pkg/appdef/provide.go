@@ -6,6 +6,6 @@
 package appdef
 
 // Creates and return new application builder
-func New(name AppQName) IAppDefBuilder {
-	return newAppDefBuilder(newAppDef(name))
+func New() IAppDefBuilder {
+	return newAppDefBuilder(newAppDef())
 }

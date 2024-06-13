@@ -187,7 +187,7 @@ func deployTestApp(
 	metrics imetrics.IMetrics,
 	appStructs istructs.IAppStructs,
 ) {
-	appDefBuilder := appdef.New(appName)
+	appDefBuilder := appdef.New()
 	if prepareAppDef != nil {
 		prepareAppDef(appDefBuilder)
 	}

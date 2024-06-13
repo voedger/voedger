@@ -31,7 +31,7 @@ func Test_AppDef_GrantAndRevoke(t *testing.T) {
 	intruderRoleName := NewQName("test", "intruderRole")
 
 	t.Run("should be ok to build application with roles and privileges", func(t *testing.T) {
-		adb := New(NewAppQName("test", "app"))
+		adb := New()
 		adb.AddPackage("test", "test.com/test")
 
 		ws := adb.AddWorkspace(wsName)
@@ -210,7 +210,7 @@ func Test_AppDef_GrantAndRevoke(t *testing.T) {
 func Test_AppDef_GrantAndRevokeErrors(t *testing.T) {
 	require := require.New(t)
 	t.Run("panics while to build application with roles and privileges", func(t *testing.T) {
-		adb := New(NewAppQName("test", "app"))
+		adb := New()
 		adb.AddPackage("test", "test.com/test")
 
 		wsName := NewQName("test", "ws")
@@ -302,7 +302,7 @@ func Test_AppDef_GrantWithFields(t *testing.T) {
 	readerRoleName := NewQName("test", "readerRole")
 
 	t.Run("should be ok to build application with roles and privileges", func(t *testing.T) {
-		adb := New(NewAppQName("test", "app"))
+		adb := New()
 		adb.AddPackage("test", "test.com/test")
 
 		doc := adb.AddCDoc(docName)
