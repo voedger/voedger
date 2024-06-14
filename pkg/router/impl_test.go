@@ -218,7 +218,7 @@ func TestHandlerPanic(t *testing.T) {
 	expectResp(t, resp, "text/plain", http.StatusInternalServerError)
 }
 
-func TestClientDisconnectDuringSections(t *testing.T) {
+func TestClientDisconnect_CtxCanceledOnElemSend(t *testing.T) {
 	require := require.New(t)
 	clientClosed := make(chan struct{})
 	firstElemSendErrCh := make(chan error)
@@ -296,29 +296,30 @@ func Test404(t *testing.T) {
 	require.Equal(t, http.StatusNotFound, resp.StatusCode)
 }
 
-func TestFailedToWriteResponse(t *testing.T) {
-	ch := make(chan struct{})
-	var disconnectClientFromServer func(ctx context.Context)
+func TestClientDisconnect_FailedToWriteResponse(t *testing.T) {
+	require := require.New(t)
+	firstElemSendErrCh := make(chan error)
+	clientDisconnect := make(chan any)
+	requestCtxCh := make(chan context.Context, 1)
+	expectedErrCh := make(chan error)
 	setUp(t, func(requestCtx context.Context, sender ibus.ISender, request ibus.Request) {
 		go func() {
 			// handler, on server side
 			rs := sender.SendParallelResponse()
+			defer rs.Close(nil)
 			rs.StartMapSection("secMap", []string{"2"})
-			require.NoError(t, rs.SendElement("id1", elem1))
+			firstElemSendErrCh <- rs.SendElement("id1", elem1)
+
+			// capture the request context so that it will be able to check if it is closed indeed right before
+			// write to the socket on next writeResponse() call
+			requestCtxCh <- requestCtx
 
 			// now let's wait for client disconnect
-			<-ch
+			<-clientDisconnect
 
-			defer func() {
-				// not a context.Canceled error below -> avoid test hang
-				rs.Close(nil)
-				ch <- struct{}{}
-			}()
-
-			// next section should be failed because the client is disconnected
-			disconnectClientFromServer(requestCtx)
-			err := rs.ObjectSection("objSec", []string{"3"}, 42)
-			require.ErrorIs(t, err, context.Canceled)
+			// next section should be failed on writeResponse() call because the client is disconnected
+			// the expected error on this bus side is context.Canceled, on the router's side - `failed to write response`
+			expectedErrCh <- rs.ObjectSection("objSec", []string{"3"}, 42)
 		}()
 	}, 2*time.Second)
 	defer tearDown()
@@ -327,36 +328,48 @@ func TestFailedToWriteResponse(t *testing.T) {
 	body := []byte("")
 	bodyReader := bytes.NewReader(body)
 	resp, err := http.Post(fmt.Sprintf("http://127.0.0.1:%d/api/%s/%s/%d/somefunc", router.port(), AppOwner, AppName, testWSID), "application/json", bodyReader)
-	require.NoError(t, err)
+	require.NoError(err)
+
+	// ensure the first element is sent successfully
+	require.NoError(<-firstElemSendErrCh)
 
 	// read out the first section
 	entireResp := []byte{}
 	for string(entireResp) != `{"sections":[{"type":"secMap","path":["2"],"elements":{"id1":{"fld1":"fld1Val"}` {
 		buf := make([]byte, 512)
-		n, _ := resp.Body.Read(buf)
-		require.NoError(t, err)
+		n, err := resp.Body.Read(buf)
+		require.NoError(err)
 		entireResp = append(entireResp, buf[:n]...)
 		log.Println(string(entireResp))
 	}
 
-	// server waits for us to send the next section
-	// let's set a hook that will close the connection right before sending a next section
-	disconnectClientFromServer = func(requestCtx context.Context) {
-		resp.Body.Close()
+	// force client disconnect right before write to the socket on the next writeResponse() call
+	once := sync.Once{}
+	onBeforeWriteResponse = func(w http.ResponseWriter) {
+		once.Do(func() {
+			resp.Request.Body.Close()
+			resp.Body.Close()
 
-		// requestCtx is not immediately closed after resp.Body.Close(). So let's wait for ctx close
-		for requestCtx.Err() == nil {
-		}
+			// wait for write to the socket will be failed indeed. It happens not at once
+			_, err := w.Write([]byte{0})
+			w.(http.Flusher).Flush()
+			for err == nil {
+				_, err = w.Write([]byte{0})
+				w.(http.Flusher).Flush()
+			}
+		})
 	}
+	defer func() {
+		onBeforeWriteResponse = nil
+	}()
 
-	// signal to the server to send the next section
-	ch <- struct{}{}
+	// signal to the handler it could try to send the next section
+	close(clientDisconnect)
 
-	// wait for fail to write response
+	// ensure the next writeResponse call is failed with the expected context.Canceled error
+	require.ErrorIs(<-expectedErrCh, context.Canceled)
+
 	<-clientDisconnections
-
-	// wait for errors check on server side
-	<-ch
 }
 
 func TestAdminService(t *testing.T) {
