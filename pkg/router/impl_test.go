@@ -298,10 +298,10 @@ func Test404(t *testing.T) {
 
 func TestClientDisconnect_FailedToWriteResponse(t *testing.T) {
 	require := require.New(t)
-	ch := make(chan struct{})
-	var disconnectClientFromServer func(ctx context.Context)
 	firstElemSendErrCh := make(chan error)
 	clientDisconnect := make(chan any)
+	requestCtxCh := make(chan context.Context, 1)
+	expectedErrCh := make(chan error)
 	setUp(t, func(requestCtx context.Context, sender ibus.ISender, request ibus.Request) {
 		go func() {
 			// handler, on server side
@@ -310,13 +310,16 @@ func TestClientDisconnect_FailedToWriteResponse(t *testing.T) {
 			rs.StartMapSection("secMap", []string{"2"})
 			firstElemSendErrCh <- rs.SendElement("id1", elem1)
 
+			// capture the request context so that it will be able to check if it is closed indeed right before
+			// write to the socket on next writeResponse() call
+			requestCtxCh <- requestCtx
+
 			// now let's wait for client disconnect
 			<-clientDisconnect
 
-			// next section should be failed because the client is disconnected
-			disconnectClientFromServer(requestCtx)
-			err := rs.ObjectSection("objSec", []string{"3"}, 42)
-			require.ErrorIs(err, context.Canceled)
+			// next section should be failed on writeResponse() call because the client is disconnected
+			// the expected error on this bus side is context.Canceled, on the router's side - `failed to write response`
+			expectedErrCh <- rs.ObjectSection("objSec", []string{"3"}, 42)
 		}()
 	}, 2*time.Second)
 	defer tearDown()
@@ -340,95 +343,33 @@ func TestClientDisconnect_FailedToWriteResponse(t *testing.T) {
 		log.Println(string(entireResp))
 	}
 
+	// force client disconnect right before write to the socket on the next writeResponse() call
 	once := sync.Once{}
-	onBeforeWriteResponse = func() {
+	onBeforeWriteResponse = func(w http.ResponseWriter) {
 		once.Do(func() {
+			resp.Request.Body.Close()
 			resp.Body.Close()
-			
-			// requestCtx is not immediately closed after resp.Body.Close(). So let's wait for ctx close
-			for requestCtx.Err() == nil {
+
+			// wait for write to the socket will be failed indeed. It happens not at once
+			_, err := w.Write([]byte{0})
+			w.(http.Flusher).Flush()
+			for err == nil {
+				_, err = w.Write([]byte{0})
+				w.(http.Flusher).Flush()
 			}
 		})
 	}
+	defer func() {
+		onBeforeWriteResponse = nil
+	}()
 
-	// server waits for us to send the next section
-	// let's set a hook that will close the connection right before sending a next section
-	disconnectClientFromServer = func(requestCtx context.Context) {
-		resp.Body.Close()
+	// signal to the handler it could try to send the next section
+	close(clientDisconnect)
 
-	}
+	// ensure the next writeResponse call is failed with the expected context.Canceled error
+	require.ErrorIs(<-expectedErrCh, context.Canceled)
 
-	// signal to the server to send the next section
-	ch <- struct{}{}
-
-	// wait for fail to write response
 	<-clientDisconnections
-
-	// wait for errors check on server side
-	<-ch
-}
-
-func TestFailedToWriteResponse(t *testing.T) {
-	ch := make(chan struct{})
-	var disconnectClientFromServer func(ctx context.Context)
-	setUp(t, func(requestCtx context.Context, sender ibus.ISender, request ibus.Request) {
-		go func() {
-			// handler, on server side
-			rs := sender.SendParallelResponse()
-			rs.StartMapSection("secMap", []string{"2"})
-			require.NoError(t, rs.SendElement("id1", elem1))
-
-			// now let's wait for client disconnect
-			<-ch
-
-			defer func() {
-				// not a context.Canceled error below -> avoid test hang
-				rs.Close(nil)
-				ch <- struct{}{}
-			}()
-
-			// next section should be failed because the client is disconnected
-			disconnectClientFromServer(requestCtx)
-			err := rs.ObjectSection("objSec", []string{"3"}, 42)
-			require.ErrorIs(t, err, context.Canceled)
-		}()
-	}, 2*time.Second)
-	defer tearDown()
-
-	// client side
-	body := []byte("")
-	bodyReader := bytes.NewReader(body)
-	resp, err := http.Post(fmt.Sprintf("http://127.0.0.1:%d/api/%s/%s/%d/somefunc", router.port(), AppOwner, AppName, testWSID), "application/json", bodyReader)
-	require.NoError(t, err)
-
-	// read out the first section
-	entireResp := []byte{}
-	for string(entireResp) != `{"sections":[{"type":"secMap","path":["2"],"elements":{"id1":{"fld1":"fld1Val"}` {
-		buf := make([]byte, 512)
-		n, _ := resp.Body.Read(buf)
-		require.NoError(t, err)
-		entireResp = append(entireResp, buf[:n]...)
-		log.Println(string(entireResp))
-	}
-
-	// server waits for us to send the next section
-	// let's set a hook that will close the connection right before sending a next section
-	disconnectClientFromServer = func(requestCtx context.Context) {
-		resp.Body.Close()
-
-		// requestCtx is not immediately closed after resp.Body.Close(). So let's wait for ctx close
-		for requestCtx.Err() == nil {
-		}
-	}
-
-	// signal to the server to send the next section
-	ch <- struct{}{}
-
-	// wait for fail to write response
-	<-clientDisconnections
-
-	// wait for errors check on server side
-	<-ch
 }
 
 func TestAdminService(t *testing.T) {

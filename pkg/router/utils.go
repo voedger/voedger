@@ -13,7 +13,7 @@ import (
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-var onBeforeWriteResponse func() // not nil in tests only
+var onBeforeWriteResponse func(w http.ResponseWriter) // not nil in tests only
 
 func WriteTextResponse(w http.ResponseWriter, msg string, code int) {
 	w.Header().Set(coreutils.ContentType, "text/plain")
@@ -23,7 +23,7 @@ func WriteTextResponse(w http.ResponseWriter, msg string, code int) {
 
 func writeResponse(w http.ResponseWriter, data string) bool {
 	if onBeforeWriteResponse != nil {
-		onBeforeWriteResponse()
+		onBeforeWriteResponse(w)
 	}
 	if _, err := w.Write([]byte(data)); err != nil {
 		stack := debug.Stack()
