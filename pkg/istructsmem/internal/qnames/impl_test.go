@@ -39,14 +39,6 @@ func TestQNames(t *testing.T) {
 
 	defName := appdef.NewQName("test", "doc")
 
-	resourceName := appdef.NewQName("test", "resource")
-	r := mockResources{}
-	r.On("Resources", mock.AnythingOfType("func(appdef.QName)")).
-		Run(func(args mock.Arguments) {
-			cb := args.Get(0).(func(appdef.QName))
-			cb(resourceName)
-		})
-
 	names := New()
 	if err := names.Prepare(storage, versions,
 		func() appdef.IAppDef {
@@ -56,8 +48,7 @@ func TestQNames(t *testing.T) {
 			appDef, err := adb.Build()
 			require.NoError(err)
 			return appDef
-		}(),
-		&r); err != nil {
+		}()); err != nil {
 		panic(err)
 	}
 
@@ -76,7 +67,6 @@ func TestQNames(t *testing.T) {
 		}
 
 		sID := check(names, defName)
-		rID := check(names, resourceName)
 
 		t.Run("must be ok to load early stored names", func(t *testing.T) {
 			versions1 := vers.New()
@@ -85,12 +75,11 @@ func TestQNames(t *testing.T) {
 			}
 
 			names1 := New()
-			if err := names1.Prepare(storage, versions, nil, nil); err != nil {
+			if err := names1.Prepare(storage, versions, nil); err != nil {
 				panic(err)
 			}
 
 			require.Equal(sID, check(names1, defName))
-			require.Equal(rID, check(names1, resourceName))
 		})
 
 		t.Run("must be ok to redeclare names", func(t *testing.T) {
@@ -108,13 +97,11 @@ func TestQNames(t *testing.T) {
 					appDef, err := adb.Build()
 					require.NoError(err)
 					return appDef
-				}(),
-				nil); err != nil {
+				}()); err != nil {
 				panic(err)
 			}
 
 			require.Equal(sID, check(names2, defName))
-			require.Equal(rID, check(names2, resourceName))
 		})
 	})
 
@@ -148,7 +135,7 @@ func TestQNamesPrepareErrors(t *testing.T) {
 		versions.Put(vers.SysQNamesVersion, latestVersion+1)
 
 		names := New()
-		err := names.Prepare(storage, versions, nil, nil)
+		err := names.Prepare(storage, versions, nil)
 		require.ErrorIs(err, vers.ErrorInvalidVersion)
 	})
 
@@ -166,7 +153,7 @@ func TestQNamesPrepareErrors(t *testing.T) {
 		storage.Put(utils.ToBytes(consts.SysView_QNames, ver01), []byte(badName), utils.ToBytes(QNameID(512)))
 
 		names := New()
-		err := names.Prepare(storage, versions, nil, nil)
+		err := names.Prepare(storage, versions, nil)
 		require.ErrorIs(err, appdef.ErrConvertError)
 		require.ErrorContains(err, badName)
 	})
@@ -184,7 +171,7 @@ func TestQNamesPrepareErrors(t *testing.T) {
 		storage.Put(utils.ToBytes(consts.SysView_QNames, ver01), []byte("test.deleted"), utils.ToBytes(NullQNameID))
 
 		names := New()
-		err := names.Prepare(storage, versions, nil, nil)
+		err := names.Prepare(storage, versions, nil)
 		require.NoError(err)
 	})
 
@@ -201,7 +188,7 @@ func TestQNamesPrepareErrors(t *testing.T) {
 		storage.Put(utils.ToBytes(consts.SysView_QNames, ver01), []byte(istructs.QNameForError.String()), utils.ToBytes(QNameIDForError))
 
 		names := New()
-		err := names.Prepare(storage, versions, nil, nil)
+		err := names.Prepare(storage, versions, nil)
 		require.ErrorIs(err, ErrWrongQNameID)
 		require.ErrorContains(err, fmt.Sprintf("unexpected ID (%v)", QNameIDForError))
 	})
@@ -226,8 +213,7 @@ func TestQNamesPrepareErrors(t *testing.T) {
 				appDef, err := adb.Build()
 				require.NoError(err)
 				return appDef
-			}(),
-			nil)
+			}())
 		require.ErrorIs(err, ErrQNameIDsExceeds)
 	})
 
@@ -254,8 +240,7 @@ func TestQNamesPrepareErrors(t *testing.T) {
 					appDef, err := adb.Build()
 					require.NoError(err)
 					return appDef
-				}(),
-				nil)
+				}())
 			require.ErrorIs(err, writeError)
 		})
 
@@ -278,8 +263,7 @@ func TestQNamesPrepareErrors(t *testing.T) {
 					appDef, err := adb.Build()
 					require.NoError(err)
 					return appDef
-				}(),
-				nil)
+				}())
 			require.ErrorIs(err, writeError)
 		})
 	})

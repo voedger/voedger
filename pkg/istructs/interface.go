@@ -15,11 +15,24 @@ import (
 
 // Structs can be changed on-the-fly, so AppStructs() are taken for each message (request) to be handled
 type IAppStructsProvider interface {
-	// ErrAppNotFound can be returned
+	// Returns AppStructs for the application with given name.
+	//
+	// ErrAppNotFound can be returned.
+	//
 	// @ConcurrentAccess
 	AppStructs(aqn appdef.AppQName) (structs IAppStructs, err error)
 
+	// Returns AppStructs for the application with given name and definition.
+	//
+	// ErrAppNotFound can be returned.
+	//
+	// @ConcurrentAccess
 	AppStructsByDef(appName appdef.AppQName, appDef appdef.IAppDef) (IAppStructs, error)
+
+	// Creates a new AppStructs for the application with given name and definition.
+	//
+	// @ConcurrentAccess
+	NewAppStructs(appName appdef.AppQName, appDef appdef.IAppDef) (IAppStructs, error)
 }
 
 type IAppStructs interface {

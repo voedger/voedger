@@ -8,6 +8,7 @@ package istructsmem
 import (
 	"context"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"sync"
 
@@ -70,6 +71,11 @@ func (provider *appStructsProviderType) AppStructs(appName appdef.AppQName) (str
 // istructs.IAppStructsProvider.AppStructsByDef
 func (provider *appStructsProviderType) AppStructsByDef(appName appdef.AppQName, appDef appdef.IAppDef) (structs istructs.IAppStructs, err error) {
 	return provider.AppStructs(appName)
+}
+
+// istructs.IAppStructsProvider.NewAppStructs
+func (provider *appStructsProviderType) NewAppStructs(appdef.AppQName, appdef.IAppDef) (istructs.IAppStructs, error) {
+	return nil, errors.ErrUnsupported
 }
 
 // appStructsType implements IAppStructs interface

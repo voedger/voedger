@@ -33,10 +33,8 @@ func TestQNamesBasicUsage(t *testing.T) {
 	d.AddUnique(appdef.UniqueQName(testName, "f1"), []appdef.FieldName{"f1"})
 	appDef := app.MustBuild()
 
-	resources := istructs.IResources(nil) //TODO: add test resources
-
 	names := New()
-	if err := names.Prepare(storage, versions, appDef, resources); err != nil {
+	if err := names.Prepare(storage, versions, appDef); err != nil {
 		panic(err)
 	}
 
@@ -57,7 +55,7 @@ func TestQNamesBasicUsage(t *testing.T) {
 			}
 
 			otherNames := New()
-			if err := otherNames.Prepare(storage, versions, nil, nil); err != nil {
+			if err := otherNames.Prepare(storage, versions, nil); err != nil {
 				panic(err)
 			}
 

@@ -89,7 +89,7 @@ func newAppConfig(appName appdef.AppQName, appDef appdef.IAppDefBuilder) *AppCon
 		panic(fmt.Errorf("%v: unable build application: %w", appName, err))
 	}
 	cfg.AppDef = app
-	cfg.Resources = newResources(&cfg)
+	cfg.Resources = makeResources()
 
 	cfg.dynoSchemes = dynobuf.New()
 
@@ -129,7 +129,7 @@ func (cfg *AppConfigType) prepare(buckets irates.IBuckets, appStorage istorage.I
 	}
 
 	// prepare QNames
-	if err := cfg.qNames.Prepare(cfg.storage, cfg.versions, cfg.AppDef, &cfg.Resources); err != nil {
+	if err := cfg.qNames.Prepare(cfg.storage, cfg.versions, cfg.AppDef); err != nil {
 		return err
 	}
 
