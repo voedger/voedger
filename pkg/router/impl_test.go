@@ -219,42 +219,53 @@ func TestHandlerPanic(t *testing.T) {
 }
 
 func TestClientDisconnectDuringSections(t *testing.T) {
-	ch := make(chan struct{})
+	require := require.New(t)
+	clientClosed := make(chan struct{})
+	firstElemSendErrCh := make(chan error)
+	expectedErrCh := make(chan error)
 	setUp(t, func(requestCtx context.Context, sender ibus.ISender, request ibus.Request) {
 		go func() {
 			rs := sender.SendParallelResponse()
+			defer rs.Close(nil)
 			rs.StartMapSection("secMap", []string{"2"})
-			require.NoError(t, rs.SendElement("id1", elem1))
-			// sometimes Request.Body.Close() happens before checking if requestCtx.Err() nil or not after sending a section
-			// So let's wait for successful SendElelemnt(), then close the request
-			ch <- struct{}{}
-			<-ch
+			firstElemSendErrCh <- rs.SendElement("id1", elem1)
+
+			// let's wait for the client close
+			<-clientClosed
+
 			// requestCtx closes not immediately after resp.Body.Close(). So let's wait for ctx close
 			for requestCtx.Err() == nil {
 			}
-			err := rs.ObjectSection("objSec", []string{"3"}, 42)
-			require.ErrorIs(t, err, context.Canceled)
-			rs.Close(nil)
-			ch <- struct{}{}
+
+			// the request is closed -> the next section should fail with context.ContextCanceled error. Check it in the test
+			expectedErrCh <- rs.ObjectSection("objSec", []string{"3"}, 42)
 		}()
 	}, 5*time.Second)
 	defer tearDown()
 
 	resp, err := http.Post(fmt.Sprintf("http://127.0.0.1:%d/api/%s/%s/%d/somefunc", router.port(), AppOwner, AppName, testWSID), "application/json", http.NoBody)
-	require.NoError(t, err)
+	require.NoError(err)
+
+	// ensure the first element is sent successfully
+	require.NoError(<-firstElemSendErrCh)
+
+	// read out the the first element
 	entireResp := []byte{}
 	for string(entireResp) != `{"sections":[{"type":"secMap","path":["2"],"elements":{"id1":{"fld1":"fld1Val"}` {
 		buf := make([]byte, 512)
-		n, _ := resp.Body.Read(buf)
-		require.NoError(t, err)
+		n, err := resp.Body.Read(buf)
+		require.NoError(err)
 		entireResp = append(entireResp, buf[:n]...)
 		log.Println(string(entireResp))
 	}
-	<-ch
+
+	// close the request and signla to the handler to try to send to the disconnected client
 	resp.Request.Body.Close()
 	resp.Body.Close()
-	ch <- struct{}{}
-	<-ch
+	close(clientClosed)
+
+	// expect the handler got context.Canceled error on try to send to the disconnected client
+	require.ErrorIs(<-expectedErrCh, context.Canceled)
 	<-clientDisconnections
 }
 
