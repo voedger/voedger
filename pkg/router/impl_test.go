@@ -224,6 +224,10 @@ func TestClientDisconnectDuringSections(t *testing.T) {
 		go func() {
 			rs := sender.SendParallelResponse()
 			rs.StartMapSection("secMap", []string{"2"})
+			err := rs.SendElement("id1", elem1)
+			if err != nil {
+				defer rs.Close(nil) // avoid test hang
+			}
 			require.NoError(t, rs.SendElement("id1", elem1))
 			// sometimes Request.Body.Close() happens before checking if requestCtx.Err() nil or not after sending a section
 			// So let's wait for successful SendElelemnt(), then close the request
@@ -232,10 +236,13 @@ func TestClientDisconnectDuringSections(t *testing.T) {
 			// requestCtx closes not immediately after resp.Body.Close(). So let's wait for ctx close
 			for requestCtx.Err() == nil {
 			}
-			err := rs.ObjectSection("objSec", []string{"3"}, 42)
-			require.ErrorIs(t, err, context.Canceled)
+			err = rs.ObjectSection("objSec", []string{"3"}, 42)
 			rs.Close(nil)
-			ch <- struct{}{}
+			defer func() {
+				// avoid test hang
+				ch <- struct{}{}
+			}()
+			require.ErrorIs(t, err, context.Canceled)
 		}()
 	}, 5*time.Second)
 	defer tearDown()
