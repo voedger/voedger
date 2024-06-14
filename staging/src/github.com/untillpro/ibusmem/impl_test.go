@@ -145,7 +145,7 @@ func TestBasicUsage(t *testing.T) {
 
 		response, sections, secErr, err := bus.SendRequest2(context.Background(), ibus.Request{}, ibus.DefaultTimeout)
 
-		require.Equal(ibus.ErrTimeoutExpired, err)
+		require.Equal(ibus.ErrBusTimeoutExpired, err)
 		require.Empty(response)
 		require.Nil(sections)
 		require.Nil(secErr)

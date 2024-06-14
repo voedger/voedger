@@ -71,8 +71,8 @@ func TestSectionedSendResponseError(t *testing.T) {
 
 	respBodyBytes, err := io.ReadAll(resp.Body)
 	require.NoError(t, err)
-	require.Equal(t, ibus.ErrTimeoutExpired.Error(), string(respBodyBytes))
-	expect500RespPlainText(t, resp)
+	require.Equal(t, ibus.ErrBusTimeoutExpired.Error(), string(respBodyBytes))
+	expectResp(t, resp, "text/plain", http.StatusServiceUnavailable)
 }
 
 func TestBasicUsage_SectionedResponse(t *testing.T) {
@@ -215,7 +215,7 @@ func TestHandlerPanic(t *testing.T) {
 	respBodyBytes, err := io.ReadAll(resp.Body)
 	require.NoError(t, err)
 	require.Contains(t, string(respBodyBytes), "test panic")
-	expect500RespPlainText(t, resp)
+	expectResp(t, resp, "text/plain", http.StatusInternalServerError)
 }
 
 func TestClientDisconnectDuringSections(t *testing.T) {
@@ -492,11 +492,6 @@ func expectJSONResp(t *testing.T, expectedJSON string, resp *http.Response) {
 	require.Contains(t, resp.Header["Content-Type"][0], "application/json", resp.Header)
 	require.Equal(t, []string{"*"}, resp.Header["Access-Control-Allow-Origin"])
 	require.Equal(t, []string{"Accept, Content-Type, Content-Length, Accept-Encoding, Authorization"}, resp.Header["Access-Control-Allow-Headers"])
-}
-
-func expect500RespPlainText(t *testing.T, resp *http.Response) {
-	t.Helper()
-	expectResp(t, resp, "text/plain", http.StatusInternalServerError)
 }
 
 func expectOKRespPlainText(t *testing.T, resp *http.Response) {
