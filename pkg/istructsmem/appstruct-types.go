@@ -182,28 +182,29 @@ func (cfg *AppConfigType) validateResources() (err error) {
 	cfg.AppDef.Extensions(func(ext appdef.IExtension) {
 		if ext.Engine() == appdef.ExtensionEngineKind_BuiltIn {
 			// Only builtin extensions should be validated by cfg.Resources
+			name := ext.QName()
 			switch ext.Kind() {
 			case appdef.TypeKind_Query, appdef.TypeKind_Command:
-				if cfg.Resources.QueryResource(ext.QName()).QName() == appdef.NullQName {
+				if cfg.Resources.QueryResource(name).QName() == appdef.NullQName {
 					err = errors.Join(err,
-						fmt.Errorf("exec of func %s is not defined", ext.QName()))
+						fmt.Errorf("%v: exec is not defined: %w", ext, ErrNameNotFound))
 				}
 			case appdef.TypeKind_Projector:
 				prj := ext.(appdef.IProjector)
-				_, syncFound := cfg.syncProjectors[prj.QName()]
-				_, asyncFound := cfg.asyncProjectors[prj.QName()]
+				_, syncFound := cfg.syncProjectors[name]
+				_, asyncFound := cfg.asyncProjectors[name]
 				if !syncFound && !asyncFound {
 					err = errors.Join(err,
-						fmt.Errorf("exec of %v is not defined", prj))
+						fmt.Errorf("%v: exec is not defined in Resources", prj))
 				} else if syncFound && asyncFound {
 					err = errors.Join(err,
-						fmt.Errorf("exec of %v is defined twice: sync and async", prj))
+						fmt.Errorf("%v: exec is defined twice in Resources (both sync & async)", prj))
 				} else if prj.Sync() && asyncFound {
 					err = errors.Join(err,
-						fmt.Errorf("exec of %v is defined as async", prj))
+						fmt.Errorf("%v: exec is defined in Resources as async, but sync expected", prj))
 				} else if !prj.Sync() && syncFound {
 					err = errors.Join(err,
-						fmt.Errorf("exec of %v is defined as sync", prj))
+						fmt.Errorf("%v: exec is defined in Resources as sync, but async expected", prj))
 				}
 			}
 		}

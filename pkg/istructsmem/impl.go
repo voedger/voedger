@@ -73,11 +73,12 @@ func (provider *appStructsProviderType) AppStructsByDef(appName appdef.AppQName,
 }
 
 // istructs.IAppStructsProvider.NewAppStructs
-func (provider *appStructsProviderType) NewAppStructs(name appdef.AppQName, id istructs.ClusterAppID, def appdef.IAppDef) (istructs.IAppStructs, error) {
+func (provider *appStructsProviderType) NewAppStructs(name appdef.AppQName, def appdef.IAppDef, id istructs.ClusterAppID, wsCount istructs.NumAppWorkspaces) (istructs.IAppStructs, error) {
 	provider.locker.Lock()
 	defer provider.locker.Unlock()
 
 	cfg := provider.configs.AddAppConfig(name, id, def)
+	cfg.SetNumAppWorkspaces(wsCount)
 	buckets := provider.bucketsFactory()
 	appTokens := provider.appTokensFactory.New(name)
 	appStorage, err := provider.storageProvider.AppStorage(name)

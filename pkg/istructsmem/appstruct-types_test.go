@@ -13,6 +13,7 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/goutils/testingu/require"
 	"github.com/voedger/voedger/pkg/iratesce"
+	istorage "github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istorage/mem"
 	istorageimpl "github.com/voedger/voedger/pkg/istorage/provider"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -22,7 +23,7 @@ import (
 	"github.com/voedger/voedger/pkg/istructsmem/internal/vers"
 )
 
-func TestAppConfigsType_AddConfig(t *testing.T) {
+func TestAppConfigsType_AddBuiltInConfig(t *testing.T) {
 	require := require.New(t)
 
 	appName, appID := istructs.AppQName_test1_app1, istructs.ClusterAppID_test1_app1
@@ -441,5 +442,72 @@ func TestErrorsAppConfigsType(t *testing.T) {
 		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
 		_, err := provider.AppStructs(appName)
 		require.ErrorIs(err, ErrNumAppWorkspacesNotSet)
+	})
+}
+
+func Test_NewAppStructs(t *testing.T) {
+
+	require := require.New(t)
+
+	name := appdef.NewAppQName("test", "myApp")
+	id := istructs.FirstGeneratedAppID + 1
+	wsCount := istructs.NumAppWorkspaces(10)
+
+	_, storageProvider := teststore.New(name)
+	structs := Provide(make(AppConfigsType, 1), iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
+
+	t.Run("should be ok to create new AppStructs", func(t *testing.T) {
+		def := appdef.New().MustBuild()
+		str, err := structs.NewAppStructs(name, def, id, wsCount)
+		require.NoError(err)
+		require.NotNil(str)
+
+		t.Run("should be ok to check from new AppStructs", func(t *testing.T) {
+			require.Equal(name, str.AppQName())
+			require.Equal(def, str.AppDef())
+			require.Equal(id, str.ClusterAppID())
+			require.Equal(wsCount, str.NumAppWorkspaces())
+
+			str.Resources().Resources(func(resName appdef.QName) { require.Fail("unexpected resource", resName) })
+			require.Empty(str.SyncProjectors())
+			require.Empty(str.AsyncProjectors())
+			require.Empty(str.CUDValidators())
+			require.Empty(str.EventValidators())
+		})
+	})
+
+	t.Run("should be error to create new AppStructs", func(t *testing.T) {
+
+		t.Run("if storage is not exists", func(t *testing.T) {
+			unknown := appdef.NewAppQName("unknown", "unknown")
+			def := appdef.New().MustBuild()
+			str, err := structs.NewAppStructs(unknown, def, id, wsCount)
+			require.Error(err,
+				require.Is(istorage.ErrStorageDoesNotExist),
+				require.Has(unknown))
+			require.Nil(str)
+		})
+
+		t.Run("if workspaces count is omitted", func(t *testing.T) {
+			def := appdef.New().MustBuild()
+			str, err := structs.NewAppStructs(name, def, id, 0)
+			require.Error(err,
+				require.Is(ErrNumAppWorkspacesNotSet),
+				require.Has(name))
+			require.Nil(str)
+		})
+
+		t.Run("if builtin extension missed in Resources", func(t *testing.T) {
+			adb := appdef.New()
+			adb.AddPackage("test", "test.com/test")
+			cmd := adb.AddCommand(appdef.NewQName("test", "cmd"))
+			cmd.SetEngine(appdef.ExtensionEngineKind_BuiltIn)
+			def := adb.MustBuild()
+			str, err := structs.NewAppStructs(name, def, id, wsCount)
+			require.Error(err,
+				require.Is(ErrNameNotFound),
+				require.Has("test.cmd"))
+			require.Nil(str)
+		})
 	})
 }

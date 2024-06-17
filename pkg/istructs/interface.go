@@ -32,7 +32,7 @@ type IAppStructsProvider interface {
 	// Creates a new AppStructs for the application with given name, id and definition.
 	//
 	// @ConcurrentAccess
-	NewAppStructs(appdef.AppQName, ClusterAppID, appdef.IAppDef) (IAppStructs, error)
+	NewAppStructs(appdef.AppQName, appdef.IAppDef, ClusterAppID, NumAppWorkspaces) (IAppStructs, error)
 }
 
 type IAppStructs interface {
