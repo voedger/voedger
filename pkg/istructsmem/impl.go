@@ -67,11 +67,6 @@ func (provider *appStructsProviderType) AppStructs(appName appdef.AppQName) (str
 	return app, nil
 }
 
-// istructs.IAppStructsProvider.AppStructsByDef
-func (provider *appStructsProviderType) AppStructsByDef(appName appdef.AppQName, appDef appdef.IAppDef) (structs istructs.IAppStructs, err error) {
-	return provider.AppStructs(appName)
-}
-
 // istructs.IAppStructsProvider.NewAppStructs
 func (provider *appStructsProviderType) NewAppStructs(name appdef.AppQName, def appdef.IAppDef, id istructs.ClusterAppID, wsCount istructs.NumAppWorkspaces) (istructs.IAppStructs, error) {
 	provider.locker.Lock()

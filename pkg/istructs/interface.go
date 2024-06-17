@@ -22,13 +22,6 @@ type IAppStructsProvider interface {
 	// @ConcurrentAccess
 	AppStructs(aqn appdef.AppQName) (structs IAppStructs, err error)
 
-	// Returns AppStructs for the application with given name and definition.
-	//
-	// ErrAppNotFound can be returned.
-	//
-	// @ConcurrentAccess
-	AppStructsByDef(appName appdef.AppQName, appDef appdef.IAppDef) (IAppStructs, error)
-
 	// Creates a new AppStructs for the application with given name, id and definition.
 	//
 	// @ConcurrentAccess
