@@ -74,7 +74,8 @@ func (provider *appStructsProviderType) AppStructsByDef(appName appdef.AppQName,
 }
 
 // istructs.IAppStructsProvider.NewAppStructs
-func (provider *appStructsProviderType) NewAppStructs(appdef.AppQName, appdef.IAppDef) (istructs.IAppStructs, error) {
+func (provider *appStructsProviderType) NewAppStructs(name appdef.AppQName, id istructs.ClusterAppID, def appdef.IAppDef) (istructs.IAppStructs, error) {
+	//appCfg := provider.configs.AddConfig(name, def)
 	return nil, errors.ErrUnsupported
 }
 

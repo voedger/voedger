@@ -29,10 +29,10 @@ type IAppStructsProvider interface {
 	// @ConcurrentAccess
 	AppStructsByDef(appName appdef.AppQName, appDef appdef.IAppDef) (IAppStructs, error)
 
-	// Creates a new AppStructs for the application with given name and definition.
+	// Creates a new AppStructs for the application with given name, id and definition.
 	//
 	// @ConcurrentAccess
-	NewAppStructs(appName appdef.AppQName, appDef appdef.IAppDef) (IAppStructs, error)
+	NewAppStructs(appdef.AppQName, ClusterAppID, appdef.IAppDef) (IAppStructs, error)
 }
 
 type IAppStructs interface {
