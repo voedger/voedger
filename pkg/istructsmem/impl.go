@@ -8,7 +8,6 @@ package istructsmem
 import (
 	"context"
 	"encoding/binary"
-	"errors"
 	"fmt"
 	"sync"
 
@@ -75,8 +74,22 @@ func (provider *appStructsProviderType) AppStructsByDef(appName appdef.AppQName,
 
 // istructs.IAppStructsProvider.NewAppStructs
 func (provider *appStructsProviderType) NewAppStructs(name appdef.AppQName, id istructs.ClusterAppID, def appdef.IAppDef) (istructs.IAppStructs, error) {
-	//appCfg := provider.configs.AddConfig(name, def)
-	return nil, errors.ErrUnsupported
+	provider.locker.Lock()
+	defer provider.locker.Unlock()
+
+	cfg := provider.configs.AddAppConfig(name, id, def)
+	buckets := provider.bucketsFactory()
+	appTokens := provider.appTokensFactory.New(name)
+	appStorage, err := provider.storageProvider.AppStorage(name)
+	if err != nil {
+		return nil, err
+	}
+	if err = cfg.prepare(buckets, appStorage); err != nil {
+		return nil, err
+	}
+	app := newAppStructs(cfg, buckets, appTokens)
+	provider.structures[name] = app
+	return app, nil
 }
 
 // appStructsType implements IAppStructs interface

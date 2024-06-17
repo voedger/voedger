@@ -27,7 +27,7 @@ func TestAppConfigsType_AddConfig(t *testing.T) {
 
 	appName, appID := istructs.AppQName_test1_app1, istructs.ClusterAppID_test1_app1
 
-	t.Run("must be ok to add config for known app", func(t *testing.T) {
+	t.Run("must be ok to add config for known builtin app", func(t *testing.T) {
 		cfgs := make(AppConfigsType)
 		adb := appdef.New()
 		adb.AddPackage("test", "test.com/test")
@@ -88,7 +88,7 @@ func TestAppConfigsType_AddConfig(t *testing.T) {
 		require.ErrorIs(err, appdef.ErrNotFoundError)
 	})
 
-	t.Run("must be panic to add config for unknown app", func(t *testing.T) {
+	t.Run("must be panic to add config for unknown builtin app", func(t *testing.T) {
 		cfgs := make(AppConfigsType)
 		appName := appdef.NewAppQName("unknown", "unknown")
 		require.Panics(func() {

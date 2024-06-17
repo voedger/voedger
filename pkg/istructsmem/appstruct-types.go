@@ -6,6 +6,7 @@
 package istructsmem
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -113,7 +114,10 @@ func newBuiltInAppConfig(appName appdef.AppQName, appDef appdef.IAppDefBuilder) 
 		panic(fmt.Errorf("%v: unable build application: %w", appName, err))
 	}
 
-	return newAppConfig(appName, id, def)
+	cfg := newAppConfig(appName, id, def)
+	cfg.appDefBuilder = appDef
+
+	return cfg
 }
 
 // prepare: prepares application configuration to use. It creates config globals and must be called from thread-safe code
@@ -124,11 +128,14 @@ func (cfg *AppConfigType) prepare(buckets irates.IBuckets, appStorage istorage.I
 		return nil
 	}
 
-	app, err := cfg.appDefBuilder.Build()
-	if err != nil {
-		return fmt.Errorf("%v: unable rebuild changed application: %w", cfg.Name, err)
+	if cfg.appDefBuilder != nil {
+		// BuiltIn application, appDefBuilder can be changed after add config
+		app, err := cfg.appDefBuilder.Build()
+		if err != nil {
+			return fmt.Errorf("%v: unable rebuild changed application: %w", cfg.Name, err)
+		}
+		cfg.AppDef = app
 	}
-	cfg.AppDef = app
 
 	cfg.dynoSchemes.Prepare(cfg.AppDef)
 
@@ -170,33 +177,38 @@ func (cfg *AppConfigType) prepare(buckets irates.IBuckets, appStorage istorage.I
 	return nil
 }
 
-func (cfg *AppConfigType) validateResources() error {
-	err := iterate.ForEachError(cfg.AppDef.Types, func(tp appdef.IType) error {
-		switch tp.Kind() {
-		case appdef.TypeKind_Query, appdef.TypeKind_Command:
-			r := cfg.Resources.QueryResource(tp.QName())
-			if r.QName() == appdef.NullQName {
-				return fmt.Errorf("exec of func %s is not defined", tp.QName())
-			}
-		case appdef.TypeKind_Projector:
-			prj := tp.(appdef.IProjector)
-			_, syncFound := cfg.syncProjectors[prj.QName()]
-			_, asyncFound := cfg.asyncProjectors[prj.QName()]
-			if !syncFound && !asyncFound {
-				return fmt.Errorf("exec of %v is not defined", prj)
-			}
-			if syncFound && asyncFound {
-				return fmt.Errorf("exec for %v is defined twice: sync and async", prj)
-			}
-			if prj.Sync() && asyncFound {
-				return fmt.Errorf("exec of %v is defined as async", prj)
-			}
-			if !prj.Sync() && syncFound {
-				return fmt.Errorf("exec of %v is defined as sync", prj)
+func (cfg *AppConfigType) validateResources() (err error) {
+
+	cfg.AppDef.Extensions(func(ext appdef.IExtension) {
+		if ext.Engine() == appdef.ExtensionEngineKind_BuiltIn {
+			// Only builtin extensions should be validated by cfg.Resources
+			switch ext.Kind() {
+			case appdef.TypeKind_Query, appdef.TypeKind_Command:
+				if cfg.Resources.QueryResource(ext.QName()).QName() == appdef.NullQName {
+					err = errors.Join(err,
+						fmt.Errorf("exec of func %s is not defined", ext.QName()))
+				}
+			case appdef.TypeKind_Projector:
+				prj := ext.(appdef.IProjector)
+				_, syncFound := cfg.syncProjectors[prj.QName()]
+				_, asyncFound := cfg.asyncProjectors[prj.QName()]
+				if !syncFound && !asyncFound {
+					err = errors.Join(err,
+						fmt.Errorf("exec of %v is not defined", prj))
+				} else if syncFound && asyncFound {
+					err = errors.Join(err,
+						fmt.Errorf("exec of %v is defined twice: sync and async", prj))
+				} else if prj.Sync() && asyncFound {
+					err = errors.Join(err,
+						fmt.Errorf("exec of %v is defined as async", prj))
+				} else if !prj.Sync() && syncFound {
+					err = errors.Join(err,
+						fmt.Errorf("exec of %v is defined as sync", prj))
+				}
 			}
 		}
-		return nil
 	})
+
 	if err != nil {
 		return err
 	}
