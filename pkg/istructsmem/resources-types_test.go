@@ -62,7 +62,7 @@ func TestResourceEnumerator(t *testing.T) {
 		})
 
 		cfgs := make(AppConfigsType, 1)
-		cfg = cfgs.AddConfig(istructs.AppQName_test1_app1, adb)
+		cfg = cfgs.AddBuiltInAppConfig(istructs.AppQName_test1_app1, adb)
 		cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 
 		cfg.Resources.Add(NewCommandFunction(cmdCreateDoc, NullCommandExec))

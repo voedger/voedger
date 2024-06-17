@@ -199,7 +199,7 @@ func Test_BasicUsage(t *testing.T) {
 
 func appStructs(appDef appdef.IAppDefBuilder, prepareAppCfg appCfgCallback) istructs.IAppStructs {
 	cfgs := make(istructsmem.AppConfigsType, 1)
-	cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, appDef)
+	cfg := cfgs.AddBuiltInAppConfig(istructs.AppQName_test1_app1, appDef)
 	cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 	if prepareAppCfg != nil {
 		prepareAppCfg(cfg)

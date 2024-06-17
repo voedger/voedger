@@ -162,7 +162,7 @@ func appStructs(appdefSql string, prepareAppCfg appCfgCallback) istructs.IAppStr
 	}
 
 	cfgs := make(istructsmem.AppConfigsType, 1)
-	cfg := cfgs.AddConfig(appName, appDef)
+	cfg := cfgs.AddBuiltInAppConfig(appName, appDef)
 	cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 	if prepareAppCfg != nil {
 		prepareAppCfg(cfg)

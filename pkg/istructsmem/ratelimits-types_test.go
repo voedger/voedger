@@ -24,7 +24,7 @@ func TestRateLimits_BasicUsage(t *testing.T) {
 	cfgs := make(AppConfigsType)
 	adb := appdef.New()
 	adb.AddPackage("test", "test.com/test")
-	cfg := cfgs.AddConfig(appName, adb)
+	cfg := cfgs.AddBuiltInAppConfig(appName, adb)
 	cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 	qName1 := appdef.NewQName("test", "myFunc")
 

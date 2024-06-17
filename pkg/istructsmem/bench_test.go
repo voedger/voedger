@@ -92,7 +92,7 @@ func bench_BuildRawEvent(b *testing.B, numOfIntFields int) {
 	// Con
 
 	configs := make(AppConfigsType, 1)
-	cfg := configs.AddConfig(appName, appDef())
+	cfg := configs.AddBuiltInAppConfig(appName, appDef())
 	cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 
 	// Register command

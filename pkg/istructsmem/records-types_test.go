@@ -143,7 +143,7 @@ func Test_RecordsRead(t *testing.T) {
 		defer storage.Reset()
 
 		cfgs := make(AppConfigsType, 1)
-		cfg := cfgs.AddConfig(test.appName, appdef.New())
+		cfg := cfgs.AddBuiltInAppConfig(test.appName, appdef.New())
 		cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
 
@@ -167,7 +167,7 @@ func Test_RecordsRead(t *testing.T) {
 		defer storage.Reset()
 
 		cfgs := make(AppConfigsType, 1)
-		cfg := cfgs.AddConfig(test.appName, appdef.New())
+		cfg := cfgs.AddBuiltInAppConfig(test.appName, appdef.New())
 		cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
 

@@ -209,7 +209,7 @@ func deployTestAppWithSecretToken(require *require.Assertions,
 		prepareAppDef(adb, wsb)
 	}
 
-	cfg := cfgs.AddConfig(appName, adb)
+	cfg := cfgs.AddBuiltInAppConfig(appName, adb)
 	cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 
 	atf := payloads.TestAppTokensFactory(itokensjwt.ProvideITokens(itokensjwt.SecretKeyExample, timeFunc))

@@ -748,7 +748,7 @@ func Test_EventUpdateRawCud(t *testing.T) {
 
 	cfgs := func() AppConfigsType {
 		cfgs := make(AppConfigsType, 1)
-		cfg := cfgs.AddConfig(appName, adb)
+		cfg := cfgs.AddBuiltInAppConfig(appName, adb)
 		cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 		return cfgs
 	}()
@@ -929,7 +929,7 @@ func Test_UpdateCorrupted(t *testing.T) {
 
 	cfgs := func() AppConfigsType {
 		cfgs := make(AppConfigsType, 1)
-		cfg := cfgs.AddConfig(appName, adb)
+		cfg := cfgs.AddBuiltInAppConfig(appName, adb)
 		cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 		return cfgs
 	}()
@@ -1062,7 +1062,7 @@ func Test_BuildPLogEvent(t *testing.T) {
 
 	cfgs := func() AppConfigsType {
 		cfgs := make(AppConfigsType, 1)
-		cfg := cfgs.AddConfig(appName, adb)
+		cfg := cfgs.AddBuiltInAppConfig(appName, adb)
 		cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 		return cfgs
 	}()
@@ -1262,7 +1262,7 @@ func Test_SingletonCDocEvent(t *testing.T) {
 
 	cfgs := func() AppConfigsType {
 		cfgs := make(AppConfigsType, 1)
-		cfg := cfgs.AddConfig(appName, adb)
+		cfg := cfgs.AddBuiltInAppConfig(appName, adb)
 		cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 		return cfgs
 	}()

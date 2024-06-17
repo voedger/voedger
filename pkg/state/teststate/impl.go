@@ -301,7 +301,7 @@ func (ctx *testState) buildAppDef(packagePath string, packageDir string, createW
 	ctx.appDef = adf
 
 	cfgs := make(istructsmem.AppConfigsType, 1)
-	cfg := cfgs.AddConfig(appName, adb)
+	cfg := cfgs.AddBuiltInAppConfig(appName, adb)
 	cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 	ctx.appDef.Extensions(func(i appdef.IExtension) {
 		if i.QName().Pkg() == TestPkgAlias {

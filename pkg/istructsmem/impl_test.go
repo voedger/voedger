@@ -89,7 +89,7 @@ func TestBasicUsage(t *testing.T) {
 			SetParam(saleParamsName)
 
 		cfgs := make(AppConfigsType, 1)
-		cfg := cfgs.AddConfig(appName, adb)
+		cfg := cfgs.AddBuiltInAppConfig(appName, adb)
 		cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 		cfg.Resources.Add(NewCommandFunction(qNameCmdTestSale, NullCommandExec))
 
@@ -216,7 +216,7 @@ func TestBasicUsage_ViewRecords(t *testing.T) {
 			AddField("active", appdef.DataKind_bool, true)
 
 		cfgs := make(AppConfigsType, 1)
-		cfg := cfgs.AddConfig(appName, adb)
+		cfg := cfgs.AddBuiltInAppConfig(appName, adb)
 		cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 
 		return cfgs
@@ -310,7 +310,7 @@ func Test_appStructsType_ObjectBuilder(t *testing.T) {
 		obj.AddContainer("child", objName, 0, appdef.Occurs_Unbounded)
 
 		cfgs := make(AppConfigsType)
-		cfg := cfgs.AddConfig(appName, adb)
+		cfg := cfgs.AddBuiltInAppConfig(appName, adb)
 		cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 
 		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider())
@@ -521,7 +521,7 @@ func Test_BasicUsageDescribePackages(t *testing.T) {
 			SetResult(appdef.QNameANY)
 
 		cfgs := make(AppConfigsType)
-		cfg := cfgs.AddConfig(appName, adb)
+		cfg := cfgs.AddBuiltInAppConfig(appName, adb)
 		cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 
 		cfg.Resources.Add(NewCommandFunction(cmdQName, NullCommandExec))
@@ -565,7 +565,7 @@ func Test_Provide(t *testing.T) {
 
 	t.Run("AppStructs() must error if unknown app name", func(t *testing.T) {
 		cfgs := make(AppConfigsType)
-		cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, appdef.New())
+		cfg := cfgs.AddBuiltInAppConfig(istructs.AppQName_test1_app1, appdef.New())
 		cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 		p := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), nil)
 		require.NotNil(p)

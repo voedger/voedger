@@ -35,8 +35,8 @@ func Example() {
 	appConfigs := istructsmem.AppConfigsType{}
 	adb_1_v1, app_1_v1 := buildAppDef("app-1 ver.1")
 	adb_2_v1, app_2_v1 := buildAppDef("app-2 ver.1")
-	appConfigs.AddConfig(istructs.AppQName_test1_app1, adb_1_v1).SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
-	appConfigs.AddConfig(istructs.AppQName_test1_app2, adb_2_v1).SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
+	appConfigs.AddBuiltInAppConfig(istructs.AppQName_test1_app1, adb_1_v1).SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
+	appConfigs.AddBuiltInAppConfig(istructs.AppQName_test1_app2, adb_2_v1).SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 
 	appStructs := istructsmem.Provide(
 		appConfigs,

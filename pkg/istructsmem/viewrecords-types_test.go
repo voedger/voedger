@@ -57,7 +57,7 @@ func Test_KeyType(t *testing.T) {
 				AddField("val_string", appdef.DataKind_string, false, appdef.MaxLen(1024))
 		})
 
-		cfg := cfgs.AddConfig(appName, adb)
+		cfg := cfgs.AddBuiltInAppConfig(appName, adb)
 		cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 
 		return cfgs
@@ -223,7 +223,7 @@ func TestCore_ViewRecords(t *testing.T) {
 				AddField("valueField1", appdef.DataKind_int64, false)
 		})
 
-		cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, adb)
+		cfg := cfgs.AddBuiltInAppConfig(istructs.AppQName_test1_app1, adb)
 		cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 
 		return cfgs
@@ -855,7 +855,7 @@ func Test_ViewRecordsPutJSON(t *testing.T) {
 				AddField("v1", appdef.DataKind_float32, true).
 				AddField("v2", appdef.DataKind_string, true)
 		})
-		cfg := cfgs.AddConfig(appName, adb)
+		cfg := cfgs.AddBuiltInAppConfig(appName, adb)
 		cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 		return cfgs
 	}()
@@ -1009,7 +1009,7 @@ func Test_LoadStoreViewRecord_Bytes(t *testing.T) {
 
 	cfg := func() *AppConfigType {
 		cfgs := make(AppConfigsType, 1)
-		cfg := cfgs.AddConfig(istructs.AppQName_test1_app2, adb)
+		cfg := cfgs.AddBuiltInAppConfig(istructs.AppQName_test1_app2, adb)
 		cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 
 		asp := simpleStorageProvider()
@@ -1130,7 +1130,7 @@ func Test_ViewRecords_ClustColumnsQName(t *testing.T) {
 		})
 
 		cfgs := make(AppConfigsType, 1)
-		cfg := cfgs.AddConfig(appName, adb)
+		cfg := cfgs.AddBuiltInAppConfig(appName, adb)
 		cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 
 		return cfgs
@@ -1215,7 +1215,7 @@ func Test_ViewRecord_GetBatch(t *testing.T) {
 	storageProvider := teststore.NewStorageProvider(storage)
 
 	cfgs := make(AppConfigsType, 1)
-	cfg := cfgs.AddConfig(appName, adb)
+	cfg := cfgs.AddBuiltInAppConfig(appName, adb)
 	cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 	provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
 
@@ -1485,7 +1485,7 @@ func Test_ViewRecordStructure(t *testing.T) {
 
 	cfg := func() *AppConfigType {
 		cfgs := make(AppConfigsType, 1)
-		cfg := cfgs.AddConfig(istructs.AppQName_test1_app2, adb)
+		cfg := cfgs.AddBuiltInAppConfig(istructs.AppQName_test1_app2, adb)
 		cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 
 		asp := simpleStorageProvider()

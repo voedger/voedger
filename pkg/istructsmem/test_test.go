@@ -397,7 +397,7 @@ func test() *testDataType {
 
 	if testData.AppConfigs == nil {
 		testData.AppConfigs = make(AppConfigsType, 1)
-		testData.AppCfg = testData.AppConfigs.AddConfig(testData.appName, prepareAppDef())
+		testData.AppCfg = testData.AppConfigs.AddBuiltInAppConfig(testData.appName, prepareAppDef())
 		testData.AppCfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 		testData.AppDef = testData.AppCfg.AppDef
 

@@ -23,9 +23,17 @@ import (
 // AppConfigsType: map of applications configurators
 type AppConfigsType map[appdef.AppQName]*AppConfigType
 
-// AddConfig: adds new config for specified application or replaces if exists
-func (cfgs *AppConfigsType) AddConfig(appName appdef.AppQName, appDef appdef.IAppDefBuilder) *AppConfigType {
-	c := newAppConfig(appName, appDef)
+// AddAppConfig: adds new config for specified application or replaces if exists
+func (cfgs *AppConfigsType) AddAppConfig(name appdef.AppQName, id istructs.ClusterAppID, def appdef.IAppDef) *AppConfigType {
+	c := newAppConfig(name, id, def)
+
+	(*cfgs)[name] = c
+	return c
+}
+
+// AddBuiltInAppConfig: adds new config for specified builtin application or replaces if exists
+func (cfgs *AppConfigsType) AddBuiltInAppConfig(appName appdef.AppQName, appDef appdef.IAppDefBuilder) *AppConfigType {
+	c := newBuiltInAppConfig(appName, appDef)
 
 	(*cfgs)[appName] = c
 	return c
@@ -69,26 +77,16 @@ type AppConfigType struct {
 	numAppWorkspaces   istructs.NumAppWorkspaces
 }
 
-func newAppConfig(appName appdef.AppQName, appDef appdef.IAppDefBuilder) *AppConfigType {
+func newAppConfig(name appdef.AppQName, id istructs.ClusterAppID, def appdef.IAppDef) *AppConfigType {
 	cfg := AppConfigType{
-		Name:            appName,
+		Name:            name,
+		ClusterAppID:    id,
 		Params:          makeAppConfigParams(),
 		syncProjectors:  make(istructs.Projectors),
 		asyncProjectors: make(istructs.Projectors),
 	}
 
-	qNameID, ok := istructs.ClusterApps[appName]
-	if !ok {
-		panic(fmt.Errorf("unable construct configuration for unknown application «%v»: %w", appName, istructs.ErrAppNotFound))
-	}
-	cfg.ClusterAppID = qNameID
-
-	cfg.appDefBuilder = appDef
-	app, err := appDef.Build()
-	if err != nil {
-		panic(fmt.Errorf("%v: unable build application: %w", appName, err))
-	}
-	cfg.AppDef = app
+	cfg.AppDef = def
 	cfg.Resources = makeResources()
 
 	cfg.dynoSchemes = dynobuf.New()
@@ -102,6 +100,20 @@ func newAppConfig(appName appdef.AppQName, appDef appdef.IAppDefBuilder) *AppCon
 		limits: map[appdef.QName]map[istructs.RateLimitKind]istructs.RateLimit{},
 	}
 	return &cfg
+}
+
+func newBuiltInAppConfig(appName appdef.AppQName, appDef appdef.IAppDefBuilder) *AppConfigType {
+	id, ok := istructs.ClusterApps[appName]
+	if !ok {
+		panic(fmt.Errorf("unable construct configuration for unknown application «%v»: %w", appName, istructs.ErrAppNotFound))
+	}
+
+	def, err := appDef.Build()
+	if err != nil {
+		panic(fmt.Errorf("%v: unable build application: %w", appName, err))
+	}
+
+	return newAppConfig(appName, id, def)
 }
 
 // prepare: prepares application configuration to use. It creates config globals and must be called from thread-safe code
@@ -246,6 +258,8 @@ func (cfg *AppConfigType) SyncProjectors() istructs.Projectors {
 
 // need to build view.sys.NextBaseWSID and view.sys.projectionOffsets
 // could be called on application build stage only
+//
+// Should be used for built-in applications only.
 func (cfg *AppConfigType) AppDefBuilder() appdef.IAppDefBuilder {
 	if cfg.prepared {
 		panic("IAppStructsProvider.AppStructs() is called already for the app -> IAppDef is built already -> wrong to work with IAppDefBuilder")

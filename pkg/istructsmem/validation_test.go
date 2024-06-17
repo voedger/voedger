@@ -52,7 +52,7 @@ func Test_ValidEventArgs(t *testing.T) {
 	})
 
 	cfgs := make(AppConfigsType, 1)
-	cfg := cfgs.AddConfig(appName, adb)
+	cfg := cfgs.AddBuiltInAppConfig(appName, adb)
 	cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 
 	provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider())
@@ -344,7 +344,7 @@ func Test_ValidSysCudEvent(t *testing.T) {
 	})
 
 	cfgs := make(AppConfigsType, 1)
-	cfg := cfgs.AddConfig(appName, adb)
+	cfg := cfgs.AddBuiltInAppConfig(appName, adb)
 	cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 
 	provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider())
@@ -567,7 +567,7 @@ func Test_ValidCommandEvent(t *testing.T) {
 	})
 
 	cfgs := make(AppConfigsType, 1)
-	cfg := cfgs.AddConfig(appName, adb)
+	cfg := cfgs.AddBuiltInAppConfig(appName, adb)
 	cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 	cfg.Resources.Add(NewCommandFunction(cmdName, NullCommandExec))
 
@@ -685,7 +685,7 @@ func Test_IObjectBuilderBuild(t *testing.T) {
 	})
 
 	cfgs := make(AppConfigsType, 1)
-	cfg := cfgs.AddConfig(appName, adb)
+	cfg := cfgs.AddBuiltInAppConfig(appName, adb)
 	cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 
 	provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider())
@@ -767,7 +767,7 @@ func Test_VerifiedFields(t *testing.T) {
 	})
 
 	cfgs := make(AppConfigsType, 1)
-	cfg := cfgs.AddConfig(test.appName, adb)
+	cfg := cfgs.AddBuiltInAppConfig(test.appName, adb)
 	cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 
 	email := "test@test.io"
@@ -950,7 +950,7 @@ func Test_CharsFieldRestricts(t *testing.T) {
 	})
 
 	cfgs := make(AppConfigsType, 1)
-	cfg := cfgs.AddConfig(test.appName, adb)
+	cfg := cfgs.AddBuiltInAppConfig(test.appName, adb)
 	cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 
 	asp := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider())

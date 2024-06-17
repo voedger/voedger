@@ -21,7 +21,7 @@ import (
 	"github.com/voedger/voedger/pkg/itokensjwt"
 )
 
-var NullAppConfig = newAppConfig(istructs.AppQName_null, appdef.New())
+var NullAppConfig = newBuiltInAppConfig(istructs.AppQName_null, appdef.New())
 
 var (
 	nullDynoBuffer = dynobuffers.NewBuffer(dynobuffers.NewScheme())

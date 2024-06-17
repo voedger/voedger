@@ -686,7 +686,7 @@ func setUp(t *testing.T, prepare func(appDef appdef.IAppDefBuilder, cfg *istruct
 	wsdescutil.AddWorkspaceDescriptorStubDef(adb)
 	qNameTestWSKind := appdef.NewQName(appdef.SysPackage, "TestWSKind")
 	adb.AddCDoc(qNameTestWSKind).SetSingleton()
-	cfg := cfgs.AddConfig(istructs.AppQName_untill_airs_bp, adb)
+	cfg := cfgs.AddBuiltInAppConfig(istructs.AppQName_untill_airs_bp, adb)
 	cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 	if prepare != nil {
 		prepare(adb, cfg)

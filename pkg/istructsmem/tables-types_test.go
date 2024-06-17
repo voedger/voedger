@@ -383,7 +383,7 @@ func Test_LoadStoreRecord_Bytes(t *testing.T) {
 			adb.AddObject(test.tablePhotos) // for reading QName_1 field value
 		})
 
-		newConfig := newAppConfig(test.AppCfg.Name, adb)
+		newConfig := newBuiltInAppConfig(test.AppCfg.Name, adb)
 		newConfig.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 
 		err := newConfig.prepare(nil, test.AppCfg.storage)
