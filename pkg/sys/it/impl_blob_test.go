@@ -23,7 +23,7 @@ func TestBasicUsage_BLOBProcessors(t *testing.T) {
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
-	as, err := vit.AppStructs(istructs.AppQName_test1_app1)
+	as, err := vit.BuiltIn(istructs.AppQName_test1_app1)
 	require.NoError(err)
 	systemPrincipal, err := payloads.GetSystemPrincipalTokenApp(as.AppTokens())
 	require.NoError(err)
@@ -78,7 +78,7 @@ func TestBlobberErrors(t *testing.T) {
 
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
 
-	as, err := vit.AppStructs(istructs.AppQName_test1_app1)
+	as, err := vit.BuiltIn(istructs.AppQName_test1_app1)
 	require.NoError(err)
 	systemPrincipal, err := payloads.GetSystemPrincipalTokenApp(as.AppTokens())
 	require.NoError(err)

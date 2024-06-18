@@ -199,7 +199,7 @@ func TestAppWSInitIndempotency(t *testing.T) {
 
 	// init app ws again (first is done on NewVIT()) -> expect no errors + assume next tests will work as well
 	for _, app := range vit.BuiltInAppsPackages {
-		as, err := vit.AppStructs(app.Name)
+		as, err := vit.BuiltIn(app.Name)
 		require.NoError(err)
 		initedWSIDs, err := cluster.InitAppWSes(as, as.NumAppWorkspaces(), app.NumParts, istructs.UnixMilli(vit.TimeFunc().UnixMilli()))
 		require.NoError(err)
@@ -209,7 +209,7 @@ func TestAppWSInitIndempotency(t *testing.T) {
 
 func checkCDocsWSDesc(vvmCfg *vvm.VVMConfig, vvm *vvm.VVM, require *require.Assertions) {
 	for appQName := range vvmCfg.VVMAppsBuilder {
-		as, err := vvm.AppStructs(appQName)
+		as, err := vvm.BuiltIn(appQName)
 		require.NoError(err)
 		for wsNum := 0; istructs.NumAppWorkspaces(wsNum) < as.NumAppWorkspaces(); wsNum++ {
 			appWSID := istructs.NewWSID(istructs.MainClusterID, istructs.WSID(wsNum+int(istructs.FirstBaseAppWSID)))

@@ -187,7 +187,7 @@ func deployTestApp(
 	metrics imetrics.IMetrics,
 	appStructs istructs.IAppStructs,
 ) {
-	appDefBuilder := appdef.New(appName)
+	appDefBuilder := appdef.New()
 	if prepareAppDef != nil {
 		prepareAppDef(appDefBuilder)
 	}
@@ -195,7 +195,7 @@ func deployTestApp(
 	appDefBuilder.AddCommand(newWorkspaceCmd)
 
 	cfgs := make(istructsmem.AppConfigsType, 1)
-	cfg := cfgs.AddConfig(appName, appDefBuilder)
+	cfg := cfgs.AddBuiltInAppConfig(appName, appDefBuilder)
 	cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 	if prepareAppCfg != nil {
 		prepareAppCfg(cfg)
@@ -226,7 +226,7 @@ func deployTestApp(
 		payloads.ProvideIAppTokensFactory(itokensjwt.TestTokensJWT()),
 		storageProvider)
 
-	appStructs, err = appStructsProvider.AppStructs(appName)
+	appStructs, err = appStructsProvider.BuiltIn(appName)
 	if err != nil {
 		panic(err)
 	}

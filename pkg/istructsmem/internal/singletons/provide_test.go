@@ -35,7 +35,7 @@ func Test_BasicUsage(t *testing.T) {
 	testName := appdef.NewQName("test", "doc")
 
 	testAppDef := func() appdef.IAppDef {
-		adb := appdef.New(istructs.AppQName_test1_app1)
+		adb := appdef.New()
 		adb.AddPackage("test", "test.com/test")
 		doc := adb.AddCDoc(testName)
 		doc.SetSingleton()
@@ -110,7 +110,7 @@ func Test_SingletonsGetID(t *testing.T) {
 			err = versions.Prepare(storage)
 			require.NoError(err)
 
-			adb := appdef.New(istructs.AppQName_test1_app1)
+			adb := appdef.New()
 			adb.AddPackage("test", "test.com/test")
 
 			{
@@ -215,7 +215,7 @@ func Test_Singletons_Errors(t *testing.T) {
 		err := versions.Prepare(storage)
 		require.NoError(err)
 
-		adb := appdef.New(istructs.AppQName_test1_app1)
+		adb := appdef.New()
 		adb.AddPackage("test", "test.com/test")
 
 		doc := adb.AddCDoc(cDocName)
@@ -237,7 +237,7 @@ func Test_Singletons_Errors(t *testing.T) {
 		err := versions.Prepare(storage)
 		require.NoError(err)
 
-		adb := appdef.New(istructs.AppQName_test1_app1)
+		adb := appdef.New()
 		adb.AddPackage("test", "test.com/test")
 
 		for id := istructs.FirstSingletonID; id <= istructs.MaxSingletonID; id++ {
@@ -263,7 +263,7 @@ func Test_Singletons_Errors(t *testing.T) {
 		err := versions.Prepare(storage)
 		require.NoError(err)
 
-		app := appdef.New(istructs.AppQName_test1_app1)
+		app := appdef.New()
 		doc := app.AddCDoc(defName)
 		doc.SetSingleton()
 		appDef, err := app.Build()
@@ -283,7 +283,7 @@ func Test_Singletons_Errors(t *testing.T) {
 		err := versions.Prepare(storage)
 		require.NoError(err)
 
-		app := appdef.New(istructs.AppQName_test1_app1)
+		app := appdef.New()
 		doc := app.AddCDoc(defName)
 		doc.SetSingleton()
 		appDef, err := app.Build()

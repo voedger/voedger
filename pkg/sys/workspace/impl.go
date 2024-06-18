@@ -117,7 +117,7 @@ func execCmdCreateWorkspaceID(asp istructs.IAppStructsProvider, appQName appdef.
 
 		// ownerWSID := istructs.WSID(args.ArgumentObject.AsInt64(FldOwnerWSID))
 		// Get new WSID from View<NextBaseWSID>
-		as, err := asp.AppStructs(appQName)
+		as, err := asp.BuiltIn(appQName)
 		if err != nil {
 			return err
 		}
@@ -230,7 +230,7 @@ func execCmdCreateWorkspace(now coreutils.TimeFunc, asp istructs.IAppStructsProv
 		wsKindInitializationData := map[string]interface{}{}
 
 		e := func() error {
-			as, err := asp.AppStructs(appQName)
+			as, err := asp.BuiltIn(appQName)
 			if err != nil {
 				return fmt.Errorf("failed to get appStructs for appQName %s: %w", appQName.String(), err)
 			}

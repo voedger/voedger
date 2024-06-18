@@ -14,7 +14,6 @@ import (
 //   - IAppDef
 type appDef struct {
 	comment
-	name         AppQName
 	packages     *packages
 	privileges   []*privilege // adding order should be saved
 	types        map[QName]interface{}
@@ -22,9 +21,8 @@ type appDef struct {
 	wsDesc       map[QName]IWorkspace
 }
 
-func newAppDef(name AppQName) *appDef {
+func newAppDef() *appDef {
 	app := appDef{
-		name:     name,
 		packages: newPackages(),
 		types:    make(map[QName]interface{}),
 		wsDesc:   make(map[QName]IWorkspace),
@@ -184,8 +182,6 @@ func (app *appDef) Object(name QName) IObject {
 	}
 	return nil
 }
-
-func (app appDef) Name() AppQName { return app.name }
 
 func (app *appDef) Objects(cb func(IObject)) {
 	app.Types(func(t IType) {

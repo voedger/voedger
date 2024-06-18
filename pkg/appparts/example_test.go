@@ -20,8 +20,8 @@ import (
 )
 
 func Example() {
-	buildAppDef := func(name appdef.AppQName, verInfo ...string) (appdef.IAppDefBuilder, appdef.IAppDef) {
-		adb := appdef.New(name)
+	buildAppDef := func(verInfo ...string) (appdef.IAppDefBuilder, appdef.IAppDef) {
+		adb := appdef.New()
 		adb.AddPackage("test", "test.com/test")
 
 		adb.AddCDoc(appdef.NewQName("test", "verInfo")).SetComment(verInfo...)
@@ -33,10 +33,10 @@ func Example() {
 	}
 
 	appConfigs := istructsmem.AppConfigsType{}
-	adb_1_v1, app_1_v1 := buildAppDef(istructs.AppQName_test1_app1, "app-1 ver.1")
-	adb_2_v1, app_2_v1 := buildAppDef(istructs.AppQName_test1_app2, "app-2 ver.1")
-	appConfigs.AddConfig(istructs.AppQName_test1_app1, adb_1_v1).SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
-	appConfigs.AddConfig(istructs.AppQName_test1_app2, adb_2_v1).SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
+	adb_1_v1, app_1_v1 := buildAppDef("app-1 ver.1")
+	adb_2_v1, app_2_v1 := buildAppDef("app-2 ver.1")
+	appConfigs.AddBuiltInAppConfig(istructs.AppQName_test1_app1, adb_1_v1).SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
+	appConfigs.AddBuiltInAppConfig(istructs.AppQName_test1_app2, adb_2_v1).SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 
 	appStructs := istructsmem.Provide(
 		appConfigs,

@@ -461,7 +461,7 @@ func TestUpdateDifferentLocations(t *testing.T) {
 		defer rollback()
 
 		// determine the number of the app workspace that stores cdoc.Login "login"
-		registryAppStructs, err := vit.IAppStructsProvider.AppStructs(istructs.AppQName_sys_registry)
+		registryAppStructs, err := vit.IAppStructsProvider.BuiltIn(istructs.AppQName_sys_registry)
 		require.NoError(err)
 		appWSNumber := pseudoWSID.BaseWSID() % istructs.WSID(registryAppStructs.NumAppWorkspaces())
 

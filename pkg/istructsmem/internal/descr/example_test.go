@@ -20,7 +20,7 @@ func Example() {
 	appName := istructs.AppQName_test1_app1
 
 	appDef := func() appdef.IAppDef {
-		adb := appdef.New(appName)
+		adb := appdef.New()
 		adb.AddPackage("test", "test/path")
 
 		numName := appdef.NewQName("test", "number")

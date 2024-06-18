@@ -76,7 +76,7 @@ func Bootstrap(federation federation.IFederation, asp istructs.IAppStructsProvid
 }
 
 func initClusterAppWS(asp istructs.IAppStructsProvider, timeFunc coreutils.TimeFunc) error {
-	as, err := asp.AppStructs(istructs.AppQName_sys_cluster)
+	as, err := asp.BuiltIn(istructs.AppQName_sys_cluster)
 	if err == nil {
 		_, err = cluster.InitAppWS(as, clusterapp.ClusterAppWSIDPartitionID, clusterapp.ClusterAppWSID, istructs.FirstOffset, istructs.FirstOffset,
 			istructs.UnixMilli(timeFunc().UnixMilli()))

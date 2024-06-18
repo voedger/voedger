@@ -27,7 +27,7 @@ func Test_AppDef_AddData(t *testing.T) {
 	tokenName := NewQName("test", "token")
 
 	t.Run("must be ok to add data types", func(t *testing.T) {
-		adb := New(NewAppQName("test", "app"))
+		adb := New()
 		adb.AddPackage("test", "test.com/test")
 
 		_ = adb.AddData(intName, DataKind_int64, NullQName)
@@ -108,15 +108,15 @@ func Test_AppDef_AddData(t *testing.T) {
 	require.Nil(app.Data(NewQName("test", "unknown")), "check nil returns")
 
 	require.Panics(func() {
-		New(NewAppQName("test", "app")).AddData(NullQName, DataKind_int64, NullQName)
+		New().AddData(NullQName, DataKind_int64, NullQName)
 	}, require.Is(ErrMissedError))
 
 	require.Panics(func() {
-		New(NewAppQName("test", "app")).AddData(NewQName("naked", "🔫"), DataKind_QName, NullQName)
+		New().AddData(NewQName("naked", "🔫"), DataKind_QName, NullQName)
 	}, require.Is(ErrInvalidError), require.Has("naked.🔫"))
 
 	t.Run("panic if type with name already exists", func(t *testing.T) {
-		adb := New(NewAppQName("test", "app"))
+		adb := New()
 		adb.AddPackage("test", "test.com/test")
 		adb.AddObject(intName)
 		require.Panics(func() {
@@ -125,18 +125,18 @@ func Test_AppDef_AddData(t *testing.T) {
 	})
 
 	require.Panics(func() {
-		New(NewAppQName("test", "app")).AddData(intName, DataKind_null, NullQName)
+		New().AddData(intName, DataKind_null, NullQName)
 	}, require.Is(ErrNotFoundError))
 
 	require.Panics(func() {
-		New(NewAppQName("test", "app")).AddData(intName, DataKind_int64,
+		New().AddData(intName, DataKind_int64,
 			NewQName("test", "unknown"), // <- error here
 		)
 	}, require.Is(ErrNotFoundError), require.Has("test.unknown"))
 
 	t.Run("panic if ancestor is not data type", func(t *testing.T) {
 		objName := NewQName("test", "object")
-		adb := New(NewAppQName("test", "app"))
+		adb := New()
 		adb.AddPackage("test", "test.com/test")
 		_ = adb.AddObject(objName)
 		require.Panics(func() {
@@ -147,7 +147,7 @@ func Test_AppDef_AddData(t *testing.T) {
 	})
 
 	t.Run("panic if ancestor has different kind", func(t *testing.T) {
-		adb := New(NewAppQName("test", "app"))
+		adb := New()
 		adb.AddPackage("test", "test.com/test")
 		_ = adb.AddData(strName, DataKind_string, NullQName)
 		require.Panics(func() {
@@ -156,7 +156,7 @@ func Test_AppDef_AddData(t *testing.T) {
 	})
 
 	t.Run("panic if incompatible constraints", func(t *testing.T) {
-		adb := New(NewAppQName("test", "app"))
+		adb := New()
 		adb.AddPackage("test", "test.com/test")
 		require.Panics(func() { _ = adb.AddData(strName, DataKind_string, NullQName, MinIncl(1)) },
 			require.Is(ErrIncompatibleError), require.Has("MinIncl"))
@@ -191,7 +191,7 @@ func Test_SysDataName(t *testing.T) {
 func Test_appDef_makeSysDataTypes(t *testing.T) {
 	require := require.New(t)
 
-	app, err := New(NewAppQName("test", "app")).Build()
+	app, err := New().Build()
 	require.NoError(err)
 
 	t.Run("must be ok to get system data types", func(t *testing.T) {
@@ -479,7 +479,7 @@ func Test_data_AddConstraint(t *testing.T) {
 	require := require.New(t)
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			adb := New(NewAppQName("test", "app"))
+			adb := New()
 			adb.AddPackage("test", "test.com/test")
 			d := adb.AddData(NewQName("test", "test"), tt.args.da, NullQName)
 			if tt.wantPanic {

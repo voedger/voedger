@@ -29,7 +29,7 @@ func Test_KeyType(t *testing.T) {
 	appConfigs := func() AppConfigsType {
 		cfgs := make(AppConfigsType, 1)
 
-		adb := appdef.New(appName)
+		adb := appdef.New()
 		adb.AddPackage("test", "test.com/test")
 
 		t.Run("must be ok to build view", func(t *testing.T) {
@@ -57,7 +57,7 @@ func Test_KeyType(t *testing.T) {
 				AddField("val_string", appdef.DataKind_string, false, appdef.MaxLen(1024))
 		})
 
-		cfg := cfgs.AddConfig(appName, adb)
+		cfg := cfgs.AddBuiltInAppConfig(appName, adb)
 		cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 
 		return cfgs
@@ -67,7 +67,7 @@ func Test_KeyType(t *testing.T) {
 	appCfg := appCfgs.GetConfig(appName)
 
 	appProvider := Provide(appCfgs, iratesce.TestBucketsFactory, testTokensFactory(), teststore.NewStorageProvider(teststore.NewStorage(appName)))
-	app, err := appProvider.AppStructs(appName)
+	app, err := appProvider.BuiltIn(appName)
 	require.NoError(err)
 	require.NotNil(app)
 
@@ -197,7 +197,7 @@ func TestCore_ViewRecords(t *testing.T) {
 	appConfigs := func() AppConfigsType {
 		cfgs := make(AppConfigsType, 1)
 
-		adb := appdef.New(appName)
+		adb := appdef.New()
 		adb.AddPackage("test", "test.com/test")
 		t.Run("must be ok to build application", func(t *testing.T) {
 			view := adb.AddView(appdef.NewQName("test", "viewDrinks"))
@@ -223,7 +223,7 @@ func TestCore_ViewRecords(t *testing.T) {
 				AddField("valueField1", appdef.DataKind_int64, false)
 		})
 
-		cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, adb)
+		cfg := cfgs.AddBuiltInAppConfig(istructs.AppQName_test1_app1, adb)
 		cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 
 		return cfgs
@@ -232,7 +232,7 @@ func TestCore_ViewRecords(t *testing.T) {
 	appCfgs := appConfigs()
 	appCfg := appCfgs.GetConfig(istructs.AppQName_test1_app1)
 	p := Provide(appCfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
-	app, err := p.AppStructs(istructs.AppQName_test1_app1)
+	app, err := p.BuiltIn(istructs.AppQName_test1_app1)
 	require.NoError(err)
 	viewRecords := app.ViewRecords()
 
@@ -842,7 +842,7 @@ func Test_ViewRecordsPutJSON(t *testing.T) {
 	appCfgs := func() AppConfigsType {
 		cfgs := make(AppConfigsType, 1)
 
-		adb := appdef.New(appName)
+		adb := appdef.New()
 		adb.AddPackage("test", "test.com/test")
 		t.Run("must be ok to build application", func(t *testing.T) {
 			view := adb.AddView(appdef.MustParseQName(viewName))
@@ -855,12 +855,12 @@ func Test_ViewRecordsPutJSON(t *testing.T) {
 				AddField("v1", appdef.DataKind_float32, true).
 				AddField("v2", appdef.DataKind_string, true)
 		})
-		cfg := cfgs.AddConfig(appName, adb)
+		cfg := cfgs.AddBuiltInAppConfig(appName, adb)
 		cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 		return cfgs
 	}()
 
-	app, err := Provide(appCfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider).AppStructs(appName)
+	app, err := Provide(appCfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider).BuiltIn(appName)
 	require.NoError(err)
 
 	t.Run("should be ok to put view record via PutJSON", func(t *testing.T) {
@@ -972,7 +972,7 @@ func Test_LoadStoreViewRecord_Bytes(t *testing.T) {
 
 	viewName := appdef.NewQName("test", "view")
 
-	adb := appdef.New(appName)
+	adb := appdef.New()
 	adb.AddPackage("test", "test.com/test")
 	t.Run("must be ok to build application", func(t *testing.T) {
 		v := adb.AddView(viewName)
@@ -1009,7 +1009,7 @@ func Test_LoadStoreViewRecord_Bytes(t *testing.T) {
 
 	cfg := func() *AppConfigType {
 		cfgs := make(AppConfigsType, 1)
-		cfg := cfgs.AddConfig(istructs.AppQName_test1_app2, adb)
+		cfg := cfgs.AddBuiltInAppConfig(istructs.AppQName_test1_app2, adb)
 		cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 
 		asp := simpleStorageProvider()
@@ -1112,7 +1112,7 @@ func Test_ViewRecords_ClustColumnsQName(t *testing.T) {
 	//
 	appConfigs := func() AppConfigsType {
 
-		adb := appdef.New(appName)
+		adb := appdef.New()
 		adb.AddPackage("test", "test.com/test")
 		t.Run("must be ok to build application", func(t *testing.T) {
 			v := adb.AddView(appdef.NewQName("test", "viewDrinks"))
@@ -1130,14 +1130,14 @@ func Test_ViewRecords_ClustColumnsQName(t *testing.T) {
 		})
 
 		cfgs := make(AppConfigsType, 1)
-		cfg := cfgs.AddConfig(appName, adb)
+		cfg := cfgs.AddBuiltInAppConfig(appName, adb)
 		cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 
 		return cfgs
 	}
 
 	p := Provide(appConfigs(), iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider())
-	as, err := p.AppStructs(appName)
+	as, err := p.BuiltIn(appName)
 	require.NoError(err)
 	viewRecords := as.ViewRecords()
 
@@ -1190,7 +1190,7 @@ func Test_ViewRecord_GetBatch(t *testing.T) {
 	championshipsView := appdef.NewQName("test", "championships")
 	championsView := appdef.NewQName("test", "champions")
 
-	adb := appdef.New(appName)
+	adb := appdef.New()
 	adb.AddPackage("test", "test.com/test")
 	t.Run("must be ok to build application", func(t *testing.T) {
 		v := adb.AddView(championshipsView)
@@ -1215,11 +1215,11 @@ func Test_ViewRecord_GetBatch(t *testing.T) {
 	storageProvider := teststore.NewStorageProvider(storage)
 
 	cfgs := make(AppConfigsType, 1)
-	cfg := cfgs.AddConfig(appName, adb)
+	cfg := cfgs.AddBuiltInAppConfig(appName, adb)
 	cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 	provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
 
-	app, err := provider.AppStructs(appName)
+	app, err := provider.BuiltIn(appName)
 	require.NoError(err)
 
 	type championship struct {
@@ -1467,7 +1467,7 @@ func Test_ViewRecordStructure(t *testing.T) {
 
 	viewName := appdef.NewQName("test", "view")
 
-	adb := appdef.New(appName)
+	adb := appdef.New()
 	adb.AddPackage("test", "test.com/test")
 	t.Run("must be ok to build application", func(t *testing.T) {
 		v := adb.AddView(viewName)
@@ -1485,7 +1485,7 @@ func Test_ViewRecordStructure(t *testing.T) {
 
 	cfg := func() *AppConfigType {
 		cfgs := make(AppConfigsType, 1)
-		cfg := cfgs.AddConfig(istructs.AppQName_test1_app2, adb)
+		cfg := cfgs.AddBuiltInAppConfig(istructs.AppQName_test1_app2, adb)
 		cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 
 		asp := simpleStorageProvider()

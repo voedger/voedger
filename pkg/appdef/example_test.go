@@ -18,7 +18,7 @@ func Example() {
 
 	// how to build AppDef with CDoc
 	{
-		adb := appdef.New(appdef.NewAppQName("test", "app"))
+		adb := appdef.New()
 		adb.AddPackage("test", "test.com/test")
 
 		doc := adb.AddCDoc(docName)
@@ -39,8 +39,6 @@ func Example() {
 
 	// how to inspect builded AppDef with CDoc
 	{
-		fmt.Printf("application %q\n", app.Name())
-
 		// how to find type by name
 		t := app.Type(docName)
 		fmt.Printf("type %q: %v\n", t.QName(), t.Kind())
@@ -89,7 +87,6 @@ func Example() {
 	}
 
 	// Output:
-	// application "test/app"
 	// type "test.doc": TypeKind_CDoc
 	// "test.doc" is CDoc: true
 	// doc "test.doc": TypeKind_CDoc. This is example doc

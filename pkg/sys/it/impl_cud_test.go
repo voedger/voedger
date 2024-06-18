@@ -281,7 +281,7 @@ func TestRefIntegrity(t *testing.T) {
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
-	appStructs, err := vit.IAppStructsProvider.AppStructs(istructs.AppQName_test1_app1)
+	appStructs, err := vit.IAppStructsProvider.BuiltIn(istructs.AppQName_test1_app1)
 	require.NoError(t, err)
 	appDef := appStructs.AppDef()
 
