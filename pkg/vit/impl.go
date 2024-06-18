@@ -307,7 +307,7 @@ func (vit *VIT) GetSystemPrincipal(appQName appdef.AppQName) *Principal {
 	}
 	prn, ok := appPrincipals["___sys"]
 	if !ok {
-		as, err := vit.IAppStructsProvider.AppStructs(appQName)
+		as, err := vit.IAppStructsProvider.BuiltIn(appQName)
 		require.NoError(vit.T, err)
 		sysToken, err := payloads.GetSystemPrincipalTokenApp(as.AppTokens())
 		require.NoError(vit.T, err)
@@ -445,7 +445,7 @@ func (vit *VIT) refreshTokens() {
 				SubjectKind: istructs.SubjectKind_User,
 				ProfileWSID: prn.ProfileWSID,
 			}
-			as, err := vit.IAppStructsProvider.AppStructs(prn.AppQName)
+			as, err := vit.IAppStructsProvider.BuiltIn(prn.AppQName)
 			require.NoError(vit.T, err) // notest
 			newToken, err := as.AppTokens().IssueToken(authnz.DefaultPrincipalTokenExpiration, &principalPayload)
 			require.NoError(vit.T, err)
@@ -484,7 +484,7 @@ func (vit *VIT) NextName() string {
 // will be automatically restored on vit.TearDown() to the state the Bucket was before MockBuckets() call
 func (vit *VIT) MockBuckets(appQName appdef.AppQName, rateLimitName string, bs irates.BucketState) {
 	vit.T.Helper()
-	as, err := vit.IAppStructsProvider.AppStructs(appQName)
+	as, err := vit.IAppStructsProvider.BuiltIn(appQName)
 	require.NoError(vit.T, err)
 	appBuckets := istructsmem.IBucketsFromIAppStructs(as)
 	initialState, err := appBuckets.GetDefaultBucketsState(rateLimitName)

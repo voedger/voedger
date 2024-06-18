@@ -326,7 +326,7 @@ func (ctx *testState) buildAppDef(packagePath string, packageDir string, createW
 		iratesce.TestBucketsFactory,
 		payloads.ProvideIAppTokensFactory(itokensjwt.TestTokensJWT()),
 		storageProvider)
-	structs, err := prov.AppStructs(appName)
+	structs, err := prov.BuiltIn(appName)
 	if err != nil {
 		panic(err)
 	}

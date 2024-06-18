@@ -28,7 +28,7 @@ func Test_RecordsRead(t *testing.T) {
 
 	provider := Provide(test.AppConfigs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
 
-	app, err := provider.AppStructs(test.appName)
+	app, err := provider.BuiltIn(test.appName)
 	require.NoError(err)
 
 	const (
@@ -147,7 +147,7 @@ func Test_RecordsRead(t *testing.T) {
 		cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
 
-		app, err = provider.AppStructs(test.appName)
+		app, err = provider.BuiltIn(test.appName)
 		require.NoError(err)
 
 		recs := make([]istructs.RecordGetBatchItem, 3)
@@ -171,7 +171,7 @@ func Test_RecordsRead(t *testing.T) {
 		cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
 
-		app, err = provider.AppStructs(test.appName)
+		app, err = provider.BuiltIn(test.appName)
 		require.NoError(err)
 
 		rec := newTestCRecord(testID)
@@ -197,7 +197,7 @@ func Test_RecordsPutJSON(t *testing.T) {
 
 	provider := Provide(test.AppConfigs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
 
-	app, err := provider.AppStructs(test.appName)
+	app, err := provider.BuiltIn(test.appName)
 	require.NoError(err)
 
 	json := make(map[appdef.FieldName]any)

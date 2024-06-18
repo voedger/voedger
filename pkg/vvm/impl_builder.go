@@ -52,7 +52,7 @@ func (ab VVMAppsBuilder) BuildAppsArtefacts(apis apps.APIs, emptyCfgs AppConfigs
 		// query IAppStructs to build IAppDef only once - on AppConfigType.prepare()
 		// это надо чтобы отловить ошибки IAppDefBuilder и проч
 		// также там нуже уже готовый IAppStorage чтобы вычитать QName->QNameID
-		if _, err = apis.IAppStructsProvider.AppStructs(appQName); err != nil {
+		if _, err = apis.IAppStructsProvider.BuiltIn(appQName); err != nil {
 			return appsArtefacts, err
 		}
 		builtInAppPackages := BuiltInAppPackages{

@@ -81,7 +81,7 @@ func TestBasicUsage_Verifier(t *testing.T) {
 
 	t.Run("decode the verified value token and check the verified value", func(t *testing.T) {
 		vvp := payloads.VerifiedValuePayload{}
-		as, err := vit.AppStructs(istructs.AppQName_test1_app1)
+		as, err := vit.BuiltIn(istructs.AppQName_test1_app1)
 		require.NoError(err)
 		gp, err := as.AppTokens().ValidateToken(verifiedValueToken, &vvp)
 		require.NoError(err)
@@ -255,7 +255,7 @@ func TestForRegistry(t *testing.T) {
 
 	// just expect no errors on validate token for sys/registry
 	vvp := payloads.VerifiedValuePayload{}
-	as, err := vit.AppStructs(istructs.AppQName_sys_registry)
+	as, err := vit.BuiltIn(istructs.AppQName_sys_registry)
 	require.NoError(t, err)
 	_, err = as.AppTokens().ValidateToken(verifiedValueToken, &vvp)
 	require.NoError(t, err)

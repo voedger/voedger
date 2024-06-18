@@ -248,7 +248,7 @@ func deployTestAppWithSecretToken(require *require.Assertions,
 		f(cfg)
 	}
 
-	as, err := asp.AppStructs(appName)
+	as, err := asp.BuiltIn(appName)
 	require.NoError(err)
 
 	appDef := as.AppDef()

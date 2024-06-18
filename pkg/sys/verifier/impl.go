@@ -51,14 +51,14 @@ func provideIEVExec(appQName appdef.AppQName, itokens itokens.ITokens, asp istru
 		forRegistry := args.ArgumentObject.AsBool(field_ForRegistry)
 		lng := args.ArgumentObject.AsString(field_Language)
 
-		as, err := asp.AppStructs(appQName)
+		as, err := asp.BuiltIn(appQName)
 		if err != nil {
 			return err
 		}
 		appTokens := as.AppTokens()
 		if forRegistry {
 			// issue token for sys/registry/pseduoWSID. That's for c.sys.ResetPassword only for now
-			asRegistry, err := asp.AppStructs(istructs.AppQName_sys_registry)
+			asRegistry, err := asp.BuiltIn(istructs.AppQName_sys_registry)
 			if err != nil {
 				// notest
 				return err
@@ -160,14 +160,14 @@ func provideIVVTExec(itokens itokens.ITokens, appQName appdef.AppQName, asp istr
 		verificationCode := args.ArgumentObject.AsString(field_VerificationCode)
 		forRegistry := args.ArgumentObject.AsBool(field_ForRegistry)
 
-		as, err := asp.AppStructs(appQName)
+		as, err := asp.BuiltIn(appQName)
 		if err != nil {
 			return err
 		}
 
 		appTokens := as.AppTokens()
 		if forRegistry {
-			asRegistry, err := asp.AppStructs(istructs.AppQName_sys_registry)
+			asRegistry, err := asp.BuiltIn(istructs.AppQName_sys_registry)
 			if err != nil {
 				// notest
 				return err

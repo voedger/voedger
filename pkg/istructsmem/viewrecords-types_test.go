@@ -67,7 +67,7 @@ func Test_KeyType(t *testing.T) {
 	appCfg := appCfgs.GetConfig(appName)
 
 	appProvider := Provide(appCfgs, iratesce.TestBucketsFactory, testTokensFactory(), teststore.NewStorageProvider(teststore.NewStorage(appName)))
-	app, err := appProvider.AppStructs(appName)
+	app, err := appProvider.BuiltIn(appName)
 	require.NoError(err)
 	require.NotNil(app)
 
@@ -232,7 +232,7 @@ func TestCore_ViewRecords(t *testing.T) {
 	appCfgs := appConfigs()
 	appCfg := appCfgs.GetConfig(istructs.AppQName_test1_app1)
 	p := Provide(appCfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
-	app, err := p.AppStructs(istructs.AppQName_test1_app1)
+	app, err := p.BuiltIn(istructs.AppQName_test1_app1)
 	require.NoError(err)
 	viewRecords := app.ViewRecords()
 
@@ -860,7 +860,7 @@ func Test_ViewRecordsPutJSON(t *testing.T) {
 		return cfgs
 	}()
 
-	app, err := Provide(appCfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider).AppStructs(appName)
+	app, err := Provide(appCfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider).BuiltIn(appName)
 	require.NoError(err)
 
 	t.Run("should be ok to put view record via PutJSON", func(t *testing.T) {
@@ -1137,7 +1137,7 @@ func Test_ViewRecords_ClustColumnsQName(t *testing.T) {
 	}
 
 	p := Provide(appConfigs(), iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider())
-	as, err := p.AppStructs(appName)
+	as, err := p.BuiltIn(appName)
 	require.NoError(err)
 	viewRecords := as.ViewRecords()
 
@@ -1219,7 +1219,7 @@ func Test_ViewRecord_GetBatch(t *testing.T) {
 	cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 	provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
 
-	app, err := provider.AppStructs(appName)
+	app, err := provider.BuiltIn(appName)
 	require.NoError(err)
 
 	type championship struct {

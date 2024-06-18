@@ -773,7 +773,7 @@ func Test_EventUpdateRawCud(t *testing.T) {
 
 	for test := simpleTest; test < testCount*2; test += 2 { // test - docID, test+1 - recID
 
-		app, err := provider.AppStructs(appName)
+		app, err := provider.BuiltIn(appName)
 		require.NoError(err)
 
 		docID := istructs.NewCDocCRecordID(istructs.FirstBaseRecordID + istructs.RecordID(test))
@@ -936,7 +936,7 @@ func Test_UpdateCorrupted(t *testing.T) {
 
 	provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider())
 
-	app, err := provider.AppStructs(appName)
+	app, err := provider.BuiltIn(appName)
 	require.NoError(err)
 
 	t.Run("should be ok to put new sys.CUD event", func(t *testing.T) {
@@ -1069,7 +1069,7 @@ func Test_BuildPLogEvent(t *testing.T) {
 
 	provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider())
 
-	app, err := provider.AppStructs(appName)
+	app, err := provider.BuiltIn(appName)
 	require.NoError(err)
 
 	t.Run("should be ok to put new sys.CUD event", func(t *testing.T) {
@@ -1269,7 +1269,7 @@ func Test_SingletonCDocEvent(t *testing.T) {
 
 	provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider())
 
-	app, err := provider.AppStructs(appName)
+	app, err := provider.BuiltIn(appName)
 	require.NoError(err)
 
 	docID, err = cfgs.GetConfig(appName).singletons.ID(docName)
@@ -1480,7 +1480,7 @@ func TestEventBuild_Error(t *testing.T) {
 
 	provider := Provide(test.AppConfigs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider())
 
-	app, err := provider.AppStructs(test.appName)
+	app, err := provider.BuiltIn(test.appName)
 	require.NoError(err)
 
 	var rawEvent istructs.IRawEvent
@@ -1854,7 +1854,7 @@ func Test_LoadStoreErrEvent_Bytes(t *testing.T) {
 
 	provider := Provide(test.AppConfigs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider())
 
-	app, err := provider.AppStructs(test.appName)
+	app, err := provider.BuiltIn(test.appName)
 	require.NoError(err)
 
 	eventName := [3]appdef.QName{

@@ -89,7 +89,7 @@ func TestBasicUsage(t *testing.T) {
 	// gets AppStructProvider and AppStructs
 	provider := Provide(appConfigs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider())
 
-	app, err := provider.AppStructs(appName)
+	app, err := provider.BuiltIn(appName)
 	require.NoError(err)
 
 	// Build raw event demo
@@ -213,7 +213,7 @@ func TestBasicUsage_ViewRecords(t *testing.T) {
 	}
 
 	p := Provide(appConfigs(), iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider())
-	as, err := p.AppStructs(appName)
+	as, err := p.BuiltIn(appName)
 	require.NoError(err)
 	viewRecords := as.ViewRecords()
 	entries := []entryType{
@@ -304,7 +304,7 @@ func Test_appStructsType_ObjectBuilder(t *testing.T) {
 		cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 
 		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider())
-		app, err := provider.AppStructs(appName)
+		app, err := provider.BuiltIn(appName)
 		require.NoError(err)
 
 		return app
@@ -527,7 +527,7 @@ func Test_BasicUsageDescribePackages(t *testing.T) {
 		})
 
 		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider())
-		app, err := provider.AppStructs(appName)
+		app, err := provider.BuiltIn(appName)
 		require.NoError(err)
 
 		return app
@@ -560,7 +560,7 @@ func Test_Provide(t *testing.T) {
 		p := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), nil)
 		require.NotNil(p)
 
-		_, err := p.AppStructs(appdef.NewAppQName("test1", "unknownApp"))
+		_, err := p.BuiltIn(appdef.NewAppQName("test1", "unknownApp"))
 		require.ErrorIs(err, istructs.ErrAppNotFound)
 		require.ErrorContains(err, "test1/unknownApp")
 	})
@@ -568,7 +568,7 @@ func Test_Provide(t *testing.T) {
 	t.Run("check application ClusterAppID() and AppQName()", func(t *testing.T) {
 		provider := Provide(test.AppConfigs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider())
 
-		app, err := provider.AppStructs(test.appName)
+		app, err := provider.BuiltIn(test.appName)
 		require.NoError(err)
 
 		require.NotNil(app)

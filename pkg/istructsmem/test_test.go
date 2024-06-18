@@ -410,7 +410,7 @@ func test() *testDataType {
 		testData.StorageProvider = istorageimpl.Provide(mem.Provide())
 
 		testData.AppStructsProvider = Provide(testData.AppConfigs, iratesce.TestBucketsFactory, testTokensFactory(), testData.StorageProvider)
-		testData.AppStructs, err = testData.AppStructsProvider.AppStructs(testData.appName)
+		testData.AppStructs, err = testData.AppStructsProvider.BuiltIn(testData.appName)
 		if err != nil {
 			panic(err)
 		}

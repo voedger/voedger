@@ -73,7 +73,7 @@ func TestResourceEnumerator(t *testing.T) {
 		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider())
 
 		var err error
-		app, err = provider.AppStructs(istructs.AppQName_test1_app1)
+		app, err = provider.BuiltIn(istructs.AppQName_test1_app1)
 		require.NoError(err)
 	})
 

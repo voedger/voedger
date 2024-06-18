@@ -175,7 +175,7 @@ func appStructs(appdefSql string, prepareAppCfg appCfgCallback) istructs.IAppStr
 		iratesce.TestBucketsFactory,
 		payloads.ProvideIAppTokensFactory(itokensjwt.TestTokensJWT()),
 		storageProvider)
-	structs, err := prov.AppStructs(appName)
+	structs, err := prov.BuiltIn(appName)
 	if err != nil {
 		panic(err)
 	}

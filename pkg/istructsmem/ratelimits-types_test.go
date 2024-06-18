@@ -47,7 +47,7 @@ func TestRateLimits_BasicUsage(t *testing.T) {
 	})
 
 	// then - get AppStructs. For the first get default bucket states will be set
-	as, err := provider.AppStructs(appName)
+	as, err := provider.BuiltIn(appName)
 	require.NoError(err)
 
 	for i := 0; i < 10; i++ {

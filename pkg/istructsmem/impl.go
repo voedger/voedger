@@ -39,8 +39,8 @@ type appStructsProviderType struct {
 	storageProvider  istorage.IAppStorageProvider
 }
 
-// istructs.IAppStructsProvider.AppStructs
-func (provider *appStructsProviderType) AppStructs(appName appdef.AppQName) (structs istructs.IAppStructs, err error) {
+// istructs.IAppStructsProvider.BuiltIn
+func (provider *appStructsProviderType) BuiltIn(appName appdef.AppQName) (structs istructs.IAppStructs, err error) {
 
 	appCfg, ok := provider.configs[appName]
 	if !ok {
@@ -67,8 +67,8 @@ func (provider *appStructsProviderType) AppStructs(appName appdef.AppQName) (str
 	return app, nil
 }
 
-// istructs.IAppStructsProvider.NewAppStructs
-func (provider *appStructsProviderType) NewAppStructs(name appdef.AppQName, def appdef.IAppDef, id istructs.ClusterAppID, wsCount istructs.NumAppWorkspaces) (istructs.IAppStructs, error) {
+// istructs.IAppStructsProvider.New
+func (provider *appStructsProviderType) New(name appdef.AppQName, def appdef.IAppDef, id istructs.ClusterAppID, wsCount istructs.NumAppWorkspaces) (istructs.IAppStructs, error) {
 	provider.locker.Lock()
 	defer provider.locker.Unlock()
 
@@ -83,7 +83,7 @@ func (provider *appStructsProviderType) NewAppStructs(name appdef.AppQName, def 
 		return nil, err
 	}
 	app := newAppStructs(cfg, buckets, appTokens)
-	provider.structures[name] = app
+	//provider.structures[name] = app
 	return app, nil
 }
 

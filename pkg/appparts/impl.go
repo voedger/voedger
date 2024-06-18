@@ -47,7 +47,7 @@ func (aps *apps) DeployApp(name appdef.AppQName, def appdef.IAppDef, partsCount 
 	a := newApplication(aps, name, partsCount)
 	aps.apps[name] = a
 
-	appStructs, err := aps.structs.AppStructs(name)
+	appStructs, err := aps.structs.BuiltIn(name)
 	if err != nil {
 		panic(err)
 	}

@@ -752,7 +752,7 @@ func setUp(t *testing.T, prepare func(appDef appdef.IAppDefBuilder, cfg *istruct
 		close(done)
 	}()
 
-	as, err := appStructsProvider.AppStructs(istructs.AppQName_untill_airs_bp)
+	as, err := appStructsProvider.BuiltIn(istructs.AppQName_untill_airs_bp)
 	require.NoError(err)
 	err = wsdescutil.CreateCDocWorkspaceDescriptorStub(as, testAppPartID, 1, qNameTestWSKind, 1, 1)
 	require.NoError(err)

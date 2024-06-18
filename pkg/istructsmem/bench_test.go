@@ -102,7 +102,7 @@ func bench_BuildRawEvent(b *testing.B, numOfIntFields int) {
 
 	provider := Provide(configs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider())
 
-	appStructs, err := provider.AppStructs(appName)
+	appStructs, err := provider.BuiltIn(appName)
 	require.NoError(err)
 
 	start := time.Now()

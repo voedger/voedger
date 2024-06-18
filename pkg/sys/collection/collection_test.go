@@ -218,7 +218,7 @@ func deployTestApp(t *testing.T) (appParts appparts.IAppPartitions, appStructs i
 	appParts.DeployAppPartitions(test.appQName, []istructs.PartitionID{test.partition})
 
 	// create stub for cdoc.sys.WorkspaceDescriptor to make query processor work
-	as, err := appStructsProvider.AppStructs(test.appQName)
+	as, err := appStructsProvider.BuiltIn(test.appQName)
 	require.NoError(err)
 	err = wsdescutil.CreateCDocWorkspaceDescriptorStub(as, test.partition, test.workspace, qNameTestWSKind, 1, 1)
 	require.NoError(err)

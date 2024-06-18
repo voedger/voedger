@@ -226,7 +226,7 @@ func deployTestApp(
 		payloads.ProvideIAppTokensFactory(itokensjwt.TestTokensJWT()),
 		storageProvider)
 
-	appStructs, err = appStructsProvider.AppStructs(appName)
+	appStructs, err = appStructsProvider.BuiltIn(appName)
 	if err != nil {
 		panic(err)
 	}
