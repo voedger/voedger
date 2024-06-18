@@ -287,7 +287,7 @@ func (ctx *testState) buildAppDef(packagePath string, packageDir string, createW
 
 	appName := istructs.AppQName_test1_app1
 
-	adb := appdef.New(appName)
+	adb := appdef.New()
 	err = parser.BuildAppDefs(appSchema, adb)
 	if err != nil {
 		panic(err)
@@ -301,7 +301,7 @@ func (ctx *testState) buildAppDef(packagePath string, packageDir string, createW
 	ctx.appDef = adf
 
 	cfgs := make(istructsmem.AppConfigsType, 1)
-	cfg := cfgs.AddConfig(appName, adb)
+	cfg := cfgs.AddBuiltInAppConfig(appName, adb)
 	cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 	ctx.appDef.Extensions(func(i appdef.IExtension) {
 		if i.QName().Pkg() == TestPkgAlias {
@@ -326,7 +326,7 @@ func (ctx *testState) buildAppDef(packagePath string, packageDir string, createW
 		iratesce.TestBucketsFactory,
 		payloads.ProvideIAppTokensFactory(itokensjwt.TestTokensJWT()),
 		storageProvider)
-	structs, err := prov.AppStructs(appName)
+	structs, err := prov.BuiltIn(appName)
 	if err != nil {
 		panic(err)
 	}

@@ -15,12 +15,11 @@ import (
 
 // Implements istructs.IResources
 type Resources struct {
-	cfg       *AppConfigType
 	resources map[appdef.QName]istructs.IResource
 }
 
-func newResources(cfg *AppConfigType) Resources {
-	return Resources{cfg, make(map[appdef.QName]istructs.IResource)}
+func makeResources() Resources {
+	return Resources{make(map[appdef.QName]istructs.IResource)}
 }
 
 // Adds new resource to application resources
@@ -29,8 +28,8 @@ func (res *Resources) Add(r istructs.IResource) {
 }
 
 // Finds application resource by QName
-func (res *Resources) QueryResource(resource appdef.QName) (r istructs.IResource) {
-	r, ok := res.resources[resource]
+func (res Resources) QueryResource(name appdef.QName) istructs.IResource {
+	r, ok := res.resources[name]
 	if !ok {
 		return nullResource
 	}
@@ -38,7 +37,7 @@ func (res *Resources) QueryResource(resource appdef.QName) (r istructs.IResource
 }
 
 // Enumerates all application resources
-func (res *Resources) Resources(enum func(appdef.QName)) {
+func (res Resources) Resources(enum func(appdef.QName)) {
 	for n := range res.resources {
 		enum(n)
 	}

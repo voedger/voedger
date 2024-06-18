@@ -82,7 +82,7 @@ func TestBasicUsage_RowsProcessorFactory(t *testing.T) {
 		resultMeta appdef.IObject
 	)
 	t.Run(" should be ok to build appDef and resultMeta", func(t *testing.T) {
-		adb := appdef.New(appName)
+		adb := appdef.New()
 		adb.AddObject(qNamePosDepartment).
 			AddField("name", appdef.DataKind_string, false)
 		resBld := adb.AddObject(qNamePosDepartmentResult)
@@ -170,7 +170,7 @@ func deployTestAppWithSecretToken(require *require.Assertions,
 	qNameDepartment := appdef.NewQName("bo", "Department")
 	qNameArticle := appdef.NewQName("bo", "Article")
 
-	adb := appdef.New(appName)
+	adb := appdef.New()
 	adb.AddPackage(pkgBo, pkgBoPath)
 
 	wsb := adb.AddWorkspace(qNameTestWS)
@@ -209,7 +209,7 @@ func deployTestAppWithSecretToken(require *require.Assertions,
 		prepareAppDef(adb, wsb)
 	}
 
-	cfg := cfgs.AddConfig(appName, adb)
+	cfg := cfgs.AddBuiltInAppConfig(appName, adb)
 	cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 
 	atf := payloads.TestAppTokensFactory(itokensjwt.ProvideITokens(itokensjwt.SecretKeyExample, timeFunc))
@@ -248,7 +248,7 @@ func deployTestAppWithSecretToken(require *require.Assertions,
 		f(cfg)
 	}
 
-	as, err := asp.AppStructs(appName)
+	as, err := asp.BuiltIn(appName)
 	require.NoError(err)
 
 	appDef := as.AppDef()
@@ -419,7 +419,7 @@ func TestRawMode(t *testing.T) {
 		resultMeta appdef.IObject
 	)
 	t.Run(" should be ok to build appDef and resultMeta", func(t *testing.T) {
-		adb := appdef.New(appName)
+		adb := appdef.New()
 		adb.AddObject(istructs.QNameRaw)
 		app, err := adb.Build()
 		require.NoError(err)

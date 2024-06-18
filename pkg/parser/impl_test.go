@@ -62,7 +62,7 @@ func Test_BasicUsage(t *testing.T) {
 	})
 	require.NoError(err)
 
-	builder := appdef.New(appSchema.AppQName())
+	builder := appdef.New()
 	err = BuildAppDefs(appSchema, builder)
 	require.NoError(err)
 
@@ -341,7 +341,7 @@ func Test_Refs_NestedTables(t *testing.T) {
 	})
 	require.NoError(err)
 
-	adb := appdef.New(packages.AppQName())
+	adb := appdef.New()
 	require.NoError(BuildAppDefs(packages, adb))
 
 	app, err := adb.Build()
@@ -447,7 +447,7 @@ func Test_Workspace_Defs(t *testing.T) {
 	})
 	require.NoError(err)
 
-	builder := appdef.New(packages.AppQName())
+	builder := appdef.New()
 	require.NoError(BuildAppDefs(packages, builder))
 
 	app, err := builder.Build()
@@ -499,7 +499,7 @@ func Test_Workspace_Defs2(t *testing.T) {
 	})
 	require.NoError(err)
 
-	builder := appdef.New(packages.AppQName())
+	builder := appdef.New()
 	require.NoError(BuildAppDefs(packages, builder))
 
 	app, err := builder.Build()
@@ -591,7 +591,7 @@ func Test_DupFieldsInTypes(t *testing.T) {
 	})
 	require.NoError(err)
 
-	err = BuildAppDefs(packages, appdef.New(packages.AppQName()))
+	err = BuildAppDefs(packages, appdef.New())
 	require.EqualError(err, strings.Join([]string{
 		"file1.vsql:16:3: redefinition of field",
 		"file1.vsql:17:3: redefinition of baseField",
@@ -668,7 +668,7 @@ func Test_DupFieldsInTables(t *testing.T) {
 	})
 	require.NoError(err)
 
-	err = BuildAppDefs(packages, appdef.New(packages.AppQName()))
+	err = BuildAppDefs(packages, appdef.New())
 	require.EqualError(err, strings.Join([]string{
 		"file1.vsql:21:3: redefinition of field",
 		"file1.vsql:22:3: redefinition of baseField",
@@ -1037,7 +1037,7 @@ func Test_Views2(t *testing.T) {
 		})
 		require.NoError(err)
 
-		appBld := appdef.New(packages.AppQName())
+		appBld := appdef.New()
 		err = BuildAppDefs(packages, appBld)
 		require.NoError(err)
 
@@ -1074,7 +1074,7 @@ func Test_Views2(t *testing.T) {
 		})
 		require.NoError(err)
 
-		appBld := appdef.New(packages.AppQName())
+		appBld := appdef.New()
 		err = BuildAppDefs(packages, appBld)
 		require.NoError(err)
 
@@ -1316,7 +1316,7 @@ func Test_UniqueFields(t *testing.T) {
 	})
 	require.NoError(err)
 
-	appBld := appdef.New(packages.AppQName())
+	appBld := appdef.New()
 	err = BuildAppDefs(packages, appBld)
 	require.NoError(err)
 
@@ -1353,7 +1353,7 @@ func Test_NestedTables(t *testing.T) {
 	})
 	require.NoError(err)
 
-	appBld := appdef.New(packages.AppQName())
+	appBld := appdef.New()
 	err = BuildAppDefs(packages, appBld)
 	require.NoError(err)
 
@@ -1385,7 +1385,7 @@ func Test_SemanticAnalysisForReferences(t *testing.T) {
 		})
 		require.NoError(err)
 
-		appBld := appdef.New(packages.AppQName())
+		appBld := appdef.New()
 		err = BuildAppDefs(packages, appBld)
 
 		require.Contains(err.Error(), "table test.CTable can not reference to table test.OTable")
@@ -1411,7 +1411,7 @@ func Test_1KStringField(t *testing.T) {
 	})
 	require.NoError(err)
 
-	appBld := appdef.New(packages.AppQName())
+	appBld := appdef.New()
 	err = BuildAppDefs(packages, appBld)
 	require.NoError(err)
 
@@ -1468,7 +1468,7 @@ func Test_VRestaurantBasic(t *testing.T) {
 	})
 	require.NoError(err)
 
-	builder := appdef.New(packages.AppQName())
+	builder := appdef.New()
 	err = BuildAppDefs(packages, builder)
 	require.NoError(err)
 
@@ -1541,7 +1541,7 @@ func Test_AppSchema(t *testing.T) {
 	appSchema, err := BuildAppSchema([]*PackageSchemaAST{getSysPackageAST(), pkg1, pkg2, pkg3})
 	require.NoError(err)
 
-	builder := appdef.New(appSchema.AppQName())
+	builder := appdef.New()
 	err = BuildAppDefs(appSchema, builder)
 	require.NoError(err)
 
@@ -1882,7 +1882,7 @@ func Test_UseTables(t *testing.T) {
 
 	require.NoError(err)
 
-	builder := appdef.New(schema.AppQName())
+	builder := appdef.New()
 	err = BuildAppDefs(schema, builder)
 	require.NoError(err)
 
@@ -1962,7 +1962,7 @@ func Test_OdocCmdArgs(t *testing.T) {
 	schema, err := BuildAppSchema([]*PackageSchemaAST{pkgApp1, getSysPackageAST()})
 	require.NoError(err)
 
-	builder := appdef.New(schema.AppQName())
+	builder := appdef.New()
 	err = BuildAppDefs(schema, builder)
 	require.NoError(err)
 
@@ -2021,7 +2021,7 @@ WORKSPACE Workspace1 (
 	schema, err := BuildAppSchema([]*PackageSchemaAST{pkgApp1, getSysPackageAST()})
 	require.NoError(err)
 
-	builder := appdef.New(schema.AppQName())
+	builder := appdef.New()
 	err = BuildAppDefs(schema, builder)
 	require.NoError(err)
 
@@ -2064,7 +2064,7 @@ TYPE EmptyType (
 	schema, err := BuildAppSchema([]*PackageSchemaAST{pkgApp1, getSysPackageAST()})
 	require.NoError(err)
 
-	builder := appdef.New(schema.AppQName())
+	builder := appdef.New()
 	err = BuildAppDefs(schema, builder)
 	require.NoError(err)
 
@@ -2244,7 +2244,7 @@ func Test_Variables(t *testing.T) {
 
 	resolver := testVarResolver{resolved: make(map[appdef.QName]bool)}
 
-	BuildAppDefs(schema, appdef.New(schema.AppQName()), WithVariableResolver(&resolver))
+	BuildAppDefs(schema, appdef.New(), WithVariableResolver(&resolver))
 	require.True(resolver.resolved[appdef.NewQName("pkg", "variable")])
 }
 
@@ -2473,7 +2473,7 @@ func Test_UniquesFromFieldsets(t *testing.T) {
 	);
 `)
 	require.NoError(err)
-	require.NoError(BuildAppDefs(schema, appdef.New(schema.AppQName())))
+	require.NoError(BuildAppDefs(schema, appdef.New()))
 }
 
 func Test_CRecordInDescriptor(t *testing.T) {
@@ -2489,5 +2489,5 @@ func Test_CRecordInDescriptor(t *testing.T) {
 	);
 `)
 	require.NoError(err)
-	require.NoError(BuildAppDefs(schema, appdef.New(schema.AppQName())))
+	require.NoError(BuildAppDefs(schema, appdef.New()))
 }

@@ -159,7 +159,7 @@ func TestDeviceProfile(t *testing.T) {
 	loginName := vit.NextName()
 	deviceLogin := vit.SignUpDevice(loginName, "123", istructs.AppQName_test1_app2)
 	devicePrn := vit.SignIn(deviceLogin)
-	as, err := vit.AppStructs(istructs.AppQName_test1_app2)
+	as, err := vit.BuiltIn(istructs.AppQName_test1_app2)
 	require.NoError(err)
 	devicePrnPayload := payloads.PrincipalPayload{}
 	_, err = as.AppTokens().ValidateToken(devicePrn.Token, &devicePrnPayload)

@@ -376,7 +376,7 @@ func provideSecretKeyJWT(sr isecrets.ISecretReader) (itokensjwt.SecretKeyType, e
 func provideNumsAppsWorkspaces(vvmApps VVMApps, asp istructs.IAppStructsProvider) (map[appdef.AppQName]istructs.NumAppWorkspaces, error) {
 	res := map[appdef.AppQName]istructs.NumAppWorkspaces{}
 	for _, appQName := range vvmApps {
-		as, err := asp.AppStructs(appQName)
+		as, err := asp.BuiltIn(appQName)
 		if err != nil {
 
 			return nil, err
@@ -583,7 +583,7 @@ func provideCommandProcessors(cpCount istructs.NumCommandProcessors, ccf Command
 func provideAsyncActualizersFactory(appParts appparts.IAppPartitions, appStructsProvider istructs.IAppStructsProvider, n10nBroker in10n.IN10nBroker, asyncActualizerFactory projectors.AsyncActualizerFactory, secretReader isecrets.ISecretReader, metrics2 imetrics.IMetrics) AsyncActualizersFactory {
 	return func(vvmCtx context.Context, appQName appdef.AppQName, asyncProjectors istructs.Projectors, partitionID istructs.PartitionID,
 		tokens itokens.ITokens, federation2 federation.IFederation, opts []state.StateOptFunc) pipeline.ISyncOperator {
-		appStructs, err := appStructsProvider.AppStructs(appQName)
+		appStructs, err := appStructsProvider.BuiltIn(appQName)
 		if err != nil {
 			panic(err)
 		}
@@ -640,7 +640,7 @@ func provideOperatorAppServices(apf AppServiceFactory, appsArtefacts AppsArtefac
 	return func(vvmCtx context.Context) pipeline.ISyncOperator {
 		var branches []pipeline.ForkOperatorOptionFunc
 		for _, builtInAppPackages := range appsArtefacts.builtInAppPackages {
-			as, err := asp.AppStructs(builtInAppPackages.Name)
+			as, err := asp.BuiltIn(builtInAppPackages.Name)
 			if err != nil {
 				panic(err)
 			}

@@ -43,7 +43,7 @@ func execQrySqlQuery(asp istructs.IAppStructsProvider, appQName appdef.AppQName)
 			app = op.AppQName
 		}
 
-		appStructs, err := asp.AppStructs(app)
+		appStructs, err := asp.BuiltIn(app)
 		if err != nil {
 			return err
 		}

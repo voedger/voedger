@@ -18,7 +18,7 @@ func ExampleIWorkspace() {
 
 	// how to build AppDef with workspace
 	{
-		adb := appdef.New(appdef.NewAppQName("test", "app"))
+		adb := appdef.New()
 		adb.AddPackage("test", "test.com/test")
 
 		adb.AddCDoc(descName).

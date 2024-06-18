@@ -15,7 +15,7 @@ import (
 
 func provideQryDescribePackageNames(asp istructs.IAppStructsProvider, appQName appdef.AppQName) func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 	return func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
-		as, err := asp.AppStructs(appQName)
+		as, err := asp.BuiltIn(appQName)
 		if err != nil {
 			return err
 		}
@@ -27,7 +27,7 @@ func provideQryDescribePackageNames(asp istructs.IAppStructsProvider, appQName a
 
 func provideQryDescribePackage(asp istructs.IAppStructsProvider, appQName appdef.AppQName) func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 	return func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
-		as, err := asp.AppStructs(appQName)
+		as, err := asp.BuiltIn(appQName)
 		if err != nil {
 			return err
 		}

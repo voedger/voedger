@@ -32,7 +32,7 @@ func Test_AppDef_AddProjector(t *testing.T) {
 	prjName := NewQName("test", "projector")
 
 	t.Run("must be ok to add projector", func(t *testing.T) {
-		adb := New(NewAppQName("test", "app"))
+		adb := New()
 		adb.AddPackage("test", "test.com/test")
 
 		adb.AddCRecord(recName).SetComment("record 1 is trigger for projector")
@@ -233,7 +233,7 @@ func Test_AppDef_AddProjector(t *testing.T) {
 	})
 
 	t.Run("more add projector checks", func(t *testing.T) {
-		adb := New(NewAppQName("test", "app"))
+		adb := New()
 		adb.AddPackage("test", "test.com/test")
 
 		_ = adb.AddCRecord(recName)
@@ -275,7 +275,7 @@ func Test_AppDef_AddProjector(t *testing.T) {
 
 	t.Run("projector validation errors", func(t *testing.T) {
 		t.Run("should be error if empty events", func(t *testing.T) {
-			adb := New(NewAppQName("test", "app"))
+			adb := New()
 			adb.AddPackage("test", "test.com/test")
 
 			prj := adb.AddProjector(prjName)
@@ -284,7 +284,7 @@ func Test_AppDef_AddProjector(t *testing.T) {
 		})
 
 		t.Run("should be error if unknown names in states", func(t *testing.T) {
-			adb := New(NewAppQName("test", "app"))
+			adb := New()
 			adb.AddPackage("test", "test.com/test")
 
 			adb.AddCRecord(recName)
@@ -300,7 +300,7 @@ func Test_AppDef_AddProjector(t *testing.T) {
 	})
 
 	t.Run("common panics while build projector", func(t *testing.T) {
-		adb := New(NewAppQName("test", "app"))
+		adb := New()
 		require.Panics(func() { adb.AddProjector(NullQName) },
 			require.Is(ErrMissedError))
 		require.Panics(func() { adb.AddProjector(NewQName("naked", "🔫")) },
@@ -322,7 +322,7 @@ func Test_AppDef_AddProjector(t *testing.T) {
 	})
 
 	t.Run("panics while build states", func(t *testing.T) {
-		adb := New(NewAppQName("test", "app"))
+		adb := New()
 		adb.AddPackage("test", "test.com/test")
 
 		prj := adb.AddProjector(NewQName("test", "projector"))
@@ -338,7 +338,7 @@ func Test_AppDef_AddProjector(t *testing.T) {
 	})
 
 	t.Run("panics while build intents", func(t *testing.T) {
-		adb := New(NewAppQName("test", "app"))
+		adb := New()
 		adb.AddPackage("test", "test.com/test")
 
 		prj := adb.AddProjector(NewQName("test", "projector"))
@@ -354,7 +354,7 @@ func Test_AppDef_AddProjector(t *testing.T) {
 	})
 
 	t.Run("panic while build events", func(t *testing.T) {
-		adb := New(NewAppQName("test", "app"))
+		adb := New()
 		adb.AddPackage("test", "test.com/test")
 
 		prj := adb.AddProjector(NewQName("test", "projector"))
@@ -402,7 +402,7 @@ func Test_AppDef_AddScheduledProjector(t *testing.T) {
 	prjName := NewQName("test", "projector")
 
 	t.Run("must be ok to add scheduled projector", func(t *testing.T) {
-		adb := New(NewAppQName("test", "app"))
+		adb := New()
 		adb.AddPackage("test", "test.com/test")
 
 		v := adb.AddView(viewName)
@@ -439,7 +439,7 @@ func Test_AppDef_AddScheduledProjector(t *testing.T) {
 
 	t.Run("scheduled projector validation errors", func(t *testing.T) {
 		t.Run("should be error if invalid cron string", func(t *testing.T) {
-			adb := New(NewAppQName("test", "app"))
+			adb := New()
 			adb.AddPackage("test", "test.com/test")
 
 			prj := adb.AddProjector(prjName)
@@ -449,7 +449,7 @@ func Test_AppDef_AddScheduledProjector(t *testing.T) {
 		})
 
 		t.Run("should be error if with intents", func(t *testing.T) {
-			adb := New(NewAppQName("test", "app"))
+			adb := New()
 			adb.AddPackage("test", "test.com/test")
 
 			v := adb.AddView(viewName)
