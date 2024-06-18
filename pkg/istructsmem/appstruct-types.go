@@ -25,8 +25,8 @@ import (
 type AppConfigsType map[appdef.AppQName]*AppConfigType
 
 // AddAppConfig: adds new config for specified application or replaces if exists
-func (cfgs *AppConfigsType) AddAppConfig(name appdef.AppQName, id istructs.ClusterAppID, def appdef.IAppDef) *AppConfigType {
-	c := newAppConfig(name, id, def)
+func (cfgs *AppConfigsType) AddAppConfig(name appdef.AppQName, id istructs.ClusterAppID, def appdef.IAppDef, wsCount istructs.NumAppWorkspaces) *AppConfigType {
+	c := newAppConfig(name, id, def, wsCount)
 
 	(*cfgs)[name] = c
 	return c
@@ -78,13 +78,14 @@ type AppConfigType struct {
 	numAppWorkspaces   istructs.NumAppWorkspaces
 }
 
-func newAppConfig(name appdef.AppQName, id istructs.ClusterAppID, def appdef.IAppDef) *AppConfigType {
+func newAppConfig(name appdef.AppQName, id istructs.ClusterAppID, def appdef.IAppDef, wsCount istructs.NumAppWorkspaces) *AppConfigType {
 	cfg := AppConfigType{
-		Name:            name,
-		ClusterAppID:    id,
-		Params:          makeAppConfigParams(),
-		syncProjectors:  make(istructs.Projectors),
-		asyncProjectors: make(istructs.Projectors),
+		Name:             name,
+		ClusterAppID:     id,
+		Params:           makeAppConfigParams(),
+		syncProjectors:   make(istructs.Projectors),
+		asyncProjectors:  make(istructs.Projectors),
+		numAppWorkspaces: wsCount,
 	}
 
 	cfg.AppDef = def
@@ -114,7 +115,7 @@ func newBuiltInAppConfig(appName appdef.AppQName, appDef appdef.IAppDefBuilder) 
 		panic(fmt.Errorf("%v: unable build application: %w", appName, err))
 	}
 
-	cfg := newAppConfig(appName, id, def)
+	cfg := newAppConfig(appName, id, def, 0)
 	cfg.appDefBuilder = appDef
 
 	return cfg

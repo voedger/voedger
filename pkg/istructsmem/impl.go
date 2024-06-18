@@ -72,8 +72,7 @@ func (provider *appStructsProviderType) NewAppStructs(name appdef.AppQName, def 
 	provider.locker.Lock()
 	defer provider.locker.Unlock()
 
-	cfg := provider.configs.AddAppConfig(name, id, def)
-	cfg.SetNumAppWorkspaces(wsCount)
+	cfg := provider.configs.AddAppConfig(name, id, def, wsCount)
 	buckets := provider.bucketsFactory()
 	appTokens := provider.appTokensFactory.New(name)
 	appStorage, err := provider.storageProvider.AppStorage(name)
