@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -267,16 +266,4 @@ func TestQNamesPrepareErrors(t *testing.T) {
 			require.ErrorIs(err, writeError)
 		})
 	})
-}
-
-type mockResources struct {
-	mock.Mock
-}
-
-func (r *mockResources) QueryResource(resource appdef.QName) istructs.IResource {
-	return r.Called(resource).Get(0).(istructs.IResource)
-}
-
-func (r *mockResources) Resources(cb func(appdef.QName)) {
-	r.Called(cb)
 }
