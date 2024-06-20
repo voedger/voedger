@@ -24,8 +24,8 @@ const (
 	OpKind_Select
 	OpKind_UpdateTable
 	OpKind_InsertTable
-	OpKind_DirectUpdate
-	OpKind_DirectInsert
+	OpKind_UnloggedUpdate
+	OpKind_UnloggedInsert
 	OpKind_UpdateCorrupted
 )
 
