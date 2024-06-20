@@ -206,9 +206,9 @@ func TestVSqlUpdate_BasicUsage_DirectUpdate_View(t *testing.T) {
 	require.EqualValues(42, m["Val"].(float64))
 
 	t.Run("basic", func(t *testing.T) {
-		// direct update
+		// unlogged update
 		newName := vit.NextName()
-		body = fmt.Sprintf(`{"args": {"Query":"direct update test1.app1.%d.app1pkg.CategoryIdx set Name = '%s' where IntFld = 43 and Dummy = 1"}}`, ws.WSID, newName)
+		body = fmt.Sprintf(`{"args": {"Query":"unlogged update test1.app1.%d.app1pkg.CategoryIdx set Name = '%s' where IntFld = 43 and Dummy = 1"}}`, ws.WSID, newName)
 		vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppWSID, "c.cluster.VSqlUpdate", body, coreutils.WithAuthorizeBy(sysPrn.Token))
 
 		// check values are updated
@@ -227,7 +227,7 @@ func TestVSqlUpdate_BasicUsage_DirectUpdate_View(t *testing.T) {
 	})
 
 	t.Run("not full key provided -> error 400", func(t *testing.T) {
-		body = fmt.Sprintf(`{"args": {"Query":"direct update test1.app1.%d.app1pkg.CategoryIdx set Name = 'any' where IntFld = 43"}}`, ws.WSID)
+		body = fmt.Sprintf(`{"args": {"Query":"unlogged update test1.app1.%d.app1pkg.CategoryIdx set Name = 'any' where IntFld = 43"}}`, ws.WSID)
 		vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppWSID, "c.cluster.VSqlUpdate", body,
 			coreutils.WithAuthorizeBy(sysPrn.Token),
 			coreutils.Expect400("Dummy", "is empty"),
@@ -235,7 +235,7 @@ func TestVSqlUpdate_BasicUsage_DirectUpdate_View(t *testing.T) {
 	})
 
 	t.Run("update missing record -> error 400", func(t *testing.T) {
-		body = fmt.Sprintf(`{"args": {"Query":"direct update test1.app1.%d.app1pkg.CategoryIdx set Name = 'any' where IntFld = 1 and Dummy = 1"}}`, ws.WSID)
+		body = fmt.Sprintf(`{"args": {"Query":"unlogged update test1.app1.%d.app1pkg.CategoryIdx set Name = 'any' where IntFld = 1 and Dummy = 1"}}`, ws.WSID)
 		vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppWSID, "c.cluster.VSqlUpdate", body,
 			coreutils.WithAuthorizeBy(sysPrn.Token),
 			coreutils.Expect400("record cannot be found"),
@@ -243,7 +243,7 @@ func TestVSqlUpdate_BasicUsage_DirectUpdate_View(t *testing.T) {
 	})
 
 	t.Run("update unexisting field -> error 400", func(t *testing.T) {
-		body = fmt.Sprintf(`{"args": {"Query":"direct update test1.app1.%d.app1pkg.CategoryIdx set unexistingField = 'any' where IntFld = 43 and Dummy = 1"}}`, ws.WSID)
+		body = fmt.Sprintf(`{"args": {"Query":"unlogged update test1.app1.%d.app1pkg.CategoryIdx set unexistingField = 'any' where IntFld = 43 and Dummy = 1"}}`, ws.WSID)
 		vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppWSID, "c.cluster.VSqlUpdate", body,
 			coreutils.WithAuthorizeBy(sysPrn.Token),
 			coreutils.Expect400("unexistingField", "is not found"),
@@ -265,9 +265,9 @@ func TestVSqlUpdate_BasicUsage_DirectUpdate_Record(t *testing.T) {
 	sysPrn := vit.GetSystemPrincipal(istructs.AppQName_sys_cluster)
 
 	t.Run("basic", func(t *testing.T) {
-		// direct update
+		// unlogged update
 		newName := vit.NextName()
-		body = fmt.Sprintf(`{"args": {"Query":"direct update test1.app1.%d.app1pkg.category.%d set name = '%s', cat_external_id = 'cat value', int_fld1 = 44"}}`, ws.WSID, categoryID, newName)
+		body = fmt.Sprintf(`{"args": {"Query":"unlogged update test1.app1.%d.app1pkg.category.%d set name = '%s', cat_external_id = 'cat value', int_fld1 = 44"}}`, ws.WSID, categoryID, newName)
 		vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppWSID, "c.cluster.VSqlUpdate", body, coreutils.WithAuthorizeBy(sysPrn.Token))
 
 		// check new state
@@ -289,16 +289,16 @@ func TestVSqlUpdate_BasicUsage_DirectUpdate_Record(t *testing.T) {
 		}, m)
 	})
 
-	t.Run("direct update unexisting record -> error 400", func(t *testing.T) {
-		body = fmt.Sprintf(`{"args": {"Query":"direct update test1.app1.%d.app1pkg.category.%d set int_fld1 = 44"}}`, ws.WSID, istructs.NonExistingRecordID)
+	t.Run("unlogged update unexisting record -> error 400", func(t *testing.T) {
+		body = fmt.Sprintf(`{"args": {"Query":"unlogged update test1.app1.%d.app1pkg.category.%d set int_fld1 = 44"}}`, ws.WSID, istructs.NonExistingRecordID)
 		vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppWSID, "c.cluster.VSqlUpdate", body,
 			coreutils.WithAuthorizeBy(sysPrn.Token),
 			coreutils.Expect400(fmt.Sprintf("record ID %d does not exist", istructs.NonExistingRecordID)),
 		)
 	})
 
-	t.Run("direct update unexisting field -> error 400", func(t *testing.T) {
-		body = fmt.Sprintf(`{"args": {"Query":"direct update test1.app1.%d.app1pkg.category.%d set unknownField = 44"}}`, ws.WSID, categoryID)
+	t.Run("unlogged update unexisting field -> error 400", func(t *testing.T) {
+		body = fmt.Sprintf(`{"args": {"Query":"unlogged update test1.app1.%d.app1pkg.category.%d set unknownField = 44"}}`, ws.WSID, categoryID)
 		vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppWSID, "c.cluster.VSqlUpdate", body,
 			coreutils.WithAuthorizeBy(sysPrn.Token),
 			coreutils.Expect400("unknownField", "is not found"),
@@ -322,9 +322,9 @@ func TestVSqlUpdate_BasicUsage_DirectInsert(t *testing.T) {
 		resp := vit.PostWS(ws, "q.sys.SqlQuery", bodySelect)
 		require.True(resp.IsEmpty())
 
-		// direct insert a view record
+		// unlogged insert a view record
 		newName := vit.NextName()
-		body := fmt.Sprintf(`{"args": {"Query":"direct insert test1.app1.%d.app1pkg.CategoryIdx set Name = '%s', Val = 123, IntFld = %d, Dummy = 1"}}`, ws.WSID, newName, intFld)
+		body := fmt.Sprintf(`{"args": {"Query":"unlogged insert test1.app1.%d.app1pkg.CategoryIdx set Name = '%s', Val = 123, IntFld = %d, Dummy = 1"}}`, ws.WSID, newName, intFld)
 		vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppWSID, "c.cluster.VSqlUpdate", body, coreutils.WithAuthorizeBy(sysPrn.Token))
 
 		// check view values
@@ -342,7 +342,7 @@ func TestVSqlUpdate_BasicUsage_DirectInsert(t *testing.T) {
 	})
 
 	t.Run("not full key proivded -> error", func(t *testing.T) {
-		body := fmt.Sprintf(`{"args": {"Query":"direct insert test1.app1.%d.app1pkg.CategoryIdx set Name = 'abc', Val = 123, IntFld = 1"}}`, ws.WSID)
+		body := fmt.Sprintf(`{"args": {"Query":"unlogged insert test1.app1.%d.app1pkg.CategoryIdx set Name = 'abc', Val = 123, IntFld = 1"}}`, ws.WSID)
 		vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppWSID, "c.cluster.VSqlUpdate", body,
 			coreutils.WithAuthorizeBy(sysPrn.Token),
 			coreutils.Expect400("Dummy", "is empty"),
@@ -352,7 +352,7 @@ func TestVSqlUpdate_BasicUsage_DirectInsert(t *testing.T) {
 	t.Run("exist already by the key -> error 409 conflict", func(t *testing.T) {
 		// insert new
 		intFld := 43 + vit.NextNumber()
-		body := fmt.Sprintf(`{"args": {"Query":"direct insert test1.app1.%d.app1pkg.CategoryIdx set Name = 'abc', Val = 123, IntFld = %d, Dummy = 1"}}`, ws.WSID, intFld)
+		body := fmt.Sprintf(`{"args": {"Query":"unlogged insert test1.app1.%d.app1pkg.CategoryIdx set Name = 'abc', Val = 123, IntFld = %d, Dummy = 1"}}`, ws.WSID, intFld)
 		vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppWSID, "c.cluster.VSqlUpdate", body, coreutils.WithAuthorizeBy(sysPrn.Token))
 
 		// insert the same again -> 409 conflict
@@ -365,7 +365,7 @@ func TestVSqlUpdate_BasicUsage_DirectInsert(t *testing.T) {
 	t.Run("set unexisting field -> error 400", func(t *testing.T) {
 		newName := vit.NextName()
 		intFld := 43 + vit.NextNumber()
-		body := fmt.Sprintf(`{"args": {"Query":"direct insert test1.app1.%d.app1pkg.CategoryIdx set Name = '%s', Val = 123, IntFld = %d, Dummy = 1, Unexisting = 42"}}`, ws.WSID, newName, intFld)
+		body := fmt.Sprintf(`{"args": {"Query":"unlogged insert test1.app1.%d.app1pkg.CategoryIdx set Name = '%s', Val = 123, IntFld = %d, Dummy = 1, Unexisting = 42"}}`, ws.WSID, newName, intFld)
 		vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppWSID, "c.cluster.VSqlUpdate", body,
 			coreutils.WithAuthorizeBy(sysPrn.Token),
 			coreutils.Expect400("Unexisting", "is not found"),
@@ -439,15 +439,15 @@ func TestUpdateDifferentLocations(t *testing.T) {
 		// rollback changes to keep the shared config predictable
 		curentWSKIDEscaped := fmt.Sprintf("%q", curentWSKID)
 		curentWSKIDEscaped = curentWSKIDEscaped[1 : len(curentWSKIDEscaped)-1] // eliminate leading and trailing double quote because the value will be specified in single qoutes
-		body := fmt.Sprintf(`{"args": {"Query":"direct update sys.registry.\"login\".registry.Login.%d set WSKindInitializationData = '%s'"}}`, loginID, curentWSKIDEscaped)
+		body := fmt.Sprintf(`{"args": {"Query":"unlogged update sys.registry.\"login\".registry.Login.%d set WSKindInitializationData = '%s'"}}`, loginID, curentWSKIDEscaped)
 		vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppWSID, "c.cluster.VSqlUpdate", body, coreutils.WithAuthorizeBy(sysPrn_ClusterApp.Token))
 	}
 
 	t.Run("hash", func(t *testing.T) {
 		defer rollback()
 
-		// direct update by login hash
-		body := fmt.Sprintf(`{"args": {"Query":"direct update sys.registry.\"login\".registry.Login.%d set WSKindInitializationData = 'abc'"}}`, loginID)
+		// unlogged update by login hash
+		body := fmt.Sprintf(`{"args": {"Query":"unlogged update sys.registry.\"login\".registry.Login.%d set WSKindInitializationData = 'abc'"}}`, loginID)
 		vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppWSID, "c.cluster.VSqlUpdate", body, coreutils.WithAuthorizeBy(sysPrn_ClusterApp.Token))
 
 		// check the result
@@ -465,8 +465,8 @@ func TestUpdateDifferentLocations(t *testing.T) {
 		require.NoError(err)
 		appWSNumber := pseudoWSID.BaseWSID() % istructs.WSID(registryAppStructs.NumAppWorkspaces())
 
-		// direct update by app workspace number
-		body := fmt.Sprintf(`{"args": {"Query":"direct update sys.registry.a%d.registry.Login.%d set WSKindInitializationData = 'def'"}}`, appWSNumber, loginID)
+		// unlogged update by app workspace number
+		body := fmt.Sprintf(`{"args": {"Query":"unlogged update sys.registry.a%d.registry.Login.%d set WSKindInitializationData = 'def'"}}`, appWSNumber, loginID)
 		vit.PostApp(istructs.AppQName_sys_cluster, clusterapp.ClusterAppWSID, "c.cluster.VSqlUpdate", body, coreutils.WithAuthorizeBy(sysPrn_ClusterApp.Token))
 
 		// check the result
@@ -527,28 +527,28 @@ func TestVSqlUpdateValidateErrors(t *testing.T) {
 		fmt.Sprintf("update corrupted test1.app1.1.sys.PLog.%d", math.MaxInt): fmt.Sprintf("plog event partition 1 plogoffset %d does not exist", math.MaxInt),
 		fmt.Sprintf("update corrupted test1.app1.1.sys.WLog.%d", math.MaxInt): fmt.Sprintf("wlog event partition 1 wlogoffset %d wsid 1 does not exist", math.MaxInt),
 
-		// direct update
-		"direct update test1.app1.1.app1pkg.CategoryIdx set Val = null where IntFld = 43 and Dummy = 1":   "null value is not supported",
-		"direct update test1.app1.1.app1pkg.CategoryIdx set Val = 44 where IntFld = 43 and Dummy = null":  "null value is not supported",
-		"direct update test1.app1.1.app1pkg.CategoryIdx set Val = 44, Name = 'x'":                         "full key must be provided on view direct update",
-		"direct update test1.app1.1.app1pkg.CategoryIdx where x = 1":                                      "syntax error",
-		"direct update test1.app1.1.app1pkg.CategoryIdx.42 set a = 2 where x = 1":                         "record ID must not be provided on view direct update",
-		"direct update test1.app1.1.app1pkg.CategoryIdx set a = 2 where x = 1 and x = 1":                  "key field x is specified twice",
-		"direct update test1.app1.1.app1pkg.CategoryIdx set Val = 44 where IntFld = 43 and Dummy is null": "'where viewField1 = val1 [and viewField2 = val2 ...]' condition is only supported",
-		"direct update test1.app1.1.app1pkg.CategoryIdx set a = 2 where x = 1 or y = 1":                   "'where viewField1 = val1 [and viewField2 = val2 ...]' condition is only supported",
-		"direct update test1.app1.1.app1pkg.CategoryIdx set a = 2 where x > 1":                            "'where viewField1 = val1 [and viewField2 = val2 ...]' condition is only supported",
-		"direct update test1.app1.1.app1pkg.category.1 set a = 2 where b = sin(x)":                        "'where viewField1 = val1 [and viewField2 = val2 ...]' condition is only supported",
-		"direct update test1.app1.1.app1pkg.category.1 set a = 2 where 1 = 1":                             "'where viewField1 = val1 [and viewField2 = val2 ...]' condition is only supported",
-		"direct update test1.app1.1.app1pkg.category.1 set a = 2 where 1 = 1 and 1 = 1":                   "'where viewField1 = val1 [and viewField2 = val2 ...]' condition is only supported",
-		"direct update test1.app1.1.app1pkg.category set a = 2":                                           "record ID must be provided on record direct update",
-		"direct update test1.app1.1.app1pkg.category.1 set a = 2 where b = 3":                             "'where' clause is not allowed on record direct update",
-		"direct update test1.app1.1.app1pkg.MockCmd set Val = 44, Name = 'x'":                             "view, CDoc or WDoc only expected",
+		// unlogged update
+		"unlogged update test1.app1.1.app1pkg.CategoryIdx set Val = null where IntFld = 43 and Dummy = 1":   "null value is not supported",
+		"unlogged update test1.app1.1.app1pkg.CategoryIdx set Val = 44 where IntFld = 43 and Dummy = null":  "null value is not supported",
+		"unlogged update test1.app1.1.app1pkg.CategoryIdx set Val = 44, Name = 'x'":                         "full key must be provided on view unlogged update",
+		"unlogged update test1.app1.1.app1pkg.CategoryIdx where x = 1":                                      "syntax error",
+		"unlogged update test1.app1.1.app1pkg.CategoryIdx.42 set a = 2 where x = 1":                         "record ID must not be provided on view unlogged update",
+		"unlogged update test1.app1.1.app1pkg.CategoryIdx set a = 2 where x = 1 and x = 1":                  "key field x is specified twice",
+		"unlogged update test1.app1.1.app1pkg.CategoryIdx set Val = 44 where IntFld = 43 and Dummy is null": "'where viewField1 = val1 [and viewField2 = val2 ...]' condition is only supported",
+		"unlogged update test1.app1.1.app1pkg.CategoryIdx set a = 2 where x = 1 or y = 1":                   "'where viewField1 = val1 [and viewField2 = val2 ...]' condition is only supported",
+		"unlogged update test1.app1.1.app1pkg.CategoryIdx set a = 2 where x > 1":                            "'where viewField1 = val1 [and viewField2 = val2 ...]' condition is only supported",
+		"unlogged update test1.app1.1.app1pkg.category.1 set a = 2 where b = sin(x)":                        "'where viewField1 = val1 [and viewField2 = val2 ...]' condition is only supported",
+		"unlogged update test1.app1.1.app1pkg.category.1 set a = 2 where 1 = 1":                             "'where viewField1 = val1 [and viewField2 = val2 ...]' condition is only supported",
+		"unlogged update test1.app1.1.app1pkg.category.1 set a = 2 where 1 = 1 and 1 = 1":                   "'where viewField1 = val1 [and viewField2 = val2 ...]' condition is only supported",
+		"unlogged update test1.app1.1.app1pkg.category set a = 2":                                           "record ID must be provided on record unlogged update",
+		"unlogged update test1.app1.1.app1pkg.category.1 set a = 2 where b = 3":                             "'where' clause is not allowed on record unlogged update",
+		"unlogged update test1.app1.1.app1pkg.MockCmd set Val = 44, Name = 'x'":                             "view, CDoc or WDoc only expected",
 
-		// direct insert
-		"direct insert test1.app1.1.app1pkg.CategoryIdx set Val = 44, Name = 'x' where a = 1": "'where' clause is not allowed on view direct insert",
-		"direct insert test1.app1.1.app1pkg.category set Val = 44, Name = 'x'":                "direct insert is not allowed for records",
-		"direct insert test1.app1.1.app1pkg.MockCmd set Val = 44, Name = 'x'":                 "view, CDoc or WDoc only expected",
-		"direct insert test1.app1.1.app1pkg.CategoryIdx set Val = null":                       "null value is not supported",
+		// unlogged insert
+		"unlogged insert test1.app1.1.app1pkg.CategoryIdx set Val = 44, Name = 'x' where a = 1": "'where' clause is not allowed on view unlogged insert",
+		"unlogged insert test1.app1.1.app1pkg.category set Val = 44, Name = 'x'":                "unlogged insert is not allowed for records",
+		"unlogged insert test1.app1.1.app1pkg.MockCmd set Val = 44, Name = 'x'":                 "view, CDoc or WDoc only expected",
+		"unlogged insert test1.app1.1.app1pkg.CategoryIdx set Val = null":                       "null value is not supported",
 	}
 	sysPrn := vit.GetSystemPrincipal(istructs.AppQName_sys_cluster)
 	for sql, expectedError := range cases {

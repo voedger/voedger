@@ -39,8 +39,8 @@ func provideExecCmdVSqlUpdate(federation federation.IFederation, itokens itokens
 			err = insertTable(update, federation, itokens, args.State, args.Intents)
 		case dml.OpKind_UpdateCorrupted:
 			err = updateCorrupted(update, istructs.UnixMilli(timeFunc().UnixMilli()))
-		case dml.OpKind_DirectUpdate, dml.OpKind_DirectInsert:
-			err = updateDirect(update)
+		case dml.OpKind_UnloggedUpdate, dml.OpKind_UnloggedInsert:
+			err = updateUnlogged(update)
 		}
 		return coreutils.WrapSysError(err, http.StatusBadRequest)
 	}
@@ -111,7 +111,7 @@ func parseAndValidateQuery(args istructs.ExecCommandArgs, query string, asp istr
 	}
 
 	switch update.Kind {
-	case dml.OpKind_UpdateTable, dml.OpKind_DirectUpdate, dml.OpKind_DirectInsert, dml.OpKind_InsertTable:
+	case dml.OpKind_UpdateTable, dml.OpKind_UnloggedUpdate, dml.OpKind_UnloggedInsert, dml.OpKind_InsertTable:
 		update.wsid = istructs.WSID(wsid)
 		update.id = istructs.RecordID(update.EntityID)
 	case dml.OpKind_UpdateCorrupted:
@@ -135,8 +135,8 @@ func validateQuery(update update) error {
 		return validateQuery_InsertTable(update)
 	case dml.OpKind_UpdateCorrupted:
 		return validateQuery_Corrupted(update)
-	case dml.OpKind_DirectUpdate, dml.OpKind_DirectInsert:
-		return validateQuery_Direct(update)
+	case dml.OpKind_UnloggedUpdate, dml.OpKind_UnloggedInsert:
+		return validateQuery_Unlogged(update)
 	default:
 		// notest: checked already on sql parse
 		panic("unknown operation kind" + fmt.Sprint(update.Kind))
