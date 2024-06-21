@@ -89,6 +89,7 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 	quotas := vvmConfig.Quotas
 	in10nBroker, cleanup := in10nmem.ProvideEx2(quotas, timeFunc)
 	v2 := projectors.NewSyncActualizerFactoryFactory(syncActualizerFactory, iSecretReader, in10nBroker)
+	iActualizers := provideAppPartsAsyncActualizers()
 	vvmPortSource := provideVVMPortSource()
 	iFederation, cleanup2 := provideIFederation(vvmConfig, vvmPortSource)
 	apIs := apps.APIs{
@@ -105,7 +106,7 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 		cleanup()
 		return nil, nil, err
 	}
-	iAppPartitions, cleanup3, err := provideAppPartitions(iAppStructsProvider, v2, appsArtefacts)
+	iAppPartitions, cleanup3, err := provideAppPartitions(iAppStructsProvider, v2, iActualizers, appsArtefacts)
 	if err != nil {
 		cleanup2()
 		cleanup()
@@ -279,9 +280,15 @@ func provideIAppStructsProvider(cfgs AppConfigsTypeEmpty, bucketsFactory irates.
 	return istructsmem.Provide(istructsmem.AppConfigsType(cfgs), bucketsFactory, appTokensFactory, storageProvider)
 }
 
+func provideAppPartsAsyncActualizers() appparts.IActualizers {
+
+	return appparts.NullActualizers
+}
+
 func provideAppPartitions(
 	asp istructs.IAppStructsProvider,
-	actualizer appparts.SyncActualizerFactory,
+	saf appparts.SyncActualizerFactory,
+	act appparts.IActualizers,
 	appsArtefacts AppsArtefacts,
 ) (ap appparts.IAppPartitions, cleanup func(), err error) {
 
@@ -290,7 +297,12 @@ func provideAppPartitions(
 		WASMCompile: false,
 	})
 
-	return appparts.NewWithActualizerWithExtEnginesFactories(asp, actualizer, eef)
+	return appparts.New2(
+		asp,
+		saf,
+		act,
+		eef,
+	)
 }
 
 func provideIsDeviceAllowedFunc(appsArtefacts AppsArtefacts) iauthnzimpl.IsDeviceAllowedFuncs {

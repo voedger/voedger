@@ -170,7 +170,8 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 		provideAppPartsCtlPipelineService,
 		provideIsDeviceAllowedFunc,
 		provideBuiltInApps,
-		provideAppPartitions, // IAppPartitions
+		provideAppPartsAsyncActualizers, // appparts.IActualizers
+		provideAppPartitions,            // appparts.IAppPartitions
 		apppartsctl.New,
 		provideAppConfigsTypeEmpty,
 		provideBuiltInAppPackages,
@@ -239,9 +240,15 @@ func provideIAppStructsProvider(cfgs AppConfigsTypeEmpty, bucketsFactory irates.
 	return istructsmem.Provide(istructsmem.AppConfigsType(cfgs), bucketsFactory, appTokensFactory, storageProvider)
 }
 
+func provideAppPartsAsyncActualizers() appparts.IActualizers {
+	// FIXME: async actualizers should be provided by projectors package
+	return appparts.NullActualizers
+}
+
 func provideAppPartitions(
 	asp istructs.IAppStructsProvider,
-	actualizer appparts.SyncActualizerFactory,
+	saf appparts.SyncActualizerFactory,
+	act appparts.IActualizers,
 	appsArtefacts AppsArtefacts,
 ) (ap appparts.IAppPartitions, cleanup func(), err error) {
 
@@ -252,9 +259,8 @@ func provideAppPartitions(
 
 	return appparts.New2(
 		asp,
-		actualizer,
-		// FIXME: actualizers should be provided by the projectors package
-		appparts.NullActualizers,
+		saf,
+		act,
 		eef,
 	)
 }
