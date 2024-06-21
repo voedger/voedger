@@ -242,6 +242,7 @@ func deployTestApp(
 	appParts, appPartsCleanup, err := appparts.New2(
 		appStructsProvider,
 		NewSyncActualizerFactoryFactory(ProvideSyncActualizerFactory(), secretReader, n10nBroker),
+		appparts.NullActualizers,
 		engines.ProvideExtEngineFactories(
 			engines.ExtEngineFactoriesConfig{
 				AppConfigs:  cfgs,

@@ -250,7 +250,13 @@ func provideAppPartitions(
 		WASMCompile: false,
 	})
 
-	return appparts.New2(asp, actualizer, eef)
+	return appparts.New2(
+		asp,
+		actualizer,
+		// FIXME: actualizers should be provided by the projectors package
+		appparts.NullActualizers,
+		eef,
+	)
 }
 
 func provideIsDeviceAllowedFunc(appsArtefacts AppsArtefacts) iauthnzimpl.IsDeviceAllowedFuncs {
