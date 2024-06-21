@@ -318,7 +318,7 @@ func deployTestAppWithSecretToken(require *require.Assertions,
 	require.NoError(as.Records().Apply(pLogEvent))
 	require.NoError(as.Events().PutWlog(pLogEvent))
 
-	appParts, cleanup, err = appparts.NewWithActualizerWithExtEnginesFactories(asp,
+	appParts, cleanup, err = appparts.New2(asp,
 		func(istructs.IAppStructs, istructs.PartitionID) pipeline.ISyncOperator { return &pipeline.NOOP{} }, // no projectors
 		engines.ProvideExtEngineFactories(
 			engines.ExtEngineFactoriesConfig{

@@ -20,15 +20,17 @@ import (
 type apps struct {
 	structs               istructs.IAppStructsProvider
 	syncActualizerFactory SyncActualizerFactory
+	actualizers           IActualizers
 	extEngineFactories    iextengine.ExtensionEngineFactories
 	apps                  map[appdef.AppQName]*app
 	mx                    sync.RWMutex
 }
 
-func newAppPartitions(asp istructs.IAppStructsProvider, saf SyncActualizerFactory, eef iextengine.ExtensionEngineFactories) (ap IAppPartitions, cleanup func(), err error) {
+func newAppPartitions(asp istructs.IAppStructsProvider, saf SyncActualizerFactory, act IActualizers, eef iextengine.ExtensionEngineFactories) (ap IAppPartitions, cleanup func(), err error) {
 	a := &apps{
 		structs:               asp,
 		syncActualizerFactory: saf,
+		actualizers:           act,
 		extEngineFactories:    eef,
 		apps:                  map[appdef.AppQName]*app{},
 		mx:                    sync.RWMutex{},
@@ -67,6 +69,17 @@ func (aps *apps) DeployAppPartitions(appName appdef.AppQName, partIDs []istructs
 	for _, id := range partIDs {
 		p := newPartition(a, id)
 		a.parts[id] = p
+	}
+
+	var err error
+	for _, id := range partIDs {
+		if e := aps.actualizers.DeployPartition(appName, id); e != nil {
+			err = errors.Join(err, e)
+		}
+	}
+
+	if err != nil {
+		panic(err)
 	}
 }
 

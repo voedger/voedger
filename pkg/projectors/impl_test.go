@@ -239,7 +239,7 @@ func deployTestApp(
 		SubscriptionsPerSubject: 10,
 	}, time.Now)
 
-	appParts, appPartsCleanup, err := appparts.NewWithActualizerWithExtEnginesFactories(
+	appParts, appPartsCleanup, err := appparts.New2(
 		appStructsProvider,
 		NewSyncActualizerFactoryFactory(ProvideSyncActualizerFactory(), secretReader, n10nBroker),
 		engines.ProvideExtEngineFactories(

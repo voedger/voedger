@@ -707,7 +707,7 @@ func setUp(t *testing.T, prepare func(appDef appdef.IAppDefBuilder, cfg *istruct
 	}, time.Now)
 
 	// prepare the AppParts to borrow AppStructs
-	appParts, appPartsClean, err := appparts.NewWithActualizerWithExtEnginesFactories(appStructsProvider,
+	appParts, appPartsClean, err := appparts.New2(appStructsProvider,
 		projectors.NewSyncActualizerFactoryFactory(projectors.ProvideSyncActualizerFactory(), secretReader, n10nBroker),
 		engines.ProvideExtEngineFactories(
 			engines.ExtEngineFactoriesConfig{

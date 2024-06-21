@@ -250,7 +250,7 @@ func provideAppPartitions(
 		WASMCompile: false,
 	})
 
-	return appparts.NewWithActualizerWithExtEnginesFactories(asp, actualizer, eef)
+	return appparts.New2(asp, actualizer, eef)
 }
 
 func provideIsDeviceAllowedFunc(appsArtefacts AppsArtefacts) iauthnzimpl.IsDeviceAllowedFuncs {
