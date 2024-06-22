@@ -26,15 +26,19 @@ type TimeAfterFunc func(d time.Duration) <-chan time.Time
 
 type LogErrorFunc func(args ...interface{})
 
-type AsyncActualizerConf struct {
-	Ctx           context.Context
-	AppQName      appdef.AppQName
+type BasicActualizerConfig struct {
+	VvmName string
+	Ctx     context.Context
+
 	AppPartitions appparts.IAppPartitions
-	AppStructs    state.AppStructsFunc
 	SecretReader  isecrets.ISecretReader
 	Tokens        itokens.ITokens
+	Metrics       imetrics.IMetrics
+	Broker        in10n.IN10nBroker
 	Federation    federation.IFederation
-	Partition     istructs.PartitionID
+
+	Opts []state.StateOptFunc
+
 	// Optional. Default value: `time.After`
 	AfterError TimeAfterFunc
 	// Optional. Default value: `core-logger.Error`
@@ -49,13 +53,16 @@ type AsyncActualizerConf struct {
 	FlushInterval time.Duration
 	// FlushPositionInterval specifies how often actializer must save it's position, even when no events has been processed by actualizer. Default is 1 minute
 	FlushPositionInterval time.Duration
+}
 
-	VvmName string
-	Metrics imetrics.IMetrics
+type AsyncActualizerConf struct {
+	BasicActualizerConfig
 
-	Broker  in10n.IN10nBroker
+	AppQName   appdef.AppQName
+	AppStructs state.AppStructsFunc
+	Partition  istructs.PartitionID
+
 	channel in10n.ChannelID
-	Opts    []state.StateOptFunc
 }
 
 type AsyncActualizerMetrics interface {

@@ -563,19 +563,21 @@ func provideAsyncActualizersFactory(appParts appparts.IAppPartitions, appStructs
 		}
 
 		conf := projectors.AsyncActualizerConf{
-			Ctx:           vvmCtx,
-			AppQName:      appQName,
-			AppPartitions: appParts,
-			AppStructs:    func() istructs.IAppStructs { return appStructs },
-			SecretReader:  secretReader,
-			Partition:     partitionID,
-			Broker:        n10nBroker,
-			Opts:          opts,
-			IntentsLimit:  projectors.DefaultIntentsLimit,
-			FlushInterval: actualizerFlushInterval,
-			Metrics:       metrics,
-			Tokens:        tokens,
-			Federation:    federation,
+			BasicActualizerConfig: projectors.BasicActualizerConfig{
+				Ctx:           vvmCtx,
+				AppPartitions: appParts,
+				SecretReader:  secretReader,
+				Broker:        n10nBroker,
+				Opts:          opts,
+				IntentsLimit:  projectors.DefaultIntentsLimit,
+				FlushInterval: actualizerFlushInterval,
+				Metrics:       metrics,
+				Tokens:        tokens,
+				Federation:    federation,
+			},
+			AppQName:   appQName,
+			AppStructs: func() istructs.IAppStructs { return appStructs },
+			Partition:  partitionID,
 		}
 
 		forkOps := make([]pipeline.ForkOperatorOptionFunc, 0, len(asyncProjectors))

@@ -114,12 +114,14 @@ func TestBasicUsage_AsynchronousActualizer(t *testing.T) {
 
 	for _, prj := range appStructs.AsyncProjectors() {
 		conf := AsyncActualizerConf{
-			Ctx:           withCancel,
-			AppQName:      appName,
-			Partition:     partitionNr,
-			AppPartitions: appParts,
-			AppStructs:    func() istructs.IAppStructs { return appStructs },
-			Broker:        broker,
+			BasicActualizerConfig: BasicActualizerConfig{
+				Ctx:           withCancel,
+				AppPartitions: appParts,
+				Broker:        broker,
+			},
+			AppQName:   appName,
+			Partition:  partitionNr,
+			AppStructs: func() istructs.IAppStructs { return appStructs },
 		}
 		actualizer, err := actualizerFactory(conf, prj)
 		require.NoError(err)
@@ -203,15 +205,17 @@ func Test_AsynchronousActualizer_FlushByRange(t *testing.T) {
 
 	// init and launch actualizer
 	conf := AsyncActualizerConf{
-		Ctx:           withCancel,
-		AppQName:      appName,
-		Partition:     partitionNr,
-		AppPartitions: appParts,
-		AppStructs:    func() istructs.IAppStructs { return appStructs },
-		IntentsLimit:  1,
-		BundlesLimit:  1,
-		FlushInterval: 2 * time.Second,
-		Broker:        broker,
+		BasicActualizerConfig: BasicActualizerConfig{
+			Ctx:           withCancel,
+			AppPartitions: appParts,
+			IntentsLimit:  1,
+			BundlesLimit:  1,
+			FlushInterval: 2 * time.Second,
+			Broker:        broker,
+		},
+		AppQName:   appName,
+		Partition:  partitionNr,
+		AppStructs: func() istructs.IAppStructs { return appStructs },
 	}
 
 	projector := appStructs.AsyncProjectors()[incrementorName]
@@ -287,13 +291,15 @@ func Test_AsynchronousActualizer_FlushByInterval(t *testing.T) {
 
 	// init and launch actualizer
 	conf := AsyncActualizerConf{
-		Ctx:           withCancel,
-		AppQName:      appName,
-		Partition:     partitionNr,
-		AppPartitions: appParts,
-		AppStructs:    func() istructs.IAppStructs { return appStructs },
-		FlushInterval: 10 * time.Millisecond,
-		Broker:        broker,
+		BasicActualizerConfig: BasicActualizerConfig{
+			Ctx:           withCancel,
+			AppPartitions: appParts,
+			FlushInterval: 10 * time.Millisecond,
+			Broker:        broker,
+		},
+		AppQName:   appName,
+		Partition:  partitionNr,
+		AppStructs: func() istructs.IAppStructs { return appStructs },
 	}
 
 	projector := appStructs.AsyncProjectors()[incrementorName]
@@ -406,25 +412,27 @@ func Test_AsynchronousActualizer_ErrorAndRestore(t *testing.T) {
 
 	// init and launch actualizer
 	conf := AsyncActualizerConf{
-		Ctx:           withCancel,
-		AppQName:      appName,
-		Partition:     partitionNr,
-		AppPartitions: appParts,
-		AppStructs:    func() istructs.IAppStructs { return appStructs },
-		AfterError: func(d time.Duration) <-chan time.Time {
-			if d.Seconds() != 30.0 {
-				panic("unexpected pause")
-			}
-			return chanAfterError
+		BasicActualizerConfig: BasicActualizerConfig{
+			VvmName:       "test",
+			Ctx:           withCancel,
+			AppPartitions: appParts,
+			AfterError: func(d time.Duration) <-chan time.Time {
+				if d.Seconds() != 30.0 {
+					panic("unexpected pause")
+				}
+				return chanAfterError
+			},
+			BundlesLimit:  10,
+			FlushInterval: 10 * time.Millisecond,
+			LogError: func(args ...interface{}) {
+				errors <- fmt.Sprint("error: ", args)
+			},
+			Broker:  broker,
+			Metrics: metrics,
 		},
-		BundlesLimit:  10,
-		FlushInterval: 10 * time.Millisecond,
-		LogError: func(args ...interface{}) {
-			errors <- fmt.Sprint("error: ", args)
-		},
-		Broker:  broker,
-		Metrics: metrics,
-		VvmName: "test",
+		AppQName:   appName,
+		Partition:  partitionNr,
+		AppStructs: func() istructs.IAppStructs { return appStructs },
 	}
 
 	projector := appStructs.AsyncProjectors()[name]
@@ -514,17 +522,19 @@ func Test_AsynchronousActualizer_ResumeReadAfterNotifications(t *testing.T) {
 
 	// init and launch actualizer
 	conf := AsyncActualizerConf{
-		Ctx:           withCancel,
-		AppQName:      appName,
-		Partition:     partitionNr,
-		AppPartitions: appParts,
-		AppStructs:    func() istructs.IAppStructs { return appStructs },
-		IntentsLimit:  2,
-		BundlesLimit:  2,
-		FlushInterval: 1 * time.Second,
-		Broker:        broker,
-		VvmName:       "test",
-		Metrics:       metrics,
+		BasicActualizerConfig: BasicActualizerConfig{
+			VvmName:       "test",
+			Ctx:           withCancel,
+			AppPartitions: appParts,
+			IntentsLimit:  2,
+			BundlesLimit:  2,
+			FlushInterval: 1 * time.Second,
+			Broker:        broker,
+			Metrics:       metrics,
+		},
+		AppQName:   appName,
+		Partition:  partitionNr,
+		AppStructs: func() istructs.IAppStructs { return appStructs },
 	}
 
 	projector := appStructs.AsyncProjectors()[incrementorName]
@@ -663,13 +673,15 @@ func Test_AsynchronousActualizer_Stress(t *testing.T) {
 
 	// init and launch two actualizers
 	conf := AsyncActualizerConf{
-		Ctx:           withCancel,
-		AppQName:      appName,
-		Partition:     partitionNr,
-		AppPartitions: appParts,
-		AppStructs:    func() istructs.IAppStructs { return appStructs },
-		Broker:        broker,
-		AAMetrics:     &metrics,
+		BasicActualizerConfig: BasicActualizerConfig{
+			Ctx:           withCancel,
+			AppPartitions: appParts,
+			Broker:        broker,
+			AAMetrics:     &metrics,
+		},
+		AppQName:   appName,
+		Partition:  partitionNr,
+		AppStructs: func() istructs.IAppStructs { return appStructs },
 	}
 	projector := appStructs.AsyncProjectors()[incrementorName]
 	require.NotNil(projector)
@@ -777,16 +789,18 @@ func Test_AsynchronousActualizer_NonBuffered(t *testing.T) {
 
 	// init and launch actualizer
 	conf := AsyncActualizerConf{
-		Ctx:           withCancel,
-		AppQName:      appName,
-		AppPartitions: appParts,
-		AppStructs:    func() istructs.IAppStructs { return appStructs },
-		Partition:     partitionNr,
-		IntentsLimit:  10,
-		BundlesLimit:  10,
-		FlushInterval: 2 * time.Second,
-		Broker:        broker,
-		AAMetrics:     &metrics,
+		BasicActualizerConfig: BasicActualizerConfig{
+			Ctx:           withCancel,
+			AppPartitions: appParts,
+			IntentsLimit:  10,
+			BundlesLimit:  10,
+			FlushInterval: 2 * time.Second,
+			Broker:        broker,
+			AAMetrics:     &metrics,
+		},
+		AppQName:   appName,
+		AppStructs: func() istructs.IAppStructs { return appStructs },
+		Partition:  partitionNr,
 	}
 
 	projector := appStructs.AsyncProjectors()[incrementorName]
@@ -924,17 +938,19 @@ func Test_AsynchronousActualizer_Stress_NonBuffered(t *testing.T) {
 				metrics := simpleMetrics{}
 
 				conf := AsyncActualizerConf{
-					Ctx:           withCancel,
-					AppQName:      appName,
-					Partition:     pn,
-					AppPartitions: appParts,
-					AppStructs:    func() istructs.IAppStructs { return appStructs },
-					IntentsLimit:  10,
-					BundlesLimit:  10,
-					FlushInterval: 2 * time.Second,
-					Broker:        broker,
-					AAMetrics:     &metrics,
-					LogError:      func(args ...interface{}) {},
+					BasicActualizerConfig: BasicActualizerConfig{
+						Ctx:           withCancel,
+						AppPartitions: appParts,
+						IntentsLimit:  10,
+						BundlesLimit:  10,
+						FlushInterval: 2 * time.Second,
+						Broker:        broker,
+						AAMetrics:     &metrics,
+						LogError:      func(args ...interface{}) {},
+					},
+					AppQName:   appName,
+					Partition:  pn,
+					AppStructs: func() istructs.IAppStructs { return appStructs },
 				}
 
 				projector := appStructs.AsyncProjectors()[incrementorName]
@@ -1098,18 +1114,20 @@ func Test_AsynchronousActualizer_Stress_Buffered(t *testing.T) {
 				metrics := simpleMetrics{}
 
 				conf := AsyncActualizerConf{
-					Ctx:                   withCancel,
-					AppQName:              appName,
-					Partition:             pn,
-					AppPartitions:         appParts,
-					AppStructs:            func() istructs.IAppStructs { return appStructs },
-					IntentsLimit:          10,
-					BundlesLimit:          10,
-					FlushInterval:         1000 * time.Millisecond,
-					Broker:                broker,
-					AAMetrics:             &metrics,
-					LogError:              func(args ...interface{}) {},
-					FlushPositionInterval: 10 * time.Second,
+					BasicActualizerConfig: BasicActualizerConfig{
+						Ctx:                   withCancel,
+						AppPartitions:         appParts,
+						IntentsLimit:          10,
+						BundlesLimit:          10,
+						FlushInterval:         1000 * time.Millisecond,
+						Broker:                broker,
+						AAMetrics:             &metrics,
+						LogError:              func(args ...interface{}) {},
+						FlushPositionInterval: 10 * time.Second,
+					},
+					AppQName:   appName,
+					Partition:  pn,
+					AppStructs: func() istructs.IAppStructs { return appStructs },
 				}
 
 				projector := appStructs.AsyncProjectors()[incrementorName]
