@@ -31,6 +31,7 @@ type ITestAPI interface {
 	PutSecret(name string, secret []byte)
 	PutHttpHandler(HttpHandlerFunc)
 	PutFederationCmdHandler(state.FederationCommandHandler)
+	PutFederationBlobHandler(state.FederationBlobHandler)
 	PutUniquesHandler(state.UniquesHandler)
 	PutRequestSubject(principals []iauthnz.Principal, token string)
 	PutQuery(wsid istructs.WSID, name appdef.FullQName, argb QueryArgBuilderCallback)
