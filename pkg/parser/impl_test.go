@@ -511,6 +511,45 @@ func Test_Workspace_Defs2(t *testing.T) {
 	require.Equal(appdef.TypeKind_ORecord, ws.Type(appdef.NewQName("pkg2", "order_item")).Kind())
 }
 
+func Test_Workspace_Defs3(t *testing.T) {
+	require := require.New(t)
+	fs, err := ParseFile("file1.vsql", `IMPORT SCHEMA 'test/pkg1';
+		APPLICATION test(
+			USE pkg1;
+		);
+		WORKSPACE Workspace2 INHERITS pkg1.Workspace1 (
+			TABLE Table2 INHERITS CDoc (
+				pkg1.Type1
+			);
+		);
+	`)
+	require.NoError(err)
+	pkg, err := BuildPackageSchema("test/pkg2", []*FileSchemaAST{fs})
+	require.NoError(err)
+
+	fs2, err := ParseFile("file2.vsql", `
+		ABSTRACT WORKSPACE Workspace1(
+			TYPE Type1 ();
+		);
+	`)
+	require.NoError(err)
+	pkg2, err := BuildPackageSchema("test/pkg1", []*FileSchemaAST{fs2})
+	require.NoError(err)
+
+	packages, err := BuildAppSchema([]*PackageSchemaAST{
+		getSysPackageAST(),
+		pkg,
+		pkg2,
+	})
+	require.NoError(err)
+
+	builder := appdef.New()
+	require.NoError(BuildAppDefs(packages, builder))
+
+	_, err = builder.Build()
+	require.NoError(err)
+}
+
 func Test_Alter_Workspace(t *testing.T) {
 
 	require := require.New(t)
