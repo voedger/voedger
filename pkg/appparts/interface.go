@@ -83,6 +83,11 @@ type IAppPartition interface {
 //
 // Used by IAppPartitions to deploy and undeploy actualizers for application partitions
 type IActualizers interface {
+	// Assign application partitions manager.
+	//
+	// Should be called before any other method.
+	SetAppPartitions(IAppPartitions)
+
 	// Deploys actualizers for specified application partition.
 	//
 	// Should start new actualizers and stop removed actualizers

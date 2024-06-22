@@ -35,6 +35,7 @@ func newAppPartitions(asp istructs.IAppStructsProvider, saf SyncActualizerFactor
 		apps:                  map[appdef.AppQName]*app{},
 		mx:                    sync.RWMutex{},
 	}
+	act.SetAppPartitions(a)
 	return a, func() {}, err
 }
 

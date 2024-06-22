@@ -14,3 +14,4 @@ type nullActualizers struct{}
 
 func (nullActualizers) DeployPartition(appdef.AppQName, istructs.PartitionID) error { return nil }
 func (nullActualizers) UndeployPartition(appdef.AppQName, istructs.PartitionID)     {}
+func (nullActualizers) SetAppPartitions(IAppPartitions)                             {}
