@@ -902,16 +902,18 @@ func includeFromInheritedWorkspaces(ws *WorkspaceStmt, c *iterateCtx) {
 		for _, inherits := range ws.Inherits {
 
 			inheritsAnything = true
-			baseWs, _, err := lookupInCtx[*WorkspaceStmt](inherits, wsctx.ictx)
+			var baseWs *WorkspaceStmt
+			err := resolveInCtx(inherits, wsctx.ictx, func(ws *WorkspaceStmt, _ *PackageSchemaAST) error {
+				baseWs = ws
+				if baseWs == sysWorkspace {
+					return ErrInheritanceFromSysWorkspaceNotAllowed
+				}
+				return nil
+			})
 			if err != nil {
 				c.stmtErr(&ws.Pos, err)
 				return
 			}
-			if baseWs == sysWorkspace {
-				c.stmtErr(&ws.Pos, ErrInheritanceFromSysWorkspaceNotAllowed)
-				return
-			}
-
 			for _, item := range added {
 				if item == baseWs {
 					return // circular reference
