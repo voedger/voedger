@@ -20,9 +20,8 @@ import (
 //   - IActualizers
 //   - appparts.IActualizers
 type actualizers struct {
-	cfg      BasicAsyncActualizerConfig
-	appParts appparts.IAppPartitions
-	apps     map[appdef.AppQName]struct {
+	cfg  BasicAsyncActualizerConfig
+	apps map[appdef.AppQName]struct {
 		parts map[istructs.PartitionID]struct {
 			cfg AsyncActualizerConf
 			run map[appdef.QName]struct {
@@ -33,9 +32,9 @@ type actualizers struct {
 	}
 }
 
-func newActualizers() *actualizers {
+func newActualizers(cfg BasicAsyncActualizerConfig) *actualizers {
 	a := &actualizers{
-		cfg: BasicAsyncActualizerConfig{},
+		cfg: cfg,
 		apps: make(map[appdef.AppQName]struct {
 			parts map[istructs.PartitionID]struct {
 				cfg AsyncActualizerConf
@@ -53,8 +52,8 @@ func (a *actualizers) DeployPartition(appdef.AppQName, istructs.PartitionID) err
 func (a *actualizers) UndeployPartition(appdef.AppQName, istructs.PartitionID)     {}
 
 func (a *actualizers) SetAppPartitions(appParts appparts.IAppPartitions) {
-	if (appParts != nil) && (a.appParts != appParts) {
+	if (appParts != nil) && (a.cfg.AppPartitions != appParts) {
 		panic(fmt.Errorf("unable to reset application partitions: %w", errors.ErrUnsupported))
 	}
-	a.appParts = appParts
+	a.cfg.AppPartitions = appParts
 }
