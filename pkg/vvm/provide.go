@@ -557,10 +557,6 @@ func provideCommandProcessors(cpCount istructs.NumCommandProcessors, ccf Command
 func provideAsyncActualizersFactory(appParts appparts.IAppPartitions, appStructsProvider istructs.IAppStructsProvider, n10nBroker in10n.IN10nBroker, asyncActualizerFactory projectors.AsyncActualizerFactory, secretReader isecrets.ISecretReader, metrics imetrics.IMetrics) AsyncActualizersFactory {
 	return func(vvmCtx context.Context, appQName appdef.AppQName, asyncProjectors istructs.Projectors, partitionID istructs.PartitionID,
 		tokens itokens.ITokens, federation federation.IFederation, opts []state.StateOptFunc) pipeline.ISyncOperator {
-		appStructs, err := appStructsProvider.BuiltIn(appQName)
-		if err != nil {
-			panic(err)
-		}
 
 		conf := projectors.AsyncActualizerConf{
 			BasicActualizerConfig: projectors.BasicActualizerConfig{
@@ -575,9 +571,8 @@ func provideAsyncActualizersFactory(appParts appparts.IAppPartitions, appStructs
 				Tokens:        tokens,
 				Federation:    federation,
 			},
-			AppQName:   appQName,
-			AppStructs: func() istructs.IAppStructs { return appStructs },
-			Partition:  partitionID,
+			AppQName:  appQName,
+			Partition: partitionID,
 		}
 
 		forkOps := make([]pipeline.ForkOperatorOptionFunc, 0, len(asyncProjectors))

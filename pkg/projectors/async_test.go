@@ -119,9 +119,8 @@ func TestBasicUsage_AsynchronousActualizer(t *testing.T) {
 				AppPartitions: appParts,
 				Broker:        broker,
 			},
-			AppQName:   appName,
-			Partition:  partitionNr,
-			AppStructs: func() istructs.IAppStructs { return appStructs },
+			AppQName:  appName,
+			Partition: partitionNr,
 		}
 		actualizer, err := actualizerFactory(conf, prj)
 		require.NoError(err)
@@ -213,9 +212,8 @@ func Test_AsynchronousActualizer_FlushByRange(t *testing.T) {
 			FlushInterval: 2 * time.Second,
 			Broker:        broker,
 		},
-		AppQName:   appName,
-		Partition:  partitionNr,
-		AppStructs: func() istructs.IAppStructs { return appStructs },
+		AppQName:  appName,
+		Partition: partitionNr,
 	}
 
 	projector := appStructs.AsyncProjectors()[incrementorName]
@@ -297,9 +295,8 @@ func Test_AsynchronousActualizer_FlushByInterval(t *testing.T) {
 			FlushInterval: 10 * time.Millisecond,
 			Broker:        broker,
 		},
-		AppQName:   appName,
-		Partition:  partitionNr,
-		AppStructs: func() istructs.IAppStructs { return appStructs },
+		AppQName:  appName,
+		Partition: partitionNr,
 	}
 
 	projector := appStructs.AsyncProjectors()[incrementorName]
@@ -430,9 +427,8 @@ func Test_AsynchronousActualizer_ErrorAndRestore(t *testing.T) {
 			Broker:  broker,
 			Metrics: metrics,
 		},
-		AppQName:   appName,
-		Partition:  partitionNr,
-		AppStructs: func() istructs.IAppStructs { return appStructs },
+		AppQName:  appName,
+		Partition: partitionNr,
 	}
 
 	projector := appStructs.AsyncProjectors()[name]
@@ -532,9 +528,8 @@ func Test_AsynchronousActualizer_ResumeReadAfterNotifications(t *testing.T) {
 			Broker:        broker,
 			Metrics:       metrics,
 		},
-		AppQName:   appName,
-		Partition:  partitionNr,
-		AppStructs: func() istructs.IAppStructs { return appStructs },
+		AppQName:  appName,
+		Partition: partitionNr,
 	}
 
 	projector := appStructs.AsyncProjectors()[incrementorName]
@@ -679,9 +674,8 @@ func Test_AsynchronousActualizer_Stress(t *testing.T) {
 			Broker:        broker,
 			AAMetrics:     &metrics,
 		},
-		AppQName:   appName,
-		Partition:  partitionNr,
-		AppStructs: func() istructs.IAppStructs { return appStructs },
+		AppQName:  appName,
+		Partition: partitionNr,
 	}
 	projector := appStructs.AsyncProjectors()[incrementorName]
 	require.NotNil(projector)
@@ -798,9 +792,8 @@ func Test_AsynchronousActualizer_NonBuffered(t *testing.T) {
 			Broker:        broker,
 			AAMetrics:     &metrics,
 		},
-		AppQName:   appName,
-		AppStructs: func() istructs.IAppStructs { return appStructs },
-		Partition:  partitionNr,
+		AppQName:  appName,
+		Partition: partitionNr,
 	}
 
 	projector := appStructs.AsyncProjectors()[incrementorName]
@@ -948,9 +941,8 @@ func Test_AsynchronousActualizer_Stress_NonBuffered(t *testing.T) {
 						AAMetrics:     &metrics,
 						LogError:      func(args ...interface{}) {},
 					},
-					AppQName:   appName,
-					Partition:  pn,
-					AppStructs: func() istructs.IAppStructs { return appStructs },
+					AppQName:  appName,
+					Partition: pn,
 				}
 
 				projector := appStructs.AsyncProjectors()[incrementorName]
@@ -1125,9 +1117,8 @@ func Test_AsynchronousActualizer_Stress_Buffered(t *testing.T) {
 						LogError:              func(args ...interface{}) {},
 						FlushPositionInterval: 10 * time.Second,
 					},
-					AppQName:   appName,
-					Partition:  pn,
-					AppStructs: func() istructs.IAppStructs { return appStructs },
+					AppQName:  appName,
+					Partition: pn,
 				}
 
 				projector := appStructs.AsyncProjectors()[incrementorName]

@@ -51,16 +51,15 @@ type BasicActualizerConfig struct {
 	BundlesLimit int
 	//FlushInterval specifies how often the current actualizer flushes changes to underlying storage, optional, default value is 100 milliseconds
 	FlushInterval time.Duration
-	// FlushPositionInterval specifies how often actializer must save it's position, even when no events has been processed by actualizer. Default is 1 minute
+	// FlushPositionInterval specifies how often actualizer must save it's position, even when no events has been processed by actualizer. Default is 1 minute
 	FlushPositionInterval time.Duration
 }
 
 type AsyncActualizerConf struct {
 	BasicActualizerConfig
 
-	AppQName   appdef.AppQName
-	AppStructs state.AppStructsFunc
-	Partition  istructs.PartitionID
+	AppQName  appdef.AppQName
+	Partition istructs.PartitionID
 
 	channel in10n.ChannelID
 }
