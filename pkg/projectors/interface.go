@@ -26,7 +26,7 @@ type TimeAfterFunc func(d time.Duration) <-chan time.Time
 
 type LogErrorFunc func(args ...interface{})
 
-type BasicActualizerConfig struct {
+type BasicAsyncActualizerConfig struct {
 	VvmName string
 	Ctx     context.Context
 
@@ -56,7 +56,7 @@ type BasicActualizerConfig struct {
 }
 
 type AsyncActualizerConf struct {
-	BasicActualizerConfig
+	BasicAsyncActualizerConfig
 
 	AppQName  appdef.AppQName
 	Partition istructs.PartitionID

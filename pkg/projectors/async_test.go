@@ -114,7 +114,7 @@ func TestBasicUsage_AsynchronousActualizer(t *testing.T) {
 
 	for _, prj := range appStructs.AsyncProjectors() {
 		conf := AsyncActualizerConf{
-			BasicActualizerConfig: BasicActualizerConfig{
+			BasicAsyncActualizerConfig: BasicAsyncActualizerConfig{
 				Ctx:           withCancel,
 				AppPartitions: appParts,
 				Broker:        broker,
@@ -204,7 +204,7 @@ func Test_AsynchronousActualizer_FlushByRange(t *testing.T) {
 
 	// init and launch actualizer
 	conf := AsyncActualizerConf{
-		BasicActualizerConfig: BasicActualizerConfig{
+		BasicAsyncActualizerConfig: BasicAsyncActualizerConfig{
 			Ctx:           withCancel,
 			AppPartitions: appParts,
 			IntentsLimit:  1,
@@ -289,7 +289,7 @@ func Test_AsynchronousActualizer_FlushByInterval(t *testing.T) {
 
 	// init and launch actualizer
 	conf := AsyncActualizerConf{
-		BasicActualizerConfig: BasicActualizerConfig{
+		BasicAsyncActualizerConfig: BasicAsyncActualizerConfig{
 			Ctx:           withCancel,
 			AppPartitions: appParts,
 			FlushInterval: 10 * time.Millisecond,
@@ -409,7 +409,7 @@ func Test_AsynchronousActualizer_ErrorAndRestore(t *testing.T) {
 
 	// init and launch actualizer
 	conf := AsyncActualizerConf{
-		BasicActualizerConfig: BasicActualizerConfig{
+		BasicAsyncActualizerConfig: BasicAsyncActualizerConfig{
 			VvmName:       "test",
 			Ctx:           withCancel,
 			AppPartitions: appParts,
@@ -518,7 +518,7 @@ func Test_AsynchronousActualizer_ResumeReadAfterNotifications(t *testing.T) {
 
 	// init and launch actualizer
 	conf := AsyncActualizerConf{
-		BasicActualizerConfig: BasicActualizerConfig{
+		BasicAsyncActualizerConfig: BasicAsyncActualizerConfig{
 			VvmName:       "test",
 			Ctx:           withCancel,
 			AppPartitions: appParts,
@@ -668,7 +668,7 @@ func Test_AsynchronousActualizer_Stress(t *testing.T) {
 
 	// init and launch two actualizers
 	conf := AsyncActualizerConf{
-		BasicActualizerConfig: BasicActualizerConfig{
+		BasicAsyncActualizerConfig: BasicAsyncActualizerConfig{
 			Ctx:           withCancel,
 			AppPartitions: appParts,
 			Broker:        broker,
@@ -783,7 +783,7 @@ func Test_AsynchronousActualizer_NonBuffered(t *testing.T) {
 
 	// init and launch actualizer
 	conf := AsyncActualizerConf{
-		BasicActualizerConfig: BasicActualizerConfig{
+		BasicAsyncActualizerConfig: BasicAsyncActualizerConfig{
 			Ctx:           withCancel,
 			AppPartitions: appParts,
 			IntentsLimit:  10,
@@ -931,7 +931,7 @@ func Test_AsynchronousActualizer_Stress_NonBuffered(t *testing.T) {
 				metrics := simpleMetrics{}
 
 				conf := AsyncActualizerConf{
-					BasicActualizerConfig: BasicActualizerConfig{
+					BasicAsyncActualizerConfig: BasicAsyncActualizerConfig{
 						Ctx:           withCancel,
 						AppPartitions: appParts,
 						IntentsLimit:  10,
@@ -1106,7 +1106,7 @@ func Test_AsynchronousActualizer_Stress_Buffered(t *testing.T) {
 				metrics := simpleMetrics{}
 
 				conf := AsyncActualizerConf{
-					BasicActualizerConfig: BasicActualizerConfig{
+					BasicAsyncActualizerConfig: BasicAsyncActualizerConfig{
 						Ctx:                   withCancel,
 						AppPartitions:         appParts,
 						IntentsLimit:          10,

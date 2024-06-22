@@ -559,7 +559,7 @@ func provideAsyncActualizersFactory(appParts appparts.IAppPartitions, appStructs
 		tokens itokens.ITokens, federation federation.IFederation, opts []state.StateOptFunc) pipeline.ISyncOperator {
 
 		conf := projectors.AsyncActualizerConf{
-			BasicActualizerConfig: projectors.BasicActualizerConfig{
+			BasicAsyncActualizerConfig: projectors.BasicAsyncActualizerConfig{
 				Ctx:           vvmCtx,
 				AppPartitions: appParts,
 				SecretReader:  secretReader,

@@ -20,6 +20,7 @@ import (
 //   - IActualizers
 //   - appparts.IActualizers
 type actualizers struct {
+	cfg      BasicAsyncActualizerConfig
 	appParts appparts.IAppPartitions
 	apps     map[appdef.AppQName]struct {
 		parts map[istructs.PartitionID]struct {
@@ -30,6 +31,22 @@ type actualizers struct {
 			}
 		}
 	}
+}
+
+func newActualizers() *actualizers {
+	a := &actualizers{
+		cfg: BasicAsyncActualizerConfig{},
+		apps: make(map[appdef.AppQName]struct {
+			parts map[istructs.PartitionID]struct {
+				cfg AsyncActualizerConf
+				run map[appdef.QName]struct {
+					actualizer *asyncActualizer
+					cancel     func()
+				}
+			}
+		}),
+	}
+	return a
 }
 
 func (a *actualizers) DeployPartition(appdef.AppQName, istructs.PartitionID) error { return nil }
