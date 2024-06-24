@@ -17,9 +17,9 @@ import (
 	"github.com/voedger/voedger/pkg/state"
 )
 
-func asyncActualizerFactory(conf AsyncActualizerConf, projector istructs.Projector) (pipeline.ISyncOperator, error) {
+func asyncActualizerFactory(conf AsyncActualizerConf, name appdef.QName) (pipeline.ISyncOperator, error) {
 	return pipeline.ServiceOperator(&asyncActualizer{
-		projector: projector,
+		projector: name,
 		conf:      conf,
 	}), nil
 }

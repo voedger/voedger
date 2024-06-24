@@ -112,17 +112,18 @@ func TestBasicUsage_AsynchronousActualizer(t *testing.T) {
 	actualizers := make([]pipeline.ISyncOperator, 0, len(appStructs.AsyncProjectors()))
 	actualizerFactory := ProvideAsyncActualizerFactory()
 
+	baseCfg := BasicAsyncActualizerConfig{
+		Ctx:           withCancel,
+		AppPartitions: appParts,
+		Broker:        broker,
+	}
 	for _, prj := range appStructs.AsyncProjectors() {
 		conf := AsyncActualizerConf{
-			BasicAsyncActualizerConfig: BasicAsyncActualizerConfig{
-				Ctx:           withCancel,
-				AppPartitions: appParts,
-				Broker:        broker,
-			},
-			AppQName:  appName,
-			Partition: partitionNr,
+			BasicAsyncActualizerConfig: baseCfg,
+			AppQName:                   appName,
+			Partition:                  partitionNr,
 		}
-		actualizer, err := actualizerFactory(conf, prj)
+		actualizer, err := actualizerFactory(conf, prj.Name)
 		require.NoError(err)
 		require.NoError(actualizer.DoSync(conf.Ctx, struct{}{})) // Start service
 		actualizers = append(actualizers, actualizer)
@@ -216,10 +217,8 @@ func Test_AsynchronousActualizer_FlushByRange(t *testing.T) {
 		Partition: partitionNr,
 	}
 
-	projector := appStructs.AsyncProjectors()[incrementorName]
-	require.NotNil(projector)
 	actualizerFactory := ProvideAsyncActualizerFactory()
-	actualizer, err := actualizerFactory(conf, projector)
+	actualizer, err := actualizerFactory(conf, incrementorName)
 	require.NoError(err)
 
 	t0 := time.Now()
@@ -299,10 +298,8 @@ func Test_AsynchronousActualizer_FlushByInterval(t *testing.T) {
 		Partition: partitionNr,
 	}
 
-	projector := appStructs.AsyncProjectors()[incrementorName]
-	require.NotNil(projector)
 	actualizerFactory := ProvideAsyncActualizerFactory()
-	actualizer, err := actualizerFactory(conf, projector)
+	actualizer, err := actualizerFactory(conf, incrementorName)
 	require.NoError(err)
 
 	t0 := time.Now()
@@ -431,10 +428,8 @@ func Test_AsynchronousActualizer_ErrorAndRestore(t *testing.T) {
 		Partition: partitionNr,
 	}
 
-	projector := appStructs.AsyncProjectors()[name]
-	require.NotNil(projector)
 	actualizerFactory := ProvideAsyncActualizerFactory()
-	actualizer, err := actualizerFactory(conf, projector)
+	actualizer, err := actualizerFactory(conf, name)
 	require.NoError(err)
 	require.NoError(actualizer.DoSync(conf.Ctx, struct{}{})) // Start service
 
@@ -532,10 +527,8 @@ func Test_AsynchronousActualizer_ResumeReadAfterNotifications(t *testing.T) {
 		Partition: partitionNr,
 	}
 
-	projector := appStructs.AsyncProjectors()[incrementorName]
-	require.NotNil(projector)
 	actualizerFactory := ProvideAsyncActualizerFactory()
-	actualizer, err := actualizerFactory(conf, projector)
+	actualizer, err := actualizerFactory(conf, incrementorName)
 	require.NoError(err)
 
 	_ = actualizer.DoSync(conf.Ctx, struct{}{}) // Start service
@@ -677,10 +670,9 @@ func Test_AsynchronousActualizer_Stress(t *testing.T) {
 		AppQName:  appName,
 		Partition: partitionNr,
 	}
-	projector := appStructs.AsyncProjectors()[incrementorName]
-	require.NotNil(projector)
+
 	actualizerFactory := ProvideAsyncActualizerFactory()
-	actualizer, err := actualizerFactory(conf, projector)
+	actualizer, err := actualizerFactory(conf, incrementorName)
 	require.NoError(err)
 	require.NoError(actualizer.DoSync(conf.Ctx, struct{}{})) // Start service
 
@@ -796,10 +788,8 @@ func Test_AsynchronousActualizer_NonBuffered(t *testing.T) {
 		Partition: partitionNr,
 	}
 
-	projector := appStructs.AsyncProjectors()[incrementorName]
-	require.NotNil(projector)
 	actualizerFactory := ProvideAsyncActualizerFactory()
-	actualizer, err := actualizerFactory(conf, projector)
+	actualizer, err := actualizerFactory(conf, incrementorName)
 	require.NoError(err)
 
 	t0 := time.Now()
@@ -945,9 +935,7 @@ func Test_AsynchronousActualizer_Stress_NonBuffered(t *testing.T) {
 					Partition: pn,
 				}
 
-				projector := appStructs.AsyncProjectors()[incrementorName]
-				require.NotNil(projector)
-				actualizer, err := actualizerFactory(conf, projector)
+				actualizer, err := actualizerFactory(conf, incrementorName)
 				require.NoError(err)
 
 				partitions[i].actualizers[k] = testActualizerCtx{
@@ -1121,9 +1109,7 @@ func Test_AsynchronousActualizer_Stress_Buffered(t *testing.T) {
 					Partition: pn,
 				}
 
-				projector := appStructs.AsyncProjectors()[incrementorName]
-				require.NotNil(projector)
-				actualizer, err := actualizerFactory(conf, projector)
+				actualizer, err := actualizerFactory(conf, incrementorName)
 				require.NoError(err)
 
 				partitions[i].actualizers[k] = testActualizerCtx{

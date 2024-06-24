@@ -577,7 +577,7 @@ func provideAsyncActualizersFactory(appParts appparts.IAppPartitions, appStructs
 
 		forkOps := make([]pipeline.ForkOperatorOptionFunc, 0, len(asyncProjectors))
 		for _, prj := range asyncProjectors {
-			asyncActualizer, err := asyncActualizerFactory(conf, prj)
+			asyncActualizer, err := asyncActualizerFactory(conf, prj.Name)
 			if err != nil {
 				panic(err)
 			}

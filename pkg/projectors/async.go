@@ -53,7 +53,7 @@ type (
 // implements ServiceOperator
 type asyncActualizer struct {
 	conf         AsyncActualizerConf
-	projector    istructs.Projector
+	projector    appdef.QName
 	pipeline     pipeline.IAsyncPipeline
 	offset       istructs.Offset
 	name         string
@@ -147,9 +147,9 @@ func (a *asyncActualizer) init(ctx context.Context) (err error) {
 	if err != nil {
 		return err
 	}
-	prjType := appDef.Projector(a.projector.Name)
+	prjType := appDef.Projector(a.projector)
 	if prjType == nil {
-		return fmt.Errorf("async projector %s is not defined in AppDef", a.projector.Name)
+		return fmt.Errorf("async projector %s is not defined in AppDef", a.projector)
 	}
 
 	// https://github.com/voedger/voedger/issues/1048
@@ -172,7 +172,7 @@ func (a *asyncActualizer) init(ctx context.Context) (err error) {
 		metrics:               a.conf.Metrics,
 		vvmName:               a.conf.VvmName,
 		appQName:              a.conf.AppQName,
-		projector:             a.projector,
+		name:                  a.projector,
 		iProjector:            prjType,
 		nonBuffered:           nonBuffered,
 		appParts:              a.conf.AppPartitions,
@@ -182,7 +182,7 @@ func (a *asyncActualizer) init(ctx context.Context) (err error) {
 		p.projInErrAddr = p.metrics.AppMetricAddr(ProjectorsInError, a.conf.VvmName, a.conf.AppQName)
 	}
 
-	err = a.readOffset(p.projector.Name)
+	err = a.readOffset(p.name)
 	if err != nil {
 		a.conf.LogError(a.name, err)
 		return err
@@ -208,7 +208,7 @@ func (a *asyncActualizer) init(ctx context.Context) (err error) {
 		a.conf.BundlesLimit,
 		a.conf.Opts...)
 
-	a.name = fmt.Sprintf("%s [%d]", p.projector.Name, a.conf.Partition)
+	a.name = fmt.Sprintf("%v [%d]", p.name, a.conf.Partition)
 
 	projectorOp := pipeline.WireAsyncOperator("Projector", p, a.conf.FlushInterval)
 
@@ -382,7 +382,7 @@ type asyncProjector struct {
 	state                 state.IBundledHostState
 	partition             istructs.PartitionID
 	event                 istructs.IPLogEvent
-	projector             istructs.Projector
+	name                  appdef.QName
 	pLogOffset            istructs.Offset
 	aametrics             AsyncActualizerMetrics
 	metrics               imetrics.IMetrics
@@ -406,7 +406,7 @@ func (p *asyncProjector) DoAsync(ctx context.Context, work pipeline.IWorkpiece) 
 	p.event = w.event
 	p.pLogOffset = w.pLogOffset
 	if p.aametrics != nil {
-		p.aametrics.Set(aaCurrentOffset, p.partition, p.projector.Name, float64(w.pLogOffset))
+		p.aametrics.Set(aaCurrentOffset, p.partition, p.name, float64(w.pLogOffset))
 	}
 
 	if !isAcceptable(w.event, p.iProjector.WantErrors(), p.iProjector.Events().Map(), p.iProjector.App()) {
@@ -425,11 +425,11 @@ func (p *asyncProjector) DoAsync(ctx context.Context, work pipeline.IWorkpiece) 
 
 	//err = p.projector.Func(w.event, p.state, p.state)
 
-	if err := p.borrowedPartition.Invoke(ctx, p.projector.Name, p.state, p.state); err != nil {
+	if err := p.borrowedPartition.Invoke(ctx, p.name, p.state, p.state); err != nil {
 		return nil, wrapErr(err)
 	}
 	if logger.IsVerbose() {
-		logger.Verbose(fmt.Sprintf("%s: handled %d", p.projector.Name, p.pLogOffset))
+		logger.Verbose(fmt.Sprintf("%s: handled %d", p.name, p.pLogOffset))
 	}
 
 	p.acceptedSinceSave = true
@@ -493,7 +493,7 @@ func (p *asyncProjector) savePosition() error {
 	}
 	key.PutInt64(state.Field_WSID, int64(istructs.NullWSID))
 	key.PutInt32(partitionFld, int32(p.partition))
-	key.PutQName(projectorNameFld, p.projector.Name)
+	key.PutQName(projectorNameFld, p.name)
 	value, e := p.state.NewValue(key)
 	if e != nil {
 		return e
@@ -520,8 +520,8 @@ func (p *asyncProjector) flush() (err error) {
 		return err
 	}
 	if p.aametrics != nil {
-		p.aametrics.Increase(aaFlushesTotal, p.partition, p.projector.Name, 1)
-		p.aametrics.Set(aaStoredOffset, p.partition, p.projector.Name, float64(p.pLogOffset))
+		p.aametrics.Increase(aaFlushesTotal, p.partition, p.name, 1)
+		p.aametrics.Set(aaStoredOffset, p.partition, p.name, float64(p.pLogOffset))
 	}
 	err = p.state.FlushBundles()
 	if err == nil && p.projInErrAddr != nil {

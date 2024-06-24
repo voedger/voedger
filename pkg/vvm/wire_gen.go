@@ -597,7 +597,7 @@ func provideAsyncActualizersFactory(appParts appparts.IAppPartitions, appStructs
 		tokens itokens.ITokens, federation2 federation.IFederation, opts []state.StateOptFunc) pipeline.ISyncOperator {
 
 		conf := projectors.AsyncActualizerConf{
-			BasicActualizerConfig: projectors.BasicActualizerConfig{
+			BasicAsyncActualizerConfig: projectors.BasicAsyncActualizerConfig{
 				Ctx:           vvmCtx,
 				AppPartitions: appParts,
 				SecretReader:  secretReader,
@@ -615,7 +615,7 @@ func provideAsyncActualizersFactory(appParts appparts.IAppPartitions, appStructs
 
 		forkOps := make([]pipeline.ForkOperatorOptionFunc, 0, len(asyncProjectors))
 		for _, prj := range asyncProjectors {
-			asyncActualizer, err := asyncActualizerFactory(conf, prj)
+			asyncActualizer, err := asyncActualizerFactory(conf, prj.Name)
 			if err != nil {
 				panic(err)
 			}
