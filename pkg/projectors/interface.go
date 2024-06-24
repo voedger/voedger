@@ -55,6 +55,13 @@ type BasicAsyncActualizerConfig struct {
 	FlushPositionInterval time.Duration
 }
 
+type IActualizers interface {
+	appparts.IActualizers
+
+	// To start from vvm service pipeline
+	AsServiceOperator() pipeline.ISyncOperator
+}
+
 type AsyncActualizerConf struct {
 	BasicAsyncActualizerConfig
 

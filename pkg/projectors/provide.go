@@ -16,6 +16,10 @@ import (
 	"github.com/voedger/voedger/pkg/pipeline"
 )
 
+func ProvideActualizers(cfg BasicAsyncActualizerConfig) IActualizers {
+	return newActualizers(cfg)
+}
+
 func ProvideAsyncActualizerFactory() AsyncActualizerFactory {
 	return asyncActualizerFactory
 }
