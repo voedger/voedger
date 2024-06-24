@@ -24,9 +24,8 @@ type (
 	//   - IActualizers
 	//   - appparts.IActualizers
 	actualizers struct {
-		cfg     BasicAsyncActualizerConfig
-		apps    map[appdef.AppQName]*appActualizers
-		started bool
+		cfg  BasicAsyncActualizerConfig
+		apps map[appdef.AppQName]*appActualizers
 	}
 
 	appActualizers struct {
@@ -63,10 +62,15 @@ func (a *actualizers) DoSync(ctx context.Context, _ interface{}) error {
 		// store vvm context for deploy new partitions (or redeploy existing)
 		a.cfg.Ctx = ctx
 	}
-	return a.start(ctx)
+	return nil
 }
 
 func (a *actualizers) DeployPartition(n appdef.AppQName, id istructs.PartitionID) error {
+	def, err := a.cfg.AppPartitions.AppDef(n)
+	if err != nil {
+		return err
+	}
+
 	app, ok := a.apps[n]
 	if !ok {
 		app = &appActualizers{
@@ -91,11 +95,17 @@ func (a *actualizers) DeployPartition(n appdef.AppQName, id istructs.PartitionID
 		app.parts[id] = part
 	}
 
-	def, err := a.cfg.AppPartitions.AppDef(n)
-	if err != nil {
-		return err
+	// stop eliminated actualizers
+	for name, run := range part.run {
+		if prj := def.Projector(name); (prj == nil) || prj.Sync() {
+			if run.cancel != nil {
+				run.cancel()
+			}
+			delete(part.run, name)
+		}
 	}
 
+	// start new actualizers
 	def.Projectors(
 		func(proj appdef.IProjector) {
 			if proj.Sync() {
@@ -104,17 +114,11 @@ func (a *actualizers) DeployPartition(n appdef.AppQName, id istructs.PartitionID
 				return
 			}
 
-			if _, ok := part.run[proj.QName()]; ok {
-				// projector already started
+			name := proj.QName()
+			if part.exists(name) {
 				return
 			}
-
-			// TODO: create actualizer
-
-			// TODO: immediately start actualizer if already working service
-			// if a.started {
-			// 	// immediately start newly created actualizer
-			// }
+			part.start(name)
 		})
 
 	return nil
@@ -129,20 +133,6 @@ func (a *actualizers) SetAppPartitions(appParts appparts.IAppPartitions) {
 	a.cfg.AppPartitions = appParts
 }
 
-func (a *actualizers) start(ctx context.Context) error {
-	if a.started {
-		panic(fmt.Errorf("actualizers already started: %w", errors.ErrUnsupported))
-	}
-
-	a.started = true
-	for _, app := range a.apps {
-		if err := app.start(ctx); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
 func (a *actualizers) stop() {
 	wg := sync.WaitGroup{}
 	for _, app := range a.apps {
@@ -153,15 +143,6 @@ func (a *actualizers) stop() {
 		}(app)
 	}
 	wg.Wait()
-}
-
-func (app *appActualizers) start(ctx context.Context) error {
-	for _, part := range app.parts {
-		if err := part.start(ctx); err != nil {
-			return err
-		}
-	}
-	return nil
 }
 
 func (app *appActualizers) stop() {
@@ -176,28 +157,46 @@ func (app *appActualizers) stop() {
 	wg.Wait()
 }
 
-func (p *partActualizers) start(ctx context.Context) error {
-	for _, run := range p.run {
-		if err := run.actualizer.Prepare(nil); err != nil {
-			return err
-		}
+func (p *partActualizers) exists(n appdef.QName) bool {
+	_, ok := p.run[n]
+	return ok
+}
 
-		aCtx, aCancel := context.WithCancel(ctx)
-		run.cancel = aCancel
-
-		p.wg.Add(1)
-		go func(a *asyncActualizer) {
-			a.Run(aCtx)
-			p.wg.Done()
-		}(run.actualizer)
+func (p *partActualizers) start(n appdef.QName) error {
+	run := &struct {
+		actualizer *asyncActualizer
+		cancel     func()
+	}{
+		actualizer: &asyncActualizer{
+			projector: n,
+			conf:      p.cfg,
+		},
 	}
+
+	// TODO: actualizer.Prepare never returns an error. Reduce complexity.
+	if err := run.actualizer.Prepare(nil); err != nil {
+		return err
+	}
+
+	p.run[n] = run
+
+	ctx, cancel := context.WithCancel(p.cfg.Ctx)
+	run.cancel = cancel
+
+	p.wg.Add(1)
+	go func() {
+		run.actualizer.Run(ctx)
+		p.wg.Done()
+	}()
 
 	return nil
 }
 
 func (p *partActualizers) stop() {
 	for _, run := range p.run {
-		run.cancel()
+		if run.cancel != nil {
+			run.cancel()
+		}
 	}
 	p.wg.Wait()
 }
