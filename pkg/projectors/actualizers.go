@@ -20,9 +20,9 @@ type (
 	// actualizers is a set of actualizers for application partitions.
 	//
 	// # Implements:
-	//	- IActualizers
-	//	- appparts.IActualizers
-	//	- pipeline.IService
+	//	- IActualizersService:
+	//	   + appparts.IActualizers
+	//	   + pipeline.IService
 	actualizers struct {
 		mx   sync.RWMutex
 		cfg  BasicAsyncActualizerConfig
@@ -66,7 +66,7 @@ func (a *actualizers) Stop() {
 	// Cancellation has already been sent to the context by caller.
 	// Here we are just waiting while all async actualizers are stopped
 
-	wp := make([]*partActs, 0) // how works?
+	wp := make([]*partActs, 0) // who works?
 	a.mx.RLock()
 	for _, app := range a.apps {
 		app.mx.RLock()
@@ -216,7 +216,7 @@ func (p *partActs) exists(n appdef.QName) bool {
 }
 
 // p.mx should be locked for write by caller
-func (p *partActs) start(n appdef.QName) error {
+func (p *partActs) start(n appdef.QName) {
 	rt := &runtimeAct{
 		actualizer: &asyncActualizer{
 			projector: n,
@@ -225,7 +225,7 @@ func (p *partActs) start(n appdef.QName) error {
 
 	// TODO: actualizer.Prepare never returns an error. Reduce complexity.
 	if err := rt.actualizer.Prepare(nil); err != nil {
-		return err
+		panic(fmt.Errorf("%v[%d]: %w", p.cfg.AppQName, p.cfg.Partition, err))
 	}
 	ctx, cancel := context.WithCancel(p.cfg.Ctx)
 	rt.cancel = cancel
@@ -242,8 +242,6 @@ func (p *partActs) start(n appdef.QName) error {
 
 		p.wg.Done()
 	}()
-
-	return nil
 }
 
 // p.mx should be read locked by caller
