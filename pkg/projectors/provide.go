@@ -16,7 +16,7 @@ import (
 	"github.com/voedger/voedger/pkg/pipeline"
 )
 
-func ProvideActualizers(cfg BasicAsyncActualizerConfig) IActualizers {
+func ProvideActualizers(cfg BasicAsyncActualizerConfig) IActualizersService {
 	return newActualizers(cfg)
 }
 

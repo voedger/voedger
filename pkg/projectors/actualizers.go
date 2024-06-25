@@ -14,28 +14,31 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/istructs"
-	"github.com/voedger/voedger/pkg/pipeline"
 )
 
 type (
 	// actualizers is a set of actualizers for application partitions.
 	//
 	// # Implements:
-	//   - IActualizers
-	//   - appparts.IActualizers
+	//	- IActualizers
+	//	- appparts.IActualizers
+	//	- pipeline.IService
 	actualizers struct {
+		mx   sync.RWMutex
 		cfg  BasicAsyncActualizerConfig
-		apps sync.Map //[appdef.AppQName]*appActs
+		apps map[appdef.AppQName]*appActs
 	}
 
 	appActs struct {
-		parts sync.Map //[istructs.PartitionID]*partActs
+		mx    sync.RWMutex
+		parts map[istructs.PartitionID]*partActs
 	}
 
 	partActs struct {
 		cfg AsyncActualizerConf
+		mx  sync.RWMutex
 		wg  sync.WaitGroup
-		rt  sync.Map // [appdef.QName]*runtimeAct
+		rt  map[appdef.QName]*runtimeAct
 	}
 
 	runtimeAct struct {
@@ -46,25 +49,51 @@ type (
 
 func newActualizers(cfg BasicAsyncActualizerConfig) *actualizers {
 	return &actualizers{
+		mx:   sync.RWMutex{},
 		cfg:  cfg,
-		apps: sync.Map{},
+		apps: make(map[appdef.AppQName]*appActs),
 	}
 }
 
-func (a *actualizers) Close() {
-	a.close()
+func (*actualizers) Prepare(interface{}) error { return nil }
+
+func (a *actualizers) Run(ctx context.Context) {
+	// store vvm context for deploy new partitions (or redeploy existing)
+	a.cfg.Ctx = ctx
 }
 
-func (a *actualizers) AsServiceOperator() pipeline.ISyncOperator {
-	return a
-}
+func (a *actualizers) Stop() {
+	// Cancellation has already been sent to the context by caller.
+	// Here we are just waiting while all async actualizers are stopped
 
-func (a *actualizers) DoSync(ctx context.Context, _ interface{}) error {
-	if a.cfg.Ctx == nil {
-		// store vvm context for deploy new partitions (or redeploy existing)
-		a.cfg.Ctx = ctx
+	wp := make([]*partActs, 0) // how works?
+	a.mx.RLock()
+	for _, app := range a.apps {
+		app.mx.RLock()
+		for _, part := range app.parts {
+			part.mx.RLock()
+			if len(part.rt) > 0 {
+				wp = append(wp, part)
+			}
+			part.mx.RUnlock()
+		}
+		app.mx.RUnlock()
 	}
-	return nil
+	a.mx.RUnlock()
+	if len(wp) == 0 {
+		return // all done
+	}
+
+	// wait for worked partitions
+	wg := sync.WaitGroup{}
+	for _, part := range wp {
+		wg.Add(1)
+		go func(part *partActs) {
+			part.wg.Wait()
+			wg.Done()
+		}(part)
+	}
+	wg.Wait()
 }
 
 func (a *actualizers) DeployPartition(n appdef.AppQName, id istructs.PartitionID) error {
@@ -73,77 +102,104 @@ func (a *actualizers) DeployPartition(n appdef.AppQName, id istructs.PartitionID
 		return err
 	}
 
-	var (
-		app  *appActs
-		part *partActs
-	)
+	a.mx.RLock()
+	app, ok := a.apps[n]
+	a.mx.RUnlock()
 
-	if v, ok := a.apps.Load(n); ok {
-		app = v.(*appActs)
-	} else {
-		app = &appActs{
-			parts: sync.Map{},
-		}
-		a.apps.Store(n, app)
-	}
-
-	if v, ok := app.parts.Load(id); ok {
-		part = v.(*partActs)
-	} else {
-		part = &partActs{
-			cfg: AsyncActualizerConf{
-				BasicAsyncActualizerConfig: a.cfg,
-				AppQName:                   n,
-				Partition:                  id,
-			},
-			rt: sync.Map{},
-		}
-		app.parts.Store(id, part)
-	}
-
-	// stop eliminated actualizers
-	part.rt.Range(
-		func(key, _ any) bool {
-			name := key.(appdef.QName)
-			if prj := def.Projector(name); (prj == nil) || prj.Sync() {
-				part.stop(name)
+	if !ok {
+		a.mx.Lock()
+		if accuracy, ok := a.apps[n]; ok {
+			app = accuracy
+		} else {
+			app = &appActs{
+				mx:    sync.RWMutex{},
+				parts: make(map[istructs.PartitionID]*partActs),
 			}
-			return true
-		})
+			a.apps[n] = app
+		}
+		a.mx.Unlock()
+	}
+
+	app.mx.RLock()
+	part, ok := app.parts[id]
+	app.mx.RUnlock()
+
+	if !ok {
+		app.mx.Lock()
+		if accuracy, ok := app.parts[id]; ok {
+			part = accuracy
+		} else {
+			part = &partActs{
+				cfg: AsyncActualizerConf{
+					BasicAsyncActualizerConfig: a.cfg,
+					AppQName:                   n,
+					Partition:                  id,
+				},
+				mx: sync.RWMutex{},
+				wg: sync.WaitGroup{},
+				rt: make(map[appdef.QName]*runtimeAct),
+			}
+			app.parts[id] = part
+		}
+		app.mx.Unlock()
+	}
+
+	// stop async actualizers for removed projectors
+	part.mx.RLock()
+	for name := range part.rt {
+		if prj := def.Projector(name); (prj == nil) || prj.Sync() {
+			part.stop(name)
+		}
+	}
+	part.mx.RUnlock()
 
 	// start new async actualizers
+	part.mx.Lock()
 	def.Projectors(
 		func(proj appdef.IProjector) {
-			if !proj.Sync() { // only async projectors should be started here,
-				name := proj.QName()
-				if !part.exists(name) {
-					part.start(name)
+			if !proj.Sync() { // only async projectors should be started here
+				prj := proj.QName()
+				if !part.exists(prj) {
+					part.start(prj)
 				}
 			}
 		})
+	part.mx.Unlock()
 
 	return nil
 }
 
 func (a *actualizers) UndeployPartition(n appdef.AppQName, id istructs.PartitionID) {
-	var (
-		app  *appActs
-		part *partActs
-	)
-	if v, ok := a.apps.Load(n); ok {
-		app = v.(*appActs)
-		if v, ok := app.parts.Load(id); ok {
-			part = v.(*partActs)
-		}
+	a.mx.RLock()
+	app, ok := a.apps[n]
+	a.mx.RUnlock()
+	if !ok {
+		return
 	}
 
-	if (app == nil) || (part == nil) {
-		return // or panic?
+	app.mx.RLock()
+	part, ok := app.parts[id]
+	app.mx.RUnlock()
+	if !ok {
+		return
 	}
 
-	part.close()
+	part.mx.RLock()
+	for prj := range part.rt {
+		part.stop(prj)
+	}
+	part.mx.RUnlock()
 
-	app.parts.Delete(id)
+	part.wg.Wait()
+
+	app.mx.Lock()
+	delete(app.parts, id)
+	if len(app.parts) == 0 {
+		a.mx.Lock()
+		delete(a.apps, n)
+		a.mx.Unlock()
+	}
+	app.mx.Unlock()
 }
 
 func (a *actualizers) SetAppPartitions(appParts appparts.IAppPartitions) {
@@ -153,45 +209,13 @@ func (a *actualizers) SetAppPartitions(appParts appparts.IAppPartitions) {
 	a.cfg.AppPartitions = appParts
 }
 
-func (a *actualizers) close() {
-	wg := sync.WaitGroup{}
-
-	a.apps.Range(
-		func(k, v any) bool {
-			app := v.(*appActs)
-			app.parts.Range(
-				func(k, v any) bool {
-					part := v.(*partActs)
-					wg.Add(1)
-					go func(part *partActs) {
-						part.close()
-						app.parts.Delete(k)
-						wg.Done()
-					}(part)
-					return true
-				})
-			a.apps.Delete(k)
-			return true
-		})
-
-	wg.Wait()
-}
-
-func (p *partActs) close() {
-	p.rt.Range(
-		func(key, _ any) bool {
-			name := key.(appdef.QName)
-			p.stop(name)
-			return true
-		})
-	p.wg.Wait()
-}
-
+// p.mx should be locked for read by caller
 func (p *partActs) exists(n appdef.QName) bool {
-	_, ok := p.rt.Load(n)
+	_, ok := p.rt[n]
 	return ok
 }
 
+// p.mx should be locked for write by caller
 func (p *partActs) start(n appdef.QName) error {
 	rt := &runtimeAct{
 		actualizer: &asyncActualizer{
@@ -206,20 +230,25 @@ func (p *partActs) start(n appdef.QName) error {
 	ctx, cancel := context.WithCancel(p.cfg.Ctx)
 	rt.cancel = cancel
 
-	p.rt.Store(n, rt)
+	p.rt[n] = rt
 
 	p.wg.Add(1)
 	go func() {
 		rt.actualizer.Run(ctx)
-		p.rt.Delete(n)
+
+		p.mx.Lock()
+		delete(p.rt, n)
+		p.mx.Unlock()
+
 		p.wg.Done()
 	}()
 
 	return nil
 }
 
+// p.mx should be read locked by caller
 func (p *partActs) stop(n appdef.QName) {
-	if rt, ok := p.rt.Load(n); ok {
-		rt.(*runtimeAct).cancel()
+	if rt, ok := p.rt[n]; ok {
+		rt.cancel()
 	}
 }
