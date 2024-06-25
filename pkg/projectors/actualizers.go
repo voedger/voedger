@@ -25,17 +25,17 @@ type (
 	//   - appparts.IActualizers
 	actualizers struct {
 		cfg  BasicAsyncActualizerConfig
-		apps map[appdef.AppQName]*appActs
+		apps sync.Map //[appdef.AppQName]*appActs
 	}
 
 	appActs struct {
-		parts map[istructs.PartitionID]*partActs
+		parts sync.Map //[istructs.PartitionID]*partActs
 	}
 
 	partActs struct {
 		cfg AsyncActualizerConf
 		wg  sync.WaitGroup
-		rt  map[appdef.QName]*runtimeAct
+		rt  sync.Map // [appdef.QName]*runtimeAct
 	}
 
 	runtimeAct struct {
@@ -47,7 +47,7 @@ type (
 func newActualizers(cfg BasicAsyncActualizerConfig) *actualizers {
 	return &actualizers{
 		cfg:  cfg,
-		apps: make(map[appdef.AppQName]*appActs),
+		apps: sync.Map{},
 	}
 }
 
@@ -73,67 +73,77 @@ func (a *actualizers) DeployPartition(n appdef.AppQName, id istructs.PartitionID
 		return err
 	}
 
-	app, ok := a.apps[n]
-	if !ok {
+	var (
+		app  *appActs
+		part *partActs
+	)
+
+	if v, ok := a.apps.Load(n); ok {
+		app = v.(*appActs)
+	} else {
 		app = &appActs{
-			parts: make(map[istructs.PartitionID]*partActs),
+			parts: sync.Map{},
 		}
-		a.apps[n] = app
+		a.apps.Store(n, app)
 	}
 
-	part, ok := app.parts[id]
-	if !ok {
+	if v, ok := app.parts.Load(id); ok {
+		part = v.(*partActs)
+	} else {
 		part = &partActs{
 			cfg: AsyncActualizerConf{
 				BasicAsyncActualizerConfig: a.cfg,
 				AppQName:                   n,
 				Partition:                  id,
 			},
-			rt: make(map[appdef.QName]*runtimeAct),
+			rt: sync.Map{},
 		}
-		app.parts[id] = part
+		app.parts.Store(id, part)
 	}
 
 	// stop eliminated actualizers
-	for name, rt := range part.rt {
-		if prj := def.Projector(name); (prj == nil) || prj.Sync() {
-			if rt.cancel != nil {
-				rt.cancel()
+	part.rt.Range(
+		func(key, _ any) bool {
+			name := key.(appdef.QName)
+			if prj := def.Projector(name); (prj == nil) || prj.Sync() {
+				part.stop(name)
 			}
-			delete(part.rt, name)
-		}
-	}
+			return true
+		})
 
 	// start new async actualizers
 	def.Projectors(
 		func(proj appdef.IProjector) {
-			if proj.Sync() {
-				// only async projectors should be started here,
-				// sync projectors are started by command processor sync pipeline
-				return
+			if !proj.Sync() { // only async projectors should be started here,
+				name := proj.QName()
+				if !part.exists(name) {
+					part.start(name)
+				}
 			}
-
-			name := proj.QName()
-			if part.exists(name) {
-				return
-			}
-			part.start(name)
 		})
 
 	return nil
 }
 
-func (a *actualizers) UndeployPartition(app appdef.AppQName, id istructs.PartitionID) {
-	part, ok := a.apps[app].parts[id]
-	if !ok {
-		return // or panics?
+func (a *actualizers) UndeployPartition(n appdef.AppQName, id istructs.PartitionID) {
+	var (
+		app  *appActs
+		part *partActs
+	)
+	if v, ok := a.apps.Load(n); ok {
+		app = v.(*appActs)
+		if v, ok := app.parts.Load(id); ok {
+			part = v.(*partActs)
+		}
 	}
+
+	if (app == nil) || (part == nil) {
+		return // or panic?
+	}
+
 	part.close()
 
-	delete(a.apps[app].parts, id)
-	if len(a.apps[app].parts) == 0 {
-		delete(a.apps, app)
-	}
+	app.parts.Delete(id)
 }
 
 func (a *actualizers) SetAppPartitions(appParts appparts.IAppPartitions) {
@@ -145,29 +155,40 @@ func (a *actualizers) SetAppPartitions(appParts appparts.IAppPartitions) {
 
 func (a *actualizers) close() {
 	wg := sync.WaitGroup{}
-	for _, app := range a.apps {
-		for _, part := range app.parts {
-			wg.Add(1)
-			go func(part *partActs) {
-				part.close()
-				wg.Done()
-			}(part)
-		}
-	}
-	wg.Wait()
 
-	clear(a.apps)
+	a.apps.Range(
+		func(k, v any) bool {
+			app := v.(*appActs)
+			app.parts.Range(
+				func(k, v any) bool {
+					part := v.(*partActs)
+					wg.Add(1)
+					go func(part *partActs) {
+						part.close()
+						app.parts.Delete(k)
+						wg.Done()
+					}(part)
+					return true
+				})
+			a.apps.Delete(k)
+			return true
+		})
+
+	wg.Wait()
 }
 
 func (p *partActs) close() {
-	for n := range p.rt {
-		p.stop(n)
-	}
+	p.rt.Range(
+		func(key, _ any) bool {
+			name := key.(appdef.QName)
+			p.stop(name)
+			return true
+		})
 	p.wg.Wait()
 }
 
 func (p *partActs) exists(n appdef.QName) bool {
-	_, ok := p.rt[n]
+	_, ok := p.rt.Load(n)
 	return ok
 }
 
@@ -185,11 +206,12 @@ func (p *partActs) start(n appdef.QName) error {
 	ctx, cancel := context.WithCancel(p.cfg.Ctx)
 	rt.cancel = cancel
 
-	p.rt[n] = rt
+	p.rt.Store(n, rt)
 
 	p.wg.Add(1)
 	go func() {
 		rt.actualizer.Run(ctx)
+		p.rt.Delete(n)
 		p.wg.Done()
 	}()
 
@@ -197,10 +219,7 @@ func (p *partActs) start(n appdef.QName) error {
 }
 
 func (p *partActs) stop(n appdef.QName) {
-	if rt, ok := p.rt[n]; ok {
-		if rt.cancel != nil {
-			rt.cancel()
-		}
-		delete(p.rt, n)
+	if rt, ok := p.rt.Load(n); ok {
+		rt.(*runtimeAct).cancel()
 	}
 }
