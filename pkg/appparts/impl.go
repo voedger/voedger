@@ -18,37 +18,40 @@ import (
 )
 
 type apps struct {
+	mx                    sync.RWMutex
 	structs               istructs.IAppStructsProvider
 	syncActualizerFactory SyncActualizerFactory
 	actualizers           IActualizers
 	extEngineFactories    iextengine.ExtensionEngineFactories
 	apps                  map[appdef.AppQName]*app
-	mx                    sync.RWMutex
 }
 
 func newAppPartitions(asp istructs.IAppStructsProvider, saf SyncActualizerFactory, act IActualizers, eef iextengine.ExtensionEngineFactories) (ap IAppPartitions, cleanup func(), err error) {
 	a := &apps{
+		mx:                    sync.RWMutex{},
 		structs:               asp,
 		syncActualizerFactory: saf,
 		actualizers:           act,
 		extEngineFactories:    eef,
 		apps:                  map[appdef.AppQName]*app{},
-		mx:                    sync.RWMutex{},
 	}
 	act.SetAppPartitions(a)
 	return a, func() {}, err
 }
 
 func (aps *apps) DeployApp(name appdef.AppQName, def appdef.IAppDef, partsCount istructs.NumAppPartitions, engines [ProcessorKind_Count]int) {
-	aps.mx.Lock()
-	defer aps.mx.Unlock()
+	aps.mx.RLock()
+	_, ok := aps.apps[name]
+	aps.mx.RUnlock()
 
-	if _, ok := aps.apps[name]; ok {
+	if ok {
 		panic(errAppCannotBeRedeployed(name))
 	}
 
 	a := newApplication(aps, name, partsCount)
+	aps.mx.Lock()
 	aps.apps[name] = a
+	aps.mx.Unlock()
 
 	appStructs, err := aps.structs.BuiltIn(name)
 	if err != nil {
@@ -58,23 +61,26 @@ func (aps *apps) DeployApp(name appdef.AppQName, def appdef.IAppDef, partsCount 
 	a.deploy(def, appStructs, engines)
 }
 
-func (aps *apps) DeployAppPartitions(appName appdef.AppQName, partIDs []istructs.PartitionID) {
-	aps.mx.Lock()
-	defer aps.mx.Unlock()
+func (aps *apps) DeployAppPartitions(name appdef.AppQName, ids []istructs.PartitionID) {
+	aps.mx.RLock()
+	a, ok := aps.apps[name]
+	aps.mx.RUnlock()
 
-	a, ok := aps.apps[appName]
 	if !ok {
-		panic(errAppNotFound(appName))
+		panic(errAppNotFound(name))
 	}
 
-	for _, id := range partIDs {
+	//TODO: parallelize
+	for _, id := range ids {
 		p := newPartition(a, id)
+		a.mx.Lock()
 		a.parts[id] = p
+		a.mx.Unlock()
 	}
 
 	var err error
-	for _, id := range partIDs {
-		if e := aps.actualizers.DeployPartition(appName, id); e != nil {
+	for _, id := range ids {
+		if e := aps.actualizers.DeployPartition(name, id); e != nil {
 			err = errors.Join(err, e)
 		}
 	}
@@ -84,13 +90,13 @@ func (aps *apps) DeployAppPartitions(appName appdef.AppQName, partIDs []istructs
 	}
 }
 
-func (aps *apps) AppDef(appName appdef.AppQName) (appdef.IAppDef, error) {
-	aps.mx.Lock()
-	defer aps.mx.Unlock()
+func (aps *apps) AppDef(name appdef.AppQName) (appdef.IAppDef, error) {
+	aps.mx.RLock()
+	app, ok := aps.apps[name]
+	aps.mx.RUnlock()
 
-	app, ok := aps.apps[appName]
 	if !ok {
-		return nil, errAppNotFound(appName)
+		return nil, errAppNotFound(name)
 	}
 	return app.def, nil
 }
@@ -98,29 +104,32 @@ func (aps *apps) AppDef(appName appdef.AppQName) (appdef.IAppDef, error) {
 // Returns _total_ application partitions count.
 //
 // This is a configuration value for the application, independent of how many sections are currently deployed.
-func (aps *apps) AppPartsCount(appName appdef.AppQName) (istructs.NumAppPartitions, error) {
-	aps.mx.Lock()
-	defer aps.mx.Unlock()
+func (aps *apps) AppPartsCount(name appdef.AppQName) (istructs.NumAppPartitions, error) {
+	aps.mx.RLock()
+	app, ok := aps.apps[name]
+	aps.mx.RUnlock()
 
-	app, ok := aps.apps[appName]
 	if !ok {
-		return 0, errAppNotFound(appName)
+		return 0, errAppNotFound(name)
 	}
 	return app.partsCount, nil
 }
 
-func (aps *apps) Borrow(appName appdef.AppQName, partID istructs.PartitionID, proc ProcessorKind) (IAppPartition, error) {
+func (aps *apps) Borrow(name appdef.AppQName, id istructs.PartitionID, proc ProcessorKind) (IAppPartition, error) {
 	aps.mx.RLock()
-	defer aps.mx.RUnlock()
+	app, ok := aps.apps[name]
+	aps.mx.RUnlock()
 
-	app, ok := aps.apps[appName]
 	if !ok {
-		return nil, errAppNotFound(appName)
+		return nil, errAppNotFound(name)
 	}
 
-	part, ok := app.parts[partID]
+	app.mx.RLock()
+	part, ok := app.parts[id]
+	app.mx.RUnlock()
+
 	if !ok {
-		return nil, errPartitionNotFound(appName, partID)
+		return nil, errPartitionNotFound(name, id)
 	}
 
 	borrowed, err := part.borrow(proc)
@@ -131,17 +140,17 @@ func (aps *apps) Borrow(appName appdef.AppQName, partID istructs.PartitionID, pr
 	return borrowed, nil
 }
 
-func (aps *apps) AppWorkspacePartitionID(appName appdef.AppQName, ws istructs.WSID) (istructs.PartitionID, error) {
-	pc, err := aps.AppPartsCount(appName)
+func (aps *apps) AppWorkspacePartitionID(name appdef.AppQName, ws istructs.WSID) (istructs.PartitionID, error) {
+	pc, err := aps.AppPartsCount(name)
 	if err != nil {
 		return 0, err
 	}
 	return coreutils.AppPartitionID(ws, pc), nil
 }
 
-func (aps *apps) WaitForBorrow(ctx context.Context, appName appdef.AppQName, partID istructs.PartitionID, proc ProcessorKind) (IAppPartition, error) {
+func (aps *apps) WaitForBorrow(ctx context.Context, name appdef.AppQName, id istructs.PartitionID, proc ProcessorKind) (IAppPartition, error) {
 	for ctx.Err() == nil {
-		ap, err := aps.Borrow(appName, partID, proc)
+		ap, err := aps.Borrow(name, id, proc)
 		if err == nil {
 			return ap, nil
 		}
