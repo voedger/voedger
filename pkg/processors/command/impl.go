@@ -608,6 +608,14 @@ func parseCUDs(_ context.Context, work interface{}) (err error) {
 	return err
 }
 
+func checkCUDsAllowed(_ context.Context, work interface{}) (err error) {
+	cmd := work.(*cmdWorkpiece)
+	if len(cmd.parsedCUDs) > 0 && cmd.cmdMes.QName() != istructs.QNameCommandCUD && cmd.cmdMes.QName() != builtin.QNameCommandInit {
+		return errors.New("CUDs allowed for c.sys.CUD command only")
+	}
+	return nil
+}
+
 func checkArgsRefIntegrity(_ context.Context, work interface{}) (err error) {
 	cmd := work.(*cmdWorkpiece)
 	if cmd.argsObject != nil {
