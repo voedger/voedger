@@ -321,7 +321,7 @@ func TestClientDisconnect_FailedToWriteResponse(t *testing.T) {
 			// the expected error on this bus side is context.Canceled, on the router's side - `failed to write response`
 			expectedErrCh <- rs.ObjectSection("objSec", []string{"3"}, 42)
 		}()
-	}, 2*time.Second)
+	}, time.Hour) // one hour timeout to eliminate case when client context closes longer than bus timoeut on client disconnect. It could take up to few seconds
 	defer tearDown()
 
 	// client side
