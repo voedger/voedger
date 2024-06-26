@@ -13,27 +13,27 @@ import (
 func newAcmeCmd() *cobra.Command {
 	acmeAddCmd := &cobra.Command{
 		Use:   "add [<domain1,domain2...>]",
-		Short: "Adds one or more domains to the acme domain list",
+		Short: "Add one or more domains to the ACME domain list",
 		Args:  cobra.ExactArgs(1),
 		RunE:  acmeAdd,
 	}
 
 	acmeListCmd := &cobra.Command{
 		Use:   "list",
-		Short: "Displaying a list of ACME domains",
+		Short: "Display the list of ACME domains",
 		RunE:  acmeList,
 	}
 
 	acmeRemoveCmd := &cobra.Command{
 		Use:   "remove [<domain1,domain2...>]",
-		Short: "Removes one or more domains from the acme domain list",
+		Short: "Remove one or more domains from the ACME domain list",
 		Args:  cobra.ExactArgs(1),
 		RunE:  acmeRemove,
 	}
 
 	acmeCmd := &cobra.Command{
 		Use:   "acme",
-		Short: "ACME settings",
+		Short: "Manage ACME settings",
 	}
 
 	if newCluster().Edition != clusterEditionCE && !addSshKeyFlag(acmeAddCmd, acmeRemoveCmd) {
