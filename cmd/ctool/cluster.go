@@ -577,36 +577,6 @@ type clusterType struct {
 // apply the cluster data to the template file
 func (c *clusterType) updateTemplateFile(filename string) error {
 	return prepareScriptFromTemplate(filename, c)
-	/*
-	   	content, err := os.ReadFile(filename)
-
-	   	if err != nil {
-	   		return err
-	   	}
-
-	   tmpl, err := template.New("clusterTemplate").Delims("[[", "]]").Parse(string(content))
-
-	   	if err != nil {
-	   		return err
-	   	}
-
-	   var processedTemplate bytes.Buffer
-
-	   	if err := tmpl.Execute(&processedTemplate, c); err != nil {
-	   		return err
-	   	}
-
-	   	if err = os.Chmod(filename, coreutils.FileMode_rw_rw_rw_); err != nil {
-	   		return err
-	   	}
-
-	   	if err := os.WriteFile(filename, processedTemplate.Bytes(), coreutils.FileMode_rw_rw_rw_); err != nil {
-	   		fmt.Println("Error writing to file:", err)
-	   		return err
-	   	}
-
-	   return nil
-	*/
 }
 
 func (c *clusterType) clusterControllerFunction() error {

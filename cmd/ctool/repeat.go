@@ -12,7 +12,7 @@ import (
 func newRepeatCmd() *cobra.Command {
 	repeatCmd := &cobra.Command{
 		Use:   "repeat",
-		Short: "executing the last incomplete command",
+		Short: "Execute the last incomplete command",
 		RunE:  repeat,
 	}
 

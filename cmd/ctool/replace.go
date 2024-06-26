@@ -13,7 +13,7 @@ import (
 func newReplaceCmd() *cobra.Command {
 	replaceCmd := &cobra.Command{
 		Use:   "replace",
-		Short: "Replaces the cluster node",
+		Short: "Replace a cluster node",
 		RunE:  replace,
 	}
 

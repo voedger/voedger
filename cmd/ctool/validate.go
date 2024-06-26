@@ -14,7 +14,7 @@ import (
 func newValidateCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "validate",
-		Short: "Validates the configuration and status of the cluster for errors",
+		Short: "Validate the cluster configuration and status for errors",
 		RunE:  validate,
 	}
 }
