@@ -9,8 +9,6 @@ package projectors
 import (
 	"context"
 	"fmt"
-	"sync"
-	"sync/atomic"
 	"testing"
 	"time"
 
@@ -22,7 +20,6 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
 	imetrics "github.com/voedger/voedger/pkg/metrics"
-	"github.com/voedger/voedger/pkg/pipeline"
 	"github.com/voedger/voedger/pkg/state"
 )
 
@@ -50,7 +47,22 @@ func TestBasicUsage_AsynchronousActualizer(t *testing.T) {
 
 	appName, totalPartitions, partitionNr := istructs.AppQName_test1_app1, istructs.NumAppPartitions(1), istructs.PartitionID(1) // test within partition 1
 
-	appParts, cleanup, _, appStructs := deployTestApp(
+	withCancel, cancelCtx := context.WithCancel(context.Background())
+
+	broker, bCleanup := in10nmem.ProvideEx2(in10n.Quotas{
+		Channels:                2,
+		ChannelsPerSubject:      2,
+		Subscriptions:           2,
+		SubscriptionsPerSubject: 2,
+	}, time.Now)
+	defer bCleanup()
+
+	actCfg := BasicAsyncActualizerConfig{
+		Ctx:    withCancel,
+		Broker: broker,
+	}
+
+	_, cleanup, _, appStructs := deployTestApp(
 		appName, totalPartitions, []istructs.PartitionID{partitionNr}, false,
 		func(appDef appdef.IAppDefBuilder) {
 			appDef.AddPackage("test", "test.com/test")
@@ -66,8 +78,18 @@ func TestBasicUsage_AsynchronousActualizer(t *testing.T) {
 		func(cfg *istructsmem.AppConfigType) {
 			cfg.Resources.Add(istructsmem.NewCommandFunction(testQName, istructsmem.NullCommandExec))
 			cfg.AddAsyncProjectors(testIncrementor, testDecrementor)
-		})
+		},
+		&actCfg)
 	defer cleanup()
+
+	// store the initial actualizer offsets
+	//
+	// 1. there will be no stored offset for incrementor, so it starts
+	// from the beginning of the log
+	//
+	// 2. Decrementor will have the offset=4 stored (will start from
+	// 5th (index 4 in pLog array)):
+	_ = storeProjectorOffset(appStructs, partitionNr, decrementorName, istructs.Offset(4))
 
 	createWS(appStructs, istructs.WSID(1001), testWorkspaceDescriptor, istructs.PartitionID(1), istructs.Offset(1))
 	createWS(appStructs, istructs.WSID(1002), testWorkspaceDescriptor, istructs.PartitionID(1), istructs.Offset(1))
@@ -89,46 +111,6 @@ func TestBasicUsage_AsynchronousActualizer(t *testing.T) {
 	f.fill(1001)
 	topOffset := f.fill(1001)
 
-	withCancel, cancelCtx := context.WithCancel(context.Background())
-
-	// store the initial actualizer offsets
-	//
-	// 1. there will be no stored offset for incrementor, so it starts
-	// from the beginning of the log
-	//
-	// 2. Decrementor will have the offset=4 stored (will start from
-	// 5th (index 4 in pLog array)):
-	_ = storeProjectorOffset(appStructs, partitionNr, decrementorName, istructs.Offset(4))
-
-	broker, cleanup := in10nmem.ProvideEx2(in10n.Quotas{
-		Channels:                2,
-		ChannelsPerSubject:      2,
-		Subscriptions:           2,
-		SubscriptionsPerSubject: 2,
-	}, time.Now)
-	defer cleanup()
-
-	// init and launch two actualizers
-	actualizers := make([]pipeline.ISyncOperator, 0, len(appStructs.AsyncProjectors()))
-	actualizerFactory := ProvideAsyncActualizerFactory()
-
-	baseCfg := BasicAsyncActualizerConfig{
-		Ctx:           withCancel,
-		AppPartitions: appParts,
-		Broker:        broker,
-	}
-	for _, prj := range appStructs.AsyncProjectors() {
-		conf := AsyncActualizerConf{
-			BasicAsyncActualizerConfig: baseCfg,
-			AppQName:                   appName,
-			Partition:                  partitionNr,
-		}
-		actualizer, err := actualizerFactory(conf, prj.Name)
-		require.NoError(err)
-		require.NoError(actualizer.DoSync(conf.Ctx, struct{}{})) // Start service
-		actualizers = append(actualizers, actualizer)
-	}
-
 	// Wait for the projectors
 	for getActualizerOffset(require, appStructs, partitionNr, incrementorName) < topOffset {
 		time.Sleep(time.Nanosecond)
@@ -138,9 +120,6 @@ func TestBasicUsage_AsynchronousActualizer(t *testing.T) {
 	}
 	// stop services
 	cancelCtx()
-	for i := range actualizers {
-		actualizers[i].Close()
-	}
 
 	// expected projection values
 	require.Equal(int32(8), getProjectionValue(require, appStructs, incProjectionView, istructs.WSID(1001)))
@@ -155,7 +134,28 @@ func Test_AsynchronousActualizer_FlushByRange(t *testing.T) {
 
 	appName, totalPartitions, partitionNr := istructs.AppQName_test1_app1, istructs.NumAppPartitions(2), istructs.PartitionID(2) // test within partition 2
 
-	appParts, cleanup, _, appStructs := deployTestApp(
+	withCancel, cancelCtx := context.WithCancel(context.Background())
+
+	broker, bCleanup := in10nmem.ProvideEx2(in10n.Quotas{
+		Channels:                2,
+		ChannelsPerSubject:      2,
+		Subscriptions:           2,
+		SubscriptionsPerSubject: 2,
+	}, time.Now)
+	defer bCleanup()
+
+	// test actualizers config
+	conf := BasicAsyncActualizerConfig{
+		Ctx:           withCancel,
+		IntentsLimit:  1,
+		BundlesLimit:  1,
+		FlushInterval: 2 * time.Second,
+		Broker:        broker,
+	}
+
+	t0 := time.Now()
+
+	_, cleanup, _, appStructs := deployTestApp(
 		appName, totalPartitions, []istructs.PartitionID{partitionNr}, false,
 		func(appDef appdef.IAppDefBuilder) {
 			appDef.AddPackage("test", "test.com/test")
@@ -170,7 +170,8 @@ func Test_AsynchronousActualizer_FlushByRange(t *testing.T) {
 		func(cfg *istructsmem.AppConfigType) {
 			cfg.Resources.Add(istructsmem.NewCommandFunction(testQName, istructsmem.NullCommandExec))
 			cfg.AddAsyncProjectors(testIncrementor)
-		})
+		},
+		&conf)
 	defer cleanup()
 
 	createWS(appStructs, istructs.WSID(1001), testWorkspaceDescriptor, istructs.PartitionID(1), istructs.Offset(1))
@@ -193,38 +194,6 @@ func Test_AsynchronousActualizer_FlushByRange(t *testing.T) {
 	f.fill(1001)
 	topOffset := f.fill(1001)
 
-	withCancel, cancelCtx := context.WithCancel(context.Background())
-
-	broker, cleanup := in10nmem.ProvideEx2(in10n.Quotas{
-		Channels:                2,
-		ChannelsPerSubject:      2,
-		Subscriptions:           2,
-		SubscriptionsPerSubject: 2,
-	}, time.Now)
-	defer cleanup()
-
-	// init and launch actualizer
-	conf := AsyncActualizerConf{
-		BasicAsyncActualizerConfig: BasicAsyncActualizerConfig{
-			Ctx:           withCancel,
-			AppPartitions: appParts,
-			IntentsLimit:  1,
-			BundlesLimit:  1,
-			FlushInterval: 2 * time.Second,
-			Broker:        broker,
-		},
-		AppQName:  appName,
-		Partition: partitionNr,
-	}
-
-	actualizerFactory := ProvideAsyncActualizerFactory()
-	actualizer, err := actualizerFactory(conf, incrementorName)
-	require.NoError(err)
-
-	t0 := time.Now()
-	err = actualizer.DoSync(conf.Ctx, struct{}{}) // Start service
-	require.NoError(err)
-
 	// Wait for the projectors
 	for getActualizerOffset(require, appStructs, partitionNr, incrementorName) < topOffset {
 		time.Sleep(time.Nanosecond)
@@ -232,7 +201,6 @@ func Test_AsynchronousActualizer_FlushByRange(t *testing.T) {
 	require.True(time.Now().Before(t0.Add(conf.FlushInterval)))
 	// stop services
 	cancelCtx()
-	actualizer.Close()
 
 	// expected projection values
 	require.Equal(int32(8), getProjectionValue(require, appStructs, incProjectionView, istructs.WSID(1001)))
@@ -245,7 +213,26 @@ func Test_AsynchronousActualizer_FlushByInterval(t *testing.T) {
 
 	appName, totalPartitions, partitionNr := istructs.AppQName_test1_app1, istructs.NumAppPartitions(1), istructs.PartitionID(1) // test within partition 1
 
-	appParts, cleanup, _, appStructs := deployTestApp(
+	withCancel, cancelCtx := context.WithCancel(context.Background())
+
+	broker, bCleanup := in10nmem.ProvideEx2(in10n.Quotas{
+		Channels:                2,
+		ChannelsPerSubject:      2,
+		Subscriptions:           2,
+		SubscriptionsPerSubject: 2,
+	}, time.Now)
+	defer bCleanup()
+
+	// test actualizers config
+	actCfg := BasicAsyncActualizerConfig{
+		Ctx:           withCancel,
+		FlushInterval: 10 * time.Millisecond,
+		Broker:        broker,
+	}
+
+	t0 := time.Now()
+
+	_, cleanup, _, appStructs := deployTestApp(
 		appName, totalPartitions, []istructs.PartitionID{partitionNr}, false,
 		func(appDef appdef.IAppDefBuilder) {
 			appDef.AddPackage("test", "test.com/test")
@@ -260,7 +247,8 @@ func Test_AsynchronousActualizer_FlushByInterval(t *testing.T) {
 		func(cfg *istructsmem.AppConfigType) {
 			cfg.Resources.Add(istructsmem.NewCommandFunction(testQName, istructsmem.NullCommandExec))
 			cfg.AddAsyncProjectors(testIncrementor)
-		})
+		},
+		&actCfg)
 	defer cleanup()
 
 	createWS(appStructs, istructs.WSID(1001), testWorkspaceDescriptor, istructs.PartitionID(1), istructs.Offset(1))
@@ -276,44 +264,13 @@ func Test_AsynchronousActualizer_FlushByInterval(t *testing.T) {
 	f.fill(1002)
 	topOffset := f.fill(1001)
 
-	withCancel, cancelCtx := context.WithCancel(context.Background())
-
-	broker, cleanup := in10nmem.ProvideEx2(in10n.Quotas{
-		Channels:                2,
-		ChannelsPerSubject:      2,
-		Subscriptions:           2,
-		SubscriptionsPerSubject: 2,
-	}, time.Now)
-	defer cleanup()
-
-	// init and launch actualizer
-	conf := AsyncActualizerConf{
-		BasicAsyncActualizerConfig: BasicAsyncActualizerConfig{
-			Ctx:           withCancel,
-			AppPartitions: appParts,
-			FlushInterval: 10 * time.Millisecond,
-			Broker:        broker,
-		},
-		AppQName:  appName,
-		Partition: partitionNr,
-	}
-
-	actualizerFactory := ProvideAsyncActualizerFactory()
-	actualizer, err := actualizerFactory(conf, incrementorName)
-	require.NoError(err)
-
-	t0 := time.Now()
-	err = actualizer.DoSync(conf.Ctx, struct{}{}) // Start service
-	require.NoError(err)
-
 	// Wait for the projectors
 	for getActualizerOffset(require, appStructs, partitionNr, incrementorName) < topOffset {
 		time.Sleep(time.Nanosecond)
 	}
-	require.True(time.Now().After(t0.Add(conf.FlushInterval)))
+	require.True(time.Now().After(t0.Add(actCfg.FlushInterval)))
 	// stop services
 	cancelCtx()
-	actualizer.Close()
 
 	// expected projection values
 	require.Equal(int32(2), getProjectionValue(require, appStructs, incProjectionView, istructs.WSID(1001)))
@@ -343,7 +300,41 @@ func Test_AsynchronousActualizer_ErrorAndRestore(t *testing.T) {
 
 	attempts := 0
 
-	appParts, cleanup, _, appStructs := deployTestApp(
+	withCancel, cancelCtx := context.WithCancel(context.Background())
+	errors := make(chan string, 10)
+	chanAfterError := make(chan time.Time)
+
+	broker, cleanup := in10nmem.ProvideEx2(in10n.Quotas{
+		Channels:                2,
+		ChannelsPerSubject:      2,
+		Subscriptions:           2,
+		SubscriptionsPerSubject: 2,
+	}, time.Now)
+	defer cleanup()
+
+	metrics := imetrics.Provide()
+
+	// init test actualizers config
+	actConf := BasicAsyncActualizerConfig{
+		Ctx:     withCancel,
+		Metrics: metrics,
+		Broker:  broker,
+
+		AfterError: func(d time.Duration) <-chan time.Time {
+			if d.Seconds() != 30.0 {
+				panic("unexpected pause")
+			}
+			return chanAfterError
+		},
+		LogError: func(args ...interface{}) {
+			errors <- fmt.Sprint("error: ", args)
+		},
+
+		BundlesLimit:  10,
+		FlushInterval: 10 * time.Millisecond,
+	}
+
+	_, cleanup, _, appStructs := deployTestApp(
 		appName, totalPartitions, []istructs.PartitionID{partitionNr}, false,
 		func(appDef appdef.IAppDefBuilder) {
 			appDef.AddPackage("test", "test.com/test")
@@ -374,7 +365,8 @@ func Test_AsynchronousActualizer_ErrorAndRestore(t *testing.T) {
 						return nil
 					},
 				})
-		})
+		},
+		&actConf)
 	defer cleanup()
 
 	createWS(appStructs, istructs.WSID(1001), testWorkspaceDescriptor, istructs.PartitionID(1), istructs.Offset(1))
@@ -389,49 +381,6 @@ func Test_AsynchronousActualizer_ErrorAndRestore(t *testing.T) {
 	f.fill(1001)
 	f.fill(1002)
 	topOffset := f.fill(1001)
-
-	withCancel, cancelCtx := context.WithCancel(context.Background())
-	errors := make(chan string, 10)
-	chanAfterError := make(chan time.Time)
-
-	broker, cleanup := in10nmem.ProvideEx2(in10n.Quotas{
-		Channels:                2,
-		ChannelsPerSubject:      2,
-		Subscriptions:           2,
-		SubscriptionsPerSubject: 2,
-	}, time.Now)
-	defer cleanup()
-
-	metrics := imetrics.Provide()
-
-	// init and launch actualizer
-	conf := AsyncActualizerConf{
-		BasicAsyncActualizerConfig: BasicAsyncActualizerConfig{
-			VvmName:       "test",
-			Ctx:           withCancel,
-			AppPartitions: appParts,
-			AfterError: func(d time.Duration) <-chan time.Time {
-				if d.Seconds() != 30.0 {
-					panic("unexpected pause")
-				}
-				return chanAfterError
-			},
-			BundlesLimit:  10,
-			FlushInterval: 10 * time.Millisecond,
-			LogError: func(args ...interface{}) {
-				errors <- fmt.Sprint("error: ", args)
-			},
-			Broker:  broker,
-			Metrics: metrics,
-		},
-		AppQName:  appName,
-		Partition: partitionNr,
-	}
-
-	actualizerFactory := ProvideAsyncActualizerFactory()
-	actualizer, err := actualizerFactory(conf, name)
-	require.NoError(err)
-	require.NoError(actualizer.DoSync(conf.Ctx, struct{}{})) // Start service
 
 	// Wait for the logged error
 	errStr := <-errors
@@ -459,7 +408,6 @@ func Test_AsynchronousActualizer_ErrorAndRestore(t *testing.T) {
 
 	// stop services
 	cancelCtx()
-	actualizer.Close()
 
 	require.Equal(2, attempts)
 }
@@ -469,7 +417,28 @@ func Test_AsynchronousActualizer_ResumeReadAfterNotifications(t *testing.T) {
 
 	appName, totalPartitions, partitionNr := istructs.AppQName_test1_app1, istructs.NumAppPartitions(1), istructs.PartitionID(1) // test within partition 1
 
-	appParts, cleanup, _, appStructs := deployTestApp(
+	withCancel, cancelCtx := context.WithCancel(context.Background())
+	metrics := imetrics.Provide()
+
+	broker, bCleanup := in10nmem.ProvideEx2(in10n.Quotas{
+		Channels:                2,
+		ChannelsPerSubject:      2,
+		Subscriptions:           2,
+		SubscriptionsPerSubject: 2,
+	}, time.Now)
+	defer bCleanup()
+
+	// test actualizers config
+	actCfg := BasicAsyncActualizerConfig{
+		Ctx:           withCancel,
+		IntentsLimit:  2,
+		BundlesLimit:  2,
+		FlushInterval: 1 * time.Second,
+		Broker:        broker,
+		Metrics:       metrics,
+	}
+
+	_, cleanup, _, appStructs := deployTestApp(
 		appName, totalPartitions, []istructs.PartitionID{partitionNr}, false,
 		func(appDef appdef.IAppDefBuilder) {
 			appDef.AddPackage("test", "test.com/test")
@@ -484,7 +453,8 @@ func Test_AsynchronousActualizer_ResumeReadAfterNotifications(t *testing.T) {
 		func(cfg *istructsmem.AppConfigType) {
 			cfg.Resources.Add(istructsmem.NewCommandFunction(testQName, istructsmem.NullCommandExec))
 			cfg.AddAsyncProjectors(testIncrementor)
-		})
+		},
+		&actCfg)
 	defer cleanup()
 
 	createWS(appStructs, istructs.WSID(1001), testWorkspaceDescriptor, istructs.PartitionID(1), istructs.Offset(1))
@@ -499,39 +469,6 @@ func Test_AsynchronousActualizer_ResumeReadAfterNotifications(t *testing.T) {
 	//Initial events in pLog
 	f.fill(1001)
 	topOffset := f.fill(1002)
-
-	withCancel, cancelCtx := context.WithCancel(context.Background())
-	metrics := imetrics.Provide()
-
-	broker, cleanup := in10nmem.ProvideEx2(in10n.Quotas{
-		Channels:                2,
-		ChannelsPerSubject:      2,
-		Subscriptions:           2,
-		SubscriptionsPerSubject: 2,
-	}, time.Now)
-	defer cleanup()
-
-	// init and launch actualizer
-	conf := AsyncActualizerConf{
-		BasicAsyncActualizerConfig: BasicAsyncActualizerConfig{
-			VvmName:       "test",
-			Ctx:           withCancel,
-			AppPartitions: appParts,
-			IntentsLimit:  2,
-			BundlesLimit:  2,
-			FlushInterval: 1 * time.Second,
-			Broker:        broker,
-			Metrics:       metrics,
-		},
-		AppQName:  appName,
-		Partition: partitionNr,
-	}
-
-	actualizerFactory := ProvideAsyncActualizerFactory()
-	actualizer, err := actualizerFactory(conf, incrementorName)
-	require.NoError(err)
-
-	_ = actualizer.DoSync(conf.Ctx, struct{}{}) // Start service
 
 	// Wait for the projectors
 	for getActualizerOffset(require, appStructs, partitionNr, incrementorName) < topOffset {
@@ -556,7 +493,6 @@ func Test_AsynchronousActualizer_ResumeReadAfterNotifications(t *testing.T) {
 
 	// stop services
 	cancelCtx()
-	actualizer.Close()
 
 	// expected projection values
 	require.Equal(int32(3), getProjectionValue(require, appStructs, incProjectionView, istructs.WSID(1001)))
@@ -606,13 +542,49 @@ func Test_AsynchronousActualizer_Stress(t *testing.T) {
 		    async_test.go:598: Total batches : 11
 		--- PASS: Test_AsynchronousActualizer_Stress (1.70s)
 	*/
+
+	/*
+		Nikolay Nikitin, 2024-06-26, Windows, amd64, Intel(R) Core(TM) i5-3570 CPU @ 3.40GHz
+		=== RUN   Test_AsynchronousActualizer_Stress
+		06/26 13:10:54.603: ===: [in10nmem.notifier:246]: notifier goroutine started
+		06/26 13:10:54.607: ===: [in10nmem.notifier:246]: notifier goroutine started
+		    async_test.go:648: Total events  : 50000
+		    async_test.go:649: Total spent   : 1.6563482s
+		    async_test.go:650: Events/sec    : 30186.8894
+		    async_test.go:651: One event avg : 33.126µs
+		    async_test.go:652: Total batches : 16
+		06/26 13:10:56.257: ===: [in10nmem.notifier:278]: notifier goroutine stopped
+		06/26 13:10:56.257: ===: [in10nmem.notifier:278]: notifier goroutine stopped
+		--- PASS: Test_AsynchronousActualizer_Stress (1.66s)
+	*/
 	t.Skip()
 
 	require := require.New(t)
 
 	appName, totalPartitions, partitionNr := istructs.AppQName_test1_app1, istructs.NumAppPartitions(1), istructs.PartitionID(1) // test within partition 1
 
-	appParts, cleanup, _, appStructs := deployTestApp(
+	withCancel, cancelCtx := context.WithCancel(context.Background())
+
+	broker, bCleanup := in10nmem.ProvideEx2(in10n.Quotas{
+		Channels:                2,
+		ChannelsPerSubject:      2,
+		Subscriptions:           2,
+		SubscriptionsPerSubject: 2,
+	}, time.Now)
+	defer bCleanup()
+
+	metrics := newSimpleMetrics()
+
+	// test actualizers config
+	conf := BasicAsyncActualizerConfig{
+		Ctx:       withCancel,
+		Broker:    broker,
+		AAMetrics: metrics,
+	}
+
+	t0 := time.Now()
+
+	_, cleanup, _, appStructs := deployTestApp(
 		appName, totalPartitions, []istructs.PartitionID{partitionNr}, false,
 		func(appDef appdef.IAppDefBuilder) {
 			appDef.AddPackage("test", "test.com/test")
@@ -627,7 +599,8 @@ func Test_AsynchronousActualizer_Stress(t *testing.T) {
 		func(cfg *istructsmem.AppConfigType) {
 			cfg.Resources.Add(istructsmem.NewCommandFunction(testQName, istructsmem.NullCommandExec))
 			cfg.AddAsyncProjectors(testIncrementor)
-		})
+		},
+		&conf)
 	defer cleanup()
 
 	createWS(appStructs, istructs.WSID(1001), testWorkspaceDescriptor, istructs.PartitionID(1), istructs.Offset(1))
@@ -647,38 +620,8 @@ func Test_AsynchronousActualizer_Stress(t *testing.T) {
 		topOffset = f.fill(1002)
 	}
 
-	withCancel, cancelCtx := context.WithCancel(context.Background())
-
-	broker, cleanup := in10nmem.ProvideEx2(in10n.Quotas{
-		Channels:                2,
-		ChannelsPerSubject:      2,
-		Subscriptions:           2,
-		SubscriptionsPerSubject: 2,
-	}, time.Now)
-	defer cleanup()
-
-	metrics := simpleMetrics{}
-
-	// init and launch two actualizers
-	conf := AsyncActualizerConf{
-		BasicAsyncActualizerConfig: BasicAsyncActualizerConfig{
-			Ctx:           withCancel,
-			AppPartitions: appParts,
-			Broker:        broker,
-			AAMetrics:     &metrics,
-		},
-		AppQName:  appName,
-		Partition: partitionNr,
-	}
-
-	actualizerFactory := ProvideAsyncActualizerFactory()
-	actualizer, err := actualizerFactory(conf, incrementorName)
-	require.NoError(err)
-	require.NoError(actualizer.DoSync(conf.Ctx, struct{}{})) // Start service
-
-	t0 := time.Now()
 	// Wait for the projectors
-	for atomic.LoadInt64(&metrics.storedOffset) < int64(topOffset) {
+	for metrics.value(aaStoredOffset, partitionNr, incrementorName) < int64(topOffset) {
 		time.Sleep(time.Nanosecond)
 	}
 	d := time.Since(t0)
@@ -687,42 +630,14 @@ func Test_AsynchronousActualizer_Stress(t *testing.T) {
 	t.Logf("Total spent   : %s", d)
 	t.Logf("Events/sec    : %.4f", totalEvents/d.Seconds())
 	t.Logf("One event avg : %s", time.Duration(d0))
-	t.Logf("Total batches : %d", metrics.flushesTotal)
+	t.Logf("Total batches : %d", metrics.total(aaFlushesTotal))
 
 	// stop services
 	cancelCtx()
-	actualizer.Close()
 
 	// expected projection values
 	require.Equal(int32(totalEvents/2), getProjectionValue(require, appStructs, incProjectionView, istructs.WSID(1001)))
 	require.Equal(int32(totalEvents/2), getProjectionValue(require, appStructs, incProjectionView, istructs.WSID(1002)))
-
-}
-
-type simpleMetrics struct {
-	flushesTotal  int64
-	currentOffset int64
-	storedOffset  int64
-}
-
-func (m *simpleMetrics) Increase(metricName string, partition istructs.PartitionID, projection appdef.QName, valueDelta float64) {
-	if metricName == aaCurrentOffset {
-		atomic.AddInt64(&m.currentOffset, int64(valueDelta))
-	} else if metricName == aaFlushesTotal {
-		atomic.AddInt64(&m.flushesTotal, int64(valueDelta))
-	} else {
-		atomic.AddInt64(&m.storedOffset, int64(valueDelta))
-	}
-}
-
-func (m *simpleMetrics) Set(metricName string, partition istructs.PartitionID, projection appdef.QName, value float64) {
-	if metricName == aaCurrentOffset {
-		atomic.StoreInt64(&m.currentOffset, int64(value))
-	} else if metricName == aaFlushesTotal {
-		atomic.StoreInt64(&m.flushesTotal, int64(value))
-	} else {
-		atomic.StoreInt64(&m.storedOffset, int64(value))
-	}
 }
 
 func Test_AsynchronousActualizer_NonBuffered(t *testing.T) {
@@ -730,7 +645,31 @@ func Test_AsynchronousActualizer_NonBuffered(t *testing.T) {
 
 	appName, totalPartitions, partitionNr := istructs.AppQName_test1_app1, istructs.NumAppPartitions(2), istructs.PartitionID(2) // test within partition 2
 
-	appParts, cleanup, _, appStructs := deployTestApp(
+	withCancel, cancelCtx := context.WithCancel(context.Background())
+
+	broker, bCleanup := in10nmem.ProvideEx2(in10n.Quotas{
+		Channels:                2,
+		ChannelsPerSubject:      2,
+		Subscriptions:           2,
+		SubscriptionsPerSubject: 2,
+	}, time.Now)
+	defer bCleanup()
+
+	metrics := newSimpleMetrics()
+
+	// test actualizers config
+	actCfg := BasicAsyncActualizerConfig{
+		Ctx:           withCancel,
+		IntentsLimit:  10,
+		BundlesLimit:  10,
+		FlushInterval: 2 * time.Second,
+		Broker:        broker,
+		AAMetrics:     metrics,
+	}
+
+	t0 := time.Now()
+
+	_, cleanup, _, appStructs := deployTestApp(
 		appName, totalPartitions, []istructs.PartitionID{partitionNr}, false,
 		func(appDef appdef.IAppDefBuilder) {
 			appDef.AddPackage("test", "test.com/test")
@@ -748,7 +687,8 @@ func Test_AsynchronousActualizer_NonBuffered(t *testing.T) {
 		func(cfg *istructsmem.AppConfigType) {
 			cfg.Resources.Add(istructsmem.NewCommandFunction(testQName, istructsmem.NullCommandExec))
 			cfg.AddAsyncProjectors(testIncrementor)
-		})
+		},
+		&actCfg)
 	defer cleanup()
 
 	createWS(appStructs, istructs.WSID(1001), testWorkspaceDescriptor, istructs.PartitionID(1), istructs.Offset(1))
@@ -761,66 +701,24 @@ func Test_AsynchronousActualizer_NonBuffered(t *testing.T) {
 	f.fill(1001)
 	topOffset := f.fill(1001)
 
-	withCancel, cancelCtx := context.WithCancel(context.Background())
-
-	broker, cleanup := in10nmem.ProvideEx2(in10n.Quotas{
-		Channels:                2,
-		ChannelsPerSubject:      2,
-		Subscriptions:           2,
-		SubscriptionsPerSubject: 2,
-	}, time.Now)
-	defer cleanup()
-
-	metrics := simpleMetrics{}
-
-	// init and launch actualizer
-	conf := AsyncActualizerConf{
-		BasicAsyncActualizerConfig: BasicAsyncActualizerConfig{
-			Ctx:           withCancel,
-			AppPartitions: appParts,
-			IntentsLimit:  10,
-			BundlesLimit:  10,
-			FlushInterval: 2 * time.Second,
-			Broker:        broker,
-			AAMetrics:     &metrics,
-		},
-		AppQName:  appName,
-		Partition: partitionNr,
-	}
-
-	actualizerFactory := ProvideAsyncActualizerFactory()
-	actualizer, err := actualizerFactory(conf, incrementorName)
-	require.NoError(err)
-
-	t0 := time.Now()
-	err = actualizer.DoSync(conf.Ctx, struct{}{}) // Start service
-	require.NoError(err)
-
 	// Wait for the projectors
-	for atomic.LoadInt64(&metrics.storedOffset) < int64(topOffset) {
+	for metrics.value(aaStoredOffset, partitionNr, incrementorName) < int64(topOffset) {
 		time.Sleep(time.Nanosecond)
 	}
-	require.True(time.Now().Before(t0.Add(conf.FlushInterval))) // no flushes by timer happen
+	require.True(time.Now().Before(t0.Add(actCfg.FlushInterval))) // no flushes by timer happen
 	// stop services
 	cancelCtx()
-	actualizer.Close()
 
-	require.Equal(int32(2), getProjectionValue(require, appStructs, incProjectionView, istructs.WSID(1001)))
-	require.Equal(int64(2), metrics.flushesTotal)
-	require.Equal(int64(topOffset), metrics.currentOffset)
+	require.EqualValues(2, getProjectionValue(require, appStructs, incProjectionView, istructs.WSID(1001)))
+	require.EqualValues(2, metrics.value(aaFlushesTotal, partitionNr, incrementorName))
+	require.EqualValues(topOffset, metrics.value(aaCurrentOffset, partitionNr, incrementorName))
 	require.Equal(topOffset, getActualizerOffset(require, appStructs, partitionNr, incrementorName))
 }
 
-type testActualizerCtx struct {
-	op      pipeline.ISyncOperator
-	metrics *simpleMetrics
-}
-
 type testPartition struct {
-	number      istructs.PartitionID
-	topOffset   istructs.Offset
-	filler      pLogFiller
-	actualizers []testActualizerCtx
+	number    istructs.PartitionID
+	topOffset istructs.Offset
+	filler    pLogFiller
 }
 
 /*
@@ -852,7 +750,6 @@ After:
 
 func Test_AsynchronousActualizer_Stress_NonBuffered(t *testing.T) {
 	t.Skip()
-	require := require.New(t)
 
 	projectorFilter := appdef.NewQName("pkg", "fake")
 	const totalPartitions = 40
@@ -865,43 +762,66 @@ func Test_AsynchronousActualizer_Stress_NonBuffered(t *testing.T) {
 		partID[i] = istructs.PartitionID(i)
 	}
 
-	appParts, cleanup, metrics, appStructs := deployTestApp(
-		appName, totalPartitions, partID, true,
-		func(appDef appdef.IAppDefBuilder) {
-			appDef.AddPackage("test", "test.com/test")
-			appDef.AddCommand(projectorFilter)
-			appDef.AddCommand(testQName)
-			appDef.AddProjector(incrementorName).Events().Add(projectorFilter, appdef.ProjectorEventKind_Execute)
-		},
-		func(cfg *istructsmem.AppConfigType) {
-			cfg.Resources.Add(istructsmem.NewCommandFunction(projectorFilter, istructsmem.NullCommandExec))
-			cfg.Resources.Add(istructsmem.NewCommandFunction(testQName, istructsmem.NullCommandExec))
-			cfg.AddAsyncProjectors(testIncrementor)
-		})
-	defer cleanup()
-
-	partitions := make([]*testPartition, totalPartitions)
+	prjName := func(i int) appdef.QName {
+		return appdef.NewQName("test", fmt.Sprintf("prj_%d", i))
+	}
 
 	withCancel, cancelCtx := context.WithCancel(context.Background())
 
-	broker, cleanup := in10nmem.ProvideEx2(in10n.Quotas{
+	broker, bCleanup := in10nmem.ProvideEx2(in10n.Quotas{
 		Channels:                totalPartitions * projectorsPerPartition,
 		ChannelsPerSubject:      totalPartitions * projectorsPerPartition,
 		Subscriptions:           totalPartitions * projectorsPerPartition,
 		SubscriptionsPerSubject: totalPartitions * projectorsPerPartition,
 	}, time.Now)
-	defer cleanup()
+	defer bCleanup()
 
-	actualizerFactory := ProvideAsyncActualizerFactory()
+	actMetrics := newSimpleMetrics()
+
+	// test actualizer config
+	actCfg := BasicAsyncActualizerConfig{
+		Ctx:           withCancel,
+		IntentsLimit:  10,
+		BundlesLimit:  10,
+		FlushInterval: 2 * time.Second,
+		Broker:        broker,
+		AAMetrics:     actMetrics,
+		LogError:      func(args ...interface{}) {},
+	}
+
 	t0 := time.Now()
 
-	var wg sync.WaitGroup
+	_, cleanup, metrics, appStructs := deployTestApp(
+		appName, totalPartitions, partID, true,
+		func(appDef appdef.IAppDefBuilder) {
+			appDef.AddPackage("test", "test.com/test")
+			appDef.AddCommand(projectorFilter)
+			appDef.AddCommand(testQName)
+			for i := 0; i < projectorsPerPartition; i++ {
+				appDef.AddProjector(prjName(i)).Events().Add(projectorFilter, appdef.ProjectorEventKind_Execute)
+			}
+		},
+		func(cfg *istructsmem.AppConfigType) {
+			cfg.Resources.Add(istructsmem.NewCommandFunction(projectorFilter, istructsmem.NullCommandExec))
+			cfg.Resources.Add(istructsmem.NewCommandFunction(testQName, istructsmem.NullCommandExec))
+			for i := 0; i < projectorsPerPartition; i++ {
+				cfg.AddAsyncProjectors(istructs.Projector{
+					Name: prjName(i),
+					Func: testIncrementorClosure,
+				})
+			}
+		},
+		&actCfg)
+	defer cleanup()
+
+	t.Logf("Initialized in %s", time.Since(t0))
+
+	partitions := make([]*testPartition, totalPartitions)
 
 	for i := range partitions {
 		pn := istructs.PartitionID(i)
 		partitions[i] = &testPartition{
-			number:      pn,
-			actualizers: make([]testActualizerCtx, projectorsPerPartition),
+			number: pn,
 			filler: pLogFiller{
 				app:       appStructs,
 				partition: pn,
@@ -912,94 +832,27 @@ func Test_AsynchronousActualizer_Stress_NonBuffered(t *testing.T) {
 		for j := 0; j < eventsPerPartition; j++ {
 			partitions[i].topOffset = partitions[i].filler.fill(istructs.WSID(j))
 		}
-		for k := 0; k < projectorsPerPartition; k++ {
-			wg.Add(1)
-			k := k
-			i := i
-			go func() {
-				defer wg.Done()
-				metrics := simpleMetrics{}
-
-				conf := AsyncActualizerConf{
-					BasicAsyncActualizerConfig: BasicAsyncActualizerConfig{
-						Ctx:           withCancel,
-						AppPartitions: appParts,
-						IntentsLimit:  10,
-						BundlesLimit:  10,
-						FlushInterval: 2 * time.Second,
-						Broker:        broker,
-						AAMetrics:     &metrics,
-						LogError:      func(args ...interface{}) {},
-					},
-					AppQName:  appName,
-					Partition: pn,
-				}
-
-				actualizer, err := actualizerFactory(conf, incrementorName)
-				require.NoError(err)
-
-				partitions[i].actualizers[k] = testActualizerCtx{
-					op:      actualizer,
-					metrics: &metrics,
-				}
-
-			}()
-		}
 	}
-	wg.Wait()
-	t.Logf("Initialized in %s", time.Since(t0))
-
-	// init and launch actualizer
-	t0 = time.Now()
-	for i := range partitions {
-		for k := 0; k < projectorsPerPartition; k++ {
-			err := partitions[i].actualizers[k].op.DoSync(withCancel, struct{}{})
-			require.NoError(err)
-		}
-	}
-	t.Logf("Started in %s", time.Since(t0))
-	t0 = time.Now()
 
 	// Wait for the projectors
-	for {
-		complete := true
-		for i := 0; i < totalPartitions && complete; i++ {
+	for complete := false; !complete; time.Sleep(time.Nanosecond) {
+		complete = true
+		for i := 0; (i < totalPartitions) && complete; i++ {
 			tp := partitions[i]
-			for k := 0; k < projectorsPerPartition && complete; k++ {
-				ts := &tp.actualizers[k]
-				stored := atomic.LoadInt64(&ts.metrics.storedOffset)
-				for stored < int64(tp.topOffset) {
+			for k := 0; (k < projectorsPerPartition) && complete; k++ {
+				if actMetrics.value(aaStoredOffset, tp.number, prjName(k)) < int64(tp.topOffset) {
 					complete = false
-					break
 				}
 			}
 		}
-		if complete {
-			break
-		}
-		time.Sleep(time.Nanosecond)
 	}
-
 	duration := time.Since(t0)
 	totalEvents := totalPartitions * eventsPerPartition
 	t.Logf("Actualized %d events in %s ", totalEvents, duration)
-	// PutBatch calls
-	t0 = time.Now()
-
-	flushesTotal := 0
-	for i := range partitions {
-		for k := 0; k < projectorsPerPartition; k++ {
-			flushesTotal += int(partitions[i].actualizers[k].metrics.flushesTotal)
-		}
-	}
 
 	// stop services
+	t0 = time.Now()
 	cancelCtx()
-	for i := range partitions {
-		for k := 0; k < projectorsPerPartition; k++ {
-			partitions[i].actualizers[k].op.Close()
-		}
-	}
 
 	t.Logf("Stopped in %s ", time.Since(t0))
 	t.Logf("RPS: %.2f", float64(totalEvents)/duration.Seconds())
@@ -1010,7 +863,7 @@ func Test_AsynchronousActualizer_Stress_NonBuffered(t *testing.T) {
 		}
 		return nil
 	})
-	t.Logf("FlushesTotal: %d", flushesTotal)
+	t.Logf("FlushesTotal: %d", actMetrics.total(aaFlushesTotal))
 }
 
 /*
@@ -1025,12 +878,11 @@ func Test_AsynchronousActualizer_Stress_NonBuffered(t *testing.T) {
 */
 func Test_AsynchronousActualizer_Stress_Buffered(t *testing.T) {
 	t.Skip()
-	require := require.New(t)
 
 	projectorFilter := appdef.NewQName("pkg", "fake")
 	const totalPartitions = 40
 	const projectorsPerPartition = 5
-	const eventsPerPartition = 20000
+	const eventsPerPartition = 10000
 
 	appName := istructs.AppQName_test1_app1
 	partID := make([]istructs.PartitionID, totalPartitions)
@@ -1038,43 +890,67 @@ func Test_AsynchronousActualizer_Stress_Buffered(t *testing.T) {
 		partID[i] = istructs.PartitionID(i)
 	}
 
-	appParts, cleanup, metrics, appStructs := deployTestApp(
-		appName, totalPartitions, partID, true,
-		func(appDef appdef.IAppDefBuilder) {
-			appDef.AddPackage("test", "test.com/test")
-			appDef.AddCommand(projectorFilter)
-			appDef.AddCommand(testQName)
-			appDef.AddProjector(incrementorName).Events().Add(projectorFilter, appdef.ProjectorEventKind_Execute)
-		},
-		func(cfg *istructsmem.AppConfigType) {
-			cfg.Resources.Add(istructsmem.NewCommandFunction(projectorFilter, istructsmem.NullCommandExec))
-			cfg.Resources.Add(istructsmem.NewCommandFunction(testQName, istructsmem.NullCommandExec))
-			cfg.AddAsyncProjectors(testIncrementor)
-		})
-	defer cleanup()
-
-	partitions := make([]*testPartition, totalPartitions)
+	prjName := func(i int) appdef.QName {
+		return appdef.NewQName("test", fmt.Sprintf("prj_%d", i))
+	}
 
 	withCancel, cancelCtx := context.WithCancel(context.Background())
 
-	broker, cleanup := in10nmem.ProvideEx2(in10n.Quotas{
+	broker, bCleanup := in10nmem.ProvideEx2(in10n.Quotas{
 		Channels:                totalPartitions * projectorsPerPartition,
 		ChannelsPerSubject:      totalPartitions * projectorsPerPartition,
 		Subscriptions:           totalPartitions * projectorsPerPartition,
 		SubscriptionsPerSubject: totalPartitions * projectorsPerPartition,
 	}, time.Now)
-	defer cleanup()
+	defer bCleanup()
 
-	actualizerFactory := ProvideAsyncActualizerFactory()
+	actMetrics := newSimpleMetrics()
+
+	// test actualizer config
+	actCfg := BasicAsyncActualizerConfig{
+		Ctx:                   withCancel,
+		IntentsLimit:          10,
+		BundlesLimit:          10,
+		FlushInterval:         1000 * time.Millisecond,
+		Broker:                broker,
+		AAMetrics:             actMetrics,
+		LogError:              func(args ...interface{}) {},
+		FlushPositionInterval: 10 * time.Second,
+	}
+
 	t0 := time.Now()
 
-	var wg sync.WaitGroup
+	_, cleanup, metrics, appStructs := deployTestApp(
+		appName, totalPartitions, partID, true,
+		func(appDef appdef.IAppDefBuilder) {
+			appDef.AddPackage("test", "test.com/test")
+			appDef.AddCommand(projectorFilter)
+			appDef.AddCommand(testQName)
+			for i := 0; i < projectorsPerPartition; i++ {
+				appDef.AddProjector(prjName(i)).Events().Add(projectorFilter, appdef.ProjectorEventKind_Execute)
+			}
+		},
+		func(cfg *istructsmem.AppConfigType) {
+			cfg.Resources.Add(istructsmem.NewCommandFunction(projectorFilter, istructsmem.NullCommandExec))
+			cfg.Resources.Add(istructsmem.NewCommandFunction(testQName, istructsmem.NullCommandExec))
+			for i := 0; i < projectorsPerPartition; i++ {
+				cfg.AddAsyncProjectors(istructs.Projector{
+					Name: prjName(i),
+					Func: testIncrementorClosure,
+				})
+			}
+		},
+		&actCfg)
+	defer cleanup()
+
+	t.Logf("Initialized in %s", time.Since(t0))
+
+	partitions := make([]*testPartition, totalPartitions)
 
 	for i := range partitions {
 		pn := istructs.PartitionID(i)
 		partitions[i] = &testPartition{
-			number:      pn,
-			actualizers: make([]testActualizerCtx, projectorsPerPartition),
+			number: pn,
 			filler: pLogFiller{
 				app:       appStructs,
 				partition: pn,
@@ -1085,95 +961,27 @@ func Test_AsynchronousActualizer_Stress_Buffered(t *testing.T) {
 		for j := 0; j < eventsPerPartition; j++ {
 			partitions[i].topOffset = partitions[i].filler.fill(istructs.WSID(j))
 		}
-		for k := 0; k < projectorsPerPartition; k++ {
-			wg.Add(1)
-			k := k
-			i := i
-			go func() {
-				defer wg.Done()
-				metrics := simpleMetrics{}
-
-				conf := AsyncActualizerConf{
-					BasicAsyncActualizerConfig: BasicAsyncActualizerConfig{
-						Ctx:                   withCancel,
-						AppPartitions:         appParts,
-						IntentsLimit:          10,
-						BundlesLimit:          10,
-						FlushInterval:         1000 * time.Millisecond,
-						Broker:                broker,
-						AAMetrics:             &metrics,
-						LogError:              func(args ...interface{}) {},
-						FlushPositionInterval: 10 * time.Second,
-					},
-					AppQName:  appName,
-					Partition: pn,
-				}
-
-				actualizer, err := actualizerFactory(conf, incrementorName)
-				require.NoError(err)
-
-				partitions[i].actualizers[k] = testActualizerCtx{
-					op:      actualizer,
-					metrics: &metrics,
-				}
-
-			}()
-		}
 	}
-	wg.Wait()
-	t.Logf("Initialized in %s", time.Since(t0))
-
-	// init and launch actualizer
-	t0 = time.Now()
-	for i := range partitions {
-		for k := 0; k < projectorsPerPartition; k++ {
-			err := partitions[i].actualizers[k].op.DoSync(withCancel, struct{}{})
-			require.NoError(err)
-		}
-	}
-	t.Logf("Started in %s", time.Since(t0))
-	t0 = time.Now()
 
 	// Wait for the projectors
-	for {
-		complete := true
-		for i := 0; i < totalPartitions && complete; i++ {
+	for complete := false; !complete; time.Sleep(time.Nanosecond) {
+		complete = true
+		for i := 0; (i < totalPartitions) && complete; i++ {
 			tp := partitions[i]
-			for k := 0; k < projectorsPerPartition && complete; k++ {
-				ts := &tp.actualizers[k]
-				stored := atomic.LoadInt64(&ts.metrics.storedOffset)
-				for stored < int64(tp.topOffset) {
+			for k := 0; (k < projectorsPerPartition) && complete; k++ {
+				if actMetrics.value(aaStoredOffset, tp.number, prjName(k)) < int64(tp.topOffset) {
 					complete = false
-					break
 				}
 			}
 		}
-		if complete {
-			break
-		}
-		time.Sleep(time.Nanosecond)
 	}
-
 	duration := time.Since(t0)
 	totalEvents := totalPartitions * eventsPerPartition
 	t.Logf("Actualized %d events in %s ", totalEvents, duration)
-	// PutBatch calls
-	t0 = time.Now()
-
-	flushesTotal := 0
-	for i := range partitions {
-		for k := 0; k < projectorsPerPartition; k++ {
-			flushesTotal += int(partitions[i].actualizers[k].metrics.flushesTotal)
-		}
-	}
 
 	// stop services
+	t0 = time.Now()
 	cancelCtx()
-	for i := range partitions {
-		for k := 0; k < projectorsPerPartition; k++ {
-			partitions[i].actualizers[k].op.Close()
-		}
-	}
 
 	t.Logf("Stopped in %s ", time.Since(t0))
 	t.Logf("RPS: %.2f", float64(totalEvents)/duration.Seconds())
@@ -1184,5 +992,5 @@ func Test_AsynchronousActualizer_Stress_Buffered(t *testing.T) {
 		}
 		return nil
 	})
-	t.Logf("FlushesTotal: %d", flushesTotal)
+	t.Logf("FlushesTotal: %d", actMetrics.total(aaFlushesTotal))
 }

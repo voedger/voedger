@@ -7,6 +7,7 @@
 package projectors
 
 import (
+	"context"
 	"errors"
 	"testing"
 	"time"
@@ -70,7 +71,8 @@ func TestBasicUsage_SynchronousActualizer(t *testing.T) {
 		func(cfg *istructsmem.AppConfigType) {
 			cfg.AddSyncProjectors(testIncrementor, testDecrementor)
 			cfg.Resources.Add(istructsmem.NewCommandFunction(testQName, istructsmem.NullCommandExec))
-		})
+		},
+		nil)
 	defer cleanup()
 	createWS(appStructs, istructs.WSID(1001), testWorkspaceDescriptor, istructs.PartitionID(1), istructs.Offset(1))
 	createWS(appStructs, istructs.WSID(1002), testWorkspaceDescriptor, istructs.PartitionID(1), istructs.Offset(1))
@@ -107,34 +109,35 @@ var testWorkspaceDescriptor = appdef.NewQName("pkg", "TestWorkspaceDescriptor")
 var errTestError = errors.New("test error")
 
 var (
+	testIncrementorClosure = func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
+		wsid := event.Workspace()
+		if wsid == 1099 {
+			return errTestError
+		}
+		key, err := s.KeyBuilder(state.View, incProjectionView)
+		if err != nil {
+			return
+		}
+		key.PutInt32("pk", 0)
+		key.PutInt32("cc", 0)
+		el, ok, err := s.CanExist(key)
+		if err != nil {
+			return
+		}
+		eb, err := intents.NewValue(key)
+		if err != nil {
+			return
+		}
+		if ok {
+			eb.PutInt32("myvalue", el.AsInt32("myvalue")+1)
+		} else {
+			eb.PutInt32("myvalue", 1)
+		}
+		return
+	}
 	testIncrementor = istructs.Projector{
 		Name: incrementorName,
-		Func: func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
-			wsid := event.Workspace()
-			if wsid == 1099 {
-				return errTestError
-			}
-			key, err := s.KeyBuilder(state.View, incProjectionView)
-			if err != nil {
-				return
-			}
-			key.PutInt32("pk", 0)
-			key.PutInt32("cc", 0)
-			el, ok, err := s.CanExist(key)
-			if err != nil {
-				return
-			}
-			eb, err := intents.NewValue(key)
-			if err != nil {
-				return
-			}
-			if ok {
-				eb.PutInt32("myvalue", el.AsInt32("myvalue")+1)
-			} else {
-				eb.PutInt32("myvalue", 1)
-			}
-			return
-		},
+		Func: testIncrementorClosure,
 	}
 	testDecrementor = istructs.Projector{
 		Name: decrementorName,
@@ -181,6 +184,7 @@ func deployTestApp(
 	cachedStorage bool,
 	prepareAppDef appDefCallback,
 	prepareAppCfg appCfgCallback,
+	actualizerCfg *BasicAsyncActualizerConfig,
 ) (
 	appParts appparts.IAppPartitions,
 	cleanup func(),
@@ -239,10 +243,37 @@ func deployTestApp(
 		SubscriptionsPerSubject: 10,
 	}, time.Now)
 
+	defaultActCfg := BasicAsyncActualizerConfig{
+		VvmName:      "test",
+		Ctx:          context.Background(),
+		SecretReader: secretReader,
+		Broker:       n10nBroker,
+		Metrics:      metrics,
+	}
+	aCfg := defaultActCfg
+	if actualizerCfg != nil {
+		aCfg = *actualizerCfg
+		if aCfg.VvmName == "" {
+			aCfg.VvmName = defaultActCfg.VvmName
+		}
+		if aCfg.Ctx == nil {
+			aCfg.Ctx = defaultActCfg.Ctx
+		}
+		if aCfg.SecretReader == nil {
+			aCfg.SecretReader = defaultActCfg.SecretReader
+		}
+		if aCfg.Broker == nil {
+			aCfg.Broker = defaultActCfg.Broker
+		}
+		if aCfg.Metrics == nil {
+			aCfg.Metrics = defaultActCfg.Metrics
+		}
+	}
+
 	appParts, appPartsCleanup, err := appparts.New2(
 		appStructsProvider,
 		NewSyncActualizerFactoryFactory(ProvideSyncActualizerFactory(), secretReader, n10nBroker),
-		appparts.NullActualizers,
+		ProvideActualizers(aCfg),
 		engines.ProvideExtEngineFactories(
 			engines.ExtEngineFactoriesConfig{
 				AppConfigs:  cfgs,
@@ -314,7 +345,8 @@ func Test_ErrorInSyncActualizer(t *testing.T) {
 		func(cfg *istructsmem.AppConfigType) {
 			cfg.AddSyncProjectors(testIncrementor, testDecrementor)
 			cfg.Resources.Add(istructsmem.NewCommandFunction(testQName, istructsmem.NullCommandExec))
-		})
+		},
+		nil)
 	defer cleanup()
 
 	createWS(appStructs, istructs.WSID(1001), testWorkspaceDescriptor, istructs.PartitionID(1), istructs.Offset(1))

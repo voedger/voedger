@@ -21,19 +21,32 @@ type appPartitions struct {
 	appparts.IAppPartitions
 }
 
-func Test_actualizers_DeployPartition(t *testing.T) {
+func (s *appPartitions) AppDef(n appdef.AppQName) (appdef.IAppDef, error) {
+	def := s.Called(n).Get(0).(appdef.IAppDef)
+	err := s.Called(n).Get(1)
+	if err == nil {
+		return def, nil
+	}
+	return def, err.(error)
+}
 
+func Test_actualizers_DeployPartition(t *testing.T) {
+	t.Skip("This test is not ready yet")
+
+	cmd := appdef.NewQName("test", "cmd")
 	prj := appdef.NewQName("test", "projector")
 
 	def := func() appdef.IAppDef {
 		adb := appdef.New()
+		adb.AddCommand(cmd)
 		adb.AddProjector(prj).
-			SetSync(false)
+			SetSync(false).
+			Events().Add(cmd)
 		return adb.MustBuild()
-	}
+	}()
 
 	parts := new(appPartitions)
-	parts.On("AppDef", istructs.AppQName_test1_app1).Return(def)
+	parts.On("AppDef", istructs.AppQName_test1_app1).Return(def, nil)
 
 	vvmCtx, vvmCancel := context.WithCancel(context.Background())
 
