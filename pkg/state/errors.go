@@ -34,6 +34,7 @@ var errWorkspaceDescriptorNotFound = errors.New("WorkspaceDescriptor not found i
 var errDescriptorForUndefinedWorkspace = errors.New("workspace descriptor for undefined workspace")
 var errCommandNotSpecified = errors.New("command not specified")
 var errBlobIDNotSpecified = errors.New("blob ID not specified")
+var ErrQNameIsNotDefinedInWorkspace = errors.New("qname is not defined in workspace")
 
 func errUnexpectedType(actual interface{}) error {
 	return fmt.Errorf("unexpected type: %v", actual)
@@ -48,5 +49,5 @@ func errIndexOutOfBounds(index int) error {
 }
 
 func typeIsNotDefinedInWorkspaceWithDescriptor(typ, ws appdef.QName) error {
-	return fmt.Errorf("%s is not available in workspace with descriptor %s", typ.String(), ws.String())
+	return fmt.Errorf("%s %w %s", typ.String(), ErrQNameIsNotDefinedInWorkspace, ws.String())
 }
