@@ -25,7 +25,7 @@ const (
 	Field_WSName                    = "WSName"
 	Field_WSKind                    = "WSKind"
 	Field_AppName                   = "AppName"
-	DefaultPrincipalTokenExpiration = time.Hour
+	DefaultPrincipalTokenExpiration = 168 * time.Hour // 1 week
 )
 
 var (
