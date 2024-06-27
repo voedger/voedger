@@ -20,10 +20,6 @@ func ProvideActualizers(cfg BasicAsyncActualizerConfig) IActualizersService {
 	return newActualizers(cfg)
 }
 
-func ProvideAsyncActualizerFactory() AsyncActualizerFactory {
-	return asyncActualizerFactory
-}
-
 func ProvideSyncActualizerFactory() SyncActualizerFactory {
 	return syncActualizerFactory
 }

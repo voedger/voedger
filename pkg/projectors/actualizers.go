@@ -223,10 +223,8 @@ func (p *partActs) start(n appdef.QName) {
 			conf:      p.cfg,
 		}}
 
-	// TODO: actualizer.Prepare never returns an error. Reduce complexity.
-	if err := rt.actualizer.Prepare(nil); err != nil {
-		panic(fmt.Errorf("%v[%d]: %w", p.cfg.AppQName, p.cfg.Partition, err))
-	}
+	rt.actualizer.Prepare()
+
 	ctx, cancel := context.WithCancel(p.cfg.Ctx)
 	rt.cancel = cancel
 

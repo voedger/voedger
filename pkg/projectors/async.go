@@ -50,7 +50,6 @@ type (
 	readPLogBatch func(*plogBatch) error
 )
 
-// implements ServiceOperator
 type asyncActualizer struct {
 	conf         AsyncActualizerConf
 	projector    appdef.QName
@@ -62,7 +61,7 @@ type asyncActualizer struct {
 	plogBatch          // [50]plogEvent
 }
 
-func (a *asyncActualizer) Prepare(interface{}) error {
+func (a *asyncActualizer) Prepare() {
 	if a.conf.IntentsLimit == 0 {
 		a.conf.IntentsLimit = defaultIntentsLimit
 	}
@@ -84,8 +83,8 @@ func (a *asyncActualizer) Prepare(interface{}) error {
 	if a.conf.LogError == nil {
 		a.conf.LogError = logger.Error
 	}
-	return nil
 }
+
 func (a *asyncActualizer) Run(ctx context.Context) {
 	var err error
 	if err = a.waitForAppDeploy(ctx); err != nil {
@@ -108,7 +107,7 @@ func (a *asyncActualizer) Run(ctx context.Context) {
 		}
 	}
 }
-func (a *asyncActualizer) Stop() {}
+
 func (a *asyncActualizer) cancelChannel(e error) {
 	a.readCtx.cancelWithError(e)
 	a.conf.Broker.WatchChannel(a.readCtx.ctx, a.conf.channel, func(projection in10n.ProjectionKey, offset istructs.Offset) {})

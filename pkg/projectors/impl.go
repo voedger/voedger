@@ -17,13 +17,6 @@ import (
 	"github.com/voedger/voedger/pkg/state"
 )
 
-func asyncActualizerFactory(conf AsyncActualizerConf, name appdef.QName) (pipeline.ISyncOperator, error) {
-	return pipeline.ServiceOperator(&asyncActualizer{
-		projector: name,
-		conf:      conf,
-	}), nil
-}
-
 func syncActualizerFactory(conf SyncActualizerConf, projectors istructs.Projectors) pipeline.ISyncOperator {
 	if conf.IntentsLimit == 0 {
 		conf.IntentsLimit = defaultIntentsLimit

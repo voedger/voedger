@@ -828,23 +828,15 @@ func Test_AsynchronousActualizer_Stress_NonBuffered(t *testing.T) {
 	t.Logf("Initialized in %s", time.Since(t0))
 
 	// Wait for the projectors
-	// TODO: decrease the number of iterations
-	for {
-		complete := true
-		for i := 0; i < totalPartitions && complete; i++ {
-			tp := partitions[i]
-			for k := 0; k < projectorsPerPartition && complete; k++ {
-				stored := actMetrics.value(aaStoredOffset, tp.number, prjName(k))
-				if stored < int64(tp.topOffset) {
-					complete = false
-					break
-				}
+	for i := 0; i < totalPartitions; i++ {
+		tp := partitions[i]
+		for k := 0; k < projectorsPerPartition; k++ {
+			stored := actMetrics.value(aaStoredOffset, tp.number, prjName(k))
+			for stored < int64(tp.topOffset) {
+				time.Sleep(time.Millisecond)
+				stored = actMetrics.value(aaStoredOffset, tp.number, prjName(k))
 			}
 		}
-		if complete {
-			break
-		}
-		time.Sleep(time.Nanosecond)
 	}
 
 	duration := time.Since(t0)
