@@ -90,10 +90,6 @@ type ViewTypeBuilder func(builder appdef.IViewBuilder)
 
 type WorkToEventFunc func(work interface{}) istructs.IPLogEvent
 
-// AsyncActualizerFactory returns the ServiceOperator<AsyncActualizer>
-// workpiece must implement projectors.IAsyncActualizerWork
-type AsyncActualizerFactory func(conf AsyncActualizerConf, name appdef.QName) (pipeline.ISyncOperator, error)
-
 // SyncActualizerFactory returns the Operator<SyncActualizer>
 // Workpiece is ...?
 type SyncActualizerFactory func(conf SyncActualizerConf, projectors istructs.Projectors) pipeline.ISyncOperator
