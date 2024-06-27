@@ -6,66 +6,98 @@
 package projectors
 
 import (
-	"context"
+	"fmt"
+	"sync/atomic"
 	"testing"
+	"time"
 
-	"github.com/stretchr/testify/mock"
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/goutils/testingu/require"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/istructsmem"
 )
 
-type appPartitions struct {
-	mock.Mock
-	appparts.IAppPartitions
-}
-
-func (s *appPartitions) AppDef(n appdef.AppQName) (appdef.IAppDef, error) {
-	def := s.Called(n).Get(0).(appdef.IAppDef)
-	err := s.Called(n).Get(1)
-	if err == nil {
-		return def, nil
-	}
-	return def, err.(error)
-}
-
 func Test_actualizers_DeployPartition(t *testing.T) {
-	t.Skip("This test is not ready yet")
-
-	cmd := appdef.NewQName("test", "cmd")
-	prj := appdef.NewQName("test", "projector")
-
-	def := func() appdef.IAppDef {
-		adb := appdef.New()
-		adb.AddCommand(cmd)
-		adb.AddProjector(prj).
-			SetSync(false).
-			Events().Add(cmd)
-		return adb.MustBuild()
-	}()
-
-	parts := new(appPartitions)
-	parts.On("AppDef", istructs.AppQName_test1_app1).Return(def, nil)
-
-	vvmCtx, vvmCancel := context.WithCancel(context.Background())
-
-	actualizers := newActualizers(BasicAsyncActualizerConfig{
-		VvmName:       "test",
-		Ctx:           vvmCtx,
-		AppPartitions: parts,
-		SecretReader:  nil,
-		Tokens:        nil,
-		Metrics:       nil,
-		Broker:        nil,
-		Federation:    nil,
-	})
-
-	actualizers.DeployPartition(istructs.AppQName_test1_app1, istructs.PartitionID(1))
-
 	require := require.New(t)
 
-	require.Equal(1, 1)
+	appName := istructs.AppQName_test1_app1
 
-	vvmCancel()
+	const (
+		partCount = 10
+		prjCount  = 10
+		evCount   = 10
+	)
+
+	prjName := func(i int) appdef.QName {
+		return appdef.NewQName("test", fmt.Sprintf("prj_%d", i))
+	}
+
+	var (
+		counter int64
+		finish  int64 = partCount * prjCount * evCount
+	)
+
+	appParts, appStructs, start, stop := deployTestApp(
+		appName, partCount, false,
+		func(appDef appdef.IAppDefBuilder) {
+			appDef.AddPackage("test", "test.com/test")
+			appDef.AddCommand(testQName)
+			for i := 0; i < prjCount; i++ {
+				appDef.AddProjector(prjName(i)).Events().Add(testQName, appdef.ProjectorEventKind_Execute)
+			}
+			addWS(appDef, testWorkspace, testWorkspaceDescriptor)
+		},
+		func(cfg *istructsmem.AppConfigType) {
+			cfg.Resources.Add(istructsmem.NewCommandFunction(testQName, istructsmem.NullCommandExec))
+			for i := 0; i < prjCount; i++ {
+				cfg.AddAsyncProjectors(istructs.Projector{
+					Name: prjName(i),
+					Func: func(istructs.IPLogEvent, istructs.IState, istructs.IIntents) error {
+						atomic.AddInt64(&counter, 1)
+						return nil
+					},
+				})
+			}
+		},
+		&BasicAsyncActualizerConfig{})
+
+	testWS := istructs.WSID(1001)
+
+	ofs := istructs.Offset(1)
+	createWS(appStructs, testWS, testWorkspaceDescriptor, 0, ofs)
+	ofs++
+
+	f := pLogFiller{
+		app:      appStructs,
+		cmdQName: testQName,
+	}
+	for i := 0; i < evCount; i++ {
+		for p := istructs.PartitionID(0); p < partCount; p++ {
+			f.partition, f.offset = p, ofs
+			f.fill(testWS)
+			ofs++
+		}
+	}
+
+	appParts.DeployAppPartitions(appName,
+		func() []istructs.PartitionID {
+			pp := make([]istructs.PartitionID, partCount)
+			for p := istructs.PartitionID(0); p < partCount; p++ {
+				pp[int(p)] = p
+			}
+			return pp
+		}())
+
+	start()
+
+	// Wait for the projectors
+
+	for atomic.LoadInt64(&counter) < finish {
+		time.Sleep(time.Millisecond)
+	}
+
+	// stop services
+	stop()
+
+	require.Equal(finish, counter)
 }
