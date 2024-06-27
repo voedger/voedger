@@ -284,7 +284,7 @@ func deployTestApp(
 	}
 
 	appParts.DeployApp(appName, appDef, appPartsCount, appparts.PoolSize(10, 10, 10))
-	appParts.DeployAppPartitions(appName, partID)
+	//appParts.DeployAppPartitions(appName, partID)
 
 	cleanup = func() {
 		appPartsCleanup()

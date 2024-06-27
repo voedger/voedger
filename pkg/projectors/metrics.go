@@ -38,10 +38,11 @@ func (*simpleMetrics) key(metricName string, partition istructs.PartitionID, pro
 }
 
 func (m *simpleMetrics) total(metricName string) int64 {
-	m.mx.RLock()
-	defer m.mx.RUnlock()
 	key := metricName + ":"
 	value := int64(0)
+
+	m.mx.RLock()
+	defer m.mx.RUnlock()
 	for k, v := range m.v {
 		if strings.HasPrefix(k, key) {
 			value += v
@@ -51,15 +52,18 @@ func (m *simpleMetrics) total(metricName string) int64 {
 }
 
 func (m *simpleMetrics) value(metricName string, partition istructs.PartitionID, projection appdef.QName) int64 {
+	k := m.key(metricName, partition, projection)
+
 	m.mx.RLock()
 	defer m.mx.RUnlock()
-	return m.v[m.key(metricName, partition, projection)]
+	return m.v[k]
 }
 
 func (m *simpleMetrics) Increase(metricName string, partition istructs.PartitionID, projection appdef.QName, valueDelta float64) {
+	k := m.key(metricName, partition, projection)
+
 	m.mx.Lock()
 	defer m.mx.Unlock()
-	k := m.key(metricName, partition, projection)
 	if v, ok := m.v[k]; ok {
 		m.v[k] = v + int64(valueDelta)
 	} else {
@@ -68,8 +72,9 @@ func (m *simpleMetrics) Increase(metricName string, partition istructs.Partition
 }
 
 func (m *simpleMetrics) Set(metricName string, partition istructs.PartitionID, projection appdef.QName, value float64) {
+	k := m.key(metricName, partition, projection)
+
 	m.mx.Lock()
 	defer m.mx.Unlock()
-	k := m.key(metricName, partition, projection)
 	m.v[k] = int64(value)
 }

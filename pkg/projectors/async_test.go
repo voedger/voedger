@@ -749,12 +749,14 @@ After:
 */
 
 func Test_AsynchronousActualizer_Stress_NonBuffered(t *testing.T) {
-	t.Skip()
+	//	t.Skip()
 
-	projectorFilter := appdef.NewQName("pkg", "fake")
+	require := require.New(t)
+
+	projectorFilter := appdef.NewQName("test", "cmd")
 	const totalPartitions = 40
 	const projectorsPerPartition = 5
-	const eventsPerPartition = 10000
+	const eventsPerPartition = 20000
 
 	appName := istructs.AppQName_test1_app1
 	partID := make([]istructs.PartitionID, totalPartitions)
@@ -786,19 +788,21 @@ func Test_AsynchronousActualizer_Stress_NonBuffered(t *testing.T) {
 		FlushInterval: 2 * time.Second,
 		Broker:        broker,
 		AAMetrics:     actMetrics,
-		LogError:      func(args ...interface{}) {},
+		LogError: func(args ...interface{}) {
+			require.Fail("actualizer error", args...)
+		},
 	}
 
 	t0 := time.Now()
 
-	_, cleanup, metrics, appStructs := deployTestApp(
+	appParts, cleanup, metrics, appStructs := deployTestApp(
 		appName, totalPartitions, partID, true,
 		func(appDef appdef.IAppDefBuilder) {
 			appDef.AddPackage("test", "test.com/test")
 			appDef.AddCommand(projectorFilter)
 			appDef.AddCommand(testQName)
 			for i := 0; i < projectorsPerPartition; i++ {
-				appDef.AddProjector(prjName(i)).Events().Add(projectorFilter, appdef.ProjectorEventKind_Execute)
+				appDef.AddProjector(prjName(i)).Events().Add(testQName, appdef.ProjectorEventKind_Execute)
 			}
 		},
 		func(cfg *istructsmem.AppConfigType) {
@@ -807,12 +811,16 @@ func Test_AsynchronousActualizer_Stress_NonBuffered(t *testing.T) {
 			for i := 0; i < projectorsPerPartition; i++ {
 				cfg.AddAsyncProjectors(istructs.Projector{
 					Name: prjName(i),
-					Func: testIncrementorClosure,
+					Func: func(istructs.IPLogEvent, istructs.IState, istructs.IIntents) error {
+						return nil
+					},
 				})
 			}
 		},
 		&actCfg)
 	defer cleanup()
+
+	require.NotNil(appParts)
 
 	t.Logf("Initialized in %s", time.Since(t0))
 
@@ -834,18 +842,27 @@ func Test_AsynchronousActualizer_Stress_NonBuffered(t *testing.T) {
 		}
 	}
 
+	appParts.DeployAppPartitions(appName, partID)
+
 	// Wait for the projectors
-	for complete := false; !complete; time.Sleep(time.Nanosecond) {
-		complete = true
-		for i := 0; (i < totalPartitions) && complete; i++ {
+	for {
+		complete := true
+		for i := 0; i < totalPartitions && complete; i++ {
 			tp := partitions[i]
-			for k := 0; (k < projectorsPerPartition) && complete; k++ {
-				if actMetrics.value(aaStoredOffset, tp.number, prjName(k)) < int64(tp.topOffset) {
+			for k := 0; k < projectorsPerPartition && complete; k++ {
+				stored := actMetrics.value(aaStoredOffset, tp.number, prjName(k))
+				if stored < int64(tp.topOffset) {
 					complete = false
+					break
 				}
 			}
 		}
+		if complete {
+			break
+		}
+		time.Sleep(time.Nanosecond)
 	}
+
 	duration := time.Since(t0)
 	totalEvents := totalPartitions * eventsPerPartition
 	t.Logf("Actualized %d events in %s ", totalEvents, duration)
@@ -877,12 +894,12 @@ func Test_AsynchronousActualizer_Stress_NonBuffered(t *testing.T) {
 /home/michael/Workspaces/voedger/voedger/pkg/projectors/async_test.go:1067: FlushesTotal: 400
 */
 func Test_AsynchronousActualizer_Stress_Buffered(t *testing.T) {
-	t.Skip()
+	//	t.Skip()
 
-	projectorFilter := appdef.NewQName("pkg", "fake")
+	projectorFilter := appdef.NewQName("test", "cmd")
 	const totalPartitions = 40
 	const projectorsPerPartition = 5
-	const eventsPerPartition = 10000
+	const eventsPerPartition = 20000
 
 	appName := istructs.AppQName_test1_app1
 	partID := make([]istructs.PartitionID, totalPartitions)
