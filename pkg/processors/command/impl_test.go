@@ -50,7 +50,6 @@ var (
 func TestBasicUsage(t *testing.T) {
 	require := require.New(t)
 	check := make(chan interface{}, 1)
-	cudsCheck := make(chan interface{})
 
 	testCmdQName := appdef.NewQName(appdef.SysPackage, "Test")
 	// схема параметров тестовой команды
@@ -70,13 +69,6 @@ func TestBasicUsage(t *testing.T) {
 
 		// сама тестовая команда
 		testExec := func(args istructs.ExecCommandArgs) (err error) {
-			cuds := args.Workpiece.(*cmdWorkpiece).parsedCUDs
-			if len(cuds) > 0 {
-				require.Len(cuds, 1)
-				require.Equal(float64(1), cuds[0].fields[appdef.SystemField_ID])
-				require.Equal(testCDoc.String(), cuds[0].fields[appdef.SystemField_QName])
-				close(cudsCheck)
-			}
 			require.Equal(istructs.WSID(1), args.PrepareArgs.WSID)
 			require.NotNil(args.State)
 
@@ -116,7 +108,7 @@ func TestBasicUsage(t *testing.T) {
 	t.Run("basic usage", func(t *testing.T) {
 		// command processor работает через ibus.SendResponse -> нам нужен sender -> тестируем через ibus.SendRequest2()
 		request := ibus.Request{
-			Body:     []byte(`{"args":{"Text":"hello"},"unloggedArgs":{"Password":"pass"},"cuds":[{"fields":{"sys.ID":1,"sys.QName":"test.TestCDoc"}}]}`),
+			Body:     []byte(`{"args":{"Text":"hello"},"unloggedArgs":{"Password":"pass"}}`),
 			AppQName: istructs.AppQName_untill_airs_bp.String(),
 			WSID:     1,
 			Resource: "c.sys.Test",
@@ -133,9 +125,6 @@ func TestBasicUsage(t *testing.T) {
 		// убедимся, что команда действительно отработала и нотификации отправились
 		<-check
 		<-check
-
-		// убедимся, что CUD'ы проверились
-		<-cudsCheck
 	})
 
 	t.Run("500 internal server error command exec error", func(t *testing.T) {
@@ -484,8 +473,10 @@ func TestAuthnz(t *testing.T) {
 		appDef.AddCDoc(qNameTestDeniedCDoc)
 		appDef.AddCommand(qNameAllowedCmd)
 		appDef.AddCommand(qNameDeniedCmd)
+		appDef.AddCommand(istructs.QNameCommandCUD)
 		cfg.Resources.Add(istructsmem.NewCommandFunction(qNameAllowedCmd, istructsmem.NullCommandExec))
 		cfg.Resources.Add(istructsmem.NewCommandFunction(qNameDeniedCmd, istructsmem.NullCommandExec))
+		cfg.Resources.Add(istructsmem.NewCommandFunction(istructs.QNameCommandCUD, istructsmem.NullCommandExec))
 	})
 	defer tearDown(app)
 
@@ -518,7 +509,7 @@ func TestAuthnz(t *testing.T) {
 				Body:     []byte(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"sys.TestDeniedCDoc"}}]}`),
 				AppQName: istructs.AppQName_untill_airs_bp.String(),
 				WSID:     1,
-				Resource: "c.sys.TestAllowedCmd",
+				Resource: "c.sys.CUD",
 				Header:   getAuthHeader(token),
 			},
 			expectedStatusCode: http.StatusForbidden,
@@ -541,7 +532,7 @@ func TestAuthnz(t *testing.T) {
 			require.Nil(secErr, secErr)
 			require.Nil(sections)
 			log.Println(string(resp.Data))
-			require.Equal(c.expectedStatusCode, resp.StatusCode)
+			require.Equal(c.expectedStatusCode, resp.StatusCode, c.desc, string(resp.Data))
 		})
 	}
 }
@@ -707,8 +698,9 @@ func setUp(t *testing.T, prepare func(appDef appdef.IAppDefBuilder, cfg *istruct
 	}, time.Now)
 
 	// prepare the AppParts to borrow AppStructs
-	appParts, appPartsClean, err := appparts.NewWithActualizerWithExtEnginesFactories(appStructsProvider,
+	appParts, appPartsClean, err := appparts.New2(appStructsProvider,
 		projectors.NewSyncActualizerFactoryFactory(projectors.ProvideSyncActualizerFactory(), secretReader, n10nBroker),
+		appparts.NullActualizers,
 		engines.ProvideExtEngineFactories(
 			engines.ExtEngineFactoriesConfig{
 				AppConfigs:  cfgs,

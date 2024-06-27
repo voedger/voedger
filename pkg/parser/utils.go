@@ -165,47 +165,42 @@ func lookupInCtx[stmtType *TableStmt | *TypeStmt | *FunctionStmt | *CommandStmt 
 		}
 	}
 
-	if schema == ictx.pkg {
-		ws := getCurrentWorkspace(ictx)
-		// First look in the current workspace
-		if ws != nil {
-			ws.Iterate(lookupCallback)
-			if item == nil {
-				var value interface{} = item
-				if _, ok := value.(*WorkspaceStmt); !ok { //  when looking for something else than a workspace, look in the inherited workspaces
-					for _, dq := range ws.Inherits {
-						err := resolveInCtx[*WorkspaceStmt](dq, ictx, func(f *WorkspaceStmt, schema *PackageSchemaAST) error {
-							f.Iterate(lookupCallback)
-							return nil
-						})
-						if err != nil {
-							return nil, nil, err
-						}
+	ws := getCurrentWorkspace(ictx)
+	// First look in the current workspace
+	if ws != nil {
+		ws.Iterate(lookupCallback)
+		if item == nil {
+			var value interface{} = item
+			if _, ok := value.(*WorkspaceStmt); !ok { //  when looking for something else than a workspace, look in the inherited workspaces
+				for _, dq := range ws.Inherits {
+					err := resolveInCtx[*WorkspaceStmt](dq, ictx, func(f *WorkspaceStmt, schema *PackageSchemaAST) error {
+						f.Iterate(lookupCallback)
+						return nil
+					})
+					if err != nil {
+						return nil, nil, err
 					}
 				}
 			}
 		}
-
-		// Look in the package
-		if item == nil {
-			schema.Ast.Iterate(lookupCallback)
-		}
-
-		// Look in the sys package
-		if item == nil && maybeSysPkg(fn.Package) { // Look in sys pkg
-			schema = ictx.app.Packages[appdef.SysPackage]
-			if schema == nil {
-				return nil, nil, ErrCouldNotImport(appdef.SysPackage)
-			}
-			iterPkg := func(coll IStatementCollection) {
-				coll.Iterate(lookupCallback)
-			}
-			iterPkg(schema.Ast)
-		}
-		return item, schema, nil
 	}
 
-	schema.Ast.Iterate(lookupCallback)
+	// Look in the package
+	if item == nil {
+		schema.Ast.Iterate(lookupCallback)
+	}
+
+	// Look in the sys package
+	if item == nil && maybeSysPkg(fn.Package) { // Look in sys pkg
+		schema = ictx.app.Packages[appdef.SysPackage]
+		if schema == nil {
+			return nil, nil, ErrCouldNotImport(appdef.SysPackage)
+		}
+		iterPkg := func(coll IStatementCollection) {
+			coll.Iterate(lookupCallback)
+		}
+		iterPkg(schema.Ast)
+	}
 	return item, schema, nil
 }
 
