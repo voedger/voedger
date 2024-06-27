@@ -190,7 +190,7 @@ func TestSignInErrors(t *testing.T) {
 		body := fmt.Sprintf(`{"args": {"Login": "%s","Password": "%s","AppName": "%s", "TTLHours":1000},"elements":[{"fields":["PrincipalToken"]}]}`,
 			prn.Name, prn.Pwd, prn.AppQName.String())
 		vit.PostApp(istructs.AppQName_sys_registry, prn.PseudoProfileWSID, "q.registry.IssuePrincipalToken", body,
-			coreutils.Expect400("max token TTL hours is 24 hours"))
+			coreutils.Expect400("max token TTL hours is 168 hours"))
 	})
 }
 

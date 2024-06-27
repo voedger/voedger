@@ -34,7 +34,7 @@ const (
 	field_Login             = "Login"
 	decimalBase             = 10
 	field_TTLHours          = "TTLHours"
-	maxTokenTTLHours        = 24
+	maxTokenTTLHours        = 168 // 1 week
 )
 
 var (
