@@ -34,18 +34,19 @@ func (e *engines) release() {
 }
 
 type app struct {
+	mx         sync.RWMutex
 	apps       *apps
 	name       appdef.AppQName
 	partsCount istructs.NumAppPartitions
 	def        appdef.IAppDef
 	structs    istructs.IAppStructs
 	engines    [ProcessorKind_Count]*pool.Pool[*engines]
-	// no locks need. Owned apps structure will locks access to this structure
-	parts map[istructs.PartitionID]*partition
+	parts      map[istructs.PartitionID]*partition
 }
 
 func newApplication(apps *apps, name appdef.AppQName, partsCount istructs.NumAppPartitions) *app {
 	return &app{
+		mx:         sync.RWMutex{},
 		apps:       apps,
 		name:       name,
 		partsCount: partsCount,
