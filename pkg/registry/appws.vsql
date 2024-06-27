@@ -30,7 +30,7 @@ ALTER WORKSPACE AppWorkspaceWS (
 		Login text NOT NULL,
 		Password text NOT NULL,
 		AppName text NOT NULL,
-		TTL int32
+		TTLHours int32
 	);
 
 	TYPE IssuePrincipalTokenResult (

@@ -7,6 +7,8 @@ package registry
 import (
 	"context"
 	"fmt"
+	"net/http"
+	"time"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -14,6 +16,7 @@ import (
 	"github.com/voedger/voedger/pkg/itokens"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	"github.com/voedger/voedger/pkg/sys/authnz"
+	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 // q.registry.IssuePrincipalToken
@@ -78,7 +81,14 @@ func provideIssuePrincipalTokenExec(itokens itokens.ITokens) istructsmem.ExecQue
 			SubjectKind: istructs.SubjectKindType(cdocLogin.AsInt32(authnz.Field_SubjectKind)),
 			ProfileWSID: istructs.WSID(result.profileWSID),
 		}
-		if result.principalToken, err = itokens.IssueToken(appQName, authnz.DefaultPrincipalTokenExpiration, &principalPayload); err != nil {
+		ttl := time.Duration(args.ArgumentObject.AsInt32(field_TTLHours)) * time.Hour
+		if ttl == 0 {
+			ttl = authnz.DefaultPrincipalTokenExpiration
+		} else if ttl > maxTokenTTLHours*time.Hour {
+			return coreutils.NewHTTPErrorf(http.StatusBadRequest, fmt.Errorf("max token TTL hours is %d hours", maxTokenTTLHours))
+		}
+
+		if result.principalToken, err = itokens.IssueToken(appQName, ttl, &principalPayload); err != nil {
 			return fmt.Errorf("principal token issue failed: %w", err)
 		}
 
