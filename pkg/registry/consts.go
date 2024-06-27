@@ -33,6 +33,8 @@ const (
 	field_AppName           = "AppName"
 	field_Login             = "Login"
 	decimalBase             = 10
+	field_TTLHours          = "TTLHours"
+	maxTokenTTLHours        = 24
 )
 
 var (
