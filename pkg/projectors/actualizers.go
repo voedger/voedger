@@ -109,7 +109,7 @@ func (a *actualizers) DeployPartition(n appdef.AppQName, id istructs.PartitionID
 	if !ok {
 		a.mx.Lock()
 		if accuracy, ok := a.apps[n]; ok {
-			app = accuracy
+			app = accuracy // notest
 		} else {
 			app = &appActs{
 				mx:    sync.RWMutex{},
@@ -127,7 +127,7 @@ func (a *actualizers) DeployPartition(n appdef.AppQName, id istructs.PartitionID
 	if !ok {
 		app.mx.Lock()
 		if accuracy, ok := app.parts[id]; ok {
-			part = accuracy
+			part = accuracy // notest
 		} else {
 			part = &partActs{
 				cfg: AsyncActualizerConf{
@@ -147,6 +147,8 @@ func (a *actualizers) DeployPartition(n appdef.AppQName, id istructs.PartitionID
 	// stop async actualizers for removed projectors
 	part.mx.RLock()
 	for name := range part.rt {
+		// TODO: Cover the tests after IAppPartitions will have the possibility to redeploy application with new AppDef
+		// notest
 		if prj := def.Projector(name); (prj == nil) || prj.Sync() {
 			part.stop(name)
 		}
@@ -194,11 +196,6 @@ func (a *actualizers) UndeployPartition(n appdef.AppQName, id istructs.Partition
 
 	app.mx.Lock()
 	delete(app.parts, id)
-	if len(app.parts) == 0 {
-		a.mx.Lock()
-		delete(a.apps, n)
-		a.mx.Unlock()
-	}
 	app.mx.Unlock()
 }
 
@@ -207,6 +204,42 @@ func (a *actualizers) SetAppPartitions(appParts appparts.IAppPartitions) {
 		panic(fmt.Errorf("unable to reset application partitions: %w", errors.ErrUnsupported))
 	}
 	a.cfg.AppPartitions = appParts
+}
+
+// internal metrics for testing
+type actualizersMetrics struct {
+	apps        []appdef.AppQName
+	parts       map[appdef.AppQName][]istructs.PartitionID
+	actualizers map[appdef.AppQName]map[istructs.PartitionID][]appdef.QName
+}
+
+func (a *actualizers) metrics() actualizersMetrics {
+	a.mx.RLock()
+	s := actualizersMetrics{
+		apps:        make([]appdef.AppQName, 0, len(a.apps)),
+		parts:       make(map[appdef.AppQName][]istructs.PartitionID, len(a.apps)),
+		actualizers: make(map[appdef.AppQName]map[istructs.PartitionID][]appdef.QName, len(a.apps)),
+	}
+	for n, app := range a.apps {
+		s.apps = append(s.apps, n)
+		app.mx.RLock()
+		s.parts[n] = make([]istructs.PartitionID, 0, len(app.parts))
+		s.actualizers[n] = make(map[istructs.PartitionID][]appdef.QName, len(app.parts))
+		for id, part := range app.parts {
+			s.parts[n] = append(s.parts[n], id)
+			part.mx.RLock()
+			pp := make([]appdef.QName, 0, len(part.rt))
+			for prj := range part.rt {
+				pp = append(pp, prj)
+			}
+			part.mx.RUnlock()
+			s.actualizers[n][id] = pp
+		}
+		app.mx.RUnlock()
+	}
+	a.mx.RUnlock()
+
+	return s
 }
 
 // p.mx should be locked for read by caller

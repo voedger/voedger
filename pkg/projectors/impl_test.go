@@ -194,6 +194,30 @@ func deployTestApp(
 	appStructs istructs.IAppStructs,
 	start, stop func(),
 ) {
+	appParts, _, appStructs, start, stop = deployTestAppEx(
+		appName,
+		appPartsCount,
+		cachedStorage,
+		prepareAppDef,
+		prepareAppCfg,
+		actualizerCfg,
+	)
+	return appParts, appStructs, start, stop
+}
+
+func deployTestAppEx(
+	appName appdef.AppQName,
+	appPartsCount istructs.NumAppPartitions,
+	cachedStorage bool,
+	prepareAppDef appDefCallback,
+	prepareAppCfg appCfgCallback,
+	actualizerCfg *BasicAsyncActualizerConfig,
+) (
+	appParts appparts.IAppPartitions,
+	actualizers IActualizersService,
+	appStructs istructs.IAppStructs,
+	start, stop func(),
+) {
 	appDefBuilder := appdef.New()
 	if prepareAppDef != nil {
 		prepareAppDef(appDefBuilder)
@@ -292,7 +316,7 @@ func deployTestApp(
 		secretReader = actualizerCfg.SecretReader
 	}
 
-	actualizers := ProvideActualizers(*actualizerCfg)
+	actualizers = ProvideActualizers(*actualizerCfg)
 
 	appParts, appPartsCleanup, err := appparts.New2(
 		appStructsProvider,
@@ -325,7 +349,7 @@ func deployTestApp(
 		}
 	}
 
-	return appParts, appStructs, start, stop
+	return appParts, actualizers, appStructs, start, stop
 }
 
 func addWS(appDef appdef.IAppDefBuilder, wsKind, wsDescriptorKind appdef.QName) appdef.IWorkspaceBuilder {
