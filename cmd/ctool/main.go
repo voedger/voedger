@@ -117,11 +117,14 @@ func execRootCmd(args []string, ver string) error {
 		newMonCmd(),
 		newAlertCmd(),
 	)
-	rootCmd.SilenceErrors = true
-	rootCmd.PersistentFlags().BoolVar(&dryRun, "dry-run", false, "Perform a dry run of the command without making any actual changes")
 
-	rootCmd.PersistentFlags().BoolVar(&skipNodeMemoryCheck, "skip-node-memory-check", false, "Skip checking nodes for the presence of the minimum allowable amount of RAM")
-	rootCmd.PersistentFlags().BoolVar(&devMode, "dev-mode", false, "Use development mode for DB stack")
+	rootCmd.PersistentFlags().BoolP("help", "h", false, "Display help for the command")
+
+	rootCmd.SilenceErrors = true
+	rootCmd.PersistentFlags().BoolVar(&dryRun, "dry-run", false, "Perform a dry run without making any changes")
+
+	rootCmd.PersistentFlags().BoolVar(&skipNodeMemoryCheck, "skip-node-memory-check", false, "Skip the minimum RAM check for nodes")
+	rootCmd.PersistentFlags().BoolVar(&devMode, "dev-mode", false, "Use development mode for the database stack")
 	logger.SetLogLevel(getLoggerLevel())
 
 	return cobrau.ExecCommandAndCatchInterrupt(rootCmd)

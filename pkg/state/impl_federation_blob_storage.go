@@ -5,6 +5,7 @@
 package state
 
 import (
+	"bytes"
 	"errors"
 	"io"
 	"strconv"
@@ -83,7 +84,7 @@ func (s *federationBlobStorage) getReadCloser(key istructs.IStateKeyBuilder) (io
 		if err != nil {
 			return nil, err
 		}
-		readCloser = io.NopCloser(strings.NewReader(string(result)))
+		readCloser = io.NopCloser(bytes.NewReader(result))
 	} else {
 		if v, ok := kb.data[Field_Token]; ok {
 			opts = append(opts, coreutils.WithAuthorizeBy(v.(string)))

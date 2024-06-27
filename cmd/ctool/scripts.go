@@ -13,6 +13,7 @@ import (
 	"math/rand"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/voedger/voedger/pkg/goutils/exec"
@@ -199,7 +200,8 @@ func prepareScriptFromTemplate(scriptFileName string, data interface{}) error {
 		return err
 	}
 
-	fName := filepath.Join(embedScriptsDir, "drafts", scriptFileName)
+	embedScriptFileName := strings.ReplaceAll(scriptFileName, "\\", "/")
+	fName := fmt.Sprintf("%s/%s/%s", embedScriptsDir, "drafts", embedScriptFileName)
 
 	content, err := scriptsFS.ReadFile(fName)
 	if err != nil {

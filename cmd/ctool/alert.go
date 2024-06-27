@@ -22,21 +22,21 @@ func newAlertCmd() *cobra.Command {
 
 	alertAddDiscordCmd := &cobra.Command{
 		Use:   "discord",
-		Short: "Add Discord webhook",
+		Short: "Add a Discord webhook",
 		Args:  cobra.ExactArgs(1),
 		RunE:  alertAddDiscord,
 	}
 
 	alertRemoveDiscordCmd := &cobra.Command{
 		Use:   "discord",
-		Short: "Remove Discord webhook",
+		Short: "Remove a Discord webhook",
 		Args:  cobra.ExactArgs(0),
 		RunE:  alertRemoveDiscord,
 	}
 
 	alertAddCmd := &cobra.Command{
 		Use:   "add",
-		Short: "Add recipients of alerts",
+		Short: "Add alert recipients",
 		Args:  cobra.ExactArgs(0),
 	}
 
@@ -44,7 +44,7 @@ func newAlertCmd() *cobra.Command {
 
 	alertRemoveCmd := &cobra.Command{
 		Use:   "remove",
-		Short: "Remove recipients of alerts",
+		Short: "Remove alert recipients",
 		Args:  cobra.ExactArgs(0),
 	}
 
@@ -52,19 +52,19 @@ func newAlertCmd() *cobra.Command {
 
 	alertCmd := &cobra.Command{
 		Use:   "alert",
-		Short: "Management of the alert",
+		Short: "Manage alerts",
 	}
 
 	if newCluster().Edition != clusterEditionCE {
 		alertConfigsCmd := &cobra.Command{
 			Use:   "configs",
-			Short: "Management of the alert's configuration",
+			Short: "Manage alert configuration",
 			Args:  cobra.ExactArgs(0),
 		}
 
 		alertConfigsDownloadCmd := &cobra.Command{
 			Use:   "download",
-			Short: "Download alert's configuration",
+			Short: "Download alert configuration",
 			Args: func(cmd *cobra.Command, args []string) error {
 				if len(args) != 0 {
 					return ErrInvalidNumberOfArguments
@@ -76,7 +76,7 @@ func newAlertCmd() *cobra.Command {
 
 		alertConfigsUploadCmd := &cobra.Command{
 			Use:   "upload",
-			Short: "Upload alert's configuration",
+			Short: "Upload alert configuration",
 			Args: func(cmd *cobra.Command, args []string) error {
 				if len(args) != 0 {
 					return ErrInvalidNumberOfArguments

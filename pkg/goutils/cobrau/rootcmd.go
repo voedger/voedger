@@ -39,7 +39,7 @@ func PrepareRootCmd(use string, short string, args []string, version string, cmd
 
 	var versionCmd = &cobra.Command{
 		Use:     "version",
-		Short:   "Print current version",
+		Short:   "Print the current version",
 		Aliases: []string{"ver"},
 		Run: func(cmd *cobra.Command, args []string) {
 			fmt.Println(version)
@@ -49,8 +49,8 @@ func PrepareRootCmd(use string, short string, args []string, version string, cmd
 	rootCmd.SetArgs(args[1:])
 	rootCmd.AddCommand(versionCmd)
 	rootCmd.AddCommand(cmds...)
-	rootCmd.PersistentFlags().BoolP("verbose", "v", false, "Verbose output")
-	rootCmd.PersistentFlags().Bool("trace", false, "Extremely verbose output")
+	rootCmd.PersistentFlags().BoolP("verbose", "v", false, "Enable verbose output")
+	rootCmd.PersistentFlags().Bool("trace", false, "Enable extremely verbose output")
 	rootCmd.SilenceUsage = true
 	return rootCmd
 }

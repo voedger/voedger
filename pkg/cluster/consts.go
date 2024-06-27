@@ -37,8 +37,8 @@ var (
 		appdef.SystemField_QName: true,
 	}
 	allowedOpKinds = map[dml.OpKind]bool{
-		dml.OpKind_DirectInsert:    true,
-		dml.OpKind_DirectUpdate:    true,
+		dml.OpKind_UnloggedInsert:  true,
+		dml.OpKind_UnloggedUpdate:  true,
 		dml.OpKind_UpdateCorrupted: true,
 		dml.OpKind_UpdateTable:     true,
 		dml.OpKind_InsertTable:     true,

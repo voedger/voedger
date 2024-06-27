@@ -16,23 +16,23 @@ import (
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-func updateDirect(update update) error {
+func updateUnlogged(update update) error {
 	if update.qNameTypeKind == appdef.TypeKind_ViewRecord {
-		return updateDirect_View(update)
+		return updateUnlogged_View(update)
 	}
-	return updateDirect_Record(update)
+	return updateUnlogged_Record(update)
 }
 
-func updateDirect_View(update update) (err error) {
+func updateUnlogged_View(update update) (err error) {
 	kb := update.appStructs.ViewRecords().KeyBuilder(update.QName)
-	if update.Kind == dml.OpKind_DirectInsert {
+	if update.Kind == dml.OpKind_UnloggedInsert {
 		kb.PutFromJSON(update.setFields)
 	} else if err = coreutils.MapToObject(update.key, kb); err != nil {
 		return err
 	}
 
 	existingViewRec, err := update.appStructs.ViewRecords().Get(update.wsid, kb)
-	if update.Kind == dml.OpKind_DirectInsert {
+	if update.Kind == dml.OpKind_UnloggedInsert {
 		if err == nil {
 			return coreutils.NewHTTPErrorf(http.StatusConflict, "view record already exists")
 		}
@@ -48,11 +48,11 @@ func updateDirect_View(update update) (err error) {
 	existingFields := coreutils.FieldsToMap(existingViewRec, update.appStructs.AppDef(), coreutils.WithNonNilsOnly())
 
 	mergedFields := coreutils.MergeMapsMakeFloats64(existingFields, update.setFields, update.key)
-	mergedFields[appdef.SystemField_QName] = update.QName.String() // missing on direct insert
+	mergedFields[appdef.SystemField_QName] = update.QName.String() // missing on unlogged insert
 	return update.appStructs.ViewRecords().PutJSON(update.wsid, mergedFields)
 }
 
-func updateDirect_Record(update update) error {
+func updateUnlogged_Record(update update) error {
 	existingRec, err := update.appStructs.Records().Get(update.wsid, true, update.id)
 	if err != nil {
 		// notest
@@ -66,25 +66,23 @@ func updateDirect_Record(update update) error {
 	return update.appStructs.Records().PutJSON(update.wsid, mergedFields)
 }
 
-func validateQuery_Direct(update update) error {
+func validateQuery_Unlogged(update update) error {
 	op := "update"
-	if update.Kind == dml.OpKind_DirectInsert {
+	if update.Kind == dml.OpKind_UnloggedInsert {
 		op = "insert"
 	}
 	tp := update.appStructs.AppDef().Type(update.QName)
 	switch {
 	case tp.Kind() == appdef.TypeKind_ViewRecord:
 		if update.id > 0 {
-			return fmt.Errorf("record ID must not be provided on view direct %s", op)
+			return fmt.Errorf("record ID must not be provided on view unlogged %s", op)
 		}
-		if update.Kind == dml.OpKind_DirectInsert {
+		if update.Kind == dml.OpKind_UnloggedInsert {
 			if len(update.key) > 0 {
-				return errors.New("'where' clause is not allowed on view direct insert")
+				return errors.New("'where' clause is not allowed on view unlogged insert")
 			}
-		} else {
-			if len(update.key) == 0 {
-				return errors.New("full key must be provided on view direct update")
-			}
+		} else if len(update.key) == 0 {
+			return errors.New("full key must be provided on view unlogged update")
 		}
 	case allowedDocsTypeKinds[tp.Kind()]:
 		if containers, ok := tp.(appdef.IContainers); ok {
@@ -93,14 +91,14 @@ func validateQuery_Direct(update update) error {
 				return fmt.Errorf("impossible to %s a record that has containers", op)
 			}
 		}
-		if update.Kind == dml.OpKind_DirectInsert {
-			return errors.New("direct insert is not allowed for records")
+		if update.Kind == dml.OpKind_UnloggedInsert {
+			return errors.New("unlogged insert is not allowed for records")
 		}
 		if update.id == 0 {
-			return errors.New("record ID must be provided on record direct update")
+			return errors.New("record ID must be provided on record unlogged update")
 		}
 		if len(update.key) > 0 {
-			return errors.New("'where' clause is not allowed on record direct update")
+			return errors.New("'where' clause is not allowed on record unlogged update")
 		}
 	default:
 		return errors.New("view, CDoc or WDoc only expected")

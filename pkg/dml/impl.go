@@ -78,12 +78,12 @@ func ParseQuery(query string) (op Op, err error) {
 	switch operationStrLowered {
 	case "update":
 		op.Kind = OpKind_UpdateTable
-	case "direct update":
-		op.Kind = OpKind_DirectUpdate
+	case "unlogged update":
+		op.Kind = OpKind_UnloggedUpdate
 	case "update corrupted":
 		op.Kind = OpKind_UpdateCorrupted
-	case "direct insert":
-		op.Kind = OpKind_DirectInsert
+	case "unlogged insert":
+		op.Kind = OpKind_UnloggedInsert
 	case "insert":
 		op.Kind = OpKind_InsertTable
 	default:

@@ -35,7 +35,7 @@ func newBackupCmd() *cobra.Command {
 	if c.Edition == clusterEditionCE {
 		backupNodeCmd = &cobra.Command{
 			Use:   "node [<target folder>]",
-			Short: "Backup db node",
+			Short: "Backup a database node",
 			Args: func(cmd *cobra.Command, args []string) error {
 				if len(args) != 1 {
 					return ErrInvalidNumberOfArguments
@@ -47,7 +47,7 @@ func newBackupCmd() *cobra.Command {
 	} else {
 		backupNodeCmd = &cobra.Command{
 			Use:   "node [<node> <target folder>]",
-			Short: "Backup db node",
+			Short: "Backup a database node",
 			Args: func(cmd *cobra.Command, args []string) error {
 				if len(args) != 2 {
 					return ErrInvalidNumberOfArguments
@@ -63,7 +63,7 @@ func newBackupCmd() *cobra.Command {
 
 	backupCronCmd := &cobra.Command{
 		Use:   "cron [<cron event>]",
-		Short: "Installation of a backup database of schedule",
+		Short: "Install a scheduled backup for the database",
 		Args: func(cmd *cobra.Command, args []string) error {
 			if len(args) != 1 {
 				return ErrInvalidNumberOfArguments
@@ -77,7 +77,7 @@ func newBackupCmd() *cobra.Command {
 
 	backupListCmd := &cobra.Command{
 		Use:   "list",
-		Short: "Display a list of existing backups on all DB nodes",
+		Short: "Display a list of existing backups on all database nodes",
 		Args: func(cmd *cobra.Command, args []string) error {
 			if len(args) != 0 {
 				return ErrInvalidNumberOfArguments
@@ -91,7 +91,7 @@ func newBackupCmd() *cobra.Command {
 
 	backupNowCmd := &cobra.Command{
 		Use:   "now",
-		Short: "Backup database",
+		Short: "Backup the database",
 		Args: func(cmd *cobra.Command, args []string) error {
 			if len(args) != 0 {
 				return ErrInvalidNumberOfArguments
@@ -103,7 +103,7 @@ func newBackupCmd() *cobra.Command {
 
 	backupCmd := &cobra.Command{
 		Use:   "backup",
-		Short: "Backup database",
+		Short: "Backup the database",
 	}
 
 	if c.Edition != clusterEditionCE && !addSshKeyFlag(backupCmd) {
