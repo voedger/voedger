@@ -237,7 +237,7 @@ func (a *asyncActualizer) finit() {
 		a.pipeline.Close()
 	}
 	if logger.IsTrace() {
-		logger.Trace(fmt.Sprintf("%s finalized", a.name))
+		logger.Trace(a.name + "s finalized")
 	}
 }
 

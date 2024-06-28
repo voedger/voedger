@@ -58,8 +58,13 @@ func newActualizers(cfg BasicAsyncActualizerConfig) *actualizers {
 func (*actualizers) Prepare(interface{}) error { return nil }
 
 func (a *actualizers) Run(ctx context.Context) {
+	panic("not implemented")
+}
+
+func (a *actualizers) RunEx(ctx context.Context, started func()) {
 	// store vvm context for deploy new partitions (or redeploy existing)
 	a.cfg.Ctx = ctx
+	started()
 }
 
 func (a *actualizers) Stop() {
