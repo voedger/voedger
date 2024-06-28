@@ -7,6 +7,7 @@
 package projectors
 
 import (
+	"errors"
 	"fmt"
 	"testing"
 	"time"
@@ -300,7 +301,7 @@ func Test_AsynchronousActualizer_ErrorAndRestore(t *testing.T) {
 
 	attempts := 0
 
-	errors := make(chan string, 10)
+	errorsCh := make(chan string, 10)
 	chanAfterError := make(chan time.Time)
 
 	broker, cleanup := in10nmem.ProvideEx2(in10n.Quotas{
@@ -321,7 +322,7 @@ func Test_AsynchronousActualizer_ErrorAndRestore(t *testing.T) {
 			return chanAfterError
 		},
 		LogError: func(args ...interface{}) {
-			errors <- fmt.Sprint("error: ", args)
+			errorsCh <- fmt.Sprint("error: ", args)
 		},
 
 		BundlesLimit:  10,
@@ -352,7 +353,7 @@ func Test_AsynchronousActualizer_ErrorAndRestore(t *testing.T) {
 						if event.Workspace() == 1002 {
 							if attempts == 0 {
 								attempts++
-								return fmt.Errorf("test error") // First attempt will fail
+								return errors.New("test error")
 							}
 							attempts++
 						}
@@ -380,7 +381,7 @@ func Test_AsynchronousActualizer_ErrorAndRestore(t *testing.T) {
 	start()
 
 	// Wait for the logged error
-	errStr := <-errors
+	errStr := <-errorsCh
 	require.Equal("error: [test.failing_projector [1] wsid[1002] offset[0]: test error]", errStr)
 
 	// wait until the istructs.Projector version is updated with the 1st record
