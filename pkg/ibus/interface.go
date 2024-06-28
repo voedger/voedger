@@ -44,7 +44,7 @@ type SectionsWriterType interface {
 
 type ISender interface {
 	// err.Error() must have QName format:
-	//   var ErrTimeoutExpired = errors.New("ibus.ErrTimeoutExpired")
+	//   var ErrBusTimeoutExpired = errors.New("ibus.ErrBusTimeoutExpired")
 	// NullHandler can be used as a reader
 	Send(ctx context.Context, request interface{}, sectionsHandler SectionsHandlerType) (response interface{}, status Status, err error)
 }

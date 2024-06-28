@@ -18,16 +18,6 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
-/* Пояснения к тесту. */
-// Некто, представившийся как «Карлсон 哇"呀呀» совершал покупку в супермаркете № 1234.
-// Пока он выкладывал покупки на кассе самообслуживания № 762, автоматические средства магазина сфотографировали его,
-// вычислили его рост (1,75 м) и приблизительный возраст (33 г.).
-// Все эти данные вместе с данными о содержимом его корзины (печенье и варенье) попали к нам в testDataType. Наша задача:
-// — сформировать новое sync событие c командой «test.sales»
-// — записать его в журнал PLog по смещению 10000 и в WLog по смещению 1000
-// — записать характеристики этого покупателя в таблицу «test.photos» в новую запись
-// — вычитать данные из журналов PLog и WLog, из таблицы и из view фотографий
-//
 /* Test scenario. */
 // Someone who introduced himself as «Carlson 哇" 呀呀» was making a purchase at Supermarket # 1234.
 // While he was uploading purchases at self-checkout # 762, the store's automated tools took a picture of him,
@@ -46,7 +36,7 @@ func TestBasicUsage(t *testing.T) {
 
 	// create app configuration
 	appConfigs := func() AppConfigsType {
-		adb := appdef.New(appName)
+		adb := appdef.New()
 		adb.AddPackage("test", "test.com/test")
 
 		saleParamsName := appdef.NewQName("test", "SaleParams")
@@ -89,7 +79,7 @@ func TestBasicUsage(t *testing.T) {
 			SetParam(saleParamsName)
 
 		cfgs := make(AppConfigsType, 1)
-		cfg := cfgs.AddConfig(appName, adb)
+		cfg := cfgs.AddBuiltInAppConfig(appName, adb)
 		cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 		cfg.Resources.Add(NewCommandFunction(qNameCmdTestSale, NullCommandExec))
 
@@ -99,7 +89,7 @@ func TestBasicUsage(t *testing.T) {
 	// gets AppStructProvider and AppStructs
 	provider := Provide(appConfigs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider())
 
-	app, err := provider.AppStructs(appName)
+	app, err := provider.BuiltIn(appName)
 	require.NoError(err)
 
 	// Build raw event demo
@@ -202,7 +192,7 @@ func TestBasicUsage_ViewRecords(t *testing.T) {
 	appName := istructs.AppQName_test1_app1
 
 	appConfigs := func() AppConfigsType {
-		adb := appdef.New(appName)
+		adb := appdef.New()
 		adb.AddPackage("test", "test.com/test")
 		view := adb.AddView(appdef.NewQName("test", "viewDrinks"))
 		view.Key().PartKey().AddField("partitionKey1", appdef.DataKind_int64)
@@ -216,14 +206,14 @@ func TestBasicUsage_ViewRecords(t *testing.T) {
 			AddField("active", appdef.DataKind_bool, true)
 
 		cfgs := make(AppConfigsType, 1)
-		cfg := cfgs.AddConfig(appName, adb)
+		cfg := cfgs.AddBuiltInAppConfig(appName, adb)
 		cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 
 		return cfgs
 	}
 
 	p := Provide(appConfigs(), iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider())
-	as, err := p.AppStructs(appName)
+	as, err := p.BuiltIn(appName)
 	require.NoError(err)
 	viewRecords := as.ViewRecords()
 	entries := []entryType{
@@ -303,18 +293,18 @@ func Test_appStructsType_ObjectBuilder(t *testing.T) {
 	objName := appdef.NewQName("test", "object")
 
 	appStructs := func() istructs.IAppStructs {
-		adb := appdef.New(appName)
+		adb := appdef.New()
 		adb.AddPackage("test", "test.com/test")
 		obj := adb.AddObject(objName)
 		obj.AddField("int", appdef.DataKind_int64, true)
 		obj.AddContainer("child", objName, 0, appdef.Occurs_Unbounded)
 
 		cfgs := make(AppConfigsType)
-		cfg := cfgs.AddConfig(appName, adb)
+		cfg := cfgs.AddBuiltInAppConfig(appName, adb)
 		cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 
 		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider())
-		app, err := provider.AppStructs(appName)
+		app, err := provider.BuiltIn(appName)
 		require.NoError(err)
 
 		return app
@@ -482,7 +472,7 @@ func Test_BasicUsageDescribePackages(t *testing.T) {
 	appName := istructs.AppQName_test1_app1
 
 	app := func() istructs.IAppStructs {
-		adb := appdef.New(appName)
+		adb := appdef.New()
 		adb.AddPackage("structs", "test.com/structs")
 		adb.AddPackage("functions", "test.com/functions")
 
@@ -521,7 +511,7 @@ func Test_BasicUsageDescribePackages(t *testing.T) {
 			SetResult(appdef.QNameANY)
 
 		cfgs := make(AppConfigsType)
-		cfg := cfgs.AddConfig(appName, adb)
+		cfg := cfgs.AddBuiltInAppConfig(appName, adb)
 		cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 
 		cfg.Resources.Add(NewCommandFunction(cmdQName, NullCommandExec))
@@ -537,7 +527,7 @@ func Test_BasicUsageDescribePackages(t *testing.T) {
 		})
 
 		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider())
-		app, err := provider.AppStructs(appName)
+		app, err := provider.BuiltIn(appName)
 		require.NoError(err)
 
 		return app
@@ -565,12 +555,12 @@ func Test_Provide(t *testing.T) {
 
 	t.Run("AppStructs() must error if unknown app name", func(t *testing.T) {
 		cfgs := make(AppConfigsType)
-		cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, appdef.New(istructs.AppQName_test1_app1))
+		cfg := cfgs.AddBuiltInAppConfig(istructs.AppQName_test1_app1, appdef.New())
 		cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 		p := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), nil)
 		require.NotNil(p)
 
-		_, err := p.AppStructs(appdef.NewAppQName("test1", "unknownApp"))
+		_, err := p.BuiltIn(appdef.NewAppQName("test1", "unknownApp"))
 		require.ErrorIs(err, istructs.ErrAppNotFound)
 		require.ErrorContains(err, "test1/unknownApp")
 	})
@@ -578,7 +568,7 @@ func Test_Provide(t *testing.T) {
 	t.Run("check application ClusterAppID() and AppQName()", func(t *testing.T) {
 		provider := Provide(test.AppConfigs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider())
 
-		app, err := provider.AppStructs(test.appName)
+		app, err := provider.BuiltIn(test.appName)
 		require.NoError(err)
 
 		require.NotNil(app)

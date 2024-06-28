@@ -147,7 +147,7 @@ func TestForeignAuthorization(t *testing.T) {
 		vit.PostWS(childWS, "q.sys.Collection", body, coreutils.Expect403())
 
 		// issue an API token
-		as, err := vit.IAppStructsProvider.AppStructs(istructs.AppQName_test1_app1)
+		as, err := vit.IAppStructsProvider.BuiltIn(istructs.AppQName_test1_app1)
 		require.NoError(err)
 		apiToken, err := iauthnzimpl.IssueAPIToken(as.AppTokens(), time.Hour, []appdef.QName{appdef.NewQName("air", "SubscriptionReseller")}, childWS.WSID, payloads.PrincipalPayload{
 			Login:       parentWS.Owner.Name,

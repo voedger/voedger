@@ -90,7 +90,7 @@ type IBus interface {
 	// behaviour on ctx.Done:
 	// - caller of SendRequest2() should not check ctx.Done() on sections read. Sections chan will be closed by bus on IResultSenderClosable.Close()
 	// - successful section element send and ctx.Done() happened simulateously -> SendElement() should return ctx.Err()
-	// neither SendResponse nor SendParallelResponse2 called during timeout -> err is ibus.ErrTimeoutExpired
+	// neither SendResponse nor SendParallelResponse2 called during timeout -> err is ibus.ErrBusTimeoutExpired
 	SendRequest2(ctx context.Context, request Request, timeout time.Duration) (res Response, sections <-chan ISection, secError *error, err error)
 
 	// SendResponse is called by service side to respond with a signle response.

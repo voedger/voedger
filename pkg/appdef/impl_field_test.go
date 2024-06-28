@@ -76,7 +76,7 @@ func Test_AddField(t *testing.T) {
 
 	objName := NewQName("test", "object")
 
-	adb := New(NewAppQName("test", "app"))
+	adb := New()
 	adb.AddPackage("test", "test.com/test")
 
 	obj := adb.AddObject(objName)
@@ -106,7 +106,7 @@ func Test_AddField(t *testing.T) {
 	})
 
 	t.Run("chain notation is ok to add fields", func(t *testing.T) {
-		adb := New(NewAppQName("test", "app"))
+		adb := New()
 		adb.AddPackage("test", "test.com/test")
 
 		_ = adb.AddObject(NewQName("test", "obj")).
@@ -138,7 +138,7 @@ func Test_AddField(t *testing.T) {
 			require.Has("f1"))
 
 		t.Run("must be panic if field data kind is not allowed by type kind", func(t *testing.T) {
-			adb := New(NewAppQName("test", "app"))
+			adb := New()
 			adb.AddPackage("test", "test.com/test")
 			o := adb.AddObject(NewQName("test", "object"))
 			require.Panics(func() { o.AddField("f1", DataKind_Event, false) },
@@ -147,7 +147,7 @@ func Test_AddField(t *testing.T) {
 		})
 
 		t.Run("must be panic if too many fields", func(t *testing.T) {
-			adb := New(NewAppQName("test", "app"))
+			adb := New()
 			adb.AddPackage("test", "test.com/test")
 			o := adb.AddObject(NewQName("test", "obj"))
 			for i := 0; i < MaxTypeFieldCount-2; i++ { // -2 because sys.QName, sys.Container
@@ -158,7 +158,7 @@ func Test_AddField(t *testing.T) {
 		})
 
 		t.Run("must be panic if not found field data kind", func(t *testing.T) {
-			adb := New(NewAppQName("test", "app"))
+			adb := New()
 			adb.AddPackage("test", "test.com/test")
 			o := adb.AddObject(NewQName("test", "obj"))
 			require.Panics(func() { o.AddField("errorField", DataKind_FakeLast, false) },
@@ -166,7 +166,7 @@ func Test_AddField(t *testing.T) {
 		})
 
 		t.Run("must be panic if unknown data type", func(t *testing.T) {
-			adb := New(NewAppQName("test", "app"))
+			adb := New()
 			adb.AddPackage("test", "test.com/test")
 			o := adb.AddObject(NewQName("test", "obj"))
 			require.Panics(func() { o.AddDataField("errorField", NewQName("test", "unknown"), false) },
@@ -179,7 +179,7 @@ func Test_AddField(t *testing.T) {
 func Test_SetFieldComment(t *testing.T) {
 	require := require.New(t)
 
-	adb := New(NewAppQName("test", "app"))
+	adb := New()
 	adb.AddPackage("test", "test.com/test")
 
 	objName := NewQName("test", "object")
@@ -199,7 +199,7 @@ func Test_SetFieldComment(t *testing.T) {
 	})
 
 	t.Run("must be panic if unknown field name passed to comment", func(t *testing.T) {
-		adb := New(NewAppQName("test", "app"))
+		adb := New()
 		adb.AddPackage("test", "test.com/test")
 		require.Panics(func() {
 			adb.AddObject(NewQName("test", "object")).
@@ -211,7 +211,7 @@ func Test_SetFieldComment(t *testing.T) {
 func Test_SetFieldVerify(t *testing.T) {
 	require := require.New(t)
 
-	adb := New(NewAppQName("test", "app"))
+	adb := New()
 	adb.AddPackage("test", "test.com/test")
 
 	objName := NewQName("test", "object")
@@ -245,7 +245,7 @@ func Test_SetFieldVerify(t *testing.T) {
 	})
 
 	t.Run("must be panic if unknown field name passed to verify", func(t *testing.T) {
-		adb := New(NewAppQName("test", "app"))
+		adb := New()
 		adb.AddPackage("test", "test.com/test")
 		require.Panics(func() {
 			adb.AddObject(NewQName("test", "object")).
@@ -261,7 +261,7 @@ func Test_AddRefField(t *testing.T) {
 	var app IAppDef
 
 	t.Run("must be ok to add reference fields", func(t *testing.T) {
-		adb := New(NewAppQName("test", "app"))
+		adb := New()
 		adb.AddPackage("test", "test.com/test")
 
 		doc := adb.AddWDoc(docName)
@@ -334,7 +334,7 @@ func Test_AddRefField(t *testing.T) {
 	})
 
 	t.Run("must be panic if empty field name", func(t *testing.T) {
-		adb := New(NewAppQName("test", "app"))
+		adb := New()
 		adb.AddPackage("test", "test.com/test")
 		doc := adb.AddWDoc(docName)
 		require.Panics(func() { doc.AddRefField("", false) },
@@ -349,7 +349,7 @@ func Test_UserFields(t *testing.T) {
 	var app IAppDef
 
 	t.Run("must be ok to add fields", func(t *testing.T) {
-		adb := New(NewAppQName("test", "app"))
+		adb := New()
 		adb.AddPackage("test", "test.com/test")
 
 		doc := adb.AddODoc(docName)
@@ -395,7 +395,7 @@ func Test_UserFields(t *testing.T) {
 func TestValidateRefFields(t *testing.T) {
 	require := require.New(t)
 
-	adb := New(NewAppQName("test", "app"))
+	adb := New()
 	adb.AddPackage("test", "test.com/test")
 
 	doc := adb.AddCDoc(NewQName("test", "doc"))

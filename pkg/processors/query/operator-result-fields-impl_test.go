@@ -25,7 +25,7 @@ func TestResultFieldsOperator_DoSync(t *testing.T) {
 		)
 
 		t.Run("Should set result fields", func(t *testing.T) {
-			adb := appdef.New(appName)
+			adb := appdef.New()
 
 			addObject := func(n appdef.QName) {
 				o := adb.AddObject(n)

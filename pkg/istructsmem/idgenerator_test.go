@@ -17,9 +17,7 @@ import (
 func TestIDGenerator(t *testing.T) {
 	require := require.New(t)
 
-	appName := istructs.AppQName_test1_app1
-
-	adb := appdef.New(appName)
+	adb := appdef.New()
 	adb.AddCDoc(istructs.QNameCDoc)
 	adb.AddCRecord(istructs.QNameCRecord)
 	adb.AddWDoc(istructs.QNameWDoc)
@@ -82,10 +80,8 @@ func TestIDGenCollision(t *testing.T) {
 
 	require := require.New(t)
 
-	appName := istructs.AppQName_test1_app1
-
 	idGen := NewIDGenerator()
-	adb := appdef.New(appName)
+	adb := appdef.New()
 	adb.AddCDoc(istructs.QNameCDoc)
 	appDef, err := adb.Build()
 	require.NoError(err)

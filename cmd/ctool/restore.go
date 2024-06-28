@@ -18,7 +18,7 @@ import (
 func newRestoreCmd() *cobra.Command {
 	restoreCmd := &cobra.Command{
 		Use:   "restore <backup name>",
-		Short: "Restore database",
+		Short: "Restore the database",
 		Args: func(cmd *cobra.Command, args []string) error {
 			if len(args) != 1 {
 				return ErrInvalidNumberOfArguments

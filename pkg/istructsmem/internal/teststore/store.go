@@ -8,6 +8,7 @@ package teststore
 import (
 	"bytes"
 	"context"
+	"fmt"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istorage"
@@ -29,28 +30,34 @@ type (
 	}
 
 	TestMemStorage struct {
+		name     appdef.AppQName
 		storage  istorage.IAppStorage
 		get, put scheduleStorageError
 		damage   scheduleStorageDamage
 	}
 
 	testStorageProvider struct {
-		testStorage *TestMemStorage
+		testStorage map[appdef.AppQName]*TestMemStorage
 	}
 )
 
-func (tsp *testStorageProvider) AppStorage(appName appdef.AppQName) (structs istorage.IAppStorage, err error) {
-	return tsp.testStorage, nil
+func (tsp testStorageProvider) AppStorage(appName appdef.AppQName) (structs istorage.IAppStorage, err error) {
+	if s, ok := tsp.testStorage[appName]; ok {
+		return s, nil
+	}
+	return nil, fmt.Errorf("%v: %w", appName, istorage.ErrStorageDoesNotExist)
 }
 
 // Returns new storage provider for specified test storage
 func NewStorageProvider(ts *TestMemStorage) istorage.IAppStorageProvider {
-	return &testStorageProvider{testStorage: ts}
+	p := &testStorageProvider{testStorage: make(map[appdef.AppQName]*TestMemStorage)}
+	p.testStorage[ts.name] = ts
+	return p
 }
 
 // Returns new test storage
 func NewStorage(appName appdef.AppQName) *TestMemStorage {
-	s := TestMemStorage{get: scheduleStorageError{}, put: scheduleStorageError{}}
+	s := &TestMemStorage{name: appName, get: scheduleStorageError{}, put: scheduleStorageError{}}
 	asf := mem.Provide()
 	sp := provider.Provide(asf)
 	var err error
@@ -58,7 +65,7 @@ func NewStorage(appName appdef.AppQName) *TestMemStorage {
 		panic(err)
 	}
 
-	return &s
+	return s
 }
 
 // Returns new test storage and new test storage provider

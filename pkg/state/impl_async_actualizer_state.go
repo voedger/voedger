@@ -66,6 +66,14 @@ func implProvideAsyncActualizerState(ctx context.Context, appStructsFunc AppStru
 		tokens:     tokensFunc,
 	}, S_GET)
 
+	state.addStorage(FederationBlob, &federationBlobStorage{
+		appStructs: appStructsFunc,
+		wsid:       wsidFunc,
+		emulation:  opts.federationBlobHandler,
+		federation: federationFunc,
+		tokens:     tokensFunc,
+	}, S_READ)
+
 	state.addStorage(AppSecret, &appSecretsStorage{secretReader: secretReader}, S_GET)
 
 	state.addStorage(Event, &eventStorage{eventFunc: eventFunc}, S_GET)

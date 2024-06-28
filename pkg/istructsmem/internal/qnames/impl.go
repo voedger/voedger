@@ -46,12 +46,12 @@ func (names *QNames) QName(id QNameID) (qName appdef.QName, err error) {
 }
 
 // Reads all application QNames from storage, add all system and application QNames and write result to storage if some changes. Must be called at application starts
-func (names *QNames) Prepare(storage istorage.IAppStorage, versions *vers.Versions, appDef appdef.IAppDef, resources istructs.IResources) error {
+func (names *QNames) Prepare(storage istorage.IAppStorage, versions *vers.Versions, appDef appdef.IAppDef) error {
 	if err := names.load(storage, versions); err != nil {
 		return err
 	}
 
-	if err := names.collectAll(appDef, resources); err != nil {
+	if err := names.collectAll(appDef); err != nil {
 		return err
 	}
 
@@ -65,7 +65,7 @@ func (names *QNames) Prepare(storage istorage.IAppStorage, versions *vers.Versio
 }
 
 // Collect all system and application QName IDs
-func (names *QNames) collectAll(appDef appdef.IAppDef, r istructs.IResources) (err error) {
+func (names *QNames) collectAll(appDef appdef.IAppDef) error {
 
 	// system QNames
 	names.
@@ -73,6 +73,8 @@ func (names *QNames) collectAll(appDef appdef.IAppDef, r istructs.IResources) (e
 		collectSys(istructs.QNameForError, QNameIDForError).
 		collectSys(istructs.QNameCommandCUD, QNameIDCommandCUD).
 		collectSys(istructs.QNameForCorruptedData, QNameIDForCorruptedData)
+
+	var err error
 
 	if appDef != nil {
 		appDef.Types(
@@ -85,14 +87,6 @@ func (names *QNames) collectAll(appDef appdef.IAppDef, r istructs.IResources) (e
 							names.collect(u.Name()))
 					}
 				}
-			})
-	}
-
-	if r != nil {
-		r.Resources(
-			func(q appdef.QName) {
-				err = errors.Join(err,
-					names.collect(q))
 			})
 	}
 

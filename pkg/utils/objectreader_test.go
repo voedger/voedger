@@ -30,7 +30,7 @@ var (
 	}
 
 	testAppDef = func(t *testing.T) appdef.IAppDef {
-		adb := appdef.New(istructs.AppQName_test1_app1)
+		adb := appdef.New()
 
 		obj := adb.AddObject(testQName)
 		addFieldDefs(obj, testFieldDefs)

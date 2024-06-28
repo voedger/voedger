@@ -154,7 +154,7 @@ func appStructs(appdefSql string, prepareAppCfg appCfgCallback) istructs.IAppStr
 
 	appName := istructs.AppQName_test1_app1
 
-	appDef := appdef.New(appName)
+	appDef := appdef.New()
 
 	err = parser.BuildAppDefs(packages, appDef)
 	if err != nil {
@@ -162,7 +162,7 @@ func appStructs(appdefSql string, prepareAppCfg appCfgCallback) istructs.IAppStr
 	}
 
 	cfgs := make(istructsmem.AppConfigsType, 1)
-	cfg := cfgs.AddConfig(appName, appDef)
+	cfg := cfgs.AddBuiltInAppConfig(appName, appDef)
 	cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 	if prepareAppCfg != nil {
 		prepareAppCfg(cfg)
@@ -175,7 +175,7 @@ func appStructs(appdefSql string, prepareAppCfg appCfgCallback) istructs.IAppStr
 		iratesce.TestBucketsFactory,
 		payloads.ProvideIAppTokensFactory(itokensjwt.TestTokensJWT()),
 		storageProvider)
-	structs, err := prov.AppStructs(appName)
+	structs, err := prov.BuiltIn(appName)
 	if err != nil {
 		panic(err)
 	}

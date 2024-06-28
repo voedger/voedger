@@ -14,10 +14,9 @@ import (
 
 type IFederation interface {
 	Func(relativeURL string, body string, optFuncs ...coreutils.ReqOptFunc) (*coreutils.FuncResponse, error)
-	UploadBLOB(appQName appdef.AppQName, wsid istructs.WSID, blobName string, blobMimeType string, blobContent []byte,
+	UploadBLOB(appQName appdef.AppQName, wsid istructs.WSID, blob coreutils.BLOBReader,
 		optFuncs ...coreutils.ReqOptFunc) (blobID istructs.RecordID, err error)
-	UploadBLOBs(appQName appdef.AppQName, wsid istructs.WSID, blobs []coreutils.BLOB, optFuncs ...coreutils.ReqOptFunc) (blobIDs []istructs.RecordID, err error)
-	ReadBLOB(appQName appdef.AppQName, wsid istructs.WSID, blobID istructs.RecordID, optFuncs ...coreutils.ReqOptFunc) (*coreutils.HTTPResponse, error)
+	ReadBLOB(appQName appdef.AppQName, wsid istructs.WSID, blobID istructs.RecordID, optFuncs ...coreutils.ReqOptFunc) (coreutils.BLOBReader, error)
 	URLStr() string
 	Port() int
 	N10NUpdate(key in10n.ProjectionKey, val int64, optFuncs ...coreutils.ReqOptFunc) error

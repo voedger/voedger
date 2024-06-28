@@ -34,25 +34,26 @@ import (
 type testState struct {
 	state.IState
 
-	ctx                  context.Context
-	appStructs           istructs.IAppStructs
-	appDef               appdef.IAppDef
-	cud                  istructs.ICUD
-	event                istructs.IPLogEvent
-	plogGen              istructs.IIDGenerator
-	wsOffsets            map[istructs.WSID]istructs.Offset
-	plogOffset           istructs.Offset
-	secretReader         isecrets.ISecretReader
-	httpHandler          HttpHandlerFunc
-	federationCmdHandler state.FederationCommandHandler
-	uniquesHandler       state.UniquesHandler
-	principals           []iauthnz.Principal
-	token                string
-	queryWsid            istructs.WSID
-	queryName            appdef.FullQName
-	processorKind        int
-	readObjects          []istructs.IObject
-	queryObject          istructs.IObject
+	ctx                   context.Context
+	appStructs            istructs.IAppStructs
+	appDef                appdef.IAppDef
+	cud                   istructs.ICUD
+	event                 istructs.IPLogEvent
+	plogGen               istructs.IIDGenerator
+	wsOffsets             map[istructs.WSID]istructs.Offset
+	plogOffset            istructs.Offset
+	secretReader          isecrets.ISecretReader
+	httpHandler           HttpHandlerFunc
+	federationCmdHandler  state.FederationCommandHandler
+	federationBlobHandler state.FederationBlobHandler
+	uniquesHandler        state.UniquesHandler
+	principals            []iauthnz.Principal
+	token                 string
+	queryWsid             istructs.WSID
+	queryName             appdef.FullQName
+	processorKind         int
+	readObjects           []istructs.IObject
+	queryObject           istructs.IObject
 }
 
 func NewTestState(processorKind int, packagePath string, createWorkspaces ...TestWorkspace) ITestState {
@@ -156,6 +157,10 @@ func (ctx *testState) PutFederationCmdHandler(emu state.FederationCommandHandler
 	ctx.federationCmdHandler = emu
 }
 
+func (ctx *testState) PutFederationBlobHandler(emu state.FederationBlobHandler) {
+	ctx.federationBlobHandler = emu
+}
+
 func (ctx *testState) PutUniquesHandler(emu state.UniquesHandler) {
 	ctx.uniquesHandler = emu
 }
@@ -172,6 +177,13 @@ func (ctx *testState) emulateFederationCmd(owner, appname string, wsid istructs.
 		panic("federation command handler not set")
 	}
 	return ctx.federationCmdHandler(owner, appname, wsid, command, body)
+}
+
+func (ctx *testState) emulateFederationBlob(owner, appname string, wsid istructs.WSID, blobId int64) ([]byte, error) {
+	if ctx.federationBlobHandler == nil {
+		panic("federation blob handler not set")
+	}
+	return ctx.federationBlobHandler(owner, appname, wsid, blobId)
 }
 
 func (ctx *testState) buildState(processorKind int) {
@@ -232,14 +244,14 @@ func (ctx *testState) buildState(processorKind int) {
 	switch processorKind {
 	case ProcKind_Actualizer:
 		ctx.IState = state.ProvideAsyncActualizerStateFactory()(ctx.ctx, appFunc, partitionIDFunc, wsidFunc, nil, ctx.secretReader, eventFunc, nil, nil,
-			IntentsLimit, BundlesLimit, state.WithCustomHttpClient(ctx), state.WithFedearationCommandHandler(ctx.emulateFederationCmd), state.WithUniquesHandler(ctx.emulateUniquesHandler))
+			IntentsLimit, BundlesLimit, state.WithCustomHttpClient(ctx), state.WithFedearationCommandHandler(ctx.emulateFederationCmd), state.WithUniquesHandler(ctx.emulateUniquesHandler), state.WithFederationBlobHandler(ctx.emulateFederationBlob))
 	case ProcKind_CommandProcessor:
 		ctx.IState = state.ProvideCommandProcessorStateFactory()(ctx.ctx, appFunc, partitionIDFunc, wsidFunc, ctx.secretReader, cudFunc, principalsFunc, tokenFunc,
 			IntentsLimit, resultBuilderFunc, commandPrepareArgs, argFunc, unloggedArgFunc, wlogOffsetFunc, state.WithUniquesHandler(ctx.emulateUniquesHandler))
 	case ProcKind_QueryProcessor:
 		ctx.IState = state.ProvideQueryProcessorStateFactory()(ctx.ctx, appFunc, partitionIDFunc, wsidFunc, ctx.secretReader, principalsFunc, tokenFunc, nil,
 			execQueryArgsFunc, argFunc, qryResultBuilderFunc, nil, execQueryCallback,
-			state.WithCustomHttpClient(ctx), state.WithFedearationCommandHandler(ctx.emulateFederationCmd), state.WithUniquesHandler(ctx.emulateUniquesHandler))
+			state.WithCustomHttpClient(ctx), state.WithFedearationCommandHandler(ctx.emulateFederationCmd), state.WithUniquesHandler(ctx.emulateUniquesHandler), state.WithFederationBlobHandler(ctx.emulateFederationBlob))
 	}
 }
 
@@ -287,7 +299,7 @@ func (ctx *testState) buildAppDef(packagePath string, packageDir string, createW
 
 	appName := istructs.AppQName_test1_app1
 
-	adb := appdef.New(appName)
+	adb := appdef.New()
 	err = parser.BuildAppDefs(appSchema, adb)
 	if err != nil {
 		panic(err)
@@ -301,7 +313,7 @@ func (ctx *testState) buildAppDef(packagePath string, packageDir string, createW
 	ctx.appDef = adf
 
 	cfgs := make(istructsmem.AppConfigsType, 1)
-	cfg := cfgs.AddConfig(appName, adb)
+	cfg := cfgs.AddBuiltInAppConfig(appName, adb)
 	cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 	ctx.appDef.Extensions(func(i appdef.IExtension) {
 		if i.QName().Pkg() == TestPkgAlias {
@@ -326,7 +338,7 @@ func (ctx *testState) buildAppDef(packagePath string, packageDir string, createW
 		iratesce.TestBucketsFactory,
 		payloads.ProvideIAppTokensFactory(itokensjwt.TestTokensJWT()),
 		storageProvider)
-	structs, err := prov.AppStructs(appName)
+	structs, err := prov.BuiltIn(appName)
 	if err != nil {
 		panic(err)
 	}

@@ -73,7 +73,7 @@ func mockedHostStateStructs() istructs.IAppStructs {
 		On("Get", istructs.WSID(1), mock.Anything).Return(nil, nil).
 		On("PutBatch", istructs.WSID(1), mock.AnythingOfType("[]istructs.ViewKV")).Return(nil)
 
-	appDef := appdef.New(testAppQName)
+	appDef := appdef.New()
 
 	view := appDef.AddView(testViewRecordQName1)
 	view.Key().PartKey().AddField("pkFld", appdef.DataKind_int64)

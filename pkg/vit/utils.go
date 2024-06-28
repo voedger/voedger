@@ -8,16 +8,16 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"math"
-	"mime"
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/istorage"
-	"github.com/voedger/voedger/pkg/istorage/mem"
 	"github.com/voedger/voedger/pkg/utils/federation"
 	"github.com/voedger/voedger/pkg/vvm"
 
@@ -30,15 +30,14 @@ import (
 
 func (vit *VIT) GetBLOB(appQName appdef.AppQName, wsid istructs.WSID, blobID istructs.RecordID, token string) *BLOB {
 	vit.T.Helper()
-	resp, err := vit.IFederation.ReadBLOB(appQName, wsid, blobID, coreutils.WithAuthorizeBy(token))
+	blobReader, err := vit.IFederation.ReadBLOB(appQName, wsid, blobID, coreutils.WithAuthorizeBy(token))
 	require.NoError(vit.T, err)
-	contentDisposition := resp.HTTPResp.Header.Get(coreutils.ContentDisposition)
-	_, params, err := mime.ParseMediaType(contentDisposition)
+	blobContent, err := io.ReadAll(blobReader)
 	require.NoError(vit.T, err)
 	return &BLOB{
-		Content:  []byte(resp.Body),
-		Name:     params["filename"],
-		MimeType: resp.HTTPResp.Header.Get(coreutils.ContentType),
+		Content:  blobContent,
+		Name:     blobReader.Name,
+		MimeType: blobReader.MimeType,
 	}
 }
 
@@ -89,7 +88,7 @@ func (vit *VIT) SignUpDevice(loginName, pwd string, appQName appdef.AppQName, op
 
 func (vit *VIT) GetCDocLoginID(login Login) int64 {
 	vit.T.Helper()
-	as, err := vit.IAppStructsProvider.AppStructs(istructs.AppQName_sys_registry)
+	as, err := vit.IAppStructsProvider.BuiltIn(istructs.AppQName_sys_registry)
 	require.NoError(vit.T, err) // notest
 	appWSID := coreutils.GetAppWSID(login.PseudoProfileWSID, as.NumAppWorkspaces())
 	body := fmt.Sprintf(`{"args":{"Query":"select CDocLoginID from registry.LoginIdx where AppWSID = %d and AppIDLoginHash = '%s/%s'"}, "elements":[{"fields":["Result"]}]}`,
@@ -110,7 +109,7 @@ func (vit *VIT) getCDoc(appQName appdef.AppQName, qName appdef.QName, wsid istru
 	vit.T.Helper()
 	body := bytes.NewBufferString(fmt.Sprintf(`{"args":{"Schema":"%s"},"elements":[{"fields":["sys.ID"`, qName))
 	fields := []string{}
-	as, err := vit.IAppStructsProvider.AppStructs(appQName)
+	as, err := vit.IAppStructsProvider.BuiltIn(appQName)
 	require.NoError(vit.T, err)
 	if doc := as.AppDef().CDoc(qName); doc != nil {
 		for _, field := range doc.Fields() {
@@ -385,12 +384,19 @@ func DummyWS(wsKind appdef.QName, wsid istructs.WSID, ownerPrn *Principal) *AppW
 // then calls testAfterRestart() with the new VIT
 // cfg must be owned
 func TestRestartPreservingStorage(t *testing.T, cfg *VITConfig, testBeforeRestart, testAfterRestart func(t *testing.T, vit *VIT)) {
-	memStorage := mem.Provide()
+	require.False(t, cfg.isShared, "storage restart could be done on Own VIT Config only")
+	var sharedStorageFactory istorage.IAppStorageFactory
+	suffix := t.Name() + uuid.NewString()
 	cfg.opts = append(cfg.opts, WithVVMConfig(func(cfg *vvm.VVMConfig) {
-		cfg.StorageFactory = func() (provider istorage.IAppStorageFactory, err error) {
-			return memStorage, nil
+		if sharedStorageFactory == nil {
+			var err error
+			sharedStorageFactory, err = cfg.StorageFactory()
+			require.NoError(t, err)
 		}
-		cfg.KeyspaceNameSuffix = t.Name()
+		cfg.KeyspaceNameSuffix = suffix
+		cfg.StorageFactory = func() (istorage.IAppStorageFactory, error) {
+			return sharedStorageFactory, nil
+		}
 	}))
 	func() {
 		vit := NewVIT(t, cfg)

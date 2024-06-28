@@ -140,10 +140,10 @@ func TestCases(t *testing.T) {
 			},
 		},
 		{
-			"direct update test1.app1.a123.sys.Table set a = b where x = y",
+			"unlogged update test1.app1.a123.sys.Table set a = b where x = y",
 			Op{
 				AppQName: test1App1,
-				Kind:     OpKind_DirectUpdate,
+				Kind:     OpKind_UnloggedUpdate,
 				QName:    sysTable,
 				CleanSQL: "update sys.Table set a = b where x = y",
 				Workspace: Workspace{
@@ -153,10 +153,10 @@ func TestCases(t *testing.T) {
 			},
 		},
 		{
-			"direct insert test1.app1.a123.sys.Table set a = b",
+			"unlogged insert test1.app1.a123.sys.Table set a = b",
 			Op{
 				AppQName: test1App1,
-				Kind:     OpKind_DirectInsert,
+				Kind:     OpKind_UnloggedInsert,
 				QName:    sysTable,
 				CleanSQL: "update sys.Table set a = b",
 				Workspace: Workspace{
@@ -191,8 +191,8 @@ func TestErrors(t *testing.T) {
 		"":         "invalid query format",
 		" ":        "invalid query format",
 		"ddsddsds": "invalid query format",
-		"direct update test1.app1.9999999999999999999999.sys.Table set a = b where x = y":   "value out of range",
-		"direct update test1.app1.1.sys.Table.9999999999999999999999 set a = b where x = y": "value out of range",
+		"unlogged update test1.app1.9999999999999999999999.sys.Table set a = b where x = y":   "value out of range",
+		"unlogged update test1.app1.1.sys.Table.9999999999999999999999 set a = b where x = y": "value out of range",
 	}
 
 	for query, expectedError := range cases {

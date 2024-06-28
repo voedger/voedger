@@ -59,10 +59,10 @@ func Test_Basic(t *testing.T) {
 
 	require.Equal(t, oldPackages.Name, newPackages.Name)
 
-	oldBuilder := appdef.New(oldPackages.AppQName())
+	oldBuilder := appdef.New()
 	require.NoError(t, parser.BuildAppDefs(oldPackages, oldBuilder))
 
-	newBuilder := appdef.New(newPackages.AppQName())
+	newBuilder := appdef.New()
 	require.NoError(t, parser.BuildAppDefs(newPackages, newBuilder))
 
 	oldAppDef, err := oldBuilder.Build()

@@ -42,7 +42,7 @@ func TestContainers(t *testing.T) {
 	if err := containers.Prepare(storage, versions,
 		func() appdef.IAppDef {
 			objName := appdef.NewQName("test", "object")
-			adb := appdef.New(appName)
+			adb := appdef.New()
 			adb.AddPackage("test", "test.com/test")
 			adb.AddObject(objName).
 				AddContainer(containerName, objName, 0, 1)
@@ -93,7 +93,7 @@ func TestContainers(t *testing.T) {
 			if err := containers2.Prepare(storage, versions,
 				func() appdef.IAppDef {
 					objName := appdef.NewQName("test", "object")
-					adb := appdef.New(appName)
+					adb := appdef.New()
 					adb.AddPackage("test", "test.com/test")
 					adb.AddObject(objName).
 						AddContainer(containerName, objName, 0, 1)
@@ -206,7 +206,7 @@ func TestContainersPrepareErrors(t *testing.T) {
 		names := New()
 		err := names.Prepare(storage, versions,
 			func() appdef.IAppDef {
-				adb := appdef.New(appName)
+				adb := appdef.New()
 				adb.AddPackage("test", "test.com/test")
 				qName := appdef.NewQName("test", "test")
 				obj := adb.AddObject(qName)
@@ -238,7 +238,7 @@ func TestContainersPrepareErrors(t *testing.T) {
 			err := names.Prepare(storage, versions,
 				func() appdef.IAppDef {
 					objName := appdef.NewQName("test", "object")
-					adb := appdef.New(appName)
+					adb := appdef.New()
 					adb.AddPackage("test", "test.com/test")
 					adb.AddObject(objName).
 						AddContainer(containerName, objName, 0, 1)
@@ -263,7 +263,7 @@ func TestContainersPrepareErrors(t *testing.T) {
 			err := names.Prepare(storage, versions,
 				func() appdef.IAppDef {
 					objName := appdef.NewQName("test", "object")
-					adb := appdef.New(appName)
+					adb := appdef.New()
 					adb.AddPackage("test", "test.com/test")
 					adb.AddObject(objName).
 						AddContainer(containerName, objName, 0, 1)

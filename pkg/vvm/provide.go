@@ -122,10 +122,6 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 		provideServicePipeline,
 		provideCommandProcessors,
 		provideQueryProcessors,
-		provideAppServiceFactory,
-		provideAppPartitionFactory,
-		provideAsyncActualizersFactory,
-		provideOperatorAppServices,
 		provideBlobAppStoragePtr,
 		provideVVMApps,
 		provideBuiltInAppsArtefacts,
@@ -152,7 +148,6 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 		imetrics.Provide,
 		projectors.ProvideSyncActualizerFactory,
 		projectors.NewSyncActualizerFactoryFactory,
-		projectors.ProvideAsyncActualizerFactory,
 		iprocbusmem.Provide,
 		provideRouterServices,
 		provideMetricsServiceOperator,
@@ -170,7 +165,9 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 		provideAppPartsCtlPipelineService,
 		provideIsDeviceAllowedFunc,
 		provideBuiltInApps,
-		provideAppPartitions, // IAppPartitions
+		provideBasicAsyncActualizerConfig, // projectors.BasicAsyncActualizerConfig
+		provideAsyncActualizersService,    // projectors.IActualizersService
+		provideAppPartitions,              // appparts.IAppPartitions
 		apppartsctl.New,
 		provideAppConfigsTypeEmpty,
 		provideBuiltInAppPackages,
@@ -239,9 +236,36 @@ func provideIAppStructsProvider(cfgs AppConfigsTypeEmpty, bucketsFactory irates.
 	return istructsmem.Provide(istructsmem.AppConfigsType(cfgs), bucketsFactory, appTokensFactory, storageProvider)
 }
 
+func provideBasicAsyncActualizerConfig(
+	vvm commandprocessor.VVMName,
+	secretReader isecrets.ISecretReader,
+	tokens itokens.ITokens,
+	metrics imetrics.IMetrics,
+	broker in10n.IN10nBroker,
+	federation federation.IFederation,
+	opts ...state.StateOptFunc,
+) projectors.BasicAsyncActualizerConfig {
+	return projectors.BasicAsyncActualizerConfig{
+		VvmName:       string(vvm),
+		SecretReader:  secretReader,
+		Tokens:        tokens,
+		Metrics:       metrics,
+		Broker:        broker,
+		Federation:    federation,
+		Opts:          opts,
+		IntentsLimit:  projectors.DefaultIntentsLimit,
+		FlushInterval: actualizerFlushInterval,
+	}
+}
+
+func provideAsyncActualizersService(cfg projectors.BasicAsyncActualizerConfig) projectors.IActualizersService {
+	return projectors.ProvideActualizers(cfg)
+}
+
 func provideAppPartitions(
 	asp istructs.IAppStructsProvider,
-	actualizer appparts.SyncActualizerFactory,
+	saf appparts.SyncActualizerFactory,
+	act projectors.IActualizersService,
 	appsArtefacts AppsArtefacts,
 ) (ap appparts.IAppPartitions, cleanup func(), err error) {
 
@@ -250,7 +274,12 @@ func provideAppPartitions(
 		WASMCompile: false,
 	})
 
-	return appparts.NewWithActualizerWithExtEnginesFactories(asp, actualizer, eef)
+	return appparts.New2(
+		asp,
+		saf,
+		act,
+		eef,
+	)
 }
 
 func provideIsDeviceAllowedFunc(appsArtefacts AppsArtefacts) iauthnzimpl.IsDeviceAllowedFuncs {
@@ -337,7 +366,7 @@ func provideSecretKeyJWT(sr isecrets.ISecretReader) (itokensjwt.SecretKeyType, e
 func provideNumsAppsWorkspaces(vvmApps VVMApps, asp istructs.IAppStructsProvider) (map[appdef.AppQName]istructs.NumAppWorkspaces, error) {
 	res := map[appdef.AppQName]istructs.NumAppWorkspaces{}
 	for _, appQName := range vvmApps {
-		as, err := asp.AppStructs(appQName)
+		as, err := asp.BuiltIn(appQName)
 		if err != nil {
 			// notest
 			return nil, err
@@ -542,67 +571,13 @@ func provideCommandProcessors(cpCount istructs.NumCommandProcessors, ccf Command
 	return pipeline.ForkOperator(pipeline.ForkSame, forks[0], forks[1:]...)
 }
 
-func provideAsyncActualizersFactory(appParts appparts.IAppPartitions, appStructsProvider istructs.IAppStructsProvider, n10nBroker in10n.IN10nBroker, asyncActualizerFactory projectors.AsyncActualizerFactory, secretReader isecrets.ISecretReader, metrics imetrics.IMetrics) AsyncActualizersFactory {
-	return func(vvmCtx context.Context, appQName appdef.AppQName, asyncProjectors istructs.Projectors, partitionID istructs.PartitionID,
-		tokens itokens.ITokens, federation federation.IFederation, opts []state.StateOptFunc) pipeline.ISyncOperator {
-		appStructs, err := appStructsProvider.AppStructs(appQName)
-		if err != nil {
-			panic(err)
-		}
-
-		conf := projectors.AsyncActualizerConf{
-			Ctx:           vvmCtx,
-			AppQName:      appQName,
-			AppPartitions: appParts,
-			AppStructs:    func() istructs.IAppStructs { return appStructs },
-			SecretReader:  secretReader,
-			Partition:     partitionID,
-			Broker:        n10nBroker,
-			Opts:          opts,
-			IntentsLimit:  projectors.DefaultIntentsLimit,
-			FlushInterval: actualizerFlushInterval,
-			Metrics:       metrics,
-			Tokens:        tokens,
-			Federation:    federation,
-		}
-
-		forkOps := make([]pipeline.ForkOperatorOptionFunc, 0, len(asyncProjectors))
-		for _, prj := range asyncProjectors {
-			asyncActualizer, err := asyncActualizerFactory(conf, prj)
-			if err != nil {
-				panic(err)
-			}
-			forkOps = append(forkOps, pipeline.ForkBranch(asyncActualizer))
-		}
-
-		return pipeline.ForkOperator(func(work interface{}, branchNumber int) (fork interface{}, err error) { return struct{}{}, nil }, forkOps[0], forkOps[1:]...)
-	}
-}
-
-func provideAppPartitionFactory(aaf AsyncActualizersFactory, opts []state.StateOptFunc, tokens itokens.ITokens, federation federation.IFederation) AppPartitionFactory {
-	return func(vvmCtx context.Context, appQName appdef.AppQName, asyncProjectors istructs.Projectors, partitionID istructs.PartitionID) pipeline.ISyncOperator {
-		return aaf(vvmCtx, appQName, asyncProjectors, partitionID, tokens, federation, opts)
-	}
-}
-
-// forks appPartition(just async actualizers for now) of one app by amount of partitions of the app
-func provideAppServiceFactory(apf AppPartitionFactory) AppServiceFactory {
-	return func(vvmCtx context.Context, appQName appdef.AppQName, asyncProjectors istructs.Projectors, appPartsCount istructs.NumAppPartitions) pipeline.ISyncOperator {
-		forks := make([]pipeline.ForkOperatorOptionFunc, appPartsCount)
-		for i := 0; i < int(appPartsCount); i++ {
-			forks[i] = pipeline.ForkBranch(apf(vvmCtx, appQName, asyncProjectors, istructs.PartitionID(i)))
-		}
-		return pipeline.ForkOperator(pipeline.ForkSame, forks[0], forks[1:]...)
-	}
-}
-
 // forks appServices per apps
 // [appsAmount]appServices
 func provideOperatorAppServices(apf AppServiceFactory, appsArtefacts AppsArtefacts, asp istructs.IAppStructsProvider) OperatorAppServicesFactory {
 	return func(vvmCtx context.Context) pipeline.ISyncOperator {
 		var branches []pipeline.ForkOperatorOptionFunc
 		for _, builtInAppPackages := range appsArtefacts.builtInAppPackages {
-			as, err := asp.AppStructs(builtInAppPackages.Name)
+			as, err := asp.BuiltIn(builtInAppPackages.Name)
 			if err != nil {
 				panic(err)
 			}
@@ -619,18 +594,25 @@ func provideOperatorAppServices(apf AppServiceFactory, appsArtefacts AppsArtefac
 	}
 }
 
-func provideServicePipeline(vvmCtx context.Context, opCommandProcessors OperatorCommandProcessors, opQueryProcessors OperatorQueryProcessors,
-	opAppServices OperatorAppServicesFactory, appPartsCtl IAppPartsCtlPipelineService, bootstrapSyncOp BootstrapOperator,
-	adminEndpoint AdminEndpointServiceOperator, publicEndpoint PublicEndpointServiceOperator) ServicePipeline {
+func provideServicePipeline(
+	vvmCtx context.Context,
+	opCommandProcessors OperatorCommandProcessors,
+	opQueryProcessors OperatorQueryProcessors,
+	opAsyncActualizers projectors.IActualizersService,
+	appPartsCtl IAppPartsCtlPipelineService,
+	bootstrapSyncOp BootstrapOperator,
+	adminEndpoint AdminEndpointServiceOperator,
+	publicEndpoint PublicEndpointServiceOperator,
+) ServicePipeline {
 	return pipeline.NewSyncPipeline(vvmCtx, "ServicePipeline",
 		pipeline.WireSyncOperator("internal services", pipeline.ForkOperator(pipeline.ForkSame,
 			pipeline.ForkBranch(opQueryProcessors),
 			pipeline.ForkBranch(opCommandProcessors),
+			pipeline.ForkBranch(pipeline.ServiceOperator(opAsyncActualizers)),
 			pipeline.ForkBranch(pipeline.ServiceOperator(appPartsCtl)),
 		)),
 		pipeline.WireSyncOperator("admin endpoint", adminEndpoint),
 		pipeline.WireSyncOperator("bootstrap", bootstrapSyncOp),
 		pipeline.WireSyncOperator("public endpoint", publicEndpoint),
-		pipeline.WireSyncOperator("async actualizers", opAppServices(vvmCtx)),
 	)
 }

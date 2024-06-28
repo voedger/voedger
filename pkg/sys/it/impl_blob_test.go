@@ -6,6 +6,7 @@ package sys_it
 
 import (
 	"fmt"
+	"io"
 	"log"
 	"testing"
 
@@ -22,7 +23,7 @@ func TestBasicUsage_BLOBProcessors(t *testing.T) {
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
-	as, err := vit.AppStructs(istructs.AppQName_test1_app1)
+	as, err := vit.BuiltIn(istructs.AppQName_test1_app1)
 	require.NoError(err)
 	systemPrincipal, err := payloads.GetSystemPrincipalTokenApp(as.AppTokens())
 	require.NoError(err)
@@ -39,41 +40,35 @@ func TestBasicUsage_BLOBProcessors(t *testing.T) {
 	log.Println(blobID)
 
 	// read, authorize over headers
-	resp := vit.ReadBLOB(istructs.AppQName_test1_app1, ws.WSID, blobID,
+	blobReader := vit.ReadBLOB(istructs.AppQName_test1_app1, ws.WSID, blobID,
 		coreutils.WithAuthorizeBy(systemPrincipal),
 	)
-	actBLOB := []byte(resp.Body)
-	require.Equal("application/x-binary", resp.HTTPResp.Header["Content-Type"][0])
-	require.Equal(`attachment;filename="test"`, resp.HTTPResp.Header["Content-Disposition"][0])
-	require.Equal(expBLOB, actBLOB)
+
+	actualBLOBContent, err := io.ReadAll(blobReader)
+	require.NoError(err)
+	require.Equal(coreutils.ApplicationXBinary, blobReader.MimeType)
+	require.Equal("test", blobReader.Name)
+	require.Equal(expBLOB, actualBLOBContent)
 
 	// read, authorize over unescaped cookies
-	resp = vit.ReadBLOB(istructs.AppQName_test1_app1, ws.WSID, blobID,
+	blobReader = vit.ReadBLOB(istructs.AppQName_test1_app1, ws.WSID, blobID,
 		coreutils.WithCookies(coreutils.Authorization, "Bearer "+systemPrincipal),
 	)
-	actBLOB = []byte(resp.Body)
-	require.Equal("application/x-binary", resp.HTTPResp.Header["Content-Type"][0])
-	require.Equal(`attachment;filename="test"`, resp.HTTPResp.Header["Content-Disposition"][0])
-	require.Equal(expBLOB, actBLOB)
+	actualBLOBContent, err = io.ReadAll(blobReader)
+	require.NoError(err)
+	require.Equal(coreutils.ApplicationXBinary, blobReader.MimeType)
+	require.Equal("test", blobReader.Name)
+	require.Equal(expBLOB, actualBLOBContent)
 
 	// read, authorize over escaped cookies
-	resp = vit.ReadBLOB(istructs.AppQName_test1_app1, ws.WSID, blobID,
+	blobReader = vit.ReadBLOB(istructs.AppQName_test1_app1, ws.WSID, blobID,
 		coreutils.WithCookies(coreutils.Authorization, "Bearer%20"+systemPrincipal),
 	)
-	actBLOB = []byte(resp.Body)
-	require.Equal("application/x-binary", resp.HTTPResp.Header["Content-Type"][0])
-	require.Equal(`attachment;filename="test"`, resp.HTTPResp.Header["Content-Disposition"][0])
-	require.Equal(expBLOB, actBLOB)
-
-	// read, POST
-	resp = vit.ReadBLOB(istructs.AppQName_test1_app1, ws.WSID, blobID,
-		coreutils.WithAuthorizeBy(systemPrincipal),
-	)
-	actBLOB = []byte(resp.Body)
-	require.Equal("application/x-binary", resp.HTTPResp.Header["Content-Type"][0])
-	require.Equal(`attachment;filename="test"`, resp.HTTPResp.Header["Content-Disposition"][0])
-	require.Equal(expBLOB, actBLOB)
-
+	actualBLOBContent, err = io.ReadAll(blobReader)
+	require.NoError(err)
+	require.Equal(coreutils.ApplicationXBinary, blobReader.MimeType)
+	require.Equal("test", blobReader.Name)
+	require.Equal(expBLOB, actualBLOBContent)
 }
 
 func TestBlobberErrors(t *testing.T) {
@@ -83,7 +78,7 @@ func TestBlobberErrors(t *testing.T) {
 
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
 
-	as, err := vit.AppStructs(istructs.AppQName_test1_app1)
+	as, err := vit.BuiltIn(istructs.AppQName_test1_app1)
 	require.NoError(err)
 	systemPrincipal, err := payloads.GetSystemPrincipalTokenApp(as.AppTokens())
 	require.NoError(err)
@@ -106,7 +101,7 @@ func TestBlobberErrors(t *testing.T) {
 		vit.ReadBLOB(istructs.AppQName_test1_app1, ws.WSID, 1,
 			coreutils.WithAuthorizeBy(systemPrincipal),
 			coreutils.Expect404(),
-		).Println()
+		)
 	})
 
 	t.Run("400 on wrong Content-Type and name+mimeType query params", func(t *testing.T) {
@@ -138,42 +133,4 @@ func TestBlobberErrors(t *testing.T) {
 			).Println()
 		})
 	})
-}
-
-func TestBlobMultipartUpload(t *testing.T) {
-	require := require.New(t)
-	vit := it.NewVIT(t, &it.SharedConfig_App1)
-	defer vit.TearDown()
-
-	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
-
-	blobs := []coreutils.BLOB{
-		{
-			Content: []byte{1, 2, 3, 4, 5},
-			Name:    "blob1",
-		},
-		{
-			Content: []byte{6, 7, 8, 9, 10},
-			Name:    "blob2",
-		},
-	}
-
-	as, err := vit.AppStructs(istructs.AppQName_test1_app1)
-	require.NoError(err)
-	systemPrincipalToken, err := payloads.GetSystemPrincipalTokenApp(as.AppTokens())
-	require.NoError(err)
-	blobIDs := vit.UploadBLOBs(istructs.AppQName_test1_app1, ws.WSID, blobs,
-		coreutils.WithAuthorizeBy(systemPrincipalToken))
-
-	// read blob1
-	actualBLOB1 := vit.GetBLOB(istructs.AppQName_test1_app1, ws.WSID, blobIDs[0], systemPrincipalToken)
-	require.Equal("application/x-binary", actualBLOB1.MimeType)
-	require.Equal(`blob1`, actualBLOB1.Name)
-	require.Equal(blobs[0].Content, actualBLOB1.Content)
-
-	// read blob2
-	actualBLOB2 := vit.GetBLOB(istructs.AppQName_test1_app1, ws.WSID, blobIDs[1], systemPrincipalToken)
-	require.Equal("application/x-binary", actualBLOB2.MimeType)
-	require.Equal(`blob2`, actualBLOB2.Name)
-	require.Equal(blobs[1].Content, actualBLOB2.Content)
 }

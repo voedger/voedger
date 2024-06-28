@@ -36,12 +36,11 @@ import (
 func TestBoostrap_BasicUsage(t *testing.T) {
 	require := require.New(t)
 	memStorage := mem.Provide()
-	keyspacePrefix := t.Name()
 
 	// launch the VVM with an app with a certain NumParts and NumAppWorkspaces
 	numParts := istructs.NumAppPartitions(42)
 	numAppWS := istructs.NumAppWorkspaces(43)
-	cfg := getTestCfg(numParts, numAppWS, memStorage, keyspacePrefix)
+	cfg := getTestCfg(numParts, numAppWS, memStorage)
 	vit := it.NewVIT(t, &cfg)
 
 	var clusterApp btstrp.ClusterBuiltInApp
@@ -103,7 +102,7 @@ func TestBoostrap_BasicUsage(t *testing.T) {
 	})
 }
 
-func getTestCfg(numParts istructs.NumAppPartitions, numAppWS istructs.NumAppWorkspaces, storage istorage.IAppStorageFactory, testName string) it.VITConfig {
+func getTestCfg(numParts istructs.NumAppPartitions, numAppWS istructs.NumAppWorkspaces, storage istorage.IAppStorageFactory) it.VITConfig {
 	fs := fstest.MapFS{
 		"app.vsql": &fstest.MapFile{
 			Data: []byte(`APPLICATION app1();`),
@@ -132,7 +131,6 @@ func getTestCfg(numParts istructs.NumAppPartitions, numAppWS istructs.NumAppWork
 			cfg.StorageFactory = func() (provider istorage.IAppStorageFactory, err error) {
 				return storage, nil
 			}
-			cfg.KeyspaceNameSuffix = testName
 		}),
 	)
 }
@@ -201,7 +199,7 @@ func TestAppWSInitIndempotency(t *testing.T) {
 
 	// init app ws again (first is done on NewVIT()) -> expect no errors + assume next tests will work as well
 	for _, app := range vit.BuiltInAppsPackages {
-		as, err := vit.AppStructs(app.Name)
+		as, err := vit.BuiltIn(app.Name)
 		require.NoError(err)
 		initedWSIDs, err := cluster.InitAppWSes(as, as.NumAppWorkspaces(), app.NumParts, istructs.UnixMilli(vit.TimeFunc().UnixMilli()))
 		require.NoError(err)
@@ -211,7 +209,7 @@ func TestAppWSInitIndempotency(t *testing.T) {
 
 func checkCDocsWSDesc(vvmCfg *vvm.VVMConfig, vvm *vvm.VVM, require *require.Assertions) {
 	for appQName := range vvmCfg.VVMAppsBuilder {
-		as, err := vvm.AppStructs(appQName)
+		as, err := vvm.BuiltIn(appQName)
 		require.NoError(err)
 		for wsNum := 0; istructs.NumAppWorkspaces(wsNum) < as.NumAppWorkspaces(); wsNum++ {
 			appWSID := istructs.NewWSID(istructs.MainClusterID, istructs.WSID(wsNum+int(istructs.FirstBaseAppWSID)))

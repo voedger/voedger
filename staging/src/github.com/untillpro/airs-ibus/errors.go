@@ -7,8 +7,8 @@ package ibus
 import "errors"
 
 var (
-	// ErrTimeoutExpired s.e.
-	ErrTimeoutExpired = errors.New("timeout expired")
+	// ErrBusTimeoutExpired s.e.
+	ErrBusTimeoutExpired = errors.New("bus timeout expired")
 
 	// ErrNoConsumer shows that consumer of further sections is gone. Further sections sending is senceless.
 	ErrNoConsumer = errors.New("no consumer for the stream")

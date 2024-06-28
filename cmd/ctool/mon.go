@@ -13,7 +13,7 @@ import (
 func newMonCmd() *cobra.Command {
 	monPasswordCmd := &cobra.Command{
 		Use:   "password <password>",
-		Short: "Setting a password for the monitoring stack",
+		Short: "Set a password for the monitoring stack",
 		Args: func(cmd *cobra.Command, args []string) error {
 			if len(args) != 1 {
 				return ErrInvalidNumberOfArguments
@@ -29,7 +29,7 @@ func newMonCmd() *cobra.Command {
 
 	monCmd := &cobra.Command{
 		Use:   "mon",
-		Short: "Monitoring stack management",
+		Short: "Manage the monitoring stack",
 	}
 
 	monCmd.AddCommand(monPasswordCmd)

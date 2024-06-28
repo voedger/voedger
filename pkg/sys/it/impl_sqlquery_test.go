@@ -506,7 +506,7 @@ func TestReadFromAnDifferentLocations(t *testing.T) {
 
 	t.Run("app workspace number", func(t *testing.T) {
 		// determine the number of the app workspace that stores cdoc.Login "login"
-		registryAppStructs, err := vit.IAppStructsProvider.AppStructs(istructs.AppQName_sys_registry)
+		registryAppStructs, err := vit.IAppStructsProvider.BuiltIn(istructs.AppQName_sys_registry)
 		require.NoError(err)
 		prn := vit.GetPrincipal(istructs.AppQName_test1_app1, "login") // from VIT shared config
 		pseudoWSID := coreutils.GetPseudoWSID(istructs.NullWSID, prn.Name, istructs.MainClusterID)
