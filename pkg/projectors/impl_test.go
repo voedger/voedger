@@ -337,7 +337,7 @@ func deployTestAppEx(
 		if err := actualizers.Prepare(struct{}{}); err != nil {
 			panic(err)
 		}
-		actualizers.Run(vvmCtx)
+		actualizers.RunEx(vvmCtx, func() {})
 	}
 
 	stop = func() {
