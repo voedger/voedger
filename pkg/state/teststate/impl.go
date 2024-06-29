@@ -463,6 +463,12 @@ type intentAssertions struct {
 	ctx *testState
 }
 
+func (ia *intentAssertions) NotExists() {
+	if ia.vb != nil {
+		require.Fail(ia.t, "expected intent not to exist")
+	}
+}
+
 func (ia *intentAssertions) Exists() {
 	if ia.vb == nil {
 		require.Fail(ia.t, "expected intent to exist")
@@ -494,7 +500,13 @@ func (ia *intentAssertions) Equal(vbc ValueBuilderCallback) {
 	vbc(vb)
 
 	if !ia.vb.Equal(vb) {
-		require.Fail(ia.t, "Expected intents to be equal")
+		require.Fail(ia.t, "expected intents to be equal")
+	}
+}
+
+func (ctx *testState) RequireNoIntents(t *testing.T) {
+	if ctx.IState.IntentsCount() > 0 {
+		require.Fail(t, "expected no intents")
 	}
 }
 
