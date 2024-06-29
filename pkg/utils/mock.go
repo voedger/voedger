@@ -435,6 +435,9 @@ type MockIntents struct {
 func (m *MockIntents) FindIntent(key istructs.IStateKeyBuilder) istructs.IStateValueBuilder {
 	return nil
 }
+func (m *MockIntents) IntentsCount() int {
+	return 0
+}
 func (m *MockIntents) NewValue(key istructs.IStateKeyBuilder) (istructs.IStateValueBuilder, error) {
 	args := m.Called(key)
 	return args.Get(0).(istructs.IStateValueBuilder), args.Error(1)
