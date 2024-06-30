@@ -8,8 +8,9 @@ package appdef
 import (
 	"errors"
 	"fmt"
-	"strconv"
 	"strings"
+
+	"github.com/voedger/voedger/pkg/utils/utils"
 )
 
 // # Implements:
@@ -114,8 +115,7 @@ func (k ExtensionEngineKind) MarshalText() ([]byte, error) {
 	if k < ExtensionEngineKind_Count {
 		s = k.String()
 	} else {
-		const base = 10
-		s = strconv.FormatUint(uint64(k), base)
+		s = utils.UIntToString(k)
 	}
 	return []byte(s), nil
 }

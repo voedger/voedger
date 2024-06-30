@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/voedger/voedger/pkg/utils/utils"
 )
 
 func Test_NullType(t *testing.T) {
@@ -69,7 +70,7 @@ func TestTypeKind_MarshalText(t *testing.T) {
 		},
 		{name: `TypeKind_FakeLast —> <number>`,
 			k:    TypeKind_count,
-			want: strconv.FormatUint(uint64(TypeKind_count), 10),
+			want: utils.UIntToString(TypeKind_count),
 		},
 	}
 	for _, tt := range tests {

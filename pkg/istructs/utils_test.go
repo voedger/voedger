@@ -17,6 +17,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/utils/utils"
 )
 
 func TestBasicUsage_RecordID(t *testing.T) {
@@ -248,7 +249,7 @@ func TestResourceKindType_MarshalText(t *testing.T) {
 		},
 		{name: `ResourceKind_FakeLast —> 3`,
 			k:    ResourceKind_FakeLast,
-			want: strconv.FormatUint(uint64(ResourceKind_FakeLast), 10),
+			want: utils.UIntToString(ResourceKind_FakeLast),
 		},
 	}
 	for _, tt := range tests {

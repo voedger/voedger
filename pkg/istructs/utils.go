@@ -7,10 +7,10 @@
 package istructs
 
 import (
-	"strconv"
 	"time"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/utils/utils"
 )
 
 // *********************************************************************************************************
@@ -111,8 +111,7 @@ func (k ResourceKindType) MarshalText() ([]byte, error) {
 	if k < ResourceKind_FakeLast {
 		s = k.String()
 	} else {
-		const base = 10
-		s = strconv.FormatUint(uint64(k), base)
+		s = utils.UIntToString(k)
 	}
 	return []byte(s), nil
 }
@@ -127,8 +126,7 @@ func (k RateLimitKind) MarshalText() ([]byte, error) {
 	if k < RateLimitKind_FakeLast {
 		s = k.String()
 	} else {
-		const base = 10
-		s = strconv.FormatUint(uint64(k), base)
+		s = utils.UIntToString(k)
 	}
 	return []byte(s), nil
 }

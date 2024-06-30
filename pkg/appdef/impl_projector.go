@@ -8,11 +8,11 @@ package appdef
 import (
 	"errors"
 	"fmt"
-	"strconv"
 	"strings"
 
 	"github.com/robfig/cron/v3"
 	"github.com/voedger/voedger/pkg/goutils/set"
+	"github.com/voedger/voedger/pkg/utils/utils"
 )
 
 // # Implements:
@@ -248,8 +248,7 @@ func (i ProjectorEventKind) MarshalText() ([]byte, error) {
 	if (i > 0) && (i < ProjectorEventKind_Count) {
 		s = i.String()
 	} else {
-		const base = 10
-		s = strconv.FormatUint(uint64(i), base)
+		s = utils.UIntToString(i)
 	}
 	return []byte(s), nil
 }

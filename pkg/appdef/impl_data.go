@@ -7,8 +7,9 @@ package appdef
 
 import (
 	"fmt"
-	"strconv"
 	"strings"
+
+	"github.com/voedger/voedger/pkg/utils/utils"
 )
 
 // # Implements:
@@ -237,8 +238,7 @@ func (k ConstraintKind) MarshalText() ([]byte, error) {
 	if k < ConstraintKind_Count {
 		s = k.String()
 	} else {
-		const base = 10
-		s = strconv.FormatUint(uint64(k), base)
+		s = utils.UIntToString(k)
 	}
 	return []byte(s), nil
 }
@@ -307,8 +307,7 @@ func (k DataKind) MarshalText() ([]byte, error) {
 	if k < DataKind_FakeLast {
 		s = k.String()
 	} else {
-		const base = 10
-		s = strconv.FormatUint(uint64(k), base)
+		s = utils.UIntToString(k)
 	}
 	return []byte(s), nil
 }

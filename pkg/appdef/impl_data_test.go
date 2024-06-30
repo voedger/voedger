@@ -15,6 +15,7 @@ import (
 	"testing"
 
 	"github.com/voedger/voedger/pkg/goutils/testingu/require"
+	"github.com/voedger/voedger/pkg/utils/utils"
 )
 
 func Test_AppDef_AddData(t *testing.T) {
@@ -393,7 +394,7 @@ func TestConstraintKind_MarshalText(t *testing.T) {
 		{
 			name: `ConstraintKind_Count —> 4`,
 			k:    ConstraintKind_Count,
-			want: strconv.FormatUint(uint64(ConstraintKind_Count), 10),
+			want: utils.UIntToString(ConstraintKind_Count),
 		},
 	}
 	for _, tt := range tests {
@@ -540,7 +541,7 @@ func TestDataKindType_MarshalText(t *testing.T) {
 		{
 			name: `DataKind_FakeLast —> 12`,
 			k:    DataKind_FakeLast,
-			want: strconv.FormatUint(uint64(DataKind_FakeLast), 10),
+			want: utils.UIntToString(DataKind_FakeLast),
 		},
 	}
 	for _, tt := range tests {

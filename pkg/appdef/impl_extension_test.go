@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/voedger/voedger/pkg/utils/utils"
 )
 
 func Test_AppDefExtensions(t *testing.T) {
@@ -97,7 +98,7 @@ func TestExtensionEngineKind_MarshalText(t *testing.T) {
 		},
 		{name: `ExtensionEngineKind_Count —> <number>`,
 			k:    ExtensionEngineKind_Count,
-			want: strconv.FormatUint(uint64(ExtensionEngineKind_Count), 10),
+			want: utils.UIntToString(ExtensionEngineKind_Count),
 		},
 	}
 	for _, tt := range tests {

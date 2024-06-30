@@ -9,6 +9,8 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+
+	"github.com/voedger/voedger/pkg/utils/utils"
 )
 
 // TODO: type ContainerName = string
@@ -171,8 +173,7 @@ func (o Occurs) String() string {
 	case Occurs_Unbounded:
 		return Occurs_UnboundedStr
 	default:
-		const base = 10
-		return strconv.FormatUint(uint64(o), base)
+		return utils.UIntToString(o)
 	}
 }
 

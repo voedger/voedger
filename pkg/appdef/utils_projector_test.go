@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/voedger/voedger/pkg/goutils/testingu/require"
+	"github.com/voedger/voedger/pkg/utils/utils"
 )
 
 func TestProjectorEventKind_MarshalText(t *testing.T) {
@@ -28,7 +29,7 @@ func TestProjectorEventKind_MarshalText(t *testing.T) {
 		},
 		{name: `ProjectorEventKind_Count —> <number>`,
 			k:    ProjectorEventKind_Count,
-			want: strconv.FormatUint(uint64(ProjectorEventKind_Count), 10),
+			want: utils.UIntToString(ProjectorEventKind_Count),
 		},
 	}
 	for _, tt := range tests {
