@@ -32,6 +32,8 @@ const (
 	field_NewPwd            = "NewPwd"
 	field_AppName           = "AppName"
 	field_Login             = "Login"
+	field_TTLHours          = "TTLHours"
+	maxTokenTTLHours        = 168 // 1 week
 )
 
 var (

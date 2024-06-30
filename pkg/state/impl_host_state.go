@@ -268,6 +268,9 @@ func (s *hostState) FindIntent(key istructs.IStateKeyBuilder) istructs.IStateVal
 	}
 	return nil
 }
+func (s *hostState) IntentsCount() int {
+	return s.isIntentsSize()
+}
 func (s *hostState) NewValue(key istructs.IStateKeyBuilder) (eb istructs.IStateValueBuilder, err error) {
 	storage, ok := s.withInsert[key.Storage()]
 	if !ok {

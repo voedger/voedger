@@ -26,15 +26,19 @@ type TimeAfterFunc func(d time.Duration) <-chan time.Time
 
 type LogErrorFunc func(args ...interface{})
 
-type AsyncActualizerConf struct {
-	Ctx           context.Context
-	AppQName      appdef.AppQName
+type BasicAsyncActualizerConfig struct {
+	VvmName string
+	Ctx     context.Context
+
 	AppPartitions appparts.IAppPartitions
-	AppStructs    state.AppStructsFunc
 	SecretReader  isecrets.ISecretReader
 	Tokens        itokens.ITokens
+	Metrics       imetrics.IMetrics
+	Broker        in10n.IN10nBroker
 	Federation    federation.IFederation
-	Partition     istructs.PartitionID
+
+	Opts []state.StateOptFunc
+
 	// Optional. Default value: `time.After`
 	AfterError TimeAfterFunc
 	// Optional. Default value: `core-logger.Error`
@@ -47,15 +51,22 @@ type AsyncActualizerConf struct {
 	BundlesLimit int
 	//FlushInterval specifies how often the current actualizer flushes changes to underlying storage, optional, default value is 100 milliseconds
 	FlushInterval time.Duration
-	// FlushPositionInterval specifies how often actializer must save it's position, even when no events has been processed by actualizer. Default is 1 minute
+	// FlushPositionInterval specifies how often actualizer must save it's position, even when no events has been processed by actualizer. Default is 1 minute
 	FlushPositionInterval time.Duration
+}
 
-	VvmName string
-	Metrics imetrics.IMetrics
+type IActualizersService interface {
+	pipeline.IServiceEx
+	appparts.IActualizers
+}
 
-	Broker  in10n.IN10nBroker
+type AsyncActualizerConf struct {
+	BasicAsyncActualizerConfig
+
+	AppQName  appdef.AppQName
+	Partition istructs.PartitionID
+
 	channel in10n.ChannelID
-	Opts    []state.StateOptFunc
 }
 
 type AsyncActualizerMetrics interface {
@@ -78,10 +89,6 @@ type SyncActualizerConf struct {
 type ViewTypeBuilder func(builder appdef.IViewBuilder)
 
 type WorkToEventFunc func(work interface{}) istructs.IPLogEvent
-
-// AsyncActualizerFactory returns the ServiceOperator<AsyncActualizer>
-// workpiece must implement projectors.IAsyncActualizerWork
-type AsyncActualizerFactory func(conf AsyncActualizerConf, projection istructs.Projector) (pipeline.ISyncOperator, error)
 
 // SyncActualizerFactory returns the Operator<SyncActualizer>
 // Workpiece is ...?
