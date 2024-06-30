@@ -11,7 +11,6 @@ import (
 	"io"
 	"log"
 	"os"
-	"strconv"
 	"testing"
 	"time"
 
@@ -19,6 +18,7 @@ import (
 	"github.com/tetratelabs/wazero"
 	"github.com/tetratelabs/wazero/api"
 	"github.com/tetratelabs/wazero/imports/wasi_snapshot_preview1"
+	"github.com/voedger/voedger/pkg/utils/utils"
 )
 
 func Benchmark_Pbill(b *testing.B) {
@@ -46,7 +46,7 @@ func runBenchFunc(b *testing.B, fname string, compiler bool, args ...uint64) {
 			if idx > 0 {
 				benchName += ","
 			}
-			benchName += strconv.FormatUint(arg, 10)
+			benchName += utils.UintToString(arg)
 		}
 		benchName += ")"
 	}

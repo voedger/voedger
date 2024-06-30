@@ -13,8 +13,6 @@ import (
 	"strings"
 	"syscall"
 	"time"
-
-	"github.com/voedger/voedger/pkg/istructs"
 )
 
 func IsBlank(str string) bool {
@@ -77,11 +75,6 @@ func IsWSAEError(err error, errno syscall.Errno) bool {
 		}
 	}
 	return false
-}
-
-// used in BuildAppWorkspaces() only because there are no apps in IAppPartitions on that moment
-func AppPartitionID(wsid istructs.WSID, numAppPartitions istructs.NumAppPartitions) istructs.PartitionID {
-	return istructs.PartitionID(int(wsid) % int(numAppPartitions))
 }
 
 func NilAdminPortGetter() int { panic("to be tested") }

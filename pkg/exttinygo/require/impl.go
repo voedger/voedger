@@ -10,6 +10,7 @@ import (
 	"strconv"
 
 	ext "github.com/voedger/voedger/pkg/exttinygo"
+	"github.com/voedger/voedger/pkg/utils/utils"
 )
 
 func floarToStr(f float64) string {
@@ -18,13 +19,13 @@ func floarToStr(f float64) string {
 
 func EqualInt32(expected, actual int32) {
 	if expected != actual {
-		panic("Int32 not equal. Expected: " + strconv.FormatInt(int64(expected), 10) + butGotPhrase + strconv.FormatInt(int64(actual), 10))
+		panic("Int32 not equal. Expected: " + utils.IntToString(expected) + butGotPhrase + utils.IntToString(actual))
 	}
 }
 
 func EqualInt64(expected, actual int64) {
 	if expected != actual {
-		panic("Int64 not equal. Expected: " + strconv.FormatInt(expected, 10) + butGotPhrase + strconv.FormatInt(actual, 10))
+		panic("Int64 not equal. Expected: " + utils.IntToString(expected) + butGotPhrase + utils.IntToString(actual))
 	}
 }
 
