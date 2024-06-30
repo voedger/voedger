@@ -16,7 +16,7 @@ func (k ProcessorKind) MarshalText() ([]byte, error) {
 	if k < ProcessorKind_Count {
 		s = k.String()
 	} else {
-		s = utils.UIntToString(k)
+		s = utils.UintToString(k)
 	}
 	return []byte(s), nil
 }

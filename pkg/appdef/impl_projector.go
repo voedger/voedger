@@ -248,7 +248,7 @@ func (i ProjectorEventKind) MarshalText() ([]byte, error) {
 	if (i > 0) && (i < ProjectorEventKind_Count) {
 		s = i.String()
 	} else {
-		s = utils.UIntToString(i)
+		s = utils.UintToString(i)
 	}
 	return []byte(s), nil
 }

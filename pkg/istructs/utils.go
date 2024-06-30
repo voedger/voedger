@@ -111,7 +111,7 @@ func (k ResourceKindType) MarshalText() ([]byte, error) {
 	if k < ResourceKind_FakeLast {
 		s = k.String()
 	} else {
-		s = utils.UIntToString(k)
+		s = utils.UintToString(k)
 	}
 	return []byte(s), nil
 }
@@ -126,7 +126,7 @@ func (k RateLimitKind) MarshalText() ([]byte, error) {
 	if k < RateLimitKind_FakeLast {
 		s = k.String()
 	} else {
-		s = utils.UIntToString(k)
+		s = utils.UintToString(k)
 	}
 	return []byte(s), nil
 }

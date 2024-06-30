@@ -6,7 +6,6 @@
 package appdef
 
 import (
-	"strconv"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -98,7 +97,7 @@ func TestExtensionEngineKind_MarshalText(t *testing.T) {
 		},
 		{name: `ExtensionEngineKind_Count —> <number>`,
 			k:    ExtensionEngineKind_Count,
-			want: utils.UIntToString(ExtensionEngineKind_Count),
+			want: utils.UintToString(ExtensionEngineKind_Count),
 		},
 	}
 	for _, tt := range tests {
@@ -116,7 +115,7 @@ func TestExtensionEngineKind_MarshalText(t *testing.T) {
 
 	t.Run("100% cover ExtensionEngineKind.String()", func(t *testing.T) {
 		const tested = ExtensionEngineKind_Count + 1
-		want := "ExtensionEngineKind(" + strconv.FormatInt(int64(tested), 10) + ")"
+		want := "ExtensionEngineKind(" + utils.UintToString(tested) + ")"
 		got := tested.String()
 		if got != want {
 			t.Errorf("(ExtensionEngineKind_Count + 1).String() = %v, want %v", got, want)

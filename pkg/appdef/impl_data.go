@@ -238,7 +238,7 @@ func (k ConstraintKind) MarshalText() ([]byte, error) {
 	if k < ConstraintKind_Count {
 		s = k.String()
 	} else {
-		s = utils.UIntToString(k)
+		s = utils.UintToString(k)
 	}
 	return []byte(s), nil
 }
@@ -307,7 +307,7 @@ func (k DataKind) MarshalText() ([]byte, error) {
 	if k < DataKind_FakeLast {
 		s = k.String()
 	} else {
-		s = utils.UIntToString(k)
+		s = utils.UintToString(k)
 	}
 	return []byte(s), nil
 }

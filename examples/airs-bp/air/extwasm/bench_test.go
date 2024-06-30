@@ -46,7 +46,7 @@ func runBenchFunc(b *testing.B, fname string, compiler bool, args ...uint64) {
 			if idx > 0 {
 				benchName += ","
 			}
-			benchName += utils.UIntToString(arg)
+			benchName += utils.UintToString(arg)
 		}
 		benchName += ")"
 	}

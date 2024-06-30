@@ -366,7 +366,7 @@ func (k VerificationKind) MarshalJSON() ([]byte, error) {
 	if k < VerificationKind_FakeLast {
 		s = strconv.Quote(k.String())
 	} else {
-		s = utils.UIntToString(k)
+		s = utils.UintToString(k)
 	}
 	return []byte(s), nil
 }

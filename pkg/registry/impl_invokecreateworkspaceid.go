@@ -29,7 +29,7 @@ func invokeCreateWorkspaceIDProjector(federation federation.IFederation, tokensA
 				return nil
 			}
 			loginHash := rec.AsString(authnz.Field_LoginHash)
-			wsName := utils.UIntToString(crc32.ChecksumIEEE([]byte(loginHash)))
+			wsName := utils.UintToString(crc32.ChecksumIEEE([]byte(loginHash)))
 			var wsKind appdef.QName
 			switch istructs.SubjectKindType(rec.AsInt32(authnz.Field_SubjectKind)) {
 			case istructs.SubjectKind_Device:

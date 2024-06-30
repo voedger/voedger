@@ -115,7 +115,7 @@ func (k ExtensionEngineKind) MarshalText() ([]byte, error) {
 	if k < ExtensionEngineKind_Count {
 		s = k.String()
 	} else {
-		s = utils.UIntToString(k)
+		s = utils.UintToString(k)
 	}
 	return []byte(s), nil
 }

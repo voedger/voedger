@@ -173,7 +173,7 @@ func (o Occurs) String() string {
 	case Occurs_Unbounded:
 		return Occurs_UnboundedStr
 	default:
-		return utils.UIntToString(o)
+		return utils.UintToString(o)
 	}
 }
 

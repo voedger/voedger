@@ -249,7 +249,7 @@ func TestResourceKindType_MarshalText(t *testing.T) {
 		},
 		{name: `ResourceKind_FakeLast —> 3`,
 			k:    ResourceKind_FakeLast,
-			want: utils.UIntToString(ResourceKind_FakeLast),
+			want: utils.UintToString(ResourceKind_FakeLast),
 		},
 	}
 	for _, tt := range tests {
@@ -267,7 +267,7 @@ func TestResourceKindType_MarshalText(t *testing.T) {
 
 	t.Run("100% cover ResourceKindType.String()", func(t *testing.T) {
 		const tested = ResourceKind_FakeLast + 1
-		want := "ResourceKindType(" + strconv.FormatInt(int64(tested), 10) + ")"
+		want := "ResourceKindType(" + utils.UintToString(tested) + ")"
 		got := tested.String()
 		if got != want {
 			t.Errorf("(ResourceKind_FakeLast + 1).String() = %v, want %v", got, want)
