@@ -11,6 +11,8 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+
+	"github.com/voedger/voedger/pkg/utils/utils"
 )
 
 // # Implements:
@@ -364,8 +366,7 @@ func (k VerificationKind) MarshalJSON() ([]byte, error) {
 	if k < VerificationKind_FakeLast {
 		s = strconv.Quote(k.String())
 	} else {
-		const base = 10
-		s = strconv.FormatUint(uint64(k), base)
+		s = utils.UintToString(k)
 	}
 	return []byte(s), nil
 }

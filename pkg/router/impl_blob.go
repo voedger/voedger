@@ -27,6 +27,7 @@ import (
 	"github.com/voedger/voedger/pkg/iprocbus"
 	"github.com/voedger/voedger/pkg/istructs"
 	coreutils "github.com/voedger/voedger/pkg/utils"
+	"github.com/voedger/voedger/pkg/utils/utils"
 )
 
 type blobWriteDetailsSingle struct {
@@ -216,7 +217,7 @@ func blobWriteMessageHandlerMultipart(bbm blobBaseMessage, blobStorage iblobstor
 		if blobID == 0 {
 			return // request handled
 		}
-		blobIDs = append(blobIDs, strconv.FormatInt(blobID, decimalBase))
+		blobIDs = append(blobIDs, utils.IntToString(blobID))
 		partNum++
 	}
 	WriteTextResponse(bbm.resp, strings.Join(blobIDs, ","), http.StatusOK)
@@ -229,7 +230,8 @@ func blobWriteMessageHandlerSingle(bbm blobBaseMessage, blobWriteDetails blobWri
 	blobID := writeBLOB(bbm.req.Context(), int64(bbm.wsid), bbm.appQName.String(), header, bbm.resp, blobWriteDetails.name,
 		blobWriteDetails.mimeType, blobStorage, bbm.req.Body, int64(bbm.blobMaxSize), bus, busTimeout)
 	if blobID > 0 {
-		WriteTextResponse(bbm.resp, strconv.FormatInt(blobID, decimalBase), http.StatusOK)
+		utils.IntToString(blobID)
+		WriteTextResponse(bbm.resp, utils.IntToString(blobID), http.StatusOK)
 	}
 }
 

@@ -6,10 +6,10 @@
 package appdef
 
 import (
-	"strconv"
 	"testing"
 
 	"github.com/voedger/voedger/pkg/goutils/testingu/require"
+	"github.com/voedger/voedger/pkg/utils/utils"
 )
 
 func TestProjectorEventKind_MarshalText(t *testing.T) {
@@ -28,7 +28,7 @@ func TestProjectorEventKind_MarshalText(t *testing.T) {
 		},
 		{name: `ProjectorEventKind_Count —> <number>`,
 			k:    ProjectorEventKind_Count,
-			want: strconv.FormatUint(uint64(ProjectorEventKind_Count), 10),
+			want: utils.UintToString(ProjectorEventKind_Count),
 		},
 	}
 	for _, tt := range tests {
@@ -46,7 +46,7 @@ func TestProjectorEventKind_MarshalText(t *testing.T) {
 
 	t.Run("100% cover ProjectorEventKind.String()", func(t *testing.T) {
 		const tested = ProjectorEventKind_Count + 1
-		want := "ProjectorEventKind(" + strconv.FormatInt(int64(tested), 10) + ")"
+		want := "ProjectorEventKind(" + utils.UintToString(tested) + ")"
 		got := tested.String()
 		if got != want {
 			t.Errorf("(ProjectorEventKind_Count + 1).String() = %v, want %v", got, want)
