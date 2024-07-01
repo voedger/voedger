@@ -31,6 +31,7 @@ type ITestAPI interface {
 	PutSecret(name string, secret []byte)
 	PutHttpHandler(HttpHandlerFunc)
 	PutFederationCmdHandler(state.FederationCommandHandler)
+	PutFederationBlobHandler(state.FederationBlobHandler)
 	PutUniquesHandler(state.UniquesHandler)
 	PutRequestSubject(principals []iauthnz.Principal, token string)
 	PutQuery(wsid istructs.WSID, name appdef.FullQName, argb QueryArgBuilderCallback)
@@ -40,6 +41,7 @@ type ITestAPI interface {
 
 	// Intent
 	RequireIntent(t *testing.T, storage appdef.QName, entity appdef.FullQName, kb KeyBuilderCallback) IIntentAssertions
+	RequireNoIntents(t *testing.T)
 	RequireRecordIntent(t *testing.T, storage appdef.QName, fQName appdef.IFullQName, keys, expectedValues map[string]any)
 }
 
@@ -49,6 +51,7 @@ type ITestState interface {
 }
 
 type IIntentAssertions interface {
+	NotExists()
 	Exists()
 	Equal(vb ValueBuilderCallback)
 	Assert(cb IntentAssertionsCallback)

@@ -39,8 +39,8 @@ type appStructsProviderType struct {
 	storageProvider  istorage.IAppStorageProvider
 }
 
-// istructs.IAppStructsProvider.AppStructs
-func (provider *appStructsProviderType) AppStructs(appName appdef.AppQName) (structs istructs.IAppStructs, err error) {
+// istructs.IAppStructsProvider.BuiltIn
+func (provider *appStructsProviderType) BuiltIn(appName appdef.AppQName) (structs istructs.IAppStructs, err error) {
 
 	appCfg, ok := provider.configs[appName]
 	if !ok {
@@ -67,9 +67,24 @@ func (provider *appStructsProviderType) AppStructs(appName appdef.AppQName) (str
 	return app, nil
 }
 
-// istructs.IAppStructsProvider.AppStructsByDef
-func (provider *appStructsProviderType) AppStructsByDef(appDef appdef.IAppDef) (structs istructs.IAppStructs, err error) {
-	return provider.AppStructs(appDef.Name())
+// istructs.IAppStructsProvider.New
+func (provider *appStructsProviderType) New(name appdef.AppQName, def appdef.IAppDef, id istructs.ClusterAppID, wsCount istructs.NumAppWorkspaces) (istructs.IAppStructs, error) {
+	provider.locker.Lock()
+	defer provider.locker.Unlock()
+
+	cfg := provider.configs.AddAppConfig(name, id, def, wsCount)
+	buckets := provider.bucketsFactory()
+	appTokens := provider.appTokensFactory.New(name)
+	appStorage, err := provider.storageProvider.AppStorage(name)
+	if err != nil {
+		return nil, err
+	}
+	if err = cfg.prepare(buckets, appStorage); err != nil {
+		return nil, err
+	}
+	app := newAppStructs(cfg, buckets, appTokens)
+	//provider.structures[name] = app
+	return app, nil
 }
 
 // appStructsType implements IAppStructs interface
@@ -211,7 +226,7 @@ func (app *appStructsType) DescribePackageNames() (names []string) {
 	return names
 }
 
-// istructs.IAppStructs.DescribePackage: Describe package content
+// istructs.IAppStructs.DescribePoackage: Describe package content
 func (app *appStructsType) DescribePackage(name string) interface{} {
 	return app.describe().Packages[name]
 }

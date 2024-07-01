@@ -41,7 +41,7 @@ func TestProjector_isAcceptable(t *testing.T) {
 	}
 	qNameDoc1 := appdef.NewQName("my", "doc1")
 	qNameDoc2 := appdef.NewQName("my", "doc2")
-	adb := appdef.New(istructs.AppQName_test1_app1)
+	adb := appdef.New()
 	qNameODoc := appdef.NewQName(appdef.SysPackage, "oDoc")
 	adb.AddODoc(qNameODoc)
 	appDef, err := adb.Build()
@@ -355,7 +355,7 @@ func TestProjector_isAcceptableGlobalDocs(t *testing.T) {
 		})
 		return event
 	}
-	adb := appdef.New(istructs.AppQName_test1_app1)
+	adb := appdef.New()
 	qNameCDoc := appdef.NewQName(appdef.SysPackage, "cDoc")
 	qNameWDoc := appdef.NewQName(appdef.SysPackage, "wDoc")
 	qNameODoc := appdef.NewQName(appdef.SysPackage, "oDoc")

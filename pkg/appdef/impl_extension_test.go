@@ -6,10 +6,10 @@
 package appdef
 
 import (
-	"strconv"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/voedger/voedger/pkg/utils/utils"
 )
 
 func Test_AppDefExtensions(t *testing.T) {
@@ -28,7 +28,7 @@ func Test_AppDefExtensions(t *testing.T) {
 	viewName := NewQName("test", "view")
 
 	t.Run("Should be ok to build application with extensions", func(t *testing.T) {
-		adb := New(NewAppQName("test", "app"))
+		adb := New()
 		adb.AddPackage("test", "test.com/test")
 
 		cmd := adb.AddCommand(cmdName)
@@ -97,7 +97,7 @@ func TestExtensionEngineKind_MarshalText(t *testing.T) {
 		},
 		{name: `ExtensionEngineKind_Count —> <number>`,
 			k:    ExtensionEngineKind_Count,
-			want: strconv.FormatUint(uint64(ExtensionEngineKind_Count), 10),
+			want: utils.UintToString(ExtensionEngineKind_Count),
 		},
 	}
 	for _, tt := range tests {
@@ -115,7 +115,7 @@ func TestExtensionEngineKind_MarshalText(t *testing.T) {
 
 	t.Run("100% cover ExtensionEngineKind.String()", func(t *testing.T) {
 		const tested = ExtensionEngineKind_Count + 1
-		want := "ExtensionEngineKind(" + strconv.FormatInt(int64(tested), 10) + ")"
+		want := "ExtensionEngineKind(" + utils.UintToString(tested) + ")"
 		got := tested.String()
 		if got != want {
 			t.Errorf("(ExtensionEngineKind_Count + 1).String() = %v, want %v", got, want)

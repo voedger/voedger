@@ -51,7 +51,7 @@ func TestBasicUsage_Uniques(t *testing.T) {
 	})
 
 	t.Run("get record id by unique fields values basic", func(t *testing.T) {
-		as, err := vit.AppStructs(istructs.AppQName_test1_app1)
+		as, err := vit.BuiltIn(istructs.AppQName_test1_app1)
 		require.NoError(err)
 		btsBytes := bytes.NewBuffer(nil)
 		binary.Write(btsBytes, binary.BigEndian, uint32(num))
@@ -350,7 +350,7 @@ func TestBasicUsage_UNIQUEFIELD(t *testing.T) {
 	vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect409(it.QNameApp1_DocConstraintsOldAndNewUniques.String()))
 
 	t.Run("get record id by uniquefield value", func(t *testing.T) {
-		as, err := vit.AppStructs(istructs.AppQName_test1_app1)
+		as, err := vit.BuiltIn(istructs.AppQName_test1_app1)
 		require.NoError(err)
 		recordID, err := uniques.GetRecordIDByUniqueCombination(ws.WSID, it.QNameApp1_DocConstraintsOldAndNewUniques, as, map[string]interface{}{
 			"Int": int32(num),
@@ -371,7 +371,7 @@ func TestRecordByUniqueValuesErrors(t *testing.T) {
 	body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.ID":1,"sys.QName":"app1pkg.DocConstraints","Int":%d,"Str":"str","Bool":true,"Bytes":"%s"}}]}`, num, bts)
 	vit.PostWS(ws, "c.sys.CUD", body)
 
-	as, err := vit.AppStructs(istructs.AppQName_test1_app1)
+	as, err := vit.BuiltIn(istructs.AppQName_test1_app1)
 	require.NoError(err)
 
 	btsBytes := bytes.NewBuffer(nil)

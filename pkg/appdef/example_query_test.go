@@ -21,7 +21,7 @@ func ExampleIAppDefBuilder_AddQuery() {
 
 	// how to build AppDef with query
 	{
-		adb := appdef.New(appdef.NewAppQName("test", "app"))
+		adb := appdef.New()
 		adb.AddPackage("test", "test.com/test")
 
 		qry := adb.AddQuery(qryName)

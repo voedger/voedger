@@ -33,7 +33,7 @@ var cfg = it.NewSharedVITConfig(
 		it.WithChildWorkspace(it.QNameApp1_TestWSKind, "test_ws", "test_template", "", "login", map[string]interface{}{"IntFld": 42}),
 	),
 	it.WithPostInit(func(vit *it.VIT) {
-		as, err := vit.AppStructs(istructs.AppQName_test1_app1)
+		as, err := vit.BuiltIn(istructs.AppQName_test1_app1)
 		require.NoError(vit.T, err)
 		plogOffsets := map[istructs.PartitionID]istructs.Offset{}
 		for wsNum := 0; wsNum < writeCnt; wsNum++ {

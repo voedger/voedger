@@ -33,7 +33,7 @@ func provideExecDeployApp(asp istructs.IAppStructsProvider, timeFunc coreutils.T
 			return coreutils.NewHTTPErrorf(http.StatusBadRequest, fmt.Sprintf("%s app can not be deployed by c.cluster.DeployApp", istructs.AppQName_sys_cluster))
 		}
 
-		clusterAppStructs, err := asp.AppStructs(istructs.AppQName_sys_cluster)
+		clusterAppStructs, err := asp.BuiltIn(istructs.AppQName_sys_cluster)
 		if err != nil {
 			// notest
 			return err
@@ -96,7 +96,7 @@ func provideExecDeployApp(asp istructs.IAppStructsProvider, timeFunc coreutils.T
 		// Initialize appstructs data
 		// note: for builtin apps that does nothing because IAppStructs is already initialized (including storage initialization) on VVM wiring
 		// note: it is good that it is done here, not before return if nothing changed because we're want to initialize (i.e. create) keyspace here - that must be done once
-		as, err := asp.AppStructs(appQName)
+		as, err := asp.BuiltIn(appQName)
 		if err != nil {
 			// notest
 			return fmt.Errorf("failed to get IAppStructs for %s", appQName)

@@ -6,6 +6,7 @@
 package coreutils
 
 import (
+	"io"
 	"io/fs"
 	"net/http"
 	"os"
@@ -48,6 +49,7 @@ type FuncError struct {
 
 type IHTTPClient interface {
 	Req(urlStr string, body string, optFuncs ...ReqOptFunc) (*HTTPResponse, error)
+	ReqReader(urlStr string, bodyReader io.Reader, optFuncs ...ReqOptFunc) (*HTTPResponse, error)
 	CloseIdleConnections()
 }
 
@@ -98,10 +100,22 @@ type IReadFS interface {
 	fs.ReadFileFS
 }
 
-// moved here to avoid import cycle: state -> federation (for cmd storage) -> blobber (IFederation.UploadBLOBs([]blobber.BLOB)) -> state
-type BLOB struct {
+type BLOBDesc struct {
+	Name     string
+	MimeType string
+}
+
+// moved here to avoid import cycle: state -> federation (for cmd storage) -> blobber (IFederation.UploadBLOBs([]blobber.BLOBWorkspaceTemplateField)) -> state
+type BLOBWorkspaceTemplateField struct {
+	BLOBDesc
 	FieldName string
 	Content   []byte
-	Name      string
-	MimeType  string
+	RecordID  istructs.RecordID
+}
+
+// for read and write
+// caller must read out and close the reader
+type BLOBReader struct {
+	io.ReadCloser
+	BLOBDesc
 }

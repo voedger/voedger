@@ -48,7 +48,7 @@ func (b *bus) SendRequest2(clientCtx context.Context, request ibus.Request, time
 			}
 		case <-b.timerResponse(timeout):
 			if err = checkPanic(handlerPanic); err == nil {
-				err = ibus.ErrTimeoutExpired
+				err = ibus.ErrBusTimeoutExpired
 			}
 		case rIntf := <-handlerPanic:
 			err = handlePanic(rIntf)

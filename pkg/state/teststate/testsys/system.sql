@@ -162,6 +162,21 @@ EXTENSION ENGINE BUILTIN (
 		GET SCOPE(QUERIES, PROJECTORS)
 	);
 
+	STORAGE FederationBlob(
+		/*
+		Key:
+			Owner text (optional, default is current app owner)
+			AppName text (optional, default is current app name)
+			WSID int64 (optional, default is current workspace)
+			Token text (optional, default is system token)
+			BlobID int64
+			ExpectedCodes text (optional, comma-separated, default is 200)
+		Value:
+			Body: []byte // blob content, returned in chunks up to 1024 bytes
+		*/		
+		READ SCOPE(QUERIES, PROJECTORS)
+	);
+
 	STORAGE SendMail(
 		/*
 		Key:

@@ -15,11 +15,17 @@ import (
 
 // Structs can be changed on-the-fly, so AppStructs() are taken for each message (request) to be handled
 type IAppStructsProvider interface {
-	// ErrAppNotFound can be returned
+	// Returns AppStructs for builtin application with given name.
+	//
+	// ErrAppNotFound can be returned.
+	//
 	// @ConcurrentAccess
-	AppStructs(aqn appdef.AppQName) (structs IAppStructs, err error)
+	BuiltIn(appdef.AppQName) (IAppStructs, error)
 
-	AppStructsByDef(appdef.IAppDef) (IAppStructs, error)
+	// Creates a new AppStructs for user application with given name, id and definition.
+	//
+	// @ConcurrentAccess
+	New(appdef.AppQName, appdef.IAppDef, ClusterAppID, NumAppWorkspaces) (IAppStructs, error)
 }
 
 type IAppStructs interface {

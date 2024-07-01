@@ -20,7 +20,7 @@ func ExampleIView() {
 
 	// how to build AppDef with view
 	{
-		adb := appdef.New(appdef.NewAppQName("test", "app"))
+		adb := appdef.New()
 		adb.AddPackage("test", "test.com/test")
 
 		docName := appdef.NewQName("test", "doc")

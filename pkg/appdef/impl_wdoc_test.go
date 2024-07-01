@@ -19,7 +19,7 @@ func Test_AppDef_AddWDoc(t *testing.T) {
 	var app IAppDef
 
 	t.Run("must be ok to add document", func(t *testing.T) {
-		adb := New(NewAppQName("test", "app"))
+		adb := New()
 		adb.AddPackage("test", "test.com/test")
 
 		doc := adb.AddWDoc(docName)
@@ -95,7 +95,7 @@ func Test_AppDef_AddWDocSingleton(t *testing.T) {
 	var app IAppDef
 
 	t.Run("must be ok to add singleton", func(t *testing.T) {
-		adb := New(NewAppQName("test", "app"))
+		adb := New()
 		adb.AddPackage("test", "test.com/test")
 
 		doc := adb.AddWDoc(docName)

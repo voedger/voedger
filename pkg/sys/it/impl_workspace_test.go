@@ -17,7 +17,6 @@ import (
 	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/sys/authnz"
-	"github.com/voedger/voedger/pkg/sys/blobber"
 	"github.com/voedger/voedger/pkg/sys/workspace"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 	it "github.com/voedger/voedger/pkg/vit"
@@ -265,7 +264,7 @@ func checkDemoAndDemoMinBLOBs(vit *it.VIT, templateName string, ep extensionpoin
 	blobs, _, err := workspace.ValidateTemplate(templateName, ep, wsKind)
 	require.NoError(err)
 	require.Len(blobs, 4)
-	blobsMap := map[string]blobber.StoredBLOB{}
+	blobsMap := map[string]coreutils.BLOBWorkspaceTemplateField{}
 	for _, templateBLOB := range blobs {
 		blobsMap[string(templateBLOB.Content)] = templateBLOB
 	}

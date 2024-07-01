@@ -20,14 +20,14 @@ var skipStacks []string
 func newInitCmd() *cobra.Command {
 	initCECmd = &cobra.Command{
 		Use:   "CE [<ipaddr>...]",
-		Short: "Creates the file cluster.json for the CE edition cluster",
+		Short: "Create the cluster.json file for the CE edition cluster",
 		Args:  cobra.MaximumNArgs(1),
 		RunE:  initCE,
 	}
 
 	initSECmd = &cobra.Command{
 		Use:   "SE [<ipaddr>...]",
-		Short: "Creates the file cluster.json for the SE edition cluster",
+		Short: "Create the cluster.json file for the SE edition cluster",
 		Args: func(cmd *cobra.Command, args []string) error {
 			if len(args) != initSeArgCount {
 				return ErrInvalidNumberOfArguments

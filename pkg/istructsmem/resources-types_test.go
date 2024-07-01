@@ -26,8 +26,6 @@ func TestResourceEnumerator(t *testing.T) {
 	require := require.New(t)
 
 	var (
-		appName = istructs.AppQName_test1_app1
-
 		cfg *AppConfigType
 		app istructs.IAppStructs
 
@@ -43,7 +41,7 @@ func TestResourceEnumerator(t *testing.T) {
 
 	t.Run("builds app", func(t *testing.T) {
 
-		adb := appdef.New(appName)
+		adb := appdef.New()
 		adb.AddPackage("test", "test.com/test")
 
 		t.Run("must be ok to build application", func(t *testing.T) {
@@ -64,7 +62,7 @@ func TestResourceEnumerator(t *testing.T) {
 		})
 
 		cfgs := make(AppConfigsType, 1)
-		cfg = cfgs.AddConfig(istructs.AppQName_test1_app1, adb)
+		cfg = cfgs.AddBuiltInAppConfig(istructs.AppQName_test1_app1, adb)
 		cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 
 		cfg.Resources.Add(NewCommandFunction(cmdCreateDoc, NullCommandExec))
@@ -75,7 +73,7 @@ func TestResourceEnumerator(t *testing.T) {
 		provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider())
 
 		var err error
-		app, err = provider.AppStructs(istructs.AppQName_test1_app1)
+		app, err = provider.BuiltIn(istructs.AppQName_test1_app1)
 		require.NoError(err)
 	})
 

@@ -75,6 +75,14 @@ func implProvideQueryProcessorState(
 		tokens:     itokens,
 	}, S_GET)
 
+	state.addStorage(FederationBlob, &federationBlobStorage{
+		appStructs: appStructsFunc,
+		wsid:       wsidFunc,
+		emulation:  opts.federationBlobHandler,
+		federation: federation,
+		tokens:     itokens,
+	}, S_READ)
+
 	state.addStorage(AppSecret, &appSecretsStorage{secretReader: secretReader}, S_GET)
 
 	state.addStorage(RequestSubject, &subjectStorage{

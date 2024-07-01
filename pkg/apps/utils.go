@@ -36,7 +36,7 @@ func BuildAppDefFromFS(app appdef.AppQName, path string, fs coreutils.IReadFS, s
 		return nil, err
 	}
 
-	adb := appdef.New(app)
+	adb := appdef.New()
 	err = parser.BuildAppDefs(appSchema, adb)
 	if err != nil {
 		return nil, err

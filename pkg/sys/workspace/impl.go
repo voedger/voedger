@@ -27,7 +27,6 @@ import (
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys/authnz"
-	"github.com/voedger/voedger/pkg/sys/blobber"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
@@ -118,7 +117,7 @@ func execCmdCreateWorkspaceID(asp istructs.IAppStructsProvider, appQName appdef.
 
 		// ownerWSID := istructs.WSID(args.ArgumentObject.AsInt64(FldOwnerWSID))
 		// Get new WSID from View<NextBaseWSID>
-		as, err := asp.AppStructs(appQName)
+		as, err := asp.BuiltIn(appQName)
 		if err != nil {
 			return err
 		}
@@ -231,7 +230,7 @@ func execCmdCreateWorkspace(now coreutils.TimeFunc, asp istructs.IAppStructsProv
 		wsKindInitializationData := map[string]interface{}{}
 
 		e := func() error {
-			as, err := asp.AppStructs(appQName)
+			as, err := asp.BuiltIn(appQName)
 			if err != nil {
 				return fmt.Errorf("failed to get appStructs for appQName %s: %w", appQName.String(), err)
 			}
@@ -442,7 +441,7 @@ func updateOwner(rec istructs.ICUDRow, ownerApp string, newWSID int64, err error
 	return err == nil
 }
 
-func parseWSTemplateBLOBs(fsEntries []fs.DirEntry, blobIDs map[int64]map[string]struct{}, wsTemplateFS coreutils.EmbedFS) (blobs []blobber.StoredBLOB, err error) {
+func parseWSTemplateBLOBs(fsEntries []fs.DirEntry, blobIDs map[int64]map[string]struct{}, wsTemplateFS coreutils.EmbedFS) (blobs []coreutils.BLOBWorkspaceTemplateField, err error) {
 	for _, ent := range fsEntries {
 		switch ent.Name() {
 		case "data.json", "provide.go":
@@ -473,14 +472,14 @@ func parseWSTemplateBLOBs(fsEntries []fs.DirEntry, blobIDs map[int64]map[string]
 			if err != nil {
 				return nil, fmt.Errorf("failed to read blob %s content: %w", ent.Name(), err)
 			}
-			blobs = append(blobs, blobber.StoredBLOB{
-				BLOB: coreutils.BLOB{
-					FieldName: fieldName,
-					Content:   blobContent,
-					Name:      ent.Name(),
-					MimeType:  filepath.Ext(ent.Name())[1:], // excluding dot
+			blobs = append(blobs, coreutils.BLOBWorkspaceTemplateField{
+				BLOBDesc: coreutils.BLOBDesc{
+					Name:     ent.Name(),
+					MimeType: filepath.Ext(ent.Name())[1:], // excluding dot
 				},
-				RecordID: istructs.RecordID(recordID),
+				FieldName: fieldName,
+				Content:   blobContent,
+				RecordID:  istructs.RecordID(recordID),
 			})
 		}
 	}
@@ -517,7 +516,7 @@ func checkOrphanedBLOBs(blobIDs map[int64]map[string]struct{}, workspaceData []m
 	return nil
 }
 
-func ValidateTemplate(wsTemplateName string, ep extensionpoints.IExtensionPoint, wsKind appdef.QName) (wsBLOBs []blobber.StoredBLOB, wsData []map[string]interface{}, err error) {
+func ValidateTemplate(wsTemplateName string, ep extensionpoints.IExtensionPoint, wsKind appdef.QName) (wsBLOBs []coreutils.BLOBWorkspaceTemplateField, wsData []map[string]interface{}, err error) {
 	if len(wsTemplateName) == 0 {
 		return nil, nil, nil
 	}

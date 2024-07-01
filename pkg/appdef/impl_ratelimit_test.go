@@ -21,7 +21,7 @@ func Test_AppDefAddRateLimit(t *testing.T) {
 	limitName := NewQName("test", "limit")
 
 	t.Run("should be ok to build application with rates and limits", func(t *testing.T) {
-		adb := New(NewAppQName("test", "app"))
+		adb := New()
 		adb.AddPackage("test", "test.com/test")
 
 		adb.AddRate(rateName, 10, time.Hour, []RateScope{RateScope_AppPartition, RateScope_IP}, "10 times per hour per partition per IP")
@@ -81,7 +81,7 @@ func Test_AppDefAddRateLimit(t *testing.T) {
 	t.Run("should be ok to add rate with default scope", func(t *testing.T) {
 		app := func() IAppDef {
 			rateName := NewQName("test", "rate")
-			adb := New(NewAppQName("test", "app"))
+			adb := New()
 			adb.AddPackage("test", "test.com/test")
 
 			adb.AddRate(rateName, 10, time.Hour, nil, "10 times per hour")
@@ -105,7 +105,7 @@ func Test_AppDefAddRateLimitErrors(t *testing.T) {
 	limitName := NewQName("test", "limit")
 
 	t.Run("should panic if missed objects", func(t *testing.T) {
-		adb := New(NewAppQName("test", "app"))
+		adb := New()
 		adb.AddPackage("test", "test.com/test")
 
 		adb.AddRate(rateName, 10, time.Hour, nil, "10 times per hour")
@@ -115,7 +115,7 @@ func Test_AppDefAddRateLimitErrors(t *testing.T) {
 	})
 
 	t.Run("should panic if missed or unknown rate", func(t *testing.T) {
-		adb := New(NewAppQName("test", "app"))
+		adb := New()
 		adb.AddPackage("test", "test.com/test")
 
 		require.Panics(func() { adb.AddLimit(limitName, []QName{QNameAnyCommand}, NullQName) },
@@ -125,7 +125,7 @@ func Test_AppDefAddRateLimitErrors(t *testing.T) {
 	})
 
 	t.Run("test validate errors", func(t *testing.T) {
-		adb := New(NewAppQName("test", "app"))
+		adb := New()
 		adb.AddPackage("test", "test.com/test")
 
 		adb.AddRate(rateName, 10, time.Hour, nil, "10 times per hour")

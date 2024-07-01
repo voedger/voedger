@@ -7,13 +7,12 @@ package federation
 
 import (
 	"bufio"
-	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"mime/multipart"
+	"io"
+	"mime"
 	"net/http"
-	"net/textproto"
 	"net/url"
 	"strconv"
 	"strings"
@@ -32,9 +31,19 @@ func (f *implIFederation) post(relativeURL string, body string, optFuncs ...core
 	return f.req(relativeURL, body, optFuncs...)
 }
 
+func (f *implIFederation) postReader(relativeURL string, bodyReader io.Reader, optFuncs ...coreutils.ReqOptFunc) (*coreutils.HTTPResponse, error) {
+	optFuncs = append(optFuncs, coreutils.WithMethod(http.MethodPost))
+	return f.reqReader(relativeURL, bodyReader, optFuncs...)
+}
+
 func (f *implIFederation) get(relativeURL string, optFuncs ...coreutils.ReqOptFunc) (*coreutils.HTTPResponse, error) {
 	optFuncs = append(optFuncs, coreutils.WithMethod(http.MethodGet))
 	return f.req(relativeURL, "", optFuncs...)
+}
+
+func (f *implIFederation) reqReader(relativeURL string, bodyReader io.Reader, optFuncs ...coreutils.ReqOptFunc) (*coreutils.HTTPResponse, error) {
+	url := f.federationURL().String() + "/" + relativeURL
+	return f.httpClient.ReqReader(url, bodyReader, optFuncs...)
 }
 
 func (f *implIFederation) req(relativeURL string, body string, optFuncs ...coreutils.ReqOptFunc) (*coreutils.HTTPResponse, error) {
@@ -42,53 +51,10 @@ func (f *implIFederation) req(relativeURL string, body string, optFuncs ...coreu
 	return f.httpClient.Req(url, body, optFuncs...)
 }
 
-func (f *implIFederation) UploadBLOBs(appQName appdef.AppQName, wsid istructs.WSID, blobs []coreutils.BLOB, optFuncs ...coreutils.ReqOptFunc) (blobIDs []istructs.RecordID, err error) {
-	body := bytes.NewBuffer(nil)
-	w := multipart.NewWriter(body)
-
-	if err := w.SetBoundary(boundary); err != nil {
-		// notest
-		return nil, err
-	}
-	for _, blob := range blobs {
-		h := textproto.MIMEHeader{}
-		h.Set(coreutils.ContentDisposition, fmt.Sprintf(`form-data; name="%s"`, blob.Name))
-		h.Set(coreutils.ContentType, "application/x-binary")
-		part, err := w.CreatePart(h)
-		if err != nil {
-			return nil, err
-		}
-		if _, err = part.Write(blob.Content); err != nil {
-			return nil, err
-		}
-	}
-	if err = w.Close(); err != nil {
-		// notest
-		return nil, err
-	}
-	url := fmt.Sprintf("blob/%s/%d", appQName, wsid)
-	optFuncs = append(optFuncs, coreutils.WithHeaders(coreutils.ContentType,
-		"multipart/form-data; boundary="+boundary))
-	resp, err := f.post(url, body.String(), optFuncs...)
-	if err != nil {
-		return nil, err
-	}
-
-	blobIDsStrs := strings.Split(resp.Body, ",")
-	for _, blobIDStr := range blobIDsStrs {
-		blobID, err := strconv.Atoi(blobIDStr)
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse one of received blob ids: %s: %w", blobIDsStrs, err)
-		}
-		blobIDs = append(blobIDs, istructs.RecordID(blobID))
-	}
-	return blobIDs, nil
-}
-
-func (f *implIFederation) UploadBLOB(appQName appdef.AppQName, wsid istructs.WSID, blobName string, blobMimeType string,
-	blobContent []byte, optFuncs ...coreutils.ReqOptFunc) (blobID istructs.RecordID, err error) {
-	uploadBLOBURL := fmt.Sprintf("blob/%s/%d?name=%s&mimeType=%s", appQName.String(), wsid, blobName, blobMimeType)
-	resp, err := f.post(uploadBLOBURL, string(blobContent), optFuncs...)
+func (f *implIFederation) UploadBLOB(appQName appdef.AppQName, wsid istructs.WSID, blob coreutils.BLOBReader,
+	optFuncs ...coreutils.ReqOptFunc) (blobID istructs.RecordID, err error) {
+	uploadBLOBURL := fmt.Sprintf("blob/%s/%d?name=%s&mimeType=%s", appQName.String(), wsid, blob.Name, blob.MimeType)
+	resp, err := f.postReader(uploadBLOBURL, blob, optFuncs...)
 	if err != nil {
 		return 0, err
 	}
@@ -102,9 +68,29 @@ func (f *implIFederation) UploadBLOB(appQName appdef.AppQName, wsid istructs.WSI
 	return istructs.NullRecordID, nil
 }
 
-func (f *implIFederation) ReadBLOB(appQName appdef.AppQName, wsid istructs.WSID, blobID istructs.RecordID, optFuncs ...coreutils.ReqOptFunc) (*coreutils.HTTPResponse, error) {
+func (f *implIFederation) ReadBLOB(appQName appdef.AppQName, wsid istructs.WSID, blobID istructs.RecordID, optFuncs ...coreutils.ReqOptFunc) (res coreutils.BLOBReader, err error) {
 	url := fmt.Sprintf(`blob/%s/%d/%d`, appQName, wsid, blobID)
-	return f.post(url, "", optFuncs...)
+	optFuncs = append(optFuncs, coreutils.WithResponseHandler(func(httpResp *http.Response) {}))
+	resp, err := f.post(url, "", optFuncs...)
+	if err != nil {
+		return res, err
+	}
+	if resp.HTTPResp.StatusCode != http.StatusOK {
+		return coreutils.BLOBReader{}, nil
+	}
+	contentDisposition := resp.HTTPResp.Header.Get(coreutils.ContentDisposition)
+	_, params, err := mime.ParseMediaType(contentDisposition)
+	if err != nil {
+		return res, err
+	}
+	res = coreutils.BLOBReader{
+		BLOBDesc: coreutils.BLOBDesc{
+			Name:     params["filename"],
+			MimeType: resp.HTTPResp.Header.Get(coreutils.ContentType),
+		},
+		ReadCloser: resp.HTTPResp.Body,
+	}
+	return res, nil
 }
 
 func (f *implIFederation) N10NUpdate(key in10n.ProjectionKey, val int64, optFuncs ...coreutils.ReqOptFunc) error {

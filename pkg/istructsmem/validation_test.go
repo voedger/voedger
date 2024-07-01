@@ -24,7 +24,7 @@ func Test_ValidEventArgs(t *testing.T) {
 
 	appName := istructs.AppQName_test1_app1
 
-	adb := appdef.New(appName)
+	adb := appdef.New()
 	adb.AddPackage("test", "test.com/test")
 
 	docName := appdef.NewQName("test", "document")
@@ -52,12 +52,12 @@ func Test_ValidEventArgs(t *testing.T) {
 	})
 
 	cfgs := make(AppConfigsType, 1)
-	cfg := cfgs.AddConfig(appName, adb)
+	cfg := cfgs.AddBuiltInAppConfig(appName, adb)
 	cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 
 	provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider())
 
-	app, err := provider.AppStructs(appName)
+	app, err := provider.BuiltIn(appName)
 	require.NoError(err)
 
 	t.Run("error if event name is not a command or odoc", func(t *testing.T) {
@@ -318,7 +318,7 @@ func Test_ValidSysCudEvent(t *testing.T) {
 
 	appName := istructs.AppQName_test1_app1
 
-	adb := appdef.New(appName)
+	adb := appdef.New()
 	adb.AddPackage("test", "test.com/test")
 
 	docName := appdef.NewQName("test", "document")
@@ -344,12 +344,12 @@ func Test_ValidSysCudEvent(t *testing.T) {
 	})
 
 	cfgs := make(AppConfigsType, 1)
-	cfg := cfgs.AddConfig(appName, adb)
+	cfg := cfgs.AddBuiltInAppConfig(appName, adb)
 	cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 
 	provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider())
 
-	app, err := provider.AppStructs(appName)
+	app, err := provider.BuiltIn(appName)
 	require.NoError(err)
 
 	cudRawEvent := func(sync bool) istructs.IRawEventBuilder {
@@ -547,7 +547,7 @@ func Test_ValidCommandEvent(t *testing.T) {
 
 	appName := istructs.AppQName_test1_app1
 
-	adb := appdef.New(appName)
+	adb := appdef.New()
 	adb.AddPackage("test", "test.com/test")
 
 	cmdName := appdef.NewQName("test", "command")
@@ -567,13 +567,13 @@ func Test_ValidCommandEvent(t *testing.T) {
 	})
 
 	cfgs := make(AppConfigsType, 1)
-	cfg := cfgs.AddConfig(appName, adb)
+	cfg := cfgs.AddBuiltInAppConfig(appName, adb)
 	cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 	cfg.Resources.Add(NewCommandFunction(cmdName, NullCommandExec))
 
 	provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider())
 
-	app, err := provider.AppStructs(appName)
+	app, err := provider.BuiltIn(appName)
 	require.NoError(err)
 
 	eventBuilder := func(sync bool) istructs.IRawEventBuilder {
@@ -671,7 +671,7 @@ func Test_IObjectBuilderBuild(t *testing.T) {
 
 	appName := istructs.AppQName_test1_app1
 
-	adb := appdef.New(appName)
+	adb := appdef.New()
 	adb.AddPackage("test", "test.com/test")
 
 	docName := appdef.NewQName("test", "document")
@@ -685,12 +685,12 @@ func Test_IObjectBuilderBuild(t *testing.T) {
 	})
 
 	cfgs := make(AppConfigsType, 1)
-	cfg := cfgs.AddConfig(appName, adb)
+	cfg := cfgs.AddBuiltInAppConfig(appName, adb)
 	cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 
 	provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider())
 
-	app, err := provider.AppStructs(appName)
+	app, err := provider.BuiltIn(appName)
 	require.NoError(err)
 
 	eventBuilder := func() istructs.IRawEventBuilder {
@@ -754,7 +754,7 @@ func Test_VerifiedFields(t *testing.T) {
 
 	objName := appdef.NewQName("test", "obj")
 
-	adb := appdef.New(test.appName)
+	adb := appdef.New()
 	adb.AddPackage("test", "test.com/test")
 
 	t.Run("must be ok to build application", func(t *testing.T) {
@@ -767,14 +767,14 @@ func Test_VerifiedFields(t *testing.T) {
 	})
 
 	cfgs := make(AppConfigsType, 1)
-	cfg := cfgs.AddConfig(test.appName, adb)
+	cfg := cfgs.AddBuiltInAppConfig(test.appName, adb)
 	cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 
 	email := "test@test.io"
 
 	tokens := testTokensFactory().New(test.appName)
 	asp := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider())
-	_, err := asp.AppStructs(test.appName) // need to set cfg.app because IAppTokens are taken from cfg.app
+	_, err := asp.BuiltIn(test.appName) // need to set cfg.app because IAppTokens are taken from cfg.app
 	require.NoError(err)
 
 	t.Run("test row verification", func(t *testing.T) {
@@ -927,7 +927,7 @@ func Test_CharsFieldRestricts(t *testing.T) {
 
 	objName := appdef.NewQName("test", "obj")
 
-	adb := appdef.New(test.appName)
+	adb := appdef.New()
 	adb.AddPackage("test", "test.com/test")
 
 	t.Run("must be ok to build application", func(t *testing.T) {
@@ -950,11 +950,11 @@ func Test_CharsFieldRestricts(t *testing.T) {
 	})
 
 	cfgs := make(AppConfigsType, 1)
-	cfg := cfgs.AddConfig(test.appName, adb)
+	cfg := cfgs.AddBuiltInAppConfig(test.appName, adb)
 	cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 
 	asp := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), simpleStorageProvider())
-	_, err := asp.AppStructs(test.appName)
+	_, err := asp.BuiltIn(test.appName)
 	require.NoError(err)
 
 	t.Run("test constraints", func(t *testing.T) {

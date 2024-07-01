@@ -3,6 +3,6 @@
  * @author Denis Gribanov
  */
 
-package federation
+package utils
 
-const boundary = "----------------"
+const DecimalBase = 10

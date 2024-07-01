@@ -199,7 +199,7 @@ func Test_BasicUsage(t *testing.T) {
 
 func appStructs(appDef appdef.IAppDefBuilder, prepareAppCfg appCfgCallback) istructs.IAppStructs {
 	cfgs := make(istructsmem.AppConfigsType, 1)
-	cfg := cfgs.AddConfig(istructs.AppQName_test1_app1, appDef)
+	cfg := cfgs.AddBuiltInAppConfig(istructs.AppQName_test1_app1, appDef)
 	cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 	if prepareAppCfg != nil {
 		prepareAppCfg(cfg)
@@ -213,7 +213,7 @@ func appStructs(appDef appdef.IAppDefBuilder, prepareAppCfg appCfgCallback) istr
 		iratesce.TestBucketsFactory,
 		payloads.ProvideIAppTokensFactory(itokensjwt.TestTokensJWT()),
 		storageProvider)
-	structs, err := prov.AppStructs(istructs.AppQName_test1_app1)
+	structs, err := prov.BuiltIn(istructs.AppQName_test1_app1)
 	if err != nil {
 		panic(err)
 	}
@@ -790,7 +790,7 @@ var sfs embed.FS
 func appStructsFromSQL(packagePath string, appdefSql string, prepareAppCfg appCfgCallback) istructs.IAppStructs {
 	plogOffset = istructs.Offset(123)
 	wlogOffset = istructs.Offset(42)
-	appDef := appdef.New(testApp)
+	appDef := appdef.New()
 
 	fs, err := parser.ParseFile("file1.vsql", appdefSql)
 	if err != nil {
