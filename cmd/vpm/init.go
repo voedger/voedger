@@ -151,7 +151,7 @@ func createPackagesGen(imports []string, dir, modulePath string, recreate bool) 
 		strBuffer.WriteString(fmt.Sprintf("_ %q\n", imp))
 	}
 
-	packageName := strings.Replace(filepath.Base(modulePath), "-", "_", -1)
+	packageName := strings.ReplaceAll(filepath.Base(modulePath), "-", "_")
 	packagesGenContent := fmt.Sprintf(packagesGenContentTemplate, packageName, strBuffer.String())
 	packagesGenContentFormatted, err := format.Source([]byte(packagesGenContent))
 	if err != nil {
