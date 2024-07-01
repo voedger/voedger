@@ -96,11 +96,14 @@ func createGoMod(dir, modulePath string) error {
 		// notest
 		return err
 	}
+
 	if exists {
 		return fmt.Errorf("%s already exists", filePath)
 	}
+
 	goVersion := runtime.Version()
 	goVersionNumber := strings.TrimSpace(strings.TrimPrefix(goVersion, "go"))
+
 	if !checkGoVersion(goVersionNumber) {
 		return fmt.Errorf(unsupportedGoVersionErrFormat, goVersionNumber)
 	}
@@ -109,9 +112,11 @@ func createGoMod(dir, modulePath string) error {
 	if err := os.WriteFile(filePath, []byte(goModContent), coreutils.FileMode_rw_rw_rw_); err != nil {
 		return err
 	}
+
 	if err := execGoGet(dir, compile.VoedgerPath); err != nil {
 		return err
 	}
+
 	return nil
 }
 
@@ -146,7 +151,8 @@ func createPackagesGen(imports []string, dir, modulePath string, recreate bool) 
 		strBuffer.WriteString(fmt.Sprintf("_ %q\n", imp))
 	}
 
-	packagesGenContent := fmt.Sprintf(packagesGenContentTemplate, filepath.Base(modulePath), strBuffer.String())
+	packageName := strings.Replace(filepath.Base(modulePath), "-", "_", -1)
+	packagesGenContent := fmt.Sprintf(packagesGenContentTemplate, packageName, strBuffer.String())
 	packagesGenContentFormatted, err := format.Source([]byte(packagesGenContent))
 	if err != nil {
 		return err
