@@ -29,7 +29,6 @@ const (
 	blobID                          = "blobID"
 	ResourceName                    = "resourceName"
 	hours24                         = 24 * time.Hour
-	decimalBase                     = 10
 )
 
 var (
