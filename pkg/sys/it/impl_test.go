@@ -338,7 +338,7 @@ func TestErrorFromResponseIntent(t *testing.T) {
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
 	body := `{"args":{"StatusCodeToReturn": 555}}`
 
-	t.Run("comand", func(t *testing.T) {
+	t.Run("command", func(t *testing.T) {
 		vit.PostWS(ws, "c.app1pkg.CmdWithResponseIntent", body, coreutils.WithExpectedCode(555, "error from response intent"))
 	})
 
