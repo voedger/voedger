@@ -51,6 +51,8 @@ var defaultACL = ACL{
 				qNameQryGetDigitalReceipt,
 				// https://dev.untill.com/projects/#!688808
 				qNameQrySendReceiptByEmail,
+				// https://dev.untill.com/projects/#!698913
+				qNameQryQueryResellerInfo,
 			},
 		},
 		policy: ACPolicy_Allow,
@@ -272,16 +274,6 @@ var defaultACL = ACL{
 				// OR
 				{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleUntillPaymentsReseller}},
 			},
-		},
-		policy: ACPolicy_Allow,
-	},
-	{
-		desc: "q.air.QueryResellerInfo is allowed for authenticated users",
-		pattern: PatternType{
-			qNamesPattern: []appdef.QName{
-				qNameQryQueryResellerInfo,
-			},
-			principalsPattern: [][]iauthnz.Principal{{{Kind: iauthnz.PrincipalKind_User}}},
 		},
 		policy: ACPolicy_Allow,
 	},
