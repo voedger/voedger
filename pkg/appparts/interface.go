@@ -7,6 +7,7 @@ package appparts
 
 import (
 	"context"
+	"net/url"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -21,7 +22,10 @@ type IAppPartitions interface {
 	// partsCount - total partitions count for the application.
 	//
 	// If application with the same name exists, then its definition will be updated.
-	DeployApp(name appdef.AppQName, def appdef.IAppDef, partsCount istructs.NumAppPartitions, numEngines [ProcessorKind_Count]int)
+	// наверное, сюда надо передать путь к app1/image, иначе движки не собрать
+	DeployApp(name appdef.AppQName, extModuleURLs map[string]*url.URL, def appdef.IAppDef, partsCount istructs.NumAppPartitions, numEngines [ProcessorKind_Count]int)
+	DeployBuiltInApp(name appdef.AppQName, def appdef.IAppDef, partsCount istructs.NumAppPartitions, numEngines [ProcessorKind_Count]int)
+	// то, что раньше вызывало DeployApp, теперь должно вызывать DeployBuiltInApp
 
 	// Deploys new partitions for specified application or update existing.
 	//

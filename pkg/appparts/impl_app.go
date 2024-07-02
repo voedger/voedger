@@ -7,6 +7,7 @@ package appparts
 
 import (
 	"context"
+	"net/url"
 	"sync"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -54,20 +55,30 @@ func newApplication(apps *apps, name appdef.AppQName, partsCount istructs.NumApp
 	}
 }
 
-func (a *app) deploy(def appdef.IAppDef, structs istructs.IAppStructs, numEngines [ProcessorKind_Count]int) {
+// extModuleURLs is important for non-builtin (non-native) apps
+// extModuleURLs: packagePath->packageURL
+func (a *app) deploy(def appdef.IAppDef, extModuleURLs map[string]*url.URL, structs istructs.IAppStructs, numEnginesPerEngineKind [ProcessorKind_Count]int) {
 	a.def = def
 	a.structs = structs
 
 	eef := a.apps.extEngineFactories
 
 	ctx := context.Background()
-	for k, cnt := range numEngines {
+	// тут надо создавать только те движки, которые есть среди packages of IAppDef
+	for k, cnt := range numEnginesPerEngineKind {
 		extEngines := make([][]iextengine.IExtensionEngine, appdef.ExtensionEngineKind_Count)
 
+		// TODO: prepare []iextengine.ExtensionPackage from IAppDef
+		// TODO: should pass iextengine.ExtEngineConfig from somewhere (Provide?)
+		// here run through IAppDef and: map[engineKind met among packages of IAppDef][]iextengine.ExtensionPackage
+		// here extModuleURLs will be used on creating iextengine.ExtensionPackage
+		// non-builtin -> has to be in extModuleURLs, panic otherwise
 		for ek, ef := range eef {
-			// TODO: prepare []iextengine.ExtensionPackage from IAppDef
-			// TODO: should pass iextengine.ExtEngineConfig from somewhere (Provide?)
-			ee, err := ef.New(ctx, a.name, []iextengine.ExtensionPackage{}, &iextengine.DefaultExtEngineConfig, cnt)
+
+			// non-native ->
+			ee, err := ef.New(ctx, a.name, []iextengine.ExtensionPackage{
+				// тут заполнить
+			}, &iextengine.DefaultExtEngineConfig, cnt)
 			if err != nil {
 				panic(err)
 			}

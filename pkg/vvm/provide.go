@@ -25,6 +25,7 @@ import (
 	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/apppartsctl"
 	"github.com/voedger/voedger/pkg/btstrp"
+	"github.com/voedger/voedger/pkg/compile"
 	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/itokens"
@@ -442,6 +443,22 @@ func provideVVMApps(builtInApps []appparts.BuiltInApp) (vvmApps VVMApps) {
 
 func provideBuiltInAppsArtefacts(vvmConfig *VVMConfig, apis apps.APIs, cfgs AppConfigsTypeEmpty) (AppsArtefacts, error) {
 	return vvmConfig.VVMAppsBuilder.BuildAppsArtefacts(apis, cfgs)
+}
+
+func attachSidecarApplications(vvmConfig *VVMConfig, aa AppsArtefacts) error {
+	appsEntries, err := vvmConfig.ConfigFS.ReadDir("apps")
+	if err != nil {
+		return err
+	}
+	for _, appEntry := range appsEntries {
+		if !appEntry.IsDir() {
+			continue
+		}
+		res, err := compile.Compile(appEntry.Name())
+		if err != nil {
+			return err
+		}
+	}
 }
 
 func provideServiceChannelFactory(vvmConfig *VVMConfig, procbus iprocbus.IProcBus) ServiceChannelFactory {
