@@ -20,6 +20,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/iextengine"
+	imetrics "github.com/voedger/voedger/pkg/metrics"
 	safe "github.com/voedger/voedger/pkg/state/isafestateapi"
 	"github.com/voedger/voedger/pkg/state/safestate"
 )
@@ -56,21 +57,23 @@ type wazeroExtPkg struct {
 type wazeroExtEngine struct {
 	app appdef.AppQName
 
-	compile bool
-	config  *iextengine.ExtEngineConfig
-	modules map[string]*wazeroExtPkg
-	host    api.Module
-	rtm     wazero.Runtime
+	compile          bool
+	invocationsTotal *imetrics.MetricValue
+	errorsTotal      *imetrics.MetricValue
+	recoversTotal    *imetrics.MetricValue
+	config           *iextengine.ExtEngineConfig
+	modules          map[string]*wazeroExtPkg
+	host             api.Module
+	rtm              wazero.Runtime
 
 	wasiCloser api.Closer
 
 	// Invoke-related!
 	safeApi safe.IStateSafeAPI
 
-	ctx             context.Context
-	pkg             *wazeroExtPkg
-	autoRecover     bool
-	numAutoRecovers int
+	ctx         context.Context
+	pkg         *wazeroExtPkg
+	autoRecover bool
 }
 
 type allocatedBuf struct {
@@ -80,7 +83,7 @@ type allocatedBuf struct {
 }
 
 type extensionEngineFactory struct {
-	compile bool
+	wasmConfig iextengine.WASMFactoryConfig
 }
 
 func newLimitedWriter(limit int) limitedWriter {
@@ -99,11 +102,14 @@ func (w *limitedWriter) Write(p []byte) (n int, err error) {
 func (f extensionEngineFactory) New(ctx context.Context, app appdef.AppQName, packages []iextengine.ExtensionPackage, config *iextengine.ExtEngineConfig, numEngines int) (engines []iextengine.IExtensionEngine, err error) {
 	for i := 0; i < numEngines; i++ {
 		engine := &wazeroExtEngine{
-			app:         app,
-			modules:     make(map[string]*wazeroExtPkg),
-			config:      config,
-			compile:     f.compile,
-			autoRecover: true,
+			app:              app,
+			modules:          make(map[string]*wazeroExtPkg),
+			config:           config,
+			compile:          f.wasmConfig.Compile,
+			invocationsTotal: f.wasmConfig.InvocationsTotal,
+			errorsTotal:      f.wasmConfig.ErrorsTotal,
+			recoversTotal:    f.wasmConfig.RecoversTotal,
+			autoRecover:      true,
 		}
 		err = engine.init(ctx)
 		if err != nil {
@@ -405,14 +411,24 @@ func (f *wazeroExtEngine) invoke(ctx context.Context, extension appdef.FullQName
 	// fmt.Print(funct)
 	_, err = funct.Call(ctx)
 
+	if f.invocationsTotal != nil {
+		f.invocationsTotal.Increase(1.0)
+	}
+
+	if err != nil && f.errorsTotal != nil {
+		f.errorsTotal.Increase(1.0)
+	}
+
 	return err
 }
 
 func (f *wazeroExtEngine) Invoke(ctx context.Context, extension appdef.FullQName, io iextengine.IExtensionIO) (err error) {
 	err = f.invoke(ctx, extension, io)
 	if err != nil && f.isMemoryOverflow(err) && f.autoRecover {
-		f.numAutoRecovers++
 		f.recover(ctx)
+		if f.recoversTotal != nil {
+			f.recoversTotal.Increase(1.0)
+		}
 		err = f.invoke(ctx, extension, io)
 	}
 	if err != nil && f.isPanic(err) && len(f.pkg.stdout.buf) > 0 {
