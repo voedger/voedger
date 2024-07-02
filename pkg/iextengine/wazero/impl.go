@@ -13,6 +13,7 @@ import (
 	"os"
 	"runtime"
 	"strings"
+	"time"
 
 	"github.com/tetratelabs/wazero"
 	"github.com/tetratelabs/wazero/api"
@@ -57,14 +58,15 @@ type wazeroExtPkg struct {
 type wazeroExtEngine struct {
 	app appdef.AppQName
 
-	compile          bool
-	invocationsTotal *imetrics.MetricValue
-	errorsTotal      *imetrics.MetricValue
-	recoversTotal    *imetrics.MetricValue
-	config           *iextengine.ExtEngineConfig
-	modules          map[string]*wazeroExtPkg
-	host             api.Module
-	rtm              wazero.Runtime
+	compile            bool
+	invocationsTotal   *imetrics.MetricValue
+	invocationsSeconds *imetrics.MetricValue
+	errorsTotal        *imetrics.MetricValue
+	recoversTotal      *imetrics.MetricValue
+	config             *iextengine.ExtEngineConfig
+	modules            map[string]*wazeroExtPkg
+	host               api.Module
+	rtm                wazero.Runtime
 
 	wasiCloser api.Closer
 
@@ -102,14 +104,15 @@ func (w *limitedWriter) Write(p []byte) (n int, err error) {
 func (f extensionEngineFactory) New(ctx context.Context, app appdef.AppQName, packages []iextengine.ExtensionPackage, config *iextengine.ExtEngineConfig, numEngines int) (engines []iextengine.IExtensionEngine, err error) {
 	for i := 0; i < numEngines; i++ {
 		engine := &wazeroExtEngine{
-			app:              app,
-			modules:          make(map[string]*wazeroExtPkg),
-			config:           config,
-			compile:          f.wasmConfig.Compile,
-			invocationsTotal: f.wasmConfig.InvocationsTotal,
-			errorsTotal:      f.wasmConfig.ErrorsTotal,
-			recoversTotal:    f.wasmConfig.RecoversTotal,
-			autoRecover:      true,
+			app:                app,
+			modules:            make(map[string]*wazeroExtPkg),
+			config:             config,
+			compile:            f.wasmConfig.Compile,
+			invocationsTotal:   f.wasmConfig.InvocationsTotal,
+			invocationsSeconds: f.wasmConfig.InvocationsSeconds,
+			errorsTotal:        f.wasmConfig.ErrorsTotal,
+			recoversTotal:      f.wasmConfig.RecoversTotal,
+			autoRecover:        true,
 		}
 		err = engine.init(ctx)
 		if err != nil {
@@ -408,8 +411,13 @@ func (f *wazeroExtEngine) invoke(ctx context.Context, extension appdef.FullQName
 		f.pkg.allocatedBufs[i].offs = 0 // reuse pre-allocated memory
 	}
 
-	// fmt.Print(funct)
+	begin := time.Now()
+
 	_, err = funct.Call(ctx)
+
+	if f.invocationsSeconds != nil {
+		f.invocationsSeconds.Increase(time.Since(begin).Seconds())
+	}
 
 	if f.invocationsTotal != nil {
 		f.invocationsTotal.Increase(1.0)

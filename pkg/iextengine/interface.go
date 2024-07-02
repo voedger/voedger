@@ -39,10 +39,11 @@ type ExtEngineConfig struct {
 }
 
 type WASMFactoryConfig struct {
-	Compile          bool
-	InvocationsTotal *imetrics.MetricValue
-	ErrorsTotal      *imetrics.MetricValue
-	RecoversTotal    *imetrics.MetricValue
+	Compile            bool
+	InvocationsTotal   *imetrics.MetricValue
+	InvocationsSeconds *imetrics.MetricValue
+	ErrorsTotal        *imetrics.MetricValue
+	RecoversTotal      *imetrics.MetricValue
 }
 
 type IExtensionIO interface {
