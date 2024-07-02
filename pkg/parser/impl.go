@@ -240,7 +240,7 @@ func defineApp(c *basicContext) {
 	}
 
 	c.app.Name = string(app.Name)
-	appAst.Name = getPackageName(appAst.Path)
+	appAst.Name = GetPackageName(appAst.Path)
 	pkgNames := make(map[string]bool)
 	pkgNames[appAst.Name] = true
 

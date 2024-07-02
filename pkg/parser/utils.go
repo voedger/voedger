@@ -244,8 +244,8 @@ func isInternalName(pkgName Ident, pkgAst *PackageSchemaAST) bool {
 	return pkg == "" || pkg == pkgAst.Name
 }
 
-func getPackageName(pkgQN string) string {
-	parts := strings.Split(pkgQN, "/")
+func GetPackageName(PkgPath string) string {
+	parts := strings.Split(PkgPath, "/")
 	if len(parts) == 0 {
 		return ""
 	}
