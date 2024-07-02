@@ -244,7 +244,7 @@ func ProvideApp1(apis apps.APIs, cfg *istructsmem.AppConfigType, ep extensionpoi
 		return nil
 	}))
 
-	funcWithIntents := func(args istructs.PrepareArgs, st istructs.IState, intents istructs.IIntents) (err error) {
+	funcWithResponseIntents := func(args istructs.PrepareArgs, st istructs.IState, intents istructs.IIntents) (err error) {
 		kb, err := st.KeyBuilder(state.Response, appdef.NullQName)
 		if err != nil {
 			return err
@@ -259,11 +259,11 @@ func ProvideApp1(apis apps.APIs, cfg *istructsmem.AppConfigType, ep extensionpoi
 	}
 
 	cfg.Resources.Add(istructsmem.NewCommandFunction(appdef.NewQName(app1PkgName, "CmdWithResponseIntent"), func(args istructs.ExecCommandArgs) (err error) {
-		return funcWithIntents(args.PrepareArgs, args.State, args.Intents)
+		return funcWithResponseIntents(args.PrepareArgs, args.State, args.Intents)
 	}))
 
 	cfg.Resources.Add(istructsmem.NewQueryFunction(appdef.NewQName(app1PkgName, "QryWithResponseIntent"), func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
-		return funcWithIntents(args.PrepareArgs, args.State, args.Intents)
+		return funcWithResponseIntents(args.PrepareArgs, args.State, args.Intents)
 	}))
 
 	app1PackageFS := parser.PackageFS{
