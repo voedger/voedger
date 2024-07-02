@@ -530,6 +530,14 @@ ALTERABLE WORKSPACE test_wsWS (
 		Fld1 varchar
 	);
 
+	TYPE WithResponseIntentParams (
+		StatusCodeToReturn int32 NOT NULL
+	);
+
+	TYPE QryWithResponseIntentResult (
+		Dummy int32
+	);
+
 	EXTENSION ENGINE BUILTIN (
 		QUERY RatedQry(RatedQryParams) RETURNS RatedQryResult;
 		QUERY MockQry(MockQryParams) RETURNS MockQryResult;
@@ -545,5 +553,8 @@ ALTERABLE WORKSPACE test_wsWS (
 		COMMAND TestCmdRawArg(sys.Raw);
 		PROJECTOR ProjDummy AFTER INSERT ON (CRecord) INTENTS(View(View)); -- does nothing, only to define view.app1pkg.View
 		SYNC PROJECTOR ApplyCategoryIdx AFTER INSERT ON (category) INTENTS(View(CategoryIdx));
+
+		COMMAND CmdWithResponseIntent(WithResponseIntentParams);
+		QUERY QryWithResponseIntent(WithResponseIntentParams) RETURNS QryWithResponseIntentResult;
 	);
 );
