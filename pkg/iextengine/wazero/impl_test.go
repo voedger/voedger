@@ -463,9 +463,13 @@ func Test_QueryValue(t *testing.T) {
 	require.NoError(err)
 }
 
-func mv(m *imetrics.MetricValue) int {
+func mvf(m *imetrics.MetricValue) float64 {
 	ptr := (*uint64)(unsafe.Pointer(m))
-	return int(math.Float64frombits(atomic.LoadUint64(ptr)))
+	return math.Float64frombits(atomic.LoadUint64(ptr))
+}
+
+func mv(m *imetrics.MetricValue) int {
+	return int(mvf(m))
 }
 
 func Test_RecoverEngine(t *testing.T) {
@@ -483,12 +487,14 @@ func Test_RecoverEngine(t *testing.T) {
 			we := extEngine.(*wazeroExtEngine)
 
 			var invocationsTotal imetrics.MetricValue
+			var invocationsSeconds imetrics.MetricValue
 			var eTotal imetrics.MetricValue
 			var recoversTotal imetrics.MetricValue
 
 			we.invocationsTotal = &invocationsTotal
 			we.errorsTotal = &eTotal
 			we.recoversTotal = &recoversTotal
+			we.invocationsSeconds = &invocationsSeconds
 
 			totalRuns := 0
 			totalErrors := 0
@@ -518,6 +524,8 @@ func Test_RecoverEngine(t *testing.T) {
 				require.NoError(err)
 				require.Equal(heapInUseAfterRecover, heapInUseAfterFirstInvoke)
 			}
+
+			require.Greater(mvf(&invocationsSeconds), 0.0)
 		})
 	}
 
