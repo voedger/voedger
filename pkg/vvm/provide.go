@@ -27,6 +27,7 @@ import (
 	"github.com/voedger/voedger/pkg/btstrp"
 	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/goutils/logger"
+	"github.com/voedger/voedger/pkg/iextengine"
 	"github.com/voedger/voedger/pkg/itokens"
 	"github.com/voedger/voedger/pkg/router"
 	"github.com/voedger/voedger/pkg/vvm/engines"
@@ -270,8 +271,8 @@ func provideAppPartitions(
 ) (ap appparts.IAppPartitions, cleanup func(), err error) {
 
 	eef := engines.ProvideExtEngineFactories(engines.ExtEngineFactoriesConfig{
-		AppConfigs:  appsArtefacts.AppConfigsType,
-		WASMCompile: false,
+		AppConfigs: appsArtefacts.AppConfigsType,
+		WASMConfig: iextengine.WASMFactoryConfig{Compile: false},
 	})
 
 	return appparts.New2(

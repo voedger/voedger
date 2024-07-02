@@ -19,6 +19,7 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/iauthnzimpl"
+	"github.com/voedger/voedger/pkg/iextengine"
 	"github.com/voedger/voedger/pkg/iprocbus"
 	"github.com/voedger/voedger/pkg/iratesce"
 	"github.com/voedger/voedger/pkg/istorage/mem"
@@ -323,8 +324,8 @@ func deployTestAppWithSecretToken(require *require.Assertions,
 		appparts.NullActualizers,
 		engines.ProvideExtEngineFactories(
 			engines.ExtEngineFactoriesConfig{
-				AppConfigs:  cfgs,
-				WASMCompile: false,
+				AppConfigs: cfgs,
+				WASMConfig: iextengine.WASMFactoryConfig{Compile: false},
 			}))
 	require.NoError(err)
 	appParts.DeployApp(appName, appDef, partCount, appEngines)
