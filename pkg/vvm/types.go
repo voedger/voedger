@@ -72,6 +72,10 @@ type AppsArtefacts struct {
 	appEPs             map[appdef.AppQName]extensionpoints.IExtensionPoint
 }
 
+type SidecarApplication struct {
+	builtInAppPackages []BuiltInAppPackages
+}
+
 type BusTimeout time.Duration
 type FederationURL func() *url.URL
 type VVMIdxType int

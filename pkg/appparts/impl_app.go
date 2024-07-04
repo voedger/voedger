@@ -7,6 +7,7 @@ package appparts
 
 import (
 	"context"
+	"fmt"
 	"net/url"
 	"sync"
 
@@ -64,7 +65,7 @@ func (a *app) deploy(def appdef.IAppDef, extModuleURLs map[string]*url.URL, stru
 	eef := a.apps.extEngineFactories
 
 	ctx := context.Background()
-	// тут надо создавать только те движки, которые есть среди packages of IAppDef
+
 	for k, cnt := range numEnginesPerEngineKind {
 		extEngines := make([][]iextengine.IExtensionEngine, appdef.ExtensionEngineKind_Count)
 
@@ -73,6 +74,21 @@ func (a *app) deploy(def appdef.IAppDef, extModuleURLs map[string]*url.URL, stru
 		// here run through IAppDef and: map[engineKind met among packages of IAppDef][]iextengine.ExtensionPackage
 		// here extModuleURLs will be used on creating iextengine.ExtensionPackage
 		// non-builtin -> has to be in extModuleURLs, panic otherwise
+
+		// тут надо создавать только те движки, которые есть среди packages of IAppDef
+		def.Extensions(func(i appdef.IExtension) {
+			extEngineKind := i.Engine()
+			factory, ok := eef[extEngineKind] // factory тут - это либо для builtin, либо для wasm
+			if !ok {
+				panic(fmt.Errorf("no extension egine factory for engine %s met among def of %s", extEngineKind.String(), a.name))
+			}
+			modueUrl, ok := extModuleURLs[]
+			factory.New(ctx, a.name, []iextengine.ExtensionPackage{ // FIXME: зачем туту массив, если sidecar?
+				{
+				},
+			}, &iextengine.DefaultExtEngineConfig, 1) // FIXME: what is numEngines here?
+		})
+
 		for ek, ef := range eef {
 
 			// non-native ->

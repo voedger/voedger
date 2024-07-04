@@ -60,7 +60,7 @@ type BuiltInExtFuncs map[appdef.AppQName]BuiltInAppExtFuncs // Provided to const
 
 type ExtensionPackage struct {
 	QualifiedName  string
-	ModuleUrl      *url.URL // путь к тому метсу на диске, где лежит wasm
+	ModuleUrl      *url.URL // путь к тому месту на диске, где лежит wasm
 	ExtensionNames []string
 }
 

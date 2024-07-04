@@ -10,8 +10,10 @@ package vvm
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io/fs"
 	"net/url"
 	"strconv"
 	"strings"
@@ -29,6 +31,7 @@ import (
 	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/itokens"
+	"github.com/voedger/voedger/pkg/parser"
 	"github.com/voedger/voedger/pkg/router"
 	"github.com/voedger/voedger/pkg/vvm/engines"
 
@@ -298,10 +301,14 @@ func provideIsDeviceAllowedFunc(appsArtefacts AppsArtefacts) iauthnzimpl.IsDevic
 	return res
 }
 
-func provideBuiltInApps(appsArtefacts AppsArtefacts) []appparts.BuiltInApp {
-	res := make([]appparts.BuiltInApp, len(appsArtefacts.builtInAppPackages))
-	for i, pkg := range appsArtefacts.builtInAppPackages {
-		res[i] = pkg.BuiltInApp
+func provideBuiltInApps(appsArtefacts AppsArtefacts, sidecarApps []SidecarApplication) []appparts.BuiltInApp {
+	res := []appparts.BuiltInApp{}
+	for _, pkg := range appsArtefacts.builtInAppPackages {
+		res = append(res, pkg.BuiltInApp)
+	}
+	for _, sidecarApp := range sidecarApps {
+		// expecting the sidecar app consists of only one package
+		res = append(res, sidecarApp.builtInAppPackages[0].BuiltInApp)
 	}
 	return res
 }
@@ -445,20 +452,71 @@ func provideBuiltInAppsArtefacts(vvmConfig *VVMConfig, apis apps.APIs, cfgs AppC
 	return vvmConfig.VVMAppsBuilder.BuildAppsArtefacts(apis, cfgs)
 }
 
-func attachSidecarApplications(vvmConfig *VVMConfig, aa AppsArtefacts) error {
+func provideSidecarApplications(vvmConfig *VVMConfig, aa AppsArtefacts) (res []SidecarApplication, err error) {
 	appsEntries, err := vvmConfig.ConfigFS.ReadDir("apps")
 	if err != nil {
-		return err
+		return nil, err
 	}
 	for _, appEntry := range appsEntries {
 		if !appEntry.IsDir() {
 			continue
 		}
-		res, err := compile.Compile(appEntry.Name())
+		appFiles, err := vvmConfig.ConfigFS.ReadDir("apps/" + appEntry.Name())
 		if err != nil {
-			return err
+			// notest
+			return nil, err
 		}
+		descriptorContent := []byte{}
+		for _, appFile := range appFiles {
+			if appFile.IsDir() || appFile.Name() != "descriptor.json" {
+				continue
+			}
+			descriptorContent, err = vvmConfig.ConfigFS.ReadFile(fmt.Sprintf("apps/%s/descriptor.json", appEntry.Name()))
+			if err != nil {
+				// notest
+				return nil, err
+			}
+		}
+		if len(descriptorContent) == 0 {
+			return nil, fmt.Errorf("no descriptor for sidecar app %s", appEntry.Name())
+		}
+		var appDD appparts.AppDeploymentDescriptor
+		if err := json.Unmarshal(descriptorContent, &appDD); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal descriptor for sidecar app %s: %w", appEntry.Name(), err)
+		}
+		compileResult, err := compile.Compile(appEntry.Name())
+		if err != nil {
+			return nil, err
+		}
+
+		// FIXME
+		appQName := appdef.NewAppQName("", appEntry.Name())
+
+		appFS, err := fs.Sub(vvmConfig.ConfigFS, fmt.Sprintf("apps/%s", appEntry.Name()))
+		if err != nil {
+			// notest
+			return nil, err
+		}
+		as := SidecarApplication{
+			builtInAppPackages: []BuiltInAppPackages{
+				BuiltInAppPackages{
+					BuiltInApp: appparts.BuiltInApp{
+						Def:                     compileResult.AppDef,
+						Name:                    appQName,
+						AppDeploymentDescriptor: appDD,
+					},
+					Packages: []parser.PackageFS{
+						parser.PackageFS{
+							Path: appEntry.Name(),
+							FS:   appFS.(coreutils.IReadFS),
+						},
+					},
+				},
+			},
+		}
+		res = append(res, as)
 	}
+	return res, nil
 }
 
 func provideServiceChannelFactory(vvmConfig *VVMConfig, procbus iprocbus.IProcBus) ServiceChannelFactory {
