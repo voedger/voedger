@@ -10,7 +10,6 @@ import (
 
 func TestPbill(t *testing.T) {
 	// test singletone insert
-	// TODO: orm.Package_air.Command_Pbill must be able to describe argument type
 	{
 		require := test.NewCommandRunner(
 			t,
