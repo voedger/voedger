@@ -161,12 +161,7 @@ func (ts *TestState) putRecords() {
 		keyValueMap, err := parseKeyValues(item.keyValueList)
 		require.NoError(ts.t, err)
 		_, _ = ts.PutRecords(istructs.WSID(1), func(cud istructs.ICUD) {
-			pkgAlias := filepath.Base(item.entity.PkgPath())
-
-			// TODO: package 'bp3' doesn't know about alias 'untill' used by 'air' package
-			if pkgAlias == "bp3" {
-				pkgAlias = "untill"
-			}
+			pkgAlias := ts.appDef.PackageLocalName(item.entity.PkgPath())
 
 			fc := cud.Create(appdef.NewQName(pkgAlias, item.entity.Entity()))
 			keyValueMap[appdef.SystemField_ID] = istructs.RecordID(1)
