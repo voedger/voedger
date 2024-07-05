@@ -1709,7 +1709,7 @@ func TestEventBuild_Error(t *testing.T) {
 
 	t.Run("Errors in Generate ID", func(t *testing.T) {
 
-		t.Run("Error in Generate Argument Object ID", func(t *testing.T) {
+		t.Run("Error in Generate ArgumentObject Object ID", func(t *testing.T) {
 			bld := eventBuilder(test.saleCmdName)
 
 			cmd := bld.ArgumentObjectBuilder()

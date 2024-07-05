@@ -23,7 +23,7 @@ func GetPrincipalTokenFromState(st istructs.IState) (token string, err error) {
 	return token, nil
 }
 
-func PopulateKeys(kb istructs.IStateKeyBuilder, keys map[string]any) {
+func PopulateKeys(kb istructs.IRowWriter, keys map[string]any) {
 	for k, v := range keys {
 		switch t := v.(type) {
 		case int32:

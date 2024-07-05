@@ -1,27 +1,323 @@
 -- Copyright (c) 2024-present unTill Software Development Group B. V.
 -- @author Maxim Geraskin
 
+// TODO: remove unnecessary fields, use only used in air app
+TABLE orders INHERITS ODoc (
+	id_bill ref(bill) NOT NULL, -- deprecated
+	ord_tableno int32 NOT NULL,
+	id_untill_users ref(untill_users) NOT NULL,
+	ord_table_part varchar(1) NOT NULL,
+	ord_datetime int64 NOT NULL,
+	number int32,
+	failurednumber int32,
+	suffix varchar(3),
+	id_sales_area ref(sales_area),
+	pcname varchar(50),
+	hht varchar(100),
+	kind int32,
+	ord_group_vat_level int32,
+	id_table_area ref(table_area),
+	order_item TABLE order_item (
+		id_orders ref(orders) NOT NULL, -- deprecated
+		rowbeg int32 NOT NULL,
+		kind int32 NOT NULL,
+		quantity int32 NOT NULL,
+		id_articles ref(articles),
+		text varchar(255),
+		price int64 NOT NULL,
+		id_prices ref(prices),
+		with_without int32,
+		id_courses ref(courses),
+		purchase_price int64,
+		vat_sign varchar(3),
+		original_price int64 NOT NULL,
+		vat float64,
+		menu_quantity int32,
+		id_menu ref(menus), -- deprecated
+		reduce_free_visits int32,
+		chair_number int32,
+		separated int32,
+		negative int32,
+		order_index int32,
+		vat_percent int64,
+		chair_name varchar(20),
+		id_option_article ref(option_article),
+		start_delay_minutes int32,
+		pua int32,
+		no_price int32,
+		weight int64,
+		option_level int32,
+		id_smartcards ref(smartcards),
+		has_allergens int32,
+		id_article_options ref(article_options),
+		id_size_modifier_item ref(size_modifier_item),
+		price_vat float64,
+		price_no_vat float64,
+		id_parent ref, -- forced RecordID
+		menu_guid varchar(36),
+		id_vat ref(vat),
+		waste_order_item TABLE waste_order_item (
+			id_order_item ref(order_item) -- deprecated
+		),
+		discounted_items TABLE discounted_items (
+			id_order_item ref(order_item), -- deprecated
+			discount_reason ref(discount_reasons),
+			savepoints int32,
+			id_untill_users ref(untill_users),
+			discount_type int32,
+			free_comments varchar(250),
+			id_menu_item ref(menu_item), -- deprecated
+			id_discount_groups ref(discount_groups)
+		),
+		voided_items TABLE voided_items (
+			id_order_item ref(order_item), -- deprecated
+			id_void_reason ref(discount_reasons),
+			id_untill_users ref(untill_users),
+			void_type int32,
+			void_text varchar(1024)
+		),
+		order_item_stock_price TABLE order_item_stock_price (
+			id_order_item ref(order_item), -- deprecated
+			price int64,
+			average_price int64
+		),
+		bonus_items TABLE bonus_items (
+			id_order_item ref(order_item), -- deprecated
+			id_parent_item ref(order_item), -- deprecated
+			id_article_bonus_groups ref(bonus_groups),
+			id_parent_menu_item ref(menu_item), -- deprecated
+			id_parent_bonus_article ref(articles)
+		),
+		order_item_onhold TABLE order_item_onhold (
+			id_order_item ref(order_item), -- deprecated
+			onhold int32,
+			datetime int64,
+			end_datetime int64,
+			printed int32
+		),
+		open_discount_item TABLE open_discount_item (
+			id_order_item ref(order_item) NOT NULL, -- deprecated
+			amount float64
+		),
+		order_item_newyse_data TABLE order_item_newyse_data (
+			id_order_item ref(order_item), -- deprecated
+			id_prepaid_groups ref(prepaid_groups),
+			prepaid_group_internal_id varchar(30),
+			prepaid_kind int32,
+			prepaid_price_orig int64
+		),
+		order_item_newyse_prices TABLE order_item_newyse_prices (
+			id_order_item ref(order_item), -- deprecated
+			prepaid_price int64,
+			prepaid_netto_vat int64,
+			prepaid_vat int64
+		),
+		oi_onhold_logoff TABLE oi_onhold_logoff (
+			id_order_item ref(order_item), -- deprecated
+			on_hold_logoff int32
+		),
+		time_articles TABLE time_articles (
+			id_order_item ref(order_item), -- deprecated
+			time_start int64,
+			time_end int64
+		),
+		coupon_payments TABLE coupon_payments (
+			id_coupon_items ref(coupon_items),
+			qty int32,
+			id_order_item ref(order_item), -- deprecated
+			coupon_template_price int64,
+			id_option_parent ref(order_item) -- deprecated
+		),
+		order_coupon_items TABLE order_coupon_items (
+			id_order_item ref(order_item), -- deprecated
+			id_coupon_item ref(coupon_items)
+		),
+		order_item_bookp TABLE order_item_bookp (
+			id_order_item ref(order_item), -- deprecated
+			id_bookkeeping_turnover ref(bookkeeping),
+			id_bookkeeping_vat ref(bookkeeping)
+		),
+		order_item_allergens TABLE order_item_allergens (
+			id_order_item ref(order_item), -- deprecated
+			id_menu_item ref(menu_item), -- deprecated
+			id_allergens ref(allergens),
+			text varchar(255),
+			id_pbill_item ref(pbill_item) -- deprecated
+		),
+		order_item_sizes TABLE order_item_sizes (
+			id_order_item ref(order_item), -- deprecated
+			id_menu_item ref(menu_item), -- deprecated
+			id_pbill_item ref(pbill_item), -- deprecated
+			id_articles ref(articles),
+			price int64,
+			original_price int64,
+			vat float64,
+			id_size_modifier_item ref(size_modifier_item),
+			price_vat float64,
+			price_no_vat float64
+		),
+		order_item_extra TABLE order_item_extra (
+			id_order_item ref(order_item), -- deprecated
+			id_menu_item ref(menu_item), -- deprecated
+			id_pbill_item ref(pbill_item), -- deprecated
+			id_article_barcodes ref(article_barcodes)
+		)
+	),
+	neg_orders TABLE neg_orders (
+		id_orders ref(orders), -- deprecated
+		ord_datetime int64,
+		reason int32,
+		from_table_no int32,
+		from_table_part varchar(1),
+		to_table_no int32,
+		to_table_part varchar(1),
+		id_discount_reasons ref(discount_reasons),
+		id_manager ref(untill_users)
+	),
+	stock_doc TABLE stock_doc (
+		id_orders ref(orders), -- deprecated
+		id_pbill ref(pbill), -- deprecated
+		id_stock_invoice ref(stock_invoice),
+		id_stock_adjustment ref(stock_adjustment),
+		id_stock_cost_correction ref(stock_cost_correction)
+	),
+	transferred_bills TABLE transferred_bills (
+		id_bill_original ref(bill), -- deprecated
+		id_bill_result ref(bill), -- deprecated
+		id_orders_result ref(orders), -- deprecated
+		id_orders_original ref(orders) -- deprecated
+	),
+	orders_newyse_data TABLE orders_newyse_data (
+		id_orders ref(orders) NOT NULL, -- deprecated
+		reservation_id varchar(30),
+		customer_name varchar(100),
+		card_number varchar(100),
+		reservation_no varchar(40),
+		customer_id varchar(40),
+		resort varchar(40),
+		driver_id varchar(255)
+	),
+	cal_orders TABLE cal_orders (
+		id_orders ref(orders), -- deprecated
+		id_callers ref(callers),
+		id_users_open ref(untill_users),
+		id_users_close ref(untill_users),
+		open_datetime int64,
+		close_datetime int64,
+		pcname varchar(50),
+		call_datetime int64,
+		inactive int32,
+		inactivate_datetime int64,
+		id_users_inactivate ref(untill_users)
+	),
+	working_day varchar(30) NOT NULL
+);
 
-WORKSPACE RestaurantWS (
-    DESCRIPTOR RestaurantDescriptor();
+TABLE untill_users INHERITS CDoc (
+	name varchar(255),
+	mandates bytes(10),
+	user_void int32 NOT NULL,
+	user_code varchar(50),
+	user_card varchar(50),
+	language varchar(100),
+	language_char int32,
+	user_training int32 NOT NULL,
+	address varchar(1024),
+	id_countries ref(countries),
+	phone varchar(50),
+	datebirth int64,
+	insurance varchar(50),
+	user_poscode varchar(50),
+	terminal_id varchar(50),
+	user_clock_in int32,
+	user_poscode_remoteterm varchar(50),
+	is_custom_remoteterm_poscode int32,
+	id_group_users ref(untill_group_users),
+	tp_api_pwd varchar(50),
+	firstname varchar(50),
+	lastname varchar(50),
+	user_transfer int32,
+	personal_drawer int32,
+	start_week_day int32,
+	start_week_time int64,
+	needcashdeclaration int32,
+	smartcard_uid varchar(50),
+	not_print_waiter_report int32,
+	exclude_message int32,
+	lefthand int32,
+	login_message varchar(100),
+	email varchar(100),
+	number int32,
+	hq_id varchar(50),
+	void_number int32,
+	last_update_dt int64,
+	block_time_break int32,
+	void_type int32,
+	tpapi_permissions bytes(80),
+	hide_wm int32,
+	creation_date int64,
+	user_redirect int32,
+	user_reopen int32,
+	user_cashdrawer int32,
+	untill_user_fingerprints TABLE untill_user_fingerprints (
+		id_untill_users ref(untill_users) NOT NULL, -- deprecated
+		name varchar(255),
+		fpdata bytes(80),
+		driver_id varchar(128)
+	),
+	untill_user_wages untill_user_wages,
+	user_report_groups TABLE user_report_groups (
+		id_untill_users ref(untill_users), -- deprecated
+		id_report_groups ref(report_groups),
+		urg_number int32
+	)
+);
 
-    TABLE bill INHERITS WDoc (
-        close_datetime int64,
-        table_name varchar(50),
-        tableno int32 NOT NULL,
-        id_untill_users ref(untill_users) NOT NULL,
-        table_part varchar(1) NOT NULL
-    );
+TABLE pbill INHERITS ODoc (
+	id_bill ref(bill) NOT NULL, -- deprecated
+	id_untill_users ref(untill_users) NOT NULL,
+	number int32, -- Deprecated. The pbill number in the event is stored in wdoc.air.LastNumbers.PBill field of CUDs of the event instead. See https://dev.untill.com/projects/#!681278
+	failurednumber int32,
+	suffix varchar(3),
+	pdatetime int64 NOT NULL,
+	id_sales_area ref(sales_area),
+	pcname varchar(50),
+	service_charge float64,
+	real_datetime int64,
+	tips int64,
+	id_clients ref(clients),
+	pbill_index int32,
+	split_parts float64,
+	id_real_untill_user ref(untill_users),
+	reopen_type int32,
+	external_id varchar(50),
+	covers int32,
+	hht varchar(100),
+	super_dx int64,
+	c_tips int64,
+	id_currency ref(currency),
+	pbill_item pbill_item,
+	pbill_payments pbill_payments,
+	pbill_item_refund pbill_item_refund,
+	neg_pbill neg_pbill,
+	pbill_return pbill_return,
+	psp_tips psp_tips,
+	bill_reprints bill_reprints,
+	sold_articles sold_articles,
+	payment_items payment_items,
+	pbill_cleancash_info pbill_cleancash_info,
+	stock_doc stock_doc,
+	sold_articles_wm sold_articles_wm,
+	open_discounts open_discounts,
+	bill_split_rest bill_split_rest,
+	pbill_email pbill_email,
+	pbill_balance pbill_balance,
+	complete_meal complete_meal,
+	working_day varchar(30) NOT NULL,
+	discount_value int64,
+	discount float64,
+	id_discount_reasons ref, -- forced RecordID
+	reopen_pbill_id ref(pbill),
+	table_number int64
+);
 
-    TABLE articles INHERITS CDoc (
-        article_number int32,
-        name varchar(255)
-    );
-
-    TABLE pbill INHERITS ODoc (
-        id_bill int64 NOT NULL,
-        id_untill_users ref(untill_users) NOT NULL,
-        number int32,
-        pbill_item pbill_item
-    );
-)

@@ -24,7 +24,8 @@ func Test_CalcOrderedItems(t *testing.T) {
 	test := test.NewTestAPI(
 		teststate.ProcKind_Actualizer,
 		testPkg,
-		teststate.TestWorkspace{WorkspaceDescriptor: "RestaurantDescriptor", WSID: testWSID})
+		teststate.TestWorkspace{WorkspaceDescriptor: "RestaurantDescriptor", WSID: testWSID},
+	)
 
 	// Fill state
 	test.PutSecret("encryptionKey", []byte("idkfa"))

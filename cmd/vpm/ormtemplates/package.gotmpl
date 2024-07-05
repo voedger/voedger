@@ -6,18 +6,21 @@
 
 package orm
 
-import (
-	"github.com/voedger/voedger/pkg/exttinygo"
-)
+import "github.com/voedger/voedger/pkg/exttinygo"
 
+
+// package type
+type TPackage_{{.Name}} struct {
+    Path 								string
+    {{range .Items}}{{.Type}}_{{.Name}} {{.Type}}_{{$.Name}}_{{.Name}}
+    {{end}}
+}
 
 // package variables
-var Package_{{.Name}} = struct {
-{{range .Items}}{{.Type}}_{{.Name}} {{.Type}}_{{$.Name}}_{{.Name}}
-{{end}}
-}{  {{range .Items}}
-    {{.Type}}_{{.Name}}: {{.Type}}_{{$.Name}}_{{.Name}}{
-        Type: Type{qname: "{{.PkgPath}}.{{.Name}}"},
+var Package_{{.Name}} = TPackage_{{.Name}}{  
+    Path: "{{.FullPath}}",
+    {{range .Items}}{{.Type}}_{{.Name}}: {{.Type}}_{{$.Name}}_{{.Name}}{
+        Type: Type{fQName: "{{.Package.FullPath}}.{{.Name}}"},
     },{{end}}
 }
 

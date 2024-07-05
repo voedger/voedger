@@ -6,7 +6,9 @@
 package main
 
 import (
+	"fmt"
 	"github.com/voedger/voedger/examples/airs-bp2/air/wasm/orm"
+	"time"
 )
 
 // Command
@@ -14,40 +16,45 @@ import (
 //export Pbill
 func Pbill() {
 
-	//var refBill orm.Ref
-	//
-	//// Query untill.pbill from the ArgumentObject
-	//{
-	//	pbill := orm.Package_air.Command_Pbill.ArgumentObject()
-	//
-	//	// Basic types fields
-	//	refBill = pbill.Get_id_bill()
-	//	pbill.Get_id_untill_users()
-	//
-	//	// Container
-	//	pbill_items := pbill.Get_pbill_item()
-	//	for i := 0; i < pbill_items.Len(); i++ {
-	//		item := pbill_items.Get(i)
-	//		item.Get_tips()
-	//	}
-	//}
-	//
-	//// Prepare intent for Package_untill.WDoc_bill
-	//{
-	//	intent := orm.Package_untill.ODoc_pbill.Update(refBill.ID())
-	//	intent.Set_pdatetime(time.Now().UnixMicro())
-	//}
-	//
+	var billID orm.ID
+
+	// Query untill.pbill from the ArgumentObject
+	{
+		pbill := orm.Package_air.Command_Pbill.ArgumentObject()
+
+		// Basic types fields
+		billID = pbill.Get_id_bill()
+		//pbill.Get_id_untill_users()
+
+		// Container
+		pbill_items := pbill.Get_pbill_item()
+		for i := 0; i < pbill_items.Len(); i++ {
+			item := pbill_items.Get(i)
+			wd := item.Get_c_tips()
+			fmt.Println(wd)
+		}
+	}
+
+	// Prepare intent for Package_untill.WDoc_bill
+	{
+		pbill := orm.Package_air.Command_Pbill.ArgumentObject()
+
+		// Basic types fields
+		billID = pbill.Get_id_bill()
+		intent := orm.Package_untill.WDoc_bill.Update(billID)
+		intent.Set_close_datetime(time.Now().UnixMicro())
+	}
+
 	// Prepare intent for Package_air.WSingleton_NextNumbers
 	{
 		var nextNumber int32
 		nextNumberValue, nextNumberOk := orm.Package_air.WSingleton_NextNumbers.Get()
 		var intent orm.Intent_WSingleton_air_NextNumbers
 		if !nextNumberOk {
-			nextNumber = 1
-			intent = orm.Package_air.WSingleton_NextNumbers.Insert()
+			nextNumber = 0
+			intent = nextNumberValue.Insert()
 		} else {
-			intent = orm.Package_air.WSingleton_NextNumbers.Update(nextNumberValue)
+			intent = nextNumberValue.Update() //orm.Package_air.WSingleton_NextNumbers.Update(nextNumberValue)
 			nextNumber = nextNumberValue.Get_NextPBillNumber()
 		}
 		intent.Set_NextPBillNumber(nextNumber + 1)
@@ -55,9 +62,14 @@ func Pbill() {
 }
 
 // TODO: add test for FillPbillDates
-// nolint revive
-func FillPbillDates() {
+// FillPbillDates аргументом является событие вызова команды Pbill
+// Берет из события дату и время и смещения результирующее (WLog).
+// В проекторе аргументом является событие вызова команды Pbill
 
+// Спросить у Мишы как расширение-проектор будет работать с событием, если этот проектор "сидит" на команде
+// Надо откуда-то это событие брать
+// После из события вытащить смещение, день и год и делаем NewIntent у которого FQName - это вьюшка из задачи
+func FillPbillDates() {
 	// Query air.PbillDates
 	{
 		v := orm.Package_air.View_PbillDates.MustGet(2019, 12)

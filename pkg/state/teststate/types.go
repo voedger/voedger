@@ -5,6 +5,7 @@
 package teststate
 
 import (
+	"github.com/voedger/voedger/pkg/appdef"
 	"io"
 	"time"
 
@@ -35,4 +36,15 @@ type HttpResponse struct {
 	Status  int
 	Body    []byte
 	Headers map[string][]string
+}
+
+type recordItem struct {
+	entity       appdef.IFullQName
+	id           int
+	keyValueList []any
+}
+
+type argumentItem struct {
+	path         string
+	keyValueList []any
 }

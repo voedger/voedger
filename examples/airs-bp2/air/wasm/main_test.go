@@ -1,55 +1,108 @@
 package main
 
 import (
-	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/voedger/voedger/examples/airs-bp2/air/wasm/orm"
-	"github.com/voedger/voedger/pkg/appdef"
 	test "github.com/voedger/voedger/pkg/exttinygo/exttinygotests"
-	"github.com/voedger/voedger/pkg/istructs"
-	"github.com/voedger/voedger/pkg/state"
-	"github.com/voedger/voedger/pkg/state/teststate"
 )
 
 func TestPbill(t *testing.T) {
-	const (
-		pkgPath  = "github.com/voedger/voedger/examples/airs-bp2/air"
-		testWSID = istructs.WSID(1)
-	)
+	// test singletone insert
+	// TODO: orm.Package_air.Command_Pbill must be able to describe argument type
+	{
+		require := test.NewCommandRunner(
+			t,
+			orm.Package_air.Command_Pbill,
+			Pbill,
+		).
+			Record( // не превращает raw id-шники в real id-шники
+				orm.Package_air.WSingleton_NextNumbers,
+				1,
+				`NextPBillNumber`, int32(6),
+			).
+			Record( // не превращает raw id-шники в real id-шники
+				orm.Package_untill.WDoc_bill,
+				100000,
+				`id_untill_users`, 100001,
+				`tableno`, 1,
+				`table_part`, `a`,
+				`proforma`, 1,
+				`working_day`, `monday`,
+			).
+			ArgumentObject(
+				1,
+				`tips`, 20_00,
+				`id_bill`, 100000,
+				`id_untill_users`, 100001,
+				`pdatetime`, time.Now().UnixMicro(),
+				`working_day`, `monday`,
+			).
+			ArgumentObjectRow(`pbill_item`,
+				1,
+				`sys.ParentID`, 1,
+				`id_untill_users`, 100001,
+				`rowbeg`, 1,
+				`tableno`, 123,
+				`rowbeg`, 1,
+				`kind`, 1,
+				`quantity`, 2,
+				`price`, 50_00,
+			).
+			Run() // Run() набивает тест стейт, запускает его и возвращает ICommandRequire
 
-	testAPI := test.NewTestAPI(
-		teststate.ProcKind_CommandProcessor,
-		pkgPath,
-		teststate.TestWorkspace{WorkspaceDescriptor: "RestaurantDescriptor", WSID: testWSID})
+		// ICommandRequire ...
 
-	pkgAlias := filepath.Base(pkgPath)
-	nextNumber := int32(5)
-	testAPI.PutRecords(testWSID, func(cud istructs.ICUD) {
-		fc := cud.Create(appdef.NewQName(pkgAlias, "NextNumbers"))
-		fc.PutRecordID(appdef.SystemField_ID, 1)
-		fc.PutInt32("NextPBillNumber", nextNumber)
-	})
+		//testCtx := test.NewProjectContextBuilder(
+		//	t,
+		//	orm.Package_air.Command_Pbill,
+		//	Pbill,
+		//).CUD().ArgumentObject().ArgumentObjectRow(`pbill_item`, `id_bill`, int64(1)).Build()
 
-	Pbill()
+		////
+		//testCtx.PutArgument(
+		//	`id_bill`, int64(1),
+		//	`id_bill`, int64(1),
+		//	`id_bill`, int64(1),
+		//).AddRow(`pbill_item`, `id_bill`, int64(1))
 
-	// TODO: RequireRecordIntent(t, id, fQName test.IFullQName, map[string]any{'NextPBillNumber': nextNumber+1})
-	// type IFullQName interface {
-	// PkgPath() string
-	// Entity() string
-	// }
-	testAPI.RequireRecordIntent(
-		t,
-		state.Record,
-		orm.Package_air.WSingleton_NextNumbers,
-		map[string]any{state.Field_IsSingleton: true},
-		map[string]any{`NextPBillNumber`: nextNumber + 1},
-	)
+		// test context assessment
+		// implicitly calls PBill
+		//require := testCtx.NewRequire()
 
-	//testAPI.RequireIntent(t, state.Record, appdef.NewFullQName(pkgAlias, "NextNumbers"), func(key istructs.IStateKeyBuilder) {
-	//	key.PutBool(state.Field_IsSingleton, true)
-	//}).Assert(func(require *require.Assertions, value istructs.IStateValue) {
-	//	require.Equal(nextNumber+1, value.AsInt32("NextPBillNumber"))
-	//})
-	// TODO: check record in pbill as well
+		// check that the next number is inserted
+		nextNumber := int32(1)
+		require.SingletonInsert(
+			orm.Package_air.WSingleton_NextNumbers,
+			`NextPBillNumber`, nextNumber,
+		)
+	}
+
+	// TODO: if intent was created but we didn't expect it, it should be an error
+	// (DO NOT USE RequireNoIntent())
+
+	////test singletone update
+	//{
+	//	testCtx := test.NewContext(
+	//		t,
+	//		orm.Package_air.Command_Pbill,
+	//		Pbill,
+	//	)
+	//
+	//	// test context assessment
+	//	nextNumber := int32(5)
+	//	testCtx.PutRecord(
+	//		orm.Package_air.WSingleton_NextNumbers,
+	//		`NextPBillNumber`, nextNumber,
+	//	)
+	//
+	//	require := testCtx.NewRequire()
+	//
+	//	// check that the next number is updated
+	//	require.SingletonUpdate(
+	//		orm.Package_air.WSingleton_NextNumbers,
+	//		`NextPBillNumber`, nextNumber+1,
+	//	)
+	//}
 }

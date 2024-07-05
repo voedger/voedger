@@ -41,11 +41,13 @@ type ormPackage struct {
 }
 
 type ormPackageItem struct {
-	Package ormPackageInfo
-	PkgPath string
-	QName   string
-	Name    string
-	Type    string
+	Package      ormPackageInfo
+	WsName       string
+	WsDescriptor string
+	PkgPath      string
+	QName        string
+	Name         string
+	Type         string
 	// TODO: find a way to extract sql-code of the package item from parser/appdef
 	SqlContent string
 }
@@ -83,4 +85,13 @@ type ormField struct {
 	Name          string
 	GetMethodName string
 	SetMethodName string
+}
+
+func hasCommands(p ormPackage) bool {
+	for _, item := range p.Items {
+		if _, ok := item.(ormCommand); ok {
+			return true
+		}
+	}
+	return false
 }

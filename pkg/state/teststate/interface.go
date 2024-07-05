@@ -42,7 +42,6 @@ type ITestAPI interface {
 	// Intent
 	RequireIntent(t *testing.T, storage appdef.QName, entity appdef.FullQName, kb KeyBuilderCallback) IIntentAssertions
 	RequireNoIntents(t *testing.T)
-	RequireRecordIntent(t *testing.T, storage appdef.QName, fQName appdef.IFullQName, keys, expectedValues map[string]any)
 }
 
 type ITestState interface {
@@ -51,7 +50,7 @@ type ITestState interface {
 }
 
 type IIntentAssertions interface {
-	NotExists()
+	ICommandRequire
 	Exists()
 	Equal(vb ValueBuilderCallback)
 	Assert(cb IntentAssertionsCallback)

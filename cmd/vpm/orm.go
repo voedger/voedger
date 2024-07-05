@@ -57,8 +57,8 @@ func generateOrm(compileRes *compile.Result, params *vpmParams) error {
 		return err
 	}
 
-	iTypeObjs, pkgInfos, currentPkgLocalName := getPkgAppDefObjs(compileRes.ModulePath, compileRes.AppDef, headerContent)
-	pkgData := getOrmData(currentPkgLocalName, pkgInfos, iTypeObjs)
+	iTypeObjsOfWS, pkgInfos, currentPkgLocalName := getPkgAppDefObjs(compileRes.ModulePath, compileRes.AppDef, headerContent)
+	pkgData := getOrmData(currentPkgLocalName, pkgInfos, iTypeObjsOfWS)
 	if err := generateOrmFiles(pkgData, dir); err != nil {
 		return err
 	}
@@ -71,9 +71,8 @@ func generateOrm(compileRes *compile.Result, params *vpmParams) error {
 
 // getPkgAppDefObjs gathers objects from the current package
 // and returns a list of objects, a map of package local names to its info and the current package local name
-func getPkgAppDefObjs(packagePath string, appDef appdef.IAppDef, headerContent string) (iTypeObjs []appdef.IType, pkgInfos map[string]ormPackageInfo, currentPkgLocalName string) {
+func getPkgAppDefObjs(packagePath string, appDef appdef.IAppDef, headerContent string) (iTypeObjsOfWS map[appdef.QName][]appdef.IType, pkgInfos map[string]ormPackageInfo, currentPkgLocalName string) {
 	uniqueObjects := make([]string, 0)
-	iTypeObjs = make([]appdef.IType, 0)        // list of package objects
 	pkgInfos = make(map[string]ormPackageInfo) // mapping of package local names to its info
 	// sys package is implicitly added to the list of packages,
 	// so we need to add it manually
@@ -93,25 +92,34 @@ func getPkgAppDefObjs(packagePath string, appDef appdef.IAppDef, headerContent s
 			HeaderFileContent: headerContent,
 		}
 	})
+	iTypeObjsOfWS = make(map[appdef.QName][]appdef.IType, len(pkgInfos))
 
-	collectITypeObjs := func(iTypeObj appdef.IType) {
-		// skip abstract types
-		if iAbstract, ok := iTypeObj.(appdef.IWithAbstract); ok {
-			if iAbstract.Abstract() {
-				return
+	collectITypeObjs := func(iWorkspace appdef.IWorkspace) func(iTypeObj appdef.IType) {
+		return func(iTypeObj appdef.IType) {
+			// skip abstract types
+			if iAbstract, ok := iTypeObj.(appdef.IWithAbstract); ok {
+				if iAbstract.Abstract() {
+					return
+				}
 			}
-		}
-		qName := iTypeObj.QName()
-		if !slices.Contains(uniqueObjects, qName.String()) {
-			iTypeObjs = append(iTypeObjs, iTypeObj)
-			uniqueObjects = append(uniqueObjects, qName.String())
+			qName := iTypeObj.QName()
+			if !slices.Contains(uniqueObjects, qName.String()) {
+				if _, ok := iTypeObjsOfWS[iWorkspace.QName()]; !ok {
+					iTypeObjsOfWS[iWorkspace.QName()] = make([]appdef.IType, 0)
+				}
+				iTypeObjsOfWS[iWorkspace.QName()] = append(iTypeObjsOfWS[iWorkspace.QName()], iTypeObj)
+				uniqueObjects = append(uniqueObjects, qName.String())
+			}
 		}
 	}
 
 	// gather objects from the current package
 	appDef.Types(func(iTypeObj appdef.IType) {
 		if workspace, ok := iTypeObj.(appdef.IWorkspace); ok {
-			workspace.Types(collectITypeObjs)
+			// add workspace itself to the list of objects as well
+			collectITypeObjs(workspace)(workspace)
+			// then add all types of the workspace
+			workspace.Types(collectITypeObjs(workspace))
 		}
 	})
 	return
@@ -179,29 +187,43 @@ func generateOrmFile(localName string, ormPkgData ormPackage, dir string) (fileP
 	return filePath, nil
 }
 
-func getOrmData(localName string, pkgInfos map[string]ormPackageInfo, iTypeObjs []appdef.IType) (pkgData map[ormPackageInfo][]interface{}) {
+func getOrmData(localName string, pkgInfos map[string]ormPackageInfo, iTypeObjsOfWS map[appdef.QName][]appdef.IType) (pkgData map[ormPackageInfo][]interface{}) {
 	pkgData = make(map[ormPackageInfo][]interface{})
 	uniquePkgQNames := make(map[ormPackageInfo][]string)
-	for _, obj := range iTypeObjs {
-		processITypeObj(localName, pkgInfos, pkgData, uniquePkgQNames, obj)
+	for wsQName, objs := range iTypeObjsOfWS {
+		for _, obj := range objs {
+			processITypeObj(localName, pkgInfos, pkgData, uniquePkgQNames, wsQName, obj)
+		}
 	}
 	return
 }
 
-func newPackageItem(defaultLocalName string, pkgInfos map[string]ormPackageInfo, obj interface{}) ormPackageItem {
-	name := getName(obj)
-	qName := obj.(appdef.IType).QName()
-	localName := defaultLocalName
-	if obj != nil {
-		localName = qName.Pkg()
+func newPackageItem(defaultPackageLocalName string, pkgInfos map[string]ormPackageInfo, wsQName appdef.QName, obj appdef.IType) ormPackageItem {
+	var wsName, wsDescriptor string
+	appDef := obj.App()
+	if appDef != nil {
+		iWorkspace := appDef.Workspace(wsQName)
+		wsName = getName(iWorkspace)
+		wsDescriptor = getName(appDef.CDoc(iWorkspace.Descriptor()))
 	}
-	pkgInfo := pkgInfos[localName]
+
+	name := getName(obj)
+	qName := obj.QName()
+
+	localPackageName := defaultPackageLocalName
+	if obj != nil {
+		localPackageName = qName.Pkg()
+	}
+
+	pkgInfo := pkgInfos[localPackageName]
 	return ormPackageItem{
-		Package: pkgInfo,
-		PkgPath: pkgInfo.FullPath,
-		QName:   qName.String(),
-		Name:    name,
-		Type:    getObjType(obj),
+		Package:      pkgInfo,
+		PkgPath:      pkgInfo.FullPath,
+		QName:        qName.String(),
+		Name:         name,
+		Type:         getObjType(obj),
+		WsName:       wsName,
+		WsDescriptor: wsDescriptor,
 	}
 }
 
@@ -216,12 +238,12 @@ func newFieldItem(tableData ormTableItem, field appdef.IField) ormField {
 	}
 }
 
-func processITypeObj(localName string, pkgInfos map[string]ormPackageInfo, pkgData map[ormPackageInfo][]interface{}, uniquePkgQNames map[ormPackageInfo][]string, obj appdef.IType) (newItem interface{}) {
+func processITypeObj(localName string, pkgInfos map[string]ormPackageInfo, pkgData map[ormPackageInfo][]interface{}, uniquePkgQNames map[ormPackageInfo][]string, wsQName appdef.QName, obj appdef.IType) (newItem interface{}) {
 	if obj == nil {
 		return nil
 	}
 
-	pkgItem := newPackageItem(localName, pkgInfos, obj)
+	pkgItem := newPackageItem(localName, pkgInfos, wsQName, obj)
 	if pkgItem.Type == unknownType {
 		return nil
 	}
@@ -266,15 +288,17 @@ func processITypeObj(localName string, pkgInfos map[string]ormPackageInfo, pkgDa
 			}
 		}
 		newItem = tableData
+	case appdef.IWorkspace:
+		newItem = pkgItem
 	case appdef.ICommand, appdef.IQuery:
 		var resultFields []ormField
-		argumentObj := processITypeObj(localName, pkgInfos, pkgData, uniquePkgQNames, t.(appdef.IFunction).Param())
+		argumentObj := processITypeObj(localName, pkgInfos, pkgData, uniquePkgQNames, wsQName, t.(appdef.IFunction).Param())
 
 		var unloggedArgumentObj interface{}
 		if iCommand, ok := t.(appdef.ICommand); ok {
-			unloggedArgumentObj = processITypeObj(localName, pkgInfos, pkgData, uniquePkgQNames, iCommand.UnloggedParam())
+			unloggedArgumentObj = processITypeObj(localName, pkgInfos, pkgData, uniquePkgQNames, wsQName, iCommand.UnloggedParam())
 		}
-		if resultObj := processITypeObj(localName, pkgInfos, pkgData, uniquePkgQNames, t.(appdef.IFunction).Result()); resultObj != nil {
+		if resultObj := processITypeObj(localName, pkgInfos, pkgData, uniquePkgQNames, wsQName, t.(appdef.IFunction).Result()); resultObj != nil {
 			if tableData, ok := resultObj.(ormTableItem); ok {
 				resultFields = tableData.Fields
 			}
@@ -290,10 +314,11 @@ func processITypeObj(localName string, pkgInfos map[string]ormPackageInfo, pkgDa
 	default:
 		typeKind := t.Kind()
 		if typeKind == appdef.TypeKind_Object {
-			return processITypeObj(localName, pkgInfos, pkgData, uniquePkgQNames, t.(appdef.IObject))
+			return processITypeObj(localName, pkgInfos, pkgData, uniquePkgQNames, wsQName, t.(appdef.IObject))
 		}
 		newItem = pkgItem
 	}
+
 	// add new package item to the package data
 	if !slices.Contains(uniquePkgQNames[pkgItem.Package], getQName(newItem)) {
 		pkgData[pkgItem.Package] = append(pkgData[pkgItem.Package], newItem)
@@ -314,7 +339,8 @@ func fillInTemplate(ormPkgData ormPackage) ([]byte, error) {
 			}
 			return strings.ToUpper(s[:1]) + s[1:]
 		},
-		"lower": strings.ToLower,
+		"lower":       strings.ToLower,
+		"hasCommands": hasCommands,
 	}).ParseFS(ormTemplates, "*")
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse template: %w", err)
@@ -364,11 +390,11 @@ func normalizeName(name string) (newName string) {
 	return
 }
 
-func getName(obj interface{}) string {
+func getName(obj appdef.IType) string {
 	if obj == nil {
 		return ""
 	}
-	return normalizeName(obj.(appdef.IType).QName().Entity())
+	return normalizeName(obj.QName().Entity())
 }
 
 func getObjType(obj interface{}) string {
@@ -391,6 +417,8 @@ func getObjType(obj interface{}) string {
 		return "Command"
 	case appdef.IQuery:
 		return "Query"
+	case appdef.IWorkspace:
+		return "WS"
 	case appdef.IObject:
 		return getTypeKind(t.Kind())
 	case appdef.IType:
@@ -432,7 +460,7 @@ func getFieldType(field appdef.IField) string {
 	case appdef.DataKind_string:
 		return "string"
 	case appdef.DataKind_RecordID:
-		return "Ref"
+		return "ID"
 	default:
 		return unknownType
 	}

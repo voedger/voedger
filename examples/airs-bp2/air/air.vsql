@@ -39,6 +39,7 @@ WORKSPACE RestaurantWS (
 	EXTENSION ENGINE BUILTIN (
         COMMAND Orders(untill.orders);
         COMMAND Pbill(untill.pbill) RETURNS CmdPBillResult;
-	    PROJECTOR FillPbillDates AFTER EXECUTE ON Orders INTENTS(View(PbillDates));
+        --COMMAND Pbill() RETURNS CmdPBillResult;
+	    PROJECTOR FillPbillDates AFTER EXECUTE ON Pbill INTENTS(View(PbillDates));
 	);
 )
