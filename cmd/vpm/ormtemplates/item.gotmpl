@@ -11,11 +11,7 @@ type Value_{{.Type}}_{{.Package.Name}}_{{.Name}} struct{
 }
 {{end}}
 
-{{if (eq .Type "ODoc")}}
-type ORecord_{{.Package.Name}}_{{.Name}} struct{
-    Type
-}
-
+{{if (eq .Type "ORecord")}}
 type Container_ORecord_{{.Package.Name}}_{{.Name}} struct {
     tv  exttinygo.TValue
     len int

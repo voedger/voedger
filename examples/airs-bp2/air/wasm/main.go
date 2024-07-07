@@ -6,9 +6,8 @@
 package main
 
 import (
+	"air/wasm/orm"
 	"fmt"
-	"github.com/voedger/voedger/examples/airs-bp2/air/wasm/orm"
-	"time"
 )
 
 // Command
@@ -16,34 +15,31 @@ import (
 //export Pbill
 func Pbill() {
 
-	var billID orm.ID
-
 	// Query untill.pbill from the ArgumentObject
 	{
 		pbill := orm.Package_air.Command_Pbill.ArgumentObject()
 
-		// Basic types fields
-		billID = pbill.Get_id_bill()
-		//pbill.Get_id_untill_users()
+		//Basic types fields
+		pbill.Get_id_untill_users()
 
 		// Container
 		pbill_items := pbill.Get_pbill_item()
 		for i := 0; i < pbill_items.Len(); i++ {
 			item := pbill_items.Get(i)
-			wd := item.Get_c_tips()
-			fmt.Println(wd)
+			price := item.Get_price()
+			fmt.Println(price)
 		}
 	}
 
-	// Prepare intent for Package_untill.WDoc_bill
-	{
-		pbill := orm.Package_air.Command_Pbill.ArgumentObject()
-
-		// Basic types fields
-		billID = pbill.Get_id_bill()
-		intent := orm.Package_untill.WDoc_bill.Update(billID)
-		intent.Set_close_datetime(time.Now().UnixMicro())
-	}
+	//// Prepare intent for Package_untill.WDoc_bill
+	//{
+	//	pbill := orm.Package_air.Command_Pbill.ArgumentObject()
+	//
+	//	// Basic types fields
+	//	billID := pbill.Get_id_bill()
+	//	intent := orm.Package_untill.WDoc_bill.Update(billID)
+	//	intent.Set_close_datetime(time.Now().UnixMicro())
+	//}
 
 	// Prepare intent for Package_air.WSingleton_NextNumbers
 	{

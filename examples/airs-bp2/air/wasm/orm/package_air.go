@@ -19,23 +19,23 @@ type TPackage_air struct {
 
 // package variables
 var Package_air = TPackage_air{
-	Path: "github.com/voedger/voedger/examples/airs-bp2/air",
+	Path: "air",
 	WS_RestaurantWS: WS_air_RestaurantWS{
-		Type: Type{fQName: "github.com/voedger/voedger/examples/airs-bp2/air.RestaurantWS"},
+		Type: Type{fQName: "air.RestaurantWS"},
 	}, Type_CmdPBillResult: Type_air_CmdPBillResult{
-		Type: Type{fQName: "github.com/voedger/voedger/examples/airs-bp2/air.CmdPBillResult"},
+		Type: Type{fQName: "air.CmdPBillResult"},
 	}, WSingleton_NextNumbers: WSingleton_air_NextNumbers{
-		Type: Type{fQName: "github.com/voedger/voedger/examples/airs-bp2/air.NextNumbers"},
+		Type: Type{fQName: "air.NextNumbers"},
 	}, Command_Orders: Command_air_Orders{
-		Type: Type{fQName: "github.com/voedger/voedger/examples/airs-bp2/air.Orders"},
+		Type: Type{fQName: "air.Orders"},
 	}, Command_Pbill: Command_air_Pbill{
-		Type: Type{fQName: "github.com/voedger/voedger/examples/airs-bp2/air.Pbill"},
+		Type: Type{fQName: "air.Pbill"},
 	}, View_PbillDates: View_air_PbillDates{
-		Type: Type{fQName: "github.com/voedger/voedger/examples/airs-bp2/air.PbillDates"},
+		Type: Type{fQName: "air.PbillDates"},
 	}, ODoc_ProformaPrinted: ODoc_air_ProformaPrinted{
-		Type: Type{fQName: "github.com/voedger/voedger/examples/airs-bp2/air.ProformaPrinted"},
+		Type: Type{fQName: "air.ProformaPrinted"},
 	}, CSingleton_RestaurantDescriptor: CSingleton_air_RestaurantDescriptor{
-		Type: Type{fQName: "github.com/voedger/voedger/examples/airs-bp2/air.RestaurantDescriptor"},
+		Type: Type{fQName: "air.RestaurantDescriptor"},
 	},
 }
 
@@ -183,6 +183,7 @@ func (r Command_air_Orders) ArgumentPkgPath() string {
 
 func (r Command_air_Orders) ArgumentEntity() string {
 	return Package_untill.ODoc_orders.Entity()
+
 }
 
 func (r Command_air_Orders) WorkspaceDescriptor() string {
@@ -315,15 +316,6 @@ type Value_ODoc_air_ProformaPrinted struct {
 	tv exttinygo.TValue
 }
 
-type ORecord_air_ProformaPrinted struct {
-	Type
-}
-
-type Container_ORecord_air_ProformaPrinted struct {
-	tv  exttinygo.TValue
-	len int
-}
-
 type Intent_ODoc_air_ProformaPrinted struct {
 	intent exttinygo.TIntent
 }
@@ -376,21 +368,6 @@ func (v ODoc_air_ProformaPrinted) Insert(id ID) Intent_ODoc_air_ProformaPrinted 
 	kb := exttinygo.KeyBuilder(exttinygo.StorageRecord, v.fQName)
 	kb.PutInt64(FieldName_ID, int64(id))
 	return Intent_ODoc_air_ProformaPrinted{intent: exttinygo.NewValue(kb)}
-}
-
-func (v Value_ODoc_air_ProformaPrinted) Get_ProformaPrinted_item() (res Container_ORecord_air_ProformaPrinted) {
-	return Container_ORecord_air_ProformaPrinted{tv: v.tv.AsValue("ProformaPrinted_item")}
-}
-
-func (v *Container_ORecord_air_ProformaPrinted) Len() int {
-	if v.len == 0 {
-		v.len = v.tv.Len() + 1
-	}
-	return v.len - 1
-}
-
-func (v *Container_ORecord_air_ProformaPrinted) Get(i int) Value_ODoc_air_ProformaPrinted {
-	return Value_ODoc_air_ProformaPrinted{tv: v.tv.GetAsValue(i)}
 }
 
 type CSingleton_air_RestaurantDescriptor struct {

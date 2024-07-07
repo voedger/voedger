@@ -55,6 +55,7 @@ type ormPackageItem struct {
 type ormTableItem struct {
 	ormPackageItem
 	Fields       []ormField
+	Containers   []ormField
 	Keys         []ormField
 	NonKeyFields []ormField
 }

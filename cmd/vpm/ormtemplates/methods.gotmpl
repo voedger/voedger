@@ -112,15 +112,14 @@ func (v {{.Type}}_{{.Package.Name}}_{{.Name}}) Insert(id ID) Intent_{{.Type}}_{{
 	kb.PutInt64(FieldName_ID, int64(id))
 	return Intent_{{.Type}}_{{.Package.Name}}_{{.Name}}{intent: exttinygo.NewValue(kb)}
 }
+{{end}}
 
-func (v Value_{{.Type}}_{{.Package.Name}}_{{.Name}}) Get_{{.Name}}_item() (res Container_ORecord_{{.Package.Name}}_{{.Name}}) {
-	return Container_ORecord_{{.Package.Name}}_{{.Name}}{tv: v.tv.AsValue("{{.Name}}_item")}
-}
-
+{{if (eq .Type "ORecord")}}
 func (v *Container_ORecord_{{.Package.Name}}_{{.Name}}) Len() int {
 	if v.len == 0 {
 		v.len = v.tv.Len() + 1
 	}
+
 	return v.len - 1
 }
 

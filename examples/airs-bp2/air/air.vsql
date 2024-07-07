@@ -1,9 +1,7 @@
 -- Copyright (c) 2024-present unTill Software Development Group B. V.
 -- @author Maxim Geraskin
 
--- TODO: use local directory untill like in the example airs-bp
---IMPORT SCHEMA 'github.com/voedger/voedger/examples/airs-bp2/untill';
-IMPORT SCHEMA 'github.com/untillpro/airs-scheme/bp3' AS untill;
+IMPORT SCHEMA 'untill';
 
 APPLICATION AIR(
     USE untill;
@@ -39,7 +37,6 @@ WORKSPACE RestaurantWS (
 	EXTENSION ENGINE BUILTIN (
         COMMAND Orders(untill.orders);
         COMMAND Pbill(untill.pbill) RETURNS CmdPBillResult;
-        --COMMAND Pbill() RETURNS CmdPBillResult;
 	    PROJECTOR FillPbillDates AFTER EXECUTE ON Pbill INTENTS(View(PbillDates));
 	);
 )

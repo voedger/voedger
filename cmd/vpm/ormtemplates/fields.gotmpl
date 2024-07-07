@@ -1,6 +1,17 @@
 {{define "fields"}}
 
-{{if or (eq .Type "View") (eq .Type "WDoc") (eq .Type "ODoc") (eq .Type "CDoc") (eq .Type "WSingleton") (eq .Type "Type")}}
+{{if or (eq .Type "View") (eq .Type "WDoc") (eq .Type "ODoc") (eq .Type "CDoc") (eq .Type "WSingleton") (eq .Type "Type") (eq .Type "ORecord")}}
+
+{{if .Containers}}
+
+{{range .Containers}}
+func (v Value_{{.Table.Type}}_{{.Table.Package.Name}}_{{.Table.Name}}) {{.GetMethodName}}() {{.Type}}_ORecord_{{.Table.Package.Name}}_{{.Name}} {
+	return {{.Type}}_ORecord_{{.Table.Package.Name}}_{{.Name}}{tv: v.tv.AsValue("{{.Name}}")}
+}
+{{end}}
+
+{{end}}
+
 {{if .Fields}}
 
 {{range .Fields}}

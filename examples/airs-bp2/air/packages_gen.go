@@ -3,7 +3,7 @@
 package air
 
 import (
-	_ "github.com/untillpro/airs-scheme/bp3"
+	_ "untill"
 
 	_ "github.com/voedger/voedger/pkg/sys"
 )

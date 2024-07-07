@@ -160,16 +160,14 @@ func (ts *TestState) putRecords() {
 	for _, item := range ts.recordItems {
 		keyValueMap, err := parseKeyValues(item.keyValueList)
 		require.NoError(ts.t, err)
-		_, _ = ts.PutRecords(istructs.WSID(1), func(cud istructs.ICUD) {
+		_, recordIDs := ts.PutRecords(ts.commandWSID, func(cud istructs.ICUD) {
 			pkgAlias := ts.appDef.PackageLocalName(item.entity.PkgPath())
 
 			fc := cud.Create(appdef.NewQName(pkgAlias, item.entity.Entity()))
-			keyValueMap[appdef.SystemField_ID] = istructs.RecordID(1)
-			state.PopulateKeys(fc, keyValueMap)
-
-			// TODO: use PutFromJSON instead of PopulateKeys
-			//fc.PutFromJSON(keyValueMap)
+			keyValueMap[appdef.SystemField_ID] = istructs.RecordID(item.id)
+			fc.PutFromJSON(keyValueMap)
 		})
+		fmt.Println(recordIDs)
 	}
 
 	// clear record items after they are processed

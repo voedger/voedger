@@ -1,4 +1,4 @@
-module github.com/voedger/voedger/examples/airs-bp2/untill
+module untill
 
 go 1.22.1
 

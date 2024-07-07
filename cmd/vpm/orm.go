@@ -249,10 +249,13 @@ func processITypeObj(localName string, pkgInfos map[string]ormPackageInfo, pkgDa
 	}
 
 	switch t := obj.(type) {
-	case appdef.ICDoc, appdef.IWDoc, appdef.IView, appdef.IODoc, appdef.IObject:
+	case appdef.ICDoc, appdef.IWDoc, appdef.IView, appdef.IODoc, appdef.IObject, appdef.IORecord:
 		tableData := ormTableItem{
 			ormPackageItem: pkgItem,
 			Fields:         make([]ormField, 0),
+		}
+		if pkgItem.Name == "pbill" {
+			fmt.Println("pbill")
 		}
 
 		iView, isView := t.(appdef.IView)
@@ -285,6 +288,19 @@ func processITypeObj(localName string, pkgInfos map[string]ormPackageInfo, pkgDa
 			}
 			if !isKey {
 				tableData.Fields = append(tableData.Fields, fieldItem)
+			}
+		}
+
+		if iContainers, ok := t.(appdef.IContainers); ok {
+			for _, container := range iContainers.Containers() {
+				containerName := container.Name()
+				tableData.Containers = append(tableData.Containers, ormField{
+					Table:         tableData,
+					Type:          "Container",
+					Name:          normalizeName(containerName),
+					GetMethodName: fmt.Sprintf("Get_%s", containerName),
+					SetMethodName: fmt.Sprintf("Set_%s", containerName),
+				})
 			}
 		}
 		newItem = tableData
@@ -415,6 +431,8 @@ func getObjType(obj interface{}) string {
 		return "View"
 	case appdef.ICommand:
 		return "Command"
+	case appdef.IORecord:
+		return "ORecord"
 	case appdef.IQuery:
 		return "Query"
 	case appdef.IWorkspace:
