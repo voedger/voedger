@@ -29,6 +29,7 @@ import (
 var ormTemplatesFS embed.FS
 var reservedWords = []string{"type"}
 
+// newOrmCmd creates a new ORM command
 func newOrmCmd(params *vpmParams) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "orm",
@@ -42,6 +43,7 @@ func newOrmCmd(params *vpmParams) *cobra.Command {
 		},
 	}
 	cmd.Flags().StringVarP(&params.HeaderFile, "header-file", "", "", "path to file to insert as a header to generated files")
+
 	return cmd
 }
 
@@ -57,21 +59,28 @@ func generateOrm(compileRes *compile.Result, params *vpmParams) error {
 		return err
 	}
 
-	iTypeObjsOfWS, pkgInfos, currentPkgLocalName := getPkgAppDefObjs(compileRes.ModulePath, compileRes.AppDef, headerContent)
+	iTypeObjsOfWS, pkgInfos, currentPkgLocalName := getPkgAppDefObjs(
+		compileRes.ModulePath,
+		compileRes.AppDef,
+		headerContent,
+	)
 	pkgData := getOrmData(currentPkgLocalName, pkgInfos, iTypeObjsOfWS)
+
 	if err := generateOrmFiles(pkgData, dir); err != nil {
 		return err
 	}
+
 	// update dependencies if go.mod file exists
-	if err := execGoModTidy(dir); err != nil {
-		return err
-	}
-	return nil
+	return execGoModTidy(dir)
 }
 
 // getPkgAppDefObjs gathers objects from the current package
-// and returns a list of objects, a map of package local names to its info and the current package local name
-func getPkgAppDefObjs(packagePath string, appDef appdef.IAppDef, headerContent string) (iTypeObjsOfWS map[appdef.QName][]appdef.IType, pkgInfos map[string]ormPackageInfo, currentPkgLocalName string) {
+// and returns a map of workspaces to its objects, a map of package local names to its info and the current package local name
+func getPkgAppDefObjs(
+	packagePath string,
+	appDef appdef.IAppDef,
+	headerContent string,
+) (iTypeObjsOfWS map[appdef.QName][]appdef.IType, pkgInfos map[string]ormPackageInfo, currentPkgLocalName string) {
 	uniqueObjects := make([]string, 0)
 	pkgInfos = make(map[string]ormPackageInfo) // mapping of package local names to its info
 	// sys package is implicitly added to the list of packages,
@@ -82,6 +91,7 @@ func getPkgAppDefObjs(packagePath string, appDef appdef.IAppDef, headerContent s
 		FullPath:          sys.PackagePath,
 		HeaderFileContent: headerContent,
 	}
+
 	appDef.Packages(func(localName, fullPath string) {
 		if fullPath == packagePath {
 			currentPkgLocalName = localName
@@ -102,11 +112,13 @@ func getPkgAppDefObjs(packagePath string, appDef appdef.IAppDef, headerContent s
 					return
 				}
 			}
+
 			qName := iTypeObj.QName()
 			if !slices.Contains(uniqueObjects, qName.String()) {
 				if _, ok := iTypeObjsOfWS[iWorkspace.QName()]; !ok {
 					iTypeObjsOfWS[iWorkspace.QName()] = make([]appdef.IType, 0)
 				}
+
 				iTypeObjsOfWS[iWorkspace.QName()] = append(iTypeObjsOfWS[iWorkspace.QName()], iTypeObj)
 				uniqueObjects = append(uniqueObjects, qName.String())
 			}
@@ -122,9 +134,11 @@ func getPkgAppDefObjs(packagePath string, appDef appdef.IAppDef, headerContent s
 			workspace.Types(collectITypeObjs(workspace))
 		}
 	})
+
 	return
 }
 
+// generateOrmFiles generates ORM files for the given package data
 func generateOrmFiles(pkgData map[ormPackageInfo][]interface{}, dir string) error {
 	ormFiles := make([]string, 0, len(pkgData)+1) // extra 1 for sys.go file
 	for pkgInfo, pkgItems := range pkgData {
@@ -132,15 +146,18 @@ func generateOrmFiles(pkgData map[ormPackageInfo][]interface{}, dir string) erro
 			ormPackageInfo: pkgInfo,
 			Items:          pkgItems,
 		}
+
 		ormFilePath, err := generateOrmFile(pkgInfo.Name, ormPkgData, dir)
 		if err != nil {
 			return fmt.Errorf(errInGeneratingOrmFileFormat, ormFilePath, err)
 		}
+
 		ormFiles = append(ormFiles, ormFilePath)
 	}
 
 	// generate sys.go file
 	sysFilePath := filepath.Join(dir, "sys.go")
+
 	ormFiles = append(ormFiles, sysFilePath)
 	if err := os.WriteFile(sysFilePath, []byte(sysContent), coreutils.FileMode_rw_rw_rw_); err != nil {
 		return fmt.Errorf(errInGeneratingOrmFileFormat, sysFilePath, err)
@@ -155,6 +172,7 @@ func generateOrmFiles(pkgData map[ormPackageInfo][]interface{}, dir string) erro
 	return formatOrmFiles(ormFiles)
 }
 
+// formatOrmFiles formats the ORM files
 func formatOrmFiles(ormFiles []string) error {
 	for _, ormFile := range ormFiles {
 		ormFileContent, err := os.ReadFile(ormFile)
@@ -171,12 +189,15 @@ func formatOrmFiles(ormFiles []string) error {
 			return err
 		}
 	}
+
 	return nil
 }
 
+// generateOrmFile generates ORM file for the given package data
 func generateOrmFile(localName string, ormPkgData ormPackage, dir string) (filePath string, err error) {
 	filePath = filepath.Join(dir, fmt.Sprintf("package_%s.go", localName))
 	ormFileContent, err := fillInTemplate(ormPkgData)
+
 	if err != nil {
 		return filePath, err
 	}
@@ -184,35 +205,54 @@ func generateOrmFile(localName string, ormPkgData ormPackage, dir string) (fileP
 	if err := os.WriteFile(filePath, ormFileContent, coreutils.FileMode_rw_rw_rw_); err != nil {
 		return filePath, err
 	}
+
 	return filePath, nil
 }
 
-func getOrmData(localName string, pkgInfos map[string]ormPackageInfo, iTypeObjsOfWS map[appdef.QName][]appdef.IType) (pkgData map[ormPackageInfo][]interface{}) {
+// getOrmData returns the ORM data for the given package
+func getOrmData(
+	localName string,
+	pkgInfos map[string]ormPackageInfo,
+	iTypeObjsOfWS map[appdef.QName][]appdef.IType,
+) (pkgData map[ormPackageInfo][]interface{}) {
 	pkgData = make(map[ormPackageInfo][]interface{})
 	uniquePkgQNames := make(map[ormPackageInfo][]string)
+
 	for wsQName, objs := range iTypeObjsOfWS {
 		for _, obj := range objs {
 			processITypeObj(localName, pkgInfos, pkgData, uniquePkgQNames, wsQName, obj)
 		}
 	}
+
 	return
 }
 
-func newPackageItem(defaultPackageLocalName string, pkgInfos map[string]ormPackageInfo, wsQName appdef.QName, obj appdef.IType) ormPackageItem {
-	var wsName, wsDescriptor string
+// newPackageItem creates a new package item
+// Parameters:
+// - pkgInfos: a map of package local names to its info
+// - wsQName: the qname of the workspace
+// - obj: the IType object to process
+func newPackageItem(
+	pkgInfos map[string]ormPackageInfo,
+	wsQName appdef.QName,
+	obj appdef.IType,
+) ormPackageItem {
+	var wsName, wsPackage, wsDescriptorName string
 	appDef := obj.App()
+
 	if appDef != nil {
 		iWorkspace := appDef.Workspace(wsQName)
 		wsName = getName(iWorkspace)
-		wsDescriptor = getName(appDef.CDoc(iWorkspace.Descriptor()))
+		wsPackage = iWorkspace.QName().Pkg()
+		wsDescriptorName = getName(appDef.CDoc(iWorkspace.Descriptor()))
 	}
 
 	name := getName(obj)
 	qName := obj.QName()
 
-	localPackageName := defaultPackageLocalName
-	if obj != nil {
-		localPackageName = qName.Pkg()
+	localPackageName := qName.Pkg()
+	if wsPackage != localPackageName {
+		wsDescriptorName = ""
 	}
 
 	pkgInfo := pkgInfos[localPackageName]
@@ -223,12 +263,14 @@ func newPackageItem(defaultPackageLocalName string, pkgInfos map[string]ormPacka
 		Name:         name,
 		Type:         getObjType(obj),
 		WsName:       wsName,
-		WsDescriptor: wsDescriptor,
+		WsDescriptor: wsDescriptorName,
 	}
 }
 
+// newFieldItem creates a new field item
 func newFieldItem(tableData ormTableItem, field appdef.IField) ormField {
 	name := normalizeName(field.Name())
+
 	return ormField{
 		Table:         tableData,
 		Type:          getFieldType(field),
@@ -238,12 +280,27 @@ func newFieldItem(tableData ormTableItem, field appdef.IField) ormField {
 	}
 }
 
-func processITypeObj(localName string, pkgInfos map[string]ormPackageInfo, pkgData map[ormPackageInfo][]interface{}, uniquePkgQNames map[ormPackageInfo][]string, wsQName appdef.QName, obj appdef.IType) (newItem interface{}) {
+// processITypeObj processes IType object and returns the corresponding ORM object
+// Parameters:
+// - localName: the local name of the current package
+// - pkgInfos: a map of package local names to its info
+// - pkgData: a map of package info to its data
+// - uniquePkgQNames: a map of package info to its unique qnames
+// - wsQName: the qname of the workspace
+// - obj: the IType object to process
+func processITypeObj(
+	localName string,
+	pkgInfos map[string]ormPackageInfo,
+	pkgData map[ormPackageInfo][]interface{},
+	uniquePkgQNames map[ormPackageInfo][]string,
+	wsQName appdef.QName,
+	obj appdef.IType,
+) (newItem interface{}) {
 	if obj == nil {
 		return nil
 	}
 
-	pkgItem := newPackageItem(localName, pkgInfos, wsQName, obj)
+	pkgItem := newPackageItem(pkgInfos, wsQName, obj)
 	if pkgItem.Type == unknownType {
 		return nil
 	}
@@ -254,9 +311,6 @@ func processITypeObj(localName string, pkgInfos map[string]ormPackageInfo, pkgDa
 			ormPackageItem: pkgItem,
 			Fields:         make([]ormField, 0),
 		}
-		if pkgItem.Name == "pbill" {
-			fmt.Println("pbill")
-		}
 
 		iView, isView := t.(appdef.IView)
 		if isView {
@@ -265,15 +319,18 @@ func processITypeObj(localName string, pkgInfos map[string]ormPackageInfo, pkgDa
 				if fieldItem.Type == unknownType {
 					continue
 				}
+
 				tableData.Keys = append(tableData.Keys, fieldItem)
 			}
 		}
+
 		// fetching fields
 		for _, field := range t.(appdef.IFields).Fields() {
 			// skip sys fields
 			if slices.Contains(sysFields, field.Name()) {
 				continue
 			}
+
 			fieldItem := newFieldItem(tableData, field)
 			if fieldItem.Type == unknownType {
 				continue
@@ -286,6 +343,7 @@ func processITypeObj(localName string, pkgInfos map[string]ormPackageInfo, pkgDa
 					break
 				}
 			}
+
 			if !isKey {
 				tableData.Fields = append(tableData.Fields, fieldItem)
 			}
@@ -308,13 +366,36 @@ func processITypeObj(localName string, pkgInfos map[string]ormPackageInfo, pkgDa
 		newItem = pkgItem
 	case appdef.ICommand, appdef.IQuery:
 		var resultFields []ormField
-		argumentObj := processITypeObj(localName, pkgInfos, pkgData, uniquePkgQNames, wsQName, t.(appdef.IFunction).Param())
+
+		argumentObj := processITypeObj(
+			localName,
+			pkgInfos,
+			pkgData,
+			uniquePkgQNames,
+			wsQName,
+			t.(appdef.IFunction).Param(),
+		)
 
 		var unloggedArgumentObj interface{}
 		if iCommand, ok := t.(appdef.ICommand); ok {
-			unloggedArgumentObj = processITypeObj(localName, pkgInfos, pkgData, uniquePkgQNames, wsQName, iCommand.UnloggedParam())
+			unloggedArgumentObj = processITypeObj(
+				localName,
+				pkgInfos,
+				pkgData,
+				uniquePkgQNames,
+				wsQName,
+				iCommand.UnloggedParam(),
+			)
 		}
-		if resultObj := processITypeObj(localName, pkgInfos, pkgData, uniquePkgQNames, wsQName, t.(appdef.IFunction).Result()); resultObj != nil {
+
+		if resultObj := processITypeObj(
+			localName,
+			pkgInfos,
+			pkgData,
+			uniquePkgQNames,
+			wsQName,
+			t.(appdef.IFunction).Result(),
+		); resultObj != nil {
 			if tableData, ok := resultObj.(ormTableItem); ok {
 				resultFields = tableData.Fields
 			}
@@ -330,8 +411,16 @@ func processITypeObj(localName string, pkgInfos map[string]ormPackageInfo, pkgDa
 	default:
 		typeKind := t.Kind()
 		if typeKind == appdef.TypeKind_Object {
-			return processITypeObj(localName, pkgInfos, pkgData, uniquePkgQNames, wsQName, t.(appdef.IObject))
+			return processITypeObj(
+				localName,
+				pkgInfos,
+				pkgData,
+				uniquePkgQNames,
+				wsQName,
+				t.(appdef.IObject),
+			)
 		}
+
 		newItem = pkgItem
 	}
 
@@ -340,14 +429,17 @@ func processITypeObj(localName string, pkgInfos map[string]ormPackageInfo, pkgDa
 		pkgData[pkgItem.Package] = append(pkgData[pkgItem.Package], newItem)
 		uniquePkgQNames[pkgItem.Package] = append(uniquePkgQNames[pkgItem.Package], getQName(newItem))
 	}
+
 	return
 }
 
+// fillInTemplate fills in the template with the given ORM package data
 func fillInTemplate(ormPkgData ormPackage) ([]byte, error) {
 	ormTemplates, err := fs.Sub(ormTemplatesFS, "ormtemplates")
 	if err != nil {
 		return nil, fmt.Errorf("failed to read templates directory: %w", err)
 	}
+
 	t, err := template.New("package").Funcs(template.FuncMap{
 		"capitalize": func(s string) string {
 			if len(s) == 0 {
@@ -358,6 +450,7 @@ func fillInTemplate(ormPkgData ormPackage) ([]byte, error) {
 		"lower":       strings.ToLower,
 		"hasCommands": hasCommands,
 	}).ParseFS(ormTemplates, "*")
+
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse template: %w", err)
 	}
@@ -370,6 +463,7 @@ func fillInTemplate(ormPkgData ormPackage) ([]byte, error) {
 	return filledTemplate.Bytes(), nil
 }
 
+// getHeaderFileContent returns the content of the header file
 func getHeaderFileContent(headerFilePath string) (string, error) {
 	if headerFilePath == "" {
 		return defaultOrmFilesHeaderComment, nil
@@ -383,36 +477,45 @@ func getHeaderFileContent(headerFilePath string) (string, error) {
 	return string(headerFileContent), nil
 }
 
+// createOrmDir creates a directory for the ORM files
 func createOrmDir(dir string) (string, error) {
 	ormDirPath := filepath.Join(dir, wasmDirName, ormDirName)
 	exists, err := coreutils.Exists(ormDirPath)
+
 	if err != nil {
 		// notest
 		return "", err
 	}
+
 	if exists {
 		if err := os.RemoveAll(ormDirPath); err != nil {
 			return "", err
 		}
 	}
+
 	return ormDirPath, os.MkdirAll(ormDirPath, coreutils.FileMode_rwxrwxrwx)
 }
 
+// normalizeName normalizes the name of the object
 func normalizeName(name string) (newName string) {
 	newName = strings.ReplaceAll(name, ".", "_")
 	if slices.Contains(reservedWords, strings.ToLower(newName)) {
 		newName += "_"
 	}
+
 	return
 }
 
+// getQName returns the qname of the object
 func getName(obj appdef.IType) string {
 	if obj == nil {
 		return ""
 	}
+
 	return normalizeName(obj.QName().Entity())
 }
 
+// getObjType returns the type of the object
 func getObjType(obj interface{}) string {
 	switch t := obj.(type) {
 	case appdef.IODoc:
@@ -446,6 +549,7 @@ func getObjType(obj interface{}) string {
 	}
 }
 
+// getTypeKind returns the type kind of the object
 func getTypeKind(typeKind appdef.TypeKind) string {
 	switch typeKind {
 	case appdef.TypeKind_Object:
@@ -461,6 +565,7 @@ func getTypeKind(typeKind appdef.TypeKind) string {
 	}
 }
 
+// getFieldType returns the type of the field
 func getFieldType(field appdef.IField) string {
 	switch field.DataKind() {
 	case appdef.DataKind_bool:

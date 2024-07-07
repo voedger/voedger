@@ -23,6 +23,9 @@ import (
 	wsdescutil "github.com/voedger/voedger/pkg/utils/testwsdesc"
 )
 
+// RecordIDs is global variable storing pointers to record ids created during test
+var RecordIDs []*istructs.RecordID
+
 // NewCommandTestState creates a new test state for command testing
 func NewCommandTestState(t *testing.T, iCommand ICommand, extensionFunc func()) *TestState {
 	const wsid = istructs.WSID(1)
@@ -50,6 +53,8 @@ func NewCommandTestState(t *testing.T, iCommand ICommand, extensionFunc func()) 
 		ts.argumentType = appdef.NewFullQName(iCommand.ArgumentPkgPath(), iCommand.ArgumentEntity())
 		ts.argumentObject = make(map[string]any)
 	}
+
+	RecordIDs = make([]*istructs.RecordID, 0)
 
 	return ts
 }
@@ -140,20 +145,11 @@ func (ts *TestState) Record(fQName IFullQName, id int, keyValueList ...any) ICom
 		keyValueList: keyValueList,
 	})
 
+	recordID := istructs.RecordID(0)
+	RecordIDs = append(RecordIDs, &recordID)
+
 	return ts
 }
-
-//func (ctx *TestState) PutRecord(entity appdef.IFullQName, keyValueList ...any) istructs.RecordID {
-//	keyValueMap, err := parseKeyValues(keyValueList)
-//	require.NoError(ctx.t, err)
-//	_, newRecordIDs := ctx.PutRecords(istructs.WSID(1), func(cud istructs.ICUD) {
-//		pkgAlias := filepath.Base(entity.PkgPath())
-//		fc := cud.Create(appdef.NewQName(pkgAlias, entity.Entity()))
-//		keyValueMap[appdef.SystemField_ID] = istructs.RecordID(1)
-//		state.PopulateKeys(fc, keyValueMap)
-//	})
-//	return newRecordIDs[0]
-//}
 
 func (ts *TestState) putRecords() {
 	// put records into the state
@@ -167,7 +163,11 @@ func (ts *TestState) putRecords() {
 			keyValueMap[appdef.SystemField_ID] = istructs.RecordID(item.id)
 			fc.PutFromJSON(keyValueMap)
 		})
-		fmt.Println(recordIDs)
+
+		// add record ids to the state
+		for i, recordID := range recordIDs {
+			*RecordIDs[i] = recordID
+		}
 	}
 
 	// clear record items after they are processed
@@ -204,20 +204,20 @@ func (ts *TestState) ArgumentObjectRow(path string, id int, keyValueList ...any)
 		}
 
 		if i < len(parts)-1 {
-			innerTree = addValueToTree(innerTree, part)
+			innerTree = putToArgumentObjectTree(innerTree, part)
 			continue
 		}
 
-		innerTree = addValueToTree(innerTree, part, keyValueList...)
+		innerTree = putToArgumentObjectTree(innerTree, part, keyValueList...)
 		innerTree[appdef.SystemField_ID] = istructs.RecordID(id)
 	}
 
 	return ts
 }
 
-// addValueToTree adds a value to the tree at the specified path part
+// putToArgumentObjectTree adds a value to the tree at the specified path part
 // and returns the new tree or an error if the path part is not a valid key
-func addValueToTree(tree map[string]any, pathPart string, keyValueList ...any) map[string]any {
+func putToArgumentObjectTree(tree map[string]any, pathPart string, keyValueList ...any) map[string]any {
 	if len(keyValueList) == 0 {
 		newTree := make(map[string]any)
 		tree[pathPart] = newTree
@@ -230,11 +230,6 @@ func addValueToTree(tree map[string]any, pathPart string, keyValueList ...any) m
 	if !ok {
 		tree[pathPart] = make([]any, 0)
 	}
-
-	//// check if value is a list of any
-	//if _, ok := value.([]any); !ok {
-	//	panic(fmt.Errorf("inproper value at path part %s", pathPart))
-	//}
 
 	newTree, err := parseKeyValues(keyValueList)
 	if err != nil {

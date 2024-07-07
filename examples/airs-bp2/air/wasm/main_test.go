@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	test "github.com/voedger/voedger/pkg/exttinygo/exttinygotests"
+	"github.com/voedger/voedger/pkg/state/teststate"
 )
 
 func TestPbill(t *testing.T) {
@@ -25,7 +26,7 @@ func TestPbill(t *testing.T) {
 			).
 			ArgumentObject(
 				2,
-				`id_bill`, 100000,
+				`id_bill`, teststate.RecordIDs[0],
 				`id_untill_users`, 100001,
 			).
 			ArgumentObjectRow(`pbill_item`,
@@ -68,7 +69,7 @@ func TestPbill(t *testing.T) {
 			).
 			ArgumentObject(
 				2,
-				`id_bill`, 100000,
+				`id_bill`, teststate.RecordIDs[0],
 				`id_untill_users`, 100001,
 			).
 			ArgumentObjectRow(`pbill_item`,

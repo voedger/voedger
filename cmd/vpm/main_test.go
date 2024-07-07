@@ -327,26 +327,6 @@ func TestBuildExample2(t *testing.T) {
 	require.NoError(err)
 }
 
-func TestInitAirFiscalCloud(t *testing.T) {
-	if testing.Short() {
-		t.Skip()
-	}
-	require := require.New(t)
-
-	err := execRootCmd([]string{"vpm", "init", "-C", "/Users/alisher/projects/untill/airs-fiscalcloud", "github.com/untillpro/airs-fiscalcloud"}, "1.0.0")
-	require.NoError(err)
-}
-
-func TestBuildAirFiscalCloud(t *testing.T) {
-	if testing.Short() {
-		t.Skip()
-	}
-	require := require.New(t)
-
-	err := execRootCmd([]string{"vpm", "build", "-C", "/Users/alisher/projects/untill/airs-fiscalcloud"}, "1.0.0")
-	require.NoError(err)
-}
-
 func TestInitBasicUsage(t *testing.T) {
 	if testing.Short() {
 		t.Skip()

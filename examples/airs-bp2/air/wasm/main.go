@@ -6,8 +6,10 @@
 package main
 
 import (
-	"air/wasm/orm"
 	"fmt"
+	"time"
+
+	"air/wasm/orm"
 )
 
 // Command
@@ -31,15 +33,15 @@ func Pbill() {
 		}
 	}
 
-	//// Prepare intent for Package_untill.WDoc_bill
-	//{
-	//	pbill := orm.Package_air.Command_Pbill.ArgumentObject()
-	//
-	//	// Basic types fields
-	//	billID := pbill.Get_id_bill()
-	//	intent := orm.Package_untill.WDoc_bill.Update(billID)
-	//	intent.Set_close_datetime(time.Now().UnixMicro())
-	//}
+	// Prepare intent for Package_untill.WDoc_bill
+	{
+		pbill := orm.Package_air.Command_Pbill.ArgumentObject()
+
+		// Basic types fields
+		billID := pbill.Get_id_bill()
+		intent := orm.Package_untill.WDoc_bill.Update(billID)
+		intent.Set_close_datetime(time.Now().UnixMicro())
+	}
 
 	// Prepare intent for Package_air.WSingleton_NextNumbers
 	{
