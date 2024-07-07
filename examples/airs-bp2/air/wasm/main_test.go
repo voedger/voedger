@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2024-present unTill Software Development Group B. V.
+ * @author Alisher Nurmanov
+ */
+
 package main
 
 import (
