@@ -6,7 +6,6 @@
 package main
 
 import (
-	"fmt"
 	"time"
 
 	"air/wasm/orm"
@@ -28,8 +27,7 @@ func Pbill() {
 		pbill_items := pbill.Get_pbill_item()
 		for i := 0; i < pbill_items.Len(); i++ {
 			item := pbill_items.Get(i)
-			price := item.Get_price()
-			fmt.Println(price)
+			item.Get_price()
 		}
 	}
 
