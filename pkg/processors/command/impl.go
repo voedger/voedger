@@ -476,6 +476,11 @@ func execCommand(ctx context.Context, work interface{}) (err error) {
 	return err
 }
 
+func checkResponseIntent(_ context.Context, work interface{}) (err error) {
+	cmd := work.(*cmdWorkpiece)
+	return processors.CheckResponseIntent(cmd.hostStateProvider.state)
+}
+
 func buildRawEvent(_ context.Context, work interface{}) (err error) {
 	cmd := work.(*cmdWorkpiece)
 	cmd.rawEvent, err = cmd.reb.BuildRawEvent()

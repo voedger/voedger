@@ -90,7 +90,7 @@ func init() {
 )
 
 var (
-	errGoModFileNotFound = errors.New("go.mod file not found")
+	errGoModFileNotFound = errors.New("go.mod file not found. Run 'vpm init'")
 )
 
 var sysFields = []string{"sys.ID", "sys.IsActive"}

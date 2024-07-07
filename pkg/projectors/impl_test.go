@@ -16,6 +16,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appparts"
+	"github.com/voedger/voedger/pkg/iextengine"
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/in10nmem"
 	"github.com/voedger/voedger/pkg/iratesce"
@@ -324,8 +325,8 @@ func deployTestAppEx(
 		actualizers,
 		engines.ProvideExtEngineFactories(
 			engines.ExtEngineFactoriesConfig{
-				AppConfigs:  cfgs,
-				WASMCompile: false,
+				AppConfigs: cfgs,
+				WASMConfig: iextengine.WASMFactoryConfig{Compile: false},
 			}))
 	if err != nil {
 		panic(err)

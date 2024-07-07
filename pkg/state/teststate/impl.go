@@ -73,7 +73,7 @@ func NewTestState(processorKind int, packagePath string, createWorkspaces ...Tes
 	ts.ctx = context.Background()
 	ts.processorKind = processorKind
 	ts.secretReader = &secretReader{secrets: make(map[string][]byte)}
-	ts.buildAppDef(packagePath, createWorkspaces...)
+	ts.buildAppDef(packagePath, "..", createWorkspaces...)
 	ts.buildState(processorKind)
 	return ts
 }
@@ -274,9 +274,9 @@ func (ctx *TestState) buildState(processorKind int) {
 //go:embed testsys/*.sql
 var fsTestSys embed.FS
 
-func (ctx *TestState) buildAppDef(packagePath string, createWorkspaces ...TestWorkspace) {
+func (ctx *TestState) buildAppDef(packagePath string, packageDir string, createWorkspaces ...TestWorkspace) {
 
-	absPath, err := filepath.Abs("..")
+	absPath, err := filepath.Abs(packageDir)
 	if err != nil {
 		panic(err)
 	}
@@ -289,21 +289,34 @@ func (ctx *TestState) buildAppDef(packagePath string, createWorkspaces ...TestWo
 	if err != nil {
 		panic(err)
 	}
-	dummyAppFileAST, err := parser.ParseFile("dummy.sql", fmt.Sprintf(`
-		IMPORT SCHEMA '%s' AS %s;
-		APPLICATION test(
-			USE %s;
-		);
-	`, packagePath, TestPkgAlias, TestPkgAlias))
-	if err != nil {
-		panic(err)
-	}
-	dummyAppPkgAST, err := parser.BuildPackageSchema(packagePath+"_app", []*parser.FileSchemaAST{dummyAppFileAST})
+
+	app, err := parser.FindApplication(pkgAst)
 	if err != nil {
 		panic(err)
 	}
 
-	packagesAST := []*parser.PackageSchemaAST{pkgAst, dummyAppPkgAST, sysPackageAST}
+	packagesAST := []*parser.PackageSchemaAST{pkgAst, sysPackageAST}
+
+	var dummyAppPkgAST *parser.PackageSchemaAST
+	if app == nil {
+		PackageName = "tstpkg"
+		dummyAppFileAST, err := parser.ParseFile("dummy.sql", fmt.Sprintf(`
+			IMPORT SCHEMA '%s' AS %s;
+			APPLICATION test(
+				USE %s;
+			);
+		`, packagePath, PackageName, PackageName))
+		if err != nil {
+			panic(err)
+		}
+		dummyAppPkgAST, err = parser.BuildPackageSchema(packagePath+"_app", []*parser.FileSchemaAST{dummyAppFileAST})
+		if err != nil {
+			panic(err)
+		}
+		packagesAST = append(packagesAST, dummyAppPkgAST)
+	} else {
+		PackageName = parser.GetPackageName(packagePath)
+	}
 
 	appSchema, err := parser.BuildAppSchema(packagesAST)
 	if err != nil {
@@ -332,7 +345,7 @@ func (ctx *TestState) buildAppDef(packagePath string, createWorkspaces ...TestWo
 	cfg := cfgs.AddBuiltInAppConfig(appName, adb)
 	cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 	ctx.appDef.Extensions(func(i appdef.IExtension) {
-		if i.QName().Pkg() == TestPkgAlias {
+		if i.QName().Pkg() == PackageName {
 			if proj, ok := i.(appdef.IProjector); ok {
 				if proj.Sync() {
 					cfg.AddSyncProjectors(istructs.Projector{Name: i.QName()})
@@ -363,7 +376,7 @@ func (ctx *TestState) buildAppDef(packagePath string, createWorkspaces ...TestWo
 	ctx.wsOffsets = make(map[istructs.WSID]istructs.Offset)
 
 	for _, ws := range createWorkspaces {
-		err = wsdescutil.CreateCDocWorkspaceDescriptorStub(ctx.appStructs, TestPartition, ws.WSID, appdef.NewQName(TestPkgAlias, ws.WorkspaceDescriptor), ctx.nextPLogOffs(), ctx.nextWSOffs(ws.WSID))
+		err = wsdescutil.CreateCDocWorkspaceDescriptorStub(ctx.appStructs, TestPartition, ws.WSID, appdef.NewQName(PackageName, ws.WorkspaceDescriptor), ctx.nextPLogOffs(), ctx.nextWSOffs(ws.WSID))
 		if err != nil {
 			panic(err)
 		}

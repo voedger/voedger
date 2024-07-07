@@ -59,7 +59,6 @@ func ProvideServiceFactory(appParts appparts.IAppPartitions, now coreutils.TimeF
 
 		return pipeline.NewService(func(vvmCtx context.Context) {
 			hsp := newHostStateProvider(vvmCtx, partitionID, secretReader)
-			//syncActualizerOperator := syncActualizerFactory(vvmCtx, partitionID)
 			cmdProc.storeOp = pipeline.NewSyncPipeline(vvmCtx, "store",
 				pipeline.WireFunc("applyRecords", func(ctx context.Context, work interface{}) (err error) {
 					// sync apply records
@@ -125,6 +124,7 @@ func ProvideServiceFactory(appParts appparts.IAppPartitions, now coreutils.TimeF
 				pipeline.WireFunc("getCmdResultBuilder", cmdProc.getCmdResultBuilder),
 				pipeline.WireFunc("buildCommandArgs", cmdProc.buildCommandArgs),
 				pipeline.WireFunc("execCommand", execCommand),
+				pipeline.WireFunc("checkResponseIntent", checkResponseIntent),
 				pipeline.WireFunc("build raw event", buildRawEvent),
 				pipeline.WireFunc("eventValidators", cmdProc.eventValidators),
 				pipeline.WireFunc("validateCUDsQNames", cmdProc.validateCUDsQNames),
