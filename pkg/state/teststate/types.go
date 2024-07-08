@@ -5,9 +5,10 @@
 package teststate
 
 import (
-	"github.com/voedger/voedger/pkg/appdef"
 	"io"
 	"time"
+
+	"github.com/voedger/voedger/pkg/appdef"
 
 	"github.com/voedger/voedger/pkg/istructs"
 )
@@ -41,10 +42,5 @@ type HttpResponse struct {
 type recordItem struct {
 	entity       appdef.IFullQName
 	id           int
-	keyValueList []any
-}
-
-type argumentItem struct {
-	path         string
 	keyValueList []any
 }
