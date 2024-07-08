@@ -377,7 +377,7 @@ func Test_rowType_PutFromJSON(t *testing.T) {
 	t.Run("wrong type -> error", func(t *testing.T) {
 		bld := test.AppStructs.ObjectBuilder(test.testRow)
 		data := map[appdef.FieldName]any{
-			"int32": int(42),
+			"int32": uint8(42),
 		}
 		bld.PutFromJSON(data)
 		_, err := bld.Build()

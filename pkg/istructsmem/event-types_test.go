@@ -2117,7 +2117,7 @@ func Test_objectType_FillFromJSON(t *testing.T) {
 		b := test.AppStructs.ObjectBuilder(test.testObj)
 		require.NotNil(b)
 		j := map[string]any{
-			"int32": int(42),
+			"int32": uint8(42),
 		}
 		b.FillFromJSON(j)
 
