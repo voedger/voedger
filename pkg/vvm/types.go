@@ -65,15 +65,12 @@ type BuiltInAppPackages struct {
 }
 type AppConfigsTypeEmpty istructsmem.AppConfigsType
 type BootstrapOperator pipeline.ISyncOperator
+type SidecarAppsDefs map[appdef.AppQName]BuiltInAppPackages
 
-type AppsArtefacts struct {
+type BuiltInAppsArtefacts struct {
 	istructsmem.AppConfigsType
 	builtInAppPackages []BuiltInAppPackages
 	appEPs             map[appdef.AppQName]extensionpoints.IExtensionPoint
-}
-
-type SidecarApplication struct {
-	builtInAppPackages []BuiltInAppPackages
 }
 
 type BusTimeout time.Duration

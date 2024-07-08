@@ -20,8 +20,8 @@ func Provide() apps.AppBuilder {
 		sysPackageFS := sys.Provide(cfg, smtp.Cfg{}, ep, nil, apis.TimeFunc, apis.ITokens, apis.IFederation, apis.IAppStructsProvider, apis.IAppTokensFactory,
 			nil, apis.IAppStorageProvider) // need to generate AppWorkspaces only
 		blobberAppPackageFS := parser.PackageFS{
-			Path: BlobberAppFQN,
-			FS:   blobberSchemaFS,
+			PackageFQN: BlobberAppFQN,
+			FS:         blobberSchemaFS,
 		}
 		return apps.BuiltInAppDef{
 			AppQName: istructs.AppQName_sys_blobber,

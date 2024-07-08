@@ -21,7 +21,7 @@ func Provide(cfg *istructsmem.AppConfigType, asp istructs.IAppStructsProvider, t
 	cfg.Resources.Add(istructsmem.NewCommandFunction(appdef.NewQName(ClusterPackage, "VSqlUpdate"),
 		provideExecCmdVSqlUpdate(federation, itokens, timeFunc, asp)))
 	return parser.PackageFS{
-		Path: ClusterPackageFQN,
-		FS:   schemaFS,
+		PackageFQN: ClusterPackageFQN,
+		FS:         schemaFS,
 	}
 }

@@ -20,8 +20,8 @@ func Provide() apps.AppBuilder {
 		sysPackageFS := sys.Provide(cfg, smtp.Cfg{}, ep, nil, apis.TimeFunc, apis.ITokens, apis.IFederation, apis.IAppStructsProvider, apis.IAppTokensFactory,
 			nil, apis.IAppStorageProvider)
 		routerAppPackageFS := parser.PackageFS{
-			Path: RouterAppFQN,
-			FS:   routerAppSchemaFS,
+			PackageFQN: RouterAppFQN,
+			FS:         routerAppSchemaFS,
 		}
 		return apps.BuiltInAppDef{
 			AppQName: istructs.AppQName_sys_router,

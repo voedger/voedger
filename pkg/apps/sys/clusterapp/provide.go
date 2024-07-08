@@ -20,8 +20,8 @@ import (
 func Provide() apps.AppBuilder {
 	return func(apis apps.APIs, cfg *istructsmem.AppConfigType, ep extensionpoints.IExtensionPoint) apps.BuiltInAppDef {
 		clusterAppPackageFS := parser.PackageFS{
-			Path: ClusterAppFQN,
-			FS:   schemaFS,
+			PackageFQN: ClusterAppFQN,
+			FS:         schemaFS,
 		}
 		clusterPackageFS := cluster.Provide(cfg, apis.IAppStructsProvider, apis.TimeFunc, apis.IFederation, apis.ITokens)
 		sysPackageFS := sys.Provide(cfg, smtp.Cfg{}, ep, nil, apis.TimeFunc, apis.ITokens, apis.IFederation, apis.IAppStructsProvider, apis.IAppTokensFactory,

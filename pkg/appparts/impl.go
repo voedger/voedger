@@ -8,7 +8,6 @@ package appparts
 import (
 	"context"
 	"errors"
-	"net/url"
 	"sync"
 	"time"
 
@@ -44,7 +43,7 @@ func (aps *apps) DeployBuiltInApp(name appdef.AppQName, def appdef.IAppDef, part
 	aps.DeployApp(name, nil, def, partsCount, engines)
 }
 
-func (aps *apps) DeployApp(name appdef.AppQName, extModuleURLs map[string]*url.URL, def appdef.IAppDef, partsCount istructs.NumAppPartitions, engines [ProcessorKind_Count]int) {
+func (aps *apps) DeployApp(name appdef.AppQName, extensionModules []iextengine.ExtensionModule, def appdef.IAppDef, partsCount istructs.NumAppPartitions, engines [ProcessorKind_Count]int) {
 	aps.mx.RLock()
 	_, ok := aps.apps[name]
 	aps.mx.RUnlock()
@@ -63,7 +62,7 @@ func (aps *apps) DeployApp(name appdef.AppQName, extModuleURLs map[string]*url.U
 		panic(err)
 	}
 
-	a.deploy(def, extModuleURLs, appStructs, engines)
+	a.deploy(def, extensionModules, appStructs, engines)
 }
 
 func (aps *apps) DeployAppPartitions(name appdef.AppQName, ids []istructs.PartitionID) {

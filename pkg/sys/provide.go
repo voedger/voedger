@@ -53,7 +53,7 @@ func Provide(cfg *istructsmem.AppConfigType, smtpCfg smtp.Cfg,
 	uniques.Provide(cfg)
 	describe.Provide(cfg, asp)
 	return parser.PackageFS{
-		Path: appdef.SysPackage,
-		FS:   SysFS,
+		PackageFQN: appdef.SysPackage,
+		FS:         SysFS,
 	}
 }

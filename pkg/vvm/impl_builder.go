@@ -23,7 +23,7 @@ func (ab VVMAppsBuilder) Add(appQName appdef.AppQName, builder apps.AppBuilder) 
 func buildAppFromPackagesFS(fses []parser.PackageFS, adf appdef.IAppDefBuilder) error {
 	packageSchemaASTs := []*parser.PackageSchemaAST{}
 	for _, fs := range fses {
-		packageSchemaAST, err := parser.ParsePackageDir(fs.Path, fs.FS, ".")
+		packageSchemaAST, err := parser.ParsePackageDir(fs.PackageFQN, fs.FS, ".")
 		if err != nil {
 			return err
 		}
@@ -36,7 +36,7 @@ func buildAppFromPackagesFS(fses []parser.PackageFS, adf appdef.IAppDefBuilder) 
 	return parser.BuildAppDefs(appSchemaAST, adf)
 }
 
-func (ab VVMAppsBuilder) BuildAppsArtefacts(apis apps.APIs, emptyCfgs AppConfigsTypeEmpty) (appsArtefacts AppsArtefacts, err error) {
+func (ab VVMAppsBuilder) BuildAppsArtefacts(apis apps.APIs, emptyCfgs AppConfigsTypeEmpty) (appsArtefacts BuiltInAppsArtefacts, err error) {
 	appsArtefacts.appEPs = map[appdef.AppQName]extensionpoints.IExtensionPoint{}
 	appsArtefacts.AppConfigsType = istructsmem.AppConfigsType(emptyCfgs)
 	for appQName, appBuilder := range ab {

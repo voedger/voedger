@@ -30,6 +30,7 @@ import (
 	"github.com/voedger/voedger/pkg/compile"
 	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/goutils/logger"
+	"github.com/voedger/voedger/pkg/iextengine"
 	"github.com/voedger/voedger/pkg/itokens"
 	"github.com/voedger/voedger/pkg/parser"
 	"github.com/voedger/voedger/pkg/router"
@@ -171,7 +172,7 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 		provideBuiltInApps,
 		provideBasicAsyncActualizerConfig, // projectors.BasicAsyncActualizerConfig
 		provideAsyncActualizersService,    // projectors.IActualizersService
-		provideAppPartitions,              // appparts.IAppPartitions
+		appparts.New2,                     // appparts.IAppPartitions
 		apppartsctl.New,
 		provideAppConfigsTypeEmpty,
 		provideBuiltInAppPackages,
@@ -200,7 +201,7 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 }
 
 func provideBootstrapOperator(federation federation.IFederation, asp istructs.IAppStructsProvider, timeFunc coreutils.TimeFunc, apppar appparts.IAppPartitions,
-	builtinApps []appparts.BuiltInApp, itokens itokens.ITokens, storageProvider istorage.IAppStorageProvider, blobberAppStoragePtr iblobstoragestg.BlobAppStoragePtr,
+	builtinApps []appparts.BuiltInApp, sidecarApps []appparts.SidecarApp, itokens itokens.ITokens, storageProvider istorage.IAppStorageProvider, blobberAppStoragePtr iblobstoragestg.BlobAppStoragePtr,
 	routerAppStoragePtr dbcertcache.RouterAppStoragePtr) (BootstrapOperator, error) {
 	var clusterBuiltinApp btstrp.ClusterBuiltInApp
 	otherApps := make([]appparts.BuiltInApp, 0, len(builtinApps)-1)
@@ -215,16 +216,16 @@ func provideBootstrapOperator(federation federation.IFederation, asp istructs.IA
 		return nil, fmt.Errorf("%s app should be added to VVM builtin apps", istructs.AppQName_sys_cluster)
 	}
 	return pipeline.NewSyncOp(func(ctx context.Context, work interface{}) (err error) {
-		return btstrp.Bootstrap(federation, asp, timeFunc, apppar, clusterBuiltinApp, otherApps, itokens, storageProvider, blobberAppStoragePtr, routerAppStoragePtr)
+		return btstrp.Bootstrap(federation, asp, timeFunc, apppar, clusterBuiltinApp, otherApps, sidecarApps, itokens, storageProvider, blobberAppStoragePtr, routerAppStoragePtr)
 	}), nil
 }
 
-func provideExtensionPoints(appsArtefacts AppsArtefacts) map[appdef.AppQName]extensionpoints.IExtensionPoint {
-	return appsArtefacts.appEPs
+func provideExtensionPoints(builtInAppsArtefacts BuiltInAppsArtefacts) map[appdef.AppQName]extensionpoints.IExtensionPoint {
+	return builtInAppsArtefacts.appEPs
 }
 
-func provideBuiltInAppPackages(appsArtefacts AppsArtefacts) []BuiltInAppPackages {
-	return appsArtefacts.builtInAppPackages
+func provideBuiltInAppPackages(builtInAppsArtefacts BuiltInAppsArtefacts) []BuiltInAppPackages {
+	return builtInAppsArtefacts.builtInAppPackages
 }
 
 func provideAppConfigsTypeEmpty() AppConfigsTypeEmpty {
@@ -232,7 +233,7 @@ func provideAppConfigsTypeEmpty() AppConfigsTypeEmpty {
 }
 
 // AppConfigsTypeEmpty is provided here despite it looks senceless. But ok: it is a map that will be filled later, on BuildAppsArtefacts(), and used after filling only
-// provide appsArtefacts.AppConfigsType here -> wire cycle: BuildappsArtefacts requires APIs requires IAppStructsProvider requires AppConfigsType obtained from BuildappsArtefacts
+// provide builtInAppsArtefacts.AppConfigsType here -> wire cycle: BuildappsArtefacts requires APIs requires IAppStructsProvider requires AppConfigsType obtained from BuildappsArtefacts
 // The same approach does not work for IAppPartitions implementation, because the appparts.NewWithActualizerWithExtEnginesFactories() accepts
 // iextengine.ExtensionEngineFactories that must be initialized with the already filled AppConfigsType
 func provideIAppStructsProvider(cfgs AppConfigsTypeEmpty, bucketsFactory irates.BucketsFactoryType, appTokensFactory payloads.IAppTokensFactory,
@@ -266,29 +267,16 @@ func provideAsyncActualizersService(cfg projectors.BasicAsyncActualizerConfig) p
 	return projectors.ProvideActualizers(cfg)
 }
 
-func provideAppPartitions(
-	asp istructs.IAppStructsProvider,
-	saf appparts.SyncActualizerFactory,
-	act projectors.IActualizersService,
-	appsArtefacts AppsArtefacts,
-) (ap appparts.IAppPartitions, cleanup func(), err error) {
-
-	eef := engines.ProvideExtEngineFactories(engines.ExtEngineFactoriesConfig{
-		AppConfigs:  appsArtefacts.AppConfigsType,
+func provideExtEngineFactories(builtInAppsArtefacts BuiltInAppsArtefacts) iextengine.ExtensionEngineFactories {
+	return engines.ProvideExtEngineFactories(engines.ExtEngineFactoriesConfig{
+		AppConfigs:  builtInAppsArtefacts.AppConfigsType,
 		WASMCompile: false,
 	})
-
-	return appparts.New2(
-		asp,
-		saf,
-		act,
-		eef,
-	)
 }
 
-func provideIsDeviceAllowedFunc(appsArtefacts AppsArtefacts) iauthnzimpl.IsDeviceAllowedFuncs {
+func provideIsDeviceAllowedFunc(builtInAppsArtefacts BuiltInAppsArtefacts) iauthnzimpl.IsDeviceAllowedFuncs {
 	res := iauthnzimpl.IsDeviceAllowedFuncs{}
-	for appQName, appEP := range appsArtefacts.appEPs {
+	for appQName, appEP := range builtInAppsArtefacts.appEPs {
 		val, ok := appEP.Find(apps.EPIsDeviceAllowedFunc)
 		if !ok {
 			res[appQName] = func(as istructs.IAppStructs, requestWSID istructs.WSID, deviceProfileWSID istructs.WSID) (ok bool, err error) {
@@ -301,11 +289,53 @@ func provideIsDeviceAllowedFunc(appsArtefacts AppsArtefacts) iauthnzimpl.IsDevic
 	return res
 }
 
-func provideBuiltInApps(appsArtefacts AppsArtefacts, sidecarApps []SidecarApplication) []appparts.BuiltInApp {
+func provideSidecarApps(eef iextengine.ExtensionEngineFactories, sidecarDefs SidecarAppsDefs) []appparts.SidecarApp {
+	res := []appparts.SidecarApp{}
+	for sidecarAppQName, sidecarDef := range sidecarDefs {
+		extensionsPathsModules := map[appdef.ExtensionEngineKind]map[string]iextengine.ExtensionModule{}
+		sidecarAppDef := sidecarDef.Def
+		sidecarAppDef.Extensions(func(i appdef.IExtension) {
+			extEngineKind := i.Engine()
+			// if i.Kind == Builtin then ModuleUrl i snot used
+			// else ModuleUrl is tkaen from extModuleURLs (panic here if msiing)
+
+			// посмотреть по path, нету ли iextengine.ExtensionModule, если нет, то создать, а если есть, то заапеенидить iextengine.ExtensionModule.ExtensionNames
+			extensionPathsModules, ok := extensionsPathsModules[extEngineKind]
+			if !ok {
+				extensionPathsModules = map[string]iextengine.ExtensionModule{}
+				extensionsPathsModules[extEngineKind] = extensionPathsModules
+			}
+			extensionPackageFullPath := sidecarAppDef.PackageFullPath(i.QName().Pkg())
+			extensionModule, ok := extensionPathsModules[extensionPackageFullPath]
+			if !ok {
+				if extEngineKind != appdef.ExtensionEngineKind_BuiltIn {
+					moduleUrl, ok := extModuleURLs[extensionPackageFullPath]
+					if !ok {
+						panic(fmt.Sprintf("app %s extension %s package url is not provided for path %s", sidecarAppQName, i.QName(), extensionPackageFullPath))
+					}
+					extensionModule.ModuleUrl = moduleUrl
+				}
+				extensionModule.Path = extensionPackageFullPath
+			}
+			// FIXME: придумать как из IExtension взять имена
+			// extensionModule.ExtensionNames = append(extensionModule.ExtensionNames, nil)
+			extensionPathsModules[extensionPackageFullPath] = extensionModule
+		})
+
+		res = append(res, appparts.SidecarApp{
+			BuiltInApp: sidecarDef.BuiltInApp,
+			// ExtensionModules: ,
+		})
+	}
+}
+
+func provideSidecarsApps(ee
+func provideBuiltInApps(builtInAppsArtefacts BuiltInAppsArtefacts) []appparts.BuiltInApp {
 	res := []appparts.BuiltInApp{}
-	for _, pkg := range appsArtefacts.builtInAppPackages {
+	for _, pkg := range builtInAppsArtefacts.builtInAppPackages {
 		res = append(res, pkg.BuiltInApp)
 	}
+	// тут наверное просто построить sidecar, всместо создания SidecarApplication. Этот тип убрать
 	for _, sidecarApp := range sidecarApps {
 		// expecting the sidecar app consists of only one package
 		res = append(res, sidecarApp.builtInAppPackages[0].BuiltInApp)
@@ -448,11 +478,11 @@ func provideVVMApps(builtInApps []appparts.BuiltInApp) (vvmApps VVMApps) {
 	return vvmApps
 }
 
-func provideBuiltInAppsArtefacts(vvmConfig *VVMConfig, apis apps.APIs, cfgs AppConfigsTypeEmpty) (AppsArtefacts, error) {
+func provideBuiltInAppsArtefacts(vvmConfig *VVMConfig, apis apps.APIs, cfgs AppConfigsTypeEmpty) (BuiltInAppsArtefacts, error) {
 	return vvmConfig.VVMAppsBuilder.BuildAppsArtefacts(apis, cfgs)
 }
 
-func provideSidecarApplications(vvmConfig *VVMConfig, aa AppsArtefacts) (res []SidecarApplication, err error) {
+func provideSidecarApplications(vvmConfig *VVMConfig, aa BuiltInAppsArtefacts) (res SidecarAppsDefs, err error) {
 	appsEntries, err := vvmConfig.ConfigFS.ReadDir("apps")
 	if err != nil {
 		return nil, err
@@ -484,6 +514,15 @@ func provideSidecarApplications(vvmConfig *VVMConfig, aa AppsArtefacts) (res []S
 		if err := json.Unmarshal(descriptorContent, &appDD); err != nil {
 			return nil, fmt.Errorf("failed to unmarshal descriptor for sidecar app %s: %w", appEntry.Name(), err)
 		}
+
+		/*
+			FIXME:
+			тут компилиировать только один модуль нельзяЮ т.к. получится IAppdef для DummyApp, а нам надо для реального прииложения
+			надо так: пробежаться по всем пакетам рекурсивно (parser.ParsePackageDir()) и врвручную объединить PackageSchemaAST, полученные от парсера для каждого пакета
+			в каком-то пакете должень быть vsql с application ,иначе просто не скопмилируется
+			на выходе получим IAppDef
+		*/
+
 		compileResult, err := compile.Compile(appEntry.Name())
 		if err != nil {
 			return nil, err
@@ -497,24 +536,20 @@ func provideSidecarApplications(vvmConfig *VVMConfig, aa AppsArtefacts) (res []S
 			// notest
 			return nil, err
 		}
-		as := SidecarApplication{
-			builtInAppPackages: []BuiltInAppPackages{
-				BuiltInAppPackages{
-					BuiltInApp: appparts.BuiltInApp{
-						Def:                     compileResult.AppDef,
-						Name:                    appQName,
-						AppDeploymentDescriptor: appDD,
-					},
-					Packages: []parser.PackageFS{
-						parser.PackageFS{
-							Path: appEntry.Name(),
-							FS:   appFS.(coreutils.IReadFS),
-						},
-					},
+
+		res[appQName] = BuiltInAppPackages{
+			BuiltInApp: appparts.BuiltInApp{
+				Def:                     compileResult.AppDef,
+				Name:                    appQName,
+				AppDeploymentDescriptor: appDD,
+			},
+			Packages: []parser.PackageFS{
+				parser.PackageFS{
+					PackageFQN: appEntry.Name(),
+					FS:         appFS.(coreutils.IReadFS),
 				},
 			},
 		}
-		res = append(res, as)
 	}
 	return res, nil
 }
@@ -648,10 +683,10 @@ func provideCommandProcessors(cpCount istructs.NumCommandProcessors, ccf Command
 
 // forks appServices per apps
 // [appsAmount]appServices
-func provideOperatorAppServices(apf AppServiceFactory, appsArtefacts AppsArtefacts, asp istructs.IAppStructsProvider) OperatorAppServicesFactory {
+func provideOperatorAppServices(apf AppServiceFactory, builtInAppsArtefacts BuiltInAppsArtefacts, asp istructs.IAppStructsProvider) OperatorAppServicesFactory {
 	return func(vvmCtx context.Context) pipeline.ISyncOperator {
 		var branches []pipeline.ForkOperatorOptionFunc
-		for _, builtInAppPackages := range appsArtefacts.builtInAppPackages {
+		for _, builtInAppPackages := range builtInAppsArtefacts.builtInAppPackages {
 			as, err := asp.BuiltIn(builtInAppPackages.Name)
 			if err != nil {
 				panic(err)

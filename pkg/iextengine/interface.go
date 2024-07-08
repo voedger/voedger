@@ -58,15 +58,15 @@ type BuiltInExtFunc func(ctx context.Context, io IExtensionIO) error
 type BuiltInAppExtFuncs map[appdef.FullQName]BuiltInExtFunc
 type BuiltInExtFuncs map[appdef.AppQName]BuiltInAppExtFuncs // Provided to construct factory of engines
 
-type ExtensionPackage struct {
-	QualifiedName  string
+type ExtensionModule struct {
+	Path           string   // это github.com/voedger/voedger
 	ModuleUrl      *url.URL // путь к тому месту на диске, где лежит wasm
-	ExtensionNames []string
+	ExtensionNames []string // тут перечислить все имена, которые перечислены в EXTENSION ENGINE WASM
 }
 
 type IExtensionEngineFactory interface {
 	// LocalPath is a path package data can be got from
 	// - packages is not used for ExtensionEngineKind_BuiltIn
 	// - config is not used for ExtensionEngineKind_BuiltIn
-	New(ctx context.Context, app appdef.AppQName, packages []ExtensionPackage, config *ExtEngineConfig, numEngines int) ([]IExtensionEngine, error)
+	New(ctx context.Context, app appdef.AppQName, packages []ExtensionModule, config *ExtEngineConfig, numEngines int) ([]IExtensionEngine, error)
 }

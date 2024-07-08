@@ -35,8 +35,8 @@ func Provide(cfg *istructsmem.AppConfigType, asp istructs.IAppStructsProvider, i
 
 func ProvidePackageFS() parser.PackageFS {
 	return parser.PackageFS{
-		Path: RegistryPackageFQN,
-		FS:   schemasFS,
+		PackageFQN: RegistryPackageFQN,
+		FS:         schemasFS,
 	}
 }
 

@@ -8,7 +8,6 @@ package appparts
 import (
 	"context"
 	"fmt"
-	"net/url"
 	"sync"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -22,10 +21,6 @@ import (
 type engines struct {
 	byKind [appdef.ExtensionEngineKind_Count]iextengine.IExtensionEngine
 	pool   *pool.Pool[*engines]
-}
-
-func newEngines() *engines {
-	return &engines{}
 }
 
 func (e *engines) release() {
@@ -58,13 +53,46 @@ func newApplication(apps *apps, name appdef.AppQName, partsCount istructs.NumApp
 
 // extModuleURLs is important for non-builtin (non-native) apps
 // extModuleURLs: packagePath->packageURL
-func (a *app) deploy(def appdef.IAppDef, extModuleURLs map[string]*url.URL, structs istructs.IAppStructs, numEnginesPerEngineKind [ProcessorKind_Count]int) {
+func (a *app) deploy(def appdef.IAppDef /*extModuleURLs map[string]*url.URL*/, extensionModules []iextengine.ExtensionModule, structs istructs.IAppStructs, numEnginesPerEngineKind [ProcessorKind_Count]int) {
 	a.def = def
 	a.structs = structs
 
 	eef := a.apps.extEngineFactories
 
 	ctx := context.Background()
+
+	// состоавить словарь extensionKind->path->iextengine.ExtensionModule
+	// тут сначала сборать по всем путям все имена
+	// extensionsPathsModules := map[appdef.ExtensionEngineKind]map[string]iextengine.ExtensionModule{}
+
+	// def.PackageFullPath()
+	// def.Extensions(func(i appdef.IExtension) {
+	// 	extEngineKind := i.Engine()
+	// 	// if i.Kind == Builtin then ModuleUrl i snot used
+	// 	// else ModuleUrl is tkaen from extModuleURLs (panic here if msiing)
+
+	// 	// посмотреть по path, нету ли iextengine.ExtensionModule, если нет, то создать, а если есть, то заапеенидить iextengine.ExtensionModule.ExtensionNames
+	// 	extensionPathsModules, ok := extensionsPathsModules[extEngineKind]
+	// 	if !ok {
+	// 		extensionPathsModules = map[string]iextengine.ExtensionModule
+	// 		extensionsPathsModules[extEngineKind] = extensionPathsModules
+	// 	}
+	// 	path := def.PackageFullPath(i.QName().Pkg())
+	// 	extensionModule, ok := extensionPathsModules[path]
+	// 	if !ok {
+	// 		if extEngineKind != appdef.ExtensionEngineKind_BuiltIn {
+	// 			moduleUrl, ok := extModuleURLs[path]
+	// 			if !ok {
+	// 				panic(fmt.Sprintf("app %s extension %s package url is not provided for path %s", a.name, i.QName(), path))
+	// 			}
+	// 			extensionModule.ModuleUrl = moduleUrl
+	// 		}
+	// 		extensionModule.Path = path
+	// 	}
+	// 	// FIXME: придумать как из IExtension взять имена
+	// 	// extensionModule.ExtensionNames = append(extensionModule.ExtensionNames, nil)
+	// 	extensionPathsModules[path] = extensionModule
+	// })
 
 	for k, cnt := range numEnginesPerEngineKind {
 		extEngines := make([][]iextengine.IExtensionEngine, appdef.ExtensionEngineKind_Count)
@@ -76,34 +104,31 @@ func (a *app) deploy(def appdef.IAppDef, extModuleURLs map[string]*url.URL, stru
 		// non-builtin -> has to be in extModuleURLs, panic otherwise
 
 		// тут надо создавать только те движки, которые есть среди packages of IAppDef
+		//
 		def.Extensions(func(i appdef.IExtension) {
 			extEngineKind := i.Engine()
 			factory, ok := eef[extEngineKind] // factory тут - это либо для builtin, либо для wasm
 			if !ok {
 				panic(fmt.Errorf("no extension egine factory for engine %s met among def of %s", extEngineKind.String(), a.name))
 			}
-			modueUrl, ok := extModuleURLs[]
-			factory.New(ctx, a.name, []iextengine.ExtensionPackage{ // FIXME: зачем туту массив, если sidecar?
-				{
-				},
-			}, &iextengine.DefaultExtEngineConfig, 1) // FIXME: what is numEngines here?
+			factory.New(ctx, a.name, extensionModules, &iextengine.DefaultExtEngineConfig, 1) // FIXME: what is numEngines here?
 		})
 
-		for ek, ef := range eef {
+		// for ek, ef := range eef {
 
-			// non-native ->
-			ee, err := ef.New(ctx, a.name, []iextengine.ExtensionPackage{
-				// тут заполнить
-			}, &iextengine.DefaultExtEngineConfig, cnt)
-			if err != nil {
-				panic(err)
-			}
-			extEngines[ek] = ee
-		}
+		// 	// non-native ->
+		// 	ee, err := ef.New(ctx, a.name, []iextengine.ExtensionModule{
+		// 		// тут заполнить
+		// 	}, &iextengine.DefaultExtEngineConfig, cnt)
+		// 	if err != nil {
+		// 		panic(err)
+		// 	}
+		// 	extEngines[ek] = ee
+		// }
 
 		ee := make([]*engines, cnt)
 		for i := 0; i < cnt; i++ {
-			ee[i] = newEngines()
+			ee[i] = &engines{}
 			for ek := range eef {
 				ee[i].byKind[ek] = extEngines[ek][i]
 			}

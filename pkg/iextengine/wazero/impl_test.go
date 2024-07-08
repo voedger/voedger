@@ -146,9 +146,9 @@ func Test_BasicUsage(t *testing.T) {
 	// Create extension package from WASM
 	ctx := context.Background()
 	moduleUrl := testModuleURL("./_testdata/basicusage/pkg.wasm")
-	packages := []iextengine.ExtensionPackage{
+	packages := []iextengine.ExtensionModule{
 		{
-			QualifiedName:  testPkg,
+			Path:           testPkg,
 			ModuleUrl:      moduleUrl,
 			ExtensionNames: []string{calcOrderedItemsProjector.Entity(), newOrderCmd.Entity()},
 		},
@@ -241,9 +241,9 @@ func requireMemStatEx(t *testing.T, wasmEngine *wazeroExtEngine, mallocs, frees,
 }
 
 func testFactoryHelper(ctx context.Context, moduleUrl *url.URL, funcs []string, cfg iextengine.ExtEngineConfig, compile bool) (iextengine.IExtensionEngine, error) {
-	packages := []iextengine.ExtensionPackage{
+	packages := []iextengine.ExtensionModule{
 		{
-			QualifiedName:  testPkg,
+			Path:           testPkg,
 			ModuleUrl:      moduleUrl,
 			ExtensionNames: funcs,
 		},
@@ -676,9 +676,9 @@ func Test_WithState(t *testing.T) {
 
 	// build packages
 	moduleUrl := testModuleURL("./_testdata/basicusage/pkg.wasm")
-	packages := []iextengine.ExtensionPackage{
+	packages := []iextengine.ExtensionModule{
 		{
-			QualifiedName:  testPkg,
+			Path:           testPkg,
 			ModuleUrl:      moduleUrl,
 			ExtensionNames: []string{extension},
 		},
@@ -753,9 +753,9 @@ func Test_StatePanic(t *testing.T) {
 	ctx := context.Background()
 
 	moduleUrl := testModuleURL("./_testdata/panics/pkg.wasm")
-	packages := []iextengine.ExtensionPackage{
+	packages := []iextengine.ExtensionModule{
 		{
-			QualifiedName:  testPkg,
+			Path:           testPkg,
 			ModuleUrl:      moduleUrl,
 			ExtensionNames: []string{extname, undefinedPackage},
 		},
