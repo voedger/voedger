@@ -13,7 +13,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/fs"
 	"net/url"
 	"strconv"
 	"strings"
@@ -27,7 +26,6 @@ import (
 	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/apppartsctl"
 	"github.com/voedger/voedger/pkg/btstrp"
-	"github.com/voedger/voedger/pkg/compile"
 	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/iextengine"
@@ -289,48 +287,47 @@ func provideIsDeviceAllowedFunc(builtInAppsArtefacts BuiltInAppsArtefacts) iauth
 	return res
 }
 
-func provideSidecarApps(eef iextengine.ExtensionEngineFactories, sidecarDefs SidecarAppsDefs) []appparts.SidecarApp {
-	res := []appparts.SidecarApp{}
-	for sidecarAppQName, sidecarDef := range sidecarDefs {
-		extensionsPathsModules := map[appdef.ExtensionEngineKind]map[string]iextengine.ExtensionModule{}
-		sidecarAppDef := sidecarDef.Def
-		sidecarAppDef.Extensions(func(i appdef.IExtension) {
-			extEngineKind := i.Engine()
-			// if i.Kind == Builtin then ModuleUrl i snot used
-			// else ModuleUrl is tkaen from extModuleURLs (panic here if msiing)
+// func provideSidecarApps(eef iextengine.ExtensionEngineFactories, sidecarDefs SidecarAppsDefs) []appparts.SidecarApp {
+// 	res := []appparts.SidecarApp{}
+// 	for sidecarAppQName, sidecarDef := range sidecarDefs {
+// 		extensionsPathsModules := map[appdef.ExtensionEngineKind]map[string]iextengine.ExtensionModule{}
+// 		sidecarAppDef := sidecarDef.Def
+// 		sidecarAppDef.Extensions(func(i appdef.IExtension) {
+// 			extEngineKind := i.Engine()
+// 			// if i.Kind == Builtin then ModuleUrl i snot used
+// 			// else ModuleUrl is tkaen from extModuleURLs (panic here if msiing)
 
-			// посмотреть по path, нету ли iextengine.ExtensionModule, если нет, то создать, а если есть, то заапеенидить iextengine.ExtensionModule.ExtensionNames
-			extensionPathsModules, ok := extensionsPathsModules[extEngineKind]
-			if !ok {
-				extensionPathsModules = map[string]iextengine.ExtensionModule{}
-				extensionsPathsModules[extEngineKind] = extensionPathsModules
-			}
-			extensionPackageFullPath := sidecarAppDef.PackageFullPath(i.QName().Pkg())
-			extensionModule, ok := extensionPathsModules[extensionPackageFullPath]
-			if !ok {
-				if extEngineKind != appdef.ExtensionEngineKind_BuiltIn {
-					moduleUrl, ok := extModuleURLs[extensionPackageFullPath]
-					if !ok {
-						panic(fmt.Sprintf("app %s extension %s package url is not provided for path %s", sidecarAppQName, i.QName(), extensionPackageFullPath))
-					}
-					extensionModule.ModuleUrl = moduleUrl
-				}
-				extensionModule.Path = extensionPackageFullPath
-			}
-			// FIXME: придумать как из IExtension взять имена
-			// extensionModule.ExtensionNames = append(extensionModule.ExtensionNames, nil)
-			extensionPathsModules[extensionPackageFullPath] = extensionModule
-		})
+// 			// посмотреть по path, нету ли iextengine.ExtensionModule, если нет, то создать, а если есть, то заапеенидить iextengine.ExtensionModule.ExtensionNames
+// 			extensionPathsModules, ok := extensionsPathsModules[extEngineKind]
+// 			if !ok {
+// 				extensionPathsModules = map[string]iextengine.ExtensionModule{}
+// 				extensionsPathsModules[extEngineKind] = extensionPathsModules
+// 			}
+// 			extensionPackageFullPath := sidecarAppDef.PackageFullPath(i.QName().Pkg())
+// 			extensionModule, ok := extensionPathsModules[extensionPackageFullPath]
+// 			if !ok {
+// 				if extEngineKind != appdef.ExtensionEngineKind_BuiltIn {
+// 					moduleUrl, ok := extModuleURLs[extensionPackageFullPath]
+// 					if !ok {
+// 						panic(fmt.Sprintf("app %s extension %s package url is not provided for path %s", sidecarAppQName, i.QName(), extensionPackageFullPath))
+// 					}
+// 					extensionModule.ModuleUrl = moduleUrl
+// 				}
+// 				extensionModule.Path = extensionPackageFullPath
+// 			}
+// 			// FIXME: придумать как из IExtension взять имена
+// 			// extensionModule.ExtensionNames = append(extensionModule.ExtensionNames, nil)
+// 			extensionPathsModules[extensionPackageFullPath] = extensionModule
+// 		})
 
-		res = append(res, appparts.SidecarApp{
-			BuiltInApp: sidecarDef.BuiltInApp,
-			// ExtensionModules: ,
-		})
-	}
-}
+// 		res = append(res, appparts.SidecarApp{
+// 			BuiltInApp: sidecarDef.BuiltInApp,
+// 			// ExtensionModules: ,
+// 		})
+// 	}
+// }
 
-func provideSidecarsApps(ee
-func provideBuiltInApps(builtInAppsArtefacts BuiltInAppsArtefacts) []appparts.BuiltInApp {
+func provideBuiltInApps(builtInAppsArtefacts BuiltInAppsArtefacts, sidecarApps []appparts.SidecarApp) []appparts.BuiltInApp {
 	res := []appparts.BuiltInApp{}
 	for _, pkg := range builtInAppsArtefacts.builtInAppPackages {
 		res = append(res, pkg.BuiltInApp)
@@ -338,7 +335,7 @@ func provideBuiltInApps(builtInAppsArtefacts BuiltInAppsArtefacts) []appparts.Bu
 	// тут наверное просто построить sidecar, всместо создания SidecarApplication. Этот тип убрать
 	for _, sidecarApp := range sidecarApps {
 		// expecting the sidecar app consists of only one package
-		res = append(res, sidecarApp.builtInAppPackages[0].BuiltInApp)
+		res = append(res, sidecarApp.BuiltInApp)
 	}
 	return res
 }
@@ -482,7 +479,46 @@ func provideBuiltInAppsArtefacts(vvmConfig *VVMConfig, apis apps.APIs, cfgs AppC
 	return vvmConfig.VVMAppsBuilder.BuildAppsArtefacts(apis, cfgs)
 }
 
-func provideSidecarApplications(vvmConfig *VVMConfig, aa BuiltInAppsArtefacts) (res SidecarAppsDefs, err error) {
+func parseSidecarAppSubDir(path string, fs coreutils.IReadFS, moduleURLPrevious *url.URL) (asts []*parser.PackageSchemaAST, moduleURLFound *url.URL, err error) {
+	dirEntries, err := fs.ReadDir(path)
+	if err != nil {
+		// notest
+		return nil, nil, err
+	}
+	for _, dirEntry := range dirEntries {
+		if !dirEntry.IsDir() {
+			if dirEntry.Name() == "pkg.wasm" {
+				if moduleURLPrevious != nil {
+					return nil, nil, fmt.Errorf("pkg.wasm previously met at %s is met again at %s", moduleURLPrevious, dirEntry.Name())
+				}
+				moduleURLFound, err = url.Parse(dirEntry.Name())
+				if err != nil {
+					// notest
+					return nil, nil, err
+				}
+				moduleURLPrevious = moduleURLFound
+			}
+			continue
+		}
+		subASTs := []*parser.PackageSchemaAST{}
+		subASTs, moduleURLFound, err = parseSidecarAppSubDir(path+"/"+dirEntry.Name(), fs, moduleURLPrevious)
+		if err != nil {
+			return nil, nil, err
+		}
+		asts = append(asts, subASTs...)
+	}
+	dirAST, err := parser.ParsePackageDir(path, fs, ".")
+	if err != nil {
+		return nil, nil, err
+	}
+	asts = append(asts, dirAST)
+	if moduleURLFound == nil {
+		moduleURLFound = moduleURLPrevious
+	}
+	return asts, moduleURLFound, nil
+}
+
+func provideSidecarApps(vvmConfig *VVMConfig) (res []appparts.SidecarApp, err error) {
 	appsEntries, err := vvmConfig.ConfigFS.ReadDir("apps")
 	if err != nil {
 		return nil, err
@@ -491,65 +527,80 @@ func provideSidecarApplications(vvmConfig *VVMConfig, aa BuiltInAppsArtefacts) (
 		if !appEntry.IsDir() {
 			continue
 		}
-		appFiles, err := vvmConfig.ConfigFS.ReadDir("apps/" + appEntry.Name())
+		appQName, err := appdef.ParseAppQName(appEntry.Name())
+		if err != nil {
+			return nil, fmt.Errorf("dir entry %s does not look like application QName: %w", appEntry.Name(), err)
+		}
+		appDirEntries, err := vvmConfig.ConfigFS.ReadDir("apps/" + appEntry.Name())
 		if err != nil {
 			// notest
 			return nil, err
 		}
-		descriptorContent := []byte{}
-		for _, appFile := range appFiles {
-			if appFile.IsDir() || appFile.Name() != "descriptor.json" {
-				continue
+		var appDD *appparts.AppDeploymentDescriptor
+		appASTs := []*parser.PackageSchemaAST{}
+		var moduleURL *url.URL
+		for _, appDirEntry := range appDirEntries {
+			if !appDirEntry.IsDir() && appDirEntry.Name() == "descriptor.json" {
+				descriptorContent, err := vvmConfig.ConfigFS.ReadFile(fmt.Sprintf("apps/%s/descriptor.json", appEntry.Name()))
+				if err != nil {
+					// notest
+					return nil, err
+				}
+				if err := json.Unmarshal(descriptorContent, &appDD); err != nil {
+					return nil, fmt.Errorf("failed to unmarshal descriptor for sidecar app %s: %w", appEntry.Name(), err)
+				}
 			}
-			descriptorContent, err = vvmConfig.ConfigFS.ReadFile(fmt.Sprintf("apps/%s/descriptor.json", appEntry.Name()))
-			if err != nil {
-				// notest
-				return nil, err
+			if appDirEntry.IsDir() && appDirEntry.Name() == "image" {
+				//  вот как тут учестьЮ что ExtensionModules может быть несколько?
+				appASTs, moduleURL, err = parseSidecarAppSubDir("apps/"+appDirEntry.Name()+"/image", vvmConfig.ConfigFS, moduleURL)
+				if err != nil {
+					return nil, err
+				}
 			}
 		}
-		if len(descriptorContent) == 0 {
-			return nil, fmt.Errorf("no descriptor for sidecar app %s", appEntry.Name())
+		if appDD == nil {
+			return nil, fmt.Errorf("no descriptor for sidecar app %s", appQName)
 		}
-		var appDD appparts.AppDeploymentDescriptor
-		if err := json.Unmarshal(descriptorContent, &appDD); err != nil {
-			return nil, fmt.Errorf("failed to unmarshal descriptor for sidecar app %s: %w", appEntry.Name(), err)
+		if moduleURL == nil {
+			return nil, fmt.Errorf("no wasm module found for sidecar app %s", appQName)
 		}
 
-		/*
-			FIXME:
-			тут компилиировать только один модуль нельзяЮ т.к. получится IAppdef для DummyApp, а нам надо для реального прииложения
-			надо так: пробежаться по всем пакетам рекурсивно (parser.ParsePackageDir()) и врвручную объединить PackageSchemaAST, полученные от парсера для каждого пакета
-			в каком-то пакете должень быть vsql с application ,иначе просто не скопмилируется
-			на выходе получим IAppDef
-		*/
+		appSchemaAST, err := parser.BuildAppSchema(appASTs)
+		if err != nil {
+			return nil, err
+		}
+		appDefBuilder := appdef.New()
+		if err := parser.BuildAppDefs(appSchemaAST, appDefBuilder); err != nil {
+			return nil, err
+		}
 
-		compileResult, err := compile.Compile(appEntry.Name())
+		appDef, err := appDefBuilder.Build()
 		if err != nil {
 			return nil, err
 		}
 
-		// FIXME
-		appQName := appdef.NewAppQName("", appEntry.Name())
+		appDef.Extensions(func(ext appdef.IExtension) {
+			if ext.Engine() != appdef.ExtensionEngineKind_WASM {
+				return
+			}
+			logger.Info(fmt.Sprintf("%T", ext)) // тут посмотреть как найти все имена
+		})
 
-		appFS, err := fs.Sub(vvmConfig.ConfigFS, fmt.Sprintf("apps/%s", appEntry.Name()))
-		if err != nil {
-			// notest
-			return nil, err
-		}
-
-		res[appQName] = BuiltInAppPackages{
+		// TODO: implement sidecar apps schemas compatibility check (baseline_schemas)
+		res = append(res, appparts.SidecarApp{
 			BuiltInApp: appparts.BuiltInApp{
-				Def:                     compileResult.AppDef,
+				AppDeploymentDescriptor: *appDD,
 				Name:                    appQName,
-				AppDeploymentDescriptor: appDD,
+				Def:                     appDef,
 			},
-			Packages: []parser.PackageFS{
-				parser.PackageFS{
-					PackageFQN: appEntry.Name(),
-					FS:         appFS.(coreutils.IReadFS),
+			ExtensionModules: []iextengine.ExtensionModule{
+				{
+					Path:           "", // TODO
+					ModuleUrl:      moduleURL,
+					ExtensionNames: []string{}, // TODO
 				},
 			},
-		}
+		})
 	}
 	return res, nil
 }

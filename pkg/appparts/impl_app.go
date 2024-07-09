@@ -109,7 +109,7 @@ func (a *app) deploy(def appdef.IAppDef /*extModuleURLs map[string]*url.URL*/, e
 			extEngineKind := i.Engine()
 			factory, ok := eef[extEngineKind] // factory тут - это либо для builtin, либо для wasm
 			if !ok {
-				panic(fmt.Errorf("no extension egine factory for engine %s met among def of %s", extEngineKind.String(), a.name))
+				panic(fmt.Errorf("no extension engine factory for engine %s met among def of %s", extEngineKind.String(), a.name))
 			}
 			factory.New(ctx, a.name, extensionModules, &iextengine.DefaultExtEngineConfig, 1) // FIXME: what is numEngines here?
 		})
