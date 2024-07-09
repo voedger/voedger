@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"io"
 	"path/filepath"
-	"sync"
 	"testing"
 	"time"
 
@@ -32,7 +31,7 @@ import (
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-type TestState struct {
+type testState struct {
 	state.IState
 
 	ctx                   context.Context
@@ -55,21 +54,10 @@ type TestState struct {
 	processorKind         int
 	readObjects           []istructs.IObject
 	queryObject           istructs.IObject
-
-	t             *testing.T
-	extensionFunc func()
-	funcRunner    *sync.Once
-	commandWSID   istructs.WSID
-
-	// recordItems to store records
-	recordItems []recordItem
-	// argumentObject to pass to argument
-	argumentType   appdef.FullQName
-	argumentObject map[string]any
 }
 
 func NewTestState(processorKind int, packagePath string, createWorkspaces ...TestWorkspace) ITestState {
-	ts := &TestState{}
+	ts := &testState{}
 	ts.ctx = context.Background()
 	ts.processorKind = processorKind
 	ts.secretReader = &secretReader{secrets: make(map[string][]byte)}
@@ -89,22 +77,18 @@ func (s *secretReader) ReadSecret(name string) (bb []byte, err error) {
 	return nil, fmt.Errorf("secret not found: %s", name)
 }
 
-func (ts *TestState) WSID() istructs.WSID {
+func (ts *testState) WSID() istructs.WSID {
 	if ts.processorKind == ProcKind_QueryProcessor {
 		return ts.queryWsid
 	}
-	if ts.event != nil {
-		return ts.event.Workspace()
-	}
-
-	return ts.commandWSID
+	return ts.event.Workspace()
 }
 
-func (ts *TestState) GetReadObjects() []istructs.IObject {
+func (ts *testState) GetReadObjects() []istructs.IObject {
 	return ts.readObjects
 }
 
-func (ts *TestState) Arg() istructs.IObject {
+func (ts *testState) Arg() istructs.IObject {
 	if ts.queryObject != nil {
 		return ts.queryObject
 	}
@@ -114,7 +98,7 @@ func (ts *TestState) Arg() istructs.IObject {
 	return ts.event.ArgumentObject()
 }
 
-func (ts *TestState) ResultBuilder() istructs.IObjectBuilder {
+func (ts *testState) ResultBuilder() istructs.IObjectBuilder {
 	if ts.event == nil {
 		panic("no current event")
 	}
@@ -126,7 +110,7 @@ func (ts *TestState) ResultBuilder() istructs.IObjectBuilder {
 	return ts.appStructs.ObjectBuilder(command.Result().QName())
 }
 
-func (ts *TestState) Request(timeout time.Duration, method, url string, body io.Reader, headers map[string]string) (statusCode int, resBody []byte, resHeaders map[string][]string, err error) {
+func (ts *testState) Request(timeout time.Duration, method, url string, body io.Reader, headers map[string]string) (statusCode int, resBody []byte, resHeaders map[string][]string, err error) {
 	if ts.httpHandler == nil {
 		panic("http handler not set")
 	}
@@ -144,7 +128,7 @@ func (ts *TestState) Request(timeout time.Duration, method, url string, body io.
 	return resp.Status, resp.Body, resp.Headers, nil
 }
 
-func (ts *TestState) PutQuery(wsid istructs.WSID, name appdef.FullQName, argb QueryArgBuilderCallback) {
+func (ts *testState) PutQuery(wsid istructs.WSID, name appdef.FullQName, argb QueryArgBuilderCallback) {
 	ts.queryWsid = wsid
 	ts.queryName = name
 
@@ -164,45 +148,45 @@ func (ts *TestState) PutQuery(wsid istructs.WSID, name appdef.FullQName, argb Qu
 	}
 }
 
-func (ts *TestState) PutRequestSubject(principals []iauthnz.Principal, token string) {
+func (ts *testState) PutRequestSubject(principals []iauthnz.Principal, token string) {
 	ts.principals = principals
 	ts.token = token
 }
 
-func (ts *TestState) PutFederationCmdHandler(emu state.FederationCommandHandler) {
+func (ts *testState) PutFederationCmdHandler(emu state.FederationCommandHandler) {
 	ts.federationCmdHandler = emu
 }
 
-func (ts *TestState) PutFederationBlobHandler(emu state.FederationBlobHandler) {
+func (ts *testState) PutFederationBlobHandler(emu state.FederationBlobHandler) {
 	ts.federationBlobHandler = emu
 }
 
-func (ts *TestState) PutUniquesHandler(emu state.UniquesHandler) {
+func (ts *testState) PutUniquesHandler(emu state.UniquesHandler) {
 	ts.uniquesHandler = emu
 }
 
-func (ts *TestState) emulateUniquesHandler(entity appdef.QName, wsid istructs.WSID, data map[string]interface{}) (istructs.RecordID, error) {
+func (ts *testState) emulateUniquesHandler(entity appdef.QName, wsid istructs.WSID, data map[string]interface{}) (istructs.RecordID, error) {
 	if ts.uniquesHandler == nil {
 		panic("uniques handler not set")
 	}
 	return ts.uniquesHandler(entity, wsid, data)
 }
 
-func (ts *TestState) emulateFederationCmd(owner, appname string, wsid istructs.WSID, command appdef.QName, body string) (statusCode int, newIDs map[string]int64, result string, err error) {
+func (ts *testState) emulateFederationCmd(owner, appname string, wsid istructs.WSID, command appdef.QName, body string) (statusCode int, newIDs map[string]int64, result string, err error) {
 	if ts.federationCmdHandler == nil {
 		panic("federation command handler not set")
 	}
 	return ts.federationCmdHandler(owner, appname, wsid, command, body)
 }
 
-func (ts *TestState) emulateFederationBlob(owner, appname string, wsid istructs.WSID, blobId int64) ([]byte, error) {
+func (ts *testState) emulateFederationBlob(owner, appname string, wsid istructs.WSID, blobId int64) ([]byte, error) {
 	if ts.federationBlobHandler == nil {
 		panic("federation blob handler not set")
 	}
 	return ts.federationBlobHandler(owner, appname, wsid, blobId)
 }
 
-func (ts *TestState) buildState(processorKind int) {
+func (ts *testState) buildState(processorKind int) {
 
 	appFunc := func() istructs.IAppStructs { return ts.appStructs }
 	eventFunc := func() istructs.IPLogEvent { return ts.event }
@@ -274,7 +258,7 @@ func (ts *TestState) buildState(processorKind int) {
 //go:embed testsys/*.sql
 var fsTestSys embed.FS
 
-func (ts *TestState) buildAppDef(packagePath string, packageDir string, createWorkspaces ...TestWorkspace) {
+func (ts *testState) buildAppDef(packagePath string, packageDir string, createWorkspaces ...TestWorkspace) {
 
 	absPath, err := filepath.Abs(packageDir)
 	if err != nil {
@@ -383,12 +367,12 @@ func (ts *TestState) buildAppDef(packagePath string, packageDir string, createWo
 	}
 }
 
-func (ts *TestState) nextPLogOffs() istructs.Offset {
+func (ts *testState) nextPLogOffs() istructs.Offset {
 	ts.plogOffset += 1
 	return ts.plogOffset
 }
 
-func (ts *TestState) nextWSOffs(ws istructs.WSID) istructs.Offset {
+func (ts *testState) nextWSOffs(ws istructs.WSID) istructs.Offset {
 	offs, ok := ts.wsOffsets[ws]
 	if !ok {
 		offs = istructs.Offset(0)
@@ -398,18 +382,18 @@ func (ts *TestState) nextWSOffs(ws istructs.WSID) istructs.Offset {
 	return offs
 }
 
-func (ts *TestState) PutHttpHandler(handler HttpHandlerFunc) {
+func (ts *testState) PutHttpHandler(handler HttpHandlerFunc) {
 	ts.httpHandler = handler
 
 }
 
-func (ts *TestState) PutRecords(wsid istructs.WSID, cb NewRecordsCallback) (wLogOffs istructs.Offset, newRecordIds []istructs.RecordID) {
+func (ts *testState) PutRecords(wsid istructs.WSID, cb NewRecordsCallback) (wLogOffs istructs.Offset, newRecordIds []istructs.RecordID) {
 	return ts.PutEvent(wsid, appdef.NewFullQName(istructs.QNameCommandCUD.Pkg(), istructs.QNameCommandCUD.Entity()), func(argBuilder istructs.IObjectBuilder, cudBuilder istructs.ICUD) {
 		cb(cudBuilder)
 	})
 }
 
-func (ts *TestState) GetRecord(wsid istructs.WSID, id istructs.RecordID) istructs.IRecord {
+func (ts *testState) GetRecord(wsid istructs.WSID, id istructs.RecordID) istructs.IRecord {
 	var rec istructs.IRecord
 	rec, err := ts.appStructs.Records().Get(wsid, false, id)
 	if err != nil {
@@ -418,13 +402,14 @@ func (ts *TestState) GetRecord(wsid istructs.WSID, id istructs.RecordID) istruct
 	return rec
 }
 
-func (ts *TestState) PutEvent(wsid istructs.WSID, name appdef.FullQName, cb NewEventCallback) (wLogOffs istructs.Offset, newRecordIds []istructs.RecordID) {
+func (ts *testState) PutEvent(wsid istructs.WSID, name appdef.FullQName, cb NewEventCallback) (wLogOffs istructs.Offset, newRecordIds []istructs.RecordID) {
 	var localPkgName string
 	if name.PkgPath() == appdef.SysPackage {
 		localPkgName = name.PkgPath()
 	} else {
 		localPkgName = ts.appDef.PackageLocalName(name.PkgPath())
 	}
+
 	wLogOffs = ts.nextWSOffs(wsid)
 	reb := ts.appStructs.Events().GetNewRawEventBuilder(istructs.NewRawEventBuilderParams{
 		GenericRawEventBuilderParams: istructs.GenericRawEventBuilderParams{
@@ -435,10 +420,12 @@ func (ts *TestState) PutEvent(wsid istructs.WSID, name appdef.FullQName, cb NewE
 			PLogOffset:        ts.nextPLogOffs(),
 		},
 	})
+
 	if cb != nil {
 		ts.cud = reb.CUDBuilder()
 		cb(reb.ArgumentObjectBuilder(), ts.cud)
 	}
+
 	rawEvent, err := reb.BuildRawEvent()
 	if err != nil {
 		panic(err)
@@ -463,10 +450,11 @@ func (ts *TestState) PutEvent(wsid istructs.WSID, name appdef.FullQName, cb NewE
 	}
 
 	ts.event = event
+
 	return wLogOffs, newRecordIds
 }
 
-func (ts *TestState) PutView(wsid istructs.WSID, entity appdef.FullQName, callback ViewValueCallback) {
+func (ts *testState) PutView(wsid istructs.WSID, entity appdef.FullQName, callback ViewValueCallback) {
 	localPkgName := ts.appDef.PackageLocalName(entity.PkgPath())
 	v := TestViewValue{
 		wsid: wsid,
@@ -481,7 +469,7 @@ func (ts *TestState) PutView(wsid istructs.WSID, entity appdef.FullQName, callba
 	}
 }
 
-func (ts *TestState) PutSecret(name string, secret []byte) {
+func (ts *testState) PutSecret(name string, secret []byte) {
 	ts.secretReader.(*secretReader).secrets[name] = secret
 }
 
@@ -489,7 +477,7 @@ type intentAssertions struct {
 	t   *testing.T
 	kb  istructs.IStateKeyBuilder
 	vb  istructs.IStateValueBuilder
-	ctx *TestState
+	ctx *testState
 }
 
 func (ia *intentAssertions) NotExists() {
@@ -533,13 +521,13 @@ func (ia *intentAssertions) Equal(vbc ValueBuilderCallback) {
 	}
 }
 
-func (ts *TestState) RequireNoIntents(t *testing.T) {
+func (ts *testState) RequireNoIntents(t *testing.T) {
 	if ts.IState.IntentsCount() > 0 {
 		require.Fail(t, "expected no intents")
 	}
 }
 
-func (ts *TestState) RequireIntent(t *testing.T, storage appdef.QName, entity appdef.FullQName, kbc KeyBuilderCallback) IIntentAssertions {
+func (ts *testState) RequireIntent(t *testing.T, storage appdef.QName, entity appdef.FullQName, kbc KeyBuilderCallback) IIntentAssertions {
 	localPkgName := ts.appDef.PackageLocalName(entity.PkgPath())
 	localEntity := appdef.NewQName(localPkgName, entity.Entity())
 	kb, err := ts.IState.KeyBuilder(storage, localEntity)

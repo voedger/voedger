@@ -877,8 +877,6 @@ func (o *objectType) FillFromJSON(data map[string]any) {
 		case nil:
 		case float64:
 			o.PutNumber(n, fv)
-		case *istructs.RecordID:
-			o.PutNumber(n, float64(*fv))
 		case istructs.RecordID:
 			o.PutNumber(n, float64(fv))
 		case int:

@@ -8,30 +8,31 @@ package main
 import (
 	"air/wasm/orm"
 	"testing"
+	"time"
 
 	test "github.com/voedger/voedger/pkg/exttinygo/exttinygotests"
-	"github.com/voedger/voedger/pkg/state/teststate"
 )
 
 func TestPbill(t *testing.T) {
-	// TODO: if intent was created but we didn't expect it, it should be an error
+	t.Parallel()
 
-	// test singletone insert
-	{
-		require := test.NewCommandRunner(
+	currentYear := time.Now().UTC().Year()
+
+	t.Run("Singleton NextPBillNumber: insert", func(t *testing.T) {
+
+		test.NewCommandRunner(
 			t,
 			orm.Package_air.Command_Pbill,
 			Pbill,
 		).
-			Record( // не превращает raw id-шники в real id-шники
+			Record(
 				orm.Package_untill.WDoc_bill,
-				1,
-				`id_untill_users`, 100001,
+				100002,
 				`tableno`, 1,
 			).
 			ArgumentObject(
 				2,
-				`id_bill`, teststate.RecordIDs[0],
+				`id_bill`, 100002,
 				`id_untill_users`, 100001,
 			).
 			ArgumentObjectRow(`pbill_item`,
@@ -43,38 +44,39 @@ func TestPbill(t *testing.T) {
 				`quantity`, 2,
 				`price`, 50_00,
 			).
+			RequireSingletonInsert(
+				orm.Package_air.WSingleton_NextNumbers,
+				`NextPBillNumber`, 1,
+			).
+			RequireRecordUpdate(
+				orm.Package_untill.WDoc_bill,
+				100002,
+				`close_year`, currentYear,
+			).
 			Run()
+	})
 
-		// check that the next number is inserted
-		nextNumber := int32(1)
-		require.SingletonInsert(
-			orm.Package_air.WSingleton_NextNumbers,
-			`NextPBillNumber`, nextNumber,
-		)
-	}
+	t.Run("Singleton NextPBillNumber: update", func(t *testing.T) {
+		nextNumber := 5
 
-	{
-		nextNumber := int32(5)
-
-		require := test.NewCommandRunner(
+		test.NewCommandRunner(
 			t,
 			orm.Package_air.Command_Pbill,
 			Pbill,
 		).
-			Record( // не превращает raw id-шники в real id-шники
+			Record(
 				orm.Package_air.WSingleton_NextNumbers,
 				1,
 				`NextPBillNumber`, nextNumber,
 			).
-			Record( // не превращает raw id-шники в real id-шники
+			Record(
 				orm.Package_untill.WDoc_bill,
-				1,
-				`id_untill_users`, 100001,
+				100002,
 				`tableno`, 1,
 			).
 			ArgumentObject(
 				2,
-				`id_bill`, teststate.RecordIDs[0],
+				`id_bill`, 100002,
 				`id_untill_users`, 100001,
 			).
 			ArgumentObjectRow(`pbill_item`,
@@ -86,12 +88,15 @@ func TestPbill(t *testing.T) {
 				`quantity`, 2,
 				`price`, 50_00,
 			).
-			Run() // Run() набивает тест стейт, запускает его и возвращает ICommandRequire
-
-		// check that the next number is inserted
-		require.SingletonUpdate(
-			orm.Package_air.WSingleton_NextNumbers,
-			`NextPBillNumber`, nextNumber+1,
-		)
-	}
+			RequireSingletonUpdate(
+				orm.Package_air.WSingleton_NextNumbers,
+				`NextPBillNumber`, nextNumber+1,
+			).
+			RequireRecordUpdate(
+				orm.Package_untill.WDoc_bill,
+				100002,
+				`close_year`, currentYear,
+			).
+			Run()
+	})
 }

@@ -38,7 +38,7 @@ func Pbill() {
 		// Basic types fields
 		billID := pbill.Get_id_bill()
 		intent := orm.Package_untill.WDoc_bill.Update(billID)
-		intent.Set_close_datetime(time.Now().UnixMicro())
+		intent.Set_close_year(int32(time.Now().UTC().Year()))
 	}
 
 	// Prepare intent for Package_air.WSingleton_NextNumbers

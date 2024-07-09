@@ -50,7 +50,6 @@ type ITestState interface {
 }
 
 type IIntentAssertions interface {
-	ICommandRequire
 	Exists()
 	Equal(vb ValueBuilderCallback)
 	Assert(cb IntentAssertionsCallback)

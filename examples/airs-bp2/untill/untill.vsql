@@ -9,8 +9,7 @@ TABLE untill_users INHERITS CDoc (
 
 TABLE bill INHERITS WDoc (
 	tableno int32 NOT NULL,
-	id_untill_users ref(untill_users) NOT NULL,
-	close_datetime int64,
+	close_year int32,
 	total int64
 );
 

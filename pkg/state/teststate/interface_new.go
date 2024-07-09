@@ -11,10 +11,17 @@ type IFullQName interface {
 }
 
 type ICommandRunner interface {
+	// methos to fulfill test state
 	Record(fQName IFullQName, id int, keyValueList ...any) ICommandRunner
 	ArgumentObject(id int, keyValueList ...any) ICommandRunner
 	ArgumentObjectRow(path string, id int, keyValueList ...any) ICommandRunner
-	Run() ICommandRequire
+	// methods to check out the test state
+	RequireSingletonInsert(fQName IFullQName, keyValueList ...any) ICommandRunner
+	RequireSingletonUpdate(fQName IFullQName, keyValueList ...any) ICommandRunner
+	RequireRecordInsert(fQName IFullQName, id int, keyValueList ...any) ICommandRunner
+	RequireRecordUpdate(fQName IFullQName, id int, keyValueList ...any) ICommandRunner
+	// method to run the test
+	Run()
 }
 
 type ICommand interface {
@@ -22,11 +29,4 @@ type ICommand interface {
 	ArgumentPkgPath() string
 	ArgumentEntity() string
 	WorkspaceDescriptor() string
-}
-
-type ICommandRequire interface {
-	SingletonInsert(fQName IFullQName, keyValueList ...any)
-	SingletonUpdate(fQName IFullQName, keyValueList ...any)
-	RecordInsert(fQName IFullQName, id int, keyValueList ...any)
-	RecordUpdate(fQName IFullQName, id int, keyValueList ...any)
 }

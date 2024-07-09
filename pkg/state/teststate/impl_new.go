@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -28,21 +29,36 @@ import (
 	wsdescutil "github.com/voedger/voedger/pkg/utils/testwsdesc"
 )
 
-// RecordIDs is global variable storing pointers to record ids created during test
-var RecordIDs []*istructs.RecordID
+// CommandTestState is a test state for command testing
+type CommandTestState struct {
+	testState
+
+	t             *testing.T
+	extensionFunc func()
+	funcRunner    *sync.Once
+	commandWSID   istructs.WSID
+
+	// recordItems is to store records
+	recordItems []recordItem
+	// argumentType and argumentObject are to pass to argument
+	argumentType   appdef.FullQName
+	argumentObject map[string]any
+	// requiredRecordItems is to store required items
+	requiredRecordItems []recordItem
+}
 
 // NewCommandTestState creates a new test state for command testing
-func NewCommandTestState(t *testing.T, iCommand ICommand, extensionFunc func()) *TestState {
+func NewCommandTestState(t *testing.T, iCommand ICommand, extensionFunc func()) *CommandTestState {
 	const wsid = istructs.WSID(1)
 
-	ts := &TestState{}
+	ts := &CommandTestState{}
 	ts.ctx = context.Background()
 	ts.processorKind = ProcKind_CommandProcessor
 	ts.commandWSID = wsid
 	ts.secretReader = &secretReader{secrets: make(map[string][]byte)}
 
 	// build appDef
-	ts.buildAppDefNew(iCommand.PkgPath(), iCommand.WorkspaceDescriptor())
+	ts.buildAppDef(iCommand.PkgPath(), iCommand.WorkspaceDescriptor())
 	ts.buildState(ProcKind_CommandProcessor)
 
 	// initialize funcRunner and extensionFunc itself
@@ -59,12 +75,10 @@ func NewCommandTestState(t *testing.T, iCommand ICommand, extensionFunc func()) 
 		ts.argumentObject = make(map[string]any)
 	}
 
-	RecordIDs = make([]*istructs.RecordID, 0)
-
 	return ts
 }
 
-func (ts *TestState) setArgument() {
+func (ts *CommandTestState) setArgument() {
 	if ts.argumentObject == nil {
 		return
 	}
@@ -74,7 +88,7 @@ func (ts *TestState) setArgument() {
 	})
 }
 
-func (ts *TestState) setCudBuilder(wsItem IFullQName, wsid istructs.WSID) {
+func (ts *CommandTestState) setCudBuilder(wsItem IFullQName, wsid istructs.WSID) {
 	localPkgName := ts.appDef.PackageLocalName(wsItem.PkgPath())
 	if wsItem.PkgPath() == appdef.SysPackage {
 		localPkgName = wsItem.PkgPath()
@@ -93,8 +107,8 @@ func (ts *TestState) setCudBuilder(wsItem IFullQName, wsid istructs.WSID) {
 	ts.cud = reb.CUDBuilder()
 }
 
-// buildAppDefNew alternative way of building IAppDef
-func (ts *TestState) buildAppDefNew(wsPkgPath, wsDescriptorName string) {
+// buildAppDef alternative way of building IAppDef
+func (ts *CommandTestState) buildAppDef(wsPkgPath, wsDescriptorName string) {
 	compileResult, err := compile.Compile("..")
 	if err != nil {
 		panic(err)
@@ -143,43 +157,109 @@ func (ts *TestState) buildAppDefNew(wsPkgPath, wsDescriptorName string) {
 	}
 }
 
-func (ts *TestState) Record(fQName IFullQName, id int, keyValueList ...any) ICommandRunner {
+func (ts *CommandTestState) Record(fQName IFullQName, id int, keyValueList ...any) ICommandRunner {
+	localPkgName := ts.appDef.PackageLocalName(fQName.PkgPath())
+	localEntity := appdef.NewQName(localPkgName, fQName.Entity())
+
+	iSingleton := ts.appDef.Singleton(localEntity)
+	var isSingleton bool
+	if iSingleton != nil && iSingleton.Singleton() {
+		isSingleton = true
+	}
+	// check if the record already exists
+	slices.ContainsFunc(ts.recordItems, func(i recordItem) bool {
+		if i.entity == fQName {
+			if isSingleton {
+				panic(fmt.Errorf("singletone %s already exists", localEntity.String()))
+			}
+			if i.id == id {
+				panic(fmt.Errorf("record with entity %s and id %d already exists", localEntity.String(), id))
+			}
+		}
+
+		return false
+	})
+
+	// id must be istructs.MinReservedBaseRecordID for singletons
+	if isSingleton {
+		id = int(istructs.MinReservedBaseRecordID)
+	}
+
 	ts.recordItems = append(ts.recordItems, recordItem{
 		entity:       fQName,
+		isSingleton:  isSingleton,
 		id:           id,
 		keyValueList: keyValueList,
 	})
 
-	recordID := istructs.RecordID(0)
-	RecordIDs = append(RecordIDs, &recordID)
-
 	return ts
 }
 
-func (ts *TestState) putRecords() {
+func (ts *CommandTestState) putRecords() {
 	// put records into the state
 	for _, item := range ts.recordItems {
+		pkgAlias := ts.appDef.PackageLocalName(item.entity.PkgPath())
+
 		keyValueMap, err := parseKeyValues(item.keyValueList)
+		require.NoError(ts.t, err, "failed to parse key values")
+
+		keyValueMap[appdef.SystemField_QName] = appdef.NewQName(pkgAlias, item.entity.Entity()).String()
+		keyValueMap[appdef.SystemField_ID] = istructs.RecordID(item.id)
+
+		err = ts.appStructs.Records().PutJSON(ts.commandWSID, keyValueMap)
 		require.NoError(ts.t, err)
-		_, recordIDs := ts.PutRecords(ts.commandWSID, func(cud istructs.ICUD) {
-			pkgAlias := ts.appDef.PackageLocalName(item.entity.PkgPath())
-
-			fc := cud.Create(appdef.NewQName(pkgAlias, item.entity.Entity()))
-			keyValueMap[appdef.SystemField_ID] = istructs.RecordID(item.id)
-			fc.PutFromJSON(keyValueMap)
-		})
-
-		// add record ids to the state
-		for i, recordID := range recordIDs {
-			*RecordIDs[i] = recordID
-		}
 	}
 
 	// clear record items after they are processed
 	ts.recordItems = nil
 }
 
-func (ts *TestState) ArgumentObject(id int, keyValueList ...any) ICommandRunner {
+func (ts *CommandTestState) require() {
+	// check out required allIntents
+	requiredKeys := make([]istructs.IStateKeyBuilder, 0, len(ts.requiredRecordItems))
+	for _, item := range ts.requiredRecordItems {
+		requiredKeys = append(requiredKeys, ts.keyBuilder(item))
+
+		if item.isSingleton {
+			ts.requireSingleton(item.entity, item.isNew, item.keyValueList...)
+			continue
+		}
+
+		ts.requireRecord(item.entity, item.id, item.isNew, item.keyValueList...)
+	}
+
+	// gather all intents
+	allIntents := make([]*intentItem, 0, ts.IState.IntentsCount())
+	ts.IState.Intents(func(key istructs.IStateKeyBuilder, value istructs.IStateValueBuilder, isNew bool) {
+		allIntents = append(allIntents, &intentItem{
+			key:   key,
+			value: value,
+			isNew: isNew,
+		})
+	})
+
+	// workaround till the bug at the 252 line is fixed
+	if len(allIntents) > len(requiredKeys) {
+		require.Failf(ts.t, "the actual intent count exceeds expected one", "expected intent count: %d, actual count: %d", len(requiredKeys), len(allIntents))
+	}
+
+	//errList := make([]error, 0, len(allIntents))
+	//// check out unexpected intents
+	//for _, intent := range allIntents {
+	//	for _, requiredKey := range requiredKeys {
+	//		if !intent.key.Equals(requiredKey) {
+	//			// FIXME: runtime error: invalid memory address or nil pointer dereference in intent.String()
+	//			errList = append(errList, fmt.Errorf("unexpected intent: %s", intent.String()))
+	//		}
+	//	}
+	//}
+	//require.Emptyf(ts.t, errList, "unexpected intents: %w", errors.Join(errList...))
+
+	// clear required record items after they are processed
+	ts.requiredRecordItems = nil
+}
+
+func (ts *CommandTestState) ArgumentObject(id int, keyValueList ...any) ICommandRunner {
 	keyValueMap, err := parseKeyValues(keyValueList)
 	if err != nil {
 		panic(fmt.Errorf("failed to parse key values: %w", err))
@@ -199,7 +279,7 @@ func (ts *TestState) ArgumentObject(id int, keyValueList ...any) ICommandRunner 
 }
 
 // use id param as sys.ID
-func (ts *TestState) ArgumentObjectRow(path string, id int, keyValueList ...any) ICommandRunner {
+func (ts *CommandTestState) ArgumentObjectRow(path string, id int, keyValueList ...any) ICommandRunner {
 	parts := strings.Split(path, "/")
 
 	innerTree := ts.argumentObject
@@ -247,114 +327,175 @@ func putToArgumentObjectTree(tree map[string]any, pathPart string, keyValueList 
 	return newTree
 }
 
-func (ts *TestState) Run() ICommandRequire {
-	// put records into the state
+func (ts *CommandTestState) Run() {
+	defer ts.require()
+
 	ts.putRecords()
-	// set argument
 	ts.setArgument()
+
 	// run extension function
 	if ts.extensionFunc != nil {
 		ts.funcRunner.Do(ts.extensionFunc)
 	}
-	return &intentAssertions{
-		t:   ts.t,
-		ctx: ts,
-	}
 }
 
 // draft
-func (ia *intentAssertions) SingletonInsert(fQName IFullQName, keyValueList ...any) {
-	ia.singletonRequire(fQName, true, keyValueList...)
+func (ts *CommandTestState) RequireSingletonInsert(fQName IFullQName, keyValueList ...any) ICommandRunner {
+	ts.requiredRecordItems = append(ts.requiredRecordItems, recordItem{
+		entity:       fQName,
+		isSingleton:  true,
+		isNew:        true,
+		keyValueList: keyValueList,
+	})
+
+	return ts
 }
 
 // draft
-func (ia *intentAssertions) SingletonUpdate(fQName IFullQName, keyValueList ...any) {
-	ia.singletonRequire(fQName, false, keyValueList...)
+func (ts *CommandTestState) RequireSingletonUpdate(fQName IFullQName, keyValueList ...any) ICommandRunner {
+	ts.requiredRecordItems = append(ts.requiredRecordItems, recordItem{
+		entity:       fQName,
+		isSingleton:  true,
+		isNew:        false,
+		keyValueList: keyValueList,
+	})
+
+	return ts
 }
 
-func (ia *intentAssertions) singletonRequire(fQName IFullQName, isInsertIntent bool, keyValueList ...any) {
-	localPkgName := ia.ctx.appDef.PackageLocalName(fQName.PkgPath())
+func (ts *CommandTestState) requireSingleton(fQName IFullQName, isInsertIntent bool, keyValueList ...any) {
+	ts.requireIntent(fQName, 0, true, isInsertIntent, keyValueList...)
+}
+
+func (ts *CommandTestState) requireRecord(fQName IFullQName, id int, isInsertIntent bool, keyValueList ...any) {
+	ts.requireIntent(fQName, id, false, isInsertIntent, keyValueList...)
+}
+
+// requireIntent checks if the intent exists in the state
+// Parameters:
+// fQName - full qname of the entity
+// id - record id (unused for singletons)
+// isSingletone - if the entity is a singleton
+// isInsertIntent - if the intent is insert or update
+// keyValueList - list of key-value pairs
+func (ts *CommandTestState) requireIntent(
+	fQName IFullQName,
+	id int,
+	isSingletone bool,
+	isInsertIntent bool,
+	keyValueList ...any,
+) {
+	localPkgName := ts.appDef.PackageLocalName(fQName.PkgPath())
 	localEntity := appdef.NewQName(localPkgName, fQName.Entity())
-	kb, err := ia.ctx.IState.KeyBuilder(state.Record, localEntity)
-	require.NoError(ia.t, err)
+
+	kb, err := ts.IState.KeyBuilder(state.Record, localEntity)
+	require.NoError(ts.t, err)
+
+	if isSingletone {
+		kb.PutBool(state.Field_IsSingleton, true)
+	} else {
+		kb.PutInt64(state.Field_ID, int64(id))
+	}
+
+	vb, isNew := ts.IState.FindIntentWithOpKind(kb)
+	require.NoError(ts.t, err)
+
+	value := vb.BuildValue()
+	if value == nil {
+		require.Fail(ts.t, "value builder does not support EqualValues operation")
+		return
+	}
 
 	keyValueMap, err := parseKeyValues(keyValueList)
-	require.NoError(ia.t, err)
+	require.NoError(ts.t, err)
 
-	state.PopulateKeys(kb, map[string]any{state.Field_IsSingleton: true})
-
-	ia.vb = ia.ctx.IState.FindIntent(kb)
-	require.NoError(ia.t, err)
-
-	value := ia.vb.BuildValue()
-	if value == nil {
-		require.Fail(ia.t, "value builder does not support EqualValues operation")
-		return
-	}
-
-	// check if we deal with Insert or Update intent
-	if isInsertIntent {
-		// sys.ID should be less than 65536 for Insert intents
-		require.Less(ia.t, value.AsRecordID(appdef.SystemField_ID), istructs.FirstSingletonID)
-	} else {
-		// sys.ID should be greater or equal to 65536 for Update intents
-		require.GreaterOrEqual(ia.t, value.AsRecordID(appdef.SystemField_ID), istructs.FirstSingletonID)
-	}
-	ia.EqualValues(keyValueMap)
+	require.Equalf(ts.t, isInsertIntent, isNew, "%s: intent kind mismatch", localEntity.String())
+	ts.EqualValues(vb, keyValueMap)
 }
 
 // draft
-func (ia *intentAssertions) RecordInsert(fQName IFullQName, id int, keyValueList ...any) {
-	//TODO implement me
+func (ts *CommandTestState) RequireRecordInsert(fQName IFullQName, id int, keyValueList ...any) ICommandRunner {
+	ts.requiredRecordItems = append(ts.requiredRecordItems, recordItem{
+		entity:       fQName,
+		id:           id,
+		isSingleton:  false,
+		isNew:        true,
+		keyValueList: keyValueList,
+	})
 
-	// id < 65536
-	panic("implement me")
+	return ts
 }
 
 // draft
-func (ia *intentAssertions) RecordUpdate(fQName IFullQName, id int, keyValueList ...any) {
-	// id > 65536
+func (ts *CommandTestState) RequireRecordUpdate(fQName IFullQName, id int, keyValueList ...any) ICommandRunner {
+	ts.requiredRecordItems = append(ts.requiredRecordItems, recordItem{
+		entity:       fQName,
+		id:           id,
+		isSingleton:  false,
+		isNew:        false,
+		keyValueList: keyValueList,
+	})
 
-	//TODO implement me
-	panic("implement me")
+	return ts
 }
 
-func (ia *intentAssertions) EqualValues(expectedValues map[string]any) {
-	if ia.vb == nil {
-		require.Fail(ia.t, "expected intent to exist")
+func (ts *CommandTestState) EqualValues(vb istructs.IStateValueBuilder, expectedValues map[string]any) {
+	if vb == nil {
+		require.Fail(ts.t, "expected value builder is nil")
 		return
 	}
-	value := ia.vb.BuildValue()
+	value := vb.BuildValue()
 	if value == nil {
-		require.Fail(ia.t, "value builder does not support EqualValues operation")
+		require.Fail(ts.t, "value builder does not support EqualValues operation")
 		return
 	}
 	for expectedKey, expectedValue := range expectedValues {
-		switch expectedValue.(type) {
+		switch t := expectedValue.(type) {
+		case int:
+			require.Equal(ts.t, int32(t), value.AsInt32(expectedKey))
+		case int8:
+			require.Equal(ts.t, int32(t), value.AsInt32(expectedKey))
+		case int16:
+			require.Equal(ts.t, int32(t), value.AsInt32(expectedKey))
 		case int32:
-			require.Equal(ia.t, expectedValue, value.AsInt32(expectedKey))
+			require.Equal(ts.t, t, value.AsInt32(expectedKey))
 		case int64:
-			require.Equal(ia.t, expectedValue, value.AsInt64(expectedKey))
+			require.Equal(ts.t, t, value.AsInt64(expectedKey))
 		case float32:
-			require.Equal(ia.t, expectedValue, value.AsFloat32(expectedKey))
+			require.Equal(ts.t, t, value.AsFloat32(expectedKey))
 		case float64:
-			require.Equal(ia.t, expectedValue, value.AsFloat64(expectedKey))
+			require.Equal(ts.t, t, value.AsFloat64(expectedKey))
 		case []byte:
-			require.Equal(ia.t, expectedValue, value.AsBytes(expectedKey))
+			require.Equal(ts.t, t, value.AsBytes(expectedKey))
 		case string:
-			require.Equal(ia.t, expectedValue, value.AsString(expectedKey))
+			require.Equal(ts.t, t, value.AsString(expectedKey))
 		case bool:
-			require.Equal(ia.t, expectedValue, value.AsBool(expectedKey))
+			require.Equal(ts.t, t, value.AsBool(expectedKey))
 		case appdef.QName:
-			require.Equal(ia.t, expectedValue, value.AsQName(expectedKey))
+			require.Equal(ts.t, t, value.AsQName(expectedKey))
 		case istructs.IStateValue:
-			require.Equal(ia.t, expectedValue, value.AsValue(expectedKey))
+			require.Equal(ts.t, t, value.AsValue(expectedKey))
 		default:
-			require.Fail(ia.t, "unsupported value type")
+			require.Fail(ts.t, "unsupported value type")
 		}
 	}
 }
 
+func (ts *CommandTestState) keyBuilder(r recordItem) istructs.IStateKeyBuilder {
+	localPkgName := ts.appDef.PackageLocalName(r.entity.PkgPath())
+	localEntity := appdef.NewQName(localPkgName, r.entity.Entity())
+
+	kb, err := ts.IState.KeyBuilder(state.Record, localEntity)
+	require.NoError(ts.t, err, "IState.KeyBuilder: failed to create key builder")
+
+	if r.isSingleton {
+		kb.PutBool(state.Field_IsSingleton, true)
+	} else {
+		kb.PutInt64(state.Field_ID, int64(r.id))
+	}
+
+	return kb
+}
 func parseKeyValues(keyValues []any) (map[string]any, error) {
 	if len(keyValues)%2 != 0 {
 		return nil, errors.New("key-value list must be even")

@@ -56,6 +56,7 @@ type recordsFunc func() istructs.IRecords
 type ApplyBatchItem struct {
 	key   istructs.IStateKeyBuilder
 	value istructs.IStateValueBuilder
+	isNew bool
 }
 
 type GetBatchItem struct {
