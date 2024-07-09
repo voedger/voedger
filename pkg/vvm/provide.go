@@ -485,6 +485,8 @@ func parseSidecarAppSubDir(path string, fs coreutils.IReadFS, moduleURLPrevious 
 		// notest
 		return nil, nil, err
 	}
+	// все sql собьираем по все каталогам и парсим - этополучаем одно приложение
+	// если найшли pgs.wasm - то каждый таой файлик - это отдельный ExtensionModule
 	for _, dirEntry := range dirEntries {
 		if !dirEntry.IsDir() {
 			if dirEntry.Name() == "pkg.wasm" {
@@ -595,9 +597,9 @@ func provideSidecarApps(vvmConfig *VVMConfig) (res []appparts.SidecarApp, err er
 			},
 			ExtensionModules: []iextengine.ExtensionModule{
 				{
-					Path:           "", // TODO
+					Path:           "", // all between image/pkg and pkg.wasm here
 					ModuleUrl:      moduleURL,
-					ExtensionNames: []string{}, // TODO
+					ExtensionNames: []string{}, // тут могут быть больше одного pkg.wasm, тогда каждый файлик pkg.wasm
 				},
 			},
 		})

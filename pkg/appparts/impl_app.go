@@ -8,6 +8,7 @@ package appparts
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"sync"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -53,7 +54,7 @@ func newApplication(apps *apps, name appdef.AppQName, partsCount istructs.NumApp
 
 // extModuleURLs is important for non-builtin (non-native) apps
 // extModuleURLs: packagePath->packageURL
-func (a *app) deploy(def appdef.IAppDef /*extModuleURLs map[string]*url.URL*/, extensionModules []iextengine.ExtensionModule, structs istructs.IAppStructs, numEnginesPerEngineKind [ProcessorKind_Count]int) {
+func (a *app) deploy(def appdef.IAppDef, appDD AppDeploymentDescriptor, extModuleURLs map[string]*url.URL /*extensionModules []iextengine.ExtensionModule,*/, structs istructs.IAppStructs, numEnginesPerEngineKind [ProcessorKind_Count]int) {
 	a.def = def
 	a.structs = structs
 
@@ -94,8 +95,8 @@ func (a *app) deploy(def appdef.IAppDef /*extModuleURLs map[string]*url.URL*/, e
 	// 	extensionPathsModules[path] = extensionModule
 	// })
 
-	for k, cnt := range numEnginesPerEngineKind {
-		extEngines := make([][]iextengine.IExtensionEngine, appdef.ExtensionEngineKind_Count)
+	// for k, cnt := range numEnginesPerEngineKind {
+	// 	extEngines := make([][]iextengine.IExtensionEngine, appdef.ExtensionEngineKind_Count)
 
 		// TODO: prepare []iextengine.ExtensionPackage from IAppDef
 		// TODO: should pass iextengine.ExtEngineConfig from somewhere (Provide?)
@@ -105,14 +106,37 @@ func (a *app) deploy(def appdef.IAppDef /*extModuleURLs map[string]*url.URL*/, e
 
 		// тут надо создавать только те движки, которые есть среди packages of IAppDef
 		//
-		def.Extensions(func(i appdef.IExtension) {
-			extEngineKind := i.Engine()
-			factory, ok := eef[extEngineKind] // factory тут - это либо для builtin, либо для wasm
-			if !ok {
-				panic(fmt.Errorf("no extension engine factory for engine %s met among def of %s", extEngineKind.String(), a.name))
-			}
-			factory.New(ctx, a.name, extensionModules, &iextengine.DefaultExtEngineConfig, 1) // FIXME: what is numEngines here?
+
+		extModules := map[appdef.ExtensionEngineKind][]iextengine.ExtensionModule{}
+		def.Extensions(func(ext appdef.IExtension) {
+			extEngineKind := ext.Engine()
+			path := ext.App().PackageFullPath(ext.QName().Pkg())
+			ur := extModuleURLs[path]
+			// тут сформируем мапу ExtEngineKind->[]ExtensionModules
+			// factory, ok := eef[extEngineKind] // factory тут - это либо для builtin, либо для wasm
+			// if !ok {
+			// 	panic(fmt.Errorf("no extension engine factory for engine %s met among def of %s", extEngineKind.String(), a.name))
+			// }
+			// extensionModules сгенерировать на лету
+			// extModules[extEngineKind] = ...
+			// factory.New(ctx, a.name, extensionModules, &iextengine.DefaultExtEngineConfig, 1) // FIXME: what is numEngines here?
 		})
+
+		for processorKind, processorsCount := range appDD.EnginePoolSize {
+			ee := make([]*engines, processorsCount)
+			for i := 0; i < processorsCount; i++ {
+				for kind, modules := range extModules {
+					factory, ok := eef[kind] // factory тут - это либо для builtin, либо для wasm
+					if !ok {
+						panic(fmt.Errorf("no extension engine factory for engine %s met among def of %s", kind.String(), a.name))
+					}
+					factory.New(ctx, a.name, modules, &iextengine.DefaultExtEngineConfig, 1) // FIXME: what is numEngines here?
+				}
+				ee[i] =&engines{}
+				a.engines[k] = pool.New(ee)
+			}
+
+		}
 
 		// for ek, ef := range eef {
 
@@ -126,15 +150,15 @@ func (a *app) deploy(def appdef.IAppDef /*extModuleURLs map[string]*url.URL*/, e
 		// 	extEngines[ek] = ee
 		// }
 
-		ee := make([]*engines, cnt)
-		for i := 0; i < cnt; i++ {
-			ee[i] = &engines{}
-			for ek := range eef {
-				ee[i].byKind[ek] = extEngines[ek][i]
-			}
-		}
-		a.engines[k] = pool.New(ee)
-	}
+		// ee := make([]*engines, cnt)
+		// for i := 0; i < cnt; i++ {
+		// 	ee[i] = &engines{}
+		// 	for ek := range eef {
+		// 		ee[i].byKind[ek] = extEngines[ek][i]
+		// 	}
+		// }
+		// a.engines[k] = pool.New(ee)
+	// }
 }
 
 type partition struct {
@@ -220,6 +244,7 @@ func (rt *partitionRT) Release() {
 
 // Initialize partition RT structures for use
 func (rt *partitionRT) init(proc ProcessorKind) error {
+	// TODO: переделать тут: возвращать в Reelase откуда взяли, а не через engine.release, убрать engine.pool.
 	pool := rt.part.app.engines[proc]
 	engine, err := pool.Borrow() // will be released in (*engine).release()
 	if err != nil {
