@@ -9,7 +9,6 @@ import (
 	"net/url"
 
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/iextengine"
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
@@ -55,5 +54,5 @@ type BuiltInApp struct {
 type SidecarApp struct {
 	BuiltInApp
 	// ExtensionModules map[appdef.ExtensionEngineKind][]iextengine.ExtensionModule
-	ExtModuleURLs    map[string]*url.URL
+	ExtModuleURLs map[string]*url.URL
 }

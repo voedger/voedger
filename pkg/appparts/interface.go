@@ -7,9 +7,9 @@ package appparts
 
 import (
 	"context"
+	"net/url"
 
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/iextengine"
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
@@ -23,8 +23,7 @@ type IAppPartitions interface {
 	// extensionModules is used for non-builtin apps only. Provide nil for others
 	//
 	// If application with the same name exists, then its definition will be updated.
-	DeployApp(name appdef.AppQName /*extModuleURLs map[string]*url.URL*/, extensionModules []iextengine.ExtensionModule,
-		def appdef.IAppDef, partsCount istructs.NumAppPartitions, numEngines [ProcessorKind_Count]int)
+	DeployApp(name appdef.AppQName, extModuleURLs map[string]*url.URL, def appdef.IAppDef, partsCount istructs.NumAppPartitions, numEngines [ProcessorKind_Count]int)
 	// DeployBuiltInApp(name appdef.AppQName, def appdef.IAppDef, partsCount istructs.NumAppPartitions, numEngines [ProcessorKind_Count]int)
 	// то, что раньше вызывало DeployApp, теперь должно вызывать DeployBuiltInApp
 

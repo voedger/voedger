@@ -73,7 +73,7 @@ func Bootstrap(federation federation.IFederation, asp istructs.IAppStructsProvid
 	}
 
 	for _, app := range sidecarApps {
-		appparts.DeployApp(app.Name, app.ExtensionModules[], app.Def, app.NumParts, app.EnginePoolSize)
+		appparts.DeployApp(app.Name, app.ExtModuleURLs, app.Def, app.NumParts, app.EnginePoolSize)
 		partitionIDs := make([]istructs.PartitionID, app.NumParts)
 		for id := istructs.NumAppPartitions(0); id < app.NumParts; id++ {
 			partitionIDs[id] = istructs.PartitionID(id)
