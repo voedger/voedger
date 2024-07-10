@@ -54,7 +54,8 @@ func newApplication(apps *apps, name appdef.AppQName, partsCount istructs.NumApp
 
 // extModuleURLs is important for non-builtin (non-native) apps
 // extModuleURLs: packagePath->packageURL
-func (a *app) deploy(def appdef.IAppDef, appDD AppDeploymentDescriptor, extModuleURLs map[string]*url.URL /*extensionModules []iextengine.ExtensionModule,*/, structs istructs.IAppStructs, numEnginesPerEngineKind [ProcessorKind_Count]int) {
+func (a *app) deploy(def appdef.IAppDef, appDD AppDeploymentDescriptor, extModuleURLs map[string]*url.URL,
+	extensionModules []iextengine.ExtensionModule, structs istructs.IAppStructs, numEnginesPerEngineKind [ProcessorKind_Count]int) {
 	a.def = def
 	a.structs = structs
 
@@ -98,66 +99,73 @@ func (a *app) deploy(def appdef.IAppDef, appDD AppDeploymentDescriptor, extModul
 	// for k, cnt := range numEnginesPerEngineKind {
 	// 	extEngines := make([][]iextengine.IExtensionEngine, appdef.ExtensionEngineKind_Count)
 
-		// TODO: prepare []iextengine.ExtensionPackage from IAppDef
-		// TODO: should pass iextengine.ExtEngineConfig from somewhere (Provide?)
-		// here run through IAppDef and: map[engineKind met among packages of IAppDef][]iextengine.ExtensionPackage
-		// here extModuleURLs will be used on creating iextengine.ExtensionPackage
-		// non-builtin -> has to be in extModuleURLs, panic otherwise
+	// TODO: prepare []iextengine.ExtensionPackage from IAppDef
+	// TODO: should pass iextengine.ExtEngineConfig from somewhere (Provide?)
+	// here run through IAppDef and: map[engineKind met among packages of IAppDef][]iextengine.ExtensionPackage
+	// here extModuleURLs will be used on creating iextengine.ExtensionPackage
+	// non-builtin -> has to be in extModuleURLs, panic otherwise
 
-		// тут надо создавать только те движки, которые есть среди packages of IAppDef
-		//
+	// тут надо создавать только те движки, которые есть среди packages of IAppDef
+	//
 
-		extModules := map[appdef.ExtensionEngineKind][]iextengine.ExtensionModule{}
-		def.Extensions(func(ext appdef.IExtension) {
-			extEngineKind := ext.Engine()
-			path := ext.App().PackageFullPath(ext.QName().Pkg())
-			ur := extModuleURLs[path]
-			// тут сформируем мапу ExtEngineKind->[]ExtensionModules
-			// factory, ok := eef[extEngineKind] // factory тут - это либо для builtin, либо для wasm
-			// if !ok {
-			// 	panic(fmt.Errorf("no extension engine factory for engine %s met among def of %s", extEngineKind.String(), a.name))
-			// }
-			// extensionModules сгенерировать на лету
-			// extModules[extEngineKind] = ...
-			// factory.New(ctx, a.name, extensionModules, &iextengine.DefaultExtEngineConfig, 1) // FIXME: what is numEngines here?
-		})
+	extModules := map[appdef.ExtensionEngineKind][]iextengine.ExtensionModule{}
+	def.Extensions(func(ext appdef.IExtension) {
+		extEngineKind := ext.Engine()
+		path := ext.App().PackageFullPath(ext.QName().Pkg())
+		moduleURL := extModuleURLs[path]
+		extendionModule := iextengine.ExtensionModule{
+			Path:           path,
+			ModuleUrl:      moduleURL,
+			ExtensionNames: []string{}, // TODO
+		}
+		extModules[extEngineKind] = append(extModules[extEngineKind], extendionModule)
 
-		for processorKind, processorsCount := range appDD.EnginePoolSize {
-			ee := make([]*engines, processorsCount)
-			for i := 0; i < processorsCount; i++ {
-				for kind, modules := range extModules {
-					factory, ok := eef[kind] // factory тут - это либо для builtin, либо для wasm
-					if !ok {
-						panic(fmt.Errorf("no extension engine factory for engine %s met among def of %s", kind.String(), a.name))
-					}
-					factory.New(ctx, a.name, modules, &iextengine.DefaultExtEngineConfig, 1) // FIXME: what is numEngines here?
+		// тут сформируем мапу ExtEngineKind->[]ExtensionModules
+		// factory, ok := eef[extEngineKind] // factory тут - это либо для builtin, либо для wasm
+		// if !ok {
+		// 	panic(fmt.Errorf("no extension engine factory for engine %s met among def of %s", extEngineKind.String(), a.name))
+		// }
+		// extensionModules сгенерировать на лету
+		// extModules[extEngineKind] = ...
+		// factory.New(ctx, a.name, extensionModules, &iextengine.DefaultExtEngineConfig, 1) // FIXME: what is numEngines here?
+	})
+
+	for processorKind, processorsCount := range appDD.EnginePoolSize {
+		ee := make([]*engines, processorsCount)
+		for i := 0; i < processorsCount; i++ {
+			for kind, modules := range extModules {
+				factory, ok := eef[kind] // factory тут - это либо для builtin, либо для wasm
+				if !ok {
+					panic(fmt.Errorf("no extension engine factory for engine %s met among def of %s", kind.String(), a.name))
 				}
-				ee[i] =&engines{}
-				a.engines[k] = pool.New(ee)
+				factory.New(ctx, a.name, modules, &iextengine.DefaultExtEngineConfig, 1) // FIXME: what is numEngines here?
 			}
-
+			ee[i] = &engines{}
+			a.engines[k] = pool.New(ee)
 		}
 
-		// for ek, ef := range eef {
+	}
 
-		// 	// non-native ->
-		// 	ee, err := ef.New(ctx, a.name, []iextengine.ExtensionModule{
-		// 		// тут заполнить
-		// 	}, &iextengine.DefaultExtEngineConfig, cnt)
-		// 	if err != nil {
-		// 		panic(err)
-		// 	}
-		// 	extEngines[ek] = ee
-		// }
+	// for ek, ef := range eef {
 
-		// ee := make([]*engines, cnt)
-		// for i := 0; i < cnt; i++ {
-		// 	ee[i] = &engines{}
-		// 	for ek := range eef {
-		// 		ee[i].byKind[ek] = extEngines[ek][i]
-		// 	}
-		// }
-		// a.engines[k] = pool.New(ee)
+	// 	// non-native ->
+	// 	ee, err := ef.New(ctx, a.name, []iextengine.ExtensionModule{
+	// 		// тут заполнить
+	// 	}, &iextengine.DefaultExtEngineConfig, cnt)
+	// 	if err != nil {
+	// 		panic(err)
+	// 	}
+	// 	extEngines[ek] = ee
+	// }
+
+	// ee := make([]*engines, cnt)
+	// for i := 0; i < cnt; i++ {
+	// 	ee[i] = &engines{}
+	// 	for ek := range eef {
+	// 		ee[i].byKind[ek] = extEngines[ek][i]
+	// 	}
+	// }
+	// a.engines[k] = pool.New(ee)
 	// }
 }
 
