@@ -13,9 +13,9 @@ alerting:
       target_label: node
   alertmanagers:
     - static_configs:
-      - targets:
-        - {{.AppNode1}}:9093 # during deploy replace with real ip address of alert manager
-        - {{.AppNode2}}:9093 # during deploy replace with real ip address of alert manager
+        - targets:
+            - {{.AppNode1}}:9093 # during deploy replace with real ip address of alert manager
+            - {{.AppNode2}}:9093 # during deploy replace with real ip address of alert manager
 
 # Load rules once and periodically evaluate them according to the global 'evaluation_interval'.
 rule_files:
