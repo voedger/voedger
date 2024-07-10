@@ -35,26 +35,6 @@ node_id=$(utils_ssh "$SSH_USER@$MANAGER" "docker node ls --format '{{.ID}}' | wh
   else 
     echo "Join node to Docker Swarm..."
     utils_ssh "$SSH_USER@$1" "docker swarm join --token $JOIN_TOKEN --listen-addr $ip:2377 $MANAGER:2377"
-
-    # Wait until the node appears in the swarm node list
-    echo "Waiting for the node to join the Docker Swarm cluster..."
-    timeout=60  # Timeout in seconds
-    interval=5  # Interval between checks in seconds
-    while (( timeout > 0 )); do
-      node_id=$(utils_ssh "$SSH_USER@$MANAGER" "docker node ls --format '{{.ID}}' | while read id; do docker node inspect --format '{{.Status.Addr}} {{.ID}}' \$id; done | grep $ip | awk '{print \$2}'")
-      if [[ -n "$node_id" ]]; then
-        echo "Node successfully joined the Docker Swarm cluster."
-        break
-      fi
-      sleep $interval
-      ((timeout -= interval))
-    done
-
-    if (( timeout <= 0 )); then
-      echo "Failed to join the Docker Swarm cluster within the timeout period." >&2
-      exit 1
-    fi
-
   fi
 
 shift
