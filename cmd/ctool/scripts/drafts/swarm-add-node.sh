@@ -37,7 +37,7 @@ node_id=$(utils_ssh "$SSH_USER@$MANAGER" "docker node ls --format '{{.ID}}' | wh
     utils_ssh "$SSH_USER@$1" "docker swarm join --token $JOIN_TOKEN --listen-addr $ip:2377 $MANAGER:2377"
   fi
 
-shift                                                ``
+shift
 
 done
 
