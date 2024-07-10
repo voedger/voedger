@@ -39,7 +39,7 @@ while true; do
 
         desired_replicas=$(utils_ssh "$SSH_USER@$AppNode1" "docker service inspect --format '{{.Spec.Mode.Replicated.Replicas}}' $service")
 
-        if [vi  "$replicas" != "$desired_replicas" ]; then
+        if [ "$replicas" != "$desired_replicas" ]; then
             all_running=false
             break
         fi
