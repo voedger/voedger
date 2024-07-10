@@ -105,7 +105,7 @@ EOF
   if [ "$VOEDGER_EDITION" == "SE3" ]; then
       cat ./prometheus/prometheus.yml | \
           sed "s/{{.DBNode1}}/${hosts[2]}/g; s/{{.DBNode2}}/${hosts[3]}/g; s/{{.DBNode3}}/${hosts[4]}/g; s/{{.AppNode1}}/${hosts[0]}/g; s/{{.AppNode2}}/${hosts[1]}/g; s/{{.Label}}/AppNode$((count+1))/g" | \
-          yq e 'del(.scrape_configs[] | select(.job_name == "node-exporter").static_configs[].targets[] | select(. == "{{.AppNode1}}:9100" or . == "{{.AppNode2}}:9100"))' - | \
+          yq e 'del(.scrape_configs[] | select(.job_name == "node-exporter").static_configs[].targets[] | select(test("^app-node.*:9100$")))' - | \
           utils_ssh "$SSH_USER@$1" 'cat > ~/prometheus/prometheus.yml'
   else
       cat ./prometheus/prometheus.yml | \
