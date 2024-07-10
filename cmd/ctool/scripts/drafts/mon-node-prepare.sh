@@ -102,15 +102,24 @@ EOF
   cat ./grafana/grafana.ini | utils_ssh "$SSH_USER@$1" 'cat > ~/grafana/grafana.ini'
 
 
-  cat ./prometheus/prometheus.yml | \
-      sed "s/{{.DBNode1}}/${hosts[2]}/g; s/{{.DBNode2}}/${hosts[3]}/g; s/{{.DBNode3}}/${hosts[4]}/g; s/{{.AppNode1}}/${hosts[0]}/g; s/{{.AppNode2}}/${hosts[1]}/g; s/{{.Label}}/AppNode$((count+1))/g" \
-      | utils_ssh "$SSH_USER@$1" 'cat > ~/prometheus/prometheus.yml'
+  if [ "$VOEDGER_EDITION" == "SE3" ]; then
+      cat ./prometheus/prometheus.yml | \
+          yq eval 'del(.scrape_configs[] | select(.job_name == "node-exporter").static_configs[].targets[] | select(. == "{{.AppNode1}}:9100" or . == "{{.AppNode2}}:9100"))' - \
+          | sed "s/{{.DBNode1}}/${hosts[2]}/g; s/{{.DBNode2}}/${hosts[3]}/g; s/{{.DBNode3}}/${hosts[4]}/g; s/{{.AppNode1}}/${hosts[0]}/g; s/{{.AppNode2}}/${hosts[1]}/g; s/{{.Label}}/AppNode$((count+1))/g" \
+          | utils_ssh "$SSH_USER@$1" 'cat > ~/prometheus/prometheus.yml'
+  else
+      cat ./prometheus/prometheus.yml | \
+          sed "s/{{.DBNode1}}/${hosts[2]}/g; s/{{.DBNode2}}/${hosts[3]}/g; s/{{.DBNode3}}/${hosts[4]}/g; s/{{.AppNode1}}/${hosts[0]}/g; s/{{.AppNode2}}/${hosts[1]}/g; s/{{.Label}}/AppNode$((count+1))/g" \
+          | utils_ssh "$SSH_USER@$1" 'cat > ~/prometheus/prometheus.yml'
+  fi
 
   cat ./prometheus/web.yml | utils_ssh "$SSH_USER@$1" 'cat > ~/prometheus/web.yml'
-  cat ./prometheus/alert.rules | utils_ssh "$SSH_USER@$1" 'cat > ~/prometheus/alert.rules'
+  if utils_ssh "SSH_USER@$1" [ ! -e ~/prometheus/alert.rules ]; then
+      cat ./prometheus/alert.rules | utils_ssh "$SSH_USER@$1" 'cat > ~/prometheus/alert.rules'
+  fi
   cat ./alertmanager/config.yml | utils_ssh "$SSH_USER@$1" 'cat > ~/alertmanager/config.yml'
 
-   utils_ssh "$SSH_USER@$1" "sudo mkdir -p /etc/node-exporter && sudo chown -R 65534:65534 /etc/node-exporter"
+  utils_ssh "$SSH_USER@$1" "sudo mkdir -p /etc/node-exporter && sudo chown -R 65534:65534 /etc/node-exporter"
 
    NODE_ID=$(utils_ssh "$SSH_USER@$1" "docker info --format '{{.Swarm.NodeID}}'")
    NODE_NAME=$(utils_ssh "$SSH_USER@$1" "docker node inspect --format '{{.Description.Hostname}}' $NODE_ID")
