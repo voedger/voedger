@@ -83,6 +83,16 @@ func (ts *CommandTestState) setArgument() {
 		return
 	}
 
+	//kb := exttinygo.KeyBuilder(exttinygo.StorageCommandContext, exttinygo.NullEntity)
+	//vb := exttinygo.NewValue(kb)
+	//m := map[string]any{
+	//	"ArgumentObject": ts.argumentObject,
+	//}
+	//vb.PutQName()
+	//
+	//err := ts.appStructs.Records().PutJSON(ts.commandWSID, m)
+	//require.NoError(ts.t, err)
+
 	ts.PutEvent(ts.commandWSID, ts.argumentType, func(argBuilder istructs.IObjectBuilder, cudBuilder istructs.ICUD) {
 		argBuilder.FillFromJSON(ts.argumentObject)
 	})
@@ -157,33 +167,28 @@ func (ts *CommandTestState) buildAppDef(wsPkgPath, wsDescriptorName string) {
 	}
 }
 
-func (ts *CommandTestState) Record(fQName IFullQName, id int, keyValueList ...any) ICommandRunner {
-	localPkgName := ts.appDef.PackageLocalName(fQName.PkgPath())
-	localEntity := appdef.NewQName(localPkgName, fQName.Entity())
+func (ts *CommandTestState) record(fQName IFullQName, id int, isSingleton bool, keyValueList ...any) ICommandRunner {
+	// TODO: error message must be understandable
+	//Record(
+	//	orm.Package_air.WSingleton_NextNumbers,
+	//	65536,
+	//	`NextPBillNumber`, nextNumber,
+	//).
+	qName := ts.getQNameFromFQName(fQName)
 
-	iSingleton := ts.appDef.Singleton(localEntity)
-	var isSingleton bool
-	if iSingleton != nil && iSingleton.Singleton() {
-		isSingleton = true
-	}
 	// check if the record already exists
 	slices.ContainsFunc(ts.recordItems, func(i recordItem) bool {
 		if i.entity == fQName {
 			if isSingleton {
-				panic(fmt.Errorf("singletone %s already exists", localEntity.String()))
+				panic(fmt.Errorf("singletone %s already exists", qName.String()))
 			}
 			if i.id == id {
-				panic(fmt.Errorf("record with entity %s and id %d already exists", localEntity.String(), id))
+				panic(fmt.Errorf("record with entity %s and id %d already exists", qName.String(), id))
 			}
 		}
 
 		return false
 	})
-
-	// id must be istructs.MinReservedBaseRecordID for singletons
-	if isSingleton {
-		id = int(istructs.MinReservedBaseRecordID)
-	}
 
 	ts.recordItems = append(ts.recordItems, recordItem{
 		entity:       fQName,
@@ -193,6 +198,50 @@ func (ts *CommandTestState) Record(fQName IFullQName, id int, keyValueList ...an
 	})
 
 	return ts
+}
+
+func (ts *CommandTestState) Record(fQName IFullQName, id int, keyValueList ...any) ICommandRunner {
+	isSingleton := ts.isSingletone(fQName)
+	if isSingleton {
+		panic("use SingletonRecord method for singletons")
+	}
+
+	return ts.record(fQName, id, isSingleton, keyValueList...)
+}
+
+// SingletonRecord adds a singleton record to the state
+// Implemented in own method because of ID for singletons are generated under-the-hood and
+// we can not insert singletons with our own IDs
+func (ts *CommandTestState) SingletonRecord(fQName IFullQName, keyValueList ...any) ICommandRunner {
+	isSingleton := ts.isSingletone(fQName)
+	if !isSingleton {
+		panic("use Record method for non-singleton entities")
+	}
+	qName := ts.getQNameFromFQName(fQName)
+
+	// get real ID of the specific singleton
+	id, err := ts.appStructs.Records().GetSingletonID(qName)
+	if err != nil {
+		panic(fmt.Errorf("failed to get singleton id: %w", err))
+	}
+
+	return ts.record(fQName, int(id), isSingleton, keyValueList...)
+}
+
+func (ts *CommandTestState) getQNameFromFQName(fQName IFullQName) appdef.QName {
+	localPkgName := ts.appDef.PackageLocalName(fQName.PkgPath())
+	return appdef.NewQName(localPkgName, fQName.Entity())
+}
+
+func (ts *CommandTestState) isSingletone(fQName IFullQName) bool {
+	qName := ts.getQNameFromFQName(fQName)
+
+	iSingleton := ts.appDef.Singleton(qName)
+	if iSingleton != nil && iSingleton.Singleton() {
+		return true
+	}
+
+	return false
 }
 
 func (ts *CommandTestState) putRecords() {
@@ -215,6 +264,7 @@ func (ts *CommandTestState) putRecords() {
 }
 
 func (ts *CommandTestState) require() {
+	// TODO: check requiring inexistent intents, error message must be understandable
 	// check out required allIntents
 	requiredKeys := make([]istructs.IStateKeyBuilder, 0, len(ts.requiredRecordItems))
 	for _, item := range ts.requiredRecordItems {
@@ -246,6 +296,7 @@ func (ts *CommandTestState) require() {
 	//errList := make([]error, 0, len(allIntents))
 	//// check out unexpected intents
 	//for _, intent := range allIntents {
+	//	// FIXME: optimize this
 	//	for _, requiredKey := range requiredKeys {
 	//		if !intent.key.Equals(requiredKey) {
 	//			// FIXME: runtime error: invalid memory address or nil pointer dereference in intent.String()
@@ -341,22 +392,20 @@ func (ts *CommandTestState) Run() {
 
 // draft
 func (ts *CommandTestState) RequireSingletonInsert(fQName IFullQName, keyValueList ...any) ICommandRunner {
-	ts.requiredRecordItems = append(ts.requiredRecordItems, recordItem{
-		entity:       fQName,
-		isSingleton:  true,
-		isNew:        true,
-		keyValueList: keyValueList,
-	})
-
-	return ts
+	return ts.addRequiredRecordItems(fQName, 0, true, true, keyValueList...)
 }
 
 // draft
 func (ts *CommandTestState) RequireSingletonUpdate(fQName IFullQName, keyValueList ...any) ICommandRunner {
+	return ts.addRequiredRecordItems(fQName, 0, true, false, keyValueList...)
+}
+
+func (ts *CommandTestState) addRequiredRecordItems(fQName IFullQName, id int, isSingleton, isNew bool, keyValueList ...any) ICommandRunner {
 	ts.requiredRecordItems = append(ts.requiredRecordItems, recordItem{
 		entity:       fQName,
-		isSingleton:  true,
-		isNew:        false,
+		id:           id,
+		isSingleton:  isSingleton,
+		isNew:        isNew,
 		keyValueList: keyValueList,
 	})
 
@@ -385,10 +434,9 @@ func (ts *CommandTestState) requireIntent(
 	isInsertIntent bool,
 	keyValueList ...any,
 ) {
-	localPkgName := ts.appDef.PackageLocalName(fQName.PkgPath())
-	localEntity := appdef.NewQName(localPkgName, fQName.Entity())
+	localQName := ts.getQNameFromFQName(fQName)
 
-	kb, err := ts.IState.KeyBuilder(state.Record, localEntity)
+	kb, err := ts.IState.KeyBuilder(state.Record, localQName)
 	require.NoError(ts.t, err)
 
 	if isSingletone {
@@ -409,34 +457,18 @@ func (ts *CommandTestState) requireIntent(
 	keyValueMap, err := parseKeyValues(keyValueList)
 	require.NoError(ts.t, err)
 
-	require.Equalf(ts.t, isInsertIntent, isNew, "%s: intent kind mismatch", localEntity.String())
+	require.Equalf(ts.t, isInsertIntent, isNew, "%s: intent kind mismatch", localQName.String())
 	ts.EqualValues(vb, keyValueMap)
 }
 
 // draft
 func (ts *CommandTestState) RequireRecordInsert(fQName IFullQName, id int, keyValueList ...any) ICommandRunner {
-	ts.requiredRecordItems = append(ts.requiredRecordItems, recordItem{
-		entity:       fQName,
-		id:           id,
-		isSingleton:  false,
-		isNew:        true,
-		keyValueList: keyValueList,
-	})
-
-	return ts
+	return ts.addRequiredRecordItems(fQName, id, false, true, keyValueList...)
 }
 
 // draft
 func (ts *CommandTestState) RequireRecordUpdate(fQName IFullQName, id int, keyValueList ...any) ICommandRunner {
-	ts.requiredRecordItems = append(ts.requiredRecordItems, recordItem{
-		entity:       fQName,
-		id:           id,
-		isSingleton:  false,
-		isNew:        false,
-		keyValueList: keyValueList,
-	})
-
-	return ts
+	return ts.addRequiredRecordItems(fQName, id, false, false, keyValueList...)
 }
 
 func (ts *CommandTestState) EqualValues(vb istructs.IStateValueBuilder, expectedValues map[string]any) {
@@ -482,10 +514,9 @@ func (ts *CommandTestState) EqualValues(vb istructs.IStateValueBuilder, expected
 }
 
 func (ts *CommandTestState) keyBuilder(r recordItem) istructs.IStateKeyBuilder {
-	localPkgName := ts.appDef.PackageLocalName(r.entity.PkgPath())
-	localEntity := appdef.NewQName(localPkgName, r.entity.Entity())
+	localQName := ts.getQNameFromFQName(r.entity)
 
-	kb, err := ts.IState.KeyBuilder(state.Record, localEntity)
+	kb, err := ts.IState.KeyBuilder(state.Record, localQName)
 	require.NoError(ts.t, err, "IState.KeyBuilder: failed to create key builder")
 
 	if r.isSingleton {

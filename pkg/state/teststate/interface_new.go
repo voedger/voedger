@@ -13,6 +13,7 @@ type IFullQName interface {
 type ICommandRunner interface {
 	// methos to fulfill test state
 	Record(fQName IFullQName, id int, keyValueList ...any) ICommandRunner
+	SingletonRecord(fQName IFullQName, keyValueList ...any) ICommandRunner
 	ArgumentObject(id int, keyValueList ...any) ICommandRunner
 	ArgumentObjectRow(path string, id int, keyValueList ...any) ICommandRunner
 	// methods to check out the test state

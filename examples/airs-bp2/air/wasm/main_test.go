@@ -16,6 +16,8 @@ import (
 func TestPbill(t *testing.T) {
 	t.Parallel()
 
+	// TODO: eliminate all nil memory dereference errors and panic situations
+
 	currentYear := time.Now().UTC().Year()
 
 	t.Run("Singleton NextPBillNumber: insert", func(t *testing.T) {
@@ -64,9 +66,8 @@ func TestPbill(t *testing.T) {
 			orm.Package_air.Command_Pbill,
 			Pbill,
 		).
-			Record(
+			SingletonRecord(
 				orm.Package_air.WSingleton_NextNumbers,
-				1,
 				`NextPBillNumber`, nextNumber,
 			).
 			Record(
