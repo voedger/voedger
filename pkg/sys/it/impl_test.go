@@ -331,3 +331,18 @@ func TestQueryIntents(t *testing.T) {
 	resp := vit.PostWS(ws, "q.app1pkg.QryIntents", body)
 	require.Equal(t, "hello", resp.SectionRow()[0].(string))
 }
+
+func TestErrorFromResponseIntent(t *testing.T) {
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
+	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+	body := `{"args":{"StatusCodeToReturn": 555}}`
+
+	t.Run("command", func(t *testing.T) {
+		vit.PostWS(ws, "c.app1pkg.CmdWithResponseIntent", body, coreutils.WithExpectedCode(555, "error from response intent"))
+	})
+
+	t.Run("query", func(t *testing.T) {
+		vit.PostWS(ws, "q.app1pkg.QryWithResponseIntent", body, coreutils.WithExpectedCode(555, "error from response intent"))
+	})
+}

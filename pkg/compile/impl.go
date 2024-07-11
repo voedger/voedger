@@ -322,7 +322,7 @@ func localPath(loadedPkgs *loadedPackages, depURL string, notFoundDeps map[strin
 		return path, nil
 	}
 	notFoundDeps[depURL] = struct{}{}
-	return "", fmt.Errorf("%s: cannot find dependency", depURL)
+	return "", fmt.Errorf("%[1]s: cannot find dependency. Ensure you have an import \"_ %[1]s\" in golang sources", depURL)
 }
 
 func getLocalPathOfTheDep(pkgs []*packages.Package, depURL string) string {
