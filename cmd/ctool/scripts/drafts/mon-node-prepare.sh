@@ -114,7 +114,7 @@ EOF
   fi
 
   cat ./prometheus/web.yml | utils_ssh "$SSH_USER@$1" 'cat > ~/prometheus/web.yml'
-  if utils_ssh "SSH_USER@$1" 'test ! -f ~/prometheus/alert.rules'; then
+  if utils_ssh "SSH_USER@$1" 'if [ ! -f ~/prometheus/alert.rules ]; then exit 0; else exit 1; fi'; then
       cat ./prometheus/alert.rules | utils_ssh "$SSH_USER@$1" 'cat > ~/prometheus/alert.rules'
   fi
   cat ./alertmanager/config.yml | utils_ssh "$SSH_USER@$1" 'cat > ~/alertmanager/config.yml'
