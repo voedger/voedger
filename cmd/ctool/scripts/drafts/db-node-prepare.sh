@@ -87,7 +87,7 @@ dev_mode_conf=""
 cat ./scylla.yaml | utils_ssh "$SSH_USER@$1" 'cat > ~/scylla/scylla.yaml'
 
 utils_ssh "$SSH_USER@$1" "mkdir -p ~/scylla-node-exporter"
-echo "SCYLLA_NODE_EXPORTER_ARGS=\"--collector.interrupts --collector.textfile.directory=/etc/node-exporter/\"" | utils_ssh "$SSH_USER@$1" "cat > ~/scylla-node-exporter/scylla-node-exporter"
+echo "SCYLLA_NODE_EXPORTER_ARGS=\"--collector.interrupts --collector.textfile.directory=/etc/node-exporter/ --web.listen-address=:9500\"" | utils_ssh "$SSH_USER@$1" "cat > ~/scylla-node-exporter/scylla-node-exporter"
 utils_ssh "$SSH_USER@$1" "sudo mkdir -p /etc/node-exporter && sudo chown -R 65534:65534 /etc/node-exporter"
 
 NODE_ID=$(utils_ssh "$SSH_USER@$1" "docker info --format '{{.Swarm.NodeID}}'")
