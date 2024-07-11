@@ -18,7 +18,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/compile"
-	"github.com/voedger/voedger/pkg/exttinygo"
 	"github.com/voedger/voedger/pkg/iratesce"
 	"github.com/voedger/voedger/pkg/istorage/mem"
 	istorageimpl "github.com/voedger/voedger/pkg/istorage/provider"
@@ -27,7 +26,6 @@ import (
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	"github.com/voedger/voedger/pkg/itokensjwt"
 	"github.com/voedger/voedger/pkg/state"
-	coreutils "github.com/voedger/voedger/pkg/utils"
 	wsdescutil "github.com/voedger/voedger/pkg/utils/testwsdesc"
 )
 
@@ -85,17 +83,17 @@ func (ts *CommandTestState) setArgument() {
 		return
 	}
 
-	kb := exttinygo.KeyBuilder(exttinygo.StorageCommandContext, exttinygo.NullEntity)
-	vb := exttinygo.NewValue(kb)
-	//vb.PutBytes()
-	m := map[string]any{
-		"ArgumentObject": ts.argumentObject,
-	}
-
-	coreutils.MapToObject(m, vb)
-
-	err := ts.appStructs.Records().PutJSON(ts.commandWSID, m)
-	require.NoError(ts.t, err)
+	//kb := exttinygo.KeyBuilder(exttinygo.StorageCommandContext, exttinygo.NullEntity)
+	//vb := exttinygo.NewValue(kb)
+	////vb.PutBytes()
+	//m := map[string]any{
+	//	"ArgumentObject": ts.argumentObject,
+	//}
+	//
+	//coreutils.MapToObject(m, vb)
+	//
+	//err := ts.appStructs.Records().PutJSON(ts.commandWSID, m)
+	//require.NoError(ts.t, err)
 
 	ts.PutEvent(ts.commandWSID, ts.argumentType, func(argBuilder istructs.IObjectBuilder, cudBuilder istructs.ICUD) {
 		argBuilder.FillFromJSON(ts.argumentObject)
