@@ -14,6 +14,7 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -479,31 +480,30 @@ func provideBuiltInAppsArtefacts(vvmConfig *VVMConfig, apis apps.APIs, cfgs AppC
 	return vvmConfig.VVMAppsBuilder.BuildAppsArtefacts(apis, cfgs)
 }
 
-func parseSidecarAppSubDir(path string, fs coreutils.IReadFS, moduleURLPrevious *url.URL) (asts []*parser.PackageSchemaAST, moduleURLFound *url.URL, err error) {
+// extModuleURLs is filled here
+func parseSidecarAppSubDir(path string, fs coreutils.IReadFS, extModuleURLs map[string]*url.URL) (asts []*parser.PackageSchemaAST, err error) {
 	dirEntries, err := fs.ReadDir(path)
 	if err != nil {
 		// notest
-		return nil, nil, err
+		return nil, err
 	}
 	// все sql собьираем по все каталогам и парсим - этополучаем одно приложение
-	// если найшли pgs.wasm - то каждый таой файлик - это отдельный ExtensionModule
+	// если найшли pgs.wasm - то каждый такой файлик - это отдельный ExtensionModule
 	for _, dirEntry := range dirEntries {
 		if !dirEntry.IsDir() {
-			if dirEntry.Name() == "pkg.wasm" {
-				if moduleURLPrevious != nil {
-					return nil, nil, fmt.Errorf("pkg.wasm previously met at %s is met again at %s", moduleURLPrevious, dirEntry.Name())
-				}
-				moduleURLFound, err = url.Parse(dirEntry.Name())
+			if filepath.Ext(dirEntry.Name()) =="wasm" {
+				path, _ := filepath.Split(dirEntry.Name())
+				moduleURL, err := url.Parse(dirEntry.Name())
 				if err != nil {
 					// notest
-					return nil, nil, err
+					return nil, err
 				}
-				moduleURLPrevious = moduleURLFound
+				extModuleURLs[path] = moduleURL
+				continue
 			}
-			continue
 		}
 		subASTs := []*parser.PackageSchemaAST{}
-		subASTs, moduleURLFound, err = parseSidecarAppSubDir(path+"/"+dirEntry.Name(), fs, moduleURLPrevious)
+		subASTs, err = parseSidecarAppSubDir(path+"/"+dirEntry.Name(), fs, moduleURLPrevious)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -531,7 +531,7 @@ func provideSidecarApps(vvmConfig *VVMConfig) (res []appparts.SidecarApp, err er
 		}
 		appQName, err := appdef.ParseAppQName(appEntry.Name())
 		if err != nil {
-			return nil, fmt.Errorf("dir entry %s does not look like application QName: %w", appEntry.Name(), err)
+			return nil, fmt.Errorf("application dir entry %s does not look like application QName: %w", appEntry.Name(), err)
 		}
 		appDirEntries, err := vvmConfig.ConfigFS.ReadDir("apps/" + appEntry.Name())
 		if err != nil {
@@ -542,6 +542,7 @@ func provideSidecarApps(vvmConfig *VVMConfig) (res []appparts.SidecarApp, err er
 		appASTs := []*parser.PackageSchemaAST{}
 		var moduleURL *url.URL
 		for _, appDirEntry := range appDirEntries {
+			// descriptor.json file and image/pkg/ folder here
 			if !appDirEntry.IsDir() && appDirEntry.Name() == "descriptor.json" {
 				descriptorContent, err := vvmConfig.ConfigFS.ReadFile(fmt.Sprintf("apps/%s/descriptor.json", appEntry.Name()))
 				if err != nil {
@@ -554,7 +555,7 @@ func provideSidecarApps(vvmConfig *VVMConfig) (res []appparts.SidecarApp, err er
 			}
 			if appDirEntry.IsDir() && appDirEntry.Name() == "image" {
 				//  вот как тут учестьЮ что ExtensionModules может быть несколько?
-				appASTs, moduleURL, err = parseSidecarAppSubDir("apps/"+appDirEntry.Name()+"/image", vvmConfig.ConfigFS, moduleURL)
+				appASTs, moduleURL, err = parseSidecarAppSubDir("apps/"+appDirEntry.Name()+"/image/pkg", vvmConfig.ConfigFS, moduleURL)
 				if err != nil {
 					return nil, err
 				}
