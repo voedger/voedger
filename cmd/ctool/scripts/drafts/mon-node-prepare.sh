@@ -114,7 +114,7 @@ EOF
   fi
 
   cat ./prometheus/web.yml | utils_ssh "$SSH_USER@$1" 'cat > ~/prometheus/web.yml'
-  if utils_ssh "SSH_USER@$1" "if [ ! -f $HOME/prometheus/alert.rules ]; then exit 0; else exit 1; fi"; then
+  if utils_ssh "$SSH_USER@$1" "if [ ! -f $HOME/prometheus/alert.rules ]; then exit 0; else exit 1; fi"; then
       echo "$HOME/prometheus/alert.rules does not exist on the remote host. Creating it now.";
       cat ./prometheus/alert.rules | utils_ssh "$SSH_USER@$1" 'cat > ~/prometheus/alert.rules';
   else
