@@ -22,7 +22,7 @@ func TestPbill(t *testing.T) {
 
 	t.Run("Singleton NextPBillNumber: insert", func(t *testing.T) {
 
-		test.NewCommandRunner(
+		test.NewCommandTest(
 			t,
 			orm.Package_air.Command_Pbill,
 			Pbill,
@@ -61,7 +61,7 @@ func TestPbill(t *testing.T) {
 	t.Run("Singleton NextPBillNumber: update", func(t *testing.T) {
 		nextNumber := 5
 
-		test.NewCommandRunner(
+		test.NewCommandTest(
 			t,
 			orm.Package_air.Command_Pbill,
 			Pbill,

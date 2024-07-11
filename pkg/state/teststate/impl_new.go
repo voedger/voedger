@@ -18,6 +18,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/compile"
+	"github.com/voedger/voedger/pkg/exttinygo"
 	"github.com/voedger/voedger/pkg/iratesce"
 	"github.com/voedger/voedger/pkg/istorage/mem"
 	istorageimpl "github.com/voedger/voedger/pkg/istorage/provider"
@@ -26,6 +27,7 @@ import (
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	"github.com/voedger/voedger/pkg/itokensjwt"
 	"github.com/voedger/voedger/pkg/state"
+	coreutils "github.com/voedger/voedger/pkg/utils"
 	wsdescutil "github.com/voedger/voedger/pkg/utils/testwsdesc"
 )
 
@@ -83,15 +85,17 @@ func (ts *CommandTestState) setArgument() {
 		return
 	}
 
-	//kb := exttinygo.KeyBuilder(exttinygo.StorageCommandContext, exttinygo.NullEntity)
-	//vb := exttinygo.NewValue(kb)
-	//m := map[string]any{
-	//	"ArgumentObject": ts.argumentObject,
-	//}
-	//vb.PutQName()
-	//
-	//err := ts.appStructs.Records().PutJSON(ts.commandWSID, m)
-	//require.NoError(ts.t, err)
+	kb := exttinygo.KeyBuilder(exttinygo.StorageCommandContext, exttinygo.NullEntity)
+	vb := exttinygo.NewValue(kb)
+	//vb.PutBytes()
+	m := map[string]any{
+		"ArgumentObject": ts.argumentObject,
+	}
+
+	coreutils.MapToObject(m, vb)
+
+	err := ts.appStructs.Records().PutJSON(ts.commandWSID, m)
+	require.NoError(ts.t, err)
 
 	ts.PutEvent(ts.commandWSID, ts.argumentType, func(argBuilder istructs.IObjectBuilder, cudBuilder istructs.ICUD) {
 		argBuilder.FillFromJSON(ts.argumentObject)
@@ -288,7 +292,7 @@ func (ts *CommandTestState) require() {
 		})
 	})
 
-	// workaround till the bug at the 252 line is fixed
+	// workaround till the bug at the 308 line is fixed
 	if len(allIntents) > len(requiredKeys) {
 		require.Failf(ts.t, "the actual intent count exceeds expected one", "expected intent count: %d, actual count: %d", len(requiredKeys), len(allIntents))
 	}
@@ -296,12 +300,16 @@ func (ts *CommandTestState) require() {
 	//errList := make([]error, 0, len(allIntents))
 	//// check out unexpected intents
 	//for _, intent := range allIntents {
-	//	// FIXME: optimize this
+	//	found := false
 	//	for _, requiredKey := range requiredKeys {
-	//		if !intent.key.Equals(requiredKey) {
-	//			// FIXME: runtime error: invalid memory address or nil pointer dereference in intent.String()
-	//			errList = append(errList, fmt.Errorf("unexpected intent: %s", intent.String()))
+	//		if intent.key.Equals(requiredKey) {
+	//			found = true
+	//			continue
 	//		}
+	//	}
+	//	if !found {
+	//		// FIXME: runtime error: invalid memory address or nil pointer dereference in intent.String()
+	//		errList = append(errList, fmt.Errorf("unexpected intent: %s", intent.String()))
 	//	}
 	//}
 	//require.Emptyf(ts.t, errList, "unexpected intents: %w", errors.Join(errList...))
