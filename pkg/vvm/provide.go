@@ -490,34 +490,32 @@ func parseSidecarAppSubDir(path string, fs coreutils.IReadFS, extModuleURLs map[
 	// все sql собьираем по все каталогам и парсим - этополучаем одно приложение
 	// если найшли pgs.wasm - то каждый такой файлик - это отдельный ExtensionModule
 	for _, dirEntry := range dirEntries {
-		if !dirEntry.IsDir() {
-			if filepath.Ext(dirEntry.Name()) =="wasm" {
-				path, _ := filepath.Split(dirEntry.Name())
-				moduleURL, err := url.Parse(dirEntry.Name())
-				if err != nil {
-					// notest
-					return nil, err
-				}
-				extModuleURLs[path] = moduleURL
-				continue
+		if dirEntry.IsDir() {
+			subASTs := []*parser.PackageSchemaAST{}
+			subASTs, err = parseSidecarAppSubDir(path+"/"+dirEntry.Name(), fs, extModuleURLs)
+			if err != nil {
+				return nil, err
 			}
+			asts = append(asts, subASTs...)
+			continue
 		}
-		subASTs := []*parser.PackageSchemaAST{}
-		subASTs, err = parseSidecarAppSubDir(path+"/"+dirEntry.Name(), fs, moduleURLPrevious)
-		if err != nil {
-			return nil, nil, err
+		if filepath.Ext(dirEntry.Name()) == "wasm" {
+			path, _ := filepath.Split(dirEntry.Name())
+			moduleURL, err := url.Parse(dirEntry.Name())
+			if err != nil {
+				// notest
+				return nil, err
+			}
+			extModuleURLs[path] = moduleURL
+			continue
 		}
-		asts = append(asts, subASTs...)
 	}
 	dirAST, err := parser.ParsePackageDir(path, fs, ".")
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	asts = append(asts, dirAST)
-	if moduleURLFound == nil {
-		moduleURLFound = moduleURLPrevious
-	}
-	return asts, moduleURLFound, nil
+	return asts, nil
 }
 
 func provideSidecarApps(vvmConfig *VVMConfig) (res []appparts.SidecarApp, err error) {
@@ -540,7 +538,7 @@ func provideSidecarApps(vvmConfig *VVMConfig) (res []appparts.SidecarApp, err er
 		}
 		var appDD *appparts.AppDeploymentDescriptor
 		appASTs := []*parser.PackageSchemaAST{}
-		var moduleURL *url.URL
+		extModuleURLs := map[string]*url.URL{}
 		for _, appDirEntry := range appDirEntries {
 			// descriptor.json file and image/pkg/ folder here
 			if !appDirEntry.IsDir() && appDirEntry.Name() == "descriptor.json" {
@@ -555,7 +553,7 @@ func provideSidecarApps(vvmConfig *VVMConfig) (res []appparts.SidecarApp, err er
 			}
 			if appDirEntry.IsDir() && appDirEntry.Name() == "image" {
 				//  вот как тут учестьЮ что ExtensionModules может быть несколько?
-				appASTs, moduleURL, err = parseSidecarAppSubDir("apps/"+appDirEntry.Name()+"/image/pkg", vvmConfig.ConfigFS, moduleURL)
+				appASTs, err = parseSidecarAppSubDir("apps/"+appDirEntry.Name()+"/image/pkg", vvmConfig.ConfigFS, extModuleURLs)
 				if err != nil {
 					return nil, err
 				}
@@ -563,9 +561,6 @@ func provideSidecarApps(vvmConfig *VVMConfig) (res []appparts.SidecarApp, err er
 		}
 		if appDD == nil {
 			return nil, fmt.Errorf("no descriptor for sidecar app %s", appQName)
-		}
-		if moduleURL == nil {
-			return nil, fmt.Errorf("no wasm module found for sidecar app %s", appQName)
 		}
 
 		appSchemaAST, err := parser.BuildAppSchema(appASTs)
@@ -596,7 +591,7 @@ func provideSidecarApps(vvmConfig *VVMConfig) (res []appparts.SidecarApp, err er
 				Name:                    appQName,
 				Def:                     appDef,
 			},
-			ExtModuleURLs: map[strsd]interface{}{}, // TODO
+			ExtModuleURLs: extModuleURLs,
 		})
 	}
 	return res, nil

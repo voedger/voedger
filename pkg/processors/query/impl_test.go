@@ -327,7 +327,7 @@ func deployTestAppWithSecretToken(require *require.Assertions,
 				WASMCompile: false,
 			}))
 	require.NoError(err)
-	appParts.DeployApp(appName, appDef, partCount, appEngines)
+	appParts.DeployApp(appName, nil, appDef, partCount, appEngines)
 	appParts.DeployAppPartitions(appName, []istructs.PartitionID{partID})
 
 	appTokens = atf.New(appName)

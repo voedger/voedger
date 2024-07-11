@@ -331,7 +331,7 @@ func deployTestAppEx(
 		panic(err)
 	}
 
-	appParts.DeployApp(appName, appDef, appPartsCount, appparts.PoolSize(10, 10, 10))
+	appParts.DeployApp(appName, nil, appDef, appPartsCount, appparts.PoolSize(10, 10, 10))
 
 	start = func() {
 		if err := actualizers.Prepare(struct{}{}); err != nil {
