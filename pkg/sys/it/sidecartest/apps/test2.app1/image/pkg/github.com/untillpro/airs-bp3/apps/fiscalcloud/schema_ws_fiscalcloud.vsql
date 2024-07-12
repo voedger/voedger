@@ -1,0 +1,159 @@
+/*
+ * Copyright (c) 2023-present unTill Software Development Group B.V.
+ * @author Michael Saigachenko
+ */
+
+WORKSPACE FiscalCloudWS (
+
+    DESCRIPTOR FiscalCloud (
+        TotalContainers int32
+    );
+
+    TABLE FiscalContainerItem INHERITS CDoc(
+        FiscalServiceHost varchar(100) NOT NULL,
+        FiscalServicePort int32 NOT NULL,
+        ChildWorkspaceID ref
+    );
+
+    VIEW ContainerIdx (
+        Partition int32, -- always 1
+        ContainerNumber int32,
+        ContainerID ref(FiscalContainerItem),
+        ClientsCount int32,
+        PRIMARY KEY((Partition), ContainerNumber)
+    ) AS RESULT OF UpdateContainerIdx;
+
+
+    TABLE Customer INHERITS CDoc(
+        Product int32 NOT NULL, -- 1: Air, 2: Prime
+        FiscalCountry int32 , --Retailforce-specific  
+        LastWLogOffs int64,
+        ApiKey varchar(50) NOT NULL,
+        ApiSecret varchar(50) NOT NULL,
+        FiscalContainerNumber int32,
+        FiscalContainerWSID int64 NOT NULL,
+        EnvironmentKey varchar(50) NOT NULL,
+
+        -- Entities filled during onboarding
+        CompanyMainIDType int32,
+        CompanyMainID varchar(50),
+        CompanyIdentificationJson varchar(1024),
+        AddressCity varchar(50),
+        AddressStreet varchar(50),
+        AddressStreetNumber varchar(50),
+        CountryCode varchar(50), -- 3-letter code
+        AddressZip varchar(50),
+        Caption varchar(50),
+        FiscalYearStartMonth int32,
+
+        CertificateMD5 varchar,
+        CertificatePasswordMD5 varchar,
+
+        OrganizationID varchar(50), -- onboarded entity ID
+        StoreID varchar(50), -- onboarded entity ID
+        ClientID varchar(50), -- onboarded Terminal Client ID
+        ClientConfigured boolean, -- downloaded from Fiscal Cloud
+        ClientInitialized boolean, -- start document initialized
+        ClientOnboarded boolean, -- command stored in the ws.FiscalContainerWSID
+        NullReceiptFiscalResponse varchar(1024),
+    
+        LastError varchar,
+
+        UNIQUE(ApiKey)
+    );
+
+    TYPE AddFiscalContainerParam (
+        FiscalServiceHost varchar(100) NOT NULL,
+        FiscalServicePort int32 NOT NULL
+    );
+
+    TYPE AddCustomerParam(
+        CompanyIdentification,
+        CustomerRequisites,
+        EnvironmentKey varchar(50) NOT NULL,
+        BoardedRetailforceApiKey varchar(50),  -- for existing customers
+        BoardedRetailforceApiSecret varchar(50),  -- for existing customers
+        BoardedOrganizationID varchar(50), -- onboarded entity ID
+        BoardedStoreID varchar(50), -- onboarded entity ID
+        BoardedClientID varchar(50) -- onboarded Terminal Client ID
+    );
+
+    TYPE AddCustomerResult(
+        FiscalContainerWSID int64,
+        ApiKey varchar(50),
+        ApiSecret varchar(50)
+    );
+
+    TYPE UpdateCustomerParam(
+        CompanyIdentification,
+        CustomerRequisites,
+        ApiKey varchar(50)
+    );  
+
+    TYPE ProvideCertificateParam(
+        ApiKey varchar(50) NOT NULL,
+        ApiSecret varchar(50) NOT NULL,
+        CertificateBlobID int64 NOT NULL,
+        CertificatePassword varchar(50)
+    );
+
+    TYPE GetCustomerStatusRequest (
+        ApiKey varchar(50) NOT NULL,
+        ApiSecret varchar(50) NOT NULL
+    );
+
+    TYPE GetCustomerStatusResult (
+        FiscalContainerWSID int64,
+        --CustomerID ref(Customer)
+        CertificateMD5 varchar,
+        CertificatePasswordMD5 varchar,
+        ClientConfigured boolean, -- downloaded from Fiscal Cloud
+        ClientInitialized boolean, -- start document initialized
+        ClientOnboarded boolean, -- command stored in the ws.FiscalContainerWSID   
+        LastError varchar
+    );
+
+
+    EXTENSION ENGINE WASM (        
+        -- Containers
+        COMMAND AddFiscalContainer(AddFiscalContainerParam);
+        
+        PROJECTOR UpdateContainerIdx AFTER EXECUTE ON AddFiscalContainer STATE(View(ContainerIdx)) INTENTS(View(ContainerIdx));
+        PROJECTOR ApplyAddFiscalContainer AFTER EXECUTE ON AddFiscalContainer STATE(FederationCommand);
+        
+        -- Customers
+
+        /*
+        Returns:
+            409, one of:
+                - no containers available
+                - container workspace is not ready
+                - country not supported
+            200 - AddCustomerResult
+        */
+        COMMAND AddCustomer(AddCustomerParam) RETURNS AddCustomerResult;
+        COMMAND UpdateCustomer(UpdateCustomerParam);
+        PROJECTOR OnboardCustomer AFTER EXECUTE ON (AddCustomer, UpdateCustomer, ProvideCertificate) STATE(FederationCommand);
+
+        /*
+        Returns:
+            404 - customer not found
+            403 - invalid credentials
+            200 - GetCustomerStatusResult
+        */
+        QUERY GetCustomerStatus(GetCustomerStatusRequest) RETURNS GetCustomerStatusResult;
+
+        /*
+        Returns:
+            404 - customer not found
+            403 - invalid credentials
+            409 - client not configured
+        */
+        COMMAND ProvideCertificate(ProvideCertificateParam);
+    );
+    GRANT INSERT ON COMMAND AddFiscalContainer TO DevOps;
+    GRANT INSERT ON COMMAND AddCustomer TO OnboardSite;
+    GRANT INSERT ON COMMAND UpdateCustomer TO OnboardSite;
+    GRANT INSERT ON COMMAND ProvideCertificate TO Anyone;
+    GRANT SELECT ON QUERY GetCustomerStatus TO Anyone;
+);

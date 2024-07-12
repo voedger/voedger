@@ -1,0 +1,37 @@
+/*
+ * Copyright (c) 2023-present unTill Software Development Group B.V.
+ * @author Michael Saigachenko
+ */
+
+APPLICATION fiscalcloud();
+
+ROLE OnboardSite;
+ROLE DevOps;
+ROLE Anyone; -- PaymentSite uses ApiKey and ApiSecret to access the Fiscal Cloud
+
+TYPE CompanyIdentification(
+    FiscalCountry int32 NOT NULL, --Retailforce-specific  
+    CompanyVatNr varchar(50),
+    CompanyTaxNr varchar(50),
+    CompanyGlnNr varchar(50),
+    CompanyBusinessIdentificationNr varchar(50),
+    CompanyStatisticalClassification varchar(50),
+    CompanyCommercialRegisterNr varchar(50),
+    CompanyCommercialRegisterNrOffice varchar(50),
+    CompayTradeRegisterNr varchar(50),
+    Reserved1 varchar(50),
+    Reserved2 varchar(50),
+    Reserved3 varchar(50)
+);
+
+TYPE CustomerRequisites (
+    Product int32 NOT NULL, -- 1: Air, 2: Prime
+    Caption varchar(50) NOT NULL,
+    AddressCity varchar(100) NOT NULL,
+    AddressStreet varchar(100) NOT NULL,
+    AddressStreetNumber varchar(30) NOT NULL, -- Can Store and Organization have different addresses?
+    AddressZip varchar(12) NOT NULL,
+    FiscalYearStartMonth int32,
+    CertificateBlobID int64,
+    CertificatePassword varchar(50)
+);

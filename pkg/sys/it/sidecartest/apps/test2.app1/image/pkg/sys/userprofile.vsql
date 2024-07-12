@@ -1,0 +1,60 @@
+-- Copyright (c) 2024-present unTill Software Development Group B.V.
+-- @author Denis Gribanov
+
+ALTERABLE WORKSPACE UserProfileWS INHERITS ProfileWS (
+	DESCRIPTOR UserProfile (
+		DisplayName varchar
+	);
+
+	TYPE DescribePackageNamesResult (
+		Names text NOT NULL
+	);
+
+	TYPE DescribePackageParams (
+		PackageName text NOT NULL
+	);
+
+	TYPE DescribePackageResult (
+		PackageDesc text NOT NULL
+	);
+
+	TYPE InitiateEmailVerificationParams (
+		Entity text NOT NULL, -- must be string, not QName, because target app could not know that QName. E.g. unknown QName «registry.ResetPasswordByEmailUnloggedParams»: name not found
+		Field text NOT NULL,
+		Email text NOT NULL,
+		TargetWSID int64 NOT NULL,
+		ForRegistry bool, -- to issue token for sys/registry/pseudoWSID/c.sys.ResetPassword, not for the current app
+		Language text
+	);
+
+	TYPE IssueVerifiedValueTokenParams (
+		VerificationToken varchar(32768) NOT NULL,
+		VerificationCode text NOT NULL,
+		ForRegistry bool
+	);
+
+	TYPE IssueVerifiedValueTokenResult (
+		VerifiedValueToken text NOT NULL
+	);
+
+	TYPE InitialEmailVerificationResult (
+		VerificationToken varchar(32768) NOT NULL
+	);
+
+	-- not SendEmailVerificationCodeParams because already there are events in dev for c.sys.SendEmailVerificationCode with arg sys.SendEmailVerificationParams
+	TYPE SendEmailVerificationParams (
+		VerificationCode text NOT NULL,
+		Email text NOT NULL,
+		Reason text NOT NULL,
+		Language text
+	);
+
+	EXTENSION ENGINE BUILTIN (
+		QUERY DescribePackageNames RETURNS DescribePackageNamesResult;
+		QUERY DescribePackage(DescribePackageParams) RETURNS DescribePackageResult;
+		QUERY InitiateEmailVerification(InitiateEmailVerificationParams) RETURNS InitialEmailVerificationResult;
+		QUERY IssueVerifiedValueToken(IssueVerifiedValueTokenParams) RETURNS IssueVerifiedValueTokenResult;
+		COMMAND SendEmailVerificationCode(SendEmailVerificationParams);
+		PROJECTOR ApplySendEmailVerificationCode AFTER EXECUTE ON (SendEmailVerificationCode) STATE(AppSecret) INTENTS(SendMail);
+	);
+);

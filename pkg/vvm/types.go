@@ -156,7 +156,7 @@ type VVMConfig struct {
 	SecretsReader       isecrets.ISecretReader
 	// used in tests only
 	KeyspaceNameSuffix string
-	ConfigFS           coreutils.IReadFS
+	ConfigPath         string
 }
 
 type resultSenderErrorFirst struct {

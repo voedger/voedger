@@ -68,18 +68,40 @@ func (a *app) deploy(def appdef.IAppDef, extModuleURLs map[string]*url.URL, stru
 	// TODO: prepare []iextengine.ExtensionPackage from IAppDef
 	// TODO: should pass iextengine.ExtEngineConfig from somewhere (Provide?)
 
-	extModules := map[appdef.ExtensionEngineKind][]iextengine.ExtensionModule{}
+	enginesPathsModules := map[appdef.ExtensionEngineKind]map[string]*iextengine.ExtensionModule{}
 	def.Extensions(func(ext appdef.IExtension) {
 		extEngineKind := ext.Engine()
 		path := ext.App().PackageFullPath(ext.QName().Pkg())
-		moduleURL := extModuleURLs[path]
-		extendionModule := iextengine.ExtensionModule{
-			Path:           path,
-			ModuleUrl:      moduleURL,
-			ExtensionNames: []string{}, // TODO
+		pathsModules, ok := enginesPathsModules[extEngineKind]
+		if !ok {
+			// initialize any engine mentioned in the schema
+			pathsModules = map[string]*iextengine.ExtensionModule{}
+			enginesPathsModules[extEngineKind] = pathsModules
 		}
-		extModules[extEngineKind] = append(extModules[extEngineKind], extendionModule)
+		if extEngineKind != appdef.ExtensionEngineKind_WASM {
+			return
+		}
+		extModule, ok := pathsModules[path]
+		if !ok {
+			moduleURL, ok := extModuleURLs[path]
+			if !ok {
+				panic(fmt.Sprintf("module path %s is missing among extension modules URLs", path))
+			}
+			extModule = &iextengine.ExtensionModule{
+				Path:      path,
+				ModuleUrl: moduleURL,
+			}
+			pathsModules[path] = extModule
+		}
+		extModule.ExtensionNames = append(extModule.ExtensionNames, ext.QName().Entity())
 	})
+	extModules := map[appdef.ExtensionEngineKind][]iextengine.ExtensionModule{}
+	for extEngineKind, pathsModules := range enginesPathsModules {
+		extModules[extEngineKind] = nil // initialize any engine mentioned in the schema
+		for _, extModule := range pathsModules {
+			extModules[extEngineKind] = append(extModules[extEngineKind], *extModule)
+		}
+	}
 
 	// processorKind here is one of ProcessorKind_Command, ProcessorKind_Query, ProcessorKind_Actualizer
 	for processorKind, processorsCountPerKind := range numEnginesPerEngineKind {
@@ -95,7 +117,9 @@ func (a *app) deploy(def appdef.IAppDef, extModuleURLs map[string]*url.URL, stru
 					panic(err)
 				}
 				for i := 0; i < processorsCountPerKind; i++ {
-					ee[i] = &engines{}
+					ee[i] = &engines{
+						byKind: map[appdef.ExtensionEngineKind]iextengine.IExtensionEngine{},
+					}
 					ee[i].byKind[extEngineKind] = extEngines[i]
 				}
 			}

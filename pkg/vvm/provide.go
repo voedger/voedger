@@ -14,6 +14,7 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -172,6 +173,8 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 		provideBasicAsyncActualizerConfig, // projectors.BasicAsyncActualizerConfig
 		provideAsyncActualizersService,    // projectors.IActualizersService
 		appparts.New2,                     // appparts.IAppPartitions
+		provideIActualizers,
+		provideExtensionEngineFactories,
 		apppartsctl.New,
 		provideAppConfigsTypeEmpty,
 		provideBuiltInAppPackages,
@@ -179,6 +182,7 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 		provideBootstrapOperator,
 		provideAdminEndpointServiceOperator,
 		providePublicEndpointServiceOperator,
+		provideSidecarApps,
 		// wire.Value(vvmConfig.NumCommandProcessors) -> (wire bug?) value github.com/untillpro/airs-bp3/vvm.CommandProcessorsCount can't be used: vvmConfig is not declared in package scope
 		wire.FieldsOf(&vvmConfig,
 			"NumCommandProcessors",
@@ -197,6 +201,17 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 			"SecretsReader",
 		),
 	))
+}
+
+func provideExtensionEngineFactories(appsArtefacts BuiltInAppsArtefacts) iextengine.ExtensionEngineFactories {
+	return engines.ProvideExtEngineFactories(engines.ExtEngineFactoriesConfig{
+		AppConfigs:  appsArtefacts.AppConfigsType,
+		WASMCompile: false,
+	})
+}
+
+func provideIActualizers(actService projectors.IActualizersService) appparts.IActualizers {
+	return actService
 }
 
 func provideBootstrapOperator(federation federation.IFederation, asp istructs.IAppStructsProvider, timeFunc coreutils.TimeFunc, apppar appparts.IAppPartitions,
@@ -399,15 +414,27 @@ func provideSecretKeyJWT(sr isecrets.ISecretReader) (itokensjwt.SecretKeyType, e
 	return sr.ReadSecret(itokensjwt.SecretKeyJWTName)
 }
 
-func provideNumsAppsWorkspaces(vvmApps VVMApps, asp istructs.IAppStructsProvider) (map[appdef.AppQName]istructs.NumAppWorkspaces, error) {
+func provideNumsAppsWorkspaces(vvmApps VVMApps, asp istructs.IAppStructsProvider, sidecarApps []appparts.SidecarApp) (map[appdef.AppQName]istructs.NumAppWorkspaces, error) {
 	res := map[appdef.AppQName]istructs.NumAppWorkspaces{}
 	for _, appQName := range vvmApps {
-		as, err := asp.BuiltIn(appQName)
-		if err != nil {
-			// notest
-			return nil, err
+		sidecarNumAppWorkspaces := istructs.NumAppWorkspaces(0)
+		for _, sa := range sidecarApps {
+			if sa.Name == appQName {
+				sidecarNumAppWorkspaces = sa.NumAppWorkspaces
+				break
+			}
 		}
-		res[appQName] = as.NumAppWorkspaces()
+		if sidecarNumAppWorkspaces > 0 {
+			// is sidecar app
+			res[appQName] = sidecarNumAppWorkspaces
+		} else {
+			as, err := asp.BuiltIn(appQName)
+			if err != nil {
+				// notest
+				return nil, err
+			}
+			res[appQName] = as.NumAppWorkspaces()
+		}
 	}
 	return res, nil
 }
@@ -481,45 +508,50 @@ func provideBuiltInAppsArtefacts(vvmConfig *VVMConfig, apis apps.APIs, cfgs AppC
 }
 
 // extModuleURLs is filled here
-func parseSidecarAppSubDir(path string, fs coreutils.IReadFS, extModuleURLs map[string]*url.URL) (asts []*parser.PackageSchemaAST, err error) {
-	dirEntries, err := fs.ReadDir(path)
+func parseSidecarAppSubDir(fullPath string, basePath string, extModuleURLs map[string]*url.URL) (asts []*parser.PackageSchemaAST, err error) {
+	dirEntries, err := os.ReadDir(fullPath)
 	if err != nil {
 		// notest
 		return nil, err
 	}
 	// все sql собьираем по все каталогам и парсим - этополучаем одно приложение
 	// если найшли pgs.wasm - то каждый такой файлик - это отдельный ExtensionModule
+	modulePath := strings.ReplaceAll(fullPath, basePath, "")
+	modulePath = strings.TrimPrefix(modulePath, string(os.PathSeparator))
 	for _, dirEntry := range dirEntries {
 		if dirEntry.IsDir() {
-			subASTs := []*parser.PackageSchemaAST{}
-			subASTs, err = parseSidecarAppSubDir(path+"/"+dirEntry.Name(), fs, extModuleURLs)
+			subASTs, err := parseSidecarAppSubDir(filepath.Join(fullPath, dirEntry.Name()), basePath, extModuleURLs)
 			if err != nil {
 				return nil, err
 			}
 			asts = append(asts, subASTs...)
 			continue
 		}
-		if filepath.Ext(dirEntry.Name()) == "wasm" {
-			path, _ := filepath.Split(dirEntry.Name())
-			moduleURL, err := url.Parse(dirEntry.Name())
+		if filepath.Ext(dirEntry.Name()) == ".wasm" {
+			moduleURL, err := url.Parse(filepath.Join(fullPath, dirEntry.Name()))
 			if err != nil {
 				// notest
 				return nil, err
 			}
-			extModuleURLs[path] = moduleURL
+
+			extModuleURLs[modulePath] = moduleURL
 			continue
 		}
 	}
-	dirAST, err := parser.ParsePackageDir(path, fs, ".")
-	if err != nil {
+
+	packageName := filepath.Base(modulePath)
+	dirAST, err := parser.ParsePackageDir(packageName, os.DirFS(fullPath).(coreutils.IReadFS), ".")
+	if err == nil {
+		asts = append(asts, dirAST)
+	} else if !errors.Is(err, parser.ErrDirContainsNoSchemaFiles) {
 		return nil, err
 	}
-	asts = append(asts, dirAST)
 	return asts, nil
 }
 
 func provideSidecarApps(vvmConfig *VVMConfig) (res []appparts.SidecarApp, err error) {
-	appsEntries, err := vvmConfig.ConfigFS.ReadDir("apps")
+	appsPath := filepath.Join(vvmConfig.ConfigPath, "apps")
+	appsEntries, err := os.ReadDir(appsPath)
 	if err != nil {
 		return nil, err
 	}
@@ -527,11 +559,11 @@ func provideSidecarApps(vvmConfig *VVMConfig) (res []appparts.SidecarApp, err er
 		if !appEntry.IsDir() {
 			continue
 		}
-		appQName, err := appdef.ParseAppQName(appEntry.Name())
-		if err != nil {
-			return nil, fmt.Errorf("application dir entry %s does not look like application QName: %w", appEntry.Name(), err)
-		}
-		appDirEntries, err := vvmConfig.ConfigFS.ReadDir("apps/" + appEntry.Name())
+		appNameStr := filepath.Base(appEntry.Name())
+		appNameParts := strings.Split(appNameStr, ".")
+		appQName := appdef.NewAppQName(appNameParts[0], appNameParts[1])
+		appPath := filepath.Join(appsPath, appNameStr)
+		appDirEntries, err := os.ReadDir(appPath)
 		if err != nil {
 			// notest
 			return nil, err
@@ -542,7 +574,7 @@ func provideSidecarApps(vvmConfig *VVMConfig) (res []appparts.SidecarApp, err er
 		for _, appDirEntry := range appDirEntries {
 			// descriptor.json file and image/pkg/ folder here
 			if !appDirEntry.IsDir() && appDirEntry.Name() == "descriptor.json" {
-				descriptorContent, err := vvmConfig.ConfigFS.ReadFile(fmt.Sprintf("apps/%s/descriptor.json", appEntry.Name()))
+				descriptorContent, err := os.ReadFile(filepath.Join(appPath, "descriptor.json"))
 				if err != nil {
 					// notest
 					return nil, err
@@ -553,7 +585,8 @@ func provideSidecarApps(vvmConfig *VVMConfig) (res []appparts.SidecarApp, err er
 			}
 			if appDirEntry.IsDir() && appDirEntry.Name() == "image" {
 				//  вот как тут учестьЮ что ExtensionModules может быть несколько?
-				appASTs, err = parseSidecarAppSubDir("apps/"+appDirEntry.Name()+"/image/pkg", vvmConfig.ConfigFS, extModuleURLs)
+				pkgPath := filepath.Join(appPath, "image", "pkg")
+				appASTs, err = parseSidecarAppSubDir(pkgPath, pkgPath, extModuleURLs)
 				if err != nil {
 					return nil, err
 				}
@@ -576,13 +609,6 @@ func provideSidecarApps(vvmConfig *VVMConfig) (res []appparts.SidecarApp, err er
 		if err != nil {
 			return nil, err
 		}
-
-		appDef.Extensions(func(ext appdef.IExtension) {
-			if ext.Engine() != appdef.ExtensionEngineKind_WASM {
-				return
-			}
-			logger.Info(fmt.Sprintf("%T", ext)) // тут посмотреть как найти все имена
-		})
 
 		// TODO: implement sidecar apps schemas compatibility check (baseline_schemas)
 		res = append(res, appparts.SidecarApp{
