@@ -7,10 +7,10 @@ package appdef
 
 import (
 	"fmt"
-	"strconv"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/voedger/voedger/pkg/utils/utils"
 )
 
 func Test_NullType(t *testing.T) {
@@ -69,7 +69,7 @@ func TestTypeKind_MarshalText(t *testing.T) {
 		},
 		{name: `TypeKind_FakeLast —> <number>`,
 			k:    TypeKind_count,
-			want: strconv.FormatUint(uint64(TypeKind_count), 10),
+			want: utils.UintToString(TypeKind_count),
 		},
 	}
 	for _, tt := range tests {
@@ -87,7 +87,7 @@ func TestTypeKind_MarshalText(t *testing.T) {
 
 	t.Run("100% cover TypeKind.String()", func(t *testing.T) {
 		const tested = TypeKind_count + 1
-		want := "TypeKind(" + strconv.FormatInt(int64(tested), 10) + ")"
+		want := "TypeKind(" + utils.UintToString(tested) + ")"
 		got := tested.String()
 		if got != want {
 			t.Errorf("(TypeKind_FakeLast + 1).String() = %v, want %v", got, want)

@@ -12,6 +12,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/google/uuid"
@@ -99,6 +100,7 @@ func build(compileRes *compile.Result, params *vpmParams) error {
 
 // buildDir creates a directory structure with vsql and wasm files
 func buildDir(pkgFiles packageFiles, buildDirPath string) error {
+	wasmDirsToBuild := make([]string, 0, len(pkgFiles))
 	for qpn, files := range pkgFiles {
 		pkgBuildDir := filepath.Join(buildDirPath, qpn)
 		if err := os.MkdirAll(pkgBuildDir, coreutils.FileMode_rwxrwxrwx); err != nil {
@@ -113,9 +115,15 @@ func buildDir(pkgFiles packageFiles, buildDirPath string) error {
 				return fmt.Errorf(errFmtCopyFile, file, err)
 			}
 
-			// building wasm files: if wasm directory exists, build wasm file and copy it to the temp build directory
+			// building wasm files: if wasm directory exists,
+			// build wasm file and copy it to the temp build directory
 			fileDir := filepath.Dir(file)
 			wasmDirPath := filepath.Join(fileDir, wasmDirName)
+			// build only unique wasm directories
+			if slices.Contains(wasmDirsToBuild, wasmDirPath) {
+				continue
+			}
+
 			exists, err := coreutils.Exists(wasmDirPath)
 			if err != nil {
 				return err
@@ -126,6 +134,9 @@ func buildDir(pkgFiles packageFiles, buildDirPath string) error {
 				if err != nil {
 					return err
 				}
+				// for controlling uniqueness of wasm directories
+				wasmDirsToBuild = append(wasmDirsToBuild, wasmDirPath)
+				// copy the wasm file to the build directory
 				if err := coreutils.CopyFile(wasmFilePath, pkgBuildDir); err != nil {
 					return fmt.Errorf(errFmtCopyFile, wasmFilePath, err)
 				}

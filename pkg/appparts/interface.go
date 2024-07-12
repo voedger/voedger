@@ -78,3 +78,23 @@ type IAppPartition interface {
 // dependency cycle: func requires IAppPartitions, provider of IAppPartitions requires already filled AppConfigsType -> impossible to provide AppConfigsType because we're filling it now
 // TODO: eliminate this workaround
 // type BuiltInAppsDeploymentDescriptors map[appdef.AppQName]AppDeploymentDescriptor
+
+// Application partition actualizers.
+//
+// Used by IAppPartitions to deploy and undeploy actualizers for application partitions
+type IActualizers interface {
+	// Assign application partitions manager.
+	//
+	// Should be called before any other method.
+	SetAppPartitions(IAppPartitions)
+
+	// Deploys actualizers for specified application partition.
+	//
+	// Should start new actualizers and stop removed actualizers
+	DeployPartition(appdef.AppQName, istructs.PartitionID) error
+
+	// Undeploy actualizers for specified application partition.
+	//
+	// Should stop all partition actualizers
+	UndeployPartition(appdef.AppQName, istructs.PartitionID)
+}

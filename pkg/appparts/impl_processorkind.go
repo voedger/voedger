@@ -6,8 +6,9 @@
 package appparts
 
 import (
-	"strconv"
 	"strings"
+
+	"github.com/voedger/voedger/pkg/utils/utils"
 )
 
 func (k ProcessorKind) MarshalText() ([]byte, error) {
@@ -15,8 +16,7 @@ func (k ProcessorKind) MarshalText() ([]byte, error) {
 	if k < ProcessorKind_Count {
 		s = k.String()
 	} else {
-		const base = 10
-		s = strconv.FormatUint(uint64(k), base)
+		s = utils.UintToString(k)
 	}
 	return []byte(s), nil
 }

@@ -89,6 +89,14 @@ func createWasmDir(dir string) error {
 }
 
 func createGoMod(dir, modulePath string) error {
+	// check go version
+	goVersion := runtime.Version()
+
+	goVersionNumber := strings.TrimSpace(strings.TrimPrefix(goVersion, "go"))
+	if !checkGoVersion(goVersionNumber) {
+		return fmt.Errorf(unsupportedGoVersionErrFormat, goVersionNumber)
+	}
+
 	filePath := filepath.Join(dir, goModFileName)
 
 	exists, err := coreutils.Exists(filePath)
@@ -96,23 +104,16 @@ func createGoMod(dir, modulePath string) error {
 		// notest
 		return err
 	}
-	if exists {
-		return fmt.Errorf("%s already exists", filePath)
-	}
-	goVersion := runtime.Version()
-	goVersionNumber := strings.TrimSpace(strings.TrimPrefix(goVersion, "go"))
-	if !checkGoVersion(goVersionNumber) {
-		return fmt.Errorf(unsupportedGoVersionErrFormat, goVersionNumber)
+
+	// if go.mod file does not exist, create it
+	if !exists {
+		goModContent := fmt.Sprintf(goModContentTemplate, modulePath, goVersionNumber)
+		if err := os.WriteFile(filePath, []byte(goModContent), coreutils.FileMode_rw_rw_rw_); err != nil {
+			return err
+		}
 	}
 
-	goModContent := fmt.Sprintf(goModContentTemplate, modulePath, goVersionNumber)
-	if err := os.WriteFile(filePath, []byte(goModContent), coreutils.FileMode_rw_rw_rw_); err != nil {
-		return err
-	}
-	if err := execGoGet(dir, compile.VoedgerPath); err != nil {
-		return err
-	}
-	return nil
+	return execGoGet(dir, compile.VoedgerPath)
 }
 
 func checkGoVersion(goVersionNumber string) bool {
@@ -146,7 +147,8 @@ func createPackagesGen(imports []string, dir, modulePath string, recreate bool) 
 		strBuffer.WriteString(fmt.Sprintf("_ %q\n", imp))
 	}
 
-	packagesGenContent := fmt.Sprintf(packagesGenContentTemplate, filepath.Base(modulePath), strBuffer.String())
+	packageName := strings.ReplaceAll(filepath.Base(modulePath), "-", "_")
+	packagesGenContent := fmt.Sprintf(packagesGenContentTemplate, packageName, strBuffer.String())
 	packagesGenContentFormatted, err := format.Source([]byte(packagesGenContent))
 	if err != nil {
 		return err
@@ -155,6 +157,7 @@ func createPackagesGen(imports []string, dir, modulePath string, recreate bool) 
 	if err := os.WriteFile(packagesGenFilePath, packagesGenContentFormatted, coreutils.FileMode_rw_rw_rw_); err != nil {
 		return err
 	}
+
 	return nil
 }
 
@@ -163,5 +166,6 @@ func execGoGet(goModDir, dependencyToGet string) error {
 	if logger.IsVerbose() {
 		stdout = os.Stdout
 	}
-	return new(exec.PipedExec).Command("go", "get", dependencyToGet+"@latest").WorkingDir(goModDir).Run(stdout, os.Stderr)
+
+	return new(exec.PipedExec).Command("go", "get", dependencyToGet+"@main").WorkingDir(goModDir).Run(stdout, os.Stderr)
 }

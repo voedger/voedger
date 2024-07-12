@@ -115,6 +115,8 @@ type IIntents interface {
 
 	// returns nil when not found
 	FindIntent(key IStateKeyBuilder) IStateValueBuilder
+
+	IntentsCount() int
 }
 type IPkgNameResolver interface {
 	// Returns package path by package local name.

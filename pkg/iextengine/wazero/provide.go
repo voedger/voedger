@@ -4,8 +4,10 @@
 */
 package iextenginewazero
 
-import "github.com/voedger/voedger/pkg/iextengine"
+import (
+	"github.com/voedger/voedger/pkg/iextengine"
+)
 
-func ProvideExtensionEngineFactory(compile bool) iextengine.IExtensionEngineFactory {
-	return extensionEngineFactory{compile}
+func ProvideExtensionEngineFactory(wasmConfig iextengine.WASMFactoryConfig) iextengine.IExtensionEngineFactory {
+	return extensionEngineFactory{wasmConfig: wasmConfig}
 }

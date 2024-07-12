@@ -42,3 +42,8 @@ func AppWSIDToPseudoWSID(appWSID istructs.WSID) (pseudoWSID istructs.WSID) {
 	appWSNumber := appWSID.BaseWSID() - istructs.FirstBaseAppWSID
 	return istructs.NewWSID(istructs.MainClusterID, appWSNumber)
 }
+
+// used in BuildAppWorkspaces() only because there are no apps in IAppPartitions on that moment
+func AppPartitionID(wsid istructs.WSID, numAppPartitions istructs.NumAppPartitions) istructs.PartitionID {
+	return istructs.PartitionID(int(wsid) % int(numAppPartitions))
+}

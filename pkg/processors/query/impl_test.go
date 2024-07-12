@@ -19,6 +19,7 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/iauthnzimpl"
+	"github.com/voedger/voedger/pkg/iextengine"
 	"github.com/voedger/voedger/pkg/iprocbus"
 	"github.com/voedger/voedger/pkg/iratesce"
 	"github.com/voedger/voedger/pkg/istorage/mem"
@@ -318,12 +319,13 @@ func deployTestAppWithSecretToken(require *require.Assertions,
 	require.NoError(as.Records().Apply(pLogEvent))
 	require.NoError(as.Events().PutWlog(pLogEvent))
 
-	appParts, cleanup, err = appparts.NewWithActualizerWithExtEnginesFactories(asp,
+	appParts, cleanup, err = appparts.New2(asp,
 		func(istructs.IAppStructs, istructs.PartitionID) pipeline.ISyncOperator { return &pipeline.NOOP{} }, // no projectors
+		appparts.NullActualizers,
 		engines.ProvideExtEngineFactories(
 			engines.ExtEngineFactoriesConfig{
-				AppConfigs:  cfgs,
-				WASMCompile: false,
+				AppConfigs: cfgs,
+				WASMConfig: iextengine.WASMFactoryConfig{Compile: false},
 			}))
 	require.NoError(err)
 	appParts.DeployApp(appName, appDef, partCount, appEngines)

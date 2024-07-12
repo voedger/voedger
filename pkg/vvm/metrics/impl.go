@@ -12,9 +12,9 @@ import (
 	"net/http"
 
 	"github.com/voedger/voedger/pkg/goutils/logger"
+	coreutils "github.com/voedger/voedger/pkg/utils"
 
 	imetrics "github.com/voedger/voedger/pkg/metrics"
-	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 func (ms *metricsService) Prepare(interface{}) (err error) {

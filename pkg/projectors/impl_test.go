@@ -7,6 +7,7 @@
 package projectors
 
 import (
+	"context"
 	"errors"
 	"testing"
 	"time"
@@ -15,9 +16,11 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appparts"
+	"github.com/voedger/voedger/pkg/iextengine"
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/in10nmem"
 	"github.com/voedger/voedger/pkg/iratesce"
+	"github.com/voedger/voedger/pkg/isecrets"
 	"github.com/voedger/voedger/pkg/isecretsimpl"
 	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istorage/mem"
@@ -54,8 +57,8 @@ var newWorkspaceCmd = appdef.NewQName("sys", "NewWorkspace")
 func TestBasicUsage_SynchronousActualizer(t *testing.T) {
 	require := require.New(t)
 
-	appParts, cleanup, _, appStructs := deployTestApp(
-		istructs.AppQName_test1_app1, 1, []istructs.PartitionID{1}, false,
+	appParts, appStructs, start, stop := deployTestApp(
+		istructs.AppQName_test1_app1, 1, false,
 		func(appDef appdef.IAppDefBuilder) {
 			appDef.AddPackage("test", "test.com/test")
 			ProvideViewDef(appDef, incProjectionView, buildProjectionView)
@@ -70,10 +73,16 @@ func TestBasicUsage_SynchronousActualizer(t *testing.T) {
 		func(cfg *istructsmem.AppConfigType) {
 			cfg.AddSyncProjectors(testIncrementor, testDecrementor)
 			cfg.Resources.Add(istructsmem.NewCommandFunction(testQName, istructsmem.NullCommandExec))
-		})
-	defer cleanup()
+		},
+		&BasicAsyncActualizerConfig{})
+
 	createWS(appStructs, istructs.WSID(1001), testWorkspaceDescriptor, istructs.PartitionID(1), istructs.Offset(1))
 	createWS(appStructs, istructs.WSID(1002), testWorkspaceDescriptor, istructs.PartitionID(1), istructs.Offset(1))
+
+	appParts.DeployAppPartitions(istructs.AppQName_test1_app1, []istructs.PartitionID{1})
+
+	start()
+	defer stop()
 
 	t.Run("Emulate the command processor", func(t *testing.T) {
 		proc := cmdProcMock{appParts}
@@ -177,15 +186,38 @@ type (
 func deployTestApp(
 	appName appdef.AppQName,
 	appPartsCount istructs.NumAppPartitions,
-	partID []istructs.PartitionID,
 	cachedStorage bool,
 	prepareAppDef appDefCallback,
 	prepareAppCfg appCfgCallback,
+	actualizerCfg *BasicAsyncActualizerConfig,
 ) (
 	appParts appparts.IAppPartitions,
-	cleanup func(),
-	metrics imetrics.IMetrics,
 	appStructs istructs.IAppStructs,
+	start, stop func(),
+) {
+	appParts, _, appStructs, start, stop = deployTestAppEx(
+		appName,
+		appPartsCount,
+		cachedStorage,
+		prepareAppDef,
+		prepareAppCfg,
+		actualizerCfg,
+	)
+	return appParts, appStructs, start, stop
+}
+
+func deployTestAppEx(
+	appName appdef.AppQName,
+	appPartsCount istructs.NumAppPartitions,
+	cachedStorage bool,
+	prepareAppDef appDefCallback,
+	prepareAppCfg appCfgCallback,
+	actualizerCfg *BasicAsyncActualizerConfig,
+) (
+	appParts appparts.IAppPartitions,
+	actualizers IActualizersService,
+	appStructs istructs.IAppStructs,
+	start, stop func(),
 ) {
 	appDefBuilder := appdef.New()
 	if prepareAppDef != nil {
@@ -211,13 +243,58 @@ func deployTestApp(
 		panic(err)
 	}
 
+	var vvmName string = "testVVM"
+
+	if actualizerCfg.VvmName == "" {
+		actualizerCfg.VvmName = vvmName
+	} else {
+		vvmName = actualizerCfg.VvmName
+	}
+
+	var (
+		vvmCtx    context.Context
+		vvmCancel context.CancelFunc
+	)
+
+	if actualizerCfg.Ctx == nil {
+		vvmCtx, vvmCancel = context.WithCancel(context.Background())
+		actualizerCfg.Ctx = vvmCtx
+	} else {
+		vvmCtx = actualizerCfg.Ctx
+	}
+
+	var metrics imetrics.IMetrics
+
+	if actualizerCfg.Metrics == nil {
+		metrics = imetrics.Provide()
+		actualizerCfg.Metrics = metrics
+	} else {
+		metrics = actualizerCfg.Metrics
+	}
+
 	var storageProvider istorage.IAppStorageProvider
 
 	if cachedStorage {
-		metrics = imetrics.Provide()
-		storageProvider = istoragecache.Provide(1000000, istorageimpl.Provide(mem.Provide()), metrics, "testVM")
+		storageProvider = istoragecache.Provide(1000000, istorageimpl.Provide(mem.Provide()), metrics, vvmName)
 	} else {
 		storageProvider = istorageimpl.Provide(mem.Provide())
+	}
+
+	var (
+		n10nBroker in10n.IN10nBroker
+		n10cleanup func()
+	)
+
+	if actualizerCfg.Broker == nil {
+		n10nBroker, n10cleanup = in10nmem.ProvideEx2(in10n.Quotas{
+			Channels:                1000,
+			ChannelsPerSubject:      10,
+			Subscriptions:           1000,
+			SubscriptionsPerSubject: 10,
+		}, time.Now)
+		actualizerCfg.Broker = n10nBroker
+	} else {
+		n10nBroker = actualizerCfg.Broker
 	}
 
 	appStructsProvider := istructsmem.Provide(
@@ -231,35 +308,49 @@ func deployTestApp(
 		panic(err)
 	}
 
-	secretReader := isecretsimpl.ProvideSecretReader()
-	n10nBroker, n10nBrokerCleanup := in10nmem.ProvideEx2(in10n.Quotas{
-		Channels:                1000,
-		ChannelsPerSubject:      10,
-		Subscriptions:           1000,
-		SubscriptionsPerSubject: 10,
-	}, time.Now)
+	var secretReader isecrets.ISecretReader
 
-	appParts, appPartsCleanup, err := appparts.NewWithActualizerWithExtEnginesFactories(
+	if actualizerCfg.SecretReader == nil {
+		secretReader = isecretsimpl.ProvideSecretReader()
+		actualizerCfg.SecretReader = secretReader
+	} else {
+		secretReader = actualizerCfg.SecretReader
+	}
+
+	actualizers = ProvideActualizers(*actualizerCfg)
+
+	appParts, appPartsCleanup, err := appparts.New2(
 		appStructsProvider,
 		NewSyncActualizerFactoryFactory(ProvideSyncActualizerFactory(), secretReader, n10nBroker),
+		actualizers,
 		engines.ProvideExtEngineFactories(
 			engines.ExtEngineFactoriesConfig{
-				AppConfigs:  cfgs,
-				WASMCompile: false,
+				AppConfigs: cfgs,
+				WASMConfig: iextengine.WASMFactoryConfig{Compile: false},
 			}))
 	if err != nil {
 		panic(err)
 	}
 
 	appParts.DeployApp(appName, appDef, appPartsCount, appparts.PoolSize(10, 10, 10))
-	appParts.DeployAppPartitions(appName, partID)
 
-	cleanup = func() {
-		appPartsCleanup()
-		n10nBrokerCleanup()
+	start = func() {
+		if err := actualizers.Prepare(struct{}{}); err != nil {
+			panic(err)
+		}
+		actualizers.RunEx(vvmCtx, func() {})
 	}
 
-	return appParts, cleanup, metrics, appStructs
+	stop = func() {
+		vvmCancel()
+		actualizers.Stop()
+		appPartsCleanup()
+		if n10cleanup != nil {
+			n10cleanup()
+		}
+	}
+
+	return appParts, actualizers, appStructs, start, stop
 }
 
 func addWS(appDef appdef.IAppDefBuilder, wsKind, wsDescriptorKind appdef.QName) appdef.IWorkspaceBuilder {
@@ -297,8 +388,8 @@ func createWS(appStructs istructs.IAppStructs, ws istructs.WSID, wsDescriptorKin
 func Test_ErrorInSyncActualizer(t *testing.T) {
 	require := require.New(t)
 
-	appParts, cleanup, _, appStructs := deployTestApp(
-		istructs.AppQName_test1_app1, 1, []istructs.PartitionID{1}, false,
+	appParts, appStructs, start, stop := deployTestApp(
+		istructs.AppQName_test1_app1, 1, false,
 		func(appDef appdef.IAppDefBuilder) {
 			appDef.AddPackage("test", "test.com/test")
 			ProvideViewDef(appDef, incProjectionView, buildProjectionView)
@@ -313,12 +404,17 @@ func Test_ErrorInSyncActualizer(t *testing.T) {
 		func(cfg *istructsmem.AppConfigType) {
 			cfg.AddSyncProjectors(testIncrementor, testDecrementor)
 			cfg.Resources.Add(istructsmem.NewCommandFunction(testQName, istructsmem.NullCommandExec))
-		})
-	defer cleanup()
+		},
+		&BasicAsyncActualizerConfig{})
 
 	createWS(appStructs, istructs.WSID(1001), testWorkspaceDescriptor, istructs.PartitionID(1), istructs.Offset(1))
 	createWS(appStructs, istructs.WSID(1002), testWorkspaceDescriptor, istructs.PartitionID(1), istructs.Offset(1))
 	createWS(appStructs, istructs.WSID(1099), testWorkspaceDescriptor, istructs.PartitionID(1), istructs.Offset(1))
+
+	appParts.DeployAppPartitions(istructs.AppQName_test1_app1, []istructs.PartitionID{1})
+
+	start()
+	defer stop()
 
 	t.Run("Emulate the command processor", func(t *testing.T) {
 		proc := cmdProcMock{appParts}

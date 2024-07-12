@@ -61,7 +61,7 @@ func NewTestState(processorKind int, packagePath string, createWorkspaces ...Tes
 	ts.ctx = context.Background()
 	ts.processorKind = processorKind
 	ts.secretReader = &secretReader{secrets: make(map[string][]byte)}
-	ts.buildAppDef(packagePath, ".", createWorkspaces...)
+	ts.buildAppDef(packagePath, "..", createWorkspaces...)
 	ts.buildState(processorKind)
 	return ts
 }
@@ -273,21 +273,34 @@ func (ctx *testState) buildAppDef(packagePath string, packageDir string, createW
 	if err != nil {
 		panic(err)
 	}
-	dummyAppFileAST, err := parser.ParseFile("dummy.sql", fmt.Sprintf(`
-		IMPORT SCHEMA '%s' AS %s;
-		APPLICATION test(
-			USE %s;
-		);
-	`, packagePath, TestPkgAlias, TestPkgAlias))
-	if err != nil {
-		panic(err)
-	}
-	dummyAppPkgAST, err := parser.BuildPackageSchema(packagePath+"_app", []*parser.FileSchemaAST{dummyAppFileAST})
+
+	app, err := parser.FindApplication(pkgAst)
 	if err != nil {
 		panic(err)
 	}
 
-	packagesAST := []*parser.PackageSchemaAST{pkgAst, dummyAppPkgAST, sysPackageAST}
+	packagesAST := []*parser.PackageSchemaAST{pkgAst, sysPackageAST}
+
+	var dummyAppPkgAST *parser.PackageSchemaAST
+	if app == nil {
+		PackageName = "tstpkg"
+		dummyAppFileAST, err := parser.ParseFile("dummy.sql", fmt.Sprintf(`
+			IMPORT SCHEMA '%s' AS %s;
+			APPLICATION test(
+				USE %s;
+			);
+		`, packagePath, PackageName, PackageName))
+		if err != nil {
+			panic(err)
+		}
+		dummyAppPkgAST, err = parser.BuildPackageSchema(packagePath+"_app", []*parser.FileSchemaAST{dummyAppFileAST})
+		if err != nil {
+			panic(err)
+		}
+		packagesAST = append(packagesAST, dummyAppPkgAST)
+	} else {
+		PackageName = parser.GetPackageName(packagePath)
+	}
 
 	appSchema, err := parser.BuildAppSchema(packagesAST)
 	if err != nil {
@@ -316,7 +329,7 @@ func (ctx *testState) buildAppDef(packagePath string, packageDir string, createW
 	cfg := cfgs.AddBuiltInAppConfig(appName, adb)
 	cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 	ctx.appDef.Extensions(func(i appdef.IExtension) {
-		if i.QName().Pkg() == TestPkgAlias {
+		if i.QName().Pkg() == PackageName {
 			if proj, ok := i.(appdef.IProjector); ok {
 				if proj.Sync() {
 					cfg.AddSyncProjectors(istructs.Projector{Name: i.QName()})
@@ -347,7 +360,7 @@ func (ctx *testState) buildAppDef(packagePath string, packageDir string, createW
 	ctx.wsOffsets = make(map[istructs.WSID]istructs.Offset)
 
 	for _, ws := range createWorkspaces {
-		err = wsdescutil.CreateCDocWorkspaceDescriptorStub(ctx.appStructs, TestPartition, ws.WSID, appdef.NewQName(TestPkgAlias, ws.WorkspaceDescriptor), ctx.nextPLogOffs(), ctx.nextWSOffs(ws.WSID))
+		err = wsdescutil.CreateCDocWorkspaceDescriptorStub(ctx.appStructs, TestPartition, ws.WSID, appdef.NewQName(PackageName, ws.WorkspaceDescriptor), ctx.nextPLogOffs(), ctx.nextWSOffs(ws.WSID))
 		if err != nil {
 			panic(err)
 		}
@@ -463,6 +476,12 @@ type intentAssertions struct {
 	ctx *testState
 }
 
+func (ia *intentAssertions) NotExists() {
+	if ia.vb != nil {
+		require.Fail(ia.t, "expected intent not to exist")
+	}
+}
+
 func (ia *intentAssertions) Exists() {
 	if ia.vb == nil {
 		require.Fail(ia.t, "expected intent to exist")
@@ -494,7 +513,13 @@ func (ia *intentAssertions) Equal(vbc ValueBuilderCallback) {
 	vbc(vb)
 
 	if !ia.vb.Equal(vb) {
-		require.Fail(ia.t, "Expected intents to be equal")
+		require.Fail(ia.t, "expected intents to be equal")
+	}
+}
+
+func (ctx *testState) RequireNoIntents(t *testing.T) {
+	if ctx.IState.IntentsCount() > 0 {
+		require.Fail(t, "expected no intents")
 	}
 }
 

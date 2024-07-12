@@ -12,6 +12,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
+	imetrics "github.com/voedger/voedger/pkg/metrics"
 )
 
 type IExtensionsModule interface {
@@ -35,6 +36,14 @@ type ExtEngineConfig struct {
 	MemoryLimitPages uint
 
 	// Compile bool
+}
+
+type WASMFactoryConfig struct {
+	Compile            bool
+	InvocationsTotal   *imetrics.MetricValue
+	InvocationsSeconds *imetrics.MetricValue
+	ErrorsTotal        *imetrics.MetricValue
+	RecoversTotal      *imetrics.MetricValue
 }
 
 type IExtensionIO interface {
