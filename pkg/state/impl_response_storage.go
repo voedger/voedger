@@ -91,11 +91,11 @@ func (s *cmdResponseStorage) NewKeyBuilder(_ appdef.QName, _ istructs.IStateKeyB
 }
 
 func (s *cmdResponseStorage) Validate([]ApplyBatchItem) (err error) {
-	panic("not applicable")
+	return nil
 }
 
 func (s *cmdResponseStorage) ApplyBatch([]ApplyBatchItem) (err error) {
-	panic("not applicable")
+	return nil
 }
 
 func (s *cmdResponseStorage) ProvideValueBuilder(istructs.IStateKeyBuilder, istructs.IStateValueBuilder) (istructs.IStateValueBuilder, error) {

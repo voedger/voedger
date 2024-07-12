@@ -19,20 +19,7 @@ import (
 )
 
 // engine placeholder
-type engines struct {
-	byKind map[appdef.ExtensionEngineKind]iextengine.IExtensionEngine
-
-	// there are 3 pools in partitionsRT: for query, command and actualizers.
-	// this field need to return the current `engines` instance to the right one of these 3 pools
-	pool *pool.Pool[*engines]
-}
-
-func (e *engines) release() {
-	if p := e.pool; p != nil {
-		e.pool = nil
-		p.Release(e)
-	}
-}
+type engines [appdef.ExtensionEngineKind_Count]iextengine.IExtensionEngine
 
 type app struct {
 	mx         sync.RWMutex
@@ -117,10 +104,7 @@ func (a *app) deploy(def appdef.IAppDef, extModuleURLs map[string]*url.URL, stru
 					panic(err)
 				}
 				for i := 0; i < processorsCountPerKind; i++ {
-					ee[i] = &engines{
-						byKind: map[appdef.ExtensionEngineKind]iextengine.IExtensionEngine{},
-					}
-					ee[i].byKind[extEngineKind] = extEngines[i]
+					ee[i][extEngineKind] = extEngines[i]
 				}
 			}
 		}
@@ -154,10 +138,11 @@ func (p *partition) borrow(proc ProcessorKind) (*partitionRT, error) {
 }
 
 type partitionRT struct {
-	part       *partition
-	appDef     appdef.IAppDef
-	appStructs istructs.IAppStructs
-	borrowed   *engines
+	part                  *partition
+	appDef                appdef.IAppDef
+	appStructs            istructs.IAppStructs
+	borrowed              *engines
+	borrowedProcessorKind ProcessorKind
 }
 
 var partionRTPool = sync.Pool{
@@ -198,26 +183,27 @@ func (rt *partitionRT) Invoke(ctx context.Context, name appdef.QName, state istr
 	}
 	io := iextengine.NewExtensionIO(rt.appDef, state, intents)
 
-	return rt.borrowed.byKind[e.Engine()].Invoke(ctx, extName, io)
+	return rt.borrowed[e.Engine()].Invoke(ctx, extName, io)
 }
 
 func (rt *partitionRT) Release() {
 	if e := rt.borrowed; e != nil {
 		rt.borrowed = nil
-		e.release()
+		rt.part.app.engines[rt.borrowedProcessorKind].Release(e)
+		rt.borrowedProcessorKind = ProcessorKind_Count // like null
 	}
 	partionRTPool.Put(rt)
 }
 
 // Initialize partition RT structures for use
 func (rt *partitionRT) init(proc ProcessorKind) error {
-	// TODO: переделать тут: возвращать в Reelase откуда взяли, а не через engine.release, убрать engine.pool.
+	// TODO: ���������� ���: ���������� � Reelase ������ �����, � �� ����� engine.release, ������ engine.pool.
 	pool := rt.part.app.engines[proc]
 	engine, err := pool.Borrow() // will be released in (*engine).release()
 	if err != nil {
 		return errNotAvailableEngines[proc]
 	}
-	engine.pool = pool
 	rt.borrowed = engine
+	rt.borrowedProcessorKind = proc
 	return nil
 }

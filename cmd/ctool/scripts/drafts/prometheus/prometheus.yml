@@ -13,9 +13,9 @@ alerting:
       target_label: node
   alertmanagers:
     - static_configs:
-      - targets:
-        - {{.AppNode1}}:9093 # during deploy replace with real ip address of alert manager
-        - {{.AppNode2}}:9093 # during deploy replace with real ip address of alert manager
+        - targets:
+            - {{.AppNode1}}:9093 # during deploy replace with real ip address of alert manager
+            - {{.AppNode2}}:9093 # during deploy replace with real ip address of alert manager
 
 # Load rules once and periodically evaluate them according to the global 'evaluation_interval'.
 rule_files:
@@ -40,9 +40,9 @@ scrape_configs:
       - targets: 
         - {{.AppNode1}}:9100
         - {{.AppNode2}}:9100
-        - {{.DBNode1}}:9100
-        - {{.DBNode2}}:9100
-        - {{.DBNode3}}:9100
+        - {{.DBNode1}}:9500
+        - {{.DBNode2}}:9500
+        - {{.DBNode3}}:9500
 
   - job_name: 'scylla-cluster'
     scrape_interval: 10s

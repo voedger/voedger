@@ -244,6 +244,28 @@ func ProvideApp1(apis apps.APIs, cfg *istructsmem.AppConfigType, ep extensionpoi
 		return nil
 	}))
 
+	funcWithResponseIntents := func(args istructs.PrepareArgs, st istructs.IState, intents istructs.IIntents) (err error) {
+		kb, err := st.KeyBuilder(state.Response, appdef.NullQName)
+		if err != nil {
+			return err
+		}
+		vb, err := intents.NewValue(kb)
+		if err != nil {
+			return err
+		}
+		vb.PutInt32(state.Field_StatusCode, args.ArgumentObject.AsInt32("StatusCodeToReturn"))
+		vb.PutString(state.Field_ErrorMessage, "error from response intent")
+		return nil
+	}
+
+	cfg.Resources.Add(istructsmem.NewCommandFunction(appdef.NewQName(app1PkgName, "CmdWithResponseIntent"), func(args istructs.ExecCommandArgs) (err error) {
+		return funcWithResponseIntents(args.PrepareArgs, args.State, args.Intents)
+	}))
+
+	cfg.Resources.Add(istructsmem.NewQueryFunction(appdef.NewQName(app1PkgName, "QryWithResponseIntent"), func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
+		return funcWithResponseIntents(args.PrepareArgs, args.State, args.Intents)
+	}))
+
 	app1PackageFS := parser.PackageFS{
 		PackageFQN: App1PkgPath,
 		FS:         SchemaTestApp1FS,

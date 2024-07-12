@@ -1,3 +1,8 @@
+## Motivation
+
+- https://github.com/voedger/voedger/issues/1829
+
+
 ## General-Purpose Data Types
 | Data Type (sql-2016)    | Aliases                      | Description                                                     |
 | ----------------------- | ---------------------------- | --------------------------------------------------------------- |

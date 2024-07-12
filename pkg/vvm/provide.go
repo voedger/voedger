@@ -173,8 +173,9 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 		provideBasicAsyncActualizerConfig, // projectors.BasicAsyncActualizerConfig
 		provideAsyncActualizersService,    // projectors.IActualizersService
 		appparts.New2,                     // appparts.IAppPartitions
+		engines.ProvideExtEngineFactories,
 		provideIActualizers,
-		provideExtensionEngineFactories,
+		provideExtensionFactoriesConfig,
 		apppartsctl.New,
 		provideAppConfigsTypeEmpty,
 		provideBuiltInAppPackages,
@@ -203,11 +204,11 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 	))
 }
 
-func provideExtensionEngineFactories(appsArtefacts BuiltInAppsArtefacts) iextengine.ExtensionEngineFactories {
-	return engines.ProvideExtEngineFactories(engines.ExtEngineFactoriesConfig{
-		AppConfigs:  appsArtefacts.AppConfigsType,
-		WASMCompile: false,
-	})
+func provideExtensionFactoriesConfig(appsArtefacts BuiltInAppsArtefacts) engines.ExtEngineFactoriesConfig {
+	return engines.ExtEngineFactoriesConfig{
+		AppConfigs: appsArtefacts.AppConfigsType,
+		WASMConfig: iextengine.WASMFactoryConfig{Compile: false},
+	}
 }
 
 func provideIActualizers(actService projectors.IActualizersService) appparts.IActualizers {
@@ -279,13 +280,6 @@ func provideBasicAsyncActualizerConfig(
 
 func provideAsyncActualizersService(cfg projectors.BasicAsyncActualizerConfig) projectors.IActualizersService {
 	return projectors.ProvideActualizers(cfg)
-}
-
-func provideExtEngineFactories(builtInAppsArtefacts BuiltInAppsArtefacts) iextengine.ExtensionEngineFactories {
-	return engines.ProvideExtEngineFactories(engines.ExtEngineFactoriesConfig{
-		AppConfigs:  builtInAppsArtefacts.AppConfigsType,
-		WASMCompile: false,
-	})
 }
 
 func provideIsDeviceAllowedFunc(builtInAppsArtefacts BuiltInAppsArtefacts) iauthnzimpl.IsDeviceAllowedFuncs {

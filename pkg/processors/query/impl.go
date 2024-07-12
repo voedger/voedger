@@ -119,7 +119,11 @@ func implServiceFactory(serviceChannel iprocbus.ServiceChannel, resultSenderClos
 						p.Close()
 						p = nil
 					} else {
-						err = execAndSendResponse(ctx, qwork)
+						if err = execQuery(ctx, qwork); err == nil {
+							if err = processors.CheckResponseIntent(qwork.state); err == nil {
+								err = qwork.state.ApplyIntents()
+							}
+						}
 					}
 					if qwork.rowsProcessor != nil {
 						// wait until all rows are sent
@@ -138,7 +142,7 @@ func implServiceFactory(serviceChannel iprocbus.ServiceChannel, resultSenderClos
 	})
 }
 
-func execAndSendResponse(ctx context.Context, qw *queryWork) (err error) {
+func execQuery(ctx context.Context, qw *queryWork) (err error) {
 	now := time.Now()
 	defer func() {
 		if r := recover(); r != nil {
@@ -147,13 +151,7 @@ func execAndSendResponse(ctx context.Context, qw *queryWork) (err error) {
 		}
 		qw.metrics.Increase(execSeconds, time.Since(now).Seconds())
 	}()
-
-	if err =  qw.appPart.Invoke(ctx, qw.queryFunc.QName(), qw.state, qw.state); err != nil {
-		return err
-	}
-
-	return qw.state.ApplyIntents()
-	//return qw.queryExec(ctx, qw.execQueryArgs, qw.callbackFunc)
+	return qw.appPart.Invoke(ctx, qw.queryFunc.QName(), qw.state, qw.state)
 }
 
 func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthenticator, authz iauthnz.IAuthorizer,
@@ -298,6 +296,7 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 				},
 			)
 			qw.execQueryArgs.State = qw.state
+			qw.execQueryArgs.Intents = qw.state
 			return
 		}),
 		operator("get queryFunc", func(ctx context.Context, qw *queryWork) (err error) {

@@ -9,9 +9,12 @@ import (
 	"context"
 	"embed"
 	"fmt"
+	"math"
 	"net/url"
+	"sync/atomic"
 	"testing"
 	"time"
+	"unsafe"
 
 	"github.com/stretchr/testify/require"
 	"github.com/tetratelabs/wazero/sys"
@@ -21,6 +24,7 @@ import (
 	"github.com/voedger/voedger/pkg/iratesce"
 	"github.com/voedger/voedger/pkg/istorage/mem"
 	istorageimpl "github.com/voedger/voedger/pkg/istorage/provider"
+	imetrics "github.com/voedger/voedger/pkg/metrics"
 	"github.com/voedger/voedger/pkg/parser"
 	"github.com/voedger/voedger/pkg/state/safestate"
 	"github.com/voedger/voedger/pkg/sys/authnz"
@@ -155,7 +159,7 @@ func Test_BasicUsage(t *testing.T) {
 	}
 
 	// Create extension engine
-	factory := ProvideExtensionEngineFactory(true)
+	factory := ProvideExtensionEngineFactory(iextengine.WASMFactoryConfig{Compile: true})
 	engines, err := factory.New(ctx, app.AppQName(), packages, &iextengine.ExtEngineConfig{}, 1)
 	if err != nil {
 		panic(err)
@@ -248,7 +252,7 @@ func testFactoryHelper(ctx context.Context, moduleUrl *url.URL, funcs []string, 
 			ExtensionNames: funcs,
 		},
 	}
-	engines, err := ProvideExtensionEngineFactory(compile).New(ctx, testApp, packages, &cfg, 1)
+	engines, err := ProvideExtensionEngineFactory(iextengine.WASMFactoryConfig{Compile: compile}).New(ctx, testApp, packages, &cfg, 1)
 	if err != nil {
 		return nil, err
 	}
@@ -459,6 +463,15 @@ func Test_QueryValue(t *testing.T) {
 	require.NoError(err)
 }
 
+func mvf(m *imetrics.MetricValue) float64 {
+	ptr := (*uint64)(unsafe.Pointer(m))
+	return math.Float64frombits(atomic.LoadUint64(ptr))
+}
+
+func mv(m *imetrics.MetricValue) int {
+	return int(mvf(m))
+}
+
 func Test_RecoverEngine(t *testing.T) {
 
 	testWithPreallocatedBuffer := func(t *testing.T, preallocatedBufferSize uint32) {
@@ -473,22 +486,46 @@ func Test_RecoverEngine(t *testing.T) {
 			defer extEngine.Close(ctx)
 			we := extEngine.(*wazeroExtEngine)
 
+			var invocationsTotal imetrics.MetricValue
+			var invocationsSeconds imetrics.MetricValue
+			var eTotal imetrics.MetricValue
+			var recoversTotal imetrics.MetricValue
+
+			we.invocationsTotal = &invocationsTotal
+			we.errorsTotal = &eTotal
+			we.recoversTotal = &recoversTotal
+			we.invocationsSeconds = &invocationsSeconds
+
+			totalRuns := 0
+			totalErrors := 0
+
 			require.NoError(extEngine.Invoke(context.Background(), appdef.NewFullQName(testPkg, arrAppend2), extIO))
-			require.Equal(0, we.numAutoRecovers) // no auto-recover during first invoke
+			totalRuns++
+			require.Equal(0, mv(&recoversTotal))
+			require.Equal(totalRuns, mv(&invocationsTotal))
+			require.Equal(totalErrors, mv(&eTotal))
 			heapInUseAfterFirstInvoke, err := we.getHeapinuse(testPkg, context.Background())
 			require.NoError(err)
 
 			for recoverNo := 0; recoverNo < 10; recoverNo++ { // 10 recover cycles
-				for run := 1; we.numAutoRecovers == recoverNo; { // run until auto-recover is triggered{
+				for run := 1; mv(&recoversTotal) == recoverNo; { // run until auto-recover is triggered{
 					require.NoError(extEngine.Invoke(context.Background(), appdef.NewFullQName(testPkg, arrAppend2), extIO))
+					totalRuns++
+					if mv(&recoversTotal) != recoverNo {
+						totalRuns++ // recovered, means one more invocation
+						totalErrors++
+					}
+					require.Equal(totalRuns, mv(&invocationsTotal))
+					require.Equal(totalErrors, mv(&eTotal))
 					run++
 				}
-
-				require.Equal(recoverNo+1, we.numAutoRecovers)
+				require.Equal(recoverNo+1, mv(&recoversTotal))
 				heapInUseAfterRecover, err := we.getHeapinuse(testPkg, context.Background())
 				require.NoError(err)
 				require.Equal(heapInUseAfterRecover, heapInUseAfterFirstInvoke)
 			}
+
+			require.Greater(mvf(&invocationsSeconds), 0.0)
 		})
 	}
 
@@ -517,36 +554,25 @@ func Test_RecoverEngine2(t *testing.T) {
 	defer extEngine.Close(ctx)
 	we := extEngine.(*wazeroExtEngine)
 
-	require.NoError(extEngine.Invoke(context.Background(), appdef.NewFullQName(testPkg, arrAppend2), extIO))
-	require.Equal(0, we.numAutoRecovers)
-	require.NoError(extEngine.Invoke(context.Background(), appdef.NewFullQName(testPkg, arrAppend2), extIO))
-	require.Equal(0, we.numAutoRecovers)
-	require.NoError(extEngine.Invoke(context.Background(), appdef.NewFullQName(testPkg, arrAppend2), extIO))
-	require.Equal(0, we.numAutoRecovers)
+	var recoversTotal imetrics.MetricValue
+	we.recoversTotal = &recoversTotal
 
 	require.NoError(extEngine.Invoke(context.Background(), appdef.NewFullQName(testPkg, arrAppend2), extIO))
-	require.Equal(1, we.numAutoRecovers)
+	require.Equal(0, mv(&recoversTotal))
 	require.NoError(extEngine.Invoke(context.Background(), appdef.NewFullQName(testPkg, arrAppend2), extIO))
-	require.Equal(1, we.numAutoRecovers)
+	require.Equal(0, mv(&recoversTotal))
 	require.NoError(extEngine.Invoke(context.Background(), appdef.NewFullQName(testPkg, arrAppend2), extIO))
-	require.Equal(1, we.numAutoRecovers)
+	require.Equal(0, mv(&recoversTotal))
 
 	require.NoError(extEngine.Invoke(context.Background(), appdef.NewFullQName(testPkg, arrAppend2), extIO))
-	require.Equal(2, we.numAutoRecovers)
+	require.Equal(1, mv(&recoversTotal))
+	require.NoError(extEngine.Invoke(context.Background(), appdef.NewFullQName(testPkg, arrAppend2), extIO))
+	require.Equal(1, mv(&recoversTotal))
+	require.NoError(extEngine.Invoke(context.Background(), appdef.NewFullQName(testPkg, arrAppend2), extIO))
+	require.Equal(1, mv(&recoversTotal))
 
-	// for i := 1; i <= 3; i++ {
-	// 	require.NoError(extEngine.Invoke(context.Background(), appdef.NewFullQName(testPkg, arrAppend2), extIO))
-	// 	require.Equal(0, we.numAutoRecovers)
-	// 	printHeapInfo(t, we)
-	// }
-	// for i := 1; i <= 3; i++ {
-	// 	err = extEngine.Invoke(context.Background(), appdef.NewFullQName(testPkg, arrAppend2), extIO)
-	// 	require.Equal(1, we.numAutoRecovers)
-	// 	printHeapInfo(t, we)
-	// 	require.NoError(err)
-	// }
-	// require.NoError(extEngine.Invoke(context.Background(), appdef.NewFullQName(testPkg, arrAppend2), extIO))
-	// require.Equal(2, we.numAutoRecovers)
+	require.NoError(extEngine.Invoke(context.Background(), appdef.NewFullQName(testPkg, arrAppend2), extIO))
+	require.Equal(2, mv(&recoversTotal))
 }
 
 func Test_Read(t *testing.T) {
@@ -685,7 +711,7 @@ func Test_WithState(t *testing.T) {
 	}
 
 	// build extension engine
-	factory := ProvideExtensionEngineFactory(true)
+	factory := ProvideExtensionEngineFactory(iextengine.WASMFactoryConfig{Compile: true})
 	engines, err := factory.New(ctx, app.AppQName(), packages, &iextengine.ExtEngineConfig{}, 1)
 	if err != nil {
 		panic(err)
@@ -760,7 +786,7 @@ func Test_StatePanic(t *testing.T) {
 			ExtensionNames: []string{extname, undefinedPackage},
 		},
 	}
-	factory := ProvideExtensionEngineFactory(true)
+	factory := ProvideExtensionEngineFactory(iextengine.WASMFactoryConfig{Compile: true})
 	engines, err := factory.New(ctx, app.AppQName(), packages, &iextengine.ExtEngineConfig{}, 1)
 	if err != nil {
 		panic(err)
