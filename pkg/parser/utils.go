@@ -350,9 +350,6 @@ func dataTypeToDataKind(t DataType) appdef.DataKind {
 	if t.Timestamp {
 		return appdef.DataKind_int64
 	}
-	if t.Record {
-		return appdef.DataKind_Record
-	}
 	return appdef.DataKind_null
 }
 
