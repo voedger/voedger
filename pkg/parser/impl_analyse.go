@@ -386,6 +386,13 @@ func analyseView(view *ViewStmt, c *iterateCtx) {
 			} else {
 				fields[string(rf.Name.Value)] = i
 			}
+		} else if fe.RecordField != nil {
+			rf := fe.RecordField
+			if _, ok := fields[string(rf.Name.Value)]; ok {
+				c.stmtErr(&rf.Name.Pos, ErrRedefined(string(rf.Name.Value)))
+			} else {
+				fields[string(rf.Name.Value)] = i
+			}
 		}
 	}
 	if view.pkRef == nil {
@@ -397,6 +404,9 @@ func analyseView(view *ViewStmt, c *iterateCtx) {
 		index, ok := fields[string(pkf.Value)]
 		if !ok {
 			c.stmtErr(&pkf.Pos, ErrUndefinedField(string(pkf.Value)))
+		}
+		if view.Items[index].RecordField != nil {
+			c.stmtErr(&pkf.Pos, ErrViewFieldRecord(string(pkf.Value)))
 		}
 		fld := view.Items[index].Field
 		if fld != nil {
@@ -414,6 +424,9 @@ func analyseView(view *ViewStmt, c *iterateCtx) {
 		last := ccIndex == len(view.pkRef.ClusteringColumnsFields)-1
 		if !ok {
 			c.stmtErr(&ccf.Pos, ErrUndefinedField(string(ccf.Value)))
+		}
+		if view.Items[fieldIndex].RecordField != nil {
+			c.stmtErr(&ccf.Pos, ErrViewFieldRecord(string(ccf.Value)))
 		}
 		fld := view.Items[fieldIndex].Field
 		if fld != nil {
