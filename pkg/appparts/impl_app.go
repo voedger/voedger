@@ -19,7 +19,7 @@ import (
 )
 
 // engine placeholder
-type engines [appdef.ExtensionEngineKind_Count]iextengine.IExtensionEngine
+type engines map[appdef.ExtensionEngineKind]iextengine.IExtensionEngine
 
 type app struct {
 	mx         sync.RWMutex
@@ -28,7 +28,7 @@ type app struct {
 	partsCount istructs.NumAppPartitions
 	def        appdef.IAppDef
 	structs    istructs.IAppStructs
-	engines    [ProcessorKind_Count]*pool.Pool[*engines]
+	engines    [ProcessorKind_Count]*pool.Pool[engines]
 	parts      map[istructs.PartitionID]*partition
 }
 
@@ -92,7 +92,7 @@ func (a *app) deploy(def appdef.IAppDef, extModuleURLs map[string]*url.URL, stru
 
 	// processorKind here is one of ProcessorKind_Command, ProcessorKind_Query, ProcessorKind_Actualizer
 	for processorKind, processorsCountPerKind := range numEnginesPerEngineKind {
-		ee := make([]*engines, processorsCountPerKind)
+		ee := make([]engines, processorsCountPerKind)
 		for i := 0; i < processorsCountPerKind; i++ {
 			for extEngineKind, extensionModules := range extModules {
 				extensionEngineFactory, ok := eef[extEngineKind]
@@ -104,6 +104,7 @@ func (a *app) deploy(def appdef.IAppDef, extModuleURLs map[string]*url.URL, stru
 					panic(err)
 				}
 				for i := 0; i < processorsCountPerKind; i++ {
+					ee[i] = map[appdef.ExtensionEngineKind]iextengine.IExtensionEngine{}
 					ee[i][extEngineKind] = extEngines[i]
 				}
 			}
@@ -141,7 +142,7 @@ type partitionRT struct {
 	part                  *partition
 	appDef                appdef.IAppDef
 	appStructs            istructs.IAppStructs
-	borrowed              *engines
+	borrowed              engines
 	borrowedProcessorKind ProcessorKind
 }
 
@@ -197,9 +198,8 @@ func (rt *partitionRT) Release() {
 
 // Initialize partition RT structures for use
 func (rt *partitionRT) init(proc ProcessorKind) error {
-	// TODO: ���������� ���: ���������� � Reelase ������ �����, � �� ����� engine.release, ������ engine.pool.
 	pool := rt.part.app.engines[proc]
-	engine, err := pool.Borrow() // will be released in (*engine).release()
+	engine, err := pool.Borrow()
 	if err != nil {
 		return errNotAvailableEngines[proc]
 	}
