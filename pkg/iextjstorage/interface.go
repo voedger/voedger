@@ -41,11 +41,16 @@ type IJCompositeObject interface {
 	IJBasicObject
 
 	// FieldNames(cb func(appdef.FieldName))
+
+	// Do NOT panic
 	AsRow(name string) (value IJCompositeObject, ok bool)
 
 	// Working with arrays
 
-	ByIdx(idx int) IJCompositeObject
+	// Do NOT panic
+	ByIdx(idx int) (value IJCompositeObject, ok bool)
+
+	// Do NOT panic
 	Length() int
 
 	// GetAsString(index int) string
