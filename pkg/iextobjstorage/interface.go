@@ -29,10 +29,15 @@ type IObjectKey interface {
 
 type IBasicObject interface {
 	IReleasable
+
 	// Do NOT panic
 	AsInt64(name string) (value int64, ok bool)
 	// Do NOT panic
 	AsFloat64(name string) (value float64, ok bool)
+
+	// ??? Do NOT panic
+	AsBool(name string) (value bool, ok bool)
+
 	// Do NOT panic
 	AsBytes(name string, value *[]byte) (ok bool)
 }
@@ -43,7 +48,7 @@ type ICompositeObject interface {
 	// FieldNames(cb func(appdef.FieldName))
 
 	// Do NOT panic
-	AsRow(name string) (value ICompositeObject, ok bool)
+	AsObject(name string) (value ICompositeObject, ok bool)
 
 	// Working with arrays
 
