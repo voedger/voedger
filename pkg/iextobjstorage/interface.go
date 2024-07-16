@@ -3,31 +3,31 @@
  * @author Maxim Geraskin
  */
 
-package iextjstorage
+package iextobjstorage
 
 import (
 	"context"
 )
 
 // Do NOT panic
-type Factory func(pkgPath string, modulePath string, extNames []string) (map[string]IJStorage, error)
+type Factory func(pkgPath string, modulePath string, extNames []string) (map[string]IObjectStorage, error)
 
 // @ConcurrentAccess
-type IJStorage interface {
+type IObjectStorage interface {
 	IReleasable
 	// Do NOT panic
-	Get(ctx context.Context, pk, cc IJKey) (v IJCompositeObject, ok bool, err error)
+	Get(ctx context.Context, pk, cc IObjectKey) (v ICompositeObject, ok bool, err error)
 	// Do NOT panic
-	Read(ctx context.Context, pk, cc IJKey, cb func(IJCompositeObject) bool) error
+	Read(ctx context.Context, pk, cc IObjectKey, cb func(ICompositeObject) bool) error
 }
 
-type IJKey interface {
+type IObjectKey interface {
 	Pkg() string
 	Name() string
-	Key() IJBasicObject
+	Key() IBasicObject
 }
 
-type IJBasicObject interface {
+type IBasicObject interface {
 	IReleasable
 	// Do NOT panic
 	AsInt64(name string) (value int64, ok bool)
@@ -37,18 +37,18 @@ type IJBasicObject interface {
 	AsBytes(name string, value *[]byte) (ok bool)
 }
 
-type IJCompositeObject interface {
-	IJBasicObject
+type ICompositeObject interface {
+	IBasicObject
 
 	// FieldNames(cb func(appdef.FieldName))
 
 	// Do NOT panic
-	AsRow(name string) (value IJCompositeObject, ok bool)
+	AsRow(name string) (value ICompositeObject, ok bool)
 
 	// Working with arrays
 
 	// Do NOT panic
-	ByIdx(idx int) (value IJCompositeObject, ok bool)
+	ByIdx(idx int) (value ICompositeObject, ok bool)
 
 	// Do NOT panic
 	Length() int

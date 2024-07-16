@@ -5,8 +5,8 @@
 
 package goplugin
 
-import "github.com/voedger/voedger/pkg/iextjstorage"
+import "github.com/voedger/voedger/pkg/iextobjstorage"
 
-func New() iextjstorage.Factory {
+func New() iextobjstorage.Factory {
 	return nil
 }
