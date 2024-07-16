@@ -76,7 +76,7 @@ func NewCommandTestState(t *testing.T, iCommand ICommand, extensionFunc func()) 
 	return ts
 }
 
-func (ts *CommandTestState) setArgument() {
+func (ts *CommandTestState) putArgument() {
 	if ts.argumentObject == nil {
 		return
 	}
@@ -265,36 +265,30 @@ func (ts *CommandTestState) require() {
 	}
 
 	// gather all intents
-	allIntents := make([]*intentItem, 0, ts.IState.IntentsCount())
+	allIntents := make([]intentItem, 0, ts.IState.IntentsCount())
 	ts.IState.Intents(func(key istructs.IStateKeyBuilder, value istructs.IStateValueBuilder, isNew bool) {
-		allIntents = append(allIntents, &intentItem{
+		allIntents = append(allIntents, intentItem{
 			key:   key,
 			value: value,
 			isNew: isNew,
 		})
 	})
 
-	// workaround till the bug at the 308 line is fixed
-	if len(allIntents) > len(requiredKeys) {
-		require.Failf(ts.t, "the actual intent count exceeds expected one", "expected intent count: %d, actual count: %d", len(requiredKeys), len(allIntents))
+	notFoundKeys := make([]istructs.IStateKeyBuilder, 0, len(allIntents))
+	// check out unexpected intents
+	for _, intent := range allIntents {
+		found := false
+		for _, requiredKey := range requiredKeys {
+			if intent.key.Equals(requiredKey) {
+				found = true
+				continue
+			}
+		}
+		if !found {
+			notFoundKeys = append(notFoundKeys, intent.key)
+		}
 	}
-
-	//errList := make([]error, 0, len(allIntents))
-	//// check out unexpected intents
-	//for _, intent := range allIntents {
-	//	found := false
-	//	for _, requiredKey := range requiredKeys {
-	//		if intent.key.Equals(requiredKey) {
-	//			found = true
-	//			continue
-	//		}
-	//	}
-	//	if !found {
-	//		// FIXME: runtime error: invalid memory address or nil pointer dereference in intent.String()
-	//		errList = append(errList, fmt.Errorf("unexpected intent: %s", intent.String()))
-	//	}
-	//}
-	//require.Emptyf(ts.t, errList, "unexpected intents: %w", errors.Join(errList...))
+	require.Empty(ts.t, notFoundKeys, "unexpected intents: %v", notFoundKeys)
 
 	// clear required record items after they are processed
 	ts.requiredRecordItems = nil
@@ -369,10 +363,19 @@ func putToArgumentObjectTree(tree map[string]any, pathPart string, keyValueList 
 }
 
 func (ts *CommandTestState) Run() {
-	defer ts.require()
+	defer func() {
+		// stop if panic occurs before requiring intents
+		r := recover()
+		if r != nil {
+			require.Fail(ts.t, r.(error).Error())
+		}
+
+		// checkout intents
+		ts.require()
+	}()
 
 	ts.putRecords()
-	ts.setArgument()
+	ts.putArgument()
 
 	// run extension function
 	if ts.extensionFunc != nil {
