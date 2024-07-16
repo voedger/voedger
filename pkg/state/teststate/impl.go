@@ -54,6 +54,13 @@ type testState struct {
 	processorKind         int
 	readObjects           []istructs.IObject
 	queryObject           istructs.IObject
+
+	testData map[string]any
+	// argumentType and argumentObject are to pass to argument
+	argumentType   appdef.FullQName
+	argumentObject map[string]any
+	t              *testing.T
+	commandWSID    istructs.WSID
 }
 
 func NewTestState(processorKind int, packagePath string, createWorkspaces ...TestWorkspace) ITestState {
@@ -78,10 +85,18 @@ func (s *secretReader) ReadSecret(name string) (bb []byte, err error) {
 }
 
 func (ts *testState) WSID() istructs.WSID {
-	if ts.processorKind == ProcKind_QueryProcessor {
+	switch ts.processorKind {
+	case ProcKind_QueryProcessor:
 		return ts.queryWsid
+	case ProcKind_CommandProcessor:
+		return ts.commandWSID
+	default:
+		if ts.event != nil {
+			return ts.event.Workspace()
+		}
+
+		return istructs.WSID(0)
 	}
-	return ts.event.Workspace()
 }
 
 func (ts *testState) GetReadObjects() []istructs.IObject {
@@ -89,12 +104,31 @@ func (ts *testState) GetReadObjects() []istructs.IObject {
 }
 
 func (ts *testState) Arg() istructs.IObject {
+	if ts.t != nil {
+		ts.t.Helper()
+	}
+
 	if ts.queryObject != nil {
 		return ts.queryObject
 	}
+
+	if ts.testData != nil && ts.testData[state.Field_ArgumentObject] != nil {
+		localPkgName := ts.appDef.PackageLocalName(ts.argumentType.PkgPath())
+		localQName := appdef.NewQName(localPkgName, ts.argumentType.Entity())
+
+		ob := ts.appStructs.ObjectBuilder(localQName)
+		ob.FillFromJSON(ts.testData[state.Field_ArgumentObject].(map[string]any))
+
+		obj, err := ob.Build()
+		require.NoError(ts.t, err)
+
+		return obj
+	}
+
 	if ts.event == nil {
 		panic("no current event")
 	}
+
 	return ts.event.ArgumentObject()
 }
 
@@ -205,7 +239,13 @@ func (ts *testState) buildState(processorKind int) {
 	}
 	argFunc := func() istructs.IObject { return ts.Arg() }
 	unloggedArgFunc := func() istructs.IObject { return nil }
-	wlogOffsetFunc := func() istructs.Offset { return ts.event.WLogOffset() }
+	wlogOffsetFunc := func() istructs.Offset {
+		if ts.event != nil {
+			return ts.event.WLogOffset()
+		}
+
+		return istructs.Offset(0)
+	}
 	wsidFunc := func() istructs.WSID {
 		return ts.WSID()
 	}

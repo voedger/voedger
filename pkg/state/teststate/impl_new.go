@@ -33,16 +33,11 @@ import (
 type CommandTestState struct {
 	testState
 
-	t             *testing.T
 	extensionFunc func()
 	funcRunner    *sync.Once
-	commandWSID   istructs.WSID
 
 	// recordItems is to store records
 	recordItems []recordItem
-	// argumentType and argumentObject are to pass to argument
-	argumentType   appdef.FullQName
-	argumentObject map[string]any
 	// requiredRecordItems is to store required items
 	requiredRecordItems []recordItem
 }
@@ -52,6 +47,11 @@ func NewCommandTestState(t *testing.T, iCommand ICommand, extensionFunc func()) 
 	const wsid = istructs.WSID(1)
 
 	ts := &CommandTestState{}
+
+	ts.testData = make(map[string]any)
+	// set test object
+	ts.t = t
+
 	ts.ctx = context.Background()
 	ts.processorKind = ProcKind_CommandProcessor
 	ts.commandWSID = wsid
@@ -64,8 +64,6 @@ func NewCommandTestState(t *testing.T, iCommand ICommand, extensionFunc func()) 
 	// initialize funcRunner and extensionFunc itself
 	ts.funcRunner = &sync.Once{}
 	ts.extensionFunc = extensionFunc
-	// set test object
-	ts.t = t
 	// set cud builder function
 	ts.setCudBuilder(iCommand, wsid)
 
@@ -83,21 +81,7 @@ func (ts *CommandTestState) setArgument() {
 		return
 	}
 
-	//kb := exttinygo.KeyBuilder(exttinygo.StorageCommandContext, exttinygo.NullEntity)
-	//vb := exttinygo.NewValue(kb)
-	////vb.PutBytes()
-	//m := map[string]any{
-	//	"ArgumentObject": ts.argumentObject,
-	//}
-	//
-	//coreutils.MapToObject(m, vb)
-	//
-	//err := ts.appStructs.Records().PutJSON(ts.commandWSID, m)
-	//require.NoError(ts.t, err)
-
-	ts.PutEvent(ts.commandWSID, ts.argumentType, func(argBuilder istructs.IObjectBuilder, cudBuilder istructs.ICUD) {
-		argBuilder.FillFromJSON(ts.argumentObject)
-	})
+	ts.testData[state.Field_ArgumentObject] = ts.argumentObject
 }
 
 func (ts *CommandTestState) setCudBuilder(wsItem IFullQName, wsid istructs.WSID) {
