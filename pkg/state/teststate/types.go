@@ -41,6 +41,14 @@ type HttpResponse struct {
 
 type recordItem struct {
 	entity       appdef.IFullQName
+	isSingleton  bool
+	isNew        bool
 	id           int
 	keyValueList []any
+}
+
+type intentItem struct {
+	key   istructs.IStateKeyBuilder
+	value istructs.IStateValueBuilder
+	isNew bool
 }

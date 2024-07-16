@@ -38,7 +38,7 @@ func Pbill() {
 		// Basic types fields
 		billID := pbill.Get_id_bill()
 		intent := orm.Package_untill.WDoc_bill.Update(billID)
-		intent.Set_close_datetime(time.Now().UnixMicro())
+		intent.Set_close_year(int32(time.Now().UTC().Year()))
 	}
 
 	// Prepare intent for Package_air.WSingleton_NextNumbers
@@ -57,14 +57,6 @@ func Pbill() {
 	}
 }
 
-// TODO: add test for FillPbillDates
-// FillPbillDates аргументом является событие вызова команды Pbill
-// Берет из события дату и время и смещения результирующее (WLog).
-// В проекторе аргументом является событие вызова команды Pbill
-
-// Спросить у Мишы как расширение-проектор будет работать с событием, если этот проектор "сидит" на команде
-// Надо откуда-то это событие брать
-// После из события вытащить смещение, день и год и делаем NewIntent у которого FQName - это вьюшка из задачи
 func FillPbillDates() {
 	// Query air.PbillDates
 	{

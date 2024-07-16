@@ -104,6 +104,27 @@ func (v {{.Type}}_{{.Package.Name}}_{{.Name}}) Get(id ID) (Value_{{.Type}}_{{.Pa
 	tv, exists := exttinygo.QueryValue(kb)
 	return Value_{{.Type}}_{{.Package.Name}}_{{.Name}}{tv: tv}, exists
 }
+
+func (v {{.Type}}_{{.Package.Name}}_{{.Name}}) Insert(id ID) Intent_{{.Type}}_{{.Package.Name}}_{{.Name}} {
+	kb := exttinygo.KeyBuilder(exttinygo.StorageRecord, v.fQName)
+	kb.PutInt64(FieldName_ID, int64(id))
+	return Intent_{{.Type}}_{{.Package.Name}}_{{.Name}}{intent: exttinygo.NewValue(kb)}
+}
+
+func (v {{.Type}}_{{.Package.Name}}_{{.Name}}) Update(id ID) Intent_{{.Type}}_{{.Package.Name}}_{{.Name}} {
+	existingValue := v.MustGet(id)
+	kb := exttinygo.KeyBuilder(exttinygo.StorageRecord, v.fQName)
+	kb.PutInt64(FieldName_ID, int64(id))
+	return Intent_{{.Type}}_{{.Package.Name}}_{{.Name}}{intent: exttinygo.UpdateValue(kb, existingValue.tv)}
+}
+
+func (v Value_{{.Type}}_{{.Package.Name}}_{{.Name}}) Insert() Intent_{{.Type}}_{{.Package.Name}}_{{.Name}} {
+	return Intent_{{.Type}}_{{.Package.Name}}_{{.Name}}{intent: exttinygo.NewValue(v.kb)}
+}
+
+func (v Value_{{.Type}}_{{.Package.Name}}_{{.Name}}) Update() Intent_{{.Type}}_{{.Package.Name}}_{{.Name}} {
+	return Intent_{{.Type}}_{{.Package.Name}}_{{.Name}}{intent: exttinygo.UpdateValue(v.kb, v.tv)}
+}
 {{end}}
 
 {{if (eq .Type "ODoc")}}

@@ -26,10 +26,16 @@ func GetPrincipalTokenFromState(st istructs.IState) (token string, err error) {
 func PopulateKeys(kb istructs.IRowWriter, keys map[string]any) {
 	for k, v := range keys {
 		switch t := v.(type) {
+		case int8:
+			kb.PutNumber(k, float64(t))
+		case int16:
+			kb.PutNumber(k, float64(t))
 		case int32:
-			kb.PutInt32(k, t)
+			kb.PutNumber(k, float64(t))
 		case int64:
 			kb.PutInt64(k, t)
+		case int:
+			kb.PutNumber(k, float64(t))
 		case float32:
 			kb.PutFloat32(k, t)
 		case float64:
