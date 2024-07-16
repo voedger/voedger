@@ -407,6 +407,11 @@ func (qw *queryWork) GetPrincipals() []iauthnz.Principal {
 	return qw.principals
 }
 
+// need for various funcs of sys package
+func (qw *queryWork) GetAppStructs() istructs.IAppStructs {
+	return qw.appStructs
+}
+
 // borrows app partition for query
 func (qw *queryWork) borrow() (err error) {
 	if qw.appPart, err = qw.appParts.Borrow(qw.msg.AppQName(), qw.msg.Partition(), appparts.ProcessorKind_Query); err != nil {

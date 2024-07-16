@@ -50,6 +50,10 @@ func (s hostState) App() appdef.AppQName {
 	return s.appStructsFunc().AppQName()
 }
 
+func (s hostState) AppStructs() istructs.IAppStructs {
+	return s.appStructsFunc()
+}
+
 func (s hostState) CommandPrepareArgs() istructs.CommandPrepareArgs {
 	panic(errCommandPrepareArgsNotSupportedByState)
 }

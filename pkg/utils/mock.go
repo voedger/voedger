@@ -103,6 +103,12 @@ func (m *MockState) App() appdef.AppQName {
 	args := m.Called()
 	return args.Get(0).(appdef.AppQName)
 }
+
+func (m *MockState) AppStructs() istructs.IAppStructs {
+	args := m.Called()
+	return args.Get(0).(istructs.IAppStructs)
+}
+
 func (m *MockState) CanExist(key istructs.IStateKeyBuilder) (value istructs.IStateValue, ok bool, err error) {
 	args := m.Called(key)
 	if intf := args.Get(0); intf != nil {
