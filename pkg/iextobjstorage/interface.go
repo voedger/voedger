@@ -17,9 +17,11 @@ type Factory func(locationPath string, stNames []string) (map[string]IObjectStor
 type IObjectStorage interface {
 	IReleasable
 	// Do NOT panic
-	Get(ctx context.Context, pk, cc IObjectKey) (v ICompositeObject, ok bool, err error)
+	Get(ctx context.Context, key IObjectKey) (v ICompositeObject, ok bool, err error)
+
+	// key can be a partial key (filled from left to right)
 	// Do NOT panic
-	Read(ctx context.Context, pk, cc IObjectKey, cb func(ICompositeObject) bool) error
+	Read(ctx context.Context, key IObjectKey, cb func(ICompositeObject) bool) error
 }
 
 type IObjectKey interface {
