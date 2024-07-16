@@ -556,6 +556,9 @@ func provideSidecarApps(vvmConfig *VVMConfig) (res []appparts.SidecarApp, err er
 		appNameStr := filepath.Base(appEntry.Name())
 		appNameParts := strings.Split(appNameStr, ".")
 		appQName := appdef.NewAppQName(appNameParts[0], appNameParts[1])
+		if _, ok := istructs.ClusterApps[appQName]; !ok {
+			return nil, fmt.Errorf("ClusterAppID for sidecar app %s is unkknown", appQName)
+		}
 		appPath := filepath.Join(appsPath, appNameStr)
 		appDirEntries, err := os.ReadDir(appPath)
 		if err != nil {

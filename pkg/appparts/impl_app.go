@@ -22,14 +22,14 @@ import (
 type engines map[appdef.ExtensionEngineKind]iextengine.IExtensionEngine
 
 type app struct {
-	mx         sync.RWMutex
-	apps       *apps
-	name       appdef.AppQName
-	partsCount istructs.NumAppPartitions
-	def        appdef.IAppDef
-	structs    istructs.IAppStructs
-	engines    [ProcessorKind_Count]*pool.Pool[engines]
-	parts      map[istructs.PartitionID]*partition
+	mx           sync.RWMutex
+	apps         *apps
+	name         appdef.AppQName
+	partsCount   istructs.NumAppPartitions
+	def          appdef.IAppDef
+	structs      istructs.IAppStructs
+	enginesPools [ProcessorKind_Count]*pool.Pool[engines]
+	parts        map[istructs.PartitionID]*partition
 }
 
 func newApplication(apps *apps, name appdef.AppQName, partsCount istructs.NumAppPartitions) *app {
@@ -51,9 +51,6 @@ func (a *app) deploy(def appdef.IAppDef, extModuleURLs map[string]*url.URL, stru
 	eef := a.apps.extEngineFactories
 
 	ctx := context.Background()
-
-	// TODO: prepare []iextengine.ExtensionPackage from IAppDef
-	// TODO: should pass iextengine.ExtEngineConfig from somewhere (Provide?)
 
 	enginesPathsModules := map[appdef.ExtensionEngineKind]map[string]*iextengine.ExtensionModule{}
 	def.Extensions(func(ext appdef.IExtension) {
@@ -93,23 +90,23 @@ func (a *app) deploy(def appdef.IAppDef, extModuleURLs map[string]*url.URL, stru
 	// processorKind here is one of ProcessorKind_Command, ProcessorKind_Query, ProcessorKind_Actualizer
 	for processorKind, processorsCountPerKind := range numEnginesPerEngineKind {
 		ee := make([]engines, processorsCountPerKind)
-		for i := 0; i < processorsCountPerKind; i++ {
-			for extEngineKind, extensionModules := range extModules {
-				extensionEngineFactory, ok := eef[extEngineKind]
-				if !ok {
-					panic(fmt.Errorf("no extension engine factory for engine %s met among def of %s", extEngineKind.String(), a.name))
-				}
-				extEngines, err := extensionEngineFactory.New(ctx, a.name, extensionModules, &iextengine.DefaultExtEngineConfig, processorsCountPerKind) // FIXME: what is numEngines here?
-				if err != nil {
-					panic(err)
-				}
-				for i := 0; i < processorsCountPerKind; i++ {
+		for extEngineKind, extensionModules := range extModules {
+			extensionEngineFactory, ok := eef[extEngineKind]
+			if !ok {
+				panic(fmt.Errorf("no extension engine factory for engine %s met among def of %s", extEngineKind.String(), a.name))
+			}
+			extEngines, err := extensionEngineFactory.New(ctx, a.name, extensionModules, &iextengine.DefaultExtEngineConfig, processorsCountPerKind)
+			if err != nil {
+				panic(err)
+			}
+			for i := 0; i < processorsCountPerKind; i++ {
+				if ee[i] == nil {
 					ee[i] = map[appdef.ExtensionEngineKind]iextengine.IExtensionEngine{}
-					ee[i][extEngineKind] = extEngines[i]
 				}
+				ee[i][extEngineKind] = extEngines[i]
 			}
 		}
-		a.engines[processorKind] = pool.New(ee)
+		a.enginesPools[processorKind] = pool.New(ee)
 	}
 }
 
@@ -139,11 +136,11 @@ func (p *partition) borrow(proc ProcessorKind) (*partitionRT, error) {
 }
 
 type partitionRT struct {
-	part                  *partition
-	appDef                appdef.IAppDef
-	appStructs            istructs.IAppStructs
-	borrowed              engines
-	borrowedProcessorKind ProcessorKind
+	part                     *partition
+	appDef                   appdef.IAppDef
+	appStructs               istructs.IAppStructs
+	borrowed                 engines
+	borrowedForProcessorKind ProcessorKind
 }
 
 var partionRTPool = sync.Pool{
@@ -184,26 +181,32 @@ func (rt *partitionRT) Invoke(ctx context.Context, name appdef.QName, state istr
 	}
 	io := iextengine.NewExtensionIO(rt.appDef, state, intents)
 
-	return rt.borrowed[e.Engine()].Invoke(ctx, extName, io)
+	extEngine, ok := rt.borrowed[e.Engine()]
+	if !ok {
+		return fmt.Errorf("no extension engine for extension kind %s", e.Engine().String())
+	}
+
+	return extEngine.Invoke(ctx, extName, io)
 }
 
 func (rt *partitionRT) Release() {
-	if e := rt.borrowed; e != nil {
+	if engine := rt.borrowed; engine != nil {
 		rt.borrowed = nil
-		rt.part.app.engines[rt.borrowedProcessorKind].Release(e)
-		rt.borrowedProcessorKind = ProcessorKind_Count // like null
+		poolTheEngineBorrowedFrom := rt.part.app.enginesPools[rt.borrowedForProcessorKind]
+		poolTheEngineBorrowedFrom.Release(engine)
+		rt.borrowedForProcessorKind = ProcessorKind_Count // like null
 	}
 	partionRTPool.Put(rt)
 }
 
 // Initialize partition RT structures for use
 func (rt *partitionRT) init(proc ProcessorKind) error {
-	pool := rt.part.app.engines[proc]
-	engine, err := pool.Borrow()
+	pool := rt.part.app.enginesPools[proc]
+	engines, err := pool.Borrow()
 	if err != nil {
 		return errNotAvailableEngines[proc]
 	}
-	rt.borrowed = engine
-	rt.borrowedProcessorKind = proc
+	rt.borrowed = engines
+	rt.borrowedForProcessorKind = proc
 	return nil
 }

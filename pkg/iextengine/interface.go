@@ -64,8 +64,8 @@ type IExtensionEngine interface {
 type ExtensionEngineFactories map[appdef.ExtensionEngineKind]IExtensionEngineFactory
 
 type BuiltInExtFunc func(ctx context.Context, io IExtensionIO) error
-type BuiltInAppExtFuncs map[appdef.FullQName]BuiltInExtFunc
-type BuiltInExtFuncs map[appdef.AppQName]BuiltInAppExtFuncs // Provided to construct factory of engines
+type BuiltInExtFuncs map[appdef.FullQName]BuiltInExtFunc
+type BuiltInAppExtFuncs map[appdef.AppQName]BuiltInExtFuncs // Provided to construct factory of engines
 
 type ExtensionModule struct {
 	Path           string   // это github.com/voedger/voedger

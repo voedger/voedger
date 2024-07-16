@@ -36,6 +36,8 @@ import (
 //go:embed *.vsql
 var SysFS embed.FS
 
+// надо сделать ProvideStateless, который вызывается один раз, а не на каждое приложение, как сейчас Provide
+// варить один раз пакет sys
 func Provide(cfg *istructsmem.AppConfigType, smtpCfg smtp.Cfg,
 	ep extensionpoints.IExtensionPoint, wsPostInitFunc workspace.WSPostInitFunc, timeFunc coreutils.TimeFunc, itokens itokens.ITokens, federation federation.IFederation,
 	asp istructs.IAppStructsProvider, atf payloads.IAppTokensFactory, buildInfo *debug.BuildInfo,

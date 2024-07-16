@@ -6,6 +6,9 @@ package iextenginebuiltin
 
 import "github.com/voedger/voedger/pkg/iextengine"
 
-func ProvideExtensionEngineFactory(funcs iextengine.BuiltInExtFuncs) iextengine.IExtensionEngineFactory {
-	return extensionEngineFactory{funcs}
+// от sys сюда все попадает
+// common - это типа sys, типа stateless, т.е. все то, что общее на все приложения и не зависит от текущего приложения
+func ProvideExtensionEngineFactory(appFuncs iextengine.BuiltInAppExtFuncs, statelessFuncs iextengine.BuiltInExtFunc) iextengine.IExtensionEngineFactory {
+	return extensionEngineFactory{appFuncs}
 }
+

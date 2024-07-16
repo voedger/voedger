@@ -13,12 +13,12 @@ import (
 )
 
 type extensionEngineFactory struct {
-	funcs iextengine.BuiltInExtFuncs
+	funcs iextengine.BuiltInAppExtFuncs
 }
 
 type extensionEngine struct {
 	app   appdef.AppQName
-	funcs iextengine.BuiltInExtFuncs
+	funcs iextengine.BuiltInAppExtFuncs
 }
 
 func (e extensionEngine) SetLimits(limits iextengine.ExtensionLimits) {}
@@ -29,6 +29,7 @@ func (e extensionEngine) Invoke(ctx context.Context, extName appdef.FullQName, i
 			err = fmt.Errorf("extension panic: %v", r)
 		}
 	}()
+	// сначала поискать в common, а если там нет, то искать в funcs
 	if appFuncs, ok := e.funcs[e.app]; ok {
 		if f, ok := appFuncs[extName]; ok {
 			return f(ctx, io)

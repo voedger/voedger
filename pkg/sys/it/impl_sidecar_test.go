@@ -6,7 +6,6 @@
 package sys_it
 
 import (
-	"embed"
 	"os"
 	"path/filepath"
 	"testing"
@@ -15,9 +14,6 @@ import (
 	it "github.com/voedger/voedger/pkg/vit"
 	"github.com/voedger/voedger/pkg/vvm"
 )
-
-//go:embed sidecartest/*
-var sidecarApps embed.FS
 
 func TestSidecarApps_BasicUsage(t *testing.T) {
 	wd, err := os.Getwd()

@@ -35,8 +35,8 @@ func Test_BasicUsage(t *testing.T) {
 		return nil
 	}
 
-	factory := ProvideExtensionEngineFactory(iextengine.BuiltInExtFuncs{
-		istructs.AppQName_test1_app1: iextengine.BuiltInAppExtFuncs{
+	factory := ProvideExtensionEngineFactory(iextengine.BuiltInAppExtFuncs{
+		istructs.AppQName_test1_app1: iextengine.BuiltInExtFuncs{
 			ext1name: ext1func,
 			ext2name: ext2func,
 		},
@@ -65,8 +65,8 @@ func Test_Panics(t *testing.T) {
 		panic("boom")
 	}
 
-	factory := ProvideExtensionEngineFactory(iextengine.BuiltInExtFuncs{
-		istructs.AppQName_test1_app1: iextengine.BuiltInAppExtFuncs{
+	factory := ProvideExtensionEngineFactory(iextengine.BuiltInAppExtFuncs{
+		istructs.AppQName_test1_app1: iextengine.BuiltInExtFuncs{
 			ext1name: ext1func,
 		},
 	})

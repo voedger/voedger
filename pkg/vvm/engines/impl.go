@@ -20,11 +20,11 @@ import (
 // # Panics:
 //   - if any extension implementation not found
 //   - if any extension package full path is unknown
-func provideAppsBuiltInExtFuncs(cfgs istructsmem.AppConfigsType) iextengine.BuiltInExtFuncs {
-	funcs := make(iextengine.BuiltInExtFuncs)
+func provideAppsBuiltInExtFuncs(cfgs istructsmem.AppConfigsType) iextengine.BuiltInAppExtFuncs {
+	funcs := make(iextengine.BuiltInAppExtFuncs)
 
 	for app, cfg := range cfgs {
-		appFuncs := make(iextengine.BuiltInAppExtFuncs)
+		appFuncs := make(iextengine.BuiltInExtFuncs)
 		cfg.AppDef.Extensions(
 			func(ext appdef.IExtension) {
 				if ext.Engine() != appdef.ExtensionEngineKind_BuiltIn {

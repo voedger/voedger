@@ -56,7 +56,7 @@ type AppConfigType struct {
 
 	appDefBuilder appdef.IAppDefBuilder
 	AppDef        appdef.IAppDef
-	Resources     Resources
+	Resources     Resources // сделать чтобы жто было statelessFuncs
 
 	// Application configuration parameters
 	Params AppConfigParams
@@ -179,7 +179,6 @@ func (cfg *AppConfigType) prepare(buckets irates.IBuckets, appStorage istorage.I
 }
 
 func (cfg *AppConfigType) validateResources() (err error) {
-
 	cfg.AppDef.Extensions(func(ext appdef.IExtension) {
 		if ext.Engine() == appdef.ExtensionEngineKind_BuiltIn {
 			// Only builtin extensions should be validated by cfg.Resources
@@ -214,6 +213,7 @@ func (cfg *AppConfigType) validateResources() (err error) {
 	if err != nil {
 		return err
 	}
+
 	err = iterate.ForEachError(cfg.Resources.Resources, func(qName appdef.QName) error {
 		if cfg.AppDef.Type(qName).Kind() == appdef.TypeKind_null {
 			return fmt.Errorf("exec of func %s is defined but the func is not defined in SQL", qName)
