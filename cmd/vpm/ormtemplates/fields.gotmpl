@@ -20,7 +20,7 @@ func (v Value_{{.Table.Type}}_{{.Table.Package.Name}}_{{.Table.Name}}) {{.GetMet
 }
 {{end}}
 
-{{if or (eq .Type "View") (eq .Type "WDoc") (eq .Type "ODoc") (eq .Type "WSingleton")}}
+{{if or (eq .Type "View") (eq .Type "WDoc") (eq .Type "ODoc") (eq .Type "CDoc") (eq .Type "WSingleton")}}
 {{range .Fields}}
 func (i Intent_{{.Table.Type}}_{{.Table.Package.Name}}_{{.Table.Name}}) {{.SetMethodName}}(value {{.Type}}) Intent_{{.Table.Type}}_{{.Table.Package.Name}}_{{.Table.Name}} {
 	{{if eq .Type "ID"}}i.intent.PutInt64("{{.Name}}", int64(value)){{else}}i.intent.Put{{capitalize .Type}}("{{.Name}}", value){{end}}

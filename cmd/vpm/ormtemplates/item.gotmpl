@@ -7,7 +7,7 @@ type {{.Type}}_{{.Package.Name}}_{{.Name}} struct {
 {{if and (ne .Type "Command") (ne .Type "Query")}}
 type Value_{{.Type}}_{{.Package.Name}}_{{.Name}} struct{
     tv exttinygo.TValue
-	{{if or (eq .Type "WDoc") (eq .Type "View") (eq .Type "WSingleton")}}kb exttinygo.TKeyBuilder{{end}}
+	{{if or (eq .Type "CDoc") (eq .Type "WDoc") (eq .Type "View") (eq .Type "WSingleton")}}kb exttinygo.TKeyBuilder{{end}}
 }
 {{end}}
 
