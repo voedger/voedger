@@ -9,8 +9,9 @@ import (
 	"context"
 )
 
+// Factory loads and returns storages specified by stNames from a location specified by locationPath
 // Do NOT panic
-type Factory func(pkgPath string, modulePath string, extNames []string) (map[string]IObjectStorage, error)
+type Factory func(locationPath string, stNames []string) (map[string]IObjectStorage, error)
 
 // @ConcurrentAccess
 type IObjectStorage interface {
@@ -22,13 +23,12 @@ type IObjectStorage interface {
 }
 
 type IObjectKey interface {
-	Pkg() string
+	LocalPkg() string
 	Name() string
-	Key() IBasicObject
+	Key() IBasicRow
 }
 
-type IBasicObject interface {
-	IReleasable
+type IBasicRow interface {
 
 	// Do NOT panic
 	AsInt64(name string) (value int64, ok bool)
@@ -40,6 +40,11 @@ type IBasicObject interface {
 
 	// Do NOT panic
 	AsBytes(name string, value *[]byte) (ok bool)
+}
+
+type IBasicObject interface {
+	IReleasable
+	IBasicRow
 }
 
 type ICompositeObject interface {
