@@ -17,20 +17,10 @@ import (
 )
 
 // engine placeholder
-type engines struct {
-	byKind [appdef.ExtensionEngineKind_Count]iextengine.IExtensionEngine
-	pool   *pool.Pool[*engines]
-}
+type engines [appdef.ExtensionEngineKind_Count]iextengine.IExtensionEngine
 
 func newEngines() *engines {
 	return &engines{}
-}
-
-func (e *engines) release() {
-	if p := e.pool; p != nil {
-		e.pool = nil
-		p.Release(e)
-	}
 }
 
 type app struct {
@@ -78,7 +68,7 @@ func (a *app) deploy(def appdef.IAppDef, structs istructs.IAppStructs, numEngine
 		for i := 0; i < cnt; i++ {
 			ee[i] = newEngines()
 			for ek := range eef {
-				ee[i].byKind[ek] = extEngines[ek][i]
+				ee[i][ek] = extEngines[ek][i]
 			}
 		}
 		a.engines[k] = pool.New(ee)
@@ -111,10 +101,11 @@ func (p *partition) borrow(proc ProcessorKind) (*partitionRT, error) {
 }
 
 type partitionRT struct {
-	part       *partition
-	appDef     appdef.IAppDef
-	appStructs istructs.IAppStructs
-	borrowed   *engines
+	part                  *partition
+	appDef                appdef.IAppDef
+	appStructs            istructs.IAppStructs
+	borrowed              *engines
+	borrowedProcessorKind ProcessorKind
 }
 
 var partionRTPool = sync.Pool{
@@ -155,13 +146,14 @@ func (rt *partitionRT) Invoke(ctx context.Context, name appdef.QName, state istr
 	}
 	io := iextengine.NewExtensionIO(rt.appDef, state, intents)
 
-	return rt.borrowed.byKind[e.Engine()].Invoke(ctx, extName, io)
+	return rt.borrowed[e.Engine()].Invoke(ctx, extName, io)
 }
 
 func (rt *partitionRT) Release() {
 	if e := rt.borrowed; e != nil {
 		rt.borrowed = nil
-		e.release()
+		rt.part.app.engines[rt.borrowedProcessorKind].Release(e)
+		rt.borrowedProcessorKind = ProcessorKind_Count // like null
 	}
 	partionRTPool.Put(rt)
 }
@@ -173,7 +165,7 @@ func (rt *partitionRT) init(proc ProcessorKind) error {
 	if err != nil {
 		return errNotAvailableEngines[proc]
 	}
-	engine.pool = pool
 	rt.borrowed = engine
+	rt.borrowedProcessorKind = proc
 	return nil
 }
