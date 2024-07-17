@@ -21,7 +21,7 @@ require (
 	github.com/gorilla/mux v1.8.1
 	github.com/hashicorp/golang-lru/v2 v2.0.7
 	github.com/juju/errors v1.0.0
-	github.com/robfig/cron/v3 v3.0.0
+	github.com/robfig/cron/v3 v3.0.1
 	github.com/spf13/cobra v1.8.0
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.9.0
@@ -30,12 +30,12 @@ require (
 	github.com/valyala/bytebufferpool v1.0.0
 	github.com/wneessen/go-mail v0.4.1
 	go.etcd.io/bbolt v1.3.9
-	golang.org/x/crypto v0.21.0
-	golang.org/x/exp v0.0.0-20240314144324-c7f7c6466f7f
-	golang.org/x/mod v0.16.0
-	golang.org/x/net v0.23.0
-	golang.org/x/text v0.14.0
-	golang.org/x/tools v0.19.0
+	golang.org/x/crypto v0.23.0
+	golang.org/x/exp v0.0.0-20240506185415-9bf2ced13842
+	golang.org/x/mod v0.17.0
+	golang.org/x/net v0.25.0
+	golang.org/x/text v0.15.0
+	golang.org/x/tools v0.21.0
 	gopkg.in/yaml.v2 v2.4.0
 )
 
@@ -55,14 +55,15 @@ require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/emersion/go-sasl v0.0.0-20231106173351-e73c9f7bad43 // indirect
 	github.com/golang/snappy v0.0.4 // indirect
-	github.com/google/flatbuffers v24.3.7+incompatible // indirect
+	github.com/google/flatbuffers v24.3.25+incompatible // indirect
 	github.com/hailocab/go-hostpool v0.0.0-20160125115350-e80d13ce29ed // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/stretchr/objx v0.5.2 // indirect
 	github.com/untillpro/gojay v1.2.17-0.20201109133446-b1069e05b56c // indirect
-	golang.org/x/sys v0.19.0 // indirect
+	golang.org/x/sync v0.7.0 // indirect
+	golang.org/x/sys v0.20.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

@@ -82,6 +82,7 @@ func compile(dir string, checkAppSchema bool) (*Result, error) {
 		if err := parser.BuildAppDefs(appAst, builder); err != nil {
 			errs = append(errs, err)
 		}
+		result.AppDefBuilder = builder
 		result.AppDef, err = builder.Build()
 		if err != nil {
 			errs = append(errs, err)

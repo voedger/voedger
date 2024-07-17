@@ -1043,6 +1043,22 @@ func (r *implIRecords) GetSingleton(wsid istructs.WSID, qName appdef.QName) (rec
 }
 func (implIRecords) Read(istructs.WSID, bool, istructs.RecordID) (istructs.IRecord, error) { panic("") }
 
+func (r *implIRecords) GetSingletonID(qName appdef.QName) (istructs.RecordID, error) {
+	for _, wsData := range r.data {
+		if qNameRecs, ok := wsData[qName]; ok {
+			if len(qNameRecs) > 1 {
+				panic(">1 records for a singleton")
+			}
+			for _, data := range qNameRecs {
+				iRecord := &implIRecord{qName: qName, TestObject: coreutils.TestObject{Data: data}}
+				return iRecord.ID(), nil
+			}
+		}
+	}
+
+	return istructs.NullRecordID, nil
+}
+
 type implIRecord struct {
 	coreutils.TestObject
 	qName appdef.QName

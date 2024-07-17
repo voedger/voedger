@@ -307,6 +307,19 @@ func TestOrmBasicUsage(t *testing.T) {
 
 }
 
+func TestBuildExample2(t *testing.T) {
+	if testing.Short() {
+		t.Skip()
+	}
+	require := require.New(t)
+
+	err := execRootCmd([]string{"vpm", "orm", "-C", "../../examples/airs-bp2/air"}, "1.0.0")
+	require.NoError(err)
+
+	err = execRootCmd([]string{"vpm", "build", "-C", "../../examples/airs-bp2/air"}, "1.0.0")
+	require.NoError(err)
+}
+
 func TestInitBasicUsage(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
