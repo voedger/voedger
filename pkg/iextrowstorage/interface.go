@@ -11,14 +11,13 @@ import (
 
 type IFactory interface {
 	// Do NOT panic
-	// New is called once per [application, packagePath, version]
+	// New is called once per [application, package, version]
 	// New loads and returns storages specified by stNames from a location specified by locationPath
 	New(cgd *Config) (map[string]IRowStorage, error)
 }
 
 type Config struct {
 	LocationPath string
-	Version      string
 	StorageNames []string
 	Logger       IRSLogger
 }
@@ -33,9 +32,19 @@ type IRSLogger interface {
 // @ConcurrentAccess
 type IRowStorage interface {
 	IReleasable
+}
+
+type IRowStorageWithGet interface {
 	// Do NOT panic
 	Get(ctx context.Context, key IRowKey) (v ICompositeRow, ok bool, err error)
+}
 
+type IRowStorageWithPut interface {
+	// Do NOT panic
+	Put(ctx context.Context, key IRowKey, value ICompositeRow) error
+}
+
+type IRowStorageWithRead interface {
 	// key can be a partial key (filled from left to right)
 	// Do NOT panic
 	Read(ctx context.Context, key IRowKey, cb func(ICompositeRow) bool) error
@@ -72,7 +81,7 @@ type ICompositeRow interface {
 	// FieldNames(cb func(appdef.FieldName))
 
 	// Do NOT panic
-	AsObject(name string) (value ICompositeRow, ok bool)
+	AsRow(name string) (value ICompositeRow, ok bool)
 
 	// Working with arrays
 
