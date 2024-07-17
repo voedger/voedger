@@ -3,34 +3,51 @@
  * @author Maxim Geraskin
  */
 
-package iextobjstorage
+package iextrowstorage
 
 import (
 	"context"
 )
 
-// Factory loads and returns storages specified by stNames from a location specified by locationPath
-// Do NOT panic
-type Factory func(locationPath string, stNames []string) (map[string]IObjectStorage, error)
+type IFactory interface {
+	// Do NOT panic
+	// New is called once per [application, packagePath, version]
+	// New loads and returns storages specified by stNames from a location specified by locationPath
+	New(cgd *Config) (map[string]IRowStorage, error)
+}
+
+type Config struct {
+	LocationPath string
+	Version      string
+	StorageNames []string
+	Logger       IRSLogger
+}
+
+type IRSLogger interface {
+	Error(args ...interface{})
+	Warning(args ...interface{})
+	Info(args ...interface{})
+	Verbose(args ...interface{})
+}
 
 // @ConcurrentAccess
-type IObjectStorage interface {
+type IRowStorage interface {
 	IReleasable
 	// Do NOT panic
-	Get(ctx context.Context, key IObjectKey) (v ICompositeObject, ok bool, err error)
+	Get(ctx context.Context, key IRowKey) (v ICompositeRow, ok bool, err error)
 
 	// key can be a partial key (filled from left to right)
 	// Do NOT panic
-	Read(ctx context.Context, key IObjectKey, cb func(ICompositeObject) bool) error
+	Read(ctx context.Context, key IRowKey, cb func(ICompositeRow) bool) error
 }
 
-type IObjectKey interface {
+type IRowKey interface {
 	LocalPkg() string
 	Name() string
-	Key() IBasicRow
+	Key() IBasicRowFields
 }
 
-type IBasicRow interface {
+type IBasicRowFields interface {
 
 	// Do NOT panic
 	AsInt64(name string) (value int64, ok bool)
@@ -44,23 +61,23 @@ type IBasicRow interface {
 	AsBytes(name string, value *[]byte) (ok bool)
 }
 
-type IBasicObject interface {
+type IBasicRow interface {
 	IReleasable
-	IBasicRow
+	IBasicRowFields
 }
 
-type ICompositeObject interface {
-	IBasicObject
+type ICompositeRow interface {
+	IBasicRow
 
 	// FieldNames(cb func(appdef.FieldName))
 
 	// Do NOT panic
-	AsObject(name string) (value ICompositeObject, ok bool)
+	AsObject(name string) (value ICompositeRow, ok bool)
 
 	// Working with arrays
 
 	// Do NOT panic
-	ByIdx(idx int) (value ICompositeObject, ok bool)
+	ByIdx(idx int) (value ICompositeRow, ok bool)
 
 	// Do NOT panic
 	Length() int
