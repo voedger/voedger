@@ -30,6 +30,7 @@ type IRSLogger interface {
 }
 
 // @ConcurrentAccess
+// Will be type-asserted to IRowStorageWith* interfaces
 type IRowStorage interface {
 	IReleasable
 }
@@ -90,18 +91,6 @@ type ICompositeRow interface {
 
 	// Do NOT panic
 	Length() int
-
-	// GetAsString(index int) string
-	// GetAsBytes(index int) []byte
-	// GetAsInt32(index int) int32
-	// GetAsInt64(index int) int64
-	// GetAsFloat32(index int) float32
-	// GetAsFloat64(index int) float64
-
-	// // GetAsQName(index int) appdef.QName
-
-	// GetAsBool(index int) bool
-
 }
 
 type IReleasable interface {

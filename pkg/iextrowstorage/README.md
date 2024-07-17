@@ -1,3 +1,3 @@
 # iextstgengine
 
-- [iextstgengine](https://github.com/voedger/voedger/issues/2370)
+- [iextrowstorage](https://github.com/voedger/voedger/issues/2370)
