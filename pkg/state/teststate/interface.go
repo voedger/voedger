@@ -50,7 +50,6 @@ type ITestState interface {
 }
 
 type IIntentAssertions interface {
-	NotExists()
 	Exists()
 	Equal(vb ValueBuilderCallback)
 	Assert(cb IntentAssertionsCallback)

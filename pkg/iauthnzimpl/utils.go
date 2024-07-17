@@ -14,7 +14,7 @@ import (
 	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/istructs"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
-	"golang.org/x/exp/slices"
+	"slices"
 )
 
 var TestSubjectRolesGetter = func(context.Context, string, istructs.IAppStructs, istructs.WSID) ([]appdef.QName, error) {
