@@ -6,6 +6,4 @@ use (
 	./cmd/edger
 	./examples/airs-bp/air/extwasm
 	./pkg/iextengine/wazero/_testdata
-	./examples/airs-bp2/air
-	./examples/airs-bp2/untill
 )
