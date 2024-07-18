@@ -20,6 +20,10 @@ import (
 // # Panics:
 //   - if any extension implementation not found
 //   - if any extension package full path is unknown
+func provideStatelessFuncs() {
+	
+}
+
 func provideAppsBuiltInExtFuncs(cfgs istructsmem.AppConfigsType) iextengine.BuiltInAppExtFuncs {
 	funcs := make(iextengine.BuiltInAppExtFuncs)
 

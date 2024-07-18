@@ -22,6 +22,7 @@ import (
 )
 
 // AppConfigsType: map of applications configurators
+// сюда подать Stateless
 type AppConfigsType map[appdef.AppQName]*AppConfigType
 
 // AddAppConfig: adds new config for specified application or replaces if exists
