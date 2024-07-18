@@ -1,106 +1,198 @@
 {{define "methods"}}
 
+func (r {{.Type}}_{{.Package.Name}}_{{.Name}}) PkgPath() string {
+	return Package_{{.Package.Name}}.Path
+}
+
+func (r {{.Type}}_{{.Package.Name}}_{{.Name}}) Entity() string {
+	return "{{.Name}}"
+}
+
+{{if (eq .Type "WS")}}
+func (r {{.Type}}_{{.Package.Name}}_{{.Name}}) Descriptor() string {
+	return "{{.WsDescriptor}}"
+}
+{{end}}
+
 {{if (eq .Type "WDoc")}}
-func (v {{.Type}}_{{.Package.Name}}_{{.Name}}) NewIntent(id ID) Intent_{{.Type}}_{{.Package.Name}}_{{.Name}} {
-	kb := exttinygo.KeyBuilder(exttinygo.StorageRecord, v.qname)
-	kb.PutInt64(FieldNameSysID, int64(id))
+func (v {{.Type}}_{{.Package.Name}}_{{.Name}}) Insert(id ID) Intent_{{.Type}}_{{.Package.Name}}_{{.Name}} {
+	kb := exttinygo.KeyBuilder(exttinygo.StorageRecord, v.fQName)
+	kb.PutInt64(FieldName_ID, int64(id))
 	return Intent_{{.Type}}_{{.Package.Name}}_{{.Name}}{intent: exttinygo.NewValue(kb)}
 }
 
+func (v {{.Type}}_{{.Package.Name}}_{{.Name}}) Update(id ID) Intent_{{.Type}}_{{.Package.Name}}_{{.Name}} {
+	existingValue := v.MustGet(id)
+	kb := exttinygo.KeyBuilder(exttinygo.StorageRecord, v.fQName)
+	kb.PutInt64(FieldName_ID, int64(id))
+	return Intent_{{.Type}}_{{.Package.Name}}_{{.Name}}{intent: exttinygo.UpdateValue(kb, existingValue.tv)}
+}
+
 func (v {{.Type}}_{{.Package.Name}}_{{.Name}}) Get(id ID) (Value_{{.Type}}_{{.Package.Name}}_{{.Name}}, bool) {
-	kb := exttinygo.KeyBuilder(exttinygo.StorageRecord, v.qname)
-	kb.PutInt64(FieldNameSysID, int64(id))
+	kb := exttinygo.KeyBuilder(exttinygo.StorageRecord, v.fQName)
+	kb.PutInt64(FieldName_ID, int64(id))
 	tv, exists := exttinygo.QueryValue(kb)
 	return Value_{{.Type}}_{{.Package.Name}}_{{.Name}}{tv: tv, kb: kb}, exists
 }
 
 func (v {{.Type}}_{{.Package.Name}}_{{.Name}}) MustGet(id ID) Value_{{.Type}}_{{.Package.Name}}_{{.Name}} {
-	kb := exttinygo.KeyBuilder(exttinygo.StorageRecord, v.qname)
-	kb.PutInt64(FieldNameSysID, int64(id))
+	kb := exttinygo.KeyBuilder(exttinygo.StorageRecord, v.fQName)
+	kb.PutInt64(FieldName_ID, int64(id))
 	tv := exttinygo.MustGetValue(kb)
 	return Value_{{.Type}}_{{.Package.Name}}_{{.Name}}{tv: tv, kb: kb}
 }
 
-func (v Value_{{.Type}}_{{.Package.Name}}_{{.Name}}) NewIntent() Intent_{{.Type}}_{{.Package.Name}}_{{.Name}} {
+func (v Value_{{.Type}}_{{.Package.Name}}_{{.Name}}) Insert() Intent_{{.Type}}_{{.Package.Name}}_{{.Name}} {
 	return Intent_{{.Type}}_{{.Package.Name}}_{{.Name}}{intent: exttinygo.NewValue(v.kb)}
+}
+
+func (v Value_{{.Type}}_{{.Package.Name}}_{{.Name}}) Update() Intent_{{.Type}}_{{.Package.Name}}_{{.Name}} {
+	return Intent_{{.Type}}_{{.Package.Name}}_{{.Name}}{intent: exttinygo.UpdateValue(v.kb, v.tv)}
 }
 {{end}}
 
 {{if (eq .Type "WSingleton")}}
-func (v {{.Type}}_{{.Package.Name}}_{{.Name}}) NewIntent() Intent_{{.Type}}_{{.Package.Name}}_{{.Name}} {
-	kb := exttinygo.KeyBuilder(exttinygo.StorageRecord, v.qname)
+func (v {{.Type}}_{{.Package.Name}}_{{.Name}}) Insert() Intent_{{.Type}}_{{.Package.Name}}_{{.Name}} {
+	kb := exttinygo.KeyBuilder(exttinygo.StorageRecord, v.fQName)
+	kb.PutBool(FieldName_IsSingleton, true)
 	return Intent_{{.Type}}_{{.Package.Name}}_{{.Name}}{intent: exttinygo.NewValue(kb)}
 }
 
+func (v {{.Type}}_{{.Package.Name}}_{{.Name}}) Update() Intent_{{.Type}}_{{.Package.Name}}_{{.Name}} {
+	existingValue := v.MustGet()
+	kb := exttinygo.KeyBuilder(exttinygo.StorageRecord, v.fQName)
+	kb.PutBool(FieldName_IsSingleton, true)
+	return Intent_{{.Type}}_{{.Package.Name}}_{{.Name}}{intent: exttinygo.UpdateValue(kb, existingValue.tv)}
+}
+
 func (v {{.Type}}_{{.Package.Name}}_{{.Name}}) Get() (Value_{{.Type}}_{{.Package.Name}}_{{.Name}}, bool) {
-	kb := exttinygo.KeyBuilder(exttinygo.StorageRecord, v.qname)
+	kb := exttinygo.KeyBuilder(exttinygo.StorageRecord, v.fQName)
+	kb.PutBool(FieldName_IsSingleton, true)
 	tv, exists := exttinygo.QueryValue(kb)
 	if !exists {
-		return Value_{{.Type}}_{{.Package.Name}}_{{.Name}}{}, false
+		return Value_{{.Type}}_{{.Package.Name}}_{{.Name}}{kb: kb}, false
 	}
-	kb.PutInt64(FieldNameSysID, tv.AsInt64(FieldNameSysID))
 	return Value_{{.Type}}_{{.Package.Name}}_{{.Name}}{tv: tv, kb: kb}, true
 }
 
 func (v {{.Type}}_{{.Package.Name}}_{{.Name}}) MustGet() Value_{{.Type}}_{{.Package.Name}}_{{.Name}} {
-	kb := exttinygo.KeyBuilder(exttinygo.StorageRecord, v.qname)
+	kb := exttinygo.KeyBuilder(exttinygo.StorageRecord, v.fQName)
+	kb.PutBool(FieldName_IsSingleton, true)
 	tv := exttinygo.MustGetValue(kb)
 	return Value_{{.Type}}_{{.Package.Name}}_{{.Name}}{tv: tv, kb: kb}
 }
 
-func (v Value_{{.Type}}_{{.Package.Name}}_{{.Name}}) NewIntent() Intent_{{.Type}}_{{.Package.Name}}_{{.Name}} {
+func (v Value_{{.Type}}_{{.Package.Name}}_{{.Name}}) Insert() Intent_{{.Type}}_{{.Package.Name}}_{{.Name}} {
 	return Intent_{{.Type}}_{{.Package.Name}}_{{.Name}}{intent: exttinygo.NewValue(v.kb)}
+}
+
+func (v Value_{{.Type}}_{{.Package.Name}}_{{.Name}}) Update() Intent_{{.Type}}_{{.Package.Name}}_{{.Name}} {
+	return Intent_{{.Type}}_{{.Package.Name}}_{{.Name}}{intent: exttinygo.UpdateValue(v.kb, v.tv)}
 }
 {{end}}
 
 {{if (eq .Type "CDoc")}}
 func (v {{.Type}}_{{.Package.Name}}_{{.Name}}) MustGet(id ID) Value_{{.Type}}_{{.Package.Name}}_{{.Name}} {
-	kb := exttinygo.KeyBuilder(exttinygo.StorageRecord, v.qname)
-	kb.PutInt64(FieldNameSysID, int64(id))
+	kb := exttinygo.KeyBuilder(exttinygo.StorageRecord, v.fQName)
+	kb.PutInt64(FieldName_ID, int64(id))
 	return Value_{{.Type}}_{{.Package.Name}}_{{.Name}}{tv: exttinygo.MustGetValue(kb)}
 }
 
 func (v {{.Type}}_{{.Package.Name}}_{{.Name}}) Get(id ID) (Value_{{.Type}}_{{.Package.Name}}_{{.Name}}, bool) {
-	kb := exttinygo.KeyBuilder(exttinygo.StorageRecord, v.qname)
-	kb.PutInt64(FieldNameSysID, int64(id))
+	kb := exttinygo.KeyBuilder(exttinygo.StorageRecord, v.fQName)
+	kb.PutInt64(FieldName_ID, int64(id))
 	tv, exists := exttinygo.QueryValue(kb)
 	return Value_{{.Type}}_{{.Package.Name}}_{{.Name}}{tv: tv}, exists
+}
+
+func (v {{.Type}}_{{.Package.Name}}_{{.Name}}) Insert(id ID) Intent_{{.Type}}_{{.Package.Name}}_{{.Name}} {
+	kb := exttinygo.KeyBuilder(exttinygo.StorageRecord, v.fQName)
+	kb.PutInt64(FieldName_ID, int64(id))
+	return Intent_{{.Type}}_{{.Package.Name}}_{{.Name}}{intent: exttinygo.NewValue(kb)}
+}
+
+func (v {{.Type}}_{{.Package.Name}}_{{.Name}}) Update(id ID) Intent_{{.Type}}_{{.Package.Name}}_{{.Name}} {
+	existingValue := v.MustGet(id)
+	kb := exttinygo.KeyBuilder(exttinygo.StorageRecord, v.fQName)
+	kb.PutInt64(FieldName_ID, int64(id))
+	return Intent_{{.Type}}_{{.Package.Name}}_{{.Name}}{intent: exttinygo.UpdateValue(kb, existingValue.tv)}
+}
+
+func (v Value_{{.Type}}_{{.Package.Name}}_{{.Name}}) Insert() Intent_{{.Type}}_{{.Package.Name}}_{{.Name}} {
+	return Intent_{{.Type}}_{{.Package.Name}}_{{.Name}}{intent: exttinygo.NewValue(v.kb)}
+}
+
+func (v Value_{{.Type}}_{{.Package.Name}}_{{.Name}}) Update() Intent_{{.Type}}_{{.Package.Name}}_{{.Name}} {
+	return Intent_{{.Type}}_{{.Package.Name}}_{{.Name}}{intent: exttinygo.UpdateValue(v.kb, v.tv)}
+}
+{{end}}
+
+{{if (eq .Type "ODoc")}}
+func (v {{.Type}}_{{.Package.Name}}_{{.Name}}) Insert(id ID) Intent_{{.Type}}_{{.Package.Name}}_{{.Name}} {
+	kb := exttinygo.KeyBuilder(exttinygo.StorageRecord, v.fQName)
+	kb.PutInt64(FieldName_ID, int64(id))
+	return Intent_{{.Type}}_{{.Package.Name}}_{{.Name}}{intent: exttinygo.NewValue(kb)}
+}
+{{end}}
+
+{{if (eq .Type "ORecord")}}
+func (v *Container_ORecord_{{.Package.Name}}_{{.Name}}) Len() int {
+	if v.len == 0 {
+		v.len = v.tv.Len() + 1
+	}
+
+	return v.len - 1
+}
+
+func (v *Container_ORecord_{{.Package.Name}}_{{.Name}}) Get(i int) Value_{{.Type}}_{{.Package.Name}}_{{.Name}} {
+	return Value_{{.Type}}_{{.Package.Name}}_{{.Name}}{tv: v.tv.GetAsValue(i)}
 }
 {{end}}
 
 {{if (eq .Type "View")}}
-func (v {{.Type}}_{{.Package.Name}}_{{.Name}}) NewIntent({{range .Keys}}{{lower .Name}} {{.Type}}, {{end}}) Intent_{{.Type}}_{{.Package.Name}}_{{.Name}} {
-	kb := exttinygo.KeyBuilder(exttinygo.StorageRecord, v.qname){{range .Keys}}
-	{{if eq .Type "Ref"}}kb.PutInt64("{{.Name}}", int64({{lower .Name}})){{else}}kb.Put{{capitalize .Type}}("{{.Name}}", {{lower .Name}}){{end}}{{end}}
+func (v {{.Type}}_{{.Package.Name}}_{{.Name}}) Insert({{range .Keys}}{{lower .Name}} {{.Type}}, {{end}}) Intent_{{.Type}}_{{.Package.Name}}_{{.Name}} {
+	kb := exttinygo.KeyBuilder(exttinygo.StorageRecord, v.fQName){{range .Keys}}
+	{{if eq .Type "ID"}}kb.PutInt64("{{.Name}}", int64({{lower .Name}})){{else}}kb.Put{{capitalize .Type}}("{{.Name}}", {{lower .Name}}){{end}}{{end}}
 	return Intent_{{.Type}}_{{.Package.Name}}_{{.Name}}{intent: exttinygo.NewValue(kb)}
 }
 
+func (v {{.Type}}_{{.Package.Name}}_{{.Name}}) Update({{range .Keys}}{{lower .Name}} {{.Type}}, {{end}}) Intent_{{.Type}}_{{.Package.Name}}_{{.Name}} {
+	existingValue := v.MustGet({{range .Keys}}{{lower .Name}}, {{end}})
+	kb := exttinygo.KeyBuilder(exttinygo.StorageRecord, v.fQName){{range .Keys}}
+	{{if eq .Type "ID"}}kb.PutInt64("{{.Name}}", int64({{lower .Name}})){{else}}kb.Put{{capitalize .Type}}("{{.Name}}", {{lower .Name}}){{end}}{{end}}
+	return Intent_{{.Type}}_{{.Package.Name}}_{{.Name}}{intent: exttinygo.UpdateValue(kb, existingValue.tv)}
+}
+
 func (v {{.Type}}_{{.Package.Name}}_{{.Name}}) Get({{range .Keys}}{{lower .Name}} {{.Type}}, {{end}}) (Value_{{.Type}}_{{.Package.Name}}_{{.Name}}, bool) {
-	kb := exttinygo.KeyBuilder(exttinygo.StorageRecord, v.qname){{range .Keys}}
-	{{if eq .Type "Ref"}}kb.PutInt64("{{.Name}}", int64({{lower .Name}})){{else}}kb.Put{{capitalize .Type}}("{{.Name}}", {{lower .Name}}){{end}}{{end}}
+	kb := exttinygo.KeyBuilder(exttinygo.StorageRecord, v.fQName){{range .Keys}}
+	{{if eq .Type "ID"}}kb.PutInt64("{{.Name}}", int64({{lower .Name}})){{else}}kb.Put{{capitalize .Type}}("{{.Name}}", {{lower .Name}}){{end}}{{end}}
 	tv, exists := exttinygo.QueryValue(kb)
 	if !exists {
-		return Value_{{.Type}}_{{.Package.Name}}_{{.Name}}{}, false
+		return Value_{{.Type}}_{{.Package.Name}}_{{.Name}}{kb: kb}, false
 	}
 	return Value_{{.Type}}_{{.Package.Name}}_{{.Name}}{tv: tv, kb: kb}, true
 }
 
 func (v {{.Type}}_{{.Package.Name}}_{{.Name}}) MustGet({{range .Keys}}{{lower .Name}} {{.Type}}, {{end}}) Value_{{.Type}}_{{.Package.Name}}_{{.Name}} {
-	kb := exttinygo.KeyBuilder(exttinygo.StorageRecord, v.qname){{range .Keys}}
-	{{if eq .Type "Ref"}}kb.PutInt64("{{.Name}}", int64({{lower .Name}})){{else}}kb.Put{{capitalize .Type}}("{{.Name}}", {{lower .Name}}){{end}}{{end}}
+	kb := exttinygo.KeyBuilder(exttinygo.StorageRecord, v.fQName){{range .Keys}}
+	{{if eq .Type "ID"}}kb.PutInt64("{{.Name}}", int64({{lower .Name}})){{else}}kb.Put{{capitalize .Type}}("{{.Name}}", {{lower .Name}}){{end}}{{end}}
 	tv := exttinygo.MustGetValue(kb)
 	return Value_{{.Type}}_{{.Package.Name}}_{{.Name}}{tv: tv, kb: kb}
 }
 
-func (v Value_{{.Type}}_{{.Package.Name}}_{{.Name}}) NewIntent() Intent_{{.Type}}_{{.Package.Name}}_{{.Name}} {
+func (v Value_{{.Type}}_{{.Package.Name}}_{{.Name}}) Insert() Intent_{{.Type}}_{{.Package.Name}}_{{.Name}} {
 	return Intent_{{.Type}}_{{.Package.Name}}_{{.Name}}{intent: exttinygo.NewValue(v.kb)}
+}
+
+func (v Value_{{.Type}}_{{.Package.Name}}_{{.Name}}) Update() Intent_{{.Type}}_{{.Package.Name}}_{{.Name}} {
+	return Intent_{{.Type}}_{{.Package.Name}}_{{.Name}}{intent: exttinygo.UpdateValue(v.kb, v.tv)}
 }
 {{end}}
 
 {{if or (eq .Type "Container")}}
 func (v {{.Type}}_{{.Package.Name}}_{{.Name}}) Get(id ID) (Value_{{.Type}}_{{.Package.Name}}_{{.Name}}, bool) {
-	kb := exttinygo.KeyBuilder(exttinygo.StorageRecord, v.qname)
-	kb.PutInt64(FieldNameSysID, int64(id))
+	kb := exttinygo.KeyBuilder(exttinygo.StorageRecord, v.fQName)
+	kb.PutInt64(FieldName_ID, int64(id))
 	tv, exists := exttinygo.QueryValue(kb)
 	return Value_{{.Type}}_{{.Package.Name}}_{{.Name}}{tv: tv}, exists
 }
@@ -114,6 +206,22 @@ func (c {{.Type}}_{{.Package.Name}}_{{.Name}}) ArgumentObject() Value_{{.Argumen
 }
 {{end}}
 
+func (r {{.Type}}_{{.Package.Name}}_{{.Name}}) ArgumentPkgPath() string {
+	{{if .ArgumentObject}}return Package_{{.ArgumentObject.Package.Name}}.{{.ArgumentObject.Type}}_{{.ArgumentObject.Name}}.PkgPath()
+	{{else}}return ""{{end}}
+}
+
+func (r {{.Type}}_{{.Package.Name}}_{{.Name}}) ArgumentEntity() string {
+	{{if .ArgumentObject}}return Package_{{.ArgumentObject.Package.Name}}.{{.ArgumentObject.Type}}_{{.ArgumentObject.Name}}.Entity()
+	{{else}}return ""{{end}}
+}
+
+{{if (eq .Type "Command")}}
+func (r {{.Type}}_{{.Package.Name}}_{{.Name}}) WorkspaceDescriptor() string {
+	{{if (eq .WsDescriptor "")}}return ""{{else}}return Package_{{.Package.Name}}.WS_{{.WsName}}.Descriptor(){{end}}
+}
+{{end}}
+
 {{if .UnloggedArgumentObject}}
 func (c {{.Type}}_{{.Package.Name}}_{{.Name}}) UnloggedArgumentObject() Value_{{.UnloggedArgumentObject.Type}}_{{.UnloggedArgumentObject.Package.Name}}_{{.UnloggedArgumentObject.Name}} {
 	kb := exttinygo.KeyBuilder(exttinygo.StorageCommandContext, exttinygo.NullEntity)
@@ -124,7 +232,7 @@ func (c {{.Type}}_{{.Package.Name}}_{{.Name}}) UnloggedArgumentObject() Value_{{
 {{if .ResultObjectFields}}
 func (c {{.Type}}_{{.Package.Name}}_{{.Name}}) Result({{range .ResultObjectFields}}{{lower .Name}} {{.Type}}, {{end}}) {
 	__result := exttinygo.NewValue(exttinygo.KeyBuilder(exttinygo.StorageResult, exttinygo.NullEntity)){{range .ResultObjectFields}}
-	{{if eq .Type "Ref"}}__result.PutInt64("{{.Name}}", int64({{lower .Name}})){{else}}__result.Put{{capitalize .Type}}("{{.Name}}", {{lower .Name}}){{end}}{{end}}
+	{{if eq .Type "ID"}}__result.PutInt64("{{.Name}}", int64({{lower .Name}})){{else}}__result.Put{{capitalize .Type}}("{{.Name}}", {{lower .Name}}){{end}}{{end}}
 }
 {{end}}
 {{end}}

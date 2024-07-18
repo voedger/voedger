@@ -806,6 +806,12 @@ func (row *rowType) PutFromJSON(j map[appdef.FieldName]any) {
 		switch fv := v.(type) {
 		case float64:
 			row.PutNumber(n, fv)
+		case int32:
+			row.PutNumber(n, float64(fv))
+		case int:
+			row.PutNumber(n, float64(fv))
+		case istructs.RecordID:
+			row.PutNumber(n, float64(fv))
 		case string:
 			row.PutChars(n, fv)
 		case bool:

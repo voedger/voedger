@@ -8,7 +8,7 @@ package coreutils
 import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
-	"golang.org/x/exp/slices"
+	"slices"
 )
 
 func MatchQName(qNames ...appdef.QName) func(cud istructs.ICUDRow, wsid istructs.WSID, cmdQName appdef.QName) bool {
