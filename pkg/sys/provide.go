@@ -36,11 +36,15 @@ import (
 //go:embed *.vsql
 var SysFS embed.FS
 
+func ProvideStateless(res istructsmem.StatelessResources)  {
+	blobber.ProvideBlobberCmds(res)
+}
+
 func Provide(cfg *istructsmem.AppConfigType, smtpCfg smtp.Cfg,
 	ep extensionpoints.IExtensionPoint, wsPostInitFunc workspace.WSPostInitFunc, timeFunc coreutils.TimeFunc, itokens itokens.ITokens, federation federation.IFederation,
 	asp istructs.IAppStructsProvider, atf payloads.IAppTokensFactory, buildInfo *debug.BuildInfo,
 	storageProvider istorage.IAppStorageProvider) parser.PackageFS {
-	blobber.ProvideBlobberCmds(cfg)
+	// blobber.ProvideBlobberCmds(cfg)
 	collection.Provide(cfg)
 	journal.Provide(cfg, ep)
 	builtin.Provide(cfg, buildInfo, storageProvider)

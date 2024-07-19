@@ -21,13 +21,18 @@ import (
 	"github.com/voedger/voedger/pkg/istructsmem/internal/vers"
 )
 
+type AppResources struct {
+	AppConfigs         AppConfigsType
+	StatelessResources StatelessResources
+}
+
 // AppConfigsType: map of applications configurators
+// does contain stateless resources
 type AppConfigsType map[appdef.AppQName]*AppConfigType
 
 // AddAppConfig: adds new config for specified application or replaces if exists
 func (cfgs *AppConfigsType) AddAppConfig(name appdef.AppQName, id istructs.ClusterAppID, def appdef.IAppDef, wsCount istructs.NumAppWorkspaces) *AppConfigType {
 	c := newAppConfig(name, id, def, wsCount)
-
 	(*cfgs)[name] = c
 	return c
 }
@@ -56,7 +61,7 @@ type AppConfigType struct {
 
 	appDefBuilder appdef.IAppDefBuilder
 	AppDef        appdef.IAppDef
-	Resources     Resources
+	Resources     Resources // does not contain stateless funcs
 
 	// Application configuration parameters
 	Params AppConfigParams

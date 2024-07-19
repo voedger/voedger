@@ -13,6 +13,10 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
+type StatelessResources struct {
+	Resources
+}
+
 // Implements istructs.IResources
 type Resources struct {
 	resources map[appdef.QName]istructs.IResource
@@ -23,7 +27,7 @@ func makeResources() Resources {
 }
 
 // Adds new resource to application resources
-func (res *Resources) Add(r istructs.IResource) {
+func (res Resources) Add(r istructs.IResource) {
 	res.resources[r.QName()] = r
 }
 
