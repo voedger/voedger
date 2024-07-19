@@ -438,6 +438,13 @@ type MockIntents struct {
 	mock.Mock
 }
 
+func (m *MockIntents) FindIntentWithOpKind(key istructs.IStateKeyBuilder) (istructs.IStateValueBuilder, bool) {
+	return nil, false
+}
+
+func (m *MockIntents) Intents(iterFunc func(key istructs.IStateKeyBuilder, value istructs.IStateValueBuilder, isNew bool)) {
+}
+
 func (m *MockIntents) FindIntent(key istructs.IStateKeyBuilder) istructs.IStateValueBuilder {
 	return nil
 }

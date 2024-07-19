@@ -99,6 +99,7 @@ var (
 	qNameWDocLastNumbers                            = appdef.NewQName(airPackage, "LastNumbers")
 	qNameCmdVSqlUpdate                              = appdef.NewQName(clusterPackage, "VSqlUpdate")
 	qNameCmdSaveTap2PayPayment                      = appdef.NewQName(airPackage, "SaveTap2PayPayment")
+	qNameQryGetResellers                            = appdef.NewQName(airPackage, "GetResellers")
 
 	// Air roles
 	qNameRoleResellersAdmin         = appdef.NewQName(airPackage, "ResellersAdmin")
