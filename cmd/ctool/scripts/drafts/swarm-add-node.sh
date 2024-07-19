@@ -34,7 +34,19 @@ node_id=$(utils_ssh "$SSH_USER@$MANAGER" "docker node ls --format '{{.ID}}' | wh
     echo "Host is already a member of Docker Swarm cluster."
   else 
     echo "Join node to Docker Swarm..."
-    utils_ssh "$SSH_USER@$1" "docker swarm join --token $JOIN_TOKEN --listen-addr $ip:2377 $MANAGER:2377"
+    # Attempt to join node to Docker Swarm
+    join_output=$(utils_ssh "$SSH_USER@$1" "docker swarm join --token $JOIN_TOKEN --listen-addr $ip:2377 $MANAGER:2377" 2>&1) || join_error=$?
+      if [[ -n "${join_error-}" ]]; then
+        if [[ "$join_output" == *"This node is already part of a swarm"* ]]; then
+          echo "Node is already part of a swarm, leaving current swarm..."
+          utils_ssh "$SSH_USER@$1" "docker swarm leave --force"
+          echo "Rejoining node to Docker Swarm..."
+          utils_ssh "$SSH_USER@$1" "docker swarm join --token $JOIN_TOKEN --listen-addr $ip:2377 $MANAGER:2377"
+        else
+          echo "Failed to join node to Docker Swarm: $join_output"
+          exit 1
+        fi
+      fi
   fi
 
 shift

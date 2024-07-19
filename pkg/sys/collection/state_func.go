@@ -18,43 +18,42 @@ import (
 func provideStateFunc(cfg *istructsmem.AppConfigType) {
 	cfg.Resources.Add(istructsmem.NewQueryFunction(
 		qNameQueryState,
-		stateFuncExec(cfg.AppDef)))
+		stateFuncExec))
 }
 
-func stateFuncExec(appDef appdef.IAppDef) istructsmem.ExecQueryClosure {
-	return func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
-		after := args.ArgumentObject.AsInt64(field_After)
+func stateFuncExec(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
+	after := args.ArgumentObject.AsInt64(field_After)
 
-		kb, err := args.State.KeyBuilder(state.View, QNameCollectionView)
-		if err != nil {
-			return err
-		}
-		kb.PutInt32(Field_PartKey, PartitionKeyCollection)
-
-		data := make(map[string]map[istructs.RecordID]map[string]interface{})
-		if err = args.State.Read(kb, func(key istructs.IKey, value istructs.IStateValue) (err error) {
-			if value.AsInt64(state.ColOffset) <= after {
-				return
-			}
-			record := value.AsRecord(Field_Record)
-			_, ok := data[record.QName().String()]
-			if !ok {
-				data[record.QName().String()] = make(map[istructs.RecordID]map[string]interface{})
-			}
-			recordData := coreutils.FieldsToMap(record, appDef, coreutils.Filter(func(name string, kind appdef.DataKind) bool {
-				return name != appdef.SystemField_QName && name != appdef.SystemField_Container
-			}))
-			data[record.QName().String()][record.ID()] = recordData
-			return err
-		}); err != nil {
-			return
-		}
-		bb, err := json.Marshal(data)
-		if err != nil {
-			return
-		}
-		return callback(&stateObject{data: string(bb)})
+	kb, err := args.State.KeyBuilder(state.View, QNameCollectionView)
+	if err != nil {
+		return err
 	}
+	kb.PutInt32(Field_PartKey, PartitionKeyCollection)
+
+	data := make(map[string]map[istructs.RecordID]map[string]interface{})
+	appDef := args.Workpiece.(interface{GetAppStructs() istructs.IAppStructs}).GetAppStructs().AppDef()
+	if err = args.State.Read(kb, func(key istructs.IKey, value istructs.IStateValue) (err error) {
+		if value.AsInt64(state.ColOffset) <= after {
+			return
+		}
+		record := value.AsRecord(Field_Record)
+		_, ok := data[record.QName().String()]
+		if !ok {
+			data[record.QName().String()] = make(map[istructs.RecordID]map[string]interface{})
+		}
+		recordData := coreutils.FieldsToMap(record, appDef, coreutils.Filter(func(name string, kind appdef.DataKind) bool {
+			return name != appdef.SystemField_QName && name != appdef.SystemField_Container
+		}))
+		data[record.QName().String()][record.ID()] = recordData
+		return err
+	}); err != nil {
+		return
+	}
+	bb, err := json.Marshal(data)
+	if err != nil {
+		return
+	}
+	return callback(&stateObject{data: string(bb)})
 }
 
 type stateObject struct {

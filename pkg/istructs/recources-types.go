@@ -103,6 +103,7 @@ type IState interface {
 	QueryCallback() ExecQueryCallback
 
 	App() appdef.AppQName
+	AppStructs() IAppStructs
 }
 
 type IIntents interface {
@@ -116,7 +117,11 @@ type IIntents interface {
 	// returns nil when not found
 	FindIntent(key IStateKeyBuilder) IStateValueBuilder
 
+	FindIntentWithOpKind(key IStateKeyBuilder) (IStateValueBuilder, bool)
+
 	IntentsCount() int
+	// iterate over all intents
+	Intents(iterFunc func(key IStateKeyBuilder, value IStateValueBuilder, isNew bool))
 }
 type IPkgNameResolver interface {
 	// Returns package path by package local name.
@@ -146,9 +151,9 @@ type IStateValue interface {
 type IStateValueBuilder interface {
 	IValueBuilder
 
-	BuildValue() IStateValue // Currently used in TestState and for the intents in the bundled storage. Must return nil of not supported by storage.
+	BuildValue() IStateValue // Currently used in testState and for the intents in the bundled storage. Must return nil of not supported by storage.
 
-	Equal(to IStateValueBuilder) bool // used in TestState
+	Equal(to IStateValueBuilder) bool // used in testState
 }
 type IStateKeyBuilder interface {
 	IKeyBuilder

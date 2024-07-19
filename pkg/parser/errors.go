@@ -184,6 +184,10 @@ func ErrViewFieldVarchar(name string) error {
 	return fmt.Errorf("varchar field %s not supported in partition key", name)
 }
 
+func ErrViewFieldRecord(name string) error {
+	return fmt.Errorf("record field %s not supported in partition key", name)
+}
+
 func ErrViewFieldBytes(name string) error {
 	return fmt.Errorf("bytes field %s not supported in partition key", name)
 }

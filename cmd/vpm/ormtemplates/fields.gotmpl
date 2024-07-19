@@ -1,18 +1,29 @@
 {{define "fields"}}
 
-{{if or (eq .Type "View") (eq .Type "WDoc") (eq .Type "ODoc") (eq .Type "CDoc") (eq .Type "WSingletone") (eq .Type "Type")}}
+{{if or (eq .Type "View") (eq .Type "WDoc") (eq .Type "ODoc") (eq .Type "CDoc") (eq .Type "WSingleton") (eq .Type "Type") (eq .Type "ORecord")}}
+
+{{if .Containers}}
+
+{{range .Containers}}
+func (v Value_{{.Table.Type}}_{{.Table.Package.Name}}_{{.Table.Name}}) {{.GetMethodName}}() {{.Type}}_ORecord_{{.Table.Package.Name}}_{{.Name}} {
+	return {{.Type}}_ORecord_{{.Table.Package.Name}}_{{.Name}}{tv: v.tv.AsValue("{{.Name}}")}
+}
+{{end}}
+
+{{end}}
+
 {{if .Fields}}
 
 {{range .Fields}}
 func (v Value_{{.Table.Type}}_{{.Table.Package.Name}}_{{.Table.Name}}) {{.GetMethodName}}() {{.Type}} {
-	{{if eq .Type "Ref"}}return Ref(v.tv.AsInt64("{{.Name}}")){{else}}return v.tv.As{{capitalize .Type}}("{{.Name}}"){{end}}
+	{{if eq .Type "ID"}}return ID(v.tv.AsInt64("{{.Name}}")){{else}}return v.tv.As{{capitalize .Type}}("{{.Name}}"){{end}}
 }
 {{end}}
 
-{{if or (eq .Type "View") (eq .Type "WDoc")}}
+{{if or (eq .Type "View") (eq .Type "WDoc") (eq .Type "ODoc") (eq .Type "CDoc") (eq .Type "WSingleton")}}
 {{range .Fields}}
 func (i Intent_{{.Table.Type}}_{{.Table.Package.Name}}_{{.Table.Name}}) {{.SetMethodName}}(value {{.Type}}) Intent_{{.Table.Type}}_{{.Table.Package.Name}}_{{.Table.Name}} {
-	{{if eq .Type "Ref"}}i.intent.PutInt64("{{.Name}}", int64(value)){{else}}i.intent.Put{{capitalize .Type}}("{{.Name}}", value){{end}}
+	{{if eq .Type "ID"}}i.intent.PutInt64("{{.Name}}", int64(value)){{else}}i.intent.Put{{capitalize .Type}}("{{.Name}}", value){{end}}
 	return i
 }
 {{end}}

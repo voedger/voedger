@@ -5,7 +5,6 @@
 package workspace
 
 import (
-	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
@@ -15,7 +14,7 @@ import (
 	"github.com/voedger/voedger/pkg/utils/federation"
 )
 
-func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, asp istructs.IAppStructsProvider, timeFunc coreutils.TimeFunc, tokensAPI itokens.ITokens,
+func Provide(cfg *istructsmem.AppConfigType, timeFunc coreutils.TimeFunc, tokensAPI itokens.ITokens,
 	federation federation.IFederation, itokens itokens.ITokens, ep extensionpoints.IExtensionPoint, wsPostInitFunc WSPostInitFunc) {
 	// c.sys.InitChildWorkspace
 	cfg.Resources.Add(istructsmem.NewCommandFunction(
@@ -27,13 +26,13 @@ func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder
 	// target app, (target cluster, base profile WSID)
 	cfg.Resources.Add(istructsmem.NewCommandFunction(
 		QNameCommandCreateWorkspaceID,
-		execCmdCreateWorkspaceID(asp, cfg.Name),
+		execCmdCreateWorkspaceID,
 	))
 
 	// c.sys.CreateWorkspace
 	cfg.Resources.Add(istructsmem.NewCommandFunction(
 		QNameCommandCreateWorkspace,
-		execCmdCreateWorkspace(timeFunc, asp, cfg.Name),
+		execCmdCreateWorkspace(timeFunc),
 	))
 
 	// q.sys.QueryChildWorkspaceByName
@@ -42,7 +41,7 @@ func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder
 		qcwbnQryExec,
 	))
 
-	provideViewNextWSID(appDefBuilder)
+	provideViewNextWSID(cfg.AppDefBuilder())
 
 	// deactivate workspace
 	provideDeactivateWorkspace(cfg, tokensAPI, federation)

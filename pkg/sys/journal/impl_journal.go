@@ -22,10 +22,10 @@ import (
 func provideQryJournal(cfg *istructsmem.AppConfigType, ep extensionpoints.IExtensionPoint) {
 	cfg.Resources.Add(istructsmem.NewQueryFunction(
 		appdef.NewQName(appdef.SysPackage, "Journal"),
-		qryJournalExec(ep, cfg.AppDef),
+		qryJournalExec(ep),
 	))
 }
-func qryJournalExec(ep extensionpoints.IExtensionPoint, appDef appdef.IAppDef) istructsmem.ExecQueryClosure {
+func qryJournalExec(ep extensionpoints.IExtensionPoint) istructsmem.ExecQueryClosure {
 	return func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 		var fo, lo int64
 		ji := ep.ExtensionPoint(EPJournalIndices)
@@ -49,6 +49,7 @@ func qryJournalExec(ep extensionpoints.IExtensionPoint, appDef appdef.IAppDef) i
 			return err
 		}
 
+		appDef := args.Workpiece.(interface{ GetAppStructs() istructs.IAppStructs }).GetAppStructs().AppDef()
 		cb := func(_ istructs.IKey, value istructs.IStateValue) (err error) {
 			if fo == int64(0) {
 				return

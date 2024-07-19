@@ -6,17 +6,16 @@ package describe
 
 import (
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
 )
 
-func Provide(cfg *istructsmem.AppConfigType, asp istructs.IAppStructsProvider) {
+func Provide(cfg *istructsmem.AppConfigType) {
 	cfg.Resources.Add(istructsmem.NewQueryFunction(
 		appdef.NewQName(appdef.SysPackage, "DescribePackageNames"),
-		provideQryDescribePackageNames(asp, cfg.Name),
+		qryDescribePackageNames,
 	))
 	cfg.Resources.Add(istructsmem.NewQueryFunction(
 		appdef.NewQName(appdef.SysPackage, "DescribePackage"),
-		provideQryDescribePackage(asp, cfg.Name),
+		qryDescribePackage,
 	))
 }

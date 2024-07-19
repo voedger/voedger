@@ -53,6 +53,8 @@ var defaultACL = ACL{
 				qNameQrySendReceiptByEmail,
 				// https://dev.untill.com/projects/#!698913
 				qNameQryQueryResellerInfo,
+				// https://dev.untill.com/projects/#!700365
+				qNameQryGetResellers,
 			},
 		},
 		policy: ACPolicy_Allow,

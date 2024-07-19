@@ -109,6 +109,11 @@ type ITypeBuilder interface {
 	ICommentsBuilder
 }
 
+type IFullQName interface {
+	PkgPath() string
+	Entity() string
+}
+
 // AnyType is used for return then type is any
 var AnyType = newAnyType(QNameANY)
 

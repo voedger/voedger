@@ -176,6 +176,8 @@ func (app *appStructsType) EventValidators() []istructs.EventValidator {
 	return app.config.eventValidators
 }
 
+// func (app appStructsType) GetAppStorage
+
 func (app *appStructsType) IsFunctionRateLimitsExceeded(funcQName appdef.QName, wsid istructs.WSID) bool {
 	rateLimits, ok := app.config.FunctionRateLimits.limits[funcQName]
 	if !ok {
@@ -597,6 +599,10 @@ func (recs *appRecordsType) GetSingleton(workspace istructs.WSID, qName appdef.Q
 		return NewNullRecord(istructs.NullRecordID), err
 	}
 	return recs.Get(workspace, true, id)
+}
+
+func (recs *appRecordsType) GetSingletonID(qName appdef.QName) (istructs.RecordID, error) {
+	return recs.app.config.singletons.ID(qName)
 }
 
 // istructs.IRecords.PutJSON
