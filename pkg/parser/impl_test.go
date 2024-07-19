@@ -1042,6 +1042,62 @@ func Test_Views(t *testing.T) {
 		);
 	)
 	`, "file.vsql:2:3: primary key not defined")
+
+	t.Run("record field in partition key", func(t *testing.T) {
+		require.AppSchemaError(`APPLICATION test(); WORKSPACE Workspace (
+			VIEW test(
+				i int32,
+				field1 record,
+				PRIMARY KEY((field1))
+			) AS RESULT OF Proj1;
+			EXTENSION ENGINE BUILTIN (
+				PROJECTOR Proj1 AFTER EXECUTE ON (Orders) INTENTS (View(test));
+				COMMAND Orders()
+			);
+			)
+		`, "file.vsql:5:18: record field field1 not supported in partition key")
+	})
+
+	t.Run("record field in clustering key", func(t *testing.T) {
+		require.AppSchemaError(`APPLICATION test(); WORKSPACE Workspace (
+			VIEW test(
+				i int32,
+				field1 record,
+				PRIMARY KEY((i), field1)
+			) AS RESULT OF Proj1;
+			EXTENSION ENGINE BUILTIN (
+				PROJECTOR Proj1 AFTER EXECUTE ON (Orders) INTENTS (View(test));
+				COMMAND Orders()
+			);
+			)
+		`, "file.vsql:5:22: record field field1 not supported in partition key")
+	})
+
+	t.Run("record fields", func(t *testing.T) {
+		schema, err := require.AppSchema(`APPLICATION test(); WORKSPACE Workspace (
+			VIEW test(
+				i int32,
+				j int32,
+				field1 record,
+				PRIMARY KEY((i), j)
+			) AS RESULT OF Proj1;
+			EXTENSION ENGINE BUILTIN (
+				PROJECTOR Proj1 AFTER EXECUTE ON (Orders) INTENTS (View(test));
+				COMMAND Orders()
+			);
+			)
+		`)
+		require.NoError(err)
+		require.NotNil(schema)
+		adf := appdef.New()
+		require.NoError(BuildAppDefs(schema, adf))
+		def, err := adf.Build()
+
+		require.NoError(err)
+		view := def.View(appdef.NewQName("pkg", "test"))
+		require.NotNil(view)
+		require.NotNil(view.Value().Field("field1"))
+	})
 }
 
 func Test_Views2(t *testing.T) {
@@ -2491,9 +2547,7 @@ ALTER WORKSPACE sys.AppWorkspaceWS (
 		s9_2 blob,
 
 		s10_1 qualified name,
-		s10_2 qname,
-
-		s11_1 record
+		s10_2 qname
 
 	);
 );`)

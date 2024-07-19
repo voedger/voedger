@@ -271,6 +271,10 @@ func (c *buildContext) views() error {
 					comment(f.Field.Name.Value, f.Field.Statement)
 					return
 				}
+				if f.RecordField != nil {
+					vb().Value().AddDataField(string(f.RecordField.Name.Value), appdef.SysDataName(appdef.DataKind_Record), f.RecordField.NotNull, []appdef.IConstraint{}...)
+					comment(f.RecordField.Name.Value, f.RecordField.Statement)
+				}
 				if f.RefField != nil {
 					vb().Value().AddRefField(string(f.RefField.Name.Value), f.RefField.NotNull, f.RefField.refQNames...)
 					comment(f.RefField.Name.Value, f.RefField.Statement)

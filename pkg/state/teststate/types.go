@@ -8,6 +8,8 @@ import (
 	"io"
 	"time"
 
+	"github.com/voedger/voedger/pkg/appdef"
+
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
@@ -35,4 +37,18 @@ type HttpResponse struct {
 	Status  int
 	Body    []byte
 	Headers map[string][]string
+}
+
+type recordItem struct {
+	entity       appdef.IFullQName
+	isSingleton  bool
+	isNew        bool
+	id           int
+	keyValueList []any
+}
+
+type intentItem struct {
+	key   istructs.IStateKeyBuilder
+	value istructs.IStateValueBuilder
+	isNew bool
 }

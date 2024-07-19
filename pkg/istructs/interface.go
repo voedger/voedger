@@ -145,6 +145,8 @@ type IRecords interface {
 	// qName must be a singleton
 	// If record not found NullRecord with QName() == NullQName is returned
 	GetSingleton(workspace WSID, qName appdef.QName) (record IRecord, err error)
+
+	GetSingletonID(qName appdef.QName) (RecordID, error)
 }
 
 type RecordGetBatchItem struct {

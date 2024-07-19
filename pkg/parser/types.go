@@ -327,8 +327,7 @@ type DataType struct {
 	Currency  bool         `parser:"| @('money' | 'currency')"`
 	Bool      bool         `parser:"| @('boolean' | 'bool')"`
 	Blob      bool         `parser:"| @(('binary' 'large' 'object') | 'blob')"`
-	QName     bool         `parser:"| @(('qualified' 'name') | 'qname')"`
-	Record    bool         `parser:"| @'record' )"`
+	QName     bool         `parser:"| @(('qualified' 'name') | 'qname')  )"`
 }
 
 func (q DataType) String() (s string) {
@@ -879,10 +878,11 @@ func (s ViewStmt) ValueFields(callback func(f *ViewItemExpr)) {
 }
 
 type ViewItemExpr struct {
-	Pos        lexer.Position
-	PrimaryKey *PrimaryKeyExpr `parser:"(PRIMARYKEY '(' @@ ')')"`
-	RefField   *ViewRefField   `parser:"| @@"`
-	Field      *ViewField      `parser:"| @@"`
+	Pos         lexer.Position
+	PrimaryKey  *PrimaryKeyExpr  `parser:"(PRIMARYKEY '(' @@ ')')"`
+	RefField    *ViewRefField    `parser:"| @@"`
+	RecordField *ViewRecordField `parser:"| @@"`
+	Field       *ViewField       `parser:"| @@"`
 }
 
 // Returns field name
@@ -892,6 +892,9 @@ func (i ViewItemExpr) FieldName() Ident {
 	}
 	if i.RefField != nil {
 		return i.RefField.Name.Value
+	}
+	if i.RecordField != nil {
+		return i.RecordField.Name.Value
 	}
 	return ""
 }
@@ -918,6 +921,12 @@ type ViewField struct {
 	Statement
 	Name    Identifier `parser:"@@"`
 	Type    DataType   `parser:"@@"`
+	NotNull bool       `parser:"@(NOTNULL)?"`
+}
+
+type ViewRecordField struct {
+	Statement
+	Name    Identifier `parser:"@@ 'record'"`
 	NotNull bool       `parser:"@(NOTNULL)?"`
 }
 

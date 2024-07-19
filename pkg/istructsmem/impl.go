@@ -599,6 +599,10 @@ func (recs *appRecordsType) GetSingleton(workspace istructs.WSID, qName appdef.Q
 	return recs.Get(workspace, true, id)
 }
 
+func (recs *appRecordsType) GetSingletonID(qName appdef.QName) (istructs.RecordID, error) {
+	return recs.app.config.singletons.ID(qName)
+}
+
 // istructs.IRecords.PutJSON
 func (recs *appRecordsType) PutJSON(ws istructs.WSID, j map[appdef.FieldName]any) error {
 	rec := newRecord(recs.app.config)
