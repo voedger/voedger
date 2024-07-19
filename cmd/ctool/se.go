@@ -388,6 +388,7 @@ func deployDbmsDockerStack(cluster *clusterType) error {
 }
 
 // set in swarm all the necessary labels for the cluster node
+// nolint
 func setNodeSwarmLabels(cluster *clusterType, node *nodeType) error {
 
 	var err error

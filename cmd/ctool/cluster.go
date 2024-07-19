@@ -282,6 +282,7 @@ func (n *nodeType) actualNodeVersion() string {
 	return n.ActualNodeState.NodeVersion
 }
 
+// nolint
 func (n *nodeType) label(key string) []string {
 	switch n.NodeRole {
 	case nrCENode:
