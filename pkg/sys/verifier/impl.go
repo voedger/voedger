@@ -32,7 +32,7 @@ func provideQryInitiateEmailVerification(cfg *istructsmem.AppConfigType, itokens
 	asp istructs.IAppStructsProvider, federation federation.IFederation) {
 	cfg.Resources.Add(istructsmem.NewQueryFunction(
 		QNameQueryInitiateEmailVerification,
-		provideIEVExec(cfg.Name, itokens, asp, federation),
+		provideIEVExec(itokens, federation, asp),
 	))
 	cfg.FunctionRateLimits.AddWorkspaceLimit(QNameQueryInitiateEmailVerification, istructs.RateLimit{
 		Period:                InitiateEmailVerification_Period,
@@ -42,7 +42,7 @@ func provideQryInitiateEmailVerification(cfg *istructsmem.AppConfigType, itokens
 
 // q.sys.InitiateEmailVerification
 // called at targetApp/profileWSID
-func provideIEVExec(appQName appdef.AppQName, itokens itokens.ITokens, asp istructs.IAppStructsProvider, federation federation.IFederation) istructsmem.ExecQueryClosure {
+func provideIEVExec(itokens itokens.ITokens, federation federation.IFederation, asp istructs.IAppStructsProvider) istructsmem.ExecQueryClosure {
 	return func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 		entity := args.ArgumentObject.AsString(field_Entity)
 		targetWSID := istructs.WSID(args.ArgumentObject.AsInt64(field_TargetWSID))
@@ -51,10 +51,7 @@ func provideIEVExec(appQName appdef.AppQName, itokens itokens.ITokens, asp istru
 		forRegistry := args.ArgumentObject.AsBool(field_ForRegistry)
 		lng := args.ArgumentObject.AsString(field_Language)
 
-		as, err := asp.BuiltIn(appQName)
-		if err != nil {
-			return err
-		}
+		as := args.Workpiece.(interface{ GetAppStructs() istructs.IAppStructs }).GetAppStructs()
 		appTokens := as.AppTokens()
 		if forRegistry {
 			// issue token for sys/registry/pseduoWSID. That's for c.sys.ResetPassword only for now
@@ -72,14 +69,14 @@ func provideIEVExec(appQName appdef.AppQName, itokens itokens.ITokens, asp istru
 			return err
 		}
 
-		systemPrincipalToken, err := payloads.GetSystemPrincipalToken(itokens, appQName)
+		systemPrincipalToken, err := payloads.GetSystemPrincipalToken(itokens, as.AppQName())
 		if err != nil {
 			return err
 		}
 
 		// c.sys.SendEmailVerificationCode
 		body := fmt.Sprintf(`{"args":{"VerificationCode":"%s","Email":"%s","Reason":"%s","Language":"%s"}}`, verificationCode, email, verifyEmailReason, lng)
-		if _, err = federation.Func(fmt.Sprintf("api/%s/%d/c.sys.SendEmailVerificationCode", appQName, args.WSID), body,
+		if _, err = federation.Func(fmt.Sprintf("api/%s/%d/c.sys.SendEmailVerificationCode", as.AppQName(), args.WSID), body,
 			coreutils.WithDiscardResponse(), coreutils.WithAuthorizeBy(systemPrincipalToken)); err != nil {
 			return fmt.Errorf("c.sys.SendEmailVerificationCode failed: %w", err)
 		}
