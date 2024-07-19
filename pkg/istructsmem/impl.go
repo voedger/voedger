@@ -176,6 +176,8 @@ func (app *appStructsType) EventValidators() []istructs.EventValidator {
 	return app.config.eventValidators
 }
 
+// func (app appStructsType) GetAppStorage
+
 func (app *appStructsType) IsFunctionRateLimitsExceeded(funcQName appdef.QName, wsid istructs.WSID) bool {
 	rateLimits, ok := app.config.FunctionRateLimits.limits[funcQName]
 	if !ok {
