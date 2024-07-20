@@ -324,8 +324,8 @@ func deployTestAppWithSecretToken(require *require.Assertions,
 		appparts.NullActualizers,
 		engines.ProvideExtEngineFactories(
 			engines.ExtEngineFactoriesConfig{
-				AppConfigs: cfgs,
-				WASMConfig: iextengine.WASMFactoryConfig{Compile: false},
+				AppResources: cfgs,
+				WASMConfig:   iextengine.WASMFactoryConfig{Compile: false},
 			}))
 	require.NoError(err)
 	appParts.DeployApp(appName, appDef, partCount, appEngines)

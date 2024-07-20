@@ -704,8 +704,8 @@ func setUp(t *testing.T, prepare func(appDef appdef.IAppDefBuilder, cfg *istruct
 		appparts.NullActualizers,
 		engines.ProvideExtEngineFactories(
 			engines.ExtEngineFactoriesConfig{
-				AppConfigs: cfgs,
-				WASMConfig: iextengine.WASMFactoryConfig{Compile: false},
+				AppResources: cfgs,
+				WASMConfig:   iextengine.WASMFactoryConfig{Compile: false},
 			}))
 	require.NoError(err)
 	defer appPartsClean()

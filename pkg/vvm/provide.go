@@ -30,6 +30,7 @@ import (
 	"github.com/voedger/voedger/pkg/iextengine"
 	"github.com/voedger/voedger/pkg/itokens"
 	"github.com/voedger/voedger/pkg/router"
+	"github.com/voedger/voedger/pkg/sys"
 	"github.com/voedger/voedger/pkg/vvm/engines"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -263,6 +264,15 @@ func provideAsyncActualizersService(cfg projectors.BasicAsyncActualizerConfig) p
 	return projectors.ProvideActualizers(cfg)
 }
 
+func provideAppResources(cfgs istructsmem.AppConfigsType) istructsmem.AppResources {
+	spb := istructsmem.NewStatelessPkgBuilder()
+	sys.ProvideStateless(spb)
+	return istructsmem.AppResources{
+		AppConfigs:        cfgs,
+		StatelessPackages: sysStatelessResources,
+	}
+}
+
 func provideAppPartitions(
 	asp istructs.IAppStructsProvider,
 	saf appparts.SyncActualizerFactory,
@@ -271,8 +281,8 @@ func provideAppPartitions(
 ) (ap appparts.IAppPartitions, cleanup func(), err error) {
 
 	eef := engines.ProvideExtEngineFactories(engines.ExtEngineFactoriesConfig{
-		AppConfigs: appsArtefacts.AppConfigsType,
-		WASMConfig: iextengine.WASMFactoryConfig{Compile: false},
+		AppResources: appsArtefacts.AppConfigsType,
+		WASMConfig:   iextengine.WASMFactoryConfig{Compile: false},
 	})
 
 	return appparts.New2(

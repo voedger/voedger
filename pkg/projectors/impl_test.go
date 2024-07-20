@@ -325,8 +325,8 @@ func deployTestAppEx(
 		actualizers,
 		engines.ProvideExtEngineFactories(
 			engines.ExtEngineFactoriesConfig{
-				AppConfigs: cfgs,
-				WASMConfig: iextengine.WASMFactoryConfig{Compile: false},
+				AppResources: cfgs,
+				WASMConfig:   iextengine.WASMFactoryConfig{Compile: false},
 			}))
 	if err != nil {
 		panic(err)

@@ -22,8 +22,8 @@ import (
 )
 
 type AppResources struct {
-	AppConfigs         AppConfigsType
-	StatelessResources StatelessResources
+	AppConfigs        AppConfigsType
+	StatelessPackages IStatelessPkg
 }
 
 // AppConfigsType: map of applications configurators
@@ -94,7 +94,7 @@ func newAppConfig(name appdef.AppQName, id istructs.ClusterAppID, def appdef.IAp
 	}
 
 	cfg.AppDef = def
-	cfg.Resources = makeResources()
+	cfg.Resources = NewResources()
 
 	cfg.dynoSchemes = dynobuf.New()
 

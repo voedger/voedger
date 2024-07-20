@@ -36,8 +36,9 @@ import (
 //go:embed *.vsql
 var SysFS embed.FS
 
-func ProvideStateless(res istructsmem.StatelessResources)  {
-	blobber.ProvideBlobberCmds(res)
+func ProvideStateless(spb istructsmem.IStatelessPkgBuilder) {
+	sprb := spb.AddPackage(appdef.SysPackage)
+	blobber.ProvideBlobberCmds(sprb)
 }
 
 func Provide(cfg *istructsmem.AppConfigType, smtpCfg smtp.Cfg,

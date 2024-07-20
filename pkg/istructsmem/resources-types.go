@@ -13,27 +13,107 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
-type StatelessResources struct {
-	Resources
+type IStatelessPkg interface {
+	istructs.IResources
+	PkgPath() string
+	SyncProjectors(func(cb istructs.Projector))
+	AsyncProjectors(func(cb istructs.Projector))
 }
+
+type IStatelessPkgBuilder interface {
+	AddPackage(pkgPath string) IStatelessPkgResourcesBuilder
+}
+
+type IStatelessPkgResourcesBuilder interface {
+	AddFunc(istructs.IResource)
+	AddSyncProjectors(...istructs.Projector)
+	AddAsyncProjectors(...istructs.Projector)
+}
+
+type statelessPkgs map[string]IStatelessPkg
+
+func (sp statelessPkgs) AddPackage(pkgPath string) IStatelessPkgResourcesBuilder {
+	if _, ok := sp[pkgPath]; ok {
+		panic("package " + pkgPath + " is added already")
+	}
+	res := &statelessPkg{
+		resources: NewResources(),
+		pkgPath:   pkgPath,
+	}
+	sp[pkgPath] = res
+	return res
+}
+
+func NewStatelessPkgBuilder() IStatelessPkgBuilder {
+	return statelessPkgs{}
+}
+
+// IStatelessPkg, IStatelessPkgResourcesBuilder
+type statelessPkg struct {
+	resources       Resources
+	pkgPath         string
+	syncProjectors  []istructs.Projector
+	asyncProjectors []istructs.Projector
+}
+
+func (sr *statelessPkg) PkgPath() string {
+	return sr.pkgPath
+}
+
+func (sr *statelessPkg) SyncProjectors(cb func(p istructs.Projector)) {
+	for _, sp := range sr.syncProjectors {
+		cb(sp)
+	}
+}
+
+func (sr *statelessPkg) AsyncProjectors(cb func(p istructs.Projector)) {
+	for _, sp := range sr.asyncProjectors {
+		cb(sp)
+	}
+}
+
+func (sr *statelessPkg) QueryResource(name appdef.QName) istructs.IResource {
+	return sr.resources.QueryResource(name)
+}
+
+func (sr *statelessPkg) Resources(enum func(appdef.QName)) {
+	sr.resources.Resources(enum)
+}
+
+func (sr *statelessPkg) AddSyncProjectors(syncProjectors ...istructs.Projector) {
+	sr.syncProjectors = append(sr.syncProjectors, syncProjectors...)
+}
+
+func (sr *statelessPkg) AddAsyncProjectors(asyncProjectors ...istructs.Projector) {
+	sr.asyncProjectors = append(sr.asyncProjectors, asyncProjectors...)
+}
+
+func (sr statelessPkg) AddFunc(res istructs.IResource) {
+	sr.resources.Add(res)
+}
+
+// type StatelessResources struct {
+// 	resources       Resources
+// 	pkgPath         string
+// 	SyncProjectors  []istructs.Projector
+// 	AsyncProjectors []istructs.Projector
+// }
 
 // Implements istructs.IResources
-type Resources struct {
-	resources map[appdef.QName]istructs.IResource
-}
+type Resources map[appdef.QName]istructs.IResource
 
-func makeResources() Resources {
-	return Resources{make(map[appdef.QName]istructs.IResource)}
+func NewResources() Resources {
+	return Resources{}
 }
 
 // Adds new resource to application resources
 func (res Resources) Add(r istructs.IResource) {
-	res.resources[r.QName()] = r
+	res[r.QName()] = r
 }
 
 // Finds application resource by QName
 func (res Resources) QueryResource(name appdef.QName) istructs.IResource {
-	r, ok := res.resources[name]
+	r, ok := res[name]
 	if !ok {
 		return nullResource
 	}
@@ -42,7 +122,7 @@ func (res Resources) QueryResource(name appdef.QName) istructs.IResource {
 
 // Enumerates all application resources
 func (res Resources) Resources(enum func(appdef.QName)) {
-	for n := range res.resources {
+	for n := range res {
 		enum(n)
 	}
 }

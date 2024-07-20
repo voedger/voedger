@@ -212,8 +212,8 @@ func deployTestApp(t *testing.T) (appParts appparts.IAppPartitions, appStructs i
 		appparts.NullActualizers,
 		engines.ProvideExtEngineFactories(
 			engines.ExtEngineFactoriesConfig{
-				AppConfigs: cfgs,
-				WASMConfig: iextengine.WASMFactoryConfig{},
+				AppResources: cfgs,
+				WASMConfig:   iextengine.WASMFactoryConfig{},
 			}))
 	require.NoError(err)
 	appParts.DeployApp(test.appQName, appDef, test.totalPartitions, test.appEngines)

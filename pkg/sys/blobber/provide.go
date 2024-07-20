@@ -12,22 +12,22 @@ import (
 	"github.com/voedger/voedger/pkg/state"
 )
 
-func ProvideBlobberCmds(res istructsmem.StatelessResources) {
-	provideUploadBLOBHelperCmd(res)
-	provideDownloadBLOBHelperCmd(res)
+func ProvideBlobberCmds(sprb istructsmem.IStatelessPkgResourcesBuilder) {
+	provideUploadBLOBHelperCmd(sprb)
+	provideDownloadBLOBHelperCmd(sprb)
 }
 
-func provideDownloadBLOBHelperCmd(res istructsmem.StatelessResources) {
+func provideDownloadBLOBHelperCmd(sprb istructsmem.IStatelessPkgResourcesBuilder) {
 	dbhQName := appdef.NewQName(appdef.SysPackage, "DownloadBLOBHelper")
 
 	// this command does nothing. It is called to check Authorization token provided in header only
 	downloadBLOBHelperCmd := istructsmem.NewCommandFunction(dbhQName, istructsmem.NullCommandExec)
-	res.Add(downloadBLOBHelperCmd)
+	sprb.AddFunc(downloadBLOBHelperCmd)
 }
 
-func provideUploadBLOBHelperCmd(res istructsmem.StatelessResources) {
+func provideUploadBLOBHelperCmd(sprb istructsmem.IStatelessPkgResourcesBuilder) {
 	uploadBLOBHelperCmd := istructsmem.NewCommandFunction(QNameCommandUploadBLOBHelper, ubhExec)
-	res.Add(uploadBLOBHelperCmd)
+	sprb.AddFunc(uploadBLOBHelperCmd)
 }
 
 func ubhExec(args istructs.ExecCommandArgs) (err error) {
