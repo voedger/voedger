@@ -19,7 +19,7 @@ func Provide(sprb istructsmem.IStatelessPkgResourcesBuilder, timeFunc coreutils.
 	// c.sys.InitChildWorkspace
 	sprb.AddFunc(istructsmem.NewCommandFunction(
 		authnz.QNameCommandInitChildWorkspace,
-		provideExecCmdInitChildWorkspace(),
+		execCmdInitChildWorkspace,
 	))
 
 	// c.sys.CreateWorkspaceID
