@@ -71,7 +71,7 @@ func execQryCDoc(ctx context.Context, args istructs.ExecQueryArgs, callback istr
 	var bytes []byte
 	var obj map[string]interface{}
 	refs := make(map[istructs.RecordID]bool)
-	appDef := args.Workpiece.(interface{ GetAppStructs() istructs.IAppStructs }).GetAppStructs().AppDef()
+	appDef := args.State.AppStructs().AppDef()
 	obj, err = convert(doc, appDef, refs, istructs.NullRecordID)
 	if err != nil {
 		return

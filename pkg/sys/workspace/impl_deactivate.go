@@ -23,38 +23,38 @@ import (
 	"github.com/voedger/voedger/pkg/utils/federation"
 )
 
-func provideDeactivateWorkspace(cfg *istructsmem.AppConfigType, tokensAPI itokens.ITokens, federation federation.IFederation) {
+func provideDeactivateWorkspace(sprb istructsmem.IStatelessPkgResourcesBuilder, tokensAPI itokens.ITokens, federation federation.IFederation) {
 
 	// c.sys.DeactivateWorkspace
 	// target app, target WSID
-	cfg.Resources.Add(istructsmem.NewCommandFunction(
+	sprb.AddFunc(istructsmem.NewCommandFunction(
 		qNameCmdInitiateDeactivateWorkspace,
 		cmdInitiateDeactivateWorkspaceExec,
 	))
 
 	// c.sys.OnWorkspaceDeactivated
 	// owner app, owner WSID
-	cfg.Resources.Add(istructsmem.NewCommandFunction(
+	sprb.AddFunc(istructsmem.NewCommandFunction(
 		appdef.NewQName(appdef.SysPackage, "OnWorkspaceDeactivated"),
 		cmdOnWorkspaceDeactivatedExec,
 	))
 
 	// c.sys.OnJoinedWorkspaceDeactivated
 	// target app, profile WSID
-	cfg.Resources.Add(istructsmem.NewCommandFunction(
+	sprb.AddFunc(istructsmem.NewCommandFunction(
 		appdef.NewQName(appdef.SysPackage, "OnJoinedWorkspaceDeactivated"),
 		cmdOnJoinedWorkspaceDeactivateExec,
 	))
 
 	// c.sys.OnChildWorkspaceDeactivated
 	// ownerApp/ownerWSID
-	cfg.Resources.Add(istructsmem.NewCommandFunction(
+	sprb.AddFunc(istructsmem.NewCommandFunction(
 		appdef.NewQName(appdef.SysPackage, "OnChildWorkspaceDeactivated"),
 		cmdOnChildWorkspaceDeactivatedExec,
 	))
 
 	// target app, target WSID
-	cfg.AddAsyncProjectors(istructs.Projector{
+	sprb.AddAsyncProjectors(istructs.Projector{
 		Name: qNameProjectorApplyDeactivateWorkspace,
 		Func: projectorApplyDeactivateWorkspace(federation, tokensAPI),
 	})

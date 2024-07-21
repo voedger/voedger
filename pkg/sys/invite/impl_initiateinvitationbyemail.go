@@ -14,8 +14,8 @@ import (
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-func provideCmdInitiateInvitationByEMail(cfg *istructsmem.AppConfigType, timeFunc coreutils.TimeFunc) {
-	cfg.Resources.Add(istructsmem.NewCommandFunction(
+func provideCmdInitiateInvitationByEMail(sprb istructsmem.IStatelessPkgResourcesBuilder, timeFunc coreutils.TimeFunc) {
+	sprb.AddFunc(istructsmem.NewCommandFunction(
 		qNameCmdInitiateInvitationByEMail,
 		execCmdInitiateInvitationByEMail(timeFunc),
 	))

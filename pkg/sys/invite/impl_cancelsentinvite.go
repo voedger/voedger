@@ -13,8 +13,8 @@ import (
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-func provideCmdCancelSentInvite(cfg *istructsmem.AppConfigType, timeFunc coreutils.TimeFunc) {
-	cfg.Resources.Add(istructsmem.NewCommandFunction(
+func provideCmdCancelSentInvite(sprb istructsmem.IStatelessPkgResourcesBuilder, timeFunc coreutils.TimeFunc) {
+	sprb.AddFunc(istructsmem.NewCommandFunction(
 		qNameCmdCancelSentInvite,
 		execCmdCancelSentInvite(timeFunc),
 	))

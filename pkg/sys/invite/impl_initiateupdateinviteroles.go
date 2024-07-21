@@ -13,8 +13,8 @@ import (
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-func provideCmdInitiateUpdateInviteRoles(cfg *istructsmem.AppConfigType, timeFunc coreutils.TimeFunc) {
-	cfg.Resources.Add(istructsmem.NewCommandFunction(
+func provideCmdInitiateUpdateInviteRoles(sprb istructsmem.IStatelessPkgResourcesBuilder, timeFunc coreutils.TimeFunc) {
+	sprb.AddFunc(istructsmem.NewCommandFunction(
 		qNameCmdInitiateUpdateInviteRoles,
 		execCmdInitiateUpdateInviteRoles(timeFunc),
 	))

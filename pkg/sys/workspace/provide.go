@@ -5,6 +5,7 @@
 package workspace
 
 import (
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
@@ -13,6 +14,10 @@ import (
 	coreutils "github.com/voedger/voedger/pkg/utils"
 	"github.com/voedger/voedger/pkg/utils/federation"
 )
+
+func ProvideViewNextWSID(adf appdef.IAppDefBuilder) {
+	provideViewNextWSID(adf)
+}
 
 func Provide(sprb istructsmem.IStatelessPkgResourcesBuilder, timeFunc coreutils.TimeFunc, tokensAPI itokens.ITokens,
 	federation federation.IFederation, itokens itokens.ITokens, ep extensionpoints.IExtensionPoint, wsPostInitFunc WSPostInitFunc) {
@@ -24,35 +29,35 @@ func Provide(sprb istructsmem.IStatelessPkgResourcesBuilder, timeFunc coreutils.
 
 	// c.sys.CreateWorkspaceID
 	// target app, (target cluster, base profile WSID)
-	cfg.Resources.Add(istructsmem.NewCommandFunction(
+	sprb.AddFunc(istructsmem.NewCommandFunction(
 		QNameCommandCreateWorkspaceID,
 		execCmdCreateWorkspaceID,
 	))
 
 	// c.sys.CreateWorkspace
-	cfg.Resources.Add(istructsmem.NewCommandFunction(
+	sprb.AddFunc(istructsmem.NewCommandFunction(
 		QNameCommandCreateWorkspace,
 		execCmdCreateWorkspace(timeFunc),
 	))
 
 	// q.sys.QueryChildWorkspaceByName
-	cfg.Resources.Add(istructsmem.NewQueryFunction(
+	sprb.AddFunc(istructsmem.NewQueryFunction(
 		QNameQueryChildWorkspaceByName,
 		qcwbnQryExec,
 	))
 
-	provideViewNextWSID(cfg.AppDefBuilder())
+	// provideViewNextWSID(cfg.AppDefBuilder())
 
 	// deactivate workspace
-	provideDeactivateWorkspace(cfg, tokensAPI, federation)
+	provideDeactivateWorkspace(sprb, tokensAPI, federation)
 
 	// projectors
-	cfg.AddAsyncProjectors(
+	sprb.AddAsyncProjectors(
 		asyncProjectorInvokeCreateWorkspace(federation, itokens),
 		asyncProjectorInvokeCreateWorkspaceID(federation, itokens),
 		asyncProjectorInitializeWorkspace(federation, timeFunc, ep, itokens, wsPostInitFunc),
 	)
-	cfg.AddSyncProjectors(
+	sprb.AddSyncProjectors(
 		syncProjectorChildWorkspaceIdx(),
 		syncProjectorWorkspaceIDIdx(),
 	)

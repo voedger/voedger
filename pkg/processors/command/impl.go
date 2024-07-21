@@ -506,6 +506,17 @@ func validateCmdResult(ctx context.Context, work interface{}) (err error) {
 
 func (cmdProc *cmdProc) eventValidators(ctx context.Context, work interface{}) (err error) {
 	cmd := work.(*cmdWorkpiece)
+	for _, statelessPkg := range cmdProc.statelessPackages {
+		err := iterate.ForEachError(statelessPkg.EventValidators, func(eventValidator istructs.EventValidator) error {
+			if err = eventValidator(ctx, cmd.rawEvent, cmd.appStructs, cmd.cmdMes.WSID()); err != nil {
+				return coreutils.WrapSysError(err, http.StatusForbidden)
+			}
+			return nil
+		})
+		if err != nil {
+			return err
+		}
+	}
 	for _, appEventValidator := range cmd.appStructs.EventValidators() {
 		if err = appEventValidator(ctx, cmd.rawEvent, cmd.appStructs, cmd.cmdMes.WSID()); err != nil {
 			return coreutils.WrapSysError(err, http.StatusForbidden)

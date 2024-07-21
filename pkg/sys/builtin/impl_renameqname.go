@@ -20,7 +20,8 @@ func proivideRenameQName(sprb istructsmem.IStatelessPkgResourcesBuilder, asp ist
 
 func provideExecCmdRenameQName(asp istorage.IAppStorageProvider) istructsmem.ExecCommandClosure {
 	return func(args istructs.ExecCommandArgs) (err error) {
-		appQName := args.Workpiece.(interface{ GetAppStructs() istructs.IAppStructs }).GetAppStructs().AppQName()
+		args.State.AppStructs()
+		appQName := args.State.AppStructs().AppQName()
 		storage, err := asp.AppStorage(appQName)
 		if err != nil {
 			// notest

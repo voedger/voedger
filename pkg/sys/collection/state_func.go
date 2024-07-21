@@ -31,7 +31,7 @@ func stateFuncExec(ctx context.Context, args istructs.ExecQueryArgs, callback is
 	kb.PutInt32(Field_PartKey, PartitionKeyCollection)
 
 	data := make(map[string]map[istructs.RecordID]map[string]interface{})
-	appDef := args.Workpiece.(interface{GetAppStructs() istructs.IAppStructs}).GetAppStructs().AppDef()
+	appDef := args.State.AppStructs().AppDef()
 	if err = args.State.Read(kb, func(key istructs.IKey, value istructs.IStateValue) (err error) {
 		if value.AsInt64(state.ColOffset) <= after {
 			return

@@ -10,8 +10,8 @@ import (
 	"github.com/voedger/voedger/pkg/istructsmem"
 )
 
-func provideCmdDeactivateJoinedWorkspace(cfg *istructsmem.AppConfigType) {
-	cfg.Resources.Add(istructsmem.NewCommandFunction(
+func provideCmdDeactivateJoinedWorkspace(sprb istructsmem.IStatelessPkgResourcesBuilder) {
+	sprb.AddFunc(istructsmem.NewCommandFunction(
 		qNameCmdDeactivateJoinedWorkspace,
 		execCmdDeactivateJoinedWorkspace,
 	))

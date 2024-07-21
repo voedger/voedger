@@ -24,7 +24,7 @@ import (
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-func execQrySqlQuery(asp istructs.IAppStructsProvider, appQName appdef.AppQName) func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
+func provideEexecQrySqlQuery(asp istructs.IAppStructsProvider) func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 	return func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 
 		query := args.ArgumentObject.AsString(field_Query)
@@ -37,8 +37,7 @@ func execQrySqlQuery(asp istructs.IAppStructsProvider, appQName appdef.AppQName)
 		if op.Kind != dml.OpKind_Select {
 			return coreutils.NewHTTPErrorf(http.StatusBadRequest, "'select' operation is expected")
 		}
-
-		app := appQName
+		app := args.State.App()
 		if op.AppQName != appdef.NullAppQName {
 			app = op.AppQName
 		}

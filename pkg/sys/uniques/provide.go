@@ -9,10 +9,10 @@ import (
 	"github.com/voedger/voedger/pkg/istructsmem"
 )
 
-func Provide(cfg *istructsmem.AppConfigType) {
-	cfg.AddSyncProjectors(istructs.Projector{
+func Provide(sprb istructsmem.IStatelessPkgResourcesBuilder) {
+	sprb.AddSyncProjectors(istructs.Projector{
 		Name: qNameApplyUniques,
-		Func: provideApplyUniques(cfg.AppDef),
+		Func: applyUniques,
 	})
-	cfg.AddEventValidators(eventUniqueValidator)
+	sprb.AddEventValidators(eventUniqueValidator)
 }

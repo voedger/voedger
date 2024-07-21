@@ -20,6 +20,7 @@ type IStatelessPkg interface {
 	SyncProjectors(func(p istructs.Projector))
 	AsyncProjectors(func(p istructs.Projector))
 	CUDValidators(func(v istructs.CUDValidator))
+	EventValidators(func(v istructs.EventValidator))
 }
 
 // passed to e.g. sys package
@@ -34,6 +35,7 @@ type IStatelessPkgResourcesBuilder interface {
 	AddSyncProjectors(...istructs.Projector)
 	AddAsyncProjectors(...istructs.Projector)
 	AddCUDValidators(...istructs.CUDValidator)
+	AddEventValidators(...istructs.EventValidator)
 }
 
 type statelessPkgs map[string]IStatelessPkg
@@ -65,6 +67,7 @@ type statelessPkg struct {
 	syncProjectors  []istructs.Projector
 	asyncProjectors []istructs.Projector
 	cudValidators   []istructs.CUDValidator
+	eventValidators []istructs.EventValidator
 }
 
 func (sr *statelessPkg) PkgPath() string {
@@ -85,6 +88,12 @@ func (sr *statelessPkg) AsyncProjectors(cb func(p istructs.Projector)) {
 
 func (sr statelessPkg) CUDValidators(cb func(v istructs.CUDValidator)) {
 	for _, v := range sr.cudValidators {
+		cb(v)
+	}
+}
+
+func (sr statelessPkg) EventValidators(cb func(v istructs.EventValidator)) {
+	for _, v := range sr.eventValidators {
 		cb(v)
 	}
 }
@@ -111,6 +120,10 @@ func (sr statelessPkg) AddFunc(res istructs.IResource) {
 
 func (sr statelessPkg) AddCUDValidators(v ...istructs.CUDValidator) {
 	sr.cudValidators = append(sr.cudValidators, v...)
+}
+
+func (sr statelessPkg) AddEventValidators(v ...istructs.EventValidator) {
+	sr.eventValidators = append(sr.eventValidators, v...)
 }
 
 // type StatelessResources struct {

@@ -28,16 +28,12 @@ import (
 var translationsCatalog = coreutils.GetCatalogFromTranslations(translations)
 
 // called at targetApp/profileWSID
-func provideQryInitiateEmailVerification(cfg *istructsmem.AppConfigType, itokens itokens.ITokens,
+func provideQryInitiateEmailVerification(sprb istructsmem.IStatelessPkgResourcesBuilder, itokens itokens.ITokens,
 	asp istructs.IAppStructsProvider, federation federation.IFederation) {
-	cfg.Resources.Add(istructsmem.NewQueryFunction(
+	sprb.AddFunc(istructsmem.NewQueryFunction(
 		QNameQueryInitiateEmailVerification,
 		provideIEVExec(itokens, federation, asp),
 	))
-	cfg.FunctionRateLimits.AddWorkspaceLimit(QNameQueryInitiateEmailVerification, istructs.RateLimit{
-		Period:                InitiateEmailVerification_Period,
-		MaxAllowedPerDuration: InitiateEmailVerification_MaxAllowed,
-	})
 }
 
 // q.sys.InitiateEmailVerification
@@ -51,7 +47,7 @@ func provideIEVExec(itokens itokens.ITokens, federation federation.IFederation, 
 		forRegistry := args.ArgumentObject.AsBool(field_ForRegistry)
 		lng := args.ArgumentObject.AsString(field_Language)
 
-		as := args.Workpiece.(interface{ GetAppStructs() istructs.IAppStructs }).GetAppStructs()
+		as := args.State.AppStructs()
 		appTokens := as.AppTokens()
 		if forRegistry {
 			// issue token for sys/registry/pseduoWSID. That's for c.sys.ResetPassword only for now
@@ -138,29 +134,23 @@ func (r ivvtResult) AsString(string) string {
 }
 
 // called at targetApp/targetWSID
-func provideQryIssueVerifiedValueToken(cfg *istructsmem.AppConfigType, itokens itokens.ITokens, asp istructs.IAppStructsProvider) {
-	cfg.Resources.Add(istructsmem.NewQueryFunction(
+func provideQryIssueVerifiedValueToken(sprb istructsmem.IStatelessPkgResourcesBuilder, itokens itokens.ITokens, asp istructs.IAppStructsProvider) {
+	sprb.AddFunc(istructsmem.NewQueryFunction(
 		QNameQueryIssueVerifiedValueToken,
-		provideIVVTExec(itokens, cfg.Name, asp),
+		provideIVVTExec(itokens, asp),
 	))
-
-	// code ok -> buckets state will be reset
-	cfg.FunctionRateLimits.AddWorkspaceLimit(QNameQueryIssueVerifiedValueToken, RateLimit_IssueVerifiedValueToken)
 }
 
 // q.sys.IssueVerifiedValueToken
 // called at targetApp/profileWSID
 // a helper is used for ResetPassword that calls `q.sys.IssueVerifiedValueToken` at the profile
-func provideIVVTExec(itokens itokens.ITokens, appQName appdef.AppQName, asp istructs.IAppStructsProvider) istructsmem.ExecQueryClosure {
+func provideIVVTExec(itokens itokens.ITokens, asp istructs.IAppStructsProvider) istructsmem.ExecQueryClosure {
 	return func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 		verificationToken := args.ArgumentObject.AsString(field_VerificationToken)
 		verificationCode := args.ArgumentObject.AsString(field_VerificationCode)
 		forRegistry := args.ArgumentObject.AsBool(field_ForRegistry)
 
-		as, err := asp.BuiltIn(appQName)
-		if err != nil {
-			return err
-		}
+		as := args.State.AppStructs()
 
 		appTokens := as.AppTokens()
 		if forRegistry {
@@ -190,8 +180,8 @@ func provideIVVTExec(itokens itokens.ITokens, appQName appdef.AppQName, asp istr
 	}
 }
 
-func provideCmdSendEmailVerificationCode(cfg *istructsmem.AppConfigType) {
-	cfg.Resources.Add(istructsmem.NewCommandFunction(
+func provideCmdSendEmailVerificationCode(sprb istructsmem.IStatelessPkgResourcesBuilder) {
+	sprb.AddFunc(istructsmem.NewCommandFunction(
 		QNameCommandSendEmailVerificationCode,
 		istructsmem.NullCommandExec,
 	))

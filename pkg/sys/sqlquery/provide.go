@@ -10,9 +10,9 @@ import (
 	"github.com/voedger/voedger/pkg/istructsmem"
 )
 
-func Provide(cfg *istructsmem.AppConfigType, asp istructs.IAppStructsProvider) {
-	cfg.Resources.Add(istructsmem.NewQueryFunction(
+func Provide(sprb istructsmem.IStatelessPkgResourcesBuilder, asp istructs.IAppStructsProvider) {
+	sprb.AddFunc(istructsmem.NewQueryFunction(
 		appdef.NewQName(appdef.SysPackage, "SqlQuery"),
-		execQrySqlQuery(asp, cfg.Name),
+		provideEexecQrySqlQuery(asp),
 	))
 }

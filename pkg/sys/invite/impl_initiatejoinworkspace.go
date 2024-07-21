@@ -15,8 +15,8 @@ import (
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-func provideCmdInitiateJoinWorkspace(cfg *istructsmem.AppConfigType, timeFunc coreutils.TimeFunc) {
-	cfg.Resources.Add(istructsmem.NewCommandFunction(
+func provideCmdInitiateJoinWorkspace(sprb istructsmem.IStatelessPkgResourcesBuilder, timeFunc coreutils.TimeFunc) {
+	sprb.AddFunc(istructsmem.NewCommandFunction(
 		qNameCmdInitiateJoinWorkspace,
 		execCmdInitiateJoinWorkspace(timeFunc),
 	))

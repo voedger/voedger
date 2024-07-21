@@ -49,7 +49,7 @@ func qryJournalExec(ep extensionpoints.IExtensionPoint) istructsmem.ExecQueryClo
 			return err
 		}
 
-		appDef := args.Workpiece.(interface{ GetAppStructs() istructs.IAppStructs }).GetAppStructs().AppDef()
+		appDef := args.State.AppStructs().AppDef()
 		cb := func(_ istructs.IKey, value istructs.IStateValue) (err error) {
 			if fo == int64(0) {
 				return

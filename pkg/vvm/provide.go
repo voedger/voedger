@@ -265,13 +265,12 @@ func provideAsyncActualizersService(cfg projectors.BasicAsyncActualizerConfig) p
 	return projectors.ProvideActualizers(cfg)
 }
 
-func provideAppResources(cfgs AppConfigsTypeEmpty) istructsmem.AppResources {
+func provideAppResources(cfgs AppConfigsTypeEmpty, vvmCfg *VVMConfig) istructsmem.AppResources {
 	spb := istructsmem.NewStatelessPkgBuilder()
-	statelessPackages := spb.Build()
-	sys.ProvideStateless(spb)
+	sys.ProvideStateless(spb, )
 	return istructsmem.AppResources{
 		AppConfigs:        istructsmem.AppConfigsType(cfgs),
-		StatelessPackages: statelessPackages,
+		StatelessPackages: spb.Build(),
 	}
 }
 

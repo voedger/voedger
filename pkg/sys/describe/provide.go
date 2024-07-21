@@ -9,12 +9,12 @@ import (
 	"github.com/voedger/voedger/pkg/istructsmem"
 )
 
-func Provide(cfg *istructsmem.AppConfigType) {
-	cfg.Resources.Add(istructsmem.NewQueryFunction(
+func Provide(sprb istructsmem.IStatelessPkgResourcesBuilder) {
+	sprb.AddFunc(istructsmem.NewQueryFunction(
 		appdef.NewQName(appdef.SysPackage, "DescribePackageNames"),
 		qryDescribePackageNames,
 	))
-	cfg.Resources.Add(istructsmem.NewQueryFunction(
+	sprb.AddFunc(istructsmem.NewQueryFunction(
 		appdef.NewQName(appdef.SysPackage, "DescribePackage"),
 		qryDescribePackage,
 	))

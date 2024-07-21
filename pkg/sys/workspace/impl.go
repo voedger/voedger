@@ -115,7 +115,7 @@ func execCmdCreateWorkspaceID(args istructs.ExecCommandArgs) (err error) {
 	}
 
 	// Get new WSID from View<NextBaseWSID>
-	as := args.Workpiece.(interface{ GetAppStructs() istructs.IAppStructs }).GetAppStructs()
+	as := args.State.AppStructs()
 	newWSID, err := GetNextWSID(args.Workpiece.(interface{ Context() context.Context }).Context(), as, args.WSID.ClusterID())
 	if err != nil {
 		return err
@@ -224,7 +224,7 @@ func execCmdCreateWorkspace(now coreutils.TimeFunc) istructsmem.ExecCommandClosu
 		wsKindInitializationData := map[string]interface{}{}
 
 		e := func() error {
-			as := args.Workpiece.(interface{ GetAppStructs() istructs.IAppStructs }).GetAppStructs()
+			as := args.State.AppStructs()
 			wsKindType := as.AppDef().Type(wsKind)
 			if wsKindType.Kind() == appdef.TypeKind_null {
 				return fmt.Errorf("unknown workspace kind: %s", wsKind.String())
