@@ -22,8 +22,10 @@ import (
 )
 
 type AppResources struct {
-	AppConfigs        AppConfigsType
-	StatelessPackages IStatelessPkg
+	AppConfigs AppConfigsType
+	
+	// pkgPath->IStatelessPkg
+	StatelessPackages map[string]IStatelessPkg
 }
 
 // AppConfigsType: map of applications configurators

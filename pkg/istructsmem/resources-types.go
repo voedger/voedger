@@ -13,17 +13,21 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
+// reader
 type IStatelessPkg interface {
 	istructs.IResources
 	PkgPath() string
-	SyncProjectors(func(cb istructs.Projector))
-	AsyncProjectors(func(cb istructs.Projector))
+	SyncProjectors(func(p istructs.Projector))
+	AsyncProjectors(func(p istructs.Projector))
 }
 
+// passed to e.g. sys package
 type IStatelessPkgBuilder interface {
 	AddPackage(pkgPath string) IStatelessPkgResourcesBuilder
+	Build() map[string]IStatelessPkg // pkgPath
 }
 
+// filled with e.g. sys resources
 type IStatelessPkgResourcesBuilder interface {
 	AddFunc(istructs.IResource)
 	AddSyncProjectors(...istructs.Projector)
@@ -42,6 +46,10 @@ func (sp statelessPkgs) AddPackage(pkgPath string) IStatelessPkgResourcesBuilder
 	}
 	sp[pkgPath] = res
 	return res
+}
+
+func (sp statelessPkgs) Build() map[string]IStatelessPkg {
+	return sp
 }
 
 func NewStatelessPkgBuilder() IStatelessPkgBuilder {

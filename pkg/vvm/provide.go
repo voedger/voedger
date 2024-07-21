@@ -266,10 +266,11 @@ func provideAsyncActualizersService(cfg projectors.BasicAsyncActualizerConfig) p
 
 func provideAppResources(cfgs istructsmem.AppConfigsType) istructsmem.AppResources {
 	spb := istructsmem.NewStatelessPkgBuilder()
+	statelessPackages := spb.Build()
 	sys.ProvideStateless(spb)
 	return istructsmem.AppResources{
 		AppConfigs:        cfgs,
-		StatelessPackages: sysStatelessResources,
+		StatelessPackages: statelessPackages,
 	}
 }
 
@@ -277,11 +278,11 @@ func provideAppPartitions(
 	asp istructs.IAppStructsProvider,
 	saf appparts.SyncActualizerFactory,
 	act projectors.IActualizersService,
-	appsArtefacts AppsArtefacts,
+	appResources istructsmem.AppResources,
 ) (ap appparts.IAppPartitions, cleanup func(), err error) {
 
 	eef := engines.ProvideExtEngineFactories(engines.ExtEngineFactoriesConfig{
-		AppResources: appsArtefacts.AppConfigsType,
+		AppResources: appResources,
 		WASMConfig:   iextengine.WASMFactoryConfig{Compile: false},
 	})
 

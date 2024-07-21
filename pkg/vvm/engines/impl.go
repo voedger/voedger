@@ -15,10 +15,17 @@ import (
 	"github.com/voedger/voedger/pkg/istructsmem"
 )
 
-func provideStatelessFuncs(resources istructsmem.StatelessResources) iextengine.BuiltInAppExtFuncs {
+func provideStatelessFuncs(statelessPackages map[string]istructsmem.IStatelessPkg) iextengine.BuiltInAppExtFuncs {
 	funcs := iextengine.BuiltInAppExtFuncs{}
-	resources.Resources.Resources(func(qName appdef.QName) {
-		res := resources.QueryResource(qName)
+	for _, statelessPkg := range statelessPackages {
+		provideStatelessPkgFuncs(statelessPkg, funcs)
+	}
+	return funcs
+}
+
+func provideStatelessPkgFuncs(pkg istructsmem.IStatelessPkg, funcs iextengine.BuiltInAppExtFuncs) {
+	pkg.Resources(func(qName appdef.QName) {
+		res := pkg.QueryResource(qName)
 		var fn iextengine.BuiltInExtFunc
 		switch ifunc := res.(type) {
 		case istructs.ICommandFunction:
@@ -46,22 +53,21 @@ func provideStatelessFuncs(resources istructsmem.StatelessResources) iextengine.
 			// notest
 			panic(fmt.Sprintf("unsupported resource type %T", ifunc))
 		}
-		fullQName := appdef.NewFullQName(resources.PkgPath, qName.Entity())
+		fullQName := appdef.NewFullQName(pkg.PkgPath(), qName.Entity())
 		funcs[fullQName] = fn
 	})
-	for _, syncProjector := range resources.SyncProjectors {
-		fullQName := appdef.NewFullQName(resources.PkgPath, syncProjector.Name.Entity())
+	pkg.SyncProjectors(func(p istructs.Projector) {
+		fullQName := appdef.NewFullQName(pkg.PkgPath(), p.Name.Entity())
 		funcs[fullQName] = func(_ context.Context, io iextengine.IExtensionIO) error {
-			return syncProjector.Func(io.PLogEvent(), io, io)
+			return p.Func(io.PLogEvent(), io, io)
 		}
-	}
-	for _, asyncProjector := range resources.AsyncProjectors {
-		fullQName := appdef.NewFullQName(resources.PkgPath, asyncProjector.Name.Entity())
+	})
+	pkg.AsyncProjectors(func(p istructs.Projector) {
+		fullQName := appdef.NewFullQName(pkg.PkgPath(), p.Name.Entity())
 		funcs[fullQName] = func(_ context.Context, io iextengine.IExtensionIO) error {
-			return asyncProjector.Func(io.PLogEvent(), io, io)
+			return p.Func(io.PLogEvent(), io, io)
 		}
-	}
-	return funcs
+	})
 }
 
 // provides all built-in extension functions for specified application config
