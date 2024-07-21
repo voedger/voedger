@@ -19,8 +19,8 @@ import (
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-func provideQryJournal(cfg *istructsmem.AppConfigType, ep extensionpoints.IExtensionPoint) {
-	cfg.Resources.Add(istructsmem.NewQueryFunction(
+func provideQryJournal(sprb istructsmem.IStatelessPkgResourcesBuilder, ep extensionpoints.IExtensionPoint) {
+	sprb.AddFunc(istructsmem.NewQueryFunction(
 		appdef.NewQName(appdef.SysPackage, "Journal"),
 		qryJournalExec(ep),
 	))

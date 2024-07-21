@@ -14,12 +14,12 @@ import (
 	"github.com/voedger/voedger/pkg/utils/federation"
 )
 
-func Provide(cfg *istructsmem.AppConfigType, timeFunc coreutils.TimeFunc, tokensAPI itokens.ITokens,
+func Provide(sprb istructsmem.IStatelessPkgResourcesBuilder, timeFunc coreutils.TimeFunc, tokensAPI itokens.ITokens,
 	federation federation.IFederation, itokens itokens.ITokens, ep extensionpoints.IExtensionPoint, wsPostInitFunc WSPostInitFunc) {
 	// c.sys.InitChildWorkspace
-	cfg.Resources.Add(istructsmem.NewCommandFunction(
+	sprb.AddFunc(istructsmem.NewCommandFunction(
 		authnz.QNameCommandInitChildWorkspace,
-		provideExecCmdInitChildWorkspace(cfg.AppDef),
+		provideExecCmdInitChildWorkspace(),
 	))
 
 	// c.sys.CreateWorkspaceID

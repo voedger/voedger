@@ -12,18 +12,18 @@ import (
 	"github.com/voedger/voedger/pkg/istructsmem"
 )
 
-func Provide(cfg *istructsmem.AppConfigType, buildInfo *debug.BuildInfo, asp istorage.IAppStorageProvider) {
-	cfg.Resources.Add(istructsmem.NewCommandFunction(istructs.QNameCommandCUD, istructsmem.NullCommandExec))
+func Provide(sprb istructsmem.IStatelessPkgResourcesBuilder, buildInfo *debug.BuildInfo, asp istorage.IAppStorageProvider) {
+	sprb.AddFunc(istructsmem.NewCommandFunction(istructs.QNameCommandCUD, istructsmem.NullCommandExec))
 
 	// Deprecated: use c.sys.CUD instead. Kept for backward compatibility only
 	// to import via ImportBO
-	cfg.Resources.Add(istructsmem.NewCommandFunction(QNameCommandInit, istructsmem.NullCommandExec))
+	sprb.AddFunc(istructsmem.NewCommandFunction(QNameCommandInit, istructsmem.NullCommandExec))
 
-	provideRefIntegrityValidation(cfg)
-	provideQryModules(cfg, buildInfo)
+	provideRefIntegrityValidation(sprb)
+	provideQryModules(sprb, buildInfo)
 
-	provideQryEcho(cfg)
-	provideQryGRCount(cfg)
-	proivideRenameQName(cfg, asp)
-	provideSysIsActiveValidation(cfg)
+	provideQryEcho(sprb)
+	provideQryGRCount(sprb)
+	proivideRenameQName(sprb, asp)
+	provideSysIsActiveValidation(sprb)
 }

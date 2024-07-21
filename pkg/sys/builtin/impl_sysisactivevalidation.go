@@ -14,8 +14,8 @@ import (
 	"github.com/voedger/voedger/pkg/istructsmem"
 )
 
-func provideSysIsActiveValidation(cfg *istructsmem.AppConfigType) {
-	cfg.AddCUDValidators(istructs.CUDValidator{
+func provideSysIsActiveValidation(sprb istructsmem.IStatelessPkgResourcesBuilder) {
+	sprb.AddCUDValidators(istructs.CUDValidator{
 		Match: func(cud istructs.ICUDRow, wsid istructs.WSID, cmdQName appdef.QName) bool {
 			return cud.IsNew()
 		},

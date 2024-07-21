@@ -36,9 +36,15 @@ import (
 //go:embed *.vsql
 var SysFS embed.FS
 
-func ProvideStateless(spb istructsmem.IStatelessPkgBuilder) {
-	sprb := spb.AddPackage(appdef.SysPackage)
-	blobber.ProvideBlobberCmds(sprb)
+func ProvideStateless(spb istructsmem.IStatelessPkgBuilder, ep extensionpoints.IExtensionPoint, buildInfo *debug.BuildInfo,
+	storageProvider istorage.IAppStorageProvider, wsPostInitFunc workspace.WSPostInitFunc, timeFunc coreutils.TimeFunc,
+	itokens itokens.ITokens, federation federation.IFederation) {
+	statelessPkgResourcesBuilder := spb.AddPackage(appdef.SysPackage)
+	blobber.ProvideBlobberCmds(statelessPkgResourcesBuilder)
+	collection.Provide(statelessPkgResourcesBuilder)
+	journal.Provide(statelessPkgResourcesBuilder, ep)
+	builtin.Provide(statelessPkgResourcesBuilder, buildInfo, storageProvider)
+	workspace.Provide(statelessPkgResourcesBuilder, timeFunc, itokens, federation, itokens, ep, wsPostInitFunc)
 }
 
 func Provide(cfg *istructsmem.AppConfigType, smtpCfg smtp.Cfg,
@@ -46,9 +52,9 @@ func Provide(cfg *istructsmem.AppConfigType, smtpCfg smtp.Cfg,
 	asp istructs.IAppStructsProvider, atf payloads.IAppTokensFactory, buildInfo *debug.BuildInfo,
 	storageProvider istorage.IAppStorageProvider) parser.PackageFS {
 	// blobber.ProvideBlobberCmds(cfg)
-	collection.Provide(cfg)
-	journal.Provide(cfg, ep)
-	builtin.Provide(cfg, buildInfo, storageProvider)
+	// collection.Provide(cfg)
+	// journal.Provide(cfg, ep)
+	// builtin.Provide(cfg, buildInfo, storageProvider)
 	workspace.Provide(cfg, timeFunc, itokens, federation, itokens, ep, wsPostInitFunc)
 	sqlquery.Provide(cfg, asp)
 	projectors.ProvideOffsetsDef(cfg.AppDefBuilder())

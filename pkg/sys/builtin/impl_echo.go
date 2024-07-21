@@ -14,8 +14,8 @@ import (
 
 func (e *echoRR) AsString(string) string { return e.text }
 
-func provideQryEcho(cfg *istructsmem.AppConfigType) {
-	cfg.Resources.Add(istructsmem.NewQueryFunction(
+func provideQryEcho(sprb istructsmem.IStatelessPkgResourcesBuilder) {
+	sprb.AddFunc(istructsmem.NewQueryFunction(
 		appdef.NewQName(appdef.SysPackage, "Echo"),
 		func(_ context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 			text := args.ArgumentObject.AsString("Text")

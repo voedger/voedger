@@ -143,6 +143,7 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 		provideIAppStructsProvider,        // IAppStructsProvider
 		payloads.ProvideIAppTokensFactory, // IAppTokensFactory
 		in10nmem.ProvideEx2,
+		provideAppResources,
 		queryprocessor.ProvideServiceFactory,
 		commandprocessor.ProvideServiceFactory,
 		metrics.ProvideMetricsService,
@@ -264,12 +265,12 @@ func provideAsyncActualizersService(cfg projectors.BasicAsyncActualizerConfig) p
 	return projectors.ProvideActualizers(cfg)
 }
 
-func provideAppResources(cfgs istructsmem.AppConfigsType) istructsmem.AppResources {
+func provideAppResources(cfgs AppConfigsTypeEmpty) istructsmem.AppResources {
 	spb := istructsmem.NewStatelessPkgBuilder()
 	statelessPackages := spb.Build()
 	sys.ProvideStateless(spb)
 	return istructsmem.AppResources{
-		AppConfigs:        cfgs,
+		AppConfigs:        istructsmem.AppConfigsType(cfgs),
 		StatelessPackages: statelessPackages,
 	}
 }
