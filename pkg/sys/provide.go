@@ -36,15 +36,15 @@ import (
 //go:embed *.vsql
 var SysFS embed.FS
 
-func ProvideStateless(spb istructsmem.IStatelessPkgBuilder, smtpCfg smtp.Cfg, ep extensionpoints.IExtensionPoint, buildInfo *debug.BuildInfo,
+func ProvideStateless(spb istructsmem.IStatelessPkgBuilder, smtpCfg smtp.Cfg, eps map[appdef.AppQName]extensionpoints.IExtensionPoint, buildInfo *debug.BuildInfo,
 	storageProvider istorage.IAppStorageProvider, wsPostInitFunc workspace.WSPostInitFunc, timeFunc coreutils.TimeFunc,
 	itokens itokens.ITokens, federation federation.IFederation, asp istructs.IAppStructsProvider, atf payloads.IAppTokensFactory) {
 	sysPkgBuilder := spb.AddPackage(appdef.SysPackage)
 	blobber.ProvideBlobberCmds(sysPkgBuilder)
 	collection.Provide(sysPkgBuilder)
-	journal.Provide(sysPkgBuilder, ep)
+	journal.Provide(sysPkgBuilder, eps)
 	builtin.Provide(sysPkgBuilder, buildInfo, storageProvider)
-	workspace.Provide(sysPkgBuilder, timeFunc, itokens, federation, itokens, ep, wsPostInitFunc)
+	workspace.Provide(sysPkgBuilder, timeFunc, itokens, federation, itokens, wsPostInitFunc, eps)
 	sqlquery.Provide(sysPkgBuilder, asp)
 	verifier.Provide(sysPkgBuilder, itokens, federation, asp, smtpCfg, timeFunc)
 	authnz.Provide(sysPkgBuilder, itokens, atf)

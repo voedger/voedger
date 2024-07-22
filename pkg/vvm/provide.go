@@ -175,11 +175,11 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 		apppartsctl.New,
 		provideAppConfigsTypeEmpty,
 		provideBuiltInAppPackages,
-		provideExtensionPoints,
 		provideBootstrapOperator,
 		provideAdminEndpointServiceOperator,
 		providePublicEndpointServiceOperator,
 		provideBuildInfo,
+		provideAppsExtensionPoints,
 		// wire.Value(vvmConfig.NumCommandProcessors) -> (wire bug?) value github.com/untillpro/airs-bp3/vvm.CommandProcessorsCount can't be used: vvmConfig is not declared in package scope
 		wire.FieldsOf(&vvmConfig,
 			"NumCommandProcessors",
@@ -218,10 +218,6 @@ func provideBootstrapOperator(federation federation.IFederation, asp istructs.IA
 	return pipeline.NewSyncOp(func(ctx context.Context, work interface{}) (err error) {
 		return btstrp.Bootstrap(federation, asp, timeFunc, apppar, clusterBuiltinApp, otherApps, itokens, storageProvider, blobberAppStoragePtr, routerAppStoragePtr)
 	}), nil
-}
-
-func provideExtensionPoints(appsArtefacts AppsArtefacts) map[appdef.AppQName]extensionpoints.IExtensionPoint {
-	return appsArtefacts.appEPs
 }
 
 func provideBuiltInAppPackages(appsArtefacts AppsArtefacts) []BuiltInAppPackages {
@@ -275,11 +271,15 @@ func provideBuildInfo() (*debug.BuildInfo, error) {
 	return buildInfo, nil
 }
 
-func provideAppResources(cfgs AppConfigsTypeEmpty, vvmCfg *VVMConfig, ep extensionpoints.IExtensionPoint, buildInfo *debug.BuildInfo,
-	sp istorage.IAppStorageProvider, itokens itokens.ITokens, federation federation.IFederation, asp istructs.IAppStructsProvider,
-	atf payloads.IAppTokensFactory) istructsmem.AppResources {
+func provideAppsExtensionPoints() map[appdef.AppQName]extensionpoints.IExtensionPoint {
+	return map[appdef.AppQName]extensionpoints.IExtensionPoint{}
+}
+
+func provideAppResources(cfgs AppConfigsTypeEmpty, vvmCfg *VVMConfig, appEPs map[appdef.AppQName]extensionpoints.IExtensionPoint,
+	buildInfo *debug.BuildInfo, sp istorage.IAppStorageProvider, itokens itokens.ITokens, federation federation.IFederation,
+	asp istructs.IAppStructsProvider, atf payloads.IAppTokensFactory) istructsmem.AppResources {
 	spb := istructsmem.NewStatelessPkgBuilder()
-	sys.ProvideStateless(spb, vvmCfg.SmtpConfig, ep, buildInfo, sp, vvmCfg.WSPostInitFunc, vvmCfg.TimeFunc, itokens, federation,
+	sys.ProvideStateless(spb, vvmCfg.SmtpConfig, appEPs, buildInfo, sp, vvmCfg.WSPostInitFunc, vvmCfg.TimeFunc, itokens, federation,
 		asp, atf)
 	return istructsmem.AppResources{
 		AppConfigs:        istructsmem.AppConfigsType(cfgs),
@@ -307,9 +307,9 @@ func provideAppPartitions(
 	)
 }
 
-func provideIsDeviceAllowedFunc(appsArtefacts AppsArtefacts) iauthnzimpl.IsDeviceAllowedFuncs {
+func provideIsDeviceAllowedFunc(appEPs map[appdef.AppQName]extensionpoints.IExtensionPoint) iauthnzimpl.IsDeviceAllowedFuncs {
 	res := iauthnzimpl.IsDeviceAllowedFuncs{}
-	for appQName, appEP := range appsArtefacts.appEPs {
+	for appQName, appEP := range appEPs {
 		val, ok := appEP.Find(apps.EPIsDeviceAllowedFunc)
 		if !ok {
 			res[appQName] = func(as istructs.IAppStructs, requestWSID istructs.WSID, deviceProfileWSID istructs.WSID) (ok bool, err error) {
@@ -465,8 +465,9 @@ func provideVVMApps(builtInApps []appparts.BuiltInApp) (vvmApps VVMApps) {
 	return vvmApps
 }
 
-func provideBuiltInAppsArtefacts(vvmConfig *VVMConfig, apis apps.APIs, cfgs AppConfigsTypeEmpty) (AppsArtefacts, error) {
-	return vvmConfig.VVMAppsBuilder.BuildAppsArtefacts(apis, cfgs)
+func provideBuiltInAppsArtefacts(vvmConfig *VVMConfig, apis apps.APIs, cfgs AppConfigsTypeEmpty,
+	appEPs map[appdef.AppQName]extensionpoints.IExtensionPoint) (AppsArtefacts, error) {
+	return vvmConfig.VVMAppsBuilder.BuildAppsArtefacts(apis, cfgs, appEPs)
 }
 
 func provideServiceChannelFactory(vvmConfig *VVMConfig, procbus iprocbus.IProcBus) ServiceChannelFactory {

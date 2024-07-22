@@ -19,15 +19,16 @@ import (
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-func provideQryJournal(sprb istructsmem.IStatelessPkgResourcesBuilder, ep extensionpoints.IExtensionPoint) {
+func provideQryJournal(sprb istructsmem.IStatelessPkgResourcesBuilder, eps map[appdef.AppQName]extensionpoints.IExtensionPoint) {
 	sprb.AddFunc(istructsmem.NewQueryFunction(
 		appdef.NewQName(appdef.SysPackage, "Journal"),
-		qryJournalExec(ep),
+		qryJournalExec(eps),
 	))
 }
-func qryJournalExec(ep extensionpoints.IExtensionPoint) istructsmem.ExecQueryClosure {
+func qryJournalExec(eps map[appdef.AppQName]extensionpoints.IExtensionPoint) istructsmem.ExecQueryClosure {
 	return func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 		var fo, lo int64
+		ep := eps[args.State.App()]
 		ji := ep.ExtensionPoint(EPJournalIndices)
 		jp := ep.ExtensionPoint(EPJournalPredicates)
 		switch args.ArgumentObject.AsString(field_RangeUnit) {

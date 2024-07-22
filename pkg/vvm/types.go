@@ -71,7 +71,6 @@ type BootstrapOperator pipeline.ISyncOperator
 type AppsArtefacts struct {
 	istructsmem.AppConfigsType
 	builtInAppPackages []BuiltInAppPackages
-	appEPs             map[appdef.AppQName]extensionpoints.IExtensionPoint
 }
 
 type BusTimeout time.Duration

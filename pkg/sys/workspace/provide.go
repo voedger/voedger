@@ -15,12 +15,13 @@ import (
 	"github.com/voedger/voedger/pkg/utils/federation"
 )
 
-func Provide(adf appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) {
+func ProvideViewNextWSID(adf appdef.IAppDefBuilder) {
 	provideViewNextWSID(adf)
 }
 
 func Provide(sprb istructsmem.IStatelessPkgResourcesBuilder, timeFunc coreutils.TimeFunc, tokensAPI itokens.ITokens,
-	federation federation.IFederation, itokens itokens.ITokens, ep extensionpoints.IExtensionPoint, wsPostInitFunc WSPostInitFunc) {
+	federation federation.IFederation, itokens itokens.ITokens, wsPostInitFunc WSPostInitFunc,
+	eps map[appdef.AppQName]extensionpoints.IExtensionPoint) {
 	// c.sys.InitChildWorkspace
 	sprb.AddFunc(istructsmem.NewCommandFunction(
 		authnz.QNameCommandInitChildWorkspace,
@@ -55,7 +56,7 @@ func Provide(sprb istructsmem.IStatelessPkgResourcesBuilder, timeFunc coreutils.
 	sprb.AddAsyncProjectors(
 		asyncProjectorInvokeCreateWorkspace(federation, itokens),
 		asyncProjectorInvokeCreateWorkspaceID(federation, itokens),
-		asyncProjectorInitializeWorkspace(federation, timeFunc, ep, itokens, wsPostInitFunc),
+		asyncProjectorInitializeWorkspace(federation, timeFunc, itokens, wsPostInitFunc, eps),
 	)
 	sprb.AddSyncProjectors(
 		syncProjectorChildWorkspaceIdx(),
@@ -72,11 +73,11 @@ func syncProjectorChildWorkspaceIdx() istructs.Projector {
 }
 
 // Projector<A, InitializeWorkspace>
-func asyncProjectorInitializeWorkspace(federation federation.IFederation, nowFunc coreutils.TimeFunc, ep extensionpoints.IExtensionPoint,
-	tokensAPI itokens.ITokens, wsPostInitFunc WSPostInitFunc) istructs.Projector {
+func asyncProjectorInitializeWorkspace(federation federation.IFederation, nowFunc coreutils.TimeFunc,
+	tokensAPI itokens.ITokens, wsPostInitFunc WSPostInitFunc, eps map[appdef.AppQName]extensionpoints.IExtensionPoint) istructs.Projector {
 	return istructs.Projector{
 		Name: qNameAPInitializeWorkspace,
-		Func: initializeWorkspaceProjector(nowFunc, federation, ep, tokensAPI, wsPostInitFunc),
+		Func: initializeWorkspaceProjector(nowFunc, federation, eps, tokensAPI, wsPostInitFunc),
 	}
 }
 

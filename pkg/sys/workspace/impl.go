@@ -286,7 +286,7 @@ func execCmdCreateWorkspace(now coreutils.TimeFunc) istructsmem.ExecCommandClosu
 
 // Projector<A, InitializeWorkspace>
 // triggered by CDoc<WorkspaceDescriptor>
-func initializeWorkspaceProjector(nowFunc coreutils.TimeFunc, federation federation.IFederation, ep extensionpoints.IExtensionPoint,
+func initializeWorkspaceProjector(nowFunc coreutils.TimeFunc, federation federation.IFederation, eps map[appdef.AppQName]extensionpoints.IExtensionPoint,
 	tokensAPI itokens.ITokens, wsPostInitFunc WSPostInitFunc) func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
 	return func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
 		return iterate.ForEachError(event.CUDs, func(rec istructs.ICUDRow) error {
@@ -370,6 +370,7 @@ func initializeWorkspaceProjector(nowFunc coreutils.TimeFunc, federation federat
 				}
 
 				wsKind := wsDescr.AsQName(authnz.Field_WSKind)
+				ep := eps[s.App()]
 				if wsError = buildWorkspace(wsDescr.AsString(field_TemplateName), ep, wsKind, federation, newWSID,
 					targetAppQName, newWSName, systemPrincipalToken_TargetApp); wsError != nil {
 					wsError = fmt.Errorf("workspace %s building: %w", wsDescr.AsString(field_TemplateName), wsError)
