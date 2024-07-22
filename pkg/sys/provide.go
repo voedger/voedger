@@ -53,21 +53,7 @@ func ProvideStateless(spb istructsmem.IStatelessPkgBuilder, smtpCfg smtp.Cfg, ep
 	describe.Provide(sysPkgBuilder)
 }
 
-func Provide(cfg *istructsmem.AppConfigType, smtpCfg smtp.Cfg,
-	ep extensionpoints.IExtensionPoint, wsPostInitFunc workspace.WSPostInitFunc, timeFunc coreutils.TimeFunc, itokens itokens.ITokens, federation federation.IFederation,
-	asp istructs.IAppStructsProvider, atf payloads.IAppTokensFactory, buildInfo *debug.BuildInfo,
-	storageProvider istorage.IAppStorageProvider) parser.PackageFS {
-	// blobber.ProvideBlobberCmds(cfg)
-	// collection.Provide(cfg)
-	// journal.Provide(cfg, ep)
-	// builtin.Provide(cfg, buildInfo, storageProvider)
-	// workspace.Provide(cfg, timeFunc, itokens, federation, itokens, ep, wsPostInitFunc)
-	// sqlquery.Provide(cfg, asp)
-	// verifier.Provide(cfg, itokens, federation, asp, smtpCfg, timeFunc)
-	// authnz.Provide(cfg, itokens, atf)
-	// invite.Provide(cfg, timeFunc, federation, itokens, smtpCfg)
-	// uniques.Provide(cfg)
-	// describe.Provide(cfg)
+func Provide(cfg *istructsmem.AppConfigType) parser.PackageFS {
 
 	verifier.ProvideLimits(cfg)
 	projectors.ProvideOffsetsDef(cfg.AppDefBuilder())

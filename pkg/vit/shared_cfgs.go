@@ -7,7 +7,6 @@ package vit
 import (
 	"context"
 	"fmt"
-	"runtime/debug"
 
 	"github.com/voedger/voedger/pkg/apps"
 	"github.com/voedger/voedger/pkg/extensionpoints"
@@ -88,12 +87,7 @@ var (
 )
 
 func ProvideApp2(apis apps.APIs, cfg *istructsmem.AppConfigType, ep extensionpoints.IExtensionPoint) apps.BuiltInAppDef {
-	buildInfo, ok := debug.ReadBuildInfo()
-	if !ok {
-		panic("no build info")
-	}
-	sysPackageFS := sys.Provide(cfg, TestSMTPCfg, ep, nil, apis.TimeFunc, apis.ITokens, apis.IFederation, apis.IAppStructsProvider, apis.IAppTokensFactory,
-		buildInfo, apis.IAppStorageProvider)
+	sysPackageFS := sys.Provide(cfg)
 	app2PackageFS := parser.PackageFS{
 		Path: app2PkgPath,
 		FS:   SchemaTestApp2FS,
@@ -112,12 +106,7 @@ func ProvideApp2(apis apps.APIs, cfg *istructsmem.AppConfigType, ep extensionpoi
 
 func ProvideApp1(apis apps.APIs, cfg *istructsmem.AppConfigType, ep extensionpoints.IExtensionPoint) apps.BuiltInAppDef {
 	// sys package
-	buildInfo, ok := debug.ReadBuildInfo()
-	if !ok {
-		panic("no build info")
-	}
-	sysPackageFS := sys.Provide(cfg, TestSMTPCfg, ep, nil, apis.TimeFunc, apis.ITokens, apis.IFederation, apis.IAppStructsProvider, apis.IAppTokensFactory,
-		buildInfo, apis.IAppStorageProvider)
+	sysPackageFS := sys.Provide(cfg)
 
 	// for rates test
 	cfg.Resources.Add(istructsmem.NewQueryFunction(

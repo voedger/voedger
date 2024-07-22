@@ -23,7 +23,7 @@ import (
 
 type AppResources struct {
 	AppConfigs AppConfigsType
-	
+
 	// pkgPath->IStatelessPkg
 	StatelessPackages map[string]IStatelessPkg
 }
@@ -83,6 +83,7 @@ type AppConfigType struct {
 	cudValidators      []istructs.CUDValidator
 	eventValidators    []istructs.EventValidator
 	numAppWorkspaces   istructs.NumAppWorkspaces
+	statelessPackages  map[string]IStatelessPkg
 }
 
 func newAppConfig(name appdef.AppQName, id istructs.ClusterAppID, def appdef.IAppDef, wsCount istructs.NumAppWorkspaces) *AppConfigType {
@@ -126,6 +127,10 @@ func newBuiltInAppConfig(appName appdef.AppQName, appDef appdef.IAppDefBuilder) 
 	cfg.appDefBuilder = appDef
 
 	return cfg
+}
+
+func (cfg *AppConfigType) SetStatelessPackages(sp map[string]IStatelessPkg) {
+	cfg.statelessPackages = sp
 }
 
 // prepare: prepares application configuration to use. It creates config globals and must be called from thread-safe code
@@ -199,18 +204,43 @@ func (cfg *AppConfigType) validateResources() (err error) {
 				}
 			case appdef.TypeKind_Projector:
 				prj := ext.(appdef.IProjector)
+
+				statelessSyncFound := false
+				statelessAsyncFound := false
+				for _, statelessPkg := range cfg.statelessPackages {
+					statelessAsyncFound, _ = iterate.FindFirst(statelessPkg.AsyncProjectors, func(p istructs.Projector) bool {
+						return p.Name == name
+					})
+					statelessSyncFound, _ = iterate.FindFirst(statelessPkg.SyncProjectors, func(p istructs.Projector) bool {
+						return p.Name == name
+					})
+				}
+
 				_, syncFound := cfg.syncProjectors[name]
 				_, asyncFound := cfg.asyncProjectors[name]
-				if !syncFound && !asyncFound {
+				count := 0
+				if syncFound {
+					count++
+				}
+				if asyncFound {
+					count++
+				}
+				if statelessAsyncFound {
+					count++
+				}
+				if statelessSyncFound {
+					count++
+				}
+				if !syncFound && !asyncFound && !statelessSyncFound && !statelessAsyncFound {
 					err = errors.Join(err,
 						fmt.Errorf("%v: exec is not defined in Resources", prj))
-				} else if syncFound && asyncFound {
+				} else if count > 1 {
 					err = errors.Join(err,
 						fmt.Errorf("%v: exec is defined twice in Resources (both sync & async)", prj))
-				} else if prj.Sync() && asyncFound {
+				} else if prj.Sync() && (asyncFound || statelessAsyncFound) {
 					err = errors.Join(err,
 						fmt.Errorf("%v: exec is defined in Resources as async, but sync expected", prj))
-				} else if !prj.Sync() && syncFound {
+				} else if !prj.Sync() && (syncFound || statelessSyncFound) {
 					err = errors.Join(err,
 						fmt.Errorf("%v: exec is defined in Resources as sync, but async expected", prj))
 				}
