@@ -30,6 +30,8 @@ import (
 	commandprocessor "github.com/voedger/voedger/pkg/processors/command"
 	"github.com/voedger/voedger/pkg/router"
 	"github.com/voedger/voedger/pkg/state"
+	"github.com/voedger/voedger/pkg/sys/smtp"
+	"github.com/voedger/voedger/pkg/sys/workspace"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 	"github.com/voedger/voedger/pkg/utils/federation"
 	"github.com/voedger/voedger/pkg/vvm/metrics"
@@ -155,6 +157,8 @@ type VVMConfig struct {
 	SecretsReader       isecrets.ISecretReader
 	// used in tests only
 	KeyspaceNameSuffix string
+	SmtpConfig         smtp.Cfg
+	WSPostInitFunc     workspace.WSPostInitFunc
 }
 
 type resultSenderErrorFirst struct {

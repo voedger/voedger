@@ -13,6 +13,7 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"runtime/debug"
 	"strconv"
 	"strings"
 	"time"
@@ -178,6 +179,7 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 		provideBootstrapOperator,
 		provideAdminEndpointServiceOperator,
 		providePublicEndpointServiceOperator,
+		provideBuildInfo,
 		// wire.Value(vvmConfig.NumCommandProcessors) -> (wire bug?) value github.com/untillpro/airs-bp3/vvm.CommandProcessorsCount can't be used: vvmConfig is not declared in package scope
 		wire.FieldsOf(&vvmConfig,
 			"NumCommandProcessors",
@@ -265,9 +267,20 @@ func provideAsyncActualizersService(cfg projectors.BasicAsyncActualizerConfig) p
 	return projectors.ProvideActualizers(cfg)
 }
 
-func provideAppResources(cfgs AppConfigsTypeEmpty, vvmCfg *VVMConfig) istructsmem.AppResources {
+func provideBuildInfo() (*debug.BuildInfo, error) {
+	buildInfo, ok := debug.ReadBuildInfo()
+	if !ok {
+		return nil, errors.New("no build info")
+	}
+	return buildInfo, nil
+}
+
+func provideAppResources(cfgs AppConfigsTypeEmpty, vvmCfg *VVMConfig, ep extensionpoints.IExtensionPoint, buildInfo *debug.BuildInfo,
+	sp istorage.IAppStorageProvider, itokens itokens.ITokens, federation federation.IFederation, asp istructs.IAppStructsProvider,
+	atf payloads.IAppTokensFactory) istructsmem.AppResources {
 	spb := istructsmem.NewStatelessPkgBuilder()
-	sys.ProvideStateless(spb, )
+	sys.ProvideStateless(spb, vvmCfg.SmtpConfig, ep, buildInfo, sp, vvmCfg.WSPostInitFunc, vvmCfg.TimeFunc, itokens, federation,
+		asp, atf)
 	return istructsmem.AppResources{
 		AppConfigs:        istructsmem.AppConfigsType(cfgs),
 		StatelessPackages: spb.Build(),

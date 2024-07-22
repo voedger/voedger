@@ -15,7 +15,7 @@ import (
 	"github.com/voedger/voedger/pkg/utils/federation"
 )
 
-func ProvideViewNextWSID(adf appdef.IAppDefBuilder) {
+func Provide(adf appdef.IAppDefBuilder, ep extensionpoints.IExtensionPoint) {
 	provideViewNextWSID(adf)
 }
 
