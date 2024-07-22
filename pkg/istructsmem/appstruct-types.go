@@ -198,7 +198,13 @@ func (cfg *AppConfigType) validateResources() (err error) {
 			name := ext.QName()
 			switch ext.Kind() {
 			case appdef.TypeKind_Query, appdef.TypeKind_Command:
-				if cfg.Resources.QueryResource(name).QName() == appdef.NullQName {
+				statelessFound := false
+				for _, statelessPkg := range cfg.statelessPackages {
+					if statelessFound = statelessPkg.QueryResource(name).QName() != appdef.NullQName; statelessFound {
+						break
+					}
+				}
+				if !statelessFound && cfg.Resources.QueryResource(name).QName() == appdef.NullQName {
 					err = errors.Join(err,
 						fmt.Errorf("%v: exec is not defined: %w", ext, ErrNameNotFound))
 				}
