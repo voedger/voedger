@@ -16,10 +16,12 @@ const (
 )
 
 const (
-	TestPkgAlias  = "tstpkg"
 	TestPartition = istructs.PartitionID(1)
 )
 
 var IntentsLimit = 10
 var BundlesLimit = 10
-var AppQName_test = appdef.NewAppQName("test", "app")
+var (
+	AppQName_test = appdef.NewAppQName("test", "app")
+	PackageName   = "tstpkg"
+)

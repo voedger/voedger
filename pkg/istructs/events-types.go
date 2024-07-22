@@ -10,7 +10,7 @@ import "github.com/voedger/voedger/pkg/appdef"
 
 type IRawEventBuilder interface {
 
-	// ****** Argument-related builders
+	// ****** ArgumentObject-related builders
 
 	// For sys.CUD command it is not called
 	ArgumentObjectBuilder() IObjectBuilder

@@ -103,6 +103,12 @@ func (m *MockState) App() appdef.AppQName {
 	args := m.Called()
 	return args.Get(0).(appdef.AppQName)
 }
+
+func (m *MockState) AppStructs() istructs.IAppStructs {
+	args := m.Called()
+	return args.Get(0).(istructs.IAppStructs)
+}
+
 func (m *MockState) CanExist(key istructs.IStateKeyBuilder) (value istructs.IStateValue, ok bool, err error) {
 	args := m.Called(key)
 	if intf := args.Get(0); intf != nil {
@@ -432,8 +438,18 @@ type MockIntents struct {
 	mock.Mock
 }
 
+func (m *MockIntents) FindIntentWithOpKind(key istructs.IStateKeyBuilder) (istructs.IStateValueBuilder, bool) {
+	return nil, false
+}
+
+func (m *MockIntents) Intents(iterFunc func(key istructs.IStateKeyBuilder, value istructs.IStateValueBuilder, isNew bool)) {
+}
+
 func (m *MockIntents) FindIntent(key istructs.IStateKeyBuilder) istructs.IStateValueBuilder {
 	return nil
+}
+func (m *MockIntents) IntentsCount() int {
+	return 0
 }
 func (m *MockIntents) NewValue(key istructs.IStateKeyBuilder) (istructs.IStateValueBuilder, error) {
 	args := m.Called(key)

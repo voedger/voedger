@@ -6,10 +6,10 @@
 package appdef
 
 import (
-	"strconv"
 	"strings"
 
 	"github.com/voedger/voedger/pkg/goutils/set"
+	"github.com/voedger/voedger/pkg/utils/utils"
 )
 
 // Is specified type kind may be used in child containers.
@@ -33,8 +33,7 @@ func (k TypeKind) MarshalText() ([]byte, error) {
 	if k < TypeKind_count {
 		s = k.String()
 	} else {
-		const base = 10
-		s = strconv.FormatUint(uint64(k), base)
+		s = utils.UintToString(k)
 	}
 	return []byte(s), nil
 }

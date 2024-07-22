@@ -9,39 +9,28 @@ import (
 	"encoding/json"
 	"strings"
 
-	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
-func provideQryDescribePackageNames(asp istructs.IAppStructsProvider, appQName appdef.AppQName) func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
-	return func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
-		as, err := asp.BuiltIn(appQName)
-		if err != nil {
-			return err
-		}
-		names := as.DescribePackageNames()
-		namesStr := strings.Join(names, ",")
-		return callback(&result{res: namesStr})
-	}
+func qryDescribePackageNames(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
+	as := args.Workpiece.(interface{ GetAppStructs() istructs.IAppStructs }).GetAppStructs()
+	names := as.DescribePackageNames()
+	namesStr := strings.Join(names, ",")
+	return callback(&result{res: namesStr})
 }
 
-func provideQryDescribePackage(asp istructs.IAppStructsProvider, appQName appdef.AppQName) func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
-	return func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
-		as, err := asp.BuiltIn(appQName)
-		if err != nil {
-			return err
-		}
+func qryDescribePackage(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
+	as := args.Workpiece.(interface{ GetAppStructs() istructs.IAppStructs }).GetAppStructs()
 
-		packageName := args.ArgumentObject.AsString(field_PackageName)
-		packageDescription := as.DescribePackage(packageName)
+	packageName := args.ArgumentObject.AsString(field_PackageName)
+	packageDescription := as.DescribePackage(packageName)
 
-		b, err := json.Marshal(packageDescription)
-		if err != nil {
-			return err
-		}
-
-		return callback(&result{res: string(b)})
+	b, err := json.Marshal(packageDescription)
+	if err != nil {
+		return err
 	}
+
+	return callback(&result{res: string(b)})
 }
 
 func (r *result) AsString(string) string {

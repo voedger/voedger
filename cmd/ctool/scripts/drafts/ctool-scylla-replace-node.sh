@@ -54,7 +54,7 @@ if [ -n "${4+x}" ] && [ -n "$4" ]; then
     DC=""
 fi
 
-REPLACED_NODE_NAME=$(getent hosts "$2" | awk '{print $2}')
+REPLACED_NODE_NAME=$(grep "$2" /etc/hosts | grep db-node | awk '{print $2}')
 ssh-keyscan -p "$(utils_SSH_PORT)" -H "$REPLACED_NODE_NAME" >> ~/.ssh/known_hosts
 
 # Function to check if Scylla server is up and listening

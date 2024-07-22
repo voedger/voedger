@@ -80,7 +80,7 @@ func (c *cmdWorkpiece) Event() istructs.IPLogEvent {
 	return c.pLogEvent
 }
 
-// need for update corrupted in c.cluster.VSqlUpdate
+// need for update corrupted in c.cluster.VSqlUpdate and for various funcs of sys package
 func (c *cmdWorkpiece) GetAppStructs() istructs.IAppStructs {
 	return c.appStructs
 }
@@ -474,6 +474,11 @@ func execCommand(ctx context.Context, work interface{}) (err error) {
 
 	cmd.metrics.increase(ExecSeconds, time.Since(begin).Seconds())
 	return err
+}
+
+func checkResponseIntent(_ context.Context, work interface{}) (err error) {
+	cmd := work.(*cmdWorkpiece)
+	return processors.CheckResponseIntent(cmd.hostStateProvider.state)
 }
 
 func buildRawEvent(_ context.Context, work interface{}) (err error) {

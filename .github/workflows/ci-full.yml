@@ -39,7 +39,7 @@ jobs:
       assignee: 'host6'
       name: 'Daily Test failed on'
       body: ${{ needs.notify_failure.outputs.failure_url }}
-      label: 'todo/triage'
+      label: 'prty/blocker'
     secrets:
       personaltoken: ${{ secrets.PERSONAL_TOKEN }}
 

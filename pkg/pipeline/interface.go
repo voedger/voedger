@@ -90,3 +90,9 @@ type IService interface {
 	// ctx provided in Run() should be cancelled right before Stop()
 	Stop()
 }
+
+type IServiceEx interface {
+	IService
+	// Blocking RunEx implementation must call started()
+	RunEx(ctx context.Context, started func())
+}

@@ -50,6 +50,10 @@ func (s hostState) App() appdef.AppQName {
 	return s.appStructsFunc().AppQName()
 }
 
+func (s hostState) AppStructs() istructs.IAppStructs {
+	return s.appStructsFunc()
+}
+
 func (s hostState) CommandPrepareArgs() istructs.CommandPrepareArgs {
 	panic(errCommandPrepareArgsNotSupportedByState)
 }
@@ -268,6 +272,28 @@ func (s *hostState) FindIntent(key istructs.IStateKeyBuilder) istructs.IStateVal
 	}
 	return nil
 }
+
+func (s *hostState) FindIntentWithOpKind(key istructs.IStateKeyBuilder) (vb istructs.IStateValueBuilder, isNew bool) {
+	for _, item := range s.intents[key.Storage()] {
+		if item.key.Equals(key) {
+			return item.value, item.isNew
+		}
+	}
+	return nil, false
+}
+
+func (s *hostState) IntentsCount() int {
+	return s.isIntentsSize()
+}
+
+func (s *hostState) Intents(iterFunc func(key istructs.IStateKeyBuilder, value istructs.IStateValueBuilder, isNew bool)) {
+	for _, items := range s.intents {
+		for _, item := range items {
+			iterFunc(item.key, item.value, item.isNew)
+		}
+	}
+}
+
 func (s *hostState) NewValue(key istructs.IStateKeyBuilder) (eb istructs.IStateValueBuilder, err error) {
 	storage, ok := s.withInsert[key.Storage()]
 	if !ok {
@@ -284,7 +310,7 @@ func (s *hostState) NewValue(key istructs.IStateKeyBuilder) (eb istructs.IStateV
 		// notest
 		return nil, err
 	}
-	s.putToIntents(key.Storage(), key, builder)
+	s.putToIntents(key.Storage(), key, builder, true)
 
 	return builder, nil
 }
@@ -304,7 +330,7 @@ func (s *hostState) UpdateValue(key istructs.IStateKeyBuilder, existingValue ist
 		// notest
 		return nil, err
 	}
-	s.putToIntents(key.Storage(), key, builder)
+	s.putToIntents(key.Storage(), key, builder, false)
 
 	return builder, nil
 }
@@ -342,8 +368,8 @@ func (s *hostState) ClearIntents() {
 		s.intents[sid] = s.intents[sid][0:0]
 	}
 }
-func (s *hostState) putToIntents(storage appdef.QName, kb istructs.IStateKeyBuilder, vb istructs.IStateValueBuilder) {
-	s.intents[storage] = append(s.intents[storage], ApplyBatchItem{key: kb, value: vb})
+func (s *hostState) putToIntents(storage appdef.QName, kb istructs.IStateKeyBuilder, vb istructs.IStateValueBuilder, isNew bool) {
+	s.intents[storage] = append(s.intents[storage], ApplyBatchItem{key: kb, value: vb, isNew: isNew})
 }
 func (s *hostState) isIntentsFull() bool {
 	return s.isIntentsSize() >= s.intentsLimit

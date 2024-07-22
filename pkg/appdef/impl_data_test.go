@@ -10,11 +10,11 @@ import (
 	"math"
 	"reflect"
 	"regexp"
-	"strconv"
 	"strings"
 	"testing"
 
 	"github.com/voedger/voedger/pkg/goutils/testingu/require"
+	"github.com/voedger/voedger/pkg/utils/utils"
 )
 
 func Test_AppDef_AddData(t *testing.T) {
@@ -393,7 +393,7 @@ func TestConstraintKind_MarshalText(t *testing.T) {
 		{
 			name: `ConstraintKind_Count —> 4`,
 			k:    ConstraintKind_Count,
-			want: strconv.FormatUint(uint64(ConstraintKind_Count), 10),
+			want: utils.UintToString(ConstraintKind_Count),
 		},
 	}
 	for _, tt := range tests {
@@ -411,7 +411,7 @@ func TestConstraintKind_MarshalText(t *testing.T) {
 
 	t.Run("100% cover", func(t *testing.T) {
 		const tested = ConstraintKind_Count + 1
-		want := "ConstraintKind(" + strconv.FormatInt(int64(tested), 10) + ")"
+		want := "ConstraintKind(" + utils.UintToString(tested) + ")"
 		got := tested.String()
 		if got != want {
 			t.Errorf("(ConstraintKind_Count + 1).String() = %v, want %v", got, want)
@@ -540,7 +540,7 @@ func TestDataKindType_MarshalText(t *testing.T) {
 		{
 			name: `DataKind_FakeLast —> 12`,
 			k:    DataKind_FakeLast,
-			want: strconv.FormatUint(uint64(DataKind_FakeLast), 10),
+			want: utils.UintToString(DataKind_FakeLast),
 		},
 	}
 	for _, tt := range tests {
@@ -558,7 +558,7 @@ func TestDataKindType_MarshalText(t *testing.T) {
 
 	t.Run("100% cover", func(t *testing.T) {
 		const tested = DataKind_FakeLast + 1
-		want := "DataKind(" + strconv.FormatInt(int64(tested), 10) + ")"
+		want := "DataKind(" + utils.UintToString(tested) + ")"
 		got := tested.String()
 		if got != want {
 			t.Errorf("(DataKind_FakeLast + 1).String() = %v, want %v", got, want)

@@ -82,6 +82,7 @@ func compile(dir string, checkAppSchema bool) (*Result, error) {
 		if err := parser.BuildAppDefs(appAst, builder); err != nil {
 			errs = append(errs, err)
 		}
+		result.AppDefBuilder = builder
 		result.AppDef, err = builder.Build()
 		if err != nil {
 			errs = append(errs, err)
@@ -322,7 +323,7 @@ func localPath(loadedPkgs *loadedPackages, depURL string, notFoundDeps map[strin
 		return path, nil
 	}
 	notFoundDeps[depURL] = struct{}{}
-	return "", fmt.Errorf("%s: cannot find dependency", depURL)
+	return "", fmt.Errorf("%[1]s: cannot find dependency. Ensure you have an import \"_ %[1]s\" in golang sources", depURL)
 }
 
 func getLocalPathOfTheDep(pkgs []*packages.Package, depURL string) string {

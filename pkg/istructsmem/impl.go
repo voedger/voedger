@@ -176,6 +176,8 @@ func (app *appStructsType) EventValidators() []istructs.EventValidator {
 	return app.config.eventValidators
 }
 
+// func (app appStructsType) GetAppStorage
+
 func (app *appStructsType) IsFunctionRateLimitsExceeded(funcQName appdef.QName, wsid istructs.WSID) bool {
 	rateLimits, ok := app.config.FunctionRateLimits.limits[funcQName]
 	if !ok {
@@ -226,7 +228,7 @@ func (app *appStructsType) DescribePackageNames() (names []string) {
 	return names
 }
 
-// istructs.IAppStructs.DescribePackage: Describe package content
+// istructs.IAppStructs.DescribePoackage: Describe package content
 func (app *appStructsType) DescribePackage(name string) interface{} {
 	return app.describe().Packages[name]
 }
@@ -597,6 +599,10 @@ func (recs *appRecordsType) GetSingleton(workspace istructs.WSID, qName appdef.Q
 		return NewNullRecord(istructs.NullRecordID), err
 	}
 	return recs.Get(workspace, true, id)
+}
+
+func (recs *appRecordsType) GetSingletonID(qName appdef.QName) (istructs.RecordID, error) {
+	return recs.app.config.singletons.ID(qName)
 }
 
 // istructs.IRecords.PutJSON

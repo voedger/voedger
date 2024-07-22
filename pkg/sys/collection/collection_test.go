@@ -18,6 +18,7 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/iauthnzimpl"
+	"github.com/voedger/voedger/pkg/iextengine"
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/in10nmem"
 	"github.com/voedger/voedger/pkg/iprocbus"
@@ -211,8 +212,8 @@ func deployTestApp(t *testing.T) (appParts appparts.IAppPartitions, appStructs i
 		appparts.NullActualizers,
 		engines.ProvideExtEngineFactories(
 			engines.ExtEngineFactoriesConfig{
-				AppConfigs:  cfgs,
-				WASMCompile: false,
+				AppConfigs: cfgs,
+				WASMConfig: iextengine.WASMFactoryConfig{},
 			}))
 	require.NoError(err)
 	appParts.DeployApp(test.appQName, appDef, test.totalPartitions, test.appEngines)

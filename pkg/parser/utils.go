@@ -244,8 +244,8 @@ func isInternalName(pkgName Ident, pkgAst *PackageSchemaAST) bool {
 	return pkg == "" || pkg == pkgAst.Name
 }
 
-func getPackageName(pkgQN string) string {
-	parts := strings.Split(pkgQN, "/")
+func GetPackageName(pkgPath string) string {
+	parts := strings.Split(pkgPath, "/")
 	if len(parts) == 0 {
 		return ""
 	}
@@ -349,9 +349,6 @@ func dataTypeToDataKind(t DataType) appdef.DataKind {
 	}
 	if t.Timestamp {
 		return appdef.DataKind_int64
-	}
-	if t.Record {
-		return appdef.DataKind_Record
 	}
 	return appdef.DataKind_null
 }
