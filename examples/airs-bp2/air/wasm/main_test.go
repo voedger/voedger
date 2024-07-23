@@ -122,6 +122,12 @@ func TestFillPbillDates(t *testing.T) {
 				100002,
 				`tableno`, 1,
 			).
+			Offset(100002).
+			View(
+				orm.Package_air.View_PbillDates,
+				100002,
+				`tableno`, 1,
+			).
 			ArgumentObject(
 				2,
 				`id_bill`, 100002,

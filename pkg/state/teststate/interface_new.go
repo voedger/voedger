@@ -27,6 +27,8 @@ type ICommandRunner interface {
 
 type ITestRunner interface {
 	CUDRow(fQName IFullQName, id int, keyValueList ...any) ITestRunner
+	View(fQName IFullQName, id int, keyValueList ...any) ITestRunner
+	Offset(offset int) ITestRunner
 	// methos to fulfill test state
 	Record(fQName IFullQName, id int, keyValueList ...any) ITestRunner
 	SingletonRecord(fQName IFullQName, keyValueList ...any) ITestRunner

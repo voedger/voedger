@@ -41,6 +41,12 @@ type CommandTestState struct {
 	recordItems []recordItem
 	// requiredRecordItems is to store required items
 	requiredRecordItems []recordItem
+	// cudRows is to store cud rows
+	cudRows []recordItem
+	// initial offset
+	initialOffset int
+	// view records
+	viewRecords []recordItem
 }
 
 type defaultTestRunnerImpl struct {
@@ -75,6 +81,14 @@ func (d defaultTestRunnerImpl) RequireSingletonUpdate(fQName IFullQName, keyValu
 }
 
 func (d defaultTestRunnerImpl) Record(fQName IFullQName, id int, keyValueList ...any) ITestRunner {
+	panic("not implemented")
+}
+
+func (d defaultTestRunnerImpl) View(fQName IFullQName, id int, keyValueList ...any) ITestRunner {
+	panic("not implemented")
+}
+
+func (d defaultTestRunnerImpl) Offset(offset int) ITestRunner {
 	panic("not implemented")
 }
 
@@ -116,13 +130,16 @@ func NewCommandTestState(t *testing.T, iCommand ICommand, extensionFunc func()) 
 	// initialize funcRunner and extensionFunc itself
 	ts.funcRunner = &sync.Once{}
 	ts.extensionFunc = extensionFunc
-	// set cud builder function
-	ts.setCudBuilder(iCommand, wsid)
 
-	// set arguments for the command
-	if len(iCommand.ArgumentEntity()) > 0 {
-		ts.argumentType = appdef.NewFullQName(iCommand.ArgumentPkgPath(), iCommand.ArgumentEntity())
-		ts.argumentObject = make(map[string]any)
+	if iCommand != nil {
+		// set cud builder function
+		ts.setCudBuilder(iCommand, wsid)
+
+		// set arguments for the command
+		if len(iCommand.ArgumentEntity()) > 0 {
+			ts.argumentType = appdef.NewFullQName(iCommand.ArgumentPkgPath(), iCommand.ArgumentEntity())
+			ts.argumentObject = make(map[string]any)
+		}
 	}
 
 	return ts
@@ -260,6 +277,22 @@ func (cts *CommandTestState) SingletonRecord(fQName IFullQName, keyValueList ...
 	return cts.record(fQName, int(id), isSingleton, keyValueList...)
 }
 
+func (cts *CommandTestState) Offset(offset int) ITestRunner {
+	cts.initialOffset = offset
+
+	return cts
+}
+
+func (cts *CommandTestState) View(fQName IFullQName, id int, keyValueList ...any) ITestRunner {
+	cts.viewRecords = append(cts.viewRecords, recordItem{
+		entity:       fQName,
+		id:           id,
+		keyValueList: keyValueList,
+	})
+
+	return cts
+}
+
 func (cts *CommandTestState) getQNameFromFQName(fQName IFullQName) appdef.QName {
 	localPkgName := cts.appDef.PackageLocalName(fQName.PkgPath())
 	return appdef.NewQName(localPkgName, fQName.Entity())
@@ -296,7 +329,6 @@ func (cts *CommandTestState) putRecords() {
 }
 
 func (cts *CommandTestState) require() {
-	// TODO: check requiring inexistent intents, error message must be understandable
 	// check out required allIntents
 	requiredKeys := make([]istructs.IStateKeyBuilder, 0, len(cts.requiredRecordItems))
 	for _, item := range cts.requiredRecordItems {
@@ -380,33 +412,6 @@ func (cts *CommandTestState) ArgumentObjectRow(path string, id int, keyValueList
 	return cts
 }
 
-// putToArgumentObjectTree adds a value to the tree at the specified path part
-// and returns the new tree or an error if the path part is not a valid key
-func putToArgumentObjectTree(tree map[string]any, pathPart string, keyValueList ...any) map[string]any {
-	if len(keyValueList) == 0 {
-		newTree := make(map[string]any)
-		tree[pathPart] = newTree
-
-		return newTree
-	}
-
-	// check if path part is a valid key
-	_, ok := tree[pathPart]
-	if !ok {
-		tree[pathPart] = make([]any, 0)
-	}
-
-	newTree, err := parseKeyValues(keyValueList)
-	if err != nil {
-		panic(fmt.Errorf("failed to parse key values: %w", err))
-	}
-
-	// add key value map to the end of tree node
-	tree[pathPart] = append(tree[pathPart].([]any), newTree)
-
-	return newTree
-}
-
 func (cts *CommandTestState) RequireSingletonInsert(fQName IFullQName, keyValueList ...any) ITestRunner {
 	return cts.addRequiredRecordItems(fQName, 0, true, true, keyValueList...)
 }
@@ -423,10 +428,21 @@ func (cts *CommandTestState) RequireRecordUpdate(fQName IFullQName, id int, keyV
 	return cts.addRequiredRecordItems(fQName, id, false, false, keyValueList...)
 }
 
+func (cts *CommandTestState) CUDRow(fQName IFullQName, id int, keyValueList ...any) ITestRunner {
+	cts.cudRows = append(cts.cudRows, recordItem{
+		entity:       fQName,
+		id:           id,
+		keyValueList: keyValueList,
+	})
+
+	return cts
+}
+
 func (cts *CommandTestState) Run() {
 	defer cts.checkoutRequires()
 
 	cts.putRecords()
+	cts.putCudRows()
 	cts.putArgument()
 
 	cts.runExtensionFunc()
@@ -435,6 +451,22 @@ func (cts *CommandTestState) Run() {
 func (cts *CommandTestState) runExtensionFunc() {
 	if cts.extensionFunc != nil {
 		cts.funcRunner.Do(cts.extensionFunc)
+	}
+}
+
+func (cts *CommandTestState) putCudRows() {
+	if len(cts.cudRows) == 0 {
+		return
+	}
+
+	for _, item := range cts.cudRows {
+		kvMap, err := parseKeyValues(item.keyValueList)
+		require.NoError(cts.t, err, "failed to parse key values")
+
+		cts.PutEvent(cts.commandWSID, cts.argumentType, func(argBuilder istructs.IObjectBuilder, cudBuilder istructs.ICUD) {
+			cud := cudBuilder.Create(cts.getQNameFromFQName(item.entity))
+			cud.PutFromJSON(kvMap)
+		})
 	}
 }
 
@@ -575,7 +607,7 @@ type ProjectorTestState struct {
 // NewProjectorTestState creates a new test state for projector testing
 func NewProjectorTestState(t *testing.T, iProjector IProjector, extensionFunc func()) *ProjectorTestState {
 	ts := &ProjectorTestState{
-		*NewCommandTestState(t, iProjector, extensionFunc),
+		*NewCommandTestState(t, nil, extensionFunc),
 	}
 
 	return ts
@@ -630,7 +662,7 @@ func (pts *ProjectorTestState) RequireRecordUpdate(fQName IFullQName, id int, ke
 }
 
 func (pts *ProjectorTestState) CUDRow(fQName IFullQName, id int, keyValueList ...any) ITestRunner {
-	// TODO: implement
+	pts.CommandTestState.CUDRow(fQName, id, keyValueList...)
 
 	return pts
 }
@@ -647,10 +679,23 @@ func (pts *ProjectorTestState) RequireViewUpdate(fQName IFullQName, id int, keyV
 	return pts
 }
 
+func (pts *ProjectorTestState) View(fQName IFullQName, id int, keyValueList ...any) ITestRunner {
+	pts.CommandTestState.View(fQName, id, keyValueList...)
+
+	return pts
+}
+
+func (pts *ProjectorTestState) Offset(offset int) ITestRunner {
+	pts.CommandTestState.Offset(offset)
+
+	return pts
+}
+
 func (pts *ProjectorTestState) Run() {
 	defer pts.checkoutRequires()
 
 	pts.putRecords()
+	pts.putCudRows()
 	pts.putArgument()
 
 	pts.runExtensionFunc()
@@ -683,4 +728,31 @@ func parseKeyValues(keyValues []any) (map[string]any, error) {
 	}
 
 	return result, nil
+}
+
+// putToArgumentObjectTree adds a value to the tree at the specified path part
+// and returns the new tree or an error if the path part is not a valid key
+func putToArgumentObjectTree(tree map[string]any, pathPart string, keyValueList ...any) map[string]any {
+	if len(keyValueList) == 0 {
+		newTree := make(map[string]any)
+		tree[pathPart] = newTree
+
+		return newTree
+	}
+
+	// check if path part is a valid key
+	_, ok := tree[pathPart]
+	if !ok {
+		tree[pathPart] = make([]any, 0)
+	}
+
+	newTree, err := parseKeyValues(keyValueList)
+	if err != nil {
+		panic(fmt.Errorf("failed to parse key values: %w", err))
+	}
+
+	// add key value map to the end of tree node
+	tree[pathPart] = append(tree[pathPart].([]any), newTree)
+
+	return newTree
 }
