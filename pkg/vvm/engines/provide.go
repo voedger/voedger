@@ -14,7 +14,9 @@ import (
 )
 
 type ExtEngineFactoriesConfig struct {
-	AppResources istructsmem.AppResources
+	// AppResources istructsmem.AppsResources
+	istructsmem.AppConfigsType
+	istructsmem.StatelessResources
 	WASMConfig   iextengine.WASMFactoryConfig
 }
 

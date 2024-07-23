@@ -13,29 +13,47 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
+type StatelessResources struct {
+	Projectors map[string]map[appdef.QName]istructs.Projector
+	Funcs      map[string]map[appdef.QName]istructs.IResource
+}
+
 // reader
 type IStatelessPkg interface {
 	istructs.IResources
 	PkgPath() string
 	SyncProjectors(func(p istructs.Projector))
 	AsyncProjectors(func(p istructs.Projector))
-	CUDValidators(func(v istructs.CUDValidator))
-	EventValidators(func(v istructs.EventValidator))
+	// CUDValidators(func(v istructs.CUDValidator))
+	// EventValidators(func(v istructs.EventValidator))
 }
 
 // passed to e.g. sys package
-type IStatelessPkgBuilder interface {
-	AddPackage(pkgPath string) IStatelessPkgResourcesBuilder
-	Build() map[string]IStatelessPkg // pkgPath
+type IStatelessResources interface {
+	// AddPackage(pkgPath string) IStatelessPkgResourcesBuilder
+	// Build() map[string]IStatelessPkg // pkgPath
+
+	Commands(func(path string, cmd istructs.ICommandFunction))
+	Queries()
+	Projectors()
+
+	AddCommands(path string, cmds ...istructs.ICommandFunction)
+	AddQuerys(path string, queries ...istructs.IQueryFunction)
+	AddProjectors(path string, projectors ...istructs.Projector)
+
+	// SyncProjectors(func(p istructs.Projector))
+	// AsyncProjectors(func(p istructs.Projector))
 }
 
 // filled with e.g. sys resources
 type IStatelessPkgResourcesBuilder interface {
-	AddFunc(istructs.IResource)
-	AddSyncProjectors(...istructs.Projector)
-	AddAsyncProjectors(...istructs.Projector)
-	AddCUDValidators(...istructs.CUDValidator)
-	AddEventValidators(...istructs.EventValidator)
+	AddCommands(...istructs.ICommandFunction)
+	AddQuerys(...istructs.IQueryFunction)
+	AddProjectors(...istructs.Projector)
+	// AddSyncProjectors(...istructs.Projector)
+	// AddAsyncProjectors(...istructs.Projector)
+	// AddCUDValidators(...istructs.CUDValidator)
+	// AddEventValidators(...istructs.EventValidator)
 }
 
 type statelessPkgs map[string]IStatelessPkg
@@ -56,7 +74,7 @@ func (sp statelessPkgs) Build() map[string]IStatelessPkg {
 	return sp
 }
 
-func NewStatelessPkgBuilder() IStatelessPkgBuilder {
+func NewStatelessPkgBuilder() IStatelessResources {
 	return statelessPkgs{}
 }
 

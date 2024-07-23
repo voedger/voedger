@@ -21,7 +21,9 @@ import (
 	"github.com/voedger/voedger/pkg/istructsmem/internal/vers"
 )
 
-type AppResources struct {
+
+// TODO: eliminate it
+type AppsResources struct {
 	AppConfigs AppConfigsType
 
 	// pkgPath->IStatelessPkg
@@ -335,6 +337,27 @@ func (cfg *AppConfigType) SetNumAppWorkspaces(naw istructs.NumAppWorkspaces) {
 		panic("must not set NumAppWorkspaces after first IAppStructsProvider.AppStructs() call because the app is considered working")
 	}
 	cfg.numAppWorkspaces = naw
+}
+
+func (cfg *AppConfigType) IsStateless(qName appdef.QName) bool {
+	for _, sp := range cfg.statelessPackages {
+		if sp.QueryResource(qName).Kind() != istructs.ResourceKind_null {
+			return true
+		}
+		found, _ := iterate.FindFirst(sp.AsyncProjectors, func(p istructs.Projector) bool {
+			return p.Name == qName
+		})
+		if found {
+			return true
+		}
+		found, _ = iterate.FindFirst(sp.SyncProjectors, func(p istructs.Projector) bool {
+			return p.Name == qName
+		})
+		if found {
+			return true
+		}
+	}
+	return false
 }
 
 // Application configuration parameters

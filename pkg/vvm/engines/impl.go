@@ -53,6 +53,9 @@ func provideStatelessPkgFuncs(pkg istructsmem.IStatelessPkg, funcs iextengine.Bu
 			// notest
 			panic(fmt.Sprintf("unsupported resource type %T", ifunc))
 		}
+		if fn == nil {
+			panic(fmt.Errorf("stateless %v implementation not found", qName))
+		}
 		fullQName := appdef.NewFullQName(pkg.PkgPath(), qName.Entity())
 		funcs[fullQName] = fn
 	})
@@ -83,6 +86,9 @@ func provideAppsBuiltInExtFuncs(cfgs istructsmem.AppConfigsType) iextengine.Buil
 		cfg.AppDef.Extensions(
 			func(ext appdef.IExtension) {
 				if ext.Engine() != appdef.ExtensionEngineKind_BuiltIn {
+					return
+				}
+				if cfg.IsStateless(ext.QName()) {
 					return
 				}
 				name := ext.QName()

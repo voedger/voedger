@@ -36,10 +36,10 @@ import (
 //go:embed *.vsql
 var SysFS embed.FS
 
-func ProvideStateless(spb istructsmem.IStatelessPkgBuilder, smtpCfg smtp.Cfg, eps map[appdef.AppQName]extensionpoints.IExtensionPoint, buildInfo *debug.BuildInfo,
+func ProvideStateless(spb istructsmem.IStatelessResources, smtpCfg smtp.Cfg, eps map[appdef.AppQName]extensionpoints.IExtensionPoint, buildInfo *debug.BuildInfo,
 	storageProvider istorage.IAppStorageProvider, wsPostInitFunc workspace.WSPostInitFunc, timeFunc coreutils.TimeFunc,
 	itokens itokens.ITokens, federation federation.IFederation, asp istructs.IAppStructsProvider, atf payloads.IAppTokensFactory) {
-	sysPkgBuilder := spb.AddPackage(appdef.SysPackage)
+	sysPkgBuilder := spb.AddPackage(appdef.SysPackagePath)
 	blobber.ProvideBlobberCmds(sysPkgBuilder)
 	collection.Provide(sysPkgBuilder)
 	journal.Provide(sysPkgBuilder, eps)
@@ -54,7 +54,6 @@ func ProvideStateless(spb istructsmem.IStatelessPkgBuilder, smtpCfg smtp.Cfg, ep
 }
 
 func Provide(cfg *istructsmem.AppConfigType) parser.PackageFS {
-
 	verifier.ProvideLimits(cfg)
 	projectors.ProvideOffsetsDef(cfg.AppDefBuilder())
 	workspace.ProvideViewNextWSID(cfg.AppDefBuilder())

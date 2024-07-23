@@ -27,7 +27,7 @@ func provideDownloadBLOBHelperCmd(sprb istructsmem.IStatelessPkgResourcesBuilder
 
 func provideUploadBLOBHelperCmd(sprb istructsmem.IStatelessPkgResourcesBuilder) {
 	uploadBLOBHelperCmd := istructsmem.NewCommandFunction(QNameCommandUploadBLOBHelper, ubhExec)
-	sprb.AddFunc(uploadBLOBHelperCmd)
+	sprb.AddCommands(uploadBLOBHelperCmd)
 }
 
 func ubhExec(args istructs.ExecCommandArgs) (err error) {
