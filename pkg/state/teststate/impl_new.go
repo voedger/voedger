@@ -31,6 +31,7 @@ import (
 
 // CommandTestState is a test state for command testing
 type CommandTestState struct {
+	defaultTestRunnerImpl
 	testState
 
 	extensionFunc func()
@@ -40,6 +41,57 @@ type CommandTestState struct {
 	recordItems []recordItem
 	// requiredRecordItems is to store required items
 	requiredRecordItems []recordItem
+}
+
+type defaultTestRunnerImpl struct {
+}
+
+func (d defaultTestRunnerImpl) CUDRow(fQName IFullQName, id int, keyValueList ...any) ITestRunner {
+	panic("not implemented")
+}
+
+func (d defaultTestRunnerImpl) RequireViewInsert(fQName IFullQName, keyValueList ...any) ITestRunner {
+	panic("not implemented")
+}
+
+func (d defaultTestRunnerImpl) RequireViewUpdate(fQName IFullQName, id int, keyValueList ...any) ITestRunner {
+	panic("not implemented")
+}
+
+func (d defaultTestRunnerImpl) RequireRecordInsert(fQName IFullQName, id int, keyValueList ...any) ITestRunner {
+	panic("not implemented")
+}
+
+func (d defaultTestRunnerImpl) RequireRecordUpdate(fQName IFullQName, id int, keyValueList ...any) ITestRunner {
+	panic("not implemented")
+}
+
+func (d defaultTestRunnerImpl) RequireSingletonInsert(fQName IFullQName, keyValueList ...any) ITestRunner {
+	panic("not implemented")
+}
+
+func (d defaultTestRunnerImpl) RequireSingletonUpdate(fQName IFullQName, keyValueList ...any) ITestRunner {
+	panic("not implemented")
+}
+
+func (d defaultTestRunnerImpl) Record(fQName IFullQName, id int, keyValueList ...any) ITestRunner {
+	panic("not implemented")
+}
+
+func (d defaultTestRunnerImpl) SingletonRecord(fQName IFullQName, keyValueList ...any) ITestRunner {
+	panic("not implemented")
+}
+
+func (d defaultTestRunnerImpl) ArgumentObject(id int, keyValueList ...any) ITestRunner {
+	panic("not implemented")
+}
+
+func (d defaultTestRunnerImpl) ArgumentObjectRow(path string, id int, keyValueList ...any) ITestRunner {
+	panic("not implemented")
+}
+
+func (d defaultTestRunnerImpl) Run() {
+	panic("not implemented")
 }
 
 // NewCommandTestState creates a new test state for command testing
@@ -153,13 +205,7 @@ func (ts *CommandTestState) buildAppDef(wsPkgPath, wsDescriptorName string) {
 	}
 }
 
-func (ts *CommandTestState) record(fQName IFullQName, id int, isSingleton bool, keyValueList ...any) ICommandRunner {
-	// TODO: error message must be understandable
-	//Record(
-	//	orm.Package_air.WSingleton_NextNumbers,
-	//	65536,
-	//	`NextPBillNumber`, nextNumber,
-	//).
+func (ts *CommandTestState) record(fQName IFullQName, id int, isSingleton bool, keyValueList ...any) ITestRunner {
 	qName := ts.getQNameFromFQName(fQName)
 
 	// check if the record already exists
@@ -186,7 +232,7 @@ func (ts *CommandTestState) record(fQName IFullQName, id int, isSingleton bool, 
 	return ts
 }
 
-func (ts *CommandTestState) Record(fQName IFullQName, id int, keyValueList ...any) ICommandRunner {
+func (ts *CommandTestState) Record(fQName IFullQName, id int, keyValueList ...any) ITestRunner {
 	isSingleton := ts.isSingletone(fQName)
 	if isSingleton {
 		panic("use SingletonRecord method for singletons")
@@ -198,7 +244,7 @@ func (ts *CommandTestState) Record(fQName IFullQName, id int, keyValueList ...an
 // SingletonRecord adds a singleton record to the state
 // Implemented in own method because of ID for singletons are generated under-the-hood and
 // we can not insert singletons with our own IDs
-func (ts *CommandTestState) SingletonRecord(fQName IFullQName, keyValueList ...any) ICommandRunner {
+func (ts *CommandTestState) SingletonRecord(fQName IFullQName, keyValueList ...any) ITestRunner {
 	isSingleton := ts.isSingletone(fQName)
 	if !isSingleton {
 		panic("use Record method for non-singleton entities")
@@ -294,7 +340,7 @@ func (ts *CommandTestState) require() {
 	ts.requiredRecordItems = nil
 }
 
-func (ts *CommandTestState) ArgumentObject(id int, keyValueList ...any) ICommandRunner {
+func (ts *CommandTestState) ArgumentObject(id int, keyValueList ...any) ITestRunner {
 	keyValueMap, err := parseKeyValues(keyValueList)
 	if err != nil {
 		panic(fmt.Errorf("failed to parse key values: %w", err))
@@ -313,8 +359,7 @@ func (ts *CommandTestState) ArgumentObject(id int, keyValueList ...any) ICommand
 	return ts
 }
 
-// use id param as sys.ID
-func (ts *CommandTestState) ArgumentObjectRow(path string, id int, keyValueList ...any) ICommandRunner {
+func (ts *CommandTestState) ArgumentObjectRow(path string, id int, keyValueList ...any) ITestRunner {
 	parts := strings.Split(path, "/")
 
 	innerTree := ts.argumentObject
@@ -383,17 +428,15 @@ func (ts *CommandTestState) Run() {
 	}
 }
 
-// draft
-func (ts *CommandTestState) RequireSingletonInsert(fQName IFullQName, keyValueList ...any) ICommandRunner {
+func (ts *CommandTestState) RequireSingletonInsert(fQName IFullQName, keyValueList ...any) ITestRunner {
 	return ts.addRequiredRecordItems(fQName, 0, true, true, keyValueList...)
 }
 
-// draft
-func (ts *CommandTestState) RequireSingletonUpdate(fQName IFullQName, keyValueList ...any) ICommandRunner {
+func (ts *CommandTestState) RequireSingletonUpdate(fQName IFullQName, keyValueList ...any) ITestRunner {
 	return ts.addRequiredRecordItems(fQName, 0, true, false, keyValueList...)
 }
 
-func (ts *CommandTestState) addRequiredRecordItems(fQName IFullQName, id int, isSingleton, isNew bool, keyValueList ...any) ICommandRunner {
+func (ts *CommandTestState) addRequiredRecordItems(fQName IFullQName, id int, isSingleton, isNew bool, keyValueList ...any) ITestRunner {
 	ts.requiredRecordItems = append(ts.requiredRecordItems, recordItem{
 		entity:       fQName,
 		id:           id,
@@ -454,13 +497,11 @@ func (ts *CommandTestState) requireIntent(
 	ts.EqualValues(vb, keyValueMap)
 }
 
-// draft
-func (ts *CommandTestState) RequireRecordInsert(fQName IFullQName, id int, keyValueList ...any) ICommandRunner {
+func (ts *CommandTestState) RequireRecordInsert(fQName IFullQName, id int, keyValueList ...any) ITestRunner {
 	return ts.addRequiredRecordItems(fQName, id, false, true, keyValueList...)
 }
 
-// draft
-func (ts *CommandTestState) RequireRecordUpdate(fQName IFullQName, id int, keyValueList ...any) ICommandRunner {
+func (ts *CommandTestState) RequireRecordUpdate(fQName IFullQName, id int, keyValueList ...any) ITestRunner {
 	return ts.addRequiredRecordItems(fQName, id, false, false, keyValueList...)
 }
 
@@ -520,6 +561,92 @@ func (ts *CommandTestState) keyBuilder(r recordItem) istructs.IStateKeyBuilder {
 
 	return kb
 }
+
+// ProjectorTestState is a test state for projector testing
+type ProjectorTestState struct {
+	CommandTestState
+}
+
+// NewProjectorTestState creates a new test state for projector testing
+func NewProjectorTestState(t *testing.T, iProjector IProjector, extensionFunc func()) *ProjectorTestState {
+	ts := &ProjectorTestState{
+		*NewCommandTestState(t, iProjector, extensionFunc),
+	}
+
+	return ts
+}
+
+func (p *ProjectorTestState) Record(fQName IFullQName, id int, keyValueList ...any) ITestRunner {
+	p.CommandTestState.Record(fQName, id, keyValueList...)
+
+	return p
+}
+
+func (p *ProjectorTestState) SingletonRecord(fQName IFullQName, keyValueList ...any) ITestRunner {
+	p.CommandTestState.SingletonRecord(fQName, keyValueList...)
+
+	return p
+}
+
+func (p *ProjectorTestState) ArgumentObject(id int, keyValueList ...any) ITestRunner {
+	p.CommandTestState.ArgumentObject(id, keyValueList...)
+
+	return p
+}
+
+func (p *ProjectorTestState) ArgumentObjectRow(path string, id int, keyValueList ...any) ITestRunner {
+	p.CommandTestState.ArgumentObjectRow(path, id, keyValueList...)
+
+	return p
+}
+
+func (p *ProjectorTestState) RequireSingletonInsert(fQName IFullQName, keyValueList ...any) ITestRunner {
+	p.CommandTestState.RequireSingletonInsert(fQName, keyValueList...)
+
+	return p
+}
+
+func (p *ProjectorTestState) RequireSingletonUpdate(fQName IFullQName, keyValueList ...any) ITestRunner {
+	p.CommandTestState.RequireSingletonUpdate(fQName, keyValueList...)
+
+	return p
+}
+
+func (p *ProjectorTestState) RequireRecordInsert(fQName IFullQName, id int, keyValueList ...any) ITestRunner {
+	p.CommandTestState.RequireRecordInsert(fQName, id, keyValueList...)
+
+	return p
+}
+
+func (p *ProjectorTestState) RequireRecordUpdate(fQName IFullQName, id int, keyValueList ...any) ITestRunner {
+	p.CommandTestState.RequireRecordUpdate(fQName, id, keyValueList...)
+
+	return p
+}
+
+func (p *ProjectorTestState) CUDRow(fQName IFullQName, id int, keyValueList ...any) ITestRunner {
+	// TODO: implement
+
+	return p
+}
+
+func (p *ProjectorTestState) RequireViewInsert(fQName IFullQName, keyValueList ...any) ITestRunner {
+	// TODO: implement
+
+	return p
+}
+
+func (p *ProjectorTestState) RequireViewUpdate(fQName IFullQName, id int, keyValueList ...any) ITestRunner {
+	// TODO: implement
+
+	return p
+}
+
+func (p *ProjectorTestState) Run() {
+	fmt.Println("ProjectorTestState.Run")
+
+}
+
 func parseKeyValues(keyValues []any) (map[string]any, error) {
 	if len(keyValues)%2 != 0 {
 		return nil, errors.New("key-value list must be even")
