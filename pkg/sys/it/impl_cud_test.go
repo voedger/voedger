@@ -18,6 +18,7 @@ import (
 )
 
 func TestBasicUsage_CUD(t *testing.T) {
+	// logger.SetLogLevel(logger.LogLevelVerbose)
 	require := require.New(t)
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()

@@ -26,14 +26,14 @@ func NewStatelessResources() IStatelessResources {
 	return &implIStatelessResources{
 		cmds:       map[string][]istructs.ICommandFunction{},
 		queries:    map[string][]istructs.IQueryFunction{},
-		projectros: map[string][]istructs.Projector{},
+		projectors: map[string][]istructs.Projector{},
 	}
 }
 
 type implIStatelessResources struct {
 	cmds       map[string][]istructs.ICommandFunction
 	queries    map[string][]istructs.IQueryFunction
-	projectros map[string][]istructs.Projector
+	projectors map[string][]istructs.Projector
 }
 
 func (sr *implIStatelessResources) Commands(cb func(path string, cmd istructs.ICommandFunction)) {
@@ -53,7 +53,7 @@ func (sr *implIStatelessResources) Queries(cb func(path string, query istructs.I
 }
 
 func (sr *implIStatelessResources) Projectors(cb func(path string, projector istructs.Projector)) {
-	for path, projectors := range sr.projectros {
+	for path, projectors := range sr.projectors {
 		for _, projector := range projectors {
 			cb(path, projector)
 		}
@@ -69,7 +69,7 @@ func (sr *implIStatelessResources) AddQueries(path string, queries ...istructs.I
 }
 
 func (sr *implIStatelessResources) AddProjectors(path string, projectors ...istructs.Projector) {
-	sr.projectros[path] = append(sr.projectros[path], projectors...)
+	sr.projectors[path] = append(sr.projectors[path], projectors...)
 }
 
 // Implements istructs.IResources

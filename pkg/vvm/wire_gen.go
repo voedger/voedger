@@ -91,11 +91,18 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 	syncActualizerFactory := projectors.ProvideSyncActualizerFactory()
 	quotas := vvmConfig.Quotas
 	in10nBroker, cleanup := in10nmem.ProvideEx2(quotas, timeFunc)
-	v2 := projectors.NewSyncActualizerFactoryFactory(syncActualizerFactory, iSecretReader, in10nBroker)
+	v2 := provideAppsExtensionPoints()
+	buildInfo, err := provideBuildInfo()
+	if err != nil {
+		cleanup()
+		return nil, nil, err
+	}
 	vvmPortSource := provideVVMPortSource()
 	iFederation, cleanup2 := provideIFederation(vvmConfig, vvmPortSource)
-	v3 := vvmConfig.ActualizerStateOpts
-	basicAsyncActualizerConfig := provideBasicAsyncActualizerConfig(vvmName, iSecretReader, iTokens, iMetrics, in10nBroker, iFederation, v3...)
+	iStatelessResources := provideStatelessResources(appConfigsTypeEmpty, vvmConfig, v2, buildInfo, iAppStorageProvider, iTokens, iFederation, iAppStructsProvider, iAppTokensFactory)
+	v3 := projectors.NewSyncActualizerFactoryFactory(syncActualizerFactory, iSecretReader, in10nBroker, iStatelessResources)
+	v4 := vvmConfig.ActualizerStateOpts
+	basicAsyncActualizerConfig := provideBasicAsyncActualizerConfig(vvmName, iSecretReader, iTokens, iMetrics, in10nBroker, iFederation, v4...)
 	iActualizersService := provideAsyncActualizersService(basicAsyncActualizerConfig)
 	apIs := apps.APIs{
 		ITokens:             iTokens,
@@ -105,28 +112,20 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 		IFederation:         iFederation,
 		TimeFunc:            timeFunc,
 	}
-	v4 := provideAppsExtensionPoints()
-	buildInfo, err := provideBuildInfo()
+	appsArtefacts, err := provideBuiltInAppsArtefacts(vvmConfig, apIs, appConfigsTypeEmpty, v2, iStatelessResources)
 	if err != nil {
 		cleanup2()
 		cleanup()
 		return nil, nil, err
 	}
-	iStatelessResources := provideStatelessResources(appConfigsTypeEmpty, vvmConfig, v4, buildInfo, iAppStorageProvider, iTokens, iFederation, iAppStructsProvider, iAppTokensFactory)
-	appsArtefacts, err := provideBuiltInAppsArtefacts(vvmConfig, apIs, appConfigsTypeEmpty, v4, iStatelessResources)
-	if err != nil {
-		cleanup2()
-		cleanup()
-		return nil, nil, err
-	}
-	iAppPartitions, cleanup3, err := provideAppPartitions(iAppStructsProvider, v2, iActualizersService, appsArtefacts, iStatelessResources)
+	iAppPartitions, cleanup3, err := provideAppPartitions(iAppStructsProvider, v3, iActualizersService, appsArtefacts, iStatelessResources)
 	if err != nil {
 		cleanup2()
 		cleanup()
 		return nil, nil, err
 	}
 	v5 := provideSubjectGetterFunc()
-	isDeviceAllowedFuncs := provideIsDeviceAllowedFunc(v4)
+	isDeviceAllowedFuncs := provideIsDeviceAllowedFunc(v2)
 	iAuthenticator := iauthnzimpl.NewDefaultAuthenticator(v5, isDeviceAllowedFuncs)
 	iAuthorizer := iauthnzimpl.NewDefaultAuthorizer()
 	serviceFactory := commandprocessor.ProvideServiceFactory(iAppPartitions, timeFunc, in10nBroker, iMetrics, vvmName, iAuthenticator, iAuthorizer, iSecretReader)
@@ -188,7 +187,7 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 		ServicePipeline:     servicePipeline,
 		APIs:                apIs,
 		IAppPartitions:      iAppPartitions,
-		AppsExtensionPoints: v4,
+		AppsExtensionPoints: v2,
 		MetricsServicePort:  v8,
 		BuiltInAppsPackages: v9,
 	}

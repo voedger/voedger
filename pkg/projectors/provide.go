@@ -8,11 +8,13 @@ package projectors
 
 import (
 	"context"
+	"maps"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/isecrets"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/pipeline"
 )
 
@@ -32,7 +34,8 @@ func ProvideViewDef(appDef appdef.IAppDefBuilder, qname appdef.QName, buildFunc 
 	provideViewDefImpl(appDef, qname, buildFunc)
 }
 
-func NewSyncActualizerFactoryFactory(actualizerFactory SyncActualizerFactory, secretReader isecrets.ISecretReader, n10nBroker in10n.IN10nBroker) func(appStructs istructs.IAppStructs, partitionID istructs.PartitionID) pipeline.ISyncOperator {
+func NewSyncActualizerFactoryFactory(actualizerFactory SyncActualizerFactory, secretReader isecrets.ISecretReader,
+	n10nBroker in10n.IN10nBroker, statelessResources istructsmem.IStatelessResources) func(appStructs istructs.IAppStructs, partitionID istructs.PartitionID) pipeline.ISyncOperator {
 	return func(appStructs istructs.IAppStructs, partitionID istructs.PartitionID) pipeline.ISyncOperator {
 		if len(appStructs.SyncProjectors()) == 0 {
 			return &pipeline.NOOP{}
@@ -54,7 +57,10 @@ func NewSyncActualizerFactoryFactory(actualizerFactory SyncActualizerFactory, se
 			},
 			IntentsLimit: DefaultIntentsLimit,
 		}
-		тут подать stateless projectors
-		return actualizerFactory(conf, appStructs.SyncProjectors())
+		projectors := maps.Clone(appStructs.SyncProjectors())
+		statelessResources.Projectors(func(path string, projector istructs.Projector) {
+			projectors[projector.Name] = projector
+		})
+		return actualizerFactory(conf, projectors)
 	}
 }

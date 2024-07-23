@@ -12,6 +12,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appparts"
+	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/pipeline"
 	"github.com/voedger/voedger/pkg/state"
@@ -69,11 +70,13 @@ func newSyncBranch(conf SyncActualizerConf, projector istructs.Projector, servic
 				appDef := appPart.AppStructs().AppDef()
 				prj := appDef.Projector(projector.Name)
 				event := s.PLogEvent()
+				if projector.Name == appdef.NewQName(appdef.SysPackage, "ProjectorChildWorkspaceIdx") {
+					logger.Info()
+				}
 				if !isAcceptable(event, prj.WantErrors(), prj.Events().Map(), appDef) {
 					return nil
 				}
 				return appPart.Invoke(ctx, projector.Name, s, s)
-				// return projector.Func(service.event, s, s)
 			}),
 		pipeline.WireFunc("IntentsValidator", func(_ context.Context, _ interface{}) (err error) {
 			return s.ValidateIntents()
