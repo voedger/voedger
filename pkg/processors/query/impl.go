@@ -303,8 +303,10 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 			return
 		}),
 		operator("get queryFunc", func(ctx context.Context, qw *queryWork) (err error) {
-			iRes := qw.appStructs.Resources().QueryResource(qw.msg.QName())
-			if iRes.Kind() == istructs.ResourceKind_null {
+			iResource := qw.appStructs.Resources().QueryResource(qw.msg.QName())
+			if iResource.Kind() != istructs.ResourceKind_null {
+				qw.queryFunc = iResource.(istructs.IQueryFunction)
+			} else {
 				_, _, qw.queryFunc = iterate.FindFirstMap(statelessResources.Queries, func(path string, qry istructs.IQueryFunction) bool {
 					return qry.QName() == qw.msg.QName()
 				})

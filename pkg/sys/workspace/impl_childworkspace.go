@@ -11,6 +11,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/goutils/iterate"
+	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys/authnz"
@@ -90,6 +91,7 @@ var childWorkspaceIdxProjector = func(event istructs.IPLogEvent, s istructs.ISta
 
 // targetApp/parentWSID/q.sys.QueryChildWorkspaceByName
 func qcwbnQryExec(_ context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) error {
+	logger.Info(args.State.App())
 	wsName := args.ArgumentObject.AsString(authnz.Field_WSName)
 	kb, err := args.State.KeyBuilder(state.View, QNameViewChildWorkspaceIdx)
 	if err != nil {
