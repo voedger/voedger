@@ -29,7 +29,7 @@ func newInitCmd() *cobra.Command {
 		Use:   "SE [<ipaddr>...]",
 		Short: "Create the cluster.json file for the SE edition cluster",
 		Args: func(cmd *cobra.Command, args []string) error {
-			if len(args) != initSeArgCount {
+			if len(args) != se3NodeCount && len(args) != se5NodeCount {
 				return ErrInvalidNumberOfArguments
 			}
 			return nil

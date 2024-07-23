@@ -44,14 +44,14 @@ func Provide(cfg *istructsmem.AppConfigType, smtpCfg smtp.Cfg,
 	collection.Provide(cfg)
 	journal.Provide(cfg, ep)
 	builtin.Provide(cfg, buildInfo, storageProvider)
-	workspace.Provide(cfg, cfg.AppDefBuilder(), asp, timeFunc, itokens, federation, itokens, ep, wsPostInitFunc)
+	workspace.Provide(cfg, timeFunc, itokens, federation, itokens, ep, wsPostInitFunc)
 	sqlquery.Provide(cfg, asp)
 	projectors.ProvideOffsetsDef(cfg.AppDefBuilder())
 	verifier.Provide(cfg, itokens, federation, asp, smtpCfg, timeFunc)
 	authnz.Provide(cfg, itokens, atf)
 	invite.Provide(cfg, timeFunc, federation, itokens, smtpCfg)
 	uniques.Provide(cfg)
-	describe.Provide(cfg, asp)
+	describe.Provide(cfg)
 	return parser.PackageFS{
 		Path: appdef.SysPackage,
 		FS:   SysFS,

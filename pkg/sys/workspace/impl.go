@@ -95,60 +95,54 @@ func ApplyInvokeCreateWorkspaceID(federation federation.IFederation, appQName ap
 // ChildWorkspace -> pseudoWSID(profileWSID+"/"+wsName, targetCluster) translated to AppWSID
 // Login -> ((PseudoWSID->AppWSID).Base, targetCluster)
 // targetApp
-func execCmdCreateWorkspaceID(asp istructs.IAppStructsProvider, appQName appdef.AppQName) istructsmem.ExecCommandClosure {
-	return func(args istructs.ExecCommandArgs) (err error) {
-		// TODO: AuthZ: System,SystemToken in header
-		ownerWSID := args.ArgumentObject.AsInt64(Field_OwnerWSID)
-		wsName := args.ArgumentObject.AsString(authnz.Field_WSName)
-		// Check that ownerWSID + wsName does not exist yet: View<WorkspaceIDIdx> to deduplication
-		kb, err := args.State.KeyBuilder(state.View, QNameViewWorkspaceIDIdx)
-		if err != nil {
-			return err
-		}
-		kb.PutInt64(Field_OwnerWSID, ownerWSID)
-		kb.PutString(authnz.Field_WSName, wsName)
-		_, ok, err := args.State.CanExist(kb)
-		if err != nil {
-			return err
-		}
-		if ok {
-			return coreutils.NewHTTPErrorf(http.StatusConflict, fmt.Sprintf("workspace with name %s and ownerWSID %d already exists", wsName, ownerWSID))
-		}
-
-		// ownerWSID := istructs.WSID(args.ArgumentObject.AsInt64(FldOwnerWSID))
-		// Get new WSID from View<NextBaseWSID>
-		as, err := asp.BuiltIn(appQName)
-		if err != nil {
-			return err
-		}
-		newWSID, err := GetNextWSID(args.Workpiece.(interface{ Context() context.Context }).Context(), as, args.WSID.ClusterID())
-		if err != nil {
-			return err
-		}
-
-		// Create CDoc<WorkspaceID>{wsParams, WSID: $NewWSID}
-		kb, err = args.State.KeyBuilder(state.Record, QNameCDocWorkspaceID)
-		if err != nil {
-			return err
-		}
-		cdocWorkspaceID, err := args.Intents.NewValue(kb)
-		if err != nil {
-			return err
-		}
-		cdocWorkspaceID.PutRecordID(appdef.SystemField_ID, 1)
-		cdocWorkspaceID.PutInt64(Field_OwnerWSID, args.ArgumentObject.AsInt64(Field_OwnerWSID))       // CDoc<Login> -> pseudoWSID->AppWSID, CDoc<ChildWorkspace> -> owner profile WSID
-		cdocWorkspaceID.PutString(Field_OwnerQName2, args.ArgumentObject.AsString(Field_OwnerQName2)) // registry.Login or sys.UserProfile
-		cdocWorkspaceID.PutInt64(Field_OwnerID, args.ArgumentObject.AsInt64(Field_OwnerID))           // CDoc<Login>.ID or CDoc<ChildWorkspace>.ID
-		cdocWorkspaceID.PutString(Field_OwnerApp, args.ArgumentObject.AsString(Field_OwnerApp))
-		cdocWorkspaceID.PutString(authnz.Field_WSName, args.ArgumentObject.AsString(authnz.Field_WSName)) // CDoc<Login> -> crc32(loginHash), CDoc<ChildWorkspace> -> wsName
-		cdocWorkspaceID.PutQName(authnz.Field_WSKind, args.ArgumentObject.AsQName(authnz.Field_WSKind))   // CDoc<Login> -> sys.DeviceProfile or sys.UserProfile, CDoc<ChildWorkspace> -> provided wsKind (e.g. air.Restaurant)
-		cdocWorkspaceID.PutString(authnz.Field_WSKindInitializationData, args.ArgumentObject.AsString(authnz.Field_WSKindInitializationData))
-		cdocWorkspaceID.PutString(field_TemplateName, args.ArgumentObject.AsString(field_TemplateName))
-		cdocWorkspaceID.PutString(Field_TemplateParams, args.ArgumentObject.AsString(Field_TemplateParams))
-		cdocWorkspaceID.PutInt64(authnz.Field_WSID, int64(newWSID))
-
-		return
+func execCmdCreateWorkspaceID(args istructs.ExecCommandArgs) (err error) {
+	// TODO: AuthZ: System,SystemToken in header
+	ownerWSID := args.ArgumentObject.AsInt64(Field_OwnerWSID)
+	wsName := args.ArgumentObject.AsString(authnz.Field_WSName)
+	// Check that ownerWSID + wsName does not exist yet: View<WorkspaceIDIdx> to deduplication
+	kb, err := args.State.KeyBuilder(state.View, QNameViewWorkspaceIDIdx)
+	if err != nil {
+		return err
 	}
+	kb.PutInt64(Field_OwnerWSID, ownerWSID)
+	kb.PutString(authnz.Field_WSName, wsName)
+	_, ok, err := args.State.CanExist(kb)
+	if err != nil {
+		return err
+	}
+	if ok {
+		return coreutils.NewHTTPErrorf(http.StatusConflict, fmt.Sprintf("workspace with name %s and ownerWSID %d already exists", wsName, ownerWSID))
+	}
+
+	// Get new WSID from View<NextBaseWSID>
+	as := args.Workpiece.(interface{ GetAppStructs() istructs.IAppStructs }).GetAppStructs()
+	newWSID, err := GetNextWSID(args.Workpiece.(interface{ Context() context.Context }).Context(), as, args.WSID.ClusterID())
+	if err != nil {
+		return err
+	}
+
+	// Create CDoc<WorkspaceID>{wsParams, WSID: $NewWSID}
+	kb, err = args.State.KeyBuilder(state.Record, QNameCDocWorkspaceID)
+	if err != nil {
+		return err
+	}
+	cdocWorkspaceID, err := args.Intents.NewValue(kb)
+	if err != nil {
+		return err
+	}
+	cdocWorkspaceID.PutRecordID(appdef.SystemField_ID, 1)
+	cdocWorkspaceID.PutInt64(Field_OwnerWSID, args.ArgumentObject.AsInt64(Field_OwnerWSID))       // CDoc<Login> -> pseudoWSID->AppWSID, CDoc<ChildWorkspace> -> owner profile WSID
+	cdocWorkspaceID.PutString(Field_OwnerQName2, args.ArgumentObject.AsString(Field_OwnerQName2)) // registry.Login or sys.UserProfile
+	cdocWorkspaceID.PutInt64(Field_OwnerID, args.ArgumentObject.AsInt64(Field_OwnerID))           // CDoc<Login>.ID or CDoc<ChildWorkspace>.ID
+	cdocWorkspaceID.PutString(Field_OwnerApp, args.ArgumentObject.AsString(Field_OwnerApp))
+	cdocWorkspaceID.PutString(authnz.Field_WSName, args.ArgumentObject.AsString(authnz.Field_WSName)) // CDoc<Login> -> crc32(loginHash), CDoc<ChildWorkspace> -> wsName
+	cdocWorkspaceID.PutQName(authnz.Field_WSKind, args.ArgumentObject.AsQName(authnz.Field_WSKind))   // CDoc<Login> -> sys.DeviceProfile or sys.UserProfile, CDoc<ChildWorkspace> -> provided wsKind (e.g. air.Restaurant)
+	cdocWorkspaceID.PutString(authnz.Field_WSKindInitializationData, args.ArgumentObject.AsString(authnz.Field_WSKindInitializationData))
+	cdocWorkspaceID.PutString(field_TemplateName, args.ArgumentObject.AsString(field_TemplateName))
+	cdocWorkspaceID.PutString(Field_TemplateParams, args.ArgumentObject.AsString(Field_TemplateParams))
+	cdocWorkspaceID.PutInt64(authnz.Field_WSID, int64(newWSID))
+
+	return
 }
 
 // sp.sys.WorkspaceIDIdx
@@ -219,7 +213,7 @@ func invokeCreateWorkspaceProjector(federation federation.IFederation, tokensAPI
 
 // c.sys.CreateWorkspace
 // должно быть вызвано в целевом приложении, т.к. профиль пользователя находится в целевом приложении на схеме!!!
-func execCmdCreateWorkspace(now coreutils.TimeFunc, asp istructs.IAppStructsProvider, appQName appdef.AppQName) istructsmem.ExecCommandClosure {
+func execCmdCreateWorkspace(now coreutils.TimeFunc) istructsmem.ExecCommandClosure {
 	return func(args istructs.ExecCommandArgs) error {
 		// TODO: AuthZ: System, SystemToken in header
 		// Check that CDoc<sys.WorkspaceDescriptor> does not exist yet (IRecords.GetSingleton())
@@ -230,10 +224,7 @@ func execCmdCreateWorkspace(now coreutils.TimeFunc, asp istructs.IAppStructsProv
 		wsKindInitializationData := map[string]interface{}{}
 
 		e := func() error {
-			as, err := asp.BuiltIn(appQName)
-			if err != nil {
-				return fmt.Errorf("failed to get appStructs for appQName %s: %w", appQName.String(), err)
-			}
+			as := args.Workpiece.(interface{ GetAppStructs() istructs.IAppStructs }).GetAppStructs()
 			wsKindType := as.AppDef().Type(wsKind)
 			if wsKindType.Kind() == appdef.TypeKind_null {
 				return fmt.Errorf("unknown workspace kind: %s", wsKind.String())

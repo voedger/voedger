@@ -26,9 +26,9 @@ fi
 
 declare -A node_map
 
-node_map["scylla1"]="db-node-1"
-node_map["scylla2"]="db-node-2"
-node_map["scylla3"]="db-node-3"
+node_map["scylla1"]="$1"
+node_map["scylla2"]="$2"
+node_map["scylla3"]="$3"
 
 # Function to convert names
 convert_name() {
