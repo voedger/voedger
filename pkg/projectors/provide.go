@@ -54,6 +54,7 @@ func NewSyncActualizerFactoryFactory(actualizerFactory SyncActualizerFactory, se
 			},
 			IntentsLimit: DefaultIntentsLimit,
 		}
+		тут подать stateless projectors
 		return actualizerFactory(conf, appStructs.SyncProjectors())
 	}
 }
