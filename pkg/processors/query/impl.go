@@ -19,6 +19,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appparts"
+	"github.com/voedger/voedger/pkg/goutils/iterate"
 	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/iprocbus"
 	"github.com/voedger/voedger/pkg/isecrets"
@@ -93,7 +94,7 @@ func implRowsProcessorFactory(ctx context.Context, appDef appdef.IAppDef, state 
 func implServiceFactory(serviceChannel iprocbus.ServiceChannel, resultSenderClosableFactory ResultSenderClosableFactory,
 	appParts appparts.IAppPartitions, maxPrepareQueries int, metrics imetrics.IMetrics, vvm string,
 	authn iauthnz.IAuthenticator, authz iauthnz.IAuthorizer, itokens itokens.ITokens, federation federation.IFederation,
-	statelessPackages map[string]istructsmem.IStatelessPkg) pipeline.IService {
+	statelessResources istructsmem.IStatelessResources) pipeline.IService {
 	secretReader := isecretsimpl.ProvideSecretReader()
 	return pipeline.NewService(func(ctx context.Context) {
 		var p pipeline.ISyncPipeline
@@ -113,7 +114,7 @@ func implServiceFactory(serviceChannel iprocbus.ServiceChannel, resultSenderClos
 				func() { // borrowed application partition should be guaranteed to be freed
 					defer qwork.release()
 					if p == nil {
-						p = newQueryProcessorPipeline(ctx, authn, authz, itokens, federation, statelessPackages)
+						p = newQueryProcessorPipeline(ctx, authn, authz, itokens, federation, statelessResources)
 					}
 					err := p.SendSync(qwork)
 					if err != nil {
@@ -157,7 +158,7 @@ func execQuery(ctx context.Context, qw *queryWork) (err error) {
 }
 
 func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthenticator, authz iauthnz.IAuthorizer,
-	itokens itokens.ITokens, federation federation.IFederation, statelessPackages map[string]istructsmem.IStatelessPkg) pipeline.ISyncPipeline {
+	itokens itokens.ITokens, federation federation.IFederation, statelessResources istructsmem.IStatelessResources) pipeline.ISyncPipeline {
 	ops := []*pipeline.WiredOperator{
 		operator("borrowAppPart", borrowAppPart),
 		operator("check function call rate", func(ctx context.Context, qw *queryWork) (err error) {
@@ -304,14 +305,10 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 		operator("get queryFunc", func(ctx context.Context, qw *queryWork) (err error) {
 			iRes := qw.appStructs.Resources().QueryResource(qw.msg.QName())
 			if iRes.Kind() == istructs.ResourceKind_null {
-				for _, sp := range statelessPackages {
-					iRes = sp.QueryResource(qw.msg.QName())
-					if iRes.Kind() != istructs.ResourceKind_null {
-						break
-					}
-				}
+				_, _, qw.queryFunc = iterate.FindFirstMap(statelessResources.Queries, func(path string, qry istructs.IQueryFunction) bool {
+					return qry.QName() == qw.msg.QName()
+				})
 			}
-			qw.queryFunc = iRes.(istructs.IQueryFunction)
 
 			return nil
 		}),

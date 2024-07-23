@@ -37,7 +37,7 @@ func buildAppFromPackagesFS(fses []parser.PackageFS, adf appdef.IAppDefBuilder) 
 }
 
 func (ab VVMAppsBuilder) BuildAppsArtefacts(apis apps.APIs, emptyCfgs AppConfigsTypeEmpty,
-	statelessPackages map[string]istructsmem.IStatelessPkg,
+	statelessResources istructsmem.IStatelessResources,
 	appsEPs map[appdef.AppQName]extensionpoints.IExtensionPoint) (appsArtefacts AppsArtefacts, err error) {
 	appsArtefacts.AppConfigsType = istructsmem.AppConfigsType(emptyCfgs)
 	for appQName, appBuilder := range ab {
@@ -45,7 +45,7 @@ func (ab VVMAppsBuilder) BuildAppsArtefacts(apis apps.APIs, emptyCfgs AppConfigs
 		appsEPs[appQName] = appEPs
 		adb := appdef.New()
 		cfg := appsArtefacts.AppConfigsType.AddBuiltInAppConfig(appQName, adb)
-		cfg.SetStatelessPackages(statelessPackages)
+		cfg.SetStatelessResources(statelessResources)
 		builtInAppDef := appBuilder(apis, cfg, appEPs)
 		cfg.SetNumAppWorkspaces(builtInAppDef.NumAppWorkspaces)
 		if err := buildAppFromPackagesFS(builtInAppDef.Packages, adb); err != nil {

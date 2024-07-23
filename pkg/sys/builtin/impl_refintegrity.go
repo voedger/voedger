@@ -19,12 +19,11 @@ import (
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-func provideRefIntegrityValidation(sprb istructsmem.IStatelessPkgResourcesBuilder) {
-	sprb.AddSyncProjectors(istructs.Projector{
+func provideRefIntegrityValidation(sr istructsmem.IStatelessResources) {
+	sr.AddProjectors(appdef.SysPackagePath, istructs.Projector{
 		Name: qNameRecordsRegistryProjector,
 		Func: recordsRegistryProjector,
 	})
-	sprb.AddCUDValidators(provideRefIntegrityValidator())
 }
 
 func CheckRefIntegrity(obj istructs.IRowReader, appStructs istructs.IAppStructs, wsid istructs.WSID) (err error) {

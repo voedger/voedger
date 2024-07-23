@@ -506,17 +506,6 @@ func validateCmdResult(ctx context.Context, work interface{}) (err error) {
 
 func (cmdProc *cmdProc) eventValidators(ctx context.Context, work interface{}) (err error) {
 	cmd := work.(*cmdWorkpiece)
-	for _, statelessPkg := range cmdProc.statelessPackages {
-		err := iterate.ForEachError(statelessPkg.EventValidators, func(eventValidator istructs.EventValidator) error {
-			if err = eventValidator(ctx, cmd.rawEvent, cmd.appStructs, cmd.cmdMes.WSID()); err != nil {
-				return coreutils.WrapSysError(err, http.StatusForbidden)
-			}
-			return nil
-		})
-		if err != nil {
-			return err
-		}
-	}
 	for _, appEventValidator := range cmd.appStructs.EventValidators() {
 		if err = appEventValidator(ctx, cmd.rawEvent, cmd.appStructs, cmd.cmdMes.WSID()); err != nil {
 			return coreutils.WrapSysError(err, http.StatusForbidden)
@@ -527,21 +516,6 @@ func (cmdProc *cmdProc) eventValidators(ctx context.Context, work interface{}) (
 
 func (cmdProc *cmdProc) cudsValidators(ctx context.Context, work interface{}) (err error) {
 	cmd := work.(*cmdWorkpiece)
-	for _, statelessPkg := range cmdProc.statelessPackages {
-		err = iterate.ForEachError(statelessPkg.CUDValidators, func(cudValidator istructs.CUDValidator) error {
-			return iterate.ForEachError(cmd.rawEvent.CUDs, func(rec istructs.ICUDRow) error {
-				if cudValidator.Match(rec, cmd.cmdMes.WSID(), cmd.cmdMes.QName()) {
-					if err := cudValidator.Validate(ctx, cmd.appStructs, rec, cmd.cmdMes.WSID(), cmd.cmdMes.QName()); err != nil {
-						return coreutils.WrapSysError(err, http.StatusForbidden)
-					}
-				}
-				return nil
-			})
-		})
-		if err != nil {
-			return err
-		}
-	}
 	for _, appCUDValidator := range cmd.appStructs.CUDValidators() {
 		err = iterate.ForEachError(cmd.rawEvent.CUDs, func(rec istructs.ICUDRow) error {
 			if appCUDValidator.Match(rec, cmd.cmdMes.WSID(), cmd.cmdMes.QName()) {

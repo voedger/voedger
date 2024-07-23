@@ -19,8 +19,8 @@ import (
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-func provideQryCDoc(sprb istructsmem.IStatelessPkgResourcesBuilder) {
-	sprb.AddFunc(istructsmem.NewQueryFunction(
+func provideQryCDoc(sr istructsmem.IStatelessResources) {
+	sr.AddQueries(appdef.SysPackagePath, istructsmem.NewQueryFunction(
 		qNameQueryGetCDoc,
 		execQryCDoc),
 	)

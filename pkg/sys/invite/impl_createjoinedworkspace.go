@@ -12,8 +12,8 @@ import (
 	"github.com/voedger/voedger/pkg/sys/authnz"
 )
 
-func provideCmdCreateJoinedWorkspace(sprb istructsmem.IStatelessPkgResourcesBuilder) {
-	sprb.AddFunc(istructsmem.NewCommandFunction(
+func provideCmdCreateJoinedWorkspace(sr istructsmem.IStatelessResources) {
+	sr.AddCommands(appdef.SysPackagePath, istructsmem.NewCommandFunction(
 		qNameCmdCreateJoinedWorkspace,
 		execCmdCreateJoinedWorkspace,
 	))

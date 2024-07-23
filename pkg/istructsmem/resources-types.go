@@ -13,143 +13,64 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
-type StatelessResources struct {
-	Projectors map[string]map[appdef.QName]istructs.Projector
-	Funcs      map[string]map[appdef.QName]istructs.IResource
-}
-
-// reader
-type IStatelessPkg interface {
-	istructs.IResources
-	PkgPath() string
-	SyncProjectors(func(p istructs.Projector))
-	AsyncProjectors(func(p istructs.Projector))
-	// CUDValidators(func(v istructs.CUDValidator))
-	// EventValidators(func(v istructs.EventValidator))
-}
-
-// passed to e.g. sys package
 type IStatelessResources interface {
-	// AddPackage(pkgPath string) IStatelessPkgResourcesBuilder
-	// Build() map[string]IStatelessPkg // pkgPath
-
 	Commands(func(path string, cmd istructs.ICommandFunction))
-	Queries()
-	Projectors()
-
+	Queries(func(path string, qry istructs.IQueryFunction))
+	Projectors(func(path string, projector istructs.Projector))
 	AddCommands(path string, cmds ...istructs.ICommandFunction)
-	AddQuerys(path string, queries ...istructs.IQueryFunction)
+	AddQueries(path string, queries ...istructs.IQueryFunction)
 	AddProjectors(path string, projectors ...istructs.Projector)
-
-	// SyncProjectors(func(p istructs.Projector))
-	// AsyncProjectors(func(p istructs.Projector))
 }
 
-// filled with e.g. sys resources
-type IStatelessPkgResourcesBuilder interface {
-	AddCommands(...istructs.ICommandFunction)
-	AddQuerys(...istructs.IQueryFunction)
-	AddProjectors(...istructs.Projector)
-	// AddSyncProjectors(...istructs.Projector)
-	// AddAsyncProjectors(...istructs.Projector)
-	// AddCUDValidators(...istructs.CUDValidator)
-	// AddEventValidators(...istructs.EventValidator)
-}
-
-type statelessPkgs map[string]IStatelessPkg
-
-func (sp statelessPkgs) AddPackage(pkgPath string) IStatelessPkgResourcesBuilder {
-	if _, ok := sp[pkgPath]; ok {
-		panic("package " + pkgPath + " is added already")
-	}
-	res := &statelessPkg{
-		resources: NewResources(),
-		pkgPath:   pkgPath,
-	}
-	sp[pkgPath] = res
-	return res
-}
-
-func (sp statelessPkgs) Build() map[string]IStatelessPkg {
-	return sp
-}
-
-func NewStatelessPkgBuilder() IStatelessResources {
-	return statelessPkgs{}
-}
-
-// IStatelessPkg, IStatelessPkgResourcesBuilder
-type statelessPkg struct {
-	resources       Resources
-	pkgPath         string
-	syncProjectors  []istructs.Projector
-	asyncProjectors []istructs.Projector
-	cudValidators   []istructs.CUDValidator
-	eventValidators []istructs.EventValidator
-}
-
-func (sr *statelessPkg) PkgPath() string {
-	return sr.pkgPath
-}
-
-func (sr *statelessPkg) SyncProjectors(cb func(p istructs.Projector)) {
-	for _, sp := range sr.syncProjectors {
-		cb(sp)
+func NewStatelessResources() IStatelessResources {
+	return &implIStatelessResources{
+		cmds:       map[string][]istructs.ICommandFunction{},
+		queries:    map[string][]istructs.IQueryFunction{},
+		projectros: map[string][]istructs.Projector{},
 	}
 }
 
-func (sr *statelessPkg) AsyncProjectors(cb func(p istructs.Projector)) {
-	for _, sp := range sr.asyncProjectors {
-		cb(sp)
+type implIStatelessResources struct {
+	cmds       map[string][]istructs.ICommandFunction
+	queries    map[string][]istructs.IQueryFunction
+	projectros map[string][]istructs.Projector
+}
+
+func (sr *implIStatelessResources) Commands(cb func(path string, cmd istructs.ICommandFunction)) {
+	for path, cmds := range sr.cmds {
+		for _, cmd := range cmds {
+			cb(path, cmd)
+		}
 	}
 }
 
-func (sr statelessPkg) CUDValidators(cb func(v istructs.CUDValidator)) {
-	for _, v := range sr.cudValidators {
-		cb(v)
+func (sr *implIStatelessResources) Queries(cb func(path string, query istructs.IQueryFunction)) {
+	for path, queries := range sr.queries {
+		for _, query := range queries {
+			cb(path, query)
+		}
 	}
 }
 
-func (sr statelessPkg) EventValidators(cb func(v istructs.EventValidator)) {
-	for _, v := range sr.eventValidators {
-		cb(v)
+func (sr *implIStatelessResources) Projectors(cb func(path string, projector istructs.Projector)) {
+	for path, projectors := range sr.projectros {
+		for _, projector := range projectors {
+			cb(path, projector)
+		}
 	}
 }
 
-func (sr *statelessPkg) QueryResource(name appdef.QName) istructs.IResource {
-	return sr.resources.QueryResource(name)
+func (sr *implIStatelessResources) AddCommands(path string, cmds ...istructs.ICommandFunction) {
+	sr.cmds[path] = append(sr.cmds[path], cmds...)
 }
 
-func (sr *statelessPkg) Resources(enum func(appdef.QName)) {
-	sr.resources.Resources(enum)
+func (sr *implIStatelessResources) AddQueries(path string, queries ...istructs.IQueryFunction) {
+	sr.queries[path] = append(sr.queries[path], queries...)
 }
 
-func (sr *statelessPkg) AddSyncProjectors(syncProjectors ...istructs.Projector) {
-	sr.syncProjectors = append(sr.syncProjectors, syncProjectors...)
+func (sr *implIStatelessResources) AddProjectors(path string, projectors ...istructs.Projector) {
+	sr.projectros[path] = append(sr.projectros[path], projectors...)
 }
-
-func (sr *statelessPkg) AddAsyncProjectors(asyncProjectors ...istructs.Projector) {
-	sr.asyncProjectors = append(sr.asyncProjectors, asyncProjectors...)
-}
-
-func (sr statelessPkg) AddFunc(res istructs.IResource) {
-	sr.resources.Add(res)
-}
-
-func (sr statelessPkg) AddCUDValidators(v ...istructs.CUDValidator) {
-	sr.cudValidators = append(sr.cudValidators, v...)
-}
-
-func (sr statelessPkg) AddEventValidators(v ...istructs.EventValidator) {
-	sr.eventValidators = append(sr.eventValidators, v...)
-}
-
-// type StatelessResources struct {
-// 	resources       Resources
-// 	pkgPath         string
-// 	SyncProjectors  []istructs.Projector
-// 	AsyncProjectors []istructs.Projector
-// }
 
 // Implements istructs.IResources
 type Resources map[appdef.QName]istructs.IResource

@@ -15,8 +15,8 @@ import (
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-func provideStateFunc(sprb istructsmem.IStatelessPkgResourcesBuilder) {
-	sprb.AddFunc(istructsmem.NewQueryFunction(
+func provideStateFunc(sr istructsmem.IStatelessResources) {
+	sr.AddQueries(appdef.SysPackagePath, istructsmem.NewQueryFunction(
 		qNameQueryState,
 		stateFuncExec))
 }

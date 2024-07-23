@@ -5,14 +5,18 @@
 package uniques
 
 import (
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
 )
 
-func Provide(sprb istructsmem.IStatelessPkgResourcesBuilder) {
-	sprb.AddSyncProjectors(istructs.Projector{
+func Provide(sr istructsmem.IStatelessResources) {
+	sr.AddProjectors(appdef.SysPackagePath, istructs.Projector{
 		Name: qNameApplyUniques,
 		Func: applyUniques,
 	})
-	sprb.AddEventValidators(eventUniqueValidator)
+}
+
+func ProvideEventValidator(cfg *istructsmem.AppConfigType) {
+	cfg.AddEventValidators(eventUniqueValidator)
 }

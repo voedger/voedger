@@ -21,15 +21,6 @@ import (
 	"github.com/voedger/voedger/pkg/istructsmem/internal/vers"
 )
 
-
-// TODO: eliminate it
-type AppsResources struct {
-	AppConfigs AppConfigsType
-
-	// pkgPath->IStatelessPkg
-	StatelessPackages map[string]IStatelessPkg
-}
-
 // AppConfigsType: map of applications configurators
 // does contain stateless resources
 type AppConfigsType map[appdef.AppQName]*AppConfigType
@@ -85,7 +76,7 @@ type AppConfigType struct {
 	cudValidators      []istructs.CUDValidator
 	eventValidators    []istructs.EventValidator
 	numAppWorkspaces   istructs.NumAppWorkspaces
-	statelessPackages  map[string]IStatelessPkg
+	statelessResources IStatelessResources
 }
 
 func newAppConfig(name appdef.AppQName, id istructs.ClusterAppID, def appdef.IAppDef, wsCount istructs.NumAppWorkspaces) *AppConfigType {
@@ -131,8 +122,8 @@ func newBuiltInAppConfig(appName appdef.AppQName, appDef appdef.IAppDefBuilder) 
 	return cfg
 }
 
-func (cfg *AppConfigType) SetStatelessPackages(sp map[string]IStatelessPkg) {
-	cfg.statelessPackages = sp
+func (cfg *AppConfigType) SetStatelessResources(sr IStatelessResources) {
+	cfg.statelessResources = sr
 }
 
 // prepare: prepares application configuration to use. It creates config globals and must be called from thread-safe code
@@ -201,10 +192,14 @@ func (cfg *AppConfigType) validateResources() (err error) {
 			switch ext.Kind() {
 			case appdef.TypeKind_Query, appdef.TypeKind_Command:
 				statelessFound := false
-				for _, statelessPkg := range cfg.statelessPackages {
-					if statelessFound = statelessPkg.QueryResource(name).QName() != appdef.NullQName; statelessFound {
-						break
-					}
+				if ext.Kind() == appdef.TypeKind_Query {
+					statelessFound, _, _ = iterate.FindFirstMap(cfg.statelessResources.Queries, func(_ string, qry istructs.IQueryFunction) bool {
+						return qry.QName() == name
+					})
+				} else {
+					statelessFound, _, _ = iterate.FindFirstMap(cfg.statelessResources.Commands, func(_ string, qry istructs.ICommandFunction) bool {
+						return qry.QName() == name
+					})
 				}
 				if !statelessFound && cfg.Resources.QueryResource(name).QName() == appdef.NullQName {
 					err = errors.Join(err,
@@ -213,17 +208,9 @@ func (cfg *AppConfigType) validateResources() (err error) {
 			case appdef.TypeKind_Projector:
 				prj := ext.(appdef.IProjector)
 
-				statelessSyncFound := false
-				statelessAsyncFound := false
-				for _, statelessPkg := range cfg.statelessPackages {
-					statelessAsyncFound, _ = iterate.FindFirst(statelessPkg.AsyncProjectors, func(p istructs.Projector) bool {
-						return p.Name == name
-					})
-					statelessSyncFound, _ = iterate.FindFirst(statelessPkg.SyncProjectors, func(p istructs.Projector) bool {
-						return p.Name == name
-					})
-				}
-
+				statelessFound, _, _ := iterate.FindFirstMap(cfg.statelessResources.Projectors, func(_ string, projector istructs.Projector) bool {
+					return projector.Name == name
+				})
 				_, syncFound := cfg.syncProjectors[name]
 				_, asyncFound := cfg.asyncProjectors[name]
 				count := 0
@@ -233,22 +220,19 @@ func (cfg *AppConfigType) validateResources() (err error) {
 				if asyncFound {
 					count++
 				}
-				if statelessAsyncFound {
+				if statelessFound {
 					count++
 				}
-				if statelessSyncFound {
-					count++
-				}
-				if !syncFound && !asyncFound && !statelessSyncFound && !statelessAsyncFound {
+				if !syncFound && !asyncFound && !statelessFound {
 					err = errors.Join(err,
 						fmt.Errorf("%v: exec is not defined in Resources", prj))
 				} else if count > 1 {
 					err = errors.Join(err,
 						fmt.Errorf("%v: exec is defined twice in Resources (both sync & async)", prj))
-				} else if prj.Sync() && (asyncFound || statelessAsyncFound) {
+				} else if prj.Sync() && asyncFound {
 					err = errors.Join(err,
 						fmt.Errorf("%v: exec is defined in Resources as async, but sync expected", prj))
-				} else if !prj.Sync() && (syncFound || statelessSyncFound) {
+				} else if !prj.Sync() && syncFound {
 					err = errors.Join(err,
 						fmt.Errorf("%v: exec is defined in Resources as sync, but async expected", prj))
 				}
@@ -340,24 +324,22 @@ func (cfg *AppConfigType) SetNumAppWorkspaces(naw istructs.NumAppWorkspaces) {
 }
 
 func (cfg *AppConfigType) IsStateless(qName appdef.QName) bool {
-	for _, sp := range cfg.statelessPackages {
-		if sp.QueryResource(qName).Kind() != istructs.ResourceKind_null {
-			return true
-		}
-		found, _ := iterate.FindFirst(sp.AsyncProjectors, func(p istructs.Projector) bool {
-			return p.Name == qName
-		})
-		if found {
-			return true
-		}
-		found, _ = iterate.FindFirst(sp.SyncProjectors, func(p istructs.Projector) bool {
-			return p.Name == qName
-		})
-		if found {
-			return true
-		}
+	found, _, _ := iterate.FindFirstMap(cfg.statelessResources.Commands, func(_ string, cmd istructs.ICommandFunction) bool {
+		return cmd.QName() == qName
+	})
+	if found {
+		return true
 	}
-	return false
+	found, _, _ = iterate.FindFirstMap(cfg.statelessResources.Queries, func(_ string, query istructs.IQueryFunction) bool {
+		return query.QName() == qName
+	})
+	if found {
+		return true
+	}
+	found, _, _ = iterate.FindFirstMap(cfg.statelessResources.Projectors, func(_ string, projector istructs.Projector) bool {
+		return projector.Name == qName
+	})
+	return found
 }
 
 // Application configuration parameters

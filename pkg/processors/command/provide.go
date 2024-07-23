@@ -29,15 +29,15 @@ type workspace struct {
 }
 
 type cmdProc struct {
-	pNumber           istructs.PartitionID
-	appPartition      *appPartition
-	appPartitions     map[appdef.AppQName]*appPartition
-	n10nBroker        in10n.IN10nBroker
-	now               coreutils.TimeFunc
-	authenticator     iauthnz.IAuthenticator
-	authorizer        iauthnz.IAuthorizer
-	storeOp           pipeline.ISyncOperator
-	statelessPackages map[string]istructsmem.IStatelessPkg
+	pNumber            istructs.PartitionID
+	appPartition       *appPartition
+	appPartitions      map[appdef.AppQName]*appPartition
+	n10nBroker         in10n.IN10nBroker
+	now                coreutils.TimeFunc
+	authenticator      iauthnz.IAuthenticator
+	authorizer         iauthnz.IAuthorizer
+	storeOp            pipeline.ISyncOperator
+	statelessResources istructsmem.IStatelessResources
 }
 
 type appPartition struct {

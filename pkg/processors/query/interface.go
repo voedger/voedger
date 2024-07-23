@@ -30,4 +30,4 @@ type RowsProcessorFactory func(ctx context.Context, appDef appdef.IAppDef, state
 type ServiceFactory func(serviceChannel iprocbus.ServiceChannel, resultSenderClosableFactory ResultSenderClosableFactory,
 	appParts appparts.IAppPartitions, maxPrepareQueries int, metrics imetrics.IMetrics, vvm string,
 	authn iauthnz.IAuthenticator, authz iauthnz.IAuthorizer, itokens itokens.ITokens, federation federation.IFederation,
-	statelesspackages map[string]istructsmem.IStatelessPkg) pipeline.IService
+	statelessResources istructsmem.IStatelessResources) pipeline.IService

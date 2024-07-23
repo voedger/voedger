@@ -12,8 +12,8 @@ import (
 	"github.com/voedger/voedger/pkg/istructsmem/qrename"
 )
 
-func proivideRenameQName(sprb istructsmem.IStatelessPkgResourcesBuilder, asp istorage.IAppStorageProvider) {
-	sprb.AddFunc(istructsmem.NewCommandFunction(
+func proivideRenameQName(sr istructsmem.IStatelessResources, asp istorage.IAppStorageProvider) {
+	sr.AddCommands(appdef.SysPackagePath, istructsmem.NewCommandFunction(
 		appdef.NewQName(appdef.SysPackage, "RenameQName"),
 		provideExecCmdRenameQName(asp)))
 }

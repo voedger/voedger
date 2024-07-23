@@ -144,7 +144,6 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 		provideIAppStructsProvider,        // IAppStructsProvider
 		payloads.ProvideIAppTokensFactory, // IAppTokensFactory
 		in10nmem.ProvideEx2,
-		provideAppsResources,
 		queryprocessor.ProvideServiceFactory,
 		commandprocessor.ProvideServiceFactory,
 		metrics.ProvideMetricsService,
@@ -276,32 +275,27 @@ func provideAppsExtensionPoints() map[appdef.AppQName]extensionpoints.IExtension
 	return map[appdef.AppQName]extensionpoints.IExtensionPoint{}
 }
 
-func provideAppsResources(appArtefacts AppsArtefacts, statelessPackages map[string]istructsmem.IStatelessPkg) istructsmem.AppsResources {
-	return istructsmem.AppsResources{
-		AppConfigs:        appArtefacts.AppConfigsType,
-		StatelessPackages: statelessPackages,
-	}
-}
-
 func provideStatelessResources(cfgs AppConfigsTypeEmpty, vvmCfg *VVMConfig, appEPs map[appdef.AppQName]extensionpoints.IExtensionPoint,
 	buildInfo *debug.BuildInfo, sp istorage.IAppStorageProvider, itokens itokens.ITokens, federation federation.IFederation,
-	asp istructs.IAppStructsProvider, atf payloads.IAppTokensFactory) map[string]istructsmem.IStatelessPkg {
-	spb := istructsmem.NewStatelessPkgBuilder()
-	sys.ProvideStateless(spb, vvmCfg.SmtpConfig, appEPs, buildInfo, sp, vvmCfg.WSPostInitFunc, vvmCfg.TimeFunc, itokens, federation,
+	asp istructs.IAppStructsProvider, atf payloads.IAppTokensFactory) istructsmem.IStatelessResources {
+	ssr := istructsmem.NewStatelessResources()
+	sys.ProvideStateless(ssr, vvmCfg.SmtpConfig, appEPs, buildInfo, sp, vvmCfg.WSPostInitFunc, vvmCfg.TimeFunc, itokens, federation,
 		asp, atf)
-	return spb.Build()
+	return ssr
 }
 
 func provideAppPartitions(
 	asp istructs.IAppStructsProvider,
 	saf appparts.SyncActualizerFactory,
 	act projectors.IActualizersService,
-	appResources istructsmem.AppsResources,
+	appsArtefacts AppsArtefacts,
+	sr istructsmem.IStatelessResources,
 ) (ap appparts.IAppPartitions, cleanup func(), err error) {
 
 	eef := engines.ProvideExtEngineFactories(engines.ExtEngineFactoriesConfig{
-		AppResources: appResources,
-		WASMConfig:   iextengine.WASMFactoryConfig{Compile: false},
+		StatelessResources: sr,
+		AppConfigs:         appsArtefacts.AppConfigsType,
+		WASMConfig:         iextengine.WASMFactoryConfig{Compile: false},
 	})
 
 	return appparts.New2(
@@ -471,8 +465,8 @@ func provideVVMApps(builtInApps []appparts.BuiltInApp) (vvmApps VVMApps) {
 }
 
 func provideBuiltInAppsArtefacts(vvmConfig *VVMConfig, apis apps.APIs, cfgs AppConfigsTypeEmpty,
-	appEPs map[appdef.AppQName]extensionpoints.IExtensionPoint, statelessPackages map[string]istructsmem.IStatelessPkg) (AppsArtefacts, error) {
-	return vvmConfig.VVMAppsBuilder.BuildAppsArtefacts(apis, cfgs, statelessPackages, appEPs)
+	appEPs map[appdef.AppQName]extensionpoints.IExtensionPoint, statelessResources istructsmem.IStatelessResources) (AppsArtefacts, error) {
+	return vvmConfig.VVMAppsBuilder.BuildAppsArtefacts(apis, cfgs, statelessResources, appEPs)
 }
 
 func provideServiceChannelFactory(vvmConfig *VVMConfig, procbus iprocbus.IProcBus) ServiceChannelFactory {
@@ -579,7 +573,7 @@ func provideCommandChannelFactory(sch ServiceChannelFactory) CommandChannelFacto
 
 func provideQueryProcessors(qpCount istructs.NumQueryProcessors, qc QueryChannel, appParts appparts.IAppPartitions, qpFactory queryprocessor.ServiceFactory,
 	imetrics imetrics.IMetrics, vvm commandprocessor.VVMName, mpq MaxPrepareQueriesType, authn iauthnz.IAuthenticator, authz iauthnz.IAuthorizer,
-	tokens itokens.ITokens, federation federation.IFederation, statelessPackages map[string]istructsmem.IStatelessPkg) OperatorQueryProcessors {
+	tokens itokens.ITokens, federation federation.IFederation, statelessResources istructsmem.IStatelessResources) OperatorQueryProcessors {
 	forks := make([]pipeline.ForkOperatorOptionFunc, qpCount)
 	resultSenderFactory := func(ctx context.Context, sender ibus.ISender) queryprocessor.IResultSenderClosable {
 		return &resultSenderErrorFirst{
@@ -589,7 +583,7 @@ func provideQueryProcessors(qpCount istructs.NumQueryProcessors, qc QueryChannel
 	}
 	for i := 0; i < int(qpCount); i++ {
 		forks[i] = pipeline.ForkBranch(pipeline.ServiceOperator(qpFactory(iprocbus.ServiceChannel(qc), resultSenderFactory, appParts, int(mpq), imetrics,
-			string(vvm), authn, authz, tokens, federation, statelessPackages)))
+			string(vvm), authn, authz, tokens, federation, statelessResources)))
 	}
 	return pipeline.ForkOperator(pipeline.ForkSame, forks[0], forks[1:]...)
 }

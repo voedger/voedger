@@ -28,9 +28,9 @@ import (
 var translationsCatalog = coreutils.GetCatalogFromTranslations(translations)
 
 // called at targetApp/profileWSID
-func provideQryInitiateEmailVerification(sprb istructsmem.IStatelessPkgResourcesBuilder, itokens itokens.ITokens,
+func provideQryInitiateEmailVerification(sr istructsmem.IStatelessResources, itokens itokens.ITokens,
 	asp istructs.IAppStructsProvider, federation federation.IFederation) {
-	sprb.AddFunc(istructsmem.NewQueryFunction(
+	sr.AddQueries(appdef.SysPackagePath, istructsmem.NewQueryFunction(
 		QNameQueryInitiateEmailVerification,
 		provideIEVExec(itokens, federation, asp),
 	))
@@ -134,8 +134,8 @@ func (r ivvtResult) AsString(string) string {
 }
 
 // called at targetApp/targetWSID
-func provideQryIssueVerifiedValueToken(sprb istructsmem.IStatelessPkgResourcesBuilder, itokens itokens.ITokens, asp istructs.IAppStructsProvider) {
-	sprb.AddFunc(istructsmem.NewQueryFunction(
+func provideQryIssueVerifiedValueToken(sr istructsmem.IStatelessResources, itokens itokens.ITokens, asp istructs.IAppStructsProvider) {
+	sr.AddQueries(appdef.SysPackagePath, istructsmem.NewQueryFunction(
 		QNameQueryIssueVerifiedValueToken,
 		provideIVVTExec(itokens, asp),
 	))
@@ -180,8 +180,8 @@ func provideIVVTExec(itokens itokens.ITokens, asp istructs.IAppStructsProvider) 
 	}
 }
 
-func provideCmdSendEmailVerificationCode(sprb istructsmem.IStatelessPkgResourcesBuilder) {
-	sprb.AddFunc(istructsmem.NewCommandFunction(
+func provideCmdSendEmailVerificationCode(sr istructsmem.IStatelessResources) {
+	sr.AddCommands(appdef.SysPackagePath, istructsmem.NewCommandFunction(
 		QNameCommandSendEmailVerificationCode,
 		istructsmem.NullCommandExec,
 	))

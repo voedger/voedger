@@ -15,62 +15,46 @@ import (
 	"github.com/voedger/voedger/pkg/istructsmem"
 )
 
-func provideStatelessFuncs(statelessPackages map[string]istructsmem.IStatelessPkg) iextengine.BuiltInAppExtFuncs {
+func provideStatelessFuncs(statelessResources istructsmem.IStatelessResources) iextengine.BuiltInAppExtFuncs {
 	funcs := iextengine.BuiltInAppExtFuncs{}
-	for _, statelessPkg := range statelessPackages {
-		provideStatelessPkgFuncs(statelessPkg, funcs)
-	}
-	return funcs
-}
 
-func provideStatelessPkgFuncs(pkg istructsmem.IStatelessPkg, funcs iextengine.BuiltInAppExtFuncs) {
-	pkg.Resources(func(qName appdef.QName) {
-		res := pkg.QueryResource(qName)
-		var fn iextengine.BuiltInExtFunc
-		switch ifunc := res.(type) {
-		case istructs.ICommandFunction:
-			fn = func(_ context.Context, io iextengine.IExtensionIO) error {
-				execArgs := istructs.ExecCommandArgs{
-					CommandPrepareArgs: io.CommandPrepareArgs(),
-					State:              io,
-					Intents:            io,
-				}
-				return ifunc.Exec(execArgs)
+	statelessResources.Commands(func(path string, cmd istructs.ICommandFunction) {
+		fn := func(_ context.Context, io iextengine.IExtensionIO) error {
+			execArgs := istructs.ExecCommandArgs{
+				CommandPrepareArgs: io.CommandPrepareArgs(),
+				State:              io,
+				Intents:            io,
 			}
-		case istructs.IQueryFunction:
-			fn = func(ctx context.Context, io iextengine.IExtensionIO) error {
-				return ifunc.Exec(
-					ctx,
-					istructs.ExecQueryArgs{
-						PrepareArgs: io.QueryPrepareArgs(),
-						State:       io,
-						Intents:     io,
-					},
-					io.QueryCallback(),
-				)
-			}
-		default:
-			// notest
-			panic(fmt.Sprintf("unsupported resource type %T", ifunc))
+			return cmd.Exec(execArgs)
 		}
-		if fn == nil {
-			panic(fmt.Errorf("stateless %v implementation not found", qName))
-		}
-		fullQName := appdef.NewFullQName(pkg.PkgPath(), qName.Entity())
+		fullQName := appdef.NewFullQName(path, cmd.QName().Entity())
 		funcs[fullQName] = fn
 	})
-	pkg.SyncProjectors(func(p istructs.Projector) {
-		fullQName := appdef.NewFullQName(pkg.PkgPath(), p.Name.Entity())
+
+	statelessResources.Queries(func(path string, qry istructs.IQueryFunction) {
+		fn := func(ctx context.Context, io iextengine.IExtensionIO) error {
+			return qry.Exec(
+				ctx,
+				istructs.ExecQueryArgs{
+					PrepareArgs: io.QueryPrepareArgs(),
+					State:       io,
+					Intents:     io,
+				},
+				io.QueryCallback(),
+			)
+		}
+		fullQName := appdef.NewFullQName(path, qry.QName().Entity())
+		funcs[fullQName] = fn
+	})
+
+	statelessResources.Projectors(func(path string, projector istructs.Projector) {
+		fullQName := appdef.NewFullQName(path, projector.Name.Entity())
 		funcs[fullQName] = func(_ context.Context, io iextengine.IExtensionIO) error {
-			return p.Func(io.PLogEvent(), io, io)
+			return projector.Func(io.PLogEvent(), io, io)
 		}
 	})
-	pkg.AsyncProjectors(func(p istructs.Projector) {
-		fullQName := appdef.NewFullQName(pkg.PkgPath(), p.Name.Entity())
-		funcs[fullQName] = func(_ context.Context, io iextengine.IExtensionIO) error {
-			return p.Func(io.PLogEvent(), io, io)
-		}
-	})
+
+	return funcs
 }
 
 // provides all built-in extension functions for specified application config

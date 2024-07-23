@@ -16,8 +16,8 @@ import (
 	istructsmem "github.com/voedger/voedger/pkg/istructsmem"
 )
 
-func provideQryModules(sprb istructsmem.IStatelessPkgResourcesBuilder, buildInfo *debug.BuildInfo) {
-	sprb.AddFunc(istructsmem.NewQueryFunction(
+func provideQryModules(sr istructsmem.IStatelessResources, buildInfo *debug.BuildInfo) {
+	sr.AddQueries(appdef.SysPackagePath, istructsmem.NewQueryFunction(
 		appdef.NewQName(appdef.SysPackage, "Modules"),
 		provideQryModulesExec(buildInfo),
 	))

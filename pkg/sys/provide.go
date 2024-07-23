@@ -36,27 +36,29 @@ import (
 //go:embed *.vsql
 var SysFS embed.FS
 
-func ProvideStateless(spb istructsmem.IStatelessResources, smtpCfg smtp.Cfg, eps map[appdef.AppQName]extensionpoints.IExtensionPoint, buildInfo *debug.BuildInfo,
+func ProvideStateless(sr istructsmem.IStatelessResources, smtpCfg smtp.Cfg, eps map[appdef.AppQName]extensionpoints.IExtensionPoint, buildInfo *debug.BuildInfo,
 	storageProvider istorage.IAppStorageProvider, wsPostInitFunc workspace.WSPostInitFunc, timeFunc coreutils.TimeFunc,
 	itokens itokens.ITokens, federation federation.IFederation, asp istructs.IAppStructsProvider, atf payloads.IAppTokensFactory) {
-	sysPkgBuilder := spb.AddPackage(appdef.SysPackagePath)
-	blobber.ProvideBlobberCmds(sysPkgBuilder)
-	collection.Provide(sysPkgBuilder)
-	journal.Provide(sysPkgBuilder, eps)
-	builtin.Provide(sysPkgBuilder, buildInfo, storageProvider)
-	workspace.Provide(sysPkgBuilder, timeFunc, itokens, federation, itokens, wsPostInitFunc, eps)
-	sqlquery.Provide(sysPkgBuilder, asp)
-	verifier.Provide(sysPkgBuilder, itokens, federation, asp, smtpCfg, timeFunc)
-	authnz.Provide(sysPkgBuilder, itokens, atf)
-	invite.Provide(sysPkgBuilder, timeFunc, federation, itokens, smtpCfg)
-	uniques.Provide(sysPkgBuilder)
-	describe.Provide(sysPkgBuilder)
+	blobber.ProvideBlobberCmds(sr)
+	collection.Provide(sr)
+	journal.Provide(sr, eps)
+	builtin.Provide(sr, buildInfo, storageProvider)
+	workspace.Provide(sr, timeFunc, itokens, federation, itokens, wsPostInitFunc, eps)
+	sqlquery.Provide(sr, asp)
+	verifier.Provide(sr, itokens, federation, asp, smtpCfg, timeFunc)
+	authnz.Provide(sr, itokens, atf)
+	invite.Provide(sr, timeFunc, federation, itokens, smtpCfg)
+	uniques.Provide(sr)
+	describe.Provide(sr)
 }
 
 func Provide(cfg *istructsmem.AppConfigType) parser.PackageFS {
 	verifier.ProvideLimits(cfg)
 	projectors.ProvideOffsetsDef(cfg.AppDefBuilder())
 	workspace.ProvideViewNextWSID(cfg.AppDefBuilder())
+	builtin.ProvideCUDValidators(cfg)
+	builtin.ProvideSysIsActiveValidation(cfg)
+	uniques.ProvideEventValidator(cfg)
 	return parser.PackageFS{
 		Path: appdef.SysPackage,
 		FS:   SysFS,

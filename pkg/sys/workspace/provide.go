@@ -19,49 +19,60 @@ func ProvideViewNextWSID(adf appdef.IAppDefBuilder) {
 	provideViewNextWSID(adf)
 }
 
-func Provide(sprb istructsmem.IStatelessPkgResourcesBuilder, timeFunc coreutils.TimeFunc, tokensAPI itokens.ITokens,
+func Provide(sr istructsmem.IStatelessResources, timeFunc coreutils.TimeFunc, tokensAPI itokens.ITokens,
 	federation federation.IFederation, itokens itokens.ITokens, wsPostInitFunc WSPostInitFunc,
 	eps map[appdef.AppQName]extensionpoints.IExtensionPoint) {
-	// c.sys.InitChildWorkspace
-	sprb.AddFunc(istructsmem.NewCommandFunction(
-		authnz.QNameCommandInitChildWorkspace,
-		execCmdInitChildWorkspace,
-	))
 
-	// c.sys.CreateWorkspaceID
-	// target app, (target cluster, base profile WSID)
-	sprb.AddFunc(istructsmem.NewCommandFunction(
-		QNameCommandCreateWorkspaceID,
-		execCmdCreateWorkspaceID,
-	))
+	sr.AddCommands(appdef.SysPackagePath,
+		// c.sys.InitChildWorkspac
+		istructsmem.NewCommandFunction(
+			authnz.QNameCommandInitChildWorkspace,
+			execCmdInitChildWorkspace,
+		),
 
-	// c.sys.CreateWorkspace
-	sprb.AddFunc(istructsmem.NewCommandFunction(
-		QNameCommandCreateWorkspace,
-		execCmdCreateWorkspace(timeFunc),
-	))
+		// c.sys.CreateWorkspaceID
+		// target app, (target cluster, base profile WSID)
+		istructsmem.NewCommandFunction(
+			QNameCommandCreateWorkspaceID,
+			execCmdCreateWorkspaceID,
+		),
 
-	// q.sys.QueryChildWorkspaceByName
-	sprb.AddFunc(istructsmem.NewQueryFunction(
-		QNameQueryChildWorkspaceByName,
-		qcwbnQryExec,
-	))
+		// c.sys.CreateWorkspace
+		istructsmem.NewCommandFunction(
+			QNameCommandCreateWorkspace,
+			execCmdCreateWorkspace(timeFunc),
+		),
+	)
 
-	// provideViewNextWSID(cfg.AppDefBuilder())
+	sr.AddQueries(appdef.SysPackagePath,
+		// q.sys.QueryChildWorkspaceByName
+		istructsmem.NewQueryFunction(
+			QNameQueryChildWorkspaceByName,
+			qcwbnQryExec,
+		),
+	)
 
 	// deactivate workspace
-	provideDeactivateWorkspace(sprb, tokensAPI, federation)
+	provideDeactivateWorkspace(sr, tokensAPI, federation)
 
-	// projectors
-	sprb.AddAsyncProjectors(
+	sr.AddProjectors(appdef.SysPackagePath,
 		asyncProjectorInvokeCreateWorkspace(federation, itokens),
 		asyncProjectorInvokeCreateWorkspaceID(federation, itokens),
 		asyncProjectorInitializeWorkspace(federation, timeFunc, itokens, wsPostInitFunc, eps),
-	)
-	sprb.AddSyncProjectors(
 		syncProjectorChildWorkspaceIdx(),
 		syncProjectorWorkspaceIDIdx(),
 	)
+
+	// // projectors
+	// sprb.AddAsyncProjectors(
+	// 	asyncProjectorInvokeCreateWorkspace(federation, itokens),
+	// 	asyncProjectorInvokeCreateWorkspaceID(federation, itokens),
+	// 	asyncProjectorInitializeWorkspace(federation, timeFunc, itokens, wsPostInitFunc, eps),
+	// )
+	// sprb.AddSyncProjectors(
+	// 	syncProjectorChildWorkspaceIdx(),
+	// 	syncProjectorWorkspaceIDIdx(),
+	// )
 }
 
 // proj.sys.ChildWorkspaceIdx
