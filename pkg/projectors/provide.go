@@ -59,7 +59,9 @@ func NewSyncActualizerFactoryFactory(actualizerFactory SyncActualizerFactory, se
 		}
 		projectors := maps.Clone(appStructs.SyncProjectors())
 		statelessResources.Projectors(func(path string, projector istructs.Projector) {
-			projectors[projector.Name] = projector
+			if appStructs.AppDef().Projector(projector.Name).Sync() {
+				projectors[projector.Name] = projector
+			}
 		})
 		return actualizerFactory(conf, projectors)
 	}

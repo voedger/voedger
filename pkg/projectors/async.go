@@ -408,6 +408,9 @@ func (p *asyncProjector) DoAsync(ctx context.Context, work pipeline.IWorkpiece) 
 		p.aametrics.Set(aaCurrentOffset, p.partition, p.name, float64(w.pLogOffset))
 	}
 
+	if p.name == appdef.NewQName(appdef.SysPackage, "InitializeWorkspace") {
+		logger.Info()
+	}
 	if !isAcceptable(w.event, p.iProjector.WantErrors(), p.iProjector.Events().Map(), p.iProjector.App()) {
 		return nil, nil
 	}

@@ -6,7 +6,10 @@ package pipeline
 
 import (
 	"context"
+	"fmt"
 	"sync"
+
+	"github.com/voedger/voedger/pkg/goutils/logger"
 )
 
 type forkOperator struct {
@@ -39,7 +42,11 @@ func (f forkOperator) DoSync(ctx context.Context, work interface{}) (err error) 
 	for i, branch := range f.branches {
 		wg.Add(1)
 		go func(i int, branch ISyncOperator) {
-			defer wg.Done()
+			defer func() {
+				logger.Info(fmt.Sprintf("%v done", branch))
+				wg.Done()
+			}()
+			logger.Info(fmt.Sprintf("%v dosync", branch))
 			e := branch.DoSync(ctx, forks[i])
 			if e != nil {
 				errs <- e
