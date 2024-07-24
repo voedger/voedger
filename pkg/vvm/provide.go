@@ -271,8 +271,12 @@ func provideBuildInfo() (*debug.BuildInfo, error) {
 	return buildInfo, nil
 }
 
-func provideAppsExtensionPoints() map[appdef.AppQName]extensionpoints.IExtensionPoint {
-	return map[appdef.AppQName]extensionpoints.IExtensionPoint{}
+func provideAppsExtensionPoints(vvmConfig *VVMConfig) map[appdef.AppQName]extensionpoints.IExtensionPoint {
+	res :=  map[appdef.AppQName]extensionpoints.IExtensionPoint{}
+	for appQName := range vvmConfig.VVMAppsBuilder {
+		res[appQName] = extensionpoints.NewRootExtensionPoint()
+	}
+	return res
 }
 
 func provideStatelessResources(cfgs AppConfigsTypeEmpty, vvmCfg *VVMConfig, appEPs map[appdef.AppQName]extensionpoints.IExtensionPoint,

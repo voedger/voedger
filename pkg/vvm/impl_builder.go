@@ -41,8 +41,7 @@ func (ab VVMAppsBuilder) BuildAppsArtefacts(apis apps.APIs, emptyCfgs AppConfigs
 	appsEPs map[appdef.AppQName]extensionpoints.IExtensionPoint) (appsArtefacts AppsArtefacts, err error) {
 	appsArtefacts.AppConfigsType = istructsmem.AppConfigsType(emptyCfgs)
 	for appQName, appBuilder := range ab {
-		appEPs := extensionpoints.NewRootExtensionPoint()
-		appsEPs[appQName] = appEPs
+		appEPs := appsEPs[appQName]
 		adb := appdef.New()
 		cfg := appsArtefacts.AppConfigsType.AddBuiltInAppConfig(appQName, adb)
 		cfg.SetStatelessResources(statelessResources)

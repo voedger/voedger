@@ -91,7 +91,7 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 	syncActualizerFactory := projectors.ProvideSyncActualizerFactory()
 	quotas := vvmConfig.Quotas
 	in10nBroker, cleanup := in10nmem.ProvideEx2(quotas, timeFunc)
-	v2 := provideAppsExtensionPoints()
+	v2 := provideAppsExtensionPoints(vvmConfig)
 	buildInfo, err := provideBuildInfo()
 	if err != nil {
 		cleanup()
@@ -315,8 +315,12 @@ func provideBuildInfo() (*debug.BuildInfo, error) {
 	return buildInfo, nil
 }
 
-func provideAppsExtensionPoints() map[appdef.AppQName]extensionpoints.IExtensionPoint {
-	return map[appdef.AppQName]extensionpoints.IExtensionPoint{}
+func provideAppsExtensionPoints(vvmConfig *VVMConfig) map[appdef.AppQName]extensionpoints.IExtensionPoint {
+	res := map[appdef.AppQName]extensionpoints.IExtensionPoint{}
+	for appQName := range vvmConfig.VVMAppsBuilder {
+		res[appQName] = extensionpoints.NewRootExtensionPoint()
+	}
+	return res
 }
 
 func provideStatelessResources(cfgs AppConfigsTypeEmpty, vvmCfg *VVMConfig, appEPs map[appdef.AppQName]extensionpoints.IExtensionPoint,
