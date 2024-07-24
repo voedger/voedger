@@ -11,7 +11,6 @@ import (
 	"maps"
 
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/isecrets"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -38,7 +37,13 @@ func ProvideViewDef(appDef appdef.IAppDefBuilder, qname appdef.QName, buildFunc 
 func NewSyncActualizerFactoryFactory(actualizerFactory SyncActualizerFactory, secretReader isecrets.ISecretReader,
 	n10nBroker in10n.IN10nBroker, statelessResources istructsmem.IStatelessResources) func(appStructs istructs.IAppStructs, partitionID istructs.PartitionID) pipeline.ISyncOperator {
 	return func(appStructs istructs.IAppStructs, partitionID istructs.PartitionID) pipeline.ISyncOperator {
-		if len(appStructs.SyncProjectors()) == 0 {
+		projectors := maps.Clone(appStructs.SyncProjectors())
+		statelessResources.Projectors(func(path string, projector istructs.Projector) {
+			if appStructs.AppDef().Projector(projector.Name).Sync() {
+				projectors[projector.Name] = projector
+			}
+		})
+		if len(projectors) == 0 {
 			return &pipeline.NOOP{}
 		}
 		conf := SyncActualizerConf{
@@ -58,13 +63,7 @@ func NewSyncActualizerFactoryFactory(actualizerFactory SyncActualizerFactory, se
 			},
 			IntentsLimit: DefaultIntentsLimit,
 		}
-		projectors := maps.Clone(appStructs.SyncProjectors())
-		statelessResources.Projectors(func(path string, projector istructs.Projector) {
-			if appStructs.AppDef().Projector(projector.Name).Sync() {
-				projectors[projector.Name] = projector
-				logger.Info(appStructs.AppQName(), partitionID, projector.Name)
-			}
-		})
+
 		return actualizerFactory(conf, projectors)
 	}
 }
