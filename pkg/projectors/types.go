@@ -13,7 +13,6 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/goutils/iterate"
-	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
@@ -75,9 +74,6 @@ func isAcceptable(event istructs.IPLogEvent, wantErrors bool, triggeringQNames m
 
 	triggered, _ := iterate.FindFirst(event.CUDs, func(rec istructs.ICUDRow) bool {
 		triggeringKinds, ok := triggeringQNames[rec.QName()]
-		if rec.QName() == appdef.NewQName(appdef.SysPackage, "ChildWorkspace") {
-			logger.Info()
-		}
 		if !ok {
 			recType := appDef.Type(rec.QName())
 			globalQNames := cudTypeKindToGlobalDocQNames[recType.Kind()]

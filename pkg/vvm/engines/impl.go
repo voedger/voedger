@@ -10,7 +10,6 @@ import (
 	"fmt"
 
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/iextengine"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
@@ -51,9 +50,6 @@ func provideStatelessFuncs(statelessResources istructsmem.IStatelessResources) i
 	statelessResources.Projectors(func(path string, projector istructs.Projector) {
 		fullQName := appdef.NewFullQName(path, projector.Name.Entity())
 		funcs[fullQName] = func(_ context.Context, io iextengine.IExtensionIO) error {
-			if projector.Name == appdef.NewQName(appdef.SysPackage, "InitializeWorkspace") {
-				logger.Info()
-			}
 			return projector.Func(io.PLogEvent(), io, io)
 		}
 	})

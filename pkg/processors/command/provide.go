@@ -75,20 +75,10 @@ func ProvideServiceFactory(appParts appparts.IAppPartitions, now coreutils.TimeF
 					pipeline.ForkBranch(
 						pipeline.NewSyncOp(func(ctx context.Context, work interface{}) (err error) {
 							cmd := work.(*cmdWorkpiece)
-
 							cmd.syncProjectorsStart = time.Now()
-							if cmd.cmdMes.QName() == appdef.NewQName(appdef.SysPackage, "CreateWorkspaceID") {
-								err = cmd.appPart.DoSyncActualizer(ctx, work)
-							} else {
-								err = cmd.appPart.DoSyncActualizer(ctx, work)
-							}
-
-							if cmd.cmdMes.QName() == appdef.NewQName(appdef.SysPackage, "CreateWorkspaceID") {
-								logger.Info()
-							}
+							err = cmd.appPart.DoSyncActualizer(ctx, work)
 							cmd.metrics.increase(ProjectorsSeconds, time.Since(cmd.syncProjectorsStart).Seconds())
 							cmd.syncProjectorsStart = time.Time{}
-
 							if err != nil {
 								cmd.appPartitionRestartScheduled = true
 							}
@@ -100,16 +90,10 @@ func ProvideServiceFactory(appParts appparts.IAppPartitions, now coreutils.TimeF
 					pipeline.ForkBranch(pipeline.NewSyncOp(func(ctx context.Context, work interface{}) (err error) {
 						// put WLog
 						cmd := work.(*cmdWorkpiece)
-						if cmd.cmdMes.QName() == appdef.NewQName(appdef.SysPackage, "CreateWorkspaceID") {
-							logger.Info()
-						}
 						if err = cmd.appStructs.Events().PutWlog(cmd.pLogEvent); err != nil {
 							cmd.appPartitionRestartScheduled = true
 						} else {
 							cmd.workspace.NextWLogOffset++
-						}
-						if cmd.cmdMes.QName() == appdef.NewQName(appdef.SysPackage, "CreateWorkspaceID") {
-							logger.Info()
 						}
 						return
 					})),
