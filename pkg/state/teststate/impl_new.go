@@ -145,6 +145,81 @@ func NewCommandTestState(t *testing.T, iCommand ICommand, extensionFunc func()) 
 	return ts
 }
 
+func (cts *CommandTestState) Record(fQName IFullQName, id int, keyValueList ...any) ITestRunner {
+	isSingleton := cts.isSingletone(fQName)
+	if isSingleton {
+		panic("use SingletonRecord method for singletons")
+	}
+
+	return cts.record(fQName, id, isSingleton, keyValueList...)
+}
+
+// SingletonRecord adds a singleton record to the state
+// Implemented in own method because of ID for singletons are generated under-the-hood and
+// we can not insert singletons with our own IDs
+func (cts *CommandTestState) SingletonRecord(fQName IFullQName, keyValueList ...any) ITestRunner {
+	isSingleton := cts.isSingletone(fQName)
+	if !isSingleton {
+		panic("use Record method for non-singleton entities")
+	}
+	qName := cts.getQNameFromFQName(fQName)
+
+	// get real ID of the specific singleton
+	id, err := cts.appStructs.Records().GetSingletonID(qName)
+	if err != nil {
+		panic(fmt.Errorf("failed to get singleton id: %w", err))
+	}
+
+	return cts.record(fQName, int(id), isSingleton, keyValueList...)
+}
+
+func (cts *CommandTestState) Offset(offset int) ITestRunner {
+	cts.initialOffset = offset
+
+	return cts
+}
+
+func (cts *CommandTestState) RequireViewInsert(fQName IFullQName, keyValueList ...any) ITestRunner {
+	return cts.addRequiredRecordItems(fQName, 0, false, true, keyValueList...)
+}
+
+func (cts *CommandTestState) RequireViewUpdate(fQName IFullQName, id int, keyValueList ...any) ITestRunner {
+	return cts.addRequiredRecordItems(fQName, 0, false, false, keyValueList...)
+}
+
+func (cts *CommandTestState) View(fQName IFullQName, id int, keyValueList ...any) ITestRunner {
+	if !cts.isView(fQName) {
+		panic("View method must be used for views only")
+	}
+
+	cts.viewRecords = append(cts.viewRecords, recordItem{
+		entity:       fQName,
+		id:           id,
+		keyValueList: keyValueList,
+	})
+
+	return cts
+}
+
+func (cts *CommandTestState) getQNameFromFQName(fQName IFullQName) appdef.QName {
+	localPkgName := cts.appDef.PackageLocalName(fQName.PkgPath())
+	return appdef.NewQName(localPkgName, fQName.Entity())
+}
+
+func (cts *CommandTestState) isSingletone(fQName IFullQName) bool {
+	qName := cts.getQNameFromFQName(fQName)
+
+	iSingleton := cts.appDef.Singleton(qName)
+	return iSingleton != nil && iSingleton.Singleton()
+}
+
+func (cts *CommandTestState) isView(fQName IFullQName) bool {
+	qName := cts.getQNameFromFQName(fQName)
+
+	iView := cts.appDef.View(qName)
+	return iView != nil
+}
+
 func (cts *CommandTestState) putArgument() {
 	if cts.argumentObject == nil {
 		return
@@ -247,66 +322,6 @@ func (cts *CommandTestState) record(fQName IFullQName, id int, isSingleton bool,
 	})
 
 	return cts
-}
-
-func (cts *CommandTestState) Record(fQName IFullQName, id int, keyValueList ...any) ITestRunner {
-	isSingleton := cts.isSingletone(fQName)
-	if isSingleton {
-		panic("use SingletonRecord method for singletons")
-	}
-
-	return cts.record(fQName, id, isSingleton, keyValueList...)
-}
-
-// SingletonRecord adds a singleton record to the state
-// Implemented in own method because of ID for singletons are generated under-the-hood and
-// we can not insert singletons with our own IDs
-func (cts *CommandTestState) SingletonRecord(fQName IFullQName, keyValueList ...any) ITestRunner {
-	isSingleton := cts.isSingletone(fQName)
-	if !isSingleton {
-		panic("use Record method for non-singleton entities")
-	}
-	qName := cts.getQNameFromFQName(fQName)
-
-	// get real ID of the specific singleton
-	id, err := cts.appStructs.Records().GetSingletonID(qName)
-	if err != nil {
-		panic(fmt.Errorf("failed to get singleton id: %w", err))
-	}
-
-	return cts.record(fQName, int(id), isSingleton, keyValueList...)
-}
-
-func (cts *CommandTestState) Offset(offset int) ITestRunner {
-	cts.initialOffset = offset
-
-	return cts
-}
-
-func (cts *CommandTestState) View(fQName IFullQName, id int, keyValueList ...any) ITestRunner {
-	cts.viewRecords = append(cts.viewRecords, recordItem{
-		entity:       fQName,
-		id:           id,
-		keyValueList: keyValueList,
-	})
-
-	return cts
-}
-
-func (cts *CommandTestState) getQNameFromFQName(fQName IFullQName) appdef.QName {
-	localPkgName := cts.appDef.PackageLocalName(fQName.PkgPath())
-	return appdef.NewQName(localPkgName, fQName.Entity())
-}
-
-func (cts *CommandTestState) isSingletone(fQName IFullQName) bool {
-	qName := cts.getQNameFromFQName(fQName)
-
-	iSingleton := cts.appDef.Singleton(qName)
-	if iSingleton != nil && iSingleton.Singleton() {
-		return true
-	}
-
-	return false
 }
 
 func (cts *CommandTestState) putRecords() {
@@ -668,13 +683,13 @@ func (pts *ProjectorTestState) CUDRow(fQName IFullQName, id int, keyValueList ..
 }
 
 func (pts *ProjectorTestState) RequireViewInsert(fQName IFullQName, keyValueList ...any) ITestRunner {
-	// TODO: implement
+	pts.CommandTestState.RequireViewInsert(fQName, keyValueList...)
 
 	return pts
 }
 
 func (pts *ProjectorTestState) RequireViewUpdate(fQName IFullQName, id int, keyValueList ...any) ITestRunner {
-	// TODO: implement
+	pts.CommandTestState.RequireViewUpdate(fQName, id, keyValueList...)
 
 	return pts
 }

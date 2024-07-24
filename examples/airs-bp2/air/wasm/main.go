@@ -8,6 +8,8 @@ package main
 import (
 	"time"
 
+	ext "github.com/voedger/voedger/pkg/exttinygo"
+
 	"air/wasm/orm"
 )
 
@@ -58,36 +60,27 @@ func Pbill() {
 }
 
 func FillPbillDates() {
-	// Query air.PbillDates
-	{
-		v := orm.Package_air.View_PbillDates.MustGet(2019, 12)
-		println(v.Get_FirstOffset())
-		println(v.Get_LastOffset())
-	}
+	event := ext.MustGetValue(ext.KeyBuilder(ext.StorageEvent, ext.NullEntity))
+	arg := event.AsValue("ArgumentObject")
+	// extract offset and count from the argument
+	offs := arg.AsInt64("Offset")
+	count := arg.AsInt64("Count")
 
-	// Query untill.Articles
-	{
-		v := orm.Package_untill.CDoc_articles.MustGet(orm.ID(12))
-		println(v.Get_article_number())
-		println(v.Get_name())
-	}
+	// get pbill datetime
+	pbillDatetime := time.UnixMicro(arg.AsInt64("pdatetime"))
+	// extract year and day of year from pbill datetime
+	year := pbillDatetime.Year()
+	dayOfYear := pbillDatetime.Day()
 
-	// Query air.PbillDates and create intents
-	{
-		{
-			v, ok := orm.Package_air.View_PbillDates.Get(2019, 12)
-			if ok {
-				intent := v.Insert()
-				// `Set` is a must to execute naming conflicts with NewIntent()
-				intent.Set_FirstOffset(1)
-				intent.Set_LastOffset(2)
-			}
-		}
-		{
-			intent := orm.Package_air.View_PbillDates.Insert(2020, 1)
-			intent.Set_FirstOffset(20)
-			intent.Set_LastOffset(17)
-		}
+	val, ok := orm.Package_air.View_PbillDates.Get(int32(year), int32(dayOfYear))
+	if !ok {
+		intent := val.Insert()
+		intent.Set_FirstOffset(offs)
+		intent.Set_LastOffset(offs + count)
+	} else {
+		intent := val.Update()
+		intent.Set_FirstOffset(offs)
+		intent.Set_LastOffset(offs + count)
 	}
 }
 
