@@ -11,6 +11,7 @@ import (
 	"maps"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/isecrets"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -61,6 +62,7 @@ func NewSyncActualizerFactoryFactory(actualizerFactory SyncActualizerFactory, se
 		statelessResources.Projectors(func(path string, projector istructs.Projector) {
 			if appStructs.AppDef().Projector(projector.Name).Sync() {
 				projectors[projector.Name] = projector
+				logger.Info(appStructs.AppQName(), partitionID, projector.Name)
 			}
 		})
 		return actualizerFactory(conf, projectors)

@@ -637,29 +637,6 @@ func provideCommandProcessors(cpCount istructs.NumCommandProcessors, ccf Command
 	return pipeline.ForkOperator(pipeline.ForkSame, forks[0], forks[1:]...)
 }
 
-// forks appServices per apps
-// [appsAmount]appServices
-func provideOperatorAppServices(apf AppServiceFactory, appsArtefacts AppsArtefacts, asp istructs.IAppStructsProvider) OperatorAppServicesFactory {
-	return func(vvmCtx context.Context) pipeline.ISyncOperator {
-		var branches []pipeline.ForkOperatorOptionFunc
-		for _, builtInAppPackages := range appsArtefacts.builtInAppPackages {
-			as, err := asp.BuiltIn(builtInAppPackages.Name)
-			if err != nil {
-				panic(err)
-			}
-			if len(as.AsyncProjectors()) == 0 {
-				continue
-			}
-			branch := pipeline.ForkBranch(apf(vvmCtx, builtInAppPackages.Name, as.AsyncProjectors(), builtInAppPackages.NumParts))
-			branches = append(branches, branch)
-		}
-		if len(branches) == 0 {
-			return &pipeline.NOOP{}
-		}
-		return pipeline.ForkOperator(pipeline.ForkSame, branches[0], branches[1:]...)
-	}
-}
-
 func provideServicePipeline(
 	vvmCtx context.Context,
 	opCommandProcessors OperatorCommandProcessors,
