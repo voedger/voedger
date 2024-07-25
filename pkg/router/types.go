@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/url"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -51,6 +52,7 @@ type httpService struct {
 	busTimeout         time.Duration
 	numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces
 	name               string
+	listeningPort      atomic.Int32
 }
 
 type httpsService struct {

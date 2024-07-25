@@ -13,23 +13,81 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
-// Implements istructs.IResources
-type Resources struct {
-	resources map[appdef.QName]istructs.IResource
+type IStatelessResources interface {
+	Commands(func(path string, cmd istructs.ICommandFunction))
+	Queries(func(path string, qry istructs.IQueryFunction))
+	Projectors(func(path string, projector istructs.Projector))
+	AddCommands(path string, cmds ...istructs.ICommandFunction)
+	AddQueries(path string, queries ...istructs.IQueryFunction)
+	AddProjectors(path string, projectors ...istructs.Projector)
 }
 
-func makeResources() Resources {
-	return Resources{make(map[appdef.QName]istructs.IResource)}
+func NewStatelessResources() IStatelessResources {
+	return &implIStatelessResources{
+		cmds:       map[string][]istructs.ICommandFunction{},
+		queries:    map[string][]istructs.IQueryFunction{},
+		projectors: map[string][]istructs.Projector{},
+	}
+}
+
+type implIStatelessResources struct {
+	cmds       map[string][]istructs.ICommandFunction
+	queries    map[string][]istructs.IQueryFunction
+	projectors map[string][]istructs.Projector
+}
+
+func (sr *implIStatelessResources) Commands(cb func(path string, cmd istructs.ICommandFunction)) {
+	for path, cmds := range sr.cmds {
+		for _, cmd := range cmds {
+			cb(path, cmd)
+		}
+	}
+}
+
+func (sr *implIStatelessResources) Queries(cb func(path string, query istructs.IQueryFunction)) {
+	for path, queries := range sr.queries {
+		for _, query := range queries {
+			cb(path, query)
+		}
+	}
+}
+
+func (sr *implIStatelessResources) Projectors(cb func(path string, projector istructs.Projector)) {
+	for path, projectors := range sr.projectors {
+		for _, projector := range projectors {
+			cb(path, projector)
+		}
+	}
+}
+
+func (sr *implIStatelessResources) AddCommands(path string, cmds ...istructs.ICommandFunction) {
+	sr.cmds[path] = append(sr.cmds[path], cmds...)
+}
+
+func (sr *implIStatelessResources) AddQueries(path string, queries ...istructs.IQueryFunction) {
+	sr.queries[path] = append(sr.queries[path], queries...)
+}
+
+func (sr *implIStatelessResources) AddProjectors(path string, projectors ...istructs.Projector) {
+	sr.projectors[path] = append(sr.projectors[path], projectors...)
+}
+
+
+// Implements istructs.IResources
+type Resources map[appdef.QName]istructs.IResource
+
+func NewResources() Resources {
+	return Resources{}
 }
 
 // Adds new resource to application resources
-func (res *Resources) Add(r istructs.IResource) {
-	res.resources[r.QName()] = r
+func (res Resources) Add(r istructs.IResource) {
+	res[r.QName()] = r
 }
 
 // Finds application resource by QName
 func (res Resources) QueryResource(name appdef.QName) istructs.IResource {
-	r, ok := res.resources[name]
+	r, ok := res[name]
 	if !ok {
 		return nullResource
 	}
@@ -38,7 +96,7 @@ func (res Resources) QueryResource(name appdef.QName) istructs.IResource {
 
 // Enumerates all application resources
 func (res Resources) Resources(enum func(appdef.QName)) {
-	for n := range res.resources {
+	for n := range res {
 		enum(n)
 	}
 }

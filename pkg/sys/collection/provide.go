@@ -5,18 +5,19 @@
 package collection
 
 import (
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructsmem"
 )
 
-func Provide(cfg *istructsmem.AppConfigType) {
-	cfg.Resources.Add(istructsmem.NewQueryFunctionCustomResult(
+func Provide(sr istructsmem.IStatelessResources) {
+	sr.AddQueries(appdef.SysPackagePath, istructsmem.NewQueryFunctionCustomResult(
 		qNameQueryCollection,
 		collectionResultQName,
 		collectionFuncExec,
 	))
 
-	provideQryCDoc(cfg)
-	provideStateFunc(cfg)
+	provideQryCDoc(sr)
+	provideStateFunc(sr)
 
-	cfg.AddSyncProjectors(collectionProjector(cfg.AppDef))
+	sr.AddProjectors(appdef.SysPackagePath, collectionProjector)
 }

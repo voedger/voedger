@@ -98,11 +98,21 @@ runs:
 
     - name: Smoke test - replace scylla node to new hardware
       run: |
-        if ssh ${{ env.SSH_OPTIONS }} ubuntu@${{ env.CTOOL_IP }} "cd /home/ubuntu/voedger/cmd/ctool && ./ctool replace db-node-1 10.0.0.16 -v --ssh-key /tmp/amazonKey.pem; exit \$?"; then
-          echo "Replace node success"
+        cluster_nodes=${{ env.TF_VAR_included_nodes }}
+        count=$(echo $cluster_nodes | jq '. | length')
+        if [ $count -eq 7 ]; then
+            replaced_node="db-node-1"
+        elif [ $count -eq 5 ]; then 
+            replaced_node="db-node-3"
+        else
+            echo "Incorrect number of nodes in the cluster"
+            exit 1
+        fi
+        if ssh ${{ env.SSH_OPTIONS }} ubuntu@${{ env.CTOOL_IP }} "cd /home/ubuntu/voedger/cmd/ctool && ./ctool replace $replaced_node 10.0.0.16 -v --ssh-key /tmp/amazonKey.pem; exit \$?"; then
+            echo "Replace node success"
         else 
-          echo "Failed to replace scylla node in cluster"
-          exit 1
+            echo "Failed to replace scylla node in cluster"
+            exit 1
         fi
       shell: bash
 

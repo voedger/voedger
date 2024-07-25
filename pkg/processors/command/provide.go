@@ -73,12 +73,10 @@ func ProvideServiceFactory(appParts appparts.IAppPartitions, now coreutils.TimeF
 					pipeline.ForkBranch(
 						pipeline.NewSyncOp(func(ctx context.Context, work interface{}) (err error) {
 							cmd := work.(*cmdWorkpiece)
-
 							cmd.syncProjectorsStart = time.Now()
 							err = cmd.appPart.DoSyncActualizer(ctx, work)
 							cmd.metrics.increase(ProjectorsSeconds, time.Since(cmd.syncProjectorsStart).Seconds())
 							cmd.syncProjectorsStart = time.Time{}
-
 							if err != nil {
 								cmd.appPartitionRestartScheduled = true
 							}
@@ -165,7 +163,7 @@ func ProvideServiceFactory(appParts appparts.IAppPartitions, now coreutils.TimeF
 							logger.Info(fmt.Sprintf("partition %d will be restarted due of an error on writing to Log: %s", cmd.cmdMes.PartitionID(), cmdHandlingErr))
 							delete(cmdProc.appPartitions, cmd.cmdMes.AppQName())
 						}
-						cmd.release()
+						// cmd.release()
 					}()
 					metrics.IncreaseApp(CommandsSeconds, string(vvm), cmdMes.AppQName(), time.Since(start).Seconds())
 				case <-vvmCtx.Done():

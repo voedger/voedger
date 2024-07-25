@@ -6,7 +6,6 @@
 package istructsmem
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -22,12 +21,13 @@ import (
 )
 
 // AppConfigsType: map of applications configurators
+// does contain stateless resources
 type AppConfigsType map[appdef.AppQName]*AppConfigType
 
 // AddAppConfig: adds new config for specified application or replaces if exists
-func (cfgs *AppConfigsType) AddAppConfig(name appdef.AppQName, id istructs.ClusterAppID, def appdef.IAppDef, wsCount istructs.NumAppWorkspaces) *AppConfigType {
+func (cfgs *AppConfigsType) AddAppConfig(name appdef.AppQName, id istructs.ClusterAppID, def appdef.IAppDef,
+	wsCount istructs.NumAppWorkspaces) *AppConfigType {
 	c := newAppConfig(name, id, def, wsCount)
-
 	(*cfgs)[name] = c
 	return c
 }
@@ -56,7 +56,7 @@ type AppConfigType struct {
 
 	appDefBuilder appdef.IAppDefBuilder
 	AppDef        appdef.IAppDef
-	Resources     Resources
+	Resources     Resources // does not contain stateless funcs
 
 	// Application configuration parameters
 	Params AppConfigParams
@@ -89,7 +89,7 @@ func newAppConfig(name appdef.AppQName, id istructs.ClusterAppID, def appdef.IAp
 	}
 
 	cfg.AppDef = def
-	cfg.Resources = makeResources()
+	cfg.Resources = NewResources()
 
 	cfg.dynoSchemes = dynobuf.New()
 
@@ -179,41 +179,6 @@ func (cfg *AppConfigType) prepare(buckets irates.IBuckets, appStorage istorage.I
 }
 
 func (cfg *AppConfigType) validateResources() (err error) {
-
-	cfg.AppDef.Extensions(func(ext appdef.IExtension) {
-		if ext.Engine() == appdef.ExtensionEngineKind_BuiltIn {
-			// Only builtin extensions should be validated by cfg.Resources
-			name := ext.QName()
-			switch ext.Kind() {
-			case appdef.TypeKind_Query, appdef.TypeKind_Command:
-				if cfg.Resources.QueryResource(name).QName() == appdef.NullQName {
-					err = errors.Join(err,
-						fmt.Errorf("%v: exec is not defined: %w", ext, ErrNameNotFound))
-				}
-			case appdef.TypeKind_Projector:
-				prj := ext.(appdef.IProjector)
-				_, syncFound := cfg.syncProjectors[name]
-				_, asyncFound := cfg.asyncProjectors[name]
-				if !syncFound && !asyncFound {
-					err = errors.Join(err,
-						fmt.Errorf("%v: exec is not defined in Resources", prj))
-				} else if syncFound && asyncFound {
-					err = errors.Join(err,
-						fmt.Errorf("%v: exec is defined twice in Resources (both sync & async)", prj))
-				} else if prj.Sync() && asyncFound {
-					err = errors.Join(err,
-						fmt.Errorf("%v: exec is defined in Resources as async, but sync expected", prj))
-				} else if !prj.Sync() && syncFound {
-					err = errors.Join(err,
-						fmt.Errorf("%v: exec is defined in Resources as sync, but async expected", prj))
-				}
-			}
-		}
-	})
-
-	if err != nil {
-		return err
-	}
 	err = iterate.ForEachError(cfg.Resources.Resources, func(qName appdef.QName) error {
 		if cfg.AppDef.Type(qName).Kind() == appdef.TypeKind_null {
 			return fmt.Errorf("exec of func %s is defined but the func is not defined in SQL", qName)

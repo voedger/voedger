@@ -80,7 +80,7 @@ func (c *cmdWorkpiece) Event() istructs.IPLogEvent {
 	return c.pLogEvent
 }
 
-// need for update corrupted in c.cluster.VSqlUpdate
+// need for update corrupted in c.cluster.VSqlUpdate and for various funcs of sys package
 func (c *cmdWorkpiece) GetAppStructs() istructs.IAppStructs {
 	return c.appStructs
 }
