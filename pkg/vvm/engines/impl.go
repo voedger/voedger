@@ -57,79 +57,70 @@ func provideStatelessFuncs(statelessResources istructsmem.IStatelessResources) i
 	return funcs
 }
 
+func extName(qName appdef.QName, cfg *istructsmem.AppConfigType) appdef.FullQName {
+	extName := cfg.AppDef.FullQName(qName)
+	if extName == appdef.NullFullQName {
+		panic(fmt.Errorf("application «%v»: package «%s» full path is unknown", cfg.Name, qName.Pkg()))
+	}
+	return extName
+}
+
 // provides all built-in extension functions for specified application config
 //
 // # Panics:
 //   - if any extension implementation not found
 //   - if any extension package full path is unknown
-func provideAppsBuiltInExtFuncs(cfgs istructsmem.AppConfigsType, statelessResources istructsmem.IStatelessResources) iextengine.BuiltInAppExtFuncs {
+func provideAppsBuiltInExtFuncs(cfgs istructsmem.AppConfigsType) iextengine.BuiltInAppExtFuncs {
 	funcs := make(iextengine.BuiltInAppExtFuncs)
 
 	for app, cfg := range cfgs {
 		appFuncs := make(iextengine.BuiltInExtFuncs)
-		cfg.AppDef.Extensions(
-			func(ext appdef.IExtension) {
-				if ext.Engine() != appdef.ExtensionEngineKind_BuiltIn {
-					return
-				}
-				if statelessResources.IsStateless(ext.QName()) {
-					return
-				}
-				name := ext.QName()
-
-				var fn iextengine.BuiltInExtFunc
-
-				switch ext.Kind() {
-				case appdef.TypeKind_Command:
-					if cmd, ok := cfg.Resources.QueryResource(name).(istructs.ICommandFunction); ok {
-						fn = func(_ context.Context, io iextengine.IExtensionIO) error {
-							execArgs := istructs.ExecCommandArgs{
-								CommandPrepareArgs: io.CommandPrepareArgs(),
-								State:              io,
-								Intents:            io,
-							}
-							return cmd.Exec(execArgs)
-						}
+		cfg.Resources.Resources(func(qName appdef.QName) {
+			ires := cfg.Resources.QueryResource(qName)
+			var fn iextengine.BuiltInExtFunc
+			switch resource := ires.(type) {
+			case istructs.ICommandFunction:
+				fn = func(_ context.Context, io iextengine.IExtensionIO) error {
+					execArgs := istructs.ExecCommandArgs{
+						CommandPrepareArgs: io.CommandPrepareArgs(),
+						State:              io,
+						Intents:            io,
 					}
-				case appdef.TypeKind_Query:
-					if query, ok := cfg.Resources.QueryResource(name).(istructs.IQueryFunction); ok {
-						fn = func(ctx context.Context, io iextengine.IExtensionIO) error {
-							return query.Exec(
-								ctx,
-								istructs.ExecQueryArgs{
-									PrepareArgs: io.QueryPrepareArgs(),
-									State:       io,
-									Intents:     io,
-								},
-								io.QueryCallback(),
-							)
-						}
-					}
-				case appdef.TypeKind_Projector:
-					var prj istructs.Projector
-					if ext.(appdef.IProjector).Sync() {
-						prj = cfg.SyncProjectors()[name]
-					} else {
-						prj = cfg.AsyncProjectors()[name]
-					}
-					if prj.Name != appdef.NullQName {
-						fn = func(_ context.Context, io iextengine.IExtensionIO) error {
-							return prj.Func(io.PLogEvent(), io, io)
-						}
-					}
+					return resource.Exec(execArgs)
 				}
-
-				if fn == nil {
-					panic(fmt.Errorf("application «%v»: %v implementation not found", app, ext))
+			case istructs.IQueryFunction:
+				fn = func(ctx context.Context, io iextengine.IExtensionIO) error {
+					return resource.Exec(
+						ctx,
+						istructs.ExecQueryArgs{
+							PrepareArgs: io.QueryPrepareArgs(),
+							State:       io,
+							Intents:     io,
+						},
+						io.QueryCallback(),
+					)
 				}
+			}
+			extName := extName(qName, cfg)
+			appFuncs[extName] = fn
+		})
 
-				extName := cfg.AppDef.FullQName(name)
-				if extName == appdef.NullFullQName {
-					panic(fmt.Errorf("application «%v»: package «%s» full path is unknown", app, name.Pkg()))
-				}
-
-				appFuncs[extName] = fn
-			})
+		for _, syncProjector := range cfg.SyncProjectors() {
+			sp := syncProjector
+			fn := func(_ context.Context, io iextengine.IExtensionIO) error {
+				return sp.Func(io.PLogEvent(), io, io)
+			}
+			extName := extName(syncProjector.Name, cfg)
+			appFuncs[extName] = fn
+		}
+		for _, asyncProjector := range cfg.AsyncProjectors() {
+			sp := asyncProjector
+			fn := func(_ context.Context, io iextengine.IExtensionIO) error {
+				return sp.Func(io.PLogEvent(), io, io)
+			}
+			extName := extName(asyncProjector.Name, cfg)
+			appFuncs[extName] = fn
+		}
 
 		funcs[app] = appFuncs
 	}

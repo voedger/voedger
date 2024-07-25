@@ -7,7 +7,6 @@ package istructsmem
 
 import (
 	"errors"
-	"log"
 	"testing"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -255,167 +254,6 @@ func TestErrorsAppConfigsType(t *testing.T) {
 		_, err := provider.BuiltIn(appName)
 		require.ErrorIs(err, vers.ErrorInvalidVersion)
 	})
-	t.Run("resources validation", func(t *testing.T) {
-		qName := appdef.NewQName("test", "qname")
-		t.Run("query", func(t *testing.T) {
-			t.Run("missing in cfg", func(t *testing.T) {
-				adb := appdef.New()
-				adb.AddPackage("test", "test.com/test")
-				adb.AddQuery(qName)
-				cfgs := make(AppConfigsType, 1)
-				cfgs.AddBuiltInAppConfig(appName, adb).SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
-				provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
-				_, err := provider.BuiltIn(appName)
-				require.Error(err)
-				log.Println(err)
-			})
-			t.Run("missing in AppDef", func(t *testing.T) {
-				adb := appdef.New()
-				cfgs := make(AppConfigsType, 1)
-				cfg := cfgs.AddBuiltInAppConfig(appName, adb)
-				cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
-				cfg.Resources.Add(NewQueryFunction(qName, nil))
-				provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
-				_, err := provider.BuiltIn(appName)
-				require.Error(err)
-				log.Println(err)
-			})
-		})
-		t.Run("command", func(t *testing.T) {
-			t.Run("missing in cfg", func(t *testing.T) {
-				adb := appdef.New()
-				adb.AddPackage("test", "test.com/test")
-				adb.AddCommand(qName)
-				cfgs := make(AppConfigsType, 1)
-				cfgs.AddBuiltInAppConfig(appName, adb).SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
-				provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
-				_, err := provider.BuiltIn(appName)
-				require.Error(err)
-				log.Println(err)
-			})
-			t.Run("missing in AppDef", func(t *testing.T) {
-				adb := appdef.New()
-				cfgs := make(AppConfigsType, 1)
-				cfg := cfgs.AddBuiltInAppConfig(appName, adb)
-				cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
-				cfg.Resources.Add(NewCommandFunction(qName, nil))
-				provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
-				_, err := provider.BuiltIn(appName)
-				require.Error(err)
-				log.Println(err)
-			})
-		})
-		t.Run("projectors", func(t *testing.T) {
-			t.Run("sync", func(t *testing.T) {
-				t.Run("missing in cfg", func(t *testing.T) {
-					adb := appdef.New()
-					adb.AddPackage("test", "test.com/test")
-					qName2 := appdef.NewQName("test", "qName2")
-					adb.AddCDoc(qName2)
-					adb.AddProjector(qName).
-						SetSync(true).
-						Events().Add(qName2, appdef.ProjectorEventKind_Insert)
-					cfgs := make(AppConfigsType, 1)
-					cfgs.AddBuiltInAppConfig(appName, adb).SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
-					provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
-					_, err := provider.BuiltIn(appName)
-					require.Error(err)
-					log.Println(err)
-				})
-				t.Run("missing in AppDef", func(t *testing.T) {
-					adb := appdef.New()
-					cfgs := make(AppConfigsType, 1)
-					cfg := cfgs.AddBuiltInAppConfig(appName, adb)
-					cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
-					cfg.AddSyncProjectors(istructs.Projector{Name: qName})
-					provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
-					_, err := provider.BuiltIn(appName)
-					require.Error(err)
-					log.Println(err)
-				})
-				t.Run("defined as async in cfg", func(t *testing.T) {
-					adb := appdef.New()
-					adb.AddPackage("test", "test.com/test")
-					qName2 := appdef.NewQName("test", "qName2")
-					adb.AddCDoc(qName2)
-					adb.AddProjector(qName).
-						SetSync(true).
-						Events().Add(qName2, appdef.ProjectorEventKind_Insert)
-					cfgs := make(AppConfigsType, 1)
-					cfg := cfgs.AddBuiltInAppConfig(appName, adb)
-					cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
-					cfg.AddAsyncProjectors(istructs.Projector{Name: qName})
-					provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
-					_, err := provider.BuiltIn(appName)
-					require.Error(err)
-					log.Println(err)
-				})
-			})
-			t.Run("async", func(t *testing.T) {
-				t.Run("missing in cfg", func(t *testing.T) {
-					adb := appdef.New()
-					adb.AddPackage("test", "test.com/test")
-					qName2 := appdef.NewQName("test", "qName2")
-					adb.AddCDoc(qName2)
-					adb.AddProjector(qName).
-						SetSync(false).
-						Events().Add(qName2, appdef.ProjectorEventKind_Insert)
-					cfgs := make(AppConfigsType, 1)
-					cfgs.AddBuiltInAppConfig(appName, adb).SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
-					provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
-					_, err := provider.BuiltIn(appName)
-					require.Error(err)
-					log.Println(err)
-				})
-				t.Run("missing in AppDef", func(t *testing.T) {
-					adb := appdef.New()
-					cfgs := make(AppConfigsType, 1)
-					cfg := cfgs.AddBuiltInAppConfig(appName, adb)
-					cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
-					cfg.AddAsyncProjectors(istructs.Projector{Name: qName})
-					provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
-					_, err := provider.BuiltIn(appName)
-					require.Error(err)
-					log.Println(err)
-				})
-				t.Run("defined as sync in cfg", func(t *testing.T) {
-					adb := appdef.New()
-					adb.AddPackage("test", "test.com/test")
-					qName2 := appdef.NewQName("test", "qName2")
-					adb.AddCDoc(qName2)
-					adb.AddProjector(qName).
-						SetSync(false).
-						Events().Add(qName2, appdef.ProjectorEventKind_Insert)
-					cfgs := make(AppConfigsType, 1)
-					cfg := cfgs.AddBuiltInAppConfig(appName, adb)
-					cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
-					cfg.AddSyncProjectors(istructs.Projector{Name: qName})
-					provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
-					_, err := provider.BuiltIn(appName)
-					require.Error(err)
-					log.Println(err)
-				})
-				t.Run("defined twice in cfg", func(t *testing.T) {
-					adb := appdef.New()
-					adb.AddPackage("test", "test.com/test")
-					qName2 := appdef.NewQName("test", "qName2")
-					adb.AddCDoc(qName2)
-					adb.AddProjector(qName).
-						SetSync(true).
-						Events().Add(qName2, appdef.ProjectorEventKind_Insert)
-					cfgs := make(AppConfigsType, 1)
-					cfg := cfgs.AddBuiltInAppConfig(appName, adb)
-					cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
-					cfg.AddAsyncProjectors(istructs.Projector{Name: qName})
-					cfg.AddSyncProjectors(istructs.Projector{Name: qName})
-					provider := Provide(cfgs, iratesce.TestBucketsFactory, testTokensFactory(), storageProvider)
-					_, err := provider.BuiltIn(appName)
-					require.Error(err)
-					log.Println(err)
-				})
-			})
-		})
-	})
 	t.Run("unable set NumAppPartititons after prepare()", func(t *testing.T) {
 		cfgs := make(AppConfigsType, 1)
 		cfg := cfgs.AddBuiltInAppConfig(appName, appDef)
@@ -497,17 +335,5 @@ func Test_NewAppStructs(t *testing.T) {
 			require.Nil(str)
 		})
 
-		t.Run("if builtin extension missed in Resources", func(t *testing.T) {
-			adb := appdef.New()
-			adb.AddPackage("test", "test.com/test")
-			cmd := adb.AddCommand(appdef.NewQName("test", "cmd"))
-			cmd.SetEngine(appdef.ExtensionEngineKind_BuiltIn)
-			def := adb.MustBuild()
-			str, err := structs.New(name, def, id, wsCount)
-			require.Error(err,
-				require.Is(ErrNameNotFound),
-				require.Has("test.cmd"))
-			require.Nil(str)
-		})
 	})
 }
