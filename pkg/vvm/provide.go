@@ -272,7 +272,7 @@ func provideBuildInfo() (*debug.BuildInfo, error) {
 }
 
 func provideAppsExtensionPoints(vvmConfig *VVMConfig) map[appdef.AppQName]extensionpoints.IExtensionPoint {
-	res :=  map[appdef.AppQName]extensionpoints.IExtensionPoint{}
+	res := map[appdef.AppQName]extensionpoints.IExtensionPoint{}
 	for appQName := range vvmConfig.VVMAppsBuilder {
 		res[appQName] = extensionpoints.NewRootExtensionPoint()
 	}
@@ -469,8 +469,8 @@ func provideVVMApps(builtInApps []appparts.BuiltInApp) (vvmApps VVMApps) {
 }
 
 func provideBuiltInAppsArtefacts(vvmConfig *VVMConfig, apis apps.APIs, cfgs AppConfigsTypeEmpty,
-	appEPs map[appdef.AppQName]extensionpoints.IExtensionPoint, statelessResources istructsmem.IStatelessResources) (AppsArtefacts, error) {
-	return vvmConfig.VVMAppsBuilder.BuildAppsArtefacts(apis, cfgs, statelessResources, appEPs)
+	appEPs map[appdef.AppQName]extensionpoints.IExtensionPoint) (AppsArtefacts, error) {
+	return vvmConfig.VVMAppsBuilder.BuildAppsArtefacts(apis, cfgs, appEPs)
 }
 
 func provideServiceChannelFactory(vvmConfig *VVMConfig, procbus iprocbus.IProcBus) ServiceChannelFactory {

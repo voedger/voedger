@@ -678,6 +678,7 @@ func setUp(t *testing.T, prepare func(appDef appdef.IAppDefBuilder, cfg *istruct
 	wsdescutil.AddWorkspaceDescriptorStubDef(adb)
 	qNameTestWSKind := appdef.NewQName(appdef.SysPackage, "TestWSKind")
 	adb.AddCDoc(qNameTestWSKind).SetSingleton()
+	statelessResources := istructsmem.NewStatelessResources()
 	cfg := cfgs.AddBuiltInAppConfig(istructs.AppQName_untill_airs_bp, adb)
 	cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 	if prepare != nil {
@@ -700,12 +701,13 @@ func setUp(t *testing.T, prepare func(appDef appdef.IAppDefBuilder, cfg *istruct
 
 	// prepare the AppParts to borrow AppStructs
 	appParts, appPartsClean, err := appparts.New2(appStructsProvider,
-		projectors.NewSyncActualizerFactoryFactory(projectors.ProvideSyncActualizerFactory(), secretReader, n10nBroker),
+		projectors.NewSyncActualizerFactoryFactory(projectors.ProvideSyncActualizerFactory(), secretReader, n10nBroker, statelessResources),
 		appparts.NullActualizers,
 		engines.ProvideExtEngineFactories(
 			engines.ExtEngineFactoriesConfig{
-				AppResources: cfgs,
-				WASMConfig:   iextengine.WASMFactoryConfig{Compile: false},
+				AppConfigs:         cfgs,
+				StatelessResources: statelessResources,
+				WASMConfig:         iextengine.WASMFactoryConfig{Compile: false},
 			}))
 	require.NoError(err)
 	defer appPartsClean()

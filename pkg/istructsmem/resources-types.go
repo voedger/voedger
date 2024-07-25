@@ -10,6 +10,7 @@ import (
 	"fmt"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/goutils/iterate"
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
@@ -20,6 +21,7 @@ type IStatelessResources interface {
 	AddCommands(path string, cmds ...istructs.ICommandFunction)
 	AddQueries(path string, queries ...istructs.IQueryFunction)
 	AddProjectors(path string, projectors ...istructs.Projector)
+	IsStateless(qName appdef.QName) bool
 }
 
 func NewStatelessResources() IStatelessResources {
@@ -70,6 +72,25 @@ func (sr *implIStatelessResources) AddQueries(path string, queries ...istructs.I
 
 func (sr *implIStatelessResources) AddProjectors(path string, projectors ...istructs.Projector) {
 	sr.projectors[path] = append(sr.projectors[path], projectors...)
+}
+
+func (sr *implIStatelessResources) IsStateless(qName appdef.QName) bool {
+	found, _, _ := iterate.FindFirstMap(sr.Commands, func(_ string, cmd istructs.ICommandFunction) bool {
+		return cmd.QName() == qName
+	})
+	if found {
+		return true
+	}
+	found, _, _ = iterate.FindFirstMap(sr.Queries, func(_ string, query istructs.IQueryFunction) bool {
+		return query.QName() == qName
+	})
+	if found {
+		return true
+	}
+	found, _, _ = iterate.FindFirstMap(sr.Projectors, func(_ string, projector istructs.Projector) bool {
+		return projector.Name == qName
+	})
+	return found
 }
 
 // Implements istructs.IResources

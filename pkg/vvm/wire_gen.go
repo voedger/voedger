@@ -112,7 +112,7 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 		IFederation:         iFederation,
 		TimeFunc:            timeFunc,
 	}
-	appsArtefacts, err := provideBuiltInAppsArtefacts(vvmConfig, apIs, appConfigsTypeEmpty, v2, iStatelessResources)
+	appsArtefacts, err := provideBuiltInAppsArtefacts(vvmConfig, apIs, appConfigsTypeEmpty, v2)
 	if err != nil {
 		cleanup2()
 		cleanup()
@@ -511,8 +511,8 @@ func provideVVMApps(builtInApps []appparts.BuiltInApp) (vvmApps VVMApps) {
 }
 
 func provideBuiltInAppsArtefacts(vvmConfig *VVMConfig, apis apps.APIs, cfgs AppConfigsTypeEmpty,
-	appEPs map[appdef.AppQName]extensionpoints.IExtensionPoint, statelessResources istructsmem.IStatelessResources) (AppsArtefacts, error) {
-	return vvmConfig.VVMAppsBuilder.BuildAppsArtefacts(apis, cfgs, statelessResources, appEPs)
+	appEPs map[appdef.AppQName]extensionpoints.IExtensionPoint) (AppsArtefacts, error) {
+	return vvmConfig.VVMAppsBuilder.BuildAppsArtefacts(apis, cfgs, appEPs)
 }
 
 func provideServiceChannelFactory(vvmConfig *VVMConfig, procbus iprocbus.IProcBus) ServiceChannelFactory {

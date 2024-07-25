@@ -15,8 +15,8 @@ import (
 	"github.com/voedger/voedger/pkg/istructsmem"
 )
 
-func provideStatelessFuncs(statelessResources istructsmem.IStatelessResources) iextengine.BuiltInAppExtFuncs {
-	funcs := iextengine.BuiltInAppExtFuncs{}
+func provideStatelessFuncs(statelessResources istructsmem.IStatelessResources) iextengine.BuiltInExtFuncs {
+	funcs := iextengine.BuiltInExtFuncs{}
 
 	statelessResources.Commands(func(path string, cmd istructs.ICommandFunction) {
 		fn := func(_ context.Context, io iextengine.IExtensionIO) error {
@@ -62,17 +62,17 @@ func provideStatelessFuncs(statelessResources istructsmem.IStatelessResources) i
 // # Panics:
 //   - if any extension implementation not found
 //   - if any extension package full path is unknown
-func provideAppsBuiltInExtFuncs(cfgs istructsmem.AppConfigsType) iextengine.BuiltInExtFuncs {
-	funcs := make(iextengine.BuiltInExtFuncs)
+func provideAppsBuiltInExtFuncs(cfgs istructsmem.AppConfigsType, statelessResources istructsmem.IStatelessResources) iextengine.BuiltInAppExtFuncs {
+	funcs := make(iextengine.BuiltInAppExtFuncs)
 
 	for app, cfg := range cfgs {
-		appFuncs := make(iextengine.BuiltInAppExtFuncs)
+		appFuncs := make(iextengine.BuiltInExtFuncs)
 		cfg.AppDef.Extensions(
 			func(ext appdef.IExtension) {
 				if ext.Engine() != appdef.ExtensionEngineKind_BuiltIn {
 					return
 				}
-				if cfg.IsStateless(ext.QName()) {
+				if statelessResources.IsStateless(ext.QName()) {
 					return
 				}
 				name := ext.QName()

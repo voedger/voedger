@@ -13,14 +13,14 @@ import (
 )
 
 type extensionEngineFactory struct {
-	funcs          iextengine.BuiltInExtFuncs
-	statelessFuncs iextengine.BuiltInAppExtFuncs
+	funcs          iextengine.BuiltInAppExtFuncs
+	statelessFuncs iextengine.BuiltInExtFuncs
 }
 
 type extensionEngine struct {
 	app            appdef.AppQName
-	funcs          iextengine.BuiltInExtFuncs
-	statelessFuncs iextengine.BuiltInAppExtFuncs
+	funcs          iextengine.BuiltInAppExtFuncs
+	statelessFuncs iextengine.BuiltInExtFuncs
 }
 
 func (e extensionEngine) SetLimits(limits iextengine.ExtensionLimits) {}

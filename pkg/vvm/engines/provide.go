@@ -25,7 +25,7 @@ type ExtEngineFactoriesConfig struct {
 func ProvideExtEngineFactories(cfg ExtEngineFactoriesConfig) iextengine.ExtensionEngineFactories {
 	return iextengine.ExtensionEngineFactories{
 		appdef.ExtensionEngineKind_BuiltIn: builtin.ProvideExtensionEngineFactory(
-			provideAppsBuiltInExtFuncs(cfg.AppConfigs),
+			provideAppsBuiltInExtFuncs(cfg.AppConfigs, cfg.StatelessResources),
 			provideStatelessFuncs(cfg.StatelessResources)),
 		appdef.ExtensionEngineKind_WASM: wazero.ProvideExtensionEngineFactory(cfg.WASMConfig),
 	}

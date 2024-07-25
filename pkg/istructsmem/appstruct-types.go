@@ -6,7 +6,6 @@
 package istructsmem
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -26,7 +25,8 @@ import (
 type AppConfigsType map[appdef.AppQName]*AppConfigType
 
 // AddAppConfig: adds new config for specified application or replaces if exists
-func (cfgs *AppConfigsType) AddAppConfig(name appdef.AppQName, id istructs.ClusterAppID, def appdef.IAppDef, wsCount istructs.NumAppWorkspaces) *AppConfigType {
+func (cfgs *AppConfigsType) AddAppConfig(name appdef.AppQName, id istructs.ClusterAppID, def appdef.IAppDef,
+	wsCount istructs.NumAppWorkspaces) *AppConfigType {
 	c := newAppConfig(name, id, def, wsCount)
 	(*cfgs)[name] = c
 	return c
@@ -76,7 +76,6 @@ type AppConfigType struct {
 	cudValidators      []istructs.CUDValidator
 	eventValidators    []istructs.EventValidator
 	numAppWorkspaces   istructs.NumAppWorkspaces
-	statelessResources IStatelessResources
 }
 
 func newAppConfig(name appdef.AppQName, id istructs.ClusterAppID, def appdef.IAppDef, wsCount istructs.NumAppWorkspaces) *AppConfigType {
@@ -120,10 +119,6 @@ func newBuiltInAppConfig(appName appdef.AppQName, appDef appdef.IAppDefBuilder) 
 	cfg.appDefBuilder = appDef
 
 	return cfg
-}
-
-func (cfg *AppConfigType) SetStatelessResources(sr IStatelessResources) {
-	cfg.statelessResources = sr
 }
 
 // prepare: prepares application configuration to use. It creates config globals and must be called from thread-safe code
@@ -185,60 +180,7 @@ func (cfg *AppConfigType) prepare(buckets irates.IBuckets, appStorage istorage.I
 
 func (cfg *AppConfigType) validateResources() (err error) {
 
-	cfg.AppDef.Extensions(func(ext appdef.IExtension) {
-		if ext.Engine() == appdef.ExtensionEngineKind_BuiltIn {
-			// Only builtin extensions should be validated by cfg.Resources
-			name := ext.QName()
-			switch ext.Kind() {
-			case appdef.TypeKind_Query, appdef.TypeKind_Command:
-				statelessFound := false
-				if ext.Kind() == appdef.TypeKind_Query {
-					statelessFound, _, _ = iterate.FindFirstMap(cfg.statelessResources.Queries, func(_ string, qry istructs.IQueryFunction) bool {
-						return qry.QName() == name
-					})
-				} else {
-					statelessFound, _, _ = iterate.FindFirstMap(cfg.statelessResources.Commands, func(_ string, qry istructs.ICommandFunction) bool {
-						return qry.QName() == name
-					})
-				}
-				if !statelessFound && cfg.Resources.QueryResource(name).QName() == appdef.NullQName {
-					err = errors.Join(err,
-						fmt.Errorf("%v: exec is not defined: %w", ext, ErrNameNotFound))
-				}
-			case appdef.TypeKind_Projector:
-				prj := ext.(appdef.IProjector)
-
-				statelessFound, _, _ := iterate.FindFirstMap(cfg.statelessResources.Projectors, func(_ string, projector istructs.Projector) bool {
-					return projector.Name == name
-				})
-				_, syncFound := cfg.syncProjectors[name]
-				_, asyncFound := cfg.asyncProjectors[name]
-				count := 0
-				if syncFound {
-					count++
-				}
-				if asyncFound {
-					count++
-				}
-				if statelessFound {
-					count++
-				}
-				if !syncFound && !asyncFound && !statelessFound {
-					err = errors.Join(err,
-						fmt.Errorf("%v: exec is not defined in Resources", prj))
-				} else if count > 1 {
-					err = errors.Join(err,
-						fmt.Errorf("%v: exec is defined twice in Resources (both sync & async)", prj))
-				} else if prj.Sync() && asyncFound {
-					err = errors.Join(err,
-						fmt.Errorf("%v: exec is defined in Resources as async, but sync expected", prj))
-				} else if !prj.Sync() && syncFound {
-					err = errors.Join(err,
-						fmt.Errorf("%v: exec is defined in Resources as sync, but async expected", prj))
-				}
-			}
-		}
-	})
+	// resources validation is elimiated because unable to differ stateless and non-stateless resources
 
 	if err != nil {
 		return err
@@ -321,25 +263,6 @@ func (cfg *AppConfigType) SetNumAppWorkspaces(naw istructs.NumAppWorkspaces) {
 		panic("must not set NumAppWorkspaces after first IAppStructsProvider.AppStructs() call because the app is considered working")
 	}
 	cfg.numAppWorkspaces = naw
-}
-
-func (cfg *AppConfigType) IsStateless(qName appdef.QName) bool {
-	found, _, _ := iterate.FindFirstMap(cfg.statelessResources.Commands, func(_ string, cmd istructs.ICommandFunction) bool {
-		return cmd.QName() == qName
-	})
-	if found {
-		return true
-	}
-	found, _, _ = iterate.FindFirstMap(cfg.statelessResources.Queries, func(_ string, query istructs.IQueryFunction) bool {
-		return query.QName() == qName
-	})
-	if found {
-		return true
-	}
-	found, _, _ = iterate.FindFirstMap(cfg.statelessResources.Projectors, func(_ string, projector istructs.Projector) bool {
-		return projector.Name == qName
-	})
-	return found
 }
 
 // Application configuration parameters

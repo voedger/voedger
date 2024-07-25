@@ -228,6 +228,7 @@ func deployTestAppEx(
 
 	cfgs := make(istructsmem.AppConfigsType, 1)
 	cfg := cfgs.AddBuiltInAppConfig(appName, appDefBuilder)
+	statelessResources := istructsmem.NewStatelessResources()
 	cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 	if prepareAppCfg != nil {
 		prepareAppCfg(cfg)
@@ -321,12 +322,13 @@ func deployTestAppEx(
 
 	appParts, appPartsCleanup, err := appparts.New2(
 		appStructsProvider,
-		NewSyncActualizerFactoryFactory(ProvideSyncActualizerFactory(), secretReader, n10nBroker),
+		NewSyncActualizerFactoryFactory(ProvideSyncActualizerFactory(), secretReader, n10nBroker, statelessResources),
 		actualizers,
 		engines.ProvideExtEngineFactories(
 			engines.ExtEngineFactoriesConfig{
-				AppResources: cfgs,
-				WASMConfig:   iextengine.WASMFactoryConfig{Compile: false},
+				AppConfigs:         cfgs,
+				StatelessResources: statelessResources,
+				WASMConfig:         iextengine.WASMFactoryConfig{Compile: false},
 			}))
 	if err != nil {
 		panic(err)
