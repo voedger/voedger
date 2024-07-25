@@ -67,10 +67,6 @@ type BuiltInAppPackages struct {
 type AppConfigsTypeEmpty istructsmem.AppConfigsType
 type BootstrapOperator pipeline.ISyncOperator
 type SidecarAppsDefs map[appdef.AppQName]BuiltInAppPackages
-type AppsArtefacts struct {
-	istructsmem.AppConfigsType
-	builtInAppPackages []BuiltInAppPackages
-}
 
 type BuiltInAppsArtefacts struct {
 	istructsmem.AppConfigsType

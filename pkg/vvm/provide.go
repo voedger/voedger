@@ -147,6 +147,7 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 		itokensjwt.ProvideITokens,         // ITokens
 		provideIAppStructsProvider,        // IAppStructsProvider
 		payloads.ProvideIAppTokensFactory, // IAppTokensFactory
+		provideAppPartitions,
 		in10nmem.ProvideEx2,
 		queryprocessor.ProvideServiceFactory,
 		commandprocessor.ProvideServiceFactory,
@@ -174,9 +175,6 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 		provideBuiltInApps,
 		provideBasicAsyncActualizerConfig, // projectors.BasicAsyncActualizerConfig
 		provideAsyncActualizersService,    // projectors.IActualizersService
-		appparts.New2,                     // appparts.IAppPartitions
-		engines.ProvideExtEngineFactories,
-		provideIActualizers,
 		apppartsctl.New,
 		provideAppConfigsTypeEmpty,
 		provideBuiltInAppPackages,
@@ -205,10 +203,6 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 			"SecretsReader",
 		),
 	))
-}
-
-func provideIActualizers(actService projectors.IActualizersService) appparts.IActualizers {
-	return actService
 }
 
 func provideBootstrapOperator(federation federation.IFederation, asp istructs.IAppStructsProvider, timeFunc coreutils.TimeFunc, apppar appparts.IAppPartitions,
@@ -304,12 +298,12 @@ func provideAppPartitions(
 	saf appparts.SyncActualizerFactory,
 	act projectors.IActualizersService,
 	sr istructsmem.IStatelessResources,
-	appsArtefacts AppsArtefacts,
+	builtinAppsArtefacts BuiltInAppsArtefacts,
 ) (ap appparts.IAppPartitions, cleanup func(), err error) {
 
 	eef := engines.ProvideExtEngineFactories(engines.ExtEngineFactoriesConfig{
 		StatelessResources: sr,
-		AppConfigs:         appsArtefacts.AppConfigsType,
+		AppConfigs:         builtinAppsArtefacts.AppConfigsType,
 		WASMConfig:         iextengine.WASMFactoryConfig{Compile: false},
 	})
 
@@ -537,7 +531,7 @@ func provideVVMApps(builtInApps []appparts.BuiltInApp) (vvmApps VVMApps) {
 }
 
 func provideBuiltInAppsArtefacts(vvmConfig *VVMConfig, apis apps.APIs, cfgs AppConfigsTypeEmpty,
-	appEPs map[appdef.AppQName]extensionpoints.IExtensionPoint) (AppsArtefacts, error) {
+	appEPs map[appdef.AppQName]extensionpoints.IExtensionPoint) (BuiltInAppsArtefacts, error) {
 	return vvmConfig.VVMAppsBuilder.BuildAppsArtefacts(apis, cfgs, appEPs)
 }
 
