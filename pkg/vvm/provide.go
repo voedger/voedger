@@ -14,6 +14,8 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"os"
+	"path/filepath"
 	"runtime/debug"
 	"strconv"
 	"strings"
@@ -309,7 +311,6 @@ func provideAppPartitions(
 	asp istructs.IAppStructsProvider,
 	saf appparts.SyncActualizerFactory,
 	act projectors.IActualizersService,
-	appsArtefacts AppsArtefacts,
 	sr istructsmem.IStatelessResources,
 ) (ap appparts.IAppPartitions, cleanup func(), err error) {
 
