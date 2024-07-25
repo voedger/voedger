@@ -37,6 +37,7 @@ var (
 	isRouterStopTested   bool
 	router               *testRouter
 	clientDisconnections = make(chan struct{}, 1)
+	previousBusTimeout   = ibus.DefaultTimeout
 )
 
 func TestBasicUsage_SingleResponse(t *testing.T) {
@@ -47,7 +48,7 @@ func TestBasicUsage_SingleResponse(t *testing.T) {
 			StatusCode:  http.StatusOK,
 			Data:        []byte("test resp"),
 		})
-	})
+	}, ibus.DefaultTimeout)
 	defer tearDown()
 
 	resp, err := http.Post(fmt.Sprintf("http://127.0.0.1:%d/api/test1/app1/%d/somefunc", router.port(), testWSID), "application/json", http.NoBody)
@@ -371,7 +372,6 @@ func TestClientDisconnect_FailedToWriteResponse(t *testing.T) {
 }
 
 func TestAdminService(t *testing.T) {
-	t.Skip()
 	require := require.New(t)
 	setUp(t, func(requestCtx context.Context, sender ibus.ISender, request ibus.Request) {
 		sender.SendResponse(ibus.Response{
@@ -420,11 +420,12 @@ type testRouter struct {
 	handler      func(requestCtx context.Context, sender ibus.ISender, request ibus.Request)
 	bus          ibus.IBus
 	adminService pipeline.IService
+	busTimeout   time.Duration
 }
 
-func startRouter(t *testing.T, rp RouterParams, bus ibus.IBus) {
+func startRouter(t *testing.T, rp RouterParams, bus ibus.IBus, busTimeout time.Duration) {
 	ctx, cancel := context.WithCancel(context.Background())
-	httpSrv, acmeSrv, adminService := Provide(ctx, rp, ibus.DefaultTimeout, nil, nil, nil, bus, map[appdef.AppQName]istructs.NumAppWorkspaces{istructs.AppQName_test1_app1: 10})
+	httpSrv, acmeSrv, adminService := Provide(ctx, rp, busTimeout, nil, nil, nil, bus, map[appdef.AppQName]istructs.NumAppWorkspaces{istructs.AppQName_test1_app1: 10})
 	require.Nil(t, acmeSrv)
 	require.NoError(t, httpSrv.Prepare(nil))
 	require.NoError(t, adminService.Prepare(nil))
@@ -443,12 +444,16 @@ func startRouter(t *testing.T, rp RouterParams, bus ibus.IBus) {
 	onRequestCtxClosed = func() {
 		clientDisconnections <- struct{}{}
 	}
+	previousBusTimeout = busTimeout
 }
 
-func setUp(t *testing.T, handlerFunc func(requestCtx context.Context, sender ibus.ISender, request ibus.Request)) {
+func setUp(t *testing.T, handlerFunc func(requestCtx context.Context, sender ibus.ISender, request ibus.Request), busTimeout time.Duration) {
 	if router != nil {
-		router.handler = handlerFunc
-		return
+		if previousBusTimeout == busTimeout {
+			router.handler = handlerFunc
+			return
+		}
+		tearDown()
 	}
 	rp := RouterParams{
 		Port:             0,
@@ -460,12 +465,13 @@ func setUp(t *testing.T, handlerFunc func(requestCtx context.Context, sender ibu
 		router.handler(requestCtx, sender, request)
 	})
 	router = &testRouter{
-		bus:     bus,
-		wg:      &sync.WaitGroup{},
-		handler: handlerFunc,
+		bus:        bus,
+		wg:         &sync.WaitGroup{},
+		handler:    handlerFunc,
+		busTimeout: busTimeout,
 	}
 
-	startRouter(t, rp, bus)
+	startRouter(t, rp, bus, busTimeout)
 }
 
 func tearDown() {
