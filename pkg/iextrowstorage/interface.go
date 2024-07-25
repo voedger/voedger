@@ -9,17 +9,20 @@ import (
 	"context"
 )
 
-type IFactory interface {
-	// Do NOT panic
-	// New is called once per [application, package, version]
-	// New loads and returns storages specified by stNames from a location specified by locationPath
-	New(cgd *Config) (map[string]IRowStorage, error)
+type IFactoryFactory interface {
+	// One per factory
+	// Shall be loaded once from JSON prior any call to the New()
+	SettingsPtr() *any
+
+	// Shall be called prior any call to the New() and after the SettingsPtr() result is loaded
+	SetConfig(cfg *Config) error
+
+	// New is called once per [application, storage package, version]
+	NewFactory(filePath string, version string) (IRowStorageFactory, error)
 }
 
 type Config struct {
-	LocationPath string
-	StorageNames []string
-	Logger       IRSLogger
+	Logger IRSLogger
 }
 
 type IRSLogger interface {
@@ -29,6 +32,15 @@ type IRSLogger interface {
 	Verbose(args ...interface{})
 }
 
+type IRowStorageFactory interface {
+	// Once per [application, storage package, version, partition]
+	// partition >= 0
+	New(partition int) IRowStorage
+}
+
+// ************************************************************
+// IRowStorage* interfaces
+
 // @ConcurrentAccess
 // Will be type-asserted to IRowStorageWith* interfaces
 type IRowStorage interface {
@@ -36,20 +48,20 @@ type IRowStorage interface {
 }
 
 type IRowStorageWithGet interface {
-	// Do NOT panic
+	// Shall return in no more than one second.
 	Get(ctx context.Context, key IRowKey) (v ICompositeRow, ok bool, err error)
 }
 
 type IRowStorageWithPut interface {
-	// Do NOT panic
 	Put(ctx context.Context, key IRowKey, value ICompositeRow) error
 }
 
 type IRowStorageWithRead interface {
 	// key can be a partial key (filled from left to right)
-	// Do NOT panic
 	Read(ctx context.Context, key IRowKey, cb func(ICompositeRow) bool) error
 }
+
+// ************************************************************
 
 type IRowKey interface {
 	LocalPkg() string
@@ -58,17 +70,27 @@ type IRowKey interface {
 }
 
 type IBasicRowFields interface {
-
-	// Do NOT panic
 	AsInt64(name string) (value int64, ok bool)
-	// Do NOT panic
+
 	AsFloat64(name string) (value float64, ok bool)
 
-	// ??? Do NOT panic
 	AsBool(name string) (value bool, ok bool)
 
-	// Do NOT panic
 	AsBytes(name string, value *[]byte) (ok bool)
+}
+
+type ICompositeRowFields interface {
+	AsRowFields(name string) (value IRowFields, ok bool)
+
+	AsRowFieldsAt(idx int) (value IRowFields, ok bool)
+
+	// Returns value >= 0
+	Length() int
+}
+
+type IRowFields interface {
+	IBasicRowFields
+	ICompositeRowFields
 }
 
 type IBasicRow interface {
@@ -77,20 +99,9 @@ type IBasicRow interface {
 }
 
 type ICompositeRow interface {
-	IBasicRow
-
-	// FieldNames(cb func(appdef.FieldName))
-
-	// Do NOT panic
-	AsRow(name string) (value ICompositeRow, ok bool)
-
-	// Working with arrays
-
-	// Do NOT panic
-	ByIdx(idx int) (value ICompositeRow, ok bool)
-
-	// Do NOT panic
-	Length() int
+	IReleasable
+	IBasicRowFields
+	ICompositeRowFields
 }
 
 type IReleasable interface {
