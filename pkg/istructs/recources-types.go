@@ -103,6 +103,7 @@ type IState interface {
 	QueryCallback() ExecQueryCallback
 
 	App() appdef.AppQName
+	AppStructs() IAppStructs
 }
 
 type IIntents interface {

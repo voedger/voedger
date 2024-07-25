@@ -13,13 +13,14 @@ import (
 )
 
 type extensionEngineFactory struct {
-	funcs iextengine.BuiltInAppExtFuncs
+	funcs          iextengine.BuiltInAppExtFuncs
+	statelessFuncs iextengine.BuiltInExtFuncs
 }
 
 type extensionEngine struct {
-	app   appdef.AppQName
-	funcs iextengine.BuiltInAppExtFuncs
-	statelessFuncs
+	app            appdef.AppQName
+	funcs          iextengine.BuiltInAppExtFuncs
+	statelessFuncs iextengine.BuiltInExtFuncs
 }
 
 func (e extensionEngine) SetLimits(limits iextengine.ExtensionLimits) {}
@@ -30,8 +31,8 @@ func (e extensionEngine) Invoke(ctx context.Context, extName appdef.FullQName, i
 			err = fmt.Errorf("extension panic: %v", r)
 		}
 	}()
-	if statelessFuncs[extName]; ok {
-		
+	if f, ok := e.statelessFuncs[extName]; ok {
+		return f(ctx, io)
 	}
 	if appFuncs, ok := e.funcs[e.app]; ok {
 		if f, ok := appFuncs[extName]; ok {
@@ -46,7 +47,7 @@ func (e extensionEngine) Close(ctx context.Context) {}
 func (f extensionEngineFactory) New(_ context.Context, app appdef.AppQName, _ []iextengine.ExtensionModule, _ *iextengine.ExtEngineConfig, numEngines int) (result []iextengine.IExtensionEngine, err error) {
 	result = make([]iextengine.IExtensionEngine, numEngines)
 	for i := 0; i < numEngines; i++ {
-		result[i] = &extensionEngine{app, f.funcs}
+		result[i] = &extensionEngine{app, f.funcs, f.statelessFuncs}
 	}
 	return
 }

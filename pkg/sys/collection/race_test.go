@@ -58,7 +58,7 @@ func newTSIdsGenerator() *TSidsGeneratorType {
 func Test_Race_SimpleInsertOne(t *testing.T) {
 	req := require.New(t)
 
-	_, appStructs, cleanup := deployTestApp(t)
+	_, appStructs, cleanup, _ := deployTestApp(t)
 	defer cleanup()
 
 	idGen := newTSIdsGenerator()
@@ -78,7 +78,7 @@ func Test_Race_SimpleInsertOne(t *testing.T) {
 func Test_Race_SimpleInsertMany(t *testing.T) {
 	req := require.New(t)
 
-	_, appStructs, cleanup := deployTestApp(t)
+	_, appStructs, cleanup, _ := deployTestApp(t)
 	defer cleanup()
 
 	idGen := newTSIdsGenerator()

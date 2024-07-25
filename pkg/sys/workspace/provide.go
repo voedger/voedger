@@ -15,45 +15,50 @@ import (
 	"github.com/voedger/voedger/pkg/utils/federation"
 )
 
-func Provide(cfg *istructsmem.AppConfigType, appDefBuilder appdef.IAppDefBuilder, asp istructs.IAppStructsProvider, timeFunc coreutils.TimeFunc, tokensAPI itokens.ITokens,
-	federation federation.IFederation, itokens itokens.ITokens, ep extensionpoints.IExtensionPoint, wsPostInitFunc WSPostInitFunc) {
-	// c.sys.InitChildWorkspace
-	cfg.Resources.Add(istructsmem.NewCommandFunction(
-		authnz.QNameCommandInitChildWorkspace,
-		provideExecCmdInitChildWorkspace(cfg.AppDef),
-	))
+func ProvideViewNextWSID(adf appdef.IAppDefBuilder) {
+	provideViewNextWSID(adf)
+}
 
-	// c.sys.CreateWorkspaceID
-	// target app, (target cluster, base profile WSID)
-	cfg.Resources.Add(istructsmem.NewCommandFunction(
-		QNameCommandCreateWorkspaceID,
-		execCmdCreateWorkspaceID(asp, cfg.Name),
-	))
+func Provide(sr istructsmem.IStatelessResources, timeFunc coreutils.TimeFunc, tokensAPI itokens.ITokens,
+	federation federation.IFederation, itokens itokens.ITokens, wsPostInitFunc WSPostInitFunc,
+	eps map[appdef.AppQName]extensionpoints.IExtensionPoint) {
 
-	// c.sys.CreateWorkspace
-	cfg.Resources.Add(istructsmem.NewCommandFunction(
-		QNameCommandCreateWorkspace,
-		execCmdCreateWorkspace(timeFunc, asp, cfg.Name),
-	))
+	sr.AddCommands(appdef.SysPackagePath,
+		// c.sys.InitChildWorkspac
+		istructsmem.NewCommandFunction(
+			authnz.QNameCommandInitChildWorkspace,
+			execCmdInitChildWorkspace,
+		),
 
-	// q.sys.QueryChildWorkspaceByName
-	cfg.Resources.Add(istructsmem.NewQueryFunction(
-		QNameQueryChildWorkspaceByName,
-		qcwbnQryExec,
-	))
+		// c.sys.CreateWorkspaceID
+		// target app, (target cluster, base profile WSID)
+		istructsmem.NewCommandFunction(
+			QNameCommandCreateWorkspaceID,
+			execCmdCreateWorkspaceID,
+		),
 
-	provideViewNextWSID(appDefBuilder)
+		// c.sys.CreateWorkspace
+		istructsmem.NewCommandFunction(
+			QNameCommandCreateWorkspace,
+			execCmdCreateWorkspace(timeFunc),
+		),
+	)
+
+	sr.AddQueries(appdef.SysPackagePath,
+		// q.sys.QueryChildWorkspaceByName
+		istructsmem.NewQueryFunction(
+			QNameQueryChildWorkspaceByName,
+			qcwbnQryExec,
+		),
+	)
 
 	// deactivate workspace
-	provideDeactivateWorkspace(cfg, tokensAPI, federation)
+	provideDeactivateWorkspace(sr, tokensAPI, federation)
 
-	// projectors
-	cfg.AddAsyncProjectors(
+	sr.AddProjectors(appdef.SysPackagePath,
 		asyncProjectorInvokeCreateWorkspace(federation, itokens),
 		asyncProjectorInvokeCreateWorkspaceID(federation, itokens),
-		asyncProjectorInitializeWorkspace(federation, timeFunc, ep, itokens, wsPostInitFunc),
-	)
-	cfg.AddSyncProjectors(
+		asyncProjectorInitializeWorkspace(federation, timeFunc, itokens, wsPostInitFunc, eps),
 		syncProjectorChildWorkspaceIdx(),
 		syncProjectorWorkspaceIDIdx(),
 	)
@@ -68,11 +73,11 @@ func syncProjectorChildWorkspaceIdx() istructs.Projector {
 }
 
 // Projector<A, InitializeWorkspace>
-func asyncProjectorInitializeWorkspace(federation federation.IFederation, nowFunc coreutils.TimeFunc, ep extensionpoints.IExtensionPoint,
-	tokensAPI itokens.ITokens, wsPostInitFunc WSPostInitFunc) istructs.Projector {
+func asyncProjectorInitializeWorkspace(federation federation.IFederation, nowFunc coreutils.TimeFunc,
+	tokensAPI itokens.ITokens, wsPostInitFunc WSPostInitFunc, eps map[appdef.AppQName]extensionpoints.IExtensionPoint) istructs.Projector {
 	return istructs.Projector{
 		Name: qNameAPInitializeWorkspace,
-		Func: initializeWorkspaceProjector(nowFunc, federation, ep, tokensAPI, wsPostInitFunc),
+		Func: initializeWorkspaceProjector(nowFunc, federation, eps, tokensAPI, wsPostInitFunc),
 	}
 }
 

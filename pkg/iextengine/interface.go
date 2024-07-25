@@ -64,13 +64,13 @@ type IExtensionEngine interface {
 type ExtensionEngineFactories map[appdef.ExtensionEngineKind]IExtensionEngineFactory
 
 type BuiltInExtFunc func(ctx context.Context, io IExtensionIO) error
-type BuiltInExtFuncs map[appdef.FullQName]BuiltInExtFunc
-type BuiltInAppExtFuncs map[appdef.AppQName]BuiltInExtFuncs // Provided to construct factory of engines
+type BuiltInAppExtFuncs map[appdef.AppQName]BuiltInExtFuncs
+type BuiltInExtFuncs map[appdef.FullQName]BuiltInExtFunc // Provided to construct factory of engines
 
 type ExtensionModule struct {
-	Path           string   // СЌС‚Рѕ github.com/voedger/voedger
-	ModuleUrl      *url.URL // РїСѓС‚СЊ Рє С‚РѕРјСѓ РјРµСЃС‚Сѓ РЅР° РґРёСЃРєРµ, РіРґРµ Р»РµР¶РёС‚ wasm
-	ExtensionNames []string // С‚СѓС‚ РїРµСЂРµС‡РёСЃР»РёС‚СЊ РІСЃРµ РёРјРµРЅР°, РєРѕС‚РѕСЂС‹Рµ РїРµСЂРµС‡РёСЃР»РµРЅС‹ РІ EXTENSION ENGINE WASM
+	Path           string   // это github.com/voedger/voedger
+	ModuleUrl      *url.URL // путь к тому месту на диске, где лежит wasm
+	ExtensionNames []string // тут перечислить все имена, которые перечислены в EXTENSION ENGINE WASM
 }
 
 type IExtensionEngineFactory interface {

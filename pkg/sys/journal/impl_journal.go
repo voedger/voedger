@@ -19,15 +19,16 @@ import (
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-func provideQryJournal(cfg *istructsmem.AppConfigType, ep extensionpoints.IExtensionPoint) {
-	cfg.Resources.Add(istructsmem.NewQueryFunction(
+func provideQryJournal(sr istructsmem.IStatelessResources, eps map[appdef.AppQName]extensionpoints.IExtensionPoint) {
+	sr.AddQueries(appdef.SysPackagePath, istructsmem.NewQueryFunction(
 		appdef.NewQName(appdef.SysPackage, "Journal"),
-		qryJournalExec(ep, cfg.AppDef),
+		qryJournalExec(eps),
 	))
 }
-func qryJournalExec(ep extensionpoints.IExtensionPoint, appDef appdef.IAppDef) istructsmem.ExecQueryClosure {
+func qryJournalExec(eps map[appdef.AppQName]extensionpoints.IExtensionPoint) istructsmem.ExecQueryClosure {
 	return func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 		var fo, lo int64
+		ep := eps[args.State.App()]
 		ji := ep.ExtensionPoint(EPJournalIndices)
 		jp := ep.ExtensionPoint(EPJournalPredicates)
 		switch args.ArgumentObject.AsString(field_RangeUnit) {
@@ -49,6 +50,7 @@ func qryJournalExec(ep extensionpoints.IExtensionPoint, appDef appdef.IAppDef) i
 			return err
 		}
 
+		appDef := args.State.AppStructs().AppDef()
 		cb := func(_ istructs.IKey, value istructs.IStateValue) (err error) {
 			if fo == int64(0) {
 				return
