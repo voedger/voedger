@@ -73,9 +73,6 @@ func extName(qName appdef.QName, cfg *istructsmem.AppConfigType) appdef.FullQNam
 func provideAppsBuiltInExtFuncs(cfgs istructsmem.AppConfigsType) iextengine.BuiltInAppExtFuncs {
 	funcs := make(iextengine.BuiltInAppExtFuncs)
 
-func provideAppsBuiltInExtFuncs(cfgs istructsmem.AppConfigsType) iextengine.BuiltInAppExtFuncs {
-	funcs := make(iextengine.BuiltInAppExtFuncs)
-
 	for app, cfg := range cfgs {
 		appFuncs := make(iextengine.BuiltInExtFuncs)
 		cfg.Resources.Resources(func(qName appdef.QName) {

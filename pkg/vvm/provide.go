@@ -312,6 +312,7 @@ func provideAppPartitions(
 	saf appparts.SyncActualizerFactory,
 	act projectors.IActualizersService,
 	sr istructsmem.IStatelessResources,
+	appsArtefacts AppsArtefacts,
 ) (ap appparts.IAppPartitions, cleanup func(), err error) {
 
 	eef := engines.ProvideExtEngineFactories(engines.ExtEngineFactoriesConfig{
