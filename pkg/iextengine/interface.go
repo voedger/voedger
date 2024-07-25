@@ -68,9 +68,9 @@ type BuiltInAppExtFuncs map[appdef.AppQName]BuiltInExtFuncs
 type BuiltInExtFuncs map[appdef.FullQName]BuiltInExtFunc // Provided to construct factory of engines
 
 type ExtensionModule struct {
-	Path           string   // это github.com/voedger/voedger
-	ModuleUrl      *url.URL // путь к тому месту на диске, где лежит wasm
-	ExtensionNames []string // тут перечислить все имена, которые перечислены в EXTENSION ENGINE WASM
+	Path           string   // e.g. github.com/voedger/voedger
+	ModuleUrl      *url.URL // drive path to the wasm file
+	ExtensionNames []string // list of names defined in EXTENSION ENGINE WASM
 }
 
 type IExtensionEngineFactory interface {
