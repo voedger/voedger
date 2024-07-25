@@ -58,6 +58,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime/debug"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -264,7 +265,12 @@ func provideBootstrapOperator(federation2 federation.IFederation, asp istructs.I
 		if app.Name == istructs.AppQName_sys_cluster {
 			clusterBuiltinApp = btstrp.ClusterBuiltInApp(app)
 		} else {
-			otherApps = append(otherApps, app)
+			isSidecarApp := slices.ContainsFunc(sidecarApps, func(sa appparts.SidecarApp) bool {
+				return sa.Name == app.Name
+			})
+			if !isSidecarApp {
+				otherApps = append(otherApps, app)
+			}
 		}
 	}
 	if clusterBuiltinApp.Name == appdef.NullAppQName {
@@ -585,6 +591,9 @@ func parseSidecarAppSubDir(fullPath string, basePath string, extModuleURLs map[s
 }
 
 func provideSidecarApps(vvmConfig *VVMConfig) (res []appparts.SidecarApp, err error) {
+	if len(vvmConfig.ConfigPath) == 0 {
+		return nil, nil
+	}
 	appsPath := filepath.Join(vvmConfig.ConfigPath, "apps")
 	appsEntries, err := os.ReadDir(appsPath)
 	if err != nil {

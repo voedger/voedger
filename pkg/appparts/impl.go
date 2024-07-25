@@ -58,6 +58,14 @@ func (aps *apps) DeployApp(name appdef.AppQName, extModuleURLs map[string]*url.U
 	aps.apps[name] = a
 	aps.mx.Unlock()
 
+	// TODO
+	var appStructs istructs.IAppStructs
+	if len(extModuleURLs) == 0 {
+		// TODO: is sidecarapp criteria?
+		- мы уже создавали New в c.cluster.DeployApp, чтобы создать AppWorkspaces. Теперь второй раз вызываем New?
+		- как передать сюда numAppWrospaces? может, IAppParts.DeploySidecarApp?
+		appStructs, err = aps.structs.New(name, def, istructs.ClusterApps[name], numAppWorkspaces)
+	}
 	appStructs, err := aps.structs.BuiltIn(name)
 	if err != nil {
 		panic(err)
