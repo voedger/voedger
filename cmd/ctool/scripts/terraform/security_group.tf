@@ -1,7 +1,7 @@
-resource "aws_security_group" "scylla_hosts" {
-  name = "scylla_hosts"
-  description = "Rules for nodes in scylla cluster"
-  vpc_id            = aws_vpc.scylla_cluster_vpc.id
+resource "aws_security_group" "cluster_hosts" {
+  name = "cluster_hosts"
+  description = "Rules for nodes in cluster"
+  vpc_id            = aws_vpc.cluster_vpc.id
 
   ingress {
     from_port = 22
@@ -18,11 +18,26 @@ resource "aws_security_group" "scylla_hosts" {
   }
 
   ingress {
+    from_port = 3000
+    to_port = 3000
+    protocol = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    from_port = 9090
+    to_port = 9090
+    protocol = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
     from_port = 80
     to_port = 80
     protocol = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
+
   ingress {
     from_port = 443
     to_port = 443
@@ -38,13 +53,6 @@ resource "aws_security_group" "scylla_hosts" {
   }
 
   ingress {
-    from_port = 0
-    to_port = 0
-    protocol = "tcp"
-    cidr_blocks = ["185.254.190.75/32"]
-  }
-
-  ingress {
     from_port = -1
     to_port = -1
     protocol = "icmp"
@@ -55,7 +63,7 @@ resource "aws_security_group" "scylla_hosts" {
     from_port = 0
     to_port = 0
     protocol = "-1"
-    cidr_blocks = [aws_vpc.scylla_cluster_vpc.cidr_block]
+    cidr_blocks = [aws_vpc.cluster_vpc.cidr_block]
   }
 
   egress {
@@ -67,6 +75,6 @@ resource "aws_security_group" "scylla_hosts" {
 
   tags = {
     Name        = "Internal"
-    Description = "Rules for nodes in scylla cluster"
+    Description = "Rules for nodes in cluster"
   }
 }
