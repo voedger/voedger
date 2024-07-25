@@ -37,6 +37,7 @@ var (
 	isRouterStopTested   bool
 	router               *testRouter
 	clientDisconnections = make(chan struct{}, 1)
+	previousBusTimeout   = ibus.DefaultTimeout
 )
 
 func TestBasicUsage_SingleResponse(t *testing.T) {
@@ -259,7 +260,7 @@ func TestClientDisconnect_CtxCanceledOnElemSend(t *testing.T) {
 		log.Println(string(entireResp))
 	}
 
-	// close the request and signla to the handler to try to send to the disconnected client
+	// close the request and signal to the handler to try to send to the disconnected client
 	resp.Request.Body.Close()
 	resp.Body.Close()
 	close(clientClosed)
@@ -351,11 +352,9 @@ func TestClientDisconnect_FailedToWriteResponse(t *testing.T) {
 			resp.Body.Close()
 
 			// wait for write to the socket will be failed indeed. It happens not at once
-			_, err := w.Write([]byte{0})
-			w.(http.Flusher).Flush()
-			for err == nil {
-				_, err = w.Write([]byte{0})
-				w.(http.Flusher).Flush()
+			// that will guarantee context.Canceled error on next sending instead of possible ErrNoConsumer
+			requestCtx := <-requestCtxCh
+			for requestCtx.Err() == nil {
 			}
 		})
 	}
@@ -421,6 +420,7 @@ type testRouter struct {
 	handler      func(requestCtx context.Context, sender ibus.ISender, request ibus.Request)
 	bus          ibus.IBus
 	adminService pipeline.IService
+	busTimeout   time.Duration
 }
 
 func startRouter(t *testing.T, rp RouterParams, bus ibus.IBus, busTimeout time.Duration) {
@@ -444,12 +444,16 @@ func startRouter(t *testing.T, rp RouterParams, bus ibus.IBus, busTimeout time.D
 	onRequestCtxClosed = func() {
 		clientDisconnections <- struct{}{}
 	}
+	previousBusTimeout = busTimeout
 }
 
 func setUp(t *testing.T, handlerFunc func(requestCtx context.Context, sender ibus.ISender, request ibus.Request), busTimeout time.Duration) {
 	if router != nil {
-		router.handler = handlerFunc
-		return
+		if previousBusTimeout == busTimeout {
+			router.handler = handlerFunc
+			return
+		}
+		tearDown()
 	}
 	rp := RouterParams{
 		Port:             0,
@@ -461,9 +465,10 @@ func setUp(t *testing.T, handlerFunc func(requestCtx context.Context, sender ibu
 		router.handler(requestCtx, sender, request)
 	})
 	router = &testRouter{
-		bus:     bus,
-		wg:      &sync.WaitGroup{},
-		handler: handlerFunc,
+		bus:        bus,
+		wg:         &sync.WaitGroup{},
+		handler:    handlerFunc,
+		busTimeout: busTimeout,
 	}
 
 	startRouter(t, rp, bus, busTimeout)
