@@ -13,6 +13,7 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"runtime/debug"
 	"strconv"
 	"strings"
 	"time"
@@ -30,6 +31,7 @@ import (
 	"github.com/voedger/voedger/pkg/iextengine"
 	"github.com/voedger/voedger/pkg/itokens"
 	"github.com/voedger/voedger/pkg/router"
+	"github.com/voedger/voedger/pkg/sys"
 	"github.com/voedger/voedger/pkg/vvm/engines"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -172,10 +174,12 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 		apppartsctl.New,
 		provideAppConfigsTypeEmpty,
 		provideBuiltInAppPackages,
-		provideExtensionPoints,
 		provideBootstrapOperator,
 		provideAdminEndpointServiceOperator,
 		providePublicEndpointServiceOperator,
+		provideBuildInfo,
+		provideAppsExtensionPoints,
+		provideStatelessResources,
 		// wire.Value(vvmConfig.NumCommandProcessors) -> (wire bug?) value github.com/untillpro/airs-bp3/vvm.CommandProcessorsCount can't be used: vvmConfig is not declared in package scope
 		wire.FieldsOf(&vvmConfig,
 			"NumCommandProcessors",
@@ -214,10 +218,6 @@ func provideBootstrapOperator(federation federation.IFederation, asp istructs.IA
 	return pipeline.NewSyncOp(func(ctx context.Context, work interface{}) (err error) {
 		return btstrp.Bootstrap(federation, asp, timeFunc, apppar, clusterBuiltinApp, otherApps, itokens, storageProvider, blobberAppStoragePtr, routerAppStoragePtr)
 	}), nil
-}
-
-func provideExtensionPoints(appsArtefacts AppsArtefacts) map[appdef.AppQName]extensionpoints.IExtensionPoint {
-	return appsArtefacts.appEPs
 }
 
 func provideBuiltInAppPackages(appsArtefacts AppsArtefacts) []BuiltInAppPackages {
@@ -263,16 +263,43 @@ func provideAsyncActualizersService(cfg projectors.BasicAsyncActualizerConfig) p
 	return projectors.ProvideActualizers(cfg)
 }
 
+func provideBuildInfo() (*debug.BuildInfo, error) {
+	buildInfo, ok := debug.ReadBuildInfo()
+	if !ok {
+		return nil, errors.New("no build info")
+	}
+	return buildInfo, nil
+}
+
+func provideAppsExtensionPoints(vvmConfig *VVMConfig) map[appdef.AppQName]extensionpoints.IExtensionPoint {
+	res := map[appdef.AppQName]extensionpoints.IExtensionPoint{}
+	for appQName := range vvmConfig.VVMAppsBuilder {
+		res[appQName] = extensionpoints.NewRootExtensionPoint()
+	}
+	return res
+}
+
+func provideStatelessResources(cfgs AppConfigsTypeEmpty, vvmCfg *VVMConfig, appEPs map[appdef.AppQName]extensionpoints.IExtensionPoint,
+	buildInfo *debug.BuildInfo, sp istorage.IAppStorageProvider, itokens itokens.ITokens, federation federation.IFederation,
+	asp istructs.IAppStructsProvider, atf payloads.IAppTokensFactory) istructsmem.IStatelessResources {
+	ssr := istructsmem.NewStatelessResources()
+	sys.ProvideStateless(ssr, vvmCfg.SmtpConfig, appEPs, buildInfo, sp, vvmCfg.WSPostInitFunc, vvmCfg.TimeFunc, itokens, federation,
+		asp, atf)
+	return ssr
+}
+
 func provideAppPartitions(
 	asp istructs.IAppStructsProvider,
 	saf appparts.SyncActualizerFactory,
 	act projectors.IActualizersService,
 	appsArtefacts AppsArtefacts,
+	sr istructsmem.IStatelessResources,
 ) (ap appparts.IAppPartitions, cleanup func(), err error) {
 
 	eef := engines.ProvideExtEngineFactories(engines.ExtEngineFactoriesConfig{
-		AppConfigs: appsArtefacts.AppConfigsType,
-		WASMConfig: iextengine.WASMFactoryConfig{Compile: false},
+		StatelessResources: sr,
+		AppConfigs:         appsArtefacts.AppConfigsType,
+		WASMConfig:         iextengine.WASMFactoryConfig{Compile: false},
 	})
 
 	return appparts.New2(
@@ -283,9 +310,9 @@ func provideAppPartitions(
 	)
 }
 
-func provideIsDeviceAllowedFunc(appsArtefacts AppsArtefacts) iauthnzimpl.IsDeviceAllowedFuncs {
+func provideIsDeviceAllowedFunc(appEPs map[appdef.AppQName]extensionpoints.IExtensionPoint) iauthnzimpl.IsDeviceAllowedFuncs {
 	res := iauthnzimpl.IsDeviceAllowedFuncs{}
-	for appQName, appEP := range appsArtefacts.appEPs {
+	for appQName, appEP := range appEPs {
 		val, ok := appEP.Find(apps.EPIsDeviceAllowedFunc)
 		if !ok {
 			res[appQName] = func(as istructs.IAppStructs, requestWSID istructs.WSID, deviceProfileWSID istructs.WSID) (ok bool, err error) {
@@ -441,8 +468,9 @@ func provideVVMApps(builtInApps []appparts.BuiltInApp) (vvmApps VVMApps) {
 	return vvmApps
 }
 
-func provideBuiltInAppsArtefacts(vvmConfig *VVMConfig, apis apps.APIs, cfgs AppConfigsTypeEmpty) (AppsArtefacts, error) {
-	return vvmConfig.VVMAppsBuilder.BuildAppsArtefacts(apis, cfgs)
+func provideBuiltInAppsArtefacts(vvmConfig *VVMConfig, apis apps.APIs, cfgs AppConfigsTypeEmpty,
+	appEPs map[appdef.AppQName]extensionpoints.IExtensionPoint) (AppsArtefacts, error) {
+	return vvmConfig.VVMAppsBuilder.BuildAppsArtefacts(apis, cfgs, appEPs)
 }
 
 func provideServiceChannelFactory(vvmConfig *VVMConfig, procbus iprocbus.IProcBus) ServiceChannelFactory {
@@ -549,7 +577,7 @@ func provideCommandChannelFactory(sch ServiceChannelFactory) CommandChannelFacto
 
 func provideQueryProcessors(qpCount istructs.NumQueryProcessors, qc QueryChannel, appParts appparts.IAppPartitions, qpFactory queryprocessor.ServiceFactory,
 	imetrics imetrics.IMetrics, vvm commandprocessor.VVMName, mpq MaxPrepareQueriesType, authn iauthnz.IAuthenticator, authz iauthnz.IAuthorizer,
-	tokens itokens.ITokens, federation federation.IFederation) OperatorQueryProcessors {
+	tokens itokens.ITokens, federation federation.IFederation, statelessResources istructsmem.IStatelessResources) OperatorQueryProcessors {
 	forks := make([]pipeline.ForkOperatorOptionFunc, qpCount)
 	resultSenderFactory := func(ctx context.Context, sender ibus.ISender) queryprocessor.IResultSenderClosable {
 		return &resultSenderErrorFirst{
@@ -559,7 +587,7 @@ func provideQueryProcessors(qpCount istructs.NumQueryProcessors, qc QueryChannel
 	}
 	for i := 0; i < int(qpCount); i++ {
 		forks[i] = pipeline.ForkBranch(pipeline.ServiceOperator(qpFactory(iprocbus.ServiceChannel(qc), resultSenderFactory, appParts, int(mpq), imetrics,
-			string(vvm), authn, authz, tokens, federation)))
+			string(vvm), authn, authz, tokens, federation, statelessResources)))
 	}
 	return pipeline.ForkOperator(pipeline.ForkSame, forks[0], forks[1:]...)
 }
@@ -570,29 +598,6 @@ func provideCommandProcessors(cpCount istructs.NumCommandProcessors, ccf Command
 		forks[i] = pipeline.ForkBranch(pipeline.ServiceOperator(cpFactory(ccf(i), istructs.PartitionID(i))))
 	}
 	return pipeline.ForkOperator(pipeline.ForkSame, forks[0], forks[1:]...)
-}
-
-// forks appServices per apps
-// [appsAmount]appServices
-func provideOperatorAppServices(apf AppServiceFactory, appsArtefacts AppsArtefacts, asp istructs.IAppStructsProvider) OperatorAppServicesFactory {
-	return func(vvmCtx context.Context) pipeline.ISyncOperator {
-		var branches []pipeline.ForkOperatorOptionFunc
-		for _, builtInAppPackages := range appsArtefacts.builtInAppPackages {
-			as, err := asp.BuiltIn(builtInAppPackages.Name)
-			if err != nil {
-				panic(err)
-			}
-			if len(as.AsyncProjectors()) == 0 {
-				continue
-			}
-			branch := pipeline.ForkBranch(apf(vvmCtx, builtInAppPackages.Name, as.AsyncProjectors(), builtInAppPackages.NumParts))
-			branches = append(branches, branch)
-		}
-		if len(branches) == 0 {
-			return &pipeline.NOOP{}
-		}
-		return pipeline.ForkOperator(pipeline.ForkSame, branches[0], branches[1:]...)
-	}
 }
 
 func provideServicePipeline(

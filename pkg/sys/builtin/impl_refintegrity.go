@@ -19,12 +19,11 @@ import (
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-func provideRefIntegrityValidation(cfg *istructsmem.AppConfigType) {
-	cfg.AddSyncProjectors(istructs.Projector{
+func provideRefIntegrityValidation(sr istructsmem.IStatelessResources) {
+	sr.AddProjectors(appdef.SysPackagePath, istructs.Projector{
 		Name: qNameRecordsRegistryProjector,
-		Func: provideRecordsRegistryProjector(cfg),
+		Func: recordsRegistryProjector,
 	})
-	cfg.AddCUDValidators(provideRefIntegrityValidator())
 }
 
 func CheckRefIntegrity(obj istructs.IRowReader, appStructs istructs.IAppStructs, wsid istructs.WSID) (err error) {
@@ -64,22 +63,21 @@ func wrongQName(targetID istructs.RecordID, srcQName appdef.QName, srcField stri
 		targetID, srcQName, srcField, actualQName, allowedQNames)
 }
 
-func provideRecordsRegistryProjector(cfg *istructsmem.AppConfigType) func(event istructs.IPLogEvent, st istructs.IState, intents istructs.IIntents) (err error) {
-	return func(event istructs.IPLogEvent, st istructs.IState, intents istructs.IIntents) (err error) {
-		argType := cfg.AppDef.Type(event.ArgumentObject().QName())
-		if argType.Kind() == appdef.TypeKind_ODoc || argType.Kind() == appdef.TypeKind_ORecord {
-			if err := writeObjectToRegistry(event.ArgumentObject(), cfg.AppDef, st, intents, event.WLogOffset()); err != nil {
-				// notest
-				return err
-			}
+func recordsRegistryProjector(event istructs.IPLogEvent, st istructs.IState, intents istructs.IIntents) (err error) {
+	appDef := st.AppStructs().AppDef()
+	argType := appDef.Type(event.ArgumentObject().QName())
+	if argType.Kind() == appdef.TypeKind_ODoc || argType.Kind() == appdef.TypeKind_ORecord {
+		if err := writeObjectToRegistry(event.ArgumentObject(), appDef, st, intents, event.WLogOffset()); err != nil {
+			// notest
+			return err
 		}
-		return iterate.ForEachError(event.CUDs, func(rec istructs.ICUDRow) error {
-			if !rec.IsNew() {
-				return nil
-			}
-			return writeObjectToRegistry(rec, cfg.AppDef, st, intents, event.WLogOffset())
-		})
 	}
+	return iterate.ForEachError(event.CUDs, func(rec istructs.ICUDRow) error {
+		if !rec.IsNew() {
+			return nil
+		}
+		return writeObjectToRegistry(rec, appDef, st, intents, event.WLogOffset())
+	})
 }
 
 func writeObjectToRegistry(root istructs.IRowReader, appDef appdef.IAppDef, st istructs.IState, intents istructs.IIntents, wLogOffsetToStore istructs.Offset) error {

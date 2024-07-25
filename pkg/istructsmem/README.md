@@ -45,7 +45,7 @@
 
 - `istructsmem.appViewRecordsType`
   * represents IViewRecords
-  
+
   * `appViewRecordsType.KeyBuilder`
     + Returns new key builder for specified view
   * `appViewRecordsType.NewValueBuilder`
@@ -60,3 +60,67 @@
     + Reads view records (key and value) for specified key from the storage by calling callback function.
     + Key may be build partially. In this case all view records, witch keys starts with specified key, will be reads
 
+```mermaid
+  erDiagram
+  statelessPackage ||..|| sys: "e.g."
+  statelessPackage || ..|| IStatelessPkgBuilder: accepts
+  statelessPackage ||..|| IStatelessPkgResourcesBuilder: fills
+  IStatelessPkgResourcesBuilder ||..|| IStatelessPkgBuilder: "obtained from"
+  statelessPackage ||..|| IStatelessPkg: returns
+  IStatelessPkg ||..|| IStatelessPkgBuilder: "built from"
+  IStatelessPkgBuilder {
+    func AddPackage(path)IStatelessPkgResourcesBuilder
+    func Build()IStatelessPkg
+  }
+  VVM ||..|{ IStatelessPkg: "wires as map by path"
+  IStatelessPkg ||..|{ AppConfigType: "wired into"
+  IStatelessPkg ||..|{ Processor: "provided to"
+  IStatelessPkg ||..|| ExtEngine: "provided to"
+
+
+  Application ||..|| AppConfigType: fills
+  Application ||..|| PackageFS: provides
+  PackageFS ||..|| "sql files": "is FS with"
+  statefullPackage ||..|| AppConfigType: fills
+
+```
+
+```mermaid
+  erDiagram
+  VVM ||..|{ BuiltinAppBuilder: collects
+  BuiltinAppBuilder ||..|| func: is
+  BuiltinAppBuilder ||..|| BuiltinAppDef: returns
+  BuiltinAppBuilder ||..|| AppConfigType: fills
+  AppConfigType ||..|| AppConfigsType: "is part of"
+  BuiltinAppDef {
+    AppDeploymentDescriptor field
+	  AppQName field
+	  PackageFS slice
+  }
+  BuiltinAppDef ||..|| BuiltinApp: "sql parsed into"
+  BuiltinApp {
+    	AppDeploymentDescriptor field
+    	Name field
+    	IAppDef field
+  }
+  BuiltinAppDef ||..|| BuiltInAppPackages: "wired into"
+  BuiltinApp ||..|| BuiltInAppPackages: "wired into"
+  BuiltInAppPackages {
+    BuiltInApp field
+	  PackageFS slice
+  }
+  BuiltInAppPackages ||..|| AppsArtefacts: "wired into"
+  AppsArtefacts {
+    AppConfigsType field
+	  BuiltInAppPackages slice
+  }
+  AppConfigsType ||..|| AppsArtefacts: "wired into"
+  BuiltInAppPackages }|..|| AppsArtefacts: "wired into"
+  AppsArtefacts ||..|| AppResources: "wired into"
+  AppResources {
+    AppConfigsType field
+		StatelessPackages slice
+  }
+  AppConfigsType ||..|| AppResources: "wired into"
+
+```
