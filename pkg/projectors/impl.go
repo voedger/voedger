@@ -73,7 +73,6 @@ func newSyncBranch(conf SyncActualizerConf, projector istructs.Projector, servic
 					return nil
 				}
 				return appPart.Invoke(ctx, projector.Name, s, s)
-				// return projector.Func(service.event, s, s)
 			}),
 		pipeline.WireFunc("IntentsValidator", func(_ context.Context, _ interface{}) (err error) {
 			return s.ValidateIntents()
