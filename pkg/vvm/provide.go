@@ -177,7 +177,6 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 		appparts.New2,                     // appparts.IAppPartitions
 		engines.ProvideExtEngineFactories,
 		provideIActualizers,
-		provideExtensionFactoriesConfig,
 		apppartsctl.New,
 		provideAppConfigsTypeEmpty,
 		provideBuiltInAppPackages,
@@ -206,13 +205,6 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 			"SecretsReader",
 		),
 	))
-}
-
-func provideExtensionFactoriesConfig(appsArtefacts BuiltInAppsArtefacts) engines.ExtEngineFactoriesConfig {
-	return engines.ExtEngineFactoriesConfig{
-		AppConfigs: appsArtefacts.AppConfigsType,
-		WASMConfig: iextengine.WASMFactoryConfig{Compile: false},
-	}
 }
 
 func provideIActualizers(actService projectors.IActualizersService) appparts.IActualizers {
