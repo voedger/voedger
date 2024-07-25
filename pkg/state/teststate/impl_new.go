@@ -454,6 +454,8 @@ func (cts *CommandTestState) CUDRow(fQName IFullQName, id int, keyValueList ...a
 }
 
 func (cts *CommandTestState) Run() {
+	defer cts.recoverPanicInTestState()
+
 	cts.putRecords()
 	cts.putCudRows()
 	cts.putArgument()
@@ -464,14 +466,6 @@ func (cts *CommandTestState) Run() {
 }
 
 func (cts *CommandTestState) runExtensionFunc() {
-	defer func() {
-		// stop if panic occurs before requiring intents
-		r := recover()
-		if r != nil {
-			require.Fail(cts.t, r.(error).Error())
-		}
-	}()
-
 	if cts.extensionFunc != nil {
 		cts.funcRunner.Do(cts.extensionFunc)
 	}
@@ -511,6 +505,14 @@ func (cts *CommandTestState) requireSingleton(fQName IFullQName, isInsertIntent 
 
 func (cts *CommandTestState) requireRecord(fQName IFullQName, id int, isInsertIntent bool, keyValueList ...any) {
 	cts.requireIntent(fQName, id, false, isInsertIntent, keyValueList...)
+}
+
+// recoverPanicInTestState must be called in defer to recover panic in the test state
+func (cts *CommandTestState) recoverPanicInTestState() {
+	r := recover()
+	if r != nil {
+		require.Fail(cts.t, r.(error).Error())
+	}
 }
 
 // requireIntent checks if the intent exists in the state
@@ -709,6 +711,8 @@ func (pts *ProjectorTestState) Offset(offset int) ITestRunner {
 }
 
 func (pts *ProjectorTestState) Run() {
+	defer pts.recoverPanicInTestState()
+
 	pts.putRecords()
 	pts.putCudRows()
 	pts.putArgument()
