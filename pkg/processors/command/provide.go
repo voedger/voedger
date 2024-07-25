@@ -11,7 +11,6 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/goutils/logger"
-	"github.com/voedger/voedger/pkg/istructsmem"
 
 	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/iauthnz"
@@ -29,15 +28,14 @@ type workspace struct {
 }
 
 type cmdProc struct {
-	pNumber            istructs.PartitionID
-	appPartition       *appPartition
-	appPartitions      map[appdef.AppQName]*appPartition
-	n10nBroker         in10n.IN10nBroker
-	now                coreutils.TimeFunc
-	authenticator      iauthnz.IAuthenticator
-	authorizer         iauthnz.IAuthorizer
-	storeOp            pipeline.ISyncOperator
-	statelessResources istructsmem.IStatelessResources
+	pNumber       istructs.PartitionID
+	appPartition  *appPartition
+	appPartitions map[appdef.AppQName]*appPartition
+	n10nBroker    in10n.IN10nBroker
+	now           coreutils.TimeFunc
+	authenticator iauthnz.IAuthenticator
+	authorizer    iauthnz.IAuthorizer
+	storeOp       pipeline.ISyncOperator
 }
 
 type appPartition struct {
