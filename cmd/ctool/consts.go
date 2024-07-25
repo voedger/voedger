@@ -8,8 +8,12 @@ package main
 // nolint
 const (
 	// edition types
-	clusterEditionCE = "CE"
-	clusterEditionSE = "SE"
+	clusterEditionCE     = "CE"
+	clusterEditionSE     = "SE"
+	clusterSubEditionSE3 = "SE3"
+	clusterSubEditionSE5 = "SE5"
+	se3NodeCount         = 3
+	se5NodeCount         = 5
 
 	// name of the cluster configuration file
 	clusterConfFileName  = "cluster.json"
@@ -33,9 +37,10 @@ const (
 	dbNodeOffset = 2
 
 	// node Roles
-	nrCENode  = "CENode"
-	nrAppNode = "AppNode"
-	nrDBNode  = "DBNode"
+	nrCENode    = "CENode"
+	nrAppNode   = "AppNode"
+	nrAppDbNode = "AppDbNode"
+	nrDBNode    = "DBNode"
 
 	embedScriptsDir = "scripts"
 
@@ -74,6 +79,7 @@ const (
 	envVoedgerSshKey      = "VOEDGER_SSH_KEY"
 	envVoedgerCeNode      = "VOEDGER_CE_NODE"
 	envVoedgerHttpPort    = "VOEDGER_HTTP_PORT"
+	envVoedgerEdition     = "VOEDGER_EDITION"
 
 	minMonPasswordLength = 5
 	monUserName          = "voedger"
