@@ -34,6 +34,7 @@ jobs:
       TF_VAR_git_repo_url: "https://github.com/voedger/voedger"
       TF_VAR_ssh_port: 2214
       TF_VAR_issue_number: ${{ github.event.issue.number }}
+      TF_VAR_included_nodes = '["node_00", "node_01", "node_02", "node_03", "node_04", "node_instead_00", "node_instead_01"]'
 
     steps:
       - name: Check Issue
@@ -141,6 +142,7 @@ jobs:
       TF_VAR_git_repo_url: "https://github.com/voedger/voedger"
       TF_VAR_ssh_port: 2214
       TF_VAR_issue_number: ${{ github.event.issue.number }}
+      TF_VAR_included_nodes = '["node_00", "node_01", "node_02", "node_03", "node_04", "node_instead_00", "node_instead_01"]'
 
     steps:
       - name: Checkout
