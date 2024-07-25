@@ -62,17 +62,6 @@ func Provide(sr istructsmem.IStatelessResources, timeFunc coreutils.TimeFunc, to
 		syncProjectorChildWorkspaceIdx(),
 		syncProjectorWorkspaceIDIdx(),
 	)
-
-	// // projectors
-	// sprb.AddAsyncProjectors(
-	// 	asyncProjectorInvokeCreateWorkspace(federation, itokens),
-	// 	asyncProjectorInvokeCreateWorkspaceID(federation, itokens),
-	// 	asyncProjectorInitializeWorkspace(federation, timeFunc, itokens, wsPostInitFunc, eps),
-	// )
-	// sprb.AddSyncProjectors(
-	// 	syncProjectorChildWorkspaceIdx(),
-	// 	syncProjectorWorkspaceIDIdx(),
-	// )
 }
 
 // proj.sys.ChildWorkspaceIdx
