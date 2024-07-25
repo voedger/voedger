@@ -12,15 +12,17 @@ import (
 	"github.com/voedger/voedger/pkg/istructsmem/qrename"
 )
 
-func proivideRenameQName(cfg *istructsmem.AppConfigType, asp istorage.IAppStorageProvider) {
-	cfg.Resources.Add(istructsmem.NewCommandFunction(
+func proivideRenameQName(sr istructsmem.IStatelessResources, asp istorage.IAppStorageProvider) {
+	sr.AddCommands(appdef.SysPackagePath, istructsmem.NewCommandFunction(
 		appdef.NewQName(appdef.SysPackage, "RenameQName"),
-		provideExecCmdRenameQName(asp, cfg)))
+		provideExecCmdRenameQName(asp)))
 }
 
-func provideExecCmdRenameQName(asp istorage.IAppStorageProvider, cfg *istructsmem.AppConfigType) istructsmem.ExecCommandClosure {
+func provideExecCmdRenameQName(asp istorage.IAppStorageProvider) istructsmem.ExecCommandClosure {
 	return func(args istructs.ExecCommandArgs) (err error) {
-		storage, err := asp.AppStorage(cfg.Name)
+		args.State.AppStructs()
+		appQName := args.State.AppStructs().AppQName()
+		storage, err := asp.AppStorage(appQName)
 		if err != nil {
 			// notest
 			return err

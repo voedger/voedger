@@ -23,38 +23,40 @@ import (
 	"github.com/voedger/voedger/pkg/utils/federation"
 )
 
-func provideDeactivateWorkspace(cfg *istructsmem.AppConfigType, tokensAPI itokens.ITokens, federation federation.IFederation) {
+func provideDeactivateWorkspace(sr istructsmem.IStatelessResources, tokensAPI itokens.ITokens, federation federation.IFederation) {
 
-	// c.sys.DeactivateWorkspace
+	sr.AddCommands(appdef.SysPackagePath,
+		// c.sys.DeactivateWorkspace
+		// target app, target WSID
+		istructsmem.NewCommandFunction(
+			qNameCmdInitiateDeactivateWorkspace,
+			cmdInitiateDeactivateWorkspaceExec,
+		),
+
+		// c.sys.OnWorkspaceDeactivated
+		// owner app, owner WSID
+		istructsmem.NewCommandFunction(
+			appdef.NewQName(appdef.SysPackage, "OnWorkspaceDeactivated"),
+			cmdOnWorkspaceDeactivatedExec,
+		),
+
+		// c.sys.OnJoinedWorkspaceDeactivated
+		// target app, profile WSID
+		istructsmem.NewCommandFunction(
+			appdef.NewQName(appdef.SysPackage, "OnJoinedWorkspaceDeactivated"),
+			cmdOnJoinedWorkspaceDeactivateExec,
+		),
+
+		// c.sys.OnChildWorkspaceDeactivated
+		// ownerApp/ownerWSID
+		istructsmem.NewCommandFunction(
+			appdef.NewQName(appdef.SysPackage, "OnChildWorkspaceDeactivated"),
+			cmdOnChildWorkspaceDeactivatedExec,
+		),
+	)
+
 	// target app, target WSID
-	cfg.Resources.Add(istructsmem.NewCommandFunction(
-		qNameCmdInitiateDeactivateWorkspace,
-		cmdInitiateDeactivateWorkspaceExec,
-	))
-
-	// c.sys.OnWorkspaceDeactivated
-	// owner app, owner WSID
-	cfg.Resources.Add(istructsmem.NewCommandFunction(
-		appdef.NewQName(appdef.SysPackage, "OnWorkspaceDeactivated"),
-		cmdOnWorkspaceDeactivatedExec,
-	))
-
-	// c.sys.OnJoinedWorkspaceDeactivated
-	// target app, profile WSID
-	cfg.Resources.Add(istructsmem.NewCommandFunction(
-		appdef.NewQName(appdef.SysPackage, "OnJoinedWorkspaceDeactivated"),
-		cmdOnJoinedWorkspaceDeactivateExec,
-	))
-
-	// c.sys.OnChildWorkspaceDeactivated
-	// ownerApp/ownerWSID
-	cfg.Resources.Add(istructsmem.NewCommandFunction(
-		appdef.NewQName(appdef.SysPackage, "OnChildWorkspaceDeactivated"),
-		cmdOnChildWorkspaceDeactivatedExec,
-	))
-
-	// target app, target WSID
-	cfg.AddAsyncProjectors(istructs.Projector{
+	sr.AddProjectors(appdef.SysPackagePath, istructs.Projector{
 		Name: qNameProjectorApplyDeactivateWorkspace,
 		Func: projectorApplyDeactivateWorkspace(federation, tokensAPI),
 	})

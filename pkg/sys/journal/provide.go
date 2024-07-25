@@ -11,13 +11,15 @@ import (
 	"github.com/voedger/voedger/pkg/istructsmem"
 )
 
-func Provide(cfg *istructsmem.AppConfigType, ep extensionpoints.IExtensionPoint) {
-	provideQryJournal(cfg, ep)
-	ji := ep.ExtensionPoint(EPJournalIndices)
-	ji.AddNamed(QNameViewWLogDates.String(), QNameViewWLogDates)
-	ji.AddNamed("", QNameViewWLogDates) // default index
-	jp := ep.ExtensionPoint(EPJournalPredicates)
-	jp.AddNamed("all", func(schemas appdef.IWorkspace, qName appdef.QName) bool { return true }) // default predicate
+func Provide(sr istructsmem.IStatelessResources, eps map[appdef.AppQName]extensionpoints.IExtensionPoint) {
+	provideQryJournal(sr, eps)
+	for _, ep := range eps {
+		ji := ep.ExtensionPoint(EPJournalIndices)
+		ji.AddNamed(QNameViewWLogDates.String(), QNameViewWLogDates)
+		ji.AddNamed("", QNameViewWLogDates) // default index
+		jp := ep.ExtensionPoint(EPJournalPredicates)
+		jp.AddNamed("all", func(schemas appdef.IWorkspace, qName appdef.QName) bool { return true }) // default predicate
+	}
 
-	cfg.AddAsyncProjectors(istructs.Projector{Name: QNameProjectorWLogDates, Func: wLogDatesProjector})
+	sr.AddProjectors(appdef.SysPackagePath, istructs.Projector{Name: QNameProjectorWLogDates, Func: wLogDatesProjector})
 }
