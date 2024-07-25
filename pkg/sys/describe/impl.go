@@ -13,14 +13,14 @@ import (
 )
 
 func qryDescribePackageNames(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
-	as := args.Workpiece.(interface{ GetAppStructs() istructs.IAppStructs }).GetAppStructs()
+	as := args.State.AppStructs()
 	names := as.DescribePackageNames()
 	namesStr := strings.Join(names, ",")
 	return callback(&result{res: namesStr})
 }
 
 func qryDescribePackage(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
-	as := args.Workpiece.(interface{ GetAppStructs() istructs.IAppStructs }).GetAppStructs()
+	as := args.State.AppStructs()
 
 	packageName := args.ArgumentObject.AsString(field_PackageName)
 	packageDescription := as.DescribePackage(packageName)

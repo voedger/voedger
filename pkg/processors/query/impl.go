@@ -19,11 +19,13 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appparts"
+	"github.com/voedger/voedger/pkg/goutils/iterate"
 	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/iprocbus"
 	"github.com/voedger/voedger/pkg/isecrets"
 	"github.com/voedger/voedger/pkg/isecretsimpl"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/itokens"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	imetrics "github.com/voedger/voedger/pkg/metrics"
@@ -91,7 +93,8 @@ func implRowsProcessorFactory(ctx context.Context, appDef appdef.IAppDef, state 
 
 func implServiceFactory(serviceChannel iprocbus.ServiceChannel, resultSenderClosableFactory ResultSenderClosableFactory,
 	appParts appparts.IAppPartitions, maxPrepareQueries int, metrics imetrics.IMetrics, vvm string,
-	authn iauthnz.IAuthenticator, authz iauthnz.IAuthorizer, itokens itokens.ITokens, federation federation.IFederation) pipeline.IService {
+	authn iauthnz.IAuthenticator, authz iauthnz.IAuthorizer, itokens itokens.ITokens, federation federation.IFederation,
+	statelessResources istructsmem.IStatelessResources) pipeline.IService {
 	secretReader := isecretsimpl.ProvideSecretReader()
 	return pipeline.NewService(func(ctx context.Context) {
 		var p pipeline.ISyncPipeline
@@ -111,7 +114,7 @@ func implServiceFactory(serviceChannel iprocbus.ServiceChannel, resultSenderClos
 				func() { // borrowed application partition should be guaranteed to be freed
 					defer qwork.release()
 					if p == nil {
-						p = newQueryProcessorPipeline(ctx, authn, authz, itokens, federation)
+						p = newQueryProcessorPipeline(ctx, authn, authz, itokens, federation, statelessResources)
 					}
 					err := p.SendSync(qwork)
 					if err != nil {
@@ -155,7 +158,7 @@ func execQuery(ctx context.Context, qw *queryWork) (err error) {
 }
 
 func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthenticator, authz iauthnz.IAuthorizer,
-	itokens itokens.ITokens, federation federation.IFederation) pipeline.ISyncPipeline {
+	itokens itokens.ITokens, federation federation.IFederation, statelessResources istructsmem.IStatelessResources) pipeline.ISyncPipeline {
 	ops := []*pipeline.WiredOperator{
 		operator("borrowAppPart", borrowAppPart),
 		operator("check function call rate", func(ctx context.Context, qw *queryWork) (err error) {
@@ -300,7 +303,15 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 			return
 		}),
 		operator("get queryFunc", func(ctx context.Context, qw *queryWork) (err error) {
-			qw.queryFunc = qw.appStructs.Resources().QueryResource(qw.msg.QName()).(istructs.IQueryFunction)
+			iResource := qw.appStructs.Resources().QueryResource(qw.msg.QName())
+			if iResource.Kind() != istructs.ResourceKind_null {
+				qw.queryFunc = iResource.(istructs.IQueryFunction)
+			} else {
+				_, _, qw.queryFunc = iterate.FindFirstMap(statelessResources.Queries, func(path string, qry istructs.IQueryFunction) bool {
+					return qry.QName() == qw.msg.QName()
+				})
+			}
+
 			return nil
 		}),
 		operator("validate: get result type", func(ctx context.Context, qw *queryWork) (err error) {
@@ -352,12 +363,6 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 				qw.state, qw.queryParams, qw.resultType, qw.rs, qw.metrics)
 			return nil
 		}),
-		operator("get func exec", func(ctx context.Context, qw *queryWork) (err error) {
-			iResource := qw.appStructs.Resources().QueryResource(qw.iQuery.QName())
-			iQueryFunc := iResource.(istructs.IQueryFunction)
-			qw.queryExec = iQueryFunc.Exec
-			return nil
-		}),
 	}
 	return pipeline.NewSyncPipeline(requestCtx, "Query Processor", ops[0], ops[1:]...)
 }
@@ -385,8 +390,8 @@ type queryWork struct {
 	iWorkspace        appdef.IWorkspace
 	iQuery            appdef.IQuery
 	wsDesc            istructs.IRecord
-	queryExec         func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) error
-	callbackFunc      istructs.ExecQueryCallback
+	// queryExec         func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) error
+	callbackFunc istructs.ExecQueryCallback
 }
 
 func newQueryWork(msg IQueryMessage, rs IResultSenderClosable, appParts appparts.IAppPartitions,

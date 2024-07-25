@@ -7,14 +7,15 @@ package invite
 import (
 	"net/http"
 
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/state"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-func provideCmdCancelSentInvite(cfg *istructsmem.AppConfigType, timeFunc coreutils.TimeFunc) {
-	cfg.Resources.Add(istructsmem.NewCommandFunction(
+func provideCmdCancelSentInvite(sr istructsmem.IStatelessResources, timeFunc coreutils.TimeFunc) {
+	sr.AddCommands(appdef.SysPackagePath, istructsmem.NewCommandFunction(
 		qNameCmdCancelSentInvite,
 		execCmdCancelSentInvite(timeFunc),
 	))
