@@ -40,6 +40,7 @@ func Pbill() {
 		// Basic types fields
 		billID := pbill.Get_id_bill()
 		intent := orm.Package_untill.WDoc_bill.Update(billID)
+
 		intent.Set_close_year(int32(time.Now().UTC().Year()))
 	}
 
@@ -64,7 +65,6 @@ func FillPbillDates() {
 	arg := event.AsValue("ArgumentObject")
 	// extract offset and count from the argument
 	offs := arg.AsInt64("Offset")
-	count := arg.AsInt64("Count")
 
 	// get pbill datetime
 	pbillDatetime := time.UnixMicro(arg.AsInt64("pdatetime"))
@@ -72,16 +72,17 @@ func FillPbillDates() {
 	year := pbillDatetime.Year()
 	dayOfYear := pbillDatetime.Day()
 
+	var intent orm.Intent_View_air_PbillDates
 	val, ok := orm.Package_air.View_PbillDates.Get(int32(year), int32(dayOfYear))
+
 	if !ok {
-		intent := val.Insert()
+		intent = val.Insert()
 		intent.Set_FirstOffset(offs)
-		intent.Set_LastOffset(offs + count)
 	} else {
-		intent := val.Update()
-		intent.Set_FirstOffset(offs)
-		intent.Set_LastOffset(offs + count)
+		intent = val.Update()
 	}
+
+	intent.Set_LastOffset(offs)
 }
 
 func main() {

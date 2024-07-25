@@ -454,16 +454,24 @@ func (cts *CommandTestState) CUDRow(fQName IFullQName, id int, keyValueList ...a
 }
 
 func (cts *CommandTestState) Run() {
-	defer cts.checkoutRequires()
-
 	cts.putRecords()
 	cts.putCudRows()
 	cts.putArgument()
 
 	cts.runExtensionFunc()
+
+	cts.require()
 }
 
 func (cts *CommandTestState) runExtensionFunc() {
+	defer func() {
+		// stop if panic occurs before requiring intents
+		r := recover()
+		if r != nil {
+			require.Fail(cts.t, r.(error).Error())
+		}
+	}()
+
 	if cts.extensionFunc != nil {
 		cts.funcRunner.Do(cts.extensionFunc)
 	}
@@ -604,12 +612,6 @@ func (cts *CommandTestState) keyBuilder(r recordItem) istructs.IStateKeyBuilder 
 }
 
 func (cts *CommandTestState) checkoutRequires() {
-	// stop if panic occurs before requiring intents
-	r := recover()
-	if r != nil {
-		require.Fail(cts.t, r.(error).Error())
-	}
-
 	// checkout intents
 	cts.require()
 }
@@ -620,9 +622,9 @@ type ProjectorTestState struct {
 }
 
 // NewProjectorTestState creates a new test state for projector testing
-func NewProjectorTestState(t *testing.T, iProjector IProjector, extensionFunc func()) *ProjectorTestState {
+func NewProjectorTestState(t *testing.T, iCommand ICommand, extensionFunc func()) *ProjectorTestState {
 	ts := &ProjectorTestState{
-		*NewCommandTestState(t, nil, extensionFunc),
+		*NewCommandTestState(t, iCommand, extensionFunc),
 	}
 
 	return ts
@@ -707,13 +709,13 @@ func (pts *ProjectorTestState) Offset(offset int) ITestRunner {
 }
 
 func (pts *ProjectorTestState) Run() {
-	defer pts.checkoutRequires()
-
 	pts.putRecords()
 	pts.putCudRows()
 	pts.putArgument()
 
 	pts.runExtensionFunc()
+
+	pts.require()
 }
 
 func (pts *ProjectorTestState) putArgument() {

@@ -103,7 +103,7 @@ func TestPbill(t *testing.T) {
 func TestFillPbillDates(t *testing.T) {
 	t.Parallel()
 
-	currentYear := time.Now().UTC().Year()
+	now := time.Now().UnixMicro()
 
 	t.Run("View View_PbillDates: insert", func(t *testing.T) {
 		nextNumber := 5
@@ -113,25 +113,22 @@ func TestFillPbillDates(t *testing.T) {
 			orm.Package_air.Command_Pbill,
 			FillPbillDates,
 		).
-			SingletonRecord(
-				orm.Package_air.WSingleton_NextNumbers,
-				`NextPBillNumber`, nextNumber,
-			).
-			Record(
+			CUDRow(
 				orm.Package_untill.WDoc_bill,
 				100002,
 				`tableno`, 1,
 			).
 			Offset(100002).
-			View(
-				orm.Package_air.View_PbillDates,
-				100002,
-				`tableno`, 1,
-			).
+			//View(
+			//	orm.Package_air.View_PbillDates,
+			//	100002,
+			//	`tableno`, 1,
+			//).
 			ArgumentObject(
 				2,
 				`id_bill`, 100002,
 				`id_untill_users`, 100001,
+				`pdatetime`, now,
 			).
 			ArgumentObjectRow(`pbill_item`,
 				3,
@@ -142,11 +139,6 @@ func TestFillPbillDates(t *testing.T) {
 				`quantity`, 2,
 				`price`, 50_00,
 			).
-			CUDRow(
-				orm.Package_untill.WDoc_bill,
-				100002,
-				`tableno`, 1,
-			).
 			RequireViewInsert(
 				orm.Package_air.View_PbillDates,
 				`NextPBillNumber`, nextNumber+1,
@@ -154,7 +146,7 @@ func TestFillPbillDates(t *testing.T) {
 			RequireViewUpdate(
 				orm.Package_air.View_PbillDates,
 				100002,
-				`close_year`, currentYear,
+				`close_year`, 2024,
 			).
 			// call PutEvent with provided argument and cud
 			// rework FillPbillDates like this: read StorageEvent (look examples)
