@@ -37,7 +37,6 @@ func execCmdCreateLogin(asp istructs.IAppStructsProvider) istructsmem.ExecComman
 		}
 
 		// still need this check after https://github.com/voedger/voedger/issues/1311: the command is tkaen from AppWS, number of AppWS related to the login is checked here
-		// тут надо брать numAppworkspace не целевого приложения, а sys/registry
 		if err = CheckAppWSID(loginStr, args.WSID, args.State.AppStructs().NumAppWorkspaces()); err != nil {
 			return
 		}
