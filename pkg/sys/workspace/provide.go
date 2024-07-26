@@ -15,10 +15,6 @@ import (
 	"github.com/voedger/voedger/pkg/utils/federation"
 )
 
-func ProvideViewNextWSID(adf appdef.IAppDefBuilder) {
-	provideViewNextWSID(adf)
-}
-
 func Provide(sr istructsmem.IStatelessResources, timeFunc coreutils.TimeFunc, tokensAPI itokens.ITokens,
 	federation federation.IFederation, itokens itokens.ITokens, wsPostInitFunc WSPostInitFunc,
 	eps map[appdef.AppQName]extensionpoints.IExtensionPoint) {
