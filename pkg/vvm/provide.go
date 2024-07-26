@@ -615,6 +615,7 @@ func provideSidecarApps(vvmConfig *VVMConfig) (res []appparts.SidecarApp, err er
 			},
 			ExtModuleURLs: extModuleURLs,
 		})
+		logger.Info(fmt.Sprintf("sidecar app %s parsed", appQName))
 	}
 	return res, nil
 }
