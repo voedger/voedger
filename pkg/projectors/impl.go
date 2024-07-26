@@ -116,10 +116,3 @@ func provideViewDefImpl(appDef appdef.IAppDefBuilder, qname appdef.QName, buildF
 		buildFunc(builder)
 	}
 }
-
-func provideOffsetsDefImpl(adb appdef.IAppDefBuilder) {
-	view := adb.AddView(qnameProjectionOffsets)
-	view.Key().PartKey().AddField(partitionFld, appdef.DataKind_int32)
-	view.Key().ClustCols().AddField(projectorNameFld, appdef.DataKind_QName)
-	view.Value().AddField(offsetFld, appdef.DataKind_int64, true)
-}
