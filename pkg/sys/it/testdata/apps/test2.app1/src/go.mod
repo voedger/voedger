@@ -1,4 +1,4 @@
-module github.com/voedger/voedger/pkg/sys/it/testdata/apps/test2.app1/src
+module github.com/voedger/sidecartestapp
 
 go 1.21.5
 

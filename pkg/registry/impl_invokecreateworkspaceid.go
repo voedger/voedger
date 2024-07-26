@@ -10,6 +10,7 @@ import (
 	"hash/crc32"
 
 	"github.com/voedger/voedger/pkg/goutils/iterate"
+	coreutils "github.com/voedger/voedger/pkg/utils"
 	"github.com/voedger/voedger/pkg/utils/federation"
 	"github.com/voedger/voedger/pkg/utils/utils"
 
@@ -42,7 +43,8 @@ func invokeCreateWorkspaceIDProjector(federation federation.IFederation, tokensA
 			targetClusterID := istructs.ClusterID(rec.AsInt32(authnz.Field_ProfileCluster))
 			targetApp := rec.AsString(authnz.Field_AppName)
 			ownerWSID := event.Workspace()
-			wsidToCallCreateWSIDAt := istructs.NewWSID(targetClusterID, ownerWSID.BaseWSID())
+			// wsidToCallCreateWSIDAt := istructs.NewWSID(targetClusterID, ownerWSID.BaseWSID())
+			wsidToCallCreateWSIDAt := coreutils.GetPseudoWSID(istructs.NullWSID, wsName, targetClusterID)
 			templateName := ""
 			templateParams := ""
 			return workspace.ApplyInvokeCreateWorkspaceID(federation, s.App(), tokensAPI, wsName, wsKind, wsidToCallCreateWSIDAt,

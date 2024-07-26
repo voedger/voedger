@@ -274,7 +274,7 @@ func loadPackages(dir string, notFoundDeps map[string]struct{}) (*loadedPackages
 		}, nil
 	}
 	notFoundDeps[dir] = struct{}{}
-	return nil, fmt.Errorf("%s: cannot find module path", dir)
+	return nil, fmt.Errorf("%s: cannot find module path. Hint: if there is a go.work in upstream dirs then try to add the path to the root go.work", dir)
 }
 
 func allImportedPackages(initialPkgs []*packages.Package) (importedPkgs map[string]*packages.Package) {

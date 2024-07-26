@@ -15,11 +15,10 @@ import (
 	"github.com/voedger/voedger/pkg/utils/federation"
 )
 
-func Provide(cfg *istructsmem.AppConfigType, asp istructs.IAppStructsProvider, itokens itokens.ITokens,
-	federation federation.IFederation) parser.PackageFS {
+func Provide(cfg *istructsmem.AppConfigType, itokens itokens.ITokens, federation federation.IFederation) parser.PackageFS {
 	cfg.Resources.Add(istructsmem.NewCommandFunction(
 		QNameCommandCreateLogin,
-		execCmdCreateLogin(asp),
+		execCmdCreateLogin,
 	))
 
 	cfg.Resources.Add(istructsmem.NewQueryFunction(
