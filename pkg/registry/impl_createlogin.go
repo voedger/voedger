@@ -36,16 +36,8 @@ func execCmdCreateLogin(asp istructs.IAppStructsProvider) istructsmem.ExecComman
 			return coreutils.NewHTTPErrorf(http.StatusBadRequest, "failed to parse app qualified name", appQName.String(), ":", err)
 		}
 
-		as, err := asp.BuiltIn(appQName)
-		if err != nil {
-			if errors.Is(err, istructs.ErrAppNotFound) {
-				return coreutils.NewHTTPErrorf(http.StatusBadRequest, "unknown application ", appName)
-			}
-			return err
-		}
-
 		// still need this check after https://github.com/voedger/voedger/issues/1311: the command is tkaen from AppWS, number of AppWS related to the login is checked here
-		if err = CheckAppWSID(loginStr, args.WSID, as.NumAppWorkspaces()); err != nil {
+		if err = CheckAppWSID(loginStr, args.WSID, args.State.AppStructs().NumAppWorkspaces()); err != nil {
 			return
 		}
 
