@@ -89,6 +89,15 @@ func TestBlobberErrors(t *testing.T) {
 		)
 	})
 
+	t.Run("401 unauthorized on read without token", func(t *testing.T) {
+		expBLOB := []byte{1, 2, 3, 4, 5}
+		blobID := vit.UploadBLOB(istructs.AppQName_test1_app1, ws.WSID, "test", coreutils.ApplicationXBinary, expBLOB,
+			coreutils.WithAuthorizeBy(systemPrincipal),
+			coreutils.WithHeaders("Content-Type", "application/x-www-form-urlencoded"), // has name+mimeType query params -> any Content-Type except "multipart/form-data" is allowed
+		)
+		vit.ReadBLOB(istructs.AppQName_test1_app1, ws.WSID, blobID, coreutils.Expect401())
+	})
+
 	t.Run("403 forbidden on blob size quota exceeded", func(t *testing.T) {
 		bigBLOB := make([]byte, 150)
 		vit.UploadBLOB(istructs.AppQName_test1_app1, ws.WSID, "test", coreutils.ApplicationXBinary, bigBLOB,

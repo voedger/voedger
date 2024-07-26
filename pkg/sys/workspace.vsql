@@ -332,7 +332,7 @@ ABSTRACT WORKSPACE Workspace (
 
 		COMMAND UploadBLOBHelper;
 		COMMAND DownloadBLOBHelper; -- Deprecated: use q.sys.DownloadBLOBAuthnz
-		QUERY DownloadBLOBAuthnz;
+		QUERY DownloadBLOBAuthnz RETURNS void;
 
 		-- builtin
 
