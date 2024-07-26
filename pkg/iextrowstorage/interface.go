@@ -9,15 +9,16 @@ import (
 	"context"
 )
 
+// Shall be created once per [application, storage extension, version]
 type IFactoryFactory interface {
-	// One per factory
+	// One per instance
 	// Shall be loaded once from JSON prior any call to the New()
 	SettingsPtr() *any
 
 	// Shall be called prior any call to the New() and after the SettingsPtr() result is loaded
 	SetConfig(cfg *Config) error
 
-	// New is called once per [application, storage package, version]
+	// New is called once per [application, IFactoryFactory]
 	NewFactory(filePath string, version string) (IRowStorageFactory, error)
 }
 
