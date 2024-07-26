@@ -336,54 +336,12 @@ func provideIsDeviceAllowedFunc(appEPs map[appdef.AppQName]extensionpoints.IExte
 	return res
 }
 
-// func provideSidecarApps(eef iextengine.ExtensionEngineFactories, sidecarDefs SidecarAppsDefs) []appparts.SidecarApp {
-// 	res := []appparts.SidecarApp{}
-// 	for sidecarAppQName, sidecarDef := range sidecarDefs {
-// 		extensionsPathsModules := map[appdef.ExtensionEngineKind]map[string]iextengine.ExtensionModule{}
-// 		sidecarAppDef := sidecarDef.Def
-// 		sidecarAppDef.Extensions(func(i appdef.IExtension) {
-// 			extEngineKind := i.Engine()
-// 			// if i.Kind == Builtin then ModuleUrl i snot used
-// 			// else ModuleUrl is tkaen from extModuleURLs (panic here if msiing)
-
-// 			// посмотреть по path, нету ли iextengine.ExtensionModule, если нет, то создать, а если есть, то заапеенидить iextengine.ExtensionModule.ExtensionNames
-// 			extensionPathsModules, ok := extensionsPathsModules[extEngineKind]
-// 			if !ok {
-// 				extensionPathsModules = map[string]iextengine.ExtensionModule{}
-// 				extensionsPathsModules[extEngineKind] = extensionPathsModules
-// 			}
-// 			extensionPackageFullPath := sidecarAppDef.PackageFullPath(i.QName().Pkg())
-// 			extensionModule, ok := extensionPathsModules[extensionPackageFullPath]
-// 			if !ok {
-// 				if extEngineKind != appdef.ExtensionEngineKind_BuiltIn {
-// 					moduleUrl, ok := extModuleURLs[extensionPackageFullPath]
-// 					if !ok {
-// 						panic(fmt.Sprintf("app %s extension %s package url is not provided for path %s", sidecarAppQName, i.QName(), extensionPackageFullPath))
-// 					}
-// 					extensionModule.ModuleUrl = moduleUrl
-// 				}
-// 				extensionModule.Path = extensionPackageFullPath
-// 			}
-// 			// FIXME: придумать как из IExtension взять имена
-// 			// extensionModule.ExtensionNames = append(extensionModule.ExtensionNames, nil)
-// 			extensionPathsModules[extensionPackageFullPath] = extensionModule
-// 		})
-
-// 		res = append(res, appparts.SidecarApp{
-// 			BuiltInApp: sidecarDef.BuiltInApp,
-// 			// ExtensionModules: ,
-// 		})
-// 	}
-// }
-
 func provideBuiltInApps(builtInAppsArtefacts BuiltInAppsArtefacts, sidecarApps []appparts.SidecarApp) []appparts.BuiltInApp {
 	res := []appparts.BuiltInApp{}
 	for _, pkg := range builtInAppsArtefacts.builtInAppPackages {
 		res = append(res, pkg.BuiltInApp)
 	}
-	// тут наверное просто построить sidecar, всместо создания SidecarApplication. Этот тип убрать
 	for _, sidecarApp := range sidecarApps {
-		// expecting the sidecar app consists of only one package
 		res = append(res, sidecarApp.BuiltInApp)
 	}
 	return res
@@ -548,8 +506,6 @@ func parseSidecarAppSubDir(fullPath string, basePath string, extModuleURLs map[s
 		// notest
 		return nil, err
 	}
-	// все sql собьираем по все каталогам и парсим - этополучаем одно приложение
-	// если найшли pgs.wasm - то каждый такой файлик - это отдельный ExtensionModule
 	modulePath := strings.ReplaceAll(fullPath, basePath, "")
 	modulePath = strings.TrimPrefix(modulePath, string(os.PathSeparator))
 	modulePath = strings.ReplaceAll(modulePath, string(os.PathSeparator), "/")

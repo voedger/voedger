@@ -390,9 +390,7 @@ func provideBuiltInApps(builtInAppsArtefacts BuiltInAppsArtefacts, sidecarApps [
 	for _, pkg := range builtInAppsArtefacts.builtInAppPackages {
 		res = append(res, pkg.BuiltInApp)
 	}
-
 	for _, sidecarApp := range sidecarApps {
-
 		res = append(res, sidecarApp.BuiltInApp)
 	}
 	return res
@@ -556,7 +554,6 @@ func parseSidecarAppSubDir(fullPath string, basePath string, extModuleURLs map[s
 
 		return nil, err
 	}
-
 	modulePath := strings.ReplaceAll(fullPath, basePath, "")
 	modulePath = strings.TrimPrefix(modulePath, string(os.PathSeparator))
 	modulePath = strings.ReplaceAll(modulePath, string(os.PathSeparator), "/")

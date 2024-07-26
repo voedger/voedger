@@ -26,8 +26,6 @@ type IAppPartitions interface {
 	// If application with the same name exists, then its definition will be updated.
 	DeployApp(name appdef.AppQName, extModuleURLs map[string]*url.URL, def appdef.IAppDef,
 		partsCount istructs.NumAppPartitions, numEngines [ProcessorKind_Count]int, numAppWorkspaces istructs.NumAppWorkspaces)
-	// DeployBuiltInApp(name appdef.AppQName, def appdef.IAppDef, partsCount istructs.NumAppPartitions, numEngines [ProcessorKind_Count]int)
-	// то, что раньше вызывало DeployApp, теперь должно вызывать DeployBuiltInApp
 
 	// Deploys new partitions for specified application or update existing.
 	//

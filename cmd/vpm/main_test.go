@@ -401,12 +401,6 @@ func TestEdgeCases(t *testing.T) {
 	require.Error(err)
 }
 
-func TestBuild2(t *testing.T) {
-	dir := "c:/Workspace/voedger/pkg/sys/it/testdata/apps/test2.app1/src"
-	err := execRootCmd([]string{"vpm", "build", "-C", dir, "-o", "qwerty"}, "1.0.0")
-	require.NoError(t, err)
-}
-
 func TestBuildBasicUsage(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
