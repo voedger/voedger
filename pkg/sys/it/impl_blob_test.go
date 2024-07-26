@@ -83,7 +83,7 @@ func TestBlobberErrors(t *testing.T) {
 	systemPrincipal, err := payloads.GetSystemPrincipalTokenApp(as.AppTokens())
 	require.NoError(err)
 
-	t.Run("401 unauthorized on no authorization token in neither headers nor cookies", func(t *testing.T) {
+	t.Run("401 unauthorized on write without token", func(t *testing.T) {
 		vit.UploadBLOB(istructs.AppQName_test1_app1, ws.WSID, "test", coreutils.ApplicationXBinary, []byte{},
 			coreutils.Expect401(),
 		)
