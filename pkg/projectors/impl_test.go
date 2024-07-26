@@ -223,7 +223,6 @@ func deployTestAppEx(
 	if prepareAppDef != nil {
 		prepareAppDef(appDefBuilder)
 	}
-	provideOffsetsDefImpl(appDefBuilder)
 	appDefBuilder.AddCommand(newWorkspaceCmd)
 
 	cfgs := make(istructsmem.AppConfigsType, 1)
