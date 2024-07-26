@@ -57,7 +57,7 @@ func Provide(cfg *istructsmem.AppConfigType) parser.PackageFS {
 	builtin.ProvideSysIsActiveValidation(cfg)
 	uniques.ProvideEventValidator(cfg)
 	return parser.PackageFS{
-		Path: appdef.SysPackage,
-		FS:   SysFS,
+		PackageFQN: appdef.SysPackage,
+		FS:         SysFS,
 	}
 }

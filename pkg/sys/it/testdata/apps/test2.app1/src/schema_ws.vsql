@@ -1,0 +1,19 @@
+-- Copyright (c) 2024-present unTill Software Development Group B.V.
+-- @author Denis Gribanov
+
+WORKSPACE test2app1WS (
+
+    DESCRIPTOR test2app1 ();
+
+    TYPE TestEchoRequest (
+        Str varchar
+    );
+
+    TYPE TestEchoResult (
+        Res varchar
+    );
+
+    EXTENSION ENGINE WASM (
+        QUERY TestEcho(TestEchoRequest) RETURNS TestEchoResult;
+    );
+);

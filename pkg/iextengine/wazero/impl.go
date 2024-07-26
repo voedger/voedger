@@ -101,7 +101,7 @@ func (w *limitedWriter) Write(p []byte) (n int, err error) {
 	return len(p), nil
 }
 
-func (f extensionEngineFactory) New(ctx context.Context, app appdef.AppQName, packages []iextengine.ExtensionPackage, config *iextengine.ExtEngineConfig, numEngines int) (engines []iextengine.IExtensionEngine, err error) {
+func (f extensionEngineFactory) New(ctx context.Context, app appdef.AppQName, packages []iextengine.ExtensionModule, config *iextengine.ExtEngineConfig, numEngines int) (engines []iextengine.IExtensionEngine, err error) {
 	for i := 0; i < numEngines; i++ {
 		engine := &wazeroExtEngine{
 			app:                app,
@@ -135,7 +135,7 @@ func (f extensionEngineFactory) New(ctx context.Context, app appdef.AppQName, pa
 			}
 
 			for _, eng := range engines {
-				err = eng.(*wazeroExtEngine).initModule(ctx, pkg.QualifiedName, wasmdata, pkg.ExtensionNames)
+				err = eng.(*wazeroExtEngine).initModule(ctx, pkg.Path, wasmdata, pkg.ExtensionNames)
 				if err != nil {
 					return nil, err
 				}

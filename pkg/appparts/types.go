@@ -6,6 +6,8 @@
 package appparts
 
 import (
+	"net/url"
+
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 )
@@ -47,4 +49,9 @@ type BuiltInApp struct {
 
 	// Application definition will use to generate AppStructs
 	Def appdef.IAppDef
+}
+
+type SidecarApp struct {
+	BuiltInApp
+	ExtModuleURLs map[string]*url.URL
 }

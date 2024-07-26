@@ -25,7 +25,7 @@ func BuildAppDefFromFS(app appdef.AppQName, path string, fs coreutils.IReadFS, s
 	}
 	packagesAST := []*parser.PackageSchemaAST{appPackageAst, sysPackageAST}
 	for _, adds := range additionalPackagesFS {
-		additionalPackageAST, err := parser.ParsePackageDir(adds.Path, adds.FS, ".")
+		additionalPackageAST, err := parser.ParsePackageDir(adds.PackageFQN, adds.FS, ".")
 		if err != nil {
 			return nil, err
 		}

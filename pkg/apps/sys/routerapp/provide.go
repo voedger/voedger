@@ -18,8 +18,8 @@ func Provide() apps.AppBuilder {
 	return func(apis apps.APIs, cfg *istructsmem.AppConfigType, ep extensionpoints.IExtensionPoint) apps.BuiltInAppDef {
 		sysPackageFS := sys.Provide(cfg)
 		routerAppPackageFS := parser.PackageFS{
-			Path: RouterAppFQN,
-			FS:   routerAppSchemaFS,
+			PackageFQN: RouterAppFQN,
+			FS:         routerAppSchemaFS,
 		}
 		return apps.BuiltInAppDef{
 			AppQName: istructs.AppQName_sys_router,

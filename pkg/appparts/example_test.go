@@ -61,8 +61,8 @@ func Example() {
 
 	fmt.Println("*** Add ver 1 ***")
 
-	appParts.DeployApp(istructs.AppQName_test1_app1, app_1_v1, 1, appparts.PoolSize(2, 2, 2))
-	appParts.DeployApp(istructs.AppQName_test1_app2, app_2_v1, 1, appparts.PoolSize(2, 2, 2))
+	appParts.DeployApp(istructs.AppQName_test1_app1, nil, app_1_v1, 1, appparts.PoolSize(2, 2, 2), istructs.DefaultNumAppWorkspaces)
+	appParts.DeployApp(istructs.AppQName_test1_app2, nil, app_2_v1, 1, appparts.PoolSize(2, 2, 2), istructs.DefaultNumAppWorkspaces)
 
 	appParts.DeployAppPartitions(istructs.AppQName_test1_app1, []istructs.PartitionID{1})
 	appParts.DeployAppPartitions(istructs.AppQName_test1_app2, []istructs.PartitionID{1})
