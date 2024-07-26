@@ -29,6 +29,8 @@ func TestSidecarApps_BasicUsage(t *testing.T) {
 
 	login := vit.SignUp("login", "1", istructs.AppQName_test2_app1)
 	prn := vit.SignIn(login)
+
+
 	_ = prn
 
 }
