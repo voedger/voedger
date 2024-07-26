@@ -19,7 +19,7 @@ import (
 func Provide(cfg *istructsmem.AppConfigType, asp istructs.IAppStructsProvider, timeFunc coreutils.TimeFunc,
 	federation federation.IFederation, itokens itokens.ITokens, sidecarApps []appparts.SidecarApp) parser.PackageFS {
 	cfg.Resources.Add(istructsmem.NewCommandFunction(appdef.NewQName(ClusterPackage, "DeployApp"),
-		provideExecDeployApp(asp, timeFunc, sidecarApps)))
+		provideCmdDeployApp(asp, timeFunc, sidecarApps)))
 	cfg.Resources.Add(istructsmem.NewCommandFunction(appdef.NewQName(ClusterPackage, "VSqlUpdate"),
 		provideExecCmdVSqlUpdate(federation, itokens, timeFunc, asp)))
 	return parser.PackageFS{

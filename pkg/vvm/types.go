@@ -158,7 +158,7 @@ type VVMConfig struct {
 	KeyspaceNameSuffix string
 	SmtpConfig         smtp.Cfg
 	WSPostInitFunc     workspace.WSPostInitFunc
-	ConfigPath         string
+	DataPath           string
 }
 
 type resultSenderErrorFirst struct {

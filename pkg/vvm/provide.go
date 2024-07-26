@@ -584,10 +584,10 @@ func parseSidecarAppSubDir(fullPath string, basePath string, extModuleURLs map[s
 }
 
 func provideSidecarApps(vvmConfig *VVMConfig) (res []appparts.SidecarApp, err error) {
-	if len(vvmConfig.ConfigPath) == 0 {
+	if len(vvmConfig.DataPath) == 0 {
 		return nil, nil
 	}
-	appsPath := filepath.Join(vvmConfig.ConfigPath, "apps")
+	appsPath := filepath.Join(vvmConfig.DataPath, "apps")
 	appsEntries, err := os.ReadDir(appsPath)
 	if err != nil {
 		return nil, err

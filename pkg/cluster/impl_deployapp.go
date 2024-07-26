@@ -22,7 +22,7 @@ import (
 )
 
 // wrong to use IAppPartitions to get total NumAppPartition because the app the cmd is called for is not deployed yet
-func provideExecDeployApp(asp istructs.IAppStructsProvider, timeFunc coreutils.TimeFunc, sidecarApps []appparts.SidecarApp) istructsmem.ExecCommandClosure {
+func provideCmdDeployApp(asp istructs.IAppStructsProvider, timeFunc coreutils.TimeFunc, sidecarApps []appparts.SidecarApp) istructsmem.ExecCommandClosure {
 	return func(args istructs.ExecCommandArgs) (err error) {
 		appQNameStr := args.ArgumentObject.AsString(Field_AppQName)
 		appQName, err := appdef.ParseAppQName(appQNameStr)

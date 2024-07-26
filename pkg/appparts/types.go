@@ -53,6 +53,5 @@ type BuiltInApp struct {
 
 type SidecarApp struct {
 	BuiltInApp
-	// ExtensionModules map[appdef.ExtensionEngineKind][]iextengine.ExtensionModule
 	ExtModuleURLs map[string]*url.URL
 }

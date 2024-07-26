@@ -20,7 +20,7 @@ func TestSidecarApps_BasicUsage(t *testing.T) {
 	require.NoError(t, err)
 	cfg := it.NewOwnVITConfig(
 		it.WithVVMConfig(func(cfg *vvm.VVMConfig) {
-			cfg.ConfigPath = filepath.Join(wd, "sidecartest")
+			cfg.DataPath = filepath.Join(wd, "testdata")
 		}),
 	)
 	vit := it.NewVIT(t, &cfg)
