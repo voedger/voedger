@@ -16,7 +16,6 @@ import (
 	"github.com/voedger/voedger/pkg/itokens"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	"github.com/voedger/voedger/pkg/parser"
-	"github.com/voedger/voedger/pkg/projectors"
 	"github.com/voedger/voedger/pkg/sys/authnz"
 	"github.com/voedger/voedger/pkg/sys/blobber"
 	"github.com/voedger/voedger/pkg/sys/builtin"
@@ -54,8 +53,6 @@ func ProvideStateless(sr istructsmem.IStatelessResources, smtpCfg smtp.Cfg, eps 
 
 func Provide(cfg *istructsmem.AppConfigType) parser.PackageFS {
 	verifier.ProvideLimits(cfg)
-	projectors.ProvideOffsetsDef(cfg.AppDefBuilder())
-	workspace.ProvideViewNextWSID(cfg.AppDefBuilder())
 	builtin.ProvideCUDValidators(cfg)
 	builtin.ProvideSysIsActiveValidation(cfg)
 	uniques.ProvideEventValidator(cfg)
