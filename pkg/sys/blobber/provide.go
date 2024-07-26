@@ -15,8 +15,17 @@ import (
 func ProvideBlobberCmds(sr istructsmem.IStatelessResources) {
 	provideUploadBLOBHelperCmd(sr)
 	provideDownloadBLOBHelperCmd(sr)
+	provideDownloadBLOBAuthnzQry(sr)
 }
 
+func provideDownloadBLOBAuthnzQry(sr istructsmem.IStatelessResources) {
+	sr.AddQueries(appdef.SysPackagePath, istructsmem.NewQueryFunction(
+		appdef.NewQName(appdef.SysPackage, "DownloadBLOBAuthnz"),
+		istructsmem.NullQueryExec,
+	))
+}
+
+// Deprecated: use q.sys.DownloadBLOBAuthnz
 func provideDownloadBLOBHelperCmd(sr istructsmem.IStatelessResources) {
 	dbhQName := appdef.NewQName(appdef.SysPackage, "DownloadBLOBHelper")
 
