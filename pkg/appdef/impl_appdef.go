@@ -734,7 +734,6 @@ func (ab *appDefBuilder) addHardcodedDefinitions() {
 	viewNextBaseWSID.Key().PartKey().AddField("dummy1", DataKind_int32)
 	viewNextBaseWSID.Key().ClustCols().AddField("dummy2", DataKind_int32)
 	viewNextBaseWSID.Value().AddField("NextBaseWSID", DataKind_int64, true)
-
 }
 
 func (ab *appDefBuilder) Grant(kinds []PrivilegeKind, on []QName, fields []FieldName, toRole QName, comment ...string) IPrivilegesBuilder {
