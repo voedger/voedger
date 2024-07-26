@@ -21,10 +21,11 @@ type IAppPartitions interface {
 	//
 	// partsCount - total partitions count for the application.
 	// extensionModules is used for non-builtin apps only. Provide nil for others
+	// numAppWorkspaces is used for non-builtin appse. Provide e.g. -1 for others
 	//
 	// If application with the same name exists, then its definition will be updated.
 	DeployApp(name appdef.AppQName, extModuleURLs map[string]*url.URL, def appdef.IAppDef,
-		partsCount istructs.NumAppPartitions, numEngines [ProcessorKind_Count]int, naw istructs.NumAppWorkspaces)
+		partsCount istructs.NumAppPartitions, numEngines [ProcessorKind_Count]int, numAppWorkspaces istructs.NumAppWorkspaces)
 	// DeployBuiltInApp(name appdef.AppQName, def appdef.IAppDef, partsCount istructs.NumAppPartitions, numEngines [ProcessorKind_Count]int)
 	// то, что раньше вызывало DeployApp, теперь должно вызывать DeployBuiltInApp
 

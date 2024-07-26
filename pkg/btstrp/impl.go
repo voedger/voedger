@@ -41,7 +41,8 @@ func Bootstrap(federation federation.IFederation, asp istructs.IAppStructsProvid
 	}
 
 	// appparts: deploy single clusterApp partition
-	appparts.DeployApp(istructs.AppQName_sys_cluster, nil, clusterApp.Def, clusterapp.ClusterAppNumPartitions, clusterapp.ClusterAppNumEngines)
+	appparts.DeployApp(istructs.AppQName_sys_cluster, nil, clusterApp.Def, clusterapp.ClusterAppNumPartitions,
+		clusterapp.ClusterAppNumEngines, clusterapp.ClusterAppNumAppWS)
 	appparts.DeployAppPartitions(istructs.AppQName_sys_cluster, []istructs.PartitionID{clusterapp.ClusterAppWSIDPartitionID})
 
 	sysToken, err := payloads.GetSystemPrincipalToken(itokens, istructs.AppQName_sys_cluster)
@@ -64,7 +65,7 @@ func Bootstrap(federation federation.IFederation, asp istructs.IAppStructsProvid
 
 	// For each app builtInApps: deploy a builtin app
 	for _, app := range otherApps {
-		appparts.DeployApp(app.Name, nil, app.Def, app.NumParts, app.EnginePoolSize)
+		appparts.DeployApp(app.Name, nil, app.Def, app.NumParts, app.EnginePoolSize, app.NumAppWorkspaces)
 		partitionIDs := make([]istructs.PartitionID, app.NumParts)
 		for id := istructs.NumAppPartitions(0); id < app.NumParts; id++ {
 			partitionIDs[id] = istructs.PartitionID(id)
@@ -73,7 +74,7 @@ func Bootstrap(federation federation.IFederation, asp istructs.IAppStructsProvid
 	}
 
 	for _, app := range sidecarApps {
-		appparts.DeployApp(app.Name, app.ExtModuleURLs, app.Def, app.NumParts, app.EnginePoolSize)
+		appparts.DeployApp(app.Name, app.ExtModuleURLs, app.Def, app.NumParts, app.EnginePoolSize, app.NumAppWorkspaces)
 		partitionIDs := make([]istructs.PartitionID, app.NumParts)
 		for id := istructs.NumAppPartitions(0); id < app.NumParts; id++ {
 			partitionIDs[id] = istructs.PartitionID(id)

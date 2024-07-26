@@ -552,6 +552,7 @@ func parseSidecarAppSubDir(fullPath string, basePath string, extModuleURLs map[s
 	// если найшли pgs.wasm - то каждый такой файлик - это отдельный ExtensionModule
 	modulePath := strings.ReplaceAll(fullPath, basePath, "")
 	modulePath = strings.TrimPrefix(modulePath, string(os.PathSeparator))
+	modulePath = strings.ReplaceAll(modulePath, string(os.PathSeparator), "/")
 	for _, dirEntry := range dirEntries {
 		if dirEntry.IsDir() {
 			subASTs, err := parseSidecarAppSubDir(filepath.Join(fullPath, dirEntry.Name()), basePath, extModuleURLs)
@@ -562,7 +563,7 @@ func parseSidecarAppSubDir(fullPath string, basePath string, extModuleURLs map[s
 			continue
 		}
 		if filepath.Ext(dirEntry.Name()) == ".wasm" {
-			moduleURL, err := url.Parse(filepath.Join(fullPath, dirEntry.Name()))
+			moduleURL, err := url.Parse("file:///" + filepath.Join(fullPath, dirEntry.Name()))
 			if err != nil {
 				// notest
 				return nil, err
@@ -573,8 +574,7 @@ func parseSidecarAppSubDir(fullPath string, basePath string, extModuleURLs map[s
 		}
 	}
 
-	packageName := filepath.Base(modulePath)
-	dirAST, err := parser.ParsePackageDir(packageName, os.DirFS(fullPath).(coreutils.IReadFS), ".")
+	dirAST, err := parser.ParsePackageDir(modulePath, os.DirFS(fullPath).(coreutils.IReadFS), ".")
 	if err == nil {
 		asts = append(asts, dirAST)
 	} else if !errors.Is(err, parser.ErrDirContainsNoSchemaFiles) {
