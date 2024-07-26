@@ -97,6 +97,14 @@ output "public_ips" {
   value = [for instance in aws_instance.node : instance.public_ip]
 }
 
+output "public_ip_node_00" {
+  value = aws_instance.node["node_00"].public_ip
+}
+
+output "public_ip_node_03" {
+  value = aws_instance.node["node_03"].public_ip
+}
+
 resource "aws_internet_gateway" "gw" { vpc_id = aws_vpc.cluster_vpc.id }
 
 resource "aws_route_table" "cluster_route" {
