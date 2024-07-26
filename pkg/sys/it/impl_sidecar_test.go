@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/voedger/voedger/pkg/istructs"
 	it "github.com/voedger/voedger/pkg/vit"
 	"github.com/voedger/voedger/pkg/vvm"
 )
@@ -25,4 +26,9 @@ func TestSidecarApps_BasicUsage(t *testing.T) {
 	)
 	vit := it.NewVIT(t, &cfg)
 	defer vit.TearDown()
+
+	login := vit.SignUp("login", "1", istructs.AppQName_test2_app1)
+	prn := vit.SignIn(login)
+	_ = prn
+
 }
