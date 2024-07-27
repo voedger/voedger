@@ -91,8 +91,8 @@ var (
 func ProvideApp2(apis apps.APIs, cfg *istructsmem.AppConfigType, ep extensionpoints.IExtensionPoint) apps.BuiltInAppDef {
 	sysPackageFS := sys.Provide(cfg)
 	app2PackageFS := parser.PackageFS{
-		PackageFQN: app2PkgPath,
-		FS:         SchemaTestApp2FS,
+		Path: app2PkgPath,
+		FS:   SchemaTestApp2FS,
 	}
 	cfg.Resources.Add(istructsmem.NewCommandFunction(appdef.NewQName(app2PkgName, "testCmd"), istructsmem.NullCommandExec))
 	ep.AddNamed(apps.EPIsDeviceAllowedFunc, func(as istructs.IAppStructs, requestWSID istructs.WSID, deviceProfileWSID istructs.WSID) (ok bool, err error) {
@@ -258,8 +258,8 @@ func ProvideApp1(apis apps.APIs, cfg *istructsmem.AppConfigType, ep extensionpoi
 	}))
 
 	app1PackageFS := parser.PackageFS{
-		PackageFQN: App1PkgPath,
-		FS:         SchemaTestApp1FS,
+		Path: App1PkgPath,
+		FS:   SchemaTestApp1FS,
 	}
 	return apps.BuiltInAppDef{
 		AppQName:                istructs.AppQName_test1_app1,

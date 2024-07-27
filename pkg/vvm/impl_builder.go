@@ -23,7 +23,7 @@ func (ab VVMAppsBuilder) Add(appQName appdef.AppQName, builder apps.AppBuilder) 
 func buildAppFromPackagesFS(fses []parser.PackageFS, adf appdef.IAppDefBuilder) error {
 	packageSchemaASTs := []*parser.PackageSchemaAST{}
 	for _, fs := range fses {
-		packageSchemaAST, err := parser.ParsePackageDir(fs.PackageFQN, fs.FS, ".")
+		packageSchemaAST, err := parser.ParsePackageDir(fs.Path, fs.FS, ".")
 		if err != nil {
 			return err
 		}
