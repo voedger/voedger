@@ -19,12 +19,13 @@ import (
 	"github.com/voedger/voedger/pkg/dml"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/istructs"
-	"github.com/voedger/voedger/pkg/processors"
-	"github.com/voedger/voedger/pkg/sys/authnz"
+	"github.com/voedger/voedger/pkg/itokens"
+	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	coreutils "github.com/voedger/voedger/pkg/utils"
+	"github.com/voedger/voedger/pkg/utils/federation"
 )
 
-func provideEexecQrySqlQuery(asp istructs.IAppStructsProvider) func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
+func provideEexecQrySqlQuery(federation federation.IFederation, itokens itokens.ITokens) func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 	return func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 
 		query := args.ArgumentObject.AsString(field_Query)
@@ -37,16 +38,7 @@ func provideEexecQrySqlQuery(asp istructs.IAppStructsProvider) func(ctx context.
 		if op.Kind != dml.OpKind_Select {
 			return coreutils.NewHTTPErrorf(http.StatusBadRequest, "'select' operation is expected")
 		}
-		app := args.State.App()
-		if op.AppQName != appdef.NullAppQName {
-			app = op.AppQName
-		}
-
-		appStructs, err := asp.BuiltIn(app)
-		if err != nil {
-			return err
-		}
-
+		appStructs := args.State.AppStructs()
 		var wsID istructs.WSID
 		switch op.Workspace.Kind {
 		case dml.WorkspaceKind_AppWSNum:
@@ -58,20 +50,40 @@ func provideEexecQrySqlQuery(asp istructs.IAppStructsProvider) func(ctx context.
 		default:
 			wsID = args.WSID
 		}
-
-		if wsID != args.WSID {
-			wsDesc, err := appStructs.Records().GetSingleton(wsID, authnz.QNameCDocWorkspaceDescriptor)
+		if (op.AppQName != appdef.NullAppQName && op.AppQName != args.State.App()) || (wsID != args.WSID) {
+			targetWSID := wsID
+			if op.Workspace.Kind == dml.WorkspaceKind_PseudoWSID {
+				targetWSID = istructs.WSID(op.Workspace.ID)
+			}
+			sysTokenForTargetApp, err := payloads.GetSystemPrincipalToken(itokens, op.AppQName)
 			if err != nil {
 				// notest
 				return err
 			}
-			if wsDesc.QName() == appdef.NullQName {
-				return coreutils.NewHTTPErrorf(http.StatusBadRequest, fmt.Sprintf("wsid %d: %s", wsID, processors.ErrWSNotInited.Message))
+			logger.Info(fmt.Sprintf("forwarding query to %s/%d", op.AppQName, targetWSID))
+			body := fmt.Sprintf(`{"args":{"Query":%q},"elements":[{"fields":["Result"]}]}`, op.VSQLWithoutAppAndWSID)
+			resp, err := federation.Func(fmt.Sprintf("api/%s/%d/q.sys.SqlQuery", op.AppQName, targetWSID),
+				body, coreutils.WithAuthorizeBy(sysTokenForTargetApp))
+			if err != nil {
+				return err
 			}
-			if ws := appStructs.AppDef().WorkspaceByDescriptor(wsDesc.AsQName(authnz.Field_WSKind)); ws == nil {
-				return coreutils.NewHTTPErrorf(http.StatusBadRequest, fmt.Sprintf("no workspace by QName of its descriptor %s from wsid %d", wsDesc.QName(), wsID))
-			}
+			return callback(&result{value: resp.SectionRow()[0].(string)})
 		}
+
+		// if wsID != args.WSID {
+
+		// 	wsDesc, err := appStructs.Records().GetSingleton(wsID, authnz.QNameCDocWorkspaceDescriptor)
+		// 	if err != nil {
+		// 		// notest
+		// 		return err
+		// 	}
+		// 	if wsDesc.QName() == appdef.NullQName {
+		// 		return coreutils.NewHTTPErrorf(http.StatusBadRequest, fmt.Sprintf("wsid %d: %s", wsID, processors.ErrWSNotInited.Message))
+		// 	}
+		// 	if ws := appStructs.AppDef().WorkspaceByDescriptor(wsDesc.AsQName(authnz.Field_WSKind)); ws == nil {
+		// 		return coreutils.NewHTTPErrorf(http.StatusBadRequest, fmt.Sprintf("no workspace by QName of its descriptor %s from wsid %d", wsDesc.QName(), wsID))
+		// 	}
+		// }
 
 		stmt, err := sqlparser.Parse(op.CleanSQL)
 		if err != nil {
@@ -104,7 +116,7 @@ func provideEexecQrySqlQuery(asp istructs.IAppStructsProvider) func(ctx context.
 		table := s.From[0].(*sqlparser.AliasedTableExpr).Expr.(sqlparser.TableName)
 		source := appdef.NewQName(table.Qualifier.String(), table.Name.String())
 
-		kind := appStructs.AppDef().Type(source).Kind()
+		kind := args.State.AppStructs().AppDef().Type(source).Kind()
 		switch kind {
 		case appdef.TypeKind_ViewRecord:
 			if op.EntityID > 0 {
@@ -130,7 +142,7 @@ func provideEexecQrySqlQuery(asp istructs.IAppStructsProvider) func(ctx context.
 				AppPartitions() appparts.IAppPartitions
 			}).AppPartitions()
 			if source == plog {
-				return readPlog(ctx, wsID, offset, limit, appStructs, f, callback, appStructs.AppDef(), appParts)
+				return readPlog(ctx, wsID, offset, limit, args.State.AppStructs(), f, callback, appStructs.AppDef(), appParts)
 			}
 			return readWlog(ctx, wsID, offset, limit, appStructs, f, callback, appStructs.AppDef())
 		}

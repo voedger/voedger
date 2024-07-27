@@ -498,7 +498,7 @@ func TestReadFromAnDifferentLocations(t *testing.T) {
 		}, anotherAppWSOwner)
 
 		// in the another app use sql to query the record from the first app
-		body = fmt.Sprintf(`{"args":{"Query":"select * from test1.app1.%d.app1pkg.category where id = %d"},"elements":[{"fields":["Result"]}]}`, oneAppWS.WSID, categoryID)
+		body = fmt.Sprintf(`{"args":{"Query":"select * from test1.app1.%d.app1pkg.category.%d"},"elements":[{"fields":["Result"]}]}`, oneAppWS.WSID, categoryID)
 		resp := vit.PostWS(anotherAppWS, "q.sys.SqlQuery", body)
 		resStr := resp.SectionRow(len(resp.Sections[0].Elements) - 1)[0].(string)
 		require.Contains(resStr, fmt.Sprintf(`"name":"%s"`, categoryName))

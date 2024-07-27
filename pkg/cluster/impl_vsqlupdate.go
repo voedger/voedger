@@ -60,6 +60,18 @@ func parseAndValidateQuery(args istructs.ExecCommandArgs, query string, asp istr
 		AppPartitions() appparts.IAppPartitions
 	}).AppPartitions()
 
+	update.appStructs = args.State.AppStructs()
+	if update.AppQName != appdef.NullAppQName && args.State.App() != update.AppQName {
+		appPartition, err := update.appParts.Borrow(update.AppQName, partitionID, appparts.ProcessorKind_Command)
+		if err != nil {
+			return update, err
+		}
+		update.appStructs = appPartition.AppStructs()
+	}
+	dealock is possible: send vsqlupdate to 2 different partitions, each updates the opposite partition -> deadlock on borrow
+	args.Workpiece.(interface {
+		AppPartitions() appparts.IAppPartitions
+	}).AppPartitions().Borrow(update.AppQName)
 
 	if update.appStructs, err = asp.BuiltIn(update.AppQName); err != nil {
 		// notest
