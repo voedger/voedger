@@ -653,7 +653,8 @@ func (app *appDef) typeByKind(name QName, kind TypeKind) interface{} {
 //   - IAppDefBuilder
 type appDefBuilder struct {
 	commentBuilder
-	app *appDef
+	app                       *appDef
+	hardcodedDefinitionsAdded bool
 }
 
 func newAppDefBuilder(app *appDef) *appDefBuilder {
@@ -713,10 +714,26 @@ func (ab *appDefBuilder) AddWorkspace(name QName) IWorkspaceBuilder { return ab.
 func (ab appDefBuilder) AppDef() IAppDef { return ab.app }
 
 func (ab *appDefBuilder) Build() (IAppDef, error) {
+	if !ab.hardcodedDefinitionsAdded {
+		ab.addHardcodedDefinitions()
+		ab.hardcodedDefinitionsAdded = true
+	}
 	if err := ab.app.build(); err != nil {
 		return nil, err
 	}
 	return ab.app, nil
+}
+
+func (ab *appDefBuilder) addHardcodedDefinitions() {
+	viewProjectionOffsets := ab.AddView(NewQName(SysPackage, "projectionOffsets"))
+	viewProjectionOffsets.Key().PartKey().AddField("partition", DataKind_int32)
+	viewProjectionOffsets.Key().ClustCols().AddField("projector", DataKind_QName)
+	viewProjectionOffsets.Value().AddField("offset", DataKind_int64, true)
+
+	viewNextBaseWSID := ab.AddView(NewQName(SysPackage, "NextBaseWSID"))
+	viewNextBaseWSID.Key().PartKey().AddField("dummy1", DataKind_int32)
+	viewNextBaseWSID.Key().ClustCols().AddField("dummy2", DataKind_int32)
+	viewNextBaseWSID.Value().AddField("NextBaseWSID", DataKind_int64, true)
 }
 
 func (ab *appDefBuilder) Grant(kinds []PrivilegeKind, on []QName, fields []FieldName, toRole QName, comment ...string) IPrivilegesBuilder {

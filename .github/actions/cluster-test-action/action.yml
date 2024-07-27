@@ -93,13 +93,15 @@ runs:
       shell: bash
 
     - name: Smoke test - node fail simulation. Drop node.
-      run: terraform -chdir=cmd/ctool/scripts/terraform/ destroy -target=aws_instance.node_02 -auto-approve
+      run: terraform -chdir=cmd/ctool/scripts/terraform/ destroy -target='aws_instance.node["node_02"]' -auto-approve
       shell: bash
 
     - name: Smoke test - replace scylla node to new hardware
       run: |
-        cluster_nodes=${{ env.TF_VAR_included_nodes }}
-        count=$(echo $cluster_nodes | jq '. | length')
+        cluster_nodes="${{ env.TF_VAR_included_nodes }}"
+        trimmed_nodes=$(echo "$cluster_nodes" | tr -d '[]')
+        node_array=($(echo "$trimmed_nodes" | tr ',' '\n'))
+        count=${#node_array[@]}
         if [ $count -eq 7 ]; then
             replaced_node="db-node-1"
         elif [ $count -eq 5 ]; then 
@@ -136,7 +138,7 @@ runs:
       shell: bash
 
     - name: Smoke test - AppNode fail simulation. Drop node.
-      run: terraform -chdir=cmd/ctool/scripts/terraform/ destroy -target=aws_instance.node_01 -auto-approve
+      run: terraform -chdir=cmd/ctool/scripts/terraform/ destroy -target='aws_instance.node["node_01"]' -auto-approve
       shell: bash
 
     - name: Smoke test - replace AppNode to new hardware
