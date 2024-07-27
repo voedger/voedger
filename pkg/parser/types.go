@@ -37,8 +37,8 @@ type AppSchemaAST struct {
 }
 
 type PackageFS struct {
-	PackageFQN string
-	FS         coreutils.IReadFS
+	Path string
+	FS   coreutils.IReadFS
 }
 
 type Ident string

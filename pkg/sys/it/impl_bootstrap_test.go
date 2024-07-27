@@ -108,8 +108,8 @@ func getTestCfg(numParts istructs.NumAppPartitions, numAppWS istructs.NumAppWork
 		},
 	}
 	app1PackageFS := parser.PackageFS{
-		PackageFQN: it.App1PkgPath,
-		FS:         fs,
+		Path: it.App1PkgPath,
+		FS:   fs,
 	}
 	return it.NewOwnVITConfig(
 		it.WithApp(istructs.AppQName_test1_app1, func(apis apps.APIs, cfg *istructsmem.AppConfigType, ep extensionpoints.IExtensionPoint) apps.BuiltInAppDef {
