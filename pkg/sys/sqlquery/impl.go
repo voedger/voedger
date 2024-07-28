@@ -105,7 +105,7 @@ func provideEexecQrySqlQuery(federation federation.IFederation, itokens itokens.
 		table := s.From[0].(*sqlparser.AliasedTableExpr).Expr.(sqlparser.TableName)
 		source := appdef.NewQName(table.Qualifier.String(), table.Name.String())
 
-		kind := args.State.AppStructs().AppDef().Type(source).Kind()
+		kind := appStructs.AppDef().Type(source).Kind()
 		switch kind {
 		case appdef.TypeKind_ViewRecord:
 			if op.EntityID > 0 {
@@ -131,7 +131,7 @@ func provideEexecQrySqlQuery(federation federation.IFederation, itokens itokens.
 				AppPartitions() appparts.IAppPartitions
 			}).AppPartitions()
 			if source == plog {
-				return readPlog(ctx, wsID, offset, limit, args.State.AppStructs(), f, callback, appStructs.AppDef(), appParts)
+				return readPlog(ctx, wsID, offset, limit, appStructs, f, callback, appStructs.AppDef(), appParts)
 			}
 			return readWlog(ctx, wsID, offset, limit, appStructs, f, callback, appStructs.AppDef())
 		}
