@@ -9,6 +9,9 @@ import (
 	"context"
 )
 
+// ************************************************************
+// `SSE` stands for `State Storage Extension`.
+
 // Shall be created once per VVM
 type IMainFactory interface {
 	// One per instance.
@@ -20,29 +23,30 @@ type IMainFactory interface {
 	SetConfig(cfg *Config) error
 
 	// Shall be called once per [application, version].
-	New(storageModulePath string, version string) (ISSEFactory, error)
+	New(storageModulePath string, version string) (IAppSSEFactory, error)
 }
 
 type Config struct {
-	Logger IRSLogger
+	Logger ISSELogger
 }
 
-type IRSLogger interface {
+type ISSELogger interface {
 	Error(args ...interface{})
 	Warning(args ...interface{})
 	Info(args ...interface{})
 	Verbose(args ...interface{})
 }
 
-// `SSE` stands for `State Storage Extension`.
-type ISSEFactory interface {
+type IAppSSEFactory interface {
+	IReleasable
+	New(partitionID int) IPartitionSSEFactory
+}
 
-	// Partition event handlers
-	BeforePartitionStart(ctx context.Context, partitionID int)
-	AfterPartitionStop(ctx context.Context, partitionID int)
+type IPartitionSSEFactory interface {
+	IReleasable
 
 	// Shall be called when a new state storage extension is needed (e.g. for every command/query processing)
-	NewSSE() ISSE
+	NewSSE(WSID uint64) ISSE
 }
 
 // ************************************************************
