@@ -55,35 +55,24 @@ func provideEexecQrySqlQuery(federation federation.IFederation, itokens itokens.
 			if op.Workspace.Kind == dml.WorkspaceKind_PseudoWSID {
 				targetWSID = istructs.WSID(op.Workspace.ID)
 			}
-			sysTokenForTargetApp, err := payloads.GetSystemPrincipalToken(itokens, op.AppQName)
+			targetAppQName := op.AppQName
+			if targetAppQName == appdef.NullAppQName {
+				targetAppQName = args.State.App()
+			}
+			sysTokenForTargetApp, err := payloads.GetSystemPrincipalToken(itokens, targetAppQName)
 			if err != nil {
 				// notest
 				return err
 			}
-			logger.Info(fmt.Sprintf("forwarding query to %s/%d", op.AppQName, targetWSID))
+			logger.Info(fmt.Sprintf("forwarding query to %s/%d", targetAppQName, targetWSID))
 			body := fmt.Sprintf(`{"args":{"Query":%q},"elements":[{"fields":["Result"]}]}`, op.VSQLWithoutAppAndWSID)
-			resp, err := federation.Func(fmt.Sprintf("api/%s/%d/q.sys.SqlQuery", op.AppQName, targetWSID),
+			resp, err := federation.Func(fmt.Sprintf("api/%s/%d/q.sys.SqlQuery", targetAppQName, targetWSID),
 				body, coreutils.WithAuthorizeBy(sysTokenForTargetApp))
 			if err != nil {
 				return err
 			}
 			return callback(&result{value: resp.SectionRow()[0].(string)})
 		}
-
-		// if wsID != args.WSID {
-
-		// 	wsDesc, err := appStructs.Records().GetSingleton(wsID, authnz.QNameCDocWorkspaceDescriptor)
-		// 	if err != nil {
-		// 		// notest
-		// 		return err
-		// 	}
-		// 	if wsDesc.QName() == appdef.NullQName {
-		// 		return coreutils.NewHTTPErrorf(http.StatusBadRequest, fmt.Sprintf("wsid %d: %s", wsID, processors.ErrWSNotInited.Message))
-		// 	}
-		// 	if ws := appStructs.AppDef().WorkspaceByDescriptor(wsDesc.AsQName(authnz.Field_WSKind)); ws == nil {
-		// 		return coreutils.NewHTTPErrorf(http.StatusBadRequest, fmt.Sprintf("no workspace by QName of its descriptor %s from wsid %d", wsDesc.QName(), wsID))
-		// 	}
-		// }
 
 		stmt, err := sqlparser.Parse(op.CleanSQL)
 		if err != nil {

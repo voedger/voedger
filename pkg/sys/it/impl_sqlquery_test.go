@@ -451,8 +451,9 @@ func TestSqlQuery(t *testing.T) {
 		require.NotEqual(t, len(wsOne.Sections[0].Elements), len(wsTwo.Sections[0].Elements))
 	})
 
-	t.Run("400 bad request on read from non-inited workspace", func(t *testing.T) {
-		vit.PostWS(ws, "q.sys.SqlQuery", `{"args":{"Query":"select * from 555.sys.wlog"}}`, coreutils.Expect400(processors.ErrWSNotInited.Message))
+	t.Run("403 forbidden on read from non-inited workspace", func(t *testing.T) {
+		vit.PostWS(ws, "q.sys.SqlQuery", fmt.Sprintf(`{"args":{"Query":"select * from %d.sys.wlog"}}`, istructs.NonExistingRecordID),
+			coreutils.Expect403(processors.ErrWSNotInited.Message))
 	})
 }
 
