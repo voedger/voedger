@@ -27,8 +27,8 @@ func Provide(smtpCfg smtp.Cfg, numCP istructs.NumCommandProcessors) apps.AppBuil
 		registryPackageFS := registry.Provide(cfg, apis.ITokens, apis.IFederation)
 		cfg.AddSyncProjectors(registry.ProvideSyncProjectorLoginIdx())
 		registryAppPackageFS := parser.PackageFS{
-			PackageFQN: RegistryAppFQN,
-			FS:         registryAppSchemaFS,
+			Path: RegistryAppFQN,
+			FS:   registryAppSchemaFS,
 		}
 
 		return apps.BuiltInAppDef{

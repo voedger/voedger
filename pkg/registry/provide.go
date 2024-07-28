@@ -34,8 +34,8 @@ func Provide(cfg *istructsmem.AppConfigType, itokens itokens.ITokens, federation
 
 func ProvidePackageFS() parser.PackageFS {
 	return parser.PackageFS{
-		PackageFQN: RegistryPackageFQN,
-		FS:         schemasFS,
+		Path: RegistryPackageFQN,
+		FS:   schemasFS,
 	}
 }
 
