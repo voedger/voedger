@@ -7,6 +7,6 @@ package goplugin
 
 import "github.com/voedger/voedger/pkg/iextrowstorage"
 
-func New() iextrowstorage.IFactoryFactory {
+func New() iextrowstorage.IMainFactory {
 	return nil
 }
