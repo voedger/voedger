@@ -8,6 +8,7 @@ package appparts
 import (
 	"context"
 	"errors"
+	"net/url"
 	"sync"
 	"time"
 
@@ -39,7 +40,12 @@ func newAppPartitions(asp istructs.IAppStructsProvider, saf SyncActualizerFactor
 	return a, func() {}, err
 }
 
-func (aps *apps) DeployApp(name appdef.AppQName, def appdef.IAppDef, partsCount istructs.NumAppPartitions, engines [ProcessorKind_Count]int) {
+func (aps *apps) DeployBuiltInApp(name appdef.AppQName, def appdef.IAppDef, partsCount istructs.NumAppPartitions, engines [ProcessorKind_Count]int) {
+	aps.DeployApp(name, nil, def, partsCount, engines, -1)
+}
+
+func (aps *apps) DeployApp(name appdef.AppQName, extModuleURLs map[string]*url.URL, def appdef.IAppDef,
+	partsCount istructs.NumAppPartitions, engines [ProcessorKind_Count]int, numAppWorkspaces istructs.NumAppWorkspaces) {
 	aps.mx.RLock()
 	_, ok := aps.apps[name]
 	aps.mx.RUnlock()
@@ -53,12 +59,19 @@ func (aps *apps) DeployApp(name appdef.AppQName, def appdef.IAppDef, partsCount 
 	aps.apps[name] = a
 	aps.mx.Unlock()
 
-	appStructs, err := aps.structs.BuiltIn(name)
+	var appStructs istructs.IAppStructs
+	var err error
+	if len(extModuleURLs) != 0 {
+		// TODO: is sidecarapp criteria?
+		appStructs, err = aps.structs.New(name, def, istructs.ClusterApps[name], numAppWorkspaces)
+	} else {
+		appStructs, err = aps.structs.BuiltIn(name)
+	}
 	if err != nil {
 		panic(err)
 	}
 
-	a.deploy(def, appStructs, engines)
+	a.deploy(def, extModuleURLs, appStructs, engines)
 }
 
 func (aps *apps) DeployAppPartitions(name appdef.AppQName, ids []istructs.PartitionID) {

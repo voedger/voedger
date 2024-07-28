@@ -10,6 +10,7 @@ import (
 	"net/http"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
@@ -21,7 +22,7 @@ import (
 )
 
 // wrong to use IAppPartitions to get total NumAppPartition because the app the cmd is called for is not deployed yet
-func provideExecDeployApp(asp istructs.IAppStructsProvider, timeFunc coreutils.TimeFunc) istructsmem.ExecCommandClosure {
+func provideCmdDeployApp(asp istructs.IAppStructsProvider, timeFunc coreutils.TimeFunc, sidecarApps []appparts.SidecarApp) istructsmem.ExecCommandClosure {
 	return func(args istructs.ExecCommandArgs) (err error) {
 		appQNameStr := args.ArgumentObject.AsString(Field_AppQName)
 		appQName, err := appdef.ParseAppQName(appQNameStr)
@@ -96,10 +97,15 @@ func provideExecDeployApp(asp istructs.IAppStructsProvider, timeFunc coreutils.T
 		// Initialize appstructs data
 		// note: for builtin apps that does nothing because IAppStructs is already initialized (including storage initialization) on VVM wiring
 		// note: it is good that it is done here, not before return if nothing changed because we're want to initialize (i.e. create) keyspace here - that must be done once
-		as, err := asp.BuiltIn(appQName)
+		var as istructs.IAppStructs
+		if sidecarApp, ok := isSidecarApp(appQName, sidecarApps); ok {
+			as, err = asp.New(appQName, sidecarApp.Def, istructs.ClusterApps[appQName], sidecarApp.NumAppWorkspaces)
+		} else {
+			as, err = asp.BuiltIn(appQName)
+		}
 		if err != nil {
 			// notest
-			return fmt.Errorf("failed to get IAppStructs for %s", appQName)
+			return fmt.Errorf("failed to get IAppStructs for %s: %w", appQName, err)
 		}
 
 		// Initialize app workspaces
@@ -110,6 +116,15 @@ func provideExecDeployApp(asp istructs.IAppStructsProvider, timeFunc coreutils.T
 		logger.Info(fmt.Sprintf("app %s successfully deployed: NumPartitions=%d, NumAppWorkspaces=%d", appQName, numAppPartitionsToDeploy, numAppWorkspacesToDeploy))
 		return nil
 	}
+}
+
+func isSidecarApp(appQName appdef.AppQName, sidecarApps []appparts.SidecarApp) (sa appparts.SidecarApp, ok bool) {
+	for _, app := range sidecarApps {
+		if app.Name == appQName {
+			return app, true
+		}
+	}
+	return sa, false
 }
 
 // returns an array of inited AppWSIDs. Inited already -> AppWSID is not in the array. Need for testing only

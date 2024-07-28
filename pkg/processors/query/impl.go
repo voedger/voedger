@@ -154,7 +154,7 @@ func execQuery(ctx context.Context, qw *queryWork) (err error) {
 		}
 		qw.metrics.Increase(execSeconds, time.Since(now).Seconds())
 	}()
-	return qw.appPart.Invoke(ctx, qw.queryFunc.QName(), qw.state, qw.state)
+	return qw.appPart.Invoke(ctx, qw.msg.QName(), qw.state, qw.state)
 }
 
 func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthenticator, authz iauthnz.IAuthorizer,
