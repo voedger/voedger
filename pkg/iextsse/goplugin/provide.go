@@ -5,7 +5,7 @@
 
 package goplugin
 
-import "github.com/voedger/voedger/pkg/iextrowstorage"
+import iextrowstorage "github.com/voedger/voedger/pkg/iextsse"
 
 func New() iextrowstorage.IMainFactory {
 	return nil
