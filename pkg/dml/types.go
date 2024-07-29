@@ -20,10 +20,11 @@ type Workspace struct {
 type WorkspaceKind int
 
 type Op struct {
-	AppQName  appdef.AppQName
-	QName     appdef.QName
-	Kind      OpKind
-	Workspace Workspace
-	EntityID  istructs.IDType // offset or RecordID
-	CleanSQL  string
+	AppQName              appdef.AppQName
+	QName                 appdef.QName
+	Kind                  OpKind
+	Workspace             Workspace
+	EntityID              istructs.IDType // offset or RecordID
+	CleanSQL              string
+	VSQLWithoutAppAndWSID string
 }

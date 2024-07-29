@@ -60,7 +60,6 @@ func parseAndValidateQuery(args istructs.ExecCommandArgs, query string, asp istr
 		AppPartitions() appparts.IAppPartitions
 	}).AppPartitions()
 
-
 	if update.appStructs, err = asp.BuiltIn(update.AppQName); err != nil {
 		// notest
 		return update, err
