@@ -47,24 +47,27 @@ func Pbill() {
 	// Prepare intent for Package_air.WSingleton_NextNumbers
 	{
 		var nextNumber int32
-		nextNumberValue, nextNumberOk := orm.Package_air.WSingleton_NextNumbers.Get()
 		var intent orm.Intent_WSingleton_air_NextNumbers
+
+		nextNumberValue, nextNumberOk := orm.Package_air.WSingleton_NextNumbers.Get()
 		if !nextNumberOk {
 			nextNumber = 0
 			intent = nextNumberValue.Insert()
 		} else {
-			intent = nextNumberValue.Update() //orm.Package_air.WSingleton_NextNumbers.Update(nextNumberValue)
+			intent = nextNumberValue.Update()
 			nextNumber = nextNumberValue.Get_NextPBillNumber()
 		}
+
 		intent.Set_NextPBillNumber(nextNumber + 1)
 	}
 }
 
 func FillPbillDates() {
 	event := ext.MustGetValue(ext.KeyBuilder(ext.StorageEvent, ext.NullEntity))
+	offs := event.AsInt64("Offset")
 	arg := event.AsValue("ArgumentObject")
 	// extract offset and count from the argument
-	offs := arg.AsInt64("Offset")
+	//offs := arg.AsInt64("Offset")
 
 	// get pbill datetime
 	pbillDatetime := time.UnixMicro(arg.AsInt64("pdatetime"))
@@ -73,8 +76,8 @@ func FillPbillDates() {
 	dayOfYear := pbillDatetime.Day()
 
 	var intent orm.Intent_View_air_PbillDates
-	val, ok := orm.Package_air.View_PbillDates.Get(int32(year), int32(dayOfYear))
 
+	val, ok := orm.Package_air.View_PbillDates.Get(int32(year), int32(dayOfYear))
 	if !ok {
 		intent = val.Insert()
 		intent.Set_FirstOffset(offs)

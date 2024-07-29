@@ -13,6 +13,12 @@ type eventStorage struct {
 	eventFunc PLogEventFunc
 }
 
+func newEventStorage(eventFunc PLogEventFunc) *eventStorage {
+	return &eventStorage{
+		eventFunc: eventFunc,
+	}
+}
+
 func (s *eventStorage) NewKeyBuilder(_ appdef.QName, _ istructs.IStateKeyBuilder) istructs.IStateKeyBuilder {
 	return newKeyBuilder(Event, appdef.NullQName)
 }

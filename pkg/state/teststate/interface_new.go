@@ -10,6 +10,11 @@ type IFullQName interface {
 	Entity() string
 }
 
+type IView interface {
+	IFullQName
+	Keys() []string
+}
+
 type ICommandRunner interface {
 	// methos to fulfill test state
 	Record(fQName IFullQName, id int, keyValueList ...any) ICommandRunner

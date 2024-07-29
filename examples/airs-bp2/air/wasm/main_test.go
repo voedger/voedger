@@ -16,7 +16,7 @@ import (
 func TestPbill(t *testing.T) {
 	t.Parallel()
 
-	currentYear := time.Now().UTC().Year()
+	date := time.Now()
 
 	t.Run("Singleton NextPBillNumber: insert", func(t *testing.T) {
 
@@ -34,6 +34,7 @@ func TestPbill(t *testing.T) {
 				2,
 				`id_bill`, 100002,
 				`id_untill_users`, 100001,
+				`pdatetime`, date.UnixMicro(),
 			).
 			ArgumentObjectRow(`pbill_item`,
 				3,
@@ -51,7 +52,7 @@ func TestPbill(t *testing.T) {
 			RequireRecordUpdate(
 				orm.Package_untill.WDoc_bill,
 				100002,
-				`close_year`, currentYear,
+				`close_year`, date.Year(),
 			).
 			Run()
 	})
@@ -77,6 +78,7 @@ func TestPbill(t *testing.T) {
 				2,
 				`id_bill`, 100002,
 				`id_untill_users`, 100001,
+				`pdatetime`, date.UnixMicro(),
 			).
 			ArgumentObjectRow(`pbill_item`,
 				3,
@@ -94,7 +96,7 @@ func TestPbill(t *testing.T) {
 			RequireRecordUpdate(
 				orm.Package_untill.WDoc_bill,
 				100002,
-				`close_year`, currentYear,
+				`close_year`, date.Year(),
 			).
 			Run()
 	})
@@ -103,21 +105,19 @@ func TestPbill(t *testing.T) {
 func TestFillPbillDates(t *testing.T) {
 	t.Parallel()
 
-	now := time.Now().UnixMicro()
+	date := time.Date(2023, 1, 9, 0, 0, 0, 0, time.UTC)
 
 	t.Run("View View_PbillDates: insert", func(t *testing.T) {
-		nextNumber := 5
-
 		test.NewProjectorTest(
 			t,
 			orm.Package_air.Command_Pbill,
 			FillPbillDates,
 		).
-			CUDRow(
-				orm.Package_untill.WDoc_bill,
-				100002,
-				`tableno`, 1,
-			).
+			//CUDRow(
+			//	orm.Package_untill.WDoc_bill,
+			//	100012,
+			//	`tableno`, 1,
+			//).
 			Offset(100002).
 			//View(
 			//	orm.Package_air.View_PbillDates,
@@ -128,7 +128,7 @@ func TestFillPbillDates(t *testing.T) {
 				2,
 				`id_bill`, 100002,
 				`id_untill_users`, 100001,
-				`pdatetime`, now,
+				`pdatetime`, date.UnixMicro(),
 			).
 			ArgumentObjectRow(`pbill_item`,
 				3,
@@ -141,13 +141,19 @@ func TestFillPbillDates(t *testing.T) {
 			).
 			RequireViewInsert(
 				orm.Package_air.View_PbillDates,
-				`NextPBillNumber`, nextNumber+1,
+				`Year`, 2023,
+				`DayOfYear`, 9,
+				`FirstOffset`, 0,
+				`LastOffset`, 0,
 			).
-			RequireViewUpdate(
-				orm.Package_air.View_PbillDates,
-				100002,
-				`close_year`, 2024,
-			).
+			//RequireViewUpdate(
+			//	orm.Package_air.View_PbillDates,
+			//	100002,
+			//	`Year`, 2024,
+			//	`DayOfYear`, 9,
+			//	`FirstOffset`, 0,
+			//	`LastOffset`, 0,
+			//).
 			// call PutEvent with provided argument and cud
 			// rework FillPbillDates like this: read StorageEvent (look examples)
 			Run()

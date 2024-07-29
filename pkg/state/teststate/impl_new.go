@@ -37,6 +37,7 @@ type CommandTestState struct {
 	extensionFunc func()
 	funcRunner    *sync.Once
 
+	command IFullQName
 	// recordItems is to store records
 	recordItems []recordItem
 	// requiredRecordItems is to store required items
@@ -114,6 +115,7 @@ func NewCommandTestState(t *testing.T, iCommand ICommand, extensionFunc func()) 
 
 	ts := &CommandTestState{}
 
+	ts.command = iCommand
 	ts.testData = make(map[string]any)
 	// set test object
 	ts.t = t
@@ -180,11 +182,11 @@ func (cts *CommandTestState) Offset(offset int) ITestRunner {
 }
 
 func (cts *CommandTestState) RequireViewInsert(fQName IFullQName, keyValueList ...any) ITestRunner {
-	return cts.addRequiredRecordItems(fQName, 0, false, true, keyValueList...)
+	return cts.addRequiredRecordItems(fQName, 0, false, true, true, keyValueList...)
 }
 
 func (cts *CommandTestState) RequireViewUpdate(fQName IFullQName, id int, keyValueList ...any) ITestRunner {
-	return cts.addRequiredRecordItems(fQName, 0, false, false, keyValueList...)
+	return cts.addRequiredRecordItems(fQName, id, false, false, true, keyValueList...)
 }
 
 func (cts *CommandTestState) View(fQName IFullQName, id int, keyValueList ...any) ITestRunner {
@@ -195,6 +197,7 @@ func (cts *CommandTestState) View(fQName IFullQName, id int, keyValueList ...any
 	cts.viewRecords = append(cts.viewRecords, recordItem{
 		entity:       fQName,
 		id:           id,
+		isView:       true,
 		keyValueList: keyValueList,
 	})
 
@@ -349,12 +352,7 @@ func (cts *CommandTestState) require() {
 	for _, item := range cts.requiredRecordItems {
 		requiredKeys = append(requiredKeys, cts.keyBuilder(item))
 
-		if item.isSingleton {
-			cts.requireSingleton(item.entity, item.isNew, item.keyValueList...)
-			continue
-		}
-
-		cts.requireRecord(item.entity, item.id, item.isNew, item.keyValueList...)
+		cts.requireIntent(item)
 	}
 
 	// gather all intents
@@ -428,19 +426,19 @@ func (cts *CommandTestState) ArgumentObjectRow(path string, id int, keyValueList
 }
 
 func (cts *CommandTestState) RequireSingletonInsert(fQName IFullQName, keyValueList ...any) ITestRunner {
-	return cts.addRequiredRecordItems(fQName, 0, true, true, keyValueList...)
+	return cts.addRequiredRecordItems(fQName, 0, true, true, false, keyValueList...)
 }
 
 func (cts *CommandTestState) RequireSingletonUpdate(fQName IFullQName, keyValueList ...any) ITestRunner {
-	return cts.addRequiredRecordItems(fQName, 0, true, false, keyValueList...)
+	return cts.addRequiredRecordItems(fQName, 0, true, false, false, keyValueList...)
 }
 
 func (cts *CommandTestState) RequireRecordInsert(fQName IFullQName, id int, keyValueList ...any) ITestRunner {
-	return cts.addRequiredRecordItems(fQName, id, false, true, keyValueList...)
+	return cts.addRequiredRecordItems(fQName, id, false, true, false, keyValueList...)
 }
 
 func (cts *CommandTestState) RequireRecordUpdate(fQName IFullQName, id int, keyValueList ...any) ITestRunner {
-	return cts.addRequiredRecordItems(fQName, id, false, false, keyValueList...)
+	return cts.addRequiredRecordItems(fQName, id, false, false, false, keyValueList...)
 }
 
 func (cts *CommandTestState) CUDRow(fQName IFullQName, id int, keyValueList ...any) ITestRunner {
@@ -487,24 +485,17 @@ func (cts *CommandTestState) putCudRows() {
 	}
 }
 
-func (cts *CommandTestState) addRequiredRecordItems(fQName IFullQName, id int, isSingleton, isNew bool, keyValueList ...any) ITestRunner {
+func (cts *CommandTestState) addRequiredRecordItems(fQName IFullQName, id int, isSingleton, isNew, isView bool, keyValueList ...any) ITestRunner {
 	cts.requiredRecordItems = append(cts.requiredRecordItems, recordItem{
 		entity:       fQName,
 		id:           id,
 		isSingleton:  isSingleton,
 		isNew:        isNew,
+		isView:       isView,
 		keyValueList: keyValueList,
 	})
 
 	return cts
-}
-
-func (cts *CommandTestState) requireSingleton(fQName IFullQName, isInsertIntent bool, keyValueList ...any) {
-	cts.requireIntent(fQName, 0, true, isInsertIntent, keyValueList...)
-}
-
-func (cts *CommandTestState) requireRecord(fQName IFullQName, id int, isInsertIntent bool, keyValueList ...any) {
-	cts.requireIntent(fQName, id, false, isInsertIntent, keyValueList...)
 }
 
 // recoverPanicInTestState must be called in defer to recover panic in the test state
@@ -521,39 +512,25 @@ func (cts *CommandTestState) recoverPanicInTestState() {
 // id - record id (unused for singletons)
 // isSingletone - if the entity is a singleton
 // isInsertIntent - if the intent is insert or update
+// isView - if the entity is a view
 // keyValueList - list of key-value pairs
-func (cts *CommandTestState) requireIntent(
-	fQName IFullQName,
-	id int,
-	isSingletone bool,
-	isInsertIntent bool,
-	keyValueList ...any,
-) {
-	localQName := cts.getQNameFromFQName(fQName)
-
-	kb, err := cts.IState.KeyBuilder(state.Record, localQName)
-	require.NoError(cts.t, err)
-
-	if isSingletone {
-		kb.PutBool(state.Field_IsSingleton, true)
-	} else {
-		kb.PutInt64(state.Field_ID, int64(id))
-	}
+func (cts *CommandTestState) requireIntent(r recordItem) {
+	kb := cts.keyBuilder(r)
 
 	vb, isNew := cts.IState.FindIntentWithOpKind(kb)
-	require.NoError(cts.t, err)
-
-	value := vb.BuildValue()
-	if value == nil {
-		require.Fail(cts.t, "value builder does not support equalValues operation")
+	if vb == nil {
+		require.Fail(cts.t, "intent not found")
 		return
 	}
 
-	keyValueMap, err := parseKeyValues(keyValueList)
-	require.NoError(cts.t, err)
+	m, err := parseKeyValues(r.keyValueList)
+	require.NoError(cts.t, err, "failed to parse key values")
 
-	require.Equalf(cts.t, isInsertIntent, isNew, "%s: intent kind mismatch", localQName.String())
-	cts.equalValues(vb, keyValueMap)
+	_, mapOfValues := splitKeysFromValues(r.entity, m)
+
+	localQName := cts.getQNameFromFQName(r.entity)
+	require.Equalf(cts.t, r.isNew, isNew, "%s: intent kind mismatch", localQName.String())
+	cts.equalValues(vb, mapOfValues)
 }
 
 func (cts *CommandTestState) equalValues(vb istructs.IStateValueBuilder, expectedValues map[string]any) {
@@ -566,10 +543,9 @@ func (cts *CommandTestState) equalValues(vb istructs.IStateValueBuilder, expecte
 		require.Fail(cts.t, "value builder does not support equalValues operation")
 		return
 	}
+
 	for expectedKey, expectedValue := range expectedValues {
 		switch t := expectedValue.(type) {
-		case int:
-			require.Equal(cts.t, int32(t), value.AsInt32(expectedKey))
 		case int8:
 			require.Equal(cts.t, int32(t), value.AsInt32(expectedKey))
 		case int16:
@@ -578,6 +554,8 @@ func (cts *CommandTestState) equalValues(vb istructs.IStateValueBuilder, expecte
 			require.Equal(cts.t, t, value.AsInt32(expectedKey))
 		case int64:
 			require.Equal(cts.t, t, value.AsInt64(expectedKey))
+		case int:
+			require.Equal(cts.t, int64(t), value.AsInt64(expectedKey))
 		case float32:
 			require.Equal(cts.t, t, value.AsFloat32(expectedKey))
 		case float64:
@@ -599,23 +577,33 @@ func (cts *CommandTestState) equalValues(vb istructs.IStateValueBuilder, expecte
 }
 
 func (cts *CommandTestState) keyBuilder(r recordItem) istructs.IStateKeyBuilder {
-	localQName := cts.getQNameFromFQName(r.entity)
+	var err error
+	var kb istructs.IStateKeyBuilder
 
-	kb, err := cts.IState.KeyBuilder(state.Record, localQName)
+	localQName := cts.getQNameFromFQName(r.entity)
+	if r.isView {
+		kb, err = cts.IState.KeyBuilder(state.View, localQName)
+	} else {
+		kb, err = cts.IState.KeyBuilder(state.Record, localQName)
+	}
+
 	require.NoError(cts.t, err, "IState.KeyBuilder: failed to create key builder")
 
-	if r.isSingleton {
+	switch {
+	case r.isSingleton:
 		kb.PutBool(state.Field_IsSingleton, true)
-	} else {
+	case !r.isView:
 		kb.PutInt64(state.Field_ID, int64(r.id))
+	case r.isView:
+		m, err := parseKeyValues(r.keyValueList)
+		require.NoError(cts.t, err, "failed to parse key values")
+
+		mapOfKeys, _ := splitKeysFromValues(r.entity, m)
+
+		kb.PutFromJSON(mapOfKeys)
 	}
 
 	return kb
-}
-
-func (cts *CommandTestState) checkoutRequires() {
-	// checkout intents
-	cts.require()
 }
 
 // ProjectorTestState is a test state for projector testing
@@ -628,6 +616,11 @@ func NewProjectorTestState(t *testing.T, iCommand ICommand, extensionFunc func()
 	ts := &ProjectorTestState{
 		*NewCommandTestState(t, iCommand, extensionFunc),
 	}
+	ts.ctx = context.Background()
+	ts.processorKind = ProcKind_Actualizer
+	ts.secretReader = &secretReader{secrets: make(map[string][]byte)}
+	ts.buildAppDef(iCommand.PkgPath(), iCommand.WorkspaceDescriptor())
+	ts.buildState(ProcKind_Actualizer)
 
 	return ts
 }
@@ -727,9 +720,16 @@ func (pts *ProjectorTestState) putArgument() {
 		return
 	}
 
-	pts.PutEvent(pts.commandWSID, pts.argumentType, func(argBuilder istructs.IObjectBuilder, cudBuilder istructs.ICUD) {
-		argBuilder.FillFromJSON(pts.argumentObject)
-	})
+	pts.PutEvent(
+		pts.commandWSID,
+		appdef.NewFullQName(
+			pts.command.PkgPath(),
+			pts.command.Entity(),
+		),
+		func(argBuilder istructs.IObjectBuilder, cudBuilder istructs.ICUD) {
+			argBuilder.FillFromJSON(pts.argumentObject)
+		},
+	)
 }
 
 func parseKeyValues(keyValues []any) (map[string]any, error) {
@@ -776,4 +776,27 @@ func putToArgumentObjectTree(tree map[string]any, pathPart string, keyValueList 
 	tree[pathPart] = append(tree[pathPart].([]any), newTree)
 
 	return newTree
+}
+
+// splitKeysFromValues splits map of key-value pairs into two maps:
+// 1. map of keys
+// 2. map of values
+func splitKeysFromValues(entity IFullQName, m map[string]any) (mapOfKeys map[string]any, mapOfValues map[string]any) {
+	mapOfKeys = make(map[string]any, len(m))
+	mapOfValues = make(map[string]any, len(m))
+
+	iView, ok := entity.(IView)
+	if ok {
+		keys := iView.Keys()
+		for k, v := range m {
+			if slices.Contains(keys, k) {
+				mapOfKeys[k] = v
+				continue
+			}
+
+			mapOfValues[k] = v
+		}
+	}
+
+	return mapOfKeys, mapOfValues
 }

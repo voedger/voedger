@@ -43,6 +43,7 @@ func implProvideAsyncActualizerState(ctx context.Context, appStructsFunc AppStru
 
 	state.addStorage(View, newViewRecordsStorage(ctx, appStructsFunc, wsidFunc, n10nFunc), S_GET|S_GET_BATCH|S_READ|S_INSERT|S_UPDATE)
 	state.addStorage(Record, newRecordsStorage(appStructsFunc, wsidFunc, nil), S_GET|S_GET_BATCH)
+	state.addStorage(Event, newEventStorage(eventFunc), S_GET)
 
 	state.addStorage(WLog, &wLogStorage{
 		ctx:        ctx,
