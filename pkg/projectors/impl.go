@@ -73,7 +73,6 @@ func newSyncBranch(conf SyncActualizerConf, projector istructs.Projector, servic
 					return nil
 				}
 				return appPart.Invoke(ctx, projector.Name, s, s)
-				// return projector.Func(service.event, s, s)
 			}),
 		pipeline.WireFunc("IntentsValidator", func(_ context.Context, _ interface{}) (err error) {
 			return s.ValidateIntents()
@@ -116,11 +115,4 @@ func provideViewDefImpl(appDef appdef.IAppDefBuilder, qname appdef.QName, buildF
 	if buildFunc != nil {
 		buildFunc(builder)
 	}
-}
-
-func provideOffsetsDefImpl(adb appdef.IAppDefBuilder) {
-	view := adb.AddView(qnameProjectionOffsets)
-	view.Key().PartKey().AddField(partitionFld, appdef.DataKind_int32)
-	view.Key().ClustCols().AddField(projectorNameFld, appdef.DataKind_QName)
-	view.Value().AddField(offsetFld, appdef.DataKind_int64, true)
 }

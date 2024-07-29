@@ -70,18 +70,18 @@ func blobReadMessageHandler(bbm blobBaseMessage, blobReadDetails blobReadDetails
 		Method:   ibus.HTTPMethodPOST,
 		WSID:     int64(bbm.wsid),
 		AppQName: bbm.appQName.String(),
-		Resource: "c.sys.DownloadBLOBHelper",
+		Resource: "q.sys.DownloadBLOBAuthnz",
 		Header:   bbm.header,
 		Body:     []byte(`{}`),
 		Host:     localhost,
 	}
 	blobHelperResp, _, _, err := bus.SendRequest2(bbm.req.Context(), req, busTimeout)
 	if err != nil {
-		WriteTextResponse(bbm.resp, "failed to exec c.sys.DownloadBLOBHelper: "+err.Error(), http.StatusInternalServerError)
+		WriteTextResponse(bbm.resp, "failed to exec q.sys.DownloadBLOBAuthnz: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 	if blobHelperResp.StatusCode != http.StatusOK {
-		WriteTextResponse(bbm.resp, "c.sys.DownloadBLOBHelper returned error: "+string(blobHelperResp.Data), blobHelperResp.StatusCode)
+		WriteTextResponse(bbm.resp, "q.sys.DownloadBLOBAuthnz returned error: "+string(blobHelperResp.Data), blobHelperResp.StatusCode)
 		return
 	}
 
@@ -278,7 +278,7 @@ func (s *httpService) blobRequestHandler(resp http.ResponseWriter, req *http.Req
 	if _, ok := mes.blobBaseMessage.header[coreutils.Authorization]; !ok {
 		if cookie, err := req.Cookie(coreutils.Authorization); err == nil {
 			if val, err := url.QueryUnescape(cookie.Value); err == nil {
-				// authorization token in cookies -> c.sys.DownloadBLOBHelper requires it in headers
+				// authorization token in cookies -> q.sys.DownloadBLOBAuthnz requires it in headers
 				mes.blobBaseMessage.header[coreutils.Authorization] = []string{val}
 			}
 		}

@@ -14,8 +14,8 @@ import (
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-func provideCmdInitiateLeaveWorkspace(cfg *istructsmem.AppConfigType, timeFunc coreutils.TimeFunc) {
-	cfg.Resources.Add(istructsmem.NewCommandFunction(
+func provideCmdInitiateLeaveWorkspace(sr istructsmem.IStatelessResources, timeFunc coreutils.TimeFunc) {
+	sr.AddCommands(appdef.SysPackagePath, istructsmem.NewCommandFunction(
 		qNameCmdInitiateLeaveWorkspace,
 		execCmdInitiateLeaveWorkspace(timeFunc),
 	))

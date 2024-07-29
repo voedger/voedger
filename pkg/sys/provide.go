@@ -16,7 +16,6 @@ import (
 	"github.com/voedger/voedger/pkg/itokens"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	"github.com/voedger/voedger/pkg/parser"
-	"github.com/voedger/voedger/pkg/projectors"
 	"github.com/voedger/voedger/pkg/sys/authnz"
 	"github.com/voedger/voedger/pkg/sys/blobber"
 	"github.com/voedger/voedger/pkg/sys/builtin"
@@ -36,22 +35,27 @@ import (
 //go:embed *.vsql
 var SysFS embed.FS
 
-func Provide(cfg *istructsmem.AppConfigType, smtpCfg smtp.Cfg,
-	ep extensionpoints.IExtensionPoint, wsPostInitFunc workspace.WSPostInitFunc, timeFunc coreutils.TimeFunc, itokens itokens.ITokens, federation federation.IFederation,
-	asp istructs.IAppStructsProvider, atf payloads.IAppTokensFactory, buildInfo *debug.BuildInfo,
-	storageProvider istorage.IAppStorageProvider) parser.PackageFS {
-	blobber.ProvideBlobberCmds(cfg)
-	collection.Provide(cfg)
-	journal.Provide(cfg, ep)
-	builtin.Provide(cfg, buildInfo, storageProvider)
-	workspace.Provide(cfg, timeFunc, itokens, federation, itokens, ep, wsPostInitFunc)
-	sqlquery.Provide(cfg, asp)
-	projectors.ProvideOffsetsDef(cfg.AppDefBuilder())
-	verifier.Provide(cfg, itokens, federation, asp, smtpCfg, timeFunc)
-	authnz.Provide(cfg, itokens, atf)
-	invite.Provide(cfg, timeFunc, federation, itokens, smtpCfg)
-	uniques.Provide(cfg)
-	describe.Provide(cfg)
+func ProvideStateless(sr istructsmem.IStatelessResources, smtpCfg smtp.Cfg, eps map[appdef.AppQName]extensionpoints.IExtensionPoint, buildInfo *debug.BuildInfo,
+	storageProvider istorage.IAppStorageProvider, wsPostInitFunc workspace.WSPostInitFunc, timeFunc coreutils.TimeFunc,
+	itokens itokens.ITokens, federation federation.IFederation, asp istructs.IAppStructsProvider, atf payloads.IAppTokensFactory) {
+	blobber.ProvideBlobberCmds(sr)
+	collection.Provide(sr)
+	journal.Provide(sr, eps)
+	builtin.Provide(sr, buildInfo, storageProvider)
+	workspace.Provide(sr, timeFunc, itokens, federation, itokens, wsPostInitFunc, eps)
+	sqlquery.Provide(sr, federation, itokens)
+	verifier.Provide(sr, itokens, federation, asp, smtpCfg, timeFunc)
+	authnz.Provide(sr, itokens, atf)
+	invite.Provide(sr, timeFunc, federation, itokens, smtpCfg)
+	uniques.Provide(sr)
+	describe.Provide(sr)
+}
+
+func Provide(cfg *istructsmem.AppConfigType) parser.PackageFS {
+	verifier.ProvideLimits(cfg)
+	builtin.ProvideCUDValidators(cfg)
+	builtin.ProvideSysIsActiveValidation(cfg)
+	uniques.ProvideEventValidator(cfg)
 	return parser.PackageFS{
 		Path: appdef.SysPackage,
 		FS:   SysFS,

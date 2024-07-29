@@ -61,6 +61,8 @@ func (s *httpService) Prepare(work interface{}) (err error) {
 		return err
 	}
 
+	s.listeningPort.Store(int32(s.listener.Addr().(*net.TCPAddr).Port))
+
 	if s.RouterParams.ConnectionsLimit > 0 {
 		s.listener = netutil.LimitListener(s.listener, s.RouterParams.ConnectionsLimit)
 	}
@@ -108,10 +110,11 @@ func (s *httpService) Stop() {
 }
 
 func (s *httpService) GetPort() int {
-	if s.listener == nil {
-		panic("listener is not listening. Need to call http funcs before public service is sarted -> use IFederation.AdminFunc()")
+	port := s.listeningPort.Load()
+	if port == 0 {
+		panic("listener is not listening. Need to call http funcs before public service is started -> use IFederation.AdminFunc()")
 	}
-	return s.listener.Addr().(*net.TCPAddr).Port
+	return int(port)
 }
 
 func (s *httpService) registerHandlers(busTimeout time.Duration, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) (err error) {

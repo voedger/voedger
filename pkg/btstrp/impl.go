@@ -7,6 +7,7 @@ package btstrp
 
 import (
 	"fmt"
+	"net/url"
 
 	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/apps/sys/clusterapp"
@@ -22,7 +23,7 @@ import (
 )
 
 func Bootstrap(federation federation.IFederation, asp istructs.IAppStructsProvider, timeFunc coreutils.TimeFunc, appparts appparts.IAppPartitions,
-	clusterApp ClusterBuiltInApp, otherApps []appparts.BuiltInApp, itokens itokens.ITokens, storageProvider istorage.IAppStorageProvider,
+	clusterApp ClusterBuiltInApp, otherApps []appparts.BuiltInApp, sidecarApps []appparts.SidecarApp, itokens itokens.ITokens, storageProvider istorage.IAppStorageProvider,
 	blobberAppStoragePtr iblobstoragestg.BlobAppStoragePtr, routerAppStoragePtr dbcertcache.RouterAppStoragePtr) (err error) {
 
 	// initialize cluster app workspace, use app ws amount 0
@@ -41,7 +42,8 @@ func Bootstrap(federation federation.IFederation, asp istructs.IAppStructsProvid
 	}
 
 	// appparts: deploy single clusterApp partition
-	appparts.DeployApp(istructs.AppQName_sys_cluster, clusterApp.Def, clusterapp.ClusterAppNumPartitions, clusterapp.ClusterAppNumEngines)
+	appparts.DeployApp(istructs.AppQName_sys_cluster, nil, clusterApp.Def, clusterapp.ClusterAppNumPartitions,
+		clusterapp.ClusterAppNumEngines, clusterapp.ClusterAppNumAppWS)
 	appparts.DeployAppPartitions(istructs.AppQName_sys_cluster, []istructs.PartitionID{clusterapp.ClusterAppWSIDPartitionID})
 
 	sysToken, err := payloads.GetSystemPrincipalToken(itokens, istructs.AppQName_sys_cluster)
@@ -51,28 +53,42 @@ func Bootstrap(federation federation.IFederation, asp istructs.IAppStructsProvid
 
 	// For each app in otherApps: check apps compatibility by calling c.cluster.DeployApp
 	for _, app := range otherApps {
-		// Use Admin Endpoint to send requests
-		body := fmt.Sprintf(`{"args":{"AppQName":"%s","NumPartitions":%d,"NumAppWorkspaces":%d}}`, app.Name, app.NumParts, app.NumAppWorkspaces)
-		_, err := federation.AdminFunc(fmt.Sprintf("api/%s/%d/c.cluster.DeployApp", istructs.AppQName_sys_cluster, clusterapp.ClusterAppPseudoWSID), body,
-			coreutils.WithDiscardResponse(),
-			coreutils.WithAuthorizeBy(sysToken),
-		)
-		if err != nil {
-			panic(fmt.Sprintf("failed to deploy app %s: %s", app.Name, err.Error()))
-		}
+		callDeployApp(federation, sysToken, app)
+	}
+	for _, sidecarApp := range sidecarApps {
+		callDeployApp(federation, sysToken, sidecarApp.BuiltInApp)
 	}
 
 	// For each app builtInApps: deploy a builtin app
 	for _, app := range otherApps {
-		appparts.DeployApp(app.Name, app.Def, app.NumParts, app.EnginePoolSize)
-		partitionIDs := make([]istructs.PartitionID, app.NumParts)
-		for id := istructs.NumAppPartitions(0); id < app.NumParts; id++ {
-			partitionIDs[id] = istructs.PartitionID(id)
-		}
-		appparts.DeployAppPartitions(app.Name, partitionIDs)
+		deployAppPartitions(appparts, app, nil)
+	}
+	for _, app := range sidecarApps {
+		deployAppPartitions(appparts, app.BuiltInApp, app.ExtModuleURLs)
 	}
 
 	return nil
+}
+
+func deployAppPartitions(appparts appparts.IAppPartitions, app appparts.BuiltInApp, extModuleURLs map[string]*url.URL) {
+	appparts.DeployApp(app.Name, extModuleURLs, app.Def, app.NumParts, app.EnginePoolSize, app.NumAppWorkspaces)
+	partitionIDs := make([]istructs.PartitionID, app.NumParts)
+	for id := istructs.NumAppPartitions(0); id < app.NumParts; id++ {
+		partitionIDs[id] = istructs.PartitionID(id)
+	}
+	appparts.DeployAppPartitions(app.Name, partitionIDs)
+}
+
+func callDeployApp(federation federation.IFederation, sysToken string, app appparts.BuiltInApp) {
+	// Use Admin Endpoint to send requests
+	body := fmt.Sprintf(`{"args":{"AppQName":"%s","NumPartitions":%d,"NumAppWorkspaces":%d}}`, app.Name, app.NumParts, app.NumAppWorkspaces)
+	_, err := federation.AdminFunc(fmt.Sprintf("api/%s/%d/c.cluster.DeployApp", istructs.AppQName_sys_cluster, clusterapp.ClusterAppPseudoWSID), body,
+		coreutils.WithDiscardResponse(),
+		coreutils.WithAuthorizeBy(sysToken),
+	)
+	if err != nil {
+		panic(fmt.Sprintf("failed to deploy app %s: %s", app.Name, err.Error()))
+	}
 }
 
 func initClusterAppWS(asp istructs.IAppStructsProvider, timeFunc coreutils.TimeFunc) error {

@@ -175,26 +175,48 @@ func (n *nodeType) address() string {
 // nolint
 func (n *nodeType) nodeName() string {
 	if n.cluster.Edition == clusterEditionSE {
-		switch n.idx {
-		case 1:
-			return "app-node-1"
-		case 2:
-			return "app-node-2"
-		case 3:
-			return "db-node-1"
-		case 4:
-			return "db-node-2"
-		case 5:
-			return "db-node-3"
-		default:
-			return "node"
+		if n.cluster.SubEdition == clusterSubEditionSE3 {
+			return fmt.Sprintf("node-%d", n.idx)
+		} else {
+			switch n.idx {
+			case 1:
+				return "app-node-1"
+			case 2:
+				return "app-node-2"
+			case 3:
+				return "db-node-1"
+			case 4:
+				return "db-node-2"
+			case 5:
+				return "db-node-3"
+			default:
+				return "node"
+
+			}
 		}
+
 	} else if n.cluster.Edition == clusterEditionCE {
 		return ceNodeName
 	} else {
 		return "node"
 	}
+}
 
+// nolint
+func (n *nodeType) hostNames() []string {
+	if n.cluster.SubEdition == clusterSubEditionSE5 {
+		return []string{n.nodeName()}
+	} else if n.cluster.SubEdition == clusterSubEditionSE3 {
+		switch n.idx {
+		case 1:
+			return []string{"app-node-1", "db-node-1"}
+		case 2:
+			return []string{"app-node-2", "db-node-2"}
+		case 3:
+			return []string{"db-node-3"}
+		}
+	}
+	return []string{n.nodeName()}
 }
 
 // the minimum amount of RAM required by the node (as string)
@@ -219,7 +241,7 @@ func (n *nodeType) nodeControllerFunction() error {
 	}
 
 	switch n.NodeRole {
-	case nrDBNode, nrAppNode:
+	case nrDBNode, nrAppNode, nrAppDbNode:
 		return seNodeControllerFunction(n)
 	case nrCENode:
 		return ceNodeControllerFunction(n)
@@ -260,17 +282,27 @@ func (n *nodeType) actualNodeVersion() string {
 	return n.ActualNodeState.NodeVersion
 }
 
-func (n *nodeType) label(key string) string {
+// nolint
+func (n *nodeType) label(key string) []string {
 	switch n.NodeRole {
 	case nrCENode:
-		return "ce"
+		return []string{"ce"}
 	case nrAppNode:
 		if key != swarmAppLabelKey {
-			return fmt.Sprintf("AppNode%d", n.idx)
+			return []string{fmt.Sprintf("AppNode%d", n.idx)}
 		}
-		return "AppNode"
+		return []string{"AppNode"}
 	case nrDBNode:
-		return fmt.Sprintf("DBNode%d", n.idx-seNodeCount)
+		if n.cluster.SubEdition == clusterSubEditionSE3 {
+			return []string{fmt.Sprintf("DBNode%d", n.idx)}
+		}
+		return []string{fmt.Sprintf("DBNode%d", n.idx-seNodeCount)}
+	case nrAppDbNode:
+		if key != swarmAppLabelKey {
+			return []string{fmt.Sprintf("AppNode%d", n.idx), fmt.Sprintf("DBNode%d", n.idx)}
+		}
+		return []string{"AppNode", fmt.Sprintf("DBNode%d", n.idx)}
+
 	}
 
 	err := fmt.Errorf(errInvalidNodeRole, n.address(), ErrInvalidNodeRole)
@@ -560,6 +592,7 @@ type clusterType struct {
 	exists                bool //the cluster is loaded from "cluster.json" at the start of ctool
 	dryRun                bool
 	Edition               string
+	SubEdition            string `json:"SubEdition,omitempty"`
 	ActualClusterVersion  string
 	DesiredClusterVersion string     `json:"DesiredClusterVersion,omitempty"`
 	SshPort               string     `json:"SSHPort,omitempty"`
@@ -572,6 +605,23 @@ type clusterType struct {
 	Nodes                 []nodeType
 	ReplacedAddresses     []string `json:"ReplacedAddresses,omitempty"`
 	Draft                 bool     `json:"Draft,omitempty"`
+}
+
+// map[hostname]ipAddress
+func (c *clusterType) hosts() map[string]string {
+	hosts := make(map[string]string)
+	var addr string
+	for _, n := range c.Nodes {
+		for i := 0; i < len(n.hostNames()); i++ {
+			if n.DesiredNodeState != nil && len(n.DesiredNodeState.Address) > 0 {
+				addr = n.DesiredNodeState.Address
+			} else {
+				addr = n.address()
+			}
+			hosts[n.hostNames()[i]] = addr
+		}
+	}
+	return hosts
 }
 
 // apply the cluster data to the template file
@@ -614,6 +664,18 @@ func equalIPs(ip1, ip2 string) bool {
 }
 
 func (c *clusterType) nodeByHost(addrOrHostName string) *nodeType {
+
+	if c.SubEdition == clusterSubEditionSE3 {
+		switch {
+		case addrOrHostName == "app-node-1" || addrOrHostName == "db-node-1":
+			addrOrHostName = "node-1"
+		case addrOrHostName == "app-node-2" || addrOrHostName == "db-node-2":
+			addrOrHostName = "node-2"
+		case addrOrHostName == "db-node-3":
+			addrOrHostName = "node-3"
+		}
+	}
+
 	for i, n := range c.Nodes {
 		if addrOrHostName == n.nodeName() || equalIPs(n.ActualNodeState.Address, addrOrHostName) {
 			return &c.Nodes[i]
@@ -675,11 +737,6 @@ func (c *clusterType) applyCmd(cmd *cmdType) error {
 				return fmt.Errorf(errHostIsNotAvailable, newAddr, ErrHostIsNotAvailable)
 			}
 
-			if len(c.Cron.Backup) > 0 && node.NodeRole == nrDBNode {
-				if err := checkBackupFolderOnHost(c, newAddr); err != nil {
-					return err
-				}
-			}
 		}
 
 		node.DesiredNodeState = newNodeState(newAddr, node.desiredNodeVersion(c))
@@ -787,6 +844,10 @@ func (c *clusterType) loadFromJSON() error {
 		c.Nodes[i].cluster = c
 	}
 
+	if c.Edition == clusterEditionSE && c.SubEdition != clusterSubEditionSE3 {
+		c.SubEdition = clusterSubEditionSE5
+	}
+
 	if err == nil {
 		err = c.setEnv()
 	}
@@ -814,6 +875,21 @@ func (c *clusterType) setEnv() error {
 		if err := os.Setenv(envVoedgerSshKey, c.sshKey); err != nil {
 			return err
 		}
+	}
+
+	if c.Edition == clusterEditionSE {
+		if c.SubEdition == clusterSubEditionSE5 {
+			logger.Verbose(fmt.Sprintf(setEnv, envVoedgerEdition, clusterSubEditionSE5))
+			if err := os.Setenv(envVoedgerEdition, clusterSubEditionSE5); err != nil {
+				return err
+			}
+		} else if c.SubEdition == clusterSubEditionSE3 {
+			logger.Verbose(fmt.Sprintf(setEnv, envVoedgerEdition, clusterSubEditionSE3))
+			if err := os.Setenv(envVoedgerEdition, clusterSubEditionSE3); err != nil {
+				return err
+			}
+		}
+
 	}
 
 	if c.Edition == clusterEditionCE && len(c.Nodes) == 1 {
@@ -866,18 +942,40 @@ func (c *clusterType) readFromInitArgs(cmd *cobra.Command, args []string) error 
 		}
 		c.SkipStacks = skipStacks
 
-		c.Edition = clusterEditionSE
-		c.Nodes = make([]nodeType, 5)
+		if len(args) == se5NodeCount {
 
-		for i := 0; i < initSeArgCount; i++ {
-			if i < seNodeCount {
-				c.Nodes[i].NodeRole = nrAppNode
-			} else {
-				c.Nodes[i].NodeRole = nrDBNode
+			c.Edition = clusterEditionSE
+			c.SubEdition = clusterSubEditionSE5
+			c.Nodes = make([]nodeType, se5NodeCount)
+
+			for i := 0; i < se5NodeCount; i++ {
+				if i < seNodeCount {
+					c.Nodes[i].NodeRole = nrAppNode
+				} else {
+					c.Nodes[i].NodeRole = nrDBNode
+				}
+				c.Nodes[i].DesiredNodeState = newNodeState(args[i], c.DesiredClusterVersion)
+				c.Nodes[i].ActualNodeState = newNodeState("", "")
+				c.Nodes[i].cluster = c
 			}
-			c.Nodes[i].DesiredNodeState = newNodeState(args[i], c.DesiredClusterVersion)
-			c.Nodes[i].ActualNodeState = newNodeState("", "")
-			c.Nodes[i].cluster = c
+		} else if len(args) == se3NodeCount {
+			c.Edition = clusterEditionSE
+			c.SubEdition = clusterSubEditionSE3
+			c.Nodes = make([]nodeType, se3NodeCount)
+
+			for i := 0; i < se3NodeCount; i++ {
+				if i < seNodeCount {
+					c.Nodes[i].NodeRole = nrAppDbNode
+				} else {
+					c.Nodes[i].NodeRole = nrDBNode
+				}
+				c.Nodes[i].DesiredNodeState = newNodeState(args[i], c.DesiredClusterVersion)
+				c.Nodes[i].ActualNodeState = newNodeState("", "")
+				c.Nodes[i].cluster = c
+			}
+		} else {
+			return ErrInvalidNumberOfArguments
+
 		}
 
 	}

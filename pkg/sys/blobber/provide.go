@@ -12,22 +12,31 @@ import (
 	"github.com/voedger/voedger/pkg/state"
 )
 
-func ProvideBlobberCmds(cfg *istructsmem.AppConfigType) {
-	provideUploadBLOBHelperCmd(cfg)
-	provideDownloadBLOBHelperCmd(cfg)
+func ProvideBlobberCmds(sr istructsmem.IStatelessResources) {
+	provideUploadBLOBHelperCmd(sr)
+	provideDownloadBLOBHelperCmd(sr)
+	provideDownloadBLOBAuthnzQry(sr)
 }
 
-func provideDownloadBLOBHelperCmd(cfg *istructsmem.AppConfigType) {
+func provideDownloadBLOBAuthnzQry(sr istructsmem.IStatelessResources) {
+	sr.AddQueries(appdef.SysPackagePath, istructsmem.NewQueryFunction(
+		appdef.NewQName(appdef.SysPackage, "DownloadBLOBAuthnz"),
+		istructsmem.NullQueryExec,
+	))
+}
+
+// Deprecated: use q.sys.DownloadBLOBAuthnz
+func provideDownloadBLOBHelperCmd(sr istructsmem.IStatelessResources) {
 	dbhQName := appdef.NewQName(appdef.SysPackage, "DownloadBLOBHelper")
 
 	// this command does nothing. It is called to check Authorization token provided in header only
 	downloadBLOBHelperCmd := istructsmem.NewCommandFunction(dbhQName, istructsmem.NullCommandExec)
-	cfg.Resources.Add(downloadBLOBHelperCmd)
+	sr.AddCommands(appdef.SysPackagePath, downloadBLOBHelperCmd)
 }
 
-func provideUploadBLOBHelperCmd(cfg *istructsmem.AppConfigType) {
+func provideUploadBLOBHelperCmd(sr istructsmem.IStatelessResources) {
 	uploadBLOBHelperCmd := istructsmem.NewCommandFunction(QNameCommandUploadBLOBHelper, ubhExec)
-	cfg.Resources.Add(uploadBLOBHelperCmd)
+	sr.AddCommands(appdef.SysPackagePath, uploadBLOBHelperCmd)
 }
 
 func ubhExec(args istructs.ExecCommandArgs) (err error) {

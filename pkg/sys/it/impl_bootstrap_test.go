@@ -26,7 +26,6 @@ import (
 	"github.com/voedger/voedger/pkg/parser"
 	"github.com/voedger/voedger/pkg/sys"
 	"github.com/voedger/voedger/pkg/sys/authnz"
-	"github.com/voedger/voedger/pkg/sys/smtp"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 	it "github.com/voedger/voedger/pkg/vit"
 	"github.com/voedger/voedger/pkg/vvm"
@@ -59,8 +58,8 @@ func TestBoostrap_BasicUsage(t *testing.T) {
 		defer cleanup()
 		blobStorage := iblobstoragestg.BlobAppStoragePtr(new(istorage.IAppStorage))
 		routerStorage := dbcertcache.RouterAppStoragePtr(new(istorage.IAppStorage))
-		err = btstrp.Bootstrap(vit.IFederation, vit.IAppStructsProvider, vit.TimeFunc, appParts, clusterApp, otherApps, vit.ITokens, vit.IAppStorageProvider,
-			blobStorage, routerStorage)
+		err = btstrp.Bootstrap(vit.IFederation, vit.IAppStructsProvider, vit.TimeFunc, appParts, clusterApp, otherApps,
+			nil, vit.ITokens, vit.IAppStorageProvider, blobStorage, routerStorage)
 		require.NoError(err)
 		require.NotNil(*blobStorage)
 		require.NotNil(*routerStorage)
@@ -78,8 +77,8 @@ func TestBoostrap_BasicUsage(t *testing.T) {
 		routerStorage := dbcertcache.RouterAppStoragePtr(new(istorage.IAppStorage))
 		require.PanicsWithValue(fmt.Sprintf("failed to deploy app %[1]s: status 409: num partitions changed: app %[1]s declaring NumPartitions=%d but was previously deployed with NumPartitions=%d",
 			otherApps[0].Name, otherApps[0].AppDeploymentDescriptor.NumParts, otherApps[0].AppDeploymentDescriptor.NumParts-1), func() {
-			btstrp.Bootstrap(vit.IFederation, vit.IAppStructsProvider, vit.TimeFunc, appParts, clusterApp, otherApps, vit.ITokens, vit.IAppStorageProvider,
-				blobStorage, routerStorage)
+			btstrp.Bootstrap(vit.IFederation, vit.IAppStructsProvider, vit.TimeFunc, appParts, clusterApp, otherApps,
+				nil, vit.ITokens, vit.IAppStorageProvider, blobStorage, routerStorage)
 		})
 	})
 
@@ -96,8 +95,8 @@ func TestBoostrap_BasicUsage(t *testing.T) {
 			otherApps[0].Name, otherApps[0].AppDeploymentDescriptor.NumAppWorkspaces, otherApps[0].AppDeploymentDescriptor.NumAppWorkspaces-1), func() {
 			blobStorage := iblobstoragestg.BlobAppStoragePtr(new(istorage.IAppStorage))
 			routerStorage := dbcertcache.RouterAppStoragePtr(new(istorage.IAppStorage))
-			btstrp.Bootstrap(vit.IFederation, vit.IAppStructsProvider, vit.TimeFunc, appParts, clusterApp, otherApps, vit.ITokens,
-				vit.IAppStorageProvider, blobStorage, routerStorage)
+			btstrp.Bootstrap(vit.IFederation, vit.IAppStructsProvider, vit.TimeFunc, appParts, clusterApp, otherApps,
+				nil, vit.ITokens, vit.IAppStorageProvider, blobStorage, routerStorage)
 		})
 	})
 }
@@ -114,8 +113,7 @@ func getTestCfg(numParts istructs.NumAppPartitions, numAppWS istructs.NumAppWork
 	}
 	return it.NewOwnVITConfig(
 		it.WithApp(istructs.AppQName_test1_app1, func(apis apps.APIs, cfg *istructsmem.AppConfigType, ep extensionpoints.IExtensionPoint) apps.BuiltInAppDef {
-			sysPkg := sys.Provide(cfg, smtp.Cfg{}, ep, nil, apis.TimeFunc, apis.ITokens, apis.IFederation, apis.IAppStructsProvider, apis.IAppTokensFactory,
-				nil, apis.IAppStorageProvider)
+			sysPkg := sys.Provide(cfg)
 			return apps.BuiltInAppDef{
 				AppDeploymentDescriptor: appparts.AppDeploymentDescriptor{
 					NumParts:         numParts,

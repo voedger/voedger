@@ -451,8 +451,9 @@ func TestSqlQuery(t *testing.T) {
 		require.NotEqual(t, len(wsOne.Sections[0].Elements), len(wsTwo.Sections[0].Elements))
 	})
 
-	t.Run("400 bad request on read from non-inited workspace", func(t *testing.T) {
-		vit.PostWS(ws, "q.sys.SqlQuery", `{"args":{"Query":"select * from 555.sys.wlog"}}`, coreutils.Expect400(processors.ErrWSNotInited.Message))
+	t.Run("403 forbidden on read from non-inited workspace", func(t *testing.T) {
+		vit.PostWS(ws, "q.sys.SqlQuery", fmt.Sprintf(`{"args":{"Query":"select * from %d.sys.wlog"}}`, istructs.NonExistingRecordID),
+			coreutils.Expect403(processors.ErrWSNotInited.Message))
 	})
 }
 
@@ -498,7 +499,7 @@ func TestReadFromAnDifferentLocations(t *testing.T) {
 		}, anotherAppWSOwner)
 
 		// in the another app use sql to query the record from the first app
-		body = fmt.Sprintf(`{"args":{"Query":"select * from test1.app1.%d.app1pkg.category where id = %d"},"elements":[{"fields":["Result"]}]}`, oneAppWS.WSID, categoryID)
+		body = fmt.Sprintf(`{"args":{"Query":"select * from test1.app1.%d.app1pkg.category.%d"},"elements":[{"fields":["Result"]}]}`, oneAppWS.WSID, categoryID)
 		resp := vit.PostWS(anotherAppWS, "q.sys.SqlQuery", body)
 		resStr := resp.SectionRow(len(resp.Sections[0].Elements) - 1)[0].(string)
 		require.Contains(resStr, fmt.Sprintf(`"name":"%s"`, categoryName))
