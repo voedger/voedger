@@ -14,10 +14,9 @@ I have a nice idea how to improve the [quality](https://iso25000.com/index.php/e
 **Now, in current architecture**
 A clear and concise description of what the problem is.
 
-## Technical design
+## Proposal
 
 Solution for the problems you described above.
-
 
 ## Alternatives
 
