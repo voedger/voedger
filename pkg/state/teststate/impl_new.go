@@ -31,7 +31,6 @@ import (
 
 // CommandTestState is a test state for command testing
 type CommandTestState struct {
-	defaultTestRunnerImpl
 	testState
 
 	extensionFunc func()
@@ -45,65 +44,6 @@ type CommandTestState struct {
 	cudRows []recordItem
 	// view records
 	viewRecords []recordItem
-}
-
-type defaultTestRunnerImpl struct {
-}
-
-func (d defaultTestRunnerImpl) CUDRow(fQName IFullQName, id int, keyValueList ...any) ITestRunner {
-	panic("not implemented")
-}
-
-func (d defaultTestRunnerImpl) RequireViewInsert(fQName IFullQName, keyValueList ...any) ITestRunner {
-	panic("not implemented")
-}
-
-func (d defaultTestRunnerImpl) RequireViewUpdate(fQName IFullQName, id int, keyValueList ...any) ITestRunner {
-	panic("not implemented")
-}
-
-func (d defaultTestRunnerImpl) RequireRecordInsert(fQName IFullQName, id int, keyValueList ...any) ITestRunner {
-	panic("not implemented")
-}
-
-func (d defaultTestRunnerImpl) RequireRecordUpdate(fQName IFullQName, id int, keyValueList ...any) ITestRunner {
-	panic("not implemented")
-}
-
-func (d defaultTestRunnerImpl) RequireSingletonInsert(fQName IFullQName, keyValueList ...any) ITestRunner {
-	panic("not implemented")
-}
-
-func (d defaultTestRunnerImpl) RequireSingletonUpdate(fQName IFullQName, keyValueList ...any) ITestRunner {
-	panic("not implemented")
-}
-
-func (d defaultTestRunnerImpl) Record(fQName IFullQName, id int, keyValueList ...any) ITestRunner {
-	panic("not implemented")
-}
-
-func (d defaultTestRunnerImpl) View(fQName IFullQName, id int, keyValueList ...any) ITestRunner {
-	panic("not implemented")
-}
-
-func (d defaultTestRunnerImpl) Offset(offset int) ITestRunner {
-	panic("not implemented")
-}
-
-func (d defaultTestRunnerImpl) SingletonRecord(fQName IFullQName, keyValueList ...any) ITestRunner {
-	panic("not implemented")
-}
-
-func (d defaultTestRunnerImpl) ArgumentObject(id int, keyValueList ...any) ITestRunner {
-	panic("not implemented")
-}
-
-func (d defaultTestRunnerImpl) ArgumentObjectRow(path string, id int, keyValueList ...any) ITestRunner {
-	panic("not implemented")
-}
-
-func (d defaultTestRunnerImpl) Run() {
-	panic("not implemented")
 }
 
 // NewCommandTestState creates a new test state for command testing
@@ -336,7 +276,7 @@ func (cts *CommandTestState) putRecords() {
 		pkgAlias := cts.appDef.PackageLocalName(item.entity.PkgPath())
 
 		keyValueMap, err := parseKeyValues(item.keyValueList)
-		require.NoError(cts.t, err, "failed to parse key values")
+		require.NoError(cts.t, err, errMsgFailedToParseKeyValues)
 
 		keyValueMap[appdef.SystemField_QName] = appdef.NewQName(pkgAlias, item.entity.Entity()).String()
 		keyValueMap[appdef.SystemField_ID] = istructs.RecordID(item.id)
@@ -352,7 +292,7 @@ func (cts *CommandTestState) putRecords() {
 func (cts *CommandTestState) putViewRecords() {
 	for _, item := range cts.viewRecords {
 		m, err := parseKeyValues(item.keyValueList)
-		require.NoError(cts.t, err, "failed to parse key values")
+		require.NoError(cts.t, err, errMsgFailedToParseKeyValues)
 
 		mapOfKeys, mapOfValues := splitKeysFromValues(item.entity, m)
 
@@ -504,7 +444,7 @@ func (cts *CommandTestState) putCudRows() {
 
 	for _, item := range cts.cudRows {
 		kvMap, err := parseKeyValues(item.keyValueList)
-		require.NoError(cts.t, err, "failed to parse key values")
+		require.NoError(cts.t, err, errMsgFailedToParseKeyValues)
 
 		cts.PutEvent(
 			cts.commandWSID,
@@ -556,7 +496,7 @@ func (cts *CommandTestState) requireIntent(r recordItem) {
 	}
 
 	m, err := parseKeyValues(r.keyValueList)
-	require.NoError(cts.t, err, "failed to parse key values")
+	require.NoError(cts.t, err, errMsgFailedToParseKeyValues)
 
 	_, mapOfValues := splitKeysFromValues(r.entity, m)
 
@@ -628,7 +568,7 @@ func (cts *CommandTestState) keyBuilder(r recordItem) istructs.IStateKeyBuilder 
 		kb.PutInt64(state.Field_ID, int64(r.id))
 	case r.isView:
 		m, err := parseKeyValues(r.keyValueList)
-		require.NoError(cts.t, err, "failed to parse key values")
+		require.NoError(cts.t, err, errMsgFailedToParseKeyValues)
 
 		mapOfKeys, _ := splitKeysFromValues(r.entity, m)
 
