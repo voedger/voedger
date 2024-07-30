@@ -21,6 +21,7 @@ classDiagram
         +Query(QName) IQuery
         +Role(QName) IRole
         +Projector(QName) IProjector
+        +Job(QName) IJob
         +Workspace(QName) IWorkspace
     }
     IAppDef "1" *--> "0..*" IType : compose
@@ -150,6 +151,8 @@ classDiagram
         <<interface>>
         +Name() string
         +Engine() ExtensionEngineKind
+        +States() IStorages
+        +Intents() IStorages
     }
 
     IExtension <|-- IFunction : inherits
@@ -176,12 +179,16 @@ classDiagram
     class IProjector {
         <<interface>>
         +Kind()* TypeKind_Projector
-        +Extension() IExtension
         +WantErrors() bool
         +Events() IProjectorEvents
         +CronSchedule() string
-        +States() IStorages
-        +Intents() IStorages
+    }
+
+    IExtension <|-- IJob : inherits
+    class IJob {
+        <<interface>>
+        +Kind()* TypeKind_Job
+        +CronSchedule() string
     }
 
     IWorkspace --|> IType : inherits
@@ -665,6 +672,13 @@ classDiagram
         ExecuteWithParam
     }
 
+    IExtension <|-- IJob : inherits
+    class IJob {
+        <<interface>>
+        +Kind()* TypeKind_Job
+        +CronSchedule() string
+    }
+
     class IAppDef {
       …
       +Extensions() []IExtension
@@ -672,6 +686,7 @@ classDiagram
       +Commands() []ICommand
       +Queries() []IQuery
       +Projectors() []IProjector
+      +Jobs() []IJob
     }
 
     IAppDef "1" *--> "0..*" IExtension : Extensions
@@ -679,6 +694,7 @@ classDiagram
     IAppDef "1" *--> "0..*" ICommand : Commands
     IAppDef "1" *--> "0..*" IQuery : Queries
     IAppDef "1" *--> "0..*" IProjector : Projectors
+    IAppDef "1" *--> "0..*" IJob : Jobs
 ```
 
 *Rem*: In the above diagram the Param and Result of the function are `IType`, in future versions it will be changed to an array of `[]IParam` and renamed to plural (`Params`, `Results`).
