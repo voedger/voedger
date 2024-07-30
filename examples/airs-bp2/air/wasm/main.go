@@ -64,11 +64,8 @@ func Pbill() {
 
 func FillPbillDates() {
 	event := ext.MustGetValue(ext.KeyBuilder(ext.StorageEvent, ext.NullEntity))
-	offs := event.AsInt64("Offset")
+	offs := event.AsInt64("WLogOffset")
 	arg := event.AsValue("ArgumentObject")
-	// extract offset and count from the argument
-	//offs := arg.AsInt64("Offset")
-
 	// get pbill datetime
 	pbillDatetime := time.UnixMicro(arg.AsInt64("pdatetime"))
 	// extract year and day of year from pbill datetime

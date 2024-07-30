@@ -113,17 +113,7 @@ func TestFillPbillDates(t *testing.T) {
 			orm.Package_air.Command_Pbill,
 			FillPbillDates,
 		).
-			//CUDRow(
-			//	orm.Package_untill.WDoc_bill,
-			//	100012,
-			//	`tableno`, 1,
-			//).
-			Offset(100002).
-			//View(
-			//	orm.Package_air.View_PbillDates,
-			//	100002,
-			//	`tableno`, 1,
-			//).
+			Offset(123).
 			ArgumentObject(
 				2,
 				`id_bill`, 100002,
@@ -143,19 +133,50 @@ func TestFillPbillDates(t *testing.T) {
 				orm.Package_air.View_PbillDates,
 				`Year`, 2023,
 				`DayOfYear`, 9,
-				`FirstOffset`, 0,
-				`LastOffset`, 0,
+				`FirstOffset`, 124,
+				`LastOffset`, 124,
 			).
-			//RequireViewUpdate(
-			//	orm.Package_air.View_PbillDates,
-			//	100002,
-			//	`Year`, 2024,
-			//	`DayOfYear`, 9,
-			//	`FirstOffset`, 0,
-			//	`LastOffset`, 0,
-			//).
-			// call PutEvent with provided argument and cud
-			// rework FillPbillDates like this: read StorageEvent (look examples)
+			Run()
+	})
+
+	t.Run("View View_PbillDates: update", func(t *testing.T) {
+		test.NewProjectorTest(
+			t,
+			orm.Package_air.Command_Pbill,
+			FillPbillDates,
+		).
+			Offset(123).
+			View(
+				orm.Package_air.View_PbillDates,
+				110012,
+				`Year`, 2023,
+				`DayOfYear`, 9,
+				`FirstOffset`, 10,
+				`LastOffset`, 10,
+			).
+			ArgumentObject(
+				2,
+				`id_bill`, 100002,
+				`id_untill_users`, 100001,
+				`pdatetime`, date.UnixMicro(),
+			).
+			ArgumentObjectRow(`pbill_item`,
+				3,
+				`sys.ParentID`, 2,
+				`id_pbill`, 100000,
+				`id_untill_users`, 100001,
+				`tableno`, 123,
+				`quantity`, 2,
+				`price`, 50_00,
+			).
+			RequireViewUpdate(
+				orm.Package_air.View_PbillDates,
+				110012,
+				`Year`, 2023,
+				`DayOfYear`, 9,
+				`FirstOffset`, 10,
+				`LastOffset`, 124,
+			).
 			Run()
 	})
 }

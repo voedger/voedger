@@ -37,15 +37,12 @@ type CommandTestState struct {
 	extensionFunc func()
 	funcRunner    *sync.Once
 
-	command IFullQName
 	// recordItems is to store records
 	recordItems []recordItem
 	// requiredRecordItems is to store required items
 	requiredRecordItems []recordItem
 	// cudRows is to store cud rows
 	cudRows []recordItem
-	// initial offset
-	initialOffset int
 	// view records
 	viewRecords []recordItem
 }
@@ -115,7 +112,6 @@ func NewCommandTestState(t *testing.T, iCommand ICommand, extensionFunc func()) 
 
 	ts := &CommandTestState{}
 
-	ts.command = iCommand
 	ts.testData = make(map[string]any)
 	// set test object
 	ts.t = t
@@ -176,7 +172,7 @@ func (cts *CommandTestState) SingletonRecord(fQName IFullQName, keyValueList ...
 }
 
 func (cts *CommandTestState) Offset(offset int) ITestRunner {
-	cts.initialOffset = offset
+	cts.wsOffsets[cts.commandWSID] = istructs.Offset(offset)
 
 	return cts
 }
@@ -294,7 +290,14 @@ func (cts *CommandTestState) buildAppDef(wsPkgPath, wsDescriptorName string) {
 	cts.plogGen = istructsmem.NewIDGenerator()
 	cts.wsOffsets = make(map[istructs.WSID]istructs.Offset)
 
-	err = wsdescutil.CreateCDocWorkspaceDescriptorStub(cts.appStructs, TestPartition, cts.commandWSID, appdef.NewQName(filepath.Base(wsPkgPath), wsDescriptorName), cts.nextPLogOffs(), cts.nextWSOffs(cts.commandWSID))
+	err = wsdescutil.CreateCDocWorkspaceDescriptorStub(
+		cts.appStructs,
+		TestPartition,
+		cts.commandWSID,
+		appdef.NewQName(filepath.Base(wsPkgPath), wsDescriptorName),
+		cts.nextPLogOffs(),
+		cts.nextWSOffs(cts.commandWSID),
+	)
 	if err != nil {
 		panic(err)
 	}
@@ -344,6 +347,30 @@ func (cts *CommandTestState) putRecords() {
 
 	// clear record items after they are processed
 	cts.recordItems = nil
+}
+
+func (cts *CommandTestState) putViewRecords() {
+	for _, item := range cts.viewRecords {
+		m, err := parseKeyValues(item.keyValueList)
+		require.NoError(cts.t, err, "failed to parse key values")
+
+		mapOfKeys, mapOfValues := splitKeysFromValues(item.entity, m)
+
+		cts.PutView(
+			cts.commandWSID,
+			appdef.NewFullQName(
+				item.entity.PkgPath(),
+				item.entity.Entity(),
+			),
+			func(key istructs.IKeyBuilder, value istructs.IValueBuilder) {
+				key.PutFromJSON(mapOfKeys)
+				value.PutFromJSON(mapOfValues)
+			},
+		)
+	}
+
+	// clear view record items after they are processed
+	cts.viewRecords = nil
 }
 
 func (cts *CommandTestState) require() {
@@ -454,6 +481,7 @@ func (cts *CommandTestState) CUDRow(fQName IFullQName, id int, keyValueList ...a
 func (cts *CommandTestState) Run() {
 	defer cts.recoverPanicInTestState()
 
+	cts.putViewRecords()
 	cts.putRecords()
 	cts.putCudRows()
 	cts.putArgument()
@@ -478,10 +506,14 @@ func (cts *CommandTestState) putCudRows() {
 		kvMap, err := parseKeyValues(item.keyValueList)
 		require.NoError(cts.t, err, "failed to parse key values")
 
-		cts.PutEvent(cts.commandWSID, cts.argumentType, func(argBuilder istructs.IObjectBuilder, cudBuilder istructs.ICUD) {
-			cud := cudBuilder.Create(cts.getQNameFromFQName(item.entity))
-			cud.PutFromJSON(kvMap)
-		})
+		cts.PutEvent(
+			cts.commandWSID,
+			cts.argumentType,
+			func(argBuilder istructs.IObjectBuilder, cudBuilder istructs.ICUD) {
+				cud := cudBuilder.Create(cts.getQNameFromFQName(item.entity))
+				cud.PutFromJSON(kvMap)
+			},
+		)
 	}
 }
 
@@ -706,6 +738,7 @@ func (pts *ProjectorTestState) Offset(offset int) ITestRunner {
 func (pts *ProjectorTestState) Run() {
 	defer pts.recoverPanicInTestState()
 
+	pts.putViewRecords()
 	pts.putRecords()
 	pts.putCudRows()
 	pts.putArgument()
@@ -722,10 +755,7 @@ func (pts *ProjectorTestState) putArgument() {
 
 	pts.PutEvent(
 		pts.commandWSID,
-		appdef.NewFullQName(
-			pts.command.PkgPath(),
-			pts.command.Entity(),
-		),
+		pts.argumentType,
 		func(argBuilder istructs.IObjectBuilder, cudBuilder istructs.ICUD) {
 			argBuilder.FillFromJSON(pts.argumentObject)
 		},
