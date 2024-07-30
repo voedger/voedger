@@ -22,7 +22,8 @@ func Provide() apps.AppBuilder {
 			Path: ClusterAppFQN,
 			FS:   schemaFS,
 		}
-		clusterPackageFS := cluster.Provide(cfg, apis.IAppStructsProvider, apis.TimeFunc, apis.IFederation, apis.ITokens)
+		clusterPackageFS := cluster.Provide(cfg, apis.IAppStructsProvider, apis.TimeFunc, apis.IFederation,
+			apis.ITokens, apis.SidecarApps)
 		sysPackageFS := sys.Provide(cfg)
 		return apps.BuiltInAppDef{
 			AppQName: istructs.AppQName_sys_cluster,

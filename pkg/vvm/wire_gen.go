@@ -8,6 +8,7 @@ package vvm
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/voedger/voedger/pkg/appdef"
@@ -37,6 +38,7 @@ import (
 	"github.com/voedger/voedger/pkg/itokens-payloads"
 	"github.com/voedger/voedger/pkg/itokensjwt"
 	"github.com/voedger/voedger/pkg/metrics"
+	"github.com/voedger/voedger/pkg/parser"
 	"github.com/voedger/voedger/pkg/pipeline"
 	"github.com/voedger/voedger/pkg/processors/command"
 	"github.com/voedger/voedger/pkg/processors/query"
@@ -53,7 +55,10 @@ import (
 	"github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
 	"golang.org/x/crypto/acme/autocert"
 	"net/url"
+	"os"
+	"path/filepath"
 	"runtime/debug"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -104,6 +109,12 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 	v4 := vvmConfig.ActualizerStateOpts
 	basicAsyncActualizerConfig := provideBasicAsyncActualizerConfig(vvmName, iSecretReader, iTokens, iMetrics, in10nBroker, iFederation, v4...)
 	iActualizersService := provideAsyncActualizersService(basicAsyncActualizerConfig)
+	v5, err := provideSidecarApps(vvmConfig)
+	if err != nil {
+		cleanup2()
+		cleanup()
+		return nil, nil, err
+	}
 	apIs := apps.APIs{
 		ITokens:             iTokens,
 		IAppStructsProvider: iAppStructsProvider,
@@ -111,22 +122,23 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 		IAppTokensFactory:   iAppTokensFactory,
 		IFederation:         iFederation,
 		TimeFunc:            timeFunc,
+		SidecarApps:         v5,
 	}
-	appsArtefacts, err := provideBuiltInAppsArtefacts(vvmConfig, apIs, appConfigsTypeEmpty, v2)
+	builtInAppsArtefacts, err := provideBuiltInAppsArtefacts(vvmConfig, apIs, appConfigsTypeEmpty, v2)
 	if err != nil {
 		cleanup2()
 		cleanup()
 		return nil, nil, err
 	}
-	iAppPartitions, cleanup3, err := provideAppPartitions(iAppStructsProvider, v3, iActualizersService, appsArtefacts, iStatelessResources)
+	iAppPartitions, cleanup3, err := provideAppPartitions(iAppStructsProvider, v3, iActualizersService, iStatelessResources, builtInAppsArtefacts)
 	if err != nil {
 		cleanup2()
 		cleanup()
 		return nil, nil, err
 	}
-	v5 := provideSubjectGetterFunc()
+	v6 := provideSubjectGetterFunc()
 	isDeviceAllowedFuncs := provideIsDeviceAllowedFunc(v2)
-	iAuthenticator := iauthnzimpl.NewDefaultAuthenticator(v5, isDeviceAllowedFuncs)
+	iAuthenticator := iauthnzimpl.NewDefaultAuthenticator(v6, isDeviceAllowedFuncs)
 	iAuthorizer := iauthnzimpl.NewDefaultAuthorizer()
 	serviceFactory := commandprocessor.ProvideServiceFactory(iAppPartitions, timeFunc, in10nBroker, iMetrics, vvmName, iAuthenticator, iAuthorizer, iSecretReader)
 	operatorCommandProcessors := provideCommandProcessors(numCommandProcessors, commandChannelFactory, serviceFactory)
@@ -143,10 +155,10 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 		return nil, nil, err
 	}
 	iAppPartsCtlPipelineService := provideAppPartsCtlPipelineService(iAppPartitionsController)
-	v6 := provideBuiltInApps(appsArtefacts)
+	v7 := provideBuiltInApps(builtInAppsArtefacts, v5)
 	blobAppStoragePtr := provideBlobAppStoragePtr(iAppStorageProvider)
 	routerAppStoragePtr := provideRouterAppStoragePtr(iAppStorageProvider)
-	bootstrapOperator, err := provideBootstrapOperator(iFederation, iAppStructsProvider, timeFunc, iAppPartitions, v6, iTokens, iAppStorageProvider, blobAppStoragePtr, routerAppStoragePtr)
+	bootstrapOperator, err := provideBootstrapOperator(iFederation, iAppStructsProvider, timeFunc, iAppPartitions, v7, v5, iTokens, iAppStorageProvider, blobAppStoragePtr, routerAppStoragePtr)
 	if err != nil {
 		cleanup4()
 		cleanup3()
@@ -163,9 +175,9 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 	cache := dbcertcache.ProvideDbCache(routerAppStoragePtr)
 	commandProcessorsChannelGroupIdxType := provideProcessorChannelGroupIdxCommand(vvmConfig)
 	queryProcessorsChannelGroupIdxType := provideProcessorChannelGroupIdxQuery(vvmConfig)
-	vvmApps := provideVVMApps(v6)
+	vvmApps := provideVVMApps(v7)
 	iBus := provideIBus(iAppPartitions, iProcBus, commandProcessorsChannelGroupIdxType, queryProcessorsChannelGroupIdxType, numCommandProcessors, vvmApps)
-	v7, err := provideNumsAppsWorkspaces(vvmApps, iAppStructsProvider)
+	v8, err := provideNumsAppsWorkspaces(vvmApps, iAppStructsProvider, v5)
 	if err != nil {
 		cleanup4()
 		cleanup3()
@@ -173,7 +185,7 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 		cleanup()
 		return nil, nil, err
 	}
-	routerServices := provideRouterServices(vvmCtx, routerParams, busTimeout, in10nBroker, quotas, timeFunc, blobberServiceChannels, blobMaxSizeType, blobStorage, cache, iBus, vvmPortSource, v7)
+	routerServices := provideRouterServices(vvmCtx, routerParams, busTimeout, in10nBroker, quotas, timeFunc, blobberServiceChannels, blobMaxSizeType, blobStorage, cache, iBus, vvmPortSource, v8)
 	adminEndpointServiceOperator := provideAdminEndpointServiceOperator(routerServices)
 	metricsServicePortInitial := vvmConfig.MetricsServicePort
 	metricsServicePort := provideMetricsServicePort(metricsServicePortInitial, vvmIdx)
@@ -181,15 +193,15 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 	metricsServiceOperator := provideMetricsServiceOperator(metricsService)
 	publicEndpointServiceOperator := providePublicEndpointServiceOperator(routerServices, metricsServiceOperator)
 	servicePipeline := provideServicePipeline(vvmCtx, operatorCommandProcessors, operatorQueryProcessors, iActualizersService, iAppPartsCtlPipelineService, bootstrapOperator, adminEndpointServiceOperator, publicEndpointServiceOperator)
-	v8 := provideMetricsServicePortGetter(metricsService)
-	v9 := provideBuiltInAppPackages(appsArtefacts)
+	v9 := provideMetricsServicePortGetter(metricsService)
+	v10 := provideBuiltInAppPackages(builtInAppsArtefacts)
 	vvm := &VVM{
 		ServicePipeline:     servicePipeline,
 		APIs:                apIs,
 		IAppPartitions:      iAppPartitions,
 		AppsExtensionPoints: v2,
-		MetricsServicePort:  v8,
-		BuiltInAppsPackages: v9,
+		MetricsServicePort:  v9,
+		BuiltInAppsPackages: v10,
 	}
 	return vvm, func() {
 		cleanup4()
@@ -245,7 +257,7 @@ func (vvm *VoedgerVM) Launch() error {
 }
 
 func provideBootstrapOperator(federation2 federation.IFederation, asp istructs.IAppStructsProvider, timeFunc coreutils.TimeFunc, apppar appparts.IAppPartitions,
-	builtinApps []appparts.BuiltInApp, itokens2 itokens.ITokens, storageProvider istorage.IAppStorageProvider, blobberAppStoragePtr iblobstoragestg.BlobAppStoragePtr,
+	builtinApps []appparts.BuiltInApp, sidecarApps []appparts.SidecarApp, itokens2 itokens.ITokens, storageProvider istorage.IAppStorageProvider, blobberAppStoragePtr iblobstoragestg.BlobAppStoragePtr,
 	routerAppStoragePtr dbcertcache.RouterAppStoragePtr) (BootstrapOperator, error) {
 	var clusterBuiltinApp btstrp.ClusterBuiltInApp
 	otherApps := make([]appparts.BuiltInApp, 0, len(builtinApps)-1)
@@ -253,19 +265,24 @@ func provideBootstrapOperator(federation2 federation.IFederation, asp istructs.I
 		if app.Name == istructs.AppQName_sys_cluster {
 			clusterBuiltinApp = btstrp.ClusterBuiltInApp(app)
 		} else {
-			otherApps = append(otherApps, app)
+			isSidecarApp := slices.ContainsFunc(sidecarApps, func(sa appparts.SidecarApp) bool {
+				return sa.Name == app.Name
+			})
+			if !isSidecarApp {
+				otherApps = append(otherApps, app)
+			}
 		}
 	}
 	if clusterBuiltinApp.Name == appdef.NullAppQName {
 		return nil, fmt.Errorf("%s app should be added to VVM builtin apps", istructs.AppQName_sys_cluster)
 	}
 	return pipeline.NewSyncOp(func(ctx context.Context, work interface{}) (err error) {
-		return btstrp.Bootstrap(federation2, asp, timeFunc, apppar, clusterBuiltinApp, otherApps, itokens2, storageProvider, blobberAppStoragePtr, routerAppStoragePtr)
+		return btstrp.Bootstrap(federation2, asp, timeFunc, apppar, clusterBuiltinApp, otherApps, sidecarApps, itokens2, storageProvider, blobberAppStoragePtr, routerAppStoragePtr)
 	}), nil
 }
 
-func provideBuiltInAppPackages(appsArtefacts AppsArtefacts) []BuiltInAppPackages {
-	return appsArtefacts.builtInAppPackages
+func provideBuiltInAppPackages(builtInAppsArtefacts BuiltInAppsArtefacts) []BuiltInAppPackages {
+	return builtInAppsArtefacts.builtInAppPackages
 }
 
 func provideAppConfigsTypeEmpty() AppConfigsTypeEmpty {
@@ -273,7 +290,7 @@ func provideAppConfigsTypeEmpty() AppConfigsTypeEmpty {
 }
 
 // AppConfigsTypeEmpty is provided here despite it looks senceless. But ok: it is a map that will be filled later, on BuildAppsArtefacts(), and used after filling only
-// provide appsArtefacts.AppConfigsType here -> wire cycle: BuildappsArtefacts requires APIs requires IAppStructsProvider requires AppConfigsType obtained from BuildappsArtefacts
+// provide builtInAppsArtefacts.AppConfigsType here -> wire cycle: BuildappsArtefacts requires APIs requires IAppStructsProvider requires AppConfigsType obtained from BuildappsArtefacts
 // The same approach does not work for IAppPartitions implementation, because the appparts.NewWithActualizerWithExtEnginesFactories() accepts
 // iextengine.ExtensionEngineFactories that must be initialized with the already filled AppConfigsType
 func provideIAppStructsProvider(cfgs AppConfigsTypeEmpty, bucketsFactory irates.BucketsFactoryType, appTokensFactory payloads.IAppTokensFactory,
@@ -335,13 +352,13 @@ func provideAppPartitions(
 	asp istructs.IAppStructsProvider,
 	saf appparts.SyncActualizerFactory,
 	act projectors.IActualizersService,
-	appsArtefacts AppsArtefacts,
 	sr istructsmem.IStatelessResources,
+	builtinAppsArtefacts BuiltInAppsArtefacts,
 ) (ap appparts.IAppPartitions, cleanup func(), err error) {
 
 	eef := engines.ProvideExtEngineFactories(engines.ExtEngineFactoriesConfig{
 		StatelessResources: sr,
-		AppConfigs:         appsArtefacts.AppConfigsType,
+		AppConfigs:         builtinAppsArtefacts.AppConfigsType,
 		WASMConfig:         iextengine.WASMFactoryConfig{Compile: false},
 	})
 
@@ -368,10 +385,13 @@ func provideIsDeviceAllowedFunc(appEPs map[appdef.AppQName]extensionpoints.IExte
 	return res
 }
 
-func provideBuiltInApps(appsArtefacts AppsArtefacts) []appparts.BuiltInApp {
-	res := make([]appparts.BuiltInApp, len(appsArtefacts.builtInAppPackages))
-	for i, pkg := range appsArtefacts.builtInAppPackages {
-		res[i] = pkg.BuiltInApp
+func provideBuiltInApps(builtInAppsArtefacts BuiltInAppsArtefacts, sidecarApps []appparts.SidecarApp) []appparts.BuiltInApp {
+	res := []appparts.BuiltInApp{}
+	for _, pkg := range builtInAppsArtefacts.builtInAppPackages {
+		res = append(res, pkg.BuiltInApp)
+	}
+	for _, sidecarApp := range sidecarApps {
+		res = append(res, sidecarApp.BuiltInApp)
 	}
 	return res
 }
@@ -433,15 +453,27 @@ func provideSecretKeyJWT(sr isecrets.ISecretReader) (itokensjwt.SecretKeyType, e
 	return sr.ReadSecret(itokensjwt.SecretKeyJWTName)
 }
 
-func provideNumsAppsWorkspaces(vvmApps VVMApps, asp istructs.IAppStructsProvider) (map[appdef.AppQName]istructs.NumAppWorkspaces, error) {
+func provideNumsAppsWorkspaces(vvmApps VVMApps, asp istructs.IAppStructsProvider, sidecarApps []appparts.SidecarApp) (map[appdef.AppQName]istructs.NumAppWorkspaces, error) {
 	res := map[appdef.AppQName]istructs.NumAppWorkspaces{}
 	for _, appQName := range vvmApps {
-		as, err := asp.BuiltIn(appQName)
-		if err != nil {
-
-			return nil, err
+		sidecarNumAppWorkspaces := istructs.NumAppWorkspaces(0)
+		for _, sa := range sidecarApps {
+			if sa.Name == appQName {
+				sidecarNumAppWorkspaces = sa.NumAppWorkspaces
+				break
+			}
 		}
-		res[appQName] = as.NumAppWorkspaces()
+		if sidecarNumAppWorkspaces > 0 {
+
+			res[appQName] = sidecarNumAppWorkspaces
+		} else {
+			as, err := asp.BuiltIn(appQName)
+			if err != nil {
+
+				return nil, err
+			}
+			res[appQName] = as.NumAppWorkspaces()
+		}
 	}
 	return res, nil
 }
@@ -511,8 +543,128 @@ func provideVVMApps(builtInApps []appparts.BuiltInApp) (vvmApps VVMApps) {
 }
 
 func provideBuiltInAppsArtefacts(vvmConfig *VVMConfig, apis apps.APIs, cfgs AppConfigsTypeEmpty,
-	appEPs map[appdef.AppQName]extensionpoints.IExtensionPoint) (AppsArtefacts, error) {
+	appEPs map[appdef.AppQName]extensionpoints.IExtensionPoint) (BuiltInAppsArtefacts, error) {
 	return vvmConfig.VVMAppsBuilder.BuildAppsArtefacts(apis, cfgs, appEPs)
+}
+
+// extModuleURLs is filled here
+func parseSidecarAppSubDir(fullPath string, basePath string, extModuleURLs map[string]*url.URL) (asts []*parser.PackageSchemaAST, err error) {
+	dirEntries, err := os.ReadDir(fullPath)
+	if err != nil {
+
+		return nil, err
+	}
+	modulePath := strings.ReplaceAll(fullPath, basePath, "")
+	modulePath = strings.TrimPrefix(modulePath, string(os.PathSeparator))
+	modulePath = strings.ReplaceAll(modulePath, string(os.PathSeparator), "/")
+	for _, dirEntry := range dirEntries {
+		if dirEntry.IsDir() {
+			subASTs, err := parseSidecarAppSubDir(filepath.Join(fullPath, dirEntry.Name()), basePath, extModuleURLs)
+			if err != nil {
+				return nil, err
+			}
+			asts = append(asts, subASTs...)
+			continue
+		}
+		if filepath.Ext(dirEntry.Name()) == ".wasm" {
+			moduleURL, err := url.Parse("file:///" + filepath.Join(fullPath, dirEntry.Name()))
+			if err != nil {
+
+				return nil, err
+			}
+
+			extModuleURLs[modulePath] = moduleURL
+			continue
+		}
+	}
+
+	dirAST, err := parser.ParsePackageDir(modulePath, os.DirFS(fullPath).(coreutils.IReadFS), ".")
+	if err == nil {
+		asts = append(asts, dirAST)
+	} else if !errors.Is(err, parser.ErrDirContainsNoSchemaFiles) {
+		return nil, err
+	}
+	return asts, nil
+}
+
+func provideSidecarApps(vvmConfig *VVMConfig) (res []appparts.SidecarApp, err error) {
+	if len(vvmConfig.DataPath) == 0 {
+		return nil, nil
+	}
+	appsPath := filepath.Join(vvmConfig.DataPath, "apps")
+	appsEntries, err := os.ReadDir(appsPath)
+	if err != nil {
+		return nil, err
+	}
+	for _, appEntry := range appsEntries {
+		if !appEntry.IsDir() {
+			continue
+		}
+		appNameStr := filepath.Base(appEntry.Name())
+		appNameParts := strings.Split(appNameStr, ".")
+		appQName := appdef.NewAppQName(appNameParts[0], appNameParts[1])
+		if _, ok := istructs.ClusterApps[appQName]; !ok {
+			return nil, fmt.Errorf("ClusterAppID for sidecar app %s is unkknown", appQName)
+		}
+		appPath := filepath.Join(appsPath, appNameStr)
+		appDirEntries, err := os.ReadDir(appPath)
+		if err != nil {
+
+			return nil, err
+		}
+		var appDD *appparts.AppDeploymentDescriptor
+		appASTs := []*parser.PackageSchemaAST{}
+		extModuleURLs := map[string]*url.URL{}
+		for _, appDirEntry := range appDirEntries {
+
+			if !appDirEntry.IsDir() && appDirEntry.Name() == "descriptor.json" {
+				descriptorContent, err := os.ReadFile(filepath.Join(appPath, "descriptor.json"))
+				if err != nil {
+
+					return nil, err
+				}
+				if err := json.Unmarshal(descriptorContent, &appDD); err != nil {
+					return nil, fmt.Errorf("failed to unmarshal descriptor for sidecar app %s: %w", appEntry.Name(), err)
+				}
+			}
+			if appDirEntry.IsDir() && appDirEntry.Name() == "image" {
+
+				pkgPath := filepath.Join(appPath, "image", "pkg")
+				appASTs, err = parseSidecarAppSubDir(pkgPath, pkgPath, extModuleURLs)
+				if err != nil {
+					return nil, err
+				}
+			}
+		}
+		if appDD == nil {
+			return nil, fmt.Errorf("no descriptor for sidecar app %s", appQName)
+		}
+
+		appSchemaAST, err := parser.BuildAppSchema(appASTs)
+		if err != nil {
+			return nil, err
+		}
+		appDefBuilder := appdef.New()
+		if err := parser.BuildAppDefs(appSchemaAST, appDefBuilder); err != nil {
+			return nil, err
+		}
+
+		appDef, err := appDefBuilder.Build()
+		if err != nil {
+			return nil, err
+		}
+
+		res = append(res, appparts.SidecarApp{
+			BuiltInApp: appparts.BuiltInApp{
+				AppDeploymentDescriptor: *appDD,
+				Name:                    appQName,
+				Def:                     appDef,
+			},
+			ExtModuleURLs: extModuleURLs,
+		})
+		logger.Info(fmt.Sprintf("sidecar app %s parsed", appQName))
+	}
+	return res, nil
 }
 
 func provideServiceChannelFactory(vvmConfig *VVMConfig, procbus iprocbus.IProcBus) ServiceChannelFactory {

@@ -10,3 +10,4 @@ import "github.com/voedger/voedger/pkg/iextengine"
 func ProvideExtensionEngineFactory(funcs iextengine.BuiltInAppExtFuncs, statelessFuncs iextengine.BuiltInExtFuncs) iextengine.IExtensionEngineFactory {
 	return extensionEngineFactory{funcs, statelessFuncs}
 }
+

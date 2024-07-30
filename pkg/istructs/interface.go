@@ -22,6 +22,11 @@ type IAppStructsProvider interface {
 	// @ConcurrentAccess
 	BuiltIn(appdef.AppQName) (IAppStructs, error)
 
+	// // TODO
+	// Sidecar(appdef.AppQName) (IAppStructs, error)
+
+	// AppStructs(appdef.AppQName) (IAppStructs, error)
+
 	// Creates a new AppStructs for user application with given name, id and definition.
 	//
 	// @ConcurrentAccess

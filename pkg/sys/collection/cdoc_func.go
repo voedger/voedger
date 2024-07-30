@@ -125,6 +125,7 @@ func convert(doc istructs.IObject, appDef appdef.IAppDef, refs map[istructs.Reco
 
 	return obj, nil
 }
+
 func addRefs(obj map[string]interface{}, refs map[istructs.RecordID]bool, s istructs.IState, appDef appdef.IAppDef) error {
 	if len(refs) == 0 {
 		return nil
