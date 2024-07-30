@@ -97,6 +97,12 @@ func Example() {
 		prj.Intents().
 			Add(sysViews, viewName).SetComment(sysViews, "needs to update «test.view» from «sys.views» storage")
 
+		job := adb.AddJob(appdef.NewQName("test", "job"))
+		job.SetCronSchedule(`@every 1h30m`)
+		job.SetEngine(appdef.ExtensionEngineKind_WASM)
+		job.States().
+			Add(sysViews, viewName).SetComment(sysViews, "needs to read «test.view» from «sys.views» storage")
+
 		reader := adb.AddRole(appdef.NewQName("test", "reader"))
 		reader.SetComment("read-only role")
 		reader.Grant(
@@ -381,6 +387,17 @@ func Example() {
 	//           "test.projector": {
 	//             "Name": "projector",
 	//             "Engine": "WASM",
+	//             "States": {
+	//               "sys.records": [
+	//                 "test.doc",
+	//                 "test.rec"
+	//               ]
+	//             },
+	//             "Intents": {
+	//               "sys.views": [
+	//                 "test.view"
+	//               ]
+	//             },
 	//             "Events": {
 	//               "test.cmd": {
 	//                 "Comment": "run projector every time when «test.cmd» command is executed",
@@ -404,18 +421,19 @@ func Example() {
 	//                 ]
 	//               }
 	//             },
-	//             "WantErrors": true,
+	//             "WantErrors": true
+	//           }
+	//         },
+	//         "Jobs": {
+	//           "test.job": {
+	//             "Name": "job",
+	//             "Engine": "WASM",
 	//             "States": {
-	//               "sys.records": [
-	//                 "test.doc",
-	//                 "test.rec"
-	//               ]
-	//             },
-	//             "Intents": {
 	//               "sys.views": [
 	//                 "test.view"
 	//               ]
-	//             }
+	//             },
+	//             "CronSchedule": "@every 1h30m"
 	//           }
 	//         }
 	//       },
