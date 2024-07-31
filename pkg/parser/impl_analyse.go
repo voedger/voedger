@@ -649,18 +649,6 @@ func analyseProjector(v *ProjectorStmt, c *iterateCtx) {
 
 		if trigger.CronSchedule != nil {
 			c.stmtErr(&v.Pos, ErrScheduledProjectorDeprecated)
-			specParser := cron.NewParser(cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow)
-			_, err := specParser.Parse(*trigger.CronSchedule)
-			if err != nil {
-				c.stmtErr(&v.Pos, ErrInvalidCronSchedule(*trigger.CronSchedule))
-			}
-			ws := getCurrentAlterWorkspace(c)
-			if ws == nil || ws.alteredWorkspace == nil || ws.alteredWorkspacePkg == nil || ws.alteredWorkspacePkg.Path != appdef.SysPackage || ws.alteredWorkspace.Name != appWorkspaceName {
-				c.stmtErr(&v.Pos, ErrScheduledProjectorNotInAppWorkspace)
-			}
-			if len(v.Intents) > 0 {
-				c.stmtErr(&v.Pos, ErrScheduledProjectorWithIntents)
-			}
 		}
 
 		for _, qname := range trigger.QNames {

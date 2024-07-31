@@ -30,7 +30,6 @@ var ErrAbstractWorkspaceDescriptor = errors.New("abstract workspace cannot have 
 var ErrNestedTablesNotSupportedInTypes = errors.New("nested tables not supported in types")
 var ErrSysWorkspaceNotFound = errors.New("sys.Workspace type not found")
 var ErrInheritanceFromSysWorkspaceNotAllowed = errors.New("explicit inheritance from sys.Workspace not allowed")
-var ErrScheduledProjectorWithIntents = errors.New("scheduled projector cannot have intents")
 var ErrScheduledProjectorDeprecated = errors.New("scheduled projector deprecated; use jobs instead")
 
 var ErrMustBeNotNull = errors.New("field has to be NOT NULL")
@@ -41,9 +40,6 @@ var ErrOnlyInsertForOdocOrORecord = errors.New("only INSERT allowed for ODoc or 
 var ErrPackageWithSameNameAlreadyIncludedInApp = errors.New("package with the same name already included in application")
 var ErrStorageDeclaredOnlyInSys = errors.New("storages are only declared in sys package")
 var ErrPkgFolderNotFound = errors.New("pkg folder not found")
-
-var ErrScheduledProjectorNotInAppWorkspace = errors.New("scheduled projector must be in app workspace")
-var ErrJobNotInAppWorkspace = errors.New("job must be in app workspace")
 
 func ErrLocalPackageNameRedeclared(localPkgName, newLocalPkgName string) error {
 	return fmt.Errorf("local package name %s was redeclared as %s", localPkgName, newLocalPkgName)
