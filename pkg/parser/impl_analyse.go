@@ -72,6 +72,8 @@ func analyse(c *basicContext, packages []*PackageSchemaAST) {
 				analyzeQuery(v, ictx)
 			case *ProjectorStmt:
 				analyseProjector(v, ictx)
+			case *JobStmt:
+				analyseJob(v, ictx)
 			case *TableStmt:
 				analyseTable(v, ictx)
 			case *TypeStmt:
@@ -646,6 +648,7 @@ func analyseProjector(v *ProjectorStmt, c *iterateCtx) {
 		trigger := &v.Triggers[i]
 
 		if trigger.CronSchedule != nil {
+			c.stmtErr(&v.Pos, ErrScheduledProjectorDeprecated)
 			specParser := cron.NewParser(cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow)
 			_, err := specParser.Parse(*trigger.CronSchedule)
 			if err != nil {
@@ -658,7 +661,6 @@ func analyseProjector(v *ProjectorStmt, c *iterateCtx) {
 			if len(v.Intents) > 0 {
 				c.stmtErr(&v.Pos, ErrScheduledProjectorWithIntents)
 			}
-
 		}
 
 		for _, qname := range trigger.QNames {
@@ -731,6 +733,14 @@ func analyseProjector(v *ProjectorStmt, c *iterateCtx) {
 
 	checkState(v.State, c, func(sc *StorageScope) bool { return sc.Projectors })
 	checkIntents(v.Intents, c, func(sc *StorageScope) bool { return sc.Projectors })
+}
+
+func analyseJob(j *JobStmt, c *iterateCtx) {
+	if _, e := cron.ParseStandard(*j.CronSchedule); e != nil {
+		c.stmtErr(&j.Pos, ErrInvalidCronSchedule(*j.CronSchedule))
+	}
+
+	checkState(j.State, c, func(sc *StorageScope) bool { return sc.Jobs })
 }
 
 // Note: function may update with argument

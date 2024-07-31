@@ -147,6 +147,7 @@ type RootExtEngineStatement struct {
 type WorkspaceExtEngineStatement struct {
 	Function  *FunctionStmt  `parser:"@@"`
 	Projector *ProjectorStmt `parser:"| @@"`
+	Job       *JobStmt       `parser:"| @@"`
 	Command   *CommandStmt   `parser:"| @@"`
 	Query     *QueryStmt     `parser:"| @@"`
 	stmt      interface{}
@@ -490,6 +491,17 @@ func (t *ProjectorTrigger) deactivate() bool {
 	return false
 }
 
+type JobStmt struct {
+	Statement
+	Name         Ident          `parser:"'JOB' @Ident"`
+	CronSchedule *string        `parser:"@String"`
+	State        []StateStorage `parser:"('STATE'   '(' @@ (',' @@)* ')' )?"`
+	Engine       EngineType     // Initialized with 1st pass
+}
+
+func (j *JobStmt) GetName() string            { return string(j.Name) }
+func (j *JobStmt) SetEngineType(e EngineType) { j.Engine = e }
+
 type TemplateStmt struct {
 	Statement
 	Name      Ident    `parser:"'TEMPLATE' @Ident 'OF' 'WORKSPACE'" `
@@ -664,7 +676,8 @@ type StorageOp struct {
 type StorageScope struct {
 	Commands   bool `parser:" ( @'COMMANDS'"`
 	Queries    bool `parser:" | @'QUERIES'"`
-	Projectors bool `parser:" | @'PROJECTORS')"`
+	Projectors bool `parser:" | @'PROJECTORS'"`
+	Jobs       bool `parser:" | @'JOBS')"`
 }
 
 type FunctionStmt struct {

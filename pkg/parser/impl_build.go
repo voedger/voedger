@@ -41,6 +41,7 @@ func (c *buildContext) build() error {
 		c.views,
 		c.commands,
 		c.projectors,
+		c.jobs,
 		c.queries,
 		c.workspaces,
 		c.packages,
@@ -139,6 +140,29 @@ func (c *buildContext) types() error {
 			c.addComments(typ, c.defCtx().defBuilder.(appdef.ICommentsBuilder))
 			c.addTableItems(typ.Items, ictx)
 			c.popDef()
+		})
+	}
+	return nil
+}
+
+func (c *buildContext) jobs() error {
+	for _, schema := range c.app.Packages {
+		iteratePackageStmt(schema, &c.basicContext, func(job *JobStmt, ictx *iterateCtx) {
+			jQname := schema.NewQName(job.Name)
+			builder := c.builder.AddJob(jQname)
+			builder.SetCronSchedule(*job.CronSchedule)
+
+			for _, state := range job.State {
+				builder.States().Add(state.storageQName, state.entityQNames...)
+			}
+
+			c.addComments(job, builder)
+			builder.SetName(job.GetName())
+			if job.Engine.WASM {
+				builder.SetEngine(appdef.ExtensionEngineKind_WASM)
+			} else {
+				builder.SetEngine(appdef.ExtensionEngineKind_BuiltIn)
+			}
 		})
 	}
 	return nil
