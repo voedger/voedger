@@ -31,7 +31,7 @@ func TestForkOperator_DoSync(t *testing.T) {
 		operator := forkOperator{
 			fork: ForkSame,
 			branches: []ISyncOperator{
-				NewSyncOp(func(ctx context.Context, work interface{}) (err error) {
+				NewSyncOp(func(ctx context.Context, work IWorkpiece) (err error) {
 					return nil
 				}),
 			},
@@ -44,7 +44,7 @@ func TestForkOperator_DoSync(t *testing.T) {
 	t.Run("Should be not ok because fork logic return error", func(t *testing.T) {
 		testErr := errors.New("fork error")
 		operator := forkOperator{
-			fork: func(work interface{}, branchNumber int) (fork interface{}, err error) {
+			fork: func(work IWorkpiece, branchNumber int) (fork IWorkpiece, err error) {
 				return nil, testErr
 			},
 			branches: []ISyncOperator{nil},
@@ -56,7 +56,7 @@ func TestForkOperator_DoSync(t *testing.T) {
 	})
 	t.Run("Should panic when fork returns nil", func(t *testing.T) {
 		operator := forkOperator{
-			fork: func(work interface{}, branchNumber int) (fork interface{}, err error) {
+			fork: func(work IWorkpiece, branchNumber int) (fork IWorkpiece, err error) {
 				return nil, nil
 			},
 			branches: []ISyncOperator{nil},
@@ -70,7 +70,7 @@ func TestForkOperator_DoSync(t *testing.T) {
 		operator := forkOperator{
 			fork: ForkSame,
 			branches: []ISyncOperator{
-				NewSyncOp(func(ctx context.Context, work interface{}) (err error) {
+				NewSyncOp(func(ctx context.Context, work IWorkpiece) (err error) {
 					return errors.New("branch DoSync() error")
 				}),
 			},

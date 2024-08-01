@@ -11,6 +11,15 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/url"
+	"os"
+	"path/filepath"
+	"runtime/debug"
+	"slices"
+	"strconv"
+	"strings"
+	"time"
+
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/apppartsctl"
@@ -54,14 +63,6 @@ import (
 	"github.com/voedger/voedger/pkg/vvm/metrics"
 	"github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
 	"golang.org/x/crypto/acme/autocert"
-	"net/url"
-	"os"
-	"path/filepath"
-	"runtime/debug"
-	"slices"
-	"strconv"
-	"strings"
-	"time"
 )
 
 // Injectors from provide.go:
@@ -247,8 +248,8 @@ func (vvm *VoedgerVM) Shutdown() {
 }
 
 func (vvm *VoedgerVM) Launch() error {
-	ignition := struct{}{}
-	err := vvm.ServicePipeline.SendSync(ignition)
+	ign := ignition{}
+	err := vvm.ServicePipeline.SendSync(ign)
 	if err != nil {
 		err = errors.Join(err, ErrVVMLaunchFailure)
 		logger.Error(err)
@@ -276,7 +277,7 @@ func provideBootstrapOperator(federation2 federation.IFederation, asp istructs.I
 	if clusterBuiltinApp.Name == appdef.NullAppQName {
 		return nil, fmt.Errorf("%s app should be added to VVM builtin apps", istructs.AppQName_sys_cluster)
 	}
-	return pipeline.NewSyncOp(func(ctx context.Context, work interface{}) (err error) {
+	return pipeline.NewSyncOp(func(ctx context.Context, work pipeline.IWorkpiece) (err error) {
 		return btstrp.Bootstrap(federation2, asp, timeFunc, apppar, clusterBuiltinApp, otherApps, sidecarApps, itokens2, storageProvider, blobberAppStoragePtr, routerAppStoragePtr)
 	}), nil
 }
@@ -803,6 +804,5 @@ func provideServicePipeline(
 	adminEndpoint AdminEndpointServiceOperator,
 	publicEndpoint PublicEndpointServiceOperator,
 ) ServicePipeline {
-	return pipeline.NewSyncPipeline(vvmCtx, "ServicePipeline", pipeline.WireSyncOperator("internal services", pipeline.ForkOperator(pipeline.ForkSame, pipeline.ForkBranch(opQueryProcessors), pipeline.ForkBranch(opCommandProcessors), pipeline.ForkBranch(pipeline.ServiceOperator(opAsyncActualizers)), pipeline.ForkBranch(pipeline.ServiceOperator(appPartsCtl)))), pipeline.WireSyncOperator("admin endpoint", adminEndpoint), pipeline.WireSyncOperator("bootstrap", bootstrapSyncOp), pipeline.WireSyncOperator("public endpoint", publicEndpoint),
-	)
+	return pipeline.NewSyncPipeline(vvmCtx, "ServicePipeline", pipeline.WireSyncOperator("internal services", pipeline.ForkOperator(pipeline.ForkSame, pipeline.ForkBranch(opQueryProcessors), pipeline.ForkBranch(opCommandProcessors), pipeline.ForkBranch(pipeline.ServiceOperator(opAsyncActualizers)), pipeline.ForkBranch(pipeline.ServiceOperator(appPartsCtl)))), pipeline.WireSyncOperator("admin endpoint", adminEndpoint), pipeline.WireSyncOperator("bootstrap", bootstrapSyncOp), pipeline.WireSyncOperator("public endpoint", publicEndpoint))
 }

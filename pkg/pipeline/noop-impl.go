@@ -15,7 +15,7 @@ type NOPService struct{}
 
 type implISyncOperatorSimple struct {
 	NOOP
-	doSync func(ctx context.Context, work interface{}) (err error)
+	doSync func(ctx context.Context, work IWorkpiece) (err error)
 }
 
 type implAsyncOperatorSimple struct {
@@ -30,7 +30,7 @@ type implIServiceSimple struct {
 
 func (n *NOOP) Close() {}
 
-func (n *NOOP) DoSync(ctx context.Context, work interface{}) (err error) {
+func (n *NOOP) DoSync(_ context.Context, _ IWorkpiece) (err error) {
 	return
 }
 
@@ -54,7 +54,7 @@ func (n *NOPService) Run(ctx context.Context) {}
 
 func (n *NOPService) Stop() {}
 
-func (so *implISyncOperatorSimple) DoSync(ctx context.Context, work interface{}) (err error) {
+func (so *implISyncOperatorSimple) DoSync(ctx context.Context, work IWorkpiece) (err error) {
 	if so.doSync != nil {
 		return so.doSync(ctx, work)
 	}
@@ -75,7 +75,7 @@ func (s *implIServiceSimple) Run(ctx context.Context) {
 }
 
 // based on ISyncOperator
-func WireFunc(name string, doSync func(ctx context.Context, work interface{}) (err error)) *WiredOperator {
+func WireFunc(name string, doSync func(ctx context.Context, work IWorkpiece) (err error)) *WiredOperator {
 	return WireSyncOperator(name, NewSyncOp(doSync))
 }
 
@@ -84,7 +84,7 @@ func WireAsyncFunc(name string, doAsync func(ctx context.Context, work IWorkpiec
 	return WireAsyncOperator(name, NewAsyncOp(doAsync))
 }
 
-func NewSyncOp(doSync func(ctx context.Context, work interface{}) (err error)) ISyncOperator {
+func NewSyncOp(doSync func(ctx context.Context, work IWorkpiece) (err error)) ISyncOperator {
 	return &implISyncOperatorSimple{doSync: doSync}
 }
 

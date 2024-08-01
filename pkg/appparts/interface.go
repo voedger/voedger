@@ -7,6 +7,7 @@ package appparts
 
 import (
 	"context"
+	"github.com/voedger/voedger/pkg/pipeline"
 	"net/url"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -73,7 +74,7 @@ type IAppPartition interface {
 	// Releases borrowed partition
 	Release()
 
-	DoSyncActualizer(ctx context.Context, work interface{}) (err error)
+	DoSyncActualizer(ctx context.Context, work pipeline.IWorkpiece) (err error)
 
 	// Invoke extension engine.
 	Invoke(ctx context.Context, name appdef.QName, state istructs.IState, intents istructs.IIntents) error

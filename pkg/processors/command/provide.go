@@ -60,7 +60,7 @@ func ProvideServiceFactory(appParts appparts.IAppPartitions, now coreutils.TimeF
 		return pipeline.NewService(func(vvmCtx context.Context) {
 			hsp := newHostStateProvider(vvmCtx, partitionID, secretReader)
 			cmdProc.storeOp = pipeline.NewSyncPipeline(vvmCtx, "store",
-				pipeline.WireFunc("applyRecords", func(ctx context.Context, work interface{}) (err error) {
+				pipeline.WireFunc("applyRecords", func(ctx context.Context, work pipeline.IWorkpiece) (err error) {
 					// sync apply records
 					cmd := work.(*cmdWorkpiece)
 					if err = cmd.appStructs.Records().Apply(cmd.pLogEvent); err != nil {
@@ -71,7 +71,7 @@ func ProvideServiceFactory(appParts appparts.IAppPartitions, now coreutils.TimeF
 					// forK: sync projector and PutWLog
 
 					pipeline.ForkBranch(
-						pipeline.NewSyncOp(func(ctx context.Context, work interface{}) (err error) {
+						pipeline.NewSyncOp(func(ctx context.Context, work pipeline.IWorkpiece) (err error) {
 							cmd := work.(*cmdWorkpiece)
 							cmd.syncProjectorsStart = time.Now()
 							err = cmd.appPart.DoSyncActualizer(ctx, work)
@@ -85,7 +85,7 @@ func ProvideServiceFactory(appParts appparts.IAppPartitions, now coreutils.TimeF
 						}),
 					),
 
-					pipeline.ForkBranch(pipeline.NewSyncOp(func(ctx context.Context, work interface{}) (err error) {
+					pipeline.ForkBranch(pipeline.NewSyncOp(func(ctx context.Context, work pipeline.IWorkpiece) (err error) {
 						// put WLog
 						cmd := work.(*cmdWorkpiece)
 						if err = cmd.appStructs.Events().PutWlog(cmd.pLogEvent); err != nil {
@@ -152,7 +152,7 @@ func ProvideServiceFactory(appParts appparts.IAppPartitions, now coreutils.TimeF
 						},
 					}
 					func() { // borrowed application partition should be guaranteed to be freed
-						defer cmd.release()
+						defer cmd.Release()
 						cmd.metrics.increase(CommandsTotal, 1.0)
 						cmdHandlingErr := cmdPipeline.SendSync(cmd)
 						if cmdHandlingErr != nil {
@@ -163,7 +163,6 @@ func ProvideServiceFactory(appParts appparts.IAppPartitions, now coreutils.TimeF
 							logger.Info(fmt.Sprintf("partition %d will be restarted due of an error on writing to Log: %s", cmd.cmdMes.PartitionID(), cmdHandlingErr))
 							delete(cmdProc.appPartitions, cmd.cmdMes.AppQName())
 						}
-						// cmd.release()
 					}()
 					metrics.IncreaseApp(CommandsSeconds, string(vvm), cmdMes.AppQName(), time.Since(start).Seconds())
 				case <-vvmCtx.Done():

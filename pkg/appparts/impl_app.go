@@ -163,7 +163,7 @@ func (rt *partitionRT) App() appdef.AppQName { return rt.part.app.name }
 
 func (rt *partitionRT) AppStructs() istructs.IAppStructs { return rt.appStructs }
 
-func (rt *partitionRT) DoSyncActualizer(ctx context.Context, work interface{}) error {
+func (rt *partitionRT) DoSyncActualizer(ctx context.Context, work pipeline.IWorkpiece) error {
 	return rt.part.syncActualizer.DoSync(ctx, work)
 }
 

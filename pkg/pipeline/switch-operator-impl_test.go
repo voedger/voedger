@@ -31,7 +31,7 @@ func TestSwitchOperator_DoSync(t *testing.T) {
 		doSync := false
 		operator := switchOperator{
 			branches: map[string]ISyncOperator{
-				"branch": NewSyncOp(func(ctx context.Context, work interface{}) (err error) {
+				"branch": NewSyncOp(func(ctx context.Context, work IWorkpiece) (err error) {
 					doSync = true
 					return nil
 				}),
