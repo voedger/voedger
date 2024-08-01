@@ -454,7 +454,7 @@ func Test_QueryValue(t *testing.T) {
 
 	require := require.New(t)
 	ctx := context.Background()
-	moduleUrl := testModuleURL("./_testdata/tests/pkg.wasm")
+	moduleUrl := testModuleURL("./_testdata/tests/wasm/pkg.wasm")
 	extEngine, err := testFactoryHelper(ctx, moduleUrl, []string{testQueryValue}, iextengine.ExtEngineConfig{MemoryLimitPages: 0x20}, false)
 	require.NoError(err)
 	defer extEngine.Close(ctx)
@@ -579,7 +579,7 @@ func Test_Read(t *testing.T) {
 	const testRead = "testRead"
 	require := require.New(t)
 	ctx := context.Background()
-	moduleUrl := testModuleURL("./_testdata/tests/pkg.wasm")
+	moduleUrl := testModuleURL("./_testdata/tests/wasm/pkg.wasm")
 	extEngine, err := testFactoryHelper(ctx, moduleUrl, []string{testRead}, iextengine.ExtEngineConfig{}, false)
 	require.NoError(err)
 	defer extEngine.Close(ctx)
@@ -591,7 +591,7 @@ func Test_AsBytes(t *testing.T) {
 	const asBytes = "asBytes"
 	require := require.New(t)
 	ctx := context.Background()
-	moduleUrl := testModuleURL("./_testdata/tests/pkg.wasm")
+	moduleUrl := testModuleURL("./_testdata/tests/wasm/pkg.wasm")
 	extEngine, err := testFactoryHelper(ctx, moduleUrl, []string{asBytes}, iextengine.ExtEngineConfig{}, false)
 	require.NoError(err)
 	defer extEngine.Close(ctx)
@@ -607,7 +607,7 @@ func Test_AsBytesOverflow(t *testing.T) {
 	const asBytes = "asBytes"
 	require := require.New(t)
 	ctx := context.Background()
-	moduleUrl := testModuleURL("./_testdata/tests/pkg.wasm")
+	moduleUrl := testModuleURL("./_testdata/tests/wasm/pkg.wasm")
 	extEngine, err := testFactoryHelper(ctx, moduleUrl, []string{asBytes}, iextengine.ExtEngineConfig{MemoryLimitPages: 0x20}, false)
 	require.NoError(err)
 	defer extEngine.Close(ctx)
@@ -621,7 +621,7 @@ func Test_KeyPutQName(t *testing.T) {
 	const putQName = "keyPutQName"
 	require := require.New(t)
 	ctx := context.Background()
-	moduleUrl := testModuleURL("./_testdata/tests/pkg.wasm")
+	moduleUrl := testModuleURL("./_testdata/tests/wasm/pkg.wasm")
 	extEngine, err := testFactoryHelper(ctx, moduleUrl, []string{putQName}, iextengine.ExtEngineConfig{}, false)
 	require.NoError(err)
 	defer extEngine.Close(ctx)
@@ -637,7 +637,7 @@ func Test_NoAllocs(t *testing.T) {
 	projectorMode = false
 	require := require.New(t)
 	ctx := context.Background()
-	moduleUrl := testModuleURL("./_testdata/tests/pkg.wasm")
+	moduleUrl := testModuleURL("./_testdata/tests/wasm/pkg.wasm")
 	extEngine, err := testFactoryHelper(ctx, moduleUrl, []string{testNoAllocs}, iextengine.ExtEngineConfig{MemoryLimitPages: 0x20}, false)
 	require.NoError(err)
 	defer extEngine.Close(ctx)

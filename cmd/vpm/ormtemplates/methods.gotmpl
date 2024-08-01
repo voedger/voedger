@@ -151,20 +151,25 @@ func (v *Container_ORecord_{{.Package.Name}}_{{.Name}}) Get(i int) Value_{{.Type
 
 {{if (eq .Type "View")}}
 func (v {{.Type}}_{{.Package.Name}}_{{.Name}}) Insert({{range .Keys}}{{lower .Name}} {{.Type}}, {{end}}) Intent_{{.Type}}_{{.Package.Name}}_{{.Name}} {
-	kb := exttinygo.KeyBuilder(exttinygo.StorageRecord, v.fQName){{range .Keys}}
+	kb := exttinygo.KeyBuilder(exttinygo.StorageView, v.fQName){{range .Keys}}
 	{{if eq .Type "ID"}}kb.PutInt64("{{.Name}}", int64({{lower .Name}})){{else}}kb.Put{{capitalize .Type}}("{{.Name}}", {{lower .Name}}){{end}}{{end}}
 	return Intent_{{.Type}}_{{.Package.Name}}_{{.Name}}{intent: exttinygo.NewValue(kb)}
 }
 
+func (v {{.Type}}_{{.Package.Name}}_{{.Name}}) Keys() []string {
+	return []string{ {{range .Keys}}"{{.Name}}", {{end}}
+	}
+}
+
 func (v {{.Type}}_{{.Package.Name}}_{{.Name}}) Update({{range .Keys}}{{lower .Name}} {{.Type}}, {{end}}) Intent_{{.Type}}_{{.Package.Name}}_{{.Name}} {
 	existingValue := v.MustGet({{range .Keys}}{{lower .Name}}, {{end}})
-	kb := exttinygo.KeyBuilder(exttinygo.StorageRecord, v.fQName){{range .Keys}}
+	kb := exttinygo.KeyBuilder(exttinygo.StorageView, v.fQName){{range .Keys}}
 	{{if eq .Type "ID"}}kb.PutInt64("{{.Name}}", int64({{lower .Name}})){{else}}kb.Put{{capitalize .Type}}("{{.Name}}", {{lower .Name}}){{end}}{{end}}
 	return Intent_{{.Type}}_{{.Package.Name}}_{{.Name}}{intent: exttinygo.UpdateValue(kb, existingValue.tv)}
 }
 
 func (v {{.Type}}_{{.Package.Name}}_{{.Name}}) Get({{range .Keys}}{{lower .Name}} {{.Type}}, {{end}}) (Value_{{.Type}}_{{.Package.Name}}_{{.Name}}, bool) {
-	kb := exttinygo.KeyBuilder(exttinygo.StorageRecord, v.fQName){{range .Keys}}
+	kb := exttinygo.KeyBuilder(exttinygo.StorageView, v.fQName){{range .Keys}}
 	{{if eq .Type "ID"}}kb.PutInt64("{{.Name}}", int64({{lower .Name}})){{else}}kb.Put{{capitalize .Type}}("{{.Name}}", {{lower .Name}}){{end}}{{end}}
 	tv, exists := exttinygo.QueryValue(kb)
 	if !exists {
@@ -174,7 +179,7 @@ func (v {{.Type}}_{{.Package.Name}}_{{.Name}}) Get({{range .Keys}}{{lower .Name}
 }
 
 func (v {{.Type}}_{{.Package.Name}}_{{.Name}}) MustGet({{range .Keys}}{{lower .Name}} {{.Type}}, {{end}}) Value_{{.Type}}_{{.Package.Name}}_{{.Name}} {
-	kb := exttinygo.KeyBuilder(exttinygo.StorageRecord, v.fQName){{range .Keys}}
+	kb := exttinygo.KeyBuilder(exttinygo.StorageView, v.fQName){{range .Keys}}
 	{{if eq .Type "ID"}}kb.PutInt64("{{.Name}}", int64({{lower .Name}})){{else}}kb.Put{{capitalize .Type}}("{{.Name}}", {{lower .Name}}){{end}}{{end}}
 	tv := exttinygo.MustGetValue(kb)
 	return Value_{{.Type}}_{{.Package.Name}}_{{.Name}}{tv: tv, kb: kb}

@@ -43,7 +43,7 @@ func Test_ActualizerStorages(t *testing.T) {
 	ProjectorTestStorageWLog()
 	test.RequireIntent(t, state.View, appdef.NewFullQName(testPkg, "Results"), func(_ istructs.IStateKeyBuilder) {}).Equal(func(value istructs.IStateValueBuilder) {
 		value.PutInt32("IntVal", 2)
-		value.PutQName("QNameVal", appdef.NewQName(teststate.TestPkgAlias, "dummyCmd"))
+		value.PutQName("QNameVal", appdef.NewQName("tstpkg", "dummyCmd"))
 	})
 
 	// Call the extension to test SendMail, Http and Secret
@@ -75,7 +75,7 @@ func Test_CommandStorages(t *testing.T) {
 
 	// Create a Doc1 record
 	_, newIds := test.PutEvent(testWSID, appdef.NewFullQName(testPkg, "dummyCmd"), func(_ istructs.IObjectBuilder, cud istructs.ICUD) {
-		c := cud.Create(appdef.NewQName(teststate.TestPkgAlias, "Doc1"))
+		c := cud.Create(appdef.NewQName("tstpkg", "Doc1"))
 		c.PutRecordID(appdef.SystemField_ID, 1)
 		c.PutInt32("Value", 42)
 	})
