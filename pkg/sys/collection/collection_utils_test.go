@@ -140,13 +140,12 @@ func (w *testCmdWorkpeace) Actualizers(ctx context.Context) error {
 	return w.appPart.DoSyncActualizer(ctx, w)
 }
 
-func (w *testCmdWorkpeace) Release() error {
+func (w *testCmdWorkpeace) Release() {
 	p := w.appPart
 	w.appPart = nil
 	if p != nil {
 		p.Release()
 	}
-	return nil
 }
 
 type testCmdProc struct {
@@ -164,20 +163,21 @@ func testProcessor(appParts appparts.IAppPartitions) *testCmdProc {
 	}
 	proc.ISyncPipeline = pipeline.NewSyncPipeline(proc.ctx, "partition processor",
 		pipeline.WireSyncOperator("Borrow", pipeline.NewSyncOp(
-			func(ctx context.Context, _ interface{}) error {
+			func(ctx context.Context, _ pipeline.IWorkpiece) error {
 				return proc.workpeace.Borrow(ctx, appParts)
 			})),
 		pipeline.WireSyncOperator("Command", pipeline.NewSyncOp(
-			func(_ context.Context, event interface{}) error {
+			func(_ context.Context, event pipeline.IWorkpiece) error {
 				return proc.workpeace.Command(event)
 			})),
 		pipeline.WireSyncOperator("SyncActualizers", pipeline.NewSyncOp(
-			func(ctx context.Context, _ interface{}) error {
+			func(ctx context.Context, _ pipeline.IWorkpiece) error {
 				return proc.workpeace.Actualizers(ctx)
 			})),
 		pipeline.WireSyncOperator("Release", pipeline.NewSyncOp(
-			func(context.Context, interface{}) error {
-				return proc.workpeace.Release()
+			func(context.Context, pipeline.IWorkpiece) error {
+				proc.workpeace.Release()
+				return nil
 			})))
 	return proc
 }

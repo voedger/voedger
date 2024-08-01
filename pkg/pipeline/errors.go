@@ -3,7 +3,7 @@
 // LICENSE file in the root directory of this source tree.
 // @author Michael Saigachenko
 // @author Alisher Nurmanov
- 
+
 package pipeline
 
 import (
@@ -14,14 +14,14 @@ import (
 type IErrorPipeline interface {
 	error
 	IWorkpiece
-	GetWork() interface{}
+	GetWork() IWorkpiece
 	GetOpName() string
 	GetPlace() string
 }
 
 type errPipeline struct {
 	err    error
-	work   interface{}
+	work   IWorkpiece
 	place  string
 	opName string
 }
@@ -37,7 +37,7 @@ func (e errPipeline) Unwrap() error {
 	return e.err
 }
 
-func (e errPipeline) GetWork() interface{} {
+func (e errPipeline) GetWork() IWorkpiece {
 	return e.work
 }
 

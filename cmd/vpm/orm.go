@@ -165,7 +165,7 @@ func generateOrmFiles(pkgData map[ormPackageInfo][]interface{}, dir string) erro
 
 	// generate .gitignore file
 	gitIgnoreFilePath := filepath.Join(dir, ".gitignore")
-	if err := os.WriteFile(gitIgnoreFilePath, []byte("*"), coreutils.FileMode_rw_rw_rw_); err != nil {
+	if err := os.WriteFile(gitIgnoreFilePath, []byte(gitignoreFileContent), coreutils.FileMode_rw_rw_rw_); err != nil {
 		return fmt.Errorf(errInGeneratingOrmFileFormat, gitIgnoreFilePath, err)
 	}
 
