@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/robfig/cron/v3"
 	"github.com/voedger/voedger/pkg/goutils/set"
 	"github.com/voedger/voedger/pkg/utils/utils"
 )
@@ -19,10 +18,9 @@ import (
 //   - IProjector
 type projector struct {
 	extension
-	sync         bool
-	sysErrors    bool
-	events       *events
-	cronSchedule string
+	sync      bool
+	sysErrors bool
+	events    *events
 }
 
 func newProjector(app *appDef, name QName) *projector {
@@ -34,15 +32,11 @@ func newProjector(app *appDef, name QName) *projector {
 	return prj
 }
 
-func (prj projector) CronSchedule() string { return prj.cronSchedule }
-
 func (prj projector) Events() IProjectorEvents { return prj.events }
 
 func (prj projector) Sync() bool { return prj.sync }
 
 func (prj projector) WantErrors() bool { return prj.sysErrors }
-
-func (prj *projector) setCronSchedule(cs string) { prj.cronSchedule = cs }
 
 func (prj *projector) setSync(sync bool) { prj.sync = sync }
 
@@ -66,11 +60,6 @@ func newProjectorBuilder(projector *projector) *projectorBuilder {
 
 func (pb *projectorBuilder) Events() IProjectorEventsBuilder { return pb.events }
 
-func (pb *projectorBuilder) SetCronSchedule(cs string) IProjectorBuilder {
-	pb.projector.setCronSchedule(cs)
-	return pb
-}
-
 func (pb *projectorBuilder) SetSync(sync bool) IProjectorBuilder {
 	pb.projector.setSync(sync)
 	return pb
@@ -88,20 +77,10 @@ func (pb *projectorBuilder) SetWantErrors() IProjectorBuilder {
 func (prj *projector) Validate() (err error) {
 	err = prj.extension.Validate()
 
-	if (len(prj.events.events) == 0) && (prj.cronSchedule == "") {
+	if len(prj.events.events) == 0 {
 		err = errors.Join(err, ErrMissed("%v events", prj))
 	}
 
-	if prj.cronSchedule != "" {
-		_, e := cron.ParseStandard(prj.cronSchedule)
-		if e != nil {
-			err = errors.Join(err, enrichError(e, "%v cron schedule", prj))
-		}
-
-		if prj.intents.Len() > 0 {
-			err = errors.Join(err, ErrUnsupported("%v with schedule can't have intents", prj))
-		}
-	}
 	return err
 }
 
