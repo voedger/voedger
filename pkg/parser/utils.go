@@ -113,17 +113,6 @@ func lookupInSysPackage[stmtType *WorkspaceStmt](ctx *basicContext, fn DefQName)
 	return s, e
 }
 
-func getCurrentAlterWorkspace(ictx *iterateCtx) *AlterWorkspaceStmt {
-	var ic *iterateCtx = ictx
-	for ic != nil {
-		if aw, isAlterWorkspace := ic.collection.(*AlterWorkspaceStmt); isAlterWorkspace {
-			return aw
-		}
-		ic = ic.parent
-	}
-	return nil
-}
-
 func getCurrentWorkspace(ictx *iterateCtx) *WorkspaceStmt {
 	var ic *iterateCtx = ictx
 	var ws *WorkspaceStmt = nil
