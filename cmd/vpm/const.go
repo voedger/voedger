@@ -59,6 +59,8 @@ func CommandContext() Value_CommandContext {
 	return Value_CommandContext{tv: exttinygo.MustGetValue(kb)}
 }
 `
+	gitignoreFileContent = `*
+`
 	unknownType                  = "Unknown"
 	errInGeneratingOrmFileFormat = "error occurred while generating %s: %w"
 )

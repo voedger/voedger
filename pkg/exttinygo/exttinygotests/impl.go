@@ -24,3 +24,9 @@ func NewCommandTest(t *testing.T, iCommand teststate.ICommand, extensionFunc fun
 	internal.SafeStateAPI = safestate.Provide(ts, nil)
 	return ts
 }
+
+func NewProjectorTest(t *testing.T, iCommand teststate.ICommand, extensionFunc func()) *teststate.ProjectorTestState {
+	ts := teststate.NewProjectorTestState(t, iCommand, extensionFunc)
+	internal.SafeStateAPI = safestate.Provide(ts, nil)
+	return ts
+}

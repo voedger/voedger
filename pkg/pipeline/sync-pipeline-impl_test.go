@@ -64,7 +64,6 @@ func TestSyncPipeline_DoSync(t *testing.T) {
 		require.Equal(t, testerr, err)
 	})
 	t.Run("Should handle not a workpiece with noop operator", func(t *testing.T) {
-		type notAWorkpiece struct{}
 		ctx := &testContext{}
 		v := &notAWorkpiece{}
 		pipeline := NewSyncPipeline(ctx, "my-pipeline",

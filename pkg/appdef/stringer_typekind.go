@@ -24,16 +24,17 @@ func _() {
 	_ = x[TypeKind_Query-13]
 	_ = x[TypeKind_Command-14]
 	_ = x[TypeKind_Projector-15]
-	_ = x[TypeKind_Workspace-16]
-	_ = x[TypeKind_Role-17]
-	_ = x[TypeKind_Rate-18]
-	_ = x[TypeKind_Limit-19]
-	_ = x[TypeKind_count-20]
+	_ = x[TypeKind_Job-16]
+	_ = x[TypeKind_Workspace-17]
+	_ = x[TypeKind_Role-18]
+	_ = x[TypeKind_Rate-19]
+	_ = x[TypeKind_Limit-20]
+	_ = x[TypeKind_count-21]
 }
 
-const _TypeKind_name = "TypeKind_nullTypeKind_AnyTypeKind_DataTypeKind_GDocTypeKind_CDocTypeKind_ODocTypeKind_WDocTypeKind_GRecordTypeKind_CRecordTypeKind_ORecordTypeKind_WRecordTypeKind_ViewRecordTypeKind_ObjectTypeKind_QueryTypeKind_CommandTypeKind_ProjectorTypeKind_WorkspaceTypeKind_RoleTypeKind_RateTypeKind_LimitTypeKind_count"
+const _TypeKind_name = "TypeKind_nullTypeKind_AnyTypeKind_DataTypeKind_GDocTypeKind_CDocTypeKind_ODocTypeKind_WDocTypeKind_GRecordTypeKind_CRecordTypeKind_ORecordTypeKind_WRecordTypeKind_ViewRecordTypeKind_ObjectTypeKind_QueryTypeKind_CommandTypeKind_ProjectorTypeKind_JobTypeKind_WorkspaceTypeKind_RoleTypeKind_RateTypeKind_LimitTypeKind_count"
 
-var _TypeKind_index = [...]uint16{0, 13, 25, 38, 51, 64, 77, 90, 106, 122, 138, 154, 173, 188, 202, 218, 236, 254, 267, 280, 294, 308}
+var _TypeKind_index = [...]uint16{0, 13, 25, 38, 51, 64, 77, 90, 106, 122, 138, 154, 173, 188, 202, 218, 236, 248, 266, 279, 292, 306, 320}
 
 func (i TypeKind) String() string {
 	if i >= TypeKind(len(_TypeKind_index)-1) {

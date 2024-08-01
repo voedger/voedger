@@ -29,3 +29,7 @@ type BatchItem struct {
 	Key   interface{}
 	Value interface{}
 }
+
+type notAWorkpiece struct{}
+
+func (nw notAWorkpiece) Release() {}

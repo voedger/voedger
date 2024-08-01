@@ -84,7 +84,7 @@ func TestBasicUsage_Make(t *testing.T) {
 	t.Run("sync operator", func(t *testing.T) {
 		defer reset()
 		ctx := context.Background()
-		so := WireFunc("test op", func(ctx context.Context, work interface{}) (err error) {
+		so := WireFunc("test op", func(ctx context.Context, work IWorkpiece) (err error) {
 			called = true
 			return
 		})

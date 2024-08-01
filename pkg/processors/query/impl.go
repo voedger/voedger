@@ -112,7 +112,7 @@ func implServiceFactory(serviceChannel iprocbus.ServiceChannel, resultSenderClos
 				rs := resultSenderClosableFactory(msg.RequestCtx(), msg.Sender())
 				qwork := newQueryWork(msg, rs, appParts, maxPrepareQueries, qpm, secretReader)
 				func() { // borrowed application partition should be guaranteed to be freed
-					defer qwork.release()
+					defer qwork.Release()
 					if p == nil {
 						p = newQueryProcessorPipeline(ctx, authn, authz, itokens, federation, statelessResources)
 					}
@@ -427,7 +427,7 @@ func (qw *queryWork) borrow() (err error) {
 }
 
 // releases borrowed app partition
-func (qw *queryWork) release() {
+func (qw *queryWork) Release() {
 	if ap := qw.appPart; ap != nil {
 		qw.appStructs = nil
 		qw.appPart = nil
@@ -457,7 +457,7 @@ func borrowAppPart(_ context.Context, qw *queryWork) error {
 }
 
 func operator(name string, doSync func(ctx context.Context, qw *queryWork) (err error)) *pipeline.WiredOperator {
-	return pipeline.WireFunc(name, func(ctx context.Context, work interface{}) (err error) {
+	return pipeline.WireFunc(name, func(ctx context.Context, work pipeline.IWorkpiece) (err error) {
 		return doSync(ctx, work.(*queryWork))
 	})
 }
