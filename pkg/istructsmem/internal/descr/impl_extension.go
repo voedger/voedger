@@ -17,6 +17,7 @@ func newExtensions() *Extensions {
 		Commands:   make(map[appdef.QName]*CommandFunction),
 		Queries:    make(map[appdef.QName]*QueryFunction),
 		Projectors: make(map[appdef.QName]*Projector),
+		Jobs:       make(map[appdef.QName]*Job),
 	}
 }
 
@@ -34,9 +35,15 @@ func (ff *Extensions) read(ext appdef.IExtension) {
 		return
 	}
 	if prj, ok := ext.(appdef.IProjector); ok {
-		p := newProjector()
+		p := &Projector{}
 		p.read(prj)
 		ff.Projectors[p.QName] = p
+		return
+	}
+	if job, ok := ext.(appdef.IJob); ok {
+		j := &Job{}
+		j.read(job)
+		ff.Jobs[j.QName] = j
 		return
 	}
 
@@ -48,6 +55,8 @@ func (e *Extension) read(ex appdef.IExtension) {
 	e.Type.read(ex)
 	e.Name = ex.Name()
 	e.Engine = ex.Engine().TrimString()
+	e.States = maps.Clone(ex.States().Map())
+	e.Intents = maps.Clone(ex.Intents().Map())
 }
 
 func (f *Function) read(fn appdef.IFunction) {
@@ -73,24 +82,17 @@ func (f *CommandFunction) read(fn appdef.ICommand) {
 	}
 }
 
-func newProjector() *Projector {
-	return &Projector{
-		Events:  make(map[appdef.QName]ProjectorEvent),
-		States:  make(map[appdef.QName]appdef.QNames),
-		Intents: make(map[appdef.QName]appdef.QNames),
-	}
-}
-
 func (p *Projector) read(prj appdef.IProjector) {
 	p.Extension.read(prj)
-	prj.Events().Enum(func(ev appdef.IProjectorEvent) {
-		e := ProjectorEvent{}
-		e.read(ev)
-		p.Events[e.On] = e
-	})
+	if prj.Events().Len() > 0 {
+		p.Events = make(map[appdef.QName]ProjectorEvent)
+		prj.Events().Enum(func(ev appdef.IProjectorEvent) {
+			e := ProjectorEvent{}
+			e.read(ev)
+			p.Events[e.On] = e
+		})
+	}
 	p.WantErrors = prj.WantErrors()
-	p.States = maps.Clone(prj.States().Map())
-	p.Intents = maps.Clone(prj.Intents().Map())
 }
 
 func (e *ProjectorEvent) read(ev appdef.IProjectorEvent) {
@@ -99,4 +101,9 @@ func (e *ProjectorEvent) read(ev appdef.IProjectorEvent) {
 	for _, k := range ev.Kind() {
 		e.Kind = append(e.Kind, k.TrimString())
 	}
+}
+
+func (j *Job) read(job appdef.IJob) {
+	j.Extension.read(job)
+	j.CronSchedule = job.CronSchedule()
 }

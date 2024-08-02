@@ -225,6 +225,13 @@ WORKSPACE MyWorkspace (
         PROJECTOR RecordsRegistryProjector
             AFTER INSERT OR ACTIVATE OR DEACTIVATE ON (CRecord, WRecord);
 
+        -- Job executed by CRON
+        JOB TestJob1 '1 0 * * *'
+            STATE (Http, AppSecret);
+
+
+        JOB TestJob2 '@every 2m30s';
+
         /*
         Commands can only be declared in workspaces
         Command can have optional argument and/or unlogged argument
