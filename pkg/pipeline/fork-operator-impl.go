@@ -20,8 +20,8 @@ func (f forkOperator) Close() {
 	}
 }
 
-func (f forkOperator) DoSync(ctx context.Context, work interface{}) (err error) {
-	forks := make([]interface{}, len(f.branches))
+func (f forkOperator) DoSync(ctx context.Context, work IWorkpiece) (err error) {
+	forks := make([]IWorkpiece, len(f.branches))
 	for i := range f.branches {
 		fork, err := f.fork(work, i)
 		if err != nil {

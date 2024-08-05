@@ -172,3 +172,7 @@ type VoedgerVM struct {
 	vvmCtxCancel func()
 	vvmCleanup   func()
 }
+
+type ignition struct{}
+
+func (i ignition) Release() {}

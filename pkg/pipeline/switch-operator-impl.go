@@ -18,7 +18,7 @@ func (s switchOperator) Close() {
 	}
 }
 
-func (s switchOperator) DoSync(ctx context.Context, work interface{}) (err error) {
+func (s switchOperator) DoSync(ctx context.Context, work IWorkpiece) (err error) {
 	s.currentBranchName, err = s.switchLogic.Switch(work)
 	if err != nil {
 		return err

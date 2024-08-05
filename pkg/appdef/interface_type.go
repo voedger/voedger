@@ -55,6 +55,7 @@ const (
 	TypeKind_Query
 	TypeKind_Command
 	TypeKind_Projector
+	TypeKind_Job
 
 	TypeKind_Workspace
 

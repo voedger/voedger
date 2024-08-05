@@ -255,6 +255,31 @@ func Test_BasicUsage(t *testing.T) {
 	require.Equal(1, intentsCount)
 	require.Equal(intentsCount, proj.Intents().Len())
 
+	t.Run("Jobs", func(t *testing.T) {
+		job1 := app.Job(appdef.NewQName("main", "TestJob1"))
+		require.EqualValues(`1 0 * * *`, job1.CronSchedule())
+		t.Run("Job states", func(t *testing.T) {
+			stateCount := 0
+			proj.States().Enum(func(storage appdef.IStorage) {
+				stateCount++
+				switch stateCount {
+				case 1:
+					require.Equal(appdef.NewQName("sys", "AppSecret"), storage.Name())
+					require.Empty(storage.Names())
+				case 2:
+					require.Equal(appdef.NewQName("sys", "Http"), storage.Name())
+					require.Empty(storage.Names())
+				default:
+					require.Fail("unexpected state", "storage: %v", storage.Name())
+				}
+			})
+			require.Equal(2, stateCount)
+		})
+
+		job2 := app.Job(appdef.NewQName("main", "TestJob2"))
+		require.EqualValues(`@every 2m30s`, job2.CronSchedule())
+	})
+
 	cmd = app.Command(appdef.NewQName("main", "NewOrder2"))
 	require.Equal(1, cmd.States().Len())
 	require.NotNil(cmd.States().Storage(appdef.NewQName("sys", "AppSecret")))
@@ -2467,7 +2492,20 @@ func Test_RefsWorkspaces(t *testing.T) {
 
 func Test_ScheduledProjectors(t *testing.T) {
 
+	t.Run("should be deprecated", func(t *testing.T) {
+		require := assertions(t)
+		require.AppSchemaError(
+			`APPLICATION test();
+				ALTER WORKSPACE sys.AppWorkspaceWS (
+					EXTENSION ENGINE BUILTIN (
+						PROJECTOR ScheduledProjector CRON '1 0 * * *';
+					);
+				);`,
+			"file.vsql:4:7: scheduled projector deprecated; use jobs instead")
+	})
+
 	t.Run("bad workspace", func(t *testing.T) {
+		t.Skip()
 		require := assertions(t)
 		require.AppSchemaError(`APPLICATION test();
 			WORKSPACE w2 (
@@ -2478,6 +2516,7 @@ func Test_ScheduledProjectors(t *testing.T) {
 	})
 
 	t.Run("bad cron and intents", func(t *testing.T) {
+		t.Skip()
 		require := assertions(t)
 		require.AppSchemaError(`APPLICATION test();
 			ALTER WORKSPACE AppWorkspaceWS (
@@ -2493,6 +2532,7 @@ func Test_ScheduledProjectors(t *testing.T) {
 	})
 
 	t.Run("good cron", func(t *testing.T) {
+		t.Skip()
 		require := assertions(t)
 		require.NoAppSchemaError(`APPLICATION test();
 ALTER WORKSPACE sys.AppWorkspaceWS (
@@ -2500,6 +2540,40 @@ ALTER WORKSPACE sys.AppWorkspaceWS (
 		PROJECTOR ScheduledProjector CRON '1 0 * * *';
 	);
 );`)
+	})
+}
+
+func Test_Jobs(t *testing.T) {
+
+	t.Run("bad workspace", func(t *testing.T) {
+		t.Skip()
+		require := assertions(t)
+		require.AppSchemaError(`APPLICATION test();
+			WORKSPACE w2 (
+				EXTENSION ENGINE BUILTIN (
+					JOB Job1 '1 0 * * *';
+				);
+			);`, "file.vsql:4:6: job must be in app workspace")
+	})
+
+	t.Run("bad cron", func(t *testing.T) {
+		require := assertions(t)
+		require.AppSchemaError(`APPLICATION test();
+			ALTER WORKSPACE AppWorkspaceWS (
+				EXTENSION ENGINE BUILTIN (
+					JOB Job1 'blah';
+				);
+			);`, "file.vsql:4:6: invalid cron schedule: blah")
+	})
+
+	t.Run("good cron", func(t *testing.T) {
+		require := assertions(t)
+		require.NoAppSchemaError(`APPLICATION test();
+			ALTER WORKSPACE AppWorkspaceWS (
+				EXTENSION ENGINE BUILTIN (
+					JOB Job1 '1 0 * * *';
+				);
+			);`)
 	})
 }
 

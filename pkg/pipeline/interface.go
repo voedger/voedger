@@ -5,7 +5,9 @@
 
 package pipeline
 
-import "context"
+import (
+	"context"
+)
 
 type StorageID string
 
@@ -23,7 +25,7 @@ type IOperator interface {
 type ISyncOperator interface {
 	IOperator
 	// If `err` is not nil then `work` is passed to the nearest `ICatch`
-	DoSync(ctx context.Context, work interface{}) (err error)
+	DoSync(ctx context.Context, work IWorkpiece) (err error)
 }
 
 type IAsyncOperator interface {
@@ -50,7 +52,7 @@ type IAsyncPipeline interface {
 type ISyncPipeline interface {
 	IPipeline
 	ISyncOperator
-	SendSync(work interface{}) (err error)
+	SendSync(work IWorkpiece) (err error)
 }
 
 type IWorkpiece interface {
@@ -74,9 +76,9 @@ type ISwitch interface {
 	Switch(work interface{}) (branchName string, err error)
 }
 
-type Fork func(work interface{}, branchNumber int) (fork interface{}, err error)
+type Fork func(work IWorkpiece, branchNumber int) (fork IWorkpiece, err error)
 
-func ForkSame(work interface{}, _ int) (fork interface{}, err error) { return work, nil }
+func ForkSame(work IWorkpiece, _ int) (fork IWorkpiece, err error) { return work, nil }
 
 type IService interface {
 	// Prepare tunes-up the service: checks arguments from `work` etc

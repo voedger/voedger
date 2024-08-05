@@ -8,8 +8,6 @@ import (
 	"io"
 	"time"
 
-	"github.com/voedger/voedger/pkg/appdef"
-
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
@@ -40,8 +38,9 @@ type HttpResponse struct {
 }
 
 type recordItem struct {
-	entity       appdef.IFullQName
+	entity       IFullQName
 	isSingleton  bool
+	isView       bool
 	isNew        bool
 	id           int
 	keyValueList []any

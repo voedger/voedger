@@ -159,7 +159,22 @@ func execTinyGoBuild(dir, appName string) (wasmFilePath string, err error) {
 	}
 
 	wasmFileName := appName + ".wasm"
-	if err := new(exec.PipedExec).Command("tinygo", "build", "--no-debug", "-o", wasmFileName, "-scheduler=none", "-opt=2", "-gc=leaking", "-target=wasi", ".").WorkingDir(dir).Run(stdout, os.Stderr); err != nil {
+	if err := new(exec.PipedExec).Command(
+		"tinygo",
+		"build",
+		"--no-debug",
+		"-o",
+		wasmFileName,
+		"-scheduler=none",
+		"-opt=2",
+		"-gc=leaking",
+		"-target=wasi",
+		".",
+	).WorkingDir(dir).Run(stdout, os.Stderr); err != nil {
+		// checking compatibility of the tinygo with go version
+		if strings.Contains(err.Error(), "requires go version") {
+			return "", fmt.Errorf("tinygo is incompatible with the current go version - %w", err)
+		}
 		return "", err
 	}
 	return filepath.Join(dir, wasmFileName), nil

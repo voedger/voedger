@@ -3,7 +3,6 @@
 // LICENSE file in the root directory of this source tree.
 // @author Michael Saigachenko
 
-
 package pipeline
 
 import "context"
@@ -53,7 +52,7 @@ type mockedSyncOperator struct {
 
 // outWork can be nil
 // If `err` is not nil then either `outWork` or `work` (if outWork is nil) is passed to `ICatchOperator`
-func (op mockedSyncOperator) DoSync(ctx context.Context, work interface{}) (err error) {
+func (op mockedSyncOperator) DoSync(ctx context.Context, work IWorkpiece) (err error) {
 	if op.fDoSync != nil {
 		return op.fDoSync(ctx, work)
 	}
@@ -77,7 +76,7 @@ func (o *mockedSyncCatchOperator) OnErr(err error, work interface{}, context IWo
 	}
 	return nil
 }
-func (o mockedSyncCatchOperator) DoSync(ctx context.Context, work interface{}) (err error) {
+func (o mockedSyncCatchOperator) DoSync(ctx context.Context, work IWorkpiece) (err error) {
 	if o.fDoSync != nil {
 		return o.fDoSync(ctx, work)
 	}

@@ -75,7 +75,7 @@ func (wo WiredOperator) String() string {
 	return "operator: " + wo.name
 }
 
-func (wo *WiredOperator) NewError(err error, work interface{}, place string) IErrorPipeline {
+func (wo *WiredOperator) NewError(err error, work IWorkpiece, place string) IErrorPipeline {
 	ep := errPipeline{
 		err:    err,
 		work:   work,
@@ -98,7 +98,7 @@ func (wo *WiredOperator) doAsync(work IWorkpiece) (IWorkpiece, IErrorPipeline) {
 	return outWork, nil
 }
 
-func (wo *WiredOperator) doSync(_ context.Context, work interface{}) IErrorPipeline {
+func (wo *WiredOperator) doSync(_ context.Context, work IWorkpiece) IErrorPipeline {
 	e := wo.Operator.(ISyncOperator).DoSync(wo.ctx, work)
 	if e != nil {
 		return wo.NewError(e, work, placeDoSync)
