@@ -21,7 +21,8 @@ type (
 	//
 	// # Implements:
 	//	- IActualizersService:
-	//	   + appparts.IActualizers
+	//	   + appparts.IActualizers ➖ should be removed
+	//	   + appparts.IActualizerFactory  ➕ should be used
 	//	   + pipeline.IService
 	actualizers struct {
 		mx   sync.RWMutex
@@ -29,11 +30,13 @@ type (
 		apps map[appdef.AppQName]*appActs
 	}
 
+	// ➡ should be moved to appparts/appRT
 	appActs struct {
 		mx    sync.RWMutex
 		parts map[istructs.PartitionID]*partActs
 	}
 
+	// ➡ should be moved to appparts/partitionRT
 	partActs struct {
 		cfg AsyncActualizerConf
 		mx  sync.RWMutex
@@ -55,18 +58,44 @@ func newActualizers(cfg BasicAsyncActualizerConfig) *actualizers {
 	}
 }
 
+// New creates a new actualizer for the specified application partition.
+//
+// # apparts.IActualizerFactory.New
+func (a *actualizers) New(app appdef.AppQName, part istructs.PartitionID, prj appdef.QName) appparts.IActualizer {
+	rt := &runtimeAct{
+		actualizer: &asyncActualizer{
+			projector: prj,
+			conf: AsyncActualizerConf{
+				BasicAsyncActualizerConfig: a.cfg,
+				AppQName:                   app,
+				Partition:                  part,
+			},
+		}}
+
+	rt.actualizer.conf.Ctx, rt.cancel = context.WithCancel(a.cfg.Ctx)
+	rt.actualizer.Prepare()
+
+	return rt
+}
+
+// # pipeline.IService.Prepare
 func (*actualizers) Prepare(interface{}) error { return nil }
 
-func (a *actualizers) Run(ctx context.Context) {
+// # pipeline.IService.Run
+func (*actualizers) Run(context.Context) {
 	panic("not implemented")
 }
 
+// # pipeline.IServiceEx.RunEx
 func (a *actualizers) RunEx(ctx context.Context, started func()) {
 	// store vvm context for deploy new partitions (or redeploy existing)
 	a.cfg.Ctx = ctx
 	started()
 }
 
+// # appparts.IActualizers.Stop
+//
+// ➖ should be removed
 func (a *actualizers) Stop() {
 	// Cancellation has already been sent to the context by caller.
 	// Here we are just waiting while all async actualizers are stopped
@@ -101,6 +130,9 @@ func (a *actualizers) Stop() {
 	wg.Wait()
 }
 
+// # appparts.IActualizers.DeployPartition
+//
+// ➖ should be removed
 func (a *actualizers) DeployPartition(n appdef.AppQName, id istructs.PartitionID) error {
 	def, err := a.cfg.AppPartitions.AppDef(n)
 	if err != nil {
@@ -176,6 +208,9 @@ func (a *actualizers) DeployPartition(n appdef.AppQName, id istructs.PartitionID
 	return nil
 }
 
+// # appparts.IActualizers.UndeployPartition
+//
+// ➖ should be removed
 func (a *actualizers) UndeployPartition(n appdef.AppQName, id istructs.PartitionID) {
 	a.mx.RLock()
 	app, ok := a.apps[n]
@@ -204,6 +239,9 @@ func (a *actualizers) UndeployPartition(n appdef.AppQName, id istructs.Partition
 	app.mx.Unlock()
 }
 
+// # appparts.IActualizers.SetAppPartitions
+//
+// ➖ should be removed
 func (a *actualizers) SetAppPartitions(appParts appparts.IAppPartitions) {
 	if (a.cfg.AppPartitions != nil) && (a.cfg.AppPartitions != appParts) {
 		panic(fmt.Errorf("unable to reset application partitions: %w", errors.ErrUnsupported))
@@ -212,12 +250,15 @@ func (a *actualizers) SetAppPartitions(appParts appparts.IAppPartitions) {
 }
 
 // internal metrics for testing
+//
+// ➖ should be removed
 type actualizersMetrics struct {
 	apps        []appdef.AppQName
 	parts       map[appdef.AppQName][]istructs.PartitionID
 	actualizers map[appdef.AppQName]map[istructs.PartitionID][]appdef.QName
 }
 
+// ➖ should be removed
 func (a *actualizers) metrics() actualizersMetrics {
 	a.mx.RLock()
 	s := actualizersMetrics{
@@ -248,12 +289,16 @@ func (a *actualizers) metrics() actualizersMetrics {
 }
 
 // p.mx should be locked for read by caller
+//
+// ➖ should be removed
 func (p *partActs) exists(n appdef.QName) bool {
 	_, ok := p.rt[n]
 	return ok
 }
 
 // p.mx should be locked for write by caller
+//
+// ➖ should be removed
 func (p *partActs) start(n appdef.QName) {
 	rt := &runtimeAct{
 		actualizer: &asyncActualizer{
@@ -281,8 +326,29 @@ func (p *partActs) start(n appdef.QName) {
 }
 
 // p.mx should be read locked by caller
+//
+// ➖ should be removed
 func (p *partActs) stop(n appdef.QName) {
 	if rt, ok := p.rt[n]; ok {
 		rt.cancel()
 	}
+}
+
+// # appparts.IActualizer.App
+func (a *runtimeAct) App() appdef.AppQName { return a.actualizer.conf.AppQName }
+
+// # appparts.IActualizer.Partition
+func (a *runtimeAct) Partition() istructs.PartitionID { return a.actualizer.conf.Partition }
+
+// # appparts.IActualizer.Name
+func (a *runtimeAct) Name() appdef.QName { return a.actualizer.projector }
+
+// # appparts.IActualizer.Start
+func (a *runtimeAct) Start() {
+	a.actualizer.Run(a.actualizer.conf.Ctx)
+}
+
+// # appparts.IActualizer.Release
+func (a *runtimeAct) Release() {
+	a.cancel()
 }
