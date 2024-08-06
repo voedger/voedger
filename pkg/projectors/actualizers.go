@@ -58,24 +58,21 @@ func newActualizers(cfg BasicAsyncActualizerConfig) *actualizers {
 	}
 }
 
-// New creates a new actualizer for the specified application partition.
+// Creates and runs new actualizer for specified partition.
 //
-// # apparts.IActualizerFactory.New
-func (a *actualizers) New(app appdef.AppQName, part istructs.PartitionID, prj appdef.QName) appparts.IActualizer {
-	rt := &runtimeAct{
-		actualizer: &asyncActualizer{
-			projector: prj,
-			conf: AsyncActualizerConf{
-				BasicAsyncActualizerConfig: a.cfg,
-				AppQName:                   app,
-				Partition:                  part,
-			},
-		}}
-
-	rt.actualizer.conf.Ctx, rt.cancel = context.WithCancel(a.cfg.Ctx)
-	rt.actualizer.Prepare()
-
-	return rt
+// # apparts.IActualizerRunner.NewAndRun
+func (a *actualizers) NewAndRun(ctx context.Context, app appdef.AppQName, part istructs.PartitionID, prj appdef.QName) {
+	act := &asyncActualizer{
+		projector: prj,
+		conf: AsyncActualizerConf{
+			BasicAsyncActualizerConfig: a.cfg,
+			AppQName:                   app,
+			Partition:                  part,
+		},
+	}
+	act.conf.Ctx = ctx
+	act.Prepare()
+	act.Run(ctx)
 }
 
 // # pipeline.IService.Prepare
@@ -332,23 +329,4 @@ func (p *partActs) stop(n appdef.QName) {
 	if rt, ok := p.rt[n]; ok {
 		rt.cancel()
 	}
-}
-
-// # appparts.IActualizer.App
-func (a *runtimeAct) App() appdef.AppQName { return a.actualizer.conf.AppQName }
-
-// # appparts.IActualizer.Partition
-func (a *runtimeAct) Partition() istructs.PartitionID { return a.actualizer.conf.Partition }
-
-// # appparts.IActualizer.Name
-func (a *runtimeAct) Name() appdef.QName { return a.actualizer.projector }
-
-// # appparts.IActualizer.Start
-func (a *runtimeAct) Start() {
-	a.actualizer.Run(a.actualizer.conf.Ctx)
-}
-
-// # appparts.IActualizer.Release
-func (a *runtimeAct) Release() {
-	a.cancel()
 }
