@@ -113,8 +113,8 @@ func (vvm *VoedgerVM) Shutdown() {
 }
 
 func (vvm *VoedgerVM) Launch() error {
-	ignition := struct{}{} // value has no sense
-	err := vvm.ServicePipeline.SendSync(ignition)
+	ign := ignition{}
+	err := vvm.ServicePipeline.SendSync(ign)
 	if err != nil {
 		err = errors.Join(err, ErrVVMLaunchFailure)
 		logger.Error(err)
@@ -226,7 +226,7 @@ func provideBootstrapOperator(federation federation.IFederation, asp istructs.IA
 	if clusterBuiltinApp.Name == appdef.NullAppQName {
 		return nil, fmt.Errorf("%s app should be added to VVM builtin apps", istructs.AppQName_sys_cluster)
 	}
-	return pipeline.NewSyncOp(func(ctx context.Context, work interface{}) (err error) {
+	return pipeline.NewSyncOp(func(ctx context.Context, work pipeline.IWorkpiece) (err error) {
 		return btstrp.Bootstrap(federation, asp, timeFunc, apppar, clusterBuiltinApp, otherApps, sidecarApps, itokens, storageProvider, blobberAppStoragePtr, routerAppStoragePtr)
 	}), nil
 }
