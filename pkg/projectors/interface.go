@@ -57,7 +57,9 @@ type BasicAsyncActualizerConfig struct {
 
 type IActualizersService interface {
 	pipeline.IServiceEx
-	appparts.IActualizers
+
+	appparts.IActualizers       // ➖ should be removed
+	appparts.IActualizerFactory // ➕ should be used
 }
 
 type AsyncActualizerConf struct {

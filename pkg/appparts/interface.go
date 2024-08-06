@@ -7,8 +7,9 @@ package appparts
 
 import (
 	"context"
-	"github.com/voedger/voedger/pkg/pipeline"
 	"net/url"
+
+	"github.com/voedger/voedger/pkg/pipeline"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -103,3 +104,22 @@ type IActualizers interface {
 	// Should stop all partition actualizers
 	UndeployPartition(appdef.AppQName, istructs.PartitionID)
 }
+
+type (
+	// Actualizer factory.
+	//
+	// Used by IAppPartitions to create actualizers then partitions are deployed.
+	IActualizerFactory interface {
+		// Creates new actualizer for specified partition.
+		New(appdef.AppQName, istructs.PartitionID, appdef.QName) IActualizer
+	}
+
+	// Actualizer
+	IActualizer interface {
+		App() appdef.AppQName
+		Partition() istructs.PartitionID
+		Name() appdef.QName
+		Start()
+		Release()
+	}
+)
