@@ -2658,3 +2658,16 @@ func Test_CRecordInDescriptor(t *testing.T) {
 	require.NoError(err)
 	require.NoError(BuildAppDefs(schema, appdef.New()))
 }
+
+func Test_RefInheritedFromSys(t *testing.T) {
+	require := assertions(t)
+
+	_, err := require.AppSchema(`APPLICATION SomeApp();
+	WORKSPACE SomeWS (
+	    TABLE SomeTable INHERITS CDoc(
+	        ChildWorkspaceID ref(sys.ChildWorkspace)
+    	);
+	)
+	`)
+	require.NoError(err)
+}
