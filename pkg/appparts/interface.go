@@ -105,21 +105,8 @@ type IActualizers interface {
 	UndeployPartition(appdef.AppQName, istructs.PartitionID)
 }
 
-type (
-	// Actualizer factory.
-	//
-	// Used by IAppPartitions to create actualizers then partitions are deployed.
-	IActualizerFactory interface {
-		// Creates new actualizer for specified partition.
-		New(appdef.AppQName, istructs.PartitionID, appdef.QName) IActualizer
-	}
-
-	// Actualizer
-	IActualizer interface {
-		App() appdef.AppQName
-		Partition() istructs.PartitionID
-		Name() appdef.QName
-		Start()
-		Release()
-	}
-)
+// Actualizer runner.
+type IActualizerRunner interface {
+	// Creates and runs new actualizer for specified partition.
+	NewAndRun(context.Context, appdef.AppQName, istructs.PartitionID, appdef.QName)
+}
