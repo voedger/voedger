@@ -172,6 +172,15 @@ func lookupInCtx[stmtType *TableStmt | *TypeStmt | *FunctionStmt | *CommandStmt 
 						return nil, nil, err
 					}
 				}
+				if item == nil {
+					sysWorkspace, err := lookupInSysPackage(ictx.basicContext, DefQName{Package: appdef.SysPackage, Name: rootWorkspaceName})
+					if err != nil {
+						return nil, nil, err
+					}
+					if sysWorkspace != nil {
+						sysWorkspace.Iterate(lookupCallback)
+					}
+				}
 			}
 		}
 	}
