@@ -85,7 +85,7 @@ func (aps *apps) DeployAppPartitions(name appdef.AppQName, ids []istructs.Partit
 
 	//TODO: parallelize
 	for _, id := range ids {
-		p := newPartition(a, id)
+		p := newAppPartitionRT(a, id)
 		a.mx.Lock()
 		a.parts[id] = p
 		a.mx.Unlock()
