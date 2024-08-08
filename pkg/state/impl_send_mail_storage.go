@@ -148,12 +148,6 @@ func (s *sendMailStorage) Validate(items []ApplyBatchItem) (err error) {
 		if k.port == 0 {
 			return notExists(Field_Port)
 		}
-		if k.username == "" {
-			return notExists(Field_Username)
-		}
-		if k.password == "" {
-			return notExists(Field_Password)
-		}
 		if k.from == "" {
 			return notExists(Field_From)
 		}

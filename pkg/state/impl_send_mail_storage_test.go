@@ -70,21 +70,6 @@ func TestSendMailStorage_Validate(t *testing.T) {
 			},
 		},
 		{
-			mandatoryField: Field_Username,
-			kbFiller: func(kb istructs.IStateKeyBuilder) {
-				kb.PutString(Field_Host, "smtp.gmail.com")
-				kb.PutInt32(Field_Port, 587)
-			},
-		},
-		{
-			mandatoryField: Field_Password,
-			kbFiller: func(kb istructs.IStateKeyBuilder) {
-				kb.PutString(Field_Host, "smtp.gmail.com")
-				kb.PutInt32(Field_Port, 587)
-				kb.PutString(Field_Username, "user")
-			},
-		},
-		{
 			mandatoryField: Field_From,
 			kbFiller: func(kb istructs.IStateKeyBuilder) {
 				kb.PutString(Field_Host, "smtp.gmail.com")

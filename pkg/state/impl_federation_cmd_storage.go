@@ -42,6 +42,38 @@ type federationCommandKeyBuilder struct {
 	token         string
 }
 
+func (b *federationCommandKeyBuilder) PutString(name string, value string) {
+	if name == Field_Owner {
+		b.owner = value
+	} else if name == Field_AppName {
+		b.appname = value
+	} else if name == Field_Body {
+		b.body = value
+	} else if name == Field_Token {
+		b.token = value
+	} else if name == Field_ExpectedCodes {
+		b.expectedCodes = value
+	} else {
+		b.baseKeyBuilder.PutString(name, value)
+	}
+}
+
+func (b *federationCommandKeyBuilder) PutInt64(name string, value int64) {
+	if name == Field_WSID {
+		b.wsid = istructs.WSID(value)
+	} else {
+		b.baseKeyBuilder.PutInt64(name, value)
+	}
+}
+
+func (b *federationCommandKeyBuilder) PutQName(name string, value appdef.QName) {
+	if name == Field_Command {
+		b.command = value
+	} else {
+		b.baseKeyBuilder.PutQName(name, value)
+	}
+}
+
 func (b *federationCommandKeyBuilder) Storage() appdef.QName {
 	return FederationCommand
 }
@@ -91,6 +123,9 @@ func (s *federationCommandStorage) Get(key istructs.IStateKeyBuilder) (istructs.
 	kb := key.(*federationCommandKeyBuilder)
 
 	for _, ec := range strings.Split(kb.expectedCodes, ",") {
+		if ec == "" {
+			continue
+		}
 		code, err := strconv.Atoi(ec)
 		if err != nil {
 			return nil, err
