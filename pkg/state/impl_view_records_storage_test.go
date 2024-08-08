@@ -37,7 +37,7 @@ func mockedStructs2(t *testing.T, addWsDescriptor bool) (*mockAppStructs, *mockV
 	mockedRecords.On("GetSingleton", istructs.WSID(1), mock.Anything).Return(mockWorkspaceRecord, nil)
 
 	mockedViews := &mockViewRecords{}
-	mockedViews.On("KeyBuilder", testViewRecordQName1).Return(newKeyBuilder(View, testViewRecordQName1))
+	mockedViews.On("KeyBuilder", testViewRecordQName1).Return(newMapKeyBuilder(View, testViewRecordQName1))
 
 	if addWsDescriptor {
 		wsDesc := appDef.AddCDoc(testWSDescriptorQName)
@@ -132,7 +132,7 @@ func TestViewRecordsStorage_Read(t *testing.T) {
 		require := require.New(t)
 		mockedStructs, mockedViews := mockedStructs(t)
 		mockedViews.
-			On("KeyBuilder", testViewRecordQName1).Return(newKeyBuilder(View, testViewRecordQName1)).
+			On("KeyBuilder", testViewRecordQName1).Return(newMapKeyBuilder(View, testViewRecordQName1)).
 			On("Read", context.Background(), istructs.WSID(1), mock.Anything, mock.Anything).
 			Return(errTest)
 		s := ProvideQueryProcessorStateFactory()(context.Background(), appStructsFunc(mockedStructs), nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil, nil, nil, nil, nil, nil, nil)

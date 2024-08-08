@@ -19,69 +19,157 @@ type sendMailStorage struct {
 	messages chan smtptest.Message // not nil in tests only
 }
 
+type mailKeyBuilder struct {
+	baseKeyBuilder
+	to       []string
+	cc       []string
+	bcc      []string
+	host     string
+	port     int32
+	username string
+	password string
+	from     string
+	subject  string
+	body     string
+}
+
+func (b *mailKeyBuilder) Storage() appdef.QName {
+	return SendMail
+}
+
+func (b *mailKeyBuilder) Equals(src istructs.IKeyBuilder) bool {
+	_, ok := src.(*mailKeyBuilder)
+	if !ok {
+		return false
+	}
+	vb := src.(*mailKeyBuilder)
+	if len(b.to) != len(vb.to) {
+		return false
+	}
+	for i, v := range b.to {
+		if v != vb.to[i] {
+			return false
+		}
+	}
+	if len(b.cc) != len(vb.cc) {
+		return false
+	}
+	for i, v := range b.cc {
+		if v != vb.cc[i] {
+			return false
+		}
+	}
+	if len(b.bcc) != len(vb.bcc) {
+		return false
+	}
+	for i, v := range b.bcc {
+		if v != vb.bcc[i] {
+			return false
+		}
+	}
+	if b.host != vb.host {
+		return false
+	}
+	if b.port != vb.port {
+		return false
+	}
+	if b.username != vb.username {
+		return false
+	}
+	if b.password != vb.password {
+		return false
+	}
+	if b.from != vb.from {
+		return false
+	}
+	if b.subject != vb.subject {
+		return false
+	}
+	if b.body != vb.body {
+		return false
+	}
+	return true
+}
+
+func (b *mailKeyBuilder) PutString(name string, value string) {
+	switch name {
+	case Field_To:
+		b.to = append(b.to, value)
+	case Field_CC:
+		b.cc = append(b.cc, value)
+	case Field_BCC:
+		b.bcc = append(b.bcc, value)
+	case Field_Host:
+		b.host = value
+	case Field_Username:
+		b.username = value
+	case Field_Password:
+		b.password = value
+	case Field_From:
+		b.from = value
+	case Field_Subject:
+		b.subject = value
+	case Field_Body:
+		b.body = value
+	default:
+		b.baseKeyBuilder.PutString(name, value)
+	}
+}
+
+func (b *mailKeyBuilder) PutInt32(name string, value int32) {
+	if name == Field_Port {
+		b.port = value
+	} else {
+		b.baseKeyBuilder.PutInt32(name, value)
+	}
+}
+
 type sendMailValueBuilder struct {
-	istructs.IStateValueBuilder
+	baseValueBuilder
 }
 
 func (s *sendMailStorage) NewKeyBuilder(appdef.QName, istructs.IStateKeyBuilder) istructs.IStateKeyBuilder {
-	return &sendMailKeyBuilder{
-		keyBuilder: newKeyBuilder(SendMail, appdef.NullQName),
-		to:         make([]string, 0),
-		cc:         make([]string, 0),
-		bcc:        make([]string, 0),
+	return &mailKeyBuilder{
+		to:  make([]string, 0),
+		cc:  make([]string, 0),
+		bcc: make([]string, 0),
 	}
 }
 func (s *sendMailStorage) Validate(items []ApplyBatchItem) (err error) {
 	for _, item := range items {
-		k := item.key.(*sendMailKeyBuilder)
+		k := item.key.(*mailKeyBuilder)
 
-		mustExist := func(field string) (err error) {
-			_, ok := k.data[field]
-			if !ok {
-				return fmt.Errorf("'%s': %w", field, ErrNotFound)
-			}
-			return
+		notExists := func(field string) (err error) {
+			return fmt.Errorf("'%s': %w", field, ErrNotFound)
 		}
-
-		err = mustExist(Field_Host)
-		if err != nil {
-			return
+		if k.host == "" {
+			return notExists(Field_Host)
 		}
-		err = mustExist(Field_Port)
-		if err != nil {
-			return
+		if k.port == 0 {
+			return notExists(Field_Port)
 		}
-		err = mustExist(Field_Username)
-		if err != nil {
-			return
+		if k.from == "" {
+			return notExists(Field_From)
 		}
-		err = mustExist(Field_Password)
-		if err != nil {
-			return
-		}
-		err = mustExist(Field_From)
-		if err != nil {
-			return
-		}
-		if len(item.key.(*sendMailKeyBuilder).to) == 0 {
+		if len(item.key.(*mailKeyBuilder).to) == 0 {
 			return fmt.Errorf("'%s': %w", Field_To, ErrNotFound)
 		}
 	}
 	return nil
 }
 func (s *sendMailStorage) ApplyBatch(items []ApplyBatchItem) (err error) {
-	stringOrEmpty := func(k *sendMailKeyBuilder, name string) string {
-		if intf, ok := k.data[name]; ok {
-			return intf.(string)
+	stringOrEmpty := func(value string) string {
+		if value != "" {
+			return value
 		}
 		return ""
 	}
 	for _, item := range items {
-		k := item.key.(*sendMailKeyBuilder)
+		k := item.key.(*mailKeyBuilder)
 
 		msg := mail.NewMsg()
-		msg.Subject(stringOrEmpty(k, Field_Subject))
-		err = msg.From(k.data[Field_From].(string))
+		msg.Subject(stringOrEmpty(k.subject))
+		err = msg.From(k.from)
 		if err != nil {
 			return
 		}
@@ -97,13 +185,13 @@ func (s *sendMailStorage) ApplyBatch(items []ApplyBatchItem) (err error) {
 		if err != nil {
 			return
 		}
-		msg.SetBodyString(mail.TypeTextHTML, stringOrEmpty(k, Field_Body))
+		msg.SetBodyString(mail.TypeTextHTML, stringOrEmpty(k.body))
 		msg.SetCharset(mail.CharsetUTF8)
 
 		opts := []mail.Option{
-			mail.WithPort(int(k.data[Field_Port].(int32))),
-			mail.WithUsername(k.data[Field_Username].(string)),
-			mail.WithPassword(k.data[Field_Password].(string)),
+			mail.WithPort(int(k.port)),
+			mail.WithUsername(k.username),
+			mail.WithPassword(k.password),
 			mail.WithSMTPAuth(mail.SMTPAuthPlain),
 		}
 
@@ -111,21 +199,21 @@ func (s *sendMailStorage) ApplyBatch(items []ApplyBatchItem) (err error) {
 			opts = append(opts, mail.WithTLSPolicy(mail.NoTLS))
 		}
 
-		logger.Info(fmt.Sprintf("send mail '%s' from '%s' to %s, cc %s, bcc %s", stringOrEmpty(k, Field_Subject), k.data[Field_From], k.to, k.cc, k.bcc))
+		logger.Info(fmt.Sprintf("send mail '%s' from '%s' to %s, cc %s, bcc %s", stringOrEmpty(k.subject), k.from, k.to, k.cc, k.bcc))
 
 		if s.messages != nil {
 			// happens in tests only
 			m := smtptest.Message{
-				Subject: stringOrEmpty(k, Field_Subject),
-				From:    k.data[Field_From].(string),
+				Subject: stringOrEmpty(k.subject),
+				From:    k.from,
 				To:      k.to,
 				CC:      k.cc,
 				BCC:     k.bcc,
-				Body:    stringOrEmpty(k, Field_Body),
+				Body:    stringOrEmpty(k.body),
 			}
 			s.messages <- m
 		} else {
-			c, e := mail.NewClient(k.data[Field_Host].(string), opts...)
+			c, e := mail.NewClient(k.host, opts...)
 			if e != nil {
 				return e
 			}
@@ -135,7 +223,7 @@ func (s *sendMailStorage) ApplyBatch(items []ApplyBatchItem) (err error) {
 			}
 		}
 
-		logger.Info(fmt.Sprintf("mail '%s' from '%s' to %s, cc %s, bcc %s successfully sent", stringOrEmpty(k, Field_Subject), k.data[Field_From], k.to, k.cc, k.bcc))
+		logger.Info(fmt.Sprintf("mail '%s' from '%s' to %s, cc %s, bcc %s successfully sent", stringOrEmpty(k.subject), k.from, k.to, k.cc, k.bcc))
 	}
 	return nil
 }

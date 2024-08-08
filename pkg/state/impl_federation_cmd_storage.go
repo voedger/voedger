@@ -31,8 +31,85 @@ type federationCommandStorage struct {
 	emulation  FederationCommandHandler
 }
 
+type federationCommandKeyBuilder struct {
+	baseKeyBuilder
+	expectedCodes string
+	owner         string
+	appname       string
+	wsid          istructs.WSID
+	command       appdef.QName
+	body          string
+	token         string
+}
+
+func (b *federationCommandKeyBuilder) PutString(name string, value string) {
+	if name == Field_Owner {
+		b.owner = value
+	} else if name == Field_AppName {
+		b.appname = value
+	} else if name == Field_Body {
+		b.body = value
+	} else if name == Field_Token {
+		b.token = value
+	} else if name == Field_ExpectedCodes {
+		b.expectedCodes = value
+	} else {
+		b.baseKeyBuilder.PutString(name, value)
+	}
+}
+
+func (b *federationCommandKeyBuilder) PutInt64(name string, value int64) {
+	if name == Field_WSID {
+		b.wsid = istructs.WSID(value)
+	} else {
+		b.baseKeyBuilder.PutInt64(name, value)
+	}
+}
+
+func (b *federationCommandKeyBuilder) PutQName(name string, value appdef.QName) {
+	if name == Field_Command {
+		b.command = value
+	} else {
+		b.baseKeyBuilder.PutQName(name, value)
+	}
+}
+
+func (b *federationCommandKeyBuilder) Storage() appdef.QName {
+	return FederationCommand
+}
+
+func (b *federationCommandKeyBuilder) Equals(src istructs.IKeyBuilder) bool {
+	_, ok := src.(*federationCommandKeyBuilder)
+	if !ok {
+		return false
+	}
+	kb := src.(*federationCommandKeyBuilder)
+	if b.owner != kb.owner {
+		return false
+	}
+	if b.appname != kb.appname {
+		return false
+	}
+	if b.wsid != kb.wsid {
+		return false
+	}
+	if b.command != kb.command {
+		return false
+	}
+	if b.body != kb.body {
+		return false
+	}
+	if b.token != kb.token {
+		return false
+	}
+	if b.expectedCodes != kb.expectedCodes {
+		return false
+	}
+	return true
+}
+
 func (s *federationCommandStorage) NewKeyBuilder(appdef.QName, istructs.IStateKeyBuilder) istructs.IStateKeyBuilder {
-	return newKeyBuilder(FederationCommand, appdef.NullQName)
+	return &federationCommandKeyBuilder{}
 }
 func (s *federationCommandStorage) Get(key istructs.IStateKeyBuilder) (istructs.IStateValue, error) {
 	appqname := s.appStructs().AppQName()
@@ -43,44 +120,45 @@ func (s *federationCommandStorage) Get(key istructs.IStateKeyBuilder) (istructs.
 	var body string
 	opts := make([]coreutils.ReqOptFunc, 0)
 
-	kb := key.(*keyBuilder)
+	kb := key.(*federationCommandKeyBuilder)
 
-	if v, ok := kb.data[Field_ExpectedCodes]; ok {
-		for _, ec := range strings.Split(v.(string), ",") {
-			code, err := strconv.Atoi(ec)
-			if err != nil {
-				return nil, err
-			}
-			opts = append(opts, coreutils.WithExpectedCode(code))
+	for _, ec := range strings.Split(kb.expectedCodes, ",") {
+		if ec == "" {
+			continue
 		}
+		code, err := strconv.Atoi(ec)
+		if err != nil {
+			return nil, err
+		}
+		opts = append(opts, coreutils.WithExpectedCode(code))
 	}
 
-	if v, ok := kb.data[Field_Owner]; ok {
-		owner = v.(string)
+	if kb.owner != "" {
+		owner = kb.owner
 	} else {
 		owner = appqname.Owner()
 	}
 
-	if v, ok := kb.data[Field_AppName]; ok {
-		appname = v.(string)
+	if kb.appname != "" {
+		appname = kb.appname
 	} else {
 		appname = appqname.Name()
 	}
 
-	if v, ok := kb.data[Field_WSID]; ok {
-		wsid = istructs.WSID(v.(int64))
+	if kb.wsid != 0 {
+		wsid = kb.wsid
 	} else {
 		wsid = s.wsid()
 	}
 
-	if v, ok := kb.data[Field_Command]; ok {
-		command = v.(appdef.QName)
+	if kb.command != appdef.NullQName {
+		command = kb.command
 	} else {
 		return nil, errCommandNotSpecified
 	}
 
-	if v, ok := kb.data[Field_Body]; ok {
-		body = v.(string)
+	if kb.body != "" {
+		body = kb.body
 	}
 
 	appOwnerAndName := owner + appdef.AppQNameQualifierChar + appname
@@ -107,8 +185,8 @@ func (s *federationCommandStorage) Get(key istructs.IStateKeyBuilder) (istructs.
 		}
 	} else {
 
-		if v, ok := kb.data[Field_Token]; ok {
-			opts = append(opts, coreutils.WithAuthorizeBy(v.(string)))
+		if kb.token != "" {
+			opts = append(opts, coreutils.WithAuthorizeBy(kb.token))
 		} else {
 			appQName := appdef.NewAppQName(owner, appname)
 			systemPrincipalToken, err := payloads.GetSystemPrincipalToken(s.tokens, appQName)
@@ -156,7 +234,7 @@ func (v *fcCmdValue) AsInt32(name string) int32 {
 	if name == Field_StatusCode {
 		return int32(v.statusCode)
 	}
-	panic(errUndefined(name))
+	return v.baseStateValue.AsInt32(name)
 }
 
 func (v *fcCmdValue) AsValue(name string) istructs.IStateValue {
@@ -166,7 +244,7 @@ func (v *fcCmdValue) AsValue(name string) istructs.IStateValue {
 	if name == Field_Result {
 		return v.result
 	}
-	panic(errUndefined(name))
+	return v.baseStateValue.AsValue(name)
 }
 
 type fcCmdNewIds struct {
@@ -178,5 +256,5 @@ func (v *fcCmdNewIds) AsInt64(name string) int64 {
 	if id, ok := v.newIds[name]; ok {
 		return id
 	}
-	panic(errUndefined(name))
+	panic(errInt64FieldUndefined(name))
 }

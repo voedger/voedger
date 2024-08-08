@@ -15,23 +15,20 @@ type cmdResponseStorage struct {
 }
 
 type responseKeyBuilder struct {
-	*keyBuilder
+	baseKeyBuilder
 }
 
-func newResponseKeyBuilder() *responseKeyBuilder {
-	return &responseKeyBuilder{
-		&keyBuilder{
-			storage: Response,
-		},
-	}
+func (b *responseKeyBuilder) Storage() appdef.QName {
+	return Response
 }
-func (*responseKeyBuilder) Equals(src istructs.IKeyBuilder) bool {
+
+func (b *responseKeyBuilder) Equals(src istructs.IKeyBuilder) bool {
 	_, ok := src.(*responseKeyBuilder)
 	return ok
 }
 
 type responseValueBuilder struct {
-	*baseValueBuilder
+	baseValueBuilder
 	statusCode   int32
 	errorMessage string
 }
@@ -41,7 +38,7 @@ func (b *responseValueBuilder) PutInt32(name string, value int32) {
 	case Field_StatusCode:
 		b.statusCode = value
 	default:
-		panic(errUndefined(name))
+		b.baseValueBuilder.PutInt32(name, value)
 	}
 }
 
@@ -50,20 +47,19 @@ func (b *responseValueBuilder) PutString(name string, value string) {
 	case Field_ErrorMessage:
 		b.errorMessage = value
 	default:
-		panic(errUndefined(name))
+		b.baseValueBuilder.PutString(name, value)
 	}
 }
 
 func (b *responseValueBuilder) BuildValue() istructs.IStateValue {
 	return &responsesValue{
-		baseStateValue: &baseStateValue{},
-		statusCode:     b.statusCode,
-		errorMessage:   b.errorMessage,
+		statusCode:   b.statusCode,
+		errorMessage: b.errorMessage,
 	}
 }
 
 type responsesValue struct {
-	*baseStateValue
+	baseStateValue
 	statusCode   int32
 	errorMessage string
 }
@@ -73,7 +69,7 @@ func (v *responsesValue) AsInt32(name string) int32 {
 	case Field_StatusCode:
 		return v.statusCode
 	default:
-		panic(errUndefined(name))
+		return v.baseStateValue.AsInt32(name)
 	}
 }
 
@@ -82,12 +78,12 @@ func (v *responsesValue) AsString(name string) string {
 	case Field_ErrorMessage:
 		return v.errorMessage
 	default:
-		panic(errUndefined(name))
+		return v.baseStateValue.AsString(name)
 	}
 }
 
 func (s *cmdResponseStorage) NewKeyBuilder(_ appdef.QName, _ istructs.IStateKeyBuilder) istructs.IStateKeyBuilder {
-	return newResponseKeyBuilder()
+	return &responseKeyBuilder{}
 }
 
 func (s *cmdResponseStorage) Validate([]ApplyBatchItem) (err error) {
@@ -100,7 +96,7 @@ func (s *cmdResponseStorage) ApplyBatch([]ApplyBatchItem) (err error) {
 
 func (s *cmdResponseStorage) ProvideValueBuilder(istructs.IStateKeyBuilder, istructs.IStateValueBuilder) (istructs.IStateValueBuilder, error) {
 	return &responseValueBuilder{
-		&baseValueBuilder{},
+		baseValueBuilder{},
 		http.StatusOK,
 		"",
 	}, nil

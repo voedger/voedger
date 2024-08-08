@@ -51,6 +51,8 @@ var (
 	QNameODoc1                               = appdef.NewQName(app1PkgName, "odoc1")
 	QNameODoc2                               = appdef.NewQName(app1PkgName, "odoc2")
 	TestSMTPCfg                              = smtp.Cfg{
+		Host:     "smtp.testserver.com",
+		Port:     1,
 		Username: "username@gmail.com",
 	}
 

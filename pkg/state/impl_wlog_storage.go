@@ -6,6 +6,7 @@ package state
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -17,12 +18,53 @@ type wLogStorage struct {
 	wsidFunc   WSIDFunc
 }
 
+type wLogKeyBuilder struct {
+	baseKeyBuilder
+	offset istructs.Offset
+	count  int
+	wsid   istructs.WSID
+}
+
+func (b *wLogKeyBuilder) Storage() appdef.QName {
+	return WLog
+}
+
+func (b *wLogKeyBuilder) Equals(src istructs.IKeyBuilder) bool {
+	_, ok := src.(*wLogKeyBuilder)
+	if !ok {
+		return false
+	}
+	kb := src.(*wLogKeyBuilder)
+	if kb.count != b.count {
+		return false
+	}
+	if kb.offset != b.offset {
+		return false
+	}
+	if kb.wsid != b.wsid {
+		return false
+	}
+	return true
+}
+
+func (b *wLogKeyBuilder) String() string {
+	return fmt.Sprintf("wlog wsid - %d, offset - %d, count - %d", b.wsid, b.offset, b.count)
+}
+
+func (b *wLogKeyBuilder) PutInt64(name string, value int64) {
+	if name == Field_WSID {
+		b.wsid = istructs.WSID(value)
+	} else if name == Field_Offset {
+		b.offset = istructs.Offset(value)
+	} else if name == Field_Count {
+		b.count = int(value)
+	} else {
+		b.baseKeyBuilder.PutInt64(name, value)
+	}
+}
+
 func (s *wLogStorage) NewKeyBuilder(appdef.QName, istructs.IStateKeyBuilder) istructs.IStateKeyBuilder {
 	return &wLogKeyBuilder{
-		logKeyBuilder: logKeyBuilder{
-			offset: istructs.FirstOffset,
-			count:  1,
-		},
 		wsid: s.wsidFunc(),
 	}
 }
@@ -45,4 +87,50 @@ func (s *wLogStorage) Read(kb istructs.IStateKeyBuilder, callback istructs.Value
 			})
 	}
 	return s.eventsFunc().ReadWLog(s.ctx, k.wsid, k.offset, k.count, cb)
+}
+
+type wLogValue struct {
+	baseStateValue
+	event  istructs.IWLogEvent
+	offset int64
+}
+
+func (v *wLogValue) AsInt64(name string) int64 {
+	switch name {
+	case Field_RegisteredAt:
+		return int64(v.event.RegisteredAt())
+	case Field_DeviceID:
+		return int64(v.event.DeviceID())
+	case Field_SyncedAt:
+		return int64(v.event.SyncedAt())
+	case Field_Offset:
+		return v.offset
+	default:
+		return v.baseStateValue.AsInt64(name)
+	}
+}
+func (v *wLogValue) AsBool(_ string) bool          { return v.event.Synced() }
+func (v *wLogValue) AsQName(_ string) appdef.QName { return v.event.QName() }
+func (v *wLogValue) AsEvent(_ string) (event istructs.IDbEvent) {
+	return v.event
+}
+func (v *wLogValue) AsRecord(_ string) (record istructs.IRecord) {
+	return v.event.ArgumentObject().AsRecord()
+}
+func (v *wLogValue) AsValue(name string) istructs.IStateValue {
+	if name == Field_CUDs {
+		sv := &cudsValue{}
+		v.event.CUDs(func(rec istructs.ICUDRow) {
+			sv.cuds = append(sv.cuds, rec)
+		})
+		return sv
+	}
+	if name == Field_ArgumentObject {
+		arg := v.event.ArgumentObject()
+		if arg == nil {
+			return nil
+		}
+		return &objectValue{object: arg}
+	}
+	return v.baseStateValue.AsValue(name)
 }

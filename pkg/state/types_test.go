@@ -23,7 +23,7 @@ func appStructsFunc(app istructs.IAppStructs) AppStructsFunc {
 func TestBundle(t *testing.T) {
 	newKey := func(qname appdef.QName, id istructs.RecordID) (k istructs.IStateKeyBuilder) {
 		k = &viewKeyBuilder{
-			IKeyBuilder: &keyBuilder{data: make(map[string]interface{})},
+			IKeyBuilder: &mapKeyBuilder{data: make(map[string]interface{})},
 			view:        qname,
 		}
 		k.PutRecordID(Field_ID, id)
@@ -89,7 +89,7 @@ func TestBundle(t *testing.T) {
 func TestKeyBuilder(t *testing.T) {
 	require := require.New(t)
 
-	k := newKeyBuilder(testStorage, appdef.NullQName)
+	k := newMapKeyBuilder(testStorage, appdef.NullQName)
 
 	require.Equal(testStorage, k.storage)
 	require.PanicsWithValue(ErrNotSupported, func() { k.PartitionKey() })
@@ -97,7 +97,7 @@ func TestKeyBuilder(t *testing.T) {
 }
 func TestHttpStorageKeyBuilder_headers(t *testing.T) {
 	require := require.New(t)
-	k := newHttpKeyBuilder()
+	k := &httpStorageKeyBuilder{headers: make(map[string]string)}
 	k.PutString(Field_Header, "key: hello:world")
 
 	headers := k.headers
