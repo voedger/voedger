@@ -87,17 +87,17 @@ func Test_getStorageID(t *testing.T) {
 		}{
 			{
 				name:            "General storage key",
-				kb:              newKeyBuilder(Record, appdef.NullQName),
+				kb:              newMapKeyBuilder(Record, appdef.NullQName),
 				expectedStorage: Record,
 			},
 			{
 				name:            "Email storage key",
-				kb:              &sendMailKeyBuilder{keyBuilder: newKeyBuilder(SendMail, appdef.NullQName)},
+				kb:              &mailKeyBuilder{},
 				expectedStorage: SendMail,
 			},
 			{
 				name:            "HTTP storage key",
-				kb:              &httpKeyBuilder{keyBuilder: newKeyBuilder(Http, appdef.NullQName)},
+				kb:              &httpStorageKeyBuilder{},
 				expectedStorage: Http,
 			},
 			{
@@ -370,18 +370,6 @@ func (w *mockRowWriter) PutString(name, value string)                     { w.Ca
 func (w *mockRowWriter) PutQName(name string, value appdef.QName)         { w.Called(name, value) }
 func (w *mockRowWriter) PutBool(name string, value bool)                  { w.Called(name, value) }
 func (w *mockRowWriter) PutRecordID(name string, value istructs.RecordID) { w.Called(name, value) }
-
-func errorFromPanic(f func()) (err error) {
-	defer func() {
-		defer func() {
-			if r := recover(); r != nil {
-				err = r.(error)
-			}
-		}()
-		f()
-	}()
-	return
-}
 
 type mockWLogEvent struct {
 	mock.Mock

@@ -15,8 +15,21 @@ type subjectStorage struct {
 	tokenFunc      TokenFunc
 }
 
+type subjectKeyBuilder struct {
+	baseKeyBuilder
+}
+
+func (b *subjectKeyBuilder) Storage() appdef.QName {
+	return RequestSubject
+}
+
+func (b *subjectKeyBuilder) Equals(src istructs.IKeyBuilder) bool {
+	_, ok := src.(*subjectKeyBuilder)
+	return ok
+}
+
 func (s *subjectStorage) NewKeyBuilder(_ appdef.QName, _ istructs.IStateKeyBuilder) istructs.IStateKeyBuilder {
-	return newKeyBuilder(RequestSubject, appdef.NullQName)
+	return &subjectKeyBuilder{}
 }
 func (s *subjectStorage) Get(_ istructs.IStateKeyBuilder) (istructs.IStateValue, error) {
 	ssv := &requestSubjectValue{
@@ -35,4 +48,39 @@ func (s *subjectStorage) Get(_ istructs.IStateKeyBuilder) (istructs.IStateValue,
 		}
 	}
 	return ssv, nil
+}
+
+type requestSubjectValue struct {
+	baseStateValue
+	kind        int32
+	profileWSID int64
+	name        string
+	token       string
+}
+
+func (v *requestSubjectValue) AsInt64(name string) int64 {
+	switch name {
+	case Field_ProfileWSID:
+		return v.profileWSID
+	default:
+		return v.baseStateValue.AsInt64(name)
+	}
+}
+func (v *requestSubjectValue) AsInt32(name string) int32 {
+	switch name {
+	case Field_Kind:
+		return v.kind
+	default:
+		return v.baseStateValue.AsInt32(name)
+	}
+}
+func (v *requestSubjectValue) AsString(name string) string {
+	switch name {
+	case Field_Name:
+		return v.name
+	case Field_Token:
+		return v.token
+	default:
+		return v.baseStateValue.AsString(name)
+	}
 }

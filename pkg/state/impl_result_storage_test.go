@@ -35,7 +35,7 @@ func TestCmdResultStorage_InsertInValue(t *testing.T) {
 func TestResultStorage_InsertInKey(t *testing.T) {
 	defer func() {
 		r := fmt.Sprint(recover())
-		require.Equal(t, "assignment to entry in nil map", r)
+		require.Equal(t, "undefined string field: name", r)
 	}()
 
 	cmdResBuilder := istructs.NewNullObjectBuilder()

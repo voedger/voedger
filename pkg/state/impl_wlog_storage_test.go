@@ -103,9 +103,9 @@ func TestWLogStorage_GetBatch(t *testing.T) {
 		require.Equal(1, cuds.Length())
 		require.NotNil(cud)
 		require.PanicsWithValue(errFieldByIndexIsNotAnObjectOrArray, func() { sv.GetAsValue(0) })
-		require.PanicsWithValue(errFieldByNameIsNotAnObjectOrArray, func() { cud.AsValue(Field_CUDs) })
+		require.PanicsWithError(errValueFieldUndefined(Field_CUDs).Error(), func() { cud.AsValue(Field_CUDs) })
 		require.PanicsWithValue(errCurrentValueIsNotAnArray, func() { sv.GetAsInt64(0) })
-		require.PanicsWithValue(errNotImplemented, func() { sv.AsRecordID(Field_Offset) })
+		require.PanicsWithError(errRecordIDFieldUndefined(Field_Offset).Error(), func() { sv.AsRecordID(Field_Offset) })
 	})
 	t.Run("Should return error when error occurred on read wlog", func(t *testing.T) {
 		require := require.New(t)

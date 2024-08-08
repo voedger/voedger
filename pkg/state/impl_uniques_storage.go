@@ -27,7 +27,7 @@ func (v *uniquesValue) AsInt64(name string) int64 {
 	if name == Field_ID {
 		return int64(v.id)
 	}
-	panic(errUndefined(name))
+	return v.baseStateValue.AsInt64(name)
 }
 
 func newUniquesStorage(appStructsFunc AppStructsFunc, wsidFunc WSIDFunc, customHandler UniquesHandler) *uniquesStorage {
@@ -39,11 +39,11 @@ func newUniquesStorage(appStructsFunc AppStructsFunc, wsidFunc WSIDFunc, customH
 }
 
 func (s *uniquesStorage) NewKeyBuilder(entity appdef.QName, _ istructs.IStateKeyBuilder) istructs.IStateKeyBuilder {
-	return newKeyBuilder(Uniq, entity)
+	return newMapKeyBuilder(Uniq, entity)
 }
 
 func (s *uniquesStorage) Get(key istructs.IStateKeyBuilder) (value istructs.IStateValue, err error) {
-	k := key.(*keyBuilder)
+	k := key.(*mapKeyBuilder)
 	var id istructs.RecordID
 	if s.uniqiesHandler != nil {
 		id, err = s.uniqiesHandler(k.entity, s.wsidFunc(), k.data)

@@ -36,7 +36,7 @@ func TestResponseStorage(t *testing.T) {
 		require.NotNil(t, value)
 		require.Equal(t, int32(404), value.AsInt32(Field_StatusCode))
 		require.Equal(t, "Not found", value.AsString(Field_ErrorMessage))
-		require.PanicsWithError(t, "unknown undefined", func() {
+		require.PanicsWithError(t, "undefined string field: unknown", func() {
 			value.AsString("unknown")
 		})
 	}

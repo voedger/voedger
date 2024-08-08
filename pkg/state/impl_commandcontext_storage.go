@@ -16,8 +16,21 @@ type commandContextStorage struct {
 	wlogOffsetFunc  WLogOffsetFunc
 }
 
+type commandContextKeyBuilder struct {
+	baseKeyBuilder
+}
+
+func (b *commandContextKeyBuilder) Storage() appdef.QName {
+	return CommandContext
+}
+
+func (b *commandContextKeyBuilder) Equals(src istructs.IKeyBuilder) bool {
+	_, ok := src.(*commandContextKeyBuilder)
+	return ok
+}
+
 func (s *commandContextStorage) NewKeyBuilder(_ appdef.QName, _ istructs.IStateKeyBuilder) istructs.IStateKeyBuilder {
-	return newKeyBuilder(CommandContext, appdef.NullQName)
+	return &commandContextKeyBuilder{}
 }
 func (s *commandContextStorage) Get(_ istructs.IStateKeyBuilder) (istructs.IStateValue, error) {
 	return &cmdContextValue{
@@ -29,7 +42,7 @@ func (s *commandContextStorage) Get(_ istructs.IStateKeyBuilder) (istructs.IStat
 }
 
 type cmdContextValue struct {
-	istructs.IStateValue
+	baseStateValue
 	arg         istructs.IObject
 	unloggedArg istructs.IObject
 	wsid        istructs.WSID
@@ -43,7 +56,7 @@ func (v *cmdContextValue) AsInt64(name string) int64 {
 	case Field_WLogOffset:
 		return int64(v.wlogOffset)
 	}
-	panic(errUndefined(name))
+	return v.baseStateValue.AsInt64(name)
 }
 
 func (v *cmdContextValue) AsValue(name string) istructs.IStateValue {
@@ -57,5 +70,5 @@ func (v *cmdContextValue) AsValue(name string) istructs.IStateValue {
 			object: v.unloggedArg,
 		}
 	}
-	panic(errUndefined(name))
+	return v.baseStateValue.AsValue(name)
 }

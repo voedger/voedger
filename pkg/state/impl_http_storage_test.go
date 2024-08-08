@@ -60,7 +60,8 @@ func TestHttpStorage_Timeout(t *testing.T) {
 		k, err := s.KeyBuilder(Http, appdef.NullQName)
 		require.NoError(err)
 
-		require.ErrorIs(errorFromPanic(func() { _ = s.Read(k, func(istructs.IKey, istructs.IStateValue) error { return nil }) }), ErrNotFound)
+		err = s.Read(k, func(istructs.IKey, istructs.IStateValue) error { return nil })
+		require.ErrorIs(err, ErrNotFound)
 	})
 	t.Run("Should return error on timeout", func(t *testing.T) {
 		require := require.New(t)
@@ -89,8 +90,11 @@ func TestHttpStorage_NewKeyBuilder_should_refresh_key_builder(t *testing.T) {
 	k.PutString(Field_Header, "my-header: my-value")
 	k.PutBytes(Field_Body, []byte(`{"hello":"api"}`))
 
-	hskb := s.NewKeyBuilder(appdef.NullQName, k).(*httpKeyBuilder)
+	hskb := s.NewKeyBuilder(appdef.NullQName, k).(*httpStorageKeyBuilder)
 
-	require.Equal(Http, hskb.storage)
-	require.Empty(hskb.data)
+	require.Equal(Http, hskb.Storage())
+	require.Equal("", hskb.url)
+	require.Equal("", hskb.method)
+	require.Empty(hskb.headers)
+	require.Empty(hskb.body)
 }
