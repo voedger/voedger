@@ -24,7 +24,7 @@ type apps struct {
 	syncActualizerFactory SyncActualizerFactory
 	actualizers           IActualizers
 	extEngineFactories    iextengine.ExtensionEngineFactories
-	apps                  map[appdef.AppQName]*app
+	apps                  map[appdef.AppQName]*appRT
 }
 
 func newAppPartitions(asp istructs.IAppStructsProvider, saf SyncActualizerFactory, act IActualizers, eef iextengine.ExtensionEngineFactories) (ap IAppPartitions, cleanup func(), err error) {
@@ -34,7 +34,7 @@ func newAppPartitions(asp istructs.IAppStructsProvider, saf SyncActualizerFactor
 		syncActualizerFactory: saf,
 		actualizers:           act,
 		extEngineFactories:    eef,
-		apps:                  map[appdef.AppQName]*app{},
+		apps:                  map[appdef.AppQName]*appRT{},
 	}
 	act.SetAppPartitions(a)
 	return a, func() {}, err

@@ -18,10 +18,9 @@ import (
 	"github.com/voedger/voedger/pkg/pipeline"
 )
 
-// engine placeholder
 type engines map[appdef.ExtensionEngineKind]iextengine.IExtensionEngine
 
-type app struct {
+type appRT struct {
 	mx           sync.RWMutex
 	apps         *apps
 	name         appdef.AppQName
@@ -32,8 +31,8 @@ type app struct {
 	parts        map[istructs.PartitionID]*partition
 }
 
-func newApplication(apps *apps, name appdef.AppQName, partsCount istructs.NumAppPartitions) *app {
-	return &app{
+func newApplication(apps *apps, name appdef.AppQName, partsCount istructs.NumAppPartitions) *appRT {
+	return &appRT{
 		mx:         sync.RWMutex{},
 		apps:       apps,
 		name:       name,
@@ -44,7 +43,7 @@ func newApplication(apps *apps, name appdef.AppQName, partsCount istructs.NumApp
 
 // extModuleURLs is important for non-builtin (non-native) apps
 // extModuleURLs: packagePath->packageURL
-func (a *app) deploy(def appdef.IAppDef, extModuleURLs map[string]*url.URL, structs istructs.IAppStructs, numEnginesPerEngineKind [ProcessorKind_Count]int) {
+func (a *appRT) deploy(def appdef.IAppDef, extModuleURLs map[string]*url.URL, structs istructs.IAppStructs, numEnginesPerEngineKind [ProcessorKind_Count]int) {
 	a.def = def
 	a.structs = structs
 
@@ -111,12 +110,12 @@ func (a *app) deploy(def appdef.IAppDef, extModuleURLs map[string]*url.URL, stru
 }
 
 type partition struct {
-	app            *app
+	app            *appRT
 	id             istructs.PartitionID
 	syncActualizer pipeline.ISyncOperator
 }
 
-func newPartition(app *app, id istructs.PartitionID) *partition {
+func newPartition(app *appRT, id istructs.PartitionID) *partition {
 	part := &partition{
 		app:            app,
 		id:             id,
