@@ -20,32 +20,37 @@ import (
 
 type engines map[appdef.ExtensionEngineKind]iextengine.IExtensionEngine
 
-type appRT struct {
-	mx           sync.RWMutex
-	apps         *apps
-	name         appdef.AppQName
-	partsCount   istructs.NumAppPartitions
+type appVersion struct {
 	def          appdef.IAppDef
 	structs      istructs.IAppStructs
 	enginesPools [ProcessorKind_Count]*pool.Pool[engines]
-	parts        map[istructs.PartitionID]*partition
+}
+
+type appRT struct {
+	mx             sync.RWMutex
+	apps           *apps
+	name           appdef.AppQName
+	partsCount     istructs.NumAppPartitions
+	lastestVersion appVersion
+	parts          map[istructs.PartitionID]*partition
 }
 
 func newApplication(apps *apps, name appdef.AppQName, partsCount istructs.NumAppPartitions) *appRT {
 	return &appRT{
-		mx:         sync.RWMutex{},
-		apps:       apps,
-		name:       name,
-		partsCount: partsCount,
-		parts:      map[istructs.PartitionID]*partition{},
+		mx:             sync.RWMutex{},
+		apps:           apps,
+		name:           name,
+		partsCount:     partsCount,
+		lastestVersion: appVersion{},
+		parts:          map[istructs.PartitionID]*partition{},
 	}
 }
 
 // extModuleURLs is important for non-builtin (non-native) apps
 // extModuleURLs: packagePath->packageURL
 func (a *appRT) deploy(def appdef.IAppDef, extModuleURLs map[string]*url.URL, structs istructs.IAppStructs, numEnginesPerEngineKind [ProcessorKind_Count]int) {
-	a.def = def
-	a.structs = structs
+	a.lastestVersion.def = def
+	a.lastestVersion.structs = structs
 
 	eef := a.apps.extEngineFactories
 
@@ -105,7 +110,7 @@ func (a *appRT) deploy(def appdef.IAppDef, extModuleURLs map[string]*url.URL, st
 				ee[i][extEngineKind] = extEngines[i]
 			}
 		}
-		a.enginesPools[processorKind] = pool.New(ee)
+		a.lastestVersion.enginesPools[processorKind] = pool.New(ee)
 	}
 }
 
@@ -119,7 +124,7 @@ func newPartition(app *appRT, id istructs.PartitionID) *partition {
 	part := &partition{
 		app:            app,
 		id:             id,
-		syncActualizer: app.apps.syncActualizerFactory(app.structs, id),
+		syncActualizer: app.apps.syncActualizerFactory(app.lastestVersion.structs, id),
 	}
 	return part
 }
@@ -152,8 +157,8 @@ func newPartitionRT(part *partition) *partitionRT {
 	rt := partionRTPool.Get().(*partitionRT)
 
 	rt.part = part
-	rt.appDef = part.app.def
-	rt.appStructs = part.app.structs
+	rt.appDef = part.app.lastestVersion.def
+	rt.appStructs = part.app.lastestVersion.structs
 
 	return rt
 }
@@ -191,7 +196,7 @@ func (rt *partitionRT) Invoke(ctx context.Context, name appdef.QName, state istr
 func (rt *partitionRT) Release() {
 	if engine := rt.borrowed; engine != nil {
 		rt.borrowed = nil
-		poolTheEngineBorrowedFrom := rt.part.app.enginesPools[rt.borrowedForProcessorKind]
+		poolTheEngineBorrowedFrom := rt.part.app.lastestVersion.enginesPools[rt.borrowedForProcessorKind]
 		poolTheEngineBorrowedFrom.Release(engine)
 		rt.borrowedForProcessorKind = ProcessorKind_Count // like null
 	}
@@ -200,7 +205,7 @@ func (rt *partitionRT) Release() {
 
 // Initialize partition RT structures for use
 func (rt *partitionRT) init(proc ProcessorKind) error {
-	pool := rt.part.app.enginesPools[proc]
+	pool := rt.part.app.lastestVersion.enginesPools[proc]
 	engines, err := pool.Borrow()
 	if err != nil {
 		return errNotAvailableEngines[proc]
