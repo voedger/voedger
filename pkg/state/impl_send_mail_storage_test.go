@@ -33,7 +33,7 @@ func TestSendMailStorage_BasicUsage(t *testing.T) {
 	k.PutString(sys.Storage_SendMail_Field_From, "from@email.com")
 	k.PutString(sys.Storage_SendMail_Field_To, "to0@email.com")
 	k.PutString(sys.Storage_SendMail_Field_To, "to1@email.com")
-	k.PutString(sys.Storage_SendMail_Field_BCC, "cc0@email.com")
+	k.PutString(sys.Storage_SendMail_Field_CC, "cc0@email.com")
 	k.PutString(sys.Storage_SendMail_Field_CC, "cc1@email.com")
 	k.PutString(sys.Storage_SendMail_Field_BCC, "bcc0@email.com")
 	k.PutString(sys.Storage_SendMail_Field_BCC, "bcc1@email.com")
