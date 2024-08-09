@@ -12,7 +12,7 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
-type nullActualizersRunner struct{}
+type nullProcessorRunner struct{}
 
-func (nullActualizersRunner) NewAndRun(context.Context, appdef.AppQName, istructs.PartitionID, appdef.QName) {
+func (nullProcessorRunner) NewAndRun(context.Context, appdef.AppQName, istructs.PartitionID, appdef.QName) {
 }

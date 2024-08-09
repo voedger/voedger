@@ -24,7 +24,7 @@ func New(structs istructs.IAppStructsProvider) (ap IAppPartitions, cleanup func(
 		func(istructs.IAppStructs, istructs.PartitionID) pipeline.ISyncOperator {
 			return &pipeline.NOOP{}
 		},
-		&nullActualizersRunner{},
+		&nullProcessorRunner{},
 		iextengine.ExtensionEngineFactories{
 			appdef.ExtensionEngineKind_BuiltIn: iextengine.NullExtensionEngineFactory,
 			appdef.ExtensionEngineKind_WASM:    iextengine.NullExtensionEngineFactory,

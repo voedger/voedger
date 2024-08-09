@@ -9,5 +9,5 @@ import "time"
 
 const AppPartitionBorrowRetryDelay = 50 * time.Millisecond
 
-// NullActualizersRunner should be used in test only
-var NullActualizersRunner nullActualizersRunner = nullActualizersRunner{}
+// NullProcessorRunner should be used in test only
+var NullProcessorRunner nullProcessorRunner = nullProcessorRunner{}
