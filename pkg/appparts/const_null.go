@@ -6,12 +6,13 @@
 package appparts
 
 import (
+	"context"
+
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
-type nullActualizers struct{}
+type nullActualizersRunner struct{}
 
-func (nullActualizers) DeployPartition(appdef.AppQName, istructs.PartitionID) error { return nil }
-func (nullActualizers) UndeployPartition(appdef.AppQName, istructs.PartitionID)     {}
-func (nullActualizers) SetAppPartitions(IAppPartitions)                             {}
+func (nullActualizersRunner) NewAndRun(context.Context, appdef.AppQName, istructs.PartitionID, appdef.QName) {
+}

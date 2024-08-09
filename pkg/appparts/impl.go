@@ -20,23 +20,24 @@ import (
 
 type apps struct {
 	mx                    sync.RWMutex
+	vvmCtx                context.Context
 	structs               istructs.IAppStructsProvider
 	syncActualizerFactory SyncActualizerFactory
-	actualizers           IActualizers
+	processors            [ProcessorKind_Count]IProcessorRunner
 	extEngineFactories    iextengine.ExtensionEngineFactories
 	apps                  map[appdef.AppQName]*appRT
 }
 
-func newAppPartitions(asp istructs.IAppStructsProvider, saf SyncActualizerFactory, act IActualizers, eef iextengine.ExtensionEngineFactories) (ap IAppPartitions, cleanup func(), err error) {
+func newAppPartitions(vvmCtx context.Context, asp istructs.IAppStructsProvider, saf SyncActualizerFactory, aar IProcessorRunner, eef iextengine.ExtensionEngineFactories) (ap IAppPartitions, cleanup func(), err error) {
 	a := &apps{
 		mx:                    sync.RWMutex{},
+		vvmCtx:                vvmCtx,
 		structs:               asp,
 		syncActualizerFactory: saf,
-		actualizers:           act,
 		extEngineFactories:    eef,
 		apps:                  map[appdef.AppQName]*appRT{},
 	}
-	act.SetAppPartitions(a)
+	a.processors[ProcessorKind_Actualizer] = aar
 	return a, func() {}, err
 }
 
@@ -89,17 +90,7 @@ func (aps *apps) DeployAppPartitions(name appdef.AppQName, ids []istructs.Partit
 		a.mx.Lock()
 		a.parts[id] = p
 		a.mx.Unlock()
-	}
-
-	var err error
-	for _, id := range ids {
-		if e := aps.actualizers.DeployPartition(name, id); e != nil {
-			err = errors.Join(err, e)
-		}
-	}
-
-	if err != nil {
-		panic(err)
+		p.actualizers.deploy()
 	}
 }
 

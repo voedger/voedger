@@ -105,8 +105,10 @@ type IActualizers interface {
 	UndeployPartition(appdef.AppQName, istructs.PartitionID)
 }
 
-// Actualizer runner.
-type IActualizerRunner interface {
-	// Creates and runs new actualizer for specified partition.
+// Processor runner.
+//
+// Used by application partitions to run actualizers and schedulers
+type IProcessorRunner interface {
+	// Creates and runs new processor for specified application partition
 	NewAndRun(context.Context, appdef.AppQName, istructs.PartitionID, appdef.QName)
 }

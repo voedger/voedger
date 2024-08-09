@@ -118,6 +118,8 @@ type appPartitionRT struct {
 	app            *appRT
 	id             istructs.PartitionID
 	syncActualizer pipeline.ISyncOperator
+	actualizers    *partitionProcessors
+
 	// TODO: implement partitionCache
 }
 
@@ -127,6 +129,7 @@ func newAppPartitionRT(app *appRT, id istructs.PartitionID) *appPartitionRT {
 		id:             id,
 		syncActualizer: app.apps.syncActualizerFactory(app.lastestVersion.structs, id),
 	}
+	part.actualizers = newPartitionProcessors(part)
 	return part
 }
 
