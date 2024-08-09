@@ -14,7 +14,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
-	"github.com/voedger/voedger/pkg/state"
+	"github.com/voedger/voedger/pkg/sys"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 	it "github.com/voedger/voedger/pkg/vit"
 )
@@ -272,7 +272,7 @@ func TestTakeQNamesFromWorkspace(t *testing.T) {
 		})
 		t.Run("CUD produced by a command", func(t *testing.T) {
 			it.MockCmdExec = func(input string, args istructs.ExecCommandArgs) error {
-				kb, err := args.State.KeyBuilder(state.Record, appdef.NewQName("app1pkg", "docInAnotherWS"))
+				kb, err := args.State.KeyBuilder(sys.Storage_Record, appdef.NewQName("app1pkg", "docInAnotherWS"))
 				if err != nil {
 					return err
 				}

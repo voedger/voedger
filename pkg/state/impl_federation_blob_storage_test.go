@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/sys"
 )
 
 func TestFederationBlobStorage_BasicUsage(t *testing.T) {
@@ -27,18 +28,18 @@ func TestFederationBlobStorage_BasicUsage(t *testing.T) {
 	}
 	s := ProvideAsyncActualizerStateFactory()(context.Background(), mockedHostStateStructs, nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil, nil, nil, 0, 0, WithFederationBlobHandler(federatioBlobHandler))
 
-	k, err := s.KeyBuilder(FederationBlob, appdef.NullQName)
+	k, err := s.KeyBuilder(sys.Storage_FederationBlob, appdef.NullQName)
 	require.NoError(err)
 
-	k.PutString(Field_Owner, "owner")
-	k.PutString(Field_AppName, "appname")
-	k.PutInt64(Field_BlobID, 1)
-	k.PutString(Field_ExpectedCodes, "200,201")
-	k.PutInt64(Field_WSID, 123)
+	k.PutString(sys.Storage_FederationBlob_Field_Owner, "owner")
+	k.PutString(sys.Storage_FederationBlob_Field_AppName, "appname")
+	k.PutInt64(sys.Storage_FederationBlob_Field_BlobID, 1)
+	k.PutString(sys.Storage_FederationBlob_Field_ExpectedCodes, "200,201")
+	k.PutInt64(sys.Storage_FederationBlob_Field_WSID, 123)
 
 	readBytes := make([]byte, 0)
 	err = s.Read(k, func(_ istructs.IKey, value istructs.IStateValue) (err error) {
-		readBytes = append(readBytes, value.AsBytes(Field_Body)...)
+		readBytes = append(readBytes, value.AsBytes(sys.Storage_FederationBlob_Field_Body)...)
 		return
 	})
 	require.NoError(err)

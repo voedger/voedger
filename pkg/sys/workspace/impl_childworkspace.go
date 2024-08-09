@@ -13,14 +13,14 @@ import (
 	"github.com/voedger/voedger/pkg/goutils/iterate"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/istructs"
-	"github.com/voedger/voedger/pkg/state"
+	"github.com/voedger/voedger/pkg/sys"
 	"github.com/voedger/voedger/pkg/sys/authnz"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 func execCmdInitChildWorkspace(args istructs.ExecCommandArgs) (err error) {
 	wsName := args.ArgumentObject.AsString(authnz.Field_WSName)
-	kb, err := args.State.KeyBuilder(state.View, QNameViewChildWorkspaceIdx)
+	kb, err := args.State.KeyBuilder(sys.Storage_View, QNameViewChildWorkspaceIdx)
 	if err != nil {
 		return
 	}
@@ -47,7 +47,7 @@ func execCmdInitChildWorkspace(args istructs.ExecCommandArgs) (err error) {
 	templateParams := args.ArgumentObject.AsString(Field_TemplateParams)
 
 	// Create cdoc.sys.ChildWorkspace
-	kb, err = args.State.KeyBuilder(state.Record, authnz.QNameCDocChildWorkspace)
+	kb, err = args.State.KeyBuilder(sys.Storage_Record, authnz.QNameCDocChildWorkspace)
 	if err != nil {
 		return
 	}
@@ -72,7 +72,7 @@ var childWorkspaceIdxProjector = func(event istructs.IPLogEvent, s istructs.ISta
 			return nil
 		}
 
-		kb, err := s.KeyBuilder(state.View, QNameViewChildWorkspaceIdx)
+		kb, err := s.KeyBuilder(sys.Storage_View, QNameViewChildWorkspaceIdx)
 		if err != nil {
 			return err
 		}
@@ -93,7 +93,7 @@ var childWorkspaceIdxProjector = func(event istructs.IPLogEvent, s istructs.ISta
 func qcwbnQryExec(_ context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) error {
 	logger.Info(args.State.App())
 	wsName := args.ArgumentObject.AsString(authnz.Field_WSName)
-	kb, err := args.State.KeyBuilder(state.View, QNameViewChildWorkspaceIdx)
+	kb, err := args.State.KeyBuilder(sys.Storage_View, QNameViewChildWorkspaceIdx)
 	if err != nil {
 		return err
 	}
@@ -106,11 +106,11 @@ func qcwbnQryExec(_ context.Context, args istructs.ExecQueryArgs, callback istru
 	if !ok {
 		return coreutils.NewHTTPErrorf(http.StatusNotFound, "child workspace ", wsName, " not found")
 	}
-	kb, err = args.State.KeyBuilder(state.Record, appdef.NullQName)
+	kb, err = args.State.KeyBuilder(sys.Storage_Record, appdef.NullQName)
 	if err != nil {
 		return err
 	}
-	kb.PutRecordID(state.Field_ID, istructs.RecordID(childWSIdx.AsInt64(Field_ChildWorkspaceID)))
+	kb.PutRecordID(sys.Storage_Record_Field_ID, istructs.RecordID(childWSIdx.AsInt64(Field_ChildWorkspaceID)))
 	rec, err := args.State.MustExist(kb)
 	if err != nil {
 		return err

@@ -11,6 +11,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/sys"
 )
 
 type recordsStorage struct {
@@ -29,7 +30,7 @@ type recordsKeyBuilder struct {
 }
 
 func (b *recordsKeyBuilder) Storage() appdef.QName {
-	return Record
+	return sys.Storage_Record
 }
 func (b *recordsKeyBuilder) Equals(src istructs.IKeyBuilder) bool {
 	kb, ok := src.(*recordsKeyBuilder)
@@ -66,25 +67,25 @@ func (b *recordsKeyBuilder) String() string {
 	return sb.String()
 }
 func (b *recordsKeyBuilder) PutInt64(name string, value int64) {
-	if name == Field_WSID {
+	if name == sys.Storage_Record_Field_WSID {
 		b.wsid = istructs.WSID(value)
 		return
 	}
-	if name == Field_ID {
+	if name == sys.Storage_Record_Field_ID {
 		b.id = istructs.RecordID(value)
 		return
 	}
 	b.baseKeyBuilder.PutInt64(name, value)
 }
 func (b *recordsKeyBuilder) PutRecordID(name string, value istructs.RecordID) {
-	if name == Field_ID {
+	if name == sys.Storage_Record_Field_ID {
 		b.id = value
 		return
 	}
 	b.baseKeyBuilder.PutRecordID(name, value)
 }
 func (b *recordsKeyBuilder) PutBool(name string, value bool) {
-	if name == Field_IsSingleton {
+	if name == sys.Storage_Record_Field_IsSingleton {
 		if b.entity == appdef.NullQName {
 			panic("entity undefined")
 		}
@@ -94,7 +95,7 @@ func (b *recordsKeyBuilder) PutBool(name string, value bool) {
 	b.baseKeyBuilder.PutBool(name, value)
 }
 func (b *recordsKeyBuilder) PutQName(name string, value appdef.QName) {
-	if name == Field_Singleton {
+	if name == sys.Storage_Record_Field_Singleton {
 		b.singleton = value
 		return
 	}

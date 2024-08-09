@@ -12,6 +12,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/sys"
 )
 
 func appStructsFunc(app istructs.IAppStructs) AppStructsFunc {
@@ -26,7 +27,7 @@ func TestBundle(t *testing.T) {
 			IKeyBuilder: &mapKeyBuilder{data: make(map[string]interface{})},
 			view:        qname,
 		}
-		k.PutRecordID(Field_ID, id)
+		k.PutRecordID(sys.Storage_Record_Field_ID, id)
 		return
 	}
 	t.Run("put", func(t *testing.T) {
@@ -98,7 +99,7 @@ func TestKeyBuilder(t *testing.T) {
 func TestHttpStorageKeyBuilder_headers(t *testing.T) {
 	require := require.New(t)
 	k := &httpStorageKeyBuilder{headers: make(map[string]string)}
-	k.PutString(Field_Header, "key: hello:world")
+	k.PutString(sys.Storage_Http_Field_Header, "key: hello:world")
 
 	headers := k.headers
 
@@ -110,9 +111,9 @@ func TestWLogKeyBuilder(t *testing.T) {
 			wsidFunc: func() istructs.WSID { return istructs.WSID(42) },
 		}
 		kb := s.NewKeyBuilder(appdef.NullQName, nil)
-		kb.PutInt64(Field_Count, 10)
-		kb.PutInt64(Field_Offset, 20)
-		kb.PutInt64(Field_WSID, 30)
+		kb.PutInt64(sys.Storage_WLog_Field_Count, 10)
+		kb.PutInt64(sys.Storage_WLog_Field_Offset, 20)
+		kb.PutInt64(sys.Storage_WLog_Field_WSID, 30)
 
 		require.Equal(t, "wlog wsid - 30, offset - 20, count - 10", kb.(fmt.Stringer).String())
 	})

@@ -10,6 +10,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/sys"
 )
 
 type wLogStorage struct {
@@ -26,7 +27,7 @@ type wLogKeyBuilder struct {
 }
 
 func (b *wLogKeyBuilder) Storage() appdef.QName {
-	return WLog
+	return sys.Storage_WLog
 }
 
 func (b *wLogKeyBuilder) Equals(src istructs.IKeyBuilder) bool {
@@ -52,11 +53,11 @@ func (b *wLogKeyBuilder) String() string {
 }
 
 func (b *wLogKeyBuilder) PutInt64(name string, value int64) {
-	if name == Field_WSID {
+	if name == sys.Storage_WLog_Field_WSID {
 		b.wsid = istructs.WSID(value)
-	} else if name == Field_Offset {
+	} else if name == sys.Storage_WLog_Field_Offset {
 		b.offset = istructs.Offset(value)
-	} else if name == Field_Count {
+	} else if name == sys.Storage_WLog_Field_Count {
 		b.count = int(value)
 	} else {
 		b.baseKeyBuilder.PutInt64(name, value)
@@ -80,7 +81,7 @@ func (s *wLogStorage) Read(kb istructs.IStateKeyBuilder, callback istructs.Value
 	cb := func(wlogOffset istructs.Offset, event istructs.IWLogEvent) (err error) {
 		offs := int64(wlogOffset)
 		return callback(
-			&key{data: map[string]interface{}{Field_Offset: offs}},
+			&key{data: map[string]interface{}{sys.Storage_WLog_Field_Offset: offs}},
 			&wLogValue{
 				event:  event,
 				offset: offs,
@@ -97,13 +98,13 @@ type wLogValue struct {
 
 func (v *wLogValue) AsInt64(name string) int64 {
 	switch name {
-	case Field_RegisteredAt:
+	case sys.Storage_WLog_Field_RegisteredAt:
 		return int64(v.event.RegisteredAt())
-	case Field_DeviceID:
+	case sys.Storage_WLog_Field_DeviceID:
 		return int64(v.event.DeviceID())
-	case Field_SyncedAt:
+	case sys.Storage_WLog_Field_SyncedAt:
 		return int64(v.event.SyncedAt())
-	case Field_Offset:
+	case sys.Storage_WLog_Field_Offset:
 		return v.offset
 	default:
 		return v.baseStateValue.AsInt64(name)
@@ -118,14 +119,14 @@ func (v *wLogValue) AsRecord(_ string) (record istructs.IRecord) {
 	return v.event.ArgumentObject().AsRecord()
 }
 func (v *wLogValue) AsValue(name string) istructs.IStateValue {
-	if name == Field_CUDs {
+	if name == sys.Storage_WLog_Field_CUDs {
 		sv := &cudsValue{}
 		v.event.CUDs(func(rec istructs.ICUDRow) {
 			sv.cuds = append(sv.cuds, rec)
 		})
 		return sv
 	}
-	if name == Field_ArgumentObject {
+	if name == sys.Storage_WLog_Field_ArgumentObject {
 		arg := v.event.ArgumentObject()
 		if arg == nil {
 			return nil

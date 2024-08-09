@@ -13,6 +13,7 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/state/smtptest"
+	"github.com/voedger/voedger/pkg/sys"
 )
 
 func TestSendMailStorage_BasicUsage(t *testing.T) {
@@ -20,23 +21,23 @@ func TestSendMailStorage_BasicUsage(t *testing.T) {
 	ts := smtptest.NewServer(smtptest.WithCredentials("user", "pwd"))
 	defer ts.Close()
 	s := ProvideAsyncActualizerStateFactory()(context.Background(), nilAppStructsFunc, nil, nil, nil, nil, nil, nil, nil, 1, 0)
-	k, err := s.KeyBuilder(SendMail, appdef.NullQName)
+	k, err := s.KeyBuilder(sys.Storage_SendMail, appdef.NullQName)
 	require.NoError(err)
 
-	k.PutInt32(Field_Port, ts.Port())
-	k.PutString(Field_Host, "localhost")
-	k.PutString(Field_Username, "user")
-	k.PutString(Field_Password, "pwd")
+	k.PutInt32(sys.Storage_SendMail_Field_Port, ts.Port())
+	k.PutString(sys.Storage_SendMail_Field_Host, "localhost")
+	k.PutString(sys.Storage_SendMail_Field_Username, "user")
+	k.PutString(sys.Storage_SendMail_Field_Password, "pwd")
 
-	k.PutString(Field_Subject, "Greeting")
-	k.PutString(Field_From, "from@email.com")
-	k.PutString(Field_To, "to0@email.com")
-	k.PutString(Field_To, "to1@email.com")
-	k.PutString(Field_CC, "cc0@email.com")
-	k.PutString(Field_CC, "cc1@email.com")
-	k.PutString(Field_BCC, "bcc0@email.com")
-	k.PutString(Field_BCC, "bcc1@email.com")
-	k.PutString(Field_Body, "Hello world")
+	k.PutString(sys.Storage_SendMail_Field_Subject, "Greeting")
+	k.PutString(sys.Storage_SendMail_Field_From, "from@email.com")
+	k.PutString(sys.Storage_SendMail_Field_To, "to0@email.com")
+	k.PutString(sys.Storage_SendMail_Field_To, "to1@email.com")
+	k.PutString(sys.Storage_SendMail_Field_BCC, "cc0@email.com")
+	k.PutString(sys.Storage_SendMail_Field_CC, "cc1@email.com")
+	k.PutString(sys.Storage_SendMail_Field_BCC, "bcc0@email.com")
+	k.PutString(sys.Storage_SendMail_Field_BCC, "bcc1@email.com")
+	k.PutString(sys.Storage_SendMail_Field_Body, "Hello world")
 
 	require.NotNil(s.NewValue(k))
 	readyToFlush, err := s.ApplyIntents()
@@ -60,32 +61,32 @@ func TestSendMailStorage_Validate(t *testing.T) {
 		kbFiller       func(kb istructs.IStateKeyBuilder)
 	}{
 		{
-			mandatoryField: Field_Host,
+			mandatoryField: sys.Storage_SendMail_Field_Host,
 			kbFiller:       func(kb istructs.IStateKeyBuilder) {},
 		},
 		{
-			mandatoryField: Field_Port,
+			mandatoryField: sys.Storage_SendMail_Field_Port,
 			kbFiller: func(kb istructs.IStateKeyBuilder) {
-				kb.PutString(Field_Host, "smtp.gmail.com")
+				kb.PutString(sys.Storage_SendMail_Field_Host, "smtp.gmail.com")
 			},
 		},
 		{
-			mandatoryField: Field_From,
+			mandatoryField: sys.Storage_SendMail_Field_From,
 			kbFiller: func(kb istructs.IStateKeyBuilder) {
-				kb.PutString(Field_Host, "smtp.gmail.com")
-				kb.PutInt32(Field_Port, 587)
-				kb.PutString(Field_Username, "user")
-				kb.PutString(Field_Password, "pwd")
+				kb.PutString(sys.Storage_SendMail_Field_Host, "smtp.gmail.com")
+				kb.PutInt32(sys.Storage_SendMail_Field_Port, 587)
+				kb.PutString(sys.Storage_SendMail_Field_Username, "user")
+				kb.PutString(sys.Storage_SendMail_Field_Password, "pwd")
 			},
 		},
 		{
-			mandatoryField: Field_To,
+			mandatoryField: sys.Storage_SendMail_Field_To,
 			kbFiller: func(kb istructs.IStateKeyBuilder) {
-				kb.PutString(Field_Host, "smtp.gmail.com")
-				kb.PutInt32(Field_Port, 587)
-				kb.PutString(Field_Username, "user")
-				kb.PutString(Field_Password, "pwd")
-				kb.PutString(Field_From, "sender@email.com")
+				kb.PutString(sys.Storage_SendMail_Field_Host, "smtp.gmail.com")
+				kb.PutInt32(sys.Storage_SendMail_Field_Port, 587)
+				kb.PutString(sys.Storage_SendMail_Field_Username, "user")
+				kb.PutString(sys.Storage_SendMail_Field_Password, "pwd")
+				kb.PutString(sys.Storage_SendMail_Field_From, "sender@email.com")
 			},
 		},
 	}
@@ -93,7 +94,7 @@ func TestSendMailStorage_Validate(t *testing.T) {
 		t.Run(fmt.Sprintf("Should return error when mandatory field '%s' not found", test.mandatoryField), func(t *testing.T) {
 			require := require.New(t)
 			s := ProvideAsyncActualizerStateFactory()(context.Background(), nilAppStructsFunc, nil, nil, nil, nil, nil, nil, nil, 1, 0)
-			k, err := s.KeyBuilder(SendMail, appdef.NullQName)
+			k, err := s.KeyBuilder(sys.Storage_SendMail, appdef.NullQName)
 			require.NoError(err)
 			test.kbFiller(k)
 			_, err = s.NewValue(k)

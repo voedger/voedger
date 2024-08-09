@@ -8,12 +8,12 @@ package invite
 import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
-	"github.com/voedger/voedger/pkg/state"
+	"github.com/voedger/voedger/pkg/sys"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 func GetCDocJoinedWorkspaceForUpdateRequired(st istructs.IState, intents istructs.IIntents, invitingWorkspaceWSID int64) (svbCDocJoinedWorkspace istructs.IStateValueBuilder, err error) {
-	skbViewJoinedWorkspaceIndex, err := st.KeyBuilder(state.View, QNameViewJoinedWorkspaceIndex)
+	skbViewJoinedWorkspaceIndex, err := st.KeyBuilder(sys.Storage_View, QNameViewJoinedWorkspaceIndex)
 	if err != nil {
 		// notest
 		return nil, err
@@ -24,12 +24,12 @@ func GetCDocJoinedWorkspaceForUpdateRequired(st istructs.IState, intents istruct
 	if err != nil {
 		return nil, err
 	}
-	skb, err := st.KeyBuilder(state.Record, QNameCDocJoinedWorkspace)
+	skb, err := st.KeyBuilder(sys.Storage_Record, QNameCDocJoinedWorkspace)
 	if err != nil {
 		// notest
 		return nil, err
 	}
-	skb.PutRecordID(state.Field_ID, svViewJoinedWorkspaceIndex.AsRecordID(field_JoinedWorkspaceID))
+	skb.PutRecordID(sys.Storage_Record_Field_ID, svViewJoinedWorkspaceIndex.AsRecordID(field_JoinedWorkspaceID))
 	svCDocJoinedWorkspace, err := st.MustExist(skb)
 	if err != nil {
 		return nil, err
@@ -39,7 +39,7 @@ func GetCDocJoinedWorkspaceForUpdateRequired(st istructs.IState, intents istruct
 }
 
 func GetCDocJoinedWorkspace(st istructs.IState, invitingWorkspaceWSID int64) (svbCDocJoinedWorkspace istructs.IStateValue, skb istructs.IStateKeyBuilder, ok bool, err error) {
-	skbViewJoinedWorkspaceIndex, err := st.KeyBuilder(state.View, QNameViewJoinedWorkspaceIndex)
+	skbViewJoinedWorkspaceIndex, err := st.KeyBuilder(sys.Storage_View, QNameViewJoinedWorkspaceIndex)
 	if err != nil {
 		// notest
 		return nil, nil, false, err
@@ -55,12 +55,12 @@ func GetCDocJoinedWorkspace(st istructs.IState, invitingWorkspaceWSID int64) (sv
 		return nil, nil, false, nil
 	}
 
-	skb, err = st.KeyBuilder(state.Record, QNameCDocJoinedWorkspace)
+	skb, err = st.KeyBuilder(sys.Storage_Record, QNameCDocJoinedWorkspace)
 	if err != nil {
 		// notest
 		return nil, nil, false, err
 	}
-	skb.PutRecordID(state.Field_ID, svViewJoinedWorkspaceIndex.AsRecordID(field_JoinedWorkspaceID))
+	skb.PutRecordID(sys.Storage_Record_Field_ID, svViewJoinedWorkspaceIndex.AsRecordID(field_JoinedWorkspaceID))
 	svbCDocJoinedWorkspace, ok, err = st.CanExist(skb)
 	return svbCDocJoinedWorkspace, skb, ok, err
 }
@@ -75,7 +75,7 @@ func GetCDocJoinedWorkspaceForUpdate(st istructs.IState, intents istructs.IInten
 }
 
 func GetSubjectIdxViewKeyBuilder(login string, s istructs.IState) (istructs.IStateKeyBuilder, error) {
-	skbViewSubjectsIdx, err := s.KeyBuilder(state.View, QNameViewSubjectsIdx)
+	skbViewSubjectsIdx, err := s.KeyBuilder(sys.Storage_View, QNameViewSubjectsIdx)
 	if err != nil {
 		// notest
 		return nil, err
@@ -91,7 +91,7 @@ func SubjectExistByBothLogins(login string, st istructs.IState) (ok bool, actual
 	if err != nil {
 		return false, "", err
 	}
-	skbPrincipal, err := st.KeyBuilder(state.RequestSubject, appdef.NullQName)
+	skbPrincipal, err := st.KeyBuilder(sys.Storage_RequestSubject, appdef.NullQName)
 	if err != nil {
 		return false, "", err
 	}
@@ -99,7 +99,7 @@ func SubjectExistByBothLogins(login string, st istructs.IState) (ok bool, actual
 	if err != nil {
 		return
 	}
-	actualLogin = svPrincipal.AsString(state.Field_Name)
+	actualLogin = svPrincipal.AsString(sys.Storage_RequestSubject_Field_Name)
 	if !subjectExists {
 		subjectExists, err = SubjectExistsByLogin(actualLogin, st)
 		if err != nil {

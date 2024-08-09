@@ -9,7 +9,7 @@ import (
 	"github.com/voedger/voedger/pkg/iblobstorage"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
-	"github.com/voedger/voedger/pkg/state"
+	"github.com/voedger/voedger/pkg/sys"
 )
 
 func ProvideBlobberCmds(sr istructsmem.IStatelessResources) {
@@ -41,7 +41,7 @@ func provideUploadBLOBHelperCmd(sr istructsmem.IStatelessResources) {
 
 func ubhExec(args istructs.ExecCommandArgs) (err error) {
 	// write a dummy WDoc<BLOB> to book an ID and then use it as a new BLOB ID
-	kb, err := args.State.KeyBuilder(state.Record, QNameWDocBLOB)
+	kb, err := args.State.KeyBuilder(sys.Storage_Record, QNameWDocBLOB)
 	if err != nil {
 		return
 	}

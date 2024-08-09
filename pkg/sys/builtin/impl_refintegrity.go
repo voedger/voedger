@@ -15,7 +15,7 @@ import (
 	"github.com/voedger/voedger/pkg/goutils/iterate"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
-	"github.com/voedger/voedger/pkg/state"
+	"github.com/voedger/voedger/pkg/sys"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
@@ -101,7 +101,7 @@ func writeObjectToRegistry(root istructs.IRowReader, appDef appdef.IAppDef, st i
 }
 
 func writeRegistry(st istructs.IState, intents istructs.IIntents, idToStore istructs.RecordID, wLogOffsetToStore istructs.Offset, qNameToStore appdef.QName) error {
-	kb, err := st.KeyBuilder(state.View, QNameViewRecordsRegistry)
+	kb, err := st.KeyBuilder(sys.Storage_View, QNameViewRecordsRegistry)
 	if err != nil {
 		// notest
 		return err

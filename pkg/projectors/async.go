@@ -15,6 +15,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/goutils/iterate"
 	"github.com/voedger/voedger/pkg/goutils/logger"
+	"github.com/voedger/voedger/pkg/sys"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appparts"
@@ -154,12 +155,12 @@ func (a *asyncActualizer) init(ctx context.Context) (err error) {
 	// https://github.com/voedger/voedger/issues/1048
 	hasIntentsExceptViewAndRecord, _ := iterate.FindFirst(prjType.Intents().Enum, func(storage appdef.IStorage) bool {
 		n := storage.Name()
-		return n != state.View && n != state.Record
+		return n != sys.Storage_View && n != sys.Storage_Record
 	})
 	// https://github.com/voedger/voedger/issues/1092
 	hasStatesExceptViewAndRecord, _ := iterate.FindFirst(prjType.States().Enum, func(storage appdef.IStorage) bool {
 		n := storage.Name()
-		return n != state.View && n != state.Record
+		return n != sys.Storage_View && n != sys.Storage_Record
 	})
 	nonBuffered := hasIntentsExceptViewAndRecord || hasStatesExceptViewAndRecord
 	p := &asyncProjector{
@@ -486,11 +487,11 @@ func (p *asyncProjector) savePosition() error {
 		p.acceptedSinceSave = false
 		p.lastSave = time.Now()
 	}()
-	key, e := p.state.KeyBuilder(state.View, qnameProjectionOffsets)
+	key, e := p.state.KeyBuilder(sys.Storage_View, qnameProjectionOffsets)
 	if e != nil {
 		return e
 	}
-	key.PutInt64(state.Field_WSID, int64(istructs.NullWSID))
+	key.PutInt64(sys.Storage_View_Field_WSID, int64(istructs.NullWSID))
 	key.PutInt32(partitionFld, int32(p.partition))
 	key.PutQName(projectorNameFld, p.name)
 	value, e := p.state.NewValue(key)

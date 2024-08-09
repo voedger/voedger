@@ -19,6 +19,7 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/itokens"
 	"github.com/voedger/voedger/pkg/state/smtptest"
+	"github.com/voedger/voedger/pkg/sys"
 	"github.com/voedger/voedger/pkg/utils/federation"
 )
 
@@ -146,7 +147,7 @@ type viewKeyBuilder struct {
 }
 
 func (b *viewKeyBuilder) PutInt64(name string, value int64) {
-	if name == Field_WSID {
+	if name == sys.Storage_View_Field_WSID {
 		b.wsid = istructs.WSID(value)
 		return
 	}
@@ -163,7 +164,7 @@ func (b *viewKeyBuilder) Entity() appdef.QName {
 	return b.view
 }
 func (b *viewKeyBuilder) Storage() appdef.QName {
-	return View
+	return sys.Storage_View
 }
 func (b *viewKeyBuilder) Equals(src istructs.IKeyBuilder) bool {
 	kb, ok := src.(*viewKeyBuilder)
@@ -429,7 +430,7 @@ type httpValue struct {
 func (v *httpValue) AsBytes(string) []byte { return v.body }
 func (v *httpValue) AsInt32(string) int32  { return int32(v.statusCode) }
 func (v *httpValue) AsString(name string) string {
-	if name == Field_Header {
+	if name == sys.Storage_Http_Field_Header {
 		var res strings.Builder
 		for k, v := range v.header {
 			if len(v) > 0 {
@@ -540,21 +541,21 @@ type eventErrorValue struct {
 }
 
 func (v *eventErrorValue) AsString(name string) string {
-	if name == Field_ErrStr {
+	if name == sys.Storage_Event_Field_ErrStr {
 		return v.error.ErrStr()
 	}
 	panic(ErrNotSupported)
 }
 
 func (v *eventErrorValue) AsBool(name string) bool {
-	if name == Field_ValidEvent {
+	if name == sys.Storage_Event_Field_ValidEvent {
 		return v.error.ValidEvent()
 	}
 	panic(ErrNotSupported)
 }
 
 func (v *eventErrorValue) AsQName(name string) appdef.QName {
-	if name == Field_QNameFromParams {
+	if name == sys.Storage_Event_Field_QNameFromParams {
 		return v.error.QNameFromParams()
 	}
 	panic(ErrNotSupported)
@@ -583,7 +584,7 @@ func (v *cudRowValue) AsBytes(name string) []byte       { return v.value.AsBytes
 func (v *cudRowValue) AsString(name string) string      { return v.value.AsString(name) }
 func (v *cudRowValue) AsQName(name string) appdef.QName { return v.value.AsQName(name) }
 func (v *cudRowValue) AsBool(name string) bool {
-	if name == Field_IsNew {
+	if name == sys.CUDs_Field_IsNew {
 		return v.value.IsNew()
 	}
 	return v.value.AsBool(name)

@@ -13,6 +13,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/sys"
 )
 
 func TestWLogStorage_Read(t *testing.T) {
@@ -31,14 +32,14 @@ func TestWLogStorage_Read(t *testing.T) {
 		appStructs.On("Records").Return(&nilRecords{})
 		appStructs.On("ViewRecords").Return(&nilViewRecords{})
 		s := ProvideQueryProcessorStateFactory()(context.Background(), appStructsFunc(appStructs), nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil, nil, nil, nil, nil, nil, nil)
-		kb, err := s.KeyBuilder(WLog, appdef.NullQName)
+		kb, err := s.KeyBuilder(sys.Storage_WLog, appdef.NullQName)
 		require.NoError(err)
-		kb.PutInt64(Field_Offset, 1)
-		kb.PutInt64(Field_Count, 1)
+		kb.PutInt64(sys.Storage_WLog_Field_Offset, 1)
+		kb.PutInt64(sys.Storage_WLog_Field_Count, 1)
 
 		require.NoError(s.Read(kb, func(key istructs.IKey, _ istructs.IStateValue) (err error) {
 			touched = true
-			require.Equal(int64(1), key.AsInt64(Field_Offset))
+			require.Equal(int64(1), key.AsInt64(sys.Storage_WLog_Field_Offset))
 			return err
 		}))
 
@@ -54,10 +55,10 @@ func TestWLogStorage_Read(t *testing.T) {
 		appStructs.On("Records").Return(&nilRecords{})
 		appStructs.On("ViewRecords").Return(&nilViewRecords{})
 		s := ProvideQueryProcessorStateFactory()(context.Background(), appStructsFunc(appStructs), nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil, nil, nil, nil, nil, nil, nil)
-		k, err := s.KeyBuilder(WLog, appdef.NullQName)
+		k, err := s.KeyBuilder(sys.Storage_WLog, appdef.NullQName)
 		require.NoError(err)
-		k.PutInt64(Field_Offset, 1)
-		k.PutInt64(Field_Count, 1)
+		k.PutInt64(sys.Storage_WLog_Field_Offset, 1)
+		k.PutInt64(sys.Storage_WLog_Field_Count, 1)
 
 		err = s.Read(k, func(istructs.IKey, istructs.IStateValue) error { return nil })
 
@@ -86,26 +87,26 @@ func TestWLogStorage_GetBatch(t *testing.T) {
 		appStructs.On("ViewRecords").Return(&nilViewRecords{})
 		s := ProvideCommandProcessorStateFactory()(context.Background(), func() istructs.IAppStructs { return appStructs },
 			nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil, nil, 0, nil, nil, nil, nil, nil)
-		kb, err := s.KeyBuilder(WLog, appdef.NullQName)
+		kb, err := s.KeyBuilder(sys.Storage_WLog, appdef.NullQName)
 		require.NoError(err)
-		kb.PutInt64(Field_Offset, 1)
-		kb.PutInt64(Field_Count, 1)
+		kb.PutInt64(sys.Storage_WLog_Field_Offset, 1)
+		kb.PutInt64(sys.Storage_WLog_Field_Count, 1)
 
 		sv, ok, err := s.CanExist(kb)
 		require.NoError(err)
 
 		require.True(ok)
-		require.Equal(int64(1), sv.AsInt64(Field_Offset))
+		require.Equal(int64(1), sv.AsInt64(sys.Storage_WLog_Field_Offset))
 
-		cuds := sv.AsValue(Field_CUDs)
+		cuds := sv.AsValue(sys.Storage_WLog_Field_CUDs)
 		cud := cuds.GetAsValue(0)
 
 		require.Equal(1, cuds.Length())
 		require.NotNil(cud)
 		require.PanicsWithValue(errFieldByIndexIsNotAnObjectOrArray, func() { sv.GetAsValue(0) })
-		require.PanicsWithError(errValueFieldUndefined(Field_CUDs).Error(), func() { cud.AsValue(Field_CUDs) })
+		require.PanicsWithError(errValueFieldUndefined(sys.Storage_WLog_Field_CUDs).Error(), func() { cud.AsValue(sys.Storage_WLog_Field_CUDs) })
 		require.PanicsWithValue(errCurrentValueIsNotAnArray, func() { sv.GetAsInt64(0) })
-		require.PanicsWithError(errRecordIDFieldUndefined(Field_Offset).Error(), func() { sv.AsRecordID(Field_Offset) })
+		require.PanicsWithError(errRecordIDFieldUndefined(sys.Storage_WLog_Field_Offset).Error(), func() { sv.AsRecordID(sys.Storage_WLog_Field_Offset) })
 	})
 	t.Run("Should return error when error occurred on read wlog", func(t *testing.T) {
 		require := require.New(t)
@@ -125,14 +126,14 @@ func TestWLogStorage_GetBatch(t *testing.T) {
 		appStructs.On("ViewRecords").Return(&nilViewRecords{})
 		s := ProvideCommandProcessorStateFactory()(context.Background(), func() istructs.IAppStructs { return appStructs },
 			nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil, nil, 0, nil, nil, nil, nil, nil)
-		kb1, err := s.KeyBuilder(WLog, appdef.NullQName)
+		kb1, err := s.KeyBuilder(sys.Storage_WLog, appdef.NullQName)
 		require.NoError(err)
-		kb1.PutInt64(Field_Offset, 1)
-		kb1.PutInt64(Field_Count, 1)
-		kb2, err := s.KeyBuilder(WLog, appdef.NullQName)
+		kb1.PutInt64(sys.Storage_WLog_Field_Offset, 1)
+		kb1.PutInt64(sys.Storage_WLog_Field_Count, 1)
+		kb2, err := s.KeyBuilder(sys.Storage_WLog, appdef.NullQName)
 		require.NoError(err)
-		kb2.PutInt64(Field_Offset, 2)
-		kb2.PutInt64(Field_Count, 1)
+		kb2.PutInt64(sys.Storage_WLog_Field_Offset, 2)
+		kb2.PutInt64(sys.Storage_WLog_Field_Count, 1)
 
 		err = s.CanExistAll([]istructs.IStateKeyBuilder{kb1, kb2}, nil)
 

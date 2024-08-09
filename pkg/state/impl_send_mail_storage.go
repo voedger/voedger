@@ -11,6 +11,7 @@ import (
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/state/smtptest"
+	"github.com/voedger/voedger/pkg/sys"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 	"github.com/wneessen/go-mail"
 )
@@ -34,7 +35,7 @@ type mailKeyBuilder struct {
 }
 
 func (b *mailKeyBuilder) Storage() appdef.QName {
-	return SendMail
+	return sys.Storage_SendMail
 }
 
 func (b *mailKeyBuilder) Equals(src istructs.IKeyBuilder) bool {
@@ -93,23 +94,23 @@ func (b *mailKeyBuilder) Equals(src istructs.IKeyBuilder) bool {
 
 func (b *mailKeyBuilder) PutString(name string, value string) {
 	switch name {
-	case Field_To:
+	case sys.Storage_SendMail_Field_To:
 		b.to = append(b.to, value)
-	case Field_CC:
+	case sys.Storage_SendMail_Field_CC:
 		b.cc = append(b.cc, value)
-	case Field_BCC:
+	case sys.Storage_SendMail_Field_BCC:
 		b.bcc = append(b.bcc, value)
-	case Field_Host:
+	case sys.Storage_SendMail_Field_Host:
 		b.host = value
-	case Field_Username:
+	case sys.Storage_SendMail_Field_Username:
 		b.username = value
-	case Field_Password:
+	case sys.Storage_SendMail_Field_Password:
 		b.password = value
-	case Field_From:
+	case sys.Storage_SendMail_Field_From:
 		b.from = value
-	case Field_Subject:
+	case sys.Storage_SendMail_Field_Subject:
 		b.subject = value
-	case Field_Body:
+	case sys.Storage_SendMail_Field_Body:
 		b.body = value
 	default:
 		b.baseKeyBuilder.PutString(name, value)
@@ -117,7 +118,7 @@ func (b *mailKeyBuilder) PutString(name string, value string) {
 }
 
 func (b *mailKeyBuilder) PutInt32(name string, value int32) {
-	if name == Field_Port {
+	if name == sys.Storage_SendMail_Field_Port {
 		b.port = value
 	} else {
 		b.baseKeyBuilder.PutInt32(name, value)
@@ -143,16 +144,16 @@ func (s *sendMailStorage) Validate(items []ApplyBatchItem) (err error) {
 			return fmt.Errorf("'%s': %w", field, ErrNotFound)
 		}
 		if k.host == "" {
-			return notExists(Field_Host)
+			return notExists(sys.Storage_SendMail_Field_Host)
 		}
 		if k.port == 0 {
-			return notExists(Field_Port)
+			return notExists(sys.Storage_SendMail_Field_Port)
 		}
 		if k.from == "" {
-			return notExists(Field_From)
+			return notExists(sys.Storage_SendMail_Field_From)
 		}
 		if len(item.key.(*mailKeyBuilder).to) == 0 {
-			return fmt.Errorf("'%s': %w", Field_To, ErrNotFound)
+			return fmt.Errorf("'%s': %w", sys.Storage_SendMail_Field_To, ErrNotFound)
 		}
 	}
 	return nil
