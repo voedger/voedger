@@ -300,6 +300,7 @@ func provideStatelessResources(cfgs AppConfigsTypeEmpty, vvmCfg *VVMConfig, appE
 }
 
 func provideAppPartitions(
+	vvmCtx context.Context,
 	asp istructs.IAppStructsProvider,
 	saf appparts.SyncActualizerFactory,
 	act projectors.IActualizersService,
@@ -314,6 +315,7 @@ func provideAppPartitions(
 	})
 
 	return appparts.New2(
+		vvmCtx,
 		asp,
 		saf,
 		act,

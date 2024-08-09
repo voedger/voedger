@@ -209,7 +209,7 @@ func deployTestApp(t *testing.T) (appParts appparts.IAppPartitions, appStructs i
 		SubscriptionsPerSubject: 10,
 	}, time.Now)
 
-	appParts, appPartsCleanup, err := appparts.New2(appStructsProvider,
+	appParts, appPartsCleanup, err := appparts.New2(context.Background(), appStructsProvider,
 		projectors.NewSyncActualizerFactoryFactory(projectors.ProvideSyncActualizerFactory(), secretReader, n10nBroker, statelessResources),
 		appparts.NullActualizersRunner,
 		engines.ProvideExtEngineFactories(
