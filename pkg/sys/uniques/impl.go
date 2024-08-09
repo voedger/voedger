@@ -60,11 +60,11 @@ func update(st istructs.IState, rec istructs.ICUDRow, intents istructs.IIntents,
 	// so came here -> we're updating anything but unique fields
 	// let's check activation\deactivation
 
-	kb, err := st.KeyBuilder(sys.Storage_Uniq, rec.QName())
+	kb, err := st.KeyBuilder(sys.Storage_Record, rec.QName())
 	if err != nil {
 		return err
 	}
-	kb.PutRecordID(sys.Storage_Uniq_Field_ID, rec.ID())
+	kb.PutRecordID(sys.Storage_Record_Field_ID, rec.ID())
 	currentRecord, err := st.MustExist(kb)
 	if err != nil {
 		return err
