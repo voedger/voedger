@@ -60,13 +60,13 @@ func (pp *partitionProcessors) deploy() {
 		}
 		if old {
 			stopWG.Add(1)
-			go func() {
+			go func(rt *procRT) {
 				rt.cancel()
 				for rt.state.Load() >= 0 {
 					time.Sleep(time.Nanosecond) // wait until processor is finished
 				}
 				stopWG.Done()
-			}()
+			}(rt)
 		}
 	}
 	pp.mx.RUnlock()
