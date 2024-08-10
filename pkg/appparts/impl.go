@@ -38,6 +38,7 @@ func newAppPartitions(vvmCtx context.Context, asp istructs.IAppStructsProvider, 
 		apps:                  map[appdef.AppQName]*appRT{},
 	}
 	a.processors[ProcessorKind_Actualizer] = aar
+	aar.SetAppPartitions(a)
 	return a, func() {}, err
 }
 

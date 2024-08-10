@@ -10,6 +10,7 @@ import (
 	"sync"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
@@ -65,6 +66,10 @@ func (*actualizers) Run(context.Context) {
 func (a *actualizers) RunEx(ctx context.Context, started func()) {
 	a.cfg.Ctx = ctx
 	started()
+}
+
+func (a *actualizers) SetAppPartitions(ap appparts.IAppPartitions) {
+	a.cfg.AppPartitions = ap
 }
 
 func (a *actualizers) Stop() {

@@ -89,6 +89,11 @@ type IAppPartition interface {
 //
 // Used by application partitions to run actualizers and schedulers
 type IProcessorRunner interface {
+	// Sets application partitions.
+	//
+	// Should be called before any other method.
+	SetAppPartitions(IAppPartitions)
+
 	// Creates and runs new processor for specified application partition
 	NewAndRun(context.Context, appdef.AppQName, istructs.PartitionID, appdef.QName)
 }

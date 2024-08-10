@@ -16,3 +16,5 @@ type nullProcessorRunner struct{}
 
 func (nullProcessorRunner) NewAndRun(context.Context, appdef.AppQName, istructs.PartitionID, appdef.QName) {
 }
+
+func (nullProcessorRunner) SetAppPartitions(IAppPartitions) {}
