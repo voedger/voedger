@@ -2,7 +2,7 @@
  * Copyright (c) 2022-present unTill Pro, Ltd.
  */
 
-package state
+package stateprovide
 
 import (
 	"context"
@@ -11,22 +11,24 @@ import (
 	"github.com/voedger/voedger/pkg/isecrets"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/itokens"
+	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys"
+	"github.com/voedger/voedger/pkg/sys/storages"
 	"github.com/voedger/voedger/pkg/utils/federation"
 )
 
 type asyncActualizerState struct {
 	*bundledHostState
-	eventFunc PLogEventFunc
+	eventFunc state.PLogEventFunc
 }
 
 func (s *asyncActualizerState) PLogEvent() istructs.IPLogEvent {
 	return s.eventFunc()
 }
 
-func implProvideAsyncActualizerState(ctx context.Context, appStructsFunc AppStructsFunc, partitionIDFunc PartitionIDFunc, wsidFunc WSIDFunc, n10nFunc N10nFunc,
-	secretReader isecrets.ISecretReader, eventFunc PLogEventFunc, tokensFunc itokens.ITokens, federationFunc federation.IFederation,
-	intentsLimit, bundlesLimit int, optFuncs ...StateOptFunc) IBundledHostState {
+func implProvideAsyncActualizerState(ctx context.Context, appStructsFunc state.AppStructsFunc, partitionIDFunc state.PartitionIDFunc, wsidFunc state.WSIDFunc, n10nFunc state.N10nFunc,
+	secretReader isecrets.ISecretReader, eventFunc state.PLogEventFunc, tokensFunc itokens.ITokens, federationFunc federation.IFederation,
+	intentsLimit, bundlesLimit int, optFuncs ...state.StateOptFunc) state.IBundledHostState {
 
 	opts := &stateOpts{}
 	for _, optFunc := range optFuncs {
@@ -76,7 +78,7 @@ func implProvideAsyncActualizerState(ctx context.Context, appStructsFunc AppStru
 		tokens:     tokensFunc,
 	}, S_READ)
 
-	state.addStorage(sys.Storage_AppSecret, &appSecretsStorage{secretReader: secretReader}, S_GET)
+	state.addStorage(sys.Storage_AppSecret, storages.NewAppSecretsStorage(secretReader), S_GET)
 
 	state.addStorage(sys.Storage_Event, &eventStorage{eventFunc: eventFunc}, S_GET)
 

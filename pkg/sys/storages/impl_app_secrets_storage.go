@@ -2,7 +2,7 @@
  * Copyright (c) 2022-present unTill Pro, Ltd.
  */
 
-package state
+package storages
 
 import (
 	"errors"
@@ -11,8 +11,15 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/isecrets"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys"
 )
+
+func NewAppSecretsStorage(secretReader isecrets.ISecretReader) state.IStateStorage {
+	return &appSecretsStorage{
+		secretReader: secretReader,
+	}
+}
 
 type appSecretsStorage struct {
 	secretReader isecrets.ISecretReader

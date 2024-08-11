@@ -59,14 +59,6 @@ var (
 )
 
 const (
-	S_GET       = 1
-	S_GET_BATCH = 2
-	S_READ      = 4
-	S_INSERT    = 8
-	S_UPDATE    = 16
-)
-
-const (
 	Field_Url                           = sys.Storage_Http_Field_Url                              // Deprecated: use sys.Storage_Http_Field_Url instead
 	Field_Method                        = sys.Storage_Http_Field_Method                           // Deprecated: use sys.Storage_Http_Field_Method instead
 	Field_Header                        = sys.Storage_Http_Field_Header                           // Deprecated: use sys.Storage_Http_Field_Header instead
@@ -127,7 +119,6 @@ const (
 )
 
 var (
-	emptyApplyBatchItem          = ApplyBatchItem{}
 	qNameCDocWorkspaceDescriptor = appdef.NewQName(appdef.SysPackage, "WorkspaceDescriptor")
 	field_WSKind                 = "WSKind"
 )

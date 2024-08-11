@@ -2,28 +2,29 @@
  * Copyright (c) 2022-present unTill Pro, Ltd.
  */
 
-package state
+package stateprovide
 
 import (
 	"fmt"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/state/smtptest"
 )
 
 type stateOpts struct {
 	messages                 chan smtptest.Message
-	federationCommandHandler FederationCommandHandler
-	federationBlobHandler    FederationBlobHandler
-	customHttpClient         IHttpClient
-	uniquesHandler           UniquesHandler
+	federationCommandHandler state.FederationCommandHandler
+	federationBlobHandler    state.FederationBlobHandler
+	customHttpClient         state.IHttpClient
+	uniquesHandler           state.UniquesHandler
 }
 
-func SimpleWSIDFunc(wsid istructs.WSID) WSIDFunc {
+func SimpleWSIDFunc(wsid istructs.WSID) state.WSIDFunc {
 	return func() istructs.WSID { return wsid }
 }
-func SimplePartitionIDFunc(partitionID istructs.PartitionID) PartitionIDFunc {
+func SimplePartitionIDFunc(partitionID istructs.PartitionID) state.PartitionIDFunc {
 	return func() istructs.PartitionID { return partitionID }
 }
 func put(fieldName string, kind appdef.DataKind, rr istructs.IRowReader, rw istructs.IRowWriter) {
@@ -47,6 +48,6 @@ func put(fieldName string, kind appdef.DataKind, rr istructs.IRowReader, rw istr
 	case appdef.DataKind_RecordID:
 		rw.PutRecordID(fieldName, rr.AsRecordID(fieldName))
 	default:
-		panic(fmt.Errorf("illegal state: field - '%s', kind - '%d': %w", fieldName, kind, ErrNotSupported))
+		panic(fmt.Errorf("illegal state: field - '%s', kind - '%d': %w", fieldName, kind, state.ErrNotSupported))
 	}
 }
