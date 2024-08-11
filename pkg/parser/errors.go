@@ -69,6 +69,10 @@ func ErrUndefinedRate(name DefQName) error {
 	return fmt.Errorf("undefined rate: %s", name)
 }
 
+func ErrUndefinedView(name DefQName) error {
+	return fmt.Errorf("undefined view: %s", name)
+}
+
 func ErrUndefinedWorkspace(name DefQName) error {
 	return fmt.Errorf("undefined workspace: %s", name.String())
 }
