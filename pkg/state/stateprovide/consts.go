@@ -4,7 +4,10 @@
 */
 package stateprovide
 
-import "github.com/voedger/voedger/pkg/state"
+import (
+	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/state"
+)
 
 const (
 	S_GET       = 1
@@ -15,3 +18,8 @@ const (
 )
 
 var emptyApplyBatchItem = state.ApplyBatchItem{}
+
+var (
+	qNameCDocWorkspaceDescriptor = appdef.NewQName(appdef.SysPackage, "WorkspaceDescriptor")
+	field_WSKind                 = "WSKind"
+)

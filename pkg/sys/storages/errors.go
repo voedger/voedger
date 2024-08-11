@@ -4,7 +4,12 @@
 */
 package storages
 
-import "errors"
+import (
+	"errors"
+	"fmt"
+
+	"github.com/voedger/voedger/pkg/appdef"
+)
 
 var ErrNotSupported = errors.New("not supported")
 var errNotImplemented = errors.New("not implemented")
@@ -58,3 +63,9 @@ func errCharsFieldUndefined(name string) error {
 func errValueFieldUndefined(name string) error {
 	return errors.New("undefined value field: " + name)
 }
+
+func typeIsNotDefinedInWorkspaceWithDescriptor(typ, ws appdef.QName) error {
+	return fmt.Errorf("%s %w %s", typ.String(), ErrQNameIsNotDefinedInWorkspace, ws.String())
+}
+
+var ErrQNameIsNotDefinedInWorkspace = errors.New("qname is not defined in workspace")

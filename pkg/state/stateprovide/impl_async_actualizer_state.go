@@ -30,7 +30,7 @@ func implProvideAsyncActualizerState(ctx context.Context, appStructsFunc state.A
 	secretReader isecrets.ISecretReader, eventFunc state.PLogEventFunc, tokensFunc itokens.ITokens, federationFunc federation.IFederation,
 	intentsLimit, bundlesLimit int, optFuncs ...state.StateOptFunc) state.IBundledHostState {
 
-	opts := &stateOpts{}
+	opts := &StateOpts{}
 	for _, optFunc := range optFuncs {
 		optFunc(opts)
 	}

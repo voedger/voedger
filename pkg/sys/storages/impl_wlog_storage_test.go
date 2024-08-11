@@ -2,10 +2,11 @@
  * Copyright (c) 2022-present unTill Pro, Ltd.
  */
 
-package state
+package storages
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/mock"
@@ -13,6 +14,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/state/stateprovide"
 	"github.com/voedger/voedger/pkg/sys"
 )
 
@@ -124,7 +126,7 @@ func TestWLogStorage_GetBatch(t *testing.T) {
 		appStructs.On("Events").Return(events)
 		appStructs.On("Records").Return(&nilRecords{})
 		appStructs.On("ViewRecords").Return(&nilViewRecords{})
-		s := ProvideCommandProcessorStateFactory()(context.Background(), func() istructs.IAppStructs { return appStructs },
+		s := stateprovide.ProvideCommandProcessorStateFactory()(context.Background(), func() istructs.IAppStructs { return appStructs },
 			nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil, nil, 0, nil, nil, nil, nil, nil)
 		kb1, err := s.KeyBuilder(sys.Storage_WLog, appdef.NullQName)
 		require.NoError(err)
@@ -138,5 +140,19 @@ func TestWLogStorage_GetBatch(t *testing.T) {
 		err = s.CanExistAll([]istructs.IStateKeyBuilder{kb1, kb2}, nil)
 
 		require.ErrorIs(err, errTest)
+	})
+}
+
+func TestWLogKeyBuilder(t *testing.T) {
+	t.Run("String", func(t *testing.T) {
+		s := &wLogStorage{
+			wsidFunc: func() istructs.WSID { return istructs.WSID(42) },
+		}
+		kb := s.NewKeyBuilder(appdef.NullQName, nil)
+		kb.PutInt64(sys.Storage_WLog_Field_Count, 10)
+		kb.PutInt64(sys.Storage_WLog_Field_Offset, 20)
+		kb.PutInt64(sys.Storage_WLog_Field_WSID, 30)
+
+		require.Equal(t, "wlog wsid - 30, offset - 20, count - 10", kb.(fmt.Stringer).String())
 	})
 }

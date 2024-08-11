@@ -2,7 +2,7 @@
  * Copyright (c) 2022-present unTill Pro, Ltd.
  */
 
-package state
+package storages
 
 import (
 	"fmt"
@@ -11,13 +11,14 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys"
 )
 
 type recordsStorage struct {
 	recordsFunc      recordsFunc
-	cudFunc          CUDFunc
-	wsidFunc         WSIDFunc
+	cudFunc          state.CUDFunc
+	wsidFunc         state.WSIDFunc
 	wsTypeVailidator wsTypeVailidator
 }
 
@@ -102,7 +103,7 @@ func (b *recordsKeyBuilder) PutQName(name string, value appdef.QName) {
 	b.baseKeyBuilder.PutQName(name, value)
 }
 
-func newRecordsStorage(appStructsFunc AppStructsFunc, wsidFunc WSIDFunc, cudFunc CUDFunc) *recordsStorage {
+func newRecordsStorage(appStructsFunc state.AppStructsFunc, wsidFunc state.WSIDFunc, cudFunc state.CUDFunc) *recordsStorage {
 	return &recordsStorage{
 		recordsFunc:      func() istructs.IRecords { return appStructsFunc().Records() },
 		wsidFunc:         wsidFunc,
@@ -145,7 +146,7 @@ func (s *recordsStorage) Get(key istructs.IStateKeyBuilder) (value istructs.ISta
 	}
 	if k.id == istructs.NullRecordID {
 		// error message according to https://dev.untill.com/projects/#!637229
-		return nil, fmt.Errorf("value of one of RecordID fields is 0: %w", ErrNotFound)
+		return nil, fmt.Errorf("value of one of RecordID fields is 0: %w", state.ErrNotFound)
 	}
 	record, err := s.recordsFunc().Get(k.wsid, true, k.id)
 	if err != nil {
@@ -157,7 +158,7 @@ func (s *recordsStorage) Get(key istructs.IStateKeyBuilder) (value istructs.ISta
 	return &recordsValue{record: record}, nil
 }
 
-func (s *recordsStorage) GetBatch(items []GetBatchItem) (err error) {
+func (s *recordsStorage) GetBatch(items []state.GetBatchItem) (err error) {
 	type getSingletonParams struct {
 		wsid    istructs.WSID
 		qname   appdef.QName
@@ -167,7 +168,7 @@ func (s *recordsStorage) GetBatch(items []GetBatchItem) (err error) {
 	batches := make(map[istructs.WSID][]istructs.RecordGetBatchItem)
 	gg := make([]getSingletonParams, 0)
 	for itemIdx, item := range items {
-		k := item.key.(*recordsKeyBuilder)
+		k := item.Key.(*recordsKeyBuilder)
 		if k.isSingleton || k.singleton != appdef.NullQName {
 			qname := k.singleton // for compatibility
 			if k.isSingleton {
@@ -186,7 +187,7 @@ func (s *recordsStorage) GetBatch(items []GetBatchItem) (err error) {
 		}
 		if k.id == istructs.NullRecordID {
 			// error message according to https://dev.untill.com/projects/#!637229
-			return fmt.Errorf("value of one of RecordID fields is 0: %w", ErrNotFound)
+			return fmt.Errorf("value of one of RecordID fields is 0: %w", state.ErrNotFound)
 		}
 		wsidToItemIdx[k.wsid] = append(wsidToItemIdx[k.wsid], itemIdx)
 		batches[k.wsid] = append(batches[k.wsid], istructs.RecordGetBatchItem{ID: k.id})
@@ -200,7 +201,7 @@ func (s *recordsStorage) GetBatch(items []GetBatchItem) (err error) {
 			if batchItem.Record.QName() == appdef.NullQName {
 				continue
 			}
-			items[wsidToItemIdx[wsid][i]].value = &recordsValue{record: batchItem.Record}
+			items[wsidToItemIdx[wsid][i]].Value = &recordsValue{record: batchItem.Record}
 		}
 	}
 	for _, g := range gg {
@@ -211,12 +212,12 @@ func (s *recordsStorage) GetBatch(items []GetBatchItem) (err error) {
 		if singleton.QName() == appdef.NullQName {
 			continue
 		}
-		items[g.itemIdx].value = &recordsValue{record: singleton}
+		items[g.itemIdx].Value = &recordsValue{record: singleton}
 	}
 	return err
 }
-func (s *recordsStorage) Validate([]ApplyBatchItem) (err error)   { return }
-func (s *recordsStorage) ApplyBatch([]ApplyBatchItem) (err error) { return }
+func (s *recordsStorage) Validate([]state.ApplyBatchItem) (err error)   { return }
+func (s *recordsStorage) ApplyBatch([]state.ApplyBatchItem) (err error) { return }
 func (s *recordsStorage) ProvideValueBuilder(key istructs.IStateKeyBuilder, _ istructs.IStateValueBuilder) (istructs.IStateValueBuilder, error) {
 	kb := key.(*recordsKeyBuilder)
 	if kb.entity == appdef.NullQName {
@@ -268,4 +269,25 @@ func (b *recordsValueBuilder) PutQName(name string, value appdef.QName) { b.rw.P
 func (b *recordsValueBuilder) PutNumber(name string, value float64)     { b.rw.PutNumber(name, value) }
 func (b *recordsValueBuilder) PutRecordID(name string, value istructs.RecordID) {
 	b.rw.PutRecordID(name, value)
+}
+
+type recordsValue struct {
+	baseStateValue
+	record istructs.IRecord
+}
+
+func (v *recordsValue) AsInt32(name string) int32        { return v.record.AsInt32(name) }
+func (v *recordsValue) AsInt64(name string) int64        { return v.record.AsInt64(name) }
+func (v *recordsValue) AsFloat32(name string) float32    { return v.record.AsFloat32(name) }
+func (v *recordsValue) AsFloat64(name string) float64    { return v.record.AsFloat64(name) }
+func (v *recordsValue) AsBytes(name string) []byte       { return v.record.AsBytes(name) }
+func (v *recordsValue) AsString(name string) string      { return v.record.AsString(name) }
+func (v *recordsValue) AsQName(name string) appdef.QName { return v.record.AsQName(name) }
+func (v *recordsValue) AsBool(name string) bool          { return v.record.AsBool(name) }
+func (v *recordsValue) AsRecordID(name string) istructs.RecordID {
+	return v.record.AsRecordID(name)
+}
+func (v *recordsValue) AsRecord(string) (record istructs.IRecord) { return v.record }
+func (v *recordsValue) FieldNames(cb func(fieldName string)) {
+	v.record.FieldNames(cb)
 }

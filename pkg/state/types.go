@@ -7,10 +7,9 @@ package state
 import (
 	"context"
 	"encoding/base64"
-	"fmt"
+	"io"
 	"maps"
-	"reflect"
-	"strings"
+	"time"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/iauthnz"
@@ -18,7 +17,7 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/itokens"
 	"github.com/voedger/voedger/pkg/state/smtptest"
-	"github.com/voedger/voedger/pkg/sys"
+
 	"github.com/voedger/voedger/pkg/utils/federation"
 )
 
@@ -45,50 +44,66 @@ type SyncActualizerStateFactory func(ctx context.Context, appStructsFunc AppStru
 type QueryProcessorStateFactory func(ctx context.Context, appStructsFunc AppStructsFunc, partitionIDFunc PartitionIDFunc, wsidFunc WSIDFunc, secretReader isecrets.ISecretReader, principalPayloadFunc PrincipalsFunc, tokenFunc TokenFunc, itokens itokens.ITokens, execQueryArgsFunc PrepareArgsFunc, argFunc ArgFunc, resultBuilderFunc ObjectBuilderFunc, federation federation.IFederation, queryCallbackFunc ExecQueryCallbackFunc, opts ...StateOptFunc) IHostState
 type AsyncActualizerStateFactory func(ctx context.Context, appStructsFunc AppStructsFunc, partitionIDFunc PartitionIDFunc, wsidFunc WSIDFunc, n10nFunc N10nFunc, secretReader isecrets.ISecretReader, eventFunc PLogEventFunc, tokensFunc itokens.ITokens, federationFunc federation.IFederation, intentsLimit, bundlesLimit int, opts ...StateOptFunc) IBundledHostState
 
+type FederationCommandHandler = func(owner, appname string, wsid istructs.WSID, command appdef.QName, body string) (statusCode int, newIDs map[string]int64, result string, err error)
+type FederationBlobHandler = func(owner, appname string, wsid istructs.WSID, blobId int64) (result []byte, err error)
+type UniquesHandler = func(entity appdef.QName, wsid istructs.WSID, data map[string]interface{}) (istructs.RecordID, error)
+
 type eventsFunc func() istructs.IEvents
 type recordsFunc func() istructs.IRecords
 
-type ApplyBatchItem struct {
-	key   istructs.IStateKeyBuilder
-	value istructs.IStateValueBuilder
-	isNew bool
+type StateOptFunc func(opts *StateOpts)
+
+type IHttpClient interface {
+	Request(timeout time.Duration, method, url string, body io.Reader, headers map[string]string) (statusCode int, resBody []byte, resHeaders map[string][]string, err error)
 }
 
-type GetBatchItem struct {
-	key   istructs.IStateKeyBuilder
-	value istructs.IStateValue
+type StateOpts struct {
+	messages                 chan smtptest.Message
+	federationCommandHandler FederationCommandHandler
+	federationBlobHandler    FederationBlobHandler
+	customHttpClient         IHttpClient
+	uniquesHandler           UniquesHandler
 }
-
-type StateOptFunc func(opts *stateOpts)
 
 func WithEmailMessagesChan(messages chan smtptest.Message) StateOptFunc {
-	return func(opts *stateOpts) {
+	return func(opts *StateOpts) {
 		opts.messages = messages
 	}
 }
 
 func WithCustomHttpClient(client IHttpClient) StateOptFunc {
-	return func(opts *stateOpts) {
+	return func(opts *StateOpts) {
 		opts.customHttpClient = client
 	}
 }
 
 func WithFedearationCommandHandler(handler FederationCommandHandler) StateOptFunc {
-	return func(opts *stateOpts) {
+	return func(opts *StateOpts) {
 		opts.federationCommandHandler = handler
 	}
 }
 
 func WithFederationBlobHandler(handler FederationBlobHandler) StateOptFunc {
-	return func(opts *stateOpts) {
+	return func(opts *StateOpts) {
 		opts.federationBlobHandler = handler
 	}
 }
 
 func WithUniquesHandler(handler UniquesHandler) StateOptFunc {
-	return func(opts *stateOpts) {
+	return func(opts *StateOpts) {
 		opts.uniquesHandler = handler
 	}
+}
+
+type ApplyBatchItem struct {
+	Key   istructs.IStateKeyBuilder
+	Value istructs.IStateValueBuilder
+	IsNew bool
+}
+
+type GetBatchItem struct {
+	Key   istructs.IStateKeyBuilder
+	Value istructs.IStateValue
 }
 
 type mapKeyBuilder struct {
@@ -138,110 +153,6 @@ func (b *mapKeyBuilder) Equals(src istructs.IKeyBuilder) bool {
 	return true
 }
 func (b *mapKeyBuilder) ToBytes(istructs.WSID) ([]byte, []byte, error) { panic(ErrNotSupported) }
-
-type viewKeyBuilder struct {
-	istructs.IKeyBuilder
-	wsid istructs.WSID
-	view appdef.QName
-}
-
-func (b *viewKeyBuilder) PutInt64(name string, value int64) {
-	if name == sys.Storage_View_Field_WSID {
-		b.wsid = istructs.WSID(value)
-		return
-	}
-	b.IKeyBuilder.PutInt64(name, value)
-}
-func (b *viewKeyBuilder) PutQName(name string, value appdef.QName) {
-	if name == appdef.SystemField_QName {
-		b.wsid = istructs.NullWSID
-		b.view = value
-	}
-	b.IKeyBuilder.PutQName(name, value)
-}
-func (b *viewKeyBuilder) Entity() appdef.QName {
-	return b.view
-}
-func (b *viewKeyBuilder) Storage() appdef.QName {
-	return sys.Storage_View
-}
-func (b *viewKeyBuilder) Equals(src istructs.IKeyBuilder) bool {
-	kb, ok := src.(*viewKeyBuilder)
-	if !ok {
-		return false
-	}
-	if b.wsid != kb.wsid {
-		return false
-	}
-	if b.view != kb.view {
-		return false
-	}
-	return b.IKeyBuilder.Equals(kb.IKeyBuilder)
-}
-
-type viewValueBuilder struct {
-	istructs.IValueBuilder
-	offset istructs.Offset
-	entity appdef.QName
-}
-
-// used in tests
-func (b *viewValueBuilder) Equal(src istructs.IStateValueBuilder) bool {
-	bThis, err := b.IValueBuilder.ToBytes()
-	if err != nil {
-		panic(err)
-	}
-
-	bSrc, err := src.ToBytes()
-	if err != nil {
-		panic(err)
-	}
-
-	return reflect.DeepEqual(bThis, bSrc)
-}
-
-func (b *viewValueBuilder) PutInt64(name string, value int64) {
-	if name == ColOffset {
-		b.offset = istructs.Offset(value)
-	}
-	b.IValueBuilder.PutInt64(name, value)
-}
-func (b *viewValueBuilder) PutQName(name string, value appdef.QName) {
-	if name == appdef.SystemField_QName {
-		b.offset = istructs.NullOffset
-	}
-	b.IValueBuilder.PutQName(name, value)
-}
-func (b *viewValueBuilder) Build() istructs.IValue {
-	return b.IValueBuilder.Build()
-}
-
-func (b *viewValueBuilder) BuildValue() istructs.IStateValue {
-	return &viewValue{
-		value: b.Build(),
-	}
-}
-
-type recordsValue struct {
-	baseStateValue
-	record istructs.IRecord
-}
-
-func (v *recordsValue) AsInt32(name string) int32        { return v.record.AsInt32(name) }
-func (v *recordsValue) AsInt64(name string) int64        { return v.record.AsInt64(name) }
-func (v *recordsValue) AsFloat32(name string) float32    { return v.record.AsFloat32(name) }
-func (v *recordsValue) AsFloat64(name string) float64    { return v.record.AsFloat64(name) }
-func (v *recordsValue) AsBytes(name string) []byte       { return v.record.AsBytes(name) }
-func (v *recordsValue) AsString(name string) string      { return v.record.AsString(name) }
-func (v *recordsValue) AsQName(name string) appdef.QName { return v.record.AsQName(name) }
-func (v *recordsValue) AsBool(name string) bool          { return v.record.AsBool(name) }
-func (v *recordsValue) AsRecordID(name string) istructs.RecordID {
-	return v.record.AsRecordID(name)
-}
-func (v *recordsValue) AsRecord(string) (record istructs.IRecord) { return v.record }
-func (v *recordsValue) FieldNames(cb func(fieldName string)) {
-	v.record.FieldNames(cb)
-}
 
 type objectArrayContainerValue struct {
 	baseStateValue
@@ -419,36 +330,6 @@ func (v *objectValue) AsValue(name string) (result istructs.IStateValue) {
 	return
 }
 
-type httpValue struct {
-	istructs.IStateValue
-	body       []byte
-	header     map[string][]string
-	statusCode int
-}
-
-func (v *httpValue) AsBytes(string) []byte { return v.body }
-func (v *httpValue) AsInt32(string) int32  { return int32(v.statusCode) }
-func (v *httpValue) AsString(name string) string {
-	if name == sys.Storage_Http_Field_Header {
-		var res strings.Builder
-		for k, v := range v.header {
-			if len(v) > 0 {
-				if res.Len() > 0 {
-					res.WriteString("\n")
-				}
-				res.WriteString(fmt.Sprintf("%s: %s", k, v[0])) // FIXME: len(v)>2 ?
-			}
-		}
-		return res.String()
-	}
-	return string(v.body)
-}
-
-type n10n struct {
-	wsid istructs.WSID
-	view appdef.QName
-}
-
 type key struct {
 	istructs.IKey
 	data map[string]interface{}
@@ -456,144 +337,7 @@ type key struct {
 
 func (k *key) AsInt64(name string) int64 { return k.data[name].(int64) }
 
-type viewValue struct {
-	baseStateValue
-	value istructs.IValue
-}
-
-func (v *viewValue) AsInt32(name string) int32        { return v.value.AsInt32(name) }
-func (v *viewValue) AsInt64(name string) int64        { return v.value.AsInt64(name) }
-func (v *viewValue) AsFloat32(name string) float32    { return v.value.AsFloat32(name) }
-func (v *viewValue) AsFloat64(name string) float64    { return v.value.AsFloat64(name) }
-func (v *viewValue) AsBytes(name string) []byte       { return v.value.AsBytes(name) }
-func (v *viewValue) AsString(name string) string      { return v.value.AsString(name) }
-func (v *viewValue) AsQName(name string) appdef.QName { return v.value.AsQName(name) }
-func (v *viewValue) AsBool(name string) bool          { return v.value.AsBool(name) }
-func (v *viewValue) AsRecordID(name string) istructs.RecordID {
-	return v.value.AsRecordID(name)
-}
-func (v *viewValue) AsRecord(name string) istructs.IRecord {
-	return v.value.AsRecord(name)
-}
-
-type eventErrorValue struct {
-	istructs.IStateValue
-	error istructs.IEventError
-}
-
-func (v *eventErrorValue) AsString(name string) string {
-	if name == sys.Storage_Event_Field_ErrStr {
-		return v.error.ErrStr()
-	}
-	panic(ErrNotSupported)
-}
-
-func (v *eventErrorValue) AsBool(name string) bool {
-	if name == sys.Storage_Event_Field_ValidEvent {
-		return v.error.ValidEvent()
-	}
-	panic(ErrNotSupported)
-}
-
-func (v *eventErrorValue) AsQName(name string) appdef.QName {
-	if name == sys.Storage_Event_Field_QNameFromParams {
-		return v.error.QNameFromParams()
-	}
-	panic(ErrNotSupported)
-}
-
-type cudsValue struct {
-	istructs.IStateValue
-	cuds []istructs.ICUDRow
-}
-
-func (v *cudsValue) Length() int { return len(v.cuds) }
-func (v *cudsValue) GetAsValue(index int) istructs.IStateValue {
-	return &cudRowValue{value: v.cuds[index]}
-}
-
-type cudRowValue struct {
-	baseStateValue
-	value istructs.ICUDRow
-}
-
-func (v *cudRowValue) AsInt32(name string) int32        { return v.value.AsInt32(name) }
-func (v *cudRowValue) AsInt64(name string) int64        { return v.value.AsInt64(name) }
-func (v *cudRowValue) AsFloat32(name string) float32    { return v.value.AsFloat32(name) }
-func (v *cudRowValue) AsFloat64(name string) float64    { return v.value.AsFloat64(name) }
-func (v *cudRowValue) AsBytes(name string) []byte       { return v.value.AsBytes(name) }
-func (v *cudRowValue) AsString(name string) string      { return v.value.AsString(name) }
-func (v *cudRowValue) AsQName(name string) appdef.QName { return v.value.AsQName(name) }
-func (v *cudRowValue) AsBool(name string) bool {
-	if name == sys.CUDs_Field_IsNew {
-		return v.value.IsNew()
-	}
-	return v.value.AsBool(name)
-}
-func (v *cudRowValue) AsRecordID(name string) istructs.RecordID {
-	return v.value.AsRecordID(name)
-}
-
 type wsTypeKey struct {
 	wsid     istructs.WSID
 	appQName appdef.AppQName
-}
-
-type wsTypeVailidator struct {
-	appStructsFunc AppStructsFunc
-	wsidKinds      map[wsTypeKey]appdef.QName
-}
-
-func newWsTypeValidator(appStructsFunc AppStructsFunc) wsTypeVailidator {
-	return wsTypeVailidator{
-		appStructsFunc: appStructsFunc,
-		wsidKinds:      make(map[wsTypeKey]appdef.QName),
-	}
-}
-
-// Returns NullQName if not found
-func (v *wsTypeVailidator) getWSIDKind(wsid istructs.WSID, entity appdef.QName) (appdef.QName, error) {
-	key := wsTypeKey{wsid: wsid, appQName: v.appStructsFunc().AppQName()}
-	wsKind, ok := v.wsidKinds[key]
-	if !ok {
-		wsDesc, err := v.appStructsFunc().Records().GetSingleton(wsid, qNameCDocWorkspaceDescriptor)
-		if err != nil {
-			// notest
-			return appdef.NullQName, err
-		}
-		if wsDesc.QName() == appdef.NullQName {
-			if v.appStructsFunc().AppDef().WorkspaceByDescriptor(entity) != nil {
-				// Special case. sys.CreateWorkspace creates WSKind while WorkspaceDescriptor is not applied yet.
-				return entity, nil
-			}
-			return appdef.NullQName, fmt.Errorf("%w: %d", errWorkspaceDescriptorNotFound, wsid)
-		}
-		wsKind = wsDesc.AsQName(field_WSKind)
-		if len(v.wsidKinds) < wsidTypeValidatorCacheSize {
-			v.wsidKinds[key] = wsKind
-		}
-	}
-	return wsKind, nil
-}
-
-func (v *wsTypeVailidator) validate(wsid istructs.WSID, entity appdef.QName) error {
-	if entity == qNameCDocWorkspaceDescriptor {
-		return nil // This QName always can be read and write. Otherwise sys.CreateWorkspace is not able to create descriptor.
-	}
-	if wsid != istructs.NullWSID && v.appStructsFunc().Records() != nil { // NullWSID only stores actualizer offsets
-		wsKind, err := v.getWSIDKind(wsid, entity)
-		if err != nil {
-			// notest
-			return err
-		}
-		ws := v.appStructsFunc().AppDef().WorkspaceByDescriptor(wsKind)
-		if ws == nil {
-			// notest
-			return errDescriptorForUndefinedWorkspace
-		}
-		if ws.TypeByName(entity) == nil {
-			return typeIsNotDefinedInWorkspaceWithDescriptor(entity, wsKind)
-		}
-	}
-	return nil
 }

@@ -2,26 +2,29 @@
  * Copyright (c) 2022-present unTill Pro, Ltd.
  */
 
-package state
+package storages
 
 import (
 	"context"
 	"errors"
+	"reflect"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
+	"github.com/voedger/voedger/pkg/state"
+	"github.com/voedger/voedger/pkg/sys"
 )
 
 type viewRecordsStorage struct {
 	ctx              context.Context
-	appStructsFunc   AppStructsFunc
-	wsidFunc         WSIDFunc
-	n10nFunc         N10nFunc
+	appStructsFunc   state.AppStructsFunc
+	wsidFunc         state.WSIDFunc
+	n10nFunc         state.N10nFunc
 	wsTypeVailidator wsTypeVailidator
 }
 
-func newViewRecordsStorage(ctx context.Context, appStructsFunc AppStructsFunc, wsidFunc WSIDFunc, n10nFunc N10nFunc) *viewRecordsStorage {
+func newViewRecordsStorage(ctx context.Context, appStructsFunc state.AppStructsFunc, wsidFunc state.WSIDFunc, n10nFunc state.N10nFunc) *viewRecordsStorage {
 	return &viewRecordsStorage{
 		ctx:              ctx,
 		appStructsFunc:   appStructsFunc,
@@ -60,11 +63,11 @@ func (s *viewRecordsStorage) Get(key istructs.IStateKeyBuilder) (value istructs.
 	}, nil
 }
 
-func (s *viewRecordsStorage) GetBatch(items []GetBatchItem) (err error) {
+func (s *viewRecordsStorage) GetBatch(items []state.GetBatchItem) (err error) {
 	wsidToItemIdx := make(map[istructs.WSID][]int)
 	batches := make(map[istructs.WSID][]istructs.ViewRecordGetBatchItem)
 	for itemIdx, item := range items {
-		k := item.key.(*viewKeyBuilder)
+		k := item.Key.(*viewKeyBuilder)
 		if err = s.wsTypeVailidator.validate(k.wsid, k.view); err != nil {
 			return err
 		}
@@ -81,7 +84,7 @@ func (s *viewRecordsStorage) GetBatch(items []GetBatchItem) (err error) {
 			if !batchItem.Ok {
 				continue
 			}
-			items[itemIndex].value = &viewValue{
+			items[itemIndex].Value = &viewValue{
 				value: batchItem.Value,
 			}
 		}
@@ -100,13 +103,13 @@ func (s *viewRecordsStorage) Read(kb istructs.IStateKeyBuilder, callback istruct
 	}
 	return s.appStructsFunc().ViewRecords().Read(s.ctx, k.wsid, k.IKeyBuilder, cb)
 }
-func (s *viewRecordsStorage) Validate([]ApplyBatchItem) (err error) { return err }
-func (s *viewRecordsStorage) ApplyBatch(items []ApplyBatchItem) (err error) {
+func (s *viewRecordsStorage) Validate([]state.ApplyBatchItem) (err error) { return err }
+func (s *viewRecordsStorage) ApplyBatch(items []state.ApplyBatchItem) (err error) {
 	batches := make(map[istructs.WSID][]istructs.ViewKV)
 	nn := make(map[n10n]istructs.Offset)
 	for _, item := range items {
-		k := item.key.(*viewKeyBuilder)
-		v := item.value.(*viewValueBuilder)
+		k := item.Key.(*viewKeyBuilder)
+		v := item.Value.(*viewValueBuilder)
 		batches[k.wsid] = append(batches[k.wsid], istructs.ViewKV{Key: k.IKeyBuilder, Value: v.IValueBuilder})
 		if nn[n10n{wsid: k.wsid, view: k.view}] < v.offset {
 			nn[n10n{wsid: k.wsid, view: k.view}] = v.offset
@@ -155,4 +158,112 @@ func (s *viewRecordsStorage) ProvideValueBuilderForUpdate(kb istructs.IStateKeyB
 		offset:        istructs.NullOffset,
 		entity:        kb.Entity(),
 	}, nil
+}
+
+type viewKeyBuilder struct {
+	istructs.IKeyBuilder
+	wsid istructs.WSID
+	view appdef.QName
+}
+
+func (b *viewKeyBuilder) PutInt64(name string, value int64) {
+	if name == sys.Storage_View_Field_WSID {
+		b.wsid = istructs.WSID(value)
+		return
+	}
+	b.IKeyBuilder.PutInt64(name, value)
+}
+func (b *viewKeyBuilder) PutQName(name string, value appdef.QName) {
+	if name == appdef.SystemField_QName {
+		b.wsid = istructs.NullWSID
+		b.view = value
+	}
+	b.IKeyBuilder.PutQName(name, value)
+}
+func (b *viewKeyBuilder) Entity() appdef.QName {
+	return b.view
+}
+func (b *viewKeyBuilder) Storage() appdef.QName {
+	return sys.Storage_View
+}
+func (b *viewKeyBuilder) Equals(src istructs.IKeyBuilder) bool {
+	kb, ok := src.(*viewKeyBuilder)
+	if !ok {
+		return false
+	}
+	if b.wsid != kb.wsid {
+		return false
+	}
+	if b.view != kb.view {
+		return false
+	}
+	return b.IKeyBuilder.Equals(kb.IKeyBuilder)
+}
+
+type viewValueBuilder struct {
+	istructs.IValueBuilder
+	offset istructs.Offset
+	entity appdef.QName
+}
+
+// used in tests
+func (b *viewValueBuilder) Equal(src istructs.IStateValueBuilder) bool {
+	bThis, err := b.IValueBuilder.ToBytes()
+	if err != nil {
+		panic(err)
+	}
+
+	bSrc, err := src.ToBytes()
+	if err != nil {
+		panic(err)
+	}
+
+	return reflect.DeepEqual(bThis, bSrc)
+}
+
+func (b *viewValueBuilder) PutInt64(name string, value int64) {
+	if name == ColOffset {
+		b.offset = istructs.Offset(value)
+	}
+	b.IValueBuilder.PutInt64(name, value)
+}
+func (b *viewValueBuilder) PutQName(name string, value appdef.QName) {
+	if name == appdef.SystemField_QName {
+		b.offset = istructs.NullOffset
+	}
+	b.IValueBuilder.PutQName(name, value)
+}
+func (b *viewValueBuilder) Build() istructs.IValue {
+	return b.IValueBuilder.Build()
+}
+
+func (b *viewValueBuilder) BuildValue() istructs.IStateValue {
+	return &viewValue{
+		value: b.Build(),
+	}
+}
+
+type viewValue struct {
+	baseStateValue
+	value istructs.IValue
+}
+
+func (v *viewValue) AsInt32(name string) int32        { return v.value.AsInt32(name) }
+func (v *viewValue) AsInt64(name string) int64        { return v.value.AsInt64(name) }
+func (v *viewValue) AsFloat32(name string) float32    { return v.value.AsFloat32(name) }
+func (v *viewValue) AsFloat64(name string) float64    { return v.value.AsFloat64(name) }
+func (v *viewValue) AsBytes(name string) []byte       { return v.value.AsBytes(name) }
+func (v *viewValue) AsString(name string) string      { return v.value.AsString(name) }
+func (v *viewValue) AsQName(name string) appdef.QName { return v.value.AsQName(name) }
+func (v *viewValue) AsBool(name string) bool          { return v.value.AsBool(name) }
+func (v *viewValue) AsRecordID(name string) istructs.RecordID {
+	return v.value.AsRecordID(name)
+}
+func (v *viewValue) AsRecord(name string) istructs.IRecord {
+	return v.value.AsRecord(name)
+}
+
+type n10n struct {
+	wsid istructs.WSID
+	view appdef.QName
 }

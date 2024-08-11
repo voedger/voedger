@@ -10,23 +10,8 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/state"
-	"github.com/voedger/voedger/pkg/state/smtptest"
 )
 
-type stateOpts struct {
-	messages                 chan smtptest.Message
-	federationCommandHandler state.FederationCommandHandler
-	federationBlobHandler    state.FederationBlobHandler
-	customHttpClient         state.IHttpClient
-	uniquesHandler           state.UniquesHandler
-}
-
-func SimpleWSIDFunc(wsid istructs.WSID) state.WSIDFunc {
-	return func() istructs.WSID { return wsid }
-}
-func SimplePartitionIDFunc(partitionID istructs.PartitionID) state.PartitionIDFunc {
-	return func() istructs.PartitionID { return partitionID }
-}
 func put(fieldName string, kind appdef.DataKind, rr istructs.IRowReader, rw istructs.IRowWriter) {
 	switch kind {
 	case appdef.DataKind_int32:

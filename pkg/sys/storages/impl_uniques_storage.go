@@ -2,7 +2,7 @@
  * Copyright (c) 2022-present unTill Pro, Ltd.
  */
 
-package state
+package storages
 
 import (
 	"github.com/voedger/voedger/pkg/appdef"
@@ -10,8 +10,6 @@ import (
 	"github.com/voedger/voedger/pkg/sys"
 	"github.com/voedger/voedger/pkg/sys/uniques"
 )
-
-type UniquesHandler = func(entity appdef.QName, wsid istructs.WSID, data map[string]interface{}) (istructs.RecordID, error)
 
 type uniquesStorage struct {
 	uniqiesHandler UniquesHandler

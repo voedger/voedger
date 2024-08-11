@@ -2,7 +2,7 @@
  * Copyright (c) 2023-present unTill Pro, Ltd.
  */
 
-package state
+package storages
 
 import (
 	"github.com/voedger/voedger/pkg/appdef"
@@ -100,4 +100,30 @@ func (s *eventStorage) Get(_ istructs.IStateKeyBuilder) (istructs.IStateValue, e
 	return &eventValue{
 		event: s.eventFunc(),
 	}, nil
+}
+
+type eventErrorValue struct {
+	istructs.IStateValue
+	error istructs.IEventError
+}
+
+func (v *eventErrorValue) AsString(name string) string {
+	if name == sys.Storage_Event_Field_ErrStr {
+		return v.error.ErrStr()
+	}
+	panic(ErrNotSupported)
+}
+
+func (v *eventErrorValue) AsBool(name string) bool {
+	if name == sys.Storage_Event_Field_ValidEvent {
+		return v.error.ValidEvent()
+	}
+	panic(ErrNotSupported)
+}
+
+func (v *eventErrorValue) AsQName(name string) appdef.QName {
+	if name == sys.Storage_Event_Field_QNameFromParams {
+		return v.error.QNameFromParams()
+	}
+	panic(ErrNotSupported)
 }

@@ -38,7 +38,7 @@ func implProvideCommandProcessorState(
 	wlogOffsetFunc WLogOffsetFunc,
 	options ...StateOptFunc) IHostState {
 
-	opts := &stateOpts{}
+	opts := &StateOpts{}
 	for _, optFunc := range options {
 		optFunc(opts)
 	}

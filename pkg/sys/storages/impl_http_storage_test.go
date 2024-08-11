@@ -2,7 +2,7 @@
  * Copyright (c) 2022-present unTill Pro, Ltd.
  */
 
-package state
+package storages
 
 import (
 	"context"
@@ -98,4 +98,14 @@ func TestHttpStorage_NewKeyBuilder_should_refresh_key_builder(t *testing.T) {
 	require.Equal("", hskb.method)
 	require.Empty(hskb.headers)
 	require.Empty(hskb.body)
+}
+
+func TestHttpStorageKeyBuilder_headers(t *testing.T) {
+	require := require.New(t)
+	k := &httpStorageKeyBuilder{headers: make(map[string]string)}
+	k.PutString(sys.Storage_Http_Field_Header, "key: hello:world")
+
+	headers := k.headers
+
+	require.Equal("hello:world", headers["key"])
 }

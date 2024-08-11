@@ -2,7 +2,7 @@
  * Copyright (c) 2022-present unTill Pro, Ltd.
  */
 
-package state
+package storages
 
 import (
 	"encoding/json"
@@ -14,6 +14,7 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/itokens"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
+	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 	"github.com/voedger/voedger/pkg/utils/federation"
@@ -23,13 +24,12 @@ const (
 	ContentType = "Content-Type"
 )
 
-type FederationCommandHandler = func(owner, appname string, wsid istructs.WSID, command appdef.QName, body string) (statusCode int, newIDs map[string]int64, result string, err error)
 type federationCommandStorage struct {
-	appStructs AppStructsFunc
-	wsid       WSIDFunc
+	appStructs state.AppStructsFunc
+	wsid       state.WSIDFunc
 	federation federation.IFederation
 	tokens     itokens.ITokens
-	emulation  FederationCommandHandler
+	emulation  state.FederationCommandHandler
 }
 
 type federationCommandKeyBuilder struct {

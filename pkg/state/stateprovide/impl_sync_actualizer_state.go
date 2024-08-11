@@ -23,7 +23,7 @@ func (s *syncActualizerState) PLogEvent() istructs.IPLogEvent {
 
 func implProvideSyncActualizerState(ctx context.Context, appStructsFunc AppStructsFunc, partitionIDFunc PartitionIDFunc,
 	wsidFunc WSIDFunc, n10nFunc N10nFunc, secretReader isecrets.ISecretReader, eventFunc PLogEventFunc, intentsLimit int, options ...StateOptFunc) IHostState {
-	opts := &stateOpts{}
+	opts := &StateOpts{}
 	for _, optFunc := range options {
 		optFunc(opts)
 	}

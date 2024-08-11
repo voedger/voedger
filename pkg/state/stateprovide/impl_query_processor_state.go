@@ -44,7 +44,7 @@ func implProvideQueryProcessorState(
 	queryCallbackFunc ExecQueryCallbackFunc,
 	options ...StateOptFunc) IHostState {
 
-	opts := &stateOpts{}
+	opts := &StateOpts{}
 	for _, optFunc := range options {
 		optFunc(opts)
 	}

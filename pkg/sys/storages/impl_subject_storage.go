@@ -2,7 +2,7 @@
  * Copyright (c) 2023-present unTill Pro, Ltd.
  */
 
-package state
+package storages
 
 import (
 	"github.com/voedger/voedger/pkg/appdef"

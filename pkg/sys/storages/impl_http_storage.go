@@ -2,7 +2,7 @@
  * Copyright (c) 2022-present unTill Pro, Ltd.
  */
 
-package state
+package storages
 
 import (
 	"bytes"
@@ -15,11 +15,12 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys"
 )
 
 type httpStorage struct {
-	customClient IHttpClient
+	customClient state.IHttpClient
 }
 
 type httpStorageKeyBuilder struct {
@@ -105,10 +106,6 @@ func (b *httpStorageKeyBuilder) PutBytes(name string, value []byte) {
 	}
 }
 
-type IHttpClient interface {
-	Request(timeout time.Duration, method, url string, body io.Reader, headers map[string]string) (statusCode int, resBody []byte, resHeaders map[string][]string, err error)
-}
-
 func (s *httpStorage) NewKeyBuilder(appdef.QName, istructs.IStateKeyBuilder) istructs.IStateKeyBuilder {
 	return &httpStorageKeyBuilder{
 		headers: make(map[string]string),
@@ -173,4 +170,29 @@ func (s *httpStorage) Read(key istructs.IStateKeyBuilder, callback istructs.Valu
 		header:     res.Header,
 		statusCode: res.StatusCode,
 	})
+}
+
+type httpValue struct {
+	istructs.IStateValue
+	body       []byte
+	header     map[string][]string
+	statusCode int
+}
+
+func (v *httpValue) AsBytes(string) []byte { return v.body }
+func (v *httpValue) AsInt32(string) int32  { return int32(v.statusCode) }
+func (v *httpValue) AsString(name string) string {
+	if name == sys.Storage_Http_Field_Header {
+		var res strings.Builder
+		for k, v := range v.header {
+			if len(v) > 0 {
+				if res.Len() > 0 {
+					res.WriteString("\n")
+				}
+				res.WriteString(fmt.Sprintf("%s: %s", k, v[0])) // FIXME: len(v)>2 ?
+			}
+		}
+		return res.String()
+	}
+	return string(v.body)
 }

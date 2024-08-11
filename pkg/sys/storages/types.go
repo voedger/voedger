@@ -7,6 +7,7 @@ package storages
 import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/sys"
 )
 
 type baseKeyBuilder struct {
@@ -137,4 +138,36 @@ func (v *baseStateValue) GetAsQName(int) appdef.QName                     { pani
 func (v *baseStateValue) GetAsBool(int) bool                              { panic(errCurrentValueIsNotAnArray) }
 func (v *baseStateValue) GetAsValue(int) istructs.IStateValue {
 	panic(errFieldByIndexIsNotAnObjectOrArray)
+}
+
+type cudsValue struct {
+	istructs.IStateValue
+	cuds []istructs.ICUDRow
+}
+
+func (v *cudsValue) Length() int { return len(v.cuds) }
+func (v *cudsValue) GetAsValue(index int) istructs.IStateValue {
+	return &cudRowValue{value: v.cuds[index]}
+}
+
+type cudRowValue struct {
+	baseStateValue
+	value istructs.ICUDRow
+}
+
+func (v *cudRowValue) AsInt32(name string) int32        { return v.value.AsInt32(name) }
+func (v *cudRowValue) AsInt64(name string) int64        { return v.value.AsInt64(name) }
+func (v *cudRowValue) AsFloat32(name string) float32    { return v.value.AsFloat32(name) }
+func (v *cudRowValue) AsFloat64(name string) float64    { return v.value.AsFloat64(name) }
+func (v *cudRowValue) AsBytes(name string) []byte       { return v.value.AsBytes(name) }
+func (v *cudRowValue) AsString(name string) string      { return v.value.AsString(name) }
+func (v *cudRowValue) AsQName(name string) appdef.QName { return v.value.AsQName(name) }
+func (v *cudRowValue) AsBool(name string) bool {
+	if name == sys.CUDs_Field_IsNew {
+		return v.value.IsNew()
+	}
+	return v.value.AsBool(name)
+}
+func (v *cudRowValue) AsRecordID(name string) istructs.RecordID {
+	return v.value.AsRecordID(name)
 }

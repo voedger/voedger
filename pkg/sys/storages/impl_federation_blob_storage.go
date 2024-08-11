@@ -2,7 +2,7 @@
  * Copyright (c) 2022-present unTill Pro, Ltd.
  */
 
-package state
+package storages
 
 import (
 	"bytes"
@@ -22,7 +22,6 @@ import (
 
 const readBufferSize = 1024
 
-type FederationBlobHandler = func(owner, appname string, wsid istructs.WSID, blobId int64) (result []byte, err error)
 type federationBlobStorage struct {
 	appStructs AppStructsFunc
 	wsid       WSIDFunc
