@@ -8,6 +8,7 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/sys"
 )
 
 type subjectStorage struct {
@@ -20,7 +21,7 @@ type subjectKeyBuilder struct {
 }
 
 func (b *subjectKeyBuilder) Storage() appdef.QName {
-	return RequestSubject
+	return sys.Storage_RequestSubject
 }
 
 func (b *subjectKeyBuilder) Equals(src istructs.IKeyBuilder) bool {
@@ -60,7 +61,7 @@ type requestSubjectValue struct {
 
 func (v *requestSubjectValue) AsInt64(name string) int64 {
 	switch name {
-	case Field_ProfileWSID:
+	case sys.Storage_RequestSubject_Field_ProfileWSID:
 		return v.profileWSID
 	default:
 		return v.baseStateValue.AsInt64(name)
@@ -68,7 +69,7 @@ func (v *requestSubjectValue) AsInt64(name string) int64 {
 }
 func (v *requestSubjectValue) AsInt32(name string) int32 {
 	switch name {
-	case Field_Kind:
+	case sys.Storage_RequestSubject_Field_Kind:
 		return v.kind
 	default:
 		return v.baseStateValue.AsInt32(name)
@@ -76,9 +77,9 @@ func (v *requestSubjectValue) AsInt32(name string) int32 {
 }
 func (v *requestSubjectValue) AsString(name string) string {
 	switch name {
-	case Field_Name:
+	case sys.Storage_RequestSubject_Field_Name:
 		return v.name
-	case Field_Token:
+	case sys.Storage_RequestSubject_Field_Token:
 		return v.token
 	default:
 		return v.baseStateValue.AsString(name)

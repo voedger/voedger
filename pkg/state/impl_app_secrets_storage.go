@@ -11,6 +11,7 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/isecrets"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/sys"
 )
 
 type appSecretsStorage struct {
@@ -23,7 +24,7 @@ type appSecretsStorageKeyBuilder struct {
 }
 
 func (b *appSecretsStorageKeyBuilder) Storage() appdef.QName {
-	return AppSecret
+	return sys.Storage_AppSecret
 }
 func (b *appSecretsStorageKeyBuilder) Equals(src istructs.IKeyBuilder) bool {
 	kb, ok := src.(*appSecretsStorageKeyBuilder)
@@ -36,7 +37,7 @@ func (b *appSecretsStorageKeyBuilder) Equals(src istructs.IKeyBuilder) bool {
 	return true
 }
 func (b *appSecretsStorageKeyBuilder) PutString(name string, value string) {
-	if name == Field_Secret {
+	if name == sys.Storage_AppSecretField_Secret {
 		b.secret = value
 		return
 	}

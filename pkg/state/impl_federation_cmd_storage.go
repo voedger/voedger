@@ -14,6 +14,7 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/itokens"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
+	"github.com/voedger/voedger/pkg/sys"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 	"github.com/voedger/voedger/pkg/utils/federation"
 )
@@ -43,15 +44,15 @@ type federationCommandKeyBuilder struct {
 }
 
 func (b *federationCommandKeyBuilder) PutString(name string, value string) {
-	if name == Field_Owner {
+	if name == sys.Storage_FederationCommand_Field_Owner {
 		b.owner = value
-	} else if name == Field_AppName {
+	} else if name == sys.Storage_FederationCommand_Field_AppName {
 		b.appname = value
-	} else if name == Field_Body {
+	} else if name == sys.Storage_FederationCommand_Field_Body {
 		b.body = value
-	} else if name == Field_Token {
+	} else if name == sys.Storage_FederationCommand_Field_Token {
 		b.token = value
-	} else if name == Field_ExpectedCodes {
+	} else if name == sys.Storage_FederationCommand_Field_ExpectedCodes {
 		b.expectedCodes = value
 	} else {
 		b.baseKeyBuilder.PutString(name, value)
@@ -59,7 +60,7 @@ func (b *federationCommandKeyBuilder) PutString(name string, value string) {
 }
 
 func (b *federationCommandKeyBuilder) PutInt64(name string, value int64) {
-	if name == Field_WSID {
+	if name == sys.Storage_FederationCommand_Field_WSID {
 		b.wsid = istructs.WSID(value)
 	} else {
 		b.baseKeyBuilder.PutInt64(name, value)
@@ -67,7 +68,7 @@ func (b *federationCommandKeyBuilder) PutInt64(name string, value int64) {
 }
 
 func (b *federationCommandKeyBuilder) PutQName(name string, value appdef.QName) {
-	if name == Field_Command {
+	if name == sys.Storage_FederationCommand_Field_Command {
 		b.command = value
 	} else {
 		b.baseKeyBuilder.PutQName(name, value)
@@ -75,7 +76,7 @@ func (b *federationCommandKeyBuilder) PutQName(name string, value appdef.QName) 
 }
 
 func (b *federationCommandKeyBuilder) Storage() appdef.QName {
-	return FederationCommand
+	return sys.Storage_FederationCommand
 }
 
 func (b *federationCommandKeyBuilder) Equals(src istructs.IKeyBuilder) bool {
@@ -231,17 +232,17 @@ type fcCmdValue struct {
 }
 
 func (v *fcCmdValue) AsInt32(name string) int32 {
-	if name == Field_StatusCode {
+	if name == sys.Storage_FederationCommand_Field_StatusCode {
 		return int32(v.statusCode)
 	}
 	return v.baseStateValue.AsInt32(name)
 }
 
 func (v *fcCmdValue) AsValue(name string) istructs.IStateValue {
-	if name == Field_NewIDs {
+	if name == sys.Storage_FederationCommand_Field_NewIDs {
 		return v.newIds
 	}
-	if name == Field_Result {
+	if name == sys.Storage_FederationCommand_Field_Result {
 		return v.result
 	}
 	return v.baseStateValue.AsValue(name)

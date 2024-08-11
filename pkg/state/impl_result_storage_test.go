@@ -13,6 +13,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/sys"
 )
 
 func TestCmdResultStorage_InsertInValue(t *testing.T) {
@@ -20,7 +21,7 @@ func TestCmdResultStorage_InsertInValue(t *testing.T) {
 	s := ProvideCommandProcessorStateFactory()(context.Background(), nil, nil, SimpleWSIDFunc(istructs.NullWSID),
 		nil, nil, nil, nil, 1, func() istructs.IObjectBuilder { return cmdResBuilder }, nil, nil, nil, nil)
 
-	kb, err := s.KeyBuilder(Result, testRecordQName1)
+	kb, err := s.KeyBuilder(sys.Storage_Result, testRecordQName1)
 	require.NoError(t, err)
 
 	vb, err := s.NewValue(kb)
@@ -42,7 +43,7 @@ func TestResultStorage_InsertInKey(t *testing.T) {
 	s := ProvideCommandProcessorStateFactory()(context.Background(), nil, nil, SimpleWSIDFunc(istructs.NullWSID),
 		nil, nil, nil, nil, 1, func() istructs.IObjectBuilder { return cmdResBuilder }, nil, nil, nil, nil)
 
-	kb, err := s.KeyBuilder(Result, testRecordQName1)
+	kb, err := s.KeyBuilder(sys.Storage_Result, testRecordQName1)
 	require.NoError(t, err)
 
 	fieldName := "name"
@@ -66,7 +67,7 @@ func TestResultStorage_QueryProcessor(t *testing.T) {
 	s := ProvideQueryProcessorStateFactory()(context.Background(), nil, nil, SimpleWSIDFunc(istructs.NullWSID),
 		nil, nil, nil, nil, nil, nil, func() istructs.IObjectBuilder { return cmdResBuilder }, nil, execQueryCallback)
 
-	kb, err := s.KeyBuilder(Result, appdef.NullQName)
+	kb, err := s.KeyBuilder(sys.Storage_Result, appdef.NullQName)
 	require.NoError(t, err)
 
 	intent, err := s.NewValue(kb)

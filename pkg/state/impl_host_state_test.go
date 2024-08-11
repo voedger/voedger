@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/sys"
 )
 
 func TestHostState_BasicUsage(t *testing.T) {
@@ -24,7 +25,7 @@ func TestHostState_BasicUsage(t *testing.T) {
 	// Declare simple extension
 	extension := func(state istructs.IState) {
 		//Create key
-		key, err := state.KeyBuilder(View, testViewRecordQName1)
+		key, err := state.KeyBuilder(sys.Storage_View, testViewRecordQName1)
 		require.NoError(err)
 		key.PutInt64("pkFld", 64)
 

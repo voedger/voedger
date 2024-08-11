@@ -15,6 +15,7 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/itokens"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
+	"github.com/voedger/voedger/pkg/sys"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 	"github.com/voedger/voedger/pkg/utils/federation"
 )
@@ -41,7 +42,7 @@ type federationBlobKeyBuilder struct {
 }
 
 func (b *federationBlobKeyBuilder) Storage() appdef.QName {
-	return FederationBlob
+	return sys.Storage_FederationBlob
 }
 
 func (b *federationBlobKeyBuilder) Equals(src istructs.IKeyBuilder) bool {
@@ -69,19 +70,19 @@ func (b *federationBlobKeyBuilder) Equals(src istructs.IKeyBuilder) bool {
 }
 
 func (b *federationBlobKeyBuilder) PutString(name string, value string) {
-	if name == Field_ExpectedCodes {
+	if name == sys.Storage_FederationBlob_Field_ExpectedCodes {
 		b.expectedCodes = value
 		return
 	}
-	if name == Field_Owner {
+	if name == sys.Storage_FederationBlob_Field_Owner {
 		b.owner = value
 		return
 	}
-	if name == Field_AppName {
+	if name == sys.Storage_FederationBlob_Field_AppName {
 		b.appname = value
 		return
 	}
-	if name == Field_Token {
+	if name == sys.Storage_FederationBlob_Field_Token {
 		b.token = value
 		return
 	}
@@ -89,11 +90,11 @@ func (b *federationBlobKeyBuilder) PutString(name string, value string) {
 }
 
 func (b *federationBlobKeyBuilder) PutInt64(name string, value int64) {
-	if name == Field_BlobID {
+	if name == sys.Storage_FederationBlob_Field_BlobID {
 		b.blobID = value
 		return
 	}
-	if name == Field_WSID {
+	if name == sys.Storage_FederationBlob_Field_WSID {
 		b.wsid = istructs.WSID(value)
 		return
 	}
@@ -207,7 +208,7 @@ type fBlobValue struct {
 }
 
 func (v *fBlobValue) AsBytes(name string) []byte {
-	if name == Field_Body {
+	if name == sys.Storage_FederationBlob_Field_Body {
 		return v.data
 	}
 	return v.baseStateValue.AsBytes(name)

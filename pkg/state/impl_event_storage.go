@@ -7,6 +7,7 @@ package state
 import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/sys"
 )
 
 type eventStorage struct {
@@ -18,7 +19,7 @@ type eventKeyBuilder struct {
 }
 
 func (b *eventKeyBuilder) Storage() appdef.QName {
-	return Event
+	return sys.Storage_Event
 }
 
 func (b *eventKeyBuilder) Equals(src istructs.IKeyBuilder) bool {
@@ -34,23 +35,23 @@ type eventValue struct {
 
 func (v *eventValue) AsInt64(name string) int64 {
 	switch name {
-	case Field_WLogOffset:
+	case sys.Storage_Event_Field_WLogOffset:
 		return int64(v.event.WLogOffset())
-	case Field_Workspace:
+	case sys.Storage_Event_Field_Workspace:
 		return int64(v.event.Workspace())
-	case Field_RegisteredAt:
+	case sys.Storage_Event_Field_RegisteredAt:
 		return int64(v.event.RegisteredAt())
-	case Field_DeviceID:
+	case sys.Storage_Event_Field_DeviceID:
 		return int64(v.event.DeviceID())
-	case Field_SyncedAt:
+	case sys.Storage_Event_Field_SyncedAt:
 		return int64(v.event.SyncedAt())
-	case Field_Offset:
+	case sys.Storage_Event_Field_Offset:
 		return v.offset
 	}
 	return v.baseStateValue.AsInt64(name)
 }
 func (v *eventValue) AsBool(name string) bool {
-	if name == Field_Synced {
+	if name == sys.Storage_Event_Field_Synced {
 		return v.event.Synced()
 	}
 	return v.baseStateValue.AsBool(name)
@@ -59,24 +60,24 @@ func (v *eventValue) AsRecord(string) istructs.IRecord {
 	return v.event.ArgumentObject().AsRecord()
 }
 func (v *eventValue) AsQName(name string) appdef.QName {
-	if name == Field_QName {
+	if name == sys.Storage_Event_Field_QName {
 		return v.event.QName()
 	}
 	return v.baseStateValue.AsQName(name)
 }
 func (v *eventValue) AsEvent(string) istructs.IDbEvent { return v.event }
 func (v *eventValue) AsValue(name string) istructs.IStateValue {
-	if name == Field_CUDs {
+	if name == sys.Storage_Event_Field_CUDs {
 		sv := &cudsValue{}
 		v.event.CUDs(func(rec istructs.ICUDRow) {
 			sv.cuds = append(sv.cuds, rec)
 		})
 		return sv
 	}
-	if name == Field_Error {
+	if name == sys.Storage_Event_Field_Error {
 		return &eventErrorValue{error: v.event.Error()}
 	}
-	if name == Field_ArgumentObject {
+	if name == sys.Storage_Event_Field_ArgumentObject {
 		arg := v.event.ArgumentObject()
 		if arg == nil {
 			return nil

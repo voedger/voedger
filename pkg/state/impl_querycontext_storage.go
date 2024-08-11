@@ -7,6 +7,7 @@ package state
 import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/sys"
 )
 
 type queryContextStorage struct {
@@ -19,7 +20,7 @@ type queryContextKeyBuilder struct {
 }
 
 func (b *queryContextKeyBuilder) Storage() appdef.QName {
-	return QueryContext
+	return sys.Storage_QueryContext
 }
 func (b *queryContextKeyBuilder) Equals(src istructs.IKeyBuilder) bool {
 	_, ok := src.(*queryContextKeyBuilder)
@@ -43,14 +44,14 @@ type qryContextValue struct {
 }
 
 func (v *qryContextValue) AsInt64(name string) int64 {
-	if name == Field_Workspace {
+	if name == sys.Storage_QueryContext_Field_Workspace {
 		return int64(v.wsid)
 	}
 	return v.baseStateValue.AsInt64(name)
 }
 
 func (v *qryContextValue) AsValue(name string) istructs.IStateValue {
-	if name == Field_ArgumentObject {
+	if name == sys.Storage_QueryContext_Field_ArgumentObject {
 		return &objectValue{
 			object: v.arg,
 		}

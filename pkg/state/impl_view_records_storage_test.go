@@ -13,6 +13,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/sys"
 )
 
 func mockedStructs2(t *testing.T, addWsDescriptor bool) (*mockAppStructs, *mockViewRecords) {
@@ -37,7 +38,7 @@ func mockedStructs2(t *testing.T, addWsDescriptor bool) (*mockAppStructs, *mockV
 	mockedRecords.On("GetSingleton", istructs.WSID(1), mock.Anything).Return(mockWorkspaceRecord, nil)
 
 	mockedViews := &mockViewRecords{}
-	mockedViews.On("KeyBuilder", testViewRecordQName1).Return(newMapKeyBuilder(View, testViewRecordQName1))
+	mockedViews.On("KeyBuilder", testViewRecordQName1).Return(newMapKeyBuilder(sys.Storage_View, testViewRecordQName1))
 
 	if addWsDescriptor {
 		wsDesc := appDef.AddCDoc(testWSDescriptorQName)
@@ -78,7 +79,7 @@ func TestViewRecordsStorage_GetBatch(t *testing.T) {
 			On("Get", istructs.WSID(1), mock.Anything).Return(valueOnGet, nil)
 
 		s := ProvideQueryProcessorStateFactory()(context.Background(), appStructsFunc(mockedStructs), nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil, nil, nil, nil, nil, nil, nil)
-		k, e := s.KeyBuilder(View, testViewRecordQName1)
+		k, e := s.KeyBuilder(sys.Storage_View, testViewRecordQName1)
 		require.NoError(e)
 		k.PutInt64("pkk", 64)
 		k.PutString("cck", "ccv")
@@ -96,7 +97,7 @@ func TestViewRecordsStorage_GetBatch(t *testing.T) {
 			On("Get", istructs.WSID(1), mock.Anything).Return(nil, errTest)
 
 		s := ProvideQueryProcessorStateFactory()(context.Background(), appStructsFunc(mockedStructs), nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil, nil, nil, nil, nil, nil, nil)
-		k, err := s.KeyBuilder(View, testViewRecordQName1)
+		k, err := s.KeyBuilder(sys.Storage_View, testViewRecordQName1)
 		require.NoError(err)
 		k.PutInt64("pkk", 64)
 
@@ -119,7 +120,7 @@ func TestViewRecordsStorage_Read(t *testing.T) {
 				require.NoError(args.Get(3).(istructs.ValuesCallback)(nil, nil))
 			})
 		s := ProvideQueryProcessorStateFactory()(context.Background(), appStructsFunc(mockedStructs), nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil, nil, nil, nil, nil, nil, nil)
-		k, err := s.KeyBuilder(View, testViewRecordQName1)
+		k, err := s.KeyBuilder(sys.Storage_View, testViewRecordQName1)
 		require.NoError(err)
 		err = s.Read(k, func(istructs.IKey, istructs.IStateValue) error {
 			touched = true
@@ -132,11 +133,11 @@ func TestViewRecordsStorage_Read(t *testing.T) {
 		require := require.New(t)
 		mockedStructs, mockedViews := mockedStructs(t)
 		mockedViews.
-			On("KeyBuilder", testViewRecordQName1).Return(newMapKeyBuilder(View, testViewRecordQName1)).
+			On("KeyBuilder", testViewRecordQName1).Return(newMapKeyBuilder(sys.Storage_View, testViewRecordQName1)).
 			On("Read", context.Background(), istructs.WSID(1), mock.Anything, mock.Anything).
 			Return(errTest)
 		s := ProvideQueryProcessorStateFactory()(context.Background(), appStructsFunc(mockedStructs), nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil, nil, nil, nil, nil, nil, nil)
-		k, err := s.KeyBuilder(View, testViewRecordQName1)
+		k, err := s.KeyBuilder(sys.Storage_View, testViewRecordQName1)
 		require.NoError(err)
 		err = s.Read(k, func(istructs.IKey, istructs.IStateValue) error { return nil })
 		require.ErrorIs(err, errTest)
@@ -150,7 +151,7 @@ func TestViewRecordsStorage_ApplyBatch_should_return_error_on_put_batch(t *testi
 		On("NewValueBuilder", testViewRecordQName1).Return(&nilValueBuilder{}).
 		On("PutBatch", istructs.WSID(1), mock.Anything).Return(errTest)
 	s := ProvideAsyncActualizerStateFactory()(context.Background(), appStructsFunc(mockedStructs), nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil, nil, nil, 10, 10)
-	kb, err := s.KeyBuilder(View, testViewRecordQName1)
+	kb, err := s.KeyBuilder(sys.Storage_View, testViewRecordQName1)
 	require.NoError(err)
 	_, err = s.NewValue(kb)
 	require.NoError(err)
@@ -176,15 +177,15 @@ func TestViewRecordsStorage_ApplyBatch_NullWSIDGoesLast(t *testing.T) {
 		Return(nil)
 
 	putViewRec := func(s IBundledHostState) {
-		kb, err := s.KeyBuilder(View, testViewRecordQName1)
+		kb, err := s.KeyBuilder(sys.Storage_View, testViewRecordQName1)
 		require.NoError(err)
 		_, err = s.NewValue(kb)
 		require.NoError(err)
 	}
 
 	putOffset := func(s IBundledHostState) {
-		kb, err := s.KeyBuilder(View, testViewRecordQName1)
-		kb.PutInt64(Field_WSID, int64(istructs.NullWSID))
+		kb, err := s.KeyBuilder(sys.Storage_View, testViewRecordQName1)
+		kb.PutInt64(sys.Storage_View_Field_WSID, int64(istructs.NullWSID))
 		require.NoError(err)
 		_, err = s.NewValue(kb)
 		require.NoError(err)
@@ -227,7 +228,7 @@ func TestViewRecordsStorage_ValidateInWorkspaces(t *testing.T) {
 	s := ProvideAsyncActualizerStateFactory()(context.Background(), appStructsFunc(mockedStructs), nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil, nil, nil, 10, 10)
 
 	wrongQName := appdef.NewQName("test", "viewRecordX")
-	wrongKb, err := s.KeyBuilder(View, wrongQName)
+	wrongKb, err := s.KeyBuilder(sys.Storage_View, wrongQName)
 	require.NoError(err)
 	expectedError := typeIsNotDefinedInWorkspaceWithDescriptor(wrongQName, testWSDescriptorQName)
 
@@ -277,21 +278,21 @@ func TestViewRecordsStorage_ValidateInWorkspaces(t *testing.T) {
 	})
 
 	t.Run("CanExistAll should validate for unavailable views", func(t *testing.T) {
-		correctKb, err := s.KeyBuilder(View, testViewRecordQName1)
+		correctKb, err := s.KeyBuilder(sys.Storage_View, testViewRecordQName1)
 		require.NoError(err)
 		err = s.CanExistAll([]istructs.IStateKeyBuilder{wrongKb, correctKb}, nil)
 		require.EqualError(err, expectedError.Error())
 	})
 
 	t.Run("MustExistAll should validate for unavailable views", func(t *testing.T) {
-		correctKb, err := s.KeyBuilder(View, testViewRecordQName1)
+		correctKb, err := s.KeyBuilder(sys.Storage_View, testViewRecordQName1)
 		require.NoError(err)
 		err = s.MustExistAll([]istructs.IStateKeyBuilder{wrongKb, correctKb}, nil)
 		require.EqualError(err, expectedError.Error())
 	})
 
 	t.Run("MustNotExistAll should validate for unavailable views", func(t *testing.T) {
-		correctKb, err := s.KeyBuilder(View, testViewRecordQName1)
+		correctKb, err := s.KeyBuilder(sys.Storage_View, testViewRecordQName1)
 		require.NoError(err)
 		err = s.MustNotExistAll([]istructs.IStateKeyBuilder{wrongKb, correctKb})
 		require.EqualError(err, expectedError.Error())

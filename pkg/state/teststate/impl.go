@@ -19,6 +19,7 @@ import (
 	"github.com/voedger/voedger/pkg/iratesce"
 	"github.com/voedger/voedger/pkg/isecrets"
 	"github.com/voedger/voedger/pkg/istorage/mem"
+	"github.com/voedger/voedger/pkg/sys"
 	wsdescutil "github.com/voedger/voedger/pkg/utils/testwsdesc"
 
 	istorageimpl "github.com/voedger/voedger/pkg/istorage/provider"
@@ -112,12 +113,12 @@ func (ts *testState) Arg() istructs.IObject {
 		return ts.queryObject
 	}
 
-	if ts.testData != nil && ts.testData[state.Field_ArgumentObject] != nil {
+	if ts.testData != nil && ts.testData[sys.Storage_CommandContext_Field_ArgumentObject] != nil {
 		localPkgName := ts.appDef.PackageLocalName(ts.argumentType.PkgPath())
 		localQName := appdef.NewQName(localPkgName, ts.argumentType.Entity())
 
 		ob := ts.appStructs.ObjectBuilder(localQName)
-		ob.FillFromJSON(ts.testData[state.Field_ArgumentObject].(map[string]any))
+		ob.FillFromJSON(ts.testData[sys.Storage_CommandContext_Field_ArgumentObject].(map[string]any))
 
 		obj, err := ob.Build()
 		require.NoError(ts.t, err)

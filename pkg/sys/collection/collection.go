@@ -8,6 +8,7 @@ package collection
 
 import (
 	"github.com/voedger/voedger/pkg/goutils/iterate"
+	"github.com/voedger/voedger/pkg/sys"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -29,7 +30,7 @@ var collectionProjector = istructs.Projector{
 		}
 
 		newKey := func(docQname appdef.QName, docID, elementID istructs.RecordID) (kb istructs.IStateKeyBuilder, err error) {
-			kb, err = s.KeyBuilder(state.View, QNameCollectionView)
+			kb, err = s.KeyBuilder(sys.Storage_View, QNameCollectionView)
 			if err != nil {
 				// notest
 				return
@@ -69,12 +70,12 @@ var collectionProjector = istructs.Projector{
 			if kind != appdef.TypeKind_CDoc && kind != appdef.TypeKind_CRecord {
 				return nil
 			}
-			kb, err := is.state.KeyBuilder(state.Record, appdef.NullQName)
+			kb, err := is.state.KeyBuilder(sys.Storage_Record, appdef.NullQName)
 			if err != nil {
 				// notest
 				return err
 			}
-			kb.PutRecordID(state.Field_ID, rec.ID())
+			kb.PutRecordID(sys.Storage_Record_Field_ID, rec.ID())
 			keyBuildersAndIDs = append(keyBuildersAndIDs, kbAndID{
 				IStateKeyBuilder: kb,
 				id:               rec.ID(),
@@ -128,11 +129,11 @@ type idService struct {
 }
 
 func (s *idService) findRecordByID(id istructs.RecordID) (record istructs.IRecord, err error) {
-	kb, err := s.state.KeyBuilder(state.Record, appdef.NullQName)
+	kb, err := s.state.KeyBuilder(sys.Storage_Record, appdef.NullQName)
 	if err != nil {
 		return nil, err
 	}
-	kb.PutRecordID(state.Field_ID, id)
+	kb.PutRecordID(sys.Storage_Record_Field_ID, id)
 
 	sv, err := s.state.MustExist(kb)
 	if err != nil {

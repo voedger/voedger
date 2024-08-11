@@ -15,6 +15,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/sys"
 )
 
 type httpStorage struct {
@@ -31,7 +32,7 @@ type httpStorageKeyBuilder struct {
 }
 
 func (b *httpStorageKeyBuilder) Storage() appdef.QName {
-	return Http
+	return sys.Storage_Http
 }
 
 func (b *httpStorageKeyBuilder) Equals(src istructs.IKeyBuilder) bool {
@@ -65,13 +66,13 @@ func (b *httpStorageKeyBuilder) Equals(src istructs.IKeyBuilder) bool {
 
 func (b *httpStorageKeyBuilder) PutString(name, value string) {
 	switch name {
-	case Field_Header:
+	case sys.Storage_Http_Field_Header:
 		trim := func(v string) string { return strings.Trim(v, " \n\r\t") }
 		ss := strings.SplitN(value, ":", 2)
 		b.headers[trim(ss[0])] = trim(ss[1])
-	case Field_Method:
+	case sys.Storage_Http_Field_Method:
 		b.method = value
-	case Field_Url:
+	case sys.Storage_Http_Field_Url:
 		b.url = value
 	default:
 		b.baseKeyBuilder.PutString(name, value)
@@ -88,7 +89,7 @@ func (b *httpStorageKeyBuilder) String() string {
 
 func (b *httpStorageKeyBuilder) PutInt64(name string, value int64) {
 	switch name {
-	case Field_HTTPClientTimeoutMilliseconds:
+	case sys.Storage_Http_Field_HTTPClientTimeoutMilliseconds:
 		b.timeout = time.Duration(value) * time.Millisecond
 	default:
 		b.baseKeyBuilder.PutInt64(name, value)
@@ -97,7 +98,7 @@ func (b *httpStorageKeyBuilder) PutInt64(name string, value int64) {
 
 func (b *httpStorageKeyBuilder) PutBytes(name string, value []byte) {
 	switch name {
-	case Field_Body:
+	case sys.Storage_Http_Field_Body:
 		b.body = value
 	default:
 		b.baseKeyBuilder.PutBytes(name, value)

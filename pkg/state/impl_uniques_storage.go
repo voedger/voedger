@@ -7,6 +7,7 @@ package state
 import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/sys"
 	"github.com/voedger/voedger/pkg/sys/uniques"
 )
 
@@ -24,7 +25,7 @@ type uniquesValue struct {
 }
 
 func (v *uniquesValue) AsInt64(name string) int64 {
-	if name == Field_ID {
+	if name == sys.Storage_Uniq_Field_ID {
 		return int64(v.id)
 	}
 	return v.baseStateValue.AsInt64(name)
@@ -39,7 +40,7 @@ func newUniquesStorage(appStructsFunc AppStructsFunc, wsidFunc WSIDFunc, customH
 }
 
 func (s *uniquesStorage) NewKeyBuilder(entity appdef.QName, _ istructs.IStateKeyBuilder) istructs.IStateKeyBuilder {
-	return newMapKeyBuilder(Uniq, entity)
+	return newMapKeyBuilder(sys.Storage_Uniq, entity)
 }
 
 func (s *uniquesStorage) Get(key istructs.IStateKeyBuilder) (value istructs.IStateValue, err error) {

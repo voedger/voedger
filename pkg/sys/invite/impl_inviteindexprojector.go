@@ -7,7 +7,7 @@ package invite
 import (
 	"github.com/voedger/voedger/pkg/goutils/iterate"
 	"github.com/voedger/voedger/pkg/istructs"
-	"github.com/voedger/voedger/pkg/state"
+	"github.com/voedger/voedger/pkg/sys"
 )
 
 func syncProjectorInviteIndex() istructs.Projector {
@@ -23,7 +23,7 @@ var inviteIndexProjector = func(event istructs.IPLogEvent, s istructs.IState, in
 			return nil
 		}
 
-		skbViewInviteIndex, err := s.KeyBuilder(state.View, qNameViewInviteIndex)
+		skbViewInviteIndex, err := s.KeyBuilder(sys.Storage_View, qNameViewInviteIndex)
 		if err != nil {
 			return err
 		}

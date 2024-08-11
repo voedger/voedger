@@ -9,6 +9,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/sys"
 )
 
 type resultStorage struct {
@@ -24,7 +25,7 @@ type resultKeyBuilder struct {
 }
 
 func (b *resultKeyBuilder) Storage() appdef.QName {
-	return Result
+	return sys.Storage_Result
 }
 
 func (b *resultKeyBuilder) Equals(src istructs.IKeyBuilder) bool {

@@ -17,6 +17,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/goutils/iterate"
 	"github.com/voedger/voedger/pkg/goutils/logger"
+	"github.com/voedger/voedger/pkg/sys"
 	"github.com/voedger/voedger/pkg/utils/federation"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -25,7 +26,6 @@ import (
 	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/itokens"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
-	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys/authnz"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
@@ -100,7 +100,7 @@ func execCmdCreateWorkspaceID(args istructs.ExecCommandArgs) (err error) {
 	ownerWSID := args.ArgumentObject.AsInt64(Field_OwnerWSID)
 	wsName := args.ArgumentObject.AsString(authnz.Field_WSName)
 	// Check that ownerWSID + wsName does not exist yet: View<WorkspaceIDIdx> to deduplication
-	kb, err := args.State.KeyBuilder(state.View, QNameViewWorkspaceIDIdx)
+	kb, err := args.State.KeyBuilder(sys.Storage_View, QNameViewWorkspaceIDIdx)
 	if err != nil {
 		return err
 	}
@@ -122,7 +122,7 @@ func execCmdCreateWorkspaceID(args istructs.ExecCommandArgs) (err error) {
 	}
 
 	// Create CDoc<WorkspaceID>{wsParams, WSID: $NewWSID}
-	kb, err = args.State.KeyBuilder(state.Record, QNameCDocWorkspaceID)
+	kb, err = args.State.KeyBuilder(sys.Storage_Record, QNameCDocWorkspaceID)
 	if err != nil {
 		return err
 	}
@@ -153,7 +153,7 @@ func workspaceIDIdxProjector(event istructs.IPLogEvent, s istructs.IState, inten
 		if rec.QName() != QNameCDocWorkspaceID || !rec.IsNew() { // skip on update cdoc.sys.WorkspaceID on e.g. deactivate workspace
 			return nil
 		}
-		kb, err := s.KeyBuilder(state.View, QNameViewWorkspaceIDIdx)
+		kb, err := s.KeyBuilder(sys.Storage_View, QNameViewWorkspaceIDIdx)
 		if err != nil {
 			// notest
 			return nil
@@ -243,7 +243,7 @@ func execCmdCreateWorkspace(now coreutils.TimeFunc) istructsmem.ExecCommandClosu
 		}()
 
 		// create CDoc<sys.WorkspaceDescriptor> (singleton)
-		kb, err := args.State.KeyBuilder(state.Record, authnz.QNameCDocWorkspaceDescriptor)
+		kb, err := args.State.KeyBuilder(sys.Storage_Record, authnz.QNameCDocWorkspaceDescriptor)
 		if err != nil {
 			return err
 		}
@@ -269,7 +269,7 @@ func execCmdCreateWorkspace(now coreutils.TimeFunc) istructsmem.ExecCommandClosu
 			logger.Info("c.sys.CreateWorkspace: ", e.Error())
 		} else {
 			// if no error create CDoc{$wsKind}
-			kb, err := args.State.KeyBuilder(state.Record, wsKind)
+			kb, err := args.State.KeyBuilder(sys.Storage_Record, wsKind)
 			if err != nil {
 				return err
 			}
