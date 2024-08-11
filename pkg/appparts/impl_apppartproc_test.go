@@ -25,6 +25,7 @@ import (
 type mockProcessorRunner struct {
 	IProcessorRunner
 	mock.Mock
+	appParts IAppPartitions
 }
 
 func (t *mockProcessorRunner) NewAndRun(ctx context.Context, app appdef.AppQName, partID istructs.PartitionID, name appdef.QName) {
@@ -34,13 +35,25 @@ func (t *mockProcessorRunner) NewAndRun(ctx context.Context, app appdef.AppQName
 		case <-ctx.Done():
 			return
 		default:
-			time.Sleep(time.Millisecond)
+			// actualizer processor should be borrowed and released
+			p, err := t.appParts.WaitForBorrow(ctx, app, partID, ProcessorKind_Actualizer)
+			switch err {
+			case nil:
+				// simulate actualizer work
+				time.Sleep(time.Millisecond)
+				p.Release()
+			case ctx.Err():
+				return // context canceled while waiting for borrowed processor
+			default:
+				panic(err) // unexpected error while waiting for borrowed processor
+			}
 		}
 	}
 }
 
 func (t *mockProcessorRunner) SetAppPartitions(ap IAppPartitions) {
 	t.Called(ap)
+	t.appParts = ap
 }
 
 func Test_partitionProcessors_deploy(t *testing.T) {
@@ -104,8 +117,12 @@ func Test_partitionProcessors_deploy(t *testing.T) {
 			return adb.MustBuild()
 		}()
 
-		// hack to update appDef
-		appParts.(*apps).apps[istructs.AppQName_test1_app1].lastestVersion.def = appDef2
+		t.Run("hack to update appDef", func(t *testing.T) {
+			appParts.(*apps).apps[istructs.AppQName_test1_app1].lastestVersion.def = appDef2
+			a2, err := appParts.AppDef(istructs.AppQName_test1_app1)
+			require.NoError(err)
+			require.Equal(appDef2, a2)
+		})
 
 		for i := 0; i < 10; i++ {
 			if i%2 == 1 {
