@@ -91,6 +91,8 @@ func resolveInCtx[stmtType *TableStmt | *TypeStmt | *FunctionStmt | *CommandStmt
 			return ErrUndefinedJob(fn)
 		case *RateStmt:
 			return ErrUndefinedRate(fn)
+		case *ViewStmt:
+			return ErrUndefinedView(fn)
 		default:
 			return ErrUndefined(fn.String())
 		}
