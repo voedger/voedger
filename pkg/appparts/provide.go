@@ -8,7 +8,6 @@ package appparts
 import (
 	"context"
 
-	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/iextengine"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/pipeline"
@@ -21,14 +20,9 @@ func New(structs istructs.IAppStructsProvider) (ap IAppPartitions, cleanup func(
 	return New2(
 		context.Background(),
 		structs,
-		func(istructs.IAppStructs, istructs.PartitionID) pipeline.ISyncOperator {
-			return &pipeline.NOOP{}
-		},
-		&nullProcessorRunner{},
-		iextengine.ExtensionEngineFactories{
-			appdef.ExtensionEngineKind_BuiltIn: iextengine.NullExtensionEngineFactory,
-			appdef.ExtensionEngineKind_WASM:    iextengine.NullExtensionEngineFactory,
-		},
+		NullSyncActualizerFactory,
+		NullProcessorRunner,
+		NullExtensionEngineFactories,
 	)
 }
 
