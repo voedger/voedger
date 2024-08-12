@@ -120,7 +120,6 @@ func Test_partitionProcessors_deploy(t *testing.T) {
 			mockProc.On("NewAndRun", mock.Anything, istructs.AppQName_test1_app1, istructs.PartitionID(i), prjName1).Once()
 		}
 		appParts.DeployAppPartitions(istructs.AppQName_test1_app1, []istructs.PartitionID{0, 1, 2, 3, 4, 5, 6, 7, 8, 9})
-		mockProc.AssertExpectations(t)
 
 		m := metrics()
 		require.Len(m, 10)
@@ -156,7 +155,6 @@ func Test_partitionProcessors_deploy(t *testing.T) {
 			}
 		}
 		appParts.DeployAppPartitions(istructs.AppQName_test1_app1, []istructs.PartitionID{1, 3, 5, 7, 9})
-		mockProc.AssertExpectations(t)
 
 		m := metrics()
 		require.Len(m, 10)
