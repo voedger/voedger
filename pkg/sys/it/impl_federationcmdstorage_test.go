@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
-	"github.com/voedger/voedger/pkg/state"
+	"github.com/voedger/voedger/pkg/sys"
 	it "github.com/voedger/voedger/pkg/vit"
 )
 
@@ -25,12 +25,12 @@ func TestBasicUsage_FederationCommand(t *testing.T) {
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
 
 	it.MockQryExec = func(input string, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) error {
-		kb, err := args.State.KeyBuilder(state.FederationCommand, appdef.NullQName)
+		kb, err := args.State.KeyBuilder(sys.Storage_FederationCommand, appdef.NullQName)
 		if err != nil {
 			return err
 		}
-		kb.PutQName(state.Field_Command, appdef.NewQName("app1pkg", "TestCmd"))
-		kb.PutString(state.Field_Body, `{
+		kb.PutQName(sys.Storage_FederationCommand_Field_Command, appdef.NewQName("app1pkg", "TestCmd"))
+		kb.PutString(sys.Storage_Http_Field_Body, `{
 			"args": {
 				"Arg1": 2
 			}

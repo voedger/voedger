@@ -24,6 +24,8 @@ ABSTRACT WORKSPACE Workspace (
     TYPE CreateLoginUnloggedParams(
         Password varchar
     );
+	TABLE ChildWorkspace INHERITS CDoc (
+	);
     EXTENSION ENGINE BUILTIN (
         COMMAND CreateLogin(CreateLoginParams, UNLOGGED CreateLoginUnloggedParams) RETURNS void;
         COMMAND UpdateSubscription(any) RETURNS any;

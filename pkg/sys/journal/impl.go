@@ -9,12 +9,12 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
-	"github.com/voedger/voedger/pkg/state"
+	"github.com/voedger/voedger/pkg/sys"
 )
 
 func FindOffsetsByTimeRange(from, till time.Time, idx appdef.QName, s istructs.IState) (fo, lo int64, err error) {
 	for y := from.Year(); y <= till.Year(); y++ {
-		kb, err := s.KeyBuilder(state.View, idx)
+		kb, err := s.KeyBuilder(sys.Storage_View, idx)
 		if err != nil {
 			return 0, 0, err
 		}

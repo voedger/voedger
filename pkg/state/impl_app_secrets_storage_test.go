@@ -6,13 +6,12 @@ package state
 
 import (
 	"context"
-	"io/fs"
 	"testing"
 
-	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/isecrets"
+	"github.com/voedger/voedger/pkg/sys"
 )
 
 func TestAppSecretsStorage_BasicUsage(t *testing.T) {
@@ -22,9 +21,9 @@ func TestAppSecretsStorage_BasicUsage(t *testing.T) {
 	sr := &isecrets.SecretReaderMock{}
 	sr.On("ReadSecret", secret).Return([]byte(secretBody), nil)
 	s := ProvideAsyncActualizerStateFactory()(context.Background(), nilAppStructsFunc, nil, nil, nil, sr, nil, nil, nil, 0, 0)
-	kb, err := s.KeyBuilder(AppSecret, appdef.NullQName)
+	kb, err := s.KeyBuilder(sys.Storage_AppSecret, appdef.NullQName)
 	require.NoError(err)
-	kb.PutString(Field_Secret, secret)
+	kb.PutString(sys.Storage_AppSecretField_Secret, secret)
 
 	sv, err := s.MustExist(kb)
 	require.NoError(err)
@@ -34,38 +33,11 @@ func TestAppSecretsStorage_BasicUsage(t *testing.T) {
 func TestAppSecretsStorage(t *testing.T) {
 	t.Run("Should return error when key invalid", func(t *testing.T) {
 		s := ProvideAsyncActualizerStateFactory()(context.Background(), nilAppStructsFunc, nil, nil, nil, nil, nil, nil, nil, 0, 0)
-		kb, err := s.KeyBuilder(AppSecret, appdef.NullQName)
+		kb, err := s.KeyBuilder(sys.Storage_AppSecret, appdef.NullQName)
 		require.NoError(t, err)
 
 		_, err = s.MustExist(kb)
 
-		require.ErrorIs(t, err, ErrNotFound)
-	})
-	t.Run("Should return value that not exists when", func(t *testing.T) {
-		tests := []struct {
-			err error
-		}{
-			{
-				err: isecrets.ErrSecretNameIsBlank,
-			},
-			{
-				err: fs.ErrNotExist,
-			},
-		}
-		for _, test := range tests {
-			t.Run(test.err.Error(), func(t *testing.T) {
-				sr := &isecrets.SecretReaderMock{}
-				sr.On("ReadSecret", mock.Anything).Return(nil, test.err)
-				s := ProvideAsyncActualizerStateFactory()(context.Background(), nilAppStructsFunc, nil, nil, nil, sr, nil, nil, nil, 0, 0)
-				kb, err := s.KeyBuilder(AppSecret, appdef.NullQName)
-				require.NoError(t, err)
-				kb.PutString(Field_Secret, "")
-
-				_, ok, err := s.CanExist(kb)
-				require.NoError(t, err)
-
-				require.False(t, ok)
-			})
-		}
+		require.ErrorContains(t, err, "secret name is not specified")
 	})
 }

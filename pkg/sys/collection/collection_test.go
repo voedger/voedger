@@ -34,6 +34,7 @@ import (
 	queryprocessor "github.com/voedger/voedger/pkg/processors/query"
 	"github.com/voedger/voedger/pkg/projectors"
 	"github.com/voedger/voedger/pkg/state"
+	"github.com/voedger/voedger/pkg/sys"
 	wsdescutil "github.com/voedger/voedger/pkg/utils/testwsdesc"
 	"github.com/voedger/voedger/pkg/vvm/engines"
 	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
@@ -72,7 +73,7 @@ func deployTestApp(t *testing.T) (appParts appparts.IAppPartitions, appStructs i
 		prj.SetSync(true).
 			Events().Add(istructs.QNameCRecord, appdef.ProjectorEventKind_Insert, appdef.ProjectorEventKind_Update)
 		prj.Intents().
-			Add(state.View, QNameCollectionView) // this view will be added below
+			Add(sys.Storage_View, QNameCollectionView) // this view will be added below
 	}
 	{
 		// fill IAppDef with funcs. That is done here manually because we o not use sys.vsql here
@@ -209,9 +210,9 @@ func deployTestApp(t *testing.T) (appParts appparts.IAppPartitions, appStructs i
 		SubscriptionsPerSubject: 10,
 	}, time.Now)
 
-	appParts, appPartsCleanup, err := appparts.New2(appStructsProvider,
+	appParts, appPartsCleanup, err := appparts.New2(context.Background(), appStructsProvider,
 		projectors.NewSyncActualizerFactoryFactory(projectors.ProvideSyncActualizerFactory(), secretReader, n10nBroker, statelessResources),
-		appparts.NullActualizers,
+		appparts.NullProcessorRunner,
 		engines.ProvideExtEngineFactories(
 			engines.ExtEngineFactoriesConfig{
 				AppConfigs:         cfgs,

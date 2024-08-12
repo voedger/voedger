@@ -15,7 +15,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
-	"github.com/voedger/voedger/pkg/state"
+	"github.com/voedger/voedger/pkg/sys"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
@@ -31,7 +31,7 @@ func CheckAppWSID(login string, urlWSID istructs.WSID, numAppWorkspaces istructs
 
 // istructs.NullRecordID means not found
 func GetCDocLoginID(st istructs.IState, appWSID istructs.WSID, appName string, login string) (cdocLoginID istructs.RecordID, err error) {
-	kb, err := st.KeyBuilder(state.View, QNameViewLoginIdx)
+	kb, err := st.KeyBuilder(sys.Storage_View, QNameViewLoginIdx)
 	if err != nil {
 		return istructs.NullRecordID, err
 	}
@@ -60,11 +60,11 @@ func GetCDocLogin(login string, st istructs.IState, appWSID istructs.WSID, appNa
 		return nil, doesLoginExist, err
 	}
 
-	kb, err := st.KeyBuilder(state.Record, QNameCDocLogin)
+	kb, err := st.KeyBuilder(sys.Storage_Record, QNameCDocLogin)
 	if err != nil {
 		return nil, doesLoginExist, err
 	}
-	kb.PutRecordID(state.Field_ID, cdocLoginID)
+	kb.PutRecordID(sys.Storage_Record_Field_ID, cdocLoginID)
 	cdocLogin, err = st.MustExist(kb)
 	return
 }
@@ -91,7 +91,7 @@ func errLoginDoesNotExist(login string) error {
 }
 
 func ChangePasswordCDocLogin(cdocLogin istructs.IStateValue, newPwd string, intents istructs.IIntents, st istructs.IState) error {
-	kb, err := st.KeyBuilder(state.Record, appdef.NullQName)
+	kb, err := st.KeyBuilder(sys.Storage_Record, appdef.NullQName)
 	if err != nil {
 		return err
 	}

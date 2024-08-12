@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/sys"
 )
 
 var (
@@ -87,23 +88,23 @@ func Test_getStorageID(t *testing.T) {
 		}{
 			{
 				name:            "General storage key",
-				kb:              newKeyBuilder(Record, appdef.NullQName),
-				expectedStorage: Record,
+				kb:              newMapKeyBuilder(sys.Storage_Record, appdef.NullQName),
+				expectedStorage: sys.Storage_Record,
 			},
 			{
 				name:            "Email storage key",
-				kb:              &sendMailKeyBuilder{keyBuilder: newKeyBuilder(SendMail, appdef.NullQName)},
-				expectedStorage: SendMail,
+				kb:              &mailKeyBuilder{},
+				expectedStorage: sys.Storage_SendMail,
 			},
 			{
 				name:            "HTTP storage key",
-				kb:              &httpKeyBuilder{keyBuilder: newKeyBuilder(Http, appdef.NullQName)},
-				expectedStorage: Http,
+				kb:              &httpStorageKeyBuilder{},
+				expectedStorage: sys.Storage_Http,
 			},
 			{
 				name:            "View storage key",
 				kb:              &viewKeyBuilder{},
-				expectedStorage: View,
+				expectedStorage: sys.Storage_View,
 			},
 		}
 		for _, test := range tests {
@@ -370,18 +371,6 @@ func (w *mockRowWriter) PutString(name, value string)                     { w.Ca
 func (w *mockRowWriter) PutQName(name string, value appdef.QName)         { w.Called(name, value) }
 func (w *mockRowWriter) PutBool(name string, value bool)                  { w.Called(name, value) }
 func (w *mockRowWriter) PutRecordID(name string, value istructs.RecordID) { w.Called(name, value) }
-
-func errorFromPanic(f func()) (err error) {
-	defer func() {
-		defer func() {
-			if r := recover(); r != nil {
-				err = r.(error)
-			}
-		}()
-		f()
-	}()
-	return
-}
 
 type mockWLogEvent struct {
 	mock.Mock

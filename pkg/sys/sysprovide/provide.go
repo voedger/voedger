@@ -2,10 +2,9 @@
  * Copyright (c) 2022-present unTill Pro, Ltd.
  */
 
-package sys
+package sysprovide
 
 import (
-	"embed"
 	"runtime/debug"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -16,6 +15,7 @@ import (
 	"github.com/voedger/voedger/pkg/itokens"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	"github.com/voedger/voedger/pkg/parser"
+	"github.com/voedger/voedger/pkg/sys"
 	"github.com/voedger/voedger/pkg/sys/authnz"
 	"github.com/voedger/voedger/pkg/sys/blobber"
 	"github.com/voedger/voedger/pkg/sys/builtin"
@@ -31,9 +31,6 @@ import (
 	coreutils "github.com/voedger/voedger/pkg/utils"
 	"github.com/voedger/voedger/pkg/utils/federation"
 )
-
-//go:embed *.vsql
-var SysFS embed.FS
 
 func ProvideStateless(sr istructsmem.IStatelessResources, smtpCfg smtp.Cfg, eps map[appdef.AppQName]extensionpoints.IExtensionPoint, buildInfo *debug.BuildInfo,
 	storageProvider istorage.IAppStorageProvider, wsPostInitFunc workspace.WSPostInitFunc, timeFunc coreutils.TimeFunc,
@@ -58,6 +55,6 @@ func Provide(cfg *istructsmem.AppConfigType) parser.PackageFS {
 	uniques.ProvideEventValidator(cfg)
 	return parser.PackageFS{
 		Path: appdef.SysPackage,
-		FS:   SysFS,
+		FS:   sys.SysFS,
 	}
 }

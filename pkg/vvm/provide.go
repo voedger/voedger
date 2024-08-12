@@ -36,7 +36,6 @@ import (
 	"github.com/voedger/voedger/pkg/itokens"
 	"github.com/voedger/voedger/pkg/parser"
 	"github.com/voedger/voedger/pkg/router"
-	"github.com/voedger/voedger/pkg/sys"
 	"github.com/voedger/voedger/pkg/vvm/engines"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -65,6 +64,7 @@ import (
 	"github.com/voedger/voedger/pkg/projectors"
 	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys/invite"
+	"github.com/voedger/voedger/pkg/sys/sysprovide"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 	"github.com/voedger/voedger/pkg/utils/federation"
 	dbcertcache "github.com/voedger/voedger/pkg/vvm/db_cert_cache"
@@ -113,8 +113,8 @@ func (vvm *VoedgerVM) Shutdown() {
 }
 
 func (vvm *VoedgerVM) Launch() error {
-	ignition := struct{}{} // value has no sense
-	err := vvm.ServicePipeline.SendSync(ignition)
+	ign := ignition{}
+	err := vvm.ServicePipeline.SendSync(ign)
 	if err != nil {
 		err = errors.Join(err, ErrVVMLaunchFailure)
 		logger.Error(err)
@@ -226,7 +226,7 @@ func provideBootstrapOperator(federation federation.IFederation, asp istructs.IA
 	if clusterBuiltinApp.Name == appdef.NullAppQName {
 		return nil, fmt.Errorf("%s app should be added to VVM builtin apps", istructs.AppQName_sys_cluster)
 	}
-	return pipeline.NewSyncOp(func(ctx context.Context, work interface{}) (err error) {
+	return pipeline.NewSyncOp(func(ctx context.Context, work pipeline.IWorkpiece) (err error) {
 		return btstrp.Bootstrap(federation, asp, timeFunc, apppar, clusterBuiltinApp, otherApps, sidecarApps, itokens, storageProvider, blobberAppStoragePtr, routerAppStoragePtr)
 	}), nil
 }
@@ -294,12 +294,13 @@ func provideStatelessResources(cfgs AppConfigsTypeEmpty, vvmCfg *VVMConfig, appE
 	buildInfo *debug.BuildInfo, sp istorage.IAppStorageProvider, itokens itokens.ITokens, federation federation.IFederation,
 	asp istructs.IAppStructsProvider, atf payloads.IAppTokensFactory) istructsmem.IStatelessResources {
 	ssr := istructsmem.NewStatelessResources()
-	sys.ProvideStateless(ssr, vvmCfg.SmtpConfig, appEPs, buildInfo, sp, vvmCfg.WSPostInitFunc, vvmCfg.TimeFunc, itokens, federation,
+	sysprovide.ProvideStateless(ssr, vvmCfg.SmtpConfig, appEPs, buildInfo, sp, vvmCfg.WSPostInitFunc, vvmCfg.TimeFunc, itokens, federation,
 		asp, atf)
 	return ssr
 }
 
 func provideAppPartitions(
+	vvmCtx context.Context,
 	asp istructs.IAppStructsProvider,
 	saf appparts.SyncActualizerFactory,
 	act projectors.IActualizersService,
@@ -314,6 +315,7 @@ func provideAppPartitions(
 	})
 
 	return appparts.New2(
+		vvmCtx,
 		asp,
 		saf,
 		act,

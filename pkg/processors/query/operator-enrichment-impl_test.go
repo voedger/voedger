@@ -13,7 +13,7 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/pipeline"
-	"github.com/voedger/voedger/pkg/state"
+	"github.com/voedger/voedger/pkg/sys"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
@@ -231,7 +231,7 @@ func TestEnrichmentOperator_DoSync(t *testing.T) {
 		skb.On("PutRecordID", mock.Anything, mock.Anything)
 		s := &mockState{}
 		s.
-			On("KeyBuilder", state.Record, appdef.NullQName).Return(skb).
+			On("KeyBuilder", sys.Storage_Record, appdef.NullQName).Return(skb).
 			On("MustExist", mock.Anything).Return(record("root")).Once().
 			On("MustExist", mock.Anything).Return(record("first_children_1_101")).Once().
 			On("MustExist", mock.Anything).Return(record("first_children_1_102")).Once().

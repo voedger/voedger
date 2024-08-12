@@ -10,7 +10,7 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
-	"github.com/voedger/voedger/pkg/state"
+	"github.com/voedger/voedger/pkg/sys"
 	"github.com/voedger/voedger/pkg/sys/authnz"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
@@ -24,11 +24,11 @@ func provideCmdInitiateJoinWorkspace(sr istructsmem.IStatelessResources, timeFun
 
 func execCmdInitiateJoinWorkspace(timeFunc coreutils.TimeFunc) func(args istructs.ExecCommandArgs) (err error) {
 	return func(args istructs.ExecCommandArgs) (err error) {
-		skbCDocInvite, err := args.State.KeyBuilder(state.Record, qNameCDocInvite)
+		skbCDocInvite, err := args.State.KeyBuilder(sys.Storage_Record, qNameCDocInvite)
 		if err != nil {
 			return
 		}
-		skbCDocInvite.PutRecordID(state.Field_ID, args.ArgumentObject.AsRecordID(field_InviteID))
+		skbCDocInvite.PutRecordID(sys.Storage_Record_Field_ID, args.ArgumentObject.AsRecordID(field_InviteID))
 		svCDocInvite, ok, err := args.State.CanExist(skbCDocInvite)
 		if err != nil {
 			return
@@ -47,7 +47,7 @@ func execCmdInitiateJoinWorkspace(timeFunc coreutils.TimeFunc) func(args istruct
 			return coreutils.NewHTTPError(http.StatusBadRequest, errInviteVerificationCodeInvalid)
 		}
 
-		skbPrincipal, err := args.State.KeyBuilder(state.RequestSubject, appdef.NullQName)
+		skbPrincipal, err := args.State.KeyBuilder(sys.Storage_RequestSubject, appdef.NullQName)
 		if err != nil {
 			return
 		}
@@ -60,11 +60,11 @@ func execCmdInitiateJoinWorkspace(timeFunc coreutils.TimeFunc) func(args istruct
 		if err != nil {
 			return
 		}
-		svbCDocInvite.PutInt64(field_InviteeProfileWSID, svPrincipal.AsInt64(state.Field_ProfileWSID))
-		svbCDocInvite.PutInt32(authnz.Field_SubjectKind, svPrincipal.AsInt32(state.Field_Kind))
+		svbCDocInvite.PutInt64(field_InviteeProfileWSID, svPrincipal.AsInt64(sys.Storage_RequestSubject_Field_ProfileWSID))
+		svbCDocInvite.PutInt32(authnz.Field_SubjectKind, svPrincipal.AsInt32(sys.Storage_RequestSubject_Field_Kind))
 		svbCDocInvite.PutInt64(field_Updated, timeFunc().UnixMilli())
 		svbCDocInvite.PutInt32(field_State, State_ToBeJoined)
-		svbCDocInvite.PutChars(field_ActualLogin, svPrincipal.AsString(state.Field_Name))
+		svbCDocInvite.PutChars(field_ActualLogin, svPrincipal.AsString(sys.Storage_RequestSubject_Field_Name))
 
 		return
 	}

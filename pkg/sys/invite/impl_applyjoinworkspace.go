@@ -11,7 +11,7 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/itokens"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
-	"github.com/voedger/voedger/pkg/state"
+	"github.com/voedger/voedger/pkg/sys"
 	"github.com/voedger/voedger/pkg/sys/authnz"
 	"github.com/voedger/voedger/pkg/sys/collection"
 	coreutils "github.com/voedger/voedger/pkg/utils"
@@ -28,11 +28,11 @@ func asyncProjectorApplyJoinWorkspace(timeFunc coreutils.TimeFunc, federation fe
 func applyJoinWorkspace(timeFunc coreutils.TimeFunc, federation federation.IFederation, tokens itokens.ITokens) func(event istructs.IPLogEvent, state istructs.IState, intents istructs.IIntents) (err error) {
 	return func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
 		// it is AFTER EXECUTE ON (InitiateJoinWorkspace) so no doc checking here
-		skbCDocInvite, err := s.KeyBuilder(state.Record, qNameCDocInvite)
+		skbCDocInvite, err := s.KeyBuilder(sys.Storage_Record, qNameCDocInvite)
 		if err != nil {
 			return
 		}
-		skbCDocInvite.PutRecordID(state.Field_ID, event.ArgumentObject().AsRecordID(field_InviteID))
+		skbCDocInvite.PutRecordID(sys.Storage_Record_Field_ID, event.ArgumentObject().AsRecordID(field_InviteID))
 		svCDocInvite, err := s.MustExist(skbCDocInvite)
 		if err != nil {
 			return
@@ -56,11 +56,11 @@ func applyJoinWorkspace(timeFunc coreutils.TimeFunc, federation federation.IFede
 			return nil
 		}
 
-		skbCDocWorkspaceDescriptor, err := s.KeyBuilder(state.Record, authnz.QNameCDocWorkspaceDescriptor)
+		skbCDocWorkspaceDescriptor, err := s.KeyBuilder(sys.Storage_Record, authnz.QNameCDocWorkspaceDescriptor)
 		if err != nil {
 			return err
 		}
-		skbCDocWorkspaceDescriptor.PutQName(state.Field_Singleton, authnz.QNameCDocWorkspaceDescriptor)
+		skbCDocWorkspaceDescriptor.PutQName(sys.Storage_Record_Field_Singleton, authnz.QNameCDocWorkspaceDescriptor)
 		svCDocWorkspaceDescriptor, err := s.MustExist(skbCDocWorkspaceDescriptor)
 		if err != nil {
 			return
@@ -84,7 +84,7 @@ func applyJoinWorkspace(timeFunc coreutils.TimeFunc, federation federation.IFede
 		}
 
 		// Find cdoc.sys.Subject by cdoc.air.Invite
-		skbViewCollection, err := s.KeyBuilder(state.View, collection.QNameCollectionView)
+		skbViewCollection, err := s.KeyBuilder(sys.Storage_View, collection.QNameCollectionView)
 		if err != nil {
 			return
 		}

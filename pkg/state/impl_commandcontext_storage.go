@@ -7,6 +7,7 @@ package state
 import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/sys"
 )
 
 type commandContextStorage struct {
@@ -16,8 +17,21 @@ type commandContextStorage struct {
 	wlogOffsetFunc  WLogOffsetFunc
 }
 
+type commandContextKeyBuilder struct {
+	baseKeyBuilder
+}
+
+func (b *commandContextKeyBuilder) Storage() appdef.QName {
+	return sys.Storage_CommandContext
+}
+
+func (b *commandContextKeyBuilder) Equals(src istructs.IKeyBuilder) bool {
+	_, ok := src.(*commandContextKeyBuilder)
+	return ok
+}
+
 func (s *commandContextStorage) NewKeyBuilder(_ appdef.QName, _ istructs.IStateKeyBuilder) istructs.IStateKeyBuilder {
-	return newKeyBuilder(CommandContext, appdef.NullQName)
+	return &commandContextKeyBuilder{}
 }
 func (s *commandContextStorage) Get(_ istructs.IStateKeyBuilder) (istructs.IStateValue, error) {
 	return &cmdContextValue{
@@ -29,7 +43,7 @@ func (s *commandContextStorage) Get(_ istructs.IStateKeyBuilder) (istructs.IStat
 }
 
 type cmdContextValue struct {
-	istructs.IStateValue
+	baseStateValue
 	arg         istructs.IObject
 	unloggedArg istructs.IObject
 	wsid        istructs.WSID
@@ -38,24 +52,24 @@ type cmdContextValue struct {
 
 func (v *cmdContextValue) AsInt64(name string) int64 {
 	switch name {
-	case Field_Workspace:
+	case sys.Storage_CommandContext_Field_Workspace:
 		return int64(v.wsid)
-	case Field_WLogOffset:
+	case sys.Storage_CommandContext_Field_WLogOffset:
 		return int64(v.wlogOffset)
 	}
-	panic(errUndefined(name))
+	return v.baseStateValue.AsInt64(name)
 }
 
 func (v *cmdContextValue) AsValue(name string) istructs.IStateValue {
-	if name == Field_ArgumentObject {
+	if name == sys.Storage_CommandContext_Field_ArgumentObject {
 		return &objectValue{
 			object: v.arg,
 		}
 	}
-	if name == Field_ArgumentUnloggedObject {
+	if name == sys.Storage_CommandContext_Field_ArgumentUnloggedObject {
 		return &objectValue{
 			object: v.unloggedArg,
 		}
 	}
-	panic(errUndefined(name))
+	return v.baseStateValue.AsValue(name)
 }

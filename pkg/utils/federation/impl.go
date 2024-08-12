@@ -127,13 +127,13 @@ func (f *implIFederation) httpRespToFuncResp(httpResp *coreutils.HTTPResponse, h
 		return nil, nil
 	}
 	if isUnexpectedCode {
-		funcError :=coreutils.FuncError{
+		funcError := coreutils.FuncError{
 			SysError: coreutils.SysError{
 				HTTPStatus: httpResp.HTTPResp.StatusCode,
 			},
 			ExpectedHTTPCodes: httpResp.ExpectedHTTPCodes(),
 		}
-		if len(httpResp.Body) == 0 || httpResp.HTTPResp.StatusCode == http.StatusOK  {
+		if len(httpResp.Body) == 0 || httpResp.HTTPResp.StatusCode == http.StatusOK {
 			return nil, funcError
 		}
 		m := map[string]interface{}{}
@@ -141,8 +141,17 @@ func (f *implIFederation) httpRespToFuncResp(httpResp *coreutils.HTTPResponse, h
 			return nil, err
 		}
 		sysErrorMap := m["sys.Error"].(map[string]interface{})
+		errQNameStr, ok := sysErrorMap["QName"].(string)
+		if ok {
+			errQName, err := appdef.ParseQName(errQNameStr)
+			if err != nil {
+				errQName = appdef.NewQName("<err>", sysErrorMap["QName"].(string))
+			}
+			funcError.SysError.QName = errQName
+		}
 		funcError.SysError.HTTPStatus = int(sysErrorMap["HTTPStatus"].(float64))
-		funcError.Message = sysErrorMap["Message"].(string)
+		funcError.SysError.Message = sysErrorMap["Message"].(string)
+		funcError.SysError.Data, _ = sysErrorMap["Data"].(string)
 		return nil, funcError
 	}
 	res := &coreutils.FuncResponse{

@@ -11,7 +11,7 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/pipeline"
-	"github.com/voedger/voedger/pkg/state"
+	"github.com/voedger/voedger/pkg/sys"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
@@ -37,11 +37,11 @@ func (o *EnrichmentOperator) DoAsync(ctx context.Context, work pipeline.IWorkpie
 					return work, ctx.Err()
 				}
 
-				kb, err := o.state.KeyBuilder(state.Record, appdef.NullQName)
+				kb, err := o.state.KeyBuilder(sys.Storage_Record, appdef.NullQName)
 				if err != nil {
 					return work, err
 				}
-				kb.PutRecordID(state.Field_ID, rows[i].Value(field.Key()).(istructs.RecordID))
+				kb.PutRecordID(sys.Storage_Record_Field_ID, rows[i].Value(field.Key()).(istructs.RecordID))
 
 				sv, err := o.state.MustExist(kb)
 				if err != nil {

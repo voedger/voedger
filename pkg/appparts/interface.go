@@ -7,8 +7,9 @@ package appparts
 
 import (
 	"context"
-	"github.com/voedger/voedger/pkg/pipeline"
 	"net/url"
+
+	"github.com/voedger/voedger/pkg/pipeline"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -84,22 +85,15 @@ type IAppPartition interface {
 // TODO: eliminate this workaround
 // type BuiltInAppsDeploymentDescriptors map[appdef.AppQName]AppDeploymentDescriptor
 
-// Application partition actualizers.
+// Processor runner.
 //
-// Used by IAppPartitions to deploy and undeploy actualizers for application partitions
-type IActualizers interface {
-	// Assign application partitions manager.
+// Used by application partitions to run actualizers and schedulers
+type IProcessorRunner interface {
+	// Sets application partitions.
 	//
 	// Should be called before any other method.
 	SetAppPartitions(IAppPartitions)
 
-	// Deploys actualizers for specified application partition.
-	//
-	// Should start new actualizers and stop removed actualizers
-	DeployPartition(appdef.AppQName, istructs.PartitionID) error
-
-	// Undeploy actualizers for specified application partition.
-	//
-	// Should stop all partition actualizers
-	UndeployPartition(appdef.AppQName, istructs.PartitionID)
+	// Creates and runs new processor for specified application partition
+	NewAndRun(context.Context, appdef.AppQName, istructs.PartitionID, appdef.QName)
 }

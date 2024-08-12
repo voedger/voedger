@@ -13,7 +13,7 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/goutils/iterate"
 	"github.com/voedger/voedger/pkg/istructs"
-	"github.com/voedger/voedger/pkg/state"
+	"github.com/voedger/voedger/pkg/sys"
 	"github.com/voedger/voedger/pkg/sys/authnz"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
@@ -61,7 +61,7 @@ func execCmdCreateLogin(args istructs.ExecCommandArgs) (err error) {
 	}
 	profileCluster := args.ArgumentObject.AsInt32(authnz.Field_ProfileCluster)
 
-	kb, err := args.State.KeyBuilder(state.Record, QNameCDocLogin)
+	kb, err := args.State.KeyBuilder(sys.Storage_Record, QNameCDocLogin)
 	if err != nil {
 		return err
 	}
@@ -86,7 +86,7 @@ var projectorLoginIdx = func(event istructs.IPLogEvent, s istructs.IState, inten
 		if rec.QName() != QNameCDocLogin {
 			return nil
 		}
-		kb, err := s.KeyBuilder(state.View, QNameViewLoginIdx)
+		kb, err := s.KeyBuilder(sys.Storage_View, QNameViewLoginIdx)
 		if err != nil {
 			return err
 		}

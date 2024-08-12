@@ -13,7 +13,7 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/itokens"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
-	"github.com/voedger/voedger/pkg/state"
+	"github.com/voedger/voedger/pkg/sys"
 	"github.com/voedger/voedger/pkg/sys/authnz"
 	"github.com/voedger/voedger/pkg/sys/smtp"
 	coreutils "github.com/voedger/voedger/pkg/utils"
@@ -30,7 +30,7 @@ func asyncProjectorApplyInvitation(timeFunc coreutils.TimeFunc, federation feder
 // AFTER EXECUTE ON (InitiateInvitationByEMail)
 func applyInvitationProjector(timeFunc coreutils.TimeFunc, federation federation.IFederation, tokens itokens.ITokens, smtpCfg smtp.Cfg) func(event istructs.IPLogEvent, state istructs.IState, intents istructs.IIntents) (err error) {
 	return func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
-		skbViewInviteIndex, err := s.KeyBuilder(state.View, qNameViewInviteIndex)
+		skbViewInviteIndex, err := s.KeyBuilder(sys.Storage_View, qNameViewInviteIndex)
 		if err != nil {
 			return
 		}
@@ -48,11 +48,11 @@ func applyInvitationProjector(timeFunc coreutils.TimeFunc, federation federation
 		}
 		emailTemplate := coreutils.TruncateEmailTemplate(event.ArgumentObject().AsString(field_EmailTemplate))
 
-		skbCDocWorkspaceDescriptor, err := s.KeyBuilder(state.Record, authnz.QNameCDocWorkspaceDescriptor)
+		skbCDocWorkspaceDescriptor, err := s.KeyBuilder(sys.Storage_Record, authnz.QNameCDocWorkspaceDescriptor)
 		if err != nil {
 			return
 		}
-		skbCDocWorkspaceDescriptor.PutQName(state.Field_Singleton, authnz.QNameCDocWorkspaceDescriptor)
+		skbCDocWorkspaceDescriptor.PutQName(sys.Storage_Record_Field_Singleton, authnz.QNameCDocWorkspaceDescriptor)
 		svCDocWorkspaceDescriptor, err := s.MustExist(skbCDocWorkspaceDescriptor)
 		if err != nil {
 			return
@@ -67,32 +67,32 @@ func applyInvitationProjector(timeFunc coreutils.TimeFunc, federation federation
 		)
 
 		// Send invitation email
-		skbSendMail, err := s.KeyBuilder(state.SendMail, appdef.NullQName)
+		skbSendMail, err := s.KeyBuilder(sys.Storage_SendMail, appdef.NullQName)
 		if err != nil {
 			return
 		}
-		skbSendMail.PutString(state.Field_Subject, event.ArgumentObject().AsString(field_EmailSubject))
-		skbSendMail.PutString(state.Field_To, event.ArgumentObject().AsString(field_Email))
-		skbSendMail.PutString(state.Field_Body, replacer.Replace(emailTemplate))
-		skbSendMail.PutString(state.Field_From, smtpCfg.GetFrom())
-		skbSendMail.PutString(state.Field_Host, smtpCfg.Host)
-		skbSendMail.PutInt32(state.Field_Port, smtpCfg.Port)
-		skbSendMail.PutString(state.Field_Username, smtpCfg.Username)
+		skbSendMail.PutString(sys.Storage_SendMail_Field_Subject, event.ArgumentObject().AsString(field_EmailSubject))
+		skbSendMail.PutString(sys.Storage_SendMail_Field_To, event.ArgumentObject().AsString(field_Email))
+		skbSendMail.PutString(sys.Storage_SendMail_Field_Body, replacer.Replace(emailTemplate))
+		skbSendMail.PutString(sys.Storage_SendMail_Field_From, smtpCfg.GetFrom())
+		skbSendMail.PutString(sys.Storage_SendMail_Field_Host, smtpCfg.Host)
+		skbSendMail.PutInt32(sys.Storage_SendMail_Field_Port, smtpCfg.Port)
+		skbSendMail.PutString(sys.Storage_SendMail_Field_Username, smtpCfg.Username)
 
 		pwd := ""
 		if !coreutils.IsTest() {
-			skbAppSecretsStorage, err := s.KeyBuilder(state.AppSecret, appdef.NullQName)
+			skbAppSecretsStorage, err := s.KeyBuilder(sys.Storage_AppSecret, appdef.NullQName)
 			if err != nil {
 				return err
 			}
-			skbAppSecretsStorage.PutString(state.Field_Secret, smtpCfg.PwdSecret)
+			skbAppSecretsStorage.PutString(sys.Storage_AppSecretField_Secret, smtpCfg.PwdSecret)
 			svAppSecretsStorage, err := s.MustExist(skbAppSecretsStorage)
 			if err != nil {
 				return err
 			}
 			pwd = svAppSecretsStorage.AsString("")
 		}
-		skbSendMail.PutString(state.Field_Password, pwd)
+		skbSendMail.PutString(sys.Storage_SendMail_Field_Password, pwd)
 
 		// Send invitation Email
 		_, err = intents.NewValue(skbSendMail)

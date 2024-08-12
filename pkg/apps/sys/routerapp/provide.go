@@ -11,12 +11,12 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/parser"
-	"github.com/voedger/voedger/pkg/sys"
+	"github.com/voedger/voedger/pkg/sys/sysprovide"
 )
 
 func Provide() apps.AppBuilder {
 	return func(apis apps.APIs, cfg *istructsmem.AppConfigType, ep extensionpoints.IExtensionPoint) apps.BuiltInAppDef {
-		sysPackageFS := sys.Provide(cfg)
+		sysPackageFS := sysprovide.Provide(cfg)
 		routerAppPackageFS := parser.PackageFS{
 			Path: RouterAppFQN,
 			FS:   routerAppSchemaFS,

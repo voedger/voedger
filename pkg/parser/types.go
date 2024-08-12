@@ -645,6 +645,8 @@ type GrantStmt struct {
 	AllCommandsWithTag   bool                          `parser:"| @INSERTONALLCOMMANDSWITHTAG"`
 	Query                bool                          `parser:"| @SELECTONQUERY"`
 	AllQueriesWithTag    bool                          `parser:"| @SELECTONALLQUERIESWITHTAG"`
+	View                 bool                          `parser:"| @SELECTONVIEW"`
+	AllViewsWithTag      bool                          `parser:"| @SELECTONALLVIEWSWITHTAG"`
 	Workspace            bool                          `parser:"| @INSERTONWORKSPACE"`
 	AllWorkspacesWithTag bool                          `parser:"| @INSERTONALLWORKSPACESWITHTAG"`
 	AllTablesWithTag     *GrantAllTablesWithTagActions `parser:"| (@@ ONALLTABLESWITHTAG)"`
