@@ -320,6 +320,7 @@ func deployTestAppEx(
 	actualizers = ProvideActualizers(*actualizerCfg)
 
 	appParts, appPartsCleanup, err := appparts.New2(
+		vvmCtx,
 		appStructsProvider,
 		NewSyncActualizerFactoryFactory(ProvideSyncActualizerFactory(), secretReader, n10nBroker, statelessResources),
 		actualizers,

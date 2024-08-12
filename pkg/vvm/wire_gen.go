@@ -130,7 +130,7 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 		cleanup()
 		return nil, nil, err
 	}
-	iAppPartitions, cleanup3, err := provideAppPartitions(iAppStructsProvider, v3, iActualizersService, iStatelessResources, builtInAppsArtefacts)
+	iAppPartitions, cleanup3, err := provideAppPartitions(vvmCtx, iAppStructsProvider, v3, iActualizersService, iStatelessResources, builtInAppsArtefacts)
 	if err != nil {
 		cleanup2()
 		cleanup()
@@ -349,6 +349,7 @@ func provideStatelessResources(cfgs AppConfigsTypeEmpty, vvmCfg *VVMConfig, appE
 }
 
 func provideAppPartitions(
+	vvmCtx context.Context,
 	asp istructs.IAppStructsProvider,
 	saf appparts.SyncActualizerFactory,
 	act projectors.IActualizersService,
@@ -363,6 +364,7 @@ func provideAppPartitions(
 	})
 
 	return appparts.New2(
+		vvmCtx,
 		asp,
 		saf,
 		act,
