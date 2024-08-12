@@ -143,7 +143,7 @@ func Test_partitionProcessors_deploy(t *testing.T) {
 			return adb.MustBuild()
 		}()
 
-		t.Run("hack to update appDef", func(t *testing.T) {
+		t.Run("hack test1.app1 to update AppDef", func(t *testing.T) {
 			appParts.(*apps).apps[istructs.AppQName_test1_app1].lastestVersion.def = appDef2
 			a2, err := appParts.AppDef(istructs.AppQName_test1_app1)
 			require.NoError(err)
@@ -169,13 +169,15 @@ func Test_partitionProcessors_deploy(t *testing.T) {
 		}
 	})
 
-	stop()
+	t.Run("stop vvm from context, wait processors finished, check metrics", func(t *testing.T) {
+		stop()
 
-	mockProc.wait()
+		mockProc.wait()
 
-	m := metrics()
-	require.Len(m, 10)
-	for i := istructs.PartitionID(0); i < 10; i++ {
-		require.Empty(m[i])
-	}
+		m := metrics()
+		require.Len(m, 10)
+		for i := istructs.PartitionID(0); i < 10; i++ {
+			require.Empty(m[i])
+		}
+	})
 }
