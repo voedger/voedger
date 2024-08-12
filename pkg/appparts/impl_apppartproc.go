@@ -41,7 +41,7 @@ func newProcRT(kind ProcessorKind, cancel context.CancelFunc) *procRT {
 
 // deploys partition processors (actualizers and schedulers):
 //   - stops actualizers for removed projectors and starts actualizers for new projectors
-//   - stops schedulers for removed jobs and starts schedulers for new jobs.
+//   - TODO: stops schedulers for removed jobs and starts schedulers for new jobs.
 func (pp *partitionProcessors) deploy() {
 	appDef := pp.part.app.lastestVersion.def
 

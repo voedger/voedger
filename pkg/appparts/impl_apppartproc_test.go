@@ -7,6 +7,7 @@ package appparts
 
 import (
 	"context"
+	"errors"
 	"sync"
 	"testing"
 	"time"
@@ -42,16 +43,15 @@ func (t *mockProcessorRunner) NewAndRun(ctx context.Context, app appdef.AppQName
 		default:
 			// actualizer processor should be borrowed and released
 			p, err := t.appParts.WaitForBorrow(ctx, app, partID, ProcessorKind_Actualizer)
-			switch err {
-			case nil:
-				// simulate actualizer work
-				time.Sleep(time.Millisecond)
-				p.Release()
-			case ctx.Err():
-				return // context canceled while waiting for borrowed processor
-			default:
+			if err != nil {
+				if errors.Is(err, ctx.Err()) {
+					return // context canceled while waiting for borrowed processor
+				}
 				panic(err) // unexpected error while waiting for borrowed processor
 			}
+			// simulate actualizer work, like p.Invoke(…)
+			time.Sleep(time.Millisecond)
+			p.Release()
 		}
 	}
 }

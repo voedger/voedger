@@ -28,7 +28,7 @@ type apps struct {
 	apps                  map[appdef.AppQName]*appRT
 }
 
-func newAppPartitions(vvmCtx context.Context, asp istructs.IAppStructsProvider, saf SyncActualizerFactory, aar IProcessorRunner, eef iextengine.ExtensionEngineFactories) (ap IAppPartitions, cleanup func(), err error) {
+func newAppPartitions(vvmCtx context.Context, asp istructs.IAppStructsProvider, saf SyncActualizerFactory, asyncActualizersRunner IProcessorRunner, eef iextengine.ExtensionEngineFactories) (ap IAppPartitions, cleanup func(), err error) {
 	a := &apps{
 		mx:                    sync.RWMutex{},
 		vvmCtx:                vvmCtx,
@@ -37,8 +37,8 @@ func newAppPartitions(vvmCtx context.Context, asp istructs.IAppStructsProvider, 
 		extEngineFactories:    eef,
 		apps:                  map[appdef.AppQName]*appRT{},
 	}
-	a.processors[ProcessorKind_Actualizer] = aar
-	aar.SetAppPartitions(a)
+	a.processors[ProcessorKind_Actualizer] = asyncActualizersRunner
+	asyncActualizersRunner.SetAppPartitions(a)
 	return a, func() {}, err
 }
 

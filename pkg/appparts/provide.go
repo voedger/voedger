@@ -39,8 +39,8 @@ func New2(
 	vvmCtx context.Context,
 	structs istructs.IAppStructsProvider,
 	syncAct SyncActualizerFactory,
-	act IProcessorRunner,
+	asyncActualizersRunner IProcessorRunner,
 	eef iextengine.ExtensionEngineFactories,
 ) (ap IAppPartitions, cleanup func(), err error) {
-	return newAppPartitions(vvmCtx, structs, syncAct, act, eef)
+	return newAppPartitions(vvmCtx, structs, syncAct, asyncActualizersRunner, eef)
 }
