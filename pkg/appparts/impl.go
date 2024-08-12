@@ -20,23 +20,25 @@ import (
 
 type apps struct {
 	mx                    sync.RWMutex
+	vvmCtx                context.Context
 	structs               istructs.IAppStructsProvider
 	syncActualizerFactory SyncActualizerFactory
-	actualizers           IActualizers
+	processors            [ProcessorKind_Count]IProcessorRunner
 	extEngineFactories    iextengine.ExtensionEngineFactories
-	apps                  map[appdef.AppQName]*app
+	apps                  map[appdef.AppQName]*appRT
 }
 
-func newAppPartitions(asp istructs.IAppStructsProvider, saf SyncActualizerFactory, act IActualizers, eef iextengine.ExtensionEngineFactories) (ap IAppPartitions, cleanup func(), err error) {
+func newAppPartitions(vvmCtx context.Context, asp istructs.IAppStructsProvider, saf SyncActualizerFactory, asyncActualizersRunner IProcessorRunner, eef iextengine.ExtensionEngineFactories) (ap IAppPartitions, cleanup func(), err error) {
 	a := &apps{
 		mx:                    sync.RWMutex{},
+		vvmCtx:                vvmCtx,
 		structs:               asp,
 		syncActualizerFactory: saf,
-		actualizers:           act,
 		extEngineFactories:    eef,
-		apps:                  map[appdef.AppQName]*app{},
+		apps:                  map[appdef.AppQName]*appRT{},
 	}
-	act.SetAppPartitions(a)
+	a.processors[ProcessorKind_Actualizer] = asyncActualizersRunner
+	asyncActualizersRunner.SetAppPartitions(a)
 	return a, func() {}, err
 }
 
@@ -85,21 +87,18 @@ func (aps *apps) DeployAppPartitions(name appdef.AppQName, ids []istructs.Partit
 
 	//TODO: parallelize
 	for _, id := range ids {
-		p := newPartition(a, id)
+		var p *appPartitionRT
+
 		a.mx.Lock()
-		a.parts[id] = p
-		a.mx.Unlock()
-	}
-
-	var err error
-	for _, id := range ids {
-		if e := aps.actualizers.DeployPartition(name, id); e != nil {
-			err = errors.Join(err, e)
+		if exists, ok := a.parts[id]; ok {
+			p = exists
+		} else {
+			p = newAppPartitionRT(a, id)
+			a.parts[id] = p
 		}
-	}
+		a.mx.Unlock()
 
-	if err != nil {
-		panic(err)
+		p.processors.deploy()
 	}
 }
 
@@ -111,7 +110,7 @@ func (aps *apps) AppDef(name appdef.AppQName) (appdef.IAppDef, error) {
 	if !ok {
 		return nil, errAppNotFound(name)
 	}
-	return app.def, nil
+	return app.lastestVersion.def, nil
 }
 
 // Returns _total_ application partitions count.

@@ -15,6 +15,7 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/state"
+	"github.com/voedger/voedger/pkg/sys"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
@@ -91,7 +92,7 @@ func (s *mockIo) CanExist(key istructs.IStateKeyBuilder) (value istructs.IStateV
 	if k.storage == storageIoError {
 		return nil, false, errTestIOError
 	}
-	if k.storage == state.Event {
+	if k.storage == sys.Storage_Event {
 		if projectorMode {
 			mv.Data["offs"] = int32(12345)
 			mv.Data["qname"] = "air.UpdateSubscription"
@@ -167,10 +168,10 @@ func (s *mockIo) CanExist(key istructs.IStateKeyBuilder) (value istructs.IStateV
 		}
 		return &mv, true, nil
 	}
-	if k.storage == state.SendMail {
+	if k.storage == sys.Storage_SendMail {
 		return &mv, true, nil
 	}
-	if k.storage == state.Record {
+	if k.storage == sys.Storage_Record {
 		return &mv, false, nil
 	}
 	return nil, false, errors.New("unsupported storage: " + k.storage.Pkg() + "." + k.storage.Entity())
@@ -185,7 +186,7 @@ func (s *mockIo) MustExist(key istructs.IStateKeyBuilder) (value istructs.IState
 	if k.storage == storageIoError {
 		return nil, errTestIOError
 	}
-	if k.storage == state.Record {
+	if k.storage == sys.Storage_Record {
 		return nil, state.ErrNotExists
 	}
 	v, ok, err := s.CanExist(key)

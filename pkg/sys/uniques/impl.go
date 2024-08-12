@@ -14,6 +14,7 @@ import (
 	"net/http"
 
 	"github.com/voedger/voedger/pkg/goutils/iterate"
+	"github.com/voedger/voedger/pkg/sys"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -59,11 +60,11 @@ func update(st istructs.IState, rec istructs.ICUDRow, intents istructs.IIntents,
 	// so came here -> we're updating anything but unique fields
 	// let's check activation\deactivation
 
-	kb, err := st.KeyBuilder(qnameRecordStorage, rec.QName())
+	kb, err := st.KeyBuilder(sys.Storage_Record, rec.QName())
 	if err != nil {
 		return err
 	}
-	kb.PutRecordID(field_RecordID, rec.ID())
+	kb.PutRecordID(sys.Storage_Record_Field_ID, rec.ID())
 	currentRecord, err := st.MustExist(kb)
 	if err != nil {
 		return err
@@ -132,7 +133,7 @@ func getUniqueViewRecord(st istructs.IState, rec istructs.IRowReader, uniqueFiel
 	if err != nil {
 		return nil, nil, false, err
 	}
-	uniqueViewRecordBuilder, err := st.KeyBuilder(qnameViewStorage, qNameViewUniques)
+	uniqueViewRecordBuilder, err := st.KeyBuilder(sys.Storage_View, qNameViewUniques)
 	if err != nil {
 		// notest
 		return nil, nil, false, err

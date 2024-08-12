@@ -25,7 +25,7 @@ import (
 	"github.com/voedger/voedger/pkg/istructsmem"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	"github.com/voedger/voedger/pkg/itokensjwt"
-	"github.com/voedger/voedger/pkg/state"
+	"github.com/voedger/voedger/pkg/sys"
 	wsdescutil "github.com/voedger/voedger/pkg/utils/testwsdesc"
 )
 
@@ -164,7 +164,7 @@ func (cts *CommandTestState) putArgument() {
 		return
 	}
 
-	cts.testData[state.Field_ArgumentObject] = cts.argumentObject
+	cts.testData[sys.Storage_CommandContext_Field_ArgumentObject] = cts.argumentObject
 }
 
 func (cts *CommandTestState) setCudBuilder(wsItem IFullQName, wsid istructs.WSID) {
@@ -554,18 +554,18 @@ func (cts *CommandTestState) keyBuilder(r recordItem) istructs.IStateKeyBuilder 
 
 	localQName := cts.getQNameFromFQName(r.entity)
 	if r.isView {
-		kb, err = cts.IState.KeyBuilder(state.View, localQName)
+		kb, err = cts.IState.KeyBuilder(sys.Storage_View, localQName)
 	} else {
-		kb, err = cts.IState.KeyBuilder(state.Record, localQName)
+		kb, err = cts.IState.KeyBuilder(sys.Storage_Record, localQName)
 	}
 
 	require.NoError(cts.t, err, "IState.KeyBuilder: failed to create key builder")
 
 	switch {
 	case r.isSingleton:
-		kb.PutBool(state.Field_IsSingleton, true)
+		kb.PutBool(sys.Storage_Record_Field_IsSingleton, true)
 	case !r.isView:
-		kb.PutInt64(state.Field_ID, int64(r.id))
+		kb.PutInt64(sys.Storage_Record_Field_ID, int64(r.id))
 	case r.isView:
 		m, err := parseKeyValues(r.keyValueList)
 		require.NoError(cts.t, err, errMsgFailedToParseKeyValues)

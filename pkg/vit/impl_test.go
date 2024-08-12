@@ -20,6 +20,7 @@ import (
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/state"
+	"github.com/voedger/voedger/pkg/sys"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
@@ -236,23 +237,23 @@ func TestEmailExpectation(t *testing.T) {
 	// provide VIT email sending chan to the IBundledHostState, then use it to send an email
 	s := state.ProvideAsyncActualizerStateFactory()(context.Background(), func() istructs.IAppStructs { return &nilAppStructs{} }, nil, nil, nil, nil, nil, nil, nil, 1, 0,
 		state.WithEmailMessagesChan(vit.emailCaptor))
-	k, err := s.KeyBuilder(state.SendMail, appdef.NullQName)
+	k, err := s.KeyBuilder(sys.Storage_SendMail, appdef.NullQName)
 	require.NoError(err)
 
 	// construct the email
-	k.PutInt32(state.Field_Port, 1)
-	k.PutString(state.Field_Host, "localhost")
-	k.PutString(state.Field_Username, "user")
-	k.PutString(state.Field_Password, "pwd")
-	k.PutString(state.Field_Subject, "Greeting")
-	k.PutString(state.Field_From, "from@email.com")
-	k.PutString(state.Field_To, "to0@email.com")
-	k.PutString(state.Field_To, "to1@email.com")
-	k.PutString(state.Field_CC, "cc0@email.com")
-	k.PutString(state.Field_CC, "cc1@email.com")
-	k.PutString(state.Field_BCC, "bcc0@email.com")
-	k.PutString(state.Field_BCC, "bcc1@email.com")
-	k.PutString(state.Field_Body, "Hello world")
+	k.PutInt32(sys.Storage_SendMail_Field_Port, 1)
+	k.PutString(sys.Storage_SendMail_Field_Host, "localhost")
+	k.PutString(sys.Storage_SendMail_Field_Username, "user")
+	k.PutString(sys.Storage_SendMail_Field_Password, "pwd")
+	k.PutString(sys.Storage_SendMail_Field_Subject, "Greeting")
+	k.PutString(sys.Storage_SendMail_Field_From, "from@email.com")
+	k.PutString(sys.Storage_SendMail_Field_To, "to0@email.com")
+	k.PutString(sys.Storage_SendMail_Field_To, "to1@email.com")
+	k.PutString(sys.Storage_SendMail_Field_CC, "cc0@email.com")
+	k.PutString(sys.Storage_SendMail_Field_CC, "cc1@email.com")
+	k.PutString(sys.Storage_SendMail_Field_BCC, "bcc0@email.com")
+	k.PutString(sys.Storage_SendMail_Field_BCC, "bcc1@email.com")
+	k.PutString(sys.Storage_SendMail_Field_Body, "Hello world")
 
 	t.Run("basic usage", func(t *testing.T) {
 		require.NotNil(s.NewValue(k))

@@ -13,8 +13,8 @@ import (
 	"github.com/voedger/voedger/pkg/goutils/iterate"
 	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/parser"
-	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys/smtp"
+	"github.com/voedger/voedger/pkg/sys/sysprovide"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -51,6 +51,8 @@ var (
 	QNameODoc1                               = appdef.NewQName(app1PkgName, "odoc1")
 	QNameODoc2                               = appdef.NewQName(app1PkgName, "odoc2")
 	TestSMTPCfg                              = smtp.Cfg{
+		Host:     "smtp.testserver.com",
+		Port:     1,
 		Username: "username@gmail.com",
 	}
 
@@ -89,7 +91,7 @@ var (
 )
 
 func ProvideApp2(apis apps.APIs, cfg *istructsmem.AppConfigType, ep extensionpoints.IExtensionPoint) apps.BuiltInAppDef {
-	sysPackageFS := sys.Provide(cfg)
+	sysPackageFS := sysprovide.Provide(cfg)
 	app2PackageFS := parser.PackageFS{
 		Path: app2PkgPath,
 		FS:   SchemaTestApp2FS,
@@ -108,7 +110,7 @@ func ProvideApp2(apis apps.APIs, cfg *istructsmem.AppConfigType, ep extensionpoi
 
 func ProvideApp1(apis apps.APIs, cfg *istructsmem.AppConfigType, ep extensionpoints.IExtensionPoint) apps.BuiltInAppDef {
 	// sys package
-	sysPackageFS := sys.Provide(cfg)
+	sysPackageFS := sysprovide.Provide(cfg)
 
 	// for rates test
 	cfg.Resources.Add(istructsmem.NewQueryFunction(
@@ -149,7 +151,7 @@ func ProvideApp1(apis apps.APIs, cfg *istructsmem.AppConfigType, ep extensionpoi
 	cfg.Resources.Add(istructsmem.NewCommandFunction(
 		appdef.NewQName(app1PkgName, "TestCmd"),
 		func(args istructs.ExecCommandArgs) (err error) {
-			key, err := args.State.KeyBuilder(state.Result, testCmdResult)
+			key, err := args.State.KeyBuilder(sys.Storage_Result, testCmdResult)
 			if err != nil {
 				return err
 			}
@@ -201,7 +203,7 @@ func ProvideApp1(apis apps.APIs, cfg *istructsmem.AppConfigType, ep extensionpoi
 					if cud.QName() != QNameApp1_CDocCategory {
 						return nil
 					}
-					kb, err := st.KeyBuilder(state.View, qNameViewCategoryIdx)
+					kb, err := st.KeyBuilder(sys.Storage_View, qNameViewCategoryIdx)
 					if err != nil {
 						return err
 					}
@@ -223,7 +225,7 @@ func ProvideApp1(apis apps.APIs, cfg *istructsmem.AppConfigType, ep extensionpoi
 	cfg.Resources.Add(istructsmem.NewCommandFunction(appdef.NewQName(app1PkgName, "TestCmdRawArg"), istructsmem.NullCommandExec))
 
 	cfg.Resources.Add(istructsmem.NewQueryFunction(appdef.NewQName(app1PkgName, "QryIntents"), func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
-		kb, err := args.State.KeyBuilder(state.Result, appdef.NewQName(app1PkgName, "QryIntentsResult"))
+		kb, err := args.State.KeyBuilder(sys.Storage_Result, appdef.NewQName(app1PkgName, "QryIntentsResult"))
 		if err != nil {
 			return err
 		}
@@ -236,7 +238,7 @@ func ProvideApp1(apis apps.APIs, cfg *istructsmem.AppConfigType, ep extensionpoi
 	}))
 
 	funcWithResponseIntents := func(args istructs.PrepareArgs, st istructs.IState, intents istructs.IIntents) (err error) {
-		kb, err := st.KeyBuilder(state.Response, appdef.NullQName)
+		kb, err := st.KeyBuilder(sys.Storage_Response, appdef.NullQName)
 		if err != nil {
 			return err
 		}
@@ -244,8 +246,8 @@ func ProvideApp1(apis apps.APIs, cfg *istructsmem.AppConfigType, ep extensionpoi
 		if err != nil {
 			return err
 		}
-		vb.PutInt32(state.Field_StatusCode, args.ArgumentObject.AsInt32("StatusCodeToReturn"))
-		vb.PutString(state.Field_ErrorMessage, "error from response intent")
+		vb.PutInt32(sys.Storage_Response_Field_StatusCode, args.ArgumentObject.AsInt32("StatusCodeToReturn"))
+		vb.PutString(sys.Storage_Response_Field_ErrorMessage, "error from response intent")
 		return nil
 	}
 

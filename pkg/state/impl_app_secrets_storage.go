@@ -6,27 +6,62 @@ package state
 
 import (
 	"errors"
-	"fmt"
 	"io/fs"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/isecrets"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/sys"
 )
 
 type appSecretsStorage struct {
 	secretReader isecrets.ISecretReader
 }
 
+type appSecretsStorageKeyBuilder struct {
+	baseKeyBuilder
+	secret string
+}
+
+func (b *appSecretsStorageKeyBuilder) Storage() appdef.QName {
+	return sys.Storage_AppSecret
+}
+func (b *appSecretsStorageKeyBuilder) Equals(src istructs.IKeyBuilder) bool {
+	kb, ok := src.(*appSecretsStorageKeyBuilder)
+	if !ok {
+		return false
+	}
+	if b.secret != kb.secret {
+		return false
+	}
+	return true
+}
+func (b *appSecretsStorageKeyBuilder) PutString(name string, value string) {
+	if name == sys.Storage_AppSecretField_Secret {
+		b.secret = value
+		return
+	}
+	b.baseKeyBuilder.PutString(name, value)
+}
+
+type appSecretValue struct {
+	baseStateValue
+	content string
+}
+
+func (v *appSecretValue) AsString(name string) string {
+	return v.content
+}
+
 func (s *appSecretsStorage) NewKeyBuilder(appdef.QName, istructs.IStateKeyBuilder) istructs.IStateKeyBuilder {
-	return newKeyBuilder(AppSecret, appdef.NullQName)
+	return &appSecretsStorageKeyBuilder{}
 }
 func (s *appSecretsStorage) Get(key istructs.IStateKeyBuilder) (value istructs.IStateValue, err error) {
-	k := key.(*keyBuilder)
-	if _, ok := k.data[Field_Secret]; !ok {
-		return nil, fmt.Errorf("'%s': %w", Field_Secret, ErrNotFound)
+	k := key.(*appSecretsStorageKeyBuilder)
+	if k.secret == "" {
+		return nil, errors.New("secret name is not specified")
 	}
-	bb, e := s.secretReader.ReadSecret(k.data[Field_Secret].(string))
+	bb, e := s.secretReader.ReadSecret(k.secret)
 	if errors.Is(e, fs.ErrNotExist) || errors.Is(e, isecrets.ErrSecretNameIsBlank) {
 		return nil, nil
 	}

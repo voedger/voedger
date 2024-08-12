@@ -8,10 +8,11 @@ package state
 import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/sys"
 )
 
 func GetPrincipalTokenFromState(st istructs.IState) (token string, err error) {
-	kb, err := st.KeyBuilder(RequestSubject, appdef.NullQName)
+	kb, err := st.KeyBuilder(sys.Storage_RequestSubject, appdef.NullQName)
 	if err != nil {
 		return "", err
 	}
@@ -19,7 +20,7 @@ func GetPrincipalTokenFromState(st istructs.IState) (token string, err error) {
 	if err != nil {
 		return "", err
 	}
-	token = principalTokenValue.AsString(Field_Token)
+	token = principalTokenValue.AsString(sys.Storage_RequestSubject_Field_Token)
 	return token, nil
 }
 

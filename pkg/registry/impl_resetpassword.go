@@ -14,7 +14,7 @@ import (
 	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/itokens"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
-	"github.com/voedger/voedger/pkg/state"
+	"github.com/voedger/voedger/pkg/sys"
 	"github.com/voedger/voedger/pkg/sys/authnz"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 	"github.com/voedger/voedger/pkg/utils/federation"
@@ -65,11 +65,11 @@ func provideQryInitiateResetPasswordByEmailExec(itokens itokens.ITokens, federat
 		}
 
 		// check CDoc<registry.Login>.WSID != 0
-		kb, err := args.State.KeyBuilder(state.Record, QNameCDocLogin)
+		kb, err := args.State.KeyBuilder(sys.Storage_Record, QNameCDocLogin)
 		if err != nil {
 			return err
 		}
-		kb.PutRecordID(state.Field_ID, cdocLoginID)
+		kb.PutRecordID(sys.Storage_Record_Field_ID, cdocLoginID)
 		sv, err := args.State.MustExist(kb)
 		if err != nil {
 			return err

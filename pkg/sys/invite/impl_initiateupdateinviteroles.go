@@ -10,7 +10,7 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
-	"github.com/voedger/voedger/pkg/state"
+	"github.com/voedger/voedger/pkg/sys"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
@@ -27,11 +27,11 @@ func execCmdInitiateUpdateInviteRoles(timeFunc coreutils.TimeFunc) func(args ist
 			return coreutils.NewHTTPError(http.StatusBadRequest, errInviteTemplateInvalid)
 		}
 
-		skbCDocInvite, err := args.State.KeyBuilder(state.Record, qNameCDocInvite)
+		skbCDocInvite, err := args.State.KeyBuilder(sys.Storage_Record, qNameCDocInvite)
 		if err != nil {
 			return
 		}
-		skbCDocInvite.PutRecordID(state.Field_ID, args.ArgumentObject.AsRecordID(field_InviteID))
+		skbCDocInvite.PutRecordID(sys.Storage_Record_Field_ID, args.ArgumentObject.AsRecordID(field_InviteID))
 		svCDocInvite, ok, err := args.State.CanExist(skbCDocInvite)
 		if err != nil {
 			return

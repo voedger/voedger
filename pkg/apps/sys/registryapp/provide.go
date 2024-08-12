@@ -12,8 +12,8 @@ import (
 	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/parser"
 	"github.com/voedger/voedger/pkg/registry"
-	"github.com/voedger/voedger/pkg/sys"
 	"github.com/voedger/voedger/pkg/sys/smtp"
+	"github.com/voedger/voedger/pkg/sys/sysprovide"
 )
 
 // for historical reason num partitions of sys/registry must be equal to numCP
@@ -21,7 +21,7 @@ func Provide(smtpCfg smtp.Cfg, numCP istructs.NumCommandProcessors) apps.AppBuil
 	return func(apis apps.APIs, cfg *istructsmem.AppConfigType, ep extensionpoints.IExtensionPoint) apps.BuiltInAppDef {
 
 		// sys package
-		sysPackageFS := sys.Provide(cfg)
+		sysPackageFS := sysprovide.Provide(cfg)
 
 		// sys/registry resources
 		registryPackageFS := registry.Provide(cfg, apis.ITokens, apis.IFederation)

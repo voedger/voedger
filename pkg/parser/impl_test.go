@@ -2297,6 +2297,8 @@ func Test_Grants(t *testing.T) {
 		GRANT ALL(ref1) ON TABLE Tbl2 TO role1;
 		GRANT ALL(items) ON TABLE Tbl2 TO role1;
 		GRANT ALL(items2) ON TABLE Tbl2 TO role1;
+		GRANT SELECT ON VIEW Fake TO role1;
+		GRANT SELECT ON ALL VIEWS WITH TAG x TO role1;
 	);
 	`, "file.vsql:5:30: undefined role: app1",
 		"file.vsql:5:22: undefined table: Fake",
@@ -2306,6 +2308,8 @@ func Test_Grants(t *testing.T) {
 		"file.vsql:10:13: undefined field FakeCol",
 		"file.vsql:11:23: undefined field FakeCol",
 		"file.vsql:12:41: undefined tag: x",
+		"file.vsql:22:24: undefined view: Fake",
+		"file.vsql:23:38: undefined tag: x",
 	)
 }
 
@@ -2657,4 +2661,17 @@ func Test_CRecordInDescriptor(t *testing.T) {
 `)
 	require.NoError(err)
 	require.NoError(BuildAppDefs(schema, appdef.New()))
+}
+
+func Test_RefInheritedFromSys(t *testing.T) {
+	require := assertions(t)
+
+	_, err := require.AppSchema(`APPLICATION SomeApp();
+	WORKSPACE SomeWS (
+	    TABLE SomeTable INHERITS CDoc(
+	        ChildWorkspaceID ref(sys.ChildWorkspace)
+    	);
+	)
+	`)
+	require.NoError(err)
 }

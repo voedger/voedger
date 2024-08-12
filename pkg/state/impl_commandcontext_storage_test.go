@@ -12,6 +12,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/sys"
 )
 
 func TestCommandContextStorage(t *testing.T) {
@@ -40,14 +41,14 @@ func TestCommandContextStorage(t *testing.T) {
 	s := ProvideCommandProcessorStateFactory()(context.Background(), nil, nil, wsidFunc, nil, nil, nil, nil, 1,
 		func() istructs.IObjectBuilder { return cmdResBuilder }, commandPrepareArgs, argFunc, unloggedArgFunc, wlogOffsetFunc)
 
-	kb, err := s.KeyBuilder(CommandContext, appdef.NullQName)
+	kb, err := s.KeyBuilder(sys.Storage_CommandContext, appdef.NullQName)
 	require.NoError(t, err)
 
 	v, err := s.MustExist(kb)
 	require.NoError(t, err)
-	require.Equal(t, int64(wsid), v.AsInt64(Field_Workspace))
-	require.NotNil(t, v.AsValue(Field_ArgumentObject))
-	require.NotNil(t, v.AsValue(Field_ArgumentUnloggedObject))
-	require.Equal(t, int64(42), v.AsInt64(Field_WLogOffset))
+	require.Equal(t, int64(wsid), v.AsInt64(sys.Storage_CommandContext_Field_Workspace))
+	require.NotNil(t, v.AsValue(sys.Storage_CommandContext_Field_ArgumentObject))
+	require.NotNil(t, v.AsValue(sys.Storage_CommandContext_Field_ArgumentUnloggedObject))
+	require.Equal(t, int64(42), v.AsInt64(sys.Storage_CommandContext_Field_WLogOffset))
 
 }

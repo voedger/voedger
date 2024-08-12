@@ -36,7 +36,6 @@ import (
 	"github.com/voedger/voedger/pkg/itokens"
 	"github.com/voedger/voedger/pkg/parser"
 	"github.com/voedger/voedger/pkg/router"
-	"github.com/voedger/voedger/pkg/sys"
 	"github.com/voedger/voedger/pkg/vvm/engines"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -65,6 +64,7 @@ import (
 	"github.com/voedger/voedger/pkg/projectors"
 	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys/invite"
+	"github.com/voedger/voedger/pkg/sys/sysprovide"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 	"github.com/voedger/voedger/pkg/utils/federation"
 	dbcertcache "github.com/voedger/voedger/pkg/vvm/db_cert_cache"
@@ -294,12 +294,13 @@ func provideStatelessResources(cfgs AppConfigsTypeEmpty, vvmCfg *VVMConfig, appE
 	buildInfo *debug.BuildInfo, sp istorage.IAppStorageProvider, itokens itokens.ITokens, federation federation.IFederation,
 	asp istructs.IAppStructsProvider, atf payloads.IAppTokensFactory) istructsmem.IStatelessResources {
 	ssr := istructsmem.NewStatelessResources()
-	sys.ProvideStateless(ssr, vvmCfg.SmtpConfig, appEPs, buildInfo, sp, vvmCfg.WSPostInitFunc, vvmCfg.TimeFunc, itokens, federation,
+	sysprovide.ProvideStateless(ssr, vvmCfg.SmtpConfig, appEPs, buildInfo, sp, vvmCfg.WSPostInitFunc, vvmCfg.TimeFunc, itokens, federation,
 		asp, atf)
 	return ssr
 }
 
 func provideAppPartitions(
+	vvmCtx context.Context,
 	asp istructs.IAppStructsProvider,
 	saf appparts.SyncActualizerFactory,
 	act projectors.IActualizersService,
@@ -314,6 +315,7 @@ func provideAppPartitions(
 	})
 
 	return appparts.New2(
+		vvmCtx,
 		asp,
 		saf,
 		act,

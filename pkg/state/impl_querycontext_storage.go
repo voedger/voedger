@@ -7,6 +7,7 @@ package state
 import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/sys"
 )
 
 type queryContextStorage struct {
@@ -14,8 +15,20 @@ type queryContextStorage struct {
 	wsidFunc WSIDFunc
 }
 
+type queryContextKeyBuilder struct {
+	baseKeyBuilder
+}
+
+func (b *queryContextKeyBuilder) Storage() appdef.QName {
+	return sys.Storage_QueryContext
+}
+func (b *queryContextKeyBuilder) Equals(src istructs.IKeyBuilder) bool {
+	_, ok := src.(*queryContextKeyBuilder)
+	return ok
+}
+
 func (s *queryContextStorage) NewKeyBuilder(_ appdef.QName, _ istructs.IStateKeyBuilder) istructs.IStateKeyBuilder {
-	return newKeyBuilder(QueryContext, appdef.NullQName)
+	return &queryContextKeyBuilder{}
 }
 func (s *queryContextStorage) Get(_ istructs.IStateKeyBuilder) (istructs.IStateValue, error) {
 	return &qryContextValue{
@@ -25,23 +38,23 @@ func (s *queryContextStorage) Get(_ istructs.IStateKeyBuilder) (istructs.IStateV
 }
 
 type qryContextValue struct {
-	istructs.IStateValue
+	baseStateValue
 	arg  istructs.IObject
 	wsid istructs.WSID
 }
 
 func (v *qryContextValue) AsInt64(name string) int64 {
-	if name == Field_Workspace {
+	if name == sys.Storage_QueryContext_Field_Workspace {
 		return int64(v.wsid)
 	}
-	panic(errUndefined(name))
+	return v.baseStateValue.AsInt64(name)
 }
 
 func (v *qryContextValue) AsValue(name string) istructs.IStateValue {
-	if name == Field_ArgumentObject {
+	if name == sys.Storage_QueryContext_Field_ArgumentObject {
 		return &objectValue{
 			object: v.arg,
 		}
 	}
-	panic(errUndefined(name))
+	return v.baseStateValue.AsValue(name)
 }

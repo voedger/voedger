@@ -11,7 +11,7 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/itokens"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
-	"github.com/voedger/voedger/pkg/state"
+	"github.com/voedger/voedger/pkg/sys"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 	"github.com/voedger/voedger/pkg/utils/federation"
 )
@@ -26,21 +26,21 @@ func asyncProjectorApplyCancelAcceptedInvite(timeFunc coreutils.TimeFunc, federa
 // AFTER EXEC c.sys.InitiateCancelAcceptedInvite
 func applyCancelAcceptedInvite(timeFunc coreutils.TimeFunc, federation federation.IFederation, tokens itokens.ITokens) func(event istructs.IPLogEvent, state istructs.IState, intents istructs.IIntents) (err error) {
 	return func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
-		skbCDocInvite, err := s.KeyBuilder(state.Record, qNameCDocInvite)
+		skbCDocInvite, err := s.KeyBuilder(sys.Storage_Record, qNameCDocInvite)
 		if err != nil {
 			return
 		}
-		skbCDocInvite.PutRecordID(state.Field_ID, event.ArgumentObject().AsRecordID(field_InviteID))
+		skbCDocInvite.PutRecordID(sys.Storage_Record_Field_ID, event.ArgumentObject().AsRecordID(field_InviteID))
 		svCDocInvite, err := s.MustExist(skbCDocInvite)
 		if err != nil {
 			return
 		}
 
-		skbCDocSubject, err := s.KeyBuilder(state.Record, QNameCDocSubject)
+		skbCDocSubject, err := s.KeyBuilder(sys.Storage_Record, QNameCDocSubject)
 		if err != nil {
 			return
 		}
-		skbCDocSubject.PutRecordID(state.Field_ID, svCDocInvite.AsRecordID(field_SubjectID))
+		skbCDocSubject.PutRecordID(sys.Storage_Record_Field_ID, svCDocInvite.AsRecordID(field_SubjectID))
 		svCDocSubject, err := s.MustExist(skbCDocSubject)
 		if err != nil {
 			return

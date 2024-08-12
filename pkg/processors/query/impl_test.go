@@ -31,7 +31,7 @@ import (
 	imetrics "github.com/voedger/voedger/pkg/metrics"
 	"github.com/voedger/voedger/pkg/pipeline"
 	"github.com/voedger/voedger/pkg/processors"
-	"github.com/voedger/voedger/pkg/state"
+	"github.com/voedger/voedger/pkg/sys"
 	"github.com/voedger/voedger/pkg/sys/authnz"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 	"github.com/voedger/voedger/pkg/vvm/engines"
@@ -72,7 +72,7 @@ func TestBasicUsage_RowsProcessorFactory(t *testing.T) {
 	skb.On("PutRecordID", mock.Anything, mock.Anything)
 	s := &mockState{}
 	s.
-		On("KeyBuilder", state.Record, appdef.NullQName).Return(skb).
+		On("KeyBuilder", sys.Storage_Record, appdef.NullQName).Return(skb).
 		On("MustExist", mock.Anything).Return(department("Soft drinks")).Once().
 		On("MustExist", mock.Anything).Return(department("Alcohol drinks")).Once().
 		On("MustExist", mock.Anything).Return(department("Alcohol drinks")).Once().
@@ -321,9 +321,9 @@ func deployTestAppWithSecretToken(require *require.Assertions,
 	require.NoError(as.Records().Apply(pLogEvent))
 	require.NoError(as.Events().PutWlog(pLogEvent))
 
-	appParts, cleanup, err = appparts.New2(asp,
+	appParts, cleanup, err = appparts.New2(context.Background(), asp,
 		func(istructs.IAppStructs, istructs.PartitionID) pipeline.ISyncOperator { return &pipeline.NOOP{} }, // no projectors
-		appparts.NullActualizers,
+		appparts.NullProcessorRunner,
 		engines.ProvideExtEngineFactories(
 			engines.ExtEngineFactoriesConfig{
 				AppConfigs:         cfgs,

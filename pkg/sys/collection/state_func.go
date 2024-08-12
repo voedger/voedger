@@ -12,6 +12,7 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 	istructsmem "github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/state"
+	"github.com/voedger/voedger/pkg/sys"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
@@ -24,7 +25,7 @@ func provideStateFunc(sr istructsmem.IStatelessResources) {
 func stateFuncExec(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 	after := args.ArgumentObject.AsInt64(field_After)
 
-	kb, err := args.State.KeyBuilder(state.View, QNameCollectionView)
+	kb, err := args.State.KeyBuilder(sys.Storage_View, QNameCollectionView)
 	if err != nil {
 		return err
 	}

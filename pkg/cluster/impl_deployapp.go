@@ -14,7 +14,7 @@ import (
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
-	"github.com/voedger/voedger/pkg/state"
+	"github.com/voedger/voedger/pkg/sys"
 	"github.com/voedger/voedger/pkg/sys/authnz"
 	"github.com/voedger/voedger/pkg/sys/uniques"
 	"github.com/voedger/voedger/pkg/sys/workspace"
@@ -49,12 +49,12 @@ func provideCmdDeployApp(asp istructs.IAppStructsProvider, timeFunc coreutils.Ti
 		numAppWorkspacesToDeploy := istructs.NumAppWorkspaces(args.ArgumentObject.AsInt32(Field_NumAppWorkspaces))
 		numAppPartitionsToDeploy := istructs.NumAppPartitions(args.ArgumentObject.AsInt32(Field_NumPartitions))
 		if wdocAppRecordID != istructs.NullRecordID {
-			kb, err := args.State.KeyBuilder(state.Record, qNameWDocApp)
+			kb, err := args.State.KeyBuilder(sys.Storage_Record, qNameWDocApp)
 			if err != nil {
 				// notest
 				return err
 			}
-			kb.PutRecordID(state.Field_ID, wdocAppRecordID)
+			kb.PutRecordID(sys.Storage_Record_Field_ID, wdocAppRecordID)
 			appRec, err := args.State.MustExist(kb)
 			if err != nil {
 				// notest
@@ -77,7 +77,7 @@ func provideCmdDeployApp(asp istructs.IAppStructsProvider, timeFunc coreutils.Ti
 			return nil
 		}
 
-		kb, err := args.State.KeyBuilder(state.Record, qNameWDocApp)
+		kb, err := args.State.KeyBuilder(sys.Storage_Record, qNameWDocApp)
 		if err != nil {
 			// notest
 			return err

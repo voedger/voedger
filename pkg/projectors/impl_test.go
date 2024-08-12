@@ -31,7 +31,7 @@ import (
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	"github.com/voedger/voedger/pkg/itokensjwt"
 	imetrics "github.com/voedger/voedger/pkg/metrics"
-	"github.com/voedger/voedger/pkg/state"
+	"github.com/voedger/voedger/pkg/sys"
 	"github.com/voedger/voedger/pkg/sys/authnz"
 	"github.com/voedger/voedger/pkg/vvm/engines"
 )
@@ -123,7 +123,7 @@ var (
 			if wsid == 1099 {
 				return errTestError
 			}
-			key, err := s.KeyBuilder(state.View, incProjectionView)
+			key, err := s.KeyBuilder(sys.Storage_View, incProjectionView)
 			if err != nil {
 				return
 			}
@@ -148,7 +148,7 @@ var (
 	testDecrementor = istructs.Projector{
 		Name: decrementorName,
 		Func: func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
-			key, err := s.KeyBuilder(state.View, decProjectionView)
+			key, err := s.KeyBuilder(sys.Storage_View, decProjectionView)
 			if err != nil {
 				return
 			}
@@ -320,6 +320,7 @@ func deployTestAppEx(
 	actualizers = ProvideActualizers(*actualizerCfg)
 
 	appParts, appPartsCleanup, err := appparts.New2(
+		vvmCtx,
 		appStructsProvider,
 		NewSyncActualizerFactoryFactory(ProvideSyncActualizerFactory(), secretReader, n10nBroker, statelessResources),
 		actualizers,

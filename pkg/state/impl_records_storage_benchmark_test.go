@@ -10,6 +10,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/sys"
 )
 
 /*
@@ -22,12 +23,12 @@ func BenchmarkRecordsGet(b *testing.B) {
 	mockRec = &mockBenchRec{}
 	appStructs := &mockAppStr{}
 	s := ProvideQueryProcessorStateFactory()(context.Background(), appStructsFunc(appStructs), nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil, nil, nil, nil, nil, nil, nil)
-	k1, err := s.KeyBuilder(Record, appdef.NullQName)
+	k1, err := s.KeyBuilder(sys.Storage_Record, appdef.NullQName)
 	if err != nil {
 		panic(err)
 	}
-	k1.PutRecordID(Field_ID, 2)
-	k1.PutInt64(Field_WSID, 1)
+	k1.PutRecordID(sys.Storage_Record_Field_ID, 2)
+	k1.PutInt64(sys.Storage_Record_Field_WSID, 1)
 
 	for i := 0; i < b.N; i++ {
 		value, ok, err := s.CanExist(k1)

@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	istorageimpl "github.com/voedger/voedger/pkg/istorage/provider"
+	"github.com/voedger/voedger/pkg/sys"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/iratesce"
@@ -85,26 +86,26 @@ func TestEventStorage_Get(t *testing.T) {
 
 	require.Equal(event, s.PLogEvent())
 
-	kb, err := s.KeyBuilder(Event, appdef.NullQName)
+	kb, err := s.KeyBuilder(sys.Storage_Event, appdef.NullQName)
 	require.NoError(err)
 	value, err := s.MustExist(kb)
 	require.NotNil(value)
 	require.NoError(err)
 
-	require.Equal(int64(wsid), value.AsInt64(Field_Workspace))
-	require.Equal(int64(0), value.AsInt64(Field_RegisteredAt))
-	require.Equal(int64(0), value.AsInt64(Field_SyncedAt))
-	require.Equal(int64(0), value.AsInt64(Field_Offset))
-	require.Equal(int64(0), value.AsInt64(Field_WLogOffset))
-	require.Equal(int64(0), value.AsInt64(Field_DeviceID))
-	require.Equal(testQName, value.AsQName(Field_QName))
-	require.False(value.AsBool(Field_Synced))
+	require.Equal(int64(wsid), value.AsInt64(sys.Storage_Event_Field_Workspace))
+	require.Equal(int64(0), value.AsInt64(sys.Storage_Event_Field_RegisteredAt))
+	require.Equal(int64(0), value.AsInt64(sys.Storage_Event_Field_SyncedAt))
+	require.Equal(int64(0), value.AsInt64(sys.Storage_Event_Field_Offset))
+	require.Equal(int64(0), value.AsInt64(sys.Storage_Event_Field_WLogOffset))
+	require.Equal(int64(0), value.AsInt64(sys.Storage_Event_Field_DeviceID))
+	require.Equal(testQName, value.AsQName(sys.Storage_Event_Field_QName))
+	require.False(value.AsBool(sys.Storage_Event_Field_Synced))
 
-	v := value.AsValue(Field_ArgumentObject)
+	v := value.AsValue(sys.Storage_Event_Field_ArgumentObject)
 	require.NotNil(v)
 	require.Equal(int32(1), v.AsInt32("i"))
 
-	c := value.AsValue(Field_CUDs)
+	c := value.AsValue(sys.Storage_Event_Field_CUDs)
 	require.NotNil(c)
 	require.Equal(1, c.Length())
 	cud1 := c.GetAsValue(0)
