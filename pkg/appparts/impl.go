@@ -98,7 +98,7 @@ func (aps *apps) DeployAppPartitions(name appdef.AppQName, ids []istructs.Partit
 		}
 		a.mx.Unlock()
 
-		p.actualizers.deploy()
+		p.processors.deploy()
 	}
 }
 

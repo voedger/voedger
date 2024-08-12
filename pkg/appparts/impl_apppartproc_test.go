@@ -7,6 +7,7 @@ package appparts
 
 import (
 	"context"
+	"sync"
 	"testing"
 	"time"
 
@@ -26,9 +27,13 @@ type mockProcessorRunner struct {
 	IProcessorRunner
 	mock.Mock
 	appParts IAppPartitions
+	wg       sync.WaitGroup
 }
 
 func (t *mockProcessorRunner) NewAndRun(ctx context.Context, app appdef.AppQName, partID istructs.PartitionID, name appdef.QName) {
+	t.wg.Add(1)
+	defer t.wg.Done()
+
 	t.Called(ctx, app, partID, name)
 	for {
 		select {
@@ -54,6 +59,11 @@ func (t *mockProcessorRunner) NewAndRun(ctx context.Context, app appdef.AppQName
 func (t *mockProcessorRunner) SetAppPartitions(ap IAppPartitions) {
 	t.Called(ap)
 	t.appParts = ap
+}
+
+func (t *mockProcessorRunner) wait() {
+	// the context should be stopped. Here we just wait for finish all processors run
+	t.wg.Wait()
 }
 
 func Test_partitionProcessors_deploy(t *testing.T) {
@@ -93,6 +103,16 @@ func Test_partitionProcessors_deploy(t *testing.T) {
 
 	defer cleanupParts()
 
+	metrics := func() map[istructs.PartitionID]appdef.QNames {
+		m := map[istructs.PartitionID]appdef.QNames{}
+		for i := istructs.PartitionID(0); i < 10; i++ {
+			if p, exists := appParts.(*apps).apps[istructs.AppQName_test1_app1].parts[i]; exists {
+				m[i] = appdef.QNamesFromMap(p.processors.proc)
+			}
+		}
+		return m
+	}
+
 	appParts.DeployApp(istructs.AppQName_test1_app1, nil, appDef1, 1, PoolSize(2, 2, 2), istructs.DefaultNumAppWorkspaces)
 
 	t.Run("deploy 10 partitions", func(t *testing.T) {
@@ -101,6 +121,12 @@ func Test_partitionProcessors_deploy(t *testing.T) {
 		}
 		appParts.DeployAppPartitions(istructs.AppQName_test1_app1, []istructs.PartitionID{0, 1, 2, 3, 4, 5, 6, 7, 8, 9})
 		mockProc.AssertExpectations(t)
+
+		m := metrics()
+		require.Len(m, 10)
+		for i := istructs.PartitionID(0); i < 10; i++ {
+			require.Equal(appdef.QNames{prjName1}, m[i])
+		}
 	})
 
 	t.Run("redeploy odd partitions", func(t *testing.T) {
@@ -131,7 +157,25 @@ func Test_partitionProcessors_deploy(t *testing.T) {
 		}
 		appParts.DeployAppPartitions(istructs.AppQName_test1_app1, []istructs.PartitionID{1, 3, 5, 7, 9})
 		mockProc.AssertExpectations(t)
+
+		m := metrics()
+		require.Len(m, 10)
+		for i := istructs.PartitionID(0); i < 10; i++ {
+			if i%2 == 1 {
+				require.Equal(appdef.QNames{prjName2}, m[i])
+			} else {
+				require.Equal(appdef.QNames{prjName1}, m[i])
+			}
+		}
 	})
 
 	stop()
+
+	mockProc.wait()
+
+	m := metrics()
+	require.Len(m, 10)
+	for i := istructs.PartitionID(0); i < 10; i++ {
+		require.Empty(m[i])
+	}
 }
