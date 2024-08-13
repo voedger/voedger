@@ -41,7 +41,7 @@ func newProcRT(kind ProcessorKind, cancel context.CancelFunc) *procRT {
 
 // deploys partition processors (actualizers and schedulers):
 //   - stops actualizers for removed projectors and starts actualizers for new projectors
-//   - TODO: stops schedulers for removed jobs and starts schedulers for new jobs.
+//   - stops schedulers for removed jobs and starts schedulers for new jobs.
 func (pp *partitionProcessors) deploy() {
 	appDef := pp.part.app.lastestVersion.def
 
@@ -52,11 +52,11 @@ func (pp *partitionProcessors) deploy() {
 		old := false
 		switch rt.kind {
 		case ProcessorKind_Actualizer:
+			// TODO: compare if projector properties changed (events, sync/async, etc.)
 			old = appDef.Projector(name) == nil
-			/* TODO:
-			case ProcessorKind_Scheduler:
-				old = appDef.Job(name) == nil
-			*/
+		case ProcessorKind_Scheduler:
+			// TODO: compare if scheduler properties changed (cron, etc.)
+			old = appDef.Job(name) == nil
 		}
 		if old {
 			stopWG.Add(1)
@@ -118,14 +118,12 @@ func (pp *partitionProcessors) deploy() {
 			}
 		}
 	})
-	/*
-		appDef.Jobs(func(job appdef.IJob) {
-			name := job.QName()
-			if _, exists := pp.proc[name]; !exists {
-				start(name, ProcessorKind_Scheduler)
-			}
-		})
-	*/
+	appDef.Jobs(func(job appdef.IJob) {
+		name := job.QName()
+		if _, exists := pp.proc[name]; !exists {
+			start(name, ProcessorKind_Scheduler)
+		}
+	})
 	pp.mx.RUnlock()
 	startWG.Wait() // wait for all new processors to start
 }

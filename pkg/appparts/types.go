@@ -22,6 +22,7 @@ const (
 	ProcessorKind_Command ProcessorKind = iota
 	ProcessorKind_Query
 	ProcessorKind_Actualizer
+	ProcessorKind_Scheduler
 
 	ProcessorKind_Count
 )
@@ -35,7 +36,7 @@ type AppDeploymentDescriptor struct {
 	// EnginePoolSize pools size for each processor kind
 	EnginePoolSize [ProcessorKind_Count]int
 
-	// total numer of AppWorkspaces
+	// total number of AppWorkspaces
 	NumAppWorkspaces istructs.NumAppWorkspaces
 }
 

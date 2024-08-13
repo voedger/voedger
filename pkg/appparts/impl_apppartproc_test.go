@@ -41,7 +41,7 @@ func (t *mockProcessorRunner) NewAndRun(ctx context.Context, app appdef.AppQName
 		case <-ctx.Done():
 			return
 		default:
-			// actualizer processor should be borrowed and released
+			// processor should be borrowed and released
 			p, err := t.appParts.WaitForBorrow(ctx, app, partID, ProcessorKind_Actualizer)
 			if err != nil {
 				if errors.Is(err, ctx.Err()) {
@@ -49,7 +49,7 @@ func (t *mockProcessorRunner) NewAndRun(ctx context.Context, app appdef.AppQName
 				}
 				panic(err) // unexpected error while waiting for borrowed processor
 			}
-			// simulate actualizer work, like p.Invoke(…)
+			// simulate processor work, like p.Invoke(…)
 			time.Sleep(time.Millisecond)
 			p.Release()
 		}
