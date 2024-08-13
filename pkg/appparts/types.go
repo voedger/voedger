@@ -40,7 +40,7 @@ type AppDeploymentDescriptor struct {
 	NumAppWorkspaces istructs.NumAppWorkspaces
 }
 
-func PoolSize(c, q, p int) [ProcessorKind_Count]int { return [ProcessorKind_Count]int{c, q, p} }
+func PoolSize(c, q, p, s int) [ProcessorKind_Count]int { return [ProcessorKind_Count]int{c, q, p, s} }
 
 // Describes built-in application.
 type BuiltInApp struct {

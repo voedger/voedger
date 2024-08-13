@@ -324,6 +324,7 @@ func deployTestAppEx(
 		appStructsProvider,
 		NewSyncActualizerFactoryFactory(ProvideSyncActualizerFactory(), secretReader, n10nBroker, statelessResources),
 		actualizers,
+		appparts.NullProcessorRunner, // no job schedulers
 		engines.ProvideExtEngineFactories(
 			engines.ExtEngineFactoriesConfig{
 				AppConfigs:         cfgs,
@@ -334,7 +335,7 @@ func deployTestAppEx(
 		panic(err)
 	}
 
-	appParts.DeployApp(appName, nil, appDef, appPartsCount, appparts.PoolSize(10, 10, 10), cfg.NumAppWorkspaces())
+	appParts.DeployApp(appName, nil, appDef, appPartsCount, appparts.PoolSize(10, 10, 10, 0), cfg.NumAppWorkspaces())
 
 	start = func() {
 		if err := actualizers.Prepare(struct{}{}); err != nil {

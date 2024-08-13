@@ -33,7 +33,7 @@ var (
 	//go:embed schemaTestApp2.vsql
 	SchemaTestApp2FS embed.FS
 
-	DefaultTestAppEnginesPool = appparts.PoolSize(10, 10, 20)
+	DefaultTestAppEnginesPool = appparts.PoolSize(10, 10, 20, 10)
 	maxRateLimit2PerMinute    = istructs.RateLimit{
 		Period:                time.Minute,
 		MaxAllowedPerDuration: 2,
