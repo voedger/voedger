@@ -103,7 +103,7 @@ func (pp *partitionProcessors) deploy() {
 			}()
 
 			for rt.state.Load() == 0 {
-				time.Sleep(time.Nanosecond) // wait until actualizer is started
+				time.Sleep(time.Nanosecond) // wait until processor is started
 			}
 			startWG.Done()
 		}()
