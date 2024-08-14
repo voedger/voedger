@@ -20,7 +20,7 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
 	imetrics "github.com/voedger/voedger/pkg/metrics"
-	"github.com/voedger/voedger/pkg/state"
+	"github.com/voedger/voedger/pkg/sys"
 )
 
 // Design: Projection Actualizers
@@ -339,7 +339,7 @@ func Test_AsynchronousActualizer_ErrorAndRestore(t *testing.T) {
 			// add not-View and not-Record state to make the projector NonBuffered
 			prj := appDef.AddProjector(name)
 			prj.Events().Add(testQName, appdef.ProjectorEventKind_Execute)
-			prj.States().Add(state.Http)
+			prj.States().Add(sys.Storage_Http)
 			ws := addWS(appDef, testWorkspace, testWorkspaceDescriptor)
 			ws.AddType(incProjectionView)
 			ws.AddType(decProjectionView)
@@ -666,7 +666,7 @@ func Test_AsynchronousActualizer_NonBuffered(t *testing.T) {
 			// add not-View and not-Record intent to make the projector NonBuffered
 			prj := appDef.AddProjector(incrementorName)
 			prj.Events().Add(testQName, appdef.ProjectorEventKind_Execute)
-			prj.Intents().Add(state.Http)
+			prj.Intents().Add(sys.Storage_Http)
 			ws := addWS(appDef, testWorkspace, testWorkspaceDescriptor)
 			ws.AddType(incProjectionView)
 			ws.AddType(decProjectionView)

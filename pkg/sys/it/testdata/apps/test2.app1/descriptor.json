@@ -1,0 +1,9 @@
+{
+	"NumParts": 1,
+	"EnginePoolSize": [
+		10,
+		10,
+		10
+	],
+	"NumAppWorkspaces": 1
+}

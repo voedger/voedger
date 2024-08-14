@@ -216,7 +216,7 @@ func (n *nodeType) hostNames() []string {
 			return []string{"db-node-3"}
 		}
 	}
-	return []string{}
+	return []string{n.nodeName()}
 }
 
 // the minimum amount of RAM required by the node (as string)
@@ -737,11 +737,6 @@ func (c *clusterType) applyCmd(cmd *cmdType) error {
 				return fmt.Errorf(errHostIsNotAvailable, newAddr, ErrHostIsNotAvailable)
 			}
 
-			if len(c.Cron.Backup) > 0 && node.NodeRole == nrDBNode {
-				if err := checkBackupFolderOnHost(c, newAddr); err != nil {
-					return err
-				}
-			}
 		}
 
 		node.DesiredNodeState = newNodeState(newAddr, node.desiredNodeVersion(c))
@@ -847,6 +842,10 @@ func (c *clusterType) loadFromJSON() error {
 
 	for i := 0; i < len(c.Nodes); i++ {
 		c.Nodes[i].cluster = c
+	}
+
+	if c.Edition == clusterEditionSE && c.SubEdition != clusterSubEditionSE3 {
+		c.SubEdition = clusterSubEditionSE5
 	}
 
 	if err == nil {

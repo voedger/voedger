@@ -8,6 +8,8 @@ package main
 import (
 	"time"
 
+	ext "github.com/voedger/voedger/pkg/exttinygo"
+
 	"air/wasm/orm"
 )
 
@@ -38,57 +40,49 @@ func Pbill() {
 		// Basic types fields
 		billID := pbill.Get_id_bill()
 		intent := orm.Package_untill.WDoc_bill.Update(billID)
+
 		intent.Set_close_year(int32(time.Now().UTC().Year()))
 	}
 
 	// Prepare intent for Package_air.WSingleton_NextNumbers
 	{
 		var nextNumber int32
-		nextNumberValue, nextNumberOk := orm.Package_air.WSingleton_NextNumbers.Get()
 		var intent orm.Intent_WSingleton_air_NextNumbers
+
+		nextNumberValue, nextNumberOk := orm.Package_air.WSingleton_NextNumbers.Get()
 		if !nextNumberOk {
 			nextNumber = 0
 			intent = nextNumberValue.Insert()
 		} else {
-			intent = nextNumberValue.Update() //orm.Package_air.WSingleton_NextNumbers.Update(nextNumberValue)
+			intent = nextNumberValue.Update()
 			nextNumber = nextNumberValue.Get_NextPBillNumber()
 		}
+
 		intent.Set_NextPBillNumber(nextNumber + 1)
 	}
 }
 
 func FillPbillDates() {
-	// Query air.PbillDates
-	{
-		v := orm.Package_air.View_PbillDates.MustGet(2019, 12)
-		println(v.Get_FirstOffset())
-		println(v.Get_LastOffset())
+	event := ext.MustGetValue(ext.KeyBuilder(ext.StorageEvent, ext.NullEntity))
+	offs := event.AsInt64("WLogOffset")
+	arg := event.AsValue("ArgumentObject")
+	// get pbill datetime
+	pbillDatetime := time.UnixMicro(arg.AsInt64("pdatetime"))
+	// extract year and day of year from pbill datetime
+	year := pbillDatetime.Year()
+	dayOfYear := pbillDatetime.Day()
+
+	var intent orm.Intent_View_air_PbillDates
+
+	val, ok := orm.Package_air.View_PbillDates.Get(int32(year), int32(dayOfYear))
+	if !ok {
+		intent = val.Insert()
+		intent.Set_FirstOffset(offs)
+	} else {
+		intent = val.Update()
 	}
 
-	// Query untill.Articles
-	{
-		v := orm.Package_untill.CDoc_articles.MustGet(orm.ID(12))
-		println(v.Get_article_number())
-		println(v.Get_name())
-	}
-
-	// Query air.PbillDates and create intents
-	{
-		{
-			v, ok := orm.Package_air.View_PbillDates.Get(2019, 12)
-			if ok {
-				intent := v.Insert()
-				// `Set` is a must to execute naming conflicts with NewIntent()
-				intent.Set_FirstOffset(1)
-				intent.Set_LastOffset(2)
-			}
-		}
-		{
-			intent := orm.Package_air.View_PbillDates.Insert(2020, 1)
-			intent.Set_FirstOffset(20)
-			intent.Set_LastOffset(17)
-		}
-	}
+	intent.Set_LastOffset(offs)
 }
 
 func main() {

@@ -12,7 +12,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
-	"github.com/voedger/voedger/pkg/state"
+	"github.com/voedger/voedger/pkg/sys"
 )
 
 func collectionResultQName(args istructs.PrepareArgs) appdef.QName {
@@ -37,7 +37,7 @@ func collectionFuncExec(ctx context.Context, args istructs.ExecQueryArgs, callba
 		return err
 	}
 
-	kb, err := args.State.KeyBuilder(state.View, QNameCollectionView)
+	kb, err := args.State.KeyBuilder(sys.Storage_View, QNameCollectionView)
 	if err != nil {
 		return err
 	}

@@ -22,7 +22,7 @@ func (so *serviceOperator) Close() {
 	<-so.serviceDone
 }
 
-func (so *serviceOperator) DoSync(ctx context.Context, work interface{}) (err error) {
+func (so *serviceOperator) DoSync(ctx context.Context, work IWorkpiece) (err error) {
 	if err = so.iService.Prepare(work); err != nil {
 		return err
 	}

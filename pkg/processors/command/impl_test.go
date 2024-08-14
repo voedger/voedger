@@ -700,9 +700,9 @@ func setUp(t *testing.T, prepare func(appDef appdef.IAppDefBuilder, cfg *istruct
 	}, time.Now)
 
 	// prepare the AppParts to borrow AppStructs
-	appParts, appPartsClean, err := appparts.New2(appStructsProvider,
+	appParts, appPartsClean, err := appparts.New2(ctx, appStructsProvider,
 		projectors.NewSyncActualizerFactoryFactory(projectors.ProvideSyncActualizerFactory(), secretReader, n10nBroker, statelessResources),
-		appparts.NullActualizers,
+		appparts.NullProcessorRunner,
 		engines.ProvideExtEngineFactories(
 			engines.ExtEngineFactoriesConfig{
 				AppConfigs:         cfgs,
@@ -712,7 +712,7 @@ func setUp(t *testing.T, prepare func(appDef appdef.IAppDefBuilder, cfg *istruct
 	require.NoError(err)
 	defer appPartsClean()
 
-	appParts.DeployApp(testAppName, appDef, testAppPartCount, testAppEngines)
+	appParts.DeployApp(testAppName, nil, appDef, testAppPartCount, testAppEngines, cfg.NumAppWorkspaces())
 	appParts.DeployAppPartitions(testAppName, []istructs.PartitionID{testAppPartID})
 
 	// command processor работает через ibus.SendResponse -> нам нужна реализация ibus

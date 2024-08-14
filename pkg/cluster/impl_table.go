@@ -14,7 +14,7 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/itokens"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
-	"github.com/voedger/voedger/pkg/state"
+	"github.com/voedger/voedger/pkg/sys"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 	"github.com/voedger/voedger/pkg/utils/federation"
 )
@@ -56,7 +56,7 @@ func insertTable(update update, federation federation.IFederation, itokens itoke
 	if err != nil {
 		return err
 	}
-	kb, err := istate.KeyBuilder(state.Result, qNameVSqlUpdateResult)
+	kb, err := istate.KeyBuilder(sys.Storage_Result, qNameVSqlUpdateResult)
 	if err != nil {
 		// notest
 		return err

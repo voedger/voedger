@@ -16,6 +16,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/sys"
 )
 
 func TestHttpStorage_BasicUsage(t *testing.T) {
@@ -32,14 +33,14 @@ func TestHttpStorage_BasicUsage(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	k, err := s.KeyBuilder(Http, appdef.NullQName)
+	k, err := s.KeyBuilder(sys.Storage_Http, appdef.NullQName)
 	require.NoError(err)
 
-	k.PutString(Field_Url, ts.URL)
-	k.PutString(Field_Method, http.MethodPost)
-	k.PutString(Field_Header, "my-header: my-value")
-	k.PutString(Field_Header, "Content-type: application/json")
-	k.PutBytes(Field_Body, []byte(`{"hello":"api"}`))
+	k.PutString(sys.Storage_Http_Field_Url, ts.URL)
+	k.PutString(sys.Storage_Http_Field_Method, http.MethodPost)
+	k.PutString(sys.Storage_Http_Field_Header, "my-header: my-value")
+	k.PutString(sys.Storage_Http_Field_Header, "Content-type: application/json")
+	k.PutBytes(sys.Storage_Http_Field_Body, []byte(`{"hello":"api"}`))
 	require.Equal(fmt.Sprintf(`%s %s {"hello":"api"}`, http.MethodPost, ts.URL), k.(fmt.Stringer).String())
 	var v istructs.IStateValue
 	err = s.Read(k, func(_ istructs.IKey, value istructs.IStateValue) (err error) {
@@ -47,20 +48,21 @@ func TestHttpStorage_BasicUsage(t *testing.T) {
 		return
 	})
 	require.NoError(err)
-	require.Equal([]byte(`{"hello":"storage"}`), v.AsBytes(Field_Body))
-	require.Equal(`{"hello":"storage"}`, v.AsString(Field_Body))
-	require.Equal(int32(http.StatusOK), v.AsInt32(Field_StatusCode))
-	require.Contains(v.AsString(Field_Header), "Content-Length: 19")
-	require.Contains(v.AsString(Field_Header), "Content-Type: text/plain")
+	require.Equal([]byte(`{"hello":"storage"}`), v.AsBytes(sys.Storage_Http_Field_Body))
+	require.Equal(`{"hello":"storage"}`, v.AsString(sys.Storage_Http_Field_Body))
+	require.Equal(int32(http.StatusOK), v.AsInt32(sys.Storage_Http_Field_StatusCode))
+	require.Contains(v.AsString(sys.Storage_Http_Field_Header), "Content-Length: 19")
+	require.Contains(v.AsString(sys.Storage_Http_Field_Header), "Content-Type: text/plain")
 }
 func TestHttpStorage_Timeout(t *testing.T) {
 	t.Run("Should panic when url not found", func(t *testing.T) {
 		require := require.New(t)
 		s := ProvideAsyncActualizerStateFactory()(context.Background(), nilAppStructsFunc, nil, nil, nil, nil, nil, nil, nil, 0, 0)
-		k, err := s.KeyBuilder(Http, appdef.NullQName)
+		k, err := s.KeyBuilder(sys.Storage_Http, appdef.NullQName)
 		require.NoError(err)
 
-		require.ErrorIs(errorFromPanic(func() { _ = s.Read(k, func(istructs.IKey, istructs.IStateValue) error { return nil }) }), ErrNotFound)
+		err = s.Read(k, func(istructs.IKey, istructs.IStateValue) error { return nil })
+		require.ErrorIs(err, ErrNotFound)
 	})
 	t.Run("Should return error on timeout", func(t *testing.T) {
 		require := require.New(t)
@@ -70,10 +72,10 @@ func TestHttpStorage_Timeout(t *testing.T) {
 		}))
 		defer ts.Close()
 
-		k, err := s.KeyBuilder(Http, appdef.NullQName)
+		k, err := s.KeyBuilder(sys.Storage_Http, appdef.NullQName)
 		require.NoError(err)
-		k.PutString(Field_Url, ts.URL)
-		k.PutInt64(Field_HTTPClientTimeoutMilliseconds, 100)
+		k.PutString(sys.Storage_Http_Field_Url, ts.URL)
+		k.PutInt64(sys.Storage_Http_Field_HTTPClientTimeoutMilliseconds, 100)
 
 		err = s.Read(k, func(istructs.IKey, istructs.IStateValue) error { return nil })
 
@@ -84,13 +86,16 @@ func TestHttpStorage_NewKeyBuilder_should_refresh_key_builder(t *testing.T) {
 	require := require.New(t)
 	s := &httpStorage{}
 	k := s.NewKeyBuilder(appdef.NullQName, nil)
-	k.PutString(Field_Url, "url")
-	k.PutString(Field_Method, http.MethodPost)
-	k.PutString(Field_Header, "my-header: my-value")
-	k.PutBytes(Field_Body, []byte(`{"hello":"api"}`))
+	k.PutString(sys.Storage_Http_Field_Url, "url")
+	k.PutString(sys.Storage_Http_Field_Method, http.MethodPost)
+	k.PutString(sys.Storage_Http_Field_Header, "my-header: my-value")
+	k.PutBytes(sys.Storage_Http_Field_Body, []byte(`{"hello":"api"}`))
 
-	hskb := s.NewKeyBuilder(appdef.NullQName, k).(*httpKeyBuilder)
+	hskb := s.NewKeyBuilder(appdef.NullQName, k).(*httpStorageKeyBuilder)
 
-	require.Equal(Http, hskb.storage)
-	require.Empty(hskb.data)
+	require.Equal(sys.Storage_Http, hskb.Storage())
+	require.Equal("", hskb.url)
+	require.Equal("", hskb.method)
+	require.Empty(hskb.headers)
+	require.Empty(hskb.body)
 }

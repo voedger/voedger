@@ -17,11 +17,4 @@ const (
 var (
 	qNameApplyUniques = appdef.NewQName(appdef.SysPackage, "ApplyUniques")
 	qNameViewUniques  = appdef.NewQName(appdef.SysPackage, "Uniques")
-
-	// FIXME: see https://github.com/voedger/voedger/issues/2208
-	qnameRecordStorage = appdef.NewQName(appdef.SysPackage, "Record")
-	qnameViewStorage   = appdef.NewQName(appdef.SysPackage, "View")
-	field_RecordID     = "ID"
-	// End FIXME
-
 )

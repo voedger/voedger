@@ -44,7 +44,7 @@ func (e extensionEngine) Invoke(ctx context.Context, extName appdef.FullQName, i
 
 func (e extensionEngine) Close(ctx context.Context) {}
 
-func (f extensionEngineFactory) New(_ context.Context, app appdef.AppQName, _ []iextengine.ExtensionPackage, _ *iextengine.ExtEngineConfig, numEngines int) (result []iextengine.IExtensionEngine, err error) {
+func (f extensionEngineFactory) New(_ context.Context, app appdef.AppQName, _ []iextengine.ExtensionModule, _ *iextengine.ExtEngineConfig, numEngines int) (result []iextengine.IExtensionEngine, err error) {
 	result = make([]iextengine.IExtensionEngine, numEngines)
 	for i := 0; i < numEngines; i++ {
 		result[i] = &extensionEngine{app, f.funcs, f.statelessFuncs}

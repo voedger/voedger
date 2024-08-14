@@ -8,12 +8,12 @@ import (
 	"time"
 
 	"github.com/voedger/voedger/pkg/istructs"
-	"github.com/voedger/voedger/pkg/state"
+	"github.com/voedger/voedger/pkg/sys"
 )
 
 var wLogDatesProjector = func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
 	timestamp := time.UnixMilli(int64(event.RegisteredAt())).UTC()
-	kb, err := s.KeyBuilder(state.View, QNameViewWLogDates)
+	kb, err := s.KeyBuilder(sys.Storage_View, QNameViewWLogDates)
 	if err != nil {
 		return
 	}

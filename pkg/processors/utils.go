@@ -10,11 +10,12 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/state"
+	"github.com/voedger/voedger/pkg/sys"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 func CheckResponseIntent(st state.IHostState) error {
-	kb, err := st.KeyBuilder(state.Response, appdef.NullQName)
+	kb, err := st.KeyBuilder(sys.Storage_Response, appdef.NullQName)
 	if err != nil {
 		// notest
 		return err
@@ -24,9 +25,9 @@ func CheckResponseIntent(st state.IHostState) error {
 		return nil
 	}
 	respIntentValue := respIntent.BuildValue()
-	statusCode := respIntentValue.AsInt32(state.Field_StatusCode)
+	statusCode := respIntentValue.AsInt32(sys.Storage_Response_Field_StatusCode)
 	if statusCode == http.StatusOK {
 		return nil
 	}
-	return coreutils.NewHTTPErrorf(int(statusCode), respIntentValue.AsString(state.Field_ErrorMessage))
+	return coreutils.NewHTTPErrorf(int(statusCode), respIntentValue.AsString(sys.Storage_Response_Field_ErrorMessage))
 }

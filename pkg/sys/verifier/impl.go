@@ -19,7 +19,7 @@ import (
 	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/itokens"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
-	"github.com/voedger/voedger/pkg/state"
+	"github.com/voedger/voedger/pkg/sys"
 	"github.com/voedger/voedger/pkg/sys/smtp"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 	"github.com/voedger/voedger/pkg/utils/federation"
@@ -91,33 +91,33 @@ func applySendEmailVerificationCode(federation federation.IFederation, smtpCfg s
 		}
 		lng := event.ArgumentObject().AsString(field_Language)
 
-		kb, err := st.KeyBuilder(state.SendMail, appdef.NullQName)
+		kb, err := st.KeyBuilder(sys.Storage_SendMail, appdef.NullQName)
 		if err != nil {
 			return
 		}
 		reason := event.ArgumentObject().AsString(field_Reason)
 		translatedEmailSubject := message.NewPrinter(language.Make(lng), message.Catalog(translationsCatalog)).Sprintf(EmailSubject)
-		kb.PutString(state.Field_Subject, translatedEmailSubject)
-		kb.PutString(state.Field_To, event.ArgumentObject().AsString(Field_Email))
-		kb.PutString(state.Field_Body, getVerificationEmailBody(federation, event.ArgumentObject().AsString(field_VerificationCode), reason, language.Make(lng), translationsCatalog))
-		kb.PutString(state.Field_From, smtpCfg.GetFrom())
-		kb.PutString(state.Field_Host, smtpCfg.Host)
-		kb.PutInt32(state.Field_Port, smtpCfg.Port)
-		kb.PutString(state.Field_Username, smtpCfg.Username)
+		kb.PutString(sys.Storage_SendMail_Field_Subject, translatedEmailSubject)
+		kb.PutString(sys.Storage_SendMail_Field_To, event.ArgumentObject().AsString(Field_Email))
+		kb.PutString(sys.Storage_SendMail_Field_Body, getVerificationEmailBody(federation, event.ArgumentObject().AsString(field_VerificationCode), reason, language.Make(lng), translationsCatalog))
+		kb.PutString(sys.Storage_SendMail_Field_From, smtpCfg.GetFrom())
+		kb.PutString(sys.Storage_SendMail_Field_Host, smtpCfg.Host)
+		kb.PutInt32(sys.Storage_SendMail_Field_Port, smtpCfg.Port)
+		kb.PutString(sys.Storage_SendMail_Field_Username, smtpCfg.Username)
 		pwd := ""
 		if !coreutils.IsTest() {
-			kbSecret, err := st.KeyBuilder(state.AppSecret, appdef.NullQName)
+			kbSecret, err := st.KeyBuilder(sys.Storage_AppSecret, appdef.NullQName)
 			if err != nil {
 				return err
 			}
-			kbSecret.PutString(state.Field_Secret, smtpCfg.PwdSecret)
+			kbSecret.PutString(sys.Storage_AppSecretField_Secret, smtpCfg.PwdSecret)
 			sv, err := st.MustExist(kbSecret)
 			if err != nil {
 				return err
 			}
 			pwd = sv.AsString("")
 		}
-		kb.PutString(state.Field_Password, pwd)
+		kb.PutString(sys.Storage_SendMail_Field_Password, pwd)
 
 		_, err = intents.NewValue(kb)
 

@@ -13,27 +13,26 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func opName(_ context.Context, work interface{}) (err error) {
+func opName(_ context.Context, work IWorkpiece) (err error) {
 	work.(testwork).slots["name"] = "michael"
 	return nil
 }
 
-func opAge(_ context.Context, work interface{}) (err error) {
+func opAge(_ context.Context, work IWorkpiece) (err error) {
 	work.(testwork).slots["age"] = "39"
 	return nil
 }
 
-func opSex(_ context.Context, work interface{}) (err error) {
+func opSex(_ context.Context, work IWorkpiece) (err error) {
 	work.(testwork).slots["sex"] = "male"
 	return nil
 }
 
-func opError(context.Context, interface{}) (err error) {
+func opError(context.Context, IWorkpiece) (err error) {
 	return errors.New("test failure")
 }
 
 func TestSyncPipeline_NotAWorkpiece(t *testing.T) {
-	type notAWorkpiece struct{}
 	ctx := &testContext{}
 	v := &notAWorkpiece{}
 	pipeline := NewSyncPipeline(ctx, "my-pipeline", WireSyncOperator("noop", &NOOP{}))

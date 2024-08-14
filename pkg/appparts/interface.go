@@ -7,6 +7,9 @@ package appparts
 
 import (
 	"context"
+	"net/url"
+
+	"github.com/voedger/voedger/pkg/pipeline"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -19,9 +22,12 @@ type IAppPartitions interface {
 	// Adds new application or update existing.
 	//
 	// partsCount - total partitions count for the application.
+	// extensionModules is used for non-builtin apps only. Provide nil for others
+	// numAppWorkspaces is used for non-builtin appse. Provide e.g. -1 for others
 	//
 	// If application with the same name exists, then its definition will be updated.
-	DeployApp(name appdef.AppQName, def appdef.IAppDef, partsCount istructs.NumAppPartitions, numEngines [ProcessorKind_Count]int)
+	DeployApp(name appdef.AppQName, extModuleURLs map[string]*url.URL, def appdef.IAppDef,
+		partsCount istructs.NumAppPartitions, numEngines [ProcessorKind_Count]int, numAppWorkspaces istructs.NumAppWorkspaces)
 
 	// Deploys new partitions for specified application or update existing.
 	//
@@ -69,7 +75,7 @@ type IAppPartition interface {
 	// Releases borrowed partition
 	Release()
 
-	DoSyncActualizer(ctx context.Context, work interface{}) (err error)
+	DoSyncActualizer(ctx context.Context, work pipeline.IWorkpiece) (err error)
 
 	// Invoke extension engine.
 	Invoke(ctx context.Context, name appdef.QName, state istructs.IState, intents istructs.IIntents) error
@@ -79,22 +85,15 @@ type IAppPartition interface {
 // TODO: eliminate this workaround
 // type BuiltInAppsDeploymentDescriptors map[appdef.AppQName]AppDeploymentDescriptor
 
-// Application partition actualizers.
+// Processor runner.
 //
-// Used by IAppPartitions to deploy and undeploy actualizers for application partitions
-type IActualizers interface {
-	// Assign application partitions manager.
+// Used by application partitions to run actualizers and schedulers
+type IProcessorRunner interface {
+	// Sets application partitions.
 	//
 	// Should be called before any other method.
 	SetAppPartitions(IAppPartitions)
 
-	// Deploys actualizers for specified application partition.
-	//
-	// Should start new actualizers and stop removed actualizers
-	DeployPartition(appdef.AppQName, istructs.PartitionID) error
-
-	// Undeploy actualizers for specified application partition.
-	//
-	// Should stop all partition actualizers
-	UndeployPartition(appdef.AppQName, istructs.PartitionID)
+	// Creates and runs new processor for specified application partition
+	NewAndRun(context.Context, appdef.AppQName, istructs.PartitionID, appdef.QName)
 }

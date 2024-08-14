@@ -43,11 +43,11 @@ func NewSyncPipeline(ctx context.Context, name string, first *WiredOperator, oth
 	return pipeline
 }
 
-func (p *SyncPipeline) DoSync(_ context.Context, work interface{}) (err error) {
+func (p *SyncPipeline) DoSync(_ context.Context, work IWorkpiece) (err error) {
 	return p.SendSync(work)
 }
 
-func (p *SyncPipeline) SendSync(work interface{}) (err error) {
+func (p *SyncPipeline) SendSync(work IWorkpiece) (err error) {
 	if p.ctx.Err() != nil {
 		return p.ctx.Err()
 	}
@@ -60,7 +60,7 @@ func (p *SyncPipeline) SendSync(work interface{}) (err error) {
 	return nil
 }
 
-func processSyncOp(wo *WiredOperator, work interface{}) interface{} {
+func processSyncOp(wo *WiredOperator, work IWorkpiece) IWorkpiece {
 	if work == nil {
 		pipelinePanic("nil work in processSyncOp", wo.name, wo.wctx)
 	}

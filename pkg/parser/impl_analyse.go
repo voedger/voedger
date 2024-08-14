@@ -72,6 +72,8 @@ func analyse(c *basicContext, packages []*PackageSchemaAST) {
 				analyzeQuery(v, ictx)
 			case *ProjectorStmt:
 				analyseProjector(v, ictx)
+			case *JobStmt:
+				analyseJob(v, ictx)
 			case *TableStmt:
 				analyseTable(v, ictx)
 			case *TypeStmt:
@@ -160,6 +162,13 @@ func analyseGrant(grant *GrantStmt, c *iterateCtx) {
 		}
 	}
 
+	if grant.View {
+		err := resolveInCtx(grant.On, c, func(f *ViewStmt, _ *PackageSchemaAST) error { return nil })
+		if err != nil {
+			c.stmtErr(&grant.On.Pos, err)
+		}
+	}
+
 	if grant.Workspace {
 		err := resolveInCtx(grant.On, c, func(f *WorkspaceStmt, _ *PackageSchemaAST) error { return nil })
 		if err != nil {
@@ -167,7 +176,7 @@ func analyseGrant(grant *GrantStmt, c *iterateCtx) {
 		}
 	}
 
-	if grant.AllCommandsWithTag || grant.AllQueriesWithTag || grant.AllWorkspacesWithTag || (grant.AllTablesWithTag != nil) {
+	if grant.AllCommandsWithTag || grant.AllQueriesWithTag || grant.AllWorkspacesWithTag || (grant.AllTablesWithTag != nil) || (grant.AllViewsWithTag) {
 		err := resolveInCtx(grant.On, c, func(f *TagStmt, _ *PackageSchemaAST) error { return nil })
 		if err != nil {
 			c.stmtErr(&grant.On.Pos, err)
@@ -646,19 +655,7 @@ func analyseProjector(v *ProjectorStmt, c *iterateCtx) {
 		trigger := &v.Triggers[i]
 
 		if trigger.CronSchedule != nil {
-			specParser := cron.NewParser(cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow)
-			_, err := specParser.Parse(*trigger.CronSchedule)
-			if err != nil {
-				c.stmtErr(&v.Pos, ErrInvalidCronSchedule(*trigger.CronSchedule))
-			}
-			ws := getCurrentAlterWorkspace(c)
-			if ws == nil || ws.alteredWorkspace == nil || ws.alteredWorkspacePkg == nil || ws.alteredWorkspacePkg.Path != appdef.SysPackage || ws.alteredWorkspace.Name != appWorkspaceName {
-				c.stmtErr(&v.Pos, ErrScheduledProjectorNotInAppWorkspace)
-			}
-			if len(v.Intents) > 0 {
-				c.stmtErr(&v.Pos, ErrScheduledProjectorWithIntents)
-			}
-
+			c.stmtErr(&v.Pos, ErrScheduledProjectorDeprecated)
 		}
 
 		for _, qname := range trigger.QNames {
@@ -731,6 +728,14 @@ func analyseProjector(v *ProjectorStmt, c *iterateCtx) {
 
 	checkState(v.State, c, func(sc *StorageScope) bool { return sc.Projectors })
 	checkIntents(v.Intents, c, func(sc *StorageScope) bool { return sc.Projectors })
+}
+
+func analyseJob(j *JobStmt, c *iterateCtx) {
+	if _, e := cron.ParseStandard(*j.CronSchedule); e != nil {
+		c.stmtErr(&j.Pos, ErrInvalidCronSchedule(*j.CronSchedule))
+	}
+
+	checkState(j.State, c, func(sc *StorageScope) bool { return sc.Jobs })
 }
 
 // Note: function may update with argument

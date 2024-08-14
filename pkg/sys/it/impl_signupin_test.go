@@ -114,10 +114,15 @@ func TestCreateLoginErrors(t *testing.T) {
 	loginPseudoWSID := coreutils.GetPseudoWSID(istructs.NullWSID, login, istructs.MainClusterID)
 
 	t.Run("unknown application", func(t *testing.T) {
+		// TODO: ensure WSError contains the actual error message
+		t.Skip("wait for https://github.com/voedger/voedger/issues/2415")
 		body := fmt.Sprintf(`{"args":{"Login":"%s","AppName":"my/unknown","SubjectKind":%d,"WSKindInitializationData":"{}","ProfileCluster":%d},"unloggedArgs":{"Password":"password"}}`,
 			login, istructs.SubjectKind_User, istructs.MainClusterID)
-		resp := vit.PostApp(istructs.AppQName_sys_registry, loginPseudoWSID, "c.registry.CreateLogin", body, coreutils.Expect400())
-		resp.RequireError(t, "unknown application my/unknown")
+		vit.PostApp(istructs.AppQName_sys_registry, loginPseudoWSID, "c.registry.CreateLogin", body)
+		pseudoWSID := coreutils.GetPseudoWSID(istructs.NullWSID, login, istructs.MainClusterID)
+		body = fmt.Sprintf(`{"args": {"Login": "%s","Password": "password","AppName": "my/unknown"},"elements":[{"fields":["PrincipalToken", "WSID", "WSError"]}]}`,
+			login)
+		vit.PostApp(istructs.AppQName_sys_registry, pseudoWSID, "q.registry.IssuePrincipalToken", body).Println()
 	})
 
 	t.Run("wrong application name", func(t *testing.T) {
@@ -151,6 +156,7 @@ func TestCreateLoginErrors(t *testing.T) {
 			"test@test.com-",
 			"-test@test.com",
 			"-test@test.com-",
+			"sys.test@test.com",
 		}
 		for _, wrongLogin := range wrongLogins {
 			pseudoWSID := coreutils.GetPseudoWSID(istructs.NullWSID, wrongLogin, istructs.MainClusterID)

@@ -66,8 +66,9 @@ type BuiltInAppPackages struct {
 }
 type AppConfigsTypeEmpty istructsmem.AppConfigsType
 type BootstrapOperator pipeline.ISyncOperator
+type SidecarAppsDefs map[appdef.AppQName]BuiltInAppPackages
 
-type AppsArtefacts struct {
+type BuiltInAppsArtefacts struct {
 	istructsmem.AppConfigsType
 	builtInAppPackages []BuiltInAppPackages
 }
@@ -157,6 +158,7 @@ type VVMConfig struct {
 	KeyspaceNameSuffix string
 	SmtpConfig         smtp.Cfg
 	WSPostInitFunc     workspace.WSPostInitFunc
+	DataPath           string
 }
 
 type resultSenderErrorFirst struct {
@@ -170,3 +172,7 @@ type VoedgerVM struct {
 	vvmCtxCancel func()
 	vvmCleanup   func()
 }
+
+type ignition struct{}
+
+func (i ignition) Release() {}

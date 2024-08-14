@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/sys"
 )
 
 func TestBundledHostState_BasicUsage(t *testing.T) {
@@ -25,7 +26,7 @@ func TestBundledHostState_BasicUsage(t *testing.T) {
 	// Declare simple extension
 	extension := func(state istructs.IState, intents istructs.IIntents) {
 		//Create key
-		kb, err := state.KeyBuilder(View, testViewRecordQName1)
+		kb, err := state.KeyBuilder(sys.Storage_View, testViewRecordQName1)
 		require.NoError(err)
 		kb.PutInt64("pkFld", int64(64))
 
@@ -112,7 +113,7 @@ func TestAsyncActualizerState_CanExist(t *testing.T) {
 		require := require.New(t)
 		stateStorage := &mockStorage{}
 		stateStorage.
-			On("NewKeyBuilder", testViewRecordQName1, nil).Return(newKeyBuilder(testStorage, testViewRecordQName1)).
+			On("NewKeyBuilder", testViewRecordQName1, nil).Return(newMapKeyBuilder(testStorage, testViewRecordQName1)).
 			On("GetBatch", mock.AnythingOfType("[]state.GetBatchItem")).
 			Return(nil).
 			Run(func(args mock.Arguments) {
@@ -131,7 +132,7 @@ func TestAsyncActualizerState_CanExist(t *testing.T) {
 		require := require.New(t)
 		stateStorage := &mockStorage{}
 		stateStorage.
-			On("NewKeyBuilder", testViewRecordQName1, nil).Return(newKeyBuilder(testStorage, testViewRecordQName1)).
+			On("NewKeyBuilder", testViewRecordQName1, nil).Return(newMapKeyBuilder(testStorage, testViewRecordQName1)).
 			On("GetBatch", mock.AnythingOfType("[]state.GetBatchItem")).Return(errTest)
 		s := asyncActualizerStateWithTestStateStorage(stateStorage)
 		kb, err := s.KeyBuilder(testStorage, testViewRecordQName1)
@@ -148,7 +149,7 @@ func TestAsyncActualizerState_CanExistAll(t *testing.T) {
 		times := 0
 		stateStorage := &mockStorage{}
 		stateStorage.
-			On("NewKeyBuilder", testViewRecordQName1, nil).Return(newKeyBuilder(testStorage, testViewRecordQName1)).
+			On("NewKeyBuilder", testViewRecordQName1, nil).Return(newMapKeyBuilder(testStorage, testViewRecordQName1)).
 			On("GetBatch", mock.AnythingOfType("[]state.GetBatchItem")).Return(nil)
 		s := asyncActualizerStateWithTestStateStorage(stateStorage)
 		kb1, err := s.KeyBuilder(testStorage, testViewRecordQName1)
@@ -167,7 +168,7 @@ func TestAsyncActualizerState_CanExistAll(t *testing.T) {
 		require := require.New(t)
 		stateStorage := &mockStorage{}
 		stateStorage.
-			On("NewKeyBuilder", testViewRecordQName1, nil).Return(newKeyBuilder(testStorage, testViewRecordQName1)).
+			On("NewKeyBuilder", testViewRecordQName1, nil).Return(newMapKeyBuilder(testStorage, testViewRecordQName1)).
 			On("GetBatch", mock.AnythingOfType("[]state.GetBatchItem")).Return(errTest)
 		s := asyncActualizerStateWithTestStateStorage(stateStorage)
 		kb1, err := s.KeyBuilder(testStorage, testViewRecordQName1)
@@ -185,7 +186,7 @@ func TestAsyncActualizerState_MustExist(t *testing.T) {
 		require := require.New(t)
 		stateStorage := &mockStorage{}
 		stateStorage.
-			On("NewKeyBuilder", testViewRecordQName1, nil).Return(newKeyBuilder(testStorage, testViewRecordQName1)).
+			On("NewKeyBuilder", testViewRecordQName1, nil).Return(newMapKeyBuilder(testStorage, testViewRecordQName1)).
 			On("GetBatch", mock.AnythingOfType("[]state.GetBatchItem")).
 			Return(nil).
 			Run(func(args mock.Arguments) {
@@ -203,7 +204,7 @@ func TestAsyncActualizerState_MustExist(t *testing.T) {
 		require := require.New(t)
 		stateStorage := &mockStorage{}
 		stateStorage.
-			On("NewKeyBuilder", testViewRecordQName1, nil).Return(newKeyBuilder(testStorage, testViewRecordQName1)).
+			On("NewKeyBuilder", testViewRecordQName1, nil).Return(newMapKeyBuilder(testStorage, testViewRecordQName1)).
 			On("GetBatch", mock.AnythingOfType("[]state.GetBatchItem")).
 			Return(nil).
 			Run(func(args mock.Arguments) {
@@ -221,7 +222,7 @@ func TestAsyncActualizerState_MustExist(t *testing.T) {
 		require := require.New(t)
 		stateStorage := &mockStorage{}
 		stateStorage.
-			On("NewKeyBuilder", testViewRecordQName1, nil).Return(newKeyBuilder(testStorage, testViewRecordQName1)).
+			On("NewKeyBuilder", testViewRecordQName1, nil).Return(newMapKeyBuilder(testStorage, testViewRecordQName1)).
 			On("GetBatch", mock.AnythingOfType("[]state.GetBatchItem")).Return(errTest)
 		s := asyncActualizerStateWithTestStateStorage(stateStorage)
 		kb, err := s.KeyBuilder(testStorage, testViewRecordQName1)
@@ -237,7 +238,7 @@ func TestAsyncActualizerState_MustExistAll(t *testing.T) {
 		require := require.New(t)
 		stateStorage := &mockStorage{}
 		stateStorage.
-			On("NewKeyBuilder", testViewRecordQName1, nil).Return(newKeyBuilder(testStorage, testViewRecordQName1)).
+			On("NewKeyBuilder", testViewRecordQName1, nil).Return(newMapKeyBuilder(testStorage, testViewRecordQName1)).
 			On("GetBatch", mock.AnythingOfType("[]state.GetBatchItem")).
 			Return(nil).
 			Run(func(args mock.Arguments) {
@@ -263,7 +264,7 @@ func TestAsyncActualizerState_MustExistAll(t *testing.T) {
 		require := require.New(t)
 		stateStorage := &mockStorage{}
 		stateStorage.
-			On("NewKeyBuilder", testViewRecordQName1, nil).Return(newKeyBuilder(testStorage, testViewRecordQName1)).
+			On("NewKeyBuilder", testViewRecordQName1, nil).Return(newMapKeyBuilder(testStorage, testViewRecordQName1)).
 			On("GetBatch", mock.AnythingOfType("[]state.GetBatchItem")).
 			Return(nil).
 			Run(func(args mock.Arguments) {
@@ -285,7 +286,7 @@ func TestAsyncActualizerState_MustNotExist(t *testing.T) {
 		require := require.New(t)
 		stateStorage := &mockStorage{}
 		stateStorage.
-			On("NewKeyBuilder", testViewRecordQName1, nil).Return(newKeyBuilder(testStorage, testViewRecordQName1)).
+			On("NewKeyBuilder", testViewRecordQName1, nil).Return(newMapKeyBuilder(testStorage, testViewRecordQName1)).
 			On("GetBatch", mock.AnythingOfType("[]state.GetBatchItem")).
 			Return(nil).
 			Run(func(args mock.Arguments) {
@@ -303,7 +304,7 @@ func TestAsyncActualizerState_MustNotExist(t *testing.T) {
 		require := require.New(t)
 		stateStorage := &mockStorage{}
 		stateStorage.
-			On("NewKeyBuilder", testViewRecordQName1, nil).Return(newKeyBuilder(testStorage, testViewRecordQName1)).
+			On("NewKeyBuilder", testViewRecordQName1, nil).Return(newMapKeyBuilder(testStorage, testViewRecordQName1)).
 			On("GetBatch", mock.AnythingOfType("[]state.GetBatchItem")).
 			Return(nil).
 			Run(func(args mock.Arguments) {
@@ -321,7 +322,7 @@ func TestAsyncActualizerState_MustNotExist(t *testing.T) {
 		require := require.New(t)
 		stateStorage := &mockStorage{}
 		stateStorage.
-			On("NewKeyBuilder", testViewRecordQName1, nil).Return(newKeyBuilder(testStorage, testViewRecordQName1)).
+			On("NewKeyBuilder", testViewRecordQName1, nil).Return(newMapKeyBuilder(testStorage, testViewRecordQName1)).
 			On("GetBatch", mock.AnythingOfType("[]state.GetBatchItem")).Return(errTest)
 		s := asyncActualizerStateWithTestStateStorage(stateStorage)
 		kb, err := s.KeyBuilder(testStorage, testViewRecordQName1)
@@ -337,7 +338,7 @@ func TestAsyncActualizerState_MustNotExistAll(t *testing.T) {
 		require := require.New(t)
 		stateStorage := &mockStorage{}
 		stateStorage.
-			On("NewKeyBuilder", testViewRecordQName1, nil).Return(newKeyBuilder(testStorage, testViewRecordQName1)).
+			On("NewKeyBuilder", testViewRecordQName1, nil).Return(newMapKeyBuilder(testStorage, testViewRecordQName1)).
 			On("GetBatch", mock.AnythingOfType("[]state.GetBatchItem")).
 			Return(nil).
 			Run(func(args mock.Arguments) {
@@ -357,7 +358,7 @@ func TestAsyncActualizerState_MustNotExistAll(t *testing.T) {
 		require := require.New(t)
 		stateStorage := &mockStorage{}
 		stateStorage.
-			On("NewKeyBuilder", testViewRecordQName1, nil).Return(newKeyBuilder(testStorage, testViewRecordQName1)).
+			On("NewKeyBuilder", testViewRecordQName1, nil).Return(newMapKeyBuilder(testStorage, testViewRecordQName1)).
 			On("GetBatch", mock.AnythingOfType("[]state.GetBatchItem")).
 			Return(nil).
 			Run(func(args mock.Arguments) {
@@ -396,9 +397,9 @@ func TestAsyncActualizerState_Read(t *testing.T) {
 			})
 
 		s := ProvideAsyncActualizerStateFactory()(context.Background(), func() istructs.IAppStructs { return mockedStructs }, nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil, nil, nil, 10, 10)
-		kb1, err := s.KeyBuilder(View, testViewRecordQName1)
+		kb1, err := s.KeyBuilder(sys.Storage_View, testViewRecordQName1)
 		require.NoError(err)
-		kb2, err := s.KeyBuilder(View, testViewRecordQName2)
+		kb2, err := s.KeyBuilder(sys.Storage_View, testViewRecordQName2)
 		require.NoError(err)
 
 		_, _ = s.NewValue(kb1)
@@ -426,9 +427,9 @@ func TestAsyncActualizerState_Read(t *testing.T) {
 			On("NewValueBuilder", testViewRecordQName2).Return(&nilValueBuilder{}).
 			On("PutBatch", istructs.WSID(1), mock.AnythingOfType("[]istructs.ViewKV")).Return(errTest)
 		s := ProvideAsyncActualizerStateFactory()(context.Background(), func() istructs.IAppStructs { return mockedStructs }, nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil, nil, nil, 10, 10)
-		kb1, err := s.KeyBuilder(View, testViewRecordQName1)
+		kb1, err := s.KeyBuilder(sys.Storage_View, testViewRecordQName1)
 		require.NoError(err)
-		kb2, err := s.KeyBuilder(View, testViewRecordQName2)
+		kb2, err := s.KeyBuilder(sys.Storage_View, testViewRecordQName2)
 		require.NoError(err)
 
 		_, _ = s.NewValue(kb1)

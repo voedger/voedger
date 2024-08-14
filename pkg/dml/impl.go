@@ -95,9 +95,14 @@ func ParseQuery(query string) (op Op, err error) {
 			return op, fmt.Errorf(`wrong dml operation kind "%s"`, operationStr)
 		}
 	}
+
 	if len(pars) > 0 || op.Kind == OpKind_Select {
 		op.CleanSQL = strings.TrimSpace(fmt.Sprintf("%s %s %s", opSQL, qNameStr, pars))
 	}
+	if op.EntityID > 0 {
+		qNameStr += "." + strconv.Itoa(int(op.EntityID))
+	}
+	op.VSQLWithoutAppAndWSID = strings.TrimSpace(fmt.Sprintf("%s %s %s", operationStr, qNameStr, pars))
 	return op, nil
 }
 

@@ -35,6 +35,14 @@ func replace(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	n := cluster.nodeByHost(args[0])
+	if n == nil {
+		return fmt.Errorf("host %s is not available", cluster.Cmd.Args[0])
+	}
+
+	args[0] = n.ActualNodeState.Address
+	replacedAddress := args[0]
+
 	// nolint
 	defer cluster.saveToJSON()
 
@@ -47,8 +55,6 @@ func replace(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-
-	replacedAddress := cluster.Cmd.Args[0]
 
 	if err = cluster.validate(); err == nil {
 		if err = cluster.Cmd.apply(cluster); err != nil {

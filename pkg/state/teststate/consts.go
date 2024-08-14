@@ -5,7 +5,6 @@
 package teststate
 
 import (
-	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
@@ -22,6 +21,6 @@ const (
 var IntentsLimit = 10
 var BundlesLimit = 10
 var (
-	AppQName_test = appdef.NewAppQName("test", "app")
-	PackageName   = "tstpkg"
+	PackageName                  = "tstpkg"
+	errMsgFailedToParseKeyValues = "failed to parse key values"
 )

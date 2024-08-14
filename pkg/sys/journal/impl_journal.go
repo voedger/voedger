@@ -15,7 +15,7 @@ import (
 	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
-	"github.com/voedger/voedger/pkg/state"
+	"github.com/voedger/voedger/pkg/sys"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
@@ -60,7 +60,7 @@ func qryJournalExec(eps map[appdef.AppQName]extensionpoints.IExtensionPoint) ist
 				return err
 			}
 			if !eo.Empty {
-				eo.Data[Field_Offset] = value.AsInt64(state.Field_Offset)
+				eo.Data[Field_Offset] = value.AsInt64(sys.Storage_WLog_Field_Offset)
 				if err := callback(eo); err != nil {
 					return err
 				}
@@ -68,12 +68,12 @@ func qryJournalExec(eps map[appdef.AppQName]extensionpoints.IExtensionPoint) ist
 			return err
 		}
 
-		kb, err := args.State.KeyBuilder(state.WLog, appdef.NullQName)
+		kb, err := args.State.KeyBuilder(sys.Storage_WLog, appdef.NullQName)
 		if err != nil {
 			return err
 		}
-		kb.PutInt64(state.Field_Offset, fo)
-		kb.PutInt64(state.Field_Count, lo-fo+1)
+		kb.PutInt64(sys.Storage_WLog_Field_Offset, fo)
+		kb.PutInt64(sys.Storage_WLog_Field_Count, lo-fo+1)
 
 		return args.State.Read(kb, cb)
 	}

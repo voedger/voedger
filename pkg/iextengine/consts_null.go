@@ -29,7 +29,7 @@ func (nullExtensionEngine) Close(context.Context) {}
 
 type nullExtensionEngineFactory struct{}
 
-func (nullExtensionEngineFactory) New(_ context.Context, _ appdef.AppQName, _ []ExtensionPackage, _ *ExtEngineConfig, numEngines int) ([]IExtensionEngine, error) {
+func (nullExtensionEngineFactory) New(_ context.Context, _ appdef.AppQName, _ []ExtensionModule, _ *ExtEngineConfig, numEngines int) ([]IExtensionEngine, error) {
 	ee := make([]IExtensionEngine, numEngines)
 	for i := 0; i < numEngines; i++ {
 		ee[i] = NullExtensionEngine

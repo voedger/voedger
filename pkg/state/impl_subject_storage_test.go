@@ -13,6 +13,7 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/sys"
 )
 
 func TestSubjectStorage_BasicUsage(t *testing.T) {
@@ -26,14 +27,14 @@ func TestSubjectStorage_BasicUsage(t *testing.T) {
 	tokenFunc := func() string { return token }
 	s := ProvideCommandProcessorStateFactory()(context.Background(), func() istructs.IAppStructs { return &nilAppStructs{} },
 		nil, nil, nil, nil, func() []iauthnz.Principal { return principals }, tokenFunc, 1, nil, nil, nil, nil, nil)
-	k, err := s.KeyBuilder(RequestSubject, appdef.NullQName)
+	k, err := s.KeyBuilder(sys.Storage_RequestSubject, appdef.NullQName)
 	require.NoError(err)
 
 	v, err := s.MustExist(k)
 	require.NoError(err)
 
-	require.Equal(int64(principals[0].WSID), v.AsInt64(Field_ProfileWSID))
-	require.Equal(int32(istructs.SubjectKind_User), v.AsInt32(Field_Kind))
-	require.Equal(principals[0].Name, v.AsString(Field_Name))
-	require.Equal(token, v.AsString(Field_Token))
+	require.Equal(int64(principals[0].WSID), v.AsInt64(sys.Storage_RequestSubject_Field_ProfileWSID))
+	require.Equal(int32(istructs.SubjectKind_User), v.AsInt32(sys.Storage_RequestSubject_Field_Kind))
+	require.Equal(principals[0].Name, v.AsString(sys.Storage_RequestSubject_Field_Name))
+	require.Equal(token, v.AsString(sys.Storage_RequestSubject_Field_Token))
 }

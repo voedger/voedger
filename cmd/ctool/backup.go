@@ -405,6 +405,7 @@ func checkBackupFolders(cluster *clusterType) error {
 }
 
 // Checking the presence of a Backup folder on node
+// nolint
 func checkBackupFolderOnHost(cluster *clusterType, addr string) error {
 	if e := newScriptExecuter(cluster.sshKey, "").
 		run("check-remote-folder.sh", addr, backupFolder); e != nil {

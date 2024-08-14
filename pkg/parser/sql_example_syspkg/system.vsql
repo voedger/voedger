@@ -24,6 +24,8 @@ ABSTRACT WORKSPACE Workspace (
     TYPE CreateLoginUnloggedParams(
         Password varchar
     );
+	TABLE ChildWorkspace INHERITS CDoc (
+	);
     EXTENSION ENGINE BUILTIN (
         COMMAND CreateLogin(CreateLoginParams, UNLOGGED CreateLoginUnloggedParams) RETURNS void;
         COMMAND UpdateSubscription(any) RETURNS any;
@@ -39,7 +41,7 @@ ALTERABLE WORKSPACE Profile(
 
 /*
     Specify sys.Raw as a command/function parameter to pass raw data to the command/function. 
-    The data isn't valudated by the core.
+    The data isn't validated by the core.
     An extension accesses the data by reading the "Body" field from the argument.
 */
 TYPE Raw(
@@ -49,33 +51,33 @@ TYPE Raw(
 EXTENSION ENGINE BUILTIN (
 
     STORAGE Record(
-        GET         SCOPE(COMMANDS, QUERIES, PROJECTORS),
-        GETBATCH    SCOPE(COMMANDS, QUERIES, PROJECTORS),
+        GET         SCOPE(COMMANDS, QUERIES, PROJECTORS, JOBS),
+        GETBATCH    SCOPE(COMMANDS, QUERIES, PROJECTORS, JOBS),
         INSERT      SCOPE(COMMANDS),
         UPDATE      SCOPE(COMMANDS)
     ) ENTITY RECORD; -- used to validate projector state/intents declaration
 
 
     STORAGE View(
-        GET         SCOPE(COMMANDS, QUERIES, PROJECTORS),
-        GETBATCH    SCOPE(COMMANDS, QUERIES, PROJECTORS),
-        READ        SCOPE(QUERIES, PROJECTORS),
+        GET         SCOPE(COMMANDS, QUERIES, PROJECTORS, JOBS),
+        GETBATCH    SCOPE(COMMANDS, QUERIES, PROJECTORS, JOBS),
+        READ        SCOPE(QUERIES, PROJECTORS, JOBS),
         INSERT      SCOPE(PROJECTORS),
         UPDATE      SCOPE(PROJECTORS)
     ) ENTITY VIEW;
 
     STORAGE WLog(
-        GET     SCOPE(COMMANDS, QUERIES, PROJECTORS),
-        READ    SCOPE(QUERIES, PROJECTORS)
+        GET     SCOPE(COMMANDS, QUERIES, PROJECTORS, JOBS),
+        READ    SCOPE(QUERIES, PROJECTORS, JOBS)
     );
 
     STORAGE PLog(
-        GET     SCOPE(COMMANDS, QUERIES, PROJECTORS),
-        READ    SCOPE(QUERIES, PROJECTORS)
+        GET     SCOPE(COMMANDS, QUERIES, PROJECTORS, JOBS),
+        READ    SCOPE(QUERIES, PROJECTORS, JOBS)
     );
 
     STORAGE AppSecret(
-        GET SCOPE(COMMANDS, QUERIES, PROJECTORS)
+        GET SCOPE(COMMANDS, QUERIES, PROJECTORS, JOBS)
     );
 
     STORAGE Subject(
@@ -83,7 +85,7 @@ EXTENSION ENGINE BUILTIN (
     );
 
     STORAGE Http (
-        READ SCOPE(QUERIES, PROJECTORS)
+        READ SCOPE(QUERIES, PROJECTORS, JOBS)
     );
 
     STORAGE SendMail(
