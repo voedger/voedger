@@ -100,6 +100,7 @@ var (
 	qNameCmdVSqlUpdate                              = appdef.NewQName(clusterPackage, "VSqlUpdate")
 	qNameCmdSaveTap2PayPayment                      = appdef.NewQName(airPackage, "SaveTap2PayPayment")
 	qNameQryGetResellers                            = appdef.NewQName(airPackage, "GetResellers")
+	qNameQryState                                   = appdef.NewQName(appdef.SysPackage, "State")
 
 	// Air roles
 	qNameRoleResellersAdmin         = appdef.NewQName(airPackage, "ResellersAdmin")
@@ -109,6 +110,7 @@ var (
 	qNameRoleSubscriptionReseller   = appdef.NewQName(airPackage, "SubscriptionReseller")
 	qNameRoleUntillPaymentsTerminal = appdef.NewQName(airPackage, "UntillPaymentsTerminal")
 	qNameRoleUntillPaymentsManager  = appdef.NewQName(airPackage, "UntillPaymentsManager")
+	qNameRoleBOReader               = appdef.NewQName(airPackage, "BOReader")
 )
 
 const (
