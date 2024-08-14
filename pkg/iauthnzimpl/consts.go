@@ -124,8 +124,6 @@ const (
 
 	// avoiding import cycle: collection->iauthnzimpl->registry->workspace->collection
 	registryPackage = "registry"
-
-	SysGuestLogin = "sys.Guest"
 )
 
 const (

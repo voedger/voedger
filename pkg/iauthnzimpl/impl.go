@@ -28,7 +28,7 @@ func (i *implIAuthenticator) Authenticate(requestContext context.Context, as ist
 		principals = append(principals, iauthnz.Principal{
 			Kind: iauthnz.PrincipalKind_User,
 			WSID: istructs.GuestWSID,
-			Name: SysGuestLogin,
+			Name: istructs.SysGuestLogin,
 		})
 		return
 	}

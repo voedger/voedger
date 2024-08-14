@@ -255,7 +255,7 @@ func TestAuthenticate(t *testing.T) {
 				RequestWSID: 1,
 			},
 			expectedPrincipals: []iauthnz.Principal{
-				{Kind: iauthnz.PrincipalKind_User, Name: SysGuestLogin, WSID: istructs.GuestWSID},
+				{Kind: iauthnz.PrincipalKind_User, Name: istructs.SysGuestLogin, WSID: istructs.GuestWSID},
 				{Kind: iauthnz.PrincipalKind_Host, Name: "127.0.0.1"},
 			},
 		},
