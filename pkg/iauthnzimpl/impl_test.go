@@ -249,12 +249,13 @@ func TestAuthenticate(t *testing.T) {
 		subjects           []appdef.QName
 	}{
 		{
-			desc: "no auth -> host only",
+			desc: "no auth -> host + Guest user",
 			req: iauthnz.AuthnRequest{
 				Host:        "127.0.0.1",
 				RequestWSID: 1,
 			},
 			expectedPrincipals: []iauthnz.Principal{
+				{Kind: iauthnz.PrincipalKind_User, Name: istructs.SysGuestLogin, WSID: istructs.GuestWSID},
 				{Kind: iauthnz.PrincipalKind_Host, Name: "127.0.0.1"},
 			},
 		},

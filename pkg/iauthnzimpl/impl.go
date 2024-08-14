@@ -25,6 +25,11 @@ func (i *implIAuthenticator) Authenticate(requestContext context.Context, as ist
 		}
 	}()
 	if len(req.Token) == 0 {
+		principals = append(principals, iauthnz.Principal{
+			Kind: iauthnz.PrincipalKind_User,
+			WSID: istructs.GuestWSID,
+			Name: istructs.SysGuestLogin,
+		})
 		return
 	}
 
