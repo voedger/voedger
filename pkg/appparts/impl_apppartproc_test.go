@@ -143,7 +143,11 @@ func Test_partitionProcessors_deploy(t *testing.T) {
 		}()
 
 		t.Run("hack test1.app1 to update AppDef", func(t *testing.T) {
-			appParts.(*apps).apps[istructs.AppQName_test1_app1].lastestVersion.def = appDef2
+			a, ok := appParts.(*apps)
+			require.True(ok)
+			a.mx.Lock()
+			a.apps[istructs.AppQName_test1_app1].lastestVersion.def = appDef2
+			a.mx.Unlock()
 			a2, err := appParts.AppDef(istructs.AppQName_test1_app1)
 			require.NoError(err)
 			require.Equal(appDef2, a2)
