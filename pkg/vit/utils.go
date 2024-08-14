@@ -359,6 +359,13 @@ func TestDeadline() time.Time {
 	return deadline
 }
 
+func getTestEmailsAwaitingTimeout() time.Duration {
+	if coreutils.IsDebug() {
+		return math.MaxInt
+	}
+	return testEmailsAwaitingTimeout
+}
+
 func getWorkspaceInitAwaitTimeout() time.Duration {
 	if coreutils.IsDebug() {
 		// so long for Test_Race_RestaurantIntenseUsage with -race
