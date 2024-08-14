@@ -42,7 +42,7 @@ func execCmdCreateLogin(args istructs.ExecCommandArgs) (err error) {
 	// see https://dev.untill.com/projects/#!537026
 	if strings.HasPrefix(loginStr, "-") || strings.HasPrefix(loginStr, ".") || strings.HasPrefix(loginStr, " ") ||
 		strings.HasSuffix(loginStr, "-") || strings.HasSuffix(loginStr, ".") || strings.HasSuffix(loginStr, " ") ||
-		strings.Contains(loginStr, "..") || !validLoginRegexp.MatchString(loginStr) {
+		strings.Contains(loginStr, "..") || strings.HasPrefix(loginStr, "sys.") || !validLoginRegexp.MatchString(loginStr) {
 		return coreutils.NewHTTPErrorf(http.StatusBadRequest, "incorrect login format: ", loginStr)
 	}
 
