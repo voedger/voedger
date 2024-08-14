@@ -416,4 +416,14 @@ var defaultACL = ACL{
 		},
 		policy: ACPolicy_Allow,
 	},
+	{
+		// https://github.com/voedger/voedger/issues/2470
+		desc: "grant select on field q.sys.State.State to role.air.BOReader",
+		pattern: PatternType{
+			opKindsPattern:    []iauthnz.OperationKindType{iauthnz.OperationKind_SELECT},
+			fieldsPattern:     [][]string{{"State"}},
+			principalsPattern: [][]iauthnz.Principal{{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleBOReader}}},
+		},
+		policy: ACPolicy_Allow,
+	},
 }
