@@ -21,6 +21,7 @@ var (
 		fmt.Errorf("%w %s", ErrNotAvailableEngines, ProcessorKind_Command.TrimString()),
 		fmt.Errorf("%w %s", ErrNotAvailableEngines, ProcessorKind_Query.TrimString()),
 		fmt.Errorf("%w %s", ErrNotAvailableEngines, ProcessorKind_Actualizer.TrimString()),
+		fmt.Errorf("%w %s", ErrNotAvailableEngines, ProcessorKind_Scheduler.TrimString()),
 	}
 )
 
