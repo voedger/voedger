@@ -21,9 +21,47 @@ import (
 type engines map[appdef.ExtensionEngineKind]iextengine.IExtensionEngine
 
 type appVersion struct {
+	mx      sync.RWMutex
 	def     appdef.IAppDef
 	structs istructs.IAppStructs
 	pools   [ProcessorKind_Count]*pool.Pool[engines]
+}
+
+func (av *appVersion) appDef() appdef.IAppDef {
+	av.mx.RLock()
+	defer av.mx.RUnlock()
+	return av.def
+}
+
+func (av *appVersion) appStructs() istructs.IAppStructs {
+	av.mx.RLock()
+	defer av.mx.RUnlock()
+	return av.structs
+}
+
+func (av *appVersion) appDefAndStructs() (appdef.IAppDef, istructs.IAppStructs) {
+	av.mx.RLock()
+	defer av.mx.RUnlock()
+	return av.def, av.structs
+}
+
+func (av *appVersion) procPool(proc ProcessorKind) *pool.Pool[engines] {
+	av.mx.RLock()
+	defer av.mx.RUnlock()
+	return av.pools[proc]
+}
+
+func (av *appVersion) upgrade(
+	def appdef.IAppDef,
+	structs istructs.IAppStructs,
+	pools [ProcessorKind_Count]*pool.Pool[engines],
+) {
+	av.mx.Lock()
+	defer av.mx.Unlock()
+
+	av.def = def
+	av.structs = structs
+	av.pools = pools
 }
 
 type appRT struct {
@@ -49,12 +87,7 @@ func newApplication(apps *apps, name appdef.AppQName, partsCount istructs.NumApp
 // extModuleURLs is important for non-builtin (non-native) apps
 // extModuleURLs: packagePath->packageURL
 func (a *appRT) deploy(def appdef.IAppDef, extModuleURLs map[string]*url.URL, structs istructs.IAppStructs, numEnginesPerEngineKind [ProcessorKind_Count]int) {
-	a.lastestVersion.def = def
-	a.lastestVersion.structs = structs
-
 	eef := a.apps.extEngineFactories
-
-	ctx := context.Background()
 
 	enginesPathsModules := map[appdef.ExtensionEngineKind]map[string]*iextengine.ExtensionModule{}
 	def.Extensions(func(ext appdef.IExtension) {
@@ -91,6 +124,7 @@ func (a *appRT) deploy(def appdef.IAppDef, extModuleURLs map[string]*url.URL, st
 		}
 	}
 
+	pools := [ProcessorKind_Count]*pool.Pool[engines]{}
 	// processorKind here is one of ProcessorKind_Command, ProcessorKind_Query, ProcessorKind_Actualizer
 	for processorKind, processorsCountPerKind := range numEnginesPerEngineKind {
 		ee := make([]engines, processorsCountPerKind)
@@ -99,7 +133,7 @@ func (a *appRT) deploy(def appdef.IAppDef, extModuleURLs map[string]*url.URL, st
 			if !ok {
 				panic(fmt.Errorf("no extension engine factory for engine %s met among def of %s", extEngineKind.String(), a.name))
 			}
-			extEngines, err := extensionEngineFactory.New(ctx, a.name, extensionModules, &iextengine.DefaultExtEngineConfig, processorsCountPerKind)
+			extEngines, err := extensionEngineFactory.New(a.apps.vvmCtx, a.name, extensionModules, &iextengine.DefaultExtEngineConfig, processorsCountPerKind)
 			if err != nil {
 				panic(err)
 			}
@@ -110,8 +144,10 @@ func (a *appRT) deploy(def appdef.IAppDef, extModuleURLs map[string]*url.URL, st
 				ee[i][extEngineKind] = extEngines[i]
 			}
 		}
-		a.lastestVersion.pools[processorKind] = pool.New(ee)
+		pools[processorKind] = pool.New(ee)
 	}
+
+	a.lastestVersion.upgrade(def, structs, pools)
 }
 
 type appPartitionRT struct {
@@ -127,7 +163,7 @@ func newAppPartitionRT(app *appRT, id istructs.PartitionID) *appPartitionRT {
 	part := &appPartitionRT{
 		app:            app,
 		id:             id,
-		syncActualizer: app.apps.syncActualizerFactory(app.lastestVersion.structs, id),
+		syncActualizer: app.apps.syncActualizerFactory(app.lastestVersion.appStructs(), id),
 	}
 	part.processors = newPartitionProcessors(part)
 	return part
@@ -162,8 +198,7 @@ func newBorrowedPartition(part *appPartitionRT) *borrowedPartition {
 	rt := borrowedPartitionsPool.Get().(*borrowedPartition)
 
 	rt.part = part
-	rt.appDef = part.app.lastestVersion.def
-	rt.appStructs = part.app.lastestVersion.structs
+	rt.appDef, rt.appStructs = part.app.lastestVersion.appDefAndStructs()
 
 	return rt
 }
@@ -207,7 +242,7 @@ func (rt *borrowedPartition) Invoke(ctx context.Context, name appdef.QName, stat
 func (rt *borrowedPartition) Release() {
 	if engine := rt.engines; engine != nil {
 		rt.engines = nil
-		pool := rt.part.app.lastestVersion.pools[rt.procKind] // source pool the engine borrowed from
+		pool := rt.part.app.lastestVersion.procPool(rt.procKind) // source pool the engine borrowed from
 		pool.Release(engine)
 	}
 	borrowedPartitionsPool.Put(rt)
@@ -215,7 +250,7 @@ func (rt *borrowedPartition) Release() {
 
 // Initialize borrowed partition structures for use
 func (rt *borrowedPartition) init(proc ProcessorKind) error {
-	pool := rt.part.app.lastestVersion.pools[proc]
+	pool := rt.part.app.lastestVersion.procPool(proc)
 	engines, err := pool.Borrow()
 	if err != nil {
 		return errNotAvailableEngines[proc]
