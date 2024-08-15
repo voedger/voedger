@@ -127,3 +127,11 @@ func (pp *partitionProcessors) deploy() {
 	pp.mx.RUnlock()
 	startWG.Wait() // wait for all new processors to start
 }
+
+// returns all deployed processors
+func (pp *partitionProcessors) enum() appdef.QNames {
+	pp.mx.RLock()
+	defer pp.mx.RUnlock()
+
+	return appdef.QNamesFromMap(pp.proc)
+}
