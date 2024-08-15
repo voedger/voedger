@@ -43,7 +43,7 @@ func newProcRT(kind ProcessorKind, cancel context.CancelFunc) *procRT {
 //   - stops actualizers for removed projectors and starts actualizers for new projectors
 //   - stops schedulers for removed jobs and starts schedulers for new jobs.
 func (pp *partitionProcessors) deploy() {
-	appDef := pp.part.app.lastestVersion.def
+	appDef := pp.part.app.lastestVersion.appDef()
 
 	// async stop old processors
 	stopWG := sync.WaitGroup{}

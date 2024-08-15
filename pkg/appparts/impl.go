@@ -119,7 +119,7 @@ func (aps *apps) AppDef(name appdef.AppQName) (appdef.IAppDef, error) {
 	if !ok {
 		return nil, errAppNotFound(name)
 	}
-	return app.lastestVersion.def, nil
+	return app.lastestVersion.appDef(), nil
 }
 
 // Returns _total_ application partitions count.
