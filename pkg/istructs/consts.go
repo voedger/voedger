@@ -196,3 +196,5 @@ const (
 )
 
 const DefaultNumAppWorkspaces = NumAppWorkspaces(10)
+
+const SysGuestLogin = appdef.SysPackage + ".Guest"
