@@ -116,7 +116,7 @@ func Test_partitionProcessors_deploy(t *testing.T) {
 		for i := istructs.PartitionID(0); i < 10; i++ {
 			appParts.(*apps).mx.RLock()
 			if p, exists := appParts.(*apps).apps[istructs.AppQName_test1_app1].parts[i]; exists {
-				m[i] = appdef.QNamesFromMap(p.processors.proc)
+				m[i] = p.processors.enum()
 			}
 			appParts.(*apps).mx.RUnlock()
 		}
