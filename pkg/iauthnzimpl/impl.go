@@ -25,7 +25,17 @@ func (i *implIAuthenticator) Authenticate(requestContext context.Context, as ist
 		}
 	}()
 	if len(req.Token) == 0 {
-		return
+		principals = append(principals, iauthnz.Principal{
+			Kind: iauthnz.PrincipalKind_User,
+			WSID: istructs.GuestWSID,
+			Name: istructs.SysGuestLogin,
+		})
+		rolesFromSubjects, err := i.rolesFromSubjects(requestContext, istructs.SysGuestLogin, as, req.RequestWSID)
+		if err != nil {
+			return nil, principalPayload, err
+		}
+		principals = append(principals, rolesFromSubjects...)
+		return principals, principalPayload, nil
 	}
 
 	if _, err = appTokens.ValidateToken(req.Token, &principalPayload); err != nil {
@@ -47,17 +57,11 @@ func (i *implIAuthenticator) Authenticate(requestContext context.Context, as ist
 	}
 
 	// read roles from cdoc.sys.Subjects from the current workspace
-	subjectRoles, err := i.subjectRolesGetter(requestContext, principalPayload.Login, as, req.RequestWSID)
+	rolesFromSubjects, err := i.rolesFromSubjects(requestContext, principalPayload.Login, as, req.RequestWSID)
 	if err != nil {
 		return nil, principalPayload, err
 	}
-	for _, sr := range subjectRoles {
-		principals = append(principals, iauthnz.Principal{
-			Kind:  iauthnz.PrincipalKind_Role,
-			WSID:  req.RequestWSID,
-			QName: sr,
-		})
-	}
+	principals = append(principals, rolesFromSubjects...)
 
 	profileWSID := principalPayload.ProfileWSID // for user and device subject kinds
 	pkt := iauthnz.PrincipalKind_NULL
@@ -174,6 +178,22 @@ func (i *implIAuthenticator) Authenticate(requestContext context.Context, as ist
 	}
 
 	return principals, principalPayload, nil
+}
+
+func (i *implIAuthenticator) rolesFromSubjects(requestContext context.Context, name string, as istructs.IAppStructs, wsid istructs.WSID) (res []iauthnz.Principal, err error) {
+	// read roles from cdoc.sys.Subjects from the current workspace
+	subjectRoles, err := i.subjectRolesGetter(requestContext, name, as, wsid)
+	if err != nil {
+		return nil, err
+	}
+	for _, sr := range subjectRoles {
+		res = append(res, iauthnz.Principal{
+			Kind:  iauthnz.PrincipalKind_Role,
+			WSID:  wsid,
+			QName: sr,
+		})
+	}
+	return res, nil
 }
 
 // principals obtained from IAuhtenticator

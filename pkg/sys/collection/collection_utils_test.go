@@ -74,7 +74,7 @@ const OccursUnbounded = appdef.Occurs(0xffff)
 var test = testDataType{
 	appQName:        istructs.AppQName_test1_app1,
 	totalPartitions: 100,
-	appEngines:      appparts.PoolSize(100, 100, 100),
+	appEngines:      appparts.PoolSize(100, 100, 0, 0),
 
 	pkgName: "test",
 
