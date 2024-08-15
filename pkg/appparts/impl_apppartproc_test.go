@@ -157,12 +157,13 @@ func Test_partitionProcessors_deploy(t *testing.T) {
 			return adb.MustBuild()
 		}()
 
-		t.Run("hack test1.app1 to update AppDef", func(t *testing.T) {
+		t.Run("upgrade test1.app1 to appDef2", func(t *testing.T) {
 			a, ok := appParts.(*apps)
 			require.True(ok)
-			a.mx.Lock()
-			a.apps[istructs.AppQName_test1_app1].lastestVersion.def = appDef2
-			a.mx.Unlock()
+
+			app1 := a.apps[istructs.AppQName_test1_app1]
+			app1.lastestVersion.upgrade(appDef2, app1.lastestVersion.appStructs(), app1.lastestVersion.pools)
+
 			a2, err := appParts.AppDef(istructs.AppQName_test1_app1)
 			require.NoError(err)
 			require.Equal(appDef2, a2)
