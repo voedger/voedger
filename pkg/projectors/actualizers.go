@@ -63,8 +63,7 @@ func (*actualizers) Run(context.Context) {
 }
 
 // # pipeline.IServiceEx.RunEx
-func (a *actualizers) RunEx(ctx context.Context, started func()) {
-	a.cfg.Ctx = ctx
+func (a *actualizers) RunEx(_ context.Context, started func()) {
 	started()
 }
 
