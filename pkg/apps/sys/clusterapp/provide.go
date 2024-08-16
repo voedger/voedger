@@ -30,7 +30,7 @@ func Provide() apps.AppBuilder {
 			Packages: []parser.PackageFS{clusterAppPackageFS, clusterPackageFS, sysPackageFS},
 			AppDeploymentDescriptor: appparts.AppDeploymentDescriptor{
 				NumParts:         ClusterAppNumPartitions,
-				EnginePoolSize:   appparts.PoolSize(int(ClusterAppNumPartitions), 1, int(ClusterAppNumPartitions)),
+				EnginePoolSize:   appparts.PoolSize(int(ClusterAppNumPartitions), 1, int(ClusterAppNumPartitions), 1),
 				NumAppWorkspaces: ClusterAppNumAppWS,
 			},
 		}

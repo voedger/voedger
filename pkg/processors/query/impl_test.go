@@ -44,7 +44,7 @@ var timeFunc = coreutils.TimeFunc(func() time.Time { return now })
 
 var (
 	appName    appdef.AppQName           = istructs.AppQName_test1_app1
-	appEngines                           = appparts.PoolSize(10, 100, 10)
+	appEngines                           = appparts.PoolSize(10, 100, 10, 0)
 	partCount  istructs.NumAppPartitions = 10
 	partID     istructs.PartitionID      = 5
 	wsID       istructs.WSID             = 15
@@ -323,6 +323,7 @@ func deployTestAppWithSecretToken(require *require.Assertions,
 
 	appParts, cleanup, err = appparts.New2(context.Background(), asp,
 		func(istructs.IAppStructs, istructs.PartitionID) pipeline.ISyncOperator { return &pipeline.NOOP{} }, // no projectors
+		appparts.NullProcessorRunner,
 		appparts.NullProcessorRunner,
 		engines.ProvideExtEngineFactories(
 			engines.ExtEngineFactoriesConfig{

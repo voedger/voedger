@@ -14,7 +14,8 @@ import (
 
 type nullProcessorRunner struct{}
 
-func (nullProcessorRunner) NewAndRun(context.Context, appdef.AppQName, istructs.PartitionID, appdef.QName) {
+func (nullProcessorRunner) NewAndRun(ctx context.Context, _ appdef.AppQName, _ istructs.PartitionID, _ appdef.QName) {
+	<-ctx.Done()
 }
 
 func (nullProcessorRunner) SetAppPartitions(IAppPartitions) {}

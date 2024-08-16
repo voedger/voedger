@@ -14,4 +14,9 @@ var registryAppSchemaFS embed.FS
 
 const RegistryAppFQN = "github.com/voedger/voedger/pkg/apps/sys/registryapp"
 
-const DefDeploymentQPCount = 10
+const (
+	// query processors
+	DefDeploymentQPCount = 10
+	// scheduler processors
+	DefDeploymentSPCount = 1
+)

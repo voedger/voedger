@@ -28,7 +28,14 @@ type apps struct {
 	apps                  map[appdef.AppQName]*appRT
 }
 
-func newAppPartitions(vvmCtx context.Context, asp istructs.IAppStructsProvider, saf SyncActualizerFactory, asyncActualizersRunner IProcessorRunner, eef iextengine.ExtensionEngineFactories) (ap IAppPartitions, cleanup func(), err error) {
+func newAppPartitions(
+	vvmCtx context.Context,
+	asp istructs.IAppStructsProvider,
+	saf SyncActualizerFactory,
+	asyncActualizersRunner IProcessorRunner,
+	jobSchedulerRunner IProcessorRunner,
+	eef iextengine.ExtensionEngineFactories,
+) (ap IAppPartitions, cleanup func(), err error) {
 	a := &apps{
 		mx:                    sync.RWMutex{},
 		vvmCtx:                vvmCtx,
@@ -39,6 +46,8 @@ func newAppPartitions(vvmCtx context.Context, asp istructs.IAppStructsProvider, 
 	}
 	a.processors[ProcessorKind_Actualizer] = asyncActualizersRunner
 	asyncActualizersRunner.SetAppPartitions(a)
+	a.processors[ProcessorKind_Scheduler] = jobSchedulerRunner
+	jobSchedulerRunner.SetAppPartitions(a)
 	return a, func() {}, err
 }
 
@@ -110,7 +119,7 @@ func (aps *apps) AppDef(name appdef.AppQName) (appdef.IAppDef, error) {
 	if !ok {
 		return nil, errAppNotFound(name)
 	}
-	return app.lastestVersion.def, nil
+	return app.lastestVersion.appDef(), nil
 }
 
 // Returns _total_ application partitions count.
