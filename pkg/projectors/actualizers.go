@@ -46,7 +46,6 @@ func (a *actualizers) NewAndRun(ctx context.Context, app appdef.AppQName, part i
 			Partition:                  part,
 		},
 	}
-	act.conf.Ctx = ctx
 	act.Prepare()
 
 	a.wait.Add(1)
