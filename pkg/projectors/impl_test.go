@@ -251,17 +251,7 @@ func deployTestAppEx(
 		vvmName = actualizerCfg.VvmName
 	}
 
-	var (
-		vvmCtx    context.Context
-		vvmCancel context.CancelFunc
-	)
-
-	if actualizerCfg.Ctx == nil {
-		vvmCtx, vvmCancel = context.WithCancel(context.Background())
-		actualizerCfg.Ctx = vvmCtx
-	} else {
-		vvmCtx = actualizerCfg.Ctx
-	}
+	vvmCtx, vvmCancel := context.WithCancel(context.Background())
 
 	var metrics imetrics.IMetrics
 
