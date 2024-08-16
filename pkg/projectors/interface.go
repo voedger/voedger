@@ -28,7 +28,6 @@ type LogErrorFunc func(args ...interface{})
 
 type BasicAsyncActualizerConfig struct {
 	VvmName string
-	Ctx     context.Context
 
 	AppPartitions appparts.IAppPartitions
 	SecretReader  isecrets.ISecretReader
