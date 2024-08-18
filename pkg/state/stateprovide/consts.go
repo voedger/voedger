@@ -17,9 +17,12 @@ const (
 	S_UPDATE    = 16
 )
 
+const (
+	queryProcessorStateMaxIntents = 2 // 1 for Result, 1 for Response
+)
+
 var emptyApplyBatchItem = state.ApplyBatchItem{}
 
 var (
 	qNameCDocWorkspaceDescriptor = appdef.NewQName(appdef.SysPackage, "WorkspaceDescriptor")
-	field_WSKind                 = "WSKind"
 )

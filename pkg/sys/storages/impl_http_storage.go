@@ -23,6 +23,12 @@ type httpStorage struct {
 	customClient state.IHttpClient
 }
 
+func NewHttpStorage(customClient state.IHttpClient) *httpStorage {
+	return &httpStorage{
+		customClient: customClient,
+	}
+}
+
 type httpStorageKeyBuilder struct {
 	baseKeyBuilder
 	timeout time.Duration

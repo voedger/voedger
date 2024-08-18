@@ -9,14 +9,14 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys"
 )
 
 type resultStorage struct {
-	cmdResultBuilderFunc ObjectBuilderFunc
-	appStructsFunc       AppStructsFunc
-	resultBuilderFunc    ObjectBuilderFunc
-	qryCallback          ExecQueryCallbackFunc
+	cmdResultBuilderFunc state.ObjectBuilderFunc
+	resultBuilderFunc    state.ObjectBuilderFunc
+	qryCallback          state.ExecQueryCallbackFunc
 	qryValueBuilder      *resultValueBuilder // last value builder
 }
 
@@ -33,15 +33,14 @@ func (b *resultKeyBuilder) Equals(src istructs.IKeyBuilder) bool {
 	return ok
 }
 
-func newCmdResultStorage(cmdResultBuilderFunc ObjectBuilderFunc) *resultStorage {
+func NewCmdResultStorage(cmdResultBuilderFunc state.ObjectBuilderFunc) *resultStorage {
 	return &resultStorage{
 		cmdResultBuilderFunc: cmdResultBuilderFunc,
 	}
 }
 
-func newQueryResultStorage(appStructsFunc AppStructsFunc, resultBuilderFunc ObjectBuilderFunc, qryCallback ExecQueryCallbackFunc) *resultStorage {
+func NewQueryResultStorage(resultBuilderFunc state.ObjectBuilderFunc, qryCallback state.ExecQueryCallbackFunc) *resultStorage {
 	return &resultStorage{
-		appStructsFunc:    appStructsFunc,
 		resultBuilderFunc: resultBuilderFunc,
 		qryCallback:       qryCallback,
 	}
@@ -51,7 +50,7 @@ func (s *resultStorage) NewKeyBuilder(_ appdef.QName, _ istructs.IStateKeyBuilde
 	return &resultKeyBuilder{}
 }
 
-func (s *resultStorage) Validate([]ApplyBatchItem) (err error) {
+func (s *resultStorage) Validate([]state.ApplyBatchItem) (err error) {
 	panic("not applicable")
 }
 
@@ -67,7 +66,7 @@ func (s *resultStorage) sendPrevQueryObject() error {
 	return nil
 }
 
-func (s *resultStorage) ApplyBatch([]ApplyBatchItem) (err error) {
+func (s *resultStorage) ApplyBatch([]state.ApplyBatchItem) (err error) {
 	return s.sendPrevQueryObject()
 }
 

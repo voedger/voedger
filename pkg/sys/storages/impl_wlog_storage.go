@@ -10,13 +10,22 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys"
 )
 
 type wLogStorage struct {
 	ctx        context.Context
-	eventsFunc eventsFunc
-	wsidFunc   WSIDFunc
+	eventsFunc state.EventsFunc
+	wsidFunc   state.WSIDFunc
+}
+
+func NewWLogStorage(ctx context.Context, eventsFunc state.EventsFunc, wsidFunc state.WSIDFunc) *wLogStorage {
+	return &wLogStorage{
+		ctx:        ctx,
+		eventsFunc: eventsFunc,
+		wsidFunc:   wsidFunc,
+	}
 }
 
 type wLogKeyBuilder struct {
@@ -135,3 +144,10 @@ func (v *wLogValue) AsValue(name string) istructs.IStateValue {
 	}
 	return v.baseStateValue.AsValue(name)
 }
+
+type key struct {
+	istructs.IKey
+	data map[string]interface{}
+}
+
+func (k *key) AsInt64(name string) int64 { return k.data[name].(int64) }

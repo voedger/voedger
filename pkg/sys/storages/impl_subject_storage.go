@@ -8,12 +8,20 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys"
 )
 
 type subjectStorage struct {
-	principalsFunc PrincipalsFunc
-	tokenFunc      TokenFunc
+	principalsFunc state.PrincipalsFunc
+	tokenFunc      state.TokenFunc
+}
+
+func NewSubjectStorage(principalsFunc state.PrincipalsFunc, tokenFunc state.TokenFunc) *subjectStorage {
+	return &subjectStorage{
+		principalsFunc: principalsFunc,
+		tokenFunc:      tokenFunc,
+	}
 }
 
 type subjectKeyBuilder struct {

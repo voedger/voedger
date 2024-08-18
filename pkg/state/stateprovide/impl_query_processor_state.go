@@ -10,14 +10,16 @@ import (
 	"github.com/voedger/voedger/pkg/isecrets"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/itokens"
+	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys"
+	"github.com/voedger/voedger/pkg/sys/storages"
 	"github.com/voedger/voedger/pkg/utils/federation"
 )
 
 type queryProcessorState struct {
 	*hostState
-	queryArgs     PrepareArgsFunc
-	queryCallback ExecQueryCallbackFunc
+	queryArgs     state.PrepareArgsFunc
+	queryCallback state.ExecQueryCallbackFunc
 }
 
 func (s queryProcessorState) QueryPrepareArgs() istructs.PrepareArgs {
@@ -30,21 +32,21 @@ func (s queryProcessorState) QueryCallback() istructs.ExecQueryCallback {
 
 func implProvideQueryProcessorState(
 	ctx context.Context,
-	appStructsFunc AppStructsFunc,
-	partitionIDFunc PartitionIDFunc,
-	wsidFunc WSIDFunc,
+	appStructsFunc state.AppStructsFunc,
+	partitionIDFunc state.PartitionIDFunc,
+	wsidFunc state.WSIDFunc,
 	secretReader isecrets.ISecretReader,
-	principalsFunc PrincipalsFunc,
-	tokenFunc TokenFunc,
+	principalsFunc state.PrincipalsFunc,
+	tokenFunc state.TokenFunc,
 	itokens itokens.ITokens,
-	execQueryArgsFunc PrepareArgsFunc,
-	argFunc ArgFunc,
-	resultBuilderFunc ObjectBuilderFunc,
+	execQueryArgsFunc state.PrepareArgsFunc,
+	argFunc state.ArgFunc,
+	resultBuilderFunc state.ObjectBuilderFunc,
 	federation federation.IFederation,
-	queryCallbackFunc ExecQueryCallbackFunc,
-	options ...StateOptFunc) IHostState {
+	queryCallbackFunc state.ExecQueryCallbackFunc,
+	options ...state.StateOptFunc) state.IHostState {
 
-	opts := &StateOpts{}
+	opts := &state.StateOpts{}
 	for _, optFunc := range options {
 		optFunc(opts)
 	}
@@ -55,52 +57,22 @@ func implProvideQueryProcessorState(
 		queryCallback: queryCallbackFunc,
 	}
 
-	state.addStorage(sys.Storage_View, newViewRecordsStorage(ctx, appStructsFunc, wsidFunc, nil), S_GET|S_GET_BATCH|S_READ)
-	state.addStorage(sys.Storage_Record, newRecordsStorage(appStructsFunc, wsidFunc, nil), S_GET|S_GET_BATCH)
+	ieventsFunc := func() istructs.IEvents {
+		return appStructsFunc().Events()
+	}
 
-	state.addStorage(sys.Storage_WLog, &wLogStorage{
-		ctx:        ctx,
-		eventsFunc: func() istructs.IEvents { return appStructsFunc().Events() },
-		wsidFunc:   wsidFunc,
-	}, S_GET|S_READ)
-
-	state.addStorage(sys.Storage_Http, &httpStorage{
-		customClient: opts.customHttpClient,
-	}, S_READ)
-
-	state.addStorage(sys.Storage_FederationCommand, &federationCommandStorage{
-		appStructs: appStructsFunc,
-		wsid:       wsidFunc,
-		emulation:  opts.federationCommandHandler,
-		federation: federation,
-		tokens:     itokens,
-	}, S_GET)
-
-	state.addStorage(sys.Storage_FederationBlob, &federationBlobStorage{
-		appStructs: appStructsFunc,
-		wsid:       wsidFunc,
-		emulation:  opts.federationBlobHandler,
-		federation: federation,
-		tokens:     itokens,
-	}, S_READ)
-
-	state.addStorage(sys.Storage_AppSecret, &appSecretsStorage{secretReader: secretReader}, S_GET)
-
-	state.addStorage(sys.Storage_RequestSubject, &subjectStorage{
-		principalsFunc: principalsFunc,
-		tokenFunc:      tokenFunc,
-	}, S_GET)
-
-	state.addStorage(sys.Storage_QueryContext, &queryContextStorage{
-		argFunc:  argFunc,
-		wsidFunc: wsidFunc,
-	}, S_GET)
-
-	state.addStorage(sys.Storage_Response, &cmdResponseStorage{}, S_INSERT)
-
-	state.addStorage(sys.Storage_Result, newQueryResultStorage(appStructsFunc, resultBuilderFunc, queryCallbackFunc), S_INSERT)
-
-	state.addStorage(sys.Storage_Uniq, newUniquesStorage(appStructsFunc, wsidFunc, opts.uniquesHandler), S_GET)
+	state.addStorage(sys.Storage_View, storages.NewViewRecordsStorage(ctx, appStructsFunc, wsidFunc, nil), S_GET|S_GET_BATCH|S_READ)
+	state.addStorage(sys.Storage_Record, storages.NewRecordsStorage(appStructsFunc, wsidFunc, nil), S_GET|S_GET_BATCH)
+	state.addStorage(sys.Storage_WLog, storages.NewWLogStorage(ctx, ieventsFunc, wsidFunc), S_GET|S_READ)
+	state.addStorage(sys.Storage_Http, storages.NewHttpStorage(opts.CustomHttpClient), S_READ)
+	state.addStorage(sys.Storage_FederationCommand, storages.NewFederationCommandStorage(appStructsFunc, wsidFunc, federation, itokens, opts.FederationCommandHandler), S_GET)
+	state.addStorage(sys.Storage_FederationBlob, storages.NewFederationBlobStorage(appStructsFunc, wsidFunc, federation, itokens, opts.FederationBlobHandler), S_READ)
+	state.addStorage(sys.Storage_AppSecret, storages.NewAppSecretsStorage(secretReader), S_GET)
+	state.addStorage(sys.Storage_RequestSubject, storages.NewSubjectStorage(principalsFunc, tokenFunc), S_GET)
+	state.addStorage(sys.Storage_QueryContext, storages.NewQueryContextStorage(argFunc, wsidFunc), S_GET)
+	state.addStorage(sys.Storage_Response, storages.NewResponseStorage(), S_INSERT)
+	state.addStorage(sys.Storage_Result, storages.NewQueryResultStorage(resultBuilderFunc, queryCallbackFunc), S_INSERT)
+	state.addStorage(sys.Storage_Uniq, storages.NewUniquesStorage(appStructsFunc, wsidFunc, opts.UniquesHandler), S_GET)
 
 	return state
 }

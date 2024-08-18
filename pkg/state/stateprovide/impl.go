@@ -9,7 +9,6 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
-	"github.com/voedger/voedger/pkg/state"
 )
 
 func put(fieldName string, kind appdef.DataKind, rr istructs.IRowReader, rw istructs.IRowWriter) {
@@ -33,6 +32,6 @@ func put(fieldName string, kind appdef.DataKind, rr istructs.IRowReader, rw istr
 	case appdef.DataKind_RecordID:
 		rw.PutRecordID(fieldName, rr.AsRecordID(fieldName))
 	default:
-		panic(fmt.Errorf("illegal state: field - '%s', kind - '%d': %w", fieldName, kind, state.ErrNotSupported))
+		panic(fmt.Errorf("illegal state: field - '%s', kind - '%d': %w", fieldName, kind, ErrNotSupported))
 	}
 }

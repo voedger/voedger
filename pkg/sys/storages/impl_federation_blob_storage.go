@@ -15,6 +15,7 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/itokens"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
+	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 	"github.com/voedger/voedger/pkg/utils/federation"
@@ -23,11 +24,21 @@ import (
 const readBufferSize = 1024
 
 type federationBlobStorage struct {
-	appStructs AppStructsFunc
-	wsid       WSIDFunc
+	appStructs state.AppStructsFunc
+	wsid       state.WSIDFunc
 	federation federation.IFederation
 	tokens     itokens.ITokens
-	emulation  FederationBlobHandler
+	emulation  state.FederationBlobHandler
+}
+
+func NewFederationBlobStorage(appStructs state.AppStructsFunc, wsid state.WSIDFunc, federation federation.IFederation, tokens itokens.ITokens, emulation state.FederationBlobHandler) *federationBlobStorage {
+	return &federationBlobStorage{
+		appStructs: appStructs,
+		wsid:       wsid,
+		federation: federation,
+		tokens:     tokens,
+		emulation:  emulation,
+	}
 }
 
 type federationBlobKeyBuilder struct {

@@ -13,14 +13,16 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys"
+	"github.com/voedger/voedger/pkg/sys/authnz"
 )
 
 func TestHostState_BasicUsage(t *testing.T) {
 	require := require.New(t)
 
 	factory := ProvideQueryProcessorStateFactory()
-	hostState := factory(context.Background(), mockedHostStateStructs, nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil, nil, nil, nil, nil, nil, nil)
+	hostState := factory(context.Background(), mockedHostStateStructs, nil, state.SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil, nil, nil, nil, nil, nil, nil)
 
 	// Declare simple extension
 	extension := func(state istructs.IState) {
@@ -44,18 +46,18 @@ func mockedHostStateStructs() istructs.IAppStructs {
 	mv := &mockValue{}
 	mv.
 		On("AsInt64", "vFld").Return(int64(10)).
-		On("AsInt64", ColOffset).Return(int64(45))
+		On("AsInt64", state.ColOffset).Return(int64(45))
 	mvb1 := &mockValueBuilder{}
 	mvb1.
 		On("PutInt64", "vFld", int64(10)).
-		On("PutInt64", ColOffset, int64(45)).
+		On("PutInt64", state.ColOffset, int64(45)).
 		On("Build").Return(mv)
 	mvb2 := &mockValueBuilder{}
 	mvb2.
 		On("PutInt64", "vFld", int64(10)).Once().
-		On("PutInt64", ColOffset, int64(45)).Once().
+		On("PutInt64", state.ColOffset, int64(45)).Once().
 		On("PutInt64", "vFld", int64(17)).Once().
-		On("PutInt64", ColOffset, int64(46)).Once()
+		On("PutInt64", state.ColOffset, int64(46)).Once()
 	mkb := &mockKeyBuilder{}
 	mkb.
 		On("PutInt64", "pkFld", int64(64))
@@ -81,7 +83,7 @@ func mockedHostStateStructs() istructs.IAppStructs {
 	view.Key().ClustCols().AddField("ccFld", appdef.DataKind_string)
 	view.Value().
 		AddField("vFld", appdef.DataKind_int64, false).
-		AddField(ColOffset, appdef.DataKind_int64, false)
+		AddField(state.ColOffset, appdef.DataKind_int64, false)
 
 	mockWorkspaceRecord := &mockRecord{}
 	mockWorkspaceRecord.On("AsQName", "WSKind").Return(testWSDescriptorQName)
@@ -90,7 +92,7 @@ func mockedHostStateStructs() istructs.IAppStructs {
 	mockedRecords.On("GetSingleton", istructs.WSID(1), mock.Anything).Return(mockWorkspaceRecord, nil)
 
 	wsDesc := appDef.AddCDoc(testWSDescriptorQName)
-	wsDesc.AddField(field_WSKind, appdef.DataKind_bytes, false)
+	wsDesc.AddField(authnz.Field_WSKind, appdef.DataKind_bytes, false)
 
 	ws := appDef.AddWorkspace(testWSQName)
 	ws.AddType(testViewRecordQName1)
@@ -127,7 +129,7 @@ func TestHostState_CanExist(t *testing.T) {
 			On("GetBatch", mock.AnythingOfType("[]state.GetBatchItem")).
 			Return(nil).
 			Run(func(args mock.Arguments) {
-				args.Get(0).([]GetBatchItem)[0].value = &mockStateValue{}
+				args.Get(0).([]state.GetBatchItem)[0].Value = &mockStateValue{}
 			})
 		s := hostStateForTest(ms)
 		k, err := s.KeyBuilder(testStorage, appdef.NullQName)
@@ -175,7 +177,7 @@ func TestHostState_CanExistAll(t *testing.T) {
 			On("GetBatch", mock.AnythingOfType("[]state.GetBatchItem")).
 			Return(nil).
 			Run(func(args mock.Arguments) {
-				args.Get(0).([]GetBatchItem)[0].value = &mockStateValue{}
+				args.Get(0).([]state.GetBatchItem)[0].Value = &mockStateValue{}
 			})
 		s := hostStateForTest(ms)
 		k, err := s.KeyBuilder(testStorage, appdef.NullQName)
@@ -227,7 +229,7 @@ func TestHostState_MustExist(t *testing.T) {
 			On("GetBatch", mock.AnythingOfType("[]state.GetBatchItem")).
 			Return(nil).
 			Run(func(args mock.Arguments) {
-				args.Get(0).([]GetBatchItem)[0].value = &mockStateValue{}
+				args.Get(0).([]state.GetBatchItem)[0].Value = &mockStateValue{}
 			})
 		s := hostStateForTest(ms)
 		k, err := s.KeyBuilder(testStorage, appdef.NullQName)
@@ -245,7 +247,7 @@ func TestHostState_MustExist(t *testing.T) {
 			On("GetBatch", mock.AnythingOfType("[]state.GetBatchItem")).
 			Return(nil).
 			Run(func(args mock.Arguments) {
-				args.Get(0).([]GetBatchItem)[0].value = nil
+				args.Get(0).([]state.GetBatchItem)[0].Value = nil
 			})
 		s := hostStateForTest(ms)
 		k, err := s.KeyBuilder(testStorage, appdef.NullQName)
@@ -279,8 +281,8 @@ func TestHostState_MustExistAll(t *testing.T) {
 			On("GetBatch", mock.AnythingOfType("[]state.GetBatchItem")).
 			Return(nil).
 			Run(func(args mock.Arguments) {
-				args.Get(0).([]GetBatchItem)[0].value = &mockStateValue{}
-				args.Get(0).([]GetBatchItem)[1].value = &mockStateValue{}
+				args.Get(0).([]state.GetBatchItem)[0].Value = &mockStateValue{}
+				args.Get(0).([]state.GetBatchItem)[1].Value = &mockStateValue{}
 			})
 		s := hostStateForTest(ms)
 		k1, err := s.KeyBuilder(testStorage, appdef.NullQName)
@@ -321,8 +323,8 @@ func TestHostState_MustExistAll(t *testing.T) {
 			On("GetBatch", mock.AnythingOfType("[]state.GetBatchItem")).
 			Return(nil).
 			Run(func(args mock.Arguments) {
-				args.Get(0).([]GetBatchItem)[0].value = &mockStateValue{}
-				args.Get(0).([]GetBatchItem)[1].value = nil
+				args.Get(0).([]state.GetBatchItem)[0].Value = &mockStateValue{}
+				args.Get(0).([]state.GetBatchItem)[1].Value = nil
 			})
 		s := hostStateForTest(ms)
 		k1, err := s.KeyBuilder(testStorage, appdef.NullQName)
@@ -356,7 +358,7 @@ func TestHostState_MustNotExist(t *testing.T) {
 			On("GetBatch", mock.AnythingOfType("[]state.GetBatchItem")).
 			Return(nil).
 			Run(func(args mock.Arguments) {
-				args.Get(0).([]GetBatchItem)[0].value = nil
+				args.Get(0).([]state.GetBatchItem)[0].Value = nil
 			})
 		s := hostStateForTest(ms)
 		k, err := s.KeyBuilder(testStorage, appdef.NullQName)
@@ -374,7 +376,7 @@ func TestHostState_MustNotExist(t *testing.T) {
 			On("GetBatch", mock.AnythingOfType("[]state.GetBatchItem")).
 			Return(nil).
 			Run(func(args mock.Arguments) {
-				args.Get(0).([]GetBatchItem)[0].value = &mockStateValue{}
+				args.Get(0).([]state.GetBatchItem)[0].Value = &mockStateValue{}
 			})
 		s := hostStateForTest(ms)
 		k, err := s.KeyBuilder(testStorage, appdef.NullQName)
@@ -408,8 +410,8 @@ func TestHostState_MustNotExistAll(t *testing.T) {
 			On("GetBatch", mock.AnythingOfType("[]state.GetBatchItem")).
 			Return(nil).
 			Run(func(args mock.Arguments) {
-				args.Get(0).([]GetBatchItem)[0].value = nil
-				args.Get(0).([]GetBatchItem)[1].value = nil
+				args.Get(0).([]state.GetBatchItem)[0].Value = nil
+				args.Get(0).([]state.GetBatchItem)[1].Value = nil
 			})
 		s := hostStateForTest(ms)
 		k1, err := s.KeyBuilder(testStorage, appdef.NullQName)
@@ -443,8 +445,8 @@ func TestHostState_MustNotExistAll(t *testing.T) {
 			On("GetBatch", mock.AnythingOfType("[]state.GetBatchItem")).
 			Return(nil).
 			Run(func(args mock.Arguments) {
-				args.Get(0).([]GetBatchItem)[0].value = nil
-				args.Get(0).([]GetBatchItem)[1].value = &mockStateValue{}
+				args.Get(0).([]state.GetBatchItem)[0].Value = nil
+				args.Get(0).([]state.GetBatchItem)[1].Value = &mockStateValue{}
 			})
 		s := hostStateForTest(ms)
 		k1, err := s.KeyBuilder(testStorage, appdef.NullQName)
@@ -553,7 +555,7 @@ func TestHostState_ValidateIntents(t *testing.T) {
 		ms := &mockStorage{}
 		ms.
 			On("NewKeyBuilder", appdef.NullQName, nil).Return(newMapKeyBuilder(testStorage, appdef.NullQName)).
-			On("ProvideValueBuilder", mock.Anything, mock.Anything).Return(&viewValueBuilder{}, nil).
+			On("ProvideValueBuilder", mock.Anything, mock.Anything).Return(&mockValueBuilder{}, nil).
 			On("Validate", mock.Anything).Return(nil)
 		s := hostStateForTest(ms)
 		kb, err := s.KeyBuilder(testStorage, appdef.NullQName)
@@ -577,7 +579,7 @@ func TestHostState_ValidateIntents(t *testing.T) {
 		ms := &mockStorage{}
 		ms.
 			On("NewKeyBuilder", appdef.NullQName, nil).Return(newMapKeyBuilder(testStorage, appdef.NullQName)).
-			On("ProvideValueBuilder", mock.Anything, mock.Anything).Return(&viewValueBuilder{}, nil).
+			On("ProvideValueBuilder", mock.Anything, mock.Anything).Return(&mockValueBuilder{}, nil).
 			On("Validate", mock.Anything).Return(errTest)
 		s := hostStateForTest(ms)
 		kb, err := s.KeyBuilder(testStorage, appdef.NullQName)
@@ -595,7 +597,7 @@ func TestHostState_ApplyIntents(t *testing.T) {
 		ms := &mockStorage{}
 		ms.
 			On("NewKeyBuilder", appdef.NullQName, nil).Return(newMapKeyBuilder(testStorage, appdef.NullQName)).
-			On("ProvideValueBuilder", mock.Anything, mock.Anything).Return(&viewValueBuilder{}, nil).
+			On("ProvideValueBuilder", mock.Anything, mock.Anything).Return(&mockValueBuilder{}, nil).
 			On("ApplyBatch", mock.Anything).Return(nil)
 		s := hostStateForTest(ms)
 		kb, err := s.KeyBuilder(testStorage, appdef.NullQName)
@@ -611,7 +613,7 @@ func TestHostState_ApplyIntents(t *testing.T) {
 		ms := &mockStorage{}
 		ms.
 			On("NewKeyBuilder", appdef.NullQName, nil).Return(newMapKeyBuilder(testStorage, appdef.NullQName)).
-			On("ProvideValueBuilder", mock.Anything, mock.Anything).Return(&viewValueBuilder{}, nil).
+			On("ProvideValueBuilder", mock.Anything, mock.Anything).Return(&mockValueBuilder{}, nil).
 			On("ApplyBatch", mock.Anything).Return(errTest)
 		s := hostStateForTest(ms)
 		kb, err := s.KeyBuilder(testStorage, appdef.NullQName)
@@ -624,17 +626,17 @@ func TestHostState_ApplyIntents(t *testing.T) {
 		require.ErrorIs(t, err, errTest)
 	})
 }
-func hostStateForTest(s IStateStorage) IHostState {
+func hostStateForTest(s state.IStateStorage) state.IHostState {
 	hs := newHostState("ForTest", 10, nil)
 	hs.addStorage(testStorage, s, S_GET_BATCH|S_READ|S_INSERT|S_UPDATE)
 	return hs
 }
-func emptyHostStateForTest(s IStateStorage) (istructs.IState, istructs.IIntents) {
+func emptyHostStateForTest(s state.IStateStorage) (istructs.IState, istructs.IIntents) {
 	bs := ProvideQueryProcessorStateFactory()(context.Background(), nilAppStructsFunc, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil).(*queryProcessorState)
 	bs.addStorage(testStorage, s, math.MinInt)
 	return bs, bs
 }
-func limitedIntentsHostStateForTest(s IStateStorage) (istructs.IState, istructs.IIntents) {
+func limitedIntentsHostStateForTest(s state.IStateStorage) (istructs.IState, istructs.IIntents) {
 	hs := newHostState("LimitedIntentsForTest", 0, nil)
 	hs.addStorage(testStorage, s, S_GET_BATCH|S_READ|S_INSERT|S_UPDATE)
 	return hs, hs

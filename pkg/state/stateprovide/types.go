@@ -1,10 +1,12 @@
+/*
+  - Copyright (c) 2024-present unTill Software Development Group B.V.
+    @author Michael Saigachenko
+*/
 package stateprovide
 
 import (
 	"container/list"
-	"fmt"
 
-	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/state"
 )
@@ -66,62 +68,3 @@ func (b *bundleImpl) values() (values []state.ApplyBatchItem) {
 }
 func (b *bundleImpl) size() (size int) { return b.list.Len() }
 func (b *bundleImpl) clear()           { b.list = list.New() }
-
-type wsTypeVailidator struct {
-	appStructsFunc AppStructsFunc
-	wsidKinds      map[wsTypeKey]appdef.QName
-}
-
-func newWsTypeValidator(appStructsFunc AppStructsFunc) wsTypeVailidator {
-	return wsTypeVailidator{
-		appStructsFunc: appStructsFunc,
-		wsidKinds:      make(map[wsTypeKey]appdef.QName),
-	}
-}
-
-// Returns NullQName if not found
-func (v *wsTypeVailidator) getWSIDKind(wsid istructs.WSID, entity appdef.QName) (appdef.QName, error) {
-	key := wsTypeKey{wsid: wsid, appQName: v.appStructsFunc().AppQName()}
-	wsKind, ok := v.wsidKinds[key]
-	if !ok {
-		wsDesc, err := v.appStructsFunc().Records().GetSingleton(wsid, qNameCDocWorkspaceDescriptor)
-		if err != nil {
-			// notest
-			return appdef.NullQName, err
-		}
-		if wsDesc.QName() == appdef.NullQName {
-			if v.appStructsFunc().AppDef().WorkspaceByDescriptor(entity) != nil {
-				// Special case. sys.CreateWorkspace creates WSKind while WorkspaceDescriptor is not applied yet.
-				return entity, nil
-			}
-			return appdef.NullQName, fmt.Errorf("%w: %d", errWorkspaceDescriptorNotFound, wsid)
-		}
-		wsKind = wsDesc.AsQName(field_WSKind)
-		if len(v.wsidKinds) < wsidTypeValidatorCacheSize {
-			v.wsidKinds[key] = wsKind
-		}
-	}
-	return wsKind, nil
-}
-
-func (v *wsTypeVailidator) validate(wsid istructs.WSID, entity appdef.QName) error {
-	if entity == qNameCDocWorkspaceDescriptor {
-		return nil // This QName always can be read and write. Otherwise sys.CreateWorkspace is not able to create descriptor.
-	}
-	if wsid != istructs.NullWSID && v.appStructsFunc().Records() != nil { // NullWSID only stores actualizer offsets
-		wsKind, err := v.getWSIDKind(wsid, entity)
-		if err != nil {
-			// notest
-			return err
-		}
-		ws := v.appStructsFunc().AppDef().WorkspaceByDescriptor(wsKind)
-		if ws == nil {
-			// notest
-			return errDescriptorForUndefinedWorkspace
-		}
-		if ws.TypeByName(entity) == nil {
-			return typeIsNotDefinedInWorkspaceWithDescriptor(entity, wsKind)
-		}
-	}
-	return nil
-}

@@ -7,12 +7,20 @@ package storages
 import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys"
 )
 
 type queryContextStorage struct {
-	argFunc  ArgFunc
-	wsidFunc WSIDFunc
+	argFunc  state.ArgFunc
+	wsidFunc state.WSIDFunc
+}
+
+func NewQueryContextStorage(argFunc state.ArgFunc, wsidFunc state.WSIDFunc) *queryContextStorage {
+	return &queryContextStorage{
+		argFunc:  argFunc,
+		wsidFunc: wsidFunc,
+	}
 }
 
 type queryContextKeyBuilder struct {

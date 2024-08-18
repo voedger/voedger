@@ -11,7 +11,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/isecrets"
-	"github.com/voedger/voedger/pkg/state/stateprovide"
 	"github.com/voedger/voedger/pkg/sys"
 )
 
@@ -21,7 +20,7 @@ func TestAppSecretsStorage_BasicUsage(t *testing.T) {
 	secretBody := `{"secret":"key"}`
 	sr := &isecrets.SecretReaderMock{}
 	sr.On("ReadSecret", secret).Return([]byte(secretBody), nil)
-	s := stateprovide.ProvideAsyncActualizerStateFactory()(context.Background(), nilAppStructsFunc, nil, nil, nil, sr, nil, nil, nil, 0, 0)
+	s := ProvideAsyncActualizerStateFactory()(context.Background(), nilAppStructsFunc, nil, nil, nil, sr, nil, nil, nil, 0, 0)
 	kb, err := s.KeyBuilder(sys.Storage_AppSecret, appdef.NullQName)
 	require.NoError(err)
 	kb.PutString(sys.Storage_AppSecretField_Secret, secret)
@@ -33,7 +32,7 @@ func TestAppSecretsStorage_BasicUsage(t *testing.T) {
 }
 func TestAppSecretsStorage(t *testing.T) {
 	t.Run("Should return error when key invalid", func(t *testing.T) {
-		s := stateprovide.ProvideAsyncActualizerStateFactory()(context.Background(), nilAppStructsFunc, nil, nil, nil, nil, nil, nil, nil, 0, 0)
+		s := ProvideAsyncActualizerStateFactory()(context.Background(), nilAppStructsFunc, nil, nil, nil, nil, nil, nil, nil, 0, 0)
 		kb, err := s.KeyBuilder(sys.Storage_AppSecret, appdef.NullQName)
 		require.NoError(t, err)
 

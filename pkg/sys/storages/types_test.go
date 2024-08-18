@@ -16,7 +16,7 @@ import (
 func TestBundle(t *testing.T) {
 	newKey := func(qname appdef.QName, id istructs.RecordID) (k istructs.IStateKeyBuilder) {
 		k = &viewKeyBuilder{
-			IKeyBuilder: &mapKeyBuilder{data: make(map[string]interface{})},
+			IKeyBuilder: &uniqKeyBuilder{data: make(map[string]interface{})},
 			view:        qname,
 		}
 		k.PutRecordID(sys.Storage_Record_Field_ID, id)

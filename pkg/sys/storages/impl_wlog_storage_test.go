@@ -14,7 +14,6 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
-	"github.com/voedger/voedger/pkg/state/stateprovide"
 	"github.com/voedger/voedger/pkg/sys"
 )
 
@@ -126,7 +125,7 @@ func TestWLogStorage_GetBatch(t *testing.T) {
 		appStructs.On("Events").Return(events)
 		appStructs.On("Records").Return(&nilRecords{})
 		appStructs.On("ViewRecords").Return(&nilViewRecords{})
-		s := stateprovide.ProvideCommandProcessorStateFactory()(context.Background(), func() istructs.IAppStructs { return appStructs },
+		s := ProvideCommandProcessorStateFactory()(context.Background(), func() istructs.IAppStructs { return appStructs },
 			nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil, nil, 0, nil, nil, nil, nil, nil)
 		kb1, err := s.KeyBuilder(sys.Storage_WLog, appdef.NullQName)
 		require.NoError(err)

@@ -419,7 +419,7 @@ func Test_HandlePanics(t *testing.T) {
 		{"incorrectValue", safestate.PanicIncorrectValue},
 		{"incorrectValue2", safestate.PanicIncorrectValue},
 		{"incorrectValue3", safestate.PanicIncorrectValue},
-		{"mustExist", state.ErrNotExists.Error()},
+		{"mustExist", stateprovide.ErrNotExists.Error()},
 		{"incorrectKeyBuilderOnNewValue", safestate.PanicIncorrectKeyBuilder},
 		{"incorrectKeyBuilderOnUpdateValue", safestate.PanicIncorrectKeyBuilder},
 		{"incorrectValueOnUpdateValue", safestate.PanicIncorrectValue},

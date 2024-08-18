@@ -16,58 +16,6 @@ import (
 	"github.com/voedger/voedger/pkg/sys"
 )
 
-func mockedStructs2(t *testing.T, addWsDescriptor bool) (*mockAppStructs, *mockViewRecords) {
-	appDef := appdef.New()
-
-	appDef.AddPackage("test", "test.com/test")
-
-	view := appDef.AddView(testViewRecordQName1)
-	view.Key().PartKey().AddField("pkk", appdef.DataKind_int64)
-	view.Key().ClustCols().AddField("cck", appdef.DataKind_string)
-	view.Value().AddField("vk", appdef.DataKind_string, false)
-
-	view = appDef.AddView(testViewRecordQName2)
-	view.Key().PartKey().AddField("pkk", appdef.DataKind_int64)
-	view.Key().ClustCols().AddField("cck", appdef.DataKind_string)
-	view.Value().AddField("vk", appdef.DataKind_string, false)
-
-	mockWorkspaceRecord := &mockRecord{}
-	mockWorkspaceRecord.On("AsQName", "WSKind").Return(testWSDescriptorQName)
-	mockWorkspaceRecord.On("QName").Return(qNameCDocWorkspaceDescriptor)
-	mockedRecords := &mockRecords{}
-	mockedRecords.On("GetSingleton", istructs.WSID(1), mock.Anything).Return(mockWorkspaceRecord, nil)
-
-	mockedViews := &mockViewRecords{}
-	mockedViews.On("KeyBuilder", testViewRecordQName1).Return(newMapKeyBuilder(sys.Storage_View, testViewRecordQName1))
-
-	if addWsDescriptor {
-		wsDesc := appDef.AddCDoc(testWSDescriptorQName)
-		wsDesc.AddField(field_WSKind, appdef.DataKind_bytes, false)
-	}
-
-	ws := appDef.AddWorkspace(testWSQName)
-	ws.AddType(testViewRecordQName1)
-	ws.AddType(testViewRecordQName2)
-	ws.SetDescriptor(testWSDescriptorQName)
-
-	app, err := appDef.Build()
-	require.NoError(t, err)
-
-	appStructs := &mockAppStructs{}
-	appStructs.
-		On("AppDef").Return(app).
-		On("AppQName").Return(testAppQName).
-		On("Records").Return(mockedRecords).
-		On("Events").Return(&nilEvents{}).
-		On("ViewRecords").Return(mockedViews)
-
-	return appStructs, mockedViews
-}
-
-func mockedStructs(t *testing.T) (*mockAppStructs, *mockViewRecords) {
-	return mockedStructs2(t, true)
-}
-
 func TestViewRecordsStorage_GetBatch(t *testing.T) {
 	t.Run("Should be ok", func(t *testing.T) {
 		require := require.New(t)
@@ -133,7 +81,7 @@ func TestViewRecordsStorage_Read(t *testing.T) {
 		require := require.New(t)
 		mockedStructs, mockedViews := mockedStructs(t)
 		mockedViews.
-			On("KeyBuilder", testViewRecordQName1).Return(newMapKeyBuilder(sys.Storage_View, testViewRecordQName1)).
+			On("KeyBuilder", testViewRecordQName1).Return(newUniqKeyBuilder(sys.Storage_View, testViewRecordQName1)).
 			On("Read", context.Background(), istructs.WSID(1), mock.Anything, mock.Anything).
 			Return(errTest)
 		s := ProvideQueryProcessorStateFactory()(context.Background(), appStructsFunc(mockedStructs), nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil, nil, nil, nil, nil, nil, nil)

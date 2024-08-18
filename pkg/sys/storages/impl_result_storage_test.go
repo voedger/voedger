@@ -5,7 +5,6 @@
 package storages
 
 import (
-	"context"
 	"fmt"
 	"testing"
 
@@ -13,18 +12,15 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
-	"github.com/voedger/voedger/pkg/sys"
+	"github.com/voedger/voedger/pkg/state"
 )
 
 func TestCmdResultStorage_InsertInValue(t *testing.T) {
 	cmdResBuilder := istructs.NewNullObjectBuilder()
-	s := ProvideCommandProcessorStateFactory()(context.Background(), nil, nil, SimpleWSIDFunc(istructs.NullWSID),
-		nil, nil, nil, nil, 1, func() istructs.IObjectBuilder { return cmdResBuilder }, nil, nil, nil, nil)
+	storage := NewCmdResultStorage(func() istructs.IObjectBuilder { return cmdResBuilder })
 
-	kb, err := s.KeyBuilder(sys.Storage_Result, testRecordQName1)
-	require.NoError(t, err)
-
-	vb, err := s.NewValue(kb)
+	kb := storage.NewKeyBuilder(appdef.NullQName, nil)
+	vb, err := storage.ProvideValueBuilder(kb, nil)
 	require.NoError(t, err)
 
 	fieldName := "name"
@@ -40,11 +36,9 @@ func TestResultStorage_InsertInKey(t *testing.T) {
 	}()
 
 	cmdResBuilder := istructs.NewNullObjectBuilder()
-	s := ProvideCommandProcessorStateFactory()(context.Background(), nil, nil, SimpleWSIDFunc(istructs.NullWSID),
-		nil, nil, nil, nil, 1, func() istructs.IObjectBuilder { return cmdResBuilder }, nil, nil, nil, nil)
+	storage := NewCmdResultStorage(func() istructs.IObjectBuilder { return cmdResBuilder })
 
-	kb, err := s.KeyBuilder(sys.Storage_Result, testRecordQName1)
-	require.NoError(t, err)
+	kb := storage.NewKeyBuilder(appdef.NullQName, nil)
 
 	fieldName := "name"
 	value := "value"
@@ -64,21 +58,22 @@ func TestResultStorage_QueryProcessor(t *testing.T) {
 			return nil
 		}
 	}
-	s := ProvideQueryProcessorStateFactory()(context.Background(), nil, nil, SimpleWSIDFunc(istructs.NullWSID),
-		nil, nil, nil, nil, nil, nil, func() istructs.IObjectBuilder { return cmdResBuilder }, nil, execQueryCallback)
 
-	kb, err := s.KeyBuilder(sys.Storage_Result, appdef.NullQName)
-	require.NoError(t, err)
+	cmdResBuilderFunc := func() istructs.IObjectBuilder { return cmdResBuilder }
 
-	intent, err := s.NewValue(kb)
-	require.NoError(t, err)
-	require.NotNil(t, intent)
+	storage := NewQueryResultStorage(cmdResBuilderFunc, execQueryCallback)
 
-	intent, err = s.NewValue(kb)
+	kb := storage.NewKeyBuilder(appdef.NullQName, nil)
+
+	intent, err := storage.ProvideValueBuilder(kb, nil)
 	require.NoError(t, err)
 	require.NotNil(t, intent)
 
-	require.NoError(t, s.ApplyIntents())
+	intent, err = storage.ProvideValueBuilder(kb, nil)
+	require.NoError(t, err)
+	require.NotNil(t, intent)
+
+	err = storage.ApplyBatch([]state.ApplyBatchItem{{Key: kb, Value: intent}})
 	require.Len(t, sentObjects, 2)
 
 }

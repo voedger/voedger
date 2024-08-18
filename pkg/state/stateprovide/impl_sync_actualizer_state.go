@@ -9,21 +9,23 @@ import (
 
 	"github.com/voedger/voedger/pkg/isecrets"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys"
+	"github.com/voedger/voedger/pkg/sys/storages"
 )
 
 type syncActualizerState struct {
 	*hostState
-	eventFunc PLogEventFunc
+	eventFunc state.PLogEventFunc
 }
 
 func (s *syncActualizerState) PLogEvent() istructs.IPLogEvent {
 	return s.eventFunc()
 }
 
-func implProvideSyncActualizerState(ctx context.Context, appStructsFunc AppStructsFunc, partitionIDFunc PartitionIDFunc,
-	wsidFunc WSIDFunc, n10nFunc N10nFunc, secretReader isecrets.ISecretReader, eventFunc PLogEventFunc, intentsLimit int, options ...StateOptFunc) IHostState {
-	opts := &StateOpts{}
+func implProvideSyncActualizerState(ctx context.Context, appStructsFunc state.AppStructsFunc, partitionIDFunc state.PartitionIDFunc,
+	wsidFunc state.WSIDFunc, n10nFunc state.N10nFunc, secretReader isecrets.ISecretReader, eventFunc state.PLogEventFunc, intentsLimit int, options ...state.StateOptFunc) state.IHostState {
+	opts := &state.StateOpts{}
 	for _, optFunc := range options {
 		optFunc(opts)
 	}
@@ -31,14 +33,13 @@ func implProvideSyncActualizerState(ctx context.Context, appStructsFunc AppStruc
 		hostState: newHostState("SyncActualizer", intentsLimit, appStructsFunc),
 		eventFunc: eventFunc,
 	}
-	hs.addStorage(sys.Storage_View, newViewRecordsStorage(ctx, appStructsFunc, wsidFunc, n10nFunc), S_GET|S_GET_BATCH|S_INSERT|S_UPDATE)
-	hs.addStorage(sys.Storage_Record, newRecordsStorage(appStructsFunc, wsidFunc, nil), S_GET|S_GET_BATCH)
-	hs.addStorage(sys.Storage_WLog, &wLogStorage{
-		ctx:        ctx,
-		eventsFunc: func() istructs.IEvents { return appStructsFunc().Events() },
-		wsidFunc:   wsidFunc,
-	}, S_GET)
-	hs.addStorage(sys.Storage_AppSecret, &appSecretsStorage{secretReader: secretReader}, S_GET)
-	hs.addStorage(sys.Storage_Uniq, newUniquesStorage(appStructsFunc, wsidFunc, opts.uniquesHandler), S_GET)
+	ieventsFunc := func() istructs.IEvents {
+		return appStructsFunc().Events()
+	}
+	hs.addStorage(sys.Storage_View, storages.NewViewRecordsStorage(ctx, appStructsFunc, wsidFunc, n10nFunc), S_GET|S_GET_BATCH|S_INSERT|S_UPDATE)
+	hs.addStorage(sys.Storage_Record, storages.NewRecordsStorage(appStructsFunc, wsidFunc, nil), S_GET|S_GET_BATCH)
+	hs.addStorage(sys.Storage_WLog, storages.NewWLogStorage(ctx, ieventsFunc, wsidFunc), S_GET)
+	hs.addStorage(sys.Storage_AppSecret, storages.NewAppSecretsStorage(secretReader), S_GET)
+	hs.addStorage(sys.Storage_Uniq, storages.NewUniquesStorage(appStructsFunc, wsidFunc, opts.UniquesHandler), S_GET)
 	return hs
 }

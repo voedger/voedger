@@ -5,7 +5,6 @@
 package storages
 
 import (
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -25,12 +24,11 @@ func TestSubjectStorage_BasicUsage(t *testing.T) {
 	}}
 	token := "token"
 	tokenFunc := func() string { return token }
-	s := ProvideCommandProcessorStateFactory()(context.Background(), func() istructs.IAppStructs { return &nilAppStructs{} },
-		nil, nil, nil, nil, func() []iauthnz.Principal { return principals }, tokenFunc, 1, nil, nil, nil, nil, nil)
-	k, err := s.KeyBuilder(sys.Storage_RequestSubject, appdef.NullQName)
-	require.NoError(err)
+	principalsFunc := func() []iauthnz.Principal { return principals }
+	storage := NewSubjectStorage(principalsFunc, tokenFunc)
+	k := storage.NewKeyBuilder(appdef.NullQName, nil)
 
-	v, err := s.MustExist(k)
+	v, err := storage.Get(k)
 	require.NoError(err)
 
 	require.Equal(int64(principals[0].WSID), v.AsInt64(sys.Storage_RequestSubject_Field_ProfileWSID))

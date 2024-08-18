@@ -9,6 +9,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/state"
 )
 
 type bundledHostState struct {
@@ -24,7 +25,7 @@ func (s *bundledHostState) CanExist(key istructs.IStateKeyBuilder) (stateValue i
 		if value, ok := bundledStorage.get(key); ok {
 			// TODO later: For the optimization purposes, maybe would be wise to use e.g. AsValue()
 			// instead of BuildValue()
-			if stateValue = value.value.BuildValue(); stateValue != nil {
+			if stateValue = value.Value.BuildValue(); stateValue != nil {
 				return stateValue, true, nil
 			}
 		}
@@ -118,7 +119,7 @@ func (s *bundledHostState) ApplyIntents() (readyToFlushBundle bool, err error) {
 		}
 
 		for _, item := range intents {
-			s.bundles[sid].put(item.key, item)
+			s.bundles[sid].put(item.Key, item)
 		}
 	}
 	bundles := 0
@@ -141,7 +142,7 @@ func (s *bundledHostState) FlushBundles() (err error) {
 	}
 	return
 }
-func (s *bundledHostState) addStorage(storageName appdef.QName, storage IStateStorage, ops int) {
+func (s *bundledHostState) addStorage(storageName appdef.QName, storage state.IStateStorage, ops int) {
 	s.hostState.addStorage(storageName, storage, ops)
 	if supports(ops, S_UPDATE) || supports(ops, S_INSERT) {
 		s.bundles[storageName] = newBundle()

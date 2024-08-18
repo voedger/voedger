@@ -32,6 +32,16 @@ type federationCommandStorage struct {
 	emulation  state.FederationCommandHandler
 }
 
+func NewFederationCommandStorage(appStructs state.AppStructsFunc, wsid state.WSIDFunc, federation federation.IFederation, tokens itokens.ITokens, emulation state.FederationCommandHandler) *federationCommandStorage {
+	return &federationCommandStorage{
+		appStructs: appStructs,
+		wsid:       wsid,
+		federation: federation,
+		tokens:     tokens,
+		emulation:  emulation,
+	}
+}
+
 type federationCommandKeyBuilder struct {
 	baseKeyBuilder
 	expectedCodes string

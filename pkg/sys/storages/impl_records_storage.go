@@ -16,7 +16,7 @@ import (
 )
 
 type recordsStorage struct {
-	recordsFunc      recordsFunc
+	recordsFunc      state.RecordsFunc
 	cudFunc          state.CUDFunc
 	wsidFunc         state.WSIDFunc
 	wsTypeVailidator wsTypeVailidator
@@ -103,7 +103,7 @@ func (b *recordsKeyBuilder) PutQName(name string, value appdef.QName) {
 	b.baseKeyBuilder.PutQName(name, value)
 }
 
-func newRecordsStorage(appStructsFunc state.AppStructsFunc, wsidFunc state.WSIDFunc, cudFunc state.CUDFunc) *recordsStorage {
+func NewRecordsStorage(appStructsFunc state.AppStructsFunc, wsidFunc state.WSIDFunc, cudFunc state.CUDFunc) *recordsStorage {
 	return &recordsStorage{
 		recordsFunc:      func() istructs.IRecords { return appStructsFunc().Records() },
 		wsidFunc:         wsidFunc,
@@ -146,7 +146,7 @@ func (s *recordsStorage) Get(key istructs.IStateKeyBuilder) (value istructs.ISta
 	}
 	if k.id == istructs.NullRecordID {
 		// error message according to https://dev.untill.com/projects/#!637229
-		return nil, fmt.Errorf("value of one of RecordID fields is 0: %w", state.ErrNotFound)
+		return nil, fmt.Errorf("value of one of RecordID fields is 0: %w", ErrNotFound)
 	}
 	record, err := s.recordsFunc().Get(k.wsid, true, k.id)
 	if err != nil {
@@ -187,7 +187,7 @@ func (s *recordsStorage) GetBatch(items []state.GetBatchItem) (err error) {
 		}
 		if k.id == istructs.NullRecordID {
 			// error message according to https://dev.untill.com/projects/#!637229
-			return fmt.Errorf("value of one of RecordID fields is 0: %w", state.ErrNotFound)
+			return fmt.Errorf("value of one of RecordID fields is 0: %w", ErrNotFound)
 		}
 		wsidToItemIdx[k.wsid] = append(wsidToItemIdx[k.wsid], itemIdx)
 		batches[k.wsid] = append(batches[k.wsid], istructs.RecordGetBatchItem{ID: k.id})

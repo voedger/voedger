@@ -10,6 +10,7 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/state/smtptest"
 	"github.com/voedger/voedger/pkg/sys"
 	coreutils "github.com/voedger/voedger/pkg/utils"
@@ -18,6 +19,12 @@ import (
 
 type sendMailStorage struct {
 	messages chan smtptest.Message // not nil in tests only
+}
+
+func NewSendMailStorage(messages chan smtptest.Message) *sendMailStorage {
+	return &sendMailStorage{
+		messages: messages,
+	}
 }
 
 type mailKeyBuilder struct {
@@ -136,9 +143,9 @@ func (s *sendMailStorage) NewKeyBuilder(appdef.QName, istructs.IStateKeyBuilder)
 		bcc: make([]string, 0),
 	}
 }
-func (s *sendMailStorage) Validate(items []ApplyBatchItem) (err error) {
+func (s *sendMailStorage) Validate(items []state.ApplyBatchItem) (err error) {
 	for _, item := range items {
-		k := item.key.(*mailKeyBuilder)
+		k := item.Key.(*mailKeyBuilder)
 
 		notExists := func(field string) (err error) {
 			return fmt.Errorf("'%s': %w", field, ErrNotFound)
@@ -152,13 +159,13 @@ func (s *sendMailStorage) Validate(items []ApplyBatchItem) (err error) {
 		if k.from == "" {
 			return notExists(sys.Storage_SendMail_Field_From)
 		}
-		if len(item.key.(*mailKeyBuilder).to) == 0 {
+		if len(item.Key.(*mailKeyBuilder).to) == 0 {
 			return fmt.Errorf("'%s': %w", sys.Storage_SendMail_Field_To, ErrNotFound)
 		}
 	}
 	return nil
 }
-func (s *sendMailStorage) ApplyBatch(items []ApplyBatchItem) (err error) {
+func (s *sendMailStorage) ApplyBatch(items []state.ApplyBatchItem) (err error) {
 	stringOrEmpty := func(value string) string {
 		if value != "" {
 			return value
@@ -166,7 +173,7 @@ func (s *sendMailStorage) ApplyBatch(items []ApplyBatchItem) (err error) {
 		return ""
 	}
 	for _, item := range items {
-		k := item.key.(*mailKeyBuilder)
+		k := item.Key.(*mailKeyBuilder)
 
 		msg := mail.NewMsg()
 		msg.Subject(stringOrEmpty(k.subject))

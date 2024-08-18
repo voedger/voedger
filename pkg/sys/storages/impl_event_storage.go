@@ -7,11 +7,12 @@ package storages
 import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys"
 )
 
 type eventStorage struct {
-	eventFunc PLogEventFunc
+	eventFunc state.PLogEventFunc
 }
 
 type eventKeyBuilder struct {
@@ -87,7 +88,7 @@ func (v *eventValue) AsValue(name string) istructs.IStateValue {
 	return v.baseStateValue.AsValue(name)
 }
 
-func newEventStorage(eventFunc PLogEventFunc) *eventStorage {
+func NewEventStorage(eventFunc state.PLogEventFunc) *eventStorage {
 	return &eventStorage{
 		eventFunc: eventFunc,
 	}

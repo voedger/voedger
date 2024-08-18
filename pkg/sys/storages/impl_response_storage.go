@@ -9,10 +9,15 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys"
 )
 
-type cmdResponseStorage struct {
+type responseStorage struct {
+}
+
+func NewResponseStorage() *responseStorage {
+	return &responseStorage{}
 }
 
 type responseKeyBuilder struct {
@@ -83,19 +88,19 @@ func (v *responsesValue) AsString(name string) string {
 	}
 }
 
-func (s *cmdResponseStorage) NewKeyBuilder(_ appdef.QName, _ istructs.IStateKeyBuilder) istructs.IStateKeyBuilder {
+func (s *responseStorage) NewKeyBuilder(_ appdef.QName, _ istructs.IStateKeyBuilder) istructs.IStateKeyBuilder {
 	return &responseKeyBuilder{}
 }
 
-func (s *cmdResponseStorage) Validate([]ApplyBatchItem) (err error) {
+func (s *responseStorage) Validate([]state.ApplyBatchItem) (err error) {
 	return nil
 }
 
-func (s *cmdResponseStorage) ApplyBatch([]ApplyBatchItem) (err error) {
+func (s *responseStorage) ApplyBatch([]state.ApplyBatchItem) (err error) {
 	return nil
 }
 
-func (s *cmdResponseStorage) ProvideValueBuilder(istructs.IStateKeyBuilder, istructs.IStateValueBuilder) (istructs.IStateValueBuilder, error) {
+func (s *responseStorage) ProvideValueBuilder(istructs.IStateKeyBuilder, istructs.IStateValueBuilder) (istructs.IStateValueBuilder, error) {
 	return &responseValueBuilder{
 		baseValueBuilder{},
 		http.StatusOK,

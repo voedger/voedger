@@ -12,7 +12,9 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys"
+	"github.com/voedger/voedger/pkg/sys/authnz"
 )
 
 func TestBundledHostState_BasicUsage(t *testing.T) {
@@ -21,12 +23,12 @@ func TestBundledHostState_BasicUsage(t *testing.T) {
 	n10nFn := func(view appdef.QName, wsid istructs.WSID, offset istructs.Offset) {}
 
 	// Create instance of async actualizer state
-	aaState := factory(context.Background(), mockedAppStructs, nil, SimpleWSIDFunc(istructs.WSID(1)), n10nFn, nil, nil, nil, nil, 2, 1)
+	aaState := factory(context.Background(), mockedAppStructs, nil, state.SimpleWSIDFunc(istructs.WSID(1)), n10nFn, nil, nil, nil, nil, 2, 1)
 
 	// Declare simple extension
-	extension := func(state istructs.IState, intents istructs.IIntents) {
+	extension := func(s istructs.IState, intents istructs.IIntents) {
 		//Create key
-		kb, err := state.KeyBuilder(sys.Storage_View, testViewRecordQName1)
+		kb, err := s.KeyBuilder(sys.Storage_View, testViewRecordQName1)
 		require.NoError(err)
 		kb.PutInt64("pkFld", int64(64))
 
@@ -34,7 +36,7 @@ func TestBundledHostState_BasicUsage(t *testing.T) {
 		eb, err := intents.NewValue(kb)
 		require.NoError(err)
 		eb.PutInt64("vFld", 10)
-		eb.PutInt64(ColOffset, 45)
+		eb.PutInt64(state.ColOffset, 45)
 	}
 
 	// Run extension
@@ -52,18 +54,18 @@ func mockedAppStructs() istructs.IAppStructs {
 	mv := &mockValue{}
 	mv.
 		On("AsInt64", "vFld").Return(int64(10)).
-		On("AsInt64", ColOffset).Return(int64(45))
+		On("AsInt64", state.ColOffset).Return(int64(45))
 	mvb1 := &mockValueBuilder{}
 	mvb1.
 		On("PutInt64", "vFld", int64(10)).
-		On("PutInt64", ColOffset, int64(45)).
+		On("PutInt64", state.ColOffset, int64(45)).
 		On("Build").Return(mv)
 	mvb2 := &mockValueBuilder{}
 	mvb2.
 		On("PutInt64", "vFld", int64(10)).Once().
-		On("PutInt64", ColOffset, int64(45)).Once().
+		On("PutInt64", state.ColOffset, int64(45)).Once().
 		On("PutInt64", "vFld", int64(17)).Once().
-		On("PutInt64", ColOffset, int64(46)).Once()
+		On("PutInt64", state.ColOffset, int64(46)).Once()
 	mkb := &mockKeyBuilder{}
 	mkb.
 		On("PutInt64", "pkFld", int64(64))
@@ -83,13 +85,13 @@ func mockedAppStructs() istructs.IAppStructs {
 
 	appDefBuilder := appdef.New()
 	wsDesc := appDefBuilder.AddCDoc(testWSDescriptorQName)
-	wsDesc.AddField(field_WSKind, appdef.DataKind_bytes, false)
+	wsDesc.AddField(authnz.Field_WSKind, appdef.DataKind_bytes, false)
 	view := appDefBuilder.AddView(testViewRecordQName1)
 	view.Key().PartKey().AddField("pkFld", appdef.DataKind_int64)
 	view.Key().ClustCols().AddField("ccFld", appdef.DataKind_string)
 	view.Value().
 		AddField("vFld", appdef.DataKind_int64, true).
-		AddField(ColOffset, appdef.DataKind_int64, true)
+		AddField(state.ColOffset, appdef.DataKind_int64, true)
 	ws := appDefBuilder.AddWorkspace(testWSQName)
 	ws.AddType(testViewRecordQName1)
 	ws.SetDescriptor(testWSDescriptorQName)
@@ -117,7 +119,7 @@ func TestAsyncActualizerState_CanExist(t *testing.T) {
 			On("GetBatch", mock.AnythingOfType("[]state.GetBatchItem")).
 			Return(nil).
 			Run(func(args mock.Arguments) {
-				args.Get(0).([]GetBatchItem)[0].value = &mockStateValue{}
+				args.Get(0).([]state.GetBatchItem)[0].Value = &mockStateValue{}
 			})
 		s := asyncActualizerStateWithTestStateStorage(stateStorage)
 		kb, err := s.KeyBuilder(testStorage, testViewRecordQName1)
@@ -190,7 +192,7 @@ func TestAsyncActualizerState_MustExist(t *testing.T) {
 			On("GetBatch", mock.AnythingOfType("[]state.GetBatchItem")).
 			Return(nil).
 			Run(func(args mock.Arguments) {
-				args.Get(0).([]GetBatchItem)[0].value = &mockStateValue{}
+				args.Get(0).([]state.GetBatchItem)[0].Value = &mockStateValue{}
 			})
 		s := asyncActualizerStateWithTestStateStorage(stateStorage)
 		kb, err := s.KeyBuilder(testStorage, testViewRecordQName1)
@@ -208,7 +210,7 @@ func TestAsyncActualizerState_MustExist(t *testing.T) {
 			On("GetBatch", mock.AnythingOfType("[]state.GetBatchItem")).
 			Return(nil).
 			Run(func(args mock.Arguments) {
-				args.Get(0).([]GetBatchItem)[0].value = nil
+				args.Get(0).([]state.GetBatchItem)[0].Value = nil
 			})
 		s := asyncActualizerStateWithTestStateStorage(stateStorage)
 		kb, err := s.KeyBuilder(testStorage, testViewRecordQName1)
@@ -242,7 +244,7 @@ func TestAsyncActualizerState_MustExistAll(t *testing.T) {
 			On("GetBatch", mock.AnythingOfType("[]state.GetBatchItem")).
 			Return(nil).
 			Run(func(args mock.Arguments) {
-				args.Get(0).([]GetBatchItem)[0].value = &mockStateValue{}
+				args.Get(0).([]state.GetBatchItem)[0].Value = &mockStateValue{}
 			})
 		s := asyncActualizerStateWithTestStateStorage(stateStorage)
 		k1, err := s.KeyBuilder(testStorage, testViewRecordQName1)
@@ -268,7 +270,7 @@ func TestAsyncActualizerState_MustExistAll(t *testing.T) {
 			On("GetBatch", mock.AnythingOfType("[]state.GetBatchItem")).
 			Return(nil).
 			Run(func(args mock.Arguments) {
-				args.Get(0).([]GetBatchItem)[0].value = nil
+				args.Get(0).([]state.GetBatchItem)[0].Value = nil
 			})
 		s := asyncActualizerStateWithTestStateStorage(stateStorage)
 		k1, err := s.KeyBuilder(testStorage, testViewRecordQName1)
@@ -290,7 +292,7 @@ func TestAsyncActualizerState_MustNotExist(t *testing.T) {
 			On("GetBatch", mock.AnythingOfType("[]state.GetBatchItem")).
 			Return(nil).
 			Run(func(args mock.Arguments) {
-				args.Get(0).([]GetBatchItem)[0].value = nil
+				args.Get(0).([]state.GetBatchItem)[0].Value = nil
 			})
 		s := asyncActualizerStateWithTestStateStorage(stateStorage)
 		k, err := s.KeyBuilder(testStorage, testViewRecordQName1)
@@ -308,7 +310,7 @@ func TestAsyncActualizerState_MustNotExist(t *testing.T) {
 			On("GetBatch", mock.AnythingOfType("[]state.GetBatchItem")).
 			Return(nil).
 			Run(func(args mock.Arguments) {
-				args.Get(0).([]GetBatchItem)[0].value = &mockStateValue{}
+				args.Get(0).([]state.GetBatchItem)[0].Value = &mockStateValue{}
 			})
 		s := asyncActualizerStateWithTestStateStorage(stateStorage)
 		k, err := s.KeyBuilder(testStorage, testViewRecordQName1)
@@ -342,7 +344,7 @@ func TestAsyncActualizerState_MustNotExistAll(t *testing.T) {
 			On("GetBatch", mock.AnythingOfType("[]state.GetBatchItem")).
 			Return(nil).
 			Run(func(args mock.Arguments) {
-				args.Get(0).([]GetBatchItem)[0].value = nil
+				args.Get(0).([]state.GetBatchItem)[0].Value = nil
 			})
 		s := asyncActualizerStateWithTestStateStorage(stateStorage)
 		k1, err := s.KeyBuilder(testStorage, testViewRecordQName1)
@@ -362,7 +364,7 @@ func TestAsyncActualizerState_MustNotExistAll(t *testing.T) {
 			On("GetBatch", mock.AnythingOfType("[]state.GetBatchItem")).
 			Return(nil).
 			Run(func(args mock.Arguments) {
-				args.Get(0).([]GetBatchItem)[0].value = &mockStateValue{}
+				args.Get(0).([]state.GetBatchItem)[0].Value = &mockStateValue{}
 			})
 		s := asyncActualizerStateWithTestStateStorage(stateStorage)
 		k1, err := s.KeyBuilder(testStorage, testViewRecordQName1)
@@ -396,7 +398,7 @@ func TestAsyncActualizerState_Read(t *testing.T) {
 				_ = args.Get(3).(istructs.ValuesCallback)(&nilKey{}, &nilValue{})
 			})
 
-		s := ProvideAsyncActualizerStateFactory()(context.Background(), func() istructs.IAppStructs { return mockedStructs }, nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil, nil, nil, 10, 10)
+		s := ProvideAsyncActualizerStateFactory()(context.Background(), func() istructs.IAppStructs { return mockedStructs }, nil, state.SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil, nil, nil, 10, 10)
 		kb1, err := s.KeyBuilder(sys.Storage_View, testViewRecordQName1)
 		require.NoError(err)
 		kb2, err := s.KeyBuilder(sys.Storage_View, testViewRecordQName2)
@@ -426,7 +428,7 @@ func TestAsyncActualizerState_Read(t *testing.T) {
 			On("NewValueBuilder", testViewRecordQName1).Return(&nilValueBuilder{}).
 			On("NewValueBuilder", testViewRecordQName2).Return(&nilValueBuilder{}).
 			On("PutBatch", istructs.WSID(1), mock.AnythingOfType("[]istructs.ViewKV")).Return(errTest)
-		s := ProvideAsyncActualizerStateFactory()(context.Background(), func() istructs.IAppStructs { return mockedStructs }, nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil, nil, nil, 10, 10)
+		s := ProvideAsyncActualizerStateFactory()(context.Background(), func() istructs.IAppStructs { return mockedStructs }, nil, state.SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil, nil, nil, 10, 10)
 		kb1, err := s.KeyBuilder(sys.Storage_View, testViewRecordQName1)
 		require.NoError(err)
 		kb2, err := s.KeyBuilder(sys.Storage_View, testViewRecordQName2)

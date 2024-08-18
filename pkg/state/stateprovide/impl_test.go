@@ -2,7 +2,7 @@
  * Copyright (c) 2022-present unTill Pro, Ltd.
  */
 
-package state
+package stateprovide
 
 import (
 	"context"
@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys"
 )
 
@@ -29,10 +30,10 @@ var (
 )
 
 func TestSimpleWSIDFunc(t *testing.T) {
-	require.Equal(t, istructs.WSID(10), SimpleWSIDFunc(istructs.WSID(10))())
+	require.Equal(t, istructs.WSID(10), state.SimpleWSIDFunc(istructs.WSID(10))())
 }
 func TestSimplePartitionIDFuncDFunc(t *testing.T) {
-	require.Equal(t, istructs.PartitionID(10), SimplePartitionIDFunc(istructs.PartitionID(10))())
+	require.Equal(t, istructs.PartitionID(10), state.SimplePartitionIDFunc(istructs.PartitionID(10))())
 }
 func Test_put(t *testing.T) {
 	t.Run("Should be ok", func(t *testing.T) {
@@ -93,18 +94,8 @@ func Test_getStorageID(t *testing.T) {
 			},
 			{
 				name:            "Email storage key",
-				kb:              &mailKeyBuilder{},
+				kb:              newMapKeyBuilder(sys.Storage_SendMail, appdef.NullQName),
 				expectedStorage: sys.Storage_SendMail,
-			},
-			{
-				name:            "HTTP storage key",
-				kb:              &httpStorageKeyBuilder{},
-				expectedStorage: sys.Storage_Http,
-			},
-			{
-				name:            "View storage key",
-				kb:              &viewKeyBuilder{},
-				expectedStorage: sys.Storage_View,
 			},
 		}
 		for _, test := range tests {
@@ -272,14 +263,14 @@ type nilValue struct {
 }
 
 type mockStorage struct {
-	IWithInsert
+	state.IWithInsert
 	mock.Mock
 }
 
 func (s *mockStorage) NewKeyBuilder(entity appdef.QName, existingBuilder istructs.IStateKeyBuilder) istructs.IStateKeyBuilder {
 	return s.Called(entity, existingBuilder).Get(0).(istructs.IStateKeyBuilder)
 }
-func (s *mockStorage) GetBatch(items []GetBatchItem) (err error) {
+func (s *mockStorage) GetBatch(items []state.GetBatchItem) (err error) {
 	return s.Called(items).Error(0)
 }
 func (s *mockStorage) Get(key istructs.IStateKeyBuilder) (value istructs.IStateValue, err error) {
@@ -294,10 +285,10 @@ func (s *mockStorage) ProvideValueBuilder(key istructs.IStateKeyBuilder, existin
 func (s *mockStorage) ProvideValueBuilderForUpdate(key istructs.IStateKeyBuilder, existingValue istructs.IStateValue, existingBuilder istructs.IStateValueBuilder) (istructs.IStateValueBuilder, error) {
 	return s.Called(key, existingValue, existingBuilder).Get(0).(istructs.IStateValueBuilder), nil
 }
-func (s *mockStorage) Validate(items []ApplyBatchItem) (err error) {
+func (s *mockStorage) Validate(items []state.ApplyBatchItem) (err error) {
 	return s.Called(items).Error(0)
 }
-func (s *mockStorage) ApplyBatch(items []ApplyBatchItem) (err error) {
+func (s *mockStorage) ApplyBatch(items []state.ApplyBatchItem) (err error) {
 	return s.Called(items).Error(0)
 }
 

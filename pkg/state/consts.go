@@ -5,9 +5,6 @@
 package state
 
 import (
-	"time"
-
-	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/sys"
 )
 
@@ -111,14 +108,5 @@ const (
 )
 
 const (
-	ColOffset                             = "offs"
-	defaultHTTPClientTimeout              = 20_000 * time.Millisecond
-	httpStorageKeyBuilderStringerSliceCap = 3
-	wsidTypeValidatorCacheSize            = 100
-	queryProcessorStateMaxIntents         = 2 // 1 for Result, 1 for Response
-)
-
-var (
-	qNameCDocWorkspaceDescriptor = appdef.NewQName(appdef.SysPackage, "WorkspaceDescriptor")
-	field_WSKind                 = "WSKind"
+	ColOffset = "offs"
 )

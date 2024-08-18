@@ -24,7 +24,7 @@ type viewRecordsStorage struct {
 	wsTypeVailidator wsTypeVailidator
 }
 
-func newViewRecordsStorage(ctx context.Context, appStructsFunc state.AppStructsFunc, wsidFunc state.WSIDFunc, n10nFunc state.N10nFunc) *viewRecordsStorage {
+func NewViewRecordsStorage(ctx context.Context, appStructsFunc state.AppStructsFunc, wsidFunc state.WSIDFunc, n10nFunc state.N10nFunc) *viewRecordsStorage {
 	return &viewRecordsStorage{
 		ctx:              ctx,
 		appStructsFunc:   appStructsFunc,
@@ -222,7 +222,7 @@ func (b *viewValueBuilder) Equal(src istructs.IStateValueBuilder) bool {
 }
 
 func (b *viewValueBuilder) PutInt64(name string, value int64) {
-	if name == ColOffset {
+	if name == state.ColOffset {
 		b.offset = istructs.Offset(value)
 	}
 	b.IValueBuilder.PutInt64(name, value)

@@ -7,14 +7,24 @@ package storages
 import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys"
 )
 
 type commandContextStorage struct {
-	argFunc         ArgFunc
-	unloggedArgFunc UnloggedArgFunc
-	wsidFunc        WSIDFunc
-	wlogOffsetFunc  WLogOffsetFunc
+	argFunc         state.ArgFunc
+	unloggedArgFunc state.UnloggedArgFunc
+	wsidFunc        state.WSIDFunc
+	wlogOffsetFunc  state.WLogOffsetFunc
+}
+
+func NewCommandContextStorage(argFunc state.ArgFunc, unloggedArgFunc state.UnloggedArgFunc, wsidFunc state.WSIDFunc, wlogOffsetFunc state.WLogOffsetFunc) *commandContextStorage {
+	return &commandContextStorage{
+		argFunc:         argFunc,
+		unloggedArgFunc: unloggedArgFunc,
+		wsidFunc:        wsidFunc,
+		wlogOffsetFunc:  wlogOffsetFunc,
+	}
 }
 
 type commandContextKeyBuilder struct {
