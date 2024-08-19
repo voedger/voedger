@@ -537,5 +537,6 @@ func TestReadFromAnDifferentLocations(t *testing.T) {
 		body := fmt.Sprintf(`{"args":{"Query":"select * from %d.sys.wlog"},"elements":[{"fields":["Result"]}]}`, ws.WSID)
 		resp := vit.PostWS(wsAnother, "q.sys.SqlQuery", body)
 		require.GreaterOrEqual(resp.NumRows(), 2)
+		resp.Println()
 	})
 }

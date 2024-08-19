@@ -11,7 +11,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net"
 	"net/http"
 	"net/url"
@@ -423,7 +422,7 @@ func (resp *HTTPResponse) ExpectedHTTPCodes() []int {
 }
 
 func (resp *HTTPResponse) Println() {
-	log.Println(resp.Body)
+	logger.Info(resp.Body)
 }
 
 func (resp *HTTPResponse) getError(t *testing.T) map[string]interface{} {
