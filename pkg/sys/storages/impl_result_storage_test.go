@@ -20,7 +20,7 @@ func TestCmdResultStorage_InsertInValue(t *testing.T) {
 	storage := NewCmdResultStorage(func() istructs.IObjectBuilder { return cmdResBuilder })
 
 	kb := storage.NewKeyBuilder(appdef.NullQName, nil)
-	vb, err := storage.ProvideValueBuilder(kb, nil)
+	vb, err := storage.(state.IWithInsert).ProvideValueBuilder(kb, nil)
 	require.NoError(t, err)
 
 	fieldName := "name"

@@ -12,6 +12,7 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys"
 )
 
@@ -28,7 +29,7 @@ func TestSubjectStorage_BasicUsage(t *testing.T) {
 	storage := NewSubjectStorage(principalsFunc, tokenFunc)
 	k := storage.NewKeyBuilder(appdef.NullQName, nil)
 
-	v, err := storage.Get(k)
+	v, err := storage.(state.IWithGet).Get(k)
 	require.NoError(err)
 
 	require.Equal(int64(principals[0].WSID), v.AsInt64(sys.Storage_RequestSubject_Field_ProfileWSID))

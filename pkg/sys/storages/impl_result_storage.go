@@ -33,7 +33,7 @@ func (b *resultKeyBuilder) Equals(src istructs.IKeyBuilder) bool {
 	return ok
 }
 
-func NewCmdResultStorage(cmdResultBuilderFunc state.ObjectBuilderFunc) *resultStorage {
+func NewCmdResultStorage(cmdResultBuilderFunc state.ObjectBuilderFunc) state.IStateStorage {
 	return &resultStorage{
 		cmdResultBuilderFunc: cmdResultBuilderFunc,
 	}

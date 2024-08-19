@@ -32,7 +32,7 @@ func (v *uniquesValue) AsInt64(name string) int64 {
 	return v.baseStateValue.AsInt64(name)
 }
 
-func NewUniquesStorage(appStructsFunc state.AppStructsFunc, wsidFunc state.WSIDFunc, customHandler state.UniquesHandler) *uniquesStorage {
+func NewUniquesStorage(appStructsFunc state.AppStructsFunc, wsidFunc state.WSIDFunc, customHandler state.UniquesHandler) state.IStateStorage {
 	return &uniquesStorage{
 		appStructsFunc: appStructsFunc,
 		wsidFunc:       wsidFunc,

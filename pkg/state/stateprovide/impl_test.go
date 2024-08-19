@@ -101,18 +101,6 @@ func (s *mockAppStructs) ViewRecords() istructs.IViewRecords {
 	return s.Called().Get(0).(istructs.IViewRecords)
 }
 
-type mockEvents struct {
-	istructs.IEvents
-	mock.Mock
-}
-
-func (e *mockEvents) ReadPLog(ctx context.Context, partition istructs.PartitionID, offset istructs.Offset, toReadCount int, cb istructs.PLogEventsReaderCallback) (err error) {
-	return e.Called(ctx, partition, offset, toReadCount, cb).Error(0)
-}
-func (e *mockEvents) ReadWLog(ctx context.Context, workspace istructs.WSID, offset istructs.Offset, toReadCount int, cb istructs.WLogEventsReaderCallback) (err error) {
-	return e.Called(ctx, workspace, offset, toReadCount, cb).Error(0)
-}
-
 type mockRecords struct {
 	istructs.IRecords
 	mock.Mock
@@ -280,46 +268,7 @@ type nilValueBuilder struct {
 	istructs.IValueBuilder
 }
 
-type mockWLogEvent struct {
-	mock.Mock
-}
-
-func (e *mockWLogEvent) ArgumentObject() istructs.IObject {
-	return e.Called().Get(0).(istructs.IObject)
-}
-func (e *mockWLogEvent) Bytes() []byte { return e.Called().Get(0).([]byte) }
-func (e *mockWLogEvent) CUDs(cb func(rec istructs.ICUDRow)) {
-	e.Called(cb)
-}
-func (e *mockWLogEvent) RegisteredAt() istructs.UnixMilli {
-	return e.Called().Get(0).(istructs.UnixMilli)
-}
-func (e *mockWLogEvent) DeviceID() istructs.ConnectedDeviceID {
-	return e.Called().Get(0).(istructs.ConnectedDeviceID)
-}
-func (e *mockWLogEvent) Synced() bool                 { return e.Called().Bool(0) }
-func (e *mockWLogEvent) QName() appdef.QName          { return e.Called().Get(0).(appdef.QName) }
-func (e *mockWLogEvent) SyncedAt() istructs.UnixMilli { return e.Called().Get(0).(istructs.UnixMilli) }
-func (e *mockWLogEvent) Error() istructs.IEventError  { return e.Called().Get(0).(istructs.IEventError) }
-func (e *mockWLogEvent) Release()                     {}
-
-type mockCUD struct {
-	mock.Mock
-}
-
-func (c *mockCUD) Create(qName appdef.QName) istructs.IRowWriter {
-	return c.Called().Get(0).(istructs.IRowWriter)
-}
-func (c *mockCUD) Update(record istructs.IRecord) istructs.IRowWriter {
-	return c.Called(record).Get(0).(istructs.IRowWriter)
-}
-
 type mockStateValue struct {
 	istructs.IStateValue
-	mock.Mock
-}
-
-type mockCUDRow struct {
-	istructs.ICUDRow
 	mock.Mock
 }

@@ -13,6 +13,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys"
 )
 
@@ -87,42 +88,30 @@ func TestRecordsStorage_GetBatch(t *testing.T) {
 			On("Records").Return(records).
 			On("ViewRecords").Return(&nilViewRecords{}).
 			On("Events").Return(&nilEvents{})
-		s := ProvideQueryProcessorStateFactory()(context.Background(), appStructsFunc(appStructs), nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil, nil, nil, nil, nil, nil, nil)
-		k1, err := s.KeyBuilder(sys.Storage_Record, appdef.NullQName)
-		require.NoError(err)
+
+		appStructsFunc := func() istructs.IAppStructs {
+			return appStructs
+		}
+		storage := NewRecordsStorage(appStructsFunc, state.SimpleWSIDFunc(istructs.WSID(1)), nil)
+		k1 := storage.NewKeyBuilder(appdef.NullQName, nil)
 		k1.PutRecordID(sys.Storage_Record_Field_ID, 1)
-		k2, err := s.KeyBuilder(sys.Storage_Record, appdef.NullQName)
-		require.NoError(err)
+		k2 := storage.NewKeyBuilder(appdef.NullQName, nil)
 		k2.PutRecordID(sys.Storage_Record_Field_ID, 2)
 		k2.PutInt64(sys.Storage_Record_Field_WSID, 2)
-		k3, err := s.KeyBuilder(sys.Storage_Record, appdef.NullQName)
-		require.NoError(err)
+		k3 := storage.NewKeyBuilder(appdef.NullQName, nil)
 		k3.PutRecordID(sys.Storage_Record_Field_ID, 3)
 		k3.PutInt64(sys.Storage_Record_Field_WSID, 2)
 
 		rr := make([]result, 0)
-		err = s.CanExistAll([]istructs.IStateKeyBuilder{k1, k2, k3}, func(key istructs.IKeyBuilder, value istructs.IStateValue, ok bool) (err error) {
-			rr = append(rr, result{
-				key:    key.(*recordsKeyBuilder),
-				value:  value,
-				exists: ok,
-			})
-			return
-		})
+		batchItems := []state.GetBatchItem{
+			{Key: k1},
+			{Key: k2},
+			{Key: k3},
+		}
+		err = storage.(state.IWithGetBatch).GetBatch(batchItems)
 		require.NoError(err)
-
-		require.Len(rr, 3)
-		require.Equal(istructs.RecordID(1), rr[0].key.(*recordsKeyBuilder).id)
-		require.Equal(istructs.WSID(1), rr[0].key.(*recordsKeyBuilder).wsid)
-		require.True(rr[0].exists)
 		require.Equal(int64(10), rr[0].value.AsInt64("number"))
-		require.Equal(istructs.RecordID(2), rr[1].key.(*recordsKeyBuilder).id)
-		require.Equal(istructs.WSID(2), rr[1].key.(*recordsKeyBuilder).wsid)
-		require.True(rr[1].exists)
 		require.Equal(int64(20), rr[1].value.AsInt64("age"))
-		require.Equal(istructs.RecordID(3), rr[2].key.(*recordsKeyBuilder).id)
-		require.Equal(istructs.WSID(2), rr[2].key.(*recordsKeyBuilder).wsid)
-		require.True(rr[2].exists)
 		require.Equal(int64(21), rr[2].value.AsInt64("age"))
 	})
 	t.Run("Should handle singleton records", func(t *testing.T) {
@@ -166,54 +155,42 @@ func TestRecordsStorage_GetBatch(t *testing.T) {
 			On("Records").Return(records).
 			On("ViewRecords").Return(&nilViewRecords{}).
 			On("Events").Return(&nilEvents{})
-		s := ProvideQueryProcessorStateFactory()(context.Background(), appStructsFunc(appStructs), nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil, nil, nil, nil, nil, nil, nil)
-		k1, err := s.KeyBuilder(sys.Storage_Record, appdef.NullQName)
-		require.NoError(err)
+
+		appStructsFunc := func() istructs.IAppStructs {
+			return appStructs
+		}
+		storage := NewRecordsStorage(appStructsFunc, state.SimpleWSIDFunc(istructs.WSID(1)), nil)
+		k1 := storage.NewKeyBuilder(appdef.NullQName, nil)
 		k1.PutQName(sys.Storage_Record_Field_Singleton, testRecordQName1)
-		k2, err := s.KeyBuilder(sys.Storage_Record, appdef.NullQName)
-		require.NoError(err)
+		k2 := storage.NewKeyBuilder(appdef.NullQName, nil)
 		k2.PutQName(sys.Storage_Record_Field_Singleton, testRecordQName2)
 		k2.PutInt64(sys.Storage_Record_Field_WSID, 2)
-		k3, err := s.KeyBuilder(sys.Storage_Record, appdef.NullQName)
-		require.NoError(err)
+		k3 := storage.NewKeyBuilder(appdef.NullQName, nil)
 		k3.PutQName(sys.Storage_Record_Field_Singleton, testRecordQName2)
 		k3.PutInt64(sys.Storage_Record_Field_WSID, 3)
-
-		k4, err := s.KeyBuilder(sys.Storage_Record, testRecordQName1)
-		require.NoError(err)
+		k4 := storage.NewKeyBuilder(appdef.NullQName, nil)
 		k4.PutBool(sys.Storage_Record_Field_IsSingleton, true)
-
 		rr := make([]result, 0)
-		err = s.CanExistAll([]istructs.IStateKeyBuilder{k1, k2, k3, k4}, func(key istructs.IKeyBuilder, value istructs.IStateValue, ok bool) (err error) {
-			rr = append(rr, result{
-				key:    key.(*recordsKeyBuilder),
-				value:  value,
-				exists: ok,
-			})
-			return
-		})
+		batchItems := []state.GetBatchItem{
+			{Key: k1},
+			{Key: k2},
+			{Key: k3},
+			{Key: k4},
+		}
+		err := storage.(state.IWithGetBatch).GetBatch(batchItems)
 		require.NoError(err)
-
-		require.Len(rr, 4)
 		require.Equal(int64(10), rr[0].value.AsInt64("number"))
-		require.True(rr[0].exists)
-		require.Equal(istructs.WSID(2), rr[1].key.(*recordsKeyBuilder).wsid)
-		require.Nil(rr[1].value)
-		require.False(rr[1].exists)
-		require.Equal(istructs.WSID(3), rr[2].key.(*recordsKeyBuilder).wsid)
-		require.True(rr[2].exists)
 		require.Equal(int64(18), rr[2].value.AsInt64("age"))
-		require.True(rr[3].exists)
 	})
 	t.Run("Should return error when 'id' not found", func(t *testing.T) {
 		require := require.New(t)
-		s := ProvideQueryProcessorStateFactory()(context.Background(), nilAppStructsFunc, nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil, nil, nil, nil, nil, nil, nil)
-		k, err := s.KeyBuilder(sys.Storage_Record, appdef.NullQName)
-		require.NoError(err)
-
-		_, ok, err := s.CanExist(k)
-
-		require.False(ok)
+		appStructs := &mockAppStructs{}
+		appStructsFunc := func() istructs.IAppStructs {
+			return appStructs
+		}
+		storage := NewRecordsStorage(appStructsFunc, state.SimpleWSIDFunc(istructs.WSID(1)), nil)
+		k := storage.NewKeyBuilder(appdef.NullQName, nil)
+		_, err := storage.(state.IWithGet).Get(k)
 		require.ErrorIs(err, ErrNotFound)
 	})
 	t.Run("Should return error on get", func(t *testing.T) {
@@ -227,14 +204,13 @@ func TestRecordsStorage_GetBatch(t *testing.T) {
 			On("Records").Return(records).
 			On("ViewRecords").Return(&nilViewRecords{}).
 			On("Events").Return(&nilEvents{})
-		s := ProvideQueryProcessorStateFactory()(context.Background(), appStructsFunc(appStructs), nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil, nil, nil, nil, nil, nil, nil)
-		k, err := s.KeyBuilder(sys.Storage_Record, appdef.NullQName)
-		require.NoError(err)
+		appStructsFunc := func() istructs.IAppStructs {
+			return appStructs
+		}
+		storage := NewRecordsStorage(appStructsFunc, state.SimpleWSIDFunc(istructs.WSID(1)), nil)
+		k := storage.NewKeyBuilder(appdef.NullQName, nil)
 		k.PutRecordID(sys.Storage_Record_Field_ID, istructs.RecordID(1))
-
-		_, ok, err := s.CanExist(k)
-
-		require.False(ok)
+		_, err := storage.(state.IWithGet).Get(k)
 		require.ErrorIs(err, errTest)
 	})
 	t.Run("Should return error on get singleton", func(t *testing.T) {
@@ -254,37 +230,34 @@ func TestRecordsStorage_GetBatch(t *testing.T) {
 			On("Records").Return(records).
 			On("ViewRecords").Return(&nilViewRecords{}).
 			On("Events").Return(&nilEvents{})
-		s := ProvideQueryProcessorStateFactory()(context.Background(), appStructsFunc(appStructs), nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil, nil, nil, nil, nil, nil, nil)
-		k, err := s.KeyBuilder(sys.Storage_Record, appdef.NullQName)
-		require.NoError(err)
+		appStructsFunc := func() istructs.IAppStructs {
+			return appStructs
+		}
+		storage := NewRecordsStorage(appStructsFunc, state.SimpleWSIDFunc(istructs.WSID(1)), nil)
+		k := storage.NewKeyBuilder(appdef.NullQName, nil)
 		k.PutQName(sys.Storage_Record_Field_Singleton, testRecordQName1)
-
-		_, ok, err := s.CanExist(k)
-
-		require.False(ok)
+		_, err := storage.(state.IWithGet).Get(k)
 		require.ErrorIs(err, errTest)
 	})
 }
 func TestRecordsStorage_Insert(t *testing.T) {
 	require := require.New(t)
 	fieldName := "name"
-	value := "Voedger" //???
+	value := "Voedger"
 	rw := &mockRowWriter{}
 	rw.
 		On("PutString", fieldName, value)
 	cud := &mockCUD{}
 	cud.On("Create").Return(rw)
-	s := ProvideCommandProcessorStateFactory()(context.Background(), nil, nil, SimpleWSIDFunc(istructs.NullWSID), nil,
-		func() istructs.ICUD { return cud }, nil, nil, 1, nil, nil, nil, nil, nil)
-	kb, err := s.KeyBuilder(sys.Storage_Record, testRecordQName1)
-	require.NoError(err)
-
-	vb, err := s.NewValue(kb)
+	appStructs := &mockAppStructs{}
+	appStructsFunc := func() istructs.IAppStructs {
+		return appStructs
+	}
+	storage := NewRecordsStorage(appStructsFunc, state.SimpleWSIDFunc(istructs.WSID(1)), nil)
+	kb := storage.NewKeyBuilder(testRecordQName1, nil)
+	vb, err := storage.(state.IWithInsert).ProvideValueBuilder(kb, nil)
 	require.NoError(err)
 	vb.PutString(fieldName, value)
-
-	require.NoError(s.ValidateIntents())
-	require.NoError(s.ApplyIntents())
 	rw.AssertExpectations(t)
 }
 func TestRecordsStorage_Update(t *testing.T) {
@@ -297,17 +270,16 @@ func TestRecordsStorage_Update(t *testing.T) {
 	sv := &recordsValue{record: r}
 	cud := &mockCUD{}
 	cud.On("Update", mock.Anything).Return(rw)
-	s := ProvideCommandProcessorStateFactory()(context.Background(), nil, nil, SimpleWSIDFunc(istructs.NullWSID), nil,
-		func() istructs.ICUD { return cud }, nil, nil, 1, nil, nil, nil, nil, nil)
-	kb, err := s.KeyBuilder(sys.Storage_Record, testRecordQName1)
-	require.NoError(err)
 
-	vb, err := s.UpdateValue(kb, sv)
+	appStructs := &mockAppStructs{}
+	appStructsFunc := func() istructs.IAppStructs {
+		return appStructs
+	}
+	storage := NewRecordsStorage(appStructsFunc, state.SimpleWSIDFunc(istructs.WSID(1)), nil)
+	kb := storage.NewKeyBuilder(testRecordQName1, nil)
+	vb, err := storage.(state.IWithUpdate).ProvideValueBuilderForUpdate(kb, sv, nil)
 	require.NoError(err)
 	vb.PutString(fieldName, value)
-
-	require.NoError(s.ValidateIntents())
-	require.NoError(s.ApplyIntents())
 	rw.AssertExpectations(t)
 }
 

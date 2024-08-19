@@ -38,11 +38,11 @@ func TestSendMailStorage_BasicUsage(t *testing.T) {
 	k.PutString(sys.Storage_SendMail_Field_BCC, "bcc1@email.com")
 	k.PutString(sys.Storage_SendMail_Field_Body, "Hello world")
 
-	v, err := storage.ProvideValueBuilder(k, nil)
+	v, err := storage.(state.IWithInsert).ProvideValueBuilder(k, nil)
 	require.NoError(err)
 	require.NotNil(v)
 
-	err = storage.ApplyBatch([]state.ApplyBatchItem{{Key: k, Value: v}})
+	err = storage.(state.IWithInsert).ApplyBatch([]state.ApplyBatchItem{{Key: k, Value: v}})
 	require.NoError(err)
 
 	msg := <-ts.Messages("user", "pwd")
@@ -96,9 +96,9 @@ func TestSendMailStorage_Validate(t *testing.T) {
 			storage := NewSendMailStorage(nil)
 			k := storage.NewKeyBuilder(appdef.NullQName, nil)
 			test.kbFiller(k)
-			_, err := storage.ProvideValueBuilder(k, nil)
+			_, err := storage.(state.IWithInsert).ProvideValueBuilder(k, nil)
 			require.NoError(err)
-			err = storage.ApplyBatch([]state.ApplyBatchItem{{Key: k, Value: nil}})
+			err = storage.(state.IWithInsert).ApplyBatch([]state.ApplyBatchItem{{Key: k, Value: nil}})
 			require.ErrorIs(err, ErrNotFound)
 			require.Contains(err.Error(), test.mandatoryField)
 		})

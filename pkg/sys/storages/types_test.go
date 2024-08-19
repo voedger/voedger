@@ -5,6 +5,7 @@
 package storages
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -22,10 +23,110 @@ var (
 	testViewRecordQName2  = appdef.NewQName("test", "viewRecord2")
 	testWSQName           = appdef.NewQName("test", "testWS")
 	testWSDescriptorQName = appdef.NewQName("test", "testWSDescriptor")
+	testAppQName          = appdef.NewAppQName("test", "testApp")
 )
+
+type nilEvents struct {
+	istructs.IEvents
+}
+
+type mockCUD struct {
+	mock.Mock
+}
+
+func (c *mockCUD) Create(qName appdef.QName) istructs.IRowWriter {
+	return c.Called().Get(0).(istructs.IRowWriter)
+}
+func (c *mockCUD) Update(record istructs.IRecord) istructs.IRowWriter {
+	return c.Called(record).Get(0).(istructs.IRowWriter)
+}
+
+type mockAppStructs struct {
+	istructs.IAppStructs
+	mock.Mock
+}
+
+func (s *mockAppStructs) AppQName() appdef.AppQName {
+	return s.Called().Get(0).(appdef.AppQName)
+}
+func (s *mockAppStructs) AppDef() appdef.IAppDef {
+	return s.Called().Get(0).(appdef.IAppDef)
+}
+func (s *mockAppStructs) Events() istructs.IEvents   { return s.Called().Get(0).(istructs.IEvents) }
+func (s *mockAppStructs) Records() istructs.IRecords { return s.Called().Get(0).(istructs.IRecords) }
+func (s *mockAppStructs) ViewRecords() istructs.IViewRecords {
+	return s.Called().Get(0).(istructs.IViewRecords)
+}
+
+type mockRecords struct {
+	istructs.IRecords
+	mock.Mock
+}
+
+func (r *mockRecords) GetBatch(workspace istructs.WSID, highConsistency bool, ids []istructs.RecordGetBatchItem) (err error) {
+	return r.Called(workspace, highConsistency, ids).Error(0)
+}
+func (r *mockRecords) Get(workspace istructs.WSID, highConsistency bool, id istructs.RecordID) (record istructs.IRecord, err error) {
+	args := r.Called(workspace, highConsistency, id)
+
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+
+	}
+	return args.Get(0).(istructs.IRecord), args.Error(1)
+}
+func (r *mockRecords) GetSingleton(workspace istructs.WSID, qName appdef.QName) (record istructs.IRecord, err error) {
+	aa := r.Called(workspace, qName)
+	return aa.Get(0).(istructs.IRecord), aa.Error(1)
+}
+
+type mockViewRecords struct {
+	istructs.IViewRecords
+	mock.Mock
+}
+
+func (r *mockViewRecords) KeyBuilder(view appdef.QName) istructs.IKeyBuilder {
+	return r.Called(view).Get(0).(istructs.IKeyBuilder)
+}
+func (r *mockViewRecords) NewValueBuilder(view appdef.QName) istructs.IValueBuilder {
+	return r.Called(view).Get(0).(istructs.IValueBuilder)
+}
+func (r *mockViewRecords) UpdateValueBuilder(view appdef.QName, existing istructs.IValue) istructs.IValueBuilder {
+	return r.Called(view, existing).Get(0).(istructs.IValueBuilder)
+}
+func (r *mockViewRecords) Get(workspace istructs.WSID, key istructs.IKeyBuilder) (value istructs.IValue, err error) {
+	c := r.Called(workspace, key)
+	if c.Get(0) == nil {
+		return nil, c.Error(1)
+	}
+	return c.Get(0).(istructs.IValue), c.Error(1)
+}
+func (r *mockViewRecords) GetBatch(workspace istructs.WSID, kv []istructs.ViewRecordGetBatchItem) (err error) {
+	return r.Called(workspace, kv).Error(0)
+}
+func (r *mockViewRecords) PutBatch(workspace istructs.WSID, batch []istructs.ViewKV) (err error) {
+	return r.Called(workspace, batch).Error(0)
+}
+func (r *mockViewRecords) Read(ctx context.Context, workspace istructs.WSID, key istructs.IKeyBuilder, cb istructs.ValuesCallback) (err error) {
+	return r.Called(ctx, workspace, key, cb).Error(0)
+}
 
 type nilViewRecords struct {
 	istructs.IViewRecords
+}
+
+type mockRecord struct {
+	istructs.IRecord
+	mock.Mock
+}
+
+func (r *mockRecord) QName() appdef.QName       { return r.Called().Get(0).(appdef.QName) }
+func (r *mockRecord) AsInt64(name string) int64 { return r.Called(name).Get(0).(int64) }
+func (r *mockRecord) AsQName(name string) appdef.QName {
+	return r.Called(name).Get(0).(appdef.QName)
+}
+func (r *mockRecord) FieldNames(cb func(fieldName string)) {
+	r.Called(cb)
 }
 
 func put(fieldName string, kind appdef.DataKind, rr istructs.IRowReader, rw istructs.IRowWriter) {

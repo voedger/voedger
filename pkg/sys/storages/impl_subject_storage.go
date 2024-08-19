@@ -17,7 +17,7 @@ type subjectStorage struct {
 	tokenFunc      state.TokenFunc
 }
 
-func NewSubjectStorage(principalsFunc state.PrincipalsFunc, tokenFunc state.TokenFunc) *subjectStorage {
+func NewSubjectStorage(principalsFunc state.PrincipalsFunc, tokenFunc state.TokenFunc) state.IStateStorage {
 	return &subjectStorage{
 		principalsFunc: principalsFunc,
 		tokenFunc:      tokenFunc,

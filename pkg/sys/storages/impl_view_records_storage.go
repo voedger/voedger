@@ -24,7 +24,7 @@ type viewRecordsStorage struct {
 	wsTypeVailidator wsTypeVailidator
 }
 
-func NewViewRecordsStorage(ctx context.Context, appStructsFunc state.AppStructsFunc, wsidFunc state.WSIDFunc, n10nFunc state.N10nFunc) *viewRecordsStorage {
+func NewViewRecordsStorage(ctx context.Context, appStructsFunc state.AppStructsFunc, wsidFunc state.WSIDFunc, n10nFunc state.N10nFunc) state.IStateStorage {
 	return &viewRecordsStorage{
 		ctx:              ctx,
 		appStructsFunc:   appStructsFunc,

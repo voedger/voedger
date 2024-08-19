@@ -21,7 +21,7 @@ type sendMailStorage struct {
 	messages chan smtptest.Message // not nil in tests only
 }
 
-func NewSendMailStorage(messages chan smtptest.Message) *sendMailStorage {
+func NewSendMailStorage(messages chan smtptest.Message) state.IStateStorage {
 	return &sendMailStorage{
 		messages: messages,
 	}

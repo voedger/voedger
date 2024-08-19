@@ -16,7 +16,7 @@ import (
 type responseStorage struct {
 }
 
-func NewResponseStorage() *responseStorage {
+func NewResponseStorage() state.IStateStorage {
 	return &responseStorage{}
 }
 

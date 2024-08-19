@@ -20,7 +20,7 @@ type wLogStorage struct {
 	wsidFunc   state.WSIDFunc
 }
 
-func NewWLogStorage(ctx context.Context, eventsFunc state.EventsFunc, wsidFunc state.WSIDFunc) *wLogStorage {
+func NewWLogStorage(ctx context.Context, eventsFunc state.EventsFunc, wsidFunc state.WSIDFunc) state.IStateStorage {
 	return &wLogStorage{
 		ctx:        ctx,
 		eventsFunc: eventsFunc,
