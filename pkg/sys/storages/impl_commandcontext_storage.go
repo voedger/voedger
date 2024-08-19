@@ -18,7 +18,7 @@ type commandContextStorage struct {
 	wlogOffsetFunc  state.WLogOffsetFunc
 }
 
-func NewCommandContextStorage(argFunc state.ArgFunc, unloggedArgFunc state.UnloggedArgFunc, wsidFunc state.WSIDFunc, wlogOffsetFunc state.WLogOffsetFunc) *commandContextStorage {
+func NewCommandContextStorage(argFunc state.ArgFunc, unloggedArgFunc state.UnloggedArgFunc, wsidFunc state.WSIDFunc, wlogOffsetFunc state.WLogOffsetFunc) state.IStateStorage {
 	return &commandContextStorage{
 		argFunc:         argFunc,
 		unloggedArgFunc: unloggedArgFunc,

@@ -16,7 +16,7 @@ type queryContextStorage struct {
 	wsidFunc state.WSIDFunc
 }
 
-func NewQueryContextStorage(argFunc state.ArgFunc, wsidFunc state.WSIDFunc) *queryContextStorage {
+func NewQueryContextStorage(argFunc state.ArgFunc, wsidFunc state.WSIDFunc) state.IStateStorage {
 	return &queryContextStorage{
 		argFunc:  argFunc,
 		wsidFunc: wsidFunc,

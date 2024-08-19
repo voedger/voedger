@@ -28,7 +28,7 @@ func TestCommandContextStorage(t *testing.T) {
 	storage := NewCommandContextStorage(argFunc, unloggedArgFunc, wsidFunc, wlogOffsetFunc)
 
 	kb := storage.NewKeyBuilder(appdef.NullQName, nil)
-	v, err := storage.Get(kb)
+	v, err := storage.(state.IWithGet).Get(kb)
 	require.NoError(t, err)
 	require.Equal(t, int64(wsid), v.AsInt64(sys.Storage_CommandContext_Field_Workspace))
 	require.NotNil(t, v.AsValue(sys.Storage_CommandContext_Field_ArgumentObject))

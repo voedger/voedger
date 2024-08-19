@@ -5,13 +5,13 @@
 package storages
 
 import (
-	"context"
 	"embed"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
 	istorageimpl "github.com/voedger/voedger/pkg/istorage/provider"
+	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -82,13 +82,11 @@ func TestEventStorage_Get(t *testing.T) {
 		return event
 	}
 
-	s := ProvideAsyncActualizerStateFactory()(context.Background(), appStructsFunc(app), nil, nil, nil, nil, eventFunc, nil, nil, 0, 0)
+	storage := NewEventStorage(eventFunc)
 
-	require.Equal(event, s.PLogEvent())
+	kb := storage.NewKeyBuilder(appdef.NullQName, nil)
 
-	kb, err := s.KeyBuilder(sys.Storage_Event, appdef.NullQName)
-	require.NoError(err)
-	value, err := s.MustExist(kb)
+	value, err := storage.(state.IWithGet).Get(kb)
 	require.NotNil(value)
 	require.NoError(err)
 
@@ -113,9 +111,6 @@ func TestEventStorage_Get(t *testing.T) {
 	require.Equal(int32(1), cud1.AsInt32("x"))
 	require.Equal(tQname, cud1.AsQName("sys.QName"))
 
-	// test sync actualizer state
-	syncState := ProvideSyncActualizerStateFactory()(context.Background(), appStructsFunc(app), nil, nil, nil, nil, eventFunc, 0)
-	require.Equal(event, syncState.PLogEvent())
 }
 
 type (

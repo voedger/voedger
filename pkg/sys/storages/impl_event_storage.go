@@ -88,7 +88,7 @@ func (v *eventValue) AsValue(name string) istructs.IStateValue {
 	return v.baseStateValue.AsValue(name)
 }
 
-func NewEventStorage(eventFunc state.PLogEventFunc) *eventStorage {
+func NewEventStorage(eventFunc state.PLogEventFunc) state.IStateStorage {
 	return &eventStorage{
 		eventFunc: eventFunc,
 	}

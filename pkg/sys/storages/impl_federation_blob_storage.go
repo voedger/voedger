@@ -31,7 +31,7 @@ type federationBlobStorage struct {
 	emulation  state.FederationBlobHandler
 }
 
-func NewFederationBlobStorage(appStructs state.AppStructsFunc, wsid state.WSIDFunc, federation federation.IFederation, tokens itokens.ITokens, emulation state.FederationBlobHandler) *federationBlobStorage {
+func NewFederationBlobStorage(appStructs state.AppStructsFunc, wsid state.WSIDFunc, federation federation.IFederation, tokens itokens.ITokens, emulation state.FederationBlobHandler) state.IStateStorage {
 	return &federationBlobStorage{
 		appStructs: appStructs,
 		wsid:       wsid,

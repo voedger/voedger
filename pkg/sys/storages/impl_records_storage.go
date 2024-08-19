@@ -103,7 +103,7 @@ func (b *recordsKeyBuilder) PutQName(name string, value appdef.QName) {
 	b.baseKeyBuilder.PutQName(name, value)
 }
 
-func NewRecordsStorage(appStructsFunc state.AppStructsFunc, wsidFunc state.WSIDFunc, cudFunc state.CUDFunc) *recordsStorage {
+func NewRecordsStorage(appStructsFunc state.AppStructsFunc, wsidFunc state.WSIDFunc, cudFunc state.CUDFunc) state.IStateStorage {
 	return &recordsStorage{
 		recordsFunc:      func() istructs.IRecords { return appStructsFunc().Records() },
 		wsidFunc:         wsidFunc,

@@ -5,11 +5,11 @@
 package storages
 
 import (
-	"context"
 	"testing"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys"
 )
 
@@ -22,24 +22,22 @@ BenchmarkRecordsGet-20    	23072106	        55.72 ns/op	      16 B/op	       1 a
 func BenchmarkRecordsGet(b *testing.B) {
 	mockRec = &mockBenchRec{}
 	appStructs := &mockAppStr{}
-	s := ProvideQueryProcessorStateFactory()(context.Background(), appStructsFunc(appStructs), nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil, nil, nil, nil, nil, nil, nil)
-	k1, err := s.KeyBuilder(sys.Storage_Record, appdef.NullQName)
-	if err != nil {
-		panic(err)
+	appStructsFunc := func() istructs.IAppStructs {
+		return appStructs
 	}
+	storage := NewRecordsStorage(appStructsFunc, state.SimpleWSIDFunc(istructs.WSID(1)), nil)
+	k1 := storage.NewKeyBuilder(appdef.NullQName, nil)
 	k1.PutRecordID(sys.Storage_Record_Field_ID, 2)
 	k1.PutInt64(sys.Storage_Record_Field_WSID, 1)
+	withGet := storage.(state.IWithGet)
 
 	for i := 0; i < b.N; i++ {
-		value, ok, err := s.CanExist(k1)
+		value, err := withGet.Get(k1)
 		if err != nil {
 			panic(err)
 		}
 		if value == nil {
 			panic("value is nil")
-		}
-		if !ok {
-			panic("!ok")
 		}
 	}
 }

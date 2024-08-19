@@ -23,7 +23,7 @@ type httpStorage struct {
 	customClient state.IHttpClient
 }
 
-func NewHttpStorage(customClient state.IHttpClient) *httpStorage {
+func NewHttpStorage(customClient state.IHttpClient) state.IStateStorage {
 	return &httpStorage{
 		customClient: customClient,
 	}
