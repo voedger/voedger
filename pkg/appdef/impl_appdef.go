@@ -15,7 +15,7 @@ import (
 type appDef struct {
 	comment
 	packages     *packages
-	privileges   []*privilege // adding order should be saved
+	privileges   []*aclRule // adding order should be saved
 	types        map[QName]interface{}
 	typesOrdered []interface{}
 	wsDesc       map[QName]IWorkspace
@@ -252,14 +252,14 @@ func (app *appDef) Packages(cb func(local, path string)) {
 	app.packages.forEach(cb)
 }
 
-func (app appDef) Privileges(cb func(IPrivilege)) {
+func (app appDef) Privileges(cb func(IACLRule)) {
 	for _, p := range app.privileges {
 		cb(p)
 	}
 }
 
-func (app appDef) PrivilegesOn(n []QName, k ...PrivilegeKind) []IPrivilege {
-	pp := make([]IPrivilege, 0)
+func (app appDef) PrivilegesOn(n []QName, k ...OperationKind) []IACLRule {
+	pp := make([]IACLRule, 0)
 	for _, p := range app.privileges {
 		if p.On().ContainsAny(n...) && p.kinds.ContainsAny(k...) {
 			pp = append(pp, p)
@@ -587,7 +587,7 @@ func (app *appDef) addWorkspace(name QName) IWorkspaceBuilder {
 	return newWorkspaceBuilder(ws)
 }
 
-func (app *appDef) appendPrivilege(p *privilege) {
+func (app *appDef) appendPrivilege(p *aclRule) {
 	app.privileges = append(app.privileges, p)
 }
 
@@ -612,7 +612,7 @@ func (app *appDef) build() (err error) {
 	return err
 }
 
-func (app *appDef) grant(kinds []PrivilegeKind, on []QName, fields []FieldName, toRole QName, comment ...string) {
+func (app *appDef) grant(kinds []OperationKind, on []QName, fields []FieldName, toRole QName, comment ...string) {
 	r := app.Role(toRole)
 	if r == nil {
 		panic(ErrRoleNotFound(toRole))
@@ -643,7 +643,7 @@ func (app *appDef) makeSysDataTypes() {
 	}
 }
 
-func (app *appDef) revoke(kinds []PrivilegeKind, on []QName, fromRole QName, comment ...string) {
+func (app *appDef) revoke(kinds []OperationKind, on []QName, fromRole QName, comment ...string) {
 	r := app.Role(fromRole)
 	if r == nil {
 		panic(ErrRoleNotFound(fromRole))
@@ -758,7 +758,7 @@ func (ab *appDefBuilder) addHardcodedDefinitions() {
 	viewNextBaseWSID.Value().AddField("NextBaseWSID", DataKind_int64, true)
 }
 
-func (ab *appDefBuilder) Grant(kinds []PrivilegeKind, on []QName, fields []FieldName, toRole QName, comment ...string) IPrivilegesBuilder {
+func (ab *appDefBuilder) Grant(kinds []OperationKind, on []QName, fields []FieldName, toRole QName, comment ...string) IPrivilegesBuilder {
 	ab.app.grant(kinds, on, fields, toRole, comment...)
 	return ab
 }
@@ -775,7 +775,7 @@ func (ab *appDefBuilder) MustBuild() IAppDef {
 	return ab.app
 }
 
-func (ab *appDefBuilder) Revoke(kinds []PrivilegeKind, on []QName, fromRole QName, comment ...string) IPrivilegesBuilder {
+func (ab *appDefBuilder) Revoke(kinds []OperationKind, on []QName, fromRole QName, comment ...string) IPrivilegesBuilder {
 	ab.app.revoke(kinds, on, fromRole, comment...)
 	return ab
 }

@@ -13,7 +13,7 @@ import (
 	"github.com/voedger/voedger/pkg/goutils/set"
 )
 
-func TestAllPrivilegesOnType(t *testing.T) {
+func Test_allOperationsOnType(t *testing.T) {
 
 	testName := NewQName("test", "test")
 
@@ -24,30 +24,30 @@ func TestAllPrivilegesOnType(t *testing.T) {
 	tests := []struct {
 		name   string
 		typ    typ
-		wantPk set.Set[PrivilegeKind]
+		wantPk set.Set[OperationKind]
 	}{
 		{"null", typ{TypeKind_null, NullQName},
-			set.Empty[PrivilegeKind]()},
+			set.Empty[OperationKind]()},
 		{"Any", typ{TypeKind_Any, QNameANY},
-			set.From(PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select, PrivilegeKind_Execute, PrivilegeKind_Inherits)},
+			set.From(OperationKind_Insert, OperationKind_Update, OperationKind_Select, OperationKind_Execute, OperationKind_Inherits)},
 		{"Any record", typ{TypeKind_Any, QNameAnyRecord},
-			set.From(PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select)},
+			set.From(OperationKind_Insert, OperationKind_Update, OperationKind_Select)},
 		{"Any command", typ{TypeKind_Any, QNameAnyCommand},
-			set.From(PrivilegeKind_Execute)},
+			set.From(OperationKind_Execute)},
 		{"GRecord", typ{TypeKind_GRecord, testName},
-			set.From(PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select)},
+			set.From(OperationKind_Insert, OperationKind_Update, OperationKind_Select)},
 		{"CDoc", typ{TypeKind_CDoc, testName},
-			set.From(PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select)},
+			set.From(OperationKind_Insert, OperationKind_Update, OperationKind_Select)},
 		{"View", typ{TypeKind_ViewRecord, testName},
-			set.From(PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select)},
+			set.From(OperationKind_Insert, OperationKind_Update, OperationKind_Select)},
 		{"Command", typ{TypeKind_Command, testName},
-			set.From(PrivilegeKind_Execute)},
+			set.From(OperationKind_Execute)},
 		{"Workspace", typ{TypeKind_Workspace, testName},
-			set.From(PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select, PrivilegeKind_Execute)},
+			set.From(OperationKind_Insert, OperationKind_Update, OperationKind_Select, OperationKind_Execute)},
 		{"Role", typ{TypeKind_Role, testName},
-			set.From(PrivilegeKind_Inherits)},
+			set.From(OperationKind_Inherits)},
 		{"Projector", typ{TypeKind_Projector, testName},
-			set.Empty[PrivilegeKind]()},
+			set.Empty[OperationKind]()},
 	}
 	for i := range tests {
 		tt := tests[i]
@@ -55,14 +55,14 @@ func TestAllPrivilegesOnType(t *testing.T) {
 			typ := new(mockType)
 			typ.kind = tt.typ.kind
 			typ.name = tt.typ.name
-			if gotPk := allPrivilegesOnType(typ); !reflect.DeepEqual(gotPk, tt.wantPk) {
+			if gotPk := allOperationsOnType(typ); !reflect.DeepEqual(gotPk, tt.wantPk) {
 				t.Errorf("AllPrivilegesOnType(%s) = %v, want %v", tt.typ.kind.TrimString(), gotPk, tt.wantPk)
 			}
 		})
 	}
 }
 
-func Test_validatePrivilegeOnNames(t *testing.T) {
+func Test_validateACLResourceNames(t *testing.T) {
 
 	cdoc := NewQName("test", "cdoc")
 	gdoc := NewQName("test", "gdoc")
@@ -119,7 +119,7 @@ func Test_validatePrivilegeOnNames(t *testing.T) {
 	require := require.New(t)
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := validatePrivilegeOnNames(app, tt.on...)
+			got, err := validateACLResourceNames(app, tt.on...)
 			if tt.wantErr == nil {
 				require.NoError(err, "unexpected error %v in validatePrivilegeOnNames(%v)", err, tt.on)
 				require.Equal(tt.want, got, "validatePrivilegeOnNames(%v): want %v, got %v", tt.on, tt.want, got)
@@ -130,19 +130,20 @@ func Test_validatePrivilegeOnNames(t *testing.T) {
 	}
 }
 
-func TestPrivilegeAccessControlString(t *testing.T) {
+func TestPolicyKindActionString(t *testing.T) {
 	tests := []struct {
-		name  string
-		grant bool
-		want  string
+		name   string
+		policy PolicyKind
+		want   string
 	}{
-		{"granted", true, "grant"},
-		{"revoked", false, "revoke"},
+		{"granted", PolicyKind_Allow, "grant"},
+		{"revoked", PolicyKind_Deny, "revoke"},
+		{"none", PolicyKind_null, "null"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := PrivilegeAccessControlString(tt.grant); got != tt.want {
-				t.Errorf("PrivilegeAccessControlString(%v) = %v, want %v", tt.grant, got, tt.want)
+			if got := tt.policy.ActionString(); got != tt.want {
+				t.Errorf("%v.ActionString() = %v, want %v", tt.policy, got, tt.want)
 			}
 		})
 	}
@@ -151,11 +152,11 @@ func TestPrivilegeAccessControlString(t *testing.T) {
 func TestPrivilegeKindTrimString(t *testing.T) {
 	tests := []struct {
 		name string
-		k    PrivilegeKind
+		k    OperationKind
 		want string
 	}{
-		{name: "basic", k: PrivilegeKind_Update, want: "Update"},
-		{name: "out of range", k: PrivilegeKind_count + 1, want: (PrivilegeKind_count + 1).String()},
+		{name: "basic", k: OperationKind_Update, want: "Update"},
+		{name: "out of range", k: OperationKind_count + 1, want: (OperationKind_count + 1).String()},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

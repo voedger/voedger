@@ -106,11 +106,11 @@ func Example() {
 		reader := adb.AddRole(appdef.NewQName("test", "reader"))
 		reader.SetComment("read-only role")
 		reader.Grant(
-			[]appdef.PrivilegeKind{appdef.PrivilegeKind_Select},
+			[]appdef.OperationKind{appdef.OperationKind_Select},
 			[]appdef.QName{docName, recName}, []appdef.FieldName{"f1", "f2"},
 			"allow reader to select some fields from test.doc and test.rec")
 		reader.Grant(
-			[]appdef.PrivilegeKind{appdef.PrivilegeKind_Select},
+			[]appdef.OperationKind{appdef.OperationKind_Select},
 			[]appdef.QName{viewName}, nil,
 			"allow reader to select all fields from test.view")
 		reader.GrantAll([]appdef.QName{queryName}, "allow reader to execute test.query")
@@ -119,7 +119,7 @@ func Example() {
 		writer.SetComment("read-write role")
 		writer.GrantAll([]appdef.QName{docName, recName, viewName}, "allow writer to do anything with test.doc, test.rec and test.view")
 		writer.Revoke(
-			[]appdef.PrivilegeKind{appdef.PrivilegeKind_Update},
+			[]appdef.OperationKind{appdef.OperationKind_Update},
 			[]appdef.QName{docName},
 			"disable writer to update test.doc")
 		writer.GrantAll([]appdef.QName{cmdName, queryName}, "allow writer to execute all test functions")
@@ -440,11 +440,11 @@ func Example() {
 	//       "Roles": {
 	//         "test.reader": {
 	//           "Comment": "read-only role",
-	//           "Privileges": [
+	//           "ACL": [
 	//             {
 	//               "Comment": "allow reader to select some fields from test.doc and test.rec",
-	//               "Access": "grant",
-	//               "Kinds": [
+	//               "Policy": "Allow",
+	//               "Ops": [
 	//                 "Select"
 	//               ],
 	//               "On": [
@@ -458,8 +458,8 @@ func Example() {
 	//             },
 	//             {
 	//               "Comment": "allow reader to select all fields from test.view",
-	//               "Access": "grant",
-	//               "Kinds": [
+	//               "Policy": "Allow",
+	//               "Ops": [
 	//                 "Select"
 	//               ],
 	//               "On": [
@@ -468,8 +468,8 @@ func Example() {
 	//             },
 	//             {
 	//               "Comment": "allow reader to execute test.query",
-	//               "Access": "grant",
-	//               "Kinds": [
+	//               "Policy": "Allow",
+	//               "Ops": [
 	//                 "Execute"
 	//               ],
 	//               "On": [
@@ -480,11 +480,11 @@ func Example() {
 	//         },
 	//         "test.writer": {
 	//           "Comment": "read-write role",
-	//           "Privileges": [
+	//           "ACL": [
 	//             {
 	//               "Comment": "allow writer to do anything with test.doc, test.rec and test.view",
-	//               "Access": "grant",
-	//               "Kinds": [
+	//               "Policy": "Allow",
+	//               "Ops": [
 	//                 "Insert",
 	//                 "Update",
 	//                 "Select"
@@ -497,8 +497,8 @@ func Example() {
 	//             },
 	//             {
 	//               "Comment": "disable writer to update test.doc",
-	//               "Access": "revoke",
-	//               "Kinds": [
+	//               "Policy": "Deny",
+	//               "Ops": [
 	//                 "Update"
 	//               ],
 	//               "On": [
@@ -507,8 +507,8 @@ func Example() {
 	//             },
 	//             {
 	//               "Comment": "allow writer to execute all test functions",
-	//               "Access": "grant",
-	//               "Kinds": [
+	//               "Policy": "Allow",
+	//               "Ops": [
 	//                 "Execute"
 	//               ],
 	//               "On": [

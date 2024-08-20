@@ -35,7 +35,7 @@ func ExampleIAppDefBuilder_AddRole() {
 		ws.AddType(docName)
 
 		reader := adb.AddRole(readerRoleName)
-		reader.Grant([]appdef.PrivilegeKind{appdef.PrivilegeKind_Select}, []appdef.QName{docName}, []appdef.FieldName{"field1"}, "grant select on doc.field1")
+		reader.Grant([]appdef.OperationKind{appdef.OperationKind_Select}, []appdef.QName{docName}, []appdef.FieldName{"field1"}, "grant select on doc.field1")
 
 		writer := adb.AddRole(writerRoleName)
 		writer.GrantAll([]appdef.QName{wsName}, "grant all on test.ws")
@@ -63,22 +63,22 @@ func ExampleIAppDefBuilder_AddRole() {
 	{
 		reader := app.Role(readerRoleName)
 		fmt.Println(reader, ":")
-		reader.Privileges(func(g appdef.IPrivilege) { fmt.Println("-", g) })
+		reader.Privileges(func(g appdef.IACLRule) { fmt.Println("-", g) })
 
 		writer := app.Role(writerRoleName)
 		fmt.Println(writer, ":")
-		writer.Privileges(func(g appdef.IPrivilege) { fmt.Println("-", g) })
+		writer.Privileges(func(g appdef.IACLRule) { fmt.Println("-", g) })
 
 		adm := app.Role(admRoleName)
 		fmt.Println(adm, ":")
-		adm.Privileges(func(g appdef.IPrivilege) { fmt.Println("-", g) })
+		adm.Privileges(func(g appdef.IACLRule) { fmt.Println("-", g) })
 
 		intruder := app.Role(intruderRoleName)
 		fmt.Println(intruder, ":")
-		intruder.Privileges(func(g appdef.IPrivilege) { fmt.Println("-", g) })
+		intruder.Privileges(func(g appdef.IACLRule) { fmt.Println("-", g) })
 
 		fmt.Println("Roles with select privilege on test.doc:")
-		for _, p := range app.PrivilegesOn([]appdef.QName{docName}, appdef.PrivilegeKind_Select) {
+		for _, p := range app.PrivilegesOn([]appdef.QName{docName}, appdef.OperationKind_Select) {
 			fmt.Println("-", p)
 		}
 	}

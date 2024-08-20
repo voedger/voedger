@@ -5,58 +5,70 @@
 
 package appdef
 
-// Enumeration of privileges.
-type PrivilegeKind uint8
+// Enumeration of ACL operation kinds.
+type OperationKind uint8
 
-//go:generate stringer -type=PrivilegeKind -output=stringer_privilegekind.go
+//go:generate stringer -type=OperationKind -output=stringer_operationkind.go
 
 const (
-	PrivilegeKind_null PrivilegeKind = iota
+	OperationKind_null OperationKind = iota
 
-	// # Privilege to insert records or view records.
-	// 	- Privilege applicable on records, view records or workspaces.
+	// # Insert records or view records.
+	// 	- Operation applicable on records, view records or workspaces.
 	// 	- Then applied to workspaces, it means insert on all tables and views of the workspace.
 	// 	- Fields are not applicable.
-	PrivilegeKind_Insert
+	OperationKind_Insert
 
-	// # Privilege to update records or view records.
-	// 	- Privilege applicable on records, view records or workspaces.
+	// # Update records or view records.
+	// 	- Operation applicable on records, view records or workspaces.
 	// 	- Then applied to workspaces, it means update on all tables and views of the workspace.
 	// 	- Fields are applicable and specify fields of records or view records that can be updated.
-	PrivilegeKind_Update
+	OperationKind_Update
 
-	// # Privilege to select records or view records.
-	// 	- Privilege applicable on records, view records or workspaces.
+	// # Select records or view records.
+	// 	- Operation applicable on records, view records or workspaces.
 	// 	- Then applied to workspaces, it means select on all tables and views of the workspace.
 	// 	- Fields are applicable and specify fields of records or view records that can be selected.
-	PrivilegeKind_Select
+	OperationKind_Select
 
-	// # Privilege to execute functions.
-	// 	- Privilege applicable on commands, queries or workspaces.
+	// # Execute functions.
+	// 	- Operation applicable on commands, queries or workspaces.
 	// 	- Then applied to workspaces, it means execute on all queries and commands of the workspace.
 	// 	- Fields are not applicable.
-	PrivilegeKind_Execute
+	OperationKind_Execute
 
-	// # Privilege to inherit privileges from other roles.
-	// 	- Privilege applicable on roles only.
+	// # Inherit ACL records from other roles.
+	// 	- Operation applicable on roles only.
 	// 	- Fields are not applicable.
-	PrivilegeKind_Inherits
+	OperationKind_Inherits
 
-	PrivilegeKind_count
+	OperationKind_count
 )
 
-// Represents a privilege (specific rights or permissions) to be granted to role or revoked from.
-type IPrivilege interface {
+// Enumeration of ACL operation policy.
+type PolicyKind uint8
+
+//go:generate stringer -type=PolicyKind -output=stringer_policykind.go
+
+const (
+	PolicyKind_null PolicyKind = iota
+
+	PolicyKind_Allow
+
+	PolicyKind_Deny
+
+	PolicyKind_Count
+)
+
+// Represents a ACL rule record (specific rights or permissions) to be granted to role or revoked from.
+type IACLRule interface {
 	IWithComments
 
-	// Returns privilege kinds
-	Kinds() []PrivilegeKind
+	// Returns operation kinds
+	Ops() []OperationKind
 
 	// Returns is privilege has been granted. The opposite of `IsRevoked()`
-	IsGranted() bool
-
-	// Returns is privilege has been revoked. The opposite of `IsGranted()`
-	IsRevoked() bool
+	Policy() PolicyKind
 
 	// Returns objects names on which privilege was applied.
 	//
@@ -81,19 +93,19 @@ type IPrivilege interface {
 	To() IRole
 }
 
-// IWithPrivileges is an interface for entities that have grants.
-type IWithPrivileges interface {
-	// Enumerates all privileges.
+// IWithACL is an interface for entities that have ACL.
+type IWithACL interface {
+	// Enumerates all ACL rules.
 	//
-	// Privileges are enumerated in the order they are added.
-	Privileges(func(IPrivilege))
+	// Rules are enumerated in the order they are added.
+	Privileges(func(IACLRule))
 
 	// Returns all privileges on specified entities, which contains at least one from specified kinds.
 	//
 	// If no kinds specified then all privileges on entities are returned.
 	//
 	// Privileges are returned in the order they are added.
-	PrivilegesOn(on []QName, kind ...PrivilegeKind) []IPrivilege
+	PrivilegesOn(on []QName, kind ...OperationKind) []IACLRule
 }
 
 type IPrivilegesBuilder interface {
@@ -108,7 +120,7 @@ type IPrivilegesBuilder interface {
 	//	 - if fields are not applicable for privilege,
 	//	 - if fields contains unknown names,
 	//   - if role is unknown.
-	Grant(kinds []PrivilegeKind, on []QName, fields []FieldName, toRole QName, comment ...string) IPrivilegesBuilder
+	Grant(kinds []OperationKind, on []QName, fields []FieldName, toRole QName, comment ...string) IPrivilegesBuilder
 
 	// Grants all available privileges on specified objects to specified role.
 	// Object names can include `QNameANY` or `QNameAny×××` names.
@@ -127,7 +139,7 @@ type IPrivilegesBuilder interface {
 	GrantAll(on []QName, toRole QName, comment ...string) IPrivilegesBuilder
 
 	// Revokes privilege with specified kind on specified objects from specified role.
-	Revoke(kinds []PrivilegeKind, on []QName, fromRole QName, comment ...string) IPrivilegesBuilder
+	Revoke(kinds []OperationKind, on []QName, fromRole QName, comment ...string) IPrivilegesBuilder
 
 	// Remove all available privileges on specified objects from specified role.
 	RevokeAll(on []QName, fromRole QName, comment ...string) IPrivilegesBuilder

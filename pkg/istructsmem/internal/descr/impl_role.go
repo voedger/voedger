@@ -9,29 +9,29 @@ import "github.com/voedger/voedger/pkg/appdef"
 
 func newRole() *Role {
 	return &Role{
-		Privileges: make([]*Privilege, 0),
+		ACL: make([]*ACLRule, 0),
 	}
 }
 
 func (r *Role) read(role appdef.IRole) {
 	r.Type.read(role)
-	role.Privileges(func(priv appdef.IPrivilege) {
-		p := newPrivilege()
-		p.read(priv)
-		r.Privileges = append(r.Privileges, p)
+	role.Privileges(func(acl appdef.IACLRule) {
+		ar := newACLRule()
+		ar.read(acl)
+		r.ACL = append(r.ACL, ar)
 	})
 }
 
-func newPrivilege() *Privilege {
-	return &Privilege{}
+func newACLRule() *ACLRule {
+	return &ACLRule{}
 }
 
-func (p *Privilege) read(priv appdef.IPrivilege) {
-	p.Comment = readComment(priv)
-	p.Access = appdef.PrivilegeAccessControlString(priv.IsGranted())
-	for _, k := range priv.Kinds() {
-		p.Kinds = append(p.Kinds, k.TrimString())
+func (ar *ACLRule) read(acl appdef.IACLRule) {
+	ar.Comment = readComment(acl)
+	ar.Policy = acl.Policy().TrimString()
+	for _, k := range acl.Ops() {
+		ar.Ops = append(ar.Ops, k.TrimString())
 	}
-	p.On = priv.On()
-	p.Fields = priv.Fields()
+	ar.On = acl.On()
+	ar.Fields = acl.Fields()
 }

@@ -8,7 +8,7 @@ package appdef
 type IRole interface {
 	IType
 
-	IWithPrivileges
+	IWithACL
 }
 
 type IRoleBuilder interface {
@@ -22,7 +22,7 @@ type IRoleBuilder interface {
 	//	 - if objects contains unknown names,
 	//	 - if kinds are not compatible with objects,
 	//	 - if fields contains unknown names.
-	Grant(kinds []PrivilegeKind, on []QName, fields []FieldName, comment ...string) IRoleBuilder
+	Grant(kinds []OperationKind, on []QName, fields []FieldName, comment ...string) IRoleBuilder
 
 	// Grants all available privileges on specified objects.
 	//
@@ -38,7 +38,7 @@ type IRoleBuilder interface {
 	GrantAll(on []QName, comment ...string) IRoleBuilder
 
 	// Revokes privilege with specified kinds on specified objects.
-	Revoke(kinds []PrivilegeKind, on []QName, comment ...string) IRoleBuilder
+	Revoke(kinds []OperationKind, on []QName, comment ...string) IRoleBuilder
 
 	// Remove all available privileges on specified objects.
 	RevokeAll(on []QName, comment ...string) IRoleBuilder

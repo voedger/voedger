@@ -34,7 +34,7 @@ type IAppDef interface {
 	IWithJobs
 
 	IWithRoles
-	IWithPrivileges
+	IWithACL
 
 	IWithRates
 	IWithLimits

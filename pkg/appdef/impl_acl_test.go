@@ -30,7 +30,7 @@ func Test_AppDef_GrantAndRevoke(t *testing.T) {
 
 	intruderRoleName := NewQName("test", "intruderRole")
 
-	t.Run("should be ok to build application with roles and privileges", func(t *testing.T) {
+	t.Run("should be ok to build application with ACL", func(t *testing.T) {
 		adb := New()
 		adb.AddPackage("test", "test.com/test")
 
@@ -53,8 +53,8 @@ func Test_AppDef_GrantAndRevoke(t *testing.T) {
 		ws.AddType(queryName)
 
 		_ = adb.AddRole(readerRoleName)
-		adb.Grant([]PrivilegeKind{PrivilegeKind_Select}, []QName{docName, viewName}, []FieldName{"field1"}, readerRoleName, "grant select from doc & view to reader")
-		adb.Grant([]PrivilegeKind{PrivilegeKind_Execute}, []QName{queryName}, nil, readerRoleName, "grant execute query to reader")
+		adb.Grant([]OperationKind{OperationKind_Select}, []QName{docName, viewName}, []FieldName{"field1"}, readerRoleName, "grant select from doc & view to reader")
+		adb.Grant([]OperationKind{OperationKind_Execute}, []QName{queryName}, nil, readerRoleName, "grant execute query to reader")
 
 		_ = adb.AddRole(writerRoleName)
 		adb.GrantAll([]QName{docName, viewName}, writerRoleName, "grant all on doc & view to writer")
@@ -68,7 +68,7 @@ func Test_AppDef_GrantAndRevoke(t *testing.T) {
 
 		_ = adb.AddRole(admRoleName)
 		adb.GrantAll([]QName{wsName}, admRoleName, "grant all workspace privileges to admin")
-		adb.Revoke([]PrivilegeKind{PrivilegeKind_Execute}, []QName{wsName}, admRoleName, "revoke execute on workspace from admin")
+		adb.Revoke([]OperationKind{OperationKind_Execute}, []QName{wsName}, admRoleName, "revoke execute on workspace from admin")
 
 		_ = adb.AddRole(intruderRoleName)
 		adb.RevokeAll([]QName{wsName}, intruderRoleName, "revoke all workspace privileges from intruder")
@@ -79,127 +79,126 @@ func Test_AppDef_GrantAndRevoke(t *testing.T) {
 		require.NotNil(app)
 	})
 
-	t.Run("should be ok to check roles and privileges", func(t *testing.T) {
+	t.Run("should be ok to check ACL", func(t *testing.T) {
 
-		checkPrivilege := func(p IPrivilege, granted bool, kinds []PrivilegeKind, on []QName, fields []FieldName, to QName) {
-			require.NotNil(p)
-			require.Equal(granted, p.IsGranted())
-			require.Equal(!granted, p.IsRevoked())
-			require.Equal(kinds, p.Kinds())
-			require.EqualValues(on, p.On())
-			require.Equal(fields, p.Fields())
-			require.Equal(to, p.To().QName())
+		checkACLRule := func(acl IACLRule, policy PolicyKind, kinds []OperationKind, on []QName, fields []FieldName, to QName) {
+			require.NotNil(acl)
+			require.Equal(policy, acl.Policy())
+			require.Equal(kinds, acl.Ops())
+			require.EqualValues(on, acl.On())
+			require.Equal(fields, acl.Fields())
+			require.Equal(to, acl.To().QName())
 		}
 
-		t.Run("should be ok to enum all app privileges", func(t *testing.T) {
+		t.Run("should be ok to enum all ACL rules", func(t *testing.T) {
 			cnt := 0
-			app.Privileges(func(p IPrivilege) {
+			app.Privileges(func(p IACLRule) {
 				cnt++
 				switch cnt {
 				case 1:
-					checkPrivilege(p, true,
-						[]PrivilegeKind{PrivilegeKind_Select},
+					checkACLRule(p, PolicyKind_Allow,
+						[]OperationKind{OperationKind_Select},
 						[]QName{docName, viewName}, []FieldName{"field1"},
 						readerRoleName)
 				case 2:
-					checkPrivilege(p, true,
-						[]PrivilegeKind{PrivilegeKind_Execute},
+					checkACLRule(p, PolicyKind_Allow,
+						[]OperationKind{OperationKind_Execute},
 						[]QName{queryName}, nil,
 						readerRoleName)
 				case 3:
-					checkPrivilege(p, true,
-						[]PrivilegeKind{PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select},
+					checkACLRule(p, PolicyKind_Allow,
+						[]OperationKind{OperationKind_Insert, OperationKind_Update, OperationKind_Select},
 						[]QName{docName, viewName}, nil,
 						writerRoleName)
 				case 4:
-					checkPrivilege(p, true,
-						[]PrivilegeKind{PrivilegeKind_Execute},
+					checkACLRule(p, PolicyKind_Allow,
+						[]OperationKind{OperationKind_Execute},
 						[]QName{cmdName, queryName}, nil,
 						writerRoleName)
 				case 5:
-					checkPrivilege(p, true,
-						[]PrivilegeKind{PrivilegeKind_Inherits},
+					checkACLRule(p, PolicyKind_Allow,
+						[]OperationKind{OperationKind_Inherits},
 						[]QName{readerRoleName, writerRoleName}, nil,
 						workerRoleName)
 				case 6:
-					checkPrivilege(p, true,
-						[]PrivilegeKind{PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select, PrivilegeKind_Execute},
+					checkACLRule(p, PolicyKind_Allow,
+						[]OperationKind{OperationKind_Insert, OperationKind_Update, OperationKind_Select, OperationKind_Execute},
 						[]QName{wsName}, nil,
 						ownerRoleName)
 				case 7:
-					checkPrivilege(p, true,
-						[]PrivilegeKind{PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select, PrivilegeKind_Execute},
+					checkACLRule(p, PolicyKind_Allow,
+						[]OperationKind{OperationKind_Insert, OperationKind_Update, OperationKind_Select, OperationKind_Execute},
 						[]QName{wsName}, nil,
 						admRoleName)
 				case 8:
-					checkPrivilege(p, false,
-						[]PrivilegeKind{PrivilegeKind_Execute},
+					checkACLRule(p, PolicyKind_Deny,
+						[]OperationKind{OperationKind_Execute},
 						[]QName{wsName}, nil,
 						admRoleName)
 				case 9:
-					checkPrivilege(p, false,
-						[]PrivilegeKind{PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select, PrivilegeKind_Execute},
+					checkACLRule(p, PolicyKind_Deny,
+						[]OperationKind{OperationKind_Insert, OperationKind_Update, OperationKind_Select, OperationKind_Execute},
 						[]QName{wsName}, nil,
 						intruderRoleName)
 				default:
-					require.Fail("unexpected privilege", "privilege: %v", p)
+					require.Fail("unexpected ACL Rule", "ACL rule: %v", p)
 				}
 			})
 			require.Equal(9, cnt)
 		})
 
-		t.Run("should be ok to enum privileges on objects", func(t *testing.T) {
+		t.Run("should be ok to enum ACL for objects", func(t *testing.T) {
 
-			t.Run("should be ok to enum privileges on ws", func(t *testing.T) {
+			t.Run("should be ok to enum ACL for ws", func(t *testing.T) {
 				pp := app.PrivilegesOn([]QName{wsName})
 				require.Len(pp, 4)
 
-				checkPrivilege(pp[0], true,
-					[]PrivilegeKind{PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select, PrivilegeKind_Execute},
+				checkACLRule(pp[0], PolicyKind_Allow,
+					[]OperationKind{OperationKind_Insert, OperationKind_Update, OperationKind_Select, OperationKind_Execute},
 					[]QName{wsName}, nil,
 					ownerRoleName)
 
-				checkPrivilege(pp[1], true,
-					[]PrivilegeKind{PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select, PrivilegeKind_Execute},
+				checkACLRule(pp[1], PolicyKind_Allow,
+					[]OperationKind{OperationKind_Insert, OperationKind_Update, OperationKind_Select, OperationKind_Execute},
 					[]QName{wsName}, nil,
 					admRoleName)
-				checkPrivilege(pp[2], false,
-					[]PrivilegeKind{PrivilegeKind_Execute},
+				checkACLRule(pp[2], PolicyKind_Deny,
+					[]OperationKind{OperationKind_Execute},
 					[]QName{wsName}, nil,
 					admRoleName)
 
-				checkPrivilege(pp[3], false,
-					[]PrivilegeKind{PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select, PrivilegeKind_Execute},
+				checkACLRule(pp[3], PolicyKind_Deny,
+					[]OperationKind{OperationKind_Insert, OperationKind_Update, OperationKind_Select, OperationKind_Execute},
 					[]QName{wsName}, nil,
 					intruderRoleName)
 			})
 
-			t.Run("should be ok to enum all select privileges", func(t *testing.T) {
-				pp := app.PrivilegesOn([]QName{}, PrivilegeKind_Select)
+			t.Run("should be ok to enum all ACL with select", func(t *testing.T) {
+				pp := app.PrivilegesOn([]QName{}, OperationKind_Select)
 				require.Len(pp, 5)
 
-				checkPrivilege(pp[0], true,
-					[]PrivilegeKind{PrivilegeKind_Select},
+				checkACLRule(pp[0], PolicyKind_Allow,
+					[]OperationKind{OperationKind_Select},
 					[]QName{docName, viewName}, []FieldName{"field1"},
 					readerRoleName)
 
-				checkPrivilege(pp[1], true,
-					[]PrivilegeKind{PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select},
+				checkACLRule(pp[1], PolicyKind_Allow,
+					[]OperationKind{OperationKind_Insert, OperationKind_Update, OperationKind_Select},
 					[]QName{docName, viewName}, nil,
 					writerRoleName)
 
-				checkPrivilege(pp[2], true,
-					[]PrivilegeKind{PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select, PrivilegeKind_Execute},
+				checkACLRule(pp[2], PolicyKind_Allow,
+					[]OperationKind{OperationKind_Insert, OperationKind_Update, OperationKind_Select, OperationKind_Execute},
 					[]QName{wsName}, nil,
 					ownerRoleName)
 
-				checkPrivilege(pp[3], true,
-					[]PrivilegeKind{PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select, PrivilegeKind_Execute},
+				checkACLRule(pp[3], PolicyKind_Allow,
+					[]OperationKind{OperationKind_Insert, OperationKind_Update, OperationKind_Select, OperationKind_Execute},
 					[]QName{wsName}, nil,
 					admRoleName)
 
-				checkPrivilege(pp[4], false,
-					[]PrivilegeKind{PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select, PrivilegeKind_Execute},
+				checkACLRule(pp[4], PolicyKind_Deny,
+					[]OperationKind{OperationKind_Insert, OperationKind_Update, OperationKind_Select, OperationKind_Execute},
 					[]QName{wsName}, nil,
 					intruderRoleName)
 			})
@@ -209,7 +208,7 @@ func Test_AppDef_GrantAndRevoke(t *testing.T) {
 
 func Test_AppDef_GrantAndRevokeErrors(t *testing.T) {
 	require := require.New(t)
-	t.Run("panics while to build application with roles and privileges", func(t *testing.T) {
+	t.Run("panics while to build application with ACL", func(t *testing.T) {
 		adb := New()
 		adb.AddPackage("test", "test.com/test")
 
@@ -229,13 +228,13 @@ func Test_AppDef_GrantAndRevokeErrors(t *testing.T) {
 		t.Run("should be panic if unknown role", func(t *testing.T) {
 			unknownRole := NewQName("test", "unknownRole")
 			require.Panics(func() {
-				adb.Grant([]PrivilegeKind{PrivilegeKind_Select}, []QName{docName}, nil, unknownRole)
+				adb.Grant([]OperationKind{OperationKind_Select}, []QName{docName}, nil, unknownRole)
 			}, require.Is(ErrNotFoundError), require.Has(unknownRole))
 			require.Panics(func() {
 				adb.GrantAll([]QName{docName}, unknownRole)
 			}, require.Is(ErrNotFoundError), require.Has(unknownRole))
 			require.Panics(func() {
-				adb.Revoke([]PrivilegeKind{PrivilegeKind_Select}, []QName{docName}, unknownRole)
+				adb.Revoke([]OperationKind{OperationKind_Select}, []QName{docName}, unknownRole)
 			}, require.Is(ErrNotFoundError), require.Has(unknownRole))
 			require.Panics(func() {
 				adb.RevokeAll([]QName{docName}, unknownRole)
@@ -244,32 +243,32 @@ func Test_AppDef_GrantAndRevokeErrors(t *testing.T) {
 
 		_ = adb.AddRole(readerRoleName)
 
-		t.Run("should be panic if invalid privileges kinds", func(t *testing.T) {
+		t.Run("should be panic if invalid operations", func(t *testing.T) {
 			require.Panics(func() {
-				adb.Grant([]PrivilegeKind{}, []QName{docName}, nil, readerRoleName)
+				adb.Grant([]OperationKind{}, []QName{docName}, nil, readerRoleName)
 			}, require.Is(ErrMissedError))
 			require.Panics(func() {
-				adb.Grant([]PrivilegeKind{PrivilegeKind_null}, []QName{docName}, nil, readerRoleName)
+				adb.Grant([]OperationKind{OperationKind_null}, []QName{docName}, nil, readerRoleName)
 			}, require.Is(ErrIncompatibleError), require.Has("[null]"))
 			require.Panics(func() {
-				adb.Grant([]PrivilegeKind{PrivilegeKind_count}, []QName{docName}, nil, readerRoleName)
+				adb.Grant([]OperationKind{OperationKind_count}, []QName{docName}, nil, readerRoleName)
 			}, require.Is(ErrIncompatibleError), require.Has("[count]"))
 		})
 
-		t.Run("should be panic if privileges on invalid objects", func(t *testing.T) {
+		t.Run("should be panic if operations on invalid objects", func(t *testing.T) {
 			require.Panics(func() {
-				adb.Grant([]PrivilegeKind{PrivilegeKind_Select}, []QName{}, nil, readerRoleName)
+				adb.Grant([]OperationKind{OperationKind_Select}, []QName{}, nil, readerRoleName)
 			}, require.Is(ErrMissedError))
 			require.Panics(func() {
 				adb.GrantAll(nil, readerRoleName)
 			}, require.Is(ErrMissedError))
 
 			require.Panics(func() {
-				adb.Grant([]PrivilegeKind{PrivilegeKind_Select}, []QName{NewQName("test", "unknown")}, nil, readerRoleName)
+				adb.Grant([]OperationKind{OperationKind_Select}, []QName{NewQName("test", "unknown")}, nil, readerRoleName)
 			}, require.Is(ErrNotFoundError), require.Has("test.unknown"))
 
 			require.Panics(func() {
-				adb.Grant([]PrivilegeKind{PrivilegeKind_Select}, []QName{SysData_String}, nil, readerRoleName)
+				adb.Grant([]OperationKind{OperationKind_Select}, []QName{SysData_String}, nil, readerRoleName)
 			}, require.Is(ErrIncompatibleError), require.Has(SysData_String))
 
 			require.Panics(func() {
@@ -277,16 +276,16 @@ func Test_AppDef_GrantAndRevokeErrors(t *testing.T) {
 			}, require.Is(ErrIncompatibleError))
 
 			require.Panics(func() {
-				adb.Grant([]PrivilegeKind{PrivilegeKind_Execute}, []QName{docName}, nil, readerRoleName)
+				adb.Grant([]OperationKind{OperationKind_Execute}, []QName{docName}, nil, readerRoleName)
 			}, require.Is(ErrIncompatibleError), require.Has("Execute"), require.Has(docName))
 		})
 
-		t.Run("should be panic if privileges on invalid fields", func(t *testing.T) {
+		t.Run("should be panic if operations on invalid fields", func(t *testing.T) {
 			require.Panics(func() {
-				adb.Grant([]PrivilegeKind{PrivilegeKind_Execute}, []QName{cmdName}, []FieldName{"field1"}, readerRoleName)
+				adb.Grant([]OperationKind{OperationKind_Execute}, []QName{cmdName}, []FieldName{"field1"}, readerRoleName)
 			}, require.Is(ErrIncompatibleError), require.Has("Execute"))
 			require.Panics(func() {
-				adb.Grant([]PrivilegeKind{PrivilegeKind_Select}, []QName{docName}, []FieldName{"unknown"}, readerRoleName)
+				adb.Grant([]OperationKind{OperationKind_Select}, []QName{docName}, []FieldName{"unknown"}, readerRoleName)
 			}, require.Is(ErrNotFoundError), require.Has("unknown"))
 		})
 	})
@@ -301,7 +300,7 @@ func Test_AppDef_GrantWithFields(t *testing.T) {
 
 	readerRoleName := NewQName("test", "readerRole")
 
-	t.Run("should be ok to build application with roles and privileges", func(t *testing.T) {
+	t.Run("should be ok to build application with ACL with fields", func(t *testing.T) {
 		adb := New()
 		adb.AddPackage("test", "test.com/test")
 
@@ -309,8 +308,8 @@ func Test_AppDef_GrantWithFields(t *testing.T) {
 		doc.AddField("field1", DataKind_int32, true)
 
 		_ = adb.AddRole(readerRoleName)
-		adb.Grant([]PrivilegeKind{PrivilegeKind_Select}, []QName{docName}, nil, readerRoleName, "grant select any field from doc to reader")
-		adb.Grant([]PrivilegeKind{PrivilegeKind_Select}, []QName{QNameAnyStructure}, []FieldName{"field1"}, readerRoleName, "grant select field1 from any to reader")
+		adb.Grant([]OperationKind{OperationKind_Select}, []QName{docName}, nil, readerRoleName, "grant select any field from doc to reader")
+		adb.Grant([]OperationKind{OperationKind_Select}, []QName{QNameAnyStructure}, []FieldName{"field1"}, readerRoleName, "grant select field1 from any to reader")
 
 		var err error
 		app, err = adb.Build()
@@ -318,34 +317,33 @@ func Test_AppDef_GrantWithFields(t *testing.T) {
 		require.NotNil(app)
 	})
 
-	t.Run("should be ok to check roles and privileges", func(t *testing.T) {
+	t.Run("should be ok to check ACL", func(t *testing.T) {
 
-		checkPrivilege := func(p IPrivilege, granted bool, kinds []PrivilegeKind, on []QName, fields []FieldName, to QName) {
+		checkPrivilege := func(p IACLRule, policy PolicyKind, kinds []OperationKind, on []QName, fields []FieldName, to QName) {
 			require.NotNil(p)
-			require.Equal(granted, p.IsGranted())
-			require.Equal(!granted, p.IsRevoked())
-			require.Equal(kinds, p.Kinds())
+			require.Equal(policy, p.Policy())
+			require.Equal(kinds, p.Ops())
 			require.EqualValues(on, p.On())
 			require.Equal(fields, p.Fields())
 			require.Equal(to, p.To().QName())
 		}
 
 		cnt := 0
-		app.Privileges(func(p IPrivilege) {
+		app.Privileges(func(p IACLRule) {
 			cnt++
 			switch cnt {
 			case 1:
-				checkPrivilege(p, true,
-					[]PrivilegeKind{PrivilegeKind_Select},
+				checkPrivilege(p, PolicyKind_Allow,
+					[]OperationKind{OperationKind_Select},
 					[]QName{docName}, nil,
 					readerRoleName)
 			case 2:
-				checkPrivilege(p, true,
-					[]PrivilegeKind{PrivilegeKind_Select},
+				checkPrivilege(p, PolicyKind_Allow,
+					[]OperationKind{OperationKind_Select},
 					[]QName{QNameAnyStructure}, []FieldName{"field1"},
 					readerRoleName)
 			default:
-				require.Fail("unexpected privilege", "privilege: %v", p)
+				require.Fail("unexpected ACL rule", "ACL rule: %v", p)
 			}
 		})
 
