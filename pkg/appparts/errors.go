@@ -41,6 +41,10 @@ func errUndefinedExtension(n appdef.QName) error {
 	return fmt.Errorf("undefined extension %v: %w", n, ErrNotFound)
 }
 
+func errExtensionIncompatibleWithProcessor(ext appdef.IExtension, proc ProcessorKind) error {
+	return fmt.Errorf("extension %v is not compatible with processor %v", ext, proc.TrimString())
+}
+
 func errCantObtainFullQName(n appdef.QName) error {
 	return fmt.Errorf("can't obtain full qualified name for «%v»: %w", n, ErrNotFound)
 }
