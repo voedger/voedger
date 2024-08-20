@@ -17,7 +17,7 @@ ALTERABLE WORKSPACE test_wsWS (
 
 	DESCRIPTOR test_ws (
 		IntFld int32 NOT NULL,
-		StrFld varchar
+		StrFld varchar(1024)
 	);
 
 	TABLE articles INHERITS CDoc (
