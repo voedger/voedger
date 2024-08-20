@@ -75,5 +75,6 @@ func TestResultStorage_QueryProcessor(t *testing.T) {
 
 	err = storage.ApplyBatch([]state.ApplyBatchItem{{Key: kb, Value: intent}})
 	require.Len(t, sentObjects, 2)
+	require.NoError(t, err)
 
 }

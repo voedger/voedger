@@ -37,11 +37,6 @@ func createAppDef() appdef.IAppDef {
 }
 
 func TestRecordsStorage_GetBatch(t *testing.T) {
-	type result struct {
-		key    istructs.IKeyBuilder
-		value  istructs.IStateValue
-		exists bool
-	}
 	t.Run("Should handle general records", func(t *testing.T) {
 		require := require.New(t)
 		records := &mockRecords{}
@@ -101,7 +96,6 @@ func TestRecordsStorage_GetBatch(t *testing.T) {
 		k3.PutRecordID(sys.Storage_Record_Field_ID, 3)
 		k3.PutInt64(sys.Storage_Record_Field_WSID, 2)
 
-		rr := make([]result, 0)
 		batchItems := []state.GetBatchItem{
 			{Key: k1},
 			{Key: k2},
@@ -109,9 +103,9 @@ func TestRecordsStorage_GetBatch(t *testing.T) {
 		}
 		err = storage.(state.IWithGetBatch).GetBatch(batchItems)
 		require.NoError(err)
-		require.Equal(int64(10), rr[0].value.AsInt64("number"))
-		require.Equal(int64(20), rr[1].value.AsInt64("age"))
-		require.Equal(int64(21), rr[2].value.AsInt64("age"))
+		require.Equal(int64(10), batchItems[0].Value.AsInt64("number"))
+		require.Equal(int64(20), batchItems[1].Value.AsInt64("age"))
+		require.Equal(int64(21), batchItems[2].Value.AsInt64("age"))
 	})
 	t.Run("Should handle singleton records", func(t *testing.T) {
 		require := require.New(t)
@@ -169,7 +163,6 @@ func TestRecordsStorage_GetBatch(t *testing.T) {
 		k3.PutInt64(sys.Storage_Record_Field_WSID, 3)
 		k4 := storage.NewKeyBuilder(appdef.NullQName, nil)
 		k4.PutBool(sys.Storage_Record_Field_IsSingleton, true)
-		rr := make([]result, 0)
 		batchItems := []state.GetBatchItem{
 			{Key: k1},
 			{Key: k2},
@@ -178,8 +171,8 @@ func TestRecordsStorage_GetBatch(t *testing.T) {
 		}
 		err := storage.(state.IWithGetBatch).GetBatch(batchItems)
 		require.NoError(err)
-		require.Equal(int64(10), rr[0].value.AsInt64("number"))
-		require.Equal(int64(18), rr[2].value.AsInt64("age"))
+		require.Equal(int64(10), batchItems[0].Value.AsInt64("number"))
+		require.Equal(int64(18), batchItems[2].Value.AsInt64("age"))
 	})
 	t.Run("Should return error when 'id' not found", func(t *testing.T) {
 		require := require.New(t)

@@ -123,6 +123,8 @@ func TestViewRecordsStorage_ApplyBatch_NullWSIDGoesLast(t *testing.T) {
 	mockedStructs, mockedViews := mockedStructs(t)
 
 	appliedWSIDs := make([]istructs.WSID, 0)
+	batch := make([]state.ApplyBatchItem, 0)
+
 	mockedViews.
 		On("KeyBuilder", testViewRecordQName1).Return(&nilKeyBuilder{}).
 		On("NewValueBuilder", testViewRecordQName1).Return(&nilValueBuilder{}).
@@ -133,23 +135,23 @@ func TestViewRecordsStorage_ApplyBatch_NullWSIDGoesLast(t *testing.T) {
 
 	putViewRec := func(s state.IStateStorage) {
 		kb := s.NewKeyBuilder(testViewRecordQName1, nil)
-		_, err := s.(state.IWithInsert).ProvideValueBuilder(kb, nil)
+		vb, err := s.(state.IWithInsert).ProvideValueBuilder(kb, nil)
 		require.NoError(err)
+		batch = append(batch, state.ApplyBatchItem{Key: kb, Value: vb})
 	}
 
 	putOffset := func(s state.IStateStorage) {
 		kb := s.NewKeyBuilder(testViewRecordQName1, nil)
 		kb.PutInt64(sys.Storage_View_Field_WSID, int64(istructs.NullWSID))
-		_, err := s.(state.IWithInsert).ProvideValueBuilder(kb, nil)
+		vb, err := s.(state.IWithInsert).ProvideValueBuilder(kb, nil)
 		require.NoError(err)
+		batch = append(batch, state.ApplyBatchItem{Key: kb, Value: vb})
 	}
 
 	applyAndFlush := func(s state.IStateStorage) {
-		readyToFlush, err := s.ApplyIntents()
-		require.False(readyToFlush)
+		err := s.(state.IWithApplyBatch).ApplyBatch(batch)
 		require.NoError(err)
-		err = s.FlushBundles()
-		require.NoError(err)
+		batch = batch[:0]
 	}
 
 	appStructsFunc := func() istructs.IAppStructs {
