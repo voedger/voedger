@@ -3,7 +3,7 @@
 package main
 
 import (
-	_ "github.com/untillpro/airs-scheme/bp3"
+	_ "github.com/voedger/voedger/pkg/sys"
 )
 
 func main() {

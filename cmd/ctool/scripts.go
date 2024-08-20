@@ -215,10 +215,17 @@ func prepareScriptFromTemplate(scriptFileName string, data interface{}) error {
 
 	destFilename := filepath.Join(scriptsTempDir, scriptFileName)
 
-	if _, err := os.Stat(destFilename); err == nil {
-		if err := os.Remove(destFilename); err != nil {
-			return err
-		}
+	exists, err := coreutils.Exists(destFilename)
+	if err != nil {
+		return err
+	}
+
+	if !exists {
+		return fmt.Errorf("%s: not found", destFilename)
+	}
+
+	if err := os.Remove(destFilename); err != nil {
+		return err
 	}
 
 	destFile, err := os.Create(destFilename)

@@ -71,7 +71,15 @@ func provideEexecQrySqlQuery(federation federation.IFederation, itokens itokens.
 			if err != nil {
 				return err
 			}
-			return callback(&result{value: resp.SectionRow()[0].(string)})
+			resp.Println()
+			logger.Info("numrows", resp.NumRows())
+			for i := 0; i < resp.NumRows(); i++ {
+				if err := callback(&result{value: resp.SectionRow(i)[0].(string)}); err != nil {
+					// notest
+					return err
+				}
+			}
+			return nil
 		}
 
 		stmt, err := sqlparser.Parse(op.CleanSQL)
