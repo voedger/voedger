@@ -5,7 +5,6 @@
 package storages
 
 import (
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/mock"
@@ -293,44 +292,25 @@ func TestRecordsStorage_ValidateInWorkspaces_Reads(t *testing.T) {
 		On("Get", istructs.WSID(1), mock.Anything).Return(&nilValue{}, nil).
 		On("PutBatch", mock.Anything, mock.Anything).Return(nil)
 
-	s := ProvideAsyncActualizerStateFactory()(context.Background(), appStructsFunc(mockedStructs), nil, SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil, nil, nil, 10, 10)
+	appStructsFunc := func() istructs.IAppStructs {
+		return mockedStructs
+	}
+	storage := NewRecordsStorage(appStructsFunc, state.SimpleWSIDFunc(istructs.WSID(1)), nil)
 
 	wrongSingleton := appdef.NewQName("test", "RecordX")
-	wrongKb, err := s.KeyBuilder(sys.Storage_Record, appdef.NullQName)
+	wrongKb := storage.NewKeyBuilder(appdef.NullQName, nil)
 	wrongKb.PutQName(sys.Storage_Record_Field_Singleton, wrongSingleton)
-	require.NoError(err)
 	expectedError := typeIsNotDefinedInWorkspaceWithDescriptor(wrongSingleton, testWSDescriptorQName)
+	var err error
 
-	t.Run("CanExist should validate for unavailable records", func(t *testing.T) {
-		value, ok, err := s.CanExist(wrongKb)
+	t.Run("Get should validate for unavailable records", func(t *testing.T) {
+		value, err := storage.(state.IWithGet).Get(wrongKb)
 		require.EqualError(err, expectedError.Error())
 		require.Nil(value)
-		require.False(ok)
 	})
 
 	t.Run("CanExistAll should validate for unavailable records", func(t *testing.T) {
-		err = s.CanExistAll([]istructs.IStateKeyBuilder{wrongKb}, nil)
-		require.EqualError(err, expectedError.Error())
-	})
-
-	t.Run("MustExist should validate for unavailable records", func(t *testing.T) {
-		value, err := s.MustExist(wrongKb)
-		require.EqualError(err, expectedError.Error())
-		require.Nil(value)
-	})
-
-	t.Run("MustNotExist should validate for unavailable records", func(t *testing.T) {
-		err := s.MustNotExist(wrongKb)
-		require.EqualError(err, expectedError.Error())
-	})
-
-	t.Run("MustExistAll should validate for unavailable records", func(t *testing.T) {
-		err = s.MustExistAll([]istructs.IStateKeyBuilder{wrongKb}, nil)
-		require.EqualError(err, expectedError.Error())
-	})
-
-	t.Run("MustNotExistAll should validate for unavailable records", func(t *testing.T) {
-		err = s.MustNotExistAll([]istructs.IStateKeyBuilder{wrongKb})
+		err = storage.(state.IWithGetBatch).GetBatch([]state.GetBatchItem{{Key: wrongKb}})
 		require.EqualError(err, expectedError.Error())
 	})
 }
@@ -345,16 +325,17 @@ func TestRecordsStorage_ValidateInWorkspaces_Writes(t *testing.T) {
 		On("Get", istructs.WSID(1), mock.Anything).Return(&nilValue{}, nil).
 		On("PutBatch", mock.Anything, mock.Anything).Return(nil)
 
-	s := ProvideCommandProcessorStateFactory()(context.Background(), appStructsFunc(mockedStructs), nil,
-		SimpleWSIDFunc(istructs.WSID(1)), nil, nil, nil, nil, 10, nil, nil, nil, nil, nil)
+	appStructsFunc := func() istructs.IAppStructs {
+		return mockedStructs
+	}
+	storage := NewRecordsStorage(appStructsFunc, state.SimpleWSIDFunc(istructs.WSID(1)), nil)
 
 	wrongSingleton := appdef.NewQName("test", "RecordX")
-	wrongKb, err := s.KeyBuilder(sys.Storage_Record, wrongSingleton)
-	require.NoError(err)
+	wrongKb := storage.NewKeyBuilder(appdef.NullQName, nil)
 	expectedError := typeIsNotDefinedInWorkspaceWithDescriptor(wrongSingleton, testWSDescriptorQName)
 
 	t.Run("NewValue should validate for unavailable records", func(t *testing.T) {
-		builder, err := s.NewValue(wrongKb)
+		builder, err := storage.(state.IWithInsert).ProvideValueBuilder(wrongKb, nil)
 		require.EqualError(err, expectedError.Error())
 		require.Nil(builder)
 	})

@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
+	"github.com/voedger/voedger/pkg/sys"
 )
 
 var (
@@ -232,3 +233,99 @@ func (w *mockRowWriter) PutString(name, value string)                     { w.Ca
 func (w *mockRowWriter) PutQName(name string, value appdef.QName)         { w.Called(name, value) }
 func (w *mockRowWriter) PutBool(name string, value bool)                  { w.Called(name, value) }
 func (w *mockRowWriter) PutRecordID(name string, value istructs.RecordID) { w.Called(name, value) }
+
+func mockedStructs2(t *testing.T, addWsDescriptor bool) (*mockAppStructs, *mockViewRecords) {
+	appDef := appdef.New()
+
+	appDef.AddPackage("test", "test.com/test")
+
+	view := appDef.AddView(testViewRecordQName1)
+	view.Key().PartKey().AddField("pkk", appdef.DataKind_int64)
+	view.Key().ClustCols().AddField("cck", appdef.DataKind_string)
+	view.Value().AddField("vk", appdef.DataKind_string, false)
+
+	view = appDef.AddView(testViewRecordQName2)
+	view.Key().PartKey().AddField("pkk", appdef.DataKind_int64)
+	view.Key().ClustCols().AddField("cck", appdef.DataKind_string)
+	view.Value().AddField("vk", appdef.DataKind_string, false)
+
+	mockWorkspaceRecord := &mockRecord{}
+	mockWorkspaceRecord.On("AsQName", "WSKind").Return(testWSDescriptorQName)
+	mockWorkspaceRecord.On("QName").Return(qNameCDocWorkspaceDescriptor)
+	mockedRecords := &mockRecords{}
+	mockedRecords.On("GetSingleton", istructs.WSID(1), mock.Anything).Return(mockWorkspaceRecord, nil)
+
+	mockedViews := &mockViewRecords{}
+	mockedViews.On("KeyBuilder", testViewRecordQName1).Return(&viewKeyBuilder{IKeyBuilder: newUniqKeyBuilder(sys.Storage_View, appdef.NullQName), view: testViewRecordQName1})
+
+	if addWsDescriptor {
+		wsDesc := appDef.AddCDoc(testWSDescriptorQName)
+		wsDesc.AddField(field_WSKind, appdef.DataKind_bytes, false)
+	}
+
+	ws := appDef.AddWorkspace(testWSQName)
+	ws.AddType(testViewRecordQName1)
+	ws.AddType(testViewRecordQName2)
+	ws.SetDescriptor(testWSDescriptorQName)
+
+	app, err := appDef.Build()
+	require.NoError(t, err)
+
+	appStructs := &mockAppStructs{}
+	appStructs.
+		On("AppDef").Return(app).
+		On("AppQName").Return(testAppQName).
+		On("Records").Return(mockedRecords).
+		On("Events").Return(&nilEvents{}).
+		On("ViewRecords").Return(mockedViews)
+
+	return appStructs, mockedViews
+}
+
+// TODO: copy-pasted from pkg/state/stateprovide. Can this be moved to a common package?
+func mockedStructs(t *testing.T) (*mockAppStructs, *mockViewRecords) {
+	return mockedStructs2(t, true)
+}
+
+// TODO: copy-pasted from pkg/state/stateprovide. Can this be moved to a common package?
+type nilValue struct {
+	istructs.IValue
+}
+
+// TODO: copy-pasted from pkg/state/stateprovide. Can this be moved to a common package?
+type nilKeyBuilder struct {
+	istructs.IKeyBuilder
+}
+
+func (b *nilKeyBuilder) Equals(istructs.IKeyBuilder) bool { return false }
+
+// TODO: copy-pasted from pkg/state/stateprovide. Can this be moved to a common package?
+type nilValueBuilder struct {
+	istructs.IValueBuilder
+}
+
+// TODO: copy-pasted from pkg/state/stateprovide. Can this be moved to a common package?
+type mockValue struct {
+	istructs.IValue
+	mock.Mock
+}
+
+func (v *mockValue) AsInt32(name string) int32     { return v.Called(name).Get(0).(int32) }
+func (v *mockValue) AsInt64(name string) int64     { return v.Called(name).Get(0).(int64) }
+func (v *mockValue) AsFloat32(name string) float32 { return v.Called(name).Get(0).(float32) }
+func (v *mockValue) AsFloat64(name string) float64 { return v.Called(name).Get(0).(float64) }
+func (v *mockValue) AsBytes(name string) []byte    { return v.Called(name).Get(0).([]byte) }
+func (v *mockValue) AsString(name string) string   { return v.Called(name).String(0) }
+func (v *mockValue) AsQName(name string) appdef.QName {
+	return v.Called(name).Get(0).(appdef.QName)
+}
+func (v *mockValue) AsBool(name string) bool { return v.Called(name).Bool(0) }
+func (v *mockValue) AsRecordID(name string) istructs.RecordID {
+	return v.Called(name).Get(0).(istructs.RecordID)
+}
+func (v *mockValue) AsRecord(name string) (record istructs.IRecord) {
+	return v.Called(name).Get(0).(istructs.IRecord)
+}
+func (v *mockValue) AsEvent(name string) (event istructs.IDbEvent) {
+	return v.Called(name).Get(0).(istructs.IDbEvent)
+}
