@@ -26,7 +26,11 @@ func TestFederationBlobStorage_BasicUsage(t *testing.T) {
 		require.Equal(int64(1), blobId)
 		return buffer, nil
 	}
-	storage := NewFederationBlobStorage(nil, nil, nil, nil, federatioBlobHandler)
+	mockedStructs, _ := mockedStructs(t)
+	appStructsFunc := func() istructs.IAppStructs {
+		return mockedStructs
+	}
+	storage := NewFederationBlobStorage(appStructsFunc, nil, nil, nil, federatioBlobHandler)
 	k := storage.NewKeyBuilder(appdef.NullQName, nil)
 	k.PutString(sys.Storage_FederationBlob_Field_Owner, "owner")
 	k.PutString(sys.Storage_FederationBlob_Field_AppName, "appname")

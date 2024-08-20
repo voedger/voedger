@@ -263,6 +263,8 @@ func (b *mockValueBuilder) PutQName(name string, value appdef.QName)         { b
 func (b *mockValueBuilder) PutBool(name string, value bool)                  { b.Called(name, value) }
 func (b *mockValueBuilder) PutRecordID(name string, value istructs.RecordID) { b.Called(name, value) }
 func (b *mockValueBuilder) Build() istructs.IValue                           { return b.Called().Get(0).(istructs.IValue) }
+func (b *mockValueBuilder) BuildValue() istructs.IStateValue                 { return nil }
+func (b *mockValueBuilder) Equal(src istructs.IStateValueBuilder) bool       { return false }
 
 type nilValueBuilder struct {
 	istructs.IValueBuilder

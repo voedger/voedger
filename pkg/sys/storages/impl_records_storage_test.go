@@ -161,7 +161,7 @@ func TestRecordsStorage_GetBatch(t *testing.T) {
 		k3 := storage.NewKeyBuilder(appdef.NullQName, nil)
 		k3.PutQName(sys.Storage_Record_Field_Singleton, testRecordQName2)
 		k3.PutInt64(sys.Storage_Record_Field_WSID, 3)
-		k4 := storage.NewKeyBuilder(appdef.NullQName, nil)
+		k4 := storage.NewKeyBuilder(qNameCDocWorkspaceDescriptor, nil)
 		k4.PutBool(sys.Storage_Record_Field_IsSingleton, true)
 		batchItems := []state.GetBatchItem{
 			{Key: k1},
@@ -241,7 +241,16 @@ func TestRecordsStorage_Insert(t *testing.T) {
 		On("PutString", fieldName, value)
 	cud := &mockCUD{}
 	cud.On("Create").Return(rw)
+
+	records := &mockRecords{}
+
 	appStructs := &mockAppStructs{}
+	appStructs.
+		On("AppDef").Return(createAppDef()).
+		On("AppQName").Return(testAppQName).
+		On("Records").Return(records).
+		On("ViewRecords").Return(&nilViewRecords{}).
+		On("Events").Return(&nilEvents{})
 	appStructsFunc := func() istructs.IAppStructs {
 		return appStructs
 	}
