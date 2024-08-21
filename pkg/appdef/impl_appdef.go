@@ -261,7 +261,7 @@ func (app appDef) ACL(cb func(IACLRule)) {
 func (app appDef) ACLForResources(n []QName, k ...OperationKind) []IACLRule {
 	pp := make([]IACLRule, 0)
 	for _, p := range app.acl {
-		if p.On().ContainsAny(n...) && p.ops.ContainsAny(k...) {
+		if p.Resources().On().ContainsAny(n...) && p.ops.ContainsAny(k...) {
 			pp = append(pp, p)
 		}
 	}

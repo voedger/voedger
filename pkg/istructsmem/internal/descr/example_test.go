@@ -447,14 +447,16 @@ func Example() {
 	//               "Ops": [
 	//                 "Select"
 	//               ],
-	//               "On": [
-	//                 "test.doc",
-	//                 "test.rec"
-	//               ],
-	//               "Fields": [
-	//                 "f1",
-	//                 "f2"
-	//               ]
+	//               "Resources": {
+	//                 "On": [
+	//                   "test.doc",
+	//                   "test.rec"
+	//                 ],
+	//                 "Fields": [
+	//                   "f1",
+	//                   "f2"
+	//                 ]
+	//               }
 	//             },
 	//             {
 	//               "Comment": "allow reader to select all fields from test.view",
@@ -462,9 +464,11 @@ func Example() {
 	//               "Ops": [
 	//                 "Select"
 	//               ],
-	//               "On": [
-	//                 "test.view"
-	//               ]
+	//               "Resources": {
+	//                 "On": [
+	//                   "test.view"
+	//                 ]
+	//               }
 	//             },
 	//             {
 	//               "Comment": "allow reader to execute test.query",
@@ -472,9 +476,11 @@ func Example() {
 	//               "Ops": [
 	//                 "Execute"
 	//               ],
-	//               "On": [
-	//                 "test.query"
-	//               ]
+	//               "Resources": {
+	//                 "On": [
+	//                   "test.query"
+	//                 ]
+	//               }
 	//             }
 	//           ]
 	//         },
@@ -489,11 +495,13 @@ func Example() {
 	//                 "Update",
 	//                 "Select"
 	//               ],
-	//               "On": [
-	//                 "test.doc",
-	//                 "test.rec",
-	//                 "test.view"
-	//               ]
+	//               "Resources": {
+	//                 "On": [
+	//                   "test.doc",
+	//                   "test.rec",
+	//                   "test.view"
+	//                 ]
+	//               }
 	//             },
 	//             {
 	//               "Comment": "disable writer to update test.doc",
@@ -501,9 +509,11 @@ func Example() {
 	//               "Ops": [
 	//                 "Update"
 	//               ],
-	//               "On": [
-	//                 "test.doc"
-	//               ]
+	//               "Resources": {
+	//                 "On": [
+	//                   "test.doc"
+	//                 ]
+	//               }
 	//             },
 	//             {
 	//               "Comment": "allow writer to execute all test functions",
@@ -511,10 +521,12 @@ func Example() {
 	//               "Ops": [
 	//                 "Execute"
 	//               ],
-	//               "On": [
-	//                 "test.cmd",
-	//                 "test.query"
-	//               ]
+	//               "Resources": {
+	//                 "On": [
+	//                   "test.cmd",
+	//                   "test.query"
+	//                 ]
+	//               }
 	//             }
 	//           ]
 	//         }

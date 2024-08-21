@@ -90,7 +90,7 @@ func ExampleIAppDefBuilder_AddRole() {
 	// 4 Role «test.writerRole»
 	// overall: 4
 	// Role «test.readerRole» :
-	// - grant [Select] on [test.doc] to Role «test.readerRole»
+	// - grant [Select] on [test.doc]([field1]) to Role «test.readerRole»
 	// Role «test.writerRole» :
 	// - grant [Insert Update Select Execute] on [test.ws] to Role «test.writerRole»
 	// Role «test.admRole» :
@@ -98,5 +98,5 @@ func ExampleIAppDefBuilder_AddRole() {
 	// Role «test.intruderRole» :
 	// - revoke [Insert Update Select Execute] on [test.ws] from Role «test.intruderRole»
 	// ACL with select operation on test.doc:
-	// - grant [Select] on [test.doc] to Role «test.readerRole»
+	// - grant [Select] on [test.doc]([field1]) to Role «test.readerRole»
 }

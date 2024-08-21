@@ -60,6 +60,25 @@ const (
 	PolicyKind_Count
 )
 
+type IResourcePattern interface {
+	// Returns resource names that match the pattern.
+	//
+	// # insert, update and select:
+	//	- records or view records names or
+	//	- workspaces names.
+	//
+	// # execute:
+	//	- commands & queries names or
+	//	- workspaces names.
+	//
+	// # inherits:
+	//	- roles names.
+	On() QNames
+
+	// Returns fields (of records or views) then update or select operation is described.
+	Fields() []FieldName
+}
+
 // Represents a ACL rule record (specific rights or permissions) to be granted to role or revoked from.
 type IACLRule interface {
 	IWithComments
@@ -70,24 +89,8 @@ type IACLRule interface {
 	// Returns operations are granted or revoked.
 	Policy() PolicyKind
 
-	// Returns resource names on which rule is applicable.
-	//
-	// # For OperationKind_Insert, OperationKind_Update and OperationKind_Select:
-	//	- records or view records names or
-	//	- workspaces names.
-	//
-	// # For OperationKind_Execute:
-	//	- commands & queries names or
-	//	- workspaces names.
-	//
-	// # For OperationKind_Inherits:
-	//	- roles names.
-	On() QNames
-
-	// Returns fields (of records or views), operations on which was granted or revoked.
-	//
-	// For OperationKind_Update and OperationKind_Select returns field names of records or view records.
-	Fields() []FieldName
+	// Returns resource on which rule is applicable.
+	Resources() IResourcePattern
 
 	// Returns the role to which the operations was granted or revoked.
 	Principal() IRole
@@ -123,7 +126,7 @@ type IACLBuilder interface {
 	Grant(ops []OperationKind, on []QName, fields []FieldName, toRole QName, comment ...string) IACLBuilder
 
 	// Grants all available operations on specified resources to specified role.
-	// Object names can include `QNameANY` or `QNameAny×××` names.
+	// Resource names can include `QNameANY` or `QNameAny×××` patterns.
 	//
 	// If the resources are records or view records, then insert, update, and select are granted.
 	//
@@ -133,7 +136,7 @@ type IACLBuilder interface {
 	//	- insert, update and select records and view records of these workspaces are granted,
 	//	- execution of commands & queries from these workspaces is granted.
 	//
-	// If the objects are roles, then all operations from these roles are granted to specified role.
+	// If the resources are roles, then all operations from these roles are granted to specified role.
 	//
 	// No mixed resources are allowed.
 	GrantAll(on []QName, toRole QName, comment ...string) IACLBuilder

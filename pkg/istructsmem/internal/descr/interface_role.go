@@ -13,9 +13,13 @@ type Role struct {
 }
 
 type ACLRule struct {
-	Comment string `json:",omitempty"`
-	Policy  string // `Allow` or `Deny`
-	Ops     []string
-	On      appdef.QNames
-	Fields  []string `json:",omitempty"`
+	Comment   string `json:",omitempty"`
+	Policy    string // `Allow` or `Deny`
+	Ops       []string
+	Resources *ACLResourcePattern
+}
+
+type ACLResourcePattern struct {
+	On     appdef.QNames
+	Fields []appdef.FieldName `json:",omitempty"`
 }

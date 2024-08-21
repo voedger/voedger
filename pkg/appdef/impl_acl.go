@@ -12,13 +12,34 @@ import (
 )
 
 // # Implements:
+//   - IResourcePattern
+type resourcePattern struct {
+	on     QNames
+	fields []FieldName
+}
+
+func newResourcePattern(on []QName, fields []FieldName) *resourcePattern {
+	return &resourcePattern{on: on, fields: fields}
+}
+
+func (r resourcePattern) On() QNames { return r.on }
+
+func (r resourcePattern) Fields() []FieldName { return r.fields }
+
+func (r resourcePattern) String() string {
+	if len(r.fields) > 0 {
+		return fmt.Sprintf("%v(%v)", r.on, r.fields)
+	}
+	return fmt.Sprint(r.on)
+}
+
+// # Implements:
 //   - IACLRule
 type aclRule struct {
 	comment
 	ops       set.Set[OperationKind]
 	policy    PolicyKind
-	on        QNames
-	fields    []FieldName
+	resources *resourcePattern
 	principal *role
 }
 
@@ -52,8 +73,7 @@ func newACLRule(ops []OperationKind, policy PolicyKind, on []QName, fields []Fie
 		comment:   makeComment(comment...),
 		policy:    policy,
 		ops:       opSet,
-		on:        names,
-		fields:    fields,
+		resources: newResourcePattern(names, fields),
 		principal: principal,
 	}
 	return acl
@@ -86,21 +106,19 @@ func newRevokeAll(on []QName, principal *role, comment ...string) *aclRule {
 	return newACLRuleAll(PolicyKind_Deny, on, principal, comment...)
 }
 
-func (g aclRule) Fields() []FieldName { return g.fields }
-
 func (g aclRule) Ops() []OperationKind { return g.ops.AsArray() }
-
-func (g aclRule) On() QNames { return g.on }
 
 func (g aclRule) Policy() PolicyKind { return g.policy }
 
 func (g aclRule) Principal() IRole { return g.principal }
 
+func (g aclRule) Resources() IResourcePattern { return g.resources }
+
 func (g aclRule) String() string {
 	switch g.policy {
 	case PolicyKind_Deny:
-		return fmt.Sprintf("%s %v on %v from %v", g.policy.ActionString(), g.ops, g.on, g.principal)
+		return fmt.Sprintf("%s %v on %v from %v", g.policy.ActionString(), g.ops, g.resources, g.principal)
 	default:
-		return fmt.Sprintf("%s %v on %v to %v", g.policy.ActionString(), g.ops, g.on, g.principal)
+		return fmt.Sprintf("%s %v on %v to %v", g.policy.ActionString(), g.ops, g.resources, g.principal)
 	}
 }

@@ -85,8 +85,8 @@ func Test_AppDef_AddRole(t *testing.T) {
 			require.NotNil(p)
 			require.Equal(policy, p.Policy())
 			require.Equal(kinds, p.Ops())
-			require.EqualValues(on, p.On())
-			require.Equal(fields, p.Fields())
+			require.EqualValues(on, p.Resources().On())
+			require.Equal(fields, p.Resources().Fields())
 			require.Equal(to, p.Principal().QName())
 		}
 
@@ -211,7 +211,7 @@ func Test_AppDef_AddRole(t *testing.T) {
 			require.Equal(6, rolesCount)
 		})
 
-		t.Run("should be ok to enum role privileges on objects", func(t *testing.T) {
+		t.Run("should be ok to enum role privileges on resources", func(t *testing.T) {
 			pp := app.Role(admRoleName).ACLForResources([]QName{wsName})
 			require.Len(pp, 2)
 

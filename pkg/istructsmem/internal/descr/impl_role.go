@@ -23,7 +23,10 @@ func (r *Role) read(role appdef.IRole) {
 }
 
 func newACLRule() *ACLRule {
-	return &ACLRule{}
+	return &ACLRule{
+		Ops:       make([]string, 0),
+		Resources: newACLResourcePattern(),
+	}
 }
 
 func (ar *ACLRule) read(acl appdef.IACLRule) {
@@ -32,6 +35,18 @@ func (ar *ACLRule) read(acl appdef.IACLRule) {
 	for _, k := range acl.Ops() {
 		ar.Ops = append(ar.Ops, k.TrimString())
 	}
-	ar.On = acl.On()
-	ar.Fields = acl.Fields()
+	ar.Resources.read(acl.Resources())
+}
+
+func newACLResourcePattern() *ACLResourcePattern {
+	return &ACLResourcePattern{
+		Fields: make([]appdef.FieldName, 0),
+	}
+}
+
+func (arp *ACLResourcePattern) read(rp appdef.IResourcePattern) {
+	arp.On.Add(rp.On()...)
+	for _, f := range rp.Fields() {
+		arp.Fields = append(arp.Fields, f)
+	}
 }

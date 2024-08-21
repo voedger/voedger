@@ -85,8 +85,8 @@ func Test_AppDef_GrantAndRevoke(t *testing.T) {
 			require.NotNil(acl)
 			require.Equal(policy, acl.Policy())
 			require.Equal(kinds, acl.Ops())
-			require.EqualValues(on, acl.On())
-			require.Equal(fields, acl.Fields())
+			require.EqualValues(on, acl.Resources().On())
+			require.Equal(fields, acl.Resources().Fields())
 			require.Equal(principal, acl.Principal().QName())
 		}
 
@@ -323,8 +323,8 @@ func Test_AppDef_GrantWithFields(t *testing.T) {
 			require.NotNil(p)
 			require.Equal(policy, p.Policy())
 			require.Equal(kinds, p.Ops())
-			require.EqualValues(on, p.On())
-			require.Equal(fields, p.Fields())
+			require.EqualValues(on, p.Resources().On())
+			require.Equal(fields, p.Resources().Fields())
 			require.Equal(to, p.Principal().QName())
 		}
 
