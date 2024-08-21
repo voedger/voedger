@@ -12,12 +12,12 @@ import (
 	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/itokens"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
-	"github.com/voedger/voedger/pkg/state"
+	"github.com/voedger/voedger/pkg/sys/storages"
 )
 
 func provideRefreshPrincipalTokenExec(itokens itokens.ITokens) istructsmem.ExecQueryClosure {
 	return func(_ context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
-		existingPrincipalToken, err := state.GetPrincipalTokenFromState(args.State)
+		existingPrincipalToken, err := storages.GetPrincipalTokenFromState(args.State)
 		if err != nil {
 			return err
 		}

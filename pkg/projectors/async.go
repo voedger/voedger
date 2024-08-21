@@ -15,6 +15,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/goutils/iterate"
 	"github.com/voedger/voedger/pkg/goutils/logger"
+	"github.com/voedger/voedger/pkg/state/stateprovide"
 	"github.com/voedger/voedger/pkg/sys"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -188,7 +189,7 @@ func (a *asyncActualizer) init(ctx context.Context) (err error) {
 		return err
 	}
 
-	p.state = state.ProvideAsyncActualizerStateFactory()(
+	p.state = stateprovide.ProvideAsyncActualizerStateFactory()(
 		ctx,
 		p.borrowedAppStructs,
 		state.SimplePartitionIDFunc(a.conf.Partition),

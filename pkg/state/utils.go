@@ -8,20 +8,13 @@ package state
 import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
-	"github.com/voedger/voedger/pkg/sys"
 )
 
-func GetPrincipalTokenFromState(st istructs.IState) (token string, err error) {
-	kb, err := st.KeyBuilder(sys.Storage_RequestSubject, appdef.NullQName)
-	if err != nil {
-		return "", err
-	}
-	principalTokenValue, err := st.MustExist(kb)
-	if err != nil {
-		return "", err
-	}
-	token = principalTokenValue.AsString(sys.Storage_RequestSubject_Field_Token)
-	return token, nil
+func SimpleWSIDFunc(wsid istructs.WSID) WSIDFunc {
+	return func() istructs.WSID { return wsid }
+}
+func SimplePartitionIDFunc(partitionID istructs.PartitionID) PartitionIDFunc {
+	return func() istructs.PartitionID { return partitionID }
 }
 
 func PopulateKeys(kb istructs.IRowWriter, keys map[string]any) {
