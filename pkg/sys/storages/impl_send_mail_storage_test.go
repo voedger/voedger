@@ -98,7 +98,7 @@ func TestSendMailStorage_Validate(t *testing.T) {
 			test.kbFiller(k)
 			_, err := storage.(state.IWithInsert).ProvideValueBuilder(k, nil)
 			require.NoError(err)
-			err = storage.(state.IWithInsert).ApplyBatch([]state.ApplyBatchItem{{Key: k, Value: nil}})
+			err = storage.(state.IWithInsert).Validate([]state.ApplyBatchItem{{Key: k, Value: nil}})
 			require.ErrorIs(err, ErrNotFound)
 			require.Contains(err.Error(), test.mandatoryField)
 		})

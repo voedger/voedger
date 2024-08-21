@@ -147,7 +147,7 @@ func TestWLogStorage_GetBatch(t *testing.T) {
 			Return(errTest)
 		eventsFunc := func() istructs.IEvents { return events }
 		storage := NewWLogStorage(context.Background(), eventsFunc, state.SimpleWSIDFunc(istructs.WSID(1)))
-		withGetBatch := storage.(state.IWithGetBatch)
+		withGet := storage.(state.IWithGet)
 
 		kb1 := storage.NewKeyBuilder(appdef.NullQName, nil)
 		kb1.PutInt64(sys.Storage_WLog_Field_Offset, 1)
@@ -156,12 +156,13 @@ func TestWLogStorage_GetBatch(t *testing.T) {
 		kb2.PutInt64(sys.Storage_WLog_Field_Offset, 2)
 		kb2.PutInt64(sys.Storage_WLog_Field_Count, 1)
 
-		err := withGetBatch.GetBatch([]state.GetBatchItem{
-			{Key: kb1, Value: nil},
-			{Key: kb2, Value: nil},
-		})
+		v1, err1 := withGet.Get(kb1)
+		require.NoError(err1)
+		require.NotNil(v1)
 
-		require.ErrorIs(err, errTest)
+		v2, err2 := withGet.Get(kb2)
+		require.Nil(v2)
+		require.ErrorIs(err2, errTest)
 	})
 }
 

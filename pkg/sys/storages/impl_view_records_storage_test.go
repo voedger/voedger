@@ -30,7 +30,7 @@ func TestViewRecordsStorage_GetBatch(t *testing.T) {
 		appStructsFunc := func() istructs.IAppStructs {
 			return mockedStructs
 		}
-		storage := NewRecordsStorage(appStructsFunc, state.SimpleWSIDFunc(istructs.WSID(1)), nil)
+		storage := NewViewRecordsStorage(context.Background(), appStructsFunc, state.SimpleWSIDFunc(istructs.WSID(1)), nil)
 		k := storage.NewKeyBuilder(testViewRecordQName1, nil)
 		k.PutInt64("pkk", 64)
 		k.PutString("cck", "ccv")
@@ -49,7 +49,7 @@ func TestViewRecordsStorage_GetBatch(t *testing.T) {
 		appStructsFunc := func() istructs.IAppStructs {
 			return mockedStructs
 		}
-		storage := NewRecordsStorage(appStructsFunc, state.SimpleWSIDFunc(istructs.WSID(1)), nil)
+		storage := NewViewRecordsStorage(context.Background(), appStructsFunc, state.SimpleWSIDFunc(istructs.WSID(1)), nil)
 		k := storage.NewKeyBuilder(testViewRecordQName1, nil)
 		k.PutInt64("pkk", 64)
 		sv, err := storage.(state.IWithGet).Get(k)
@@ -72,7 +72,7 @@ func TestViewRecordsStorage_Read(t *testing.T) {
 		appStructsFunc := func() istructs.IAppStructs {
 			return mockedStructs
 		}
-		storage := NewRecordsStorage(appStructsFunc, state.SimpleWSIDFunc(istructs.WSID(1)), nil)
+		storage := NewViewRecordsStorage(context.Background(), appStructsFunc, state.SimpleWSIDFunc(istructs.WSID(1)), nil)
 		k := storage.NewKeyBuilder(testViewRecordQName1, nil)
 
 		err := storage.(state.IWithRead).Read(k, func(istructs.IKey, istructs.IStateValue) error {
@@ -93,7 +93,7 @@ func TestViewRecordsStorage_Read(t *testing.T) {
 		appStructsFunc := func() istructs.IAppStructs {
 			return mockedStructs
 		}
-		storage := NewRecordsStorage(appStructsFunc, state.SimpleWSIDFunc(istructs.WSID(1)), nil)
+		storage := NewViewRecordsStorage(context.Background(), appStructsFunc, state.SimpleWSIDFunc(istructs.WSID(1)), nil)
 		k := storage.NewKeyBuilder(testViewRecordQName1, nil)
 		err := storage.(state.IWithRead).Read(k, func(istructs.IKey, istructs.IStateValue) error { return nil })
 		require.ErrorIs(err, errTest)
@@ -109,7 +109,7 @@ func TestViewRecordsStorage_ApplyBatch_should_return_error_on_put_batch(t *testi
 	appStructsFunc := func() istructs.IAppStructs {
 		return mockedStructs
 	}
-	storage := NewRecordsStorage(appStructsFunc, state.SimpleWSIDFunc(istructs.WSID(1)), nil)
+	storage := NewViewRecordsStorage(context.Background(), appStructsFunc, state.SimpleWSIDFunc(istructs.WSID(1)), nil)
 	kb := storage.NewKeyBuilder(testViewRecordQName1, nil)
 	vb, err := storage.(state.IWithInsert).ProvideValueBuilder(kb, nil)
 	require.NoError(err)
@@ -157,7 +157,7 @@ func TestViewRecordsStorage_ApplyBatch_NullWSIDGoesLast(t *testing.T) {
 	appStructsFunc := func() istructs.IAppStructs {
 		return mockedStructs
 	}
-	s := NewRecordsStorage(appStructsFunc, state.SimpleWSIDFunc(istructs.WSID(1)), nil)
+	s := NewViewRecordsStorage(context.Background(), appStructsFunc, state.SimpleWSIDFunc(istructs.WSID(1)), nil)
 
 	putViewRec(s)
 	putViewRec(s)
@@ -188,7 +188,7 @@ func TestViewRecordsStorage_ValidateInWorkspaces(t *testing.T) {
 	appStructsFunc := func() istructs.IAppStructs {
 		return mockedStructs
 	}
-	storage := NewRecordsStorage(appStructsFunc, state.SimpleWSIDFunc(istructs.WSID(1)), nil)
+	storage := NewViewRecordsStorage(context.Background(), appStructsFunc, state.SimpleWSIDFunc(istructs.WSID(1)), nil)
 
 	wrongQName := appdef.NewQName("test", "viewRecordX")
 	wrongKb := storage.NewKeyBuilder(wrongQName, nil)
