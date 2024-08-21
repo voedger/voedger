@@ -84,13 +84,13 @@ type IACLRule interface {
 	//	- roles names.
 	On() QNames
 
-	// Returns fields (of objects) operations on which was granted or revoked.
+	// Returns fields (of records or views), operations on which was granted or revoked.
 	//
 	// For OperationKind_Update and OperationKind_Select returns field names of records or view records.
 	Fields() []FieldName
 
 	// Returns the role to which the operations was granted or revoked.
-	To() IRole
+	Principal() IRole
 }
 
 // IWithACL is an interface for entities that have ACL.

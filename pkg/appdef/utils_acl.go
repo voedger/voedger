@@ -30,22 +30,22 @@ func (p PolicyKind) TrimString() string {
 	return strings.TrimPrefix(p.String(), pref)
 }
 
-// Returns all available privileges on specified type.
+// Returns all available operations on specified type.
 //
-// If type can not to be privileged then returns empty slice.
-func allOperationsOnType(t IType) (pk set.Set[OperationKind]) {
+// If type can not to be used as resource for ACL rule then returns empty slice.
+func allACLOperationsOnType(t IType) (ops set.Set[OperationKind]) {
 	switch t.Kind() {
 	case TypeKind_Any:
 		switch t.QName() {
 		case QNameANY:
-			pk = set.From(OperationKind_Insert, OperationKind_Update, OperationKind_Select, OperationKind_Execute, OperationKind_Inherits)
+			ops = set.From(OperationKind_Insert, OperationKind_Update, OperationKind_Select, OperationKind_Execute, OperationKind_Inherits)
 		case QNameAnyStructure, QNameAnyRecord,
 			QNameAnyGDoc, QNameAnyCDoc, QNameAnyWDoc,
 			QNameAnySingleton,
 			QNameAnyView:
-			pk = set.From(OperationKind_Insert, OperationKind_Update, OperationKind_Select)
+			ops = set.From(OperationKind_Insert, OperationKind_Update, OperationKind_Select)
 		case QNameAnyFunction, QNameAnyCommand, QNameAnyQuery:
-			pk = set.From(OperationKind_Execute)
+			ops = set.From(OperationKind_Execute)
 		}
 	case TypeKind_GRecord, TypeKind_GDoc,
 		TypeKind_CRecord, TypeKind_CDoc,
@@ -53,15 +53,15 @@ func allOperationsOnType(t IType) (pk set.Set[OperationKind]) {
 		TypeKind_ORecord, TypeKind_ODoc,
 		TypeKind_Object,
 		TypeKind_ViewRecord:
-		pk = set.From(OperationKind_Insert, OperationKind_Update, OperationKind_Select)
+		ops = set.From(OperationKind_Insert, OperationKind_Update, OperationKind_Select)
 	case TypeKind_Command, TypeKind_Query:
-		pk = set.From(OperationKind_Execute)
+		ops = set.From(OperationKind_Execute)
 	case TypeKind_Workspace:
-		pk = set.From(OperationKind_Insert, OperationKind_Update, OperationKind_Select, OperationKind_Execute)
+		ops = set.From(OperationKind_Insert, OperationKind_Update, OperationKind_Select, OperationKind_Execute)
 	case TypeKind_Role:
-		pk = set.From(OperationKind_Inherits)
+		ops = set.From(OperationKind_Inherits)
 	}
-	return pk
+	return ops
 }
 
 // Renders an OperationKind in human-readable form, without "OperationKind_" prefix,

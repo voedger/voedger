@@ -81,13 +81,13 @@ func Test_AppDef_GrantAndRevoke(t *testing.T) {
 
 	t.Run("should be ok to check ACL", func(t *testing.T) {
 
-		checkACLRule := func(acl IACLRule, policy PolicyKind, kinds []OperationKind, on []QName, fields []FieldName, to QName) {
+		checkACLRule := func(acl IACLRule, policy PolicyKind, kinds []OperationKind, on []QName, fields []FieldName, principal QName) {
 			require.NotNil(acl)
 			require.Equal(policy, acl.Policy())
 			require.Equal(kinds, acl.Ops())
 			require.EqualValues(on, acl.On())
 			require.Equal(fields, acl.Fields())
-			require.Equal(to, acl.To().QName())
+			require.Equal(principal, acl.Principal().QName())
 		}
 
 		t.Run("should be ok to enum all ACL rules", func(t *testing.T) {
@@ -147,7 +147,7 @@ func Test_AppDef_GrantAndRevoke(t *testing.T) {
 			require.Equal(9, cnt)
 		})
 
-		t.Run("should be ok to enum ACL for objects", func(t *testing.T) {
+		t.Run("should be ok to enum ACL for resource", func(t *testing.T) {
 
 			t.Run("should be ok to enum ACL for ws", func(t *testing.T) {
 				pp := app.ACLForResources([]QName{wsName})
@@ -225,7 +225,7 @@ func Test_AppDef_GrantAndRevokeErrors(t *testing.T) {
 		doc := adb.AddCDoc(docName)
 		doc.AddField("field1", DataKind_int32, true)
 
-		t.Run("should be panic if unknown role", func(t *testing.T) {
+		t.Run("should be panic if unknown principal", func(t *testing.T) {
 			unknownRole := NewQName("test", "unknownRole")
 			require.Panics(func() {
 				adb.Grant([]OperationKind{OperationKind_Select}, []QName{docName}, nil, unknownRole)
@@ -255,7 +255,7 @@ func Test_AppDef_GrantAndRevokeErrors(t *testing.T) {
 			}, require.Is(ErrIncompatibleError), require.Has("[count]"))
 		})
 
-		t.Run("should be panic if operations on invalid objects", func(t *testing.T) {
+		t.Run("should be panic if operations on invalid resources", func(t *testing.T) {
 			require.Panics(func() {
 				adb.Grant([]OperationKind{OperationKind_Select}, []QName{}, nil, readerRoleName)
 			}, require.Is(ErrMissedError))
@@ -325,7 +325,7 @@ func Test_AppDef_GrantWithFields(t *testing.T) {
 			require.Equal(kinds, p.Ops())
 			require.EqualValues(on, p.On())
 			require.Equal(fields, p.Fields())
-			require.Equal(to, p.To().QName())
+			require.Equal(to, p.Principal().QName())
 		}
 
 		cnt := 0

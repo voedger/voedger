@@ -13,7 +13,7 @@ import (
 	"github.com/voedger/voedger/pkg/goutils/set"
 )
 
-func Test_allOperationsOnType(t *testing.T) {
+func Test_allACLOperationsOnType(t *testing.T) {
 
 	testName := NewQName("test", "test")
 
@@ -55,8 +55,8 @@ func Test_allOperationsOnType(t *testing.T) {
 			typ := new(mockType)
 			typ.kind = tt.typ.kind
 			typ.name = tt.typ.name
-			if gotPk := allOperationsOnType(typ); !reflect.DeepEqual(gotPk, tt.wantPk) {
-				t.Errorf("AllPrivilegesOnType(%s) = %v, want %v", tt.typ.kind.TrimString(), gotPk, tt.wantPk)
+			if gotPk := allACLOperationsOnType(typ); !reflect.DeepEqual(gotPk, tt.wantPk) {
+				t.Errorf("allACLOperationsOnType(%s) = %v, want %v", tt.typ.kind.TrimString(), gotPk, tt.wantPk)
 			}
 		})
 	}

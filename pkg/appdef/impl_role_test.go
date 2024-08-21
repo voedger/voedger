@@ -87,7 +87,7 @@ func Test_AppDef_AddRole(t *testing.T) {
 			require.Equal(kinds, p.Ops())
 			require.EqualValues(on, p.On())
 			require.Equal(fields, p.Fields())
-			require.Equal(to, p.To().QName())
+			require.Equal(to, p.Principal().QName())
 		}
 
 		t.Run("should be ok to enum all app roles", func(t *testing.T) {
