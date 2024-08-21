@@ -14,7 +14,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
-	"github.com/voedger/voedger/pkg/state"
+	"github.com/voedger/voedger/pkg/state/stateprovide"
 	"github.com/voedger/voedger/pkg/sys"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
@@ -187,7 +187,7 @@ func (s *mockIo) MustExist(key istructs.IStateKeyBuilder) (value istructs.IState
 		return nil, errTestIOError
 	}
 	if k.storage == sys.Storage_Record {
-		return nil, state.ErrNotExists
+		return nil, stateprovide.ErrNotExists
 	}
 	v, ok, err := s.CanExist(key)
 	if err != nil {

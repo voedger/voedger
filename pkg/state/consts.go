@@ -5,9 +5,6 @@
 package state
 
 import (
-	"time"
-
-	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/sys"
 )
 
@@ -56,14 +53,6 @@ var (
 
 	// Deprecated: use sys.Storage_Uniq instead
 	Uniq = sys.Storage_Uniq
-)
-
-const (
-	S_GET       = 1
-	S_GET_BATCH = 2
-	S_READ      = 4
-	S_INSERT    = 8
-	S_UPDATE    = 16
 )
 
 const (
@@ -119,15 +108,5 @@ const (
 )
 
 const (
-	ColOffset                             = "offs"
-	defaultHTTPClientTimeout              = 20_000 * time.Millisecond
-	httpStorageKeyBuilderStringerSliceCap = 3
-	wsidTypeValidatorCacheSize            = 100
-	queryProcessorStateMaxIntents         = 2 // 1 for Result, 1 for Response
-)
-
-var (
-	emptyApplyBatchItem          = ApplyBatchItem{}
-	qNameCDocWorkspaceDescriptor = appdef.NewQName(appdef.SysPackage, "WorkspaceDescriptor")
-	field_WSKind                 = "WSKind"
+	ColOffset = "offs"
 )
