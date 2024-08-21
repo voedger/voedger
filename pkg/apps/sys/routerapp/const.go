@@ -18,4 +18,4 @@ const RouterAppFQN = "github.com/voedger/voedger/pkg/apps/sys/routerapp"
 
 const DefDeploymentPartsCount = 10
 
-var DefDeploymentEnginePoolSize = appparts.PoolSize(0, 0, 10)
+var DefDeploymentEnginePoolSize = appparts.PoolSize(0, 0, 10, 1)

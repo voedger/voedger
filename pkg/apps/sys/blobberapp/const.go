@@ -18,4 +18,4 @@ const BlobberAppFQN = "github.com/voedger/voedger/pkg/apps/sys/blobberapp"
 
 const DefDeploymentPartsCount = 10
 
-var DefDeploymentEnginePoolSize = appparts.PoolSize(10, 10, 10)
+var DefDeploymentEnginePoolSize = appparts.PoolSize(10, 10, 10, 1)

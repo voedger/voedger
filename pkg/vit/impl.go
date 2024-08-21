@@ -502,7 +502,7 @@ func (vit *VIT) MockBuckets(appQName appdef.AppQName, rateLimitName string, bs i
 // an email was sent but CaptureEmail is not called -> test will be failed on VIT.TearDown()
 func (vit *VIT) CaptureEmail() (msg smtptest.Message) {
 	vit.T.Helper()
-	tmr := time.NewTimer(testEmailsAwaitingTimeout)
+	tmr := time.NewTimer(getTestEmailsAwaitingTimeout())
 	select {
 	case msg = <-vit.emailCaptor:
 		return msg

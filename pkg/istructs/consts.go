@@ -103,11 +103,24 @@ const NonExistingRecordID = MaxSingletonID + 1
 const FirstBaseRecordID = MaxReservedBaseRecordID + 1
 
 // Pseudo Workspaces
+
 const FirstPseudoBaseWSID = NullWSID
 const MaxPseudoBaseWSID = WSID(0xffff)
 
 // Application Workspaces
+
 const FirstBaseAppWSID = MaxPseudoBaseWSID + 1
+const MaxNumAppWorkspaces = 0x8000 // 32768
+
+// Reserved WSIDs
+
+const FirtReservedWSID = FirstBaseAppWSID + MaxNumAppWorkspaces // 0x18000, 98304
+const NumReservedWSID = 0x7fff                                  // 32767
+
+const (
+	GuestWSID               = FirtReservedWSID + iota // 0x18000, 98304
+	LastCurrentReservedWSID                           // Can be changed in the future
+)
 
 // User Workspaces
 const FirstBaseUserWSID = FirstBaseAppWSID + 0xffff
@@ -183,3 +196,5 @@ const (
 )
 
 const DefaultNumAppWorkspaces = NumAppWorkspaces(10)
+
+const SysGuestLogin = appdef.SysPackage + ".Guest"

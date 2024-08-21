@@ -11,12 +11,13 @@ func _() {
 	_ = x[ProcessorKind_Command-0]
 	_ = x[ProcessorKind_Query-1]
 	_ = x[ProcessorKind_Actualizer-2]
-	_ = x[ProcessorKind_Count-3]
+	_ = x[ProcessorKind_Scheduler-3]
+	_ = x[ProcessorKind_Count-4]
 }
 
-const _ProcessorKind_name = "ProcessorKind_CommandProcessorKind_QueryProcessorKind_ActualizerProcessorKind_Count"
+const _ProcessorKind_name = "ProcessorKind_CommandProcessorKind_QueryProcessorKind_ActualizerProcessorKind_SchedulerProcessorKind_Count"
 
-var _ProcessorKind_index = [...]uint8{0, 21, 40, 64, 83}
+var _ProcessorKind_index = [...]uint8{0, 21, 40, 64, 87, 106}
 
 func (i ProcessorKind) String() string {
 	if i >= ProcessorKind(len(_ProcessorKind_index)-1) {

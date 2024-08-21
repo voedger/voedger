@@ -176,6 +176,7 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 		provideBuiltInApps,
 		provideBasicAsyncActualizerConfig, // projectors.BasicAsyncActualizerConfig
 		provideAsyncActualizersService,    // projectors.IActualizersService
+		provideJobSchedulerRunner,         // appparts.IProcessorRunner
 		apppartsctl.New,
 		provideAppConfigsTypeEmpty,
 		provideBuiltInAppPackages,
@@ -274,6 +275,11 @@ func provideAsyncActualizersService(cfg projectors.BasicAsyncActualizerConfig) p
 	return projectors.ProvideActualizers(cfg)
 }
 
+func provideJobSchedulerRunner() appparts.IProcessorRunner {
+	// TODO: implement ISchedulerService interface{ IProcessorRunner } in pkg/processor/scheduler
+	return appparts.NullProcessorRunner
+}
+
 func provideBuildInfo() (*debug.BuildInfo, error) {
 	buildInfo, ok := debug.ReadBuildInfo()
 	if !ok {
@@ -304,6 +310,7 @@ func provideAppPartitions(
 	asp istructs.IAppStructsProvider,
 	saf appparts.SyncActualizerFactory,
 	act projectors.IActualizersService,
+	sch appparts.IProcessorRunner,
 	sr istructsmem.IStatelessResources,
 	builtinAppsArtefacts BuiltInAppsArtefacts,
 ) (ap appparts.IAppPartitions, cleanup func(), err error) {
@@ -319,6 +326,7 @@ func provideAppPartitions(
 		asp,
 		saf,
 		act,
+		sch,
 		eef,
 	)
 }
