@@ -63,23 +63,23 @@ func ExampleIAppDefBuilder_AddRole() {
 	{
 		reader := app.Role(readerRoleName)
 		fmt.Println(reader, ":")
-		reader.Privileges(func(g appdef.IACLRule) { fmt.Println("-", g) })
+		reader.ACL(func(r appdef.IACLRule) { fmt.Println("-", r) })
 
 		writer := app.Role(writerRoleName)
 		fmt.Println(writer, ":")
-		writer.Privileges(func(g appdef.IACLRule) { fmt.Println("-", g) })
+		writer.ACL(func(r appdef.IACLRule) { fmt.Println("-", r) })
 
 		adm := app.Role(admRoleName)
 		fmt.Println(adm, ":")
-		adm.Privileges(func(g appdef.IACLRule) { fmt.Println("-", g) })
+		adm.ACL(func(r appdef.IACLRule) { fmt.Println("-", r) })
 
 		intruder := app.Role(intruderRoleName)
 		fmt.Println(intruder, ":")
-		intruder.Privileges(func(g appdef.IACLRule) { fmt.Println("-", g) })
+		intruder.ACL(func(r appdef.IACLRule) { fmt.Println("-", r) })
 
-		fmt.Println("Roles with select privilege on test.doc:")
-		for _, p := range app.PrivilegesOn([]appdef.QName{docName}, appdef.OperationKind_Select) {
-			fmt.Println("-", p)
+		fmt.Println("ACL with select operation on test.doc:")
+		for _, r := range app.ACLForResources([]appdef.QName{docName}, appdef.OperationKind_Select) {
+			fmt.Println("-", r)
 		}
 	}
 
@@ -97,6 +97,6 @@ func ExampleIAppDefBuilder_AddRole() {
 	// - grant [Inherits] on [test.readerRole test.writerRole] to Role «test.admRole»
 	// Role «test.intruderRole» :
 	// - revoke [Insert Update Select Execute] on [test.ws] from Role «test.intruderRole»
-	// Roles with select privilege on test.doc:
+	// ACL with select operation on test.doc:
 	// - grant [Select] on [test.doc] to Role «test.readerRole»
 }

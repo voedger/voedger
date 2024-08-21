@@ -98,7 +98,7 @@ func Test_AppDef_AddRole(t *testing.T) {
 				case 1:
 					require.Equal(admRoleName, r.QName())
 					privilegesCount := 0
-					r.Privileges(func(p IACLRule) {
+					r.ACL(func(p IACLRule) {
 						privilegesCount++
 						switch privilegesCount {
 						case 1:
@@ -119,7 +119,7 @@ func Test_AppDef_AddRole(t *testing.T) {
 				case 2:
 					require.Equal(intruderRoleName, r.QName())
 					privilegesCount := 0
-					r.Privileges(func(p IACLRule) {
+					r.ACL(func(p IACLRule) {
 						privilegesCount++
 						switch privilegesCount {
 						case 1:
@@ -135,7 +135,7 @@ func Test_AppDef_AddRole(t *testing.T) {
 				case 3:
 					require.Equal(ownerRoleName, r.QName())
 					privilegesCount := 0
-					r.Privileges(func(p IACLRule) {
+					r.ACL(func(p IACLRule) {
 						privilegesCount++
 						switch privilegesCount {
 						case 1:
@@ -151,7 +151,7 @@ func Test_AppDef_AddRole(t *testing.T) {
 				case 4:
 					require.Equal(readerRoleName, r.QName())
 					privilegesCount := 0
-					r.Privileges(func(p IACLRule) {
+					r.ACL(func(p IACLRule) {
 						privilegesCount++
 						switch privilegesCount {
 						case 1:
@@ -172,7 +172,7 @@ func Test_AppDef_AddRole(t *testing.T) {
 				case 5:
 					require.Equal(workerRoleName, r.QName())
 					privilegesCount := 0
-					r.Privileges(func(p IACLRule) {
+					r.ACL(func(p IACLRule) {
 						privilegesCount++
 						switch privilegesCount {
 						case 1:
@@ -188,7 +188,7 @@ func Test_AppDef_AddRole(t *testing.T) {
 				case 6:
 					require.Equal(writerRoleName, r.QName())
 					privilegesCount := 0
-					r.Privileges(func(p IACLRule) {
+					r.ACL(func(p IACLRule) {
 						privilegesCount++
 						switch privilegesCount {
 						case 1:
@@ -212,7 +212,7 @@ func Test_AppDef_AddRole(t *testing.T) {
 		})
 
 		t.Run("should be ok to enum role privileges on objects", func(t *testing.T) {
-			pp := app.Role(admRoleName).PrivilegesOn([]QName{wsName})
+			pp := app.Role(admRoleName).ACLForResources([]QName{wsName})
 			require.Len(pp, 2)
 
 			checkPrivilege(pp[0], PolicyKind_Allow,

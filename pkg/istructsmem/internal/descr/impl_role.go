@@ -15,7 +15,7 @@ func newRole() *Role {
 
 func (r *Role) read(role appdef.IRole) {
 	r.Type.read(role)
-	role.Privileges(func(acl appdef.IACLRule) {
+	role.ACL(func(acl appdef.IACLRule) {
 		ar := newACLRule()
 		ar.read(acl)
 		r.ACL = append(r.ACL, ar)

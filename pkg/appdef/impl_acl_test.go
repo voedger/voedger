@@ -64,14 +64,14 @@ func Test_AppDef_GrantAndRevoke(t *testing.T) {
 		adb.GrantAll([]QName{readerRoleName, writerRoleName}, workerRoleName, "grant reader and writer roles to worker")
 
 		_ = adb.AddRole(ownerRoleName)
-		adb.GrantAll([]QName{wsName}, ownerRoleName, "grant all workspace privileges to owner")
+		adb.GrantAll([]QName{wsName}, ownerRoleName, "grant all workspace operations to owner")
 
 		_ = adb.AddRole(admRoleName)
-		adb.GrantAll([]QName{wsName}, admRoleName, "grant all workspace privileges to admin")
+		adb.GrantAll([]QName{wsName}, admRoleName, "grant all workspace operations to admin")
 		adb.Revoke([]OperationKind{OperationKind_Execute}, []QName{wsName}, admRoleName, "revoke execute on workspace from admin")
 
 		_ = adb.AddRole(intruderRoleName)
-		adb.RevokeAll([]QName{wsName}, intruderRoleName, "revoke all workspace privileges from intruder")
+		adb.RevokeAll([]QName{wsName}, intruderRoleName, "revoke all workspace operations from intruder")
 
 		var err error
 		app, err = adb.Build()
@@ -92,7 +92,7 @@ func Test_AppDef_GrantAndRevoke(t *testing.T) {
 
 		t.Run("should be ok to enum all ACL rules", func(t *testing.T) {
 			cnt := 0
-			app.Privileges(func(p IACLRule) {
+			app.ACL(func(p IACLRule) {
 				cnt++
 				switch cnt {
 				case 1:
@@ -150,7 +150,7 @@ func Test_AppDef_GrantAndRevoke(t *testing.T) {
 		t.Run("should be ok to enum ACL for objects", func(t *testing.T) {
 
 			t.Run("should be ok to enum ACL for ws", func(t *testing.T) {
-				pp := app.PrivilegesOn([]QName{wsName})
+				pp := app.ACLForResources([]QName{wsName})
 				require.Len(pp, 4)
 
 				checkACLRule(pp[0], PolicyKind_Allow,
@@ -174,7 +174,7 @@ func Test_AppDef_GrantAndRevoke(t *testing.T) {
 			})
 
 			t.Run("should be ok to enum all ACL with select", func(t *testing.T) {
-				pp := app.PrivilegesOn([]QName{}, OperationKind_Select)
+				pp := app.ACLForResources([]QName{}, OperationKind_Select)
 				require.Len(pp, 5)
 
 				checkACLRule(pp[0], PolicyKind_Allow,
@@ -319,7 +319,7 @@ func Test_AppDef_GrantWithFields(t *testing.T) {
 
 	t.Run("should be ok to check ACL", func(t *testing.T) {
 
-		checkPrivilege := func(p IACLRule, policy PolicyKind, kinds []OperationKind, on []QName, fields []FieldName, to QName) {
+		checkRule := func(p IACLRule, policy PolicyKind, kinds []OperationKind, on []QName, fields []FieldName, to QName) {
 			require.NotNil(p)
 			require.Equal(policy, p.Policy())
 			require.Equal(kinds, p.Ops())
@@ -329,16 +329,16 @@ func Test_AppDef_GrantWithFields(t *testing.T) {
 		}
 
 		cnt := 0
-		app.Privileges(func(p IACLRule) {
+		app.ACL(func(p IACLRule) {
 			cnt++
 			switch cnt {
 			case 1:
-				checkPrivilege(p, PolicyKind_Allow,
+				checkRule(p, PolicyKind_Allow,
 					[]OperationKind{OperationKind_Select},
 					[]QName{docName}, nil,
 					readerRoleName)
 			case 2:
-				checkPrivilege(p, PolicyKind_Allow,
+				checkRule(p, PolicyKind_Allow,
 					[]OperationKind{OperationKind_Select},
 					[]QName{QNameAnyStructure}, []FieldName{"field1"},
 					readerRoleName)

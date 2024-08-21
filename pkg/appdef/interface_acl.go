@@ -64,32 +64,32 @@ const (
 type IACLRule interface {
 	IWithComments
 
-	// Returns operation kinds
+	// Returns operations that was granted or revoked.
 	Ops() []OperationKind
 
-	// Returns is privilege has been granted. The opposite of `IsRevoked()`
+	// Returns operations are granted or revoked.
 	Policy() PolicyKind
 
-	// Returns objects names on which privilege was applied.
+	// Returns resource names on which rule is applicable.
 	//
-	// # For PrivilegeKind_Insert, GrantKind_Update and GrantKind_Select:
+	// # For OperationKind_Insert, OperationKind_Update and OperationKind_Select:
 	//	- records or view records names or
 	//	- workspaces names.
 	//
-	// # For PrivilegeKind_Execute:
+	// # For OperationKind_Execute:
 	//	- commands & queries names or
 	//	- workspaces names.
 	//
-	// # For PrivilegeKind_Inherits:
+	// # For OperationKind_Inherits:
 	//	- roles names.
 	On() QNames
 
-	// Returns fields (of objects) which was granted or revoked.
+	// Returns fields (of objects) operations on which was granted or revoked.
 	//
-	// For PrivilegeKind_Update and PrivilegeKind_Select returns field names of records or view records.
+	// For OperationKind_Update and OperationKind_Select returns field names of records or view records.
 	Fields() []FieldName
 
-	// Returns the role to which the privilege was granted or revoked.
+	// Returns the role to which the operations was granted or revoked.
 	To() IRole
 }
 
@@ -98,49 +98,49 @@ type IWithACL interface {
 	// Enumerates all ACL rules.
 	//
 	// Rules are enumerated in the order they are added.
-	Privileges(func(IACLRule))
+	ACL(func(IACLRule))
 
-	// Returns all privileges on specified entities, which contains at least one from specified kinds.
+	// Returns all ACL rules on specified resources, which contains at least one from specified kinds.
 	//
-	// If no kinds specified then all privileges on entities are returned.
+	// If no kinds specified then all rules are returned.
 	//
-	// Privileges are returned in the order they are added.
-	PrivilegesOn(on []QName, kind ...OperationKind) []IACLRule
+	// Rules are returned in the order they are added.
+	ACLForResources([]QName, ...OperationKind) []IACLRule
 }
 
-type IPrivilegesBuilder interface {
-	// Grants new privilege with specified kinds on specified objects to specified role.
+type IACLBuilder interface {
+	// Grants specified operations on specified resources to specified role.
 	//
 	// # Panics:
-	//   - if kinds is empty,
-	//	 - if objects are empty,
-	//	 - if objects contains unknown names,
-	//	 - if objects are mixed, e.g. records and commands,
-	//	 - if kinds are not compatible with objects,
-	//	 - if fields are not applicable for privilege,
+	//   - if ops is empty,
+	//	 - if resources are empty,
+	//	 - if resources contains unknown names,
+	//	 - if resources are mixed, e.g. records and commands,
+	//	 - if ops are not compatible with resources,
+	//	 - if fields are not applicable for ops,
 	//	 - if fields contains unknown names,
 	//   - if role is unknown.
-	Grant(kinds []OperationKind, on []QName, fields []FieldName, toRole QName, comment ...string) IPrivilegesBuilder
+	Grant(ops []OperationKind, on []QName, fields []FieldName, toRole QName, comment ...string) IACLBuilder
 
-	// Grants all available privileges on specified objects to specified role.
+	// Grants all available operations on specified resources to specified role.
 	// Object names can include `QNameANY` or `QNameAny×××` names.
 	//
-	// If the objects are records or view records, then insert, update, and select are granted.
+	// If the resources are records or view records, then insert, update, and select are granted.
 	//
-	// If the objects are commands or queries, their execution is granted.
+	// If the resources are commands or queries, their execution is granted.
 	//
-	// If the objects are workspaces, then:
+	// If the resources are workspaces, then:
 	//	- insert, update and select records and view records of these workspaces are granted,
 	//	- execution of commands & queries from these workspaces is granted.
 	//
-	// If the objects are roles, then all privileges from these roles are granted to specified role.
+	// If the objects are roles, then all operations from these roles are granted to specified role.
 	//
-	// No mixed objects are allowed.
-	GrantAll(on []QName, toRole QName, comment ...string) IPrivilegesBuilder
+	// No mixed resources are allowed.
+	GrantAll(on []QName, toRole QName, comment ...string) IACLBuilder
 
-	// Revokes privilege with specified kind on specified objects from specified role.
-	Revoke(kinds []OperationKind, on []QName, fromRole QName, comment ...string) IPrivilegesBuilder
+	// Revokes specified operations on specified resources from specified role.
+	Revoke(ops []OperationKind, on []QName, fromRole QName, comment ...string) IACLBuilder
 
-	// Remove all available privileges on specified objects from specified role.
-	RevokeAll(on []QName, fromRole QName, comment ...string) IPrivilegesBuilder
+	// Remove all available operations on specified resources from specified role.
+	RevokeAll(on []QName, fromRole QName, comment ...string) IACLBuilder
 }

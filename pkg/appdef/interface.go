@@ -62,7 +62,7 @@ type IAppDefBuilder interface {
 	IJobsBuilder
 
 	IRolesBuilder
-	IPrivilegesBuilder
+	IACLBuilder
 
 	IRatesBuilder
 	ILimitsBuilder
