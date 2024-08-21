@@ -254,7 +254,10 @@ func TestRecordsStorage_Insert(t *testing.T) {
 	appStructsFunc := func() istructs.IAppStructs {
 		return appStructs
 	}
-	storage := NewRecordsStorage(appStructsFunc, state.SimpleWSIDFunc(istructs.WSID(1)), nil)
+	cudFunc := func() istructs.ICUD {
+		return cud
+	}
+	storage := NewRecordsStorage(appStructsFunc, state.SimpleWSIDFunc(istructs.WSID(istructs.NullWSID)), cudFunc)
 	kb := storage.NewKeyBuilder(testRecordQName1, nil)
 	vb, err := storage.(state.IWithInsert).ProvideValueBuilder(kb, nil)
 	require.NoError(err)
@@ -271,12 +274,14 @@ func TestRecordsStorage_Update(t *testing.T) {
 	sv := &recordsValue{record: r}
 	cud := &mockCUD{}
 	cud.On("Update", mock.Anything).Return(rw)
-
+	cudFunc := func() istructs.ICUD {
+		return cud
+	}
 	appStructs := &mockAppStructs{}
 	appStructsFunc := func() istructs.IAppStructs {
 		return appStructs
 	}
-	storage := NewRecordsStorage(appStructsFunc, state.SimpleWSIDFunc(istructs.WSID(1)), nil)
+	storage := NewRecordsStorage(appStructsFunc, state.SimpleWSIDFunc(istructs.WSID(istructs.NullWSID)), cudFunc)
 	kb := storage.NewKeyBuilder(testRecordQName1, nil)
 	vb, err := storage.(state.IWithUpdate).ProvideValueBuilderForUpdate(kb, sv, nil)
 	require.NoError(err)
@@ -333,7 +338,7 @@ func TestRecordsStorage_ValidateInWorkspaces_Writes(t *testing.T) {
 	storage := NewRecordsStorage(appStructsFunc, state.SimpleWSIDFunc(istructs.WSID(1)), nil)
 
 	wrongSingleton := appdef.NewQName("test", "RecordX")
-	wrongKb := storage.NewKeyBuilder(appdef.NullQName, nil)
+	wrongKb := storage.NewKeyBuilder(wrongSingleton, nil)
 	expectedError := typeIsNotDefinedInWorkspaceWithDescriptor(wrongSingleton, testWSDescriptorQName)
 
 	t.Run("NewValue should validate for unavailable records", func(t *testing.T) {
