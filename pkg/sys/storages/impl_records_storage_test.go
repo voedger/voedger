@@ -257,7 +257,7 @@ func TestRecordsStorage_Insert(t *testing.T) {
 	cudFunc := func() istructs.ICUD {
 		return cud
 	}
-	storage := NewRecordsStorage(appStructsFunc, state.SimpleWSIDFunc(istructs.WSID(istructs.NullWSID)), cudFunc)
+	storage := NewRecordsStorage(appStructsFunc, state.SimpleWSIDFunc(istructs.NullWSID), cudFunc)
 	kb := storage.NewKeyBuilder(testRecordQName1, nil)
 	vb, err := storage.(state.IWithInsert).ProvideValueBuilder(kb, nil)
 	require.NoError(err)
@@ -281,7 +281,7 @@ func TestRecordsStorage_Update(t *testing.T) {
 	appStructsFunc := func() istructs.IAppStructs {
 		return appStructs
 	}
-	storage := NewRecordsStorage(appStructsFunc, state.SimpleWSIDFunc(istructs.WSID(istructs.NullWSID)), cudFunc)
+	storage := NewRecordsStorage(appStructsFunc, state.SimpleWSIDFunc(istructs.NullWSID), cudFunc)
 	kb := storage.NewKeyBuilder(testRecordQName1, nil)
 	vb, err := storage.(state.IWithUpdate).ProvideValueBuilderForUpdate(kb, sv, nil)
 	require.NoError(err)

@@ -76,14 +76,6 @@ type nilEvents struct {
 	istructs.IEvents
 }
 
-type nilRecords struct {
-	istructs.IRecords
-}
-
-type nilAppDef struct {
-	appdef.IAppDef
-}
-
 type mockAppStructs struct {
 	istructs.IAppStructs
 	mock.Mock
