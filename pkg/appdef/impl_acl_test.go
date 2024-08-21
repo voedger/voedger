@@ -81,11 +81,11 @@ func Test_AppDef_GrantAndRevoke(t *testing.T) {
 
 	t.Run("should be ok to check ACL", func(t *testing.T) {
 
-		checkACLRule := func(acl IACLRule, policy PolicyKind, kinds []OperationKind, on []QName, fields []FieldName, principal QName) {
+		checkACLRule := func(acl IACLRule, policy PolicyKind, kinds []OperationKind, resources []QName, fields []FieldName, principal QName) {
 			require.NotNil(acl)
 			require.Equal(policy, acl.Policy())
 			require.Equal(kinds, acl.Ops())
-			require.EqualValues(on, acl.Resources().On())
+			require.EqualValues(resources, acl.Resources().On())
 			require.Equal(fields, acl.Resources().Fields())
 			require.Equal(principal, acl.Principal().QName())
 		}
@@ -319,11 +319,11 @@ func Test_AppDef_GrantWithFields(t *testing.T) {
 
 	t.Run("should be ok to check ACL", func(t *testing.T) {
 
-		checkRule := func(p IACLRule, policy PolicyKind, kinds []OperationKind, on []QName, fields []FieldName, to QName) {
+		checkRule := func(p IACLRule, policy PolicyKind, kinds []OperationKind, resources []QName, fields []FieldName, to QName) {
 			require.NotNil(p)
 			require.Equal(policy, p.Policy())
 			require.Equal(kinds, p.Ops())
-			require.EqualValues(on, p.Resources().On())
+			require.EqualValues(resources, p.Resources().On())
 			require.Equal(fields, p.Resources().Fields())
 			require.Equal(to, p.Principal().QName())
 		}

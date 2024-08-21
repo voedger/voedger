@@ -43,13 +43,13 @@ type aclRule struct {
 	principal *role
 }
 
-func newACLRule(ops []OperationKind, policy PolicyKind, on []QName, fields []FieldName, principal *role, comment ...string) *aclRule {
+func newACLRule(ops []OperationKind, policy PolicyKind, resources []QName, fields []FieldName, principal *role, comment ...string) *aclRule {
 	opSet := set.From(ops...)
 	if opSet.Len() == 0 {
 		panic(ErrMissed("operations"))
 	}
 
-	names, err := validateACLResourceNames(principal.app, on...)
+	names, err := validateACLResourceNames(principal.app, resources...)
 	if err != nil {
 		panic(err)
 	}
@@ -64,7 +64,7 @@ func newACLRule(ops []OperationKind, policy PolicyKind, on []QName, fields []Fie
 		if !opSet.ContainsAny(OperationKind_Select, OperationKind_Update) {
 			panic(ErrIncompatible("fields are not applicable for operations «%s»", opSet))
 		}
-		if err := validateFieldNamesByTypes(principal.app, on, fields); err != nil {
+		if err := validateFieldNamesByTypes(principal.app, resources, fields); err != nil {
 			panic(err)
 		}
 	}
@@ -79,16 +79,16 @@ func newACLRule(ops []OperationKind, policy PolicyKind, on []QName, fields []Fie
 	return acl
 }
 
-func newGrant(ops []OperationKind, on []QName, fields []FieldName, principal *role, comment ...string) *aclRule {
-	return newACLRule(ops, PolicyKind_Allow, on, fields, principal, comment...)
+func newGrant(ops []OperationKind, resources []QName, fields []FieldName, principal *role, comment ...string) *aclRule {
+	return newACLRule(ops, PolicyKind_Allow, resources, fields, principal, comment...)
 }
 
-func newRevoke(ops []OperationKind, on []QName, fields []FieldName, principal *role, comment ...string) *aclRule {
-	return newACLRule(ops, PolicyKind_Deny, on, fields, principal, comment...)
+func newRevoke(ops []OperationKind, resources []QName, fields []FieldName, principal *role, comment ...string) *aclRule {
+	return newACLRule(ops, PolicyKind_Deny, resources, fields, principal, comment...)
 }
 
-func newACLRuleAll(policy PolicyKind, on []QName, principal *role, comment ...string) *aclRule {
-	names, err := validateACLResourceNames(principal.app, on...)
+func newACLRuleAll(policy PolicyKind, resources []QName, principal *role, comment ...string) *aclRule {
+	names, err := validateACLResourceNames(principal.app, resources...)
 	if err != nil {
 		panic(err)
 	}
@@ -98,12 +98,12 @@ func newACLRuleAll(policy PolicyKind, on []QName, principal *role, comment ...st
 	return newACLRule(allOps.AsArray(), policy, names, nil, principal, comment...)
 }
 
-func newGrantAll(on []QName, principal *role, comment ...string) *aclRule {
-	return newACLRuleAll(PolicyKind_Allow, on, principal, comment...)
+func newGrantAll(resources []QName, principal *role, comment ...string) *aclRule {
+	return newACLRuleAll(PolicyKind_Allow, resources, principal, comment...)
 }
 
-func newRevokeAll(on []QName, principal *role, comment ...string) *aclRule {
-	return newACLRuleAll(PolicyKind_Deny, on, principal, comment...)
+func newRevokeAll(resources []QName, principal *role, comment ...string) *aclRule {
+	return newACLRuleAll(PolicyKind_Deny, resources, principal, comment...)
 }
 
 func (g aclRule) Ops() []OperationKind { return g.ops.AsArray() }

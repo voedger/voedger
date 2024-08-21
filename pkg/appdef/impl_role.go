@@ -27,10 +27,10 @@ func (r role) ACL(cb func(IACLRule)) {
 	}
 }
 
-func (r role) ACLForResources(on []QName, ops ...OperationKind) []IACLRule {
+func (r role) ACLForResources(resources []QName, ops ...OperationKind) []IACLRule {
 	pp := make([]IACLRule, 0)
 	for _, p := range r.aclRules {
-		if p.Resources().On().ContainsAny(on...) && p.ops.ContainsAny(ops...) {
+		if p.Resources().On().ContainsAny(resources...) && p.ops.ContainsAny(ops...) {
 			pp = append(pp, p)
 		}
 	}
@@ -42,20 +42,20 @@ func (r *role) appendACL(rule *aclRule) {
 	r.app.appendACL(rule)
 }
 
-func (r *role) grant(ops []OperationKind, on []QName, fields []FieldName, comment ...string) {
-	r.appendACL(newGrant(ops, on, fields, r, comment...))
+func (r *role) grant(ops []OperationKind, resources []QName, fields []FieldName, comment ...string) {
+	r.appendACL(newGrant(ops, resources, fields, r, comment...))
 }
 
-func (r *role) grantAll(on []QName, comment ...string) {
-	r.appendACL(newGrantAll(on, r, comment...))
+func (r *role) grantAll(resources []QName, comment ...string) {
+	r.appendACL(newGrantAll(resources, r, comment...))
 }
 
-func (r *role) revoke(ops []OperationKind, on []QName, comment ...string) {
-	r.appendACL(newRevoke(ops, on, nil, r, comment...))
+func (r *role) revoke(ops []OperationKind, resources []QName, comment ...string) {
+	r.appendACL(newRevoke(ops, resources, nil, r, comment...))
 }
 
-func (r *role) revokeAll(on []QName, comment ...string) {
-	r.appendACL(newRevokeAll(on, r, comment...))
+func (r *role) revokeAll(resources []QName, comment ...string) {
+	r.appendACL(newRevokeAll(resources, r, comment...))
 }
 
 // # Implements:
@@ -72,22 +72,22 @@ func newRoleBuilder(role *role) *roleBuilder {
 	}
 }
 
-func (rb *roleBuilder) Grant(ops []OperationKind, on []QName, fields []FieldName, comment ...string) IRoleBuilder {
-	rb.role.grant(ops, on, fields, comment...)
+func (rb *roleBuilder) Grant(ops []OperationKind, resources []QName, fields []FieldName, comment ...string) IRoleBuilder {
+	rb.role.grant(ops, resources, fields, comment...)
 	return rb
 }
 
-func (rb *roleBuilder) GrantAll(on []QName, comment ...string) IRoleBuilder {
-	rb.role.grantAll(on, comment...)
+func (rb *roleBuilder) GrantAll(resource []QName, comment ...string) IRoleBuilder {
+	rb.role.grantAll(resource, comment...)
 	return rb
 }
 
-func (rb *roleBuilder) Revoke(ops []OperationKind, on []QName, comment ...string) IRoleBuilder {
-	rb.role.revoke(ops, on, comment...)
+func (rb *roleBuilder) Revoke(ops []OperationKind, resources []QName, comment ...string) IRoleBuilder {
+	rb.role.revoke(ops, resources, comment...)
 	return rb
 }
 
-func (rb *roleBuilder) RevokeAll(on []QName, comment ...string) IRoleBuilder {
-	rb.role.revokeAll(on, comment...)
+func (rb *roleBuilder) RevokeAll(resources []QName, comment ...string) IRoleBuilder {
+	rb.role.revokeAll(resources, comment...)
 	return rb
 }

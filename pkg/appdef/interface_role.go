@@ -22,7 +22,7 @@ type IRoleBuilder interface {
 	//	 - if resources contains unknown names,
 	//	 - if ops are not compatible with resources,
 	//	 - if fields contains unknown names.
-	Grant(ops []OperationKind, on []QName, fields []FieldName, comment ...string) IRoleBuilder
+	Grant(ops []OperationKind, resources []QName, fields []FieldName, comment ...string) IRoleBuilder
 
 	// Grants all available operations on specified resources.
 	//
@@ -35,13 +35,13 @@ type IRoleBuilder interface {
 	//	- execution of commands & queries from these workspaces is granted.
 	//
 	// If the resources are roles, then all operations from these roles are granted.
-	GrantAll(on []QName, comment ...string) IRoleBuilder
+	GrantAll(resources []QName, comment ...string) IRoleBuilder
 
 	// Revokes operations on specified resources.
-	Revoke(ops []OperationKind, on []QName, comment ...string) IRoleBuilder
+	Revoke(ops []OperationKind, resources []QName, comment ...string) IRoleBuilder
 
 	// Remove all available operations on specified resources.
-	RevokeAll(on []QName, comment ...string) IRoleBuilder
+	RevokeAll(resources []QName, comment ...string) IRoleBuilder
 }
 
 type IWithRoles interface {

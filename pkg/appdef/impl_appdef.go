@@ -612,20 +612,20 @@ func (app *appDef) build() (err error) {
 	return err
 }
 
-func (app *appDef) grant(ops []OperationKind, on []QName, fields []FieldName, toRole QName, comment ...string) {
+func (app *appDef) grant(ops []OperationKind, resources []QName, fields []FieldName, toRole QName, comment ...string) {
 	r := app.Role(toRole)
 	if r == nil {
 		panic(ErrRoleNotFound(toRole))
 	}
-	r.(*role).grant(ops, on, fields, comment...)
+	r.(*role).grant(ops, resources, fields, comment...)
 }
 
-func (app *appDef) grantAll(on []QName, toRole QName, comment ...string) {
+func (app *appDef) grantAll(resources []QName, toRole QName, comment ...string) {
 	r := app.Role(toRole)
 	if r == nil {
 		panic(ErrRoleNotFound(toRole))
 	}
-	r.(*role).grantAll(on, comment...)
+	r.(*role).grantAll(resources, comment...)
 }
 
 // Makes system package.
@@ -643,20 +643,20 @@ func (app *appDef) makeSysDataTypes() {
 	}
 }
 
-func (app *appDef) revoke(ops []OperationKind, on []QName, fromRole QName, comment ...string) {
+func (app *appDef) revoke(ops []OperationKind, resources []QName, fromRole QName, comment ...string) {
 	r := app.Role(fromRole)
 	if r == nil {
 		panic(ErrRoleNotFound(fromRole))
 	}
-	r.(*role).revoke(ops, on, comment...)
+	r.(*role).revoke(ops, resources, comment...)
 }
 
-func (app *appDef) revokeAll(on []QName, fromRole QName, comment ...string) {
+func (app *appDef) revokeAll(resources []QName, fromRole QName, comment ...string) {
 	r := app.Role(fromRole)
 	if r == nil {
 		panic(ErrRoleNotFound(fromRole))
 	}
-	r.(*role).revokeAll(on, comment...)
+	r.(*role).revokeAll(resources, comment...)
 }
 
 // Returns type by name and kind. If type is not found then returns nil.
@@ -758,13 +758,13 @@ func (ab *appDefBuilder) addHardcodedDefinitions() {
 	viewNextBaseWSID.Value().AddField("NextBaseWSID", DataKind_int64, true)
 }
 
-func (ab *appDefBuilder) Grant(ops []OperationKind, on []QName, fields []FieldName, toRole QName, comment ...string) IACLBuilder {
-	ab.app.grant(ops, on, fields, toRole, comment...)
+func (ab *appDefBuilder) Grant(ops []OperationKind, resources []QName, fields []FieldName, toRole QName, comment ...string) IACLBuilder {
+	ab.app.grant(ops, resources, fields, toRole, comment...)
 	return ab
 }
 
-func (ab *appDefBuilder) GrantAll(on []QName, toRole QName, comment ...string) IACLBuilder {
-	ab.app.grantAll(on, toRole, comment...)
+func (ab *appDefBuilder) GrantAll(resources []QName, toRole QName, comment ...string) IACLBuilder {
+	ab.app.grantAll(resources, toRole, comment...)
 	return ab
 }
 
@@ -775,12 +775,12 @@ func (ab *appDefBuilder) MustBuild() IAppDef {
 	return ab.app
 }
 
-func (ab *appDefBuilder) Revoke(ops []OperationKind, on []QName, fromRole QName, comment ...string) IACLBuilder {
-	ab.app.revoke(ops, on, fromRole, comment...)
+func (ab *appDefBuilder) Revoke(ops []OperationKind, resources []QName, fromRole QName, comment ...string) IACLBuilder {
+	ab.app.revoke(ops, resources, fromRole, comment...)
 	return ab
 }
 
-func (ab *appDefBuilder) RevokeAll(on []QName, fromRole QName, comment ...string) IACLBuilder {
-	ab.app.revokeAll(on, fromRole, comment...)
+func (ab *appDefBuilder) RevokeAll(resources []QName, fromRole QName, comment ...string) IACLBuilder {
+	ab.app.revokeAll(resources, fromRole, comment...)
 	return ab
 }

@@ -73,6 +73,8 @@ type IResourcePattern interface {
 	//
 	// # inherits:
 	//	- roles names.
+	//
+	// Resource names can include `QNameANY` or `QNameAny×××` patterns.
 	On() QNames
 
 	// Returns fields (of records or views) then update or select operation is described.
@@ -123,7 +125,7 @@ type IACLBuilder interface {
 	//	 - if fields are not applicable for ops,
 	//	 - if fields contains unknown names,
 	//   - if role is unknown.
-	Grant(ops []OperationKind, on []QName, fields []FieldName, toRole QName, comment ...string) IACLBuilder
+	Grant(ops []OperationKind, resources []QName, fields []FieldName, toRole QName, comment ...string) IACLBuilder
 
 	// Grants all available operations on specified resources to specified role.
 	// Resource names can include `QNameANY` or `QNameAny×××` patterns.
@@ -139,11 +141,11 @@ type IACLBuilder interface {
 	// If the resources are roles, then all operations from these roles are granted to specified role.
 	//
 	// No mixed resources are allowed.
-	GrantAll(on []QName, toRole QName, comment ...string) IACLBuilder
+	GrantAll(resources []QName, toRole QName, comment ...string) IACLBuilder
 
 	// Revokes specified operations on specified resources from specified role.
-	Revoke(ops []OperationKind, on []QName, fromRole QName, comment ...string) IACLBuilder
+	Revoke(ops []OperationKind, resources []QName, fromRole QName, comment ...string) IACLBuilder
 
 	// Remove all available operations on specified resources from specified role.
-	RevokeAll(on []QName, fromRole QName, comment ...string) IACLBuilder
+	RevokeAll(resources []QName, fromRole QName, comment ...string) IACLBuilder
 }

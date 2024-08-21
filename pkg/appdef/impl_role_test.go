@@ -81,11 +81,11 @@ func Test_AppDef_AddRole(t *testing.T) {
 
 	t.Run("should be ok to check roles", func(t *testing.T) {
 
-		checkPrivilege := func(p IACLRule, policy PolicyKind, kinds []OperationKind, on []QName, fields []FieldName, to QName) {
+		checkPrivilege := func(p IACLRule, policy PolicyKind, kinds []OperationKind, resources []QName, fields []FieldName, to QName) {
 			require.NotNil(p)
 			require.Equal(policy, p.Policy())
 			require.Equal(kinds, p.Ops())
-			require.EqualValues(on, p.Resources().On())
+			require.EqualValues(resources, p.Resources().On())
 			require.Equal(fields, p.Resources().Fields())
 			require.Equal(to, p.Principal().QName())
 		}
