@@ -655,7 +655,7 @@ func replyBadRequest(sender ibus.ISender, message string) {
 // test app deployment constants
 var (
 	testAppName                                = istructs.AppQName_untill_airs_bp
-	testAppEngines                             = [appparts.ProcessorKind_Count]int{10, 10, 10}
+	testAppEngines                             = [appparts.ProcessorKind_Count]int{10, 10, 10, 0}
 	testAppPartID    istructs.PartitionID      = 1
 	testAppPartCount istructs.NumAppPartitions = 1
 )
@@ -700,9 +700,10 @@ func setUp(t *testing.T, prepare func(appDef appdef.IAppDefBuilder, cfg *istruct
 	}, time.Now)
 
 	// prepare the AppParts to borrow AppStructs
-	appParts, appPartsClean, err := appparts.New2(appStructsProvider,
+	appParts, appPartsClean, err := appparts.New2(ctx, appStructsProvider,
 		projectors.NewSyncActualizerFactoryFactory(projectors.ProvideSyncActualizerFactory(), secretReader, n10nBroker, statelessResources),
-		appparts.NullActualizers,
+		appparts.NullProcessorRunner,
+		appparts.NullProcessorRunner,
 		engines.ProvideExtEngineFactories(
 			engines.ExtEngineFactoriesConfig{
 				AppConfigs:         cfgs,

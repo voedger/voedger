@@ -18,39 +18,71 @@ import (
 	"github.com/voedger/voedger/pkg/pipeline"
 )
 
-// engine placeholder
 type engines map[appdef.ExtensionEngineKind]iextengine.IExtensionEngine
 
-type app struct {
-	mx           sync.RWMutex
-	apps         *apps
-	name         appdef.AppQName
-	partsCount   istructs.NumAppPartitions
-	def          appdef.IAppDef
-	structs      istructs.IAppStructs
-	enginesPools [ProcessorKind_Count]*pool.Pool[engines]
-	parts        map[istructs.PartitionID]*partition
+type appVersion struct {
+	mx      sync.RWMutex
+	def     appdef.IAppDef
+	structs istructs.IAppStructs
+	pools   [ProcessorKind_Count]*pool.Pool[engines]
 }
 
-func newApplication(apps *apps, name appdef.AppQName, partsCount istructs.NumAppPartitions) *app {
-	return &app{
-		mx:         sync.RWMutex{},
-		apps:       apps,
-		name:       name,
-		partsCount: partsCount,
-		parts:      map[istructs.PartitionID]*partition{},
+func (av *appVersion) appDef() appdef.IAppDef {
+	av.mx.RLock()
+	defer av.mx.RUnlock()
+	return av.def
+}
+
+func (av *appVersion) appStructs() istructs.IAppStructs {
+	av.mx.RLock()
+	defer av.mx.RUnlock()
+	return av.structs
+}
+
+// returns AppDef, AppStructs and engines pool for the specified processor kind
+func (av *appVersion) snapshot(proc ProcessorKind) (appdef.IAppDef, istructs.IAppStructs, *pool.Pool[engines]) {
+	av.mx.RLock()
+	defer av.mx.RUnlock()
+	return av.def, av.structs, av.pools[proc]
+}
+
+func (av *appVersion) upgrade(
+	def appdef.IAppDef,
+	structs istructs.IAppStructs,
+	pools [ProcessorKind_Count]*pool.Pool[engines],
+) {
+	av.mx.Lock()
+	defer av.mx.Unlock()
+
+	av.def = def
+	av.structs = structs
+	av.pools = pools
+}
+
+type appRT struct {
+	mx             sync.RWMutex
+	apps           *apps
+	name           appdef.AppQName
+	partsCount     istructs.NumAppPartitions
+	lastestVersion appVersion
+	parts          map[istructs.PartitionID]*appPartitionRT
+}
+
+func newApplication(apps *apps, name appdef.AppQName, partsCount istructs.NumAppPartitions) *appRT {
+	return &appRT{
+		mx:             sync.RWMutex{},
+		apps:           apps,
+		name:           name,
+		partsCount:     partsCount,
+		lastestVersion: appVersion{},
+		parts:          map[istructs.PartitionID]*appPartitionRT{},
 	}
 }
 
 // extModuleURLs is important for non-builtin (non-native) apps
 // extModuleURLs: packagePath->packageURL
-func (a *app) deploy(def appdef.IAppDef, extModuleURLs map[string]*url.URL, structs istructs.IAppStructs, numEnginesPerEngineKind [ProcessorKind_Count]int) {
-	a.def = def
-	a.structs = structs
-
+func (a *appRT) deploy(def appdef.IAppDef, extModuleURLs map[string]*url.URL, structs istructs.IAppStructs, numEnginesPerEngineKind [ProcessorKind_Count]int) {
 	eef := a.apps.extEngineFactories
-
-	ctx := context.Background()
 
 	enginesPathsModules := map[appdef.ExtensionEngineKind]map[string]*iextengine.ExtensionModule{}
 	def.Extensions(func(ext appdef.IExtension) {
@@ -87,6 +119,7 @@ func (a *app) deploy(def appdef.IAppDef, extModuleURLs map[string]*url.URL, stru
 		}
 	}
 
+	pools := [ProcessorKind_Count]*pool.Pool[engines]{}
 	// processorKind here is one of ProcessorKind_Command, ProcessorKind_Query, ProcessorKind_Actualizer
 	for processorKind, processorsCountPerKind := range numEnginesPerEngineKind {
 		ee := make([]engines, processorsCountPerKind)
@@ -95,7 +128,7 @@ func (a *app) deploy(def appdef.IAppDef, extModuleURLs map[string]*url.URL, stru
 			if !ok {
 				panic(fmt.Errorf("no extension engine factory for engine %s met among def of %s", extEngineKind.String(), a.name))
 			}
-			extEngines, err := extensionEngineFactory.New(ctx, a.name, extensionModules, &iextengine.DefaultExtEngineConfig, processorsCountPerKind)
+			extEngines, err := extensionEngineFactory.New(a.apps.vvmCtx, a.name, extensionModules, &iextengine.DefaultExtEngineConfig, processorsCountPerKind)
 			if err != nil {
 				panic(err)
 			}
@@ -106,82 +139,90 @@ func (a *app) deploy(def appdef.IAppDef, extModuleURLs map[string]*url.URL, stru
 				ee[i][extEngineKind] = extEngines[i]
 			}
 		}
-		a.enginesPools[processorKind] = pool.New(ee)
+		pools[processorKind] = pool.New(ee)
 	}
+
+	a.lastestVersion.upgrade(def, structs, pools)
 }
 
-type partition struct {
-	app            *app
+type appPartitionRT struct {
+	app            *appRT
 	id             istructs.PartitionID
 	syncActualizer pipeline.ISyncOperator
+	processors     *partitionProcessors
+
+	// TODO: implement partitionCache
 }
 
-func newPartition(app *app, id istructs.PartitionID) *partition {
-	part := &partition{
+func newAppPartitionRT(app *appRT, id istructs.PartitionID) *appPartitionRT {
+	part := &appPartitionRT{
 		app:            app,
 		id:             id,
-		syncActualizer: app.apps.syncActualizerFactory(app.structs, id),
+		syncActualizer: app.apps.syncActualizerFactory(app.lastestVersion.appStructs(), id),
 	}
+	part.processors = newPartitionProcessors(part)
 	return part
 }
 
-func (p *partition) borrow(proc ProcessorKind) (*partitionRT, error) {
-	b := newPartitionRT(p)
+func (p *appPartitionRT) borrow(proc ProcessorKind) (*borrowedPartition, error) {
+	b := newBorrowedPartition(p)
 
-	if err := b.init(proc); err != nil {
+	if err := b.borrow(proc); err != nil {
 		return nil, err
 	}
 
 	return b, nil
 }
 
-type partitionRT struct {
-	part                     *partition
-	appDef                   appdef.IAppDef
-	appStructs               istructs.IAppStructs
-	borrowed                 engines
-	borrowedForProcessorKind ProcessorKind
+// # Implements IAppPartition
+type borrowedPartition struct {
+	part       *appPartitionRT
+	appDef     appdef.IAppDef
+	appStructs istructs.IAppStructs
+	pool       *pool.Pool[engines] // pool of borrowed engines
+	engines    engines             // borrowed engines
 }
 
-var partionRTPool = sync.Pool{
+var borrowedPartitionsPool = sync.Pool{
 	New: func() interface{} {
-		return &partitionRT{}
+		return &borrowedPartition{}
 	},
 }
 
-func newPartitionRT(part *partition) *partitionRT {
-	rt := partionRTPool.Get().(*partitionRT)
-
-	rt.part = part
-	rt.appDef = part.app.def
-	rt.appStructs = part.app.structs
-
-	return rt
+func newBorrowedPartition(part *appPartitionRT) *borrowedPartition {
+	bp := borrowedPartitionsPool.Get().(*borrowedPartition)
+	bp.part = part
+	return bp
 }
 
-func (rt *partitionRT) App() appdef.AppQName { return rt.part.app.name }
+// # IAppPartition.App
+func (bp *borrowedPartition) App() appdef.AppQName { return bp.part.app.name }
 
-func (rt *partitionRT) AppStructs() istructs.IAppStructs { return rt.appStructs }
+// # IAppPartition.AppStructs
+func (bp *borrowedPartition) AppStructs() istructs.IAppStructs { return bp.appStructs }
 
-func (rt *partitionRT) DoSyncActualizer(ctx context.Context, work pipeline.IWorkpiece) error {
-	return rt.part.syncActualizer.DoSync(ctx, work)
+// # IAppPartition.DoSyncActualizer
+func (bp *borrowedPartition) DoSyncActualizer(ctx context.Context, work pipeline.IWorkpiece) error {
+	return bp.part.syncActualizer.DoSync(ctx, work)
 }
 
-func (rt *partitionRT) ID() istructs.PartitionID { return rt.part.id }
+// # IAppPartition.ID
+func (bp *borrowedPartition) ID() istructs.PartitionID { return bp.part.id }
 
-func (rt *partitionRT) Invoke(ctx context.Context, name appdef.QName, state istructs.IState, intents istructs.IIntents) error {
-	e := rt.appDef.Extension(name)
+// # IAppPartition.Invoke
+func (bp *borrowedPartition) Invoke(ctx context.Context, name appdef.QName, state istructs.IState, intents istructs.IIntents) error {
+	e := bp.appDef.Extension(name)
 	if e == nil {
 		return errUndefinedExtension(name)
 	}
 
-	extName := rt.appDef.FullQName(name)
+	extName := bp.appDef.FullQName(name)
 	if extName == appdef.NullFullQName {
 		return errCantObtainFullQName(name)
 	}
-	io := iextengine.NewExtensionIO(rt.appDef, state, intents)
+	io := iextengine.NewExtensionIO(bp.appDef, state, intents)
 
-	extEngine, ok := rt.borrowed[e.Engine()]
+	extEngine, ok := bp.engines[e.Engine()]
 	if !ok {
 		return fmt.Errorf("no extension engine for extension kind %s", e.Engine().String())
 	}
@@ -189,24 +230,26 @@ func (rt *partitionRT) Invoke(ctx context.Context, name appdef.QName, state istr
 	return extEngine.Invoke(ctx, extName, io)
 }
 
-func (rt *partitionRT) Release() {
-	if engine := rt.borrowed; engine != nil {
-		rt.borrowed = nil
-		poolTheEngineBorrowedFrom := rt.part.app.enginesPools[rt.borrowedForProcessorKind]
-		poolTheEngineBorrowedFrom.Release(engine)
-		rt.borrowedForProcessorKind = ProcessorKind_Count // like null
+// # IAppPartition.Release
+func (bp *borrowedPartition) Release() {
+	bp.part = nil
+	bp.appDef = nil
+	bp.appStructs = nil
+	if pool := bp.pool; pool != nil {
+		bp.pool = nil
+		if engine := bp.engines; engine != nil {
+			bp.engines = nil
+			pool.Release(engine)
+		}
 	}
-	partionRTPool.Put(rt)
+	borrowedPartitionsPool.Put(bp)
 }
 
-// Initialize partition RT structures for use
-func (rt *partitionRT) init(proc ProcessorKind) error {
-	pool := rt.part.app.enginesPools[proc]
-	engines, err := pool.Borrow()
+func (bp *borrowedPartition) borrow(proc ProcessorKind) (err error) {
+	bp.appDef, bp.appStructs, bp.pool = bp.part.app.lastestVersion.snapshot(proc)
+	bp.engines, err = bp.pool.Borrow()
 	if err != nil {
 		return errNotAvailableEngines[proc]
 	}
-	rt.borrowed = engines
-	rt.borrowedForProcessorKind = proc
 	return nil
 }

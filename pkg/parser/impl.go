@@ -36,6 +36,8 @@ func parseImpl(fileName string, content string) (*SchemaAST, error) {
 		{Name: "INSERTONALLCOMMANDSWITHTAG", Pattern: `INSERT[ \r\n\t]+ON[ \r\n\t]+ALL[ \r\n\t]+COMMANDS[ \r\n\t]+WITH[ \r\n\t]+TAG`},
 		{Name: "SELECTONQUERY", Pattern: `SELECT[ \r\n\t]+ON[ \r\n\t]+QUERY`},
 		{Name: "SELECTONALLQUERIESWITHTAG", Pattern: `SELECT[ \r\n\t]+ON[ \r\n\t]+ALL[ \r\n\t]+QUERIES[ \r\n\t]+WITH[ \r\n\t]+TAG`},
+		{Name: "SELECTONVIEW", Pattern: `SELECT[ \r\n\t]+ON[ \r\n\t]+VIEW`},
+		{Name: "SELECTONALLVIEWSWITHTAG", Pattern: `SELECT[ \r\n\t]+ON[ \r\n\t]+ALL[ \r\n\t]+VIEWS[ \r\n\t]+WITH[ \r\n\t]+TAG`},
 		{Name: "INSERTONWORKSPACE", Pattern: `INSERT[ \r\n\t]+ON[ \r\n\t]+WORKSPACE`},
 		{Name: "INSERTONALLWORKSPACESWITHTAG", Pattern: `INSERT[ \r\n\t]+ON[ \r\n\t]+ALL[ \r\n\t]+WORKSPACES[ \r\n\t]+WITH[ \r\n\t]+TAG`},
 		{Name: "ONALLTABLESWITHTAG", Pattern: `ON[ \r\n\t]+ALL[ \r\n\t]+TABLES[ \r\n\t]+WITH[ \r\n\t]+TAG`},

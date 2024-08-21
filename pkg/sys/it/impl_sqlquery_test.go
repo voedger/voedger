@@ -530,4 +530,13 @@ func TestReadFromAnDifferentLocations(t *testing.T) {
 		loginHash := registry.GetLoginHash(prn.Login.Name)
 		require.Contains(resp.SectionRow()[0].(string), fmt.Sprintf(`"LoginHash":"%s"`, loginHash))
 	})
+
+	t.Run("query forwarding", func(t *testing.T) {
+		wsAnother := vit.WS(istructs.AppQName_test1_app1, "test_ws_another")
+		ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+		body := fmt.Sprintf(`{"args":{"Query":"select * from %d.sys.wlog"},"elements":[{"fields":["Result"]}]}`, ws.WSID)
+		resp := vit.PostWS(wsAnother, "q.sys.SqlQuery", body)
+		require.GreaterOrEqual(resp.NumRows(), 2)
+		resp.Println()
+	})
 }

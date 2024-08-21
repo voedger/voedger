@@ -39,4 +39,14 @@ func TestWSID(t *testing.T) {
 	require.Equal(MaxPseudoBaseWSID, WSID(0xffff))
 	require.Equal(FirstBaseAppWSID, WSID(0xffff+1))
 	require.Equal(FirstBaseUserWSID, WSID(0xffff+0xffff+1))
+
+	require.Equal(FirtReservedWSID, WSID(0xffff+1+0x8000))
+	require.Equal(FirtReservedWSID, WSID(98304))
+	require.Equal(FirtReservedWSID, WSID(0x18000))
+	require.Equal(GuestWSID, WSID(0x18000))
+	require.Equal(GuestWSID, WSID(98304))
+
+	require.Equal(FirstPseudoBaseWSID+MaxPseudoBaseWSID+1, FirstBaseAppWSID)
+	require.Equal(FirstBaseAppWSID+MaxNumAppWorkspaces, FirtReservedWSID)
+	require.Equal(FirtReservedWSID+NumReservedWSID, FirstBaseUserWSID)
 }

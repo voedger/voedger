@@ -162,6 +162,13 @@ func analyseGrant(grant *GrantStmt, c *iterateCtx) {
 		}
 	}
 
+	if grant.View {
+		err := resolveInCtx(grant.On, c, func(f *ViewStmt, _ *PackageSchemaAST) error { return nil })
+		if err != nil {
+			c.stmtErr(&grant.On.Pos, err)
+		}
+	}
+
 	if grant.Workspace {
 		err := resolveInCtx(grant.On, c, func(f *WorkspaceStmt, _ *PackageSchemaAST) error { return nil })
 		if err != nil {
@@ -169,7 +176,7 @@ func analyseGrant(grant *GrantStmt, c *iterateCtx) {
 		}
 	}
 
-	if grant.AllCommandsWithTag || grant.AllQueriesWithTag || grant.AllWorkspacesWithTag || (grant.AllTablesWithTag != nil) {
+	if grant.AllCommandsWithTag || grant.AllQueriesWithTag || grant.AllWorkspacesWithTag || (grant.AllTablesWithTag != nil) || (grant.AllViewsWithTag) {
 		err := resolveInCtx(grant.On, c, func(f *TagStmt, _ *PackageSchemaAST) error { return nil })
 		if err != nil {
 			c.stmtErr(&grant.On.Pos, err)

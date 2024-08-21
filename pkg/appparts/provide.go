@@ -6,7 +6,8 @@
 package appparts
 
 import (
-	"github.com/voedger/voedger/pkg/appdef"
+	"context"
+
 	"github.com/voedger/voedger/pkg/iextengine"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/pipeline"
@@ -17,15 +18,12 @@ type SyncActualizerFactory = func(istructs.IAppStructs, istructs.PartitionID) pi
 // New only for tests where sync actualizer is not used
 func New(structs istructs.IAppStructsProvider) (ap IAppPartitions, cleanup func(), err error) {
 	return New2(
+		context.Background(),
 		structs,
-		func(istructs.IAppStructs, istructs.PartitionID) pipeline.ISyncOperator {
-			return &pipeline.NOOP{}
-		},
-		&nullActualizers{},
-		iextengine.ExtensionEngineFactories{
-			appdef.ExtensionEngineKind_BuiltIn: iextengine.NullExtensionEngineFactory,
-			appdef.ExtensionEngineKind_WASM:    iextengine.NullExtensionEngineFactory,
-		},
+		NullSyncActualizerFactory,
+		NullProcessorRunner,
+		NullProcessorRunner,
+		NullExtensionEngineFactories,
 	)
 }
 
@@ -33,15 +31,19 @@ func New(structs istructs.IAppStructsProvider) (ap IAppPartitions, cleanup func(
 //
 // # Parameters:
 //
+//	vvmCtx - VVM context. Used to run processors (actualizers and schedulers)
 //	structs - application structures provider
 //	syncAct - sync actualizer factory, old actualizers style, should be used with builtin applications only
-//	act - actualizers
+//	asyncActualizersRunner - async actualizers runner
+//	jobSchedulerRunner - job scheduler runner
 //	eef - extension engine factories
 func New2(
+	vvmCtx context.Context,
 	structs istructs.IAppStructsProvider,
 	syncAct SyncActualizerFactory,
-	act IActualizers,
+	asyncActualizersRunner IProcessorRunner,
+	jobSchedulerRunner IProcessorRunner,
 	eef iextengine.ExtensionEngineFactories,
 ) (ap IAppPartitions, cleanup func(), err error) {
-	return newAppPartitions(structs, syncAct, act, eef)
+	return newAppPartitions(vvmCtx, structs, syncAct, asyncActualizersRunner, jobSchedulerRunner, eef)
 }

@@ -251,17 +251,7 @@ func deployTestAppEx(
 		vvmName = actualizerCfg.VvmName
 	}
 
-	var (
-		vvmCtx    context.Context
-		vvmCancel context.CancelFunc
-	)
-
-	if actualizerCfg.Ctx == nil {
-		vvmCtx, vvmCancel = context.WithCancel(context.Background())
-		actualizerCfg.Ctx = vvmCtx
-	} else {
-		vvmCtx = actualizerCfg.Ctx
-	}
+	vvmCtx, vvmCancel := context.WithCancel(context.Background())
 
 	var metrics imetrics.IMetrics
 
@@ -320,9 +310,11 @@ func deployTestAppEx(
 	actualizers = ProvideActualizers(*actualizerCfg)
 
 	appParts, appPartsCleanup, err := appparts.New2(
+		vvmCtx,
 		appStructsProvider,
 		NewSyncActualizerFactoryFactory(ProvideSyncActualizerFactory(), secretReader, n10nBroker, statelessResources),
 		actualizers,
+		appparts.NullProcessorRunner, // no job schedulers
 		engines.ProvideExtEngineFactories(
 			engines.ExtEngineFactoriesConfig{
 				AppConfigs:         cfgs,
@@ -333,7 +325,7 @@ func deployTestAppEx(
 		panic(err)
 	}
 
-	appParts.DeployApp(appName, nil, appDef, appPartsCount, appparts.PoolSize(10, 10, 10), cfg.NumAppWorkspaces())
+	appParts.DeployApp(appName, nil, appDef, appPartsCount, appparts.PoolSize(10, 10, 10, 0), cfg.NumAppWorkspaces())
 
 	start = func() {
 		if err := actualizers.Prepare(struct{}{}); err != nil {

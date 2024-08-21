@@ -36,7 +36,7 @@ func Provide(smtpCfg smtp.Cfg, numCP istructs.NumCommandProcessors) apps.AppBuil
 			Packages: []parser.PackageFS{sysPackageFS, registryPackageFS, registryAppPackageFS},
 			AppDeploymentDescriptor: appparts.AppDeploymentDescriptor{
 				NumParts:         istructs.NumAppPartitions(numCP),
-				EnginePoolSize:   appparts.PoolSize(int(numCP), DefDeploymentQPCount, int(numCP)),
+				EnginePoolSize:   appparts.PoolSize(int(numCP), DefDeploymentQPCount, int(numCP), DefDeploymentSPCount),
 				NumAppWorkspaces: istructs.DefaultNumAppWorkspaces,
 			},
 		}
