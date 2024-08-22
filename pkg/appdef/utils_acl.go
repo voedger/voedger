@@ -12,31 +12,40 @@ import (
 	"github.com/voedger/voedger/pkg/goutils/set"
 )
 
-// Returns "grant" if grant is true, otherwise "revoke".
-func PrivilegeAccessControlString(grant bool) string {
-	var result = []string{"grant", "revoke"}
-	if grant {
-		return result[0]
+// Returns "grant" if policy is allow, "revoke" if deny
+func (p PolicyKind) ActionString() string {
+	switch p {
+	case PolicyKind_Allow:
+		return "grant"
+	case PolicyKind_Deny:
+		return "revoke"
 	}
-	return result[1]
+	return p.TrimString()
 }
 
-// Returns all available privileges on specified type.
+// Renders an PolicyKind in human-readable form, without "PolicyKind_" prefix,
+// suitable for debugging or error messages
+func (p PolicyKind) TrimString() string {
+	const pref = "PolicyKind_"
+	return strings.TrimPrefix(p.String(), pref)
+}
+
+// Returns all available operations on specified type.
 //
-// If type can not to be privileged then returns empty slice.
-func allPrivilegesOnType(t IType) (pk set.Set[PrivilegeKind]) {
+// If type can not to be used as resource for ACL rule then returns empty slice.
+func allACLOperationsOnType(t IType) (ops set.Set[OperationKind]) {
 	switch t.Kind() {
 	case TypeKind_Any:
 		switch t.QName() {
 		case QNameANY:
-			pk = set.From(PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select, PrivilegeKind_Execute, PrivilegeKind_Inherits)
+			ops = set.From(OperationKind_Insert, OperationKind_Update, OperationKind_Select, OperationKind_Execute, OperationKind_Inherits)
 		case QNameAnyStructure, QNameAnyRecord,
 			QNameAnyGDoc, QNameAnyCDoc, QNameAnyWDoc,
 			QNameAnySingleton,
 			QNameAnyView:
-			pk = set.From(PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select)
+			ops = set.From(OperationKind_Insert, OperationKind_Update, OperationKind_Select)
 		case QNameAnyFunction, QNameAnyCommand, QNameAnyQuery:
-			pk = set.From(PrivilegeKind_Execute)
+			ops = set.From(OperationKind_Execute)
 		}
 	case TypeKind_GRecord, TypeKind_GDoc,
 		TypeKind_CRecord, TypeKind_CDoc,
@@ -44,29 +53,29 @@ func allPrivilegesOnType(t IType) (pk set.Set[PrivilegeKind]) {
 		TypeKind_ORecord, TypeKind_ODoc,
 		TypeKind_Object,
 		TypeKind_ViewRecord:
-		pk = set.From(PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select)
+		ops = set.From(OperationKind_Insert, OperationKind_Update, OperationKind_Select)
 	case TypeKind_Command, TypeKind_Query:
-		pk = set.From(PrivilegeKind_Execute)
+		ops = set.From(OperationKind_Execute)
 	case TypeKind_Workspace:
-		pk = set.From(PrivilegeKind_Insert, PrivilegeKind_Update, PrivilegeKind_Select, PrivilegeKind_Execute)
+		ops = set.From(OperationKind_Insert, OperationKind_Update, OperationKind_Select, OperationKind_Execute)
 	case TypeKind_Role:
-		pk = set.From(PrivilegeKind_Inherits)
+		ops = set.From(OperationKind_Inherits)
 	}
-	return pk
+	return ops
 }
 
-// Renders an PrivilegeKind in human-readable form, without "PrivilegeKind_" prefix,
+// Renders an OperationKind in human-readable form, without "OperationKind_" prefix,
 // suitable for debugging or error messages
-func (k PrivilegeKind) TrimString() string {
-	const pref = "PrivilegeKind_"
+func (k OperationKind) TrimString() string {
+	const pref = "OperationKind_"
 	return strings.TrimPrefix(k.String(), pref)
 }
 
-// Validates privilege on field names. Returns error if any field is not found.
+// Validates specified field names by types. Returns error if any field is not found.
 //
-// If on contains any substitution then all fields are allowed.
-func validatePrivilegeOnFieldNames(tt IWithTypes, on []QName, fields []FieldName) (err error) {
-	names := QNamesFrom(on...)
+// If types contains any substitution then all fields are allowed.
+func validateFieldNamesByTypes(tt IWithTypes, types []QName, fields []FieldName) (err error) {
+	names := QNamesFrom(types...)
 
 	allFields := map[FieldName]struct{}{}
 
@@ -99,21 +108,21 @@ func validatePrivilegeOnFieldNames(tt IWithTypes, on []QName, fields []FieldName
 	return err
 }
 
-// Validates names for privilege on. Returns sorted names without duplicates.
+// Validates resource names for ACL. Returns sorted names without duplicates.
 //
-//   - If on is empty then returns error
-//   - If on contains unknown name then returns error
-//   - If on contains name of type that can not to be privileged then returns error
-//   - If on contains names of mixed types then returns error.
-func validatePrivilegeOnNames(tt IWithTypes, on ...QName) (QNames, error) {
-	if len(on) == 0 {
+//   - If names is empty then returns error
+//   - If names contains unknown name then returns error
+//   - If names contains name of type that can not to be in ACL then returns error
+//   - If names contains names of mixed types then returns error.
+func validateACLResourceNames(tt IWithTypes, names ...QName) (QNames, error) {
+	if len(names) == 0 {
 		return nil, ErrMissed("privilege object names")
 	}
 
-	names := QNamesFrom(on...)
+	nn := QNamesFrom(names...)
 	onType := TypeKind_null
 
-	for _, n := range names {
+	for _, n := range nn {
 		t := tt.TypeByName(n)
 		if t == nil {
 			return nil, ErrTypeNotFound(n)
@@ -132,7 +141,7 @@ func validatePrivilegeOnNames(tt IWithTypes, on ...QName) (QNames, error) {
 			case QNameAnyFunction, QNameAnyCommand, QNameAnyQuery:
 				k = TypeKind_Command
 			default:
-				return nil, ErrIncompatible("substitution «%v» can not to be privileged", t)
+				return nil, ErrIncompatible("substitution «%v» can not be used in ACL", t)
 			}
 		case TypeKind_GRecord, TypeKind_GDoc,
 			TypeKind_CRecord, TypeKind_CDoc,
@@ -148,17 +157,17 @@ func validatePrivilegeOnNames(tt IWithTypes, on ...QName) (QNames, error) {
 		case TypeKind_Role:
 			k = TypeKind_Role
 		default:
-			return nil, ErrIncompatible("type «%v» can not to be privileged", t)
+			return nil, ErrIncompatible("type «%v» can not to be restricted by ACL", t)
 		}
 
 		if onType != k {
 			if onType == TypeKind_null {
 				onType = k
 			} else {
-				return nil, ErrIncompatible("privileged object types mixed in list (%v and %v)", tt.Type(names[0]), t)
+				return nil, ErrIncompatible("incompatible resource types can not to be mixed in one ACL (%v and %v)", tt.Type(nn[0]), t)
 			}
 		}
 	}
 
-	return names, nil
+	return nn, nil
 }

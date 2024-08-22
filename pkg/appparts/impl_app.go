@@ -179,6 +179,7 @@ type borrowedPartition struct {
 	part       *appPartitionRT
 	appDef     appdef.IAppDef
 	appStructs istructs.IAppStructs
+	kind       ProcessorKind
 	pool       *pool.Pool[engines] // pool of borrowed engines
 	engines    engines             // borrowed engines
 }
@@ -216,6 +217,10 @@ func (bp *borrowedPartition) Invoke(ctx context.Context, name appdef.QName, stat
 		return errUndefinedExtension(name)
 	}
 
+	if compat, err := bp.kind.compatibleWithExtension(e); !compat {
+		return fmt.Errorf("%s: %w", bp, err)
+	}
+
 	extName := bp.appDef.FullQName(name)
 	if extName == appdef.NullFullQName {
 		return errCantObtainFullQName(name)
@@ -228,6 +233,10 @@ func (bp *borrowedPartition) Invoke(ctx context.Context, name appdef.QName, stat
 	}
 
 	return extEngine.Invoke(ctx, extName, io)
+}
+
+func (bp *borrowedPartition) String() string {
+	return fmt.Sprintf("borrowedPartition{app=%s, part=%d, kind=%s}", bp.part.app.name, bp.part.id, bp.kind)
 }
 
 // # IAppPartition.Release
@@ -246,6 +255,7 @@ func (bp *borrowedPartition) Release() {
 }
 
 func (bp *borrowedPartition) borrow(proc ProcessorKind) (err error) {
+	bp.kind = proc
 	bp.appDef, bp.appStructs, bp.pool = bp.part.app.lastestVersion.snapshot(proc)
 	bp.engines, err = bp.pool.Borrow()
 	if err != nil {
