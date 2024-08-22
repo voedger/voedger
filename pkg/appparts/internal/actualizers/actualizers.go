@@ -3,7 +3,7 @@
  * @author: Nikolay Nikitin
  */
 
-package actualizer
+package actualizers
 
 import (
 	"context"
@@ -15,34 +15,36 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
-type ActualizerRun func(context.Context, appdef.AppQName, istructs.PartitionID, appdef.QName)
+// Run is a function that runs actualizer for the specified projector.
+type Run func(context.Context, appdef.AppQName, istructs.PartitionID, appdef.QName)
 
-type Actualizers struct {
-	mx          sync.RWMutex
-	app         appdef.AppQName
-	part        istructs.PartitionID
-	actualizers map[appdef.QName]*actualizerRT
+// PartitionActualizers manages actualizers deployment for the specified application partition.
+type PartitionActualizers struct {
+	mx   sync.RWMutex
+	app  appdef.AppQName
+	part istructs.PartitionID
+	rt   map[appdef.QName]*runtime
 }
 
-func newActualizers(app appdef.AppQName, part istructs.PartitionID) *Actualizers {
-	return &Actualizers{
-		app:         app,
-		part:        part,
-		actualizers: make(map[appdef.QName]*actualizerRT),
+func newActualizers(app appdef.AppQName, part istructs.PartitionID) *PartitionActualizers {
+	return &PartitionActualizers{
+		app:  app,
+		part: part,
+		rt:   make(map[appdef.QName]*runtime),
 	}
 }
 
 // Deploys partition actualizers: stops actualizers for removed projectors and
-// starts actualizers for new projectors
-func (pa *Actualizers) Deploy(vvmCtx context.Context, appDef appdef.IAppDef, run ActualizerRun) {
+// starts actualizers for new projectors using the specified run function.
+func (pa *PartitionActualizers) Deploy(vvmCtx context.Context, appDef appdef.IAppDef, run Run) {
 	// async stop old processors
 	stopWG := sync.WaitGroup{}
 	pa.mx.RLock()
-	for name, rt := range pa.actualizers {
+	for name, rt := range pa.rt {
 		// TODO: compare if projector properties changed (events, sync/async, etc.)
 		if appDef.Projector(name) == nil {
 			stopWG.Add(1)
-			go func(rt *actualizerRT) {
+			go func(rt *runtime) {
 				rt.cancel()
 				for rt.state.Load() >= 0 {
 					time.Sleep(time.Nanosecond) // wait until actualizer is finished
@@ -61,10 +63,10 @@ func (pa *Actualizers) Deploy(vvmCtx context.Context, appDef appdef.IAppDef, run
 		startWG.Add(1)
 		go func() {
 			ctx, cancel := context.WithCancel(vvmCtx)
-			rt := newActualizerRT(cancel)
+			rt := newRuntime(cancel)
 
 			pa.mx.Lock()
-			pa.actualizers[name] = rt
+			pa.rt[name] = rt
 			pa.mx.Unlock()
 
 			go func() {
@@ -73,7 +75,7 @@ func (pa *Actualizers) Deploy(vvmCtx context.Context, appDef appdef.IAppDef, run
 				run(ctx, pa.app, pa.part, name)
 
 				pa.mx.Lock()
-				delete(pa.actualizers, name)
+				delete(pa.rt, name)
 				pa.mx.Unlock()
 
 				rt.state.Store(-1) // finished
@@ -90,7 +92,7 @@ func (pa *Actualizers) Deploy(vvmCtx context.Context, appDef appdef.IAppDef, run
 	appDef.Projectors(func(prj appdef.IProjector) {
 		if !prj.Sync() {
 			name := prj.QName()
-			if _, exists := pa.actualizers[name]; !exists {
+			if _, exists := pa.rt[name]; !exists {
 				start(name)
 			}
 		}
@@ -99,19 +101,19 @@ func (pa *Actualizers) Deploy(vvmCtx context.Context, appDef appdef.IAppDef, run
 	startWG.Wait() // wait for all new actualizers to start
 }
 
-// returns all deployed actualizers
-func (pa *Actualizers) Enum() appdef.QNames {
+// Returns all deployed actualizers
+func (pa *PartitionActualizers) Enum() appdef.QNames {
 	pa.mx.RLock()
 	defer pa.mx.RUnlock()
 
-	return appdef.QNamesFromMap(pa.actualizers)
+	return appdef.QNamesFromMap(pa.rt)
 }
 
-type actualizerRT struct {
-	cancel context.CancelFunc
+type runtime struct {
 	state  atomic.Int32 // 0: newly; +1: started; -1: finished
+	cancel context.CancelFunc
 }
 
-func newActualizerRT(cancel context.CancelFunc) *actualizerRT {
-	return &actualizerRT{cancel: cancel}
+func newRuntime(cancel context.CancelFunc) *runtime {
+	return &runtime{cancel: cancel}
 }
