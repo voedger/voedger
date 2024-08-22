@@ -85,15 +85,15 @@ type IAppPartition interface {
 // TODO: eliminate this workaround
 // type BuiltInAppsDeploymentDescriptors map[appdef.AppQName]AppDeploymentDescriptor
 
-// Processor runner.
+// Async actualizer runner.
 //
-// Used by application partitions to run actualizers and schedulers
-type IProcessorRunner interface {
+// Used by application partitions to run actualizers
+type IActualizerRunner interface {
 	// Sets application partitions.
 	//
 	// Should be called before any other method.
 	SetAppPartitions(IAppPartitions)
 
-	// Creates and runs new processor for specified application partition
+	// Creates and runs new async actualizer for specified application partition
 	NewAndRun(context.Context, appdef.AppQName, istructs.PartitionID, appdef.QName)
 }

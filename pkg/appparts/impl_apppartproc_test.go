@@ -25,7 +25,7 @@ import (
 )
 
 type mockProcessorRunner struct {
-	IProcessorRunner
+	IActualizerRunner
 	mock.Mock
 	appParts IAppPartitions
 	wg       sync.WaitGroup

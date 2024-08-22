@@ -23,7 +23,7 @@ type apps struct {
 	vvmCtx                context.Context
 	structs               istructs.IAppStructsProvider
 	syncActualizerFactory SyncActualizerFactory
-	processors            [ProcessorKind_Count]IProcessorRunner
+	processors            [ProcessorKind_Count]IActualizerRunner
 	extEngineFactories    iextengine.ExtensionEngineFactories
 	apps                  map[appdef.AppQName]*appRT
 }
@@ -32,8 +32,8 @@ func newAppPartitions(
 	vvmCtx context.Context,
 	asp istructs.IAppStructsProvider,
 	saf SyncActualizerFactory,
-	asyncActualizersRunner IProcessorRunner,
-	jobSchedulerRunner IProcessorRunner,
+	asyncActualizersRunner IActualizerRunner,
+	jobSchedulerRunner IActualizerRunner,
 	eef iextengine.ExtensionEngineFactories,
 ) (ap IAppPartitions, cleanup func(), err error) {
 	a := &apps{

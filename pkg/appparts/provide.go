@@ -41,8 +41,8 @@ func New2(
 	vvmCtx context.Context,
 	structs istructs.IAppStructsProvider,
 	syncAct SyncActualizerFactory,
-	asyncActualizersRunner IProcessorRunner,
-	jobSchedulerRunner IProcessorRunner,
+	asyncActualizersRunner IActualizerRunner,
+	jobSchedulerRunner IActualizerRunner,
 	eef iextengine.ExtensionEngineFactories,
 ) (ap IAppPartitions, cleanup func(), err error) {
 	return newAppPartitions(vvmCtx, structs, syncAct, asyncActualizersRunner, jobSchedulerRunner, eef)

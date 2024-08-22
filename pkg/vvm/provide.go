@@ -275,7 +275,7 @@ func provideAsyncActualizersService(cfg projectors.BasicAsyncActualizerConfig) p
 	return projectors.ProvideActualizers(cfg)
 }
 
-func provideJobSchedulerRunner() appparts.IProcessorRunner {
+func provideJobSchedulerRunner() appparts.IActualizerRunner {
 	// TODO: implement ISchedulerService interface{ IProcessorRunner } in pkg/processor/scheduler
 	return appparts.NullProcessorRunner
 }
@@ -310,7 +310,7 @@ func provideAppPartitions(
 	asp istructs.IAppStructsProvider,
 	saf appparts.SyncActualizerFactory,
 	act projectors.IActualizersService,
-	sch appparts.IProcessorRunner,
+	sch appparts.IActualizerRunner,
 	sr istructsmem.IStatelessResources,
 	builtinAppsArtefacts BuiltInAppsArtefacts,
 ) (ap appparts.IAppPartitions, cleanup func(), err error) {
