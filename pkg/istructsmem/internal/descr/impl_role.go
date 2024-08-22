@@ -46,7 +46,5 @@ func newACLResourcePattern() *ACLResourcePattern {
 
 func (arp *ACLResourcePattern) read(rp appdef.IResourcePattern) {
 	arp.On.Add(rp.On()...)
-	for _, f := range rp.Fields() {
-		arp.Fields = append(arp.Fields, f)
-	}
+	arp.Fields = append(arp.Fields, rp.Fields()...)
 }
