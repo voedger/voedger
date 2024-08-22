@@ -12,6 +12,7 @@ import (
 	"os"
 	"strings"
 	"syscall"
+	"testing"
 	"time"
 )
 
@@ -30,7 +31,7 @@ func ResetTimer(t *time.Timer, timeout time.Duration) {
 	t.Reset(timeout)
 }
 func IsTest() bool {
-	return strings.Contains(os.Args[0], ".test") || IsDebug()
+	return testing.Testing() || IsDebug()
 }
 
 func IsDebug() bool {
