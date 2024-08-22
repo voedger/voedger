@@ -19,6 +19,7 @@ import (
 	"github.com/voedger/voedger/pkg/iratesce"
 	"github.com/voedger/voedger/pkg/isecrets"
 	"github.com/voedger/voedger/pkg/istorage/mem"
+	"github.com/voedger/voedger/pkg/state/stateprovide"
 	"github.com/voedger/voedger/pkg/sys"
 	wsdescutil "github.com/voedger/voedger/pkg/utils/testwsdesc"
 
@@ -284,13 +285,13 @@ func (ts *testState) buildState(processorKind int) {
 
 	switch processorKind {
 	case ProcKind_Actualizer:
-		ts.IState = state.ProvideAsyncActualizerStateFactory()(ts.ctx, appFunc, partitionIDFunc, wsidFunc, nil, ts.secretReader, eventFunc, nil, nil,
+		ts.IState = stateprovide.ProvideAsyncActualizerStateFactory()(ts.ctx, appFunc, partitionIDFunc, wsidFunc, nil, ts.secretReader, eventFunc, nil, nil,
 			IntentsLimit, BundlesLimit, state.WithCustomHttpClient(ts), state.WithFedearationCommandHandler(ts.emulateFederationCmd), state.WithUniquesHandler(ts.emulateUniquesHandler), state.WithFederationBlobHandler(ts.emulateFederationBlob))
 	case ProcKind_CommandProcessor:
-		ts.IState = state.ProvideCommandProcessorStateFactory()(ts.ctx, appFunc, partitionIDFunc, wsidFunc, ts.secretReader, cudFunc, principalsFunc, tokenFunc,
+		ts.IState = stateprovide.ProvideCommandProcessorStateFactory()(ts.ctx, appFunc, partitionIDFunc, wsidFunc, ts.secretReader, cudFunc, principalsFunc, tokenFunc,
 			IntentsLimit, resultBuilderFunc, commandPrepareArgs, argFunc, unloggedArgFunc, wlogOffsetFunc, state.WithUniquesHandler(ts.emulateUniquesHandler))
 	case ProcKind_QueryProcessor:
-		ts.IState = state.ProvideQueryProcessorStateFactory()(ts.ctx, appFunc, partitionIDFunc, wsidFunc, ts.secretReader, principalsFunc, tokenFunc, nil,
+		ts.IState = stateprovide.ProvideQueryProcessorStateFactory()(ts.ctx, appFunc, partitionIDFunc, wsidFunc, ts.secretReader, principalsFunc, tokenFunc, nil,
 			execQueryArgsFunc, argFunc, qryResultBuilderFunc, nil, execQueryCallback,
 			state.WithCustomHttpClient(ts), state.WithFedearationCommandHandler(ts.emulateFederationCmd), state.WithUniquesHandler(ts.emulateUniquesHandler), state.WithFederationBlobHandler(ts.emulateFederationBlob))
 	}
