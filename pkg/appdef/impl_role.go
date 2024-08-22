@@ -9,53 +9,53 @@ package appdef
 //   - IRole
 type role struct {
 	typ
-	privileges []*privilege
+	aclRules []*aclRule
 }
 
 func newRole(app *appDef, name QName) *role {
 	r := &role{
-		typ:        makeType(app, name, TypeKind_Role),
-		privileges: make([]*privilege, 0),
+		typ:      makeType(app, name, TypeKind_Role),
+		aclRules: make([]*aclRule, 0),
 	}
 	app.appendType(r)
 	return r
 }
 
-func (r role) Privileges(cb func(IPrivilege)) {
-	for _, p := range r.privileges {
+func (r role) ACL(cb func(IACLRule)) {
+	for _, p := range r.aclRules {
 		cb(p)
 	}
 }
 
-func (r role) PrivilegesOn(on []QName, kind ...PrivilegeKind) []IPrivilege {
-	pp := make([]IPrivilege, 0)
-	for _, p := range r.privileges {
-		if p.On().ContainsAny(on...) && p.kinds.ContainsAny(kind...) {
+func (r role) ACLForResources(resources []QName, ops ...OperationKind) []IACLRule {
+	pp := make([]IACLRule, 0)
+	for _, p := range r.aclRules {
+		if p.Resources().On().ContainsAny(resources...) && p.ops.ContainsAny(ops...) {
 			pp = append(pp, p)
 		}
 	}
 	return pp
 }
 
-func (r *role) appendPrivilege(p *privilege) {
-	r.privileges = append(r.privileges, p)
-	r.app.appendPrivilege(p)
+func (r *role) appendACL(rule *aclRule) {
+	r.aclRules = append(r.aclRules, rule)
+	r.app.appendACL(rule)
 }
 
-func (r *role) grant(kinds []PrivilegeKind, on []QName, fields []FieldName, comment ...string) {
-	r.appendPrivilege(newGrant(kinds, on, fields, r, comment...))
+func (r *role) grant(ops []OperationKind, resources []QName, fields []FieldName, comment ...string) {
+	r.appendACL(newGrant(ops, resources, fields, r, comment...))
 }
 
-func (r *role) grantAll(on []QName, comment ...string) {
-	r.appendPrivilege(newGrantAll(on, r, comment...))
+func (r *role) grantAll(resources []QName, comment ...string) {
+	r.appendACL(newGrantAll(resources, r, comment...))
 }
 
-func (r *role) revoke(kinds []PrivilegeKind, on []QName, comment ...string) {
-	r.appendPrivilege(newRevoke(kinds, on, nil, r, comment...))
+func (r *role) revoke(ops []OperationKind, resources []QName, comment ...string) {
+	r.appendACL(newRevoke(ops, resources, nil, r, comment...))
 }
 
-func (r *role) revokeAll(on []QName, comment ...string) {
-	r.appendPrivilege(newRevokeAll(on, r, comment...))
+func (r *role) revokeAll(resources []QName, comment ...string) {
+	r.appendACL(newRevokeAll(resources, r, comment...))
 }
 
 // # Implements:
@@ -72,22 +72,22 @@ func newRoleBuilder(role *role) *roleBuilder {
 	}
 }
 
-func (rb *roleBuilder) Grant(kinds []PrivilegeKind, on []QName, fields []FieldName, comment ...string) IRoleBuilder {
-	rb.role.grant(kinds, on, fields, comment...)
+func (rb *roleBuilder) Grant(ops []OperationKind, resources []QName, fields []FieldName, comment ...string) IRoleBuilder {
+	rb.role.grant(ops, resources, fields, comment...)
 	return rb
 }
 
-func (rb *roleBuilder) GrantAll(on []QName, comment ...string) IRoleBuilder {
-	rb.role.grantAll(on, comment...)
+func (rb *roleBuilder) GrantAll(resource []QName, comment ...string) IRoleBuilder {
+	rb.role.grantAll(resource, comment...)
 	return rb
 }
 
-func (rb *roleBuilder) Revoke(kinds []PrivilegeKind, on []QName, comment ...string) IRoleBuilder {
-	rb.role.revoke(kinds, on, comment...)
+func (rb *roleBuilder) Revoke(ops []OperationKind, resources []QName, comment ...string) IRoleBuilder {
+	rb.role.revoke(ops, resources, comment...)
 	return rb
 }
 
-func (rb *roleBuilder) RevokeAll(on []QName, comment ...string) IRoleBuilder {
-	rb.role.revokeAll(on, comment...)
+func (rb *roleBuilder) RevokeAll(resources []QName, comment ...string) IRoleBuilder {
+	rb.role.revokeAll(resources, comment...)
 	return rb
 }

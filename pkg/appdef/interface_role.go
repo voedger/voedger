@@ -8,40 +8,40 @@ package appdef
 type IRole interface {
 	IType
 
-	IWithPrivileges
+	IWithACL
 }
 
 type IRoleBuilder interface {
 	ITypeBuilder
 
-	// Adds new privilege with specified kinds on specified objects.
+	// Grants specified operations on specified resources.
 	//
 	// # Panics:
-	//   - if kinds is empty,
-	//	 - if objects are empty,
-	//	 - if objects contains unknown names,
-	//	 - if kinds are not compatible with objects,
+	//   - if ops is empty,
+	//	 - if resources are empty,
+	//	 - if resources contains unknown names,
+	//	 - if ops are not compatible with resources,
 	//	 - if fields contains unknown names.
-	Grant(kinds []PrivilegeKind, on []QName, fields []FieldName, comment ...string) IRoleBuilder
+	Grant(ops []OperationKind, resources []QName, fields []FieldName, comment ...string) IRoleBuilder
 
-	// Grants all available privileges on specified objects.
+	// Grants all available operations on specified resources.
 	//
-	// If the objects are records or view records, then insert, update, and select are granted.
+	// If the resources are records or view records, then insert, update, and select are granted.
 	//
-	// If the objects are commands or queries, their execution is granted.
+	// If the resources are commands or queries, their execution is granted.
 	//
-	// If the objects are workspaces, then:
+	// If the resources are workspaces, then:
 	//	- insert, update and select records and view records of these workspaces are granted,
 	//	- execution of commands & queries from these workspaces is granted.
 	//
-	// If the objects are roles, then all privileges from these roles are granted.
-	GrantAll(on []QName, comment ...string) IRoleBuilder
+	// If the resources are roles, then all operations from these roles are granted.
+	GrantAll(resources []QName, comment ...string) IRoleBuilder
 
-	// Revokes privilege with specified kinds on specified objects.
-	Revoke(kinds []PrivilegeKind, on []QName, comment ...string) IRoleBuilder
+	// Revokes operations on specified resources.
+	Revoke(ops []OperationKind, resources []QName, comment ...string) IRoleBuilder
 
-	// Remove all available privileges on specified objects.
-	RevokeAll(on []QName, comment ...string) IRoleBuilder
+	// Remove all available operations on specified resources.
+	RevokeAll(resources []QName, comment ...string) IRoleBuilder
 }
 
 type IWithRoles interface {

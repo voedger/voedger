@@ -15,6 +15,7 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/pipeline"
 	"github.com/voedger/voedger/pkg/state"
+	"github.com/voedger/voedger/pkg/state/stateprovide"
 )
 
 func syncActualizerFactory(conf SyncActualizerConf, projectors istructs.Projectors) pipeline.ISyncOperator {
@@ -53,7 +54,7 @@ func syncActualizerFactory(conf SyncActualizerConf, projectors istructs.Projecto
 
 func newSyncBranch(conf SyncActualizerConf, projector istructs.Projector, service *eventService) (fn pipeline.ForkOperatorOptionFunc, s state.IHostState) {
 	pipelineName := fmt.Sprintf("[%d] %s", conf.Partition, projector.Name)
-	s = state.ProvideSyncActualizerStateFactory()(
+	s = stateprovide.ProvideSyncActualizerStateFactory()(
 		conf.Ctx,
 		conf.AppStructs,
 		state.SimplePartitionIDFunc(conf.Partition),
