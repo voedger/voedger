@@ -21,8 +21,8 @@ func New(structs istructs.IAppStructsProvider) (ap IAppPartitions, cleanup func(
 		context.Background(),
 		structs,
 		NullSyncActualizerFactory,
-		NullProcessorRunner,
-		NullProcessorRunner,
+		NullActualizerRunner,
+		NullSchedulerRunner,
 		NullExtensionEngineFactories,
 	)
 }
@@ -42,7 +42,7 @@ func New2(
 	structs istructs.IAppStructsProvider,
 	syncAct SyncActualizerFactory,
 	asyncActualizersRunner IActualizerRunner,
-	jobSchedulerRunner IActualizerRunner,
+	jobSchedulerRunner ISchedulerRunner,
 	eef iextengine.ExtensionEngineFactories,
 ) (ap IAppPartitions, cleanup func(), err error) {
 	return newAppPartitions(vvmCtx, structs, syncAct, asyncActualizersRunner, jobSchedulerRunner, eef)

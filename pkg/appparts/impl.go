@@ -19,13 +19,14 @@ import (
 )
 
 type apps struct {
-	mx                    sync.RWMutex
-	vvmCtx                context.Context
-	structs               istructs.IAppStructsProvider
-	syncActualizerFactory SyncActualizerFactory
-	processors            [ProcessorKind_Count]IActualizerRunner
-	extEngineFactories    iextengine.ExtensionEngineFactories
-	apps                  map[appdef.AppQName]*appRT
+	mx                     sync.RWMutex
+	vvmCtx                 context.Context
+	structs                istructs.IAppStructsProvider
+	syncActualizerFactory  SyncActualizerFactory
+	asyncActualizersRunner IActualizerRunner
+	schedulerRunner        ISchedulerRunner
+	extEngineFactories     iextengine.ExtensionEngineFactories
+	apps                   map[appdef.AppQName]*appRT
 }
 
 func newAppPartitions(
@@ -33,21 +34,21 @@ func newAppPartitions(
 	asp istructs.IAppStructsProvider,
 	saf SyncActualizerFactory,
 	asyncActualizersRunner IActualizerRunner,
-	jobSchedulerRunner IActualizerRunner,
+	jobSchedulerRunner ISchedulerRunner,
 	eef iextengine.ExtensionEngineFactories,
 ) (ap IAppPartitions, cleanup func(), err error) {
 	a := &apps{
-		mx:                    sync.RWMutex{},
-		vvmCtx:                vvmCtx,
-		structs:               asp,
-		syncActualizerFactory: saf,
-		extEngineFactories:    eef,
-		apps:                  map[appdef.AppQName]*appRT{},
+		mx:                     sync.RWMutex{},
+		vvmCtx:                 vvmCtx,
+		structs:                asp,
+		asyncActualizersRunner: asyncActualizersRunner,
+		schedulerRunner:        jobSchedulerRunner,
+		syncActualizerFactory:  saf,
+		extEngineFactories:     eef,
+		apps:                   map[appdef.AppQName]*appRT{},
 	}
-	a.processors[ProcessorKind_Actualizer] = asyncActualizersRunner
-	asyncActualizersRunner.SetAppPartitions(a)
-	a.processors[ProcessorKind_Scheduler] = jobSchedulerRunner
-	jobSchedulerRunner.SetAppPartitions(a)
+	a.asyncActualizersRunner.SetAppPartitions(a)
+	a.schedulerRunner.SetAppPartitions(a)
 	return a, func() {}, err
 }
 
@@ -107,7 +108,11 @@ func (aps *apps) DeployAppPartitions(name appdef.AppQName, ids []istructs.Partit
 		}
 		a.mx.Unlock()
 
-		p.processors.deploy()
+		p.actualizers.Deploy(
+			aps.vvmCtx,
+			a.lastestVersion.appDef(),
+			aps.asyncActualizersRunner.NewAndRun,
+		)
 	}
 }
 

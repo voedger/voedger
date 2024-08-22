@@ -24,14 +24,14 @@ import (
 	"github.com/voedger/voedger/pkg/itokensjwt"
 )
 
-type mockProcessorRunner struct {
+type mockActualizersRunner struct {
 	IActualizerRunner
 	mock.Mock
 	appParts IAppPartitions
 	wg       sync.WaitGroup
 }
 
-func (t *mockProcessorRunner) NewAndRun(ctx context.Context, app appdef.AppQName, partID istructs.PartitionID, name appdef.QName) {
+func (t *mockActualizersRunner) NewAndRun(ctx context.Context, app appdef.AppQName, partID istructs.PartitionID, name appdef.QName) {
 	t.wg.Add(1)
 	defer t.wg.Done()
 
@@ -41,36 +41,35 @@ func (t *mockProcessorRunner) NewAndRun(ctx context.Context, app appdef.AppQName
 		case <-ctx.Done():
 			return
 		default:
-			// processor should be borrowed and released
+			// actualizer should be borrowed and released
 			p, err := t.appParts.WaitForBorrow(ctx, app, partID, ProcessorKind_Actualizer)
 			if err != nil {
 				if errors.Is(err, ctx.Err()) {
-					return // context canceled while waiting for borrowed processor
+					return // context canceled while actualizer wait for borrowed partition
 				}
-				panic(err) // unexpected error while waiting for borrowed processor
+				panic(err) // unexpected error while waiting for borrowed partition
 			}
-			// simulate processor work, like p.Invoke(…)
+			// simulate actualizer work, like p.Invoke(…)
 			time.Sleep(time.Millisecond)
 			p.Release()
 		}
 	}
 }
 
-func (t *mockProcessorRunner) SetAppPartitions(ap IAppPartitions) {
+func (t *mockActualizersRunner) SetAppPartitions(ap IAppPartitions) {
 	t.Called(ap)
 	t.appParts = ap
 }
 
-func (t *mockProcessorRunner) wait() {
-	// the context should be stopped. Here we just wait for finish all processors run
+func (t *mockActualizersRunner) wait() {
+	// the context should be stopped. Here we just wait for actualizers to finish
 	t.wg.Wait()
 }
 
-func Test_partitionProcessors_deploy(t *testing.T) {
+func Test_partitionActualizers_deploy(t *testing.T) {
 	require := require.New(t)
 
 	prj1name := appdef.NewQName("test", "projector1")
-	job1name := appdef.NewQName("test", "job1")
 
 	ctx, stop := context.WithCancel(context.Background())
 
@@ -81,9 +80,6 @@ func Test_partitionProcessors_deploy(t *testing.T) {
 		prj := adb.AddProjector(prj1name)
 		prj.SetSync(false)
 		prj.Events().Add(appdef.QNameAnyCommand, appdef.ProjectorEventKind_Execute)
-
-		job := adb.AddJob(job1name)
-		job.SetCronSchedule("1 * * * *")
 
 		return adb, adb.MustBuild()
 	}()
@@ -97,15 +93,12 @@ func Test_partitionProcessors_deploy(t *testing.T) {
 		payloads.TestAppTokensFactory(itokensjwt.TestTokensJWT()),
 		provider.Provide(mem.Provide(), ""))
 
-	mockActualizers := &mockProcessorRunner{}
+	mockActualizers := &mockActualizersRunner{}
 	mockActualizers.On("SetAppPartitions", mock.Anything).Once()
-
-	mockSchedulers := &mockProcessorRunner{}
-	mockSchedulers.On("SetAppPartitions", mock.Anything).Once()
 
 	appParts, cleanupParts, err := New2(ctx, appStructs, NullSyncActualizerFactory,
 		mockActualizers,
-		mockSchedulers,
+		NullSchedulerRunner,
 		NullExtensionEngineFactories)
 	require.NoError(err)
 
@@ -116,7 +109,7 @@ func Test_partitionProcessors_deploy(t *testing.T) {
 		for i := istructs.PartitionID(0); i < 10; i++ {
 			appParts.(*apps).mx.RLock()
 			if p, exists := appParts.(*apps).apps[istructs.AppQName_test1_app1].parts[i]; exists {
-				m[i] = p.processors.enum()
+				m[i] = p.actualizers.Enum()
 			}
 			appParts.(*apps).mx.RUnlock()
 		}
@@ -128,21 +121,19 @@ func Test_partitionProcessors_deploy(t *testing.T) {
 	t.Run("deploy 10 partitions", func(t *testing.T) {
 		for i := 0; i < 10; i++ {
 			mockActualizers.On("NewAndRun", mock.Anything, istructs.AppQName_test1_app1, istructs.PartitionID(i), prj1name).Once()
-			mockSchedulers.On("NewAndRun", mock.Anything, istructs.AppQName_test1_app1, istructs.PartitionID(i), job1name).Once()
 		}
 		appParts.DeployAppPartitions(istructs.AppQName_test1_app1, []istructs.PartitionID{0, 1, 2, 3, 4, 5, 6, 7, 8, 9})
 
 		m := metrics()
 		require.Len(m, 10)
 		for i := istructs.PartitionID(0); i < 10; i++ {
-			require.Equal(appdef.QNames{job1name, prj1name}, m[i])
+			require.Equal(appdef.QNames{prj1name}, m[i])
 		}
 	})
 
 	t.Run("redeploy odd partitions", func(t *testing.T) {
 
 		prj2name := appdef.NewQName("test", "projector2")
-		job2name := appdef.NewQName("test", "job2")
 		appDef2 := func() appdef.IAppDef {
 			adb := appdef.New()
 			adb.AddPackage("test", "test.com/test")
@@ -150,9 +141,6 @@ func Test_partitionProcessors_deploy(t *testing.T) {
 			prj := adb.AddProjector(prj2name)
 			prj.SetSync(false)
 			prj.Events().Add(appdef.QNameAnyCommand, appdef.ProjectorEventKind_Execute)
-
-			job := adb.AddJob(job2name)
-			job.SetCronSchedule("* 1 * * *")
 
 			return adb.MustBuild()
 		}()
@@ -172,7 +160,6 @@ func Test_partitionProcessors_deploy(t *testing.T) {
 		for i := 0; i < 10; i++ {
 			if i%2 == 1 {
 				mockActualizers.On("NewAndRun", mock.Anything, istructs.AppQName_test1_app1, istructs.PartitionID(i), prj2name).Once()
-				mockSchedulers.On("NewAndRun", mock.Anything, istructs.AppQName_test1_app1, istructs.PartitionID(i), job2name).Once()
 			}
 		}
 		appParts.DeployAppPartitions(istructs.AppQName_test1_app1, []istructs.PartitionID{1, 3, 5, 7, 9})
@@ -181,9 +168,9 @@ func Test_partitionProcessors_deploy(t *testing.T) {
 		require.Len(m, 10)
 		for i := istructs.PartitionID(0); i < 10; i++ {
 			if i%2 == 1 {
-				require.Equal(appdef.QNames{job2name, prj2name}, m[i])
+				require.Equal(appdef.QNames{prj2name}, m[i])
 			} else {
-				require.Equal(appdef.QNames{job1name, prj1name}, m[i])
+				require.Equal(appdef.QNames{prj1name}, m[i])
 			}
 		}
 	})
@@ -192,7 +179,6 @@ func Test_partitionProcessors_deploy(t *testing.T) {
 		stop()
 
 		mockActualizers.wait()
-		mockSchedulers.wait()
 
 		m := metrics()
 		require.Len(m, 10)

@@ -12,10 +12,18 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
-type nullProcessorRunner struct{}
+type nullActualizerRunner struct{}
 
-func (nullProcessorRunner) NewAndRun(ctx context.Context, _ appdef.AppQName, _ istructs.PartitionID, _ appdef.QName) {
+func (nullActualizerRunner) NewAndRun(ctx context.Context, _ appdef.AppQName, _ istructs.PartitionID, _ appdef.QName) {
 	<-ctx.Done()
 }
 
-func (nullProcessorRunner) SetAppPartitions(IAppPartitions) {}
+func (nullActualizerRunner) SetAppPartitions(IAppPartitions) {}
+
+type nullSchedulerRunner struct{}
+
+func (nullSchedulerRunner) NewAndRun(ctx context.Context, _ appdef.AppQName, _ istructs.PartitionID, _ istructs.WSID, _ istructs.WSID, _ appdef.QName) {
+	<-ctx.Done()
+}
+
+func (nullSchedulerRunner) SetAppPartitions(IAppPartitions) {}

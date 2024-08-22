@@ -314,7 +314,7 @@ func deployTestAppEx(
 		appStructsProvider,
 		NewSyncActualizerFactoryFactory(ProvideSyncActualizerFactory(), secretReader, n10nBroker, statelessResources),
 		actualizers,
-		appparts.NullProcessorRunner, // no job schedulers
+		appparts.NullActualizerRunner, // no job schedulers
 		engines.ProvideExtEngineFactories(
 			engines.ExtEngineFactoriesConfig{
 				AppConfigs:         cfgs,

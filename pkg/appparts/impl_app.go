@@ -12,6 +12,7 @@ import (
 	"sync"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appparts/internal/actualizer"
 	"github.com/voedger/voedger/pkg/appparts/internal/pool"
 	"github.com/voedger/voedger/pkg/iextengine"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -149,9 +150,7 @@ type appPartitionRT struct {
 	app            *appRT
 	id             istructs.PartitionID
 	syncActualizer pipeline.ISyncOperator
-	processors     *partitionProcessors
-
-	// TODO: implement partitionCache
+	actualizers    *actualizer.Actualizers
 }
 
 func newAppPartitionRT(app *appRT, id istructs.PartitionID) *appPartitionRT {
@@ -159,8 +158,8 @@ func newAppPartitionRT(app *appRT, id istructs.PartitionID) *appPartitionRT {
 		app:            app,
 		id:             id,
 		syncActualizer: app.apps.syncActualizerFactory(app.lastestVersion.appStructs(), id),
+		actualizers:    actualizer.New(app.name, id),
 	}
-	part.processors = newPartitionProcessors(part)
 	return part
 }
 

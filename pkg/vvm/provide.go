@@ -277,7 +277,7 @@ func provideAsyncActualizersService(cfg projectors.BasicAsyncActualizerConfig) p
 
 func provideJobSchedulerRunner() appparts.IActualizerRunner {
 	// TODO: implement ISchedulerService interface{ IProcessorRunner } in pkg/processor/scheduler
-	return appparts.NullProcessorRunner
+	return appparts.NullActualizerRunner
 }
 
 func provideBuildInfo() (*debug.BuildInfo, error) {

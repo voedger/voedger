@@ -27,5 +27,8 @@ var NullExtensionEngineFactories iextengine.ExtensionEngineFactories = iextengin
 	appdef.ExtensionEngineKind_WASM:    iextengine.NullExtensionEngineFactory,
 }
 
-// NullProcessorRunner should be used in test only
-var NullProcessorRunner nullProcessorRunner = nullProcessorRunner{}
+// NullActualizerRunner should be used in test only
+var NullActualizerRunner nullActualizerRunner = nullActualizerRunner{}
+
+// NullSchedulerRunner should be used in test only
+var NullSchedulerRunner nullSchedulerRunner = nullSchedulerRunner{}

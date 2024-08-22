@@ -97,3 +97,16 @@ type IActualizerRunner interface {
 	// Creates and runs new async actualizer for specified application partition
 	NewAndRun(context.Context, appdef.AppQName, istructs.PartitionID, appdef.QName)
 }
+
+// Scheduler runner.
+//
+// Used by application partitions to run schedulers
+type ISchedulerRunner interface {
+	// Sets application partitions.
+	//
+	// Should be called before any other method.
+	SetAppPartitions(IAppPartitions)
+
+	// Creates and runs new specified job scheduler for specified application partition and workspace
+	NewAndRun(ctx context.Context, app appdef.AppQName, partition istructs.PartitionID, wsIdx istructs.WSID, wsid istructs.WSID, job appdef.QName)
+}
