@@ -324,7 +324,7 @@ func deployTestAppWithSecretToken(require *require.Assertions,
 	appParts, cleanup, err = appparts.New2(context.Background(), asp,
 		func(istructs.IAppStructs, istructs.PartitionID) pipeline.ISyncOperator { return &pipeline.NOOP{} }, // no projectors
 		appparts.NullActualizerRunner,
-		appparts.NullActualizerRunner,
+		appparts.NullSchedulerRunner,
 		engines.ProvideExtEngineFactories(
 			engines.ExtEngineFactoriesConfig{
 				AppConfigs:         cfgs,
