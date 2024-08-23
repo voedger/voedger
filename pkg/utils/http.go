@@ -463,6 +463,9 @@ func discardRespBody(resp *http.Response) error {
 }
 
 func (resp *FuncResponse) NumRows() int {
+	if resp.IsEmpty() {
+		return 0
+	}
 	return len(resp.Sections[0].Elements)
 }
 
