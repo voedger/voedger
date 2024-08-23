@@ -108,5 +108,5 @@ type ISchedulerRunner interface {
 	SetAppPartitions(IAppPartitions)
 
 	// Creates and runs new specified job scheduler for specified application partition and workspace
-	NewAndRun(ctx context.Context, app appdef.AppQName, partition istructs.PartitionID, wsIdx istructs.WSID, wsid istructs.WSID, job appdef.QName)
+	NewAndRun(ctx context.Context, app appdef.AppQName, partition istructs.PartitionID, wsIdx int, wsid istructs.WSID, job appdef.QName)
 }

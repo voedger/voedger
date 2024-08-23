@@ -37,7 +37,7 @@ func newActualizers(app appdef.AppQName, part istructs.PartitionID) *PartitionAc
 // Deploys partition actualizers: stops actualizers for removed projectors and
 // starts actualizers for new projectors using the specified run function.
 func (pa *PartitionActualizers) Deploy(vvmCtx context.Context, appDef appdef.IAppDef, run Run) {
-	// async stop old processors
+	// async stop old actualizers
 	stopWG := sync.WaitGroup{}
 	pa.mx.RLock()
 	for name, rt := range pa.rt {

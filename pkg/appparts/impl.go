@@ -95,7 +95,7 @@ func (aps *apps) DeployAppPartitions(name appdef.AppQName, ids []istructs.Partit
 		panic(errAppNotFound(name))
 	}
 
-	//TODO: parallelize
+	wg := sync.WaitGroup{}
 	for _, id := range ids {
 		var p *appPartitionRT
 
@@ -108,12 +108,27 @@ func (aps *apps) DeployAppPartitions(name appdef.AppQName, ids []istructs.Partit
 		}
 		a.mx.Unlock()
 
-		p.actualizers.Deploy(
-			aps.vvmCtx,
-			a.lastestVersion.appDef(),
-			aps.asyncActualizersRunner.NewAndRun,
-		)
+		wg.Add(1)
+		go func(p *appPartitionRT) {
+			p.actualizers.Deploy(
+				aps.vvmCtx,
+				a.lastestVersion.appDef(),
+				aps.asyncActualizersRunner.NewAndRun,
+			)
+			wg.Done()
+		}(p)
+
+		wg.Add(1)
+		go func(p *appPartitionRT) {
+			p.schedulers.Deploy(
+				aps.vvmCtx,
+				a.lastestVersion.appDef(),
+				aps.schedulerRunner.NewAndRun,
+			)
+			wg.Done()
+		}(p)
 	}
+	wg.Wait()
 }
 
 func (aps *apps) AppDef(name appdef.AppQName) (appdef.IAppDef, error) {

@@ -22,7 +22,7 @@ func (nullActualizerRunner) SetAppPartitions(IAppPartitions) {}
 
 type nullSchedulerRunner struct{}
 
-func (nullSchedulerRunner) NewAndRun(ctx context.Context, _ appdef.AppQName, _ istructs.PartitionID, _ istructs.WSID, _ istructs.WSID, _ appdef.QName) {
+func (nullSchedulerRunner) NewAndRun(ctx context.Context, _ appdef.AppQName, _ istructs.PartitionID, _ int, _ istructs.WSID, _ appdef.QName) {
 	<-ctx.Done()
 }
 
