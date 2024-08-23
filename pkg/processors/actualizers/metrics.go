@@ -4,7 +4,7 @@
  * @author Michael Saigachenko
  */
 
-package projectors
+package actualizers
 
 import (
 	"fmt"
