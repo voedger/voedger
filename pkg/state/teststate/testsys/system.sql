@@ -261,4 +261,15 @@ EXTENSION ENGINE BUILTIN (
 		*/
 		GET SCOPE(QUERIES)
 	);
+
+	STORAGE JobContext(
+		/*
+		Key: empty
+		Value
+			Workspace int64
+			UnixTime int64
+		*/
+		GET SCOPE(JOBS)
+	);
+
 )
