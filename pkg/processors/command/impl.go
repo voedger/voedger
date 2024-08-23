@@ -180,7 +180,6 @@ func (cmdProc *cmdProc) getCmdResultBuilder(_ context.Context, work pipeline.IWo
 
 func (cmdProc *cmdProc) buildCommandArgs(_ context.Context, work pipeline.IWorkpiece) (err error) {
 	cmd := work.(*cmdWorkpiece)
-
 	cmd.eca.CommandPrepareArgs = istructs.CommandPrepareArgs{
 		PrepareArgs: istructs.PrepareArgs{
 			ArgumentObject: cmd.argsObject,
@@ -192,7 +191,7 @@ func (cmdProc *cmdProc) buildCommandArgs(_ context.Context, work pipeline.IWorkp
 	}
 
 	hs := cmd.hostStateProvider.get(cmd.appStructs, cmd.cmdMes.WSID(), cmd.reb.CUDBuilder(),
-		cmd.principals, cmd.cmdMes.Token(), cmd.cmdResultBuilder, cmd.eca.CommandPrepareArgs, cmd.workspace.NextWLogOffset)
+		cmd.principals, cmd.cmdMes.Token(), cmd.cmdResultBuilder, cmd.eca.CommandPrepareArgs, cmd.workspace.NextWLogOffset, cmd.argsObject, cmd.unloggedArgsObject)
 	hs.ClearIntents()
 
 	cmd.eca.State = hs
