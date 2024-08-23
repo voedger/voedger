@@ -125,14 +125,15 @@ type hostStateProvider struct {
 	cmdResultBuilder istructs.IObjectBuilder
 	cmdPrepareArgs   istructs.CommandPrepareArgs
 	wlogOffset       istructs.Offset
+	args             istructs.IObject
+	unloggedArgs     istructs.IObject
 }
 
 func newHostStateProvider(ctx context.Context, pid istructs.PartitionID, secretReader isecrets.ISecretReader) *hostStateProvider {
 	p := &hostStateProvider{}
-	// TODO: provide ArgFunc & UnloggedArgFunc
 	p.state = stateprovide.ProvideCommandProcessorStateFactory()(ctx, p.getAppStructs, state.SimplePartitionIDFunc(pid),
 		p.getWSID, secretReader, p.getCUD, p.getPrincipals, p.getToken, projectors.DefaultIntentsLimit,
-		p.getCmdResultBuilder, p.getCmdPrepareArgs, nil, nil, p.getWLogOffset)
+		p.getCmdResultBuilder, p.getCmdPrepareArgs, p.getArgs, p.getUnloggedArgs, p.getWLogOffset)
 	return p
 }
 
@@ -146,8 +147,11 @@ func (p *hostStateProvider) getToken() string                               { re
 func (p *hostStateProvider) getCmdResultBuilder() istructs.IObjectBuilder   { return p.cmdResultBuilder }
 func (p *hostStateProvider) getCmdPrepareArgs() istructs.CommandPrepareArgs { return p.cmdPrepareArgs }
 func (p *hostStateProvider) getWLogOffset() istructs.Offset                 { return p.wlogOffset }
+func (p *hostStateProvider) getArgs() istructs.IObject                      { return p.args }
+func (p *hostStateProvider) getUnloggedArgs() istructs.IObject              { return p.unloggedArgs }
 func (p *hostStateProvider) get(appStructs istructs.IAppStructs, wsid istructs.WSID, cud istructs.ICUD, principals []iauthnz.Principal, token string,
-	cmdResultBuilder istructs.IObjectBuilder, cmdPrepareArgs istructs.CommandPrepareArgs, wlogOffset istructs.Offset) state.IHostState {
+	cmdResultBuilder istructs.IObjectBuilder, cmdPrepareArgs istructs.CommandPrepareArgs, wlogOffset istructs.Offset, args istructs.IObject,
+	unloggedArgs istructs.IObject) state.IHostState {
 	p.as = appStructs
 	p.wsid = wsid
 	p.cud = cud
@@ -156,5 +160,7 @@ func (p *hostStateProvider) get(appStructs istructs.IAppStructs, wsid istructs.W
 	p.cmdResultBuilder = cmdResultBuilder
 	p.cmdPrepareArgs = cmdPrepareArgs
 	p.wlogOffset = wlogOffset
+	p.args = args
+	p.unloggedArgs = unloggedArgs
 	return p.state
 }
