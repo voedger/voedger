@@ -736,6 +736,7 @@ func analyseJob(j *JobStmt, c *iterateCtx) {
 	}
 
 	checkState(j.State, c, func(sc *StorageScope) bool { return sc.Jobs })
+	checkIntents(j.Intents, c, func(sc *StorageScope) bool { return sc.Jobs })
 }
 
 // Note: function may update with argument
