@@ -5,7 +5,10 @@
 
 package schedulers
 
-import "github.com/voedger/voedger/pkg/istructs"
+import (
+	"github.com/voedger/voedger/pkg/istructs"
+	coreutils "github.com/voedger/voedger/pkg/utils"
+)
 
 // Returns application workspaces handled by the specified partition.
 //
@@ -14,7 +17,7 @@ func AppWorkspacesHandledByPartition(partCount istructs.NumAppPartitions, wsCoun
 	ws := make(map[istructs.WSID]int)
 	for wsNum := 0; wsNum < int(wsCount); wsNum++ {
 		wsID := istructs.NewWSID(istructs.MainClusterID, istructs.WSID(wsNum+int(istructs.FirstBaseAppWSID)))
-		if int64(wsID)%int64(partCount) == int64(part) {
+		if coreutils.AppPartitionID(wsID, partCount) == part {
 			ws[wsID] = wsNum
 		}
 	}
