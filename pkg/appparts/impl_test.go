@@ -144,23 +144,25 @@ func Test_DeployActualizersAndSchedulers(t *testing.T) {
 
 	defer cleanupParts()
 
-	metrics := func() map[istructs.PartitionID]appdef.QNames {
+	whatsRun := func() map[istructs.PartitionID]appdef.QNames {
 		m := map[istructs.PartitionID]appdef.QNames{}
-		for i := istructs.PartitionID(0); i < 10; i++ {
+		for partID := istructs.PartitionID(0); partID < istructs.PartitionID(appPartsCount); partID++ {
 			appParts.(*apps).mx.RLock()
-			if p, exists := appParts.(*apps).apps[appName].parts[i]; exists {
-				n := p.actualizers.Enum()
-				n.Add(appdef.QNamesFromMap(p.schedulers.Enum())...)
-				m[i] = n
+			if p, exists := appParts.(*apps).apps[appName].parts[partID]; exists {
+				names := p.actualizers.Enum()
+				names.Add(appdef.QNamesFromMap(p.schedulers.Enum())...)
+				if len(names) > 0 {
+					m[partID] = names
+				}
 			}
 			appParts.(*apps).mx.RUnlock()
 		}
 		return m
 	}
 
-	appParts.DeployApp(appName, nil, appDef1, appPartsCount, PoolSize(2, 2, 2, 2), appWSCount)
+	appParts.DeployApp(appName, nil, appDef1, appPartsCount, PoolSize(1, 1, 2, 2), appWSCount)
 
-	t.Run("deploy 10 partitions", func(t *testing.T) {
+	t.Run("deploy partitions", func(t *testing.T) {
 		parts := make([]istructs.PartitionID, 0, appPartsCount)
 		for partID := istructs.PartitionID(0); partID < istructs.PartitionID(appPartsCount); partID++ {
 			parts = append(parts, partID)
@@ -174,13 +176,13 @@ func Test_DeployActualizersAndSchedulers(t *testing.T) {
 		}
 		appParts.DeployAppPartitions(appName, parts)
 
-		m := metrics()
-		require.Len(m, int(appPartsCount))
+		wr := whatsRun()
+		require.Len(wr, int(appPartsCount))
 		for partID := istructs.PartitionID(0); partID < istructs.PartitionID(appPartsCount); partID++ {
 			if len(schedulers.AppWorkspacesHandledByPartition(appPartsCount, appWSCount, partID)) == 0 {
-				require.Equal(appdef.QNames{prj1name}, m[partID])
+				require.Equal(appdef.QNames{prj1name}, wr[partID])
 			} else {
-				require.Equal(appdef.QNames{job1name, prj1name}, m[partID])
+				require.Equal(appdef.QNames{job1name, prj1name}, wr[partID])
 			}
 		}
 	})
@@ -202,7 +204,7 @@ func Test_DeployActualizersAndSchedulers(t *testing.T) {
 			return adb.MustBuild()
 		}()
 
-		t.Run("upgrade test1.app1 to appDef2", func(t *testing.T) {
+		t.Run("upgrade app to appDef2", func(t *testing.T) {
 			a, ok := appParts.(*apps)
 			require.True(ok)
 
@@ -229,20 +231,20 @@ func Test_DeployActualizersAndSchedulers(t *testing.T) {
 		}
 		appParts.DeployAppPartitions(appName, parts)
 
-		m := metrics()
-		require.Len(m, int(appPartsCount))
+		wr := whatsRun()
+		require.Len(wr, int(appPartsCount))
 		for partID := istructs.PartitionID(0); partID < istructs.PartitionID(appPartsCount); partID++ {
 			if partID%2 == 1 {
 				if len(schedulers.AppWorkspacesHandledByPartition(appPartsCount, appWSCount, partID)) == 0 {
-					require.Equal(appdef.QNames{prj2name}, m[partID])
+					require.Equal(appdef.QNames{prj2name}, wr[partID])
 				} else {
-					require.Equal(appdef.QNames{job2name, prj2name}, m[partID])
+					require.Equal(appdef.QNames{job2name, prj2name}, wr[partID])
 				}
 			} else {
 				if len(schedulers.AppWorkspacesHandledByPartition(appPartsCount, appWSCount, partID)) == 0 {
-					require.Equal(appdef.QNames{prj1name}, m[partID])
+					require.Equal(appdef.QNames{prj1name}, wr[partID])
 				} else {
-					require.Equal(appdef.QNames{job1name, prj1name}, m[partID])
+					require.Equal(appdef.QNames{job1name, prj1name}, wr[partID])
 				}
 			}
 		}
@@ -253,10 +255,6 @@ func Test_DeployActualizersAndSchedulers(t *testing.T) {
 
 		mockActualizers.wait()
 
-		m := metrics()
-		require.Len(m, int(appPartsCount))
-		for partID := istructs.PartitionID(0); partID < istructs.PartitionID(appPartsCount); partID++ {
-			require.Empty(m[partID])
-		}
+		require.Empty(whatsRun())
 	})
 }
