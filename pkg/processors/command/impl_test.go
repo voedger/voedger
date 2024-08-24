@@ -34,7 +34,7 @@ import (
 	imetrics "github.com/voedger/voedger/pkg/metrics"
 	"github.com/voedger/voedger/pkg/pipeline"
 	"github.com/voedger/voedger/pkg/processors"
-	"github.com/voedger/voedger/pkg/projectors"
+	"github.com/voedger/voedger/pkg/processors/actualizers"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 	wsdescutil "github.com/voedger/voedger/pkg/utils/testwsdesc"
 	"github.com/voedger/voedger/pkg/vvm/engines"
@@ -96,7 +96,7 @@ func TestBasicUsage(t *testing.T) {
 	require.NoError(err)
 	projectionKey := in10n.ProjectionKey{
 		App:        istructs.AppQName_untill_airs_bp,
-		Projection: projectors.PLogUpdatesQName,
+		Projection: actualizers.PLogUpdatesQName,
 		WS:         1,
 	}
 	go app.n10nBroker.WatchChannel(app.ctx, channelID, func(projection in10n.ProjectionKey, _ istructs.Offset) {
@@ -701,7 +701,7 @@ func setUp(t *testing.T, prepare func(appDef appdef.IAppDefBuilder, cfg *istruct
 
 	// prepare the AppParts to borrow AppStructs
 	appParts, appPartsClean, err := appparts.New2(ctx, appStructsProvider,
-		projectors.NewSyncActualizerFactoryFactory(projectors.ProvideSyncActualizerFactory(), secretReader, n10nBroker, statelessResources),
+		actualizers.NewSyncActualizerFactoryFactory(actualizers.ProvideSyncActualizerFactory(), secretReader, n10nBroker, statelessResources),
 		appparts.NullActualizerRunner,
 		appparts.NullSchedulerRunner,
 		engines.ProvideExtEngineFactories(

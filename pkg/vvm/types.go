@@ -146,19 +146,22 @@ type VVMConfig struct {
 	MaxPrepareQueries          MaxPrepareQueriesType
 	StorageCacheSize           StorageCacheSizeType
 	processorsChannels         []ProcesorChannel
+	ActualizerStateOpts        []state.StateOptFunc
+	SecretsReader              isecrets.ISecretReader
+	SmtpConfig                 smtp.Cfg
+	WSPostInitFunc             workspace.WSPostInitFunc
+	DataPath                   string
+	MetricsServicePort         MetricsServicePortInitial
+
 	// 0 -> dynamic port will be used, new on each vvmIdx
 	// >0 -> vVMPort+vvmIdx will be actually used
-	VVMPort            VVMPortType
-	MetricsServicePort MetricsServicePortInitial
+	VVMPort VVMPortType
+
 	// test and FederationURL contains port -> the port will be relaced with the actual VVMPort
-	FederationURL       *url.URL
-	ActualizerStateOpts []state.StateOptFunc
-	SecretsReader       isecrets.ISecretReader
+	FederationURL *url.URL
+
 	// used in tests only
 	KeyspaceNameSuffix string
-	SmtpConfig         smtp.Cfg
-	WSPostInitFunc     workspace.WSPostInitFunc
-	DataPath           string
 }
 
 type resultSenderErrorFirst struct {

@@ -539,4 +539,12 @@ func TestReadFromAnDifferentLocations(t *testing.T) {
 		require.GreaterOrEqual(resp.NumRows(), 2)
 		resp.Println()
 	})
+
+	t.Run("query forwarding with empty result", func(t *testing.T) {
+		wsAnother := vit.WS(istructs.AppQName_test1_app1, "test_ws_another")
+		ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+		body := fmt.Sprintf(`{"args":{"Query":"select * from %d.sys.wlog where offset = %d"},"elements":[{"fields":["Result"]}]}`, ws.WSID, istructs.NonExistingRecordID)
+		resp := vit.PostWS(wsAnother, "q.sys.SqlQuery", body)
+		require.True(resp.IsEmpty())
+	})
 }

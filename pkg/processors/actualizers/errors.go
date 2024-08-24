@@ -2,7 +2,7 @@
  * Copyright (c) 2021-present unTill Pro, Ltd.
  */
 
-package projectors
+package actualizers
 
 import "errors"
 

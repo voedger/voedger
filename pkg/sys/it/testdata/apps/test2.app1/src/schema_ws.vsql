@@ -3,17 +3,18 @@
 
 WORKSPACE test2app1WS (
 
-    DESCRIPTOR test2app1 ();
+	DESCRIPTOR test2app1 ();
 
-    TYPE TestEchoRequest (
-        Str varchar
-    );
+	TYPE TestEchoRequest (
+		Str varchar
+	);
 
-    TYPE TestEchoResult (
-        Res varchar
-    );
+	TYPE TestEchoResult (
+		Res varchar
+	);
 
-    EXTENSION ENGINE WASM (
-        QUERY TestEcho(TestEchoRequest) RETURNS TestEchoResult;
-    );
+	EXTENSION ENGINE WASM (
+		QUERY TestEcho(TestEchoRequest) RETURNS TestEchoResult;
+		COMMAND TestCmdEcho(TestEchoRequest) RETURNS TestEchoResult;
+	);
 );

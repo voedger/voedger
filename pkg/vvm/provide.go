@@ -35,6 +35,7 @@ import (
 	"github.com/voedger/voedger/pkg/iextengine"
 	"github.com/voedger/voedger/pkg/itokens"
 	"github.com/voedger/voedger/pkg/parser"
+	"github.com/voedger/voedger/pkg/processors/actualizers"
 	"github.com/voedger/voedger/pkg/router"
 	"github.com/voedger/voedger/pkg/vvm/engines"
 
@@ -61,7 +62,6 @@ import (
 	"github.com/voedger/voedger/pkg/pipeline"
 	commandprocessor "github.com/voedger/voedger/pkg/processors/command"
 	queryprocessor "github.com/voedger/voedger/pkg/processors/query"
-	"github.com/voedger/voedger/pkg/projectors"
 	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys/invite"
 	"github.com/voedger/voedger/pkg/sys/sysprovide"
@@ -155,8 +155,8 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 		metrics.ProvideMetricsService,
 		dbcertcache.ProvideDbCache,
 		imetrics.Provide,
-		projectors.ProvideSyncActualizerFactory,
-		projectors.NewSyncActualizerFactoryFactory,
+		actualizers.ProvideSyncActualizerFactory,
+		actualizers.NewSyncActualizerFactoryFactory,
 		iprocbusmem.Provide,
 		provideRouterServices,
 		provideMetricsServiceOperator,
@@ -257,8 +257,8 @@ func provideBasicAsyncActualizerConfig(
 	broker in10n.IN10nBroker,
 	federation federation.IFederation,
 	opts ...state.StateOptFunc,
-) projectors.BasicAsyncActualizerConfig {
-	return projectors.BasicAsyncActualizerConfig{
+) actualizers.BasicAsyncActualizerConfig {
+	return actualizers.BasicAsyncActualizerConfig{
 		VvmName:       string(vvm),
 		SecretReader:  secretReader,
 		Tokens:        tokens,
@@ -266,13 +266,13 @@ func provideBasicAsyncActualizerConfig(
 		Broker:        broker,
 		Federation:    federation,
 		Opts:          opts,
-		IntentsLimit:  projectors.DefaultIntentsLimit,
+		IntentsLimit:  actualizers.DefaultIntentsLimit,
 		FlushInterval: actualizerFlushInterval,
 	}
 }
 
-func provideAsyncActualizersService(cfg projectors.BasicAsyncActualizerConfig) projectors.IActualizersService {
-	return projectors.ProvideActualizers(cfg)
+func provideAsyncActualizersService(cfg actualizers.BasicAsyncActualizerConfig) actualizers.IActualizersService {
+	return actualizers.ProvideActualizers(cfg)
 }
 
 func provideJobSchedulerRunner() appparts.ISchedulerRunner {
@@ -309,7 +309,7 @@ func provideAppPartitions(
 	vvmCtx context.Context,
 	asp istructs.IAppStructsProvider,
 	saf appparts.SyncActualizerFactory,
-	act projectors.IActualizersService,
+	act actualizers.IActualizersService,
 	sch appparts.ISchedulerRunner,
 	sr istructsmem.IStatelessResources,
 	builtinAppsArtefacts BuiltInAppsArtefacts,
@@ -761,7 +761,7 @@ func provideServicePipeline(
 	vvmCtx context.Context,
 	opCommandProcessors OperatorCommandProcessors,
 	opQueryProcessors OperatorQueryProcessors,
-	opAsyncActualizers projectors.IActualizersService,
+	opAsyncActualizers actualizers.IActualizersService,
 	appPartsCtl IAppPartsCtlPipelineService,
 	bootstrapSyncOp BootstrapOperator,
 	adminEndpoint AdminEndpointServiceOperator,
