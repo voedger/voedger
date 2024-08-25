@@ -30,9 +30,9 @@ type mockRunner struct {
 	wg       sync.WaitGroup
 }
 
-func (t *mockRunner) newAndRun(ctx context.Context, app appdef.AppQName, partID istructs.PartitionID, kind ProcessorKind) {
-	t.wg.Add(1)
-	defer t.wg.Done()
+func (mr *mockRunner) newAndRun(ctx context.Context, app appdef.AppQName, partID istructs.PartitionID, kind ProcessorKind) {
+	mr.wg.Add(1)
+	defer mr.wg.Done()
 
 	for {
 		select {
@@ -40,7 +40,7 @@ func (t *mockRunner) newAndRun(ctx context.Context, app appdef.AppQName, partID 
 			return
 		default:
 			// partition should be borrowed and released
-			p, err := t.appParts.WaitForBorrow(ctx, app, partID, kind)
+			p, err := mr.appParts.WaitForBorrow(ctx, app, partID, kind)
 			if err != nil {
 				if errors.Is(err, ctx.Err()) {
 					return // context canceled while wait for borrowed partition
@@ -54,13 +54,13 @@ func (t *mockRunner) newAndRun(ctx context.Context, app appdef.AppQName, partID 
 	}
 }
 
-func (pr *mockRunner) setAppPartitions(ap IAppPartitions) {
-	pr.appParts = ap
+func (mr *mockRunner) setAppPartitions(ap IAppPartitions) {
+	mr.appParts = ap
 }
 
-func (pr *mockRunner) wait() {
+func (mr *mockRunner) wait() {
 	// the context should be stopped. Here we just wait for processors to finish
-	pr.wg.Wait()
+	mr.wg.Wait()
 }
 
 type mockActualizerRunner struct {
