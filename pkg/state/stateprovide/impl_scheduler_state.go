@@ -1,6 +1,7 @@
 /*
- * Copyright (c) 2022-present unTill Pro, Ltd.
- */
+  - Copyright (c) 2024-present unTill Software Development Group B.V.
+    @author Michael Saigachenko
+*/
 
 package stateprovide
 
