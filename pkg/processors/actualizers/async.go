@@ -129,7 +129,7 @@ func (a *asyncActualizer) waitForAppDeploy(ctx context.Context) error {
 			return err
 		}
 		if time.Since(start) >= initFailureErrorLogInterval {
-			logger.Error(fmt.Sprintf("app %s part %d actualizer %s: failed to init in 30 seconds", a.conf.AppQName, a.conf.Partition, a.name))
+			logger.Error(fmt.Sprintf("app %s part %d actualizer %q: failed to init in 30 seconds", a.conf.AppQName, a.conf.Partition, a.projector))
 			start = time.Now()
 		}
 		time.Sleep(borrowRetryDelay)
