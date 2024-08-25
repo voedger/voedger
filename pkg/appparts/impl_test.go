@@ -253,7 +253,20 @@ func Test_DeployActualizersAndSchedulers(t *testing.T) {
 	t.Run("stop vvm from context, wait processors finished, check metrics", func(t *testing.T) {
 		stop()
 
-		mockActualizers.wait()
+		wg := sync.WaitGroup{}
+		wg.Add(1)
+		go func() {
+			mockActualizers.wait()
+			wg.Done()
+		}()
+
+		wg.Add(1)
+		go func() {
+			mockSchedulers.wait()
+			wg.Done()
+		}()
+
+		wg.Wait()
 
 		require.Empty(whatsRun())
 	})
