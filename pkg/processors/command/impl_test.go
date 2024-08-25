@@ -702,8 +702,8 @@ func setUp(t *testing.T, prepare func(appDef appdef.IAppDefBuilder, cfg *istruct
 	// prepare the AppParts to borrow AppStructs
 	appParts, appPartsClean, err := appparts.New2(ctx, appStructsProvider,
 		actualizers.NewSyncActualizerFactoryFactory(actualizers.ProvideSyncActualizerFactory(), secretReader, n10nBroker, statelessResources),
-		appparts.NullProcessorRunner,
-		appparts.NullProcessorRunner,
+		appparts.NullActualizerRunner,
+		appparts.NullSchedulerRunner,
 		engines.ProvideExtEngineFactories(
 			engines.ExtEngineFactoriesConfig{
 				AppConfigs:         cfgs,
