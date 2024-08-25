@@ -109,7 +109,7 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 	v4 := vvmConfig.ActualizerStateOpts
 	basicAsyncActualizerConfig := provideBasicAsyncActualizerConfig(vvmName, iSecretReader, iTokens, iMetrics, in10nBroker, iFederation, v4...)
 	iActualizersService := provideAsyncActualizersService(basicAsyncActualizerConfig)
-	iProcessorRunner := provideJobSchedulerRunner()
+	iSchedulerRunner := provideJobSchedulerRunner()
 	v5, err := provideSidecarApps(vvmConfig)
 	if err != nil {
 		cleanup2()
@@ -131,7 +131,7 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 		cleanup()
 		return nil, nil, err
 	}
-	iAppPartitions, cleanup3, err := provideAppPartitions(vvmCtx, iAppStructsProvider, v3, iActualizersService, iProcessorRunner, iStatelessResources, builtInAppsArtefacts)
+	iAppPartitions, cleanup3, err := provideAppPartitions(vvmCtx, iAppStructsProvider, v3, iActualizersService, iSchedulerRunner, iStatelessResources, builtInAppsArtefacts)
 	if err != nil {
 		cleanup2()
 		cleanup()
@@ -325,9 +325,9 @@ func provideAsyncActualizersService(cfg actualizers.BasicAsyncActualizerConfig) 
 	return actualizers.ProvideActualizers(cfg)
 }
 
-func provideJobSchedulerRunner() appparts.IProcessorRunner {
+func provideJobSchedulerRunner() appparts.ISchedulerRunner {
 
-	return appparts.NullProcessorRunner
+	return appparts.NullSchedulerRunner
 }
 
 func provideBuildInfo() (*debug.BuildInfo, error) {
@@ -359,7 +359,7 @@ func provideAppPartitions(
 	asp istructs.IAppStructsProvider,
 	saf appparts.SyncActualizerFactory,
 	act actualizers.IActualizersService,
-	sch appparts.IProcessorRunner,
+	sch appparts.ISchedulerRunner,
 	sr istructsmem.IStatelessResources,
 	builtinAppsArtefacts BuiltInAppsArtefacts,
 ) (ap appparts.IAppPartitions, cleanup func(), err error) {
