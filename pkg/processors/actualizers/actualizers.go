@@ -3,7 +3,7 @@
  * @author: Nikolay Nikitin
  */
 
-package projectors
+package actualizers
 
 import (
 	"context"

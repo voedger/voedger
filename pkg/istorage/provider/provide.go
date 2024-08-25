@@ -9,6 +9,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istorage"
+	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 // keyspaceNameSuffix is used in tests only
@@ -18,10 +19,12 @@ func Provide(asf istorage.IAppStorageFactory, keyspaceNameSuffix ...string) isto
 		asf:   asf,
 		cache: map[appdef.AppQName]istorage.IAppStorage{},
 	}
-	if len(keyspaceNameSuffix) > 0 {
-		res.suffix = keyspaceNameSuffix[0]
-	} else {
-		res.suffix = uuid.NewString()
+	if coreutils.IsTest() {
+		if len(keyspaceNameSuffix) > 0 && len(keyspaceNameSuffix[0]) > 0 {
+			res.suffix = keyspaceNameSuffix[0]
+		} else {
+			res.suffix = uuid.NewString()
+		}
 	}
 	return res
 }

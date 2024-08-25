@@ -18,4 +18,13 @@ func TestEcho() {
 	result.PutString(field_Res, "hello, "+str)
 }
 
+//export TestCmdEcho
+func TestCmdEcho() {
+	arg := ext.MustGetValue(ext.KeyBuilder(ext.StorageCommandContext, ext.NullEntity)).AsValue(cmdContext_Argument)
+	str := arg.AsString(field_Str)
+
+	result := ext.NewValue(ext.KeyBuilder(ext.StorageResult, ext.NullEntity))
+	result.PutString(field_Res, "hello, "+str)
+}
+
 func main() {}
