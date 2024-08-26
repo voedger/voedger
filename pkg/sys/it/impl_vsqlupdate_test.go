@@ -427,7 +427,7 @@ func TestUpdateDifferentLocations(t *testing.T) {
 
 	// read and store current cdoc.Login.WSKindInitializationData
 	sysPrn_Test1App1 := vit.GetSystemPrincipal(istructs.AppQName_sys_registry)
-	pseudoWSID := coreutils.GetPseudoWSID(istructs.NullWSID, prn.Name, istructs.MainClusterID)
+	pseudoWSID := coreutils.GetPseudoWSID(istructs.NullWSID, prn.Name, istructs.CurrentClusterID())
 	queryCDocLoginBody := fmt.Sprintf(`{"args":{"Query":"select * from registry.Login.%d"},"elements":[{"fields":["Result"]}]}`, loginID)
 	resp := vit.PostApp(istructs.AppQName_sys_registry, pseudoWSID, "q.sys.SqlQuery", queryCDocLoginBody, coreutils.WithAuthorizeBy(sysPrn_Test1App1.Token))
 	m := map[string]interface{}{}
