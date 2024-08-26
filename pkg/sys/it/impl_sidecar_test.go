@@ -40,7 +40,7 @@ func TestSidecarApps_BasicUsage(t *testing.T) {
 	ws := vit.CreateWorkspace(it.WSParams{
 		Name:      "test_sidecar_ws",
 		Kind:      appdef.NewQName("sidecartestapp", "test2app1"),
-		ClusterID: istructs.MainClusterID,
+		ClusterID: istructs.CurrentClusterID(),
 	}, prn)
 
 	t.Run("query", func(t *testing.T) {

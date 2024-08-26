@@ -20,7 +20,7 @@ func GetAppWSID(wsid istructs.WSID, numAppWorkspaces istructs.NumAppWorkspaces) 
 	// request to an another cluster -> there are no App Workspaces yet
 	// it is ok for now because App Workspaces should be created on deply an app in the new cluster
 	// we're using Main Cluster only
-	return istructs.NewWSID(istructs.MainClusterID, baseAppWSID)
+	return istructs.NewWSID(istructs.CurrentClusterID(), baseAppWSID)
 }
 
 func CRC16(entity []byte) uint16 {
@@ -40,7 +40,7 @@ func GetPseudoWSID(ownerWSID istructs.WSID, entity string, clusterID istructs.Cl
 // note: there could be many different pseudoWSIDs that leads to the same appWSID
 func AppWSIDToPseudoWSID(appWSID istructs.WSID) (pseudoWSID istructs.WSID) {
 	appWSNumber := appWSID.BaseWSID() - istructs.FirstBaseAppWSID
-	return istructs.NewWSID(istructs.MainClusterID, appWSNumber)
+	return istructs.NewWSID(istructs.CurrentClusterID(), appWSNumber)
 }
 
 // used in BuildAppWorkspaces() only because there are no apps in IAppPartitions on that moment

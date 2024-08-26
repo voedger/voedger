@@ -68,7 +68,7 @@ func Example() {
 						appName,
 						partID,
 						ws,
-						istructs.NewWSID(istructs.MainClusterID, istructs.FirstBaseAppWSID+istructs.WSID(ws)),
+						istructs.NewWSID(istructs.CurrentClusterID(), istructs.FirstBaseAppWSID+istructs.WSID(ws)),
 						name).Once()
 				}
 			}
@@ -91,7 +91,7 @@ func Example() {
 						appName,
 						partID,
 						ws,
-						istructs.NewWSID(istructs.MainClusterID, istructs.FirstBaseAppWSID+istructs.WSID(ws)),
+						istructs.NewWSID(istructs.CurrentClusterID(), istructs.FirstBaseAppWSID+istructs.WSID(ws)),
 						name).Once()
 				}
 			}

@@ -133,7 +133,7 @@ func InitAppWSes(as istructs.IAppStructs, numAppWorkspaces istructs.NumAppWorksp
 	wLogOffset := istructs.FirstOffset
 	res := []istructs.WSID{}
 	for wsNum := 0; istructs.NumAppWorkspaces(wsNum) < numAppWorkspaces; wsNum++ {
-		appWSID := istructs.NewWSID(istructs.MainClusterID, istructs.WSID(wsNum+int(istructs.FirstBaseAppWSID)))
+		appWSID := istructs.NewWSID(istructs.CurrentClusterID(), istructs.WSID(wsNum+int(istructs.FirstBaseAppWSID)))
 		partitionID := coreutils.AppPartitionID(appWSID, numAppPartitions)
 		if _, ok := pLogOffsets[partitionID]; !ok {
 			pLogOffsets[partitionID] = istructs.FirstOffset
