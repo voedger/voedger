@@ -22,8 +22,8 @@ func ExecCommandAndCatchInterrupt(cmd *cobra.Command) error {
 		return
 	}
 
-	return goAndCatchInterrupt(cmdExec)
-
+	err := goAndCatchInterrupt(cmdExec)
+	return err
 }
 
 func goAndCatchInterrupt(f func(ctx context.Context) error) (err error) {

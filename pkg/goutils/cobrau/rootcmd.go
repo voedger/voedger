@@ -42,15 +42,20 @@ func PrepareRootCmd(use string, short string, args []string, version string, cmd
 		Short:   "Print the current version",
 		Aliases: []string{"ver"},
 		Run: func(cmd *cobra.Command, args []string) {
-			fmt.Println(version)
+			fmt.Printf("%s version %s\n", cmd.Root().Name(), version)
 		},
 	}
 
 	rootCmd.SetArgs(args[1:])
-	rootCmd.AddCommand(versionCmd)
 	rootCmd.AddCommand(cmds...)
-	rootCmd.PersistentFlags().BoolP("verbose", "v", false, "Enable verbose output")
-	rootCmd.PersistentFlags().Bool("trace", false, "Enable extremely verbose output")
+	for _, cmd := range cmds {
+		cmd.Flags().BoolP("verbose", "v", false, "Enable verbose output")
+		cmd.Flags().Bool("trace", false, "Enable extremely verbose output")
+		cmd.InitDefaultCompletionCmd()
+		cmd.InitDefaultHelpFlag()
+		cmd.SilenceErrors = true
+	}
+	rootCmd.AddCommand(versionCmd)
 	rootCmd.SilenceUsage = true
 	return rootCmd
 }
