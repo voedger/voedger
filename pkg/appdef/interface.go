@@ -34,7 +34,7 @@ type IAppDef interface {
 	IWithJobs
 
 	IWithRoles
-	IWithPrivileges
+	IWithACL
 
 	IWithRates
 	IWithLimits
@@ -62,7 +62,7 @@ type IAppDefBuilder interface {
 	IJobsBuilder
 
 	IRolesBuilder
-	IPrivilegesBuilder
+	IACLBuilder
 
 	IRatesBuilder
 	ILimitsBuilder

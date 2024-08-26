@@ -32,6 +32,7 @@ import (
 	"github.com/voedger/voedger/pkg/pipeline"
 	"github.com/voedger/voedger/pkg/processors"
 	"github.com/voedger/voedger/pkg/state"
+	"github.com/voedger/voedger/pkg/state/stateprovide"
 	"github.com/voedger/voedger/pkg/sys/authnz"
 	"github.com/voedger/voedger/pkg/utils/federation"
 	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
@@ -279,7 +280,7 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 			return nil
 		}),
 		operator("create state", func(ctx context.Context, qw *queryWork) (err error) {
-			qw.state = state.ProvideQueryProcessorStateFactory()(
+			qw.state = stateprovide.ProvideQueryProcessorStateFactory()(
 				qw.msg.RequestCtx(),
 				func() istructs.IAppStructs { return qw.appStructs },
 				state.SimplePartitionIDFunc(qw.msg.Partition()),

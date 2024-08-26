@@ -3,7 +3,6 @@
 package mypkg5
 
 import (
-	_ "github.com/untillpro/airs-bp3"
 	_ "mypkg1"
 
 	_ "github.com/voedger/voedger/pkg/sys"

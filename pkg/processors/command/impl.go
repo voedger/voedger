@@ -16,6 +16,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/goutils/iterate"
 	"github.com/voedger/voedger/pkg/goutils/logger"
+	"github.com/voedger/voedger/pkg/processors/actualizers"
 	"golang.org/x/exp/maps"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -26,7 +27,6 @@ import (
 	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/pipeline"
 	"github.com/voedger/voedger/pkg/processors"
-	"github.com/voedger/voedger/pkg/projectors"
 	"github.com/voedger/voedger/pkg/sys/authnz"
 	"github.com/voedger/voedger/pkg/sys/blobber"
 	"github.com/voedger/voedger/pkg/sys/builtin"
@@ -180,7 +180,6 @@ func (cmdProc *cmdProc) getCmdResultBuilder(_ context.Context, work pipeline.IWo
 
 func (cmdProc *cmdProc) buildCommandArgs(_ context.Context, work pipeline.IWorkpiece) (err error) {
 	cmd := work.(*cmdWorkpiece)
-
 	cmd.eca.CommandPrepareArgs = istructs.CommandPrepareArgs{
 		PrepareArgs: istructs.PrepareArgs{
 			ArgumentObject: cmd.argsObject,
@@ -192,7 +191,7 @@ func (cmdProc *cmdProc) buildCommandArgs(_ context.Context, work pipeline.IWorkp
 	}
 
 	hs := cmd.hostStateProvider.get(cmd.appStructs, cmd.cmdMes.WSID(), cmd.reb.CUDBuilder(),
-		cmd.principals, cmd.cmdMes.Token(), cmd.cmdResultBuilder, cmd.eca.CommandPrepareArgs, cmd.workspace.NextWLogOffset)
+		cmd.principals, cmd.cmdMes.Token(), cmd.cmdResultBuilder, cmd.eca.CommandPrepareArgs, cmd.workspace.NextWLogOffset, cmd.argsObject, cmd.unloggedArgsObject)
 	hs.ClearIntents()
 
 	cmd.eca.State = hs
@@ -705,7 +704,7 @@ func (cmdProc *cmdProc) n10n(_ context.Context, work pipeline.IWorkpiece) (err e
 	cmd := work.(*cmdWorkpiece)
 	cmdProc.n10nBroker.Update(in10n.ProjectionKey{
 		App:        cmd.cmdMes.AppQName(),
-		Projection: projectors.PLogUpdatesQName,
+		Projection: actualizers.PLogUpdatesQName,
 		WS:         istructs.WSID(cmdProc.pNumber),
 	}, cmd.rawEvent.PLogOffset())
 	logger.Verbose("updated plog event on offset ", cmd.rawEvent.PLogOffset(), ", pnumber ", cmdProc.pNumber)

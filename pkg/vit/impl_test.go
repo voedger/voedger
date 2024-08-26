@@ -20,6 +20,7 @@ import (
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/state"
+	"github.com/voedger/voedger/pkg/state/stateprovide"
 	"github.com/voedger/voedger/pkg/sys"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
@@ -100,7 +101,7 @@ func TestBasicUsage_Workspaces(t *testing.T) {
 			TemplateName: "test_template",  // from SharedConfig_Simple
 			InitDataJSON: `{"IntFld": 42}`, // intFld is required field, from SharedConfig_Simple
 			Kind:         QNameApp1_TestWSKind,
-			ClusterID:    istructs.MainClusterID,
+			ClusterID:    istructs.CurrentClusterID(),
 		}
 		newWS := vit.CreateWorkspace(wsp, ownerPrincipal)
 
@@ -235,7 +236,7 @@ func TestEmailExpectation(t *testing.T) {
 	defer vit.TearDown()
 
 	// provide VIT email sending chan to the IBundledHostState, then use it to send an email
-	s := state.ProvideAsyncActualizerStateFactory()(context.Background(), func() istructs.IAppStructs { return &nilAppStructs{} }, nil, nil, nil, nil, nil, nil, nil, 1, 0,
+	s := stateprovide.ProvideAsyncActualizerStateFactory()(context.Background(), func() istructs.IAppStructs { return &nilAppStructs{} }, nil, nil, nil, nil, nil, nil, nil, 1, 0,
 		state.WithEmailMessagesChan(vit.emailCaptor))
 	k, err := s.KeyBuilder(sys.Storage_SendMail, appdef.NullQName)
 	require.NoError(err)

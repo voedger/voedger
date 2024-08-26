@@ -42,7 +42,7 @@ func provideEexecQrySqlQuery(federation federation.IFederation, itokens itokens.
 		var wsID istructs.WSID
 		switch op.Workspace.Kind {
 		case dml.WorkspaceKind_AppWSNum:
-			wsID = istructs.NewWSID(istructs.MainClusterID, istructs.FirstBaseAppWSID+istructs.WSID(op.Workspace.ID))
+			wsID = istructs.NewWSID(istructs.CurrentClusterID(), istructs.FirstBaseAppWSID+istructs.WSID(op.Workspace.ID))
 		case dml.WorkspaceKind_WSID:
 			wsID = istructs.WSID(op.Workspace.ID)
 		case dml.WorkspaceKind_PseudoWSID:
@@ -71,7 +71,13 @@ func provideEexecQrySqlQuery(federation federation.IFederation, itokens itokens.
 			if err != nil {
 				return err
 			}
-			return callback(&result{value: resp.SectionRow()[0].(string)})
+			for i := 0; i < resp.NumRows(); i++ {
+				if err := callback(&result{value: resp.SectionRow(i)[0].(string)}); err != nil {
+					// notest
+					return err
+				}
+			}
+			return nil
 		}
 
 		stmt, err := sqlparser.Parse(op.CleanSQL)

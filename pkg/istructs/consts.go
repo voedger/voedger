@@ -132,7 +132,7 @@ const FirstBaseUserWSID = FirstBaseAppWSID + 0xffff
 
 const (
 	NullClusterID = ClusterID(iota)
-	MainClusterID
+	MainClusterID_useWithCare
 )
 const MaxClusterID = ClusterID(0xffff)
 
@@ -198,3 +198,7 @@ const (
 const DefaultNumAppWorkspaces = NumAppWorkspaces(10)
 
 const SysGuestLogin = appdef.SysPackage + ".Guest"
+
+func CurrentClusterID() ClusterID {
+	return MainClusterID_useWithCare
+}

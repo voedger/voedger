@@ -494,7 +494,7 @@ func TestReadFromAnDifferentLocations(t *testing.T) {
 		anotherAppWS := vit.CreateWorkspace(it.WSParams{
 			Name:         "anotherAppWS",
 			Kind:         qNameApp2_TestWSKind,
-			ClusterID:    istructs.MainClusterID,
+			ClusterID:    istructs.CurrentClusterID(),
 			InitDataJSON: `{"IntFld":42}`,
 		}, anotherAppWSOwner)
 
@@ -510,7 +510,7 @@ func TestReadFromAnDifferentLocations(t *testing.T) {
 		registryAppStructs, err := vit.IAppStructsProvider.BuiltIn(istructs.AppQName_sys_registry)
 		require.NoError(err)
 		prn := vit.GetPrincipal(istructs.AppQName_test1_app1, "login") // from VIT shared config
-		pseudoWSID := coreutils.GetPseudoWSID(istructs.NullWSID, prn.Name, istructs.MainClusterID)
+		pseudoWSID := coreutils.GetPseudoWSID(istructs.NullWSID, prn.Name, istructs.CurrentClusterID())
 		appWSNumber := pseudoWSID.BaseWSID() % istructs.WSID(registryAppStructs.NumAppWorkspaces())
 
 		// for example read cdoc.registry.Login.LoginHash from the app workspace
@@ -529,5 +529,22 @@ func TestReadFromAnDifferentLocations(t *testing.T) {
 		resp := vit.PostWS(oneAppWS, "q.sys.SqlQuery", body)
 		loginHash := registry.GetLoginHash(prn.Login.Name)
 		require.Contains(resp.SectionRow()[0].(string), fmt.Sprintf(`"LoginHash":"%s"`, loginHash))
+	})
+
+	t.Run("query forwarding", func(t *testing.T) {
+		wsAnother := vit.WS(istructs.AppQName_test1_app1, "test_ws_another")
+		ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+		body := fmt.Sprintf(`{"args":{"Query":"select * from %d.sys.wlog"},"elements":[{"fields":["Result"]}]}`, ws.WSID)
+		resp := vit.PostWS(wsAnother, "q.sys.SqlQuery", body)
+		require.GreaterOrEqual(resp.NumRows(), 2)
+		resp.Println()
+	})
+
+	t.Run("query forwarding with empty result", func(t *testing.T) {
+		wsAnother := vit.WS(istructs.AppQName_test1_app1, "test_ws_another")
+		ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
+		body := fmt.Sprintf(`{"args":{"Query":"select * from %d.sys.wlog where offset = %d"},"elements":[{"fields":["Result"]}]}`, ws.WSID, istructs.NonExistingRecordID)
+		resp := vit.PostWS(wsAnother, "q.sys.SqlQuery", body)
+		require.True(resp.IsEmpty())
 	})
 }

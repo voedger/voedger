@@ -11,7 +11,7 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
-	"github.com/voedger/voedger/pkg/state"
+	"github.com/voedger/voedger/pkg/sys/storages"
 
 	"golang.org/x/exp/slices"
 )
@@ -31,7 +31,7 @@ func provideExecQryEnrichPrincipalToken(atf payloads.IAppTokensFactory) istructs
 	return func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 		appTokens := atf.New(args.State.App())
 
-		principalToken, err := state.GetPrincipalTokenFromState(args.State)
+		principalToken, err := storages.GetPrincipalTokenFromState(args.State)
 		if err != nil {
 			return err
 		}

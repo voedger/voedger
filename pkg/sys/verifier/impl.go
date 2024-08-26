@@ -57,7 +57,7 @@ func provideIEVExec(itokens itokens.ITokens, federation federation.IFederation, 
 				return err
 			}
 			appTokens = asRegistry.AppTokens()
-			targetWSID = coreutils.GetPseudoWSID(istructs.NullWSID, email, istructs.MainClusterID)
+			targetWSID = coreutils.GetPseudoWSID(istructs.NullWSID, email, istructs.CurrentClusterID())
 		}
 
 		verificationToken, verificationCode, err := NewVerificationToken(entity, field, email, appdef.VerificationKind_EMail, targetWSID, itokens, appTokens)

@@ -26,5 +26,5 @@ type Op struct {
 	Workspace             Workspace
 	EntityID              istructs.IDType // offset or RecordID
 	CleanSQL              string
-	VSQLWithoutAppAndWSID string
+	VSQLWithoutAppAndWSID string // need to forward the query to the target app and\or WSID
 }

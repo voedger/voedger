@@ -17,14 +17,16 @@ import (
 func Zip(zipFilePath string, objectToZip any) error {
 	switch t := objectToZip.(type) {
 	case string:
-		fileInfo, err := os.Stat(t)
+		exists, err := Exists(t)
 		if err != nil {
-			if os.IsNotExist(err) {
-				return fmt.Errorf("'%s': does not exist", t)
-			}
-			return fmt.Errorf("failed to check '%s' existence: %w", t, err)
+			return err
 		}
-		if fileInfo.IsDir() {
+
+		if !exists {
+			return fmt.Errorf("%s: not found", t)
+		}
+
+		if fileInfo, _ := os.Stat(t); fileInfo.IsDir() {
 			return zipDir(zipFilePath, t)
 		}
 		return zipFiles(zipFilePath, "", []string{t})

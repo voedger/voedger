@@ -12,7 +12,9 @@ import (
 	"sync"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appparts/internal/actualizers"
 	"github.com/voedger/voedger/pkg/appparts/internal/pool"
+	"github.com/voedger/voedger/pkg/appparts/internal/schedulers"
 	"github.com/voedger/voedger/pkg/iextengine"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/pipeline"
@@ -149,18 +151,19 @@ type appPartitionRT struct {
 	app            *appRT
 	id             istructs.PartitionID
 	syncActualizer pipeline.ISyncOperator
-	processors     *partitionProcessors
-
-	// TODO: implement partitionCache
+	actualizers    *actualizers.PartitionActualizers
+	schedulers     *schedulers.PartitionSchedulers
 }
 
 func newAppPartitionRT(app *appRT, id istructs.PartitionID) *appPartitionRT {
+	as := app.lastestVersion.appStructs()
 	part := &appPartitionRT{
 		app:            app,
 		id:             id,
-		syncActualizer: app.apps.syncActualizerFactory(app.lastestVersion.appStructs(), id),
+		syncActualizer: app.apps.syncActualizerFactory(as, id),
+		actualizers:    actualizers.New(app.name, id),
+		schedulers:     schedulers.New(app.name, app.partsCount, as.NumAppWorkspaces(), id),
 	}
-	part.processors = newPartitionProcessors(part)
 	return part
 }
 
@@ -179,6 +182,7 @@ type borrowedPartition struct {
 	part       *appPartitionRT
 	appDef     appdef.IAppDef
 	appStructs istructs.IAppStructs
+	kind       ProcessorKind
 	pool       *pool.Pool[engines] // pool of borrowed engines
 	engines    engines             // borrowed engines
 }
@@ -216,6 +220,10 @@ func (bp *borrowedPartition) Invoke(ctx context.Context, name appdef.QName, stat
 		return errUndefinedExtension(name)
 	}
 
+	if compat, err := bp.kind.compatibleWithExtension(e); !compat {
+		return fmt.Errorf("%s: %w", bp, err)
+	}
+
 	extName := bp.appDef.FullQName(name)
 	if extName == appdef.NullFullQName {
 		return errCantObtainFullQName(name)
@@ -228,6 +236,10 @@ func (bp *borrowedPartition) Invoke(ctx context.Context, name appdef.QName, stat
 	}
 
 	return extEngine.Invoke(ctx, extName, io)
+}
+
+func (bp *borrowedPartition) String() string {
+	return fmt.Sprintf("borrowedPartition{app=%s, part=%d, kind=%s}", bp.part.app.name, bp.part.id, bp.kind)
 }
 
 // # IAppPartition.Release
@@ -246,6 +258,7 @@ func (bp *borrowedPartition) Release() {
 }
 
 func (bp *borrowedPartition) borrow(proc ProcessorKind) (err error) {
+	bp.kind = proc
 	bp.appDef, bp.appStructs, bp.pool = bp.part.app.lastestVersion.snapshot(proc)
 	bp.engines, err = bp.pool.Borrow()
 	if err != nil {

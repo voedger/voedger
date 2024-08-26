@@ -462,6 +462,13 @@ func discardRespBody(resp *http.Response) error {
 	return nil
 }
 
+func (resp *FuncResponse) NumRows() int {
+	if resp.IsEmpty() {
+		return 0
+	}
+	return len(resp.Sections[0].Elements)
+}
+
 func (resp *FuncResponse) SectionRow(rowIdx ...int) []interface{} {
 	if len(rowIdx) > 1 {
 		panic("must be 0 or 1 rowIdx'es")
