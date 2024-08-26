@@ -7,6 +7,7 @@ package main
 
 import (
 	_ "embed"
+	"errors"
 	"fmt"
 	"os"
 	"strconv"
@@ -101,6 +102,9 @@ func exactArgs(n int) cobra.PositionalArgs {
 	return func(cmd *cobra.Command, args []string) error {
 		switch {
 		case len(args) >= 1 && args[0] == "help":
+			if len(args) > 1 {
+				return errors.New("'help' accepts no arguments")
+			}
 			cmd.RunE = func(*cobra.Command, []string) error {
 				return cmd.Help()
 			}
