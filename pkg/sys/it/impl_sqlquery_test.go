@@ -494,7 +494,7 @@ func TestReadFromAnDifferentLocations(t *testing.T) {
 		anotherAppWS := vit.CreateWorkspace(it.WSParams{
 			Name:         "anotherAppWS",
 			Kind:         qNameApp2_TestWSKind,
-			ClusterID:    istructs.MainClusterID,
+			ClusterID:    istructs.CurrentClusterID(),
 			InitDataJSON: `{"IntFld":42}`,
 		}, anotherAppWSOwner)
 
@@ -510,7 +510,7 @@ func TestReadFromAnDifferentLocations(t *testing.T) {
 		registryAppStructs, err := vit.IAppStructsProvider.BuiltIn(istructs.AppQName_sys_registry)
 		require.NoError(err)
 		prn := vit.GetPrincipal(istructs.AppQName_test1_app1, "login") // from VIT shared config
-		pseudoWSID := coreutils.GetPseudoWSID(istructs.NullWSID, prn.Name, istructs.MainClusterID)
+		pseudoWSID := coreutils.GetPseudoWSID(istructs.NullWSID, prn.Name, istructs.CurrentClusterID())
 		appWSNumber := pseudoWSID.BaseWSID() % istructs.WSID(registryAppStructs.NumAppWorkspaces())
 
 		// for example read cdoc.registry.Login.LoginHash from the app workspace

@@ -70,7 +70,7 @@ func (vit *VIT) SignUp(loginName, pwd string, appQName appdef.AppQName, opts ...
 
 func getSignUpOpts(opts []signUpOptFunc) *signUpOpts {
 	res := &signUpOpts{
-		profileClusterID: istructs.MainClusterID,
+		profileClusterID: istructs.CurrentClusterID(),
 	}
 	for _, opt := range opts {
 		opt(res)
@@ -182,7 +182,7 @@ func (vit *VIT) waitForWorkspace(wsName string, owner *Principal, respGetter fun
 					InitDataJSON:   resp.SectionRow()[2].(string),
 					TemplateName:   resp.SectionRow()[tmplNameIdx].(string),
 					TemplateParams: resp.SectionRow()[tmplParamsIdx].(string),
-					ClusterID:      istructs.MainClusterID,
+					ClusterID:      istructs.CurrentClusterID(),
 					ownerLoginName: owner.Name,
 				},
 				WSID:    wsid,
@@ -286,7 +286,7 @@ func SimpleWSParams(wsName string) WSParams {
 	return WSParams{
 		Name:         wsName,
 		Kind:         QNameApp1_TestWSKind,
-		ClusterID:    istructs.MainClusterID,
+		ClusterID:    istructs.CurrentClusterID(),
 		InitDataJSON: `{"IntFld": 42}`, //
 	}
 }
@@ -347,7 +347,7 @@ func (vit *VIT) GetAny(entity string, ws *AppWorkspace) istructs.RecordID {
 }
 
 func NewLogin(name, pwd string, appQName appdef.AppQName, subjectKind istructs.SubjectKindType, clusterID istructs.ClusterID) Login {
-	pseudoWSID := coreutils.GetPseudoWSID(istructs.NullWSID, name, istructs.MainClusterID)
+	pseudoWSID := coreutils.GetPseudoWSID(istructs.NullWSID, name, istructs.CurrentClusterID())
 	return Login{name, pwd, pseudoWSID, appQName, subjectKind, clusterID, map[appdef.QName]func(verifiedValues map[string]string) map[string]interface{}{}}
 }
 
@@ -379,7 +379,7 @@ func DummyWS(wsKind appdef.QName, wsid istructs.WSID, ownerPrn *Principal) *AppW
 		WorkspaceDescriptor: WorkspaceDescriptor{
 			WSParams: WSParams{
 				Kind:      wsKind,
-				ClusterID: istructs.MainClusterID,
+				ClusterID: istructs.CurrentClusterID(),
 			},
 			WSID: wsid,
 		},

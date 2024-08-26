@@ -19,13 +19,13 @@ func TestBasicUsage_GetAppWSID(t *testing.T) {
 		numAppWorkspaces istructs.NumAppWorkspaces
 		expectedAppWSID  istructs.WSID
 	}{
-		{1, 1, istructs.NewWSID(istructs.MainClusterID, istructs.MaxPseudoBaseWSID+1)},
-		{2, 1, istructs.NewWSID(istructs.MainClusterID, istructs.MaxPseudoBaseWSID+1)},
-		{3, 1, istructs.NewWSID(istructs.MainClusterID, istructs.MaxPseudoBaseWSID+1)},
-		{1, 10, istructs.NewWSID(istructs.MainClusterID, istructs.MaxPseudoBaseWSID+2)},
-		{8, 10, istructs.NewWSID(istructs.MainClusterID, istructs.MaxPseudoBaseWSID+9)},
-		{10, 10, istructs.NewWSID(istructs.MainClusterID, istructs.MaxPseudoBaseWSID+1)},
-		{11, 10, istructs.NewWSID(istructs.MainClusterID, istructs.MaxPseudoBaseWSID+2)},
+		{1, 1, istructs.NewWSID(istructs.CurrentClusterID(), istructs.MaxPseudoBaseWSID+1)},
+		{2, 1, istructs.NewWSID(istructs.CurrentClusterID(), istructs.MaxPseudoBaseWSID+1)},
+		{3, 1, istructs.NewWSID(istructs.CurrentClusterID(), istructs.MaxPseudoBaseWSID+1)},
+		{1, 10, istructs.NewWSID(istructs.CurrentClusterID(), istructs.MaxPseudoBaseWSID+2)},
+		{8, 10, istructs.NewWSID(istructs.CurrentClusterID(), istructs.MaxPseudoBaseWSID+9)},
+		{10, 10, istructs.NewWSID(istructs.CurrentClusterID(), istructs.MaxPseudoBaseWSID+1)},
+		{11, 10, istructs.NewWSID(istructs.CurrentClusterID(), istructs.MaxPseudoBaseWSID+2)},
 	}
 
 	for _, c := range cases {
@@ -50,7 +50,7 @@ func TestGetPseudoWSID(t *testing.T) {
 
 func TestAppWSIDToPseudoWSID(t *testing.T) {
 	numAppWorkspaces := istructs.NumAppWorkspaces(10)
-	pseudoWSIDInitial := GetPseudoWSID(istructs.NullWSID, "test", istructs.MainClusterID)
+	pseudoWSIDInitial := GetPseudoWSID(istructs.NullWSID, "test", istructs.CurrentClusterID())
 	appWSIDExpected := GetAppWSID(pseudoWSIDInitial, numAppWorkspaces)
 
 	// could be any but must lead to the initial appWSIDExpected

@@ -31,7 +31,8 @@ func TestClusterApps(t *testing.T) {
 
 func TestMainCluster(t *testing.T) {
 	require := require.New(t)
-	require.Equal(MainClusterID, ClusterID(1))
+	require.Equal(MainClusterID_useWithCare, ClusterID(1))
+	require.Equal(CurrentClusterID(), ClusterID(1))
 }
 
 func TestWSID(t *testing.T) {

@@ -142,6 +142,35 @@ func QNamesFromMap[V any, M ~map[QName]V](m M) QNames {
 	return qq
 }
 
+// Parse a qualified names from strings.
+//
+// # Panics:
+//   - if strings contains not a valid qualified name
+func MustParseQNames(val ...string) QNames {
+	q := QNames{}
+	for _, v := range val {
+		q.Add(MustParseQName(v))
+	}
+	return q
+}
+
+// Parse a qualified name from string
+func ParseQNames(val ...string) (res QNames, err error) {
+	res = QNames{}
+	for _, v := range val {
+		q, e := ParseQName(v)
+		if e == nil {
+			res.Add(q)
+		} else {
+			err = errors.Join(err, e)
+		}
+	}
+	if err == nil {
+		return res, nil
+	}
+	return nil, err
+}
+
 // Returns is slice with valid qNames and error if not
 func ValidQNames(qName ...QName) (ok bool, err error) {
 	for _, q := range qName {

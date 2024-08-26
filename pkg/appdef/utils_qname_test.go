@@ -857,3 +857,70 @@ func TestAppQName_UnmarshalInvalidString(t *testing.T) {
 		})
 	}
 }
+
+func TestParseQNames(t *testing.T) {
+	type args struct {
+		val []string
+	}
+	tests := []struct {
+		name    string
+		args    args
+		wantRes QNames
+		wantErr bool
+	}{
+		{"empty", args{[]string{}}, QNames{}, false},
+		{"NullQName", args{[]string{"."}}, QNames{NullQName}, false},
+		{"sys.error", args{[]string{"sys.error"}}, QNames{NewQName("sys", "error")}, false},
+		{"deduplicate", args{[]string{"a.a", "a.a"}}, QNames{NewQName("a", "a")}, false},
+		{"sort by package", args{[]string{"c.c", "b.b", "a.a"}}, QNames{NewQName("a", "a"), NewQName("b", "b"), NewQName("c", "c")}, false},
+		{"sort by entity", args{[]string{"a.b", "a.c", "a.x", "a.a"}}, QNames{NewQName("a", "a"), NewQName("a", "b"), NewQName("a", "c"), NewQName("a", "x")}, false},
+		{"sort and deduplicate", args{[]string{"b.b", "z.z", "b.b", "a.a", "z.b"}}, QNames{NewQName("a", "a"), NewQName("b", "b"), NewQName("z", "b"), NewQName("z", "z")}, false},
+		// Errors
+		{"error if invalid qname", args{[]string{"naked 🔫"}}, nil, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			gotRes, err := ParseQNames(tt.args.val...)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ParseQNames() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(gotRes, tt.wantRes) {
+				t.Errorf("ParseQNames() = %v, want %v", gotRes, tt.wantRes)
+			}
+		})
+	}
+}
+
+func TestMustParseQNames(t *testing.T) {
+	type args struct {
+		val []string
+	}
+	tests := []struct {
+		name       string
+		args       args
+		want       QNames
+		wantPanics bool
+	}{
+		{"empty", args{[]string{}}, QNames{}, false},
+		{"sys.error", args{[]string{"sys.error"}}, QNames{NewQName("sys", "error")}, false},
+		{"deduplicate", args{[]string{"a.a", "a.a"}}, QNames{NewQName("a", "a")}, false},
+		{"sort by package", args{[]string{"c.c", "b.b", "a.a"}}, QNames{NewQName("a", "a"), NewQName("b", "b"), NewQName("c", "c")}, false},
+		{"sort by entity", args{[]string{"a.b", "a.c", "a.x", "a.a"}}, QNames{NewQName("a", "a"), NewQName("a", "b"), NewQName("a", "c"), NewQName("a", "x")}, false},
+		{"sort and deduplicate", args{[]string{"b.b", "z.z", "b.b", "a.a", "z.b"}}, QNames{NewQName("a", "a"), NewQName("b", "b"), NewQName("z", "b"), NewQName("z", "z")}, false},
+		// Errors
+		{"panic if invalid qname", args{[]string{"naked 🔫"}}, nil, true},
+	}
+	require := require.New(t)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.wantPanics {
+				require.Panics(func() { MustParseQNames(tt.args.val...) })
+			} else {
+				if got := MustParseQNames(tt.args.val...); !reflect.DeepEqual(got, tt.want) {
+					t.Errorf("MustParseQNames() = %v, want %v", got, tt.want)
+				}
+			}
+		})
+	}
+}
