@@ -42,7 +42,7 @@ func provideEexecQrySqlQuery(federation federation.IFederation, itokens itokens.
 		var wsID istructs.WSID
 		switch op.Workspace.Kind {
 		case dml.WorkspaceKind_AppWSNum:
-			wsID = istructs.NewWSID(istructs.MainClusterID, istructs.FirstBaseAppWSID+istructs.WSID(op.Workspace.ID))
+			wsID = istructs.NewWSID(istructs.CurrentClusterID(), istructs.FirstBaseAppWSID+istructs.WSID(op.Workspace.ID))
 		case dml.WorkspaceKind_WSID:
 			wsID = istructs.WSID(op.Workspace.ID)
 		case dml.WorkspaceKind_PseudoWSID:

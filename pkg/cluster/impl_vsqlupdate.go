@@ -72,7 +72,7 @@ func parseAndValidateQuery(args istructs.ExecCommandArgs, query string, asp istr
 	case dml.WorkspaceKind_PseudoWSID:
 		wsid = istructs.IDType(coreutils.GetAppWSID(istructs.WSID(update.Workspace.ID), update.appStructs.NumAppWorkspaces()))
 	case dml.WorkspaceKind_AppWSNum:
-		wsid = istructs.IDType(istructs.NewWSID(istructs.MainClusterID, istructs.FirstBaseAppWSID+istructs.WSID(update.Workspace.ID)))
+		wsid = istructs.IDType(istructs.NewWSID(istructs.CurrentClusterID(), istructs.FirstBaseAppWSID+istructs.WSID(update.Workspace.ID)))
 	default:
 		return update, errors.New("location must be specified")
 	}

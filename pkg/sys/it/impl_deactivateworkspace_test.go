@@ -105,7 +105,7 @@ func TestDeactivateJoinedWorkspace(t *testing.T) {
 	require.False(joinedWorkspace.isActive)
 
 	// check appWS/cdoc.sys.WorkspaceID.IsActive == false
-	wsidOfCDocWorkspaceID := coreutils.GetPseudoWSID(prn1.ProfileWSID, newWS.Name, istructs.MainClusterID)
+	wsidOfCDocWorkspaceID := coreutils.GetPseudoWSID(prn1.ProfileWSID, newWS.Name, istructs.CurrentClusterID())
 	body = fmt.Sprintf(`{"args":{"Query":"select IDOfCDocWorkspaceID from sys.WorkspaceIDIdx where OwnerWSID = %d and WSName = '%s'"}, "elements":[{"fields":["Result"]}]}`,
 		prn1.ProfileWSID, newWS.Name)
 	sysToken := vit.GetSystemPrincipal(istructs.AppQName_test1_app1)
