@@ -107,7 +107,7 @@ func TestBasicUsage(t *testing.T) {
 	defer app.n10nBroker.Unsubscribe(channelID, projectionKey)
 
 	t.Run("basic usage", func(t *testing.T) {
-		// command processor works throught ibus.SendResponse -> we need a sender -> let's test using ibus.SendRequest2()
+		// command processor works through ibus.SendResponse -> we need a sender -> let's test using ibus.SendRequest2()
 		request := ibus.Request{
 			Body:     []byte(`{"args":{"Text":"hello"},"unloggedArgs":{"Password":"pass"}}`),
 			AppQName: istructs.AppQName_untill_airs_bp.String(),
