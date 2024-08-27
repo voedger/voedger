@@ -103,7 +103,7 @@ type IWithACL interface {
 	// Enumerates all ACL rules.
 	//
 	// Rules are enumerated in the order they are added.
-	ACL(func(IACLRule))
+	ACL(func(IACLRule) bool)
 
 	// Returns all ACL rules on specified resources, which contains at least one from specified kinds.
 	//

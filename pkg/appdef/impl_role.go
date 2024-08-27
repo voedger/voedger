@@ -21,9 +21,11 @@ func newRole(app *appDef, name QName) *role {
 	return r
 }
 
-func (r role) ACL(cb func(IACLRule)) {
+func (r role) ACL(cb func(IACLRule) bool) {
 	for _, p := range r.aclRules {
-		cb(p)
+		if !cb(p) {
+			break
+		}
 	}
 }
 

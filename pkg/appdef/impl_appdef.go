@@ -252,9 +252,11 @@ func (app *appDef) Packages(cb func(local, path string)) {
 	app.packages.forEach(cb)
 }
 
-func (app appDef) ACL(cb func(IACLRule)) {
+func (app appDef) ACL(cb func(IACLRule) bool) {
 	for _, p := range app.acl {
-		cb(p)
+		if !cb(p) {
+			break
+		}
 	}
 }
 

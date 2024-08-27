@@ -98,7 +98,7 @@ func Test_AppDef_AddRole(t *testing.T) {
 				case 1:
 					require.Equal(admRoleName, r.QName())
 					privilegesCount := 0
-					r.ACL(func(p IACLRule) {
+					r.ACL(func(p IACLRule) bool {
 						privilegesCount++
 						switch privilegesCount {
 						case 1:
@@ -114,12 +114,13 @@ func Test_AppDef_AddRole(t *testing.T) {
 						default:
 							require.Fail("unexpected ACL rule", "ACL rule: %v", p)
 						}
+						return true
 					})
 					require.Equal(2, privilegesCount)
 				case 2:
 					require.Equal(intruderRoleName, r.QName())
 					privilegesCount := 0
-					r.ACL(func(p IACLRule) {
+					r.ACL(func(p IACLRule) bool {
 						privilegesCount++
 						switch privilegesCount {
 						case 1:
@@ -130,12 +131,13 @@ func Test_AppDef_AddRole(t *testing.T) {
 						default:
 							require.Fail("unexpected ACL rule", "ACL rule: %v", p)
 						}
+						return true
 					})
 					require.Equal(1, privilegesCount)
 				case 3:
 					require.Equal(ownerRoleName, r.QName())
 					privilegesCount := 0
-					r.ACL(func(p IACLRule) {
+					r.ACL(func(p IACLRule) bool {
 						privilegesCount++
 						switch privilegesCount {
 						case 1:
@@ -146,12 +148,13 @@ func Test_AppDef_AddRole(t *testing.T) {
 						default:
 							require.Fail("unexpected ACL rule", "ACL rule: %v", p)
 						}
+						return true
 					})
 					require.Equal(1, privilegesCount)
 				case 4:
 					require.Equal(readerRoleName, r.QName())
 					privilegesCount := 0
-					r.ACL(func(p IACLRule) {
+					r.ACL(func(p IACLRule) bool {
 						privilegesCount++
 						switch privilegesCount {
 						case 1:
@@ -167,12 +170,13 @@ func Test_AppDef_AddRole(t *testing.T) {
 						default:
 							require.Fail("unexpected ACL rule", "ACL rule: %v", p)
 						}
+						return true
 					})
 					require.Equal(2, privilegesCount)
 				case 5:
 					require.Equal(workerRoleName, r.QName())
 					privilegesCount := 0
-					r.ACL(func(p IACLRule) {
+					r.ACL(func(p IACLRule) bool {
 						privilegesCount++
 						switch privilegesCount {
 						case 1:
@@ -183,12 +187,13 @@ func Test_AppDef_AddRole(t *testing.T) {
 						default:
 							require.Fail("unexpected ACL rule", "ACL rule: %v", p)
 						}
+						return true
 					})
 					require.Equal(1, privilegesCount)
 				case 6:
 					require.Equal(writerRoleName, r.QName())
 					privilegesCount := 0
-					r.ACL(func(p IACLRule) {
+					r.ACL(func(p IACLRule) bool {
 						privilegesCount++
 						switch privilegesCount {
 						case 1:
@@ -204,6 +209,7 @@ func Test_AppDef_AddRole(t *testing.T) {
 						default:
 							require.Fail("unexpected ACL rule", "ACL rule: %v", p)
 						}
+						return true
 					})
 					require.Equal(2, privilegesCount)
 				}
@@ -224,6 +230,15 @@ func Test_AppDef_AddRole(t *testing.T) {
 				[]QName{wsName}, nil,
 				admRoleName)
 		})
+	})
+
+	t.Run("range by role ACL rules should be breakable", func(t *testing.T) {
+		role, cnt := app.Role(admRoleName), 0
+		role.ACL(func(p IACLRule) bool {
+			cnt++
+			return false
+		})
+		require.Equal(1, cnt)
 	})
 }
 

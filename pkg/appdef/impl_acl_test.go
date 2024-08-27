@@ -92,7 +92,7 @@ func Test_AppDef_GrantAndRevoke(t *testing.T) {
 
 		t.Run("should be ok to enum all ACL rules", func(t *testing.T) {
 			cnt := 0
-			app.ACL(func(p IACLRule) {
+			app.ACL(func(p IACLRule) bool {
 				cnt++
 				switch cnt {
 				case 1:
@@ -143,6 +143,7 @@ func Test_AppDef_GrantAndRevoke(t *testing.T) {
 				default:
 					require.Fail("unexpected ACL Rule", "ACL rule: %v", p)
 				}
+				return true
 			})
 			require.Equal(9, cnt)
 		})
@@ -329,7 +330,7 @@ func Test_AppDef_GrantWithFields(t *testing.T) {
 		}
 
 		cnt := 0
-		app.ACL(func(p IACLRule) {
+		app.ACL(func(p IACLRule) bool {
 			cnt++
 			switch cnt {
 			case 1:
@@ -345,8 +346,18 @@ func Test_AppDef_GrantWithFields(t *testing.T) {
 			default:
 				require.Fail("unexpected ACL rule", "ACL rule: %v", p)
 			}
+			return true
 		})
 
 		require.Equal(2, cnt)
+	})
+
+	t.Run("range by ACL should breakable", func(t *testing.T) {
+		cnt := 0
+		app.ACL(func(p IACLRule) bool {
+			cnt++
+			return false
+		})
+		require.Equal(1, cnt)
 	})
 }

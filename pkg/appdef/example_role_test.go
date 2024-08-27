@@ -63,19 +63,19 @@ func ExampleIAppDefBuilder_AddRole() {
 	{
 		reader := app.Role(readerRoleName)
 		fmt.Println(reader, ":")
-		reader.ACL(func(r appdef.IACLRule) { fmt.Println("-", r) })
+		reader.ACL(func(r appdef.IACLRule) bool { fmt.Println("-", r); return true })
 
 		writer := app.Role(writerRoleName)
 		fmt.Println(writer, ":")
-		writer.ACL(func(r appdef.IACLRule) { fmt.Println("-", r) })
+		writer.ACL(func(r appdef.IACLRule) bool { fmt.Println("-", r); return true })
 
 		adm := app.Role(admRoleName)
 		fmt.Println(adm, ":")
-		adm.ACL(func(r appdef.IACLRule) { fmt.Println("-", r) })
+		adm.ACL(func(r appdef.IACLRule) bool { fmt.Println("-", r); return true })
 
 		intruder := app.Role(intruderRoleName)
 		fmt.Println(intruder, ":")
-		intruder.ACL(func(r appdef.IACLRule) { fmt.Println("-", r) })
+		intruder.ACL(func(r appdef.IACLRule) bool { fmt.Println("-", r); return true })
 
 		fmt.Println("ACL with select operation on test.doc:")
 		for _, r := range app.ACLForResources([]appdef.QName{docName}, appdef.OperationKind_Select) {
