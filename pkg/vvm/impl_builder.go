@@ -48,9 +48,10 @@ func (ab VVMAppsBuilder) BuildAppsArtefacts(apis apps.APIs, emptyCfgs AppConfigs
 		if err := buildAppFromPackagesFS(builtInAppDef.Packages, adb); err != nil {
 			return builtinAppsArtefacts, err
 		}
+
 		// query IAppStructs to build IAppDef only once - on AppConfigType.prepare()
-		// это надо чтобы отловить ошибки IAppDefBuilder и проч
-		// также там нуже уже готовый IAppStorage чтобы вычитать QName->QNameID
+		// that need to catch errors from IAppDefBuilder etc here, not after VVM launch
+		// also we need ready-to-use IAppStorage to read a dictionary QName->QNameID
 		if _, err = apis.IAppStructsProvider.BuiltIn(appQName); err != nil {
 			return builtinAppsArtefacts, err
 		}

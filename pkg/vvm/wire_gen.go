@@ -711,15 +711,6 @@ func provideCachingAppStorageProvider(storageCacheSize StorageCacheSizeType, met
 	return istoragecache.Provide(int(storageCacheSize), aspNonCaching, metrics2, string(vvmName))
 }
 
-// синхронный актуализатор один на приложение из-за storages, которые у каждого приложения свои
-// сделаем так, чтобы в командный процессор подавался свитч по appName, который выберет нужный актуализатор с нужным набором проекторов
-type switchByAppName struct {
-}
-
-func (s *switchByAppName) Switch(work interface{}) (branchName string, err error) {
-	return work.(interface{ AppQName() appdef.AppQName }).AppQName().String(), nil
-}
-
 func provideBlobAppStoragePtr(astp istorage.IAppStorageProvider) iblobstoragestg.BlobAppStoragePtr {
 	return new(istorage.IAppStorage)
 }

@@ -27,7 +27,7 @@ type VIT struct {
 	isFinalized          bool
 	nextNumber           int
 	appWorkspaces        map[appdef.AppQName]map[string]*AppWorkspace
-	principals           map[appdef.AppQName]map[string]*Principal // потому что принципалы обновляются
+	principals           map[appdef.AppQName]map[string]*Principal // because principals could be updated
 	isOnSharedConfig     bool
 	initialGoroutinesNum int
 	configCleanupsAmount int
@@ -45,7 +45,7 @@ type VITConfig struct {
 	isShared bool
 }
 
-type vitApps map[appdef.AppQName]*app // указатель потому, что к app потом будут опции применяться ([]logins, например)
+type vitApps map[appdef.AppQName]*app // pointer here because options could be applied to app later, e.g. []logins
 
 type vitPreConfig struct {
 	vvmCfg       *vvm.VVMConfig
@@ -98,7 +98,7 @@ type WorkspaceDescriptor struct {
 
 type AppWorkspace struct {
 	WorkspaceDescriptor
-	Owner *Principal // потому что токены принципала обновляются, когда меняется время
+	Owner *Principal // because tokens of the principal will be updated when the time will be changed
 }
 
 func (a *AppWorkspace) AppQName() appdef.AppQName { return a.Owner.AppQName }

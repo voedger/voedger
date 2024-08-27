@@ -53,9 +53,9 @@ func TestBasicUsage(t *testing.T) {
 	check := make(chan interface{}, 1)
 
 	testCmdQName := appdef.NewQName(appdef.SysPackage, "Test")
-	// схема параметров тестовой команды
+	// schema of parameters of the test command
 	testCmdQNameParams := appdef.NewQName(appdef.SysPackage, "TestParams")
-	// схема unlogged-параметров тестовой команды
+	// schema of unlogged parameters of the test command
 	testCmdQNameParamsUnlogged := appdef.NewQName(appdef.SysPackage, "TestParamsUnlogged")
 	prepareAppDef := func(appDef appdef.IAppDefBuilder, cfg *istructsmem.AppConfigType) {
 		pars := appDef.AddObject(testCmdQNameParams)
@@ -68,12 +68,12 @@ func TestBasicUsage(t *testing.T) {
 		appDef.AddCRecord(testCRecord)
 		appDef.AddCommand(testCmdQName).SetUnloggedParam(testCmdQNameParamsUnlogged).SetParam(testCmdQNameParams)
 
-		// сама тестовая команда
+		// the test command itself
 		testExec := func(args istructs.ExecCommandArgs) (err error) {
 			require.Equal(istructs.WSID(1), args.PrepareArgs.WSID)
 			require.NotNil(args.State)
 
-			// просто проверим, что мы получили то, что передал клиент
+			// check that we received exactly what client sent
 			text := args.ArgumentObject.AsString("Text")
 			if text == "fire error" {
 				return errors.New(text)
@@ -82,7 +82,7 @@ func TestBasicUsage(t *testing.T) {
 			}
 			require.Equal("pass", args.ArgumentUnloggedObject.AsString("Password"))
 
-			check <- 1 // сигнал: проверки случились
+			check <- 1 // signal that the checking is done
 			return
 		}
 		testCmd := istructsmem.NewCommandFunction(testCmdQName, testExec)
@@ -107,7 +107,7 @@ func TestBasicUsage(t *testing.T) {
 	defer app.n10nBroker.Unsubscribe(channelID, projectionKey)
 
 	t.Run("basic usage", func(t *testing.T) {
-		// command processor работает через ibus.SendResponse -> нам нужен sender -> тестируем через ibus.SendRequest2()
+		// command processor works throught ibus.SendResponse -> we need a sender -> let's test using ibus.SendRequest2()
 		request := ibus.Request{
 			Body:     []byte(`{"args":{"Text":"hello"},"unloggedArgs":{"Password":"pass"}}`),
 			AppQName: istructs.AppQName_untill_airs_bp.String(),
@@ -123,7 +123,7 @@ func TestBasicUsage(t *testing.T) {
 		log.Println(string(resp.Data))
 		require.Equal(http.StatusOK, resp.StatusCode)
 		require.Equal(coreutils.ApplicationJSON, resp.ContentType)
-		// убедимся, что команда действительно отработала и нотификации отправились
+		// check that command is handled and notifications were sent
 		<-check
 		<-check
 	})
@@ -636,7 +636,7 @@ type testApp struct {
 }
 
 func tearDown(app testApp) {
-	// завершим command processor IService
+	// finish the command processors IService
 	app.n10nBrokerCleanup()
 	app.cancel()
 	<-app.done
@@ -662,7 +662,7 @@ var (
 
 func setUp(t *testing.T, prepare func(appDef appdef.IAppDefBuilder, cfg *istructsmem.AppConfigType)) testApp {
 	require := require.New(t)
-	// command processor - это IService, работающий через CommandChannel(iprocbus.ServiceChannel). Подготовим этот channel
+	// command processor is a IService working through CommandChannel(iprocbus.ServiceChannel). Let's prepare that channel
 	serviceChannel := make(CommandChannel)
 	done := make(chan struct{})
 
@@ -716,9 +716,9 @@ func setUp(t *testing.T, prepare func(appDef appdef.IAppDefBuilder, cfg *istruct
 	appParts.DeployApp(testAppName, nil, appDef, testAppPartCount, testAppEngines, cfg.NumAppWorkspaces())
 	appParts.DeployAppPartitions(testAppName, []istructs.PartitionID{testAppPartID})
 
-	// command processor работает через ibus.SendResponse -> нам нужна реализация ibus
+	// command processor works through ibus.SendResponse -> we need ibus implementation
 	bus := ibusmem.Provide(func(ctx context.Context, sender ibus.ISender, request ibus.Request) {
-		// сымитируем работу реального приложения при приеме запроса-команды
+		// simulate handling the command request be a real application
 		cmdQName, err := appdef.ParseQName(request.Resource[2:])
 		require.NoError(err)
 		appQName, err := appdef.ParseAppQName(request.AppQName)

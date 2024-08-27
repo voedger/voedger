@@ -61,7 +61,7 @@ func TestBasicUsage_QName_JSon(t *testing.T) {
 
 	t.Run("Marshal/Unmarshal QName", func(t *testing.T) {
 
-		qname := NewQName("airs-bp", `Карлсон 哇"呀呀`)
+		qname := NewQName("airs-bp", `Carlson 哇"呀呀`)
 
 		// Marshal
 
@@ -92,7 +92,7 @@ func TestBasicUsage_QName_JSon(t *testing.T) {
 		}
 
 		ms := myStruct{
-			QName:       NewQName("p", `Карлсон 哇"呀呀`),
+			QName:       NewQName("p", `Carlson 哇"呀呀`),
 			StringValue: "sv",
 			IntValue:    56,
 		}
@@ -115,7 +115,7 @@ func TestBasicUsage_QName_JSon(t *testing.T) {
 	t.Run("key of a map", func(t *testing.T) {
 		expected := map[QName]bool{
 			NewQName("sys", "my"):           true,
-			NewQName("sys", `Карлсон 哇"呀呀`): true,
+			NewQName("sys", `Carlson 哇"呀呀`): true,
 		}
 
 		b, err := json.Marshal(&expected)
@@ -428,7 +428,7 @@ func TestBasicUsage_FullQName_JSon(t *testing.T) {
 
 	t.Run("Marshal/Unmarshal FullQName", func(t *testing.T) {
 
-		fqn := NewFullQName("untill.pro/airs-bp", `Карлсон 哇"呀呀`)
+		fqn := NewFullQName("untill.pro/airs-bp", `Carlson 哇"呀呀`)
 
 		// Marshal
 
@@ -459,7 +459,7 @@ func TestBasicUsage_FullQName_JSon(t *testing.T) {
 		}
 
 		ms := myStruct{
-			FullQName:   NewFullQName("p.p/p", `Карлсон 哇"呀呀`),
+			FullQName:   NewFullQName("p.p/p", `Carlson 哇"呀呀`),
 			StringValue: "sv",
 			IntValue:    56,
 		}
@@ -482,7 +482,7 @@ func TestBasicUsage_FullQName_JSon(t *testing.T) {
 	t.Run("key of a map", func(t *testing.T) {
 		expected := map[FullQName]string{
 			NewFullQName("test.test/test", "my"):           "one",
-			NewFullQName("test.test/test", `Карлсон 哇"呀呀`): "two",
+			NewFullQName("test.test/test", `Carlson 哇"呀呀`): "two",
 		}
 
 		b, err := json.Marshal(&expected)
@@ -687,7 +687,7 @@ func TestBasicUsage_AppQName_JSon(t *testing.T) {
 
 	t.Run("Marshal/Unmarshal QName", func(t *testing.T) {
 
-		aqn := NewAppQName("sys", `Карлосон 哇"呀呀`)
+		aqn := NewAppQName("sys", `Carlson 哇"呀呀`)
 
 		// Marshal
 
@@ -718,7 +718,7 @@ func TestBasicUsage_AppQName_JSon(t *testing.T) {
 		}
 
 		ms := myStruct{
-			AQN:         NewAppQName("p", `Карлосон 哇"呀呀`),
+			AQN:         NewAppQName("p", `Carlson 哇"呀呀`),
 			StringValue: "sv",
 			IntValue:    56,
 		}
@@ -741,7 +741,7 @@ func TestBasicUsage_AppQName_JSon(t *testing.T) {
 	t.Run("key of a map", func(t *testing.T) {
 		expected := map[AppQName]bool{
 			NewAppQName("sys", "my"):            true,
-			NewAppQName("sys", `Карлосон 哇"呀呀`): true,
+			NewAppQName("sys", `Carlson 哇"呀呀`): true,
 		}
 
 		b, err := json.Marshal(&expected)

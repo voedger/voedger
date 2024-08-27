@@ -6,7 +6,6 @@ package iextenginebuiltin
 
 import "github.com/voedger/voedger/pkg/iextengine"
 
-// поменять местами
 func ProvideExtensionEngineFactory(funcs iextengine.BuiltInAppExtFuncs, statelessFuncs iextengine.BuiltInExtFuncs) iextengine.IExtensionEngineFactory {
 	return extensionEngineFactory{funcs, statelessFuncs}
 }
