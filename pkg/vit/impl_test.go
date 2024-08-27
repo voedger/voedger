@@ -101,7 +101,7 @@ func TestBasicUsage_Workspaces(t *testing.T) {
 			TemplateName: "test_template",  // from SharedConfig_Simple
 			InitDataJSON: `{"IntFld": 42}`, // intFld is required field, from SharedConfig_Simple
 			Kind:         QNameApp1_TestWSKind,
-			ClusterID:    istructs.MainClusterID,
+			ClusterID:    istructs.CurrentClusterID(),
 		}
 		newWS := vit.CreateWorkspace(wsp, ownerPrincipal)
 

@@ -46,7 +46,7 @@ func invokeCreateWorkspaceIDProjector(federation federation.IFederation, tokensA
 			templateParams := rec.AsString(Field_TemplateParams)
 			appQName := s.App()
 			targetApp := appQName.String()
-			targetClusterID := istructs.MainClusterID // TODO: on https://github.com/voedger/voedger/commit/1e7ce3f2c546e9bf1332edb31a5beed5954bc476 was NullClusetrID!
+			targetClusterID := istructs.CurrentClusterID() // TODO: on https://github.com/voedger/voedger/commit/1e7ce3f2c546e9bf1332edb31a5beed5954bc476 was NullClusetrID!
 			wsidToCallCreateWSIDAt := coreutils.GetPseudoWSID(ownerWSID, wsName, targetClusterID)
 			return ApplyInvokeCreateWorkspaceID(federation, appQName, tokensAPI, wsName, wsKind, wsidToCallCreateWSIDAt, targetApp,
 				templateName, templateParams, rec, ownerWSID)

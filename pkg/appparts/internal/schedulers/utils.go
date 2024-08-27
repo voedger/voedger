@@ -16,7 +16,7 @@ import (
 func AppWorkspacesHandledByPartition(partCount istructs.NumAppPartitions, wsCount istructs.NumAppWorkspaces, part istructs.PartitionID) map[istructs.WSID]int {
 	ws := make(map[istructs.WSID]int)
 	for wsNum := 0; wsNum < int(wsCount); wsNum++ {
-		wsID := istructs.NewWSID(istructs.MainClusterID, istructs.WSID(wsNum+int(istructs.FirstBaseAppWSID)))
+		wsID := istructs.NewWSID(istructs.CurrentClusterID(), istructs.WSID(wsNum+int(istructs.FirstBaseAppWSID)))
 		if coreutils.AppPartitionID(wsID, partCount) == part {
 			ws[wsID] = wsNum
 		}
