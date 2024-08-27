@@ -361,3 +361,34 @@ func Test_AppDef_GrantWithFields(t *testing.T) {
 		require.Equal(1, cnt)
 	})
 }
+
+func TestPolicyKind_String(t *testing.T) {
+	tests := []struct {
+		name string
+		k    PolicyKind
+		want string
+	}{
+		{
+			name: "0 —> `PolicyKind_null`",
+			k:    PolicyKind_null,
+			want: `PolicyKind_null`,
+		},
+		{
+			name: "1 —> `PolicyKind_Allow`",
+			k:    PolicyKind_Allow,
+			want: `PolicyKind_Allow`,
+		},
+		{
+			name: "4 —> `PolicyKind(4)`",
+			k:    PolicyKind_Count + 1,
+			want: `PolicyKind(4)`,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.k.String(); got != tt.want {
+				t.Errorf("PolicyKind.String() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
