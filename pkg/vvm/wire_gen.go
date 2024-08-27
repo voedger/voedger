@@ -558,7 +558,7 @@ func provideBuiltInAppsArtefacts(vvmConfig *VVMConfig, apis apps.APIs, cfgs AppC
 }
 
 // extModuleURLs is filled here
-func parseSidecarAppSubDir(fullPath string, basePath string, extModuleURLs map[string]*url.URL) (asts []*parser.PackageSchemaAST, err error) {
+func parseSidecarAppSubDir(fullPath string, basePath string, out_extModuleURLs map[string]*url.URL) (asts []*parser.PackageSchemaAST, err error) {
 	dirEntries, err := os.ReadDir(fullPath)
 	if err != nil {
 
@@ -569,7 +569,7 @@ func parseSidecarAppSubDir(fullPath string, basePath string, extModuleURLs map[s
 	modulePath = strings.ReplaceAll(modulePath, string(os.PathSeparator), "/")
 	for _, dirEntry := range dirEntries {
 		if dirEntry.IsDir() {
-			subASTs, err := parseSidecarAppSubDir(filepath.Join(fullPath, dirEntry.Name()), basePath, extModuleURLs)
+			subASTs, err := parseSidecarAppSubDir(filepath.Join(fullPath, dirEntry.Name()), basePath, out_extModuleURLs)
 			if err != nil {
 				return nil, err
 			}
@@ -583,7 +583,7 @@ func parseSidecarAppSubDir(fullPath string, basePath string, extModuleURLs map[s
 				return nil, err
 			}
 
-			extModuleURLs[modulePath] = moduleURL
+			out_extModuleURLs[modulePath] = moduleURL
 			continue
 		}
 	}
