@@ -18,8 +18,8 @@ import (
 	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
 )
 
-// если одновременно ctx.Done() и SendParallelResponse, то возвращаем канал секций + err = ctx.Err()
-// канал секций в этом случае никто не читает (по контракту IBus), поэтому точно сработает ветка ctx.Done в trySendSection()
+// if ctx.Done() and SendParallelResponse simultaneously then return sections channel + err = ctx.Err()
+// nobody reads the sections channel in this case (according to the IBus contract) so `case ctx.Done()` in trySendSection() will fire for sure
 func (b *bus) SendRequest2(clientCtx context.Context, request ibus.Request, timeout time.Duration) (res ibus.Response, sections <-chan ibus.ISection, secError *error, err error) {
 	wg := sync.WaitGroup{}
 	handlerPanic := make(chan interface{}, 1)

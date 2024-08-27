@@ -47,7 +47,7 @@ func TestBasicUsage_SignUpIn(t *testing.T) {
 	refreshedPrincipalToken := resp.SectionRow()[0].(string)
 	require.NotEqual(prn1.Token, refreshedPrincipalToken)
 
-	// читать CDoc<Login> не надо. И вообще, в AppWS делать нечего
+	// not need to read CDoc<Login>. Nothing to do in AppWS at all.
 
 	var idOfCDocUserProfile int64
 	t.Run("check CDoc<sys.UserProfile> at profileWSID at target app at target cluster", func(t *testing.T) {
@@ -143,7 +143,7 @@ func TestCreateLoginErrors(t *testing.T) {
 	t.Run("subject name constraint violation", func(t *testing.T) {
 		// see https://dev.untill.com/projects/#!537026
 		wrongLogins := []string{
-			"вронг",
+			"哇",
 			"test@tesT.com",
 			"test@test.com ",
 			" test@test.com",

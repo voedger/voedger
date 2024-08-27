@@ -43,7 +43,7 @@ type appPartition struct {
 	nextPLogOffset istructs.Offset
 }
 
-// syncActualizerFactory - это фабрика(разделИД), которая возвращает свитч, в бранчах которого по синхронному актуализатору на каждое приложение, внутри каждого - проекторы на каждое приложение
+// syncActualizerFactory is a factory(partitionID) that returns a fork operator with a sync actualizer per each application. Inside of an each actualizer - projectors for each application
 func ProvideServiceFactory(appParts appparts.IAppPartitions, now coreutils.TimeFunc,
 	n10nBroker in10n.IN10nBroker, metrics imetrics.IMetrics, vvm VVMName, authenticator iauthnz.IAuthenticator, authorizer iauthnz.IAuthorizer,
 	secretReader isecrets.ISecretReader) ServiceFactory {
@@ -133,7 +133,7 @@ func ProvideServiceFactory(appParts appparts.IAppPartitions, now coreutils.TimeF
 				pipeline.WireFunc("store", cmdProc.storeOp.DoSync),
 				pipeline.WireFunc("n10n", cmdProc.n10n),
 			)
-			// TODO: сделать потом plogOffset свой по каждому разделу, wlogoffset - свой для каждого wsid
+			// TODO: later make so that each partition has its own plogOffset, wsid has its own wlogOffset
 			defer cmdPipeline.Close()
 			for vvmCtx.Err() == nil {
 				select {

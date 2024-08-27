@@ -16,7 +16,7 @@ type ISingleton interface {
 type ISingletonBuilder interface {
 	IDocBuilder
 
-	// Устанавливает, что документ является синглтоном
+	// Makes the doc a singleton
 	SetSingleton()
 }
 

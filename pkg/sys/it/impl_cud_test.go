@@ -207,12 +207,12 @@ func TestBasicUsage_Singletons(t *testing.T) {
 			]
 		}`
 	resp := vit.PostWS(ws, "c.sys.CUD", body)
-	require.Empty(resp.NewIDs) // ничего не прошло через ID generator
+	require.Empty(resp.NewIDs) // nothing passed through ID generator
 
-	// повторное создание -> ошибка
+	// create again -> error
 	vit.PostWS(ws, "c.sys.CUD", body, coreutils.Expect409()).Println()
 
-	// запросим ID через collection
+	// query ID using collection
 	body = `{
 		"args":{ "Schema":"app1pkg.Config" },
 		"elements":[{ "fields": ["sys.ID"] }]

@@ -31,8 +31,6 @@ func (w workpiece) Release() {
 
 func TestBasicUsage_SyncPipeline(t *testing.T) {
 
-	// Конвейер состоит из операторов
-	// Заготовка перемещается от оператора к оператору
 	// Pipeline consists of few operators
 	// Workpieces go through the pipelines operators
 
