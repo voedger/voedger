@@ -45,7 +45,7 @@ func (a *scheduler) Prepare() {
 	if a.conf.LogError == nil {
 		a.conf.LogError = logger.Error
 	}
-	a.name = fmt.Sprintf("%v [%d]", a.job, a.conf.Workspace)
+	a.name = fmt.Sprintf("%v [idx: %d, id: %d]", a.job, a.conf.WSIdx, a.conf.Workspace)
 }
 
 func (a *scheduler) Run(ctx context.Context) {

@@ -51,10 +51,11 @@ type SchedulerConfig struct {
 
 	AppQName  appdef.AppQName
 	Workspace istructs.WSID
+	WSIdx     int
 	Partition istructs.PartitionID // ?
 }
 
 type ISchedulersService interface {
 	pipeline.IServiceEx
-	appparts.IProcessorRunner
+	appparts.ISchedulerRunner
 }
