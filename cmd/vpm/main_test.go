@@ -385,14 +385,14 @@ func TestEdgeCases(t *testing.T) {
 
 	err := execRootCmd([]string{"vpm", "tidy", "unknown"}, "1.0.0")
 	require.Error(err)
-	require.Equal("'vpm tidy' accepts no arg(s). Run 'vpm tidy help'", err.Error())
+	require.Equal("'vpm tidy' accepts no arguments", err.Error())
 
 	err = execRootCmd([]string{"vpm", "tidy", "help"}, "1.0.0")
 	require.NoError(err)
 
 	err = execRootCmd([]string{"vpm", "tidy", "help", "adads"}, "1.0.0")
 	require.Error(err)
-	require.Equal("'vpm tidy' accepts no arg(s). Run 'vpm tidy help'", err.Error())
+	require.Equal("'help' accepts no arguments", err.Error())
 
 	err = execRootCmd([]string{"vpm", "init", "help"}, "1.0.0")
 	require.NoError(err)
@@ -406,9 +406,9 @@ func TestBuildBasicUsage(t *testing.T) {
 		t.Skip()
 	}
 	require := require.New(t)
-	var err error
 	var tempDir string
 	if logger.IsVerbose() {
+		var err error
 		tempDir, err = os.MkdirTemp("", "test_build")
 		require.NoError(err)
 	} else {
