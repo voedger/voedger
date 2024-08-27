@@ -7,6 +7,7 @@ package appdef
 
 import (
 	"errors"
+	"slices"
 	"sort"
 )
 
@@ -29,6 +30,14 @@ func newAppDef() *appDef {
 	}
 	app.makeSysPackage()
 	return &app
+}
+
+func (app appDef) ACL(cb func(IACLRule) bool) {
+	for _, p := range app.acl {
+		if !cb(p) {
+			break
+		}
+	}
 }
 
 func (app *appDef) CDoc(name QName) (d ICDoc) {
@@ -159,6 +168,84 @@ func (app *appDef) GRecords(cb func(IGRecord)) {
 	})
 }
 
+func (app *appDef) IsOperationAllowed(operation OperationKind, resource QName, fields []FieldName, r []QName) (bool, []FieldName) {
+	result := false
+
+	var str IStructure
+	if operation == OperationKind_Update || operation == OperationKind_Select {
+		str = app.Structure(resource)
+	} else {
+		str = nil
+	}
+
+	allowedFields := map[FieldName]any{}
+
+	roles := QNamesFrom(r...)
+
+	app.ACL(func(rule IACLRule) bool {
+		if slices.Contains(rule.Ops(), operation) {
+			if rule.Resources().On().Contains(resource) {
+				if roles.Contains(rule.Principal().QName()) {
+					switch rule.Policy() {
+					case PolicyKind_Allow:
+						result = true
+						if str != nil {
+							if len(rule.Resources().Fields()) > 0 {
+								// allow for specified fields only
+								for _, f := range rule.Resources().Fields() {
+									allowedFields[f] = true
+								}
+							} else {
+								// allow for all fields
+								for _, f := range str.Fields() {
+									allowedFields[f.Name()] = true
+								}
+							}
+						}
+					case PolicyKind_Deny:
+						if str != nil {
+							if len(rule.Resources().Fields()) > 0 {
+								// partially deny, only specified fields
+								for _, f := range rule.Resources().Fields() {
+									delete(allowedFields, f)
+								}
+								result = len(allowedFields) > 0
+							} else {
+								// full deny, for all fields
+								clear(allowedFields)
+								result = false
+							}
+						} else {
+							result = false
+						}
+					}
+				}
+			}
+		}
+		return true
+	})
+
+	if str != nil {
+		fields := make([]FieldName, 0, len(allowedFields))
+		if result {
+			for f := range allowedFields {
+				fields = append(fields, f)
+			}
+			if len(fields) > 0 {
+				for _, f := range fields {
+					if _, ok := allowedFields[f]; !ok {
+						result = false
+						break
+					}
+				}
+			}
+		}
+		return result, fields
+	}
+
+	return result, nil
+}
+
 func (app *appDef) Job(name QName) IJob {
 	if t := app.typeByKind(name, TypeKind_Job); t != nil {
 		return t.(IJob)
@@ -250,24 +337,6 @@ func (app *appDef) PackageLocalNames() []string {
 
 func (app *appDef) Packages(cb func(local, path string)) {
 	app.packages.forEach(cb)
-}
-
-func (app appDef) ACL(cb func(IACLRule) bool) {
-	for _, p := range app.acl {
-		if !cb(p) {
-			break
-		}
-	}
-}
-
-func (app appDef) ACLForResources(n []QName, k ...OperationKind) []IACLRule {
-	pp := make([]IACLRule, 0)
-	for _, p := range app.acl {
-		if p.Resources().On().ContainsAny(n...) && p.ops.ContainsAny(k...) {
-			pp = append(pp, p)
-		}
-	}
-	return pp
 }
 
 func (app *appDef) Projector(name QName) IProjector {

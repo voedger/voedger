@@ -216,20 +216,6 @@ func Test_AppDef_AddRole(t *testing.T) {
 			})
 			require.Equal(6, rolesCount)
 		})
-
-		t.Run("should be ok to enum role privileges on resources", func(t *testing.T) {
-			pp := app.Role(admRoleName).ACLForResources([]QName{wsName})
-			require.Len(pp, 2)
-
-			checkPrivilege(pp[0], PolicyKind_Allow,
-				[]OperationKind{OperationKind_Insert, OperationKind_Update, OperationKind_Select, OperationKind_Execute},
-				[]QName{wsName}, nil,
-				admRoleName)
-			checkPrivilege(pp[1], PolicyKind_Deny,
-				[]OperationKind{OperationKind_Execute},
-				[]QName{wsName}, nil,
-				admRoleName)
-		})
 	})
 
 	t.Run("range by role ACL rules should be breakable", func(t *testing.T) {

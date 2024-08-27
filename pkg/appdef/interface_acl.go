@@ -104,13 +104,17 @@ type IWithACL interface {
 	//
 	// Rules are enumerated in the order they are added.
 	ACL(func(IACLRule) bool)
+}
 
-	// Returns all ACL rules on specified resources, which contains at least one from specified kinds.
+type IWithACLExtended interface {
+	IWithACL
+
+	// Returns true if specified operation is allowed on specified resource for any of specified roles.
 	//
-	// If no kinds specified then all rules are returned.
-	//
-	// Rules are returned in the order they are added.
-	ACLForResources([]QName, ...OperationKind) []IACLRule
+	// If resource is any structure and operation is UPDATE or SELECT, then:
+	//	- if fields list specified, then result consider it,
+	//	- full list of allowed fields also returned.
+	IsOperationAllowed(operation OperationKind, resource QName, fields []FieldName, roles []QName) (allowed bool, allowedFields []FieldName)
 }
 
 type IACLBuilder interface {

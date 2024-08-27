@@ -29,16 +29,6 @@ func (r role) ACL(cb func(IACLRule) bool) {
 	}
 }
 
-func (r role) ACLForResources(resources []QName, ops ...OperationKind) []IACLRule {
-	pp := make([]IACLRule, 0)
-	for _, p := range r.aclRules {
-		if p.Resources().On().ContainsAny(resources...) && p.ops.ContainsAny(ops...) {
-			pp = append(pp, p)
-		}
-	}
-	return pp
-}
-
 func (r *role) appendACL(rule *aclRule) {
 	r.aclRules = append(r.aclRules, rule)
 	r.app.appendACL(rule)

@@ -76,11 +76,6 @@ func ExampleIAppDefBuilder_AddRole() {
 		intruder := app.Role(intruderRoleName)
 		fmt.Println(intruder, ":")
 		intruder.ACL(func(r appdef.IACLRule) bool { fmt.Println("-", r); return true })
-
-		fmt.Println("ACL with select operation on test.doc:")
-		for _, r := range app.ACLForResources([]appdef.QName{docName}, appdef.OperationKind_Select) {
-			fmt.Println("-", r)
-		}
 	}
 
 	// Output:
@@ -97,6 +92,4 @@ func ExampleIAppDefBuilder_AddRole() {
 	// - grant [Inherits] on [test.readerRole test.writerRole] to Role «test.admRole»
 	// Role «test.intruderRole» :
 	// - revoke [Insert Update Select Execute] on [test.ws] from Role «test.intruderRole»
-	// ACL with select operation on test.doc:
-	// - grant [Select] on [test.doc]([field1]) to Role «test.readerRole»
 }

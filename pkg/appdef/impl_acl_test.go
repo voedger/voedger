@@ -147,63 +147,6 @@ func Test_AppDef_GrantAndRevoke(t *testing.T) {
 			})
 			require.Equal(9, cnt)
 		})
-
-		t.Run("should be ok to enum ACL for resource", func(t *testing.T) {
-
-			t.Run("should be ok to enum ACL for ws", func(t *testing.T) {
-				pp := app.ACLForResources([]QName{wsName})
-				require.Len(pp, 4)
-
-				checkACLRule(pp[0], PolicyKind_Allow,
-					[]OperationKind{OperationKind_Insert, OperationKind_Update, OperationKind_Select, OperationKind_Execute},
-					[]QName{wsName}, nil,
-					ownerRoleName)
-
-				checkACLRule(pp[1], PolicyKind_Allow,
-					[]OperationKind{OperationKind_Insert, OperationKind_Update, OperationKind_Select, OperationKind_Execute},
-					[]QName{wsName}, nil,
-					admRoleName)
-				checkACLRule(pp[2], PolicyKind_Deny,
-					[]OperationKind{OperationKind_Execute},
-					[]QName{wsName}, nil,
-					admRoleName)
-
-				checkACLRule(pp[3], PolicyKind_Deny,
-					[]OperationKind{OperationKind_Insert, OperationKind_Update, OperationKind_Select, OperationKind_Execute},
-					[]QName{wsName}, nil,
-					intruderRoleName)
-			})
-
-			t.Run("should be ok to enum all ACL with select", func(t *testing.T) {
-				pp := app.ACLForResources([]QName{}, OperationKind_Select)
-				require.Len(pp, 5)
-
-				checkACLRule(pp[0], PolicyKind_Allow,
-					[]OperationKind{OperationKind_Select},
-					[]QName{docName, viewName}, []FieldName{"field1"},
-					readerRoleName)
-
-				checkACLRule(pp[1], PolicyKind_Allow,
-					[]OperationKind{OperationKind_Insert, OperationKind_Update, OperationKind_Select},
-					[]QName{docName, viewName}, nil,
-					writerRoleName)
-
-				checkACLRule(pp[2], PolicyKind_Allow,
-					[]OperationKind{OperationKind_Insert, OperationKind_Update, OperationKind_Select, OperationKind_Execute},
-					[]QName{wsName}, nil,
-					ownerRoleName)
-
-				checkACLRule(pp[3], PolicyKind_Allow,
-					[]OperationKind{OperationKind_Insert, OperationKind_Update, OperationKind_Select, OperationKind_Execute},
-					[]QName{wsName}, nil,
-					admRoleName)
-
-				checkACLRule(pp[4], PolicyKind_Deny,
-					[]OperationKind{OperationKind_Insert, OperationKind_Update, OperationKind_Select, OperationKind_Execute},
-					[]QName{wsName}, nil,
-					intruderRoleName)
-			})
-		})
 	})
 }
 
