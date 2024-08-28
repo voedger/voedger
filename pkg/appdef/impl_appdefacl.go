@@ -7,20 +7,45 @@ package appdef
 
 import "slices"
 
-func (app *appDef) IsOperationAllowed(op OperationKind, res QName, fld []FieldName, prc []QName) (bool, []FieldName) {
-	result := false
+func (app *appDef) IsOperationAllowed(op OperationKind, res QName, fld []FieldName, prc []QName) (bool, []FieldName, error) {
 
 	var str IStructure
-	if op == OperationKind_Update || op == OperationKind_Select {
+	switch op {
+	case OperationKind_Insert:
+		if app.Structure(res) == nil {
+			return false, nil, ErrNotFound("structure «%q»", res)
+		}
+	case OperationKind_Update, OperationKind_Select:
 		str = app.Structure(res)
-	} else {
-		str = nil
+		if str == nil {
+			return false, nil, ErrNotFound("structure «%q»", res)
+		}
+		for _, f := range fld {
+			if str.Field(f) == nil {
+				return false, nil, ErrNotFound("field «%q» in %q", f, str)
+			}
+		}
+	case OperationKind_Execute:
+		if app.Function(res) == nil {
+			return false, nil, ErrNotFound("function «%q»", res)
+		}
+	default:
+		return false, nil, ErrUnsupported("operation %q", op)
 	}
 
-	fields := map[FieldName]any{}
+	allowedFields := map[FieldName]any{}
 
 	roles := QNamesFrom(prc...)
+	if len(roles) == 0 {
+		return false, nil, ErrMissed("participants")
+	}
+	for _, r := range roles {
+		if app.Role(r) == nil {
+			return false, nil, ErrNotFound("role «%q»", r)
+		}
+	}
 
+	result := false
 	app.ACL(func(rule IACLRule) bool {
 		if slices.Contains(rule.Ops(), op) {
 			if rule.Resources().On().Contains(res) {
@@ -32,12 +57,12 @@ func (app *appDef) IsOperationAllowed(op OperationKind, res QName, fld []FieldNa
 							if len(rule.Resources().Fields()) > 0 {
 								// allow for specified fields only
 								for _, f := range rule.Resources().Fields() {
-									fields[f] = true
+									allowedFields[f] = true
 								}
 							} else {
 								// allow for all fields
 								for _, f := range str.Fields() {
-									fields[f.Name()] = true
+									allowedFields[f.Name()] = true
 								}
 							}
 						}
@@ -46,12 +71,12 @@ func (app *appDef) IsOperationAllowed(op OperationKind, res QName, fld []FieldNa
 							if len(rule.Resources().Fields()) > 0 {
 								// partially deny, only specified fields
 								for _, f := range rule.Resources().Fields() {
-									delete(fields, f)
+									delete(allowedFields, f)
 								}
-								result = len(fields) > 0
+								result = len(allowedFields) > 0
 							} else {
 								// full deny, for all fields
-								clear(fields)
+								clear(allowedFields)
 								result = false
 							}
 						} else {
@@ -68,24 +93,24 @@ func (app *appDef) IsOperationAllowed(op OperationKind, res QName, fld []FieldNa
 		if result {
 			if len(fld) > 0 {
 				for _, f := range fld {
-					if _, ok := fields[f]; !ok {
+					if _, ok := allowedFields[f]; !ok {
 						result = false
 						break
 					}
 				}
 			}
 		}
-		if len(fields) > 0 {
-			allowed := make([]FieldName, 0, len(fields))
+		if len(allowedFields) > 0 {
+			allowed := make([]FieldName, 0, len(allowedFields))
 			for _, fld := range str.Fields() {
 				f := fld.Name()
-				if _, ok := fields[f]; ok {
+				if _, ok := allowedFields[f]; ok {
 					allowed = append(allowed, f)
 				}
 			}
-			return result, allowed
+			return result, allowed, nil
 		}
 	}
 
-	return result, nil
+	return result, nil, nil
 }

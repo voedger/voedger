@@ -113,8 +113,11 @@ type IWithACLExtended interface {
 	//
 	// If resource is any structure and operation is UPDATE or SELECT, then:
 	//	- if fields list specified, then result consider it,
-	//	- full list of allowed fields also returned.
-	IsOperationAllowed(operation OperationKind, resource QName, fields []FieldName, roles []QName) (allowed bool, allowedFields []FieldName)
+	//	- full list of allowed fields also returned,
+	// else fields list is ignored and nil allowedFields is returned.
+	//
+	// If some error in arguments, (resource or role not found, operation is not applicable to resource, etc…) then error is returned.
+	IsOperationAllowed(operation OperationKind, resource QName, fields []FieldName, roles []QName) (allowed bool, allowedFields []FieldName, error error)
 }
 
 type IACLBuilder interface {
