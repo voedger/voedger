@@ -232,7 +232,7 @@ func (b *viewValueBuilder) PutInt64(name string, value int64) {
 	if name == state.ColOffset {
 		b.offset = istructs.Offset(value)
 	}
-	if b.fc.isViewInt64FieldRecordID(b.entity, appdef.FieldName(name)) {
+	if b.fc.isViewInt64FieldRecordID(b.entity, name) {
 		b.IValueBuilder.PutRecordID(name, istructs.RecordID(value))
 	} else {
 		b.IValueBuilder.PutInt64(name, value)

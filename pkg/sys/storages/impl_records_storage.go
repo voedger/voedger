@@ -274,7 +274,7 @@ func (b *recordsValueBuilder) Equal(src istructs.IStateValueBuilder) bool {
 }
 func (b *recordsValueBuilder) PutInt32(name string, value int32) { b.rw.PutInt32(name, value) }
 func (b *recordsValueBuilder) PutInt64(name string, value int64) {
-	if b.fc.isStructureInt64FieldRecordID(b.entity, appdef.FieldName(name)) {
+	if b.fc.isStructureInt64FieldRecordID(b.entity, name) {
 		b.rw.PutRecordID(name, istructs.RecordID(value))
 	} else {
 		b.rw.PutInt64(name, value)
