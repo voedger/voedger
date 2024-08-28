@@ -68,7 +68,7 @@ func Test_AppDef_GrantAndRevoke(t *testing.T) {
 
 		_ = adb.AddRole(admRoleName)
 		adb.GrantAll([]QName{wsName}, admRoleName, "grant all workspace operations to admin")
-		adb.Revoke([]OperationKind{OperationKind_Execute}, []QName{wsName}, admRoleName, "revoke execute on workspace from admin")
+		adb.Revoke([]OperationKind{OperationKind_Execute}, []QName{wsName}, nil, admRoleName, "revoke execute on workspace from admin")
 
 		_ = adb.AddRole(intruderRoleName)
 		adb.RevokeAll([]QName{wsName}, intruderRoleName, "revoke all workspace operations from intruder")
@@ -178,7 +178,7 @@ func Test_AppDef_GrantAndRevokeErrors(t *testing.T) {
 				adb.GrantAll([]QName{docName}, unknownRole)
 			}, require.Is(ErrNotFoundError), require.Has(unknownRole))
 			require.Panics(func() {
-				adb.Revoke([]OperationKind{OperationKind_Select}, []QName{docName}, unknownRole)
+				adb.Revoke([]OperationKind{OperationKind_Select}, []QName{docName}, nil, unknownRole)
 			}, require.Is(ErrNotFoundError), require.Has(unknownRole))
 			require.Panics(func() {
 				adb.RevokeAll([]QName{docName}, unknownRole)

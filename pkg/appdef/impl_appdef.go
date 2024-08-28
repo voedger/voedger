@@ -7,7 +7,6 @@ package appdef
 
 import (
 	"errors"
-	"slices"
 	"sort"
 )
 
@@ -166,84 +165,6 @@ func (app *appDef) GRecords(cb func(IGRecord)) {
 			cb(r)
 		}
 	})
-}
-
-func (app *appDef) IsOperationAllowed(operation OperationKind, resource QName, fields []FieldName, r []QName) (bool, []FieldName) {
-	result := false
-
-	var str IStructure
-	if operation == OperationKind_Update || operation == OperationKind_Select {
-		str = app.Structure(resource)
-	} else {
-		str = nil
-	}
-
-	allowedFields := map[FieldName]any{}
-
-	roles := QNamesFrom(r...)
-
-	app.ACL(func(rule IACLRule) bool {
-		if slices.Contains(rule.Ops(), operation) {
-			if rule.Resources().On().Contains(resource) {
-				if roles.Contains(rule.Principal().QName()) {
-					switch rule.Policy() {
-					case PolicyKind_Allow:
-						result = true
-						if str != nil {
-							if len(rule.Resources().Fields()) > 0 {
-								// allow for specified fields only
-								for _, f := range rule.Resources().Fields() {
-									allowedFields[f] = true
-								}
-							} else {
-								// allow for all fields
-								for _, f := range str.Fields() {
-									allowedFields[f.Name()] = true
-								}
-							}
-						}
-					case PolicyKind_Deny:
-						if str != nil {
-							if len(rule.Resources().Fields()) > 0 {
-								// partially deny, only specified fields
-								for _, f := range rule.Resources().Fields() {
-									delete(allowedFields, f)
-								}
-								result = len(allowedFields) > 0
-							} else {
-								// full deny, for all fields
-								clear(allowedFields)
-								result = false
-							}
-						} else {
-							result = false
-						}
-					}
-				}
-			}
-		}
-		return true
-	})
-
-	if str != nil {
-		fields := make([]FieldName, 0, len(allowedFields))
-		if result {
-			for f := range allowedFields {
-				fields = append(fields, f)
-			}
-			if len(fields) > 0 {
-				for _, f := range fields {
-					if _, ok := allowedFields[f]; !ok {
-						result = false
-						break
-					}
-				}
-			}
-		}
-		return result, fields
-	}
-
-	return result, nil
 }
 
 func (app *appDef) Job(name QName) IJob {
@@ -714,12 +635,12 @@ func (app *appDef) makeSysDataTypes() {
 	}
 }
 
-func (app *appDef) revoke(ops []OperationKind, resources []QName, fromRole QName, comment ...string) {
+func (app *appDef) revoke(ops []OperationKind, resources []QName, fields []FieldName, fromRole QName, comment ...string) {
 	r := app.Role(fromRole)
 	if r == nil {
 		panic(ErrRoleNotFound(fromRole))
 	}
-	r.(*role).revoke(ops, resources, comment...)
+	r.(*role).revoke(ops, resources, fields, comment...)
 }
 
 func (app *appDef) revokeAll(resources []QName, fromRole QName, comment ...string) {
@@ -846,8 +767,8 @@ func (ab *appDefBuilder) MustBuild() IAppDef {
 	return ab.app
 }
 
-func (ab *appDefBuilder) Revoke(ops []OperationKind, resources []QName, fromRole QName, comment ...string) IACLBuilder {
-	ab.app.revoke(ops, resources, fromRole, comment...)
+func (ab *appDefBuilder) Revoke(ops []OperationKind, resources []QName, fields []FieldName, fromRole QName, comment ...string) IACLBuilder {
+	ab.app.revoke(ops, resources, fields, fromRole, comment...)
 	return ab
 }
 

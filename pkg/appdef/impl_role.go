@@ -42,8 +42,8 @@ func (r *role) grantAll(resources []QName, comment ...string) {
 	r.appendACL(newGrantAll(resources, r, comment...))
 }
 
-func (r *role) revoke(ops []OperationKind, resources []QName, comment ...string) {
-	r.appendACL(newRevoke(ops, resources, nil, r, comment...))
+func (r *role) revoke(ops []OperationKind, resources []QName, fields []FieldName, comment ...string) {
+	r.appendACL(newRevoke(ops, resources, fields, r, comment...))
 }
 
 func (r *role) revokeAll(resources []QName, comment ...string) {
@@ -74,8 +74,8 @@ func (rb *roleBuilder) GrantAll(resource []QName, comment ...string) IRoleBuilde
 	return rb
 }
 
-func (rb *roleBuilder) Revoke(ops []OperationKind, resources []QName, comment ...string) IRoleBuilder {
-	rb.role.revoke(ops, resources, comment...)
+func (rb *roleBuilder) Revoke(ops []OperationKind, resources []QName, fields []FieldName, comment ...string) IRoleBuilder {
+	rb.role.revoke(ops, resources, fields, comment...)
 	return rb
 }
 

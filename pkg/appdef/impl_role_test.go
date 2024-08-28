@@ -68,7 +68,7 @@ func Test_AppDef_AddRole(t *testing.T) {
 
 		adm := adb.AddRole(admRoleName)
 		adm.GrantAll([]QName{wsName}, "grant all workspace privileges to admin")
-		adm.Revoke([]OperationKind{OperationKind_Execute}, []QName{wsName}, "revoke execute on workspace from admin")
+		adm.Revoke([]OperationKind{OperationKind_Execute}, []QName{wsName}, nil, "revoke execute on workspace from admin")
 
 		intruder := adb.AddRole(intruderRoleName)
 		intruder.RevokeAll([]QName{wsName}, "revoke all workspace privileges from intruder")

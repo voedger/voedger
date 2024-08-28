@@ -148,7 +148,7 @@ type IACLBuilder interface {
 	GrantAll(resources []QName, toRole QName, comment ...string) IACLBuilder
 
 	// Revokes specified operations on specified resources from specified role.
-	Revoke(ops []OperationKind, resources []QName, fromRole QName, comment ...string) IACLBuilder
+	Revoke(ops []OperationKind, resources []QName, fields []FieldName, fromRole QName, comment ...string) IACLBuilder
 
 	// Remove all available operations on specified resources from specified role.
 	RevokeAll(resources []QName, fromRole QName, comment ...string) IACLBuilder

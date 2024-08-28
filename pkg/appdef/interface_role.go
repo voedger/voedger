@@ -38,7 +38,7 @@ type IRoleBuilder interface {
 	GrantAll(resources []QName, comment ...string) IRoleBuilder
 
 	// Revokes operations on specified resources.
-	Revoke(ops []OperationKind, resources []QName, comment ...string) IRoleBuilder
+	Revoke(ops []OperationKind, resources []QName, fields []FieldName, comment ...string) IRoleBuilder
 
 	// Remove all available operations on specified resources.
 	RevokeAll(resources []QName, comment ...string) IRoleBuilder
