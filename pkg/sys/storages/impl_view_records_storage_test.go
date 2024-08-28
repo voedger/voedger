@@ -219,3 +219,31 @@ func TestViewRecordsStorage_ValidateInWorkspaces(t *testing.T) {
 	})
 
 }
+
+func TestViewRecordsStorage_PutInt64ForRecordIDFields(t *testing.T) {
+	require := require.New(t)
+	fieldName1 := "i64"
+	fieldName2 := "recID"
+	value1 := int64(1)
+	value2 := int64(2)
+
+	mockedValueBuilder := &mockValueBuilder{}
+	mockedValueBuilder.On("PutInt64", fieldName1, value1)
+	mockedValueBuilder.On("PutRecordID", fieldName2, istructs.RecordID(value2))
+
+	mockedStructs, mockedViews := mockedStructs(t)
+	mockedViews.
+		On("NewValueBuilder", mock.Anything).Return(mockedValueBuilder)
+
+	appStructsFunc := func() istructs.IAppStructs {
+		return mockedStructs
+	}
+	storage := NewViewRecordsStorage(context.Background(), appStructsFunc, state.SimpleWSIDFunc(istructs.WSID(1)), nil)
+
+	kb := storage.NewKeyBuilder(testViewRecordQName1, nil)
+	value, err := storage.(state.IWithInsert).ProvideValueBuilder(kb, nil)
+	require.NoError(err)
+	value.PutInt64(fieldName1, value1)
+	value.PutInt64(fieldName2, value2)
+	mockedValueBuilder.AssertExpectations(t)
+}

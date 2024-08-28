@@ -22,6 +22,10 @@ type recordsStorage struct {
 	wsTypeVailidator wsTypeVailidator
 }
 
+type iStructureInt64FieldTypeChecker interface {
+	isStructureInt64FieldRecordID(name appdef.QName, fieldName appdef.FieldName) bool
+}
+
 type recordsKeyBuilder struct {
 	baseKeyBuilder
 	id          istructs.RecordID
@@ -228,15 +232,26 @@ func (s *recordsStorage) ProvideValueBuilder(key istructs.IStateKeyBuilder, _ is
 		return nil, err
 	}
 	rw := s.cudFunc().Create(kb.entity)
-	return &recordsValueBuilder{rw: rw}, nil
+	return &recordsValueBuilder{
+		rw:     rw,
+		fc:     &s.wsTypeVailidator,
+		entity: kb.entity,
+	}, nil
 }
 func (s *recordsStorage) ProvideValueBuilderForUpdate(_ istructs.IStateKeyBuilder, existingValue istructs.IStateValue, _ istructs.IStateValueBuilder) (istructs.IStateValueBuilder, error) {
-	return &recordsValueBuilder{rw: s.cudFunc().Update(existingValue.AsRecord(""))}, nil
+	value := existingValue.(*recordsValue)
+	return &recordsValueBuilder{
+		rw:     s.cudFunc().Update(value.record),
+		fc:     &s.wsTypeVailidator,
+		entity: value.record.QName(),
+	}, nil
 }
 
 type recordsValueBuilder struct {
 	istructs.IStateValueBuilder
-	rw istructs.IRowWriter
+	rw     istructs.IRowWriter
+	entity appdef.QName
+	fc     iStructureInt64FieldTypeChecker
 }
 
 func (b *recordsValueBuilder) BuildValue() istructs.IStateValue {
@@ -257,8 +272,14 @@ func (b *recordsValueBuilder) Equal(src istructs.IStateValueBuilder) bool {
 	}
 	return reflect.DeepEqual(b.rw, vb.rw) // TODO: does that work?
 }
-func (b *recordsValueBuilder) PutInt32(name string, value int32)        { b.rw.PutInt32(name, value) }
-func (b *recordsValueBuilder) PutInt64(name string, value int64)        { b.rw.PutInt64(name, value) }
+func (b *recordsValueBuilder) PutInt32(name string, value int32) { b.rw.PutInt32(name, value) }
+func (b *recordsValueBuilder) PutInt64(name string, value int64) {
+	if b.fc.isStructureInt64FieldRecordID(b.entity, appdef.FieldName(name)) {
+		b.rw.PutRecordID(name, istructs.RecordID(value))
+	} else {
+		b.rw.PutInt64(name, value)
+	}
+}
 func (b *recordsValueBuilder) PutBytes(name string, value []byte)       { b.rw.PutBytes(name, value) }
 func (b *recordsValueBuilder) PutString(name, value string)             { b.rw.PutString(name, value) }
 func (b *recordsValueBuilder) PutBool(name string, value bool)          { b.rw.PutBool(name, value) }

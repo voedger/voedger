@@ -24,6 +24,10 @@ type viewRecordsStorage struct {
 	wsTypeVailidator wsTypeVailidator
 }
 
+type iViewInt64FieldTypeChecker interface {
+	isViewInt64FieldRecordID(name appdef.QName, fieldName appdef.FieldName) bool
+}
+
 func NewViewRecordsStorage(ctx context.Context, appStructsFunc state.AppStructsFunc, wsidFunc state.WSIDFunc, n10nFunc state.N10nFunc) state.IStateStorage {
 	return &viewRecordsStorage{
 		ctx:              ctx,
@@ -146,6 +150,7 @@ func (s *viewRecordsStorage) ProvideValueBuilder(kb istructs.IStateKeyBuilder, _
 		IValueBuilder: s.appStructsFunc().ViewRecords().NewValueBuilder(k.view),
 		offset:        istructs.NullOffset,
 		entity:        kb.Entity(),
+		fc:            &s.wsTypeVailidator,
 	}, nil
 }
 func (s *viewRecordsStorage) ProvideValueBuilderForUpdate(kb istructs.IStateKeyBuilder, existingValue istructs.IStateValue, _ istructs.IStateValueBuilder) (istructs.IStateValueBuilder, error) {
@@ -157,6 +162,7 @@ func (s *viewRecordsStorage) ProvideValueBuilderForUpdate(kb istructs.IStateKeyB
 		IValueBuilder: s.appStructsFunc().ViewRecords().UpdateValueBuilder(kb.(*viewKeyBuilder).view, existingValue.(*viewValue).value),
 		offset:        istructs.NullOffset,
 		entity:        kb.Entity(),
+		fc:            &s.wsTypeVailidator,
 	}, nil
 }
 
@@ -204,6 +210,7 @@ type viewValueBuilder struct {
 	istructs.IValueBuilder
 	offset istructs.Offset
 	entity appdef.QName
+	fc     iViewInt64FieldTypeChecker
 }
 
 // used in tests
@@ -225,7 +232,11 @@ func (b *viewValueBuilder) PutInt64(name string, value int64) {
 	if name == state.ColOffset {
 		b.offset = istructs.Offset(value)
 	}
-	b.IValueBuilder.PutInt64(name, value)
+	if b.fc.isViewInt64FieldRecordID(b.entity, appdef.FieldName(name)) {
+		b.IValueBuilder.PutRecordID(name, istructs.RecordID(value))
+	} else {
+		b.IValueBuilder.PutInt64(name, value)
+	}
 }
 func (b *viewValueBuilder) PutQName(name string, value appdef.QName) {
 	if name == appdef.SystemField_QName {
