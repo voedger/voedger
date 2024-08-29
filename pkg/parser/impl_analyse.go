@@ -731,10 +731,10 @@ func analyseProjector(v *ProjectorStmt, c *iterateCtx) {
 }
 
 func analyseJob(j *JobStmt, c *iterateCtx) {
-	if _, e := cron.ParseStandard(*j.CronSchedule); e != nil {
+	parser := cron.NewParser(cron.SecondOptional | cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow | cron.Descriptor)
+	if _, e := parser.Parse(*j.CronSchedule); e != nil {
 		c.stmtErr(&j.Pos, ErrInvalidCronSchedule(*j.CronSchedule))
 	}
-
 	checkState(j.State, c, func(sc *StorageScope) bool { return sc.Jobs })
 	checkIntents(j.Intents, c, func(sc *StorageScope) bool { return sc.Jobs })
 }

@@ -161,7 +161,8 @@ func (a *scheduler) init(_ context.Context) (err error) {
 		a.jobInErrAddr = a.conf.Metrics.AppMetricAddr(JobsInError, a.conf.VvmName, a.conf.AppQName)
 	}
 
-	a.schedule, err = cron.ParseStandard(jobType.CronSchedule())
+	parser := cron.NewParser(cron.SecondOptional | cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow | cron.Descriptor)
+	a.schedule, err = parser.Parse(jobType.CronSchedule())
 	if err != nil {
 		return fmt.Errorf("failed to parse cron schedule: %w", err)
 	}
