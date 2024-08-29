@@ -20,8 +20,6 @@ func every(interval time.Duration) Limit {
 
 // newLimiter returns a new Limiter that allows events up to rate r and permits
 // bursts of at most b tokens.
-// newLimiter возвращает новый ограничитель, который разрешает события с частотой до r и разрешает
-// burst не более b токенов.
 func newLimiter(r Limit, b int) *Limiter {
 	return &Limiter{
 		limit: r,
@@ -32,9 +30,6 @@ func newLimiter(r Limit, b int) *Limiter {
 // allowN reports whether n events may happen at time now.
 // Use this method if you intend to drop / skip events that exceed the rate limit.
 // Otherwise use Reserve or Wait.
-// allowN сообщает, может ли n событий произойти в данный момент.
-// Используйте этот метод, если вы собираетесь удалять /пропускать события, превышающие предельную скорость.
-// В противном случае используйте Reserve или Wait.
 func (lim *Limiter) allowN(now time.Time, n int) bool {
 	return lim.reserveN(now, n, 0).ok
 }
@@ -107,9 +102,6 @@ func (lim *Limiter) reserveN(now time.Time, n int, maxFutureReserve time.Duratio
 // advance calculates and returns an updated state for lim resulting from the passage of time.
 // lim is not changed.
 // advance requires that lim.mu is held.
-// advance вычисляет и возвращает обновленное состояние для lim, полученное с течением времени.
-// лимит не изменен.
-// продвижение требует, чтобы lim.mu удерживается.
 func (lim *Limiter) advance(now time.Time) (newNow time.Time, newLast time.Time, newTokens float64) {
 	last := lim.last
 	if now.Before(last) {
@@ -128,8 +120,6 @@ func (lim *Limiter) advance(now time.Time) (newNow time.Time, newLast time.Time,
 
 // durationFromTokens is a unit conversion function from the number of tokens to the duration
 // of time it takes to accumulate them at a rate of limit tokens per second.
-// durationFromTokens - это функция преобразования единиц измерения количества токенов в продолжительность
-// времени, необходимого для их накопления со скоростью предельных токенов в секунду
 func (limit Limit) durationFromTokens(tokens float64) time.Duration {
 	if limit <= 0 {
 		return InfDuration
@@ -140,8 +130,6 @@ func (limit Limit) durationFromTokens(tokens float64) time.Duration {
 
 // tokensFromDuration is a unit conversion function from a time duration to the number of tokens
 // which could be accumulated during that duration at a rate of limit tokens per second.
-// tokensFromDuration - это функция преобразования единиц измерения продолжительности времени в количество токенов
-// которые могут накапливаться в течение этого периода со скоростью предельных токенов в секунду.
 func (limit Limit) tokensFromDuration(d time.Duration) float64 {
 	if limit <= 0 {
 		return 0

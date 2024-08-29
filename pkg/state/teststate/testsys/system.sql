@@ -54,7 +54,7 @@ EXTENSION ENGINE BUILTIN (
 		/*
 		Key:
 			ID int64 // used to identify record by ID
-			Singletone QName // used to identify singleton 
+			Singletone QName // used to identify singleton
 		*/
 		GET SCOPE(COMMANDS, QUERIES, PROJECTORS),
 		GETBATCH SCOPE(COMMANDS, QUERIES, PROJECTORS),
@@ -158,7 +158,7 @@ EXTENSION ENGINE BUILTIN (
 				...
 			}
 			Result: value // command result
-		*/		
+		*/
 		GET SCOPE(QUERIES, PROJECTORS)
 	);
 
@@ -173,7 +173,7 @@ EXTENSION ENGINE BUILTIN (
 			ExpectedCodes text (optional, comma-separated, default is 200)
 		Value:
 			Body: []byte // blob content, returned in chunks up to 1024 bytes
-		*/		
+		*/
 		READ SCOPE(QUERIES, PROJECTORS)
 	);
 
@@ -182,7 +182,7 @@ EXTENSION ENGINE BUILTIN (
 		Key:
 			From text
 			To text
-			СС text
+			CC text
 			BCC text
 			Host text - SMTP server
 			Port int32 - SMTP server
@@ -190,7 +190,7 @@ EXTENSION ENGINE BUILTIN (
 			Password text - SMTP server
 			Subject text
 			Body text
-			
+
 		*/
 		INSERT SCOPE(PROJECTORS)
 	);
@@ -218,7 +218,7 @@ EXTENSION ENGINE BUILTIN (
 		Key: empty
 		Value
 			WLogOffset int64
-			Workspace int64			
+			Workspace int64
 			RegisteredAt int64
 			SyncedAt int64
 			DeviceID int64
@@ -228,7 +228,7 @@ EXTENSION ENGINE BUILTIN (
 			Error value {
 				ErrStr text
 				ValidEvent bool
-				QNameFromParams qname				
+				QNameFromParams qname
 			}
 			ArgumentObject value
 			CUDs []value {

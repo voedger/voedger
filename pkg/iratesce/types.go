@@ -12,8 +12,6 @@ import (
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-// bucket, соответствующий некому ключу irates.BucketKey
-// содержит в себе Limiter и параметры ограничения, с которыми он работает
 // bucket corresponding to a certain key irates.BucketKey
 // contains a Limiter and the restriction parameters with which it works
 type bucketType struct {
@@ -21,8 +19,6 @@ type bucketType struct {
 	state   irates.BucketState
 }
 
-// реализация для irates.IBuckets
-// распределяет отображение bucket'ов (token bucket)и отображение поименованных параметров ограничений "по умолчанию"
 type bucketsType struct {
 	mu            sync.Mutex
 	buckets       map[irates.BucketKey]*bucketType
@@ -67,8 +63,6 @@ type Limiter struct {
 
 // A Reservation holds information about events that are permitted by a Limiter to happen after a delay.
 // A Reservation may be canceled, which may enable the Limiter to permit additional events.
-// Reservation содержит информацию о событиях, которые разрешены Limiter после задержки.
-// Reservation может быть отменено, что может позволить Limiter разрешить дополнительные мероприятия
 type Reservation struct {
 	ok        bool
 	lim       *Limiter
