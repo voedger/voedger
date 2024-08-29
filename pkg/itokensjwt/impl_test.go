@@ -140,7 +140,7 @@ func TestBasicUsage_ITokens(t *testing.T) {
 		expiredToken, err := signer.IssueToken(istructs.AppQName_test1_app1, testDuration, &principalPayload)
 		require.NoError(err)
 
-		// делаем текущее время позже момента expiration
+		// make current time later the expiration moment
 		testTime = testTime.Add(testDuration * 2)
 		payload := TestPayload_Principal{}
 		gp, err = signer.ValidateToken(expiredToken, &payload)

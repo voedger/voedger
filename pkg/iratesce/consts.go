@@ -14,6 +14,5 @@ const (
 	Inf = Limit(math.MaxFloat64)
 
 	// InfDuration is the duration returned by Delay when a Reservation is not OK.
-	// InfDuration - это продолжительность, возвращаемая с задержкой, когда Reservation  не в порядке.
 	InfDuration = time.Duration(1<<63 - 1)
 )

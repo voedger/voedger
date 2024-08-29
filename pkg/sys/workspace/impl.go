@@ -212,7 +212,7 @@ func invokeCreateWorkspaceProjector(federation federation.IFederation, tokensAPI
 }
 
 // c.sys.CreateWorkspace
-// должно быть вызвано в целевом приложении, т.к. профиль пользователя находится в целевом приложении на схеме!!!
+// must be called in the target application because the user profile is located in the target application according to schema
 func execCmdCreateWorkspace(now coreutils.TimeFunc) istructsmem.ExecCommandClosure {
 	return func(args istructs.ExecCommandArgs) error {
 		// TODO: AuthZ: System, SystemToken in header
