@@ -136,6 +136,21 @@ func (ps *PartitionSchedulers) Enum() map[appdef.QName][]istructs.WSID {
 	return res
 }
 
+// Wait while all schedulers are finished.
+//
+// Contexts for schedulers should be stopped. Here we just wait for schedulers to finish
+func (ps *PartitionSchedulers) Wait() {
+	for {
+		ps.mx.RLock()
+		if len(ps.rt) == 0 {
+			ps.mx.RUnlock()
+			break
+		}
+		ps.mx.RUnlock()
+		time.Sleep(time.Nanosecond)
+	}
+}
+
 type runtime struct {
 	state  atomic.Int32 // 0: newly; +1: started; -1: finished
 	cancel context.CancelFunc

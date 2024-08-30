@@ -105,9 +105,7 @@ func Example() {
 	{
 		// stop vvm from context, wait schedulers finished
 		stop()
-
-		runner.wait()
-
+		schedulers.Wait()
 		fmt.Println(schedulers.Enum())
 	}
 
