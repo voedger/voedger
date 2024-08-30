@@ -158,6 +158,7 @@ func execQuery(ctx context.Context, qw *queryWork) (err error) {
 	return qw.appPart.Invoke(ctx, qw.msg.QName(), qw.state, qw.state)
 }
 
+// IStatelessResources need only for determine the exact result type of ANY
 func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthenticator, authz iauthnz.IAuthorizer,
 	itokens itokens.ITokens, federation federation.IFederation, statelessResources istructsmem.IStatelessResources) pipeline.ISyncPipeline {
 	ops := []*pipeline.WiredOperator{
@@ -303,29 +304,25 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 			qw.execQueryArgs.Intents = qw.state
 			return
 		}),
-		operator("get queryFunc", func(ctx context.Context, qw *queryWork) (err error) {
+		operator("validate: get result type", func(ctx context.Context, qw *queryWork) (err error) {
+			qw.resultType = qw.iQuery.Result()
+			if qw.resultType == nil || qw.resultType.QName() != appdef.QNameANY {
+				return nil
+			}
+			// ANY -> exact type according to PrepareArgs
 			iResource := qw.appStructs.Resources().QueryResource(qw.msg.QName())
+			var iQueryFunc istructs.IQueryFunction
 			if iResource.Kind() != istructs.ResourceKind_null {
-				qw.queryFunc = iResource.(istructs.IQueryFunction)
+				iQueryFunc = iResource.(istructs.IQueryFunction)
 			} else {
-				_, _, qw.queryFunc = iterate.FindFirstMap(statelessResources.Queries, func(path string, qry istructs.IQueryFunction) bool {
+				_, _, iQueryFunc = iterate.FindFirstMap(statelessResources.Queries, func(path string, qry istructs.IQueryFunction) bool {
 					return qry.QName() == qw.msg.QName()
 				})
 			}
-
-			return nil
-		}),
-		operator("validate: get result type", func(ctx context.Context, qw *queryWork) (err error) {
-			qw.resultType = qw.iQuery.Result()
-			if qw.resultType == nil {
-				return nil
-			}
-			if qw.resultType.QName() == appdef.QNameANY {
-				qNameResultType := qw.queryFunc.ResultType(qw.execQueryArgs.PrepareArgs)
-				qw.resultType = qw.iWorkspace.Type(qNameResultType)
-				if qw.resultType.Kind() == appdef.TypeKind_null {
-					return coreutils.NewHTTPError(http.StatusBadRequest, fmt.Errorf("%s query result type %s does not exist in workspace %s", qw.iQuery.QName(), qNameResultType, qw.iWorkspace.QName()))
-				}
+			qNameResultType := iQueryFunc.ResultType(qw.execQueryArgs.PrepareArgs)
+			qw.resultType = qw.iWorkspace.Type(qNameResultType)
+			if qw.resultType.Kind() == appdef.TypeKind_null {
+				return coreutils.NewHTTPError(http.StatusBadRequest, fmt.Errorf("%s query result type %s does not exist in workspace %s", qw.iQuery.QName(), qNameResultType, qw.iWorkspace.QName()))
 			}
 			return nil
 		}),
@@ -387,7 +384,6 @@ type queryWork struct {
 	principals        []iauthnz.Principal
 	principalPayload  payloads.PrincipalPayload
 	secretReader      isecrets.ISecretReader
-	queryFunc         istructs.IQueryFunction
 	iWorkspace        appdef.IWorkspace
 	iQuery            appdef.IQuery
 	wsDesc            istructs.IRecord

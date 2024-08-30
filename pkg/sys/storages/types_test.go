@@ -242,6 +242,8 @@ func mockedStructs2(t *testing.T, addWsDescriptor bool) (*mockAppStructs, *mockV
 	view.Key().PartKey().AddField("pkk", appdef.DataKind_int64)
 	view.Key().ClustCols().AddField("cck", appdef.DataKind_string)
 	view.Value().AddField("vk", appdef.DataKind_string, false)
+	view.Value().AddField("i64", appdef.DataKind_int64, false)
+	view.Value().AddField("recID", appdef.DataKind_RecordID, false)
 
 	view = appDef.AddView(testViewRecordQName2)
 	view.Key().PartKey().AddField("pkk", appdef.DataKind_int64)
@@ -328,3 +330,22 @@ func (v *mockValue) AsRecord(name string) (record istructs.IRecord) {
 func (v *mockValue) AsEvent(name string) (event istructs.IDbEvent) {
 	return v.Called(name).Get(0).(istructs.IDbEvent)
 }
+
+// TODO: copy-pasted from pkg/state/stateprovide. Can this be moved to a common package?
+type mockValueBuilder struct {
+	istructs.IValueBuilder
+	mock.Mock
+}
+
+func (b *mockValueBuilder) PutInt32(name string, value int32)                { b.Called(name, value) }
+func (b *mockValueBuilder) PutInt64(name string, value int64)                { b.Called(name, value) }
+func (b *mockValueBuilder) PutFloat32(name string, value float32)            { b.Called(name, value) }
+func (b *mockValueBuilder) PutFloat64(name string, value float64)            { b.Called(name, value) }
+func (b *mockValueBuilder) PutBytes(name string, value []byte)               { b.Called(name, value) }
+func (b *mockValueBuilder) PutString(name string, value string)              { b.Called(name, value) }
+func (b *mockValueBuilder) PutQName(name string, value appdef.QName)         { b.Called(name, value) }
+func (b *mockValueBuilder) PutBool(name string, value bool)                  { b.Called(name, value) }
+func (b *mockValueBuilder) PutRecordID(name string, value istructs.RecordID) { b.Called(name, value) }
+func (b *mockValueBuilder) Build() istructs.IValue                           { return b.Called().Get(0).(istructs.IValue) }
+func (b *mockValueBuilder) BuildValue() istructs.IStateValue                 { return nil }
+func (b *mockValueBuilder) Equal(src istructs.IStateValueBuilder) bool       { return false }

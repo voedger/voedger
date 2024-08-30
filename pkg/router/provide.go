@@ -41,13 +41,13 @@ func Provide(vvmCtx context.Context, rp RouterParams, aBusTimeout time.Duration,
 	}
 	crtMgr := &autocert.Manager{
 		/*
-			В том случае если требуется тестировать выпуск большого количества сертификатов для разных доменов,
-			то нужно использовать тестовый контур компании. Для этого в Manager требуется переопределить DirectoryURL в клиенте на
+			If we need to test issuance of big amount of certficates for different domains then need to use test perimeter of the enterprise.
+			Need to redefine DirectoryURL in Manager at:
 			https://acme-staging-v02.api.letsencrypt.org/directory :
 			Client: &acme.Client{
 				DirectoryURL: "https://acme-staging-v02.api.letsencrypt.org/directory",
 			},
-			поскольку есть квоты на выпуск сертификатов - на количество доменов,  сертификатов в единицу времени и пр.
+			that is because there are quotas for certificate issuace: per domains amount, per amount of certificates per time etc
 		*/
 		Prompt:     autocert.AcceptTOS,
 		HostPolicy: autocert.HostWhitelist(rp.HTTP01ChallengeHosts...),

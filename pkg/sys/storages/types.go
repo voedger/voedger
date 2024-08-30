@@ -357,6 +357,7 @@ type wsTypeKey struct {
 	appQName appdef.AppQName
 }
 
+// implements iStructureInt64FieldTypeChecker, iViewInt64FieldTypeChecker
 type wsTypeVailidator struct {
 	appStructsFunc state.AppStructsFunc
 	wsidKinds      map[wsTypeKey]appdef.QName
@@ -367,6 +368,26 @@ func newWsTypeValidator(appStructsFunc state.AppStructsFunc) wsTypeVailidator {
 		appStructsFunc: appStructsFunc,
 		wsidKinds:      make(map[wsTypeKey]appdef.QName),
 	}
+}
+
+func (v *wsTypeVailidator) isStructureInt64FieldRecordID(name appdef.QName, fieldName appdef.FieldName) bool {
+	app := v.appStructsFunc().AppDef()
+	rec := app.Structure(name)
+	field := rec.Field(fieldName)
+	if field == nil {
+		panic(errInt64FieldUndefined(fieldName))
+	}
+	return field.DataKind() == appdef.DataKind_RecordID
+}
+
+func (v *wsTypeVailidator) isViewInt64FieldRecordID(name appdef.QName, fieldName appdef.FieldName) bool {
+	app := v.appStructsFunc().AppDef()
+	rec := app.View(name)
+	field := rec.Field(fieldName)
+	if field == nil {
+		panic(errInt64FieldUndefined(fieldName))
+	}
+	return field.DataKind() == appdef.DataKind_RecordID
 }
 
 // Returns NullQName if not found

@@ -510,7 +510,7 @@ func provideBuiltInAppsArtefacts(vvmConfig *VVMConfig, apis apps.APIs, cfgs AppC
 }
 
 // extModuleURLs is filled here
-func parseSidecarAppSubDir(fullPath string, basePath string, extModuleURLs map[string]*url.URL) (asts []*parser.PackageSchemaAST, err error) {
+func parseSidecarAppSubDir(fullPath string, basePath string, out_extModuleURLs map[string]*url.URL) (asts []*parser.PackageSchemaAST, err error) {
 	dirEntries, err := os.ReadDir(fullPath)
 	if err != nil {
 		// notest
@@ -521,7 +521,7 @@ func parseSidecarAppSubDir(fullPath string, basePath string, extModuleURLs map[s
 	modulePath = strings.ReplaceAll(modulePath, string(os.PathSeparator), "/")
 	for _, dirEntry := range dirEntries {
 		if dirEntry.IsDir() {
-			subASTs, err := parseSidecarAppSubDir(filepath.Join(fullPath, dirEntry.Name()), basePath, extModuleURLs)
+			subASTs, err := parseSidecarAppSubDir(filepath.Join(fullPath, dirEntry.Name()), basePath, out_extModuleURLs)
 			if err != nil {
 				return nil, err
 			}
@@ -535,7 +535,7 @@ func parseSidecarAppSubDir(fullPath string, basePath string, extModuleURLs map[s
 				return nil, err
 			}
 
-			extModuleURLs[modulePath] = moduleURL
+			out_extModuleURLs[modulePath] = moduleURL
 			continue
 		}
 	}
@@ -590,7 +590,7 @@ func provideSidecarApps(vvmConfig *VVMConfig) (res []appparts.SidecarApp, err er
 				}
 			}
 			if appDirEntry.IsDir() && appDirEntry.Name() == "image" {
-				//  вот как тут учестьЮ что ExtensionModules может быть несколько?
+				// how to consider that could be >1 ExtensionModules here?
 				pkgPath := filepath.Join(appPath, "image", "pkg")
 				appASTs, err = parseSidecarAppSubDir(pkgPath, pkgPath, extModuleURLs)
 				if err != nil {
@@ -662,15 +662,6 @@ func provideCachingAppStorageProvider(storageCacheSize StorageCacheSizeType, met
 	vvmName commandprocessor.VVMName, uncachingProvider IAppStorageUncachingProviderFactory) istorage.IAppStorageProvider {
 	aspNonCaching := uncachingProvider()
 	return istoragecache.Provide(int(storageCacheSize), aspNonCaching, metrics, string(vvmName))
-}
-
-// синхронный актуализатор один на приложение из-за storages, которые у каждого приложения свои
-// сделаем так, чтобы в командный процессор подавался свитч по appName, который выберет нужный актуализатор с нужным набором проекторов
-type switchByAppName struct {
-}
-
-func (s *switchByAppName) Switch(work interface{}) (branchName string, err error) {
-	return work.(interface{ AppQName() appdef.AppQName }).AppQName().String(), nil
 }
 
 func provideBlobAppStoragePtr(astp istorage.IAppStorageProvider) iblobstoragestg.BlobAppStoragePtr {

@@ -30,6 +30,7 @@ var (
 	Storage_Event             = appdef.NewQName(PackageName, "Event")
 	Storage_CommandContext    = appdef.NewQName(PackageName, "CommandContext")
 	Storage_QueryContext      = appdef.NewQName(PackageName, "QueryContext")
+	Storage_JobContext        = appdef.NewQName(PackageName, "JobContext")
 	Storage_Response          = appdef.NewQName(PackageName, "Response")
 	Storage_FederationCommand = appdef.NewQName(PackageName, "FederationCommand")
 	Storage_FederationBlob    = appdef.NewQName(PackageName, "FederationBlob")
@@ -86,6 +87,9 @@ const (
 
 	Storage_QueryContext_Field_ArgumentObject = "ArgumentObject"
 	Storage_QueryContext_Field_Workspace      = "Workspace"
+
+	Storage_JobContext_Field_Workspace = "Workspace"
+	Storage_JobContext_Field_UnixTime  = "UnixTime"
 
 	Storage_Uniq_Field_ID = "ID"
 
