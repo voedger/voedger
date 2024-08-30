@@ -21,7 +21,8 @@ func createAppDef() appdef.IAppDef {
 	appDef.AddObject(testRecordQName1).
 		AddField("number", appdef.DataKind_int64, false)
 	appDef.AddObject(testRecordQName2).
-		AddField("age", appdef.DataKind_int64, false)
+		AddField("age", appdef.DataKind_int64, false).
+		AddField("ref", appdef.DataKind_RecordID, false)
 	wsDesc := appDef.AddCDoc(testWSDescriptorQName)
 	wsDesc.AddField(field_WSKind, appdef.DataKind_bytes, false)
 	ws := appDef.AddWorkspace(testWSQName)
@@ -264,6 +265,44 @@ func TestRecordsStorage_Insert(t *testing.T) {
 	vb.PutString(fieldName, value)
 	rw.AssertExpectations(t)
 }
+func TestRecordsStorage_InsertRecordIDField(t *testing.T) {
+	require := require.New(t)
+	fieldName1 := "ref"
+	fieldName2 := "age"
+	var value1 int64 = 1234
+	var value2 int64 = 18
+
+	rw := &mockRowWriter{}
+	rw.
+		On("PutRecordID", fieldName1, istructs.RecordID(value1))
+	rw.
+		On("PutInt64", fieldName2, value2)
+	cud := &mockCUD{}
+	cud.On("Create").Return(rw)
+
+	records := &mockRecords{}
+
+	appStructs := &mockAppStructs{}
+	appStructs.
+		On("AppDef").Return(createAppDef()).
+		On("AppQName").Return(testAppQName).
+		On("Records").Return(records).
+		On("ViewRecords").Return(&nilViewRecords{}).
+		On("Events").Return(&nilEvents{})
+	appStructsFunc := func() istructs.IAppStructs {
+		return appStructs
+	}
+	cudFunc := func() istructs.ICUD {
+		return cud
+	}
+	storage := NewRecordsStorage(appStructsFunc, state.SimpleWSIDFunc(istructs.NullWSID), cudFunc)
+	kb := storage.NewKeyBuilder(testRecordQName2, nil)
+	vb, err := storage.(state.IWithInsert).ProvideValueBuilder(kb, nil)
+	require.NoError(err)
+	vb.PutInt64(fieldName1, value1)
+	vb.PutInt64(fieldName2, value2)
+	rw.AssertExpectations(t)
+}
 func TestRecordsStorage_Update(t *testing.T) {
 	require := require.New(t)
 	fieldName := "name"
@@ -271,6 +310,7 @@ func TestRecordsStorage_Update(t *testing.T) {
 	rw := &mockRowWriter{}
 	rw.On("PutString", fieldName, value)
 	r := &mockRecord{}
+	r.On("QName").Return(appdef.NewQName("test", "Record1"))
 	sv := &recordsValue{record: r}
 	cud := &mockCUD{}
 	cud.On("Update", mock.Anything).Return(rw)

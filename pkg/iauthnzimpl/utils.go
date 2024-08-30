@@ -45,10 +45,10 @@ func matchOrNotSpecified_Principals(pattern [][]iauthnz.Principal, actualPrns []
 	for _, prnsAND := range pattern {
 		matchedCount := 0
 		for _, prnAND := range prnsAND {
-			// среди actualPrns должны быть все prnsAND
+			// all prnsAND must be among actualPrns
 			isMatched := false
 			for _, actualPrn := range actualPrns {
-				// тут мы должны найти prnAnd
+				// let's find prnAND
 				if actualPrn.Kind != prnAND.Kind {
 					continue
 				}

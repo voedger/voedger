@@ -66,7 +66,7 @@ func main() {
 	}
 }
 
-// adds to the сommand flag --ssh-key
+// adds to the command flag --ssh-key
 // If the environment variable VOEDGER_SSH_KEY is not established, then the flag is marked as a required
 func addSshKeyFlag(cmds ...*cobra.Command) bool {
 	for _, cmd := range cmds {

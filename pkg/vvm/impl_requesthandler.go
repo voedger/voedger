@@ -29,8 +29,8 @@ func provideIBus(appParts appparts.IAppPartitions, procbus iprocbus.IProcBus,
 	cpAmount istructs.NumCommandProcessors, vvmApps VVMApps) ibus.IBus {
 	return ibusmem.Provide(func(requestCtx context.Context, sender ibus.ISender, request ibus.Request) {
 		// Handling Command/Query messages
-		// router -> SendRequest2(ctx, ...) -> requestHandler(ctx, ... ) - вот этот контекст. Если connection gracefully closed, то этот ctx.Done()
-		// т.е. надо этот контекст пробрасывать далее
+		// router -> SendRequest2(ctx, ...) -> requestHandler(ctx, ... ) - it is that context. If connection gracefully closed the that ctx is Done()
+		// so we need to forward that context
 
 		if len(request.Resource) <= ShortestPossibleFunctionNameLen {
 			coreutils.ReplyBadRequest(sender, "wrong function name: "+request.Resource)

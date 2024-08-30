@@ -138,7 +138,7 @@ func newVit(t testing.TB, vitCfg *VITConfig, useCas bool) *VIT {
 	vit.cleanups = append(vit.cleanups, vitPreConfig.cleanups...)
 	vit.cleanups = append(vit.cleanups, func(vit *VIT) { httpClientCleanup() })
 
-	// запустим сервер
+	// launch the server
 	require.NoError(t, vit.Launch())
 
 	for _, app := range vitPreConfig.vitApps {
@@ -158,7 +158,7 @@ func newVit(t testing.TB, vitCfg *VITConfig, useCas bool) *VIT {
 			verifiedValues[desiredValue] = verifiedValueToken
 		}
 
-		// создадим логины и рабочие области
+		// create logins and workspaces
 		for _, login := range app.logins {
 			vit.SignUp(login.Name, login.Pwd, login.AppQName,
 				WithReqOpt(coreutils.WithExpectedCode(http.StatusOK)),

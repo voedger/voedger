@@ -291,7 +291,7 @@ func Test_rowType_PutAs_SimpleTypes(t *testing.T) {
 		require.Equal(float64(4), row.AsFloat64("float64"))
 		require.Equal(istructs.RecordID(5), row.AsRecordID("RecordID"))
 
-		t.Run("Should be OK to As××× with type casts", func(t *testing.T) {
+		t.Run("Should be OK to Asxxx with type casts", func(t *testing.T) {
 			require.EqualValues(1, row.AsFloat64("int32"))
 			require.EqualValues(2, row.AsFloat64("int64"))
 			require.EqualValues(3, row.AsFloat64("float32"))
@@ -307,7 +307,7 @@ func Test_rowType_PutAs_SimpleTypes(t *testing.T) {
 		row := makeRow(test.AppCfg)
 		row.setQName(test.testRow)
 
-		row.PutChars("string", "test 🏐 тест")
+		row.PutChars("string", "test 🏐 哇")
 		row.PutChars("QName", test.saleCmdName.String())
 
 		// cspell:disable
@@ -319,7 +319,7 @@ func Test_rowType_PutAs_SimpleTypes(t *testing.T) {
 
 		require.NoError(row.build())
 
-		require.Equal("test 🏐 тест", row.AsString("string"))
+		require.Equal("test 🏐 哇", row.AsString("string"))
 		require.Equal(test.saleCmdName, row.AsQName("QName"))
 		require.Equal([]byte{1, 2, 3, 4}, row.AsBytes("bytes"))
 		require.Equal(rawValue, row.AsBytes("raw"))
