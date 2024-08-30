@@ -11,6 +11,15 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 )
 
+// Returns true if specified operation is allowed on specified resource for any of specified roles.
+//
+// If resource is any structure and operation is UPDATE or SELECT, then:
+//   - if fields list specified, then result consider it,
+//   - full list of allowed fields also returned,
+//
+// else fields list is ignored and nil allowedFields is returned.
+//
+// If some error in arguments, (resource or role not found, operation is not applicable to resource, etc…) then error is returned.
 func IsOperationAllowed(app appdef.IAppDef, op appdef.OperationKind, res appdef.QName, fld []appdef.FieldName, prc []appdef.QName) (bool, []appdef.FieldName, error) {
 
 	var str appdef.IStructure
