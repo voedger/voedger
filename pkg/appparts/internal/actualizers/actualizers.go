@@ -109,6 +109,21 @@ func (pa *PartitionActualizers) Enum() appdef.QNames {
 	return appdef.QNamesFromMap(pa.rt)
 }
 
+// Wait waits for all actualizers to finish.
+//
+// The context should be stopped before calling this method. Here we just wait for actualizers to finish.
+func (pa *PartitionActualizers) Wait() {
+	for {
+		pa.mx.RLock()
+		cnt := len(pa.rt)
+		pa.mx.RUnlock()
+		if cnt == 0 {
+			break
+		}
+		time.Sleep(time.Nanosecond)
+	}
+}
+
 type runtime struct {
 	state  atomic.Int32 // 0: newly; +1: started; -1: finished
 	cancel context.CancelFunc
