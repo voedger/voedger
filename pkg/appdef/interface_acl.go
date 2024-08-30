@@ -106,20 +106,6 @@ type IWithACL interface {
 	ACL(func(IACLRule) bool)
 }
 
-type IWithACLExtended interface {
-	IWithACL
-
-	// Returns true if specified operation is allowed on specified resource for any of specified roles.
-	//
-	// If resource is any structure and operation is UPDATE or SELECT, then:
-	//	- if fields list specified, then result consider it,
-	//	- full list of allowed fields also returned,
-	// else fields list is ignored and nil allowedFields is returned.
-	//
-	// If some error in arguments, (resource or role not found, operation is not applicable to resource, etc…) then error is returned.
-	IsOperationAllowed(operation OperationKind, resource QName, fields []FieldName, roles []QName) (allowed bool, allowedFields []FieldName, error error)
-}
-
 type IACLBuilder interface {
 	// Grants specified operations on specified resources to specified role.
 	//

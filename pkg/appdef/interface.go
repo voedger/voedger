@@ -35,7 +35,6 @@ type IAppDef interface {
 
 	IWithRoles
 	IWithACL
-	IWithACLExtended
 
 	IWithRates
 	IWithLimits

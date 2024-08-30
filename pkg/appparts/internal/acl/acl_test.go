@@ -3,57 +3,58 @@
  * @author: Nikolay Nikitin
  */
 
-package appdef
+package acl
 
 import (
 	"testing"
 
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/goutils/testingu/require"
 )
 
 func Test_IsOperationAllowed(t *testing.T) {
 	require := require.New(t)
 
-	var app IAppDef
+	var app appdef.IAppDef
 
-	docName := NewQName("test", "doc")
-	queryName := NewQName("test", "qry")
-	cmdName := NewQName("test", "cmd")
+	docName := appdef.NewQName("test", "doc")
+	queryName := appdef.NewQName("test", "qry")
+	cmdName := appdef.NewQName("test", "cmd")
 
-	reader := NewQName("test", "reader")
-	writer := NewQName("test", "writer")
-	intruder := NewQName("test", "intruder")
+	reader := appdef.NewQName("test", "reader")
+	writer := appdef.NewQName("test", "writer")
+	intruder := appdef.NewQName("test", "intruder")
 
 	t.Run("should be ok to build application with ACL with fields", func(t *testing.T) {
-		adb := New()
+		adb := appdef.New()
 		adb.AddPackage("test", "test.com/test")
 
 		doc := adb.AddCDoc(docName)
 		doc.
-			AddField("field1", DataKind_int32, true).
-			AddField("hiddenField", DataKind_int32, false).
-			AddField("field3", DataKind_int32, false)
+			AddField("field1", appdef.DataKind_int32, true).
+			AddField("hiddenField", appdef.DataKind_int32, false).
+			AddField("field3", appdef.DataKind_int32, false)
 
 		qry := adb.AddQuery(queryName)
 		qry.SetResult(docName)
 
 		cmd := adb.AddCommand(cmdName)
-		cmd.SetParam(QNameANY)
+		cmd.SetParam(appdef.QNameANY)
 
 		_ = adb.AddRole(reader)
-		adb.Grant([]OperationKind{OperationKind_Select}, []QName{docName}, nil, reader, "grant select doc.* to reader")
-		adb.Revoke([]OperationKind{OperationKind_Select}, []QName{docName}, []FieldName{"hiddenField"}, reader, "revoke select doc.field1 from reader")
-		adb.Grant([]OperationKind{OperationKind_Execute}, []QName{queryName}, nil, reader, "grant execute query to reader")
+		adb.Grant([]appdef.OperationKind{appdef.OperationKind_Select}, []appdef.QName{docName}, nil, reader, "grant select doc.* to reader")
+		adb.Revoke([]appdef.OperationKind{appdef.OperationKind_Select}, []appdef.QName{docName}, []appdef.FieldName{"hiddenField"}, reader, "revoke select doc.field1 from reader")
+		adb.Grant([]appdef.OperationKind{appdef.OperationKind_Execute}, []appdef.QName{queryName}, nil, reader, "grant execute query to reader")
 
 		_ = adb.AddRole(writer)
-		adb.Grant([]OperationKind{OperationKind_Insert}, []QName{docName}, nil, writer, "grant insert doc.* to writer")
-		adb.Grant([]OperationKind{OperationKind_Update}, []QName{docName}, []FieldName{"field1", "hiddenField", "field3"}, writer, "grant update doc.field[1,2,3] to writer")
-		adb.Revoke([]OperationKind{OperationKind_Update}, []QName{docName}, []FieldName{"hiddenField"}, writer, "revoke update doc.hiddenField from writer")
-		adb.Grant([]OperationKind{OperationKind_Execute}, []QName{cmdName}, nil, writer, "grant execute cmd to writer")
+		adb.Grant([]appdef.OperationKind{appdef.OperationKind_Insert}, []appdef.QName{docName}, nil, writer, "grant insert doc.* to writer")
+		adb.Grant([]appdef.OperationKind{appdef.OperationKind_Update}, []appdef.QName{docName}, []appdef.FieldName{"field1", "hiddenField", "field3"}, writer, "grant update doc.field[1,2,3] to writer")
+		adb.Revoke([]appdef.OperationKind{appdef.OperationKind_Update}, []appdef.QName{docName}, []appdef.FieldName{"hiddenField"}, writer, "revoke update doc.hiddenField from writer")
+		adb.Grant([]appdef.OperationKind{appdef.OperationKind_Execute}, []appdef.QName{cmdName}, nil, writer, "grant execute cmd to writer")
 
 		_ = adb.AddRole(intruder)
-		adb.RevokeAll([]QName{docName}, intruder, "revoke all access to doc from intruder")
-		adb.RevokeAll([]QName{queryName, cmdName}, intruder, "revoke all access to functions from intruder")
+		adb.RevokeAll([]appdef.QName{docName}, intruder, "revoke all access to doc from intruder")
+		adb.RevokeAll([]appdef.QName{queryName, cmdName}, intruder, "revoke all access to functions from intruder")
 
 		var err error
 		app, err = adb.Build()
@@ -61,39 +62,41 @@ func Test_IsOperationAllowed(t *testing.T) {
 		require.NotNil(app)
 	})
 
-	selectableDocFields := []FieldName{SystemField_QName, SystemField_ID, SystemField_IsActive, "field1", "field3"}
+	selectableDocFields := []appdef.FieldName{
+		appdef.SystemField_QName, appdef.SystemField_ID, appdef.SystemField_IsActive,
+		"field1", "field3"}
 	t.Run("test IsAllowed", func(t *testing.T) {
 		var tests = []struct {
 			name          string
-			op            OperationKind
-			res           QName
-			fields        []FieldName
-			role          QName
+			op            appdef.OperationKind
+			res           appdef.QName
+			fields        []appdef.FieldName
+			role          appdef.QName
 			allowed       bool
-			allowedFields []FieldName
+			allowedFields []appdef.FieldName
 		}{
 			// reader tests
 			{
 				name:          "allow select doc.field1 for reader",
-				op:            OperationKind_Select,
+				op:            appdef.OperationKind_Select,
 				res:           docName,
-				fields:        []FieldName{"field1"},
+				fields:        []appdef.FieldName{"field1"},
 				role:          reader,
 				allowed:       true,
 				allowedFields: selectableDocFields,
 			},
 			{
 				name:          "deny select doc.hiddenField for reader",
-				op:            OperationKind_Select,
+				op:            appdef.OperationKind_Select,
 				res:           docName,
-				fields:        []FieldName{"hiddenField"},
+				fields:        []appdef.FieldName{"hiddenField"},
 				role:          reader,
 				allowed:       false,
 				allowedFields: selectableDocFields,
 			},
 			{
 				name:          "allow select ? from doc for reader",
-				op:            OperationKind_Select,
+				op:            appdef.OperationKind_Select,
 				res:           docName,
 				fields:        nil,
 				role:          reader,
@@ -102,16 +105,16 @@ func Test_IsOperationAllowed(t *testing.T) {
 			},
 			{
 				name:          "deny select * from doc for reader",
-				op:            OperationKind_Select,
+				op:            appdef.OperationKind_Select,
 				res:           docName,
-				fields:        []FieldName{"field1", "hiddenField", "field3"},
+				fields:        []appdef.FieldName{"field1", "hiddenField", "field3"},
 				role:          reader,
 				allowed:       false,
 				allowedFields: selectableDocFields,
 			},
 			{
 				name:          "deny insert doc for reader",
-				op:            OperationKind_Insert,
+				op:            appdef.OperationKind_Insert,
 				res:           docName,
 				fields:        nil,
 				role:          reader,
@@ -120,7 +123,7 @@ func Test_IsOperationAllowed(t *testing.T) {
 			},
 			{
 				name:          "deny update doc for reader",
-				op:            OperationKind_Update,
+				op:            appdef.OperationKind_Update,
 				res:           docName,
 				fields:        nil,
 				role:          reader,
@@ -129,7 +132,7 @@ func Test_IsOperationAllowed(t *testing.T) {
 			},
 			{
 				name:          "allow execute query for reader",
-				op:            OperationKind_Execute,
+				op:            appdef.OperationKind_Execute,
 				res:           queryName,
 				fields:        nil,
 				role:          reader,
@@ -138,7 +141,7 @@ func Test_IsOperationAllowed(t *testing.T) {
 			},
 			{
 				name:          "deny execute cmd for reader",
-				op:            OperationKind_Execute,
+				op:            appdef.OperationKind_Execute,
 				res:           cmdName,
 				fields:        nil,
 				role:          reader,
@@ -148,7 +151,7 @@ func Test_IsOperationAllowed(t *testing.T) {
 			// writer tests
 			{
 				name:          "deny select ? from doc for writer",
-				op:            OperationKind_Select,
+				op:            appdef.OperationKind_Select,
 				res:           docName,
 				fields:        nil,
 				role:          writer,
@@ -157,7 +160,7 @@ func Test_IsOperationAllowed(t *testing.T) {
 			},
 			{
 				name:          "allow insert to doc for writer",
-				op:            OperationKind_Insert,
+				op:            appdef.OperationKind_Insert,
 				res:           docName,
 				fields:        nil,
 				role:          writer,
@@ -166,25 +169,25 @@ func Test_IsOperationAllowed(t *testing.T) {
 			},
 			{
 				name:          "allow update doc for writer",
-				op:            OperationKind_Update,
+				op:            appdef.OperationKind_Update,
 				res:           docName,
 				fields:        nil,
 				role:          writer,
 				allowed:       true,
-				allowedFields: []FieldName{"field1", "field3"},
+				allowedFields: []appdef.FieldName{"field1", "field3"},
 			},
 			{
 				name:          "deny update doc.hiddenField for writer",
-				op:            OperationKind_Update,
+				op:            appdef.OperationKind_Update,
 				res:           docName,
-				fields:        []FieldName{"hiddenField"},
+				fields:        []appdef.FieldName{"hiddenField"},
 				role:          writer,
 				allowed:       false,
-				allowedFields: []FieldName{"field1", "field3"},
+				allowedFields: []appdef.FieldName{"field1", "field3"},
 			},
 			{
 				name:          "allow execute cmd for writer",
-				op:            OperationKind_Execute,
+				op:            appdef.OperationKind_Execute,
 				res:           cmdName,
 				fields:        nil,
 				role:          writer,
@@ -193,7 +196,7 @@ func Test_IsOperationAllowed(t *testing.T) {
 			},
 			{
 				name:          "deny execute query for writer",
-				op:            OperationKind_Execute,
+				op:            appdef.OperationKind_Execute,
 				res:           queryName,
 				fields:        nil,
 				role:          writer,
@@ -203,7 +206,7 @@ func Test_IsOperationAllowed(t *testing.T) {
 			// intruder tests
 			{
 				name:          "deny select ? from doc for intruder",
-				op:            OperationKind_Select,
+				op:            appdef.OperationKind_Select,
 				res:           docName,
 				fields:        nil,
 				role:          intruder,
@@ -212,7 +215,7 @@ func Test_IsOperationAllowed(t *testing.T) {
 			},
 			{
 				name:          "deny insert doc for intruder",
-				op:            OperationKind_Insert,
+				op:            appdef.OperationKind_Insert,
 				res:           docName,
 				fields:        nil,
 				role:          intruder,
@@ -221,7 +224,7 @@ func Test_IsOperationAllowed(t *testing.T) {
 			},
 			{
 				name:          "deny update doc for intruder",
-				op:            OperationKind_Update,
+				op:            appdef.OperationKind_Update,
 				res:           docName,
 				fields:        nil,
 				role:          intruder,
@@ -230,7 +233,7 @@ func Test_IsOperationAllowed(t *testing.T) {
 			},
 			{
 				name:          "deny execute query for intruder",
-				op:            OperationKind_Execute,
+				op:            appdef.OperationKind_Execute,
 				res:           queryName,
 				fields:        nil,
 				role:          intruder,
@@ -239,7 +242,7 @@ func Test_IsOperationAllowed(t *testing.T) {
 			},
 			{
 				name:          "deny execute cmd for intruder",
-				op:            OperationKind_Execute,
+				op:            appdef.OperationKind_Execute,
 				res:           cmdName,
 				fields:        nil,
 				role:          intruder,
@@ -249,7 +252,7 @@ func Test_IsOperationAllowed(t *testing.T) {
 		}
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
-				allowed, allowedFields, err := app.IsOperationAllowed(tt.op, tt.res, tt.fields, []QName{tt.role})
+				allowed, allowedFields, err := IsOperationAllowed(app, tt.op, tt.res, tt.fields, []appdef.QName{tt.role})
 				require.NoError(err)
 				require.Equal(tt.allowed, allowed)
 				require.EqualValues(tt.allowedFields, allowedFields)
@@ -260,49 +263,49 @@ func Test_IsOperationAllowed(t *testing.T) {
 	t.Run("test IsAllowed with multiple roles", func(t *testing.T) {
 		var tests = []struct {
 			name          string
-			op            OperationKind
-			res           QName
-			fields        []FieldName
-			role          []QName
+			op            appdef.OperationKind
+			res           appdef.QName
+			fields        []appdef.FieldName
+			role          []appdef.QName
 			allowed       bool
-			allowedFields []FieldName
+			allowedFields []appdef.FieldName
 		}{
 			{
 				name:          "allow select doc for [reader, writer]",
-				op:            OperationKind_Select,
+				op:            appdef.OperationKind_Select,
 				res:           docName,
-				role:          []QName{reader, writer},
+				role:          []appdef.QName{reader, writer},
 				allowed:       true,
 				allowedFields: selectableDocFields,
 			},
 			{
 				name:          "deny select doc for [reader, intruder]",
-				op:            OperationKind_Select,
+				op:            appdef.OperationKind_Select,
 				res:           docName,
-				role:          []QName{reader, intruder},
+				role:          []appdef.QName{reader, intruder},
 				allowed:       false,
 				allowedFields: nil,
 			},
 			{
 				name:          "allow execute cmd for [reader, writer]",
-				op:            OperationKind_Execute,
+				op:            appdef.OperationKind_Execute,
 				res:           cmdName,
-				role:          []QName{reader, writer},
+				role:          []appdef.QName{reader, writer},
 				allowed:       true,
 				allowedFields: nil,
 			},
 			{
 				name:          "deny execute cmd for [writer, intruder]",
-				op:            OperationKind_Execute,
+				op:            appdef.OperationKind_Execute,
 				res:           cmdName,
-				role:          []QName{writer, intruder},
+				role:          []appdef.QName{writer, intruder},
 				allowed:       false,
 				allowedFields: nil,
 			},
 		}
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
-				allowed, allowedFields, err := app.IsOperationAllowed(tt.op, tt.res, tt.fields, tt.role)
+				allowed, allowedFields, err := IsOperationAllowed(app, tt.op, tt.res, tt.fields, tt.role)
 				require.NoError(err)
 				require.Equal(tt.allowed, allowed)
 				require.EqualValues(tt.allowedFields, allowedFields)
@@ -313,73 +316,73 @@ func Test_IsOperationAllowed(t *testing.T) {
 	t.Run("test IsAllowed with errors", func(t *testing.T) {
 		var tests = []struct {
 			name   string
-			op     OperationKind
-			res    QName
-			fields []FieldName
-			role   []QName
+			op     appdef.OperationKind
+			res    appdef.QName
+			fields []appdef.FieldName
+			role   []appdef.QName
 			error  error
 			errHas string
 		}{
 			{
 				name:   "unsupported operation",
-				op:     OperationKind_Inherits,
+				op:     appdef.OperationKind_Inherits,
 				res:    docName,
-				role:   []QName{reader},
-				error:  ErrUnsupportedError,
+				role:   []appdef.QName{reader},
+				error:  appdef.ErrUnsupportedError,
 				errHas: "Inherits",
 			},
 			{
 				name:   "resource not found",
-				op:     OperationKind_Insert,
-				res:    NewQName("test", "unknown"),
-				role:   []QName{reader},
-				error:  ErrNotFoundError,
+				op:     appdef.OperationKind_Insert,
+				res:    appdef.NewQName("test", "unknown"),
+				role:   []appdef.QName{reader},
+				error:  appdef.ErrNotFoundError,
 				errHas: "test.unknown",
 			},
 			{
 				name:   "structure not found",
-				op:     OperationKind_Select,
+				op:     appdef.OperationKind_Select,
 				res:    cmdName,
-				role:   []QName{reader},
-				error:  ErrNotFoundError,
+				role:   []appdef.QName{reader},
+				error:  appdef.ErrNotFoundError,
 				errHas: cmdName.String(),
 			},
 			{
 				name:   "function not found",
-				op:     OperationKind_Execute,
+				op:     appdef.OperationKind_Execute,
 				res:    docName,
-				role:   []QName{writer},
-				error:  ErrNotFoundError,
+				role:   []appdef.QName{writer},
+				error:  appdef.ErrNotFoundError,
 				errHas: docName.String(),
 			},
 			{
 				name:   "field not found",
-				op:     OperationKind_Update,
+				op:     appdef.OperationKind_Update,
 				res:    docName,
-				fields: []FieldName{"unknown"},
-				role:   []QName{writer},
-				error:  ErrNotFoundError,
+				fields: []appdef.FieldName{"unknown"},
+				role:   []appdef.QName{writer},
+				error:  appdef.ErrNotFoundError,
 				errHas: "unknown",
 			},
 			{
 				name:   "no participants",
-				op:     OperationKind_Execute,
+				op:     appdef.OperationKind_Execute,
 				res:    cmdName,
-				error:  ErrMissedError,
+				error:  appdef.ErrMissedError,
 				errHas: "participant",
 			},
 			{
 				name:   "role not found",
-				op:     OperationKind_Execute,
+				op:     appdef.OperationKind_Execute,
 				res:    cmdName,
-				role:   []QName{NewQName("test", "unknown")},
-				error:  ErrNotFoundError,
+				role:   []appdef.QName{appdef.NewQName("test", "unknown")},
+				error:  appdef.ErrNotFoundError,
 				errHas: "test.unknown",
 			},
 		}
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
-				allowed, allowedFields, err := app.IsOperationAllowed(tt.op, tt.res, tt.fields, tt.role)
+				allowed, allowedFields, err := IsOperationAllowed(app, tt.op, tt.res, tt.fields, tt.role)
 				require.Error(err, require.Is(tt.error), require.Has(tt.errHas))
 				require.False(allowed)
 				require.Nil(allowedFields)

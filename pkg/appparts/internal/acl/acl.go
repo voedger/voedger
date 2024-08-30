@@ -3,56 +3,61 @@
  * @author: Nikolay Nikitin
  */
 
-package appdef
+package acl
 
-import "slices"
+import (
+	"slices"
 
-func (app *appDef) IsOperationAllowed(op OperationKind, res QName, fld []FieldName, prc []QName) (bool, []FieldName, error) {
+	"github.com/voedger/voedger/pkg/appdef"
+)
 
-	var str IStructure
+func IsOperationAllowed(app appdef.IAppDef, op appdef.OperationKind, res appdef.QName, fld []appdef.FieldName, prc []appdef.QName) (bool, []appdef.FieldName, error) {
+
+	var str appdef.IStructure
 	switch op {
-	case OperationKind_Insert:
+	case appdef.OperationKind_Insert:
 		if app.Structure(res) == nil {
-			return false, nil, ErrNotFound("structure «%q»", res)
+			return false, nil, appdef.ErrNotFound("structure «%q»", res)
 		}
-	case OperationKind_Update, OperationKind_Select:
+	case appdef.OperationKind_Update, appdef.OperationKind_Select:
 		str = app.Structure(res)
 		if str == nil {
-			return false, nil, ErrNotFound("structure «%q»", res)
+			return false, nil, appdef.ErrNotFound("structure «%q»", res)
 		}
 		for _, f := range fld {
 			if str.Field(f) == nil {
-				return false, nil, ErrNotFound("field «%q» in %q", f, str)
+				return false, nil, appdef.ErrNotFound("field «%q» in %q", f, str)
 			}
 		}
-	case OperationKind_Execute:
+	case appdef.OperationKind_Execute:
 		if app.Function(res) == nil {
-			return false, nil, ErrNotFound("function «%q»", res)
+			return false, nil, appdef.ErrNotFound("function «%q»", res)
 		}
 	default:
-		return false, nil, ErrUnsupported("operation %q", op)
+		return false, nil, appdef.ErrUnsupported("operation %q", op)
 	}
 
-	allowedFields := map[FieldName]any{}
+	allowedFields := map[appdef.FieldName]any{}
 
-	roles := QNamesFrom(prc...)
+	roles := appdef.QNamesFrom(prc...)
 	// TODO: expand roles with inherits roles (GRANT READER TO EXTREADER)
+
 	if len(roles) == 0 {
-		return false, nil, ErrMissed("participants")
+		return false, nil, appdef.ErrMissed("participants")
 	}
 	for _, r := range roles {
 		if app.Role(r) == nil {
-			return false, nil, ErrNotFound("role «%q»", r)
+			return false, nil, appdef.ErrNotFound("role «%q»", r)
 		}
 	}
 
 	result := false
-	app.ACL(func(rule IACLRule) bool {
+	app.ACL(func(rule appdef.IACLRule) bool {
 		if slices.Contains(rule.Ops(), op) {
-			if rule.Resources().On().Contains(res) { // no substitution like ANYQName, ANYTable ANYCRecord
+			if rule.Resources().On().Contains(res) {
 				if roles.Contains(rule.Principal().QName()) {
 					switch rule.Policy() {
-					case PolicyKind_Allow:
+					case appdef.PolicyKind_Allow:
 						result = true
 						if str != nil {
 							if len(rule.Resources().Fields()) > 0 {
@@ -67,7 +72,7 @@ func (app *appDef) IsOperationAllowed(op OperationKind, res QName, fld []FieldNa
 								}
 							}
 						}
-					case PolicyKind_Deny:
+					case appdef.PolicyKind_Deny:
 						if str != nil {
 							if len(rule.Resources().Fields()) > 0 {
 								// partially deny, only specified fields
@@ -102,7 +107,7 @@ func (app *appDef) IsOperationAllowed(op OperationKind, res QName, fld []FieldNa
 			}
 		}
 		if len(allowedFields) > 0 {
-			allowed := make([]FieldName, 0, len(allowedFields))
+			allowed := make([]appdef.FieldName, 0, len(allowedFields))
 			for _, fld := range str.Fields() {
 				f := fld.Name()
 				if _, ok := allowedFields[f]; ok {
