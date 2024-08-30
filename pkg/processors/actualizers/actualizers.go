@@ -22,8 +22,9 @@ type (
 	//	   + pipeline.IService
 	//	   + appparts.IActualizerFactory
 	actualizers struct {
-		cfg  BasicAsyncActualizerConfig
-		wait sync.WaitGroup
+		cfg      BasicAsyncActualizerConfig
+		wait     sync.WaitGroup
+		appParts appparts.IAppPartitions
 	}
 )
 
@@ -45,6 +46,7 @@ func (a *actualizers) NewAndRun(ctx context.Context, app appdef.AppQName, part i
 			AppQName:                   app,
 			Partition:                  part,
 		},
+		appParts: a.appParts,
 	}
 	act.Prepare()
 
@@ -67,7 +69,7 @@ func (a *actualizers) RunEx(_ context.Context, started func()) {
 }
 
 func (a *actualizers) SetAppPartitions(ap appparts.IAppPartitions) {
-	a.cfg.AppPartitions = ap
+	a.appParts = ap
 }
 
 func (a *actualizers) Stop() {

@@ -28,13 +28,12 @@ type LogErrorFunc func(args ...interface{})
 type BasicSchedulerConfig struct {
 	VvmName string
 
-	AppPartitions appparts.IAppPartitions
-	SecretReader  isecrets.ISecretReader
-	Tokens        itokens.ITokens
-	Metrics       imetrics.IMetrics
-	Broker        in10n.IN10nBroker
-	Federation    federation.IFederation
-	TimeFunc      TimeFunc
+	SecretReader isecrets.ISecretReader
+	Tokens       itokens.ITokens
+	Metrics      imetrics.IMetrics
+	Broker       in10n.IN10nBroker
+	Federation   federation.IFederation
+	TimeFunc     TimeFunc
 
 	Opts []state.StateOptFunc
 
