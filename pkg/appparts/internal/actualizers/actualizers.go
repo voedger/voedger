@@ -115,9 +115,9 @@ func (pa *PartitionActualizers) Enum() appdef.QNames {
 func (pa *PartitionActualizers) Wait() {
 	for {
 		pa.mx.RLock()
-		len := len(pa.rt)
+		cnt := len(pa.rt)
 		pa.mx.RUnlock()
-		if len == 0 {
+		if cnt == 0 {
 			break
 		}
 		time.Sleep(time.Nanosecond)
