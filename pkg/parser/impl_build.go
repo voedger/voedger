@@ -156,6 +156,10 @@ func (c *buildContext) jobs() error {
 				builder.States().Add(state.storageQName, state.entityQNames...)
 			}
 
+			for _, intent := range job.Intents {
+				builder.Intents().Add(intent.storageQName, intent.entityQNames...)
+			}
+
 			c.addComments(job, builder)
 			builder.SetName(job.GetName())
 			if job.Engine.WASM {
