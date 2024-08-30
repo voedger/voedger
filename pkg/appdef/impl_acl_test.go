@@ -197,6 +197,9 @@ func Test_AppDef_GrantAndRevokeErrors(t *testing.T) {
 			require.Panics(func() {
 				adb.Grant([]OperationKind{OperationKind_count}, []QName{docName}, nil, readerRoleName)
 			}, require.Is(ErrIncompatibleError), require.Has("[count]"))
+			require.Panics(func() {
+				adb.Revoke([]OperationKind{OperationKind_Inherits}, []QName{readerRoleName}, nil, readerRoleName)
+			}, require.Is(ErrUnsupportedError), require.Has("revoke"), require.Has("Inherits"))
 		})
 
 		t.Run("should be panic if operations on invalid resources", func(t *testing.T) {

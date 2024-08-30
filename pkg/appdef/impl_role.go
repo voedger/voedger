@@ -29,6 +29,17 @@ func (r role) ACL(cb func(IACLRule) bool) {
 	}
 }
 
+func (r *role) AncRoles() (roles []QName) {
+	for _, p := range r.aclRules {
+		if p.ops.Contains(OperationKind_Inherits) {
+			for _, n := range p.Resources().On() {
+				roles = append(roles, n)
+			}
+		}
+	}
+	return roles
+}
+
 func (r *role) appendACL(rule *aclRule) {
 	r.aclRules = append(r.aclRules, rule)
 	r.app.appendACL(rule)

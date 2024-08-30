@@ -54,6 +54,10 @@ func newACLRule(ops []OperationKind, policy PolicyKind, resources []QName, field
 		panic(err)
 	}
 
+	if opSet.Contains(OperationKind_Inherits) && (policy != PolicyKind_Allow) {
+		panic(ErrUnsupported("«%s» for «%s»", policy.ActionString(), OperationKind_Inherits.TrimString()))
+	}
+
 	res := principal.app.Type(names[0])
 	allOps := allACLOperationsOnType(res)
 	if !allOps.ContainsAll(opSet.AsArray()...) {

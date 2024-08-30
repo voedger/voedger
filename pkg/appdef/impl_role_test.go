@@ -81,7 +81,7 @@ func Test_AppDef_AddRole(t *testing.T) {
 
 	t.Run("should be ok to check roles", func(t *testing.T) {
 
-		checkPrivilege := func(p IACLRule, policy PolicyKind, kinds []OperationKind, resources []QName, fields []FieldName, to QName) {
+		checkACLRule := func(p IACLRule, policy PolicyKind, kinds []OperationKind, resources []QName, fields []FieldName, to QName) {
 			require.NotNil(p)
 			require.Equal(policy, p.Policy())
 			require.Equal(kinds, p.Ops())
@@ -97,17 +97,17 @@ func Test_AppDef_AddRole(t *testing.T) {
 				switch rolesCount {
 				case 1:
 					require.Equal(admRoleName, r.QName())
-					privilegesCount := 0
+					ruleCount := 0
 					r.ACL(func(p IACLRule) bool {
-						privilegesCount++
-						switch privilegesCount {
+						ruleCount++
+						switch ruleCount {
 						case 1:
-							checkPrivilege(p, PolicyKind_Allow,
+							checkACLRule(p, PolicyKind_Allow,
 								[]OperationKind{OperationKind_Insert, OperationKind_Update, OperationKind_Select, OperationKind_Execute},
 								[]QName{wsName}, nil,
 								admRoleName)
 						case 2:
-							checkPrivilege(p, PolicyKind_Deny,
+							checkACLRule(p, PolicyKind_Deny,
 								[]OperationKind{OperationKind_Execute},
 								[]QName{wsName}, nil,
 								admRoleName)
@@ -116,15 +116,15 @@ func Test_AppDef_AddRole(t *testing.T) {
 						}
 						return true
 					})
-					require.Equal(2, privilegesCount)
+					require.Equal(2, ruleCount)
 				case 2:
 					require.Equal(intruderRoleName, r.QName())
-					privilegesCount := 0
+					ruleCount := 0
 					r.ACL(func(p IACLRule) bool {
-						privilegesCount++
-						switch privilegesCount {
+						ruleCount++
+						switch ruleCount {
 						case 1:
-							checkPrivilege(p, PolicyKind_Deny,
+							checkACLRule(p, PolicyKind_Deny,
 								[]OperationKind{OperationKind_Insert, OperationKind_Update, OperationKind_Select, OperationKind_Execute},
 								[]QName{wsName}, nil,
 								intruderRoleName)
@@ -133,15 +133,15 @@ func Test_AppDef_AddRole(t *testing.T) {
 						}
 						return true
 					})
-					require.Equal(1, privilegesCount)
+					require.Equal(1, ruleCount)
 				case 3:
 					require.Equal(ownerRoleName, r.QName())
-					privilegesCount := 0
+					ruleCount := 0
 					r.ACL(func(p IACLRule) bool {
-						privilegesCount++
-						switch privilegesCount {
+						ruleCount++
+						switch ruleCount {
 						case 1:
-							checkPrivilege(p, PolicyKind_Allow,
+							checkACLRule(p, PolicyKind_Allow,
 								[]OperationKind{OperationKind_Insert, OperationKind_Update, OperationKind_Select, OperationKind_Execute},
 								[]QName{wsName}, nil,
 								ownerRoleName)
@@ -150,20 +150,20 @@ func Test_AppDef_AddRole(t *testing.T) {
 						}
 						return true
 					})
-					require.Equal(1, privilegesCount)
+					require.Equal(1, ruleCount)
 				case 4:
 					require.Equal(readerRoleName, r.QName())
-					privilegesCount := 0
+					ruleCount := 0
 					r.ACL(func(p IACLRule) bool {
-						privilegesCount++
-						switch privilegesCount {
+						ruleCount++
+						switch ruleCount {
 						case 1:
-							checkPrivilege(p, PolicyKind_Allow,
+							checkACLRule(p, PolicyKind_Allow,
 								[]OperationKind{OperationKind_Select},
 								[]QName{docName, viewName}, []FieldName{"field1"},
 								readerRoleName)
 						case 2:
-							checkPrivilege(p, PolicyKind_Allow,
+							checkACLRule(p, PolicyKind_Allow,
 								[]OperationKind{OperationKind_Execute},
 								[]QName{queryName}, nil,
 								readerRoleName)
@@ -172,15 +172,15 @@ func Test_AppDef_AddRole(t *testing.T) {
 						}
 						return true
 					})
-					require.Equal(2, privilegesCount)
+					require.Equal(2, ruleCount)
 				case 5:
 					require.Equal(workerRoleName, r.QName())
-					privilegesCount := 0
+					ruleCount := 0
 					r.ACL(func(p IACLRule) bool {
-						privilegesCount++
-						switch privilegesCount {
+						ruleCount++
+						switch ruleCount {
 						case 1:
-							checkPrivilege(p, PolicyKind_Allow,
+							checkACLRule(p, PolicyKind_Allow,
 								[]OperationKind{OperationKind_Inherits},
 								[]QName{readerRoleName, writerRoleName}, nil,
 								workerRoleName)
@@ -189,20 +189,20 @@ func Test_AppDef_AddRole(t *testing.T) {
 						}
 						return true
 					})
-					require.Equal(1, privilegesCount)
+					require.Equal(1, ruleCount)
 				case 6:
 					require.Equal(writerRoleName, r.QName())
-					privilegesCount := 0
+					ruleCount := 0
 					r.ACL(func(p IACLRule) bool {
-						privilegesCount++
-						switch privilegesCount {
+						ruleCount++
+						switch ruleCount {
 						case 1:
-							checkPrivilege(p, PolicyKind_Allow,
+							checkACLRule(p, PolicyKind_Allow,
 								[]OperationKind{OperationKind_Insert, OperationKind_Update, OperationKind_Select},
 								[]QName{docName, viewName}, nil,
 								writerRoleName)
 						case 2:
-							checkPrivilege(p, PolicyKind_Allow,
+							checkACLRule(p, PolicyKind_Allow,
 								[]OperationKind{OperationKind_Execute},
 								[]QName{cmdName, queryName}, nil,
 								writerRoleName)
@@ -211,7 +211,7 @@ func Test_AppDef_AddRole(t *testing.T) {
 						}
 						return true
 					})
-					require.Equal(2, privilegesCount)
+					require.Equal(2, ruleCount)
 				}
 			})
 			require.Equal(6, rolesCount)
@@ -225,6 +225,11 @@ func Test_AppDef_AddRole(t *testing.T) {
 			return false
 		})
 		require.Equal(1, cnt)
+	})
+
+	t.Run("role.Anc() should return inheritance", func(t *testing.T) {
+		roles := app.Role(workerRoleName).AncRoles()
+		require.Equal([]QName{readerRoleName, writerRoleName}, roles)
 	})
 }
 

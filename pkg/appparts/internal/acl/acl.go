@@ -11,6 +11,19 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 )
 
+// Returns recursive list of role ancestors for specified role.
+//
+// If role has no ancestors, then result contains only specified role.
+// Result is alphabetically sorted list of role names.
+func RecursiveRoleAncestors(role appdef.IRole) (roles appdef.QNames) {
+	roles.Add(role.QName())
+	app := role.App()
+	for _, r := range role.AncRoles() {
+		roles.Add(RecursiveRoleAncestors(app.Role(r))...)
+	}
+	return roles
+}
+
 // Returns true if specified operation is allowed on specified resource for any of specified roles.
 //
 // If resource is any structure and operation is UPDATE or SELECT, then:
@@ -49,15 +62,16 @@ func IsOperationAllowed(app appdef.IAppDef, op appdef.OperationKind, res appdef.
 	allowedFields := map[appdef.FieldName]any{}
 
 	roles := appdef.QNamesFrom(prc...)
-	// TODO: expand roles with inherits roles (GRANT READER TO EXTREADER)
 
 	if len(roles) == 0 {
 		return false, nil, appdef.ErrMissed("participants")
 	}
 	for _, r := range roles {
-		if app.Role(r) == nil {
+		role := app.Role(r)
+		if role == nil {
 			return false, nil, appdef.ErrNotFound("role «%q»", r)
 		}
+		roles.Add(RecursiveRoleAncestors(role)...)
 	}
 
 	result := false
