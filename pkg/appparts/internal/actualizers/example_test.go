@@ -8,7 +8,6 @@ package actualizers_test
 import (
 	"context"
 	"fmt"
-	"sync"
 
 	"github.com/stretchr/testify/mock"
 	"github.com/voedger/voedger/pkg/appdef"
@@ -18,21 +17,12 @@ import (
 
 type mockActualizerRunner struct {
 	mock.Mock
-	wg sync.WaitGroup
 }
 
 func (t *mockActualizerRunner) Run(ctx context.Context, app appdef.AppQName, partID istructs.PartitionID, name appdef.QName) {
-	t.wg.Add(1)
-	defer t.wg.Done()
-
 	t.Called(ctx, app, partID, name)
 
 	<-ctx.Done()
-}
-
-func (t *mockActualizerRunner) wait() {
-	// the context should be stopped. Here we just wait for actualizers to finish
-	t.wg.Wait()
 }
 
 func Example() {
@@ -85,9 +75,7 @@ func Example() {
 	{
 		// stop vvm from context, wait actualizers finished
 		stop()
-
-		runner.wait()
-
+		actualizers.Wait()
 		fmt.Println(actualizers.Enum())
 	}
 
