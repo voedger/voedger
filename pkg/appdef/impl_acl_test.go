@@ -64,14 +64,16 @@ func Test_AppDef_GrantAndRevoke(t *testing.T) {
 		adb.GrantAll([]QName{readerRoleName, writerRoleName}, workerRoleName, "grant reader and writer roles to worker")
 
 		_ = adb.AddRole(ownerRoleName)
-		adb.GrantAll([]QName{wsName}, ownerRoleName, "grant all workspace operations to owner")
+		adb.GrantAll([]QName{docName, viewName}, ownerRoleName)
+		adb.GrantAll([]QName{cmdName, queryName}, ownerRoleName)
 
 		_ = adb.AddRole(admRoleName)
-		adb.GrantAll([]QName{wsName}, admRoleName, "grant all workspace operations to admin")
-		adb.Revoke([]OperationKind{OperationKind_Execute}, []QName{wsName}, nil, admRoleName, "revoke execute on workspace from admin")
+		adb.GrantAll([]QName{ownerRoleName}, admRoleName)
+		adb.Revoke([]OperationKind{OperationKind_Execute}, []QName{cmdName, queryName}, nil, admRoleName, "revoke execute on workspace from admin")
 
 		_ = adb.AddRole(intruderRoleName)
-		adb.RevokeAll([]QName{wsName}, intruderRoleName, "revoke all workspace operations from intruder")
+		adb.RevokeAll([]QName{docName, viewName}, intruderRoleName)
+		adb.RevokeAll([]QName{cmdName, queryName}, intruderRoleName)
 
 		var err error
 		app, err = adb.Build()
@@ -81,71 +83,45 @@ func Test_AppDef_GrantAndRevoke(t *testing.T) {
 
 	t.Run("should be ok to check ACL", func(t *testing.T) {
 
-		checkACLRule := func(acl IACLRule, policy PolicyKind, kinds []OperationKind, resources []QName, fields []FieldName, principal QName) {
-			require.NotNil(acl)
-			require.Equal(policy, acl.Policy())
-			require.Equal(kinds, acl.Ops())
-			require.EqualValues(resources, acl.Resources().On())
-			require.Equal(fields, acl.Resources().Fields())
-			require.Equal(principal, acl.Principal().QName())
-		}
-
 		t.Run("should be ok to enum all ACL rules", func(t *testing.T) {
+			tt := []struct {
+				policy    PolicyKind
+				ops       []OperationKind
+				res       []QName
+				fields    []FieldName
+				principal QName
+			}{
+				// reader role
+				{PolicyKind_Allow, []OperationKind{OperationKind_Select}, []QName{docName, viewName}, []FieldName{"field1"}, readerRoleName},
+				{PolicyKind_Allow, []OperationKind{OperationKind_Execute}, []QName{queryName}, nil, readerRoleName},
+				// writer role
+				{PolicyKind_Allow, []OperationKind{OperationKind_Insert, OperationKind_Update, OperationKind_Select}, []QName{docName, viewName}, nil, writerRoleName},
+				{PolicyKind_Allow, []OperationKind{OperationKind_Execute}, []QName{cmdName, queryName}, nil, writerRoleName},
+				// worker role
+				{PolicyKind_Allow, []OperationKind{OperationKind_Inherits}, []QName{readerRoleName, writerRoleName}, nil, workerRoleName},
+				// owner role
+				{PolicyKind_Allow, []OperationKind{OperationKind_Insert, OperationKind_Update, OperationKind_Select}, []QName{docName, viewName}, nil, ownerRoleName},
+				{PolicyKind_Allow, []OperationKind{OperationKind_Execute}, []QName{cmdName, queryName}, nil, ownerRoleName},
+				// admin role
+				{PolicyKind_Allow, []OperationKind{OperationKind_Inherits}, []QName{ownerRoleName}, nil, admRoleName},
+				{PolicyKind_Deny, []OperationKind{OperationKind_Execute}, []QName{cmdName, queryName}, nil, admRoleName},
+				// intruder role
+				{PolicyKind_Deny, []OperationKind{OperationKind_Insert, OperationKind_Update, OperationKind_Select}, []QName{docName, viewName}, nil, intruderRoleName},
+				{PolicyKind_Deny, []OperationKind{OperationKind_Execute}, []QName{cmdName, queryName}, nil, intruderRoleName},
+			}
+
 			cnt := 0
 			app.ACL(func(p IACLRule) bool {
+				require.Less(cnt, len(tt))
+				require.Equal(tt[cnt].policy, p.Policy())
+				require.Equal(tt[cnt].ops, p.Ops())
+				require.EqualValues(tt[cnt].res, p.Resources().On())
+				require.Equal(tt[cnt].fields, p.Resources().Fields())
+				require.Equal(tt[cnt].principal, p.Principal().QName())
 				cnt++
-				switch cnt {
-				case 1:
-					checkACLRule(p, PolicyKind_Allow,
-						[]OperationKind{OperationKind_Select},
-						[]QName{docName, viewName}, []FieldName{"field1"},
-						readerRoleName)
-				case 2:
-					checkACLRule(p, PolicyKind_Allow,
-						[]OperationKind{OperationKind_Execute},
-						[]QName{queryName}, nil,
-						readerRoleName)
-				case 3:
-					checkACLRule(p, PolicyKind_Allow,
-						[]OperationKind{OperationKind_Insert, OperationKind_Update, OperationKind_Select},
-						[]QName{docName, viewName}, nil,
-						writerRoleName)
-				case 4:
-					checkACLRule(p, PolicyKind_Allow,
-						[]OperationKind{OperationKind_Execute},
-						[]QName{cmdName, queryName}, nil,
-						writerRoleName)
-				case 5:
-					checkACLRule(p, PolicyKind_Allow,
-						[]OperationKind{OperationKind_Inherits},
-						[]QName{readerRoleName, writerRoleName}, nil,
-						workerRoleName)
-				case 6:
-					checkACLRule(p, PolicyKind_Allow,
-						[]OperationKind{OperationKind_Insert, OperationKind_Update, OperationKind_Select, OperationKind_Execute},
-						[]QName{wsName}, nil,
-						ownerRoleName)
-				case 7:
-					checkACLRule(p, PolicyKind_Allow,
-						[]OperationKind{OperationKind_Insert, OperationKind_Update, OperationKind_Select, OperationKind_Execute},
-						[]QName{wsName}, nil,
-						admRoleName)
-				case 8:
-					checkACLRule(p, PolicyKind_Deny,
-						[]OperationKind{OperationKind_Execute},
-						[]QName{wsName}, nil,
-						admRoleName)
-				case 9:
-					checkACLRule(p, PolicyKind_Deny,
-						[]OperationKind{OperationKind_Insert, OperationKind_Update, OperationKind_Select, OperationKind_Execute},
-						[]QName{wsName}, nil,
-						intruderRoleName)
-				default:
-					require.Fail("unexpected ACL Rule", "ACL rule: %v", p)
-				}
 				return true
 			})
-			require.Equal(9, cnt)
+			require.Equal(11, cnt)
 		})
 	})
 }
@@ -256,7 +232,7 @@ func Test_AppDef_GrantWithFields(t *testing.T) {
 
 		_ = adb.AddRole(readerRoleName)
 		adb.Grant([]OperationKind{OperationKind_Select}, []QName{docName}, nil, readerRoleName, "grant select any field from doc to reader")
-		adb.Grant([]OperationKind{OperationKind_Select}, []QName{QNameAnyStructure}, []FieldName{"field1"}, readerRoleName, "grant select field1 from any to reader")
+		adb.Grant([]OperationKind{OperationKind_Select}, []QName{docName}, []FieldName{"field1"}, readerRoleName, "grant select field1 from doc to reader")
 
 		var err error
 		app, err = adb.Build()
@@ -287,7 +263,7 @@ func Test_AppDef_GrantWithFields(t *testing.T) {
 			case 2:
 				checkRule(p, PolicyKind_Allow,
 					[]OperationKind{OperationKind_Select},
-					[]QName{QNameAnyStructure}, []FieldName{"field1"},
+					[]QName{docName}, []FieldName{"field1"},
 					readerRoleName)
 			default:
 				require.Fail("unexpected ACL rule", "ACL rule: %v", p)

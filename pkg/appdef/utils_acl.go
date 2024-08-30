@@ -35,18 +35,6 @@ func (p PolicyKind) TrimString() string {
 // If type can not to be used as resource for ACL rule then returns empty slice.
 func allACLOperationsOnType(t IType) (ops set.Set[OperationKind]) {
 	switch t.Kind() {
-	case TypeKind_Any:
-		switch t.QName() {
-		case QNameANY:
-			ops = set.From(OperationKind_Insert, OperationKind_Update, OperationKind_Select, OperationKind_Execute, OperationKind_Inherits)
-		case QNameAnyStructure, QNameAnyRecord,
-			QNameAnyGDoc, QNameAnyCDoc, QNameAnyWDoc,
-			QNameAnySingleton,
-			QNameAnyView:
-			ops = set.From(OperationKind_Insert, OperationKind_Update, OperationKind_Select)
-		case QNameAnyFunction, QNameAnyCommand, QNameAnyQuery:
-			ops = set.From(OperationKind_Execute)
-		}
 	case TypeKind_GRecord, TypeKind_GDoc,
 		TypeKind_CRecord, TypeKind_CDoc,
 		TypeKind_WRecord, TypeKind_WDoc,
@@ -56,8 +44,6 @@ func allACLOperationsOnType(t IType) (ops set.Set[OperationKind]) {
 		ops = set.From(OperationKind_Insert, OperationKind_Update, OperationKind_Select)
 	case TypeKind_Command, TypeKind_Query:
 		ops = set.From(OperationKind_Execute)
-	case TypeKind_Workspace:
-		ops = set.From(OperationKind_Insert, OperationKind_Update, OperationKind_Select, OperationKind_Execute)
 	case TypeKind_Role:
 		ops = set.From(OperationKind_Inherits)
 	}
@@ -82,9 +68,6 @@ func validateFieldNamesByTypes(tt IWithTypes, types []QName, fields []FieldName)
 	for _, n := range names {
 		t := tt.Type(n)
 		switch t.Kind() {
-		case TypeKind_Any:
-			// any subst allow to use any fields
-			return nil
 		case TypeKind_GRecord, TypeKind_GDoc,
 			TypeKind_CRecord, TypeKind_CDoc,
 			TypeKind_WRecord, TypeKind_WDoc,
@@ -116,7 +99,7 @@ func validateFieldNamesByTypes(tt IWithTypes, types []QName, fields []FieldName)
 //   - If names contains names of mixed types then returns error.
 func validateACLResourceNames(tt IWithTypes, names ...QName) (QNames, error) {
 	if len(names) == 0 {
-		return nil, ErrMissed("privilege object names")
+		return nil, ErrMissed("resource names")
 	}
 
 	nn := QNamesFrom(names...)
@@ -129,20 +112,6 @@ func validateACLResourceNames(tt IWithTypes, names ...QName) (QNames, error) {
 		}
 		k := onType
 		switch t.Kind() {
-		case TypeKind_Any:
-			switch n {
-			case QNameANY:
-				k = TypeKind_Any
-			case QNameAnyStructure, QNameAnyRecord,
-				QNameAnyGDoc, QNameAnyCDoc, QNameAnyWDoc,
-				QNameAnySingleton,
-				QNameAnyView:
-				k = TypeKind_GRecord
-			case QNameAnyFunction, QNameAnyCommand, QNameAnyQuery:
-				k = TypeKind_Command
-			default:
-				return nil, ErrIncompatible("substitution «%v» can not be used in ACL", t)
-			}
 		case TypeKind_GRecord, TypeKind_GDoc,
 			TypeKind_CRecord, TypeKind_CDoc,
 			TypeKind_WRecord, TypeKind_WDoc,
@@ -152,12 +121,10 @@ func validateACLResourceNames(tt IWithTypes, names ...QName) (QNames, error) {
 			k = TypeKind_GRecord
 		case TypeKind_Command, TypeKind_Query:
 			k = TypeKind_Command
-		case TypeKind_Workspace:
-			k = TypeKind_Workspace
 		case TypeKind_Role:
 			k = TypeKind_Role
 		default:
-			return nil, ErrIncompatible("type «%v» can not to be restricted by ACL", t)
+			return nil, ErrIncompatible("type «%v» can not to be used in ACL", t)
 		}
 
 		if onType != k {

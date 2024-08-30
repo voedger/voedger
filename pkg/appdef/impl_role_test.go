@@ -64,14 +64,16 @@ func Test_AppDef_AddRole(t *testing.T) {
 		worker.GrantAll([]QName{readerRoleName, writerRoleName}, "grant reader and writer roles to worker")
 
 		owner := adb.AddRole(ownerRoleName)
-		owner.GrantAll([]QName{wsName}, "grant all workspace privileges to owner")
+		owner.GrantAll([]QName{docName, viewName}, "grant all on doc & view to owner")
+		owner.GrantAll([]QName{cmdName, queryName}, "grant execute all functions to owner")
 
 		adm := adb.AddRole(admRoleName)
-		adm.GrantAll([]QName{wsName}, "grant all workspace privileges to admin")
-		adm.Revoke([]OperationKind{OperationKind_Execute}, []QName{wsName}, nil, "revoke execute on workspace from admin")
+		adm.GrantAll([]QName{ownerRoleName})
+		adm.Revoke([]OperationKind{OperationKind_Execute}, []QName{cmdName, queryName}, nil, "revoke execute from admin")
 
 		intruder := adb.AddRole(intruderRoleName)
-		intruder.RevokeAll([]QName{wsName}, "revoke all workspace privileges from intruder")
+		intruder.RevokeAll([]QName{docName, viewName}, "revoke all from intruder")
+		intruder.RevokeAll([]QName{cmdName, queryName}, "revoke all from intruder")
 
 		var err error
 		app, err = adb.Build()
@@ -103,16 +105,16 @@ func Test_AppDef_AddRole(t *testing.T) {
 						switch ruleCount {
 						case 1:
 							checkACLRule(p, PolicyKind_Allow,
-								[]OperationKind{OperationKind_Insert, OperationKind_Update, OperationKind_Select, OperationKind_Execute},
-								[]QName{wsName}, nil,
+								[]OperationKind{OperationKind_Inherits},
+								[]QName{ownerRoleName}, nil,
 								admRoleName)
 						case 2:
 							checkACLRule(p, PolicyKind_Deny,
 								[]OperationKind{OperationKind_Execute},
-								[]QName{wsName}, nil,
+								[]QName{cmdName, queryName}, nil,
 								admRoleName)
 						default:
-							require.Fail("unexpected ACL rule", "ACL rule: %v", p)
+							require.Fail("unexpected ACL rule", "%v ACL rule: %v", r, p)
 						}
 						return true
 					})
@@ -125,15 +127,20 @@ func Test_AppDef_AddRole(t *testing.T) {
 						switch ruleCount {
 						case 1:
 							checkACLRule(p, PolicyKind_Deny,
-								[]OperationKind{OperationKind_Insert, OperationKind_Update, OperationKind_Select, OperationKind_Execute},
-								[]QName{wsName}, nil,
+								[]OperationKind{OperationKind_Insert, OperationKind_Update, OperationKind_Select},
+								[]QName{docName, viewName}, nil,
+								intruderRoleName)
+						case 2:
+							checkACLRule(p, PolicyKind_Deny,
+								[]OperationKind{OperationKind_Execute},
+								[]QName{cmdName, queryName}, nil,
 								intruderRoleName)
 						default:
-							require.Fail("unexpected ACL rule", "ACL rule: %v", p)
+							require.Fail("unexpected ACL rule", "%v ACL rule: %v", r, p)
 						}
 						return true
 					})
-					require.Equal(1, ruleCount)
+					require.Equal(2, ruleCount)
 				case 3:
 					require.Equal(ownerRoleName, r.QName())
 					ruleCount := 0
@@ -142,15 +149,20 @@ func Test_AppDef_AddRole(t *testing.T) {
 						switch ruleCount {
 						case 1:
 							checkACLRule(p, PolicyKind_Allow,
-								[]OperationKind{OperationKind_Insert, OperationKind_Update, OperationKind_Select, OperationKind_Execute},
-								[]QName{wsName}, nil,
+								[]OperationKind{OperationKind_Insert, OperationKind_Update, OperationKind_Select},
+								[]QName{docName, viewName}, nil,
+								ownerRoleName)
+						case 2:
+							checkACLRule(p, PolicyKind_Allow,
+								[]OperationKind{OperationKind_Execute},
+								[]QName{cmdName, queryName}, nil,
 								ownerRoleName)
 						default:
-							require.Fail("unexpected ACL rule", "ACL rule: %v", p)
+							require.Fail("unexpected ACL rule", "%v ACL rule: %v", r, p)
 						}
 						return true
 					})
-					require.Equal(1, ruleCount)
+					require.Equal(2, ruleCount)
 				case 4:
 					require.Equal(readerRoleName, r.QName())
 					ruleCount := 0
@@ -168,7 +180,7 @@ func Test_AppDef_AddRole(t *testing.T) {
 								[]QName{queryName}, nil,
 								readerRoleName)
 						default:
-							require.Fail("unexpected ACL rule", "ACL rule: %v", p)
+							require.Fail("unexpected ACL rule", "%v ACL rule: %v", r, p)
 						}
 						return true
 					})
@@ -185,7 +197,7 @@ func Test_AppDef_AddRole(t *testing.T) {
 								[]QName{readerRoleName, writerRoleName}, nil,
 								workerRoleName)
 						default:
-							require.Fail("unexpected ACL rule", "ACL rule: %v", p)
+							require.Fail("unexpected ACL rule", "%v ACL rule: %v", r, p)
 						}
 						return true
 					})
@@ -207,7 +219,7 @@ func Test_AppDef_AddRole(t *testing.T) {
 								[]QName{cmdName, queryName}, nil,
 								writerRoleName)
 						default:
-							require.Fail("unexpected ACL rule", "ACL rule: %v", p)
+							require.Fail("unexpected ACL rule", "%v ACL rule: %v", r, p)
 						}
 						return true
 					})
@@ -220,7 +232,7 @@ func Test_AppDef_AddRole(t *testing.T) {
 
 	t.Run("range by role ACL rules should be breakable", func(t *testing.T) {
 		role, cnt := app.Role(admRoleName), 0
-		role.ACL(func(p IACLRule) bool {
+		role.ACL(func(IACLRule) bool {
 			cnt++
 			return false
 		})

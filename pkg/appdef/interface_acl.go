@@ -14,26 +14,22 @@ const (
 	OperationKind_null OperationKind = iota
 
 	// # Insert records or view records.
-	// 	- Operation applicable on records, view records or workspaces.
-	// 	- Then applied to workspaces, it means insert on all tables and views of the workspace.
+	// 	- Operation applicable on records, view records.
 	// 	- Fields are not applicable.
 	OperationKind_Insert
 
 	// # Update records or view records.
-	// 	- Operation applicable on records, view records or workspaces.
-	// 	- Then applied to workspaces, it means update on all tables and views of the workspace.
+	// 	- Operation applicable on records, view records.
 	// 	- Fields are applicable and specify fields of records or view records that can be updated.
 	OperationKind_Update
 
 	// # Select records or view records.
-	// 	- Operation applicable on records, view records or workspaces.
-	// 	- Then applied to workspaces, it means select on all tables and views of the workspace.
+	// 	- Operation applicable on records, view records.
 	// 	- Fields are applicable and specify fields of records or view records that can be selected.
 	OperationKind_Select
 
 	// # Execute functions.
-	// 	- Operation applicable on commands, queries or workspaces.
-	// 	- Then applied to workspaces, it means execute on all queries and commands of the workspace.
+	// 	- Operation applicable on commands, queries.
 	// 	- Fields are not applicable.
 	OperationKind_Execute
 
@@ -64,17 +60,15 @@ type IResourcePattern interface {
 	// Returns resource names that match the pattern.
 	//
 	// # insert, update and select:
-	//	- records or view records names or
-	//	- workspaces names.
+	//	- records or view records names
 	//
 	// # execute:
-	//	- commands & queries names or
-	//	- workspaces names.
+	//	- commands & queries names
 	//
 	// # inherits:
 	//	- roles names.
 	//
-	// Resource names can include `QNameANY` or `QNameAny×××` patterns.
+	// `QNameANY` or `QNameAny×××` patterns are not allowed in resource names
 	On() QNames
 
 	// Returns fields (of records or views) then update or select operation is described.
@@ -121,15 +115,10 @@ type IACLBuilder interface {
 	Grant(ops []OperationKind, resources []QName, fields []FieldName, toRole QName, comment ...string) IACLBuilder
 
 	// Grants all available operations on specified resources to specified role.
-	// Resource names can include `QNameANY` or `QNameAny×××` patterns.
 	//
 	// If the resources are records or view records, then insert, update, and select are granted.
 	//
 	// If the resources are commands or queries, their execution is granted.
-	//
-	// If the resources are workspaces, then:
-	//	- insert, update and select records and view records of these workspaces are granted,
-	//	- execution of commands & queries from these workspaces is granted.
 	//
 	// If the resources are roles, then all operations from these roles are granted to specified role.
 	//
@@ -137,8 +126,12 @@ type IACLBuilder interface {
 	GrantAll(resources []QName, toRole QName, comment ...string) IACLBuilder
 
 	// Revokes specified operations on specified resources from specified role.
+	//
+	// Revoke inherited roles is not supported
 	Revoke(ops []OperationKind, resources []QName, fields []FieldName, fromRole QName, comment ...string) IACLBuilder
 
 	// Remove all available operations on specified resources from specified role.
+	//
+	// Revoke inherited roles is not supported
 	RevokeAll(resources []QName, fromRole QName, comment ...string) IACLBuilder
 }

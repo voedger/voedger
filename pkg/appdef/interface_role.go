@@ -37,10 +37,6 @@ type IRoleBuilder interface {
 	//
 	// If the resources are commands or queries, their execution is granted.
 	//
-	// If the resources are workspaces, then:
-	//	- insert, update and select records and view records of these workspaces are granted,
-	//	- execution of commands & queries from these workspaces is granted.
-	//
 	// If the resources are roles, then all operations from these roles are granted.
 	GrantAll(resources []QName, comment ...string) IRoleBuilder
 

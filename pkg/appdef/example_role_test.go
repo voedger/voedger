@@ -38,13 +38,13 @@ func ExampleIAppDefBuilder_AddRole() {
 		reader.Grant([]appdef.OperationKind{appdef.OperationKind_Select}, []appdef.QName{docName}, []appdef.FieldName{"field1"}, "grant select on doc.field1")
 
 		writer := adb.AddRole(writerRoleName)
-		writer.GrantAll([]appdef.QName{wsName}, "grant all on test.ws")
+		writer.GrantAll([]appdef.QName{docName}, "grant all on test.doc")
 
 		adm := adb.AddRole(admRoleName)
 		adm.GrantAll([]appdef.QName{readerRoleName, writerRoleName}, "grant reader and writer roles to adm")
 
 		intruder := adb.AddRole(intruderRoleName)
-		intruder.RevokeAll([]appdef.QName{wsName}, "revoke all on test.ws")
+		intruder.RevokeAll([]appdef.QName{docName}, "revoke all on test.doc")
 
 		app = adb.MustBuild()
 	}
@@ -87,9 +87,9 @@ func ExampleIAppDefBuilder_AddRole() {
 	// Role «test.readerRole» :
 	// - grant [Select] on [test.doc]([field1]) to Role «test.readerRole»
 	// Role «test.writerRole» :
-	// - grant [Insert Update Select Execute] on [test.ws] to Role «test.writerRole»
+	// - grant [Insert Update Select] on [test.doc] to Role «test.writerRole»
 	// Role «test.admRole» :
 	// - grant [Inherits] on [test.readerRole test.writerRole] to Role «test.admRole»
 	// Role «test.intruderRole» :
-	// - revoke [Insert Update Select Execute] on [test.ws] from Role «test.intruderRole»
+	// - revoke [Insert Update Select] on [test.doc] from Role «test.intruderRole»
 }

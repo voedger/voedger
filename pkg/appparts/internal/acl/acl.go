@@ -33,7 +33,7 @@ func RecursiveRoleAncestors(role appdef.IRole) (roles appdef.QNames) {
 // else fields list is ignored and nil allowedFields is returned.
 //
 // If some error in arguments, (resource or role not found, operation is not applicable to resource, etc…) then error is returned.
-func IsOperationAllowed(app appdef.IAppDef, op appdef.OperationKind, res appdef.QName, fld []appdef.FieldName, prc []appdef.QName) (bool, []appdef.FieldName, error) {
+func IsOperationAllowed(app appdef.IAppDef, op appdef.OperationKind, res appdef.QName, fld []appdef.FieldName, rol []appdef.QName) (bool, []appdef.FieldName, error) {
 
 	var str appdef.IStructure
 	switch op {
@@ -61,7 +61,7 @@ func IsOperationAllowed(app appdef.IAppDef, op appdef.OperationKind, res appdef.
 
 	allowedFields := map[appdef.FieldName]any{}
 
-	roles := appdef.QNamesFrom(prc...)
+	roles := appdef.QNamesFrom(rol...)
 
 	if len(roles) == 0 {
 		return false, nil, appdef.ErrMissed("participants")
