@@ -8,7 +8,6 @@ package schedulers_test
 import (
 	"context"
 	"fmt"
-	"sync"
 
 	"github.com/stretchr/testify/mock"
 	"github.com/voedger/voedger/pkg/appdef"
@@ -18,21 +17,13 @@ import (
 
 type mockSchedulerRunner struct {
 	mock.Mock
-	wg sync.WaitGroup
 }
 
 func (t *mockSchedulerRunner) Run(ctx context.Context, app appdef.AppQName, partID istructs.PartitionID, wsIdx int, wsID istructs.WSID, job appdef.QName) {
-	t.wg.Add(1)
-	defer t.wg.Done()
 
 	t.Called(ctx, app, partID, wsIdx, wsID, job)
 
 	<-ctx.Done()
-}
-
-func (t *mockSchedulerRunner) wait() {
-	// the context should be stopped. Here we just wait for scheduler to finish
-	t.wg.Wait()
 }
 
 func Example() {
