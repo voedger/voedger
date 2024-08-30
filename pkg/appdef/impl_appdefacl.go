@@ -36,6 +36,7 @@ func (app *appDef) IsOperationAllowed(op OperationKind, res QName, fld []FieldNa
 	allowedFields := map[FieldName]any{}
 
 	roles := QNamesFrom(prc...)
+	// TODO: expand roles with inherits roles (GRANT READER TO EXTREADER)
 	if len(roles) == 0 {
 		return false, nil, ErrMissed("participants")
 	}
@@ -48,7 +49,7 @@ func (app *appDef) IsOperationAllowed(op OperationKind, res QName, fld []FieldNa
 	result := false
 	app.ACL(func(rule IACLRule) bool {
 		if slices.Contains(rule.Ops(), op) {
-			if rule.Resources().On().Contains(res) {
+			if rule.Resources().On().Contains(res) { // no substitution like ANYQName, ANYTable ANYCRecord
 				if roles.Contains(rule.Principal().QName()) {
 					switch rule.Policy() {
 					case PolicyKind_Allow:
