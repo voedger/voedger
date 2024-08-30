@@ -13,6 +13,8 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
+// actually defines resources that are shared between apps
+// was: sys package is compiled per each app, now: sys package is compiled once and used in all apps through IStatelessResources
 type IStatelessResources interface {
 	Commands(func(path string, cmd istructs.ICommandFunction))
 	Queries(func(path string, qry istructs.IQueryFunction))
