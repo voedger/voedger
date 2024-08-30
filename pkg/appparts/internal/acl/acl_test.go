@@ -424,38 +424,17 @@ func TestRecursiveRoleAncestors(t *testing.T) {
 
 	t.Run("test RecursiveRoleAncestors", func(t *testing.T) {
 		var tests = []struct {
-			name   string
 			role   appdef.QName
 			result []appdef.QName
 		}{
-			{
-				name:   "reader",
-				role:   reader,
-				result: []appdef.QName{reader},
-			},
-			{
-				name:   "writer",
-				role:   writer,
-				result: []appdef.QName{writer},
-			},
-			{
-				name:   "worker",
-				role:   worker,
-				result: []appdef.QName{worker, reader, writer},
-			},
-			{
-				name:   "owner",
-				role:   owner,
-				result: []appdef.QName{owner, worker, reader, writer},
-			},
-			{
-				name:   "admin",
-				role:   admin,
-				result: []appdef.QName{admin, owner, worker, reader, writer},
-			},
+			{reader, []appdef.QName{reader}},
+			{writer, []appdef.QName{writer}},
+			{worker, []appdef.QName{worker, reader, writer}},
+			{owner, []appdef.QName{owner, worker, reader, writer}},
+			{admin, []appdef.QName{admin, owner, worker, reader, writer}},
 		}
 		for _, tt := range tests {
-			t.Run(tt.name, func(t *testing.T) {
+			t.Run(tt.role.String(), func(t *testing.T) {
 				roles := RecursiveRoleAncestors(app.Role(tt.role))
 				require.ElementsMatch(tt.result, roles)
 			})
