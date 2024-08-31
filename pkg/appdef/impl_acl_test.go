@@ -83,7 +83,7 @@ func Test_AppDef_GrantAndRevoke(t *testing.T) {
 	})
 
 	t.Run("should be ok to enum all ACL rules", func(t *testing.T) {
-		tt := []struct {
+		wantACL := []struct {
 			policy    PolicyKind
 			ops       []OperationKind
 			res       []QName
@@ -109,20 +109,20 @@ func Test_AppDef_GrantAndRevoke(t *testing.T) {
 			{PolicyKind_Deny, []OperationKind{OperationKind_Execute}, []QName{cmdName, queryName}, nil, intruderRoleName},
 		}
 
-		cnt := 0
+		aclCount := 0
 		app.ACL(func(p IACLRule) bool {
-			require.Less(cnt, len(tt))
-			t.Run(fmt.Sprintf("ACL[%d]", cnt), func(t *testing.T) {
-				require.Equal(tt[cnt].policy, p.Policy())
-				require.Equal(tt[cnt].ops, p.Ops())
-				require.EqualValues(tt[cnt].res, p.Resources().On())
-				require.Equal(tt[cnt].fields, p.Resources().Fields())
-				require.Equal(tt[cnt].principal, p.Principal().QName())
+			require.Less(aclCount, len(wantACL))
+			t.Run(fmt.Sprintf("ACL[%d]", aclCount), func(t *testing.T) {
+				require.Equal(wantACL[aclCount].policy, p.Policy())
+				require.Equal(wantACL[aclCount].ops, p.Ops())
+				require.EqualValues(wantACL[aclCount].res, p.Resources().On())
+				require.Equal(wantACL[aclCount].fields, p.Resources().Fields())
+				require.Equal(wantACL[aclCount].principal, p.Principal().QName())
 			})
-			cnt++
+			aclCount++
 			return true
 		})
-		require.Equal(len(tt), cnt)
+		require.Len(wantACL, aclCount)
 	})
 }
 
@@ -241,7 +241,7 @@ func Test_AppDef_GrantWithFields(t *testing.T) {
 	})
 
 	t.Run("should be ok to check ACL", func(t *testing.T) {
-		tt := []struct {
+		wantACL := []struct {
 			policy    PolicyKind
 			ops       []OperationKind
 			res       []QName
@@ -252,20 +252,20 @@ func Test_AppDef_GrantWithFields(t *testing.T) {
 			{PolicyKind_Allow, []OperationKind{OperationKind_Select}, []QName{docName}, []FieldName{"field1"}, readerRoleName},
 		}
 
-		cnt := 0
+		aclCount := 0
 		app.ACL(func(p IACLRule) bool {
-			require.Less(cnt, len(tt))
-			t.Run(fmt.Sprintf("ACL[%d]", cnt), func(t *testing.T) {
-				require.Equal(tt[cnt].policy, p.Policy())
-				require.Equal(tt[cnt].ops, p.Ops())
-				require.EqualValues(tt[cnt].res, p.Resources().On())
-				require.Equal(tt[cnt].fields, p.Resources().Fields())
-				require.Equal(tt[cnt].principal, p.Principal().QName())
+			require.Less(aclCount, len(wantACL))
+			t.Run(fmt.Sprintf("ACL[%d]", aclCount), func(t *testing.T) {
+				require.Equal(wantACL[aclCount].policy, p.Policy())
+				require.Equal(wantACL[aclCount].ops, p.Ops())
+				require.EqualValues(wantACL[aclCount].res, p.Resources().On())
+				require.Equal(wantACL[aclCount].fields, p.Resources().Fields())
+				require.Equal(wantACL[aclCount].principal, p.Principal().QName())
 			})
-			cnt++
+			aclCount++
 			return true
 		})
-		require.Equal(len(tt), cnt)
+		require.Len(wantACL, aclCount)
 	})
 
 	t.Run("range by ACL should breakable", func(t *testing.T) {

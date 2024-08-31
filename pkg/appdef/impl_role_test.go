@@ -135,7 +135,7 @@ func Test_AppDef_AddRole(t *testing.T) {
 				aclCount++
 				return true
 			})
-			require.Equal(len(wantACL), aclCount)
+			require.Len(wantACL, aclCount)
 			rolesCount++
 		})
 		require.Equal(6, rolesCount)
