@@ -121,6 +121,7 @@ func Example() {
 		writer.Revoke(
 			[]appdef.OperationKind{appdef.OperationKind_Update},
 			[]appdef.QName{docName},
+			nil,
 			"disable writer to update test.doc")
 		writer.GrantAll([]appdef.QName{cmdName, queryName}, "allow writer to execute all test functions")
 

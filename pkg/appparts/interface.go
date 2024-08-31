@@ -79,6 +79,17 @@ type IAppPartition interface {
 
 	// Invoke extension engine.
 	Invoke(ctx context.Context, name appdef.QName, state istructs.IState, intents istructs.IIntents) error
+
+	// Returns true if specified operation is allowed on specified resource for any of specified roles.
+	//
+	// If resource is any structure and operation is UPDATE or SELECT, then:
+	//   - if fields list specified, then result consider it,
+	//   - full list of allowed fields also returned,
+	//
+	// else fields list is ignored and nil allowedFields is returned.
+	//
+	// If some error in arguments, (resource or role not found, operation is not applicable to resource, etc…) then error is returned.
+	IsOperationAllowed(op appdef.OperationKind, res appdef.QName, fld []appdef.FieldName, roles []appdef.QName) (bool, []appdef.FieldName, error)
 }
 
 // dependency cycle: func requires IAppPartitions, provider of IAppPartitions requires already filled AppConfigsType -> impossible to provide AppConfigsType because we're filling it now

@@ -21,20 +21,23 @@ func newRole(app *appDef, name QName) *role {
 	return r
 }
 
-func (r role) ACL(cb func(IACLRule)) {
+func (r role) ACL(cb func(IACLRule) bool) {
 	for _, p := range r.aclRules {
-		cb(p)
+		if !cb(p) {
+			break
+		}
 	}
 }
 
-func (r role) ACLForResources(resources []QName, ops ...OperationKind) []IACLRule {
-	pp := make([]IACLRule, 0)
+func (r *role) AncRoles() (roles []QName) {
 	for _, p := range r.aclRules {
-		if p.Resources().On().ContainsAny(resources...) && p.ops.ContainsAny(ops...) {
-			pp = append(pp, p)
+		if p.ops.Contains(OperationKind_Inherits) {
+			for _, n := range p.Resources().On() {
+				roles = append(roles, n)
+			}
 		}
 	}
-	return pp
+	return roles
 }
 
 func (r *role) appendACL(rule *aclRule) {
@@ -50,8 +53,8 @@ func (r *role) grantAll(resources []QName, comment ...string) {
 	r.appendACL(newGrantAll(resources, r, comment...))
 }
 
-func (r *role) revoke(ops []OperationKind, resources []QName, comment ...string) {
-	r.appendACL(newRevoke(ops, resources, nil, r, comment...))
+func (r *role) revoke(ops []OperationKind, resources []QName, fields []FieldName, comment ...string) {
+	r.appendACL(newRevoke(ops, resources, fields, r, comment...))
 }
 
 func (r *role) revokeAll(resources []QName, comment ...string) {
@@ -82,8 +85,8 @@ func (rb *roleBuilder) GrantAll(resource []QName, comment ...string) IRoleBuilde
 	return rb
 }
 
-func (rb *roleBuilder) Revoke(ops []OperationKind, resources []QName, comment ...string) IRoleBuilder {
-	rb.role.revoke(ops, resources, comment...)
+func (rb *roleBuilder) Revoke(ops []OperationKind, resources []QName, fields []FieldName, comment ...string) IRoleBuilder {
+	rb.role.revoke(ops, resources, fields, comment...)
 	return rb
 }
 
