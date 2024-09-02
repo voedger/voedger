@@ -354,7 +354,7 @@ func testEventBuilderCore(t *testing.T, cachedPLog bool) {
 	var (
 		changedHeights float32 = test.heightValue + 0.1
 		changedPhoto           = []byte{10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
-		changedRems    string  = "changes изменение"
+		changedRems    string  = "changes"
 	)
 
 	t.Run("VI. Build change event", func(t *testing.T) {
@@ -1904,7 +1904,7 @@ func Test_LoadStoreErrEvent_Bytes(t *testing.T) {
 	t.Run("load/store custom build error event", func(t *testing.T) {
 
 		const (
-			errMsg = "test build error message; тест сообщения об ошибке; エラーメッセージテスト; 🏐;"
+			errMsg = "test build error message; エラーメッセージテスト; 🏐;"
 			maxLen = 0xFFFF
 		)
 		for testNo := 0; testNo < 3; testNo++ {
@@ -1943,7 +1943,7 @@ func Test_LoadStoreErrEvent_Bytes(t *testing.T) {
 }
 
 func Test_LoadErrorEvent_CorruptedBytes(t *testing.T) {
-	const errMsg = "test build error message; тест сообщения об ошибке; エラーメッセージテスト"
+	const errMsg = "test build error message; エラーメッセージテスト"
 
 	require := require.New(t)
 

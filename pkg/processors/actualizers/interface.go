@@ -29,12 +29,11 @@ type LogErrorFunc func(args ...interface{})
 type BasicAsyncActualizerConfig struct {
 	VvmName string
 
-	AppPartitions appparts.IAppPartitions
-	SecretReader  isecrets.ISecretReader
-	Tokens        itokens.ITokens
-	Metrics       imetrics.IMetrics
-	Broker        in10n.IN10nBroker
-	Federation    federation.IFederation
+	SecretReader isecrets.ISecretReader
+	Tokens       itokens.ITokens
+	Metrics      imetrics.IMetrics
+	Broker       in10n.IN10nBroker
+	Federation   federation.IFederation
 
 	Opts []state.StateOptFunc
 

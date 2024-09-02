@@ -6,6 +6,8 @@
 package main
 
 import (
+	"time"
+
 	ext "github.com/voedger/voedger/pkg/exttinygo"
 )
 
@@ -147,6 +149,13 @@ func undefinedPackage() {
 //export TestPanic
 func TestPanic() {
 	panic("goodbye, world")
+}
+
+//export TestSignExtensionsFuncs
+func TestSignExtensionsFuncs() {
+	if time.Now().Year() < 2024 {
+		panic("unexpected year")
+	}
 }
 
 func main() {

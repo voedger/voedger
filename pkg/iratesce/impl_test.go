@@ -17,23 +17,19 @@ import (
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-// пример ограничения общего количества регистраций (не более 1000) и регистраций с одного адреса (10) в день
 // example of limiting the total number of registrations (no more than 1000) and registrations from one address (10) per day
 func TestBasicUsage(t *testing.T) {
 	require := require.New(t)
 
-	// описание приложения и рабочей области
 	// description of the application and workspace
 	app := istructs.AppQName_test1_app1
 	qName := appdef.NewQName("testPkg", "test")
 	wsid := istructs.WSID(1)
 
-	// имена ограничений
 	// constraint names
 	sTotalRegLimitName := "TotalRegPerDay"
 	sAddrRegLimitName := "AddrRegPerDay"
 
-	// параметры общего ограничения количества регистраций (не более 1000 в сутки)
 	// parameters of the general limitation of the number of registrations (no more than 1000 per day)
 	totalRegistrationQuota := irates.BucketState{
 		Period:             24 * time.Hour,
@@ -41,7 +37,6 @@ func TestBasicUsage(t *testing.T) {
 		TakenTokens:        0,
 	}
 
-	// параметры ограничения количества регистраций с одного адреса (не более 10 в сутки)
 	// parameters for limiting the number of registrations from one address (no more than 10 per day)
 	addrRegistrationQuota := irates.BucketState{
 		Period:             24 * time.Hour,
@@ -49,11 +44,9 @@ func TestBasicUsage(t *testing.T) {
 		TakenTokens:        0,
 	}
 
-	// создаем bucket'ы
 	// creating buckets
 	buckets := Provide(testTimeFunc)
 
-	// передадим в bucket'ы именованые ограничения
 	// passing named constraints to bucket's
 	buckets.SetDefaultBucketState(sTotalRegLimitName, totalRegistrationQuota)
 	buckets.SetDefaultBucketState(sAddrRegLimitName, addrRegistrationQuota)
@@ -68,12 +61,8 @@ func TestBasicUsage(t *testing.T) {
 	_, err = buckets.GetDefaultBucketsState("unknown")
 	require.ErrorIs(irates.ErrorRateLimitNotFound, err)
 
-	// в процессе работы приложения с некого адреса "remote_address" пришел запрос на регистрацию
-	// проверим, доступна ли эта операция
-	// during the operation of the application, a registration request came from a certain address "remote_address"
 	// let's check if this operation is available
 
-	// ключ для проверки общего количества регистраций
 	// key for checking the total number of registrations
 	totalRegKey := irates.BucketKey{
 		RateLimitName: sTotalRegLimitName,
@@ -83,7 +72,6 @@ func TestBasicUsage(t *testing.T) {
 		Workspace:     wsid,
 	}
 
-	// ключ для проверки количества регистраций с адреса "remote_address"
 	// key for checking the number of registrations from the address "remote_address"
 	addrRegKey := irates.BucketKey{
 		RateLimitName: sAddrRegLimitName,
@@ -93,7 +81,6 @@ func TestBasicUsage(t *testing.T) {
 		Workspace:     wsid,
 	}
 
-	// теперь проверим, хватает ли токенов для обоих этих ключей и, если хватает, то разрешим операцию регистрации
 	// now let's check if there are enough tokens for both of these keys and, if there are enough, then we will allow the registration operation
 	keys := []irates.BucketKey{totalRegKey, addrRegKey}
 
@@ -108,8 +95,6 @@ var testTime = time.Now()
 
 var testTimeFunc = coreutils.TimeFunc(func() time.Time { return testTime })
 
-// быстрый тест функционала структуры buckets (реализации интерфейса irates.IBuckets)
-// для эмуляции временных диапазонеов используется функция testTimeFunc()
 // quick test of the functionality of the buckets structure (implementation of the irates interface.IBuckets)
 // the testTimeFunc() function is used to emulate time ranges
 func TestBucketsNew(t *testing.T) {
@@ -117,18 +102,15 @@ func TestBucketsNew(t *testing.T) {
 
 	buckets := Provide(testTimeFunc)
 
-	// описание приложения и рабочей области
 	// description of the application and workspace
 	app := istructs.AppQName_test1_app1
 	qName := appdef.NewQName("testPkg", "test")
 	wsid := istructs.WSID(1)
 
-	// имена ограничений
 	// constraint names
 	sTotalRegLimitName := "TotalRegPerDay"
 	sAddrRegLimitName := "AddrRegPerDay"
 
-	// параметры общего ограничения количества регистраций (не более 100 в час)
 	// parameters of the general limitation of the number of registrations (no more than 1000 per hour)
 	totalRegistrationQuota := irates.BucketState{
 		Period:             1 * time.Hour,
@@ -136,7 +118,6 @@ func TestBucketsNew(t *testing.T) {
 		TakenTokens:        0,
 	}
 
-	// параметры ограничения количества регистраций с одного адреса (не более 10 в час)
 	// parameters for limiting the number of registrations from one address (no more than 10 per hour)
 	addrRegistrationQuota := irates.BucketState{
 		Period:             1 * time.Hour,
@@ -144,7 +125,6 @@ func TestBucketsNew(t *testing.T) {
 		TakenTokens:        0,
 	}
 
-	// ключ для проверки количества регистраций с адреса "remote_address"
 	// key for checking the number of registrations from the address "remote_address"
 	addrRegKey := irates.BucketKey{
 		RateLimitName: sAddrRegLimitName,
@@ -154,7 +134,6 @@ func TestBucketsNew(t *testing.T) {
 		Workspace:     wsid,
 	}
 
-	// ключ для проверки общего количества регистраций
 	// key for checking the total number of registrations
 	totalRegKey := irates.BucketKey{
 		RateLimitName: sTotalRegLimitName,

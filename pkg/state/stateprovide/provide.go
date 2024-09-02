@@ -18,3 +18,6 @@ func ProvideQueryProcessorStateFactory() state.QueryProcessorStateFactory {
 func ProvideAsyncActualizerStateFactory() state.AsyncActualizerStateFactory {
 	return implProvideAsyncActualizerState
 }
+func ProvideSchedulerStateFactory() state.SchedulerStateFactory {
+	return implProvideSchedulerState
+}

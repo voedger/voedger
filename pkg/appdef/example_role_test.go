@@ -38,13 +38,13 @@ func ExampleIAppDefBuilder_AddRole() {
 		reader.Grant([]appdef.OperationKind{appdef.OperationKind_Select}, []appdef.QName{docName}, []appdef.FieldName{"field1"}, "grant select on doc.field1")
 
 		writer := adb.AddRole(writerRoleName)
-		writer.GrantAll([]appdef.QName{wsName}, "grant all on test.ws")
+		writer.GrantAll([]appdef.QName{docName}, "grant all on test.doc")
 
 		adm := adb.AddRole(admRoleName)
 		adm.GrantAll([]appdef.QName{readerRoleName, writerRoleName}, "grant reader and writer roles to adm")
 
 		intruder := adb.AddRole(intruderRoleName)
-		intruder.RevokeAll([]appdef.QName{wsName}, "revoke all on test.ws")
+		intruder.RevokeAll([]appdef.QName{docName}, "revoke all on test.doc")
 
 		app = adb.MustBuild()
 	}
@@ -63,24 +63,19 @@ func ExampleIAppDefBuilder_AddRole() {
 	{
 		reader := app.Role(readerRoleName)
 		fmt.Println(reader, ":")
-		reader.ACL(func(r appdef.IACLRule) { fmt.Println("-", r) })
+		reader.ACL(func(r appdef.IACLRule) bool { fmt.Println("-", r); return true })
 
 		writer := app.Role(writerRoleName)
 		fmt.Println(writer, ":")
-		writer.ACL(func(r appdef.IACLRule) { fmt.Println("-", r) })
+		writer.ACL(func(r appdef.IACLRule) bool { fmt.Println("-", r); return true })
 
 		adm := app.Role(admRoleName)
 		fmt.Println(adm, ":")
-		adm.ACL(func(r appdef.IACLRule) { fmt.Println("-", r) })
+		adm.ACL(func(r appdef.IACLRule) bool { fmt.Println("-", r); return true })
 
 		intruder := app.Role(intruderRoleName)
 		fmt.Println(intruder, ":")
-		intruder.ACL(func(r appdef.IACLRule) { fmt.Println("-", r) })
-
-		fmt.Println("ACL with select operation on test.doc:")
-		for _, r := range app.ACLForResources([]appdef.QName{docName}, appdef.OperationKind_Select) {
-			fmt.Println("-", r)
-		}
+		intruder.ACL(func(r appdef.IACLRule) bool { fmt.Println("-", r); return true })
 	}
 
 	// Output:
@@ -92,11 +87,9 @@ func ExampleIAppDefBuilder_AddRole() {
 	// Role «test.readerRole» :
 	// - grant [Select] on [test.doc]([field1]) to Role «test.readerRole»
 	// Role «test.writerRole» :
-	// - grant [Insert Update Select Execute] on [test.ws] to Role «test.writerRole»
+	// - grant [Insert Update Select] on [test.doc] to Role «test.writerRole»
 	// Role «test.admRole» :
 	// - grant [Inherits] on [test.readerRole test.writerRole] to Role «test.admRole»
 	// Role «test.intruderRole» :
-	// - revoke [Insert Update Select Execute] on [test.ws] from Role «test.intruderRole»
-	// ACL with select operation on test.doc:
-	// - grant [Select] on [test.doc]([field1]) to Role «test.readerRole»
+	// - revoke [Insert Update Select] on [test.doc] from Role «test.intruderRole»
 }

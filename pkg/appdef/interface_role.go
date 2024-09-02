@@ -9,6 +9,13 @@ type IRole interface {
 	IType
 
 	IWithACL
+
+	// Returns all roles that this role inherits.
+	//
+	// Role inheritance provided by `GRANT <role> TO <role>` statement.
+	//
+	// Only direct inheritance is returned. If role inherits another role, which inherits another role, then only direct ancestor is returned.
+	AncRoles() []QName
 }
 
 type IRoleBuilder interface {
@@ -30,15 +37,11 @@ type IRoleBuilder interface {
 	//
 	// If the resources are commands or queries, their execution is granted.
 	//
-	// If the resources are workspaces, then:
-	//	- insert, update and select records and view records of these workspaces are granted,
-	//	- execution of commands & queries from these workspaces is granted.
-	//
 	// If the resources are roles, then all operations from these roles are granted.
 	GrantAll(resources []QName, comment ...string) IRoleBuilder
 
 	// Revokes operations on specified resources.
-	Revoke(ops []OperationKind, resources []QName, comment ...string) IRoleBuilder
+	Revoke(ops []OperationKind, resources []QName, fields []FieldName, comment ...string) IRoleBuilder
 
 	// Remove all available operations on specified resources.
 	RevokeAll(resources []QName, comment ...string) IRoleBuilder

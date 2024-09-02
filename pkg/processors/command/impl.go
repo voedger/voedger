@@ -572,7 +572,7 @@ func parseCUDs(_ context.Context, work pipeline.IWorkpiece) (err error) {
 		if !ok {
 			return cudXPath.Errorf(`"fields" missing`)
 		}
-		// sys.ID внутри -> create, снаружи -> update
+		// sys.ID inside -> create, outside -> update
 		isCreate := false
 		if parsedCUD.id, isCreate, err = parsedCUD.fields.AsInt64(appdef.SystemField_ID); err != nil {
 			return cudXPath.Error(err)

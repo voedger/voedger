@@ -112,7 +112,7 @@ func TestBasicUsage(t *testing.T) {
 	cmd := bld.ArgumentObjectBuilder()
 
 	cmd.PutRecordID(appdef.SystemField_ID, 1)
-	cmd.PutString("Buyer", "Карлсон 哇\"呀呀") // to test unicode issues
+	cmd.PutString("Buyer", "Carlson 哇\"呀呀") // to test unicode issues
 	cmd.PutInt32("Age", 33)
 	cmd.PutFloat32("Height", 1.75)
 	cmd.PutBytes("Photo", []byte{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 9, 8, 7, 6, 4, 4, 3, 2, 1, 0})
@@ -139,7 +139,7 @@ func TestBasicUsage(t *testing.T) {
 	cud := bld.CUDBuilder()
 	rec := cud.Create(appdef.NewQName("test", "photos"))
 	rec.PutRecordID(appdef.SystemField_ID, 11)
-	rec.PutString("Buyer", "Карлсон 哇\"呀呀")
+	rec.PutString("Buyer", "Carlson 哇\"呀呀")
 	rec.PutInt32("Age", 33)
 	rec.PutFloat32("Height", 1.75)
 	rec.PutBytes("Photo", []byte{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 9, 8, 7, 6, 4, 4, 3, 2, 1, 0})

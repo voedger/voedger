@@ -17,7 +17,7 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
-func TestGetAppStorgaDesc(t *testing.T) {
+func TestGetAppStorageDesc(t *testing.T) {
 	require := require.New(t)
 	type n struct {
 		name     appdef.AppQName
@@ -62,7 +62,7 @@ func TestGetAppStorgaDesc(t *testing.T) {
 		},
 		{
 			// non-latin chars
-			{appdef.NewAppQName("sys", `Карлосон 哇"呀呀`), "sys"},
+			{appdef.NewAppQName("sys", `Carlson 哇"呀呀`), "syscarlson"},
 			{appdef.NewAppQName("sys", `aaaaaaaaaaaaa`), "sysaaaaaaaaaaaaa"},
 		},
 	}

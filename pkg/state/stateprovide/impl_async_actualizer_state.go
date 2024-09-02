@@ -57,7 +57,6 @@ func implProvideAsyncActualizerState(ctx context.Context, appStructsFunc state.A
 	state.addStorage(sys.Storage_FederationCommand, storages.NewFederationCommandStorage(appStructsFunc, wsidFunc, federationFunc, tokensFunc, opts.FederationCommandHandler), S_GET)
 	state.addStorage(sys.Storage_FederationBlob, storages.NewFederationBlobStorage(appStructsFunc, wsidFunc, federationFunc, tokensFunc, opts.FederationBlobHandler), S_READ)
 	state.addStorage(sys.Storage_AppSecret, storages.NewAppSecretsStorage(secretReader), S_GET)
-	state.addStorage(sys.Storage_Event, storages.NewEventStorage(eventFunc), S_GET)
 	state.addStorage(sys.Storage_Uniq, storages.NewUniquesStorage(appStructsFunc, wsidFunc, opts.UniquesHandler), S_GET)
 
 	return state

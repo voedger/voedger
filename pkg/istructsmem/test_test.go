@@ -160,7 +160,7 @@ var testData = testDataType{
 	syncTime:           1005001,
 
 	buyerIdent:     "Buyer",
-	buyerValue:     "Карлсон 哇\"呀呀", // to test unicode issues
+	buyerValue:     "Carlson 哇\"呀呀", // to test unicode issues
 	ageIdent:       "Age",
 	ageValue:       33,
 	heightIdent:    "Height",
@@ -170,7 +170,7 @@ var testData = testDataType{
 	photoIdent:     "Photo",
 	photoValue:     []byte{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 9, 8, 7, 6, 4, 4, 3, 2, 1, 0},
 	remarkIdent:    "Remark",
-	remarkValue:    "remark text Примечание",
+	remarkValue:    "remark text",
 	emptinessIdent: "Emptiness",
 	emptinessValue: "to be emptied",
 
@@ -443,7 +443,7 @@ func fillTestRow(row *rowType) {
 	row.PutFloat32("float32", 3)
 	row.PutFloat64("float64", 4)
 	row.PutBytes("bytes", []byte{1, 2, 3, 4, 5})
-	row.PutString("string", "Строка") // for unicode test
+	row.PutString("string", "test string") // for unicode test
 	row.PutBytes("raw", test.photoRawValue)
 	row.PutQName("QName", test.tablePhotos)
 	row.PutBool("bool", true)
@@ -526,7 +526,7 @@ func testTestRow(t *testing.T, row istructs.IRowReader) {
 	require.Equal(float32(3), row.AsFloat32("float32"))
 	require.Equal(float64(4), row.AsFloat64("float64"))
 	require.Equal([]byte{1, 2, 3, 4, 5}, row.AsBytes("bytes"))
-	require.Equal("Строка", row.AsString("string"))
+	require.Equal("test string", row.AsString("string"))
 	require.EqualValues(test.photoRawValue, row.AsBytes("raw"))
 
 	require.Equal(test.tablePhotos, row.AsQName("QName"))

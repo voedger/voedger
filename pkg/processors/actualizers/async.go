@@ -61,6 +61,7 @@ type asyncActualizer struct {
 	readCtx      *asyncActualizerContextState
 	projErrState int32 // 0 - no error, 1 - error
 	plogBatch          // [50]plogEvent
+	appParts     appparts.IAppPartitions
 }
 
 func (a *asyncActualizer) Prepare() {
@@ -118,7 +119,7 @@ func (a *asyncActualizer) cancelChannel(e error) {
 func (a *asyncActualizer) waitForAppDeploy(ctx context.Context) error {
 	start := time.Now()
 	for ctx.Err() == nil {
-		ap, err := a.conf.AppPartitions.Borrow(a.conf.AppQName, a.conf.Partition, appparts.ProcessorKind_Actualizer)
+		ap, err := a.appParts.Borrow(a.conf.AppQName, a.conf.Partition, appparts.ProcessorKind_Actualizer)
 		if err == nil || errors.Is(err, appparts.ErrNotAvailableEngines) {
 			if ap != nil {
 				ap.Release()
@@ -144,7 +145,7 @@ func (a *asyncActualizer) init(ctx context.Context) (err error) {
 
 	a.readCtx.ctx, a.readCtx.cancel = context.WithCancel(ctx)
 
-	appDef, err := a.conf.AppPartitions.AppDef(a.conf.AppQName)
+	appDef, err := a.appParts.AppDef(a.conf.AppQName)
 	if err != nil {
 		return err
 	}
@@ -176,7 +177,7 @@ func (a *asyncActualizer) init(ctx context.Context) (err error) {
 		name:                  a.projector,
 		iProjector:            prjType,
 		nonBuffered:           nonBuffered,
-		appParts:              a.conf.AppPartitions,
+		appParts:              a.appParts,
 	}
 
 	if p.metrics != nil {
@@ -306,7 +307,7 @@ func (a *asyncActualizer) readPlogByBatches(readBatch readPLogBatch) error {
 }
 
 func (a *asyncActualizer) borrowAppPart(ctx context.Context) (ap appparts.IAppPartition, err error) {
-	return a.conf.AppPartitions.WaitForBorrow(ctx, a.conf.AppQName, a.conf.Partition, appparts.ProcessorKind_Actualizer)
+	return a.appParts.WaitForBorrow(ctx, a.conf.AppQName, a.conf.Partition, appparts.ProcessorKind_Actualizer)
 }
 
 func (a *asyncActualizer) readPlogToTheEnd(ctx context.Context) error {
