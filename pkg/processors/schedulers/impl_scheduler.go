@@ -31,6 +31,7 @@ type scheduler struct {
 	// run:
 	ctx          context.Context
 	projErrState int32 // 0 - no error, 1 - error
+	appParts     appparts.IAppPartitions
 }
 
 func (a *scheduler) Prepare() {
@@ -85,7 +86,7 @@ func (a *scheduler) runJob() {
 			}
 		}
 	}()
-	borrowedPartition, err = a.conf.AppPartitions.WaitForBorrow(a.ctx, a.conf.AppQName, a.conf.Partition, appparts.ProcessorKind_Scheduler)
+	borrowedPartition, err = a.appParts.WaitForBorrow(a.ctx, a.conf.AppQName, a.conf.Partition, appparts.ProcessorKind_Scheduler)
 	if err != nil {
 		return
 	}
@@ -127,7 +128,7 @@ func (a *scheduler) runJob() {
 func (a *scheduler) waitForAppDeploy(ctx context.Context) error {
 	start := time.Now()
 	for ctx.Err() == nil {
-		ap, err := a.conf.AppPartitions.Borrow(a.conf.AppQName, a.conf.Partition, appparts.ProcessorKind_Actualizer)
+		ap, err := a.appParts.Borrow(a.conf.AppQName, a.conf.Partition, appparts.ProcessorKind_Actualizer)
 		if err == nil || errors.Is(err, appparts.ErrNotAvailableEngines) {
 			if ap != nil {
 				ap.Release()
@@ -148,7 +149,7 @@ func (a *scheduler) waitForAppDeploy(ctx context.Context) error {
 
 func (a *scheduler) init(_ context.Context) (err error) {
 
-	appDef, err := a.conf.AppPartitions.AppDef(a.conf.AppQName)
+	appDef, err := a.appParts.AppDef(a.conf.AppQName)
 	if err != nil {
 		return err
 	}

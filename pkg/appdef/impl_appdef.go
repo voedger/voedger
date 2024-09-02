@@ -31,6 +31,14 @@ func newAppDef() *appDef {
 	return &app
 }
 
+func (app appDef) ACL(cb func(IACLRule) bool) {
+	for _, p := range app.acl {
+		if !cb(p) {
+			break
+		}
+	}
+}
+
 func (app *appDef) CDoc(name QName) (d ICDoc) {
 	if t := app.typeByKind(name, TypeKind_CDoc); t != nil {
 		return t.(ICDoc)
@@ -250,22 +258,6 @@ func (app *appDef) PackageLocalNames() []string {
 
 func (app *appDef) Packages(cb func(local, path string)) {
 	app.packages.forEach(cb)
-}
-
-func (app appDef) ACL(cb func(IACLRule)) {
-	for _, p := range app.acl {
-		cb(p)
-	}
-}
-
-func (app appDef) ACLForResources(n []QName, k ...OperationKind) []IACLRule {
-	pp := make([]IACLRule, 0)
-	for _, p := range app.acl {
-		if p.Resources().On().ContainsAny(n...) && p.ops.ContainsAny(k...) {
-			pp = append(pp, p)
-		}
-	}
-	return pp
 }
 
 func (app *appDef) Projector(name QName) IProjector {
@@ -643,12 +635,12 @@ func (app *appDef) makeSysDataTypes() {
 	}
 }
 
-func (app *appDef) revoke(ops []OperationKind, resources []QName, fromRole QName, comment ...string) {
+func (app *appDef) revoke(ops []OperationKind, resources []QName, fields []FieldName, fromRole QName, comment ...string) {
 	r := app.Role(fromRole)
 	if r == nil {
 		panic(ErrRoleNotFound(fromRole))
 	}
-	r.(*role).revoke(ops, resources, comment...)
+	r.(*role).revoke(ops, resources, fields, comment...)
 }
 
 func (app *appDef) revokeAll(resources []QName, fromRole QName, comment ...string) {
@@ -775,8 +767,8 @@ func (ab *appDefBuilder) MustBuild() IAppDef {
 	return ab.app
 }
 
-func (ab *appDefBuilder) Revoke(ops []OperationKind, resources []QName, fromRole QName, comment ...string) IACLBuilder {
-	ab.app.revoke(ops, resources, fromRole, comment...)
+func (ab *appDefBuilder) Revoke(ops []OperationKind, resources []QName, fields []FieldName, fromRole QName, comment ...string) IACLBuilder {
+	ab.app.revoke(ops, resources, fields, fromRole, comment...)
 	return ab
 }
 

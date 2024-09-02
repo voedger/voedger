@@ -6,6 +6,7 @@
 package appdef
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -64,14 +65,16 @@ func Test_AppDef_AddRole(t *testing.T) {
 		worker.GrantAll([]QName{readerRoleName, writerRoleName}, "grant reader and writer roles to worker")
 
 		owner := adb.AddRole(ownerRoleName)
-		owner.GrantAll([]QName{wsName}, "grant all workspace privileges to owner")
+		owner.GrantAll([]QName{docName, viewName}, "grant all on doc & view to owner")
+		owner.GrantAll([]QName{cmdName, queryName}, "grant execute all functions to owner")
 
 		adm := adb.AddRole(admRoleName)
-		adm.GrantAll([]QName{wsName}, "grant all workspace privileges to admin")
-		adm.Revoke([]OperationKind{OperationKind_Execute}, []QName{wsName}, "revoke execute on workspace from admin")
+		adm.GrantAll([]QName{ownerRoleName})
+		adm.Revoke([]OperationKind{OperationKind_Execute}, []QName{cmdName, queryName}, nil, "revoke execute from admin")
 
 		intruder := adb.AddRole(intruderRoleName)
-		intruder.RevokeAll([]QName{wsName}, "revoke all workspace privileges from intruder")
+		intruder.RevokeAll([]QName{docName, viewName}, "revoke all from intruder")
+		intruder.RevokeAll([]QName{cmdName, queryName}, "revoke all from intruder")
 
 		var err error
 		app, err = adb.Build()
@@ -79,151 +82,77 @@ func Test_AppDef_AddRole(t *testing.T) {
 		require.NotNil(app)
 	})
 
-	t.Run("should be ok to check roles", func(t *testing.T) {
-
-		checkPrivilege := func(p IACLRule, policy PolicyKind, kinds []OperationKind, resources []QName, fields []FieldName, to QName) {
-			require.NotNil(p)
-			require.Equal(policy, p.Policy())
-			require.Equal(kinds, p.Ops())
-			require.EqualValues(resources, p.Resources().On())
-			require.Equal(fields, p.Resources().Fields())
-			require.Equal(to, p.Principal().QName())
+	t.Run("should be ok to enum all app roles", func(t *testing.T) {
+		type wantACL []struct {
+			policy PolicyKind
+			ops    []OperationKind
+			res    []QName
+			fld    []FieldName
+			to     QName
+		}
+		tt := []struct {
+			name QName
+			wantACL
+		}{ // sorted by name
+			{admRoleName, wantACL{
+				{PolicyKind_Allow, []OperationKind{OperationKind_Inherits}, []QName{ownerRoleName}, nil, admRoleName},
+				{PolicyKind_Deny, []OperationKind{OperationKind_Execute}, []QName{cmdName, queryName}, nil, admRoleName},
+			}},
+			{intruderRoleName, wantACL{
+				{PolicyKind_Deny, []OperationKind{OperationKind_Insert, OperationKind_Update, OperationKind_Select}, []QName{docName, viewName}, nil, intruderRoleName},
+				{PolicyKind_Deny, []OperationKind{OperationKind_Execute}, []QName{cmdName, queryName}, nil, intruderRoleName},
+			}},
+			{ownerRoleName, wantACL{
+				{PolicyKind_Allow, []OperationKind{OperationKind_Insert, OperationKind_Update, OperationKind_Select}, []QName{docName, viewName}, nil, ownerRoleName},
+				{PolicyKind_Allow, []OperationKind{OperationKind_Execute}, []QName{cmdName, queryName}, nil, ownerRoleName},
+			}},
+			{readerRoleName, wantACL{
+				{PolicyKind_Allow, []OperationKind{OperationKind_Select}, []QName{docName, viewName}, []FieldName{"field1"}, readerRoleName},
+				{PolicyKind_Allow, []OperationKind{OperationKind_Execute}, []QName{queryName}, nil, readerRoleName},
+			}},
+			{workerRoleName, wantACL{
+				{PolicyKind_Allow, []OperationKind{OperationKind_Inherits}, []QName{readerRoleName, writerRoleName}, nil, workerRoleName},
+			}},
+			{writerRoleName, wantACL{
+				{PolicyKind_Allow, []OperationKind{OperationKind_Insert, OperationKind_Update, OperationKind_Select}, []QName{docName, viewName}, nil, writerRoleName},
+				{PolicyKind_Allow, []OperationKind{OperationKind_Execute}, []QName{cmdName, queryName}, nil, writerRoleName},
+			}},
 		}
 
-		t.Run("should be ok to enum all app roles", func(t *testing.T) {
-			rolesCount := 0
-			app.Roles(func(r IRole) {
-				rolesCount++
-				switch rolesCount {
-				case 1:
-					require.Equal(admRoleName, r.QName())
-					privilegesCount := 0
-					r.ACL(func(p IACLRule) {
-						privilegesCount++
-						switch privilegesCount {
-						case 1:
-							checkPrivilege(p, PolicyKind_Allow,
-								[]OperationKind{OperationKind_Insert, OperationKind_Update, OperationKind_Select, OperationKind_Execute},
-								[]QName{wsName}, nil,
-								admRoleName)
-						case 2:
-							checkPrivilege(p, PolicyKind_Deny,
-								[]OperationKind{OperationKind_Execute},
-								[]QName{wsName}, nil,
-								admRoleName)
-						default:
-							require.Fail("unexpected ACL rule", "ACL rule: %v", p)
-						}
-					})
-					require.Equal(2, privilegesCount)
-				case 2:
-					require.Equal(intruderRoleName, r.QName())
-					privilegesCount := 0
-					r.ACL(func(p IACLRule) {
-						privilegesCount++
-						switch privilegesCount {
-						case 1:
-							checkPrivilege(p, PolicyKind_Deny,
-								[]OperationKind{OperationKind_Insert, OperationKind_Update, OperationKind_Select, OperationKind_Execute},
-								[]QName{wsName}, nil,
-								intruderRoleName)
-						default:
-							require.Fail("unexpected ACL rule", "ACL rule: %v", p)
-						}
-					})
-					require.Equal(1, privilegesCount)
-				case 3:
-					require.Equal(ownerRoleName, r.QName())
-					privilegesCount := 0
-					r.ACL(func(p IACLRule) {
-						privilegesCount++
-						switch privilegesCount {
-						case 1:
-							checkPrivilege(p, PolicyKind_Allow,
-								[]OperationKind{OperationKind_Insert, OperationKind_Update, OperationKind_Select, OperationKind_Execute},
-								[]QName{wsName}, nil,
-								ownerRoleName)
-						default:
-							require.Fail("unexpected ACL rule", "ACL rule: %v", p)
-						}
-					})
-					require.Equal(1, privilegesCount)
-				case 4:
-					require.Equal(readerRoleName, r.QName())
-					privilegesCount := 0
-					r.ACL(func(p IACLRule) {
-						privilegesCount++
-						switch privilegesCount {
-						case 1:
-							checkPrivilege(p, PolicyKind_Allow,
-								[]OperationKind{OperationKind_Select},
-								[]QName{docName, viewName}, []FieldName{"field1"},
-								readerRoleName)
-						case 2:
-							checkPrivilege(p, PolicyKind_Allow,
-								[]OperationKind{OperationKind_Execute},
-								[]QName{queryName}, nil,
-								readerRoleName)
-						default:
-							require.Fail("unexpected ACL rule", "ACL rule: %v", p)
-						}
-					})
-					require.Equal(2, privilegesCount)
-				case 5:
-					require.Equal(workerRoleName, r.QName())
-					privilegesCount := 0
-					r.ACL(func(p IACLRule) {
-						privilegesCount++
-						switch privilegesCount {
-						case 1:
-							checkPrivilege(p, PolicyKind_Allow,
-								[]OperationKind{OperationKind_Inherits},
-								[]QName{readerRoleName, writerRoleName}, nil,
-								workerRoleName)
-						default:
-							require.Fail("unexpected ACL rule", "ACL rule: %v", p)
-						}
-					})
-					require.Equal(1, privilegesCount)
-				case 6:
-					require.Equal(writerRoleName, r.QName())
-					privilegesCount := 0
-					r.ACL(func(p IACLRule) {
-						privilegesCount++
-						switch privilegesCount {
-						case 1:
-							checkPrivilege(p, PolicyKind_Allow,
-								[]OperationKind{OperationKind_Insert, OperationKind_Update, OperationKind_Select},
-								[]QName{docName, viewName}, nil,
-								writerRoleName)
-						case 2:
-							checkPrivilege(p, PolicyKind_Allow,
-								[]OperationKind{OperationKind_Execute},
-								[]QName{cmdName, queryName}, nil,
-								writerRoleName)
-						default:
-							require.Fail("unexpected ACL rule", "ACL rule: %v", p)
-						}
-					})
-					require.Equal(2, privilegesCount)
-				}
+		rolesCount := 0
+		app.Roles(func(r IRole) {
+			require.Equal(tt[rolesCount].name, r.QName())
+			wantACL := tt[rolesCount].wantACL
+			aclCount := 0
+			r.ACL(func(p IACLRule) bool {
+				t.Run(fmt.Sprintf("%v.ACL[%d]", r, aclCount), func(t *testing.T) {
+					require.Equal(wantACL[aclCount].policy, p.Policy())
+					require.Equal(wantACL[aclCount].ops, p.Ops())
+					require.EqualValues(wantACL[aclCount].res, p.Resources().On())
+					require.Equal(wantACL[aclCount].fld, p.Resources().Fields())
+					require.Equal(wantACL[aclCount].to, p.Principal().QName())
+				})
+				aclCount++
+				return true
 			})
-			require.Equal(6, rolesCount)
+			require.Len(wantACL, aclCount)
+			rolesCount++
 		})
+		require.Equal(6, rolesCount)
+	})
 
-		t.Run("should be ok to enum role privileges on resources", func(t *testing.T) {
-			pp := app.Role(admRoleName).ACLForResources([]QName{wsName})
-			require.Len(pp, 2)
-
-			checkPrivilege(pp[0], PolicyKind_Allow,
-				[]OperationKind{OperationKind_Insert, OperationKind_Update, OperationKind_Select, OperationKind_Execute},
-				[]QName{wsName}, nil,
-				admRoleName)
-			checkPrivilege(pp[1], PolicyKind_Deny,
-				[]OperationKind{OperationKind_Execute},
-				[]QName{wsName}, nil,
-				admRoleName)
+	t.Run("range by role ACL rules should be breakable", func(t *testing.T) {
+		role, cnt := app.Role(admRoleName), 0
+		role.ACL(func(IACLRule) bool {
+			cnt++
+			return false
 		})
+		require.Equal(1, cnt)
+	})
+
+	t.Run("role.Anc() should return inheritance", func(t *testing.T) {
+		roles := app.Role(workerRoleName).AncRoles()
+		require.Equal([]QName{readerRoleName, writerRoleName}, roles)
 	})
 }
 

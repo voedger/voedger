@@ -28,12 +28,6 @@ func Test_allACLOperationsOnType(t *testing.T) {
 	}{
 		{"null", typ{TypeKind_null, NullQName},
 			set.Empty[OperationKind]()},
-		{"Any", typ{TypeKind_Any, QNameANY},
-			set.From(OperationKind_Insert, OperationKind_Update, OperationKind_Select, OperationKind_Execute, OperationKind_Inherits)},
-		{"Any record", typ{TypeKind_Any, QNameAnyRecord},
-			set.From(OperationKind_Insert, OperationKind_Update, OperationKind_Select)},
-		{"Any command", typ{TypeKind_Any, QNameAnyCommand},
-			set.From(OperationKind_Execute)},
 		{"GRecord", typ{TypeKind_GRecord, testName},
 			set.From(OperationKind_Insert, OperationKind_Update, OperationKind_Select)},
 		{"CDoc", typ{TypeKind_CDoc, testName},
@@ -42,8 +36,6 @@ func Test_allACLOperationsOnType(t *testing.T) {
 			set.From(OperationKind_Insert, OperationKind_Update, OperationKind_Select)},
 		{"Command", typ{TypeKind_Command, testName},
 			set.From(OperationKind_Execute)},
-		{"Workspace", typ{TypeKind_Workspace, testName},
-			set.From(OperationKind_Insert, OperationKind_Update, OperationKind_Select, OperationKind_Execute)},
 		{"Role", typ{TypeKind_Role, testName},
 			set.From(OperationKind_Inherits)},
 		{"Projector", typ{TypeKind_Projector, testName},
@@ -93,27 +85,14 @@ func Test_validateACLResourceNames(t *testing.T) {
 		{"error: empty names", []QName{}, nil, ErrMissedError},
 		{"error: unknown name", []QName{NewQName("test", "unknown")}, nil, ErrNotFoundError},
 
-		{"ok: sys.ANY", []QName{QNameANY}, QNamesFrom(QNameANY), nil},
-		{"error: sys.ANY + test.cmd", []QName{QNameANY, cmd}, nil, ErrIncompatibleError},
-
 		{"ok: test.cdoc + test.gdoc", []QName{cdoc, gdoc}, QNamesFrom(cdoc, gdoc), nil},
-		{"ok: sys.AnyStruct", []QName{QNameAnyStructure}, QNamesFrom(QNameAnyStructure), nil},
-		{"ok: sys.AnyCDoc + test.gdoc", []QName{QNameAnyCDoc, gdoc}, QNamesFrom(QNameAnyCDoc, gdoc), nil},
 
 		{"ok: test.cmd + test.query", []QName{cmd, query}, QNamesFrom(cmd, query), nil},
-		{"ok: sys.AnyFunction", []QName{QNameAnyFunction}, QNamesFrom(QNameAnyFunction), nil},
-		{"ok: sys.AnyCommand + test.query", []QName{QNameAnyCommand, query}, QNamesFrom(QNameAnyCommand, query), nil},
 
 		{"ok test.role", []QName{role}, QNamesFrom(role), nil},
 		{"error: test.role + test.cmd", []QName{role, cmd}, nil, ErrIncompatibleError},
 
-		{"ok: test.ws", []QName{ws}, QNamesFrom(ws), nil},
-		{"err: test.ws + test.cdoc", []QName{ws, cdoc}, nil, ErrIncompatibleError},
-
 		{"error: test.cdoc + test.cmd", []QName{cdoc, cmd}, nil, ErrIncompatibleError},
-		{"error: sys.AnyView + test.role", []QName{QNameAnyView, role}, nil, ErrIncompatibleError},
-
-		{"error: sys.AnyExtension", []QName{QNameAnyExtension}, nil, ErrIncompatibleError},
 	}
 
 	require := require.New(t)

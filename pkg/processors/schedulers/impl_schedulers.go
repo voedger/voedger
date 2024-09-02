@@ -20,8 +20,9 @@ implements:
 	appparts.IProcessorRunner
 */
 type schedulers struct {
-	cfg  BasicSchedulerConfig
-	wait sync.WaitGroup
+	cfg      BasicSchedulerConfig
+	wait     sync.WaitGroup
+	appParts appparts.IAppPartitions
 }
 
 func newSchedulers(cfg BasicSchedulerConfig) ISchedulersService {
@@ -43,6 +44,7 @@ func (a *schedulers) NewAndRun(ctx context.Context, app appdef.AppQName, partiti
 			Workspace:            wsid,
 			WSIdx:                wsIdx,
 		},
+		appParts: a.appParts,
 	}
 	act.Prepare()
 
@@ -65,7 +67,7 @@ func (a *schedulers) RunEx(_ context.Context, started func()) {
 }
 
 func (a *schedulers) SetAppPartitions(ap appparts.IAppPartitions) {
-	a.cfg.AppPartitions = ap
+	a.appParts = ap
 }
 
 func (a *schedulers) Stop() {
