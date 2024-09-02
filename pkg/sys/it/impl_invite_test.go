@@ -309,3 +309,4 @@ func testOverwriteRoles(t *testing.T, vit *it.VIT, ws *it.AppWorkspace, email st
 
 	return verificationCode
 }
+

@@ -76,6 +76,7 @@ type AppConfigType struct {
 	cudValidators      []istructs.CUDValidator
 	eventValidators    []istructs.EventValidator
 	numAppWorkspaces   istructs.NumAppWorkspaces
+	jobs               []appdef.IJob
 }
 
 func newAppConfig(name appdef.AppQName, id istructs.ClusterAppID, def appdef.IAppDef, wsCount istructs.NumAppWorkspaces) *AppConfigType {
@@ -223,6 +224,10 @@ func (cfg *AppConfigType) AddEventValidators(eventValidators ...istructs.EventVa
 	cfg.eventValidators = append(cfg.eventValidators, eventValidators...)
 }
 
+func (cfg *AppConfigType) AddJobs(jobs ...appdef.IJob) {
+	cfg.jobs = append(cfg.jobs, jobs...)
+}
+
 func (cfg *AppConfigType) AsyncProjectors() istructs.Projectors {
 	return cfg.asyncProjectors
 }
@@ -234,6 +239,10 @@ func (cfg *AppConfigType) Prepared() bool {
 
 func (cfg *AppConfigType) SyncProjectors() istructs.Projectors {
 	return cfg.syncProjectors
+}
+
+func (cfg *AppConfigType) Jobs() []appdef.IJob {
+	return cfg.jobs
 }
 
 // need to build view.sys.NextBaseWSID and view.sys.projectionOffsets

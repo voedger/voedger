@@ -123,7 +123,7 @@ func (a *appRT) deploy(def appdef.IAppDef, extModuleURLs map[string]*url.URL, st
 	}
 
 	pools := [ProcessorKind_Count]*pool.Pool[engines]{}
-	// processorKind here is one of ProcessorKind_Command, ProcessorKind_Query, ProcessorKind_Actualizer
+	// processorKind here is one of ProcessorKind_Command, ProcessorKind_Query, ProcessorKind_Actualizer, ProcessorKind_Scheduler
 	for processorKind, processorsCountPerKind := range numEnginesPerEngineKind {
 		ee := make([]engines, processorsCountPerKind)
 		for extEngineKind, extensionModules := range extModules {

@@ -21,33 +21,33 @@ type Run func(ctx context.Context, app appdef.AppQName, partID istructs.Partitio
 
 // PartitionSchedulers manages schedulers deployment for the specified application partition.
 type PartitionSchedulers struct {
-	mx   sync.RWMutex
-	app  appdef.AppQName
-	part istructs.PartitionID
-	ws   map[istructs.WSID]int
-	rt   map[appdef.QName]map[istructs.WSID]*runtime
+	mx                    sync.RWMutex
+	appQName              appdef.AppQName
+	partitionID           istructs.PartitionID
+	appWSNumbers          map[istructs.WSID]int
+	jobsInAppWSIDRuntimes map[appdef.QName]map[istructs.WSID]*runtime
 }
 
-func newPartitionSchedulers(app appdef.AppQName, partCount istructs.NumAppPartitions, wsCount istructs.NumAppWorkspaces, part istructs.PartitionID) *PartitionSchedulers {
+func newPartitionSchedulers(appQName appdef.AppQName, partCount istructs.NumAppPartitions, wsCount istructs.NumAppWorkspaces, partitionID istructs.PartitionID) *PartitionSchedulers {
 	return &PartitionSchedulers{
-		app:  app,
-		part: part,
-		ws:   AppWorkspacesHandledByPartition(partCount, wsCount, part),
-		rt:   make(map[appdef.QName]map[istructs.WSID]*runtime),
+		appQName:              appQName,
+		partitionID:           partitionID,
+		appWSNumbers:          AppWorkspacesHandledByPartition(partCount, wsCount, partitionID),
+		jobsInAppWSIDRuntimes: make(map[appdef.QName]map[istructs.WSID]*runtime),
 	}
 }
 
 // Deploys partition schedulers: stops schedulers for removed jobs and
 // starts schedulers for new jobs using the specified run function.
 func (ps *PartitionSchedulers) Deploy(vvmCtx context.Context, appDef appdef.IAppDef, run Run) {
-	if len(ps.ws) == 0 {
+	if len(ps.appWSNumbers) == 0 {
 		return // no application workspaces handled by this partition
 	}
 
 	// async stop old actualizers
 	stopWG := sync.WaitGroup{}
 	ps.mx.RLock()
-	for name, wsRT := range ps.rt {
+	for name, wsRT := range ps.jobsInAppWSIDRuntimes {
 		// TODO: compare if job properties changed (cron, etc.)
 		if appDef.Job(name) == nil {
 			for _, rt := range wsRT {
@@ -68,35 +68,35 @@ func (ps *PartitionSchedulers) Deploy(vvmCtx context.Context, appDef appdef.IApp
 	// async start new schedulers
 	startWG := sync.WaitGroup{}
 
-	start := func(name appdef.QName) {
+	start := func(jobQName appdef.QName) {
 		startWG.Add(1)
 		go func() {
 			ps.mx.Lock()
-			ps.rt[name] = make(map[istructs.WSID]*runtime)
+			ps.jobsInAppWSIDRuntimes[jobQName] = make(map[istructs.WSID]*runtime)
 			ps.mx.Unlock()
 
-			for wsID, wsIdx := range ps.ws {
+			for appWSID, appWSNumber := range ps.appWSNumbers {
 				ctx, cancel := context.WithCancel(vvmCtx)
 				rt := newRuntime(cancel)
 
 				ps.mx.Lock()
-				ps.rt[name][wsID] = rt
+				ps.jobsInAppWSIDRuntimes[jobQName][appWSID] = rt
 				ps.mx.Unlock()
 
-				go func(wsIdx int, wsID istructs.WSID) {
+				go func(appWSNumber int, appWSID istructs.WSID) {
 					rt.state.Store(1) // started
 
-					run(ctx, ps.app, ps.part, wsIdx, wsID, name)
+					run(ctx, ps.appQName, ps.partitionID, appWSNumber, appWSID, jobQName)
 
 					ps.mx.Lock()
-					delete(ps.rt[name], wsID)
-					if len(ps.rt[name]) == 0 {
-						delete(ps.rt, name)
+					delete(ps.jobsInAppWSIDRuntimes[jobQName], appWSID)
+					if len(ps.jobsInAppWSIDRuntimes[jobQName]) == 0 {
+						delete(ps.jobsInAppWSIDRuntimes, jobQName)
 					}
 					ps.mx.Unlock()
 
 					rt.state.Store(-1) // finished
-				}(wsIdx, wsID)
+				}(appWSNumber, appWSID)
 
 				for rt.state.Load() == 0 {
 					time.Sleep(time.Nanosecond) // wait until actualizer go-routine is started
@@ -108,9 +108,9 @@ func (ps *PartitionSchedulers) Deploy(vvmCtx context.Context, appDef appdef.IApp
 
 	ps.mx.RLock()
 	appDef.Jobs(func(job appdef.IJob) {
-		name := job.QName()
-		if _, exists := ps.rt[name]; !exists {
-			start(name)
+		jobQName := job.QName()
+		if _, exists := ps.jobsInAppWSIDRuntimes[jobQName]; !exists {
+			start(jobQName)
 		}
 	})
 	ps.mx.RUnlock()
@@ -125,7 +125,7 @@ func (ps *PartitionSchedulers) Enum() map[appdef.QName][]istructs.WSID {
 	defer ps.mx.RUnlock()
 
 	res := make(map[appdef.QName][]istructs.WSID)
-	for name, wsRT := range ps.rt {
+	for name, wsRT := range ps.jobsInAppWSIDRuntimes {
 		ws := make([]istructs.WSID, 0, len(wsRT))
 		for wsID := range wsRT {
 			ws = append(ws, wsID)
