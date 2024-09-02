@@ -76,7 +76,7 @@ type AppConfigType struct {
 	cudValidators      []istructs.CUDValidator
 	eventValidators    []istructs.EventValidator
 	numAppWorkspaces   istructs.NumAppWorkspaces
-	jobs               []appdef.IJob
+	jobs               []BuiltinJob
 }
 
 func newAppConfig(name appdef.AppQName, id istructs.ClusterAppID, def appdef.IAppDef, wsCount istructs.NumAppWorkspaces) *AppConfigType {
@@ -171,11 +171,24 @@ func (cfg *AppConfigType) prepare(buckets irates.IBuckets, appStorage istorage.I
 		return err
 	}
 
+	if err := cfg.validateJobs(); err != nil {
+		return err
+	}
+
 	if cfg.numAppWorkspaces <= 0 {
 		return fmt.Errorf("%s: %w", cfg.Name, ErrNumAppWorkspacesNotSet)
 	}
 
 	cfg.prepared = true
+	return nil
+}
+
+func (cfg *AppConfigType) validateJobs() error {
+	for _, job := range cfg.jobs {
+		if cfg.AppDef.Type(job.Name).Kind() == appdef.TypeKind_null {
+			return fmt.Errorf("exec of job %s is defined but the job is not defined in SQL", job.Name)
+		}
+	}
 	return nil
 }
 
@@ -224,7 +237,7 @@ func (cfg *AppConfigType) AddEventValidators(eventValidators ...istructs.EventVa
 	cfg.eventValidators = append(cfg.eventValidators, eventValidators...)
 }
 
-func (cfg *AppConfigType) AddJobs(jobs ...appdef.IJob) {
+func (cfg *AppConfigType) AddJobs(jobs ...BuiltinJob) {
 	cfg.jobs = append(cfg.jobs, jobs...)
 }
 
@@ -241,7 +254,7 @@ func (cfg *AppConfigType) SyncProjectors() istructs.Projectors {
 	return cfg.syncProjectors
 }
 
-func (cfg *AppConfigType) Jobs() []appdef.IJob {
+func (cfg *AppConfigType) BuiltingJobs() []BuiltinJob {
 	return cfg.jobs
 }
 

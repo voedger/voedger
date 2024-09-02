@@ -159,7 +159,7 @@ func (a *scheduler) init(_ context.Context) (err error) {
 	}
 
 	if a.conf.Metrics != nil {
-		a.jobInErrAddr = a.conf.Metrics.AppMetricAddr(JobsInError, a.conf.VvmName, a.conf.AppQName)
+		a.jobInErrAddr = a.conf.Metrics.AppMetricAddr(JobsInError, string(a.conf.VvmName), a.conf.AppQName)
 	}
 
 	parser := cron.NewParser(cron.SecondOptional | cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow | cron.Descriptor)

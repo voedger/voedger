@@ -91,9 +91,9 @@ func provideAppsBuiltInExtFuncs(cfgs istructsmem.AppConfigsType) iextengine.Buil
 
 		// async projectors
 		for _, asyncProjector := range cfg.AsyncProjectors() {
-			sp := asyncProjector
+			asp := asyncProjector
 			fn := func(_ context.Context, io iextengine.IExtensionIO) error {
-				return sp.Func(io.PLogEvent(), io, io)
+				return asp.Func(io.PLogEvent(), io, io)
 			}
 			extName := extName(asyncProjector.Name, cfg)
 			appFuncs[extName] = fn
@@ -105,8 +105,13 @@ func provideAppsBuiltInExtFuncs(cfgs istructsmem.AppConfigsType) iextengine.Buil
 }
 
 func writeJobs(cfg *istructsmem.AppConfigType, appFuncs iextengine.BuiltInExtFuncs) {
-	for _, job := range cfg.Jobs() {
-		job.
+	for _, builtinJob := range cfg.BuiltingJobs() {
+		fn := func(_ context.Context, io iextengine.IExtensionIO) error {
+			bj := builtinJob
+			return bj.Func(io, io)
+		}
+		extName := extName(builtinJob.Name, cfg)
+		appFuncs[extName] = fn
 	}
 }
 

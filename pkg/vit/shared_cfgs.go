@@ -12,6 +12,7 @@ import (
 	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/goutils/iterate"
 	"github.com/voedger/voedger/pkg/iauthnz"
+	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	"github.com/voedger/voedger/pkg/parser"
 	"github.com/voedger/voedger/pkg/sys/smtp"
 	"github.com/voedger/voedger/pkg/sys/sysprovide"
@@ -258,6 +259,28 @@ func ProvideApp1(apis apps.APIs, cfg *istructsmem.AppConfigType, ep extensionpoi
 	cfg.Resources.Add(istructsmem.NewQueryFunction(appdef.NewQName(app1PkgName, "QryWithResponseIntent"), func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 		return funcWithResponseIntents(args.PrepareArgs, args.State, args.Intents)
 	}))
+
+	cfg.AddJobs(istructsmem.BuiltinJob{
+		Name: appdef.NewQName(app1PkgName, "Job1"),
+		Func: func(st istructs.IState, intents istructs.IIntents) error {
+			kb, err := st.KeyBuilder(sys.Storage_FederationCommand, istructs.QNameCommandCUD)
+			if err != nil {
+				return err
+			}
+			// kb.PutString(sys.Storage_FederationCommand_Field_Command, "c.sys.CUD")
+			kb.PutString(sys.Storage_FederationCommand_Field_Body, `{"cuds": [{"fields": {"sys.ID": 1,"sys.QName": "app1pkg.JobTable,"Str":"str"}]}`)
+			kb.PutInt64(sys.Storage_FederationCommand_Field_WSID, int64(st.PLogEvent().Workspace()))
+			sysToken, err := payloads.GetSystemPrincipalToken(apis.ITokens, istructs.AppQName_test1_app1)
+			if err != nil {
+				return err
+			}
+			kb.PutString(sys.Storage_FederationCommand_Field_Token, sysToken)
+			kb.PutString(sys.Storage_FederationCommand_Field_Owner, istructs.AppQName_test1_app1.Owner())
+			kb.PutString(sys.Storage_FederationCommand_Field_AppName, istructs.AppQName_test1_app1.Name())
+			_, err = intents.NewValue(kb)
+			return err
+		},
+	})
 
 	app1PackageFS := parser.PackageFS{
 		Path: App1PkgPath,

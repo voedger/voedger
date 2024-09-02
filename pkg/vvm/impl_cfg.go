@@ -9,6 +9,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/goutils/logger"
+	"github.com/voedger/voedger/pkg/processors"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 
 	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
@@ -19,7 +20,6 @@ import (
 	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istorage/mem"
 	"github.com/voedger/voedger/pkg/itokensjwt"
-	commandprocessor "github.com/voedger/voedger/pkg/processors/command"
 	"github.com/voedger/voedger/pkg/router"
 )
 
@@ -38,7 +38,7 @@ func NewVVMDefaultConfig() VVMConfig {
 		RouterConnectionsLimit: router.DefaultConnectionsLimit,
 		BLOBMaxSize:            DefaultBLOBMaxSize,
 		TimeFunc:               DefaultTimeFunc,
-		Name:                   commandprocessor.VVMName(hostname),
+		Name:                   processors.VVMName(hostname),
 		VVMAppsBuilder:         VVMAppsBuilder{},
 		BusTimeout:             BusTimeout(ibus.DefaultTimeout),
 		BlobberServiceChannels: router.BlobberServiceChannels{

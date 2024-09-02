@@ -142,7 +142,7 @@ func (ps *PartitionSchedulers) Enum() map[appdef.QName][]istructs.WSID {
 func (ps *PartitionSchedulers) Wait() {
 	for {
 		ps.mx.RLock()
-		cnt := len(ps.rt)
+		cnt := len(ps.jobsInAppWSIDRuntimes)
 		ps.mx.RUnlock()
 		if cnt == 0 {
 			break

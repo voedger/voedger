@@ -35,7 +35,9 @@ import (
 	"github.com/voedger/voedger/pkg/iextengine"
 	"github.com/voedger/voedger/pkg/itokens"
 	"github.com/voedger/voedger/pkg/parser"
+	"github.com/voedger/voedger/pkg/processors"
 	"github.com/voedger/voedger/pkg/processors/actualizers"
+	"github.com/voedger/voedger/pkg/processors/schedulers"
 	"github.com/voedger/voedger/pkg/router"
 	"github.com/voedger/voedger/pkg/vvm/engines"
 
@@ -127,6 +129,7 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 	panic(wire.Build(
 		wire.Struct(new(VVM), "*"),
 		wire.Struct(new(apps.APIs), "*"),
+		wire.Struct(new(schedulers.BasicSchedulerConfig), "VvmName", "SecretReader", "Tokens", "Metrics", "Broker", "Federation", "TimeFunc"),
 		provideServicePipeline,
 		provideCommandProcessors,
 		provideQueryProcessors,
@@ -176,7 +179,7 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 		provideBuiltInApps,
 		provideBasicAsyncActualizerConfig, // projectors.BasicAsyncActualizerConfig
 		provideAsyncActualizersService,    // projectors.IActualizersService
-		provideJobSchedulerRunner,         // appparts.IProcessorRunner
+		provideSchedulerRunner,            // appparts.IProcessorRunner
 		apppartsctl.New,
 		provideAppConfigsTypeEmpty,
 		provideBuiltInAppPackages,
@@ -205,6 +208,10 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 			"SecretsReader",
 		),
 	))
+}
+
+func provideSchedulerRunner(cfg schedulers.BasicSchedulerConfig) appparts.ISchedulerRunner {
+	return schedulers.ProvideSchedulers(cfg)
 }
 
 func provideBootstrapOperator(federation federation.IFederation, asp istructs.IAppStructsProvider, timeFunc coreutils.TimeFunc, apppar appparts.IAppPartitions,
@@ -250,7 +257,7 @@ func provideIAppStructsProvider(cfgs AppConfigsTypeEmpty, bucketsFactory irates.
 }
 
 func provideBasicAsyncActualizerConfig(
-	vvm commandprocessor.VVMName,
+	vvm processors.VVMName,
 	secretReader isecrets.ISecretReader,
 	tokens itokens.ITokens,
 	metrics imetrics.IMetrics,
@@ -273,11 +280,6 @@ func provideBasicAsyncActualizerConfig(
 
 func provideAsyncActualizersService(cfg actualizers.BasicAsyncActualizerConfig) actualizers.IActualizersService {
 	return actualizers.ProvideActualizers(cfg)
-}
-
-func provideJobSchedulerRunner() appparts.ISchedulerRunner {
-	// TODO: implement ISchedulerService interface{ IProcessorRunner } in pkg/processor/scheduler
-	return appparts.NullSchedulerRunner
 }
 
 func provideBuildInfo() (*debug.BuildInfo, error) {
@@ -659,7 +661,7 @@ func provideChannelGroups(cfg *VVMConfig) (res []iprocbusmem.ChannelGroup) {
 }
 
 func provideCachingAppStorageProvider(storageCacheSize StorageCacheSizeType, metrics imetrics.IMetrics,
-	vvmName commandprocessor.VVMName, uncachingProvider IAppStorageUncachingProviderFactory) istorage.IAppStorageProvider {
+	vvmName processors.VVMName, uncachingProvider IAppStorageUncachingProviderFactory) istorage.IAppStorageProvider {
 	aspNonCaching := uncachingProvider()
 	return istoragecache.Provide(int(storageCacheSize), aspNonCaching, metrics, string(vvmName))
 }
@@ -724,7 +726,7 @@ func provideCommandChannelFactory(sch ServiceChannelFactory) CommandChannelFacto
 }
 
 func provideQueryProcessors(qpCount istructs.NumQueryProcessors, qc QueryChannel, appParts appparts.IAppPartitions, qpFactory queryprocessor.ServiceFactory,
-	imetrics imetrics.IMetrics, vvm commandprocessor.VVMName, mpq MaxPrepareQueriesType, authn iauthnz.IAuthenticator, authz iauthnz.IAuthorizer,
+	imetrics imetrics.IMetrics, vvm processors.VVMName, mpq MaxPrepareQueriesType, authn iauthnz.IAuthenticator, authz iauthnz.IAuthorizer,
 	tokens itokens.ITokens, federation federation.IFederation, statelessResources istructsmem.IStatelessResources) OperatorQueryProcessors {
 	forks := make([]pipeline.ForkOperatorOptionFunc, qpCount)
 	resultSenderFactory := func(ctx context.Context, sender ibus.ISender) queryprocessor.IResultSenderClosable {
