@@ -10,6 +10,11 @@ import (
 	"time"
 )
 
+type ITime interface {
+	Now() time.Time
+	NewTimer(d time.Duration) <-chan time.Time
+}
+
 var MockTime IMockTime = &mockedTime{
 	now:     time.Now(),
 	RWMutex: sync.RWMutex{},
@@ -20,16 +25,17 @@ type IMockTime interface {
 	Add(d time.Duration)
 }
 
-type ITime interface {
-	Now() time.Time
-	NewTimer(d time.Duration) <-chan time.Time
+type realTime struct{}
+
+type mockedTime struct {
+	sync.RWMutex
+	now    time.Time
+	timers sync.Map
 }
 
 func NewITime() ITime {
 	return &realTime{}
 }
-
-type realTime struct{}
 
 func (t *realTime) Now() time.Time {
 	return time.Now()
@@ -38,12 +44,6 @@ func (t *realTime) Now() time.Time {
 func (t *realTime) NewTimer(d time.Duration) <-chan time.Time {
 	res := time.NewTimer(d)
 	return res.C
-}
-
-type mockedTime struct {
-	sync.RWMutex
-	now    time.Time
-	timers sync.Map
 }
 
 func (t *mockedTime) Now() time.Time {
@@ -78,7 +78,7 @@ func (t *mockedTime) Add(d time.Duration) {
 func (t *mockedTime) checkTimers() {
 	t.timers.Range(func(key, value any) bool {
 		timer := key.(*MockTimer)
-		if !timer.fired && t.now.After(timer.expiration) {
+		if !timer.fired && (t.now.Equal(timer.expiration) || t.now.After(timer.expiration)) {
 			timer.fired = true
 			select {
 			case timer.C <- t.now:
