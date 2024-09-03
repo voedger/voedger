@@ -74,14 +74,14 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 	serviceChannelFactory := provideServiceChannelFactory(vvmConfig, iProcBus)
 	commandChannelFactory := provideCommandChannelFactory(serviceChannelFactory)
 	appConfigsTypeEmpty := provideAppConfigsTypeEmpty()
-	timeFunc := vvmConfig.TimeFunc
-	bucketsFactoryType := provideBucketsFactory(timeFunc)
+	iTime := vvmConfig.Time
+	bucketsFactoryType := provideBucketsFactory(iTime)
 	iSecretReader := vvmConfig.SecretsReader
 	secretKeyType, err := provideSecretKeyJWT(iSecretReader)
 	if err != nil {
 		return nil, nil, err
 	}
-	iTokens := itokensjwt.ProvideITokens(secretKeyType, timeFunc)
+	iTokens := itokensjwt.ProvideITokens(secretKeyType, iTime)
 	iAppTokensFactory := payloads.ProvideIAppTokensFactory(iTokens)
 	storageCacheSizeType := vvmConfig.StorageCacheSize
 	iMetrics := imetrics.Provide()
@@ -95,7 +95,7 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 	iAppStructsProvider := provideIAppStructsProvider(appConfigsTypeEmpty, bucketsFactoryType, iAppTokensFactory, iAppStorageProvider)
 	syncActualizerFactory := actualizers.ProvideSyncActualizerFactory()
 	quotas := vvmConfig.Quotas
-	in10nBroker, cleanup := in10nmem.ProvideEx2(quotas, timeFunc)
+	in10nBroker, cleanup := in10nmem.ProvideEx2(quotas, iTime)
 	v2 := provideAppsExtensionPoints(vvmConfig)
 	buildInfo, err := provideBuildInfo()
 	if err != nil {
@@ -122,7 +122,7 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 		IAppStorageProvider: iAppStorageProvider,
 		IAppTokensFactory:   iAppTokensFactory,
 		IFederation:         iFederation,
-		TimeFunc:            timeFunc,
+		ITime:               iTime,
 		SidecarApps:         v5,
 	}
 	builtInAppsArtefacts, err := provideBuiltInAppsArtefacts(vvmConfig, apIs, appConfigsTypeEmpty, v2)
@@ -141,7 +141,7 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 	isDeviceAllowedFuncs := provideIsDeviceAllowedFunc(v2)
 	iAuthenticator := iauthnzimpl.NewDefaultAuthenticator(v6, isDeviceAllowedFuncs)
 	iAuthorizer := iauthnzimpl.NewDefaultAuthorizer()
-	serviceFactory := commandprocessor.ProvideServiceFactory(iAppPartitions, timeFunc, in10nBroker, iMetrics, vvmName, iAuthenticator, iAuthorizer, iSecretReader)
+	serviceFactory := commandprocessor.ProvideServiceFactory(iAppPartitions, iTime, in10nBroker, iMetrics, vvmName, iAuthenticator, iAuthorizer, iSecretReader)
 	operatorCommandProcessors := provideCommandProcessors(numCommandProcessors, commandChannelFactory, serviceFactory)
 	numQueryProcessors := vvmConfig.NumQueryProcessors
 	queryChannel := provideQueryChannel(serviceChannelFactory)
@@ -159,7 +159,7 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 	v7 := provideBuiltInApps(builtInAppsArtefacts, v5)
 	blobAppStoragePtr := provideBlobAppStoragePtr(iAppStorageProvider)
 	routerAppStoragePtr := provideRouterAppStoragePtr(iAppStorageProvider)
-	bootstrapOperator, err := provideBootstrapOperator(iFederation, iAppStructsProvider, timeFunc, iAppPartitions, v7, v5, iTokens, iAppStorageProvider, blobAppStoragePtr, routerAppStoragePtr)
+	bootstrapOperator, err := provideBootstrapOperator(iFederation, iAppStructsProvider, iTime, iAppPartitions, v7, v5, iTokens, iAppStorageProvider, blobAppStoragePtr, routerAppStoragePtr)
 	if err != nil {
 		cleanup4()
 		cleanup3()
@@ -172,7 +172,7 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 	busTimeout := vvmConfig.BusTimeout
 	blobberServiceChannels := vvmConfig.BlobberServiceChannels
 	blobMaxSizeType := vvmConfig.BLOBMaxSize
-	blobStorage := provideBlobStorage(blobAppStoragePtr, timeFunc)
+	blobStorage := provideBlobStorage(blobAppStoragePtr, iTime)
 	cache := dbcertcache.ProvideDbCache(routerAppStoragePtr)
 	commandProcessorsChannelGroupIdxType := provideProcessorChannelGroupIdxCommand(vvmConfig)
 	queryProcessorsChannelGroupIdxType := provideProcessorChannelGroupIdxQuery(vvmConfig)
@@ -186,7 +186,7 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 		cleanup()
 		return nil, nil, err
 	}
-	routerServices := provideRouterServices(vvmCtx, routerParams, busTimeout, in10nBroker, quotas, timeFunc, blobberServiceChannels, blobMaxSizeType, blobStorage, cache, iBus, vvmPortSource, v8)
+	routerServices := provideRouterServices(vvmCtx, routerParams, busTimeout, in10nBroker, quotas, blobberServiceChannels, blobMaxSizeType, blobStorage, cache, iBus, vvmPortSource, v8)
 	adminEndpointServiceOperator := provideAdminEndpointServiceOperator(routerServices)
 	metricsServicePortInitial := vvmConfig.MetricsServicePort
 	metricsServicePort := provideMetricsServicePort(metricsServicePortInitial, vvmIdx)
@@ -257,7 +257,7 @@ func (vvm *VoedgerVM) Launch() error {
 	return err
 }
 
-func provideBootstrapOperator(federation2 federation.IFederation, asp istructs.IAppStructsProvider, timeFunc coreutils.TimeFunc, apppar appparts.IAppPartitions,
+func provideBootstrapOperator(federation2 federation.IFederation, asp istructs.IAppStructsProvider, time coreutils.ITime, apppar appparts.IAppPartitions,
 	builtinApps []appparts.BuiltInApp, sidecarApps []appparts.SidecarApp, itokens2 itokens.ITokens, storageProvider istorage.IAppStorageProvider, blobberAppStoragePtr iblobstoragestg.BlobAppStoragePtr,
 	routerAppStoragePtr dbcertcache.RouterAppStoragePtr) (BootstrapOperator, error) {
 	var clusterBuiltinApp btstrp.ClusterBuiltInApp
@@ -278,7 +278,7 @@ func provideBootstrapOperator(federation2 federation.IFederation, asp istructs.I
 		return nil, fmt.Errorf("%s app should be added to VVM builtin apps", istructs.AppQName_sys_cluster)
 	}
 	return pipeline.NewSyncOp(func(ctx context.Context, work pipeline.IWorkpiece) (err error) {
-		return btstrp.Bootstrap(federation2, asp, timeFunc, apppar, clusterBuiltinApp, otherApps, sidecarApps, itokens2, storageProvider, blobberAppStoragePtr, routerAppStoragePtr)
+		return btstrp.Bootstrap(federation2, asp, time, apppar, clusterBuiltinApp, otherApps, sidecarApps, itokens2, storageProvider, blobberAppStoragePtr, routerAppStoragePtr)
 	}), nil
 }
 
@@ -350,7 +350,7 @@ func provideStatelessResources(cfgs AppConfigsTypeEmpty, vvmCfg *VVMConfig, appE
 	buildInfo *debug.BuildInfo, sp istorage.IAppStorageProvider, itokens2 itokens.ITokens, federation2 federation.IFederation,
 	asp istructs.IAppStructsProvider, atf payloads.IAppTokensFactory) istructsmem.IStatelessResources {
 	ssr := istructsmem.NewStatelessResources()
-	sysprovide.ProvideStateless(ssr, vvmCfg.SmtpConfig, appEPs, buildInfo, sp, vvmCfg.WSPostInitFunc, vvmCfg.TimeFunc, itokens2, federation2, asp, atf)
+	sysprovide.ProvideStateless(ssr, vvmCfg.SmtpConfig, appEPs, buildInfo, sp, vvmCfg.WSPostInitFunc, vvmCfg.Time, itokens2, federation2, asp, atf)
 	return ssr
 }
 
@@ -453,9 +453,9 @@ func provideSubjectGetterFunc() iauthnzimpl.SubjectGetterFunc {
 	}
 }
 
-func provideBucketsFactory(timeFunc coreutils.TimeFunc) irates.BucketsFactoryType {
+func provideBucketsFactory(time coreutils.ITime) irates.BucketsFactoryType {
 	return func() irates.IBuckets {
-		return iratesce.Provide(timeFunc)
+		return iratesce.Provide(time)
 	}
 }
 
@@ -715,8 +715,8 @@ func provideBlobAppStoragePtr(astp istorage.IAppStorageProvider) iblobstoragestg
 	return new(istorage.IAppStorage)
 }
 
-func provideBlobStorage(bas iblobstoragestg.BlobAppStoragePtr, nowFunc coreutils.TimeFunc) BlobStorage {
-	return iblobstoragestg.Provide(bas, nowFunc)
+func provideBlobStorage(bas iblobstoragestg.BlobAppStoragePtr, time coreutils.ITime) BlobStorage {
+	return iblobstoragestg.Provide(bas, time)
 }
 
 func provideRouterAppStoragePtr(astp istorage.IAppStorageProvider) dbcertcache.RouterAppStoragePtr {
@@ -725,7 +725,7 @@ func provideRouterAppStoragePtr(astp istorage.IAppStorageProvider) dbcertcache.R
 
 // port 80 -> [0] is http server, port 443 -> [0] is https server, [1] is acme server
 func provideRouterServices(vvmCtx context.Context, rp router.RouterParams, busTimeout BusTimeout, broker in10n.IN10nBroker, quotas in10n.Quotas,
-	nowFunc coreutils.TimeFunc, bsc router.BlobberServiceChannels, bms router.BLOBMaxSizeType, blobStorage BlobStorage,
+	bsc router.BlobberServiceChannels, bms router.BLOBMaxSizeType, blobStorage BlobStorage,
 	autocertCache autocert.Cache, bus ibus.IBus, vvmPortSource *VVMPortSource, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) RouterServices {
 	bp := &router.BlobberParams{
 		ServiceChannels:        bsc,

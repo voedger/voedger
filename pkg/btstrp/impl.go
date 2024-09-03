@@ -22,12 +22,12 @@ import (
 	dbcertcache "github.com/voedger/voedger/pkg/vvm/db_cert_cache"
 )
 
-func Bootstrap(federation federation.IFederation, asp istructs.IAppStructsProvider, timeFunc coreutils.TimeFunc, appparts appparts.IAppPartitions,
+func Bootstrap(federation federation.IFederation, asp istructs.IAppStructsProvider, time coreutils.ITime, appparts appparts.IAppPartitions,
 	clusterApp ClusterBuiltInApp, otherApps []appparts.BuiltInApp, sidecarApps []appparts.SidecarApp, itokens itokens.ITokens, storageProvider istorage.IAppStorageProvider,
 	blobberAppStoragePtr iblobstoragestg.BlobAppStoragePtr, routerAppStoragePtr dbcertcache.RouterAppStoragePtr) (err error) {
 
 	// initialize cluster app workspace, use app ws amount 0
-	if err := initClusterAppWS(asp, timeFunc); err != nil {
+	if err := initClusterAppWS(asp, time); err != nil {
 		return err
 	}
 
@@ -91,11 +91,11 @@ func callDeployApp(federation federation.IFederation, sysToken string, app apppa
 	}
 }
 
-func initClusterAppWS(asp istructs.IAppStructsProvider, timeFunc coreutils.TimeFunc) error {
+func initClusterAppWS(asp istructs.IAppStructsProvider, time coreutils.ITime) error {
 	as, err := asp.BuiltIn(istructs.AppQName_sys_cluster)
 	if err == nil {
 		_, err = cluster.InitAppWS(as, clusterapp.ClusterAppWSIDPartitionID, clusterapp.ClusterAppWSID, istructs.FirstOffset, istructs.FirstOffset,
-			istructs.UnixMilli(timeFunc().UnixMilli()))
+			istructs.UnixMilli(time.Now().UnixMilli()))
 	}
 	return err
 }

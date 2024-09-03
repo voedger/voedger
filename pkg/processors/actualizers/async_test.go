@@ -21,6 +21,7 @@ import (
 	"github.com/voedger/voedger/pkg/istructsmem"
 	imetrics "github.com/voedger/voedger/pkg/metrics"
 	"github.com/voedger/voedger/pkg/sys"
+	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 // Design: Projection Actualizers
@@ -52,7 +53,7 @@ func TestBasicUsage_AsynchronousActualizer(t *testing.T) {
 		ChannelsPerSubject:      2,
 		Subscriptions:           2,
 		SubscriptionsPerSubject: 2,
-	}, time.Now)
+	}, coreutils.NewITime())
 	defer bCleanup()
 
 	actCfg := &BasicAsyncActualizerConfig{
@@ -140,7 +141,7 @@ func Test_AsynchronousActualizer_FlushByRange(t *testing.T) {
 		ChannelsPerSubject:      2,
 		Subscriptions:           2,
 		SubscriptionsPerSubject: 2,
-	}, time.Now)
+	}, coreutils.NewITime())
 	defer bCleanup()
 
 	conf := &BasicAsyncActualizerConfig{
@@ -219,7 +220,7 @@ func Test_AsynchronousActualizer_FlushByInterval(t *testing.T) {
 		ChannelsPerSubject:      2,
 		Subscriptions:           2,
 		SubscriptionsPerSubject: 2,
-	}, time.Now)
+	}, coreutils.NewITime())
 	defer bCleanup()
 
 	actCfg := &BasicAsyncActualizerConfig{
@@ -309,7 +310,7 @@ func Test_AsynchronousActualizer_ErrorAndRestore(t *testing.T) {
 		ChannelsPerSubject:      2,
 		Subscriptions:           2,
 		SubscriptionsPerSubject: 2,
-	}, time.Now)
+	}, coreutils.NewITime())
 	defer cleanup()
 
 	actConf := &BasicAsyncActualizerConfig{
@@ -420,7 +421,7 @@ func Test_AsynchronousActualizer_ResumeReadAfterNotifications(t *testing.T) {
 		ChannelsPerSubject:      2,
 		Subscriptions:           2,
 		SubscriptionsPerSubject: 2,
-	}, time.Now)
+	}, coreutils.NewITime())
 	defer bCleanup()
 
 	actCfg := &BasicAsyncActualizerConfig{
@@ -560,7 +561,7 @@ func Test_AsynchronousActualizer_Stress(t *testing.T) {
 		ChannelsPerSubject:      2,
 		Subscriptions:           2,
 		SubscriptionsPerSubject: 2,
-	}, time.Now)
+	}, coreutils.NewITime())
 	defer bCleanup()
 
 	actMetrics := newSimpleMetrics()
@@ -641,7 +642,7 @@ func Test_AsynchronousActualizer_NonBuffered(t *testing.T) {
 		ChannelsPerSubject:      2,
 		Subscriptions:           2,
 		SubscriptionsPerSubject: 2,
-	}, time.Now)
+	}, coreutils.NewITime())
 	defer bCleanup()
 
 	actMetrics := newSimpleMetrics()
@@ -764,7 +765,7 @@ func Test_AsynchronousActualizer_Stress_NonBuffered(t *testing.T) {
 		ChannelsPerSubject:      totalPartitions * projectorsPerPartition,
 		Subscriptions:           totalPartitions * projectorsPerPartition,
 		SubscriptionsPerSubject: totalPartitions * projectorsPerPartition,
-	}, time.Now)
+	}, coreutils.NewITime())
 	defer bCleanup()
 
 	actMetrics := newSimpleMetrics()
@@ -893,7 +894,7 @@ func Test_AsynchronousActualizer_Stress_Buffered(t *testing.T) {
 		ChannelsPerSubject:      totalPartitions * projectorsPerPartition,
 		Subscriptions:           totalPartitions * projectorsPerPartition,
 		SubscriptionsPerSubject: totalPartitions * projectorsPerPartition,
-	}, time.Now)
+	}, coreutils.NewITime())
 	defer bCleanup()
 
 	actMetrics := newSimpleMetrics()

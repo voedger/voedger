@@ -11,10 +11,10 @@ import (
 )
 
 // Provide: constructs bucketFactory
-func Provide(timeFunc coreutils.TimeFunc) (buckets irates.IBuckets) {
+func Provide(time coreutils.ITime) (buckets irates.IBuckets) {
 	return &bucketsType{
 		buckets:       map[irates.BucketKey]*bucketType{},
 		defaultStates: map[string]irates.BucketState{},
-		timeFunc:      timeFunc,
+		time:          time,
 	}
 }

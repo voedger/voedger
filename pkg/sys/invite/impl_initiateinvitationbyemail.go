@@ -14,14 +14,14 @@ import (
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-func provideCmdInitiateInvitationByEMail(sr istructsmem.IStatelessResources, timeFunc coreutils.TimeFunc) {
+func provideCmdInitiateInvitationByEMail(sr istructsmem.IStatelessResources, time coreutils.ITime) {
 	sr.AddCommands(appdef.SysPackagePath, istructsmem.NewCommandFunction(
 		qNameCmdInitiateInvitationByEMail,
-		execCmdInitiateInvitationByEMail(timeFunc),
+		execCmdInitiateInvitationByEMail(time),
 	))
 }
 
-func execCmdInitiateInvitationByEMail(timeFunc coreutils.TimeFunc) func(args istructs.ExecCommandArgs) (err error) {
+func execCmdInitiateInvitationByEMail(tm coreutils.ITime) func(args istructs.ExecCommandArgs) (err error) {
 	return func(args istructs.ExecCommandArgs) (err error) {
 		if !coreutils.IsValidEmailTemplate(args.ArgumentObject.AsString(field_EmailTemplate)) {
 			return coreutils.NewHTTPError(http.StatusBadRequest, errInviteTemplateInvalid)
@@ -71,7 +71,7 @@ func execCmdInitiateInvitationByEMail(timeFunc coreutils.TimeFunc) func(args ist
 			svbCDocInvite.PutString(Field_Roles, args.ArgumentObject.AsString(Field_Roles))
 			svbCDocInvite.PutInt64(field_ExpireDatetime, args.ArgumentObject.AsInt64(field_ExpireDatetime))
 			svbCDocInvite.PutInt32(field_State, State_ToBeInvited)
-			svbCDocInvite.PutInt64(field_Updated, timeFunc().UnixMilli())
+			svbCDocInvite.PutInt64(field_Updated, tm.Now().UnixMilli())
 			svbCDocInvite.PutString(field_ActualLogin, actualLogin)
 
 			return nil
@@ -85,7 +85,7 @@ func execCmdInitiateInvitationByEMail(timeFunc coreutils.TimeFunc) func(args ist
 		if err != nil {
 			return err
 		}
-		now := timeFunc().UnixMilli()
+		now := tm.Now().UnixMilli()
 		svbCDocInvite.PutRecordID(appdef.SystemField_ID, istructs.RecordID(1))
 		svbCDocInvite.PutString(Field_Login, args.ArgumentObject.AsString(field_Email))
 		svbCDocInvite.PutString(field_Email, args.ArgumentObject.AsString(field_Email))

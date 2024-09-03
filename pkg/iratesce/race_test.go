@@ -15,10 +15,11 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/irates"
 	"github.com/voedger/voedger/pkg/istructs"
+	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 func TestRace_Buckets(t *testing.T) {
-	buckets := Provide(time.Now)
+	buckets := Provide(coreutils.NewITime())
 
 	sTotalRegLimitName := "TotalRegLimitName"
 	sAddrRegLimitName := "TotalRegLimitName"

@@ -15,11 +15,10 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/itokens"
 	"github.com/voedger/voedger/pkg/itokensjwt"
+	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 var (
-	testTime     = time.Now()
-	testTimeFunc = func() time.Time { return testTime }
 	testApp      = istructs.AppQName_test1_app1
 	testDuration = time.Minute
 )
@@ -28,7 +27,7 @@ func TestBasicUsage_PrincipalPayload(t *testing.T) {
 
 	require := require.New(t)
 
-	signer := itokensjwt.ProvideITokens(itokensjwt.SecretKeyExample, testTimeFunc)
+	signer := itokensjwt.TestTokensJWT()
 
 	srcPayload := PrincipalPayload{
 		Login:       "login",
@@ -60,7 +59,7 @@ func TestBasicUsage_PrincipalPayload(t *testing.T) {
 func TestBasicUsage_BLOBUploadingPayload(t *testing.T) {
 
 	require := require.New(t)
-	signer := itokensjwt.ProvideITokens(itokensjwt.SecretKeyExample, testTimeFunc)
+	signer := itokensjwt.TestTokensJWT()
 
 	srcPayload := BLOBUploadingPayload{
 		Workspace: istructs.WSID(1),
@@ -91,7 +90,7 @@ func TestBasicUsage_BLOBUploadingPayload(t *testing.T) {
 func TestBasicUsage_VerifiedValue(t *testing.T) {
 
 	require := require.New(t)
-	signer := itokensjwt.ProvideITokens(itokensjwt.SecretKeyExample, testTimeFunc)
+	signer := itokensjwt.TestTokensJWT()
 	testQName := appdef.NewQName("test", "entity")
 
 	token := ""
@@ -126,7 +125,7 @@ func TestBasicUsage_VerifiedValue(t *testing.T) {
 
 func TestBasicUsage_IAppTokens(t *testing.T) {
 	require := require.New(t)
-	tokens := itokensjwt.ProvideITokens(itokensjwt.SecretKeyExample, testTimeFunc)
+	tokens := itokensjwt.TestTokensJWT()
 	atf := ProvideIAppTokensFactory(tokens)
 	at := atf.New(testApp)
 
@@ -153,15 +152,15 @@ func TestBasicUsage_IAppTokens(t *testing.T) {
 	})
 
 	t.Run("Basic validation error", func(t *testing.T) {
-		testTime = testTime.Add(testDuration * 2)
-		defer func() { testTime = testTime.Add(-testDuration * 2) }()
+		coreutils.MockTime.Add(testDuration * 2)
+		defer func() { coreutils.MockTime.Add(-testDuration * 2) }()
 		payload := PrincipalPayload{}
 		_, err := at.ValidateToken(token, &payload)
 		require.ErrorIs(err, itokens.ErrTokenExpired)
 	})
 
 	t.Run("Error on validate a token issued for an another app", func(t *testing.T) {
-		tokens := itokensjwt.ProvideITokens(itokensjwt.SecretKeyExample, testTimeFunc)
+		tokens := itokensjwt.TestTokensJWT()
 		atf := ProvideIAppTokensFactory(tokens)
 		at := atf.New(istructs.AppQName_test2_app1)
 		payload := PrincipalPayload{}

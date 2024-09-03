@@ -17,6 +17,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/itokens"
+	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 var SecretKeyTooShortExample = SecretKeyType{
@@ -42,16 +43,11 @@ type TestPayload_BLOBUploading struct {
 	MaxSize   int64
 }
 
-var (
-	testTime     = time.Now()
-	testTimeFunc = func() time.Time { return testTime }
-)
-
 func TestBasicUsage_ITokens(t *testing.T) {
 
 	require := require.New(t)
 
-	signer := ProvideITokens(SecretKeyExample, testTimeFunc)
+	signer := ProvideITokens(SecretKeyExample, coreutils.MockTime)
 
 	// Prepare payloads
 
@@ -121,14 +117,14 @@ func TestBasicUsage_ITokens(t *testing.T) {
 
 	t.Run("Check expired token", func(t *testing.T) {
 		var gp istructs.GenericPayload
-		testTime = time.Date(2021, time.October, 16, 0, 46, 0, 0, time.Local)
-		// acquire signer with synthetic time and issue token
+
+		// acquire signer with current time
 		expiredToken, err := signer.IssueToken(istructs.AppQName_test1_app1, 1*time.Minute, &principalPayload)
 		require.NoError(err)
 
-		// acquire signer with correct time and verify token
+		// simulate token validity time is passed
 		// must get error, because token already expired
-		testTime = time.Now()
+		coreutils.MockTime.Add(2 * time.Minute)
 		var payload = TestPayload_Principal{}
 		gp, err = signer.ValidateToken(expiredToken, &payload)
 		require.Greater(gp.IssuedAt.Unix(), new(time.Time).Unix())
@@ -141,7 +137,7 @@ func TestBasicUsage_ITokens(t *testing.T) {
 		require.NoError(err)
 
 		// make current time later the expiration moment
-		testTime = testTime.Add(testDuration * 2)
+		coreutils.MockTime.Add(testDuration * 2)
 		payload := TestPayload_Principal{}
 		gp, err = signer.ValidateToken(expiredToken, &payload)
 		require.Greater(gp.IssuedAt.Unix(), new(time.Time).Unix())
@@ -151,7 +147,7 @@ func TestBasicUsage_ITokens(t *testing.T) {
 
 func TestErrorProcessing(t *testing.T) {
 	require := require.New(t)
-	signer := ProvideITokens(SecretKeyExample, testTimeFunc)
+	signer := TestTokensJWT()
 
 	// Prepare payloads
 	principalPayload := TestPayload_Principal{
@@ -295,7 +291,7 @@ func TestErrorProcessing(t *testing.T) {
 // Try to create signer with TOO SHORT Secret Key. We must panic.
 func TestSecretKeyTooShort(t *testing.T) {
 	require.Panics(t, func() {
-		_ = ProvideITokens(SecretKeyTooShortExample, testTimeFunc)
+		_ = ProvideITokens(SecretKeyTooShortExample, coreutils.MockTime)
 	})
 }
 
@@ -308,7 +304,7 @@ func TestHashFunc(t *testing.T) {
 	)
 	b := make([]byte, 32)
 	require := require.New(t)
-	signer := ProvideITokens(SecretKeyExample, testTimeFunc)
+	signer := TestTokensJWT()
 	hash := signer.CryptoHash256(testMsg)
 	require.NotNil(hash)
 	copy(b, hash[:])

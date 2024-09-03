@@ -127,7 +127,7 @@ func Test_DeployActualizersAndSchedulers(t *testing.T) {
 	appStructs := istructsmem.Provide(
 		appConfigs,
 		iratesce.TestBucketsFactory,
-		payloads.TestAppTokensFactory(itokensjwt.TestTokensJWT()),
+		payloads.ProvideIAppTokensFactory(itokensjwt.TestTokensJWT()),
 		provider.Provide(mem.Provide(), ""))
 
 	mockActualizers := &mockActualizerRunner{}

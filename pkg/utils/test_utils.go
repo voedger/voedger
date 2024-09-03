@@ -13,11 +13,6 @@ import (
 	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
 )
 
-var (
-	TestNow      = time.Now()
-	TestTimeFunc = TimeFunc(func() time.Time { return TestNow })
-)
-
 // ICUDRow, IObject
 type TestObject struct {
 	istructs.NullObject

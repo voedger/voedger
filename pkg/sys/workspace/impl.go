@@ -213,7 +213,7 @@ func invokeCreateWorkspaceProjector(federation federation.IFederation, tokensAPI
 
 // c.sys.CreateWorkspace
 // must be called in the target application because the user profile is located in the target application according to schema
-func execCmdCreateWorkspace(now coreutils.TimeFunc) istructsmem.ExecCommandClosure {
+func execCmdCreateWorkspace(time coreutils.ITime) istructsmem.ExecCommandClosure {
 	return func(args istructs.ExecCommandArgs) error {
 		// TODO: AuthZ: System, SystemToken in header
 		// Check that CDoc<sys.WorkspaceDescriptor> does not exist yet (IRecords.GetSingleton())
@@ -262,7 +262,7 @@ func execCmdCreateWorkspace(now coreutils.TimeFunc) istructsmem.ExecCommandClosu
 		cdocWSDesc.PutString(field_TemplateName, args.ArgumentObject.AsString(field_TemplateName))
 		cdocWSDesc.PutString(Field_TemplateParams, args.ArgumentObject.AsString(Field_TemplateParams))
 		cdocWSDesc.PutInt64(authnz.Field_WSID, int64(newWSID))
-		cdocWSDesc.PutInt64(authnz.Field_CreatedAtMs, now().UnixMilli())
+		cdocWSDesc.PutInt64(authnz.Field_CreatedAtMs, time.Now().UnixMilli())
 		cdocWSDesc.PutInt32(authnz.Field_Status, int32(authnz.WorkspaceStatus_Active))
 		if e != nil {
 			cdocWSDesc.PutString(Field_CreateError, e.Error())
@@ -286,7 +286,7 @@ func execCmdCreateWorkspace(now coreutils.TimeFunc) istructsmem.ExecCommandClosu
 
 // Projector<A, InitializeWorkspace>
 // triggered by CDoc<WorkspaceDescriptor>
-func initializeWorkspaceProjector(nowFunc coreutils.TimeFunc, federation federation.IFederation, eps map[appdef.AppQName]extensionpoints.IExtensionPoint,
+func initializeWorkspaceProjector(time coreutils.ITime, federation federation.IFederation, eps map[appdef.AppQName]extensionpoints.IExtensionPoint,
 	tokensAPI itokens.ITokens, wsPostInitFunc WSPostInitFunc) func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
 	return func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
 		return iterate.ForEachError(event.CUDs, func(rec istructs.ICUDRow) error {
@@ -361,7 +361,7 @@ func initializeWorkspaceProjector(nowFunc coreutils.TimeFunc, federation federat
 				info("initStartedAtMs = 0. WS init was not started")
 				// WS[currentWS].c.sys.CUD(wsDescr.ID, initStartedAtMs)
 				body := fmt.Sprintf(`{"cuds": [{"sys.ID": %d,"fields": {"sys.QName": "%s","%s": %d}}]}`,
-					wsDescr.ID(), authnz.QNameCDocWorkspaceDescriptor, Field_InitStartedAtMs, nowFunc().UnixMilli())
+					wsDescr.ID(), authnz.QNameCDocWorkspaceDescriptor, Field_InitStartedAtMs, time.Now().UnixMilli())
 				info("updating initStartedAtMs:", updateWSDescrURL)
 
 				if _, err := federation.Func(updateWSDescrURL, body, coreutils.WithAuthorizeBy(systemPrincipalToken_TargetApp), coreutils.WithDiscardResponse()); err != nil {
@@ -381,7 +381,7 @@ func initializeWorkspaceProjector(nowFunc coreutils.TimeFunc, federation federat
 					wsErrStr = wsError.Error()
 				}
 				body = fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"sys.QName":"%s","%s":%q,"%s":%d}}]}`,
-					wsDescr.ID(), authnz.QNameCDocWorkspaceDescriptor, Field_InitError, wsErrStr, Field_InitCompletedAtMs, nowFunc().UnixMilli())
+					wsDescr.ID(), authnz.QNameCDocWorkspaceDescriptor, Field_InitError, wsErrStr, Field_InitCompletedAtMs, time.Now().UnixMilli())
 				if _, err = federation.Func(updateWSDescrURL, body, coreutils.WithAuthorizeBy(systemPrincipalToken_TargetApp), coreutils.WithDiscardResponse()); err != nil {
 					er("failed to update initError+initCompletedAtMs:", err)
 					return nil
@@ -390,7 +390,7 @@ func initializeWorkspaceProjector(nowFunc coreutils.TimeFunc, federation federat
 				info("initCompletedAtMs = 0. WS data init was interrupted")
 				wsError = errors.New("workspace data initialization was interrupted")
 				body := fmt.Sprintf(`{"cuds":[{"fields":{"sys.QName":"%s","%s":%q,"%s":%d}}]}`,
-					authnz.QNameCDocWorkspaceDescriptor, Field_InitError, wsError.Error(), Field_InitCompletedAtMs, nowFunc().UnixMilli())
+					authnz.QNameCDocWorkspaceDescriptor, Field_InitError, wsError.Error(), Field_InitCompletedAtMs, time.Now().UnixMilli())
 				if _, err = federation.Func(updateWSDescrURL, body, coreutils.WithAuthorizeBy(systemPrincipalToken_TargetApp), coreutils.WithDiscardResponse()); err != nil {
 					er("failed to update initError+initCompletedAtMs:", err)
 					return nil
