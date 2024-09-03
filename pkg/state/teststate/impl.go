@@ -391,7 +391,7 @@ func (ts *testState) buildAppDef(packagePath string, packageDir string, createWo
 	prov := istructsmem.Provide(
 		cfgs,
 		iratesce.TestBucketsFactory,
-		payloads.ProvideIAppTokensFactory(itokensjwt.TestTokensJWT(coreutils.NewITime())),
+		payloads.ProvideIAppTokensFactory(itokensjwt.TestTokensJWT()),
 		storageProvider)
 	structs, err := prov.BuiltIn(appName)
 	if err != nil {

@@ -19,7 +19,6 @@ import (
 )
 
 var (
-	testTime     = coreutils.NewMockTime(time.Now())
 	testApp      = istructs.AppQName_test1_app1
 	testDuration = time.Minute
 )
@@ -28,7 +27,7 @@ func TestBasicUsage_PrincipalPayload(t *testing.T) {
 
 	require := require.New(t)
 
-	signer := itokensjwt.ProvideITokens(itokensjwt.SecretKeyExample, testTime)
+	signer := itokensjwt.TestTokensJWT()
 
 	srcPayload := PrincipalPayload{
 		Login:       "login",
@@ -60,7 +59,7 @@ func TestBasicUsage_PrincipalPayload(t *testing.T) {
 func TestBasicUsage_BLOBUploadingPayload(t *testing.T) {
 
 	require := require.New(t)
-	signer := itokensjwt.ProvideITokens(itokensjwt.SecretKeyExample, testTime)
+	signer := itokensjwt.TestTokensJWT()
 
 	srcPayload := BLOBUploadingPayload{
 		Workspace: istructs.WSID(1),
@@ -91,7 +90,7 @@ func TestBasicUsage_BLOBUploadingPayload(t *testing.T) {
 func TestBasicUsage_VerifiedValue(t *testing.T) {
 
 	require := require.New(t)
-	signer := itokensjwt.ProvideITokens(itokensjwt.SecretKeyExample, testTime)
+	signer := itokensjwt.TestTokensJWT()
 	testQName := appdef.NewQName("test", "entity")
 
 	token := ""
@@ -126,7 +125,7 @@ func TestBasicUsage_VerifiedValue(t *testing.T) {
 
 func TestBasicUsage_IAppTokens(t *testing.T) {
 	require := require.New(t)
-	tokens := itokensjwt.ProvideITokens(itokensjwt.SecretKeyExample, testTime)
+	tokens := itokensjwt.TestTokensJWT()
 	atf := ProvideIAppTokensFactory(tokens)
 	at := atf.New(testApp)
 
@@ -153,15 +152,15 @@ func TestBasicUsage_IAppTokens(t *testing.T) {
 	})
 
 	t.Run("Basic validation error", func(t *testing.T) {
-		testTime.Add(testDuration * 2)
-		defer func() { testTime.Add(-testDuration * 2) }()
+		coreutils.MockTime.Add(testDuration * 2)
+		defer func() { coreutils.MockTime.Add(-testDuration * 2) }()
 		payload := PrincipalPayload{}
 		_, err := at.ValidateToken(token, &payload)
 		require.ErrorIs(err, itokens.ErrTokenExpired)
 	})
 
 	t.Run("Error on validate a token issued for an another app", func(t *testing.T) {
-		tokens := itokensjwt.ProvideITokens(itokensjwt.SecretKeyExample, testTime)
+		tokens := itokensjwt.TestTokensJWT()
 		atf := ProvideIAppTokensFactory(tokens)
 		at := atf.New(istructs.AppQName_test2_app1)
 		payload := PrincipalPayload{}

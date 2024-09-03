@@ -290,7 +290,7 @@ func deployTestAppEx(
 	appStructsProvider := istructsmem.Provide(
 		cfgs,
 		iratesce.TestBucketsFactory,
-		payloads.ProvideIAppTokensFactory(itokensjwt.TestTokensJWT(coreutils.NewITime())),
+		payloads.ProvideIAppTokensFactory(itokensjwt.TestTokensJWT()),
 		storageProvider)
 
 	appStructs, err = appStructsProvider.BuiltIn(appName)

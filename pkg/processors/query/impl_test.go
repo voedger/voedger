@@ -39,7 +39,6 @@ import (
 )
 
 var (
-	testTime                             = coreutils.NewMockTime(time.Now())
 	appName    appdef.AppQName           = istructs.AppQName_test1_app1
 	appEngines                           = appparts.PoolSize(10, 100, 10, 0)
 	partCount  istructs.NumAppPartitions = 10
@@ -212,7 +211,7 @@ func deployTestAppWithSecretToken(require *require.Assertions,
 	cfg := cfgs.AddBuiltInAppConfig(appName, adb)
 	cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 
-	atf := payloads.TestAppTokensFactory(itokensjwt.ProvideITokens(itokensjwt.SecretKeyExample, testTime))
+	atf := payloads.ProvideIAppTokensFactory(itokensjwt.TestTokensJWT())
 	asp := istructsmem.Provide(cfgs, iratesce.TestBucketsFactory, atf, storageProvider)
 
 	article := func(id, idDepartment istructs.RecordID, name string) istructs.IObject {
@@ -259,14 +258,14 @@ func deployTestAppWithSecretToken(require *require.Assertions,
 		HandlingPartition: partID,
 		Workspace:         wsID,
 		QName:             istructs.QNameCommandCUD,
-		RegisteredAt:      istructs.UnixMilli(testTime.Now().UnixMilli()),
+		RegisteredAt:      istructs.UnixMilli(coreutils.MockTime.Now().UnixMilli()),
 		PLogOffset:        plogOffset,
 		WLogOffset:        wlogOffset,
 	}
 	reb := as.Events().GetSyncRawEventBuilder(
 		istructs.SyncRawEventBuilderParams{
 			GenericRawEventBuilderParams: grebp,
-			SyncedAt:                     istructs.UnixMilli(testTime.Now().UnixMilli()),
+			SyncedAt:                     istructs.UnixMilli(coreutils.MockTime.Now().UnixMilli()),
 		},
 	)
 
@@ -291,7 +290,7 @@ func deployTestAppWithSecretToken(require *require.Assertions,
 
 	// create stub for cdoc.sys.WorkspaceDescriptor to make query processor work
 	require.NoError(err)
-	now := testTime.Now()
+	now := coreutils.MockTime.Now()
 	grebp = istructs.GenericRawEventBuilderParams{
 		HandlingPartition: partID,
 		Workspace:         wsID,
@@ -382,7 +381,7 @@ func TestBasicUsage_ServiceFactory(t *testing.T) {
 		func(ctx context.Context, sender ibus.ISender) IResultSenderClosable { return rs },
 		appParts,
 		3, // max concurrent queries
-		metrics, "vvm", authn, authz, itokensjwt.TestTokensJWT(coreutils.NewITime()), nil, statelessResources)
+		metrics, "vvm", authn, authz, itokensjwt.TestTokensJWT(), nil, statelessResources)
 	processorCtx, processorCtxCancel := context.WithCancel(context.Background())
 	wg := sync.WaitGroup{}
 	wg.Add(1)
@@ -1143,7 +1142,7 @@ func TestRateLimiter(t *testing.T) {
 		func(ctx context.Context, sender ibus.ISender) IResultSenderClosable { return rs },
 		appParts,
 		3, // max concurrent queries
-		metrics, "vvm", authn, authz, itokensjwt.TestTokensJWT(coreutils.NewITime()), nil, statelessResources)
+		metrics, "vvm", authn, authz, itokensjwt.TestTokensJWT(), nil, statelessResources)
 	go queryProcessor.Run(context.Background())
 
 	systemToken := getSystemToken(appTokens)
@@ -1192,7 +1191,7 @@ func TestAuthnz(t *testing.T) {
 		func(ctx context.Context, sender ibus.ISender) IResultSenderClosable { return rs },
 		appParts,
 		3, // max concurrent queries
-		metrics, "vvm", authn, authz, itokensjwt.TestTokensJWT(coreutils.NewITime()), nil, statelessResources)
+		metrics, "vvm", authn, authz, itokensjwt.TestTokensJWT(), nil, statelessResources)
 	go queryProcessor.Run(context.Background())
 
 	t.Run("no token for a query that requires authorization -> 403 unauthorized", func(t *testing.T) {
@@ -1205,7 +1204,7 @@ func TestAuthnz(t *testing.T) {
 	t.Run("expired token -> 401 unauthorized", func(t *testing.T) {
 		systemToken := getSystemToken(appTokens)
 		// make the token be expired
-		testTime.Add(2 * time.Minute)
+		coreutils.MockTime.Add(2 * time.Minute)
 		serviceChannel <- NewQueryMessage(context.Background(), appName, partID, wsID, nil, body, qNameFunction, "127.0.0.1", systemToken)
 		var se coreutils.SysError
 		require.ErrorAs(<-errs, &se)

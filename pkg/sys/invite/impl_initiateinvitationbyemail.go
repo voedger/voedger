@@ -21,7 +21,7 @@ func provideCmdInitiateInvitationByEMail(sr istructsmem.IStatelessResources, tim
 	))
 }
 
-func execCmdInitiateInvitationByEMail(time coreutils.ITime) func(args istructs.ExecCommandArgs) (err error) {
+func execCmdInitiateInvitationByEMail(tm coreutils.ITime) func(args istructs.ExecCommandArgs) (err error) {
 	return func(args istructs.ExecCommandArgs) (err error) {
 		if !coreutils.IsValidEmailTemplate(args.ArgumentObject.AsString(field_EmailTemplate)) {
 			return coreutils.NewHTTPError(http.StatusBadRequest, errInviteTemplateInvalid)
@@ -71,7 +71,7 @@ func execCmdInitiateInvitationByEMail(time coreutils.ITime) func(args istructs.E
 			svbCDocInvite.PutString(Field_Roles, args.ArgumentObject.AsString(Field_Roles))
 			svbCDocInvite.PutInt64(field_ExpireDatetime, args.ArgumentObject.AsInt64(field_ExpireDatetime))
 			svbCDocInvite.PutInt32(field_State, State_ToBeInvited)
-			svbCDocInvite.PutInt64(field_Updated, time.Now().UnixMilli())
+			svbCDocInvite.PutInt64(field_Updated, tm.Now().UnixMilli())
 			svbCDocInvite.PutString(field_ActualLogin, actualLogin)
 
 			return nil
@@ -85,7 +85,7 @@ func execCmdInitiateInvitationByEMail(time coreutils.ITime) func(args istructs.E
 		if err != nil {
 			return err
 		}
-		now := time.Now().UnixMilli()
+		now := tm.Now().UnixMilli()
 		svbCDocInvite.PutRecordID(appdef.SystemField_ID, istructs.RecordID(1))
 		svbCDocInvite.PutString(Field_Login, args.ArgumentObject.AsString(field_Email))
 		svbCDocInvite.PutString(field_Email, args.ArgumentObject.AsString(field_Email))

@@ -191,7 +191,7 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 		wire.FieldsOf(&vvmConfig,
 			"NumCommandProcessors",
 			"NumQueryProcessors",
-			"TimeFunc",
+			"Time",
 			"Quotas",
 			"BlobberServiceChannels",
 			"BLOBMaxSize",

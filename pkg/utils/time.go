@@ -11,7 +11,8 @@ import (
 )
 
 var MockTime IMockTime = &mockedTime{
-	now: time.Now(),
+	now:     time.Now(),
+	RWMutex: sync.RWMutex{},
 }
 
 type IMockTime interface {
@@ -40,11 +41,14 @@ func (t *realTime) NewTimer(d time.Duration) <-chan time.Time {
 }
 
 type mockedTime struct {
+	sync.RWMutex
 	now    time.Time
 	timers sync.Map
 }
 
 func (t *mockedTime) Now() time.Time {
+	t.RLock()
+	defer t.RUnlock()
 	return t.now
 }
 
@@ -65,6 +69,9 @@ type MockTimer struct {
 }
 
 func (t *mockedTime) Add(d time.Duration) {
+	t.Lock()
+	defer t.Unlock()
+	t.now = t.now.Add(d)
 	t.checkTimers()
 }
 

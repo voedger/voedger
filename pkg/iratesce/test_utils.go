@@ -10,5 +10,5 @@ import (
 )
 
 var TestBucketsFactory = func() irates.IBuckets {
-	return Provide(coreutils.NewITime())
+	return Provide(coreutils.MockTime)
 }
