@@ -31,7 +31,7 @@ func (bucket *bucketType) resetToState(state irates.BucketState, now time.Time) 
 	bucket.reset(now)
 }
 
-// recalculates the number of bucket.state tokens.TakenTokens for the TimeFunc time
+// recalculates the number of bucket.state tokens.TakenTokens for the time time
 func (bucket *bucketType) recalcBuketState(now time.Time) {
 	_, _, tokens := bucket.limiter.advance(now)
 	value := float64(bucket.limiter.burst) - tokens

@@ -58,7 +58,7 @@ type Limiter struct {
 	last time.Time
 	// lastEvent is the latest time of a rate-limited event (past or future)
 	lastEvent time.Time
-	// timeFunc  coreutils.ITime
+	// time  coreutils.ITime
 }
 
 // A Reservation holds information about events that are permitted by a Limiter to happen after a delay.
