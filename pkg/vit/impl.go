@@ -77,7 +77,7 @@ func newVit(t testing.TB, vitCfg *VITConfig, useCas bool) *VIT {
 	cfg.VVMPort = 0
 	cfg.MetricsServicePort = 0
 
-	cfg.TimeFunc = coreutils.TimeFunc(func() time.Time { return ts.now() })
+	cfg.TimeFunc = coreutils.ITime(func() time.Time { return ts.now() })
 	if !coreutils.IsTest() {
 		cfg.SecretsReader = itokensjwt.ProvideTestSecretsReader(cfg.SecretsReader)
 	}

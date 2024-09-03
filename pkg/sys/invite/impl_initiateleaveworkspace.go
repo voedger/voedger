@@ -14,14 +14,14 @@ import (
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-func provideCmdInitiateLeaveWorkspace(sr istructsmem.IStatelessResources, timeFunc coreutils.TimeFunc) {
+func provideCmdInitiateLeaveWorkspace(sr istructsmem.IStatelessResources, time coreutils.ITime) {
 	sr.AddCommands(appdef.SysPackagePath, istructsmem.NewCommandFunction(
 		qNameCmdInitiateLeaveWorkspace,
-		execCmdInitiateLeaveWorkspace(timeFunc),
+		execCmdInitiateLeaveWorkspace(time),
 	))
 }
 
-func execCmdInitiateLeaveWorkspace(timeFunc coreutils.TimeFunc) func(args istructs.ExecCommandArgs) (err error) {
+func execCmdInitiateLeaveWorkspace(time coreutils.ITime) func(args istructs.ExecCommandArgs) (err error) {
 	return func(args istructs.ExecCommandArgs) (err error) {
 		skbPrincipal, err := args.State.KeyBuilder(sys.Storage_RequestSubject, appdef.NullQName)
 		if err != nil {
@@ -62,7 +62,7 @@ func execCmdInitiateLeaveWorkspace(timeFunc coreutils.TimeFunc) func(args istruc
 			return err
 		}
 		svbCDocInvite.PutInt32(field_State, State_ToBeLeft)
-		svbCDocInvite.PutInt64(field_Updated, timeFunc().UnixMilli())
+		svbCDocInvite.PutInt64(field_Updated, time.Now().UnixMilli())
 		svbCDocInvite.PutBool(appdef.SystemField_IsActive, false)
 
 		return

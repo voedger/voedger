@@ -16,12 +16,11 @@ import (
 	imetrics "github.com/voedger/voedger/pkg/metrics"
 	"github.com/voedger/voedger/pkg/pipeline"
 	"github.com/voedger/voedger/pkg/state"
+	coreutils "github.com/voedger/voedger/pkg/utils"
 	"github.com/voedger/voedger/pkg/utils/federation"
 )
 
 type TimeAfterFunc func(d time.Duration) <-chan time.Time
-
-type TimeFunc func() time.Time
 
 type LogErrorFunc func(args ...interface{})
 
@@ -33,7 +32,7 @@ type BasicSchedulerConfig struct {
 	Metrics      imetrics.IMetrics
 	Broker       in10n.IN10nBroker
 	Federation   federation.IFederation
-	TimeFunc     TimeFunc
+	Time         coreutils.ITime
 
 	Opts []state.StateOptFunc
 

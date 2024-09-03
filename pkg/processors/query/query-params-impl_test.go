@@ -13,6 +13,7 @@ import (
 	"github.com/voedger/voedger/pkg/iprocbus"
 	"github.com/voedger/voedger/pkg/itokensjwt"
 	imetrics "github.com/voedger/voedger/pkg/metrics"
+	coreutils "github.com/voedger/voedger/pkg/utils"
 	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
 )
 
@@ -42,7 +43,7 @@ func TestWrongTypes(t *testing.T) {
 		resultSenderClosableFactory,
 		appParts,
 		3, // maxPrepareQueries
-		imetrics.Provide(), "vvm", authn, authz, itokensjwt.TestTokensJWT(), nil, statelessResources)
+		imetrics.Provide(), "vvm", authn, authz, itokensjwt.TestTokensJWT(coreutils.NewITime()), nil, statelessResources)
 	ctx, cancel := context.WithCancel(context.Background())
 	go func() {
 		queryProcessor.Run(ctx)

@@ -20,9 +20,9 @@ var onceJWTTimeFuncSetter = sync.Once{}
 
 // ProvideITokens implementation by provided interface
 // To receive implementation you must provide Secret Key. Min length - 64 byte, panic otherwise
-func ProvideITokens(secretKey SecretKeyType, timeFunc coreutils.TimeFunc) (tokenImpl itokens.ITokens) {
+func ProvideITokens(secretKey SecretKeyType, time coreutils.ITime) (tokenImpl itokens.ITokens) {
 	onceJWTTimeFuncSetter.Do(func() {
-		jwt.TimeFunc = timeFunc
+		jwt.TimeFunc = time.Now
 	})
 	return NewJWTSigner(secretKey)
 }

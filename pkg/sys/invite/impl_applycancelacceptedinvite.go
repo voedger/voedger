@@ -16,15 +16,15 @@ import (
 	"github.com/voedger/voedger/pkg/utils/federation"
 )
 
-func asyncProjectorApplyCancelAcceptedInvite(timeFunc coreutils.TimeFunc, federation federation.IFederation, tokens itokens.ITokens) istructs.Projector {
+func asyncProjectorApplyCancelAcceptedInvite(time coreutils.ITime, federation federation.IFederation, tokens itokens.ITokens) istructs.Projector {
 	return istructs.Projector{
 		Name: qNameAPApplyCancelAcceptedInvite,
-		Func: applyCancelAcceptedInvite(timeFunc, federation, tokens),
+		Func: applyCancelAcceptedInvite(time, federation, tokens),
 	}
 }
 
 // AFTER EXEC c.sys.InitiateCancelAcceptedInvite
-func applyCancelAcceptedInvite(timeFunc coreutils.TimeFunc, federation federation.IFederation, tokens itokens.ITokens) func(event istructs.IPLogEvent, state istructs.IState, intents istructs.IIntents) (err error) {
+func applyCancelAcceptedInvite(time coreutils.ITime, federation federation.IFederation, tokens itokens.ITokens) func(event istructs.IPLogEvent, state istructs.IState, intents istructs.IIntents) (err error) {
 	return func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
 		skbCDocInvite, err := s.KeyBuilder(sys.Storage_Record, qNameCDocInvite)
 		if err != nil {
@@ -76,7 +76,7 @@ func applyCancelAcceptedInvite(timeFunc coreutils.TimeFunc, federation federatio
 		// Update invite
 		_, err = federation.Func(
 			fmt.Sprintf("api/%s/%d/c.sys.CUD", appQName, event.Workspace()),
-			fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"State":%d,"Updated":%d}}]}`, event.ArgumentObject().AsRecordID(field_InviteID), State_Cancelled, timeFunc().UnixMilli()),
+			fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"State":%d,"Updated":%d}}]}`, event.ArgumentObject().AsRecordID(field_InviteID), State_Cancelled, time.Now().UnixMilli()),
 			coreutils.WithAuthorizeBy(token),
 			coreutils.WithDiscardResponse())
 

@@ -15,14 +15,14 @@ import (
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-func provideCmdInitiateJoinWorkspace(sr istructsmem.IStatelessResources, timeFunc coreutils.TimeFunc) {
+func provideCmdInitiateJoinWorkspace(sr istructsmem.IStatelessResources, time coreutils.ITime) {
 	sr.AddCommands(appdef.SysPackagePath, istructsmem.NewCommandFunction(
 		qNameCmdInitiateJoinWorkspace,
-		execCmdInitiateJoinWorkspace(timeFunc),
+		execCmdInitiateJoinWorkspace(time),
 	))
 }
 
-func execCmdInitiateJoinWorkspace(timeFunc coreutils.TimeFunc) func(args istructs.ExecCommandArgs) (err error) {
+func execCmdInitiateJoinWorkspace(time coreutils.ITime) func(args istructs.ExecCommandArgs) (err error) {
 	return func(args istructs.ExecCommandArgs) (err error) {
 		skbCDocInvite, err := args.State.KeyBuilder(sys.Storage_Record, qNameCDocInvite)
 		if err != nil {
@@ -40,7 +40,7 @@ func execCmdInitiateJoinWorkspace(timeFunc coreutils.TimeFunc) func(args istruct
 		if !isValidInviteState(svCDocInvite.AsInt32(field_State), qNameCmdInitiateJoinWorkspace) {
 			return coreutils.NewHTTPError(http.StatusBadRequest, ErrInviteStateInvalid)
 		}
-		if svCDocInvite.AsInt64(field_ExpireDatetime) < timeFunc().UnixMilli() {
+		if svCDocInvite.AsInt64(field_ExpireDatetime) < time.Now().UnixMilli() {
 			return coreutils.NewHTTPError(http.StatusBadRequest, errInviteExpired)
 		}
 		if svCDocInvite.AsString(field_VerificationCode) != args.ArgumentObject.AsString(field_VerificationCode) {
@@ -62,7 +62,7 @@ func execCmdInitiateJoinWorkspace(timeFunc coreutils.TimeFunc) func(args istruct
 		}
 		svbCDocInvite.PutInt64(field_InviteeProfileWSID, svPrincipal.AsInt64(sys.Storage_RequestSubject_Field_ProfileWSID))
 		svbCDocInvite.PutInt32(authnz.Field_SubjectKind, svPrincipal.AsInt32(sys.Storage_RequestSubject_Field_Kind))
-		svbCDocInvite.PutInt64(field_Updated, timeFunc().UnixMilli())
+		svbCDocInvite.PutInt64(field_Updated, time.Now().UnixMilli())
 		svbCDocInvite.PutInt32(field_State, State_ToBeJoined)
 		svbCDocInvite.PutChars(field_ActualLogin, svPrincipal.AsString(sys.Storage_RequestSubject_Field_Name))
 

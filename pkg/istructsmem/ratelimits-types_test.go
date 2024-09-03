@@ -88,7 +88,7 @@ func TestRateLimitsErrors(t *testing.T) {
 		},
 	}
 
-	require.Panics(func() { rls.prepare(iratesce.Provide(time.Now)) },
+	require.Panics(func() { rls.prepare(iratesce.Provide(coreutils.NewITime())) },
 		require.Has(unsupportedRateLimitKind))
 }
 

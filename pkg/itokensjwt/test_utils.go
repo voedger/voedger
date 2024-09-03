@@ -10,8 +10,12 @@ import (
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
+var TestTokensJWTWithTime = func(time coreutils.ITime) itokens.ITokens {
+	return ProvideITokens(SecretKeyExample, time)
+}
+
 var TestTokensJWT = func() itokens.ITokens {
-	return ProvideITokens(SecretKeyExample, coreutils.TestTimeFunc)
+	return ProvideITokens(SecretKeyExample, coreutils.MockTime)
 }
 
 func ProvideTestSecretsReader(realSecretsReader isecrets.ISecretReader) isecrets.ISecretReader {

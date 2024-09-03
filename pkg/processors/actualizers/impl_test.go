@@ -10,7 +10,6 @@ import (
 	"context"
 	"errors"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/require"
 
@@ -33,6 +32,7 @@ import (
 	imetrics "github.com/voedger/voedger/pkg/metrics"
 	"github.com/voedger/voedger/pkg/sys"
 	"github.com/voedger/voedger/pkg/sys/authnz"
+	coreutils "github.com/voedger/voedger/pkg/utils"
 	"github.com/voedger/voedger/pkg/vvm/engines"
 )
 
@@ -281,7 +281,7 @@ func deployTestAppEx(
 			ChannelsPerSubject:      10,
 			Subscriptions:           1000,
 			SubscriptionsPerSubject: 10,
-		}, time.Now)
+		}, coreutils.NewITime())
 		actualizerCfg.Broker = n10nBroker
 	} else {
 		n10nBroker = actualizerCfg.Broker
@@ -290,7 +290,7 @@ func deployTestAppEx(
 	appStructsProvider := istructsmem.Provide(
 		cfgs,
 		iratesce.TestBucketsFactory,
-		payloads.ProvideIAppTokensFactory(itokensjwt.TestTokensJWT()),
+		payloads.ProvideIAppTokensFactory(itokensjwt.TestTokensJWT(coreutils.NewITime())),
 		storageProvider)
 
 	appStructs, err = appStructsProvider.BuiltIn(appName)

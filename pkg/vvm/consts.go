@@ -38,7 +38,6 @@ const (
 
 var (
 	LocalHost        = "http://127.0.0.1"
-	DefaultTimeFunc  = time.Now
 	DefaultCasParams = cas.CassandraParamsType{
 		Hosts:                   "127.0.0.1",
 		Port:                    defaultCassandraPort,
