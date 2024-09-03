@@ -1,0 +1,84 @@
+/*
+ * Copyright (c) 2024-present unTill Software Development Group B.V.
+ * @author Denis Gribanov
+ */
+
+package coreutils
+
+import (
+	"sync"
+	"time"
+)
+
+var MockTime IMockTime = &mockedTime{
+	now: time.Now(),
+}
+
+type IMockTime interface {
+	ITime
+	Add(d time.Duration)
+}
+
+type ITime interface {
+	Now() time.Time
+	NewTimer(d time.Duration) <-chan time.Time
+}
+
+func NewITime() ITime {
+	return &realTime{}
+}
+
+type realTime struct{}
+
+func (t *realTime) Now() time.Time {
+	return time.Now()
+}
+
+func (t *realTime) NewTimer(d time.Duration) <-chan time.Time {
+	res := time.NewTimer(d)
+	return res.C
+}
+
+type mockedTime struct {
+	now    time.Time
+	timers sync.Map
+}
+
+func (t *mockedTime) Now() time.Time {
+	return t.now
+}
+
+func (t *mockedTime) NewTimer(d time.Duration) <-chan time.Time {
+	mt := &MockTimer{
+		C:          make(chan time.Time, 1),
+		expiration: t.now.Add(d),
+	}
+	// Store the timer in the registry
+	t.timers.Store(mt, struct{}{})
+	return mt.C
+}
+
+type MockTimer struct {
+	C          chan time.Time
+	expiration time.Time
+	fired      bool
+}
+
+func (t *mockedTime) Add(d time.Duration) {
+	t.checkTimers()
+}
+
+func (t *mockedTime) checkTimers() {
+	t.timers.Range(func(key, value any) bool {
+		timer := key.(*MockTimer)
+		if !timer.fired && t.now.After(timer.expiration) {
+			timer.fired = true
+			select {
+			case timer.C <- t.now:
+			default:
+			}
+			t.timers.Delete(timer)
+		}
+		return true
+	})
+}
