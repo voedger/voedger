@@ -12,7 +12,6 @@ import (
 	"io"
 	"log"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/require"
 
@@ -20,6 +19,7 @@ import (
 	"github.com/voedger/voedger/pkg/istorage/mem"
 	istorageimpl "github.com/voedger/voedger/pkg/istorage/provider"
 	"github.com/voedger/voedger/pkg/istructs"
+	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 var (
@@ -46,7 +46,7 @@ func TestBasicUsage(t *testing.T) {
 	asp := istorageimpl.Provide(asf)
 	storage, err := asp.AppStorage(istructs.AppQName_test1_app1)
 	require.NoError(err)
-	blobber := Provide(&storage, time.Now)
+	blobber := Provide(&storage, coreutils.NewITime())
 	ctx := context.TODO()
 	reader := provideTestData()
 
@@ -120,7 +120,7 @@ func TestQuotaExceed(t *testing.T) {
 	asp := istorageimpl.Provide(asf)
 	storage, err := asp.AppStorage(istructs.AppQName_test1_app1)
 	require.NoError(err)
-	blobber := Provide(&storage, time.Now)
+	blobber := Provide(&storage, coreutils.NewITime())
 	reader := provideTestData()
 	ctx := context.Background()
 	// Quota (maxSize -1 = 19265) assigned to reader less then filesize logo.png (maxSize)

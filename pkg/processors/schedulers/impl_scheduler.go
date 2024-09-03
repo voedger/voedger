@@ -104,7 +104,7 @@ func (a *scheduler) runJob() {
 		a.conf.SecretReader,
 		a.conf.Tokens,
 		a.conf.Federation,
-		func() int64 { return a.conf.TimeFunc().Unix() },
+		func() int64 { return a.conf.Time.Now().Unix() },
 		a.conf.IntentsLimit,
 		a.conf.Opts...)
 
@@ -172,19 +172,18 @@ func (a *scheduler) init(_ context.Context) (err error) {
 }
 
 func (a *scheduler) keepRunning() {
-	now := a.conf.TimeFunc()
-	next := a.schedule.Next(now)
-
+	now := a.conf.Time.Now()
+	nextTime := a.schedule.Next(now)
 	for a.ctx.Err() == nil {
-		logger.Info(a.name, "schedule", "now", now, "next", next)
-		timer := time.NewTimer(next.Sub(now))
+		logger.Info(a.name, "schedule", "now", now, "next", nextTime)
+		timerChan := a.conf.Time.NewTimer(nextTime.Sub(now))
 		select {
 		case <-a.ctx.Done():
 			return
-		case now = <-timer.C:
+		case now = <-timerChan:
 			logger.Info(a.name, "wake", "now", now)
 			a.runJob()
-			next = a.schedule.Next(now)
+			nextTime = a.schedule.Next(now)
 		}
 	}
 }

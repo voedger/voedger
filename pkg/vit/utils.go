@@ -287,7 +287,7 @@ func SimpleWSParams(wsName string) WSParams {
 		Name:         wsName,
 		Kind:         QNameApp1_TestWSKind,
 		ClusterID:    istructs.CurrentClusterID(),
-		InitDataJSON: `{"IntFld": 42}`, //
+		InitDataJSON: `{"IntFld": 42}`,
 	}
 }
 

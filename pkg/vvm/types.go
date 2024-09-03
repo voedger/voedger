@@ -127,7 +127,7 @@ type AppsExtensionPoints map[appdef.AppQName]extensionpoints.IExtensionPoint
 
 type VVMConfig struct {
 	VVMAppsBuilder             VVMAppsBuilder // is a map
-	TimeFunc                   coreutils.TimeFunc
+	Time                       coreutils.ITime
 	RouterWriteTimeout         int
 	RouterReadTimeout          int
 	RouterConnectionsLimit     int

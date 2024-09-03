@@ -15,7 +15,7 @@ import (
 	"github.com/voedger/voedger/pkg/utils/federation"
 )
 
-func Provide(sr istructsmem.IStatelessResources, timeFunc coreutils.TimeFunc, tokensAPI itokens.ITokens,
+func Provide(sr istructsmem.IStatelessResources, time coreutils.ITime, tokensAPI itokens.ITokens,
 	federation federation.IFederation, itokens itokens.ITokens, wsPostInitFunc WSPostInitFunc,
 	eps map[appdef.AppQName]extensionpoints.IExtensionPoint) {
 
@@ -36,7 +36,7 @@ func Provide(sr istructsmem.IStatelessResources, timeFunc coreutils.TimeFunc, to
 		// c.sys.CreateWorkspace
 		istructsmem.NewCommandFunction(
 			QNameCommandCreateWorkspace,
-			execCmdCreateWorkspace(timeFunc),
+			execCmdCreateWorkspace(time),
 		),
 	)
 
@@ -54,7 +54,7 @@ func Provide(sr istructsmem.IStatelessResources, timeFunc coreutils.TimeFunc, to
 	sr.AddProjectors(appdef.SysPackagePath,
 		asyncProjectorInvokeCreateWorkspace(federation, itokens),
 		asyncProjectorInvokeCreateWorkspaceID(federation, itokens),
-		asyncProjectorInitializeWorkspace(federation, timeFunc, itokens, wsPostInitFunc, eps),
+		asyncProjectorInitializeWorkspace(federation, time, itokens, wsPostInitFunc, eps),
 		syncProjectorChildWorkspaceIdx(),
 		syncProjectorWorkspaceIDIdx(),
 	)
@@ -69,11 +69,11 @@ func syncProjectorChildWorkspaceIdx() istructs.Projector {
 }
 
 // Projector<A, InitializeWorkspace>
-func asyncProjectorInitializeWorkspace(federation federation.IFederation, nowFunc coreutils.TimeFunc,
+func asyncProjectorInitializeWorkspace(federation federation.IFederation, time coreutils.ITime,
 	tokensAPI itokens.ITokens, wsPostInitFunc WSPostInitFunc, eps map[appdef.AppQName]extensionpoints.IExtensionPoint) istructs.Projector {
 	return istructs.Projector{
 		Name: qNameAPInitializeWorkspace,
-		Func: initializeWorkspaceProjector(nowFunc, federation, eps, tokensAPI, wsPostInitFunc),
+		Func: initializeWorkspaceProjector(time, federation, eps, tokensAPI, wsPostInitFunc),
 	}
 }
 

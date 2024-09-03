@@ -33,7 +33,7 @@ type BasicSchedulerConfig struct {
 	Metrics      imetrics.IMetrics
 	Broker       in10n.IN10nBroker
 	Federation   federation.IFederation
-	TimeFunc     coreutils.TimeFunc
+	Time         coreutils.ITime
 
 	Opts []state.StateOptFunc
 

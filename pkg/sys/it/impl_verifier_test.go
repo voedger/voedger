@@ -31,8 +31,8 @@ func TestBasicUsage_Verifier(t *testing.T) {
 
 	verificationToken := ""
 	verificationCode := ""
-	t.Run("initiate verification and get the verification token", func(t *testing.T) {
-		body := fmt.Sprintf(`
+	// initiate verification and get the verification token
+	body := fmt.Sprintf(`
 			{
 				"args":{
 					"Entity":"%s",
@@ -44,27 +44,25 @@ func TestBasicUsage_Verifier(t *testing.T) {
 				"elements":[{"fields":["VerificationToken"]}]
 			}
 		`, it.QNameApp1_TestEmailVerificationDoc, it.TestEmail, userPrincipal.ProfileWSID) // targetWSID - is the workspace we're going to use the verified value at
-		// call q.sys.InitiateEmailVerification at user profile to avoid guests
-		// call in target app
-		resp := vit.PostProfile(userPrincipal, "q.sys.InitiateEmailVerification", body)
-		email := vit.CaptureEmail()
-		require.Equal([]string{it.TestEmail}, email.To)
-		require.Equal("Votre code de vérification", email.Subject)
-		require.Equal(it.TestSMTPCfg.GetFrom(), email.From)
-		require.Empty(email.CC)
-		require.Empty(email.BCC)
-		r := regexp.MustCompile(`(?P<code>\d{6})`)
-		matches := r.FindStringSubmatch(email.Body)
-		verificationCode = matches[0]
-		verificationToken = resp.SectionRow()[0].(string)
-		log.Println(verificationCode)
-		match, _ := regexp.MatchString(`Voici votre code de vérification`, email.Body)
-		require.True(match)
-	})
+	// call q.sys.InitiateEmailVerification at user profile to avoid guests
+	// call in target app
+	resp := vit.PostProfile(userPrincipal, "q.sys.InitiateEmailVerification", body)
+	email := vit.CaptureEmail()
+	require.Equal([]string{it.TestEmail}, email.To)
+	require.Equal("Votre code de vérification", email.Subject)
+	require.Equal(it.TestSMTPCfg.GetFrom(), email.From)
+	require.Empty(email.CC)
+	require.Empty(email.BCC)
+	r := regexp.MustCompile(`(?P<code>\d{6})`)
+	matches := r.FindStringSubmatch(email.Body)
+	verificationCode = matches[0]
+	verificationToken = resp.SectionRow()[0].(string)
+	log.Println(verificationCode)
+	match, _ := regexp.MatchString(`Voici votre code de vérification`, email.Body)
+	require.True(match)
 
-	verifiedValueToken := ""
-	t.Run("get the verified value token using the verification token", func(t *testing.T) {
-		body := fmt.Sprintf(`
+	// get the verified value token using the verification token"
+	body = fmt.Sprintf(`
 		{
 			"args":{
 				"VerificationToken":"%s",
@@ -73,10 +71,8 @@ func TestBasicUsage_Verifier(t *testing.T) {
 			"elements":[{"fields":["VerifiedValueToken"]}]
 		}
 		`, verificationToken, verificationCode)
-		resp := vit.PostProfile(userPrincipal, "q.sys.IssueVerifiedValueToken", body)
-		verifiedValueToken = resp.SectionRow()[0].(string)
-	})
-
+	resp = vit.PostProfile(userPrincipal, "q.sys.IssueVerifiedValueToken", body)
+	verifiedValueToken := resp.SectionRow()[0].(string)
 	log.Println(verifiedValueToken)
 
 	t.Run("decode the verified value token and check the verified value", func(t *testing.T) {
@@ -87,7 +83,7 @@ func TestBasicUsage_Verifier(t *testing.T) {
 		require.NoError(err)
 		require.Equal(istructs.AppQName_test1_app1, gp.AppQName)
 		require.Equal(verifier.VerifiedValueTokenDuration, gp.Duration)
-		require.Equal(vit.Now(), gp.IssuedAt)
+		require.Equal(vit.Now().UTC(), gp.IssuedAt.UTC())
 		require.Equal(it.QNameApp1_TestEmailVerificationDoc, vvp.Entity)
 		require.Equal("EmailField", vvp.Field)
 		require.Equal(it.TestEmail, vvp.Value)

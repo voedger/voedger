@@ -697,7 +697,7 @@ func setUp(t *testing.T, prepare func(appDef appdef.IAppDefBuilder, cfg *istruct
 		ChannelsPerSubject:      10,
 		Subscriptions:           1000,
 		SubscriptionsPerSubject: 10,
-	}, time.Now)
+	}, coreutils.NewITime())
 
 	// prepare the AppParts to borrow AppStructs
 	appParts, appPartsClean, err := appparts.New2(ctx, appStructsProvider,
@@ -736,11 +736,11 @@ func setUp(t *testing.T, prepare func(appDef appdef.IAppDefBuilder, cfg *istruct
 		serviceChannel <- icm
 	})
 
-	tokens := itokensjwt.ProvideITokens(itokensjwt.SecretKeyExample, time.Now)
+	tokens := itokensjwt.TestTokensJWT()
 	appTokens := payloads.ProvideIAppTokensFactory(tokens).New(testAppName)
 	systemToken, err := payloads.GetSystemPrincipalTokenApp(appTokens)
 	require.NoError(err)
-	cmdProcessorFactory := ProvideServiceFactory(appParts, time.Now, n10nBroker, imetrics.Provide(), "vvm", iauthnzimpl.NewDefaultAuthenticator(iauthnzimpl.TestSubjectRolesGetter, iauthnzimpl.TestIsDeviceAllowedFuncs), iauthnzimpl.NewDefaultAuthorizer(), secretReader)
+	cmdProcessorFactory := ProvideServiceFactory(appParts, coreutils.NewITime(), n10nBroker, imetrics.Provide(), "vvm", iauthnzimpl.NewDefaultAuthenticator(iauthnzimpl.TestSubjectRolesGetter, iauthnzimpl.TestIsDeviceAllowedFuncs), iauthnzimpl.NewDefaultAuthorizer(), secretReader)
 	cmdProcService := cmdProcessorFactory(serviceChannel, testAppPartID)
 
 	go func() {

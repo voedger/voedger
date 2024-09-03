@@ -14,14 +14,14 @@ import (
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-func provideCmdCancelSentInvite(sr istructsmem.IStatelessResources, timeFunc coreutils.TimeFunc) {
+func provideCmdCancelSentInvite(sr istructsmem.IStatelessResources, time coreutils.ITime) {
 	sr.AddCommands(appdef.SysPackagePath, istructsmem.NewCommandFunction(
 		qNameCmdCancelSentInvite,
-		execCmdCancelSentInvite(timeFunc),
+		execCmdCancelSentInvite(time),
 	))
 }
 
-func execCmdCancelSentInvite(timeFunc coreutils.TimeFunc) func(args istructs.ExecCommandArgs) (err error) {
+func execCmdCancelSentInvite(time coreutils.ITime) func(args istructs.ExecCommandArgs) (err error) {
 	return func(args istructs.ExecCommandArgs) (err error) {
 		skbCDocInvite, err := args.State.KeyBuilder(sys.Storage_Record, qNameCDocInvite)
 		if err != nil {
@@ -45,7 +45,7 @@ func execCmdCancelSentInvite(timeFunc coreutils.TimeFunc) func(args istructs.Exe
 		if err != nil {
 			return
 		}
-		svbCDocInvite.PutInt64(field_Updated, timeFunc().UnixMilli())
+		svbCDocInvite.PutInt64(field_Updated, time.Now().UnixMilli())
 		svbCDocInvite.PutInt32(field_State, State_Cancelled)
 
 		return

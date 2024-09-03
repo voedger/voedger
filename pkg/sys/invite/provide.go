@@ -13,23 +13,23 @@ import (
 	"github.com/voedger/voedger/pkg/utils/federation"
 )
 
-func Provide(sr istructsmem.IStatelessResources, timeFunc coreutils.TimeFunc,
+func Provide(sr istructsmem.IStatelessResources, time coreutils.ITime,
 	federation federation.IFederation, itokens itokens.ITokens, smtpCfg smtp.Cfg) {
-	provideCmdInitiateInvitationByEMail(sr, timeFunc)
-	provideCmdInitiateJoinWorkspace(sr, timeFunc)
-	provideCmdInitiateUpdateInviteRoles(sr, timeFunc)
-	provideCmdInitiateCancelAcceptedInvite(sr, timeFunc)
-	provideCmdInitiateLeaveWorkspace(sr, timeFunc)
-	provideCmdCancelSentInvite(sr, timeFunc)
+	provideCmdInitiateInvitationByEMail(sr, time)
+	provideCmdInitiateJoinWorkspace(sr, time)
+	provideCmdInitiateUpdateInviteRoles(sr, time)
+	provideCmdInitiateCancelAcceptedInvite(sr, time)
+	provideCmdInitiateLeaveWorkspace(sr, time)
+	provideCmdCancelSentInvite(sr, time)
 	provideCmdCreateJoinedWorkspace(sr)
 	provideCmdUpdateJoinedWorkspaceRoles(sr)
 	provideCmdDeactivateJoinedWorkspace(sr)
 	sr.AddProjectors(appdef.SysPackagePath,
-		asyncProjectorApplyInvitation(timeFunc, federation, itokens, smtpCfg),
-		asyncProjectorApplyJoinWorkspace(timeFunc, federation, itokens),
-		asyncProjectorApplyUpdateInviteRoles(timeFunc, federation, itokens, smtpCfg),
-		asyncProjectorApplyCancelAcceptedInvite(timeFunc, federation, itokens),
-		asyncProjectorApplyLeaveWorkspace(timeFunc, federation, itokens),
+		asyncProjectorApplyInvitation(time, federation, itokens, smtpCfg),
+		asyncProjectorApplyJoinWorkspace(time, federation, itokens),
+		asyncProjectorApplyUpdateInviteRoles(time, federation, itokens, smtpCfg),
+		asyncProjectorApplyCancelAcceptedInvite(time, federation, itokens),
+		asyncProjectorApplyLeaveWorkspace(time, federation, itokens),
 		syncProjectorInviteIndex(),
 		syncProjectorJoinedWorkspaceIndex(),
 		applyViewSubjectsIdx(),

@@ -18,14 +18,14 @@ import (
 	"github.com/voedger/voedger/pkg/utils/federation"
 )
 
-func asyncProjectorApplyUpdateInviteRoles(timeFunc coreutils.TimeFunc, federation federation.IFederation, tokens itokens.ITokens, smtpCfg smtp.Cfg) istructs.Projector {
+func asyncProjectorApplyUpdateInviteRoles(time coreutils.ITime, federation federation.IFederation, tokens itokens.ITokens, smtpCfg smtp.Cfg) istructs.Projector {
 	return istructs.Projector{
 		Name: qNameAPApplyUpdateInviteRoles,
-		Func: applyUpdateInviteRolesProjector(timeFunc, federation, tokens, smtpCfg),
+		Func: applyUpdateInviteRolesProjector(time, federation, tokens, smtpCfg),
 	}
 }
 
-func applyUpdateInviteRolesProjector(timeFunc coreutils.TimeFunc, federation federation.IFederation, tokens itokens.ITokens, smtpCfg smtp.Cfg) func(event istructs.IPLogEvent, state istructs.IState, intents istructs.IIntents) (err error) {
+func applyUpdateInviteRolesProjector(time coreutils.ITime, federation federation.IFederation, tokens itokens.ITokens, smtpCfg smtp.Cfg) func(event istructs.IPLogEvent, state istructs.IState, intents istructs.IIntents) (err error) {
 	return func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
 		skbCDocInvite, err := s.KeyBuilder(sys.Storage_Record, qNameCDocInvite)
 		if err != nil {
@@ -114,7 +114,7 @@ func applyUpdateInviteRolesProjector(timeFunc coreutils.TimeFunc, federation fed
 		//Update invite
 		_, err = federation.Func(
 			fmt.Sprintf("api/%s/%d/c.sys.CUD", appQName, event.Workspace()),
-			fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"State":%d,"Updated":%d,"Roles":"%s"}}]}`, event.ArgumentObject().AsRecordID(field_InviteID), State_Joined, timeFunc().UnixMilli(), event.ArgumentObject().AsString(Field_Roles)),
+			fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"State":%d,"Updated":%d,"Roles":"%s"}}]}`, event.ArgumentObject().AsRecordID(field_InviteID), State_Joined, time.Now().UnixMilli(), event.ArgumentObject().AsString(Field_Roles)),
 			coreutils.WithAuthorizeBy(token),
 			coreutils.WithDiscardResponse())
 

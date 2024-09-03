@@ -37,7 +37,7 @@ func NewVVMDefaultConfig() VVMConfig {
 		RouterReadTimeout:      router.DefaultRouterWriteTimeout, // same
 		RouterConnectionsLimit: router.DefaultConnectionsLimit,
 		BLOBMaxSize:            DefaultBLOBMaxSize,
-		TimeFunc:               DefaultTimeFunc,
+		Time:                   coreutils.NewITime(),
 		Name:                   processors.VVMName(hostname),
 		VVMAppsBuilder:         VVMAppsBuilder{},
 		BusTimeout:             BusTimeout(ibus.DefaultTimeout),

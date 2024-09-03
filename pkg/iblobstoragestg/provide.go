@@ -9,9 +9,9 @@ import (
 	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-func Provide(storage BlobAppStoragePtr, now coreutils.TimeFunc) iblobstorage.IBLOBStorage {
+func Provide(storage BlobAppStoragePtr, time coreutils.ITime) iblobstorage.IBLOBStorage {
 	return &bStorageType{
 		appStorage: storage,
-		now:        now,
+		time:       time,
 	}
 }
