@@ -25,8 +25,7 @@ const (
 )
 
 var (
-	vits            = map[*VITConfig]*VIT{}
-	DefaultTestTime = time.UnixMilli(testTimeMillis) // 2022-04-11 11:54:46 +0300 MSK
+	vits = map[*VITConfig]*VIT{}
 	//go:embed schemaTestApp1.vsql
 	SchemaTestApp1FS embed.FS
 	//go:embed schemaTestApp2.vsql
