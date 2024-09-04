@@ -42,7 +42,10 @@ func (s *queryProcessorState) sendPrevQueryObject() error {
 
 func (s *queryProcessorState) NewValue(key istructs.IStateKeyBuilder) (eb istructs.IStateValueBuilder, err error) {
 	if key.Storage() == sys.Storage_Result {
-		s.sendPrevQueryObject()
+		err = s.sendPrevQueryObject()
+		if err != nil {
+			return nil, err
+		}
 		eb, err = s.hostState.withInsert[sys.Storage_Result].ProvideValueBuilder(key, nil)
 		if err != nil {
 			return nil, err
