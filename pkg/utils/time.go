@@ -15,7 +15,8 @@ type ITime interface {
 	NewTimerChan(d time.Duration) <-chan time.Time
 }
 
-// must be a global var to avoid case when different times could be used in tests. jwt.TimeFunc is a global var: once set it must not be changed during tests
+// MockTime must be a global var to avoid case when different times could be used in tests.
+// jwt.TimeFunc is a global var: once set it must not be changed during tests
 var MockTime IMockTime = &mockedTime{
 	now:     time.Now(),
 	RWMutex: sync.RWMutex{},
