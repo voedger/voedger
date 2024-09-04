@@ -58,6 +58,8 @@ func (t *mockedTime) Now() time.Time {
 }
 
 func (t *mockedTime) NewTimerChan(d time.Duration) <-chan time.Time {
+	t.Lock()
+	defer t.Unlock()
 	mt := mockTimer{
 		c:          make(chan time.Time, 1),
 		expiration: t.now.Add(d),
