@@ -9,6 +9,8 @@ import (
 	ext "github.com/voedger/voedger/pkg/exttinygo"
 )
 
+func main() {}
+
 //export TestEcho
 func TestEcho() {
 	arg := ext.MustGetValue(ext.KeyBuilder(ext.StorageQueryContext, ext.NullEntity)).AsValue(cmdContext_Argument)
@@ -26,5 +28,3 @@ func TestCmdEcho() {
 	result := ext.NewValue(ext.KeyBuilder(ext.StorageResult, ext.NullEntity))
 	result.PutString(field_Res, "hello, "+str)
 }
-
-func main() {}
