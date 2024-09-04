@@ -269,7 +269,7 @@ func ProvideApp1(apis apps.APIs, cfg *istructsmem.AppConfigType, ep extensionpoi
 			}
 			// kb.PutString(sys.Storage_FederationCommand_Field_Command, "c.sys.CUD")
 			kb.PutString(sys.Storage_FederationCommand_Field_Body, `{"cuds": [{"fields": {"sys.ID": 1,"sys.QName": "app1pkg.JobTable,"Str":"str"}]}`)
-			kb.PutInt64(sys.Storage_FederationCommand_Field_WSID, int64(st.PLogEvent().Workspace()))
+			// kb.PutInt64(sys.Storage_FederationCommand_Field_WSID, int64(st.PLogEvent().Workspace()))
 			sysToken, err := payloads.GetSystemPrincipalToken(apis.ITokens, istructs.AppQName_test1_app1)
 			if err != nil {
 				return err

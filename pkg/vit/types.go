@@ -32,6 +32,7 @@ type VIT struct {
 	configCleanupsAmount int
 	emailCaptor          emailCaptor
 	httpClient           coreutils.IHTTPClient
+	mockTime             coreutils.IMockTime
 }
 
 type VITConfig struct {
