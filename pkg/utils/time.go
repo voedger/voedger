@@ -12,17 +12,25 @@ import (
 
 type ITime interface {
 	Now() time.Time
-	NewTimer(d time.Duration) <-chan time.Time
+	NewTimerChan(d time.Duration) <-chan time.Time
 }
 
+// must be a global var to avoid case when different times could be used in tests. jwt.TimeFunc is a global var: once set it must not be changed during tests
 var MockTime IMockTime = &mockedTime{
 	now:     time.Now(),
 	RWMutex: sync.RWMutex{},
+	timers:  map[mockTimer]struct{}{},
 }
 
 type IMockTime interface {
 	ITime
+
+	// implementation must trigger each timer created by IMockTime.NewTimer() if the time has come after adding
 	Add(d time.Duration)
+}
+
+func NewITime() ITime {
+	return &realTime{}
 }
 
 type realTime struct{}
@@ -30,18 +38,14 @@ type realTime struct{}
 type mockedTime struct {
 	sync.RWMutex
 	now    time.Time
-	timers sync.Map
-}
-
-func NewITime() ITime {
-	return &realTime{}
+	timers map[mockTimer]struct{}
 }
 
 func (t *realTime) Now() time.Time {
 	return time.Now()
 }
 
-func (t *realTime) NewTimer(d time.Duration) <-chan time.Time {
+func (t *realTime) NewTimerChan(d time.Duration) <-chan time.Time {
 	res := time.NewTimer(d)
 	return res.C
 }
@@ -52,20 +56,18 @@ func (t *mockedTime) Now() time.Time {
 	return t.now
 }
 
-func (t *mockedTime) NewTimer(d time.Duration) <-chan time.Time {
-	mt := &MockTimer{
-		C:          make(chan time.Time, 1),
+func (t *mockedTime) NewTimerChan(d time.Duration) <-chan time.Time {
+	mt := mockTimer{
+		c:          make(chan time.Time, 1),
 		expiration: t.now.Add(d),
 	}
-	// Store the timer in the registry
-	t.timers.Store(mt, struct{}{})
-	return mt.C
+	t.timers[mt] = struct{}{}
+	return mt.c
 }
 
-type MockTimer struct {
-	C          chan time.Time
+type mockTimer struct {
+	c          chan time.Time
 	expiration time.Time
-	fired      bool
 }
 
 func (t *mockedTime) Add(d time.Duration) {
@@ -76,16 +78,10 @@ func (t *mockedTime) Add(d time.Duration) {
 }
 
 func (t *mockedTime) checkTimers() {
-	t.timers.Range(func(key, value any) bool {
-		timer := key.(*MockTimer)
-		if !timer.fired && (t.now.Equal(timer.expiration) || t.now.After(timer.expiration)) {
-			timer.fired = true
-			select {
-			case timer.C <- t.now:
-			default:
-			}
-			t.timers.Delete(timer)
+	for timer := range t.timers {
+		if t.now.Equal(timer.expiration) || t.now.After(timer.expiration) {
+			timer.c <- t.now
+			delete(t.timers, timer)
 		}
-		return true
-	})
+	}
 }

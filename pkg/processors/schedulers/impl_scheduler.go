@@ -176,7 +176,7 @@ func (a *scheduler) keepRunning() {
 	nextTime := a.schedule.Next(now)
 	for a.ctx.Err() == nil {
 		logger.Info(a.name, "schedule", "now", now, "next", nextTime)
-		timerChan := a.conf.Time.NewTimer(nextTime.Sub(now))
+		timerChan := a.conf.Time.NewTimerChan(nextTime.Sub(now))
 		select {
 		case <-a.ctx.Done():
 			return
