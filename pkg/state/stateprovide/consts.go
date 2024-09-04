@@ -18,7 +18,7 @@ const (
 )
 
 const (
-	queryProcessorStateMaxIntents = 2 // 1 for Result, 1 for Response
+	queryProcessorStateMaxIntents = 1 // For Response
 )
 
 var emptyApplyBatchItem = state.ApplyBatchItem{}

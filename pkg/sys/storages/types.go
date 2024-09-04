@@ -176,25 +176,28 @@ func (v *cudRowValue) AsRecordID(name string) istructs.RecordID {
 	return v.value.AsRecordID(name)
 }
 
-type objectValue struct {
+type ObjectStateValue struct {
 	baseStateValue
 	object istructs.IObject
 }
 
-func (v *objectValue) AsInt32(name string) int32                { return v.object.AsInt32(name) }
-func (v *objectValue) AsInt64(name string) int64                { return v.object.AsInt64(name) }
-func (v *objectValue) AsFloat32(name string) float32            { return v.object.AsFloat32(name) }
-func (v *objectValue) AsFloat64(name string) float64            { return v.object.AsFloat64(name) }
-func (v *objectValue) AsBytes(name string) []byte               { return v.object.AsBytes(name) }
-func (v *objectValue) AsString(name string) string              { return v.object.AsString(name) }
-func (v *objectValue) AsQName(name string) appdef.QName         { return v.object.AsQName(name) }
-func (v *objectValue) AsBool(name string) bool                  { return v.object.AsBool(name) }
-func (v *objectValue) AsRecordID(name string) istructs.RecordID { return v.object.AsRecordID(name) }
-func (v *objectValue) RecordIDs(includeNulls bool, cb func(string, istructs.RecordID)) {
+func (v *ObjectStateValue) AsObject() istructs.IObject       { return v.object }
+func (v *ObjectStateValue) AsInt32(name string) int32        { return v.object.AsInt32(name) }
+func (v *ObjectStateValue) AsInt64(name string) int64        { return v.object.AsInt64(name) }
+func (v *ObjectStateValue) AsFloat32(name string) float32    { return v.object.AsFloat32(name) }
+func (v *ObjectStateValue) AsFloat64(name string) float64    { return v.object.AsFloat64(name) }
+func (v *ObjectStateValue) AsBytes(name string) []byte       { return v.object.AsBytes(name) }
+func (v *ObjectStateValue) AsString(name string) string      { return v.object.AsString(name) }
+func (v *ObjectStateValue) AsQName(name string) appdef.QName { return v.object.AsQName(name) }
+func (v *ObjectStateValue) AsBool(name string) bool          { return v.object.AsBool(name) }
+func (v *ObjectStateValue) AsRecordID(name string) istructs.RecordID {
+	return v.object.AsRecordID(name)
+}
+func (v *ObjectStateValue) RecordIDs(includeNulls bool, cb func(string, istructs.RecordID)) {
 	v.object.RecordIDs(includeNulls, cb)
 }
-func (v *objectValue) FieldNames(cb func(string)) { v.object.FieldNames(cb) }
-func (v *objectValue) AsValue(name string) (result istructs.IStateValue) {
+func (v *ObjectStateValue) FieldNames(cb func(string)) { v.object.FieldNames(cb) }
+func (v *ObjectStateValue) AsValue(name string) (result istructs.IStateValue) {
 	v.object.Containers(func(name string) {
 		result = &objectArrayContainerValue{
 			object:    v.object,
@@ -225,7 +228,7 @@ func (v *objectArrayContainerValue) GetAsValue(i int) (result istructs.IStateVal
 	index := 0
 	v.object.Children(v.container, func(o istructs.IObject) {
 		if index == i {
-			result = &objectValue{object: o}
+			result = &ObjectStateValue{object: o}
 		}
 		index++
 	})

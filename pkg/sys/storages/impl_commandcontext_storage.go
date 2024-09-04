@@ -72,12 +72,12 @@ func (v *cmdContextValue) AsInt64(name string) int64 {
 
 func (v *cmdContextValue) AsValue(name string) istructs.IStateValue {
 	if name == sys.Storage_CommandContext_Field_ArgumentObject {
-		return &objectValue{
+		return &ObjectStateValue{
 			object: v.arg,
 		}
 	}
 	if name == sys.Storage_CommandContext_Field_ArgumentUnloggedObject {
-		return &objectValue{
+		return &ObjectStateValue{
 			object: v.unloggedArg,
 		}
 	}

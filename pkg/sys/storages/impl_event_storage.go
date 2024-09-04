@@ -83,7 +83,7 @@ func (v *eventValue) AsValue(name string) istructs.IStateValue {
 		if arg == nil {
 			return nil
 		}
-		return &objectValue{object: arg}
+		return &ObjectStateValue{object: arg}
 	}
 	return v.baseStateValue.AsValue(name)
 }
