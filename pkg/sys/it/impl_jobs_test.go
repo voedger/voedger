@@ -25,6 +25,8 @@ func TestJobjs_BasicUsage_Builtin(t *testing.T) {
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
+	// note: use vit.TimeAdd(appropriate duration) to force timer fire for the job
+
 	time.Sleep(1 * time.Second)
 
 	// observe "Job1_builtin works!!!!!!!!!!!!!!" in console output
@@ -48,6 +50,8 @@ func TestJobs_BasicUsage_Sidecar(t *testing.T) {
 	//   timer for Job1_sidecar is fired
 	vit := it.NewVIT(t, &cfg)
 	defer vit.TearDown()
+
+	// note: use vit.TimeAdd(appropriate duration) to force timer fire for the job
 
 	time.Sleep(1 * time.Second)
 
