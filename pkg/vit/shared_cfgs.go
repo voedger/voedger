@@ -6,6 +6,7 @@ package vit
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/voedger/voedger/pkg/apps"
@@ -258,6 +259,13 @@ func ProvideApp1(apis apps.APIs, cfg *istructsmem.AppConfigType, ep extensionpoi
 	cfg.Resources.Add(istructsmem.NewQueryFunction(appdef.NewQName(app1PkgName, "QryWithResponseIntent"), func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 		return funcWithResponseIntents(args.PrepareArgs, args.State, args.Intents)
 	}))
+
+	cfg.AddJobs(istructsmem.BuiltinJob{
+		Name: appdef.NewQName(app1PkgName, "Job1_builtin"),
+		Func: func(st istructs.IState, intents istructs.IIntents) error {
+			return errors.New("Job1_builtin works!!!!!!!!!!!!!! ")
+		},
+	})
 
 	app1PackageFS := parser.PackageFS{
 		Path: App1PkgPath,

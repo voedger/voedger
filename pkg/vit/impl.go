@@ -131,6 +131,7 @@ func newVit(t testing.TB, vitCfg *VITConfig, useCas bool) *VIT {
 		isOnSharedConfig:     vitCfg.isShared,
 		configCleanupsAmount: len(vitPreConfig.cleanups),
 		emailCaptor:          emailMessagesChan,
+		mockTime:             coreutils.MockTime,
 	}
 	httpClient, httpClientCleanup := coreutils.NewIHTTPClient()
 	vit.httpClient = httpClient
@@ -467,7 +468,7 @@ func (vit *VIT) Now() time.Time {
 }
 
 func (vit *VIT) TimeAdd(dur time.Duration) {
-	vit.Time.(interface{ Add(time.Duration) }).Add(dur)
+	vit.mockTime.Add(dur)
 	vit.refreshTokens()
 }
 

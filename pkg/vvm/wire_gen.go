@@ -40,9 +40,11 @@ import (
 	"github.com/voedger/voedger/pkg/metrics"
 	"github.com/voedger/voedger/pkg/parser"
 	"github.com/voedger/voedger/pkg/pipeline"
+	"github.com/voedger/voedger/pkg/processors"
 	"github.com/voedger/voedger/pkg/processors/actualizers"
 	"github.com/voedger/voedger/pkg/processors/command"
 	"github.com/voedger/voedger/pkg/processors/query"
+	"github.com/voedger/voedger/pkg/processors/schedulers"
 	"github.com/voedger/voedger/pkg/router"
 	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys/invite"
@@ -109,7 +111,16 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 	v4 := vvmConfig.ActualizerStateOpts
 	basicAsyncActualizerConfig := provideBasicAsyncActualizerConfig(vvmName, iSecretReader, iTokens, iMetrics, in10nBroker, iFederation, v4...)
 	iActualizersService := provideAsyncActualizersService(basicAsyncActualizerConfig)
-	iSchedulerRunner := provideJobSchedulerRunner()
+	basicSchedulerConfig := schedulers.BasicSchedulerConfig{
+		VvmName:      vvmName,
+		SecretReader: iSecretReader,
+		Tokens:       iTokens,
+		Metrics:      iMetrics,
+		Broker:       in10nBroker,
+		Federation:   iFederation,
+		Time:         iTime,
+	}
+	iSchedulerRunner := provideSchedulerRunner(basicSchedulerConfig)
 	v5, err := provideSidecarApps(vvmConfig)
 	if err != nil {
 		cleanup2()
@@ -257,6 +268,10 @@ func (vvm *VoedgerVM) Launch() error {
 	return err
 }
 
+func provideSchedulerRunner(cfg schedulers.BasicSchedulerConfig) appparts.ISchedulerRunner {
+	return schedulers.ProvideSchedulers(cfg)
+}
+
 func provideBootstrapOperator(federation2 federation.IFederation, asp istructs.IAppStructsProvider, time coreutils.ITime, apppar appparts.IAppPartitions,
 	builtinApps []appparts.BuiltInApp, sidecarApps []appparts.SidecarApp, itokens2 itokens.ITokens, storageProvider istorage.IAppStorageProvider, blobberAppStoragePtr iblobstoragestg.BlobAppStoragePtr,
 	routerAppStoragePtr dbcertcache.RouterAppStoragePtr) (BootstrapOperator, error) {
@@ -300,7 +315,7 @@ func provideIAppStructsProvider(cfgs AppConfigsTypeEmpty, bucketsFactory irates.
 }
 
 func provideBasicAsyncActualizerConfig(
-	vvm commandprocessor.VVMName,
+	vvm processors.VVMName,
 	secretReader isecrets.ISecretReader,
 	tokens itokens.ITokens, metrics2 imetrics.IMetrics,
 
@@ -323,11 +338,6 @@ func provideBasicAsyncActualizerConfig(
 
 func provideAsyncActualizersService(cfg actualizers.BasicAsyncActualizerConfig) actualizers.IActualizersService {
 	return actualizers.ProvideActualizers(cfg)
-}
-
-func provideJobSchedulerRunner() appparts.ISchedulerRunner {
-
-	return appparts.NullSchedulerRunner
 }
 
 func provideBuildInfo() (*debug.BuildInfo, error) {
@@ -706,7 +716,7 @@ func provideChannelGroups(cfg *VVMConfig) (res []iprocbusmem.ChannelGroup) {
 }
 
 func provideCachingAppStorageProvider(storageCacheSize StorageCacheSizeType, metrics2 imetrics.IMetrics,
-	vvmName commandprocessor.VVMName, uncachingProvider IAppStorageUncachingProviderFactory) istorage.IAppStorageProvider {
+	vvmName processors.VVMName, uncachingProvider IAppStorageUncachingProviderFactory) istorage.IAppStorageProvider {
 	aspNonCaching := uncachingProvider()
 	return istoragecache.Provide(int(storageCacheSize), aspNonCaching, metrics2, string(vvmName))
 }
@@ -771,7 +781,7 @@ func provideCommandChannelFactory(sch ServiceChannelFactory) CommandChannelFacto
 }
 
 func provideQueryProcessors(qpCount istructs.NumQueryProcessors, qc QueryChannel, appParts appparts.IAppPartitions, qpFactory queryprocessor.ServiceFactory, imetrics2 imetrics.IMetrics,
-	vvm commandprocessor.VVMName, mpq MaxPrepareQueriesType, authn iauthnz.IAuthenticator, authz iauthnz.IAuthorizer,
+	vvm processors.VVMName, mpq MaxPrepareQueriesType, authn iauthnz.IAuthenticator, authz iauthnz.IAuthorizer,
 	tokens itokens.ITokens, federation2 federation.IFederation, statelessResources istructsmem.IStatelessResources) OperatorQueryProcessors {
 	forks := make([]pipeline.ForkOperatorOptionFunc, qpCount)
 	resultSenderFactory := func(ctx context.Context, sender ibus.ISender) queryprocessor.IResultSenderClosable {

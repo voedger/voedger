@@ -538,6 +538,10 @@ ALTERABLE WORKSPACE test_wsWS (
 		Dummy int32
 	);
 
+	TABLE JobTable INHERITS CDoc (
+		Str1 varchar NOT NULL
+	);
+
 	EXTENSION ENGINE BUILTIN (
 		QUERY RatedQry(RatedQryParams) RETURNS RatedQryResult;
 		QUERY MockQry(MockQryParams) RETURNS MockQryResult;
@@ -556,5 +560,7 @@ ALTERABLE WORKSPACE test_wsWS (
 
 		COMMAND CmdWithResponseIntent(WithResponseIntentParams);
 		QUERY QryWithResponseIntent(WithResponseIntentParams) RETURNS QryWithResponseIntentResult;
+
+		JOB Job1_builtin '* * * * *';
 	);
 );

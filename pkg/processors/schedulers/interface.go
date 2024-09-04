@@ -15,6 +15,7 @@ import (
 	"github.com/voedger/voedger/pkg/itokens"
 	imetrics "github.com/voedger/voedger/pkg/metrics"
 	"github.com/voedger/voedger/pkg/pipeline"
+	"github.com/voedger/voedger/pkg/processors"
 	"github.com/voedger/voedger/pkg/state"
 	coreutils "github.com/voedger/voedger/pkg/utils"
 	"github.com/voedger/voedger/pkg/utils/federation"
@@ -25,7 +26,7 @@ type TimeAfterFunc func(d time.Duration) <-chan time.Time
 type LogErrorFunc func(args ...interface{})
 
 type BasicSchedulerConfig struct {
-	VvmName string
+	VvmName processors.VVMName
 
 	SecretReader isecrets.ISecretReader
 	Tokens       itokens.ITokens
