@@ -22,6 +22,7 @@ const (
 	StorageFederationCommand = "sys.FederationCommand"
 	StorageFederationBlob    = "sys.FederationBlob"
 	StorageUniq              = "sys.Uniq"
+	StorageLogger            = "sys.Logger"
 
 	NullEntity = ""
 )

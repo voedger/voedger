@@ -272,4 +272,13 @@ EXTENSION ENGINE BUILTIN (
 		GET SCOPE(JOBS)
 	);
 
+	STORAGE Logger(
+		/*
+		Key: 
+			LogLevel int32
+		Value
+			Message text
+		*/
+		INSERT SCOPE(COMMANDS, QUERIES, PROJECTORS, JOBS)
+	);
 )

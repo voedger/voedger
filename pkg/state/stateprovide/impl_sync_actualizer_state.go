@@ -41,5 +41,6 @@ func implProvideSyncActualizerState(ctx context.Context, appStructsFunc state.Ap
 	hs.addStorage(sys.Storage_WLog, storages.NewWLogStorage(ctx, ieventsFunc, wsidFunc), S_GET)
 	hs.addStorage(sys.Storage_AppSecret, storages.NewAppSecretsStorage(secretReader), S_GET)
 	hs.addStorage(sys.Storage_Uniq, storages.NewUniquesStorage(appStructsFunc, wsidFunc, opts.UniquesHandler), S_GET)
+	hs.addStorage(sys.Storage_Logger, storages.NewLoggerStorage(), S_INSERT)
 	return hs
 }
