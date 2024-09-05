@@ -27,6 +27,7 @@ import (
 	"github.com/voedger/voedger/pkg/itokens"
 	"github.com/voedger/voedger/pkg/parser"
 	"github.com/voedger/voedger/pkg/pipeline"
+	"github.com/voedger/voedger/pkg/processors"
 	commandprocessor "github.com/voedger/voedger/pkg/processors/command"
 	"github.com/voedger/voedger/pkg/router"
 	"github.com/voedger/voedger/pkg/state"
@@ -126,7 +127,7 @@ type AppsExtensionPoints map[appdef.AppQName]extensionpoints.IExtensionPoint
 
 type VVMConfig struct {
 	VVMAppsBuilder             VVMAppsBuilder // is a map
-	TimeFunc                   coreutils.TimeFunc
+	Time                       coreutils.ITime
 	RouterWriteTimeout         int
 	RouterReadTimeout          int
 	RouterConnectionsLimit     int
@@ -140,7 +141,7 @@ type VVMConfig struct {
 	StorageFactory             func() (provider istorage.IAppStorageFactory, err error)
 	BlobberServiceChannels     router.BlobberServiceChannels
 	BLOBMaxSize                router.BLOBMaxSizeType
-	Name                       commandprocessor.VVMName
+	Name                       processors.VVMName
 	NumCommandProcessors       istructs.NumCommandProcessors
 	NumQueryProcessors         istructs.NumQueryProcessors
 	MaxPrepareQueries          MaxPrepareQueriesType

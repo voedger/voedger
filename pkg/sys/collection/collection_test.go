@@ -11,7 +11,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/require"
 
@@ -35,6 +34,7 @@ import (
 	queryprocessor "github.com/voedger/voedger/pkg/processors/query"
 	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys"
+	coreutils "github.com/voedger/voedger/pkg/utils"
 	wsdescutil "github.com/voedger/voedger/pkg/utils/testwsdesc"
 	"github.com/voedger/voedger/pkg/vvm/engines"
 	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
@@ -208,7 +208,7 @@ func deployTestApp(t *testing.T) (appParts appparts.IAppPartitions, appStructs i
 		ChannelsPerSubject:      10,
 		Subscriptions:           1000,
 		SubscriptionsPerSubject: 10,
-	}, time.Now)
+	}, coreutils.NewITime())
 
 	appParts, appPartsCleanup, err := appparts.New2(context.Background(), appStructsProvider,
 		actualizers.NewSyncActualizerFactoryFactory(actualizers.ProvideSyncActualizerFactory(), secretReader, n10nBroker, statelessResources),
@@ -503,7 +503,7 @@ func TestBasicUsage_QueryFunc_Collection(t *testing.T) {
 
 	authn := iauthnzimpl.NewDefaultAuthenticator(iauthnzimpl.TestSubjectRolesGetter, iauthnzimpl.TestIsDeviceAllowedFuncs)
 	authz := iauthnzimpl.NewDefaultAuthorizer()
-	tokens := itokensjwt.ProvideITokens(itokensjwt.SecretKeyExample, time.Now)
+	tokens := itokensjwt.TestTokensJWT()
 	appTokens := payloads.ProvideIAppTokensFactory(tokens).New(test.appQName)
 	queryProcessor := queryprocessor.ProvideServiceFactory()(
 		serviceChannel,
@@ -621,7 +621,7 @@ func TestBasicUsage_QueryFunc_CDoc(t *testing.T) {
 
 	authn := iauthnzimpl.NewDefaultAuthenticator(iauthnzimpl.TestSubjectRolesGetter, iauthnzimpl.TestIsDeviceAllowedFuncs)
 	authz := iauthnzimpl.NewDefaultAuthorizer()
-	tokens := itokensjwt.ProvideITokens(itokensjwt.SecretKeyExample, time.Now)
+	tokens := itokensjwt.TestTokensJWT()
 	appTokens := payloads.ProvideIAppTokensFactory(tokens).New(test.appQName)
 	queryProcessor := queryprocessor.ProvideServiceFactory()(serviceChannel, func(ctx context.Context, sender ibus.ISender) queryprocessor.IResultSenderClosable {
 		return out
@@ -740,7 +740,7 @@ func TestBasicUsage_State(t *testing.T) {
 
 	authn := iauthnzimpl.NewDefaultAuthenticator(iauthnzimpl.TestSubjectRolesGetter, iauthnzimpl.TestIsDeviceAllowedFuncs)
 	authz := iauthnzimpl.NewDefaultAuthorizer()
-	tokens := itokensjwt.ProvideITokens(itokensjwt.SecretKeyExample, time.Now)
+	tokens := itokensjwt.TestTokensJWT()
 	appTokens := payloads.ProvideIAppTokensFactory(tokens).New(test.appQName)
 	queryProcessor := queryprocessor.ProvideServiceFactory()(serviceChannel, func(ctx context.Context, sender ibus.ISender) queryprocessor.IResultSenderClosable {
 		return out
@@ -909,7 +909,7 @@ func TestState_withAfterArgument(t *testing.T) {
 
 	authn := iauthnzimpl.NewDefaultAuthenticator(iauthnzimpl.TestSubjectRolesGetter, iauthnzimpl.TestIsDeviceAllowedFuncs)
 	authz := iauthnzimpl.NewDefaultAuthorizer()
-	tokens := itokensjwt.ProvideITokens(itokensjwt.SecretKeyExample, time.Now)
+	tokens := itokensjwt.TestTokensJWT()
 	appTokens := payloads.ProvideIAppTokensFactory(tokens).New(test.appQName)
 	queryProcessor := queryprocessor.ProvideServiceFactory()(serviceChannel, func(ctx context.Context, sender ibus.ISender) queryprocessor.IResultSenderClosable {
 		return out

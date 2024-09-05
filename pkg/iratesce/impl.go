@@ -31,7 +31,7 @@ func (bucket *bucketType) resetToState(state irates.BucketState, now time.Time) 
 	bucket.reset(now)
 }
 
-// recalculates the number of bucket.state tokens.TakenTokens for the TimeFunc time
+// recalculates the number of bucket.state tokens.TakenTokens for the time time
 func (bucket *bucketType) recalcBuketState(now time.Time) {
 	_, _, tokens := bucket.limiter.advance(now)
 	value := float64(bucket.limiter.burst) - tokens
@@ -58,7 +58,7 @@ func (b *bucketsType) TakeTokens(buckets []irates.BucketKey, n int) bool {
 	defer b.mu.Unlock()
 	var keyIdx int
 	res := true
-	t := b.timeFunc()
+	t := b.time.Now()
 	// let's check the presence of a token using the requested keys
 	for keyIdx = 0; keyIdx < len(buckets); keyIdx++ {
 		bucket := b.bucketByKey(&buckets[keyIdx])
@@ -99,7 +99,7 @@ func (b *bucketsType) bucketByKey(key *irates.BucketKey) (bucket *bucketType) {
 	if !ok {
 		return nil
 	}
-	bucket = newBucket(bs, b.timeFunc())
+	bucket = newBucket(bs, b.time.Now())
 	b.buckets[*key] = bucket
 	return bucket
 }
@@ -138,7 +138,7 @@ func (b *bucketsType) ResetRateBuckets(rateLimitName string, bucketState irates.
 
 	for bucketKey, bucket := range b.buckets {
 		if bucketKey.RateLimitName == rateLimitName {
-			bucket.resetToState(bucketState, b.timeFunc())
+			bucket.resetToState(bucketState, b.time.Now())
 		}
 	}
 }
@@ -150,7 +150,7 @@ func (b *bucketsType) GetBucketState(bucketKey irates.BucketKey) (state irates.B
 	buc := b.bucketByKey(&bucketKey)
 
 	if buc != nil {
-		buc.recalcBuketState(b.timeFunc())
+		buc.recalcBuketState(b.time.Now())
 		return buc.state, nil
 	}
 	return state, irates.ErrorRateLimitNotFound
@@ -165,6 +165,6 @@ func (b *bucketsType) SetBucketState(bucketKey irates.BucketKey, state irates.Bu
 		return irates.ErrorRateLimitNotFound
 	}
 
-	buc.resetToState(state, b.timeFunc())
+	buc.resetToState(state, b.time.Now())
 	return nil
 }

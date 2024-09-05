@@ -81,10 +81,10 @@ func provideIEVExec(itokens itokens.ITokens, federation federation.IFederation, 
 	}
 }
 
-func applySendEmailVerificationCode(federation federation.IFederation, smtpCfg smtp.Cfg, timeFunc coreutils.TimeFunc) func(event istructs.IPLogEvent, state istructs.IState, intents istructs.IIntents) (err error) {
+func applySendEmailVerificationCode(federation federation.IFederation, smtpCfg smtp.Cfg) func(event istructs.IPLogEvent, state istructs.IState, intents istructs.IIntents) (err error) {
 	return func(event istructs.IPLogEvent, st istructs.IState, intents istructs.IIntents) (err error) {
 		eventTime := time.UnixMilli(int64(event.RegisteredAt()))
-		if eventTime.Add(threeDays).Before(timeFunc()) {
+		if eventTime.Add(threeDays).Before(time.Now()) {
 			// skip old emails to prevent re-sending after projector rename
 			// see https://github.com/voedger/voedger/issues/275
 			return nil

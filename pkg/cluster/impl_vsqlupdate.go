@@ -23,7 +23,7 @@ import (
 	"github.com/voedger/voedger/pkg/utils/federation"
 )
 
-func provideExecCmdVSqlUpdate(federation federation.IFederation, itokens itokens.ITokens, timeFunc coreutils.TimeFunc,
+func provideExecCmdVSqlUpdate(federation federation.IFederation, itokens itokens.ITokens, time coreutils.ITime,
 	asp istructs.IAppStructsProvider) istructsmem.ExecCommandClosure {
 	return func(args istructs.ExecCommandArgs) (err error) {
 		query := args.ArgumentObject.AsString(field_Query)
@@ -38,7 +38,7 @@ func provideExecCmdVSqlUpdate(federation federation.IFederation, itokens itokens
 		case dml.OpKind_InsertTable:
 			err = insertTable(update, federation, itokens, args.State, args.Intents)
 		case dml.OpKind_UpdateCorrupted:
-			err = updateCorrupted(update, istructs.UnixMilli(timeFunc().UnixMilli()))
+			err = updateCorrupted(update, istructs.UnixMilli(time.Now().UnixMilli()))
 		case dml.OpKind_UnloggedUpdate, dml.OpKind_UnloggedInsert:
 			err = updateUnlogged(update)
 		}

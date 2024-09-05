@@ -60,7 +60,7 @@ func (v *qryContextValue) AsInt64(name string) int64 {
 
 func (v *qryContextValue) AsValue(name string) istructs.IStateValue {
 	if name == sys.Storage_QueryContext_Field_ArgumentObject {
-		return &objectValue{
+		return &ObjectStateValue{
 			object: v.arg,
 		}
 	}

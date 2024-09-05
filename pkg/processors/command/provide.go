@@ -11,6 +11,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/goutils/logger"
+	"github.com/voedger/voedger/pkg/processors"
 
 	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/iauthnz"
@@ -32,7 +33,7 @@ type cmdProc struct {
 	appPartition  *appPartition
 	appPartitions map[appdef.AppQName]*appPartition
 	n10nBroker    in10n.IN10nBroker
-	now           coreutils.TimeFunc
+	time          coreutils.ITime
 	authenticator iauthnz.IAuthenticator
 	authorizer    iauthnz.IAuthorizer
 	storeOp       pipeline.ISyncOperator
@@ -44,15 +45,15 @@ type appPartition struct {
 }
 
 // syncActualizerFactory is a factory(partitionID) that returns a fork operator with a sync actualizer per each application. Inside of an each actualizer - projectors for each application
-func ProvideServiceFactory(appParts appparts.IAppPartitions, now coreutils.TimeFunc,
-	n10nBroker in10n.IN10nBroker, metrics imetrics.IMetrics, vvm VVMName, authenticator iauthnz.IAuthenticator, authorizer iauthnz.IAuthorizer,
+func ProvideServiceFactory(appParts appparts.IAppPartitions, tm coreutils.ITime,
+	n10nBroker in10n.IN10nBroker, metrics imetrics.IMetrics, vvm processors.VVMName, authenticator iauthnz.IAuthenticator, authorizer iauthnz.IAuthorizer,
 	secretReader isecrets.ISecretReader) ServiceFactory {
 	return func(commandsChannel CommandChannel, partitionID istructs.PartitionID) pipeline.IService {
 		cmdProc := &cmdProc{
 			pNumber:       partitionID,
 			appPartitions: map[appdef.AppQName]*appPartition{},
 			n10nBroker:    n10nBroker,
-			now:           now,
+			time:          tm,
 			authenticator: authenticator,
 			authorizer:    authorizer,
 		}
@@ -73,10 +74,10 @@ func ProvideServiceFactory(appParts appparts.IAppPartitions, now coreutils.TimeF
 					pipeline.ForkBranch(
 						pipeline.NewSyncOp(func(ctx context.Context, work pipeline.IWorkpiece) (err error) {
 							cmd := work.(*cmdWorkpiece)
-							cmd.syncProjectorsStart = time.Now()
+							cmd.syncProjectorsStart = tm.Now()
 							err = cmd.appPart.DoSyncActualizer(ctx, work)
 							cmd.metrics.increase(ProjectorsSeconds, time.Since(cmd.syncProjectorsStart).Seconds())
-							cmd.syncProjectorsStart = time.Time{}
+							cmd.syncProjectorsStart = tm.Now()
 							if err != nil {
 								cmd.appPartitionRestartScheduled = true
 							}
@@ -138,7 +139,7 @@ func ProvideServiceFactory(appParts appparts.IAppPartitions, now coreutils.TimeF
 			for vvmCtx.Err() == nil {
 				select {
 				case intf := <-commandsChannel:
-					start := time.Now()
+					start := tm.Now()
 					cmdMes := intf.(ICommandMessage)
 					cmd := &cmdWorkpiece{
 						cmdMes:            cmdMes,

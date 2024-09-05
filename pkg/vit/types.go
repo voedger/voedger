@@ -7,7 +7,6 @@ package vit
 import (
 	"sync"
 	"testing"
-	"time"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/extensionpoints"
@@ -33,11 +32,7 @@ type VIT struct {
 	configCleanupsAmount int
 	emailCaptor          emailCaptor
 	httpClient           coreutils.IHTTPClient
-}
-
-type timeService struct {
-	m              sync.Mutex
-	currentInstant time.Time
+	mockTime             coreutils.IMockTime
 }
 
 type VITConfig struct {

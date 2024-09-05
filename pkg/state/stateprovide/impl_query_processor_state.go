@@ -18,8 +18,9 @@ import (
 
 type queryProcessorState struct {
 	*hostState
-	queryArgs     state.PrepareArgsFunc
-	queryCallback state.ExecQueryCallbackFunc
+	queryArgs          state.PrepareArgsFunc
+	queryCallback      state.ExecQueryCallbackFunc
+	resultValueBuilder istructs.IStateValueBuilder
 }
 
 func (s queryProcessorState) QueryPrepareArgs() istructs.PrepareArgs {
@@ -28,6 +29,39 @@ func (s queryProcessorState) QueryPrepareArgs() istructs.PrepareArgs {
 
 func (s queryProcessorState) QueryCallback() istructs.ExecQueryCallback {
 	return s.queryCallback()
+}
+
+func (s *queryProcessorState) sendPrevQueryObject() error {
+	if s.resultValueBuilder != nil {
+		obj := s.resultValueBuilder.BuildValue().(*storages.ObjectStateValue).AsObject()
+		s.resultValueBuilder = nil
+		return s.queryCallback()(obj)
+	}
+	return nil
+}
+
+func (s *queryProcessorState) NewValue(key istructs.IStateKeyBuilder) (eb istructs.IStateValueBuilder, err error) {
+	if key.Storage() == sys.Storage_Result {
+		err = s.sendPrevQueryObject()
+		if err != nil {
+			return nil, err
+		}
+		eb, err = s.hostState.withInsert[sys.Storage_Result].ProvideValueBuilder(key, nil)
+		if err != nil {
+			return nil, err
+		}
+		s.resultValueBuilder = eb
+		return eb, nil
+	}
+	return s.hostState.NewValue(key)
+}
+
+func (s *queryProcessorState) ApplyIntents() (err error) {
+	err = s.sendPrevQueryObject()
+	if err != nil {
+		return err
+	}
+	return s.hostState.ApplyIntents()
 }
 
 func implProvideQueryProcessorState(
@@ -71,7 +105,7 @@ func implProvideQueryProcessorState(
 	state.addStorage(sys.Storage_RequestSubject, storages.NewSubjectStorage(principalsFunc, tokenFunc), S_GET)
 	state.addStorage(sys.Storage_QueryContext, storages.NewQueryContextStorage(argFunc, wsidFunc), S_GET)
 	state.addStorage(sys.Storage_Response, storages.NewResponseStorage(), S_INSERT)
-	state.addStorage(sys.Storage_Result, storages.NewQueryResultStorage(resultBuilderFunc, queryCallbackFunc), S_INSERT)
+	state.addStorage(sys.Storage_Result, storages.NewResultStorage(resultBuilderFunc), S_INSERT)
 	state.addStorage(sys.Storage_Uniq, storages.NewUniquesStorage(appStructsFunc, wsidFunc, opts.UniquesHandler), S_GET)
 
 	return state

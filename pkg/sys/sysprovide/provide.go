@@ -33,17 +33,17 @@ import (
 )
 
 func ProvideStateless(sr istructsmem.IStatelessResources, smtpCfg smtp.Cfg, eps map[appdef.AppQName]extensionpoints.IExtensionPoint, buildInfo *debug.BuildInfo,
-	storageProvider istorage.IAppStorageProvider, wsPostInitFunc workspace.WSPostInitFunc, timeFunc coreutils.TimeFunc,
+	storageProvider istorage.IAppStorageProvider, wsPostInitFunc workspace.WSPostInitFunc, time coreutils.ITime,
 	itokens itokens.ITokens, federation federation.IFederation, asp istructs.IAppStructsProvider, atf payloads.IAppTokensFactory) {
 	blobber.ProvideBlobberCmds(sr)
 	collection.Provide(sr)
 	journal.Provide(sr, eps)
 	builtin.Provide(sr, buildInfo, storageProvider)
-	workspace.Provide(sr, timeFunc, itokens, federation, itokens, wsPostInitFunc, eps)
+	workspace.Provide(sr, time, itokens, federation, itokens, wsPostInitFunc, eps)
 	sqlquery.Provide(sr, federation, itokens)
-	verifier.Provide(sr, itokens, federation, asp, smtpCfg, timeFunc)
+	verifier.Provide(sr, itokens, federation, asp, smtpCfg)
 	authnz.Provide(sr, itokens, atf)
-	invite.Provide(sr, timeFunc, federation, itokens, smtpCfg)
+	invite.Provide(sr, time, federation, itokens, smtpCfg)
 	uniques.Provide(sr)
 	describe.Provide(sr)
 }
