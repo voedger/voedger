@@ -101,16 +101,20 @@ var (
 	qNameCmdSaveTap2PayPayment                      = appdef.NewQName(airPackage, "SaveTap2PayPayment")
 	qNameQryGetResellers                            = appdef.NewQName(airPackage, "GetResellers")
 	qNameQryState                                   = appdef.NewQName(appdef.SysPackage, "State")
+	qNameQryGetAirLocations                         = appdef.NewQName(airPackage, "GetAirLocations")
+	qNameQryResellersDashboardSalesMetrics          = appdef.NewQName(airPackage, "ResellersDashboardSalesMetrics")
+	qNameQryResellersDashboardBackofficeMetrics     = appdef.NewQName(airPackage, "ResellersDashboardBackofficeMetrics")
 
 	// Air roles
-	qNameRoleResellersAdmin         = appdef.NewQName(airPackage, "ResellersAdmin")
-	qNameRoleUntillPaymentsReseller = appdef.NewQName(airPackage, "UntillPaymentsReseller")
-	qNameRoleUntillPaymentsUser     = appdef.NewQName(airPackage, "UntillPaymentsUser")
-	qNameRoleAirReseller            = appdef.NewQName(airPackage, "AirReseller") // Deprecated: use role air.SubscriptionReseller instead
-	qNameRoleSubscriptionReseller   = appdef.NewQName(airPackage, "SubscriptionReseller")
-	qNameRoleUntillPaymentsTerminal = appdef.NewQName(airPackage, "UntillPaymentsTerminal")
-	qNameRoleUntillPaymentsManager  = appdef.NewQName(airPackage, "UntillPaymentsManager")
-	qNameRoleBOReader               = appdef.NewQName(airPackage, "BOReader")
+	qNameRoleResellersAdmin            = appdef.NewQName(airPackage, "ResellersAdmin")
+	qNameRoleUntillPaymentsReseller    = appdef.NewQName(airPackage, "UntillPaymentsReseller")
+	qNameRoleUntillPaymentsUser        = appdef.NewQName(airPackage, "UntillPaymentsUser")
+	qNameRoleAirReseller               = appdef.NewQName(airPackage, "AirReseller") // Deprecated: use role air.SubscriptionReseller instead
+	qNameRoleSubscriptionReseller      = appdef.NewQName(airPackage, "SubscriptionReseller")
+	qNameRoleUntillPaymentsTerminal    = appdef.NewQName(airPackage, "UntillPaymentsTerminal")
+	qNameRoleUntillPaymentsManager     = appdef.NewQName(airPackage, "UntillPaymentsManager")
+	qNameRoleBOReader                  = appdef.NewQName(airPackage, "BOReader")
+	qNameResellerPortalDashboardViewer = appdef.NewQName(airPackage, "ResellerPortalDashboardViewer")
 )
 
 const (
