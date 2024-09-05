@@ -107,6 +107,7 @@ func implProvideQueryProcessorState(
 	state.addStorage(sys.Storage_Response, storages.NewResponseStorage(), S_INSERT)
 	state.addStorage(sys.Storage_Result, storages.NewResultStorage(resultBuilderFunc), S_INSERT)
 	state.addStorage(sys.Storage_Uniq, storages.NewUniquesStorage(appStructsFunc, wsidFunc, opts.UniquesHandler), S_GET)
+	state.addStorage(sys.Storage_Logger, storages.NewLoggerStorage(), S_INSERT)
 
 	return state
 }

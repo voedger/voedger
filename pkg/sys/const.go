@@ -35,6 +35,7 @@ var (
 	Storage_FederationCommand = appdef.NewQName(PackageName, "FederationCommand")
 	Storage_FederationBlob    = appdef.NewQName(PackageName, "FederationBlob")
 	Storage_Uniq              = appdef.NewQName(PackageName, "Uniq")
+	Storage_Logger            = appdef.NewQName(PackageName, "Logger")
 )
 
 const (
@@ -132,6 +133,9 @@ const (
 	Storage_RequestSubject_Field_ProfileWSID = "ProfileWSID"
 	Storage_RequestSubject_Field_Name        = "Name"
 	Storage_RequestSubject_Field_Token       = "Token"
+
+	Storage_Logger_Field_LogLevel = "LogLevel"
+	Storage_Logger_Field_Message  = "Message"
 
 	// Common Field names
 	CUDs_Field_IsNew = "IsNew"
