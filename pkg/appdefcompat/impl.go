@@ -6,6 +6,10 @@
 package appdefcompat
 
 import (
+	"io/fs"
+	"os"
+	"path/filepath"
+
 	"github.com/google/go-cmp/cmp"
 	"golang.org/x/exp/slices"
 
@@ -373,4 +377,16 @@ func matchNodes(oldNodes, newNodes []*CompatibilityTreeNode) *matchNodesResult {
 		}
 	}
 	return result
+}
+
+func (r *PathReader) Open(name string) (fs.File, error) {
+	return os.Open(filepath.Join(r.rootPath, name))
+}
+
+func (r *PathReader) ReadDir(name string) ([]os.DirEntry, error) {
+	return os.ReadDir(filepath.Join(r.rootPath, name))
+}
+
+func (r *PathReader) ReadFile(name string) ([]byte, error) {
+	return os.ReadFile(filepath.Join(r.rootPath, name))
 }
