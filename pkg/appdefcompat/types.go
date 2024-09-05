@@ -8,6 +8,8 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+
+	"github.com/voedger/voedger/pkg/parser"
 )
 
 type Constraint uint8
@@ -76,4 +78,24 @@ type matchNodesResult struct {
 	AppendedNodeCount  int
 	MatchedNodePairs   [][2]*CompatibilityTreeNode
 	ReorderedNodeNames []string
+}
+
+type ExportedApp struct {
+	Ast    *parser.AppSchemaAST
+	Ignore []string
+}
+
+type ExportedAppInfo struct {
+	Package string   `json:"package"`
+	Ignore  []string `json:"ignore"`
+}
+
+type PathReader struct {
+	rootPath string
+}
+
+type ExportedAppsInfo struct {
+	Version string            `json:"version"`
+	Apps    []ExportedAppInfo `json:"apps"`
+	Ignore  []string          `json:"ignore"`
 }
