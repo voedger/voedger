@@ -560,7 +560,5 @@ ALTERABLE WORKSPACE test_wsWS (
 
 		COMMAND CmdWithResponseIntent(WithResponseIntentParams);
 		QUERY QryWithResponseIntent(WithResponseIntentParams) RETURNS QryWithResponseIntentResult;
-
-		JOB Job1_builtin '* * * * *';
 	);
 );
