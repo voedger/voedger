@@ -53,4 +53,5 @@ type IIntentAssertions interface {
 	Exists()
 	Equal(vb ValueBuilderCallback)
 	Assert(cb IntentAssertionsCallback)
+	NotExists()
 }
