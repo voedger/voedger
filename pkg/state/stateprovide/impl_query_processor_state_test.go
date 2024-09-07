@@ -37,6 +37,10 @@ func TestQueryProcessorState(t *testing.T) {
 		require.NoError(err)
 		require.NotNil(vb)
 	}
+
+	intent := qps.FindIntent(kb)
+	require.NotNil(intent)
+
 	err = qps.ApplyIntents()
 	require.NoError(err)
 	require.Len(sentObjects, rows)

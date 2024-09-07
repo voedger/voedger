@@ -56,6 +56,13 @@ func (s *queryProcessorState) NewValue(key istructs.IStateKeyBuilder) (eb istruc
 	return s.hostState.NewValue(key)
 }
 
+func (s *queryProcessorState) FindIntent(key istructs.IStateKeyBuilder) istructs.IStateValueBuilder {
+	if key.Storage() == sys.Storage_Result {
+		return s.resultValueBuilder
+	}
+	return s.hostState.FindIntent(key)
+}
+
 func (s *queryProcessorState) ApplyIntents() (err error) {
 	err = s.sendPrevQueryObject()
 	if err != nil {
