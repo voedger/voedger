@@ -150,6 +150,7 @@ const (
 	ClusterAppID_sys_router
 	ClusterAppID_untill_resellerportal
 	ClusterAppID_sys_cluster
+	ClusterAppID_untill_fiscalcloud
 	ClusterAppID_FakeLast
 )
 
@@ -170,6 +171,7 @@ var AppQName_sys_blobber = appdef.NewAppQName(SysOwner, "blobber")
 var AppQName_sys_router = appdef.NewAppQName(SysOwner, "router") // For ACME certificates
 var AppQName_untill_resellerportal = appdef.NewAppQName("untill", "resellerportal")
 var AppQName_sys_cluster = appdef.NewAppQName(SysOwner, "cluster")
+var AppQName_untill_fiscalcloud = appdef.NewAppQName("untill", "fiscalcloud")
 
 // Cluster applications
 
@@ -185,6 +187,7 @@ var ClusterApps = map[appdef.AppQName]ClusterAppID{
 	AppQName_sys_router:            ClusterAppID_sys_router,
 	AppQName_untill_resellerportal: ClusterAppID_untill_resellerportal,
 	AppQName_sys_cluster:           ClusterAppID_sys_cluster,
+	AppQName_untill_fiscalcloud:    ClusterAppID_untill_fiscalcloud,
 }
 
 const (
