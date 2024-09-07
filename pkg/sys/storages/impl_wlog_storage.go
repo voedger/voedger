@@ -78,11 +78,16 @@ func (s *wLogStorage) NewKeyBuilder(appdef.QName, istructs.IStateKeyBuilder) ist
 		wsid: s.wsidFunc(),
 	}
 }
-func (s *wLogStorage) Get(key istructs.IStateKeyBuilder) (value istructs.IStateValue, err error) {
-	err = s.Read(key, func(_ istructs.IKey, v istructs.IStateValue) (err error) {
-		value = v
+func (s *wLogStorage) Get(kb istructs.IStateKeyBuilder) (value istructs.IStateValue, err error) {
+	k := kb.(*wLogKeyBuilder)
+	cb := func(wlogOffset istructs.Offset, event istructs.IWLogEvent) (err error) {
+		value = &wLogValue{
+			event:  event,
+			offset: int64(wlogOffset),
+		}
 		return nil
-	})
+	}
+	err = s.eventsFunc().ReadWLog(s.ctx, k.wsid, k.offset, 1, cb)
 	return value, err
 }
 func (s *wLogStorage) Read(kb istructs.IStateKeyBuilder, callback istructs.ValueCallback) (err error) {
