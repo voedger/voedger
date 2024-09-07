@@ -97,6 +97,30 @@ func TestWLogStorage_Read(t *testing.T) {
 		require.ErrorIs(err, errTest)
 	})
 }
+
+func TestWLogStorage_Get(t *testing.T) {
+	t.Run("Should be ok", func(t *testing.T) {
+		require := require.New(t)
+		event := new(mockWLogEvent)
+		events := &mockEvents{}
+		events.On("ReadWLog", context.Background(), istructs.WSID(1), istructs.FirstOffset, 1, mock.AnythingOfType("istructs.WLogEventsReaderCallback")).
+			Return(nil).
+			Run(func(args mock.Arguments) {
+				cb := args.Get(4).(istructs.WLogEventsReaderCallback)
+				require.NoError(cb(istructs.FirstOffset, event))
+			})
+		eventsFunc := func() istructs.IEvents { return events }
+		storage := NewWLogStorage(context.Background(), eventsFunc, state.SimpleWSIDFunc(istructs.WSID(1)))
+		withGet := storage.(state.IWithGet)
+
+		kb := storage.NewKeyBuilder(appdef.NullQName, nil)
+		kb.PutInt64(sys.Storage_WLog_Field_Offset, 1)
+		sv, err := withGet.Get(kb)
+		require.NoError(err)
+		require.NotNil(sv)
+	})
+
+}
 func TestWLogStorage_GetBatch(t *testing.T) {
 	t.Run("Should be ok", func(t *testing.T) {
 		require := require.New(t)
