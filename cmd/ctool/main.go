@@ -96,7 +96,10 @@ func cursorOn() {
 	cmd.Run()
 }
 
-var rootCmd *cobra.Command
+var (
+	rootCmd    *cobra.Command
+	currentCmd *cobra.Command
+)
 
 // nolint
 func execRootCmd(args []string, ver string) error {

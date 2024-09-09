@@ -94,6 +94,7 @@ func parseDeployArgs(args []string) error {
 // nolint
 func initCE(cmd *cobra.Command, args []string) error {
 
+	currentCmd = cmd
 	cluster := newCluster()
 	var err error
 
@@ -136,6 +137,7 @@ func initCE(cmd *cobra.Command, args []string) error {
 // nolint
 func initSE(cmd *cobra.Command, args []string) error {
 
+	currentCmd = cmd
 	cluster := newCluster()
 	var err error
 	if !cluster.Draft {
