@@ -187,7 +187,7 @@ func (f *wazeroExtEngine) init(ctx context.Context) error {
 		rtConf = wazero.NewRuntimeConfigInterpreter()
 	}
 	rtConf = rtConf.
-		WithCoreFeatures(api.CoreFeatureBulkMemoryOperations | api.CoreFeatureSignExtensionOps).
+		WithCoreFeatures(api.CoreFeatureBulkMemoryOperations | api.CoreFeatureSignExtensionOps | api.CoreFeatureNonTrappingFloatToIntConversion).
 		WithCloseOnContextDone(true).
 		WithMemoryCapacityFromMax(true).
 		WithMemoryLimitPages(uint32(memPages))
