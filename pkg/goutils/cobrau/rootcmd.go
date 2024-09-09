@@ -21,6 +21,17 @@ Persistent flags:
 
 */
 
+func addFlagsToCommands(cmd *cobra.Command) {
+	cmd.Flags().BoolP("verbose", "v", false, "Enable verbose output")
+	cmd.Flags().Bool("trace", false, "Enable extremely verbose output")
+	cmd.InitDefaultHelpFlag()
+	cmd.SilenceErrors = true
+
+	for _, subCmd := range cmd.Commands() {
+		addFlagsToCommands(subCmd)
+	}
+}
+
 func PrepareRootCmd(use string, short string, args []string, version string, cmds ...*cobra.Command) *cobra.Command {
 
 	var rootCmd = &cobra.Command{
@@ -48,13 +59,10 @@ func PrepareRootCmd(use string, short string, args []string, version string, cmd
 
 	rootCmd.SetArgs(args[1:])
 	rootCmd.AddCommand(cmds...)
-	for _, cmd := range cmds {
-		cmd.Flags().BoolP("verbose", "v", false, "Enable verbose output")
-		cmd.Flags().Bool("trace", false, "Enable extremely verbose output")
-		cmd.InitDefaultCompletionCmd()
-		cmd.InitDefaultHelpFlag()
-		cmd.SilenceErrors = true
-	}
+
+	rootCmd.InitDefaultCompletionCmd()
+	addFlagsToCommands(rootCmd)
+
 	rootCmd.AddCommand(versionCmd)
 	rootCmd.SilenceUsage = true
 	return rootCmd

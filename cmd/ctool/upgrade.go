@@ -36,6 +36,7 @@ func compareVersions(version1 string, version2 string) int {
 
 func upgrade(cmd *cobra.Command, args []string) error {
 
+	currentCmd = cmd
 	cluster := newCluster()
 	var err error
 

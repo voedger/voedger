@@ -21,6 +21,7 @@ func newValidateCmd() *cobra.Command {
 
 func validate(cmd *cobra.Command, arg []string) error {
 
+	currentCmd = cmd
 	cluster := newCluster()
 
 	// nolint
