@@ -27,7 +27,7 @@ func hostRowWriterPutBytes(id uint64, typ uint32, namePtr, nameSize, valuePtr, v
 //export hostRowWriterPutQName
 func hostRowWriterPutQName(id uint64, typ uint32, namePtr, nameSize, pkgPtr, pkgSize, entityPtr, entitySize uint32)
 
-//export hostRowWriterPutIntBool
+//export hostRowWriterPutBool
 func hostRowWriterPutBool(id uint64, typ uint32, namePtr, nameSize, value uint32)
 
 //export hostRowWriterPutInt32
