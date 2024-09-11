@@ -17,6 +17,7 @@ import (
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/state/stateprovide"
 	"github.com/voedger/voedger/pkg/sys"
+	"github.com/voedger/voedger/pkg/sys/authnz"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appparts"
@@ -52,16 +53,17 @@ type (
 	readPLogBatch func(*plogBatch) error
 )
 
+// 1 asyncActualizer per each projector per each partition
 type asyncActualizer struct {
-	conf         AsyncActualizerConf
-	projector    appdef.QName
-	pipeline     pipeline.IAsyncPipeline
-	offset       istructs.Offset
-	name         string
-	readCtx      *asyncActualizerContextState
-	projErrState int32 // 0 - no error, 1 - error
-	plogBatch          // [50]plogEvent
-	appParts     appparts.IAppPartitions
+	conf           AsyncActualizerConf
+	projectorQName appdef.QName
+	pipeline       pipeline.IAsyncPipeline
+	offset         istructs.Offset
+	name           string
+	readCtx        *asyncActualizerContextState
+	projErrState   int32 // 0 - no error, 1 - error
+	plogBatch            // [50]plogEvent
+	appParts       appparts.IAppPartitions
 }
 
 func (a *asyncActualizer) Prepare() {
@@ -119,7 +121,7 @@ func (a *asyncActualizer) cancelChannel(e error) {
 func (a *asyncActualizer) waitForAppDeploy(ctx context.Context) error {
 	start := time.Now()
 	for ctx.Err() == nil {
-		ap, err := a.appParts.Borrow(a.conf.AppQName, a.conf.Partition, appparts.ProcessorKind_Actualizer)
+		ap, err := a.appParts.Borrow(a.conf.AppQName, a.conf.PartitionID, appparts.ProcessorKind_Actualizer)
 		if err == nil || errors.Is(err, appparts.ErrNotAvailableEngines) {
 			if ap != nil {
 				ap.Release()
@@ -130,7 +132,7 @@ func (a *asyncActualizer) waitForAppDeploy(ctx context.Context) error {
 			return err
 		}
 		if time.Since(start) >= initFailureErrorLogInterval {
-			logger.Error(fmt.Sprintf("app %s part %d actualizer %q: failed to init in 30 seconds", a.conf.AppQName, a.conf.Partition, a.projector))
+			logger.Error(fmt.Sprintf("app %s part %d actualizer %q: failed to init in 30 seconds", a.conf.AppQName, a.conf.PartitionID, a.projectorQName))
 			start = time.Now()
 		}
 		time.Sleep(borrowRetryDelay)
@@ -149,9 +151,9 @@ func (a *asyncActualizer) init(ctx context.Context) (err error) {
 	if err != nil {
 		return err
 	}
-	prjType := appDef.Projector(a.projector)
+	prjType := appDef.Projector(a.projectorQName)
 	if prjType == nil {
-		return fmt.Errorf("async projector %s is not defined in AppDef", a.projector)
+		return fmt.Errorf("async projector %s is not defined in AppDef", a.projectorQName)
 	}
 
 	// https://github.com/voedger/voedger/issues/1048
@@ -166,7 +168,7 @@ func (a *asyncActualizer) init(ctx context.Context) (err error) {
 	})
 	nonBuffered := hasIntentsExceptViewAndRecord || hasStatesExceptViewAndRecord
 	p := &asyncProjector{
-		partition:             a.conf.Partition,
+		partitionID:           a.conf.PartitionID,
 		aametrics:             a.conf.AAMetrics,
 		flushPositionInterval: a.conf.FlushPositionInterval,
 		lastSave:              time.Now(),
@@ -174,7 +176,7 @@ func (a *asyncActualizer) init(ctx context.Context) (err error) {
 		metrics:               a.conf.Metrics,
 		vvmName:               a.conf.VvmName,
 		appQName:              a.conf.AppQName,
-		name:                  a.projector,
+		name:                  a.projectorQName,
 		iProjector:            prjType,
 		nonBuffered:           nonBuffered,
 		appParts:              a.appParts,
@@ -193,7 +195,7 @@ func (a *asyncActualizer) init(ctx context.Context) (err error) {
 	p.state = stateprovide.ProvideAsyncActualizerStateFactory()(
 		ctx,
 		p.borrowedAppStructs,
-		state.SimplePartitionIDFunc(a.conf.Partition),
+		state.SimplePartitionIDFunc(a.conf.PartitionID),
 		p.WSIDProvider,
 		func(view appdef.QName, wsid istructs.WSID, offset istructs.Offset) {
 			a.conf.Broker.Update(in10n.ProjectionKey{
@@ -210,7 +212,7 @@ func (a *asyncActualizer) init(ctx context.Context) (err error) {
 		a.conf.BundlesLimit,
 		a.conf.Opts...)
 
-	a.name = fmt.Sprintf("%v [%d]", p.name, a.conf.Partition)
+	a.name = fmt.Sprintf("%v [%d]", p.name, a.conf.PartitionID)
 
 	projectorOp := pipeline.WireAsyncOperator("Projector", p, a.conf.FlushInterval)
 
@@ -231,7 +233,7 @@ func (a *asyncActualizer) init(ctx context.Context) (err error) {
 	return a.conf.Broker.Subscribe(a.conf.channel, in10n.ProjectionKey{
 		App:        a.conf.AppQName,
 		Projection: PLogUpdatesQName,
-		WS:         istructs.WSID(a.conf.Partition),
+		WS:         istructs.WSID(a.conf.PartitionID),
 	})
 }
 
@@ -307,7 +309,7 @@ func (a *asyncActualizer) readPlogByBatches(readBatch readPLogBatch) error {
 }
 
 func (a *asyncActualizer) borrowAppPart(ctx context.Context) (ap appparts.IAppPartition, err error) {
-	return a.appParts.WaitForBorrow(ctx, a.conf.AppQName, a.conf.Partition, appparts.ProcessorKind_Actualizer)
+	return a.appParts.WaitForBorrow(ctx, a.conf.AppQName, a.conf.PartitionID, appparts.ProcessorKind_Actualizer)
 }
 
 func (a *asyncActualizer) readPlogToTheEnd(ctx context.Context) error {
@@ -321,7 +323,7 @@ func (a *asyncActualizer) readPlogToTheEnd(ctx context.Context) error {
 
 		defer ap.Release()
 
-		err = ap.AppStructs().Events().ReadPLog(a.readCtx.ctx, a.conf.Partition, a.offset+1, istructs.ReadToTheEnd,
+		err = ap.AppStructs().Events().ReadPLog(a.readCtx.ctx, a.conf.PartitionID, a.offset+1, istructs.ReadToTheEnd,
 			func(ofs istructs.Offset, event istructs.IPLogEvent) error {
 				if *batch = append(*batch, plogEvent{ofs, event}); len(*batch) == cap(*batch) {
 					return errBatchFull
@@ -349,7 +351,7 @@ func (a *asyncActualizer) readPlogToOffset(ctx context.Context, tillOffset istru
 
 		plog := ap.AppStructs().Events()
 		for readOffset := a.offset + 1; readOffset <= tillOffset; readOffset++ {
-			if err = plog.ReadPLog(a.readCtx.ctx, a.conf.Partition, readOffset, 1,
+			if err = plog.ReadPLog(a.readCtx.ctx, a.conf.PartitionID, readOffset, 1,
 				func(ofs istructs.Offset, event istructs.IPLogEvent) error {
 					if *batch = append(*batch, plogEvent{ofs, event}); len(*batch) == cap(*batch) {
 						return errBatchFull
@@ -375,14 +377,14 @@ func (a *asyncActualizer) readOffset(projectorName appdef.QName) error {
 
 	defer ap.Release()
 
-	a.offset, err = ActualizerOffset(ap.AppStructs(), a.conf.Partition, projectorName)
+	a.offset, err = ActualizerOffset(ap.AppStructs(), a.conf.PartitionID, projectorName)
 	return err
 }
 
 type asyncProjector struct {
 	pipeline.AsyncNOOP
 	state                 state.IBundledHostState
-	partition             istructs.PartitionID
+	partitionID           istructs.PartitionID
 	event                 istructs.IPLogEvent
 	name                  appdef.QName
 	pLogOffset            istructs.Offset
@@ -408,7 +410,7 @@ func (p *asyncProjector) DoAsync(ctx context.Context, work pipeline.IWorkpiece) 
 	p.event = w.event
 	p.pLogOffset = w.pLogOffset
 	if p.aametrics != nil {
-		p.aametrics.Set(aaCurrentOffset, p.partition, p.name, float64(w.pLogOffset))
+		p.aametrics.Set(aaCurrentOffset, p.partitionID, p.name, float64(w.pLogOffset))
 	}
 
 	if !isAcceptable(w.event, p.iProjector.WantErrors(), p.iProjector.Events().Map(), p.iProjector.App()) {
@@ -426,6 +428,32 @@ func (p *asyncProjector) DoAsync(ctx context.Context, work pipeline.IWorkpiece) 
 	defer p.releaseAppPart()
 
 	//err = p.projector.Func(w.event, p.state, p.state)
+
+	ok, err := p.isProjectorDefined()
+	if err != nil {
+		return nil, err
+	}
+	if !ok {
+		// projector is not defined in the workspace of the event -> skip
+		return nil, nil
+	}
+
+	skbCDocWorkspaceDescriptor, err := p.state.KeyBuilder(state.Record, authnz.QNameCDocWorkspaceDescriptor)
+	if err != nil {
+		// notest
+		return nil, err
+	}
+	skbCDocWorkspaceDescriptor.PutQName(state.Field_Singleton, authnz.QNameCDocWorkspaceDescriptor)
+	skbCDocWorkspaceDescriptor.PutInt64(state.Field_WSID, int64(p.event.Workspace()))
+	svCDocWorkspaceDescriptor, err := p.state.MustExist(skbCDocWorkspaceDescriptor)
+	if err != nil {
+		// notest
+		return nil, err
+	}
+	iws := p.borrowedPartition.AppStructs().AppDef().WorkspaceByDescriptor(svCDocWorkspaceDescriptor.AsQName(authnz.Field_WSKind))
+	if iws.Type(p.name).Kind() == appdef.TypeKind_null {
+		return nil, nil
+	}
 
 	if err := p.borrowedPartition.Invoke(ctx, p.name, p.state, p.state); err != nil {
 		return nil, wrapErr(err)
@@ -450,6 +478,23 @@ func (p *asyncProjector) DoAsync(ctx context.Context, work pipeline.IWorkpiece) 
 	return nil, nil
 }
 
+func (p *asyncProjector) isProjectorDefined() (bool, error) {
+	skbCDocWorkspaceDescriptor, err := p.state.KeyBuilder(sys.Storage_Record, authnz.QNameCDocWorkspaceDescriptor)
+	if err != nil {
+		// notest
+		return false, err
+	}
+	skbCDocWorkspaceDescriptor.PutQName(state.Field_Singleton, authnz.QNameCDocWorkspaceDescriptor)
+	skbCDocWorkspaceDescriptor.PutInt64(state.Field_WSID, int64(p.event.Workspace()))
+	svCDocWorkspaceDescriptor, err := p.state.MustExist(skbCDocWorkspaceDescriptor)
+	if err != nil {
+		// notest
+		return false, err
+	}
+	iws := p.borrowedPartition.AppStructs().AppDef().WorkspaceByDescriptor(svCDocWorkspaceDescriptor.AsQName(authnz.Field_WSKind))
+	return iws.Type(p.name).Kind() != appdef.TypeKind_null, nil
+}
+
 func (p *asyncProjector) Flush(pipeline.OpFuncFlush) error {
 	if err := p.borrowAppPart(context.Background()); err != nil {
 		return err
@@ -464,7 +509,7 @@ func (p *asyncProjector) WSIDProvider() istructs.WSID        { return p.event.Wo
 func (p *asyncProjector) EventProvider() istructs.IPLogEvent { return p.event }
 
 func (p *asyncProjector) borrowAppPart(ctx context.Context) (err error) {
-	if p.borrowedPartition, err = p.appParts.WaitForBorrow(ctx, p.appQName, p.partition, appparts.ProcessorKind_Actualizer); err != nil {
+	if p.borrowedPartition, err = p.appParts.WaitForBorrow(ctx, p.appQName, p.partitionID, appparts.ProcessorKind_Actualizer); err != nil {
 		return err
 	}
 	return nil
@@ -494,7 +539,7 @@ func (p *asyncProjector) savePosition() error {
 		return e
 	}
 	key.PutInt64(sys.Storage_View_Field_WSID, int64(istructs.NullWSID))
-	key.PutInt32(partitionFld, int32(p.partition))
+	key.PutInt32(partitionFld, int32(p.partitionID))
 	key.PutQName(projectorNameFld, p.name)
 	value, e := p.state.NewValue(key)
 	if e != nil {
@@ -522,8 +567,8 @@ func (p *asyncProjector) flush() (err error) {
 		return err
 	}
 	if p.aametrics != nil {
-		p.aametrics.Increase(aaFlushesTotal, p.partition, p.name, 1)
-		p.aametrics.Set(aaStoredOffset, p.partition, p.name, float64(p.pLogOffset))
+		p.aametrics.Increase(aaFlushesTotal, p.partitionID, p.name, 1)
+		p.aametrics.Set(aaStoredOffset, p.partitionID, p.name, float64(p.pLogOffset))
 	}
 	err = p.state.FlushBundles()
 	if err == nil && p.projInErrAddr != nil {

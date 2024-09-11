@@ -40,11 +40,11 @@ func newActualizers(cfg BasicAsyncActualizerConfig) *actualizers {
 // # apparts.IActualizerRunner.NewAndRun
 func (a *actualizers) NewAndRun(ctx context.Context, app appdef.AppQName, part istructs.PartitionID, prj appdef.QName) {
 	act := &asyncActualizer{
-		projector: prj,
+		projectorQName: prj,
 		conf: AsyncActualizerConf{
 			BasicAsyncActualizerConfig: a.cfg,
 			AppQName:                   app,
-			Partition:                  part,
+			PartitionID:                part,
 		},
 		appParts: a.appParts,
 	}

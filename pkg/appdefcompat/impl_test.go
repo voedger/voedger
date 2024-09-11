@@ -17,41 +17,41 @@ import (
 	"github.com/voedger/voedger/pkg/parser"
 )
 
-//go:embed sql/sys.old.vsql
+//go:embed testdata/sys.old.vsql
 var oldSysSchemaFS embed.FS
 
-//go:embed sql/pkg1.old.vsql
+//go:embed testdata/pkg1.old.vsql
 var oldPkg1SchemaFS embed.FS
 
-//go:embed sql/pkg2.vsql
+//go:embed testdata/pkg2.vsql
 var pkg2SchemaFS embed.FS
 
-//go:embed sql/sys.new.vsql
+//go:embed testdata/sys.new.vsql
 var newSysSchemaFS embed.FS
 
-//go:embed sql/pkg1.new.vsql
+//go:embed testdata/pkg1.new.vsql
 var newPkg1SchemaFS embed.FS
 
 func Test_Basic(t *testing.T) {
-	oldSysPkgAST, err := parser.ParsePackageDir(appdef.SysPackage, oldSysSchemaFS, "sql")
+	oldSysPkgAST, err := parser.ParsePackageDir(appdef.SysPackage, oldSysSchemaFS, "testdata")
 	require.NoError(t, err)
 
-	oldPkg1AST, err := parser.ParsePackageDir("pkg1", oldPkg1SchemaFS, "sql")
+	oldPkg1AST, err := parser.ParsePackageDir("pkg1", oldPkg1SchemaFS, "testdata")
 	require.NoError(t, err)
 
-	oldpkg2AST, err := parser.ParsePackageDir("pkg2", pkg2SchemaFS, "sql")
+	oldpkg2AST, err := parser.ParsePackageDir("pkg2", pkg2SchemaFS, "testdata")
 	require.NoError(t, err)
 
-	newpkg2AST, err := parser.ParsePackageDir("pkg2", pkg2SchemaFS, "sql")
+	newpkg2AST, err := parser.ParsePackageDir("pkg2", pkg2SchemaFS, "testdata")
 	require.NoError(t, err)
 
 	oldPackages, err := parser.BuildAppSchema([]*parser.PackageSchemaAST{oldSysPkgAST, oldPkg1AST, oldpkg2AST})
 	require.NoError(t, err)
 
-	newSysPkgAST, err := parser.ParsePackageDir(appdef.SysPackage, newSysSchemaFS, "sql")
+	newSysPkgAST, err := parser.ParsePackageDir(appdef.SysPackage, newSysSchemaFS, "testdata")
 	require.NoError(t, err)
 
-	newPkg1AST, err := parser.ParsePackageDir("pkg1", newPkg1SchemaFS, "sql")
+	newPkg1AST, err := parser.ParsePackageDir("pkg1", newPkg1SchemaFS, "testdata")
 	require.NoError(t, err)
 
 	newPackages, err := parser.BuildAppSchema([]*parser.PackageSchemaAST{newSysPkgAST, newPkg1AST, newpkg2AST})
