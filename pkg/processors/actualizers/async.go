@@ -438,23 +438,6 @@ func (p *asyncProjector) DoAsync(ctx context.Context, work pipeline.IWorkpiece) 
 		return nil, nil
 	}
 
-	skbCDocWorkspaceDescriptor, err := p.state.KeyBuilder(state.Record, authnz.QNameCDocWorkspaceDescriptor)
-	if err != nil {
-		// notest
-		return nil, err
-	}
-	skbCDocWorkspaceDescriptor.PutQName(state.Field_Singleton, authnz.QNameCDocWorkspaceDescriptor)
-	skbCDocWorkspaceDescriptor.PutInt64(state.Field_WSID, int64(p.event.Workspace()))
-	svCDocWorkspaceDescriptor, err := p.state.MustExist(skbCDocWorkspaceDescriptor)
-	if err != nil {
-		// notest
-		return nil, err
-	}
-	iws := p.borrowedPartition.AppStructs().AppDef().WorkspaceByDescriptor(svCDocWorkspaceDescriptor.AsQName(authnz.Field_WSKind))
-	if iws.Type(p.name).Kind() == appdef.TypeKind_null {
-		return nil, nil
-	}
-
 	if err := p.borrowedPartition.Invoke(ctx, p.name, p.state, p.state); err != nil {
 		return nil, wrapErr(err)
 	}
