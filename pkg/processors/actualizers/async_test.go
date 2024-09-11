@@ -72,6 +72,8 @@ func TestBasicUsage_AsynchronousActualizer(t *testing.T) {
 			ws := addWS(appDef, testWorkspace, testWorkspaceDescriptor)
 			ws.AddType(incProjectionView)
 			ws.AddType(decProjectionView)
+			ws.AddType(incrementorName)
+			ws.AddType(decrementorName)
 		},
 		func(cfg *istructsmem.AppConfigType) {
 			cfg.Resources.Add(istructsmem.NewCommandFunction(testQName, istructsmem.NullCommandExec))
@@ -164,6 +166,7 @@ func Test_AsynchronousActualizer_FlushByRange(t *testing.T) {
 			ws := addWS(appDef, testWorkspace, testWorkspaceDescriptor)
 			ws.AddType(incProjectionView)
 			ws.AddType(decProjectionView)
+			ws.AddType(incrementorName)
 		},
 		func(cfg *istructsmem.AppConfigType) {
 			cfg.Resources.Add(istructsmem.NewCommandFunction(testQName, istructsmem.NullCommandExec))
@@ -241,6 +244,7 @@ func Test_AsynchronousActualizer_FlushByInterval(t *testing.T) {
 			ws := addWS(appDef, testWorkspace, testWorkspaceDescriptor)
 			ws.AddType(incProjectionView)
 			ws.AddType(decProjectionView)
+			ws.AddType(incrementorName)
 		},
 		func(cfg *istructsmem.AppConfigType) {
 			cfg.Resources.Add(istructsmem.NewCommandFunction(testQName, istructsmem.NullCommandExec))
@@ -344,6 +348,7 @@ func Test_AsynchronousActualizer_ErrorAndRestore(t *testing.T) {
 			ws := addWS(appDef, testWorkspace, testWorkspaceDescriptor)
 			ws.AddType(incProjectionView)
 			ws.AddType(decProjectionView)
+			ws.AddType(name)
 		},
 		func(cfg *istructsmem.AppConfigType) {
 			cfg.Resources.Add(istructsmem.NewCommandFunction(testQName, istructsmem.NullCommandExec))
@@ -442,6 +447,7 @@ func Test_AsynchronousActualizer_ResumeReadAfterNotifications(t *testing.T) {
 			ws := addWS(appDef, testWorkspace, testWorkspaceDescriptor)
 			ws.AddType(incProjectionView)
 			ws.AddType(decProjectionView)
+			ws.AddType(incrementorName)
 		},
 		func(cfg *istructsmem.AppConfigType) {
 			cfg.Resources.Add(istructsmem.NewCommandFunction(testQName, istructsmem.NullCommandExec))
@@ -584,6 +590,7 @@ func Test_AsynchronousActualizer_Stress(t *testing.T) {
 			ws := addWS(appDef, testWorkspace, testWorkspaceDescriptor)
 			ws.AddType(incProjectionView)
 			ws.AddType(decProjectionView)
+			ws.AddType(incrementorName)
 		},
 		func(cfg *istructsmem.AppConfigType) {
 			cfg.Resources.Add(istructsmem.NewCommandFunction(testQName, istructsmem.NullCommandExec))
@@ -671,6 +678,7 @@ func Test_AsynchronousActualizer_NonBuffered(t *testing.T) {
 			ws := addWS(appDef, testWorkspace, testWorkspaceDescriptor)
 			ws.AddType(incProjectionView)
 			ws.AddType(decProjectionView)
+			ws.AddType(incrementorName)
 		},
 		func(cfg *istructsmem.AppConfigType) {
 			cfg.Resources.Add(istructsmem.NewCommandFunction(testQName, istructsmem.NullCommandExec))

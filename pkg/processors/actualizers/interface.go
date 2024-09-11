@@ -61,8 +61,8 @@ type IActualizersService interface {
 type AsyncActualizerConf struct {
 	BasicAsyncActualizerConfig
 
-	AppQName  appdef.AppQName
-	Partition istructs.PartitionID
+	AppQName    appdef.AppQName
+	PartitionID istructs.PartitionID
 
 	channel in10n.ChannelID
 }
