@@ -88,6 +88,7 @@ func newVit(t testing.TB, vitCfg *VITConfig, useCas bool) *VIT {
 	vitPreConfig := &vitPreConfig{
 		vvmCfg:  &cfg,
 		vitApps: vitApps{},
+		secrets: map[string][]byte{},
 	}
 
 	if useCas {
@@ -104,6 +105,8 @@ func newVit(t testing.TB, vitCfg *VITConfig, useCas bool) *VIT {
 	for _, initFunc := range vitPreConfig.initFuncs {
 		initFunc()
 	}
+
+	cfg.SecretsReader = &implVITISecretsReader{secrets: vitPreConfig.secrets, underlyingReader: cfg.SecretsReader}
 
 	// eliminate timeouts impact for debugging
 	cfg.RouterReadTimeout = int(debugTimeout)
@@ -562,4 +565,11 @@ func (ec emailCaptor) checkEmpty(t testing.TB) {
 
 func (ec emailCaptor) shutDown() {
 	close(ec)
+}
+
+func (sr *implVITISecretsReader) ReadSecret(name string) ([]byte, error) {
+	if val, ok := sr.secrets[name]; ok {
+		return val, nil
+	}
+	return sr.underlyingReader.ReadSecret(name)
 }
