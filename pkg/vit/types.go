@@ -10,6 +10,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/extensionpoints"
+	"github.com/voedger/voedger/pkg/isecrets"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/state/smtptest"
 	coreutils "github.com/voedger/voedger/pkg/utils"
@@ -48,6 +49,7 @@ type vitPreConfig struct {
 	cleanups     []func(vit *VIT)
 	initFuncs    []func()
 	postInitFunc func(vit *VIT)
+	secrets      map[string][]byte
 }
 
 type vitConfigOptFunc func(*vitPreConfig)
@@ -137,3 +139,8 @@ type signUpOpts struct {
 }
 
 type emailCaptor chan smtptest.Message
+
+type implVITISecretsReader struct {
+	secrets          map[string][]byte
+	underlyingReader isecrets.ISecretReader
+}

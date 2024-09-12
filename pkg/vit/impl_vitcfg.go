@@ -190,3 +190,9 @@ func WithVerifiedValue(docQName appdef.QName, fieldName string, desiredValue str
 		}
 	}
 }
+
+func WithSecret(name string, value []byte) vitConfigOptFunc {
+	return func(vpc *vitPreConfig) {
+		vpc.secrets[name] = value
+	}
+}
