@@ -27,13 +27,16 @@ func repeat(cmd *cobra.Command, arg []string) error {
 
 	currentCmd = cmd
 	cluster := newCluster()
-	var err error
+
+	if cluster.Draft {
+		return ErrClusterConfNotFound
+	}
 
 	if !cluster.existsNodeError() && (cluster.Cmd == nil || cluster.Cmd.isEmpty()) {
 		return ErrNoIncompleteCommandWasFoundToRepeat
 	}
 
-	err = cluster.checkVersion()
+	err := cluster.checkVersion()
 	if err != nil {
 		return err
 	}
