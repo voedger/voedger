@@ -426,4 +426,16 @@ var defaultACL = ACL{
 		},
 		policy: ACPolicy_Allow,
 	},
+	{
+		desc: "grant exec on few funcs to role air.ResellerPortalDashboardViewer",
+		pattern: PatternType{
+			qNamesPattern: []appdef.QName{
+				qNameQryGetAirLocations,
+				qNameQryResellersDashboardSalesMetrics,
+				qNameQryResellersDashboardBackofficeMetrics,
+			},
+			principalsPattern: [][]iauthnz.Principal{{{Kind: iauthnz.PrincipalKind_Role, QName: qNameResellerPortalDashboardViewer}}},
+		},
+		policy: ACPolicy_Allow,
+	},
 }

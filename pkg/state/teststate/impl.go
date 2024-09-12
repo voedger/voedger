@@ -91,6 +91,11 @@ func (ts *testState) WSID() istructs.WSID {
 	case ProcKind_QueryProcessor:
 		return ts.queryWsid
 	case ProcKind_CommandProcessor:
+		// for command processor kind first look for WSID in event field
+		if ts.event != nil {
+			return ts.event.Workspace()
+		}
+
 		return ts.commandWSID
 	default:
 		if ts.event != nil {

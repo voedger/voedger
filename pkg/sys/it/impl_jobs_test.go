@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+	"github.com/voedger/voedger/pkg/istructs"
 	it "github.com/voedger/voedger/pkg/vit"
 	"github.com/voedger/voedger/pkg/vvm"
 )
@@ -22,18 +23,18 @@ func TestJobjs_BasicUsage_Builtin(t *testing.T) {
 	//   VVM is launched, timer for Job1_builtin is charged to MockTime.Now()+1minute
 	//   MockTime.Now+1day is made on NewVIT()
 	//   timer for Job1_builtin is fired
-	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	cfg := it.NewOwnVITConfig(
+		it.WithApp(istructs.AppQName_test1_app2, it.ProvideApp2WithJob, it.WithUserLogin("login", "1")),
+	)
+	vit := it.NewVIT(t, &cfg)
 	defer vit.TearDown()
 
 	// note: use vit.TimeAdd(appropriate duration) to force timer fire for the job
-
-	time.Sleep(1 * time.Second)
 
 	// observe "Job1_builtin works!!!!!!!!!!!!!!" in console output
 }
 
 func TestJobs_BasicUsage_Sidecar(t *testing.T) {
-
 	wd, err := os.Getwd()
 	require.NoError(t, err)
 	cfg := it.NewOwnVITConfig(
@@ -42,7 +43,6 @@ func TestJobs_BasicUsage_Sidecar(t *testing.T) {
 			cfg.DataPath = filepath.Join(wd, "testdata")
 		}),
 	)
-
 	// job will run because time is increased by 1 day per each NewVIT
 	// case:
 	//   VVM is launched, timer for Job1_sidecar is charged to MockTime.Now()+1minute
@@ -53,7 +53,7 @@ func TestJobs_BasicUsage_Sidecar(t *testing.T) {
 
 	// note: use vit.TimeAdd(appropriate duration) to force timer fire for the job
 
-	time.Sleep(1 * time.Second)
+	time.Sleep(time.Second)
 
 	// observe "panic: Job1_sidecar works!!!!!!!!!!" in console output
 }

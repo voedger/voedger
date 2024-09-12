@@ -39,6 +39,8 @@ func newMonCmd() *cobra.Command {
 }
 
 func monPassword(cmd *cobra.Command, args []string) error {
+
+	currentCmd = cmd
 	cluster := newCluster()
 	if cluster.Draft {
 		return ErrClusterConfNotFound

@@ -37,6 +37,7 @@ func newRestoreCmd() *cobra.Command {
 
 func restore(cmd *cobra.Command, args []string) error {
 
+	currentCmd = cmd
 	cluster := newCluster()
 
 	var err error

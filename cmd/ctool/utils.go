@@ -71,12 +71,10 @@ func printLogLine(logLevel logger.TLogLevel, line string) {
 }
 
 func getLoggerLevel() logger.TLogLevel {
-	b, err := rootCmd.Flags().GetBool("trace")
-	if err == nil && b {
+	if trace() {
 		return logger.LogLevelTrace
 	}
-	b, err = rootCmd.Flags().GetBool("verbose")
-	if err == nil && b {
+	if verbose() {
 		return logger.LogLevelVerbose
 	}
 	return logger.LogLevelInfo

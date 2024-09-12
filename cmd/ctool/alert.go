@@ -204,6 +204,7 @@ func checkURL(s string) error {
 
 func alertAddDiscord(cmd *cobra.Command, args []string) error {
 
+	currentCmd = cmd
 	cluster := newCluster()
 
 	if cluster.Draft {
@@ -236,7 +237,7 @@ func alertAddDiscord(cmd *cobra.Command, args []string) error {
 }
 
 func alertRemoveDiscord(cmd *cobra.Command, args []string) error {
-
+	currentCmd = cmd
 	cluster := newCluster()
 
 	if cluster.Draft {
@@ -266,6 +267,7 @@ func alertRemoveDiscord(cmd *cobra.Command, args []string) error {
 
 func alertConfigsDownload(cmd *cobra.Command, args []string) error {
 
+	currentCmd = cmd
 	cluster := newCluster()
 
 	if cluster.Draft {
@@ -295,6 +297,7 @@ func alertConfigsDownload(cmd *cobra.Command, args []string) error {
 
 func alertConfigsUpload(cmd *cobra.Command, args []string) error {
 
+	currentCmd = cmd
 	cluster := newCluster()
 
 	if cluster.Draft {

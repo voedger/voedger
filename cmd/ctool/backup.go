@@ -213,6 +213,8 @@ func newBackupErrorEvent(host string, err error) *eventType {
 }
 
 func backupCENode(cmd *cobra.Command, args []string) error {
+
+	currentCmd = cmd
 	cluster := newCluster()
 
 	var err error
@@ -254,6 +256,8 @@ func backupCENode(cmd *cobra.Command, args []string) error {
 }
 
 func backupNode(cmd *cobra.Command, args []string) error {
+
+	currentCmd = cmd
 	cluster := newCluster()
 
 	var err error
@@ -301,6 +305,7 @@ func newBackupFolderName() string {
 }
 
 func backupNow(cmd *cobra.Command, args []string) error {
+	currentCmd = cmd
 	cluster := newCluster()
 
 	if cluster.Draft {
@@ -341,6 +346,8 @@ func backupNow(cmd *cobra.Command, args []string) error {
 }
 
 func backupCron(cmd *cobra.Command, args []string) error {
+
+	currentCmd = cmd
 	cluster := newCluster()
 	if cluster.Draft {
 		return ErrClusterConfNotFound
@@ -415,6 +422,8 @@ func checkBackupFolderOnHost(cluster *clusterType, addr string) error {
 }
 
 func backupList(cmd *cobra.Command, args []string) error {
+
+	currentCmd = cmd
 	cluster := newCluster()
 	if cluster.Draft {
 		return ErrClusterConfNotFound
