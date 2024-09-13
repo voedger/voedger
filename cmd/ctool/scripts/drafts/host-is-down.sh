@@ -7,14 +7,15 @@
 
 set -euo pipefail
 
-if [ $# -ne 1 ]; then
-  echo "Usage: $0 <IP-Address>" 
+if [ $# -ne 2 ]; then
+  echo "Usage: $0 <IP-Address> <docker host name>" 
   exit 1
 fi
 
 HOST=$1
+HOST_NAME=$2
 
-if ./host-check.sh ${HOST}; then
+if ./host-check.sh ${HOST} ${HOST_NAME}; then
   echo "host ${HOST} is live"
   exit 1
 else

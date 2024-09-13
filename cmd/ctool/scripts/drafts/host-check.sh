@@ -10,7 +10,7 @@ set -euo pipefail
 
 
 if [ $# -lt 1 ] || [ $# -gt 2 ]; then
-  echo "Usage: $0 <IP-Address> [only-ping]" 
+  echo "Usage: $0 <IP-Address> ["only-ping" or docker host name]" 
   exit 1
 fi
 
@@ -26,6 +26,7 @@ if [ $# -eq 2 ] && [ "$2" == "only-ping" ]; then
   exit 0
 fi
 
+
 # Checking the availability of docker on the host
 if ! command -v docker &> /dev/null; then
   echo "Docker is not installed"
@@ -33,7 +34,7 @@ if ! command -v docker &> /dev/null; then
 fi
 
 # Checking the state of the node in the Swarm Claster
-node_status=$(docker node ls --format '{{json .}}' | jq -r "select(.Hostname == \"$1\") | .Status")
+node_status=$(docker node ls --format '{{json .}}' | jq -r "select(.Hostname == \"$2\") | .Status")
 
 if [ -z "$node_status" ]; then
   echo "The indicated node was not found in the Swarm Claster."
@@ -41,9 +42,9 @@ if [ -z "$node_status" ]; then
 fi
 
 if [ "$node_status" = "Ready" ]; then
-  echo "Node $1 is in working condition."
+  echo "Node $2 is in working condition."
 else
-  echo "Node $1 is not in working condition."
+  echo "Node $2 is not in working condition."
   exit 1
 fi
 

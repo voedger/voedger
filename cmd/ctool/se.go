@@ -731,9 +731,17 @@ func hostIsAvailable(cluster *clusterType, host string) error {
 // node is down
 // checks that the node is down in the Swarm cluster
 func nodeIsDown(node *nodeType) error {
-	if err := newScriptExecuter(node.cluster.sshKey, node.nodeName()).
-		run("host-is-down.sh", node.hostNames()[0]); err != nil {
-		return err
+	if node.cluster.SubEdition != clusterSubEditionSE3 {
+		if err := newScriptExecuter(node.cluster.sshKey, node.nodeName()).
+			run("host-is-down.sh", node.hostNames()[0], node.hostNames()[0]); err != nil {
+			return err
+		}
+	} else {
+		if err := newScriptExecuter(node.cluster.sshKey, node.nodeName()).
+			run("host-is-down.sh", node.hostNames()[0], node.nodeName()); err != nil {
+			return err
+		}
+
 	}
 	return nil
 }
