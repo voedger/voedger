@@ -5,6 +5,7 @@
 package storages
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 
@@ -35,8 +36,13 @@ type wLogKeyBuilder struct {
 	wsid   istructs.WSID
 }
 
-func (b *wLogKeyBuilder) Storage() appdef.QName {
-	return sys.Storage_WLog
+func (b *wLogKeyBuilder) String() string {
+	bb := new(bytes.Buffer)
+	fmt.Fprint(bb, b.baseKeyBuilder.String())
+	fmt.Fprintf(bb, ", wsid:%d", b.wsid)
+	fmt.Fprintf(bb, ", offset:%d", b.offset)
+	fmt.Fprintf(bb, ", count:%d", b.count)
+	return bb.String()
 }
 
 func (b *wLogKeyBuilder) Equals(src istructs.IKeyBuilder) bool {
@@ -57,10 +63,6 @@ func (b *wLogKeyBuilder) Equals(src istructs.IKeyBuilder) bool {
 	return true
 }
 
-func (b *wLogKeyBuilder) String() string {
-	return fmt.Sprintf("wlog wsid - %d, offset - %d, count - %d", b.wsid, b.offset, b.count)
-}
-
 func (b *wLogKeyBuilder) PutInt64(name string, value int64) {
 	if name == sys.Storage_WLog_Field_WSID {
 		b.wsid = istructs.WSID(value)
@@ -75,7 +77,8 @@ func (b *wLogKeyBuilder) PutInt64(name string, value int64) {
 
 func (s *wLogStorage) NewKeyBuilder(appdef.QName, istructs.IStateKeyBuilder) istructs.IStateKeyBuilder {
 	return &wLogKeyBuilder{
-		wsid: s.wsidFunc(),
+		baseKeyBuilder: baseKeyBuilder{storage: sys.Storage_WLog},
+		wsid:           s.wsidFunc(),
 	}
 }
 func (s *wLogStorage) Get(kb istructs.IStateKeyBuilder) (value istructs.IStateValue, err error) {

@@ -105,6 +105,7 @@ runs:
       run: |
         INSTANCE_IDS=$(aws ec2 describe-instances --filters "Name=tag:Name,Values=node_02" "Name=instance-state-name,Values=running" --query "Reservations[*].Instances[*].InstanceId" --output text)
         aws ec2 stop-instances --instance-ids $INSTANCE_IDS
+        aws ec2 wait instance-stopped --instance-ids $INSTANCE_IDS
       shell: bash
 
     - name: Smoke test - replace scylla node to new hardware
@@ -152,6 +153,7 @@ runs:
       run: |
         INSTANCE_IDS=$(aws ec2 describe-instances --filters "Name=tag:Name,Values=node_01" "Name=instance-state-name,Values=running" --query "Reservations[*].Instances[*].InstanceId" --output text)
         aws ec2 stop-instances --instance-ids $INSTANCE_IDS
+        aws ec2 wait instance-stopped --instance-ids $INSTANCE_IDS
       shell: bash
 
     - name: Smoke test - replace AppNode to new hardware

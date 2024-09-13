@@ -19,10 +19,6 @@ type eventKeyBuilder struct {
 	baseKeyBuilder
 }
 
-func (b *eventKeyBuilder) Storage() appdef.QName {
-	return sys.Storage_Event
-}
-
 func (b *eventKeyBuilder) Equals(src istructs.IKeyBuilder) bool {
 	_, ok := src.(*eventKeyBuilder)
 	return ok
@@ -95,7 +91,9 @@ func NewEventStorage(eventFunc state.PLogEventFunc) state.IStateStorage {
 }
 
 func (s *eventStorage) NewKeyBuilder(_ appdef.QName, _ istructs.IStateKeyBuilder) istructs.IStateKeyBuilder {
-	return &eventKeyBuilder{}
+	return &eventKeyBuilder{
+		baseKeyBuilder: baseKeyBuilder{storage: sys.Storage_Event},
+	}
 }
 func (s *eventStorage) Get(_ istructs.IStateKeyBuilder) (istructs.IStateValue, error) {
 	return &eventValue{

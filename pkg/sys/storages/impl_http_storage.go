@@ -42,10 +42,6 @@ type httpStorageKeyBuilder struct {
 	headers map[string]string
 }
 
-func (b *httpStorageKeyBuilder) Storage() appdef.QName {
-	return sys.Storage_Http
-}
-
 func (b *httpStorageKeyBuilder) Equals(src istructs.IKeyBuilder) bool {
 	_, ok := src.(*httpStorageKeyBuilder)
 	if !ok {
@@ -118,7 +114,8 @@ func (b *httpStorageKeyBuilder) PutBytes(name string, value []byte) {
 
 func (s *httpStorage) NewKeyBuilder(appdef.QName, istructs.IStateKeyBuilder) istructs.IStateKeyBuilder {
 	return &httpStorageKeyBuilder{
-		headers: make(map[string]string),
+		baseKeyBuilder: baseKeyBuilder{storage: sys.Storage_Http},
+		headers:        make(map[string]string),
 	}
 }
 func (s *httpStorage) Read(key istructs.IStateKeyBuilder, callback istructs.ValueCallback) (err error) {
