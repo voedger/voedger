@@ -28,17 +28,15 @@ type subjectKeyBuilder struct {
 	baseKeyBuilder
 }
 
-func (b *subjectKeyBuilder) Storage() appdef.QName {
-	return sys.Storage_RequestSubject
-}
-
 func (b *subjectKeyBuilder) Equals(src istructs.IKeyBuilder) bool {
 	_, ok := src.(*subjectKeyBuilder)
 	return ok
 }
 
 func (s *subjectStorage) NewKeyBuilder(_ appdef.QName, _ istructs.IStateKeyBuilder) istructs.IStateKeyBuilder {
-	return &subjectKeyBuilder{}
+	return &subjectKeyBuilder{
+		baseKeyBuilder: baseKeyBuilder{storage: sys.Storage_RequestSubject},
+	}
 }
 func (s *subjectStorage) Get(_ istructs.IStateKeyBuilder) (istructs.IStateValue, error) {
 	ssv := &requestSubjectValue{

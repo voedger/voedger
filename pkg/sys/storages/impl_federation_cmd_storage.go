@@ -85,10 +85,6 @@ func (b *federationCommandKeyBuilder) PutQName(name string, value appdef.QName) 
 	}
 }
 
-func (b *federationCommandKeyBuilder) Storage() appdef.QName {
-	return sys.Storage_FederationCommand
-}
-
 func (b *federationCommandKeyBuilder) Equals(src istructs.IKeyBuilder) bool {
 	_, ok := src.(*federationCommandKeyBuilder)
 	if !ok {
@@ -120,7 +116,9 @@ func (b *federationCommandKeyBuilder) Equals(src istructs.IKeyBuilder) bool {
 }
 
 func (s *federationCommandStorage) NewKeyBuilder(appdef.QName, istructs.IStateKeyBuilder) istructs.IStateKeyBuilder {
-	return &federationCommandKeyBuilder{}
+	return &federationCommandKeyBuilder{
+		baseKeyBuilder: baseKeyBuilder{storage: sys.Storage_FederationCommand},
+	}
 }
 func (s *federationCommandStorage) Get(key istructs.IStateKeyBuilder) (istructs.IStateValue, error) {
 	appqname := s.appStructs().AppQName()

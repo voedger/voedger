@@ -16,14 +16,21 @@ import (
 
 type baseKeyBuilder struct {
 	istructs.IStateKeyBuilder
-	entity appdef.QName
+	storage appdef.QName
+	entity  appdef.QName
 }
 
 func (b *baseKeyBuilder) Storage() appdef.QName {
-	panic(errNotImplemented)
+	return b.storage
 }
 func (b *baseKeyBuilder) Entity() appdef.QName {
 	return b.entity
+}
+func (b *baseKeyBuilder) String() string {
+	if b.entity == appdef.NullQName {
+		return fmt.Sprintf("storage:%s", b.Storage().String())
+	}
+	return fmt.Sprintf("storage:%s, entity:%s", b.Storage(), b.entity.String())
 }
 func (b *baseKeyBuilder) PartitionKey() istructs.IRowWriter                { panic(ErrNotSupported) } // TODO: must be eliminated, IStateKeyBuilder must be inherited from IRowWriter
 func (b *baseKeyBuilder) ClusteringColumns() istructs.IRowWriter           { panic(ErrNotSupported) } // TODO: must be eliminated, IStateKeyBuilder must be inherited from IRowWriter

@@ -24,9 +24,6 @@ type loggerStorageKeyBuilder struct {
 	logLevel logger.TLogLevel
 }
 
-func (b *loggerStorageKeyBuilder) Storage() appdef.QName {
-	return sys.Storage_Logger
-}
 func (b *loggerStorageKeyBuilder) PutInt32(name string, value int32) {
 	switch name {
 	case sys.Storage_Logger_Field_LogLevel:
@@ -67,7 +64,9 @@ func (b *loggerStorageValueBuilder) BuildValue() istructs.IStateValue {
 }
 
 func (s *loggerStorage) NewKeyBuilder(_ appdef.QName, _ istructs.IStateKeyBuilder) istructs.IStateKeyBuilder {
-	return &loggerStorageKeyBuilder{}
+	return &loggerStorageKeyBuilder{
+		baseKeyBuilder: baseKeyBuilder{storage: sys.Storage_Logger},
+	}
 }
 
 func (s *loggerStorage) Validate([]state.ApplyBatchItem) (err error) {

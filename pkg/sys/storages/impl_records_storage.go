@@ -5,9 +5,9 @@
 package storages
 
 import (
+	"bytes"
 	"fmt"
 	"reflect"
-	"strings"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -34,8 +34,20 @@ type recordsKeyBuilder struct {
 	wsid        istructs.WSID
 }
 
-func (b *recordsKeyBuilder) Storage() appdef.QName {
-	return sys.Storage_Record
+func (b *recordsKeyBuilder) String() string {
+	bb := new(bytes.Buffer)
+	fmt.Fprint(bb, b.baseKeyBuilder.String())
+	if b.id != istructs.NullRecordID {
+		fmt.Fprintf(bb, ", id:%d", b.id)
+	}
+	if b.singleton != appdef.NullQName {
+		fmt.Fprintf(bb, ", singleton:%s", b.singleton)
+	}
+	if b.isSingleton {
+		fmt.Fprint(bb, ", isSingleton")
+	}
+	fmt.Fprintf(bb, ", wsid:%d", b.wsid)
+	return bb.String()
 }
 func (b *recordsKeyBuilder) Equals(src istructs.IKeyBuilder) bool {
 	kb, ok := src.(*recordsKeyBuilder)
@@ -55,21 +67,6 @@ func (b *recordsKeyBuilder) Equals(src istructs.IKeyBuilder) bool {
 		return false
 	}
 	return true
-}
-func (b *recordsKeyBuilder) String() string {
-	sb := strings.Builder{}
-	_, _ = sb.WriteString(fmt.Sprintf("- %T", b))
-	if b.id != istructs.NullRecordID {
-		_, _ = sb.WriteString(fmt.Sprintf(", ID - %d", b.id))
-	}
-	if b.singleton != appdef.NullQName {
-		_, _ = sb.WriteString(fmt.Sprintf(", singleton - %s", b.singleton))
-	}
-	if b.isSingleton {
-		_, _ = sb.WriteString(", singleton")
-	}
-	_, _ = sb.WriteString(fmt.Sprintf(", WSID - %d", b.wsid))
-	return sb.String()
 }
 func (b *recordsKeyBuilder) PutInt64(name string, value int64) {
 	if name == sys.Storage_Record_Field_WSID {
@@ -122,7 +119,7 @@ func (s *recordsStorage) NewKeyBuilder(entity appdef.QName, _ istructs.IStateKey
 		singleton:      appdef.NullQName, // Deprecated, use isSingleton instead
 		isSingleton:    false,
 		wsid:           s.wsidFunc(),
-		baseKeyBuilder: baseKeyBuilder{entity: entity},
+		baseKeyBuilder: baseKeyBuilder{storage: sys.Storage_Record, entity: entity},
 	}
 }
 

@@ -255,6 +255,7 @@ type mockKeyBuilder struct {
 	data    map[string]interface{}
 }
 
+func (kb *mockKeyBuilder) String() string                                   { return "" }
 func (kb *mockKeyBuilder) Storage() appdef.QName                            { return kb.storage }
 func (kb *mockKeyBuilder) Entity() appdef.QName                             { return kb.entity }
 func (kb *mockKeyBuilder) PartitionKey() istructs.IRowWriter                { return nil }

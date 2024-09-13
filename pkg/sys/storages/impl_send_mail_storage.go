@@ -41,10 +41,6 @@ type mailKeyBuilder struct {
 	body     string
 }
 
-func (b *mailKeyBuilder) Storage() appdef.QName {
-	return sys.Storage_SendMail
-}
-
 func (b *mailKeyBuilder) Equals(src istructs.IKeyBuilder) bool {
 	_, ok := src.(*mailKeyBuilder)
 	if !ok {
@@ -138,9 +134,10 @@ type sendMailValueBuilder struct {
 
 func (s *sendMailStorage) NewKeyBuilder(appdef.QName, istructs.IStateKeyBuilder) istructs.IStateKeyBuilder {
 	return &mailKeyBuilder{
-		to:  make([]string, 0),
-		cc:  make([]string, 0),
-		bcc: make([]string, 0),
+		baseKeyBuilder: baseKeyBuilder{storage: sys.Storage_SendMail},
+		to:             make([]string, 0),
+		cc:             make([]string, 0),
+		bcc:            make([]string, 0),
 	}
 }
 func (s *sendMailStorage) Validate(items []state.ApplyBatchItem) (err error) {

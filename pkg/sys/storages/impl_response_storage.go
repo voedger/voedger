@@ -24,10 +24,6 @@ type responseKeyBuilder struct {
 	baseKeyBuilder
 }
 
-func (b *responseKeyBuilder) Storage() appdef.QName {
-	return sys.Storage_Response
-}
-
 func (b *responseKeyBuilder) Equals(src istructs.IKeyBuilder) bool {
 	_, ok := src.(*responseKeyBuilder)
 	return ok
@@ -89,7 +85,9 @@ func (v *responsesValue) AsString(name string) string {
 }
 
 func (s *responseStorage) NewKeyBuilder(_ appdef.QName, _ istructs.IStateKeyBuilder) istructs.IStateKeyBuilder {
-	return &responseKeyBuilder{}
+	return &responseKeyBuilder{
+		baseKeyBuilder{storage: sys.Storage_Response},
+	}
 }
 
 func (s *responseStorage) Validate([]state.ApplyBatchItem) (err error) {
