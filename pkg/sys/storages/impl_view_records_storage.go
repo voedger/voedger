@@ -39,13 +39,6 @@ func NewViewRecordsStorage(ctx context.Context, appStructsFunc state.AppStructsF
 		wsTypeVailidator: newWsTypeValidator(appStructsFunc),
 	}
 }
-func (s *viewKeyBuilder) String() string {
-	bb := new(bytes.Buffer)
-	fmt.Fprintf(bb, "storage:%s", s.Storage())
-	fmt.Fprintf(bb, ", entity:%s", s.Entity())
-	fmt.Fprintf(bb, ", wsid:%d", s.wsid)
-	return bb.String()
-}
 func (s *viewRecordsStorage) NewKeyBuilder(entity appdef.QName, _ istructs.IStateKeyBuilder) (newKeyBuilder istructs.IStateKeyBuilder) {
 	return &viewKeyBuilder{
 		IKeyBuilder: s.appStructsFunc().ViewRecords().KeyBuilder(entity),
@@ -212,6 +205,13 @@ func (b *viewKeyBuilder) Equals(src istructs.IKeyBuilder) bool {
 		return false
 	}
 	return b.IKeyBuilder.Equals(kb.IKeyBuilder)
+}
+func (b *viewKeyBuilder) String() string {
+	bb := new(bytes.Buffer)
+	fmt.Fprintf(bb, "storage:%s", b.Storage())
+	fmt.Fprintf(bb, ", entity:%s", b.Entity())
+	fmt.Fprintf(bb, ", wsid:%d", b.wsid)
+	return bb.String()
 }
 
 type viewValueBuilder struct {
