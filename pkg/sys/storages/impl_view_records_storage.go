@@ -5,8 +5,10 @@
 package storages
 
 import (
+	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"reflect"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -37,7 +39,13 @@ func NewViewRecordsStorage(ctx context.Context, appStructsFunc state.AppStructsF
 		wsTypeVailidator: newWsTypeValidator(appStructsFunc),
 	}
 }
-
+func (s *viewKeyBuilder) String() string {
+	bb := new(bytes.Buffer)
+	fmt.Fprintf(bb, "storage:%s", s.Storage())
+	fmt.Fprintf(bb, ", entity:%s", s.Entity())
+	fmt.Fprintf(bb, ", wsid:%d", s.wsid)
+	return bb.String()
+}
 func (s *viewRecordsStorage) NewKeyBuilder(entity appdef.QName, _ istructs.IStateKeyBuilder) (newKeyBuilder istructs.IStateKeyBuilder) {
 	return &viewKeyBuilder{
 		IKeyBuilder: s.appStructsFunc().ViewRecords().KeyBuilder(entity),

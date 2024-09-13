@@ -51,10 +51,6 @@ type federationBlobKeyBuilder struct {
 	token         string
 }
 
-func (b *federationBlobKeyBuilder) Storage() appdef.QName {
-	return sys.Storage_FederationBlob
-}
-
 func (b *federationBlobKeyBuilder) Equals(src istructs.IKeyBuilder) bool {
 	_, ok := src.(*federationBlobKeyBuilder)
 	if !ok {
@@ -112,7 +108,9 @@ func (b *federationBlobKeyBuilder) PutInt64(name string, value int64) {
 }
 
 func (s *federationBlobStorage) NewKeyBuilder(appdef.QName, istructs.IStateKeyBuilder) istructs.IStateKeyBuilder {
-	return &federationBlobKeyBuilder{}
+	return &federationBlobKeyBuilder{
+		baseKeyBuilder: baseKeyBuilder{storage: sys.Storage_FederationBlob},
+	}
 }
 func (s *federationBlobStorage) getReadCloser(key istructs.IStateKeyBuilder) (io.ReadCloser, error) {
 	appqname := s.appStructs().AppQName()

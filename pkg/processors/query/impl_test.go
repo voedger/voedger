@@ -1336,6 +1336,7 @@ type mockStateKeyBuilder struct {
 	mock.Mock
 }
 
+func (b *mockStateKeyBuilder) String() string { return "" }
 func (b *mockStateKeyBuilder) PutRecordID(name string, value istructs.RecordID) {
 	b.Called(name, value)
 }

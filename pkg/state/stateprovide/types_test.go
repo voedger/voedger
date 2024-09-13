@@ -5,6 +5,8 @@
 package stateprovide
 
 import (
+	"bytes"
+	"fmt"
 	"maps"
 	"testing"
 
@@ -31,6 +33,17 @@ func newMapKeyBuilder(storage, entity appdef.QName) *mapKeyBuilder {
 	}
 }
 
+func (b *mapKeyBuilder) String() string {
+	bb := new(bytes.Buffer)
+	fmt.Fprintf(bb, "storage:%s", b.storage)
+	if b.entity != appdef.NullQName {
+		fmt.Fprintf(bb, ", entity:%s", b.entity)
+	}
+	for key, value := range b.data {
+		fmt.Fprintf(bb, ", %s:%v", key, value)
+	}
+	return bb.String()
+}
 func (b *mapKeyBuilder) Storage() appdef.QName                            { return b.storage }
 func (b *mapKeyBuilder) Entity() appdef.QName                             { return b.entity }
 func (b *mapKeyBuilder) PutInt32(name string, value int32)                { b.data[name] = value }

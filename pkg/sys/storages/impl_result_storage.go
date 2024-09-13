@@ -21,10 +21,6 @@ type resultKeyBuilder struct {
 	baseKeyBuilder
 }
 
-func (b *resultKeyBuilder) Storage() appdef.QName {
-	return sys.Storage_Result
-}
-
 func (b *resultKeyBuilder) Equals(src istructs.IKeyBuilder) bool {
 	_, ok := src.(*resultKeyBuilder)
 	return ok
@@ -37,7 +33,9 @@ func NewResultStorage(resultBuilderFunc state.ObjectBuilderFunc) state.IStateSto
 }
 
 func (s *resultStorage) NewKeyBuilder(_ appdef.QName, _ istructs.IStateKeyBuilder) istructs.IStateKeyBuilder {
-	return &resultKeyBuilder{}
+	return &resultKeyBuilder{
+		baseKeyBuilder: baseKeyBuilder{storage: sys.Storage_Result},
+	}
 }
 
 func (s *resultStorage) Validate([]state.ApplyBatchItem) (err error) {

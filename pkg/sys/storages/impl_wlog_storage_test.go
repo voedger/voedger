@@ -200,6 +200,6 @@ func TestWLogKeyBuilder(t *testing.T) {
 		kb.PutInt64(sys.Storage_WLog_Field_Offset, 20)
 		kb.PutInt64(sys.Storage_WLog_Field_WSID, 30)
 
-		require.Equal(t, "wlog wsid - 30, offset - 20, count - 10", kb.(fmt.Stringer).String())
+		require.Equal(t, "storage:sys.WLog, wsid:30, offset:20, count:10", kb.(fmt.Stringer).String())
 	})
 }

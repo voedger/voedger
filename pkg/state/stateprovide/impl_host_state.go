@@ -389,5 +389,5 @@ func (s *hostState) errOperationNotSupported(sid appdef.QName, err error) error 
 	return fmt.Errorf("state %s, storage %s: %w", s.name, sid, err)
 }
 func (s *hostState) err(key istructs.IStateKeyBuilder, err error) error {
-	return fmt.Errorf("state %s, key %+v: %w", s.name, key, err)
+	return fmt.Errorf("state %s, key {%s}: %w", s.name, key, err)
 }

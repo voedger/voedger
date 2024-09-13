@@ -27,16 +27,15 @@ type queryContextKeyBuilder struct {
 	baseKeyBuilder
 }
 
-func (b *queryContextKeyBuilder) Storage() appdef.QName {
-	return sys.Storage_QueryContext
-}
 func (b *queryContextKeyBuilder) Equals(src istructs.IKeyBuilder) bool {
 	_, ok := src.(*queryContextKeyBuilder)
 	return ok
 }
 
 func (s *queryContextStorage) NewKeyBuilder(_ appdef.QName, _ istructs.IStateKeyBuilder) istructs.IStateKeyBuilder {
-	return &queryContextKeyBuilder{}
+	return &queryContextKeyBuilder{
+		baseKeyBuilder: baseKeyBuilder{storage: sys.Storage_QueryContext},
+	}
 }
 func (s *queryContextStorage) Get(_ istructs.IStateKeyBuilder) (istructs.IStateValue, error) {
 	return &qryContextValue{
