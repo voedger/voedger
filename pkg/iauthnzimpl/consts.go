@@ -104,6 +104,13 @@ var (
 	qNameQryGetAirLocations                         = appdef.NewQName(airPackage, "GetAirLocations")
 	qNameQryResellersDashboardSalesMetrics          = appdef.NewQName(airPackage, "ResellersDashboardSalesMetrics")
 	qNameQryResellersDashboardBackofficeMetrics     = appdef.NewQName(airPackage, "ResellersDashboardBackofficeMetrics")
+	qNameCmdProvideCertificatePart                  = appdef.NewQName(fiscalcloudPackage, "ProvideCertificatePart")
+	qNameCmdProvideCertificate                      = appdef.NewQName(fiscalcloudPackage, "ProvideCertificate")
+	qNameQryGetCustomerStatus                       = appdef.NewQName(fiscalcloudPackage, "GetCustomerStatus")
+	qNameCmdFiscalizeDocument                       = appdef.NewQName(fiscalcloudPackage, "FiscalizeDocument")
+	qNameQryFiscalizationResultStatus               = appdef.NewQName(fiscalcloudPackage, "FiscalizationResultStatus")
+	qNameCmdCreateExport                            = appdef.NewQName(fiscalcloudPackage, "CreateExport")
+	qNameQryExportStatus                            = appdef.NewQName(fiscalcloudPackage, "ExportStatus")
 
 	// Air roles
 	qNameRoleResellersAdmin            = appdef.NewQName(airPackage, "ResellersAdmin")
@@ -115,6 +122,7 @@ var (
 	qNameRoleUntillPaymentsManager     = appdef.NewQName(airPackage, "UntillPaymentsManager")
 	qNameRoleBOReader                  = appdef.NewQName(airPackage, "BOReader")
 	qNameResellerPortalDashboardViewer = appdef.NewQName(airPackage, "ResellerPortalDashboardViewer")
+	qNameSysGuest                      = appdef.NewQName(appdef.SysPackage, "Guest")
 )
 
 const (
@@ -125,6 +133,7 @@ const (
 	field_OwnerWSID             = "OwnerWSID"
 	airPackage                  = "air"
 	untillPackage               = "untill"
+	fiscalcloudPackage          = "fiscalcloud"
 	untillChargebeeAgentLogin   = "untillchargebeeagent"
 	clusterPackage              = "cluster"
 

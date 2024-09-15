@@ -60,6 +60,15 @@ var defaultACL = ACL{
 		policy: ACPolicy_Allow,
 	},
 	{
+		desc: "allowed to Guest",
+		pattern: PatternType{
+			principalsPattern: [][]iauthnz.Principal{{{Kind: iauthnz.PrincipalKind_User, QName: qNameSysGuest}}},
+			qNamesPattern: []appdef.QName{
+				qNameCmdProvideCertificatePart, qNameCmdProvideCertificate, qNameQryGetCustomerStatus,
+				qNameCmdFiscalizeDocument, qNameQryFiscalizationResultStatus, qNameCmdCreateExport, qNameQryExportStatus},
+		},
+	},
+	{
 		desc: "everything is allowed to WorkspaceOwner",
 		pattern: PatternType{
 			principalsPattern: [][]iauthnz.Principal{{{Kind: iauthnz.PrincipalKind_Role, QName: iauthnz.QNameRoleWorkspaceOwner}}},
