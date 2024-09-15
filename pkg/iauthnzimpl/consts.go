@@ -122,7 +122,6 @@ var (
 	qNameRoleUntillPaymentsManager     = appdef.NewQName(airPackage, "UntillPaymentsManager")
 	qNameRoleBOReader                  = appdef.NewQName(airPackage, "BOReader")
 	qNameResellerPortalDashboardViewer = appdef.NewQName(airPackage, "ResellerPortalDashboardViewer")
-	qNameSysGuest                      = appdef.NewQName(appdef.SysPackage, "Guest")
 )
 
 const (
