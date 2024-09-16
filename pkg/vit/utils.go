@@ -231,9 +231,8 @@ func (vit *VIT) WaitForProfile(cdocLoginID istructs.RecordID, login string, appQ
 					tempWSErr = tempWSErr[errChunkIdx+len(errChunk):]
 				}
 				return istructs.WSID(m["WSID"].(float64))
-			} else {
-				vit.T.Fatalf("profile init error: %s", wsError)
 			}
+			vit.T.Fatalf("profile init error: %s", wsError)
 		}
 		if m["WSID"].(float64) > 0 {
 			if len(expectWSInitErrorChunks) > 0 {
