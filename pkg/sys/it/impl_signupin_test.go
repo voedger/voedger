@@ -11,6 +11,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	"github.com/voedger/voedger/pkg/sys/authnz"
@@ -114,15 +115,10 @@ func TestCreateLoginErrors(t *testing.T) {
 	loginPseudoWSID := coreutils.GetPseudoWSID(istructs.NullWSID, login, istructs.CurrentClusterID())
 
 	t.Run("unknown application", func(t *testing.T) {
-		// TODO: ensure WSError contains the actual error message
-		t.Skip("wait for https://github.com/voedger/voedger/issues/2415")
 		body := fmt.Sprintf(`{"args":{"Login":"%s","AppName":"my/unknown","SubjectKind":%d,"WSKindInitializationData":"{}","ProfileCluster":%d},"unloggedArgs":{"Password":"password"}}`,
 			login, istructs.SubjectKind_User, istructs.CurrentClusterID())
-		vit.PostApp(istructs.AppQName_sys_registry, loginPseudoWSID, "c.registry.CreateLogin", body)
-		pseudoWSID := coreutils.GetPseudoWSID(istructs.NullWSID, login, istructs.CurrentClusterID())
-		body = fmt.Sprintf(`{"args": {"Login": "%s","Password": "password","AppName": "my/unknown"},"elements":[{"fields":["PrincipalToken", "WSID", "WSError"]}]}`,
-			login)
-		vit.PostApp(istructs.AppQName_sys_registry, pseudoWSID, "q.registry.IssuePrincipalToken", body).Println()
+		loginID := vit.PostApp(istructs.AppQName_sys_registry, loginPseudoWSID, "c.registry.CreateLogin", body).NewID()
+		vit.WaitForProfile(istructs.RecordID(loginID), login, appdef.NewAppQName("my", "unknown"), "unknown app my/unknown")
 	})
 
 	t.Run("wrong application name", func(t *testing.T) {
