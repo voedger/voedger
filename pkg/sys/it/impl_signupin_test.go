@@ -118,13 +118,7 @@ func TestCreateLoginErrors(t *testing.T) {
 		body := fmt.Sprintf(`{"args":{"Login":"%s","AppName":"my/unknown","SubjectKind":%d,"WSKindInitializationData":"{}","ProfileCluster":%d},"unloggedArgs":{"Password":"password"}}`,
 			login, istructs.SubjectKind_User, istructs.CurrentClusterID())
 		loginID := vit.PostApp(istructs.AppQName_sys_registry, loginPseudoWSID, "c.registry.CreateLogin", body).NewID()
-
-		vit.WaitForProfile(istructs.RecordID(loginID), login, appdef.NewAppQName("my", "unknown"))
-
-		pseudoWSID := coreutils.GetPseudoWSID(istructs.NullWSID, login, istructs.CurrentClusterID())
-		body = fmt.Sprintf(`{"args": {"Login": "%s","Password": "password","AppName": "my/unknown"},"elements":[{"fields":["PrincipalToken", "WSID", "WSError"]}]}`,
-			login)
-		vit.PostApp(istructs.AppQName_sys_registry, pseudoWSID, "q.registry.IssuePrincipalToken", body).Println()
+		vit.WaitForProfile(istructs.RecordID(loginID), login, appdef.NewAppQName("my", "unknown"), "unknown app my/unknown")
 	})
 
 	t.Run("wrong application name", func(t *testing.T) {

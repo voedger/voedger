@@ -81,14 +81,24 @@ func ApplyInvokeCreateWorkspaceID(federation federation.IFederation, appQName ap
 		return fmt.Errorf("aproj.sys.InvokeCreateWorkspaceID: %w", err)
 	}
 
-	if _, err = federation.Func(createWSIDCmdURL, body,
+	if _, createWSIDCmdErr := federation.Func(createWSIDCmdURL, body,
 		coreutils.WithAuthorizeBy(systemPrincipalToken),
 		coreutils.WithDiscardResponse(),
 		coreutils.WithExpectedCode(http.StatusOK),
 		coreutils.WithExpectedCode(http.StatusConflict),
-	); err != nil {
+	); createWSIDCmdErr != nil {
 		logger.Error(fmt.Sprintf("aproj.sys.InvokeCreateWorkspaceID: c.sys.CreateWorkspaceID failed: %s. Body:\n%s", err, body))
-		return updateOwnerErr(ownerWSID, ownerID, ownerApp, ownerQName.String(), istructs.NullWSID, err, systemPrincipalToken, federation)
+		ownerAppQName, err := appdef.ParseAppQName(ownerApp)
+		if err != nil {
+			// notest
+			return fmt.Errorf("aproj.sys.InvokeCreateWorkspaceID: %w", err)
+		}
+		ownerAppToken, err := payloads.GetSystemPrincipalToken(tokensAPI, ownerAppQName)
+		if err != nil {
+			// notest
+			return fmt.Errorf("aproj.sys.InvokeCreateWorkspaceID: %w", err)
+		}
+		return updateOwnerErr(ownerWSID, ownerID, ownerApp, ownerQName.String(), istructs.NullWSID, createWSIDCmdErr, ownerAppToken, federation)
 	}
 	return nil
 }

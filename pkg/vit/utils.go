@@ -9,7 +9,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"math"
 	"strings"
 	"testing"
@@ -209,20 +208,41 @@ func (vit *VIT) waitForWorkspace(wsName string, owner *Principal, respGetter fun
 	return ws
 }
 
-func (vit *VIT) WaitForProfile(cdocLoginID istructs.RecordID, login string, appQName appdef.AppQName, expectWSInitErrorChunks ...string) (profileWSID istructs.WSID, wsError string) {
+func (vit *VIT) WaitForProfile(cdocLoginID istructs.RecordID, login string, appQName appdef.AppQName, expectWSInitErrorChunks ...string) (profileWSID istructs.WSID) {
 	vit.T.Helper()
 	deadline := time.Now().Add(getWorkspaceInitAwaitTimeout())
 	pseudoWSID := coreutils.GetPseudoWSID(istructs.NullWSID, login, istructs.CurrentClusterID())
 	queryCDocLoginBody := fmt.Sprintf(`{"args":{"Query":"select * from registry.Login.%d"},"elements":[{"fields":["Result"]}]}`, cdocLoginID)
-	sysToken, err := payloads.GetSystemPrincipalToken(vit.ITokens, appQName)
+	sysToken, err := payloads.GetSystemPrincipalToken(vit.ITokens, istructs.AppQName_sys_registry)
 	require.NoError(vit.T, err)
 	for time.Now().Before(deadline) {
 		resp := vit.PostApp(istructs.AppQName_sys_registry, pseudoWSID, "q.sys.SqlQuery", queryCDocLoginBody, coreutils.WithAuthorizeBy(sysToken))
 		m := map[string]interface{}{}
 		require.NoError(vit.T, json.Unmarshal([]byte(resp.SectionRow()[0].(string)), &m))
-		log.Println(m)
+		wsError := m["WSError"].(string)
+		if len(wsError) > 0 {
+			if len(expectWSInitErrorChunks) > 0 {
+				tempWSErr := wsError
+				for _, errChunk := range expectWSInitErrorChunks {
+					errChunkIdx := strings.Index(tempWSErr, errChunk)
+					if errChunkIdx == 0 {
+						vit.T.Fatalf("expected error should contain [%s] but is %s", strings.Join(expectWSInitErrorChunks, ","), wsError)
+					}
+					tempWSErr = tempWSErr[errChunkIdx+len(errChunk):]
+				}
+				return istructs.WSID(m["WSID"].(float64))
+			} else {
+				vit.T.Fatalf("profile init error: %s", wsError)
+			}
+		}
+		if m["WSID"].(float64) > 0 {
+			if len(expectWSInitErrorChunks) > 0 {
+				vit.T.Fatalf("profile init error should contain [%s] but inited with no error", strings.Join(expectWSInitErrorChunks, ","))
+			}
+			return istructs.WSID(m["WSID"].(float64))
+		}
 	}
-	return istructs.NullWSID, ""
+	panic("profile init await taimout")
 }
 
 func (vit *VIT) WaitForWorkspace(wsName string, owner *Principal, expectWSInitErrorChunks ...string) (ws *AppWorkspace) {
