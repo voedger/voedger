@@ -44,6 +44,9 @@ func execCmdInitChildWorkspace(args istructs.ExecCommandArgs) (err error) {
 	wsKindInitializationData := args.ArgumentObject.AsString(authnz.Field_WSKindInitializationData)
 	templateName := args.ArgumentObject.AsString(field_TemplateName)
 	wsClusterID := args.ArgumentObject.AsInt32(authnz.Field_WSClusterID)
+	if wsClusterID == 0 {
+		wsClusterID = int32(istructs.CurrentClusterID())
+	}
 	templateParams := args.ArgumentObject.AsString(Field_TemplateParams)
 
 	// Create cdoc.sys.ChildWorkspace

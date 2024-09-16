@@ -132,6 +132,18 @@ func TestBasicUsage_Workspace(t *testing.T) {
 	})
 }
 
+func TestCurrentClusterIDOnMissingWSClusterID(t *testing.T) {
+	require := require.New(t)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
+	wsName := vit.NextName()
+	body := fmt.Sprintf(`{"args":{"WSName":%q,"WSKind":"app1pkg.test_ws","WSKindInitializationData":"{\"IntFld\": 10}"}}`, wsName)
+	prn := vit.GetPrincipal(istructs.AppQName_test1_app1, "login")
+	vit.PostProfile(prn, "c.sys.InitChildWorkspace", body)
+	ws := vit.WaitForWorkspace(wsName, prn)
+	require.Equal(istructs.ClusterID(1), ws.WSID.ClusterID())
+}
+
 func TestWorkspaceAuthorization(t *testing.T) {
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
