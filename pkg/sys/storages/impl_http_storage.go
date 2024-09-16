@@ -177,7 +177,7 @@ func (s *httpStorage) Read(key istructs.IStateKeyBuilder, callback istructs.Valu
 	}
 
 	if logger.IsVerbose() {
-		logger.Verbose("resp ", reqNumber, ": ", res.StatusCode, " body: ", string(kb.body))
+		logger.Verbose("resp ", reqNumber, ": ", res.StatusCode, " body: ", string(bb))
 	}
 
 	return callback(nil, &httpValue{
