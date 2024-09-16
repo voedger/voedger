@@ -9,7 +9,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"math"
+	"strings"
 	"testing"
 	"time"
 
@@ -18,6 +20,7 @@ import (
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/istorage"
+	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	"github.com/voedger/voedger/pkg/utils/federation"
 	"github.com/voedger/voedger/pkg/vvm"
 
@@ -139,7 +142,7 @@ func (vit *VIT) GetCDocChildWorkspace(ws *AppWorkspace) (cdoc map[string]interfa
 	return vit.getCDoc(ws.Owner.AppQName, authnz.QNameCDocChildWorkspace, ws.Owner.ProfileWSID)
 }
 
-func (vit *VIT) waitForWorkspace(wsName string, owner *Principal, respGetter func(owner *Principal, body string) *coreutils.FuncResponse) (ws *AppWorkspace) {
+func (vit *VIT) waitForWorkspace(wsName string, owner *Principal, respGetter func(owner *Principal, body string) *coreutils.FuncResponse, expectWSInitErrorChunks ...string) (ws *AppWorkspace) {
 	const (
 		// respect linter
 		tmplNameIdx   = 3
@@ -171,9 +174,20 @@ func (vit *VIT) waitForWorkspace(wsName string, owner *Principal, respGetter fun
 		}
 		wsKind, err := appdef.ParseQName(resp.SectionRow()[1].(string))
 		require.NoError(vit.T, err)
-		if len(wsError) > 0 {
+
+		if len(expectWSInitErrorChunks) > 0 {
+			tempWSError := wsError
+			for _, errChunk := range expectWSInitErrorChunks {
+				if strings.Contains(wsError, errChunk) {
+					tempWSError = tempWSError[:strings.Index(tempWSError, errChunk)+len(errChunk)]
+					continue
+				}
+				vit.T.Fatalf(`expected ws init error template is [%s] but is "%s"`, strings.Join(expectWSInitErrorChunks, ", "), wsError)
+			}
+		} else if len(wsError) > 0 {
 			vit.T.Fatal(wsError)
 		}
+
 		return &AppWorkspace{
 			WorkspaceDescriptor: WorkspaceDescriptor{
 				WSParams: WSParams{
@@ -195,10 +209,26 @@ func (vit *VIT) waitForWorkspace(wsName string, owner *Principal, respGetter fun
 	return ws
 }
 
-func (vit *VIT) WaitForWorkspace(wsName string, owner *Principal) (ws *AppWorkspace) {
+func (vit *VIT) WaitForProfile(cdocLoginID istructs.RecordID, login string, appQName appdef.AppQName, expectWSInitErrorChunks ...string) (profileWSID istructs.WSID, wsError string) {
+	vit.T.Helper()
+	deadline := time.Now().Add(getWorkspaceInitAwaitTimeout())
+	pseudoWSID := coreutils.GetPseudoWSID(istructs.NullWSID, login, istructs.CurrentClusterID())
+	queryCDocLoginBody := fmt.Sprintf(`{"args":{"Query":"select * from registry.Login.%d"},"elements":[{"fields":["Result"]}]}`, cdocLoginID)
+	sysToken, err := payloads.GetSystemPrincipalToken(vit.ITokens, appQName)
+	require.NoError(vit.T, err)
+	for time.Now().Before(deadline) {
+		resp := vit.PostApp(istructs.AppQName_sys_registry, pseudoWSID, "q.sys.SqlQuery", queryCDocLoginBody, coreutils.WithAuthorizeBy(sysToken))
+		m := map[string]interface{}{}
+		require.NoError(vit.T, json.Unmarshal([]byte(resp.SectionRow()[0].(string)), &m))
+		log.Println(m)
+	}
+	return istructs.NullWSID, ""
+}
+
+func (vit *VIT) WaitForWorkspace(wsName string, owner *Principal, expectWSInitErrorChunks ...string) (ws *AppWorkspace) {
 	return vit.waitForWorkspace(wsName, owner, func(owner *Principal, body string) *coreutils.FuncResponse {
 		return vit.PostProfile(owner, "q.sys.QueryChildWorkspaceByName", body)
-	})
+	}, expectWSInitErrorChunks...)
 }
 
 func (vit *VIT) WaitForChildWorkspace(parentWS *AppWorkspace, wsName string) (ws *AppWorkspace) {

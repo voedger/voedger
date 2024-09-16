@@ -308,3 +308,16 @@ func TestWSNameEscaping(t *testing.T) {
 
 	vit.WaitForWorkspace(`\f;jf;GJ`, prn)
 }
+
+func TestWorkspaceInitError(t *testing.T) {
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
+
+	prn := vit.GetPrincipal(istructs.AppQName_test1_app1, "login")
+
+	wsName := vit.NextName()
+	body := fmt.Sprintf(`{"args":{"WSName":"%s","WSKind":"app1pkg.test_ws","WSKindInitializationData":"{ wrong json }","WSClusterID":1}}`, wsName)
+	vit.PostProfile(prn, "c.sys.InitChildWorkspace", body)
+
+	vit.WaitForWorkspace(wsName, prn, "failed to unmarshal workspace initialization data")
+}
