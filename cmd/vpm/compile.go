@@ -14,7 +14,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/voedger/voedger/pkg/compile"
-	coreutils "github.com/voedger/voedger/pkg/utils"
+	"github.com/voedger/voedger/pkg/coreutils"
 )
 
 func newCompileCmd(params *vpmParams) *cobra.Command {

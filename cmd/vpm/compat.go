@@ -18,8 +18,8 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appdefcompat"
 	"github.com/voedger/voedger/pkg/compile"
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/parser"
-	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 func newCompatCmd(params *vpmParams) *cobra.Command {

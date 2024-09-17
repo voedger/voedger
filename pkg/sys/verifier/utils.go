@@ -8,10 +8,10 @@ import (
 	"net/http"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/itokens"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
-	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 func NewVerificationToken(entity string, field, value string, kind appdef.VerificationKind, targetWSID istructs.WSID, itokens itokens.ITokens, appTokens istructs.IAppTokens) (token, code string, err error) {

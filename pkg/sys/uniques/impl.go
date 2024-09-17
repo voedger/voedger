@@ -20,7 +20,7 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
 
-	coreutils "github.com/voedger/voedger/pkg/utils"
+	"github.com/voedger/voedger/pkg/coreutils"
 )
 
 func applyUniques(event istructs.IPLogEvent, st istructs.IState, intents istructs.IIntents) (err error) {

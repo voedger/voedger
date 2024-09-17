@@ -9,9 +9,9 @@ import (
 	"net/http"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys"
-	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 func CheckResponseIntent(st state.IHostState) error {

@@ -6,11 +6,11 @@ package verifier
 
 import (
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/coreutils/federation"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/itokens"
 	"github.com/voedger/voedger/pkg/sys/smtp"
-	"github.com/voedger/voedger/pkg/utils/federation"
 )
 
 func ProvideLimits(cfg *istructsmem.AppConfigType) {

@@ -19,6 +19,8 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appparts"
+	"github.com/voedger/voedger/pkg/coreutils"
+	wsdescutil "github.com/voedger/voedger/pkg/coreutils/testwsdesc"
 	"github.com/voedger/voedger/pkg/iauthnzimpl"
 	"github.com/voedger/voedger/pkg/iextengine"
 	"github.com/voedger/voedger/pkg/in10n"
@@ -35,8 +37,6 @@ import (
 	"github.com/voedger/voedger/pkg/pipeline"
 	"github.com/voedger/voedger/pkg/processors"
 	"github.com/voedger/voedger/pkg/processors/actualizers"
-	coreutils "github.com/voedger/voedger/pkg/utils"
-	wsdescutil "github.com/voedger/voedger/pkg/utils/testwsdesc"
 	"github.com/voedger/voedger/pkg/vvm/engines"
 	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
 	"github.com/voedger/voedger/staging/src/github.com/untillpro/ibusmem"

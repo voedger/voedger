@@ -12,7 +12,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/voedger/voedger/pkg/utils/utils"
+	"github.com/voedger/voedger/pkg/coreutils/utils"
 )
 
 // # Implements:

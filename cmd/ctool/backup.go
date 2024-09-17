@@ -15,7 +15,7 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
-	coreutils "github.com/voedger/voedger/pkg/utils"
+	"github.com/voedger/voedger/pkg/coreutils"
 
 	"github.com/robfig/cron/v3"
 )

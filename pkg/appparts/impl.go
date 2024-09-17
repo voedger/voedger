@@ -13,9 +13,9 @@ import (
 	"time"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/iextengine"
 	"github.com/voedger/voedger/pkg/istructs"
-	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 type apps struct {

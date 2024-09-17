@@ -14,11 +14,11 @@ import (
 	"time"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/in10nmem"
 	in10nmemv1 "github.com/voedger/voedger/pkg/in10nmem/v1"
 	"github.com/voedger/voedger/pkg/istructs"
-	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 func main() {

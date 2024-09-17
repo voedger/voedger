@@ -11,11 +11,11 @@ import (
 	"strings"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/goutils/iterate"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/sys"
 	"github.com/voedger/voedger/pkg/sys/authnz"
-	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 // sys/registry, pseudoProfileWSID translated to appWSID

@@ -8,9 +8,9 @@ import (
 	"os"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/processors"
-	coreutils "github.com/voedger/voedger/pkg/utils"
 
 	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
 

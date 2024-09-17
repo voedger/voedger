@@ -10,7 +10,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"github.com/voedger/voedger/pkg/utils/utils"
+	"github.com/voedger/voedger/pkg/coreutils/utils"
 )
 
 func Test_NullType(t *testing.T) {

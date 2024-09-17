@@ -8,13 +8,13 @@ import (
 	"fmt"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/coreutils/federation"
 	"github.com/voedger/voedger/pkg/goutils/iterate"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/itokens"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	"github.com/voedger/voedger/pkg/sys"
-	coreutils "github.com/voedger/voedger/pkg/utils"
-	"github.com/voedger/voedger/pkg/utils/federation"
 )
 
 func asyncProjectorApplyLeaveWorkspace(time coreutils.ITime, federation federation.IFederation, tokens itokens.ITokens) istructs.Projector {

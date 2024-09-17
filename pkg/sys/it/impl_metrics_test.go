@@ -13,9 +13,9 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/istructs"
 	commandprocessor "github.com/voedger/voedger/pkg/processors/command"
-	coreutils "github.com/voedger/voedger/pkg/utils"
 	it "github.com/voedger/voedger/pkg/vit"
 )
 

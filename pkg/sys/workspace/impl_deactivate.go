@@ -10,6 +10,8 @@ import (
 	"net/http"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/coreutils/federation"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
@@ -19,8 +21,6 @@ import (
 	"github.com/voedger/voedger/pkg/sys/authnz"
 	"github.com/voedger/voedger/pkg/sys/collection"
 	"github.com/voedger/voedger/pkg/sys/invite"
-	coreutils "github.com/voedger/voedger/pkg/utils"
-	"github.com/voedger/voedger/pkg/utils/federation"
 )
 
 func provideDeactivateWorkspace(sr istructsmem.IStatelessResources, tokensAPI itokens.ITokens, federation federation.IFederation) {

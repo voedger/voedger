@@ -18,6 +18,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/compile"
+	wsdescutil "github.com/voedger/voedger/pkg/coreutils/testwsdesc"
 	"github.com/voedger/voedger/pkg/iratesce"
 	"github.com/voedger/voedger/pkg/istorage/mem"
 	istorageimpl "github.com/voedger/voedger/pkg/istorage/provider"
@@ -26,7 +27,6 @@ import (
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	"github.com/voedger/voedger/pkg/itokensjwt"
 	"github.com/voedger/voedger/pkg/sys"
-	wsdescutil "github.com/voedger/voedger/pkg/utils/testwsdesc"
 )
 
 // CommandTestState is a test state for command testing
