@@ -75,6 +75,7 @@ func (b *StateKeyBuilder) PutInt32(name string, value int32)        { b.Called(n
 func (b *StateKeyBuilder) PutInt64(name string, value int64)        { b.Called(name, value) }
 func (b *StateKeyBuilder) PutString(name, value string)             { b.Called(name, value) }
 func (b *StateKeyBuilder) PutQName(name string, value appdef.QName) { b.Called(name, value) }
+func (b *StateKeyBuilder) String() string                           { return b.Called().String(0) }
 
 type StateValueBuilder struct {
 	istructs.IStateValueBuilder
