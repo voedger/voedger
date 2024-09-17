@@ -7,7 +7,7 @@ package queryprocessor
 import (
 	"fmt"
 
-	coreutils "github.com/voedger/voedger/pkg/utils"
+	"github.com/voedger/voedger/pkg/coreutils"
 )
 
 func NewOrderBy(data coreutils.MapObject) (IOrderBy, error) {

@@ -6,8 +6,8 @@
 package schedulers
 
 import (
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/istructs"
-	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 // Returns application workspaces handled by the specified partition.

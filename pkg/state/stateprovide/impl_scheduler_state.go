@@ -8,13 +8,13 @@ package stateprovide
 import (
 	"context"
 
+	"github.com/voedger/voedger/pkg/coreutils/federation"
 	"github.com/voedger/voedger/pkg/isecrets"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/itokens"
 	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys"
 	"github.com/voedger/voedger/pkg/sys/storages"
-	"github.com/voedger/voedger/pkg/utils/federation"
 )
 
 type schedulerState struct {

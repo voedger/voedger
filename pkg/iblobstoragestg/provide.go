@@ -5,8 +5,8 @@
 package iblobstoragestg
 
 import (
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/iblobstorage"
-	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 func Provide(storage BlobAppStoragePtr, time coreutils.ITime) iblobstorage.IBLOBStorage {

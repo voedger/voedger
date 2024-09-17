@@ -10,8 +10,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/voedger/voedger/pkg/coreutils/utils"
 	"github.com/voedger/voedger/pkg/goutils/set"
-	"github.com/voedger/voedger/pkg/utils/utils"
 )
 
 // # Implements:

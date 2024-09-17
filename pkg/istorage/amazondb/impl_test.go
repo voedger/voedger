@@ -8,8 +8,8 @@ package amazondb
 import (
 	"testing"
 
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/istorage"
-	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 func TestBasicUsage(t *testing.T) {
