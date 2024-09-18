@@ -11,8 +11,8 @@ import (
 	"time"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/goutils/logger"
-	coreutils "github.com/voedger/voedger/pkg/utils"
 	"golang.org/x/crypto/acme/autocert"
 
 	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"

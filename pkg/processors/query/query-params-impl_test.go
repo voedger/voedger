@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/iauthnzimpl"
 	"github.com/voedger/voedger/pkg/iprocbus"
+	"github.com/voedger/voedger/pkg/isecretsimpl"
 	"github.com/voedger/voedger/pkg/itokensjwt"
 	imetrics "github.com/voedger/voedger/pkg/metrics"
 	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
@@ -42,7 +43,8 @@ func TestWrongTypes(t *testing.T) {
 		resultSenderClosableFactory,
 		appParts,
 		3, // maxPrepareQueries
-		imetrics.Provide(), "vvm", authn, authz, itokensjwt.TestTokensJWT(), nil, statelessResources)
+
+		imetrics.Provide(), "vvm", authn, authz, itokensjwt.TestTokensJWT(), nil, statelessResources, isecretsimpl.TestSecretReader)
 	ctx, cancel := context.WithCancel(context.Background())
 	go func() {
 		queryProcessor.Run(ctx)

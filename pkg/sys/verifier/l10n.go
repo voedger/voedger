@@ -8,7 +8,7 @@ package verifier
 import (
 	"golang.org/x/text/language"
 
-	coreutils "github.com/voedger/voedger/pkg/utils"
+	"github.com/voedger/voedger/pkg/coreutils"
 )
 
 var translations = coreutils.Translations{

@@ -181,13 +181,6 @@ func TestJournal_read_in_years_range_1(t *testing.T) {
 	require := require.New(t)
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
-	vit.SetNow(vit.Now().AddDate(1, 0, 0))
-
-	setTimestamp := func(year int, month time.Month, day int) time.Time {
-		now := time.Date(year, month, day, 0, 0, 0, 0, time.UTC)
-		vit.SetNow(now)
-		return now
-	}
 
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
 	idUntillUsers := vit.GetAny("app1pkg.untill_users", ws)
@@ -197,35 +190,49 @@ func TestJournal_read_in_years_range_1(t *testing.T) {
 		return vit.PostWS(ws, "c.sys.CUD", bill).CurrentWLogOffset
 	}
 
+	startNow := vit.Now()
 	startYear := vit.Now().Year()
-	nextYear := startYear + 1
+	nextYear := startYear
 
 	//Create bills at different years
-	setTimestamp(nextYear, time.August, 17)
+	vit.TimeAdd(365 * 27 * time.Hour)
 	createBill(vit.NextNumber())
-	time1 := setTimestamp(nextYear, time.October, 13)
+	nextYear++
+
+	vit.TimeAdd(365 * 27 * time.Hour)
+	time1 := vit.Now()
 	table1 := vit.NextNumber()
 	offset1 := createBill(table1)
 	nextYear++
-	time2 := setTimestamp(nextYear, time.June, 5)
+
+	vit.TimeAdd(365 * 27 * time.Hour)
+	time2 := vit.Now()
 	table2 := vit.NextNumber()
 	offset2 := createBill(table2)
 	nextYear++
-	time3 := setTimestamp(nextYear, time.July, 7)
+
+	vit.TimeAdd(365 * 27 * time.Hour)
+	time3 := vit.Now()
 	table3 := vit.NextNumber()
 	offset3 := createBill(table3)
 	nextYear++
-	time4 := setTimestamp(nextYear, time.September, 3)
+
+	vit.TimeAdd(365 * 27 * time.Hour)
+	time4 := vit.Now()
 	table4 := vit.NextNumber()
 	offset4 := createBill(table4)
-	setTimestamp(nextYear, time.November, 5)
+	nextYear++
+
+	vit.TimeAdd(365 * 27 * time.Hour)
 	offset := createBill(vit.NextNumber())
+	nextYear++
 
 	WaitForIndexOffset(vit, ws, journal.QNameViewWLogDates, offset)
 
 	//Read journal
-	from := time.Date(startYear+1, time.August, 18, 0, 0, 0, 0, time.UTC).UnixMilli()
-	till := time.Date(nextYear, time.November, 4, 0, 0, 0, 0, time.UTC).UnixMilli()
+	// endNow := vit.Now()
+	from := time.Date(startYear+2, startNow.Month(), startNow.Day(), startNow.Hour(), startNow.Minute(), startNow.Second()+1, startNow.Nanosecond(), time.UTC).UnixMilli()
+	till := vit.Now().UnixMilli()
 	body := fmt.Sprintf(`
 			{
 				"args":{"From":%d,"Till":%d,"EventTypes":"all"},

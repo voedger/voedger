@@ -243,19 +243,20 @@ func TestHostState_MustExist(t *testing.T) {
 		require := require.New(t)
 		ms := &mockStorage{}
 		ms.
-			On("NewKeyBuilder", appdef.NullQName, nil).Return(newMapKeyBuilder(testStorage, appdef.NullQName)).
+			On("NewKeyBuilder", testEntity, nil).Return(newMapKeyBuilder(testStorage, appdef.NullQName)).
 			On("GetBatch", mock.AnythingOfType("[]state.GetBatchItem")).
 			Return(nil).
 			Run(func(args mock.Arguments) {
 				args.Get(0).([]state.GetBatchItem)[0].Value = nil
 			})
 		s := hostStateForTest(ms)
-		k, err := s.KeyBuilder(testStorage, appdef.NullQName)
+		k, err := s.KeyBuilder(testStorage, testEntity)
 		require.NoError(err)
 
 		_, err = s.MustExist(k)
 
 		require.ErrorIs(err, ErrNotExists)
+		require.Equal("state ForTest, key {storage:test.testStorage}: not exists", err.Error())
 	})
 	t.Run("Should return error when error occurred on get batch", func(t *testing.T) {
 		require := require.New(t)

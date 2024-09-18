@@ -27,6 +27,7 @@ func newReplaceCmd() *cobra.Command {
 
 func replace(cmd *cobra.Command, args []string) error {
 
+	currentCmd = cmd
 	cluster := newCluster()
 	var err error
 

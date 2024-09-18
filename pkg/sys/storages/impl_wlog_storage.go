@@ -5,6 +5,7 @@
 package storages
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 
@@ -35,8 +36,13 @@ type wLogKeyBuilder struct {
 	wsid   istructs.WSID
 }
 
-func (b *wLogKeyBuilder) Storage() appdef.QName {
-	return sys.Storage_WLog
+func (b *wLogKeyBuilder) String() string {
+	bb := new(bytes.Buffer)
+	fmt.Fprint(bb, b.baseKeyBuilder.String())
+	fmt.Fprintf(bb, ", wsid:%d", b.wsid)
+	fmt.Fprintf(bb, ", offset:%d", b.offset)
+	fmt.Fprintf(bb, ", count:%d", b.count)
+	return bb.String()
 }
 
 func (b *wLogKeyBuilder) Equals(src istructs.IKeyBuilder) bool {
@@ -57,10 +63,6 @@ func (b *wLogKeyBuilder) Equals(src istructs.IKeyBuilder) bool {
 	return true
 }
 
-func (b *wLogKeyBuilder) String() string {
-	return fmt.Sprintf("wlog wsid - %d, offset - %d, count - %d", b.wsid, b.offset, b.count)
-}
-
 func (b *wLogKeyBuilder) PutInt64(name string, value int64) {
 	if name == sys.Storage_WLog_Field_WSID {
 		b.wsid = istructs.WSID(value)
@@ -75,14 +77,20 @@ func (b *wLogKeyBuilder) PutInt64(name string, value int64) {
 
 func (s *wLogStorage) NewKeyBuilder(appdef.QName, istructs.IStateKeyBuilder) istructs.IStateKeyBuilder {
 	return &wLogKeyBuilder{
-		wsid: s.wsidFunc(),
+		baseKeyBuilder: baseKeyBuilder{storage: sys.Storage_WLog},
+		wsid:           s.wsidFunc(),
 	}
 }
-func (s *wLogStorage) Get(key istructs.IStateKeyBuilder) (value istructs.IStateValue, err error) {
-	err = s.Read(key, func(_ istructs.IKey, v istructs.IStateValue) (err error) {
-		value = v
+func (s *wLogStorage) Get(kb istructs.IStateKeyBuilder) (value istructs.IStateValue, err error) {
+	k := kb.(*wLogKeyBuilder)
+	cb := func(wlogOffset istructs.Offset, event istructs.IWLogEvent) (err error) {
+		value = &wLogValue{
+			event:  event,
+			offset: int64(wlogOffset),
+		}
 		return nil
-	})
+	}
+	err = s.eventsFunc().ReadWLog(s.ctx, k.wsid, k.offset, 1, cb)
 	return value, err
 }
 func (s *wLogStorage) Read(kb istructs.IStateKeyBuilder, callback istructs.ValueCallback) (err error) {
@@ -140,7 +148,7 @@ func (v *wLogValue) AsValue(name string) istructs.IStateValue {
 		if arg == nil {
 			return nil
 		}
-		return &objectValue{object: arg}
+		return &ObjectStateValue{object: arg}
 	}
 	return v.baseStateValue.AsValue(name)
 }

@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"strings"
 
-	coreutils "github.com/voedger/voedger/pkg/utils"
+	"github.com/voedger/voedger/pkg/coreutils"
 )
 
 func NewElement(data coreutils.MapObject) (IElement, error) {

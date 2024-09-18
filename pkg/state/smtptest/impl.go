@@ -9,7 +9,7 @@ import (
 	"net"
 
 	"github.com/emersion/go-smtp"
-	coreutils "github.com/voedger/voedger/pkg/utils"
+	"github.com/voedger/voedger/pkg/coreutils"
 )
 
 func NewServer(opts ...Option) Server {

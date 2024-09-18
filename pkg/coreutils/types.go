@@ -59,8 +59,6 @@ type retrier struct {
 	delay   time.Duration
 }
 
-type TimeFunc func() time.Time
-
 type PathReader struct {
 	rootPath string
 }

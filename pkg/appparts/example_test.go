@@ -41,7 +41,7 @@ func Example() {
 	appStructs := istructsmem.Provide(
 		appConfigs,
 		iratesce.TestBucketsFactory,
-		payloads.TestAppTokensFactory(itokensjwt.TestTokensJWT()),
+		payloads.ProvideIAppTokensFactory(itokensjwt.TestTokensJWT()),
 		provider.Provide(mem.Provide(), ""))
 
 	appParts, cleanupParts, err := appparts.New(appStructs)

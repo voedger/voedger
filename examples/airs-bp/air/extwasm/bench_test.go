@@ -18,7 +18,7 @@ import (
 	"github.com/tetratelabs/wazero"
 	"github.com/tetratelabs/wazero/api"
 	"github.com/tetratelabs/wazero/imports/wasi_snapshot_preview1"
-	"github.com/voedger/voedger/pkg/utils/utils"
+	"github.com/voedger/voedger/pkg/coreutils/utils"
 )
 
 func Benchmark_Pbill(b *testing.B) {

@@ -21,6 +21,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/in10n"
 	istructs "github.com/voedger/voedger/pkg/istructs"
 )
@@ -68,7 +69,7 @@ func Test_SubscribeUnsubscribe(t *testing.T) {
 	}
 	req := require.New(t)
 
-	nb, cleanup := ProvideEx2(quotasExample, time.Now)
+	nb, cleanup := ProvideEx2(quotasExample, coreutils.NewITime())
 	defer cleanup()
 
 	var channel1ID in10n.ChannelID
@@ -163,7 +164,7 @@ func TestWatchNotExistsChannel(t *testing.T) {
 		SubscriptionsPerSubject: 1,
 	}
 
-	broker, cleanup := ProvideEx2(quotasExample, time.Now)
+	broker, cleanup := ProvideEx2(quotasExample, coreutils.NewITime())
 	defer cleanup()
 	ctx := context.TODO()
 
@@ -195,7 +196,7 @@ func TestQuotas(t *testing.T) {
 	}
 
 	t.Run("Test channel quotas per subject. We create more channels than allowed for subject.", func(t *testing.T) {
-		broker, cleanup := ProvideEx2(quotasExample, time.Now)
+		broker, cleanup := ProvideEx2(quotasExample, coreutils.NewITime())
 		defer cleanup()
 		for i := 0; i <= 10; i++ {
 			_, err := broker.NewChannel("paa", 24*time.Hour)
@@ -206,7 +207,7 @@ func TestQuotas(t *testing.T) {
 	})
 
 	t.Run("Test channel quotas for the whole service. We create more channels than allowed for service.", func(t *testing.T) {
-		broker, cleanup := ProvideEx2(quotasExample, time.Now)
+		broker, cleanup := ProvideEx2(quotasExample, coreutils.NewITime())
 		defer cleanup()
 		var subject istructs.SubjectLogin
 		for i := 0; i < 10; i++ {
@@ -226,7 +227,7 @@ func TestQuotas(t *testing.T) {
 			Projection: appdef.NewQName("test", "restaurant"),
 			WS:         istructs.WSID(1),
 		}
-		broker, cleanup := ProvideEx2(quotasExample, time.Now)
+		broker, cleanup := ProvideEx2(quotasExample, coreutils.NewITime())
 		defer cleanup()
 		var subject istructs.SubjectLogin
 		for i := 0; i < 100; i++ {

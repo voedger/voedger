@@ -12,6 +12,7 @@ import (
 	"sync"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appparts/internal/acl"
 	"github.com/voedger/voedger/pkg/appparts/internal/actualizers"
 	"github.com/voedger/voedger/pkg/appparts/internal/pool"
 	"github.com/voedger/voedger/pkg/appparts/internal/schedulers"
@@ -122,7 +123,7 @@ func (a *appRT) deploy(def appdef.IAppDef, extModuleURLs map[string]*url.URL, st
 	}
 
 	pools := [ProcessorKind_Count]*pool.Pool[engines]{}
-	// processorKind here is one of ProcessorKind_Command, ProcessorKind_Query, ProcessorKind_Actualizer
+	// processorKind here is one of ProcessorKind_Command, ProcessorKind_Query, ProcessorKind_Actualizer, ProcessorKind_Scheduler
 	for processorKind, processorsCountPerKind := range numEnginesPerEngineKind {
 		ee := make([]engines, processorsCountPerKind)
 		for extEngineKind, extensionModules := range extModules {
@@ -236,6 +237,10 @@ func (bp *borrowedPartition) Invoke(ctx context.Context, name appdef.QName, stat
 	}
 
 	return extEngine.Invoke(ctx, extName, io)
+}
+
+func (bp *borrowedPartition) IsOperationAllowed(op appdef.OperationKind, res appdef.QName, fld []appdef.FieldName, roles []appdef.QName) (bool, []appdef.FieldName, error) {
+	return acl.IsOperationAllowed(bp.appDef, op, res, fld, roles)
 }
 
 func (bp *borrowedPartition) String() string {

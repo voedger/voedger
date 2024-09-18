@@ -8,8 +8,8 @@ package federation
 import (
 	"net/url"
 
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/istructs"
-	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 type implIFederation struct {

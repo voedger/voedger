@@ -12,13 +12,13 @@ import (
 	"strings"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/coreutils/federation"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/itokens"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys"
-	coreutils "github.com/voedger/voedger/pkg/utils"
-	"github.com/voedger/voedger/pkg/utils/federation"
 )
 
 const readBufferSize = 1024
@@ -49,10 +49,6 @@ type federationBlobKeyBuilder struct {
 	appname       string
 	wsid          istructs.WSID
 	token         string
-}
-
-func (b *federationBlobKeyBuilder) Storage() appdef.QName {
-	return sys.Storage_FederationBlob
 }
 
 func (b *federationBlobKeyBuilder) Equals(src istructs.IKeyBuilder) bool {
@@ -112,7 +108,9 @@ func (b *federationBlobKeyBuilder) PutInt64(name string, value int64) {
 }
 
 func (s *federationBlobStorage) NewKeyBuilder(appdef.QName, istructs.IStateKeyBuilder) istructs.IStateKeyBuilder {
-	return &federationBlobKeyBuilder{}
+	return &federationBlobKeyBuilder{
+		baseKeyBuilder: baseKeyBuilder{storage: sys.Storage_FederationBlob},
+	}
 }
 func (s *federationBlobStorage) getReadCloser(key istructs.IStateKeyBuilder) (io.ReadCloser, error) {
 	appqname := s.appStructs().AppQName()

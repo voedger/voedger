@@ -8,7 +8,7 @@ package router
 import (
 	"time"
 
-	coreutils "github.com/voedger/voedger/pkg/utils"
+	"github.com/voedger/voedger/pkg/coreutils"
 )
 
 const (

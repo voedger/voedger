@@ -21,6 +21,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appparts"
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -31,7 +32,6 @@ import (
 	"github.com/voedger/voedger/pkg/sys/blobber"
 	"github.com/voedger/voedger/pkg/sys/builtin"
 	workspacemgmt "github.com/voedger/voedger/pkg/sys/workspace"
-	coreutils "github.com/voedger/voedger/pkg/utils"
 	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
 )
 
@@ -396,7 +396,7 @@ func (cmdProc *cmdProc) getRawEventBuilder(_ context.Context, work pipeline.IWor
 		HandlingPartition: cmd.cmdMes.PartitionID(),
 		Workspace:         cmd.cmdMes.WSID(),
 		QName:             cmd.cmdMes.QName(),
-		RegisteredAt:      istructs.UnixMilli(cmdProc.now().UnixMilli()),
+		RegisteredAt:      istructs.UnixMilli(cmdProc.time.Now().UnixMilli()),
 		PLogOffset:        cmdProc.appPartition.nextPLogOffset,
 		WLogOffset:        cmd.workspace.NextWLogOffset,
 	}
@@ -405,7 +405,7 @@ func (cmdProc *cmdProc) getRawEventBuilder(_ context.Context, work pipeline.IWor
 	case builtin.QNameCommandInit: // nolint, kept to not to break existing events only
 		cmd.reb = cmd.appStructs.Events().GetSyncRawEventBuilder(
 			istructs.SyncRawEventBuilderParams{
-				SyncedAt:                     istructs.UnixMilli(cmdProc.now().UnixMilli()),
+				SyncedAt:                     istructs.UnixMilli(cmdProc.time.Now().UnixMilli()),
 				GenericRawEventBuilderParams: grebp,
 			},
 		)

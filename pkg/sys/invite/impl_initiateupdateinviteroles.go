@@ -8,20 +8,20 @@ import (
 	"net/http"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/sys"
-	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-func provideCmdInitiateUpdateInviteRoles(sr istructsmem.IStatelessResources, timeFunc coreutils.TimeFunc) {
+func provideCmdInitiateUpdateInviteRoles(sr istructsmem.IStatelessResources, time coreutils.ITime) {
 	sr.AddCommands(appdef.SysPackagePath, istructsmem.NewCommandFunction(
 		qNameCmdInitiateUpdateInviteRoles,
-		execCmdInitiateUpdateInviteRoles(timeFunc),
+		execCmdInitiateUpdateInviteRoles(time),
 	))
 }
 
-func execCmdInitiateUpdateInviteRoles(timeFunc coreutils.TimeFunc) func(args istructs.ExecCommandArgs) (err error) {
+func execCmdInitiateUpdateInviteRoles(time coreutils.ITime) func(args istructs.ExecCommandArgs) (err error) {
 	return func(args istructs.ExecCommandArgs) (err error) {
 		if !coreutils.IsValidEmailTemplate(args.ArgumentObject.AsString(field_EmailTemplate)) {
 			return coreutils.NewHTTPError(http.StatusBadRequest, errInviteTemplateInvalid)
@@ -49,7 +49,7 @@ func execCmdInitiateUpdateInviteRoles(timeFunc coreutils.TimeFunc) func(args ist
 			return
 		}
 		svbCDocInvite.PutInt32(field_State, State_ToUpdateRoles)
-		svbCDocInvite.PutInt64(field_Updated, timeFunc().UnixMilli())
+		svbCDocInvite.PutInt64(field_Updated, time.Now().UnixMilli())
 
 		return err
 	}

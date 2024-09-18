@@ -41,7 +41,7 @@ Also, using GET and POST allows to distinguish between Query and Command process
 | GET                 | Query Processor   |
 | POST, PATCH, DELETE | Command Processor |
 
->> Note: according to RESTful API design, queries should not change the state of the system. Current QueryFunction design allows it to execute commands through HTTP bus.
+> Note: according to RESTful API design, queries should not change the state of the system. Current QueryFunction design allows it to execute commands through HTTP bus.
 
 Another thing is that according to REST best practices, it is not recommended to use verbs in the URL, the resource names should be based on nouns:
 
@@ -101,17 +101,18 @@ GRANT SELECT ON QUERY Query1 TO LocationUser;
 
 - URL:
     - `POST /api/v2/owner/app/wsid/pkg.table`
-- Parameters:
-    - application/json
+- Body:
+    - Content-type: application/json
     - CDoc/WDoc/CRecord/WRecord
-- Errors:
+- result non-200: [error object](#errors) is returned in the body. Possible results:
     - 400: Bad Request, e.g. Record requires sys.ParentID
     - 401: Unauthorized
     - 403: Forbidden
     - 404: Table Not Found
     - 405: Method Not Allowed, table is an ODoc/ORecord
-
-200 Result:
+- result 200: current WLog offset and the new IDs
+ 
+Example result 200:
 ```json
 {
     "CurrentWLogOffset":114,
@@ -124,10 +125,9 @@ GRANT SELECT ON QUERY Query1 TO LocationUser;
 ### Read CDoc/WDoc/CRecord/WRecord
 - URL:
     - `GET /api/v2/owner/app/wsid/pkg.table/id`
-- Parameters: none
-- Result:
+- result 200:
     - CDoc/WDoc/CRecord/WRecord object
-- Errors:
+- result non-200: [error object](#errors) is returned in the body. Possible results:
     - 401: Unauthorized
     - 403: Forbidden
     - 404: Table Not Found
@@ -136,17 +136,18 @@ GRANT SELECT ON QUERY Query1 TO LocationUser;
 ### Update CDoc/WDoc/CRecord/WRecord
 - URL:
     - `PATCH /api/v2/owner/app/wsid/pkg.table/id`
-- Parameters: 
+- Body: 
     - application/json
     - CDoc/WDoc/CRecord/WRecord (fields to be updated)
-- Errors:
+- result non-200: [error object](#errors) is returned in the body. Possible results:
     - 400: Bad Request, e.g. Record requires sys.ParentID
     - 401: Unauthorized
     - 403: Forbidden
     - 404: Table Not Found
     - 405: Method Not Allowed, table is an ODoc/ORecord
+- result 200: current WLog offset and the new IDs
 
-200 Result:
+Example Result 200:
 ```json
 {
     "CurrentWLogOffset":114,
@@ -159,14 +160,14 @@ GRANT SELECT ON QUERY Query1 TO LocationUser;
 ### Deactivate CDoc/WDoc/CRecord/WRecord
 - URL:
     - `DELETE /api/v2/owner/app/wsid/pkg.table/id`
-- Parameters: none
-- Errors:
+- result non-200: [error object](#errors) is returned in the body. Possible results:
     - 401: Unauthorized
     - 403: Forbidden
     - 404: Table Not Found
     - 405: Method Not Allowed, table is an ODoc/ORecord
+- result 200: current WLog offset
 
-200 Result:
+Example Result 200:
 ```json
 {
     "CurrentWLogOffset":114,
@@ -180,13 +181,13 @@ GRANT SELECT ON QUERY Query1 TO LocationUser;
 - Parameters: 
     - Query [constraints](../queryprocessor/request.md)
     - Query function argument `&arg=...`
-- Result: 
-    -  The return value is a JSON object that contains a results field with a JSON array that lists the objects [example](../queryprocessor/request.md), ref. [Parse API](https://docs.parseplatform.org/rest/guide/#basic-queries)
-- Errors:
+- Result 200: 
+    -  The return value is a JSON object that contains a `results` field with a JSON array that lists the objects [example](../queryprocessor/request.md), ref. [Parse API](https://docs.parseplatform.org/rest/guide/#basic-queries)
+    - When the error happens during the read, the [error](#errors) property is added in the response
+- Result non-200: [error object](#errors) is returned in the body. Possible results:
     - 401: Unauthorized
     - 403: Forbidden
     - 404: Query Function Not Found
-
 - Examples:
     - Read from WLog
         - `GET /api/v2/owner/app/wsid/sys.wlog?limit=100&skip=13994`
@@ -198,9 +199,10 @@ GRANT SELECT ON QUERY Query1 TO LocationUser;
     - `GET /api/v2/owner/app/wsid/pkg.table`
 - Parameters: 
     - Query [constraints](../queryprocessor/request.md)
-- Result: 
-    -  The return value is a JSON object that contains a results field with a JSON array that lists the objects [example](../queryprocessor/request.md)
-- Errors:
+- Result 200: 
+    - The return value is a JSON object that contains a `results` field with a JSON array that lists the objects [example](../queryprocessor/request.md)
+    - When the error happens during the read, the [error](#errors) property is added in the response
+- Result non-200: [error object](#errors) is returned in the body. Possible results:
     - 401: Unauthorized
     - 403: Forbidden
     - 404: Table Not Found
@@ -213,26 +215,28 @@ GRANT SELECT ON QUERY Query1 TO LocationUser;
     - `GET /api/v2/owner/app/wsid/pkg.view`
 - Parameters: 
     - Query [constraints](../queryprocessor/request.md)
-- Constraints
+- Limitations:
     -  "where" must contain "eq" or "in" condition for PK fields
-- Result: 
-    -  The return value is a JSON object that contains a results field with a JSON array that lists the objects [example](../queryprocessor/request.md)
-- Errors:
+- Result 200: 
+    - The return value is a JSON object that contains a results field with a JSON array that lists the objects [example](../queryprocessor/request.md)
+    - When the error happens during the read, the [error](#errors) property is added in the response
+- Result non-200: [error object](#errors) is returned in the body. Possible results:
     - 401: Unauthorized
     - 403: Forbidden
     - 404: View Not Found
 - Examples:
     - `GET /api/v2/untill/airs-bp3/12313123123/air.SalesMetrics?where={"Year":2024, "Month":{"$in":[1,2,3]}}`
+
 ### Execute Command
 - URL
     - `POST /api/v2/owner/app/wsid/pkg.command`
 - Parameters: 
-    - application/json
+    - Content-type: application/json
     - Parameter Type / ODoc
-- Result:
+- Result 200:
     - application/json
     - Return Type
-- Errors:
+- Result non-200: [error object](#errors) is returned in the body. Possible results:
     - 404: Command Not Found
     - 403: Forbidden
     - 401: Unauthorized
@@ -245,7 +249,7 @@ When HTTP Result code is not OK, then [response](https://docs.parseplatform.org/
   "error": "invalid field name: bl!ng"
 }
 ```
-
+In the GET operations, returning the list of objects, when the error happens during the read, the "error" property may be added in the response object, meaning that the error is happened after the transmission started
 
 # Limitations
 - sys.CUD function cannot be called directly

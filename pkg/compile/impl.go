@@ -15,9 +15,9 @@ import (
 	"golang.org/x/tools/go/packages"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/parser"
 	"github.com/voedger/voedger/pkg/sys"
-	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 func compile(dir string, checkAppSchema bool) (*Result, error) {
@@ -47,7 +47,8 @@ func compile(dir string, checkAppSchema bool) (*Result, error) {
 	// add dummy app schema if no app schema found
 	appSchemaExists := hasAppSchema(pkgs)
 	if checkAppSchema && !appSchemaExists {
-		return nil, ErrAppSchemaNotFound
+		errs = append(errs, ErrAppSchemaNotFound)
+		return nil, errors.Join(errs...)
 	}
 	if !appSchemaExists {
 		appPackageAst, err := getDummyAppPackageAst(maps.Values(importedStmts))

@@ -13,12 +13,12 @@ import (
 	"github.com/voedger/voedger/pkg/goutils/logger"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	"github.com/voedger/voedger/pkg/itokensjwt"
-	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 const (
@@ -31,7 +31,7 @@ func TestBasicUsage(t *testing.T) {
 	logger.SetLogLevel(logger.LogLevelVerbose)
 	defer logger.SetLogLevel(logger.LogLevelInfo)
 
-	tokens := itokensjwt.ProvideITokens(itokensjwt.SecretKeyExample, time.Now)
+	tokens := itokensjwt.ProvideITokens(itokensjwt.SecretKeyExample, coreutils.NewITime())
 	appTokens := payloads.ProvideIAppTokensFactory(tokens).New(istructs.AppQName_test1_app1)
 	pp := payloads.PrincipalPayload{
 		Login:       "testlogin",
@@ -163,7 +163,7 @@ func TestBasicUsage(t *testing.T) {
 func TestAuthenticate(t *testing.T) {
 	require := require.New(t)
 
-	tokens := itokensjwt.ProvideITokens(itokensjwt.SecretKeyExample, time.Now)
+	tokens := itokensjwt.ProvideITokens(itokensjwt.SecretKeyExample, coreutils.NewITime())
 	appTokens := payloads.ProvideIAppTokensFactory(tokens).New(istructs.AppQName_test1_app1)
 	login := "testlogin"
 	pp := payloads.PrincipalPayload{
@@ -397,7 +397,7 @@ func TestAuthenticate(t *testing.T) {
 func TestAuthorize(t *testing.T) {
 	require := require.New(t)
 
-	tokens := itokensjwt.ProvideITokens(itokensjwt.SecretKeyExample, time.Now)
+	tokens := itokensjwt.ProvideITokens(itokensjwt.SecretKeyExample, coreutils.NewITime())
 	appTokens := payloads.ProvideIAppTokensFactory(tokens).New(istructs.AppQName_test1_app1)
 	pp := payloads.PrincipalPayload{
 		Login:       "testlogin",
@@ -892,7 +892,7 @@ func TestACLDeny(t *testing.T) {
 func TestErrors(t *testing.T) {
 	require := require.New(t)
 
-	tokens := itokensjwt.ProvideITokens(itokensjwt.SecretKeyExample, time.Now)
+	tokens := itokensjwt.ProvideITokens(itokensjwt.SecretKeyExample, coreutils.NewITime())
 	appTokens := payloads.ProvideIAppTokensFactory(tokens).New(istructs.AppQName_test1_app1)
 
 	appStructs := &implIAppStructs{}
@@ -942,7 +942,7 @@ func TestErrors(t *testing.T) {
 // with principals cache:  1455242       782.8 ns/op	     432 B/op	       9 allocs/op
 // without principals cache: 45534	     24370 ns/op	    7964 B/op	     126 allocs/op
 func BenchmarkBasic(b *testing.B) {
-	tokens := itokensjwt.ProvideITokens(itokensjwt.SecretKeyExample, time.Now)
+	tokens := itokensjwt.ProvideITokens(itokensjwt.SecretKeyExample, coreutils.NewITime())
 	appTokens := payloads.ProvideIAppTokensFactory(tokens).New(istructs.AppQName_test1_app1)
 	pp := payloads.PrincipalPayload{
 		Login:       "testlogin",

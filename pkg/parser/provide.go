@@ -8,7 +8,7 @@ import (
 	"errors"
 
 	"github.com/voedger/voedger/pkg/appdef"
-	coreutils "github.com/voedger/voedger/pkg/utils"
+	"github.com/voedger/voedger/pkg/coreutils"
 )
 
 // ParseFile parses content of the single file, creates FileSchemaAST and returns pointer to it.

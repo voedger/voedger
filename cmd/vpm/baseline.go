@@ -19,7 +19,7 @@ import (
 	"github.com/voedger/voedger/pkg/parser"
 
 	"github.com/voedger/voedger/pkg/compile"
-	coreutils "github.com/voedger/voedger/pkg/utils"
+	"github.com/voedger/voedger/pkg/coreutils"
 )
 
 func newBaselineCmd(params *vpmParams) *cobra.Command {

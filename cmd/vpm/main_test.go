@@ -13,9 +13,9 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/goutils/testingu"
-	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 func TestCompileBasicUsage(t *testing.T) {

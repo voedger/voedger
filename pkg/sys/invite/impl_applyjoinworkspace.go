@@ -8,24 +8,24 @@ import (
 	"fmt"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/coreutils/federation"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/itokens"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	"github.com/voedger/voedger/pkg/sys"
 	"github.com/voedger/voedger/pkg/sys/authnz"
 	"github.com/voedger/voedger/pkg/sys/collection"
-	coreutils "github.com/voedger/voedger/pkg/utils"
-	"github.com/voedger/voedger/pkg/utils/federation"
 )
 
-func asyncProjectorApplyJoinWorkspace(timeFunc coreutils.TimeFunc, federation federation.IFederation, tokens itokens.ITokens) istructs.Projector {
+func asyncProjectorApplyJoinWorkspace(time coreutils.ITime, federation federation.IFederation, tokens itokens.ITokens) istructs.Projector {
 	return istructs.Projector{
 		Name: qNameAPApplyJoinWorkspace,
-		Func: applyJoinWorkspace(timeFunc, federation, tokens),
+		Func: applyJoinWorkspace(time, federation, tokens),
 	}
 }
 
-func applyJoinWorkspace(timeFunc coreutils.TimeFunc, federation federation.IFederation, tokens itokens.ITokens) func(event istructs.IPLogEvent, state istructs.IState, intents istructs.IIntents) (err error) {
+func applyJoinWorkspace(time coreutils.ITime, federation federation.IFederation, tokens itokens.ITokens) func(event istructs.IPLogEvent, state istructs.IState, intents istructs.IIntents) (err error) {
 	return func(event istructs.IPLogEvent, s istructs.IState, intents istructs.IIntents) (err error) {
 		// it is AFTER EXECUTE ON (InitiateJoinWorkspace) so no doc checking here
 		skbCDocInvite, err := s.KeyBuilder(sys.Storage_Record, qNameCDocInvite)
@@ -130,10 +130,10 @@ func applyJoinWorkspace(timeFunc coreutils.TimeFunc, federation federation.IFede
 		//TODO why Login update???
 		if svCDocSubject == nil {
 			body = fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"State":%d,"SubjectID":%d,"Updated":%d}}]}`,
-				svCDocInvite.AsRecordID(appdef.SystemField_ID), State_Joined, resp.NewID(), timeFunc().UnixMilli())
+				svCDocInvite.AsRecordID(appdef.SystemField_ID), State_Joined, resp.NewID(), time.Now().UnixMilli())
 		} else {
 			body = fmt.Sprintf(`{"cuds":[{"sys.ID":%d,"fields":{"State":%d,"Updated":%d}}]}`,
-				svCDocInvite.AsRecordID(appdef.SystemField_ID), State_Joined, timeFunc().UnixMilli())
+				svCDocInvite.AsRecordID(appdef.SystemField_ID), State_Joined, time.Now().UnixMilli())
 		}
 		_, err = federation.Func(
 			fmt.Sprintf("api/%s/%d/c.sys.CUD", appQName, event.Workspace()),

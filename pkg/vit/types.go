@@ -7,13 +7,13 @@ package vit
 import (
 	"sync"
 	"testing"
-	"time"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/extensionpoints"
+	"github.com/voedger/voedger/pkg/isecrets"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/state/smtptest"
-	coreutils "github.com/voedger/voedger/pkg/utils"
 	"github.com/voedger/voedger/pkg/vvm"
 )
 
@@ -33,11 +33,7 @@ type VIT struct {
 	configCleanupsAmount int
 	emailCaptor          emailCaptor
 	httpClient           coreutils.IHTTPClient
-}
-
-type timeService struct {
-	m              sync.Mutex
-	currentInstant time.Time
+	mockTime             coreutils.IMockTime
 }
 
 type VITConfig struct {
@@ -53,6 +49,7 @@ type vitPreConfig struct {
 	cleanups     []func(vit *VIT)
 	initFuncs    []func()
 	postInitFunc func(vit *VIT)
+	secrets      map[string][]byte
 }
 
 type vitConfigOptFunc func(*vitPreConfig)
@@ -142,3 +139,8 @@ type signUpOpts struct {
 }
 
 type emailCaptor chan smtptest.Message
+
+type implVITISecretsReader struct {
+	secrets          map[string][]byte
+	underlyingReader isecrets.ISecretReader
+}

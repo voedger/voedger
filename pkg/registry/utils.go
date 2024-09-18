@@ -14,9 +14,9 @@ import (
 	"golang.org/x/crypto/bcrypt"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/sys"
-	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 func CheckAppWSID(login string, urlWSID istructs.WSID, numAppWorkspaces istructs.NumAppWorkspaces) error {

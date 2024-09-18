@@ -59,10 +59,11 @@ func implProvideCommandProcessorState(
 	state.addStorage(sys.Storage_WLog, storages.NewWLogStorage(ctx, ieventsFunc, wsidFunc), S_GET)
 	state.addStorage(sys.Storage_AppSecret, storages.NewAppSecretsStorage(secretReader), S_GET)
 	state.addStorage(sys.Storage_RequestSubject, storages.NewSubjectStorage(principalsFunc, tokenFunc), S_GET)
-	state.addStorage(sys.Storage_Result, storages.NewCmdResultStorage(cmdResultBuilderFunc), S_INSERT)
+	state.addStorage(sys.Storage_Result, storages.NewResultStorage(cmdResultBuilderFunc), S_INSERT)
 	state.addStorage(sys.Storage_Uniq, storages.NewUniquesStorage(appStructsFunc, wsidFunc, opts.UniquesHandler), S_GET)
 	state.addStorage(sys.Storage_Response, storages.NewResponseStorage(), S_INSERT)
 	state.addStorage(sys.Storage_CommandContext, storages.NewCommandContextStorage(argFunc, unloggedArgFunc, wsidFunc, wlogOffsetFunc), S_GET)
+	state.addStorage(sys.Storage_Logger, storages.NewLoggerStorage(), S_INSERT)
 
 	return state
 }

@@ -9,7 +9,7 @@ import (
 	"os"
 	"path/filepath"
 
-	coreutils "github.com/voedger/voedger/pkg/utils"
+	"github.com/voedger/voedger/pkg/coreutils"
 )
 
 var ceSuccessPhrases = map[string]string{

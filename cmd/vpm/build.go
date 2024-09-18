@@ -8,20 +8,21 @@ package main
 import (
 	"errors"
 	"fmt"
-	"github.com/voedger/voedger/pkg/parser"
 	"io"
 	"os"
 	"path/filepath"
 	"slices"
 	"strings"
 
+	"github.com/voedger/voedger/pkg/parser"
+
 	"github.com/google/uuid"
 
 	"github.com/spf13/cobra"
 	"github.com/voedger/voedger/pkg/compile"
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/goutils/exec"
 	"github.com/voedger/voedger/pkg/goutils/logger"
-	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 func newBuildCmd(params *vpmParams) *cobra.Command {

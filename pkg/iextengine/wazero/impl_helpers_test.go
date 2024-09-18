@@ -13,10 +13,10 @@ import (
 	"path/filepath"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/state/stateprovide"
 	"github.com/voedger/voedger/pkg/sys"
-	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 var errTestIOError = errors.New("test i/o error")
@@ -255,6 +255,7 @@ type mockKeyBuilder struct {
 	data    map[string]interface{}
 }
 
+func (kb *mockKeyBuilder) String() string                                   { return "" }
 func (kb *mockKeyBuilder) Storage() appdef.QName                            { return kb.storage }
 func (kb *mockKeyBuilder) Entity() appdef.QName                             { return kb.entity }
 func (kb *mockKeyBuilder) PartitionKey() istructs.IRowWriter                { return nil }

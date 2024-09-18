@@ -18,10 +18,12 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appparts"
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/iauthnzimpl"
 	"github.com/voedger/voedger/pkg/iextengine"
 	"github.com/voedger/voedger/pkg/iprocbus"
 	"github.com/voedger/voedger/pkg/iratesce"
+	"github.com/voedger/voedger/pkg/isecretsimpl"
 	"github.com/voedger/voedger/pkg/istorage/mem"
 	istorageimpl "github.com/voedger/voedger/pkg/istorage/provider"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -33,14 +35,9 @@ import (
 	"github.com/voedger/voedger/pkg/processors"
 	"github.com/voedger/voedger/pkg/sys"
 	"github.com/voedger/voedger/pkg/sys/authnz"
-	coreutils "github.com/voedger/voedger/pkg/utils"
 	"github.com/voedger/voedger/pkg/vvm/engines"
 	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
 )
-
-var now = time.Now()
-
-var timeFunc = coreutils.TimeFunc(func() time.Time { return now })
 
 var (
 	appName    appdef.AppQName           = istructs.AppQName_test1_app1
@@ -215,7 +212,7 @@ func deployTestAppWithSecretToken(require *require.Assertions,
 	cfg := cfgs.AddBuiltInAppConfig(appName, adb)
 	cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
 
-	atf := payloads.TestAppTokensFactory(itokensjwt.ProvideITokens(itokensjwt.SecretKeyExample, timeFunc))
+	atf := payloads.ProvideIAppTokensFactory(itokensjwt.TestTokensJWT())
 	asp := istructsmem.Provide(cfgs, iratesce.TestBucketsFactory, atf, storageProvider)
 
 	article := func(id, idDepartment istructs.RecordID, name string) istructs.IObject {
@@ -262,14 +259,14 @@ func deployTestAppWithSecretToken(require *require.Assertions,
 		HandlingPartition: partID,
 		Workspace:         wsID,
 		QName:             istructs.QNameCommandCUD,
-		RegisteredAt:      istructs.UnixMilli(time.Now().UnixMilli()),
+		RegisteredAt:      istructs.UnixMilli(coreutils.MockTime.Now().UnixMilli()),
 		PLogOffset:        plogOffset,
 		WLogOffset:        wlogOffset,
 	}
 	reb := as.Events().GetSyncRawEventBuilder(
 		istructs.SyncRawEventBuilderParams{
 			GenericRawEventBuilderParams: grebp,
-			SyncedAt:                     istructs.UnixMilli(time.Now().UnixMilli()),
+			SyncedAt:                     istructs.UnixMilli(coreutils.MockTime.Now().UnixMilli()),
 		},
 	)
 
@@ -294,7 +291,7 @@ func deployTestAppWithSecretToken(require *require.Assertions,
 
 	// create stub for cdoc.sys.WorkspaceDescriptor to make query processor work
 	require.NoError(err)
-	now := time.Now()
+	now := coreutils.MockTime.Now()
 	grebp = istructs.GenericRawEventBuilderParams{
 		HandlingPartition: partID,
 		Workspace:         wsID,
@@ -385,7 +382,7 @@ func TestBasicUsage_ServiceFactory(t *testing.T) {
 		func(ctx context.Context, sender ibus.ISender) IResultSenderClosable { return rs },
 		appParts,
 		3, // max concurrent queries
-		metrics, "vvm", authn, authz, itokensjwt.TestTokensJWT(), nil, statelessResources)
+		metrics, "vvm", authn, authz, itokensjwt.TestTokensJWT(), nil, statelessResources, isecretsimpl.TestSecretReader)
 	processorCtx, processorCtxCancel := context.WithCancel(context.Background())
 	wg := sync.WaitGroup{}
 	wg.Add(1)
@@ -1146,7 +1143,7 @@ func TestRateLimiter(t *testing.T) {
 		func(ctx context.Context, sender ibus.ISender) IResultSenderClosable { return rs },
 		appParts,
 		3, // max concurrent queries
-		metrics, "vvm", authn, authz, itokensjwt.TestTokensJWT(), nil, statelessResources)
+		metrics, "vvm", authn, authz, itokensjwt.TestTokensJWT(), nil, statelessResources, isecretsimpl.TestSecretReader)
 	go queryProcessor.Run(context.Background())
 
 	systemToken := getSystemToken(appTokens)
@@ -1195,7 +1192,7 @@ func TestAuthnz(t *testing.T) {
 		func(ctx context.Context, sender ibus.ISender) IResultSenderClosable { return rs },
 		appParts,
 		3, // max concurrent queries
-		metrics, "vvm", authn, authz, itokensjwt.TestTokensJWT(), nil, statelessResources)
+		metrics, "vvm", authn, authz, itokensjwt.TestTokensJWT(), nil, statelessResources, isecretsimpl.TestSecretReader)
 	go queryProcessor.Run(context.Background())
 
 	t.Run("no token for a query that requires authorization -> 403 unauthorized", func(t *testing.T) {
@@ -1208,7 +1205,7 @@ func TestAuthnz(t *testing.T) {
 	t.Run("expired token -> 401 unauthorized", func(t *testing.T) {
 		systemToken := getSystemToken(appTokens)
 		// make the token be expired
-		now = now.Add(2 * time.Minute)
+		coreutils.MockTime.Add(2 * time.Minute)
 		serviceChannel <- NewQueryMessage(context.Background(), appName, partID, wsID, nil, body, qNameFunction, "127.0.0.1", systemToken)
 		var se coreutils.SysError
 		require.ErrorAs(<-errs, &se)
@@ -1340,6 +1337,7 @@ type mockStateKeyBuilder struct {
 	mock.Mock
 }
 
+func (b *mockStateKeyBuilder) String() string { return "" }
 func (b *mockStateKeyBuilder) PutRecordID(name string, value istructs.RecordID) {
 	b.Called(name, value)
 }

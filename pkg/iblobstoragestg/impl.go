@@ -14,15 +14,15 @@ import (
 	"io"
 	"reflect"
 
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/iblobstorage"
 	"github.com/voedger/voedger/pkg/istructs"
-	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 type bStorageType struct {
 	appStorage BlobAppStoragePtr
-	now        coreutils.TimeFunc
+	time       coreutils.ITime
 }
 
 func (b *bStorageType) WriteBLOB(ctx context.Context, key iblobstorage.KeyType, descr iblobstorage.DescrType, reader io.Reader, maxSize int64) (err error) {
@@ -34,7 +34,7 @@ func (b *bStorageType) WriteBLOB(ctx context.Context, key iblobstorage.KeyType, 
 	)
 	state := iblobstorage.BLOBState{
 		Descr:     descr,
-		StartedAt: istructs.UnixMilli(b.now().UnixMilli()),
+		StartedAt: istructs.UnixMilli(b.time.Now().UnixMilli()),
 		Status:    iblobstorage.BLOBStatus_InProcess,
 	}
 
@@ -74,7 +74,7 @@ func (b *bStorageType) WriteBLOB(ctx context.Context, key iblobstorage.KeyType, 
 	if errors.Is(err, io.EOF) {
 		err = nil
 	}
-	state.FinishedAt = istructs.UnixMilli(b.now().UnixMilli())
+	state.FinishedAt = istructs.UnixMilli(b.time.Now().UnixMilli())
 	state.Status = iblobstorage.BLOBStatus_Completed
 	state.Size = bytesRead
 	if err != nil {

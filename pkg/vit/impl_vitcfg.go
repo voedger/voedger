@@ -12,11 +12,11 @@ import (
 	"github.com/voedger/voedger/pkg/apps"
 	"github.com/voedger/voedger/pkg/apps/sys/clusterapp"
 	"github.com/voedger/voedger/pkg/apps/sys/registryapp"
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/sys/smtp"
 	"github.com/voedger/voedger/pkg/sys/workspace"
-	coreutils "github.com/voedger/voedger/pkg/utils"
 	"github.com/voedger/voedger/pkg/vvm"
 )
 
@@ -188,5 +188,11 @@ func WithVerifiedValue(docQName appdef.QName, fieldName string, desiredValue str
 			fieldName:    fieldName,
 			desiredValue: desiredValue,
 		}
+	}
+}
+
+func WithSecret(name string, value []byte) vitConfigOptFunc {
+	return func(vpc *vitPreConfig) {
+		vpc.secrets[name] = value
 	}
 }

@@ -22,6 +22,7 @@ import (
 	"github.com/voedger/voedger/pkg/goutils/logger"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/irates"
 	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istorage/cas"
@@ -33,7 +34,6 @@ import (
 	"github.com/voedger/voedger/pkg/state/smtptest"
 	"github.com/voedger/voedger/pkg/sys/authnz"
 	"github.com/voedger/voedger/pkg/sys/verifier"
-	coreutils "github.com/voedger/voedger/pkg/utils"
 	"github.com/voedger/voedger/pkg/vvm"
 )
 
@@ -77,7 +77,7 @@ func newVit(t testing.TB, vitCfg *VITConfig, useCas bool) *VIT {
 	cfg.VVMPort = 0
 	cfg.MetricsServicePort = 0
 
-	cfg.TimeFunc = coreutils.TimeFunc(func() time.Time { return ts.now() })
+	cfg.Time = coreutils.MockTime
 	if !coreutils.IsTest() {
 		cfg.SecretsReader = itokensjwt.ProvideTestSecretsReader(cfg.SecretsReader)
 	}
@@ -88,6 +88,7 @@ func newVit(t testing.TB, vitCfg *VITConfig, useCas bool) *VIT {
 	vitPreConfig := &vitPreConfig{
 		vvmCfg:  &cfg,
 		vitApps: vitApps{},
+		secrets: map[string][]byte{},
 	}
 
 	if useCas {
@@ -104,6 +105,8 @@ func newVit(t testing.TB, vitCfg *VITConfig, useCas bool) *VIT {
 	for _, initFunc := range vitPreConfig.initFuncs {
 		initFunc()
 	}
+
+	cfg.SecretsReader = &implVITISecretsReader{secrets: vitPreConfig.secrets, underlyingReader: cfg.SecretsReader}
 
 	// eliminate timeouts impact for debugging
 	cfg.RouterReadTimeout = int(debugTimeout)
@@ -131,6 +134,7 @@ func newVit(t testing.TB, vitCfg *VITConfig, useCas bool) *VIT {
 		isOnSharedConfig:     vitCfg.isShared,
 		configCleanupsAmount: len(vitPreConfig.cleanups),
 		emailCaptor:          emailMessagesChan,
+		mockTime:             coreutils.MockTime,
 	}
 	httpClient, httpClientCleanup := coreutils.NewIHTTPClient()
 	vit.httpClient = httpClient
@@ -463,16 +467,11 @@ func (vit *VIT) NextNumber() int {
 }
 
 func (vit *VIT) Now() time.Time {
-	return ts.now()
-}
-
-func (vit *VIT) SetNow(now time.Time) {
-	ts.setCurrentInstant(now)
-	vit.refreshTokens()
+	return vit.Time.Now()
 }
 
 func (vit *VIT) TimeAdd(dur time.Duration) {
-	ts.add(dur)
+	vit.mockTime.Add(dur)
 	vit.refreshTokens()
 }
 
@@ -553,25 +552,6 @@ func (vit *VIT) iterateDelaySetters(cb func(delaySetter istorage.IStorageDelaySe
 	}
 }
 
-func (ts *timeService) now() time.Time {
-	ts.m.Lock()
-	res := ts.currentInstant
-	ts.m.Unlock()
-	return res
-}
-
-func (ts *timeService) add(dur time.Duration) {
-	ts.m.Lock()
-	ts.currentInstant = ts.currentInstant.Add(dur)
-	ts.m.Unlock()
-}
-
-func (ts *timeService) setCurrentInstant(now time.Time) {
-	ts.m.Lock()
-	ts.currentInstant = now
-	ts.m.Unlock()
-}
-
 func (ec emailCaptor) checkEmpty(t testing.TB) {
 	select {
 	case _, ok := <-ec:
@@ -585,4 +565,11 @@ func (ec emailCaptor) checkEmpty(t testing.TB) {
 
 func (ec emailCaptor) shutDown() {
 	close(ec)
+}
+
+func (sr *implVITISecretsReader) ReadSecret(name string) ([]byte, error) {
+	if val, ok := sr.secrets[name]; ok {
+		return val, nil
+	}
+	return sr.underlyingReader.ReadSecret(name)
 }

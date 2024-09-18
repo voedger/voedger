@@ -15,7 +15,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	coreutils "github.com/voedger/voedger/pkg/utils"
+	"github.com/voedger/voedger/pkg/coreutils"
 	it "github.com/voedger/voedger/pkg/vit"
 )
 

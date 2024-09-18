@@ -6,20 +6,20 @@
 package schedulers
 
 import (
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/istructs"
-	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 // Returns application workspaces handled by the specified partition.
 //
 // Returned map keys - workspace IDs, values - workspace indexes in application workspaces list.
-func AppWorkspacesHandledByPartition(partCount istructs.NumAppPartitions, wsCount istructs.NumAppWorkspaces, part istructs.PartitionID) map[istructs.WSID]int {
-	ws := make(map[istructs.WSID]int)
-	for wsNum := 0; wsNum < int(wsCount); wsNum++ {
-		wsID := istructs.NewWSID(istructs.CurrentClusterID(), istructs.WSID(wsNum+int(istructs.FirstBaseAppWSID)))
-		if coreutils.AppPartitionID(wsID, partCount) == part {
-			ws[wsID] = wsNum
+func AppWorkspacesHandledByPartition(numAppPartitions istructs.NumAppPartitions, numAppWorkspaces istructs.NumAppWorkspaces, part istructs.PartitionID) map[istructs.WSID]int {
+	appWSNumbers := make(map[istructs.WSID]int)
+	for appWorspaceIdx := 0; appWorspaceIdx < int(numAppWorkspaces); appWorspaceIdx++ {
+		appWSID := istructs.NewWSID(istructs.CurrentClusterID(), istructs.WSID(appWorspaceIdx+int(istructs.FirstBaseAppWSID)))
+		if coreutils.AppPartitionID(appWSID, numAppPartitions) == part {
+			appWSNumbers[appWSID] = appWorspaceIdx
 		}
 	}
-	return ws
+	return appWSNumbers
 }

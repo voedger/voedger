@@ -9,31 +9,31 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appparts"
+	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/coreutils/federation"
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/isecrets"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/itokens"
 	imetrics "github.com/voedger/voedger/pkg/metrics"
 	"github.com/voedger/voedger/pkg/pipeline"
+	"github.com/voedger/voedger/pkg/processors"
 	"github.com/voedger/voedger/pkg/state"
-	"github.com/voedger/voedger/pkg/utils/federation"
 )
 
 type TimeAfterFunc func(d time.Duration) <-chan time.Time
 
-type TimeFunc func() time.Time
-
 type LogErrorFunc func(args ...interface{})
 
 type BasicSchedulerConfig struct {
-	VvmName string
+	VvmName processors.VVMName
 
 	SecretReader isecrets.ISecretReader
 	Tokens       itokens.ITokens
 	Metrics      imetrics.IMetrics
 	Broker       in10n.IN10nBroker
 	Federation   federation.IFederation
-	TimeFunc     TimeFunc
+	Time         coreutils.ITime
 
 	Opts []state.StateOptFunc
 

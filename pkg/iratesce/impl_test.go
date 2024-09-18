@@ -12,9 +12,9 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/irates"
 	"github.com/voedger/voedger/pkg/istructs"
-	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 // example of limiting the total number of registrations (no more than 1000) and registrations from one address (10) per day
@@ -45,7 +45,7 @@ func TestBasicUsage(t *testing.T) {
 	}
 
 	// creating buckets
-	buckets := Provide(testTimeFunc)
+	buckets := Provide(coreutils.MockTime)
 
 	// passing named constraints to bucket's
 	buckets.SetDefaultBucketState(sTotalRegLimitName, totalRegistrationQuota)
@@ -91,16 +91,11 @@ func TestBasicUsage(t *testing.T) {
 	require.False(buckets.TakeTokens(keys, 1))
 }
 
-var testTime = time.Now()
-
-var testTimeFunc = coreutils.TimeFunc(func() time.Time { return testTime })
-
 // quick test of the functionality of the buckets structure (implementation of the irates interface.IBuckets)
-// the testTimeFunc() function is used to emulate time ranges
 func TestBucketsNew(t *testing.T) {
 	require := require.New(t)
 
-	buckets := Provide(testTimeFunc)
+	buckets := Provide(coreutils.MockTime)
 
 	// description of the application and workspace
 	app := istructs.AppQName_test1_app1
@@ -155,19 +150,19 @@ func TestBucketsNew(t *testing.T) {
 	require.False(buckets.TakeTokens(keys, 100))
 	require.NoError(err)
 
-	testTime = testTime.Add(time.Hour)
+	coreutils.MockTime.Add(time.Hour)
 
 	bs, err = buckets.GetBucketState(totalRegKey)
 	require.NoError(err)
 	require.Equal(bs.TakenTokens, irates.NumTokensType(0))
 
-	testTime = testTime.Add(-time.Hour)
+	coreutils.MockTime.Add(-time.Hour)
 
 	bs, err = buckets.GetBucketState(totalRegKey)
 	require.NoError(err)
 	require.Equal(bs.TakenTokens, irates.NumTokensType(100))
 
-	testTime = testTime.Add(time.Hour)
+	coreutils.MockTime.Add(time.Hour)
 
 	keys = []irates.BucketKey{totalRegKey, addrRegKey}
 	require.True(buckets.TakeTokens(keys, 5))
@@ -186,7 +181,7 @@ func TestBucketsNew(t *testing.T) {
 	require.NoError(err)
 	require.Equal(bs.TakenTokens, irates.NumTokensType(5))
 
-	testTime = testTime.Add(5 * time.Hour)
+	coreutils.MockTime.Add(5 * time.Hour)
 
 	bs, err = buckets.GetBucketState(totalRegKey)
 	require.NoError(err)

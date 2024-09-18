@@ -6,8 +6,8 @@ package workspace
 
 import (
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/coreutils/federation"
 	"github.com/voedger/voedger/pkg/istructs"
-	"github.com/voedger/voedger/pkg/utils/federation"
 )
 
 // template recordID -> template fieldName -> uploaded blobID to set to fieldName

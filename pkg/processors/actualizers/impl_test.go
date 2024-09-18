@@ -10,12 +10,12 @@ import (
 	"context"
 	"errors"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/require"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appparts"
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/iextengine"
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/in10nmem"
@@ -281,7 +281,7 @@ func deployTestAppEx(
 			ChannelsPerSubject:      10,
 			Subscriptions:           1000,
 			SubscriptionsPerSubject: 10,
-		}, time.Now)
+		}, coreutils.NewITime())
 		actualizerCfg.Broker = n10nBroker
 	} else {
 		n10nBroker = actualizerCfg.Broker

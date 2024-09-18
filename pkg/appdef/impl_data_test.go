@@ -13,8 +13,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/voedger/voedger/pkg/coreutils/utils"
 	"github.com/voedger/voedger/pkg/goutils/testingu/require"
-	"github.com/voedger/voedger/pkg/utils/utils"
 )
 
 func Test_AppDef_AddData(t *testing.T) {

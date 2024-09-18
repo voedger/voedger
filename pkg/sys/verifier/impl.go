@@ -14,6 +14,8 @@ import (
 	"golang.org/x/text/message/catalog"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/coreutils/federation"
 	"github.com/voedger/voedger/pkg/irates"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
@@ -21,8 +23,6 @@ import (
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	"github.com/voedger/voedger/pkg/sys"
 	"github.com/voedger/voedger/pkg/sys/smtp"
-	coreutils "github.com/voedger/voedger/pkg/utils"
-	"github.com/voedger/voedger/pkg/utils/federation"
 )
 
 var translationsCatalog = coreutils.GetCatalogFromTranslations(translations)
@@ -81,10 +81,10 @@ func provideIEVExec(itokens itokens.ITokens, federation federation.IFederation, 
 	}
 }
 
-func applySendEmailVerificationCode(federation federation.IFederation, smtpCfg smtp.Cfg, timeFunc coreutils.TimeFunc) func(event istructs.IPLogEvent, state istructs.IState, intents istructs.IIntents) (err error) {
+func applySendEmailVerificationCode(federation federation.IFederation, smtpCfg smtp.Cfg) func(event istructs.IPLogEvent, state istructs.IState, intents istructs.IIntents) (err error) {
 	return func(event istructs.IPLogEvent, st istructs.IState, intents istructs.IIntents) (err error) {
 		eventTime := time.UnixMilli(int64(event.RegisteredAt()))
-		if eventTime.Add(threeDays).Before(timeFunc()) {
+		if eventTime.Add(threeDays).Before(time.Now()) {
 			// skip old emails to prevent re-sending after projector rename
 			// see https://github.com/voedger/voedger/issues/275
 			return nil

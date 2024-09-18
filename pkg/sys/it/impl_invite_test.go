@@ -11,10 +11,10 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/state/smtptest"
 	"github.com/voedger/voedger/pkg/sys/invite"
-	coreutils "github.com/voedger/voedger/pkg/utils"
 	it "github.com/voedger/voedger/pkg/vit"
 )
 
@@ -194,7 +194,7 @@ func TestInvite_BasicUsage(t *testing.T) {
 
 	t.Run("reinivite the joined already -> error", func(t *testing.T) {
 		body := fmt.Sprintf(`{"args":{"Email":"%s","Roles":"%s","ExpireDatetime":%d,"EmailTemplate":"%s","EmailSubject":"%s"}}`,
-			email1, initialRoles, 1674751138000, inviteEmailTemplate, inviteEmailSubject)
+			email1, initialRoles, vit.Now().UnixMilli(), inviteEmailTemplate, inviteEmailSubject)
 		vit.PostWS(ws, "c.sys.InitiateInvitationByEMail", body, coreutils.Expect400(invite.ErrSubjectAlreadyExists.Error()))
 	})
 
@@ -278,7 +278,7 @@ func TestCancelSentInvite(t *testing.T) {
 	ws := vit.CreateWorkspace(wsParams, loginPrn)
 
 	t.Run("basic usage", func(t *testing.T) {
-		inviteID := InitiateInvitationByEMail(vit, ws, 1674751138000, email, initialRoles, inviteEmailTemplate, inviteEmailSubject)
+		inviteID := InitiateInvitationByEMail(vit, ws, vit.Now().UnixMilli(), email, initialRoles, inviteEmailTemplate, inviteEmailSubject)
 		WaitForInviteState(vit, ws, inviteID, invite.State_ToBeInvited, invite.State_Invited)
 
 		//Read it for successful vit tear down
@@ -296,7 +296,7 @@ func testOverwriteRoles(t *testing.T, vit *it.VIT, ws *it.AppWorkspace, email st
 	require := require.New(t)
 
 	// reinvite when invitation is not accepted yet -> roles must be overwritten
-	newInviteID := InitiateInvitationByEMail(vit, ws, 1674751138000, email, newRoles, inviteEmailTemplate, inviteEmailSubject)
+	newInviteID := InitiateInvitationByEMail(vit, ws, vit.Now().UnixMilli(), email, newRoles, inviteEmailTemplate, inviteEmailSubject)
 	require.Zero(newInviteID)
 	WaitForInviteState(vit, ws, inviteID, invite.State_ToBeInvited, invite.State_Invited)
 	actualEmail := vit.CaptureEmail()

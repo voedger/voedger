@@ -996,3 +996,8 @@ func (row *rowType) String() string {
 	// short form, such as "CDoc «sales.BillDocument»"
 	return fmt.Sprint(row.typ)
 }
+
+type BuiltinJob struct {
+	Name appdef.QName
+	Func func(state istructs.IState, intents istructs.IIntents) error
+}

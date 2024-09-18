@@ -8,6 +8,7 @@ package istructs
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -157,6 +158,7 @@ type IStateValueBuilder interface {
 }
 type IStateKeyBuilder interface {
 	IKeyBuilder
+	fmt.Stringer
 	Storage() appdef.QName
 	Entity() appdef.QName
 }

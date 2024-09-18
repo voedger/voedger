@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/in10nmem"
 	in10nmemv1 "github.com/voedger/voedger/pkg/in10nmem/v1"
@@ -43,7 +44,7 @@ func main() {
 		runChannels(nb)
 	case "v2":
 		println("Running v2...")
-		nb, cleanup := in10nmem.ProvideEx2(quotas, time.Now)
+		nb, cleanup := in10nmem.ProvideEx2(quotas, coreutils.NewITime())
 		defer cleanup()
 
 		runChannels(nb)

@@ -11,7 +11,7 @@ import (
 	"path/filepath"
 
 	"github.com/spf13/cobra"
-	coreutils "github.com/voedger/voedger/pkg/utils"
+	"github.com/voedger/voedger/pkg/coreutils"
 )
 
 // nolint
@@ -37,6 +37,7 @@ func newRestoreCmd() *cobra.Command {
 
 func restore(cmd *cobra.Command, args []string) error {
 
+	currentCmd = cmd
 	cluster := newCluster()
 
 	var err error

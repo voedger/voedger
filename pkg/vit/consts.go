@@ -25,13 +25,13 @@ const (
 )
 
 var (
-	ts              = &timeService{currentInstant: DefaultTestTime}
-	vits            = map[*VITConfig]*VIT{}
-	DefaultTestTime = time.UnixMilli(testTimeMillis) // 2022-04-11 11:54:46 +0300 MSK
+	vits = map[*VITConfig]*VIT{}
 	//go:embed schemaTestApp1.vsql
 	SchemaTestApp1FS embed.FS
 	//go:embed schemaTestApp2.vsql
 	SchemaTestApp2FS embed.FS
+	//go:embed schemaTestApp2WithJob.vsql
+	SchemaTestApp2WithJobFS embed.FS
 
 	DefaultTestAppEnginesPool = appparts.PoolSize(10, 10, 20, 10)
 	maxRateLimit2PerMinute    = istructs.RateLimit{

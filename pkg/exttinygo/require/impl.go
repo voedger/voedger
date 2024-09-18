@@ -9,8 +9,8 @@ import (
 	"math"
 	"strconv"
 
+	"github.com/voedger/voedger/pkg/coreutils/utils"
 	ext "github.com/voedger/voedger/pkg/exttinygo"
-	"github.com/voedger/voedger/pkg/utils/utils"
 )
 
 func floarToStr(f float64) string {

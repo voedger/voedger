@@ -11,6 +11,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appparts"
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
@@ -18,11 +19,10 @@ import (
 	"github.com/voedger/voedger/pkg/sys/authnz"
 	"github.com/voedger/voedger/pkg/sys/uniques"
 	"github.com/voedger/voedger/pkg/sys/workspace"
-	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 // wrong to use IAppPartitions to get total NumAppPartition because the app the cmd is called for is not deployed yet
-func provideCmdDeployApp(asp istructs.IAppStructsProvider, timeFunc coreutils.TimeFunc, sidecarApps []appparts.SidecarApp) istructsmem.ExecCommandClosure {
+func provideCmdDeployApp(asp istructs.IAppStructsProvider, time coreutils.ITime, sidecarApps []appparts.SidecarApp) istructsmem.ExecCommandClosure {
 	return func(args istructs.ExecCommandArgs) (err error) {
 		appQNameStr := args.ArgumentObject.AsString(Field_AppQName)
 		appQName, err := appdef.ParseAppQName(appQNameStr)
@@ -109,7 +109,7 @@ func provideCmdDeployApp(asp istructs.IAppStructsProvider, timeFunc coreutils.Ti
 		}
 
 		// Initialize app workspaces
-		if _, err = InitAppWSes(as, numAppWorkspacesToDeploy, numAppPartitionsToDeploy, istructs.UnixMilli(timeFunc().UnixMilli())); err != nil {
+		if _, err = InitAppWSes(as, numAppWorkspacesToDeploy, numAppPartitionsToDeploy, istructs.UnixMilli(time.Now().UnixMilli())); err != nil {
 			// notest
 			return fmt.Errorf("failed to deploy %s: %w", appQName, err)
 		}

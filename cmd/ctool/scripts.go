@@ -16,8 +16,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/goutils/exec"
-	coreutils "github.com/voedger/voedger/pkg/utils"
 	"golang.org/x/term"
 )
 
@@ -70,11 +70,22 @@ func verbose() bool {
 	if dryRun {
 		return true
 	}
-	if rootCmd != nil {
-		b, err := rootCmd.Flags().GetBool("verbose")
-		return err == nil && b
+	if currentCmd != nil {
+
+		b, err := currentCmd.Flags().GetBool("verbose")
+		return b && err == nil
 	}
 	return false
+
+}
+
+func trace() bool {
+	if currentCmd != nil {
+		b, err := currentCmd.Flags().GetBool("trace")
+		return b && err == nil
+	}
+	return false
+
 }
 
 func (se *scriptExecuterType) run(scriptName string, args ...string) error {

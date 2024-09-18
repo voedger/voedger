@@ -12,8 +12,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/istorage"
-	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 const casDefaultPort = 9042
