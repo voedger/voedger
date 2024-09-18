@@ -93,8 +93,11 @@ func build(compileRes *compile.Result, params *vpmParams) error {
 	}
 	varFile := filepath.Join(params.Dir, archiveName)
 
+	// set dir without "build" dir on the end. That need to have expected path within the archive: build/file1.txt instead of file1.txt
+	tempDirWithoutBuild := filepath.Dir(tempDir)
+
 	// zip build info directory along with vsql and wasm files
-	return coreutils.Zip(tempDir, varFile)
+	return coreutils.Zip(tempDirWithoutBuild, varFile)
 }
 
 // buildDir creates a directory structure with vsql and wasm files

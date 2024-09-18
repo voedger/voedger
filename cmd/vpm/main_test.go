@@ -316,6 +316,12 @@ func TestBuildExample2(t *testing.T) {
 	err := execRootCmd([]string{"vpm", "orm", "-C", "../../examples/airs-bp2/air"}, "1.0.0")
 	require.NoError(err)
 
+	wd, err := os.Getwd()
+	require.NoError(err)
+
+	f := filepath.Join(wd, "../../examples/airs-bp2/air/air.var")
+	require.NoError(os.Remove(f))
+
 	err = execRootCmd([]string{"vpm", "build", "-C", "../../examples/airs-bp2/air"}, "1.0.0")
 	require.NoError(err)
 }
