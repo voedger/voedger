@@ -229,8 +229,9 @@ func buildTypesNode(parentNode *CompatibilityTreeNode, item appdef.IWithTypes, q
 
 func buildPackagesNode(parentNode *CompatibilityTreeNode, item appdef.IAppDef) (node *CompatibilityTreeNode) {
 	node = newNode(parentNode, NodeNamePackages, nil)
-	item.Packages(func(localName, fullPath string) {
+	item.Packages(func(localName, fullPath string) bool {
 		node.Props = append(node.Props, newNode(node, fullPath, localName))
+		return true
 	})
 	return
 }

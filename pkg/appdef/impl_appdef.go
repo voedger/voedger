@@ -256,7 +256,7 @@ func (app *appDef) PackageLocalNames() []string {
 	return app.packages.localNames()
 }
 
-func (app *appDef) Packages(cb func(local, path string)) {
+func (app *appDef) Packages(cb func(local, path string) bool) {
 	app.packages.forEach(cb)
 }
 

@@ -45,9 +45,11 @@ func (p *packages) add(local, path string) {
 	p.pathByLocal[local] = path
 }
 
-func (p packages) forEach(cb func(local, path string)) {
+func (p packages) forEach(cb func(local, path string) bool) {
 	for _, local := range p.local {
-		cb(local, p.pathByLocal[local])
+		if !cb(local, p.pathByLocal[local]) {
+			break
+		}
 	}
 }
 
