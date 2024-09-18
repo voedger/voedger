@@ -47,10 +47,11 @@ func (app *appDef) CDoc(name QName) (d ICDoc) {
 }
 
 func (app *appDef) CDocs(cb func(ICDoc)) {
-	app.Types(func(t IType) {
+	app.Types(func(t IType) bool {
 		if d, ok := t.(ICDoc); ok {
 			cb(d)
 		}
+		return true
 	})
 }
 
@@ -62,10 +63,11 @@ func (app *appDef) Command(name QName) ICommand {
 }
 
 func (app *appDef) Commands(cb func(ICommand)) {
-	app.Types(func(t IType) {
+	app.Types(func(t IType) bool {
 		if c, ok := t.(ICommand); ok {
 			cb(c)
 		}
+		return true
 	})
 }
 
@@ -77,10 +79,11 @@ func (app *appDef) CRecord(name QName) ICRecord {
 }
 
 func (app *appDef) CRecords(cb func(ICRecord)) {
-	app.Types(func(t IType) {
+	app.Types(func(t IType) bool {
 		if r, ok := t.(ICRecord); ok {
 			cb(r)
 		}
+		return true
 	})
 }
 
@@ -92,12 +95,13 @@ func (app *appDef) Data(name QName) IData {
 }
 
 func (app *appDef) DataTypes(incSys bool, cb func(IData)) {
-	app.Types(func(t IType) {
+	app.Types(func(t IType) bool {
 		if d, ok := t.(IData); ok {
 			if incSys || !d.IsSystem() {
 				cb(d)
 			}
 		}
+		return true
 	})
 }
 
@@ -111,10 +115,11 @@ func (app *appDef) Extension(name QName) IExtension {
 }
 
 func (app *appDef) Extensions(cb func(IExtension)) {
-	app.Types(func(t IType) {
+	app.Types(func(t IType) bool {
 		if ex, ok := t.(IExtension); ok {
 			cb(ex)
 		}
+		return true
 	})
 }
 
@@ -137,18 +142,20 @@ func (app *appDef) Function(name QName) IFunction {
 }
 
 func (app *appDef) Functions(cb func(IFunction)) {
-	app.Types(func(t IType) {
+	app.Types(func(t IType) bool {
 		if f, ok := t.(IFunction); ok {
 			cb(f)
 		}
+		return true
 	})
 }
 
 func (app *appDef) GDocs(cb func(IGDoc)) {
-	app.Types(func(t IType) {
+	app.Types(func(t IType) bool {
 		if d, ok := t.(IGDoc); ok {
 			cb(d)
 		}
+		return true
 	})
 }
 
@@ -160,10 +167,11 @@ func (app *appDef) GRecord(name QName) IGRecord {
 }
 
 func (app *appDef) GRecords(cb func(IGRecord)) {
-	app.Types(func(t IType) {
+	app.Types(func(t IType) bool {
 		if r, ok := t.(IGRecord); ok {
 			cb(r)
 		}
+		return true
 	})
 }
 
@@ -175,10 +183,11 @@ func (app *appDef) Job(name QName) IJob {
 }
 
 func (app *appDef) Jobs(cb func(IJob)) {
-	app.Types(func(t IType) {
+	app.Types(func(t IType) bool {
 		if j, ok := t.(IJob); ok {
 			cb(j)
 		}
+		return true
 	})
 }
 
@@ -190,10 +199,11 @@ func (app *appDef) Limit(name QName) ILimit {
 }
 
 func (app *appDef) Limits(cb func(ILimit)) {
-	app.Types(func(t IType) {
+	app.Types(func(t IType) bool {
 		if l, ok := t.(ILimit); ok {
 			cb(l)
 		}
+		return true
 	})
 }
 
@@ -207,10 +217,11 @@ func (app *appDef) Object(name QName) IObject {
 }
 
 func (app *appDef) Objects(cb func(IObject)) {
-	app.Types(func(t IType) {
+	app.Types(func(t IType) bool {
 		if o, ok := t.(IObject); ok {
 			cb(o)
 		}
+		return true
 	})
 }
 
@@ -222,10 +233,11 @@ func (app *appDef) ODoc(name QName) IODoc {
 }
 
 func (app *appDef) ODocs(cb func(IODoc)) {
-	app.Types(func(t IType) {
+	app.Types(func(t IType) bool {
 		if d, ok := t.(IODoc); ok {
 			cb(d)
 		}
+		return true
 	})
 }
 
@@ -237,10 +249,11 @@ func (app *appDef) ORecord(name QName) IORecord {
 }
 
 func (app *appDef) ORecords(cb func(IORecord)) {
-	app.Types(func(t IType) {
+	app.Types(func(t IType) bool {
 		if r, ok := t.(IORecord); ok {
 			cb(r)
 		}
+		return true
 	})
 }
 
@@ -268,18 +281,20 @@ func (app *appDef) Projector(name QName) IProjector {
 }
 
 func (app *appDef) Projectors(cb func(IProjector)) {
-	app.Types(func(t IType) {
+	app.Types(func(t IType) bool {
 		if p, ok := t.(IProjector); ok {
 			cb(p)
 		}
+		return true
 	})
 }
 
 func (app *appDef) Queries(cb func(IQuery)) {
-	app.Types(func(t IType) {
+	app.Types(func(t IType) bool {
 		if q, ok := t.(IQuery); ok {
 			cb(q)
 		}
+		return true
 	})
 }
 
@@ -298,10 +313,11 @@ func (app appDef) Rate(name QName) IRate {
 }
 
 func (app appDef) Rates(cb func(IRate)) {
-	app.Types(func(t IType) {
+	app.Types(func(t IType) bool {
 		if r, ok := t.(IRate); ok {
 			cb(r)
 		}
+		return true
 	})
 }
 
@@ -330,10 +346,11 @@ func (app *appDef) Role(name QName) IRole {
 }
 
 func (app *appDef) Roles(cb func(IRole)) {
-	app.Types(func(t IType) {
+	app.Types(func(t IType) bool {
 		if r, ok := t.(IRole); ok {
 			cb(r)
 		}
+		return true
 	})
 }
 
@@ -347,10 +364,11 @@ func (app *appDef) Singleton(name QName) ISingleton {
 }
 
 func (app *appDef) Singletons(cb func(ISingleton)) {
-	app.Types(func(t IType) {
+	app.Types(func(t IType) bool {
 		if s, ok := t.(ISingleton); ok {
 			cb(s)
 		}
+		return true
 	})
 }
 
@@ -364,10 +382,11 @@ func (app *appDef) Structure(name QName) IStructure {
 }
 
 func (app *appDef) Structures(cb func(IStructure)) {
-	app.Types(func(t IType) {
+	app.Types(func(t IType) bool {
 		if s, ok := t.(IStructure); ok {
 			cb(s)
 		}
+		return true
 	})
 }
 
@@ -401,7 +420,7 @@ func (app *appDef) TypeByName(name QName) IType {
 	return nil
 }
 
-func (app *appDef) Types(cb func(IType)) {
+func (app *appDef) Types(cb func(IType) bool) {
 	if app.typesOrdered == nil {
 		app.typesOrdered = make([]interface{}, 0, len(app.types))
 		for _, t := range app.types {
@@ -412,7 +431,9 @@ func (app *appDef) Types(cb func(IType)) {
 		})
 	}
 	for _, t := range app.typesOrdered {
-		cb(t.(IType))
+		if !cb(t.(IType)) {
+			break
+		}
 	}
 }
 
@@ -424,10 +445,11 @@ func (app *appDef) View(name QName) IView {
 }
 
 func (app *appDef) Views(cb func(IView)) {
-	app.Types(func(t IType) {
+	app.Types(func(t IType) bool {
 		if v, ok := t.(IView); ok {
 			cb(v)
 		}
+		return true
 	})
 }
 
@@ -439,10 +461,11 @@ func (app *appDef) WDoc(name QName) IWDoc {
 }
 
 func (app *appDef) WDocs(cb func(IWDoc)) {
-	app.Types(func(t IType) {
+	app.Types(func(t IType) bool {
 		if d, ok := t.(IWDoc); ok {
 			cb(d)
 		}
+		return true
 	})
 }
 
@@ -454,10 +477,11 @@ func (app *appDef) WRecord(name QName) IWRecord {
 }
 
 func (app *appDef) WRecords(cb func(IWRecord)) {
-	app.Types(func(t IType) {
+	app.Types(func(t IType) bool {
 		if r, ok := t.(IWRecord); ok {
 			cb(r)
 		}
+		return true
 	})
 }
 
@@ -469,10 +493,11 @@ func (app *appDef) Workspace(name QName) IWorkspace {
 }
 
 func (app *appDef) Workspaces(cb func(IWorkspace)) {
-	app.Types(func(t IType) {
+	app.Types(func(t IType) bool {
 		if ws, ok := t.(IWorkspace); ok {
 			cb(ws)
 		}
+		return true
 	})
 }
 
@@ -598,8 +623,9 @@ func (app *appDef) appendType(t interface{}) {
 }
 
 func (app *appDef) build() (err error) {
-	app.Types(func(t IType) {
+	app.Types(func(t IType) bool {
 		err = errors.Join(err, validateType(t))
+		return true
 	})
 	return err
 }

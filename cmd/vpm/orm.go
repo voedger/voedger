@@ -92,7 +92,7 @@ func getPkgAppDefObjs(
 		HeaderFileContent: headerContent,
 	}
 
-	appDef.Packages(func(localName, fullPath string) {
+	appDef.Packages(func(localName, fullPath string) bool {
 		if fullPath == packagePath {
 			currentPkgLocalName = localName
 		}
@@ -101,15 +101,16 @@ func getPkgAppDefObjs(
 			FullPath:          fullPath,
 			HeaderFileContent: headerContent,
 		}
+		return true
 	})
 	iTypeObjsOfWS = make(map[appdef.QName][]appdef.IType, len(pkgInfos))
 
-	collectITypeObjs := func(iWorkspace appdef.IWorkspace) func(iTypeObj appdef.IType) {
-		return func(iTypeObj appdef.IType) {
+	collectITypeObjs := func(iWorkspace appdef.IWorkspace) func(iTypeObj appdef.IType) bool {
+		return func(iTypeObj appdef.IType) bool {
 			// skip abstract types
 			if iAbstract, ok := iTypeObj.(appdef.IWithAbstract); ok {
 				if iAbstract.Abstract() {
-					return
+					return true
 				}
 			}
 
@@ -122,17 +123,16 @@ func getPkgAppDefObjs(
 				iTypeObjsOfWS[iWorkspace.QName()] = append(iTypeObjsOfWS[iWorkspace.QName()], iTypeObj)
 				uniqueObjects = append(uniqueObjects, qName.String())
 			}
+			return true
 		}
 	}
 
 	// gather objects from the current package
-	appDef.Types(func(iTypeObj appdef.IType) {
-		if workspace, ok := iTypeObj.(appdef.IWorkspace); ok {
-			// add workspace itself to the list of objects as well
-			collectITypeObjs(workspace)(workspace)
-			// then add all types of the workspace
-			workspace.Types(collectITypeObjs(workspace))
-		}
+	appDef.Workspaces(func(workspace appdef.IWorkspace) {
+		// add workspace itself to the list of objects as well
+		_ = collectITypeObjs(workspace)(workspace)
+		// then add all types of the workspace
+		workspace.Types(collectITypeObjs(workspace))
 	})
 
 	return

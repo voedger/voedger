@@ -217,12 +217,13 @@ func buildWorkspaceNode(parentNode *CompatibilityTreeNode, item appdef.IWorkspac
 
 func buildTypesNode(parentNode *CompatibilityTreeNode, item appdef.IWithTypes, qNamesOnly bool) (node *CompatibilityTreeNode) {
 	node = newNode(parentNode, NodeNameTypes, nil)
-	item.Types(func(t appdef.IType) {
+	item.Types(func(t appdef.IType) bool {
 		if qNamesOnly {
 			node.Props = append(node.Props, buildQNameNode(node, t, t.QName().String(), true))
 		} else {
 			node.Props = append(node.Props, buildTreeNode(node, t))
 		}
+		return true
 	})
 	return
 }
