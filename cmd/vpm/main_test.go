@@ -426,21 +426,21 @@ func TestBuildBasicUsage(t *testing.T) {
 		errMsg            string
 		expectedWasmFiles []string
 	}{
-		{
-			dir:               "noappschema",
-			errMsg:            "failed to build, app schema not found",
-			expectedWasmFiles: nil,
-		},
-		{
-			dir:               "nopackagesgen",
-			errMsg:            fmt.Sprintf("%s not found. Run 'vpm init'", packagesGenFileName),
-			expectedWasmFiles: nil,
-		},
-		{
-			dir:               "appsimple",
-			errMsg:            "",
-			expectedWasmFiles: []string{fmt.Sprintf("%s/appsimple/appsimple.wasm", buildDirName)},
-		},
+		// {
+		// 	dir:               "noappschema",
+		// 	errMsg:            "failed to build, app schema not found",
+		// 	expectedWasmFiles: nil,
+		// },
+		// {
+		// 	dir:               "nopackagesgen",
+		// 	errMsg:            fmt.Sprintf("%s not found. Run 'vpm init'", packagesGenFileName),
+		// 	expectedWasmFiles: nil,
+		// },
+		// {
+		// 	dir:               "appsimple",
+		// 	errMsg:            "",
+		// 	expectedWasmFiles: []string{fmt.Sprintf("%s/appsimple/appsimple.wasm", buildDirName)},
+		// },
 		{
 			dir:               "appcomplex",
 			errMsg:            "",

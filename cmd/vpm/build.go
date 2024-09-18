@@ -75,12 +75,12 @@ func checkCompileResult(compileRes *compile.Result) error {
 
 func build(compileRes *compile.Result, params *vpmParams) error {
 	// temp directory to save the build info: vsql files, wasm files
-	tempBuildInfoDir := filepath.Join(os.TempDir(), uuid.New().String(), buildDirName)
-	if err := os.MkdirAll(tempBuildInfoDir, coreutils.FileMode_rwxrwxrwx); err != nil {
+	tempDir := filepath.Join(os.TempDir(), uuid.New().String(), buildDirName)
+	if err := os.MkdirAll(tempDir, coreutils.FileMode_rwxrwxrwx); err != nil {
 		return err
 	}
 	// create temp build info directory along with vsql and wasm files
-	if err := buildDir(compileRes.PkgFiles, tempBuildInfoDir); err != nil {
+	if err := buildDir(compileRes.PkgFiles, tempDir); err != nil {
 		return err
 	}
 	// set the path to the output archive, e.g. app.var
@@ -91,10 +91,10 @@ func build(compileRes *compile.Result, params *vpmParams) error {
 	if !strings.HasSuffix(archiveName, ".var") {
 		archiveName += ".var"
 	}
-	archivePath := filepath.Join(params.Dir, archiveName)
+	varFile := filepath.Join(params.Dir, archiveName)
 
 	// zip build info directory along with vsql and wasm files
-	return coreutils.Zip(archivePath, tempBuildInfoDir)
+	return coreutils.Zip(tempDir, varFile)
 }
 
 // buildDir creates a directory structure with vsql and wasm files
