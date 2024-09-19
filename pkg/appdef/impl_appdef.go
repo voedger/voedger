@@ -94,12 +94,10 @@ func (app *appDef) Data(name QName) IData {
 	return nil
 }
 
-func (app *appDef) DataTypes(incSys bool, cb func(IData)) {
+func (app *appDef) DataTypes(cb func(IData) bool) {
 	app.Types(func(t IType) bool {
 		if d, ok := t.(IData); ok {
-			if incSys || !d.IsSystem() {
-				cb(d)
-			}
+			return cb(d)
 		}
 		return true
 	})
