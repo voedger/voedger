@@ -443,10 +443,10 @@ func (app *appDef) View(name QName) IView {
 	return nil
 }
 
-func (app *appDef) Views(cb func(IView)) {
+func (app *appDef) Views(cb func(IView) bool) {
 	app.Types(func(t IType) bool {
 		if v, ok := t.(IView); ok {
-			cb(v)
+			return cb(v)
 		}
 		return true
 	})
