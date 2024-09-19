@@ -459,10 +459,10 @@ func (app *appDef) WDoc(name QName) IWDoc {
 	return nil
 }
 
-func (app *appDef) WDocs(cb func(IWDoc)) {
+func (app *appDef) WDocs(cb func(IWDoc) bool) {
 	app.Types(func(t IType) bool {
 		if d, ok := t.(IWDoc); ok {
-			cb(d)
+			return cb(d)
 		}
 		return true
 	})
@@ -475,10 +475,10 @@ func (app *appDef) WRecord(name QName) IWRecord {
 	return nil
 }
 
-func (app *appDef) WRecords(cb func(IWRecord)) {
+func (app *appDef) WRecords(cb func(IWRecord) bool) {
 	app.Types(func(t IType) bool {
 		if r, ok := t.(IWRecord); ok {
-			cb(r)
+			return cb(r)
 		}
 		return true
 	})
