@@ -310,10 +310,10 @@ func (app appDef) Rate(name QName) IRate {
 	return nil
 }
 
-func (app appDef) Rates(cb func(IRate)) {
+func (app appDef) Rates(cb func(IRate) bool) {
 	app.Types(func(t IType) bool {
 		if r, ok := t.(IRate); ok {
-			cb(r)
+			return cb(r)
 		}
 		return true
 	})

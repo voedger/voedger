@@ -36,9 +36,10 @@ func ExampleIAppDefBuilder_AddRate() {
 	{
 		fmt.Println("enum rates:")
 		cnt := 0
-		app.Rates(func(r appdef.IRate) {
+		app.Rates(func(r appdef.IRate) bool {
 			cnt++
 			fmt.Println("-", cnt, r, fmt.Sprintf("%d per %v per %v", r.Count(), r.Period(), r.Scopes()))
+			return true
 		})
 		fmt.Println("overall:", cnt)
 	}
