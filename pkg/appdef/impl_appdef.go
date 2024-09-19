@@ -46,10 +46,10 @@ func (app *appDef) CDoc(name QName) (d ICDoc) {
 	return nil
 }
 
-func (app *appDef) CDocs(cb func(ICDoc)) {
+func (app *appDef) CDocs(cb func(ICDoc) bool) {
 	app.Types(func(t IType) bool {
 		if d, ok := t.(ICDoc); ok {
-			cb(d)
+			return cb(d)
 		}
 		return true
 	})
@@ -78,10 +78,10 @@ func (app *appDef) CRecord(name QName) ICRecord {
 	return nil
 }
 
-func (app *appDef) CRecords(cb func(ICRecord)) {
+func (app *appDef) CRecords(cb func(ICRecord) bool) {
 	app.Types(func(t IType) bool {
 		if r, ok := t.(ICRecord); ok {
-			cb(r)
+			return cb(r)
 		}
 		return true
 	})
