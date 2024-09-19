@@ -230,10 +230,10 @@ func (app *appDef) ODoc(name QName) IODoc {
 	return nil
 }
 
-func (app *appDef) ODocs(cb func(IODoc)) {
+func (app *appDef) ODocs(cb func(IODoc) bool) {
 	app.Types(func(t IType) bool {
 		if d, ok := t.(IODoc); ok {
-			cb(d)
+			return cb(d)
 		}
 		return true
 	})
@@ -246,10 +246,10 @@ func (app *appDef) ORecord(name QName) IORecord {
 	return nil
 }
 
-func (app *appDef) ORecords(cb func(IORecord)) {
+func (app *appDef) ORecords(cb func(IORecord) bool) {
 	app.Types(func(t IType) bool {
 		if r, ok := t.(IORecord); ok {
-			cb(r)
+			return cb(r)
 		}
 		return true
 	})
