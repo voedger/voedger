@@ -51,7 +51,7 @@ func Test_AppDefAddRateLimit(t *testing.T) {
 
 	t.Run("should be ok to enum limits", func(t *testing.T) {
 		cnt := 0
-		app.Limits(func(l ILimit) {
+		app.Limits(func(l ILimit) bool {
 			cnt++
 			switch cnt {
 			case 1:
@@ -62,6 +62,7 @@ func Test_AppDefAddRateLimit(t *testing.T) {
 			default:
 				require.FailNow("unexpected limit", "limit: %v", l)
 			}
+			return true
 		})
 	})
 

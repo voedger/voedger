@@ -78,7 +78,7 @@ type IWithLimits interface {
 	// Enumerates all limits
 	//
 	// Limits are enumerated in alphabetical order by QName
-	Limits(func(ILimit))
+	Limits(func(ILimit) bool)
 }
 
 type ILimitsBuilder interface {

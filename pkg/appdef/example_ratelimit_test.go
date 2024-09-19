@@ -48,9 +48,10 @@ func ExampleIAppDefBuilder_AddRate() {
 	{
 		fmt.Println("enum limits:")
 		cnt := 0
-		app.Limits(func(l appdef.ILimit) {
+		app.Limits(func(l appdef.ILimit) bool {
 			cnt++
 			fmt.Println("-", cnt, l, fmt.Sprintf("on %v with %v", l.On(), l.Rate()))
+			return true
 		})
 		fmt.Println("overall:", cnt)
 	}

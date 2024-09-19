@@ -196,10 +196,10 @@ func (app *appDef) Limit(name QName) ILimit {
 	return nil
 }
 
-func (app *appDef) Limits(cb func(ILimit)) {
+func (app *appDef) Limits(cb func(ILimit) bool) {
 	app.Types(func(t IType) bool {
 		if l, ok := t.(ILimit); ok {
-			cb(l)
+			return cb(l)
 		}
 		return true
 	})
