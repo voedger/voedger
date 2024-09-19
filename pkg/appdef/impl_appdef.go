@@ -362,10 +362,10 @@ func (app *appDef) Singleton(name QName) ISingleton {
 	return nil
 }
 
-func (app *appDef) Singletons(cb func(ISingleton)) {
+func (app *appDef) Singletons(cb func(ISingleton) bool) {
 	app.Types(func(t IType) bool {
 		if s, ok := t.(ISingleton); ok {
-			cb(s)
+			return cb(s)
 		}
 		return true
 	})
