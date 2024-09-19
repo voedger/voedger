@@ -328,10 +328,10 @@ func (app *appDef) Record(name QName) IRecord {
 	return nil
 }
 
-func (app *appDef) Records(cb func(IRecord)) {
+func (app *appDef) Records(cb func(IRecord) bool) {
 	app.Structures(func(s IStructure) bool {
 		if r, ok := s.(IRecord); ok {
-			cb(r)
+			return cb(r)
 		}
 		return true
 	})

@@ -60,7 +60,7 @@ type IWithRecords interface {
 	// Enumerates all application records, e.g. documents and contained records
 	//
 	// Records are enumerated in alphabetical order by QName
-	Records(func(IRecord))
+	Records(func(IRecord) bool)
 }
 
 // Document is a record.
