@@ -62,10 +62,10 @@ func (app *appDef) Command(name QName) ICommand {
 	return nil
 }
 
-func (app *appDef) Commands(cb func(ICommand)) {
+func (app *appDef) Commands(cb func(ICommand) bool) {
 	app.Types(func(t IType) bool {
 		if c, ok := t.(ICommand); ok {
-			cb(c)
+			return cb(c)
 		}
 		return true
 	})
@@ -139,10 +139,10 @@ func (app *appDef) Function(name QName) IFunction {
 	return nil
 }
 
-func (app *appDef) Functions(cb func(IFunction)) {
+func (app *appDef) Functions(cb func(IFunction) bool) {
 	app.Types(func(t IType) bool {
 		if f, ok := t.(IFunction); ok {
-			cb(f)
+			return cb(f)
 		}
 		return true
 	})
@@ -287,10 +287,10 @@ func (app *appDef) Projectors(cb func(IProjector)) {
 	})
 }
 
-func (app *appDef) Queries(cb func(IQuery)) {
+func (app *appDef) Queries(cb func(IQuery) bool) {
 	app.Types(func(t IType) bool {
 		if q, ok := t.(IQuery); ok {
-			cb(q)
+			return cb(q)
 		}
 		return true
 	})
