@@ -112,10 +112,10 @@ func (app *appDef) Extension(name QName) IExtension {
 	return nil
 }
 
-func (app *appDef) Extensions(cb func(IExtension)) {
+func (app *appDef) Extensions(cb func(IExtension) bool) {
 	app.Types(func(t IType) bool {
 		if ex, ok := t.(IExtension); ok {
-			cb(ex)
+			return cb(ex)
 		}
 		return true
 	})
