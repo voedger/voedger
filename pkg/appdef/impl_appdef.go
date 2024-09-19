@@ -148,10 +148,10 @@ func (app *appDef) Functions(cb func(IFunction)) {
 	})
 }
 
-func (app *appDef) GDocs(cb func(IGDoc)) {
+func (app *appDef) GDocs(cb func(IGDoc) bool) {
 	app.Types(func(t IType) bool {
 		if d, ok := t.(IGDoc); ok {
-			cb(d)
+			return cb(d)
 		}
 		return true
 	})
@@ -164,10 +164,10 @@ func (app *appDef) GRecord(name QName) IGRecord {
 	return nil
 }
 
-func (app *appDef) GRecords(cb func(IGRecord)) {
+func (app *appDef) GRecords(cb func(IGRecord) bool) {
 	app.Types(func(t IType) bool {
 		if r, ok := t.(IGRecord); ok {
-			cb(r)
+			return cb(r)
 		}
 		return true
 	})
