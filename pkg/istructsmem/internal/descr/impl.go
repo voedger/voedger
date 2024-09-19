@@ -20,23 +20,23 @@ func newApplication() *Application {
 func (a *Application) read(app istructs.IAppStructs, rateLimits map[appdef.QName]map[istructs.RateLimitKind]istructs.RateLimit) {
 	a.Packages = make(map[string]*Package)
 
-	app.AppDef().Packages(func(localName, fullPath string) {
-		if localName == appdef.SysPackage {
-			return
+	app.AppDef().Packages(func(localName, fullPath string) bool {
+		if localName != appdef.SysPackage {
+			pkg := newPackage()
+			pkg.Name = localName
+			pkg.Path = fullPath
+			a.Packages[localName] = pkg
 		}
-		pkg := newPackage()
-		pkg.Name = localName
-		pkg.Path = fullPath
-		a.Packages[localName] = pkg
+		return true
 	})
 
 	a.Name = app.AppQName()
 
-	app.AppDef().Types(func(typ appdef.IType) {
+	app.AppDef().Types(func(typ appdef.IType) bool {
 		name := typ.QName()
 
 		if name.Pkg() == appdef.SysPackage {
-			return
+			return true
 		}
 
 		pkg := getPkg(name, a)
@@ -47,21 +47,21 @@ func (a *Application) read(app istructs.IAppStructs, rateLimits map[appdef.QName
 				d.read(data)
 				pkg.DataTypes[name.String()] = d
 			}
-			return
+			return true
 		}
 
 		if str, ok := typ.(appdef.IStructure); ok {
 			s := newStructure()
 			s.read(str)
 			pkg.Structures[name.String()] = s
-			return
+			return true
 		}
 
 		if view, ok := typ.(appdef.IView); ok {
 			v := newView()
 			v.read(view)
 			pkg.Views[name.String()] = v
-			return
+			return true
 		}
 
 		if ext, ok := typ.(appdef.IExtension); ok {
@@ -69,15 +69,17 @@ func (a *Application) read(app istructs.IAppStructs, rateLimits map[appdef.QName
 				pkg.Extensions = newExtensions()
 			}
 			pkg.Extensions.read(ext)
-			return
+			return true
 		}
 
 		if role, ok := typ.(appdef.IRole); ok {
 			r := newRole()
 			r.read(role)
 			pkg.Roles[name.String()] = r
-			return
+			return true
 		}
+
+		return true
 	})
 
 	for qName, qNameRateLimit := range rateLimits {

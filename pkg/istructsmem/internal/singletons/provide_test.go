@@ -82,7 +82,7 @@ func Test_BasicUsage(t *testing.T) {
 func test_AppDefSingletons(t *testing.T, appDef appdef.IAppDef, st *Singletons) {
 	require := require.New(t)
 	appDef.Types(
-		func(t appdef.IType) {
+		func(t appdef.IType) bool {
 			if singleton, ok := t.(appdef.ISingleton); ok {
 				if singleton.Singleton() {
 					id, err := st.ID(singleton.QName())
@@ -90,6 +90,7 @@ func test_AppDefSingletons(t *testing.T, appDef appdef.IAppDef, st *Singletons) 
 					require.NotEqual(istructs.NullRecordID, id)
 				}
 			}
+			return true
 		})
 }
 

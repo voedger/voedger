@@ -43,12 +43,12 @@ type IWithCDocs interface {
 	// Enumerates all application configuration documents
 	//
 	// Configuration documents are enumerated in alphabetical order by QName
-	CDocs(func(ICDoc))
+	CDocs(func(ICDoc) bool)
 
 	// Enumerates all application configuration records
 	//
 	// Configuration records are enumerated in alphabetical order by QName
-	CRecords(func(ICRecord))
+	CRecords(func(ICRecord) bool)
 }
 
 type ICDocsBuilder interface {

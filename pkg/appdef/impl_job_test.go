@@ -67,7 +67,7 @@ func Test_AppDef_AddJob(t *testing.T) {
 
 		t.Run("should be ok enum states", func(t *testing.T) {
 			cnt := 0
-			job.States().Enum(func(s IStorage) {
+			job.States().Enum(func(s IStorage) bool {
 				cnt++
 				switch cnt {
 				case 1:
@@ -76,6 +76,7 @@ func Test_AppDef_AddJob(t *testing.T) {
 				default:
 					require.Failf("unexpected state", "state: %v", s)
 				}
+				return true
 			})
 			require.Equal(1, cnt)
 			require.Equal(cnt, job.States().Len())
@@ -100,7 +101,7 @@ func Test_AppDef_AddJob(t *testing.T) {
 
 	t.Run("should be ok to enum jobs", func(t *testing.T) {
 		cnt := 0
-		app.Jobs(func(j IJob) {
+		app.Jobs(func(j IJob) bool {
 			cnt++
 			switch cnt {
 			case 1:
@@ -109,6 +110,7 @@ func Test_AppDef_AddJob(t *testing.T) {
 			default:
 				require.Failf("unexpected job", "job: %v", j)
 			}
+			return true
 		})
 		require.Equal(1, cnt)
 	})

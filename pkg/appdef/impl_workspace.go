@@ -56,7 +56,7 @@ func (ws *workspace) Validate() error {
 	return nil
 }
 
-func (ws *workspace) Types(cb func(IType)) {
+func (ws *workspace) Types(cb func(IType) bool) {
 	if ws.typesOrdered == nil {
 		ws.typesOrdered = make([]interface{}, 0, len(ws.types))
 		for _, t := range ws.types {
@@ -67,7 +67,9 @@ func (ws *workspace) Types(cb func(IType)) {
 		})
 	}
 	for _, t := range ws.typesOrdered {
-		cb(t.(IType))
+		if !cb(t.(IType)) {
+			break
+		}
 	}
 }
 

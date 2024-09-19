@@ -48,22 +48,25 @@ func ExampleIAppDefBuilder_AddData() {
 	// how to inspect data types in builded AppDef
 	{
 		cnt := 0
-		app.DataTypes(false, func(d appdef.IData) {
-			cnt++
-			fmt.Println("-", d, "inherits from", d.Ancestor())
-			if d.Comment() != "" {
-				fmt.Println(" ", d.Comment())
+		app.DataTypes(func(d appdef.IData) bool {
+			if !d.IsSystem() {
+				cnt++
+				fmt.Println("-", d, "inherits from", d.Ancestor())
+				if d.Comment() != "" {
+					fmt.Println(" ", d.Comment())
+				}
+				str := []string{}
+				for _, c := range d.Constraints(false) {
+					str = append(str, fmt.Sprint(c))
+				}
+				if len(str) > 0 {
+					sort.Strings(str)
+					fmt.Printf("  constraints: (%v)\n", strings.Join(str, `, `))
+				}
 			}
-			str := []string{}
-			for _, c := range d.Constraints(false) {
-				str = append(str, fmt.Sprint(c))
-			}
-			if len(str) > 0 {
-				sort.Strings(str)
-				fmt.Printf("  constraints: (%v)\n", strings.Join(str, `, `))
-			}
+			return true
 		})
-		fmt.Println("overall data types: ", cnt)
+		fmt.Println("overall user data types: ", cnt)
 	}
 
 	// Output:
@@ -80,5 +83,5 @@ func ExampleIAppDefBuilder_AddData() {
 	//   constraints: (Pattern: `^[a-z]+$`)
 	// - string-data «test.weekDay» inherits from string-data «test.string»
 	//   constraints: (Enum: [Fri Mon Sat Sun Thu Tue Wed])
-	// overall data types:  6
+	// overall user data types:  6
 }

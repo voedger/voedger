@@ -47,7 +47,7 @@ type IWithRates interface {
 	// Enumerates all rates
 	//
 	// Rates are enumerated in alphabetical order by QName
-	Rates(func(IRate))
+	Rates(func(IRate) bool)
 }
 
 type IRatesBuilder interface {
@@ -78,7 +78,7 @@ type IWithLimits interface {
 	// Enumerates all limits
 	//
 	// Limits are enumerated in alphabetical order by QName
-	Limits(func(ILimit))
+	Limits(func(ILimit) bool)
 }
 
 type ILimitsBuilder interface {

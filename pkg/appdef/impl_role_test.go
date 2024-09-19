@@ -120,7 +120,7 @@ func Test_AppDef_AddRole(t *testing.T) {
 		}
 
 		rolesCount := 0
-		app.Roles(func(r IRole) {
+		app.Roles(func(r IRole) bool {
 			require.Equal(tt[rolesCount].name, r.QName())
 			wantACL := tt[rolesCount].wantACL
 			aclCount := 0
@@ -137,6 +137,7 @@ func Test_AppDef_AddRole(t *testing.T) {
 			})
 			require.Len(wantACL, aclCount)
 			rolesCount++
+			return true
 		})
 		require.Equal(6, rolesCount)
 	})

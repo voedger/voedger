@@ -198,7 +198,7 @@ func (cts *CommandTestState) buildAppDef(wsPkgPath, wsDescriptorName string) {
 	cfgs := make(istructsmem.AppConfigsType, 1)
 	cfg := cfgs.AddBuiltInAppConfig(istructs.AppQName_test1_app1, compileResult.AppDefBuilder)
 	cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
-	cts.appDef.Extensions(func(i appdef.IExtension) {
+	cts.appDef.Extensions(func(i appdef.IExtension) bool {
 		if proj, ok := i.(appdef.IProjector); ok {
 			if proj.Sync() {
 				cfg.AddSyncProjectors(istructs.Projector{Name: i.QName()})
@@ -210,6 +210,7 @@ func (cts *CommandTestState) buildAppDef(wsPkgPath, wsDescriptorName string) {
 		} else if q, ok := i.(appdef.IQuery); ok {
 			cfg.Resources.Add(istructsmem.NewCommandFunction(q.QName(), istructsmem.NullCommandExec))
 		}
+		return true
 	})
 
 	asf := mem.Provide()

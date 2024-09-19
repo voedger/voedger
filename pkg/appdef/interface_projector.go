@@ -121,7 +121,7 @@ type IWithProjectors interface {
 	// Enumerates all application projectors.
 	//
 	// Projectors are enumerated in alphabetical order by QName.
-	Projectors(func(IProjector))
+	Projectors(func(IProjector) bool)
 }
 
 type IProjectorsBuilder interface {

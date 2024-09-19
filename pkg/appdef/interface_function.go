@@ -49,5 +49,5 @@ type IWithFunctions interface {
 	// Enumerates all application functions (commands & queries)
 	//
 	// Functions are enumerated in alphabetical order by QName
-	Functions(func(IFunction))
+	Functions(func(IFunction) bool)
 }

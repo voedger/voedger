@@ -29,7 +29,7 @@ type IWithJobs interface {
 	// Enumerates all jobs.
 	//
 	// Jobs are enumerated in alphabetical order by QName.
-	Jobs(func(IJob))
+	Jobs(func(IJob) bool)
 }
 
 type IJobsBuilder interface {

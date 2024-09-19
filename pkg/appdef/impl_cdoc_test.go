@@ -68,15 +68,17 @@ func Test_AppDef_AddCDoc(t *testing.T) {
 
 	t.Run("must be ok to enumerate docs", func(t *testing.T) {
 		var docs []QName
-		app.CDocs(func(doc ICDoc) {
+		app.CDocs(func(doc ICDoc) bool {
 			docs = append(docs, doc.QName())
+			return true
 		})
 		require.Len(docs, 1)
 		require.Equal(docName, docs[0])
 		t.Run("must be ok to enumerate recs", func(t *testing.T) {
 			var recs []QName
-			app.CRecords(func(rec ICRecord) {
+			app.CRecords(func(rec ICRecord) bool {
 				recs = append(recs, rec.QName())
+				return true
 			})
 			require.Len(recs, 1)
 			require.Equal(recName, recs[0])
