@@ -29,5 +29,5 @@ type IWithSingletons interface {
 	// Enumerates all application singletons
 	//
 	// Singletons are enumerated in alphabetical order by QName
-	Singletons(func(ISingleton))
+	Singletons(func(ISingleton) bool)
 }

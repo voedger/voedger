@@ -71,5 +71,5 @@ type IWithExtensions interface {
 	// Enumerates all application extensions (commands, queries and extensions)
 	//
 	// Extensions are enumerated in alphabetical order by QName
-	Extensions(func(IExtension))
+	Extensions(func(IExtension) bool)
 }

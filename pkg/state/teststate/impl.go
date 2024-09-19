@@ -375,7 +375,7 @@ func (ts *testState) buildAppDef(packagePath string, packageDir string, createWo
 	cfgs := make(istructsmem.AppConfigsType, 1)
 	cfg := cfgs.AddBuiltInAppConfig(appName, adb)
 	cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
-	ts.appDef.Extensions(func(i appdef.IExtension) {
+	ts.appDef.Extensions(func(i appdef.IExtension) bool {
 		if i.QName().Pkg() == PackageName {
 			if proj, ok := i.(appdef.IProjector); ok {
 				if proj.Sync() {
@@ -389,6 +389,7 @@ func (ts *testState) buildAppDef(packagePath string, packageDir string, createWo
 				cfg.Resources.Add(istructsmem.NewCommandFunction(q.QName(), istructsmem.NullCommandExec))
 			}
 		}
+		return true
 	})
 
 	asf := mem.Provide()

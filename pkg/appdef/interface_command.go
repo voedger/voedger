@@ -24,7 +24,7 @@ type IWithCommands interface {
 	// Enumerates all commands
 	//
 	// Commands are enumerated in alphabetical order by QName
-	Commands(func(ICommand))
+	Commands(func(ICommand) bool)
 }
 
 type ICommandBuilder interface {
