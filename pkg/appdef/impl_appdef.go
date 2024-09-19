@@ -214,10 +214,10 @@ func (app *appDef) Object(name QName) IObject {
 	return nil
 }
 
-func (app *appDef) Objects(cb func(IObject)) {
+func (app *appDef) Objects(cb func(IObject) bool) {
 	app.Types(func(t IType) bool {
 		if o, ok := t.(IObject); ok {
-			cb(o)
+			return cb(o)
 		}
 		return true
 	})
