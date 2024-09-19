@@ -492,10 +492,10 @@ func (app *appDef) Workspace(name QName) IWorkspace {
 	return nil
 }
 
-func (app *appDef) Workspaces(cb func(IWorkspace)) {
+func (app *appDef) Workspaces(cb func(IWorkspace) bool) {
 	app.Types(func(t IType) bool {
 		if ws, ok := t.(IWorkspace); ok {
-			cb(ws)
+			return cb(ws)
 		}
 		return true
 	})

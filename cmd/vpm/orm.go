@@ -128,11 +128,12 @@ func getPkgAppDefObjs(
 	}
 
 	// gather objects from the current package
-	appDef.Workspaces(func(workspace appdef.IWorkspace) {
+	appDef.Workspaces(func(workspace appdef.IWorkspace) bool {
 		// add workspace itself to the list of objects as well
 		_ = collectITypeObjs(workspace)(workspace)
 		// then add all types of the workspace
 		workspace.Types(collectITypeObjs(workspace))
+		return true
 	})
 
 	return
