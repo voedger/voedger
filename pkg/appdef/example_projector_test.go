@@ -74,9 +74,10 @@ func ExampleIAppDefBuilder_AddProjector() {
 	// How to enum all projectors in AppDef
 	{
 		cnt := 0
-		app.Projectors(func(prj appdef.IProjector) {
+		app.Projectors(func(prj appdef.IProjector) bool {
 			cnt++
 			fmt.Println(cnt, prj)
+			return true
 		})
 	}
 

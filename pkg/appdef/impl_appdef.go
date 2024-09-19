@@ -180,10 +180,10 @@ func (app *appDef) Job(name QName) IJob {
 	return nil
 }
 
-func (app *appDef) Jobs(cb func(IJob)) {
+func (app *appDef) Jobs(cb func(IJob) bool) {
 	app.Types(func(t IType) bool {
 		if j, ok := t.(IJob); ok {
-			cb(j)
+			return cb(j)
 		}
 		return true
 	})
@@ -278,10 +278,10 @@ func (app *appDef) Projector(name QName) IProjector {
 	return nil
 }
 
-func (app *appDef) Projectors(cb func(IProjector)) {
+func (app *appDef) Projectors(cb func(IProjector) bool) {
 	app.Types(func(t IType) bool {
 		if p, ok := t.(IProjector); ok {
-			cb(p)
+			return cb(p)
 		}
 		return true
 	})
