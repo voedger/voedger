@@ -344,10 +344,10 @@ func (app *appDef) Role(name QName) IRole {
 	return nil
 }
 
-func (app *appDef) Roles(cb func(IRole)) {
+func (app *appDef) Roles(cb func(IRole) bool) {
 	app.Types(func(t IType) bool {
 		if r, ok := t.(IRole); ok {
-			cb(r)
+			return cb(r)
 		}
 		return true
 	})
