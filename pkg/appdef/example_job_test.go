@@ -43,9 +43,10 @@ func ExampleIAppDefBuilder_AddJob() {
 	{
 		job := app.Job(jobName)
 		fmt.Println(job, ":")
-		job.States().Enum(func(s appdef.IStorage) {
+		job.States().Enum(func(s appdef.IStorage) bool {
 			fmt.Println(" - crone:", job.CronSchedule())
 			fmt.Println(" - state:", s, s.Comment())
+			return true
 		})
 
 		fmt.Println(app.Job(appdef.NewQName("test", "unknown")))

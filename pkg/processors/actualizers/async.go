@@ -13,7 +13,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/voedger/voedger/pkg/goutils/iterate"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/state/stateprovide"
 	"github.com/voedger/voedger/pkg/sys"
@@ -156,16 +155,27 @@ func (a *asyncActualizer) init(ctx context.Context) (err error) {
 		return fmt.Errorf("async projector %s is not defined in AppDef", a.projectorQName)
 	}
 
+	// returns true if there are custom storages except «sys.View» and «sys.Record»
+	customStorages := func(ss appdef.IStorages) bool {
+		if ss.Len() > 2 {
+			return true
+		}
+		found := false
+		ss.Enum(
+			func(storage appdef.IStorage) bool {
+				n := storage.Name()
+				found = n != sys.Storage_View && n != sys.Storage_Record
+				return !found
+			})
+		return found
+	}
+
 	// https://github.com/voedger/voedger/issues/1048
-	hasIntentsExceptViewAndRecord, _ := iterate.FindFirst(prjType.Intents().Enum, func(storage appdef.IStorage) bool {
-		n := storage.Name()
-		return n != sys.Storage_View && n != sys.Storage_Record
-	})
+	hasIntentsExceptViewAndRecord := customStorages(prjType.Intents())
+
 	// https://github.com/voedger/voedger/issues/1092
-	hasStatesExceptViewAndRecord, _ := iterate.FindFirst(prjType.States().Enum, func(storage appdef.IStorage) bool {
-		n := storage.Name()
-		return n != sys.Storage_View && n != sys.Storage_Record
-	})
+	hasStatesExceptViewAndRecord := customStorages(prjType.States())
+
 	nonBuffered := hasIntentsExceptViewAndRecord || hasStatesExceptViewAndRecord
 	p := &asyncProjector{
 		partitionID:           a.conf.PartitionID,

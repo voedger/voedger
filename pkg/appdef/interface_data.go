@@ -74,7 +74,7 @@ type IWithDataTypes interface {
 	// Enumerates all application data types.
 	//
 	// Data types are enumerated in alphabetical order by QName.
-	DataTypes(cb func(IData) bool)
+	DataTypes(func(IData) bool)
 
 	// Returns system data type (sys.int32, sys.float654, etc.) by data kind.
 	//

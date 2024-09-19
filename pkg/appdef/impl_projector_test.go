@@ -144,7 +144,7 @@ func Test_AppDef_AddProjector(t *testing.T) {
 
 		t.Run("must be ok enum states", func(t *testing.T) {
 			cnt := 0
-			prj.States().Enum(func(s IStorage) {
+			prj.States().Enum(func(s IStorage) bool {
 				cnt++
 				switch cnt {
 				case 1: // "sys.WLog" < "sys.records" (`W` < `r`)
@@ -156,6 +156,7 @@ func Test_AppDef_AddProjector(t *testing.T) {
 				default:
 					require.Failf("unexpected state", "state: %v", s)
 				}
+				return true
 			})
 			require.Equal(2, cnt)
 			require.Equal(cnt, prj.States().Len())
@@ -181,7 +182,7 @@ func Test_AppDef_AddProjector(t *testing.T) {
 
 		t.Run("must be ok enum intents", func(t *testing.T) {
 			cnt := 0
-			prj.Intents().Enum(func(s IStorage) {
+			prj.Intents().Enum(func(s IStorage) bool {
 				cnt++
 				switch cnt {
 				case 1:
@@ -191,6 +192,7 @@ func Test_AppDef_AddProjector(t *testing.T) {
 				default:
 					require.Failf("unexpected intent", "intent: %v", s)
 				}
+				return true
 			})
 			require.Equal(1, cnt)
 			require.Equal(cnt, prj.Intents().Len())
