@@ -34,7 +34,7 @@ type IWithStructures interface {
 	// Enumerates all application structures
 	//
 	// Structures are enumerated in alphabetical order by QName
-	Structures(func(IStructure))
+	Structures(func(IStructure) bool)
 }
 
 // Record is a structure.

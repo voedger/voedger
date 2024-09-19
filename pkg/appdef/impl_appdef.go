@@ -329,10 +329,11 @@ func (app *appDef) Record(name QName) IRecord {
 }
 
 func (app *appDef) Records(cb func(IRecord)) {
-	app.Structures(func(s IStructure) {
+	app.Structures(func(s IStructure) bool {
 		if r, ok := s.(IRecord); ok {
 			cb(r)
 		}
+		return true
 	})
 }
 
@@ -379,10 +380,10 @@ func (app *appDef) Structure(name QName) IStructure {
 	return nil
 }
 
-func (app *appDef) Structures(cb func(IStructure)) {
+func (app *appDef) Structures(cb func(IStructure) bool) {
 	app.Types(func(t IType) bool {
 		if s, ok := t.(IStructure); ok {
-			cb(s)
+			return cb(s)
 		}
 		return true
 	})
