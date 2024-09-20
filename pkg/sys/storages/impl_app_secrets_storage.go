@@ -6,6 +6,7 @@ package storages
 
 import (
 	"errors"
+	"fmt"
 	"io/fs"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -30,8 +31,8 @@ type appSecretsStorageKeyBuilder struct {
 	secret string
 }
 
-func (b *appSecretsStorageKeyBuilder) Storage() appdef.QName {
-	return sys.Storage_AppSecret
+func (b *appSecretsStorageKeyBuilder) String() string {
+	return fmt.Sprintf("%s, secret:%s", b.baseKeyBuilder.String(), b.secret)
 }
 func (b *appSecretsStorageKeyBuilder) Equals(src istructs.IKeyBuilder) bool {
 	kb, ok := src.(*appSecretsStorageKeyBuilder)
@@ -61,7 +62,9 @@ func (v *appSecretValue) AsString(name string) string {
 }
 
 func (s *appSecretsStorage) NewKeyBuilder(appdef.QName, istructs.IStateKeyBuilder) istructs.IStateKeyBuilder {
-	return &appSecretsStorageKeyBuilder{}
+	return &appSecretsStorageKeyBuilder{
+		baseKeyBuilder: baseKeyBuilder{storage: sys.Storage_AppSecret},
+	}
 }
 func (s *appSecretsStorage) Get(key istructs.IStateKeyBuilder) (value istructs.IStateValue, err error) {
 	k := key.(*appSecretsStorageKeyBuilder)

@@ -16,6 +16,7 @@ import (
 	"github.com/voedger/voedger/pkg/apps/sys/clusterapp"
 	"github.com/voedger/voedger/pkg/btstrp"
 	"github.com/voedger/voedger/pkg/cluster"
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/iblobstoragestg"
 	"github.com/voedger/voedger/pkg/istorage"
@@ -26,7 +27,6 @@ import (
 	"github.com/voedger/voedger/pkg/parser"
 	"github.com/voedger/voedger/pkg/sys/authnz"
 	"github.com/voedger/voedger/pkg/sys/sysprovide"
-	coreutils "github.com/voedger/voedger/pkg/utils"
 	it "github.com/voedger/voedger/pkg/vit"
 	"github.com/voedger/voedger/pkg/vvm"
 	dbcertcache "github.com/voedger/voedger/pkg/vvm/db_cert_cache"
@@ -58,7 +58,7 @@ func TestBoostrap_BasicUsage(t *testing.T) {
 		defer cleanup()
 		blobStorage := iblobstoragestg.BlobAppStoragePtr(new(istorage.IAppStorage))
 		routerStorage := dbcertcache.RouterAppStoragePtr(new(istorage.IAppStorage))
-		err = btstrp.Bootstrap(vit.IFederation, vit.IAppStructsProvider, vit.TimeFunc, appParts, clusterApp, otherApps,
+		err = btstrp.Bootstrap(vit.IFederation, vit.IAppStructsProvider, vit.Time, appParts, clusterApp, otherApps,
 			nil, vit.ITokens, vit.IAppStorageProvider, blobStorage, routerStorage)
 		require.NoError(err)
 		require.NotNil(*blobStorage)
@@ -77,7 +77,7 @@ func TestBoostrap_BasicUsage(t *testing.T) {
 		routerStorage := dbcertcache.RouterAppStoragePtr(new(istorage.IAppStorage))
 		require.PanicsWithValue(fmt.Sprintf("failed to deploy app %[1]s: status 409: num partitions changed: app %[1]s declaring NumPartitions=%d but was previously deployed with NumPartitions=%d",
 			otherApps[0].Name, otherApps[0].AppDeploymentDescriptor.NumParts, otherApps[0].AppDeploymentDescriptor.NumParts-1), func() {
-			btstrp.Bootstrap(vit.IFederation, vit.IAppStructsProvider, vit.TimeFunc, appParts, clusterApp, otherApps,
+			btstrp.Bootstrap(vit.IFederation, vit.IAppStructsProvider, vit.Time, appParts, clusterApp, otherApps,
 				nil, vit.ITokens, vit.IAppStorageProvider, blobStorage, routerStorage)
 		})
 	})
@@ -95,7 +95,7 @@ func TestBoostrap_BasicUsage(t *testing.T) {
 			otherApps[0].Name, otherApps[0].AppDeploymentDescriptor.NumAppWorkspaces, otherApps[0].AppDeploymentDescriptor.NumAppWorkspaces-1), func() {
 			blobStorage := iblobstoragestg.BlobAppStoragePtr(new(istorage.IAppStorage))
 			routerStorage := dbcertcache.RouterAppStoragePtr(new(istorage.IAppStorage))
-			btstrp.Bootstrap(vit.IFederation, vit.IAppStructsProvider, vit.TimeFunc, appParts, clusterApp, otherApps,
+			btstrp.Bootstrap(vit.IFederation, vit.IAppStructsProvider, vit.Time, appParts, clusterApp, otherApps,
 				nil, vit.ITokens, vit.IAppStorageProvider, blobStorage, routerStorage)
 		})
 	})
@@ -199,7 +199,7 @@ func TestAppWSInitIndempotency(t *testing.T) {
 	for _, app := range vit.BuiltInAppsPackages {
 		as, err := vit.BuiltIn(app.Name)
 		require.NoError(err)
-		initedWSIDs, err := cluster.InitAppWSes(as, as.NumAppWorkspaces(), app.NumParts, istructs.UnixMilli(vit.TimeFunc().UnixMilli()))
+		initedWSIDs, err := cluster.InitAppWSes(as, as.NumAppWorkspaces(), app.NumParts, istructs.UnixMilli(vit.Time.Now().UnixMilli()))
 		require.NoError(err)
 		require.Empty(initedWSIDs)
 	}
@@ -210,7 +210,7 @@ func checkCDocsWSDesc(vvmCfg *vvm.VVMConfig, vvm *vvm.VVM, require *require.Asse
 		as, err := vvm.BuiltIn(appQName)
 		require.NoError(err)
 		for wsNum := 0; istructs.NumAppWorkspaces(wsNum) < as.NumAppWorkspaces(); wsNum++ {
-			appWSID := istructs.NewWSID(istructs.MainClusterID, istructs.WSID(wsNum+int(istructs.FirstBaseAppWSID)))
+			appWSID := istructs.NewWSID(istructs.CurrentClusterID(), istructs.WSID(wsNum+int(istructs.FirstBaseAppWSID)))
 			existingCDocWSDesc, err := as.Records().GetSingleton(appWSID, authnz.QNameCDocWorkspaceDescriptor)
 			require.NoError(err)
 			require.Equal(authnz.QNameCDocWorkspaceDescriptor, existingCDocWSDesc.QName())

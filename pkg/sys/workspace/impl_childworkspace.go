@@ -10,12 +10,12 @@ import (
 	"net/http"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/goutils/iterate"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/sys"
 	"github.com/voedger/voedger/pkg/sys/authnz"
-	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 func execCmdInitChildWorkspace(args istructs.ExecCommandArgs) (err error) {
@@ -44,6 +44,9 @@ func execCmdInitChildWorkspace(args istructs.ExecCommandArgs) (err error) {
 	wsKindInitializationData := args.ArgumentObject.AsString(authnz.Field_WSKindInitializationData)
 	templateName := args.ArgumentObject.AsString(field_TemplateName)
 	wsClusterID := args.ArgumentObject.AsInt32(authnz.Field_WSClusterID)
+	if wsClusterID == 0 {
+		wsClusterID = int32(istructs.CurrentClusterID())
+	}
 	templateParams := args.ArgumentObject.AsString(Field_TemplateParams)
 
 	// Create cdoc.sys.ChildWorkspace

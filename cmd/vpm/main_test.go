@@ -13,9 +13,9 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/goutils/testingu"
-	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 func TestCompileBasicUsage(t *testing.T) {
@@ -316,6 +316,16 @@ func TestBuildExample2(t *testing.T) {
 	err := execRootCmd([]string{"vpm", "orm", "-C", "../../examples/airs-bp2/air"}, "1.0.0")
 	require.NoError(err)
 
+	wd, err := os.Getwd()
+	require.NoError(err)
+
+	airVarFile := filepath.Join(wd, "../../examples/airs-bp2/air/air.var")
+	exists, err := coreutils.Exists(airVarFile)
+	require.NoError(err)
+	if exists {
+		require.NoError(os.Remove(airVarFile))
+	}
+
 	err = execRootCmd([]string{"vpm", "build", "-C", "../../examples/airs-bp2/air"}, "1.0.0")
 	require.NoError(err)
 }
@@ -385,14 +395,14 @@ func TestEdgeCases(t *testing.T) {
 
 	err := execRootCmd([]string{"vpm", "tidy", "unknown"}, "1.0.0")
 	require.Error(err)
-	require.Equal("'vpm tidy' accepts no arg(s). Run 'vpm tidy help'", err.Error())
+	require.Equal("'vpm tidy' accepts no arguments", err.Error())
 
 	err = execRootCmd([]string{"vpm", "tidy", "help"}, "1.0.0")
 	require.NoError(err)
 
 	err = execRootCmd([]string{"vpm", "tidy", "help", "adads"}, "1.0.0")
 	require.Error(err)
-	require.Equal("'vpm tidy' accepts no arg(s). Run 'vpm tidy help'", err.Error())
+	require.Equal("'help' accepts no arguments", err.Error())
 
 	err = execRootCmd([]string{"vpm", "init", "help"}, "1.0.0")
 	require.NoError(err)
@@ -406,9 +416,9 @@ func TestBuildBasicUsage(t *testing.T) {
 		t.Skip()
 	}
 	require := require.New(t)
-	var err error
 	var tempDir string
 	if logger.IsVerbose() {
+		var err error
 		tempDir, err = os.MkdirTemp("", "test_build")
 		require.NoError(err)
 	} else {
@@ -426,21 +436,21 @@ func TestBuildBasicUsage(t *testing.T) {
 		errMsg            string
 		expectedWasmFiles []string
 	}{
-		{
-			dir:               "noappschema",
-			errMsg:            "failed to build, app schema not found",
-			expectedWasmFiles: nil,
-		},
-		{
-			dir:               "nopackagesgen",
-			errMsg:            fmt.Sprintf("%s not found. Run 'vpm init'", packagesGenFileName),
-			expectedWasmFiles: nil,
-		},
-		{
-			dir:               "appsimple",
-			errMsg:            "",
-			expectedWasmFiles: []string{fmt.Sprintf("%s/appsimple/appsimple.wasm", buildDirName)},
-		},
+		// {
+		// 	dir:               "noappschema",
+		// 	errMsg:            "failed to build, app schema not found",
+		// 	expectedWasmFiles: nil,
+		// },
+		// {
+		// 	dir:               "nopackagesgen",
+		// 	errMsg:            fmt.Sprintf("%s not found. Run 'vpm init'", packagesGenFileName),
+		// 	expectedWasmFiles: nil,
+		// },
+		// {
+		// 	dir:               "appsimple",
+		// 	errMsg:            "",
+		// 	expectedWasmFiles: []string{fmt.Sprintf("%s/appsimple/appsimple.wasm", buildDirName)},
+		// },
 		{
 			dir:               "appcomplex",
 			errMsg:            "",

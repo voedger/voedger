@@ -11,9 +11,9 @@ import (
 	"github.com/voedger/voedger/pkg/goutils/testingu/require"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/iratesce"
 	"github.com/voedger/voedger/pkg/istructs"
-	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 func TestRateLimits_BasicUsage(t *testing.T) {
@@ -58,18 +58,18 @@ func TestRateLimits_BasicUsage(t *testing.T) {
 		require.True(as.IsFunctionRateLimitsExceeded(qName1, 42))
 
 		// proceed to the next minute to restore per-minute limit
-		coreutils.TestNow = coreutils.TestNow.Add(time.Minute)
+		coreutils.MockTime.Add(time.Minute)
 	}
 
 	// still failed because now the 10-hours limit is exceeded
 	require.True(as.IsFunctionRateLimitsExceeded(qName1, 42))
 
 	// try to add a minute the check if per-minute limit restore is not enough indeed
-	coreutils.TestNow = coreutils.TestNow.Add(time.Minute)
+	coreutils.MockTime.Add(time.Minute)
 	require.True(as.IsFunctionRateLimitsExceeded(qName1, 42))
 
 	// add 10 hours to restore all limits
-	coreutils.TestNow = coreutils.TestNow.Add(10 * time.Hour)
+	coreutils.MockTime.Add(10 * time.Hour)
 	require.False(as.IsFunctionRateLimitsExceeded(qName1, 42))
 
 	t.Run("must be False if unknown (or unlimited) function", func(t *testing.T) {
@@ -88,7 +88,7 @@ func TestRateLimitsErrors(t *testing.T) {
 		},
 	}
 
-	require.Panics(func() { rls.prepare(iratesce.Provide(time.Now)) },
+	require.Panics(func() { rls.prepare(iratesce.Provide(coreutils.NewITime())) },
 		require.Has(unsupportedRateLimitKind))
 }
 

@@ -31,7 +31,7 @@ erDiagram
 
     Processor ||--|| Goroutine: has
     Processor }|--|| Receiver: has
-    Goroutine }|--|| Receiver: calls    
+    Goroutine }|--|| Receiver: calls
 ```
 
 ### How it works with Commands and Queries
@@ -43,7 +43,7 @@ erDiagram
     Address_1 ||--|| AddressHandler_1: served-by
     AddressHandler_1 ||--|| RegistryQueryHandler8: call
 
-    HTTPClient ||--|| ISender_2: "requested ISender for sys/registry/5/с"
+    HTTPClient ||--|| ISender_2: "requested ISender for sys/registry/5/c"
     ISender_2 ||--|| Address_2: connected-to
     Address_2 ||--|| AddressHandler_2: served-by
     AddressHandler_2 ||--|| RegistryCommandHandler5: call
@@ -55,7 +55,7 @@ erDiagram
         string owner "sys"
         string app  "registry"
         int partition "8"
-        int part    "q" 
+        int part    "q"
     }
     AddressHandler_1{
         goroutine processor1
@@ -69,8 +69,8 @@ erDiagram
         string app  "registry"
         int partition "5"
         int part "c"
-    } 
+    }
     AddressHandler_2{
         goroutine r1
-    }    
+    }
 ```

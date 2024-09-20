@@ -15,14 +15,15 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/appdef"
+	wsdescutil "github.com/voedger/voedger/pkg/coreutils/testwsdesc"
 	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/iratesce"
 	"github.com/voedger/voedger/pkg/isecrets"
 	"github.com/voedger/voedger/pkg/istorage/mem"
 	"github.com/voedger/voedger/pkg/state/stateprovide"
 	"github.com/voedger/voedger/pkg/sys"
-	wsdescutil "github.com/voedger/voedger/pkg/utils/testwsdesc"
 
+	"github.com/voedger/voedger/pkg/coreutils"
 	istorageimpl "github.com/voedger/voedger/pkg/istorage/provider"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
@@ -30,7 +31,6 @@ import (
 	"github.com/voedger/voedger/pkg/itokensjwt"
 	"github.com/voedger/voedger/pkg/parser"
 	"github.com/voedger/voedger/pkg/state"
-	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 type testState struct {
@@ -91,6 +91,11 @@ func (ts *testState) WSID() istructs.WSID {
 	case ProcKind_QueryProcessor:
 		return ts.queryWsid
 	case ProcKind_CommandProcessor:
+		// for command processor kind first look for WSID in event field
+		if ts.event != nil {
+			return ts.event.Workspace()
+		}
+
 		return ts.commandWSID
 	default:
 		if ts.event != nil {
@@ -370,7 +375,7 @@ func (ts *testState) buildAppDef(packagePath string, packageDir string, createWo
 	cfgs := make(istructsmem.AppConfigsType, 1)
 	cfg := cfgs.AddBuiltInAppConfig(appName, adb)
 	cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
-	ts.appDef.Extensions(func(i appdef.IExtension) {
+	ts.appDef.Extensions(func(i appdef.IExtension) bool {
 		if i.QName().Pkg() == PackageName {
 			if proj, ok := i.(appdef.IProjector); ok {
 				if proj.Sync() {
@@ -384,6 +389,7 @@ func (ts *testState) buildAppDef(packagePath string, packageDir string, createWo
 				cfg.Resources.Add(istructsmem.NewCommandFunction(q.QName(), istructsmem.NullCommandExec))
 			}
 		}
+		return true
 	})
 
 	asf := mem.Provide()

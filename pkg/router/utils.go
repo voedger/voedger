@@ -10,7 +10,7 @@ import (
 	"net/http"
 	"runtime/debug"
 
-	coreutils "github.com/voedger/voedger/pkg/utils"
+	"github.com/voedger/voedger/pkg/coreutils"
 )
 
 var onBeforeWriteResponse func(w http.ResponseWriter) // not nil in tests only

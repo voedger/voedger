@@ -12,7 +12,7 @@ import (
 	"github.com/alecthomas/participle/v2/lexer"
 
 	"github.com/voedger/voedger/pkg/appdef"
-	coreutils "github.com/voedger/voedger/pkg/utils"
+	"github.com/voedger/voedger/pkg/coreutils"
 )
 
 type FileSchemaAST struct {
@@ -496,6 +496,7 @@ type JobStmt struct {
 	Name         Ident          `parser:"'JOB' @Ident"`
 	CronSchedule *string        `parser:"@String"`
 	State        []StateStorage `parser:"('STATE'   '(' @@ (',' @@)* ')' )?"`
+	Intents      []StateStorage `parser:"('INTENTS' '(' @@ (',' @@)* ')' )?"`
 	Engine       EngineType     // Initialized with 1st pass
 }
 

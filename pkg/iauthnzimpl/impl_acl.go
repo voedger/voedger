@@ -60,6 +60,16 @@ var defaultACL = ACL{
 		policy: ACPolicy_Allow,
 	},
 	{
+		desc: "allowed to sys.Guest login, i.e. without principal token at all",
+		pattern: PatternType{
+			principalsPattern: [][]iauthnz.Principal{{{Kind: iauthnz.PrincipalKind_User, WSID: istructs.GuestWSID}}},
+			qNamesPattern: []appdef.QName{
+				qNameCmdProvideCertificatePart, qNameCmdProvideCertificate, qNameQryGetCustomerStatus,
+				qNameCmdFiscalizeDocument, qNameQryFiscalizationResultStatus, qNameCmdCreateExport, qNameQryExportStatus},
+		},
+		policy: ACPolicy_Allow,
+	},
+	{
 		desc: "everything is allowed to WorkspaceOwner",
 		pattern: PatternType{
 			principalsPattern: [][]iauthnz.Principal{{{Kind: iauthnz.PrincipalKind_Role, QName: iauthnz.QNameRoleWorkspaceOwner}}},
@@ -423,6 +433,18 @@ var defaultACL = ACL{
 			opKindsPattern:    []iauthnz.OperationKindType{iauthnz.OperationKind_SELECT},
 			fieldsPattern:     [][]string{{"State"}},
 			principalsPattern: [][]iauthnz.Principal{{{Kind: iauthnz.PrincipalKind_Role, QName: qNameRoleBOReader}}},
+		},
+		policy: ACPolicy_Allow,
+	},
+	{
+		desc: "grant exec on few funcs to role air.ResellerPortalDashboardViewer",
+		pattern: PatternType{
+			qNamesPattern: []appdef.QName{
+				qNameQryGetAirLocations,
+				qNameQryResellersDashboardSalesMetrics,
+				qNameQryResellersDashboardBackofficeMetrics,
+			},
+			principalsPattern: [][]iauthnz.Principal{{{Kind: iauthnz.PrincipalKind_Role, QName: qNameResellerPortalDashboardViewer}}},
 		},
 		policy: ACPolicy_Allow,
 	},

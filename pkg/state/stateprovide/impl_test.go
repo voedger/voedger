@@ -23,6 +23,7 @@ var (
 	testViewRecordQName1  = appdef.NewQName("test", "viewRecord1")
 	testViewRecordQName2  = appdef.NewQName("test", "viewRecord2")
 	testStorage           = appdef.NewQName("test", "testStorage")
+	testEntity            = appdef.NewQName("test", "testEntity")
 	testWSQName           = appdef.NewQName("test", "testWS")
 	testWSDescriptorQName = appdef.NewQName("test", "testWSDescriptor")
 	testAppQName          = appdef.NewAppQName("test", "testApp")

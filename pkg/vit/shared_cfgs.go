@@ -6,6 +6,7 @@ package vit
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/voedger/voedger/pkg/apps"
@@ -100,6 +101,29 @@ func ProvideApp2(apis apps.APIs, cfg *istructsmem.AppConfigType, ep extensionpoi
 	ep.AddNamed(apps.EPIsDeviceAllowedFunc, func(as istructs.IAppStructs, requestWSID istructs.WSID, deviceProfileWSID istructs.WSID) (ok bool, err error) {
 		// simulate we could not work in any non-profile WS
 		return false, err
+	})
+	return apps.BuiltInAppDef{
+		AppQName:                istructs.AppQName_test1_app2,
+		Packages:                []parser.PackageFS{sysPackageFS, app2PackageFS},
+		AppDeploymentDescriptor: TestAppDeploymentDescriptor,
+	}
+}
+
+func ProvideApp2WithJob(apis apps.APIs, cfg *istructsmem.AppConfigType, ep extensionpoints.IExtensionPoint) apps.BuiltInAppDef {
+	sysPackageFS := sysprovide.Provide(cfg)
+	app2PackageFS := parser.PackageFS{
+		Path: app2PkgPath,
+		FS:   SchemaTestApp2WithJobFS,
+	}
+	ep.AddNamed(apps.EPIsDeviceAllowedFunc, func(as istructs.IAppStructs, requestWSID istructs.WSID, deviceProfileWSID istructs.WSID) (ok bool, err error) {
+		// simulate we could not work in any non-profile WS
+		return false, err
+	})
+	cfg.AddJobs(istructsmem.BuiltinJob{
+		Name: appdef.NewQName(app2PkgName, "Job1_builtin"),
+		Func: func(st istructs.IState, intents istructs.IIntents) error {
+			return errors.New("Job1_builtin works!!!!!!!!!!!!!! ")
+		},
 	})
 	return apps.BuiltInAppDef{
 		AppQName:                istructs.AppQName_test1_app2,

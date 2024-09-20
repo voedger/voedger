@@ -19,12 +19,12 @@ import (
 	"github.com/voedger/voedger/pkg/parser"
 
 	"github.com/voedger/voedger/pkg/compile"
-	coreutils "github.com/voedger/voedger/pkg/utils"
+	"github.com/voedger/voedger/pkg/coreutils"
 )
 
 func newBaselineCmd(params *vpmParams) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "baseline baseline-folder",
+		Use:   "baseline folder",
 		Short: "create baseline schemas",
 		Args:  exactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) (err error) {

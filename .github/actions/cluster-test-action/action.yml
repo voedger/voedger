@@ -36,9 +36,18 @@ runs:
       uses: ./.github/actions/cluster-backup-action
 
     - name: Check voedger SE stack status
+      env:
+        ISSUE_TITLE: "${{ github.event.issue.title }}"
       run: |
         attempts=3
-        ssh ${{ env.SSH_OPTIONS }} ubuntu@${{ env.PUBLIC_IP }} docker node update --label-rm  AppNode app-node-2
+
+        if [ "$ISSUE_TITLE" == "ctoolintegrationtest se" ]; then
+            hostName="app-node-2"
+        else
+            hostName="node-2" 
+        fi
+
+        ssh ${{ env.SSH_OPTIONS }} ubuntu@${{ env.PUBLIC_IP }} docker node update --label-rm  AppNode $hostName
         sleep 20
         url="https://${{ github.event.issue.number }}-01.cdci.voedger.io/static/sys/monitor/site/hello"
         for ((i=1; i<=attempts; i++)); do
@@ -56,7 +65,7 @@ runs:
             exit 1
           fi
         done
-        ssh ${{ env.SSH_OPTIONS }} ubuntu@${{ env.PUBLIC_IP }} docker node update --label-add  AppNode=true app-node-2
+        ssh ${{ env.SSH_OPTIONS }} ubuntu@${{ env.PUBLIC_IP }} docker node update --label-add  AppNode=true $hostName
       shell: bash
 
     - name: Set password for Mon Stack
@@ -93,7 +102,10 @@ runs:
       shell: bash
 
     - name: Smoke test - node fail simulation. Drop node.
-      run: terraform -chdir=cmd/ctool/scripts/terraform/ destroy -target='aws_instance.node["node_02"]' -auto-approve
+      run: |
+        INSTANCE_IDS=$(aws ec2 describe-instances --filters "Name=tag:Name,Values=node_02" "Name=instance-state-name,Values=running" --query "Reservations[*].Instances[*].InstanceId" --output text)
+        aws ec2 stop-instances --instance-ids $INSTANCE_IDS
+        aws ec2 wait instance-stopped --instance-ids $INSTANCE_IDS
       shell: bash
 
     - name: Smoke test - replace scylla node to new hardware
@@ -138,7 +150,10 @@ runs:
       shell: bash
 
     - name: Smoke test - AppNode fail simulation. Drop node.
-      run: terraform -chdir=cmd/ctool/scripts/terraform/ destroy -target='aws_instance.node["node_01"]' -auto-approve
+      run: |
+        INSTANCE_IDS=$(aws ec2 describe-instances --filters "Name=tag:Name,Values=node_01" "Name=instance-state-name,Values=running" --query "Reservations[*].Instances[*].InstanceId" --output text)
+        aws ec2 stop-instances --instance-ids $INSTANCE_IDS
+        aws ec2 wait instance-stopped --instance-ids $INSTANCE_IDS
       shell: bash
 
     - name: Smoke test - replace AppNode to new hardware

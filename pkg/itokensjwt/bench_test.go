@@ -14,7 +14,7 @@ import (
 
 func Benchmark_IssueTtoken(b *testing.B) {
 
-	signer := ProvideITokens(SecretKeyExample, testTimeFunc)
+	signer := TestTokensJWT()
 
 	// Prepare payloads
 
@@ -41,7 +41,7 @@ func Benchmark_IssueTtoken(b *testing.B) {
 }
 
 func Benchmark_VerifyToken(b *testing.B) {
-	signer := ProvideITokens(SecretKeyExample, testTimeFunc)
+	signer := TestTokensJWT()
 
 	// Prepare payloads
 

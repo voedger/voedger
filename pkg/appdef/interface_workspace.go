@@ -59,7 +59,7 @@ type IWithWorkspaces interface {
 	// Enumerates all application workspaces.
 	//
 	// Workspaces are enumerated in alphabetical order by QName
-	Workspaces(func(IWorkspace))
+	Workspaces(func(IWorkspace) bool)
 }
 
 type IWorkspacesBuilder interface {

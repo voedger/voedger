@@ -203,7 +203,7 @@ classDiagram
     class IRole {
         <<interface>>
         +Kind()* TypeKind_Role
-        +Privileges() []IPrivilege
+        +ACL() []IACLRule
     }
 ```
 
@@ -699,7 +699,7 @@ classDiagram
 
 ### Workspaces
 
-### Roles and privileges
+### Roles and ACL
 
 ```mermaid
     classDiagram
@@ -707,24 +707,22 @@ classDiagram
     class IRole {
         <<interface>>
         +Kind()* TypeKind_Role
-        +Privileges() []IPrivilege
+        +ACL() []IACLRule
     }
 
-    IRole "1" *--> "1..*" IPrivilege : On
+    IRole "1" *--> "1..*" IACLRule : ACL
 
-    class IPrivilege {
+    class IACLRule {
         <<interface>>
         +Comment() []string
-        +Kinds() []PrivilegeKind
-        +IsGranted() bool
-        +IsRevoked() bool
-        +On() QNames
-        +Fields() []FieldName
+        +Ops() []OperationKind
+        +Policy() PolicyKind
+        +Resources() IResourcePattern
     }
 
-    IPrivilege "1" *--> "1..*" PrivilegeKind : Kinds
+    IACLRule "1" *--> "1..*" OperationKind : operations
     
-    class PrivilegeKind {
+    class OperationKind {
         <<enumeration>>
         Insert
         Update
@@ -733,17 +731,36 @@ classDiagram
         Inherits
     }
 
-    IPrivilege "1" *--> "1..*" QName : On
-    note for QName "types on which the privilege is granted or revoked"
+    IACLRule "1" *--> "1" PolicyKind : policy
+    
+    class PolicyKind {
+        <<enumeration>>
+        Allow
+        Deny
+    }
+
+    IACLRule "1" *--> "1" IResourcePattern : resources
+
+    class IResourcePattern {
+        <<interface>>
+        +On()[]QName
+        +Fields()[]FieldName
+    }
+
+    IResourcePattern "1" *--> "1..*" QName : On
+    IResourcePattern "1" *--> "0..*" FieldName : Fields
+
+    note for QName "names or patterns of resources"
+    note for FieldName "fields of records or view records for select and update operations"
 
     class IAppDef {
       …
       +Roles() []IRole
-      +Privileges() []IPrivilege
+      +ACL() []IACLRule
     }
 
     IAppDef "1" *--> "0..*" IRole : Roles
-    IAppDef "1" *--> "0..*" IPrivilege : all application privileges
+    IAppDef "1" *--> "0..*" IACLRule : application ACL
 ```
 
 ## Restrictions

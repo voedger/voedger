@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"github.com/voedger/voedger/pkg/utils/utils"
+	"github.com/voedger/voedger/pkg/coreutils/utils"
 )
 
 func Test_AppDefExtensions(t *testing.T) {
@@ -65,8 +65,9 @@ func Test_AppDefExtensions(t *testing.T) {
 
 	t.Run("Should be ok to enumerate extensions", func(t *testing.T) {
 		var extNames []QName
-		app.Extensions(func(ex IExtension) {
+		app.Extensions(func(ex IExtension) bool {
 			extNames = append(extNames, ex.QName())
+			return true
 		})
 		require.Len(extNames, 3)
 		require.Equal([]QName{cmdName, prjName, qrName}, extNames)

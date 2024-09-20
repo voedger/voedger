@@ -15,7 +15,7 @@ import (
 type appDef struct {
 	comment
 	packages     *packages
-	privileges   []*privilege // adding order should be saved
+	acl          []*aclRule // adding order should be saved
 	types        map[QName]interface{}
 	typesOrdered []interface{}
 	wsDesc       map[QName]IWorkspace
@@ -31,6 +31,14 @@ func newAppDef() *appDef {
 	return &app
 }
 
+func (app appDef) ACL(cb func(IACLRule) bool) {
+	for _, p := range app.acl {
+		if !cb(p) {
+			break
+		}
+	}
+}
+
 func (app *appDef) CDoc(name QName) (d ICDoc) {
 	if t := app.typeByKind(name, TypeKind_CDoc); t != nil {
 		return t.(ICDoc)
@@ -38,11 +46,12 @@ func (app *appDef) CDoc(name QName) (d ICDoc) {
 	return nil
 }
 
-func (app *appDef) CDocs(cb func(ICDoc)) {
-	app.Types(func(t IType) {
+func (app *appDef) CDocs(cb func(ICDoc) bool) {
+	app.Types(func(t IType) bool {
 		if d, ok := t.(ICDoc); ok {
-			cb(d)
+			return cb(d)
 		}
+		return true
 	})
 }
 
@@ -53,11 +62,12 @@ func (app *appDef) Command(name QName) ICommand {
 	return nil
 }
 
-func (app *appDef) Commands(cb func(ICommand)) {
-	app.Types(func(t IType) {
+func (app *appDef) Commands(cb func(ICommand) bool) {
+	app.Types(func(t IType) bool {
 		if c, ok := t.(ICommand); ok {
-			cb(c)
+			return cb(c)
 		}
+		return true
 	})
 }
 
@@ -68,11 +78,12 @@ func (app *appDef) CRecord(name QName) ICRecord {
 	return nil
 }
 
-func (app *appDef) CRecords(cb func(ICRecord)) {
-	app.Types(func(t IType) {
+func (app *appDef) CRecords(cb func(ICRecord) bool) {
+	app.Types(func(t IType) bool {
 		if r, ok := t.(ICRecord); ok {
-			cb(r)
+			return cb(r)
 		}
+		return true
 	})
 }
 
@@ -83,13 +94,12 @@ func (app *appDef) Data(name QName) IData {
 	return nil
 }
 
-func (app *appDef) DataTypes(incSys bool, cb func(IData)) {
-	app.Types(func(t IType) {
+func (app *appDef) DataTypes(cb func(IData) bool) {
+	app.Types(func(t IType) bool {
 		if d, ok := t.(IData); ok {
-			if incSys || !d.IsSystem() {
-				cb(d)
-			}
+			return cb(d)
 		}
+		return true
 	})
 }
 
@@ -102,11 +112,12 @@ func (app *appDef) Extension(name QName) IExtension {
 	return nil
 }
 
-func (app *appDef) Extensions(cb func(IExtension)) {
-	app.Types(func(t IType) {
+func (app *appDef) Extensions(cb func(IExtension) bool) {
+	app.Types(func(t IType) bool {
 		if ex, ok := t.(IExtension); ok {
-			cb(ex)
+			return cb(ex)
 		}
+		return true
 	})
 }
 
@@ -128,19 +139,21 @@ func (app *appDef) Function(name QName) IFunction {
 	return nil
 }
 
-func (app *appDef) Functions(cb func(IFunction)) {
-	app.Types(func(t IType) {
+func (app *appDef) Functions(cb func(IFunction) bool) {
+	app.Types(func(t IType) bool {
 		if f, ok := t.(IFunction); ok {
-			cb(f)
+			return cb(f)
 		}
+		return true
 	})
 }
 
-func (app *appDef) GDocs(cb func(IGDoc)) {
-	app.Types(func(t IType) {
+func (app *appDef) GDocs(cb func(IGDoc) bool) {
+	app.Types(func(t IType) bool {
 		if d, ok := t.(IGDoc); ok {
-			cb(d)
+			return cb(d)
 		}
+		return true
 	})
 }
 
@@ -151,11 +164,12 @@ func (app *appDef) GRecord(name QName) IGRecord {
 	return nil
 }
 
-func (app *appDef) GRecords(cb func(IGRecord)) {
-	app.Types(func(t IType) {
+func (app *appDef) GRecords(cb func(IGRecord) bool) {
+	app.Types(func(t IType) bool {
 		if r, ok := t.(IGRecord); ok {
-			cb(r)
+			return cb(r)
 		}
+		return true
 	})
 }
 
@@ -166,11 +180,12 @@ func (app *appDef) Job(name QName) IJob {
 	return nil
 }
 
-func (app *appDef) Jobs(cb func(IJob)) {
-	app.Types(func(t IType) {
+func (app *appDef) Jobs(cb func(IJob) bool) {
+	app.Types(func(t IType) bool {
 		if j, ok := t.(IJob); ok {
-			cb(j)
+			return cb(j)
 		}
+		return true
 	})
 }
 
@@ -181,11 +196,12 @@ func (app *appDef) Limit(name QName) ILimit {
 	return nil
 }
 
-func (app *appDef) Limits(cb func(ILimit)) {
-	app.Types(func(t IType) {
+func (app *appDef) Limits(cb func(ILimit) bool) {
+	app.Types(func(t IType) bool {
 		if l, ok := t.(ILimit); ok {
-			cb(l)
+			return cb(l)
 		}
+		return true
 	})
 }
 
@@ -198,11 +214,12 @@ func (app *appDef) Object(name QName) IObject {
 	return nil
 }
 
-func (app *appDef) Objects(cb func(IObject)) {
-	app.Types(func(t IType) {
+func (app *appDef) Objects(cb func(IObject) bool) {
+	app.Types(func(t IType) bool {
 		if o, ok := t.(IObject); ok {
-			cb(o)
+			return cb(o)
 		}
+		return true
 	})
 }
 
@@ -213,11 +230,12 @@ func (app *appDef) ODoc(name QName) IODoc {
 	return nil
 }
 
-func (app *appDef) ODocs(cb func(IODoc)) {
-	app.Types(func(t IType) {
+func (app *appDef) ODocs(cb func(IODoc) bool) {
+	app.Types(func(t IType) bool {
 		if d, ok := t.(IODoc); ok {
-			cb(d)
+			return cb(d)
 		}
+		return true
 	})
 }
 
@@ -228,11 +246,12 @@ func (app *appDef) ORecord(name QName) IORecord {
 	return nil
 }
 
-func (app *appDef) ORecords(cb func(IORecord)) {
-	app.Types(func(t IType) {
+func (app *appDef) ORecords(cb func(IORecord) bool) {
+	app.Types(func(t IType) bool {
 		if r, ok := t.(IORecord); ok {
-			cb(r)
+			return cb(r)
 		}
+		return true
 	})
 }
 
@@ -248,24 +267,8 @@ func (app *appDef) PackageLocalNames() []string {
 	return app.packages.localNames()
 }
 
-func (app *appDef) Packages(cb func(local, path string)) {
+func (app *appDef) Packages(cb func(local, path string) bool) {
 	app.packages.forEach(cb)
-}
-
-func (app appDef) Privileges(cb func(IPrivilege)) {
-	for _, p := range app.privileges {
-		cb(p)
-	}
-}
-
-func (app appDef) PrivilegesOn(n []QName, k ...PrivilegeKind) []IPrivilege {
-	pp := make([]IPrivilege, 0)
-	for _, p := range app.privileges {
-		if p.On().ContainsAny(n...) && p.kinds.ContainsAny(k...) {
-			pp = append(pp, p)
-		}
-	}
-	return pp
 }
 
 func (app *appDef) Projector(name QName) IProjector {
@@ -275,19 +278,21 @@ func (app *appDef) Projector(name QName) IProjector {
 	return nil
 }
 
-func (app *appDef) Projectors(cb func(IProjector)) {
-	app.Types(func(t IType) {
+func (app *appDef) Projectors(cb func(IProjector) bool) {
+	app.Types(func(t IType) bool {
 		if p, ok := t.(IProjector); ok {
-			cb(p)
+			return cb(p)
 		}
+		return true
 	})
 }
 
-func (app *appDef) Queries(cb func(IQuery)) {
-	app.Types(func(t IType) {
+func (app *appDef) Queries(cb func(IQuery) bool) {
+	app.Types(func(t IType) bool {
 		if q, ok := t.(IQuery); ok {
-			cb(q)
+			return cb(q)
 		}
+		return true
 	})
 }
 
@@ -305,11 +310,12 @@ func (app appDef) Rate(name QName) IRate {
 	return nil
 }
 
-func (app appDef) Rates(cb func(IRate)) {
-	app.Types(func(t IType) {
+func (app appDef) Rates(cb func(IRate) bool) {
+	app.Types(func(t IType) bool {
 		if r, ok := t.(IRate); ok {
-			cb(r)
+			return cb(r)
 		}
+		return true
 	})
 }
 
@@ -322,11 +328,12 @@ func (app *appDef) Record(name QName) IRecord {
 	return nil
 }
 
-func (app *appDef) Records(cb func(IRecord)) {
-	app.Structures(func(s IStructure) {
+func (app *appDef) Records(cb func(IRecord) bool) {
+	app.Structures(func(s IStructure) bool {
 		if r, ok := s.(IRecord); ok {
-			cb(r)
+			return cb(r)
 		}
+		return true
 	})
 }
 
@@ -337,11 +344,12 @@ func (app *appDef) Role(name QName) IRole {
 	return nil
 }
 
-func (app *appDef) Roles(cb func(IRole)) {
-	app.Types(func(t IType) {
+func (app *appDef) Roles(cb func(IRole) bool) {
+	app.Types(func(t IType) bool {
 		if r, ok := t.(IRole); ok {
-			cb(r)
+			return cb(r)
 		}
+		return true
 	})
 }
 
@@ -354,11 +362,12 @@ func (app *appDef) Singleton(name QName) ISingleton {
 	return nil
 }
 
-func (app *appDef) Singletons(cb func(ISingleton)) {
-	app.Types(func(t IType) {
+func (app *appDef) Singletons(cb func(ISingleton) bool) {
+	app.Types(func(t IType) bool {
 		if s, ok := t.(ISingleton); ok {
-			cb(s)
+			return cb(s)
 		}
+		return true
 	})
 }
 
@@ -371,11 +380,12 @@ func (app *appDef) Structure(name QName) IStructure {
 	return nil
 }
 
-func (app *appDef) Structures(cb func(IStructure)) {
-	app.Types(func(t IType) {
+func (app *appDef) Structures(cb func(IStructure) bool) {
+	app.Types(func(t IType) bool {
 		if s, ok := t.(IStructure); ok {
-			cb(s)
+			return cb(s)
 		}
+		return true
 	})
 }
 
@@ -409,7 +419,7 @@ func (app *appDef) TypeByName(name QName) IType {
 	return nil
 }
 
-func (app *appDef) Types(cb func(IType)) {
+func (app *appDef) Types(cb func(IType) bool) {
 	if app.typesOrdered == nil {
 		app.typesOrdered = make([]interface{}, 0, len(app.types))
 		for _, t := range app.types {
@@ -420,7 +430,9 @@ func (app *appDef) Types(cb func(IType)) {
 		})
 	}
 	for _, t := range app.typesOrdered {
-		cb(t.(IType))
+		if !cb(t.(IType)) {
+			break
+		}
 	}
 }
 
@@ -431,11 +443,12 @@ func (app *appDef) View(name QName) IView {
 	return nil
 }
 
-func (app *appDef) Views(cb func(IView)) {
-	app.Types(func(t IType) {
+func (app *appDef) Views(cb func(IView) bool) {
+	app.Types(func(t IType) bool {
 		if v, ok := t.(IView); ok {
-			cb(v)
+			return cb(v)
 		}
+		return true
 	})
 }
 
@@ -446,11 +459,12 @@ func (app *appDef) WDoc(name QName) IWDoc {
 	return nil
 }
 
-func (app *appDef) WDocs(cb func(IWDoc)) {
-	app.Types(func(t IType) {
+func (app *appDef) WDocs(cb func(IWDoc) bool) {
+	app.Types(func(t IType) bool {
 		if d, ok := t.(IWDoc); ok {
-			cb(d)
+			return cb(d)
 		}
+		return true
 	})
 }
 
@@ -461,11 +475,12 @@ func (app *appDef) WRecord(name QName) IWRecord {
 	return nil
 }
 
-func (app *appDef) WRecords(cb func(IWRecord)) {
-	app.Types(func(t IType) {
+func (app *appDef) WRecords(cb func(IWRecord) bool) {
+	app.Types(func(t IType) bool {
 		if r, ok := t.(IWRecord); ok {
-			cb(r)
+			return cb(r)
 		}
+		return true
 	})
 }
 
@@ -476,11 +491,12 @@ func (app *appDef) Workspace(name QName) IWorkspace {
 	return nil
 }
 
-func (app *appDef) Workspaces(cb func(IWorkspace)) {
-	app.Types(func(t IType) {
+func (app *appDef) Workspaces(cb func(IWorkspace) bool) {
+	app.Types(func(t IType) bool {
 		if ws, ok := t.(IWorkspace); ok {
-			cb(ws)
+			return cb(ws)
 		}
+		return true
 	})
 }
 
@@ -587,8 +603,8 @@ func (app *appDef) addWorkspace(name QName) IWorkspaceBuilder {
 	return newWorkspaceBuilder(ws)
 }
 
-func (app *appDef) appendPrivilege(p *privilege) {
-	app.privileges = append(app.privileges, p)
+func (app *appDef) appendACL(p *aclRule) {
+	app.acl = append(app.acl, p)
 }
 
 func (app *appDef) appendType(t interface{}) {
@@ -606,26 +622,27 @@ func (app *appDef) appendType(t interface{}) {
 }
 
 func (app *appDef) build() (err error) {
-	app.Types(func(t IType) {
+	app.Types(func(t IType) bool {
 		err = errors.Join(err, validateType(t))
+		return true
 	})
 	return err
 }
 
-func (app *appDef) grant(kinds []PrivilegeKind, on []QName, fields []FieldName, toRole QName, comment ...string) {
+func (app *appDef) grant(ops []OperationKind, resources []QName, fields []FieldName, toRole QName, comment ...string) {
 	r := app.Role(toRole)
 	if r == nil {
 		panic(ErrRoleNotFound(toRole))
 	}
-	r.(*role).grant(kinds, on, fields, comment...)
+	r.(*role).grant(ops, resources, fields, comment...)
 }
 
-func (app *appDef) grantAll(on []QName, toRole QName, comment ...string) {
+func (app *appDef) grantAll(resources []QName, toRole QName, comment ...string) {
 	r := app.Role(toRole)
 	if r == nil {
 		panic(ErrRoleNotFound(toRole))
 	}
-	r.(*role).grantAll(on, comment...)
+	r.(*role).grantAll(resources, comment...)
 }
 
 // Makes system package.
@@ -643,20 +660,20 @@ func (app *appDef) makeSysDataTypes() {
 	}
 }
 
-func (app *appDef) revoke(kinds []PrivilegeKind, on []QName, fromRole QName, comment ...string) {
+func (app *appDef) revoke(ops []OperationKind, resources []QName, fields []FieldName, fromRole QName, comment ...string) {
 	r := app.Role(fromRole)
 	if r == nil {
 		panic(ErrRoleNotFound(fromRole))
 	}
-	r.(*role).revoke(kinds, on, comment...)
+	r.(*role).revoke(ops, resources, fields, comment...)
 }
 
-func (app *appDef) revokeAll(on []QName, fromRole QName, comment ...string) {
+func (app *appDef) revokeAll(resources []QName, fromRole QName, comment ...string) {
 	r := app.Role(fromRole)
 	if r == nil {
 		panic(ErrRoleNotFound(fromRole))
 	}
-	r.(*role).revokeAll(on, comment...)
+	r.(*role).revokeAll(resources, comment...)
 }
 
 // Returns type by name and kind. If type is not found then returns nil.
@@ -758,13 +775,13 @@ func (ab *appDefBuilder) addHardcodedDefinitions() {
 	viewNextBaseWSID.Value().AddField("NextBaseWSID", DataKind_int64, true)
 }
 
-func (ab *appDefBuilder) Grant(kinds []PrivilegeKind, on []QName, fields []FieldName, toRole QName, comment ...string) IPrivilegesBuilder {
-	ab.app.grant(kinds, on, fields, toRole, comment...)
+func (ab *appDefBuilder) Grant(ops []OperationKind, resources []QName, fields []FieldName, toRole QName, comment ...string) IACLBuilder {
+	ab.app.grant(ops, resources, fields, toRole, comment...)
 	return ab
 }
 
-func (ab *appDefBuilder) GrantAll(on []QName, toRole QName, comment ...string) IPrivilegesBuilder {
-	ab.app.grantAll(on, toRole, comment...)
+func (ab *appDefBuilder) GrantAll(resources []QName, toRole QName, comment ...string) IACLBuilder {
+	ab.app.grantAll(resources, toRole, comment...)
 	return ab
 }
 
@@ -775,12 +792,12 @@ func (ab *appDefBuilder) MustBuild() IAppDef {
 	return ab.app
 }
 
-func (ab *appDefBuilder) Revoke(kinds []PrivilegeKind, on []QName, fromRole QName, comment ...string) IPrivilegesBuilder {
-	ab.app.revoke(kinds, on, fromRole, comment...)
+func (ab *appDefBuilder) Revoke(ops []OperationKind, resources []QName, fields []FieldName, fromRole QName, comment ...string) IACLBuilder {
+	ab.app.revoke(ops, resources, fields, fromRole, comment...)
 	return ab
 }
 
-func (ab *appDefBuilder) RevokeAll(on []QName, fromRole QName, comment ...string) IPrivilegesBuilder {
-	ab.app.revokeAll(on, fromRole, comment...)
+func (ab *appDefBuilder) RevokeAll(resources []QName, fromRole QName, comment ...string) IACLBuilder {
+	ab.app.revokeAll(resources, fromRole, comment...)
 	return ab
 }

@@ -16,7 +16,7 @@ runs:
         
         if [ "$ISSUE_TITLE" == "ctoolintegrationtest ce" ]; then
             REPLICATION_STRATEGY="'class': 'SimpleStrategy', 'replication_factor': 1"
-        elif [ "$ISSUE_TITLE" == "ctoolintegrationtest se" ]; then
+        elif [ "$ISSUE_TITLE" == "ctoolintegrationtest se" -o "$ISSUE_TITLE" == "ctoolintegrationtest se3" ]; then
             REPLICATION_STRATEGY="'class': 'NetworkTopologyStrategy', 'dc1': 2, 'dc2': 1"
         else
             echo "Unknown issue title: $ISSUE_TITLE"
@@ -85,7 +85,7 @@ runs:
             CYCLE_END=1
             SSH_KEY_OPTION=""
             SSH_PORT_OPTION="" 
-        elif [ "$ISSUE_TITLE" == "ctoolintegrationtest se" ]; then
+        elif [ "$ISSUE_TITLE" == "ctoolintegrationtest se" -o "$ISSUE_TITLE" == "ctoolintegrationtest se3" ]; then
             CYCLE_END=3
             SSH_KEY_OPTION="--ssh-key /tmp/amazonKey.pem"
             SSH_PORT_OPTION="-p ${{ env.SSH_PORT }}"
@@ -122,7 +122,7 @@ runs:
         
         if [ "$ISSUE_TITLE" == "ctoolintegrationtest ce" ]; then
             SSH_KEY_OPTION=""
-        elif [ "$ISSUE_TITLE" == "ctoolintegrationtest se" ]; then
+        elif [ "$ISSUE_TITLE" == "ctoolintegrationtest se" -o "$ISSUE_TITLE" == "ctoolintegrationtest se3" ]; then
             SSH_KEY_OPTION="--ssh-key /tmp/amazonKey.pem"
         else
           echo "Unknown issue title: $ISSUE_TITLE"

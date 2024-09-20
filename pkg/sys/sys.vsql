@@ -45,7 +45,7 @@ EXTENSION ENGINE BUILTIN (
 		/*
 		Key:
 			ID int64 // used to identify record by ID
-			Singletone QName // used to identify singleton 
+			Singletone QName // used to identify singleton
 		*/
 		GET SCOPE(COMMANDS, QUERIES, PROJECTORS, JOBS),
 		GETBATCH SCOPE(COMMANDS, QUERIES, PROJECTORS, JOBS),
@@ -58,8 +58,8 @@ EXTENSION ENGINE BUILTIN (
 		GET SCOPE(COMMANDS, QUERIES, PROJECTORS, JOBS),
 		GETBATCH SCOPE(COMMANDS, QUERIES, PROJECTORS, JOBS),
 		READ SCOPE(QUERIES, PROJECTORS, JOBS),
-		INSERT SCOPE(PROJECTORS),
-		UPDATE SCOPE(PROJECTORS)
+		INSERT SCOPE(PROJECTORS, JOBS),
+		UPDATE SCOPE(PROJECTORS, JOBS)
 	) ENTITY VIEW;
 
 	STORAGE Uniq(
@@ -150,7 +150,7 @@ EXTENSION ENGINE BUILTIN (
 				...
 			}
 			Result: value // command result
-		*/		
+		*/
 		GET SCOPE(QUERIES, PROJECTORS, JOBS)
 	);
 
@@ -165,7 +165,7 @@ EXTENSION ENGINE BUILTIN (
 			ExpectedCodes text (optional, comma-separated, default is 200)
 		Value:
 			Body: []byte // blob content, returned in chunks up to 1024 bytes
-		*/		
+		*/
 		READ SCOPE(QUERIES, PROJECTORS, JOBS)
 	);
 
@@ -174,7 +174,7 @@ EXTENSION ENGINE BUILTIN (
 		Key:
 			From text
 			To text
-			СС text
+			CC text
 			BCC text
 			Host text - SMTP server
 			Port int32 - SMTP server
@@ -182,9 +182,9 @@ EXTENSION ENGINE BUILTIN (
 			Password text - SMTP server
 			Subject text
 			Body text
-			
+
 		*/
-		INSERT SCOPE(PROJECTORS)
+		INSERT SCOPE(PROJECTORS, JOBS)
 	);
 
 	STORAGE Result(
@@ -210,7 +210,7 @@ EXTENSION ENGINE BUILTIN (
 		Key: empty
 		Value
 			WLogOffset int64
-			Workspace int64			
+			Workspace int64
 			RegisteredAt int64
 			SyncedAt int64
 			DeviceID int64
@@ -220,7 +220,7 @@ EXTENSION ENGINE BUILTIN (
 			Error value {
 				ErrStr text
 				ValidEvent bool
-				QNameFromParams qname				
+				QNameFromParams qname
 			}
 			ArgumentObject value
 			CUDs []value {
@@ -228,7 +228,7 @@ EXTENSION ENGINE BUILTIN (
 				...CUD fields...
 			}
 		*/
-		GET SCOPE(PROJECTORS, JOBS)
+		GET SCOPE(PROJECTORS)
 	);
 
 	STORAGE CommandContext(
@@ -252,5 +252,25 @@ EXTENSION ENGINE BUILTIN (
 			ArgumentObject value
 		*/
 		GET SCOPE(QUERIES)
+	);
+
+	STORAGE JobContext(
+		/*
+		Key: empty
+		Value
+			Workspace int64
+			UnixTime int64
+		*/
+		GET SCOPE(JOBS)
+	);
+
+	STORAGE Logger(
+		/*
+		Key: 
+			LogLevel int32
+		Value
+			Message text
+		*/
+		INSERT SCOPE(COMMANDS, QUERIES, PROJECTORS, JOBS)
 	);
 );

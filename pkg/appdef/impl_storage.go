@@ -68,9 +68,11 @@ func (ss *storages) Len() int { return len(ss.storages) }
 
 func (ss *storages) Map() map[QName]QNames { return ss.qnames }
 
-func (ss *storages) Enum(cb func(IStorage)) {
+func (ss *storages) Enum(cb func(IStorage) bool) {
 	for _, n := range ss.ordered {
-		cb(ss.storages[n])
+		if !cb(ss.storages[n]) {
+			break
+		}
 	}
 }
 

@@ -7,13 +7,13 @@ package vit
 import (
 	"sync"
 	"testing"
-	"time"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/extensionpoints"
+	"github.com/voedger/voedger/pkg/isecrets"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/state/smtptest"
-	coreutils "github.com/voedger/voedger/pkg/utils"
 	"github.com/voedger/voedger/pkg/vvm"
 )
 
@@ -27,17 +27,13 @@ type VIT struct {
 	isFinalized          bool
 	nextNumber           int
 	appWorkspaces        map[appdef.AppQName]map[string]*AppWorkspace
-	principals           map[appdef.AppQName]map[string]*Principal // потому что принципалы обновляются
+	principals           map[appdef.AppQName]map[string]*Principal // because principals could be updated
 	isOnSharedConfig     bool
 	initialGoroutinesNum int
 	configCleanupsAmount int
 	emailCaptor          emailCaptor
 	httpClient           coreutils.IHTTPClient
-}
-
-type timeService struct {
-	m              sync.Mutex
-	currentInstant time.Time
+	mockTime             coreutils.IMockTime
 }
 
 type VITConfig struct {
@@ -45,7 +41,7 @@ type VITConfig struct {
 	isShared bool
 }
 
-type vitApps map[appdef.AppQName]*app // указатель потому, что к app потом будут опции применяться ([]logins, например)
+type vitApps map[appdef.AppQName]*app // pointer here because options could be applied to app later, e.g. []logins
 
 type vitPreConfig struct {
 	vvmCfg       *vvm.VVMConfig
@@ -53,6 +49,7 @@ type vitPreConfig struct {
 	cleanups     []func(vit *VIT)
 	initFuncs    []func()
 	postInitFunc func(vit *VIT)
+	secrets      map[string][]byte
 }
 
 type vitConfigOptFunc func(*vitPreConfig)
@@ -98,7 +95,7 @@ type WorkspaceDescriptor struct {
 
 type AppWorkspace struct {
 	WorkspaceDescriptor
-	Owner *Principal // потому что токены принципала обновляются, когда меняется время
+	Owner *Principal // because tokens of the principal will be updated when the time will be changed
 }
 
 func (a *AppWorkspace) AppQName() appdef.AppQName { return a.Owner.AppQName }
@@ -142,3 +139,8 @@ type signUpOpts struct {
 }
 
 type emailCaptor chan smtptest.Message
+
+type implVITISecretsReader struct {
+	secrets          map[string][]byte
+	underlyingReader isecrets.ISecretReader
+}

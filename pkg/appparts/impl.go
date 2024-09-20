@@ -13,41 +13,42 @@ import (
 	"time"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/iextengine"
 	"github.com/voedger/voedger/pkg/istructs"
-	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 type apps struct {
-	mx                    sync.RWMutex
-	vvmCtx                context.Context
-	structs               istructs.IAppStructsProvider
-	syncActualizerFactory SyncActualizerFactory
-	processors            [ProcessorKind_Count]IProcessorRunner
-	extEngineFactories    iextengine.ExtensionEngineFactories
-	apps                  map[appdef.AppQName]*appRT
+	mx                     sync.RWMutex
+	vvmCtx                 context.Context
+	structs                istructs.IAppStructsProvider
+	syncActualizerFactory  SyncActualizerFactory
+	asyncActualizersRunner IActualizerRunner
+	schedulerRunner        ISchedulerRunner
+	extEngineFactories     iextengine.ExtensionEngineFactories
+	apps                   map[appdef.AppQName]*appRT
 }
 
 func newAppPartitions(
 	vvmCtx context.Context,
 	asp istructs.IAppStructsProvider,
 	saf SyncActualizerFactory,
-	asyncActualizersRunner IProcessorRunner,
-	jobSchedulerRunner IProcessorRunner,
+	asyncActualizersRunner IActualizerRunner,
+	jobSchedulerRunner ISchedulerRunner,
 	eef iextengine.ExtensionEngineFactories,
 ) (ap IAppPartitions, cleanup func(), err error) {
 	a := &apps{
-		mx:                    sync.RWMutex{},
-		vvmCtx:                vvmCtx,
-		structs:               asp,
-		syncActualizerFactory: saf,
-		extEngineFactories:    eef,
-		apps:                  map[appdef.AppQName]*appRT{},
+		mx:                     sync.RWMutex{},
+		vvmCtx:                 vvmCtx,
+		structs:                asp,
+		asyncActualizersRunner: asyncActualizersRunner,
+		schedulerRunner:        jobSchedulerRunner,
+		syncActualizerFactory:  saf,
+		extEngineFactories:     eef,
+		apps:                   map[appdef.AppQName]*appRT{},
 	}
-	a.processors[ProcessorKind_Actualizer] = asyncActualizersRunner
-	asyncActualizersRunner.SetAppPartitions(a)
-	a.processors[ProcessorKind_Scheduler] = jobSchedulerRunner
-	jobSchedulerRunner.SetAppPartitions(a)
+	a.asyncActualizersRunner.SetAppPartitions(a)
+	a.schedulerRunner.SetAppPartitions(a)
 	return a, func() {}, err
 }
 
@@ -94,7 +95,7 @@ func (aps *apps) DeployAppPartitions(name appdef.AppQName, ids []istructs.Partit
 		panic(errAppNotFound(name))
 	}
 
-	//TODO: parallelize
+	wg := sync.WaitGroup{}
 	for _, id := range ids {
 		var p *appPartitionRT
 
@@ -107,8 +108,27 @@ func (aps *apps) DeployAppPartitions(name appdef.AppQName, ids []istructs.Partit
 		}
 		a.mx.Unlock()
 
-		p.processors.deploy()
+		wg.Add(1)
+		go func(p *appPartitionRT) {
+			p.actualizers.Deploy(
+				aps.vvmCtx,
+				a.lastestVersion.appDef(),
+				aps.asyncActualizersRunner.NewAndRun,
+			)
+			wg.Done()
+		}(p)
+
+		wg.Add(1)
+		go func(p *appPartitionRT) {
+			p.schedulers.Deploy(
+				aps.vvmCtx,
+				a.lastestVersion.appDef(),
+				aps.schedulerRunner.NewAndRun,
+			)
+			wg.Done()
+		}(p)
 	}
+	wg.Wait()
 }
 
 func (aps *apps) AppDef(name appdef.AppQName) (appdef.IAppDef, error) {

@@ -40,13 +40,22 @@ func TestSidecarApps_BasicUsage(t *testing.T) {
 	ws := vit.CreateWorkspace(it.WSParams{
 		Name:      "test_sidecar_ws",
 		Kind:      appdef.NewQName("sidecartestapp", "test2app1"),
-		ClusterID: istructs.MainClusterID,
+		ClusterID: istructs.CurrentClusterID(),
 	}, prn)
 
-	// call a TestEcho query defined in wasm in test2/app1 sidecar app
-	body := `{"args":{"Str":"world"},"elements":[{"fields":["Res"]}]}`
-	resp := vit.PostWS(ws, "q.sidecartestapp.TestEcho", body)
-	resp.Println()
+	t.Run("query", func(t *testing.T) {
+		// call a TestEcho query defined in wasm in test2/app1 sidecar app
+		body := `{"args":{"Str":"world"},"elements":[{"fields":["Res"]}]}`
+		resp := vit.PostWS(ws, "q.sidecartestapp.TestEcho", body)
+		resp.Println()
+		require.Equal(t, "hello, world", resp.SectionRow()[0].(string))
+	})
 
-	require.Equal(t, "hello, world", resp.SectionRow()[0].(string))
+	t.Run("command", func(t *testing.T) {
+		// call a TestCmdEcho command defined in wasm in test2/app1 sidecar app
+		body := `{"args":{"Str":"world"}}`
+		resp := vit.PostWS(ws, "c.sidecartestapp.TestCmdEcho", body)
+		require.Equal(t, "hello, world", resp.CmdResult["Res"].(string))
+	})
+
 }

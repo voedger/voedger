@@ -16,22 +16,22 @@ import (
 
 	"github.com/voedger/voedger/pkg/goutils/iterate"
 	"github.com/voedger/voedger/pkg/goutils/logger"
+	"github.com/voedger/voedger/pkg/processors/actualizers"
 	"golang.org/x/exp/maps"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appparts"
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/pipeline"
 	"github.com/voedger/voedger/pkg/processors"
-	"github.com/voedger/voedger/pkg/projectors"
 	"github.com/voedger/voedger/pkg/sys/authnz"
 	"github.com/voedger/voedger/pkg/sys/blobber"
 	"github.com/voedger/voedger/pkg/sys/builtin"
 	workspacemgmt "github.com/voedger/voedger/pkg/sys/workspace"
-	coreutils "github.com/voedger/voedger/pkg/utils"
 	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
 )
 
@@ -180,7 +180,6 @@ func (cmdProc *cmdProc) getCmdResultBuilder(_ context.Context, work pipeline.IWo
 
 func (cmdProc *cmdProc) buildCommandArgs(_ context.Context, work pipeline.IWorkpiece) (err error) {
 	cmd := work.(*cmdWorkpiece)
-
 	cmd.eca.CommandPrepareArgs = istructs.CommandPrepareArgs{
 		PrepareArgs: istructs.PrepareArgs{
 			ArgumentObject: cmd.argsObject,
@@ -192,7 +191,7 @@ func (cmdProc *cmdProc) buildCommandArgs(_ context.Context, work pipeline.IWorkp
 	}
 
 	hs := cmd.hostStateProvider.get(cmd.appStructs, cmd.cmdMes.WSID(), cmd.reb.CUDBuilder(),
-		cmd.principals, cmd.cmdMes.Token(), cmd.cmdResultBuilder, cmd.eca.CommandPrepareArgs, cmd.workspace.NextWLogOffset)
+		cmd.principals, cmd.cmdMes.Token(), cmd.cmdResultBuilder, cmd.eca.CommandPrepareArgs, cmd.workspace.NextWLogOffset, cmd.argsObject, cmd.unloggedArgsObject)
 	hs.ClearIntents()
 
 	cmd.eca.State = hs
@@ -397,7 +396,7 @@ func (cmdProc *cmdProc) getRawEventBuilder(_ context.Context, work pipeline.IWor
 		HandlingPartition: cmd.cmdMes.PartitionID(),
 		Workspace:         cmd.cmdMes.WSID(),
 		QName:             cmd.cmdMes.QName(),
-		RegisteredAt:      istructs.UnixMilli(cmdProc.now().UnixMilli()),
+		RegisteredAt:      istructs.UnixMilli(cmdProc.time.Now().UnixMilli()),
 		PLogOffset:        cmdProc.appPartition.nextPLogOffset,
 		WLogOffset:        cmd.workspace.NextWLogOffset,
 	}
@@ -406,7 +405,7 @@ func (cmdProc *cmdProc) getRawEventBuilder(_ context.Context, work pipeline.IWor
 	case builtin.QNameCommandInit: // nolint, kept to not to break existing events only
 		cmd.reb = cmd.appStructs.Events().GetSyncRawEventBuilder(
 			istructs.SyncRawEventBuilderParams{
-				SyncedAt:                     istructs.UnixMilli(cmdProc.now().UnixMilli()),
+				SyncedAt:                     istructs.UnixMilli(cmdProc.time.Now().UnixMilli()),
 				GenericRawEventBuilderParams: grebp,
 			},
 		)
@@ -573,7 +572,7 @@ func parseCUDs(_ context.Context, work pipeline.IWorkpiece) (err error) {
 		if !ok {
 			return cudXPath.Errorf(`"fields" missing`)
 		}
-		// sys.ID внутри -> create, снаружи -> update
+		// sys.ID inside -> create, outside -> update
 		isCreate := false
 		if parsedCUD.id, isCreate, err = parsedCUD.fields.AsInt64(appdef.SystemField_ID); err != nil {
 			return cudXPath.Error(err)
@@ -705,7 +704,7 @@ func (cmdProc *cmdProc) n10n(_ context.Context, work pipeline.IWorkpiece) (err e
 	cmd := work.(*cmdWorkpiece)
 	cmdProc.n10nBroker.Update(in10n.ProjectionKey{
 		App:        cmd.cmdMes.AppQName(),
-		Projection: projectors.PLogUpdatesQName,
+		Projection: actualizers.PLogUpdatesQName,
 		WS:         istructs.WSID(cmdProc.pNumber),
 	}, cmd.rawEvent.PLogOffset())
 	logger.Verbose("updated plog event on offset ", cmd.rawEvent.PLogOffset(), ", pnumber ", cmdProc.pNumber)

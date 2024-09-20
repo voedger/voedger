@@ -10,9 +10,9 @@ import (
 	"net/http"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/istructs"
 	itokens "github.com/voedger/voedger/pkg/itokens"
-	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 func GetSystemPrincipalToken(itokens itokens.ITokens, appQName appdef.AppQName) (string, error) {

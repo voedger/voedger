@@ -14,9 +14,9 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/sys"
-	coreutils "github.com/voedger/voedger/pkg/utils"
 	it "github.com/voedger/voedger/pkg/vit"
 )
 
@@ -38,23 +38,23 @@ func TestBug_QueryProcessorMustStopOnClientDisconnect(t *testing.T) {
 	it.MockQryExec = func(input string, _ istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 		rr := &rr{res: input}
 		require.NoError(callback(rr))
-		<-goOn // ждем, пока http клиент примет первый элемент и отключится
-		// теперь ждем ошибку context.Cancelled. Она выйдет не сразу, т.к. в queryprocessor работает асинхронный конвейер
+		<-goOn // what for http client to receive the first element and disconnect
+		// now wait for error context.Cancelled. It will be occurred immediately because an async pipeline works within queryprocessor
 		for err == nil {
 			err = callback(rr)
 		}
 		require.Equal(context.Canceled, err)
-		defer func() { goOn <- nil }() // отсигналим, что поймали ошибку context.Cancelled
+		defer func() { goOn <- nil }() // signal that context.Canceled error is caught
 		return err
 	}
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 
-	// отправим POST-запрос
+	// sned POST request
 	body := `{"args": {"Input": "world"},"elements": [{"fields": ["Res"]}]}`
 	ws := vit.WS(istructs.AppQName_test1_app1, "test_ws")
 	vit.PostWS(ws, "q.app1pkg.MockQry", body, coreutils.WithResponseHandler(func(httpResp *http.Response) {
-		// прочтем первую часть ответа (сервер не отдаст вторую, пока в goOn не запишем чего-нибудь)
+		// read out the first part of the respoce (the serer will not send the next one before writing something in goOn)
 		entireResp := []byte{}
 		var err error
 		n := 0
@@ -67,21 +67,21 @@ func TestBug_QueryProcessorMustStopOnClientDisconnect(t *testing.T) {
 			entireResp = append(entireResp, buf[:n]...)
 		}
 
-		// порвем соединение в середине обработки запроса
+		// break the connection during request handling
 		httpResp.Request.Body.Close()
 		httpResp.Body.Close()
-		goOn <- nil // функция начнет передавать вторую часть, но это не получится, т.к. request context закрыт
+		goOn <- nil // the func will start to send the second part. That will be failed because the request context is closed
 	}))
 
-	<-goOn // подождем, пока ошибки проверятся
-	// ожидаем, что никаких посторонних ошибок нет: ничего не повисло, queryprocessor отдал управление, роутер не пытается писать в закрытую коннекцию и т.п.
+	<-goOn // wait for error check
+	// expecting that there are no additional errors: nothing hung, queryprocessor is done, router does not try to write to a closed connection etc
 }
 
 func Test409OnRepeatedlyUsedRawIDsInResultCUDs_(t *testing.T) {
 	vit := it.NewVIT(t, &it.SharedConfig_App1)
 	defer vit.TearDown()
 	it.MockCmdExec = func(_ string, args istructs.ExecCommandArgs) error {
-		// 2 раза используем один и тот же rawID -> 500 internal server error
+		// the same rawID 2 times -> 500 internal server error
 		kb, err := args.State.KeyBuilder(sys.Storage_Record, it.QNameApp1_CDocCategory)
 		if err != nil {
 			return err

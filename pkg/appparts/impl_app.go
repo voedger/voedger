@@ -12,7 +12,10 @@ import (
 	"sync"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/appparts/internal/acl"
+	"github.com/voedger/voedger/pkg/appparts/internal/actualizers"
 	"github.com/voedger/voedger/pkg/appparts/internal/pool"
+	"github.com/voedger/voedger/pkg/appparts/internal/schedulers"
 	"github.com/voedger/voedger/pkg/iextengine"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/pipeline"
@@ -85,7 +88,7 @@ func (a *appRT) deploy(def appdef.IAppDef, extModuleURLs map[string]*url.URL, st
 	eef := a.apps.extEngineFactories
 
 	enginesPathsModules := map[appdef.ExtensionEngineKind]map[string]*iextengine.ExtensionModule{}
-	def.Extensions(func(ext appdef.IExtension) {
+	def.Extensions(func(ext appdef.IExtension) bool {
 		extEngineKind := ext.Engine()
 		path := ext.App().PackageFullPath(ext.QName().Pkg())
 		pathsModules, ok := enginesPathsModules[extEngineKind]
@@ -95,7 +98,7 @@ func (a *appRT) deploy(def appdef.IAppDef, extModuleURLs map[string]*url.URL, st
 			enginesPathsModules[extEngineKind] = pathsModules
 		}
 		if extEngineKind != appdef.ExtensionEngineKind_WASM {
-			return
+			return true
 		}
 		extModule, ok := pathsModules[path]
 		if !ok {
@@ -110,6 +113,7 @@ func (a *appRT) deploy(def appdef.IAppDef, extModuleURLs map[string]*url.URL, st
 			pathsModules[path] = extModule
 		}
 		extModule.ExtensionNames = append(extModule.ExtensionNames, ext.QName().Entity())
+		return true
 	})
 	extModules := map[appdef.ExtensionEngineKind][]iextengine.ExtensionModule{}
 	for extEngineKind, pathsModules := range enginesPathsModules {
@@ -120,7 +124,7 @@ func (a *appRT) deploy(def appdef.IAppDef, extModuleURLs map[string]*url.URL, st
 	}
 
 	pools := [ProcessorKind_Count]*pool.Pool[engines]{}
-	// processorKind here is one of ProcessorKind_Command, ProcessorKind_Query, ProcessorKind_Actualizer
+	// processorKind here is one of ProcessorKind_Command, ProcessorKind_Query, ProcessorKind_Actualizer, ProcessorKind_Scheduler
 	for processorKind, processorsCountPerKind := range numEnginesPerEngineKind {
 		ee := make([]engines, processorsCountPerKind)
 		for extEngineKind, extensionModules := range extModules {
@@ -149,18 +153,19 @@ type appPartitionRT struct {
 	app            *appRT
 	id             istructs.PartitionID
 	syncActualizer pipeline.ISyncOperator
-	processors     *partitionProcessors
-
-	// TODO: implement partitionCache
+	actualizers    *actualizers.PartitionActualizers
+	schedulers     *schedulers.PartitionSchedulers
 }
 
 func newAppPartitionRT(app *appRT, id istructs.PartitionID) *appPartitionRT {
+	as := app.lastestVersion.appStructs()
 	part := &appPartitionRT{
 		app:            app,
 		id:             id,
-		syncActualizer: app.apps.syncActualizerFactory(app.lastestVersion.appStructs(), id),
+		syncActualizer: app.apps.syncActualizerFactory(as, id),
+		actualizers:    actualizers.New(app.name, id),
+		schedulers:     schedulers.New(app.name, app.partsCount, as.NumAppWorkspaces(), id),
 	}
-	part.processors = newPartitionProcessors(part)
 	return part
 }
 
@@ -179,6 +184,7 @@ type borrowedPartition struct {
 	part       *appPartitionRT
 	appDef     appdef.IAppDef
 	appStructs istructs.IAppStructs
+	kind       ProcessorKind
 	pool       *pool.Pool[engines] // pool of borrowed engines
 	engines    engines             // borrowed engines
 }
@@ -216,6 +222,10 @@ func (bp *borrowedPartition) Invoke(ctx context.Context, name appdef.QName, stat
 		return errUndefinedExtension(name)
 	}
 
+	if compat, err := bp.kind.compatibleWithExtension(e); !compat {
+		return fmt.Errorf("%s: %w", bp, err)
+	}
+
 	extName := bp.appDef.FullQName(name)
 	if extName == appdef.NullFullQName {
 		return errCantObtainFullQName(name)
@@ -228,6 +238,14 @@ func (bp *borrowedPartition) Invoke(ctx context.Context, name appdef.QName, stat
 	}
 
 	return extEngine.Invoke(ctx, extName, io)
+}
+
+func (bp *borrowedPartition) IsOperationAllowed(op appdef.OperationKind, res appdef.QName, fld []appdef.FieldName, roles []appdef.QName) (bool, []appdef.FieldName, error) {
+	return acl.IsOperationAllowed(bp.appDef, op, res, fld, roles)
+}
+
+func (bp *borrowedPartition) String() string {
+	return fmt.Sprintf("borrowedPartition{app=%s, part=%d, kind=%s}", bp.part.app.name, bp.part.id, bp.kind)
 }
 
 // # IAppPartition.Release
@@ -246,6 +264,7 @@ func (bp *borrowedPartition) Release() {
 }
 
 func (bp *borrowedPartition) borrow(proc ProcessorKind) (err error) {
+	bp.kind = proc
 	bp.appDef, bp.appStructs, bp.pool = bp.part.app.lastestVersion.snapshot(proc)
 	bp.engines, err = bp.pool.Borrow()
 	if err != nil {

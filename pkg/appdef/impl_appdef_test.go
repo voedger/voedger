@@ -65,11 +65,21 @@ func Test_NullAppDef(t *testing.T) {
 	})
 
 	t.Run("should be null return other members", func(t *testing.T) {
-		app.Types(func(typ IType) {
+		app.Types(func(typ IType) bool {
 			if !typ.IsSystem() {
 				t.Errorf("unexpected user type %v", typ)
 			}
+			return true
 		})
+	})
+
+	t.Run("should be break enum types", func(t *testing.T) {
+		cnt := 0
+		app.Types(func(IType) bool {
+			cnt++
+			return false
+		})
+		require.Equal(1, cnt)
 	})
 }
 

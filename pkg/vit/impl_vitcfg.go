@@ -12,11 +12,11 @@ import (
 	"github.com/voedger/voedger/pkg/apps"
 	"github.com/voedger/voedger/pkg/apps/sys/clusterapp"
 	"github.com/voedger/voedger/pkg/apps/sys/registryapp"
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/sys/smtp"
 	"github.com/voedger/voedger/pkg/sys/workspace"
-	coreutils "github.com/voedger/voedger/pkg/utils"
 	"github.com/voedger/voedger/pkg/vvm"
 )
 
@@ -44,7 +44,7 @@ func WithBuilder(builder apps.AppBuilder) AppOptFunc {
 // at MainCluster
 func WithUserLogin(name, pwd string, opts ...PostConstructFunc) AppOptFunc {
 	return func(app *app, _ *vvm.VVMConfig) {
-		login := NewLogin(name, pwd, app.name, istructs.SubjectKind_User, istructs.MainClusterID)
+		login := NewLogin(name, pwd, app.name, istructs.SubjectKind_User, istructs.CurrentClusterID())
 		for _, opt := range opts {
 			opt(&login)
 		}
@@ -75,7 +75,7 @@ func WithChild(wsKind appdef.QName, name, templateName string, templateParams st
 			Kind:           wsKind,
 			ownerLoginName: ownerLoginName,
 			InitDataJSON:   string(initData),
-			ClusterID:      istructs.MainClusterID,
+			ClusterID:      istructs.CurrentClusterID(),
 			docs:           map[appdef.QName]func(verifiedValues map[string]string) map[string]interface{}{},
 		}
 		for _, opt := range opts {
@@ -98,7 +98,7 @@ func WithChildWorkspace(wsKind appdef.QName, name, templateName string, template
 			Kind:           wsKind,
 			ownerLoginName: ownerLoginName,
 			InitDataJSON:   string(initData),
-			ClusterID:      istructs.MainClusterID,
+			ClusterID:      istructs.CurrentClusterID(),
 			docs:           map[appdef.QName]func(verifiedValues map[string]string) map[string]interface{}{},
 		}
 		for _, opt := range opts {
@@ -188,5 +188,11 @@ func WithVerifiedValue(docQName appdef.QName, fieldName string, desiredValue str
 			fieldName:    fieldName,
 			desiredValue: desiredValue,
 		}
+	}
+}
+
+func WithSecret(name string, value []byte) vitConfigOptFunc {
+	return func(vpc *vitPreConfig) {
+		vpc.secrets[name] = value
 	}
 }

@@ -16,8 +16,8 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/goutils/logger"
-	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 var logFile *os.File
@@ -71,12 +71,10 @@ func printLogLine(logLevel logger.TLogLevel, line string) {
 }
 
 func getLoggerLevel() logger.TLogLevel {
-	b, err := rootCmd.Flags().GetBool("trace")
-	if err == nil && b {
+	if trace() {
 		return logger.LogLevelTrace
 	}
-	b, err = rootCmd.Flags().GetBool("verbose")
-	if err == nil && b {
+	if verbose() {
 		return logger.LogLevelVerbose
 	}
 	return logger.LogLevelInfo

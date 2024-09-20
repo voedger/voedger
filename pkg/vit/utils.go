@@ -10,22 +10,24 @@ import (
 	"fmt"
 	"io"
 	"math"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
+	"github.com/voedger/voedger/pkg/coreutils/federation"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/istorage"
-	"github.com/voedger/voedger/pkg/utils/federation"
+	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	"github.com/voedger/voedger/pkg/vvm"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/registry"
 	"github.com/voedger/voedger/pkg/sys/authnz"
-	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 func (vit *VIT) GetBLOB(appQName appdef.AppQName, wsid istructs.WSID, blobID istructs.RecordID, token string) *BLOB {
@@ -70,7 +72,7 @@ func (vit *VIT) SignUp(loginName, pwd string, appQName appdef.AppQName, opts ...
 
 func getSignUpOpts(opts []signUpOptFunc) *signUpOpts {
 	res := &signUpOpts{
-		profileClusterID: istructs.MainClusterID,
+		profileClusterID: istructs.CurrentClusterID(),
 	}
 	for _, opt := range opts {
 		opt(res)
@@ -139,7 +141,7 @@ func (vit *VIT) GetCDocChildWorkspace(ws *AppWorkspace) (cdoc map[string]interfa
 	return vit.getCDoc(ws.Owner.AppQName, authnz.QNameCDocChildWorkspace, ws.Owner.ProfileWSID)
 }
 
-func (vit *VIT) waitForWorkspace(wsName string, owner *Principal, respGetter func(owner *Principal, body string) *coreutils.FuncResponse) (ws *AppWorkspace) {
+func (vit *VIT) waitForWorkspace(wsName string, owner *Principal, respGetter func(owner *Principal, body string) *coreutils.FuncResponse, expectWSInitErrorChunks ...string) (ws *AppWorkspace) {
 	const (
 		// respect linter
 		tmplNameIdx   = 3
@@ -171,9 +173,20 @@ func (vit *VIT) waitForWorkspace(wsName string, owner *Principal, respGetter fun
 		}
 		wsKind, err := appdef.ParseQName(resp.SectionRow()[1].(string))
 		require.NoError(vit.T, err)
-		if len(wsError) > 0 {
+
+		if len(expectWSInitErrorChunks) > 0 {
+			tempWSError := wsError
+			for _, errChunk := range expectWSInitErrorChunks {
+				if strings.Contains(wsError, errChunk) {
+					tempWSError = tempWSError[:strings.Index(tempWSError, errChunk)+len(errChunk)]
+					continue
+				}
+				vit.T.Fatalf(`expected ws init error template is [%s] but is "%s"`, strings.Join(expectWSInitErrorChunks, ", "), wsError)
+			}
+		} else if len(wsError) > 0 {
 			vit.T.Fatal(wsError)
 		}
+
 		return &AppWorkspace{
 			WorkspaceDescriptor: WorkspaceDescriptor{
 				WSParams: WSParams{
@@ -182,7 +195,7 @@ func (vit *VIT) waitForWorkspace(wsName string, owner *Principal, respGetter fun
 					InitDataJSON:   resp.SectionRow()[2].(string),
 					TemplateName:   resp.SectionRow()[tmplNameIdx].(string),
 					TemplateParams: resp.SectionRow()[tmplParamsIdx].(string),
-					ClusterID:      istructs.MainClusterID,
+					ClusterID:      istructs.CurrentClusterID(),
 					ownerLoginName: owner.Name,
 				},
 				WSID:    wsid,
@@ -195,10 +208,46 @@ func (vit *VIT) waitForWorkspace(wsName string, owner *Principal, respGetter fun
 	return ws
 }
 
-func (vit *VIT) WaitForWorkspace(wsName string, owner *Principal) (ws *AppWorkspace) {
+func (vit *VIT) WaitForProfile(cdocLoginID istructs.RecordID, login string, appQName appdef.AppQName, expectWSInitErrorChunks ...string) (profileWSID istructs.WSID) {
+	vit.T.Helper()
+	deadline := time.Now().Add(getWorkspaceInitAwaitTimeout())
+	pseudoWSID := coreutils.GetPseudoWSID(istructs.NullWSID, login, istructs.CurrentClusterID())
+	queryCDocLoginBody := fmt.Sprintf(`{"args":{"Query":"select * from registry.Login.%d"},"elements":[{"fields":["Result"]}]}`, cdocLoginID)
+	sysToken, err := payloads.GetSystemPrincipalToken(vit.ITokens, istructs.AppQName_sys_registry)
+	require.NoError(vit.T, err)
+	for time.Now().Before(deadline) {
+		resp := vit.PostApp(istructs.AppQName_sys_registry, pseudoWSID, "q.sys.SqlQuery", queryCDocLoginBody, coreutils.WithAuthorizeBy(sysToken))
+		m := map[string]interface{}{}
+		require.NoError(vit.T, json.Unmarshal([]byte(resp.SectionRow()[0].(string)), &m))
+		wsError := m["WSError"].(string)
+		if len(wsError) > 0 {
+			if len(expectWSInitErrorChunks) > 0 {
+				tempWSErr := wsError
+				for _, errChunk := range expectWSInitErrorChunks {
+					errChunkIdx := strings.Index(tempWSErr, errChunk)
+					if errChunkIdx == 0 {
+						vit.T.Fatalf("expected error should contain [%s] but is %s", strings.Join(expectWSInitErrorChunks, ","), wsError)
+					}
+					tempWSErr = tempWSErr[errChunkIdx+len(errChunk):]
+				}
+				return istructs.WSID(m["WSID"].(float64))
+			}
+			vit.T.Fatalf("profile init error: %s", wsError)
+		}
+		if m["WSID"].(float64) > 0 {
+			if len(expectWSInitErrorChunks) > 0 {
+				vit.T.Fatalf("profile init error should contain [%s] but inited with no error", strings.Join(expectWSInitErrorChunks, ","))
+			}
+			return istructs.WSID(m["WSID"].(float64))
+		}
+	}
+	panic("profile init await taimout")
+}
+
+func (vit *VIT) WaitForWorkspace(wsName string, owner *Principal, expectWSInitErrorChunks ...string) (ws *AppWorkspace) {
 	return vit.waitForWorkspace(wsName, owner, func(owner *Principal, body string) *coreutils.FuncResponse {
 		return vit.PostProfile(owner, "q.sys.QueryChildWorkspaceByName", body)
-	})
+	}, expectWSInitErrorChunks...)
 }
 
 func (vit *VIT) WaitForChildWorkspace(parentWS *AppWorkspace, wsName string) (ws *AppWorkspace) {
@@ -286,8 +335,8 @@ func SimpleWSParams(wsName string) WSParams {
 	return WSParams{
 		Name:         wsName,
 		Kind:         QNameApp1_TestWSKind,
-		ClusterID:    istructs.MainClusterID,
-		InitDataJSON: `{"IntFld": 42}`, //
+		ClusterID:    istructs.CurrentClusterID(),
+		InitDataJSON: `{"IntFld": 42}`,
 	}
 }
 
@@ -347,7 +396,7 @@ func (vit *VIT) GetAny(entity string, ws *AppWorkspace) istructs.RecordID {
 }
 
 func NewLogin(name, pwd string, appQName appdef.AppQName, subjectKind istructs.SubjectKindType, clusterID istructs.ClusterID) Login {
-	pseudoWSID := coreutils.GetPseudoWSID(istructs.NullWSID, name, istructs.MainClusterID)
+	pseudoWSID := coreutils.GetPseudoWSID(istructs.NullWSID, name, istructs.CurrentClusterID())
 	return Login{name, pwd, pseudoWSID, appQName, subjectKind, clusterID, map[appdef.QName]func(verifiedValues map[string]string) map[string]interface{}{}}
 }
 
@@ -379,7 +428,7 @@ func DummyWS(wsKind appdef.QName, wsid istructs.WSID, ownerPrn *Principal) *AppW
 		WorkspaceDescriptor: WorkspaceDescriptor{
 			WSParams: WSParams{
 				Kind:      wsKind,
-				ClusterID: istructs.MainClusterID,
+				ClusterID: istructs.CurrentClusterID(),
 			},
 			WSID: wsid,
 		},

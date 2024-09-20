@@ -101,16 +101,27 @@ var (
 	qNameCmdSaveTap2PayPayment                      = appdef.NewQName(airPackage, "SaveTap2PayPayment")
 	qNameQryGetResellers                            = appdef.NewQName(airPackage, "GetResellers")
 	qNameQryState                                   = appdef.NewQName(appdef.SysPackage, "State")
+	qNameQryGetAirLocations                         = appdef.NewQName(airPackage, "GetAirLocations")
+	qNameQryResellersDashboardSalesMetrics          = appdef.NewQName(airPackage, "ResellersDashboardSalesMetrics")
+	qNameQryResellersDashboardBackofficeMetrics     = appdef.NewQName(airPackage, "ResellersDashboardBackofficeMetrics")
+	qNameCmdProvideCertificatePart                  = appdef.NewQName(fiscalcloudPackage, "ProvideCertificatePart")
+	qNameCmdProvideCertificate                      = appdef.NewQName(fiscalcloudPackage, "ProvideCertificate")
+	qNameQryGetCustomerStatus                       = appdef.NewQName(fiscalcloudPackage, "GetCustomerStatus")
+	qNameCmdFiscalizeDocument                       = appdef.NewQName(fiscalcloudPackage, "FiscalizeDocument")
+	qNameQryFiscalizationResultStatus               = appdef.NewQName(fiscalcloudPackage, "FiscalizationResultStatus")
+	qNameCmdCreateExport                            = appdef.NewQName(fiscalcloudPackage, "CreateExport")
+	qNameQryExportStatus                            = appdef.NewQName(fiscalcloudPackage, "ExportStatus")
 
 	// Air roles
-	qNameRoleResellersAdmin         = appdef.NewQName(airPackage, "ResellersAdmin")
-	qNameRoleUntillPaymentsReseller = appdef.NewQName(airPackage, "UntillPaymentsReseller")
-	qNameRoleUntillPaymentsUser     = appdef.NewQName(airPackage, "UntillPaymentsUser")
-	qNameRoleAirReseller            = appdef.NewQName(airPackage, "AirReseller") // Deprecated: use role air.SubscriptionReseller instead
-	qNameRoleSubscriptionReseller   = appdef.NewQName(airPackage, "SubscriptionReseller")
-	qNameRoleUntillPaymentsTerminal = appdef.NewQName(airPackage, "UntillPaymentsTerminal")
-	qNameRoleUntillPaymentsManager  = appdef.NewQName(airPackage, "UntillPaymentsManager")
-	qNameRoleBOReader               = appdef.NewQName(airPackage, "BOReader")
+	qNameRoleResellersAdmin            = appdef.NewQName(airPackage, "ResellersAdmin")
+	qNameRoleUntillPaymentsReseller    = appdef.NewQName(airPackage, "UntillPaymentsReseller")
+	qNameRoleUntillPaymentsUser        = appdef.NewQName(airPackage, "UntillPaymentsUser")
+	qNameRoleAirReseller               = appdef.NewQName(airPackage, "AirReseller") // Deprecated: use role air.SubscriptionReseller instead
+	qNameRoleSubscriptionReseller      = appdef.NewQName(airPackage, "SubscriptionReseller")
+	qNameRoleUntillPaymentsTerminal    = appdef.NewQName(airPackage, "UntillPaymentsTerminal")
+	qNameRoleUntillPaymentsManager     = appdef.NewQName(airPackage, "UntillPaymentsManager")
+	qNameRoleBOReader                  = appdef.NewQName(airPackage, "BOReader")
+	qNameResellerPortalDashboardViewer = appdef.NewQName(airPackage, "ResellerPortalDashboardViewer")
 )
 
 const (
@@ -121,6 +132,7 @@ const (
 	field_OwnerWSID             = "OwnerWSID"
 	airPackage                  = "air"
 	untillPackage               = "untill"
+	fiscalcloudPackage          = "fiscalcloud"
 	untillChargebeeAgentLogin   = "untillchargebeeagent"
 	clusterPackage              = "cluster"
 

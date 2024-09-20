@@ -23,7 +23,7 @@ jobs:
 
 
   deploy:
-    if: ${{ contains(github.event.issue.title, 'ctoolintegrationtest se') }}
+    if: ${{ github.event.issue.title == 'ctoolintegrationtest se' }}
     runs-on: ubuntu-latest
     env:
       SSH_PORT: 2214
@@ -131,14 +131,14 @@ jobs:
 
   upgrade:
     needs: deploy
-    if: ${{ contains(github.event.issue.title, 'ctoolintegrationtest se') }}
+    if: ${{ github.event.issue.title == 'ctoolintegrationtest se' }}
     runs-on: ubuntu-latest
     env:
       SSH_PORT: 2214
       SSH_OPTIONS: "-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=ERROR"
       TF_VAR_ssh_private_key: ${{ secrets.AWS_SSH_KEY }}
       TF_VAR_gh_token: ${{ secrets.REPOREADING_TOKEN }}
-      TF_VAR_git_commit_id: "4b0e2993e942a57234d949b2b7d86f9965ed928c"
+      TF_VAR_git_commit_id: "7f00f4c759b23c46754a201266cbe94fa8c3777c"
       TF_VAR_git_repo_url: "https://github.com/voedger/voedger"
       TF_VAR_ssh_port: 2214
       TF_VAR_issue_number: ${{ github.event.issue.number }}
@@ -232,7 +232,7 @@ jobs:
 
       - name: Terraform destroy
         if: always()
-        run: terraform -chdir=cmd/ctool/scripts/terraform/ destroy -auto-approve  -var="git_commit_id=4b0e2993e942a57234d949b2b7d86f9965ed928c"
+        run: terraform -chdir=cmd/ctool/scripts/terraform/ destroy -auto-approve  -var="git_commit_id=7f00f4c759b23c46754a201266cbe94fa8c3777c"
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}

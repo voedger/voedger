@@ -8,12 +8,12 @@ import (
 	"fmt"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/state/smtptest"
 	"github.com/voedger/voedger/pkg/sys"
-	coreutils "github.com/voedger/voedger/pkg/utils"
 	"github.com/wneessen/go-mail"
 )
 
@@ -39,10 +39,6 @@ type mailKeyBuilder struct {
 	from     string
 	subject  string
 	body     string
-}
-
-func (b *mailKeyBuilder) Storage() appdef.QName {
-	return sys.Storage_SendMail
 }
 
 func (b *mailKeyBuilder) Equals(src istructs.IKeyBuilder) bool {
@@ -138,9 +134,10 @@ type sendMailValueBuilder struct {
 
 func (s *sendMailStorage) NewKeyBuilder(appdef.QName, istructs.IStateKeyBuilder) istructs.IStateKeyBuilder {
 	return &mailKeyBuilder{
-		to:  make([]string, 0),
-		cc:  make([]string, 0),
-		bcc: make([]string, 0),
+		baseKeyBuilder: baseKeyBuilder{storage: sys.Storage_SendMail},
+		to:             make([]string, 0),
+		cc:             make([]string, 0),
+		bcc:            make([]string, 0),
 	}
 }
 func (s *sendMailStorage) Validate(items []state.ApplyBatchItem) (err error) {

@@ -19,6 +19,8 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appparts"
+	"github.com/voedger/voedger/pkg/coreutils"
+	wsdescutil "github.com/voedger/voedger/pkg/coreutils/testwsdesc"
 	"github.com/voedger/voedger/pkg/iauthnzimpl"
 	"github.com/voedger/voedger/pkg/iextengine"
 	"github.com/voedger/voedger/pkg/in10n"
@@ -34,9 +36,7 @@ import (
 	imetrics "github.com/voedger/voedger/pkg/metrics"
 	"github.com/voedger/voedger/pkg/pipeline"
 	"github.com/voedger/voedger/pkg/processors"
-	"github.com/voedger/voedger/pkg/projectors"
-	coreutils "github.com/voedger/voedger/pkg/utils"
-	wsdescutil "github.com/voedger/voedger/pkg/utils/testwsdesc"
+	"github.com/voedger/voedger/pkg/processors/actualizers"
 	"github.com/voedger/voedger/pkg/vvm/engines"
 	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
 	"github.com/voedger/voedger/staging/src/github.com/untillpro/ibusmem"
@@ -53,9 +53,9 @@ func TestBasicUsage(t *testing.T) {
 	check := make(chan interface{}, 1)
 
 	testCmdQName := appdef.NewQName(appdef.SysPackage, "Test")
-	// схема параметров тестовой команды
+	// schema of parameters of the test command
 	testCmdQNameParams := appdef.NewQName(appdef.SysPackage, "TestParams")
-	// схема unlogged-параметров тестовой команды
+	// schema of unlogged parameters of the test command
 	testCmdQNameParamsUnlogged := appdef.NewQName(appdef.SysPackage, "TestParamsUnlogged")
 	prepareAppDef := func(appDef appdef.IAppDefBuilder, cfg *istructsmem.AppConfigType) {
 		pars := appDef.AddObject(testCmdQNameParams)
@@ -68,12 +68,12 @@ func TestBasicUsage(t *testing.T) {
 		appDef.AddCRecord(testCRecord)
 		appDef.AddCommand(testCmdQName).SetUnloggedParam(testCmdQNameParamsUnlogged).SetParam(testCmdQNameParams)
 
-		// сама тестовая команда
+		// the test command itself
 		testExec := func(args istructs.ExecCommandArgs) (err error) {
 			require.Equal(istructs.WSID(1), args.PrepareArgs.WSID)
 			require.NotNil(args.State)
 
-			// просто проверим, что мы получили то, что передал клиент
+			// check that we received exactly what client sent
 			text := args.ArgumentObject.AsString("Text")
 			if text == "fire error" {
 				return errors.New(text)
@@ -82,7 +82,7 @@ func TestBasicUsage(t *testing.T) {
 			}
 			require.Equal("pass", args.ArgumentUnloggedObject.AsString("Password"))
 
-			check <- 1 // сигнал: проверки случились
+			check <- 1 // signal that the checking is done
 			return
 		}
 		testCmd := istructsmem.NewCommandFunction(testCmdQName, testExec)
@@ -96,7 +96,7 @@ func TestBasicUsage(t *testing.T) {
 	require.NoError(err)
 	projectionKey := in10n.ProjectionKey{
 		App:        istructs.AppQName_untill_airs_bp,
-		Projection: projectors.PLogUpdatesQName,
+		Projection: actualizers.PLogUpdatesQName,
 		WS:         1,
 	}
 	go app.n10nBroker.WatchChannel(app.ctx, channelID, func(projection in10n.ProjectionKey, _ istructs.Offset) {
@@ -107,7 +107,7 @@ func TestBasicUsage(t *testing.T) {
 	defer app.n10nBroker.Unsubscribe(channelID, projectionKey)
 
 	t.Run("basic usage", func(t *testing.T) {
-		// command processor работает через ibus.SendResponse -> нам нужен sender -> тестируем через ibus.SendRequest2()
+		// command processor works through ibus.SendResponse -> we need a sender -> let's test using ibus.SendRequest2()
 		request := ibus.Request{
 			Body:     []byte(`{"args":{"Text":"hello"},"unloggedArgs":{"Password":"pass"}}`),
 			AppQName: istructs.AppQName_untill_airs_bp.String(),
@@ -123,7 +123,7 @@ func TestBasicUsage(t *testing.T) {
 		log.Println(string(resp.Data))
 		require.Equal(http.StatusOK, resp.StatusCode)
 		require.Equal(coreutils.ApplicationJSON, resp.ContentType)
-		// убедимся, что команда действительно отработала и нотификации отправились
+		// check that command is handled and notifications were sent
 		<-check
 		<-check
 	})
@@ -636,7 +636,7 @@ type testApp struct {
 }
 
 func tearDown(app testApp) {
-	// завершим command processor IService
+	// finish the command processors IService
 	app.n10nBrokerCleanup()
 	app.cancel()
 	<-app.done
@@ -662,7 +662,7 @@ var (
 
 func setUp(t *testing.T, prepare func(appDef appdef.IAppDefBuilder, cfg *istructsmem.AppConfigType)) testApp {
 	require := require.New(t)
-	// command processor - это IService, работающий через CommandChannel(iprocbus.ServiceChannel). Подготовим этот channel
+	// command processor is a IService working through CommandChannel(iprocbus.ServiceChannel). Let's prepare that channel
 	serviceChannel := make(CommandChannel)
 	done := make(chan struct{})
 
@@ -697,13 +697,13 @@ func setUp(t *testing.T, prepare func(appDef appdef.IAppDefBuilder, cfg *istruct
 		ChannelsPerSubject:      10,
 		Subscriptions:           1000,
 		SubscriptionsPerSubject: 10,
-	}, time.Now)
+	}, coreutils.NewITime())
 
 	// prepare the AppParts to borrow AppStructs
 	appParts, appPartsClean, err := appparts.New2(ctx, appStructsProvider,
-		projectors.NewSyncActualizerFactoryFactory(projectors.ProvideSyncActualizerFactory(), secretReader, n10nBroker, statelessResources),
-		appparts.NullProcessorRunner,
-		appparts.NullProcessorRunner,
+		actualizers.NewSyncActualizerFactoryFactory(actualizers.ProvideSyncActualizerFactory(), secretReader, n10nBroker, statelessResources),
+		appparts.NullActualizerRunner,
+		appparts.NullSchedulerRunner,
 		engines.ProvideExtEngineFactories(
 			engines.ExtEngineFactoriesConfig{
 				AppConfigs:         cfgs,
@@ -716,9 +716,9 @@ func setUp(t *testing.T, prepare func(appDef appdef.IAppDefBuilder, cfg *istruct
 	appParts.DeployApp(testAppName, nil, appDef, testAppPartCount, testAppEngines, cfg.NumAppWorkspaces())
 	appParts.DeployAppPartitions(testAppName, []istructs.PartitionID{testAppPartID})
 
-	// command processor работает через ibus.SendResponse -> нам нужна реализация ibus
+	// command processor works through ibus.SendResponse -> we need ibus implementation
 	bus := ibusmem.Provide(func(ctx context.Context, sender ibus.ISender, request ibus.Request) {
-		// сымитируем работу реального приложения при приеме запроса-команды
+		// simulate handling the command request be a real application
 		cmdQName, err := appdef.ParseQName(request.Resource[2:])
 		require.NoError(err)
 		appQName, err := appdef.ParseAppQName(request.AppQName)
@@ -736,11 +736,11 @@ func setUp(t *testing.T, prepare func(appDef appdef.IAppDefBuilder, cfg *istruct
 		serviceChannel <- icm
 	})
 
-	tokens := itokensjwt.ProvideITokens(itokensjwt.SecretKeyExample, time.Now)
+	tokens := itokensjwt.TestTokensJWT()
 	appTokens := payloads.ProvideIAppTokensFactory(tokens).New(testAppName)
 	systemToken, err := payloads.GetSystemPrincipalTokenApp(appTokens)
 	require.NoError(err)
-	cmdProcessorFactory := ProvideServiceFactory(appParts, time.Now, n10nBroker, imetrics.Provide(), "vvm", iauthnzimpl.NewDefaultAuthenticator(iauthnzimpl.TestSubjectRolesGetter, iauthnzimpl.TestIsDeviceAllowedFuncs), iauthnzimpl.NewDefaultAuthorizer(), secretReader)
+	cmdProcessorFactory := ProvideServiceFactory(appParts, coreutils.NewITime(), n10nBroker, imetrics.Provide(), "vvm", iauthnzimpl.NewDefaultAuthenticator(iauthnzimpl.TestSubjectRolesGetter, iauthnzimpl.TestIsDeviceAllowedFuncs), iauthnzimpl.NewDefaultAuthorizer(), secretReader)
 	cmdProcService := cmdProcessorFactory(serviceChannel, testAppPartID)
 
 	go func() {

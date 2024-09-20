@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/in10nmem"
@@ -43,7 +44,7 @@ func Example() {
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 
-	broker, cleanup := in10nmem.ProvideEx2(quotasExample, time.Now)
+	broker, cleanup := in10nmem.ProvideEx2(quotasExample, coreutils.NewITime())
 	defer cleanup()
 
 	numChannels := broker.MetricNumChannels()

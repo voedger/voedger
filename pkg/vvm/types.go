@@ -15,6 +15,8 @@ import (
 	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/apppartsctl"
 	"github.com/voedger/voedger/pkg/apps"
+	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/coreutils/federation"
 	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/iblobstorage"
 	"github.com/voedger/voedger/pkg/in10n"
@@ -27,13 +29,12 @@ import (
 	"github.com/voedger/voedger/pkg/itokens"
 	"github.com/voedger/voedger/pkg/parser"
 	"github.com/voedger/voedger/pkg/pipeline"
+	"github.com/voedger/voedger/pkg/processors"
 	commandprocessor "github.com/voedger/voedger/pkg/processors/command"
 	"github.com/voedger/voedger/pkg/router"
 	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys/smtp"
 	"github.com/voedger/voedger/pkg/sys/workspace"
-	coreutils "github.com/voedger/voedger/pkg/utils"
-	"github.com/voedger/voedger/pkg/utils/federation"
 	"github.com/voedger/voedger/pkg/vvm/metrics"
 )
 
@@ -126,7 +127,7 @@ type AppsExtensionPoints map[appdef.AppQName]extensionpoints.IExtensionPoint
 
 type VVMConfig struct {
 	VVMAppsBuilder             VVMAppsBuilder // is a map
-	TimeFunc                   coreutils.TimeFunc
+	Time                       coreutils.ITime
 	RouterWriteTimeout         int
 	RouterReadTimeout          int
 	RouterConnectionsLimit     int
@@ -140,25 +141,28 @@ type VVMConfig struct {
 	StorageFactory             func() (provider istorage.IAppStorageFactory, err error)
 	BlobberServiceChannels     router.BlobberServiceChannels
 	BLOBMaxSize                router.BLOBMaxSizeType
-	Name                       commandprocessor.VVMName
+	Name                       processors.VVMName
 	NumCommandProcessors       istructs.NumCommandProcessors
 	NumQueryProcessors         istructs.NumQueryProcessors
 	MaxPrepareQueries          MaxPrepareQueriesType
 	StorageCacheSize           StorageCacheSizeType
 	processorsChannels         []ProcesorChannel
+	ActualizerStateOpts        []state.StateOptFunc
+	SecretsReader              isecrets.ISecretReader
+	SmtpConfig                 smtp.Cfg
+	WSPostInitFunc             workspace.WSPostInitFunc
+	DataPath                   string
+	MetricsServicePort         MetricsServicePortInitial
+
 	// 0 -> dynamic port will be used, new on each vvmIdx
 	// >0 -> vVMPort+vvmIdx will be actually used
-	VVMPort            VVMPortType
-	MetricsServicePort MetricsServicePortInitial
+	VVMPort VVMPortType
+
 	// test and FederationURL contains port -> the port will be relaced with the actual VVMPort
-	FederationURL       *url.URL
-	ActualizerStateOpts []state.StateOptFunc
-	SecretsReader       isecrets.ISecretReader
+	FederationURL *url.URL
+
 	// used in tests only
 	KeyspaceNameSuffix string
-	SmtpConfig         smtp.Cfg
-	WSPostInitFunc     workspace.WSPostInitFunc
-	DataPath           string
 }
 
 type resultSenderErrorFirst struct {

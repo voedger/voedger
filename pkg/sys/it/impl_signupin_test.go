@@ -11,10 +11,11 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/istructs"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	"github.com/voedger/voedger/pkg/sys/authnz"
-	coreutils "github.com/voedger/voedger/pkg/utils"
 	it "github.com/voedger/voedger/pkg/vit"
 )
 
@@ -47,7 +48,7 @@ func TestBasicUsage_SignUpIn(t *testing.T) {
 	refreshedPrincipalToken := resp.SectionRow()[0].(string)
 	require.NotEqual(prn1.Token, refreshedPrincipalToken)
 
-	// читать CDoc<Login> не надо. И вообще, в AppWS делать нечего
+	// not need to read CDoc<Login>. Nothing to do in AppWS at all.
 
 	var idOfCDocUserProfile int64
 	t.Run("check CDoc<sys.UserProfile> at profileWSID at target app at target cluster", func(t *testing.T) {
@@ -105,24 +106,19 @@ func TestCreateLoginErrors(t *testing.T) {
 	t.Run("wrong AppWSID", func(t *testing.T) {
 		body := fmt.Sprintf(`{"args":{"Login":"login1","AppName":"test1/app1","SubjectKind":%d,"WSKindInitializationData":"{}","ProfileCluster":1},"unloggedArgs":{"Password":"password"}}`, istructs.SubjectKind_User)
 		crc16 := coreutils.CRC16([]byte("login1")) - 1 // simulate crc16 is calculated wrong
-		pseudoWSID := istructs.NewWSID(istructs.MainClusterID, istructs.WSID(crc16))
+		pseudoWSID := istructs.NewWSID(istructs.CurrentClusterID(), istructs.WSID(crc16))
 		resp := vit.PostApp(istructs.AppQName_sys_registry, pseudoWSID, "c.registry.CreateLogin", body, coreutils.Expect403())
 		resp.RequireError(t, "wrong AppWSID: 140737488420870 expected, 140737488420869 got")
 	})
 
 	login := vit.NextName()
-	loginPseudoWSID := coreutils.GetPseudoWSID(istructs.NullWSID, login, istructs.MainClusterID)
+	loginPseudoWSID := coreutils.GetPseudoWSID(istructs.NullWSID, login, istructs.CurrentClusterID())
 
 	t.Run("unknown application", func(t *testing.T) {
-		// TODO: ensure WSError contains the actual error message
-		t.Skip("wait for https://github.com/voedger/voedger/issues/2415")
 		body := fmt.Sprintf(`{"args":{"Login":"%s","AppName":"my/unknown","SubjectKind":%d,"WSKindInitializationData":"{}","ProfileCluster":%d},"unloggedArgs":{"Password":"password"}}`,
-			login, istructs.SubjectKind_User, istructs.MainClusterID)
-		vit.PostApp(istructs.AppQName_sys_registry, loginPseudoWSID, "c.registry.CreateLogin", body)
-		pseudoWSID := coreutils.GetPseudoWSID(istructs.NullWSID, login, istructs.MainClusterID)
-		body = fmt.Sprintf(`{"args": {"Login": "%s","Password": "password","AppName": "my/unknown"},"elements":[{"fields":["PrincipalToken", "WSID", "WSError"]}]}`,
-			login)
-		vit.PostApp(istructs.AppQName_sys_registry, pseudoWSID, "q.registry.IssuePrincipalToken", body).Println()
+			login, istructs.SubjectKind_User, istructs.CurrentClusterID())
+		loginID := vit.PostApp(istructs.AppQName_sys_registry, loginPseudoWSID, "c.registry.CreateLogin", body).NewID()
+		vit.WaitForProfile(istructs.RecordID(loginID), login, appdef.NewAppQName("my", "unknown"), "unknown app my/unknown")
 	})
 
 	t.Run("wrong application name", func(t *testing.T) {
@@ -143,7 +139,7 @@ func TestCreateLoginErrors(t *testing.T) {
 	t.Run("subject name constraint violation", func(t *testing.T) {
 		// see https://dev.untill.com/projects/#!537026
 		wrongLogins := []string{
-			"вронг",
+			"哇",
 			"test@tesT.com",
 			"test@test.com ",
 			" test@test.com",
@@ -159,9 +155,9 @@ func TestCreateLoginErrors(t *testing.T) {
 			"sys.test@test.com",
 		}
 		for _, wrongLogin := range wrongLogins {
-			pseudoWSID := coreutils.GetPseudoWSID(istructs.NullWSID, wrongLogin, istructs.MainClusterID)
+			pseudoWSID := coreutils.GetPseudoWSID(istructs.NullWSID, wrongLogin, istructs.CurrentClusterID())
 			body := fmt.Sprintf(`{"args":{"Login":"%s","AppName":"%s","SubjectKind":%d,"WSKindInitializationData":"{}","ProfileCluster":%d},"unloggedArgs":{"Password":"%s"}}`,
-				wrongLogin, istructs.AppQName_test1_app1.String(), istructs.SubjectKind_User, istructs.MainClusterID, "1")
+				wrongLogin, istructs.AppQName_test1_app1.String(), istructs.SubjectKind_User, istructs.CurrentClusterID(), "1")
 			resp := vit.PostApp(istructs.AppQName_sys_registry, pseudoWSID, "c.registry.CreateLogin", body, coreutils.Expect400())
 			resp.RequireContainsError(t, "incorrect login format")
 		}
@@ -173,7 +169,7 @@ func TestSignInErrors(t *testing.T) {
 	defer vit.TearDown()
 
 	login := vit.NextName()
-	pseudoWSID := coreutils.GetPseudoWSID(istructs.NullWSID, login, istructs.MainClusterID)
+	pseudoWSID := coreutils.GetPseudoWSID(istructs.NullWSID, login, istructs.CurrentClusterID())
 
 	t.Run("unknown login", func(t *testing.T) {
 		body := fmt.Sprintf(`{"args": {"Login": "%s","Password": "1","AppName": "%s"},"elements":[{"fields":["PrincipalToken", "WSID", "WSError"]}]}`,

@@ -8,12 +8,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/voedger/voedger/pkg/coreutils"
 	irates "github.com/voedger/voedger/pkg/irates"
-	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
-// bucket, соответствующий некому ключу irates.BucketKey
-// содержит в себе Limiter и параметры ограничения, с которыми он работает
 // bucket corresponding to a certain key irates.BucketKey
 // contains a Limiter and the restriction parameters with which it works
 type bucketType struct {
@@ -21,13 +19,11 @@ type bucketType struct {
 	state   irates.BucketState
 }
 
-// реализация для irates.IBuckets
-// распределяет отображение bucket'ов (token bucket)и отображение поименованных параметров ограничений "по умолчанию"
 type bucketsType struct {
 	mu            sync.Mutex
 	buckets       map[irates.BucketKey]*bucketType
 	defaultStates map[string]irates.BucketState
-	timeFunc      coreutils.TimeFunc
+	time          coreutils.ITime
 }
 
 // A Limiter controls how frequently events are allowed to happen.
@@ -62,13 +58,11 @@ type Limiter struct {
 	last time.Time
 	// lastEvent is the latest time of a rate-limited event (past or future)
 	lastEvent time.Time
-	// timeFunc  coreutils.TimeFunc
+	// time  coreutils.ITime
 }
 
 // A Reservation holds information about events that are permitted by a Limiter to happen after a delay.
 // A Reservation may be canceled, which may enable the Limiter to permit additional events.
-// Reservation содержит информацию о событиях, которые разрешены Limiter после задержки.
-// Reservation может быть отменено, что может позволить Limiter разрешить дополнительные мероприятия
 type Reservation struct {
 	ok        bool
 	lim       *Limiter

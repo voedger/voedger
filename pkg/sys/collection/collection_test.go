@@ -11,12 +11,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/require"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appparts"
+	"github.com/voedger/voedger/pkg/coreutils"
+	wsdescutil "github.com/voedger/voedger/pkg/coreutils/testwsdesc"
 	"github.com/voedger/voedger/pkg/iauthnzimpl"
 	"github.com/voedger/voedger/pkg/iextengine"
 	"github.com/voedger/voedger/pkg/in10n"
@@ -31,11 +32,10 @@ import (
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	"github.com/voedger/voedger/pkg/itokensjwt"
 	imetrics "github.com/voedger/voedger/pkg/metrics"
+	"github.com/voedger/voedger/pkg/processors/actualizers"
 	queryprocessor "github.com/voedger/voedger/pkg/processors/query"
-	"github.com/voedger/voedger/pkg/projectors"
 	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys"
-	wsdescutil "github.com/voedger/voedger/pkg/utils/testwsdesc"
 	"github.com/voedger/voedger/pkg/vvm/engines"
 	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
 )
@@ -165,7 +165,7 @@ func deployTestApp(t *testing.T) (appParts appparts.IAppPartitions, appStructs i
 	}
 
 	// kept here to keep local tests working without sql
-	projectors.ProvideViewDef(adb, QNameCollectionView, func(b appdef.IViewBuilder) {
+	actualizers.ProvideViewDef(adb, QNameCollectionView, func(b appdef.IViewBuilder) {
 		b.Key().PartKey().AddField(Field_PartKey, appdef.DataKind_int32)
 		b.Key().ClustCols().
 			AddField(Field_DocQName, appdef.DataKind_QName).
@@ -208,12 +208,12 @@ func deployTestApp(t *testing.T) (appParts appparts.IAppPartitions, appStructs i
 		ChannelsPerSubject:      10,
 		Subscriptions:           1000,
 		SubscriptionsPerSubject: 10,
-	}, time.Now)
+	}, coreutils.NewITime())
 
 	appParts, appPartsCleanup, err := appparts.New2(context.Background(), appStructsProvider,
-		projectors.NewSyncActualizerFactoryFactory(projectors.ProvideSyncActualizerFactory(), secretReader, n10nBroker, statelessResources),
-		appparts.NullProcessorRunner,
-		appparts.NullProcessorRunner,
+		actualizers.NewSyncActualizerFactoryFactory(actualizers.ProvideSyncActualizerFactory(), secretReader, n10nBroker, statelessResources),
+		appparts.NullActualizerRunner,
+		appparts.NullSchedulerRunner,
 		engines.ProvideExtEngineFactories(
 			engines.ExtEngineFactoriesConfig{
 				AppConfigs:         cfgs,
@@ -503,14 +503,14 @@ func TestBasicUsage_QueryFunc_Collection(t *testing.T) {
 
 	authn := iauthnzimpl.NewDefaultAuthenticator(iauthnzimpl.TestSubjectRolesGetter, iauthnzimpl.TestIsDeviceAllowedFuncs)
 	authz := iauthnzimpl.NewDefaultAuthorizer()
-	tokens := itokensjwt.ProvideITokens(itokensjwt.SecretKeyExample, time.Now)
+	tokens := itokensjwt.TestTokensJWT()
 	appTokens := payloads.ProvideIAppTokensFactory(tokens).New(test.appQName)
 	queryProcessor := queryprocessor.ProvideServiceFactory()(
 		serviceChannel,
 		func(ctx context.Context, sender ibus.ISender) queryprocessor.IResultSenderClosable { return out },
 		appParts,
 		maxPrepareQueries,
-		imetrics.Provide(), "vvm", authn, authz, tokens, nil, statelessResources)
+		imetrics.Provide(), "vvm", authn, authz, tokens, nil, statelessResources, isecretsimpl.TestSecretReader)
 	go queryProcessor.Run(context.Background())
 	sysToken, err := payloads.GetSystemPrincipalTokenApp(appTokens)
 	require.NoError(err)
@@ -621,11 +621,11 @@ func TestBasicUsage_QueryFunc_CDoc(t *testing.T) {
 
 	authn := iauthnzimpl.NewDefaultAuthenticator(iauthnzimpl.TestSubjectRolesGetter, iauthnzimpl.TestIsDeviceAllowedFuncs)
 	authz := iauthnzimpl.NewDefaultAuthorizer()
-	tokens := itokensjwt.ProvideITokens(itokensjwt.SecretKeyExample, time.Now)
+	tokens := itokensjwt.TestTokensJWT()
 	appTokens := payloads.ProvideIAppTokensFactory(tokens).New(test.appQName)
 	queryProcessor := queryprocessor.ProvideServiceFactory()(serviceChannel, func(ctx context.Context, sender ibus.ISender) queryprocessor.IResultSenderClosable {
 		return out
-	}, appParts, maxPrepareQueries, imetrics.Provide(), "vvm", authn, authz, tokens, nil, statelessResources)
+	}, appParts, maxPrepareQueries, imetrics.Provide(), "vvm", authn, authz, tokens, nil, statelessResources, isecretsimpl.TestSecretReader)
 
 	go queryProcessor.Run(context.Background())
 	sysToken, err := payloads.GetSystemPrincipalTokenApp(appTokens)
@@ -740,11 +740,11 @@ func TestBasicUsage_State(t *testing.T) {
 
 	authn := iauthnzimpl.NewDefaultAuthenticator(iauthnzimpl.TestSubjectRolesGetter, iauthnzimpl.TestIsDeviceAllowedFuncs)
 	authz := iauthnzimpl.NewDefaultAuthorizer()
-	tokens := itokensjwt.ProvideITokens(itokensjwt.SecretKeyExample, time.Now)
+	tokens := itokensjwt.TestTokensJWT()
 	appTokens := payloads.ProvideIAppTokensFactory(tokens).New(test.appQName)
 	queryProcessor := queryprocessor.ProvideServiceFactory()(serviceChannel, func(ctx context.Context, sender ibus.ISender) queryprocessor.IResultSenderClosable {
 		return out
-	}, appParts, maxPrepareQueries, imetrics.Provide(), "vvm", authn, authz, tokens, nil, statelessResources)
+	}, appParts, maxPrepareQueries, imetrics.Provide(), "vvm", authn, authz, tokens, nil, statelessResources, isecretsimpl.TestSecretReader)
 
 	go queryProcessor.Run(context.Background())
 	sysToken, err := payloads.GetSystemPrincipalTokenApp(appTokens)
@@ -909,11 +909,11 @@ func TestState_withAfterArgument(t *testing.T) {
 
 	authn := iauthnzimpl.NewDefaultAuthenticator(iauthnzimpl.TestSubjectRolesGetter, iauthnzimpl.TestIsDeviceAllowedFuncs)
 	authz := iauthnzimpl.NewDefaultAuthorizer()
-	tokens := itokensjwt.ProvideITokens(itokensjwt.SecretKeyExample, time.Now)
+	tokens := itokensjwt.TestTokensJWT()
 	appTokens := payloads.ProvideIAppTokensFactory(tokens).New(test.appQName)
 	queryProcessor := queryprocessor.ProvideServiceFactory()(serviceChannel, func(ctx context.Context, sender ibus.ISender) queryprocessor.IResultSenderClosable {
 		return out
-	}, appParts, maxPrepareQueries, imetrics.Provide(), "vvm", authn, authz, tokens, nil, statelessResources)
+	}, appParts, maxPrepareQueries, imetrics.Provide(), "vvm", authn, authz, tokens, nil, statelessResources, isecretsimpl.TestSecretReader)
 
 	go queryProcessor.Run(context.Background())
 	sysToken, err := payloads.GetSystemPrincipalTokenApp(appTokens)

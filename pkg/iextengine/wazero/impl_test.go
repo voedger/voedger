@@ -876,17 +876,25 @@ func appStructsFromSQL(packagePath string, appdefSql string, prepareAppCfg appCf
 
 }
 
-func Test_Panic(t *testing.T) {
-	const arrAppend = "TestPanic"
-
+func Test_Panics(t *testing.T) {
 	require := require.New(t)
-	ctx := context.Background()
-	WasmPreallocatedBufferSize = 1000000
-	moduleUrl := testModuleURL("./_testdata/panics/pkg.wasm")
-	extEngine, err := testFactoryHelper(ctx, moduleUrl, []string{arrAppend}, iextengine.ExtEngineConfig{}, false)
-	require.NoError(err)
-	defer extEngine.Close(ctx)
+	invoke := func(name string) error {
+		ctx := context.Background()
+		WasmPreallocatedBufferSize = 1000000
+		moduleUrl := testModuleURL("./_testdata/panics/pkg.wasm")
+		extEngine, err := testFactoryHelper(ctx, moduleUrl, []string{name}, iextengine.ExtEngineConfig{}, false)
+		if err != nil {
+			return err
+		}
+		defer extEngine.Close(ctx)
+		return extEngine.Invoke(context.Background(), appdef.NewFullQName(testPkg, name), extIO)
+	}
 
-	err = extEngine.Invoke(context.Background(), appdef.NewFullQName(testPkg, arrAppend), extIO)
-	require.EqualError(err, "panic: goodbye, world")
+	t.Run("Test Panic", func(t *testing.T) {
+		require.EqualError(invoke("TestPanic"), "panic: goodbye, world")
+	})
+
+	t.Run("No Panic On Sign Extensions Funcs", func(t *testing.T) {
+		require.NoError(invoke("TestSignExtensionsFuncs"))
+	})
 }

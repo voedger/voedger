@@ -17,10 +17,12 @@ const (
 	StorageResult            = "sys.Result"
 	StorageCommandContext    = "sys.CommandContext"
 	StorageQueryContext      = "sys.QueryContext"
+	StorageJobContext        = "sys.JobContext"
 	StorageResponse          = "sys.Response"
 	StorageFederationCommand = "sys.FederationCommand"
 	StorageFederationBlob    = "sys.FederationBlob"
 	StorageUniq              = "sys.Uniq"
+	StorageLogger            = "sys.Logger"
 
 	NullEntity = ""
 )

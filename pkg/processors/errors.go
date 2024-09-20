@@ -10,7 +10,7 @@ package processors
 import (
 	"net/http"
 
-	coreutils "github.com/voedger/voedger/pkg/utils"
+	"github.com/voedger/voedger/pkg/coreutils"
 )
 
 var ErrWSNotInited = coreutils.NewHTTPErrorf(http.StatusForbidden, "workspace is not initialized")

@@ -19,10 +19,10 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/in10n"
 	istructs "github.com/voedger/voedger/pkg/istructs"
-	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 type N10nBroker struct {
@@ -32,7 +32,7 @@ type N10nBroker struct {
 	quotas           in10n.Quotas
 	metricBySubject  map[istructs.SubjectLogin]*metricType
 	numSubscriptions int
-	now              coreutils.TimeFunc
+	time             coreutils.ITime
 	events           chan event
 }
 
@@ -94,7 +94,7 @@ func (nb *N10nBroker) NewChannel(subject istructs.SubjectLogin, channelDuration 
 		subject:         subject,
 		subscriptions:   make(map[in10n.ProjectionKey]*subscription),
 		channelDuration: channelDuration,
-		createTime:      nb.now(),
+		createTime:      nb.time.Now(),
 		cchan:           make(chan struct{}, 1),
 	}
 	nb.channels[channelID] = &channel
@@ -337,13 +337,13 @@ func (nb *N10nBroker) MetricSubject(ctx context.Context, cb func(subject istruct
 	}
 }
 
-func NewN10nBroker(quotas in10n.Quotas, now coreutils.TimeFunc) (nb *N10nBroker, cleanup func()) {
+func NewN10nBroker(quotas in10n.Quotas, time coreutils.ITime) (nb *N10nBroker, cleanup func()) {
 	broker := N10nBroker{
 		projections:     make(map[in10n.ProjectionKey]*projection),
 		channels:        make(map[in10n.ChannelID]*channelType),
 		metricBySubject: make(map[istructs.SubjectLogin]*metricType),
 		quotas:          quotas,
-		now:             now,
+		time:            time,
 		events:          make(chan event, eventsChannelSize),
 	}
 	ctx, cancel := context.WithCancel(context.Background())
@@ -370,5 +370,5 @@ func (nb *N10nBroker) validateChannel(channel *channelType) error {
 }
 
 func (nb *N10nBroker) Since(t time.Time) time.Duration {
-	return nb.now().Sub(t)
+	return nb.time.Now().Sub(t)
 }

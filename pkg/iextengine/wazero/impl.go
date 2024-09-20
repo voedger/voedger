@@ -187,7 +187,7 @@ func (f *wazeroExtEngine) init(ctx context.Context) error {
 		rtConf = wazero.NewRuntimeConfigInterpreter()
 	}
 	rtConf = rtConf.
-		WithCoreFeatures(api.CoreFeatureBulkMemoryOperations).
+		WithCoreFeatures(api.CoreFeatureBulkMemoryOperations | api.CoreFeatureSignExtensionOps | api.CoreFeatureNonTrappingFloatToIntConversion).
 		WithCloseOnContextDone(true).
 		WithMemoryCapacityFromMax(true).
 		WithMemoryLimitPages(uint32(memPages))
@@ -318,7 +318,7 @@ func (f *wazeroExtEngine) initModule(ctx context.Context, pkgName string, wasmda
 	ePkg := &wazeroExtPkg{}
 
 	ePkg.stdout = newLimitedWriter(maxStdErrSize)
-	ePkg.moduleCfg = wazero.NewModuleConfig().WithName("wasm").WithStdout(&ePkg.stdout)
+	ePkg.moduleCfg = wazero.NewModuleConfig().WithName("wasm").WithStdout(&ePkg.stdout).WithSysWalltime()
 
 	if f.compile {
 		ePkg.compiled, err = f.rtm.CompileModule(ctx, wasmdata)

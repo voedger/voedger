@@ -11,8 +11,8 @@ import (
 	"strings"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/istructs"
-	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 func ParseQuery(query string) (op Op, err error) {
@@ -114,7 +114,7 @@ func parseWorkspace(workspaceStr string) (workspace Workspace, err error) {
 		workspace.Kind = WorkspaceKind_AppWSNum
 	case `"`:
 		login := workspaceStr[1 : len(workspaceStr)-1]
-		workspace.ID = uint64(coreutils.GetPseudoWSID(istructs.NullWSID, login, istructs.MainClusterID))
+		workspace.ID = uint64(coreutils.GetPseudoWSID(istructs.NullWSID, login, istructs.CurrentClusterID()))
 		workspace.Kind = WorkspaceKind_PseudoWSID
 	default:
 		workspace.ID, err = strconv.ParseUint(workspaceStr, 0, 0)

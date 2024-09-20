@@ -31,17 +31,15 @@ type commandContextKeyBuilder struct {
 	baseKeyBuilder
 }
 
-func (b *commandContextKeyBuilder) Storage() appdef.QName {
-	return sys.Storage_CommandContext
-}
-
 func (b *commandContextKeyBuilder) Equals(src istructs.IKeyBuilder) bool {
 	_, ok := src.(*commandContextKeyBuilder)
 	return ok
 }
 
 func (s *commandContextStorage) NewKeyBuilder(_ appdef.QName, _ istructs.IStateKeyBuilder) istructs.IStateKeyBuilder {
-	return &commandContextKeyBuilder{}
+	return &commandContextKeyBuilder{
+		baseKeyBuilder: baseKeyBuilder{storage: sys.Storage_CommandContext},
+	}
 }
 func (s *commandContextStorage) Get(_ istructs.IStateKeyBuilder) (istructs.IStateValue, error) {
 	return &cmdContextValue{
@@ -72,12 +70,12 @@ func (v *cmdContextValue) AsInt64(name string) int64 {
 
 func (v *cmdContextValue) AsValue(name string) istructs.IStateValue {
 	if name == sys.Storage_CommandContext_Field_ArgumentObject {
-		return &objectValue{
+		return &ObjectStateValue{
 			object: v.arg,
 		}
 	}
 	if name == sys.Storage_CommandContext_Field_ArgumentUnloggedObject {
-		return &objectValue{
+		return &ObjectStateValue{
 			object: v.unloggedArg,
 		}
 	}

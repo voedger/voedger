@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"math"
 
-	coreutils "github.com/voedger/voedger/pkg/utils"
+	"github.com/voedger/voedger/pkg/coreutils"
 )
 
 func NewFilter(data coreutils.MapObject) (IFilter, error) {

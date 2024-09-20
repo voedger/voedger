@@ -6,12 +6,11 @@ package verifier
 
 import (
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/coreutils/federation"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/itokens"
 	"github.com/voedger/voedger/pkg/sys/smtp"
-	coreutils "github.com/voedger/voedger/pkg/utils"
-	"github.com/voedger/voedger/pkg/utils/federation"
 )
 
 func ProvideLimits(cfg *istructsmem.AppConfigType) {
@@ -25,14 +24,14 @@ func ProvideLimits(cfg *istructsmem.AppConfigType) {
 }
 
 func Provide(sr istructsmem.IStatelessResources, itokens itokens.ITokens, federation federation.IFederation, asp istructs.IAppStructsProvider,
-	smtpCfg smtp.Cfg, timeFunc coreutils.TimeFunc) {
+	smtpCfg smtp.Cfg) {
 	provideQryInitiateEmailVerification(sr, itokens, asp, federation)
 	provideQryIssueVerifiedValueToken(sr, itokens, asp)
 	provideCmdSendEmailVerificationCode(sr)
 	sr.AddProjectors(appdef.SysPackagePath,
 		istructs.Projector{
 			Name: qNameAPApplySendEmailVerificationCode,
-			Func: applySendEmailVerificationCode(federation, smtpCfg, timeFunc),
+			Func: applySendEmailVerificationCode(federation, smtpCfg),
 		},
 	)
 }

@@ -5,14 +5,15 @@
 package itokensjwt
 
 import (
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/isecrets"
 	itokens "github.com/voedger/voedger/pkg/itokens"
-	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 var TestTokensJWT = func() itokens.ITokens {
-	return ProvideITokens(SecretKeyExample, coreutils.TestTimeFunc)
+	return ProvideITokens(SecretKeyExample, coreutils.MockTime)
 }
+
 
 func ProvideTestSecretsReader(realSecretsReader isecrets.ISecretReader) isecrets.ISecretReader {
 	return &testISecretReader{realSecretReader: realSecretsReader}

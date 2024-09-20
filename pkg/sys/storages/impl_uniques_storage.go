@@ -5,6 +5,8 @@
 package storages
 
 import (
+	"bytes"
+	"fmt"
 	"maps"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -74,7 +76,17 @@ func newUniqKeyBuilder(storage, entity appdef.QName) *uniqKeyBuilder {
 		entity:  entity,
 	}
 }
-
+func (b *uniqKeyBuilder) String() string {
+	bb := new(bytes.Buffer)
+	fmt.Fprintf(bb, "storage:%s", b.storage)
+	if b.entity != appdef.NullQName {
+		fmt.Fprintf(bb, ", entity:%s", b.entity)
+	}
+	for key, value := range b.data {
+		fmt.Fprintf(bb, ", %s:%v", key, value)
+	}
+	return bb.String()
+}
 func (b *uniqKeyBuilder) Storage() appdef.QName                            { return b.storage }
 func (b *uniqKeyBuilder) Entity() appdef.QName                             { return b.entity }
 func (b *uniqKeyBuilder) PutInt32(name string, value int32)                { b.data[name] = value }

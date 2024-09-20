@@ -8,6 +8,8 @@ import (
 	"runtime/debug"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/coreutils/federation"
 	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/istorage"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -28,22 +30,20 @@ import (
 	"github.com/voedger/voedger/pkg/sys/uniques"
 	"github.com/voedger/voedger/pkg/sys/verifier"
 	"github.com/voedger/voedger/pkg/sys/workspace"
-	coreutils "github.com/voedger/voedger/pkg/utils"
-	"github.com/voedger/voedger/pkg/utils/federation"
 )
 
 func ProvideStateless(sr istructsmem.IStatelessResources, smtpCfg smtp.Cfg, eps map[appdef.AppQName]extensionpoints.IExtensionPoint, buildInfo *debug.BuildInfo,
-	storageProvider istorage.IAppStorageProvider, wsPostInitFunc workspace.WSPostInitFunc, timeFunc coreutils.TimeFunc,
+	storageProvider istorage.IAppStorageProvider, wsPostInitFunc workspace.WSPostInitFunc, time coreutils.ITime,
 	itokens itokens.ITokens, federation federation.IFederation, asp istructs.IAppStructsProvider, atf payloads.IAppTokensFactory) {
 	blobber.ProvideBlobberCmds(sr)
 	collection.Provide(sr)
 	journal.Provide(sr, eps)
 	builtin.Provide(sr, buildInfo, storageProvider)
-	workspace.Provide(sr, timeFunc, itokens, federation, itokens, wsPostInitFunc, eps)
+	workspace.Provide(sr, time, itokens, federation, itokens, wsPostInitFunc, eps)
 	sqlquery.Provide(sr, federation, itokens)
-	verifier.Provide(sr, itokens, federation, asp, smtpCfg, timeFunc)
+	verifier.Provide(sr, itokens, federation, asp, smtpCfg)
 	authnz.Provide(sr, itokens, atf)
-	invite.Provide(sr, timeFunc, federation, itokens, smtpCfg)
+	invite.Provide(sr, time, federation, itokens, smtpCfg)
 	uniques.Provide(sr)
 	describe.Provide(sr)
 }

@@ -190,7 +190,7 @@ ABSTRACT WORKSPACE Workspace (
 		OwnerApp text NOT NULL,
 		WSName text NOT NULL,
 		WSKind qname NOT NULL,
-		WSKindInitializationData text,
+		WSKindInitializationData varchar(1024),
 		TemplateName text,
 		TemplateParams text,
 		OwnerQName2 text
@@ -203,7 +203,7 @@ ABSTRACT WORKSPACE Workspace (
 		OwnerApp text NOT NULL,
 		WSName text NOT NULL,
 		WSKind qname NOT NULL,
-		WSKindInitializationData text,
+		WSKindInitializationData varchar(1024),
 		TemplateName text,
 		TemplateParams text,
 		OwnerQName2 text
@@ -313,7 +313,7 @@ ABSTRACT WORKSPACE Workspace (
 	TYPE InitChildWorkspaceParams (
 		WSName text NOT NULL,
 		WSKind qname NOT NULL,
-		WSKindInitializationData text,
+		WSKindInitializationData varchar(1024),
 		WSClusterID int32 NOT NULL,
 		TemplateName text,
 		TemplateParams text

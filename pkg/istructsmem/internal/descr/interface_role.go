@@ -9,13 +9,17 @@ import "github.com/voedger/voedger/pkg/appdef"
 
 type Role struct {
 	Type
-	Privileges []*Privilege
+	ACL []*ACLRule
 }
 
-type Privilege struct {
-	Comment string `json:",omitempty"`
-	Access  string // `grant` or `revoke`
-	Kinds   []string
-	On      appdef.QNames
-	Fields  []string `json:",omitempty"`
+type ACLRule struct {
+	Comment   string `json:",omitempty"`
+	Policy    string // `Allow` or `Deny`
+	Ops       []string
+	Resources *ACLResourcePattern
+}
+
+type ACLResourcePattern struct {
+	On     appdef.QNames
+	Fields []appdef.FieldName `json:",omitempty"`
 }

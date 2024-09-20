@@ -14,18 +14,11 @@ import (
 )
 
 type resultStorage struct {
-	cmdResultBuilderFunc state.ObjectBuilderFunc
-	resultBuilderFunc    state.ObjectBuilderFunc
-	qryCallback          state.ExecQueryCallbackFunc
-	qryValueBuilder      *resultValueBuilder // last value builder
+	resultBuilderFunc state.ObjectBuilderFunc
 }
 
 type resultKeyBuilder struct {
 	baseKeyBuilder
-}
-
-func (b *resultKeyBuilder) Storage() appdef.QName {
-	return sys.Storage_Result
 }
 
 func (b *resultKeyBuilder) Equals(src istructs.IKeyBuilder) bool {
@@ -33,55 +26,28 @@ func (b *resultKeyBuilder) Equals(src istructs.IKeyBuilder) bool {
 	return ok
 }
 
-func NewCmdResultStorage(cmdResultBuilderFunc state.ObjectBuilderFunc) state.IStateStorage {
-	return &resultStorage{
-		cmdResultBuilderFunc: cmdResultBuilderFunc,
-	}
-}
-
-func NewQueryResultStorage(resultBuilderFunc state.ObjectBuilderFunc, qryCallback state.ExecQueryCallbackFunc) *resultStorage {
+func NewResultStorage(resultBuilderFunc state.ObjectBuilderFunc) state.IStateStorage {
 	return &resultStorage{
 		resultBuilderFunc: resultBuilderFunc,
-		qryCallback:       qryCallback,
 	}
 }
 
 func (s *resultStorage) NewKeyBuilder(_ appdef.QName, _ istructs.IStateKeyBuilder) istructs.IStateKeyBuilder {
-	return &resultKeyBuilder{}
+	return &resultKeyBuilder{
+		baseKeyBuilder: baseKeyBuilder{storage: sys.Storage_Result},
+	}
 }
 
 func (s *resultStorage) Validate([]state.ApplyBatchItem) (err error) {
 	panic("not applicable")
 }
 
-func (s *resultStorage) sendPrevQueryObject() error {
-	if s.qryCallback != nil && s.qryValueBuilder != nil { // query processor, there's unsent object
-		obj, err := s.qryValueBuilder.resultBuilder.Build()
-		if err != nil {
-			return err
-		}
-		s.qryValueBuilder = nil
-		return s.qryCallback()(obj)
-	}
+func (s *resultStorage) ApplyBatch([]state.ApplyBatchItem) (err error) {
 	return nil
 }
 
-func (s *resultStorage) ApplyBatch([]state.ApplyBatchItem) (err error) {
-	return s.sendPrevQueryObject()
-}
-
 func (s *resultStorage) ProvideValueBuilder(istructs.IStateKeyBuilder, istructs.IStateValueBuilder) (istructs.IStateValueBuilder, error) {
-	if s.qryCallback != nil { // query processor
-		err := s.sendPrevQueryObject()
-		if err != nil {
-			return nil, err
-		}
-		s.qryValueBuilder = &resultValueBuilder{resultBuilder: s.resultBuilderFunc()}
-		return s.qryValueBuilder, nil
-	}
-	// command processor
-	builder := s.cmdResultBuilderFunc()
-	return &resultValueBuilder{resultBuilder: builder}, nil
+	return &resultValueBuilder{resultBuilder: s.resultBuilderFunc()}, nil
 }
 
 type resultValueBuilder struct {
@@ -109,7 +75,7 @@ func (c *resultValueBuilder) BuildValue() istructs.IStateValue {
 	if err != nil {
 		panic(err)
 	}
-	return &objectValue{object: o}
+	return &ObjectStateValue{object: o}
 }
 
 func (c *resultValueBuilder) PutInt32(name string, value int32) {

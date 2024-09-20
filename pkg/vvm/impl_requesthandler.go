@@ -14,12 +14,12 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appparts"
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/iprocbus"
 	"github.com/voedger/voedger/pkg/istructs"
 	commandprocessor "github.com/voedger/voedger/pkg/processors/command"
 	queryprocessor "github.com/voedger/voedger/pkg/processors/query"
-	coreutils "github.com/voedger/voedger/pkg/utils"
 	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
 	"github.com/voedger/voedger/staging/src/github.com/untillpro/ibusmem"
 )
@@ -29,8 +29,8 @@ func provideIBus(appParts appparts.IAppPartitions, procbus iprocbus.IProcBus,
 	cpAmount istructs.NumCommandProcessors, vvmApps VVMApps) ibus.IBus {
 	return ibusmem.Provide(func(requestCtx context.Context, sender ibus.ISender, request ibus.Request) {
 		// Handling Command/Query messages
-		// router -> SendRequest2(ctx, ...) -> requestHandler(ctx, ... ) - вот этот контекст. Если connection gracefully closed, то этот ctx.Done()
-		// т.е. надо этот контекст пробрасывать далее
+		// router -> SendRequest2(ctx, ...) -> requestHandler(ctx, ... ) - it is that context. If connection gracefully closed the that ctx is Done()
+		// so we need to forward that context
 
 		if len(request.Resource) <= ShortestPossibleFunctionNameLen {
 			coreutils.ReplyBadRequest(sender, "wrong function name: "+request.Resource)

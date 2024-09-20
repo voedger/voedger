@@ -61,7 +61,7 @@ func TestBasicUsage_QName_JSon(t *testing.T) {
 
 	t.Run("Marshal/Unmarshal QName", func(t *testing.T) {
 
-		qname := NewQName("airs-bp", `Карлсон 哇"呀呀`)
+		qname := NewQName("airs-bp", `Carlson 哇"呀呀`)
 
 		// Marshal
 
@@ -92,7 +92,7 @@ func TestBasicUsage_QName_JSon(t *testing.T) {
 		}
 
 		ms := myStruct{
-			QName:       NewQName("p", `Карлсон 哇"呀呀`),
+			QName:       NewQName("p", `Carlson 哇"呀呀`),
 			StringValue: "sv",
 			IntValue:    56,
 		}
@@ -115,7 +115,7 @@ func TestBasicUsage_QName_JSon(t *testing.T) {
 	t.Run("key of a map", func(t *testing.T) {
 		expected := map[QName]bool{
 			NewQName("sys", "my"):           true,
-			NewQName("sys", `Карлсон 哇"呀呀`): true,
+			NewQName("sys", `Carlson 哇"呀呀`): true,
 		}
 
 		b, err := json.Marshal(&expected)
@@ -428,7 +428,7 @@ func TestBasicUsage_FullQName_JSon(t *testing.T) {
 
 	t.Run("Marshal/Unmarshal FullQName", func(t *testing.T) {
 
-		fqn := NewFullQName("untill.pro/airs-bp", `Карлсон 哇"呀呀`)
+		fqn := NewFullQName("untill.pro/airs-bp", `Carlson 哇"呀呀`)
 
 		// Marshal
 
@@ -459,7 +459,7 @@ func TestBasicUsage_FullQName_JSon(t *testing.T) {
 		}
 
 		ms := myStruct{
-			FullQName:   NewFullQName("p.p/p", `Карлсон 哇"呀呀`),
+			FullQName:   NewFullQName("p.p/p", `Carlson 哇"呀呀`),
 			StringValue: "sv",
 			IntValue:    56,
 		}
@@ -482,7 +482,7 @@ func TestBasicUsage_FullQName_JSon(t *testing.T) {
 	t.Run("key of a map", func(t *testing.T) {
 		expected := map[FullQName]string{
 			NewFullQName("test.test/test", "my"):           "one",
-			NewFullQName("test.test/test", `Карлсон 哇"呀呀`): "two",
+			NewFullQName("test.test/test", `Carlson 哇"呀呀`): "two",
 		}
 
 		b, err := json.Marshal(&expected)
@@ -687,7 +687,7 @@ func TestBasicUsage_AppQName_JSon(t *testing.T) {
 
 	t.Run("Marshal/Unmarshal QName", func(t *testing.T) {
 
-		aqn := NewAppQName("sys", `Карлосон 哇"呀呀`)
+		aqn := NewAppQName("sys", `Carlson 哇"呀呀`)
 
 		// Marshal
 
@@ -718,7 +718,7 @@ func TestBasicUsage_AppQName_JSon(t *testing.T) {
 		}
 
 		ms := myStruct{
-			AQN:         NewAppQName("p", `Карлосон 哇"呀呀`),
+			AQN:         NewAppQName("p", `Carlson 哇"呀呀`),
 			StringValue: "sv",
 			IntValue:    56,
 		}
@@ -741,7 +741,7 @@ func TestBasicUsage_AppQName_JSon(t *testing.T) {
 	t.Run("key of a map", func(t *testing.T) {
 		expected := map[AppQName]bool{
 			NewAppQName("sys", "my"):            true,
-			NewAppQName("sys", `Карлосон 哇"呀呀`): true,
+			NewAppQName("sys", `Carlson 哇"呀呀`): true,
 		}
 
 		b, err := json.Marshal(&expected)
@@ -853,6 +853,73 @@ func TestAppQName_UnmarshalInvalidString(t *testing.T) {
 			require.ErrorIs(err, tt.err)
 			if tt.errContains != "" {
 				require.ErrorContains(err, tt.errContains)
+			}
+		})
+	}
+}
+
+func TestParseQNames(t *testing.T) {
+	type args struct {
+		val []string
+	}
+	tests := []struct {
+		name    string
+		args    args
+		wantRes QNames
+		wantErr bool
+	}{
+		{"empty", args{[]string{}}, QNames{}, false},
+		{"NullQName", args{[]string{"."}}, QNames{NullQName}, false},
+		{"sys.error", args{[]string{"sys.error"}}, QNames{NewQName("sys", "error")}, false},
+		{"deduplicate", args{[]string{"a.a", "a.a"}}, QNames{NewQName("a", "a")}, false},
+		{"sort by package", args{[]string{"c.c", "b.b", "a.a"}}, QNames{NewQName("a", "a"), NewQName("b", "b"), NewQName("c", "c")}, false},
+		{"sort by entity", args{[]string{"a.b", "a.c", "a.x", "a.a"}}, QNames{NewQName("a", "a"), NewQName("a", "b"), NewQName("a", "c"), NewQName("a", "x")}, false},
+		{"sort and deduplicate", args{[]string{"b.b", "z.z", "b.b", "a.a", "z.b"}}, QNames{NewQName("a", "a"), NewQName("b", "b"), NewQName("z", "b"), NewQName("z", "z")}, false},
+		// Errors
+		{"error if invalid qname", args{[]string{"naked 🔫"}}, nil, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			gotRes, err := ParseQNames(tt.args.val...)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ParseQNames() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(gotRes, tt.wantRes) {
+				t.Errorf("ParseQNames() = %v, want %v", gotRes, tt.wantRes)
+			}
+		})
+	}
+}
+
+func TestMustParseQNames(t *testing.T) {
+	type args struct {
+		val []string
+	}
+	tests := []struct {
+		name       string
+		args       args
+		want       QNames
+		wantPanics bool
+	}{
+		{"empty", args{[]string{}}, QNames{}, false},
+		{"sys.error", args{[]string{"sys.error"}}, QNames{NewQName("sys", "error")}, false},
+		{"deduplicate", args{[]string{"a.a", "a.a"}}, QNames{NewQName("a", "a")}, false},
+		{"sort by package", args{[]string{"c.c", "b.b", "a.a"}}, QNames{NewQName("a", "a"), NewQName("b", "b"), NewQName("c", "c")}, false},
+		{"sort by entity", args{[]string{"a.b", "a.c", "a.x", "a.a"}}, QNames{NewQName("a", "a"), NewQName("a", "b"), NewQName("a", "c"), NewQName("a", "x")}, false},
+		{"sort and deduplicate", args{[]string{"b.b", "z.z", "b.b", "a.a", "z.b"}}, QNames{NewQName("a", "a"), NewQName("b", "b"), NewQName("z", "b"), NewQName("z", "z")}, false},
+		// Errors
+		{"panic if invalid qname", args{[]string{"naked 🔫"}}, nil, true},
+	}
+	require := require.New(t)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.wantPanics {
+				require.Panics(func() { MustParseQNames(tt.args.val...) })
+			} else {
+				if got := MustParseQNames(tt.args.val...); !reflect.DeepEqual(got, tt.want) {
+					t.Errorf("MustParseQNames() = %v, want %v", got, tt.want)
+				}
 			}
 		})
 	}

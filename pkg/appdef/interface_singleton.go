@@ -16,7 +16,7 @@ type ISingleton interface {
 type ISingletonBuilder interface {
 	IDocBuilder
 
-	// Устанавливает, что документ является синглтоном
+	// Makes the doc a singleton
 	SetSingleton()
 }
 
@@ -29,5 +29,5 @@ type IWithSingletons interface {
 	// Enumerates all application singletons
 	//
 	// Singletons are enumerated in alphabetical order by QName
-	Singletons(func(ISingleton))
+	Singletons(func(ISingleton) bool)
 }

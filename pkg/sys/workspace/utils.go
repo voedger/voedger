@@ -10,7 +10,7 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
 
-	coreutils "github.com/voedger/voedger/pkg/utils"
+	"github.com/voedger/voedger/pkg/coreutils"
 )
 
 func validateWSKindInitializationData(as istructs.IAppStructs, data map[string]interface{}, t appdef.IType) (err error) {

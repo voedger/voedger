@@ -41,11 +41,11 @@ func TestBasicUsage_n10n(t *testing.T) {
 		}
 	}()
 
-	// вызовем тестовый метод update для обновления проекции
+	// call a test method that updates the projection
 	vit.N10NUpdate(testProjectionKey, 13)
 
-	// отпишемся, чтобы закрылся канал offsetsChan
+	// unsubscribe to force offsetsChan to close
 	unsubscribe()
 
-	<-done // подождем чтения события и закрытия каналс offsestChan
+	<-done // wait for event read and offsestChan close
 }

@@ -14,8 +14,8 @@ import (
 
 	bolt "go.etcd.io/bbolt"
 
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/istorage"
-	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 type appStorageFactory struct {

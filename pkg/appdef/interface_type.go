@@ -21,15 +21,15 @@ const (
 	// Simple data types, like string, number, date, etc.
 	TypeKind_Data
 
-	// Глобальный Global configuration, WSID==0 (глобальная номенклатура): UserProfileLocation, SystemConfig
+	// Global configuration, WSID==0 (global doc): UserProfileLocation, SystemConfig
 	TypeKind_GDoc
 
-	// Конфигурационный документ (per workspace articles, prices, clients)
+	// Config document (per workspace articles, prices, clients)
 	TypeKind_CDoc
 
 	// Operational documents: bills, orders
 	// https://vocable.ru/termin/operacionnyi-dokument.html
-	// ОПЕРАЦИОННЫЙ ДОКУМЕНТ счет-фактура, чек, заказ, свидетельствующий о совершении сделки.
+	// THE OPERATIONAL DOCUMENT: an invoice, receipt, order indicating the completion of the transaction
 	// Might not be edited
 	TypeKind_ODoc
 
@@ -103,7 +103,7 @@ type IWithTypes interface {
 	// Enumerates all internal types.
 	//
 	// Types are enumerated in alphabetical order of QNames.
-	Types(func(IType))
+	Types(func(IType) bool)
 }
 
 type ITypeBuilder interface {

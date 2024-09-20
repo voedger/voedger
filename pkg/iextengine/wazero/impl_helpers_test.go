@@ -13,10 +13,10 @@ import (
 	"path/filepath"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/state/stateprovide"
 	"github.com/voedger/voedger/pkg/sys"
-	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 var errTestIOError = errors.New("test i/o error")
@@ -129,36 +129,36 @@ func (s *mockIo) CanExist(key istructs.IStateKeyBuilder) (value istructs.IStateV
 	}
 	if k.storage == storageTest2 {
 		const vvv = "012345678901234567890"
-		mv.Data["а10"] = vvv
-		mv.Data["а11"] = vvv
-		mv.Data["а12"] = vvv
-		mv.Data["а13"] = vvv
-		mv.Data["а14"] = vvv
-		mv.Data["а15"] = vvv
-		mv.Data["а16"] = vvv
-		mv.Data["а17"] = vvv
-		mv.Data["а18"] = vvv
-		mv.Data["а19"] = vvv
-		mv.Data["а20"] = vvv
-		mv.Data["а21"] = vvv
-		mv.Data["а22"] = vvv
-		mv.Data["а23"] = vvv
-		mv.Data["а24"] = vvv
-		mv.Data["а25"] = vvv
-		mv.Data["а26"] = vvv
-		mv.Data["а27"] = vvv
-		mv.Data["а28"] = vvv
-		mv.Data["а29"] = vvv
-		mv.Data["а30"] = vvv
-		mv.Data["а31"] = vvv
-		mv.Data["а32"] = vvv
-		mv.Data["а33"] = vvv
-		mv.Data["а34"] = vvv
-		mv.Data["а35"] = vvv
-		mv.Data["а36"] = vvv
-		mv.Data["а37"] = vvv
-		mv.Data["а38"] = vvv
-		mv.Data["а39"] = vvv
+		mv.Data["a10"] = vvv
+		mv.Data["a11"] = vvv
+		mv.Data["a12"] = vvv
+		mv.Data["a13"] = vvv
+		mv.Data["a14"] = vvv
+		mv.Data["a15"] = vvv
+		mv.Data["a16"] = vvv
+		mv.Data["a17"] = vvv
+		mv.Data["a18"] = vvv
+		mv.Data["a19"] = vvv
+		mv.Data["a20"] = vvv
+		mv.Data["a21"] = vvv
+		mv.Data["a22"] = vvv
+		mv.Data["a23"] = vvv
+		mv.Data["a24"] = vvv
+		mv.Data["a25"] = vvv
+		mv.Data["a26"] = vvv
+		mv.Data["a27"] = vvv
+		mv.Data["a28"] = vvv
+		mv.Data["a29"] = vvv
+		mv.Data["a30"] = vvv
+		mv.Data["a31"] = vvv
+		mv.Data["a32"] = vvv
+		mv.Data["a33"] = vvv
+		mv.Data["a34"] = vvv
+		mv.Data["a35"] = vvv
+		mv.Data["a36"] = vvv
+		mv.Data["a37"] = vvv
+		mv.Data["a38"] = vvv
+		mv.Data["a39"] = vvv
 		return &mv, true, nil
 	}
 	if k.storage == storageTestQname {
@@ -255,6 +255,7 @@ type mockKeyBuilder struct {
 	data    map[string]interface{}
 }
 
+func (kb *mockKeyBuilder) String() string                                   { return "" }
 func (kb *mockKeyBuilder) Storage() appdef.QName                            { return kb.storage }
 func (kb *mockKeyBuilder) Entity() appdef.QName                             { return kb.entity }
 func (kb *mockKeyBuilder) PartitionKey() istructs.IRowWriter                { return nil }

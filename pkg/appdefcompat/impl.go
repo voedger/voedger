@@ -6,6 +6,10 @@
 package appdefcompat
 
 import (
+	"io/fs"
+	"os"
+	"path/filepath"
+
 	"github.com/google/go-cmp/cmp"
 	"golang.org/x/exp/slices"
 
@@ -213,20 +217,22 @@ func buildWorkspaceNode(parentNode *CompatibilityTreeNode, item appdef.IWorkspac
 
 func buildTypesNode(parentNode *CompatibilityTreeNode, item appdef.IWithTypes, qNamesOnly bool) (node *CompatibilityTreeNode) {
 	node = newNode(parentNode, NodeNameTypes, nil)
-	item.Types(func(t appdef.IType) {
+	item.Types(func(t appdef.IType) bool {
 		if qNamesOnly {
 			node.Props = append(node.Props, buildQNameNode(node, t, t.QName().String(), true))
 		} else {
 			node.Props = append(node.Props, buildTreeNode(node, t))
 		}
+		return true
 	})
 	return
 }
 
 func buildPackagesNode(parentNode *CompatibilityTreeNode, item appdef.IAppDef) (node *CompatibilityTreeNode) {
 	node = newNode(parentNode, NodeNamePackages, nil)
-	item.Packages(func(localName, fullPath string) {
+	item.Packages(func(localName, fullPath string) bool {
 		node.Props = append(node.Props, newNode(node, fullPath, localName))
+		return true
 	})
 	return
 }
@@ -373,4 +379,16 @@ func matchNodes(oldNodes, newNodes []*CompatibilityTreeNode) *matchNodesResult {
 		}
 	}
 	return result
+}
+
+func (r *PathReader) Open(name string) (fs.File, error) {
+	return os.Open(filepath.Join(r.rootPath, name))
+}
+
+func (r *PathReader) ReadDir(name string) ([]os.DirEntry, error) {
+	return os.ReadDir(filepath.Join(r.rootPath, name))
+}
+
+func (r *PathReader) ReadFile(name string) ([]byte, error) {
+	return os.ReadFile(filepath.Join(r.rootPath, name))
 }

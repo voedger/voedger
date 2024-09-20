@@ -7,6 +7,7 @@ package main
 
 import (
 	_ "embed"
+	"errors"
 	"fmt"
 	"os"
 	"strconv"
@@ -31,7 +32,7 @@ func execRootCmd(args []string, ver string) error {
 	params := &vpmParams{}
 	rootCmd := cobrau.PrepareRootCmd(
 		"vpm",
-		"",
+		"vpm is a extensions manager for voedger framework",
 		args,
 		ver,
 		newCompileCmd(params),
@@ -42,10 +43,8 @@ func execRootCmd(args []string, ver string) error {
 		newTidyCmd(params),
 		newBuildCmd(params),
 	)
-	rootCmd.InitDefaultHelpCmd()
-	rootCmd.InitDefaultCompletionCmd()
 	correctCommandTexts(rootCmd)
-	initGlobalFlags(rootCmd, params)
+	initChangeDirFlags(rootCmd.Commands(), params)
 	rootCmd.PersistentPreRunE = func(cmd *cobra.Command, args []string) error {
 		return prepareParams(cmd, params, args)
 	}
@@ -90,29 +89,31 @@ func makeFirstLetterSmall(s string) string {
 	return strings.ToLower(s[0:1]) + s[1:]
 }
 
-func initGlobalFlags(cmd *cobra.Command, params *vpmParams) {
-	cmd.SilenceErrors = true
-	cmd.PersistentFlags().StringVarP(&params.Dir, "change-dir", "C", "", "change to dir before running the command. Any files named on the command line are interpreted after changing directories")
+func initChangeDirFlags(cmds []*cobra.Command, params *vpmParams) {
+	for _, cmd := range cmds {
+		if cmd.Name() == "version" {
+			continue
+		}
+		cmd.Flags().StringVarP(&params.Dir, "change-dir", "C", "", "change to dir before running the command. Any files named on the command line are interpreted after changing directories")
+	}
 }
 
 func exactArgs(n int) cobra.PositionalArgs {
 	return func(cmd *cobra.Command, args []string) error {
-		runHelpFuncInstead := func(cmd *cobra.Command, args []string) error {
-			if err := cmd.Help(); err != nil {
-				return err
-			}
-			return nil
-		}
 		switch {
-		case len(args) == 1 && args[0] == "help":
-			cmd.RunE = runHelpFuncInstead
-			return nil
-		case len(args) != n:
-			strCountOfArgs := strconv.Itoa(n)
-			if n == 0 {
-				strCountOfArgs = "no"
+		case len(args) >= 1 && args[0] == "help":
+			if len(args) > 1 {
+				return errors.New("'help' accepts no arguments")
 			}
-			return fmt.Errorf("'%s' accepts %s arg(s). Run '%s help'", cmd.CommandPath(), strCountOfArgs, cmd.CommandPath())
+			cmd.RunE = func(*cobra.Command, []string) error {
+				return cmd.Help()
+			}
+		case len(args) != n:
+			if n == 0 {
+				return fmt.Errorf("'%s' accepts no arguments", cmd.CommandPath())
+			}
+			strCountOfArgs := strconv.Itoa(n) + " arg(s)"
+			return fmt.Errorf("'%s' accepts %s\nusage: %s %s", cmd.CommandPath(), strCountOfArgs, cmd.Parent().Use, cmd.Use)
 		}
 		return nil
 	}

@@ -17,12 +17,12 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/state/stateprovide"
 	"github.com/voedger/voedger/pkg/sys"
-	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 func TestBasicUsage_SharedTestConfig(t *testing.T) {
@@ -101,7 +101,7 @@ func TestBasicUsage_Workspaces(t *testing.T) {
 			TemplateName: "test_template",  // from SharedConfig_Simple
 			InitDataJSON: `{"IntFld": 42}`, // intFld is required field, from SharedConfig_Simple
 			Kind:         QNameApp1_TestWSKind,
-			ClusterID:    istructs.MainClusterID,
+			ClusterID:    istructs.CurrentClusterID(),
 		}
 		newWS := vit.CreateWorkspace(wsp, ownerPrincipal)
 

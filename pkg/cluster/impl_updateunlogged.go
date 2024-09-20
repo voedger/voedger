@@ -11,9 +11,9 @@ import (
 	"net/http"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/dml"
 	"github.com/voedger/voedger/pkg/istructsmem"
-	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 func updateUnlogged(update update) error {
