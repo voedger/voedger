@@ -7,6 +7,7 @@ package istructsmem
 import (
 	"context"
 	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"testing"
@@ -85,7 +86,7 @@ func Test_KeyType(t *testing.T) {
 		kb.PutQName("pk_qname", istructs.QNameForError)
 		kb.PutBool("pk_bool", true)
 		kb.PutRecordID("pk_recID", istructs.RecordID(5555555))
-		kb.PutNumber("pk_number", 1.23456789)
+		kb.PutNumber("pk_number", json.Number("1.23456789"))
 
 		kb.PutInt32("cc_int32", 6666666)
 		kb.PutInt64("cc_int64", 777777777777)
@@ -94,7 +95,7 @@ func Test_KeyType(t *testing.T) {
 		kb.PutQName("cc_qname", viewName)
 		kb.PutBool("cc_bool", true)
 		kb.PutRecordID("cc_recID", istructs.RecordID(314159265358))
-		kb.PutNumber("cc_number", -9.87654321)
+		kb.PutNumber("cc_number", json.Number("-9.87654321"))
 		kb.PutChars("cc_bytes", base64.StdEncoding.EncodeToString([]byte(`naked 🔫`)))
 	})
 

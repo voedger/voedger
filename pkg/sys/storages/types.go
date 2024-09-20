@@ -6,6 +6,7 @@ package storages
 
 import (
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -67,7 +68,7 @@ func (b *baseKeyBuilder) PutBool(name appdef.FieldName, value bool) {
 func (b *baseKeyBuilder) PutRecordID(name appdef.FieldName, value istructs.RecordID) {
 	panic(errRecordIDFieldUndefined(name))
 }
-func (b *baseKeyBuilder) PutNumber(name appdef.FieldName, value float64) {
+func (b *baseKeyBuilder) PutNumber(name appdef.FieldName, value json.Number) {
 	panic(errNumberFieldUndefined(name))
 }
 func (b *baseKeyBuilder) PutChars(name appdef.FieldName, value string) {

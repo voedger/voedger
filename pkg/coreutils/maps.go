@@ -6,6 +6,7 @@
 package coreutils
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -26,25 +27,27 @@ func PairsToMap(pairs []string, m map[string]string) error {
 }
 
 func MapToObject(data map[string]interface{}, rw istructs.IRowWriter) (err error) {
-	for fieldName, vIntf := range data {
+	for fn, vIntf := range data {
 		switch v := vIntf.(type) {
 		case nil:
 		case float64:
-			rw.PutNumber(fieldName, v)
+			rw.PutFloat64(fn, v)
 		case float32:
-			rw.PutNumber(fieldName, float64(v))
+			rw.PutFloat32(fn, v)
 		case int32:
-			rw.PutNumber(fieldName, float64(v))
+			rw.PutInt32(fn, v)
 		case int64:
-			rw.PutNumber(fieldName, float64(v))
+			rw.PutInt64(fn, v)
 		case istructs.RecordID:
-			rw.PutNumber(fieldName, float64(v))
+			rw.PutRecordID(fn, v)
+		case json.Number:
+			rw.PutNumber(fn, v)
 		case string:
-			rw.PutChars(fieldName, v)
+			rw.PutChars(fn, v)
 		case bool:
-			rw.PutBool(fieldName, v)
+			rw.PutBool(fn, v)
 		default:
-			return fmt.Errorf("field %s: unsupported value type %#v", fieldName, vIntf)
+			return fmt.Errorf("field %s: unsupported value type %#v", fn, vIntf)
 		}
 	}
 	return nil

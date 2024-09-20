@@ -9,8 +9,11 @@ import (
 	"bytes"
 	"encoding/base64"
 	"encoding/binary"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
+	"strconv"
 
 	"github.com/untillpro/dynobuffers"
 
@@ -805,13 +808,19 @@ func (row *rowType) PutFromJSON(j map[appdef.FieldName]any) {
 	for n, v := range j {
 		switch fv := v.(type) {
 		case float64:
-			row.PutNumber(n, fv)
+			row.PutFloat64(n, fv)
 		case int32:
-			row.PutNumber(n, float64(fv))
-		case int:
-			row.PutNumber(n, float64(fv))
+			row.PutInt32(n, fv)
+		case int64:
+			row.PutInt64(n, fv)
+		case float32:
+			row.PutFloat32(n, fv)
+		case json.Number:
+			row.PutNumber(n, fv)
+		// case int:
+		// 	row.PutI(n, float64(fv))
 		case istructs.RecordID:
-			row.PutNumber(n, float64(fv))
+			row.PutRecordID(n, fv)
 		case string:
 			row.PutChars(n, fv)
 		case bool:
@@ -825,25 +834,49 @@ func (row *rowType) PutFromJSON(j map[appdef.FieldName]any) {
 	}
 }
 
+func fitNumber[T number](getter func() (T, error), min T, max T, fld appdef.IField, row *rowType, valStr string) (val T, ok bool) {
+	val, err := getter()
+	if err != nil && (val > max || val < min) {
+		err = fmt.Errorf("does not fit into %s", fld.DataKind().TrimString())
+	}
+	if err != nil {
+		row.collectErrorf(errNumberFieldWrongValueWrap, fld.Name(), valStr, fld.DataKind().TrimString(), err)
+		return 0, false
+	}
+	return val, true
+}
+
 // istructs.IRowWriter.PutNumber
-func (row *rowType) PutNumber(name appdef.FieldName, value float64) {
+func (row *rowType) PutNumber(name appdef.FieldName, value json.Number) {
 	fld := row.fieldDef(name)
 	if fld == nil {
 		row.collectErrorf(errFieldNotFoundWrap, name, row, ErrNameNotFound)
 		return
 	}
-
 	switch fld.DataKind() {
 	case appdef.DataKind_int32:
-		row.PutInt32(name, int32(value))
+		if int64Val, ok := fitNumber(value.Int64, math.MinInt32, math.MaxInt32, fld, row, value.String()); ok {
+			row.PutInt32(name, int32(int64Val))
+		}
 	case appdef.DataKind_int64:
-		row.PutInt64(name, int64(value))
+		if int64Val, ok := fitNumber(value.Int64, math.MinInt64, math.MaxInt64, fld, row, value.String()); ok {
+			row.PutInt64(name, int64Val)
+		}
 	case appdef.DataKind_float32:
-		row.PutFloat32(name, float32(value))
+		if float64Val, ok := fitNumber(value.Float64, -math.MaxFloat32, math.MaxFloat32, fld, row, value.String()); ok {
+			row.PutFloat32(name, float32(float64Val))
+		}
 	case appdef.DataKind_float64:
-		row.PutFloat64(name, value)
+		if float64Val, ok := fitNumber(value.Float64, -math.MaxFloat64, math.MaxFloat64, fld, row, value.String()); ok {
+			row.PutFloat64(name, float64Val)
+		}
 	case appdef.DataKind_RecordID:
-		row.PutRecordID(name, istructs.RecordID(value))
+		recodID, err := strconv.ParseUint(value.String(), 0, 64)
+		if err != nil {
+			row.collectErrorf(errNumberFieldWrongValueWrap, fld.Name(), value.String(), fld.DataKind().TrimString(), err)
+			return
+		}
+		row.PutRecordID(name, istructs.RecordID(recodID))
 	default:
 		row.collectErrorf(errFieldValueTypeMismatchWrap, appdef.DataKind_float64.TrimString(), fld, ErrWrongFieldType)
 	}

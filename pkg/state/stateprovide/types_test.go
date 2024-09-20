@@ -6,6 +6,7 @@ package stateprovide
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"maps"
 	"testing"
@@ -55,7 +56,7 @@ func (b *mapKeyBuilder) PutString(name string, value string)              { b.da
 func (b *mapKeyBuilder) PutQName(name string, value appdef.QName)         { b.data[name] = value }
 func (b *mapKeyBuilder) PutBool(name string, value bool)                  { b.data[name] = value }
 func (b *mapKeyBuilder) PutRecordID(name string, value istructs.RecordID) { b.data[name] = value }
-func (b *mapKeyBuilder) PutNumber(string, float64)                        { panic(ErrNotSupported) }
+func (b *mapKeyBuilder) PutNumber(string, json.Number)                    { panic(ErrNotSupported) }
 func (b *mapKeyBuilder) PutChars(string, string)                          { panic(ErrNotSupported) }
 func (b *mapKeyBuilder) PutFromJSON(j map[string]any)                     { maps.Copy(b.data, j) }
 func (b *mapKeyBuilder) PartitionKey() istructs.IRowWriter                { panic(ErrNotSupported) }

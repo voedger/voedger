@@ -62,7 +62,7 @@ func bench_BuildRawEvent(b *testing.B, numOfIntFields int) {
 	// oDoc field names and values
 
 	intFieldNames := make([]string, numOfIntFields)
-	intFieldNamesFloat64Values := make(map[string]float64)
+	intFieldNamesFloat64Values := make(map[string]json.Number)
 	stringFieldNames := make([]string, numOfIntFields)
 	stringFieldValues := make(map[string]string)
 
@@ -77,7 +77,7 @@ func bench_BuildRawEvent(b *testing.B, numOfIntFields int) {
 			intFieldName := fmt.Sprintf("i%v", i)
 			doc.AddField(intFieldName, appdef.DataKind_int64, true)
 			intFieldNames[i] = intFieldName
-			intFieldNamesFloat64Values[intFieldName] = float64(i)
+			intFieldNamesFloat64Values[intFieldName] = json.Number(fmt.Sprint(i))
 
 			stringFieldName := fmt.Sprintf("s%v", i)
 			doc.AddField(stringFieldName, appdef.DataKind_string, true)

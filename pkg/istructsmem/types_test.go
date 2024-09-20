@@ -9,6 +9,7 @@ import (
 	"bytes"
 	"encoding/base64"
 	"encoding/binary"
+	"encoding/json"
 	"testing"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -277,11 +278,11 @@ func Test_rowType_PutAs_SimpleTypes(t *testing.T) {
 		row := makeRow(test.AppCfg)
 		row.setQName(test.testRow)
 
-		row.PutNumber("int32", 1)
-		row.PutNumber("int64", 2)
-		row.PutNumber("float32", 3)
-		row.PutNumber("float64", 4)
-		row.PutNumber("RecordID", 5)
+		row.PutNumber("int32", json.Number("1"))
+		row.PutNumber("int64", json.Number("2"))
+		row.PutNumber("float32", json.Number("3"))
+		row.PutNumber("float64", json.Number("4"))
+		row.PutNumber("RecordID", json.Number("5"))
 
 		require.NoError(row.build())
 
@@ -437,7 +438,7 @@ func Test_rowType_PutErrors(t *testing.T) {
 		testPut(func(row istructs.IRowWriter) { row.PutBool("unknown_field", true) })
 		testPut(func(row istructs.IRowWriter) { row.PutRecordID("unknown_field", istructs.NullRecordID) })
 
-		testPut(func(row istructs.IRowWriter) { row.PutNumber("unknown_field", 888) })
+		testPut(func(row istructs.IRowWriter) { row.PutNumber("unknown_field", json.Number("88")) })
 		testPut(func(row istructs.IRowWriter) { row.PutChars("unknown_field", "c.h.a.r.s.") })
 	})
 
@@ -466,8 +467,8 @@ func Test_rowType_PutErrors(t *testing.T) {
 		row := makeRow(test.AppCfg)
 		row.setQName(test.testRow)
 
-		row.PutNumber("bytes", 29)
-		row.PutNumber("raw", 3.141592653589793238)
+		row.PutNumber("bytes", json.Number("29"))
+		row.PutNumber("raw", json.Number("3.141592653589793238"))
 
 		require.ErrorIs(row.build(), ErrWrongFieldType)
 	})

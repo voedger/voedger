@@ -5,6 +5,7 @@
 package istructs
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 
@@ -83,10 +84,10 @@ type IRowWriter interface {
 	PutBool(appdef.FieldName, bool)
 	PutRecordID(appdef.FieldName, RecordID)
 
-	// Puts value into int23, int64, float32, float64 or RecordID data type fields.
+	// Puts underlying json.Number value into field of int32, int64, float32 or float64
 	//
 	// Tries to make conversion from value to a name type
-	PutNumber(appdef.FieldName, float64)
+	PutNumber(appdef.FieldName, json.Number)
 
 	// Puts value into string, bytes or QName data type field.
 	//
@@ -94,6 +95,7 @@ type IRowWriter interface {
 	PutChars(appdef.FieldName, string)
 
 	// Puts value into fields. Field names are taken from map keys, values are taken from map values.
+	// joson.Number value type is allowed
 	//
 	// Calls PutNumber for numbers and RecordIDs, PutChars for strings, bytes and QNames.
 	PutFromJSON(map[appdef.FieldName]any)

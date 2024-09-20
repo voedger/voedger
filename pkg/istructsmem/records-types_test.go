@@ -202,10 +202,10 @@ func Test_RecordsPutJSON(t *testing.T) {
 
 	json := make(map[appdef.FieldName]any)
 	json[appdef.SystemField_QName] = test.testCDoc.String()
-	json[appdef.SystemField_ID] = float64(100500)
-	json["int32"] = float64(1)
-	json["int64"] = float64(2)
-	json["float32"] = float64(3)
+	json[appdef.SystemField_ID] = istructs.RecordID(100500)
+	json["int32"] = int32(1)
+	json["int64"] = int64(2)
+	json["float32"] = float32(3)
 	json["float64"] = float64(4)
 	// cspell:disable
 	json["bytes"] = `AQIDBA==`
@@ -213,7 +213,7 @@ func Test_RecordsPutJSON(t *testing.T) {
 	json["string"] = `naked 🔫`
 	json["QName"] = test.testCRec.String()
 	json["bool"] = true
-	json["RecordID"] = float64(100501)
+	json["RecordID"] = istructs.RecordID(100501)
 
 	t.Run("should be ok to put record from JSON", func(t *testing.T) {
 		err := app.Records().PutJSON(test.workspace, json)
@@ -279,7 +279,7 @@ func Test_RecordsPutJSON(t *testing.T) {
 			json[appdef.SystemField_ID] = float64(1)
 			err = app.Records().PutJSON(test.workspace, json)
 			require.ErrorIs(err, ErrRawRecordIDUnexpected)
-			require.ErrorContains(err, appdef.SystemField_ID)
+			require.ErrorContains(err, appdef.SystemField_ID) 
 		})
 
 		t.Run("should fail to put record with invalid data", func(t *testing.T) {
