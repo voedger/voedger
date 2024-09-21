@@ -37,7 +37,7 @@ func Test_AppDef_AddPackage(t *testing.T) {
 		require.EqualValues([]string{"example", "sys", "test"}, app.PackageLocalNames())
 
 		cnt := 0
-		app.Packages(func(localName, fullPath string) {
+		app.Packages(func(localName, fullPath string) bool {
 			switch cnt {
 			case 0:
 				require.Equal("example", localName)
@@ -52,8 +52,18 @@ func Test_AppDef_AddPackage(t *testing.T) {
 				require.Fail("unexpected package %v (%v)", localName, fullPath)
 			}
 			cnt++
+			return true
 		})
 		require.Equal(3, cnt)
+
+		t.Run("range for packages should be breakable", func(t *testing.T) {
+			cnt := 0
+			app.Packages(func(string, string) bool {
+				cnt++
+				return false
+			})
+			require.Equal(1, cnt)
+		})
 	})
 
 	t.Run("should be reconvert full-local qualified names", func(t *testing.T) {

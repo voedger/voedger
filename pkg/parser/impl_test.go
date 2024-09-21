@@ -227,30 +227,38 @@ func Test_BasicUsage(t *testing.T) {
 	require.Equal(eventsCount, proj.Events().Len())
 
 	stateCount := 0
-	proj.States().Enum(func(storage appdef.IStorage) {
+	proj.States().Enum(func(storage appdef.IStorage) bool {
 		stateCount++
-		if stateCount == 1 {
+		switch stateCount {
+		case 1:
 			require.Equal(appdef.NewQName("sys", "AppSecret"), storage.Name())
 			require.Empty(storage.Names())
-		} else if stateCount == 2 {
+		case 2:
 			require.Equal(appdef.NewQName("sys", "Http"), storage.Name())
 			require.Empty(storage.Names())
+		default:
+			require.Fail("unexpected state", "state: %v", storage)
 		}
+		return true
 	})
 	require.Equal(2, stateCount)
 	require.Equal(stateCount, proj.States().Len())
 
 	intentsCount := 0
-	proj.Intents().Enum(func(storage appdef.IStorage) {
+	proj.Intents().Enum(func(storage appdef.IStorage) bool {
 		intentsCount++
-		if intentsCount == 1 {
+		switch intentsCount {
+		case 1:
 			require.Equal(appdef.NewQName("sys", "View"), storage.Name())
 			require.Len(storage.Names(), 4)
 			require.Equal(appdef.NewQName("main", "ActiveTablePlansView"), storage.Names()[0])
 			require.Equal(appdef.NewQName("main", "DashboardView"), storage.Names()[1])
 			require.Equal(appdef.NewQName("main", "NotificationsHistory"), storage.Names()[2])
 			require.Equal(appdef.NewQName("main", "XZReports"), storage.Names()[3])
+		default:
+			require.Fail("unexpected intent", "intent: %v", storage)
 		}
+		return true
 	})
 	require.Equal(1, intentsCount)
 	require.Equal(intentsCount, proj.Intents().Len())
@@ -260,7 +268,7 @@ func Test_BasicUsage(t *testing.T) {
 		require.EqualValues(`1 0 * * *`, job1.CronSchedule())
 		t.Run("Job states", func(t *testing.T) {
 			stateCount := 0
-			proj.States().Enum(func(storage appdef.IStorage) {
+			proj.States().Enum(func(storage appdef.IStorage) bool {
 				stateCount++
 				switch stateCount {
 				case 1:
@@ -272,6 +280,7 @@ func Test_BasicUsage(t *testing.T) {
 				default:
 					require.Fail("unexpected state", "storage: %v", storage.Name())
 				}
+				return true
 			})
 			require.Equal(2, stateCount)
 		})

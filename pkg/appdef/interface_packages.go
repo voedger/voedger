@@ -22,7 +22,7 @@ type IWithPackages interface {
 	// Enumerates all packages.
 	//
 	// Packages are enumerated in alphabetical order by local name
-	Packages(func(localName, fullPath string))
+	Packages(func(localName, fullPath string) bool)
 
 	// Returns full qualified name by qualified name.
 	//

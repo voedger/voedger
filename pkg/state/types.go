@@ -16,7 +16,7 @@ import (
 	"github.com/voedger/voedger/pkg/itokens"
 	"github.com/voedger/voedger/pkg/state/smtptest"
 
-	"github.com/voedger/voedger/pkg/utils/federation"
+	"github.com/voedger/voedger/pkg/coreutils/federation"
 )
 
 type PartitionIDFunc func() istructs.PartitionID

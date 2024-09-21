@@ -8,9 +8,9 @@ import (
 	"context"
 	"time"
 
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/pipeline"
-	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 type ResultFieldsOperator struct {

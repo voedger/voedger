@@ -16,8 +16,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/goutils/exec"
-	coreutils "github.com/voedger/voedger/pkg/utils"
 	"golang.org/x/term"
 )
 

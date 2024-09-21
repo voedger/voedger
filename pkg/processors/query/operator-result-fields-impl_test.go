@@ -10,9 +10,9 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/pipeline"
-	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 func TestResultFieldsOperator_DoSync(t *testing.T) {

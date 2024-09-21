@@ -39,9 +39,10 @@ func ExampleIAppDefBuilder_AddQuery() {
 	// how to enum queries
 	{
 		cnt := 0
-		app.Queries(func(q appdef.IQuery) {
+		app.Queries(func(q appdef.IQuery) bool {
 			cnt++
 			fmt.Println(cnt, q)
+			return true
 		})
 		fmt.Println("overall:", cnt)
 	}

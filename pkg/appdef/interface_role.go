@@ -56,7 +56,7 @@ type IWithRoles interface {
 	// Enumerates all roles
 	//
 	// Roles are enumerated in alphabetical order by QName
-	Roles(func(IRole))
+	Roles(func(IRole) bool)
 }
 
 type IRolesBuilder interface {

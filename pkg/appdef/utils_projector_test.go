@@ -8,8 +8,8 @@ package appdef
 import (
 	"testing"
 
+	"github.com/voedger/voedger/pkg/coreutils/utils"
 	"github.com/voedger/voedger/pkg/goutils/testingu/require"
-	"github.com/voedger/voedger/pkg/utils/utils"
 )
 
 func TestProjectorEventKind_MarshalText(t *testing.T) {

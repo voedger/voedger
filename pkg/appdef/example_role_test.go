@@ -52,9 +52,10 @@ func ExampleIAppDefBuilder_AddRole() {
 	// how to enum roles
 	{
 		cnt := 0
-		app.Roles(func(r appdef.IRole) {
+		app.Roles(func(r appdef.IRole) bool {
 			cnt++
 			fmt.Println(cnt, r)
+			return true
 		})
 		fmt.Println("overall:", cnt)
 	}

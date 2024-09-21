@@ -15,9 +15,9 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/itokens"
-	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 var SecretKeyTooShortExample = SecretKeyType{

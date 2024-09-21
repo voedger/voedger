@@ -5,9 +5,9 @@
 package itokensjwt
 
 import (
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/isecrets"
 	itokens "github.com/voedger/voedger/pkg/itokens"
-	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 var TestTokensJWT = func() itokens.ITokens {

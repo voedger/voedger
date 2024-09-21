@@ -8,20 +8,21 @@ package main
 import (
 	"errors"
 	"fmt"
-	"github.com/voedger/voedger/pkg/parser"
 	"io"
 	"os"
 	"path/filepath"
 	"slices"
 	"strings"
 
+	"github.com/voedger/voedger/pkg/parser"
+
 	"github.com/google/uuid"
 
 	"github.com/spf13/cobra"
 	"github.com/voedger/voedger/pkg/compile"
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/goutils/exec"
 	"github.com/voedger/voedger/pkg/goutils/logger"
-	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 func newBuildCmd(params *vpmParams) *cobra.Command {
@@ -74,12 +75,12 @@ func checkCompileResult(compileRes *compile.Result) error {
 
 func build(compileRes *compile.Result, params *vpmParams) error {
 	// temp directory to save the build info: vsql files, wasm files
-	tempBuildInfoDir := filepath.Join(os.TempDir(), uuid.New().String(), buildDirName)
-	if err := os.MkdirAll(tempBuildInfoDir, coreutils.FileMode_rwxrwxrwx); err != nil {
+	tempDir := filepath.Join(os.TempDir(), uuid.New().String(), buildDirName)
+	if err := os.MkdirAll(tempDir, coreutils.FileMode_rwxrwxrwx); err != nil {
 		return err
 	}
 	// create temp build info directory along with vsql and wasm files
-	if err := buildDir(compileRes.PkgFiles, tempBuildInfoDir); err != nil {
+	if err := buildDir(compileRes.PkgFiles, tempDir); err != nil {
 		return err
 	}
 	// set the path to the output archive, e.g. app.var
@@ -90,10 +91,13 @@ func build(compileRes *compile.Result, params *vpmParams) error {
 	if !strings.HasSuffix(archiveName, ".var") {
 		archiveName += ".var"
 	}
-	archivePath := filepath.Join(params.Dir, archiveName)
+	varFile := filepath.Join(params.Dir, archiveName)
+
+	// set dir without "build" dir on the end. That need to have expected path within the archive: build/file1.txt instead of file1.txt
+	tempDirWithoutBuild := filepath.Dir(tempDir)
 
 	// zip build info directory along with vsql and wasm files
-	return coreutils.Zip(archivePath, tempBuildInfoDir)
+	return coreutils.Zip(tempDirWithoutBuild, varFile)
 }
 
 // buildDir creates a directory structure with vsql and wasm files

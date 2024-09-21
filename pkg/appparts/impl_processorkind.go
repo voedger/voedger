@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/utils/utils"
+	"github.com/voedger/voedger/pkg/coreutils/utils"
 )
 
 func (k ProcessorKind) MarshalText() ([]byte, error) {

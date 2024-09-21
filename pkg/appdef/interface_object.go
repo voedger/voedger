@@ -26,7 +26,7 @@ type IWithObjects interface {
 	// Enumerates all application objects
 	//
 	// Objects are enumerated in alphabetical order by QName
-	Objects(func(IObject))
+	Objects(func(IObject) bool)
 }
 
 type IObjectsBuilder interface {

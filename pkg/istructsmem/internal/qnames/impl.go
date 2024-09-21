@@ -78,7 +78,7 @@ func (names *QNames) collectAll(appDef appdef.IAppDef) error {
 
 	if appDef != nil {
 		appDef.Types(
-			func(t appdef.IType) {
+			func(t appdef.IType) bool {
 				err = errors.Join(err,
 					names.collect(t.QName()))
 				if uu, ok := t.(appdef.IUniques); ok {
@@ -87,6 +87,7 @@ func (names *QNames) collectAll(appDef appdef.IAppDef) error {
 							names.collect(u.Name()))
 					}
 				}
+				return true
 			})
 	}
 

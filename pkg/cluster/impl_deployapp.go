@@ -11,6 +11,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appparts"
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
@@ -18,7 +19,6 @@ import (
 	"github.com/voedger/voedger/pkg/sys/authnz"
 	"github.com/voedger/voedger/pkg/sys/uniques"
 	"github.com/voedger/voedger/pkg/sys/workspace"
-	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 // wrong to use IAppPartitions to get total NumAppPartition because the app the cmd is called for is not deployed yet

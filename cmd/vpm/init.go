@@ -21,7 +21,7 @@ import (
 	"golang.org/x/mod/semver"
 
 	"github.com/voedger/voedger/pkg/compile"
-	coreutils "github.com/voedger/voedger/pkg/utils"
+	"github.com/voedger/voedger/pkg/coreutils"
 )
 
 var minimalRequiredGoVersionValue = minimalRequiredGoVersion

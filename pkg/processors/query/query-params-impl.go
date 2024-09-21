@@ -7,7 +7,7 @@ package queryprocessor
 import (
 	"fmt"
 
-	coreutils "github.com/voedger/voedger/pkg/utils"
+	"github.com/voedger/voedger/pkg/coreutils"
 )
 
 type queryParams struct {

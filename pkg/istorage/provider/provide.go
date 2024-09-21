@@ -8,8 +8,8 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/istorage"
-	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 // keyspaceNameSuffix is used in tests only

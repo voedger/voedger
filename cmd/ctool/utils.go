@@ -16,8 +16,8 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/goutils/logger"
-	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 var logFile *os.File

@@ -8,7 +8,7 @@ package processors
 import (
 	"net/http"
 
-	coreutils "github.com/voedger/voedger/pkg/utils"
+	"github.com/voedger/voedger/pkg/coreutils"
 )
 
 const Field_RawObject_Body = "Body"
