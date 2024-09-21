@@ -133,7 +133,8 @@ type WorkspaceStatement struct {
 	Type      *TypeStmt               `parser:"| @@"`
 	Limit     *LimitStmt              `parser:"| @@"`
 	// Sequence  *sequenceStmt  `parser:"| @@"`
-	Grant *GrantStmt `parser:"| @@"`
+	Grant  *GrantStmt  `parser:"| @@"`
+	Revoke *RevokeStmt `parser:"| @@"`
 
 	stmt interface{}
 }
@@ -655,6 +656,23 @@ type GrantStmt struct {
 
 	On DefQName `parser:"@@"`
 	To DefQName `parser:"'TO' @@"`
+}
+
+type RevokeStmt struct {
+	Statement
+	Command              bool                          `parser:"'REVOKE' ( @INSERTONCOMMAND"`
+	AllCommandsWithTag   bool                          `parser:"| @INSERTONALLCOMMANDSWITHTAG"`
+	Query                bool                          `parser:"| @SELECTONQUERY"`
+	AllQueriesWithTag    bool                          `parser:"| @SELECTONALLQUERIESWITHTAG"`
+	View                 bool                          `parser:"| @SELECTONVIEW"`
+	AllViewsWithTag      bool                          `parser:"| @SELECTONALLVIEWSWITHTAG"`
+	Workspace            bool                          `parser:"| @INSERTONWORKSPACE"`
+	AllWorkspacesWithTag bool                          `parser:"| @INSERTONALLWORKSPACESWITHTAG"`
+	AllTablesWithTag     *GrantAllTablesWithTagActions `parser:"| (@@ ONALLTABLESWITHTAG)"`
+	Table                *GrantTableActions            `parser:"| (@@ ONTABLE) )"`
+
+	On DefQName `parser:"@@"`
+	To DefQName `parser:"'FROM' @@"`
 }
 
 type StorageStmt struct {
