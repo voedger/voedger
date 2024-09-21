@@ -642,25 +642,13 @@ type GrantAllTablesWithTagActions struct {
 }
 
 type GrantStmt struct {
-	Statement
-	Command              bool                          `parser:"'GRANT' ( @INSERTONCOMMAND"`
-	AllCommandsWithTag   bool                          `parser:"| @INSERTONALLCOMMANDSWITHTAG"`
-	Query                bool                          `parser:"| @SELECTONQUERY"`
-	AllQueriesWithTag    bool                          `parser:"| @SELECTONALLQUERIESWITHTAG"`
-	View                 bool                          `parser:"| @SELECTONVIEW"`
-	AllViewsWithTag      bool                          `parser:"| @SELECTONALLVIEWSWITHTAG"`
-	Workspace            bool                          `parser:"| @INSERTONWORKSPACE"`
-	AllWorkspacesWithTag bool                          `parser:"| @INSERTONALLWORKSPACESWITHTAG"`
-	AllTablesWithTag     *GrantAllTablesWithTagActions `parser:"| (@@ ONALLTABLESWITHTAG)"`
-	Table                *GrantTableActions            `parser:"| (@@ ONTABLE) )"`
-
-	On DefQName `parser:"@@"`
+	Revoke bool `parser:"'GRANT'"`
+	GrantOrRevoke
 	To DefQName `parser:"'TO' @@"`
 }
 
-type RevokeStmt struct {
-	Statement
-	Command              bool                          `parser:"'REVOKE' ( @INSERTONCOMMAND"`
+type GrantOrRevoke struct {
+	Command              bool                          `parser:"( @INSERTONCOMMAND"`
 	AllCommandsWithTag   bool                          `parser:"| @INSERTONALLCOMMANDSWITHTAG"`
 	Query                bool                          `parser:"| @SELECTONQUERY"`
 	AllQueriesWithTag    bool                          `parser:"| @SELECTONALLQUERIESWITHTAG"`
@@ -670,9 +658,13 @@ type RevokeStmt struct {
 	AllWorkspacesWithTag bool                          `parser:"| @INSERTONALLWORKSPACESWITHTAG"`
 	AllTablesWithTag     *GrantAllTablesWithTagActions `parser:"| (@@ ONALLTABLESWITHTAG)"`
 	Table                *GrantTableActions            `parser:"| (@@ ONTABLE) )"`
+	On                   DefQName                      `parser:"@@"`
+}
 
-	On DefQName `parser:"@@"`
-	To DefQName `parser:"'FROM' @@"`
+type RevokeStmt struct {
+	Revoke bool `parser:"'REVOKE'"`
+	GrantOrRevoke
+	From DefQName `parser:"'FROM' @@"`
 }
 
 type StorageStmt struct {

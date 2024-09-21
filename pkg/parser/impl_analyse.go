@@ -92,6 +92,8 @@ func analyse(c *basicContext, packages []*PackageSchemaAST) {
 				analyseLimit(v, ictx)
 			case *GrantStmt:
 				analyseGrant(v, ictx)
+			case *RevokeStmt:
+				analyseRevoke(v, ictx)
 			}
 		})
 	}
@@ -139,12 +141,11 @@ func analyse(c *basicContext, packages []*PackageSchemaAST) {
 	}
 }
 
-func analyseGrant(grant *GrantStmt, c *iterateCtx) {
-
+func analyseGrantOrRevoke(ToOrFrom DefQName, grant *GrantOrRevoke, c *iterateCtx) {
 	// To
-	err := resolveInCtx(grant.To, c, func(f *RoleStmt, _ *PackageSchemaAST) error { return nil })
+	err := resolveInCtx(ToOrFrom, c, func(f *RoleStmt, _ *PackageSchemaAST) error { return nil })
 	if err != nil {
-		c.stmtErr(&grant.To.Pos, err)
+		c.stmtErr(&ToOrFrom.Pos, err)
 	}
 
 	// On
@@ -226,6 +227,15 @@ func analyseGrant(grant *GrantStmt, c *iterateCtx) {
 			}
 		}
 	}
+
+}
+
+func analyseGrant(grant *GrantStmt, c *iterateCtx) {
+	analyseGrantOrRevoke(grant.To, &grant.GrantOrRevoke, c)
+}
+
+func analyseRevoke(revoke *RevokeStmt, c *iterateCtx) {
+	analyseGrantOrRevoke(revoke.From, &revoke.GrantOrRevoke, c)
 }
 
 func analyseUseTable(u *UseTableStmt, c *iterateCtx) {
