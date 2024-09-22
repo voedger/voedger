@@ -816,10 +816,12 @@ func (row *rowType) PutFromJSON(j map[appdef.FieldName]any) {
 		case float32:
 			row.PutFloat32(n, fv)
 		case json.Number:
+			// тут  если sys.ID, то просто вызываем PutInt64, а там - просто пишем в dynobuffer, не делаем setID()
 			row.PutNumber(n, fv)
 		// case int:
 		// 	row.PutI(n, float64(fv))
 		case istructs.RecordID:
+			// тут если кладем sys.ID или sys.ParentID, то не пишем в динобуфер
 			row.PutRecordID(n, fv)
 		case string:
 			row.PutChars(n, fv)
@@ -853,6 +855,7 @@ func (row *rowType) PutNumber(name appdef.FieldName, value json.Number) {
 		row.collectErrorf(errFieldNotFoundWrap, name, row, ErrNameNotFound)
 		return
 	}
+	// тут проблема: если делаем PutInt64(sys.RecordID)
 	switch fld.DataKind() {
 	case appdef.DataKind_int32:
 		if int64Val, ok := fitNumber(value.Int64, math.MinInt32, math.MaxInt32, fld, row, value.String()); ok {

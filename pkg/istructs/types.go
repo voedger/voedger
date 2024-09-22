@@ -95,7 +95,8 @@ type IRowWriter interface {
 	PutChars(appdef.FieldName, string)
 
 	// Puts value into fields. Field names are taken from map keys, values are taken from map values.
-	// joson.Number value type is allowed
+	// types of values and types of the target fields in the schema must be the same
+	// joson.Number value type is allowed for number fields
 	//
 	// Calls PutNumber for numbers and RecordIDs, PutChars for strings, bytes and QNames.
 	PutFromJSON(map[appdef.FieldName]any)
