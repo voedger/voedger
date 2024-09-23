@@ -162,7 +162,7 @@ func (i *implIAuthenticator) Authenticate(requestContext context.Context, as ist
 		}
 	}
 
-	// ResellersAdmin || UntillPaymentsReseller -> WorkspaceAdmin
+	// air.ResellersAdmin || air.UntillPaymentsReseller -> WorkspaceAdmin
 	for _, prn := range principals {
 		if prn.Kind == iauthnz.PrincipalKind_Role && (prn.QName == qNameRoleResellersAdmin || prn.QName == qNameRoleUntillPaymentsReseller) {
 			prnWSAdmin := iauthnz.Principal{

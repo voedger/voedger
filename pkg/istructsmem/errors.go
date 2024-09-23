@@ -87,6 +87,8 @@ const errViewNotFoundWrap = "view «%v» not found: %w"
 
 const errFieldDataConstraintViolatedFmt = "%v data constraint «%v» violated: %w"
 
+
+
 // ValidateError: an interface for describing errors that occurred during validation
 //   - methods:
 //     — Code(): returns error code, see ECode_××× constants

@@ -272,6 +272,24 @@ func (row *rowType) putValue(name appdef.FieldName, kind dynobuffers.FieldType, 
 		return
 	}
 
+	if name == appdef.SystemField_ID {
+		int64Val, ok := value.(int64)
+		if !ok {
+			row.collectError(ErrWrongType)
+		}
+		row.setID(istructs.RecordID(int64Val))
+		return
+	}
+
+	if name == appdef.SystemField_ParentID {
+		int64Val, ok := value.(int64)
+		if !ok {
+			row.collectError(ErrWrongType)
+		}
+		row.setParent(istructs.RecordID(int64Val))
+		return
+	}
+
 	if fld.Verifiable() {
 		token, ok := value.(string)
 		if !ok {
@@ -962,14 +980,14 @@ func (row *rowType) PutBool(name appdef.FieldName, value bool) {
 
 // istructs.IRowWriter.PutRecordID
 func (row *rowType) PutRecordID(name appdef.FieldName, value istructs.RecordID) {
-	if name == appdef.SystemField_ID {
-		row.setID(value)
-		return
-	}
-	if name == appdef.SystemField_ParentID {
-		row.setParent(value)
-		return
-	}
+	// if name == appdef.SystemField_ID {
+	// 	row.setID(value)
+	// 	return
+	// }
+	// if name == appdef.SystemField_ParentID {
+	// 	row.setParent(value)
+	// 	return
+	// }
 
 	row.putValue(name, dynobuffers.FieldTypeInt64, int64(value))
 }
