@@ -640,11 +640,9 @@ type GrantAllTablesWithTagActions struct {
 	GrantAll bool                          `parser:"@'ALL' | "`
 	Items    []GrantAllTablesWithTagAction `parser:"(@@ (',' @@)*)"`
 }
-
-type GrantStmt struct {
-	Revoke bool `parser:"'GRANT'"`
-	GrantOrRevoke
-	To DefQName `parser:"'TO' @@"`
+type GrantView struct {
+	Pos     lexer.Position
+	Columns []Identifier `parser:"'SELECT' ( '(' @@ (',' @@)* ')' )? ('ON' 'VIEW')"`
 }
 
 type GrantOrRevoke struct {
@@ -652,16 +650,28 @@ type GrantOrRevoke struct {
 	AllCommandsWithTag   bool                          `parser:"| @INSERTONALLCOMMANDSWITHTAG"`
 	Query                bool                          `parser:"| @SELECTONQUERY"`
 	AllQueriesWithTag    bool                          `parser:"| @SELECTONALLQUERIESWITHTAG"`
-	View                 bool                          `parser:"| @SELECTONVIEW"`
+	View                 *GrantView                    `parser:"| @@"`
 	AllViewsWithTag      bool                          `parser:"| @SELECTONALLVIEWSWITHTAG"`
 	Workspace            bool                          `parser:"| @INSERTONWORKSPACE"`
 	AllWorkspacesWithTag bool                          `parser:"| @INSERTONALLWORKSPACESWITHTAG"`
 	AllTablesWithTag     *GrantAllTablesWithTagActions `parser:"| (@@ ONALLTABLESWITHTAG)"`
 	Table                *GrantTableActions            `parser:"| (@@ ONTABLE) )"`
 	On                   DefQName                      `parser:"@@"`
+
+	role    appdef.QName           // filled on the analysis stage
+	on      []appdef.QName         // filled on the analysis stage
+	ops     []appdef.OperationKind // filled on the analysis stage
+	columns []appdef.FieldName     // filled on the analysis stage
 }
 
+type GrantStmt struct {
+	Statement
+	Revoke bool `parser:"'GRANT'"`
+	GrantOrRevoke
+	To DefQName `parser:"'TO' @@"`
+}
 type RevokeStmt struct {
+	Statement
 	Revoke bool `parser:"'REVOKE'"`
 	GrantOrRevoke
 	From DefQName `parser:"'FROM' @@"`

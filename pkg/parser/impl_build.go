@@ -42,6 +42,7 @@ func (c *buildContext) build() error {
 		c.commands,
 		c.projectors,
 		c.jobs,
+		c.grantsAndRevokes,
 		c.queries,
 		c.workspaces,
 		c.packages,
@@ -140,6 +141,19 @@ func (c *buildContext) types() error {
 			c.addComments(typ, c.defCtx().defBuilder.(appdef.ICommentsBuilder))
 			c.addTableItems(typ.Items, ictx)
 			c.popDef()
+		})
+	}
+	return nil
+}
+
+func (c *buildContext) grantsAndRevokes() error {
+	for _, schema := range c.app.Packages {
+		iteratePackageStmt(schema, &c.basicContext, func(grant *GrantStmt, ictx *iterateCtx) {
+			acl := c.builder.Grant(grant.ops, grant.on, grant.columns, grant.role)
+			c.addComments(grant, acl)
+		})
+		iteratePackageStmt(schema, &c.basicContext, func(grant *RevokeStmt, ictx *iterateCtx) {
+			c.builder.Revoke(grant.ops, grant.on, grant.columns, grant.role)
 		})
 	}
 	return nil

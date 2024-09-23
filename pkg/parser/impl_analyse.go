@@ -143,30 +143,68 @@ func analyse(c *basicContext, packages []*PackageSchemaAST) {
 
 func analyseGrantOrRevoke(ToOrFrom DefQName, grant *GrantOrRevoke, c *iterateCtx) {
 	// To
-	err := resolveInCtx(ToOrFrom, c, func(f *RoleStmt, _ *PackageSchemaAST) error { return nil })
+	err := resolveInCtx(ToOrFrom, c, func(f *RoleStmt, pkg *PackageSchemaAST) error {
+		grant.role = pkg.NewQName(f.Name)
+		return nil
+	})
 	if err != nil {
 		c.stmtErr(&ToOrFrom.Pos, err)
 	}
 
 	// On
 	if grant.Command {
-		err := resolveInCtx(grant.On, c, func(f *CommandStmt, _ *PackageSchemaAST) error { return nil })
+		err := resolveInCtx(grant.On, c, func(f *CommandStmt, pkg *PackageSchemaAST) error {
+			grant.on = append(grant.on, pkg.NewQName(f.Name))
+			grant.ops = append(grant.ops, appdef.OperationKind_Execute)
+			return nil
+		})
 		if err != nil {
 			c.stmtErr(&grant.On.Pos, err)
 		}
 	}
 
 	if grant.Query {
-		err := resolveInCtx(grant.On, c, func(f *QueryStmt, _ *PackageSchemaAST) error { return nil })
+		err := resolveInCtx(grant.On, c, func(f *QueryStmt, pkg *PackageSchemaAST) error {
+			grant.on = append(grant.on, pkg.NewQName(f.Name))
+			grant.ops = append(grant.ops, appdef.OperationKind_Execute)
+			return nil
+		})
 		if err != nil {
 			c.stmtErr(&grant.On.Pos, err)
 		}
 	}
 
-	if grant.View {
-		err := resolveInCtx(grant.On, c, func(f *ViewStmt, _ *PackageSchemaAST) error { return nil })
+	if grant.View != nil {
+		var view *ViewStmt
+		err := resolveInCtx(grant.On, c, func(f *ViewStmt, pkg *PackageSchemaAST) error {
+			view = f
+			grant.on = append(grant.on, pkg.NewQName(f.Name))
+			grant.ops = append(grant.ops, appdef.OperationKind_Select)
+			return nil
+		})
 		if err != nil {
 			c.stmtErr(&grant.On.Pos, err)
+		}
+		if view != nil {
+			// check columns
+			checkColumn := func(column Identifier) error {
+				for _, f := range view.Items {
+					if f.Field != nil && f.Field.Name == column {
+						grant.columns = append(grant.columns, string(column.Value))
+						return nil
+					}
+					if f.RefField != nil && f.RefField.Name == column {
+						grant.columns = append(grant.columns, string(column.Value))
+						return nil
+					}
+				}
+				return ErrUndefinedField(string(column.Value))
+			}
+			for _, i := range grant.View.Columns {
+				if err := checkColumn(i); err != nil {
+					c.stmtErr(&i.Pos, err)
+				}
+			}
 		}
 	}
 
@@ -199,9 +237,11 @@ func analyseGrantOrRevoke(ToOrFrom DefQName, grant *GrantOrRevoke, c *iterateCtx
 		checkColumn := func(column Ident) error {
 			for _, f := range table.Items {
 				if f.Field != nil && f.Field.Name == column {
+					grant.columns = append(grant.columns, string(column))
 					return nil
 				}
 				if f.RefField != nil && f.RefField.Name == column {
+					grant.columns = append(grant.columns, string(column))
 					return nil
 				}
 				if f.NestedTable != nil && f.NestedTable.Name == column {

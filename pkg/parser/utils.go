@@ -217,7 +217,7 @@ func iteratePackage(pkg *PackageSchemaAST, ctx *basicContext, callback func(stmt
 }
 
 func iteratePackageStmt[stmtType *TableStmt | *TypeStmt | *ViewStmt | *CommandStmt | *QueryStmt |
-	*WorkspaceStmt | *AlterWorkspaceStmt | *ProjectorStmt | *JobStmt | *RateStmt](pkg *PackageSchemaAST, ctx *basicContext, callback func(stmt stmtType, ctx *iterateCtx)) {
+	*WorkspaceStmt | *AlterWorkspaceStmt | *ProjectorStmt | *JobStmt | *RateStmt | *GrantStmt | *RevokeStmt](pkg *PackageSchemaAST, ctx *basicContext, callback func(stmt stmtType, ctx *iterateCtx)) {
 	iteratePackage(pkg, ctx, func(stmt interface{}, ctx *iterateCtx) {
 		if s, ok := stmt.(stmtType); ok {
 			callback(s, ctx)
