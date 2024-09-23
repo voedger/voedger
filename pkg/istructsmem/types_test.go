@@ -914,3 +914,20 @@ func Test_rowType_String(t *testing.T) {
 		require.Contains(s, "«test.CDoc»")
 	})
 }
+
+func TestWrong(t *testing.T) {
+	require := require.New(t)
+	test := test()
+
+	bld := test.AppStructs.ObjectBuilder(test.testRow)
+
+	data := map[appdef.FieldName]any{
+		"RecordID": istructs.RecordID(1),
+	}
+
+	bld.PutFromJSON(data)
+
+	row, err := bld.Build()
+	require.NoError(err)
+	require.EqualValues(istructs.RecordID(1), row.AsRecordID("RecordID"))
+}
