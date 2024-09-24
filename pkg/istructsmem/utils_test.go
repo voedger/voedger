@@ -6,6 +6,7 @@
 package istructsmem
 
 import (
+	"encoding/json"
 	"reflect"
 	"testing"
 
@@ -116,19 +117,19 @@ func TestObjectFillAndGet(t *testing.T) {
 	t.Run("basic", func(t *testing.T) {
 
 		data := map[string]interface{}{
-			"sys.ID":  float64(7),
-			"int32":   float64(1),
-			"int64":   float64(2),
-			"float32": float64(3),
-			"float64": float64(4),
+			"sys.ID":  json.Number("7"),
+			"int32":   json.Number("1"),
+			"int64":   json.Number("2"),
+			"float32": json.Number("3"),
+			"float64": json.Number("4"),
 			"bytes":   "BQY=", // []byte{5,6}
 			"string":  "str",
 			"QName":   "test.CDoc",
 			"bool":    true,
 			"record": []interface{}{
 				map[string]interface{}{
-					"sys.ID": float64(8),
-					"int32":  float64(6),
+					"sys.ID": json.Number("8"),
+					"int32":  json.Number("6"),
 				},
 			},
 		}
@@ -172,7 +173,7 @@ func TestObjectFillAndGet(t *testing.T) {
 		for name, val := range cases {
 			builder := as.ObjectBuilder(test.testCDoc)
 			data := map[string]interface{}{
-				"sys.ID": float64(1),
+				"sys.ID": json.Number("1"),
 				name:     val,
 			}
 			builder.FillFromJSON(data)

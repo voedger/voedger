@@ -9,8 +9,10 @@ import (
 	"bytes"
 	"encoding/base64"
 	"encoding/binary"
+	"encoding/json"
 	"fmt"
 	"io"
+	"math"
 
 	"github.com/untillpro/dynobuffers"
 
@@ -27,34 +29,80 @@ import (
 //	— string value can be converted to QName and []byte kinds
 //
 // QName values, record- and event- values returned as []byte
-func (row *rowType) dynoBufValue(value interface{}, kind appdef.DataKind) (interface{}, error) {
+// eliminates case when numbers are emited as float64 instead of json.Number on json unmarshaling
+func (row *rowType) clarifyJSONValue(value interface{}, kind appdef.DataKind) (res interface{}, err error) {
+
+outer:
 	switch kind {
 	case appdef.DataKind_int32:
 		switch v := value.(type) {
 		case int32:
 			return v, nil
-		case float64:
-			return int32(v), nil
+		case json.Number:
+			int64Val, err := v.Int64()
+			if err != nil {
+				return nil, fmt.Errorf("failed to cast %s to int*: %w", v.String(), err)
+			}
+			if int64Val < math.MinInt32 || int64Val > math.MaxInt32 {
+				return nil, fmt.Errorf("the value %s overflows int32", v.String())
+			}
+			return int32(int64Val), nil
 		}
 	case appdef.DataKind_int64:
 		switch v := value.(type) {
 		case int64:
 			return v, nil
-		case float64:
-			return int64(v), nil
+		case json.Number:
+			int64Val, err := v.Int64()
+			if err != nil {
+				return nil, fmt.Errorf("failed to cast %s to int*: %w", v.String(), err)
+			}
+			return int64Val, nil
 		}
 	case appdef.DataKind_float32:
 		switch v := value.(type) {
 		case float32:
 			return v, nil
-		case float64:
-			return float32(v), nil
+		case json.Number:
+			float64Val, err := v.Float64()
+			if err != nil {
+				return nil, fmt.Errorf("failed to cast %s to float*: %w", v.String(), err)
+			}
+			if float64Val < -math.MaxFloat32 || float64Val > math.MaxFloat32 {
+				return nil, fmt.Errorf("the value %s overflows float32", v.String())
+			}
+			return float32(float64Val), nil
 		}
 	case appdef.DataKind_float64:
 		switch v := value.(type) {
 		case float64:
 			return v, nil
+		case json.Number:
+			float64Val, err := v.Float64()
+			if err != nil {
+				return nil, fmt.Errorf("failed to cast %s to float*: %w", v.String(), err)
+			}
+			return float64Val, nil
 		}
+	case appdef.DataKind_RecordID:
+		var int64Val int64
+		switch v := value.(type) {
+		case int64:
+			int64Val = v
+		case istructs.RecordID:
+			return v, nil
+		case json.Number:
+			int64Val, err = v.Int64()
+			if err != nil {
+				return nil, fmt.Errorf("failed to cast %s to RecordID: %w", v.String(), err)
+			}
+		default:
+			break outer
+		}
+		if int64Val < 0 {
+			return nil, fmt.Errorf("the value %d is out of range of RecordID", int64Val)
+		}
+		return istructs.RecordID(int64Val), nil
 	case appdef.DataKind_bytes:
 		switch v := value.(type) {
 		case string:
@@ -99,13 +147,6 @@ func (row *rowType) dynoBufValue(value interface{}, kind appdef.DataKind) (inter
 		case bool:
 			return v, nil
 		}
-	case appdef.DataKind_RecordID:
-		switch v := value.(type) {
-		case float64:
-			return int64(v), nil
-		case istructs.RecordID:
-			return int64(v), nil
-		}
 	case appdef.DataKind_Record:
 		switch v := value.(type) {
 		case *recordType:
@@ -119,6 +160,99 @@ func (row *rowType) dynoBufValue(value interface{}, kind appdef.DataKind) (inter
 	}
 	return nil, fmt.Errorf("value has type «%T», but «%s» expected: %w", value, kind.TrimString(), ErrWrongFieldType)
 }
+
+// func (row *rowType) dynoBufValue(value interface{}, kind appdef.DataKind) (interface{}, error) {
+// 	switch kind {
+// 	case appdef.DataKind_int32:
+// 		switch v := value.(type) {
+// 		case int32:
+// 			return v, nil
+// 		case float64:
+// 			return int32(v), nil
+// 		}
+// 	case appdef.DataKind_int64:
+// 		switch v := value.(type) {
+// 		case int64:
+// 			return v, nil
+// 		case float64:
+// 			return int64(v), nil
+// 		}
+// 	case appdef.DataKind_float32:
+// 		switch v := value.(type) {
+// 		case float32:
+// 			return v, nil
+// 		case float64:
+// 			return float32(v), nil
+// 		}
+// 	case appdef.DataKind_float64:
+// 		switch v := value.(type) {
+// 		case float64:
+// 			return v, nil
+// 		}
+// 	case appdef.DataKind_bytes:
+// 		switch v := value.(type) {
+// 		case string:
+// 			bytes, err := base64.StdEncoding.DecodeString(v)
+// 			if err != nil {
+// 				return nil, err
+// 			}
+// 			return bytes, nil
+// 		case []byte:
+// 			return v, nil
+// 		}
+// 	case appdef.DataKind_string:
+// 		switch v := value.(type) {
+// 		case string:
+// 			return v, nil
+// 		}
+// 	case appdef.DataKind_QName:
+// 		switch v := value.(type) {
+// 		case string:
+// 			qName, err := appdef.ParseQName(v)
+// 			if err != nil {
+// 				return nil, err
+// 			}
+// 			id, err := row.appCfg.qNames.ID(qName)
+// 			if err != nil {
+// 				return nil, err
+// 			}
+// 			b := make([]byte, 2)
+// 			binary.BigEndian.PutUint16(b, id)
+// 			return b, nil
+// 		case appdef.QName:
+// 			id, err := row.appCfg.qNames.ID(v)
+// 			if err != nil {
+// 				return nil, err
+// 			}
+// 			b := make([]byte, 2)
+// 			binary.BigEndian.PutUint16(b, id)
+// 			return b, nil
+// 		}
+// 	case appdef.DataKind_bool:
+// 		switch v := value.(type) {
+// 		case bool:
+// 			return v, nil
+// 		}
+// 	case appdef.DataKind_RecordID:
+// 		switch v := value.(type) {
+// 		case float64:
+// 			return int64(v), nil
+// 		case istructs.RecordID:
+// 			return int64(v), nil
+// 		}
+// 	case appdef.DataKind_Record:
+// 		switch v := value.(type) {
+// 		case *recordType:
+// 			return v.storeToBytes(), nil
+// 		}
+// 	case appdef.DataKind_Event:
+// 		switch v := value.(type) {
+// 		case *eventType:
+// 			return v.storeToBytes(), nil
+// 		}
+// 	}
+// 	return nil, fmt.Errorf("value has type «%T», but «%s» expected: %w", value, kind.TrimString(), ErrWrongFieldType)
+// }
 
 func dynoBufGetWord(dyB *dynobuffers.Buffer, fieldName appdef.FieldName) (value uint16, ok bool) {
 	if b := dyB.GetByteArray(fieldName); b != nil {

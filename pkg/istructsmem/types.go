@@ -12,8 +12,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"math"
-	"strconv"
 
 	"github.com/untillpro/dynobuffers"
 
@@ -522,8 +520,8 @@ func (row *rowType) verifyToken(fld appdef.IField, token string) (value interfac
 		return nil, fmt.Errorf("verified field is «%s», but «%s» expected: %w", payload.Field, fld.Name(), ErrInvalidName)
 	}
 
-	if value, err = row.dynoBufValue(payload.Value, fld.DataKind()); err != nil {
-		return nil, fmt.Errorf("verified field «%s» data has invalid type: %w", fld.Name(), err)
+	if value, err = row.clarifyJSONValue(payload.Value, fld.DataKind()); err != nil {
+		return nil, fmt.Errorf("wrong value for verified field «%s»: %w", fld.Name(), err)
 	}
 
 	return value, nil
@@ -873,33 +871,25 @@ func (row *rowType) PutNumber(name appdef.FieldName, value json.Number) {
 		row.collectErrorf(errFieldNotFoundWrap, name, row, ErrNameNotFound)
 		return
 	}
-	// тут проблема: если делаем PutInt64(sys.RecordID)
+	clarifiedVal, err := row.clarifyJSONValue(value, fld.DataKind())
+	if err != nil {
+		row.collectErrorf(errNumberFieldWrongValueWrap, fld.Name(), value.String(), fld.DataKind().TrimString(), err)
+		return
+	}
 	switch fld.DataKind() {
 	case appdef.DataKind_int32:
-		if int64Val, ok := fitNumber(value.Int64, math.MinInt32, math.MaxInt32, fld, row, value.String()); ok {
-			row.PutInt32(name, int32(int64Val))
-		}
+		row.PutInt32(name, clarifiedVal.(int32))
 	case appdef.DataKind_int64:
-		if int64Val, ok := fitNumber(value.Int64, math.MinInt64, math.MaxInt64, fld, row, value.String()); ok {
-			row.PutInt64(name, int64Val)
-		}
+		row.PutInt64(name, clarifiedVal.(int64))
 	case appdef.DataKind_float32:
-		if float64Val, ok := fitNumber(value.Float64, -math.MaxFloat32, math.MaxFloat32, fld, row, value.String()); ok {
-			row.PutFloat32(name, float32(float64Val))
-		}
+		row.PutFloat32(name, clarifiedVal.(float32))
 	case appdef.DataKind_float64:
-		if float64Val, ok := fitNumber(value.Float64, -math.MaxFloat64, math.MaxFloat64, fld, row, value.String()); ok {
-			row.PutFloat64(name, float64Val)
-		}
+		row.PutFloat64(name, clarifiedVal.(float64))
 	case appdef.DataKind_RecordID:
-		recodID, err := strconv.ParseUint(value.String(), 0, 64)
-		if err != nil {
-			row.collectErrorf(errNumberFieldWrongValueWrap, fld.Name(), value.String(), fld.DataKind().TrimString(), err)
-			return
-		}
-		row.PutRecordID(name, istructs.RecordID(recodID))
+		row.PutRecordID(name, clarifiedVal.(istructs.RecordID))
 	default:
-		row.collectErrorf(errFieldValueTypeMismatchWrap, appdef.DataKind_float64.TrimString(), fld, ErrWrongFieldType)
+		// notest: avoided already by row.clarifyJSONValue()
+		panic(fmt.Errorf(errFieldValueTypeMismatchWrap, appdef.DataKind_float64.TrimString(), fld, ErrWrongFieldType))
 	}
 }
 
