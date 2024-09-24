@@ -59,46 +59,38 @@ type ISSEStateInstance interface {
 
 type ISSEWithGet interface {
 	// Shall return within one second.
-	Get(ctx context.Context, key ISSEKey) (v ISSERow, ok bool, err error)
+	Get(ctx context.Context, key ISSEKey) (v ISSEValue, ok bool, err error)
 }
 
 type ISSEWithPut interface {
 	// Shall return within one second.
-	Put(ctx context.Context, key ISSEKey, value ISSERow) error
+	Put(ctx context.Context, key ISSEKey, value ISSEValue) error
 }
 
 type ISSEWithRead interface {
 	// key can be a partial key (filled from left to right).
-	Read(ctx context.Context, key ISSEKey, cb func(ISSERow) bool) error
+	Read(ctx context.Context, key ISSEKey, cb func(ISSEValue) bool) error
 }
 
 // ************************************************************
 
 type ISSEKey interface {
-	PkgPath() string
+	Namespace() string
 	Name() string
 	AsInt64(name string) (value int64, ok bool)
 	AsString(name string) (value string, ok bool)
 }
 
-type ISSEBasicFields interface {
+type ISSEValue interface {
 	AsInt64(name string) (value int64, ok bool)
 	AsFloat64(name string) (value float64, ok bool)
 	AsString(name string) (value string, ok bool)
+	AsBytes(name string, bytes *[]byte) (ok bool)
 	AsBool(name string) (value bool, ok bool)
-}
-
-type ISSEFields interface {
-	ISSEBasicFields
-	AsRowFields(name string) (value ISSEFields, ok bool)
-	AsRowFieldsAt(idx int) (value ISSEFields, ok bool)
-	// Returns value >= 0
-	Length() int
-}
-
-type ISSERow interface {
+	AsValue(name string) (value ISSEValue, ok bool)
+	AsValueAt(idx int) (value ISSEValue, ok bool)
+	Len() int
 	IReleasable
-	ISSEFields
 }
 
 type IReleasable interface {
