@@ -7,6 +7,6 @@ package goplugin
 
 import iextrowstorage "github.com/voedger/voedger/pkg/iextsse"
 
-func New() iextrowstorage.IMainFactory {
+func New() iextrowstorage.ISSEVVMFactory {
 	return nil
 }

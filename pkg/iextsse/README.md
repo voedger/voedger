@@ -1,6 +1,8 @@
 # iextsse
 
-- [server/vsql-select-update.md](https://github.com/voedger/voedger-internals/blob/main/server/vsql-select-update.md)
+State Storage Extensions
+
+- [server/storage-extensions.md](https://github.com/voedger/voedger-internals/blob/main/server/storage-extensions.md)
 
 ## Key components
 
