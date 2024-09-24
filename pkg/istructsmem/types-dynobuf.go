@@ -29,7 +29,7 @@ import (
 //	— string value can be converted to QName and []byte kinds
 //
 // QName values, record- and event- values returned as []byte
-// eliminates case when numbers are emited as float64 instead of json.Number on json unmarshaling
+// eliminates case when numbers are emitted as float64 instead of json.Number on json unmarshaling
 func (row *rowType) clarifyJSONValue(value interface{}, kind appdef.DataKind) (res interface{}, err error) {
 
 outer:
@@ -160,99 +160,6 @@ outer:
 	}
 	return nil, fmt.Errorf("value has type «%T», but «%s» expected: %w", value, kind.TrimString(), ErrWrongFieldType)
 }
-
-// func (row *rowType) dynoBufValue(value interface{}, kind appdef.DataKind) (interface{}, error) {
-// 	switch kind {
-// 	case appdef.DataKind_int32:
-// 		switch v := value.(type) {
-// 		case int32:
-// 			return v, nil
-// 		case float64:
-// 			return int32(v), nil
-// 		}
-// 	case appdef.DataKind_int64:
-// 		switch v := value.(type) {
-// 		case int64:
-// 			return v, nil
-// 		case float64:
-// 			return int64(v), nil
-// 		}
-// 	case appdef.DataKind_float32:
-// 		switch v := value.(type) {
-// 		case float32:
-// 			return v, nil
-// 		case float64:
-// 			return float32(v), nil
-// 		}
-// 	case appdef.DataKind_float64:
-// 		switch v := value.(type) {
-// 		case float64:
-// 			return v, nil
-// 		}
-// 	case appdef.DataKind_bytes:
-// 		switch v := value.(type) {
-// 		case string:
-// 			bytes, err := base64.StdEncoding.DecodeString(v)
-// 			if err != nil {
-// 				return nil, err
-// 			}
-// 			return bytes, nil
-// 		case []byte:
-// 			return v, nil
-// 		}
-// 	case appdef.DataKind_string:
-// 		switch v := value.(type) {
-// 		case string:
-// 			return v, nil
-// 		}
-// 	case appdef.DataKind_QName:
-// 		switch v := value.(type) {
-// 		case string:
-// 			qName, err := appdef.ParseQName(v)
-// 			if err != nil {
-// 				return nil, err
-// 			}
-// 			id, err := row.appCfg.qNames.ID(qName)
-// 			if err != nil {
-// 				return nil, err
-// 			}
-// 			b := make([]byte, 2)
-// 			binary.BigEndian.PutUint16(b, id)
-// 			return b, nil
-// 		case appdef.QName:
-// 			id, err := row.appCfg.qNames.ID(v)
-// 			if err != nil {
-// 				return nil, err
-// 			}
-// 			b := make([]byte, 2)
-// 			binary.BigEndian.PutUint16(b, id)
-// 			return b, nil
-// 		}
-// 	case appdef.DataKind_bool:
-// 		switch v := value.(type) {
-// 		case bool:
-// 			return v, nil
-// 		}
-// 	case appdef.DataKind_RecordID:
-// 		switch v := value.(type) {
-// 		case float64:
-// 			return int64(v), nil
-// 		case istructs.RecordID:
-// 			return int64(v), nil
-// 		}
-// 	case appdef.DataKind_Record:
-// 		switch v := value.(type) {
-// 		case *recordType:
-// 			return v.storeToBytes(), nil
-// 		}
-// 	case appdef.DataKind_Event:
-// 		switch v := value.(type) {
-// 		case *eventType:
-// 			return v.storeToBytes(), nil
-// 		}
-// 	}
-// 	return nil, fmt.Errorf("value has type «%T», but «%s» expected: %w", value, kind.TrimString(), ErrWrongFieldType)
-// }
 
 func dynoBufGetWord(dyB *dynobuffers.Buffer, fieldName appdef.FieldName) (value uint16, ok bool) {
 	if b := dyB.GetByteArray(fieldName); b != nil {

@@ -92,17 +92,25 @@ func Test_clarifyJSONValue(t *testing.T) {
 		kind          appdef.DataKind
 		expectedError string
 	}{
-		// {val: float64(7), kind: appdef.DataKind_int32},
-		// {val: float64(7), kind: appdef.DataKind_int64},
-		// {val: float64(7), kind: appdef.DataKind_float32},
-		// {val: float32(7), kind: appdef.DataKind_float64},
+		{val: float64(7), kind: appdef.DataKind_int32},
+		{val: float64(7), kind: appdef.DataKind_int64},
+		{val: float64(7), kind: appdef.DataKind_float32},
+		{val: float32(7), kind: appdef.DataKind_float64},
 		{val: float64(7), kind: appdef.DataKind_RecordID},
+		{val: json.Number("1.1"), kind: appdef.DataKind_int32},
+		{val: json.Number("1.1"), kind: appdef.DataKind_int64},
+		{val: json.Number("1.1"), kind: appdef.DataKind_RecordID},
 		{val: json.Number(strconv.Itoa(math.MaxInt32 + 1)), kind: appdef.DataKind_int32},
 		{val: json.Number(strconv.Itoa(math.MinInt32 - 1)), kind: appdef.DataKind_int32},
 		{val: json.Number(fmt.Sprint(math.MaxInt64 + (float64(1)))), kind: appdef.DataKind_int64},
 		{val: json.Number(fmt.Sprint(math.MinInt64 - (float64(1)))), kind: appdef.DataKind_int64},
 		{val: json.Number(fmt.Sprint(math.MaxFloat64)), kind: appdef.DataKind_float32},
 		{val: json.Number(fmt.Sprint(-math.MaxFloat64)), kind: appdef.DataKind_float32},
+		{val: json.Number("a"), kind: appdef.DataKind_float32},
+		{val: json.Number("a"), kind: appdef.DataKind_float64},
+		{val: json.Number("a"), kind: appdef.DataKind_int32},
+		{val: json.Number("a"), kind: appdef.DataKind_int64},
+		{val: json.Number("a"), kind: appdef.DataKind_RecordID},
 		{val: json.Number("1111111111111111111111111111111111999999999999999999999999999111111111111111111111111111111111111111119999999999999999999999999991111111111111111111111111111111111111111199999999999999999999999999911111111111111111111111111111111111111111999999999999999999999999999111111111111111111111111111111111111111119999999999999999999999999991111111"), kind: appdef.DataKind_float64},
 		{val: json.Number("-1111111111111111111111111111111111999999999999999999999999999111111111111111111111111111111111111111119999999999999999999999999991111111111111111111111111111111111111111199999999999999999999999999911111111111111111111111111111111111111111999999999999999999999999999111111111111111111111111111111111111111119999999999999999999999999991111111"), kind: appdef.DataKind_float64},
 		{val: json.Number("-1"), kind: appdef.DataKind_RecordID},
@@ -111,6 +119,10 @@ func Test_clarifyJSONValue(t *testing.T) {
 		{val: float64(7), kind: appdef.DataKind_string},
 		{val: float64(7), kind: appdef.DataKind_QName},
 		{val: float64(7), kind: appdef.DataKind_bytes},
+		{val: "a", kind: appdef.DataKind_bytes},
+		{val: "a", kind: appdef.DataKind_QName},
+		{val: "a.a", kind: appdef.DataKind_QName},
+		{val: appdef.NewQName("a", "a"), kind: appdef.DataKind_QName},
 	}
 
 	for i, ec := range errorCases {
