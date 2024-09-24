@@ -174,7 +174,7 @@ func analyseGrantOrRevoke(ToOrFrom DefQName, grant *GrantOrRevoke, c *iterateCtx
 		}
 	}
 
-	if grant.View != nil {
+	if grant.View || grant.ViewColumns != nil {
 		var view *ViewStmt
 		err := resolveInCtx(grant.On, c, func(f *ViewStmt, pkg *PackageSchemaAST) error {
 			view = f
@@ -185,22 +185,22 @@ func analyseGrantOrRevoke(ToOrFrom DefQName, grant *GrantOrRevoke, c *iterateCtx
 		if err != nil {
 			c.stmtErr(&grant.On.Pos, err)
 		}
-		if view != nil {
+		if view != nil && grant.ViewColumns != nil {
 			// check columns
 			checkColumn := func(column Identifier) error {
 				for _, f := range view.Items {
-					if f.Field != nil && f.Field.Name == column {
+					if f.Field != nil && f.Field.Name.Value == column.Value {
 						grant.columns = append(grant.columns, string(column.Value))
 						return nil
 					}
-					if f.RefField != nil && f.RefField.Name == column {
+					if f.RefField != nil && f.RefField.Name.Value == column.Value {
 						grant.columns = append(grant.columns, string(column.Value))
 						return nil
 					}
 				}
 				return ErrUndefinedField(string(column.Value))
 			}
-			for _, i := range grant.View.Columns {
+			for _, i := range grant.ViewColumns.Columns {
 				if err := checkColumn(i); err != nil {
 					c.stmtErr(&i.Pos, err)
 				}
@@ -208,17 +208,68 @@ func analyseGrantOrRevoke(ToOrFrom DefQName, grant *GrantOrRevoke, c *iterateCtx
 		}
 	}
 
-	if grant.Workspace {
-		err := resolveInCtx(grant.On, c, func(f *WorkspaceStmt, _ *PackageSchemaAST) error { return nil })
-		if err != nil {
-			c.stmtErr(&grant.On.Pos, err)
-		}
-	}
+	// if grant.Workspace {
+	// 	err := resolveInCtx(grant.On, c, func(f *WorkspaceStmt, _ *PackageSchemaAST) error { return nil })
+	// 	if err != nil {
+	// 		c.stmtErr(&grant.On.Pos, err)
+	// 	}
+	// }
 
 	if grant.AllCommandsWithTag || grant.AllQueriesWithTag || grant.AllWorkspacesWithTag || (grant.AllTablesWithTag != nil) || (grant.AllViewsWithTag) {
-		err := resolveInCtx(grant.On, c, func(f *TagStmt, _ *PackageSchemaAST) error { return nil })
+		var tagPkg *PackageSchemaAST
+		var tag *TagStmt
+		err := resolveInCtx(grant.On, c, func(f *TagStmt, pkg *PackageSchemaAST) error {
+			tag = f
+			tagPkg = pkg
+			return nil
+		})
 		if err != nil {
 			c.stmtErr(&grant.On.Pos, err)
+		} else {
+			if grant.AllCommandsWithTag {
+				grant.ops = append(grant.ops, appdef.OperationKind_Execute)
+				iterateStmts(c, func(cmd *CommandStmt, schema *PackageSchemaAST, ctx *iterateCtx) {
+					if hasTags(cmd.With, tag, tagPkg, c) {
+						grant.on = append(grant.on, schema.NewQName(cmd.Name))
+					}
+				})
+			}
+			if grant.AllQueriesWithTag {
+				grant.ops = append(grant.ops, appdef.OperationKind_Execute)
+				iterateStmts(c, func(q *QueryStmt, schema *PackageSchemaAST, ctx *iterateCtx) {
+					if hasTags(q.With, tag, tagPkg, c) {
+						grant.on = append(grant.on, schema.NewQName(q.Name))
+					}
+				})
+			}
+			// if grant.AllWorkspacesWithTag {
+			// 	grant.tag = appdef.OperationKind_Execute
+			// }
+			if grant.AllTablesWithTag != nil {
+				for _, item := range grant.AllTablesWithTag.Items {
+					if item.Insert {
+						grant.ops = append(grant.ops, appdef.OperationKind_Insert)
+					} else if item.Update {
+						grant.ops = append(grant.ops, appdef.OperationKind_Update)
+					} else if item.Select {
+						grant.ops = append(grant.ops, appdef.OperationKind_Select)
+					}
+				}
+				iterateStmts(c, func(tbl *TableStmt, schema *PackageSchemaAST, ctx *iterateCtx) {
+					if hasTags(tbl.With, tag, tagPkg, c) {
+						grant.on = append(grant.on, schema.NewQName(tbl.Name))
+					}
+				})
+			}
+			if grant.AllViewsWithTag {
+				grant.ops = append(grant.ops, appdef.OperationKind_Select)
+				iterateStmts(c, func(view *ViewStmt, schema *PackageSchemaAST, ctx *iterateCtx) {
+					if hasTags(view.With, tag, tagPkg, c) {
+						grant.on = append(grant.on, schema.NewQName(view.Name))
+					}
+				})
+			}
+
 		}
 	}
 
@@ -229,6 +280,16 @@ func analyseGrantOrRevoke(ToOrFrom DefQName, grant *GrantOrRevoke, c *iterateCtx
 		if err != nil {
 			c.stmtErr(&grant.On.Pos, err)
 		}
+		for _, item := range grant.Table.Items {
+			if item.Insert {
+				grant.ops = append(grant.ops, appdef.OperationKind_Insert)
+			} else if item.Update {
+				grant.ops = append(grant.ops, appdef.OperationKind_Update)
+			} else if item.Select {
+				grant.ops = append(grant.ops, appdef.OperationKind_Select)
+			}
+		}
+
 	}
 
 	// Grant table actions
@@ -251,8 +312,8 @@ func analyseGrantOrRevoke(ToOrFrom DefQName, grant *GrantOrRevoke, c *iterateCtx
 			return ErrUndefinedField(string(column))
 		}
 
-		if grant.Table.GrantAll != nil {
-			for _, column := range grant.Table.GrantAll.Columns {
+		if grant.Table.All != nil {
+			for _, column := range grant.Table.All.Columns {
 				if err := checkColumn(column.Value); err != nil {
 					c.stmtErr(&column.Pos, err)
 				}
@@ -268,6 +329,20 @@ func analyseGrantOrRevoke(ToOrFrom DefQName, grant *GrantOrRevoke, c *iterateCtx
 		}
 	}
 
+}
+
+func hasTags(with []WithItem, tag *TagStmt, tagPkg *PackageSchemaAST, c *iterateCtx) bool {
+	for _, w := range with {
+		for _, t := range w.Tags {
+			if t.Name == tag.Name {
+				pkg, _ := findPackage(t.Package, c)
+				if pkg == tagPkg {
+					return true
+				}
+			}
+		}
+	}
+	return false
 }
 
 func analyseGrant(grant *GrantStmt, c *iterateCtx) {

@@ -630,19 +630,20 @@ type GrantTableAll struct {
 }
 
 type GrantTableActions struct {
-	Pos      lexer.Position
-	GrantAll *GrantTableAll     `parser:"(@@ | "`
-	Items    []GrantTableAction `parser:"(@@ (',' @@)*))"`
+	Pos   lexer.Position
+	All   *GrantTableAll     `parser:"(@@ | "`
+	Items []GrantTableAction `parser:"(@@ (',' @@)*))"`
 }
 
 type GrantAllTablesWithTagActions struct {
-	Pos      lexer.Position
-	GrantAll bool                          `parser:"@'ALL' | "`
-	Items    []GrantAllTablesWithTagAction `parser:"(@@ (',' @@)*)"`
+	Pos   lexer.Position
+	All   bool                          `parser:"@'ALL' | "`
+	Items []GrantAllTablesWithTagAction `parser:"(@@ (',' @@)*)"`
 }
-type GrantView struct {
+
+type GrantViewColumns struct {
 	Pos     lexer.Position
-	Columns []Identifier `parser:"'SELECT' ( '(' @@ (',' @@)* ')' )? ('ON' 'VIEW')"`
+	Columns []Identifier `parser:"( SELECT '(' @@ (',' @@)* ')' ONVIEW)"`
 }
 
 type GrantOrRevoke struct {
@@ -650,10 +651,11 @@ type GrantOrRevoke struct {
 	AllCommandsWithTag   bool                          `parser:"| @INSERTONALLCOMMANDSWITHTAG"`
 	Query                bool                          `parser:"| @SELECTONQUERY"`
 	AllQueriesWithTag    bool                          `parser:"| @SELECTONALLQUERIESWITHTAG"`
-	View                 *GrantView                    `parser:"| @@"`
 	AllViewsWithTag      bool                          `parser:"| @SELECTONALLVIEWSWITHTAG"`
 	Workspace            bool                          `parser:"| @INSERTONWORKSPACE"`
 	AllWorkspacesWithTag bool                          `parser:"| @INSERTONALLWORKSPACESWITHTAG"`
+	View                 bool                          `parser:"| @SELECTONVIEW"`
+	ViewColumns          *GrantViewColumns             `parser:"| @@ "`
 	AllTablesWithTag     *GrantAllTablesWithTagActions `parser:"| (@@ ONALLTABLESWITHTAG)"`
 	Table                *GrantTableActions            `parser:"| (@@ ONTABLE) )"`
 	On                   DefQName                      `parser:"@@"`
@@ -858,6 +860,7 @@ type ViewStmt struct {
 	Name     Ident          `parser:"'VIEW' @Ident"`
 	Items    []ViewItemExpr `parser:"'(' @@? (',' @@)* ')'"`
 	ResultOf DefQName       `parser:"'AS' 'RESULT' 'OF' @@"`
+	With     []WithItem     `parser:"('WITH' @@ (',' @@)* )?"`
 	pkRef    *PrimaryKeyExpr
 }
 

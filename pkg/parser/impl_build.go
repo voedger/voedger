@@ -149,11 +149,20 @@ func (c *buildContext) types() error {
 func (c *buildContext) grantsAndRevokes() error {
 	for _, schema := range c.app.Packages {
 		iteratePackageStmt(schema, &c.basicContext, func(grant *GrantStmt, ictx *iterateCtx) {
-			acl := c.builder.Grant(grant.ops, grant.on, grant.columns, grant.role)
-			c.addComments(grant, acl)
+			comments := grant.GetComments()
+			if (grant.AllTablesWithTag != nil && grant.AllTablesWithTag.All) || (grant.Table != nil && grant.Table.All != nil) {
+				c.builder.GrantAll(grant.on, grant.role, comments...)
+				return
+			}
+			c.builder.Grant(grant.ops, grant.on, grant.columns, grant.role, comments...)
 		})
-		iteratePackageStmt(schema, &c.basicContext, func(grant *RevokeStmt, ictx *iterateCtx) {
-			c.builder.Revoke(grant.ops, grant.on, grant.columns, grant.role)
+		iteratePackageStmt(schema, &c.basicContext, func(revoke *RevokeStmt, ictx *iterateCtx) {
+			comments := revoke.GetComments()
+			if (revoke.AllTablesWithTag != nil && revoke.AllTablesWithTag.All) || (revoke.Table != nil && revoke.Table.All != nil) {
+				c.builder.RevokeAll(revoke.on, revoke.role, comments...)
+				return
+			}
+			c.builder.Revoke(revoke.ops, revoke.on, revoke.columns, revoke.role, comments...)
 		})
 	}
 	return nil

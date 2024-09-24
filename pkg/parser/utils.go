@@ -225,6 +225,15 @@ func iteratePackageStmt[stmtType *TableStmt | *TypeStmt | *ViewStmt | *CommandSt
 	})
 }
 
+func iterateStmts[stmtType *TableStmt | *TypeStmt | *ViewStmt | *CommandStmt | *QueryStmt |
+	*WorkspaceStmt | *AlterWorkspaceStmt | *ProjectorStmt | *JobStmt | *RateStmt | *GrantStmt | *RevokeStmt](ctx *iterateCtx, callback func(stmt stmtType, schema *PackageSchemaAST, ctx *iterateCtx)) {
+	for _, schema := range ctx.app.Packages {
+		iteratePackageStmt[stmtType](schema, ctx.basicContext, func(stmt stmtType, ctx *iterateCtx) {
+			callback(stmt, schema, ctx)
+		})
+	}
+}
+
 func iterateContext(ictx *iterateCtx, callback func(stmt interface{}, ctx *iterateCtx)) {
 	ictx.collection.Iterate(func(stmt interface{}) {
 		callback(stmt, ictx)
