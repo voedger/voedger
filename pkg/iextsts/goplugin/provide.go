@@ -5,8 +5,8 @@
 
 package goplugin
 
-import iextrowstorage "github.com/voedger/voedger/pkg/iextsse"
+import "github.com/voedger/voedger/pkg/iextsts"
 
-func New() iextrowstorage.ISSEEngine {
+func New() iextsts.ISTSEngine {
 	return nil
 }

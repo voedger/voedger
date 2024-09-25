@@ -3,7 +3,7 @@
  * @author Maxim Geraskin
  */
 
-package iextrowstorage
+package iextsts
 
 import (
 	"context"
@@ -13,7 +13,7 @@ import (
 // `SSE` stands for `State Storage Extension`.
 
 // Shall be created once per VVM
-type ISSEEngine interface {
+type ISTSEngine interface {
 	// One per instance.
 	// nil means "no settings".
 	// Shall be loaded once from JSON prior calling SetConfig.
@@ -23,7 +23,7 @@ type ISSEEngine interface {
 	SetConfig(cfg *Config) error
 
 	// Shall be called once per storageModulePath, it effectively means that it is called once per [application, version].
-	NewAppFactory(storageModulePath string, version string) (ISSEAppFactory, error)
+	NewAppFactory(storageModulePath string, version string ) (ISSEAppFactory, error)
 }
 
 type Config struct {
@@ -39,7 +39,9 @@ type ISSELogger interface {
 
 type ISSEAppFactory interface {
 	IReleasable
-	NewPartitionFactory(partitionID int) ISSEPartitionFactory
+	// NewPartitionFactory is called once per partition per application version.
+	// Existing is nil for the first partition.
+	NewPartitionFactory(partitionID int, existing ISSEPartitionFactory) ISSEPartitionFactory
 }
 
 type ISSEPartitionFactory interface {
@@ -58,23 +60,24 @@ type ISSEStateInstance interface {
 }
 
 type ISSEWithGet interface {
-	// Shall return within one second.
-	Get(ctx context.Context, key ISSEKey) (v ISSEValue, ok bool, err error)
+	// Must return within one second.
+	Get(ctx context.Context, key ISSEKey) (v ISSERow, ok bool, err error)
 }
 
 type ISSEWithPut interface {
 	// Shall return within one second.
-	Put(ctx context.Context, key ISSEKey, value ISSEValue) error
+	Put(ctx context.Context, key ISSEKey, value ISSERow) error
 }
 
-type ISSEWithRead interface {
-	// key can be a partial key (filled from left to right).
-	Read(ctx context.Context, key ISSEKey, cb func(ISSEValue) bool) error
-}
+// type ISSEWithRead interface {
+// 	// key can be a partial key (filled from left to right).
+// 	// go 1.23
+// 	Read(ctx context.Context, key ISSEKey, cb func(ISSERow) bool) error
+// }
 
 // ************************************************************
 
-// As* methods panic if the requested type is not compatible or the value is missing.
+// As* methods panic if the requested type is not compatible with the value or the value is missing.
 type ISSEKey interface {
 	Namespace() string
 	Name() string
@@ -82,9 +85,10 @@ type ISSEKey interface {
 	AsString(name string) (value string)
 }
 
-// ISSEValue is a read-only interface.
-// As* methods panic if the requested type is not compatible or the value is missing.
-type ISSEValue interface {
+// ISSERow is a read-only interface.
+// As* methods panics if the requested type is not compatible with the value or the `name` parameter is invalid.
+// If the `name` is valid, but the value is missing, As* methods returns a zero value.
+type ISSERow interface {
 	IReleasable
 
 	// Basic types
@@ -98,8 +102,8 @@ type ISSEValue interface {
 
 	// Composite types
 
-	AsValue(name string) ISSEValue
-	AsValueIdx(idx int) ISSEValue
+	AsValue(name string) ISSERow
+	AsValueIdx(idx int) ISSERow
 	// Len returns the number of elements that can be accessed by AsValueIdx.
 	Len() int
 }
