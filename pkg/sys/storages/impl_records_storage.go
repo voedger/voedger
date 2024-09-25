@@ -6,6 +6,7 @@ package storages
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"reflect"
 
@@ -284,7 +285,7 @@ func (b *recordsValueBuilder) PutChars(name string, value string)       { b.rw.P
 func (b *recordsValueBuilder) PutFloat32(name string, value float32)    { b.rw.PutFloat32(name, value) }
 func (b *recordsValueBuilder) PutFloat64(name string, value float64)    { b.rw.PutFloat64(name, value) }
 func (b *recordsValueBuilder) PutQName(name string, value appdef.QName) { b.rw.PutQName(name, value) }
-func (b *recordsValueBuilder) PutNumber(name string, value float64)     { b.rw.PutNumber(name, value) }
+func (b *recordsValueBuilder) PutNumber(name string, value json.Number) { b.rw.PutNumber(name, value) }
 func (b *recordsValueBuilder) PutRecordID(name string, value istructs.RecordID) {
 	b.rw.PutRecordID(name, value)
 }

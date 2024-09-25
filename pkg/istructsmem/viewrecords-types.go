@@ -7,6 +7,7 @@ package istructsmem
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 
@@ -499,7 +500,7 @@ func (key *keyType) PutInt64(name appdef.FieldName, value int64) {
 }
 
 // istructs.IRowWriter.PutNumber
-func (key *keyType) PutNumber(name appdef.FieldName, value float64) {
+func (key *keyType) PutNumber(name appdef.FieldName, value json.Number) {
 	if key.partRow.fieldDef(name) != nil {
 		key.partRow.PutNumber(name, value)
 	} else {

@@ -7,6 +7,7 @@
 package istructs
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"math"
@@ -157,9 +158,9 @@ func TestNullObject(t *testing.T) {
 		builder.PutQName("QName", appdef.NullQName)
 		builder.PutBool("bool", true)
 		builder.PutRecordID("RecordID", NullRecordID)
-		builder.PutNumber("float64", 1)
+		builder.PutNumber("float64", json.Number("1"))
 		builder.PutChars("string", "ABC")
-		builder.PutNumber("int64", 1)
+		builder.PutNumber("int64", json.Number("1"))
 
 		builder.PutFromJSON(map[string]interface{}{"int32": 1})
 		builder.FillFromJSON(map[string]interface{}{"int32": 1, "child": []any{map[string]interface{}{"int32": 1}}})

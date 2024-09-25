@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/istructs"
 
 	"github.com/golang-jwt/jwt"
@@ -72,15 +73,14 @@ func (j *JWTSigner) ValidateToken(token string, pointerToPayload interface{}) (g
 		jwtToken *jwt.Token
 	)
 	expectedAudience := reflect.TypeOf(pointerToPayload).Elem().String()
-	jwtToken, err = jwt.
-		Parse(token,
-			func(token *jwt.Token) (interface{}, error) {
-				_, ok := token.Method.(*jwt.SigningMethodHMAC)
-				if !ok {
-					return nil, itokens.ErrInvalidToken
-				}
-				return j.secretKey, nil
-			})
+	parser := &jwt.Parser{UseJSONNumber: true}
+	jwtToken, err = parser.Parse(token, func(token *jwt.Token) (interface{}, error) {
+		_, ok := token.Method.(*jwt.SigningMethodHMAC)
+		if !ok {
+			return nil, itokens.ErrInvalidToken
+		}
+		return j.secretKey, nil
+	})
 	if jwtToken == nil {
 		if err != nil {
 			err = fmt.Errorf(err.Error()+". %w", itokens.ErrInvalidToken)
@@ -126,7 +126,8 @@ func (j *JWTSigner) ValidateToken(token string, pointerToPayload interface{}) (g
 		if onByteArrayMutate != nil {
 			onByteArrayMutate(&claimBytes)
 		}
-		err = json.Unmarshal(claimBytes, &pointerToPayload)
+
+		err = coreutils.JSONUnmarshal(claimBytes, &pointerToPayload)
 
 		return gp, err
 	}
@@ -139,7 +140,10 @@ func buildGenericPayload(claims jwt.Claims) (gp istructs.GenericPayload, err err
 		duration int64
 		issuedAt time.Time
 	)
-	duration = int64(claims.(jwt.MapClaims)["Duration"].(float64))
+	duration, err = claims.(jwt.MapClaims)["Duration"].(json.Number).Int64()
+	if err != nil {
+		return gp, err
+	}
 
 	iat, e := json.Marshal(claims.(jwt.MapClaims)["IssuedAt"])
 	if e != nil {

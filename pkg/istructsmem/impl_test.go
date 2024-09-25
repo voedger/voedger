@@ -328,10 +328,10 @@ func Test_appStructsType_ObjectBuilder(t *testing.T) {
 		require.NotNil(b)
 
 		b.FillFromJSON(map[string]interface{}{
-			"int": float64(1),
+			"int": int64(1),
 			"child": []interface{}{
 				map[string]interface{}{
-					"int": float64(2),
+					"int": int64(2),
 				},
 			},
 		})
@@ -534,8 +534,7 @@ func Test_BasicUsageDescribePackages(t *testing.T) {
 	}()
 
 	pkgNames := app.DescribePackageNames()
-	require.NotNil(pkgNames)
-	require.EqualValues(2, len(pkgNames))
+	require.Len(pkgNames, 2)
 
 	for _, name := range pkgNames {
 		pkg := app.DescribePackage(name)
