@@ -38,7 +38,7 @@ func (f EqualsFilter) IsMatch(fk FieldsKinds, outputRow IOutputRow) (bool, error
 		if err != nil {
 			return false, err
 		}
-		return nearlyEqual(float32Intf.(float64), float64(outputRow.Value(f.field).(float32)), f.epsilon), nil
+		return nearlyEqual(float64(float32Intf.(float32)), float64(outputRow.Value(f.field).(float32)), f.epsilon), nil
 	case appdef.DataKind_float64:
 		float64Intf, err := coreutils.ClarifyJSONNumber(f.value.(json.Number), appdef.DataKind_float64)
 		if err != nil {

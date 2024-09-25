@@ -59,7 +59,7 @@ func (m MapObject) AsInt64(name string) (val int64, ok bool, err error) {
 	case int64:
 		return v, true, nil
 	default:
-		return 0, true, fmt.Errorf("field '%s' must be an int64: %w", name, ErrFieldTypeMismatch)
+		return 0, true, fmt.Errorf("field '%s' must be json.Number: %w", name, ErrFieldTypeMismatch)
 	}
 }
 
@@ -85,7 +85,7 @@ func (m MapObject) AsFloat64(name string) (val float64, ok bool, err error) {
 		}
 		return float64Intf.(float64), true, nil
 	default:
-		return 0, true, fmt.Errorf("field '%s' must be a float64: %w", name, ErrFieldTypeMismatch)
+		return 0, true, fmt.Errorf("field '%s' must be json.Number: %w", name, ErrFieldTypeMismatch)
 	}
 }
 

@@ -7,6 +7,7 @@ package queryprocessor
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"math"
 	"net/http"
 	"sync"
@@ -475,7 +476,7 @@ func Test_epsilon(t *testing.T) {
 		return args
 	}
 	t.Run("Should return epsilon", func(t *testing.T) {
-		epsilon, err := epsilon(args(options(math.E)))
+		epsilon, err := epsilon(args(options(json.Number(fmt.Sprint(math.E)))))
 
 		require.Equal(t, math.E, epsilon)
 		require.NoError(t, err)
