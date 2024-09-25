@@ -7,6 +7,7 @@ package istructsmem
 import (
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"testing"
 	"time"
 
@@ -77,7 +78,7 @@ func bench_BuildRawEvent(b *testing.B, numOfIntFields int) {
 			intFieldName := fmt.Sprintf("i%v", i)
 			doc.AddField(intFieldName, appdef.DataKind_int64, true)
 			intFieldNames[i] = intFieldName
-			intFieldNamesFloat64Values[intFieldName] = json.Number(fmt.Sprint(i))
+			intFieldNamesFloat64Values[intFieldName] = json.Number(strconv.Itoa(i))
 
 			stringFieldName := fmt.Sprintf("s%v", i)
 			doc.AddField(stringFieldName, appdef.DataKind_string, true)
