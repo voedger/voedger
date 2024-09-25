@@ -957,15 +957,6 @@ func (row *rowType) PutBool(name appdef.FieldName, value bool) {
 
 // istructs.IRowWriter.PutRecordID
 func (row *rowType) PutRecordID(name appdef.FieldName, value istructs.RecordID) {
-	// if name == appdef.SystemField_ID {
-	// 	row.setID(value)
-	// 	return
-	// }
-	// if name == appdef.SystemField_ParentID {
-	// 	row.setParent(value)
-	// 	return
-	// }
-
 	row.putValue(name, dynobuffers.FieldTypeInt64, int64(value))
 }
 

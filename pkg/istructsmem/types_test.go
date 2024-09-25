@@ -112,8 +112,8 @@ func Test_clarifyJSONValue(t *testing.T) {
 		{val: json.Number("a"), kind: appdef.DataKind_int32},
 		{val: json.Number("a"), kind: appdef.DataKind_int64},
 		{val: json.Number("a"), kind: appdef.DataKind_RecordID},
-		{val: json.Number(tooBigNumberStr), kind: appdef.DataKind_float64},
-		{val: json.Number("-" + tooBigNumberStr), kind: appdef.DataKind_float64},
+		{val: json.Number(coreutils.TooBigNumberStr), kind: appdef.DataKind_float64},
+		{val: json.Number("-" + coreutils.TooBigNumberStr), kind: appdef.DataKind_float64},
 		{val: json.Number("-1"), kind: appdef.DataKind_RecordID},
 		{val: int64(-1), kind: appdef.DataKind_RecordID},
 		{val: float64(7), kind: appdef.DataKind_bool, expectedError: ErrWrongFieldType},
@@ -348,8 +348,8 @@ func Test_rowType_PutFromJSON(t *testing.T) {
 			"int64": {
 				{val: json.Number("1.1"), expectedErr: strconv.ErrSyntax},
 				{val: json.Number("d"), expectedErr: strconv.ErrSyntax},
-				{val: json.Number(tooBigNumberStr), expectedErr: strconv.ErrRange},
-				{val: json.Number("-" + tooBigNumberStr), expectedErr: strconv.ErrRange},
+				{val: json.Number(coreutils.TooBigNumberStr), expectedErr: strconv.ErrRange},
+				{val: json.Number("-" + coreutils.TooBigNumberStr), expectedErr: strconv.ErrRange},
 			},
 			"float32": {
 				{val: json.Number("d"), expectedErr: strconv.ErrSyntax},
@@ -358,8 +358,8 @@ func Test_rowType_PutFromJSON(t *testing.T) {
 			},
 			"float64": {
 				{val: json.Number("d"), expectedErr: strconv.ErrSyntax},
-				{val: json.Number(tooBigNumberStr), expectedErr: strconv.ErrRange},
-				{val: json.Number("-" + tooBigNumberStr), expectedErr: strconv.ErrRange},
+				{val: json.Number(coreutils.TooBigNumberStr), expectedErr: strconv.ErrRange},
+				{val: json.Number("-" + coreutils.TooBigNumberStr), expectedErr: strconv.ErrRange},
 			},
 		}
 
@@ -925,5 +925,3 @@ func TestWrong(t *testing.T) {
 	require.NoError(err)
 	require.EqualValues(istructs.RecordID(1), row.AsRecordID("RecordID"))
 }
-
-const tooBigNumberStr = "1111111111111111111111111111111111999999999999999999999999999111111111111111111111111111111111111111119999999999999999999999999991111111111111111111111111111111111111111199999999999999999999999999911111111111111111111111111111111111111111999999999999999999999999999111111111111111111111111111111111111111119999999999999999999999999991111111"
