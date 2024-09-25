@@ -15,6 +15,7 @@ func puller_async(wo *WiredOperator) {
 	timer.Stop()
 	var open = true
 	var work interface{}
+	timerTicked := true
 	for open {
 		select {
 		case work, open = <-wo.Stdin:
@@ -42,9 +43,13 @@ func puller_async(wo *WiredOperator) {
 				if outWork != nil {
 					wo.Stdout <- outWork
 				}
-				coreutils.ResetTimer(timer, wo.FlushInterval)
+				if timerTicked && wo.FlushInterval > 0 {
+					coreutils.ResetTimer(timer, wo.FlushInterval)
+					timerTicked = false
+				}
 			}
 		case <-timer.C:
+			timerTicked = true
 			p_flush(wo, placeFlushByTimer)
 		}
 	}
