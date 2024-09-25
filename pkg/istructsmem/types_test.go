@@ -90,13 +90,13 @@ func Test_clarifyJSONValue(t *testing.T) {
 	errorCases := []struct {
 		val           interface{}
 		kind          appdef.DataKind
-		expectedError string
+		expectedError error
 	}{
-		{val: float64(7), kind: appdef.DataKind_int32},
-		{val: float64(7), kind: appdef.DataKind_int64},
-		{val: float64(7), kind: appdef.DataKind_float32},
-		{val: float32(7), kind: appdef.DataKind_float64},
-		{val: float64(7), kind: appdef.DataKind_RecordID},
+		{val: float64(7), kind: appdef.DataKind_int32, expectedError: ErrWrongFieldType},
+		{val: float64(7), kind: appdef.DataKind_int64, expectedError: ErrWrongFieldType},
+		{val: float64(7), kind: appdef.DataKind_float32, expectedError: ErrWrongFieldType},
+		{val: float32(7), kind: appdef.DataKind_float64, expectedError: ErrWrongFieldType},
+		{val: float64(7), kind: appdef.DataKind_RecordID, expectedError: ErrWrongFieldType},
 		{val: json.Number("1.1"), kind: appdef.DataKind_int32},
 		{val: json.Number("1.1"), kind: appdef.DataKind_int64},
 		{val: json.Number("1.1"), kind: appdef.DataKind_RecordID},
@@ -111,93 +111,31 @@ func Test_clarifyJSONValue(t *testing.T) {
 		{val: json.Number("a"), kind: appdef.DataKind_int32},
 		{val: json.Number("a"), kind: appdef.DataKind_int64},
 		{val: json.Number("a"), kind: appdef.DataKind_RecordID},
-		{val: json.Number("1111111111111111111111111111111111999999999999999999999999999111111111111111111111111111111111111111119999999999999999999999999991111111111111111111111111111111111111111199999999999999999999999999911111111111111111111111111111111111111111999999999999999999999999999111111111111111111111111111111111111111119999999999999999999999999991111111"), kind: appdef.DataKind_float64},
-		{val: json.Number("-1111111111111111111111111111111111999999999999999999999999999111111111111111111111111111111111111111119999999999999999999999999991111111111111111111111111111111111111111199999999999999999999999999911111111111111111111111111111111111111111999999999999999999999999999111111111111111111111111111111111111111119999999999999999999999999991111111"), kind: appdef.DataKind_float64},
+		{val: json.Number(tooBigNumberStr), kind: appdef.DataKind_float64},
+		{val: json.Number("-" + tooBigNumberStr), kind: appdef.DataKind_float64},
 		{val: json.Number("-1"), kind: appdef.DataKind_RecordID},
 		{val: int64(-1), kind: appdef.DataKind_RecordID},
-		{val: float64(7), kind: appdef.DataKind_bool},
-		{val: float64(7), kind: appdef.DataKind_string},
-		{val: float64(7), kind: appdef.DataKind_QName},
-		{val: float64(7), kind: appdef.DataKind_bytes},
+		{val: float64(7), kind: appdef.DataKind_bool, expectedError: ErrWrongFieldType},
+		{val: float64(7), kind: appdef.DataKind_string, expectedError: ErrWrongFieldType},
+		{val: float64(7), kind: appdef.DataKind_QName, expectedError: ErrWrongFieldType},
+		{val: float64(7), kind: appdef.DataKind_bytes, expectedError: ErrWrongFieldType},
 		{val: "a", kind: appdef.DataKind_bytes},
 		{val: "a", kind: appdef.DataKind_QName},
-		{val: "a.a", kind: appdef.DataKind_QName},
-		{val: appdef.NewQName("a", "a"), kind: appdef.DataKind_QName},
+		{val: "a.a", kind: appdef.DataKind_QName, expectedError: qnames.ErrNameNotFound},
+		{val: appdef.NewQName("a", "a"), kind: appdef.DataKind_QName, expectedError: qnames.ErrNameNotFound},
 	}
 
 	for i, ec := range errorCases {
 		t.Run(strconv.Itoa(i), func(t *testing.T) {
 			clarifiedVal, err := row.clarifyJSONValue(ec.val, ec.kind)
-			require.Error(err)
+			if ec.expectedError != nil {
+				require.ErrorIs(err, ec.expectedError)
+			} else {
+				require.Error(err)
+			}
 			require.Zero(clarifiedVal)
 		})
 	}
-
-	// t.Run("test QName", func(t *testing.T) {
-	// 	id, _ := test.AppCfg.qNames.ID(test.saleCmdName)
-	// 	b := make([]byte, 2)
-	// 	binary.BigEndian.PutUint16(b, id)
-
-	// 	v, err := row.dynoBufValue(test.saleCmdName, appdef.DataKind_QName)
-	// 	require.NoError(err)
-	// 	require.EqualValues(b, v)
-
-	// 	v, err = row.dynoBufValue(test.saleCmdName.String(), appdef.DataKind_QName)
-	// 	require.NoError(err)
-	// 	require.EqualValues(b, v)
-
-	// 	v, err = row.dynoBufValue(appdef.NewQName("test", "unknown"), appdef.DataKind_QName)
-	// 	require.ErrorIs(err, qnames.ErrNameNotFound)
-	// 	require.Nil(v)
-
-	// 	v, err = row.dynoBufValue("test.unknown", appdef.DataKind_QName)
-	// 	require.ErrorIs(err, qnames.ErrNameNotFound)
-	// 	require.Nil(v)
-
-	// 	v, err = row.dynoBufValue("ups!", appdef.DataKind_QName)
-	// 	require.Error(err) // invalid QName
-	// 	require.Nil(v)
-
-	// 	v, err = row.dynoBufValue(7, appdef.DataKind_bytes)
-	// 	require.ErrorIs(err, ErrWrongFieldType)
-	// 	require.Nil(v)
-	// })
-
-	// t.Run("test bool", func(t *testing.T) {
-	// 	v, err := row.dynoBufValue(false, appdef.DataKind_bool)
-	// 	require.NoError(err)
-	// 	vBool, ok := v.(bool)
-	// 	require.True(ok)
-	// 	require.False(vBool)
-
-	// 	v, err = row.dynoBufValue(true, appdef.DataKind_bool)
-	// 	require.NoError(err)
-	// 	vBool, ok = v.(bool)
-	// 	require.True(ok)
-	// 	require.True(vBool)
-
-	// 	v, err = row.dynoBufValue(7, appdef.DataKind_bool)
-	// 	require.ErrorIs(err, ErrWrongFieldType)
-	// 	require.Nil(v)
-	// })
-
-	// t.Run("test int64", func(t *testing.T) {
-	// 	v, err := row.dynoBufValue(istructs.NullRecordID, appdef.DataKind_RecordID)
-	// 	require.NoError(err)
-	// 	require.EqualValues(istructs.NullRecordID, v)
-
-	// 	v, err = row.dynoBufValue(istructs.RecordID(100500700), appdef.DataKind_RecordID)
-	// 	require.NoError(err)
-	// 	require.EqualValues(100500700, v)
-
-	// 	v, err = row.dynoBufValue(float64(100500700), appdef.DataKind_RecordID)
-	// 	require.NoError(err)
-	// 	require.EqualValues(100500700, v)
-
-	// 	v, err = row.dynoBufValue("100500700", appdef.DataKind_RecordID)
-	// 	require.ErrorIs(err, ErrWrongFieldType)
-	// 	require.Nil(v)
-	// })
 
 	t.Run("test Record", func(t *testing.T) {
 		var testRec istructs.IRecord = newTestCRecord(100500700)
@@ -386,12 +324,97 @@ func Test_rowType_PutFromJSON(t *testing.T) {
 
 	t.Run("wrong type -> error", func(t *testing.T) {
 		bld := test.AppStructs.ObjectBuilder(test.testRow)
+
 		data := map[appdef.FieldName]any{
 			"int32": uint8(42),
 		}
 		bld.PutFromJSON(data)
 		_, err := bld.Build()
 		require.ErrorIs(err, ErrWrongType)
+	})
+
+	t.Run("json.Number errors", func(t *testing.T) {
+		cases := map[string][]struct {
+			val         interface{}
+			expectedErr error
+		}{
+			"int32": {
+				{val: json.Number("1.1"), expectedErr: strconv.ErrSyntax},
+				{val: json.Number("d"), expectedErr: strconv.ErrSyntax},
+				{val: json.Number(strconv.Itoa(math.MaxInt32 + 1)), expectedErr: ErrNumberOverflow},
+				{val: json.Number(strconv.Itoa(math.MinInt32 - 1)), expectedErr: ErrNumberOverflow},
+			},
+			"int64": {
+				{val: json.Number("1.1"), expectedErr: strconv.ErrSyntax},
+				{val: json.Number("d"), expectedErr: strconv.ErrSyntax},
+				{val: json.Number(tooBigNumberStr), expectedErr: strconv.ErrRange},
+				{val: json.Number("-" + tooBigNumberStr), expectedErr: strconv.ErrRange},
+			},
+			"float32": {
+				{val: json.Number("d"), expectedErr: strconv.ErrSyntax},
+				{val: json.Number(fmt.Sprint(math.MaxFloat64)), expectedErr: ErrNumberOverflow},
+				{val: json.Number(fmt.Sprint(-math.MaxFloat64)), expectedErr: ErrNumberOverflow},
+			},
+			"float64": {
+				{val: json.Number("d"), expectedErr: strconv.ErrSyntax},
+				{val: json.Number(tooBigNumberStr), expectedErr: ErrNumberOverflow},
+				{val: json.Number("-" + tooBigNumberStr), expectedErr: ErrNumberOverflow},
+			},
+		}
+
+		for fieldName, vals := range cases {
+			for _, val := range vals {
+				bld := test.AppStructs.ObjectBuilder(test.testRow)
+				data := map[string]interface{}{}
+				data[fieldName] = val.val
+				bld.PutFromJSON(data)
+				_, err := bld.Build()
+				if val.expectedErr != nil {
+					require.ErrorIs(err, val.expectedErr)
+				} else {
+					require.Error(err)
+				}
+			}
+		}
+
+		// 	errorCases := []struct {
+		// 		val           interface{}
+		// 		kind          appdef.DataKind
+		// 		expectedError error
+		// 	}{
+
+		// 		{val: float64(7), kind: appdef.DataKind_int32, expectedError: ErrWrongFieldType},
+		// 		{val: float64(7), kind: appdef.DataKind_int64, expectedError: ErrWrongFieldType},
+		// 		{val: float64(7), kind: appdef.DataKind_float32, expectedError: ErrWrongFieldType},
+		// 		{val: float32(7), kind: appdef.DataKind_float64, expectedError: ErrWrongFieldType},
+		// 		{val: float64(7), kind: appdef.DataKind_RecordID, expectedError: ErrWrongFieldType},
+		// 		{val: json.Number("1.1"), kind: appdef.DataKind_int32},
+		// 		{val: json.Number("1.1"), kind: appdef.DataKind_int64},
+		// 		{val: json.Number("1.1"), kind: appdef.DataKind_RecordID},
+		// 		{val: json.Number(strconv.Itoa(math.MaxInt32 + 1)), kind: appdef.DataKind_int32},
+		// 		{val: json.Number(strconv.Itoa(math.MinInt32 - 1)), kind: appdef.DataKind_int32},
+		// 		{val: json.Number(fmt.Sprint(math.MaxInt64 + (float64(1)))), kind: appdef.DataKind_int64},
+		// 		{val: json.Number(fmt.Sprint(math.MinInt64 - (float64(1)))), kind: appdef.DataKind_int64},
+		// 		{val: json.Number(fmt.Sprint(math.MaxFloat64)), kind: appdef.DataKind_float32},
+		// 		{val: json.Number(fmt.Sprint(-math.MaxFloat64)), kind: appdef.DataKind_float32},
+		// 		{val: json.Number("a"), kind: appdef.DataKind_float32},
+		// 		{val: json.Number("a"), kind: appdef.DataKind_float64},
+		// 		{val: json.Number("a"), kind: appdef.DataKind_int32},
+		// 		{val: json.Number("a"), kind: appdef.DataKind_int64},
+		// 		{val: json.Number("a"), kind: appdef.DataKind_RecordID},
+		// 		{val: json.Number("1111111111111111111111111111111111999999999999999999999999999111111111111111111111111111111111111111119999999999999999999999999991111111111111111111111111111111111111111199999999999999999999999999911111111111111111111111111111111111111111999999999999999999999999999111111111111111111111111111111111111111119999999999999999999999999991111111"), kind: appdef.DataKind_float64},
+		// 		{val: json.Number("-1111111111111111111111111111111111999999999999999999999999999111111111111111111111111111111111111111119999999999999999999999999991111111111111111111111111111111111111111199999999999999999999999999911111111111111111111111111111111111111111999999999999999999999999999111111111111111111111111111111111111111119999999999999999999999999991111111"), kind: appdef.DataKind_float64},
+		// 		{val: json.Number("-1"), kind: appdef.DataKind_RecordID},
+		// 		{val: int64(-1), kind: appdef.DataKind_RecordID},
+		// 		{val: float64(7), kind: appdef.DataKind_bool, expectedError: ErrWrongFieldType},
+		// 		{val: float64(7), kind: appdef.DataKind_string, expectedError: ErrWrongFieldType},
+		// 		{val: float64(7), kind: appdef.DataKind_QName, expectedError: ErrWrongFieldType},
+		// 		{val: float64(7), kind: appdef.DataKind_bytes, expectedError: ErrWrongFieldType},
+		// 		{val: "a", kind: appdef.DataKind_bytes},
+		// 		{val: "a", kind: appdef.DataKind_QName},
+		// 		{val: "a.a", kind: appdef.DataKind_QName, expectedError: qnames.ErrNameNotFound},
+		// 		{val: appdef.NewQName("a", "a"), kind: appdef.DataKind_QName, expectedError: qnames.ErrNameNotFound},
+		// 	}
 	})
 }
 
@@ -940,3 +963,5 @@ func TestWrong(t *testing.T) {
 	require.NoError(err)
 	require.EqualValues(istructs.RecordID(1), row.AsRecordID("RecordID"))
 }
+
+const tooBigNumberStr = "1111111111111111111111111111111111999999999999999999999999999111111111111111111111111111111111111111119999999999999999999999999991111111111111111111111111111111111111111199999999999999999999999999911111111111111111111111111111111111111111999999999999999999999999999111111111111111111111111111111111111111119999999999999999999999999991111111"

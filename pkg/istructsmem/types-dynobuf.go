@@ -22,11 +22,12 @@ import (
 	"github.com/voedger/voedger/pkg/istructsmem/internal/utils"
 )
 
-// Converts specified value to dyno-buffer compatible type using specified data kind.
+// Converts specified value to the value according to data kind
 // If value type is not corresponding to kind then next conversions are available:
 //
-//	— float64 value can be converted to all numeric kinds (int32, int64, float32, float64, RecordID)
-//	— string value can be converted to QName and []byte kinds
+//	 — json.Number can be converted to all numeric kinds (int32, int64, float32, float64, RecordID)
+//	   — overflowing is checked
+//		— string value can be converted to QName and []byte kinds
 //
 // QName values, record- and event- values returned as []byte
 // eliminates case when numbers are emitted as float64 instead of json.Number on json unmarshaling
@@ -44,7 +45,7 @@ outer:
 				return nil, fmt.Errorf("failed to cast %s to int*: %w", v.String(), err)
 			}
 			if int64Val < math.MinInt32 || int64Val > math.MaxInt32 {
-				return nil, fmt.Errorf("the value %s overflows int32", v.String())
+				return nil, fmt.Errorf("cast %s to int32: %w", v.String(), ErrNumberOverflow)
 			}
 			return int32(int64Val), nil
 		}
@@ -69,7 +70,7 @@ outer:
 				return nil, fmt.Errorf("failed to cast %s to float*: %w", v.String(), err)
 			}
 			if float64Val < -math.MaxFloat32 || float64Val > math.MaxFloat32 {
-				return nil, fmt.Errorf("the value %s overflows float32", v.String())
+				return nil, fmt.Errorf("cast %s to float32: %w", v.String(), ErrNumberOverflow)
 			}
 			return float32(float64Val), nil
 		}
@@ -100,7 +101,7 @@ outer:
 			break outer
 		}
 		if int64Val < 0 {
-			return nil, fmt.Errorf("the value %d is out of range of RecordID", int64Val)
+			return nil, fmt.Errorf("%w: %d", ErrWrongRecordID, int64Val)
 		}
 		return istructs.RecordID(int64Val), nil
 	case appdef.DataKind_bytes:

@@ -832,12 +832,8 @@ func (row *rowType) PutFromJSON(j map[appdef.FieldName]any) {
 		case float32:
 			row.PutFloat32(n, fv)
 		case json.Number:
-			// тут  если sys.ID, то просто вызываем PutInt64, а там - просто пишем в dynobuffer, не делаем setID()
 			row.PutNumber(n, fv)
-		// case int:
-		// 	row.PutI(n, float64(fv))
 		case istructs.RecordID:
-			// тут если кладем sys.ID или sys.ParentID, то не пишем в динобуфер
 			row.PutRecordID(n, fv)
 		case string:
 			row.PutChars(n, fv)
@@ -850,18 +846,6 @@ func (row *rowType) PutFromJSON(j map[appdef.FieldName]any) {
 			row.collectErrorf("%w: %#T", ErrWrongType, v)
 		}
 	}
-}
-
-func fitNumber[T number](getter func() (T, error), min T, max T, fld appdef.IField, row *rowType, valStr string) (val T, ok bool) {
-	val, err := getter()
-	if err != nil && (val > max || val < min) {
-		err = fmt.Errorf("does not fit into %s", fld.DataKind().TrimString())
-	}
-	if err != nil {
-		row.collectErrorf(errNumberFieldWrongValueWrap, fld.Name(), valStr, fld.DataKind().TrimString(), err)
-		return 0, false
-	}
-	return val, true
 }
 
 // istructs.IRowWriter.PutNumber
