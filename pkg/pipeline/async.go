@@ -6,10 +6,13 @@ package pipeline
 
 import (
 	"time"
+
+	"github.com/voedger/voedger/pkg/coreutils"
 )
 
 func puller_async(wo *WiredOperator) {
-	flushTimer := newFlushTimer(wo.FlushInterval)
+	timer := time.NewTimer(wo.FlushInterval)
+	timer.Stop()
 	var open = true
 	var work interface{}
 	for open {
@@ -39,10 +42,9 @@ func puller_async(wo *WiredOperator) {
 				if outWork != nil {
 					wo.Stdout <- outWork
 				}
-				flushTimer.reset()
+				coreutils.ResetTimer(timer, wo.FlushInterval)
 			}
-		case <-flushTimer.timer.C:
-			flushTimer.ticked()
+		case <-timer.C:
 			p_flush(wo, placeFlushByTimer)
 		}
 	}
@@ -50,7 +52,6 @@ func puller_async(wo *WiredOperator) {
 	p_flush(wo, placeFlushDisassembling)
 	wo.Operator.Close()
 	close(wo.Stdout)
-	flushTimer.stop()
 }
 
 func p_flush(wo *WiredOperator, place string) {
@@ -69,40 +70,4 @@ func p_release(w IWorkpiece) {
 	if w != nil {
 		w.Release()
 	}
-}
-
-type flushTimer struct {
-	timer  *time.Timer
-	intvl  time.Duration
-	active bool
-}
-
-func newFlushTimer(interval time.Duration) *flushTimer {
-	flush := flushTimer{
-		intvl:  interval,
-		active: true,
-		timer:  time.NewTimer(interval),
-	}
-	flush.stop()
-	return &flush
-}
-
-func (t *flushTimer) stop() {
-	if t.active {
-		if !t.timer.Stop() {
-			<-t.timer.C
-		}
-		t.active = false
-	}
-}
-
-func (t *flushTimer) reset() {
-	if !t.active && t.intvl > 0 {
-		t.timer.Reset(t.intvl)
-		t.active = true
-	}
-}
-
-func (t *flushTimer) ticked() {
-	t.active = false
 }
