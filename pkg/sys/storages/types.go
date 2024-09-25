@@ -109,7 +109,7 @@ func (b *baseValueBuilder) PutFloat64(name string, value float64) {
 func (b *baseValueBuilder) PutQName(name string, value appdef.QName) {
 	panic(errQNameFieldUndefined(name))
 }
-func (b *baseValueBuilder) PutNumber(name string, value float64) {
+func (b *baseValueBuilder) PutNumber(name string, value json.Number) {
 	panic(errNumberFieldUndefined(name))
 }
 func (b *baseValueBuilder) PutRecordID(name string, value istructs.RecordID) {

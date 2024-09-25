@@ -63,8 +63,6 @@ var ErrNumAppWorkspacesNotSet = errors.New("NumAppWorkspaces is not set")
 
 var ErrCorruptedData = errors.New("corrupted data")
 
-var ErrNumberOverflow = errors.New("number overflow")
-
 const errTypedFieldNotFoundWrap = "%s-type field «%s» is not found in %v: %w" // int32-type field «myField» is not found …
 
 const errFieldNotFoundWrap = "field «%s» is not found in %v: %w" // int32-type field «myField» is not found …
@@ -88,8 +86,6 @@ const errMustValidatedBeforeStore = "%v must be validated before store: %w"
 const errViewNotFoundWrap = "view «%v» not found: %w"
 
 const errFieldDataConstraintViolatedFmt = "%v data constraint «%v» violated: %w"
-
-
 
 // ValidateError: an interface for describing errors that occurred during validation
 //   - methods:

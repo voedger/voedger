@@ -12,27 +12,27 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"math"
 
 	"github.com/untillpro/dynobuffers"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/containers"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/utils"
 )
 
 // Converts specified value to the value according to data kind
+// number types must be the same as DataKind, e.g. DataKind_int32 -> int32 is expected only
+// float64 value is accepted in case of DataKind_float64 only
 // If value type is not corresponding to kind then next conversions are available:
 //
-//	 — json.Number can be converted to all numeric kinds (int32, int64, float32, float64, RecordID)
-//	   — overflowing is checked
-//		— string value can be converted to QName and []byte kinds
+//	— json.Number can be converted to all numeric kinds (int32, int64, float32, float64, RecordID)
+//	  — overflowing is checked
+//	— string value can be converted to QName and []byte kinds
 //
 // QName values, record- and event- values returned as []byte
-// eliminates case when numbers are emitted as float64 instead of json.Number on json unmarshaling
 func (row *rowType) clarifyJSONValue(value interface{}, kind appdef.DataKind) (res interface{}, err error) {
-
 outer:
 	switch kind {
 	case appdef.DataKind_int32:
@@ -40,50 +40,28 @@ outer:
 		case int32:
 			return v, nil
 		case json.Number:
-			int64Val, err := v.Int64()
-			if err != nil {
-				return nil, fmt.Errorf("failed to cast %s to int*: %w", v.String(), err)
-			}
-			if int64Val < math.MinInt32 || int64Val > math.MaxInt32 {
-				return nil, fmt.Errorf("cast %s to int32: %w", v.String(), ErrNumberOverflow)
-			}
-			return int32(int64Val), nil
+			return coreutils.ClarifyJSONNumber(v, kind)
 		}
 	case appdef.DataKind_int64:
 		switch v := value.(type) {
 		case int64:
 			return v, nil
 		case json.Number:
-			int64Val, err := v.Int64()
-			if err != nil {
-				return nil, fmt.Errorf("failed to cast %s to int*: %w", v.String(), err)
-			}
-			return int64Val, nil
+			return coreutils.ClarifyJSONNumber(v, kind)
 		}
 	case appdef.DataKind_float32:
 		switch v := value.(type) {
 		case float32:
 			return v, nil
 		case json.Number:
-			float64Val, err := v.Float64()
-			if err != nil {
-				return nil, fmt.Errorf("failed to cast %s to float*: %w", v.String(), err)
-			}
-			if float64Val < -math.MaxFloat32 || float64Val > math.MaxFloat32 {
-				return nil, fmt.Errorf("cast %s to float32: %w", v.String(), ErrNumberOverflow)
-			}
-			return float32(float64Val), nil
+			return coreutils.ClarifyJSONNumber(v, kind)
 		}
 	case appdef.DataKind_float64:
 		switch v := value.(type) {
 		case float64:
 			return v, nil
 		case json.Number:
-			float64Val, err := v.Float64()
-			if err != nil {
-				return nil, fmt.Errorf("failed to cast %s to float*: %w", v.String(), err)
-			}
-			return float64Val, nil
+			return coreutils.ClarifyJSONNumber(v, kind)
 		}
 	case appdef.DataKind_RecordID:
 		var int64Val int64
@@ -93,10 +71,7 @@ outer:
 		case istructs.RecordID:
 			return v, nil
 		case json.Number:
-			int64Val, err = v.Int64()
-			if err != nil {
-				return nil, fmt.Errorf("failed to cast %s to RecordID: %w", v.String(), err)
-			}
+			return coreutils.ClarifyJSONNumber(v, kind)
 		default:
 			break outer
 		}

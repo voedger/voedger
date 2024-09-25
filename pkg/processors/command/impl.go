@@ -378,7 +378,7 @@ func unmarshalRequestBody(_ context.Context, work pipeline.IWorkpiece) (err erro
 		cmd.requestData["args"] = map[string]interface{}{
 			processors.Field_RawObject_Body: string(cmd.cmdMes.Body()),
 		}
-	} else if err = json.Unmarshal(cmd.cmdMes.Body(), &cmd.requestData); err != nil {
+	} else if err = coreutils.JSONUnmarshal(cmd.cmdMes.Body(), &cmd.requestData); err != nil {
 		err = fmt.Errorf("failed to unmarshal request body: %w\n%s", err, cmd.cmdMes.Body())
 	}
 	return

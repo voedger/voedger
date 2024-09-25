@@ -17,6 +17,7 @@ import (
 	"testing"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/goutils/testingu/require"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/qnames"
@@ -341,8 +342,8 @@ func Test_rowType_PutFromJSON(t *testing.T) {
 			"int32": {
 				{val: json.Number("1.1"), expectedErr: strconv.ErrSyntax},
 				{val: json.Number("d"), expectedErr: strconv.ErrSyntax},
-				{val: json.Number(strconv.Itoa(math.MaxInt32 + 1)), expectedErr: ErrNumberOverflow},
-				{val: json.Number(strconv.Itoa(math.MinInt32 - 1)), expectedErr: ErrNumberOverflow},
+				{val: json.Number(strconv.Itoa(math.MaxInt32 + 1)), expectedErr: coreutils.ErrNumberOverflow},
+				{val: json.Number(strconv.Itoa(math.MinInt32 - 1)), expectedErr: coreutils.ErrNumberOverflow},
 			},
 			"int64": {
 				{val: json.Number("1.1"), expectedErr: strconv.ErrSyntax},
@@ -352,13 +353,13 @@ func Test_rowType_PutFromJSON(t *testing.T) {
 			},
 			"float32": {
 				{val: json.Number("d"), expectedErr: strconv.ErrSyntax},
-				{val: json.Number(fmt.Sprint(math.MaxFloat64)), expectedErr: ErrNumberOverflow},
-				{val: json.Number(fmt.Sprint(-math.MaxFloat64)), expectedErr: ErrNumberOverflow},
+				{val: json.Number(fmt.Sprint(math.MaxFloat64)), expectedErr: coreutils.ErrNumberOverflow},
+				{val: json.Number(fmt.Sprint(-math.MaxFloat64)), expectedErr: coreutils.ErrNumberOverflow},
 			},
 			"float64": {
 				{val: json.Number("d"), expectedErr: strconv.ErrSyntax},
-				{val: json.Number(tooBigNumberStr), expectedErr: ErrNumberOverflow},
-				{val: json.Number("-" + tooBigNumberStr), expectedErr: ErrNumberOverflow},
+				{val: json.Number(tooBigNumberStr), expectedErr: strconv.ErrRange},
+				{val: json.Number("-" + tooBigNumberStr), expectedErr: strconv.ErrRange},
 			},
 		}
 
@@ -376,45 +377,6 @@ func Test_rowType_PutFromJSON(t *testing.T) {
 				}
 			}
 		}
-
-		// 	errorCases := []struct {
-		// 		val           interface{}
-		// 		kind          appdef.DataKind
-		// 		expectedError error
-		// 	}{
-
-		// 		{val: float64(7), kind: appdef.DataKind_int32, expectedError: ErrWrongFieldType},
-		// 		{val: float64(7), kind: appdef.DataKind_int64, expectedError: ErrWrongFieldType},
-		// 		{val: float64(7), kind: appdef.DataKind_float32, expectedError: ErrWrongFieldType},
-		// 		{val: float32(7), kind: appdef.DataKind_float64, expectedError: ErrWrongFieldType},
-		// 		{val: float64(7), kind: appdef.DataKind_RecordID, expectedError: ErrWrongFieldType},
-		// 		{val: json.Number("1.1"), kind: appdef.DataKind_int32},
-		// 		{val: json.Number("1.1"), kind: appdef.DataKind_int64},
-		// 		{val: json.Number("1.1"), kind: appdef.DataKind_RecordID},
-		// 		{val: json.Number(strconv.Itoa(math.MaxInt32 + 1)), kind: appdef.DataKind_int32},
-		// 		{val: json.Number(strconv.Itoa(math.MinInt32 - 1)), kind: appdef.DataKind_int32},
-		// 		{val: json.Number(fmt.Sprint(math.MaxInt64 + (float64(1)))), kind: appdef.DataKind_int64},
-		// 		{val: json.Number(fmt.Sprint(math.MinInt64 - (float64(1)))), kind: appdef.DataKind_int64},
-		// 		{val: json.Number(fmt.Sprint(math.MaxFloat64)), kind: appdef.DataKind_float32},
-		// 		{val: json.Number(fmt.Sprint(-math.MaxFloat64)), kind: appdef.DataKind_float32},
-		// 		{val: json.Number("a"), kind: appdef.DataKind_float32},
-		// 		{val: json.Number("a"), kind: appdef.DataKind_float64},
-		// 		{val: json.Number("a"), kind: appdef.DataKind_int32},
-		// 		{val: json.Number("a"), kind: appdef.DataKind_int64},
-		// 		{val: json.Number("a"), kind: appdef.DataKind_RecordID},
-		// 		{val: json.Number("1111111111111111111111111111111111999999999999999999999999999111111111111111111111111111111111111111119999999999999999999999999991111111111111111111111111111111111111111199999999999999999999999999911111111111111111111111111111111111111111999999999999999999999999999111111111111111111111111111111111111111119999999999999999999999999991111111"), kind: appdef.DataKind_float64},
-		// 		{val: json.Number("-1111111111111111111111111111111111999999999999999999999999999111111111111111111111111111111111111111119999999999999999999999999991111111111111111111111111111111111111111199999999999999999999999999911111111111111111111111111111111111111111999999999999999999999999999111111111111111111111111111111111111111119999999999999999999999999991111111"), kind: appdef.DataKind_float64},
-		// 		{val: json.Number("-1"), kind: appdef.DataKind_RecordID},
-		// 		{val: int64(-1), kind: appdef.DataKind_RecordID},
-		// 		{val: float64(7), kind: appdef.DataKind_bool, expectedError: ErrWrongFieldType},
-		// 		{val: float64(7), kind: appdef.DataKind_string, expectedError: ErrWrongFieldType},
-		// 		{val: float64(7), kind: appdef.DataKind_QName, expectedError: ErrWrongFieldType},
-		// 		{val: float64(7), kind: appdef.DataKind_bytes, expectedError: ErrWrongFieldType},
-		// 		{val: "a", kind: appdef.DataKind_bytes},
-		// 		{val: "a", kind: appdef.DataKind_QName},
-		// 		{val: "a.a", kind: appdef.DataKind_QName, expectedError: qnames.ErrNameNotFound},
-		// 		{val: appdef.NewQName("a", "a"), kind: appdef.DataKind_QName, expectedError: qnames.ErrNameNotFound},
-		// 	}
 	})
 }
 
