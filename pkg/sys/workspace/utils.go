@@ -51,7 +51,7 @@ func GetNextWSID(ctx context.Context, appStructs istructs.IAppStructs, clusterID
 		return 0, err
 	}
 	vb := vr.NewValueBuilder(QNameViewNextBaseWSID)
-	vb.PutInt64(fldNextBaseWSID, int64(nextBaseWSID+1))
+	vb.PutInt64(fldNextBaseWSID, int64(nextBaseWSID)) // nolint G115: WSID got by NewWSID can not cause data loss on casting to int64
 	if err := vr.Put(istructs.NullWSID, kb, vb); err != nil {
 		return 0, err
 	}

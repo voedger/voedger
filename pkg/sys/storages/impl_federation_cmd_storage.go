@@ -241,7 +241,7 @@ type fcCmdValue struct {
 
 func (v *fcCmdValue) AsInt32(name string) int32 {
 	if name == sys.Storage_FederationCommand_Field_StatusCode {
-		return int32(v.statusCode)
+		return int32(v.statusCode) // nolint G115
 	}
 	return v.baseStateValue.AsInt32(name)
 }

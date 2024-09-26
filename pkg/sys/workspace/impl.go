@@ -153,7 +153,7 @@ func execCmdCreateWorkspaceID(args istructs.ExecCommandArgs) (err error) {
 	cdocWorkspaceID.PutString(authnz.Field_WSKindInitializationData, args.ArgumentObject.AsString(authnz.Field_WSKindInitializationData))
 	cdocWorkspaceID.PutString(field_TemplateName, args.ArgumentObject.AsString(field_TemplateName))
 	cdocWorkspaceID.PutString(Field_TemplateParams, args.ArgumentObject.AsString(Field_TemplateParams))
-	cdocWorkspaceID.PutInt64(authnz.Field_WSID, int64(newWSID))
+	cdocWorkspaceID.PutInt64(authnz.Field_WSID, int64(newWSID)) // nolint G115: safe to cast WSID 
 
 	return
 }
@@ -219,6 +219,7 @@ func invokeCreateWorkspaceProjector(federation federation.IFederation, tokensAPI
 			}
 			if _, err = federation.Func(createWSCmdURL, body, coreutils.WithAuthorizeBy(systemPrincipalToken), coreutils.WithDiscardResponse()); err != nil {
 				logger.Error("aproj.sys.InvokeCreateWorkspace: c.sys.CreateWorkspace failed: " + err.Error())
+				// nolint G115 ownerWSID came from WSID so its highest but is always 0 -> no data loss possible
 				return updateOwnerErr(istructs.WSID(ownerWSID), istructs.RecordID(ownerID), ownerApp, ownerQName, istructs.NullWSID, err, systemPrincipalToken, federation)
 			}
 			return nil
@@ -276,7 +277,7 @@ func execCmdCreateWorkspace(time coreutils.ITime) istructsmem.ExecCommandClosure
 		cdocWSDesc.PutString(authnz.Field_WSKindInitializationData, wsKindInitializationDataStr)
 		cdocWSDesc.PutString(field_TemplateName, args.ArgumentObject.AsString(field_TemplateName))
 		cdocWSDesc.PutString(Field_TemplateParams, args.ArgumentObject.AsString(Field_TemplateParams))
-		cdocWSDesc.PutInt64(authnz.Field_WSID, int64(newWSID))
+		cdocWSDesc.PutInt64(authnz.Field_WSID, int64(newWSID)) // nolint G115: safe to cast WSID to int64, highest bit is 0 always
 		cdocWSDesc.PutInt64(authnz.Field_CreatedAtMs, time.Now().UnixMilli())
 		cdocWSDesc.PutInt32(authnz.Field_Status, int32(authnz.WorkspaceStatus_Active))
 		if e != nil {
@@ -367,6 +368,7 @@ func initializeWorkspaceProjector(time coreutils.ITime, federation federation.IF
 			if len(createErrorStr) > 0 {
 				wsError = errors.New(createErrorStr)
 				info("have new.createError, will just updateOwner():", createErrorStr)
+				// nolint G115: highest bit of newWSID is always 0 -> safe to cast to WSID
 				ownerUpdated = updateOwner(istructs.WSID(rec.AsInt64(Field_OwnerWSID)), istructs.RecordID(rec.AsInt64(Field_OwnerID)), ownerApp, rec.AsString(Field_OwnerQName2),
 					istructs.WSID(newWSID), wsError, systemPrincipalToken_OwnerApp, federation)
 				return nil

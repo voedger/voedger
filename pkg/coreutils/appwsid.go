@@ -45,5 +45,7 @@ func AppWSIDToPseudoWSID(appWSID istructs.WSID) (pseudoWSID istructs.WSID) {
 
 // used in BuildAppWorkspaces() only because there are no apps in IAppPartitions on that moment
 func AppPartitionID(wsid istructs.WSID, numAppPartitions istructs.NumAppPartitions) istructs.PartitionID {
-	return istructs.PartitionID(int(wsid) % int(numAppPartitions))
+	// numAppPartitions is uint16, the modulo operation is always less than numAppPartitions
+	// so data loss is not possible on casting to PartitionID
+	return istructs.PartitionID(wsid % istructs.WSID(numAppPartitions)) // nolint G115
 }
