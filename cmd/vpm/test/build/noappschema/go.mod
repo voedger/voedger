@@ -1,6 +1,6 @@
 module noappschema
 
-go 1.21.4
+go 1.23.1
 
 require github.com/untillpro/airs-scheme v0.0.0-20240410095142-7a585227f4aa
 

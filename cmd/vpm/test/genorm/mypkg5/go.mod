@@ -1,6 +1,6 @@
 module mypkg5
 
-go 1.21.4
+go 1.23.1
 
 require (
 	github.com/untillpro/airs-bp3 v1.202111031426.2-0.20240815085007-fcacd19afce0

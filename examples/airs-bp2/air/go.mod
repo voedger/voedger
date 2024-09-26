@@ -1,6 +1,6 @@
 module air
 
-go 1.22.1
+go 1.23.1
 
 require github.com/voedger/voedger v0.0.0-20240520144910-273e84102129
 

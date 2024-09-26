@@ -1,6 +1,6 @@
 module appcomplex
 
-go 1.21.4
+go 1.23.1
 
 require github.com/voedger/voedger v0.0.0-20240508122917-697cf6bf2b7a
 
