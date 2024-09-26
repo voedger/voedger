@@ -6,8 +6,8 @@ github.com/stretchr/testify v1.9.0 h1:HtqpIVDClZ4nwg75+f6Lvsy/wHu+3BoSGCbBAcpTsT
 github.com/stretchr/testify v1.9.0/go.mod h1:r2ic/lqez/lEtzL7wO/rwa5dbSLXVDPFyf8C91i36aY=
 github.com/tetratelabs/wazero v1.7.2 h1:1+z5nXJNwMLPAWaTePFi49SSTL0IMx/i3Fg8Yc25GDc=
 github.com/tetratelabs/wazero v1.7.2/go.mod h1:ytl6Zuh20R/eROuyDaGPkp82O9C/DJfXAwJfQ3X6/7Y=
-github.com/voedger/voedger v0.0.0-20240523190522-5ed155210a27 h1:gkfFqTf9Fzs2XgBqXcr0jlLh51OX0Hk/TILIbuva6Tw=
-github.com/voedger/voedger v0.0.0-20240523190522-5ed155210a27/go.mod h1:4J0xgQCIso/XNccuxcWkqEg3r7yw3ZThKUICKP+JWyA=
+github.com/voedger/voedger v0.0.0-20240925154640-cd63a37232a6 h1:vy9xxUpvWkZdqmlA9xV8CX9qzkINJ43Ofq2uCMnPNBw=
+github.com/voedger/voedger v0.0.0-20240925154640-cd63a37232a6/go.mod h1:Cf0BKHbD18txG/5P0RJczuaZT4U3q0l9YsoXF/HelYQ=
 gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405 h1:yhCVgyC4o1eVCa2tZl7eS0r+SDo693bJlVdllGtEeKM=
 gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
 gopkg.in/yaml.v3 v3.0.1 h1:fxVm/GzAzEWqLHuvctI91KS9hhNmmWOoWu0XTYJS7CA=
