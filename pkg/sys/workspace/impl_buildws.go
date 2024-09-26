@@ -6,6 +6,7 @@ package workspace
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
 
@@ -46,10 +47,15 @@ func buildWorkspace(templateName string, ep extensionpoints.IExtensionPoint, wsK
 	return nil
 }
 
-func updateBLOBsIDsMap(wsData []map[string]interface{}, blobsMap map[int64]map[string]int64) {
+func updateBLOBsIDsMap(wsData []map[string]interface{}, blobsMap blobsMap) {
 	for _, record := range wsData {
 		recordIDIntf := record[appdef.SystemField_ID] // record id existence is checked on validation stage
-		recordID := int64(recordIDIntf.(float64))
+		recordIDClarified, err := coreutils.ClarifyJSONNumber(recordIDIntf.(json.Number), appdef.DataKind_RecordID)
+		if err != nil {
+			// notest
+			panic(err)
+		}
+		recordID := recordIDClarified.(istructs.RecordID)
 		if fieldsBlobIDs, ok := blobsMap[recordID]; ok {
 			for fieldName, blobIDToSet := range fieldsBlobIDs {
 				// blob fields existence is checked on validation stage
@@ -75,12 +81,12 @@ func uploadBLOBs(blobs []coreutils.BLOBWorkspaceTemplateField, federation federa
 			return nil, fmt.Errorf("blob %s: %w", blob.Name, err)
 		}
 
-		fieldBlobID, ok := res[int64(blob.RecordID)]
+		fieldBlobID, ok := res[blob.RecordID]
 		if !ok {
-			fieldBlobID = map[string]int64{}
-			res[int64(blob.RecordID)] = fieldBlobID
+			fieldBlobID = map[string]istructs.RecordID{}
+			res[blob.RecordID] = fieldBlobID
 		}
-		fieldBlobID[blob.FieldName] = int64(newBLOBID)
+		fieldBlobID[blob.FieldName] = newBLOBID
 		logger.Info(fmt.Sprintf("workspace build: blob %s uploaded and set: [%d][%s]=%d", blob.Name, blob.RecordID, blob.FieldName, newBLOBID))
 	}
 	return res, nil

@@ -77,5 +77,5 @@ type IExtensionEngineFactory interface {
 	// LocalPath is a path package data can be got from
 	// - modules is not used for ExtensionEngineKind_BuiltIn
 	// - config is not used for ExtensionEngineKind_BuiltIn
-	New(ctx context.Context, app appdef.AppQName, modules []ExtensionModule, config *ExtEngineConfig, numEnginesPerKind int) ([]IExtensionEngine, error)
+	New(ctx context.Context, app appdef.AppQName, modules []ExtensionModule, config *ExtEngineConfig, numEnginesPerKind uint) ([]IExtensionEngine, error)
 }

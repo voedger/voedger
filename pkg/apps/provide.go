@@ -7,6 +7,7 @@ package apps
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 
@@ -54,7 +55,7 @@ func NewAppStorageFactory(params CLIParams) (istorage.IAppStorageFactory, error)
 	case storageTypeMem:
 		return mem.Provide(), nil
 	default:
-		return nil, fmt.Errorf("unable to define replication strategy")
+		return nil, errors.New("unable to define replication strategy")
 	}
 	return cas.Provide(casParams)
 }
@@ -83,7 +84,7 @@ func NewSysRouterRequestHandler(_ context.Context, sender ibus.ISender, request 
 			}
 			rs.Close(nil)
 		default:
-			coreutils.ReplyBadRequest(sender, fmt.Sprintf("unknown func: %s", request.Resource))
+			coreutils.ReplyBadRequest(sender, "unknown func: "+request.Resource)
 		}
 	}()
 }

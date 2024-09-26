@@ -101,8 +101,8 @@ func (w *limitedWriter) Write(p []byte) (n int, err error) {
 	return len(p), nil
 }
 
-func (f extensionEngineFactory) New(ctx context.Context, app appdef.AppQName, packages []iextengine.ExtensionModule, config *iextengine.ExtEngineConfig, numEngines int) (engines []iextengine.IExtensionEngine, err error) {
-	for i := 0; i < numEngines; i++ {
+func (f extensionEngineFactory) New(ctx context.Context, app appdef.AppQName, packages []iextengine.ExtensionModule, config *iextengine.ExtEngineConfig, numEngines uint) (engines []iextengine.IExtensionEngine, err error) {
+	for i := uint(0); i < numEngines; i++ {
 		engine := &wazeroExtEngine{
 			app:                app,
 			modules:            make(map[string]*wazeroExtPkg),
@@ -141,7 +141,7 @@ func (f extensionEngineFactory) New(ctx context.Context, app appdef.AppQName, pa
 				}
 			}
 		} else {
-			return nil, fmt.Errorf("unsupported URL: " + pkg.ModuleUrl.String())
+			return nil, errors.New("unsupported URL: " + pkg.ModuleUrl.String())
 		}
 	}
 	return engines, nil
@@ -175,7 +175,7 @@ func (f *wazeroExtEngine) init(ctx context.Context) error {
 	const memoryLimitCoef = 1.7
 	memoryLimit := memPages * iextengine.MemoryPageSize
 	limit := math.Trunc(float64(WasmPreallocatedBufferSize) * float64(memoryLimitCoef))
-	if uint32(memoryLimit) <= uint32(limit) {
+	if uint32(memoryLimit) <= uint32(limit) { // nolint G115 memoryLimit is max maxMemoryPages, limit is WasmPreallocatedBufferSize*1.7
 		return fmt.Errorf("the minimum limit of memory is: %.1f bytes, requested limit is: %.1f", limit, float32(memoryLimit))
 	}
 

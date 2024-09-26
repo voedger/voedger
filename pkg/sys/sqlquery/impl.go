@@ -18,6 +18,7 @@ import (
 	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/coreutils/federation"
+	"github.com/voedger/voedger/pkg/coreutils/utils"
 	"github.com/voedger/voedger/pkg/dml"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -218,7 +219,7 @@ func offs(expr sqlparser.Expr, simpleOffset istructs.Offset) (istructs.Offset, b
 }
 
 func parseInt64(bb []byte) (int64, error) {
-	return strconv.ParseInt(string(bb), base, bitSize64)
+	return strconv.ParseInt(string(bb), utils.DecimalBase, utils.BitSize64)
 }
 
 func getFilter(f func(string) bool) coreutils.MapperOpt {

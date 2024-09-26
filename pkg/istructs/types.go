@@ -33,7 +33,7 @@ type ClusterID = uint16
 // 2^32 apps per clusters
 type ClusterAppID = uint32
 
-type SubjectKindType uint8
+type SubjectKindType int32 // not uint8 because it is written to int32 fields, so int32 is better to avoid data loss
 
 const (
 	SubjectKind_null SubjectKindType = iota
@@ -102,10 +102,11 @@ type IRowWriter interface {
 	PutFromJSON(map[appdef.FieldName]any)
 }
 
-type NumAppWorkspaces int
-type NumAppPartitions int
-type NumCommandProcessors int
-type NumQueryProcessors int
+type NumAppWorkspaces uint
+type NumAppPartitions uint16 // since istructs.PartitionID is uint16
+type NumCommandProcessors uint
+type NumQueryProcessors uint
+type AppWorkspaceNumber uint
 
 // RowBuilder is a type for function that creates a row reader from a row writer.
 //

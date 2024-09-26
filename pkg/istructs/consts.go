@@ -89,6 +89,8 @@ const NullWSID = WSID(0)
 // WSID = ClusterID << WSIDClusterLShift + NextWSID()
 const WSIDClusterLShift = 64 - 16 - 1
 
+const MaxBaseWSID = 1<<WSIDClusterLShift - 1
+
 const MinReservedBaseRecordID = MaxRawRecordID + 1
 const MaxReservedBaseRecordID = MinReservedBaseRecordID + 0xffff
 

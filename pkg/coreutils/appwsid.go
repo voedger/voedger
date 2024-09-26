@@ -24,7 +24,7 @@ func GetAppWSID(wsid istructs.WSID, numAppWorkspaces istructs.NumAppWorkspaces) 
 }
 
 func CRC16(entity []byte) uint16 {
-	return uint16(crc32.ChecksumIEEE(entity) & CRC16Mask)
+	return uint16(crc32.ChecksumIEEE(entity) & CRC16Mask) //nolint G115
 }
 
 // for Login use NullWSID as ownerWSID

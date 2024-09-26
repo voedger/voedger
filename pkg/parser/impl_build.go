@@ -507,12 +507,12 @@ func (c *buildContext) addDataTypeField(field *FieldExpr) {
 
 func (c *buildContext) addObjectFieldToType(field *FieldExpr) {
 
-	minOccur := 0
+	minOccur := appdef.Occurs(0)
 	if field.NotNull {
 		minOccur = 1
 	}
 
-	maxOccur := 1
+	maxOccur := appdef.Occurs(1)
 	// not supported by kernel yet
 	// if field.Type.Array != nil {
 	// 	if field.Type.Array.Unbounded {
@@ -521,7 +521,7 @@ func (c *buildContext) addObjectFieldToType(field *FieldExpr) {
 	// 		maxOccur = field.Type.Array.MaxOccurs
 	// 	}
 	// }
-	c.defCtx().defBuilder.(appdef.IObjectBuilder).AddContainer(string(field.Name), field.Type.qName, appdef.Occurs(minOccur), appdef.Occurs(maxOccur))
+	c.defCtx().defBuilder.(appdef.IObjectBuilder).AddContainer(string(field.Name), field.Type.qName, minOccur, maxOccur)
 }
 
 func (c *buildContext) addTableFieldToTable(field *FieldExpr, ictx *iterateCtx) {

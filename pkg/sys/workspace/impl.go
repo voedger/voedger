@@ -16,6 +16,7 @@ import (
 	"strings"
 
 	"github.com/voedger/voedger/pkg/coreutils/federation"
+	"github.com/voedger/voedger/pkg/coreutils/utils"
 	"github.com/voedger/voedger/pkg/goutils/iterate"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/sys"
@@ -454,7 +455,7 @@ func updateOwner(ownerWSID istructs.WSID, ownerID istructs.RecordID, ownerApp st
 	return updateOwnerErr == nil
 }
 
-func parseWSTemplateBLOBs(fsEntries []fs.DirEntry, blobIDs map[int64]map[string]struct{}, wsTemplateFS coreutils.EmbedFS) (blobs []coreutils.BLOBWorkspaceTemplateField, err error) {
+func parseWSTemplateBLOBs(fsEntries []fs.DirEntry, blobIDs map[istructs.RecordID]map[string]struct{}, wsTemplateFS coreutils.EmbedFS) (blobs []coreutils.BLOBWorkspaceTemplateField, err error) {
 	for _, ent := range fsEntries {
 		switch ent.Name() {
 		case "data.json", "provide.go":
@@ -464,7 +465,7 @@ func parseWSTemplateBLOBs(fsEntries []fs.DirEntry, blobIDs map[int64]map[string]
 				return nil, fmt.Errorf("wrong blob file name format: %s", ent.Name())
 			}
 			recordIDStr := ent.Name()[:underscorePos]
-			recordID, err := strconv.Atoi(recordIDStr)
+			recordID, err := strconv.ParseUint(recordIDStr, utils.DecimalBase, utils.BitSize64)
 			if err != nil {
 				return nil, fmt.Errorf("wrong recordID in blob %s: %w", ent.Name(), err)
 			}
@@ -472,10 +473,10 @@ func parseWSTemplateBLOBs(fsEntries []fs.DirEntry, blobIDs map[int64]map[string]
 			if len(fieldName) == 0 {
 				return nil, fmt.Errorf("no fieldName in blob %s", ent.Name())
 			}
-			fieldNames, ok := blobIDs[int64(recordID)]
+			fieldNames, ok := blobIDs[istructs.RecordID(recordID)]
 			if !ok {
 				fieldNames = map[string]struct{}{}
-				blobIDs[int64(recordID)] = fieldNames
+				blobIDs[istructs.RecordID(recordID)] = fieldNames
 			}
 			if _, exists := fieldNames[fieldName]; exists {
 				return nil, fmt.Errorf("recordID %d: blob for field %s is met again: %s", recordID, fieldName, ent.Name())
@@ -499,8 +500,8 @@ func parseWSTemplateBLOBs(fsEntries []fs.DirEntry, blobIDs map[int64]map[string]
 	return blobs, nil
 }
 
-func checkOrphanedBLOBs(blobIDs map[int64]map[string]struct{}, workspaceData []map[string]interface{}) error {
-	orphanedBLOBRecordIDs := map[int64]struct{}{}
+func checkOrphanedBLOBs(blobIDs map[istructs.RecordID]map[string]struct{}, workspaceData []map[string]interface{}) error {
+	orphanedBLOBRecordIDs := map[istructs.RecordID]struct{}{}
 	for blobRecID := range blobIDs {
 		orphanedBLOBRecordIDs[blobRecID] = struct{}{}
 	}
@@ -510,7 +511,12 @@ func checkOrphanedBLOBs(blobIDs map[int64]map[string]struct{}, workspaceData []m
 		if !ok {
 			return errors.New("record with missing sys.ID field is met")
 		}
-		recID := int64(recIDIntf.(float64))
+		recIDJSONNumber := recIDIntf.(json.Number)
+		clarifiedRecIDIntf, err := coreutils.ClarifyJSONNumber(recIDJSONNumber, appdef.DataKind_RecordID)
+		if err != nil {
+			return fmt.Errorf("wrong blobID %s is met in workspace data: %w", recIDJSONNumber.String(), err)
+		}
+		recID := clarifiedRecIDIntf.(istructs.RecordID)
 		blobFields, ok := blobIDs[recID]
 		if !ok {
 			continue
@@ -553,13 +559,13 @@ func ValidateTemplate(wsTemplateName string, ep extensionpoints.IExtensionPoint,
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to read data.json: %w", err)
 	}
-	if err := json.Unmarshal(dataBytes, &wsData); err != nil {
+	if err := coreutils.JSONUnmarshal(dataBytes, &wsData); err != nil {
 		return nil, nil, fmt.Errorf("failed to unmarshal data.json: %w", err)
 	}
 
 	// check blob entries
 	//          newBLOBID   fieldName
-	blobIDs := map[int64]map[string]struct{}{}
+	blobIDs := map[istructs.RecordID]map[string]struct{}{}
 	wsBLOBs, err = parseWSTemplateBLOBs(fsEntries, blobIDs, wsTemplateFS)
 	if err != nil {
 		return nil, nil, err

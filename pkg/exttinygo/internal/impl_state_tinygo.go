@@ -264,7 +264,7 @@ func decodeSlice(value uint64) []byte {
 }
 
 func decodeString(value uint64) (ret string) {
-	u := uintptr(uint32(value >> 32))
+	u := uintptr(uint32(value >> 32)) //nolint G115
 	s := uint32(value)
 	return unsafe.String((*byte)(unsafe.Pointer(u)), s)
 }

@@ -151,7 +151,7 @@ func TestBasicUsage(t *testing.T) {
 func sendCUD(t *testing.T, wsid istructs.WSID, app testApp, expectedCode ...int) map[string]interface{} {
 	require := require.New(t)
 	req := ibus.Request{
-		WSID:     int64(wsid),
+		WSID:     wsid,
 		AppQName: istructs.AppQName_untill_airs_bp.String(),
 		Resource: "c.sys.CUD",
 		Body: []byte(`{"cuds":[
@@ -655,7 +655,7 @@ func replyBadRequest(sender ibus.ISender, message string) {
 // test app deployment constants
 var (
 	testAppName                                = istructs.AppQName_untill_airs_bp
-	testAppEngines                             = [appparts.ProcessorKind_Count]int{10, 10, 10, 0}
+	testAppEngines                             = [appparts.ProcessorKind_Count]uint{10, 10, 10, 0}
 	testAppPartID    istructs.PartitionID      = 1
 	testAppPartCount istructs.NumAppPartitions = 1
 )
@@ -732,7 +732,7 @@ func setUp(t *testing.T, prepare func(appDef appdef.IAppDefBuilder, cfg *istruct
 		if authHeaders, ok := request.Header[coreutils.Authorization]; ok {
 			token = strings.TrimPrefix(authHeaders[0], "Bearer ")
 		}
-		icm := NewCommandMessage(ctx, request.Body, appQName, istructs.WSID(request.WSID), sender, testAppPartID, cmdQName, token, "")
+		icm := NewCommandMessage(ctx, request.Body, appQName, request.WSID, sender, testAppPartID, cmdQName, token, "")
 		serviceChannel <- icm
 	})
 

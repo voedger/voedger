@@ -6,6 +6,7 @@
 package singletons
 
 import (
+	"errors"
 	"fmt"
 	"testing"
 
@@ -190,7 +191,7 @@ func Test_Singletons_Errors(t *testing.T) {
 
 	require := require.New(t)
 	cDocName := appdef.NewQName("test", "SingletonCDoc")
-	testError := fmt.Errorf("test error")
+	testError := errors.New("test error")
 
 	t.Run("must error if unknown version of Singletons system view", func(t *testing.T) {
 		storage, err := istorageimpl.Provide(mem.Provide()).AppStorage(istructs.AppQName_test1_app1)

@@ -9,8 +9,6 @@ import (
 )
 
 const (
-	base         = 10
-	bitSize64    = 64
 	DefaultLimit = 100
 	field_Query  = "Query"
 )

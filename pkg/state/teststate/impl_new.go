@@ -83,7 +83,7 @@ func NewCommandTestState(t *testing.T, iCommand ICommand, extensionFunc func()) 
 	return ts
 }
 
-func (cts *CommandTestState) Record(fQName IFullQName, id int, keyValueList ...any) ITestRunner {
+func (cts *CommandTestState) Record(fQName IFullQName, id istructs.RecordID, keyValueList ...any) ITestRunner {
 	isSingleton := cts.isSingletone(fQName)
 	if isSingleton {
 		panic("use SingletonRecord method for singletons")
@@ -108,11 +108,11 @@ func (cts *CommandTestState) SingletonRecord(fQName IFullQName, keyValueList ...
 		panic(fmt.Errorf("failed to get singleton id: %w", err))
 	}
 
-	return cts.record(fQName, int(id), isSingleton, keyValueList...)
+	return cts.record(fQName, id, isSingleton, keyValueList...)
 }
 
-func (cts *CommandTestState) Offset(offset int) ITestRunner {
-	cts.wsOffsets[cts.commandWSID] = istructs.Offset(offset)
+func (cts *CommandTestState) Offset(offset istructs.Offset) ITestRunner {
+	cts.wsOffsets[cts.commandWSID] = offset
 
 	return cts
 }
@@ -121,11 +121,11 @@ func (cts *CommandTestState) RequireViewInsert(fQName IFullQName, keyValueList .
 	return cts.addRequiredRecordItems(fQName, 0, false, true, true, keyValueList...)
 }
 
-func (cts *CommandTestState) RequireViewUpdate(fQName IFullQName, id int, keyValueList ...any) ITestRunner {
+func (cts *CommandTestState) RequireViewUpdate(fQName IFullQName, id istructs.RecordID, keyValueList ...any) ITestRunner {
 	return cts.addRequiredRecordItems(fQName, id, false, false, true, keyValueList...)
 }
 
-func (cts *CommandTestState) View(fQName IFullQName, id int, keyValueList ...any) ITestRunner {
+func (cts *CommandTestState) View(fQName IFullQName, id istructs.RecordID, keyValueList ...any) ITestRunner {
 	if !cts.isView(fQName) {
 		panic("View method must be used for views only")
 	}
@@ -244,7 +244,7 @@ func (cts *CommandTestState) buildAppDef(wsPkgPath, wsDescriptorName string) {
 	}
 }
 
-func (cts *CommandTestState) record(fQName IFullQName, id int, isSingleton bool, keyValueList ...any) ITestRunner {
+func (cts *CommandTestState) record(fQName IFullQName, id istructs.RecordID, isSingleton bool, keyValueList ...any) ITestRunner {
 	qName := cts.getQNameFromFQName(fQName)
 
 	// check if the record already exists
@@ -280,7 +280,7 @@ func (cts *CommandTestState) putRecords() {
 		require.NoError(cts.t, err, errMsgFailedToParseKeyValues)
 
 		keyValueMap[appdef.SystemField_QName] = appdef.NewQName(pkgAlias, item.entity.Entity()).String()
-		keyValueMap[appdef.SystemField_ID] = istructs.RecordID(item.id)
+		keyValueMap[appdef.SystemField_ID] = item.id
 
 		err = cts.appStructs.Records().PutJSON(cts.commandWSID, keyValueMap)
 		require.NoError(cts.t, err)
@@ -353,7 +353,7 @@ func (cts *CommandTestState) require() {
 	cts.requiredRecordItems = nil
 }
 
-func (cts *CommandTestState) ArgumentObject(id int, keyValueList ...any) ITestRunner {
+func (cts *CommandTestState) ArgumentObject(id istructs.RecordID, keyValueList ...any) ITestRunner {
 	keyValueMap, err := parseKeyValues(keyValueList)
 	if err != nil {
 		panic(fmt.Errorf("failed to parse key values: %w", err))
@@ -367,12 +367,12 @@ func (cts *CommandTestState) ArgumentObject(id int, keyValueList ...any) ITestRu
 
 		cts.argumentObject[key] = value
 	}
-	cts.argumentObject[appdef.SystemField_ID] = istructs.RecordID(id)
+	cts.argumentObject[appdef.SystemField_ID] = id
 
 	return cts
 }
 
-func (cts *CommandTestState) ArgumentObjectRow(path string, id int, keyValueList ...any) ITestRunner {
+func (cts *CommandTestState) ArgumentObjectRow(path string, id istructs.RecordID, keyValueList ...any) ITestRunner {
 	parts := strings.Split(path, "/")
 
 	innerTree := cts.argumentObject
@@ -387,7 +387,7 @@ func (cts *CommandTestState) ArgumentObjectRow(path string, id int, keyValueList
 		}
 
 		innerTree = putToArgumentObjectTree(innerTree, part, keyValueList...)
-		innerTree[appdef.SystemField_ID] = istructs.RecordID(id)
+		innerTree[appdef.SystemField_ID] = id
 	}
 
 	return cts
@@ -401,15 +401,15 @@ func (cts *CommandTestState) RequireSingletonUpdate(fQName IFullQName, keyValueL
 	return cts.addRequiredRecordItems(fQName, 0, true, false, false, keyValueList...)
 }
 
-func (cts *CommandTestState) RequireRecordInsert(fQName IFullQName, id int, keyValueList ...any) ITestRunner {
+func (cts *CommandTestState) RequireRecordInsert(fQName IFullQName, id istructs.RecordID, keyValueList ...any) ITestRunner {
 	return cts.addRequiredRecordItems(fQName, id, false, true, false, keyValueList...)
 }
 
-func (cts *CommandTestState) RequireRecordUpdate(fQName IFullQName, id int, keyValueList ...any) ITestRunner {
+func (cts *CommandTestState) RequireRecordUpdate(fQName IFullQName, id istructs.RecordID, keyValueList ...any) ITestRunner {
 	return cts.addRequiredRecordItems(fQName, id, false, false, false, keyValueList...)
 }
 
-func (cts *CommandTestState) CUDRow(fQName IFullQName, id int, keyValueList ...any) ITestRunner {
+func (cts *CommandTestState) CUDRow(fQName IFullQName, id istructs.RecordID, keyValueList ...any) ITestRunner {
 	cts.cudRows = append(cts.cudRows, recordItem{
 		entity:       fQName,
 		id:           id,
@@ -458,7 +458,7 @@ func (cts *CommandTestState) putCudRows() {
 	}
 }
 
-func (cts *CommandTestState) addRequiredRecordItems(fQName IFullQName, id int, isSingleton, isNew, isView bool, keyValueList ...any) ITestRunner {
+func (cts *CommandTestState) addRequiredRecordItems(fQName IFullQName, id istructs.RecordID, isSingleton, isNew, isView bool, keyValueList ...any) ITestRunner {
 	cts.requiredRecordItems = append(cts.requiredRecordItems, recordItem{
 		entity:       fQName,
 		id:           id,
@@ -598,7 +598,7 @@ func NewProjectorTestState(t *testing.T, iCommand ICommand, extensionFunc func()
 	return ts
 }
 
-func (pts *ProjectorTestState) Record(fQName IFullQName, id int, keyValueList ...any) ITestRunner {
+func (pts *ProjectorTestState) Record(fQName IFullQName, id istructs.RecordID, keyValueList ...any) ITestRunner {
 	pts.CommandTestState.Record(fQName, id, keyValueList...)
 
 	return pts
@@ -610,13 +610,13 @@ func (pts *ProjectorTestState) SingletonRecord(fQName IFullQName, keyValueList .
 	return pts
 }
 
-func (pts *ProjectorTestState) ArgumentObject(id int, keyValueList ...any) ITestRunner {
+func (pts *ProjectorTestState) ArgumentObject(id istructs.RecordID, keyValueList ...any) ITestRunner {
 	pts.CommandTestState.ArgumentObject(id, keyValueList...)
 
 	return pts
 }
 
-func (pts *ProjectorTestState) ArgumentObjectRow(path string, id int, keyValueList ...any) ITestRunner {
+func (pts *ProjectorTestState) ArgumentObjectRow(path string, id istructs.RecordID, keyValueList ...any) ITestRunner {
 	pts.CommandTestState.ArgumentObjectRow(path, id, keyValueList...)
 
 	return pts
@@ -634,19 +634,19 @@ func (pts *ProjectorTestState) RequireSingletonUpdate(fQName IFullQName, keyValu
 	return pts
 }
 
-func (pts *ProjectorTestState) RequireRecordInsert(fQName IFullQName, id int, keyValueList ...any) ITestRunner {
+func (pts *ProjectorTestState) RequireRecordInsert(fQName IFullQName, id istructs.RecordID, keyValueList ...any) ITestRunner {
 	pts.CommandTestState.RequireRecordInsert(fQName, id, keyValueList...)
 
 	return pts
 }
 
-func (pts *ProjectorTestState) RequireRecordUpdate(fQName IFullQName, id int, keyValueList ...any) ITestRunner {
+func (pts *ProjectorTestState) RequireRecordUpdate(fQName IFullQName, id istructs.RecordID, keyValueList ...any) ITestRunner {
 	pts.CommandTestState.RequireRecordUpdate(fQName, id, keyValueList...)
 
 	return pts
 }
 
-func (pts *ProjectorTestState) CUDRow(fQName IFullQName, id int, keyValueList ...any) ITestRunner {
+func (pts *ProjectorTestState) CUDRow(fQName IFullQName, id istructs.RecordID, keyValueList ...any) ITestRunner {
 	pts.CommandTestState.CUDRow(fQName, id, keyValueList...)
 
 	return pts
@@ -658,19 +658,19 @@ func (pts *ProjectorTestState) RequireViewInsert(fQName IFullQName, keyValueList
 	return pts
 }
 
-func (pts *ProjectorTestState) RequireViewUpdate(fQName IFullQName, id int, keyValueList ...any) ITestRunner {
+func (pts *ProjectorTestState) RequireViewUpdate(fQName IFullQName, id istructs.RecordID, keyValueList ...any) ITestRunner {
 	pts.CommandTestState.RequireViewUpdate(fQName, id, keyValueList...)
 
 	return pts
 }
 
-func (pts *ProjectorTestState) View(fQName IFullQName, id int, keyValueList ...any) ITestRunner {
+func (pts *ProjectorTestState) View(fQName IFullQName, id istructs.RecordID, keyValueList ...any) ITestRunner {
 	pts.CommandTestState.View(fQName, id, keyValueList...)
 
 	return pts
 }
 
-func (pts *ProjectorTestState) Offset(offset int) ITestRunner {
+func (pts *ProjectorTestState) Offset(offset istructs.Offset) ITestRunner {
 	pts.CommandTestState.Offset(offset)
 
 	return pts

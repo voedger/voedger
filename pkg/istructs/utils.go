@@ -16,10 +16,18 @@ import (
 
 // *********************************************************************************************************
 //
-//				WSID
+//					WSID
 //
 
+//	        clusterID shifted here on <<               zeroed on <<
+//	63      62 61 60 59 58 57 ........ 47 46 45 44 43 ..................... 1 0
+//
+// always 0 └─── ClusterID (16 bits) ───┘ └─────── BaseWSID (47 bits) ────────┘
+// casting WSID created by NewWSID() to int64 can not cause data loss since the highest bit is always 0
 func NewWSID(cluster ClusterID, baseWSID WSID) WSID {
+	if baseWSID > MaxBaseWSID {
+		panic("baseWSID overflow")
+	}
 	return WSID(cluster)<<WSIDClusterLShift + baseWSID
 }
 
@@ -32,8 +40,13 @@ func NewCDocCRecordID(baseID RecordID) RecordID {
 	return RecordID(ClusterAsCRecordRegisterID)*RegisterFactor + baseID
 }
 
+//	63      62 61 60 59 58 57 ......47 ... 15 14 13 12 11 ..................... 1 0
+//
+// always 0 └─── ClusterID before ───┘     └──── ClusterID is here after >> ──────┘
 func (wsid WSID) ClusterID() ClusterID {
-	return ClusterID(wsid >> WSIDClusterLShift)
+	// data loss could happen on uint16(uint64) cast if bit number 63 is !0
+	// bit number 63 is 0 always if WSID was created by NewWSID() -> no data loss here on WSID created by NewWSID()
+	return ClusterID(wsid >> WSIDClusterLShift) // nolint G115
 }
 
 func (wsid WSID) BaseWSID() WSID {

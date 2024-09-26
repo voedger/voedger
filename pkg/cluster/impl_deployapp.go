@@ -7,6 +7,7 @@ package cluster
 
 import (
 	"fmt"
+	"math"
 	"net/http"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -46,8 +47,17 @@ func provideCmdDeployApp(asp istructs.IAppStructsProvider, time coreutils.ITime,
 			// notest
 			return err
 		}
-		numAppWorkspacesToDeploy := istructs.NumAppWorkspaces(args.ArgumentObject.AsInt32(Field_NumAppWorkspaces))
-		numAppPartitionsToDeploy := istructs.NumAppPartitions(args.ArgumentObject.AsInt32(Field_NumPartitions))
+
+		numAppWSInt := args.ArgumentObject.AsInt32(Field_NumAppWorkspaces)
+		if numAppWSInt <= 0 || uint(numAppWSInt) > math.MaxUint {
+			return coreutils.NewHTTPErrorf(http.StatusBadRequest, "app workspaces number must be >0 and <maxUint")
+		}
+		numPartitionsInt := args.ArgumentObject.AsInt32(Field_NumPartitions)
+		if numPartitionsInt < 0 || numPartitionsInt > math.MaxUint16 {
+			return coreutils.NewHTTPErrorf(http.StatusBadRequest, fmt.Sprintf("app partitions number must be >0 and <%d", math.MaxUint16))
+		}
+		numAppWorkspacesToDeploy := istructs.NumAppWorkspaces(numAppWSInt)
+		numAppPartitionsToDeploy := istructs.NumAppPartitions(numPartitionsInt)
 		if wdocAppRecordID != istructs.NullRecordID {
 			kb, err := args.State.KeyBuilder(sys.Storage_Record, qNameWDocApp)
 			if err != nil {
@@ -132,8 +142,8 @@ func InitAppWSes(as istructs.IAppStructs, numAppWorkspaces istructs.NumAppWorksp
 	pLogOffsets := map[istructs.PartitionID]istructs.Offset{}
 	wLogOffset := istructs.FirstOffset
 	res := []istructs.WSID{}
-	for wsNum := 0; istructs.NumAppWorkspaces(wsNum) < numAppWorkspaces; wsNum++ {
-		appWSID := istructs.NewWSID(istructs.CurrentClusterID(), istructs.WSID(wsNum+int(istructs.FirstBaseAppWSID)))
+	for wsNum := uint(0); istructs.NumAppWorkspaces(wsNum) < numAppWorkspaces; wsNum++ {
+		appWSID := istructs.NewWSID(istructs.CurrentClusterID(), istructs.WSID(wsNum+uint(istructs.FirstBaseAppWSID)))
 		partitionID := coreutils.AppPartitionID(appWSID, numAppPartitions)
 		if _, ok := pLogOffsets[partitionID]; !ok {
 			pLogOffsets[partitionID] = istructs.FirstOffset

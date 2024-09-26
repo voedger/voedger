@@ -6,8 +6,6 @@
 package ihttpctl
 
 import (
-	"fmt"
-
 	"github.com/voedger/voedger/pkg/ihttp"
 )
 
@@ -16,7 +14,7 @@ func NewHTTPProcessorController(processor ihttp.IHTTPProcessor, staticResources 
 	for _, sr := range staticResources {
 		for url, fs := range sr {
 			if _, exists := srs[url]; exists {
-				panic(fmt.Sprintf("static resource with duplicate url %s", url))
+				panic("static resource with duplicate url " + url)
 			}
 			srs[url] = fs
 		}
