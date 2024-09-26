@@ -75,6 +75,8 @@ const errFieldMustBeVerified = "field «%s» must be verified, token expected, b
 
 const errFieldConvertErrorWrap = "field «%s» value type «%T» can not to be converted to «%s»: %w"
 
+const errNumberFieldWrongValueWrap = "field «%s» value %s can not to be converted to «%s»: %w"
+
 const errCantGetFieldQNameIDWrap = "QName field «%s» can not get ID for value «%v»: %w"
 
 const errTypeNotFoundWrap = "type «%v» not found: %w"

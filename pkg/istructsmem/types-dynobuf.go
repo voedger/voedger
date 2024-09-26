@@ -9,52 +9,76 @@ import (
 	"bytes"
 	"encoding/base64"
 	"encoding/binary"
+	"encoding/json"
 	"fmt"
 	"io"
 
 	"github.com/untillpro/dynobuffers"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/containers"
 	"github.com/voedger/voedger/pkg/istructsmem/internal/utils"
 )
 
-// Converts specified value to dyno-buffer compatible type using specified data kind.
+// Converts specified value to the value according to data kind
+// number types must be the same as DataKind, e.g. DataKind_int32 -> int32 is expected only
+// float64 value is accepted in case of DataKind_float64 only
 // If value type is not corresponding to kind then next conversions are available:
 //
-//	— float64 value can be converted to all numeric kinds (int32, int64, float32, float64, RecordID)
+//	— json.Number can be converted to all numeric kinds (int32, int64, float32, float64, RecordID)
+//	  — overflowing is checked
 //	— string value can be converted to QName and []byte kinds
 //
 // QName values, record- and event- values returned as []byte
-func (row *rowType) dynoBufValue(value interface{}, kind appdef.DataKind) (interface{}, error) {
+func (row *rowType) clarifyJSONValue(value interface{}, kind appdef.DataKind) (res interface{}, err error) {
+outer:
 	switch kind {
 	case appdef.DataKind_int32:
 		switch v := value.(type) {
 		case int32:
 			return v, nil
-		case float64:
-			return int32(v), nil
+		case json.Number:
+			return coreutils.ClarifyJSONNumber(v, kind)
 		}
 	case appdef.DataKind_int64:
 		switch v := value.(type) {
 		case int64:
 			return v, nil
-		case float64:
-			return int64(v), nil
+		case json.Number:
+			return coreutils.ClarifyJSONNumber(v, kind)
 		}
 	case appdef.DataKind_float32:
 		switch v := value.(type) {
 		case float32:
 			return v, nil
-		case float64:
-			return float32(v), nil
+		case json.Number:
+			return coreutils.ClarifyJSONNumber(v, kind)
 		}
 	case appdef.DataKind_float64:
 		switch v := value.(type) {
 		case float64:
 			return v, nil
+		case json.Number:
+			return coreutils.ClarifyJSONNumber(v, kind)
 		}
+	case appdef.DataKind_RecordID:
+		var int64Val int64
+		switch v := value.(type) {
+		case int64:
+			int64Val = v
+		case istructs.RecordID:
+			return v, nil
+		case json.Number:
+			return coreutils.ClarifyJSONNumber(v, kind)
+		default:
+			break outer
+		}
+		if int64Val < 0 {
+			return nil, fmt.Errorf("%w: %d", ErrWrongRecordID, int64Val)
+		}
+		return istructs.RecordID(int64Val), nil
 	case appdef.DataKind_bytes:
 		switch v := value.(type) {
 		case string:
@@ -98,13 +122,6 @@ func (row *rowType) dynoBufValue(value interface{}, kind appdef.DataKind) (inter
 		switch v := value.(type) {
 		case bool:
 			return v, nil
-		}
-	case appdef.DataKind_RecordID:
-		switch v := value.(type) {
-		case float64:
-			return int64(v), nil
-		case istructs.RecordID:
-			return int64(v), nil
 		}
 	case appdef.DataKind_Record:
 		switch v := value.(type) {
