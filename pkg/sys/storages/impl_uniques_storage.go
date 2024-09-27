@@ -30,7 +30,7 @@ type uniquesValue struct {
 
 func (v *uniquesValue) AsInt64(name string) int64 {
 	if name == sys.Storage_Uniq_Field_ID {
-		return int64(v.id)
+		return int64(v.id) // nolint G115
 	}
 	return v.baseStateValue.AsInt64(name)
 }

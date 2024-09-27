@@ -49,15 +49,15 @@ func provideCmdDeployApp(asp istructs.IAppStructsProvider, time coreutils.ITime,
 		}
 
 		numAppWSInt := args.ArgumentObject.AsInt32(Field_NumAppWorkspaces)
-		if numAppWSInt <= 0 || uint(numAppWSInt) > math.MaxUint {
-			return coreutils.NewHTTPErrorf(http.StatusBadRequest, "app workspaces number must be >0 and <maxUint")
+		if numAppWSInt <= 0 || numAppWSInt > istructs.MaxNumAppWorkspaces {
+			return coreutils.NewHTTPErrorf(http.StatusBadRequest, fmt.Sprintf("app workspaces number must be >0 and <%d", istructs.MaxNumAppWorkspaces))
 		}
 		numPartitionsInt := args.ArgumentObject.AsInt32(Field_NumPartitions)
 		if numPartitionsInt < 0 || numPartitionsInt > math.MaxUint16 {
 			return coreutils.NewHTTPErrorf(http.StatusBadRequest, fmt.Sprintf("app partitions number must be >0 and <%d", math.MaxUint16))
 		}
-		numAppWorkspacesToDeploy := istructs.NumAppWorkspaces(numAppWSInt)
-		numAppPartitionsToDeploy := istructs.NumAppPartitions(numPartitionsInt)
+		numAppWorkspacesToDeploy := istructs.NumAppWorkspaces(numAppWSInt)      // nolint G115 checked above
+		numAppPartitionsToDeploy := istructs.NumAppPartitions(numPartitionsInt) // nolint G115 checked above
 		if wdocAppRecordID != istructs.NullRecordID {
 			kb, err := args.State.KeyBuilder(sys.Storage_Record, qNameWDocApp)
 			if err != nil {
@@ -70,8 +70,8 @@ func provideCmdDeployApp(asp istructs.IAppStructsProvider, time coreutils.ITime,
 				// notest
 				return err
 			}
-			numPartitionsDeployed := istructs.NumAppPartitions(appRec.AsInt32(Field_NumPartitions))
-			numAppWorkspacesDeployed := istructs.NumAppWorkspaces(appRec.AsInt32(Field_NumAppWorkspaces))
+			numPartitionsDeployed := istructs.NumAppPartitions(appRec.AsInt32(Field_NumPartitions))       // nolint G115 checked above
+			numAppWorkspacesDeployed := istructs.NumAppWorkspaces(appRec.AsInt32(Field_NumAppWorkspaces)) // nolint G115 checked above
 
 			// Check application compatibility (409)
 			if numPartitionsDeployed != numAppPartitionsToDeploy {
@@ -142,8 +142,8 @@ func InitAppWSes(as istructs.IAppStructs, numAppWorkspaces istructs.NumAppWorksp
 	pLogOffsets := map[istructs.PartitionID]istructs.Offset{}
 	wLogOffset := istructs.FirstOffset
 	res := []istructs.WSID{}
-	for wsNum := uint(0); istructs.NumAppWorkspaces(wsNum) < numAppWorkspaces; wsNum++ {
-		appWSID := istructs.NewWSID(istructs.CurrentClusterID(), istructs.WSID(wsNum+uint(istructs.FirstBaseAppWSID)))
+	for wsNum := uint16(0); istructs.NumAppWorkspaces(wsNum) < numAppWorkspaces; wsNum++ {
+		appWSID := istructs.NewWSID(istructs.CurrentClusterID(), istructs.WSID(wsNum)+istructs.FirstBaseAppWSID)
 		partitionID := coreutils.AppPartitionID(appWSID, numAppPartitions)
 		if _, ok := pLogOffsets[partitionID]; !ok {
 			pLogOffsets[partitionID] = istructs.FirstOffset

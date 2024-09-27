@@ -44,7 +44,12 @@ func GetNextWSID(ctx context.Context, appStructs istructs.IAppStructs, clusterID
 		if nextBaseWSID != istructs.FirstBaseUserWSID {
 			panic(">1 records in view NextBaseWSID")
 		}
-		nextBaseWSID = istructs.WSID(value.AsInt64(fldNextBaseWSID))
+		nextWSIDInt64 := value.AsInt64(fldNextBaseWSID)
+		if nextWSIDInt64 > istructs.MaxAllowedWSID {
+			// notest
+			panic("too many WSIDs")
+		}
+		nextBaseWSID = istructs.WSID(nextWSIDInt64) // nolint G115
 		return nil
 	})
 	if err != nil {

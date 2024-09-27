@@ -29,7 +29,7 @@ func (b *baseKeyBuilder) Entity() appdef.QName {
 }
 func (b *baseKeyBuilder) String() string {
 	if b.entity == appdef.NullQName {
-		return fmt.Sprintf("storage:%s", b.Storage().String())
+		return "storage:" + b.Storage().String()
 	}
 	return fmt.Sprintf("storage:%s, entity:%s", b.Storage(), b.entity.String())
 }

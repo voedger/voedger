@@ -111,7 +111,7 @@ func qcwbnQryExec(_ context.Context, args istructs.ExecQueryArgs, callback istru
 	if err != nil {
 		return err
 	}
-	kb.PutRecordID(sys.Storage_Record_Field_ID, istructs.RecordID(childWSIdx.AsInt64(Field_ChildWorkspaceID)))
+	kb.PutRecordID(sys.Storage_Record_Field_ID, istructs.RecordID(childWSIdx.AsInt64(Field_ChildWorkspaceID))) // nolint G115
 	rec, err := args.State.MustExist(kb)
 	if err != nil {
 		return err

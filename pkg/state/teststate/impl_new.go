@@ -566,7 +566,7 @@ func (cts *CommandTestState) keyBuilder(r recordItem) istructs.IStateKeyBuilder 
 	case r.isSingleton:
 		kb.PutBool(sys.Storage_Record_Field_IsSingleton, true)
 	case !r.isView:
-		kb.PutInt64(sys.Storage_Record_Field_ID, int64(r.id))
+		kb.PutInt64(sys.Storage_Record_Field_ID, int64(r.id)) // nolint G115
 	case r.isView:
 		m, err := parseKeyValues(r.keyValueList)
 		require.NoError(cts.t, err, errMsgFailedToParseKeyValues)

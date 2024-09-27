@@ -56,7 +56,7 @@ func storeEventBuildError(ev *eventType, buf *bytes.Buffer) {
 	utils.WriteShortString(buf, ev.name.String())
 
 	bytes := ev.buildErr.OriginalEventBytes()
-	bytesLen := uint32(len(bytes))
+	bytesLen := uint32(len(bytes)) // nolint G115
 
 	if ev.argUnlObj.QName() != appdef.NullQName {
 		bytesLen = 0 // to protect logging security data

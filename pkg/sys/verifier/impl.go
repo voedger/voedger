@@ -41,7 +41,7 @@ func provideQryInitiateEmailVerification(sr istructsmem.IStatelessResources, ito
 func provideIEVExec(itokens itokens.ITokens, federation federation.IFederation, asp istructs.IAppStructsProvider) istructsmem.ExecQueryClosure {
 	return func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 		entity := args.ArgumentObject.AsString(field_Entity)
-		targetWSID := istructs.WSID(args.ArgumentObject.AsInt64(field_TargetWSID))
+		targetWSID := istructs.WSID(args.ArgumentObject.AsInt64(field_TargetWSID)) // nolint G115
 		field := args.ArgumentObject.AsString(field_Field)
 		email := args.ArgumentObject.AsString(Field_Email)
 		forRegistry := args.ArgumentObject.AsBool(field_ForRegistry)

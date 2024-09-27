@@ -102,8 +102,8 @@ type IRowWriter interface {
 	PutFromJSON(map[appdef.FieldName]any)
 }
 
-type NumAppWorkspaces uint
-type NumAppPartitions uint16 // since istructs.PartitionID is uint16
+type NumAppWorkspaces uint16 // since [MaxNumAppWorkspaces] = 32768
+type NumAppPartitions uint16 // since [PartitionID] is uint16
 type NumCommandProcessors uint
 type NumQueryProcessors uint
 type AppWorkspaceNumber uint

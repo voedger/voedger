@@ -13,7 +13,7 @@ import (
 
 type IBLOBStorage interface {
 	// Errors: ErrBLOBSizeQuotaExceeded
-	WriteBLOB(ctx context.Context, key KeyType, descr DescrType, reader io.Reader, maxSize int64) (err error)
+	WriteBLOB(ctx context.Context, key KeyType, descr DescrType, reader io.Reader, maxSize BLOBMaxSizeType) (err error)
 
 	// Function calls stateWriter then writer
 	// Both stateWriter and writer can be nil

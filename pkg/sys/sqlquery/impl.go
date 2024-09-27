@@ -190,7 +190,7 @@ func offs(expr sqlparser.Expr, simpleOffset istructs.Offset) (istructs.Offset, b
 		if simpleOffset > 0 {
 			return 0, false, errors.New("both .Offset and 'where offset ...' clause can not be provided in one query")
 		}
-		v, e := parseInt64(r.Right.(*sqlparser.SQLVal).Val)
+		v, e := parseUint64(r.Right.(*sqlparser.SQLVal).Val)
 		if e != nil {
 			return 0, false, e
 		}
@@ -220,6 +220,10 @@ func offs(expr sqlparser.Expr, simpleOffset istructs.Offset) (istructs.Offset, b
 
 func parseInt64(bb []byte) (int64, error) {
 	return strconv.ParseInt(string(bb), utils.DecimalBase, utils.BitSize64)
+}
+
+func parseUint64(bb []byte) (uint64, error) {
+	return strconv.ParseUint(string(bb), utils.DecimalBase, utils.BitSize64)
 }
 
 func getFilter(f func(string) bool) coreutils.MapperOpt {

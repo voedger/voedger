@@ -153,7 +153,7 @@ func execCmdCreateWorkspaceID(args istructs.ExecCommandArgs) (err error) {
 	cdocWorkspaceID.PutString(authnz.Field_WSKindInitializationData, args.ArgumentObject.AsString(authnz.Field_WSKindInitializationData))
 	cdocWorkspaceID.PutString(field_TemplateName, args.ArgumentObject.AsString(field_TemplateName))
 	cdocWorkspaceID.PutString(Field_TemplateParams, args.ArgumentObject.AsString(Field_TemplateParams))
-	cdocWorkspaceID.PutInt64(authnz.Field_WSID, int64(newWSID)) // nolint G115: safe to cast WSID 
+	cdocWorkspaceID.PutInt64(authnz.Field_WSID, int64(newWSID)) // nolint G115: safe to cast WSID
 
 	return
 }
@@ -390,7 +390,7 @@ func initializeWorkspaceProjector(time coreutils.ITime, federation federation.IF
 
 				wsKind := wsDescr.AsQName(authnz.Field_WSKind)
 				ep := eps[s.App()]
-				if wsError = buildWorkspace(wsDescr.AsString(field_TemplateName), ep, wsKind, federation, newWSID,
+				if wsError = buildWorkspace(wsDescr.AsString(field_TemplateName), ep, wsKind, federation, istructs.WSID(newWSID), // nolint G115
 					targetAppQName, newWSName, systemPrincipalToken_TargetApp); wsError != nil {
 					wsError = fmt.Errorf("workspace %s building: %w", wsDescr.AsString(field_TemplateName), wsError)
 				}
@@ -422,9 +422,11 @@ func initializeWorkspaceProjector(time coreutils.ITime, federation federation.IF
 			}
 
 			if wsError == nil && wsPostInitFunc != nil {
+				// nolint G115
 				wsError = wsPostInitFunc(targetAppQName, wsDescr.AsQName(authnz.Field_WSKind), istructs.WSID(newWSID), federation, systemPrincipalToken_TargetApp)
 			}
 
+			// nolint G115
 			ownerUpdated = updateOwner(istructs.WSID(rec.AsInt64(Field_OwnerWSID)), istructs.RecordID(rec.AsInt64(Field_OwnerID)), ownerApp, rec.AsString(Field_OwnerQName2),
 				istructs.WSID(newWSID), wsError, systemPrincipalToken_OwnerApp, federation)
 			return nil

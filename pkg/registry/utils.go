@@ -36,7 +36,7 @@ func GetCDocLoginID(st istructs.IState, appWSID istructs.WSID, appName string, l
 		return istructs.NullRecordID, err
 	}
 	loginHash := GetLoginHash(login)
-	kb.PutInt64(field_AppWSID, int64(appWSID))
+	kb.PutInt64(field_AppWSID, int64(appWSID)) // nolint G115
 	kb.PutString(field_AppIDLoginHash, appName+"/"+loginHash)
 	loginIdx, ok, err := st.CanExist(kb)
 	if err != nil {

@@ -454,7 +454,7 @@ func TestBuildBasicUsage(t *testing.T) {
 		{
 			dir:               "appcomplex",
 			errMsg:            "",
-			expectedWasmFiles: []string{fmt.Sprintf("%s/appcomplex/appcomplex.wasm", buildDirName)},
+			expectedWasmFiles: []string{buildDirName + "/appcomplex/appcomplex.wasm"},
 		},
 	}
 

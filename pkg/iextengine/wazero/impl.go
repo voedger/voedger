@@ -3,6 +3,7 @@
     @author Michael Saigachenko
 */
 
+// nolint G115
 package iextenginewazero
 
 import (
@@ -658,7 +659,7 @@ func (f *wazeroExtEngine) allocBuf(size uint32) (addr uint32, err error) {
 	if err != nil {
 		return 0, err
 	}
-	addr = uint32(res[0])
+	addr = uint32(res[0]) // nolint G115
 	f.pkg.allocatedBufs = append(f.pkg.allocatedBufs, &allocatedBuf{
 		addr: addr,
 		offs: 0,

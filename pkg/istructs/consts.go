@@ -8,6 +8,8 @@
 package istructs
 
 import (
+	"math"
+
 	"github.com/voedger/voedger/pkg/appdef"
 )
 
@@ -93,6 +95,7 @@ const MaxBaseWSID = 1<<WSIDClusterLShift - 1
 
 const MinReservedBaseRecordID = MaxRawRecordID + 1
 const MaxReservedBaseRecordID = MinReservedBaseRecordID + 0xffff
+const MaxAllowedWSID = math.MaxUint64 >> 1
 
 // Singleton - CDoc which has at most one record
 const FirstSingletonID = MinReservedBaseRecordID

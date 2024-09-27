@@ -19,7 +19,7 @@ import (
 )
 
 // everything is validated already
-func buildWorkspace(templateName string, ep extensionpoints.IExtensionPoint, wsKind appdef.QName, federation federation.IFederation, newWSID int64,
+func buildWorkspace(templateName string, ep extensionpoints.IExtensionPoint, wsKind appdef.QName, federation federation.IFederation, newWSID istructs.WSID,
 	targetAppQName appdef.AppQName, wsName string, systemPrincipalToken string) (err error) {
 	wsTemplateBLOBs, wsTemplateData, err := ValidateTemplate(templateName, ep, wsKind)
 	if err != nil {
@@ -65,7 +65,7 @@ func updateBLOBsIDsMap(wsData []map[string]interface{}, blobsMap blobsMap) {
 	}
 }
 
-func uploadBLOBs(blobs []coreutils.BLOBWorkspaceTemplateField, federation federation.IFederation, appQName appdef.AppQName, wsid int64, principalToken string) (blobsMap, error) {
+func uploadBLOBs(blobs []coreutils.BLOBWorkspaceTemplateField, federation federation.IFederation, appQName appdef.AppQName, wsid istructs.WSID, principalToken string) (blobsMap, error) {
 	res := blobsMap{}
 	for _, blob := range blobs {
 		logger.Info("workspace build: uploading blob", blob.Name)
@@ -76,7 +76,7 @@ func uploadBLOBs(blobs []coreutils.BLOBWorkspaceTemplateField, federation federa
 			},
 			ReadCloser: io.NopCloser(bytes.NewReader(blob.Content)),
 		}
-		newBLOBID, err := federation.UploadBLOB(appQName, istructs.WSID(wsid), blobReader, coreutils.WithAuthorizeBy(principalToken))
+		newBLOBID, err := federation.UploadBLOB(appQName, wsid, blobReader, coreutils.WithAuthorizeBy(principalToken))
 		if err != nil {
 			return nil, fmt.Errorf("blob %s: %w", blob.Name, err)
 		}

@@ -64,8 +64,6 @@ type acmeService struct {
 	http.Server
 }
 
-type BLOBMaxSizeType int64
-
 type BlobberServiceChannels []iprocbusmem.ChannelGroup
 
 type BlobberParams struct {
@@ -74,7 +72,7 @@ type BlobberParams struct {
 	BLOBWorkersNum         int
 	procBus                iprocbus.IProcBus
 	RetryAfterSecondsOn503 int
-	BLOBMaxSize            BLOBMaxSizeType
+	BLOBMaxSize            iblobstorage.BLOBMaxSizeType
 }
 
 type route struct {

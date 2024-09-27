@@ -140,7 +140,7 @@ type VVMConfig struct {
 	Quotas                     in10n.Quotas
 	StorageFactory             func() (provider istorage.IAppStorageFactory, err error)
 	BlobberServiceChannels     router.BlobberServiceChannels
-	BLOBMaxSize                router.BLOBMaxSizeType
+	BLOBMaxSize                iblobstorage.BLOBMaxSizeType
 	Name                       processors.VVMName
 	NumCommandProcessors       istructs.NumCommandProcessors
 	NumQueryProcessors         istructs.NumQueryProcessors
