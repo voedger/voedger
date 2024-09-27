@@ -156,8 +156,7 @@ func newExpireType(str string) (*expireType, error) {
 	return expire, nil
 }
 
-// nolint
-func validateBackupCronCmd(cmd *cmdType, cluster *clusterType) error {
+func validateBackupCronCmd(cmd *cmdType, _ *clusterType) error {
 
 	if len(cmd.Args) != 2 {
 		return ErrInvalidNumberOfArguments
