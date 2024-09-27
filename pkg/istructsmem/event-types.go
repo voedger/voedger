@@ -7,6 +7,7 @@ package istructsmem
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 
@@ -876,15 +877,17 @@ func (o *objectType) FillFromJSON(data map[string]any) {
 		switch fv := v.(type) {
 		case nil:
 		case float64:
-			o.PutNumber(n, fv)
+			o.PutFloat64(n, fv)
 		case istructs.RecordID:
-			o.PutNumber(n, float64(fv))
-		case int:
-			o.PutNumber(n, float64(fv))
+			o.PutRecordID(n, fv)
+		// case int:
+		// 	o.PutNumber(n, float64(fv))
 		case int32:
-			o.PutNumber(n, float64(fv))
+			o.PutInt32(n, fv)
 		case int64:
-			o.PutNumber(n, float64(fv))
+			o.PutInt64(n, fv)
+		case json.Number:
+			o.PutNumber(n, fv)
 		case string:
 			o.PutChars(n, fv)
 		case bool:

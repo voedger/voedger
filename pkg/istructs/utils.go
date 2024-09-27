@@ -7,6 +7,7 @@
 package istructs
 
 import (
+	"encoding/json"
 	"time"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -88,7 +89,7 @@ func (*NullRowWriter) PutString(string, string)      {}
 func (*NullRowWriter) PutQName(string, appdef.QName) {}
 func (*NullRowWriter) PutBool(string, bool)          {}
 func (*NullRowWriter) PutRecordID(string, RecordID)  {}
-func (*NullRowWriter) PutNumber(string, float64)     {}
+func (*NullRowWriter) PutNumber(string, json.Number) {}
 func (*NullRowWriter) PutChars(string, string)       {}
 func (*NullRowWriter) PutFromJSON(map[string]any)    {}
 

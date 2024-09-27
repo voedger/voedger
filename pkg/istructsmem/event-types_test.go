@@ -2023,7 +2023,7 @@ func Test_objectType_FillFromJSON(t *testing.T) {
 				require.EqualValues(0, o.AsInt32("int32"))
 			}},
 		{"must be ok to fill from JSON with nil values even for unknown fields",
-			`{"int32": nil, "unknown": nil}`,
+			`{"int32": null, "unknown": null}`,
 			func(o istructs.IObject, err error) {
 				require.NoError(err)
 				require.Equal(test.testObj, o.QName())
@@ -2106,7 +2106,9 @@ func Test_objectType_FillFromJSON(t *testing.T) {
 			require.NotNil(b)
 
 			var j map[string]any
-			_ = json.Unmarshal([]byte(tt.data), &j)
+			d := json.NewDecoder(strings.NewReader(tt.data))
+			d.UseNumber()
+			require.NoError(d.Decode(&j))
 			b.FillFromJSON(j)
 
 			tt.check(b.Build())

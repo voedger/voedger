@@ -7,10 +7,10 @@ package cluster
 
 import (
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
-	"strconv"
 
 	"github.com/blastrain/vitess-sqlparser/sqlparser"
 	"github.com/voedger/voedger/pkg/appdef"
@@ -150,11 +150,7 @@ func exprToInterface(expr sqlparser.Expr) (val interface{}, err error) {
 		case sqlparser.StrVal:
 			return string(typed.Val), nil
 		case sqlparser.IntVal, sqlparser.FloatVal:
-			if val, err = strconv.ParseFloat(string(typed.Val), bitSize64); err != nil {
-				// notest: avoided already by sql parser
-				return nil, err
-			}
-			return val, nil
+			return json.Number(string(typed.Val)), nil
 		case sqlparser.HexNum:
 			hexBytes := typed.Val[2:] // cut `0x` prefix
 			val := make([]byte, len(hexBytes)/2)

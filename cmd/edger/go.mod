@@ -1,13 +1,13 @@
 module github.com/voedger/voedger/cmd/edger
 
-go 1.21.4
+go 1.23.1
 
 replace github.com/voedger/voedger => ../..
 
 require (
 	github.com/spf13/cobra v1.8.0
 	github.com/stretchr/testify v1.9.0
-	github.com/voedger/voedger v0.0.0-00010101000000-000000000000
+	github.com/voedger/voedger v0.0.0-20240925154640-cd63a37232a6
 )
 
 require (

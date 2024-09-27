@@ -247,7 +247,7 @@ func execCmdCreateWorkspace(time coreutils.ITime) istructsmem.ExecCommandClosure
 				return nil
 			}
 			// validate wsKindInitializationData
-			if err := json.Unmarshal([]byte(wsKindInitializationDataStr), &wsKindInitializationData); err != nil {
+			if err := coreutils.JSONUnmarshal([]byte(wsKindInitializationDataStr), &wsKindInitializationData); err != nil {
 				return fmt.Errorf("failed to unmarshal workspace initialization data: %w", err)
 			}
 			if err := validateWSKindInitializationData(as, wsKindInitializationData, wsKindType); err != nil {

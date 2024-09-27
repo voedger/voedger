@@ -250,7 +250,7 @@ func newQueryProcessorPipeline(requestCtx context.Context, authn iauthnz.IAuthen
 				}
 				return nil
 			}
-			err = json.Unmarshal(qw.msg.Body(), &qw.requestData)
+			err = coreutils.JSONUnmarshal(qw.msg.Body(), &qw.requestData)
 			return coreutils.WrapSysError(err, http.StatusBadRequest)
 		}),
 		operator("validate: get exec query args", func(ctx context.Context, qw *queryWork) (err error) {
@@ -522,7 +522,9 @@ type outputRow struct {
 	values   []interface{}
 }
 
-func (r *outputRow) Set(alias string, value interface{}) { r.values[r.keyToIdx[alias]] = value }
+func (r *outputRow) Set(alias string, value interface{}) {
+	r.values[r.keyToIdx[alias]] = value
+}
 func (r *outputRow) Values() []interface{}               { return r.values }
 func (r *outputRow) Value(alias string) interface{}      { return r.values[r.keyToIdx[alias]] }
 func (r *outputRow) MarshalJSON() ([]byte, error)        { return json.Marshal(r.values) }

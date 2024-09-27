@@ -144,7 +144,7 @@ func TestWrongTypes(t *testing.T) {
 		{
 			name: "Equals filter epsilon must be a float64",
 			body: `{"filters":[{"expr":"eq","args":{"field":"id","value":1,"options":{"epsilon":"wrong"}}}]}`,
-			err:  "filters: 'eq' filter: field 'epsilon' must be a float64: field type mismatch",
+			err:  "filters: 'eq' filter: field 'epsilon' must be json.Number: field type mismatch",
 		},
 		{
 			name: "Not equals filter wrong args",
@@ -154,7 +154,7 @@ func TestWrongTypes(t *testing.T) {
 		{
 			name: "Not equals filter epsilon must be a float64",
 			body: `{"filters":[{"expr":"notEq","args":{"field":"id","value":1,"options":{"epsilon":"wrong"}}}]}`,
-			err:  "filters: 'notEq' filter: field 'epsilon' must be a float64: field type mismatch",
+			err:  "filters: 'notEq' filter: field 'epsilon' must be json.Number: field type mismatch",
 		},
 		{
 			name: "Greater filter wrong args",
@@ -229,12 +229,12 @@ func TestWrongTypes(t *testing.T) {
 		{
 			name: "Count must be a int64",
 			body: `{"count":{}}`,
-			err:  "field 'count' must be an int64: field type mismatch",
+			err:  "field 'count' must be json.Number: field type mismatch",
 		},
 		{
 			name: "StartFrom must be a int64",
 			body: `{"startFrom":{}}`,
-			err:  "field 'startFrom' must be an int64: field type mismatch",
+			err:  "field 'startFrom' must be json.Number: field type mismatch",
 		},
 		{
 			name: "Root element fields must be present in result fields",
