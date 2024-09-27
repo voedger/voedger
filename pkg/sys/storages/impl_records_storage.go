@@ -11,6 +11,7 @@ import (
 	"reflect"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys"
@@ -71,11 +72,19 @@ func (b *recordsKeyBuilder) Equals(src istructs.IKeyBuilder) bool {
 }
 func (b *recordsKeyBuilder) PutInt64(name string, value int64) {
 	if name == sys.Storage_Record_Field_WSID {
-		b.wsid = istructs.WSID(value)
+		wsid, err := coreutils.Int64ToWSID(value)
+		if err != nil {
+			panic(err)
+		}
+		b.wsid = wsid
 		return
 	}
 	if name == sys.Storage_Record_Field_ID {
-		b.id = istructs.RecordID(value)
+		recID, err := coreutils.Int64ToRecordID(value)
+		if err != nil {
+			panic(err)
+		}
+		b.id = recID
 		return
 	}
 	b.baseKeyBuilder.PutInt64(name, value)
@@ -273,7 +282,11 @@ func (b *recordsValueBuilder) Equal(src istructs.IStateValueBuilder) bool {
 func (b *recordsValueBuilder) PutInt32(name string, value int32) { b.rw.PutInt32(name, value) }
 func (b *recordsValueBuilder) PutInt64(name string, value int64) {
 	if b.fc.isStructureInt64FieldRecordID(b.entity, name) {
-		b.rw.PutRecordID(name, istructs.RecordID(value))
+		recID, err := coreutils.Int64ToRecordID(value)
+		if err != nil {
+			panic(err)
+		}
+		b.rw.PutRecordID(name, recID)
 	} else {
 		b.rw.PutInt64(name, value)
 	}

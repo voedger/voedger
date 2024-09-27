@@ -25,7 +25,7 @@ import (
 var (
 	//go:embed logo.png
 	blob    []byte
-	maxSize int64 = 19266
+	maxSize iblobstorage.BLOBMaxSizeType = 19266
 )
 
 func TestBasicUsage(t *testing.T) {

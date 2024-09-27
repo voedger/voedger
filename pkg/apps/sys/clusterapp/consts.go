@@ -26,5 +26,5 @@ var (
 	ClusterAppWSID            = istructs.NewWSID(istructs.CurrentClusterID(), istructs.FirstBaseAppWSID)    // 140737488420864
 	ClusterAppPseudoWSID      = istructs.NewWSID(istructs.CurrentClusterID(), istructs.FirstPseudoBaseWSID) // 140737488355328
 	ClusterAppWSIDPartitionID = coreutils.AppPartitionID(ClusterAppWSID, ClusterAppNumPartitions)           // 0
-	ClusterAppNumEngines      = [appparts.ProcessorKind_Count]int{int(ClusterAppNumPartitions), 1, int(ClusterAppNumPartitions)}
+	ClusterAppNumEngines      = [appparts.ProcessorKind_Count]uint{uint(ClusterAppNumPartitions), 1, uint(ClusterAppNumPartitions)}
 )

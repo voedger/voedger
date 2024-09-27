@@ -47,17 +47,17 @@ type AppPartitionFactory func(ctx context.Context, appQName appdef.AppQName, asy
 type AsyncActualizersFactory func(ctx context.Context, appQName appdef.AppQName, asyncProjectors istructs.Projectors, partitionID istructs.PartitionID,
 	tokens itokens.ITokens, federation federation.IFederation, opts []state.StateOptFunc) pipeline.ISyncOperator
 type OperatorAppServicesFactory func(ctx context.Context) pipeline.ISyncOperator
-type CommandChannelFactory func(channelIdx int) commandprocessor.CommandChannel
+type CommandChannelFactory func(channelIdx uint) commandprocessor.CommandChannel
 type QueryChannel iprocbus.ServiceChannel
 type AdminEndpointServiceOperator pipeline.ISyncOperator
 type PublicEndpointServiceOperator pipeline.ISyncOperator
 type BlobberAppClusterID istructs.ClusterAppID
 type BlobStorage iblobstorage.IBLOBStorage
 type BlobberAppStruct istructs.IAppStructs
-type CommandProcessorsChannelGroupIdxType int
-type QueryProcessorsChannelGroupIdxType int
+type CommandProcessorsChannelGroupIdxType uint
+type QueryProcessorsChannelGroupIdxType uint
 type MaxPrepareQueriesType int
-type ServiceChannelFactory func(pcgt ProcessorChannelType, channelIdx int) iprocbus.ServiceChannel
+type ServiceChannelFactory func(pcgt ProcessorChannelType, channelIdx uint) iprocbus.ServiceChannel
 type AppStorageFactory func(appQName appdef.AppQName, appStorage istorage.IAppStorage) istorage.IAppStorage
 type StorageCacheSizeType int
 type VVMApps []appdef.AppQName
@@ -140,7 +140,7 @@ type VVMConfig struct {
 	Quotas                     in10n.Quotas
 	StorageFactory             func() (provider istorage.IAppStorageFactory, err error)
 	BlobberServiceChannels     router.BlobberServiceChannels
-	BLOBMaxSize                router.BLOBMaxSizeType
+	BLOBMaxSize                iblobstorage.BLOBMaxSizeType
 	Name                       processors.VVMName
 	NumCommandProcessors       istructs.NumCommandProcessors
 	NumQueryProcessors         istructs.NumQueryProcessors

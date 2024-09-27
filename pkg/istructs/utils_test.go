@@ -65,6 +65,11 @@ func TestBasicUsage_NewWSID(t *testing.T) {
 	}
 }
 
+func TestBaseWSIDOverflow(t *testing.T) {
+	NewWSID(CurrentClusterID(), MaxBaseWSID)
+	require.Panics(t, func() { NewWSID(CurrentClusterID(), MaxBaseWSID+1) })
+}
+
 func TestBasicUsage_NewRecordID(t *testing.T) {
 	require := require.New(t)
 

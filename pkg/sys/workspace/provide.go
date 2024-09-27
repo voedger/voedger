@@ -58,6 +58,8 @@ func Provide(sr istructsmem.IStatelessResources, time coreutils.ITime, tokensAPI
 		syncProjectorChildWorkspaceIdx(),
 		syncProjectorWorkspaceIDIdx(),
 	)
+
+	// TODO: validate cdoc.sys.Subject.SubjectKind
 }
 
 // proj.sys.ChildWorkspaceIdx

@@ -7,6 +7,7 @@ package istructsmem
 
 import (
 	"errors"
+	"math"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -366,6 +367,14 @@ func validateEventCUDs(ev *eventType) (err error) {
 			return validateErrorf(ECode_EEmptyCUDs, errCUDsMissed, ev, ErrCUDsMissed)
 		}
 		return nil
+	}
+
+	if len(ev.cud.creates) > math.MaxUint16 {
+		return validateErrorf(ECode_TooManyCreates, "creates number must not be more than %d", math.MaxUint16)
+	}
+
+	if len(ev.cud.updates) > math.MaxUint16 {
+		return validateErrorf(ECode_TooManyUpdates, "updates number must not be more than %d", math.MaxUint16)
 	}
 
 	for _, rec := range ev.cud.creates {

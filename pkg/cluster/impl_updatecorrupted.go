@@ -100,15 +100,7 @@ func validateQuery_Corrupted(update update) error {
 			return errors.New("wsid must be provided for update corrupted wlog")
 		}
 	case plog:
-		partno := istructs.NumAppPartitions(update.partitionID)
-		partsCount, err := update.appParts.AppPartsCount(update.AppQName)
-		if err != nil {
-			// notest
-			return err
-		}
-		if partno >= partsCount {
-			return fmt.Errorf("provided partno %d is out of %d declared by app %s", partno, partsCount, update.AppQName)
-		}
+		// PartitionID correctness is checked in [parseAndValidateQuery]
 	default:
 		return fmt.Errorf("invalid log view %s, sys.plog or sys.wlog are only allowed", update.QName)
 	}

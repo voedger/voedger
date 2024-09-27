@@ -280,7 +280,7 @@ func TestSqlQuery_readLogParams(t *testing.T) {
 		body := `{"args":{"Query":"select * from sys.plog where Offset >= 2.1"}}`
 		resp := vit.PostWS(ws, "q.sys.SqlQuery", body, coreutils.Expect500())
 
-		resp.RequireError(t, `strconv.ParseInt: parsing "2.1": invalid syntax`)
+		resp.RequireError(t, `strconv.ParseUint: parsing "2.1": invalid syntax`)
 	})
 	t.Run("Should return error when Offset value invalid", func(t *testing.T) {
 		body := `{"args":{"Query":"select * from sys.plog where Offset >= 0"}}`

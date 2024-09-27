@@ -79,7 +79,7 @@ func provideIssuePrincipalTokenExec(itokens itokens.ITokens) istructsmem.ExecQue
 		principalPayload := payloads.PrincipalPayload{
 			Login:       args.ArgumentObject.AsString(authnz.Field_Login),
 			SubjectKind: istructs.SubjectKindType(cdocLogin.AsInt32(authnz.Field_SubjectKind)),
-			ProfileWSID: istructs.WSID(result.profileWSID),
+			ProfileWSID: istructs.WSID(result.profileWSID), //nolint G115 since WSID is created by NewWSID()
 		}
 		ttl := time.Duration(args.ArgumentObject.AsInt32(field_TTLHours)) * time.Hour
 		if ttl == 0 {

@@ -159,7 +159,7 @@ func setDiscordWebhookCe(cluster *clusterType, webhook string) error {
 	host := ceNodeName
 
 	if webhook == emptyDiscordWebhookUrl {
-		loggerInfo(fmt.Sprintf("Removing Discord webhook from %s", host))
+		loggerInfo("Removing Discord webhook from " + host)
 	} else {
 		loggerInfo(fmt.Sprintf("Adding Discord webhook %s to %s", webhook, host))
 	}
@@ -178,7 +178,7 @@ func setDiscordWebhookCe(cluster *clusterType, webhook string) error {
 		return err
 	}
 
-	loggerInfo(fmt.Sprintf("Restarting alertmanager on %s", host))
+	loggerInfo("Restarting alertmanager on " + host)
 	if err = newScriptExecuter(cluster.sshKey, "").
 		run("ce/docker-container-restart.sh", alertmanager); err != nil {
 		return err

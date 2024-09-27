@@ -390,11 +390,9 @@ func (k *VerificationKind) UnmarshalJSON(data []byte) (err error) {
 		}
 	}
 
-	var i uint64
-	const base, wordBits = 10, 16
-	i, err = strconv.ParseUint(text, base, wordBits)
+	uint8Val, err := utils.StringToUint8(text)
 	if err == nil {
-		*k = VerificationKind(i)
+		*k = VerificationKind(uint8Val)
 	}
 	return err
 }
