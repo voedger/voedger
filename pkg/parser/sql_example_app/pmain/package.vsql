@@ -168,7 +168,7 @@ WORKSPACE MyWorkspace (
             TypeWithKind, -- Fieldset
             Number int
         )
-    );
+    ) WITH Tags=(BackofficeTag);
 
     -- Workspace-level extensions
     EXTENSION ENGINE BUILTIN (
@@ -279,12 +279,12 @@ WORKSPACE MyWorkspace (
 	LIMIT BackofficeLimit ON TAG BackofficeTag WITH RATE BackofficeRate; -- Limit on anything with tag
 
     -- ACLs
+    GRANT SELECT ON QUERY Query1 TO LocationUser;
     GRANT ALL ON ALL TABLES WITH TAG BackofficeTag TO LocationManager;
     GRANT INSERT,UPDATE ON ALL TABLES WITH TAG PosTag TO LocationUser;
     GRANT SELECT ON TABLE untill.Prices TO LocationUser;
     GRANT SELECT(Price) ON TABLE untill.Prices TO LocationUser;
     GRANT INSERT ON COMMAND NewOrder TO LocationUser;
-    GRANT SELECT ON QUERY Query1 TO LocationUser;
     GRANT SELECT ON ALL QUERIES WITH TAG PosTag TO main.LocationUser;
     --GRANT INSERT ON WORKSPACE MyWorkspace TO LocationUser;
     GRANT SELECT ON VIEW XZReports TO LocationUser;

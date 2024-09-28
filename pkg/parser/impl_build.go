@@ -156,30 +156,54 @@ func (c *buildContext) roles() error {
 }
 
 func (c *buildContext) grantsAndRevokes() error {
+	grants := func(stmts []WorkspaceStatement) {
+		for _, s := range stmts {
+			if s.Grant != nil {
+				comments := s.Grant.GetComments()
+				if (s.Grant.AllTablesWithTag != nil && s.Grant.AllTablesWithTag.All) || (s.Grant.Table != nil && s.Grant.Table.All != nil) {
+					if len(s.Grant.on) > 0 {
+						c.builder.GrantAll(s.Grant.on, s.Grant.role, comments...)
+					}
+					return
+				}
+				if len(s.Grant.on) > 0 {
+					c.builder.Grant(s.Grant.ops, s.Grant.on, s.Grant.columns, s.Grant.role, comments...)
+				}
+			}
+		}
+	}
+	revokes := func(stmts []WorkspaceStatement) {
+		for _, s := range stmts {
+			if s.Revoke != nil {
+				comments := s.Revoke.GetComments()
+				if (s.Revoke.AllTablesWithTag != nil && s.Revoke.AllTablesWithTag.All) || (s.Revoke.Table != nil && s.Revoke.Table.All != nil) {
+					if len(s.Revoke.on) > 0 {
+						c.builder.RevokeAll(s.Revoke.on, s.Revoke.role, comments...)
+					}
+					return
+				}
+				if len(s.Revoke.on) > 0 {
+					c.builder.Revoke(s.Revoke.ops, s.Revoke.on, s.Revoke.columns, s.Revoke.role, comments...)
+				}
+			}
+		}
+	}
+	handleWorkspace := func(stmts []WorkspaceStatement) {
+		grants(stmts)
+		revokes(stmts)
+	}
+
 	for _, schema := range c.app.Packages {
-		iteratePackageStmt(schema, &c.basicContext, func(grant *GrantStmt, ictx *iterateCtx) {
-			comments := grant.GetComments()
-			if (grant.AllTablesWithTag != nil && grant.AllTablesWithTag.All) || (grant.Table != nil && grant.Table.All != nil) {
-				if len(grant.on) > 0 {
-					c.builder.GrantAll(grant.on, grant.role, comments...)
-				}
-				return
+		iteratePackageStmt(schema, &c.basicContext, func(w *WorkspaceStmt, ictx *iterateCtx) {
+			for _, inheritedWs := range w.inheritedWorkspaces {
+				handleWorkspace(inheritedWs.Statements)
 			}
-			if len(grant.on) > 0 {
-				c.builder.Grant(grant.ops, grant.on, grant.columns, grant.role, comments...)
-			}
+			handleWorkspace(w.Statements)
 		})
-		iteratePackageStmt(schema, &c.basicContext, func(revoke *RevokeStmt, ictx *iterateCtx) {
-			comments := revoke.GetComments()
-			if (revoke.AllTablesWithTag != nil && revoke.AllTablesWithTag.All) || (revoke.Table != nil && revoke.Table.All != nil) {
-				if len(revoke.on) > 0 {
-					c.builder.RevokeAll(revoke.on, revoke.role, comments...)
-				}
-				return
-			}
-			if len(revoke.on) > 0 {
-				c.builder.Revoke(revoke.ops, revoke.on, revoke.columns, revoke.role, comments...)
-			}
+	}
+	for _, schema := range c.app.Packages {
+		iteratePackageStmt(schema, &c.basicContext, func(w *AlterWorkspaceStmt, ictx *iterateCtx) {
+			handleWorkspace(w.Statements)
 		})
 	}
 	return nil

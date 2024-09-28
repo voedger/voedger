@@ -119,6 +119,10 @@ func getCurrentWorkspace(ictx *iterateCtx) *WorkspaceStmt {
 	var ic *iterateCtx = ictx
 	var ws *WorkspaceStmt = nil
 	for ic != nil {
+		if _, isWorkspace := ic.collection.(*AlterWorkspaceStmt); isWorkspace {
+			ws = ic.collection.(*AlterWorkspaceStmt).alteredWorkspace
+			break
+		}
 		if _, isWorkspace := ic.collection.(*WorkspaceStmt); isWorkspace {
 			ws = ic.collection.(*WorkspaceStmt)
 			break

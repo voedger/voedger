@@ -2285,14 +2285,14 @@ func Test_Constraints(t *testing.T) {
 func Test_Grants(t *testing.T) {
 	require := assertions(t)
 
-	require.AppSchemaError(`
+	t.Run("Basic", func(t *testing.T) {
+		require.AppSchemaError(`
 	APPLICATION app1();
 	ROLE role1;
 	WORKSPACE ws1 (
 		GRANT ALL ON TABLE Fake TO app1;
 		GRANT INSERT ON COMMAND Fake TO role1;
 		GRANT SELECT ON QUERY Fake TO role1;
-		GRANT INSERT ON WORKSPACE Fake TO role1;
 		TABLE Tbl INHERITS CDoc();
 		GRANT ALL(FakeCol) ON TABLE Tbl TO role1;
 		GRANT INSERT,UPDATE(FakeCol) ON TABLE Tbl TO role1;
@@ -2310,16 +2310,31 @@ func Test_Grants(t *testing.T) {
 		GRANT SELECT ON ALL VIEWS WITH TAG x TO role1;
 	);
 	`, "file.vsql:5:30: undefined role: app1",
-		"file.vsql:5:22: undefined table: Fake",
-		"file.vsql:6:27: undefined command: Fake",
-		"file.vsql:7:25: undefined query: Fake",
-		"file.vsql:8:29: undefined workspace: Fake",
-		"file.vsql:10:13: undefined field FakeCol",
-		"file.vsql:11:23: undefined field FakeCol",
-		"file.vsql:12:41: undefined tag: x",
-		"file.vsql:22:24: undefined view: Fake",
-		"file.vsql:23:38: undefined tag: x",
-	)
+			"file.vsql:5:22: undefined table: Fake",
+			"file.vsql:6:27: undefined command: Fake",
+			"file.vsql:7:25: undefined query: Fake",
+			"file.vsql:9:13: undefined field FakeCol",
+			"file.vsql:10:23: undefined field FakeCol",
+			"file.vsql:11:41: undefined tag: x",
+			"file.vsql:21:24: undefined view: Fake",
+			"file.vsql:22:38: undefined tag: x",
+		)
+	})
+
+	t.Run("GRANT follows REVOKE in WORKSPACE", func(t *testing.T) {
+		require.AppSchemaError(`APPLICATION test();
+			ROLE role1;
+			TABLE Table1 INHERITS CDoc(
+				Field1 int32
+			);
+			WORKSPACE AppWorkspaceWS (
+				USE TABLE Table1;
+				REVOKE ALL ON TABLE Table1 FROM role1;
+				GRANT ALL ON TABLE Table1 TO role1;
+				
+			);`, "file.vsql:9:5: GRANT follows REVOKE in the same container")
+	})
+
 }
 
 func Test_UndefinedType(t *testing.T) {

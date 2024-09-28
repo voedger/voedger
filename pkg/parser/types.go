@@ -230,7 +230,8 @@ type WorkspaceStmt struct {
 	Statements []WorkspaceStatement `parser:"@@? (';' @@)* ';'? ')'"`
 
 	// filled on the analysis stage
-	qNames map[appdef.QName]statementNode
+	qNames              map[appdef.QName]statementNode
+	inheritedWorkspaces []*WorkspaceStmt
 }
 
 func (s *WorkspaceStmt) registerQName(qn appdef.QName, stmt statementNode) {
@@ -562,8 +563,8 @@ func (s *UseTableStmt) registerQName(qn appdef.QName, stmt statementNode) {
 
 type UseWorkspaceStmt struct {
 	Statement
-	Workspace Identifier    `parser:"'USE' 'WORKSPACE' @@"`
-	useWs     statementNode // filled on the analysis stage
+	Workspace Identifier     `parser:"'USE' 'WORKSPACE' @@"`
+	useWs     *statementNode // filled on the analysis stage
 }
 
 /*type sequenceStmt struct {

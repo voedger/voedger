@@ -179,8 +179,7 @@ func analyseGrantOrRevoke(ToOrFrom DefQName, grant *GrantOrRevoke, c *iterateCtx
 		cmd, pkg, err := resolveInCurrentWs[*CommandStmt](grant.On, c)
 		if err != nil {
 			c.stmtErr(&grant.On.Pos, err)
-		}
-		if cmd != nil {
+		} else if cmd != nil {
 			grant.on = append(grant.on, pkg.NewQName(cmd.Name))
 			grant.ops = append(grant.ops, appdef.OperationKind_Execute)
 		} else {
@@ -192,8 +191,7 @@ func analyseGrantOrRevoke(ToOrFrom DefQName, grant *GrantOrRevoke, c *iterateCtx
 		query, pkg, err := resolveInCurrentWs[*QueryStmt](grant.On, c)
 		if err != nil {
 			c.stmtErr(&grant.On.Pos, err)
-		}
-		if query != nil {
+		} else if query != nil {
 			grant.on = append(grant.on, pkg.NewQName(query.Name))
 			grant.ops = append(grant.ops, appdef.OperationKind_Execute)
 		} else {
@@ -205,14 +203,9 @@ func analyseGrantOrRevoke(ToOrFrom DefQName, grant *GrantOrRevoke, c *iterateCtx
 		view, pkg, err := resolveInCurrentWs[*ViewStmt](grant.On, c)
 		if err != nil {
 			c.stmtErr(&grant.On.Pos, err)
-		}
-		if view != nil {
+		} else if view != nil {
 			grant.on = append(grant.on, pkg.NewQName(view.Name))
 			grant.ops = append(grant.ops, appdef.OperationKind_Select)
-		} else {
-			c.stmtErr(&grant.On.Pos, ErrUndefinedView(grant.On))
-		}
-		if view != nil {
 			// check columns
 			checkColumn := func(column Identifier) error {
 				for _, f := range view.Items {
@@ -232,6 +225,8 @@ func analyseGrantOrRevoke(ToOrFrom DefQName, grant *GrantOrRevoke, c *iterateCtx
 					c.stmtErr(&i.Pos, err)
 				}
 			}
+		} else {
+			c.stmtErr(&grant.On.Pos, ErrUndefinedView(grant.On))
 		}
 	}
 
@@ -304,8 +299,7 @@ func analyseGrantOrRevoke(ToOrFrom DefQName, grant *GrantOrRevoke, c *iterateCtx
 		table, pkg, err := resolveInCurrentWs[*TableStmt](grant.On, c)
 		if err != nil {
 			c.stmtErr(&grant.On.Pos, err)
-		}
-		if table != nil {
+		} else if table != nil {
 			grant.on = append(grant.on, pkg.NewQName(table.Name))
 			for _, item := range grant.Table.Items {
 				if item.Insert {
@@ -394,7 +388,7 @@ func analyseUseTable(u *UseTableStmt, c *iterateCtx) {
 		var iter func(tbl *TableStmt)
 		iter = func(tbl *TableStmt) {
 			if !tbl.Abstract {
-				u.qNames[pkg.NewQName(tbl.Name)] = statementNode{Pkg: pkg, Stmt: tbl}
+				u.registerQName(pkg.NewQName(tbl.Name), statementNode{Pkg: pkg, Stmt: tbl})
 			}
 			for _, item := range tbl.Items {
 				if item.NestedTable != nil {
@@ -431,7 +425,7 @@ func analyseUseWorkspace(u *UseWorkspaceStmt, c *iterateCtx) {
 		if f.Abstract {
 			return ErrUseOfAbstractWorkspace(string(u.Workspace.Value))
 		}
-		u.useWs = statementNode{Pkg: pkg, Stmt: f}
+		u.useWs = &statementNode{Pkg: pkg, Stmt: f}
 		return nil
 	}
 	err := resolveInCtx(DefQName{Package: Ident(c.pkg.Name), Name: u.Workspace.Value}, c, resolveFunc)
@@ -958,7 +952,9 @@ func useStmtInWs(wsctx *wsCtx, stmtPackage *PackageSchemaAST, stmt interface{}) 
 		}
 	}
 	if useWorkspace, ok := stmt.(*UseWorkspaceStmt); ok {
-		wsctx.ws.registerQName(useWorkspace.useWs.qName(), useWorkspace.useWs)
+		if useWorkspace.useWs != nil {
+			wsctx.ws.registerQName(useWorkspace.useWs.qName(), *useWorkspace.useWs)
+		}
 	}
 }
 
@@ -975,7 +971,7 @@ func analyseWorkspace(v *WorkspaceStmt, c *iterateCtx) {
 	var checkChain func(qn DefQName) error
 
 	checkChain = func(qn DefQName) error {
-		resolveFunc := func(w *WorkspaceStmt, _ *PackageSchemaAST) error {
+		resolveFunc := func(w *WorkspaceStmt, wp *PackageSchemaAST) error {
 			if !w.Abstract {
 				return ErrBaseWorkspaceMustBeAbstract
 			}
@@ -991,6 +987,7 @@ func analyseWorkspace(v *WorkspaceStmt, c *iterateCtx) {
 					return e
 				}
 			}
+			v.inheritedWorkspaces = append(v.inheritedWorkspaces, w)
 			return nil
 		}
 		return resolveInCtx(qn, c, resolveFunc)
@@ -1047,6 +1044,18 @@ func analyseWorkspace(v *WorkspaceStmt, c *iterateCtx) {
 	}
 
 	iter(v, wsc, v)
+
+	// GRANT shall not follow REVOKE
+	revokeFound := false
+	for _, s := range v.Statements {
+		if s.Revoke != nil {
+			revokeFound = true
+		}
+		if s.Grant != nil && revokeFound {
+			c.stmtErr(&s.Grant.Pos, ErrGrantFollowsRevoke)
+		}
+
+	}
 }
 
 type wsCtx struct {
