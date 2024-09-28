@@ -156,6 +156,8 @@ WORKSPACE MyWorkspace (
     -- To include table or workspace declared in different place of the schema, they must be USEd:
 	USE TABLE SubscriptionProfile;
     USE WORKSPACE MyWorkspace;  -- It's now possible to create MyWorkspace in MyWorkspace hierarchy
+    USE TABLE untill.Prices;
+    USE TABLE untill.Promotions;
 
     -- Declare table within workspace
     TABLE WsTable INHERITS CDoc (

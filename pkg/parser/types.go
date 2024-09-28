@@ -41,6 +41,15 @@ type PackageFS struct {
 	FS   coreutils.IReadFS
 }
 
+type statementNode struct {
+	Pkg  *PackageSchemaAST
+	Stmt INamedStatement
+}
+
+func (s *statementNode) qName() appdef.QName {
+	return s.Pkg.NewQName(Ident(s.Stmt.GetName()))
+}
+
 type Ident string
 
 func (b *Ident) Capture(values []string) error {
@@ -221,12 +230,19 @@ type WorkspaceStmt struct {
 	Statements []WorkspaceStatement `parser:"@@? (';' @@)* ';'? ')'"`
 
 	// filled on the analysis stage
-	qNames []appdef.QName
+	qNames map[appdef.QName]statementNode
+}
+
+func (s *WorkspaceStmt) registerQName(qn appdef.QName, stmt statementNode) {
+	if s.qNames == nil {
+		s.qNames = make(map[appdef.QName]statementNode)
+	}
+	s.qNames[qn] = stmt
 }
 
 func (s *WorkspaceStmt) containsQName(qName appdef.QName) bool {
-	for i := 0; i < len(s.qNames); i++ {
-		if s.qNames[i] == qName {
+	for k := range s.qNames {
+		if k == qName {
 			return true
 		}
 	}
@@ -534,14 +550,20 @@ type UseTableStmt struct {
 	AllTables bool        `parser:"(@'*'"`
 	TableName *Identifier `parser:"| @@)"`
 
-	qNames []appdef.QName // filled on the analysis stage
+	qNames map[appdef.QName]statementNode // filled on the analysis stage
+}
+
+func (s *UseTableStmt) registerQName(qn appdef.QName, stmt statementNode) {
+	if s.qNames == nil {
+		s.qNames = make(map[appdef.QName]statementNode)
+	}
+	s.qNames[qn] = stmt
 }
 
 type UseWorkspaceStmt struct {
 	Statement
-	Workspace Identifier `parser:"'USE' 'WORKSPACE' @@"`
-
-	qName appdef.QName // filled on the analysis stage
+	Workspace Identifier    `parser:"'USE' 'WORKSPACE' @@"`
+	useWs     statementNode // filled on the analysis stage
 }
 
 /*type sequenceStmt struct {
@@ -641,9 +663,10 @@ type GrantAllTablesWithTagActions struct {
 	Items []GrantAllTablesWithTagAction `parser:"(@@ (',' @@)*)"`
 }
 
-type GrantViewColumns struct {
-	Pos     lexer.Position
-	Columns []Identifier `parser:"( SELECT '(' @@ (',' @@)* ')' ONVIEW)"`
+type GrantView struct {
+	Pos        lexer.Position
+	AllColumns bool         `parser:"@SELECTONVIEW | "`
+	Columns    []Identifier `parser:"( SELECT '(' @@ (',' @@)* ')' ONVIEW)"`
 }
 
 type GrantOrRevoke struct {
@@ -654,8 +677,7 @@ type GrantOrRevoke struct {
 	AllViewsWithTag      bool                          `parser:"| @SELECTONALLVIEWSWITHTAG"`
 	Workspace            bool                          `parser:"| @INSERTONWORKSPACE"`
 	AllWorkspacesWithTag bool                          `parser:"| @INSERTONALLWORKSPACESWITHTAG"`
-	View                 bool                          `parser:"| @SELECTONVIEW"`
-	ViewColumns          *GrantViewColumns             `parser:"| @@ "`
+	View                 *GrantView                    `parser:"| @@ "`
 	AllTablesWithTag     *GrantAllTablesWithTagActions `parser:"| (@@ ONALLTABLESWITHTAG)"`
 	Table                *GrantTableActions            `parser:"| (@@ ONTABLE) )"`
 	On                   DefQName                      `parser:"@@"`

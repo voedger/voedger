@@ -42,9 +42,10 @@ func (c *buildContext) build() error {
 		c.commands,
 		c.projectors,
 		c.jobs,
-		c.grantsAndRevokes,
+		c.roles,
 		c.queries,
 		c.workspaces,
+		c.grantsAndRevokes,
 		c.packages,
 	}
 	for _, step := range steps {
@@ -59,9 +60,6 @@ func (c *buildContext) build() error {
 func supported(stmt interface{}) bool {
 	// FIXME: this must be empty in the end
 	if _, ok := stmt.(*TagStmt); ok {
-		return false
-	}
-	if _, ok := stmt.(*RoleStmt); ok {
 		return false
 	}
 	if _, ok := stmt.(*RateStmt); ok {
@@ -120,7 +118,7 @@ func (c *buildContext) workspaces() error {
 		if wb.w.Descriptor != nil {
 			wb.bld.SetDescriptor(wb.pkg.NewQName(wb.w.Descriptor.Name))
 		}
-		for _, qn := range wb.w.qNames {
+		for qn := range wb.w.qNames {
 			wb.bld.AddType(qn)
 		}
 	}
@@ -146,23 +144,42 @@ func (c *buildContext) types() error {
 	return nil
 }
 
+func (c *buildContext) roles() error {
+	for _, schema := range c.app.Packages {
+		iteratePackageStmt(schema, &c.basicContext, func(role *RoleStmt, ictx *iterateCtx) {
+			rb := c.builder.AddRole(schema.NewQName(role.Name))
+			c.addComments(role, rb)
+		})
+	}
+	return nil
+
+}
+
 func (c *buildContext) grantsAndRevokes() error {
 	for _, schema := range c.app.Packages {
 		iteratePackageStmt(schema, &c.basicContext, func(grant *GrantStmt, ictx *iterateCtx) {
 			comments := grant.GetComments()
 			if (grant.AllTablesWithTag != nil && grant.AllTablesWithTag.All) || (grant.Table != nil && grant.Table.All != nil) {
-				c.builder.GrantAll(grant.on, grant.role, comments...)
+				if len(grant.on) > 0 {
+					c.builder.GrantAll(grant.on, grant.role, comments...)
+				}
 				return
 			}
-			c.builder.Grant(grant.ops, grant.on, grant.columns, grant.role, comments...)
+			if len(grant.on) > 0 {
+				c.builder.Grant(grant.ops, grant.on, grant.columns, grant.role, comments...)
+			}
 		})
 		iteratePackageStmt(schema, &c.basicContext, func(revoke *RevokeStmt, ictx *iterateCtx) {
 			comments := revoke.GetComments()
 			if (revoke.AllTablesWithTag != nil && revoke.AllTablesWithTag.All) || (revoke.Table != nil && revoke.Table.All != nil) {
-				c.builder.RevokeAll(revoke.on, revoke.role, comments...)
+				if len(revoke.on) > 0 {
+					c.builder.RevokeAll(revoke.on, revoke.role, comments...)
+				}
 				return
 			}
-			c.builder.Revoke(revoke.ops, revoke.on, revoke.columns, revoke.role, comments...)
+			if len(revoke.on) > 0 {
+				c.builder.Revoke(revoke.ops, revoke.on, revoke.columns, revoke.role, comments...)
+			}
 		})
 	}
 	return nil
