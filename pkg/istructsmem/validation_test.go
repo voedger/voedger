@@ -6,7 +6,6 @@
 package istructsmem
 
 import (
-	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -970,8 +969,8 @@ func Test_CharsFieldRestricts(t *testing.T) {
 
 		t.Run("must be error if length constraint violated", func(t *testing.T) {
 			row := makeObject(cfg, objName, nil)
-			row.PutString("email", fmt.Sprintf("%s.com", strings.Repeat("a", 97))) // 97 + 4 = 101 : too long
-			row.PutBytes("mime", []byte(`abc`))                                    // 3 < 4 : too short
+			row.PutString("email", strings.Repeat("a", 97)+".com") // 97 + 4 = 101 : too long
+			row.PutBytes("mime", []byte(`abc`))                    // 3 < 4 : too short
 
 			_, err := row.Build()
 			require.ErrorIs(err, ErrDataConstraintViolation)

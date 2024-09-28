@@ -5,6 +5,8 @@
 
 package teststate
 
+import "github.com/voedger/voedger/pkg/istructs"
+
 type IFullQName interface {
 	PkgPath() string
 	Entity() string
@@ -17,35 +19,35 @@ type IView interface {
 
 type ICommandRunner interface {
 	// methos to fulfill test state
-	Record(fQName IFullQName, id int, keyValueList ...any) ICommandRunner
+	Record(fQName IFullQName, id istructs.RecordID, keyValueList ...any) ICommandRunner
 	SingletonRecord(fQName IFullQName, keyValueList ...any) ICommandRunner
-	ArgumentObject(id int, keyValueList ...any) ICommandRunner
-	ArgumentObjectRow(path string, id int, keyValueList ...any) ICommandRunner
+	ArgumentObject(id istructs.RecordID, keyValueList ...any) ICommandRunner
+	ArgumentObjectRow(path string, id istructs.RecordID, keyValueList ...any) ICommandRunner
 	// methods to check out the test state
 	RequireSingletonInsert(fQName IFullQName, keyValueList ...any) ICommandRunner
 	RequireSingletonUpdate(fQName IFullQName, keyValueList ...any) ICommandRunner
-	RequireRecordInsert(fQName IFullQName, id int, keyValueList ...any) ICommandRunner
-	RequireRecordUpdate(fQName IFullQName, id int, keyValueList ...any) ICommandRunner
+	RequireRecordInsert(fQName IFullQName, id istructs.RecordID, keyValueList ...any) ICommandRunner
+	RequireRecordUpdate(fQName IFullQName, id istructs.RecordID, keyValueList ...any) ICommandRunner
 	// method to run the test
 	Run()
 }
 
 type ITestRunner interface {
-	CUDRow(fQName IFullQName, id int, keyValueList ...any) ITestRunner
-	View(fQName IFullQName, id int, keyValueList ...any) ITestRunner
-	Offset(offset int) ITestRunner
+	CUDRow(fQName IFullQName, id istructs.RecordID, keyValueList ...any) ITestRunner
+	View(fQName IFullQName, id istructs.RecordID, keyValueList ...any) ITestRunner
+	Offset(offset istructs.Offset) ITestRunner
 	// methos to fulfill test state
-	Record(fQName IFullQName, id int, keyValueList ...any) ITestRunner
+	Record(fQName IFullQName, id istructs.RecordID, keyValueList ...any) ITestRunner
 	SingletonRecord(fQName IFullQName, keyValueList ...any) ITestRunner
-	ArgumentObject(id int, keyValueList ...any) ITestRunner
-	ArgumentObjectRow(path string, id int, keyValueList ...any) ITestRunner
+	ArgumentObject(id istructs.RecordID, keyValueList ...any) ITestRunner
+	ArgumentObjectRow(path string, id istructs.RecordID, keyValueList ...any) ITestRunner
 	// methods to check out the test state
 	RequireSingletonInsert(fQName IFullQName, keyValueList ...any) ITestRunner
 	RequireSingletonUpdate(fQName IFullQName, keyValueList ...any) ITestRunner
-	RequireRecordInsert(fQName IFullQName, id int, keyValueList ...any) ITestRunner
-	RequireRecordUpdate(fQName IFullQName, id int, keyValueList ...any) ITestRunner
+	RequireRecordInsert(fQName IFullQName, id istructs.RecordID, keyValueList ...any) ITestRunner
+	RequireRecordUpdate(fQName IFullQName, id istructs.RecordID, keyValueList ...any) ITestRunner
 	RequireViewInsert(fQName IFullQName, keyValueList ...any) ITestRunner
-	RequireViewUpdate(fQName IFullQName, id int, keyValueList ...any) ITestRunner
+	RequireViewUpdate(fQName IFullQName, id istructs.RecordID, keyValueList ...any) ITestRunner
 	// method to run the test
 	Run()
 }

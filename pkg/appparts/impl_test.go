@@ -85,7 +85,7 @@ type mockSchedulerRunner struct {
 	ISchedulerRunner
 }
 
-func (sr *mockSchedulerRunner) NewAndRun(ctx context.Context, app appdef.AppQName, partID istructs.PartitionID, wsIdx int, wsid istructs.WSID, job appdef.QName) {
+func (sr *mockSchedulerRunner) NewAndRun(ctx context.Context, app appdef.AppQName, partID istructs.PartitionID, wsIdx istructs.AppWorkspaceNumber, wsid istructs.WSID, job appdef.QName) {
 	sr.Called(ctx, app, partID, wsIdx, wsid, job)
 	sr.mockRunner.newAndRun(ctx, app, partID, ProcessorKind_Scheduler)
 }

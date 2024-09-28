@@ -21,8 +21,6 @@ const (
 	DefaultRouterReadTimeout        = 15
 	DefaultRouterWriteTimeout       = 15
 	localhost                       = "127.0.0.1"
-	parseInt64Base                  = 10
-	parseInt64Bits                  = 64
 	WSID                            = "wsid"
 	AppOwner                        = "appOwner"
 	AppName                         = "appName"

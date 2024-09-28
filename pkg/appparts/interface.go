@@ -27,7 +27,7 @@ type IAppPartitions interface {
 	//
 	// If application with the same name exists, then its definition will be updated.
 	DeployApp(name appdef.AppQName, extModuleURLs map[string]*url.URL, def appdef.IAppDef,
-		partsCount istructs.NumAppPartitions, numEngines [ProcessorKind_Count]int, numAppWorkspaces istructs.NumAppWorkspaces)
+		partsCount istructs.NumAppPartitions, numEngines [ProcessorKind_Count]uint, numAppWorkspaces istructs.NumAppWorkspaces)
 
 	// Deploys new partitions for specified application or update existing.
 	//
@@ -119,5 +119,5 @@ type ISchedulerRunner interface {
 	SetAppPartitions(IAppPartitions)
 
 	// Creates and runs new specified job scheduler for specified application partition and workspace
-	NewAndRun(ctx context.Context, app appdef.AppQName, partition istructs.PartitionID, wsIdx int, wsid istructs.WSID, job appdef.QName)
+	NewAndRun(ctx context.Context, app appdef.AppQName, partition istructs.PartitionID, wsIdx istructs.AppWorkspaceNumber, wsid istructs.WSID, job appdef.QName)
 }

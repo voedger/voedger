@@ -147,7 +147,7 @@ func loadClustFieldFromBuffer_00(key *keyType, field appdef.IField, buf *bytes.B
 	case appdef.DataKind_RecordID:
 		v := int64(istructs.NullRecordID)
 		if v, err = utils.ReadInt64(buf); err == nil {
-			key.ccolsRow.PutRecordID(field.Name(), istructs.RecordID(v))
+			key.ccolsRow.PutRecordID(field.Name(), istructs.RecordID(v)) // nolint G115
 		}
 	case appdef.DataKind_bytes:
 		key.ccolsRow.PutBytes(field.Name(), buf.Bytes())

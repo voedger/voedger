@@ -10,6 +10,7 @@ import (
 	"fmt"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys"
@@ -65,9 +66,13 @@ func (b *wLogKeyBuilder) Equals(src istructs.IKeyBuilder) bool {
 
 func (b *wLogKeyBuilder) PutInt64(name string, value int64) {
 	if name == sys.Storage_WLog_Field_WSID {
-		b.wsid = istructs.WSID(value)
+		wsid, err := coreutils.Int64ToWSID(value)
+		if err != nil {
+			panic(err)
+		}
+		b.wsid = wsid
 	} else if name == sys.Storage_WLog_Field_Offset {
-		b.offset = istructs.Offset(value)
+		b.offset = istructs.Offset(value) // nolint G115
 	} else if name == sys.Storage_WLog_Field_Count {
 		b.count = int(value)
 	} else {
@@ -86,7 +91,7 @@ func (s *wLogStorage) Get(kb istructs.IStateKeyBuilder) (value istructs.IStateVa
 	cb := func(wlogOffset istructs.Offset, event istructs.IWLogEvent) (err error) {
 		value = &wLogValue{
 			event:  event,
-			offset: int64(wlogOffset),
+			offset: wlogOffset,
 		}
 		return nil
 	}
@@ -96,7 +101,7 @@ func (s *wLogStorage) Get(kb istructs.IStateKeyBuilder) (value istructs.IStateVa
 func (s *wLogStorage) Read(kb istructs.IStateKeyBuilder, callback istructs.ValueCallback) (err error) {
 	k := kb.(*wLogKeyBuilder)
 	cb := func(wlogOffset istructs.Offset, event istructs.IWLogEvent) (err error) {
-		offs := int64(wlogOffset)
+		offs := wlogOffset
 		return callback(
 			&key{data: map[string]interface{}{sys.Storage_WLog_Field_Offset: offs}},
 			&wLogValue{
@@ -110,7 +115,7 @@ func (s *wLogStorage) Read(kb istructs.IStateKeyBuilder, callback istructs.Value
 type wLogValue struct {
 	baseStateValue
 	event  istructs.IWLogEvent
-	offset int64
+	offset istructs.Offset
 }
 
 func (v *wLogValue) AsInt64(name string) int64 {
@@ -122,7 +127,7 @@ func (v *wLogValue) AsInt64(name string) int64 {
 	case sys.Storage_WLog_Field_SyncedAt:
 		return int64(v.event.SyncedAt())
 	case sys.Storage_WLog_Field_Offset:
-		return v.offset
+		return int64(v.offset) // nolint G115
 	default:
 		return v.baseStateValue.AsInt64(name)
 	}
@@ -158,4 +163,4 @@ type key struct {
 	data map[string]interface{}
 }
 
-func (k *key) AsInt64(name string) int64 { return k.data[name].(int64) }
+func (k *key) AsInt64(name string) int64 { return int64(k.data[name].(istructs.Offset)) } // nolint G115

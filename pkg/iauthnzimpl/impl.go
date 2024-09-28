@@ -124,12 +124,12 @@ func (i *implIAuthenticator) Authenticate(requestContext context.Context, as ist
 					WSID:  req.RequestWSID,
 					QName: iauthnz.QNameRoleWorkspaceOwner,
 				}
-				if ownerWSID == int64(profileWSID) && !slices.Contains(principals, prnWSOwner) {
+				if ownerWSID == int64(profileWSID) && !slices.Contains(principals, prnWSOwner) { // nolint G115
 					principals = append(principals, prnWSOwner)
 				}
 				// check roles came from token
 				for _, role := range principalPayload.Roles {
-					if role.WSID != istructs.WSID(ownerWSID) {
+					if role.WSID != istructs.WSID(ownerWSID) { // nolint G115
 						continue
 					}
 					prn := iauthnz.Principal{
@@ -162,7 +162,7 @@ func (i *implIAuthenticator) Authenticate(requestContext context.Context, as ist
 		}
 	}
 
-	// ResellersAdmin || UntillPaymentsReseller -> WorkspaceAdmin
+	// air.ResellersAdmin || air.UntillPaymentsReseller -> WorkspaceAdmin
 	for _, prn := range principals {
 		if prn.Kind == iauthnz.PrincipalKind_Role && (prn.QName == qNameRoleResellersAdmin || prn.QName == qNameRoleUntillPaymentsReseller) {
 			prnWSAdmin := iauthnz.Principal{

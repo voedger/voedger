@@ -61,7 +61,7 @@ func (s *httpService) Prepare(work interface{}) (err error) {
 		return err
 	}
 
-	s.listeningPort.Store(int32(s.listener.Addr().(*net.TCPAddr).Port))
+	s.listeningPort.Store(uint32(s.listener.Addr().(*net.TCPAddr).Port)) // nolint G115
 
 	if s.RouterParams.ConnectionsLimit > 0 {
 		s.listener = netutil.LimitListener(s.listener, s.RouterParams.ConnectionsLimit)

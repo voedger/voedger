@@ -151,7 +151,7 @@ func TestBasicUsage(t *testing.T) {
 func sendCUD(t *testing.T, wsid istructs.WSID, app testApp, expectedCode ...int) map[string]interface{} {
 	require := require.New(t)
 	req := ibus.Request{
-		WSID:     int64(wsid),
+		WSID:     wsid,
 		AppQName: istructs.AppQName_untill_airs_bp.String(),
 		Resource: "c.sys.CUD",
 		Body: []byte(`{"cuds":[
@@ -365,8 +365,8 @@ func Test400BadRequestOnCUDErrors(t *testing.T) {
 		{`missing fields`, `"cuds":[{}]`, `cuds[0]: "fields" missing`},
 		{`fields is not an object`, `"cuds":[{"fields":42}]`, `cuds[0]: field 'fields' must be an object`},
 		{`fields: sys.ID missing`, `"cuds":[{"fields":{"sys.QName":"test.Test"}}]`, `cuds[0]: "sys.ID" missing`},
-		{`fields: sys.ID is not a number (create)`, `"cuds":[{"sys.ID":"wrong","fields":{"sys.QName":"test.Test"}}]`, `cuds[0]: field 'sys.ID' must be an int64`},
-		{`fields: sys.ID is not a number (update)`, `"cuds":[{"fields":{"sys.ID":"wrong","sys.QName":"test.Test"}}]`, `cuds[0]: field 'sys.ID' must be an int64`},
+		{`fields: sys.ID is not a number (create)`, `"cuds":[{"sys.ID":"wrong","fields":{"sys.QName":"test.Test"}}]`, `cuds[0]: field 'sys.ID' must be json.Number`},
+		{`fields: sys.ID is not a number (update)`, `"cuds":[{"fields":{"sys.ID":"wrong","sys.QName":"test.Test"}}]`, `cuds[0]: field 'sys.ID' must be json.Number`},
 		{`fields: wrong qName`, `"cuds":[{"fields":{"sys.ID":1,"sys.QName":"wrong"}},{"fields":{"sys.ID":1,"sys.QName":"test.Test"}}]`, `convert error: string «wrong»`},
 	}
 
@@ -655,7 +655,7 @@ func replyBadRequest(sender ibus.ISender, message string) {
 // test app deployment constants
 var (
 	testAppName                                = istructs.AppQName_untill_airs_bp
-	testAppEngines                             = [appparts.ProcessorKind_Count]int{10, 10, 10, 0}
+	testAppEngines                             = [appparts.ProcessorKind_Count]uint{10, 10, 10, 0}
 	testAppPartID    istructs.PartitionID      = 1
 	testAppPartCount istructs.NumAppPartitions = 1
 )
@@ -732,7 +732,7 @@ func setUp(t *testing.T, prepare func(appDef appdef.IAppDefBuilder, cfg *istruct
 		if authHeaders, ok := request.Header[coreutils.Authorization]; ok {
 			token = strings.TrimPrefix(authHeaders[0], "Bearer ")
 		}
-		icm := NewCommandMessage(ctx, request.Body, appQName, istructs.WSID(request.WSID), sender, testAppPartID, cmdQName, token, "")
+		icm := NewCommandMessage(ctx, request.Body, appQName, request.WSID, sender, testAppPartID, cmdQName, token, "")
 		serviceChannel <- icm
 	})
 

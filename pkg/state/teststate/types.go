@@ -42,7 +42,7 @@ type recordItem struct {
 	isSingleton  bool
 	isView       bool
 	isNew        bool
-	id           int
+	id           istructs.RecordID
 	keyValueList []any
 }
 

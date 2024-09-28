@@ -42,7 +42,7 @@ func WriteBool(buf *bytes.Buffer, value bool) {
 // Write int16 to buf
 func WriteInt16(buf *bytes.Buffer, value int16) {
 	s := []byte{0, 0}
-	binary.BigEndian.PutUint16(s, uint16(value))
+	BigEndianPutInt16(s, value)
 	buf.Write(s)
 }
 
@@ -56,7 +56,7 @@ func WriteUint16(buf *bytes.Buffer, value uint16) {
 // Write int32 to buf
 func WriteInt32(buf *bytes.Buffer, value int32) {
 	s := []byte{0, 0, 0, 0}
-	binary.BigEndian.PutUint32(s, uint32(value))
+	BigEndianPutInt32(s, value)
 	buf.Write(s)
 }
 
@@ -70,7 +70,7 @@ func WriteUint32(buf *bytes.Buffer, value uint32) {
 // Write int64 to buf
 func WriteInt64(buf *bytes.Buffer, value int64) {
 	s := []byte{0, 0, 0, 0, 0, 0, 0, 0}
-	binary.BigEndian.PutUint64(s, uint64(value))
+	BigEndianPutInt64(s, value)
 	buf.Write(s)
 }
 
@@ -105,7 +105,7 @@ func WriteShortString(buf *bytes.Buffer, str string) {
 	line := str
 
 	if len(line) < int(maxLen) {
-		l = uint16(len(line))
+		l = uint16(len(line)) //nolint G115
 	} else {
 		l = maxLen
 		line = line[0:maxLen]
@@ -196,7 +196,7 @@ func ReadInt16(buf *bytes.Buffer) (int16, error) {
 	if err := checkBufLen(buf, size); err != nil {
 		return 0, err
 	}
-	return int16(binary.BigEndian.Uint16(buf.Next(size))), nil
+	return BigEndianInt16(buf.Next(size)), nil
 }
 
 // Reads uint16 from buf
@@ -214,7 +214,7 @@ func ReadInt32(buf *bytes.Buffer) (int32, error) {
 	if err := checkBufLen(buf, size); err != nil {
 		return 0, err
 	}
-	return int32(binary.BigEndian.Uint32(buf.Next(size))), nil
+	return BigEndianInt32(buf.Next(size)), nil
 }
 
 // Reads uint32 from buf
@@ -232,7 +232,7 @@ func ReadInt64(buf *bytes.Buffer) (int64, error) {
 	if err := checkBufLen(buf, size); err != nil {
 		return 0, err
 	}
-	return int64(binary.BigEndian.Uint64(buf.Next(size))), nil
+	return BigEndianInt64(buf.Next(size)), nil
 }
 
 // Reads uint64 from buf
@@ -318,4 +318,52 @@ func IncBytes(cur []byte) (next []byte) {
 	copy(next, cur)
 	incByte(len(cur) - 1)
 	return next
+}
+
+// nolint revive
+func BigEndianInt32(b []byte) int32 {
+	_ = b[3] // bounds check
+	return int32(b[3]) | int32(b[2])<<8 | int32(b[1])<<16 | int32(b[0])<<24
+}
+
+// nolint revive
+func BigEndianPutInt16(b []byte, v int16) {
+	_ = b[1] // bounds check
+	b[0] = byte(v >> 8)
+	b[1] = byte(v)
+}
+
+// nolint revive
+func BigEndianPutInt32(b []byte, v int32) {
+	_ = b[3] // bounds check
+	b[0] = byte(v >> 24)
+	b[1] = byte(v >> 16)
+	b[2] = byte(v >> 8)
+	b[3] = byte(v)
+}
+
+// nolint revive
+func BigEndianPutInt64(b []byte, v int64) {
+	_ = b[7] // bounds check
+	b[0] = byte(v >> 56)
+	b[1] = byte(v >> 48)
+	b[2] = byte(v >> 40)
+	b[3] = byte(v >> 32)
+	b[4] = byte(v >> 24)
+	b[5] = byte(v >> 16)
+	b[6] = byte(v >> 8)
+	b[7] = byte(v)
+}
+
+// nolint revive
+func BigEndianInt16(b []byte) int16 {
+	_ = b[1] // bounds check
+	return int16(b[1]) | int16(b[0])<<8
+}
+
+// nolint revive
+func BigEndianInt64(b []byte) int64 {
+	_ = b[7] // bounds check
+	return int64(b[7]) | int64(b[6])<<8 | int64(b[5])<<16 | int64(b[4])<<24 |
+		int64(b[3])<<32 | int64(b[2])<<40 | int64(b[1])<<48 | int64(b[0])<<56
 }

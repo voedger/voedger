@@ -145,4 +145,4 @@ func (t anyType) App() IAppDef   { return nil }
 func (t anyType) IsSystem() bool { return true }
 func (t anyType) Kind() TypeKind { return TypeKind_Any }
 func (t anyType) QName() QName   { return t.name }
-func (t anyType) String() string { return fmt.Sprintf("%s type", t.name.Entity()) }
+func (t anyType) String() string { return t.name.Entity() + " type" }

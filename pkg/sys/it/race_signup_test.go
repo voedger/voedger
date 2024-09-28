@@ -5,7 +5,6 @@
 package sys_it
 
 import (
-	"fmt"
 	"strconv"
 	"sync"
 	"testing"
@@ -37,7 +36,7 @@ func Test_Race_SUsignUpIn(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			login := vit.SignUp(fmt.Sprintf("login%s", strconv.Itoa(vit.NextNumber())), "1", istructs.AppQName_test1_app1)
+			login := vit.SignUp("login"+strconv.Itoa(vit.NextNumber()), "1", istructs.AppQName_test1_app1)
 			logins <- login
 		}()
 	}

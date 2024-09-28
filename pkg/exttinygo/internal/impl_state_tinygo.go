@@ -3,6 +3,7 @@
     @author Michael Saigachenko
 */
 
+// nolint G115
 package internal
 
 import (
