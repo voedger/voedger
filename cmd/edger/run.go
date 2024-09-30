@@ -9,7 +9,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"os"
 	"time"
@@ -75,7 +74,7 @@ func runEdger(ctx context.Context, r io.Reader, commandInCh chan ctrlloop.Contro
 				dockerInCh <- *m
 			}
 		default:
-			logger.Verbose(fmt.Sprintf("unknown sp type: %s", input.Type))
+			logger.Verbose("unknown sp type: " + input.Type)
 		}
 		time.Sleep(inputStreamReadingInterval)
 	}
@@ -97,7 +96,7 @@ func getControlMessage[Key comparable, SP any](input InputControlMessage) *ctrll
 	case SPTypeDocker:
 		return decodeControlMessage[Key, SP](input)
 	default:
-		logger.Verbose(fmt.Sprintf("unknown sp type: %s", input.Type))
+		logger.Verbose("unknown sp type: " + input.Type)
 		return nil
 	}
 }

@@ -33,9 +33,9 @@ type eventValue struct {
 func (v *eventValue) AsInt64(name string) int64 {
 	switch name {
 	case sys.Storage_Event_Field_WLogOffset:
-		return int64(v.event.WLogOffset())
+		return int64(v.event.WLogOffset()) // nolint G115
 	case sys.Storage_Event_Field_Workspace:
-		return int64(v.event.Workspace())
+		return int64(v.event.Workspace()) // nolint G115
 	case sys.Storage_Event_Field_RegisteredAt:
 		return int64(v.event.RegisteredAt())
 	case sys.Storage_Event_Field_DeviceID:

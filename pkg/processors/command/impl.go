@@ -577,6 +577,10 @@ func parseCUDs(_ context.Context, work pipeline.IWorkpiece) (err error) {
 		if parsedCUD.id, isCreate, err = parsedCUD.fields.AsInt64(appdef.SystemField_ID); err != nil {
 			return cudXPath.Error(err)
 		}
+		if parsedCUD.id < 0 {
+			// TODO: cover by tests
+			return cudXPath.Errorf("id can not be negative")
+		}
 		if isCreate {
 			parsedCUD.opKind = iauthnz.OperationKind_INSERT
 			qNameStr, _, err := parsedCUD.fields.AsString(appdef.SystemField_QName)
@@ -594,7 +598,7 @@ func parseCUDs(_ context.Context, work pipeline.IWorkpiece) (err error) {
 			if !ok {
 				return cudXPath.Errorf(`"sys.ID" missing`)
 			}
-			if parsedCUD.existingRecord, err = cmd.appStructs.Records().Get(cmd.cmdMes.WSID(), true, istructs.RecordID(parsedCUD.id)); err != nil {
+			if parsedCUD.existingRecord, err = cmd.appStructs.Records().Get(cmd.cmdMes.WSID(), true, istructs.RecordID(parsedCUD.id)); err != nil { // nolint G115
 				return
 			}
 			if parsedCUD.qName = parsedCUD.existingRecord.QName(); parsedCUD.qName == appdef.NullQName {
@@ -685,7 +689,7 @@ func (cmdProc *cmdProc) writeCUDs(_ context.Context, work pipeline.IWorkpiece) (
 		var cud istructs.IRowWriter
 		if parsedCUD.opKind == iauthnz.OperationKind_INSERT {
 			cud = cmd.reb.CUDBuilder().Create(parsedCUD.qName)
-			cud.PutRecordID(appdef.SystemField_ID, istructs.RecordID(parsedCUD.id))
+			cud.PutRecordID(appdef.SystemField_ID, istructs.RecordID(parsedCUD.id)) // nolint G115
 		} else {
 			cud = cmd.reb.CUDBuilder().Update(parsedCUD.existingRecord)
 		}

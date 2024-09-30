@@ -394,7 +394,7 @@ func testAppStorage_PutBatch(t *testing.T, storage IAppStorage) {
 	require.Equal(items[2].Value, rr[2].value)
 }
 
-// nolint:revive,add-constant // This is part of exported test suit
+// nolint:revive
 func testAppStorage_GetBatch(t *testing.T, storage IAppStorage) {
 	t.Run("Should get batch of existing records", func(t *testing.T) {
 		require := require.New(t)

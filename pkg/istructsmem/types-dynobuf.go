@@ -165,7 +165,7 @@ func storeRow(row *rowType, buf *bytes.Buffer) {
 		// no test
 		panic(fmt.Errorf(errMustValidatedBeforeStore, row.QName(), err))
 	}
-	length := uint32(len(b))
+	length := uint32(len(b)) // nolint G115 considering int32 is enough to store the event
 	utils.WriteUint32(buf, length)
 	utils.SafeWriteBuf(buf, b)
 }

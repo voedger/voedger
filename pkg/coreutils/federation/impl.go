@@ -19,6 +19,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/coreutils/utils"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -59,7 +60,7 @@ func (f *implIFederation) UploadBLOB(appQName appdef.AppQName, wsid istructs.WSI
 		return 0, err
 	}
 	if resp.HTTPResp.StatusCode == http.StatusOK {
-		newBLOBID, err := strconv.Atoi(resp.Body)
+		newBLOBID, err := strconv.ParseUint(resp.Body, utils.DecimalBase, utils.BitSize64)
 		if err != nil {
 			return 0, fmt.Errorf("failed to parse the received blobID string: %w", err)
 		}
@@ -231,7 +232,7 @@ func (f *implIFederation) N10NSubscribe(projectionKey in10n.ProjectionKey) (offs
 				channelID = data
 				close(subscribed)
 			} else {
-				offset, err := strconv.Atoi(data)
+				offset, err := strconv.ParseUint(data, utils.DecimalBase, utils.BitSize64)
 				if err != nil {
 					panic(fmt.Sprint("failed to parse offset", data, err))
 				}

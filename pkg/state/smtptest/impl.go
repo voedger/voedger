@@ -25,7 +25,7 @@ func NewServer(opts ...Option) Server {
 	if err != nil {
 		panic(err)
 	}
-	ts.port = l.Addr().(*net.TCPAddr).Port
+	ts.port = int32(l.Addr().(*net.TCPAddr).Port) // nolint G115
 
 	s.AllowInsecureAuth = true
 

@@ -17,8 +17,8 @@ type RedirectRoutes map[string]string
 type DefaultRedirectRoute map[string]string // single record only
 type AppRequestHandler struct {
 	AppQName      appdef.AppQName
-	NumPartitions uint
-	NumAppWS      uint
+	NumPartitions istructs.NumAppPartitions
+	NumAppWS      istructs.NumAppWorkspaces
 	Handlers      map[istructs.PartitionID]ibus.RequestHandler
 }
 type AppRequestHandlers []AppRequestHandler

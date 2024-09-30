@@ -106,7 +106,7 @@ func runChannels(broker in10n.IN10nBroker) {
 		projectionKeyExample := in10n.ProjectionKey{
 			App:        istructs.AppQName_test1_app1,
 			Projection: projectionPLog,
-			WS:         istructs.WSID(partition),
+			WS:         istructs.WSID(partition), // nolint G115
 		}
 		broker.Update(projectionKeyExample, 0)
 		offset++

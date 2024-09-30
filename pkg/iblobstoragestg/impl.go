@@ -25,9 +25,9 @@ type bStorageType struct {
 	time       coreutils.ITime
 }
 
-func (b *bStorageType) WriteBLOB(ctx context.Context, key iblobstorage.KeyType, descr iblobstorage.DescrType, reader io.Reader, maxSize int64) (err error) {
+func (b *bStorageType) WriteBLOB(ctx context.Context, key iblobstorage.KeyType, descr iblobstorage.DescrType, reader io.Reader, maxSize iblobstorage.BLOBMaxSizeType) (err error) {
 	var (
-		bytesRead    int64
+		bytesRead    uint64
 		cCol         uint64
 		bucketNumber uint64 = 1
 		pKeyBuf      *bytes.Buffer
@@ -60,8 +60,8 @@ func (b *bStorageType) WriteBLOB(ctx context.Context, key iblobstorage.KeyType, 
 
 		if chunkBytes > 0 {
 			buf = buf[:chunkBytes]
-			bytesRead += int64(len(buf))
-			if bytesRead > maxSize {
+			bytesRead += uint64(len(buf))
+			if bytesRead > uint64(maxSize) {
 				err = iblobstorage.ErrBLOBSizeQuotaExceeded
 				break
 			}
@@ -87,9 +87,9 @@ func (b *bStorageType) WriteBLOB(ctx context.Context, key iblobstorage.KeyType, 
 	return err
 }
 
-func (b *bStorageType) writeChunk(pKeyBuf *bytes.Buffer, cCol uint64, bucketNumber *uint64, bytesRead int64, buf *[]byte) (err error) {
+func (b *bStorageType) writeChunk(pKeyBuf *bytes.Buffer, cCol uint64, bucketNumber *uint64, bytesRead uint64, buf *[]byte) (err error) {
 	var cColBuf *bytes.Buffer
-	if uint64(bytesRead) > chunkSize*bucketSize*(*bucketNumber) {
+	if bytesRead > chunkSize*bucketSize*(*bucketNumber) {
 		*bucketNumber++
 		if errBucket := addBucket(pKeyBuf, *bucketNumber); errBucket != nil {
 			err = errBucket

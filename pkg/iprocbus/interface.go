@@ -10,8 +10,8 @@ type ServiceChannel chan interface{}
 type IProcBus interface {
 	// Used during wiring
 	// This channel should be used by service to get its messages
-	ServiceChannel(groupIdx int, channelIdx int) ServiceChannel
+	ServiceChannel(groupIdx uint, channelIdx uint) ServiceChannel
 
 	// Message is submitted to the channel defined by groupIdx, channelIdx
-	Submit(groupIdx int, channelIdx int, msg interface{}) (ok bool)
+	Submit(groupIdx uint, channelIdx uint, msg interface{}) (ok bool)
 }

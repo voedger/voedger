@@ -22,7 +22,7 @@ import (
 type testDataType struct {
 	appQName        appdef.AppQName
 	totalPartitions istructs.NumAppPartitions
-	appEngines      [appparts.ProcessorKind_Count]int
+	appEngines      [appparts.ProcessorKind_Count]uint
 
 	pkgName string
 

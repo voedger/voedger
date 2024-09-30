@@ -275,7 +275,7 @@ func (row *rowType) putValue(name appdef.FieldName, kind dynobuffers.FieldType, 
 		if !ok {
 			row.collectError(ErrWrongType)
 		}
-		row.setID(istructs.RecordID(int64Val))
+		row.setID(istructs.RecordID(int64Val)) // nolint G115
 		return
 	}
 
@@ -284,7 +284,7 @@ func (row *rowType) putValue(name appdef.FieldName, kind dynobuffers.FieldType, 
 		if !ok {
 			row.collectError(ErrWrongType)
 		}
-		row.setParent(istructs.RecordID(int64Val))
+		row.setParent(istructs.RecordID(int64Val)) // nolint G115
 		return
 	}
 
@@ -543,9 +543,9 @@ func (row *rowType) AsInt64(name appdef.FieldName) (value int64) {
 	if fld.DataKind() == appdef.DataKind_RecordID {
 		switch name {
 		case appdef.SystemField_ID:
-			return int64(row.id)
+			return int64(row.id) // nolint G115 TODO: data loss on sending RecordID to the client as a func rersponse
 		case appdef.SystemField_ParentID:
-			return int64(row.parentID)
+			return int64(row.parentID) // nolint G115 TODO: data loss on sending RecordID to the client as a func rersponse
 		}
 	}
 
@@ -672,7 +672,7 @@ func (row *rowType) AsRecordID(name appdef.FieldName) istructs.RecordID {
 	_ = row.fieldMustExists(name, appdef.DataKind_RecordID, appdef.DataKind_int64)
 
 	if value, ok := row.dyB.GetInt64(name); ok {
-		return istructs.RecordID(value)
+		return istructs.RecordID(value) // nolint G115
 	}
 
 	return istructs.NullRecordID
@@ -957,7 +957,7 @@ func (row *rowType) PutBool(name appdef.FieldName, value bool) {
 
 // istructs.IRowWriter.PutRecordID
 func (row *rowType) PutRecordID(name appdef.FieldName, value istructs.RecordID) {
-	row.putValue(name, dynobuffers.FieldTypeInt64, int64(value))
+	row.putValue(name, dynobuffers.FieldTypeInt64, int64(value)) // nolint G115
 }
 
 // istructs.IValueBuilder.PutRecord

@@ -84,7 +84,7 @@ func newApplication(apps *apps, name appdef.AppQName, partsCount istructs.NumApp
 
 // extModuleURLs is important for non-builtin (non-native) apps
 // extModuleURLs: packagePath->packageURL
-func (a *appRT) deploy(def appdef.IAppDef, extModuleURLs map[string]*url.URL, structs istructs.IAppStructs, numEnginesPerEngineKind [ProcessorKind_Count]int) {
+func (a *appRT) deploy(def appdef.IAppDef, extModuleURLs map[string]*url.URL, structs istructs.IAppStructs, numEnginesPerEngineKind [ProcessorKind_Count]uint) {
 	eef := a.apps.extEngineFactories
 
 	enginesPathsModules := map[appdef.ExtensionEngineKind]map[string]*iextengine.ExtensionModule{}
@@ -136,7 +136,7 @@ func (a *appRT) deploy(def appdef.IAppDef, extModuleURLs map[string]*url.URL, st
 			if err != nil {
 				panic(err)
 			}
-			for i := 0; i < processorsCountPerKind; i++ {
+			for i := uint(0); i < processorsCountPerKind; i++ {
 				if ee[i] == nil {
 					ee[i] = map[appdef.ExtensionEngineKind]iextengine.IExtensionEngine{}
 				}

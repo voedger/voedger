@@ -5,6 +5,9 @@
 package registryapp
 
 import (
+	"fmt"
+	"math"
+
 	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/apps"
 	"github.com/voedger/voedger/pkg/extensionpoints"
@@ -31,12 +34,16 @@ func Provide(smtpCfg smtp.Cfg, numCP istructs.NumCommandProcessors) apps.AppBuil
 			FS:   registryAppSchemaFS,
 		}
 
+		if numCP > math.MaxUint16 {
+			panic(fmt.Sprintf("number of command processors can not be more than %d because this number will go to NumAppPartitions uint16", math.MaxUint16))
+		}
+
 		return apps.BuiltInAppDef{
 			AppQName: istructs.AppQName_sys_registry,
 			Packages: []parser.PackageFS{sysPackageFS, registryPackageFS, registryAppPackageFS},
 			AppDeploymentDescriptor: appparts.AppDeploymentDescriptor{
-				NumParts:         istructs.NumAppPartitions(numCP),
-				EnginePoolSize:   appparts.PoolSize(int(numCP), DefDeploymentQPCount, int(numCP), DefDeploymentSPCount),
+				NumParts:         istructs.NumAppPartitions(numCP), // nolint G115
+				EnginePoolSize:   appparts.PoolSize(uint(numCP), DefDeploymentQPCount, uint(numCP), DefDeploymentSPCount),
 				NumAppWorkspaces: istructs.DefaultNumAppWorkspaces,
 			},
 		}

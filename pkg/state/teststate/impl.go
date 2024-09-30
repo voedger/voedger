@@ -220,7 +220,7 @@ func (ts *testState) emulateFederationCmd(owner, appname string, wsid istructs.W
 	return ts.federationCmdHandler(owner, appname, wsid, command, body)
 }
 
-func (ts *testState) emulateFederationBlob(owner, appname string, wsid istructs.WSID, blobId int64) ([]byte, error) {
+func (ts *testState) emulateFederationBlob(owner, appname string, wsid istructs.WSID, blobId istructs.RecordID) ([]byte, error) {
 	if ts.federationBlobHandler == nil {
 		panic("federation blob handler not set")
 	}
@@ -502,6 +502,7 @@ func (ts *testState) PutEvent(wsid istructs.WSID, name appdef.FullQName, cb NewE
 	return wLogOffs, newRecordIds
 }
 
+// nolint unusedwrite
 func (ts *testState) PutView(wsid istructs.WSID, entity appdef.FullQName, callback ViewValueCallback) {
 	localPkgName := ts.appDef.PackageLocalName(entity.PkgPath())
 	v := TestViewValue{
