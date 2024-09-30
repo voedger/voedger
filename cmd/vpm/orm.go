@@ -92,7 +92,7 @@ func getPkgAppDefObjs(
 		HeaderFileContent: headerContent,
 	}
 
-	appDef.Packages(func(localName, fullPath string) bool {
+	for localName, fullPath := range appDef.Packages {
 		if fullPath == packagePath {
 			currentPkgLocalName = localName
 		}
@@ -101,8 +101,7 @@ func getPkgAppDefObjs(
 			FullPath:          fullPath,
 			HeaderFileContent: headerContent,
 		}
-		return true
-	})
+	}
 	iTypeObjsOfWS = make(map[appdef.QName][]appdef.IType, len(pkgInfos))
 
 	collectITypeObjs := func(iWorkspace appdef.IWorkspace) func(iTypeObj appdef.IType) bool {

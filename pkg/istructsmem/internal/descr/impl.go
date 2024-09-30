@@ -20,15 +20,15 @@ func newApplication() *Application {
 func (a *Application) read(app istructs.IAppStructs, rateLimits map[appdef.QName]map[istructs.RateLimitKind]istructs.RateLimit) {
 	a.Packages = make(map[string]*Package)
 
-	app.AppDef().Packages(func(localName, fullPath string) bool {
-		if localName != appdef.SysPackage {
-			pkg := newPackage()
-			pkg.Name = localName
-			pkg.Path = fullPath
-			a.Packages[localName] = pkg
+	for localName, fullPath := range app.AppDef().Packages {
+		if localName == appdef.SysPackage {
+			continue
 		}
-		return true
-	})
+		pkg := newPackage()
+		pkg.Name = localName
+		pkg.Path = fullPath
+		a.Packages[localName] = pkg
+	}
 
 	a.Name = app.AppQName()
 
