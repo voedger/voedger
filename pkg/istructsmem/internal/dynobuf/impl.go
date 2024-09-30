@@ -20,14 +20,15 @@ func newSchemes() *DynoBufSchemes {
 // Prepares schemes
 func (sch *DynoBufSchemes) Prepare(appDef appdef.IAppDef) {
 	appDef.Types(
-		func(t appdef.IType) {
+		func(t appdef.IType) bool {
 			if view, ok := t.(appdef.IView); ok {
 				sch.addView(view)
-				return
+				return true
 			}
 			if fld, ok := t.(appdef.IFields); ok {
 				sch.add(t.QName().String(), fld)
 			}
+			return true
 		})
 }
 

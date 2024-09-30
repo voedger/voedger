@@ -21,8 +21,8 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/compile"
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/sys"
-	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 //go:embed ormtemplates/*
@@ -92,7 +92,7 @@ func getPkgAppDefObjs(
 		HeaderFileContent: headerContent,
 	}
 
-	appDef.Packages(func(localName, fullPath string) {
+	appDef.Packages(func(localName, fullPath string) bool {
 		if fullPath == packagePath {
 			currentPkgLocalName = localName
 		}
@@ -101,15 +101,16 @@ func getPkgAppDefObjs(
 			FullPath:          fullPath,
 			HeaderFileContent: headerContent,
 		}
+		return true
 	})
 	iTypeObjsOfWS = make(map[appdef.QName][]appdef.IType, len(pkgInfos))
 
-	collectITypeObjs := func(iWorkspace appdef.IWorkspace) func(iTypeObj appdef.IType) {
-		return func(iTypeObj appdef.IType) {
+	collectITypeObjs := func(iWorkspace appdef.IWorkspace) func(iTypeObj appdef.IType) bool {
+		return func(iTypeObj appdef.IType) bool {
 			// skip abstract types
 			if iAbstract, ok := iTypeObj.(appdef.IWithAbstract); ok {
 				if iAbstract.Abstract() {
-					return
+					return true
 				}
 			}
 
@@ -122,17 +123,17 @@ func getPkgAppDefObjs(
 				iTypeObjsOfWS[iWorkspace.QName()] = append(iTypeObjsOfWS[iWorkspace.QName()], iTypeObj)
 				uniqueObjects = append(uniqueObjects, qName.String())
 			}
+			return true
 		}
 	}
 
 	// gather objects from the current package
-	appDef.Types(func(iTypeObj appdef.IType) {
-		if workspace, ok := iTypeObj.(appdef.IWorkspace); ok {
-			// add workspace itself to the list of objects as well
-			collectITypeObjs(workspace)(workspace)
-			// then add all types of the workspace
-			workspace.Types(collectITypeObjs(workspace))
-		}
+	appDef.Workspaces(func(workspace appdef.IWorkspace) bool {
+		// add workspace itself to the list of objects as well
+		_ = collectITypeObjs(workspace)(workspace)
+		// then add all types of the workspace
+		workspace.Types(collectITypeObjs(workspace))
+		return true
 	})
 
 	return
@@ -275,8 +276,8 @@ func newFieldItem(tableData ormTableItem, field appdef.IField) ormField {
 		Table:         tableData,
 		Type:          getFieldType(field),
 		Name:          normalizeName(field.Name()),
-		GetMethodName: fmt.Sprintf("Get_%s", name),
-		SetMethodName: fmt.Sprintf("Set_%s", name),
+		GetMethodName: "Get_" + name,
+		SetMethodName: "Set_" + name,
 	}
 }
 
@@ -356,8 +357,8 @@ func processITypeObj(
 					Table:         tableData,
 					Type:          "Container",
 					Name:          normalizeName(containerName),
-					GetMethodName: fmt.Sprintf("Get_%s", containerName),
-					SetMethodName: fmt.Sprintf("Set_%s", containerName),
+					GetMethodName: "Get_" + containerName,
+					SetMethodName: "Set_" + containerName,
 				})
 			}
 		}

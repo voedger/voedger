@@ -314,7 +314,7 @@ ABSTRACT WORKSPACE Workspace (
 		WSName text NOT NULL,
 		WSKind qname NOT NULL,
 		WSKindInitializationData varchar(1024),
-		WSClusterID int32 NOT NULL,
+		WSClusterID int32,
 		TemplateName text,
 		TemplateParams text
 	);

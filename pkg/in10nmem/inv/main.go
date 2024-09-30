@@ -14,11 +14,11 @@ import (
 	"time"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/in10nmem"
 	in10nmemv1 "github.com/voedger/voedger/pkg/in10nmem/v1"
 	"github.com/voedger/voedger/pkg/istructs"
-	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 func main() {
@@ -106,7 +106,7 @@ func runChannels(broker in10n.IN10nBroker) {
 		projectionKeyExample := in10n.ProjectionKey{
 			App:        istructs.AppQName_test1_app1,
 			Projection: projectionPLog,
-			WS:         istructs.WSID(partition),
+			WS:         istructs.WSID(partition), // nolint G115
 		}
 		broker.Update(projectionKeyExample, 0)
 		offset++

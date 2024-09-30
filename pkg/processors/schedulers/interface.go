@@ -9,6 +9,8 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appparts"
+	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/coreutils/federation"
 	"github.com/voedger/voedger/pkg/in10n"
 	"github.com/voedger/voedger/pkg/isecrets"
 	"github.com/voedger/voedger/pkg/istructs"
@@ -17,8 +19,6 @@ import (
 	"github.com/voedger/voedger/pkg/pipeline"
 	"github.com/voedger/voedger/pkg/processors"
 	"github.com/voedger/voedger/pkg/state"
-	coreutils "github.com/voedger/voedger/pkg/utils"
-	"github.com/voedger/voedger/pkg/utils/federation"
 )
 
 type TimeAfterFunc func(d time.Duration) <-chan time.Time
@@ -50,7 +50,7 @@ type SchedulerConfig struct {
 
 	AppQName  appdef.AppQName
 	Workspace istructs.WSID
-	WSIdx     int
+	AppWSIdx  istructs.AppWorkspaceNumber
 	Partition istructs.PartitionID // ?
 }
 

@@ -32,6 +32,7 @@ import (
 	"github.com/voedger/voedger/pkg/btstrp"
 	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/goutils/logger"
+	"github.com/voedger/voedger/pkg/iblobstorage"
 	"github.com/voedger/voedger/pkg/iextengine"
 	"github.com/voedger/voedger/pkg/itokens"
 	"github.com/voedger/voedger/pkg/parser"
@@ -43,6 +44,8 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/apps"
+	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/coreutils/federation"
 	"github.com/voedger/voedger/pkg/iauthnz"
 	"github.com/voedger/voedger/pkg/iauthnzimpl"
 	"github.com/voedger/voedger/pkg/iblobstoragestg"
@@ -67,8 +70,6 @@ import (
 	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys/invite"
 	"github.com/voedger/voedger/pkg/sys/sysprovide"
-	coreutils "github.com/voedger/voedger/pkg/utils"
-	"github.com/voedger/voedger/pkg/utils/federation"
 	dbcertcache "github.com/voedger/voedger/pkg/vvm/db_cert_cache"
 	"github.com/voedger/voedger/pkg/vvm/metrics"
 )
@@ -80,8 +81,8 @@ func ProvideVVM(vvmCfg *VVMConfig, vvmIdx VVMIdxType) (voedgerVM *VoedgerVM, err
 		// command processors
 		// each restaurant must go to the same cmd proc -> one single cmd processor behind the each command service channel
 		iprocbusmem.ChannelGroup{
-			NumChannels:       int(vvmCfg.NumCommandProcessors),
-			ChannelBufferSize: int(DefaultNumCommandProcessors), // to avoid bus timeout on big values of `vvmCfg.NumCommandProcessors``
+			NumChannels:       uint(vvmCfg.NumCommandProcessors),
+			ChannelBufferSize: uint(DefaultNumCommandProcessors), // to avoid bus timeout on big values of `vvmCfg.NumCommandProcessors``
 		},
 		ProcessorChannel_Command,
 	)
@@ -680,7 +681,7 @@ func provideRouterAppStoragePtr(astp istorage.IAppStorageProvider) dbcertcache.R
 
 // port 80 -> [0] is http server, port 443 -> [0] is https server, [1] is acme server
 func provideRouterServices(vvmCtx context.Context, rp router.RouterParams, busTimeout BusTimeout, broker in10n.IN10nBroker, quotas in10n.Quotas,
-	bsc router.BlobberServiceChannels, bms router.BLOBMaxSizeType, blobStorage BlobStorage,
+	bsc router.BlobberServiceChannels, bms iblobstorage.BLOBMaxSizeType, blobStorage BlobStorage,
 	autocertCache autocert.Cache, bus ibus.IBus, vvmPortSource *VVMPortSource, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) RouterServices {
 	bp := &router.BlobberParams{
 		ServiceChannels:        bsc,
@@ -720,7 +721,7 @@ func provideQueryChannel(sch ServiceChannelFactory) QueryChannel {
 }
 
 func provideCommandChannelFactory(sch ServiceChannelFactory) CommandChannelFactory {
-	return func(channelIdx int) commandprocessor.CommandChannel {
+	return func(channelIdx uint) commandprocessor.CommandChannel {
 		return commandprocessor.CommandChannel(sch(ProcessorChannel_Command, channelIdx))
 	}
 }
@@ -744,7 +745,7 @@ func provideQueryProcessors(qpCount istructs.NumQueryProcessors, qc QueryChannel
 
 func provideCommandProcessors(cpCount istructs.NumCommandProcessors, ccf CommandChannelFactory, cpFactory commandprocessor.ServiceFactory) OperatorCommandProcessors {
 	forks := make([]pipeline.ForkOperatorOptionFunc, cpCount)
-	for i := 0; i < int(cpCount); i++ {
+	for i := uint(0); i < uint(cpCount); i++ {
 		forks[i] = pipeline.ForkBranch(pipeline.ServiceOperator(cpFactory(ccf(i), istructs.PartitionID(i))))
 	}
 	return pipeline.ForkOperator(pipeline.ForkSame, forks[0], forks[1:]...)

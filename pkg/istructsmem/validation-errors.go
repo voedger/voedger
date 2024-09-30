@@ -25,6 +25,10 @@ const (
 	ECode_InvalidChildName
 	ECode_InvalidOccursMin
 	ECode_InvalidOccursMax
+
+	ECode_TooManyCreates
+	ECode_TooManyUpdates
+	ECode_TooManyChilds
 )
 
 type validateErrorType struct {

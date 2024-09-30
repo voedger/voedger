@@ -6,16 +6,16 @@
 package registry
 
 import (
-	"errors"
+	"math"
 	"net/http"
 	"strings"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/goutils/iterate"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/sys"
 	"github.com/voedger/voedger/pkg/sys/authnz"
-	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 // sys/registry, pseudoProfileWSID translated to appWSID
@@ -24,9 +24,10 @@ func execCmdCreateLogin(args istructs.ExecCommandArgs) (err error) {
 	loginStr := args.ArgumentObject.AsString(authnz.Field_Login)
 	appName := args.ArgumentObject.AsString(authnz.Field_AppName)
 
-	subjectKind := istructs.SubjectKindType(args.ArgumentObject.AsInt32(authnz.Field_SubjectKind))
-	if subjectKind >= istructs.SubjectKind_FakeLast || subjectKind <= istructs.SubjectKind_null {
-		return errors.New("wrong subject kind")
+	subjectKind := args.ArgumentObject.AsInt32(authnz.Field_SubjectKind)
+	if subjectKind >= int32(istructs.SubjectKind_FakeLast) || subjectKind <= int32(istructs.SubjectKind_null) {
+		// TODO: cover it by tests
+		return coreutils.NewHTTPErrorf(http.StatusBadRequest, "SubjectKind must be >0 and <", istructs.SubjectKind_FakeLast)
 	}
 
 	appQName, err := appdef.ParseAppQName(appName)
@@ -60,6 +61,10 @@ func execCmdCreateLogin(args istructs.ExecCommandArgs) (err error) {
 		return err
 	}
 	profileCluster := args.ArgumentObject.AsInt32(authnz.Field_ProfileCluster)
+	if profileCluster <= 0 || profileCluster > math.MaxUint16 {
+		// TODO: cover it by tests
+		return coreutils.NewHTTPErrorf(http.StatusBadRequest, "ProfileCluster must be >0 and <", math.MaxUint16)
+	}
 
 	kb, err := args.State.KeyBuilder(sys.Storage_Record, QNameCDocLogin)
 	if err != nil {
@@ -72,7 +77,7 @@ func execCmdCreateLogin(args istructs.ExecCommandArgs) (err error) {
 	cdocLogin.PutInt32(authnz.Field_ProfileCluster, profileCluster)
 	cdocLogin.PutBytes(field_PwdHash, pwdSaltedHash)
 	cdocLogin.PutString(authnz.Field_AppName, appName)
-	cdocLogin.PutInt32(authnz.Field_SubjectKind, args.ArgumentObject.AsInt32(authnz.Field_SubjectKind))
+	cdocLogin.PutInt32(authnz.Field_SubjectKind, subjectKind)
 	cdocLogin.PutString(authnz.Field_LoginHash, GetLoginHash(loginStr))
 	cdocLogin.PutRecordID(appdef.SystemField_ID, 1)
 	cdocLogin.PutString(authnz.Field_WSKindInitializationData, wsKindInitializationData)

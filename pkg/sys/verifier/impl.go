@@ -14,6 +14,8 @@ import (
 	"golang.org/x/text/message/catalog"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/coreutils/federation"
 	"github.com/voedger/voedger/pkg/irates"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
@@ -21,8 +23,6 @@ import (
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	"github.com/voedger/voedger/pkg/sys"
 	"github.com/voedger/voedger/pkg/sys/smtp"
-	coreutils "github.com/voedger/voedger/pkg/utils"
-	"github.com/voedger/voedger/pkg/utils/federation"
 )
 
 var translationsCatalog = coreutils.GetCatalogFromTranslations(translations)
@@ -41,7 +41,7 @@ func provideQryInitiateEmailVerification(sr istructsmem.IStatelessResources, ito
 func provideIEVExec(itokens itokens.ITokens, federation federation.IFederation, asp istructs.IAppStructsProvider) istructsmem.ExecQueryClosure {
 	return func(ctx context.Context, args istructs.ExecQueryArgs, callback istructs.ExecQueryCallback) (err error) {
 		entity := args.ArgumentObject.AsString(field_Entity)
-		targetWSID := istructs.WSID(args.ArgumentObject.AsInt64(field_TargetWSID))
+		targetWSID := istructs.WSID(args.ArgumentObject.AsInt64(field_TargetWSID)) // nolint G115
 		field := args.ArgumentObject.AsString(field_Field)
 		email := args.ArgumentObject.AsString(Field_Email)
 		forRegistry := args.ArgumentObject.AsBool(field_ForRegistry)

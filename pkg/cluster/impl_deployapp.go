@@ -7,10 +7,12 @@ package cluster
 
 import (
 	"fmt"
+	"math"
 	"net/http"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appparts"
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
@@ -18,7 +20,6 @@ import (
 	"github.com/voedger/voedger/pkg/sys/authnz"
 	"github.com/voedger/voedger/pkg/sys/uniques"
 	"github.com/voedger/voedger/pkg/sys/workspace"
-	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 // wrong to use IAppPartitions to get total NumAppPartition because the app the cmd is called for is not deployed yet
@@ -46,8 +47,17 @@ func provideCmdDeployApp(asp istructs.IAppStructsProvider, time coreutils.ITime,
 			// notest
 			return err
 		}
-		numAppWorkspacesToDeploy := istructs.NumAppWorkspaces(args.ArgumentObject.AsInt32(Field_NumAppWorkspaces))
-		numAppPartitionsToDeploy := istructs.NumAppPartitions(args.ArgumentObject.AsInt32(Field_NumPartitions))
+
+		numAppWSInt := args.ArgumentObject.AsInt32(Field_NumAppWorkspaces)
+		if numAppWSInt <= 0 || numAppWSInt > istructs.MaxNumAppWorkspaces {
+			return coreutils.NewHTTPErrorf(http.StatusBadRequest, fmt.Sprintf("app workspaces number must be >0 and <%d", istructs.MaxNumAppWorkspaces))
+		}
+		numPartitionsInt := args.ArgumentObject.AsInt32(Field_NumPartitions)
+		if numPartitionsInt < 0 || numPartitionsInt > math.MaxUint16 {
+			return coreutils.NewHTTPErrorf(http.StatusBadRequest, fmt.Sprintf("app partitions number must be >0 and <%d", math.MaxUint16))
+		}
+		numAppWorkspacesToDeploy := istructs.NumAppWorkspaces(numAppWSInt)      // nolint G115 checked above
+		numAppPartitionsToDeploy := istructs.NumAppPartitions(numPartitionsInt) // nolint G115 checked above
 		if wdocAppRecordID != istructs.NullRecordID {
 			kb, err := args.State.KeyBuilder(sys.Storage_Record, qNameWDocApp)
 			if err != nil {
@@ -60,8 +70,8 @@ func provideCmdDeployApp(asp istructs.IAppStructsProvider, time coreutils.ITime,
 				// notest
 				return err
 			}
-			numPartitionsDeployed := istructs.NumAppPartitions(appRec.AsInt32(Field_NumPartitions))
-			numAppWorkspacesDeployed := istructs.NumAppWorkspaces(appRec.AsInt32(Field_NumAppWorkspaces))
+			numPartitionsDeployed := istructs.NumAppPartitions(appRec.AsInt32(Field_NumPartitions))       // nolint G115 checked above
+			numAppWorkspacesDeployed := istructs.NumAppWorkspaces(appRec.AsInt32(Field_NumAppWorkspaces)) // nolint G115 checked above
 
 			// Check application compatibility (409)
 			if numPartitionsDeployed != numAppPartitionsToDeploy {
@@ -132,8 +142,8 @@ func InitAppWSes(as istructs.IAppStructs, numAppWorkspaces istructs.NumAppWorksp
 	pLogOffsets := map[istructs.PartitionID]istructs.Offset{}
 	wLogOffset := istructs.FirstOffset
 	res := []istructs.WSID{}
-	for wsNum := 0; istructs.NumAppWorkspaces(wsNum) < numAppWorkspaces; wsNum++ {
-		appWSID := istructs.NewWSID(istructs.CurrentClusterID(), istructs.WSID(wsNum+int(istructs.FirstBaseAppWSID)))
+	for wsNum := uint16(0); istructs.NumAppWorkspaces(wsNum) < numAppWorkspaces; wsNum++ {
+		appWSID := istructs.NewWSID(istructs.CurrentClusterID(), istructs.WSID(wsNum)+istructs.FirstBaseAppWSID)
 		partitionID := coreutils.AppPartitionID(appWSID, numAppPartitions)
 		if _, ok := pLogOffsets[partitionID]; !ok {
 			pLogOffsets[partitionID] = istructs.FirstOffset

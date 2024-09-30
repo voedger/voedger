@@ -11,13 +11,13 @@ import (
 	"strings"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/coreutils/federation"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/itokens"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys"
-	coreutils "github.com/voedger/voedger/pkg/utils"
-	"github.com/voedger/voedger/pkg/utils/federation"
 )
 
 const (
@@ -71,7 +71,11 @@ func (b *federationCommandKeyBuilder) PutString(name string, value string) {
 
 func (b *federationCommandKeyBuilder) PutInt64(name string, value int64) {
 	if name == sys.Storage_FederationCommand_Field_WSID {
-		b.wsid = istructs.WSID(value)
+		wsid, err := coreutils.Int64ToWSID(value)
+		if err != nil {
+			panic(err)
+		}
+		b.wsid = wsid
 	} else {
 		b.baseKeyBuilder.PutInt64(name, value)
 	}
@@ -241,7 +245,7 @@ type fcCmdValue struct {
 
 func (v *fcCmdValue) AsInt32(name string) int32 {
 	if name == sys.Storage_FederationCommand_Field_StatusCode {
-		return int32(v.statusCode)
+		return int32(v.statusCode) // nolint G115
 	}
 	return v.baseStateValue.AsInt32(name)
 }

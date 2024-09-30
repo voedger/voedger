@@ -8,7 +8,7 @@ package router
 import (
 	"time"
 
-	coreutils "github.com/voedger/voedger/pkg/utils"
+	"github.com/voedger/voedger/pkg/coreutils"
 )
 
 const (
@@ -21,8 +21,6 @@ const (
 	DefaultRouterReadTimeout        = 15
 	DefaultRouterWriteTimeout       = 15
 	localhost                       = "127.0.0.1"
-	parseInt64Base                  = 10
-	parseInt64Bits                  = 64
 	WSID                            = "wsid"
 	AppOwner                        = "appOwner"
 	AppName                         = "appName"

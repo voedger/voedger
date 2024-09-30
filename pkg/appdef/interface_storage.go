@@ -25,7 +25,7 @@ type IStorages interface {
 	//
 	// Storages enumerated in alphabetical QNames order.
 	// Names slice in every storage is sorted and deduplicated.
-	Enum(func(IStorage))
+	Enum(func(IStorage) bool)
 
 	// Returns number of storages.
 	Len() int

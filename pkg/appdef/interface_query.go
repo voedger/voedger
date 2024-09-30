@@ -22,7 +22,7 @@ type IWithQueries interface {
 	// Enumerates all queries
 	//
 	// Queries are enumerated in alphabetical order by QName
-	Queries(func(IQuery))
+	Queries(func(IQuery) bool)
 }
 
 type IQueryBuilder interface {

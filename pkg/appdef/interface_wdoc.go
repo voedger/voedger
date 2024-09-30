@@ -38,7 +38,7 @@ type IWithWDocs interface {
 	// Enumerates all application workflow documents
 	//
 	// Workflow documents are enumerated in alphabetical order by QName
-	WDocs(func(IWDoc))
+	WDocs(func(IWDoc) bool)
 
 	// Return WRecord by name.
 	//
@@ -48,7 +48,7 @@ type IWithWDocs interface {
 	// Enumerates all application workflow records
 	//
 	// Workflow records are enumerated in alphabetical order by QName
-	WRecords(func(IWRecord))
+	WRecords(func(IWRecord) bool)
 }
 
 type IWDocsBuilder interface {

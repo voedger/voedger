@@ -13,8 +13,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/voedger/voedger/pkg/coreutils/utils"
 	"github.com/voedger/voedger/pkg/goutils/testingu/require"
-	"github.com/voedger/voedger/pkg/utils/utils"
 )
 
 func Test_AppDef_AddData(t *testing.T) {
@@ -88,19 +88,22 @@ func Test_AppDef_AddData(t *testing.T) {
 
 	t.Run("must be ok to enum data types", func(t *testing.T) {
 		cnt := 0
-		app.DataTypes(false, func(d IData) {
-			cnt++
-			require.Equal(TypeKind_Data, d.Kind())
-			switch cnt {
-			case 1:
-				require.Equal(intName, d.QName())
-			case 2:
-				require.Equal(strName, d.QName())
-			case 3:
-				require.Equal(tokenName, d.QName())
-			default:
-				require.Failf("unexpected data type", "data type: %v", d)
+		app.DataTypes(func(d IData) bool {
+			if !d.IsSystem() {
+				cnt++
+				require.Equal(TypeKind_Data, d.Kind())
+				switch cnt {
+				case 1:
+					require.Equal(intName, d.QName())
+				case 2:
+					require.Equal(strName, d.QName())
+				case 3:
+					require.Equal(tokenName, d.QName())
+				default:
+					require.Failf("unexpected data type", "data type: %v", d)
+				}
 			}
+			return true
 		})
 		require.Equal(3, cnt)
 	})

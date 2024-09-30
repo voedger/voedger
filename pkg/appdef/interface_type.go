@@ -103,7 +103,7 @@ type IWithTypes interface {
 	// Enumerates all internal types.
 	//
 	// Types are enumerated in alphabetical order of QNames.
-	Types(func(IType))
+	Types(func(IType) bool)
 }
 
 type ITypeBuilder interface {

@@ -13,9 +13,9 @@ import (
 	"time"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/iextengine"
 	"github.com/voedger/voedger/pkg/istructs"
-	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 type apps struct {
@@ -52,12 +52,8 @@ func newAppPartitions(
 	return a, func() {}, err
 }
 
-func (aps *apps) DeployBuiltInApp(name appdef.AppQName, def appdef.IAppDef, partsCount istructs.NumAppPartitions, engines [ProcessorKind_Count]int) {
-	aps.DeployApp(name, nil, def, partsCount, engines, -1)
-}
-
 func (aps *apps) DeployApp(name appdef.AppQName, extModuleURLs map[string]*url.URL, def appdef.IAppDef,
-	partsCount istructs.NumAppPartitions, engines [ProcessorKind_Count]int, numAppWorkspaces istructs.NumAppWorkspaces) {
+	partsCount istructs.NumAppPartitions, engines [ProcessorKind_Count]uint, numAppWorkspaces istructs.NumAppWorkspaces) {
 	aps.mx.RLock()
 	_, ok := aps.apps[name]
 	aps.mx.RUnlock()

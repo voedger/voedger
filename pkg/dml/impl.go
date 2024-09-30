@@ -6,13 +6,15 @@
 package dml
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/coreutils/utils"
 	"github.com/voedger/voedger/pkg/istructs"
-	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 func ParseQuery(query string) (op Op, err error) {
@@ -64,11 +66,14 @@ func ParseQuery(query string) (op Op, err error) {
 
 	if offsetStr := parts[offsetOrIDIdx]; len(offsetStr) > 0 {
 		offsetStr = offsetStr[1:]
-		offsetInt, err := strconv.Atoi(offsetStr)
+		offsetUint, err := strconv.ParseUint(offsetStr, utils.DecimalBase, utils.BitSize64)
 		if err != nil {
 			return op, err
 		}
-		op.EntityID = istructs.IDType(offsetInt)
+		if offsetUint == 0 {
+			return op, errors.New("provided offset or ID must not be 0")
+		}
+		op.EntityID = istructs.IDType(offsetUint)
 	}
 	pars := strings.TrimSpace(parts[parsIdx])
 
@@ -100,7 +105,7 @@ func ParseQuery(query string) (op Op, err error) {
 		op.CleanSQL = strings.TrimSpace(fmt.Sprintf("%s %s %s", opSQL, qNameStr, pars))
 	}
 	if op.EntityID > 0 {
-		qNameStr += "." + strconv.Itoa(int(op.EntityID))
+		qNameStr += "." + fmt.Sprint(op.EntityID)
 	}
 	op.VSQLWithoutAppAndWSID = strings.TrimSpace(fmt.Sprintf("%s %s %s", operationStr, qNameStr, pars))
 	return op, nil
@@ -110,14 +115,14 @@ func parseWorkspace(workspaceStr string) (workspace Workspace, err error) {
 	switch workspaceStr[:1] {
 	case "a":
 		appWSNumStr := workspaceStr[1:]
-		workspace.ID, err = strconv.ParseUint(appWSNumStr, 0, 0)
+		workspace.ID, err = strconv.ParseUint(appWSNumStr, utils.DecimalBase, utils.BitSize64)
 		workspace.Kind = WorkspaceKind_AppWSNum
 	case `"`:
 		login := workspaceStr[1 : len(workspaceStr)-1]
 		workspace.ID = uint64(coreutils.GetPseudoWSID(istructs.NullWSID, login, istructs.CurrentClusterID()))
 		workspace.Kind = WorkspaceKind_PseudoWSID
 	default:
-		workspace.ID, err = strconv.ParseUint(workspaceStr, 0, 0)
+		workspace.ID, err = strconv.ParseUint(workspaceStr, utils.DecimalBase, utils.BitSize64)
 		workspace.Kind = WorkspaceKind_WSID
 	}
 	return workspace, err

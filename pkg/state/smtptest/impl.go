@@ -9,7 +9,7 @@ import (
 	"net"
 
 	"github.com/emersion/go-smtp"
-	coreutils "github.com/voedger/voedger/pkg/utils"
+	"github.com/voedger/voedger/pkg/coreutils"
 )
 
 func NewServer(opts ...Option) Server {
@@ -25,7 +25,7 @@ func NewServer(opts ...Option) Server {
 	if err != nil {
 		panic(err)
 	}
-	ts.port = l.Addr().(*net.TCPAddr).Port
+	ts.port = int32(l.Addr().(*net.TCPAddr).Port) // nolint G115
 
 	s.AllowInsecureAuth = true
 

@@ -14,12 +14,12 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appparts"
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/iprocbus"
 	"github.com/voedger/voedger/pkg/istructs"
 	commandprocessor "github.com/voedger/voedger/pkg/processors/command"
 	queryprocessor "github.com/voedger/voedger/pkg/processors/query"
-	coreutils "github.com/voedger/voedger/pkg/utils"
 	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
 	"github.com/voedger/voedger/staging/src/github.com/untillpro/ibusmem"
 )
@@ -53,7 +53,7 @@ func provideIBus(appParts appparts.IAppPartitions, procbus iprocbus.IProcBus,
 			return
 		}
 		if !vvmApps.Exists(appQName) {
-			coreutils.ReplyBadRequest(sender, fmt.Sprintf("unknown app %s", request.AppQName))
+			coreutils.ReplyBadRequest(sender, "unknown app "+request.AppQName)
 			return
 		}
 
@@ -63,7 +63,7 @@ func provideIBus(appParts appparts.IAppPartitions, procbus iprocbus.IProcBus,
 			return
 		}
 
-		partitionID, err := appParts.AppWorkspacePartitionID(appQName, istructs.WSID(request.WSID))
+		partitionID, err := appParts.AppWorkspacePartitionID(appQName, request.WSID)
 		if err != nil {
 			if errors.Is(err, appparts.ErrNotFound) {
 				coreutils.ReplyErrf(sender, http.StatusServiceUnavailable, fmt.Sprintf("app %s is not deployed", appQName))
@@ -83,15 +83,15 @@ func deliverToProcessors(request ibus.Request, requestCtx context.Context, appQN
 	cpCount istructs.NumCommandProcessors, partitionID istructs.PartitionID) {
 	switch request.Resource[:1] {
 	case "q":
-		iqm := queryprocessor.NewQueryMessage(requestCtx, appQName, istructs.PartitionID(request.PartitionNumber), istructs.WSID(request.WSID), sender, request.Body, funcQName, request.Host, token)
-		if !procbus.Submit(int(qpcgIdx), 0, iqm) {
+		iqm := queryprocessor.NewQueryMessage(requestCtx, appQName, request.PartitionID, request.WSID, sender, request.Body, funcQName, request.Host, token)
+		if !procbus.Submit(uint(qpcgIdx), 0, iqm) {
 			coreutils.ReplyErrf(sender, http.StatusServiceUnavailable, "no query processors available")
 		}
 	case "c":
 		// TODO: use appQName to calculate cmdProcessorIdx in solid range [0..cpCount)
-		cmdProcessorIdx := int64(partitionID) % int64(cpCount)
-		icm := commandprocessor.NewCommandMessage(requestCtx, request.Body, appQName, istructs.WSID(request.WSID), sender, partitionID, funcQName, token, request.Host)
-		if !procbus.Submit(int(cpchIdx), int(cmdProcessorIdx), icm) {
+		cmdProcessorIdx := uint(partitionID) % uint(cpCount)
+		icm := commandprocessor.NewCommandMessage(requestCtx, request.Body, appQName, request.WSID, sender, partitionID, funcQName, token, request.Host)
+		if !procbus.Submit(uint(cpchIdx), cmdProcessorIdx, icm) {
 			coreutils.ReplyErrf(sender, http.StatusServiceUnavailable, fmt.Sprintf("command processor of partition %d is busy", partitionID))
 		}
 	default:

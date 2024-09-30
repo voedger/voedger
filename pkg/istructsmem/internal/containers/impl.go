@@ -72,12 +72,13 @@ func (cnt *Containers) collectAll(appDef appdef.IAppDef) (err error) {
 	// application containers
 	if appDef != nil {
 		appDef.Types(
-			func(t appdef.IType) {
+			func(t appdef.IType) bool {
 				if cont, ok := t.(appdef.IContainers); ok {
 					for _, c := range cont.Containers() {
 						err = errors.Join(err, cnt.collect(c.Name()))
 					}
 				}
+				return true
 			})
 	}
 

@@ -70,15 +70,17 @@ func Test_AppDef_AddODoc(t *testing.T) {
 
 	t.Run("must be ok to enumerate docs", func(t *testing.T) {
 		var docs []QName
-		app.ODocs(func(doc IODoc) {
+		app.ODocs(func(doc IODoc) bool {
 			docs = append(docs, doc.QName())
+			return true
 		})
 		require.Len(docs, 1)
 		require.Equal(docName, docs[0])
 		t.Run("must be ok to enumerate recs", func(t *testing.T) {
 			var recs []QName
-			app.ORecords(func(rec IORecord) {
+			app.ORecords(func(rec IORecord) bool {
 				recs = append(recs, rec.QName())
+				return true
 			})
 			require.Len(recs, 1)
 			require.Equal(recName, recs[0])

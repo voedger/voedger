@@ -38,7 +38,7 @@ type IWithGDocs interface {
 	// Enumerates all global documents
 	//
 	// Global documents are enumerated in alphabetical order by QName
-	GDocs(func(IGDoc))
+	GDocs(func(IGDoc) bool)
 
 	// Return GRecord by name.
 	//
@@ -48,7 +48,7 @@ type IWithGDocs interface {
 	// Enumerates all global records
 	//
 	// Global records are enumerated in alphabetical order by QName
-	GRecords(func(IGRecord))
+	GRecords(func(IGRecord) bool)
 }
 
 type IGDocsBuilder interface {

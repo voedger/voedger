@@ -10,7 +10,7 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/voedger/voedger/pkg/utils/utils"
+	"github.com/voedger/voedger/pkg/coreutils/utils"
 )
 
 // TODO: type ContainerName = string
@@ -101,7 +101,7 @@ func (cc *containers) addContainer(name string, contType QName, minOccurs, maxOc
 	}
 
 	if contType == NullQName {
-		panic(ErrMissed(fmt.Sprintf("container «%v» type", name)))
+		panic(ErrMissed("container «%v» type", name))
 	}
 
 	if maxOccurs == 0 {
@@ -163,8 +163,8 @@ func makeContainersBuilder(containers *containers) containersBuilder {
 	}
 }
 
-func (cb *containersBuilder) AddContainer(name string, typeName QName, min, max Occurs, comment ...string) IContainersBuilder {
-	cb.addContainer(name, typeName, min, max, comment...)
+func (cb *containersBuilder) AddContainer(name string, typeName QName, minimum, maximum Occurs, comment ...string) IContainersBuilder {
+	cb.addContainer(name, typeName, minimum, maximum, comment...)
 	return cb
 }
 

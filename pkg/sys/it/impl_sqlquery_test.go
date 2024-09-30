@@ -14,11 +14,11 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/processors"
 	"github.com/voedger/voedger/pkg/registry"
 	"github.com/voedger/voedger/pkg/sys/sqlquery"
-	coreutils "github.com/voedger/voedger/pkg/utils"
 	it "github.com/voedger/voedger/pkg/vit"
 )
 
@@ -280,7 +280,7 @@ func TestSqlQuery_readLogParams(t *testing.T) {
 		body := `{"args":{"Query":"select * from sys.plog where Offset >= 2.1"}}`
 		resp := vit.PostWS(ws, "q.sys.SqlQuery", body, coreutils.Expect500())
 
-		resp.RequireError(t, `strconv.ParseInt: parsing "2.1": invalid syntax`)
+		resp.RequireError(t, `strconv.ParseUint: parsing "2.1": invalid syntax`)
 	})
 	t.Run("Should return error when Offset value invalid", func(t *testing.T) {
 		body := `{"args":{"Query":"select * from sys.plog where Offset >= 0"}}`

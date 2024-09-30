@@ -10,6 +10,8 @@ import (
 	"net/http"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/coreutils/federation"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/istructsmem"
@@ -19,8 +21,6 @@ import (
 	"github.com/voedger/voedger/pkg/sys/authnz"
 	"github.com/voedger/voedger/pkg/sys/collection"
 	"github.com/voedger/voedger/pkg/sys/invite"
-	coreutils "github.com/voedger/voedger/pkg/utils"
-	"github.com/voedger/voedger/pkg/utils/federation"
 )
 
 func provideDeactivateWorkspace(sr istructsmem.IStatelessResources, tokensAPI itokens.ITokens, federation federation.IFederation) {
@@ -161,7 +161,7 @@ func cmdOnChildWorkspaceDeactivatedExec(args istructs.ExecCommandArgs) (err erro
 		// notest
 		return err
 	}
-	kb.PutRecordID(sys.Storage_Record_Field_ID, istructs.RecordID(ownerID))
+	kb.PutRecordID(sys.Storage_Record_Field_ID, istructs.RecordID(ownerID)) // nolint G115
 	cdocOwnerSV, err := args.State.MustExist(kb)
 	if err != nil {
 		// notest
@@ -218,7 +218,7 @@ func projectorApplyDeactivateWorkspace(federation federation.IFederation, tokens
 			if istructs.SubjectKindType(subject.AsInt32(authnz.Field_SubjectKind)) != istructs.SubjectKind_User {
 				return nil
 			}
-			profileWSID := istructs.WSID(subject.AsInt64(invite.Field_ProfileWSID))
+			profileWSID := istructs.WSID(subject.AsInt64(invite.Field_ProfileWSID)) // nolint G115
 
 			// app is always current
 			// impossible to have logins from different apps among subjects (Michael said)
@@ -235,7 +235,7 @@ func projectorApplyDeactivateWorkspace(federation federation.IFederation, tokens
 		// currentApp/ApplicationWS/c.sys.OnWorkspaceDeactivated(OnwerWSID, WSName)
 		wsName := wsDesc.AsString(authnz.Field_WSName)
 		body := fmt.Sprintf(`{"args":{"OwnerWSID":%d, "WSName":%q}}`, ownerWSID, wsName)
-		cdocWorkspaceIDWSID := coreutils.GetPseudoWSID(istructs.WSID(ownerWSID), wsName, event.Workspace().ClusterID())
+		cdocWorkspaceIDWSID := coreutils.GetPseudoWSID(istructs.WSID(ownerWSID), wsName, event.Workspace().ClusterID()) // nolint G115
 		if _, err := federation.Func(fmt.Sprintf("api/%s/%d/c.sys.OnWorkspaceDeactivated", ownerApp, cdocWorkspaceIDWSID), body,
 			coreutils.WithDiscardResponse(), coreutils.WithAuthorizeBy(sysToken)); err != nil {
 			return fmt.Errorf("c.sys.OnWorkspaceDeactivated failed: %w", err)

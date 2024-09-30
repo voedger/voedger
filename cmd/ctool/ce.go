@@ -9,7 +9,7 @@ import (
 	"os"
 	"path/filepath"
 
-	coreutils "github.com/voedger/voedger/pkg/utils"
+	"github.com/voedger/voedger/pkg/coreutils"
 )
 
 var ceSuccessPhrases = map[string]string{
@@ -107,8 +107,7 @@ func ceNodeControllerFunction(n *nodeType) error {
 	return nil
 }
 
-// nolint
-func deployCeCluster(cluster *clusterType) error {
+func deployCeCluster(*clusterType) error {
 	return nil
 }
 
@@ -133,7 +132,7 @@ func copyCtoolToCeNode(node *nodeType) error {
 		return err
 	}
 
-	loggerInfo(fmt.Sprintf("Copying ctool and configuration file to %s", ctoolPath))
+	loggerInfo("Copying ctool and configuration file to " + ctoolPath)
 	if err := newScriptExecuter("", "").
 		run("ce/copy-ctool.sh", filepath.Dir(ctoolPath)); err != nil {
 		node.Error = err.Error()

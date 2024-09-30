@@ -84,11 +84,11 @@ func newApplication(apps *apps, name appdef.AppQName, partsCount istructs.NumApp
 
 // extModuleURLs is important for non-builtin (non-native) apps
 // extModuleURLs: packagePath->packageURL
-func (a *appRT) deploy(def appdef.IAppDef, extModuleURLs map[string]*url.URL, structs istructs.IAppStructs, numEnginesPerEngineKind [ProcessorKind_Count]int) {
+func (a *appRT) deploy(def appdef.IAppDef, extModuleURLs map[string]*url.URL, structs istructs.IAppStructs, numEnginesPerEngineKind [ProcessorKind_Count]uint) {
 	eef := a.apps.extEngineFactories
 
 	enginesPathsModules := map[appdef.ExtensionEngineKind]map[string]*iextengine.ExtensionModule{}
-	def.Extensions(func(ext appdef.IExtension) {
+	def.Extensions(func(ext appdef.IExtension) bool {
 		extEngineKind := ext.Engine()
 		path := ext.App().PackageFullPath(ext.QName().Pkg())
 		pathsModules, ok := enginesPathsModules[extEngineKind]
@@ -98,7 +98,7 @@ func (a *appRT) deploy(def appdef.IAppDef, extModuleURLs map[string]*url.URL, st
 			enginesPathsModules[extEngineKind] = pathsModules
 		}
 		if extEngineKind != appdef.ExtensionEngineKind_WASM {
-			return
+			return true
 		}
 		extModule, ok := pathsModules[path]
 		if !ok {
@@ -113,6 +113,7 @@ func (a *appRT) deploy(def appdef.IAppDef, extModuleURLs map[string]*url.URL, st
 			pathsModules[path] = extModule
 		}
 		extModule.ExtensionNames = append(extModule.ExtensionNames, ext.QName().Entity())
+		return true
 	})
 	extModules := map[appdef.ExtensionEngineKind][]iextengine.ExtensionModule{}
 	for extEngineKind, pathsModules := range enginesPathsModules {
@@ -135,7 +136,7 @@ func (a *appRT) deploy(def appdef.IAppDef, extModuleURLs map[string]*url.URL, st
 			if err != nil {
 				panic(err)
 			}
-			for i := 0; i < processorsCountPerKind; i++ {
+			for i := uint(0); i < processorsCountPerKind; i++ {
 				if ee[i] == nil {
 					ee[i] = map[appdef.ExtensionEngineKind]iextengine.IExtensionEngine{}
 				}

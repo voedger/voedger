@@ -16,8 +16,8 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/goutils/logger"
-	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 var logFile *os.File
@@ -56,7 +56,7 @@ func loggerError(args ...interface{}) {
 }
 
 func printLogLine(logLevel logger.TLogLevel, line string) {
-	line = fmt.Sprintf("\r%s", line)
+	line = "\r" + line
 	if logFile != nil {
 		mutex.Lock()
 		fmt.Fprintln(logFile, line)

@@ -13,7 +13,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/voedger/voedger/pkg/goutils/iterate"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 	"github.com/voedger/voedger/pkg/state/stateprovide"
 	"github.com/voedger/voedger/pkg/sys"
@@ -156,16 +155,27 @@ func (a *asyncActualizer) init(ctx context.Context) (err error) {
 		return fmt.Errorf("async projector %s is not defined in AppDef", a.projectorQName)
 	}
 
+	// returns true if there are custom storages except «sys.View» and «sys.Record»
+	customStorages := func(ss appdef.IStorages) bool {
+		if ss.Len() > 2 {
+			return true
+		}
+		found := false
+		ss.Enum(
+			func(storage appdef.IStorage) bool {
+				n := storage.Name()
+				found = n != sys.Storage_View && n != sys.Storage_Record
+				return !found
+			})
+		return found
+	}
+
 	// https://github.com/voedger/voedger/issues/1048
-	hasIntentsExceptViewAndRecord, _ := iterate.FindFirst(prjType.Intents().Enum, func(storage appdef.IStorage) bool {
-		n := storage.Name()
-		return n != sys.Storage_View && n != sys.Storage_Record
-	})
+	hasIntentsExceptViewAndRecord := customStorages(prjType.Intents())
+
 	// https://github.com/voedger/voedger/issues/1092
-	hasStatesExceptViewAndRecord, _ := iterate.FindFirst(prjType.States().Enum, func(storage appdef.IStorage) bool {
-		n := storage.Name()
-		return n != sys.Storage_View && n != sys.Storage_Record
-	})
+	hasStatesExceptViewAndRecord := customStorages(prjType.States())
+
 	nonBuffered := hasIntentsExceptViewAndRecord || hasStatesExceptViewAndRecord
 	p := &asyncProjector{
 		partitionID:           a.conf.PartitionID,
@@ -468,7 +478,7 @@ func (p *asyncProjector) isProjectorDefined() (bool, error) {
 		return false, err
 	}
 	skbCDocWorkspaceDescriptor.PutQName(state.Field_Singleton, authnz.QNameCDocWorkspaceDescriptor)
-	skbCDocWorkspaceDescriptor.PutInt64(state.Field_WSID, int64(p.event.Workspace()))
+	skbCDocWorkspaceDescriptor.PutInt64(state.Field_WSID, int64(p.event.Workspace())) // nolint G115
 	svCDocWorkspaceDescriptor, err := p.state.MustExist(skbCDocWorkspaceDescriptor)
 	if err != nil {
 		// notest
@@ -528,7 +538,7 @@ func (p *asyncProjector) savePosition() error {
 	if e != nil {
 		return e
 	}
-	value.PutInt64(offsetFld, int64(p.pLogOffset))
+	value.PutInt64(offsetFld, int64(p.pLogOffset)) // nolint G115
 	return nil
 }
 func (p *asyncProjector) flush() (err error) {
@@ -593,5 +603,5 @@ func ActualizerOffset(appStructs istructs.IAppStructs, partition istructs.Partit
 	if err != nil {
 		return istructs.NullOffset, err
 	}
-	return istructs.Offset(value.AsInt64(offsetFld)), err
+	return istructs.Offset(value.AsInt64(offsetFld)), err // nolint G115
 }

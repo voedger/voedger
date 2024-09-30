@@ -12,8 +12,8 @@ import (
 	"github.com/blastrain/vitess-sqlparser/sqlparser"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/istructs"
-	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 func readRecords(wsid istructs.WSID, qName appdef.QName, expr sqlparser.Expr, appStructs istructs.IAppStructs, f *filter,
@@ -26,7 +26,7 @@ func readRecords(wsid istructs.WSID, qName appdef.QName, expr sqlparser.Expr, ap
 		isSingleton = iSingleton.Singleton()
 	}
 
-	whereIDs := []int64{}
+	whereIDs := []istructs.RecordID{}
 	switch compExpr := expr.(type) {
 	case nil:
 	default:
@@ -37,18 +37,18 @@ func readRecords(wsid istructs.WSID, qName appdef.QName, expr sqlparser.Expr, ap
 		}
 		switch compExpr.Operator {
 		case sqlparser.EqualStr:
-			id, err := parseInt64(compExpr.Right.(*sqlparser.SQLVal).Val)
+			id, err := parseUint64(compExpr.Right.(*sqlparser.SQLVal).Val)
 			if err != nil {
 				return err
 			}
-			whereIDs = append(whereIDs, id)
+			whereIDs = append(whereIDs, istructs.RecordID(id))
 		case sqlparser.InStr:
 			for _, v := range compExpr.Right.(sqlparser.ValTuple) {
-				id, err := parseInt64(v.(*sqlparser.SQLVal).Val)
+				id, err := parseUint64(v.(*sqlparser.SQLVal).Val)
 				if err != nil {
 					return err
 				}
-				whereIDs = append(whereIDs, id)
+				whereIDs = append(whereIDs, istructs.RecordID(id))
 			}
 		default:
 			return fmt.Errorf("unsupported operation: %s", compExpr.Operator)
@@ -83,7 +83,7 @@ func readRecords(wsid istructs.WSID, qName appdef.QName, expr sqlparser.Expr, ap
 	}
 
 	for _, whereID := range whereIDs {
-		rr = append(rr, istructs.RecordGetBatchItem{ID: istructs.RecordID(whereID)})
+		rr = append(rr, istructs.RecordGetBatchItem{ID: whereID})
 	}
 
 	err := appStructs.Records().GetBatch(wsid, true, rr)

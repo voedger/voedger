@@ -51,11 +51,12 @@ func ExampleIAppDef_Structures() {
 	{
 		// how to enum structures
 		cnt := 0
-		app.Structures(func(s appdef.IStructure) {
+		app.Structures(func(s appdef.IStructure) bool {
 			cnt++
 			fmt.Printf("%d. %v\n", cnt, s)
 			fmt.Printf("- user/overall field count: %d/%d\n", s.UserFieldCount(), s.FieldCount())
 			fmt.Printf("- container count: %d\n", s.ContainerCount())
+			return true
 		})
 		fmt.Printf("Overall %d structures\n", cnt)
 
@@ -67,11 +68,12 @@ func ExampleIAppDef_Structures() {
 	// how to inspect builded AppDef with records
 	{
 		cnt := 0
-		app.Records(func(s appdef.IRecord) {
+		app.Records(func(s appdef.IRecord) bool {
 			cnt++
 			fmt.Printf("%d. %v\n", cnt, s)
 			fmt.Printf("- user/overall field count: %d/%d\n", s.UserFieldCount(), s.FieldCount())
 			fmt.Printf("- container count: %d\n", s.ContainerCount())
+			return true
 		})
 
 		fmt.Printf("Overall %d records\n", cnt)

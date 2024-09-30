@@ -242,11 +242,11 @@ func (c *buildContext) views() error {
 				switch k := dataTypeToDataKind(f.Type); k {
 				case appdef.DataKind_bytes:
 					if (f.Type.Bytes != nil) && (f.Type.Bytes.MaxLen != nil) {
-						cc = append(cc, appdef.MaxLen(uint16(*f.Type.Bytes.MaxLen)))
+						cc = append(cc, appdef.MaxLen(uint16(*f.Type.Bytes.MaxLen))) // nolint G115: checked in [analyseFields]
 					}
 				case appdef.DataKind_string:
 					if (f.Type.Varchar != nil) && (f.Type.Varchar.MaxLen != nil) {
-						cc = append(cc, appdef.MaxLen(uint16(*f.Type.Varchar.MaxLen)))
+						cc = append(cc, appdef.MaxLen(uint16(*f.Type.Varchar.MaxLen))) // nolint G115: checked in [analyseFields]
 					}
 				}
 				return cc
@@ -477,14 +477,14 @@ func (c *buildContext) addDataTypeField(field *FieldExpr) {
 
 	if field.Type.DataType.Bytes != nil {
 		if field.Type.DataType.Bytes.MaxLen != nil {
-			bld.AddField(fieldName, appdef.DataKind_bytes, field.NotNull, appdef.MaxLen(uint16(*field.Type.DataType.Bytes.MaxLen)))
+			bld.AddField(fieldName, appdef.DataKind_bytes, field.NotNull, appdef.MaxLen(uint16(*field.Type.DataType.Bytes.MaxLen))) // nolint G115: checked in [analyseFields]
 		} else {
 			bld.AddField(fieldName, appdef.DataKind_bytes, field.NotNull)
 		}
 	} else if field.Type.DataType.Varchar != nil {
 		constraints := make([]appdef.IConstraint, 0)
 		if field.Type.DataType.Varchar.MaxLen != nil {
-			constraints = append(constraints, appdef.MaxLen(uint16(*field.Type.DataType.Varchar.MaxLen)))
+			constraints = append(constraints, appdef.MaxLen(uint16(*field.Type.DataType.Varchar.MaxLen))) // nolint G115: checked in [analyseFields]
 		}
 		if field.CheckRegexp != nil {
 			constraints = append(constraints, appdef.Pattern(field.CheckRegexp.Regexp))
@@ -507,12 +507,12 @@ func (c *buildContext) addDataTypeField(field *FieldExpr) {
 
 func (c *buildContext) addObjectFieldToType(field *FieldExpr) {
 
-	minOccur := 0
+	minOccur := appdef.Occurs(0)
 	if field.NotNull {
 		minOccur = 1
 	}
 
-	maxOccur := 1
+	maxOccur := appdef.Occurs(1)
 	// not supported by kernel yet
 	// if field.Type.Array != nil {
 	// 	if field.Type.Array.Unbounded {
@@ -521,7 +521,7 @@ func (c *buildContext) addObjectFieldToType(field *FieldExpr) {
 	// 		maxOccur = field.Type.Array.MaxOccurs
 	// 	}
 	// }
-	c.defCtx().defBuilder.(appdef.IObjectBuilder).AddContainer(string(field.Name), field.Type.qName, appdef.Occurs(minOccur), appdef.Occurs(maxOccur))
+	c.defCtx().defBuilder.(appdef.IObjectBuilder).AddContainer(string(field.Name), field.Type.qName, minOccur, maxOccur)
 }
 
 func (c *buildContext) addTableFieldToTable(field *FieldExpr, ictx *iterateCtx) {

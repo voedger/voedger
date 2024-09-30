@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appparts/internal/schedulers"
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/istructs"
 )
 
@@ -19,7 +20,7 @@ type mockSchedulerRunner struct {
 	mock.Mock
 }
 
-func (t *mockSchedulerRunner) Run(ctx context.Context, app appdef.AppQName, partID istructs.PartitionID, wsIdx int, wsID istructs.WSID, job appdef.QName) {
+func (t *mockSchedulerRunner) Run(ctx context.Context, app appdef.AppQName, partID istructs.PartitionID, wsIdx istructs.AppWorkspaceNumber, wsID istructs.WSID, job appdef.QName) {
 
 	t.Called(ctx, app, partID, wsIdx, wsID, job)
 
@@ -54,11 +55,11 @@ func Example() {
 
 		for ws := 0; ws < int(wsCnt); ws++ {
 			for _, name := range jobNames {
-				if ws%int(partCnt) == int(partID) {
+				if coreutils.AppPartitionID(istructs.WSID(ws), partCnt) == partID {
 					runner.On("Run", mock.Anything,
 						appName,
 						partID,
-						ws,
+						istructs.AppWorkspaceNumber(ws),
 						istructs.NewWSID(istructs.CurrentClusterID(), istructs.FirstBaseAppWSID+istructs.WSID(ws)),
 						name).Once()
 				}
@@ -81,7 +82,7 @@ func Example() {
 					runner.On("Run", mock.Anything,
 						appName,
 						partID,
-						ws,
+						istructs.AppWorkspaceNumber(ws),
 						istructs.NewWSID(istructs.CurrentClusterID(), istructs.FirstBaseAppWSID+istructs.WSID(ws)),
 						name).Once()
 				}

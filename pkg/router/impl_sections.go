@@ -19,22 +19,23 @@ import (
 	"github.com/valyala/bytebufferpool"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/coreutils/utils"
 	"github.com/voedger/voedger/pkg/istructs"
-	coreutils "github.com/voedger/voedger/pkg/utils"
 	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
 )
 
 func createRequest(reqMethod string, req *http.Request, rw http.ResponseWriter, numsAppsWorkspaces map[appdef.AppQName]istructs.NumAppWorkspaces) (res ibus.Request, ok bool) {
 	vars := mux.Vars(req)
 	wsidStr := vars[WSID]
-	wsidInt, err := strconv.ParseInt(wsidStr, parseInt64Base, parseInt64Bits)
+	wsidUint, err := strconv.ParseUint(wsidStr, utils.DecimalBase, utils.BitSize64)
 	if err != nil {
 		//  impossible because of regexp in a handler
 		// notest
 		panic(err)
 	}
 	appQNameStr := vars[AppOwner] + appdef.AppQNameQualifierChar + vars[AppName]
-	wsid := istructs.WSID(wsidInt)
+	wsid := istructs.WSID(wsidUint)
 	if appQName, err := appdef.ParseAppQName(appQNameStr); err == nil {
 		if numAppWorkspaces, ok := numsAppsWorkspaces[appQName]; ok {
 			baseWSID := wsid.BaseWSID()
@@ -45,7 +46,7 @@ func createRequest(reqMethod string, req *http.Request, rw http.ResponseWriter, 
 	}
 	res = ibus.Request{
 		Method:   ibus.NameToHTTPMethod[reqMethod],
-		WSID:     int64(wsid),
+		WSID:     wsid,
 		Query:    req.URL.Query(),
 		Header:   req.Header,
 		AppQName: appQNameStr,
@@ -142,7 +143,7 @@ func writeSectionedResponse(requestCtx context.Context, w http.ResponseWriter, s
 			writeResponse(w, fmt.Sprintf(`%s"status":%d,"errorDescription":"%s"}`, closer, http.StatusInternalServerError, *secErr))
 		}
 	} else if sectionedResponseStarted {
-		writeResponse(w, fmt.Sprintf(`%s}`, closer))
+		writeResponse(w, closer+"}")
 	}
 }
 
@@ -178,12 +179,12 @@ func writeSection(w http.ResponseWriter, isec ibus.ISection, requestCtx context.
 		// ctx.Done() is tracked by ibusnats implementation: writing to section elem channel -> read here, ctxdone -> close elem channel
 		for val, ok := sec.Next(requestCtx); ok; val, ok = sec.Next(requestCtx) {
 			if isFirst {
-				if !writeResponse(w, fmt.Sprintf(`,"elements":[%s`, string(val))) {
+				if !writeResponse(w, `,"elements":[`+string(val)) {
 					return false
 				}
 				isFirst = false
 				closer = "]}"
-			} else if !writeResponse(w, fmt.Sprintf(`,%s`, string(val))) {
+			} else if !writeResponse(w, ","+string(val)) {
 				return false
 			}
 		}

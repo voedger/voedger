@@ -13,10 +13,10 @@ import (
 	"path/filepath"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/state/stateprovide"
 	"github.com/voedger/voedger/pkg/sys"
-	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 var errTestIOError = errors.New("test i/o error")
@@ -273,7 +273,7 @@ func (kb *mockKeyBuilder) PutRecordID(name string, value istructs.RecordID) {}
 func (kb *mockKeyBuilder) ToBytes(istructs.WSID) ([]byte, []byte, error)    { return nil, nil, nil }
 
 // Tries to make conversion from value to a name type
-func (kb *mockKeyBuilder) PutNumber(name string, value float64) {}
+func (kb *mockKeyBuilder) PutNumber(name string, value json.Number) {}
 
 // Tries to make conversion from value to a name type
 func (kb *mockKeyBuilder) PutChars(name string, value string) {}
@@ -399,5 +399,5 @@ func (vb *mockValueBuilder) PutBool(name string, value bool)                  {}
 func (vb *mockValueBuilder) PutRecordID(name string, value istructs.RecordID) {}
 func (vb *mockValueBuilder) PutFromJSON(map[string]any)                       {}
 func (vb *mockValueBuilder) ToBytes() ([]byte, error)                         { return nil, nil }
-func (vb *mockValueBuilder) PutNumber(name string, value float64)             {}
+func (vb *mockValueBuilder) PutNumber(name string, value json.Number)         {}
 func (vb *mockValueBuilder) PutChars(name string, value string)               {}

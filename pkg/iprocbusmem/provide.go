@@ -9,8 +9,8 @@ import (
 )
 
 type ChannelGroup struct {
-	NumChannels       int
-	ChannelBufferSize int
+	NumChannels       uint
+	ChannelBufferSize uint
 }
 
 // Usage:
@@ -24,7 +24,7 @@ func Provide(groups []ChannelGroup) (bus iprocbus.IProcBus) {
 	res := &implIProcBus{make([][]iprocbus.ServiceChannel, len(groups))}
 	for i, group := range groups {
 		res.chans[i] = make([]iprocbus.ServiceChannel, group.NumChannels)
-		for j := 0; j < group.NumChannels; j++ {
+		for j := uint(0); j < group.NumChannels; j++ {
 			res.chans[i][j] = make(iprocbus.ServiceChannel, group.ChannelBufferSize)
 		}
 	}

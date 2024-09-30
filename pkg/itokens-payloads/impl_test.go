@@ -5,6 +5,7 @@
 package payloads
 
 import (
+	"encoding/json"
 	"log"
 	"testing"
 	"time"
@@ -12,10 +13,10 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/itokens"
 	"github.com/voedger/voedger/pkg/itokensjwt"
-	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 var (
@@ -115,7 +116,7 @@ func TestBasicUsage_VerifiedValue(t *testing.T) {
 		require.Equal(appdef.VerificationKind_EMail, payload.VerificationKind)
 		require.Equal(testQName, payload.Entity)
 		require.Equal("testName", payload.Field)
-		require.Equal(float64(42), payload.Value)
+		require.Equal(json.Number("42"), payload.Value)
 		require.Greater(gp.IssuedAt.Unix(), int64(0))
 		require.Equal(testApp, gp.AppQName)
 		require.Equal(testDuration, gp.Duration)

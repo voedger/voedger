@@ -8,8 +8,8 @@ package appdef
 import (
 	"strings"
 
+	"github.com/voedger/voedger/pkg/coreutils/utils"
 	"github.com/voedger/voedger/pkg/goutils/set"
-	"github.com/voedger/voedger/pkg/utils/utils"
 )
 
 // Is specified type kind may be used in child containers.

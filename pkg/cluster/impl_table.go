@@ -11,12 +11,12 @@ import (
 	"fmt"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/coreutils/federation"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/itokens"
 	payloads "github.com/voedger/voedger/pkg/itokens-payloads"
 	"github.com/voedger/voedger/pkg/sys"
-	coreutils "github.com/voedger/voedger/pkg/utils"
-	"github.com/voedger/voedger/pkg/utils/federation"
 )
 
 func updateTable(update update, federation federation.IFederation, itokens itokens.ITokens) error {
@@ -68,7 +68,7 @@ func insertTable(update update, federation federation.IFederation, itokens itoke
 		return err
 	}
 
-	result.PutRecordID(field_NewID, istructs.RecordID(resp.NewID()))
+	result.PutRecordID(field_NewID, istructs.RecordID(resp.NewID())) // nolint G115
 	return nil
 }
 

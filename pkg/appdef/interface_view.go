@@ -28,7 +28,7 @@ type IWithViews interface {
 	// Enumerates all application views
 	//
 	// Views are enumerated in alphabetical order by QName
-	Views(func(IView))
+	Views(func(IView) bool)
 }
 
 type IViewBuilder interface {

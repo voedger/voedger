@@ -211,7 +211,7 @@ func TestHTTP(t *testing.T) {
 		handler = func(w http.ResponseWriter, r *http.Request) {
 			body, err := io.ReadAll(r.Body)
 			require.NoError(err)
-			w.Write([]byte(fmt.Sprintf("hello, %s", string(body))))
+			w.Write([]byte("hello, " + string(body)))
 		}
 		resp, err := httpClient.Req(federationURL.String()+"/test", "world")
 		require.NoError(err)

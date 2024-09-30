@@ -9,7 +9,6 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"fmt"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -111,7 +110,7 @@ func (s *implIAppStorage) Get(pKey []byte, cCols []byte, data *[]byte) (ok bool,
 				Value: prefixZero(cCols),
 			},
 		},
-		ProjectionExpression:     aws.String(fmt.Sprintf("%s, #v", sortKeyAttributeName)),
+		ProjectionExpression:     aws.String(sortKeyAttributeName + ", #v"),
 		ExpressionAttributeNames: map[string]string{"#v": valueAttributeName},
 	}
 
@@ -168,7 +167,7 @@ func (s *implIAppStorage) GetBatch(pKey []byte, items []istorage.GetBatchItem) e
 		RequestItems: map[string]types.KeysAndAttributes{
 			tableName: {
 				Keys:                     keyList,
-				ProjectionExpression:     aws.String(fmt.Sprintf("%s, #v", sortKeyAttributeName)),
+				ProjectionExpression:     aws.String(sortKeyAttributeName + ", #v"),
 				ExpressionAttributeNames: map[string]string{"#v": valueAttributeName},
 			},
 		},
@@ -243,7 +242,7 @@ func (s *implIAppStorage) Read(ctx context.Context, pKey []byte, startCCols, fin
 	}
 	params := dynamodb.QueryInput{
 		TableName:                aws.String(s.keySpace),
-		ProjectionExpression:     aws.String(fmt.Sprintf("%s, #v", sortKeyAttributeName)),
+		ProjectionExpression:     aws.String(sortKeyAttributeName + ", #v"),
 		ExpressionAttributeNames: map[string]string{"#v": valueAttributeName},
 		KeyConditions:            keyConditions,
 	}
@@ -349,7 +348,7 @@ func doesTableExist(name string, client *dynamodb.Client) (bool, error) {
 }
 
 func dynamoDBTableName(name string) string {
-	return fmt.Sprintf("%s.values", name)
+	return name + ".values"
 }
 
 // prefixZero is a workaround for DynamoDB's limitation on empty byte slices in SortKey

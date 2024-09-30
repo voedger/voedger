@@ -27,15 +27,15 @@ import (
 	"golang.org/x/crypto/acme/autocert"
 	"golang.org/x/exp/slices"
 
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/ihttp"
 	"github.com/voedger/voedger/pkg/istructs"
 	routerpkg "github.com/voedger/voedger/pkg/router"
-	coreutils "github.com/voedger/voedger/pkg/utils"
 	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
 )
 
 type appInfo struct {
-	numPartitions uint
+	numPartitions istructs.NumAppPartitions
 	handlers      map[istructs.PartitionID]ibus.RequestHandler
 }
 
@@ -184,7 +184,7 @@ func (p *httpProcessor) getAppPartHandler(appQName appdef.AppQName, partNo istru
 	if !ok {
 		return nil, ErrAppIsNotDeployed
 	}
-	if uint(partNo) >= app.numPartitions {
+	if partNo >= istructs.PartitionID(app.numPartitions) {
 		return nil, ErrAppPartNoOutOfRange
 	}
 	handler, ok := app.handlers[partNo]
@@ -194,7 +194,7 @@ func (p *httpProcessor) getAppPartHandler(appQName appdef.AppQName, partNo istru
 	return handler, nil
 }
 
-func (p *httpProcessor) DeployApp(app appdef.AppQName, numPartitions uint, numAppWS uint) error {
+func (p *httpProcessor) DeployApp(app appdef.AppQName, numPartitions istructs.NumAppPartitions, numAppWS istructs.NumAppWorkspaces) error {
 	p.Lock()
 	defer p.Unlock()
 
@@ -205,7 +205,7 @@ func (p *httpProcessor) DeployApp(app appdef.AppQName, numPartitions uint, numAp
 		numPartitions: numPartitions,
 		handlers:      make(map[istructs.PartitionID]ibus.RequestHandler),
 	}
-	p.numsAppsWorkspaces[app] = istructs.NumAppWorkspaces(numAppWS)
+	p.numsAppsWorkspaces[app] = numAppWS
 	return nil
 }
 
@@ -278,7 +278,7 @@ func (p *httpProcessor) requestHandler(ctx context.Context, sender ibus.ISender,
 		coreutils.ReplyBadRequest(sender, ErrAppIsNotDeployed.Error())
 		return
 	}
-	partNo := istructs.PartitionID(request.WSID % int64(app.numPartitions))
+	partNo := coreutils.AppPartitionID(request.WSID, app.numPartitions)
 	handler, err := p.getAppPartHandler(appQName, partNo)
 	if err != nil {
 		coreutils.ReplyBadRequest(sender, err.Error())

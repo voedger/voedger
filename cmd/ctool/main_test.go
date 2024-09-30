@@ -13,8 +13,8 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/stretchr/testify/require"
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/goutils/logger"
-	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 var testVersion string = "0.0.1-dummy"

@@ -5,6 +5,7 @@
 package storages
 
 import (
+	"encoding/json"
 	"reflect"
 
 	"github.com/voedger/voedger/pkg/appdef"
@@ -106,7 +107,7 @@ func (c *resultValueBuilder) PutFloat64(name string, value float64) {
 func (c *resultValueBuilder) PutQName(name string, value appdef.QName) {
 	c.resultBuilder.PutQName(name, value)
 }
-func (c *resultValueBuilder) PutNumber(name string, value float64) {
+func (c *resultValueBuilder) PutNumber(name string, value json.Number) {
 	c.resultBuilder.PutNumber(name, value)
 }
 func (c *resultValueBuilder) PutRecordID(name string, value istructs.RecordID) {

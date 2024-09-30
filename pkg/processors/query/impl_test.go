@@ -7,6 +7,7 @@ package queryprocessor
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"math"
 	"net/http"
 	"sync"
@@ -18,6 +19,7 @@ import (
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appparts"
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/iauthnzimpl"
 	"github.com/voedger/voedger/pkg/iextengine"
 	"github.com/voedger/voedger/pkg/iprocbus"
@@ -34,7 +36,6 @@ import (
 	"github.com/voedger/voedger/pkg/processors"
 	"github.com/voedger/voedger/pkg/sys"
 	"github.com/voedger/voedger/pkg/sys/authnz"
-	coreutils "github.com/voedger/voedger/pkg/utils"
 	"github.com/voedger/voedger/pkg/vvm/engines"
 	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
 )
@@ -475,7 +476,7 @@ func Test_epsilon(t *testing.T) {
 		return args
 	}
 	t.Run("Should return epsilon", func(t *testing.T) {
-		epsilon, err := epsilon(args(options(math.E)))
+		epsilon, err := epsilon(args(options(json.Number(fmt.Sprint(math.E)))))
 
 		require.Equal(t, math.E, epsilon)
 		require.NoError(t, err)

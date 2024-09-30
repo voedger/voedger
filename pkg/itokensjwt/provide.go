@@ -10,8 +10,8 @@ import (
 	"sync"
 
 	"github.com/golang-jwt/jwt"
+	"github.com/voedger/voedger/pkg/coreutils"
 	itokens "github.com/voedger/voedger/pkg/itokens"
-	coreutils "github.com/voedger/voedger/pkg/utils"
 )
 
 // jwt.TimeFunc will be set to timeFunc but jwt.TimeFunc can not be protected from simulaneous access -> must be set only once

@@ -14,11 +14,11 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/voedger/voedger/pkg/appdef"
+	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/sys/authnz"
 	"github.com/voedger/voedger/pkg/sys/workspace"
-	coreutils "github.com/voedger/voedger/pkg/utils"
 	it "github.com/voedger/voedger/pkg/vit"
 )
 
@@ -130,6 +130,18 @@ func TestBasicUsage_Workspace(t *testing.T) {
 		resp := vit.PostProfile(prn, "c.sys.InitChildWorkspace", body, coreutils.Expect400())
 		resp.Println()
 	})
+}
+
+func TestCurrentClusterIDOnMissingWSClusterID(t *testing.T) {
+	require := require.New(t)
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
+	wsName := vit.NextName()
+	body := fmt.Sprintf(`{"args":{"WSName":%q,"WSKind":"app1pkg.test_ws","WSKindInitializationData":"{\"IntFld\": 10}"}}`, wsName)
+	prn := vit.GetPrincipal(istructs.AppQName_test1_app1, "login")
+	vit.PostProfile(prn, "c.sys.InitChildWorkspace", body)
+	ws := vit.WaitForWorkspace(wsName, prn)
+	require.Equal(istructs.ClusterID(1), ws.WSID.ClusterID())
 }
 
 func TestWorkspaceAuthorization(t *testing.T) {
@@ -307,4 +319,17 @@ func TestWSNameEscaping(t *testing.T) {
 	vit.PostProfile(prn, "c.sys.InitChildWorkspace", body)
 
 	vit.WaitForWorkspace(`\f;jf;GJ`, prn)
+}
+
+func TestWorkspaceInitError(t *testing.T) {
+	vit := it.NewVIT(t, &it.SharedConfig_App1)
+	defer vit.TearDown()
+
+	prn := vit.GetPrincipal(istructs.AppQName_test1_app1, "login")
+
+	wsName := vit.NextName()
+	body := fmt.Sprintf(`{"args":{"WSName":"%s","WSKind":"app1pkg.test_ws","WSKindInitializationData":"{ wrong json }","WSClusterID":1}}`, wsName)
+	vit.PostProfile(prn, "c.sys.InitChildWorkspace", body)
+
+	vit.WaitForWorkspace(wsName, prn, "failed to unmarshal workspace initialization data")
 }
