@@ -47,11 +47,10 @@ func ExampleIWorkspace() {
 	// how to enum workspaces
 	{
 		cnt := 0
-		app.Workspaces(func(ws appdef.IWorkspace) bool {
+		for ws := range app.Workspaces {
 			cnt++
 			fmt.Println(cnt, ws)
-			return true
-		})
+		}
 		fmt.Println("overall:", cnt)
 	}
 
