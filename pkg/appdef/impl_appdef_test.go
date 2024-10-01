@@ -99,6 +99,15 @@ func Test_AppDef_EnumerationBreakable(t *testing.T) {
 		}
 		require.Equal(1, cnt)
 	})
+
+	t.Run("records enumeration should be breakable", func(t *testing.T) {
+		cnt := 0
+		for range app.Records {
+			cnt++
+			break
+		}
+		require.Equal(1, cnt)
+	})
 }
 
 func Test_appDefBuilder_MustBuild(t *testing.T) {
