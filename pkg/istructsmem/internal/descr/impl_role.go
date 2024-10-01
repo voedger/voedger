@@ -15,12 +15,11 @@ func newRole() *Role {
 
 func (r *Role) read(role appdef.IRole) {
 	r.Type.read(role)
-	role.ACL(func(acl appdef.IACLRule) bool {
+	for acl := range role.ACL {
 		ar := newACLRule()
 		ar.read(acl)
 		r.ACL = append(r.ACL, ar)
-		return true
-	})
+	}
 }
 
 func newACLRule() *ACLRule {

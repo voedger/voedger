@@ -111,13 +111,18 @@ func Test_AppDef_EnumerationBreakable(t *testing.T) {
 	v.Key().ClustCols().AddField("ccf", DataKind_string)
 	v.Value().AddField("vf", DataKind_bytes, false)
 
-	adb.AddCommand(NewQName("test", "Command"))
+	cmdName := NewQName("test", "Command")
+	adb.AddCommand(cmdName)
 	adb.AddQuery(NewQName("test", "Query"))
 
 	adb.AddProjector(NewQName("test", "Projector")).
-		Events().Add(NewQName("test", "Command"))
+		Events().Add(cmdName)
 
 	adb.AddJob(NewQName("test", "Job")).SetCronSchedule("@every 3s")
+
+	adb.AddRole(NewQName("test", "Role")).
+		GrantAll([]QName{cmdName}).
+		RevokeAll([]QName{cmdName})
 
 	app := adb.MustBuild()
 	require.NotNil(app)
@@ -143,6 +148,9 @@ func Test_AppDef_EnumerationBreakable(t *testing.T) {
 		testBreakable(t, "Queries", app.Queries)
 		testBreakable(t, "Projectors", app.Projectors)
 		testBreakable(t, "Jobs", app.Jobs)
+		testBreakable(t, "Roles", app.Roles)
+		testBreakable(t, "ACL", app.ACL)
+		testBreakable(t, "IRole.ACL", app.Role(NewQName("test", "Role")).ACL)
 	})
 }
 
