@@ -217,7 +217,7 @@ func Test_AppDef_AddProjector(t *testing.T) {
 
 	t.Run("must be ok to enum projectors", func(t *testing.T) {
 		cnt := 0
-		app.Projectors(func(p IProjector) bool {
+		for p := range app.Projectors {
 			cnt++
 			switch cnt {
 			case 1:
@@ -226,8 +226,7 @@ func Test_AppDef_AddProjector(t *testing.T) {
 			default:
 				require.Failf("unexpected projector", "projector: %v", p)
 			}
-			return true
-		})
+		}
 		require.Equal(1, cnt)
 	})
 

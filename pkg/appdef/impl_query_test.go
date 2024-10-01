@@ -68,7 +68,7 @@ func Test_AppDef_AddQuery(t *testing.T) {
 
 	t.Run("must be ok to enum queries", func(t *testing.T) {
 		cnt := 0
-		app.Queries(func(q IQuery) bool {
+		for q := range app.Queries {
 			cnt++
 			switch cnt {
 			case 1:
@@ -76,8 +76,7 @@ func Test_AppDef_AddQuery(t *testing.T) {
 			default:
 				require.Failf("unexpected query", "query: %v", q)
 			}
-			return true
-		})
+		}
 		require.Equal(1, cnt)
 	})
 

@@ -111,6 +111,14 @@ func Test_AppDef_EnumerationBreakable(t *testing.T) {
 	v.Key().ClustCols().AddField("ccf", DataKind_string)
 	v.Value().AddField("vf", DataKind_bytes, false)
 
+	adb.AddCommand(NewQName("test", "Command"))
+	adb.AddQuery(NewQName("test", "Query"))
+
+	adb.AddProjector(NewQName("test", "Projector")).
+		Events().Add(NewQName("test", "Command"))
+
+	adb.AddJob(NewQName("test", "Job")).SetCronSchedule("@every 3s")
+
 	app := adb.MustBuild()
 	require.NotNil(app)
 
@@ -129,6 +137,12 @@ func Test_AppDef_EnumerationBreakable(t *testing.T) {
 		testBreakable(t, "ORecords", app.ORecords)
 		testBreakable(t, "Objects", app.Objects)
 		testBreakable(t, "View", app.Views)
+		testBreakable(t, "Extensions", app.Extensions)
+		testBreakable(t, "Functions", app.Functions)
+		testBreakable(t, "Commands", app.Commands)
+		testBreakable(t, "Queries", app.Queries)
+		testBreakable(t, "Projectors", app.Projectors)
+		testBreakable(t, "Jobs", app.Jobs)
 	})
 }
 

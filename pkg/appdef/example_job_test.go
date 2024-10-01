@@ -55,11 +55,10 @@ func ExampleIAppDefBuilder_AddJob() {
 	// How to enum all jobs in AppDef
 	{
 		cnt := 0
-		app.Jobs(func(j appdef.IJob) bool {
+		for j := range app.Jobs {
 			cnt++
 			fmt.Println(cnt, j)
-			return true
-		})
+		}
 	}
 
 	// Output:
