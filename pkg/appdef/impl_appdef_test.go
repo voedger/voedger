@@ -89,11 +89,16 @@ func Test_AppDef_EnumerationBreakable(t *testing.T) {
 	require := require.New(t)
 
 	adb := New()
+
 	adb.AddGDoc(NewQName("test", "GDoc"))
 	adb.AddGRecord(NewQName("test", "GRecord"))
-	adb.AddCDoc(NewQName("test", "CDoc"))
+
+	adb.AddCDoc(NewQName("test", "CDoc")).
+		SetSingleton()
 	adb.AddCRecord(NewQName("test", "CRecord"))
-	adb.AddWDoc(NewQName("test", "WDoc"))
+
+	adb.AddWDoc(NewQName("test", "WDoc")).
+		SetSingleton()
 	adb.AddWRecord(NewQName("test", "WRecord"))
 
 	app := adb.MustBuild()

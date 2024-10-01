@@ -383,8 +383,10 @@ func (app *appDef) Singleton(name QName) ISingleton {
 func (app *appDef) Singletons(cb func(ISingleton) bool) {
 	for t := range app.Types {
 		if s, ok := t.(ISingleton); ok {
-			if !cb(s) {
-				break
+			if s.Singleton() {
+				if !cb(s) {
+					break
+				}
 			}
 		}
 	}
