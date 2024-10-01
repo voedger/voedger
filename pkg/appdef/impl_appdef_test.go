@@ -71,10 +71,29 @@ func Test_NullAppDef(t *testing.T) {
 			}
 		}
 	})
+}
 
-	t.Run("should be break enum types", func(t *testing.T) {
+func Test_AppDef_EnumerationBreakable(t *testing.T) {
+	require := require.New(t)
+
+	adb := New()
+	adb.AddCDoc(NewQName("test", "doc"))
+
+	app := adb.MustBuild()
+	require.NotNil(app)
+
+	t.Run("types enumeration should be breakable", func(t *testing.T) {
 		cnt := 0
 		for range app.Types {
+			cnt++
+			break
+		}
+		require.Equal(1, cnt)
+	})
+
+	t.Run("structures enumeration should be breakable", func(t *testing.T) {
+		cnt := 0
+		for range app.Structures {
 			cnt++
 			break
 		}
