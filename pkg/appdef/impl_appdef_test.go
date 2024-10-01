@@ -109,6 +109,7 @@ func Test_AppDef_EnumerationBreakable(t *testing.T) {
 		testBreakable(t, "CRecords", app.CRecords)
 		testBreakable(t, "WDocs", app.WDocs)
 		testBreakable(t, "WRecords", app.WRecords)
+		testBreakable(t, "Singletons", app.Singletons)
 	})
 }
 
