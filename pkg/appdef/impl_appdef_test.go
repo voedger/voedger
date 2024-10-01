@@ -106,6 +106,11 @@ func Test_AppDef_EnumerationBreakable(t *testing.T) {
 
 	adb.AddObject(NewQName("test", "Object"))
 
+	v := adb.AddView(NewQName("test", "View"))
+	v.Key().PartKey().AddField("pkf", DataKind_int64)
+	v.Key().ClustCols().AddField("ccf", DataKind_string)
+	v.Value().AddField("vf", DataKind_bytes, false)
+
 	app := adb.MustBuild()
 	require.NotNil(app)
 
@@ -123,6 +128,7 @@ func Test_AppDef_EnumerationBreakable(t *testing.T) {
 		testBreakable(t, "ODocs", app.ODocs)
 		testBreakable(t, "ORecords", app.ORecords)
 		testBreakable(t, "Objects", app.Objects)
+		testBreakable(t, "View", app.Views)
 	})
 }
 

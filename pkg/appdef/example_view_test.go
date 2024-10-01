@@ -47,11 +47,10 @@ func ExampleIView() {
 	// now to enum views
 	{
 		cnt := 0
-		app.Views(func(v appdef.IView) bool {
+		for v := range app.Views {
 			cnt++
 			fmt.Println(cnt, v)
-			return true
-		})
+		}
 		fmt.Println("overall view(s):", cnt)
 	}
 
