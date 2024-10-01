@@ -74,13 +74,9 @@ func Test_NullAppDef(t *testing.T) {
 	})
 }
 
-type tstEnum[T any] struct {
-	enum iter.Seq[T]
-}
-
-func (e tstEnum[T]) breakable(t *testing.T, name string) {
+func testBreakable[T any](t *testing.T, name string, seq iter.Seq[T]) {
 	cnt := 0
-	for range e.enum {
+	for range seq {
 		cnt++
 		break
 	}
@@ -93,18 +89,22 @@ func Test_AppDef_EnumerationBreakable(t *testing.T) {
 	require := require.New(t)
 
 	adb := New()
-	adb.AddGDoc(NewQName("test", "doc"))
-	adb.AddGRecord(NewQName("test", "rec"))
+	adb.AddGDoc(NewQName("test", "GDoc"))
+	adb.AddGRecord(NewQName("test", "GRecord"))
+	adb.AddCDoc(NewQName("test", "CDoc"))
+	adb.AddCRecord(NewQName("test", "CRecord"))
 
 	app := adb.MustBuild()
 	require.NotNil(app)
 
-	t.Run("ranges enumerations should be breakable", func(t *testing.T) {
-		tstEnum[IType]{app.Types}.breakable(t, "Types")
-		tstEnum[IStructure]{app.Structures}.breakable(t, "Structures")
-		tstEnum[IRecord]{app.Records}.breakable(t, "Records")
-		tstEnum[IGDoc]{app.GDocs}.breakable(t, "GDocs")
-		tstEnum[IGRecord]{app.GRecords}.breakable(t, "GRecords")
+	t.Run("range enumeration should be breakable", func(t *testing.T) {
+		testBreakable(t, "Types", app.Types)
+		testBreakable(t, "Structures", app.Structures)
+		testBreakable(t, "Records", app.Records)
+		testBreakable(t, "GDocs", app.GDocs)
+		testBreakable(t, "GRecords", app.GRecords)
+		testBreakable(t, "CDocs", app.CDocs)
+		testBreakable(t, "CRecords", app.CRecords)
 	})
 }
 
