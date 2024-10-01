@@ -6,6 +6,7 @@
 package appdef
 
 import (
+	"iter"
 	"testing"
 
 	"github.com/voedger/voedger/pkg/goutils/testingu/require"
@@ -73,40 +74,37 @@ func Test_NullAppDef(t *testing.T) {
 	})
 }
 
+type tstEnum[T any] struct {
+	enum iter.Seq[T]
+}
+
+func (e tstEnum[T]) breakable(t *testing.T, name string) {
+	cnt := 0
+	for range e.enum {
+		cnt++
+		break
+	}
+	if cnt != 1 {
+		t.Errorf("range by %s should be breakable", name)
+	}
+}
+
 func Test_AppDef_EnumerationBreakable(t *testing.T) {
 	require := require.New(t)
 
 	adb := New()
-	adb.AddCDoc(NewQName("test", "doc"))
+	adb.AddGDoc(NewQName("test", "doc"))
+	adb.AddGRecord(NewQName("test", "rec"))
 
 	app := adb.MustBuild()
 	require.NotNil(app)
 
-	t.Run("types enumeration should be breakable", func(t *testing.T) {
-		cnt := 0
-		for range app.Types {
-			cnt++
-			break
-		}
-		require.Equal(1, cnt)
-	})
-
-	t.Run("structures enumeration should be breakable", func(t *testing.T) {
-		cnt := 0
-		for range app.Structures {
-			cnt++
-			break
-		}
-		require.Equal(1, cnt)
-	})
-
-	t.Run("records enumeration should be breakable", func(t *testing.T) {
-		cnt := 0
-		for range app.Records {
-			cnt++
-			break
-		}
-		require.Equal(1, cnt)
+	t.Run("ranges enumerations should be breakable", func(t *testing.T) {
+		tstEnum[IType]{app.Types}.breakable(t, "Types")
+		tstEnum[IStructure]{app.Structures}.breakable(t, "Structures")
+		tstEnum[IRecord]{app.Records}.breakable(t, "Records")
+		tstEnum[IGDoc]{app.GDocs}.breakable(t, "GDocs")
+		tstEnum[IGRecord]{app.GRecords}.breakable(t, "GRecords")
 	})
 }
 
