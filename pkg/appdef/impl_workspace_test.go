@@ -69,25 +69,24 @@ func Test_AppDef_AddWorkspace(t *testing.T) {
 		t.Run("must be ok to enum workspace types", func(t *testing.T) {
 			require.Equal(1, func() int {
 				cnt := 0
-				ws.Types(func(typ IType) bool {
+				for typ := range ws.Types {
 					switch typ.QName() {
 					case objName:
 					default:
 						require.Fail("unexpected type in workspace", "unexpected type «%v» in workspace «%v»", typ.QName(), ws.QName())
 					}
 					cnt++
-					return true
-				})
+				}
 				return cnt
 			}())
 		})
 
 		t.Run("Should be ok to break enum workspace types", func(t *testing.T) {
 			cnt := 0
-			ws.Types(func(IType) bool {
+			for range ws.Types {
 				cnt++
-				return false
-			})
+				break
+			}
 			require.Equal(1, cnt)
 		})
 
