@@ -101,6 +101,9 @@ func Test_AppDef_EnumerationBreakable(t *testing.T) {
 		SetSingleton()
 	adb.AddWRecord(NewQName("test", "WRecord"))
 
+	adb.AddODoc(NewQName("test", "ODoc"))
+	adb.AddORecord(NewQName("test", "ORecord"))
+
 	app := adb.MustBuild()
 	require.NotNil(app)
 
@@ -115,6 +118,8 @@ func Test_AppDef_EnumerationBreakable(t *testing.T) {
 		testBreakable(t, "WDocs", app.WDocs)
 		testBreakable(t, "WRecords", app.WRecords)
 		testBreakable(t, "Singletons", app.Singletons)
+		testBreakable(t, "ODocs", app.ODocs)
+		testBreakable(t, "ORecords", app.ORecords)
 	})
 }
 
