@@ -121,7 +121,12 @@ EOF
       echo "$HOME/prometheus/alert.rules already exists on the remote host.";
   fi
 
-  cat ./alertmanager/config.yml | utils_ssh "$SSH_USER@$1" 'cat > ~/alertmanager/config.yml'
+  if utils_ssh "$SSH_USER@$1" "if [ ! -f $HOME/alertmanager/config.yml ]; then exit 0; else exit 1; fi"; then
+      echo "$HOME/alertmanager/config.yml does not exist on the remote host. Creating it now.";
+      cat ./alertmanager/config.yml | utils_ssh "$SSH_USER@$1" 'cat > ~/alertmanager/config.yml';
+  else
+      echo "$HOME/alertmanager/config.yml already exists on the remote host.";
+  fi
 
   utils_ssh "$SSH_USER@$1" "sudo mkdir -p /etc/node-exporter && sudo chown -R 65534:65534 /etc/node-exporter"
 
