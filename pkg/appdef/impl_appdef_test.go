@@ -6,8 +6,10 @@
 package appdef
 
 import (
+	"fmt"
 	"iter"
 	"testing"
+	"time"
 
 	"github.com/voedger/voedger/pkg/goutils/testingu/require"
 )
@@ -90,39 +92,72 @@ func Test_AppDef_EnumerationBreakable(t *testing.T) {
 
 	adb := New()
 
-	adb.AddGDoc(NewQName("test", "GDoc"))
-	adb.AddGRecord(NewQName("test", "GRecord"))
+	adb.AddGDoc(NewQName("test", "GDoc1"))
+	adb.AddGDoc(NewQName("test", "GDoc2"))
+	adb.AddGRecord(NewQName("test", "GRecord1"))
+	adb.AddGRecord(NewQName("test", "GRecord2"))
 
-	adb.AddCDoc(NewQName("test", "CDoc")).
+	adb.AddCDoc(NewQName("test", "CDoc1")).
 		SetSingleton()
-	adb.AddCRecord(NewQName("test", "CRecord"))
-
-	adb.AddWDoc(NewQName("test", "WDoc")).
+	adb.AddCDoc(NewQName("test", "CDoc2")).
 		SetSingleton()
-	adb.AddWRecord(NewQName("test", "WRecord"))
+	adb.AddCRecord(NewQName("test", "CRecord1"))
+	adb.AddCRecord(NewQName("test", "CRecord2"))
 
-	adb.AddODoc(NewQName("test", "ODoc"))
-	adb.AddORecord(NewQName("test", "ORecord"))
+	adb.AddWDoc(NewQName("test", "WDoc1")).
+		SetSingleton()
+	adb.AddWDoc(NewQName("test", "WDoc2")).
+		SetSingleton()
+	adb.AddWRecord(NewQName("test", "WRecord1"))
+	adb.AddWRecord(NewQName("test", "WRecord2"))
 
-	adb.AddObject(NewQName("test", "Object"))
+	adb.AddODoc(NewQName("test", "ODoc1"))
+	adb.AddODoc(NewQName("test", "ODoc2"))
+	adb.AddORecord(NewQName("test", "ORecord1"))
+	adb.AddORecord(NewQName("test", "ORecord2"))
 
-	v := adb.AddView(NewQName("test", "View"))
-	v.Key().PartKey().AddField("pkf", DataKind_int64)
-	v.Key().ClustCols().AddField("ccf", DataKind_string)
-	v.Value().AddField("vf", DataKind_bytes, false)
+	adb.AddObject(NewQName("test", "Object1"))
+	adb.AddObject(NewQName("test", "Object2"))
 
-	cmdName := NewQName("test", "Command")
-	adb.AddCommand(cmdName)
-	adb.AddQuery(NewQName("test", "Query"))
+	for i := 1; i <= 2; i++ {
+		v := adb.AddView(NewQName("test", fmt.Sprintf("View%d", i)))
+		v.Key().PartKey().AddField("pkf", DataKind_int64)
+		v.Key().ClustCols().AddField("ccf", DataKind_string)
+		v.Value().AddField("vf", DataKind_bytes, false)
+	}
 
-	adb.AddProjector(NewQName("test", "Projector")).
-		Events().Add(cmdName)
+	cmd1Name, cmd2Name := NewQName("test", "Command1"), NewQName("test", "Command2")
+	adb.AddCommand(cmd1Name)
+	adb.AddCommand(cmd2Name)
 
-	adb.AddJob(NewQName("test", "Job")).SetCronSchedule("@every 3s")
+	adb.AddQuery(NewQName("test", "Query1"))
+	adb.AddQuery(NewQName("test", "Query2"))
 
-	adb.AddRole(NewQName("test", "Role")).
-		GrantAll([]QName{cmdName}).
-		RevokeAll([]QName{cmdName})
+	adb.AddProjector(NewQName("test", "Projector1")).
+		Events().Add(cmd1Name)
+	adb.AddProjector(NewQName("test", "Projector2")).
+		Events().Add(cmd2Name)
+
+	job1name, job2name := NewQName("test", "Job1"), NewQName("test", "Job2")
+	adb.AddJob(job1name).SetCronSchedule("@every 3s").
+		States().
+		Add(NewQName("test", "State1"), cmd1Name, cmd2Name).
+		Add(NewQName("test", "State2"))
+	adb.AddJob(job2name).SetCronSchedule("@every 1h")
+
+	role1Name, role2Name := NewQName("test", "Role1"), NewQName("test", "Role2")
+	adb.AddRole(role1Name).
+		GrantAll([]QName{cmd1Name, cmd2Name}).
+		RevokeAll([]QName{cmd2Name})
+	adb.AddRole(role2Name).
+		GrantAll([]QName{cmd1Name, cmd2Name}).
+		RevokeAll([]QName{cmd1Name})
+
+	rate1Name, rate2Name := NewQName("test", "Rate1"), NewQName("test", "Rate2")
+	adb.AddRate(rate1Name, 1, time.Second, []RateScope{RateScope_AppPartition})
+	adb.AddRate(rate2Name, 2, 2*time.Second, []RateScope{RateScope_IP})
+	adb.AddLimit(NewQName("test", "Limit1"), []QName{cmd1Name}, rate1Name)
+	adb.AddLimit(NewQName("test", "Limit2"), []QName{cmd2Name}, rate2Name)
 
 	app := adb.MustBuild()
 	require.NotNil(app)
@@ -148,9 +183,12 @@ func Test_AppDef_EnumerationBreakable(t *testing.T) {
 		testBreakable(t, "Queries", app.Queries)
 		testBreakable(t, "Projectors", app.Projectors)
 		testBreakable(t, "Jobs", app.Jobs)
+		testBreakable(t, "IStorages.Enum", app.Job(job1name).States().Enum)
 		testBreakable(t, "Roles", app.Roles)
 		testBreakable(t, "ACL", app.ACL)
-		testBreakable(t, "IRole.ACL", app.Role(NewQName("test", "Role")).ACL)
+		testBreakable(t, "IRole.ACL", app.Role(role1Name).ACL)
+		testBreakable(t, "Rates", app.Rates)
+		testBreakable(t, "Limits", app.Limits)
 	})
 }
 
