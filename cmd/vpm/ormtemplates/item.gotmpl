@@ -1,13 +1,21 @@
 {{define "item"}}
 
+{{if (ne .Type "Projector")}}
 type {{.Type}}_{{.Package.Name}}_{{.Name}} struct {
     Type
 }
+{{end}}
 
-{{if and (ne .Type "Command") (ne .Type "Query")}}
+{{if and (ne .Type "Command") (ne .Type "Query") (ne .Type "Projector")}}
 type Value_{{.Type}}_{{.Package.Name}}_{{.Name}} struct{
     tv exttinygo.TValue
 	{{if or (eq .Type "CDoc") (eq .Type "WDoc") (eq .Type "View") (eq .Type "WSingleton")}}kb exttinygo.TKeyBuilder{{end}}
+}
+{{end}}
+
+{{if and (ne .Type "Command") (ne .Type "Query") (ne .Type "Projector")}}
+type Intent_{{.Type}}_{{.Package.Name}}_{{.Name}} struct{
+intent exttinygo.TIntent
 }
 {{end}}
 
@@ -18,11 +26,55 @@ type Container_ORecord_{{.Package.Name}}_{{.Name}} struct {
 }
 {{end}}
 
-{{if and (ne .Type "Command") (ne .Type "Query")}}
-type Intent_{{.Type}}_{{.Package.Name}}_{{.Name}} struct{
-	intent exttinygo.TIntent
+{{if (eq .Type "Projector")}}
+
+type ProjectorEvent_{{.Package.Name}}_{{.Name}} struct {
+	event exttinygo.TValue
+}
+
+type ProjectorArg_{{.Package.Name}}_{{.Name}} struct {
+    qname string
+	value exttinygo.TValue
+}
+
+func (pa ProjectorArg_{{.Package.Name}}_{{.Name}}) QName() string {
+    return pa.qname
+}
+
+func (pa ProjectorArg_{{.Package.Name}}_{{.Name}}) Get() exttinygo.TValue {
+    return pa.value
+}
+
+func (pe ProjectorEvent_{{.Package.Name}}_{{.Name}}) Arg() ProjectorArg_{{.Package.Name}}_{{.Name}} {
+    arg := pe.event.AsValue("ArgumentObject")
+    return ProjectorArg_{{.Package.Name}}_{{.Name}}{
+        qname: arg.AsString("qname"),
+		value: arg,
+    }
+}
+
+type {{.Type}}_{{.Package.Name}}_{{.Name}} struct {
+Type
+event ProjectorEvent_{{.Package.Name}}_{{.Name}}
+}
+
+func (pkg TPackage_{{.Package.Name}}) Projector_{{.Name}}() Projector_{{.Package.Name}}_{{.Name}} {
+	pe := ProjectorEvent_{{.Package.Name}}_{{.Name}}{
+        event: exttinygo.MustGetValue(exttinygo.KeyBuilder(exttinygo.StorageEvent, exttinygo.NullEntity)),
+	}
+    return Projector_{{.Package.Name}}_{{.Name}}{
+        event: pe,
+    }
+}
+
+{{if (isExecutableWithParam .)}}
+func (p Projector_{{.Package.Name}}_{{.Name}}) Event() ProjectorEvent_{{.Package.Name}}_{{.Name}} {
+return p.event
 }
 {{end}}
+
+{{end}}
+
 
 {{template "fields" .}}
 

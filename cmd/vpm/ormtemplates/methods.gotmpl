@@ -242,5 +242,52 @@ func (c {{.Type}}_{{.Package.Name}}_{{.Name}}) Result({{range .ResultObjectField
 {{end}}
 {{end}}
 
+{{if (eq .Type "Projector")}}
+
+{{range .On}}
+
+{{if (doesExecuteOn .)}}
+
+type Cmd_{{.Package.Name}}_{{.Name}} struct {
+qname string
+event ProjectorEvent_{{.Projector.Package.Name}}_{{.Projector.Name}}
+}
+
+func (c Cmd_{{.Package.Name}}_{{.Name}}) Arg() (ProjectorArg_{{.Projector.Package.Name}}_{{.Projector.Name}}, bool) {
+	return c.event.Arg(), true
+}
+
+func (p Projector_{{.Projector.Package.Name}}_{{.Projector.Name}}) Cmd_{{.Name}}() Cmd_{{.Package.Name}}_{{.Name}} {
+	return Cmd_{{.Package.Name}}_{{.Name}}{
+		qname: p.PkgPath() + "." + "{{.Name}}",
+		event: p.event,
+	}
+}
+
+{{end}}
+
+{{if (doesTriggerOnCUD .)}}
+
+func (p Projector_{{.Projector.Package.Name}}_{{.Projector.Name}}) Cuds_{{.Package.Name}}_{{.Name}}() []Value_{{.Type}}_{{.Package.Name}}_{{.Name}} {
+	// get cuds from event
+return nil
+}
+
+{{end}}
+
+{{if (doesExecuteWithParam .)}}
+
+func (p Projector_{{.Projector.Package.Name}}_{{.Projector.Name}}) Arg_{{.Package.Name}}_{{.Name}}() ProjectorArg_{{.Projector.Package.Name}}_{{.Projector.Name}} {
+return p.event.Arg()
+}
+
+{{end}}
+
+{{end}}
+
+{{end}}
+
+
+
 {{end}}
 

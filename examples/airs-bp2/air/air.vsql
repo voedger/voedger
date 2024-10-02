@@ -11,6 +11,10 @@ WORKSPACE RestaurantWS (
     DESCRIPTOR RestaurantDescriptor();
     USE TABLE untill.*;
 
+	TABLE Abc INHERITS CDoc (
+		Field1 int32 NOT NULL
+	);
+
 	TABLE ProformaPrinted INHERITS ODoc (
 		Number int32 NOT NULL,
 		UserID ref(untill.untill_users) NOT NULL,
@@ -37,6 +41,9 @@ WORKSPACE RestaurantWS (
 	EXTENSION ENGINE BUILTIN (
         COMMAND Orders(untill.orders);
         COMMAND Pbill(untill.pbill) RETURNS CmdPBillResult;
-	    PROJECTOR FillPbillDates AFTER EXECUTE ON Pbill INTENTS(View(PbillDates));
-	);
+        PROJECTOR ApplySalesMetrics AFTER EXECUTE ON (Pbill) INTENTS (View(PbillDates));
+        PROJECTOR FillPbillDates AFTER EXECUTE WITH PARAM ON untill.pbill INTENTS(View(PbillDates));
+        -- CUD
+        PROJECTOR NewAbcItem AFTER INSERT ON (Abc);
+    );
 )

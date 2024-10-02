@@ -363,6 +363,24 @@ func processITypeObj(
 			}
 		}
 		newItem = tableData
+	case appdef.IProjector:
+		// projector is a special case
+		ormProjectorItem := ormProjector{
+			ormPackageItem: pkgItem,
+			On:             make([]ormProjectorEventItem, 0),
+		}
+		iProjectorEvents := t.Events()
+
+		// collecting projector events (Commands, CUDs, etc.)
+		iProjectorEvents.Enum(func(iProjectorEvent appdef.IProjectorEvent) {
+			ormProjectorItem.On = append(ormProjectorItem.On, ormProjectorEventItem{
+				Projector:      ormProjectorItem,
+				Kinds:          iProjectorEvent.Kind(),
+				ormPackageItem: newPackageItem(pkgInfos, wsQName, iProjectorEvent.On()),
+			})
+		})
+
+		newItem = ormProjectorItem
 	case appdef.IWorkspace:
 		newItem = pkgItem
 	case appdef.ICommand, appdef.IQuery:
@@ -448,8 +466,11 @@ func fillInTemplate(ormPkgData ormPackage) ([]byte, error) {
 			}
 			return strings.ToUpper(s[:1]) + s[1:]
 		},
-		"lower":       strings.ToLower,
-		"hasCommands": hasCommands,
+		"lower":                 strings.ToLower,
+		"doesExecuteOn":         doesExecuteOn,
+		"doesTriggerOnCUD":      doesTriggerOnCUD,
+		"doesExecuteWithParam":  doesExecuteWithParam,
+		"isExecutableWithParam": isExecutableWithParam,
 	}).ParseFS(ormTemplates, "*")
 
 	if err != nil {
@@ -545,6 +566,8 @@ func getObjType(obj interface{}) string {
 		return getTypeKind(t.Kind())
 	case appdef.IType:
 		return getTypeKind(t.Kind())
+	case appdef.IProjector:
+		return getTypeKind(t.Kind())
 	default:
 		return unknownType
 	}
@@ -561,6 +584,8 @@ func getTypeKind(typeKind appdef.TypeKind) string {
 		return "WDoc"
 	case appdef.TypeKind_ODoc:
 		return "ODoc"
+	case appdef.TypeKind_Projector:
+		return "Projector"
 	default:
 		return unknownType
 	}
