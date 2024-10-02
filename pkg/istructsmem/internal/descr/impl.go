@@ -65,6 +65,10 @@ func (a *Application) read(app istructs.IAppStructs, rateLimits map[appdef.QName
 			r := newRole()
 			r.read(t)
 			pkg.Roles[name.String()] = r
+		case appdef.IWorkspace:
+			w := newWorkspace()
+			w.read(t)
+			pkg.Workspaces[name.String()] = w
 		}
 	}
 
@@ -99,6 +103,7 @@ func newPackage() *Package {
 		Structures: make(map[string]*Structure),
 		Views:      make(map[string]*View),
 		Roles:      make(map[string]*Role),
+		Workspaces: make(map[string]*Workspace),
 		Resources:  make(map[string]*Resource),
 		RateLimits: make(map[string][]*RateLimit),
 	}
