@@ -10,6 +10,7 @@ import "github.com/voedger/voedger/pkg/appdef"
 type Application struct {
 	Name     appdef.AppQName
 	Packages map[string]*Package `json:",omitempty"`
+	ACL      *ACL                `json:",omitempty"`
 }
 
 type Package struct {
