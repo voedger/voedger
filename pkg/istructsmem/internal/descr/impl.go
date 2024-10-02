@@ -20,67 +20,52 @@ func newApplication() *Application {
 func (a *Application) read(app istructs.IAppStructs, rateLimits map[appdef.QName]map[istructs.RateLimitKind]istructs.RateLimit) {
 	a.Packages = make(map[string]*Package)
 
-	app.AppDef().Packages(func(localName, fullPath string) bool {
-		if localName != appdef.SysPackage {
-			pkg := newPackage()
-			pkg.Name = localName
-			pkg.Path = fullPath
-			a.Packages[localName] = pkg
+	for localName, fullPath := range app.AppDef().Packages {
+		if localName == appdef.SysPackage {
+			continue
 		}
-		return true
-	})
+		pkg := newPackage()
+		pkg.Name = localName
+		pkg.Path = fullPath
+		a.Packages[localName] = pkg
+	}
 
 	a.Name = app.AppQName()
 
-	app.AppDef().Types(func(typ appdef.IType) bool {
+	for typ := range app.AppDef().Types {
 		name := typ.QName()
 
 		if name.Pkg() == appdef.SysPackage {
-			return true
+			continue
 		}
 
 		pkg := getPkg(name, a)
-
-		if data, ok := typ.(appdef.IData); ok {
-			if !data.IsSystem() {
+		switch t := typ.(type) {
+		case appdef.IData:
+			if !t.IsSystem() {
 				d := newData()
-				d.read(data)
+				d.read(t)
 				pkg.DataTypes[name.String()] = d
 			}
-			return true
-		}
-
-		if str, ok := typ.(appdef.IStructure); ok {
+		case appdef.IStructure:
 			s := newStructure()
-			s.read(str)
+			s.read(t)
 			pkg.Structures[name.String()] = s
-			return true
-		}
-
-		if view, ok := typ.(appdef.IView); ok {
+		case appdef.IView:
 			v := newView()
-			v.read(view)
+			v.read(t)
 			pkg.Views[name.String()] = v
-			return true
-		}
-
-		if ext, ok := typ.(appdef.IExtension); ok {
+		case appdef.IExtension:
 			if pkg.Extensions == nil {
 				pkg.Extensions = newExtensions()
 			}
-			pkg.Extensions.read(ext)
-			return true
-		}
-
-		if role, ok := typ.(appdef.IRole); ok {
+			pkg.Extensions.read(t)
+		case appdef.IRole:
 			r := newRole()
-			r.read(role)
+			r.read(t)
 			pkg.Roles[name.String()] = r
-			return true
 		}
-
-		return true
-	})
+	}
 
 	for qName, qNameRateLimit := range rateLimits {
 		pkg := getPkg(qName, a)

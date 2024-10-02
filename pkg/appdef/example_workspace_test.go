@@ -47,11 +47,10 @@ func ExampleIWorkspace() {
 	// how to enum workspaces
 	{
 		cnt := 0
-		app.Workspaces(func(ws appdef.IWorkspace) bool {
+		for ws := range app.Workspaces {
 			cnt++
 			fmt.Println(cnt, ws)
-			return true
-		})
+		}
 		fmt.Println("overall:", cnt)
 	}
 
@@ -64,11 +63,10 @@ func ExampleIWorkspace() {
 		// how to inspect workspace
 		fmt.Printf("workspace %q descriptor is %q\n", ws.QName(), ws.Descriptor())
 		cnt := 0
-		ws.Types(func(t appdef.IType) bool {
+		for t := range ws.Types {
 			fmt.Printf("- Type: %q, kind: %v\n", t.QName(), t.Kind())
 			cnt++
-			return true
-		})
+		}
 		fmt.Println("types count:", cnt)
 	}
 

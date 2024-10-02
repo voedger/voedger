@@ -160,14 +160,13 @@ func (a *asyncActualizer) init(ctx context.Context) (err error) {
 		if ss.Len() > 2 {
 			return true
 		}
-		found := false
-		ss.Enum(
-			func(storage appdef.IStorage) bool {
-				n := storage.Name()
-				found = n != sys.Storage_View && n != sys.Storage_Record
-				return !found
-			})
-		return found
+		for storage := range ss.Enum {
+			n := storage.Name()
+			if n != sys.Storage_View && n != sys.Storage_Record {
+				return true
+			}
+		}
+		return false
 	}
 
 	// https://github.com/voedger/voedger/issues/1048
