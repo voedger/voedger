@@ -28,7 +28,7 @@ func (e extensionEngine) SetLimits(limits iextengine.ExtensionLimits) {}
 func (e extensionEngine) Invoke(ctx context.Context, extName appdef.FullQName, io iextengine.IExtensionIO) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
-			err = fmt.Errorf("extension panic: %v", r)
+			err = fmt.Errorf("extension %s panic: %v", extName, r)
 		}
 	}()
 	if f, ok := e.statelessFuncs[extName]; ok {
