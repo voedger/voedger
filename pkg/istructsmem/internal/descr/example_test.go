@@ -533,7 +533,97 @@ func Example() {
 	//         }
 	//       }
 	//     }
-	//   }
+	//   },
+	//   "ACL": [
+	//     {
+	//       "Comment": "allow reader to select some fields from test.doc and test.rec",
+	//       "Policy": "Allow",
+	//       "Ops": [
+	//         "Select"
+	//       ],
+	//       "Resources": {
+	//         "On": [
+	//           "test.doc",
+	//           "test.rec"
+	//         ],
+	//         "Fields": [
+	//           "f1",
+	//           "f2"
+	//         ]
+	//       },
+	//       "Principal": "test.reader"
+	//     },
+	//     {
+	//       "Comment": "allow reader to select all fields from test.view",
+	//       "Policy": "Allow",
+	//       "Ops": [
+	//         "Select"
+	//       ],
+	//       "Resources": {
+	//         "On": [
+	//           "test.view"
+	//         ]
+	//       },
+	//       "Principal": "test.reader"
+	//     },
+	//     {
+	//       "Comment": "allow reader to execute test.query",
+	//       "Policy": "Allow",
+	//       "Ops": [
+	//         "Execute"
+	//       ],
+	//       "Resources": {
+	//         "On": [
+	//           "test.query"
+	//         ]
+	//       },
+	//       "Principal": "test.reader"
+	//     },
+	//     {
+	//       "Comment": "allow writer to do anything with test.doc, test.rec and test.view",
+	//       "Policy": "Allow",
+	//       "Ops": [
+	//         "Insert",
+	//         "Update",
+	//         "Select"
+	//       ],
+	//       "Resources": {
+	//         "On": [
+	//           "test.doc",
+	//           "test.rec",
+	//           "test.view"
+	//         ]
+	//       },
+	//       "Principal": "test.writer"
+	//     },
+	//     {
+	//       "Comment": "disable writer to update test.doc",
+	//       "Policy": "Deny",
+	//       "Ops": [
+	//         "Update"
+	//       ],
+	//       "Resources": {
+	//         "On": [
+	//           "test.doc"
+	//         ]
+	//       },
+	//       "Principal": "test.writer"
+	//     },
+	//     {
+	//       "Comment": "allow writer to execute all test functions",
+	//       "Policy": "Allow",
+	//       "Ops": [
+	//         "Execute"
+	//       ],
+	//       "Resources": {
+	//         "On": [
+	//           "test.cmd",
+	//           "test.query"
+	//         ]
+	//       },
+	//       "Principal": "test.writer"
+	//     }
+	//   ]
 	// }
 }
 
