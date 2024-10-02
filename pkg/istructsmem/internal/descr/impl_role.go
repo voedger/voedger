@@ -15,5 +15,5 @@ func newRole() *Role {
 
 func (r *Role) read(role appdef.IRole) {
 	r.Type.read(role)
-	r.ACL.read(role)
+	r.ACL.read(role, false)
 }

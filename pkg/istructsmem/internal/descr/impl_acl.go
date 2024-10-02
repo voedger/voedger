@@ -11,10 +11,10 @@ func newACL() *ACL {
 	return &ACL{}
 }
 
-func (acl *ACL) read(a appdef.IWithACL) {
+func (acl *ACL) read(a appdef.IWithACL, withPrincipals bool) {
 	for r := range a.ACL {
 		ar := newACLRule()
-		ar.read(r)
+		ar.read(r, withPrincipals)
 		*acl = append(*acl, ar)
 	}
 }
@@ -26,14 +26,18 @@ func newACLRule() *ACLRule {
 	}
 }
 
-func (ar *ACLRule) read(acl appdef.IACLRule) {
+func (ar *ACLRule) read(acl appdef.IACLRule, withPrincipal bool) {
 	ar.Comment = readComment(acl)
 	ar.Policy = acl.Policy().TrimString()
 	for _, k := range acl.Ops() {
 		ar.Ops = append(ar.Ops, k.TrimString())
 	}
 	ar.Resources.read(acl.Resources())
-	ar.Principal = acl.Principal().QName()
+
+	if withPrincipal {
+		n := acl.Principal().QName()
+		ar.Principal = &n
+	}
 }
 
 func newACLResourcePattern() *ACLResourcePattern {

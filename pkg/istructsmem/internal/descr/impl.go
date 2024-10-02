@@ -68,7 +68,7 @@ func (a *Application) read(app istructs.IAppStructs, rateLimits map[appdef.QName
 		}
 	}
 
-	a.ACL.read(app.AppDef())
+	a.ACL.read(app.AppDef(), true)
 
 	for qName, qNameRateLimit := range rateLimits {
 		pkg := getPkg(qName, a)
