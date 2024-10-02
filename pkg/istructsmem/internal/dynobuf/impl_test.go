@@ -89,18 +89,16 @@ func TestDynoBufSchemes(t *testing.T) {
 		}
 	}
 
-	appDef.Types(
-		func(typ appdef.IType) bool {
-			name := typ.QName()
-			if view, ok := typ.(appdef.IView); ok {
-				checkScheme(name, view.Key().PartKey(), schemes.ViewPartKeyScheme(name))
-				checkScheme(name, view.Key().ClustCols(), schemes.ViewClustColsScheme(name))
-				checkScheme(name, view.Value(), schemes.Scheme(name))
-				return true
-			}
-			if fld, ok := typ.(appdef.IFields); ok {
-				checkScheme(name, fld, schemes.Scheme(name))
-			}
-			return true
-		})
+	for typ := range appDef.Types {
+		name := typ.QName()
+		if view, ok := typ.(appdef.IView); ok {
+			checkScheme(name, view.Key().PartKey(), schemes.ViewPartKeyScheme(name))
+			checkScheme(name, view.Key().ClustCols(), schemes.ViewClustColsScheme(name))
+			checkScheme(name, view.Value(), schemes.Scheme(name))
+			continue
+		}
+		if fld, ok := typ.(appdef.IFields); ok {
+			checkScheme(name, fld, schemes.Scheme(name))
+		}
+	}
 }

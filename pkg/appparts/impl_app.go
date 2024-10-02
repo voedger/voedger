@@ -88,7 +88,7 @@ func (a *appRT) deploy(def appdef.IAppDef, extModuleURLs map[string]*url.URL, st
 	eef := a.apps.extEngineFactories
 
 	enginesPathsModules := map[appdef.ExtensionEngineKind]map[string]*iextengine.ExtensionModule{}
-	def.Extensions(func(ext appdef.IExtension) bool {
+	for ext := range def.Extensions {
 		extEngineKind := ext.Engine()
 		path := ext.App().PackageFullPath(ext.QName().Pkg())
 		pathsModules, ok := enginesPathsModules[extEngineKind]
@@ -98,7 +98,7 @@ func (a *appRT) deploy(def appdef.IAppDef, extModuleURLs map[string]*url.URL, st
 			enginesPathsModules[extEngineKind] = pathsModules
 		}
 		if extEngineKind != appdef.ExtensionEngineKind_WASM {
-			return true
+			continue
 		}
 		extModule, ok := pathsModules[path]
 		if !ok {
@@ -113,8 +113,7 @@ func (a *appRT) deploy(def appdef.IAppDef, extModuleURLs map[string]*url.URL, st
 			pathsModules[path] = extModule
 		}
 		extModule.ExtensionNames = append(extModule.ExtensionNames, ext.QName().Entity())
-		return true
-	})
+	}
 	extModules := map[appdef.ExtensionEngineKind][]iextengine.ExtensionModule{}
 	for extEngineKind, pathsModules := range enginesPathsModules {
 		extModules[extEngineKind] = nil // initialize any engine mentioned in the schema

@@ -86,9 +86,9 @@ func Test_AppDef_AddData(t *testing.T) {
 		require.Equal(3, cnt)
 	})
 
-	t.Run("must be ok to enum data types", func(t *testing.T) {
+	t.Run("should be ok to enum data types", func(t *testing.T) {
 		cnt := 0
-		app.DataTypes(func(d IData) bool {
+		for d := range app.DataTypes {
 			if !d.IsSystem() {
 				cnt++
 				require.Equal(TypeKind_Data, d.Kind())
@@ -103,9 +103,17 @@ func Test_AppDef_AddData(t *testing.T) {
 					require.Failf("unexpected data type", "data type: %v", d)
 				}
 			}
-			return true
-		})
+		}
 		require.Equal(3, cnt)
+	})
+
+	t.Run("data types range should be breakable", func(t *testing.T) {
+		cnt := 0
+		for range app.DataTypes {
+			cnt++
+			break
+		}
+		require.Equal(1, cnt)
 	})
 
 	require.Nil(app.Data(NewQName("test", "unknown")), "check nil returns")
