@@ -16,7 +16,7 @@ import (
 func getNextStartTime(cronSchedule string, startTimeTolerance time.Duration, now time.Time) time.Time {
 	nextStartExp, err := cronexpr.Parse(cronSchedule)
 	if err != nil {
-		logger.Verbose(fmt.Sprintf("wrong CronSchedule field = %s", cronSchedule))
+		logger.Verbose("wrong CronSchedule field = " + cronSchedule)
 		return now
 	}
 	return nextStartExp.Next(now.Add(-startTimeTolerance))

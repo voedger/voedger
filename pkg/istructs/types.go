@@ -5,6 +5,7 @@
 package istructs
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 
@@ -32,7 +33,7 @@ type ClusterID = uint16
 // 2^32 apps per clusters
 type ClusterAppID = uint32
 
-type SubjectKindType uint8
+type SubjectKindType int32 // not uint8 because it is written to int32 fields, so int32 is better to avoid data loss
 
 const (
 	SubjectKind_null SubjectKindType = iota
@@ -83,10 +84,10 @@ type IRowWriter interface {
 	PutBool(appdef.FieldName, bool)
 	PutRecordID(appdef.FieldName, RecordID)
 
-	// Puts value into int23, int64, float32, float64 or RecordID data type fields.
+	// Puts underlying json.Number value into field of int32, int64, float32 or float64
 	//
 	// Tries to make conversion from value to a name type
-	PutNumber(appdef.FieldName, float64)
+	PutNumber(appdef.FieldName, json.Number)
 
 	// Puts value into string, bytes or QName data type field.
 	//
@@ -94,15 +95,18 @@ type IRowWriter interface {
 	PutChars(appdef.FieldName, string)
 
 	// Puts value into fields. Field names are taken from map keys, values are taken from map values.
+	// types of values and types of the target fields in the schema must be the same
+	// joson.Number value type is allowed for number fields
 	//
 	// Calls PutNumber for numbers and RecordIDs, PutChars for strings, bytes and QNames.
 	PutFromJSON(map[appdef.FieldName]any)
 }
 
-type NumAppWorkspaces int
-type NumAppPartitions int
-type NumCommandProcessors int
-type NumQueryProcessors int
+type NumAppWorkspaces uint16 // since [MaxNumAppWorkspaces] = 32768
+type NumAppPartitions uint16 // since [PartitionID] is uint16
+type NumCommandProcessors uint
+type NumQueryProcessors uint
+type AppWorkspaceNumber uint
 
 // RowBuilder is a type for function that creates a row reader from a row writer.
 //

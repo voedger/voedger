@@ -9,6 +9,7 @@ import (
 	"bytes"
 	"encoding/base64"
 	"encoding/binary"
+	"encoding/json"
 	"errors"
 	"fmt"
 
@@ -269,6 +270,24 @@ func (row *rowType) putValue(name appdef.FieldName, kind dynobuffers.FieldType, 
 		return
 	}
 
+	if name == appdef.SystemField_ID {
+		int64Val, ok := value.(int64)
+		if !ok {
+			row.collectError(ErrWrongType)
+		}
+		row.setID(istructs.RecordID(int64Val)) // nolint G115
+		return
+	}
+
+	if name == appdef.SystemField_ParentID {
+		int64Val, ok := value.(int64)
+		if !ok {
+			row.collectError(ErrWrongType)
+		}
+		row.setParent(istructs.RecordID(int64Val)) // nolint G115
+		return
+	}
+
 	if fld.Verifiable() {
 		token, ok := value.(string)
 		if !ok {
@@ -501,8 +520,8 @@ func (row *rowType) verifyToken(fld appdef.IField, token string) (value interfac
 		return nil, fmt.Errorf("verified field is «%s», but «%s» expected: %w", payload.Field, fld.Name(), ErrInvalidName)
 	}
 
-	if value, err = row.dynoBufValue(payload.Value, fld.DataKind()); err != nil {
-		return nil, fmt.Errorf("verified field «%s» data has invalid type: %w", fld.Name(), err)
+	if value, err = row.clarifyJSONValue(payload.Value, fld.DataKind()); err != nil {
+		return nil, fmt.Errorf("wrong value for verified field «%s»: %w", fld.Name(), err)
 	}
 
 	return value, nil
@@ -524,9 +543,9 @@ func (row *rowType) AsInt64(name appdef.FieldName) (value int64) {
 	if fld.DataKind() == appdef.DataKind_RecordID {
 		switch name {
 		case appdef.SystemField_ID:
-			return int64(row.id)
+			return int64(row.id) // nolint G115 TODO: data loss on sending RecordID to the client as a func rersponse
 		case appdef.SystemField_ParentID:
-			return int64(row.parentID)
+			return int64(row.parentID) // nolint G115 TODO: data loss on sending RecordID to the client as a func rersponse
 		}
 	}
 
@@ -653,7 +672,7 @@ func (row *rowType) AsRecordID(name appdef.FieldName) istructs.RecordID {
 	_ = row.fieldMustExists(name, appdef.DataKind_RecordID, appdef.DataKind_int64)
 
 	if value, ok := row.dyB.GetInt64(name); ok {
-		return istructs.RecordID(value)
+		return istructs.RecordID(value) // nolint G115
 	}
 
 	return istructs.NullRecordID
@@ -805,13 +824,17 @@ func (row *rowType) PutFromJSON(j map[appdef.FieldName]any) {
 	for n, v := range j {
 		switch fv := v.(type) {
 		case float64:
-			row.PutNumber(n, fv)
+			row.PutFloat64(n, fv)
 		case int32:
-			row.PutNumber(n, float64(fv))
-		case int:
-			row.PutNumber(n, float64(fv))
+			row.PutInt32(n, fv)
+		case int64:
+			row.PutInt64(n, fv)
+		case float32:
+			row.PutFloat32(n, fv)
+		case json.Number:
+			row.PutNumber(n, fv)
 		case istructs.RecordID:
-			row.PutNumber(n, float64(fv))
+			row.PutRecordID(n, fv)
 		case string:
 			row.PutChars(n, fv)
 		case bool:
@@ -826,26 +849,31 @@ func (row *rowType) PutFromJSON(j map[appdef.FieldName]any) {
 }
 
 // istructs.IRowWriter.PutNumber
-func (row *rowType) PutNumber(name appdef.FieldName, value float64) {
+func (row *rowType) PutNumber(name appdef.FieldName, value json.Number) {
 	fld := row.fieldDef(name)
 	if fld == nil {
 		row.collectErrorf(errFieldNotFoundWrap, name, row, ErrNameNotFound)
 		return
 	}
-
+	clarifiedVal, err := row.clarifyJSONValue(value, fld.DataKind())
+	if err != nil {
+		row.collectErrorf(errNumberFieldWrongValueWrap, fld.Name(), value.String(), fld.DataKind().TrimString(), err)
+		return
+	}
 	switch fld.DataKind() {
 	case appdef.DataKind_int32:
-		row.PutInt32(name, int32(value))
+		row.PutInt32(name, clarifiedVal.(int32))
 	case appdef.DataKind_int64:
-		row.PutInt64(name, int64(value))
+		row.PutInt64(name, clarifiedVal.(int64))
 	case appdef.DataKind_float32:
-		row.PutFloat32(name, float32(value))
+		row.PutFloat32(name, clarifiedVal.(float32))
 	case appdef.DataKind_float64:
-		row.PutFloat64(name, value)
+		row.PutFloat64(name, clarifiedVal.(float64))
 	case appdef.DataKind_RecordID:
-		row.PutRecordID(name, istructs.RecordID(value))
+		row.PutRecordID(name, clarifiedVal.(istructs.RecordID))
 	default:
-		row.collectErrorf(errFieldValueTypeMismatchWrap, appdef.DataKind_float64.TrimString(), fld, ErrWrongFieldType)
+		// notest: avoided already by row.clarifyJSONValue()
+		panic(fmt.Errorf(errFieldValueTypeMismatchWrap, appdef.DataKind_float64.TrimString(), fld, ErrWrongFieldType))
 	}
 }
 
@@ -929,16 +957,7 @@ func (row *rowType) PutBool(name appdef.FieldName, value bool) {
 
 // istructs.IRowWriter.PutRecordID
 func (row *rowType) PutRecordID(name appdef.FieldName, value istructs.RecordID) {
-	if name == appdef.SystemField_ID {
-		row.setID(value)
-		return
-	}
-	if name == appdef.SystemField_ParentID {
-		row.setParent(value)
-		return
-	}
-
-	row.putValue(name, dynobuffers.FieldTypeInt64, int64(value))
+	row.putValue(name, dynobuffers.FieldTypeInt64, int64(value)) // nolint G115
 }
 
 // istructs.IValueBuilder.PutRecord

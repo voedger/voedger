@@ -276,8 +276,8 @@ func newFieldItem(tableData ormTableItem, field appdef.IField) ormField {
 		Table:         tableData,
 		Type:          getFieldType(field),
 		Name:          normalizeName(field.Name()),
-		GetMethodName: fmt.Sprintf("Get_%s", name),
-		SetMethodName: fmt.Sprintf("Set_%s", name),
+		GetMethodName: "Get_" + name,
+		SetMethodName: "Set_" + name,
 	}
 }
 
@@ -357,8 +357,8 @@ func processITypeObj(
 					Table:         tableData,
 					Type:          "Container",
 					Name:          normalizeName(containerName),
-					GetMethodName: fmt.Sprintf("Get_%s", containerName),
-					SetMethodName: fmt.Sprintf("Set_%s", containerName),
+					GetMethodName: "Get_" + containerName,
+					SetMethodName: "Set_" + containerName,
 				})
 			}
 		}

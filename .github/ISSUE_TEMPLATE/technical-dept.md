@@ -9,20 +9,25 @@ assignees: ''
 
 ## Motivation
 
-**Now, in current architecture**
-A clear and concise description of what the problem is.
+**Current architecture**
 
-- Problem (hot): pain which MUST be fixed
-- Problem (warm): pain which SHOULD be fixed
+Provide a clear and concise description of the issue.
+
+- **Critical Problem (hot)**: Pain point that **must** be addressed.
+- **Significant Problem (warm)**: Pain point that **should** be addressed.
 
 ## Technical design
 
-Solution for the problems you described above.
+Present the solution for the problems outlined above.
 
 ## Alternatives
 
-A clear and concise description of any alternative solutions or features you've considered.
+Describe any alternative solutions or features that were considered.
 
 ## Context
 
-Add any other context or screenshots about the feature request here.
+Include any additional context or screenshots relevant to the feature request here.
+
+---
+
+This version eliminates redundancy, improves clarity, and ensures the flow is more streamlined.

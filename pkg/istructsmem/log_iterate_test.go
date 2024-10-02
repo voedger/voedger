@@ -7,7 +7,6 @@ package istructsmem
 
 import (
 	"errors"
-	"fmt"
 	"io"
 	"testing"
 
@@ -212,7 +211,7 @@ func Test_readLogParts(t *testing.T) {
 		bytesRead := 0
 		toRead := 3 * 4096
 
-		testError := fmt.Errorf("test error")
+		testError := errors.New("test error")
 
 		readPart := func(partID uint64, ccolsFrom, ccolsTo uint16) (bool, error) {
 			o1 := glueLogOffset(partID, ccolsFrom)

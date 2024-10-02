@@ -34,7 +34,7 @@ func newSchedulers(cfg BasicSchedulerConfig) ISchedulersService {
 // Creates and runs new actualizer for specified partition.
 //
 // # apparts.IActualizerRunner.NewAndRun
-func (a *schedulers) NewAndRun(ctx context.Context, app appdef.AppQName, partition istructs.PartitionID, wsIdx int, wsid istructs.WSID, job appdef.QName) {
+func (a *schedulers) NewAndRun(ctx context.Context, app appdef.AppQName, partition istructs.PartitionID, appWSIdx istructs.AppWorkspaceNumber, wsid istructs.WSID, job appdef.QName) {
 	act := &scheduler{
 		job: job,
 		conf: SchedulerConfig{
@@ -42,7 +42,7 @@ func (a *schedulers) NewAndRun(ctx context.Context, app appdef.AppQName, partiti
 			AppQName:             app,
 			Partition:            partition,
 			Workspace:            wsid,
-			WSIdx:                wsIdx,
+			AppWSIdx:             appWSIdx,
 		},
 		appParts: a.appParts,
 	}

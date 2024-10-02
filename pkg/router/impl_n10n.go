@@ -13,6 +13,7 @@ import (
 	"strconv"
 
 	"github.com/gorilla/mux"
+	"github.com/voedger/voedger/pkg/coreutils/utils"
 	"github.com/voedger/voedger/pkg/goutils/logger"
 
 	"github.com/voedger/voedger/pkg/in10n"
@@ -184,7 +185,7 @@ func (s *httpService) updateHandler() http.HandlerFunc {
 
 		params := mux.Vars(req)
 		offset := params["offset"]
-		if off, err := strconv.ParseInt(offset, parseInt64Base, parseInt64Bits); err == nil {
+		if off, err := strconv.ParseUint(offset, utils.DecimalBase, utils.BitSize64); err == nil {
 			s.n10n.Update(p, istructs.Offset(off))
 		}
 	}

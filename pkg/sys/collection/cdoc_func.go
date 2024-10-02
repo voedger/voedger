@@ -10,10 +10,10 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
-	"strconv"
 
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/coreutils"
+	"github.com/voedger/voedger/pkg/coreutils/utils"
 	"github.com/voedger/voedger/pkg/istructs"
 	istructsmem "github.com/voedger/voedger/pkg/istructsmem"
 	"github.com/voedger/voedger/pkg/sys"
@@ -31,7 +31,7 @@ func execQryCDoc(ctx context.Context, args istructs.ExecQueryArgs, callback istr
 	if err != nil {
 		return
 	}
-	rkb.PutRecordID(sys.Storage_Record_Field_ID, istructs.RecordID(args.ArgumentObject.AsInt64(field_ID)))
+	rkb.PutRecordID(sys.Storage_Record_Field_ID, istructs.RecordID(args.ArgumentObject.AsInt64(field_ID))) // nolint G115
 	rsv, err := args.State.MustExist(rkb)
 	if err != nil {
 		return
@@ -152,7 +152,8 @@ func addRefs(obj map[string]interface{}, refs map[istructs.RecordID]bool, s istr
 			recmap = make(map[string]interface{})
 			references[rkv.AsQName(appdef.SystemField_QName).String()] = recmap
 		}
-		recKey := strconv.FormatInt(int64(recordId), DEC)
+
+		recKey := utils.UintToString(recordId)
 		if _, ok := recmap[recKey]; !ok {
 			child := newCollectionObject(rkv.AsRecord(""))
 			obj, err := convert(child, appDef, nil, istructs.NullRecordID)

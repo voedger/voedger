@@ -56,7 +56,7 @@ func storeEventBuildError(ev *eventType, buf *bytes.Buffer) {
 	utils.WriteShortString(buf, ev.name.String())
 
 	bytes := ev.buildErr.OriginalEventBytes()
-	bytesLen := uint32(len(bytes))
+	bytesLen := uint32(len(bytes)) // nolint G115
 
 	if ev.argUnlObj.QName() != appdef.NullQName {
 		bytesLen = 0 // to protect logging security data
@@ -75,13 +75,13 @@ func storeEventArguments(ev *eventType, buf *bytes.Buffer) {
 }
 
 func storeEventCUDs(ev *eventType, buf *bytes.Buffer) {
-	count := uint16(len(ev.cud.creates))
+	count := uint16(len(ev.cud.creates)) // nolint G115 validated in [validateEventCUDs]
 	utils.WriteUint16(buf, count)
 	for _, rec := range ev.cud.creates {
 		storeRow(&rec.rowType, buf)
 	}
 
-	count = uint16(len(ev.cud.updates))
+	count = uint16(len(ev.cud.updates)) // nolint G115 validated in [validateEventCUDs]
 	utils.WriteUint16(buf, count)
 	for _, rec := range ev.cud.updates {
 		storeRow(&rec.changes.rowType, buf)
@@ -96,7 +96,7 @@ func storeObject(o *objectType, buf *bytes.Buffer) {
 		return
 	}
 
-	childCount := uint16(len(o.child))
+	childCount := uint16(len(o.child)) // nolint G115 validated, see [objectType.build]
 	utils.WriteUint16(buf, childCount)
 	for _, c := range o.child {
 		storeObject(c, buf)

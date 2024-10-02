@@ -44,7 +44,7 @@ func NewFederationBlobStorage(appStructs state.AppStructsFunc, wsid state.WSIDFu
 type federationBlobKeyBuilder struct {
 	baseKeyBuilder
 	expectedCodes string
-	blobID        int64
+	blobID        istructs.RecordID
 	owner         string
 	appname       string
 	wsid          istructs.WSID
@@ -97,11 +97,19 @@ func (b *federationBlobKeyBuilder) PutString(name string, value string) {
 
 func (b *federationBlobKeyBuilder) PutInt64(name string, value int64) {
 	if name == sys.Storage_FederationBlob_Field_BlobID {
-		b.blobID = value
+		recordID, err := coreutils.Int64ToRecordID(value)
+		if err != nil {
+			panic(err)
+		}
+		b.blobID = recordID
 		return
 	}
 	if name == sys.Storage_FederationBlob_Field_WSID {
-		b.wsid = istructs.WSID(value)
+		wsid, err := coreutils.Int64ToWSID(value)
+		if err != nil {
+			panic(err)
+		}
+		b.wsid = wsid
 		return
 	}
 	b.baseKeyBuilder.PutInt64(name, value)
@@ -177,7 +185,7 @@ func (s *federationBlobStorage) getReadCloser(key istructs.IStateKeyBuilder) (io
 			}
 			opts = append(opts, coreutils.WithAuthorizeBy(systemPrincipalToken))
 		}
-		blobReader, err := s.federation.ReadBLOB(appdef.NewAppQName(owner, appname), wsid, istructs.RecordID(kb.blobID), opts...)
+		blobReader, err := s.federation.ReadBLOB(appdef.NewAppQName(owner, appname), wsid, kb.blobID, opts...)
 		if err != nil {
 			return nil, err
 		}

@@ -14,6 +14,9 @@ import (
 	"syscall"
 	"testing"
 	"time"
+
+	"github.com/voedger/voedger/pkg/coreutils/utils"
+	"github.com/voedger/voedger/pkg/istructs"
 )
 
 func IsBlank(str string) bool {
@@ -91,4 +94,18 @@ func ScanSSE(data []byte, atEOF bool) (advance int, token []byte, err error) {
 		return len(data), data, nil
 	}
 	return 0, nil, nil
+}
+
+func Int64ToWSID(val int64) (istructs.WSID, error) {
+	if val < 0 || val > istructs.MaxAllowedWSID {
+		return 0, errors.New("wsid value is out of range:" + utils.IntToString(val))
+	}
+	return istructs.WSID(val), nil
+}
+
+func Int64ToRecordID(val int64) (istructs.RecordID, error) {
+	if val < 0 {
+		return 0, errors.New("record ID value is out of range:" + utils.IntToString(val))
+	}
+	return istructs.RecordID(val), nil
 }

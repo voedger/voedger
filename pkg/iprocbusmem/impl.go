@@ -13,11 +13,11 @@ type implIProcBus struct {
 	chans [][]iprocbus.ServiceChannel
 }
 
-func (b *implIProcBus) ServiceChannel(groupIdx int, channelIdx int) (res iprocbus.ServiceChannel) {
+func (b *implIProcBus) ServiceChannel(groupIdx uint, channelIdx uint) (res iprocbus.ServiceChannel) {
 	return b.chans[groupIdx][channelIdx]
 }
 
-func (b *implIProcBus) Submit(groupIdx int, channelIdx int, msg interface{}) (ok bool) {
+func (b *implIProcBus) Submit(groupIdx uint, channelIdx uint, msg interface{}) (ok bool) {
 	select {
 	case b.chans[groupIdx][channelIdx] <- msg:
 		return true

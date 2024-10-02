@@ -5,6 +5,7 @@
 package coreutils
 
 import (
+	"encoding/json"
 	"maps"
 	"time"
 
@@ -12,6 +13,8 @@ import (
 	"github.com/voedger/voedger/pkg/istructs"
 	ibus "github.com/voedger/voedger/staging/src/github.com/untillpro/airs-ibus"
 )
+
+const TooBigNumberStr = "1111111111111111111111111111111111999999999999999999999999999111111111111111111111111111111111111111119999999999999999999999999991111111111111111111111111111111111111111199999999999999999999999999911111111111111111111111111111111111111111999999999999999999999999999111111111111111111111111111111111111111119999999999999999999999999991111111"
 
 // ICUDRow, IObject
 type TestObject struct {
@@ -44,7 +47,7 @@ func (o *TestObject) PutString(name, value string)                     { o.Data[
 func (o *TestObject) PutQName(name string, value appdef.QName)         { o.Data[name] = value }
 func (o *TestObject) PutBool(name string, value bool)                  { o.Data[name] = value }
 func (o *TestObject) PutRecordID(name string, value istructs.RecordID) { o.Data[name] = value }
-func (o *TestObject) PutNumber(name string, value float64)             { o.Data[name] = value }
+func (o *TestObject) PutNumber(name string, value json.Number)         { o.Data[name] = value }
 func (o *TestObject) PutChars(name string, value string)               { o.Data[name] = value }
 func (o *TestObject) PutFromJSON(value map[string]any)                 { maps.Copy(o.Data, value) }
 

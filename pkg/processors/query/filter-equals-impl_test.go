@@ -5,6 +5,9 @@
 package queryprocessor
 
 import (
+	"encoding/json"
+	"fmt"
+	"strconv"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -27,7 +30,7 @@ func TestEqualsFilter_IsMatch(t *testing.T) {
 		ageFilter := func(age int) IFilter {
 			return &EqualsFilter{
 				field: "age",
-				value: float64(age),
+				value: json.Number(strconv.Itoa(age)),
 			}
 		}
 		t.Run("Should match", func(t *testing.T) {
@@ -47,7 +50,7 @@ func TestEqualsFilter_IsMatch(t *testing.T) {
 		ageFilter := func(age int) IFilter {
 			return &EqualsFilter{
 				field: "age",
-				value: float64(age),
+				value: json.Number(strconv.Itoa(age)),
 			}
 		}
 		t.Run("Should match", func(t *testing.T) {
@@ -67,7 +70,7 @@ func TestEqualsFilter_IsMatch(t *testing.T) {
 		heightFilter := func(height float32) IFilter {
 			return &EqualsFilter{
 				field:   "height",
-				value:   float64(height),
+				value:   json.Number(fmt.Sprint(height)),
 				epsilon: 0.0000001,
 			}
 		}
@@ -88,7 +91,7 @@ func TestEqualsFilter_IsMatch(t *testing.T) {
 		heightFilter := func(height float64) IFilter {
 			return &EqualsFilter{
 				field:   "height",
-				value:   height,
+				value:   json.Number(fmt.Sprint(height)),
 				epsilon: 0.0000001,
 			}
 		}
@@ -165,7 +168,7 @@ func TestEqualsFilter_IsMatch(t *testing.T) {
 		ageFilter := func(id istructs.RecordID) IFilter {
 			return &EqualsFilter{
 				field: "id",
-				value: float64(id),
+				value: json.Number(strconv.Itoa(int(id))),
 			}
 		}
 		t.Run("Should match", func(t *testing.T) {

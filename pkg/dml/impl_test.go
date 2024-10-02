@@ -205,6 +205,7 @@ func TestErrors(t *testing.T) {
 		"ddsddsds": "invalid query format",
 		"unlogged update test1.app1.9999999999999999999999.sys.Table set a = b where x = y":   "value out of range",
 		"unlogged update test1.app1.1.sys.Table.9999999999999999999999 set a = b where x = y": "value out of range",
+		"unlogged update test1.app1.1.sys.Table.0 set a = b where x = y":                      "provided offset or ID must not be 0",
 	}
 
 	for query, expectedError := range cases {

@@ -5,6 +5,7 @@
 package coreutils
 
 import (
+	"encoding/json"
 	"reflect"
 	"testing"
 
@@ -16,21 +17,21 @@ func TestMapObject(t *testing.T) {
 
 	t.Run("basic", func(t *testing.T) {
 		mo := MapObject{
-			"int641":    int64(1),
-			"int642":    float64(2),
-			"float64":   float64(4),
+			"int641":    json.Number("1"),
+			"int642":    json.Number("2"),
+			"float64":   json.Number("4"),
 			"boolTrue":  true,
 			"boolFalse": false,
 			"string":    "str",
 			"obj": map[string]interface{}{
-				"int64": int64(5),
+				"int64": json.Number("5"),
 			},
 			"objs": []interface{}{
 				map[string]interface{}{
-					"int64": int64(6),
+					"int64": json.Number("6"),
 				},
 				map[string]interface{}{
-					"int64": int64(7),
+					"int64": json.Number("7"),
 				},
 			},
 		}
@@ -49,14 +50,14 @@ func TestMapObject(t *testing.T) {
 				return val, true, err
 			}},
 			{MapObject{
-				"int64": int64(5),
+				"int64": json.Number("5"),
 			}, func() (interface{}, bool, error) { return mo.AsObject("obj") }},
 			{[]interface{}{
 				map[string]interface{}{
-					"int64": int64(6),
+					"int64": json.Number("6"),
 				},
 				map[string]interface{}{
-					"int64": int64(7),
+					"int64": json.Number("7"),
 				},
 			}, func() (interface{}, bool, error) { return mo.AsObjects("objs") }},
 		}

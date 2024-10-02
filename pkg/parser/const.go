@@ -6,8 +6,6 @@
 package parser
 
 import (
-	"fmt"
-
 	"github.com/voedger/voedger/pkg/appdef"
 )
 
@@ -43,5 +41,5 @@ var canNotReferenceTo = map[appdef.TypeKind][]appdef.TypeKind{
 }
 
 func defaultDescriptorName(wsName string) Ident {
-	return Ident(fmt.Sprintf("%sDescriptor", wsName))
+	return Ident(wsName + "Descriptor")
 }

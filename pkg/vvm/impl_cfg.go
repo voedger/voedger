@@ -73,10 +73,10 @@ func (cfg *VVMConfig) addProcessorChannel(cg iprocbusmem.ChannelGroup, t Process
 }
 
 func (cfg *VVMConfig) ProvideServiceChannelFactory(procbus iprocbus.IProcBus) ServiceChannelFactory {
-	return func(pct ProcessorChannelType, channelIdx int) iprocbus.ServiceChannel {
+	return func(pct ProcessorChannelType, channelIdx uint) iprocbus.ServiceChannel {
 		for groupIdx, pcg := range cfg.processorsChannels {
 			if pcg.ChannelType == pct {
-				return procbus.ServiceChannel(groupIdx, channelIdx)
+				return procbus.ServiceChannel(uint(groupIdx), channelIdx) // nolint G115
 			}
 		}
 		panic("processor channel group type not found")

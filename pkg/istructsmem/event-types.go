@@ -7,8 +7,10 @@ package istructsmem
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 
 	bytespool "github.com/valyala/bytebufferpool"
 
@@ -706,6 +708,10 @@ func (o *objectType) allChildren(cb func(*objectType)) {
 
 // Builds object with children recursive
 func (o *objectType) build() (err error) {
+	if len(o.child) > math.MaxUint16 {
+		// because len(o.child) will be stored as uint16, see [storeObject]
+		return validateErrorf(ECode_TooManyChilds, "childs number must not be more than %d", math.MaxUint16)
+	}
 	return o.forEach(func(c *objectType) error {
 		return c.rowType.build()
 	})
@@ -876,15 +882,17 @@ func (o *objectType) FillFromJSON(data map[string]any) {
 		switch fv := v.(type) {
 		case nil:
 		case float64:
-			o.PutNumber(n, fv)
+			o.PutFloat64(n, fv)
 		case istructs.RecordID:
-			o.PutNumber(n, float64(fv))
-		case int:
-			o.PutNumber(n, float64(fv))
+			o.PutRecordID(n, fv)
+		// case int:
+		// 	o.PutNumber(n, float64(fv))
 		case int32:
-			o.PutNumber(n, float64(fv))
+			o.PutInt32(n, fv)
 		case int64:
-			o.PutNumber(n, float64(fv))
+			o.PutInt64(n, fv)
+		case json.Number:
+			o.PutNumber(n, fv)
 		case string:
 			o.PutChars(n, fv)
 		case bool:

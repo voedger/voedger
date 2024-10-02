@@ -478,7 +478,7 @@ func (p *asyncProjector) isProjectorDefined() (bool, error) {
 		return false, err
 	}
 	skbCDocWorkspaceDescriptor.PutQName(state.Field_Singleton, authnz.QNameCDocWorkspaceDescriptor)
-	skbCDocWorkspaceDescriptor.PutInt64(state.Field_WSID, int64(p.event.Workspace()))
+	skbCDocWorkspaceDescriptor.PutInt64(state.Field_WSID, int64(p.event.Workspace())) // nolint G115
 	svCDocWorkspaceDescriptor, err := p.state.MustExist(skbCDocWorkspaceDescriptor)
 	if err != nil {
 		// notest
@@ -538,7 +538,7 @@ func (p *asyncProjector) savePosition() error {
 	if e != nil {
 		return e
 	}
-	value.PutInt64(offsetFld, int64(p.pLogOffset))
+	value.PutInt64(offsetFld, int64(p.pLogOffset)) // nolint G115
 	return nil
 }
 func (p *asyncProjector) flush() (err error) {
@@ -603,5 +603,5 @@ func ActualizerOffset(appStructs istructs.IAppStructs, partition istructs.Partit
 	if err != nil {
 		return istructs.NullOffset, err
 	}
-	return istructs.Offset(value.AsInt64(offsetFld)), err
+	return istructs.Offset(value.AsInt64(offsetFld)), err // nolint G115
 }
