@@ -26,6 +26,12 @@ WORKSPACE RestaurantWS (
 		Number int32 NOT NULL
 	);
 
+	TYPE cmd1Params (
+		A int32 NOT NULL,
+		B int32 NOT NULL,
+		C varchar NOT NULL
+	);
+
 	VIEW PbillDates (
 		Year int32 NOT NULL,
 		DayOfYear int32 NOT NULL,
@@ -39,10 +45,12 @@ WORKSPACE RestaurantWS (
 	);
 
 	EXTENSION ENGINE BUILTIN (
+	    COMMAND Cmd1(cmd1Params);
         COMMAND Orders(untill.orders);
         COMMAND Pbill(untill.pbill) RETURNS CmdPBillResult;
-        PROJECTOR ApplySalesMetrics AFTER EXECUTE ON (Pbill) INTENTS (View(PbillDates));
-        PROJECTOR FillPbillDates AFTER EXECUTE WITH PARAM ON untill.pbill INTENTS(View(PbillDates));
+        PROJECTOR ApplyCmd1 AFTER EXECUTE ON (Cmd1);
+        PROJECTOR ApplySalesMetrics AFTER EXECUTE ON (Pbill, Orders) INTENTS (View(PbillDates));
+        PROJECTOR FillPbillDates AFTER EXECUTE WITH PARAM ON (untill.pbill, untill.orders) INTENTS(View(PbillDates));
         -- CUD
         PROJECTOR NewAbcItem AFTER INSERT ON (Abc);
     );

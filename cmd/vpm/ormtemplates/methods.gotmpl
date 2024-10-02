@@ -253,6 +253,7 @@ qname string
 event ProjectorEvent_{{.Projector.Package.Name}}_{{.Projector.Name}}
 }
 
+// TODO: Arg() must return Argument object of the command
 func (c Cmd_{{.Package.Name}}_{{.Name}}) Arg() (ProjectorArg_{{.Projector.Package.Name}}_{{.Projector.Name}}, bool) {
 	return c.event.Arg(), true
 }
@@ -268,6 +269,7 @@ func (p Projector_{{.Projector.Package.Name}}_{{.Projector.Name}}) Cmd_{{.Name}}
 
 {{if (doesTriggerOnCUD .)}}
 
+// TODO: must return iterator (iter.Seq)
 func (p Projector_{{.Projector.Package.Name}}_{{.Projector.Name}}) Cuds_{{.Package.Name}}_{{.Name}}() []Value_{{.Type}}_{{.Package.Name}}_{{.Name}} {
 	// get cuds from event
 return nil
@@ -277,6 +279,7 @@ return nil
 
 {{if (doesExecuteWithParam .)}}
 
+// TODO: Arg_untill_pbill() must check qname of the argument and return Cdov_untill_pbill and true if qname of the argument is "untill.pbill"
 func (p Projector_{{.Projector.Package.Name}}_{{.Projector.Name}}) Arg_{{.Package.Name}}_{{.Name}}() ProjectorArg_{{.Projector.Package.Name}}_{{.Projector.Name}} {
 return p.event.Arg()
 }
