@@ -14,6 +14,7 @@ type ACLRule struct {
 	Policy    string // `Allow` or `Deny`
 	Ops       []string
 	Resources *ACLResourcePattern
+	Principal appdef.QName
 }
 
 type ACLResourcePattern struct {

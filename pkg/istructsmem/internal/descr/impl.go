@@ -13,6 +13,7 @@ import (
 func newApplication() *Application {
 	a := Application{
 		Packages: make(map[string]*Package),
+		ACL:      newACL(),
 	}
 	return &a
 }
@@ -66,6 +67,8 @@ func (a *Application) read(app istructs.IAppStructs, rateLimits map[appdef.QName
 			pkg.Roles[name.String()] = r
 		}
 	}
+
+	a.ACL.read(app.AppDef())
 
 	for qName, qNameRateLimit := range rateLimits {
 		pkg := getPkg(qName, a)
