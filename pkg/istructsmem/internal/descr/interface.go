@@ -21,6 +21,7 @@ type Package struct {
 	Views      map[string]*View        `json:",omitempty"`
 	Extensions *Extensions             `json:",omitempty"`
 	Roles      map[string]*Role        `json:",omitempty"`
+	Workspaces map[string]*Workspace   `json:",omitempty"`
 	Resources  map[string]*Resource    `json:",omitempty"`
 	RateLimits map[string][]*RateLimit `json:",omitempty"`
 }

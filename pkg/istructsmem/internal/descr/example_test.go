@@ -84,7 +84,8 @@ func Example() {
 			SetParam(objName).
 			SetResult(appdef.QNameANY)
 
-		prj := adb.AddProjector(appdef.NewQName("test", "projector"))
+		prjName := appdef.NewQName("test", "projector")
+		prj := adb.AddProjector(prjName)
 		prj.
 			SetWantErrors().
 			SetEngine(appdef.ExtensionEngineKind_WASM)
@@ -97,13 +98,15 @@ func Example() {
 		prj.Intents().
 			Add(sysViews, viewName).SetComment(sysViews, "needs to update «test.view» from «sys.views» storage")
 
-		job := adb.AddJob(appdef.NewQName("test", "job"))
+		jobName := appdef.NewQName("test", "job")
+		job := adb.AddJob(jobName)
 		job.SetCronSchedule(`@every 1h30m`)
 		job.SetEngine(appdef.ExtensionEngineKind_WASM)
 		job.States().
 			Add(sysViews, viewName).SetComment(sysViews, "needs to read «test.view» from «sys.views» storage")
 
-		reader := adb.AddRole(appdef.NewQName("test", "reader"))
+		readerName := appdef.NewQName("test", "reader")
+		reader := adb.AddRole(readerName)
 		reader.SetComment("read-only role")
 		reader.Grant(
 			[]appdef.OperationKind{appdef.OperationKind_Select},
@@ -115,7 +118,8 @@ func Example() {
 			"allow reader to select all fields from test.view")
 		reader.GrantAll([]appdef.QName{queryName}, "allow reader to execute test.query")
 
-		writer := adb.AddRole(appdef.NewQName("test", "writer"))
+		writerName := appdef.NewQName("test", "writer")
+		writer := adb.AddRole(writerName)
 		writer.SetComment("read-write role")
 		writer.GrantAll([]appdef.QName{docName, recName, viewName}, "allow writer to do anything with test.doc, test.rec and test.view")
 		writer.Revoke(
@@ -124,6 +128,21 @@ func Example() {
 			nil,
 			"disable writer to update test.doc")
 		writer.GrantAll([]appdef.QName{cmdName, queryName}, "allow writer to execute all test functions")
+
+		wsName, wsDescName := appdef.NewQName("test", "ws"), appdef.NewQName("test", "wsDesc")
+		adb.AddCDoc(wsDescName).SetSingleton()
+		adb.AddWorkspace(wsName).
+			SetDescriptor(wsDescName).
+			AddType(docName).
+			AddType(recName).
+			AddType(viewName).
+			AddType(objName).
+			AddType(cmdName).
+			AddType(queryName).
+			AddType(prjName).
+			AddType(jobName).
+			AddType(readerName).
+			AddType(writerName)
 
 		app, err := adb.Build()
 		if err != nil {
@@ -321,6 +340,26 @@ func Example() {
 	//             }
 	//           },
 	//           "UniqueField": "phone"
+	//         },
+	//         "test.wsDesc": {
+	//           "Kind": "CDoc",
+	//           "Fields": [
+	//             {
+	//               "Name": "sys.QName",
+	//               "Data": "sys.QName",
+	//               "Required": true
+	//             },
+	//             {
+	//               "Name": "sys.ID",
+	//               "Data": "sys.RecordID",
+	//               "Required": true
+	//             },
+	//             {
+	//               "Name": "sys.IsActive",
+	//               "Data": "sys.bool"
+	//             }
+	//           ],
+	//           "Singleton": true
 	//         }
 	//       },
 	//       "Views": {
@@ -529,6 +568,23 @@ func Example() {
 	//                 ]
 	//               }
 	//             }
+	//           ]
+	//         }
+	//       },
+	//       "Workspaces": {
+	//         "test.ws": {
+	//           "Descriptor": "test.wsDesc",
+	//           "Types": [
+	//             "test.cmd",
+	//             "test.doc",
+	//             "test.job",
+	//             "test.obj",
+	//             "test.projector",
+	//             "test.query",
+	//             "test.reader",
+	//             "test.rec",
+	//             "test.view",
+	//             "test.writer"
 	//           ]
 	//         }
 	//       }

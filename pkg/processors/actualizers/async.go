@@ -97,12 +97,10 @@ func (a *asyncActualizer) Run(ctx context.Context) {
 	for ctx.Err() == nil {
 		if err = a.init(ctx); err == nil {
 			logger.Trace(a.name, "started")
-			if err = a.keepReading(); err != nil {
-				a.conf.LogError(a.name, err)
-			}
+			err = a.keepReading()
 		}
-		a.finit() // even execute if a.init has failed
-		if ctx.Err() == nil && err != nil {
+		a.finit() // execute even if a.init() has failed
+		if err != nil {
 			a.conf.LogError(a.name, err)
 			select {
 			case <-ctx.Done():
