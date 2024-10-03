@@ -18,7 +18,7 @@ type ITime interface {
 // MockTime must be a global var to avoid case when different times could be used in tests.
 // jwt.TimeFunc is a global var: once set it must not be changed during tests
 var MockTime IMockTime = &mockedTime{
-	now:     time.Now(),
+	now:     time.Now().Add(-5 * time.Minute), // decrease current time to avoid "token used before issued" error in bp3 utils_test.go
 	RWMutex: sync.RWMutex{},
 	timers:  map[mockTimer]struct{}{},
 }
