@@ -28,7 +28,6 @@ linters:
 # Third stage linters
 #------------------------------------
     - prealloc
-    - perfsprint
     - nilnil
     - gocritic
     - errorlint
