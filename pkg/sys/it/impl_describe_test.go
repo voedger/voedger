@@ -42,7 +42,7 @@ func TestBasicUsage_DescribeSchema(t *testing.T) {
 			require.Len(actual["Workspaces"], 1)
 			ws := actual["Workspaces"].(map[string]interface{})["app2pkg.test_wsWS"].(map[string]interface{})
 			require.Len(ws, 2)
-			require.Equal(ws["Descriptor"], "app2pkg.test_ws")
+			require.Equal("app2pkg.test_ws", ws["Descriptor"])
 
 			types := ws["Types"].([]interface{})
 			require.Contains(types, "app2pkg.doc1")
