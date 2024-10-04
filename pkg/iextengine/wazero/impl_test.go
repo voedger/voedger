@@ -221,16 +221,16 @@ func testMetrics(require *require.Assertions, metrics imetrics.IMetrics, expecte
 	checkedMetricsCount := 0
 	metrics.List(func(metric imetrics.IMetric, metricValue float64) (err error) {
 		switch metric.Name() {
-		case metric_voedger_wasm_invocations_total:
+		case metric_voedger_pee_invocations_total:
 			require.EqualValues(expectedMetrcis.invocationsTotal, metricValue)
 			checkedMetricsCount++
-		case metric_voedger_wasm_errors_total:
+		case metric_voedger_pee_errors_total:
 			require.EqualValues(expectedMetrcis.errors, metricValue)
 			checkedMetricsCount++
-		case metric_voedger_wasm_invocations_seconds:
+		case metric_voedger_pee_invocations_seconds:
 			require.GreaterOrEqual(metricValue, float64(0))
 			checkedMetricsCount++
-		case metric_voedger_wasm_recovers_total:
+		case metric_voedger_pee_recovers_total:
 			require.EqualValues(expectedMetrcis.recovers, metricValue)
 			checkedMetricsCount++
 		default:
@@ -535,10 +535,10 @@ func Test_RecoverEngine(t *testing.T) {
 			totalRuns := 0
 			totalErrors := 0
 
-			invocationsTotal := metrics.AppMetricAddr(metric_voedger_wasm_invocations_total, string(testVVMName), testApp)
-			invocationsSeconds := metrics.AppMetricAddr(metric_voedger_wasm_invocations_seconds, string(testVVMName), testApp)
-			eTotal := metrics.AppMetricAddr(metric_voedger_wasm_errors_total, string(testVVMName), testApp)
-			recoversTotal := metrics.AppMetricAddr(metric_voedger_wasm_recovers_total, string(testVVMName), testApp)
+			invocationsTotal := metrics.AppMetricAddr(metric_voedger_pee_invocations_total, string(testVVMName), testApp)
+			invocationsSeconds := metrics.AppMetricAddr(metric_voedger_pee_invocations_seconds, string(testVVMName), testApp)
+			eTotal := metrics.AppMetricAddr(metric_voedger_pee_errors_total, string(testVVMName), testApp)
+			recoversTotal := metrics.AppMetricAddr(metric_voedger_pee_recovers_total, string(testVVMName), testApp)
 
 			require.NoError(extEngine.Invoke(context.Background(), appdef.NewFullQName(testPkg, arrAppend2), extIO))
 			totalRuns++
