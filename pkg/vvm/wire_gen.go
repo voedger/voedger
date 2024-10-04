@@ -14,7 +14,6 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/appparts"
 	"github.com/voedger/voedger/pkg/apppartsctl"
-	"github.com/voedger/voedger/pkg/apps"
 	"github.com/voedger/voedger/pkg/btstrp"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/coreutils/federation"
@@ -52,6 +51,7 @@ import (
 	"github.com/voedger/voedger/pkg/state"
 	"github.com/voedger/voedger/pkg/sys/invite"
 	"github.com/voedger/voedger/pkg/sys/sysprovide"
+	"github.com/voedger/voedger/pkg/vvm/builtin"
 	"github.com/voedger/voedger/pkg/vvm/db_cert_cache"
 	"github.com/voedger/voedger/pkg/vvm/engines"
 	"github.com/voedger/voedger/pkg/vvm/metrics"
@@ -128,7 +128,7 @@ func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxT
 		cleanup()
 		return nil, nil, err
 	}
-	apIs := apps.APIs{
+	apIs := builtinapps.APIs{
 		ITokens:             iTokens,
 		IAppStructsProvider: iAppStructsProvider,
 		IAppStorageProvider: iAppStorageProvider,
@@ -398,7 +398,7 @@ func provideAppPartitions(
 func provideIsDeviceAllowedFunc(appEPs map[appdef.AppQName]extensionpoints.IExtensionPoint) iauthnzimpl.IsDeviceAllowedFuncs {
 	res := iauthnzimpl.IsDeviceAllowedFuncs{}
 	for appQName, appEP := range appEPs {
-		val, ok := appEP.Find(apps.EPIsDeviceAllowedFunc)
+		val, ok := appEP.Find(builtinapps.EPIsDeviceAllowedFunc)
 		if !ok {
 			res[appQName] = func(as istructs.IAppStructs, requestWSID istructs.WSID, deviceProfileWSID istructs.WSID) (ok bool, err error) {
 				return true, nil
