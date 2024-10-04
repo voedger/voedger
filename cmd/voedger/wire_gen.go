@@ -7,7 +7,7 @@
 package main
 
 import (
-	"github.com/voedger/voedger/cmd/voedger/voedger"
+	voedger "github.com/voedger/voedger/cmd/voedger/voedgerimpl"
 	"github.com/voedger/voedger/pkg/ihttp"
 	"github.com/voedger/voedger/pkg/ihttpctl"
 	"github.com/voedger/voedger/pkg/ihttpimpl"
