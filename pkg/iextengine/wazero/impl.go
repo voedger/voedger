@@ -23,6 +23,7 @@ import (
 	"github.com/voedger/voedger/pkg/appdef"
 	"github.com/voedger/voedger/pkg/iextengine"
 	imetrics "github.com/voedger/voedger/pkg/metrics"
+	"github.com/voedger/voedger/pkg/processors"
 	safe "github.com/voedger/voedger/pkg/state/isafestateapi"
 	"github.com/voedger/voedger/pkg/state/safestate"
 )
@@ -87,6 +88,8 @@ type allocatedBuf struct {
 
 type extensionEngineFactory struct {
 	wasmConfig iextengine.WASMFactoryConfig
+	vvmName    processors.VVMName
+	imetrics   imetrics.IMetrics
 }
 
 func newLimitedWriter(limit int) limitedWriter {
@@ -109,10 +112,10 @@ func (f extensionEngineFactory) New(ctx context.Context, app appdef.AppQName, pa
 			modules:            make(map[string]*wazeroExtPkg),
 			config:             config,
 			compile:            f.wasmConfig.Compile,
-			invocationsTotal:   f.wasmConfig.InvocationsTotal,
-			invocationsSeconds: f.wasmConfig.InvocationsSeconds,
-			errorsTotal:        f.wasmConfig.ErrorsTotal,
-			recoversTotal:      f.wasmConfig.RecoversTotal,
+			invocationsTotal:   f.imetrics.AppMetricAddr(metric_voedger_wasm_invocations_total, string(f.vvmName), app),
+			invocationsSeconds: f.imetrics.AppMetricAddr(metric_voedger_wasm_invocations_seconds, string(f.vvmName), app),
+			errorsTotal:        f.imetrics.AppMetricAddr(metric_voedger_wasm_errors_total, string(f.vvmName), app),
+			recoversTotal:      f.imetrics.AppMetricAddr(metric_voedger_wasm_recovers_total, string(f.vvmName), app),
 			autoRecover:        true,
 		}
 		err = engine.init(ctx)

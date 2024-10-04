@@ -709,7 +709,7 @@ func setUp(t *testing.T, prepare func(appDef appdef.IAppDefBuilder, cfg *istruct
 				AppConfigs:         cfgs,
 				StatelessResources: statelessResources,
 				WASMConfig:         iextengine.WASMFactoryConfig{Compile: false},
-			}))
+			}, "", imetrics.Provide()))
 	require.NoError(err)
 	defer appPartsClean()
 
