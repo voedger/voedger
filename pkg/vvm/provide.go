@@ -316,13 +316,17 @@ func provideAppPartitions(
 	sch appparts.ISchedulerRunner,
 	sr istructsmem.IStatelessResources,
 	builtinAppsArtefacts BuiltInAppsArtefacts,
+	vvmName processors.VVMName,
+	imetrics imetrics.IMetrics,
 ) (ap appparts.IAppPartitions, cleanup func(), err error) {
 
 	eef := engines.ProvideExtEngineFactories(engines.ExtEngineFactoriesConfig{
 		StatelessResources: sr,
 		AppConfigs:         builtinAppsArtefacts.AppConfigsType,
-		WASMConfig:         iextengine.WASMFactoryConfig{Compile: false},
-	})
+		WASMConfig: iextengine.WASMFactoryConfig{
+			Compile: false,
+		},
+	}, vvmName, imetrics)
 
 	return appparts.New2(
 		vvmCtx,
