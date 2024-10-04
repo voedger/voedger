@@ -112,10 +112,10 @@ func (f extensionEngineFactory) New(ctx context.Context, app appdef.AppQName, pa
 			modules:            make(map[string]*wazeroExtPkg),
 			config:             config,
 			compile:            f.wasmConfig.Compile,
-			invocationsTotal:   f.imetrics.AppMetricAddr(metric_voedger_wasm_invocations_total, string(f.vvmName), app),
-			invocationsSeconds: f.imetrics.AppMetricAddr(metric_voedger_wasm_invocations_seconds, string(f.vvmName), app),
-			errorsTotal:        f.imetrics.AppMetricAddr(metric_voedger_wasm_errors_total, string(f.vvmName), app),
-			recoversTotal:      f.imetrics.AppMetricAddr(metric_voedger_wasm_recovers_total, string(f.vvmName), app),
+			invocationsTotal:   f.imetrics.AppMetricAddr(metric_voedger_pee_invocations_total, string(f.vvmName), app),
+			invocationsSeconds: f.imetrics.AppMetricAddr(metric_voedger_pee_invocations_seconds, string(f.vvmName), app),
+			errorsTotal:        f.imetrics.AppMetricAddr(metric_voedger_pee_errors_total, string(f.vvmName), app),
+			recoversTotal:      f.imetrics.AppMetricAddr(metric_voedger_pee_recovers_total, string(f.vvmName), app),
 			autoRecover:        true,
 		}
 		err = engine.init(ctx)
