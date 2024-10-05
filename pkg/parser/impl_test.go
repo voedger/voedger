@@ -2360,7 +2360,7 @@ func Test_Grants_Inherit(t *testing.T) {
 		app.ACL(func(i appdef.IACLRule) bool {
 			require.Len(i.Ops(), 1)
 			require.Equal(appdef.OperationKind_Insert, i.Ops()[0])
-			require.Equal(i.Policy(), appdef.PolicyKind_Allow)
+			require.Equal(appdef.PolicyKind_Allow, i.Policy())
 			require.Len(i.Resources().On(), 1)
 			require.Equal("pkg.Table2", i.Resources().On()[0].String())
 			require.Equal("pkg.role1", i.Principal().QName().String())
@@ -2394,7 +2394,7 @@ func Test_Grants_Inherit(t *testing.T) {
 		app.ACL(func(i appdef.IACLRule) bool {
 			require.Len(i.Ops(), 1)
 			require.Equal(appdef.OperationKind_Insert, i.Ops()[0])
-			require.Equal(i.Policy(), appdef.PolicyKind_Allow)
+			require.Equal(appdef.PolicyKind_Allow, i.Policy())
 			require.Len(i.Resources().On(), 2)
 			require.Equal("pkg.Table1", i.Resources().On()[0].String())
 			require.Equal("pkg.Table2", i.Resources().On()[1].String())

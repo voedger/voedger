@@ -167,14 +167,14 @@ func resolveInCurrentWs[stmtType *CommandStmt | *QueryStmt | *ViewStmt | *TableS
 	return result, pkg, err
 }
 
-func analyseGrantOrRevoke(ToOrFrom DefQName, grant *GrantOrRevoke, c *iterateCtx) {
+func analyseGrantOrRevoke(toOrFrom DefQName, grant *GrantOrRevoke, c *iterateCtx) {
 	// To
-	err := resolveInCtx(ToOrFrom, c, func(f *RoleStmt, pkg *PackageSchemaAST) error {
+	err := resolveInCtx(toOrFrom, c, func(f *RoleStmt, pkg *PackageSchemaAST) error {
 		grant.role = pkg.NewQName(f.Name)
 		return nil
 	})
 	if err != nil {
-		c.stmtErr(&ToOrFrom.Pos, err)
+		c.stmtErr(&toOrFrom.Pos, err)
 	}
 
 	// INSERT ON COMMAND
