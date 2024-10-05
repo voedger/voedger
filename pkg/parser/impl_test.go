@@ -227,39 +227,37 @@ func Test_BasicUsage(t *testing.T) {
 	require.Equal(eventsCount, proj.Events().Len())
 
 	stateCount := 0
-	proj.States().Enum(func(storage appdef.IStorage) bool {
+	for s := range proj.States().Enum {
 		stateCount++
 		switch stateCount {
 		case 1:
-			require.Equal(appdef.NewQName("sys", "AppSecret"), storage.Name())
-			require.Empty(storage.Names())
+			require.Equal(appdef.NewQName("sys", "AppSecret"), s.Name())
+			require.Empty(s.Names())
 		case 2:
-			require.Equal(appdef.NewQName("sys", "Http"), storage.Name())
-			require.Empty(storage.Names())
+			require.Equal(appdef.NewQName("sys", "Http"), s.Name())
+			require.Empty(s.Names())
 		default:
-			require.Fail("unexpected state", "state: %v", storage)
+			require.Fail("unexpected state", "state: %v", s)
 		}
-		return true
-	})
+	}
 	require.Equal(2, stateCount)
 	require.Equal(stateCount, proj.States().Len())
 
 	intentsCount := 0
-	proj.Intents().Enum(func(storage appdef.IStorage) bool {
+	for i := range proj.Intents().Enum {
 		intentsCount++
 		switch intentsCount {
 		case 1:
-			require.Equal(appdef.NewQName("sys", "View"), storage.Name())
-			require.Len(storage.Names(), 4)
-			require.Equal(appdef.NewQName("main", "ActiveTablePlansView"), storage.Names()[0])
-			require.Equal(appdef.NewQName("main", "DashboardView"), storage.Names()[1])
-			require.Equal(appdef.NewQName("main", "NotificationsHistory"), storage.Names()[2])
-			require.Equal(appdef.NewQName("main", "XZReports"), storage.Names()[3])
+			require.Equal(appdef.NewQName("sys", "View"), i.Name())
+			require.Len(i.Names(), 4)
+			require.Equal(appdef.NewQName("main", "ActiveTablePlansView"), i.Names()[0])
+			require.Equal(appdef.NewQName("main", "DashboardView"), i.Names()[1])
+			require.Equal(appdef.NewQName("main", "NotificationsHistory"), i.Names()[2])
+			require.Equal(appdef.NewQName("main", "XZReports"), i.Names()[3])
 		default:
-			require.Fail("unexpected intent", "intent: %v", storage)
+			require.Fail("unexpected intent", "intent: %v", i)
 		}
-		return true
-	})
+	}
 	require.Equal(1, intentsCount)
 	require.Equal(intentsCount, proj.Intents().Len())
 
@@ -268,20 +266,19 @@ func Test_BasicUsage(t *testing.T) {
 		require.EqualValues(`1 0 * * *`, job1.CronSchedule())
 		t.Run("Job states", func(t *testing.T) {
 			stateCount := 0
-			proj.States().Enum(func(storage appdef.IStorage) bool {
+			for s := range proj.States().Enum {
 				stateCount++
 				switch stateCount {
 				case 1:
-					require.Equal(appdef.NewQName("sys", "AppSecret"), storage.Name())
-					require.Empty(storage.Names())
+					require.Equal(appdef.NewQName("sys", "AppSecret"), s.Name())
+					require.Empty(s.Names())
 				case 2:
-					require.Equal(appdef.NewQName("sys", "Http"), storage.Name())
-					require.Empty(storage.Names())
+					require.Equal(appdef.NewQName("sys", "Http"), s.Name())
+					require.Empty(s.Names())
 				default:
-					require.Fail("unexpected state", "storage: %v", storage.Name())
+					require.Fail("unexpected state", "storage: %v", s.Name())
 				}
-				return true
-			})
+			}
 			require.Equal(2, stateCount)
 		})
 

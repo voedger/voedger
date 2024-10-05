@@ -1,9 +1,9 @@
 /*
- * Copyright (c) 2020-present unTill Pro, Ltd.
+ * Copyright (c) 2024-present unTill Software Development Group B.V.
  * @author Denis Gribanov
  */
 
-package apps
+package builtinapps
 
 import (
 	"github.com/voedger/voedger/pkg/appdef"
@@ -19,6 +19,14 @@ import (
 	"github.com/voedger/voedger/pkg/parser"
 )
 
+type Builder func(apis APIs, cfg *istructsmem.AppConfigType, ep extensionpoints.IExtensionPoint) Def
+
+type Def struct {
+	appparts.AppDeploymentDescriptor
+	AppQName appdef.AppQName
+	Packages []parser.PackageFS
+}
+
 type APIs struct {
 	itokens.ITokens
 	istructs.IAppStructsProvider
@@ -31,13 +39,3 @@ type APIs struct {
 	//                                     that requires filled AppConfigsType, but AppConfigsType requires apps.APIs with IAppPartitions
 }
 
-type AppBuilder func(apis APIs, cfg *istructsmem.AppConfigType, ep extensionpoints.IExtensionPoint) BuiltInAppDef
-type SchemasExportedContent map[string]map[string][]byte // packageName->schemaFilePath->content
-type CLIParams struct {
-	Storage string
-}
-type BuiltInAppDef struct {
-	appparts.AppDeploymentDescriptor
-	AppQName appdef.AppQName
-	Packages []parser.PackageFS
-}

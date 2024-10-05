@@ -40,10 +40,10 @@ import (
 	"github.com/voedger/voedger/pkg/processors/actualizers"
 	"github.com/voedger/voedger/pkg/processors/schedulers"
 	"github.com/voedger/voedger/pkg/router"
+	builtinapps "github.com/voedger/voedger/pkg/vvm/builtin"
 	"github.com/voedger/voedger/pkg/vvm/engines"
 
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/apps"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/coreutils/federation"
 	"github.com/voedger/voedger/pkg/iauthnz"
@@ -129,7 +129,7 @@ func (vvm *VoedgerVM) Launch() error {
 func ProvideCluster(vvmCtx context.Context, vvmConfig *VVMConfig, vvmIdx VVMIdxType) (*VVM, func(), error) {
 	panic(wire.Build(
 		wire.Struct(new(VVM), "*"),
-		wire.Struct(new(apps.APIs), "*"),
+		wire.Struct(new(builtinapps.APIs), "*"),
 		wire.Struct(new(schedulers.BasicSchedulerConfig), "VvmName", "SecretReader", "Tokens", "Metrics", "Broker", "Federation", "Time"),
 		provideServicePipeline,
 		provideCommandProcessors,
@@ -316,13 +316,17 @@ func provideAppPartitions(
 	sch appparts.ISchedulerRunner,
 	sr istructsmem.IStatelessResources,
 	builtinAppsArtefacts BuiltInAppsArtefacts,
+	vvmName processors.VVMName,
+	imetrics imetrics.IMetrics,
 ) (ap appparts.IAppPartitions, cleanup func(), err error) {
 
 	eef := engines.ProvideExtEngineFactories(engines.ExtEngineFactoriesConfig{
 		StatelessResources: sr,
 		AppConfigs:         builtinAppsArtefacts.AppConfigsType,
-		WASMConfig:         iextengine.WASMFactoryConfig{Compile: false},
-	})
+		WASMConfig: iextengine.WASMFactoryConfig{
+			Compile: false,
+		},
+	}, vvmName, imetrics)
 
 	return appparts.New2(
 		vvmCtx,
@@ -337,7 +341,7 @@ func provideAppPartitions(
 func provideIsDeviceAllowedFunc(appEPs map[appdef.AppQName]extensionpoints.IExtensionPoint) iauthnzimpl.IsDeviceAllowedFuncs {
 	res := iauthnzimpl.IsDeviceAllowedFuncs{}
 	for appQName, appEP := range appEPs {
-		val, ok := appEP.Find(apps.EPIsDeviceAllowedFunc)
+		val, ok := appEP.Find(builtinapps.EPIsDeviceAllowedFunc)
 		if !ok {
 			res[appQName] = func(as istructs.IAppStructs, requestWSID istructs.WSID, deviceProfileWSID istructs.WSID) (ok bool, err error) {
 				return true, nil
@@ -507,7 +511,7 @@ func provideVVMApps(builtInApps []appparts.BuiltInApp) (vvmApps VVMApps) {
 	return vvmApps
 }
 
-func provideBuiltInAppsArtefacts(vvmConfig *VVMConfig, apis apps.APIs, cfgs AppConfigsTypeEmpty,
+func provideBuiltInAppsArtefacts(vvmConfig *VVMConfig, apis builtinapps.APIs, cfgs AppConfigsTypeEmpty,
 	appEPs map[appdef.AppQName]extensionpoints.IExtensionPoint) (BuiltInAppsArtefacts, error) {
 	return vvmConfig.VVMAppsBuilder.BuildAppsArtefacts(apis, cfgs, appEPs)
 }

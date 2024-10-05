@@ -48,7 +48,7 @@ func ExampleIAppDefBuilder_AddData() {
 	// how to inspect data types in builded AppDef
 	{
 		cnt := 0
-		app.DataTypes(func(d appdef.IData) bool {
+		for d := range app.DataTypes {
 			if !d.IsSystem() {
 				cnt++
 				fmt.Println("-", d, "inherits from", d.Ancestor())
@@ -64,8 +64,7 @@ func ExampleIAppDefBuilder_AddData() {
 					fmt.Printf("  constraints: (%v)\n", strings.Join(str, `, `))
 				}
 			}
-			return true
-		})
+		}
 		fmt.Println("overall user data types: ", cnt)
 	}
 

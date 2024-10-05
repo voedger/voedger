@@ -12,7 +12,7 @@ import (
 //go:embed schema.vsql
 var registryAppSchemaFS embed.FS
 
-const RegistryAppFQN = "github.com/voedger/voedger/pkg/apps/sys/registryapp"
+const RegistryAppFQN = "github.com/voedger/voedger/pkg/vvm/builtin/registryapp"
 
 const (
 	// query processors

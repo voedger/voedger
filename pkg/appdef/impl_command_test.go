@@ -73,7 +73,7 @@ func Test_AppDef_AddCommand(t *testing.T) {
 
 	t.Run("must be ok to enum commands", func(t *testing.T) {
 		cnt := 0
-		app.Commands(func(c ICommand) bool {
+		for c := range app.Commands {
 			cnt++
 			switch cnt {
 			case 1:
@@ -81,8 +81,7 @@ func Test_AppDef_AddCommand(t *testing.T) {
 			default:
 				require.Failf("unexpected command", "command: %v", c)
 			}
-			return true
-		})
+		}
 		require.Equal(1, cnt)
 	})
 

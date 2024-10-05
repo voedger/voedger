@@ -97,12 +97,10 @@ func (a *asyncActualizer) Run(ctx context.Context) {
 	for ctx.Err() == nil {
 		if err = a.init(ctx); err == nil {
 			logger.Trace(a.name, "started")
-			if err = a.keepReading(); err != nil {
-				a.conf.LogError(a.name, err)
-			}
+			err = a.keepReading()
 		}
-		a.finit() // even execute if a.init has failed
-		if ctx.Err() == nil && err != nil {
+		a.finit() // execute even if a.init() has failed
+		if err != nil {
 			a.conf.LogError(a.name, err)
 			select {
 			case <-ctx.Done():
@@ -160,14 +158,13 @@ func (a *asyncActualizer) init(ctx context.Context) (err error) {
 		if ss.Len() > 2 {
 			return true
 		}
-		found := false
-		ss.Enum(
-			func(storage appdef.IStorage) bool {
-				n := storage.Name()
-				found = n != sys.Storage_View && n != sys.Storage_Record
-				return !found
-			})
-		return found
+		for storage := range ss.Enum {
+			n := storage.Name()
+			if n != sys.Storage_View && n != sys.Storage_Record {
+				return true
+			}
+		}
+		return false
 	}
 
 	// https://github.com/voedger/voedger/issues/1048

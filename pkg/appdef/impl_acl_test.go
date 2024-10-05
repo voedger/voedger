@@ -110,18 +110,17 @@ func Test_AppDef_GrantAndRevoke(t *testing.T) {
 		}
 
 		aclCount := 0
-		app.ACL(func(p IACLRule) bool {
+		for r := range app.ACL {
 			require.Less(aclCount, len(wantACL))
 			t.Run(fmt.Sprintf("ACL[%d]", aclCount), func(t *testing.T) {
-				require.Equal(wantACL[aclCount].policy, p.Policy())
-				require.Equal(wantACL[aclCount].ops, p.Ops())
-				require.EqualValues(wantACL[aclCount].res, p.Resources().On())
-				require.Equal(wantACL[aclCount].fields, p.Resources().Fields())
-				require.Equal(wantACL[aclCount].principal, p.Principal().QName())
+				require.Equal(wantACL[aclCount].policy, r.Policy())
+				require.Equal(wantACL[aclCount].ops, r.Ops())
+				require.EqualValues(wantACL[aclCount].res, r.Resources().On())
+				require.Equal(wantACL[aclCount].fields, r.Resources().Fields())
+				require.Equal(wantACL[aclCount].principal, r.Principal().QName())
 			})
 			aclCount++
-			return true
-		})
+		}
 		require.Len(wantACL, aclCount)
 	})
 }
@@ -253,28 +252,18 @@ func Test_AppDef_GrantWithFields(t *testing.T) {
 		}
 
 		aclCount := 0
-		app.ACL(func(p IACLRule) bool {
+		for r := range app.ACL {
 			require.Less(aclCount, len(wantACL))
 			t.Run(fmt.Sprintf("ACL[%d]", aclCount), func(t *testing.T) {
-				require.Equal(wantACL[aclCount].policy, p.Policy())
-				require.Equal(wantACL[aclCount].ops, p.Ops())
-				require.EqualValues(wantACL[aclCount].res, p.Resources().On())
-				require.Equal(wantACL[aclCount].fields, p.Resources().Fields())
-				require.Equal(wantACL[aclCount].principal, p.Principal().QName())
+				require.Equal(wantACL[aclCount].policy, r.Policy())
+				require.Equal(wantACL[aclCount].ops, r.Ops())
+				require.EqualValues(wantACL[aclCount].res, r.Resources().On())
+				require.Equal(wantACL[aclCount].fields, r.Resources().Fields())
+				require.Equal(wantACL[aclCount].principal, r.Principal().QName())
 			})
 			aclCount++
-			return true
-		})
+		}
 		require.Len(wantACL, aclCount)
-	})
-
-	t.Run("range by ACL should breakable", func(t *testing.T) {
-		cnt := 0
-		app.ACL(func(p IACLRule) bool {
-			cnt++
-			return false
-		})
-		require.Equal(1, cnt)
 	})
 }
 

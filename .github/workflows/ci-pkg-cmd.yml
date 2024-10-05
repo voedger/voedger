@@ -5,17 +5,16 @@ on:
     branches:
       - main
     paths:
-      - 'pkg/**'
-
+      - "pkg/**"
 
 jobs:
   call-workflow-ci-pkg:
     uses: untillpro/ci-action/.github/workflows/ci_reuse_go.yml@master
-    with: 
-      test_folder: 'pkg'
-      ignore_copyright: 'pkg/apps/sys.monitor/site.main'
-      ignore_bp3: 'true'
-      short_test: 'true'
+    with:
+      test_folder: "pkg"
+      ignore_copyright: "cmd/voedger/sys.monitor/site.main"
+      ignore_bp3: "true"
+      short_test: "true"
     secrets:
       reporeading_token: ${{ secrets.REPOREADING_TOKEN }}
       codecov_token: ${{ secrets.CODECOV_TOKEN }}
@@ -28,22 +27,22 @@ jobs:
       ibp3: ${{ steps.setignore.outputs.ignore_bp3 }}
 
     steps:
-    - name: Set Ignore Build BP3
-      id: setignore
-      run: |
-        if [[ ${{ github.repository }} == 'voedger/voedger' ]]; then
-          echo "ignore_bp3=false" >> "$GITHUB_OUTPUT"
-        else
-          echo "ignore_bp3=true" >> "$GITHUB_OUTPUT"
-        fi
+      - name: Set Ignore Build BP3
+        id: setignore
+        run: |
+          if [[ ${{ github.repository }} == 'voedger/voedger' ]]; then
+            echo "ignore_bp3=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ignore_bp3=true" >> "$GITHUB_OUTPUT"
+          fi
 
   call-workflow-ci-cmd-ctool:
     needs: build
     uses: untillpro/ci-action/.github/workflows/ci_reuse_go.yml@master
-    with: 
-      test_folder: 'cmd/ctool/'
-      ignore_copyright: 'pkg/apps/sys.monitor/site.main'
-      short_test: 'true'
+    with:
+      test_folder: "cmd/ctool/"
+      ignore_copyright: "cmd/voedger/sys.monitor/site.main"
+      short_test: "true"
     secrets:
       reporeading_token: ${{ secrets.REPOREADING_TOKEN }}
       codecov_token: ${{ secrets.CODECOV_TOKEN }}
@@ -51,10 +50,10 @@ jobs:
   call-workflow-ci-cmd-edger:
     needs: call-workflow-ci-cmd-ctool
     uses: untillpro/ci-action/.github/workflows/ci_reuse_go.yml@master
-    with: 
-      test_folder: 'cmd/edger/'
-      ignore_copyright: 'pkg/apps/sys.monitor/site.main'
-      short_test: 'true'
+    with:
+      test_folder: "cmd/edger/"
+      ignore_copyright: "cmd/voedger/sys.monitor/site.main"
+      short_test: "true"
     secrets:
       reporeading_token: ${{ secrets.REPOREADING_TOKEN }}
       codecov_token: ${{ secrets.CODECOV_TOKEN }}
@@ -62,10 +61,10 @@ jobs:
   call-workflow-ci-cmd-voedger:
     needs: call-workflow-ci-cmd-edger
     uses: untillpro/ci-action/.github/workflows/ci_reuse_go.yml@master
-    with: 
-      test_folder: 'cmd/voedger/'
-      ignore_copyright: 'pkg/apps/sys.monitor/site.main'
-      short_test: 'true'
+    with:
+      test_folder: "cmd/voedger/"
+      ignore_copyright: "cmd/voedger/sys.monitor/site.main"
+      short_test: "true"
     secrets:
       reporeading_token: ${{ secrets.REPOREADING_TOKEN }}
       codecov_token: ${{ secrets.CODECOV_TOKEN }}
@@ -79,5 +78,3 @@ jobs:
       dockerpassword: ${{ secrets.DOCKER_PASSWORD }}
       personaltoken: ${{ secrets.PERSONAL_TOKEN }}
       reporeading_token: ${{ secrets.REPOREADING_TOKEN }}
-
-

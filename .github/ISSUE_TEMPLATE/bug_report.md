@@ -6,7 +6,7 @@ labels: kind/bug, todo/triage
 assignees: ''
 ---
 
-## Steps to reproduce the behavior
+## Steps to reproduce the problem
 
 1. Go to '...'
 2. Click on '....'

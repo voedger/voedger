@@ -9,15 +9,15 @@ import (
 	"fmt"
 
 	"github.com/voedger/voedger/pkg/appdef"
-	"github.com/voedger/voedger/pkg/apps"
-	"github.com/voedger/voedger/pkg/apps/sys/clusterapp"
-	"github.com/voedger/voedger/pkg/apps/sys/registryapp"
 	"github.com/voedger/voedger/pkg/coreutils"
 	"github.com/voedger/voedger/pkg/extensionpoints"
 	"github.com/voedger/voedger/pkg/istructs"
 	"github.com/voedger/voedger/pkg/sys/smtp"
 	"github.com/voedger/voedger/pkg/sys/workspace"
 	"github.com/voedger/voedger/pkg/vvm"
+	builtinapps "github.com/voedger/voedger/pkg/vvm/builtin"
+	"github.com/voedger/voedger/pkg/vvm/builtin/clusterapp"
+	"github.com/voedger/voedger/pkg/vvm/builtin/registryapp"
 )
 
 func NewOwnVITConfig(opts ...vitConfigOptFunc) VITConfig {
@@ -35,7 +35,7 @@ func NewSharedVITConfig(opts ...vitConfigOptFunc) VITConfig {
 	return cfg
 }
 
-func WithBuilder(builder apps.AppBuilder) AppOptFunc {
+func WithBuilder(builder builtinapps.Builder) AppOptFunc {
 	return func(app *app, cfg *vvm.VVMConfig) {
 		cfg.VVMAppsBuilder.Add(app.name, builder)
 	}
@@ -162,7 +162,7 @@ func WithPostInit(postInitFunc func(vit *VIT)) vitConfigOptFunc {
 	}
 }
 
-func WithApp(appQName appdef.AppQName, updater apps.AppBuilder, appOpts ...AppOptFunc) vitConfigOptFunc {
+func WithApp(appQName appdef.AppQName, updater builtinapps.Builder, appOpts ...AppOptFunc) vitConfigOptFunc {
 	return func(vpc *vitPreConfig) {
 		_, ok := vpc.vitApps[appQName]
 		if ok {

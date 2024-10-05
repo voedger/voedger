@@ -3,16 +3,15 @@ name: Daily test suite
 on:
   workflow_dispatch:
   schedule:
-    - cron: '0 5 * * *'
+    - cron: "0 5 * * *"
 
 jobs:
-
   call-workflow-ci:
     if: github.repository == 'voedger/voedger'
     uses: untillpro/ci-action/.github/workflows/ci_reuse_go.yml@master
-    with: 
-      ignore_copyright: 'pkg/apps/sys.monitor/site.main'
-      short_test: 'false'
+    with:
+      ignore_copyright: "cmd/voedger/sys.monitor/site.main"
+      short_test: "false"
     secrets:
       reporeading_token: ${{ secrets.REPOREADING_TOKEN }}
       codecov_token: ${{ secrets.CODECOV_TOKEN }}
@@ -23,23 +22,22 @@ jobs:
     if: ${{ failure() }}
     runs-on: ubuntu-latest
     outputs:
-      failure_url: ${{ steps.set_output.outputs.failure_url }}  # Declaring output at the job level
+      failure_url: ${{ steps.set_output.outputs.failure_url }} # Declaring output at the job level
     steps:
       - name: Set Failure URL Output
         id: set_output
-        run: 
-          echo "failure_url=https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" >> $GITHUB_OUTPUT
+        run: echo "failure_url=https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" >> $GITHUB_OUTPUT
 
   call-workflow-create-issue:
     needs: notify_failure
     if: ${{ failure() }}
     uses: untillpro/ci-action/.github/workflows/create_issue.yml@master
-    with: 
-      repo: 'voedger/voedger' 
-      assignee: 'host6'
-      name: 'Daily Test failed on'
+    with:
+      repo: "voedger/voedger"
+      assignee: "host6"
+      name: "Daily Test failed on"
       body: ${{ needs.notify_failure.outputs.failure_url }}
-      label: 'prty/blocker'
+      label: "prty/blocker"
     secrets:
       personaltoken: ${{ secrets.PERSONAL_TOKEN }}
 
@@ -55,4 +53,3 @@ jobs:
       dockerpassword: ${{ secrets.DOCKER_PASSWORD }}
       personaltoken: ${{ secrets.PERSONAL_TOKEN }}
       reporeading_token: ${{ secrets.REPOREADING_TOKEN }}
-
