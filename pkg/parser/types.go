@@ -230,19 +230,25 @@ type WorkspaceStmt struct {
 	Statements []WorkspaceStatement `parser:"@@? (';' @@)* ';'? ')'"`
 
 	// filled on the analysis stage
-	qNames              map[appdef.QName]statementNode
+	nodes               map[appdef.QName]workspaceNode
 	inheritedWorkspaces []*WorkspaceStmt
 }
 
-func (s *WorkspaceStmt) registerQName(qn appdef.QName, stmt statementNode) {
-	if s.qNames == nil {
-		s.qNames = make(map[appdef.QName]statementNode)
+type workspaceNode struct {
+	workspace *WorkspaceStmt
+	node      statementNode
+}
+
+func (s *WorkspaceStmt) registerNode(qn appdef.QName, node statementNode, ws *WorkspaceStmt) {
+	wsNode := workspaceNode{workspace: ws, node: node}
+	if s.nodes == nil {
+		s.nodes = make(map[appdef.QName]workspaceNode)
 	}
-	s.qNames[qn] = stmt
+	s.nodes[qn] = wsNode
 }
 
 func (s *WorkspaceStmt) containsQName(qName appdef.QName) bool {
-	for k := range s.qNames {
+	for k := range s.nodes {
 		if k == qName {
 			return true
 		}
@@ -639,7 +645,7 @@ type GrantTableAction struct {
 	Columns []Identifier `parser:"( '(' @@ (',' @@)* ')' )?"`
 }
 
-type GrantAllTablesWithTagAction struct {
+type GrantAllTablesAction struct {
 	Pos    lexer.Position
 	Select bool `parser:"@'SELECT'"`
 	Insert bool `parser:"| @'INSERT'"`
@@ -656,37 +662,51 @@ type GrantTableActions struct {
 	Pos   lexer.Position
 	All   *GrantTableAll     `parser:"(@@ | "`
 	Items []GrantTableAction `parser:"(@@ (',' @@)*))"`
+	Table DefQName           `parser:"ONTABLE @@"`
 }
 
 type GrantAllTablesWithTagActions struct {
 	Pos   lexer.Position
-	All   bool                          `parser:"@'ALL' | "`
-	Items []GrantAllTablesWithTagAction `parser:"(@@ (',' @@)*)"`
+	All   bool                   `parser:"( @'ALL' | "`
+	Items []GrantAllTablesAction `parser:"(@@ (',' @@)*) )"`
+	Tag   DefQName               `parser:"ONALLTABLESWITHTAG @@"`
+}
+
+type GrantAllTables struct {
+	Pos   lexer.Position
+	All   bool                   `parser:"( @'ALL' | "`
+	Items []GrantAllTablesAction `parser:"(@@ (',' @@)*) )"`
+	Tag   DefQName               `parser:"ONALLTABLES"`
 }
 
 type GrantView struct {
 	Pos        lexer.Position
-	AllColumns bool         `parser:"@SELECTONVIEW | "`
-	Columns    []Identifier `parser:"( SELECT '(' @@ (',' @@)* ')' ONVIEW)"`
+	AllColumns bool         `parser:"(@SELECTONVIEW | "`
+	Columns    []Identifier `parser:"( SELECT '(' @@ (',' @@)* ')' ONVIEW))"`
+	View       DefQName     `parser:"@@"`
 }
 
 type GrantOrRevoke struct {
-	Command              bool                          `parser:"( @INSERTONCOMMAND"`
-	AllCommandsWithTag   bool                          `parser:"| @INSERTONALLCOMMANDSWITHTAG"`
-	Query                bool                          `parser:"| @SELECTONQUERY"`
-	AllQueriesWithTag    bool                          `parser:"| @SELECTONALLQUERIESWITHTAG"`
-	AllViewsWithTag      bool                          `parser:"| @SELECTONALLVIEWSWITHTAG"`
-	Workspace            bool                          `parser:"| @INSERTONWORKSPACE"`
-	AllWorkspacesWithTag bool                          `parser:"| @INSERTONALLWORKSPACESWITHTAG"`
-	View                 *GrantView                    `parser:"| @@ "`
-	AllTablesWithTag     *GrantAllTablesWithTagActions `parser:"| (@@ ONALLTABLESWITHTAG)"`
-	Table                *GrantTableActions            `parser:"| (@@ ONTABLE) )"`
-	On                   DefQName                      `parser:"@@"`
+	Command              *DefQName                     `parser:"( (INSERTONCOMMAND @@)"`
+	AllCommandsWithTag   *DefQName                     `parser:"  | (INSERTONALLCOMMANDSWITHTAG @@)"`
+	Query                *DefQName                     `parser:"  | (SELECTONQUERY @@)"`
+	AllQueriesWithTag    *DefQName                     `parser:"  | (SELECTONALLQUERIESWITHTAG @@)"`
+	AllViewsWithTag      *DefQName                     `parser:"  | (SELECTONALLVIEWSWITHTAG @@)"`
+	Workspace            *DefQName                     `parser:"  | (INSERTONWORKSPACE @@)"`
+	AllWorkspacesWithTag *DefQName                     `parser:"  | (INSERTONALLWORKSPACESWITHTAG @@)"`
+	View                 *GrantView                    `parser:"  | @@"`
+	AllTablesWithTag     *GrantAllTablesWithTagActions `parser:"  | @@"`
+	Table                *GrantTableActions            `parser:"  | @@"`
+	AllCommands          bool                          `parser:"  | @INSERTONALLCOMMANDS"`
+	AllQueries           bool                          `parser:"  | @SELECTONALLQUERIES"`
+	AllViews             bool                          `parser:"  | @SELECTONALLVIEWS"`
+	AllTables            *GrantAllTables               `parser:"  | @@ )"`
 
-	role    appdef.QName           // filled on the analysis stage
-	on      []appdef.QName         // filled on the analysis stage
-	ops     []appdef.OperationKind // filled on the analysis stage
-	columns []appdef.FieldName     // filled on the analysis stage
+	/* filled on the analysis stage */
+	role    appdef.QName
+	on      []appdef.QName
+	ops     []appdef.OperationKind
+	columns []appdef.FieldName
 }
 
 type GrantStmt struct {
