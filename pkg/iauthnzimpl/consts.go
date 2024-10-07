@@ -115,6 +115,7 @@ var (
 	qNameQryGetUPPayoutTransfers                    = appdef.NewQName(airPackage, "GetUPPayoutTransfers")
 	qNameQryGetAllUPInvoices                        = appdef.NewQName(airPackage, "GetAllUPInvoices")
 	qNameQryGetAllUPPayoutTransfers                 = appdef.NewQName(airPackage, "GetAllUPPayoutTransfers")
+	qNameQryGetDailyUPReports                       = appdef.NewQName(airPackage, "GetDailyUPReports")
 
 	// Air roles
 	qNameRoleResellersAdmin            = appdef.NewQName(airPackage, "ResellersAdmin")
