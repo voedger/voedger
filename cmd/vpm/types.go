@@ -72,6 +72,7 @@ type ormProjector struct {
 
 type ormProjectorEventItem struct {
 	ormPackageItem
+	EventItem any
 	Kinds     []appdef.ProjectorEventKind
 	Projector ormProjector
 }

@@ -296,7 +296,7 @@ func processITypeObj(
 	uniquePkgQNames map[ormPackageInfo][]string,
 	wsQName appdef.QName,
 	obj appdef.IType,
-) (newItem interface{}) {
+) (newItem any) {
 	if obj == nil {
 		return nil
 	}
@@ -373,11 +373,15 @@ func processITypeObj(
 
 		// collecting projector events (Commands, CUDs, etc.)
 		iProjectorEvents.Enum(func(iProjectorEvent appdef.IProjectorEvent) {
-			ormProjectorItem.On = append(ormProjectorItem.On, ormProjectorEventItem{
-				Projector:      ormProjectorItem,
-				Kinds:          iProjectorEvent.Kind(),
-				ormPackageItem: newPackageItem(pkgInfos, wsQName, iProjectorEvent.On()),
-			})
+			ormObject := processITypeObj(localName, pkgInfos, pkgData, uniquePkgQNames, wsQName, iProjectorEvent.On())
+			if ormObject != nil {
+				ormProjectorItem.On = append(ormProjectorItem.On, ormProjectorEventItem{
+					ormPackageItem: extractOrmPackageItem(ormObject),
+					Projector:      ormProjectorItem,
+					Kinds:          iProjectorEvent.Kind(),
+					EventItem:      ormObject,
+				})
+			}
 		})
 
 		newItem = ormProjectorItem
@@ -612,5 +616,22 @@ func getFieldType(field appdef.IField) string {
 		return "ID"
 	default:
 		return unknownType
+	}
+}
+
+func extractOrmPackageItem(ormObject any) ormPackageItem {
+	switch t := ormObject.(type) {
+	case ormPackageItem:
+		return t
+	case ormProjector:
+		return t.ormPackageItem
+	case ormTableItem:
+		return t.ormPackageItem
+	case ormProjectorEventItem:
+		return t.ormPackageItem
+	case ormCommand:
+		return t.ormPackageItem
+	default:
+		return ormPackageItem{}
 	}
 }

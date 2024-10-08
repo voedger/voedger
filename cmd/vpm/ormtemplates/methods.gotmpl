@@ -248,18 +248,24 @@ func (c {{.Type}}_{{.Package.Name}}_{{.Name}}) Result({{range .ResultObjectField
 
 {{if (doesExecuteOn .)}}
 
-type Cmd_{{.Package.Name}}_{{.Name}} struct {
-qname string
-event ProjectorEvent_{{.Projector.Package.Name}}_{{.Projector.Name}}
+type Cmd_{{.Projector.Package.Name}}_{{.Name}} struct {
+	qname string
+	event exttinygo.TValue
 }
 
-// TODO: Arg() must return Argument object of the command
-func (c Cmd_{{.Package.Name}}_{{.Name}}) Arg() (ProjectorArg_{{.Projector.Package.Name}}_{{.Projector.Name}}, bool) {
-	return c.event.Arg(), true
-}
+{{if .EventItem.ArgumentObject}}
+func (c Cmd_{{.Projector.Package.Name}}_{{.Name}}) Arg() (Value_{{.EventItem.ArgumentObject.Type}}_{{.EventItem.ArgumentObject.Package.Name}}_{{.EventItem.ArgumentObject.Name}}, bool) {
+	qname := c.event.AsQName("QName")
+	if qname.FullPkgName != Package_{{.EventItem.ArgumentObject.Package.Name}}.{{.EventItem.ArgumentObject.Type}}_{{.EventItem.ArgumentObject.Name}}.PkgPath() || qname.Entity != Package_{{.EventItem.ArgumentObject.Package.Name}}.{{.EventItem.ArgumentObject.Type}}_{{.EventItem.ArgumentObject.Name}}.Entity() {
+		return Value_{{.EventItem.ArgumentObject.Type}}_{{.EventItem.ArgumentObject.Package.Name}}_{{.EventItem.ArgumentObject.Name}}{}, false
+	}
 
-func (p Projector_{{.Projector.Package.Name}}_{{.Projector.Name}}) Cmd_{{.Name}}() Cmd_{{.Package.Name}}_{{.Name}} {
-	return Cmd_{{.Package.Name}}_{{.Name}}{
+	return Value_{{.EventItem.ArgumentObject.Type}}_{{.EventItem.ArgumentObject.Package.Name}}_{{.EventItem.ArgumentObject.Name}}{tv: c.event}, true
+}
+{{end}}
+
+func (p Projector_{{.Projector.Package.Name}}_{{.Projector.Name}}) Cmd_{{.Name}}() Cmd_{{.Projector.Package.Name}}_{{.Name}} {
+	return Cmd_{{.Projector.Package.Name}}_{{.Name}}{
 		qname: p.PkgPath() + "." + "{{.Name}}",
 		event: p.event,
 	}
@@ -269,19 +275,30 @@ func (p Projector_{{.Projector.Package.Name}}_{{.Projector.Name}}) Cmd_{{.Name}}
 
 {{if (doesTriggerOnCUD .)}}
 
-// TODO: must return iterator (iter.Seq)
-func (p Projector_{{.Projector.Package.Name}}_{{.Projector.Name}}) Cuds_{{.Package.Name}}_{{.Name}}() []Value_{{.Type}}_{{.Package.Name}}_{{.Name}} {
-	// get cuds from event
-return nil
+func (p Projector_{{.Projector.Package.Name}}_{{.Projector.Name}}) Cuds_{{.Package.Name}}_{{.Name}}() iter.Seq[Value_{{.Type}}_{{.Package.Name}}_{{.Name}}] {
+	return func(yield func(Value_{{.Type}}_{{.Package.Name}}_{{.Name}}) bool) {
+		cudsValue := p.event.AsValue("CUDs")
+		for i := 0; i < cudsValue.Len(); i++ {
+			cudValue := cudsValue.GetAsValue(i)
+			cudQName := cudValue.AsQName("QName")
+			if cudQName.FullPkgName != Package_{{.EventItem.Package.Name}}.{{.EventItem.Type}}_{{.EventItem.Name}}.PkgPath() || cudQName.Entity != Package_{{.EventItem.Package.Name}}.{{.EventItem.Type}}_{{.EventItem.Name}}.Entity() {
+				yield(Value_{{.Type}}_{{.Package.Name}}_{{.Name}}{tv: cudValue})
+			}
+		}
+	}
 }
 
 {{end}}
 
 {{if (doesExecuteWithParam .)}}
 
-// TODO: Arg_untill_pbill() must check qname of the argument and return Cdov_untill_pbill and true if qname of the argument is "untill.pbill"
-func (p Projector_{{.Projector.Package.Name}}_{{.Projector.Name}}) Arg_{{.Package.Name}}_{{.Name}}() ProjectorArg_{{.Projector.Package.Name}}_{{.Projector.Name}} {
-return p.event.Arg()
+func (p Projector_{{.Projector.Package.Name}}_{{.Projector.Name}}) Arg_{{.Package.Name}}_{{.Name}}() (Value_{{.EventItem.Type}}_{{.EventItem.Package.Name}}_{{.EventItem.Name}}, bool) {
+	qname := p.event.AsQName("QName")
+	if qname.FullPkgName != Package_{{.EventItem.Package.Name}}.{{.EventItem.Type}}_{{.EventItem.Name}}.PkgPath() || qname.Entity != Package_{{.EventItem.Package.Name}}.{{.EventItem.Type}}_{{.EventItem.Name}}.Entity() {
+		return Value_{{.EventItem.Type}}_{{.EventItem.Package.Name}}_{{.EventItem.Name}}{}, false
+	}
+
+	return Value_{{.EventItem.Type}}_{{.EventItem.Package.Name}}_{{.EventItem.Name}}{tv: p.event}, true
 }
 
 {{end}}

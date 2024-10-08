@@ -28,10 +28,6 @@ type Container_ORecord_{{.Package.Name}}_{{.Name}} struct {
 
 {{if (eq .Type "Projector")}}
 
-type ProjectorEvent_{{.Package.Name}}_{{.Name}} struct {
-	event exttinygo.TValue
-}
-
 type ProjectorArg_{{.Package.Name}}_{{.Name}} struct {
     qname string
 	value exttinygo.TValue
@@ -45,33 +41,22 @@ func (pa ProjectorArg_{{.Package.Name}}_{{.Name}}) Get() exttinygo.TValue {
     return pa.value
 }
 
-func (pe ProjectorEvent_{{.Package.Name}}_{{.Name}}) Arg() ProjectorArg_{{.Package.Name}}_{{.Name}} {
-    arg := pe.event.AsValue("ArgumentObject")
-    return ProjectorArg_{{.Package.Name}}_{{.Name}}{
-        qname: arg.AsString("qname"),
-		value: arg,
-    }
-}
-
 type {{.Type}}_{{.Package.Name}}_{{.Name}} struct {
 Type
-event ProjectorEvent_{{.Package.Name}}_{{.Name}}
+event exttinygo.TValue
 }
 
 func (pkg TPackage_{{.Package.Name}}) Projector_{{.Name}}() Projector_{{.Package.Name}}_{{.Name}} {
-	pe := ProjectorEvent_{{.Package.Name}}_{{.Name}}{
-        event: exttinygo.MustGetValue(exttinygo.KeyBuilder(exttinygo.StorageEvent, exttinygo.NullEntity)),
-	}
     return Projector_{{.Package.Name}}_{{.Name}}{
-        event: pe,
+        event: exttinygo.MustGetValue(exttinygo.KeyBuilder(exttinygo.StorageEvent, exttinygo.NullEntity)),
     }
 }
 
-{{if (isExecutableWithParam .)}}
-func (p Projector_{{.Package.Name}}_{{.Name}}) Event() ProjectorEvent_{{.Package.Name}}_{{.Name}} {
-return p.event
-}
-{{end}}
+{{/*{{if (isExecutableWithParam .)}}*/}}
+{{/*func (p Projector_{{.Package.Name}}_{{.Name}}) Event() ProjectorEvent_{{.Package.Name}}_{{.Name}} {*/}}
+{{/*return p.event*/}}
+{{/*}*/}}
+{{/*{{end}}*/}}
 
 {{end}}
 

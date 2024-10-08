@@ -6,6 +6,7 @@
 package main
 
 import (
+	"fmt"
 	"time"
 
 	ext "github.com/voedger/voedger/pkg/exttinygo"
@@ -59,6 +60,38 @@ func Pbill() {
 		}
 
 		intent.Set_NextPBillNumber(nextNumber + 1)
+	}
+}
+
+func ProjectorFillPbillDates() {
+	projector := orm.Package_air.Projector_FillPbillDates()
+	if arg, ok := projector.Arg_untill_pbill(); ok {
+		fmt.Println(arg.Get_pdatetime())
+		return
+	}
+
+	if arg, ok := projector.Arg_untill_orders(); ok {
+		fmt.Println(arg.Get_id_bill())
+		return
+	}
+}
+
+func ProjectorNewAbcItem() {
+	projector := orm.Package_air.Projector_NewAbcItem()
+	for cud := range projector.Cuds_air_Abc() {
+		fmt.Println(cud.Get_Field1())
+	}
+}
+
+func ProjectorApplySalesMetrics() {
+	projector := orm.Package_air.Projector_ApplySalesMetrics()
+	if arg, ok := projector.Cmd_Pbill().Arg(); ok {
+		fmt.Println(arg.Get_id_bill())
+		return
+	}
+	if arg, ok := projector.Cmd_Orders().Arg(); ok {
+		fmt.Println(arg.Get_id_bill())
+		return
 	}
 }
 
