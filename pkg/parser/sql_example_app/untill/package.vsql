@@ -6,4 +6,8 @@ TABLE Prices INHERITS CDoc(
     Price float
 );
 
+TABLE Promotions INHERITS CDoc(
+    Discount float
+);
+
 ABSTRACT WORKSPACE UntillAWorkspace ();

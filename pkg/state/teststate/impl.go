@@ -375,22 +375,21 @@ func (ts *testState) buildAppDef(packagePath string, packageDir string, createWo
 	cfgs := make(istructsmem.AppConfigsType, 1)
 	cfg := cfgs.AddBuiltInAppConfig(appName, adb)
 	cfg.SetNumAppWorkspaces(istructs.DefaultNumAppWorkspaces)
-	ts.appDef.Extensions(func(i appdef.IExtension) bool {
-		if i.QName().Pkg() == PackageName {
-			if proj, ok := i.(appdef.IProjector); ok {
+	for ext := range ts.appDef.Extensions {
+		if ext.QName().Pkg() == PackageName {
+			if proj, ok := ext.(appdef.IProjector); ok {
 				if proj.Sync() {
-					cfg.AddSyncProjectors(istructs.Projector{Name: i.QName()})
+					cfg.AddSyncProjectors(istructs.Projector{Name: ext.QName()})
 				} else {
-					cfg.AddAsyncProjectors(istructs.Projector{Name: i.QName()})
+					cfg.AddAsyncProjectors(istructs.Projector{Name: ext.QName()})
 				}
-			} else if cmd, ok := i.(appdef.ICommand); ok {
+			} else if cmd, ok := ext.(appdef.ICommand); ok {
 				cfg.Resources.Add(istructsmem.NewCommandFunction(cmd.QName(), istructsmem.NullCommandExec))
-			} else if q, ok := i.(appdef.IQuery); ok {
+			} else if q, ok := ext.(appdef.IQuery); ok {
 				cfg.Resources.Add(istructsmem.NewCommandFunction(q.QName(), istructsmem.NullCommandExec))
 			}
 		}
-		return true
-	})
+	}
 
 	asf := mem.Provide()
 	storageProvider := istorageimpl.Provide(asf)

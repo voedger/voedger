@@ -414,6 +414,12 @@ func Test_AsynchronousActualizer_ErrorAndRestore(t *testing.T) {
 	stop()
 
 	require.Equal(2, attempts)
+
+	select {
+	case err := <-errorsCh:
+		t.Fatal("unexpected error is logged:", err)
+	default:
+	}
 }
 
 func Test_AsynchronousActualizer_ResumeReadAfterNotifications(t *testing.T) {

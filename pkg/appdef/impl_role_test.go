@@ -120,35 +120,24 @@ func Test_AppDef_AddRole(t *testing.T) {
 		}
 
 		rolesCount := 0
-		app.Roles(func(r IRole) bool {
+		for r := range app.Roles {
 			require.Equal(tt[rolesCount].name, r.QName())
 			wantACL := tt[rolesCount].wantACL
 			aclCount := 0
-			r.ACL(func(p IACLRule) bool {
+			for acl := range r.ACL {
 				t.Run(fmt.Sprintf("%v.ACL[%d]", r, aclCount), func(t *testing.T) {
-					require.Equal(wantACL[aclCount].policy, p.Policy())
-					require.Equal(wantACL[aclCount].ops, p.Ops())
-					require.EqualValues(wantACL[aclCount].res, p.Resources().On())
-					require.Equal(wantACL[aclCount].fld, p.Resources().Fields())
-					require.Equal(wantACL[aclCount].to, p.Principal().QName())
+					require.Equal(wantACL[aclCount].policy, acl.Policy())
+					require.Equal(wantACL[aclCount].ops, acl.Ops())
+					require.EqualValues(wantACL[aclCount].res, acl.Resources().On())
+					require.Equal(wantACL[aclCount].fld, acl.Resources().Fields())
+					require.Equal(wantACL[aclCount].to, acl.Principal().QName())
 				})
 				aclCount++
-				return true
-			})
+			}
 			require.Len(wantACL, aclCount)
 			rolesCount++
-			return true
-		})
+		}
 		require.Equal(6, rolesCount)
-	})
-
-	t.Run("range by role ACL rules should be breakable", func(t *testing.T) {
-		role, cnt := app.Role(admRoleName), 0
-		role.ACL(func(IACLRule) bool {
-			cnt++
-			return false
-		})
-		require.Equal(1, cnt)
 	})
 
 	t.Run("role.Anc() should return inheritance", func(t *testing.T) {

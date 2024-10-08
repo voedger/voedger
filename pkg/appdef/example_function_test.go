@@ -43,11 +43,10 @@ func ExampleIAppDef_Functions() {
 	// how to enum functions
 	{
 		cnt := 0
-		app.Functions(func(f appdef.IFunction) bool {
+		for f := range app.Functions {
 			cnt++
 			fmt.Println(cnt, f)
-			return true
-		})
+		}
 		fmt.Println("overall function(s):", cnt)
 	}
 

@@ -31,13 +31,9 @@ func ExampleIAppDefBuilder_AddPackage() {
 
 		fmt.Println(app.PackageLocalNames())
 
-		// for localName, fullPath := range app.PackageLocalNames {
-		// 	fmt.Println(localName, fullPath)
-		// }
-		app.Packages(func(localName, fullPath string) bool {
+		for localName, fullPath := range app.Packages {
 			fmt.Println(localName, fullPath)
-			return true
-		})
+		}
 
 		fmt.Println(app.FullQName(appdef.NewQName("test", "name")))
 		fmt.Println(app.LocalQName(appdef.NewFullQName("example.com/example", "name")))

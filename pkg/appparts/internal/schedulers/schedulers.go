@@ -107,13 +107,12 @@ func (ps *PartitionSchedulers) Deploy(vvmCtx context.Context, appDef appdef.IApp
 	}
 
 	ps.mx.RLock()
-	appDef.Jobs(func(job appdef.IJob) bool {
+	for job := range appDef.Jobs {
 		jobQName := job.QName()
 		if _, exists := ps.jobsInAppWSIDRuntimes[jobQName]; !exists {
 			start(jobQName)
 		}
-		return true
-	})
+	}
 	ps.mx.RUnlock()
 	startWG.Wait() // wait for all new schedulers to start
 }

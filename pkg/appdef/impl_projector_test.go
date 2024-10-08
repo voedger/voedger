@@ -144,7 +144,7 @@ func Test_AppDef_AddProjector(t *testing.T) {
 
 		t.Run("must be ok enum states", func(t *testing.T) {
 			cnt := 0
-			prj.States().Enum(func(s IStorage) bool {
+			for s := range prj.States().Enum {
 				cnt++
 				switch cnt {
 				case 1: // "sys.WLog" < "sys.records" (`W` < `r`)
@@ -156,8 +156,7 @@ func Test_AppDef_AddProjector(t *testing.T) {
 				default:
 					require.Failf("unexpected state", "state: %v", s)
 				}
-				return true
-			})
+			}
 			require.Equal(2, cnt)
 			require.Equal(cnt, prj.States().Len())
 
@@ -182,18 +181,17 @@ func Test_AppDef_AddProjector(t *testing.T) {
 
 		t.Run("must be ok enum intents", func(t *testing.T) {
 			cnt := 0
-			prj.Intents().Enum(func(s IStorage) bool {
+			for i := range prj.Intents().Enum {
 				cnt++
 				switch cnt {
 				case 1:
-					require.Equal(sysViews, s.Name())
-					require.EqualValues(QNames{viewName}, s.Names())
-					require.Equal("view is intent for projector", s.Comment())
+					require.Equal(sysViews, i.Name())
+					require.EqualValues(QNames{viewName}, i.Names())
+					require.Equal("view is intent for projector", i.Comment())
 				default:
-					require.Failf("unexpected intent", "intent: %v", s)
+					require.Failf("unexpected intent", "intent: %v", i)
 				}
-				return true
-			})
+			}
 			require.Equal(1, cnt)
 			require.Equal(cnt, prj.Intents().Len())
 
@@ -217,7 +215,7 @@ func Test_AppDef_AddProjector(t *testing.T) {
 
 	t.Run("must be ok to enum projectors", func(t *testing.T) {
 		cnt := 0
-		app.Projectors(func(p IProjector) bool {
+		for p := range app.Projectors {
 			cnt++
 			switch cnt {
 			case 1:
@@ -226,8 +224,7 @@ func Test_AppDef_AddProjector(t *testing.T) {
 			default:
 				require.Failf("unexpected projector", "projector: %v", p)
 			}
-			return true
-		})
+		}
 		require.Equal(1, cnt)
 	})
 

@@ -96,14 +96,12 @@ func (st *Singletons) load01(storage istorage.IAppStorage) error {
 
 // Collect all application singleton IDs
 func (st *Singletons) collectAllSingletons(appDef appdef.IAppDef) (err error) {
-	appDef.Singletons(
-		func(s appdef.ISingleton) bool {
-			if s.Singleton() {
-				err = errors.Join(err,
-					st.collectSingleton(s.QName()))
-			}
-			return true
-		})
+	for s := range appDef.Singletons {
+		if s.Singleton() {
+			err = errors.Join(err,
+				st.collectSingleton(s.QName()))
+		}
+	}
 
 	return err
 }

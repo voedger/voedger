@@ -42,11 +42,10 @@ func ExampleIAppDefBuilder_AddCommand() {
 	// how to enum commands
 	{
 		cnt := 0
-		app.Commands(func(c appdef.ICommand) bool {
+		for c := range app.Commands {
 			cnt++
 			fmt.Println(cnt, c)
-			return true
-		})
+		}
 		fmt.Println("overall command(s):", cnt)
 	}
 

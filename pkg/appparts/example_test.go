@@ -52,12 +52,11 @@ func Example() {
 
 	report := func(part appparts.IAppPartition) {
 		fmt.Println(part.App(), "partition", part.ID())
-		part.AppStructs().AppDef().Types(func(t appdef.IType) bool {
+		for t := range part.AppStructs().AppDef().Types {
 			if !t.IsSystem() {
 				fmt.Println("-", t, t.Comment())
 			}
-			return true
-		})
+		}
 	}
 
 	fmt.Println("*** Add ver 1 ***")
